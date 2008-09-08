@@ -1,0 +1,175 @@
+/* $Id$ */
+
+%prefixes%
+
+	terminal = lex_;
+	function = p_;
+
+%maps%
+
+	string -> string;
+	int -> usint;
+	state-list -> state_list;
+	state -> state;
+
+%header% @{
+
+	#include <stdlib.h>
+	#include <stdio.h>
+	#include <stdlib.h>
+
+	#include "lexer.h"
+	#include "xmalloc.h"
+	#include "syntax.h"
+	#include "fsm.h"
+
+	typedef unsigned int usint;
+	typedef const char * string;
+
+	int lex_tok;
+	int lex_tok_save;
+
+	struct lexi_state lex_state;
+
+	struct state_list *sl;
+
+	#define CURRENT_TERMINAL lex_tok
+	#define ERROR_TERMINAL   lex_unknown
+	#define ADVANCE_LEXER    do { lex_tok = lexi_read_token(&lex_state); } while (0);
+	#define SAVE_LEXER(tok)  do { lex_tok_save = lex_tok; lex_tok = tok; } while (0);
+	#define RESTORE_LEXER    do { lex_tok = lex_tok_save; } while (0);
+
+	static void err_expected(const char *token) {
+		fprintf(stderr, "syntax error: expected %s\n", token);
+		exit(EXIT_FAILURE);
+	}
+
+@}, @{
+
+	#include "fsm.h"
+
+	typedef struct state_list * state_list;
+	typedef struct fsm_state * state;
+
+	void parse(struct state_list **l, struct fsm_state **start);
+
+@};
+
+%terminals%
+
+	id: () -> (i :int) = @{
+		@i = atoi(lex_tokbuf);
+	@};
+
+	label: () -> (s :string) = @{
+		@s = xstrdup(lex_tokbuf);
+	@};
+
+%actions%
+
+	<add-state>: (n :int) -> (s :state) = @{
+		struct state_list *p;
+
+		/* Find an existing state */
+		for (p = sl; p; p = p->next) {
+			if (p->state.id == @n) {
+				break;
+			}
+		}
+
+		/* Otherwise, create a new one */
+		if (p == NULL) {
+			p = xmalloc(sizeof *p);
+			p->state.id = @n;
+			p->state.edges = NULL;
+			p->next = sl;
+			sl = p;
+		}
+
+		@s = &p->state;
+	@};
+
+	<mark-end>: (n :int) -> () = @{
+		struct state_list *p;
+
+		for (p = sl; p; p = p->next) {
+			if (p->state.id == @n) {
+				p->state.end = 1;
+				break;
+			}
+		}
+
+		if (p == NULL) {
+			fprintf(stderr, "unrecognised end state: %u\n", @n);
+			@!;
+		}
+	@};
+
+	<add-edge>: (x :state, y :state, c :string) -> () = @{
+		struct fsm_edge *p;
+
+		p = xmalloc(sizeof *p);
+		p->label = @c;
+		p->state = @y;
+		p->next = @x->edges;
+		@x->edges = p;
+	@};
+
+	<find-start-state>: (n :int) -> (s :state) = @{
+		struct state_list *p;
+
+		/* TODO: move into API as find_state_by_id() or somesuch */
+		@s = NULL;
+		for (p = sl; p; p = p->next) {
+			if (p->state.id == @n) {
+				@s = &p->state;
+			}
+		}
+
+		if (@s == NULL) {
+			fprintf(stderr, "unrecognised start state %u\n", @n);
+			@!;
+		}
+	@};
+
+
+	<err-syntax>: () -> (l :state-list, s :state) = @{
+		fprintf(stderr, "syntax error\n");
+		exit(EXIT_FAILURE);
+		@l = NULL;
+		@s = NULL;
+	@};
+
+	<err-expected-label>: () -> (s :string) = @{
+		err_expected("label");
+		@s = NULL;
+	@};
+
+	<err-expected-sep>: () -> () = @{
+		err_expected("';'");
+	@};
+
+	<err-expected-comma>: () -> () = @{
+		err_expected("','");
+	@};
+
+	<err-expected-start>: () -> () = @{
+		err_expected("'start:'");
+	@};
+
+	<err-expected-end>: () -> () = @{
+		err_expected("'end:'");
+	@};
+
+%trailer% @{
+
+	void parse(struct state_list **l, struct fsm_state **start) {
+		lexi_init(&lex_state);
+		ADVANCE_LEXER;
+		p_fsm(start);
+		*l = sl;
+	}
+
+@}, @{
+@};
+

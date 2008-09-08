@@ -1,0 +1,8 @@
+hopcroft minimisation algorithim
+
+remember line number for error messages
+
+better error handling for lex_tok_unknown
+
+test for empty files
+

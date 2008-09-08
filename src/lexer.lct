@@ -1,0 +1,70 @@
+/* $Id$ */
+
+HEADERS = @{
+
+	#include <stdio.h>
+	#include <stdlib.h>
+	#include <string.h>
+
+	#include "syntax.h"
+
+	char lex_tokbuf[20];
+
+	#define lexi_unknown_token lex_unknown
+
+	static void push(int c) {
+		size_t l;
+
+		l = strlen(lex_tokbuf);
+		if (l == sizeof lex_tokbuf) {
+			fprintf(stderr, "token buffer full\n");
+			exit(1);
+		}
+
+		lex_tokbuf[l] = c;
+		lex_tokbuf[l + 1] = '\0';
+	}
+
+	static int lexi_getchar(void) {
+		int c;
+
+		c = fgetc(stdin);
+		if (c == EOF) {
+			return LEXI_EOF;
+		}
+
+		return c;
+	}
+
+@}, @{
+
+	extern char lex_tokbuf[];
+
+@};
+
+TRAILERS = @{
+@}, @{
+@};
+
+ACTION flush = @{
+	lex_tokbuf[0] = '\0';
+@};
+
+ACTION push: (c :CHARACTER) -> () = @{
+	push(@c);
+@};
+
+ACTION read_id: (c :CHARACTER) -> () = @{
+	int c;
+
+	for (c = @c; lexi_group(lexi_group_digit, c); c = lexi_readchar(state)) {
+		push(c);
+	}
+
+	if (c == LEXI_EOF) {
+		return lex_eof;
+	}
+
+	lexi_push(state, c);
+@};
+

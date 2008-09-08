@@ -1,0 +1,31 @@
+/* $Id$ */
+
+ACTION <flush>;
+ACTION <push>: (:CHARACTER) -> ();
+ACTION <read_id>: (:CHARACTER) -> ();
+
+
+GROUP digit = {0-9};
+
+TOKEN "[digit]" -> <flush>, <read_id>(#0), $id;
+
+ZONE comment: "#" ... "\n" -> $$ {
+	GROUP white = "";
+	TOKEN DEFAULT -> $$;
+};
+
+ZONE label: "\"" -> <flush> ... "\"" -> $label {
+	GROUP white = "";
+	TOKEN DEFAULT -> <push>(#0);
+};
+
+TOKEN "start:" -> $start;
+TOKEN "end:"   -> $end;
+
+TOKEN "->" -> $arrow;
+
+TOKEN ";" -> $sep;
+TOKEN "," -> $comma;
+
+TOKEN "\e" -> $eof;
+

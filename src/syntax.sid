@@ -1,0 +1,131 @@
+/* $Id$ */
+
+%types%
+
+	int;
+	string;
+	state;
+	state-list;
+
+%terminals%
+
+	id: () -> (:int);
+	label: () -> (:string);
+
+	start;
+	end;
+
+	arrow;
+
+	sep;
+	comma;
+
+	eof;
+	!unknown;
+
+%productions%
+
+	<add-state>: (:int) -> (:state);
+	<mark-end>: (:int) -> ();
+	<add-edge>: (:state, :state, :string) -> ();
+	<find-start-state>: (:int) -> (:state);
+
+	<err-expected-label>: () -> (:string);
+	<err-expected-sep>;
+	<err-expected-comma>;
+	<err-expected-start>;
+	<err-expected-end>;
+	<err-syntax>: () -> (:state-list, :state);
+
+
+	ids = {
+		n = id;
+		<mark-end>(n);
+	||
+		ids;
+		{
+			comma;
+		##
+			<err-expected-comma>;
+		};
+		n = id;
+		<mark-end>(n);
+	};
+
+	xend = {
+		{
+			end;
+		##
+			<err-expected-end>;
+		};
+
+		ids;
+
+		{
+			sep;
+		##
+			<err-expected-sep>;
+		};
+	};
+
+	xstart: () -> (n :int) = {
+		{
+			start;
+		##
+			<err-expected-start>;
+		};
+
+		n = id;
+
+		{
+			sep;
+		##
+			<err-expected-sep>;
+		};
+	};
+
+	edge = {
+		a = id;
+		arrow;
+		b = id;
+		{
+			c = label;
+		##
+			c = <err-expected-label>;
+		};
+
+		{
+			sep;
+		##
+			<err-expected-sep>;
+		};
+
+		x = <add-state>(a);
+		y = <add-state>(b);
+		<add-edge>(x, y, c);
+	};
+
+	edges = {
+		edges;
+		edge;
+	||
+		edge;
+	};
+
+	fsm: () -> (ns :state) = {
+		edges;
+
+		n = xstart;
+		ns = <find-start-state>(n);
+
+		xend;
+
+		eof;
+	##
+		(s, ns) = <err-syntax>;
+	};
+
+%entry%
+
+	fsm;
+
