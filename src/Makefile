@@ -10,11 +10,11 @@ all: fsm
 
 clean:
 	rm -f lexer.c lexer.h syntax.c syntax.h fsm
-	rm -f lexer.o syntax.o xmalloc.o out-dot.o main.o
+	rm -f lexer.o syntax.o xmalloc.o out-dot.o out-table.o main.o
 
 
-fsm: lexer.o syntax.o xmalloc.o out-dot.o main.o
-	$(CC) -o fsm $(CFLAGS) lexer.o syntax.o xmalloc.o out-dot.o main.o
+fsm: lexer.o syntax.o xmalloc.o out-dot.o out-table.o main.o
+	$(CC) -o fsm $(CFLAGS) lexer.o syntax.o xmalloc.o out-dot.o out-table.o main.o
 
 
 lexer.c lexer.h: lexer.lxi lexer.lct

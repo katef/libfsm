@@ -3,8 +3,10 @@
 #include <stdio.h>
 
 #include "fsm.h"
+#include "out.h"
 
-void out_dot(FILE *f, const struct fsm_options *options, struct state_list *l, struct fsm_state *start) {
+void out_dot(FILE *f, const struct fsm_options *options,
+	struct state_list *sl, struct label_list *ll, struct fsm_state *start) {
 	struct state_list *s;
 	struct fsm_edge *e;
 
@@ -24,16 +26,16 @@ void out_dot(FILE *f, const struct fsm_options *options, struct state_list *l, s
 
 	fprintf(f, "\n");
 
-	for (s = l; s; s = s->next) {
+	for (s = sl; s; s = s->next) {
 		for (e = s->state.edges; e; e = e->next) {
 			fprintf(f, "\t%-2u -> %-2u [ label = \"%s\" ];\n",
-				s->state.id, e->state->id, e->label);
+				s->state.id, e->state->id, e->label->label);
 		}
 	}
 
 	fprintf(f, "\n");
 
-	for (s = l; s; s = s->next) {
+	for (s = sl; s; s = s->next) {
 		if (s->state.end) {
 			fprintf(f, "\t%-2u [ shape = doublecircle ];\n", s->state.id);
 		}

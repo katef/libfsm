@@ -7,9 +7,10 @@
 
 #include "syntax.h"
 #include "fsm.h"
-#include "out-dot.h"
+#include "out.h"
 
 extern int optind;
+extern char *optarg;
 
 void usage(void) {
 	printf("usage: fsm [-a] [<input> [<output>]]\n");
@@ -30,18 +31,23 @@ FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
 }
 
 int main(int argc, char *argv[]) {
-	struct state_list *l;
+	struct state_list *sl;
+	struct label_list *ll;
 	struct fsm_state *start;
 	FILE *in;
 	FILE *out;
+	void (*outf)(FILE *f, const struct fsm_options *options,
+		struct state_list *sl, struct label_list *ll, struct fsm_state *start);
 
 	static const struct fsm_options options_defaults;
 	struct fsm_options options = options_defaults;
 
+	outf = out_dot;
+
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "ha")) != -1) {
+		while ((c = getopt(argc, argv, "hal:")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -49,6 +55,17 @@ int main(int argc, char *argv[]) {
 
 			case 'a':
 				options.anonymous_states = 1;
+				break;
+
+			case 'l':
+				if (0 == strcmp(optarg, "dot")) {
+					outf = out_dot;
+				} else if (0 == strcmp(optarg, "table")) {
+					outf = out_table;
+				} else {
+					fprintf(stderr, "unrecognised output language; valid languages are: dot, table\n");
+					exit(EXIT_FAILURE);
+				}
 				break;
 
 			case '?':
@@ -70,9 +87,9 @@ int main(int argc, char *argv[]) {
 	in  = xopen(argc, argv, 0, stdin,  "r");
 	out = xopen(argc, argv, 1, stdout, "w");
 
-	parse(in, &l, &start);
+	parse(in, &sl, &ll, &start);
 
-	out_dot(out, &options, l, start);
+	outf(out, &options, sl, ll, start);
 
 	/* TODO: free stuff. make an api.c */
 

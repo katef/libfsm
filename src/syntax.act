@@ -17,6 +17,7 @@
 	#include <stdlib.h>
 	#include <stdio.h>
 	#include <stdlib.h>
+	#include <string.h>
 
 	#include "lexer.h"
 	#include "xmalloc.h"
@@ -30,12 +31,13 @@
 	int lex_tok_save;
 
 	struct state_list *sl;
+	struct label_list *ll;
 
 	#define CURRENT_TERMINAL lex_tok
 	#define ERROR_TERMINAL   lex_unknown
-	#define ADVANCE_LEXER    do { lex_tok = lex_nexttoken(); } while (0);
+	#define ADVANCE_LEXER    do { lex_tok = lex_nexttoken();             } while (0);
 	#define SAVE_LEXER(tok)  do { lex_tok_save = lex_tok; lex_tok = tok; } while (0);
-	#define RESTORE_LEXER    do { lex_tok = lex_tok_save; } while (0);
+	#define RESTORE_LEXER    do { lex_tok = lex_tok_save;                } while (0);
 
 	static void err_expected(const char *token) {
 		fprintf(stderr, "syntax error: expected %s\n", token);
@@ -51,7 +53,8 @@
 	typedef struct state_list * state_list;
 	typedef struct fsm_state * state;
 
-	void parse(FILE *f, struct state_list **l, struct fsm_state **start);
+	void parse(FILE *f, struct state_list **s, struct label_list **l,
+		struct fsm_state **start);
 
 @};
 
@@ -106,13 +109,29 @@
 	@};
 
 	<add-edge>: (x :state, y :state, c :string) -> () = @{
-		struct fsm_edge *p;
+		struct label_list *p;
+		struct fsm_edge   *e;
 
-		p = xmalloc(sizeof *p);
-		p->label = @c;
-		p->state = @y;
-		p->next = @x->edges;
-		@x->edges = p;
+		/* Find an existing label */
+		for (p = ll; p; p = p->next) {
+			if (0 == strcmp(p->label, @c)) {
+				break;
+			}
+		}
+
+		/* Otherwise, create a new one */
+		if (p == NULL) {
+			p = xmalloc(sizeof *p);
+			p->label = @c;
+			p->next = ll;
+			ll = p;
+		}
+
+		e = xmalloc(sizeof *e);
+		e->label = p;
+		e->state = @y;
+		e->next  = @x->edges;
+		@x->edges = e;
 	@};
 
 	<find-start-state>: (n :int) -> (s :state) = @{
@@ -163,11 +182,13 @@
 
 %trailer% @{
 
-	void parse(FILE *f, struct state_list **l, struct fsm_state **start) {
+	void parse(FILE *f, struct state_list **s, struct label_list **l,
+		struct fsm_state **start) {
 		lex_init(f);
 		ADVANCE_LEXER;
 		p_fsm(start);
-		*l = sl;
+		*s = sl;
+		*l = ll;
 	}
 
 @}, @{

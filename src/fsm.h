@@ -11,7 +11,7 @@ struct fsm_state {
 };
 
 struct fsm_edge {
-	const char *label;
+	struct label_list *label;
 	struct fsm_state *state;
 
 	struct fsm_edge *next;	/* ll */
@@ -22,6 +22,12 @@ struct fsm_edge {
 struct state_list {
 	struct fsm_state state;
 	struct state_list *next;
+};
+
+/* global registry of all labels: TODO: ditto */
+struct label_list {
+	const char *label;
+	struct label_list *next;
 };
 
 struct fsm_options {
