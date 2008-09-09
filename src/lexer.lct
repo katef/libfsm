@@ -9,6 +9,8 @@ HEADERS = @{
 	#include "syntax.h"
 
 	char lex_tokbuf[20];
+	FILE *lex_file;
+	struct lexi_state lex_state;
 
 	#define lexi_unknown_token lex_unknown
 
@@ -28,7 +30,7 @@ HEADERS = @{
 	static int lexi_getchar(void) {
 		int c;
 
-		c = fgetc(stdin);
+		c = fgetc(lex_file);
 		if (c == EOF) {
 			return LEXI_EOF;
 		}
@@ -38,11 +40,26 @@ HEADERS = @{
 
 @}, @{
 
+	#include <stdio.h>
+
 	extern char lex_tokbuf[];
+
+	void lex_init(FILE *f);
+	int lex_nexttoken(void);
 
 @};
 
 TRAILERS = @{
+
+	void lex_init(FILE *f) {
+		lex_file = f;
+		lexi_init(&lex_state);
+	}
+
+	int lex_nexttoken(void) {
+		return lexi_read_token(&lex_state);
+	}
+
 @}, @{
 @};
 

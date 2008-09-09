@@ -4,21 +4,21 @@
 
 #include "fsm.h"
 
-void out_dot(FILE *f, struct fsm_state *start, struct state_list *l) {
+void out_dot(FILE *f, struct state_list *l, struct fsm_state *start) {
 	struct state_list *s;
 	struct fsm_edge *e;
 
-	printf("digraph G {\n");
-	printf("\trankdir = LR;\n");
+	fprintf(f, "digraph G {\n");
+	fprintf(f, "\trankdir = LR;\n");
 
-	printf("\tnode [ shape = circle ];\n");
+	fprintf(f, "\tnode [ shape = circle ];\n");
 
-	printf("\n");
+	fprintf(f, "\n");
 
-	printf("\tstart [ shape = none, label = \"\" ];\n");
-	printf("\tstart -> %u;\n", start->id);
+	fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
+	fprintf(f, "\tstart -> %u;\n", start->id);
 
-	printf("\n");
+	fprintf(f, "\n");
 
 	for (s = l; s; s = s->next) {
 		for (e = s->state.edges; e; e = e->next) {
@@ -27,7 +27,7 @@ void out_dot(FILE *f, struct fsm_state *start, struct state_list *l) {
 		}
 	}
 
-	printf("\n");
+	fprintf(f, "\n");
 
 	for (s = l; s; s = s->next) {
 		if (s->state.end) {
@@ -35,6 +35,7 @@ void out_dot(FILE *f, struct fsm_state *start, struct state_list *l) {
 		}
 	}
 
-	printf("};\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
 }
 

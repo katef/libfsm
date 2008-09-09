@@ -29,13 +29,11 @@
 	int lex_tok;
 	int lex_tok_save;
 
-	struct lexi_state lex_state;
-
 	struct state_list *sl;
 
 	#define CURRENT_TERMINAL lex_tok
 	#define ERROR_TERMINAL   lex_unknown
-	#define ADVANCE_LEXER    do { lex_tok = lexi_read_token(&lex_state); } while (0);
+	#define ADVANCE_LEXER    do { lex_tok = lex_nexttoken(); } while (0);
 	#define SAVE_LEXER(tok)  do { lex_tok_save = lex_tok; lex_tok = tok; } while (0);
 	#define RESTORE_LEXER    do { lex_tok = lex_tok_save; } while (0);
 
@@ -46,12 +44,14 @@
 
 @}, @{
 
+	#include <stdio.h>
+
 	#include "fsm.h"
 
 	typedef struct state_list * state_list;
 	typedef struct fsm_state * state;
 
-	void parse(struct state_list **l, struct fsm_state **start);
+	void parse(FILE *f, struct state_list **l, struct fsm_state **start);
 
 @};
 
@@ -163,8 +163,8 @@
 
 %trailer% @{
 
-	void parse(struct state_list **l, struct fsm_state **start) {
-		lexi_init(&lex_state);
+	void parse(FILE *f, struct state_list **l, struct fsm_state **start) {
+		lex_init(f);
 		ADVANCE_LEXER;
 		p_fsm(start);
 		*l = sl;

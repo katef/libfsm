@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 
-void out_dot(FILE *f, struct fsm_state *start, struct state_list *l);
+void out_dot(FILE *f, struct state_list *l, struct fsm_state *start);
 
 #endif
 
