@@ -32,7 +32,10 @@ void out_table(FILE *f, const struct fsm_options *options,
 	hr(f, sl);
 
 	for (y = ll; y; y = y->next) {
-		fprintf(f, "%-8s ", y->label);
+		const char *label;
+
+		label = y->label == NULL ? "epsilon" : y->label;
+		fprintf(f, "%-8s ", label);
 
 		for (x = sl; x; x = x->next) {
 			for (e = x->state.edges; e; e = e->next) {

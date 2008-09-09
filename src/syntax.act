@@ -114,6 +114,14 @@
 
 		/* Find an existing label */
 		for (p = ll; p; p = p->next) {
+			if (@c == NULL && p->label == NULL) {
+				break;
+			}
+
+			if (@c == NULL || p->label == NULL) {
+				continue;
+			}
+
 			if (0 == strcmp(p->label, @c)) {
 				break;
 			}
@@ -151,16 +159,15 @@
 		}
 	@};
 
+	<epsilon>: () -> (s :string) = @{
+		@s = NULL;
+	@};
+
 
 	<err-syntax>: () -> (l :state-list, s :state) = @{
 		fprintf(stderr, "syntax error\n");
 		exit(EXIT_FAILURE);
 		@l = NULL;
-		@s = NULL;
-	@};
-
-	<err-expected-label>: () -> (s :string) = @{
-		err_expected("label");
 		@s = NULL;
 	@};
 

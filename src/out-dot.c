@@ -28,8 +28,11 @@ void out_dot(FILE *f, const struct fsm_options *options,
 
 	for (s = sl; s; s = s->next) {
 		for (e = s->state.edges; e; e = e->next) {
+			const char *label;
+
+			label = e->label->label == NULL ? "&epsilon;" : e->label->label;
 			fprintf(f, "\t%-2u -> %-2u [ label = \"%s\" ];\n",
-				s->state.id, e->state->id, e->label->label);
+				s->state.id, e->state->id, label);
 		}
 	}
 

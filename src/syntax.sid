@@ -29,8 +29,8 @@
 	<mark-end>: (:int) -> ();
 	<add-edge>: (:state, :state, :string) -> ();
 	<find-start-state>: (:int) -> (:state);
+	<epsilon>: () -> (:string);
 
-	<err-expected-label>: () -> (:string);
 	<err-expected-sep>;
 	<err-expected-comma>;
 	<err-expected-start>;
@@ -88,10 +88,11 @@
 		a = id;
 		arrow;
 		b = id;
+
 		{
 			c = label;
 		##
-			c = <err-expected-label>;
+			c = <epsilon>;
 		};
 
 		{
@@ -122,7 +123,7 @@
 			xend;
 		||
 			$;
-		}
+		};
 
 		eof;
 	##
