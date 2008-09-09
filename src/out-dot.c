@@ -4,7 +4,7 @@
 
 #include "fsm.h"
 
-void out_dot(FILE *f, struct state_list *l, struct fsm_state *start) {
+void out_dot(FILE *f, const struct fsm_options *options, struct state_list *l, struct fsm_state *start) {
 	struct state_list *s;
 	struct fsm_edge *e;
 
@@ -12,6 +12,10 @@ void out_dot(FILE *f, struct state_list *l, struct fsm_state *start) {
 	fprintf(f, "\trankdir = LR;\n");
 
 	fprintf(f, "\tnode [ shape = circle ];\n");
+
+	if (options->anonymous_states) {
+		fprintf(f, "\tnode [ label = \"\", width = 0.3 ];\n");
+	}
 
 	fprintf(f, "\n");
 

@@ -24,5 +24,9 @@ struct state_list {
 	struct state_list *next;
 };
 
+struct fsm_options {
+	int anonymous_states;
+};
+
 #endif
 

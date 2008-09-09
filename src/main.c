@@ -9,8 +9,10 @@
 #include "fsm.h"
 #include "out-dot.h"
 
+extern int optind;
+
 void usage(void) {
-	printf("usage: fsm [<input> [<output>]]\n");
+	printf("usage: fsm [-a] [<input> [<output>]]\n");
 }
 
 FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
@@ -33,17 +35,44 @@ int main(int argc, char *argv[]) {
 	FILE *in;
 	FILE *out;
 
-	if (argc > 3) {
+	static const struct fsm_options options_defaults;
+	struct fsm_options options = options_defaults;
+
+	{
+		int c;
+
+		while ((c = getopt(argc, argv, "ha")) != -1) {
+			switch (c) {
+			case 'h':
+				usage();
+				exit(EXIT_SUCCESS);
+
+			case 'a':
+				options.anonymous_states = 1;
+				break;
+
+			case '?':
+			default:
+				usage();
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		argc -= optind;
+		argv += optind;
+	}
+
+	if (argc > 2) {
 		usage();
 		exit(EXIT_FAILURE);
 	}
 
-	in  = xopen(argc, argv, 1, stdin,  "r");
-	out = xopen(argc, argv, 2, stdout, "w");
+	in  = xopen(argc, argv, 0, stdin,  "r");
+	out = xopen(argc, argv, 1, stdout, "w");
 
 	parse(in, &l, &start);
 
-	out_dot(out, l, start);
+	out_dot(out, &options, l, start);
 
 	/* TODO: free stuff. make an api.c */
 
