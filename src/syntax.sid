@@ -118,7 +118,11 @@
 		n = xstart;
 		ns = <find-start-state>(n);
 
-		xend;
+		{
+			xend;
+		||
+			$;
+		}
 
 		eof;
 	##
