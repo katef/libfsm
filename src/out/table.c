@@ -23,6 +23,9 @@ void out_table(FILE *f, const struct fsm_options *options,
 	struct label_list *y;
 	struct fsm_edge   *e;
 
+	(void) options;
+	(void) start;
+
 	fprintf(f, "%-8s ", "");
 	for (x = sl; x; x = x->next) {
 		fprintf(f, "| %-2u ", x->state.id);
@@ -58,6 +61,7 @@ void out_table(FILE *f, const struct fsm_options *options,
 
 	fprintf(f, "%-8s ", "end");
 
+	/* TODO: indicate start state, too */
 	for (x = sl; x; x = x->next) {
 		fprintf(f, "| %s  ", x->state.end ? "E" : " ");
 	}

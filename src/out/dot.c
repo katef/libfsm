@@ -11,6 +11,8 @@ void out_dot(FILE *f, const struct fsm_options *options,
 	struct state_list *s;
 	struct fsm_edge *e;
 
+	(void) ll;
+
 	fprintf(f, "digraph G {\n");
 	fprintf(f, "\trankdir = LR;\n");
 

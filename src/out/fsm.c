@@ -12,6 +12,9 @@ void out_fsm(FILE *f, const struct fsm_options *options,
 	struct fsm_edge *e;
 	int end;
 
+	(void) options;
+	(void) ll;
+
 	for (s = sl; s; s = s->next) {
 		for (e = s->state.edges; e; e = e->next) {
 			fprintf(f, "%-2u -> %-2u", s->state.id, e->state->id);

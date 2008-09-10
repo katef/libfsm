@@ -166,10 +166,11 @@
 
 
 	<err-syntax>: () -> (l :state-list, s :state) = @{
+		(void) @l;
+		(void) @s;
+
 		fprintf(stderr, "syntax error\n");
 		exit(EXIT_FAILURE);
-		@l = NULL;
-		@s = NULL;
 	@};
 
 	<err-expected-sep>: () -> () = @{
