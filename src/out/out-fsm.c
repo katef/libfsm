@@ -2,8 +2,9 @@
 
 #include <stdio.h>
 
-#include "fsm.h"
-#include "out.h"
+#include <fsm/fsm.h>
+
+#include "out/out.h"
 
 void out_fsm(FILE *f, const struct fsm_options *options,
 	struct state_list *sl, struct label_list *ll, struct fsm_state *start) {

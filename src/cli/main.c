@@ -5,9 +5,10 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "syntax.h"
-#include "fsm.h"
-#include "out.h"
+#include <fsm/fsm.h>
+
+#include "libfsm/syntax.h"
+#include "out/out.h"
 
 extern int optind;
 extern char *optarg;

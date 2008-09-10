@@ -2,8 +2,9 @@
 
 #include <stdio.h>
 
-#include "fsm.h"
-#include "out.h"
+#include <fsm/fsm.h>
+
+#include "out/out.h"
 
 static void hr(FILE *f, struct state_list *sl) {
 	struct state_list *x;

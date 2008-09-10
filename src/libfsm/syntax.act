@@ -19,10 +19,11 @@
 	#include <stdlib.h>
 	#include <string.h>
 
+	#include <fsm/fsm.h>
+
+	#include "cli/xmalloc.h"	/* XXX */
 	#include "lexer.h"
-	#include "xmalloc.h"
 	#include "syntax.h"
-	#include "fsm.h"
 
 	typedef unsigned int usint;
 	typedef const char * string;
@@ -48,7 +49,7 @@
 
 	#include <stdio.h>
 
-	#include "fsm.h"
+	#include <fsm/fsm.h>
 
 	typedef struct state_list * state_list;
 	typedef struct fsm_state * state;
