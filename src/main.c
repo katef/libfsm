@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 	static const struct fsm_options options_defaults;
 	struct fsm_options options = options_defaults;
 
-	outf = out_dot;
+	outf = out_fsm;
 
 	{
 		int c;
@@ -58,12 +58,14 @@ int main(int argc, char *argv[]) {
 				break;
 
 			case 'l':
-				if (0 == strcmp(optarg, "dot")) {
+				if (0 == strcmp(optarg, "fsm")) {
+					outf = out_fsm;
+				} else if (0 == strcmp(optarg, "dot")) {
 					outf = out_dot;
 				} else if (0 == strcmp(optarg, "table")) {
 					outf = out_table;
 				} else {
-					fprintf(stderr, "unrecognised output language; valid languages are: dot, table\n");
+					fprintf(stderr, "unrecognised output language; valid languages are: fsm, dot, table\n");
 					exit(EXIT_FAILURE);
 				}
 				break;
