@@ -6,9 +6,8 @@
 #include <stdlib.h>
 
 #include <fsm/fsm.h>
-
-#include "libfsm/syntax.h"
-#include "out/out.h"
+#include <fsm/parse.h>
+#include <fsm/out.h>
 
 extern int optind;
 extern char *optarg;
@@ -34,12 +33,10 @@ FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
 int main(int argc, char *argv[]) {
 	FILE *in;
 	FILE *out;
-	void (*outf)(FILE *f, const struct fsm *fsm);
+	enum fsm_out format = FSM_OUT_FSM;
 
 	static const struct fsm_options options_defaults;
 	struct fsm_options options = options_defaults;
-
-	outf = out_fsm;
 
 	{
 		int c;
@@ -56,11 +53,11 @@ int main(int argc, char *argv[]) {
 
 			case 'l':
 				if (0 == strcmp(optarg, "fsm")) {
-					outf = out_fsm;
+					format = FSM_OUT_FSM;
 				} else if (0 == strcmp(optarg, "dot")) {
-					outf = out_dot;
+					format = FSM_OUT_DOT;
 				} else if (0 == strcmp(optarg, "table")) {
-					outf = out_table;
+					format = FSM_OUT_TABLE;
 				} else {
 					fprintf(stderr, "unrecognised output language; valid languages are: fsm, dot, table\n");
 					exit(EXIT_FAILURE);
@@ -97,8 +94,8 @@ int main(int argc, char *argv[]) {
 
 		fsm_setoptions(fsm, &options);
 
-		parse(in, fsm);
-		outf(out, fsm);
+		fsm_parse(fsm, in);
+		fsm_print(fsm, out, format);
 
 		fsm_free(fsm);
 	}

@@ -8,7 +8,7 @@
 #include "out/out.h"
 #include "libfsm/internal.h"
 
-void out_fsm(FILE *f, const struct fsm *fsm) {
+void out_fsm(const struct fsm *fsm, FILE *f) {
 	struct state_list *s;
 	struct fsm_edge *e;
 	struct fsm_state *start;

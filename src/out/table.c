@@ -18,7 +18,7 @@ static void hr(FILE *f, struct state_list *sl) {
 	fprintf(f, "\n");
 }
 
-void out_table(FILE *f, const struct fsm *fsm) {
+void out_table(const struct fsm *fsm, FILE *f) {
 	struct state_list *x;
 	struct label_list *y;
 	struct fsm_edge   *e;

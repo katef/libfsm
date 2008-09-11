@@ -1,5 +1,7 @@
 /* $Id$ */
 
+/* TODO: this shouldn't exit(); implement panic mode instead */
+
 %prefixes%
 
 	terminal = lex_;
@@ -12,8 +14,8 @@
 %maps%
 
 	string -> string;
-	int -> usint;
-	state -> state;
+	int    -> usint;
+	state  -> state;
 
 %header% @{
 
@@ -25,11 +27,11 @@
 	#include <fsm/fsm.h>
 
 	#include "lexer.h"
-	#include "syntax.h"
+	#include "parser.h"
 
-	typedef unsigned int        usint;
-	typedef const char *        string;
-	typedef struct fsm_state *  state;
+	typedef unsigned int       usint;
+	typedef const char *       string;
+	typedef struct fsm_state * state;
 
 	int lex_tok;
 	int lex_tok_save;
@@ -59,13 +61,7 @@
 
 @}, @{
 
-	#include <stdio.h>
-
-	#include <fsm/fsm.h>
-
 	typedef struct fsm * fsm;
-
-	void parse(FILE *f, struct fsm *fsm);
 
 @};
 
@@ -149,7 +145,7 @@
 
 %trailer% @{
 
-	void parse(FILE *f, struct fsm *fsm) {
+	void fsm_parse(struct fsm *fsm, FILE *f) {
 		lex_init(f);
 		ADVANCE_LEXER;
 		p_fsm(fsm);

@@ -15,12 +15,12 @@ all: cli/fsm libfsm/libfsm.a
 clean:
 	rm -f cli/fsm cli/main.o
 	rm -f $(OUT)
-	rm -f libfsm/lexer.c libfsm/lexer.h libfsm/syntax.c libfsm/syntax.h
-	rm -f libfsm/lexer.o libfsm/syntax.o libfsm/fsm.o
+	rm -f libfsm/lexer.c libfsm/lexer.h libfsm/parser.c libfsm/parser.h
+	rm -f libfsm/lexer.o libfsm/parser.o libfsm/fsm.o
 	rm -f libfsm/libfsm.a
 
-libfsm/libfsm.a: $(OUT) libfsm/lexer.o libfsm/syntax.o libfsm/fsm.o
-	ar r libfsm/libfsm.a $(OUT) libfsm/lexer.o libfsm/syntax.o libfsm/fsm.o
+libfsm/libfsm.a: $(OUT) libfsm/lexer.o libfsm/parser.o libfsm/fsm.o libfsm/parser.o libfsm/out.o
+	ar r libfsm/libfsm.a $(OUT) libfsm/lexer.o libfsm/parser.o libfsm/fsm.o libfsm/parser.o libfsm/out.o
 	ranlib libfsm/libfsm.a
 
 cli/fsm: cli/main.o libfsm/libfsm.a
@@ -30,14 +30,12 @@ cli/fsm: cli/main.o libfsm/libfsm.a
 libfsm/lexer.c libfsm/lexer.h: libfsm/lexer.lxi libfsm/lexer.lct
 	lexi libfsm/lexer.lxi libfsm/lexer.lct libfsm/lexer.c libfsm/lexer.h
 
-libfsm/syntax.c libfsm/syntax.h: libfsm/syntax.sid libfsm/syntax.act
-	sid -s no-numeric-terminals libfsm/syntax.sid libfsm/syntax.act libfsm/syntax.c libfsm/syntax.h
+libfsm/parser.c libfsm/parser.h: libfsm/parser.sid libfsm/parser.act
+	sid -s no-numeric-terminals libfsm/parser.sid libfsm/parser.act libfsm/parser.c libfsm/parser.h
 
-libfsm/lexer.c: libfsm/syntax.h
+libfsm/lexer.c: libfsm/parser.h
 
-libfsm/syntax.c: libfsm/lexer.h
-
-cli/main.c: libfsm/syntax.h # XXX
+libfsm/parser.c: libfsm/lexer.h
 
 .c.o:
 	$(CC) -o $@ -c $< $(CFLAGS)

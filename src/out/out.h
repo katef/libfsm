@@ -1,15 +1,17 @@
 /* $Id$ */
 
-#ifndef OUT_DOT_H
-#define OUT_DOT_H
+#ifndef OUT_H
+#define OUT_H
 
 #include <stdio.h>
 
-void out_fsm(FILE *f, const struct fsm *fsm);
+#include <fsm/out.h>
 
-void out_dot(FILE *f, const struct fsm *fsm);
+void out_fsm(const struct fsm *fsm, FILE *f);
 
-void out_table(FILE *f, const struct fsm *fsm);
+void out_dot(const struct fsm *fsm, FILE *f);
+
+void out_table(const struct fsm *fsm, FILE *f);
 
 #endif
 
