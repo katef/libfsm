@@ -1,35 +1,37 @@
 /* $Id$ */
 
+#include <assert.h>
 #include <stdio.h>
 
 #include <fsm/fsm.h>
 
 #include "out/out.h"
+#include "libfsm/internal.h"
 
-void out_dot(FILE *f, const struct fsm_options *options,
-	struct state_list *sl, struct label_list *ll, struct fsm_state *start) {
+void out_dot(FILE *f, const struct fsm *fsm) {
 	struct state_list *s;
 	struct fsm_edge *e;
-
-	(void) ll;
+	struct fsm_state *start;
 
 	fprintf(f, "digraph G {\n");
 	fprintf(f, "\trankdir = LR;\n");
 
 	fprintf(f, "\tnode [ shape = circle ];\n");
 
-	if (options->anonymous_states) {
+	if (fsm->options.anonymous_states) {
 		fprintf(f, "\tnode [ label = \"\", width = 0.3 ];\n");
 	}
 
 	fprintf(f, "\n");
 
+	start = fsm_getstart(fsm);
+	assert(start != NULL);
 	fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
 	fprintf(f, "\tstart -> %u;\n", start->id);
 
 	fprintf(f, "\n");
 
-	for (s = sl; s; s = s->next) {
+	for (s = fsm->sl; s; s = s->next) {
 		for (e = s->state.edges; e; e = e->next) {
 			const char *label;
 
@@ -41,8 +43,8 @@ void out_dot(FILE *f, const struct fsm_options *options,
 
 	fprintf(f, "\n");
 
-	for (s = sl; s; s = s->next) {
-		if (s->state.end) {
+	for (s = fsm->sl; s; s = s->next) {
+		if (fsm_isend(fsm, &s->state)) {
 			fprintf(f, "\t%-2u [ shape = doublecircle ];\n", s->state.id);
 		}
 	}

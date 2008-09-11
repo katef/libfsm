@@ -1,21 +1,20 @@
 /* $Id$ */
 
+#include <assert.h>
 #include <stdio.h>
 
 #include <fsm/fsm.h>
 
 #include "out/out.h"
+#include "libfsm/internal.h"
 
-void out_fsm(FILE *f, const struct fsm_options *options,
-	struct state_list *sl, struct label_list *ll, struct fsm_state *start) {
+void out_fsm(FILE *f, const struct fsm *fsm) {
 	struct state_list *s;
 	struct fsm_edge *e;
+	struct fsm_state *start;
 	int end;
 
-	(void) options;
-	(void) ll;
-
-	for (s = sl; s; s = s->next) {
+	for (s = fsm->sl; s; s = s->next) {
 		for (e = s->state.edges; e; e = e->next) {
 			fprintf(f, "%-2u -> %-2u", s->state.id, e->state->id);
 
@@ -29,13 +28,13 @@ void out_fsm(FILE *f, const struct fsm_options *options,
 
 	fprintf(f, "\n");
 
+	start = fsm_getstart(fsm);
+	assert(start != NULL);
 	fprintf(f, "start: %u;\n", start->id);
 
 	end = 0;
-	for (s = sl; s; s = s->next) {
-		if (s->state.end) {
-			end++;
-		}
+	for (s = fsm->sl; s; s = s->next) {
+		end += fsm_isend(fsm, &s->state);
 	}
 
 	if (end == 0) {
@@ -43,8 +42,8 @@ void out_fsm(FILE *f, const struct fsm_options *options,
 	}
 
 	fprintf(f, "end:   ");
-	for (s = sl; s; s = s->next) {
-		if (s->state.end) {
+	for (s = fsm->sl; s; s = s->next) {
+		if (fsm_isend(fsm, &s->state)) {
 			end--;
 			fprintf(f, "%u%s", s->state.id, end > 0 ? ", " : ";\n");
 		}

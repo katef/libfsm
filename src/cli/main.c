@@ -32,13 +32,9 @@ FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
 }
 
 int main(int argc, char *argv[]) {
-	struct state_list *sl;
-	struct label_list *ll;
-	struct fsm_state *start;
 	FILE *in;
 	FILE *out;
-	void (*outf)(FILE *f, const struct fsm_options *options,
-		struct state_list *sl, struct label_list *ll, struct fsm_state *start);
+	void (*outf)(FILE *f, const struct fsm *fsm);
 
 	static const struct fsm_options options_defaults;
 	struct fsm_options options = options_defaults;
@@ -90,11 +86,22 @@ int main(int argc, char *argv[]) {
 	in  = xopen(argc, argv, 0, stdin,  "r");
 	out = xopen(argc, argv, 1, stdout, "w");
 
-	parse(in, &sl, &ll, &start);
+	{
+		struct fsm *fsm;
 
-	outf(out, &options, sl, ll, start);
+		fsm = fsm_new();
+		if (fsm == NULL) {
+			perror("fsm_new");
+			exit(EXIT_FAILURE);
+		}
 
-	/* TODO: free stuff. make an api.c */
+		fsm_setoptions(fsm, &options);
+
+		parse(in, fsm);
+		outf(out, fsm);
+
+		fsm_free(fsm);
+	}
 
 	return 0;
 }

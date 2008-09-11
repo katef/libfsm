@@ -5,11 +5,14 @@
 	terminal = lex_;
 	function = p_;
 
+%persistents%
+
+	fsm :fsm;
+
 %maps%
 
 	string -> string;
 	int -> usint;
-	state-list -> state_list;
 	state -> state;
 
 %header% @{
@@ -21,18 +24,15 @@
 
 	#include <fsm/fsm.h>
 
-	#include "cli/xmalloc.h"	/* XXX */
 	#include "lexer.h"
 	#include "syntax.h"
 
-	typedef unsigned int usint;
-	typedef const char * string;
+	typedef unsigned int        usint;
+	typedef const char *        string;
+	typedef struct fsm_state *  state;
 
 	int lex_tok;
 	int lex_tok_save;
-
-	struct state_list *sl;
-	struct label_list *ll;
 
 	#define CURRENT_TERMINAL lex_tok
 	#define ERROR_TERMINAL   lex_unknown
@@ -45,17 +45,27 @@
 		exit(EXIT_FAILURE);
 	}
 
+	static char *xstrdup(const char *s) {
+		char *new;
+
+		new = malloc(strlen(s) + 1);
+		if (!new) {
+			perror("xstrdup");
+			exit(EXIT_FAILURE);
+		}
+
+		return strcpy(new, s);
+	}
+
 @}, @{
 
 	#include <stdio.h>
 
 	#include <fsm/fsm.h>
 
-	typedef struct state_list * state_list;
-	typedef struct fsm_state * state;
+	typedef struct fsm * fsm;
 
-	void parse(FILE *f, struct state_list **s, struct label_list **l,
-		struct fsm_state **start);
+	void parse(FILE *f, struct fsm *fsm);
 
 @};
 
@@ -72,91 +82,42 @@
 %actions%
 
 	<add-state>: (n :int) -> (s :state) = @{
-		struct state_list *p;
+		@s = fsm_addstate(fsm, @n, 0);
 
-		/* Find an existing state */
-		for (p = sl; p; p = p->next) {
-			if (p->state.id == @n) {
-				break;
-			}
+		if (@s == NULL) {
+			perror("fsm_addstate");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
+	<mark-start>: (n :int) -> () = @{
+		struct fsm_state *state;
+
+		state = fsm_getstatebyid(fsm, @n);
+		if (state == NULL) {
+			fprintf(stderr, "unrecognised start state: %u\n", @n);
+			@!;
 		}
 
-		/* Otherwise, create a new one */
-		if (p == NULL) {
-			p = xmalloc(sizeof *p);
-			p->state.id = @n;
-			p->state.edges = NULL;
-			p->next = sl;
-			sl = p;
-		}
-
-		@s = &p->state;
+		fsm_setstart(fsm, state);
 	@};
 
 	<mark-end>: (n :int) -> () = @{
-		struct state_list *p;
+		struct fsm_state *state;
 
-		for (p = sl; p; p = p->next) {
-			if (p->state.id == @n) {
-				p->state.end = 1;
-				break;
-			}
-		}
-
-		if (p == NULL) {
+		state = fsm_getstatebyid(fsm, @n);
+		if (state == NULL) {
 			fprintf(stderr, "unrecognised end state: %u\n", @n);
 			@!;
 		}
+
+		fsm_setend(fsm, state, 1);
 	@};
 
 	<add-edge>: (x :state, y :state, c :string) -> () = @{
-		struct label_list *p;
-		struct fsm_edge   *e;
-
-		/* Find an existing label */
-		for (p = ll; p; p = p->next) {
-			if (@c == NULL && p->label == NULL) {
-				break;
-			}
-
-			if (@c == NULL || p->label == NULL) {
-				continue;
-			}
-
-			if (0 == strcmp(p->label, @c)) {
-				break;
-			}
-		}
-
-		/* Otherwise, create a new one */
-		if (p == NULL) {
-			p = xmalloc(sizeof *p);
-			p->label = @c;
-			p->next = ll;
-			ll = p;
-		}
-
-		e = xmalloc(sizeof *e);
-		e->label = p;
-		e->state = @y;
-		e->next  = @x->edges;
-		@x->edges = e;
-	@};
-
-	<find-start-state>: (n :int) -> (s :state) = @{
-		struct state_list *p;
-
-		/* TODO: move into API as find_state_by_id() or somesuch */
-		@s = NULL;
-		for (p = sl; p; p = p->next) {
-			if (p->state.id == @n) {
-				@s = &p->state;
-			}
-		}
-
-		if (@s == NULL) {
-			fprintf(stderr, "unrecognised start state %u\n", @n);
-			@!;
+		if (fsm_addedge(fsm, @x, @y, @c) == NULL) {
+			perror("fsm_addedge");
+			exit(EXIT_FAILURE);
 		}
 	@};
 
@@ -165,39 +126,33 @@
 	@};
 
 
-	<err-syntax>: () -> (l :state-list, s :state) = @{
-		(void) @l;
-		(void) @s;
-
-		fprintf(stderr, "syntax error\n");
+	<err-parse> = @{
+		fprintf(stderr, "parse error\n");
 		exit(EXIT_FAILURE);
 	@};
 
-	<err-expected-sep>: () -> () = @{
+	<err-expected-sep> = @{
 		err_expected("';'");
 	@};
 
-	<err-expected-comma>: () -> () = @{
+	<err-expected-comma> = @{
 		err_expected("','");
 	@};
 
-	<err-expected-start>: () -> () = @{
+	<err-expected-start> = @{
 		err_expected("'start:'");
 	@};
 
-	<err-expected-end>: () -> () = @{
+	<err-expected-end> = @{
 		err_expected("'end:'");
 	@};
 
 %trailer% @{
 
-	void parse(FILE *f, struct state_list **s, struct label_list **l,
-		struct fsm_state **start) {
+	void parse(FILE *f, struct fsm *fsm) {
 		lex_init(f);
 		ADVANCE_LEXER;
-		p_fsm(start);
-		*s = sl;
-		*l = ll;
+		p_fsm(fsm);
 	}
 
 @}, @{

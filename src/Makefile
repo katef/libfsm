@@ -13,18 +13,18 @@ OUT = out/fsm.o out/dot.o out/table.o
 all: cli/fsm libfsm/libfsm.a
 
 clean:
-	rm -f cli/fsm cli/xmalloc.o cli/main.o
+	rm -f cli/fsm cli/main.o
 	rm -f $(OUT)
 	rm -f libfsm/lexer.c libfsm/lexer.h libfsm/syntax.c libfsm/syntax.h
-	rm -f libfsm/lexer.o libfsm/syntax.o
+	rm -f libfsm/lexer.o libfsm/syntax.o libfsm/fsm.o
 	rm -f libfsm/libfsm.a
 
-libfsm/libfsm.a: $(OUT) libfsm/lexer.o libfsm/syntax.o cli/xmalloc.o
-	ar r libfsm/libfsm.a $(OUT) libfsm/lexer.o libfsm/syntax.o cli/xmalloc.o	# XXX xmalloc
+libfsm/libfsm.a: $(OUT) libfsm/lexer.o libfsm/syntax.o libfsm/fsm.o
+	ar r libfsm/libfsm.a $(OUT) libfsm/lexer.o libfsm/syntax.o libfsm/fsm.o
 	ranlib libfsm/libfsm.a
 
-cli/fsm: libfsm/libfsm.a libfsm/lexer.o libfsm/syntax.o cli/xmalloc.o cli/main.o $(OUT)
-	$(CC) -o cli/fsm $(CFLAGS) libfsm/lexer.o libfsm/syntax.o cli/xmalloc.o cli/main.o $(OUT)
+cli/fsm: cli/main.o libfsm/libfsm.a
+	$(CC) -o cli/fsm $(CFLAGS) cli/main.o libfsm/libfsm.a
 
 
 libfsm/lexer.c libfsm/lexer.h: libfsm/lexer.lxi libfsm/lexer.lct
@@ -37,6 +37,7 @@ libfsm/lexer.c: libfsm/syntax.h
 
 libfsm/syntax.c: libfsm/lexer.h
 
+cli/main.c: libfsm/syntax.h # XXX
 
 .c.o:
 	$(CC) -o $@ -c $< $(CFLAGS)

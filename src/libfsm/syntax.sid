@@ -5,7 +5,6 @@
 	int;
 	string;
 	state;
-	state-list;
 
 %terminals%
 
@@ -26,16 +25,16 @@
 %productions%
 
 	<add-state>: (:int) -> (:state);
+	<mark-start>: (:int) -> ();
 	<mark-end>: (:int) -> ();
 	<add-edge>: (:state, :state, :string) -> ();
-	<find-start-state>: (:int) -> (:state);
 	<epsilon>: () -> (:string);
 
 	<err-expected-sep>;
 	<err-expected-comma>;
 	<err-expected-start>;
 	<err-expected-end>;
-	<err-syntax>: () -> (:state-list, :state);
+	<err-parse>;
 
 
 	ids = {
@@ -113,11 +112,11 @@
 		edge;
 	};
 
-	fsm: () -> (ns :state) = {
+	fsm = {
 		edges;
 
 		n = xstart;
-		ns = <find-start-state>(n);
+		<mark-start>(n);
 
 		{
 			xend;
@@ -127,7 +126,7 @@
 
 		eof;
 	##
-		(s, ns) = <err-syntax>;
+		<err-parse>;
 	};
 
 %entry%

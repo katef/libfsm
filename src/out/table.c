@@ -5,6 +5,7 @@
 #include <fsm/fsm.h>
 
 #include "out/out.h"
+#include "libfsm/internal.h"
 
 static void hr(FILE *f, struct state_list *sl) {
 	struct state_list *x;
@@ -17,30 +18,27 @@ static void hr(FILE *f, struct state_list *sl) {
 	fprintf(f, "\n");
 }
 
-void out_table(FILE *f, const struct fsm_options *options,
-	struct state_list *sl, struct label_list *ll, struct fsm_state *start) {
+void out_table(FILE *f, const struct fsm *fsm) {
 	struct state_list *x;
 	struct label_list *y;
 	struct fsm_edge   *e;
 
-	(void) options;
-
 	fprintf(f, "%-9s ", "");
-	for (x = sl; x; x = x->next) {
+	for (x = fsm->sl; x; x = x->next) {
 		fprintf(f, "| %-2u ", x->state.id);
 	}
 
 	fprintf(f, "\n");
 
-	hr(f, sl);
+	hr(f, fsm->sl);
 
-	for (y = ll; y; y = y->next) {
+	for (y = fsm->ll; y; y = y->next) {
 		const char *label;
 
 		label = y->label == NULL ? "epsilon" : y->label;
 		fprintf(f, "%-9s ", label);
 
-		for (x = sl; x; x = x->next) {
+		for (x = fsm->sl; x; x = x->next) {
 			for (e = x->state.edges; e; e = e->next) {
 				if (y == e->label) {
 					fprintf(f, "| %-2u ", e->state->id);
@@ -56,14 +54,14 @@ void out_table(FILE *f, const struct fsm_options *options,
 		fprintf(f, "\n");
 	}
 
-	hr(f, sl);
+	hr(f, fsm->sl);
 
 	fprintf(f, "%-9s ", "start/end");
 
-	for (x = sl; x; x = x->next) {
+	for (x = fsm->sl; x; x = x->next) {
 		fprintf(f, "| %s%s ",
-			&x->state == start ? "S" : " ",
-			x->state.end ? "E" : " ");
+			&x->state == fsm_getstart(fsm) ? "S" : " ",
+			fsm_isend(fsm, &x->state) ? "E" : " ");
 	}
 
 	fprintf(f, "\n");
