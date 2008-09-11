@@ -17,6 +17,7 @@ clean:
 	rm -f $(OUT)
 	rm -f libfsm/lexer.c libfsm/lexer.h libfsm/syntax.c libfsm/syntax.h
 	rm -f libfsm/lexer.o libfsm/syntax.o
+	rm -f libfsm/libfsm.a
 
 libfsm/libfsm.a: $(OUT) libfsm/lexer.o libfsm/syntax.o cli/xmalloc.o
 	ar r libfsm/libfsm.a $(OUT) libfsm/lexer.o libfsm/syntax.o cli/xmalloc.o	# XXX xmalloc
