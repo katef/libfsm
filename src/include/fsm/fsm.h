@@ -60,7 +60,7 @@ fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
  * after a call to fsm_setoptions().
  */
 void
-fsm_setoptions(struct fsm *fsm, struct fsm_options *options);
+fsm_setoptions(struct fsm *fsm, const struct fsm_options *options);
 
 /*
  * Mark a given state as being an end state or not. The value of end is treated

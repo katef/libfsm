@@ -121,7 +121,7 @@ fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 }
 
 void
-fsm_setoptions(struct fsm *fsm, struct fsm_options *options)
+fsm_setoptions(struct fsm *fsm, const struct fsm_options *options)
 {
 	assert(fsm != NULL);
 	assert(options != NULL);
