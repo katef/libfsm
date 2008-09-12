@@ -6,7 +6,7 @@
 struct fsm_state {
 	unsigned int id;
 
-	int end;    /* boolean */
+	int end:1;    /* boolean */
 	struct fsm_edge *edges;
 };
 
