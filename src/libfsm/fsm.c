@@ -74,6 +74,10 @@ fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	struct label_list *p;
 	struct fsm_edge   *e;
 
+	if (label != NULL && strlen(label) == 0) {
+		return NULL;
+	}
+
 	/* Find an existing label */
 	for (p = fsm->ll; p; p = p->next) {
 		if (label == NULL && p->label == NULL) {

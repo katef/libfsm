@@ -111,6 +111,11 @@
 	@};
 
 	<add-edge>: (x :state, y :state, c :string) -> () = @{
+		if (@c != NULL && strlen(@c) == 0) {
+			fprintf(stderr, "empty label\n");
+			@!;
+		}
+
 		if (fsm_addedge(fsm, @x, @y, @c) == NULL) {
 			perror("fsm_addedge");
 			exit(EXIT_FAILURE);

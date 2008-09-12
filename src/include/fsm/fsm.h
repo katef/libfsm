@@ -45,8 +45,8 @@ fsm_addstate(struct fsm *fsm, unsigned int id, int end);
  * label. If an edge to that state of the same label already exists, the
  * existing edge is returned.
  *
- * The label may be empty for an unlabelled edge, or NULL for an epsilon
- * transition.
+ * The label may be NULL for an epsilon transition. Empty labels are not
+ * legal.
  *
  * Returns NULL on error; see errno.
  */
