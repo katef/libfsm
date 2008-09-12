@@ -8,6 +8,20 @@
 
 #include "internal.h"
 
+static unsigned int inventid(const struct fsm *fsm) {
+	unsigned int max;
+	struct state_list *p;
+
+	max = 0;
+	for (p = fsm->sl; p; p = p->next) {
+		if (p->state.id > max) {
+			max = p->state.id;
+		}
+	}
+
+	return max + 1;
+}
+
 struct fsm *
 fsm_new(void)
 {
@@ -56,7 +70,7 @@ fsm_addstate(struct fsm *fsm, unsigned int id, int end)
 			return NULL;
 		}
 
-		p->state.id    = id;
+		p->state.id    = id == 0 ? inventid(fsm) : id;
 		p->state.edges = NULL;
 		p->state.end   = end;
 
@@ -174,6 +188,7 @@ fsm_getstatebyid(const struct fsm *fsm, unsigned int id)
 	struct state_list *p;
 
 	assert(fsm != NULL);
+	assert(id != 0);
 
 	for (p = fsm->sl; p; p = p->next) {
 		if (p->state.id == id) {

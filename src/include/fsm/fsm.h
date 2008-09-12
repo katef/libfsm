@@ -33,9 +33,11 @@ fsm_free(struct fsm *fsm);
  * Add a state of the given id. An existing state is returned if the id is
  * already present.
  *
- * Returns NULL on error; see errno.
+ * The special id 0 may be used to indicate a state for which libfsm is to
+ * invent an arbitary ID during creation. The ID invented will not be used by
+ * any existing states.
  *
- * TODO: perhaps pass 0 to have libfsm invent a state? adjust lexer accordingly
+ * Returns NULL on error; see errno.
  */
 struct fsm_state *
 fsm_addstate(struct fsm *fsm, unsigned int id, int end);
@@ -91,6 +93,9 @@ fsm_getstart(const struct fsm *fsm);
 
 /*
  * Find a state by its id. Returns NULL if no start of the given id exists.
+ *
+ * The id may not be 0, which is a special value reserved for use by
+ * fsm_addstate().
  */
 struct fsm_state *
 fsm_getstatebyid(const struct fsm *fsm, unsigned int id);

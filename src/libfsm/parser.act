@@ -78,6 +78,11 @@
 %actions%
 
 	<add-state>: (n :int) -> (s :state) = @{
+		if (@n == 0) {
+			fprintf(stderr, "special id 0 is reserved.\n");
+			@!;
+		}
+
 		@s = fsm_addstate(fsm, @n, 0);
 
 		if (@s == NULL) {
