@@ -7,13 +7,14 @@
 
 #include <fsm/fsm.h>
 #include <fsm/parse.h>
+#include <fsm/graph.h>
 #include <fsm/out.h>
 
 extern int optind;
 extern char *optarg;
 
 void usage(void) {
-	printf("usage: fsm [-a] [<input> [<output>]]\n");
+	printf("usage: fsm [-ar] [<input> [<output>]]\n");
 }
 
 FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
@@ -35,13 +36,21 @@ int main(int argc, char *argv[]) {
 	FILE *out;
 	enum fsm_out format = FSM_OUT_FSM;
 
+	struct cli_options {
+		/* boolean: reverse the FSM as per fsm_reverse() */
+		int reverse:1;
+	};
+
 	static const struct fsm_options options_defaults;
 	struct fsm_options options = options_defaults;
+
+	static const struct cli_options cli_options_defaults;
+	struct cli_options cli_options = cli_options_defaults;
 
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hal:")) != -1) {
+		while ((c = getopt(argc, argv, "hal:r")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -62,6 +71,10 @@ int main(int argc, char *argv[]) {
 					fprintf(stderr, "unrecognised output language; valid languages are: fsm, dot, table\n");
 					exit(EXIT_FAILURE);
 				}
+				break;
+
+			case 'r':
+				cli_options.reverse = 1;
 				break;
 
 			case '?':
@@ -95,6 +108,20 @@ int main(int argc, char *argv[]) {
 		fsm_setoptions(fsm, &options);
 
 		fsm_parse(fsm, in);
+
+		if (cli_options.reverse) {
+			struct fsm *new;
+
+			new = fsm_reverse(fsm);
+			if (new == NULL) {
+				perror("fsm_reverse");
+				exit(EXIT_FAILURE);
+			}
+
+			fsm_free(fsm);
+			fsm = new;
+		}
+
 		fsm_print(fsm, out, format);
 
 		fsm_free(fsm);
