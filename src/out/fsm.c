@@ -34,7 +34,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 
 	end = 0;
 	for (s = fsm->sl; s; s = s->next) {
-		end += fsm_isend(fsm, &s->state);
+		end += !!fsm_isend(fsm, &s->state);
 	}
 
 	if (end == 0) {
