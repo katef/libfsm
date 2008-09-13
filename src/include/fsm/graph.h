@@ -6,10 +6,12 @@
 struct fsm;
 
 /*
- * Return a copy of the given fsm, reversed. This may be an NFA.
+ * Reverse the given fsm. This may result in an NFA.
+ *
+ * Returns fsm on success, or NULL on error.
  */
 struct fsm *
-fsm_reverse(const struct fsm *fsm);
+fsm_reverse(struct fsm *fsm);
 
 #endif
 

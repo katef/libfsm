@@ -110,16 +110,10 @@ int main(int argc, char *argv[]) {
 		fsm_parse(fsm, in);
 
 		if (cli_options.reverse) {
-			struct fsm *new;
-
-			new = fsm_reverse(fsm);
-			if (new == NULL) {
+			if (fsm_reverse(fsm) == NULL) {
 				perror("fsm_reverse");
 				exit(EXIT_FAILURE);
 			}
-
-			fsm_free(fsm);
-			fsm = new;
 		}
 
 		fsm_print(fsm, out, format);
