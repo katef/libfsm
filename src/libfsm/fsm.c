@@ -49,6 +49,26 @@ fsm_free(struct fsm *fsm)
 	/* TODO */
 }
 
+void
+fsm_move(struct fsm *dst, struct fsm *src)
+{
+	assert(src != NULL);
+	assert(dst != NULL);
+
+	dst->sl      = src->sl;
+	dst->ll      = src->ll;
+	dst->start   = src->start;
+	dst->options = src->options;
+
+#ifndef NDEBUG
+	src->sl    = NULL;
+	src->ll    = NULL;
+	src->start = NULL;
+#endif
+
+	free(src);
+}
+
 struct fsm_state *
 fsm_addstate(struct fsm *fsm, unsigned int id, int end)
 {

@@ -30,6 +30,12 @@ void
 fsm_free(struct fsm *fsm);
 
 /*
+ * Copy the contents of src over dst, and free src.
+ */
+void
+fsm_move(struct fsm *dst, struct fsm *src);
+
+/*
  * Add a state of the given id. An existing state is returned if the id is
  * already present.
  *
