@@ -14,7 +14,7 @@ extern int optind;
 extern char *optarg;
 
 void usage(void) {
-	printf("usage: fsm [-ar] [<input> [<output>]]\n");
+	printf("usage: fsm [-adr] [<input> [<output>]]\n");
 }
 
 FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
@@ -39,6 +39,9 @@ int main(int argc, char *argv[]) {
 	struct cli_options {
 		/* boolean: reverse the FSM as per fsm_reverse() */
 		int reverse:1;
+
+		/* boolean: convert to a DFA as per fsm_todfa() */
+		int todfa:1;
 	};
 
 	static const struct fsm_options options_defaults;
@@ -50,7 +53,7 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hal:r")) != -1) {
+		while ((c = getopt(argc, argv, "hal:dr")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -71,6 +74,10 @@ int main(int argc, char *argv[]) {
 					fprintf(stderr, "unrecognised output language; valid languages are: fsm, dot, table\n");
 					exit(EXIT_FAILURE);
 				}
+				break;
+
+			case 'd':
+				cli_options.todfa = 1;
 				break;
 
 			case 'r':
@@ -112,6 +119,13 @@ int main(int argc, char *argv[]) {
 		if (cli_options.reverse) {
 			if (fsm_reverse(fsm) == NULL) {
 				perror("fsm_reverse");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		if (cli_options.todfa) {
+			if (fsm_todfa(fsm) == NULL) {
+				perror("fsm_todfa");
 				exit(EXIT_FAILURE);
 			}
 		}

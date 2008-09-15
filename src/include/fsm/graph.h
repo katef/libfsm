@@ -13,5 +13,13 @@ struct fsm;
 struct fsm *
 fsm_reverse(struct fsm *fsm);
 
+/*
+ * Convert an fsm to a DFA.
+ *
+ * Returns fsm on success, or NULL on error.
+ */
+struct fsm *
+fsm_todfa(struct fsm *fsm);
+
 #endif
 

@@ -19,8 +19,8 @@ clean:
 	rm -f libfsm/lexer.o libfsm/parser.o libfsm/fsm.o
 	rm -f libfsm/libfsm.a
 
-libfsm/libfsm.a: $(OUT) libfsm/lexer.o libfsm/parser.o libfsm/fsm.o libfsm/graph.o libfsm/parser.o libfsm/out.o
-	ar r libfsm/libfsm.a $(OUT) libfsm/lexer.o libfsm/parser.o libfsm/fsm.o libfsm/graph.o libfsm/parser.o libfsm/out.o
+libfsm/libfsm.a: $(OUT) libfsm/lexer.o libfsm/parser.o libfsm/fsm.o libfsm/reverse.o libfsm/todfa.o libfsm/parser.o libfsm/out.o
+	ar r libfsm/libfsm.a $(OUT) libfsm/lexer.o libfsm/parser.o libfsm/fsm.o libfsm/reverse.o libfsm/todfa.o libfsm/parser.o libfsm/out.o
 	ranlib libfsm/libfsm.a
 
 cli/fsm: cli/main.o libfsm/libfsm.a

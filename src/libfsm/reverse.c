@@ -9,7 +9,7 @@
 #include "internal.h"
 
 struct fsm *
-fsm_reverse(struct fsm *fsm)
+fsm_reverse(const struct fsm *fsm)
 {
 	struct fsm *new;
 
@@ -133,8 +133,6 @@ fsm_reverse(struct fsm *fsm)
 		}
 	}
 
-	fsm_move(fsm, new);
-
-	return fsm;
+	return new;
 }
 
