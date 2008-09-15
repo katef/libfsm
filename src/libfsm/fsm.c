@@ -44,9 +44,23 @@ fsm_new(void)
 void
 fsm_free(struct fsm *fsm)
 {
+	void *next;
+	struct state_list *sl;
+	struct label_list *ll;
+
 	assert(fsm != NULL);
 
-	/* TODO */
+	for (sl = fsm->sl; sl; sl = next) {
+		next = sl->next;
+		free(sl);
+	}
+
+	for (ll = fsm->ll; ll; ll = next) {
+		next = ll->next;
+		free(ll);
+	}
+
+	free(fsm);
 }
 
 void

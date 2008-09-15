@@ -42,13 +42,23 @@ struct mapping {
 };
 
 void free_set(struct set *set) {
-	/* TODO */
-	(void) set;
+	struct set *p;
+	struct set *next;
+
+	for (p = set; p; p = next) {
+		next = p->next;
+		free(p);
+	}
 }
 
 void free_mappings(struct mapping *m) {
-	/* TODO */
-	(void) m;
+	struct mapping *p;
+	struct mapping *next;
+
+	for (p = m; p; p = next) {
+		next = p->next;
+		free(p);
+	}
 }
 
 /* Find if a label is in a set */
