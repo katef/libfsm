@@ -57,6 +57,8 @@ fsm_addstate(struct fsm *fsm, unsigned int id, int end);
  * legal.
  *
  * Returns NULL on error; see errno.
+ *
+ * TODO: explain if label may be free()d after this call.
  */
 struct fsm_edge *
 fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
