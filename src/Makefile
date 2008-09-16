@@ -8,7 +8,7 @@ CC = gcc
 
 CFLAGS += -I include -I .
 
-OUT = out/fsm.o out/dot.o out/table.o
+OUT = out/fsm.o out/dot.o out/table.o out/c.o
 
 all: cli/fsm libfsm/libfsm.a
 

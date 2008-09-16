@@ -70,8 +70,10 @@ int main(int argc, char *argv[]) {
 					format = FSM_OUT_DOT;
 				} else if (0 == strcmp(optarg, "table")) {
 					format = FSM_OUT_TABLE;
+				} else if (0 == strcmp(optarg, "c")) {
+					format = FSM_OUT_C;
 				} else {
-					fprintf(stderr, "unrecognised output language; valid languages are: fsm, dot, table\n");
+					fprintf(stderr, "unrecognised output language; valid languages are: fsm, dot, table, c\n");
 					exit(EXIT_FAILURE);
 				}
 				break;
