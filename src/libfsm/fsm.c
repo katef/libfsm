@@ -22,6 +22,53 @@ static unsigned int inventid(const struct fsm *fsm) {
 	return max + 1;
 }
 
+static void free_contents(struct fsm *fsm) {
+	void *next;
+	struct state_list *s;
+	struct label_list *l;
+	struct fsm_edge *e;
+#ifndef NDEBUG
+	static const struct fsm_state state_defaults;
+#endif
+
+	assert(fsm != NULL);
+
+	for (s = fsm->sl; s; s = next) {
+		struct fsm_edge *e_next;
+
+		next = s->next;
+
+		for (e = s->state.edges; e; e = e_next) {
+			e_next = e->next;
+
+#ifndef NDEBUG
+			e->label = NULL;
+			e->state = NULL;
+			e->next  = NULL;
+#endif
+			free(e);
+		}
+
+#ifndef NDEBUG
+		s->state = state_defaults;
+		s->next = NULL;
+#endif
+
+		free(s);
+	}
+
+	for (l = fsm->ll; l; l = next) {
+		next = l->next;
+
+		/* XXX: free from strduping from parser.c; we ought to stdup on ll creation instead */
+#ifndef NDEBUG
+		l->label = NULL;
+#endif
+
+		free(l);
+	}
+}
+
 struct fsm *
 fsm_new(void)
 {
@@ -44,21 +91,9 @@ fsm_new(void)
 void
 fsm_free(struct fsm *fsm)
 {
-	void *next;
-	struct state_list *sl;
-	struct label_list *ll;
-
 	assert(fsm != NULL);
 
-	for (sl = fsm->sl; sl; sl = next) {
-		next = sl->next;
-		free(sl);
-	}
-
-	for (ll = fsm->ll; ll; ll = next) {
-		next = ll->next;
-		free(ll);
-	}
+	free_contents(fsm);
 
 	free(fsm);
 }
@@ -68,6 +103,8 @@ fsm_move(struct fsm *dst, struct fsm *src)
 {
 	assert(src != NULL);
 	assert(dst != NULL);
+
+	free_contents(dst);
 
 	dst->sl      = src->sl;
 	dst->ll      = src->ll;
