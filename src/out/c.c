@@ -49,7 +49,7 @@ static void stateenum(FILE *f, struct state_list *sl) {
 	fprintf(f, "\t} state;\n");
 }
 
-static void endstates(FILE *f, struct fsm *fsm, struct state_list *sl) {
+static void endstates(FILE *f, const struct fsm *fsm, struct state_list *sl) {
 	struct state_list *s;
 
 	fprintf(f, "\t/* end states */\n");
