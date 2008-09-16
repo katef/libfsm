@@ -98,6 +98,62 @@ fsm_free(struct fsm *fsm)
 	free(fsm);
 }
 
+struct fsm *
+fsm_copy(struct fsm *fsm)
+{
+	struct state_list *s;
+	struct fsm_edge *e;
+	struct fsm *new;
+
+	new = fsm_new();
+	if (new == NULL) {
+		return NULL;
+	}
+
+	/* recreate states */
+	for (s = fsm->sl; s; s = s->next) {
+		struct fsm_state *state;
+
+		state = fsm_addstate(new, s->state.id);
+		if (state == NULL) {
+			fsm_free(new);
+			return NULL;
+		}
+
+		if (fsm_isend(fsm, &s->state)) {
+			fsm_setend(new, state, 1);
+		}
+	}
+
+	/* recreate edges */
+	for (s = fsm->sl; s; s = s->next) {
+		for (e = s->state.edges; e; e = e->next) {
+			struct fsm_state *from;
+			struct fsm_state *to;
+
+			from = fsm_getstatebyid(new, s->state.id);
+			to   = fsm_getstatebyid(new, e->state->id);
+
+			assert(from != NULL);
+			assert(to   != NULL);
+
+			if (fsm_addedge(new, from, to, e->label->label) == NULL) {
+				fsm_free(new);
+				return NULL;
+			}
+		}
+	}
+
+	new->start = fsm_getstatebyid(new, fsm->start->id);
+	if (new->start == NULL) {
+		return NULL;
+	}
+
+	new->options = fsm->options;
+
+	return new;
+}
+
 void
 fsm_move(struct fsm *dst, struct fsm *src)
 {
