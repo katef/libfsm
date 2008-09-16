@@ -83,7 +83,7 @@
 			@!;
 		}
 
-		@s = fsm_addstate(fsm, @n, 0);
+		@s = fsm_addstate(fsm, @n);
 
 		if (@s == NULL) {
 			perror("fsm_addstate");

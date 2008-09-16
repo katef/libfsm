@@ -140,7 +140,7 @@ static struct mapping *addtoml(struct fsm *dfa, struct mapping **ml, struct set 
 	}
 
 	p->closure = closure;
-	p->dfastate = fsm_addstate(dfa, 0, 0);	/* TODO: does anybody use that parameter? */
+	p->dfastate = fsm_addstate(dfa, 0);
 	if (p->dfastate == NULL) {
 		free(p);
 		return NULL;

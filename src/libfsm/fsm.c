@@ -84,7 +84,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 }
 
 struct fsm_state *
-fsm_addstate(struct fsm *fsm, unsigned int id, int end)
+fsm_addstate(struct fsm *fsm, unsigned int id)
 {
 	struct state_list *p;
 
@@ -106,7 +106,7 @@ fsm_addstate(struct fsm *fsm, unsigned int id, int end)
 
 		p->state.id    = id == 0 ? inventid(fsm) : id;
 		p->state.edges = NULL;
-		p->state.end   = end;
+		p->state.end   = 0;
 
 		p->next = fsm->sl;
 		fsm->sl = p;

@@ -46,7 +46,7 @@ fsm_move(struct fsm *dst, struct fsm *src);
  * Returns NULL on error; see errno.
  */
 struct fsm_state *
-fsm_addstate(struct fsm *fsm, unsigned int id, int end);
+fsm_addstate(struct fsm *fsm, unsigned int id);
 
 /*
  * Add an edge from a given state to a given state, labelled with the given

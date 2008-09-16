@@ -27,7 +27,7 @@ fsm_reverse(struct fsm *fsm)
 		struct state_list *s;
 
 		for (s = fsm->sl; s; s = s->next) {
-			if (fsm_addstate(new, s->state.id, 0) == NULL) {
+			if (fsm_addstate(new, s->state.id) == NULL) {
 				fsm_free(new);
 				return NULL;
 			}
@@ -79,7 +79,7 @@ fsm_reverse(struct fsm *fsm)
 			{
 				struct fsm_state *start;
 
-				start = fsm_addstate(new, 0, 0);
+				start = fsm_addstate(new, 0);
 				if (start == NULL) {
 					return NULL;
 				}
@@ -110,7 +110,7 @@ fsm_reverse(struct fsm *fsm)
 			{
 				struct fsm_state *start;
 
-				start = fsm_addstate(new, 0, 0);
+				start = fsm_addstate(new, 0);
 				if (start == NULL) {
 					return NULL;
 				}
