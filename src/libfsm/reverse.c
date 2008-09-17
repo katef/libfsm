@@ -135,6 +135,6 @@ fsm_reverse(struct fsm *fsm)
 
 	fsm_move(fsm, new);
 
-	return new;
+	return fsm;
 }
 
