@@ -99,8 +99,8 @@ fsm_reverse(struct fsm *fsm)
 		case 1:
 			/* Since there's only one state, we can indicate it directly */
 			for (s = fsm->sl; s; s = s->next) {
-				if (fsm_isend(new, &s->state)) {
-					fsm_setstart(new, &s->state);
+				if (fsm_isend(fsm, &s->state)) {
+					fsm_setstart(new, fsm_getstatebyid(new, s->state.id));
 				}
 			}
 			break;
