@@ -21,5 +21,13 @@ fsm_reverse(struct fsm *fsm);
 struct fsm *
 fsm_todfa(struct fsm *fsm);
 
+/*
+ * Minimize an FSM to its canonical form.
+ *
+ * Returns fsm on success, or NULL on error.
+ */
+struct fsm *
+fsm_minimize(struct fsm *fsm);
+
 #endif
 

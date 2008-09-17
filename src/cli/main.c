@@ -14,7 +14,7 @@ extern int optind;
 extern char *optarg;
 
 void usage(void) {
-	printf("usage: fsm [-adr] [<input> [<output>]]\n");
+	printf("usage: fsm [-adrm] [<input> [<output>]]\n");
 }
 
 FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
@@ -42,6 +42,9 @@ int main(int argc, char *argv[]) {
 
 		/* boolean: convert to a DFA as per fsm_todfa() */
 		int todfa:1;
+
+		/* boolean: minimize redundant transitions */
+		int minimize:1;
 	};
 
 	static const struct fsm_options options_defaults;
@@ -53,7 +56,7 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hal:dr")) != -1) {
+		while ((c = getopt(argc, argv, "hal:drm")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -61,6 +64,10 @@ int main(int argc, char *argv[]) {
 
 			case 'a':
 				options.anonymous_states = 1;
+				break;
+
+			case 'm':
+				cli_options.minimize = 1;
 				break;
 
 			case 'l':
@@ -128,6 +135,13 @@ int main(int argc, char *argv[]) {
 		if (cli_options.todfa) {
 			if (fsm_todfa(fsm) == NULL) {
 				perror("fsm_todfa");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		if (cli_options.minimize) {
+			if (fsm_minimize(fsm) == NULL) {
+				perror("fsm_minimize");
 				exit(EXIT_FAILURE);
 			}
 		}
