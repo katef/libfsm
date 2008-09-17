@@ -165,16 +165,17 @@ static struct mapping *addtoml(struct fsm *dfa, struct mapping **ml, struct set 
  * This is an internal routine for convenience of recursion; the
  * state_closure() and set_closure() interfaces ought to be called, instead.
  *
- * FIXME: Returning an empty list is indistinguishable from error.
+ * Returns closure on success, NULL on error.
  */
-static struct set *epsilon_closure(const struct fsm_state *state, struct set *ec) {
+static struct set **epsilon_closure(const struct fsm_state *state, struct set **closure) {
 	struct fsm_edge *p;
 	struct set *s;
 
 	assert(state != NULL);
+	assert(closure != NULL);
 
-	/* Find if the given state is already in ec */
-	for (s = ec; s; s = s->next) {
+	/* Find if the given state is already in the closure */
+	for (s = *closure; s; s = s->next) {
 		if (s->state == state) {
 			break;
 		}
@@ -182,7 +183,7 @@ static struct set *epsilon_closure(const struct fsm_state *state, struct set *ec
 
 	/* If the given state is already in the closure set, we don't need to add it again; end recursion */
 	if (s != NULL) {
-		return ec;
+		return closure;
 	}
 
 	/* Create a new entry */
@@ -191,19 +192,21 @@ static struct set *epsilon_closure(const struct fsm_state *state, struct set *ec
 		return NULL;
 	}
 
-	s->next  = ec;
+	s->next  = *closure;
 	s->state = state;
 	s->label = NULL;
-	ec = s;
+	*closure = s;
 
 	/* Follow each epsilon transition */
 	for (p = state->edges; p; p = p->next) {
 		if (p->label->label == NULL) {
-			ec = epsilon_closure(p->state, ec);
+			if (epsilon_closure(p->state, closure) == NULL) {
+				return NULL;
+			}
 		}
 	}
 
-	return ec;
+	return closure;
 }
 
 /*
@@ -215,8 +218,15 @@ static struct fsm_state *state_closure(struct mapping **ml, struct fsm *dfa, con
 	struct mapping *m;
 
 	assert(ml != NULL);
+	assert(dfa != NULL);
+	assert(nfastate != NULL);
 
-	ec = epsilon_closure(nfastate, NULL);
+	ec = NULL;
+	if (epsilon_closure(nfastate, &ec) == NULL) {
+		free_set(ec);
+		return NULL;
+	}
+
 	if (ec == NULL) {
 		return NULL;
 	}
@@ -243,8 +253,10 @@ static struct fsm_state *set_closure(struct mapping **ml, struct fsm *dfa, struc
 
 	ec = NULL;
 	for (p = set; p; p = p->next) {
-		ec = epsilon_closure(p->state, ec);
-		/* TODO: test ec */
+		if (epsilon_closure(p->state, &ec) == NULL) {
+			free_set(ec);
+			return NULL;
+		}
 	}
 
 	m = addtoml(dfa, ml, ec);
@@ -258,6 +270,8 @@ static struct fsm_state *set_closure(struct mapping **ml, struct fsm *dfa, struc
  */
 static int containsendstate(struct fsm *fsm, struct set *set) {
 	struct set *s;
+
+	assert(fsm != NULL);
 
 	for (s = set; s; s = s->next) {
 		if (fsm_isend(fsm, s->state)) {
@@ -287,15 +301,16 @@ static struct mapping *nextnotdone(struct mapping *ml) {
  * List all states within a set which are reachable via non-epsilon
  * transitions (that is, have a label associated with them).
  *
- * TODO: Consider folding in to nfatodfa() below.
- * FIXME: Cannot differentiate between NULL/error.
+ * Returns l on success, NULL on error.
  */
-static struct set *listnonepsilonstates(struct set *set) {
-	struct set *l;
+static struct set **listnonepsilonstates(struct set **l, struct set *set) {
 	struct set *s;
 	struct fsm_edge *e;
 
-	l = NULL;
+	assert(l != NULL);
+	assert(set != NULL);
+
+	*l = NULL;
 	for (s = set; s; s = s->next) {
 		for (e = s->state->edges; e; e = e->next) {
 			struct set *p;
@@ -306,20 +321,20 @@ static struct set *listnonepsilonstates(struct set *set) {
 			}
 
 			/* Skip labels we've already got */
-			if (labelin(e->label->label, l)) {
+			if (labelin(e->label->label, *l)) {
 				continue;
 			}
 
 			p = malloc(sizeof *p);
 			if (p == NULL) {
-				free_set(l);
+				free_set(*l);
 				return NULL;
 			}
 
 			p->state = e->state;
 			p->label = e->label->label;
-			p->next = l;
-			l = p;
+			p->next = *l;
+			*l = p;
 		}
 	}
 
@@ -426,7 +441,9 @@ static void nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 		 * (computed on insertion to ml), these labels directly reach the next
 		 * states in the NFA.
 		 */
-		nes = listnonepsilonstates(curr->closure);
+		if (listnonepsilonstates(&nes, curr->closure) == NULL) {
+			return;
+		}
 
 		for (s = nes; s; s = s->next) {
 			struct fsm_state *new;
