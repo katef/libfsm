@@ -38,7 +38,13 @@ fsm_reverse(struct fsm *fsm)
 	 * The new end state is the previous start state. Because there is exactly
 	 * one start state, the new FSM will have exactly one end state.
 	 */
-	fsm_setend(new, fsm_getstatebyid(new, fsm->start->id), 1);
+	{
+		struct fsm_state *end;
+
+		end = fsm_getstatebyid(new, fsm->start->id);
+		assert(end != NULL);
+		fsm_setend(new, end, 1);
+	}
 
 	/* Create reversed edges */
 	{
@@ -100,7 +106,12 @@ fsm_reverse(struct fsm *fsm)
 			/* Since there's only one state, we can indicate it directly */
 			for (s = fsm->sl; s; s = s->next) {
 				if (fsm_isend(fsm, &s->state)) {
-					fsm_setstart(new, fsm_getstatebyid(new, s->state.id));
+					struct fsm_state *start;
+
+					start = fsm_getstatebyid(new, s->state.id);
+					assert(start != NULL);
+
+					fsm_setstart(new, start);
 				}
 			}
 			break;
@@ -118,11 +129,15 @@ fsm_reverse(struct fsm *fsm)
 				fsm_setstart(new, start);
 
 				for (s = new->sl; s; s = s->next) {
+					struct fsm_state *state;
+
 					if (&s->state == start) {
 						continue;
 					}
 
-					if (!fsm_isend(fsm, fsm_getstatebyid(fsm, s->state.id))) {
+					state = fsm_getstatebyid(fsm, s->state.id);
+					assert(state != NULL);
+					if (!fsm_isend(fsm, state)) {
 						continue;
 					}
 
