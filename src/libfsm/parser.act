@@ -19,18 +19,18 @@
 
 %header% @{
 
-	#include <stdlib.h>
 	#include <stdio.h>
 	#include <stdlib.h>
 	#include <string.h>
 
 	#include <fsm/fsm.h>
 
+	#include "xalloc.h"
 	#include "lexer.h"
 	#include "parser.h"
 
 	typedef unsigned int       usint;
-	typedef const char *       string;
+	typedef char *             string;
 	typedef struct fsm_state * state;
 
 	int lex_tok;
@@ -47,18 +47,6 @@
 		exit(EXIT_FAILURE);
 	}
 
-	static char *xstrdup(const char *s) {
-		char *new;
-
-		new = malloc(strlen(s) + 1);
-		if (!new) {
-			perror("xstrdup");
-			exit(EXIT_FAILURE);
-		}
-
-		return strcpy(new, s);
-	}
-
 @}, @{
 
 	typedef struct fsm * fsm;
@@ -73,6 +61,10 @@
 
 	label: () -> (s :string) = @{
 		@s = xstrdup(lex_tokbuf);
+		if (@s == NULL) {
+			perror("xstrdup");
+			exit(EXIT_FAILURE);
+		}
 	@};
 
 %actions%
@@ -129,6 +121,10 @@
 
 	<epsilon>: () -> (s :string) = @{
 		@s = NULL;
+	@};
+
+	<free>: (s :string) -> () = @{
+		free(@s);
 	@};
 
 

@@ -7,6 +7,7 @@
 #include <fsm/fsm.h>
 
 #include "internal.h"
+#include "xalloc.h"
 
 static unsigned int inventid(const struct fsm *fsm) {
 	unsigned int max;
@@ -60,7 +61,8 @@ static void free_contents(struct fsm *fsm) {
 	for (l = fsm->ll; l; l = next) {
 		next = l->next;
 
-		/* XXX: free from strduping from parser.c; we ought to stdup on ll creation instead */
+		free(l->label);
+
 #ifndef NDEBUG
 		l->label = NULL;
 #endif
@@ -241,7 +243,15 @@ fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 			return NULL;
 		}
 
-		p->label = label;
+		if (label == NULL) {
+			p->label = NULL;
+		} else {
+			p->label = xstrdup(label);
+			if (p->label == NULL) {
+				free(p);
+				return NULL;
+			}
+		}
 
 		p->next = fsm->ll;
 		fsm->ll = p;

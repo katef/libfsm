@@ -87,6 +87,7 @@ fsm_reverse(struct fsm *fsm)
 
 				start = fsm_addstate(new, 0);
 				if (start == NULL) {
+					fsm_free(new);
 					return NULL;
 				}
 
@@ -123,6 +124,7 @@ fsm_reverse(struct fsm *fsm)
 
 				start = fsm_addstate(new, 0);
 				if (start == NULL) {
+					fsm_free(new);
 					return NULL;
 				}
 

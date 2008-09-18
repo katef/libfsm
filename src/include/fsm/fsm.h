@@ -64,9 +64,11 @@ fsm_addstate(struct fsm *fsm, unsigned int id);
  * The label may be NULL for an epsilon transition. Empty labels are not
  * legal.
  *
- * Returns NULL on error; see errno.
+ * If non-NULL, the contents of the label are duplicated and stored
+ * internally. Therefore the memory passed may be deallocated after a call
+ * to fsm_addedge().
  *
- * TODO: explain if label may be free()d after this call.
+ * Returns NULL on error; see errno.
  */
 struct fsm_edge *
 fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
