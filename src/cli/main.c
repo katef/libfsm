@@ -38,13 +38,13 @@ int main(int argc, char *argv[]) {
 
 	struct cli_options {
 		/* boolean: reverse the FSM as per fsm_reverse() */
-		int reverse:1;
+		unsigned int reverse:1;
 
 		/* boolean: convert to a DFA as per fsm_todfa() */
-		int todfa:1;
+		unsigned int todfa:1;
 
 		/* boolean: minimize redundant transitions */
-		int minimize:1;
+		unsigned int minimize:1;
 	};
 
 	static const struct fsm_options options_defaults;
