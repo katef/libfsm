@@ -26,7 +26,7 @@ struct state_list {
 
 /* global registry of all labels */
 struct label_list {
-	const char *label;
+	char *label;
 	struct label_list *next;
 };
 
