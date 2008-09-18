@@ -13,6 +13,13 @@
 static void singlecase(FILE *f, const struct fsm_state *state) {
 	struct fsm_edge *e;
 
+	/* no edges */
+	if (state->edges == NULL) {
+		fprintf(f, "\t\t\treturn 0;\n");
+		return;
+	}
+
+	/* usual case */
 	fprintf(f, "\t\t\tswitch (c) {\n");
 	for (e = state->edges; e; e = e->next) {
 		assert(e->label->label != NULL);
@@ -52,6 +59,22 @@ static void stateenum(FILE *f, struct state_list *sl) {
 static void endstates(FILE *f, const struct fsm *fsm, struct state_list *sl) {
 	struct state_list *s;
 
+	/* no end states */
+	{
+		int endcount;
+
+		endcount = 0;
+		for (s = sl; s; s = s->next) {
+			endcount += !!fsm_isend(fsm, &s->state);
+		}
+
+		if (endcount == 0) {
+			printf("\treturn EOF; /* unexpected EOF */\n");
+			return;
+		}
+	}
+
+	/* usual case */
 	fprintf(f, "\t/* end states */\n");
 	fprintf(f, "\tswitch (state) {\n");
 	for (s = sl; s; s = s->next) {
