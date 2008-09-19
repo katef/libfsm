@@ -1,5 +1,6 @@
 /* $Id$ */
 
+#include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -9,12 +10,13 @@
 #include <fsm/parse.h>
 #include <fsm/graph.h>
 #include <fsm/out.h>
+#include <fsm/exec.h>
 
 extern int optind;
 extern char *optarg;
 
 void usage(void) {
-	printf("usage: fsm [-adrm] [<input> [<output>]]\n");
+	printf("usage: fsm [-hadmr] [-l <language] [-e <execution>] [<input> [<output>]]\n");
 }
 
 FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
@@ -31,6 +33,18 @@ FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
 	return f;
 }
 
+static int exec_getc(void *opaque) {
+	char **p = opaque;
+	int c;
+
+	assert(opaque != NULL);
+
+	c = **p != '\0' ? **p : EOF;
+	(*p)++;
+
+	return c;
+}
+
 int main(int argc, char *argv[]) {
 	FILE *in;
 	FILE *out;
@@ -45,6 +59,8 @@ int main(int argc, char *argv[]) {
 
 		/* boolean: minimize redundant transitions */
 		unsigned int minimize:1;
+
+		const char *execute;
 	};
 
 	static const struct fsm_options options_defaults;
@@ -56,7 +72,7 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hal:drm")) != -1) {
+		while ((c = getopt(argc, argv, "hal:de:mr")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -64,10 +80,6 @@ int main(int argc, char *argv[]) {
 
 			case 'a':
 				options.anonymous_states = 1;
-				break;
-
-			case 'm':
-				cli_options.minimize = 1;
 				break;
 
 			case 'l':
@@ -87,6 +99,14 @@ int main(int argc, char *argv[]) {
 
 			case 'd':
 				cli_options.todfa = 1;
+				break;
+
+			case 'e':
+				cli_options.execute = optarg;
+				break;
+
+			case 'm':
+				cli_options.minimize = 1;
 				break;
 
 			case 'r':
@@ -146,7 +166,18 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+		/* TODO: make optional */
 		fsm_print(fsm, out, format);
+
+		if (cli_options.execute != NULL) {
+			int e;
+
+			e = fsm_exec(fsm, exec_getc, &cli_options.execute);
+
+			fsm_free(fsm);
+
+			return e ? 0 : 1;
+		}
 
 		fsm_free(fsm);
 	}
