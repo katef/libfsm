@@ -105,8 +105,6 @@ void out_c(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "#include <stdio.h>\n");
 	fprintf(f, "\n");
 	fprintf(f, "extern int fsm_getc(void *opaque);\n");
-	fprintf(f, "\n");
-	fprintf(f, "int fsm_main(void *opaque);\n");
 
 	fprintf(f, "\n");
 
