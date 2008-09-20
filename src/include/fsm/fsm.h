@@ -96,6 +96,12 @@ int
 fsm_isend(const struct fsm *fsm, const struct fsm_state *state);
 
 /*
+ * Return true if a given FSM has an end state.
+ */
+int
+fsm_hasend(const struct fsm *fsm);
+
+/*
  * Register a given state as the start state for an FSM. There may only be one
  * start state; this assignment displaces a previous start-state, if a previous
  * start state exists.

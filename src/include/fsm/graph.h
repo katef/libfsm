@@ -22,6 +22,12 @@ struct fsm *
 fsm_todfa(struct fsm *fsm);
 
 /*
+ * Returns true if a given FSM is a DFA.
+ */
+int
+fsm_isdfa(const struct fsm *fsm);
+
+/*
  * Minimize an FSM to its canonical form.
  *
  * Returns fsm on success, or NULL on error.

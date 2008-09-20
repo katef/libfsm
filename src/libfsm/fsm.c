@@ -302,6 +302,22 @@ fsm_isend(const struct fsm *fsm, const struct fsm_state *state)
 	return state->end;
 }
 
+int
+fsm_hasend(const struct fsm *fsm)
+{
+	const struct state_list *s;
+
+	assert(fsm != NULL);
+
+	for (s = fsm->sl; s; s = s->next) {
+		if (fsm_isend(fsm, &s->state)) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 void
 fsm_setstart(struct fsm *fsm, struct fsm_state *state)
 {

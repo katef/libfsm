@@ -16,7 +16,7 @@ extern int optind;
 extern char *optarg;
 
 void usage(void) {
-	printf("usage: fsm [-hadmr] [-l <language] [-e <execution>] [<input> [<output>]]\n");
+	printf("usage: fsm [-hadmr] [-l <language] [-e <execution> | -q <query] [<input> [<output>]]\n");
 }
 
 FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
@@ -60,6 +60,10 @@ int main(int argc, char *argv[]) {
 		/* boolean: minimize redundant transitions */
 		unsigned int minimize:1;
 
+		/* boolean: query properties */
+		unsigned int query:1;
+		enum query { QUERY_DFA, QUERY_END } query_property;
+
 		const char *execute;
 	};
 
@@ -72,7 +76,7 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hal:de:mr")) != -1) {
+		while ((c = getopt(argc, argv, "hal:de:mrq:")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -113,11 +117,28 @@ int main(int argc, char *argv[]) {
 				cli_options.reverse = 1;
 				break;
 
+			case 'q':
+				cli_options.query = 1;
+				if (0 == strcmp(optarg, "dfa")) {
+					cli_options.query_property = QUERY_DFA;
+				} else if (0 == strcmp(optarg, "end")) {
+					cli_options.query_property = QUERY_END;
+				} else {
+					fprintf(stderr, "unrecognised query property; valid properties are: dfa, end\n");
+					exit(EXIT_FAILURE);
+				}
+				break;
+
 			case '?':
 			default:
 				usage();
 				exit(EXIT_FAILURE);
 			}
+		}
+
+		if (cli_options.query && cli_options.execute != NULL) {
+			fprintf(stderr, "query and execution are mutually exclusive\n");
+			exit(EXIT_FAILURE);
 		}
 
 		argc -= optind;
@@ -177,6 +198,24 @@ int main(int argc, char *argv[]) {
 			fsm_free(fsm);
 
 			return e ? 0 : 1;
+		}
+
+		if (cli_options.query) {
+			int q;
+
+			switch (cli_options.query_property) {
+			case QUERY_DFA:
+				q = fsm_isdfa(fsm);
+				break;
+
+			case QUERY_END:
+				q = fsm_hasend(fsm);
+				break;
+			}
+
+			fsm_free(fsm);
+
+			return q ? 0 : 1;
 		}
 
 		fsm_free(fsm);
