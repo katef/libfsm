@@ -9,6 +9,9 @@ CC = gcc
 CFLAGS += -I include -I .
 
 OUT = out/fsm.o out/dot.o out/table.o out/c.o
+LIBFSM = libfsm/lexer.o libfsm/parser.o libfsm/xalloc.o libfsm/fsm.o \
+	libfsm/reverse.o libfsm/todfa.o libfsm/isdfa.o libfsm/minimize.o \
+	libfsm/exec.o libfsm/out.o
 
 all: cli/fsm libfsm/libfsm.a
 
@@ -16,11 +19,10 @@ clean:
 	rm -f cli/fsm cli/main.o
 	rm -f $(OUT)
 	rm -f libfsm/lexer.c libfsm/lexer.h libfsm/parser.c libfsm/parser.h
-	rm -f libfsm/lexer.o libfsm/parser.o libfsm/fsm.o
-	rm -f libfsm/libfsm.a
+	rm -f $(LIBFSM) libfsm/libfsm.a
 
-libfsm/libfsm.a: $(OUT) libfsm/lexer.o libfsm/parser.o libfsm/xalloc.o libfsm/fsm.o libfsm/reverse.o libfsm/todfa.o libfsm/isdfa.o libfsm/minimize.o libfsm/exec.o libfsm/out.o
-	ar r libfsm/libfsm.a $(OUT) libfsm/lexer.o libfsm/parser.o libfsm/xalloc.o libfsm/fsm.o libfsm/reverse.o libfsm/todfa.o libfsm/isdfa.o libfsm/minimize.o libfsm/exec.o libfsm/out.o
+libfsm/libfsm.a: $(OUT) $(LIBFSM)
+	ar r libfsm/libfsm.a $(OUT) $(LIBFSM)
 	ranlib libfsm/libfsm.a
 
 cli/fsm: cli/main.o libfsm/libfsm.a
