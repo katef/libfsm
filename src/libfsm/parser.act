@@ -38,9 +38,9 @@
 
 	#define CURRENT_TERMINAL lex_tok
 	#define ERROR_TERMINAL   lex_unknown
-	#define ADVANCE_LEXER    do { lex_tok = lex_nexttoken();             } while (0);
-	#define SAVE_LEXER(tok)  do { lex_tok_save = lex_tok; lex_tok = tok; } while (0);
-	#define RESTORE_LEXER    do { lex_tok = lex_tok_save;                } while (0);
+	#define ADVANCE_LEXER    do { lex_tok = lex_nexttoken();             } while (0)
+	#define SAVE_LEXER(tok)  do { lex_tok_save = lex_tok; lex_tok = tok; } while (0)
+	#define RESTORE_LEXER    do { lex_tok = lex_tok_save;                } while (0)
 
 	static void err_expected(const char *token) {
 		fprintf(stderr, "syntax error: expected %s\n", token);
