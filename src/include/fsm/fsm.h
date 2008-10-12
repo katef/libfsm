@@ -84,10 +84,13 @@ fsm_setoptions(struct fsm *fsm, const struct fsm_options *options);
 
 /*
  * Mark a given state as being an end state or not. The value of end is treated
- * as a boolean.
+ * as a boolean; if zero, the state is not an end state. If non-zero, the state
+ * is marked as an end state, and the value is used to distinguish between
+ * various different end states during execution of the FSM. The maximum value
+ * permitted is INT_MAX.
  */
 void
-fsm_setend(struct fsm *fsm, struct fsm_state *state, int end);
+fsm_setend(struct fsm *fsm, struct fsm_state *state, unsigned int end);
 
 /*
  * Return if a given state is an end state.

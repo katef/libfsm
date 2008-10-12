@@ -82,10 +82,9 @@ static void endstates(FILE *f, const struct fsm *fsm, struct state_list *sl) {
 			continue;
 		}
 
-		/* TODO: pass a value to return when marking end states. 53 is a placeholder */
-		assert(53U < INT_MAX);
-		fprintf(f, "\tcase S%u: return %u; /* TODO */\n",
-			s->state.id, 53U);
+		assert(s->state.end <= INT_MAX && s->state.end > 0);
+		fprintf(f, "\tcase S%d: return %u;\n",
+			s->state.id, s->state.end);
 	}
 	fprintf(f, "\tdefault: return EOF; /* unexpected EOF */\n");
 	fprintf(f, "\t}\n");

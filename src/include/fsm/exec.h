@@ -12,7 +12,8 @@ struct fsm;
  * input.
  *
  * Returns true on a successful parse, and false for unexpected input, or
- * premature EOF.
+ * premature EOF. If true, the value of the end state as set by fsm_setend()
+ * is returned.
  *
  * The given FSM is expected to be a DFA.
  */
