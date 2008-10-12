@@ -43,8 +43,6 @@ int fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque)
 	state = fsm->start;
 
 	while ((c = fsm_getc(opaque)) != EOF) {
-		struct fsm_edge *e;
-
 		state = nextstate(state->edges, c);
 		if (state == NULL) {
 			return 0;
