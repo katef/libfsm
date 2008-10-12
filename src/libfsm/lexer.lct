@@ -2,6 +2,7 @@
 
 HEADERS = @{
 
+	#include <assert.h>
 	#include <stdio.h>
 	#include <stdlib.h>
 	#include <string.h>
@@ -52,6 +53,8 @@ HEADERS = @{
 TRAILERS = @{
 
 	void lex_init(FILE *f) {
+		assert(f != NULL);
+
 		lex_file = f;
 		lexi_init(&lex_state);
 	}
