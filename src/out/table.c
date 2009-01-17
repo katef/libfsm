@@ -18,10 +18,18 @@ static void hr(FILE *f, struct state_list *sl) {
 	fprintf(f, "\n");
 }
 
-void out_table(const struct fsm *fsm, FILE *f) {
+void out_table(const struct fsm *fsm, FILE *f,
+	int (*put)(const char *s, FILE *f)) {
 	struct state_list *x;
 	struct label_list *y;
 	struct fsm_edge   *e;
+
+	/* TODO: assert! */
+
+	if (!put) {
+		/* TODO: default to escaping special characters? (maybe just non-printable ones) */
+		put = fputs;
+	}
 
 	fprintf(f, "%-9s ", "");
 	for (x = fsm->sl; x; x = x->next) {
@@ -36,7 +44,8 @@ void out_table(const struct fsm *fsm, FILE *f) {
 		const char *label;
 
 		label = y->label == NULL ? "epsilon" : y->label;
-		fprintf(f, "%-9s ", label);
+		put(label, f);
+		fprintf(f, "%.*s ", 9 - (int) strlen(label), "         ");
 
 		for (x = fsm->sl; x; x = x->next) {
 			for (e = x->state.edges; e; e = e->next) {

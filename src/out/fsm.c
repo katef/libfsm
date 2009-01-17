@@ -8,18 +8,26 @@
 #include "out/out.h"
 #include "libfsm/internal.h"
 
-void out_fsm(const struct fsm *fsm, FILE *f) {
+void out_fsm(const struct fsm *fsm, FILE *f,
+	int (*put)(const char *s, FILE *f)) {
 	struct state_list *s;
 	struct fsm_edge *e;
 	struct fsm_state *start;
 	int end;
+
+	if (!put) {
+		/* TODO: default to escaping special characters .fsm-style. strings */
+		put = fputs;
+	}
 
 	for (s = fsm->sl; s; s = s->next) {
 		for (e = s->state.edges; e; e = e->next) {
 			fprintf(f, "%-2u -> %-2u", s->state.id, e->state->id);
 
 			if (e->label->label != NULL) {
-				fprintf(f, " \"%s\"", e->label->label);
+				fprintf(f, " \"");
+				put(e->label->label, f);
+				fprintf(f, "\"");
 			}
 
 			fprintf(f, ";\n");

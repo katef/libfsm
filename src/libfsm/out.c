@@ -8,14 +8,14 @@
 #include "out/out.h"
 
 void
-fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format)
+fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format,
+	int (*put)(const char *s, FILE *f))
 {
-	void (*out)(const struct fsm *fsm, FILE *f) = NULL;
+	void (*out)(const struct fsm *fsm, FILE *f,
+		int (*put)(const char *s, FILE *f)) = NULL;
 
-	/* TODO: include callback for rendering labels (fputc style) */
-
-	assert(f);
 	assert(fsm);
+	assert(f);
 
 	switch (format) {
 	case FSM_OUT_FSM:   out = out_fsm;   break;
@@ -26,6 +26,6 @@ fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format)
 
 	assert(out != NULL);
 
-	out(fsm, f);
+	out(fsm, f, put);
 }
 
