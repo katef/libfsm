@@ -19,7 +19,7 @@ enum fsm_out {
  *  FSM_OUT_FSM   - Native .fsm format, suitable for parsing by fsm_parse();
  *  FSM_OUT_DOT   - Graphviz Dot format, intended for rendering graphically;
  *  FSM_OUT_TABLE - A plaintext state transition matrix.
- *  FSM_OUT_C     - A plaintext state transition matrix.
+ *  FSM_OUT_C     - ISO C90 code.
  *
  * TODO: what to return?
  */
