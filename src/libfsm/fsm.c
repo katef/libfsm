@@ -218,7 +218,12 @@ fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	struct label_list *p;
 	struct fsm_edge   *e;
 
+	/* TODO: assert! */
+	/* TODO: consider permissing from and to states to be NULL for API convenience (create them on the fly) */
+
+	/* TODO: why do we not allow strlen(label) == 0? */
 	if (label != NULL && strlen(label) == 0) {
+		/* TODO: set errno for things like this */
 		return NULL;
 	}
 

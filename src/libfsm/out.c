@@ -12,6 +12,8 @@ fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format)
 {
 	void (*out)(const struct fsm *fsm, FILE *f) = NULL;
 
+	/* TODO: include callback for rendering labels (fputc style) */
+
 	assert(f);
 	assert(fsm);
 

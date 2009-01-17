@@ -22,9 +22,10 @@ enum fsm_out {
  *  FSM_OUT_C     - ISO C90 code.
  *
  * TODO: what to return?
+ * TODO: explain constraints (e.g. single-character labels for C output)
  */
 void
-fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format);
+fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format, int (*fputs)(const char *s, FILE *f));
 
 #endif
 
