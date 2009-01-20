@@ -21,15 +21,11 @@ enum fsm_out {
  *  FSM_OUT_TABLE - A plaintext state transition matrix.
  *  FSM_OUT_C     - ISO C90 code.
  *
- * If NULL, the put argument defaults to output as appropiate for the format.
- * This might include escaping special characters, for example.
- *
  * TODO: what to return?
  * TODO: explain constraints (e.g. single-character labels for C output)
  */
 void
-fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format,
-	int (*put)(const char *s, FILE *f));
+fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format);
 
 #endif
 

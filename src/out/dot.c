@@ -8,18 +8,12 @@
 #include "out/out.h"
 #include "libfsm/internal.h"
 
-void out_dot(const struct fsm *fsm, FILE *f,
-	int (*put)(const char *s, FILE *f)) {
+void out_dot(const struct fsm *fsm, FILE *f) {
 	struct state_list *s;
 	struct fsm_edge *e;
 	struct fsm_state *start;
 
 	/* TODO: assert! */
-
-	if (!put) {
-		/* TODO: default to escaping special characters dot-style. strings */
-		put = fputs;
-	}
 
 	fprintf(f, "digraph G {\n");
 	fprintf(f, "\trankdir = LR;\n");
@@ -46,7 +40,8 @@ void out_dot(const struct fsm *fsm, FILE *f,
 			if (e->label->label == NULL) {
 				fprintf(f, "&epsilon;");
 			} else {
-				put(e->label->label, f);
+				/* TODO: escape special characters dot-style. strings */
+				fputs(e->label->label, f);
 			}
 
 			fprintf(f, "\" ];\n");

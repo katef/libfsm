@@ -8,11 +8,9 @@
 #include "out/out.h"
 
 void
-fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format,
-	int (*put)(const char *s, FILE *f))
+fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format)
 {
-	void (*out)(const struct fsm *fsm, FILE *f,
-		int (*put)(const char *s, FILE *f)) = NULL;
+	void (*out)(const struct fsm *fsm, FILE *f) = NULL;
 
 	assert(fsm);
 	assert(f);
@@ -26,6 +24,6 @@ fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format,
 
 	assert(out != NULL);
 
-	out(fsm, f, put);
+	out(fsm, f);
 }
 

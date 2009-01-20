@@ -10,14 +10,8 @@
 #include "out/out.h"
 #include "libfsm/internal.h"
 
-static void singlecase(FILE *f, const struct fsm_state *state,
-	int (*put)(const char *s, FILE *f)) {
+static void singlecase(FILE *f, const struct fsm_state *state) {
 	struct fsm_edge *e;
-
-	if (!put) {
-		/* TODO: default to escaping special characters C-style. one character only */
-		put = fputs;
-	}
 
 	/* no edges */
 	if (state->edges == NULL) {
@@ -32,7 +26,8 @@ static void singlecase(FILE *f, const struct fsm_state *state,
 		assert(strlen(e->label->label) == 1);
 
 		fprintf(f, "\t\t\tcase '");
-		put(e->label->label, f);
+		/* TODO: escape special characters C-style. one character only */
+		fputs(e->label->label, f);
 		fprintf(f, "': state = S%u; continue;\n", e->state->id);
 	}
 
@@ -97,8 +92,7 @@ static void endstates(FILE *f, const struct fsm *fsm, struct state_list *sl) {
 	fprintf(f, "\t}\n");
 }
 
-void out_c(const struct fsm *fsm, FILE *f,
-	int (*put)(const char *s, FILE *f)) {
+void out_c(const struct fsm *fsm, FILE *f) {
 	struct state_list *s;
 
 	assert(fsm != NULL);
@@ -133,7 +127,7 @@ void out_c(const struct fsm *fsm, FILE *f,
 	fprintf(f, "\t\tswitch (state) {\n");
 	for (s = fsm->sl; s; s = s->next) {
 		fprintf(f, "\t\tcase S%u:\n", s->state.id);
-		singlecase(f, &s->state, put);
+		singlecase(f, &s->state);
 
 		if (s->next != NULL) {
 			fprintf(f, "\n");
