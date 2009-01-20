@@ -16,6 +16,8 @@ struct fsm_edge {
 	struct fsm_state *state;
 
 	struct fsm_edge *next;
+
+	/* TODO: union for literal etc, and an enum */
 };
 
 
