@@ -6,9 +6,27 @@
 #include <limits.h>
 
 #include <fsm/fsm.h>
+#include <fsm/graph.h>
 
 #include "out/out.h"
 #include "libfsm/internal.h"
+
+static void escputc(char c, FILE *f) {
+	assert(f != NULL);
+
+	switch (c) {
+	case '\"':
+		fprintf(f, "\\\"");
+		return;
+
+		/* TODO: others */
+
+	default:
+		/* TODO: if (isprint(c)) { putc(c, f); } else { hex } */
+		putc(c, f);
+	}
+}
+
 
 static void singlecase(FILE *f, const struct fsm_state *state) {
 	struct fsm_edge *e;
@@ -22,12 +40,11 @@ static void singlecase(FILE *f, const struct fsm_state *state) {
 	/* usual case */
 	fprintf(f, "\t\t\tswitch (c) {\n");
 	for (e = state->edges; e; e = e->next) {
-		assert(e->label->label != NULL);
-		assert(strlen(e->label->label) == 1);
+		assert(e->trans != NULL);
+		assert(e->trans->type == FSM_EDGE_LITERAL);
 
 		fprintf(f, "\t\t\tcase '");
-		/* TODO: escape special characters C-style. one character only */
-		fputs(e->label->label, f);
+		escputc(e->trans->u.literal, f);
 		fprintf(f, "': state = S%u; continue;\n", e->state->id);
 	}
 
@@ -96,6 +113,7 @@ void out_c(const struct fsm *fsm, FILE *f) {
 	struct state_list *s;
 
 	assert(fsm != NULL);
+	assert(fsm_isdfa(fsm));
 
 	/* TODO: prerequisite that the FSM is a DFA */
 

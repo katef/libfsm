@@ -1,14 +1,12 @@
 /* $Id$ */
 
 #include <assert.h>
-#include <string.h>
 #include <stdlib.h>
 #include <limits.h>
 
 #include <fsm/fsm.h>
 
 #include "internal.h"
-#include "xalloc.h"
 
 static unsigned int inventid(const struct fsm *fsm) {
 	unsigned int max;
@@ -27,7 +25,7 @@ static unsigned int inventid(const struct fsm *fsm) {
 static void free_contents(struct fsm *fsm) {
 	void *next;
 	struct state_list *s;
-	struct label_list *l;
+	struct trans_list *t;
 	struct fsm_edge *e;
 #ifndef NDEBUG
 	static const struct fsm_state state_defaults;
@@ -44,7 +42,7 @@ static void free_contents(struct fsm *fsm) {
 			e_next = e->next;
 
 #ifndef NDEBUG
-			e->label = NULL;
+			e->trans = NULL;
 			e->state = NULL;
 			e->next  = NULL;
 #endif
@@ -59,16 +57,18 @@ static void free_contents(struct fsm *fsm) {
 		free(s);
 	}
 
-	for (l = fsm->ll; l; l = next) {
-		next = l->next;
+	for (t = fsm->tl; t; t = next) {
+		next = t->next;
 
-		free(l->label);
+		if (t->type == FSM_EDGE_LABEL) {
+			free(t->u.label);
 
 #ifndef NDEBUG
-		l->label = NULL;
+			t->u.label = NULL;
 #endif
+		}
 
-		free(l);
+		free(t);
 	}
 }
 
@@ -84,7 +84,7 @@ fsm_new(void)
 	}
 
 	new->sl = NULL;
-	new->ll = NULL;
+	new->tl = NULL;
 	new->start = NULL;
 	new->options = default_options;
 
@@ -140,7 +140,7 @@ fsm_copy(struct fsm *fsm)
 			assert(from != NULL);
 			assert(to   != NULL);
 
-			if (fsm_addedge(new, from, to, e->label->label) == NULL) {
+			if (fsm_addedge_copy(new, from, to, e) == NULL) {
 				fsm_free(new);
 				return NULL;
 			}
@@ -166,13 +166,13 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	free_contents(dst);
 
 	dst->sl      = src->sl;
-	dst->ll      = src->ll;
+	dst->tl      = src->tl;
 	dst->start   = src->start;
 	dst->options = src->options;
 
 #ifndef NDEBUG
 	src->sl    = NULL;
-	src->ll    = NULL;
+	src->tl    = NULL;
 	src->start = NULL;
 #endif
 
@@ -209,72 +209,6 @@ fsm_addstate(struct fsm *fsm, unsigned int id)
 	}
 
 	return &p->state;
-}
-
-struct fsm_edge *
-fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
-	const char *label)
-{
-	struct label_list *p;
-	struct fsm_edge   *e;
-
-	/* TODO: assert! */
-	/* TODO: consider permissing from and to states to be NULL for API convenience (create them on the fly) */
-
-	/* TODO: why do we not allow strlen(label) == 0? */
-	if (label != NULL && strlen(label) == 0) {
-		/* TODO: set errno for things like this */
-		return NULL;
-	}
-
-	/* Find an existing label */
-	for (p = fsm->ll; p; p = p->next) {
-		if (label == NULL && p->label == NULL) {
-			break;
-		}
-
-		if (label == NULL || p->label == NULL) {
-			continue;
-		}
-
-		if (0 == strcmp(p->label, label)) {
-			break;
-		}
-	}
-
-	/* Otherwise, create a new one */
-	if (p == NULL) {
-		p = malloc(sizeof *p);
-		if (p == NULL) {
-			return NULL;
-		}
-
-		if (label == NULL) {
-			p->label = NULL;
-		} else {
-			p->label = xstrdup(label);
-			if (p->label == NULL) {
-				free(p);
-				return NULL;
-			}
-		}
-
-		p->next = fsm->ll;
-		fsm->ll = p;
-	}
-
-	e = malloc(sizeof *e);
-	if (e == NULL) {
-		return NULL;
-	}
-
-	e->label = p;
-	e->state = to;
-
-	e->next  = from->edges;
-	from->edges = e;
-
-	return e;
 }
 
 void

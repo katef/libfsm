@@ -61,7 +61,7 @@ fsm_reverse(struct fsm *fsm)
 
 				assert(from != NULL);
 
-				if (fsm_addedge(new, from, to, e->label->label) == NULL) {
+				if (fsm_addedge_copy(new, from, to, e) == NULL) {
 					fsm_free(new);
 					return NULL;
 				}
@@ -98,7 +98,7 @@ fsm_reverse(struct fsm *fsm)
 						continue;
 					}
 
-					fsm_addedge(new, start, &s->state, NULL);
+					fsm_addedge_epsilon(new, start, &s->state);
 				}
 			}
 			break;
@@ -143,7 +143,7 @@ fsm_reverse(struct fsm *fsm)
 						continue;
 					}
 
-					fsm_addedge(new, start, &s->state, NULL);
+					fsm_addedge_epsilon(new, start, &s->state);
 				}
 			}
 			break;

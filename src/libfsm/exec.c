@@ -9,18 +9,13 @@
 
 #include "internal.h"
 
-static struct fsm_state *nextstate(const struct fsm_edge *edges, int c) {
-	char label[2];
+static struct fsm_state *nextstate(const struct fsm_edge *edges, char c) {
 	const struct fsm_edge *e;
 
-	label[0] = c;
-	label[1] = '\0';
-
 	for (e = edges; e; e = e->next) {
-		assert(e->label->label != NULL);
-		assert(strlen(e->label->label) == 1);
+		assert(e->trans->type == FSM_EDGE_LITERAL);
 
-		if (0 == strcmp(e->label->label, label)) {
+		if (e->trans->u.literal == c) {
 			return e->state;
 		}
 	}

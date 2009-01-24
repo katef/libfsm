@@ -7,6 +7,12 @@ struct fsm;
 struct fsm_state;
 struct fsm_edge;
 
+enum fsm_edge_type {
+	FSM_EDGE_EPSILON,
+	FSM_EDGE_LITERAL,
+	FSM_EDGE_LABEL
+};
+
 struct fsm_options {
 	/* boolean: true indicates to omit names for states in output */
 	int anonymous_states:1;
@@ -61,19 +67,36 @@ fsm_addstate(struct fsm *fsm, unsigned int id);
  * label. If an edge to that state of the same label already exists, the
  * existing edge is returned.
  *
- * The label may be NULL for an epsilon transition. Empty labels are not
- * legal.
+ * Edges may be one of the following types:
  *
- * If non-NULL, the contents of the label are duplicated and stored
- * internally. Therefore the memory passed may be deallocated after a call
- * to fsm_addedge().
+ * - An epsilon transition.
+ * - A literal character. The character '\0' is permitted.
+ * - A human-readable label. Empty labels are not legal, and the label may
+ *   not be NULL. The contents of the label are duplicated and stored
+ *   internally. Therefore the memory passed may be deallocated after a call
+ *   to fsm_addedge_label().
  *
  * Returns NULL on error; see errno.
  */
 struct fsm_edge *
-fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
+fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to);
+
+struct fsm_edge *
+fsm_addedge_label(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	const char *label);
 
+struct fsm_edge *
+fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
+	char c);
+/* TODO: other edge-adding types; fsm_getedgetype(edge) */
+
+/*
+ * Add an edge who's transition value (epsilon, label, etc) is copied from
+ * another edge.
+ */
+struct fsm_edge *
+fsm_addedge_copy(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
+	struct fsm_edge *edge);
 
 /*
  * A local copy of *options is taken, so its storage needn't remain around

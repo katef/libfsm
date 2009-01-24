@@ -8,6 +8,32 @@
 #include "out/out.h"
 #include "libfsm/internal.h"
 
+static void escputc(char c, FILE *f) {
+	assert(f != NULL);
+
+	switch (c) {
+	case '\"':
+		fprintf(f, "\\\"");
+		return;
+
+	/* TODO: others */
+
+	default:
+		putc(c, f);
+	}
+}
+
+static void escputs(const char *s, FILE *f) {
+	const char *p;
+
+	assert(f != NULL);
+	assert(s != NULL);
+
+	for (p = s; *p; p++) {
+		escputc(*p, f);
+	}
+}
+
 void out_dot(const struct fsm *fsm, FILE *f) {
 	struct state_list *s;
 	struct fsm_edge *e;
@@ -35,13 +61,23 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 
 	for (s = fsm->sl; s; s = s->next) {
 		for (e = s->state.edges; e; e = e->next) {
+			assert(e->state);
+			assert(e->trans);
+
 			fprintf(f, "\t%-2u -> %-2u [ label = \"", s->state.id, e->state->id);
 
-			if (e->label->label == NULL) {
-				fprintf(f, "&epsilon;");
-			} else {
-				/* TODO: escape special characters dot-style. strings */
-				fputs(e->label->label, f);
+			switch (e->trans->type) {
+			case FSM_EDGE_EPSILON:
+				fputs("&epsilon;", f);
+				break;
+
+			case FSM_EDGE_LITERAL:
+				escputc(e->trans->u.literal, f);
+				break;
+
+			case FSM_EDGE_LABEL:
+				escputs(e->trans->u.label, f);
+				break;
 			}
 
 			fprintf(f, "\" ];\n");

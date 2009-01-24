@@ -12,12 +12,10 @@ struct fsm_state {
 };
 
 struct fsm_edge {
-	struct label_list *label;
 	struct fsm_state *state;
+	struct trans_list *trans;
 
 	struct fsm_edge *next;
-
-	/* TODO: union for literal etc, and an enum */
 };
 
 
@@ -27,15 +25,22 @@ struct state_list {
 	struct state_list *next;
 };
 
-/* global registry of all labels */
-struct label_list {
+union trans_value {
+	char literal;
 	char *label;
-	struct label_list *next;
+};
+
+/* global registry of all transitions */
+struct trans_list {
+	enum fsm_edge_type type;
+	union trans_value u;
+
+	struct trans_list *next;
 };
 
 struct fsm {
 	struct state_list *sl;
-	struct label_list *ll;
+	struct trans_list *tl;
 	struct fsm_state *start;
 	struct fsm_options options;
 };

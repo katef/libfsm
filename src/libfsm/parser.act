@@ -114,10 +114,12 @@
 			@!;
 		}
 
-		if (fsm_addedge(fsm, @x, @y, @c) == NULL) {
+		if (fsm_addedge_label(fsm, @x, @y, @c) == NULL) {
 			perror("fsm_addedge");
 			exit(EXIT_FAILURE);
 		}
+
+		/* TODO: free label here? */
 	@};
 
 	<epsilon>: () -> (s :string) = @{

@@ -16,6 +16,7 @@ ZONE comment: "#" ... "\n" -> $$ {
 
 ZONE label: "\"" -> <flush> ... "\"" -> $label {
 	GROUP white = "";
+	/* TODO: escaping for special characters */
 	TOKEN DEFAULT -> <push>(#0);
 };
 
