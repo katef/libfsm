@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		/* TODO: make optional */
-		fsm_print(fsm, out, format, NULL);
+		fsm_print(fsm, out, format);
 
 		if (cli_options.execute != NULL) {
 			int e;
