@@ -74,7 +74,7 @@ static int transin(struct trans_list *trans, const struct set *set) {
 		assert(p->trans != NULL);	/* TODO: not sure */
 		assert(p->trans->type != FSM_EDGE_EPSILON);	/* TODO: not sure */
 
-		/* TODO: deep comparison? if (trans_equal(trans->type, &p->trans->u, &trans->u)) { */
+		/* TODO: deep comparison? if (trans_equal(p->trans, trans)) { */
 		if (p->trans == trans) {
 			return 1;
 		}
@@ -377,7 +377,7 @@ static struct set *allstatesreachableby(struct set *set, struct trans_list *tran
 			}
 
 			/* Skip labels which aren't the one we're looking for */
-			if (!trans_equal(trans->type, &e->trans->u, &trans->u)) {
+			if (!trans_equal(e->trans, trans)) {
 				continue;
 			}
 

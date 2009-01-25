@@ -11,21 +11,26 @@
 #include "xalloc.h"
 
 int
-trans_equal(enum fsm_edge_type type, union trans_value *a, union trans_value *b)
+trans_equal(const struct trans_list *a, const struct trans_list *b)
 {
-	switch (type) {
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (a->type != b->type) {
+		return 0;
+	}
+
+	switch (a->type) {
 	case FSM_EDGE_EPSILON:
 		return 1;
 
 	case FSM_EDGE_LITERAL:
-		assert(a != NULL);
-		assert(b != NULL);
-		return a->literal == b->literal;
+		return a->u.literal == b->u.literal;
 
 	case FSM_EDGE_LABEL:
-		assert(a != NULL);
-		assert(b != NULL);
-		return 0 == strcmp(a->label, b->label);
+		assert(a->u.label != NULL);
+		assert(b->u.label != NULL);
+		return 0 == strcmp(a->u.label, b->u.label);
 	}
 
 	assert(!"unreached");
@@ -38,14 +43,15 @@ trans_add(struct fsm *fsm, enum fsm_edge_type type, union trans_value *u)
 	struct trans_list *t;
 
 	assert(fsm != NULL);
+	assert(u != NULL);
 
 	/* Find an existing transition */
 	for (t = fsm->tl; t; t = t->next) {
-		if (t->type != type) {
-			continue;
-		}
+		struct trans_list tmp;	/* XXX: hacky */
 
-		if (trans_equal(type, &t->u, u)) {
+		tmp.u = *u;
+		tmp.type = type;
+		if (trans_equal(t, &tmp)) {
 			return t;
 		}
 	}

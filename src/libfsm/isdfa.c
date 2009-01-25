@@ -21,11 +21,7 @@ hasduplicateedge(const struct fsm_state *state, const struct fsm_edge *edge)
 	for (e = state->edges; e; e = e->next) {
 		assert(e->trans != NULL);
 
-		if (edge->trans->type != e->trans->type) {
-			continue;
-		}
-
-		count += trans_equal(edge->trans->type, &edge->trans->u, &e->trans->u);
+		count += trans_equal(edge->trans, e->trans);
 	}
 
 	return count > 1;
