@@ -51,6 +51,10 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 			case FSM_EDGE_EPSILON:
 				break;
 
+			case FSM_EDGE_ANY:
+				fprintf(f, " ?");
+				break;
+
 			case FSM_EDGE_LITERAL:
 				fprintf(f, " \'");
 				escputc(e->trans->u.literal, f);

@@ -26,6 +26,8 @@ ZONE literal: "\'" -> <flush> ... "\'" -> $literal {
 	TOKEN DEFAULT -> <push>(#0);
 };
 
+TOKEN "?" -> $any;
+
 TOKEN "start:" -> $start;
 TOKEN "end:"   -> $end;
 

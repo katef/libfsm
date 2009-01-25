@@ -11,6 +11,7 @@
 	id: () -> (:int);
 	label: () -> (:string);
 	literal: () -> (:string);
+	any;
 
 	start;
 	end;
@@ -30,6 +31,7 @@
 	<mark-end>: (:int) -> ();
 	<add-edge-label>: (:state, :state, :string) -> ();
 	<add-edge-literal>: (:state, :state, :string) -> ();
+	<add-edge-any>: (:state, :state) -> ();
 	<add-edge-epsilon>: (:state, :state) -> ();
 	<free>: (:string) -> ();
 
@@ -102,6 +104,9 @@
 		||
 			s = literal;
 			<add-edge-literal>(x, y, s);
+		||
+			any;
+			<add-edge-any>(x, y);
 		||
 			<add-edge-epsilon>(x, y);
 		##

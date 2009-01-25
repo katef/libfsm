@@ -71,6 +71,10 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 				fputs("&epsilon;", f);
 				break;
 
+			case FSM_EDGE_ANY:
+				fputs("?", f);
+				break;
+
 			case FSM_EDGE_LITERAL:
 				escputc(e->trans->u.literal, f);
 				break;

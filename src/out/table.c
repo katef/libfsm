@@ -77,6 +77,10 @@ void out_table(const struct fsm *fsm, FILE *f) {
 				n = fprintf(f, "epsilon");
 				break;
 
+			case FSM_EDGE_ANY:
+				n = fprintf(f, "?");
+				break;
+
 			case FSM_EDGE_LITERAL:
 				n = escputc(t->u.literal, f);
 				break;

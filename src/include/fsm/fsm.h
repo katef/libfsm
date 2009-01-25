@@ -7,12 +7,6 @@ struct fsm;
 struct fsm_state;
 struct fsm_edge;
 
-enum fsm_edge_type {
-	FSM_EDGE_EPSILON,
-	FSM_EDGE_LITERAL,
-	FSM_EDGE_LABEL
-};
-
 struct fsm_options {
 	/* boolean: true indicates to omit names for states in output */
 	int anonymous_states:1;
@@ -70,6 +64,7 @@ fsm_addstate(struct fsm *fsm, unsigned int id);
  * Edges may be one of the following types:
  *
  * - An epsilon transition.
+ * - Any character
  * - A literal character. The character '\0' is permitted.
  * - A human-readable label. Empty labels are not legal, and the label may
  *   not be NULL. The contents of the label are duplicated and stored
@@ -80,6 +75,9 @@ fsm_addstate(struct fsm *fsm, unsigned int id);
  */
 struct fsm_edge *
 fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to);
+
+struct fsm_edge *
+fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to);
 
 struct fsm_edge *
 fsm_addedge_label(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,

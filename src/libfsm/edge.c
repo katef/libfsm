@@ -80,6 +80,32 @@ fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 }
 
 struct fsm_edge *
+fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
+{
+	struct fsm_edge *e;
+
+	assert(fsm != NULL);
+	assert(from != NULL);
+	assert(to != NULL);
+
+	e = addedge(from, to);
+	if (e == NULL) {
+		return NULL;
+	}
+
+	/* Assign the any transition for this edge */
+	{
+		e->trans = trans_add(fsm, FSM_EDGE_ANY, NULL);
+		if (e->trans == NULL) {
+			freeedge(from, e);
+			return NULL;
+		}
+	}
+
+	return e;
+}
+
+struct fsm_edge *
 fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	char c)
 {

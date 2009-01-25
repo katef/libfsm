@@ -151,6 +151,13 @@
 		}
 	@};
 
+	<add-edge-any>: (x :state, y :state) -> () = @{
+		if (fsm_addedge_any(fsm, @x, @y) == NULL) {
+			perror("fsm_addedge_any");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
 	<free>: (s :string) -> () = @{
 		free(@s);
 	@};

@@ -25,6 +25,13 @@ struct state_list {
 	struct state_list *next;
 };
 
+enum fsm_edge_type {
+	FSM_EDGE_EPSILON,
+	FSM_EDGE_ANY,
+	FSM_EDGE_LITERAL,
+	FSM_EDGE_LABEL
+};
+
 union trans_value {
 	char literal;
 	char *label;

@@ -27,9 +27,27 @@ static void escputc(char c, FILE *f) {
 	}
 }
 
+static const struct fsm_edge *findany(const struct fsm_state *state) {
+	const struct fsm_edge *e;
+
+	assert(state != NULL);
+	
+	for (e = state->edges; e; e = e->next) {
+		assert(e->trans != NULL);
+
+		if (e->trans->type == FSM_EDGE_ANY) {
+			return e;
+		}
+	}
+
+	return NULL;
+}
 
 static void singlecase(FILE *f, const struct fsm_state *state) {
-	struct fsm_edge *e;
+	const struct fsm_edge *e;
+
+	assert(f != NULL);
+	assert(state != NULL);
 
 	/* no edges */
 	if (state->edges == NULL) {
@@ -41,6 +59,11 @@ static void singlecase(FILE *f, const struct fsm_state *state) {
 	fprintf(f, "\t\t\tswitch (c) {\n");
 	for (e = state->edges; e; e = e->next) {
 		assert(e->trans != NULL);
+
+		if (e->trans->type == FSM_EDGE_ANY) {
+			continue;
+		}
+
 		assert(e->trans->type == FSM_EDGE_LITERAL);
 
 		fprintf(f, "\t\t\tcase '");
@@ -48,7 +71,13 @@ static void singlecase(FILE *f, const struct fsm_state *state) {
 		fprintf(f, "': state = S%u; continue;\n", e->state->id);
 	}
 
-	fprintf(f, "\t\t\tdefault:  return 0;\n");	/* invalid edge */
+	e = findany(state);
+	if (e) {
+		fprintf(f, "\t\t\tdefault:  state = S%u; continue;\n", e->state->id);
+	} else {
+		fprintf(f, "\t\t\tdefault:  return 0;\n");	/* invalid edge */
+	}
+
 	fprintf(f, "\t\t\t}\n");
 }
 

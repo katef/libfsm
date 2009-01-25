@@ -6,6 +6,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/exec.h>
+#include <fsm/graph.h>
 
 #include "internal.h"
 
@@ -13,10 +14,20 @@ static struct fsm_state *nextstate(const struct fsm_edge *edges, char c) {
 	const struct fsm_edge *e;
 
 	for (e = edges; e; e = e->next) {
-		assert(e->trans->type == FSM_EDGE_LITERAL);
-
-		if (e->trans->u.literal == c) {
+		switch (e->trans->type) {
+		case FSM_EDGE_ANY:
 			return e->state;
+
+		case FSM_EDGE_LITERAL:
+			if (e->trans->u.literal == c) {
+				return e->state;
+			}
+			continue;
+
+		case FSM_EDGE_LABEL:
+		case FSM_EDGE_EPSILON:
+			assert(!"unreached");
+			return NULL;
 		}
 	}
 
@@ -30,10 +41,11 @@ int fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque)
 	assert(fsm != NULL);
 	assert(fsm_getc != NULL);
 
-	/* TODO: assert that the given FSM is a DFA */
+	/* TODO: check prerequisites; that it has literal edges (or any), DFA, etc */
 
 	/* TODO: pass struct of callbacks to call during each event; transitions etc */
 
+	assert(fsm_isdfa(fsm));
 	assert(fsm->start != NULL);
 	state = fsm->start;
 

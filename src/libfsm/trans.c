@@ -22,6 +22,7 @@ trans_equal(const struct trans_list *a, const struct trans_list *b)
 
 	switch (a->type) {
 	case FSM_EDGE_EPSILON:
+	case FSM_EDGE_ANY:
 		return 1;
 
 	case FSM_EDGE_LITERAL:
@@ -43,14 +44,18 @@ trans_add(struct fsm *fsm, enum fsm_edge_type type, union trans_value *u)
 	struct trans_list *t;
 
 	assert(fsm != NULL);
-	assert(u != NULL);
 
 	/* Find an existing transition */
 	for (t = fsm->tl; t; t = t->next) {
 		struct trans_list tmp;	/* XXX: hacky */
 
-		tmp.u = *u;
+		if (u != NULL) {
+			tmp.u    = *u;
+		}
+
 		tmp.type = type;
+		tmp.next = NULL;
+
 		if (trans_equal(t, &tmp)) {
 			return t;
 		}
@@ -64,14 +69,22 @@ trans_add(struct fsm *fsm, enum fsm_edge_type type, union trans_value *u)
 		return NULL;
 	}
 
+	t->type = type;
+
+	switch (type) {
+	case FSM_EDGE_EPSILON:
+	case FSM_EDGE_ANY:
+		break;
+
+	case FSM_EDGE_LITERAL:
+	case FSM_EDGE_LABEL:
+		assert(u != NULL);
+		t->u = *u;
+		break;
+	}
+
 	t->next = fsm->tl;
 	fsm->tl = t;
-
-	if (type != FSM_EDGE_EPSILON) {
-		assert(u != NULL);
-		t->type = type;
-		t->u = *u;
-	}
 
 	return t;
 }
@@ -85,6 +98,7 @@ trans_copyvalue(enum fsm_edge_type type, const union trans_value *from,
 
 	switch (type) {
 	case FSM_EDGE_EPSILON:
+	case FSM_EDGE_ANY:
 		return 1;
 
 	case FSM_EDGE_LITERAL:
