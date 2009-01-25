@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (cli_options.query) {
-			int q;
+			int q = 0;
 
 			switch (cli_options.query_property) {
 			case QUERY_DFA:
