@@ -68,11 +68,19 @@
 		}
 	@};
 
+	literal: () -> (s :string) = @{
+		@s = xstrdup(lex_tokbuf);
+		if (@s == NULL) {
+			perror("xstrdup");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
 %actions%
 
 	<add-state>: (n :int) -> (s :state) = @{
 		if (@n == 0) {
-			fprintf(stderr, "special id 0 is reserved.\n");
+			fprintf(stderr, "special id 0 is reserved\n");
 			@!;
 		}
 
@@ -108,22 +116,41 @@
 		fsm_setend(fsm, state, 1);
 	@};
 
-	<add-edge>: (x :state, y :state, c :string) -> () = @{
-		if (@c != NULL && strlen(@c) == 0) {
+	<add-edge-label>: (x :state, y :state, s :string) -> () = @{
+		assert(@s != NULL);
+
+		if (strlen(@s) == 0) {
 			fprintf(stderr, "empty label\n");
 			@!;
 		}
 
-		if (fsm_addedge_label(fsm, @x, @y, @c) == NULL) {
-			perror("fsm_addedge");
+		if (fsm_addedge_label(fsm, @x, @y, @s) == NULL) {
+			perror("fsm_addedge_label");
 			exit(EXIT_FAILURE);
 		}
 
 		/* TODO: free label here? */
 	@};
 
-	<epsilon>: () -> (s :string) = @{
-		@s = NULL;
+	<add-edge-literal>: (x :state, y :state, s :string) -> () = @{
+		assert(@s != NULL);
+
+		if (strlen(@s) != 1) {
+			fprintf(stderr, "literals must have exactly one character\n");
+			@!;
+		}
+
+		if (fsm_addedge_literal(fsm, @x, @y, @s[0]) == NULL) {
+			perror("fsm_addedge_literal");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
+	<add-edge-epsilon>: (x :state, y :state) -> () = @{
+		if (fsm_addedge_epsilon(fsm, @x, @y) == NULL) {
+			perror("fsm_addedge_epsilon");
+			exit(EXIT_FAILURE);
+		}
 	@};
 
 	<free>: (s :string) -> () = @{
@@ -138,6 +165,10 @@
 
 	<err-expected-sep> = @{
 		err_expected("';'");
+	@};
+
+	<err-expected-trans> = @{
+		err_expected("transition");
 	@};
 
 	<err-expected-comma> = @{

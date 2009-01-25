@@ -20,6 +20,12 @@ ZONE label: "\"" -> <flush> ... "\"" -> $label {
 	TOKEN DEFAULT -> <push>(#0);
 };
 
+ZONE literal: "\'" -> <flush> ... "\'" -> $literal {
+	GROUP white = "";
+	/* TODO: escaping for special characters */
+	TOKEN DEFAULT -> <push>(#0);
+};
+
 TOKEN "start:" -> $start;
 TOKEN "end:"   -> $end;
 

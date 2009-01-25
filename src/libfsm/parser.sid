@@ -10,6 +10,7 @@
 
 	id: () -> (:int);
 	label: () -> (:string);
+	literal: () -> (:string);
 
 	start;
 	end;
@@ -27,11 +28,13 @@
 	<add-state>: (:int) -> (:state);
 	<mark-start>: (:int) -> ();
 	<mark-end>: (:int) -> ();
-	<add-edge>: (:state, :state, :string) -> ();
-	<epsilon>: () -> (:string);
+	<add-edge-label>: (:state, :state, :string) -> ();
+	<add-edge-literal>: (:state, :state, :string) -> ();
+	<add-edge-epsilon>: (:state, :state) -> ();
 	<free>: (:string) -> ();
 
 	<err-expected-sep>;
+	<err-expected-trans>;
 	<err-expected-comma>;
 	<err-expected-start>;
 	<err-expected-end>;
@@ -89,10 +92,20 @@
 		arrow;
 		b = id;
 
+		x = <add-state>(a);
+		y = <add-state>(b);
+
 		{
-			c = label;
+			s = label;
+			<add-edge-label>(x, y, s);
+			<free>(s);
+		||
+			s = literal;
+			<add-edge-literal>(x, y, s);
+		||
+			<add-edge-epsilon>(x, y);
 		##
-			c = <epsilon>;
+			<err-expected-trans>;
 		};
 
 		{
@@ -100,11 +113,6 @@
 		##
 			<err-expected-sep>;
 		};
-
-		x = <add-state>(a);
-		y = <add-state>(b);
-		<add-edge>(x, y, c);
-		<free>(c);
 	};
 
 	edges = {

@@ -52,9 +52,9 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 				break;
 
 			case FSM_EDGE_LITERAL:
-				fprintf(f, " \"");
+				fprintf(f, " \'");
 				escputc(e->trans->u.literal, f);
-				fprintf(f, "\"");
+				fprintf(f, "\'");
 				break;
 
 			case FSM_EDGE_LABEL:
