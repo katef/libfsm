@@ -128,8 +128,6 @@
 			perror("fsm_addedge_label");
 			exit(EXIT_FAILURE);
 		}
-
-		/* TODO: free label here? */
 	@};
 
 	<add-edge-literal>: (x :state, y :state, s :string) -> () = @{
