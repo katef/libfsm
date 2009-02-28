@@ -1,5 +1,7 @@
 /* $Id$ */
 
+ARGUMENT lex_state: lex_statep;
+
 HEADERS = @{
 
 	#include <assert.h>
@@ -9,29 +11,37 @@ HEADERS = @{
 
 	#include "parser.h"
 
-	char lex_tokbuf[20];
-	FILE *lex_file;
-	struct lexi_state lex_state;
-
 	#define lexi_unknown_token lex_unknown
 
-	static void push(int c) {
+	struct lex_state {
+		struct lexi_state lexi_state;
+		char tokbuf[20];
+		FILE *file;
+	};
+
+	static void push(struct lex_state *lex_state, int c) {
 		size_t l;
 
-		l = strlen(lex_tokbuf);
-		if (l == sizeof lex_tokbuf) {
+		assert(lex_state != NULL);
+
+		l = strlen(lex_state->tokbuf);
+		if (l == sizeof lex_state->tokbuf) {
 			fprintf(stderr, "token buffer full\n");
 			exit(1);
 		}
 
-		lex_tokbuf[l] = c;
-		lex_tokbuf[l + 1] = '\0';
+		lex_state->tokbuf[l] = c;
+		lex_state->tokbuf[l + 1] = '\0';
 	}
 
-	static int lexi_getchar(void) {
+	static int lexi_getchar(struct lexi_state *state) {
 		int c;
 
-		c = fgetc(lex_file);
+		assert(state != NULL);
+		assert(state->lex_state != NULL);
+		assert(state->lex_state->file != NULL);
+
+		c = fgetc(state->lex_state->file);
 		if (c == EOF) {
 			return LEXI_EOF;
 		}
@@ -43,42 +53,68 @@ HEADERS = @{
 
 	#include <stdio.h>
 
-	extern char lex_tokbuf[];
+	typedef struct lex_state * lex_statep;
 
-	void lex_init(FILE *f);
-	int lex_nexttoken(void);
+	struct lex_state *lex_init(FILE *f);
+	int lex_nexttoken(struct lex_state *state);
+	void lex_free(struct lex_state *state);
+	const char *lex_tokbuf(struct lex_state *state);
 
 @};
 
 TRAILERS = @{
 
-	void lex_init(FILE *f) {
+	struct lex_state *lex_init(FILE *f) {
+		struct lex_state *new;
+
 		assert(f != NULL);
 
-		lex_file = f;
-		lexi_init(&lex_state);
+		new = malloc(sizeof *new);
+		if (new == NULL) {
+			return NULL;
+		}
+
+		new->file = f;
+
+		lexi_init(&new->lexi_state, new);
+
+		return new;
 	}
 
-	int lex_nexttoken(void) {
-		return lexi_read_token(&lex_state);
+	int lex_nexttoken(struct lex_state *state) {
+		assert(state != NULL);
+
+		return lexi_read_token(&state->lexi_state);
+	}
+
+	void lex_free(struct lex_state *state) {
+		assert(state != NULL);
+
+		free(state);
+	}
+
+	const char *lex_tokbuf(struct lex_state *state) {
+		assert(state != NULL);
+
+		return state->tokbuf;
 	}
 
 @}, @{
 @};
 
 ACTION flush = @{
-	lex_tokbuf[0] = '\0';
+	state->lex_state->tokbuf[0] = '\0';
 @};
 
 ACTION push: (c :CHARACTER) -> () = @{
-	push(@c);
+	push(state->lex_state, @c);
 @};
 
 ACTION read_id: (c :CHARACTER) -> () = @{
 	int c;
 
 	for (c = @c; lexi_group(lexi_group_digit, c); c = lexi_readchar(state)) {
-		push(c);
+		push(state->lex_state, c);
 	}
 
 	if (c == LEXI_EOF) {
