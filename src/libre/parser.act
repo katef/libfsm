@@ -1,0 +1,289 @@
+/* $Id$ */
+
+/*
+ * TODO: actions common to all grammars.
+ * globs only use a few; regex parsers use most.
+ *
+ * TODO: explain that in some cases (e.g. counting) actions are centralised
+ * here for the sake of DRY, at the expense of slight overkill.
+ */
+
+%prefixes%
+
+	terminal = TOK_;
+	function = p_;
+	type     = t_;
+
+%persistents%
+
+	re        :re;
+	lex_state :lex_state;
+	act_state :act_state;
+
+%maps%
+
+%header% @{
+
+	#include <assert.h>
+	#include <stdlib.h>
+	#include <stdio.h>	/* XXX */
+	#include <limits.h>
+
+	#include <fsm/fsm.h>
+	#include <re/re.h>
+
+	#include "parser.h"
+	#include "lexer.h"
+
+	#include "../libre/internal.h"
+
+	typedef char          t_char;
+	typedef unsigned long t_unsigned;
+	typedef char *        t_grp;
+
+	typedef struct fsm_state * t_fsm__state;
+
+@}, @{
+
+	typedef struct re *        re;
+	typedef struct lex_state * lex_state;
+	typedef struct act_state * act_state;
+
+	struct act_state {
+		int lex_tok;
+		int lex_tok_save;
+		enum re_err err;
+	};
+
+	/* XXX: we need a lexer per form. possibly have comp_whatever() set callbacks in act_state?
+	 * then these macros would just be like
+	 * #define ADVANCE_LEXER (act_state->advance_lexer(lex_state))
+	 */
+	#define CURRENT_TERMINAL (act_state->lex_tok)
+	#define ERROR_TERMINAL   @$ERROR
+	#define ADVANCE_LEXER    do { act_state->lex_tok = lex_nexttoken(lex_state); } while (0)
+	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok;  \
+	                              act_state->lex_tok = tok;                      } while (0)
+	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save;  } while (0)
+
+@};
+
+%terminals%
+
+	CHAR: () -> (c :char) = @{
+		@c = lex_tokval(lex_state);
+	@};
+
+	EOL: () -> (c :char) = @{
+		@c = 0;	/* TODO */
+	@};
+
+	SOL: () -> (c :char) = @{
+		@c = 1;	/* TODO */
+	@};
+
+	COUNT: () -> (n :unsigned) = @{
+		@n = 0;	/* TODO: strtoul */
+	@};
+
+%actions%
+
+	<make-states>: () -> (x :fsm_state, y :fsm_state) = @{
+		assert(re != NULL);
+		assert(re->fsm != NULL);
+		/* TODO: assert re is empty */
+		
+		@x = fsm_addstate(re->fsm, 0);
+		if (@x == NULL) {
+			@!;
+		}
+
+		fsm_setstart(re->fsm, @x);
+
+		@y = fsm_addstate(re->fsm, 0);
+		if (@y == NULL) {
+			@!;
+		}
+
+		fsm_setend(re->fsm, @y, 1);
+	@};
+
+
+	<make-group>: () -> (g :grp) = @{
+		@g = calloc(UCHAR_MAX, sizeof *@g);
+		if (@g == NULL) {
+			@!;
+		}
+	@};
+
+	<free-group>: (g :grp) -> () = @{
+		assert(@g != NULL);
+
+		free(@g);
+	@};
+
+	<invert-group>: (g :grp) -> () = @{
+		int i;
+
+		assert(@g != NULL);
+
+		for (i = 0; i <= UCHAR_MAX; i++) {
+			@g[i] = !@g[i];
+		}
+	@};
+
+	<group-add-char>: (g :grp, c :char) -> () = @{
+		assert(@g != NULL);
+
+		@g[(unsigned char) @c] = 1;
+	@};
+
+	<group-add-range>: (g :grp, a :char, b :char) -> () = @{
+		int i;
+
+		assert(@g != NULL);
+
+		for (i = (unsigned char) @a; i <= (unsigned char) @b; i++) {
+			@g[i] = 1;
+		}
+	@};
+
+	<group-to-states>: (g :grp, x :fsm_state, y :fsm_state) -> () = @{
+		int i;
+
+		assert(@g != NULL);
+
+		/* TODO: eventually libfsm will provide a neater mechanism here */
+		for (i = 0; i <= UCHAR_MAX; i++) {
+			if (!fsm_addedge_literal(re->fsm, @x, @y, @g[i])) {
+				@!;
+			}
+		}
+	@};
+
+
+	/*
+	 * The following regular expression fragments map to associated fsm states
+	 * as follows (transitions written in .fsm format):
+	 *
+	 *  ab    add-concat:  1 -> 3 "a"; 3 -> 2 "b";
+	 *  a|b   add-alt:     1 -> 2 "a"; 1 -> 2 "b";
+	 *  (a)   add-sub:     1 -> 1a; 2a -> 2;
+	 *  [abc] add-group:   1 -> 2 "a"; 1 -> 2 "b"; 1 -> 2 "c";
+	 *  a     add-literal: 1 -> 1a; 2a -> 2;
+	 *  .     add-any:     1 -> 2 ?;
+	 *
+	 * Each of these component parts has exactly one input (1) and exactly one
+	 * output state (2).
+	 * TODO: say that these correspond to "x" and "y"
+	 * TODO: explain that these are stacklike
+	 * TODO: update these comments
+	 */
+
+	<add-concat>: () -> (s :fsm_state) = @{
+		@s = fsm_addstate(re->fsm, 0);
+		if (@s == NULL) {
+			@!;
+		}
+	@};
+
+	<add-epsilon>: (x :fsm_state, y: fsm_state) -> () = @{
+		if (!fsm_addedge_epsilon(re->fsm, @x, @y)) {
+			@!;
+		}
+	@};
+
+	<add-literal>: (x :fsm_state, y :fsm_state, c :char) -> () = @{
+		assert(@x != NULL);
+		assert(@y != NULL);
+
+		/* TODO: check c is legal? */
+
+		if (!fsm_addedge_literal(re->fsm, @x, @y, @c)) {
+			@!;
+		}
+	@};
+
+	<add-any>: (x :fsm_state, y :fsm_state) -> () = @{
+		assert(@x != NULL);
+		assert(@y != NULL);
+
+		if (!fsm_addedge_any(re->fsm, @x, @y)) {
+			@!;
+		}
+	@};
+
+
+	/*
+	 * The following count repetition operators encapsulate regular expression
+	 * fragments as follows (transitions written in .fsm format where 1a and 2a
+	 * indicate the a'th occurance of the input and output states 1 and 2 from
+	 * the fragment):
+	 *
+	 *  a{n} count-n:         8 -> 1a; 2a -> 1b; 2b -> ...a; ...b -> na; nb -> 9;
+	 *  a?   count-0-or-1:    8 -> 1a; 2a -> 9; 8 -> 9;
+	 *  a*   count-0-or-many: 8 -> 1a; 2a -> 9; 8 -> 9; 9 -> 8;
+	 *  a+   count-1-or-many: 8 -> 1a; 2a -> 9;         9 -> 8;
+	 *  a    count-1:         8 -> 1a; 2a -> 9;
+	 *
+	 * Each of these component parts has exactly one input (8) and exactly one
+	 * output state (9). Between these states are an appropiate number of
+	 * regex fragments as per <add-*> which begin and end (1) and (2). Each of
+	 * these pairs is lettered a, b, ..., n for ease of identification.
+	 */
+
+	<count-n>: (x :fsm_state, y :fsm_state, n :unsigned) -> () = @{
+		/* TODO: check n > 0 */
+		/* TODO: do this by duplicating the transitions? */
+	@};
+
+	<count-0-or-1>: (x :fsm_state, y :fsm_state) -> () = @{
+		if (!fsm_addedge_epsilon(re->fsm, @x, @y)) {
+			@!;
+		}
+	@};
+
+	<count-0-or-many>: (x :fsm_state, y :fsm_state) -> () = @{
+		if (!fsm_addedge_epsilon(re->fsm, @x, @y)) {
+			@!;
+		}
+
+		if (!fsm_addedge_epsilon(re->fsm, @y, @x)) {
+			@!;
+		}
+	@};
+
+	<count-1-or-many>: (x :fsm_state, y :fsm_state) -> () = @{
+		if (!fsm_addedge_epsilon(re->fsm, @y, @x)) {
+			@!;
+		}
+	@};
+
+	<count-1>: (x :fsm_state, y :fsm_state) -> () = @{
+		(void) @x;
+		(void) @y;
+	@};
+
+
+	<err-expected-term> = @{
+		act_state->err = RE_EXTERM;
+	@};
+
+	<err-expected-count> = @{
+		act_state->err = RE_EXCOUNT;
+	@};
+
+	<err-expected-alts> = @{
+		act_state->err = RE_EXALTS;
+	@};
+
+	<err-expected-eof> = @{
+		act_state->err = RE_EXEOF;
+	@};
+
+%trailer% @{
+
+@}, @{
+
+@};
+
