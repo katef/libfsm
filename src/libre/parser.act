@@ -155,7 +155,11 @@
 
 		/* TODO: eventually libfsm will provide a neater mechanism here */
 		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (!fsm_addedge_literal(re->fsm, @x, @y, @g[i])) {
+			if (!@g[i]) {
+				continue;
+			}
+
+			if (!fsm_addedge_literal(re->fsm, @x, @y, (char) i)) {
 				@!;
 			}
 		}
