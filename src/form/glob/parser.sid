@@ -1,0 +1,117 @@
+/* $Id$ */
+
+%types%
+
+	char;
+	unsigned;
+	fsm_state;
+	grp;
+
+%terminals%
+
+	!SOL: () -> (:char);
+	!EOL: () -> (:char);
+	QMARK;
+	STAR;
+	!PLUS;
+	!DOT;
+	!ALT;
+	!SEP;
+	!OPEN_SUB;   !CLOSE_SUB;
+	!OPEN_GROUP; !CLOSE_GROUP;
+	!COUNT: () -> (:unsigned);
+	CHAR: () -> (:char);
+	EOF;
+	!ERROR;
+
+%productions%
+
+	<make-states>: () -> (:fsm_state, :fsm_state);
+
+	!<make-group>: () -> (:grp);
+	!<free-group>: (:grp) -> ();
+	!<invert-group>: (:grp) -> ();
+	!<group-add-char>: (:grp, :char) -> ();
+	!<group-add-range>: (:grp, :char, :char) -> ();
+	!<group-to-states>: (:grp, :fsm_state, :fsm_state) -> ();
+
+	<add-concat>: () -> (:fsm_state);
+	<add-epsilon>: (:fsm_state, :fsm_state) -> ();
+	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
+	<add-any>: (:fsm_state, :fsm_state) -> ();
+
+	!<count-n>: (:fsm_state, :fsm_state, :unsigned) -> ();
+	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
+	<count-0-or-many>: (:fsm_state, :fsm_state) -> ();
+	!<count-1-or-many>: (:fsm_state, :fsm_state) -> ();
+	<count-1>: (:fsm_state, :fsm_state) -> ();
+
+	!<err-expected-term>;
+	!<err-expected-count>;
+	<err-expected-items>;
+	!<err-expected-alts>;
+	<err-expected-eof>;
+
+	list-of-items: (x :fsm_state, y :fsm_state) -> () [
+
+		literal: (x :fsm_state, y :fsm_state) -> () = {
+			c = CHAR;
+			<add-literal>(x, y, c);
+		};
+
+		any: (x :fsm_state, y :fsm_state) -> () = {
+			QMARK;
+			<add-any>(x, y);
+		};
+
+		wildcard: (x :fsm_state, y :fsm_state) -> () = {
+			STAR;
+			<add-any>(x, y);
+		};
+
+		item: (x :fsm_state, y :fsm_state) -> () = {
+			literal(x, y);
+			<count-1>(x, y);
+		||
+			any(x, y);
+			<count-1>(x, y);
+		||
+			wildcard(x, y);
+			<count-0-or-many>(x, y);
+		};
+
+	] = {
+		z = <add-concat>;
+		item(x, z);
+
+		{
+			list-of-items(z, y);
+		||
+			/* TODO: I don't like this. refactor somehow? */
+			<add-epsilon>(z, y);
+		};
+	};
+
+	re_glob: () -> () = {
+		(x, y) = <make-states>;
+
+		{
+			list-of-items(x, y);
+		||
+			/* TODO: does this need any action performing? */
+			$;
+		##
+			<err-expected-items>;
+		};
+
+		{
+			EOF;
+		##
+			<err-expected-eof>;
+		};
+	};
+
+%entry%
+
+	re_glob;
+

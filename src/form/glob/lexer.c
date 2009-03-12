@@ -1,9 +1,4 @@
-/* $Id$ */
-
-/*
- * TODO: {counts} (produce unsigned long)
- * TODO: \escapes
- */
+/* $Id: lexer.c 2 2009-03-08 17:12:37Z kate $ */
 
 #include <assert.h>
 #include <stdio.h>
@@ -17,7 +12,7 @@ struct lex_state {
 };
 
 struct lex_state *
-lex_simple_init(const char *s)
+lex_glob_init(const char *s)
 {
 	struct lex_state *new;
 
@@ -34,7 +29,7 @@ lex_simple_init(const char *s)
 }
 
 void
-lex_simple_free(struct lex_state *state)
+lex_glob_free(struct lex_state *state)
 {
 	assert(state != NULL);
 
@@ -42,7 +37,7 @@ lex_simple_free(struct lex_state *state)
 }
 
 enum lex_tok
-lex_simple_nexttoken(struct lex_state *state)
+lex_glob_nexttoken(struct lex_state *state)
 {
 	assert(state != NULL);
 	assert(state->input != NULL);
@@ -55,16 +50,8 @@ lex_simple_nexttoken(struct lex_state *state)
 	state->input++;
 
 	switch (state->c) {
-	case '^': return TOK_SOL;
-	case '$': return TOK_EOL;
 	case '?': return TOK_QMARK;
 	case '*': return TOK_STAR;
-	case '+': return TOK_PLUS;
-	case '.': return TOK_DOT;
-	case '|': return TOK_ALT;
-	case '-': return TOK_SEP;
-	case '(': return TOK_OPEN__SUB;   case ')': return TOK_CLOSE__SUB;
-	case '[': return TOK_OPEN__GROUP; case ']': return TOK_CLOSE__GROUP;
 	default:  return TOK_CHAR;
 	}
 
@@ -73,7 +60,7 @@ lex_simple_nexttoken(struct lex_state *state)
 }
 
 char
-lex_simple_tokval(struct lex_state *state)
+lex_glob_tokval(struct lex_state *state)
 {
 	assert(state != NULL);
 

@@ -53,6 +53,7 @@
 
 	<err-expected-term>;
 	<err-expected-count>;
+	!<err-expected-items>;
 	<err-expected-alts>;
 	<err-expected-eof>;
 

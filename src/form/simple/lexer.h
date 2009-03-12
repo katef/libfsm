@@ -23,16 +23,16 @@ enum lex_tok {
 };
 
 struct lex_state *
-lex_init(const char *s);
+lex_simple_init(const char *s);
 
 void
-lex_free(struct lex_state *state);
+lex_simple_free(struct lex_state *state);
 
 enum lex_tok
-lex_nexttoken(struct lex_state *state);
+lex_simple_nexttoken(struct lex_state *state);
 
 char
-lex_tokval(struct lex_state *state);
+lex_simple_tokval(struct lex_state *state);
 
 #endif
 

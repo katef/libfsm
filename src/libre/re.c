@@ -56,6 +56,7 @@ re_new_comp(enum re_form form, const char *s, void *opaque, enum re_cflags cflag
 	assert(s != NULL);
 
 	switch (form) {
+	case RE_GLOB:   comp = comp_glob;   break;
 	case RE_SIMPLE: comp = comp_simple; break;
 	default: e = RE_EBADFORM;           goto error;
 	}
@@ -91,6 +92,7 @@ re_strerror(enum re_err err)
 	case RE_EXGROUP:  return "syntax error: expected group";
 	case RE_EXITEM:   return "syntax error: expected item";
 	case RE_EXCOUNT:  return "syntax error: expected count";
+	case RE_EXITEMS:  return "syntax error: expected items list";
 	case RE_EXALTS:   return "syntax error: expected alternative list";
 	case RE_EXEOF:    return "syntax error: expected EOF";
 	}

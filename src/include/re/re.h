@@ -7,12 +7,12 @@ struct re;
 
 enum re_form {
 /* TODO:
-	RE_GLOB,
 	RE_ERE,
 	RE_BRE,
 	RE_PLAN9,
 	RE_PCRE,
 */
+	RE_GLOB,
 	RE_SIMPLE
 };
 
@@ -37,6 +37,7 @@ enum re_err {
 	RE_EXGROUP,
 	RE_EXITEM,
 	RE_EXCOUNT,
+	RE_EXITEMS,
 	RE_EXALTS,
 	RE_EXEOF
 };

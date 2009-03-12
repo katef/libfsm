@@ -31,12 +31,12 @@ static void usage(void) {
 static enum re_form form(char c) {
 	switch (c) {
 /* TODO:
-	case 'g': return RE_GLOB;
 	case 'e': return RE_ERE;
 	case 'b': return RE_BRE;
 	case '9': return RE_PLAN9;
 	case 'p': return RE_PCRE;
 */
+	case 'g': return RE_GLOB;
 	case 's': return RE_SIMPLE;
 
 	default:
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hs:")) != -1) {
+		while ((c = getopt(argc, argv, "hg:s:")) != -1) {
 			struct re *new;
 			enum re_err err;
 
@@ -77,9 +77,9 @@ int main(int argc, char *argv[]) {
 			case 'b':
 			case 'e':
 			case '9':
-			case 'g':
 			case 'p':
 */
+			case 'g':
 			case 's':
 				/* TODO: flags? */
 				new = re_new_comp(form(c), optarg, NULL, 0, &err);

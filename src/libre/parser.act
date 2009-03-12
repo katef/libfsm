@@ -53,15 +53,18 @@
 		int lex_tok;
 		int lex_tok_save;
 		enum re_err err;
+
+		/*
+		 * XXX: This non-portably assumes all struct lex_state * pointers may
+		 * store the same representation. Really it ought to be void * instead.
+		 */
+		int (*lex_nexttoken)(struct lex_state *);
+		char (*lex_tokval)(struct lex_state *);
 	};
 
-	/* XXX: we need a lexer per form. possibly have comp_whatever() set callbacks in act_state?
-	 * then these macros would just be like
-	 * #define ADVANCE_LEXER (act_state->advance_lexer(lex_state))
-	 */
 	#define CURRENT_TERMINAL (act_state->lex_tok)
 	#define ERROR_TERMINAL   @$ERROR
-	#define ADVANCE_LEXER    do { act_state->lex_tok = lex_nexttoken(lex_state); } while (0)
+	#define ADVANCE_LEXER    do { act_state->lex_tok = act_state->lex_nexttoken(lex_state); } while (0)
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok;  \
 	                              act_state->lex_tok = tok;                      } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save;  } while (0)
@@ -71,7 +74,7 @@
 %terminals%
 
 	CHAR: () -> (c :char) = @{
-		@c = lex_tokval(lex_state);
+		@c = act_state->lex_tokval(lex_state);
 	@};
 
 	EOL: () -> (c :char) = @{
@@ -275,6 +278,10 @@
 
 	<err-expected-count> = @{
 		act_state->err = RE_EXCOUNT;
+	@};
+
+	<err-expected-items> = @{
+		act_state->err = RE_EXITEMS;
 	@};
 
 	<err-expected-alts> = @{

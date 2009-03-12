@@ -1,4 +1,4 @@
-/* $Id$ */
+/* $Id: comp.c 2 2009-03-08 17:12:37Z kate $ */
 
 #include <assert.h>
 #include <stddef.h>
@@ -13,7 +13,7 @@
 #include "parser.h"
 
 struct re *
-comp_simple(const char *s, enum re_err *err)
+comp_glob(const char *s, enum re_err *err)
 {
 	struct act_state act_state_s;
 	struct act_state *act_state;
@@ -29,7 +29,7 @@ comp_simple(const char *s, enum re_err *err)
 		goto error;
 	}
 
-	lex_state = lex_simple_init(s);
+	lex_state = lex_glob_init(s);
 	if (lex_state == NULL) {
 		re_free(new);
 		e = RE_ENOMEM;
@@ -40,13 +40,13 @@ comp_simple(const char *s, enum re_err *err)
 	act_state = &act_state_s;
 
 	act_state->err           = RE_ESUCCESS;
-	act_state->lex_nexttoken = lex_simple_nexttoken;
-	act_state->lex_tokval    = lex_simple_tokval;
+	act_state->lex_nexttoken = lex_glob_nexttoken;
+	act_state->lex_tokval    = lex_glob_tokval;
 
 	ADVANCE_LEXER;
-	p_re__simple(new, lex_state, act_state);
+	p_re__glob(new, lex_state, act_state);
 
-	lex_simple_free(lex_state);
+	lex_glob_free(lex_state);
 
 	if (act_state->err != RE_ESUCCESS) {
 		/* TODO: free internals allocated during parsing (are there any?) */
