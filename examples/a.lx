@@ -1,0 +1,78 @@
+# $Id$
+
+# Three types of pattern:
+#  'literal' - no escaping
+#  "string"  - with C-style escaped characters \r, \n etc
+#  /regex/   - form as given by some CLI flag
+
+"abc" -> $token;
+
+/[ \t\r\n]/;              # skip whitespace
+" " | "\t" | "\r" | "\n"; # another way (not a nice one)
+" "; "\t"; "\r"; "\n";    # yet another way (also not nice)
+
+
+/'(.*)'/ -> $string;
+
+'\' -> $literal;
+
+
+# TODO: Document rationalle as for why we don't return typed token values from
+# the lexer (e.g. if the lexer is used for syntax hilighting)
+/(0-9)+/ -> $int;
+
+'"' .. '"' {
+	'\t'          -> $str_tab;
+	'\r'          -> $str_return;
+	'\n'          -> $str_return;
+	/\\0([0-9]+)/ -> $str_octal;
+	/(.)/         -> $str_char;
+}
+
+
+# can yield a token for the start and end of a zone
+# anything other than 'x' inside the zone yields the default "unhandled" token (whatever that's called; some reserved enum value)
+'a' -> $a .. 'b' -> $b {
+	/x/ -> $x;
+}
+
+
+
+'/*' .. '*/';	# skip comments
+'#'  .. "\n";
+
+
+
+# Things for the future:
+
+
+# need a generic term for regexps/literals. patterns?
+# assigning pattern names:
+# TODO: i don't think i want these, but i'm unsure. they could be useful to contain the /i flag
+#digits = /[0-9]/;
+#alpha  = /[A-Z]/i;	# /i for case-insensitive
+#alnum  = digits | alpha;	# alternatives, not set union (they differ for a | b where a is different length to b)
+#ident  = alpha /[:alnum:]*/;	# concatenation. XXX: check if introducing  [:group:] is sane
+
+#'$' ident               -> $token;	# concatenation. e.g. $abc
+#'$' /([a-z][a-z0-9]*)/i -> $token;	# equivalent to above
+
+#/(['"])(.*)$1/ -> $string;	# backreferences
+
+#crlf = "\r\n";
+#crlf crlf /(.*)$/g -> $entity_body;	# /g makes $ match to EOF instead of EOL
+#"\r\n" "\r\n" /(.*)$/g -> $entity_body; # is just as readable, imo
+
+
+# recursive comments. TODO: check this. i'm not sure i like it
+# comment-stripping after all ought to be the responsibility of the lexer
+# or you could say 'x' -> someotherzone; and make an FSM
+# zone names would be a different namespace to pattern names
+#z1 = '(-' .. '-)' {
+#	'(-' -> z1;
+#	/./;
+#}
+
+# TODO: something else to consider: returning multiple tokens. I see no use for this
+#'abc' -> $a, $b, $c;
+
