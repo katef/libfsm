@@ -25,7 +25,7 @@
  */
 
 static void usage(void) {
-	fprintf(stderr, "usage: re [-h] { [-geb9p] <re> } <string>\n");
+	fprintf(stderr, "usage: re [-h] { [-lgeb9p] <re> } <string>\n");
 }
 
 static enum re_form form(char c) {
@@ -36,6 +36,7 @@ static enum re_form form(char c) {
 	case '9': return RE_PLAN9;
 	case 'p': return RE_PCRE;
 */
+	case 'l': return RE_LITERAL;
 	case 'g': return RE_GLOB;
 	case 's': return RE_SIMPLE;
 
@@ -64,7 +65,7 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hg:s:")) != -1) {
+		while ((c = getopt(argc, argv, "hl:g:s:")) != -1) {
 			struct re *new;
 			enum re_err err;
 
@@ -79,6 +80,7 @@ int main(int argc, char *argv[]) {
 			case '9':
 			case 'p':
 */
+			case 'l':
 			case 'g':
 			case 's':
 				/* TODO: flags? */

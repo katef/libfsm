@@ -56,8 +56,9 @@ re_new_comp(enum re_form form, const char *s, void *opaque, enum re_cflags cflag
 	assert(s != NULL);
 
 	switch (form) {
-	case RE_GLOB:   comp = comp_glob;   break;
-	case RE_SIMPLE: comp = comp_simple; break;
+	case RE_LITERAL: comp = comp_literal; break;
+	case RE_GLOB:    comp = comp_glob;    break;
+	case RE_SIMPLE:  comp = comp_simple;  break;
 	default: e = RE_EBADFORM;           goto error;
 	}
 

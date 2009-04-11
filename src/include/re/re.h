@@ -12,6 +12,7 @@ enum re_form {
 	RE_PLAN9,
 	RE_PCRE,
 */
+	RE_LITERAL,
 	RE_GLOB,
 	RE_SIMPLE
 };

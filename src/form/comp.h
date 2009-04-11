@@ -6,6 +6,9 @@
 #include <re/re.h>
 
 struct re *
+comp_literal(const char *s, enum re_err *err);
+
+struct re *
 comp_glob(const char *s, enum re_err *err);
 
 struct re *
