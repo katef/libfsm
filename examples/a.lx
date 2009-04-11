@@ -19,7 +19,7 @@
 
 # TODO: Document rationalle as for why we don't return typed token values from
 # the lexer (e.g. if the lexer is used for syntax hilighting)
-/(0-9)+/ -> $int;
+/([0-9]+)/ -> $int;
 
 '"' .. '"' {
 	'\t'          -> $str_tab;
