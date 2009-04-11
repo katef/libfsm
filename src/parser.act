@@ -1,0 +1,121 @@
+/* $Id$ */
+
+%prefixes%
+
+	terminal = lex_;
+	function = p_;
+
+%persistents%
+
+	lex_state :lex_state;
+	act_state :act_state;
+
+%maps%
+
+%header% @{
+
+	#include <assert.h>
+	#include <stdio.h>
+	#include <stdlib.h>
+
+	#include "lexer.h"
+	#include "parser.h"
+
+	struct act_state {
+		int lex_tok;
+		int lex_tok_save;
+	};
+
+	#define CURRENT_TERMINAL (act_state->lex_tok)
+	#define ERROR_TERMINAL   lex_unknown
+	#define ADVANCE_LEXER    do { act_state->lex_tok = lex_nexttoken(lex_state); } while (0)
+	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
+	                              act_state->lex_tok = tok;                      } while (0)
+	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save;  } while (0)
+
+	static void err_expected(const char *token) {
+		fprintf(stderr, "syntax error: expected %s\n", token);
+		exit(EXIT_FAILURE);
+	}
+
+@}, @{
+
+	#include <stdio.h>
+
+	typedef struct lex_state * lex_state;
+	typedef struct act_state * act_state;
+
+	void lx_parse(FILE *f);
+
+@};
+
+%terminals%
+
+%actions%
+
+	<err-syntax> = @{
+		fprintf(stderr, "syntax error\n");
+		exit(EXIT_FAILURE);
+	@};
+
+    <err-expected-alt> = @{
+		err_expected("'|'");
+	@};
+
+    <err-expected-map> = @{
+		err_expected("'->'");
+	@};
+
+    <err-expected-semi> = @{
+		err_expected("';'");
+	@};
+
+    <err-expected-to> = @{
+		err_expected("'..'");
+	@};
+
+    <err-expected-open> = @{
+		err_expected("'{'");
+	@};
+
+    <err-expected-close> = @{
+		err_expected("'}'");
+	@};
+
+
+    <err-expected-name> = @{
+		err_expected("token name");
+	@};
+
+    <err-expected-list> = @{
+		err_expected("list of token mappings or zones");
+	@};
+
+%trailer% @{
+
+	void lx_parse(FILE *f) {
+		struct act_state act_state_s;
+		struct act_state *act_state;
+		struct lex_state *lex_state;
+
+		assert(f != NULL);
+
+		lex_state = lex_init(f);
+		if (lex_state == NULL) {
+			perror("lex_init");
+			return;
+		}
+
+		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
+		act_state = &act_state_s;
+
+		ADVANCE_LEXER;	/* XXX: what if the first token is unrecognised? */
+		p_lx(lex_state, act_state);
+
+		lex_free(lex_state);
+	}
+
+@}, @{
+
+@};
+

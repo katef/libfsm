@@ -43,7 +43,7 @@ TOKEN "}"  -> $close;
 
 GROUP alpha = {A-Z} + {a-z};
 GROUP alnum = {0-9} + "[alpha]" + "_";
-ZONE token: "$[alpha]" -> <flush>, <push>(#1) [...) "[^alnum]" -> $token {
+ZONE token: "$[alpha]" -> <flush>, <push>(#1) [...) "[^alnum]" -> $token_name {
 	TOKEN DEFAULT -> <push>(#0);
 }
 
