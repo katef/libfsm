@@ -20,9 +20,6 @@ static void free_contents(struct fsm *fsm) {
 	struct state_list *s;
 	struct trans_list *t;
 	struct fsm_edge *e;
-#ifndef NDEBUG
-	static const struct fsm_state state_defaults;
-#endif
 
 	assert(fsm != NULL);
 
@@ -33,19 +30,8 @@ static void free_contents(struct fsm *fsm) {
 
 		for (e = s->state.edges; e; e = e_next) {
 			e_next = e->next;
-
-#ifndef NDEBUG
-			e->trans = NULL;
-			e->state = NULL;
-			e->next  = NULL;
-#endif
 			free(e);
 		}
-
-#ifndef NDEBUG
-		s->state = state_defaults;
-		s->next = NULL;
-#endif
 
 		free(s);
 	}
@@ -55,10 +41,6 @@ static void free_contents(struct fsm *fsm) {
 
 		if (t->type == FSM_EDGE_LABEL) {
 			free(t->u.label);
-
-#ifndef NDEBUG
-			t->u.label = NULL;
-#endif
 		}
 
 		free(t);
@@ -163,12 +145,6 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	dst->start   = src->start;
 	dst->options = src->options;
 
-#ifndef NDEBUG
-	src->sl    = NULL;
-	src->tl    = NULL;
-	src->start = NULL;
-#endif
-
 	free(src);
 }
 
@@ -223,12 +199,6 @@ fsm_union(struct fsm *dst, struct fsm *src)
 		/* TODO: src has no start state. rethink during API refactor */
 	}
 
-
-#ifndef NDEBUG
-	src->sl    = NULL;
-	src->tl    = NULL;
-	src->start = NULL;
-#endif
 
 	free(src);
 
