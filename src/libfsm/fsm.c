@@ -10,17 +10,9 @@
 #include "internal.h"
 
 static unsigned int inventid(const struct fsm *fsm) {
-	unsigned int max;
-	struct state_list *p;
+	assert(fsm != NULL);
 
-	max = 0;
-	for (p = fsm->sl; p; p = p->next) {
-		if (p->state.id > max) {
-			max = p->state.id;
-		}
-	}
-
-	return max + 1;
+	return fsm_getmaxid(fsm) + 1;
 }
 
 static void free_contents(struct fsm *fsm) {
@@ -355,5 +347,23 @@ fsm_getstatebyid(const struct fsm *fsm, unsigned int id)
 	}
 
 	return NULL;
+}
+
+unsigned int
+fsm_getmaxid(const struct fsm *fsm)
+{
+	unsigned int max;
+	struct state_list *p;
+
+	assert(fsm != NULL);
+
+	max = 0;
+	for (p = fsm->sl; p; p = p->next) {
+		if (p->state.id > max) {
+			max = p->state.id;
+		}
+	}
+
+	return max;
 }
 

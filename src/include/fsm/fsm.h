@@ -165,5 +165,17 @@ fsm_getstart(const struct fsm *fsm);
 struct fsm_state *
 fsm_getstatebyid(const struct fsm *fsm, unsigned int id);
 
+/*
+ * Find the maximum id.
+ *
+ * This is intended to be used in conjunction with fsm_getstatebyid() to
+ * iterate through all states after renumbering by conversion to a DFA,
+ * minimization or similar.
+ *
+ * Returns 0 if no states are present. TODO: due to be impossible
+ */
+unsigned int
+fsm_getmaxid(const struct fsm *fsm);
+
 #endif
 
