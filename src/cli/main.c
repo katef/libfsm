@@ -16,10 +16,32 @@ extern int optind;
 extern char *optarg;
 
 void usage(void) {
-	printf("usage: fsm [-hadmr] [-l <language] [-e <execution> | -q <query] [<input> [<output>]]\n");
+	printf("usage: fsm [-hadmr] [-l <language] [-e <execution> | -q <query] [-u <input>] [<input> [<output>]]\n");
 }
 
-FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
+static void union_parse(struct fsm *fsm, FILE *f) {
+	struct fsm *tmp;
+
+	assert(fsm != NULL);
+	assert(f != NULL);
+
+	/* TODO: This ought to come out more nicely when fsm.h's API is refactored */
+
+	tmp = fsm_new();
+	if (tmp == NULL) {
+		perror("fsm_new");
+		exit(EXIT_FAILURE);
+	}
+
+	fsm_parse(tmp, f);	/* TODO: error-check */
+
+	if (!fsm_union(fsm, tmp)) {
+		perror("fsm_union");
+		exit(EXIT_FAILURE);
+	}
+}
+
+static FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
 	if (argc <= i || 0 == strcmp("-", argv[i])) {
 		return f;
 	}
@@ -49,6 +71,7 @@ int main(int argc, char *argv[]) {
 	FILE *in;
 	FILE *out;
 	enum fsm_out format = FSM_OUT_FSM;
+	struct fsm *fsm;
 
 	struct cli_options {
 		/* boolean: reverse the FSM as per fsm_reverse() */
@@ -73,10 +96,16 @@ int main(int argc, char *argv[]) {
 	static const struct cli_options cli_options_defaults;
 	struct cli_options cli_options = cli_options_defaults;
 
+	fsm = fsm_new();
+	if (fsm == NULL) {
+		perror("fsm_new");
+		exit(EXIT_FAILURE);
+	}
+
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hal:de:mrq:")) != -1) {
+		while ((c = getopt(argc, argv, "hal:de:mrq:u:")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -129,6 +158,22 @@ int main(int argc, char *argv[]) {
 				}
 				break;
 
+			case 'u': {
+					FILE *f;
+					struct fsm *tmp;
+
+					f = fopen(optarg, "r");
+					if (f == NULL) {
+						perror(optarg);
+						exit(EXIT_FAILURE);
+					}
+
+					union_parse(fsm, f);
+
+					fclose(f);
+					break;
+				}
+
 			case '?':
 			default:
 				usage();
@@ -150,21 +195,13 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
+	fsm_setoptions(fsm, &options);
+
 	in  = xopen(argc, argv, 0, stdin,  "r");
 	out = xopen(argc, argv, 1, stdout, "w");
 
 	{
-		struct fsm *fsm;
-
-		fsm = fsm_new();
-		if (fsm == NULL) {
-			perror("fsm_new");
-			exit(EXIT_FAILURE);
-		}
-
-		fsm_setoptions(fsm, &options);
-
-		fsm_parse(fsm, in);
+		union_parse(fsm, in);
 
 		if (cli_options.reverse) {
 			if (fsm_reverse(fsm) == NULL) {

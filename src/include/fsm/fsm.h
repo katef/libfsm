@@ -3,6 +3,10 @@
 #ifndef FSM_H
 #define FSM_H
 
+/*
+ * TODO: This API needs quite some refactoring.
+ */
+
 struct fsm;
 struct fsm_state;
 struct fsm_edge;
@@ -18,6 +22,8 @@ struct fsm_options {
  * functions in this API.
  *
  * Returns NULL on error; see errno.
+ * TODO: perhaps automatically create a start state, and never have an empty FSM
+ * TODO: also fsm_parse should create an FSM, not add into an existing one
  */
 struct fsm *
 fsm_new(void);
@@ -39,9 +45,20 @@ fsm_copy(struct fsm *fsm);
 
 /*
  * Copy the contents of src over dst, and free src.
+ *
+ * TODO: I don't really like this sort of interface. Reconsider?
  */
 void
 fsm_move(struct fsm *dst, struct fsm *src);
+
+/*
+ * Merge the contents of src into dst by union, and free src.
+ * Returns 0 on error.
+ *
+ * TODO: I don't really like this sort of interface. Reconsider?
+ */
+int
+fsm_union(struct fsm *dst, struct fsm *src);
 
 /*
  * Add a state of the given id. An existing state is returned if the id is

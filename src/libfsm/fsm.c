@@ -1,5 +1,6 @@
 /* $Id$ */
 
+#include <stdio.h> /* XXX */
 #include <assert.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -177,6 +178,69 @@ fsm_move(struct fsm *dst, struct fsm *src)
 #endif
 
 	free(src);
+}
+
+int
+fsm_union(struct fsm *dst, struct fsm *src)
+{
+	struct trans_list **tl;
+	struct state_list **sl;
+	struct state_list *p;
+
+	assert(src != NULL);
+	assert(dst != NULL);
+
+	/*
+	 * Splice over lists from src to dst.
+	 */
+
+	for (sl = &dst->sl; *sl; sl = &(*sl)->next) {
+		/* nothing */
+	}
+	*sl = src->sl;
+
+
+	for (tl = &dst->tl; *tl; tl = &(*tl)->next) {
+		/* nothing */
+	}
+	*tl = src->tl;
+
+
+	/*
+	 * Renumber incoming states so as not to clash over existing ones.
+	 */
+	for (p = src->sl; p; p = p->next) {
+		p->state.id = 0;
+	}
+	for (p = src->sl; p; p = p->next) {
+		p->state.id = inventid(dst);
+	}
+
+
+	/*
+	 * Add epsilon transition from dst's start state to src's start state.
+	 */
+	if (src->start != NULL) {
+		if (dst->start == NULL) {
+			dst->start = src->start;
+		} else if (!fsm_addedge_epsilon(dst, dst->start, src->start)) {
+			/* TODO: this leaves dst in a questionable state */
+			return 0;
+		}
+	} else {
+		/* TODO: src has no start state. rethink during API refactor */
+	}
+
+
+#ifndef NDEBUG
+	src->sl    = NULL;
+	src->tl    = NULL;
+	src->start = NULL;
+#endif
+
+	free(src);
+
+	return 1;
 }
 
 struct fsm_state *
