@@ -63,3 +63,20 @@ int fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque)
 	return state->id;
 }
 
+int fsm_sgetc(void *opaque) {
+	const char **s = opaque;
+	char c;
+
+	assert(s != NULL);
+
+	c = **s;
+
+	if (c == '\0') {
+		return EOF;
+	}
+
+	(*s)++;
+
+	return c;
+}
+

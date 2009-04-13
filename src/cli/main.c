@@ -55,18 +55,6 @@ static FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mo
 	return f;
 }
 
-static int exec_getc(void *opaque) {
-	char **p = opaque;
-	int c;
-
-	assert(opaque != NULL);
-
-	c = **p != '\0' ? **p : EOF;
-	(*p)++;
-
-	return c;
-}
-
 int main(int argc, char *argv[]) {
 	FILE *in;
 	FILE *out;
@@ -229,7 +217,7 @@ int main(int argc, char *argv[]) {
 		if (cli_options.execute != NULL) {
 			int e;
 
-			e = fsm_exec(fsm, exec_getc, &cli_options.execute);
+			e = fsm_exec(fsm, fsm_sgetc, &cli_options.execute);
 
 			fsm_free(fsm);
 

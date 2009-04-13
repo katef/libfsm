@@ -24,5 +24,22 @@ struct fsm;
 int
 fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque);
 
+/*
+ * Callbacks which may be passed to fsm_exec(). These are conveniences for
+ * common situations; they could equally well be user-defined.
+ *
+ *  fsm_sgetc - To read from a string. Pass the address of a pointer to the
+ *              first element of a string:
+ *
+ *                const char *s = "abc";
+ *                fsm_exec(fsm, fsm_sgetc, &s);
+ *
+ *              Where s will be incremented to point to each character in turn.
+ *
+ * TODO: add fsm_fgetc
+ */
+int
+fsm_sgetc(void *opaque);
+
 #endif
 
