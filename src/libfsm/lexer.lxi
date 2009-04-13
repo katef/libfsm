@@ -35,6 +35,7 @@ TOKEN "->" -> $arrow;
 
 TOKEN ";" -> $sep;
 TOKEN "," -> $comma;
+TOKEN "=" -> $equals;
 
 TOKEN "\e" -> $eof;
 

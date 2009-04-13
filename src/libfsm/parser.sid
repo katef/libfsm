@@ -20,6 +20,7 @@
 
 	sep;
 	comma;
+	equals;
 
 	eof;
 	!unknown;
@@ -29,6 +30,7 @@
 	<add-state>: (:int) -> (:state);
 	<mark-start>: (:int) -> ();
 	<mark-end>: (:int) -> ();
+	<mark-colour>: (:int, :string) -> ();
 	<add-edge-label>: (:state, :state, :string) -> ();
 	<add-edge-literal>: (:state, :state, :string) -> ();
 	<add-edge-any>: (:state, :state) -> ();
@@ -38,6 +40,7 @@
 	<err-expected-sep>;
 	<err-expected-trans>;
 	<err-expected-comma>;
+	<err-expected-equals>;
 	<err-expected-start>;
 	<err-expected-end>;
 	<err-parse>;
@@ -120,15 +123,43 @@
 		};
 	};
 
-	edges = {
-		edges;
-		edge;
+	colour = {
+		n = id;
+
+		{
+			equals;
+		##
+			<err-expected-equals>;
+		};
+
+		s = label;
+
+		{
+			sep;
+		##
+			<err-expected-sep>;
+		};
+
+		<mark-colour>(n, s);
+	};
+
+	things [
+
+		thing = {
+			edge;
+		||
+			colour;
+		};
+
+	] = {
+		things;
+		thing;
 	||
-		edge;
+		thing;
 	};
 
 	fsm = {
-		edges;
+		things;
 
 		n = xstart;
 		<mark-start>(n);

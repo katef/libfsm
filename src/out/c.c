@@ -172,7 +172,15 @@ void out_c(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "\twhile ((c = fsm_getc(opaque)) != EOF) {\n");
 	fprintf(f, "\t\tswitch (state) {\n");
 	for (s = fsm->sl; s; s = s->next) {
-		fprintf(f, "\t\tcase S%u:\n", s->state.id);
+		fprintf(f, "\t\tcase S%u:", s->state.id);
+
+		if (s->state.opaque != NULL) {
+			fprintf(f, " /* ");
+			fputs(s->state.opaque, f);
+			fprintf(f, " */");
+		}
+
+		fprintf(f, "\n");
 		singlecase(f, &s->state);
 
 		if (s->next != NULL) {

@@ -123,6 +123,18 @@
 		fsm_setend(fsm, state, 1);
 	@};
 
+	<mark-colour>: (n :int, s :string) -> () = @{
+		struct fsm_state *state;
+
+		state = fsm_getstatebyid(fsm, @n);
+		if (state == NULL) {
+			fprintf(stderr, "unrecognised state: %u\n", @n);
+			@!;
+		}
+
+		fsm_setopaque(fsm, state, @s);
+	@};
+
 	<add-edge-label>: (x :state, y :state, s :string) -> () = @{
 		assert(@s != NULL);
 
@@ -185,6 +197,10 @@
 
 	<err-expected-comma> = @{
 		err_expected("','");
+	@};
+
+	<err-expected-equals> = @{
+		err_expected("'='");
 	@};
 
 	<err-expected-start> = @{

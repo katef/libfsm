@@ -72,6 +72,16 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 		}
 	}
 
+	for (s = fsm->sl; s; s = s->next) {
+		if (s->state.opaque == NULL) {
+			continue;
+		}
+
+		fprintf(f, "%-2u = \"", s->state.id);
+		escputs(s->state.opaque, f);
+		fprintf(f, "\";\n");
+	}
+
 	fprintf(f, "\n");
 
 	start = fsm_getstart(fsm);
