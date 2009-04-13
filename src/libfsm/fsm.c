@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include <limits.h>
 
 #include <fsm/fsm.h>
 
@@ -249,13 +248,12 @@ fsm_setoptions(struct fsm *fsm, const struct fsm_options *options)
 }
 
 void
-fsm_setend(struct fsm *fsm, struct fsm_state *state, unsigned int end)
+fsm_setend(struct fsm *fsm, struct fsm_state *state, int end)
 {
 	(void) fsm;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
-	assert(end <= INT_MAX);
 
 	state->end = end;
 }
@@ -268,7 +266,7 @@ fsm_isend(const struct fsm *fsm, const struct fsm_state *state)
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	return state->end;
+	return !!state->end;
 }
 
 int

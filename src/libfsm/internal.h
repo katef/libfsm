@@ -7,7 +7,7 @@ struct fsm_state {
 	unsigned int id;
 	void *opaque;
 
-	unsigned int end;	/* <= INT_MAX */
+	int end;
 
 	struct fsm_edge *edges;
 };

@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include <limits.h>
 
 #include <fsm/fsm.h>
 #include <fsm/graph.h>
@@ -130,9 +129,9 @@ static void endstates(FILE *f, const struct fsm *fsm, struct state_list *sl) {
 			continue;
 		}
 
-		assert(s->state.end <= INT_MAX && s->state.end > 0);
+		assert(s->state.end > 0);
 		fprintf(f, "\tcase S%d: return %u;\n",
-			s->state.id, s->state.end);
+			s->state.id, s->state.id);
 	}
 	fprintf(f, "\tdefault: return EOF; /* unexpected EOF */\n");
 	fprintf(f, "\t}\n");
