@@ -43,7 +43,7 @@ struct mapping {
 	struct mapping *next;
 };
 
-void free_set(struct set *set) {
+static void free_set(struct set *set) {
 	struct set *p;
 	struct set *next;
 
@@ -53,7 +53,7 @@ void free_set(struct set *set) {
 	}
 }
 
-void free_mappings(struct mapping *m) {
+static void free_mappings(struct mapping *m) {
 	struct mapping *p;
 	struct mapping *next;
 
@@ -61,6 +61,41 @@ void free_mappings(struct mapping *m) {
 		next = p->next;
 		free(p);
 	}
+}
+
+/* Carry through non-NULL opaque values to a newly-created state */
+static int carrythroughopaques(struct fsm *fsm, struct fsm_state *state, struct set *set) {
+	const struct set *p;
+	void *opaque;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	opaque = NULL;
+
+	/*
+	 * Here we need to check if all non-opaque values are identical. If not, we
+	 * have a collision, as multiple opaque values cannot be expressed in one
+	 * state.
+	 *
+	 * This loop finds the first non-NULL opaque value, then proceeds to check
+	 * that all remaining non-NULL opaque values have the same value.
+	 */
+	for (p = set; p; p = p->next) {
+		if (p->state->opaque == NULL) {
+			continue;
+		}
+
+		if (opaque == NULL) {
+			opaque = p->state->opaque;
+		} else if (opaque != p->state->opaque) {
+			return 0;
+		}
+	}
+
+	fsm_setopaque(fsm, state, opaque);
+
+	return 1;
 }
 
 /* Find if a transition is in a set */
@@ -417,6 +452,8 @@ static struct set *allstatesreachableby(struct set *set, struct trans_list *tran
  *
  * As all DFA are NFA; for a DFA this has no semantic effect other than
  * renumbering states as a side-effect of constructing the new FSM).
+ *
+ * TODO: returning an int is a little cumbersome here. Why not return an fsm?
  */
 static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 	struct mapping *curr;
@@ -488,6 +525,13 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 
 		free_set(nes);
 
+		/* TODO: document */
+		if (!carrythroughopaques(dfa, curr->dfastate, curr->closure)) {
+			/* We have a collision, and the NFA->DFA conversion must fail */
+			/* TODO: free something? */
+			return -1;
+		}
+
 		/*
 		 * The current DFA state is an end state if any of its associated NFA
 		 * states are end states.
@@ -502,10 +546,10 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 	return 1;
 }
 
-struct fsm *
+int
 fsm_todfa(struct fsm *fsm)
 {
-	int i;
+	int r;
 	struct mapping *ml;
 	struct fsm *dfa;
 
@@ -513,14 +557,14 @@ fsm_todfa(struct fsm *fsm)
 
 	dfa = fsm_new();
 	if (dfa == NULL) {
-		return NULL;
+		return 0;
 	}
 
 	ml = NULL;
-	i = nfatodfa(&ml, fsm, dfa);
+	r = nfatodfa(&ml, fsm, dfa);
 	free_mappings(ml);
-	if (!i) {
-		return NULL;
+	if (r <= 0) {
+		return r;
 	}
 
 	/* TODO: can assert a whole bunch of things about the dfa, here */
@@ -528,6 +572,6 @@ fsm_todfa(struct fsm *fsm)
 
 	fsm_move(fsm, dfa);
 
-	return fsm;
+	return 1;
 }
 

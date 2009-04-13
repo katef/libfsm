@@ -160,7 +160,6 @@ int main(int argc, char *argv[]) {
 
 			case 'u': {
 					FILE *f;
-					struct fsm *tmp;
 
 					f = fopen(optarg, "r");
 					if (f == NULL) {
@@ -204,21 +203,21 @@ int main(int argc, char *argv[]) {
 		union_parse(fsm, in);
 
 		if (cli_options.reverse) {
-			if (fsm_reverse(fsm) == NULL) {
+			if (!fsm_reverse(fsm)) {
 				perror("fsm_reverse");
 				exit(EXIT_FAILURE);
 			}
 		}
 
 		if (cli_options.todfa) {
-			if (fsm_todfa(fsm) == NULL) {
+			if (!fsm_todfa(fsm)) {
 				perror("fsm_todfa");
 				exit(EXIT_FAILURE);
 			}
 		}
 
 		if (cli_options.minimize) {
-			if (fsm_minimize(fsm) == NULL) {
+			if (!fsm_minimize(fsm)) {
 				perror("fsm_minimize");
 				exit(EXIT_FAILURE);
 			}

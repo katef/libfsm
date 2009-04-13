@@ -8,7 +8,7 @@
 
 #include "internal.h"
 
-struct fsm *
+int
 fsm_reverse(struct fsm *fsm)
 {
 	struct fsm *new;
@@ -17,20 +17,30 @@ fsm_reverse(struct fsm *fsm)
 
 	new = fsm_new();
 	if (new == NULL) {
-		return NULL;
+		return 0;
 	}
 
 	fsm_setoptions(new, &fsm->options);
 
-	/* create states corresponding to the origional FSM's states */
+	/*
+	 * Create states corresponding to the origional FSM's states. Their opaque
+	 * values are copied over.
+	 *
+	 * TODO: possibly centralise with fsm_copy() into a state-copying function
+	 */
 	{
 		struct state_list *s;
 
 		for (s = fsm->sl; s; s = s->next) {
-			if (fsm_addstate(new, s->state.id) == NULL) {
+			struct fsm_state *n;
+
+			n = fsm_addstate(new, s->state.id);
+			if (n == NULL) {
 				fsm_free(new);
-				return NULL;
+				return 0;
 			}
+
+			n->opaque = s->state.opaque;
 		}
 	}
 
@@ -63,7 +73,7 @@ fsm_reverse(struct fsm *fsm)
 
 				if (fsm_addedge_copy(new, from, to, e) == NULL) {
 					fsm_free(new);
-					return NULL;
+					return 0;
 				}
 			}
 		}
@@ -88,7 +98,7 @@ fsm_reverse(struct fsm *fsm)
 				start = fsm_addstate(new, 0);
 				if (start == NULL) {
 					fsm_free(new);
-					return NULL;
+					return 0;
 				}
 
 				fsm_setstart(new, start);
@@ -125,7 +135,7 @@ fsm_reverse(struct fsm *fsm)
 				start = fsm_addstate(new, 0);
 				if (start == NULL) {
 					fsm_free(new);
-					return NULL;
+					return 0;
 				}
 
 				fsm_setstart(new, start);
@@ -152,6 +162,6 @@ fsm_reverse(struct fsm *fsm)
 
 	fsm_move(fsm, new);
 
-	return fsm;
+	return 1;
 }
 

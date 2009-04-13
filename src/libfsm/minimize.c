@@ -5,31 +5,37 @@
 
 #include <fsm/graph.h>
 
-struct fsm *
+int
 fsm_minimize(struct fsm *fsm)
 {
+	int r;
+
 	assert(fsm != NULL);
 
 	/*
 	 * Brzozowski's algorithm.
 	 */
 
-	if (fsm_reverse(fsm) == NULL) {
-		return NULL;
+	r = fsm_reverse(fsm);
+	if (r <= 0) {
+		return r;
 	}
 
-	if (fsm_todfa(fsm)   == NULL) {
-		return NULL;
+	r = fsm_todfa(fsm);
+	if (r <= 0) {
+		return r;
 	}
 
-	if (fsm_reverse(fsm) == NULL) {
-		return NULL;
+	r = fsm_reverse(fsm);
+	if (r <= 0) {
+		return r;
 	}
 
-	if (fsm_todfa(fsm)   == NULL) {
-		return NULL;
+	r = fsm_todfa(fsm);
+	if (r <= 0) {
+		return r;
 	}
 
-	return fsm;
+	return 1;
 }
 

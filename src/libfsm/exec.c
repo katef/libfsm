@@ -56,6 +56,10 @@ int fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque)
 		}
 	}
 
-	return state->end;
+	if (!state->end) {
+		return 0;
+	}
+
+	return state->id;
 }
 

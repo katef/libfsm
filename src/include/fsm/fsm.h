@@ -4,7 +4,11 @@
 #define FSM_H
 
 /*
- * TODO: This API needs quite some refactoring.
+ * TODO: This API needs quite some refactoring. Mostly we ought to operate
+ * in-place, else the user would only free() everything. Having an explicit
+ * copy interface leaves the option for duplicating, if they wish. However be
+ * careful about leaving things in an indeterminate state; everything ought to
+ * be atomic.
  */
 
 struct fsm;
@@ -176,6 +180,20 @@ fsm_getstatebyid(const struct fsm *fsm, unsigned int id);
  */
 unsigned int
 fsm_getmaxid(const struct fsm *fsm);
+
+/*
+ * Store and retrieve user-specified opaque data per-state. If not set, this
+ * defaults to NULL.
+ *
+ * Caveats apply during graph operations (such as minimization and conversion
+ * from NFA to DFA); when states are to be merged to produce one output state,
+ * all their opaque values must be identical, if non-NULL. If not, those
+ * processes will fail; see <fsm/graph.h> for details.
+ */
+void
+fsm_setopaque(struct fsm *fsm, struct fsm_state *state, void *opaque);
+void *
+fsm_getopaque(struct fsm *fsm, struct fsm_state *state);
 
 #endif
 

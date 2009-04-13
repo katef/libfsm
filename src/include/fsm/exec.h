@@ -11,9 +11,13 @@ struct fsm;
  * either an unsigned character cast to int, or EOF to indicate the end of
  * input.
  *
- * Returns true on a successful parse, and false for unexpected input, or
- * premature EOF. If true, the value of the end state as set by fsm_setend()
- * is returned.
+ * Returns true on a successful parse ending in an end state as set by
+ * fsm_setend(), and false for unexpected input, premature EOF, or ending in
+ * a state not marked as an end state.
+ *
+ * If true, the state id is returned; this is intended to facillitate lookup of
+ * its state opaque value previously set by fsm_setopaque() (not to be confused
+ * with the opaque pointer passed for the fsm_getc callback function).
  *
  * The given FSM is expected to be a DFA.
  */

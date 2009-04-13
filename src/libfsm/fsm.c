@@ -1,6 +1,5 @@
 /* $Id$ */
 
-#include <stdio.h> /* XXX */
 #include <assert.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -97,6 +96,8 @@ fsm_copy(struct fsm *fsm)
 			fsm_free(new);
 			return NULL;
 		}
+
+		state->opaque = s->state.opaque;
 
 		if (fsm_isend(fsm, &s->state)) {
 			fsm_setend(new, state, 1);
@@ -226,9 +227,10 @@ fsm_addstate(struct fsm *fsm, unsigned int id)
 			return NULL;
 		}
 
-		p->state.id    = id == 0 ? inventid(fsm) : id;
-		p->state.edges = NULL;
-		p->state.end   = 0;
+		p->state.id     = id == 0 ? inventid(fsm) : id;
+		p->state.opaque = NULL;
+		p->state.edges  = NULL;
+		p->state.end    = 0;
 
 		p->next = fsm->sl;
 		fsm->sl = p;
@@ -335,5 +337,23 @@ fsm_getmaxid(const struct fsm *fsm)
 	}
 
 	return max;
+}
+
+void
+fsm_setopaque(struct fsm *fsm, struct fsm_state *state, void *opaque)
+{
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	state->opaque = opaque;
+}
+
+void *
+fsm_getopaque(struct fsm *fsm, struct fsm_state *state)
+{
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	return state->opaque;
 }
 

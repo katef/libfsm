@@ -5,6 +5,7 @@
 
 struct fsm_state {
 	unsigned int id;
+	void *opaque;
 
 	unsigned int end;	/* <= INT_MAX */
 
