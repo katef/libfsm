@@ -11,16 +11,23 @@
 
 /*
  * A set of states in an NFA.
- *
- * These may optionally have labels naming a transition which was followed to
- * reach the state. This is used for finding which states are reachable by a
- * given label, given an set of several states.
- * TODO: optionally... optional under what condition? maybe split into two types?
  */
-struct set {
+struct stateset {
+	const struct fsm_state *state;
+	struct stateset *next;
+};
+
+/*
+ * A set of states in an NFA.
+ *
+ * These have labels naming a transition which was followed to reach the state.
+ * This is used for finding which states are reachable by a given label, given
+ * a set of several states.
+ */
+struct transset {
 	const struct fsm_state *state;
 	struct trans_list *trans;
-	struct set *next;
+	struct transset *next;
 };
 
 /*
@@ -32,20 +39,30 @@ struct set {
  */
 struct mapping {
 	/* The set of NFA states forming the epsilon closure for this DFA state */
-	struct set *closure;
+	struct stateset *closure;
 
 	/* The DFA state associated with this epsilon closure of NFA states */
 	struct fsm_state *dfastate;
 
 	/* boolean: are the outgoing edges for dfastate all created? */
-	int done:1;
+	unsigned int done:1;
 
 	struct mapping *next;
 };
 
-static void free_set(struct set *set) {
-	struct set *p;
-	struct set *next;
+static void free_stateset(struct stateset *set) {
+	struct stateset *p;
+	struct stateset *next;
+
+	for (p = set; p; p = next) {
+		next = p->next;
+		free(p);
+	}
+}
+
+static void free_transset(struct transset *set) {
+	struct transset *p;
+	struct transset *next;
 
 	for (p = set; p; p = next) {
 		next = p->next;
@@ -64,8 +81,8 @@ static void free_mappings(struct mapping *m) {
 }
 
 /* Carry through non-NULL opaque values to a newly-created state */
-static int carrythroughopaques(struct fsm *fsm, struct fsm_state *state, struct set *set) {
-	const struct set *p;
+static int carrythroughopaques(struct fsm *fsm, struct fsm_state *state, struct stateset *set) {
+	const struct stateset *s;
 	void *opaque;
 
 	assert(fsm != NULL);
@@ -81,14 +98,14 @@ static int carrythroughopaques(struct fsm *fsm, struct fsm_state *state, struct 
 	 * This loop finds the first non-NULL opaque value, then proceeds to check
 	 * that all remaining non-NULL opaque values have the same value.
 	 */
-	for (p = set; p; p = p->next) {
-		if (p->state->opaque == NULL) {
+	for (s = set; s; s = s->next) {
+		if (s->state->opaque == NULL) {
 			continue;
 		}
 
 		if (opaque == NULL) {
-			opaque = p->state->opaque;
-		} else if (opaque != p->state->opaque) {
+			opaque = s->state->opaque;
+		} else if (opaque != s->state->opaque) {
 			return 0;
 		}
 	}
@@ -99,14 +116,14 @@ static int carrythroughopaques(struct fsm *fsm, struct fsm_state *state, struct 
 }
 
 /* Find if a transition is in a set */
-static int transin(struct trans_list *trans, const struct set *set) {
-	const struct set *p;
+static int transin(struct trans_list *trans, const struct transset *set) {
+	const struct transset *p;
 
 	assert(trans != NULL);
 	assert(trans->type != FSM_EDGE_EPSILON);
 
 	for (p = set; p; p = p->next) {
-		assert(p->trans != NULL);	/* TODO: not sure */
+		assert(p->trans != NULL);
 		assert(p->trans->type != FSM_EDGE_EPSILON);	/* TODO: not sure */
 
 		/* TODO: deep comparison? if (trans_equal(p->trans, trans)) { */
@@ -118,9 +135,9 @@ static int transin(struct trans_list *trans, const struct set *set) {
 	return 0;
 }
 
-/* Find if a state is in a set */
-static int statein(const struct fsm_state *state, const struct set *set) {
-	const struct set *p;
+/* Find if a state is in a stateset */
+static int statein(const struct fsm_state *state, const struct stateset *set) {
+	const struct stateset *p;
 
 	for (p = set; p; p = p->next) {
 		if (p->state == state) {
@@ -132,8 +149,8 @@ static int statein(const struct fsm_state *state, const struct set *set) {
 }
 
 /* Find a is a subset of b */
-static int subsetof(const struct set *a, const struct set *b) {
-	const struct set *p;
+static int subsetof(const struct stateset *a, const struct stateset *b) {
+	const struct stateset *p;
 
 	for (p = a; p; p = p->next) {
 		if (!statein(p->state, b)) {
@@ -145,9 +162,9 @@ static int subsetof(const struct set *a, const struct set *b) {
 }
 
 /*
- * Compare two sets of states for equality, ignoring their edge transitions.
+ * Compare two sets of states for equality.
  */
-static int ecequal(const struct set *a, const struct set *b) {
+static int ecequal(const struct stateset *a, const struct stateset *b) {
 	return subsetof(a, b) && subsetof(b, a);
 }
 
@@ -158,13 +175,13 @@ static int ecequal(const struct set *a, const struct set *b) {
  * The association of DFA states to epsilon closures in the NFA is stored in
  * the mapping list ml for future reference.
  */
-static struct mapping *addtoml(struct fsm *dfa, struct mapping **ml, struct set *closure) {
+static struct mapping *addtoml(struct fsm *dfa, struct mapping **ml, struct stateset *closure) {
 	struct mapping *p;
 
 	/* use existing mapping if present */
 	for (p = *ml; p; p = p->next) {
 		if (ecequal(p->closure, closure)) {
-			free_set(closure);
+			free_stateset(closure);
 			return p;
 		}
 	}
@@ -203,9 +220,9 @@ static struct mapping *addtoml(struct fsm *dfa, struct mapping **ml, struct set 
  *
  * Returns closure on success, NULL on error.
  */
-static struct set **epsilon_closure(const struct fsm_state *state, struct set **closure) {
+static struct stateset **epsilon_closure(const struct fsm_state *state, struct stateset **closure) {
 	struct fsm_edge *p;
-	struct set *s;
+	struct stateset *s;
 
 	assert(state != NULL);
 	assert(closure != NULL);
@@ -225,8 +242,6 @@ static struct set **epsilon_closure(const struct fsm_state *state, struct set **
 	}
 
 	s->state = state;
-	s->trans = NULL;
-	/* TODO: document that this is an entirely unrelated set to the one where ->trans is non-NULL */
 
 	s->next  = *closure;
 	*closure = s;
@@ -250,7 +265,7 @@ static struct set **epsilon_closure(const struct fsm_state *state, struct set **
  * Create the DFA state if neccessary.
  */
 static struct fsm_state *state_closure(struct mapping **ml, struct fsm *dfa, const struct fsm_state *nfastate) {
-	struct set *ec;
+	struct stateset *ec;
 	struct mapping *m;
 
 	assert(ml != NULL);
@@ -259,7 +274,7 @@ static struct fsm_state *state_closure(struct mapping **ml, struct fsm *dfa, con
 
 	ec = NULL;
 	if (epsilon_closure(nfastate, &ec) == NULL) {
-		free_set(ec);
+		free_stateset(ec);
 		return NULL;
 	}
 
@@ -279,19 +294,17 @@ static struct fsm_state *state_closure(struct mapping **ml, struct fsm *dfa, con
  * Return the DFA state associated with the closure of a set of given NFA
  * states. Create the DFA state if neccessary.
  */
-static struct fsm_state *set_closure(struct mapping **ml, struct fsm *dfa, struct set *set) {
-	struct set *ec;
+static struct fsm_state *set_closure(struct mapping **ml, struct fsm *dfa, struct stateset *set) {
+	struct stateset *ec;
 	struct mapping *m;
-	struct set *p;
+	struct stateset *p;
 
 	assert(ml != NULL);
 
 	ec = NULL;
 	for (p = set; p; p = p->next) {
-		assert(p->trans == NULL);
-
 		if (epsilon_closure(p->state, &ec) == NULL) {
-			free_set(ec);
+			free_stateset(ec);
 			return NULL;
 		}
 	}
@@ -305,8 +318,8 @@ static struct fsm_state *set_closure(struct mapping **ml, struct fsm *dfa, struc
 /*
  * Return true if any of the states in the set are end states.
  */
-static int containsendstate(struct fsm *fsm, struct set *set) {
-	struct set *s;
+static int containsendstate(struct fsm *fsm, struct stateset *set) {
+	struct stateset *s;
 
 	assert(fsm != NULL);
 
@@ -341,8 +354,8 @@ static struct mapping *nextnotdone(struct mapping *ml) {
  * Returns l on success, NULL on error.
  * TODO: maybe simpler to just return the set, rather than take a double pointer
  */
-static struct set **listnonepsilonstates(struct set **l, struct set *set) {
-	struct set *s;
+static struct transset **listnonepsilonstates(struct transset **l, struct stateset *set) {
+	struct stateset *s;
 	struct fsm_edge *e;
 
 	assert(l != NULL);
@@ -351,7 +364,7 @@ static struct set **listnonepsilonstates(struct set **l, struct set *set) {
 	*l = NULL;
 	for (s = set; s; s = s->next) {
 		for (e = s->state->edges; e; e = e->next) {
-			struct set *p;
+			struct transset *p;
 
 			assert(e->trans != NULL);
 
@@ -367,7 +380,7 @@ static struct set **listnonepsilonstates(struct set **l, struct set *set) {
 
 			p = malloc(sizeof *p);
 			if (p == NULL) {
-				free_set(*l);
+				free_transset(*l);
 				return NULL;
 			}
 
@@ -385,9 +398,9 @@ static struct set **listnonepsilonstates(struct set **l, struct set *set) {
 /*
  * Return a list of all states reachable from set via the given transition.
  */
-static struct set *allstatesreachableby(struct set *set, struct trans_list *trans) {
-	struct set *l;
-	struct set *s;
+static struct stateset *allstatesreachableby(struct stateset *set, struct trans_list *trans) {
+	struct stateset *l;
+	struct stateset *s;
 	struct fsm_edge *e;
 
 	assert(set != NULL);
@@ -397,7 +410,7 @@ static struct set *allstatesreachableby(struct set *set, struct trans_list *tran
 	l = NULL;
 	for (s = set; s; s = s->next) {
 		for (e = s->state->edges; e; e = e->next) {
-			struct set *p;
+			struct stateset *p;
 
 			assert(e->trans != NULL);
 
@@ -418,7 +431,7 @@ static struct set *allstatesreachableby(struct set *set, struct trans_list *tran
 
 			p = malloc(sizeof *p);
 			if (p == NULL) {
-				free_set(l);
+				free_stateset(l);
 				return NULL;
 			}
 
@@ -426,7 +439,6 @@ static struct set *allstatesreachableby(struct set *set, struct trans_list *tran
 			 * There is no need to store the label here, since our caller is
 			 * only interested in states.
 			 */
-			p->trans = NULL;
 			p->state = e->state;
 
 			p->next = l;
@@ -478,8 +490,8 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 	 * While there are still DFA states remaining to be "done", process each.
 	 */
 	for (curr = *ml; (curr = nextnotdone(*ml)) != NULL; curr->done = 1) {
-		struct set *s;
-		struct set *nes;
+		struct transset *s;
+		struct transset *nes;
 
 		/*
 		 * Loop over every unique non-epsilon transition out of curr's epsilon
@@ -496,7 +508,7 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 
 		for (s = nes; s; s = s->next) {
 			struct fsm_state *new;
-			struct set *reachable;
+			struct stateset *reachable;
 			struct fsm_edge edge;
 
 			assert(s->trans != NULL);
@@ -510,20 +522,20 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 			reachable = allstatesreachableby(curr->closure, s->trans);
 
 			new = set_closure(ml, dfa, reachable);
-			free_set(reachable);
+			free_stateset(reachable);
 			if (new == NULL) {
-				free_set(nes);
+				free_transset(nes);
 				return 0;
 			}
 
 			edge.trans = s->trans;	/* XXX hacky */
 			if (fsm_addedge_copy(dfa, curr->dfastate, new, &edge) == NULL) {
-				free_set(nes);
+				free_transset(nes);
 				return 0;
 			}
 		}
 
-		free_set(nes);
+		free_transset(nes);
 
 		/* TODO: document */
 		if (!carrythroughopaques(dfa, curr->dfastate, curr->closure)) {
