@@ -58,7 +58,7 @@ fsm_minimize(struct fsm *fsm)
 		struct state_list *s;
 
 		for (s = fsm->sl; s; s = s->next) {
-			fsm_setend(fsm, s, 0);
+			fsm_setend(fsm, &s->state, 0);
 		}
 	}
 
