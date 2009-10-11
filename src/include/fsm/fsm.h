@@ -17,7 +17,7 @@ struct fsm_edge;
 
 struct fsm_options {
 	/* boolean: true indicates to omit names for states in output */
-	int anonymous_states:1;
+	unsigned int anonymous_states:1;
 };
 
 /*
