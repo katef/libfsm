@@ -7,10 +7,11 @@
 #include <stdlib.h>
 
 #include <fsm/fsm.h>
-#include <fsm/parse.h>
 #include <fsm/graph.h>
 #include <fsm/out.h>
 #include <fsm/exec.h>
+
+#include "parser.h"
 
 extern int optind;
 extern char *optarg;

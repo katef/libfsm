@@ -107,13 +107,13 @@ ACTION flush = @{
 @};
 
 ACTION push: (c :CHARACTER) -> () = @{
-	push(state->lex_state, @c);
+	push(state->lex_state, xc);
 @};
 
 ACTION read_id: (c :CHARACTER) -> () = @{
 	int c;
 
-	for (c = @c; lexi_group(lexi_group_digit, c); c = lexi_readchar(state)) {
+	for (c = xc; lexi_group(lexi_group_digit, c); c = lexi_readchar(state)) {
 		push(state->lex_state, c);
 	}
 

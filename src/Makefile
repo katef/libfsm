@@ -9,7 +9,7 @@ CC = gcc
 CFLAGS += -I include -I .
 
 OUT = out/fsm.o out/dot.o out/table.o out/c.o
-LIBFSM = libfsm/lexer.o libfsm/parser.o libfsm/xalloc.o libfsm/fsm.o \
+LIBFSM = libfsm/xalloc.o libfsm/fsm.o \
 	libfsm/reverse.o libfsm/todfa.o libfsm/isdfa.o libfsm/minimize.o \
 	libfsm/exec.o libfsm/out.o libfsm/trans.o libfsm/edge.o
 
@@ -17,27 +17,29 @@ all: cli/fsm libfsm/libfsm.a
 
 clean:
 	rm -f cli/fsm cli/main.o
+	rm -f cli/lexer.c cli/lexer.h cli/parser.c cli/parser.h
 	rm -f $(OUT)
-	rm -f libfsm/lexer.c libfsm/lexer.h libfsm/parser.c libfsm/parser.h
 	rm -f $(LIBFSM) libfsm/libfsm.a
 
 libfsm/libfsm.a: $(OUT) $(LIBFSM)
 	ar r libfsm/libfsm.a $(OUT) $(LIBFSM)
 	ranlib libfsm/libfsm.a
 
-cli/fsm: cli/main.o libfsm/libfsm.a
-	$(CC) -o cli/fsm $(CFLAGS) cli/main.o libfsm/libfsm.a
+cli/fsm: cli/main.o cli/parser.o cli/lexer.o libfsm/libfsm.a
+	$(CC) -o cli/fsm $(CFLAGS) cli/main.o cli/parser.o cli/lexer.o libfsm/libfsm.a
 
 
-libfsm/lexer.c libfsm/lexer.h: libfsm/lexer.lxi libfsm/lexer.lct
-	lexi libfsm/lexer.lxi libfsm/lexer.lct libfsm/lexer.c libfsm/lexer.h
+cli/lexer.c cli/lexer.h: cli/lexer.lxi cli/lexer.lct
+	lexi cli/lexer.lxi cli/lexer.lct cli/lexer.c cli/lexer.h
 
-libfsm/parser.c libfsm/parser.h: libfsm/parser.sid libfsm/parser.act
-	sid -s no-numeric-terminals libfsm/parser.sid libfsm/parser.act libfsm/parser.c libfsm/parser.h
+cli/parser.c cli/parser.h: cli/parser.sid cli/parser.act
+	sid -s no-numeric-terminals cli/parser.sid cli/parser.act cli/parser.c cli/parser.h
 
-libfsm/lexer.c: libfsm/parser.h
+cli/lexer.c: cli/parser.h
 
-libfsm/parser.c: libfsm/lexer.h
+cli/parser.c: cli/lexer.h
+
+cli/main.c: cli/parser.h
 
 .c.o:
 	$(CC) -o $@ -c $< $(CFLAGS)

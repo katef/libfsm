@@ -28,7 +28,8 @@
 
 	#include <fsm/fsm.h>
 
-	#include "xalloc.h"
+	#include "../libfsm/xalloc.h"
+
 	#include "lexer.h"
 	#include "parser.h"
 
@@ -58,6 +59,14 @@
 	typedef struct fsm *       fsm;
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
+
+	/*
+	 * Parse .fsm input from the given file stream. The fsm passed is expected to
+	 * have been created by fsm_new(); it should not have any existing states.
+	 * TODO: Have this create an fsm, instead
+	 */
+	struct fsm *
+	fsm_parse(struct fsm *fsm, FILE *f);
 
 @};
 
