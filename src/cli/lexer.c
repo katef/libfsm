@@ -133,7 +133,8 @@ lexi_read_token_literal(struct lexi_state *state)
 		/* DEFAULT */
 		/* ACTION <push> */
 		{
-			push(state->lex_state, c0);
+
+	push(state->lex_state, c0);
 		}
 		/* END ACTION <push> */
 		goto start; /* DEFAULT */
@@ -153,7 +154,8 @@ lexi_read_token_label(struct lexi_state *state)
 		/* DEFAULT */
 		/* ACTION <push> */
 		{
-			push(state->lex_state, c0);
+
+	push(state->lex_state, c0);
 		}
 		/* END ACTION <push> */
 		goto start; /* DEFAULT */
