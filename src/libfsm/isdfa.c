@@ -12,16 +12,16 @@
 static int
 hasduplicateedge(const struct fsm_state *state, const struct fsm_edge *edge)
 {
+	int i;
 	int count;
-	const struct fsm_edge *e;
 
 	/* TODO: assertions! */
 
 	count = 0;
-	for (e = state->edges; e; e = e->next) {
-		assert(e->trans != NULL);
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		assert(state->edges[i].trans != NULL);
 
-		count += trans_equal(edge->trans, e->trans);
+		count += trans_equal(edge->trans, state->edges[i].trans);
 	}
 
 	return count > 1;
@@ -30,18 +30,18 @@ hasduplicateedge(const struct fsm_state *state, const struct fsm_edge *edge)
 static int
 isdfastate(const struct fsm_state *state)
 {
-	const struct fsm_edge *e;
+	int i;
 
-	for (e = state->edges; e; e = e->next) {
-		assert(e->trans != NULL);
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		assert(state->edges[i].trans != NULL);
 
 		/* DFA may not have epsilon edges */
-		if (e->trans->type == FSM_EDGE_EPSILON) {
+		if (state->edges[i].trans->type == FSM_EDGE_EPSILON) {
 			return 0;
 		}
 
 		/* DFA may not have duplicate edges */
-		if (hasduplicateedge(state, e)) {
+		if (hasduplicateedge(state, &state->edges[i])) {
 			return 0;
 		}
 	}

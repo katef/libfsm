@@ -221,8 +221,8 @@ static struct mapping *addtoml(struct fsm *dfa, struct mapping **ml, struct stat
  * Returns closure on success, NULL on error.
  */
 static struct stateset **epsilon_closure(const struct fsm_state *state, struct stateset **closure) {
-	struct fsm_edge *p;
 	struct stateset *s;
+	int i;
 
 	assert(state != NULL);
 	assert(closure != NULL);
@@ -247,11 +247,11 @@ static struct stateset **epsilon_closure(const struct fsm_state *state, struct s
 	*closure = s;
 
 	/* Follow each epsilon transition */
-	for (p = state->edges; p; p = p->next) {
-		assert(p->trans != NULL);
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		assert(state->edges[i].trans != NULL);
 
-		if (p->trans->type == FSM_EDGE_EPSILON) {
-			if (epsilon_closure(p->state, closure) == NULL) {
+		if (state->edges[i].trans->type == FSM_EDGE_EPSILON) {
+			if (epsilon_closure(state->edges[i].state, closure) == NULL) {
 				return NULL;
 			}
 		}
@@ -356,25 +356,26 @@ static struct mapping *nextnotdone(struct mapping *ml) {
  */
 static struct transset **listnonepsilonstates(struct transset **l, struct stateset *set) {
 	struct stateset *s;
-	struct fsm_edge *e;
 
 	assert(l != NULL);
 	assert(set != NULL);
 
 	*l = NULL;
 	for (s = set; s; s = s->next) {
-		for (e = s->state->edges; e; e = e->next) {
+		int i;
+
+		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			struct transset *p;
 
-			assert(e->trans != NULL);
+			assert(s->state->edges[i].trans != NULL);
 
 			/* Skip epsilon edges */
-			if (e->trans->type == FSM_EDGE_EPSILON) {
+			if (s->state->edges[i].trans->type == FSM_EDGE_EPSILON) {
 				continue;
 			}
 
 			/* Skip transitions we've already got */
-			if (transin(e->trans, *l)) {
+			if (transin(s->state->edges[i].trans, *l)) {
 				continue;
 			}
 
@@ -384,8 +385,8 @@ static struct transset **listnonepsilonstates(struct transset **l, struct states
 				return NULL;
 			}
 
-			p->state = e->state;
-			p->trans = e->trans;
+			p->state = s->state->edges[i].state;
+			p->trans = s->state->edges[i].trans;
 
 			p->next = *l;
 			*l = p;
@@ -401,7 +402,6 @@ static struct transset **listnonepsilonstates(struct transset **l, struct states
 static struct stateset *allstatesreachableby(struct stateset *set, struct trans_list *trans) {
 	struct stateset *l;
 	struct stateset *s;
-	struct fsm_edge *e;
 
 	assert(set != NULL);
 	assert(trans != NULL);
@@ -409,23 +409,25 @@ static struct stateset *allstatesreachableby(struct stateset *set, struct trans_
 
 	l = NULL;
 	for (s = set; s; s = s->next) {
-		for (e = s->state->edges; e; e = e->next) {
+		int i;
+
+		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			struct stateset *p;
 
-			assert(e->trans != NULL);
+			assert(s->state->edges[i].trans != NULL);
 
 			/* Skip epsilon edges */
-			if (e->trans->type == FSM_EDGE_EPSILON) {
+			if (s->state->edges[i].trans->type == FSM_EDGE_EPSILON) {
 				continue;
 			}
 
 			/* Skip states which we've already got */
-			if (statein(e->state, l)) {
+			if (statein(s->state->edges[i].state, l)) {
 				continue;
 			}
 
 			/* Skip labels which aren't the one we're looking for */
-			if (!trans_equal(e->trans, trans)) {
+			if (!trans_equal(s->state->edges[i].trans, trans)) {
 				continue;
 			}
 
@@ -439,7 +441,7 @@ static struct stateset *allstatesreachableby(struct stateset *set, struct trans_
 			 * There is no need to store the label here, since our caller is
 			 * only interested in states.
 			 */
-			p->state = e->state;
+			p->state = s->state->edges[i].state;
 
 			p->next = l;
 			l = p;

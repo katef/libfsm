@@ -36,7 +36,6 @@ static void escputs(const char *s, FILE *f) {
 
 void out_dot(const struct fsm *fsm, FILE *f) {
 	struct state_list *s;
-	struct fsm_edge *e;
 	struct fsm_state *start;
 
 	/* TODO: assert! */
@@ -60,9 +59,18 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "\n");
 
 	for (s = fsm->sl; s; s = s->next) {
-		for (e = s->state.edges; e; e = e->next) {
+		int i;
+
+		for (i = 0; i <= FSM_EDGE_MAX; i++) {
+			const struct fsm_edge *e;
+
+			e = &s->state.edges[i];
+
+			if (e->trans == NULL) {
+				continue;
+			}
+
 			assert(e->state);
-			assert(e->trans);
 
 			fprintf(f, "\t%-2u -> %-2u [ label = \"", s->state.id, e->state->id);
 

@@ -59,19 +59,19 @@ fsm_reverse(struct fsm *fsm)
 	/* Create reversed edges */
 	{
 		struct state_list *s;
-		struct fsm_edge   *e;
 
 		for (s = fsm->sl; s; s = s->next) {
 			struct fsm_state *to = fsm_getstatebyid(new, s->state.id);
+			int i;
 
 			assert(to != NULL);
 
-			for (e = s->state.edges; e; e = e ->next) {
-				struct fsm_state *from = fsm_getstatebyid(new, e->state->id);
+			for (i = 0; i <= FSM_EDGE_MAX; i++) {
+				struct fsm_state *from = fsm_getstatebyid(new, s->state.edges[i].state->id);
 
 				assert(from != NULL);
 
-				if (fsm_addedge_copy(new, from, to, e) == NULL) {
+				if (fsm_addedge_copy(new, from, to, &s->state.edges[i]) == NULL) {
 					fsm_free(new);
 					return 0;
 				}

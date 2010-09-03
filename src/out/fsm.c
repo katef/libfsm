@@ -36,13 +36,21 @@ static void escputs(const char *s, FILE *f) {
 
 void out_fsm(const struct fsm *fsm, FILE *f) {
 	struct state_list *s;
-	struct fsm_edge *e;
 	struct fsm_state *start;
 	int end;
 
 	for (s = fsm->sl; s; s = s->next) {
-		for (e = s->state.edges; e; e = e->next) {
-			assert(e->trans != NULL);
+		int i;
+
+		for (i = 0; i <= FSM_EDGE_MAX; i++) {
+			const struct fsm_edge *e;
+
+			e = &s->state.edges[i];
+
+			if (e->trans == NULL) {
+				continue;
+			}
+
 			assert(e->state != NULL);
 
 			fprintf(f, "%-2u -> %-2u", s->state.id, e->state->id);

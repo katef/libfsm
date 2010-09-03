@@ -26,13 +26,22 @@ static void escputc(char c, FILE *f) {
 	}
 }
 
+/* TODO: refactor for when FSM_EDGE_ANY goes; it is an "any" transition if all
+ * trans LITERAL to the same state. centralise that to trans.c */
 static const struct fsm_edge *findany(const struct fsm_state *state) {
 	const struct fsm_edge *e;
+	int i;
 
 	assert(state != NULL);
-	
-	for (e = state->edges; e; e = e->next) {
-		assert(e->trans != NULL);
+
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		e = &state->edges[i];
+
+		if (e->trans == NULL) {
+			continue;
+		}
+
+		assert(e->state != NULL);
 
 		if (e->trans->type == FSM_EDGE_ANY) {
 			return e;
@@ -44,20 +53,33 @@ static const struct fsm_edge *findany(const struct fsm_state *state) {
 
 static void singlecase(FILE *f, const struct fsm_state *state) {
 	const struct fsm_edge *e;
+	int i;
 
 	assert(f != NULL);
 	assert(state != NULL);
 
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		if (state->edges[i].trans != NULL) {
+			break;
+		}
+	}
+
 	/* no edges */
-	if (state->edges == NULL) {
+	if (i > FSM_EDGE_MAX) {
 		fprintf(f, "\t\t\treturn 0;\n");
 		return;
 	}
 
 	/* usual case */
 	fprintf(f, "\t\t\tswitch (c) {\n");
-	for (e = state->edges; e; e = e->next) {
-		assert(e->trans != NULL);
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		e = &state->edges[i];
+
+		if (e->trans == NULL) {
+			continue;
+		}
+
+		assert(e->state != NULL);
 
 		if (e->trans->type == FSM_EDGE_ANY) {
 			continue;

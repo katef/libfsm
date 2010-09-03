@@ -38,6 +38,8 @@ trans_equal(const struct trans_list *a, const struct trans_list *b)
 	return 0;
 }
 
+/* TODO: try to get rid of trans types. type can depend on edge[] location.
+ * if not a normal char, it must be epsilon: easy to identify. */
 struct trans_list *
 trans_add(struct fsm *fsm, enum fsm_edge_type type, union trans_value *u)
 {
@@ -50,7 +52,7 @@ trans_add(struct fsm *fsm, enum fsm_edge_type type, union trans_value *u)
 		struct trans_list tmp;	/* XXX: hacky */
 
 		if (u != NULL) {
-			tmp.u    = *u;
+			tmp.u = *u;
 		}
 
 		tmp.type = type;

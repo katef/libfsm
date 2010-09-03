@@ -17,19 +17,11 @@ static void free_contents(struct fsm *fsm) {
 	void *next;
 	struct state_list *s;
 	struct trans_list *t;
-	struct fsm_edge *e;
 
 	assert(fsm != NULL);
 
 	for (s = fsm->sl; s; s = next) {
-		struct fsm_edge *e_next;
-
 		next = s->next;
-
-		for (e = s->state.edges; e; e = e_next) {
-			e_next = e->next;
-			free(e);
-		}
 
 		free(s);
 	}
@@ -78,7 +70,6 @@ struct fsm *
 fsm_copy(struct fsm *fsm)
 {
 	struct state_list *s;
-	struct fsm_edge *e;
 	struct fsm *new;
 
 	new = fsm_new();
@@ -105,17 +96,19 @@ fsm_copy(struct fsm *fsm)
 
 	/* recreate edges */
 	for (s = fsm->sl; s; s = s->next) {
-		for (e = s->state.edges; e; e = e->next) {
+		int i;
+
+		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			struct fsm_state *from;
 			struct fsm_state *to;
 
 			from = fsm_getstatebyid(new, s->state.id);
-			to   = fsm_getstatebyid(new, e->state->id);
+			to   = fsm_getstatebyid(new, s->state.edges[i].state->id);
 
 			assert(from != NULL);
 			assert(to   != NULL);
 
-			if (fsm_addedge_copy(new, from, to, e) == NULL) {
+			if (fsm_addedge_copy(new, from, to, &s->state.edges[i]) == NULL) {
 				fsm_free(new);
 				return NULL;
 			}
@@ -155,8 +148,8 @@ fsm_union(struct fsm *dst, struct fsm *src)
 	struct state_list **sl;
 	struct state_list *p;
 
-	assert(src != NULL);
 	assert(dst != NULL);
+	assert(src != NULL);
 
 	/*
 	 * Splice over lists from src to dst.
@@ -221,6 +214,8 @@ fsm_addstate(struct fsm *fsm, unsigned int id)
 
 	/* Otherwise, create a new one */
 	if (p == NULL) {
+		int i;
+
 		p = malloc(sizeof *p);
 		if (p == NULL) {
 			return NULL;
@@ -228,8 +223,12 @@ fsm_addstate(struct fsm *fsm, unsigned int id)
 
 		p->state.id     = id == 0 ? inventid(fsm) : id;
 		p->state.opaque = NULL;
-		p->state.edges  = NULL;
 		p->state.end    = 0;
+
+		for (i = 0; i <= FSM_EDGE_MAX; i++) {
+			p->state.edges[i].state = NULL;
+			p->state.edges[i].trans = NULL;
+		}
 
 		p->next = fsm->sl;
 		fsm->sl = p;

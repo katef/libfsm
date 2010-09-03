@@ -10,17 +10,17 @@
 
 #include "internal.h"
 
-static struct fsm_state *nextstate(const struct fsm_edge *edges, char c) {
-	const struct fsm_edge *e;
+static struct fsm_state *nextstate(const struct fsm_edge edges[], char c) {
+	int i;
 
-	for (e = edges; e; e = e->next) {
-		switch (e->trans->type) {
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		switch (edges[i].trans->type) {
 		case FSM_EDGE_ANY:
-			return e->state;
+			return edges[i].state;
 
 		case FSM_EDGE_LITERAL:
-			if (e->trans->u.literal == c) {
-				return e->state;
+			if (edges[i].trans->u.literal == c) {
+				return edges[i].state;
 			}
 			continue;
 

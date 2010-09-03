@@ -55,7 +55,6 @@ static void hr(FILE *f, struct state_list *sl) {
 void out_table(const struct fsm *fsm, FILE *f) {
 	struct state_list *x;
 	struct trans_list *t;
-	struct fsm_edge   *e;
 
 	/* TODO: assert! */
 
@@ -99,14 +98,26 @@ void out_table(const struct fsm *fsm, FILE *f) {
 		}
 
 		for (x = fsm->sl; x; x = x->next) {
-			for (e = x->state.edges; e; e = e->next) {
+			int i;
+
+			for (i = 0; i <= FSM_EDGE_MAX; i++) {
+				const struct fsm_edge *e;
+
+				e = &x->state.edges[i];
+
+				if (e->trans == NULL) {
+					continue;
+				}
+
+				assert(e->state != NULL);
+
 				if (t == e->trans) {
 					fprintf(f, "| %-2u ", e->state->id);
 					break;
 				}
 			}
 
-			if (e == NULL) {
+			if (i > FSM_EDGE_MAX) {
 				fprintf(f, "|    ");
 			}
 		}

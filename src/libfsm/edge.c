@@ -11,46 +11,12 @@
 #include "xalloc.h"
 
 enum fsm_edge_type
-fsm_getedgetype(struct fsm_edge *edge)
+fsm_getedgetype(const struct fsm_edge *edge)
 {
 	assert(edge != NULL);
 	assert(edge->trans != NULL);
 
 	return edge->trans->type;
-}
-
-static struct fsm_edge*
-addedge(struct fsm_state *from, struct fsm_state *to)
-{
-	struct fsm_edge *e;
-
-	assert(from != NULL);
-	assert(to != NULL);
-
-	e = malloc(sizeof *e);
-	if (e == NULL) {
-		return NULL;
-	}
-
-	e->state = to;
-	e->trans = NULL;
-
-	e->next  = from->edges;
-	from->edges = e;
-
-	return e;
-}
-
-static void
-freeedge(struct fsm_state *from, struct fsm_edge *e)
-{
-	assert(from != NULL);
-	assert(e != NULL);
-	assert(e->trans == NULL);
-
-	/* assumed to be called immediately after addedge() */
-	from->edges = e->next;
-	free(e);
 }
 
 struct fsm_edge *
@@ -62,18 +28,16 @@ fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 	assert(from != NULL);
 	assert(to != NULL);
 
-	e = addedge(from, to);
-	if (e == NULL) {
-		return NULL;
-	}
+	e = &from->edges[FSM_EDGE_EPSILON];
 
 	/* Assign the epsilon transition for this edge */
 	{
 		e->trans = trans_add(fsm, FSM_EDGE_EPSILON, NULL);
 		if (e->trans == NULL) {
-			freeedge(from, e);
 			return NULL;
 		}
+
+		e->state = to;
 	}
 
 	return e;
@@ -88,18 +52,16 @@ fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
 	assert(from != NULL);
 	assert(to != NULL);
 
-	e = addedge(from, to);
-	if (e == NULL) {
-		return NULL;
-	}
+	e = &from->edges[FSM_EDGE_ANY];
 
 	/* Assign the any transition for this edge */
 	{
 		e->trans = trans_add(fsm, FSM_EDGE_ANY, NULL);
 		if (e->trans == NULL) {
-			freeedge(from, e);
 			return NULL;
 		}
+
+		e->state = to;
 	}
 
 	return e;
@@ -114,11 +76,10 @@ fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 	assert(fsm != NULL);
 	assert(from != NULL);
 	assert(to != NULL);
+	assert((unsigned char) c >= 0);
+	assert((unsigned char) c <= FSM_EDGE_MAX);
 
-	e = addedge(from, to);
-	if (e == NULL) {
-		return NULL;
-	}
+	e = &from->edges[(unsigned char) c];
 
 	/* Assign the literal transition for this edge */
 	{
@@ -127,9 +88,10 @@ fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 		u.literal = c;
 		e->trans = trans_add(fsm, FSM_EDGE_LITERAL, &u);
 		if (e->trans == NULL) {
-			freeedge(from, e);
 			return NULL;
 		}
+
+		e->state = to;
 	}
 
 	return e;
@@ -156,10 +118,7 @@ fsm_addedge_label(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 		return NULL;
 	}
 
-	e = addedge(from, to);
-	if (e == NULL) {
-		return NULL;
-	}
+	e = &from->edges[(unsigned char) label[0]];	/* XXX: hacky. due to go when labels go */
 
 	/* Assign the labelled transition for this edge */
 	{
@@ -167,15 +126,15 @@ fsm_addedge_label(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 
 		u.label = xstrdup(label);
 		if (u.label == NULL) {
-			freeedge(from, e);
 			return NULL;
 		}
 
 		e->trans = trans_add(fsm, FSM_EDGE_LABEL, &u);
 		if (e->trans == NULL) {
-			freeedge(from, e);
 			return NULL;
 		}
+
+		e->state = to;
 	}
 
 	return e;
@@ -185,7 +144,7 @@ struct fsm_edge *
 fsm_addedge_copy(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	struct fsm_edge *edge)
 {
-	struct fsm_edge *e;
+	int i;
 
 	assert(fsm != NULL);
 	assert(from != NULL);
@@ -193,27 +152,29 @@ fsm_addedge_copy(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	assert(edge != NULL);
 	assert(edge->trans != NULL);
 
-	e = addedge(from, to);
-	if (e == NULL) {
-		return NULL;
-	}
+	i = edge - from->edges;
+
+	assert(i >= 0);
+	assert(i < FSM_EDGE_MAX);
+	assert(to->edges[i].state == NULL);
+	assert(to->edges[i].trans == NULL);
 
 	/* Assign the copied transition for this edge */
 	{
 		union trans_value u;
 
 		if (!trans_copyvalue(edge->trans->type, &edge->trans->u, &u)) {
-			freeedge(from, e);
 			return NULL;
 		}
 
-		e->trans = trans_add(fsm, edge->trans->type, &u);
-		if (e->trans == NULL) {
-			freeedge(from, e);
+		to->edges[i].state = edge->state;
+
+		to->edges[i].trans = trans_add(fsm, edge->trans->type, &u);
+		if (to->edges[i].trans == NULL) {
 			return NULL;
 		}
 	}
 
-	return e;
+	return &to->edges[i];
 }
 
