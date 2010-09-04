@@ -144,23 +144,10 @@
 		fsm_setopaque(fsm, state, @s);
 	@};
 
-	<add-edge-label>: (x :state, y :state, s :string) -> () = @{
-		assert(@s != NULL);
-
-		if (strlen(@s) == 0) {
-			fprintf(stderr, "empty label\n");
-			@!;
-		}
-
-		if (fsm_addedge_label(fsm, @x, @y, @s) == NULL) {
-			perror("fsm_addedge_label");
-			exit(EXIT_FAILURE);
-		}
-	@};
-
 	<add-edge-literal>: (x :state, y :state, s :string) -> () = @{
 		assert(@s != NULL);
 
+		/* TODO: convert to single char */
 		if (strlen(@s) != 1) {
 			fprintf(stderr, "literals must have exactly one character\n");
 			@!;

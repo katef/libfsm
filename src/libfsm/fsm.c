@@ -22,17 +22,11 @@ static void free_contents(struct fsm *fsm) {
 
 	for (s = fsm->sl; s; s = next) {
 		next = s->next;
-
 		free(s);
 	}
 
 	for (t = fsm->tl; t; t = next) {
 		next = t->next;
-
-		if (t->type == FSM_EDGE_LABEL) {
-			free(t->u.label);
-		}
-
 		free(t);
 	}
 }

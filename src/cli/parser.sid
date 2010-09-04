@@ -31,7 +31,6 @@
 	<mark-start>: (:int) -> ();
 	<mark-end>: (:int) -> ();
 	<mark-colour>: (:int, :string) -> ();
-	<add-edge-label>: (:state, :state, :string) -> ();
 	<add-edge-literal>: (:state, :state, :string) -> ();
 	<add-edge-any>: (:state, :state) -> ();
 	<add-edge-epsilon>: (:state, :state) -> ();
@@ -101,12 +100,9 @@
 		y = <add-state>(b);
 
 		{
-			s = label;
-			<add-edge-label>(x, y, s);
-			<free>(s);
-		||
 			s = literal;
 			<add-edge-literal>(x, y, s);
+			<free>(s);
 		||
 			any;
 			<add-edge-any>(x, y);

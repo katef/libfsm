@@ -26,6 +26,7 @@ struct stateset {
  */
 struct transset {
 	const struct fsm_state *state;
+	char c;
 	struct trans_list *trans;
 	struct transset *next;
 };
@@ -385,6 +386,7 @@ static struct transset **listnonepsilonstates(struct transset **l, struct states
 				return NULL;
 			}
 
+			p->c = i;
 			p->state = s->state->edges[i].state;
 			p->trans = s->state->edges[i].trans;
 
@@ -399,7 +401,7 @@ static struct transset **listnonepsilonstates(struct transset **l, struct states
 /*
  * Return a list of all states reachable from set via the given transition.
  */
-static struct stateset *allstatesreachableby(struct stateset *set, struct trans_list *trans) {
+static struct stateset *allstatesreachableby(struct stateset *set, int e, struct trans_list *trans) {
 	struct stateset *l;
 	struct stateset *s;
 
@@ -427,7 +429,7 @@ static struct stateset *allstatesreachableby(struct stateset *set, struct trans_
 			}
 
 			/* Skip labels which aren't the one we're looking for */
-			if (!trans_equal(s->state->edges[i].trans, trans)) {
+			if (i != e || !trans_equal(s->state->edges[i].trans, trans)) {
 				continue;
 			}
 
@@ -521,7 +523,7 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 			 * through this label, starting from the set of states forming curr's
 			 * closure.
 			 */
-			reachable = allstatesreachableby(curr->closure, s->trans);
+			reachable = allstatesreachableby(curr->closure, s->c, s->trans);
 
 			new = set_closure(ml, dfa, reachable);
 			free_stateset(reachable);

@@ -10,7 +10,7 @@
 #include "trans.h"
 
 static int
-hasduplicateedge(const struct fsm_state *state, const struct fsm_edge *edge)
+hasduplicateedge(const struct fsm_state *state, int e, const struct fsm_edge *edge)
 {
 	int i;
 	int count;
@@ -19,7 +19,13 @@ hasduplicateedge(const struct fsm_state *state, const struct fsm_edge *edge)
 
 	count = 0;
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		assert(state->edges[i].trans != NULL);
+		if (state->edges[i].trans == NULL) {
+			continue;
+		}
+
+		if (i != e) {
+			continue;
+		}
 
 		count += trans_equal(edge->trans, state->edges[i].trans);
 	}
@@ -33,7 +39,9 @@ isdfastate(const struct fsm_state *state)
 	int i;
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		assert(state->edges[i].trans != NULL);
+		if (state->edges[i].trans == NULL) {
+			continue;
+		}
 
 		/* DFA may not have epsilon edges */
 		if (state->edges[i].trans->type == FSM_EDGE_EPSILON) {
@@ -41,7 +49,7 @@ isdfastate(const struct fsm_state *state)
 		}
 
 		/* DFA may not have duplicate edges */
-		if (hasduplicateedge(state, &state->edges[i])) {
+		if (hasduplicateedge(state, i, &state->edges[i])) {
 			return 0;
 		}
 	}

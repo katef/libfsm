@@ -87,8 +87,9 @@ static void singlecase(FILE *f, const struct fsm_state *state) {
 
 		assert(e->trans->type == FSM_EDGE_LITERAL);
 
+		/* TODO: pass S%u out to maximum state width */
 		fprintf(f, "\t\t\tcase '");
-		escputc(e->trans->u.literal, f);
+		escputc(i, f);
 		fprintf(f, "': state = S%u; continue;\n", e->state->id);
 	}
 

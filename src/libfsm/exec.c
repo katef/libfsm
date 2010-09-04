@@ -19,12 +19,11 @@ static struct fsm_state *nextstate(const struct fsm_edge edges[], char c) {
 			return edges[i].state;
 
 		case FSM_EDGE_LITERAL:
-			if (edges[i].trans->u.literal == c) {
+			if (i == c) {
 				return edges[i].state;
 			}
 			continue;
 
-		case FSM_EDGE_LABEL:
 		case FSM_EDGE_EPSILON:
 			assert(!"unreached");
 			return NULL;

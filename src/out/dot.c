@@ -84,11 +84,7 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 				break;
 
 			case FSM_EDGE_LITERAL:
-				escputc(e->trans->u.literal, f);
-				break;
-
-			case FSM_EDGE_LABEL:
-				escputs(e->trans->u.label, f);
+				escputc(i, f);
 				break;
 			}
 

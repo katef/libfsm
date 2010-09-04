@@ -39,19 +39,12 @@ struct state_list {
 enum fsm_edge_type {
 	FSM_EDGE_EPSILON = FSM_EDGE_MAX,
 	FSM_EDGE_ANY,
-	FSM_EDGE_LITERAL,
-	FSM_EDGE_LABEL
-};
-
-union trans_value {
-	char literal;
-	char *label;
+	FSM_EDGE_LITERAL
 };
 
 /* global registry of all transitions */
 struct trans_list {
 	enum fsm_edge_type type;
-	union trans_value u;
 
 	struct trans_list *next;
 };

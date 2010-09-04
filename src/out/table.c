@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <fsm/fsm.h>
 
@@ -14,14 +15,14 @@ static int escputc(char c, FILE *f) {
 
 	switch (c) {
 	case '\"':
-			fprintf(f, "\\\"");
-			return 2;
+		fprintf(f, "\\\"");
+		return 2;
 
 	/* TODO: others */
 
 	default:
-			putc(c, f);
-			return 1;
+		putc(c, f);
+		return 1;
 	}
 }
 
@@ -55,6 +56,7 @@ static void hr(FILE *f, struct state_list *sl) {
 void out_table(const struct fsm *fsm, FILE *f) {
 	struct state_list *x;
 	struct trans_list *t;
+	int i;
 
 	/* TODO: assert! */
 
@@ -67,11 +69,18 @@ void out_table(const struct fsm *fsm, FILE *f) {
 
 	hr(f, fsm->sl);
 
-	for (t = fsm->tl; t; t = t->next) {
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		{
 			int n = 0;
 
-			switch (t->type) {
+			/* TODO: deal with non-printable characters */
+			if (!isprint(i)) {
+				continue;
+			}
+
+			/* TODO: skip edges with no transitions */
+
+			switch (i) {
 			case FSM_EDGE_EPSILON:
 				n = fprintf(f, "epsilon");
 				break;
@@ -81,11 +90,10 @@ void out_table(const struct fsm *fsm, FILE *f) {
 				break;
 
 			case FSM_EDGE_LITERAL:
-				n = escputc(t->u.literal, f);
 				break;
 
-			case FSM_EDGE_LABEL:
-				n = escputs(t->u.label, f);
+			default:
+				n = escputc(i, f);
 				break;
 			}
 
