@@ -11,7 +11,7 @@ struct fsm_edge {
 	struct trans_list *trans;
 };
 
-/* TODO: +2 for SOL, EOL */
+/* TODO: +2 for SOL, EOL, EPSILON */
 /* TODO: +lots for FSM_EDGE_* */
 #define FSM_EDGE_MAX UCHAR_MAX
 
@@ -38,7 +38,6 @@ struct state_list {
  */
 enum fsm_edge_type {
 	FSM_EDGE_EPSILON = FSM_EDGE_MAX,
-	FSM_EDGE_ANY,
 	FSM_EDGE_LITERAL
 };
 

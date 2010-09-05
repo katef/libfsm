@@ -13,6 +13,10 @@
 static int escputc(char c, FILE *f) {
 	assert(f != NULL);
 
+	if (!isprint(c)) {
+		return printf("0x%02X", (unsigned char) c);
+	}
+
 	switch (c) {
 	case '\"':
 		fprintf(f, "\\\"");
@@ -24,19 +28,6 @@ static int escputc(char c, FILE *f) {
 		putc(c, f);
 		return 1;
 	}
-}
-
-static int escputs(const char *s, FILE *f) {
-	int n;
-
-	assert(f != NULL);
-	assert(s != NULL);
-
-	for (n = 0; *s; s++) {
-		n += escputc(*s, f);
-	}
-
-	return n;
 }
 
 static void hr(FILE *f, struct state_list *sl) {
@@ -53,9 +44,23 @@ static void hr(FILE *f, struct state_list *sl) {
 	fprintf(f, "\n");
 }
 
+static int notransitions(struct state_list *sl, int i) {
+	struct state_list *x;
+
+	assert(i >= 0);
+	assert(i <= UCHAR_MAX);
+
+	for (x = sl; x; x = x->next) {
+		if (x->state.edges[i].trans != NULL) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 void out_table(const struct fsm *fsm, FILE *f) {
 	struct state_list *x;
-	struct trans_list *t;
 	int i;
 
 	/* TODO: assert! */
@@ -73,26 +78,22 @@ void out_table(const struct fsm *fsm, FILE *f) {
 		{
 			int n = 0;
 
-			/* TODO: deal with non-printable characters */
-			if (!isprint(i)) {
-				continue;
-			}
-
-			/* TODO: skip edges with no transitions */
+			/* TODO: print "?" for edges which are all equal */
 
 			switch (i) {
 			case FSM_EDGE_EPSILON:
 				n = fprintf(f, "epsilon");
 				break;
 
-			case FSM_EDGE_ANY:
-				n = fprintf(f, "?");
-				break;
-
 			case FSM_EDGE_LITERAL:
 				break;
 
 			default:
+				/* skip edges with no transitions */
+				if (notransitions(fsm->sl, i)) {
+					continue;
+				}
+
 				n = escputc(i, f);
 				break;
 			}
@@ -106,28 +107,18 @@ void out_table(const struct fsm *fsm, FILE *f) {
 		}
 
 		for (x = fsm->sl; x; x = x->next) {
-			int i;
+			const struct fsm_edge *e;
 
-			for (i = 0; i <= FSM_EDGE_MAX; i++) {
-				const struct fsm_edge *e;
+			e = &x->state.edges[i];
 
-				e = &x->state.edges[i];
-
-				if (e->trans == NULL) {
-					continue;
-				}
-
-				assert(e->state != NULL);
-
-				if (t == e->trans) {
-					fprintf(f, "| %-2u ", e->state->id);
-					break;
-				}
-			}
-
-			if (i > FSM_EDGE_MAX) {
+			if (e->trans == NULL) {
 				fprintf(f, "|    ");
+				continue;
 			}
+
+			assert(e->state != NULL);
+
+			fprintf(f, "| %-2u ", e->state->id);
 		}
 
 		fprintf(f, "\n");

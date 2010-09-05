@@ -74,13 +74,11 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 
 			fprintf(f, "\t%-2u -> %-2u [ label = \"", s->state.id, e->state->id);
 
+			/* TODO: print "?" if all edges are equal */
+
 			switch (e->trans->type) {
 			case FSM_EDGE_EPSILON:
 				fputs("&epsilon;", f);
-				break;
-
-			case FSM_EDGE_ANY:
-				fputs("?", f);
 				break;
 
 			case FSM_EDGE_LITERAL:

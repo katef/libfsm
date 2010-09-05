@@ -55,12 +55,10 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 
 			fprintf(f, "%-2u -> %-2u", s->state.id, e->state->id);
 
+			/* TODO: print " ?" if all edges are equal */
+
 			switch (e->trans->type) {
 			case FSM_EDGE_EPSILON:
-				break;
-
-			case FSM_EDGE_ANY:
-				fprintf(f, " ?");
 				break;
 
 			case FSM_EDGE_LITERAL:

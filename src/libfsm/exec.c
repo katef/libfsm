@@ -15,9 +15,6 @@ static struct fsm_state *nextstate(const struct fsm_edge edges[], char c) {
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		switch (edges[i].trans->type) {
-		case FSM_EDGE_ANY:
-			return edges[i].state;
-
 		case FSM_EDGE_LITERAL:
 			if (i == c) {
 				return edges[i].state;

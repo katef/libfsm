@@ -47,22 +47,24 @@ struct fsm_edge *
 fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
 {
 	struct fsm_edge *e;
+	int i;
 
 	assert(fsm != NULL);
 	assert(from != NULL);
 	assert(to != NULL);
 
-	/* TODO: instead, have this set all indicies, and remove FSM_EDGE_ANY */
-	e = &from->edges[FSM_EDGE_ANY];
+	for (i = 0; i <= UCHAR_MAX; i++) {
+		e = &from->edges[i];
 
-	/* Assign the any transition for this edge */
-	{
-		e->trans = trans_add(fsm, FSM_EDGE_ANY);
-		if (e->trans == NULL) {
-			return NULL;
+		/* Assign the any transition for this edge */
+		{
+			e->trans = trans_add(fsm, FSM_EDGE_LITERAL);
+			if (e->trans == NULL) {
+				return NULL;
+			}
+
+			e->state = to;
 		}
-
-		e->state = to;
 	}
 
 	return e;
@@ -116,7 +118,7 @@ fsm_addedge_copy(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	{
 		to->edges[i].state = edge->state;
 
-		to->edges[i].trans = trans_add(fsm, edge->trans->type);
+		to->edges[i].trans = trans_add(fsm, FSM_EDGE_LITERAL);
 		if (to->edges[i].trans == NULL) {
 			return NULL;
 		}

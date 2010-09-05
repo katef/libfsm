@@ -28,31 +28,25 @@ static void escputc(char c, FILE *f) {
 
 /* TODO: refactor for when FSM_EDGE_ANY goes; it is an "any" transition if all
  * trans LITERAL to the same state. centralise that to trans.c */
-static const struct fsm_edge *findany(const struct fsm_state *state) {
-	const struct fsm_edge *e;
+static const struct fsm_state *findany(const struct fsm_state *state) {
+	const struct fsm_state *to;
 	int i;
 
 	assert(state != NULL);
 
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		e = &state->edges[i];
+	to = state->edges[0].state;
 
-		if (e->trans == NULL) {
-			continue;
-		}
-
-		assert(e->state != NULL);
-
-		if (e->trans->type == FSM_EDGE_ANY) {
-			return e;
+	for (i = 0; i <= UCHAR_MAX; i++) {
+		if (to != state->edges[i].state) {
+			return NULL;
 		}
 	}
 
-	return NULL;
+	return to;
 }
 
 static void singlecase(FILE *f, const struct fsm_state *state) {
-	const struct fsm_edge *e;
+	const struct fsm_state *to;
 	int i;
 
 	assert(f != NULL);
@@ -70,32 +64,34 @@ static void singlecase(FILE *f, const struct fsm_state *state) {
 		return;
 	}
 
-	/* usual case */
 	fprintf(f, "\t\t\tswitch (c) {\n");
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		e = &state->edges[i];
 
-		if (e->trans == NULL) {
-			continue;
+	/* "any" edge */
+	to = findany(state);
+
+	/* usual case */
+	if (to == NULL) {
+		for (i = 0; i <= FSM_EDGE_MAX; i++) {
+			const struct fsm_edge *e;
+
+			e = &state->edges[i];
+
+			if (e->trans == NULL) {
+				continue;
+			}
+
+			assert(e->state != NULL);
+			assert(e->trans->type == FSM_EDGE_LITERAL);
+
+			/* TODO: pass S%u out to maximum state width */
+			fprintf(f, "\t\t\tcase '");
+			escputc(i, f);
+			fprintf(f, "': state = S%u; continue;\n", e->state->id);
 		}
-
-		assert(e->state != NULL);
-
-		if (e->trans->type == FSM_EDGE_ANY) {
-			continue;
-		}
-
-		assert(e->trans->type == FSM_EDGE_LITERAL);
-
-		/* TODO: pass S%u out to maximum state width */
-		fprintf(f, "\t\t\tcase '");
-		escputc(i, f);
-		fprintf(f, "': state = S%u; continue;\n", e->state->id);
 	}
 
-	e = findany(state);
-	if (e) {
-		fprintf(f, "\t\t\tdefault:  state = S%u; continue;\n", e->state->id);
+	if (to != NULL) {
+		fprintf(f, "\t\t\tdefault:  state = S%u; continue;\n", to->id);
 	} else {
 		fprintf(f, "\t\t\tdefault:  return 0;\n");	/* invalid edge */
 	}
