@@ -48,7 +48,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 				continue;
 			}
 
-			fprintf(f, "%-2u -> %-2u", s->state.id, s->state.edges[i]->id);
+			fprintf(f, "%-2u -> %2u", s->state.id, s->state.edges[i]->id);
 
 			/* TODO: print " ?" if all edges are equal */
 
@@ -58,7 +58,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 		}
 
 		for (e = s->state.el; e != NULL; e = e->next) {
-			fprintf(f, "%-2u -> %-2u;", s->state.id, e->state->id);
+			fprintf(f, "%-2u -> %2u;", s->state.id, e->state->id);
 		}
 	}
 
