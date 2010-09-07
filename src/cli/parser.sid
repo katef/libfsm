@@ -8,8 +8,8 @@
 
 %terminals%
 
-	id: () -> (:int);
-	label: () -> (:string);
+	id:      () -> (:int);
+	label:   () -> (:string);
 	literal: () -> (:string);
 	any;
 
@@ -27,14 +27,17 @@
 
 %productions%
 
-	<add-state>: (:int) -> (:state);
-	<mark-start>: (:int) -> ();
-	<mark-end>: (:int) -> ();
-	<mark-colour>: (:int, :string) -> ();
+	<add-state>:        (:int) -> (:state);
+	<mark-start>:       (:int) -> ();
+	<mark-end>:         (:int) -> ();
+
+	<free>:             (:string) -> ();
+
+	<mark-colour>:      (:int, :string) -> ();
+
 	<add-edge-literal>: (:state, :state, :string) -> ();
-	<add-edge-any>: (:state, :state) -> ();
-	<add-edge-epsilon>: (:state, :state) -> ();
-	<free>: (:string) -> ();
+	<add-edge-any>:     (:state, :state)          -> ();
+	<add-edge-epsilon>: (:state, :state)          -> ();
 
 	<err-expected-sep>;
 	<err-expected-trans>;
