@@ -16,7 +16,7 @@ struct fsm_state {
 
 	int end;
 
-	struct fsm_state *edges[FSM_EDGE_MAX];
+	struct fsm_state *edges[FSM_EDGE_MAX + 1];
 	struct epsilon_list *el;
 };
 
