@@ -103,7 +103,7 @@ fsm_copy(struct fsm *fsm)
 			assert(from != NULL);
 			assert(to   != NULL);
 
-			if (!fsm_addedge_copy(new, from, to, &s->state.edges[i])) {
+			if (!fsm_addedge_literal(new, from, to, i)) {
 				fsm_free(new);
 				return NULL;
 			}

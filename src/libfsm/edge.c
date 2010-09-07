@@ -78,28 +78,3 @@ fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 	return e;
 }
 
-struct fsm_edge *
-fsm_addedge_copy(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
-	struct fsm_edge *edge)
-{
-	int i;
-
-	assert(fsm != NULL);
-	assert(from != NULL);
-	assert(to != NULL);
-	assert(edge != NULL);
-
-	i = edge - from->edges;
-
-	assert(i >= 0);
-	assert(i < FSM_EDGE_MAX);
-	assert(to->edges[i].state == NULL);
-
-	/* Assign the copied transition for this edge */
-	{
-		to->edges[i].state = edge->state;
-	}
-
-	return &to->edges[i];
-}
-

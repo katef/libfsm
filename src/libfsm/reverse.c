@@ -71,7 +71,7 @@ fsm_reverse(struct fsm *fsm)
 
 				assert(from != NULL);
 
-				if (fsm_addedge_copy(new, from, to, &s->state.edges[i]) == NULL) {
+				if (fsm_addedge_literal(new, from, to, i) == NULL) {
 					fsm_free(new);
 					return 0;
 				}

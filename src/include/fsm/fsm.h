@@ -109,14 +109,6 @@ fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 	char c);
 
 /*
- * Add an edge who's transition value (epsilon, label, etc) is copied from
- * another edge.
- */
-struct fsm_edge *
-fsm_addedge_copy(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
-	struct fsm_edge *edge);
-
-/*
  * A local copy of *options is taken, so its storage needn't remain around
  * after a call to fsm_setoptions().
  */
