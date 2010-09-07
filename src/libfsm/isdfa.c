@@ -24,7 +24,7 @@ isdfastate(const struct fsm_state *state)
 int
 fsm_isdfa(const struct fsm *fsm)
 {
-	const struct state_list *s;
+	const struct state_set *s;
 
 	assert(fsm != NULL);
 	assert(fsm->start != NULL);
@@ -34,7 +34,7 @@ fsm_isdfa(const struct fsm *fsm)
 	}
 
 	for (s = fsm->sl; s; s = s->next) {
-		if (!isdfastate(&s->state)) {
+		if (!isdfastate(s->state)) {
 			return 0;
 		}
 	}

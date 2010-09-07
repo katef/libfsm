@@ -18,7 +18,7 @@ fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 
 	/* Assign the epsilon transition for this state */
 	{
-		struct epsilon_list *e;
+		struct state_set *e;
 
 		e = malloc(sizeof *e);
 		if (e == NULL) {

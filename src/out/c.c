@@ -89,15 +89,15 @@ static void singlecase(FILE *f, const struct fsm_state *state) {
 	fprintf(f, "\t\t\t}\n");
 }
 
-static void stateenum(FILE *f, struct state_list *sl) {
-	struct state_list *s;
+static void stateenum(FILE *f, struct state_set *sl) {
+	struct state_set *s;
 	int i;
 
 	fprintf(f, "\tenum {\n");
 	fprintf(f, "\t\t");
 
 	for (s = sl, i = 1; s; s = s->next, i++) {
-		fprintf(f, "S%u", s->state.id);
+		fprintf(f, "S%u", s->state->id);
 		if (s->next != NULL) {
 			fprintf(f, ", ");
 		}
@@ -112,8 +112,8 @@ static void stateenum(FILE *f, struct state_list *sl) {
 	fprintf(f, "\t} state;\n");
 }
 
-static void endstates(FILE *f, const struct fsm *fsm, struct state_list *sl) {
-	struct state_list *s;
+static void endstates(FILE *f, const struct fsm *fsm, struct state_set *sl) {
+	struct state_set *s;
 
 	/* no end states */
 	{
@@ -121,7 +121,7 @@ static void endstates(FILE *f, const struct fsm *fsm, struct state_list *sl) {
 
 		endcount = 0;
 		for (s = sl; s; s = s->next) {
-			endcount += !!fsm_isend(fsm, &s->state);
+			endcount += !!fsm_isend(fsm, s->state);
 		}
 
 		if (endcount == 0) {
@@ -134,20 +134,20 @@ static void endstates(FILE *f, const struct fsm *fsm, struct state_list *sl) {
 	fprintf(f, "\t/* end states */\n");
 	fprintf(f, "\tswitch (state) {\n");
 	for (s = sl; s; s = s->next) {
-		if (!fsm_isend(fsm, &s->state)) {
+		if (!fsm_isend(fsm, s->state)) {
 			continue;
 		}
 
-		assert(s->state.end > 0);
+		assert(s->state->end > 0);
 		fprintf(f, "\tcase S%d: return %u;\n",
-			s->state.id, s->state.id);
+			s->state->id, s->state->id);
 	}
 	fprintf(f, "\tdefault: return EOF; /* unexpected EOF */\n");
 	fprintf(f, "\t}\n");
 }
 
 void out_c(const struct fsm *fsm, FILE *f) {
-	struct state_list *s;
+	struct state_set *s;
 
 	assert(fsm != NULL);
 	assert(fsm_isdfa(fsm));
@@ -181,16 +181,16 @@ void out_c(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "\twhile ((c = fsm_getc(opaque)) != EOF) {\n");
 	fprintf(f, "\t\tswitch (state) {\n");
 	for (s = fsm->sl; s; s = s->next) {
-		fprintf(f, "\t\tcase S%u:", s->state.id);
+		fprintf(f, "\t\tcase S%u:", s->state->id);
 
-		if (s->state.opaque != NULL) {
+		if (s->state->opaque != NULL) {
 			fprintf(f, " /* ");
-			fputs(s->state.opaque, f);
+			fputs(s->state->opaque, f);
 			fprintf(f, " */");
 		}
 
 		fprintf(f, "\n");
-		singlecase(f, &s->state);
+		singlecase(f, s->state);
 
 		if (s->next != NULL) {
 			fprintf(f, "\n");

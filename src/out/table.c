@@ -30,8 +30,8 @@ static int escputc(char c, FILE *f) {
 	}
 }
 
-static void hr(FILE *f, struct state_list *sl) {
-	struct state_list *x;
+static void hr(FILE *f, struct state_set *sl) {
+	struct state_set *x;
 
 	assert(f != NULL);
 	assert(sl != NULL);
@@ -44,14 +44,14 @@ static void hr(FILE *f, struct state_list *sl) {
 	fprintf(f, "\n");
 }
 
-static int notransitions(struct state_list *sl, int i) {
-	struct state_list *x;
+static int notransitions(struct state_set *sl, int i) {
+	struct state_set *x;
 
 	assert(i >= 0);
 	assert(i <= UCHAR_MAX);
 
 	for (x = sl; x; x = x->next) {
-		if (x->state.edges[i] != NULL) {
+		if (x->state->edges[i] != NULL) {
 			return 0;
 		}
 	}
@@ -60,14 +60,14 @@ static int notransitions(struct state_list *sl, int i) {
 }
 
 void out_table(const struct fsm *fsm, FILE *f) {
-	struct state_list *x;
+	struct state_set *x;
 	int i;
 
 	/* TODO: assert! */
 
 	fprintf(f, "%-9s ", "");
 	for (x = fsm->sl; x; x = x->next) {
-		fprintf(f, "| %-2u ", x->state.id);
+		fprintf(f, "| %-2u ", x->state->id);
 	}
 
 	fprintf(f, "\n");
@@ -97,10 +97,10 @@ void out_table(const struct fsm *fsm, FILE *f) {
 		}
 
 		for (x = fsm->sl; x; x = x->next) {
-			if (x->state.edges[i] == NULL) {
+			if (x->state->edges[i] == NULL) {
 				fprintf(f, "|    ");
 			} else {
-				fprintf(f, "| %-2u ", x->state.edges[i]->id);
+				fprintf(f, "| %-2u ", x->state->edges[i]->id);
 			}
 		}
 
@@ -109,15 +109,15 @@ void out_table(const struct fsm *fsm, FILE *f) {
 
 	/* TODO: only if there are epislon transitions for at least one state */
 	{
-		struct epsilon_list *e;
+		struct state_set *e;
 
 		fprintf(f, "%-9s ", "epsilon");
 
 		for (x = fsm->sl; x; x = x->next) {
-			for (e = x->state.el; e; e = e->next) {
+			for (e = x->state->el; e; e = e->next) {
 				assert(e->state != NULL);
 
-				if (e->state == &x->state) {
+				if (e->state == x->state) {
 					break;
 				}
 			}
@@ -141,8 +141,8 @@ void out_table(const struct fsm *fsm, FILE *f) {
 
 	for (x = fsm->sl; x; x = x->next) {
 		fprintf(f, "| %s%s ",
-			&x->state == fsm_getstart(fsm) ? "S" : " ",
-			fsm_isend(fsm, &x->state) ? "E" : " ");
+			x->state == fsm_getstart(fsm) ? "S" : " ",
+			fsm_isend(fsm, x->state)      ? "E" : " ");
 	}
 
 	fprintf(f, "\n");

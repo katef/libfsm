@@ -35,8 +35,8 @@ static void escputs(const char *s, FILE *f) {
 }
 
 void out_dot(const struct fsm *fsm, FILE *f) {
-	struct state_list *s;
-	struct epsilon_list *e;
+	struct state_set *s;
+	struct state_set *e;
 	struct fsm_state *start;
 
 	/* TODO: assert! */
@@ -63,38 +63,38 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 		int i;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			if (s->state.edges[i] == NULL) {
+			if (s->state->edges[i] == NULL) {
 				continue;
 			}
 
 			/* TODO: print "?" if all edges are equal */
 
-			fprintf(f, "\t%-2u -> %-2u [ label = \"", s->state.id, s->state.edges[i]->id);
+			fprintf(f, "\t%-2u -> %-2u [ label = \"", s->state->id, s->state->edges[i]->id);
 			escputc(i, f);
 			fprintf(f, "\" ];\n");
 		}
 
-		for (e = s->state.el; e; e = e->next) {
+		for (e = s->state->el; e; e = e->next) {
 			fprintf(f, "\t%-2u -> %-2u [ label = \"&epsilon;\" ];\n",
-				s->state.id, e->state->id);
+				s->state->id, e->state->id);
 		}
 	}
 
 	for (s = fsm->sl; s; s = s->next) {
-		if (s->state.opaque == NULL) {
+		if (s->state->opaque == NULL) {
 			continue;
 		}
 
-		fprintf(f, "\t%-2u [ color = \"", s->state.id);
-		escputs(s->state.opaque, f);
+		fprintf(f, "\t%-2u [ color = \"", s->state->id);
+		escputs(s->state->opaque, f);
 		fprintf(f, "\" ];\n");
 	}
 
 	fprintf(f, "\n");
 
 	for (s = fsm->sl; s; s = s->next) {
-		if (fsm_isend(fsm, &s->state)) {
-			fprintf(f, "\t%-2u [ shape = doublecircle ];\n", s->state.id);
+		if (fsm_isend(fsm, s->state)) {
+			fprintf(f, "\t%-2u [ shape = doublecircle ];\n", s->state->id);
 		}
 	}
 

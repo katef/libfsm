@@ -55,10 +55,10 @@ fsm_minimize(struct fsm *fsm)
 	}
 
 	if (!hasend) {
-		struct state_list *s;
+		struct state_set *s;
 
 		for (s = fsm->sl; s; s = s->next) {
-			fsm_setend(fsm, &s->state, 0);
+			fsm_setend(fsm, s->state, 0);
 		}
 	}
 

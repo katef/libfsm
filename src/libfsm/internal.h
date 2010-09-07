@@ -17,24 +17,17 @@ struct fsm_state {
 	int end;
 
 	struct fsm_state *edges[FSM_EDGE_MAX + 1];
-	struct epsilon_list *el;
+	struct state_set *el;
 };
 
 
-/* TODO: observation: same struct as state_list... */
-struct epsilon_list {
+struct state_set {
 	struct fsm_state *state;
-	struct epsilon_list *next;
-};
-
-/* global registry of all states */
-struct state_list {
-	struct fsm_state state;
-	struct state_list *next;
+	struct state_set *next;
 };
 
 struct fsm {
-	struct state_list *sl;
+	struct state_set *sl;
 	struct fsm_state *start;
 	struct fsm_options options;
 };
