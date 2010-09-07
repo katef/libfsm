@@ -5,6 +5,8 @@
 
 #include <limits.h>
 
+#include <fsm/fsm.h>
+
 
 /* TODO: +2 for SOL, EOL */
 /* TODO: +lots for FSM_EDGE_* */

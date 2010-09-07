@@ -7,6 +7,7 @@
 #include <fsm/fsm.h>
 
 #include "internal.h"
+#include "set.h"
 #include "xalloc.h"
 
 int
@@ -16,22 +17,9 @@ fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 	assert(from != NULL);
 	assert(to != NULL);
 
-	/* Assign the epsilon transition for this state */
-	{
-		struct state_set *e;
+	(void) fsm;
 
-		e = malloc(sizeof *e);
-		if (e == NULL) {
-			return 0;
-		}
-
-		e->state = to;
-
-		e->next  = from->el;
-		from->el = e;
-	}
-
-	return 1;
+	return !!set_addstate(&from->el, to);
 }
 
 int
@@ -42,6 +30,8 @@ fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
 	assert(fsm != NULL);
 	assert(from != NULL);
 	assert(to != NULL);
+
+	(void) fsm;
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
 		from->edges[i] = to;

@@ -6,6 +6,7 @@
 #include <fsm/fsm.h>
 
 #include "internal.h"
+#include "set.h"
 
 static unsigned int inventid(const struct fsm *fsm) {
 	assert(fsm != NULL);
@@ -14,25 +15,18 @@ static unsigned int inventid(const struct fsm *fsm) {
 }
 
 static void free_contents(struct fsm *fsm) {
-	void *next;
 	struct state_set *s;
-	struct state_set *e;
 
 	assert(fsm != NULL);
 
-	for (s = fsm->sl; s; s = next) {
+	for (s = fsm->sl; s; s = s->next) {
 		assert(s->state != NULL);
 
-		for (e = s->state->el; e; e = next) {
-			next = e->next;
-			free(e);
-		}
-
+		set_free(s->state->el);
 		free(s->state);
-
-		next = s->next;
-		free(s);
 	}
+
+	set_free(fsm->sl);
 }
 
 struct fsm *
@@ -46,8 +40,8 @@ fsm_new(void)
 		return NULL;
 	}
 
-	new->sl = NULL;
-	new->start = NULL;
+	new->sl      = NULL;
+	new->start   = NULL;
 	new->options = default_options;
 
 	return new;
@@ -210,29 +204,23 @@ struct fsm_state *
 fsm_addstate(struct fsm *fsm, unsigned int id)
 {
 	struct state_set *p;
+	struct fsm_state *new;
 
 	assert(fsm != NULL);
 
 	/* Find an existing state */
 	for (p = fsm->sl; p; p = p->next) {
 		if (p->state->id == id) {
-			break;
+			return p->state;
 		}
 	}
 
 	/* Otherwise, create a new one */
-	if (p == NULL) {
-		struct fsm_state *new;
+	{
 		int i;
 
 		new = malloc(sizeof *new);
 		if (new == NULL) {
-			return NULL;
-		}
-
-		p = malloc(sizeof *p);
-		if (p == NULL) {
-			free(new);
 			return NULL;
 		}
 
@@ -245,13 +233,13 @@ fsm_addstate(struct fsm *fsm, unsigned int id)
 			new->edges[i] = NULL;
 		}
 
-		p->state = new;
-
-		p->next  = fsm->sl;
-		fsm->sl  = p;
+		if (!set_addstate(&fsm->sl, new)) {
+			free(new);
+			return NULL;
+		}
 	}
 
-	return p->state;
+	return new;
 }
 
 void

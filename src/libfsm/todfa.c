@@ -7,6 +7,7 @@
 #include <fsm/graph.h>
 
 #include "internal.h"
+#include "set.h"
 
 /*
  * A set of states in an NFA.
@@ -40,17 +41,6 @@ struct mapping {
 
 	struct mapping *next;
 };
-
-/* TODO: centralise. perhaps all set operations to set.c */
-static void free_stateset(struct state_set *set) {
-	struct state_set *p;
-	struct state_set *next;
-
-	for (p = set; p; p = next) {
-		next = p->next;
-		free(p);
-	}
-}
 
 static void free_transset(struct transset *set) {
 	struct transset *p;
@@ -122,39 +112,6 @@ static int transin(char c, const struct transset *set) {
 	return 0;
 }
 
-/* Find if a state is in a stateset */
-static int statein(const struct fsm_state *state, const struct state_set *set) {
-	const struct state_set *p;
-
-	for (p = set; p; p = p->next) {
-		if (p->state == state) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-/* Find a is a subset of b */
-static int subsetof(const struct state_set *a, const struct state_set *b) {
-	const struct state_set *p;
-
-	for (p = a; p; p = p->next) {
-		if (!statein(p->state, b)) {
-			return 0;
-		}
-	}
-
-	return 1;
-}
-
-/*
- * Compare two sets of states for equality.
- */
-static int ecequal(const struct state_set *a, const struct state_set *b) {
-	return subsetof(a, b) && subsetof(b, a);
-}
-
 /*
  * Find the DFA state associated with a given epsilon closure of NFA states.
  * A new DFA state is created if none exists.
@@ -167,8 +124,8 @@ static struct mapping *addtoml(struct fsm *dfa, struct mapping **ml, struct stat
 
 	/* use existing mapping if present */
 	for (p = *ml; p; p = p->next) {
-		if (ecequal(p->closure, closure)) {
-			free_stateset(closure);
+		if (set_equal(p->closure, closure)) {
+			set_free(closure);
 			return p;
 		}
 	}
@@ -259,7 +216,7 @@ static struct fsm_state *state_closure(struct mapping **ml, struct fsm *dfa, con
 
 	ec = NULL;
 	if (epsilon_closure(nfastate, &ec) == NULL) {
-		free_stateset(ec);
+		set_free(ec);
 		return NULL;
 	}
 
@@ -289,7 +246,7 @@ static struct fsm_state *set_closure(struct mapping **ml, struct fsm *dfa, struc
 	ec = NULL;
 	for (p = set; p; p = p->next) {
 		if (epsilon_closure(p->state, &ec) == NULL) {
-			free_stateset(ec);
+			set_free(ec);
 			return NULL;
 		}
 	}
@@ -298,23 +255,6 @@ static struct fsm_state *set_closure(struct mapping **ml, struct fsm *dfa, struc
 	/* TODO: test ec */
 
 	return m->dfastate;
-}
-
-/*
- * Return true if any of the states in the set are end states.
- */
-static int containsendstate(struct fsm *fsm, struct state_set *set) {
-	struct state_set *s;
-
-	assert(fsm != NULL);
-
-	for (s = set; s; s = s->next) {
-		if (fsm_isend(fsm, s->state)) {
-			return 1;
-		}
-	}
-
-	return 0;
 }
 
 /*
@@ -396,13 +336,13 @@ static struct state_set *allstatesreachableby(struct state_set *set, int e) {
 		}
 
 		/* Skip states which we've already got */
-		if (statein(s->state->edges[e], l)) {
+		if (set_contains(s->state->edges[e], l)) {
 			continue;
 		}
 
 		p = malloc(sizeof *p);
 		if (p == NULL) {
-			free_stateset(l);
+			set_free(l);
 			return NULL;
 		}
 
@@ -490,7 +430,7 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 			reachable = allstatesreachableby(curr->closure, s->c);
 
 			new = set_closure(ml, dfa, reachable);
-			free_stateset(reachable);
+			set_free(reachable);
 			if (new == NULL) {
 				free_transset(nes);
 				return 0;
@@ -515,7 +455,7 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 		 * The current DFA state is an end state if any of its associated NFA
 		 * states are end states.
 		 */
-		if (containsendstate(nfa, curr->closure)) {
+		if (set_containsendstate(nfa, curr->closure)) {
 			fsm_setend(dfa, curr->dfastate, 1);
 		}
 	}
