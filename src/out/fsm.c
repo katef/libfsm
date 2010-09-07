@@ -44,17 +44,11 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 		int i;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			const struct fsm_edge *e;
-
-			e = &s->state.edges[i];
-
-			if (e->state == NULL) {
+			if (s->state.edges[i] == NULL) {
 				continue;
 			}
 
-			assert(e->state != NULL);
-
-			fprintf(f, "%-2u -> %-2u", s->state.id, e->state->id);
+			fprintf(f, "%-2u -> %-2u", s->state.id, s->state.edges[i]->id);
 
 			/* TODO: print " ?" if all edges are equal */
 

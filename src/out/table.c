@@ -51,7 +51,7 @@ static int notransitions(struct state_list *sl, int i) {
 	assert(i <= UCHAR_MAX);
 
 	for (x = sl; x; x = x->next) {
-		if (x->state.edges[i].state != NULL) {
+		if (x->state.edges[i] != NULL) {
 			return 0;
 		}
 	}
@@ -97,14 +97,10 @@ void out_table(const struct fsm *fsm, FILE *f) {
 		}
 
 		for (x = fsm->sl; x; x = x->next) {
-			const struct fsm_edge *e;
-
-			e = &x->state.edges[i];
-
-			if (e->state == NULL) {
+			if (x->state.edges[i] == NULL) {
 				fprintf(f, "|    ");
 			} else {
-				fprintf(f, "| %-2u ", e->state->id);
+				fprintf(f, "| %-2u ", x->state.edges[i]->id);
 			}
 		}
 

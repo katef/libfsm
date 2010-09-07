@@ -29,20 +29,17 @@ static void escputc(char c, FILE *f) {
 /* TODO: refactor for when FSM_EDGE_ANY goes; it is an "any" transition if all
  * labels transition to the same state. centralise that, perhaps */
 static const struct fsm_state *findany(const struct fsm_state *state) {
-	const struct fsm_state *to;
 	int i;
 
 	assert(state != NULL);
 
-	to = state->edges[0].state;
-
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (to != state->edges[i].state) {
+		if (state->edges[0] != state->edges[i]) {
 			return NULL;
 		}
 	}
 
-	return to;
+	return state->edges[0];
 }
 
 static void singlecase(FILE *f, const struct fsm_state *state) {
@@ -53,7 +50,7 @@ static void singlecase(FILE *f, const struct fsm_state *state) {
 	assert(state != NULL);
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		if (state->edges[i].state != NULL) {
+		if (state->edges[i] != NULL) {
 			break;
 		}
 	}
@@ -72,18 +69,14 @@ static void singlecase(FILE *f, const struct fsm_state *state) {
 	/* usual case */
 	if (to == NULL) {
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			const struct fsm_edge *e;
-
-			e = &state->edges[i];
-
-			if (e->state == NULL) {
+			if (state->edges[i] == NULL) {
 				continue;
 			}
 
 			/* TODO: pass S%u out to maximum state width */
 			fprintf(f, "\t\t\tcase '");
 			escputc(i, f);
-			fprintf(f, "': state = S%u; continue;\n", e->state->id);
+			fprintf(f, "': state = S%u; continue;\n", state->edges[i]->id);
 		}
 	}
 

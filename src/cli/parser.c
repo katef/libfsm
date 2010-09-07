@@ -357,7 +357,7 @@ p_60(fsm fsm, lex_state lex_state, act_state act_state, usint *ZI59)
 						{
 #line 170 "cli/parser.act"
 
-		if (fsm_addedge_any(fsm, (ZIx), (ZIy)) == NULL) {
+		if (!fsm_addedge_any(fsm, (ZIx), (ZIy))) {
 			perror("fsm_addedge_any");
 			exit(EXIT_FAILURE);
 		}
@@ -397,7 +397,7 @@ p_60(fsm fsm, lex_state lex_state, act_state act_state, usint *ZI59)
 			goto ZL3;
 		}
 
-		if (fsm_addedge_literal(fsm, (ZIx), (ZIy), (ZIs)[0]) == NULL) {
+		if (!fsm_addedge_literal(fsm, (ZIx), (ZIy), (ZIs)[0])) {
 			perror("fsm_addedge_literal");
 			exit(EXIT_FAILURE);
 		}

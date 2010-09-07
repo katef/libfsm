@@ -98,7 +98,9 @@ fsm_copy(struct fsm *fsm)
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			struct fsm_state *to;
 
-			to = fsm_getstatebyid(new, s->state.edges[i].state->id);
+			assert(s->state.edges[i] != NULL);
+
+			to = fsm_getstatebyid(new, s->state.edges[i]->id);
 
 			assert(from != NULL);
 			assert(to   != NULL);
@@ -229,7 +231,7 @@ fsm_addstate(struct fsm *fsm, unsigned int id)
 		p->state.el     = NULL;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			p->state.edges[i].state = NULL;
+			p->state.edges[i] = NULL;
 		}
 
 		p->next = fsm->sl;

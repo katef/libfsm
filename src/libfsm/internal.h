@@ -6,10 +6,6 @@
 #include <limits.h>
 
 
-struct fsm_edge {
-	struct fsm_state *state;
-};
-
 /* TODO: +2 for SOL, EOL */
 /* TODO: +lots for FSM_EDGE_* */
 #define FSM_EDGE_MAX UCHAR_MAX
@@ -20,7 +16,7 @@ struct fsm_state {
 
 	int end;
 
-	struct fsm_edge edges[FSM_EDGE_MAX];
+	struct fsm_state *edges[FSM_EDGE_MAX];
 	struct epsilon_list *el;
 };
 

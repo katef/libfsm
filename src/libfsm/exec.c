@@ -10,12 +10,6 @@
 
 #include "internal.h"
 
-static struct fsm_state *nextstate(const struct fsm_edge edges[], char c) {
-	assert(edges != NULL);
-
-	return edges[(unsigned char) c].state;
-}
-
 int fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque) {
 	struct fsm_state *state;
 	int c;
@@ -32,7 +26,7 @@ int fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque)
 	state = fsm->start;
 
 	while ((c = fsm_getc(opaque)) != EOF) {
-		state = nextstate(state->edges, c);
+		state = state->edges[(unsigned char) c];
 		if (state == NULL) {
 			return 0;
 		}

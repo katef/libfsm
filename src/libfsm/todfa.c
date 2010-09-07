@@ -360,7 +360,7 @@ static struct transset **listnonepsilonstates(struct transset **l, struct states
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			struct transset *p;
 
-			if (s->state->edges[i].state == NULL) {
+			if (s->state->edges[i] == NULL) {
 				continue;
 			}
 
@@ -376,7 +376,7 @@ static struct transset **listnonepsilonstates(struct transset **l, struct states
 			}
 
 			p->c = i;
-			p->state = s->state->edges[i].state;
+			p->state = s->state->edges[i];
 
 			p->next = *l;
 			*l = p;
@@ -399,12 +399,12 @@ static struct stateset *allstatesreachableby(struct stateset *set, int e) {
 	for (s = set; s; s = s->next) {
 		struct stateset *p;
 
-		if (s->state->edges[e].state == NULL) {
+		if (s->state->edges[e] == NULL) {
 			continue;
 		}
 
 		/* Skip states which we've already got */
-		if (statein(s->state->edges[e].state, l)) {
+		if (statein(s->state->edges[e], l)) {
 			continue;
 		}
 
@@ -418,7 +418,7 @@ static struct stateset *allstatesreachableby(struct stateset *set, int e) {
 		 * There is no need to store the label here, since our caller is
 		 * only interested in states.
 		 */
-		p->state = s->state->edges[e].state;
+		p->state = s->state->edges[e];
 
 		p->next = l;
 		l = p;
@@ -504,7 +504,7 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 				return 0;
 			}
 
-			if (fsm_addedge_literal(dfa, curr->dfastate, new, s->c) == NULL) {
+			if (!fsm_addedge_literal(dfa, curr->dfastate, new, s->c)) {
 				free_transset(nes);
 				return 0;
 			}

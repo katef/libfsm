@@ -153,7 +153,7 @@
 			@!;
 		}
 
-		if (fsm_addedge_literal(fsm, @x, @y, @s[0]) == NULL) {
+		if (!fsm_addedge_literal(fsm, @x, @y, @s[0])) {
 			perror("fsm_addedge_literal");
 			exit(EXIT_FAILURE);
 		}
@@ -167,7 +167,7 @@
 	@};
 
 	<add-edge-any>: (x :state, y :state) -> () = @{
-		if (fsm_addedge_any(fsm, @x, @y) == NULL) {
+		if (!fsm_addedge_any(fsm, @x, @y)) {
 			perror("fsm_addedge_any");
 			exit(EXIT_FAILURE);
 		}

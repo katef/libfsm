@@ -63,19 +63,13 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 		int i;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			const struct fsm_edge *e;
-
-			e = &s->state.edges[i];
-
-			if (e->state == NULL) {
+			if (s->state.edges[i] == NULL) {
 				continue;
 			}
 
-			assert(e->state);
-
 			/* TODO: print "?" if all edges are equal */
 
-			fprintf(f, "\t%-2u -> %-2u [ label = \"", s->state.id, e->state->id);
+			fprintf(f, "\t%-2u -> %-2u [ label = \"", s->state.id, s->state.edges[i]->id);
 			escputc(i, f);
 			fprintf(f, "\" ];\n");
 		}

@@ -34,10 +34,9 @@ fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 	return 1;
 }
 
-struct fsm_edge *
+int
 fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
 {
-	struct fsm_edge *e;
 	int i;
 
 	assert(fsm != NULL);
@@ -45,36 +44,24 @@ fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
 	assert(to != NULL);
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		e = &from->edges[i];
-
-		/* Assign the any transition for this edge */
-		{
-			e->state = to;
-		}
+		from->edges[i] = to;
 	}
 
-	return e;
+	return 1;
 }
 
-struct fsm_edge *
+int
 fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	char c)
 {
-	struct fsm_edge *e;
-
 	assert(fsm != NULL);
 	assert(from != NULL);
 	assert(to != NULL);
 
-	e = &from->edges[(unsigned char) c];
-
 	/* TODO: provide for duplicate labels; create an epsilon transition on the fly */
 
-	/* Assign the literal transition for this edge */
-	{
-		e->state = to;
-	}
+	from->edges[(unsigned char) c] = to;
 
-	return e;
+	return 1;
 }
 

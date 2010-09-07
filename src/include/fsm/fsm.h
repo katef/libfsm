@@ -92,19 +92,19 @@ fsm_addstate(struct fsm *fsm, unsigned int id);
  *   internally. Therefore the memory passed may be deallocated after a call
  *   to fsm_addedge_label().
  *
- * Returns NULL on error; see errno.
+ * Returns false on error; see errno.
  */
-int	/* TODO: address inconsistency */
+int
 fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to);
 
-struct fsm_edge *
+int
 fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to);
 
-struct fsm_edge *
+int
 fsm_addedge_label(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	const char *label);
 
-struct fsm_edge *
+int
 fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	char c);
 
