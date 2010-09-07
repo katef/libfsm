@@ -7,17 +7,7 @@
 #include <fsm/fsm.h>
 
 #include "internal.h"
-#include "trans.h"
 #include "xalloc.h"
-
-enum fsm_edge_type
-fsm_getedgetype(const struct fsm_edge *edge)
-{
-	assert(edge != NULL);
-	assert(edge->trans != NULL);
-
-	return edge->trans->type;
-}
 
 int
 fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
@@ -59,11 +49,6 @@ fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
 
 		/* Assign the any transition for this edge */
 		{
-			e->trans = trans_add(fsm, FSM_EDGE_LITERAL);
-			if (e->trans == NULL) {
-				return NULL;
-			}
-
 			e->state = to;
 		}
 	}
@@ -83,13 +68,10 @@ fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 
 	e = &from->edges[(unsigned char) c];
 
+	/* TODO: provide for duplicate labels; create an epsilon transition on the fly */
+
 	/* Assign the literal transition for this edge */
 	{
-		e->trans = trans_add(fsm, FSM_EDGE_LITERAL);
-		if (e->trans == NULL) {
-			return NULL;
-		}
-
 		e->state = to;
 	}
 
@@ -106,23 +88,16 @@ fsm_addedge_copy(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	assert(from != NULL);
 	assert(to != NULL);
 	assert(edge != NULL);
-	assert(edge->trans != NULL);
 
 	i = edge - from->edges;
 
 	assert(i >= 0);
 	assert(i < FSM_EDGE_MAX);
 	assert(to->edges[i].state == NULL);
-	assert(to->edges[i].trans == NULL);
 
 	/* Assign the copied transition for this edge */
 	{
 		to->edges[i].state = edge->state;
-
-		to->edges[i].trans = trans_add(fsm, FSM_EDGE_LITERAL);
-		if (to->edges[i].trans == NULL) {
-			return NULL;
-		}
 	}
 
 	return &to->edges[i];

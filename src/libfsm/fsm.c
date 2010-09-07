@@ -16,7 +16,6 @@ static unsigned int inventid(const struct fsm *fsm) {
 static void free_contents(struct fsm *fsm) {
 	void *next;
 	struct state_list *s;
-	struct trans_list *t;
 	struct epsilon_list *e;
 
 	assert(fsm != NULL);
@@ -29,11 +28,6 @@ static void free_contents(struct fsm *fsm) {
 
 		next = s->next;
 		free(s);
-	}
-
-	for (t = fsm->tl; t; t = next) {
-		next = t->next;
-		free(t);
 	}
 }
 
@@ -49,7 +43,6 @@ fsm_new(void)
 	}
 
 	new->sl = NULL;
-	new->tl = NULL;
 	new->start = NULL;
 	new->options = default_options;
 
@@ -151,7 +144,6 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	free_contents(dst);
 
 	dst->sl      = src->sl;
-	dst->tl      = src->tl;
 	dst->start   = src->start;
 	dst->options = src->options;
 
@@ -161,7 +153,6 @@ fsm_move(struct fsm *dst, struct fsm *src)
 int
 fsm_union(struct fsm *dst, struct fsm *src)
 {
-	struct trans_list **tl;
 	struct state_list **sl;
 	struct state_list *p;
 
@@ -176,12 +167,6 @@ fsm_union(struct fsm *dst, struct fsm *src)
 		/* nothing */
 	}
 	*sl = src->sl;
-
-
-	for (tl = &dst->tl; *tl; tl = &(*tl)->next) {
-		/* nothing */
-	}
-	*tl = src->tl;
 
 
 	/*
@@ -245,7 +230,6 @@ fsm_addstate(struct fsm *fsm, unsigned int id)
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			p->state.edges[i].state = NULL;
-			p->state.edges[i].trans = NULL;
 		}
 
 		p->next = fsm->sl;

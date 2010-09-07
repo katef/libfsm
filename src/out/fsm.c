@@ -48,7 +48,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 
 			e = &s->state.edges[i];
 
-			if (e->trans == NULL) {
+			if (e->state == NULL) {
 				continue;
 			}
 
@@ -58,15 +58,9 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 
 			/* TODO: print " ?" if all edges are equal */
 
-			switch (e->trans->type) {
-			case FSM_EDGE_LITERAL:
-				fprintf(f, " \'");
-				escputc(i, f);
-				fprintf(f, "\'");
-				break;
-			}
-
-			fprintf(f, ";\n");
+			fprintf(f, " \'");
+			escputc(i, f);
+			fprintf(f, "\';\n");
 		}
 
 		for (e = s->state.el; e != NULL; e = e->next) {

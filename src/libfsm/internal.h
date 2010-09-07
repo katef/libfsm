@@ -8,7 +8,6 @@
 
 struct fsm_edge {
 	struct fsm_state *state;
-	struct trans_list *trans;
 };
 
 /* TODO: +2 for SOL, EOL */
@@ -38,25 +37,8 @@ struct state_list {
 	struct state_list *next;
 };
 
-/*
- * Note that these are used to index state.edges[] (as well as the more usual
- * index of a character cast to unsigned char).
- * TODO: due to get rid of all of these
- */
-enum fsm_edge_type {
-	FSM_EDGE_LITERAL = FSM_EDGE_MAX
-};
-
-/* global registry of all transitions */
-struct trans_list {
-	enum fsm_edge_type type;
-
-	struct trans_list *next;
-};
-
 struct fsm {
 	struct state_list *sl;
-	struct trans_list *tl;
 	struct fsm_state *start;
 	struct fsm_options options;
 };

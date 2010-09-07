@@ -51,7 +51,7 @@ static int notransitions(struct state_list *sl, int i) {
 	assert(i <= UCHAR_MAX);
 
 	for (x = sl; x; x = x->next) {
-		if (x->state.edges[i].trans != NULL) {
+		if (x->state.edges[i].state != NULL) {
 			return 0;
 		}
 	}
@@ -74,26 +74,20 @@ void out_table(const struct fsm *fsm, FILE *f) {
 
 	hr(f, fsm->sl);
 
+	/* TODO: this is sideways. now we have single-char edges only, pivot */
+
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		{
 			int n = 0;
 
 			/* TODO: print "?" for edges which are all equal */
 
-			switch (i) {
-			case FSM_EDGE_LITERAL:
-				break;
-
-			default:
-				/* skip edges with no transitions */
-				if (notransitions(fsm->sl, i)) {
-					continue;
-				}
-
-				n = escputc(i, f);
-				break;
+			/* skip edges with no transitions */
+			if (notransitions(fsm->sl, i)) {
+				continue;
 			}
 
+			n = escputc(i, f);
 			if (n > 9) {
 				n = 9;
 			}
@@ -107,14 +101,11 @@ void out_table(const struct fsm *fsm, FILE *f) {
 
 			e = &x->state.edges[i];
 
-			if (e->trans == NULL) {
+			if (e->state == NULL) {
 				fprintf(f, "|    ");
-				continue;
+			} else {
+				fprintf(f, "| %-2u ", e->state->id);
 			}
-
-			assert(e->state != NULL);
-
-			fprintf(f, "| %-2u ", e->state->id);
 		}
 
 		fprintf(f, "\n");
@@ -124,7 +115,7 @@ void out_table(const struct fsm *fsm, FILE *f) {
 	{
 		struct epsilon_list *e;
 
-		fprintf(f, "%9s", "epsilon");
+		fprintf(f, "%-9s ", "epsilon");
 
 		for (x = fsm->sl; x; x = x->next) {
 			for (e = x->state.el; e; e = e->next) {

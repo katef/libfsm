@@ -107,7 +107,6 @@ fsm_addedge_label(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 struct fsm_edge *
 fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	char c);
-/* TODO: other edge-adding types; fsm_getedgetype(edge) */
 
 /*
  * Add an edge who's transition value (epsilon, label, etc) is copied from

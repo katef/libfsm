@@ -7,7 +7,6 @@
 #include <fsm/graph.h>
 
 #include "internal.h"
-#include "trans.h"
 
 /*
  * A set of states in an NFA.
@@ -28,7 +27,6 @@ struct stateset {
 struct transset {
 	const struct fsm_state *state;
 	char c;
-	struct trans_list *trans;
 	struct transset *next;
 };
 
@@ -118,17 +116,13 @@ static int carrythroughopaques(struct fsm *fsm, struct fsm_state *state, struct 
 }
 
 /* Find if a transition is in a set */
-static int transin(struct trans_list *trans, const struct transset *set) {
+static int transin(char c, const struct transset *set) {
 	const struct transset *p;
 
-	assert(trans != NULL);
-
 	for (p = set; p; p = p->next) {
-		assert(p->trans != NULL);
-		/* TODO: not sure, but i think these cannot include epislons */
+		assert(p->state != NULL);
 
-		/* TODO: deep comparison? if (trans_equal(p->trans, trans)) { */
-		if (p->trans == trans) {
+		if (p->c == c) {
 			return 1;
 		}
 	}
@@ -366,10 +360,12 @@ static struct transset **listnonepsilonstates(struct transset **l, struct states
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			struct transset *p;
 
-			assert(s->state->edges[i].trans != NULL);
+			if (s->state->edges[i].state == NULL) {
+				continue;
+			}
 
 			/* Skip transitions we've already got */
-			if (transin(s->state->edges[i].trans, *l)) {
+			if (transin(i, *l)) {
 				continue;
 			}
 
@@ -381,7 +377,6 @@ static struct transset **listnonepsilonstates(struct transset **l, struct states
 
 			p->c = i;
 			p->state = s->state->edges[i].state;
-			p->trans = s->state->edges[i].trans;
 
 			p->next = *l;
 			*l = p;
@@ -394,47 +389,39 @@ static struct transset **listnonepsilonstates(struct transset **l, struct states
 /*
  * Return a list of all states reachable from set via the given transition.
  */
-static struct stateset *allstatesreachableby(struct stateset *set, int e, struct trans_list *trans) {
+static struct stateset *allstatesreachableby(struct stateset *set, int e) {
 	struct stateset *l;
 	struct stateset *s;
 
 	assert(set != NULL);
-	assert(trans != NULL);
 
 	l = NULL;
 	for (s = set; s; s = s->next) {
-		int i;
+		struct stateset *p;
 
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			struct stateset *p;
-
-			assert(s->state->edges[i].trans != NULL);
-
-			/* Skip states which we've already got */
-			if (statein(s->state->edges[i].state, l)) {
-				continue;
-			}
-
-			/* Skip labels which aren't the one we're looking for */
-			if (i != e || !trans_equal(s->state->edges[i].trans, trans)) {
-				continue;
-			}
-
-			p = malloc(sizeof *p);
-			if (p == NULL) {
-				free_stateset(l);
-				return NULL;
-			}
-
-			/*
-			 * There is no need to store the label here, since our caller is
-			 * only interested in states.
-			 */
-			p->state = s->state->edges[i].state;
-
-			p->next = l;
-			l = p;
+		if (s->state->edges[e].state == NULL) {
+			continue;
 		}
+
+		/* Skip states which we've already got */
+		if (statein(s->state->edges[e].state, l)) {
+			continue;
+		}
+
+		p = malloc(sizeof *p);
+		if (p == NULL) {
+			free_stateset(l);
+			return NULL;
+		}
+
+		/*
+		 * There is no need to store the label here, since our caller is
+		 * only interested in states.
+		 */
+		p->state = s->state->edges[e].state;
+
+		p->next = l;
+		l = p;
 	}
 
 	return l;
@@ -492,7 +479,7 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 		 * (computed on insertion to ml), these labels directly reach the next
 		 * states in the NFA.
 		 */
-		/* TODO: document that nes contains only entries with ->trans set */
+		/* TODO: document that nes contains only entries with labels set */
 		if (listnonepsilonstates(&nes, curr->closure) == NULL) {
 			return 0;
 		}
@@ -500,16 +487,15 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 		for (s = nes; s; s = s->next) {
 			struct fsm_state *new;
 			struct stateset *reachable;
-			struct fsm_edge edge;
 
-			assert(s->trans != NULL);
+			assert(s->state != NULL);
 
 			/*
 			 * Find the closure of the set of all NFA states which are reachable
 			 * through this label, starting from the set of states forming curr's
 			 * closure.
 			 */
-			reachable = allstatesreachableby(curr->closure, s->c, s->trans);
+			reachable = allstatesreachableby(curr->closure, s->c);
 
 			new = set_closure(ml, dfa, reachable);
 			free_stateset(reachable);
@@ -518,8 +504,7 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 				return 0;
 			}
 
-			edge.trans = s->trans;	/* XXX hacky */
-			if (fsm_addedge_copy(dfa, curr->dfastate, new, &edge) == NULL) {
+			if (fsm_addedge_literal(dfa, curr->dfastate, new, s->c) == NULL) {
 				free_transset(nes);
 				return 0;
 			}

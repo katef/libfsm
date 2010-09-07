@@ -7,54 +7,18 @@
 #include <fsm/fsm.h>
 
 #include "internal.h"
-#include "trans.h"
-
-static int
-hasduplicateedge(const struct fsm_state *state, int e, const struct fsm_edge *edge)
-{
-	int i;
-	int count;
-
-	/* TODO: assertions! */
-
-	count = 0;
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		if (state->edges[i].trans == NULL) {
-			continue;
-		}
-
-		if (i != e) {
-			continue;
-		}
-
-		count += trans_equal(edge->trans, state->edges[i].trans);
-	}
-
-	return count > 1;
-}
 
 static int
 isdfastate(const struct fsm_state *state)
 {
-	int i;
-
-	/* DFA may not have epsilon edges */
-	if (state->el != NULL) {
-		return 0;
-	}
-
-	/* DFA may not have duplicate edges */
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		if (state->edges[i].trans == NULL) {
-			continue;
-		}
-
-		if (hasduplicateedge(state, i, &state->edges[i])) {
-			return 0;
-		}
-	}
-
-	return 1;
+	/*
+	 * DFA may not have epsilon edges or duplicate states.
+	 *
+	 * Since this implementation encodes duplicate states as hanging off
+	 * epsilon transitions, we need simply check for the presence of those
+	 * to cover both situations.
+	 */
+	return state->el == NULL;
 }
 
 int

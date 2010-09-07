@@ -27,7 +27,7 @@ static void escputc(char c, FILE *f) {
 }
 
 /* TODO: refactor for when FSM_EDGE_ANY goes; it is an "any" transition if all
- * trans LITERAL to the same state. centralise that to trans.c */
+ * labels transition to the same state. centralise that, perhaps */
 static const struct fsm_state *findany(const struct fsm_state *state) {
 	const struct fsm_state *to;
 	int i;
@@ -53,7 +53,7 @@ static void singlecase(FILE *f, const struct fsm_state *state) {
 	assert(state != NULL);
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		if (state->edges[i].trans != NULL) {
+		if (state->edges[i].state != NULL) {
 			break;
 		}
 	}
@@ -76,12 +76,9 @@ static void singlecase(FILE *f, const struct fsm_state *state) {
 
 			e = &state->edges[i];
 
-			if (e->trans == NULL) {
+			if (e->state == NULL) {
 				continue;
 			}
-
-			assert(e->state != NULL);
-			assert(e->trans->type == FSM_EDGE_LITERAL);
 
 			/* TODO: pass S%u out to maximum state width */
 			fprintf(f, "\t\t\tcase '");

@@ -67,7 +67,7 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 
 			e = &s->state.edges[i];
 
-			if (e->trans == NULL) {
+			if (e->state == NULL) {
 				continue;
 			}
 

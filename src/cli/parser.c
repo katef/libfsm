@@ -422,7 +422,7 @@ p_60(fsm fsm, lex_state lex_state, act_state act_state, usint *ZI59)
 						{
 #line 163 "cli/parser.act"
 
-		if (fsm_addedge_epsilon(fsm, (ZIx), (ZIy)) == NULL) {
+		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			perror("fsm_addedge_epsilon");
 			exit(EXIT_FAILURE);
 		}

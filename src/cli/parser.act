@@ -160,7 +160,7 @@
 	@};
 
 	<add-edge-epsilon>: (x :state, y :state) -> () = @{
-		if (fsm_addedge_epsilon(fsm, @x, @y) == NULL) {
+		if (!fsm_addedge_epsilon(fsm, @x, @y)) {
 			perror("fsm_addedge_epsilon");
 			exit(EXIT_FAILURE);
 		}
