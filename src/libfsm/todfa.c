@@ -11,6 +11,7 @@
 
 /*
  * A set of states in an NFA.
+ * TODO: observation: same as struct epislon_list
  */
 struct stateset {
 	const struct fsm_state *state;
@@ -121,11 +122,10 @@ static int transin(struct trans_list *trans, const struct transset *set) {
 	const struct transset *p;
 
 	assert(trans != NULL);
-	assert(trans->type != FSM_EDGE_EPSILON);
 
 	for (p = set; p; p = p->next) {
 		assert(p->trans != NULL);
-		assert(p->trans->type != FSM_EDGE_EPSILON);	/* TODO: not sure */
+		/* TODO: not sure, but i think these cannot include epislons */
 
 		/* TODO: deep comparison? if (trans_equal(p->trans, trans)) { */
 		if (p->trans == trans) {
@@ -223,13 +223,13 @@ static struct mapping *addtoml(struct fsm *dfa, struct mapping **ml, struct stat
  */
 static struct stateset **epsilon_closure(const struct fsm_state *state, struct stateset **closure) {
 	struct stateset *s;
-	int i;
+	struct epsilon_list *e;
 
 	assert(state != NULL);
 	assert(closure != NULL);
 
 	/* Find if the given state is already in the closure */
-	for (s = *closure; s; s = s->next) {
+	for (s = *closure; s != NULL; s = s->next) {
 		/* If the given state is already in the closure set, we don't need to add it again; end recursion */
 		if (s->state == state) {
 			return closure;
@@ -248,13 +248,11 @@ static struct stateset **epsilon_closure(const struct fsm_state *state, struct s
 	*closure = s;
 
 	/* Follow each epsilon transition */
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		assert(state->edges[i].trans != NULL);
+	for (e = state->el; e != NULL; e = e->next) {
+		assert(e->state != NULL);
 
-		if (state->edges[i].trans->type == FSM_EDGE_EPSILON) {
-			if (epsilon_closure(state->edges[i].state, closure) == NULL) {
-				return NULL;
-			}
+		if (epsilon_closure(e->state, closure) == NULL) {
+			return NULL;
 		}
 	}
 
@@ -370,11 +368,6 @@ static struct transset **listnonepsilonstates(struct transset **l, struct states
 
 			assert(s->state->edges[i].trans != NULL);
 
-			/* Skip epsilon edges */
-			if (s->state->edges[i].trans->type == FSM_EDGE_EPSILON) {
-				continue;
-			}
-
 			/* Skip transitions we've already got */
 			if (transin(s->state->edges[i].trans, *l)) {
 				continue;
@@ -407,7 +400,6 @@ static struct stateset *allstatesreachableby(struct stateset *set, int e, struct
 
 	assert(set != NULL);
 	assert(trans != NULL);
-	assert(trans->type != FSM_EDGE_EPSILON);
 
 	l = NULL;
 	for (s = set; s; s = s->next) {
@@ -417,11 +409,6 @@ static struct stateset *allstatesreachableby(struct stateset *set, int e, struct
 			struct stateset *p;
 
 			assert(s->state->edges[i].trans != NULL);
-
-			/* Skip epsilon edges */
-			if (s->state->edges[i].trans->type == FSM_EDGE_EPSILON) {
-				continue;
-			}
 
 			/* Skip states which we've already got */
 			if (statein(s->state->edges[i].state, l)) {
@@ -516,7 +503,6 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 			struct fsm_edge edge;
 
 			assert(s->trans != NULL);
-			assert(s->trans->type != FSM_EDGE_EPSILON);
 
 			/*
 			 * Find the closure of the set of all NFA states which are reachable

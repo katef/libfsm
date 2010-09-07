@@ -11,23 +11,9 @@
 #include "internal.h"
 
 static struct fsm_state *nextstate(const struct fsm_edge edges[], char c) {
-	int i;
+	assert(edges != NULL);
 
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		switch (edges[i].trans->type) {
-		case FSM_EDGE_LITERAL:
-			if (i == c) {
-				return edges[i].state;
-			}
-			continue;
-
-		case FSM_EDGE_EPSILON:
-			assert(!"unreached");
-			return NULL;
-		}
-	}
-
-	return NULL;
+	return edges[(unsigned char) c].state;
 }
 
 int fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque) {

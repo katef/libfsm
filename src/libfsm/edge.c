@@ -19,28 +19,29 @@ fsm_getedgetype(const struct fsm_edge *edge)
 	return edge->trans->type;
 }
 
-struct fsm_edge *
+int
 fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
 {
-	struct fsm_edge *e;
-
 	assert(fsm != NULL);
 	assert(from != NULL);
 	assert(to != NULL);
 
-	e = &from->edges[FSM_EDGE_EPSILON];
-
-	/* Assign the epsilon transition for this edge */
+	/* Assign the epsilon transition for this state */
 	{
-		e->trans = trans_add(fsm, FSM_EDGE_EPSILON);
-		if (e->trans == NULL) {
-			return NULL;
+		struct epsilon_list *e;
+
+		e = malloc(sizeof *e);
+		if (e == NULL) {
+			return 0;
 		}
 
 		e->state = to;
+
+		e->next  = from->el;
+		from->el = e;
 	}
 
-	return e;
+	return 1;
 }
 
 struct fsm_edge *

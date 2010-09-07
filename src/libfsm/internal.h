@@ -11,7 +11,7 @@ struct fsm_edge {
 	struct trans_list *trans;
 };
 
-/* TODO: +2 for SOL, EOL, EPSILON */
+/* TODO: +2 for SOL, EOL */
 /* TODO: +lots for FSM_EDGE_* */
 #define FSM_EDGE_MAX UCHAR_MAX
 
@@ -22,8 +22,15 @@ struct fsm_state {
 	int end;
 
 	struct fsm_edge edges[FSM_EDGE_MAX];
+	struct epsilon_list *el;
 };
 
+
+/* TODO: observation: same struct as state_list... */
+struct epsilon_list {
+	struct fsm_state *state;
+	struct epsilon_list *next;
+};
 
 /* global registry of all states */
 struct state_list {
@@ -37,8 +44,7 @@ struct state_list {
  * TODO: due to get rid of all of these
  */
 enum fsm_edge_type {
-	FSM_EDGE_EPSILON = FSM_EDGE_MAX,
-	FSM_EDGE_LITERAL
+	FSM_EDGE_LITERAL = FSM_EDGE_MAX
 };
 
 /* global registry of all transitions */

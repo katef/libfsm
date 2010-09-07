@@ -36,6 +36,7 @@ static void escputs(const char *s, FILE *f) {
 
 void out_dot(const struct fsm *fsm, FILE *f) {
 	struct state_list *s;
+	struct epsilon_list *e;
 	struct fsm_state *start;
 
 	/* TODO: assert! */
@@ -72,21 +73,16 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 
 			assert(e->state);
 
-			fprintf(f, "\t%-2u -> %-2u [ label = \"", s->state.id, e->state->id);
-
 			/* TODO: print "?" if all edges are equal */
 
-			switch (e->trans->type) {
-			case FSM_EDGE_EPSILON:
-				fputs("&epsilon;", f);
-				break;
-
-			case FSM_EDGE_LITERAL:
-				escputc(i, f);
-				break;
-			}
-
+			fprintf(f, "\t%-2u -> %-2u [ label = \"", s->state.id, e->state->id);
+			escputc(i, f);
 			fprintf(f, "\" ];\n");
+		}
+
+		for (e = s->state.el; e; e = e->next) {
+			fprintf(f, "\t%-2u -> %-2u [ label = \"&epsilon;\" ];\n",
+				s->state.id, e->state->id);
 		}
 	}
 

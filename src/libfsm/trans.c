@@ -21,7 +21,6 @@ trans_equal(const struct trans_list *a, const struct trans_list *b)
 	}
 
 	switch (a->type) {
-	case FSM_EDGE_EPSILON:
 	case FSM_EDGE_LITERAL:
 		return 1;
 	}

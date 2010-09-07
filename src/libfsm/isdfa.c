@@ -38,17 +38,17 @@ isdfastate(const struct fsm_state *state)
 {
 	int i;
 
+	/* DFA may not have epsilon edges */
+	if (state->el != NULL) {
+		return 0;
+	}
+
+	/* DFA may not have duplicate edges */
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		if (state->edges[i].trans == NULL) {
 			continue;
 		}
 
-		/* DFA may not have epsilon edges */
-		if (state->edges[i].trans->type == FSM_EDGE_EPSILON) {
-			return 0;
-		}
-
-		/* DFA may not have duplicate edges */
 		if (hasduplicateedge(state, i, &state->edges[i])) {
 			return 0;
 		}

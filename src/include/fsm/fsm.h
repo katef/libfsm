@@ -94,7 +94,7 @@ fsm_addstate(struct fsm *fsm, unsigned int id);
  *
  * Returns NULL on error; see errno.
  */
-struct fsm_edge *
+int	/* TODO: address inconsistency */
 fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to);
 
 struct fsm_edge *

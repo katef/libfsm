@@ -17,10 +17,16 @@ static void free_contents(struct fsm *fsm) {
 	void *next;
 	struct state_list *s;
 	struct trans_list *t;
+	struct epsilon_list *e;
 
 	assert(fsm != NULL);
 
 	for (s = fsm->sl; s; s = next) {
+		for (e = s->state.el; e; e = next) {
+			next = e->next;
+			free(e);
+		}
+
 		next = s->next;
 		free(s);
 	}
@@ -90,19 +96,35 @@ fsm_copy(struct fsm *fsm)
 
 	/* recreate edges */
 	for (s = fsm->sl; s; s = s->next) {
+		struct epsilon_list *e;
+		struct fsm_state *from;
 		int i;
 
+		from = fsm_getstatebyid(new, s->state.id);
+
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			struct fsm_state *from;
 			struct fsm_state *to;
 
-			from = fsm_getstatebyid(new, s->state.id);
-			to   = fsm_getstatebyid(new, s->state.edges[i].state->id);
+			to = fsm_getstatebyid(new, s->state.edges[i].state->id);
 
 			assert(from != NULL);
 			assert(to   != NULL);
 
-			if (fsm_addedge_copy(new, from, to, &s->state.edges[i]) == NULL) {
+			if (!fsm_addedge_copy(new, from, to, &s->state.edges[i])) {
+				fsm_free(new);
+				return NULL;
+			}
+		}
+
+		for (e = s->state.el; e; e = e->next) {
+			struct fsm_state *to;
+
+			to = fsm_getstatebyid(new, e->state->id);
+
+			assert(from != NULL);
+			assert(to   != NULL);
+
+			if (!fsm_addedge_epsilon(new, from, to)) {
 				fsm_free(new);
 				return NULL;
 			}
@@ -111,6 +133,7 @@ fsm_copy(struct fsm *fsm)
 
 	new->start = fsm_getstatebyid(new, fsm->start->id);
 	if (new->start == NULL) {
+		fsm_free(new);
 		return NULL;
 	}
 
@@ -218,6 +241,7 @@ fsm_addstate(struct fsm *fsm, unsigned int id)
 		p->state.id     = id == 0 ? inventid(fsm) : id;
 		p->state.opaque = NULL;
 		p->state.end    = 0;
+		p->state.el     = NULL;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			p->state.edges[i].state = NULL;

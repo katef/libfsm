@@ -79,6 +79,29 @@ fsm_reverse(struct fsm *fsm)
 		}
 	}
 
+	/* Create reverse epsilon transitions */
+	{
+		struct state_list *s;
+		struct epsilon_list *e;
+
+		for (s = fsm->sl; s; s = s->next) {
+			struct fsm_state *to = fsm_getstatebyid(new, s->state.id);
+
+			assert(to != NULL);
+
+			for (e = s->state.el; e; e = e->next) {
+				struct fsm_state *from = fsm_getstatebyid(new, e->state->id);
+
+				assert(from != NULL);
+
+				if (!fsm_addedge_epsilon(new, from, to)) {
+					fsm_free(new);
+					return 0;
+				}
+			}
+		}
+	}
+
 	/* Create the new start state */
 	{
 		struct state_list *s;

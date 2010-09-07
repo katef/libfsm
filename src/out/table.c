@@ -81,10 +81,6 @@ void out_table(const struct fsm *fsm, FILE *f) {
 			/* TODO: print "?" for edges which are all equal */
 
 			switch (i) {
-			case FSM_EDGE_EPSILON:
-				n = fprintf(f, "epsilon");
-				break;
-
 			case FSM_EDGE_LITERAL:
 				break;
 
@@ -112,6 +108,34 @@ void out_table(const struct fsm *fsm, FILE *f) {
 			e = &x->state.edges[i];
 
 			if (e->trans == NULL) {
+				fprintf(f, "|    ");
+				continue;
+			}
+
+			assert(e->state != NULL);
+
+			fprintf(f, "| %-2u ", e->state->id);
+		}
+
+		fprintf(f, "\n");
+	}
+
+	/* TODO: only if there are epislon transitions for at least one state */
+	{
+		struct epsilon_list *e;
+
+		fprintf(f, "%9s", "epsilon");
+
+		for (x = fsm->sl; x; x = x->next) {
+			for (e = x->state.el; e; e = e->next) {
+				assert(e->state != NULL);
+
+				if (e->state == &x->state) {
+					break;
+				}
+			}
+
+			if (e == NULL) {
 				fprintf(f, "|    ");
 				continue;
 			}
