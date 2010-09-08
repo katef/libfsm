@@ -69,7 +69,9 @@ fsm_reverse(struct fsm *fsm)
 			for (i = 0; i <= FSM_EDGE_MAX; i++) {
 				struct fsm_state *from;
 
-				assert(s->state->edges[i] != NULL);
+				if (s->state->edges[i] == NULL) {
+					continue;
+				}
 
 				from = fsm_getstatebyid(new, s->state->edges[i]->id);
 
