@@ -58,7 +58,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 		}
 
 		for (e = s->state->el; e != NULL; e = e->next) {
-			fprintf(f, "%-2u -> %2u;", s->state->id, e->state->id);
+			fprintf(f, "%-2u -> %2u;\n", s->state->id, e->state->id);
 		}
 	}
 
