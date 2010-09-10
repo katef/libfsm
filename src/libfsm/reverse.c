@@ -170,20 +170,21 @@ fsm_reverse(struct fsm *fsm)
 
 				fsm_setstart(new, start);
 
-				for (s = new->sl; s; s = s->next) {
+				for (s = fsm->sl; s; s = s->next) {
 					struct fsm_state *state;
 
 					if (s == start) {
 						continue;
 					}
 
-					state = fsm_getstatebyid(fsm, s->id);
-					assert(state != NULL);
-					if (!fsm_isend(fsm, state)) {
+					if (!fsm_isend(fsm, s)) {
 						continue;
 					}
 
-					fsm_addedge_epsilon(new, start, s);
+					state = fsm_getstatebyid(new, s->id);
+					assert(state != NULL);
+
+					fsm_addedge_epsilon(new, start, state);
 				}
 			}
 			break;
