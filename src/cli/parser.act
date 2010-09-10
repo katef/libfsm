@@ -16,7 +16,6 @@
 %maps%
 
 	string -> string;
-	int    -> usint;
 	state  -> state;
 
 %header% @{
@@ -33,13 +32,19 @@
 	#include "lexer.h"
 	#include "parser.h"
 
-	typedef unsigned int       usint;
 	typedef char *             string;
 	typedef struct fsm_state * state;
 
 	struct act_state {
 		int lex_tok;
 		int lex_tok_save;
+		struct act_statelist *sl;
+	};
+
+	struct act_statelist {
+		char *id;
+		struct fsm_state *state;
+		struct act_statelist *next;
 	};
 
 	#define CURRENT_TERMINAL (act_state->lex_tok)
@@ -72,8 +77,12 @@
 
 %terminals%
 
-	id: () -> (i :int) = @{
-		@i = atoi(lex_tokbuf(lex_state));
+	ident: () -> (s :string) = @{
+		@s = xstrdup(lex_tokbuf(lex_state));
+		if (@s == NULL) {
+			perror("xstrdup");
+			exit(EXIT_FAILURE);
+		}
 	@};
 
 	label: () -> (s :string) = @{
@@ -84,84 +93,107 @@
 		}
 	@};
 
-	literal: () -> (s :string) = @{
-		@s = xstrdup(lex_tokbuf(lex_state));
-		if (@s == NULL) {
+%actions%
+
+	<add-state>: (n :string) -> (s :state) = @{
+		struct act_statelist *new;
+
+		assert(@n != NULL);
+
+		new = malloc(sizeof *new);
+		if (new == NULL) {
+			perror("malloc");
+			exit(EXIT_FAILURE);
+		}
+
+		new->id = xstrdup(@n);
+		if (new->id == NULL) {
 			perror("xstrdup");
 			exit(EXIT_FAILURE);
 		}
-	@};
 
-%actions%
-
-	<add-state>: (n :int) -> (s :state) = @{
-		if (@n == 0) {
-			fprintf(stderr, "special id 0 is reserved\n");
-			@!;
-		}
-
-		@s = fsm_addstate(fsm, @n);
-
+		@s = fsm_addstate(fsm, 0);
 		if (@s == NULL) {
 			perror("fsm_addstate");
 			exit(EXIT_FAILURE);
 		}
+
+		new->state = @s;
+
+		new->next = act_state->sl;
+		act_state->sl = new;
+
 	@};
 
-	<mark-start>: (n :int) -> () = @{
-		struct fsm_state *state;
+	<find-state>: (n :string) -> (s :state) = @{
+		struct act_statelist *p;
 
-		state = fsm_getstatebyid(fsm, @n);
-		if (state == NULL) {
-			fprintf(stderr, "unrecognised start state: %u\n", @n);
-			@!;
+		assert(@n != NULL);
+
+		for (p = act_state->sl; p != NULL; p = p->next) {
+			assert(p->id != NULL);
+			assert(p->state != NULL);
+
+			if (0 == strcmp(p->id, @n)) {
+				@s = p->state;
+				break;
+			}
 		}
 
-		fsm_setstart(fsm, state);
+		if (p == NULL) {
+			fprintf(stderr, "unrecognised state: %s\n", @n);
+			@!;
+		}
 	@};
 
-	<mark-end>: (n :int) -> () = @{
-		struct fsm_state *state;
+	<mark-start>: (s :state) -> () = @{
+		assert(@s != NULL);
 
-		state = fsm_getstatebyid(fsm, @n);
-		if (state == NULL) {
-			fprintf(stderr, "unrecognised end state: %u\n", @n);
-			@!;
-		}
-
-		fsm_setend(fsm, state, 1);
+		fsm_setstart(fsm, @s);
 	@};
 
-	<mark-colour>: (n :int, s :string) -> () = @{
-		struct fsm_state *state;
+	<mark-end>: (s :state) -> () = @{
+		assert(@s != NULL);
 
-		state = fsm_getstatebyid(fsm, @n);
-		if (state == NULL) {
-			fprintf(stderr, "unrecognised state: %u\n", @n);
-			@!;
+		fsm_setend(fsm, @s, 1);
+	@};
+
+	<free>: (s :string) -> () = @{
+		free(@s);
+	@};
+
+	<free-statelist> = @{
+		struct act_statelist *p;
+		struct act_statelist *next;
+
+		for (p = act_state->sl; p != NULL; p = next) {
+			next = p->next;
+
+			assert(p->id != NULL);
+
+			free(p->id);
+			free(p);
 		}
+	@};
 
-		fsm_setopaque(fsm, state, @s);
+	<mark-colour>: (s :state, o :string) -> () = @{
+		assert(@s != NULL);
+		assert(@o != NULL);
+
+		fsm_setopaque(fsm, @s, @o);
 	@};
 
 	<add-edge-literal>: (x :state, y :state, s :string) -> () = @{
 		assert(@s != NULL);
 
-		/* TODO: convert to single char */
+		/* TODO: convert to single char in the grammar? */
 		if (strlen(@s) != 1) {
-			fprintf(stderr, "literals must have exactly one character\n");
+			fprintf(stderr, "edge literals must have exactly one character\n");
 			@!;
 		}
 
 		if (!fsm_addedge_literal(fsm, @x, @y, @s[0])) {
 			perror("fsm_addedge_literal");
-			exit(EXIT_FAILURE);
-		}
-	@};
-
-	<add-edge-epsilon>: (x :state, y :state) -> () = @{
-		if (!fsm_addedge_epsilon(fsm, @x, @y)) {
-			perror("fsm_addedge_epsilon");
 			exit(EXIT_FAILURE);
 		}
 	@};
@@ -173,15 +205,13 @@
 		}
 	@};
 
-	<free>: (s :string) -> () = @{
-		free(@s);
+	<add-edge-epsilon>: (x :state, y :state) -> () = @{
+		if (!fsm_addedge_epsilon(fsm, @x, @y)) {
+			perror("fsm_addedge_epsilon");
+			exit(EXIT_FAILURE);
+		}
 	@};
 
-
-	<err-parse> = @{
-		fprintf(stderr, "parse error\n");
-		exit(EXIT_FAILURE);
-	@};
 
 	<err-expected-sep> = @{
 		err_expected("';'");
@@ -207,6 +237,11 @@
 		err_expected("'end:'");
 	@};
 
+	<err-parse> = @{
+		fprintf(stderr, "parse error\n");
+		exit(EXIT_FAILURE);
+	@};
+
 %trailer% @{
 
 	struct fsm *fsm_parse(struct fsm *fsm, FILE *f) {
@@ -218,6 +253,8 @@
 		assert(f != NULL);
 
 		/* TODO: perhaps create the fsm struct here, rather than passing one in */
+
+		act_state_s.sl = NULL;
 
 		lex_state = lex_init(f);
 		if (lex_state == NULL) {

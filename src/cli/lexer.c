@@ -80,13 +80,13 @@ static lookup_type lookup_tab[] = {
 	   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
 	   0,    0,    0,    0,    0,    0,    0,    0,  0x1,    0,    0,    0, 
 	   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
-	 0x2,  0x2,  0x2,  0x2,  0x2,  0x2,  0x2,  0x2,  0x2,  0x2,    0,    0, 
-	   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
-	   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
-	   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
-	   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
-	   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
-	   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
+	 0xa,  0xa,  0xa,  0xa,  0xa,  0xa,  0xa,  0xa,  0xa,  0xa,    0,    0, 
+	   0,    0,    0,    0,    0,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6, 
+	 0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6, 
+	 0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,    0,    0,    0,    0,  0x6, 
+	   0,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6, 
+	 0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6,  0x6, 
+	 0x6,  0x6,  0x6,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
 	   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
 	   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
 	   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
@@ -114,36 +114,36 @@ void lexi_init(struct lexi_state *state, lex_statep lex_state) {
 }
 /* ZONES PASS ANALYSER PROTOTYPES*/
 
-static int lexi_read_token_literal(struct lexi_state *state);
-static int lexi_read_token_label(struct lexi_state *state);
+static int lexi_read_token_label1(struct lexi_state *state);
+static int lexi_read_token_label0(struct lexi_state *state);
 static void lexi_read_token_comment(struct lexi_state *state);
 /* MAIN PASS ANALYSERS */
 
 
-/* MAIN PASS ANALYSER for literal */
+/* MAIN PASS ANALYSER for label1 */
 static int
-lexi_read_token_literal(struct lexi_state *state)
+lexi_read_token_label1(struct lexi_state *state)
 {
 	start: {
 		int c0 = lexi_readchar(state);
 		if (c0 == '\'') {
-			return lex_literal;
+			return lex_label;
 		}
 
 		/* DEFAULT */
 		/* ACTION <push> */
 		{
 
-	push(state->lex_state, c0);
+	push(state->lex_state, c0);	/* XXX c0 hack */
 		}
 		/* END ACTION <push> */
 		goto start; /* DEFAULT */
 	}
 }
 
-/* MAIN PASS ANALYSER for label */
+/* MAIN PASS ANALYSER for label0 */
 static int
-lexi_read_token_label(struct lexi_state *state)
+lexi_read_token_label0(struct lexi_state *state)
 {
 	start: {
 		int c0 = lexi_readchar(state);
@@ -155,7 +155,7 @@ lexi_read_token_label(struct lexi_state *state)
 		/* ACTION <push> */
 		{
 
-	push(state->lex_state, c0);
+	push(state->lex_state, c0);	/* XXX c0 hack */
 		}
 		/* END ACTION <push> */
 		goto start; /* DEFAULT */
@@ -265,7 +265,7 @@ lexi_read_token(struct lexi_state *state)
 	state->lex_state->tokbuf[0] = '\0';
 				}
 				/* END ACTION <flush> */
-				return lexi_read_token_literal(state);
+				return lexi_read_token_label1(state);
 			}
 
 		case '"': {
@@ -275,7 +275,7 @@ lexi_read_token(struct lexi_state *state)
 	state->lex_state->tokbuf[0] = '\0';
 				}
 				/* END ACTION <flush> */
-				return lexi_read_token_label(state);
+				return lexi_read_token_label0(state);
 			}
 
 		case '#': {
@@ -284,7 +284,7 @@ lexi_read_token(struct lexi_state *state)
 			}
 
 		}
-		if (lexi_group(lexi_group_digit, c0)) {
+		if (lexi_group(lexi_group_alnum, c0)) {
 			/* ACTION <flush> */
 			{
 
@@ -296,7 +296,8 @@ lexi_read_token(struct lexi_state *state)
 
 	int c;
 
-	for (c = c0; lexi_group(lexi_group_digit, c); c = lexi_readchar(state)) {
+	/* XXX: c0 hack */
+	for (c = c0; lexi_group(lexi_group_alnum, c); c = lexi_readchar(state)) {
 		push(state->lex_state, c);
 	}
 
@@ -307,7 +308,7 @@ lexi_read_token(struct lexi_state *state)
 	lexi_push(state, c);
 			}
 			/* END ACTION <read_id> */
-			return lex_id;
+			return lex_ident;
 		}
 
 		/* DEFAULT */
@@ -315,40 +316,38 @@ lexi_read_token(struct lexi_state *state)
 	}
 }
 
+    struct lex_state *lex_init(FILE *f) {
+        struct lex_state *new;
 
-	struct lex_state *lex_init(FILE *f) {
-		struct lex_state *new;
+        assert(f != NULL);
 
-		assert(f != NULL);
+        new = malloc(sizeof *new);
+        if (new == NULL) {
+            return NULL;
+        }
 
-		new = malloc(sizeof *new);
-		if (new == NULL) {
-			return NULL;
-		}
+        new->file = f;
 
-		new->file = f;
+        lexi_init(&new->lexi_state, new);
 
-		lexi_init(&new->lexi_state, new);
+        return new;
+    }
 
-		return new;
-	}
+    int lex_nexttoken(struct lex_state *state) {
+        assert(state != NULL);
 
-	int lex_nexttoken(struct lex_state *state) {
-		assert(state != NULL);
+        return lexi_read_token(&state->lexi_state);
+    }
 
-		return lexi_read_token(&state->lexi_state);
-	}
+    void lex_free(struct lex_state *state) {
+        assert(state != NULL);
 
-	void lex_free(struct lex_state *state) {
-		assert(state != NULL);
+        free(state);
+    }
 
-		free(state);
-	}
+    const char *lex_tokbuf(struct lex_state *state) {
+        assert(state != NULL);
 
-	const char *lex_tokbuf(struct lex_state *state) {
-		assert(state != NULL);
-
-		return state->tokbuf;
-	}
-
+        return state->tokbuf;
+    }
 

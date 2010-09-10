@@ -107,13 +107,14 @@ ACTION flush = @{
 @};
 
 ACTION push: (c :CHARACTER) -> () = @{
-	push(state->lex_state, xc);
+	push(state->lex_state, c0);	/* XXX c0 hack */
 @};
 
 ACTION read_id: (c :CHARACTER) -> () = @{
 	int c;
 
-	for (c = xc; lexi_group(lexi_group_digit, c); c = lexi_readchar(state)) {
+	/* XXX: c0 hack */
+	for (c = c0; lexi_group(lexi_group_alnum, c); c = lexi_readchar(state)) {
 		push(state->lex_state, c);
 	}
 

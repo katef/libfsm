@@ -50,9 +50,11 @@ void lexi_flush(struct lexi_state *state);
 
 enum lexi_groups {
 	lexi_group_white = 0x1,
-	lexi_group_digit = 0x2,
-	lexi_literal_white = 0,
-	lexi_label_white = 0,
+	lexi_group_alnum = 0x2,
+	lexi_group_alpha = 0x4,
+	lexi_group_digit = 0x8,
+	lexi_label1_white = 0,
+	lexi_label0_white = 0,
 	lexi_comment_white = 0
 };
 

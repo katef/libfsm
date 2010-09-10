@@ -2,15 +2,13 @@
 
 %types%
 
-	int;
 	string;
 	state;
 
 %terminals%
 
-	id:      () -> (:int);
-	label:   () -> (:string);
-	literal: () -> (:string);
+	ident: () -> (:string);
+	label: () -> (:string);
 	any;
 
 	start;
@@ -27,13 +25,15 @@
 
 %productions%
 
-	<add-state>:        (:int) -> (:state);
-	<mark-start>:       (:int) -> ();
-	<mark-end>:         (:int) -> ();
+	<add-state>:        (:string) -> (:state);
+	<find-state>:       (:string) -> (:state);
+	<mark-start>:       (:state)  -> ();
+	<mark-end>:         (:state)  -> ();
 
 	<free>:             (:string) -> ();
+	<free-statelist>;
 
-	<mark-colour>:      (:int, :string) -> ();
+	<mark-colour>:      (:state, :string) -> ();
 
 	<add-edge-literal>: (:state, :state, :string) -> ();
 	<add-edge-any>:     (:state, :state)          -> ();
@@ -48,9 +48,16 @@
 	<err-parse>;
 
 
+	id: () -> (n :string) = {
+		n = ident;
+	||
+		n = label;
+	};
+
 	ids = {
 		n = id;
-		<mark-end>(n);
+		s = <find-state>(n);
+		<mark-end>(s);
 	||
 		ids;
 		{
@@ -59,7 +66,8 @@
 			<err-expected-comma>;
 		};
 		n = id;
-		<mark-end>(n);
+		s = <find-state>(n);
+		<mark-end>(s);
 	};
 
 	xend = {
@@ -78,7 +86,7 @@
 		};
 	};
 
-	xstart: () -> (n :int) = {
+	xstart: () -> (n :string) = {
 		{
 			start;
 		##
@@ -103,7 +111,7 @@
 		y = <add-state>(b);
 
 		{
-			s = literal;
+			s = label;
 			<add-edge-literal>(x, y, s);
 			<free>(s);
 		||
@@ -124,6 +132,7 @@
 
 	colour = {
 		n = id;
+		s = <find-state>(n);
 
 		{
 			equals;
@@ -131,7 +140,7 @@
 			<err-expected-equals>;
 		};
 
-		s = label;
+		o = label;
 
 		{
 			sep;
@@ -139,7 +148,7 @@
 			<err-expected-sep>;
 		};
 
-		<mark-colour>(n, s);
+		<mark-colour>(s, o);
 	};
 
 	things [
@@ -161,7 +170,8 @@
 		things;
 
 		n = xstart;
-		<mark-start>(n);
+		s = <find-state>(n);
+		<mark-start>(s);
 
 		{
 			xend;
@@ -170,6 +180,8 @@
 		};
 
 		eof;
+
+		<free-statelist>;
 	##
 		<err-parse>;
 	};

@@ -6,21 +6,24 @@ ACTION <read_id>: (:CHARACTER) -> ();
 
 
 GROUP digit = {0-9};
+GROUP alpha = {a-z} + {A-Z} + "_";
+GROUP alnum = "[alpha]" + "[digit]";
 
-TOKEN "[digit]" -> <flush>, <read_id>(#0), $id;
+
+TOKEN "[alnum]" -> <flush>, <read_id>(#0), $ident;
 
 ZONE comment: "#" ... "\n" -> $$ {
 	GROUP white = "";
 	TOKEN DEFAULT -> $$;
 };
 
-ZONE label: "\"" -> <flush> ... "\"" -> $label {
+ZONE label0: "\"" -> <flush> ... "\"" -> $label {
 	GROUP white = "";
 	/* TODO: escaping for special characters */
 	TOKEN DEFAULT -> <push>(#0);
 };
 
-ZONE literal: "\'" -> <flush> ... "\'" -> $literal {
+ZONE label1: "\'" -> <flush> ... "\'" -> $label {
 	GROUP white = "";
 	/* TODO: escaping for special characters */
 	TOKEN DEFAULT -> <push>(#0);
