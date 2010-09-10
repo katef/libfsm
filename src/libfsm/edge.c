@@ -57,12 +57,7 @@ fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 	if (from->edges[(unsigned char) c] != NULL) {
 		struct fsm_state *new;
 
-		/*
-		 * XXX: this causes strange effects when the user doesn't expect state
-		 * numbering to change. have inventid() pick descending values from
-		 * UINT_MAX instead
-		 */
-		new = fsm_addstate(fsm, 0);
+		new = fsm_addstate(fsm);
 		if (new == NULL) {
 			return 0;
 		}

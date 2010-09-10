@@ -68,17 +68,12 @@ int
 fsm_union(struct fsm *dst, struct fsm *src, void *opaque);
 
 /*
- * Add a state of the given id. An existing state is returned if the id is
- * already present.
- *
- * The special id 0 may be used to indicate a state for which libfsm is to
- * invent an arbitary ID during creation. The ID invented will not be used by
- * any existing states.
+ * Add a state.
  *
  * Returns NULL on error; see errno.
  */
 struct fsm_state *
-fsm_addstate(struct fsm *fsm, unsigned int id);
+fsm_addstate(struct fsm *fsm);
 
 /*
  * Add an edge from a given state to a given state, labelled with the given
@@ -151,27 +146,6 @@ fsm_setstart(struct fsm *fsm, struct fsm_state *state);
  */
 struct fsm_state *
 fsm_getstart(const struct fsm *fsm);
-
-/*
- * Find a state by its id. Returns NULL if no start of the given id exists.
- *
- * The id may not be 0, which is a special value reserved for use by
- * fsm_addstate().
- */
-struct fsm_state *
-fsm_getstatebyid(const struct fsm *fsm, unsigned int id);
-
-/*
- * Find the maximum id.
- *
- * This is intended to be used in conjunction with fsm_getstatebyid() to
- * iterate through all states after renumbering by conversion to a DFA,
- * minimization or similar.
- *
- * Returns 0 if no states are present. TODO: due to be impossible
- */
-unsigned int
-fsm_getmaxid(const struct fsm *fsm);
 
 /*
  * Store and retrieve user-specified opaque data per-state. Multiple opaque

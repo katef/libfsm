@@ -432,7 +432,7 @@ p_60(fsm fsm, lex_state lex_state, act_state act_state, string *ZI59)
 				exit(EXIT_FAILURE);
 			}
 
-			(ZIx) = fsm_addstate(fsm, 0);
+			(ZIx) = fsm_addstate(fsm);
 			if ((ZIx) == NULL) {
 				perror("fsm_addstate");
 				exit(EXIT_FAILURE);
@@ -480,7 +480,7 @@ p_60(fsm fsm, lex_state lex_state, act_state act_state, string *ZI59)
 				exit(EXIT_FAILURE);
 			}
 
-			(ZIy) = fsm_addstate(fsm, 0);
+			(ZIy) = fsm_addstate(fsm);
 			if ((ZIy) == NULL) {
 				perror("fsm_addstate");
 				exit(EXIT_FAILURE);
@@ -642,7 +642,7 @@ p_60(fsm fsm, lex_state lex_state, act_state act_state, string *ZI59)
 				exit(EXIT_FAILURE);
 			}
 
-			(ZIs) = fsm_addstate(fsm, 0);
+			(ZIs) = fsm_addstate(fsm);
 			if ((ZIs) == NULL) {
 				perror("fsm_addstate");
 				exit(EXIT_FAILURE);
@@ -825,7 +825,7 @@ ZL2_ids:;
 				exit(EXIT_FAILURE);
 			}
 
-			(ZIs) = fsm_addstate(fsm, 0);
+			(ZIs) = fsm_addstate(fsm);
 			if ((ZIs) == NULL) {
 				perror("fsm_addstate");
 				exit(EXIT_FAILURE);
@@ -949,7 +949,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 				exit(EXIT_FAILURE);
 			}
 
-			(ZIs) = fsm_addstate(fsm, 0);
+			(ZIs) = fsm_addstate(fsm);
 			if ((ZIs) == NULL) {
 				perror("fsm_addstate");
 				exit(EXIT_FAILURE);

@@ -121,8 +121,8 @@ static struct mapping *addtoml(struct fsm *dfa, struct mapping **ml, struct stat
 		return NULL;
 	}
 
-	p->closure = closure;
-	p->dfastate = fsm_addstate(dfa, 0);
+	p->closure  = closure;
+	p->dfastate = fsm_addstate(dfa);
 	if (p->dfastate == NULL) {
 		free(p);
 		return NULL;

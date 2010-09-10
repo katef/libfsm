@@ -125,7 +125,7 @@
 				exit(EXIT_FAILURE);
 			}
 
-			@s = fsm_addstate(fsm, 0);
+			@s = fsm_addstate(fsm);
 			if (@s == NULL) {
 				perror("fsm_addstate");
 				exit(EXIT_FAILURE);

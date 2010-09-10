@@ -72,7 +72,7 @@ fsm_copy(struct fsm *fsm)
 		struct fsm_state *state;
 		struct opaque_set *o;
 
-		state = fsm_addstate(new, s->id);
+		state = fsm_addstateid(new, s->id);
 		if (state == NULL) {
 			fsm_free(new);
 			return NULL;
@@ -218,7 +218,7 @@ fsm_union(struct fsm *dst, struct fsm *src, void *opaque)
 }
 
 struct fsm_state *
-fsm_addstate(struct fsm *fsm, unsigned int id)
+fsm_addstateid(struct fsm *fsm, unsigned int id)
 {
 	struct fsm_state *new;
 
@@ -244,7 +244,7 @@ fsm_addstate(struct fsm *fsm, unsigned int id)
 			return NULL;
 		}
 
-		new->id  = id == 0 ? inventid(fsm) : id;
+		new->id  = id;
 		new->end = 0;
 		new->ol  = NULL;
 		new->el  = NULL;
@@ -258,6 +258,14 @@ fsm_addstate(struct fsm *fsm, unsigned int id)
 	}
 
 	return new;
+}
+
+struct fsm_state *
+fsm_addstate(struct fsm *fsm)
+{
+	assert(fsm != NULL);
+
+	return fsm_addstateid(fsm, inventid(fsm));
 }
 
 void
@@ -330,7 +338,6 @@ fsm_getstatebyid(const struct fsm *fsm, unsigned int id)
 	struct fsm_state *p;
 
 	assert(fsm != NULL);
-	assert(id != 0);
 
 	for (p = fsm->sl; p; p = p->next) {
 		if (p->id == id) {
