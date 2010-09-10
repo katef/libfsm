@@ -71,6 +71,7 @@ fsm_copy(struct fsm *fsm)
 	/* recreate states */
 	for (s = fsm->sl; s; s = s->next) {
 		struct fsm_state *state;
+		struct opaque_set *o;
 
 		state = fsm_addstate(new, s->state->id);
 		if (state == NULL) {
@@ -78,7 +79,12 @@ fsm_copy(struct fsm *fsm)
 			return NULL;
 		}
 
-		state->opaque = s->state->opaque;
+		for (o = s->state->ol; o; o = o->next) {
+			if (!fsm_addopaque(new, state, o->opaque)) {
+				fsm_free(new);
+				return NULL;
+			}
+		}
 
 		if (fsm_isend(fsm, s->state)) {
 			fsm_setend(new, state, 1);
@@ -151,7 +157,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 }
 
 int
-fsm_union(struct fsm *dst, struct fsm *src)
+fsm_union(struct fsm *dst, struct fsm *src, void *opaque)
 {
 	struct state_set **sl;
 	struct state_set *p;
@@ -170,17 +176,6 @@ fsm_union(struct fsm *dst, struct fsm *src)
 
 
 	/*
-	 * Renumber incoming states so as not to clash over existing ones.
-	 */
-	for (p = src->sl; p; p = p->next) {
-		p->state->id = 0;
-	}
-	for (p = src->sl; p; p = p->next) {
-		p->state->id = inventid(dst);
-	}
-
-
-	/*
 	 * Add epsilon transition from dst's start state to src's start state.
 	 */
 	if (src->start != NULL) {
@@ -194,6 +189,29 @@ fsm_union(struct fsm *dst, struct fsm *src)
 		/* TODO: src has no start state. rethink during API refactor */
 	}
 
+
+	/*
+	 * Renumber incoming states so as not to clash over existing ones.
+	 */
+	for (p = src->sl; p; p = p->next) {
+		p->state->id = 0;
+	}
+	for (p = src->sl; p; p = p->next) {
+		p->state->id = inventid(dst);
+	}
+
+
+	/*
+	 * Colour incoming states.
+	 */
+	if (opaque != NULL) {
+		for (p = src->sl; p; p = p->next) {
+			if (!fsm_addopaque(src, p->state, opaque)) {
+				/* TODO: this leaves dst in a questionable state */
+				return 0;
+			}
+		}
+	}
 
 	free(src);
 
@@ -224,10 +242,10 @@ fsm_addstate(struct fsm *fsm, unsigned int id)
 			return NULL;
 		}
 
-		new->id     = id == 0 ? inventid(fsm) : id;
-		new->opaque = NULL;
-		new->end    = 0;
-		new->el     = NULL;
+		new->id  = id == 0 ? inventid(fsm) : id;
+		new->end = 0;
+		new->ol  = NULL;
+		new->el  = NULL;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			new->edges[i] = NULL;
@@ -341,21 +359,35 @@ fsm_getmaxid(const struct fsm *fsm)
 	return max;
 }
 
-void
-fsm_setopaque(struct fsm *fsm, struct fsm_state *state, void *opaque)
+int
+fsm_addopaque(struct fsm *fsm, struct fsm_state *state, void *opaque)
 {
+	struct opaque_set *new;
+
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	state->opaque = opaque;
-}
+	/* adding is a no-op for duplicate opaque values */
+	{
+		const struct opaque_set *p;
 
-void *
-fsm_getopaque(struct fsm *fsm, struct fsm_state *state)
-{
-	assert(fsm != NULL);
-	assert(state != NULL);
+		for (p = state->ol; p != NULL; p = p->next) {
+			if (p->opaque == opaque) {
+				return 1;
+			}
+		}
+	}
 
-	return state->opaque;
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+		return 0;
+	}
+
+	new->opaque = opaque;
+
+	new->next = state->ol;
+	state->ol = new;
+
+	return 1;
 }
 

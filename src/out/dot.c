@@ -81,13 +81,13 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 	}
 
 	for (s = fsm->sl; s; s = s->next) {
-		if (s->state->opaque == NULL) {
-			continue;
-		}
+		struct opaque_set *o;
 
-		fprintf(f, "\t%-2u [ color = \"", s->state->id);
-		escputs(s->state->opaque, f);
-		fprintf(f, "\" ];\n");
+		for (o = s->state->ol; o; o = o->next) {
+			fprintf(f, "\t%-2u [ color = \"", s->state->id);
+			escputs(o->opaque, f);
+			fprintf(f, "\" ];\n");
+		}
 	}
 
 	fprintf(f, "\n");

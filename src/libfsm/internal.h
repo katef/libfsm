@@ -14,14 +14,19 @@
 
 struct fsm_state {
 	unsigned int id;
-	void *opaque;
-
 	int end;
+
+	struct opaque_set *ol;
 
 	struct fsm_state *edges[FSM_EDGE_MAX + 1];
 	struct state_set *el;
 };
 
+
+struct opaque_set {
+	void *opaque;
+	struct opaque_set *next;
+};
 
 struct state_set {
 	struct fsm_state *state;

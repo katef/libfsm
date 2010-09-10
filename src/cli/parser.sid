@@ -26,7 +26,6 @@
 %productions%
 
 	<add-state>:        (:string) -> (:state);
-	<find-state>:       (:string) -> (:state);
 	<mark-start>:       (:state)  -> ();
 	<mark-end>:         (:state)  -> ();
 
@@ -56,7 +55,7 @@
 
 	ids = {
 		n = id;
-		s = <find-state>(n);
+		s = <add-state>(n);
 		<mark-end>(s);
 	||
 		ids;
@@ -66,7 +65,7 @@
 			<err-expected-comma>;
 		};
 		n = id;
-		s = <find-state>(n);
+		s = <add-state>(n);
 		<mark-end>(s);
 	};
 
@@ -132,7 +131,7 @@
 
 	colour = {
 		n = id;
-		s = <find-state>(n);
+		s = <add-state>(n);
 
 		{
 			equals;
@@ -170,7 +169,7 @@
 		things;
 
 		n = xstart;
-		s = <find-state>(n);
+		s = <add-state>(n);
 		<mark-start>(s);
 
 		{

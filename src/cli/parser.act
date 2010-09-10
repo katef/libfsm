@@ -96,36 +96,6 @@
 %actions%
 
 	<add-state>: (n :string) -> (s :state) = @{
-		struct act_statelist *new;
-
-		assert(@n != NULL);
-
-		new = malloc(sizeof *new);
-		if (new == NULL) {
-			perror("malloc");
-			exit(EXIT_FAILURE);
-		}
-
-		new->id = xstrdup(@n);
-		if (new->id == NULL) {
-			perror("xstrdup");
-			exit(EXIT_FAILURE);
-		}
-
-		@s = fsm_addstate(fsm, 0);
-		if (@s == NULL) {
-			perror("fsm_addstate");
-			exit(EXIT_FAILURE);
-		}
-
-		new->state = @s;
-
-		new->next = act_state->sl;
-		act_state->sl = new;
-
-	@};
-
-	<find-state>: (n :string) -> (s :state) = @{
 		struct act_statelist *p;
 
 		assert(@n != NULL);
@@ -141,8 +111,30 @@
 		}
 
 		if (p == NULL) {
-			fprintf(stderr, "unrecognised state: %s\n", @n);
-			@!;
+			struct act_statelist *new;
+
+			new = malloc(sizeof *new);
+			if (new == NULL) {
+				perror("malloc");
+				exit(EXIT_FAILURE);
+			}
+
+			new->id = xstrdup(@n);
+			if (new->id == NULL) {
+				perror("xstrdup");
+				exit(EXIT_FAILURE);
+			}
+
+			@s = fsm_addstate(fsm, 0);
+			if (@s == NULL) {
+				perror("fsm_addstate");
+				exit(EXIT_FAILURE);
+			}
+
+			new->state = @s;
+
+			new->next = act_state->sl;
+			act_state->sl = new;
 		}
 	@};
 
@@ -180,7 +172,10 @@
 		assert(@s != NULL);
 		assert(@o != NULL);
 
-		fsm_setopaque(fsm, @s, @o);
+		if (!fsm_addopaque(fsm, @s, @o)) {
+			perror("fsm_addopaque");
+			@!;
+		}
 	@};
 
 	<add-edge-literal>: (x :state, y :state, s :string) -> () = @{

@@ -40,7 +40,7 @@ fsm_reverse(struct fsm *fsm)
 				return 0;
 			}
 
-			n->opaque = s->state->opaque;
+			n->ol = s->state->ol;
 		}
 	}
 

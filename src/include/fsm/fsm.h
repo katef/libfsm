@@ -59,10 +59,13 @@ fsm_move(struct fsm *dst, struct fsm *src);
  * Merge the contents of src into dst by union, and free src.
  * Returns 0 on error.
  *
+ * If opaque is non-NULL, all states in src are set as if by
+ * fsm_addopaque().
+ *
  * TODO: I don't really like this sort of interface. Reconsider?
  */
 int
-fsm_union(struct fsm *dst, struct fsm *src);
+fsm_union(struct fsm *dst, struct fsm *src, void *opaque);
 
 /*
  * Add a state of the given id. An existing state is returned if the id is
@@ -171,18 +174,18 @@ unsigned int
 fsm_getmaxid(const struct fsm *fsm);
 
 /*
- * Store and retrieve user-specified opaque data per-state. If not set, this
- * defaults to NULL.
+ * Store and retrieve user-specified opaque data per-state. Multiple opaque
+ * values may be stored. Duplicate values are disregarded and silently succeed.
  *
  * Caveats apply during graph operations (such as minimization and conversion
  * from NFA to DFA); when states are to be merged to produce one output state,
  * all their opaque values must be identical, if non-NULL. If not, those
  * processes will fail; see <fsm/graph.h> for details.
+ *
+ * Returns false on error; see errno.
  */
-void
-fsm_setopaque(struct fsm *fsm, struct fsm_state *state, void *opaque);
-void *
-fsm_getopaque(struct fsm *fsm, struct fsm_state *state);
+int
+fsm_addopaque(struct fsm *fsm, struct fsm_state *state, void *opaque);
 
 #endif
 

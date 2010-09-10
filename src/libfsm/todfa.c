@@ -65,34 +65,19 @@ static void free_mappings(struct mapping *m) {
 /* Carry through non-NULL opaque values to a newly-created state */
 static int carrythroughopaques(struct fsm *fsm, struct fsm_state *state, struct state_set *set) {
 	const struct state_set *s;
-	void *opaque;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	opaque = NULL;
-
-	/*
-	 * Here we need to check if all non-opaque values are identical. If not, we
-	 * have a collision, as multiple opaque values cannot be expressed in one
-	 * state.
-	 *
-	 * This loop finds the first non-NULL opaque value, then proceeds to check
-	 * that all remaining non-NULL opaque values have the same value.
-	 */
 	for (s = set; s; s = s->next) {
-		if (s->state->opaque == NULL) {
-			continue;
-		}
+		struct opaque_set *o;
 
-		if (opaque == NULL) {
-			opaque = s->state->opaque;
-		} else if (opaque != s->state->opaque) {
-			return 0;
+		for (o = s->state->ol; o; o = o->next) {
+			if (!fsm_addopaque(fsm, state, o->opaque)) {
+				return 0;
+			}
 		}
 	}
-
-	fsm_setopaque(fsm, state, opaque);
 
 	return 1;
 }
@@ -446,9 +431,8 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 
 		/* TODO: document */
 		if (!carrythroughopaques(dfa, curr->dfastate, curr->closure)) {
-			/* We have a collision, and the NFA->DFA conversion must fail */
 			/* TODO: free something? */
-			return -1;
+			return 0;
 		}
 
 		/*
@@ -468,9 +452,9 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 int
 fsm_todfa(struct fsm *fsm)
 {
-	int r;
 	struct mapping *ml;
 	struct fsm *dfa;
+	int r;
 
 	assert(fsm != NULL);
 
@@ -482,8 +466,8 @@ fsm_todfa(struct fsm *fsm)
 	ml = NULL;
 	r = nfatodfa(&ml, fsm, dfa);
 	free_mappings(ml);
-	if (r <= 0) {
-		return r;
+	if (!r) {
+		return 0;
 	}
 
 	/* TODO: can assert a whole bunch of things about the dfa, here */

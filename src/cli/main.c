@@ -20,7 +20,7 @@ void usage(void) {
 	printf("usage: fsm [-hadmr] [-l <language] [-e <execution> | -q <query] [-u <input>] [<input> [<output>]]\n");
 }
 
-static void union_parse(struct fsm *fsm, FILE *f) {
+static void union_parse(struct fsm *fsm, FILE *f, const char *colour) {
 	struct fsm *tmp;
 
 	assert(fsm != NULL);
@@ -36,7 +36,7 @@ static void union_parse(struct fsm *fsm, FILE *f) {
 
 	fsm_parse(tmp, f);	/* TODO: error-check */
 
-	if (!fsm_union(fsm, tmp)) {
+	if (!fsm_union(fsm, tmp, colour)) {
 		perror("fsm_union");
 		exit(EXIT_FAILURE);
 	}
@@ -156,7 +156,11 @@ int main(int argc, char *argv[]) {
 						exit(EXIT_FAILURE);
 					}
 
-					union_parse(fsm, f);
+					if (strrchr(optarg, '.')) {
+						*strrchr(optarg, '.') = '\0';
+					}
+
+					union_parse(fsm, f, optarg);
 
 					fclose(f);
 					break;
@@ -189,7 +193,7 @@ int main(int argc, char *argv[]) {
 	out = xopen(argc, argv, 1, stdout, "w");
 
 	{
-		union_parse(fsm, in);
+		union_parse(fsm, in, NULL);
 
 		if (cli_options.reverse) {
 			if (!fsm_reverse(fsm)) {

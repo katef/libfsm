@@ -183,9 +183,13 @@ void out_c(const struct fsm *fsm, FILE *f) {
 	for (s = fsm->sl; s; s = s->next) {
 		fprintf(f, "\t\tcase S%u:", s->state->id);
 
-		if (s->state->opaque != NULL) {
-			fprintf(f, " /* ");
-			fputs(s->state->opaque, f);
+		if (s->state->ol != NULL) {
+			struct opaque_set *o;
+
+			fprintf(f, " /*");
+			for (o = s->state->ol; o; o = o->next) {
+				fprintf(f, " %s", (char *) o->opaque);
+			}
 			fprintf(f, " */");
 		}
 
