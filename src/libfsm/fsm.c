@@ -15,18 +15,17 @@ static unsigned int inventid(const struct fsm *fsm) {
 }
 
 static void free_contents(struct fsm *fsm) {
-	struct state_set *s;
+	struct fsm_state *s;
+	struct fsm_state *next;
 
 	assert(fsm != NULL);
 
-	for (s = fsm->sl; s; s = s->next) {
-		assert(s->state != NULL);
+	for (s = fsm->sl; s; s = next) {
+		next = s->next;
 
-		set_free(s->state->el);
-		free(s->state);
+		set_free(s->el);
+		free(s);
 	}
-
-	set_free(fsm->sl);
 }
 
 struct fsm *
@@ -60,7 +59,7 @@ fsm_free(struct fsm *fsm)
 struct fsm *
 fsm_copy(struct fsm *fsm)
 {
-	struct state_set *s;
+	struct fsm_state *s;
 	struct fsm *new;
 
 	new = fsm_new();
@@ -73,20 +72,20 @@ fsm_copy(struct fsm *fsm)
 		struct fsm_state *state;
 		struct opaque_set *o;
 
-		state = fsm_addstate(new, s->state->id);
+		state = fsm_addstate(new, s->id);
 		if (state == NULL) {
 			fsm_free(new);
 			return NULL;
 		}
 
-		for (o = s->state->ol; o; o = o->next) {
+		for (o = s->ol; o; o = o->next) {
 			if (!fsm_addopaque(new, state, o->opaque)) {
 				fsm_free(new);
 				return NULL;
 			}
 		}
 
-		if (fsm_isend(fsm, s->state)) {
+		if (fsm_isend(fsm, s)) {
 			fsm_setend(new, state, 1);
 		}
 	}
@@ -97,14 +96,14 @@ fsm_copy(struct fsm *fsm)
 		struct fsm_state *from;
 		int i;
 
-		from = fsm_getstatebyid(new, s->state->id);
+		from = fsm_getstatebyid(new, s->id);
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			struct fsm_state *to;
 
-			assert(s->state->edges[i] != NULL);
+			assert(s->edges[i] != NULL);
 
-			to = fsm_getstatebyid(new, s->state->edges[i]->id);
+			to = fsm_getstatebyid(new, s->edges[i]->id);
 
 			assert(from != NULL);
 			assert(to   != NULL);
@@ -115,7 +114,7 @@ fsm_copy(struct fsm *fsm)
 			}
 		}
 
-		for (e = s->state->el; e; e = e->next) {
+		for (e = s->el; e; e = e->next) {
 			struct fsm_state *to;
 
 			to = fsm_getstatebyid(new, e->state->id);
@@ -159,8 +158,8 @@ fsm_move(struct fsm *dst, struct fsm *src)
 int
 fsm_union(struct fsm *dst, struct fsm *src, void *opaque)
 {
-	struct state_set **sl;
-	struct state_set *p;
+	struct fsm_state **sl;
+	struct fsm_state *p;
 
 	assert(dst != NULL);
 	assert(src != NULL);
@@ -194,10 +193,10 @@ fsm_union(struct fsm *dst, struct fsm *src, void *opaque)
 	 * Renumber incoming states so as not to clash over existing ones.
 	 */
 	for (p = src->sl; p; p = p->next) {
-		p->state->id = 0;
+		p->id = 0;
 	}
 	for (p = src->sl; p; p = p->next) {
-		p->state->id = inventid(dst);
+		p->id = inventid(dst);
 	}
 
 
@@ -206,7 +205,7 @@ fsm_union(struct fsm *dst, struct fsm *src, void *opaque)
 	 */
 	if (opaque != NULL) {
 		for (p = src->sl; p; p = p->next) {
-			if (!fsm_addopaque(src, p->state, opaque)) {
+			if (!fsm_addopaque(src, p, opaque)) {
 				/* TODO: this leaves dst in a questionable state */
 				return 0;
 			}
@@ -221,15 +220,18 @@ fsm_union(struct fsm *dst, struct fsm *src, void *opaque)
 struct fsm_state *
 fsm_addstate(struct fsm *fsm, unsigned int id)
 {
-	struct state_set *p;
 	struct fsm_state *new;
 
 	assert(fsm != NULL);
 
 	/* Find an existing state */
-	for (p = fsm->sl; p; p = p->next) {
-		if (p->state->id == id) {
-			return p->state;
+	{
+		struct fsm_state *p;
+
+		for (p = fsm->sl; p; p = p->next) {
+			if (p->id == id) {
+				return p;
+			}
 		}
 	}
 
@@ -251,10 +253,8 @@ fsm_addstate(struct fsm *fsm, unsigned int id)
 			new->edges[i] = NULL;
 		}
 
-		if (!set_addstate(&fsm->sl, new)) {
-			free(new);
-			return NULL;
-		}
+		new->next = fsm->sl;
+		fsm->sl = new;
 	}
 
 	return new;
@@ -294,12 +294,12 @@ fsm_isend(const struct fsm *fsm, const struct fsm_state *state)
 int
 fsm_hasend(const struct fsm *fsm)
 {
-	const struct state_set *s;
+	const struct fsm_state *s;
 
 	assert(fsm != NULL);
 
 	for (s = fsm->sl; s; s = s->next) {
-		if (fsm_isend(fsm, s->state)) {
+		if (fsm_isend(fsm, s)) {
 			return 1;
 		}
 	}
@@ -327,14 +327,14 @@ fsm_getstart(const struct fsm *fsm)
 struct fsm_state *
 fsm_getstatebyid(const struct fsm *fsm, unsigned int id)
 {
-	struct state_set *p;
+	struct fsm_state *p;
 
 	assert(fsm != NULL);
 	assert(id != 0);
 
 	for (p = fsm->sl; p; p = p->next) {
-		if (p->state->id == id) {
-			return p->state;
+		if (p->id == id) {
+			return p;
 		}
 	}
 
@@ -345,14 +345,14 @@ unsigned int
 fsm_getmaxid(const struct fsm *fsm)
 {
 	unsigned int max;
-	struct state_set *p;
+	struct fsm_state *p;
 
 	assert(fsm != NULL);
 
 	max = 0;
 	for (p = fsm->sl; p; p = p->next) {
-		if (p->state->id > max) {
-			max = p->state->id;
+		if (p->id > max) {
+			max = p->id;
 		}
 	}
 
@@ -367,7 +367,7 @@ fsm_addopaque(struct fsm *fsm, struct fsm_state *state, void *opaque)
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	/* adding is a no-op for duplicate opaque values */
+	/* Adding is a no-op for duplicate opaque values */
 	{
 		const struct opaque_set *p;
 
@@ -378,15 +378,18 @@ fsm_addopaque(struct fsm *fsm, struct fsm_state *state, void *opaque)
 		}
 	}
 
-	new = malloc(sizeof *new);
-	if (new == NULL) {
-		return 0;
+	/* Otherwise, add a new one */
+	{
+		new = malloc(sizeof *new);
+		if (new == NULL) {
+			return 0;
+		}
+
+		new->opaque = opaque;
+
+		new->next = state->ol;
+		state->ol = new;
 	}
-
-	new->opaque = opaque;
-
-	new->next = state->ol;
-	state->ol = new;
 
 	return 1;
 }

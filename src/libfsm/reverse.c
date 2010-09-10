@@ -7,6 +7,7 @@
 #include <fsm/graph.h>
 
 #include "internal.h"
+#include "set.h"
 
 int
 fsm_reverse(struct fsm *fsm)
@@ -29,18 +30,18 @@ fsm_reverse(struct fsm *fsm)
 	 * TODO: possibly centralise with fsm_copy() into a state-copying function
 	 */
 	{
-		struct state_set *s;
+		struct fsm_state *s;
 
 		for (s = fsm->sl; s; s = s->next) {
 			struct fsm_state *n;
 
-			n = fsm_addstate(new, s->state->id);
+			n = fsm_addstate(new, s->id);
 			if (n == NULL) {
 				fsm_free(new);
 				return 0;
 			}
 
-			n->ol = s->state->ol;
+			n->ol = s->ol;
 		}
 	}
 
@@ -58,10 +59,10 @@ fsm_reverse(struct fsm *fsm)
 
 	/* Create reversed edges */
 	{
-		struct state_set *s;
+		struct fsm_state *s;
 
 		for (s = fsm->sl; s; s = s->next) {
-			struct fsm_state *to = fsm_getstatebyid(new, s->state->id);
+			struct fsm_state *to = fsm_getstatebyid(new, s->id);
 			int i;
 
 			assert(to != NULL);
@@ -69,11 +70,11 @@ fsm_reverse(struct fsm *fsm)
 			for (i = 0; i <= FSM_EDGE_MAX; i++) {
 				struct fsm_state *from;
 
-				if (s->state->edges[i] == NULL) {
+				if (s->edges[i] == NULL) {
 					continue;
 				}
 
-				from = fsm_getstatebyid(new, s->state->edges[i]->id);
+				from = fsm_getstatebyid(new, s->edges[i]->id);
 
 				assert(from != NULL);
 
@@ -87,15 +88,15 @@ fsm_reverse(struct fsm *fsm)
 
 	/* Create reverse epsilon transitions */
 	{
-		struct state_set *s;
+		struct fsm_state *s;
 		struct state_set *e;
 
 		for (s = fsm->sl; s; s = s->next) {
-			struct fsm_state *to = fsm_getstatebyid(new, s->state->id);
+			struct fsm_state *to = fsm_getstatebyid(new, s->id);
 
 			assert(to != NULL);
 
-			for (e = s->state->el; e; e = e->next) {
+			for (e = s->el; e; e = e->next) {
 				struct fsm_state *from = fsm_getstatebyid(new, e->state->id);
 
 				assert(from != NULL);
@@ -110,12 +111,12 @@ fsm_reverse(struct fsm *fsm)
 
 	/* Create the new start state */
 	{
-		struct state_set *s;
+		struct fsm_state *s;
 		int endcount;
 
 		endcount = 0;
 		for (s = fsm->sl; s; s = s->next) {
-			endcount += !!fsm_isend(fsm, s->state);
+			endcount += !!fsm_isend(fsm, s);
 		}
 
 		switch (endcount) {
@@ -133,11 +134,11 @@ fsm_reverse(struct fsm *fsm)
 				fsm_setstart(new, start);
 
 				for (s = new->sl; s; s = s->next) {
-					if (s->state == start) {
+					if (s == start) {
 						continue;
 					}
 
-					fsm_addedge_epsilon(new, start, s->state);
+					fsm_addedge_epsilon(new, start, s);
 				}
 			}
 			break;
@@ -145,10 +146,10 @@ fsm_reverse(struct fsm *fsm)
 		case 1:
 			/* Since there's only one state, we can indicate it directly */
 			for (s = fsm->sl; s; s = s->next) {
-				if (fsm_isend(fsm, s->state)) {
+				if (fsm_isend(fsm, s)) {
 					struct fsm_state *start;
 
-					start = fsm_getstatebyid(new, s->state->id);
+					start = fsm_getstatebyid(new, s->id);
 					assert(start != NULL);
 
 					fsm_setstart(new, start);
@@ -172,17 +173,17 @@ fsm_reverse(struct fsm *fsm)
 				for (s = new->sl; s; s = s->next) {
 					struct fsm_state *state;
 
-					if (s->state == start) {
+					if (s == start) {
 						continue;
 					}
 
-					state = fsm_getstatebyid(fsm, s->state->id);
+					state = fsm_getstatebyid(fsm, s->id);
 					assert(state != NULL);
 					if (!fsm_isend(fsm, state)) {
 						continue;
 					}
 
-					fsm_addedge_epsilon(new, start, s->state);
+					fsm_addedge_epsilon(new, start, s);
 				}
 			}
 			break;

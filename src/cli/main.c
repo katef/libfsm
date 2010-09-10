@@ -20,7 +20,7 @@ void usage(void) {
 	printf("usage: fsm [-hadmr] [-l <language] [-e <execution> | -q <query] [-u <input>] [<input> [<output>]]\n");
 }
 
-static void union_parse(struct fsm *fsm, FILE *f, const char *colour) {
+static void union_parse(struct fsm *fsm, FILE *f, char *colour) {
 	struct fsm *tmp;
 
 	assert(fsm != NULL);

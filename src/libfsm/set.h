@@ -4,6 +4,11 @@
 #define SET_H
 
 
+struct state_set {
+	struct fsm_state *state;
+	struct state_set *next;
+};
+
 struct state_set *
 set_addstate(struct state_set **head, struct fsm_state *state);
 

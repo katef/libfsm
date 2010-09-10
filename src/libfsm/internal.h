@@ -20,6 +20,8 @@ struct fsm_state {
 
 	struct fsm_state *edges[FSM_EDGE_MAX + 1];
 	struct state_set *el;
+
+	struct fsm_state *next;
 };
 
 
@@ -28,13 +30,8 @@ struct opaque_set {
 	struct opaque_set *next;
 };
 
-struct state_set {
-	struct fsm_state *state;
-	struct state_set *next;
-};
-
 struct fsm {
-	struct state_set *sl;
+	struct fsm_state *sl;
 	struct fsm_state *start;
 	struct fsm_options options;
 };
