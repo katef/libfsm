@@ -35,9 +35,127 @@ static void escputs(const char *s, FILE *f) {
 	}
 }
 
+/* TODO: centralise */
+static unsigned edgecount(struct fsm_state *s) {
+	int i;
+	unsigned count;
+
+	assert(s != NULL);
+
+	count = 0;
+
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		count += s->edges[i] != NULL;
+	}
+
+	return count;
+}
+
+static int duplicateedge(struct fsm_state *a, struct fsm_state *b) {
+	int i;
+
+	assert(a != NULL);
+	assert(b != NULL);
+
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		if (a->edges[i] != NULL && b->edges[i] != NULL) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, struct fsm_state *origin) {
+	struct state_set *e;
+	int i;
+
+	assert(fsm != NULL);
+	assert(f != NULL);
+	assert(s != NULL);
+
+	if (s == origin) {
+		/* TODO: infinite recursion... output an epsilon here instead? */
+		return;
+	}
+
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		if (s->edges[i] == NULL) {
+			continue;
+		}
+
+		/* TODO: print "?" if all edges are equal */
+
+		fprintf(f, "\t%-2u -> %-2u [ label = \"", origin == NULL ? s->id : origin->id, s->edges[i]->id);
+		escputc(i, f);
+		fprintf(f, "\" ];\n");
+	}
+
+	/*
+	 * The traverse_epsilons option is an aesthetic optimisation. The internal
+	 * form for storing an FSM (both NFA and DFA) currently uses an array
+	 * per state which holds edges, indexed by the character for each edge.
+	 * Since this is physically unable to express duplicate entries, for NFA
+	 * which require duplicate edges, fsm_addedge_literal() internally creates
+	 * an epsilon transition to a newly-created state, and uses that state to
+	 * hold the duplicate edge entry.
+	 *
+	 * The traverse_epsilons option attempts to "fold in" these epsilon edges on
+	 * the fly, which gives the effect of having several duplicate edges per
+	 * per state, as the user might expect to have created.
+	 *
+	 * An intentionally-created epsilon witb a single edge is indistinguishable
+	 * from the internally-created state asm_addedge_literal() produces, and so
+	 * this optimisation is made optional, as it is possible that it could
+	 * accidentally fold in desired epsilons.
+	 */
+	if (fsm->options.traverse_epsilons) {
+		for (e = s->el; e; e = e->next) {
+			if (edgecount(e->state) == 1 && e->state->el == NULL && duplicateedge(e->state, s)) {
+				singlestate(fsm, f, e->state, s);
+			} else {
+				fprintf(f, "\t%-2u -> %-2u [ label = \"&epsilon;\" ];\n",
+					s->id, e->state->id);
+			}
+		}
+	} else {
+		assert(origin == NULL);
+
+		for (e = s->el; e; e = e->next) {
+			fprintf(f, "\t%-2u -> %-2u [ label = \"&epsilon;\" ];\n",
+				s->id, e->state->id);
+		}
+	}
+}
+
+static int reachablebyanedge(const struct fsm *fsm, struct fsm_state *state) {
+	struct fsm_state *s;
+	int i;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	if (state == fsm->start) {
+		return 1;
+	}
+
+	for (s = fsm->sl; s; s = s->next) {
+		if (s == state) {
+			continue;
+		}
+
+		for (i = 0; i <= FSM_EDGE_MAX; i++) {
+			if (s->edges[i] == state) {
+				return 1;
+			}
+		}
+	}
+
+	return 0;
+}
+
 void out_dot(const struct fsm *fsm, FILE *f) {
 	struct fsm_state *s;
-	struct state_set *e;
 	struct fsm_state *start;
 
 	/* TODO: assert! */
@@ -61,39 +179,28 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "\n");
 
 	for (s = fsm->sl; s; s = s->next) {
-		int i;
+		struct opaque_set *o;
 
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			if (s->edges[i] == NULL) {
+		if (fsm->options.traverse_epsilons) {
+			/*
+			 * These should only be items which were dealt with during folding
+			 * in of epsilons, hence redundant, and are skipped.
+			 *
+			 * TODO: I am not convinced that this is correct in all cases.
+			 */
+			if (!reachablebyanedge(fsm, s)) {
 				continue;
 			}
-
-			/* TODO: print "?" if all edges are equal */
-
-			fprintf(f, "\t%-2u -> %-2u [ label = \"", s->id, s->edges[i]->id);
-			escputc(i, f);
-			fprintf(f, "\" ];\n");
 		}
 
-		for (e = s->el; e; e = e->next) {
-			fprintf(f, "\t%-2u -> %-2u [ label = \"&epsilon;\" ];\n",
-				s->id, e->state->id);
-		}
-	}
-
-	for (s = fsm->sl; s; s = s->next) {
-		struct opaque_set *o;
+		singlestate(fsm, f, s, NULL);
 
 		for (o = s->ol; o; o = o->next) {
 			fprintf(f, "\t%-2u [ color = \"", s->id);
 			escputs(o->opaque, f);
 			fprintf(f, "\" ];\n");
 		}
-	}
 
-	fprintf(f, "\n");
-
-	for (s = fsm->sl; s; s = s->next) {
 		if (fsm_isend(fsm, s)) {
 			fprintf(f, "\t%-2u [ shape = doublecircle ];\n", s->id);
 		}

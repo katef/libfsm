@@ -18,6 +18,10 @@ struct fsm_edge;
 struct fsm_options {
 	/* boolean: true indicates to omit names for states in output */
 	unsigned int anonymous_states:1;
+
+	/* boolean: true indicates to optimsie aesthetically during output.
+	 * Note that this may render an NFA with duplicate edges */
+	unsigned int traverse_epsilons:1;
 };
 
 /*
