@@ -17,6 +17,10 @@ static void escputc(char c, FILE *f) {
 		fprintf(f, "\\\"");
 		return;
 
+	case '|':
+		fprintf(f, "\\\|");
+		return;
+
 	/* TODO: others */
 
 	default:
@@ -66,6 +70,22 @@ static int duplicateedge(struct fsm_state *a, struct fsm_state *b) {
 	return 0;
 }
 
+/* Return true if the edges after o contains state */
+static int contains(struct fsm_state *edges[], int o, struct fsm_state *state) {
+	int i;
+
+	assert(edges != NULL);
+	assert(state != NULL);
+
+	for (i = o; i <= FSM_EDGE_MAX; i++) {
+		if (edges[i] == state) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, struct fsm_state *origin) {
 	struct state_set *e;
 	int i;
@@ -86,9 +106,42 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, str
 
 		/* TODO: print "?" if all edges are equal */
 
-		fprintf(f, "\t%-2u -> %-2u [ label = \"", origin == NULL ? s->id : origin->id, s->edges[i]->id);
-		escputc(i, f);
-		fprintf(f, "\" ];\n");
+		/*
+		 * The consolidate_edges option is an aesthetic optimisation.
+		 * For a state which has multiple edges all transitioning to the same
+		 * state, all these edges are combined into a single edge, labelled
+		 * with a more concise form of all their literal values.
+		 *
+		 * To implement this, we loop through all unique states, rather than
+		 * looping through each edge.
+		 */
+		if (fsm->options.consolidate_edges) {
+			int k;
+
+			/* unique states only */
+			if (contains(s->edges, i + 1, s->edges[i])) {
+				continue;
+			}
+
+			/* find all edges which go to this state */
+			fprintf(f, "\t%-2u -> %-2u [ label = \"", origin == NULL ? s->id : origin->id, s->edges[i]->id);
+			for (k = 0; k <= FSM_EDGE_MAX; k++) {
+				if (s->edges[k] != s->edges[i]) {
+					continue;
+				}
+
+				escputc(k, f);
+
+				if (contains(s->edges, k + 1, s->edges[k])) {
+					fprintf(f, "|");
+				}
+			}
+			fprintf(f, "\" ];\n");
+		} else {
+			fprintf(f, "\t%-2u -> %-2u [ label = \"", origin == NULL ? s->id : origin->id, s->edges[i]->id);
+			escputc(i, f);
+			fprintf(f, "\" ];\n");
+		}
 	}
 
 	/*

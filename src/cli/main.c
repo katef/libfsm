@@ -17,7 +17,7 @@ extern int optind;
 extern char *optarg;
 
 void usage(void) {
-	printf("usage: fsm [-hadmrt] [-l <language] [-e <execution> | -q <query] [-u <input>] [<input> [<output>]]\n");
+	printf("usage: fsm [-chadmrt] [-l <language] [-e <execution> | -q <query] [-u <input>] [<input> [<output>]]\n");
 }
 
 static void union_parse(struct fsm *fsm, FILE *f, char *colour) {
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hal:de:mrtq:u:")) != -1) {
+		while ((c = getopt(argc, argv, "hal:de:cmrtq:u:")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -137,6 +137,10 @@ int main(int argc, char *argv[]) {
 
 			case 't':
 				options.traverse_epsilons = 1;
+				break;
+
+			case 'c':
+				options.consolidate_edges = 1;
 				break;
 
 			case 'q':
