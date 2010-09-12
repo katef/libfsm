@@ -18,7 +18,7 @@ static void escputc(char c, FILE *f) {
 		return;
 
 	case '|':
-		fprintf(f, "\\\|");
+		fprintf(f, "\\|");
 		return;
 
 	/* TODO: others */
