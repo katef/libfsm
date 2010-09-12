@@ -73,7 +73,7 @@ static struct fsm *compile(const char *glob) {
 		exit(2);
 	}
 
-	state = fsm_addstate(fsm, 0);
+	state = fsm_addstate(fsm);
 	if (!state) {
 		perror("fsm_addstate");
 		exit(2);
@@ -101,7 +101,7 @@ static struct fsm *compile(const char *glob) {
 		struct fsm_state *new;
 
 		/* TODO: we could omit this; see fsm_addedge() accepting NULL */
-		new = fsm_addstate(fsm, 0);
+		new = fsm_addstate(fsm);
 		if (!new) {
 			perror("fsm_addstate");
 			exit(2);
