@@ -63,6 +63,7 @@ static void free_mappings(struct mapping *m) {
 }
 
 /* Carry through non-NULL opaque values to a newly-created state */
+/* TODO: centralise with fsm_copy */
 static int carrythroughopaques(struct fsm *fsm, struct fsm_state *state, struct state_set *set) {
 	const struct state_set *s;
 
@@ -266,6 +267,7 @@ static struct mapping *nextnotdone(struct mapping *ml) {
  */
 static struct transset **listnonepsilonstates(struct transset **l, struct state_set *set) {
 	struct state_set *s;
+	struct state_set *e;
 
 	assert(l != NULL);
 	assert(set != NULL);
@@ -275,28 +277,28 @@ static struct transset **listnonepsilonstates(struct transset **l, struct state_
 		int i;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			struct transset *p;
+			for (e = s->state->edges[i]; e; e = e->next) {
+				struct transset *p;
 
-			if (s->state->edges[i] == NULL) {
-				continue;
+				assert(e->state != NULL);
+
+				/* Skip transitions we've already got */
+				if (transin(i, *l)) {
+					continue;
+				}
+
+				p = malloc(sizeof *p);
+				if (p == NULL) {
+					free_transset(*l);
+					return NULL;
+				}
+
+				p->c = i;
+				p->state = e->state;
+
+				p->next = *l;
+				*l = p;
 			}
-
-			/* Skip transitions we've already got */
-			if (transin(i, *l)) {
-				continue;
-			}
-
-			p = malloc(sizeof *p);
-			if (p == NULL) {
-				free_transset(*l);
-				return NULL;
-			}
-
-			p->c = i;
-			p->state = s->state->edges[i];
-
-			p->next = *l;
-			*l = p;
 		}
 	}
 
@@ -306,39 +308,23 @@ static struct transset **listnonepsilonstates(struct transset **l, struct state_
 /*
  * Return a list of all states reachable from set via the given transition.
  */
-static struct state_set *allstatesreachableby(struct state_set *set, int e) {
+static struct state_set *allstatesreachableby(struct state_set *set, char c) {
 	struct state_set *l;
 	struct state_set *s;
+	struct state_set *e;
 
 	assert(set != NULL);
 
 	l = NULL;
 	for (s = set; s; s = s->next) {
-		struct state_set *p;
+		for (e = s->state->edges[(unsigned char) c]; e; e = e->next) {
+			assert(e->state != NULL);
 
-		if (s->state->edges[e] == NULL) {
-			continue;
+			if (!set_addstate(&l, e->state)) {
+				set_free(l);
+				return NULL;
+			}
 		}
-
-		/* Skip states which we've already got */
-		if (set_contains(s->state->edges[e], l)) {
-			continue;
-		}
-
-		p = malloc(sizeof *p);
-		if (p == NULL) {
-			set_free(l);
-			return NULL;
-		}
-
-		/*
-		 * There is no need to store the label here, since our caller is
-		 * only interested in states.
-		 */
-		p->state = s->state->edges[e];
-
-		p->next = l;
-		l = p;
 	}
 
 	return l;

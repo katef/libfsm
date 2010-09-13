@@ -17,11 +17,16 @@ static unsigned int inventid(const struct fsm *fsm) {
 static void free_contents(struct fsm *fsm) {
 	struct fsm_state *s;
 	struct fsm_state *next;
+	int i;
 
 	assert(fsm != NULL);
 
 	for (s = fsm->sl; s; s = next) {
 		next = s->next;
+
+		for (i = 0; i <= FSM_EDGE_MAX; i++) {
+			set_free(s->edges[i]);
+		}
 
 		set_free(s->el);
 		free(s);
@@ -99,18 +104,20 @@ fsm_copy(struct fsm *fsm)
 		from = fsm_getstatebyid(new, s->id);
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			struct fsm_state *to;
+			for (e = s->edges[i]; e; e = e->next) {
+				struct fsm_state *to;
 
-			assert(s->edges[i] != NULL);
+				assert(e->state != NULL);
 
-			to = fsm_getstatebyid(new, s->edges[i]->id);
+				to = fsm_getstatebyid(new, e->state->id);
 
-			assert(from != NULL);
-			assert(to   != NULL);
+				assert(from != NULL);
+				assert(to   != NULL);
 
-			if (!fsm_addedge_literal(new, from, to, i)) {
-				fsm_free(new);
-				return NULL;
+				if (!fsm_addedge_literal(new, from, to, i)) {
+					fsm_free(new);
+					return NULL;
+				}
 			}
 		}
 

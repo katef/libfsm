@@ -18,7 +18,7 @@ struct fsm_state {
 
 	struct opaque_set *ol;
 
-	struct fsm_state *edges[FSM_EDGE_MAX + 1];
+	struct state_set *edges[FSM_EDGE_MAX + 1];
 	struct state_set *el;
 
 	struct fsm_state *next;

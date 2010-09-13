@@ -34,7 +34,9 @@ fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
 	(void) fsm;
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		from->edges[i] = to;
+		if (!set_addstate(&from->edges[i], to)) {
+			return 0;
+		}
 	}
 
 	return 1;
@@ -48,29 +50,6 @@ fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 	assert(from != NULL);
 	assert(to != NULL);
 
-	/*
-	 * NFA may have duplicate edges. Since edges are stored in an array indexed
-	 * by c, duplicate transitions cannot be expressed directly. Instead, we
-	 * create a dummy epsilon transition which serves to hold a newly-created
-	 * state, and transition from that state instead.
-	 */
-	if (from->edges[(unsigned char) c] != NULL) {
-		struct fsm_state *new;
-
-		new = fsm_addstate(fsm);
-		if (new == NULL) {
-			return 0;
-		}
-
-		if (!fsm_addedge_epsilon(fsm, from, new)) {
-			return 0;
-		}
-
-		from = new;
-	}
-
-	from->edges[(unsigned char) c] = to;
-
-	return 1;
+	return !!set_addstate(&from->edges[(unsigned char) c], to);
 }
 

@@ -14,6 +14,17 @@ set_addstate(struct state_set **head, struct fsm_state *state)
 	assert(head != NULL);
 	assert(state != NULL);
 
+	/* TODO: explain we find duplicate; return success */
+	{
+		struct state_set *p;
+
+		for (p = *head; p; p = p->next) {
+			if (p->state == state) {
+				return p;
+			}
+		}
+	}
+
 	new = malloc(sizeof *new);
 	if (new == NULL) {
 		return NULL;

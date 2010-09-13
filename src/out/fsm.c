@@ -45,17 +45,17 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 		int i;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			if (s->edges[i] == NULL) {
-				continue;
+			for (e = s->edges[i]; e; e = e->next) {
+				assert(e->state != NULL);
+
+				fprintf(f, "%-2u -> %2u", s->id, e->state->id);
+
+				/* TODO: print " ?" if all edges are equal */
+
+				fprintf(f, " \'");
+				escputc(i, f);
+				fprintf(f, "\';\n");
 			}
-
-			fprintf(f, "%-2u -> %2u", s->id, s->edges[i]->id);
-
-			/* TODO: print " ?" if all edges are equal */
-
-			fprintf(f, " \'");
-			escputc(i, f);
-			fprintf(f, "\';\n");
 		}
 
 		for (e = s->el; e != NULL; e = e->next) {

@@ -101,7 +101,9 @@ void out_table(const struct fsm *fsm, FILE *f) {
 			if (x->edges[i] == NULL) {
 				fprintf(f, "|    ");
 			} else {
-				fprintf(f, "| %-2u ", x->edges[i]->id);
+				assert(x->edges[i]->state != NULL);
+
+				fprintf(f, "| %-2u ", x->edges[i]->state->id);
 			}
 		}
 

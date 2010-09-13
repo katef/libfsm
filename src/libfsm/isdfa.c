@@ -7,18 +7,34 @@
 #include <fsm/fsm.h>
 
 #include "internal.h"
+#include "set.h"
 
 static int
 isdfastate(const struct fsm_state *state)
 {
+	int i;
+
 	/*
-	 * DFA may not have epsilon edges or duplicate states.
-	 *
-	 * Since this implementation encodes duplicate states as hanging off
-	 * epsilon transitions, we need simply check for the presence of those
-	 * to cover both situations.
+	 * DFA may not have epsilon edges.
 	 */
-	return state->el == NULL;
+	if (state->el != NULL) {
+		return 0;
+	}
+
+	/*
+	 * DFA may not have duplicate edges.
+	 */
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		if (state->edges[i] == NULL) {
+			continue;
+		}
+
+		if (state->edges[i]->next != NULL) {
+			return 0;
+		}
+	}
+
+	return 1;
 }
 
 int

@@ -39,46 +39,15 @@ static void escputs(const char *s, FILE *f) {
 	}
 }
 
-/* TODO: centralise */
-static unsigned edgecount(struct fsm_state *s) {
-	int i;
-	unsigned count;
-
-	assert(s != NULL);
-
-	count = 0;
-
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		count += s->edges[i] != NULL;
-	}
-
-	return count;
-}
-
-static int duplicateedge(struct fsm_state *a, struct fsm_state *b) {
-	int i;
-
-	assert(a != NULL);
-	assert(b != NULL);
-
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		if (a->edges[i] != NULL && b->edges[i] != NULL) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
 /* Return true if the edges after o contains state */
-static int contains(struct fsm_state *edges[], int o, struct fsm_state *state) {
+static int contains(struct state_set *edges[], int o, struct fsm_state *state) {
 	int i;
 
 	assert(edges != NULL);
 	assert(state != NULL);
 
 	for (i = o; i <= FSM_EDGE_MAX; i++) {
-		if (edges[i] == state) {
+		if (set_contains(state, edges[i])) {
 			return 1;
 		}
 	}
@@ -100,111 +69,59 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, str
 	}
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		if (s->edges[i] == NULL) {
-			continue;
-		}
+		for (e = s->edges[i]; e; e = e->next) {
+			assert(e->state != NULL);
 
-		/* TODO: print "?" if all edges are equal */
+			/* TODO: print "?" if all edges are equal */
 
-		/*
-		 * The consolidate_edges option is an aesthetic optimisation.
-		 * For a state which has multiple edges all transitioning to the same
-		 * state, all these edges are combined into a single edge, labelled
-		 * with a more concise form of all their literal values.
-		 *
-		 * To implement this, we loop through all unique states, rather than
-		 * looping through each edge.
-		 */
-		if (fsm->options.consolidate_edges) {
-			int k;
+			/*
+			 * The consolidate_edges option is an aesthetic optimisation.
+			 * For a state which has multiple edges all transitioning to the same
+			 * state, all these edges are combined into a single edge, labelled
+			 * with a more concise form of all their literal values.
+			 *
+			 * To implement this, we loop through all unique states, rather than
+			 * looping through each edge.
+			 */
+			if (fsm->options.consolidate_edges) {
+				int k;
+				struct state_set *e2;
 
-			/* unique states only */
-			if (contains(s->edges, i + 1, s->edges[i])) {
-				continue;
-			}
-
-			/* find all edges which go to this state */
-			fprintf(f, "\t%-2u -> %-2u [ label = \"", origin == NULL ? s->id : origin->id, s->edges[i]->id);
-			for (k = 0; k <= FSM_EDGE_MAX; k++) {
-				if (s->edges[k] != s->edges[i]) {
+				/* unique states only */
+				if (contains(s->edges, i + 1, e->state)) {
 					continue;
 				}
 
-				escputc(k, f);
+				/* find all edges which go to this state */
+				fprintf(f, "\t%-2u -> %-2u [ label = \"", origin == NULL ? s->id : origin->id, e->state->id);
+				for (k = 0; k <= FSM_EDGE_MAX; k++) {
+					for (e2 = s->edges[k]; e2; e2 = e2->next) {
+						if (e2->state != e->state) {
+							continue;
+						}
 
-				if (contains(s->edges, k + 1, s->edges[k])) {
-					fprintf(f, "|");
+						escputc(k, f);
+
+						if (set_contains(e2->state, e2->next) || contains(s->edges, k + 1, e2->state)) {
+							fprintf(f, "|");
+						}
+					}
 				}
-			}
-			fprintf(f, "\" ];\n");
-		} else {
-			fprintf(f, "\t%-2u -> %-2u [ label = \"", origin == NULL ? s->id : origin->id, s->edges[i]->id);
-			escputc(i, f);
-			fprintf(f, "\" ];\n");
-		}
-	}
-
-	/*
-	 * The traverse_epsilons option is an aesthetic optimisation. The internal
-	 * form for storing an FSM (both NFA and DFA) currently uses an array
-	 * per state which holds edges, indexed by the character for each edge.
-	 * Since this is physically unable to express duplicate entries, for NFA
-	 * which require duplicate edges, fsm_addedge_literal() internally creates
-	 * an epsilon transition to a newly-created state, and uses that state to
-	 * hold the duplicate edge entry.
-	 *
-	 * The traverse_epsilons option attempts to "fold in" these epsilon edges on
-	 * the fly, which gives the effect of having several duplicate edges per
-	 * per state, as the user might expect to have created.
-	 *
-	 * An intentionally-created epsilon witb a single edge is indistinguishable
-	 * from the internally-created state asm_addedge_literal() produces, and so
-	 * this optimisation is made optional, as it is possible that it could
-	 * accidentally fold in desired epsilons.
-	 */
-	if (fsm->options.traverse_epsilons) {
-		for (e = s->el; e; e = e->next) {
-			if (edgecount(e->state) == 1 && e->state->el == NULL && duplicateedge(e->state, s)) {
-				singlestate(fsm, f, e->state, s);
+				fprintf(f, "\" ];\n");
 			} else {
-				fprintf(f, "\t%-2u -> %-2u [ label = \"&epsilon;\" ];\n",
-					s->id, e->state->id);
-			}
-		}
-	} else {
-		assert(origin == NULL);
-
-		for (e = s->el; e; e = e->next) {
-			fprintf(f, "\t%-2u -> %-2u [ label = \"&epsilon;\" ];\n",
-				s->id, e->state->id);
-		}
-	}
-}
-
-static int reachablebyanedge(const struct fsm *fsm, struct fsm_state *state) {
-	struct fsm_state *s;
-	int i;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	if (state == fsm->start) {
-		return 1;
-	}
-
-	for (s = fsm->sl; s; s = s->next) {
-		if (s == state) {
-			continue;
-		}
-
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			if (s->edges[i] == state) {
-				return 1;
+				fprintf(f, "\t%-2u -> %-2u [ label = \"", origin == NULL ? s->id : origin->id, e->state->id);
+				escputc(i, f);
+				fprintf(f, "\" ];\n");
 			}
 		}
 	}
 
-	return 0;
+	assert(origin == NULL);
+
+	for (e = s->el; e; e = e->next) {
+		fprintf(f, "\t%-2u -> %-2u [ label = \"&epsilon;\" ];\n",
+			s->id, e->state->id);
+	}
 }
 
 void out_dot(const struct fsm *fsm, FILE *f) {
@@ -233,18 +150,6 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 
 	for (s = fsm->sl; s; s = s->next) {
 		struct opaque_set *o;
-
-		if (fsm->options.traverse_epsilons) {
-			/*
-			 * These should only be items which were dealt with during folding
-			 * in of epsilons, hence redundant, and are skipped.
-			 *
-			 * TODO: I am not convinced that this is correct in all cases.
-			 */
-			if (!reachablebyanedge(fsm, s)) {
-				continue;
-			}
-		}
 
 		singlestate(fsm, f, s, NULL);
 

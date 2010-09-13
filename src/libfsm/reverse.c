@@ -31,6 +31,7 @@ fsm_reverse(struct fsm *fsm)
 	 */
 	{
 		struct fsm_state *s;
+		struct opaque_set *o;
 
 		for (s = fsm->sl; s; s = s->next) {
 			struct fsm_state *n;
@@ -41,7 +42,12 @@ fsm_reverse(struct fsm *fsm)
 				return 0;
 			}
 
-			n->ol = s->ol;
+			for (o = s->ol; o; o = o->next) {
+				if (!fsm_addopaque(new, n, o->opaque)) {
+					fsm_free(new);
+					return 0;
+				}
+			}
 		}
 	}
 
@@ -62,25 +68,28 @@ fsm_reverse(struct fsm *fsm)
 		struct fsm_state *s;
 
 		for (s = fsm->sl; s; s = s->next) {
-			struct fsm_state *to = fsm_getstatebyid(new, s->id);
+			struct fsm_state *to;
+			struct state_set *e;
 			int i;
+
+			to = fsm_getstatebyid(new, s->id);
 
 			assert(to != NULL);
 
 			for (i = 0; i <= FSM_EDGE_MAX; i++) {
-				struct fsm_state *from;
+				for (e = s->edges[i]; e; e = e->next) {
+					struct fsm_state *from;
 
-				if (s->edges[i] == NULL) {
-					continue;
-				}
+					assert(e->state != NULL);
 
-				from = fsm_getstatebyid(new, s->edges[i]->id);
+					from = fsm_getstatebyid(new, e->state->id);
 
-				assert(from != NULL);
+					assert(from != NULL);
 
-				if (!fsm_addedge_literal(new, from, to, i)) {
-					fsm_free(new);
-					return 0;
+					if (!fsm_addedge_literal(new, from, to, i)) {
+						fsm_free(new);
+						return 0;
+					}
 				}
 			}
 		}
@@ -97,7 +106,11 @@ fsm_reverse(struct fsm *fsm)
 			assert(to != NULL);
 
 			for (e = s->el; e; e = e->next) {
-				struct fsm_state *from = fsm_getstatebyid(new, e->state->id);
+				struct fsm_state *from;
+
+				assert(e->state != NULL);
+
+				from = fsm_getstatebyid(new, e->state->id);
 
 				assert(from != NULL);
 
