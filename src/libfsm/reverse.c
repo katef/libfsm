@@ -108,7 +108,17 @@ fsm_reverse(struct fsm *fsm)
 		}
 	}
 
-	/* Create the new start state */
+	/*
+	 * Mark the new start state. If there's only one state, we can indicate it
+	 * directly. Otherwise we will be starting from a group of states, linked
+	 * together by epsilon transitions.
+	 *
+	 * In both the following cases, we nominate an arbitary state from the set
+	 * of candidates to act as our start state, and link to the rest of the
+	 * candidates by epsilon transitions. This is equivalent to adding a new
+	 * start state, and linking out from that, except it does not need to
+	 * introduce a new state, which helps minimization.
+	 */
 	{
 		struct fsm_state *s;
 		int endcount;
@@ -118,75 +128,25 @@ fsm_reverse(struct fsm *fsm)
 			endcount += !!fsm_isend(fsm, s);
 		}
 
-		switch (endcount) {
-		case 0:
-			/* Start from an epsilon transition to all states */
-			{
-				struct fsm_state *start;
+		for (s = fsm->sl; s; s = s->next) {
+			struct fsm_state *state;
 
-				start = fsm_addstate(new);
-				if (start == NULL) {
-					fsm_free(new);
-					return 0;
-				}
-
-				fsm_setstart(new, start);
-
-				for (s = new->sl; s; s = s->next) {
-					if (s == start) {
-						continue;
-					}
-
-					fsm_addedge_epsilon(new, start, s);
-				}
+			if (endcount > 0 && !fsm_isend(fsm, s)) {
+				continue;
 			}
-			break;
 
-		case 1:
-			/* Since there's only one state, we can indicate it directly */
-			for (s = fsm->sl; s; s = s->next) {
-				if (fsm_isend(fsm, s)) {
-					struct fsm_state *start;
+			state = fsm_getstatebyid(new, s->id);
+			assert(state != NULL);
 
-					start = fsm_getstatebyid(new, s->id);
-					assert(start != NULL);
-
-					fsm_setstart(new, start);
-				}
+			if (new->start == NULL) {
+				fsm_setstart(new, state);
 			}
-			break;
 
-		default:
-			/* Start from an epsilon transition to each end state */
-			{
-				struct fsm_state *start;
-
-				start = fsm_addstate(new);
-				if (start == NULL) {
-					fsm_free(new);
-					return 0;
-				}
-
-				fsm_setstart(new, start);
-
-				for (s = fsm->sl; s; s = s->next) {
-					struct fsm_state *state;
-
-					if (s == start) {
-						continue;
-					}
-
-					if (!fsm_isend(fsm, s)) {
-						continue;
-					}
-
-					state = fsm_getstatebyid(new, s->id);
-					assert(state != NULL);
-
-					fsm_addedge_epsilon(new, start, state);
-				}
+			if (s->id == new->start->id) {
+				continue;
 			}
-			break;
+
+			fsm_addedge_epsilon(new, new->start, state);
 		}
 	}
 
