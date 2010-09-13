@@ -11,14 +11,14 @@
 #include "libfsm/set.h"
 #include "libfsm/internal.h"
 
-static int escputc(char c, FILE *f) {
+static int escputc(int c, FILE *f) {
 	assert(f != NULL);
 
-	if (!isprint(c)) {
-		return printf("0x%02X", (unsigned char) c);
-	}
-
 	switch (c) {
+	case FSM_EDGE_EPSILON:
+		fprintf(f, "epsilon");
+		return 7;
+
 	case '\"':
 		fprintf(f, "\\\"");
 		return 2;
@@ -26,6 +26,10 @@ static int escputc(char c, FILE *f) {
 	/* TODO: others */
 
 	default:
+		if (!isprint(c)) {
+			return printf("0x%02X", (unsigned char) c);
+		}
+
 		putc(c, f);
 		return 1;
 	}
@@ -49,7 +53,7 @@ static int notransitions(struct fsm_state *sl, int i) {
 	struct fsm_state *x;
 
 	assert(i >= 0);
-	assert(i <= UCHAR_MAX);
+	assert(i <= FSM_EDGE_MAX);
 
 	for (x = sl; x; x = x->next) {
 		if (x->edges[i] != NULL) {
@@ -105,34 +109,6 @@ void out_table(const struct fsm *fsm, FILE *f) {
 
 				fprintf(f, "| %-2u ", x->edges[i]->state->id);
 			}
-		}
-
-		fprintf(f, "\n");
-	}
-
-	/* TODO: only if there are epislon transitions for at least one state */
-	{
-		struct state_set *e;
-
-		fprintf(f, "%-9s ", "epsilon");
-
-		for (x = fsm->sl; x; x = x->next) {
-			for (e = x->el; e; e = e->next) {
-				assert(e->state != NULL);
-
-				if (e->state == x) {
-					break;
-				}
-			}
-
-			if (e == NULL) {
-				fprintf(f, "|    ");
-				continue;
-			}
-
-			assert(e->state != NULL);
-
-			fprintf(f, "| %-2u ", e->state->id);
 		}
 
 		fprintf(f, "\n");

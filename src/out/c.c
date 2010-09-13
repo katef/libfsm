@@ -54,14 +54,14 @@ static const struct fsm_state *findany(const struct fsm_state *state) {
 
 /* Return true if the edges after o contains state */
 /* TODO: centralise */
-static int contains(struct fsm_state *edges[], int o, struct fsm_state *state) {
+static int contains(struct state_set *edges[], int o, struct fsm_state *state) {
 	int i;
 
 	assert(edges != NULL);
 	assert(state != NULL);
 
-	for (i = o; i <= FSM_EDGE_MAX; i++) {
-		if (set_contains(state->edges[i], state)) {
+	for (i = o; i <= UCHAR_MAX; i++) {
+		if (set_contains(state, state->edges[i])) {
 			return 1;
 		}
 	}
@@ -69,7 +69,7 @@ static int contains(struct fsm_state *edges[], int o, struct fsm_state *state) {
 	return 0;
 }
 
-static void singlecase(FILE *f, const struct fsm_state *state) {
+static void singlecase(FILE *f, struct fsm_state *state) {
 	const struct fsm_state *to;
 	int i;
 
@@ -77,14 +77,14 @@ static void singlecase(FILE *f, const struct fsm_state *state) {
 	assert(state != NULL);
 
 	/* TODO: move this out into a count function */
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+	for (i = 0; i <= UCHAR_MAX; i++) {
 		if (state->edges[i] != NULL) {
 			break;
 		}
 	}
 
 	/* no edges */
-	if (i > FSM_EDGE_MAX) {
+	if (i > UCHAR_MAX) {
 		fprintf(f, "\t\t\treturn 0;\n");
 		return;
 	}
@@ -96,7 +96,7 @@ static void singlecase(FILE *f, const struct fsm_state *state) {
 
 	/* usual case */
 	if (to == NULL) {
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		for (i = 0; i <= UCHAR_MAX; i++) {
 			if (state->edges[i] == NULL) {
 				continue;
 			}

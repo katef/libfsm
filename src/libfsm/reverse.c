@@ -86,37 +86,23 @@ fsm_reverse(struct fsm *fsm)
 
 					assert(from != NULL);
 
-					if (!fsm_addedge_literal(new, from, to, i)) {
-						fsm_free(new);
-						return 0;
+					switch (i) {
+					case FSM_EDGE_EPSILON:
+						if (!fsm_addedge_epsilon(new, from, to)) {
+							fsm_free(new);
+							return 0;
+						}
+						break;
+
+					default:
+						assert(i >= 0);
+						assert(i <= UCHAR_MAX);
+
+						if (!fsm_addedge_literal(new, from, to, i)) {
+							fsm_free(new);
+							return 0;
+						}
 					}
-				}
-			}
-		}
-	}
-
-	/* Create reverse epsilon transitions */
-	{
-		struct fsm_state *s;
-		struct state_set *e;
-
-		for (s = fsm->sl; s; s = s->next) {
-			struct fsm_state *to = fsm_getstatebyid(new, s->id);
-
-			assert(to != NULL);
-
-			for (e = s->el; e; e = e->next) {
-				struct fsm_state *from;
-
-				assert(e->state != NULL);
-
-				from = fsm_getstatebyid(new, e->state->id);
-
-				assert(from != NULL);
-
-				if (!fsm_addedge_epsilon(new, from, to)) {
-					fsm_free(new);
-					return 0;
 				}
 			}
 		}

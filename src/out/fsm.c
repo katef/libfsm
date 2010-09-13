@@ -52,14 +52,19 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 
 				/* TODO: print " ?" if all edges are equal */
 
-				fprintf(f, " \'");
-				escputc(i, f);
-				fprintf(f, "\';\n");
-			}
-		}
+				switch (i) {
+				case FSM_EDGE_EPSILON:
+					break;
 
-		for (e = s->el; e != NULL; e = e->next) {
-			fprintf(f, "%-2u -> %2u;\n", s->id, e->state->id);
+				default:
+					fprintf(f, " \'");
+					escputc(i, f);
+					fprintf(f, "\'");
+					break;
+				}
+
+				fprintf(f, ";\n");
+			}
 		}
 	}
 

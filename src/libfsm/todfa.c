@@ -177,7 +177,7 @@ static struct state_set **epsilon_closure(const struct fsm_state *state, struct 
 	*closure = s;
 
 	/* Follow each epsilon transition */
-	for (e = state->el; e != NULL; e = e->next) {
+	for (e = state->edges[FSM_EDGE_EPSILON]; e != NULL; e = e->next) {
 		assert(e->state != NULL);
 
 		if (epsilon_closure(e->state, closure) == NULL) {
@@ -276,7 +276,7 @@ static struct transset **listnonepsilonstates(struct transset **l, struct state_
 	for (s = set; s; s = s->next) {
 		int i;
 
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		for (i = 0; i <= UCHAR_MAX; i++) {
 			for (e = s->state->edges[i]; e; e = e->next) {
 				struct transset *p;
 

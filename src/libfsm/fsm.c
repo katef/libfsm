@@ -28,7 +28,6 @@ static void free_contents(struct fsm *fsm) {
 			set_free(s->edges[i]);
 		}
 
-		set_free(s->el);
 		free(s);
 	}
 }
@@ -103,6 +102,7 @@ fsm_copy(struct fsm *fsm)
 
 		from = fsm_getstatebyid(new, s->id);
 
+		/* TODO: centralise this with reverse.c */
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			for (e = s->edges[i]; e; e = e->next) {
 				struct fsm_state *to;
@@ -114,24 +114,23 @@ fsm_copy(struct fsm *fsm)
 				assert(from != NULL);
 				assert(to   != NULL);
 
-				if (!fsm_addedge_literal(new, from, to, i)) {
-					fsm_free(new);
-					return NULL;
+				switch (i) {
+				case FSM_EDGE_EPSILON:
+					if (!fsm_addedge_epsilon(new, from, to)) {
+						fsm_free(new);
+						return NULL;
+					}
+					break;
+
+				default:
+					assert(i >= 0);
+					assert(i <= UCHAR_MAX);
+
+					if (!fsm_addedge_literal(new, from, to, i)) {
+						fsm_free(new);
+						return NULL;
+					}
 				}
-			}
-		}
-
-		for (e = s->el; e; e = e->next) {
-			struct fsm_state *to;
-
-			to = fsm_getstatebyid(new, e->state->id);
-
-			assert(from != NULL);
-			assert(to   != NULL);
-
-			if (!fsm_addedge_epsilon(new, from, to)) {
-				fsm_free(new);
-				return NULL;
 			}
 		}
 	}
@@ -254,7 +253,6 @@ fsm_addstateid(struct fsm *fsm, unsigned int id)
 		new->id  = id;
 		new->end = 0;
 		new->ol  = NULL;
-		new->el  = NULL;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			new->edges[i] = NULL;

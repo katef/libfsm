@@ -10,7 +10,11 @@
 
 /* TODO: +2 for SOL, EOL */
 /* TODO: +lots for FSM_EDGE_* */
-#define FSM_EDGE_MAX UCHAR_MAX
+enum fsm_edge_type {
+	FSM_EDGE_EPSILON = UCHAR_MAX + 1
+};
+
+#define FSM_EDGE_MAX FSM_EDGE_EPSILON
 
 struct fsm_state {
 	unsigned int id;
@@ -19,7 +23,6 @@ struct fsm_state {
 	struct opaque_set *ol;
 
 	struct state_set *edges[FSM_EDGE_MAX + 1];
-	struct state_set *el;
 
 	struct fsm_state *next;
 };

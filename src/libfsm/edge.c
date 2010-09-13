@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include <fsm/fsm.h>
 
@@ -19,7 +20,7 @@ fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 
 	(void) fsm;
 
-	return !!set_addstate(&from->el, to);
+	return !!set_addstate(&from->edges[FSM_EDGE_EPSILON], to);
 }
 
 int

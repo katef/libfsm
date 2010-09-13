@@ -9,10 +9,14 @@
 #include "libfsm/internal.h"
 #include "libfsm/set.h"
 
-static void escputc(char c, FILE *f) {
+static void escputc(int c, FILE *f) {
 	assert(f != NULL);
 
 	switch (c) {
+	case FSM_EDGE_EPSILON:
+		fprintf(f, "&epsilon;");
+		return;
+
 	case '\"':
 		fprintf(f, "\\\"");
 		return;
@@ -55,18 +59,13 @@ static int contains(struct state_set *edges[], int o, struct fsm_state *state) {
 	return 0;
 }
 
-static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, struct fsm_state *origin) {
+static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 	struct state_set *e;
 	int i;
 
 	assert(fsm != NULL);
 	assert(f != NULL);
 	assert(s != NULL);
-
-	if (s == origin) {
-		/* TODO: infinite recursion... output an epsilon here instead? */
-		return;
-	}
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		for (e = s->edges[i]; e; e = e->next) {
@@ -93,7 +92,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, str
 				}
 
 				/* find all edges which go to this state */
-				fprintf(f, "\t%-2u -> %-2u [ label = \"", origin == NULL ? s->id : origin->id, e->state->id);
+				fprintf(f, "\t%-2u -> %-2u [ label = \"", s->id, e->state->id);
 				for (k = 0; k <= FSM_EDGE_MAX; k++) {
 					for (e2 = s->edges[k]; e2; e2 = e2->next) {
 						if (e2->state != e->state) {
@@ -109,18 +108,11 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, str
 				}
 				fprintf(f, "\" ];\n");
 			} else {
-				fprintf(f, "\t%-2u -> %-2u [ label = \"", origin == NULL ? s->id : origin->id, e->state->id);
+				fprintf(f, "\t%-2u -> %-2u [ label = \"", s->id, e->state->id);
 				escputc(i, f);
 				fprintf(f, "\" ];\n");
 			}
 		}
-	}
-
-	assert(origin == NULL);
-
-	for (e = s->el; e; e = e->next) {
-		fprintf(f, "\t%-2u -> %-2u [ label = \"&epsilon;\" ];\n",
-			s->id, e->state->id);
 	}
 }
 
@@ -151,7 +143,7 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 	for (s = fsm->sl; s; s = s->next) {
 		struct opaque_set *o;
 
-		singlestate(fsm, f, s, NULL);
+		singlestate(fsm, f, s);
 
 		for (o = s->ol; o; o = o->next) {
 			fprintf(f, "\t%-2u [ color = \"", s->id);

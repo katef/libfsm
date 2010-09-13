@@ -17,14 +17,14 @@ isdfastate(const struct fsm_state *state)
 	/*
 	 * DFA may not have epsilon edges.
 	 */
-	if (state->el != NULL) {
+	if (state->edges[FSM_EDGE_EPSILON] != NULL) {
 		return 0;
 	}
 
 	/*
 	 * DFA may not have duplicate edges.
 	 */
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+	for (i = 0; i <= UCHAR_MAX; i++) {
 		if (state->edges[i] == NULL) {
 			continue;
 		}
