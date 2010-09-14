@@ -17,6 +17,10 @@ static void escputc(int c, FILE *f) {
 		fprintf(f, "&epsilon;");
 		return;
 
+	case '\\':
+		fprintf(f, "\\\\");
+		return;
+
 	case '\"':
 		fprintf(f, "&lsquo;\\\"&rsquo;");
 		return;
