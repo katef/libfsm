@@ -13,11 +13,11 @@ static void escputc(char c, FILE *f) {
 	assert(f != NULL);
 
 	switch (c) {
-	case '\"':
+	case '\'':
 		fprintf(f, "\"'\"");
 		return;
 
-	case '\'':
+	case '\"':
 		fprintf(f, "'\"'");
 		return;
 
