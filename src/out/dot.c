@@ -18,15 +18,19 @@ static void escputc(int c, FILE *f) {
 		return;
 
 	case '\"':
-		fprintf(f, "\\\"");
+		fprintf(f, "&lsquo;\\\"&rsquo;");
+		return;
+
+	case '\'':
+		fprintf(f, "&lsquo;\\'&rsquo;");
 		return;
 
 	case '.':
-		fprintf(f, "\\.");
+		fprintf(f, "&lsquo;.&rsquo;");
 		return;
 
 	case '|':
-		fprintf(f, "\\|");
+		fprintf(f, "&lsquo;|&rsquo;");
 		return;
 
 	/* TODO: others */
@@ -103,13 +107,19 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 							continue;
 						}
 
+						/* TODO: this is a horrible mess */
+
 						if (k > 0 && !set_contains(e->state, s->edges[k - 1])) {
 							/* lower end of range */
 							escputc(k, f);
+							if ((k < FSM_EDGE_MAX && !set_contains(e->state, s->edges[k + 1]))
+								&& (set_contains(e->state, e2->next) || contains(s->edges, k + 1, e->state))) {
+								fprintf(f, "|");
+							}
 							continue;
 						}
 
-						if (k >= FSM_EDGE_MAX || set_contains(e->state, s->edges[k + 1])) {
+						if (k == FSM_EDGE_MAX || set_contains(e->state, s->edges[k + 1])) {
 							/* middle of range */
 							continue;
 						}
@@ -125,7 +135,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 						}
 						escputc(k, f);
 
-						if (set_contains(e2->state, e2->next) || contains(s->edges, k + 1, e2->state)) {
+						if (set_contains(e->state, e2->next) || contains(s->edges, k + 1, e->state)) {
 							fprintf(f, "|");
 						}
 					}
