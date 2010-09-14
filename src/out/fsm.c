@@ -14,13 +14,19 @@ static void escputc(char c, FILE *f) {
 
 	switch (c) {
 	case '\"':
-		fprintf(f, "\\\"");
+		fprintf(f, "\"'\"");
+		return;
+
+	case '\'':
+		fprintf(f, "'\"'");
 		return;
 
 	/* TODO: others */
 
 	default:
+		putc('\'', f);
 		putc(c, f);
+		putc('\'', f);
 	}
 }
 
@@ -57,9 +63,8 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 					break;
 
 				default:
-					fprintf(f, " \'");
+					putc(' ', f);
 					escputc(i, f);
-					fprintf(f, "\'");
 					break;
 				}
 
