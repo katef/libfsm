@@ -96,14 +96,14 @@
 		assert(re->fsm != NULL);
 		/* TODO: assert re is empty */
 		
-		@x = fsm_addstate(re->fsm, 0);
+		@x = fsm_addstate(re->fsm);
 		if (@x == NULL) {
 			@!;
 		}
 
 		fsm_setstart(re->fsm, @x);
 
-		@y = fsm_addstate(re->fsm, 0);
+		@y = fsm_addstate(re->fsm);
 		if (@y == NULL) {
 			@!;
 		}
@@ -188,7 +188,7 @@
 	 */
 
 	<add-concat>: () -> (s :fsm_state) = @{
-		@s = fsm_addstate(re->fsm, 0);
+		@s = fsm_addstate(re->fsm);
 		if (@s == NULL) {
 			@!;
 		}

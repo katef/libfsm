@@ -66,7 +66,7 @@ ZL2_list_Hof_Hitems:;
 		{
 #line 191 "libre/parser.act"
 
-		(ZIz) = fsm_addstate(re->fsm, 0);
+		(ZIz) = fsm_addstate(re->fsm);
 		if ((ZIz) == NULL) {
 			goto ZL1;
 		}
@@ -279,14 +279,14 @@ p_re__glob(re re, lex_state lex_state, act_state act_state)
 		assert(re->fsm != NULL);
 		/* TODO: assert re is empty */
 		
-		(ZIx) = fsm_addstate(re->fsm, 0);
+		(ZIx) = fsm_addstate(re->fsm);
 		if ((ZIx) == NULL) {
 			goto ZL1;
 		}
 
 		fsm_setstart(re->fsm, (ZIx));
 
-		(ZIy) = fsm_addstate(re->fsm, 0);
+		(ZIy) = fsm_addstate(re->fsm);
 		if ((ZIy) == NULL) {
 			goto ZL1;
 		}
