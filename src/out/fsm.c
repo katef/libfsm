@@ -41,6 +41,32 @@ static void escputs(const char *s, FILE *f) {
 	}
 }
 
+/* TODO: refactor for when FSM_EDGE_ANY goes; it is an "any" transition if all
+ * labels transition to the same state. centralise that, perhaps */
+/* TODO: centralise */
+static const struct fsm_state *findany(const struct fsm_state *state) {
+	struct state_set *e;
+	int i;
+
+	assert(state != NULL);
+
+	for (i = 0; i <= UCHAR_MAX; i++) {
+		if (state->edges[i] == NULL) {
+			return NULL;
+		}
+
+		for (e = state->edges[i]; e; e = e->next) {
+			if (e->state != state->edges[0]->state) {
+				return NULL;
+			}
+		}
+	}
+
+	assert(state->edges[0] != NULL);
+
+	return state->edges[0]->state;
+}
+
 void out_fsm(const struct fsm *fsm, FILE *f) {
 	struct fsm_state *s;
 	struct state_set *e;
@@ -49,6 +75,16 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 
 	for (s = fsm->sl; s; s = s->next) {
 		int i;
+
+		{
+			const struct fsm_state *a;
+
+			a = findany(s);
+			if (a != NULL) {
+				fprintf(f, "%-2u -> %2u ?;\n", s->id, a->id);
+				continue;
+			}
+		}
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			for (e = s->edges[i]; e; e = e->next) {
