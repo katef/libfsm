@@ -201,10 +201,10 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 
 	fprintf(f, "\n");
 
-	start = fsm_getstart(fsm);
-	assert(start != NULL);
 	fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
-	fprintf(f, "\tstart -> %u;\n", start->id);
+
+	start = fsm_getstart(fsm);
+	fprintf(f, "\tstart -> %u;\n", start != NULL ? start->id : 0U);
 
 	fprintf(f, "\n");
 
@@ -222,6 +222,10 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 		if (fsm_isend(fsm, s)) {
 			fprintf(f, "\t%-2u [ shape = doublecircle ];\n", s->id);
 		}
+	}
+
+	if (start == NULL) {
+		fprintf(f, "\t0 [ shape = doublecircle ];\n");
 	}
 
 	fprintf(f, "}\n");

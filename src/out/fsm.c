@@ -122,7 +122,10 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "\n");
 
 	start = fsm_getstart(fsm);
-	assert(start != NULL);
+	if (start == NULL) {
+		return;
+	}
+
 	fprintf(f, "start: %u;\n", start->id);
 
 	end = 0;

@@ -316,38 +316,40 @@ lexi_read_token(struct lexi_state *state)
 	}
 }
 
-    struct lex_state *lex_init(FILE *f) {
-        struct lex_state *new;
 
-        assert(f != NULL);
+	struct lex_state *lex_init(FILE *f) {
+		struct lex_state *new;
 
-        new = malloc(sizeof *new);
-        if (new == NULL) {
-            return NULL;
-        }
+		assert(f != NULL);
 
-        new->file = f;
+		new = malloc(sizeof *new);
+		if (new == NULL) {
+			return NULL;
+		}
 
-        lexi_init(&new->lexi_state, new);
+		new->file = f;
 
-        return new;
-    }
+		lexi_init(&new->lexi_state, new);
 
-    int lex_nexttoken(struct lex_state *state) {
-        assert(state != NULL);
+		return new;
+	}
 
-        return lexi_read_token(&state->lexi_state);
-    }
+	int lex_nexttoken(struct lex_state *state) {
+		assert(state != NULL);
 
-    void lex_free(struct lex_state *state) {
-        assert(state != NULL);
+		return lexi_read_token(&state->lexi_state);
+	}
 
-        free(state);
-    }
+	void lex_free(struct lex_state *state) {
+		assert(state != NULL);
 
-    const char *lex_tokbuf(struct lex_state *state) {
-        assert(state != NULL);
+		free(state);
+	}
 
-        return state->tokbuf;
-    }
+	const char *lex_tokbuf(struct lex_state *state) {
+		assert(state != NULL);
+
+		return state->tokbuf;
+	}
+
 

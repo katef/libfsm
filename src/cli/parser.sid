@@ -166,11 +166,15 @@
 	};
 
 	fsm = {
-		things;
+		{
+			things;
 
-		n = xstart;
-		s = <add-state>(n);
-		<mark-start>(s);
+			n = xstart;
+			s = <add-state>(n);
+			<mark-start>(s);
+		||
+			$;
+		};
 
 		{
 			xend;

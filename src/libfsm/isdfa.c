@@ -43,9 +43,12 @@ fsm_isdfa(const struct fsm *fsm)
 	const struct fsm_state *s;
 
 	assert(fsm != NULL);
-	assert(fsm->start != NULL);
 
 	if (fsm->sl == NULL) {
+		return 0;
+	}
+
+	if (fsm->start == NULL) {
 		return 0;
 	}
 

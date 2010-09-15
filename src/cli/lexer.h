@@ -55,7 +55,7 @@ enum lexi_groups {
 	lexi_group_digit = 0x8,
 	lexi_label1_white = 0,
 	lexi_label0_white = 0,
-	lexi_comment_white = 0
+	lexi_comment_white = 0,
 };
 
 /* true if the given character is present in the given group */
@@ -66,6 +66,7 @@ int lexi_read_token(struct lexi_state *state);
 
 /* Initialise a lexi_state structure */
 void lexi_init(struct lexi_state *state, lex_statep lex_state);
+
 
 #endif
 

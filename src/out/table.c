@@ -39,7 +39,6 @@ static void hr(FILE *f, struct fsm_state *sl) {
 	struct fsm_state *x;
 
 	assert(f != NULL);
-	assert(sl != NULL);
 
 	fprintf(f, "----------");
 	for (x = sl; x; x = x->next) {

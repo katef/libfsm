@@ -65,7 +65,7 @@ static void p_things_C_Cthing(fsm, lex_state, act_state);
 static void p_xstart(fsm, lex_state, act_state, string *);
 static void p_xend(fsm, lex_state, act_state);
 static void p_51(fsm, lex_state, act_state);
-static void p_60(fsm, lex_state, act_state, string *);
+static void p_61(fsm, lex_state, act_state, string *);
 static void p_ids(fsm, lex_state, act_state);
 extern void p_fsm(fsm, lex_state, act_state);
 
@@ -83,7 +83,7 @@ p_things(fsm fsm, lex_state lex_state, act_state act_state)
 ZL2_things:;
 	{
 		p_things_C_Cthing (fsm, lex_state, act_state);
-		/* BEGINNING OF INLINE: 58 */
+		/* BEGINNING OF INLINE: 59 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (lex_ident): case (lex_label):
@@ -100,7 +100,7 @@ ZL2_things:;
 				break;
 			}
 		}
-		/* END OF INLINE: 58 */
+		/* END OF INLINE: 59 */
 	}
 	return;
 ZL1:;
@@ -115,7 +115,7 @@ p_things_C_Cthing(fsm fsm, lex_state lex_state, act_state act_state)
 		return;
 	}
 	{
-		string ZI59;
+		string ZI60;
 
 		/* BEGINNING OF INLINE: id */
 		{
@@ -126,8 +126,8 @@ p_things_C_Cthing(fsm fsm, lex_state lex_state, act_state act_state)
 					{
 #line 81 "cli/parser.act"
 
-		ZI59 = xstrdup(lex_tokbuf(lex_state));
-		if (ZI59 == NULL) {
+		ZI60 = xstrdup(lex_tokbuf(lex_state));
+		if (ZI60 == NULL) {
 			perror("xstrdup");
 			exit(EXIT_FAILURE);
 		}
@@ -144,8 +144,8 @@ p_things_C_Cthing(fsm fsm, lex_state lex_state, act_state act_state)
 					{
 #line 89 "cli/parser.act"
 
-		ZI59 = xstrdup(lex_tokbuf(lex_state));
-		if (ZI59 == NULL) {
+		ZI60 = xstrdup(lex_tokbuf(lex_state));
+		if (ZI60 == NULL) {
 			perror("xstrdup");
 			exit(EXIT_FAILURE);
 		}
@@ -161,7 +161,7 @@ p_things_C_Cthing(fsm fsm, lex_state lex_state, act_state act_state)
 			}
 		}
 		/* END OF INLINE: id */
-		p_60 (fsm, lex_state, act_state, &ZI59);
+		p_61 (fsm, lex_state, act_state, &ZI60);
 		if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 			RESTORE_LEXER;
 			goto ZL1;
@@ -345,7 +345,7 @@ ZL1:;
 }
 
 static void
-p_60(fsm fsm, lex_state lex_state, act_state act_state, string *ZI59)
+p_61(fsm fsm, lex_state lex_state, act_state act_state, string *ZI60)
 {
 	switch (CURRENT_TERMINAL) {
 	case (lex_arrow):
@@ -405,13 +405,13 @@ p_60(fsm fsm, lex_state lex_state, act_state act_state, string *ZI59)
 
 		struct act_statelist *p;
 
-		assert((*ZI59) != NULL);
+		assert((*ZI60) != NULL);
 
 		for (p = act_state->sl; p != NULL; p = p->next) {
 			assert(p->id != NULL);
 			assert(p->state != NULL);
 
-			if (0 == strcmp(p->id, (*ZI59))) {
+			if (0 == strcmp(p->id, (*ZI60))) {
 				(ZIx) = p->state;
 				break;
 			}
@@ -426,7 +426,7 @@ p_60(fsm fsm, lex_state lex_state, act_state act_state, string *ZI59)
 				exit(EXIT_FAILURE);
 			}
 
-			new->id = xstrdup((*ZI59));
+			new->id = xstrdup((*ZI60));
 			if (new->id == NULL) {
 				perror("xstrdup");
 				exit(EXIT_FAILURE);
@@ -615,13 +615,13 @@ p_60(fsm fsm, lex_state lex_state, act_state act_state, string *ZI59)
 
 		struct act_statelist *p;
 
-		assert((*ZI59) != NULL);
+		assert((*ZI60) != NULL);
 
 		for (p = act_state->sl; p != NULL; p = p->next) {
 			assert(p->id != NULL);
 			assert(p->state != NULL);
 
-			if (0 == strcmp(p->id, (*ZI59))) {
+			if (0 == strcmp(p->id, (*ZI60))) {
 				(ZIs) = p->state;
 				break;
 			}
@@ -636,7 +636,7 @@ p_60(fsm fsm, lex_state lex_state, act_state act_state, string *ZI59)
 				exit(EXIT_FAILURE);
 			}
 
-			new->id = xstrdup((*ZI59));
+			new->id = xstrdup((*ZI60));
 			if (new->id == NULL) {
 				perror("xstrdup");
 				exit(EXIT_FAILURE);
@@ -851,7 +851,7 @@ ZL2_ids:;
 #line 852 "cli/parser.c"
 		}
 		/* END OF ACTION: mark-end */
-		/* BEGINNING OF INLINE: 57 */
+		/* BEGINNING OF INLINE: 58 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (lex_comma):
@@ -892,7 +892,7 @@ ZL2_ids:;
 				break;
 			}
 		}
-		/* END OF INLINE: 57 */
+		/* END OF INLINE: 58 */
 	}
 	return;
 ZL1:;
@@ -907,17 +907,22 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 		return;
 	}
 	{
-		string ZIn;
-		state ZIs;
-
-		p_things (fsm, lex_state, act_state);
-		p_xstart (fsm, lex_state, act_state, &ZIn);
-		if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
-			RESTORE_LEXER;
-			goto ZL1;
-		}
-		/* BEGINNING OF ACTION: add-state */
+		/* BEGINNING OF INLINE: 56 */
 		{
+			switch (CURRENT_TERMINAL) {
+			case (lex_ident): case (lex_label):
+				{
+					string ZIn;
+					state ZIs;
+
+					p_things (fsm, lex_state, act_state);
+					p_xstart (fsm, lex_state, act_state, &ZIn);
+					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
+						RESTORE_LEXER;
+						goto ZL1;
+					}
+					/* BEGINNING OF ACTION: add-state */
+					{
 #line 101 "cli/parser.act"
 
 		struct act_statelist *p;
@@ -961,21 +966,28 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 			act_state->sl = new;
 		}
 	
-#line 965 "cli/parser.c"
-		}
-		/* END OF ACTION: add-state */
-		/* BEGINNING OF ACTION: mark-start */
-		{
+#line 970 "cli/parser.c"
+					}
+					/* END OF ACTION: add-state */
+					/* BEGINNING OF ACTION: mark-start */
+					{
 #line 142 "cli/parser.act"
 
 		assert((ZIs) != NULL);
 
 		fsm_setstart(fsm, (ZIs));
 	
-#line 976 "cli/parser.c"
+#line 981 "cli/parser.c"
+					}
+					/* END OF ACTION: mark-start */
+				}
+				break;
+			default:
+				break;
+			}
 		}
-		/* END OF ACTION: mark-start */
-		/* BEGINNING OF INLINE: 56 */
+		/* END OF INLINE: 56 */
+		/* BEGINNING OF INLINE: 57 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (lex_end):
@@ -991,7 +1003,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 				break;
 			}
 		}
-		/* END OF INLINE: 56 */
+		/* END OF INLINE: 57 */
 		switch (CURRENT_TERMINAL) {
 		case (lex_eof):
 			break;
@@ -1015,7 +1027,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 			free(p);
 		}
 	
-#line 1019 "cli/parser.c"
+#line 1031 "cli/parser.c"
 		}
 		/* END OF ACTION: free-statelist */
 	}
@@ -1029,7 +1041,7 @@ ZL1:;
 		fprintf(stderr, "parse error\n");
 		exit(EXIT_FAILURE);
 	
-#line 1033 "cli/parser.c"
+#line 1045 "cli/parser.c"
 		}
 		/* END OF ACTION: err-parse */
 	}
@@ -1069,6 +1081,6 @@ ZL1:;
 		return fsm;
 	}
 
-#line 1073 "cli/parser.c"
+#line 1085 "cli/parser.c"
 
 /* END OF FILE */
