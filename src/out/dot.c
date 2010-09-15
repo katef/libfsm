@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include <fsm/fsm.h>
 
@@ -12,6 +13,11 @@
 static void escputc(int c, FILE *f) {
 	assert(f != NULL);
 
+	if (!isprint(c) && !isspace(c)) {
+		fprintf(f, "0x%x", (unsigned char) c);
+		return;
+	}
+
 	switch (c) {
 	case FSM_EDGE_EPSILON:
 		fprintf(f, "&epsilon;");
@@ -19,6 +25,30 @@ static void escputc(int c, FILE *f) {
 
 	case '\\':
 		fprintf(f, "\\\\");
+		return;
+
+	case '\n':
+		fprintf(f, "\\n");
+		return;
+
+	case '\r':
+		fprintf(f, "\\r");
+		return;
+
+	case '\f':
+		fprintf(f, "\\f");
+		return;
+
+	case '\v':
+		fprintf(f, "\\v");
+		return;
+
+	case '\t':
+		fprintf(f, "\\t");
+		return;
+
+	case ' ':
+		fprintf(f, "&lsquo; &rsquo;");
 		return;
 
 	case '\"':
@@ -79,11 +109,11 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 	assert(f != NULL);
 	assert(s != NULL);
 
+	/* TODO: findany() here? */
+
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		for (e = s->edges[i]; e; e = e->next) {
 			assert(e->state != NULL);
-
-			/* TODO: print "?" if all edges are equal */
 
 			/*
 			 * The consolidate_edges option is an aesthetic optimisation.
