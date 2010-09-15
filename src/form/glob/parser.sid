@@ -98,8 +98,7 @@
 		{
 			list-of-items(x, y);
 		||
-			/* TODO: does this need any action performing? */
-			$;
+			<add-epsilon>(x, y);
 		##
 			<err-expected-items>;
 		};

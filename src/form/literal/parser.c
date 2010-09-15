@@ -97,6 +97,19 @@ p_re__literal(re re, lex_state lex_state, act_state act_state)
 				}
 				break;
 			default:
+				{
+					/* BEGINNING OF ACTION: add-epsilon */
+					{
+#line 198 "libre/parser.act"
+
+		if (!fsm_addedge_epsilon(re->fsm, (ZIx), (ZIy))) {
+			goto ZL3;
+		}
+	
+#line 110 "form/literal/parser.c"
+					}
+					/* END OF ACTION: add-epsilon */
+				}
 				break;
 			}
 			goto ZL2;
@@ -108,7 +121,7 @@ p_re__literal(re re, lex_state lex_state, act_state act_state)
 
 		act_state->err = RE_EXITEMS;
 	
-#line 112 "form/literal/parser.c"
+#line 125 "form/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-items */
 			}
@@ -135,7 +148,7 @@ p_re__literal(re re, lex_state lex_state, act_state act_state)
 
 		act_state->err = RE_EXEOF;
 	
-#line 139 "form/literal/parser.c"
+#line 152 "form/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -166,7 +179,7 @@ p_list_Hof_Hliterals_C_Cliteral(re re, lex_state lex_state, act_state act_state,
 
 		ZIc = act_state->lex_tokval(lex_state);
 	
-#line 170 "form/literal/parser.c"
+#line 183 "form/literal/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -187,7 +200,7 @@ p_list_Hof_Hliterals_C_Cliteral(re re, lex_state lex_state, act_state act_state,
 			goto ZL1;
 		}
 	
-#line 191 "form/literal/parser.c"
+#line 204 "form/literal/parser.c"
 		}
 		/* END OF ACTION: add-literal */
 		/* BEGINNING OF ACTION: count-1 */
@@ -197,7 +210,7 @@ p_list_Hof_Hliterals_C_Cliteral(re re, lex_state lex_state, act_state act_state,
 		(void) (ZIx);
 		(void) (ZIy);
 	
-#line 201 "form/literal/parser.c"
+#line 214 "form/literal/parser.c"
 		}
 		/* END OF ACTION: count-1 */
 	}
@@ -226,7 +239,7 @@ ZL2_list_Hof_Hliterals:;
 			goto ZL1;
 		}
 	
-#line 230 "form/literal/parser.c"
+#line 243 "form/literal/parser.c"
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hliterals_C_Cliteral (re, lex_state, act_state, ZIx, ZIz);
@@ -251,7 +264,7 @@ ZL2_list_Hof_Hliterals:;
 			goto ZL1;
 		}
 	
-#line 255 "form/literal/parser.c"
+#line 268 "form/literal/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -274,6 +287,6 @@ ZL1:;
 #line 297 "libre/parser.act"
 
 
-#line 278 "form/literal/parser.c"
+#line 291 "form/literal/parser.c"
 
 /* END OF FILE */

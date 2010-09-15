@@ -15,7 +15,7 @@ all: cli/re
 
 clean:
 	rm -f cli/re cli/main.o
-	rm -f libre/libre.a libre/re.o
+	rm -f libre/libre.a libre/re.o libre/getc.o
 	rm -f $(FORMS)
 	rm -f form/literal/parser.c form/literal/parser.h
 	rm -f form/simple/parser.c form/simple/parser.h
@@ -36,8 +36,8 @@ form/glob/parser.c form/glob/parser.h: form/glob/parser.sid libre/parser.act
 	$(SID) $(SIDOPTS) form/glob/parser.sid libre/parser.act \
 		form/glob/parser.c form/glob/parser.h
 
-libre/libre.a: libre/re.o $(FORMS)
-	ar ru $@ libre/re.o $(FORMS)
+libre/libre.a: libre/re.o libre/getc.o $(FORMS)
+	ar ru $@ libre/re.o libre/getc.o $(FORMS)
 	ranlib $@
 
 libre/re.c: form/literal/parser.h

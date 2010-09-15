@@ -309,6 +309,19 @@ p_re__glob(re re, lex_state lex_state, act_state act_state)
 				}
 				break;
 			default:
+				{
+					/* BEGINNING OF ACTION: add-epsilon */
+					{
+#line 198 "libre/parser.act"
+
+		if (!fsm_addedge_epsilon(re->fsm, (ZIx), (ZIy))) {
+			goto ZL3;
+		}
+	
+#line 322 "form/glob/parser.c"
+					}
+					/* END OF ACTION: add-epsilon */
+				}
 				break;
 			}
 			goto ZL2;
@@ -320,7 +333,7 @@ p_re__glob(re re, lex_state lex_state, act_state act_state)
 
 		act_state->err = RE_EXITEMS;
 	
-#line 324 "form/glob/parser.c"
+#line 337 "form/glob/parser.c"
 				}
 				/* END OF ACTION: err-expected-items */
 			}
@@ -347,7 +360,7 @@ p_re__glob(re re, lex_state lex_state, act_state act_state)
 
 		act_state->err = RE_EXEOF;
 	
-#line 351 "form/glob/parser.c"
+#line 364 "form/glob/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -378,7 +391,7 @@ p_list_Hof_Hitems_C_Cliteral(re re, lex_state lex_state, act_state act_state, t_
 
 		ZIc = act_state->lex_tokval(lex_state);
 	
-#line 382 "form/glob/parser.c"
+#line 395 "form/glob/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -399,7 +412,7 @@ p_list_Hof_Hitems_C_Cliteral(re re, lex_state lex_state, act_state act_state, t_
 			goto ZL1;
 		}
 	
-#line 403 "form/glob/parser.c"
+#line 416 "form/glob/parser.c"
 		}
 		/* END OF ACTION: add-literal */
 	}
@@ -414,6 +427,6 @@ ZL1:;
 #line 297 "libre/parser.act"
 
 
-#line 418 "form/glob/parser.c"
+#line 431 "form/glob/parser.c"
 
 /* END OF FILE */

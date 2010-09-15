@@ -78,8 +78,7 @@
 		{
 			list-of-literals(x, y);
 		||
-			/* TODO: does this need any action performing? */
-			$;
+			<add-epsilon>(x, y);
 		##
 			<err-expected-items>;	/* TODO: inappropiate? */
 		};
