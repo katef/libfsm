@@ -25,7 +25,7 @@
  */
 
 static void usage(void) {
-	fprintf(stderr, "usage: re [-h] { [-lgeb9p] <re> } <string>\n");
+	fprintf(stderr, "usage: re [-h] { [-i] [-lgeb9p] <re> } <string>\n");
 }
 
 static enum re_form form(char c) {
@@ -50,6 +50,7 @@ static enum re_form form(char c) {
 
 int main(int argc, char *argv[]) {
 	struct re *re;
+	int files;
 
 	if (argc < 2) {
 		usage();
@@ -62,10 +63,12 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
+	files = 0;
+
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hl:g:s:")) != -1) {
+		while ((c = getopt(argc, argv, "hil:g:s:")) != -1) {
 			struct re *new;
 			enum re_err err;
 
@@ -80,11 +83,31 @@ int main(int argc, char *argv[]) {
 			case '9':
 			case 'p':
 */
+			case 'i':
+				files = 1;
+				break;
+
 			case 'l':
 			case 'g':
 			case 's':
 				/* TODO: flags? */
-				new = re_new_comp(form(c), re_getc_str, &optarg, 0, &err);
+
+				if (files) {
+					FILE *f;
+
+					f = fopen(optarg, "r");
+					if (f == NULL) {
+						perror(optarg);
+						return EXIT_FAILURE;
+					}
+
+					new = re_new_comp(form(c), re_getc_file, f, 0, &err);
+
+					fclose(f);
+				} else {
+					new = re_new_comp(form(c), re_getc_str, &optarg, 0, &err);
+				}
+
 				if (new == NULL) {
 					fprintf(stderr, "re_new_comp: %s\n", re_strerror(err));
 					return EXIT_FAILURE;
