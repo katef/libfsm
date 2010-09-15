@@ -7,23 +7,25 @@
 #include "lexer.h"
 
 struct lex_state {
-	const char *input;
+	int (*getc)(void *opaque);
+	void *opaque;
 	char c;
 };
 
 struct lex_state *
-lex_glob_init(const char *s)
+lex_glob_init(int (*getc)(void *opaque), void *opaque)
 {
 	struct lex_state *new;
 
-	assert(s != NULL);
+	assert(getc != NULL);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
 
-	new->input = s;
+	new->getc   = getc;
+	new->opaque = opaque;
 
 	return new;
 }
@@ -39,17 +41,16 @@ lex_glob_free(struct lex_state *state)
 enum lex_tok
 lex_glob_nexttoken(struct lex_state *state)
 {
+	int c;
+
 	assert(state != NULL);
-	assert(state->input != NULL);
+	assert(state->getc != NULL);
 
-	if (*state->input == '\0') {
-		return TOK_EOF;
-	}
+	c = state->getc(state->opaque);
+	state->c = c;
 
-	state->c = *state->input;
-	state->input++;
-
-	switch (state->c) {
+	switch (c) {
+	case EOF: return TOK_EOF;
 	case '?': return TOK_QMARK;
 	case '*': return TOK_STAR;
 	default:  return TOK_CHAR;

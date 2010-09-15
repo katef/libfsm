@@ -47,22 +47,23 @@ re_free(struct re *re)
 }
 
 struct re *
-re_new_comp(enum re_form form, const char *s, void *opaque, enum re_cflags cflags, enum re_err *err)
+re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
+	enum re_cflags cflags, enum re_err *err)
 {
 	struct re *new;
 	enum re_err e;
-	struct re *(*comp)(const char *s, enum re_err *err);
+	struct re *(*comp)(int (*getc)(void *opaque), void *opaque, enum re_err *err);
 
-	assert(s != NULL);
+	assert(getc != NULL);
 
 	switch (form) {
 	case RE_LITERAL: comp = comp_literal; break;
 	case RE_GLOB:    comp = comp_glob;    break;
 	case RE_SIMPLE:  comp = comp_simple;  break;
-	default: e = RE_EBADFORM;           goto error;
+	default: e = RE_EBADFORM;             goto error;
 	}
 
-	new = comp(s, err);
+	new = comp(getc, opaque, err);
 	if (new == NULL) {
 		return NULL;
 	}

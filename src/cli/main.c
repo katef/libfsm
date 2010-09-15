@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 			case 'g':
 			case 's':
 				/* TODO: flags? */
-				new = re_new_comp(form(c), optarg, NULL, 0, &err);
+				new = re_new_comp(form(c), re_getc_str, &optarg, 0, &err);
 				if (new == NULL) {
 					fprintf(stderr, "re_new_comp: %s\n", re_strerror(err));
 					return EXIT_FAILURE;

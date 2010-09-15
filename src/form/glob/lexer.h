@@ -14,7 +14,7 @@ enum lex_tok {
 };
 
 struct lex_state *
-lex_glob_init(const char *s);
+lex_glob_init(int (*getc)(void *opaque), void *opaque);
 
 void
 lex_glob_free(struct lex_state *state);

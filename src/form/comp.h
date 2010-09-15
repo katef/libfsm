@@ -6,13 +6,13 @@
 #include <re/re.h>
 
 struct re *
-comp_literal(const char *s, enum re_err *err);
+comp_literal(int (*getc)(void *opaque), void *opaque, enum re_err *err);
 
 struct re *
-comp_glob(const char *s, enum re_err *err);
+comp_glob(int (*getc)(void *opaque), void *opaque, enum re_err *err);
 
 struct re *
-comp_simple(const char *s, enum re_err *err);
+comp_simple(int (*getc)(void *opaque), void *opaque, enum re_err *err);
 
 #endif
 

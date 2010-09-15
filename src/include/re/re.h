@@ -52,7 +52,7 @@ re_free(struct re *re);
 
 /* TODO: compile a string of the given form */
 struct re *
-re_new_comp(enum re_form form, const char *s, void *opaque,
+re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	enum re_cflags cflags, enum re_err *err);
 
 const char *
@@ -68,6 +68,13 @@ re_merge(struct re *re, const struct re *new, void *opaque);
 /* TODO: match a string. returns opaque of the re which matches (whichever match is the best match) */
 void *
 re_exec(const struct re *re, const char *s, enum re_eflags eflags);
+
+
+/*
+ * Conveniences for re_new_comp().
+ */
+int re_getc_str(void *opaque);  /* expects opaque to be char ** */
+int re_getc_file(void *oapque); /* expects opaque to be FILE */
 
 #endif
 

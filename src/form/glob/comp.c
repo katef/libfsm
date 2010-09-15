@@ -13,7 +13,7 @@
 #include "parser.h"
 
 struct re *
-comp_glob(const char *s, enum re_err *err)
+comp_glob(int (*getc)(void *opaque), void *opaque, enum re_err *err)
 {
 	struct act_state act_state_s;
 	struct act_state *act_state;
@@ -21,7 +21,7 @@ comp_glob(const char *s, enum re_err *err)
 	struct re *new;
 	enum re_err e;
 
-	assert(s != NULL);
+	assert(getc != NULL);
 
 	new = re_new_empty();
 	if (new == NULL) {
@@ -29,7 +29,7 @@ comp_glob(const char *s, enum re_err *err)
 		goto error;
 	}
 
-	lex_state = lex_glob_init(s);
+	lex_state = lex_glob_init(getc, opaque);
 	if (lex_state == NULL) {
 		re_free(new);
 		e = RE_ENOMEM;
@@ -46,6 +46,7 @@ comp_glob(const char *s, enum re_err *err)
 	ADVANCE_LEXER;
 	p_re__glob(new, lex_state, act_state);
 
+	/* TODO: no need to malloc lex_state; could use automatic storage */
 	lex_glob_free(lex_state);
 
 	if (act_state->err != RE_ESUCCESS) {

@@ -7,23 +7,25 @@
 #include "lexer.h"
 
 struct lex_state {
-	const char *input;
+	int (*getc)(void *opaque);
+	void *opaque;
 	char c;
 };
 
 struct lex_state *
-lex_literal_init(const char *s)
+lex_literal_init(int (*getc)(void *opaque), void *opaque)
 {
 	struct lex_state *new;
 
-	assert(s != NULL);
+	assert(getc != NULL);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
 
-	new->input = s;
+	new->getc   = getc;
+	new->opaque = opaque;
 
 	return new;
 }
@@ -39,15 +41,17 @@ lex_literal_free(struct lex_state *state)
 enum lex_tok
 lex_literal_nexttoken(struct lex_state *state)
 {
-	assert(state != NULL);
-	assert(state->input != NULL);
+	int c;
 
-	if (*state->input == '\0') {
+	assert(state != NULL);
+	assert(state->getc != NULL);
+
+	c = state->getc(state->opaque);
+	if (c == EOF) {
 		return TOK_EOF;
 	}
 
-	state->c = *state->input;
-	state->input++;
+	state->c = c;
 
 	return TOK_CHAR;
 }

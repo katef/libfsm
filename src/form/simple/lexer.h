@@ -23,7 +23,7 @@ enum lex_tok {
 };
 
 struct lex_state *
-lex_simple_init(const char *s);
+lex_simple_init(int (*getc)(void *opaque), void *opaque);
 
 void
 lex_simple_free(struct lex_state *state);

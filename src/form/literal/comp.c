@@ -13,7 +13,7 @@
 #include "parser.h"
 
 struct re *
-comp_literal(const char *s, enum re_err *err)
+comp_literal(int (*getc)(void *opaque), void *opaque, enum re_err *err)
 {
 	struct act_state act_state_s;
 	struct act_state *act_state;
@@ -21,7 +21,7 @@ comp_literal(const char *s, enum re_err *err)
 	struct re *new;
 	enum re_err e;
 
-	assert(s != NULL);
+	assert(getc != NULL);
 
 	new = re_new_empty();
 	if (new == NULL) {
@@ -29,7 +29,7 @@ comp_literal(const char *s, enum re_err *err)
 		goto error;
 	}
 
-	lex_state = lex_literal_init(s);
+	lex_state = lex_literal_init(getc, opaque);
 	if (lex_state == NULL) {
 		re_free(new);
 		e = RE_ENOMEM;
