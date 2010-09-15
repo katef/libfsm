@@ -12,7 +12,7 @@ enum lex_tok {
 };
 
 struct lex_state *
-lex_literal_init(int (*getc)(void *opaque), void *opaque);
+lex_literal_init(int (*f)(void *opaque), void *opaque);
 
 void
 lex_literal_free(struct lex_state *state);

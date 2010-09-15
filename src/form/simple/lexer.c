@@ -13,24 +13,24 @@
 
 /* TODO: centralise all lexers' states? */
 struct lex_state {
-	int (*getc)(void *opaque);
+	int (*f)(void *opaque);
 	void *opaque;
 	char c;
 };
 
 struct lex_state *
-lex_simple_init(int (*getc)(void *opaque), void *opaque)
+lex_simple_init(int (*f)(void *opaque), void *opaque)
 {
 	struct lex_state *new;
 
-	assert(getc != NULL);
+	assert(f != NULL);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
 
-	new->getc   = getc;
+	new->f      = f;
 	new->opaque = opaque;
 
 	return new;
@@ -50,9 +50,9 @@ lex_simple_nexttoken(struct lex_state *state)
 	int c;
 
 	assert(state != NULL);
-	assert(state->getc != NULL);
+	assert(state->f != NULL);
 
-	c = state->getc(state->opaque);
+	c = state->f(state->opaque);
 
 	state->c = c;
 

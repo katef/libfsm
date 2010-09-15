@@ -52,7 +52,7 @@ re_free(struct re *re);
 
 /* TODO: compile a string of the given form */
 struct re *
-re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
+re_new_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
 	enum re_cflags cflags, enum re_err *err);
 
 const char *
