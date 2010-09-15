@@ -5,12 +5,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <fsm/out.h>
 #include <re/re.h>
+
+#include "../libre/internal.h"	/* XXX */
 
 /*
  * TODO: match a regexp against arguments. return $? if all match
  *
+ * TODO: pass a language option for dumping output.
  * output to various forms, too (print the fsm as ERE, glob, etc)
+ * do this through a proper interface, instead of including internal.h
  *
  * TODO: accepting a delimiter would be useful: /abc/. perhaps provide that as
  * a convenience function, especially wrt. escaping for lexing. Also convenient
@@ -19,13 +24,12 @@
  * getopts:
  * pass optarg for "form" of regex. -g for glob etc
  * remaining argv is string(s) to match
- * print the matching strings to stdout?
  *
  * ./re -e '^012.*abc$' -b '[a-z]_xx$' -g 'abc*def' "some string" "some other string"
  */
 
 static void usage(void) {
-	fprintf(stderr, "usage: re [-h] { [-i] [-lgeb9p] <re> } <string>\n");
+	fprintf(stderr, "usage: re [-h] { [-id] [-lgeb9p] <re> } <string>\n");
 }
 
 static enum re_form form(char c) {
@@ -51,6 +55,7 @@ static enum re_form form(char c) {
 int main(int argc, char *argv[]) {
 	struct re *re;
 	int files;
+	int dump;
 
 	if (argc < 2) {
 		usage();
@@ -64,11 +69,12 @@ int main(int argc, char *argv[]) {
 	}
 
 	files = 0;
+	dump  = 0;
 
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hil:g:s:")) != -1) {
+		while ((c = getopt(argc, argv, "hdil:g:s:")) != -1) {
 			struct re *new;
 			enum re_err err;
 
@@ -83,6 +89,10 @@ int main(int argc, char *argv[]) {
 			case '9':
 			case 'p':
 */
+			case 'd':
+				dump = 1;
+				break;
+
 			case 'i':
 				files = 1;
 				break;
@@ -116,6 +126,10 @@ int main(int argc, char *argv[]) {
 				if (!re_merge(re, new, optarg)) {
 					perror("re_merge");
 					return EXIT_FAILURE;
+				}
+
+				if (dump) {
+					fsm_print(new->fsm, stdout, FSM_OUT_FSM);
 				}
 
 				re_free(new);

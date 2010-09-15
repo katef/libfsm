@@ -6,7 +6,6 @@
  * and depend on libre.so.
  */
 
-#include <stdio.h>	/* XXX */
 #include <assert.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -14,7 +13,6 @@
 
 #include <re/re.h>
 #include <fsm/fsm.h>
-#include <fsm/out.h>	/* XXX */
 
 #include "internal.h"
 
@@ -67,9 +65,6 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	if (new == NULL) {
 		return NULL;
 	}
-
-/* XXX */
-fsm_print(new->fsm, stdout, FSM_OUT_FSM);
 
 	return new;
 
