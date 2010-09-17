@@ -146,7 +146,15 @@ fsm_reverse(struct fsm *fsm)
 
 		switch (endcount) {
 		case 1:
-			new->start = fsm_getstatebyid(new, fsm->start->id);
+			for (s = fsm->sl; s; s = s->next) {
+				if (fsm_isend(fsm, s)) {
+					break;
+				}
+			}
+
+			assert(s != NULL);
+
+			new->start = fsm_getstatebyid(new, s->id);
 			assert(new->start != NULL);
 			break;
 
