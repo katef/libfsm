@@ -183,7 +183,15 @@
 		};
 
 		alt: (x :fsm_state, y :fsm_state) -> () = {
-			list-of-items(x, y);
+			/*
+			 * This epsilon isolates alts for * and +.
+			 * Without it, a(v*b|c) would match "avvc" because v* would return
+			 * to state x. Instead, it returns to state z.
+			 */
+			z = <add-concat>;
+			<add-epsilon>(x, z);
+
+			list-of-items(z, y);
 		};
 
 	] = {

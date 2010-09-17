@@ -787,7 +787,32 @@ p_list_Hof_Halts_C_Calt(re re, lex_state lex_state, act_state act_state, t_fsm__
 		return;
 	}
 	{
-		p_list_Hof_Halts_C_Clist_Hof_Hitems (re, lex_state, act_state, ZIx, ZIy);
+		t_fsm__state ZIz;
+
+		/* BEGINNING OF ACTION: add-concat */
+		{
+#line 191 "libre/parser.act"
+
+		(ZIz) = fsm_addstate(re->fsm);
+		if ((ZIz) == NULL) {
+			goto ZL1;
+		}
+	
+#line 802 "form/simple/parser.c"
+		}
+		/* END OF ACTION: add-concat */
+		/* BEGINNING OF ACTION: add-epsilon */
+		{
+#line 198 "libre/parser.act"
+
+		if (!fsm_addedge_epsilon(re->fsm, (ZIx), (ZIz))) {
+			goto ZL1;
+		}
+	
+#line 813 "form/simple/parser.c"
+		}
+		/* END OF ACTION: add-epsilon */
+		p_list_Hof_Halts_C_Clist_Hof_Hitems (re, lex_state, act_state, ZIz, ZIy);
 		if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 			RESTORE_LEXER;
 			goto ZL1;
@@ -819,7 +844,7 @@ p_literal(re re, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_f
 
 		ZIc = act_state->lex_tokval(lex_state);
 	
-#line 823 "form/simple/parser.c"
+#line 848 "form/simple/parser.c"
 					}
 					/* END OF EXTRACT: CHAR */
 					ADVANCE_LEXER;
@@ -833,7 +858,7 @@ p_literal(re re, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_f
 
 		ZIc = 0;	/* TODO */
 	
-#line 837 "form/simple/parser.c"
+#line 862 "form/simple/parser.c"
 					}
 					/* END OF EXTRACT: EOL */
 					ADVANCE_LEXER;
@@ -847,7 +872,7 @@ p_literal(re re, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_f
 
 		ZIc = 1;	/* TODO */
 	
-#line 851 "form/simple/parser.c"
+#line 876 "form/simple/parser.c"
 					}
 					/* END OF EXTRACT: SOL */
 					ADVANCE_LEXER;
@@ -871,7 +896,7 @@ p_literal(re re, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_f
 			goto ZL1;
 		}
 	
-#line 875 "form/simple/parser.c"
+#line 900 "form/simple/parser.c"
 		}
 		/* END OF ACTION: add-literal */
 	}
@@ -898,7 +923,7 @@ p_group_C_Clist_Hof_Hterms_C_Cterm(re re, lex_state lex_state, act_state act_sta
 
 		ZI88 = act_state->lex_tokval(lex_state);
 	
-#line 902 "form/simple/parser.c"
+#line 927 "form/simple/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -921,7 +946,7 @@ ZL1:;
 
 		act_state->err = RE_EXTERM;
 	
-#line 925 "form/simple/parser.c"
+#line 950 "form/simple/parser.c"
 		}
 		/* END OF ACTION: err-expected-term */
 	}
@@ -932,6 +957,6 @@ ZL1:;
 #line 297 "libre/parser.act"
 
 
-#line 936 "form/simple/parser.c"
+#line 961 "form/simple/parser.c"
 
 /* END OF FILE */
