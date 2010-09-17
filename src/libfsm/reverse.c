@@ -9,6 +9,22 @@
 #include "internal.h"
 #include "set.h"
 
+/* TODO: centralise? */
+static int incomingedges(struct fsm *fsm, struct fsm_state *state) {
+	struct fsm_state *s;
+	int i;
+
+	for (s = fsm->sl; s; s = s->next) {
+		for (i = 0; i <= FSM_EDGE_MAX; i++) {
+			if (set_contains(state, s->edges[i])) {
+				return 1;
+			}
+		}
+	}
+
+	return 0;
+}
+
 int
 fsm_reverse(struct fsm *fsm)
 {
@@ -128,25 +144,69 @@ fsm_reverse(struct fsm *fsm)
 			endcount += !!fsm_isend(fsm, s);
 		}
 
-		for (s = fsm->sl; s; s = s->next) {
-			struct fsm_state *state;
+		switch (endcount) {
+		case 1:
+			new->start = fsm_getstatebyid(new, fsm->start->id);
+			assert(new->start != NULL);
+			break;
 
-			if (endcount > 0 && !fsm_isend(fsm, s)) {
-				continue;
+		case 0:
+			/*
+			 * Transition to all states. I don't like this at all, but it is
+			 * required to be able to minimize automata with no end states.
+			 */
+
+		default:
+			for (s = fsm->sl; s; s = s->next) {
+				if (endcount > 0 && !fsm_isend(fsm, s)) {
+					continue;
+				}
+
+				if (!incomingedges(fsm, s)) {
+					break;
+				}
 			}
 
-			state = fsm_getstatebyid(new, s->id);
-			assert(state != NULL);
-
-			if (new->start == NULL) {
-				fsm_setstart(new, state);
+			/*
+			 * If we found an end state with no incoming edges, that state is
+			 * nominated as a new start state. Otherwise, we need to create a
+			 * new start state. In either case, the start is linked to the
+			 * other new start states by epsilons.
+			 *
+			 * It is important to use a start state with no incoming edges as
+			 * this prevents accidentally transitioning to another route.
+			 */
+			if (s != NULL) {
+				new->start = fsm_getstatebyid(new, s->id);
+				assert(new->start != NULL);
+			} else {
+				new->start = fsm_addstate(new);
+				if (new->start == NULL) {
+					fsm_free(new);
+					return 0;
+				}
 			}
 
-			if (s->id == new->start->id) {
-				continue;
-			}
+			for (s = fsm->sl; s; s = s->next) {
+				struct fsm_state *state;
 
-			fsm_addedge_epsilon(new, new->start, state);
+				if (endcount > 0 && !fsm_isend(fsm, s)) {
+					continue;
+				}
+
+				if (s->id == new->start->id) {
+					continue;
+				}
+
+				state = fsm_getstatebyid(new, s->id);
+				assert(state != NULL);
+
+				if (!fsm_addedge_epsilon(new, new->start, state)) {
+					fsm_free(new);
+					return 0;
+				}
+			}
+			break;
 		}
 	}
 
