@@ -13,11 +13,6 @@
 static void escputc(int c, FILE *f) {
 	assert(f != NULL);
 
-	if (!isprint(c) && !isspace(c)) {
-		fprintf(f, "0x%x", (unsigned char) c);
-		return;
-	}
-
 	switch (c) {
 	case FSM_EDGE_EPSILON:
 		fprintf(f, "&epsilon;");
@@ -68,10 +63,14 @@ static void escputc(int c, FILE *f) {
 		return;
 
 	/* TODO: others */
-
-	default:
-		putc(c, f);
 	}
+
+	if (!isprint(c)) {
+		fprintf(f, "0x%x", (unsigned char) c);
+		return;
+	}
+
+	putc(c, f);
 }
 
 static void escputs(const char *s, FILE *f) {
