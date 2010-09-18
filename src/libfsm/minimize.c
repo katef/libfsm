@@ -38,6 +38,52 @@ static int equivalent(struct fsm_state *a, struct fsm_state *b) {
 	return 1;
 }
 
+/* Return true if the edges after o contains state */
+/* TODO: centralise */
+static int contains(struct state_set *edges[], int o, struct fsm_state *state) {
+	int i;
+
+	assert(edges != NULL);
+	assert(state != NULL);
+
+	for (i = o; i <= FSM_EDGE_MAX; i++) {
+		if (set_contains(state, edges[i])) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+/* Count the number of distinct states to which a state transitions */
+/* TODO: centralise? */
+static unsigned int counttargets(struct fsm_state *state) {
+	unsigned int count;
+	int i;
+
+	assert(state != NULL);
+
+	count = 0;
+
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		if (state->edges[i] == NULL) {
+			continue;
+		}
+
+		/* Distinct targets only */
+		if (contains(state->edges, i + 1, state->edges[i]->state)) {
+			continue;
+		}
+
+		/* Note that this assumes the state is a DFA state */
+		assert(state->edges[i]->next == NULL);
+
+		count++;
+	}
+
+	return count;
+}
+
 static void remove(struct fsm *fsm, struct fsm_state *state) {
 	struct fsm_state **s;
 	int i;
@@ -127,9 +173,9 @@ fsm_minimize(struct fsm *fsm)
 	 * like it at all.
 	 *
 	 * This is special-case code; it can only possibly occur for the start
-	 * state, and there can only ever be one equivalent candidate for merging.
+	 * state.
 	 */
-	if (fsm->start->end) {
+	if (fsm->start->end || counttargets(fsm->start) > 1) {
 		struct fsm_state *s;
 		struct fsm_state *next;
 
@@ -137,10 +183,6 @@ fsm_minimize(struct fsm *fsm)
 			next = s->next;
 
 			if (s == fsm->start) {
-				continue;
-			}
-
-			if (!s->end) {
 				continue;
 			}
 
