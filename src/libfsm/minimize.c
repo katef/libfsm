@@ -129,7 +129,7 @@ fsm_minimize(struct fsm *fsm)
 	 * This is special-case code; it can only possibly occur for the start
 	 * state, and there can only ever be one equivalent candidate for merging.
 	 */
-	{
+	if (fsm->start->end) {
 		struct fsm_state *s;
 		struct fsm_state *next;
 
@@ -137,6 +137,10 @@ fsm_minimize(struct fsm *fsm)
 			next = s->next;
 
 			if (s == fsm->start) {
+				continue;
+			}
+
+			if (!s->end) {
 				continue;
 			}
 
