@@ -173,14 +173,14 @@
 			a = <add-concat>;
 			b = <add-concat>;
 
-			item(x, a);
-
 			/*
 			 * This epsilon isolates items for * and +, which would otherwise
 			 * be able to transition back and continue via another route.
 			 * For example, a+b+ would match "abaa".
 			 */
-			<add-epsilon>(a, b);
+			<add-epsilon>(x, a);
+
+			item(a, b);
 
 			/* TODO: I don't like this. Refactor somehow? */
 			{
