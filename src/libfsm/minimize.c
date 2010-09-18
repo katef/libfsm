@@ -38,22 +38,6 @@ static int equivalent(struct fsm_state *a, struct fsm_state *b) {
 	return 1;
 }
 
-/* TODO: centralise */
-static int linksto(struct fsm_state *from, struct fsm_state *to) {
-	int i;
-
-	assert(from != NULL);
-	assert(to   != NULL);
-
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		if (set_contains(to, from->edges[i])) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
 static void remove(struct fsm *fsm, struct fsm_state *state) {
 	struct fsm_state **s;
 	int i;
@@ -62,6 +46,10 @@ static void remove(struct fsm *fsm, struct fsm_state *state) {
 
 	for (s = &fsm->sl; *s; s = &(*s)->next) {
 		if (*s == state) {
+			struct fsm_state *next;
+
+			next = (*s)->next;
+
 			/* TODO: centralise */
 			for (i = 0; i <= FSM_EDGE_MAX; i++) {
 				set_free((*s)->edges[i]);
@@ -71,7 +59,7 @@ static void remove(struct fsm *fsm, struct fsm_state *state) {
 
 			/* TODO: free opaques */
 
-			*s = state->next;
+			*s = next;
 
 			return;
 		}
@@ -133,24 +121,22 @@ fsm_minimize(struct fsm *fsm)
 	}
 
 	/*
-	 * If the start state is equivalent to one of the states it links to, then
-	 * merge them. This is a special case due to neccessarily adding a state
-	 * during reversal under some situations. Essentially, this removes that
-	 * extra state by merging it with an equivalent. It's a bit of a hack and I
-	 * don't like it at all.
+	 * If the start state is equivalent to another state then merge them.
+	 * This is a special case due to neccessarily adding a state during
+	 * reversal under some situations. It's a bit of a hack and I don't
+	 * like it at all.
 	 *
 	 * This is special-case code; it can only possibly occur for the start
 	 * state, and there can only ever be one equivalent candidate for merging.
 	 */
 	{
 		struct fsm_state *s;
+		struct fsm_state *next;
 
-		for (s = fsm->sl; s; s = s->next) {
+		for (s = fsm->sl; s; s = next) {
+			next = s->next;
+
 			if (s == fsm->start) {
-				continue;
-			}
-
-			if (!linksto(fsm->start, s)) {
 				continue;
 			}
 
