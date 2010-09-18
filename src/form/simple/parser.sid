@@ -170,28 +170,28 @@
 		};
 
 		list-of-items: (x :fsm_state, y :fsm_state) -> () = {
-			z = <add-concat>;
-			item(x, z);
+			a = <add-concat>;
+			b = <add-concat>;
 
+			item(x, a);
+
+			/*
+			 * This epsilon isolates items for * and +, which would otherwise
+			 * be able to transition back and continue via another route.
+			 * For example, a+b+ would match "abaa".
+			 */
+			<add-epsilon>(a, b);
+
+			/* TODO: I don't like this. Refactor somehow? */
 			{
-				list-of-items(z, y);
+				<add-epsilon>(b, y);
 			||
-				/* TODO: I don't like this. refactor somehow? */
-				<add-epsilon>(z, y);
+				list-of-items(b, y);
 			};
-
 		};
 
 		alt: (x :fsm_state, y :fsm_state) -> () = {
-			/*
-			 * This epsilon isolates alts for * and +.
-			 * Without it, a(v*b|c) would match "avvc" because v* would return
-			 * to state x. Instead, it returns to state z.
-			 */
-			z = <add-concat>;
-			<add-epsilon>(x, z);
-
-			list-of-items(z, y);
+			list-of-items(x, y);
 		};
 
 	] = {
