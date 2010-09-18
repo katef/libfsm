@@ -3,12 +3,50 @@
 #include <assert.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <limits.h>
 
 #include <fsm/fsm.h>
 
 #include "out/out.h"
 #include "libfsm/internal.h"
 #include "libfsm/set.h"
+
+struct bm {
+	unsigned char map[(FSM_EDGE_MAX + 1) / CHAR_BIT];
+};
+
+static int bm_get(struct bm *bm, size_t i) {
+	assert(bm != NULL);
+	assert(i <= FSM_EDGE_MAX);
+
+	return bm->map[i / CHAR_BIT] & (1 << i % CHAR_BIT);
+}
+
+static void bm_set(struct bm *bm, size_t i) {
+	assert(bm != NULL);
+	assert(i <= FSM_EDGE_MAX);
+
+	bm->map[i / CHAR_BIT] |=  (1 << i % CHAR_BIT);
+}
+
+size_t
+bm_next(const struct bm *bm, int i, int value)
+{
+	size_t n;
+
+	assert(bm != NULL);
+	assert(i / CHAR_BIT < FSM_EDGE_MAX);
+
+	/* this could be faster by incrementing per element instead of per bit */
+	for (n = i + 1; n <= FSM_EDGE_MAX; n++) {
+		/* ...and this could be faster by using peter wegner's method */
+		if (!(bm->map[n / CHAR_BIT] & (1 << n % CHAR_BIT)) == !value) {
+			return n;
+		}
+	}
+
+	return FSM_EDGE_MAX + 1;
+}
 
 static void escputc(int c, FILE *f) {
 	assert(f != NULL);
@@ -124,55 +162,61 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 			 * looping through each edge.
 			 */
 			if (fsm->options.consolidate_edges) {
-				int k;
+				static const struct bm bm_empty;
+				struct bm bm;
 				struct state_set *e2;
+				int hi, lo;
+				int k;
 
 				/* unique states only */
 				if (contains(s->edges, i + 1, e->state)) {
 					continue;
 				}
 
+				bm = bm_empty;
+
 				/* find all edges which go to this state */
 				fprintf(f, "\t%-2u -> %-2u [ label = \"", s->id, e->state->id);
 				for (k = 0; k <= FSM_EDGE_MAX; k++) {
 					for (e2 = s->edges[k]; e2; e2 = e2->next) {
-						if (e2->state != e->state) {
-							continue;
-						}
-
-						/* TODO: this is a horrible mess */
-
-						if (k > 0 && !set_contains(e->state, s->edges[k - 1])) {
-							/* lower end of range */
-							escputc(k, f);
-							if ((k < FSM_EDGE_MAX && !set_contains(e->state, s->edges[k + 1]))
-								&& (set_contains(e->state, e2->next) || contains(s->edges, k + 1, e->state))) {
-								fprintf(f, "|");
-							}
-							continue;
-						}
-
-						if (k == FSM_EDGE_MAX || set_contains(e->state, s->edges[k + 1])) {
-							/* middle of range */
-							continue;
-						}
-
-						if (k > 2 && !set_contains(e->state, s->edges[k - 3])) {
-							fprintf(f, "|");
-							if (set_contains(e->state, s->edges[k - 2])) {
-								escputc(k - 1, f);
-								fprintf(f, "|");
-							}
-						} else {
-							fprintf(f, "..");
-						}
-						escputc(k, f);
-
-						if (set_contains(e->state, e2->next) || contains(s->edges, k + 1, e->state)) {
-							fprintf(f, "|");
+						if (e2->state == e->state) {
+							bm_set(&bm, k);
 						}
 					}
 				}
+
+				/* now print the edges we found */
+				hi = -1;
+				for (;;) {
+					lo = bm_next(&bm, hi, 1);	/* start of range */
+					if (lo == FSM_EDGE_MAX + 1) {
+						break;
+					}
+
+					if (hi != -1) {
+						fputc('|', f);
+					}
+
+					hi = bm_next(&bm, lo, 0);	/* end of range */
+
+					assert(hi > lo);
+
+					switch (hi - lo) {
+					case 1:
+					case 2:
+					case 3:
+						escputc(lo, f);
+						hi = lo;
+						continue;
+
+					default:
+						escputc(lo, f);
+						fprintf(f, "..");
+						escputc(hi - 1, f);
+						break;
+					}
+				}
+
 				fprintf(f, "\" ];\n");
 			} else {
 				fprintf(f, "\t%-2u -> %-2u [ label = \"", s->id, e->state->id);
