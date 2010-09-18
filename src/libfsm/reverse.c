@@ -166,11 +166,16 @@ fsm_reverse(struct fsm *fsm)
 
 		default:
 			for (s = fsm->sl; s; s = s->next) {
+				struct fsm_state *state;
+
 				if (endcount > 0 && !fsm_isend(fsm, s)) {
 					continue;
 				}
 
-				if (!incomingedges(fsm, s)) {
+				state = fsm_getstatebyid(new, s->id);
+				assert(state != NULL);
+
+				if (!incomingedges(new, state)) {
 					break;
 				}
 			}
