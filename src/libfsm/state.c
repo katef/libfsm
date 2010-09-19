@@ -85,6 +85,16 @@ static struct mapping *getnextnotdone(struct mapping *mapping) {
 struct fsm_state *
 fsm_state_duplicatesubgraph(struct fsm *fsm, struct fsm_state *state)
 {
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	return fsm_state_duplicatesubgraphx(fsm, state, NULL);
+}
+
+struct fsm_state *
+fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
+	struct fsm_state **x)
+{
 	struct mapping *mappings;
 	struct mapping *m;
 	struct mapping *start;
@@ -100,12 +110,16 @@ fsm_state_duplicatesubgraph(struct fsm *fsm, struct fsm_state *state)
 		return 0;
 	}
 
-	/* TODO: does this algorithim have a name? */
+	/* TODO: does this traversal algorithim have a name? */
 	/* TODO: errors leave fsm in a questionable state */
 
 	while ((m = getnextnotdone(mappings)) != NULL) {
 		struct state_set *s;
 		int i;
+
+		if (x != NULL && m->old == *x) {
+			*x = m->new;
+		}
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			for (s = m->old->edges[i]; s; s = s->next) {

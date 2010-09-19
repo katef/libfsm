@@ -157,10 +157,21 @@ fsm_getstart(const struct fsm *fsm);
  * from the state, to the states to which those point, and so on. It does not
  * include edges going *to* the given state, or its descendants.
  *
+ * For duplicate_subgraphbetween(), if non-NULL, the state x in the origional
+ * subgraph is overwritten with its equivalent state in the duplicated subgraph.
+ * This provides a mechanism to keep track of a state of interest (for example
+ * the endpoint of a segment).
+ *
  * Returns the duplicated state, or NULL on error; see errno.
+ *
+ * TODO: fsm_state_duplicatesubgraphx() is a horrible inteface, but I'm not
+ * sure how else to go about that.
  */
 struct fsm_state *
 fsm_state_duplicatesubgraph(struct fsm *fsm, struct fsm_state *state);
+struct fsm_state *
+fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
+	struct fsm_state **x);
 
 /*
  * Store and retrieve user-specified opaque data per-state. Multiple opaque
