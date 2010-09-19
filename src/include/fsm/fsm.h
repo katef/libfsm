@@ -153,6 +153,16 @@ struct fsm_state *
 fsm_getstart(const struct fsm *fsm);
 
 /*
+ * Duplicate a state and all its targets. This traverses the edges leading out
+ * from the state, to the states to which those point, and so on. It does not
+ * include edges going *to* the given state, or its descendants.
+ *
+ * Returns the duplicated state, or NULL on error; see errno.
+ */
+struct fsm_state *
+fsm_state_duplicatesubgraph(struct fsm *fsm, struct fsm_state *state);
+
+/*
  * Store and retrieve user-specified opaque data per-state. Multiple opaque
  * values may be stored. Duplicate values are disregarded and silently succeed.
  *

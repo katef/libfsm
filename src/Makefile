@@ -11,7 +11,7 @@ CFLAGS += -I include -I .
 OUT = out/fsm.o out/dot.o out/table.o out/c.o
 LIBFSM = libfsm/xalloc.o libfsm/fsm.o \
 	libfsm/reverse.o libfsm/todfa.o libfsm/isdfa.o libfsm/minimize.o \
-	libfsm/exec.o libfsm/out.o libfsm/edge.o libfsm/set.o
+	libfsm/exec.o libfsm/out.o libfsm/edge.o libfsm/set.o libfsm/state.o
 
 all: cli/fsm libfsm/libfsm.a
 
