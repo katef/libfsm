@@ -42,6 +42,7 @@ comp_glob(int (*f)(void *opaque), void *opaque, enum re_err *err)
 	act_state->err           = RE_ESUCCESS;
 	act_state->lex_nexttoken = lex_glob_nexttoken;
 	act_state->lex_tokval    = lex_glob_tokval;
+	act_state->lex_tokval_u  = NULL;
 
 	ADVANCE_LEXER;
 	p_re__glob(new, lex_state, act_state);

@@ -37,9 +37,9 @@
 
 	#include "../libre/internal.h"
 
-	typedef char          t_char;
-	typedef unsigned long t_unsigned;
-	typedef char *        t_grp;
+	typedef char     t_char;
+	typedef unsigned t_unsigned;
+	typedef char *   t_grp;
 
 	typedef struct fsm_state * t_fsm__state;
 
@@ -60,6 +60,7 @@
 		 */
 		int (*lex_nexttoken)(struct lex_state *);
 		char (*lex_tokval)(struct lex_state *);
+		unsigned (*lex_tokval_u)(struct lex_state *);
 	};
 
 	#define CURRENT_TERMINAL (act_state->lex_tok)
@@ -86,7 +87,7 @@
 	@};
 
 	COUNT: () -> (n :unsigned) = @{
-		@n = 0;	/* TODO: strtoul */
+		@n = act_state->lex_tokval_u(lex_state);
 	@};
 
 %actions%
@@ -239,9 +240,29 @@
 	 * these pairs is lettered a, b, ..., n for ease of identification.
 	 */
 
-	<count-n>: (x :fsm_state, y :fsm_state, n :unsigned) -> () = @{
-		/* TODO: check n > 0 */
-		/* TODO: do this by duplicating the transitions? */
+	<count-n>: (x :fsm_state, y :fsm_state &, n :unsigned) -> () = @{
+		struct fsm_state *a;
+		struct fsm_state *b;
+
+		if (@n == 0) {
+			@!;
+		}
+
+		b = @y;
+
+		while (--@n > 0) {
+			a = fsm_state_duplicatesubgraphx(re->fsm, @x, &b);
+			if (a == NULL) {
+				@!;
+			}
+
+			if (!fsm_addedge_epsilon(re->fsm, @y, a)) {
+				@!;
+			}
+
+			@=y = b;
+			@x = a;
+		}
 	@};
 
 	<count-0-or-1>: (x :fsm_state, y :fsm_state) -> () = @{
@@ -250,7 +271,7 @@
 		}
 	@};
 
-	<count-0-or-many>: (x :fsm_state, y :fsm_state) -> () = @{
+	<count-0-or-many>: (x :fsm_state, y :fsm_state &) -> () = @{
 		if (!fsm_addedge_epsilon(re->fsm, @x, @y)) {
 			@!;
 		}
@@ -258,11 +279,45 @@
 		if (!fsm_addedge_epsilon(re->fsm, @y, @x)) {
 			@!;
 		}
+
+		/* isolation guard */
+		/* TODO: centralise */
+		{
+			struct fsm_state *z;
+
+			z = fsm_addstate(re->fsm);
+			if (z == NULL) {
+				@!;
+			}
+
+			if (!fsm_addedge_epsilon(re->fsm, @y, z)) {
+				@!;
+			}
+
+			@=y = z;
+		}
 	@};
 
-	<count-1-or-many>: (x :fsm_state, y :fsm_state) -> () = @{
+	<count-1-or-many>: (x :fsm_state, y :fsm_state &) -> () = @{
 		if (!fsm_addedge_epsilon(re->fsm, @y, @x)) {
 			@!;
+		}
+
+		/* isolation guard */
+		/* TODO: centralise */
+		{
+			struct fsm_state *z;
+
+			z = fsm_addstate(re->fsm);
+			if (z == NULL) {
+				@!;
+			}
+
+			if (!fsm_addedge_epsilon(re->fsm, @y, z)) {
+				@!;
+			}
+
+			@=y = z;
 		}
 	@};
 

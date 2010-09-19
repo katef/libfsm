@@ -16,6 +16,7 @@ enum lex_tok {
 	TOK_SEP,
 	TOK_OPEN__SUB,   TOK_CLOSE__SUB,
 	TOK_OPEN__GROUP, TOK_CLOSE__GROUP,
+	TOK_OPEN__COUNT, TOK_CLOSE__COUNT,
 	TOK_COUNT,
 	TOK_CHAR,
 	TOK_EOF,
@@ -33,6 +34,9 @@ lex_simple_nexttoken(struct lex_state *state);
 
 char
 lex_simple_tokval(struct lex_state *state);
+
+unsigned
+lex_simple_tokval_u(struct lex_state *state);
 
 #endif
 

@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 66 "libre/parser.act"
+#line 67 "libre/parser.act"
 
 
 	typedef struct re *        re;
@@ -27,6 +27,7 @@
 		 */
 		int (*lex_nexttoken)(struct lex_state *);
 		char (*lex_tokval)(struct lex_state *);
+		unsigned (*lex_tokval_u)(struct lex_state *);
 	};
 
 	#define CURRENT_TERMINAL (act_state->lex_tok)
@@ -36,16 +37,16 @@
 	                              act_state->lex_tok = tok;                      } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save;  } while (0)
 
-#line 40 "form/glob/parser.h"
+#line 41 "form/glob/parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
 extern void p_re__glob(re, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 299 "libre/parser.act"
+#line 354 "libre/parser.act"
 
 
-#line 50 "form/glob/parser.h"
+#line 51 "form/glob/parser.h"
 
 /* END OF FILE */

@@ -24,6 +24,7 @@
 	SEP;
 	OPEN_SUB;   CLOSE_SUB;
 	OPEN_GROUP; CLOSE_GROUP;
+	OPEN_COUNT; CLOSE_COUNT;
 	COUNT: () -> (:unsigned);
 	CHAR: () -> (:char);
 	EOF;
@@ -45,10 +46,10 @@
 	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
 	<add-any>: (:fsm_state, :fsm_state) -> ();
 
-	<count-n>: (:fsm_state, :fsm_state, :unsigned) -> ();
+	<count-n>: (:fsm_state, :fsm_state &, :unsigned) -> ();
 	<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
-	<count-0-or-many>: (:fsm_state, :fsm_state) -> ();
-	<count-1-or-many>: (:fsm_state, :fsm_state) -> ();
+	<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
+	<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
 	<count-1>: (:fsm_state, :fsm_state) -> ();
 
 	<err-expected-term>;
@@ -139,7 +140,7 @@
 
 	list-of-alts: (x :fsm_state, y :fsm_state) -> () [
 
-		item: (x :fsm_state, y :fsm_state) -> () = {
+		item: (x :fsm_state, y :fsm_state &) -> () = {
 			{
 				sub(x, y);
 			||
@@ -151,17 +152,19 @@
 			};
 
 			{
+				OPEN_COUNT;
 				n = COUNT;
-				<count-n>(x, y, n);
+				CLOSE_COUNT;
+				<count-n>(x, &y, n);
 			||
 				QMARK;
 				<count-0-or-1>(x, y);
 			||
 				STAR;
-				<count-0-or-many>(x, y);
+				<count-0-or-many>(x, &y);
 			||
 				PLUS;
-				<count-1-or-many>(x, y);
+				<count-1-or-many>(x, &y);
 			||
 				<count-1>(x, y);
 			##
@@ -170,23 +173,15 @@
 		};
 
 		list-of-items: (x :fsm_state, y :fsm_state) -> () = {
-			a = <add-concat>;
-			b = <add-concat>;
+			z = <add-concat>;
 
-			/*
-			 * This epsilon isolates items for * and +, which would otherwise
-			 * be able to transition back and continue via another route.
-			 * For example, a+b+ would match "abaa".
-			 */
-			<add-epsilon>(x, a);
-
-			item(a, b);
+			item(x, &z);
 
 			/* TODO: I don't like this. Refactor somehow? */
 			{
-				<add-epsilon>(b, y);
+				<add-epsilon>(z, y);
 			||
-				list-of-items(b, y);
+				list-of-items(z, y);
 			};
 		};
 

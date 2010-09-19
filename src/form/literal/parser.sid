@@ -40,10 +40,10 @@
 	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
 	!<add-any>: (:fsm_state, :fsm_state) -> ();
 
-	!<count-n>: (:fsm_state, :fsm_state, :unsigned) -> ();
+	!<count-n>: (:fsm_state, :fsm_state &, :unsigned) -> ();
 	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
-	!<count-0-or-many>: (:fsm_state, :fsm_state) -> ();
-	!<count-1-or-many>: (:fsm_state, :fsm_state) -> ();
+	!<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
+	!<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
 	<count-1>: (:fsm_state, :fsm_state) -> ();
 
 	!<err-expected-term>;

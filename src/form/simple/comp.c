@@ -42,6 +42,7 @@ comp_simple(int (*f)(void *opaque), void *opaque, enum re_err *err)
 	act_state->err           = RE_ESUCCESS;
 	act_state->lex_nexttoken = lex_simple_nexttoken;
 	act_state->lex_tokval    = lex_simple_tokval;
+	act_state->lex_tokval_u  = lex_simple_tokval_u;
 
 	ADVANCE_LEXER;
 	p_re__simple(new, lex_state, act_state);
