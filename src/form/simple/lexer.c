@@ -96,7 +96,7 @@ nexttoken_group(struct lex_state *state)
 	switch (c) {
 	case EOF:                               return TOK_EOF;
 	case '^':                               return TOK_SOL;	/* TODO: rename */
-	case '-':                               return TOK_SEP;
+	case '-':                               return TOK_RANGESEP;
 	case ']': state->state = STATE_LITERAL; return TOK_CLOSE__GROUP;
 	default:                                return TOK_CHAR;
 	}
@@ -122,6 +122,7 @@ nexttoken_count(struct lex_state *state)
 
 	switch (c) {
 	case EOF:                                return TOK_EOF;
+	case ',': state->state = STATE_COUNTEND; return TOK_COUNT;
 	case '}': state->state = STATE_COUNTEND; return TOK_COUNT;
 	default:                                 return TOK_CHAR;
 	}
@@ -132,9 +133,10 @@ nexttoken_countend(struct lex_state *state)
 {
 	assert(state != NULL);
 
-	assert(state->c == '}');
+	assert(state->c == '}' || state->c == ',');
 
 	switch (state->c) {
+	case ',': state->state = STATE_COUNT;   return TOK_COUNTSEP;
 	case '}': state->state = STATE_LITERAL; return TOK_CLOSE__COUNT;
 	}
 }

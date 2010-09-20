@@ -238,26 +238,41 @@
 	 * output state (9). Between these states are an appropiate number of
 	 * regex fragments as per <add-*> which begin and end (1) and (2). Each of
 	 * these pairs is lettered a, b, ..., n for ease of identification.
+	 *
+	 * TODO: update for count-m-n
 	 */
 
-	<count-n>: (x :fsm_state, y :fsm_state &, n :unsigned) -> () = @{
+	<count-m-to-n>: (x :fsm_state, y :fsm_state &, m :unsigned, n :unsigned) -> () = @{
+		unsigned i;
 		struct fsm_state *a;
 		struct fsm_state *b;
 
-		if (@n == 0) {
+		if (@m == 0) {
+			@!;
+		}
+
+		if (@n < @m) {
 			@!;
 		}
 
 		b = @y;
 
-		while (--@n > 0) {
+		for (i = 1; i < @n; i++) {
 			a = fsm_state_duplicatesubgraphx(re->fsm, @x, &b);
 			if (a == NULL) {
 				@!;
 			}
 
+			/* TODO: could elide this epsilon if fsm_state_duplicatesubgraphx()
+			 * took an extra parameter giving it a m->new for the start state */
 			if (!fsm_addedge_epsilon(re->fsm, @y, a)) {
 				@!;
+			}
+
+			if (i >= @m) {
+				if (!fsm_addedge_epsilon(re->fsm, @y, b)) {
+					@!;
+				}
 			}
 
 			@=y = b;

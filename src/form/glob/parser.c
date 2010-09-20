@@ -127,7 +127,7 @@ p_list_Hof_Hitems_C_Citem(re re, lex_state lex_state, act_state act_state, t_fsm
 			}
 			/* BEGINNING OF ACTION: count-1 */
 			{
-#line 325 "libre/parser.act"
+#line 340 "libre/parser.act"
 
 		(void) (ZIx);
 		(void) (*ZIy);
@@ -146,7 +146,7 @@ p_list_Hof_Hitems_C_Citem(re re, lex_state lex_state, act_state act_state, t_fsm
 			}
 			/* BEGINNING OF ACTION: count-1 */
 			{
-#line 325 "libre/parser.act"
+#line 340 "libre/parser.act"
 
 		(void) (ZIx);
 		(void) (*ZIy);
@@ -165,7 +165,7 @@ p_list_Hof_Hitems_C_Citem(re re, lex_state lex_state, act_state act_state, t_fsm
 			}
 			/* BEGINNING OF ACTION: count-0-or-many */
 			{
-#line 275 "libre/parser.act"
+#line 290 "libre/parser.act"
 
 		if (!fsm_addedge_epsilon(re->fsm, (ZIx), (*ZIy))) {
 			goto ZL1;
@@ -346,7 +346,7 @@ p_re__glob(re re, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-items */
 				{
-#line 340 "libre/parser.act"
+#line 355 "libre/parser.act"
 
 		act_state->err = RE_EXITEMS;
 	
@@ -373,7 +373,7 @@ p_re__glob(re re, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 348 "libre/parser.act"
+#line 363 "libre/parser.act"
 
 		act_state->err = RE_EXEOF;
 	
@@ -441,7 +441,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 352 "libre/parser.act"
+#line 367 "libre/parser.act"
 
 
 #line 448 "form/glob/parser.c"

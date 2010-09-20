@@ -44,7 +44,7 @@
 extern void p_re__literal(re, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 354 "libre/parser.act"
+#line 369 "libre/parser.act"
 
 
 #line 51 "form/literal/parser.h"

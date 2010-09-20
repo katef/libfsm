@@ -117,7 +117,7 @@ p_re__literal(re re, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-items */
 				{
-#line 340 "libre/parser.act"
+#line 355 "libre/parser.act"
 
 		act_state->err = RE_EXITEMS;
 	
@@ -144,7 +144,7 @@ p_re__literal(re re, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 348 "libre/parser.act"
+#line 363 "libre/parser.act"
 
 		act_state->err = RE_EXEOF;
 	
@@ -205,7 +205,7 @@ p_list_Hof_Hliterals_C_Cliteral(re re, lex_state lex_state, act_state act_state,
 		/* END OF ACTION: add-literal */
 		/* BEGINNING OF ACTION: count-1 */
 		{
-#line 325 "libre/parser.act"
+#line 340 "libre/parser.act"
 
 		(void) (ZIx);
 		(void) (ZIy);
@@ -284,7 +284,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 352 "libre/parser.act"
+#line 367 "libre/parser.act"
 
 
 #line 291 "form/literal/parser.c"

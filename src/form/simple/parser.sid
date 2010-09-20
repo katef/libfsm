@@ -21,7 +21,8 @@
 	PLUS;
 	DOT;
 	ALT;
-	SEP;
+	RANGESEP;
+	COUNTSEP;
 	OPEN_SUB;   CLOSE_SUB;
 	OPEN_GROUP; CLOSE_GROUP;
 	OPEN_COUNT; CLOSE_COUNT;
@@ -46,7 +47,7 @@
 	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
 	<add-any>: (:fsm_state, :fsm_state) -> ();
 
-	<count-n>: (:fsm_state, :fsm_state &, :unsigned) -> ();
+	<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
 	<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
 	<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
 	<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
@@ -79,7 +80,7 @@
 
 			range: () -> (a :char, b :char) = {
 				a = CHAR;
-				SEP;
+				RANGESEP;
 				b = CHAR;
 			};
 
@@ -155,7 +156,14 @@
 				OPEN_COUNT;
 				n = COUNT;
 				CLOSE_COUNT;
-				<count-n>(x, &y, n);
+				<count-m-to-n>(x, &y, n, n);
+			||
+				OPEN_COUNT;
+				m = COUNT;
+				COUNTSEP;
+				n = COUNT;
+				CLOSE_COUNT;
+				<count-m-to-n>(x, &y, m, n);
 			||
 				QMARK;
 				<count-0-or-1>(x, y);
