@@ -55,6 +55,23 @@ lex_simple_free(struct lex_state *state)
 }
 
 static enum lex_tok
+nexttoken_esc(struct lex_state *state)
+{
+	int c;
+
+	assert(state != NULL);
+
+	c = state->f(state->opaque);
+
+	state->c = c;
+
+	switch (c) {
+	case EOF: return TOK_EOF;
+	default:  return TOK_CHAR;
+	}
+}
+
+static enum lex_tok
 nexttoken_literal(struct lex_state *state)
 {
 	int c;
@@ -66,19 +83,20 @@ nexttoken_literal(struct lex_state *state)
 	state->c = c;
 
 	switch (c) {
-	case EOF:                             return TOK_EOF;
-	case '^':                             return TOK_SOL;
-	case '$':                             return TOK_EOL;
-	case '?':                             return TOK_QMARK;
-	case '*':                             return TOK_STAR;
-	case '+':                             return TOK_PLUS;
-	case '.':                             return TOK_DOT;
-	case '|':                             return TOK_ALT;
-	case '(':                             return TOK_OPEN__SUB;
-	case ')':                             return TOK_CLOSE__SUB;
-	case '[': state->state = STATE_GROUP; return TOK_OPEN__GROUP;
-	case '{': state->state = STATE_COUNT; return TOK_OPEN__COUNT;
-	default:                              return TOK_CHAR;
+	case EOF:                              return TOK_EOF;
+	case '^':                              return TOK_SOL;
+	case '$':                              return TOK_EOL;
+	case '?':                              return TOK_QMARK;
+	case '*':                              return TOK_STAR;
+	case '+':                              return TOK_PLUS;
+	case '.':                              return TOK_DOT;
+	case '|':                              return TOK_ALT;
+	case '(':                              return TOK_OPEN__SUB;
+	case ')':                              return TOK_CLOSE__SUB;
+	case '\\':                             return nexttoken_esc(state);
+	case '[':  state->state = STATE_GROUP; return TOK_OPEN__GROUP;
+	case '{':  state->state = STATE_COUNT; return TOK_OPEN__COUNT;
+	default:                               return TOK_CHAR;
 	}
 }
 
@@ -94,11 +112,12 @@ nexttoken_group(struct lex_state *state)
 	state->c = c;
 
 	switch (c) {
-	case EOF:                               return TOK_EOF;
-	case '^':                               return TOK_SOL;	/* TODO: rename */
-	case '-':                               return TOK_RANGESEP;
-	case ']': state->state = STATE_LITERAL; return TOK_CLOSE__GROUP;
-	default:                                return TOK_CHAR;
+	case EOF:                                return TOK_EOF;
+	case '^':                                return TOK_SOL;	/* TODO: rename */
+	case '-':                                return TOK_RANGESEP;
+	case '\\':                               return nexttoken_esc(state);
+	case ']':  state->state = STATE_LITERAL; return TOK_CLOSE__GROUP;
+	default:                                 return TOK_CHAR;
 	}
 }
 
