@@ -11,10 +11,7 @@
 #include "set.h"
 
 /* TODO: explain not true equivalence; only intended for use here */
-/* TODO: note that this is asymetric; really it's if a is a subset of b */
-/* TODO: i.e. if b goes to the same places that a goes to */
 static int equivalent(struct fsm_state *a, struct fsm_state *b) {
-	struct state_set *s;
 	int i;
 
 	assert(a != NULL);
@@ -25,11 +22,8 @@ static int equivalent(struct fsm_state *a, struct fsm_state *b) {
 	}
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		/* TODO: centralise subsetof()? */
-		for (s = a->edges[i]; s; s = s->next) {
-			if (!set_contains(s->state, b->edges[i])) {
-				return 0;
-			}
+		if (!set_equal(a->edges[i], b->edges[i])) {
+			return 0;
 		}
 	}
 
