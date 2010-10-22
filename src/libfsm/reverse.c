@@ -128,12 +128,6 @@ fsm_reverse(struct fsm *fsm)
 	 * Mark the new start state. If there's only one state, we can indicate it
 	 * directly. Otherwise we will be starting from a group of states, linked
 	 * together by epsilon transitions.
-	 *
-	 * In both the following cases, we nominate an arbitary state from the set
-	 * of candidates to act as our start state, and link to the rest of the
-	 * candidates by epsilon transitions. This is equivalent to adding a new
-	 * start state, and linking out from that, except it does not need to
-	 * introduce a new state, which helps minimization.
 	 */
 	{
 		struct fsm_state *s;
@@ -181,10 +175,17 @@ fsm_reverse(struct fsm *fsm)
 			}
 
 			/*
-			 * If we found an end state with no incoming edges, that state is
-			 * nominated as a new start state. Otherwise, we need to create a
-			 * new start state. In either case, the start is linked to the
-			 * other new start states by epsilons.
+			 * The typical case here is to create a new start state, and to
+			 * link it to end states by epsilon transitions.
+			 *
+			 * An optimisation: if we found an end state with no incoming
+			 * edges, that state is nominated as a new start state. This is
+			 * equivalent to adding a new start state, and linking out from
+			 * that, except it does not need to introduce a new state.
+			 * Otherwise, we need to create a new start state as per usual.
+			 *
+			 * In either case, the start is linked to the other new start
+			 * states by epsilons.
 			 *
 			 * It is important to use a start state with no incoming edges as
 			 * this prevents accidentally transitioning to another route.
