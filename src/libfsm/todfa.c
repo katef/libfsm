@@ -8,6 +8,7 @@
 
 #include "internal.h"
 #include "set.h"
+#include "opaque.h"
 
 /*
  * A set of states in an NFA.

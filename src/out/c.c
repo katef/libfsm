@@ -9,6 +9,7 @@
 
 #include "out/out.h"
 #include "libfsm/set.h"
+#include "libfsm/opaque.h"
 #include "libfsm/internal.h"
 
 static void escputc(char c, FILE *f) {

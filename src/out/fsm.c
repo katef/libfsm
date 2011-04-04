@@ -8,6 +8,7 @@
 #include "out/out.h"
 #include "libfsm/internal.h"
 #include "libfsm/set.h"
+#include "libfsm/opaque.h"
 
 static void escputc(char c, FILE *f) {
 	assert(f != NULL);

@@ -8,6 +8,7 @@
 
 #include "internal.h"
 #include "set.h"
+#include "opaque.h"
 
 /* TODO: centralise? */
 static int incomingedges(struct fsm *fsm, struct fsm_state *state) {

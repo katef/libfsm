@@ -32,11 +32,6 @@ struct fsm_state {
 };
 
 
-struct opaque_set {
-	void *opaque;
-	struct opaque_set *next;
-};
-
 struct fsm {
 	struct fsm_state *sl;
 	struct fsm_state *start;

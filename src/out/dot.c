@@ -10,6 +10,7 @@
 #include "out/out.h"
 #include "libfsm/internal.h"
 #include "libfsm/set.h"
+#include "libfsm/opaque.h"
 
 struct bm {
 	unsigned char map[(FSM_EDGE_MAX + 1) / CHAR_BIT];

@@ -7,6 +7,7 @@
 
 #include "internal.h"
 #include "set.h"
+#include "opaque.h"
 
 static unsigned int inventid(const struct fsm *fsm) {
 	assert(fsm != NULL);
@@ -374,35 +375,9 @@ fsm_getmaxid(const struct fsm *fsm)
 int
 fsm_addopaque(struct fsm *fsm, struct fsm_state *state, void *opaque)
 {
-	struct opaque_set *new;
-
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	/* Adding is a no-op for duplicate opaque values */
-	{
-		const struct opaque_set *p;
-
-		for (p = state->ol; p != NULL; p = p->next) {
-			if (p->opaque == opaque) {
-				return 1;
-			}
-		}
-	}
-
-	/* Otherwise, add a new one */
-	{
-		new = malloc(sizeof *new);
-		if (new == NULL) {
-			return 0;
-		}
-
-		new->opaque = opaque;
-
-		new->next = state->ol;
-		state->ol = new;
-	}
-
-	return 1;
+	return !!set_addopaque(&state->ol, opaque);
 }
 
