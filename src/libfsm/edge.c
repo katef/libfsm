@@ -20,7 +20,7 @@ fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 
 	(void) fsm;
 
-	return !!set_addstate(&from->edges[FSM_EDGE_EPSILON], to);
+	return !!set_addstate(&from->edges[FSM_EDGE_EPSILON].sl, to);
 }
 
 int
@@ -35,7 +35,7 @@ fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
 	(void) fsm;
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (!set_addstate(&from->edges[i], to)) {
+		if (!set_addstate(&from->edges[i].sl, to)) {
 			return 0;
 		}
 	}
@@ -51,6 +51,6 @@ fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 	assert(from != NULL);
 	assert(to != NULL);
 
-	return !!set_addstate(&from->edges[(unsigned char) c], to);
+	return !!set_addstate(&from->edges[(unsigned char) c].sl, to);
 }
 

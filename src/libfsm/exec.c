@@ -16,7 +16,7 @@ struct fsm_state *nextstate(const struct fsm_state *state, char c) {
 
 	assert(state != NULL);
 
-	s = state->edges[(unsigned char) c];
+	s = state->edges[(unsigned char) c].sl;
 	if (s == NULL) {
 		return NULL;
 	}

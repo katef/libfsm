@@ -25,7 +25,7 @@ static void free_contents(struct fsm *fsm) {
 		next = s->next;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			set_free(s->edges[i]);
+			set_free(s->edges[i].sl);
 		}
 
 		free(s);
@@ -104,7 +104,7 @@ fsm_copy(struct fsm *fsm)
 
 		/* TODO: centralise this with reverse.c */
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (e = s->edges[i]; e; e = e->next) {
+			for (e = s->edges[i].sl; e; e = e->next) {
 				struct fsm_state *to;
 
 				assert(e->state != NULL);
@@ -255,7 +255,7 @@ fsm_addstateid(struct fsm *fsm, unsigned int id)
 		new->ol  = NULL;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			new->edges[i] = NULL;
+			new->edges[i].sl = NULL;
 		}
 
 		new->next = fsm->sl;

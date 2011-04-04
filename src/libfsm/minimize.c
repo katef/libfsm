@@ -22,7 +22,7 @@ static int equivalent(struct fsm_state *a, struct fsm_state *b) {
 	}
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		if (!set_equal(a->edges[i], b->edges[i])) {
+		if (!set_equal(a->edges[i].sl, b->edges[i].sl)) {
 			return 0;
 		}
 	}
@@ -34,14 +34,14 @@ static int equivalent(struct fsm_state *a, struct fsm_state *b) {
 
 /* Return true if the edges after o contains state */
 /* TODO: centralise */
-static int contains(struct state_set *edges[], int o, struct fsm_state *state) {
+static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
 	int i;
 
 	assert(edges != NULL);
 	assert(state != NULL);
 
 	for (i = o; i <= FSM_EDGE_MAX; i++) {
-		if (set_contains(state, edges[i])) {
+		if (set_contains(state, edges[i].sl)) {
 			return 1;
 		}
 	}
@@ -60,17 +60,17 @@ static unsigned int counttargets(struct fsm_state *state) {
 	count = 0;
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		if (state->edges[i] == NULL) {
+		if (state->edges[i].sl == NULL) {
 			continue;
 		}
 
 		/* Distinct targets only */
-		if (contains(state->edges, i + 1, state->edges[i]->state)) {
+		if (contains(state->edges, i + 1, state->edges[i].sl->state)) {
 			continue;
 		}
 
 		/* Note that this assumes the state is a DFA state */
-		assert(state->edges[i]->next == NULL);
+		assert(state->edges[i].sl->next == NULL);
 
 		count++;
 	}
@@ -92,7 +92,7 @@ static void remove(struct fsm *fsm, struct fsm_state *state) {
 
 			/* TODO: centralise */
 			for (i = 0; i <= FSM_EDGE_MAX; i++) {
-				set_free((*s)->edges[i]);
+				set_free((*s)->edges[i].sl);
 			}
 
 			free(*s);

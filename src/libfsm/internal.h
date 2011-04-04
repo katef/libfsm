@@ -16,13 +16,17 @@ enum fsm_edge_type {
 
 #define FSM_EDGE_MAX FSM_EDGE_EPSILON
 
+struct fsm_edge {
+	struct state_set *sl;
+};
+
 struct fsm_state {
 	unsigned int id;
 	int end;
 
 	struct opaque_set *ol;
 
-	struct state_set *edges[FSM_EDGE_MAX + 1];
+	struct fsm_edge edges[FSM_EDGE_MAX + 1];
 
 	struct fsm_state *next;
 };

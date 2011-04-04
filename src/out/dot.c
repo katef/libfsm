@@ -123,14 +123,14 @@ static void escputs(const char *s, FILE *f) {
 }
 
 /* Return true if the edges after o contains state */
-static int contains(struct state_set *edges[], int o, struct fsm_state *state) {
+static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
 	int i;
 
 	assert(edges != NULL);
 	assert(state != NULL);
 
 	for (i = o; i <= FSM_EDGE_MAX; i++) {
-		if (set_contains(state, edges[i])) {
+		if (set_contains(state, edges[i].sl)) {
 			return 1;
 		}
 	}
@@ -149,7 +149,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 	/* TODO: findany() here? */
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		for (e = s->edges[i]; e; e = e->next) {
+		for (e = s->edges[i].sl; e; e = e->next) {
 			assert(e->state != NULL);
 
 			/*
@@ -178,7 +178,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 				/* find all edges which go to this state */
 				fprintf(f, "\t%-2u -> %-2u [ label = \"", s->id, e->state->id);
 				for (k = 0; k <= FSM_EDGE_MAX; k++) {
-					for (e2 = s->edges[k]; e2; e2 = e2->next) {
+					for (e2 = s->edges[k].sl; e2; e2 = e2->next) {
 						if (e2->state == e->state) {
 							bm_set(&bm, k);
 						}

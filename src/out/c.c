@@ -36,32 +36,32 @@ static const struct fsm_state *findany(const struct fsm_state *state) {
 	assert(state != NULL);
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (state->edges[i] == NULL) {
+		if (state->edges[i].sl== NULL) {
 			return NULL;
 		}
 
-		for (e = state->edges[i]; e; e = e->next) {
-			if (e->state != state->edges[0]->state) {
+		for (e = state->edges[i].sl; e; e = e->next) {
+			if (e->state != state->edges[0].sl->state) {
 				return NULL;
 			}
 		}
 	}
 
-	assert(state->edges[0] != NULL);
+	assert(state->edges[0].sl != NULL);
 
-	return state->edges[0]->state;
+	return state->edges[0].sl->state;
 }
 
 /* Return true if the edges after o contains state */
 /* TODO: centralise */
-static int contains(struct state_set *edges[], int o, struct fsm_state *state) {
+static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
 	int i;
 
 	assert(edges != NULL);
 	assert(state != NULL);
 
 	for (i = o; i <= UCHAR_MAX; i++) {
-		if (set_contains(state, state->edges[i])) {
+		if (set_contains(state, edges[i].sl)) {
 			return 1;
 		}
 	}
@@ -78,7 +78,7 @@ static void singlecase(FILE *f, struct fsm_state *state) {
 
 	/* TODO: move this out into a count function */
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (state->edges[i] != NULL) {
+		if (state->edges[i].sl != NULL) {
 			break;
 		}
 	}
@@ -97,26 +97,26 @@ static void singlecase(FILE *f, struct fsm_state *state) {
 	/* usual case */
 	if (to == NULL) {
 		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (state->edges[i] == NULL) {
+			if (state->edges[i].sl == NULL) {
 				continue;
 			}
 
-			assert(state->edges[i]->state != NULL);
-			assert(state->edges[i]->next  == NULL);
+			assert(state->edges[i].sl->state != NULL);
+			assert(state->edges[i].sl->next  == NULL);
 
 			fprintf(f, "\t\t\tcase '");
 			escputc(i, f);
 			fprintf(f, "':");
 
 			/* non-unique states fall through */
-			if (contains(state->edges, i + 1, state->edges[i]->state)) {
+			if (contains(state->edges, i + 1, state->edges[i].sl->state)) {
 				fprintf(f, "\n");
 				continue;
 			}
 
 			/* TODO: pass S%u out to maximum state width */
-			if (state->edges[i]->state->id != state->id) {
-				fprintf(f, " state = S%u; continue;\n", state->edges[i]->state->id);
+			if (state->edges[i].sl->state->id != state->id) {
+				fprintf(f, " state = S%u; continue;\n", state->edges[i].sl->state->id);
 			} else {
 				fprintf(f, "             continue;\n");
 			}
@@ -193,8 +193,6 @@ void out_c(const struct fsm *fsm, FILE *f) {
 	assert(fsm_isdfa(fsm));
 
 	/* TODO: prerequisite that the FSM is a DFA */
-
-	/* TODO: prerequisite that edges are single characters */
 
 	/* TODO: pass in %s prefix (default to "fsm_") */
 

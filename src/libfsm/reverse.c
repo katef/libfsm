@@ -16,7 +16,7 @@ static int incomingedges(struct fsm *fsm, struct fsm_state *state) {
 
 	for (s = fsm->sl; s; s = s->next) {
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			if (set_contains(state, s->edges[i])) {
+			if (set_contains(state, s->edges[i].sl)) {
 				return 1;
 			}
 		}
@@ -93,7 +93,7 @@ fsm_reverse(struct fsm *fsm)
 			assert(to != NULL);
 
 			for (i = 0; i <= FSM_EDGE_MAX; i++) {
-				for (e = s->edges[i]; e; e = e->next) {
+				for (e = s->edges[i].sl; e; e = e->next) {
 					struct fsm_state *from;
 
 					assert(e->state != NULL);

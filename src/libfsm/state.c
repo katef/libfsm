@@ -122,7 +122,7 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 		}
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (s = m->old->edges[i]; s; s = s->next) {
+			for (s = m->old->edges[i].sl; s; s = s->next) {
 				struct mapping *to;
 
 				assert(s->state != NULL);
