@@ -17,7 +17,8 @@ enum fsm_edge_type {
 #define FSM_EDGE_MAX FSM_EDGE_EPSILON
 
 struct fsm_edge {
-	struct state_set *sl;
+	struct state_set  *sl;
+	struct opaque_set *ol;
 };
 
 struct fsm_state {

@@ -257,6 +257,7 @@ fsm_addstateid(struct fsm *fsm, unsigned int id)
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			new->edges[i].sl = NULL;
+			new->edges[i].ol = NULL;
 		}
 
 		new->next = fsm->sl;

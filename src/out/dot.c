@@ -139,6 +139,30 @@ static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
 	return 0;
 }
 
+static void printopaques(const struct fsm *fsm, const struct opaque_set *ol, FILE *f) {
+	const struct opaque_set *o;
+
+	assert(fsm != NULL);
+	assert(f != NULL);
+
+	if (ol == NULL) {
+		return;
+	}
+
+	fprintf(f, "<font point-size=\"12\">");
+
+	for (o = ol; o; o = o->next) {
+		/* TODO: html escapes */
+		escputs(o->opaque, f);
+
+		if (o->next != NULL) {
+			fprintf(f, ",");
+		}
+	}
+
+	fprintf(f, "</font>");
+}
+
 static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 	struct state_set *e;
 	int i;
@@ -146,6 +170,20 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 	assert(fsm != NULL);
 	assert(f != NULL);
 	assert(s != NULL);
+
+	if (s->ol != NULL) {
+		fprintf(f, "\t%-2u [ label = <", s->id);
+
+		if (!fsm->options.anonymous_states) {
+			fprintf(f, "%2u", s->id);
+
+			fprintf(f, "<br/>");
+		}
+
+		printopaques(fsm, s->ol, f);
+
+		fprintf(f, "> ];\n");
+	}
 
 	/* TODO: findany() here? */
 
@@ -174,10 +212,21 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 					continue;
 				}
 
+				/*
+				 * Currently edges' opaques are inherited from their "from"
+				 * states, so we can assume each edge has an identical opaque
+				 * set per consolidated group of edges.
+				 *
+				 * If the ability is ever added for arbitary opaques to be
+				 * assigned to edges, than that assumption breaks, and this
+				 * code will need to repeat for each distinct opaque set within
+				 * that consolidated group.
+				 */
+
 				bm = bm_empty;
 
 				/* find all edges which go to this state */
-				fprintf(f, "\t%-2u -> %-2u [ label = \"", s->id, e->state->id);
+				fprintf(f, "\t%-2u -> %-2u [ label = <", s->id, e->state->id);
 				for (k = 0; k <= FSM_EDGE_MAX; k++) {
 					for (e2 = s->edges[k].sl; e2; e2 = e2->next) {
 						if (e2->state == e->state) {
@@ -218,11 +267,22 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 					}
 				}
 
-				fprintf(f, "\" ];\n");
+				if (s->ol != NULL) {
+					fprintf(f, "<br/>");
+					printopaques(fsm, s->ol, f);
+				}
+
+				fprintf(f, "> ];\n");
 			} else {
-				fprintf(f, "\t%-2u -> %-2u [ label = \"", s->id, e->state->id);
+				fprintf(f, "\t%-2u -> %-2u [ label = <", s->id, e->state->id);
 				escputc(i, f);
-				fprintf(f, "\" ];\n");
+
+				if (s->ol != NULL) {
+					fprintf(f, "<br/>");
+					printopaques(fsm, s->ol, f);
+				}
+
+				fprintf(f, "> ];\n");
 			}
 		}
 	}
@@ -253,15 +313,7 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "\n");
 
 	for (s = fsm->sl; s; s = s->next) {
-		struct opaque_set *o;
-
 		singlestate(fsm, f, s);
-
-		for (o = s->ol; o; o = o->next) {
-			fprintf(f, "\t%-2u [ color = \"", s->id);
-			escputs(o->opaque, f);
-			fprintf(f, "\" ];\n");
-		}
 
 		if (fsm_isend(fsm, s)) {
 			fprintf(f, "\t%-2u [ shape = doublecircle ];\n", s->id);
