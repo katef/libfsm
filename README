@@ -1,0 +1,25 @@
+lexing is the process of categorising a stream of items by their spellings. The output from this process is a stream of tokens, each of a specific lexeme category, which are most commonly input to a parser which would be responsible for asserting the order of these tokens is valid.
+
+lx is an attempt to produce a simple, expressive, and unobtrusive lexer generator which is good at lexing, does just lexing, is language independant, and has no other features.
+
+
+
+generated API:
+ * buffer: user-definable of a maximum length, or resizable by some callback (realloc-compatible)
+ * getc: state kept by an opaque void *; pass a string or a FILE *, and a callback to traverse it
+
+
+keywords: have order in the .lx file determine precidence: i'm not sure
+consider /if|else|for|while|each/ -> $keyword; /([a-z_][a-z0-9_]*)/i -> $ident;
+
+
+limitations:
+
+handling string escapes:
+there are three options:
+ 1. have the lexer map down escapes and yield one token (lx cannot do this)
+ 2. pass the string as one token as-is, and have the parser map-down escapes
+ 3. pass the string as a stream of tokens
+lx permits #2 or #3, the way i have it atm
+#1 would require introducing actions, which i don't want to do
+
