@@ -1,0 +1,127 @@
+/* $Id$ */
+
+ARGUMENT lex_state: lex_statep;
+
+HEADERS = @{
+
+	#include <assert.h>
+	#include <stdio.h>
+	#include <stdlib.h>
+	#include <string.h>
+
+	#include "parser.h"
+
+	#define lexi_unknown_token lex_unknown
+
+	struct lex_state {
+		struct lexi_state lexi_state;
+		char tokbuf[20];
+		FILE *file;
+	};
+
+	static void push(struct lex_state *lex_state, int c) {
+		size_t l;
+
+		assert(lex_state != NULL);
+
+		l = strlen(lex_state->tokbuf);
+		if (l == sizeof lex_state->tokbuf) {
+			fprintf(stderr, "token buffer full\n");
+			exit(1);
+		}
+
+		lex_state->tokbuf[l] = c;
+		lex_state->tokbuf[l + 1] = '\0';
+	}
+
+	static int lexi_getchar(struct lexi_state *state) {
+		int c;
+
+		assert(state != NULL);
+		assert(state->lex_state != NULL);
+		assert(state->lex_state->file != NULL);
+
+		c = fgetc(state->lex_state->file);
+		if (c == EOF) {
+			return LEXI_EOF;
+		}
+
+		return c;
+	}
+
+@}, @{
+
+	#include <stdio.h>
+
+	typedef struct lex_state * lex_statep;
+
+	struct lex_state *lex_init(FILE *f);
+	int lex_nexttoken(struct lex_state *state);
+	void lex_free(struct lex_state *state);
+	const char *lex_tokbuf(struct lex_state *state);
+
+@};
+
+TRAILERS = @{
+
+	struct lex_state *lex_init(FILE *f) {
+		struct lex_state *new;
+
+		assert(f != NULL);
+
+		new = malloc(sizeof *new);
+		if (new == NULL) {
+			return NULL;
+		}
+
+		new->file = f;
+
+		lexi_init(&new->lexi_state, new);
+
+		return new;
+	}
+
+	int lex_nexttoken(struct lex_state *state) {
+		assert(state != NULL);
+
+		return lexi_read_token(&state->lexi_state);
+	}
+
+	void lex_free(struct lex_state *state) {
+		assert(state != NULL);
+
+		free(state);
+	}
+
+	const char *lex_tokbuf(struct lex_state *state) {
+		assert(state != NULL);
+
+		return state->tokbuf;
+	}
+
+@}, @{
+@};
+
+ACTION flush = @{
+	state->lex_state->tokbuf[0] = '\0';
+@};
+
+ACTION push: (c :CHARACTER) -> () = @{
+	push(state->lex_state, c0);	/* XXX c0 hack */
+@};
+
+ACTION read_id: (c :CHARACTER) -> () = @{
+	int c;
+
+	/* XXX: c0 hack */
+	for (c = c0; lexi_group(lexi_group_alnum, c); c = lexi_readchar(state)) {
+		push(state->lex_state, c);
+	}
+
+	if (c == LEXI_EOF) {
+		return lex_eof;
+	}
+
+	lexi_push(state, c);
+@};
+

@@ -1,0 +1,156 @@
+/* $Id$ */
+
+%types%
+
+%terminals%
+
+	pattern_regex;
+	pattern_literal;
+
+	map;
+	to;
+	semi;
+	alt;
+	token_name;
+
+	open;
+	close;
+
+	!unknown;
+	eof;
+
+%productions%
+
+	<err-syntax>;
+	<err-expected-alt>;
+	<err-expected-map>;
+	<err-expected-semi>;
+	<err-expected-to>;
+	<err-expected-open>;
+	<err-expected-close>;
+
+	<err-expected-name>;
+	<err-expected-list>;
+
+
+	token-mapping [
+
+		pattern = {
+			pattern_literal;
+		||
+			pattern_regex;
+		};
+
+		concaternated-patterns = {
+			pattern;
+		||
+			concaternated-patterns;
+			pattern;
+		};
+
+		alternative-patterns = {
+			concaternated-patterns;
+		||
+			alternative-patterns;
+
+			{
+				alt;
+			##
+				<err-expected-alt>;
+			};
+
+			concaternated-patterns;
+		};
+
+	] = {
+		alternative-patterns;
+
+		{
+			$;
+		||
+			{
+				map;
+			##
+				<err-expected-map>;
+			};
+
+			token_name;
+		##
+			<err-expected-name>;
+		};
+	};
+
+	list-of-things [
+
+		token-thing = {
+			token-mapping;
+
+			{
+				semi;
+			##
+				<err-expected-semi>;
+			};
+		};
+
+		zone-thing = {
+			token-mapping;
+
+			{
+				to;
+			##
+				<err-expected-to>;
+			};
+
+			token-mapping;
+
+			{
+				{
+					semi;
+				##
+					<err-expected-semi>;
+				};
+			||
+				{
+					open;
+				##
+					<err-expected-open>;
+				};
+
+				list-of-things;
+
+				{
+					close;
+				##
+					<err-expected-close>;
+				};
+			##
+				<err-expected-list>;
+			};
+		};
+
+		thing = {
+			token-thing;
+		||
+			zone-thing;
+		};
+
+	] = {
+		thing;
+	||
+		list-of-things;
+		thing;
+	##
+		<err-expected-list>;
+	};
+
+	lx = {
+		list-of-things;
+		eof;
+	##
+		<err-syntax>;
+	};
+
+%entry%
+
+	lx;
+

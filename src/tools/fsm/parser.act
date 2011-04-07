@@ -1,0 +1,273 @@
+/* $Id$ */
+
+/* TODO: this shouldn't exit(); implement panic mode instead */
+
+%prefixes%
+
+	terminal = lex_;
+	function = p_;
+
+%persistents%
+
+	fsm :fsm;
+	lex_state :lex_state;
+	act_state :act_state;
+
+%maps%
+
+	string -> string;
+	state  -> state;
+
+%header% @{
+
+	#include <assert.h>
+	#include <stdio.h>
+	#include <stdlib.h>
+	#include <string.h>
+
+	#include <fsm/fsm.h>
+
+	#include "../libfsm/xalloc.h"
+
+	#include "lexer.h"
+	#include "parser.h"
+
+	typedef char *             string;
+	typedef struct fsm_state * state;
+
+	struct act_state {
+		int lex_tok;
+		int lex_tok_save;
+		struct act_statelist *sl;
+	};
+
+	struct act_statelist {
+		char *id;
+		struct fsm_state *state;
+		struct act_statelist *next;
+	};
+
+	#define CURRENT_TERMINAL (act_state->lex_tok)
+	#define ERROR_TERMINAL   lex_unknown
+	#define ADVANCE_LEXER    do { act_state->lex_tok = lex_nexttoken(lex_state); } while (0)
+	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok;  \
+	                              act_state->lex_tok = tok;                      } while (0)
+	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save;  } while (0)
+
+	static void err_expected(const char *token) {
+		fprintf(stderr, "syntax error: expected %s\n", token);
+		exit(EXIT_FAILURE);
+	}
+
+@}, @{
+
+	typedef struct fsm *       fsm;
+	typedef struct lex_state * lex_state;
+	typedef struct act_state * act_state;
+
+	/*
+	 * Parse .fsm input from the given file stream. The fsm passed is expected to
+	 * have been created by fsm_new(); it should not have any existing states.
+	 * TODO: Have this create an fsm, instead
+	 */
+	struct fsm *
+	fsm_parse(struct fsm *fsm, FILE *f);
+
+@};
+
+%terminals%
+
+	ident: () -> (s :string) = @{
+		@s = xstrdup(lex_tokbuf(lex_state));
+		if (@s == NULL) {
+			perror("xstrdup");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
+	label: () -> (s :string) = @{
+		@s = xstrdup(lex_tokbuf(lex_state));
+		if (@s == NULL) {
+			perror("xstrdup");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
+%actions%
+
+	<add-state>: (n :string) -> (s :state) = @{
+		struct act_statelist *p;
+
+		assert(@n != NULL);
+
+		for (p = act_state->sl; p != NULL; p = p->next) {
+			assert(p->id != NULL);
+			assert(p->state != NULL);
+
+			if (0 == strcmp(p->id, @n)) {
+				@s = p->state;
+				break;
+			}
+		}
+
+		if (p == NULL) {
+			struct act_statelist *new;
+
+			new = malloc(sizeof *new);
+			if (new == NULL) {
+				perror("malloc");
+				exit(EXIT_FAILURE);
+			}
+
+			new->id = xstrdup(@n);
+			if (new->id == NULL) {
+				perror("xstrdup");
+				exit(EXIT_FAILURE);
+			}
+
+			@s = fsm_addstate(fsm);
+			if (@s == NULL) {
+				perror("fsm_addstate");
+				exit(EXIT_FAILURE);
+			}
+
+			new->state = @s;
+
+			new->next = act_state->sl;
+			act_state->sl = new;
+		}
+	@};
+
+	<mark-start>: (s :state) -> () = @{
+		assert(@s != NULL);
+
+		fsm_setstart(fsm, @s);
+	@};
+
+	<mark-end>: (s :state) -> () = @{
+		assert(@s != NULL);
+
+		fsm_setend(fsm, @s, 1);
+	@};
+
+	<free>: (s :string) -> () = @{
+		free(@s);
+	@};
+
+	<free-statelist> = @{
+		struct act_statelist *p;
+		struct act_statelist *next;
+
+		for (p = act_state->sl; p != NULL; p = next) {
+			next = p->next;
+
+			assert(p->id != NULL);
+
+			free(p->id);
+			free(p);
+		}
+	@};
+
+	<mark-colour>: (s :state, o :string) -> () = @{
+		assert(@s != NULL);
+		assert(@o != NULL);
+
+		if (!fsm_addopaque(fsm, @s, @o)) {
+			perror("fsm_addopaque");
+			@!;
+		}
+	@};
+
+	<add-edge-literal>: (x :state, y :state, s :string) -> () = @{
+		assert(@s != NULL);
+
+		/* TODO: convert to single char in the grammar? */
+		if (strlen(@s) != 1) {
+			fprintf(stderr, "edge literals must have exactly one character\n");
+			@!;
+		}
+
+		if (!fsm_addedge_literal(fsm, @x, @y, @s[0])) {
+			perror("fsm_addedge_literal");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
+	<add-edge-any>: (x :state, y :state) -> () = @{
+		if (!fsm_addedge_any(fsm, @x, @y)) {
+			perror("fsm_addedge_any");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
+	<add-edge-epsilon>: (x :state, y :state) -> () = @{
+		if (!fsm_addedge_epsilon(fsm, @x, @y)) {
+			perror("fsm_addedge_epsilon");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
+
+	<err-expected-sep> = @{
+		err_expected("';'");
+	@};
+
+	<err-expected-trans> = @{
+		err_expected("transition");
+	@};
+
+	<err-expected-comma> = @{
+		err_expected("','");
+	@};
+
+	<err-expected-equals> = @{
+		err_expected("'='");
+	@};
+
+	<err-expected-start> = @{
+		err_expected("'start:'");
+	@};
+
+	<err-expected-end> = @{
+		err_expected("'end:'");
+	@};
+
+	<err-parse> = @{
+		fprintf(stderr, "parse error\n");
+		exit(EXIT_FAILURE);
+	@};
+
+%trailer% @{
+
+	struct fsm *fsm_parse(struct fsm *fsm, FILE *f) {
+		struct act_state act_state_s;
+		struct act_state *act_state;
+		struct lex_state *lex_state;
+
+		assert(fsm != NULL);
+		assert(f != NULL);
+
+		/* TODO: perhaps create the fsm struct here, rather than passing one in */
+
+		act_state_s.sl = NULL;
+
+		lex_state = lex_init(f);
+		if (lex_state == NULL) {
+			perror("lex_init");
+			return NULL;
+		}
+
+		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
+		act_state = &act_state_s;
+
+		ADVANCE_LEXER;
+		p_fsm(fsm, lex_state, act_state);
+
+		lex_free(lex_state);
+
+		return fsm;
+	}
+
+@}, @{
+@};
+
