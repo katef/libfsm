@@ -1,0 +1,96 @@
+/* $Id$ */
+
+%types%
+
+	char;
+	unsigned;
+	fsm_state;
+	grp;
+
+%terminals%
+
+	!SOL: () -> (:char);
+	!EOL: () -> (:char);
+	!QMARK;
+	!STAR;
+	!PLUS;
+	!DOT;
+	!ALT;
+	!SEP;
+	!OPEN_SUB;   !CLOSE_SUB;
+	!OPEN_GROUP; !CLOSE_GROUP;
+	!COUNT: () -> (:unsigned);
+	CHAR: () -> (:char);
+	EOF;
+	!ERROR;
+
+%productions%
+
+	<make-states>: () -> (:fsm_state, :fsm_state);
+
+	!<make-group>: () -> (:grp);
+	!<free-group>: (:grp) -> ();
+	!<invert-group>: (:grp) -> ();
+	!<group-add-char>: (:grp, :char) -> ();
+	!<group-add-range>: (:grp, :char, :char) -> ();
+	!<group-to-states>: (:grp, :fsm_state, :fsm_state) -> ();
+
+	<add-concat>: () -> (:fsm_state);
+	<add-epsilon>: (:fsm_state, :fsm_state) -> ();
+	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
+	!<add-any>: (:fsm_state, :fsm_state) -> ();
+
+	!<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
+	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
+	!<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
+	!<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
+	<count-1>: (:fsm_state, :fsm_state) -> ();
+
+	!<err-expected-term>;
+	!<err-expected-count>;
+	<err-expected-items>;
+	!<err-expected-alts>;
+	<err-expected-eof>;
+
+	list-of-literals: (x :fsm_state, y :fsm_state) -> () [
+
+		literal: (x :fsm_state, y :fsm_state) -> () = {
+			c = CHAR;
+			<add-literal>(x, y, c);
+			<count-1>(x, y);
+		};
+
+	] = {
+		z = <add-concat>;
+		literal(x, z);
+
+		{
+			list-of-literals(z, y);
+		||
+			/* TODO: I don't like this. refactor somehow? */
+			<add-epsilon>(z, y);
+		};
+	};
+
+	re_literal: () -> () = {
+		(x, y) = <make-states>;
+
+		{
+			list-of-literals(x, y);
+		||
+			<add-epsilon>(x, y);
+		##
+			<err-expected-items>;	/* TODO: inappropiate? */
+		};
+
+		{
+			EOF;
+		##
+			<err-expected-eof>;
+		};
+	};
+
+%entry%
+
+	re_literal;
+

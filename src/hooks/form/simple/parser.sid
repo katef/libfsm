@@ -1,0 +1,229 @@
+/* $Id$ */
+
+/*
+ * TODO: explain choices. e.g. i'm not permitting () or ||. only the root expression is allowed to be empty.
+ * TODO: explain strategy: pass in x,y endpoints top-down
+ */
+
+%types%
+
+	char;
+	unsigned;
+	fsm_state;
+	grp;
+
+%terminals%
+
+	SOL: () -> (:char);
+	EOL: () -> (:char);
+	QMARK;
+	STAR;
+	PLUS;
+	DOT;
+	ALT;
+	RANGESEP;
+	COUNTSEP;
+	OPEN_SUB;   CLOSE_SUB;
+	OPEN_GROUP; CLOSE_GROUP;
+	OPEN_COUNT; CLOSE_COUNT;
+	COUNT: () -> (:unsigned);
+	CHAR: () -> (:char);
+	EOF;
+	!ERROR;
+
+%productions%
+
+	<make-states>: () -> (:fsm_state, :fsm_state);
+
+	<make-group>: () -> (:grp);
+	<free-group>: (:grp) -> ();
+	<invert-group>: (:grp) -> ();
+	<group-add-char>: (:grp, :char) -> ();
+	<group-add-range>: (:grp, :char, :char) -> ();
+	<group-to-states>: (:grp, :fsm_state, :fsm_state) -> ();
+
+	<add-concat>: () -> (:fsm_state);
+	<add-epsilon>: (:fsm_state, :fsm_state) -> ();
+	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
+	<add-any>: (:fsm_state, :fsm_state) -> ();
+
+	<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
+	<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
+	<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
+	<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
+	<count-1>: (:fsm_state, :fsm_state) -> ();
+
+	<err-expected-term>;
+	<err-expected-count>;
+	!<err-expected-items>;
+	<err-expected-alts>;
+	<err-expected-eof>;
+
+
+	list-of-alts: (:fsm_state, :fsm_state) -> ();
+
+	sub: (x :fsm_state, y :fsm_state) -> () = {
+		OPEN_SUB;
+
+		list-of-alts(x, y);
+
+		CLOSE_SUB;
+	};
+
+	group: (x :fsm_state, y :fsm_state) -> () [
+
+		list-of-terms: (g :grp) -> () [
+
+			char: () -> (c :char) = {
+				c = CHAR;
+			};
+
+			range: () -> (a :char, b :char) = {
+				a = CHAR;
+				RANGESEP;
+				b = CHAR;
+			};
+
+			term: (g :grp) -> () = {
+				c = char;
+				<group-add-char>(g, c);
+			||
+				(a, b) = range;
+				<group-add-range>(g, a, b);
+			##
+				<err-expected-term>;
+			};
+
+		] = {
+			term(g);
+		||
+			list-of-terms(g);
+			term(g);
+		};
+
+	] = {
+		OPEN_GROUP;
+
+		g = <make-group>;
+
+		/* not */
+		{
+			! = SOL;
+			<invert-group>(g);
+		||
+			$;
+		};
+
+		list-of-terms(g);
+
+		<group-to-states>(g, x, y);
+
+		<free-group>(g);
+
+		CLOSE_GROUP;
+	};
+
+	literal: (x :fsm_state, y :fsm_state) -> () = {
+		{
+			c = SOL;
+		||
+			c = EOL;
+		||
+			c = CHAR;
+		};
+		<add-literal>(x, y, c);
+	};
+
+	any: (x :fsm_state, y :fsm_state) -> () = {
+		DOT;
+		<add-any>(x, y);
+	};
+
+	list-of-alts: (x :fsm_state, y :fsm_state) -> () [
+
+		item: (x :fsm_state, y :fsm_state &) -> () = {
+			{
+				sub(x, y);
+			||
+				group(x, y);
+			||
+				literal(x, y);
+			||
+				any(x, y);
+			};
+
+			{
+				OPEN_COUNT;
+				n = COUNT;
+				CLOSE_COUNT;
+				<count-m-to-n>(x, &y, n, n);
+			||
+				OPEN_COUNT;
+				m = COUNT;
+				COUNTSEP;
+				n = COUNT;
+				CLOSE_COUNT;
+				<count-m-to-n>(x, &y, m, n);
+			||
+				QMARK;
+				<count-0-or-1>(x, y);
+			||
+				STAR;
+				<count-0-or-many>(x, &y);
+			||
+				PLUS;
+				<count-1-or-many>(x, &y);
+			||
+				<count-1>(x, y);
+			##
+				<err-expected-count>;
+			};
+		};
+
+		list-of-items: (x :fsm_state, y :fsm_state) -> () = {
+			z = <add-concat>;
+
+			item(x, &z);
+
+			/* TODO: I don't like this. Refactor somehow? */
+			{
+				<add-epsilon>(z, y);
+			||
+				list-of-items(z, y);
+			};
+		};
+
+		alt: (x :fsm_state, y :fsm_state) -> () = {
+			list-of-items(x, y);
+		};
+
+	] = {
+		alt(x, y);
+	||
+		list-of-alts(x, y);
+		ALT;
+		alt(x, y);
+	};
+
+	re_simple: () -> () = {
+		(x, y) = <make-states>;
+
+		{
+			list-of-alts(x, y);
+		||
+			<add-epsilon>(x, y);
+		##
+			<err-expected-alts>;
+		};
+
+		{
+			EOF;
+		##
+			<err-expected-eof>;
+		};
+	};
+
+%entry%
+
+	re_simple;
+
