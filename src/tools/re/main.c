@@ -8,7 +8,7 @@
 #include <fsm/out.h>
 #include <re/re.h>
 
-#include "../libre/internal.h"	/* XXX */
+#include "libre/internal.h"	/* XXX */
 
 /*
  * TODO: match a regexp against arguments. return $? if all match

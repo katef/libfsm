@@ -7,7 +7,7 @@
 #include <fsm/fsm.h>
 #include <fsm/graph.h>
 
-#include "out/out.h"
+#include "out.h"
 #include "libfsm/set.h"
 #include "libfsm/opaque.h"
 #include "libfsm/internal.h"

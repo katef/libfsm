@@ -27,7 +27,7 @@
 
 	#include <fsm/fsm.h>
 
-	#include "../libfsm/xalloc.h"
+	#include "libfsm/xalloc.h"
 
 	#include "lexer.h"
 	#include "parser.h"

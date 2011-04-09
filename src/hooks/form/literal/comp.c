@@ -6,7 +6,7 @@
 #include <re/re.h>
 #include <fsm/fsm.h>
 
-#include "../../libre/internal.h"
+#include "libre/internal.h"
 #include "../comp.h"
 
 #include "lexer.h"

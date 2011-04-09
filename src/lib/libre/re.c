@@ -16,7 +16,7 @@
 
 #include "internal.h"
 
-#include "../form/comp.h"
+#include "form/comp.h"
 
 struct re *
 re_new_empty(void)

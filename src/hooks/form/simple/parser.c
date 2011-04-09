@@ -23,7 +23,7 @@
 	#include "parser.h"
 	#include "lexer.h"
 
-	#include "../libre/internal.h"
+	#include "libre/internal.h"
 
 	typedef char     t_char;
 	typedef unsigned t_unsigned;

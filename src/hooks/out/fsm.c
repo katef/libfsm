@@ -5,7 +5,7 @@
 
 #include <fsm/fsm.h>
 
-#include "out/out.h"
+#include "out.h"
 #include "libfsm/internal.h"
 #include "libfsm/set.h"
 #include "libfsm/opaque.h"
