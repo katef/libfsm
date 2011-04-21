@@ -39,6 +39,27 @@ set_addstate(struct state_set **head, struct fsm_state *state)
 }
 
 void
+set_remove(struct state_set **head, struct fsm_state *state)
+{
+	struct state_set **p;
+	struct state_set *next;
+
+	assert(head != NULL);
+	assert(state != NULL);
+
+	for (p = head; *p; p = &(*p)->next) {
+		next = (*p)->next;
+
+		free(*p);
+
+		*p = next;
+
+		assert(!set_contains(state, *head));
+		return;
+	}
+}
+
+void
 set_free(struct state_set *set)
 {
 	struct state_set *p;

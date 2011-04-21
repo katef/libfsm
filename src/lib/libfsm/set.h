@@ -13,6 +13,9 @@ struct state_set *
 set_addstate(struct state_set **head, struct fsm_state *state);
 
 void
+set_remove(struct state_set **head, struct fsm_state *state);
+
+void
 set_free(struct state_set *set);
 
 /*
