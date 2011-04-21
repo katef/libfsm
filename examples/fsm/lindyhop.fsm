@@ -1,0 +1,15 @@
+# $Id$
+
+closed -> open   'swingout';
+open   -> closed 'lindycircle';
+open   -> open   'lindyturn';
+
+closed -> open   'send-out';
+open   -> closed 'bring-in';
+
+closed -> open   'american spin';
+closed -> closed 'american spin';
+
+closed -> open   'tuck turn';
+closed -> closed 'jigwalk';
+

@@ -1,0 +1,12 @@
+# $Id$
+
+1->2;
+a->'b';
+
+abc -> def 'x';
+"def" -> xyz 'y';
+
+start: abc;
+end: def;
+
+
