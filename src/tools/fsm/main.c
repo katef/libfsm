@@ -20,6 +20,14 @@ void usage(void) {
 	printf("usage: fsm [-chadmr] [-l <language] [-e <execution> | -q <query] [-u <input>] [<input> [<output>]]\n");
 }
 
+static int opaque_comp(const struct fsm *fsm, void *a, void *b) {
+	assert(fsm != NULL);
+	assert(a != NULL);
+	assert(b != NULL);
+
+	return 0 == strcmp(a, b);
+}
+
 static void union_parse(struct fsm *fsm, FILE *f, char *colour) {
 	struct fsm *tmp;
 
@@ -33,6 +41,8 @@ static void union_parse(struct fsm *fsm, FILE *f, char *colour) {
 		perror("fsm_new");
 		exit(EXIT_FAILURE);
 	}
+
+	fsm_setcompare(fsm, opaque_comp);
 
 	fsm_parse(tmp, f);	/* TODO: error-check */
 
@@ -90,6 +100,8 @@ int main(int argc, char *argv[]) {
 		perror("fsm_new");
 		exit(EXIT_FAILURE);
 	}
+
+	fsm_setcompare(fsm, opaque_comp);
 
 	{
 		int c;

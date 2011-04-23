@@ -26,7 +26,7 @@ static int fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state
 	}
 
 	for (o = from->ol; o != NULL; o = o->next) {
-		if (!set_addopaque(&edge->ol, o)) {
+		if (!set_addopaque(fsm, &edge->ol, o)) {
 			/* XXX */
 			return 0;
 		}

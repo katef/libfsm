@@ -7,7 +7,7 @@
 #include "opaque.h"
 
 struct opaque_set *
-set_addopaque(struct opaque_set **head, void *opaque)
+set_addopaque(const struct fsm *fsm, struct opaque_set **head, void *opaque)
 {
 	struct opaque_set *new;
 
@@ -18,7 +18,7 @@ set_addopaque(struct opaque_set **head, void *opaque)
 		struct opaque_set *p;
 
 		for (p = *head; p; p = p->next) {
-			if (p->opaque == opaque) {
+			if (opaque_comp(fsm, p->opaque, opaque)) {
 				return p;
 			}
 		}
@@ -50,5 +50,17 @@ set_freeopaques(struct opaque_set *set)
 		next = p->next;
 		free(p);
 	}
+}
+
+int
+opaque_comp(const struct fsm *fsm, void *a, void *b)
+{
+	assert(fsm != NULL);
+
+	if (fsm->comp == NULL) {
+		return a == b;
+	}
+
+	return fsm->comp(fsm, a, b);
 }
 

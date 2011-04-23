@@ -47,6 +47,7 @@ fsm_new(void)
 	new->sl      = NULL;
 	new->start   = NULL;
 	new->options = default_options;
+	new->comp    = NULL;
 
 	return new;
 }
@@ -379,6 +380,15 @@ fsm_addopaque(struct fsm *fsm, struct fsm_state *state, void *opaque)
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	return !!set_addopaque(&state->ol, opaque);
+	return !!set_addopaque(fsm, &state->ol, opaque);
+}
+
+void
+fsm_setcompare(struct fsm *fsm,
+	int (*comp)(const struct fsm *fsm, void *a, void *b))
+{
+	assert(fsm != NULL);
+
+	fsm->comp = comp;
 }
 

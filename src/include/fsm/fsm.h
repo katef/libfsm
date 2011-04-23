@@ -177,15 +177,27 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
  * Store and retrieve user-specified opaque data per-state. Multiple opaque
  * values may be stored. Duplicate values are disregarded and silently succeed.
  *
- * Caveats apply during graph operations (such as minimization and conversion
- * from NFA to DFA); when states are to be merged to produce one output state,
- * all their opaque values must be identical, if non-NULL. If not, those
- * processes will fail; see <fsm/graph.h> for details.
- *
  * Returns false on error; see errno.
  */
 int
 fsm_addopaque(struct fsm *fsm, struct fsm_state *state, void *opaque);
+
+/*
+ * Assign a callback used to compare opaque values (as per fsm_addopaque). This
+ * will be used by any internal operations which need to test for equality of
+ * opaque values.
+ *
+ * A "shallow" comparison by pointer value is performed if set NULL, which is
+ * the default.
+ *
+ * The callbck is expected to return true if the opaque values are considered
+ * equivalent, and false otherwise.
+ *
+ * You may not modify the fsm from within the comparison callback.
+ */
+void
+fsm_setcompare(struct fsm *fsm,
+	int (*comp)(const struct fsm *fsm, void *a, void *b));
 
 #endif
 

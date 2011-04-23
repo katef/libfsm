@@ -37,6 +37,8 @@ struct fsm {
 	struct fsm_state *sl;
 	struct fsm_state *start;
 	struct fsm_options options;
+
+	int (*comp)(const struct fsm *fsm, void *a, void *b);
 };
 
 
