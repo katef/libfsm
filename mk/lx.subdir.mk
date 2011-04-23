@@ -19,7 +19,6 @@
 .for target in all doc clean install install-doc regen regen-clean
 ${target}::
 . for dir in ${SUBDIR}
-	@${ECHO} "==> Entering ${SRCDIR}/${dir}"
 	@cd ${CURDIR}/${dir}; ${MAKE} ${.TARGET}
 . endfor
 .endfor

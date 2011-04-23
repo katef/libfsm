@@ -22,14 +22,12 @@ ${OBJ_SDIR}/${PROG}: ${OBJ_SDIR}/${obj}
 
 ${OBJ_SDIR}/${PROG}:
 	@${MKDIR} ${OBJ_SDIR}
-	@${ECHO} "==> Linking ${SRCDIR}/${PROG} executable"
 	${CC} -o ${.TARGET} ${LDFLAGS} ${.ALLSRC} ${LIBS}
 
 all:: ${OBJ_SDIR}/${PROG}
 
 # TODO: if empty directory, also rmdir OBJ_SDIR (since we created it)
 clean::
-	@${ECHO} "==> Cleaning ${SRCDIR}/${PROG} executable"
 . if exists(${OBJ_SDIR}/${PROG}})
 	${RMFILE} ${OBJ_SDIR}/${PROG}
 . endif

@@ -28,12 +28,10 @@ ${OBJ_SDIR}/${LIB}.${LIBEXT_STATIC}:  ${OBJ_SDIR}/${obj}
 
 ${OBJ_SDIR}/${LIB}.${LIBEXT_DYNAMIC}:
 	@${MKDIR} ${OBJ_SDIR}
-	@${ECHO} "==> Linking ${SRCDIR}/${LIB} dynamic library"
 	${LD} -dylib -o ${.TARGET} ${LDFLAGS} -r ${.ALLSRC} ${LIBS}
 
 ${OBJ_SDIR}/${LIB}.${LIBEXT_STATIC}:
 	@${MKDIR} ${OBJ_SDIR}
-	@${ECHO} "==> Linking ${SRCDIR}/${LIB} static library"
 	${AR} -cr ${.TARGET} ${.ALLSRC}
 	${RANLIB} ${.TARGET}
 
@@ -42,7 +40,6 @@ all:: ${OBJ_SDIR}/${LIB}.${LIBEXT_STATIC}
 
 # TODO: if empty directory, also rmdir OBJ_SDIR (since we created it)
 clean::
-	@${ECHO} "==> Cleaning ${SRCDIR}/${LIB} libraries"
 . if exists(${OBJ_SDIR}/${LIB}.${LIBEXT_STATIC})
 	${RMFILE} ${OBJ_SDIR}/${LIB}.${LIBEXT_STATIC}
 . endif

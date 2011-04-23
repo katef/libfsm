@@ -16,14 +16,12 @@ ${OBJ_SDIR}/_partial.o: ${OBJ_SDIR}/${obj}
 
 ${OBJ_SDIR}/_partial.o:
 	@${MKDIR} ${OBJ_SDIR}
-	@${ECHO} "==> Linking ${SRCDIR} partial library"
 	${LD} -o ${.TARGET} -r ${.ALLSRC}
 
 all:: ${OBJ_SDIR}/_partial.o
 
 # TODO: if empty directory, also rmdir OBJ_SDIR (since we created it)
 clean::
-	@${ECHO} "==> Cleaning ${SRCDIR} partial library"
 . if exists(${OBJ_SDIR}/_partial.o)
 	${RMFILE} ${OBJ_SDIR}/_partial.o
 . endif

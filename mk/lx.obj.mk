@@ -19,7 +19,6 @@ OBJS?=	${SRCS:C/.c$/.o/}
 .for src in ${SRCS:M*.c}
 ${OBJ_SDIR}/${src:C/.c$/.o/}: ${src}
 	@${MKDIR} "${OBJ_SDIR}"
-	@${ECHO} "==> Compiling ${SRCDIR}/${src}"
 	${CC} ${CFLAGS} -c ${.ALLSRC} -o ${.TARGET}
 .endfor
 
@@ -29,7 +28,6 @@ all:: ${OBJ_SDIR}/${obj}
 
 # TODO: if empty directory, also rmdir OBJ_SDIR (since we created it)
 clean::
-	@${ECHO} "==> Cleaning ${SRCDIR} for ${OBJS}"
 .for obj in ${OBJS}
 . if exists(${OBJ_SDIR}/${obj})
 	${RMFILE} ${OBJ_SDIR}/${obj}

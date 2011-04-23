@@ -20,13 +20,11 @@ REGEN+=	${SID_H}
 
 ${SID_C} ${SID_H}:
 	@${CONDCREATE} "${OBJ_SDIR}"
-	@${ECHO} "==> Transforming ${CURDIR}/${SID_SID}"
 	${SID} ${SIDFLAGS} ${SID_SID} ${SID_ACT} ${SID_C} ${SID_H}
 
 regen:: ${SID_C} ${SID_H}
 
 regen-clean::
-	@${ECHO} "==> Cleaning for ${CURDIR}/${SID_SID} and ${CURDIR}/${SID_ACT}"
 .if exists(${SID_C})
 	${RMFILE} ${SID_C}
 .endif
