@@ -30,9 +30,7 @@ fsm_isdfa(const struct fsm *fsm);
 /*
  * Minimize an FSM to its canonical form.
  *
- * Returns 1 on success, 0 on error, or -1 if minimization fails due to an
- * opaque constraint violation. If no non-NULL opaque values are present, then
- * -1 can never be returned. See fsm_setopaque() for details.
+ * Returns false on error; see errno.
  */
 int
 fsm_minimize(struct fsm *fsm);

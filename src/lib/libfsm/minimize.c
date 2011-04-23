@@ -132,23 +132,23 @@ fsm_minimize(struct fsm *fsm)
 	 */
 	{
 		r = fsm_reverse(fsm);
-		if (r <= 0) {
-			return r;
+		if (!r) {
+			return 0;
 		}
 
 		r = fsm_todfa(fsm);
-		if (r <= 0) {
-			return r;
+		if (!r) {
+			return 0;
 		}
 
 		r = fsm_reverse(fsm);
-		if (r <= 0) {
-			return r;
+		if (!r) {
+			return 0;
 		}
 
 		r = fsm_todfa(fsm);
-		if (r <= 0) {
-			return r;
+		if (!r) {
+			return 0;
 		}
 	}
 
