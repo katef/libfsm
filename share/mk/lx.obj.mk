@@ -6,14 +6,6 @@
 	@${EXIT} 1
 .endif
 
-.for src in ${SRCS}
-. if !exists(${.CURDIR}/${src}) && ${REGEN:M${src} == ""
-.BEGIN::
-	@${ECHO} '${src} not found' >&2
-	@${EXIT} 1
-. endif
-.endfor
-
 OBJS?=	${SRCS:C/.c$/.o/}
 
 .for src in ${SRCS:M*.c}
