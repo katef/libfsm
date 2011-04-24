@@ -13,12 +13,14 @@ PREFIX_DOC?= ${PREFIX}/share/doc
 
 # If you just want to have all build work undertaken in a specific directory
 # (i.e. a read-only source tree), then OBJ_DIR is what you're looking for.
-OBJ_DIR?=  ${BASE_DIR}/obj
+# I would love to call OBJ_DIR obj, but that invokes magic behviour for bmake.
+OBJ_DIR?=  ${BASE_DIR}/build
 OBJ_SDIR?= ${OBJ_DIR}/${SRCDIR}
 CURDIR!= pwd
 SRCDIR?= ${CURDIR:C/^${BASE_DIR}\///}
 
 AR=       ar
+AWK=      awk
 ECHO=     echo
 EXIT=     exit
 CC=       gcc
@@ -36,9 +38,12 @@ LESSCSS=  lessc    # from lesscss.org
 XSLTPROC= xsltproc # from xmlsoft.org
 XMLLINT=  xmllint  # from xmlsoft.org
 
+FSM=      ${OBJ_DIR}/src/tools/fsm/fsm
+
 CFLAGS=
-SIDFLAGS= -l ansi-c
+SIDFLAGS=  -l ansi-c
 LEXIFLAGS=
 XSLTFLAGS= --nonet --novalid --nowrite --nomkdir --xincludestyle
 XMLFLAGS=  --nonet --nsclean --format
+DOTFLAGS=
 
