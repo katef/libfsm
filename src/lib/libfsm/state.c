@@ -150,7 +150,7 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 					break;
 				}
 
-				/* TODO: duplicate opaques */
+				/* TODO: duplicate colour sets */
 			}
 		}
 

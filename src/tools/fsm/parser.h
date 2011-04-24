@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 76 "parser.act"
+#line 77 "parser.act"
 
 
 	typedef struct fsm *       fsm;
@@ -46,7 +46,7 @@ extern void p_fsm(fsm, lex_state, act_state);
 
 /* BEGINNING OF TRAILER */
 
-#line 272 "parser.act"
+#line 273 "parser.act"
 
 #line 52 "parser.h"
 

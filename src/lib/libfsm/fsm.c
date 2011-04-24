@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include <fsm/fsm.h>
+#include <fsm/colour.h>
 
 #include "internal.h"
 #include "set.h"
@@ -47,7 +48,8 @@ fsm_new(void)
 	new->sl      = NULL;
 	new->start   = NULL;
 	new->options = default_options;
-	new->comp    = NULL;
+
+	fsm_setcolourhooks(new, NULL);
 
 	return new;
 }
@@ -372,23 +374,5 @@ fsm_getmaxid(const struct fsm *fsm)
 	}
 
 	return max;
-}
-
-int
-fsm_addcolour(struct fsm *fsm, struct fsm_state *state, void *colour)
-{
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	return !!set_addcolour(fsm, &state->cl, colour);
-}
-
-void
-fsm_setcompare(struct fsm *fsm,
-	int (*comp)(const struct fsm *fsm, void *a, void *b))
-{
-	assert(fsm != NULL);
-
-	fsm->comp = comp;
 }
 

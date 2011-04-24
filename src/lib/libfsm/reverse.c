@@ -41,7 +41,7 @@ fsm_reverse(struct fsm *fsm)
 	fsm_setoptions(new, &fsm->options);
 
 	/*
-	 * Create states corresponding to the origional FSM's states. Their opaque
+	 * Create states corresponding to the origional FSM's states. Their colour
 	 * values are copied over.
 	 *
 	 * TODO: possibly centralise with fsm_copy() into a state-copying function

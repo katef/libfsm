@@ -26,6 +26,7 @@
 	#include <string.h>
 
 	#include <fsm/fsm.h>
+	#include <fsm/colour.h>
 
 	#include "libfsm/xalloc.h"
 

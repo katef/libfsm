@@ -27,7 +27,7 @@ static int equivalent(struct fsm_state *a, struct fsm_state *b) {
 		}
 	}
 
-	/* TODO: anything else? opaques? */
+	/* TODO: anything else? colours? */
 
 	return 1;
 }
@@ -78,7 +78,8 @@ static unsigned int counttargets(struct fsm_state *state) {
 	return count;
 }
 
-static void remove(struct fsm *fsm, struct fsm_state *state) {
+/* TODO: centralise */
+static void removestate(struct fsm *fsm, struct fsm_state *state) {
 	struct fsm_state **s;
 	int i;
 
@@ -97,7 +98,7 @@ static void remove(struct fsm *fsm, struct fsm_state *state) {
 
 			free(*s);
 
-			/* TODO: free opaques */
+			/* TODO: free colours */
 
 			*s = next;
 
@@ -181,9 +182,9 @@ fsm_minimize(struct fsm *fsm)
 			}
 
 			if (equivalent(fsm->start, s)) {
-				remove(fsm, fsm->start);
+				removestate(fsm, fsm->start);
 
-				/* TODO: merge opaques? */
+				/* TODO: merge colour sets? */
 
 				fsm->start = s;
 

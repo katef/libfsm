@@ -222,12 +222,13 @@ void out_c(const struct fsm *fsm, FILE *f) {
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		fprintf(f, "\t\tcase S%u:", s->id);
 
-		if (s->cl != NULL) {
+		if (s->cl != NULL && fsm->colour_hooks.print != NULL) {
 			struct colour_set *c;
 
 			fprintf(f, " /*");
 			for (c = s->cl; c != NULL; c = c->next) {
-				fprintf(f, " %s", (char *) c->colour);
+				fprintf(f, " ");
+				fsm->colour_hooks.print(fsm, f, c->colour);
 			}
 			fprintf(f, " */");
 		}

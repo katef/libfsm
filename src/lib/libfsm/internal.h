@@ -7,6 +7,8 @@
 
 #include <fsm/fsm.h>
 
+#include "colour.h"
+
 
 /* TODO: +2 for SOL, EOL */
 /* TODO: +lots for FSM_EDGE_* */
@@ -38,7 +40,7 @@ struct fsm {
 	struct fsm_state *start;
 	struct fsm_options options;
 
-	int (*comp)(const struct fsm *fsm, void *a, void *b);
+	struct fsm_colour_hooks colour_hooks;
 };
 
 

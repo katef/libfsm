@@ -31,6 +31,7 @@ static void escputc(char c, FILE *f) {
 	}
 }
 
+/* TODO: centralise */
 static void escputs(const char *s, FILE *f) {
 	const char *p;
 
@@ -108,13 +109,18 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 		}
 	}
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		struct colour_set *c;
+	if (fsm->colour_hooks.print != NULL) {
+		for (s = fsm->sl; s != NULL; s = s->next) {
+			struct colour_set *c;
 
-		for (c = s->cl; c != NULL; c = c->next) {
-			fprintf(f, "%-2u = \"", s->id);
-			escputs(c->colour, f);
-			fprintf(f, "\";\n");
+			for (c = s->cl; c != NULL; c = c->next) {
+				fprintf(f, "%-2u = \"", s->id);
+
+				/* TODO: escape */
+				fsm->colour_hooks.print(fsm, f, c->colour);
+
+				fprintf(f, "\";\n");
+			}
 		}
 	}
 

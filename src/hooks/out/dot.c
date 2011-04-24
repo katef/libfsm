@@ -49,6 +49,7 @@ bm_next(const struct bm *bm, int i, int value)
 	return FSM_EDGE_MAX + 1;
 }
 
+/* TODO: centralise */
 static void escputc(int c, FILE *f) {
 	assert(f != NULL);
 
@@ -149,11 +150,15 @@ static void printcolours(const struct fsm *fsm, const struct colour_set *cl, FIL
 		return;
 	}
 
+	if (fsm->colour_hooks.print == NULL) {
+		return;
+	}
+
 	fprintf(f, "<font point-size=\"12\">");
 
 	for (c = cl; c != NULL; c = c->next) {
 		/* TODO: html escapes */
-		escputs(c->colour, f);
+		fsm->colour_hooks.print(fsm, f, c->colour);
 
 		if (c->next != NULL) {
 			fprintf(f, ",");

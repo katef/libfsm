@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include <fsm/fsm.h>
+#include <fsm/colour.h>
 #include <fsm/graph.h>
 #include <fsm/out.h>
 #include <fsm/exec.h>
@@ -20,12 +21,40 @@ void usage(void) {
 	printf("usage: fsm [-chadmr] [-l <language] [-e <execution> | -q <query] [-u <input>] [<input> [<output>]]\n");
 }
 
-static int opaque_comp(const struct fsm *fsm, void *a, void *b) {
+static int colour_compare(const struct fsm *fsm, void *a, void *b) {
 	assert(fsm != NULL);
 	assert(a != NULL);
 	assert(b != NULL);
 
 	return 0 == strcmp(a, b);
+}
+
+/* TODO: centralise for convenience, into <fsm/colour.h> */
+static int colour_print(const struct fsm *fsm, FILE *f, void *colour) {
+	assert(fsm != NULL);
+	assert(colour != NULL);
+	assert(f != NULL);
+
+	return fprintf(f, "%s", (const char *) colour);
+}
+
+static struct fsm *xnewfsm(void) {
+	struct fsm *new;
+
+	struct fsm_colour_hooks hooks = {
+		colour_compare,
+		colour_print
+	};
+
+	new = fsm_new();
+	if (new == NULL) {
+		perror("fsm_new");
+		exit(EXIT_FAILURE);
+	}
+
+	fsm_setcolourhooks(new, &hooks);
+
+	return new;
 }
 
 static void union_parse(struct fsm *fsm, FILE *f, char *colour) {
@@ -35,14 +64,9 @@ static void union_parse(struct fsm *fsm, FILE *f, char *colour) {
 	assert(f != NULL);
 
 	/* TODO: This ought to come out more nicely when fsm.h's API is refactored */
+	/* TODO: in particular, in unioning with respect to colour hooks */
 
-	tmp = fsm_new();
-	if (tmp == NULL) {
-		perror("fsm_new");
-		exit(EXIT_FAILURE);
-	}
-
-	fsm_setcompare(fsm, opaque_comp);
+	tmp = xnewfsm();
 
 	fsm_parse(tmp, f);	/* TODO: error-check */
 
@@ -95,13 +119,7 @@ int main(int argc, char *argv[]) {
 	static const struct cli_options cli_options_defaults;
 	struct cli_options cli_options = cli_options_defaults;
 
-	fsm = fsm_new();
-	if (fsm == NULL) {
-		perror("fsm_new");
-		exit(EXIT_FAILURE);
-	}
-
-	fsm_setcompare(fsm, opaque_comp);
+	fsm = xnewfsm();
 
 	{
 		int c;
