@@ -5,7 +5,7 @@
 
 #SUBDIR+=	doc
 SUBDIR+=	src
-#SUBDIR+=	tests
+SUBDIR+=	tests
 
 .include <lx.subdir.mk>
 
