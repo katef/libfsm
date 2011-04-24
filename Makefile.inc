@@ -6,7 +6,7 @@ BASE_DIR!= cd ${_BASEDIR_RELATIVE} && pwd
 BASE_DIR!= cd ${.CURDIR} && pwd
 .endif
 
-.MAKEFLAGS: -r -e -m ${BASE_DIR}/mk
+.MAKEFLAGS: -r -e -m ${BASE_DIR}/share/mk
 
 
 # TODO: remove these from here
