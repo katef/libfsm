@@ -12,18 +12,19 @@
 	@${EXIT} 1
 .endif
 
-SID_C?=	${SID_SID:C/.sid$/.c/}
-SID_H?=	${SID_C:C/.c$/.h/}
+SID_C?=	${SID_SID:R}.c
+SID_H?=	${SID_SID:R}.h
 
 REGEN+=	${SID_C}
 REGEN+=	${SID_H}
 
 ${SID_C} ${SID_H}:
-	@${CONDCREATE} "${OBJ_SDIR}"
+	@${MKDIR} "${OBJ_SDIR}"
 	${SID} ${SIDFLAGS} ${SID_SID} ${SID_ACT} ${SID_C} ${SID_H}
 
 regen:: ${SID_C} ${SID_H}
 
+# TODO: if empty directory, also rmdir OBJ_SDIR (since we created it)
 regen-clean::
 .if exists(${SID_C})
 	${RMFILE} ${SID_C}
