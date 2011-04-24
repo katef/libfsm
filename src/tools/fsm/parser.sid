@@ -139,7 +139,7 @@
 			<err-expected-equals>;
 		};
 
-		o = label;
+		c = label;
 
 		{
 			sep;
@@ -147,7 +147,7 @@
 			<err-expected-sep>;
 		};
 
-		<mark-colour>(s, o);
+		<mark-colour>(s, c);
 	};
 
 	things [

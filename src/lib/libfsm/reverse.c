@@ -8,7 +8,7 @@
 
 #include "internal.h"
 #include "set.h"
-#include "opaque.h"
+#include "colour.h"
 
 /* TODO: centralise? */
 static int incomingedges(struct fsm *fsm, struct fsm_state *state) {
@@ -48,7 +48,7 @@ fsm_reverse(struct fsm *fsm)
 	 */
 	{
 		struct fsm_state *s;
-		struct opaque_set *o;
+		struct colour_set *c;
 
 		for (s = fsm->sl; s; s = s->next) {
 			struct fsm_state *n;
@@ -59,8 +59,8 @@ fsm_reverse(struct fsm *fsm)
 				return 0;
 			}
 
-			for (o = s->ol; o; o = o->next) {
-				if (!fsm_addopaque(new, n, o->opaque)) {
+			for (c = s->cl; c; c = c->next) {
+				if (!fsm_addcolour(new, n, c->colour)) {
 					fsm_free(new);
 					return 0;
 				}

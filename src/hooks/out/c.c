@@ -9,7 +9,7 @@
 
 #include "out.h"
 #include "libfsm/set.h"
-#include "libfsm/opaque.h"
+#include "libfsm/colour.h"
 #include "libfsm/internal.h"
 
 static void escputc(char c, FILE *f) {
@@ -222,12 +222,12 @@ void out_c(const struct fsm *fsm, FILE *f) {
 	for (s = fsm->sl; s; s = s->next) {
 		fprintf(f, "\t\tcase S%u:", s->id);
 
-		if (s->ol != NULL) {
-			struct opaque_set *o;
+		if (s->cl != NULL) {
+			struct colour_set *c;
 
 			fprintf(f, " /*");
-			for (o = s->ol; o; o = o->next) {
-				fprintf(f, " %s", (char *) o->opaque);
+			for (c = s->cl; c; c = c->next) {
+				fprintf(f, " %s", (char *) c->colour);
 			}
 			fprintf(f, " */");
 		}

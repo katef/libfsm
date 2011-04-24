@@ -8,7 +8,7 @@
 #include "out.h"
 #include "libfsm/internal.h"
 #include "libfsm/set.h"
-#include "libfsm/opaque.h"
+#include "libfsm/colour.h"
 
 static void escputc(char c, FILE *f) {
 	assert(f != NULL);
@@ -109,11 +109,11 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 	}
 
 	for (s = fsm->sl; s; s = s->next) {
-		struct opaque_set *o;
+		struct colour_set *c;
 
-		for (o = s->ol; o; o = o->next) {
+		for (c = s->cl; c; c = c->next) {
 			fprintf(f, "%-2u = \"", s->id);
-			escputs(o->opaque, f);
+			escputs(c->colour, f);
 			fprintf(f, "\";\n");
 		}
 	}

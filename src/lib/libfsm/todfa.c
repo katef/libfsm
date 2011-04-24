@@ -8,7 +8,7 @@
 
 #include "internal.h"
 #include "set.h"
-#include "opaque.h"
+#include "colour.h"
 
 /*
  * A set of states in an NFA.
@@ -72,10 +72,10 @@ static int carrythroughopaques(struct fsm *fsm, struct fsm_state *state, struct 
 	assert(state != NULL);
 
 	for (s = set; s; s = s->next) {
-		struct opaque_set *o;
+		struct colour_set *c;
 
-		for (o = s->state->ol; o; o = o->next) {
-			if (!fsm_addopaque(fsm, state, o->opaque)) {
+		for (c = s->state->cl; c; c = c->next) {
+			if (!fsm_addcolour(fsm, state, c->colour)) {
 				return 0;
 			}
 		}

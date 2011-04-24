@@ -64,13 +64,13 @@ fsm_move(struct fsm *dst, struct fsm *src);
  * Merge the contents of src into dst by union, and free src.
  * Returns 0 on error.
  *
- * If opaque is non-NULL, all states in src are set as if by
- * fsm_addopaque().
+ * If colour is non-NULL, all states in src are set as if by
+ * fsm_addcolour().
  *
  * TODO: I don't really like this sort of interface. Reconsider?
  */
 int
-fsm_union(struct fsm *dst, struct fsm *src, void *opaque);
+fsm_union(struct fsm *dst, struct fsm *src, void *colour);
 
 /*
  * Add a state.
@@ -174,23 +174,34 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 	struct fsm_state **x);
 
 /*
- * Store and retrieve user-specified opaque data per-state. Multiple opaque
- * values may be stored. Duplicate values are disregarded and silently succeed.
+ * Set user-specified colour data per-state. Multiple colours may be assigned
+ * to the same state. Duplicate values (as determined by the comparison callback
+ * specified to fsm_setcompare) are disregarded and silently succeed.
+ *
+ * A colour is really just an opaque pointer which is passed around by libfsm
+ * and never dereferenced, so you can use it to point to application-specific
+ * data.
+ *
+ * There are two types of void * used for user data floating around; these are
+ * called colours (as in graph colouring) because they're also used to uniquely
+ * identify unambigious subgraphs during graph splitting. The other kind (passed
+ * through to callbacks e.g. by fsm_exec and the generated code) have no semantic
+ * meaning, and so are just called "opaques", to keep the distinction clear.
  *
  * Returns false on error; see errno.
  */
 int
-fsm_addopaque(struct fsm *fsm, struct fsm_state *state, void *opaque);
+fsm_addcolour(struct fsm *fsm, struct fsm_state *state, void *colour);
 
 /*
- * Assign a callback used to compare opaque values (as per fsm_addopaque). This
- * will be used by any internal operations which need to test for equality of
- * opaque values.
+ * Assign a callback used to compare colours (as per fsm_addcolour).
+ * This will be used by any internal operations which need to test for equality
+ * of colours.
  *
  * A "shallow" comparison by pointer value is performed if set NULL, which is
  * the default.
  *
- * The callbck is expected to return true if the opaque values are considered
+ * The callbck is expected to return true if the colours are considered
  * equivalent, and false otherwise.
  *
  * You may not modify the fsm from within the comparison callback.

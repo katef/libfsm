@@ -10,7 +10,7 @@
 #include "out.h"
 #include "libfsm/internal.h"
 #include "libfsm/set.h"
-#include "libfsm/opaque.h"
+#include "libfsm/colour.h"
 
 struct bm {
 	unsigned char map[(FSM_EDGE_MAX + 1) / CHAR_BIT];
@@ -139,23 +139,23 @@ static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
 	return 0;
 }
 
-static void printopaques(const struct fsm *fsm, const struct opaque_set *ol, FILE *f) {
-	const struct opaque_set *o;
+static void printcolours(const struct fsm *fsm, const struct colour_set *cl, FILE *f) {
+	const struct colour_set *c;
 
 	assert(fsm != NULL);
 	assert(f != NULL);
 
-	if (ol == NULL) {
+	if (cl == NULL) {
 		return;
 	}
 
 	fprintf(f, "<font point-size=\"12\">");
 
-	for (o = ol; o; o = o->next) {
+	for (c = cl; c; c = c->next) {
 		/* TODO: html escapes */
-		escputs(o->opaque, f);
+		escputs(c->colour, f);
 
-		if (o->next != NULL) {
+		if (c->next != NULL) {
 			fprintf(f, ",");
 		}
 	}
@@ -171,7 +171,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 	assert(f != NULL);
 	assert(s != NULL);
 
-	if (s->ol != NULL) {
+	if (s->cl != NULL) {
 		fprintf(f, "\t%-2u [ label = <", s->id);
 
 		if (!fsm->options.anonymous_states) {
@@ -180,7 +180,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 			fprintf(f, "<br/>");
 		}
 
-		printopaques(fsm, s->ol, f);
+		printcolours(fsm, s->cl, f);
 
 		fprintf(f, "> ];\n");
 	}
@@ -213,13 +213,13 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 				}
 
 				/*
-				 * Currently edges' opaques are inherited from their "from"
-				 * states, so we can assume each edge has an identical opaque
+				 * Currently edges' colours are inherited from their "from"
+				 * states, so we can assume each edge has an identical colour
 				 * set per consolidated group of edges.
 				 *
-				 * If the ability is ever added for arbitary opaques to be
+				 * If the ability is ever added for arbitary colours to be
 				 * assigned to edges, than that assumption breaks, and this
-				 * code will need to repeat for each distinct opaque set within
+				 * code will need to repeat for each distinct colour set within
 				 * that consolidated group.
 				 */
 
@@ -267,9 +267,9 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 					}
 				}
 
-				if (s->ol != NULL) {
+				if (s->cl != NULL) {
 					fprintf(f, "<br/>");
-					printopaques(fsm, s->ol, f);
+					printcolours(fsm, s->cl, f);
 				}
 
 				fprintf(f, "> ];\n");
@@ -277,9 +277,9 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 				fprintf(f, "\t%-2u -> %-2u [ label = <", s->id, e->state->id);
 				escputc(i, f);
 
-				if (s->ol != NULL) {
+				if (s->cl != NULL) {
 					fprintf(f, "<br/>");
-					printopaques(fsm, s->ol, f);
+					printcolours(fsm, s->cl, f);
 				}
 
 				fprintf(f, "> ];\n");

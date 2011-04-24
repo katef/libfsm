@@ -7,7 +7,7 @@
 
 #include "internal.h"
 #include "set.h"
-#include "opaque.h"
+#include "colour.h"
 
 static unsigned int inventid(const struct fsm *fsm) {
 	assert(fsm != NULL);
@@ -76,7 +76,7 @@ fsm_copy(struct fsm *fsm)
 	/* recreate states */
 	for (s = fsm->sl; s; s = s->next) {
 		struct fsm_state *state;
-		struct opaque_set *o;
+		struct colour_set *c;
 
 		state = fsm_addstateid(new, s->id);
 		if (state == NULL) {
@@ -84,8 +84,8 @@ fsm_copy(struct fsm *fsm)
 			return NULL;
 		}
 
-		for (o = s->ol; o; o = o->next) {
-			if (!fsm_addopaque(new, state, o->opaque)) {
+		for (c = s->cl; c; c = c->next) {
+			if (!fsm_addcolour(new, state, c->colour)) {
 				fsm_free(new);
 				return NULL;
 			}
@@ -164,7 +164,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 }
 
 int
-fsm_union(struct fsm *dst, struct fsm *src, void *opaque)
+fsm_union(struct fsm *dst, struct fsm *src, void *colour)
 {
 	struct fsm_state **sl;
 	struct fsm_state *p;
@@ -211,9 +211,9 @@ fsm_union(struct fsm *dst, struct fsm *src, void *opaque)
 	/*
 	 * Colour incoming states.
 	 */
-	if (opaque != NULL) {
+	if (colour != NULL) {
 		for (p = src->sl; p; p = p->next) {
-			if (!fsm_addopaque(src, p, opaque)) {
+			if (!fsm_addcolour(src, p, colour)) {
 				/* TODO: this leaves dst in a questionable state */
 				return 0;
 			}
@@ -254,11 +254,11 @@ fsm_addstateid(struct fsm *fsm, unsigned int id)
 
 		new->id  = id;
 		new->end = 0;
-		new->ol  = NULL;
+		new->cl  = NULL;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			new->edges[i].sl = NULL;
-			new->edges[i].ol = NULL;
+			new->edges[i].cl = NULL;
 		}
 
 		new->next = fsm->sl;
@@ -375,12 +375,12 @@ fsm_getmaxid(const struct fsm *fsm)
 }
 
 int
-fsm_addopaque(struct fsm *fsm, struct fsm_state *state, void *opaque)
+fsm_addcolour(struct fsm *fsm, struct fsm_state *state, void *colour)
 {
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	return !!set_addopaque(fsm, &state->ol, opaque);
+	return !!set_addcolour(fsm, &state->cl, colour);
 }
 
 void

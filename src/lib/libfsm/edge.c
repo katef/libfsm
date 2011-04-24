@@ -9,11 +9,11 @@
 
 #include "internal.h"
 #include "set.h"
-#include "opaque.h"
+#include "colour.h"
 #include "xalloc.h"
 
 static int fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to, struct fsm_edge *edge) {
-	struct opaque_set *o;
+	struct colour_set *c;
 
 	assert(from != NULL);
 	assert(to != NULL);
@@ -25,8 +25,8 @@ static int fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state
 		return 0;
 	}
 
-	for (o = from->ol; o != NULL; o = o->next) {
-		if (!set_addopaque(fsm, &edge->ol, o)) {
+	for (c = from->cl; c != NULL; c = c->next) {
+		if (!set_addcolour(fsm, &edge->cl, c)) {
 			/* XXX */
 			return 0;
 		}

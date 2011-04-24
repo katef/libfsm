@@ -18,14 +18,14 @@ enum fsm_edge_type {
 
 struct fsm_edge {
 	struct state_set  *sl;
-	struct opaque_set *ol;
+	struct colour_set *cl;
 };
 
 struct fsm_state {
 	unsigned int id;
 	int end;
 
-	struct opaque_set *ol;
+	struct colour_set *cl;
 
 	struct fsm_edge edges[FSM_EDGE_MAX + 1];
 

@@ -1,15 +1,15 @@
 /*
  * Automatically generated from the files:
- *	cli/parser.sid
+ *	parser.sid
  * and
- *	cli/parser.act
+ *	parser.act
  * by:
  *	sid
  */
 
 /* BEGINNING OF HEADER */
 
-#line 76 "cli/parser.act"
+#line 76 "parser.act"
 
 
 	typedef struct fsm *       fsm;
@@ -24,7 +24,7 @@
 	struct fsm *
 	fsm_parse(struct fsm *fsm, FILE *f);
 
-#line 28 "cli/parser.h"
+#line 28 "parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
@@ -46,8 +46,8 @@ extern void p_fsm(fsm, lex_state, act_state);
 
 /* BEGINNING OF TRAILER */
 
-#line 272 "cli/parser.act"
+#line 272 "parser.act"
 
-#line 52 "cli/parser.h"
+#line 52 "parser.h"
 
 /* END OF FILE */

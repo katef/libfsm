@@ -168,12 +168,12 @@
 		}
 	@};
 
-	<mark-colour>: (s :state, o :string) -> () = @{
+	<mark-colour>: (s :state, c :string) -> () = @{
 		assert(@s != NULL);
-		assert(@o != NULL);
+		assert(@c != NULL);
 
-		if (!fsm_addopaque(fsm, @s, @o)) {
-			perror("fsm_addopaque");
+		if (!fsm_addcolour(fsm, @s, @c)) {
+			perror("fsm_addcolour");
 			@!;
 		}
 	@};
