@@ -15,9 +15,6 @@
 SID_C?=	${SID_SID:R}.c
 SID_H?=	${SID_SID:R}.h
 
-REGEN+=	${SID_C}
-REGEN+=	${SID_H}
-
 ${SID_C} ${SID_H}:
 	@${MKDIR} "${OBJ_SDIR}"
 	${SID} ${SIDFLAGS} ${SID_SID} ${SID_ACT} ${SID_C} ${SID_H}
