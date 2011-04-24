@@ -36,12 +36,12 @@ static int escputc(int c, FILE *f) {
 }
 
 static void hr(FILE *f, struct fsm_state *sl) {
-	struct fsm_state *x;
+	struct fsm_state *s;
 
 	assert(f != NULL);
 
 	fprintf(f, "----------");
-	for (x = sl; x; x = x->next) {
+	for (s = sl; s != NULL; s = s->next) {
 		fprintf(f, "+----");
 	}
 
@@ -49,13 +49,13 @@ static void hr(FILE *f, struct fsm_state *sl) {
 }
 
 static int notransitions(struct fsm_state *sl, int i) {
-	struct fsm_state *x;
+	struct fsm_state *s;
 
 	assert(i >= 0);
 	assert(i <= FSM_EDGE_MAX);
 
-	for (x = sl; x; x = x->next) {
-		if (x->edges[i].sl != NULL) {
+	for (s = sl; s != NULL; s = s->next) {
+		if (s->edges[i].sl != NULL) {
 			return 0;
 		}
 	}
@@ -64,14 +64,14 @@ static int notransitions(struct fsm_state *sl, int i) {
 }
 
 void out_table(const struct fsm *fsm, FILE *f) {
-	struct fsm_state *x;
+	struct fsm_state *s;
 	int i;
 
 	/* TODO: assert! */
 
 	fprintf(f, "%-9s ", "");
-	for (x = fsm->sl; x; x = x->next) {
-		fprintf(f, "| %-2u ", x->id);
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		fprintf(f, "| %-2u ", s->id);
 	}
 
 	fprintf(f, "\n");
@@ -100,13 +100,13 @@ void out_table(const struct fsm *fsm, FILE *f) {
 			fprintf(f, "%.*s ", 9 - n, "         ");
 		}
 
-		for (x = fsm->sl; x; x = x->next) {
-			if (x->edges[i].sl == NULL) {
+		for (s = fsm->sl; s != NULL; s = s->next) {
+			if (s->edges[i].sl == NULL) {
 				fprintf(f, "|    ");
 			} else {
-				assert(x->edges[i].sl->state != NULL);
+				assert(s->edges[i].sl->state != NULL);
 
-				fprintf(f, "| %-2u ", x->edges[i].sl->state->id);
+				fprintf(f, "| %-2u ", s->edges[i].sl->state->id);
 			}
 		}
 
@@ -117,10 +117,10 @@ void out_table(const struct fsm *fsm, FILE *f) {
 
 	fprintf(f, "%-9s ", "start/end");
 
-	for (x = fsm->sl; x; x = x->next) {
+	for (s = fsm->sl; s != NULL; s = s->next) {
 		fprintf(f, "| %s%s ",
-			x == fsm_getstart(fsm) ? "S" : " ",
-			fsm_isend(fsm, x)      ? "E" : " ");
+			s == fsm_getstart(fsm) ? "S" : " ",
+			fsm_isend(fsm, s)      ? "E" : " ");
 	}
 
 	fprintf(f, "\n");

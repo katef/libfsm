@@ -84,7 +84,7 @@ static void remove(struct fsm *fsm, struct fsm_state *state) {
 
 	assert(fsm != NULL);
 
-	for (s = &fsm->sl; *s; s = &(*s)->next) {
+	for (s = &fsm->sl; *s != NULL; s = &(*s)->next) {
 		if (*s == state) {
 			struct fsm_state *next;
 
@@ -155,7 +155,7 @@ fsm_minimize(struct fsm *fsm)
 	if (!hasend) {
 		struct fsm_state *s;
 
-		for (s = fsm->sl; s; s = s->next) {
+		for (s = fsm->sl; s != NULL; s = s->next) {
 			fsm_setend(fsm, s, 0);
 		}
 	}
@@ -173,7 +173,7 @@ fsm_minimize(struct fsm *fsm)
 		struct fsm_state *s;
 		struct fsm_state *next;
 
-		for (s = fsm->sl; s; s = next) {
+		for (s = fsm->sl; s != NULL; s = next) {
 			next = s->next;
 
 			if (s == fsm->start) {

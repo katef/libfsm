@@ -52,7 +52,7 @@ fsm_isdfa(const struct fsm *fsm)
 		return 0;
 	}
 
-	for (s = fsm->sl; s; s = s->next) {
+	for (s = fsm->sl; s != NULL; s = s->next) {
 		if (!isdfastate(s)) {
 			return 0;
 		}

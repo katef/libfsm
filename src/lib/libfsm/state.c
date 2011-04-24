@@ -27,7 +27,7 @@ static struct mapping *mapping_ensure(struct fsm *fsm, struct mapping **head, st
 	assert(old != NULL);
 
 	/* Find an existing mapping */
-	for (m = *head; m; m = m->next) {
+	for (m = *head; m != NULL; m = m->next) {
 		if (m->old == old) {
 			return m;
 		}
@@ -61,7 +61,7 @@ static void mapping_free(struct mapping *mapping) {
 	struct mapping *next;
 	struct mapping *m;
 
-	for (m = mapping; m; m = next) {
+	for (m = mapping; m != NULL; m = next) {
 		next = m->next;
 
 		free(m);
@@ -73,7 +73,7 @@ static struct mapping *getnextnotdone(struct mapping *mapping) {
 
 	assert(mapping != NULL);
 
-	for (m = mapping; m; m = m->next) {
+	for (m = mapping; m != NULL; m = m->next) {
 		if (!m->done) {
 			return m;
 		}
@@ -122,7 +122,7 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 		}
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (s = m->old->edges[i].sl; s; s = s->next) {
+			for (s = m->old->edges[i].sl; s != NULL; s = s->next) {
 				struct mapping *to;
 
 				assert(s->state != NULL);

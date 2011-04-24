@@ -9,7 +9,7 @@ char *xstrdup(const char *s) {
 	char *new;
 
 	new = malloc(strlen(s) + 1);
-	if (!new) {
+	if (new != NULL) {
 		return NULL;
 	}
 

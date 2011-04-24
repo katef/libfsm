@@ -47,7 +47,7 @@ static void free_transset(struct transset *set) {
 	struct transset *p;
 	struct transset *next;
 
-	for (p = set; p; p = next) {
+	for (p = set; p != NULL; p = next) {
 		next = p->next;
 		free(p);
 	}
@@ -57,7 +57,7 @@ static void free_mappings(struct mapping *m) {
 	struct mapping *p;
 	struct mapping *next;
 
-	for (p = m; p; p = next) {
+	for (p = m; p != NULL; p = next) {
 		next = p->next;
 		free(p);
 	}
@@ -71,10 +71,10 @@ static int carrythroughopaques(struct fsm *fsm, struct fsm_state *state, struct 
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	for (s = set; s; s = s->next) {
+	for (s = set; s != NULL; s = s->next) {
 		struct colour_set *c;
 
-		for (c = s->state->cl; c; c = c->next) {
+		for (c = s->state->cl; c != NULL; c = c->next) {
 			if (!fsm_addcolour(fsm, state, c->colour)) {
 				return 0;
 			}
@@ -88,7 +88,7 @@ static int carrythroughopaques(struct fsm *fsm, struct fsm_state *state, struct 
 static int transin(char c, const struct transset *set) {
 	const struct transset *p;
 
-	for (p = set; p; p = p->next) {
+	for (p = set; p != NULL; p = p->next) {
 		assert(p->state != NULL);
 
 		if (p->c == c) {
@@ -107,34 +107,34 @@ static int transin(char c, const struct transset *set) {
  * the mapping list ml for future reference.
  */
 static struct mapping *addtoml(struct fsm *dfa, struct mapping **ml, struct state_set *closure) {
-	struct mapping *p;
+	struct mapping *m;
 
 	/* use existing mapping if present */
-	for (p = *ml; p; p = p->next) {
-		if (set_equal(p->closure, closure)) {
+	for (m = *ml; m != NULL; m = m->next) {
+		if (set_equal(m->closure, closure)) {
 			set_free(closure);
-			return p;
+			return m;
 		}
 	}
 
 	/* else add new DFA state */
-	p = malloc(sizeof *p);
-	if (p == NULL) {
+	m = malloc(sizeof *m);
+	if (m == NULL) {
 		return NULL;
 	}
 
-	p->closure  = closure;
-	p->dfastate = fsm_addstate(dfa);
-	if (p->dfastate == NULL) {
-		free(p);
+	m->closure  = closure;
+	m->dfastate = fsm_addstate(dfa);
+	if (m->dfastate == NULL) {
+		free(m);
 		return NULL;
 	}
 
-	p->done = 0;
-	p->next = *ml;
-	*ml = p;
+	m->done = 0;
+	m->next = *ml;
+	*ml = m;
 
-	return p;
+	return m;
 }
 
 /*
@@ -226,13 +226,13 @@ static struct fsm_state *state_closure(struct mapping **ml, struct fsm *dfa, con
 static struct fsm_state *set_closure(struct mapping **ml, struct fsm *dfa, struct state_set *set) {
 	struct state_set *ec;
 	struct mapping *m;
-	struct state_set *p;
+	struct state_set *s;
 
 	assert(ml != NULL);
 
 	ec = NULL;
-	for (p = set; p; p = p->next) {
-		if (epsilon_closure(p->state, &ec) == NULL) {
+	for (s = set; s != NULL; s = s->next) {
+		if (epsilon_closure(s->state, &ec) == NULL) {
 			set_free(ec);
 			return NULL;
 		}
@@ -248,11 +248,11 @@ static struct fsm_state *set_closure(struct mapping **ml, struct fsm *dfa, struc
  * Return an arbitary mapping which isn't marked "done" yet.
  */
 static struct mapping *nextnotdone(struct mapping *ml) {
-	struct mapping *p;
+	struct mapping *m;
 
-	for (p = ml; p; p = p->next) {
-		if (!p->done) {
-			return p;
+	for (m = ml; m != NULL; m = m->next) {
+		if (!m->done) {
+			return m;
 		}
 	}
 
@@ -274,11 +274,11 @@ static struct transset **listnonepsilonstates(struct transset **l, struct state_
 	assert(set != NULL);
 
 	*l = NULL;
-	for (s = set; s; s = s->next) {
+	for (s = set; s != NULL; s = s->next) {
 		int i;
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
-			for (e = s->state->edges[i].sl; e; e = e->next) {
+			for (e = s->state->edges[i].sl; e != NULL; e = e->next) {
 				struct transset *p;
 
 				assert(e->state != NULL);
@@ -317,8 +317,8 @@ static struct state_set *allstatesreachableby(struct state_set *set, char c) {
 	assert(set != NULL);
 
 	l = NULL;
-	for (s = set; s; s = s->next) {
-		for (e = s->state->edges[(unsigned char) c].sl; e; e = e->next) {
+	for (s = set; s != NULL; s = s->next) {
+		for (e = s->state->edges[(unsigned char) c].sl; e != NULL; e = e->next) {
 			assert(e->state != NULL);
 
 			if (!set_addstate(&l, e->state)) {
@@ -388,7 +388,7 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 			return 0;
 		}
 
-		for (s = nes; s; s = s->next) {
+		for (s = nes; s != NULL; s = s->next) {
 			struct fsm_state *new;
 			struct state_set *reachable;
 

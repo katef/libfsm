@@ -22,7 +22,7 @@ static void free_contents(struct fsm *fsm) {
 
 	assert(fsm != NULL);
 
-	for (s = fsm->sl; s; s = next) {
+	for (s = fsm->sl; s != NULL; s = next) {
 		next = s->next;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
@@ -74,7 +74,7 @@ fsm_copy(struct fsm *fsm)
 	}
 
 	/* recreate states */
-	for (s = fsm->sl; s; s = s->next) {
+	for (s = fsm->sl; s != NULL; s = s->next) {
 		struct fsm_state *state;
 		struct colour_set *c;
 
@@ -84,7 +84,7 @@ fsm_copy(struct fsm *fsm)
 			return NULL;
 		}
 
-		for (c = s->cl; c; c = c->next) {
+		for (c = s->cl; c != NULL; c = c->next) {
 			if (!fsm_addcolour(new, state, c->colour)) {
 				fsm_free(new);
 				return NULL;
@@ -97,7 +97,7 @@ fsm_copy(struct fsm *fsm)
 	}
 
 	/* recreate edges */
-	for (s = fsm->sl; s; s = s->next) {
+	for (s = fsm->sl; s != NULL; s = s->next) {
 		struct state_set *e;
 		struct fsm_state *from;
 		int i;
@@ -106,7 +106,7 @@ fsm_copy(struct fsm *fsm)
 
 		/* TODO: centralise this with reverse.c */
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (e = s->edges[i].sl; e; e = e->next) {
+			for (e = s->edges[i].sl; e != NULL; e = e->next) {
 				struct fsm_state *to;
 
 				assert(e->state != NULL);
@@ -167,7 +167,7 @@ int
 fsm_union(struct fsm *dst, struct fsm *src, void *colour)
 {
 	struct fsm_state **sl;
-	struct fsm_state *p;
+	struct fsm_state *s;
 
 	assert(dst != NULL);
 	assert(src != NULL);
@@ -176,7 +176,7 @@ fsm_union(struct fsm *dst, struct fsm *src, void *colour)
 	 * Splice over lists from src to dst.
 	 */
 
-	for (sl = &dst->sl; *sl; sl = &(*sl)->next) {
+	for (sl = &dst->sl; *sl != NULL; sl = &(*sl)->next) {
 		/* nothing */
 	}
 	*sl = src->sl;
@@ -200,11 +200,11 @@ fsm_union(struct fsm *dst, struct fsm *src, void *colour)
 	/*
 	 * Renumber incoming states so as not to clash over existing ones.
 	 */
-	for (p = src->sl; p; p = p->next) {
-		p->id = 0;
+	for (s = src->sl; s != NULL; s = s->next) {
+		s->id = 0;
 	}
-	for (p = src->sl; p; p = p->next) {
-		p->id = inventid(dst);
+	for (s = src->sl; s != NULL; s = s->next) {
+		s->id = inventid(dst);
 	}
 
 
@@ -212,8 +212,8 @@ fsm_union(struct fsm *dst, struct fsm *src, void *colour)
 	 * Colour incoming states.
 	 */
 	if (colour != NULL) {
-		for (p = src->sl; p; p = p->next) {
-			if (!fsm_addcolour(src, p, colour)) {
+		for (s = src->sl; s != NULL; s = s->next) {
+			if (!fsm_addcolour(src, s, colour)) {
 				/* TODO: this leaves dst in a questionable state */
 				return 0;
 			}
@@ -234,11 +234,11 @@ fsm_addstateid(struct fsm *fsm, unsigned int id)
 
 	/* Find an existing state */
 	{
-		struct fsm_state *p;
+		struct fsm_state *s;
 
-		for (p = fsm->sl; p; p = p->next) {
-			if (p->id == id) {
-				return p;
+		for (s = fsm->sl; s; s = s->next) {
+			if (s->id == id) {
+				return s;
 			}
 		}
 	}
@@ -314,7 +314,7 @@ fsm_hasend(const struct fsm *fsm)
 
 	assert(fsm != NULL);
 
-	for (s = fsm->sl; s; s = s->next) {
+	for (s = fsm->sl; s != NULL; s = s->next) {
 		if (fsm_isend(fsm, s)) {
 			return 1;
 		}
@@ -343,13 +343,13 @@ fsm_getstart(const struct fsm *fsm)
 struct fsm_state *
 fsm_getstatebyid(const struct fsm *fsm, unsigned int id)
 {
-	struct fsm_state *p;
+	struct fsm_state *s;
 
 	assert(fsm != NULL);
 
-	for (p = fsm->sl; p; p = p->next) {
-		if (p->id == id) {
-			return p;
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		if (s->id == id) {
+			return s;
 		}
 	}
 
@@ -360,14 +360,14 @@ unsigned int
 fsm_getmaxid(const struct fsm *fsm)
 {
 	unsigned int max;
-	struct fsm_state *p;
+	struct fsm_state *s;
 
 	assert(fsm != NULL);
 
 	max = 0;
-	for (p = fsm->sl; p; p = p->next) {
-		if (p->id > max) {
-			max = p->id;
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		if (s->id > max) {
+			max = s->id;
 		}
 	}
 

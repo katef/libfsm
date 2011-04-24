@@ -37,7 +37,7 @@ static void escputs(const char *s, FILE *f) {
 	assert(f != NULL);
 	assert(s != NULL);
 
-	for (p = s; *p; p++) {
+	for (p = s; *p != '\0'; p++) {
 		escputc(*p, f);
 	}
 }
@@ -54,7 +54,7 @@ static const struct fsm_state *findany(const struct fsm_state *state) {
 			return NULL;
 		}
 
-		for (e = state->edges[i].sl; e; e = e->next) {
+		for (e = state->edges[i].sl; e != NULL; e = e->next) {
 			if (e->state != state->edges[0].sl->state) {
 				return NULL;
 			}
@@ -72,7 +72,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 	struct fsm_state *start;
 	int end;
 
-	for (s = fsm->sl; s; s = s->next) {
+	for (s = fsm->sl; s != NULL; s = s->next) {
 		int i;
 
 		{
@@ -86,7 +86,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 		}
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (e = s->edges[i].sl; e; e = e->next) {
+			for (e = s->edges[i].sl; e != NULL; e = e->next) {
 				assert(e->state != NULL);
 
 				fprintf(f, "%-2u -> %2u", s->id, e->state->id);
@@ -108,10 +108,10 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 		}
 	}
 
-	for (s = fsm->sl; s; s = s->next) {
+	for (s = fsm->sl; s != NULL; s = s->next) {
 		struct colour_set *c;
 
-		for (c = s->cl; c; c = c->next) {
+		for (c = s->cl; c != NULL; c = c->next) {
 			fprintf(f, "%-2u = \"", s->id);
 			escputs(c->colour, f);
 			fprintf(f, "\";\n");
@@ -128,7 +128,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "start: %u;\n", start->id);
 
 	end = 0;
-	for (s = fsm->sl; s; s = s->next) {
+	for (s = fsm->sl; s != NULL; s = s->next) {
 		end += !!fsm_isend(fsm, s);
 	}
 
@@ -137,7 +137,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 	}
 
 	fprintf(f, "end:   ");
-	for (s = fsm->sl; s; s = s->next) {
+	for (s = fsm->sl; s != NULL; s = s->next) {
 		if (fsm_isend(fsm, s)) {
 			end--;
 			fprintf(f, "%u%s", s->id, end > 0 ? ", " : ";\n");

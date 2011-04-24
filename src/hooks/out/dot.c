@@ -118,7 +118,7 @@ static void escputs(const char *s, FILE *f) {
 	assert(f != NULL);
 	assert(s != NULL);
 
-	for (p = s; *p; p++) {
+	for (p = s; *p != '\0'; p++) {
 		escputc(*p, f);
 	}
 }
@@ -151,7 +151,7 @@ static void printcolours(const struct fsm *fsm, const struct colour_set *cl, FIL
 
 	fprintf(f, "<font point-size=\"12\">");
 
-	for (c = cl; c; c = c->next) {
+	for (c = cl; c != NULL; c = c->next) {
 		/* TODO: html escapes */
 		escputs(c->colour, f);
 
@@ -188,7 +188,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 	/* TODO: findany() here? */
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		for (e = s->edges[i].sl; e; e = e->next) {
+		for (e = s->edges[i].sl; e != NULL; e = e->next) {
 			assert(e->state != NULL);
 
 			/*
@@ -228,7 +228,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 				/* find all edges which go to this state */
 				fprintf(f, "\t%-2u -> %-2u [ label = <", s->id, e->state->id);
 				for (k = 0; k <= FSM_EDGE_MAX; k++) {
-					for (e2 = s->edges[k].sl; e2; e2 = e2->next) {
+					for (e2 = s->edges[k].sl; e2 != NULL; e2 = e2->next) {
 						if (e2->state == e->state) {
 							bm_set(&bm, k);
 						}
@@ -312,7 +312,7 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 
 	fprintf(f, "\n");
 
-	for (s = fsm->sl; s; s = s->next) {
+	for (s = fsm->sl; s != NULL; s = s->next) {
 		singlestate(fsm, f, s);
 
 		if (fsm_isend(fsm, s)) {

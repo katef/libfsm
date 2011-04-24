@@ -37,11 +37,11 @@ static const struct fsm_state *findany(const struct fsm_state *state) {
 	assert(state != NULL);
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (state->edges[i].sl== NULL) {
+		if (state->edges[i].sl == NULL) {
 			return NULL;
 		}
 
-		for (e = state->edges[i].sl; e; e = e->next) {
+		for (e = state->edges[i].sl; e != NULL; e = e->next) {
 			if (e->state != state->edges[0].sl->state) {
 				return NULL;
 			}
@@ -138,7 +138,7 @@ static void stateenum(FILE *f, struct fsm_state *sl) {
 	fprintf(f, "\tenum {\n");
 	fprintf(f, "\t\t");
 
-	for (s = sl, i = 1; s; s = s->next, i++) {
+	for (s = sl, i = 1; s != NULL; s = s->next, i++) {
 		fprintf(f, "S%u", s->id);
 		if (s->next != NULL) {
 			fprintf(f, ", ");
@@ -162,7 +162,7 @@ static void endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
 		int endcount;
 
 		endcount = 0;
-		for (s = sl; s; s = s->next) {
+		for (s = sl; s != NULL; s = s->next) {
 			endcount += !!fsm_isend(fsm, s);
 		}
 
@@ -175,7 +175,7 @@ static void endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
 	/* usual case */
 	fprintf(f, "\t/* end states */\n");
 	fprintf(f, "\tswitch (state) {\n");
-	for (s = sl; s; s = s->next) {
+	for (s = sl; s != NULL; s = s->next) {
 		if (!fsm_isend(fsm, s)) {
 			continue;
 		}
@@ -219,14 +219,14 @@ void out_c(const struct fsm *fsm, FILE *f) {
 	/* FSM */
 	fprintf(f, "\twhile ((c = fsm_getc(opaque)) != EOF) {\n");
 	fprintf(f, "\t\tswitch (state) {\n");
-	for (s = fsm->sl; s; s = s->next) {
+	for (s = fsm->sl; s != NULL; s = s->next) {
 		fprintf(f, "\t\tcase S%u:", s->id);
 
 		if (s->cl != NULL) {
 			struct colour_set *c;
 
 			fprintf(f, " /*");
-			for (c = s->cl; c; c = c->next) {
+			for (c = s->cl; c != NULL; c = c->next) {
 				fprintf(f, " %s", (char *) c->colour);
 			}
 			fprintf(f, " */");

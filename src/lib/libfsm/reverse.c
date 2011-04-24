@@ -15,7 +15,7 @@ static int incomingedges(struct fsm *fsm, struct fsm_state *state) {
 	struct fsm_state *s;
 	int i;
 
-	for (s = fsm->sl; s; s = s->next) {
+	for (s = fsm->sl; s != NULL; s = s->next) {
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			if (set_contains(state, s->edges[i].sl)) {
 				return 1;
@@ -50,7 +50,7 @@ fsm_reverse(struct fsm *fsm)
 		struct fsm_state *s;
 		struct colour_set *c;
 
-		for (s = fsm->sl; s; s = s->next) {
+		for (s = fsm->sl; s != NULL; s = s->next) {
 			struct fsm_state *n;
 
 			n = fsm_addstateid(new, s->id);
@@ -59,7 +59,7 @@ fsm_reverse(struct fsm *fsm)
 				return 0;
 			}
 
-			for (c = s->cl; c; c = c->next) {
+			for (c = s->cl; c != NULL; c = c->next) {
 				if (!fsm_addcolour(new, n, c->colour)) {
 					fsm_free(new);
 					return 0;
@@ -84,7 +84,7 @@ fsm_reverse(struct fsm *fsm)
 	{
 		struct fsm_state *s;
 
-		for (s = fsm->sl; s; s = s->next) {
+		for (s = fsm->sl; s != NULL; s = s->next) {
 			struct fsm_state *to;
 			struct state_set *e;
 			int i;
@@ -94,7 +94,7 @@ fsm_reverse(struct fsm *fsm)
 			assert(to != NULL);
 
 			for (i = 0; i <= FSM_EDGE_MAX; i++) {
-				for (e = s->edges[i].sl; e; e = e->next) {
+				for (e = s->edges[i].sl; e != NULL; e = e->next) {
 					struct fsm_state *from;
 
 					assert(e->state != NULL);
@@ -135,13 +135,13 @@ fsm_reverse(struct fsm *fsm)
 		int endcount;
 
 		endcount = 0;
-		for (s = fsm->sl; s; s = s->next) {
+		for (s = fsm->sl; s != NULL; s = s->next) {
 			endcount += !!fsm_isend(fsm, s);
 		}
 
 		switch (endcount) {
 		case 1:
-			for (s = fsm->sl; s; s = s->next) {
+			for (s = fsm->sl; s != NULL; s = s->next) {
 				if (fsm_isend(fsm, s)) {
 					break;
 				}
@@ -160,7 +160,7 @@ fsm_reverse(struct fsm *fsm)
 			 */
 
 		default:
-			for (s = fsm->sl; s; s = s->next) {
+			for (s = fsm->sl; s != NULL; s = s->next) {
 				struct fsm_state *state;
 
 				if (endcount > 0 && !fsm_isend(fsm, s)) {
@@ -202,7 +202,7 @@ fsm_reverse(struct fsm *fsm)
 				}
 			}
 
-			for (s = fsm->sl; s; s = s->next) {
+			for (s = fsm->sl; s != NULL; s = s->next) {
 				struct fsm_state *state;
 
 				if (endcount > 0 && !fsm_isend(fsm, s)) {

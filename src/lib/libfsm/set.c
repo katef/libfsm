@@ -16,11 +16,11 @@ set_addstate(struct state_set **head, struct fsm_state *state)
 
 	/* TODO: explain we find duplicate; return success */
 	{
-		struct state_set *p;
+		struct state_set *s;
 
-		for (p = *head; p; p = p->next) {
-			if (p->state == state) {
-				return p;
+		for (s = *head; s != NULL; s = s->next) {
+			if (s->state == state) {
+				return s;
 			}
 		}
 	}
@@ -41,18 +41,18 @@ set_addstate(struct state_set **head, struct fsm_state *state)
 void
 set_remove(struct state_set **head, struct fsm_state *state)
 {
-	struct state_set **p;
+	struct state_set **s;
 	struct state_set *next;
 
 	assert(head != NULL);
 	assert(state != NULL);
 
-	for (p = head; *p; p = &(*p)->next) {
-		next = (*p)->next;
+	for (s = head; *s != NULL; s = &(*s)->next) {
+		next = (*s)->next;
 
-		free(*p);
+		free(*s);
 
-		*p = next;
+		*s = next;
 
 		assert(!set_contains(state, *head));
 		return;
@@ -62,12 +62,12 @@ set_remove(struct state_set **head, struct fsm_state *state)
 void
 set_free(struct state_set *set)
 {
-	struct state_set *p;
+	struct state_set *s;
 	struct state_set *next;
 
-	for (p = set; p; p = next) {
-		next = p->next;
-		free(p);
+	for (s = set; s != NULL; s = next) {
+		next = s->next;
+		free(s);
 	}
 }
 
@@ -78,7 +78,7 @@ set_containsendstate(struct fsm *fsm, struct state_set *set)
 
 	assert(fsm != NULL);
 
-	for (s = set; s; s = s->next) {
+	for (s = set; s != NULL; s = s->next) {
 		/* TODO: no need to pass fsm here */
 		if (fsm_isend(fsm, s->state)) {
 			return 1;
@@ -91,10 +91,10 @@ set_containsendstate(struct fsm *fsm, struct state_set *set)
 int
 set_contains(const struct fsm_state *state, const struct state_set *set)
 {
-	const struct state_set *p;
+	const struct state_set *s;
 
-	for (p = set; p; p = p->next) {
-		if (p->state == state) {
+	for (s = set; s != NULL; s = s->next) {
+		if (s->state == state) {
 			return 1;
 		}
 	}
@@ -104,10 +104,10 @@ set_contains(const struct fsm_state *state, const struct state_set *set)
 
 /* Find if a is a subset of b */
 static int subsetof(const struct state_set *a, const struct state_set *b) {
-	const struct state_set *p;
+	const struct state_set *s;
 
-	for (p = a; p; p = p->next) {
-		if (!set_contains(p->state, b)) {
+	for (s = a; s != NULL; s = s->next) {
+		if (!set_contains(s->state, b)) {
 			return 0;
 		}
 	}

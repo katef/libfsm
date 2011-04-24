@@ -17,7 +17,7 @@ set_addcolour(const struct fsm *fsm, struct colour_set **head, void *colour)
 	{
 		struct colour_set *c;
 
-		for (c = *head; c; c = c->next) {
+		for (c = *head; c != NULL; c = c->next) {
 			if (colour_comp(fsm, c->colour, colour)) {
 				return c;
 			}
@@ -46,7 +46,7 @@ set_freecolours(struct colour_set *set)
 	struct colour_set *c;
 	struct colour_set *next;
 
-	for (c = set; c; c = next) {
+	for (c = set; c != NULL; c = next) {
 		next = c->next;
 		free(c);
 	}
