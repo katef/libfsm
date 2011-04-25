@@ -154,11 +154,19 @@ static void printcolours(const struct fsm *fsm, const struct colour_set *cl, FIL
 		return;
 	}
 
-	fprintf(f, "<font point-size=\"12\">");
+	fprintf(f, "<font point-size = \"12\">");
 
 	for (c = cl; c != NULL; c = c->next) {
+		fprintf(f, "<font color = \"");
+
+		fsm->colour_hooks.print(fsm, f, c->colour);
+
+		fprintf(f, "\">");
+
 		/* TODO: html escapes */
 		fsm->colour_hooks.print(fsm, f, c->colour);
+
+		fprintf(f, "</font>");
 
 		if (c->next != NULL) {
 			fprintf(f, ",");
@@ -177,7 +185,23 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 	assert(s != NULL);
 
 	if (s->cl != NULL) {
-		fprintf(f, "\t%-2u [ label = <", s->id);
+		fprintf(f, "\t%-2u [ ", s->id);
+
+		if (fsm->colour_hooks.print != NULL && s->cl->next == NULL) {
+			fprintf(f, "color = ");
+
+			fsm->colour_hooks.print(fsm, f, s->cl->colour);
+
+			if (!fsm->options.anonymous_states) {
+				fprintf(f, ", fontcolor = ");
+
+				fsm->colour_hooks.print(fsm, f, s->cl->colour);
+			}
+
+			fprintf(f, ", ");
+		}
+
+		fprintf(f, "label = <", s->id);
 
 		if (!fsm->options.anonymous_states) {
 			fprintf(f, "%2u", s->id);
@@ -185,7 +209,9 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 			fprintf(f, "<br/>");
 		}
 
-		printcolours(fsm, s->cl, f);
+		if (fsm->colour_hooks.print != NULL && s->cl->next != NULL) {
+			printcolours(fsm, s->cl, f);
+		}
 
 		fprintf(f, "> ];\n");
 	}
@@ -272,12 +298,20 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 					}
 				}
 
-				if (s->cl != NULL) {
+				if (s->cl != NULL && s->cl->next != NULL) {
 					fprintf(f, "<br/>");
 					printcolours(fsm, s->cl, f);
 				}
 
-				fprintf(f, "> ];\n");
+				fprintf(f, ">");
+
+				if (s->cl != NULL && s->cl->next == NULL && fsm->colour_hooks.print != NULL) {
+					fprintf(f, ", color = ");
+
+					fsm->colour_hooks.print(fsm, f, s->cl->colour);
+				}
+
+				fprintf(f, " ];\n");
 			} else {
 				fprintf(f, "\t%-2u -> %-2u [ label = <", s->id, e->state->id);
 				escputc(i, f);
@@ -287,7 +321,15 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 					printcolours(fsm, s->cl, f);
 				}
 
-				fprintf(f, "> ];\n");
+				fprintf(f, ">");
+
+				if (s->cl != NULL && s->cl->next == NULL && fsm->colour_hooks.print != NULL) {
+					fprintf(f, ", color = ");
+
+					fsm->colour_hooks.print(fsm, f, s->cl->colour);
+				}
+
+				fprintf(f, " ];\n");
 			}
 		}
 	}
