@@ -21,6 +21,9 @@ void
 set_freecolours(struct colour_set *set);
 
 int
+set_containscolour(const struct fsm *fsm, void *colour, const struct colour_set *set);
+
+int
 colour_compare(const struct fsm *fsm, void *a, void *b);
 
 #endif

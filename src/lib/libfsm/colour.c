@@ -20,6 +20,20 @@ set_freecolours(struct colour_set *set)
 }
 
 int
+set_containscolour(const struct fsm *fsm, void *colour, const struct colour_set *set)
+{
+	const struct colour_set *s;
+
+	for (s = set; s != NULL; s = s->next) {
+		if (colour_compare(fsm, s->colour, colour)) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+int
 colour_compare(const struct fsm *fsm, void *a, void *b)
 {
 	assert(fsm != NULL);
