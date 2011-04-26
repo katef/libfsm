@@ -201,7 +201,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 			fprintf(f, ", ");
 		}
 
-		fprintf(f, "label = <", s->id);
+		fprintf(f, "label = <");
 
 		if (!fsm->options.anonymous_states) {
 			fprintf(f, "%2u", s->id);
