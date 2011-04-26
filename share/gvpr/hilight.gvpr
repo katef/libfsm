@@ -1,0 +1,17 @@
+#!/usr/bin/env gvpr
+# $Id$
+
+BEGIN {
+	int i;
+	int a[];
+
+	while (scanf("%u\n", &i) == 1) {
+		a[i] = 1;
+	}
+}
+
+N [ name != "start" && (int) name in a ] {
+	fillcolor = "#11dd55";
+	style = "filled";
+}
+
