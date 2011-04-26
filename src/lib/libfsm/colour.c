@@ -66,12 +66,28 @@ set_addcolour(const struct fsm *fsm, struct colour_set **head, void *colour)
 }
 
 int
-fsm_addcolour(struct fsm *fsm, struct fsm_state *state, void *colour)
+fsm_addstatecolour(struct fsm *fsm, struct fsm_state *state, void *colour)
 {
 	assert(fsm != NULL);
 	assert(state != NULL);
 
 	return !!set_addcolour(fsm, &state->cl, colour);
+}
+
+int
+fsm_addcolour(struct fsm *fsm, void *colour)
+{
+	struct fsm_state *s;
+
+	assert(fsm != NULL);
+
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		if (!set_addcolour(fsm, &s->cl, colour)) {
+			return 0;
+		}
+	}
+
+	return 1;
 }
 
 void

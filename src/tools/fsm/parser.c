@@ -677,8 +677,8 @@ p_62(fsm fsm, lex_state lex_state, act_state act_state, string *ZI61)
 		assert((ZIs) != NULL);
 		assert((ZIc) != NULL);
 
-		if (!fsm_addcolour(fsm, (ZIs), (ZIc))) {
-			perror("fsm_addcolour");
+		if (!fsm_addstatecolour(fsm, (ZIs), (ZIc))) {
+			perror("fsm_addstatecolour");
 			goto ZL1;
 		}
 	

@@ -75,7 +75,7 @@ static int carrythroughopaques(struct fsm *fsm, struct fsm_state *state, struct 
 		struct colour_set *c;
 
 		for (c = s->state->cl; c != NULL; c = c->next) {
-			if (!fsm_addcolour(fsm, state, c->colour)) {
+			if (!fsm_addstatecolour(fsm, state, c->colour)) {
 				return 0;
 			}
 		}

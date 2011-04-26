@@ -173,8 +173,8 @@
 		assert(@s != NULL);
 		assert(@c != NULL);
 
-		if (!fsm_addcolour(fsm, @s, @c)) {
-			perror("fsm_addcolour");
+		if (!fsm_addstatecolour(fsm, @s, @c)) {
+			perror("fsm_addstatecolour");
 			@!;
 		}
 	@};

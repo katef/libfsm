@@ -60,7 +60,7 @@ fsm_reverse(struct fsm *fsm)
 			}
 
 			for (c = s->cl; c != NULL; c = c->next) {
-				if (!fsm_addcolour(new, n, c->colour)) {
+				if (!fsm_addstatecolour(new, n, c->colour)) {
 					fsm_free(new);
 					return 0;
 				}

@@ -38,9 +38,11 @@ struct fsm_colour_hooks {
 
 
 /*
- * Set user-specified colour data per-state. Multiple colours may be assigned
- * to the same state. Duplicate values (as determined by the comparison callback
- * specified to fsm_setcompare) are disregarded and silently succeed.
+ * Add user-specified colour data to a state, and to all states, resectively.
+ *
+ * Multiple colours may be assigned to the same state. Duplicate colours (as
+ * determined by the comparison callback specified to fsm_setcompare) are
+ * disregarded and silently succeed.
  *
  * A colour is really just an opaque pointer which is passed around by libfsm
  * and never dereferenced, so you can use it to point to application-specific
@@ -55,7 +57,9 @@ struct fsm_colour_hooks {
  * Returns false on error; see errno.
  */
 int
-fsm_addcolour(struct fsm *fsm, struct fsm_state *state, void *colour);
+fsm_addstatecolour(struct fsm *fsm, struct fsm_state *state, void *colour);
+int
+fsm_addcolour(struct fsm *fsm, void *colour);
 
 /*
  * Assign a callbacks used for colour operations. If none have been set, the
@@ -67,6 +71,16 @@ fsm_addcolour(struct fsm *fsm, struct fsm_state *state, void *colour);
  */
 void
 fsm_setcolourhooks(struct fsm *fsm, const struct fsm_colour_hooks *h);
+
+/*
+ * Returns true if a state is pure for a given colour.
+ *
+ * Pure states are reachable only by not needing to traverse edges or states
+ * of another colour.
+ */
+int
+fsm_ispure(const struct fsm *fsm, const struct fsm_state *state, void *colour);
+
 
 #endif
 
