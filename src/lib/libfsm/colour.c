@@ -82,10 +82,28 @@ set_addcolour(const struct fsm *fsm, struct colour_set **head, void *colour)
 int
 fsm_addstatecolour(struct fsm *fsm, struct fsm_state *state, void *colour)
 {
+	int e;
+
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	return !!set_addcolour(fsm, &state->cl, colour);
+	if (!set_addcolour(fsm, &state->cl, colour)) {
+		return 0;
+	}
+
+	/* Propogate colour through to all edges present */
+	for (e = 0; e <= FSM_EDGE_MAX; e++) {
+		if (state->edges[e].sl == NULL) {
+			continue;
+		}
+
+		if (!set_addcolour(fsm, &state->edges[e].cl, colour)) {
+			/* TODO: this leaves the state in a questionable ... state */
+			return 0;
+		}
+	}
+
+	return 1;
 }
 
 int
