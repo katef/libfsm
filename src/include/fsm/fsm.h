@@ -64,13 +64,10 @@ fsm_move(struct fsm *dst, struct fsm *src);
  * Merge the contents of src into dst by union, and free src.
  * Returns 0 on error.
  *
- * If colour is non-NULL, all states in src are set as if by
- * fsm_addcolour().
- *
  * TODO: I don't really like this sort of interface. Reconsider?
  */
 int
-fsm_union(struct fsm *dst, struct fsm *src, void *colour);
+fsm_union(struct fsm *dst, struct fsm *src);
 
 /*
  * Add a state.

@@ -57,7 +57,7 @@ static struct fsm *xnewfsm(void) {
 	return new;
 }
 
-static void union_parse(struct fsm *fsm, FILE *f, char *colour) {
+static void union_parse(struct fsm *fsm, FILE *f) {
 	struct fsm *tmp;
 
 	assert(fsm != NULL);
@@ -70,7 +70,7 @@ static void union_parse(struct fsm *fsm, FILE *f, char *colour) {
 
 	fsm_parse(tmp, f);	/* TODO: error-check */
 
-	if (!fsm_union(fsm, tmp, colour)) {
+	if (!fsm_union(fsm, tmp)) {
 		perror("fsm_union");
 		exit(EXIT_FAILURE);
 	}
@@ -194,7 +194,7 @@ int main(int argc, char *argv[]) {
 						*strrchr(optarg, '.') = '\0';
 					}
 
-					union_parse(fsm, f, optarg);
+					union_parse(fsm, f);
 
 					fclose(f);
 					break;
@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
 	out = xopen(argc, argv, 1, stdout, "w");
 
 	{
-		union_parse(fsm, in, NULL);
+		union_parse(fsm, in);
 
 		if (cli_options.reverse) {
 			if (!fsm_reverse(fsm)) {

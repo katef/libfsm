@@ -87,7 +87,7 @@ fsm_copy(struct fsm *fsm)
 		}
 
 		for (c = s->cl; c != NULL; c = c->next) {
-			if (!fsm_addcolour(new, state, c->colour)) {
+			if (!fsm_addstatecolour(new, state, c->colour)) {
 				fsm_free(new);
 				return NULL;
 			}
@@ -166,7 +166,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 }
 
 int
-fsm_union(struct fsm *dst, struct fsm *src, void *colour)
+fsm_union(struct fsm *dst, struct fsm *src)
 {
 	struct fsm_state **sl;
 	struct fsm_state *s;
@@ -186,13 +186,25 @@ fsm_union(struct fsm *dst, struct fsm *src, void *colour)
 
 	/*
 	 * Add epsilon transition from dst's start state to src's start state.
+	 * XXX: i believe this is incorrect when dst has a transition to dst->start.
 	 */
 	if (src->start != NULL) {
 		if (dst->start == NULL) {
 			dst->start = src->start;
-		} else if (!fsm_addedge_epsilon(dst, dst->start, src->start)) {
-			/* TODO: this leaves dst in a questionable state */
-			return 0;
+		} else {
+			struct colour_set *c;
+
+			for (c = src->start->cl; c != NULL; c = c->next) {
+				if (!fsm_addstatecolour(dst, dst->start, c->colour)) {
+					/* TODO: this leaves dst in a questionable state */
+					return 0;
+				}
+			}
+
+			if (!fsm_addedge_epsilon(dst, dst->start, src->start)) {
+				/* TODO: this leaves dst in a questionable state */
+				return 0;
+			}
 		}
 	} else {
 		/* TODO: src has no start state. rethink during API refactor */
@@ -209,18 +221,6 @@ fsm_union(struct fsm *dst, struct fsm *src, void *colour)
 		s->id = inventid(dst);
 	}
 
-
-	/*
-	 * Colour incoming states.
-	 */
-	if (colour != NULL) {
-		for (s = src->sl; s != NULL; s = s->next) {
-			if (!fsm_addcolour(src, s, colour)) {
-				/* TODO: this leaves dst in a questionable state */
-				return 0;
-			}
-		}
-	}
 
 	free(src);
 
