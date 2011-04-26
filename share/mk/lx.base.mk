@@ -31,6 +31,7 @@ RANLIB=   ranlib
 RMFILE=   rm
 RMDIR=    rmdir
 TEST=     test
+GVPR=     gvpr     # from graphviz.org
 DOT=      dot      # from graphviz.org
 SID=      sid      # from tendra.org
 LEXI=     lexi     # from tendra.org
