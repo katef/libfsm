@@ -7,6 +7,7 @@
 
 struct fsm;
 struct fsm_state;
+struct fsm_edge;
 
 /*
  * You may not modify the fsm from within the these callbacks.
@@ -38,9 +39,9 @@ struct fsm_colour_hooks {
 
 
 /*
- * Add user-specified colour data to a state, and to all states, resectively.
+ * Add user-specified colour data to an edge, and to all edges, respectively.
  *
- * Multiple colours may be assigned to the same state. Duplicate colours (as
+ * Multiple colours may be assigned to the same edge. Duplicate colours (as
  * determined by the comparison callback specified to fsm_setcompare) are
  * disregarded and silently succeed.
  *
@@ -57,7 +58,7 @@ struct fsm_colour_hooks {
  * Returns false on error; see errno.
  */
 int
-fsm_addstatecolour(struct fsm *fsm, struct fsm_state *state, void *colour);
+fsm_addedgecolour(struct fsm *fsm, struct fsm_edge *edge, void *colour);
 int
 fsm_addcolour(struct fsm *fsm, void *colour);
 

@@ -46,7 +46,7 @@ extern void p_fsm(fsm, lex_state, act_state);
 
 /* BEGINNING OF TRAILER */
 
-#line 273 "parser.act"
+#line 259 "parser.act"
 
 #line 52 "parser.h"
 

@@ -27,8 +27,6 @@ struct fsm_state {
 	unsigned int id;
 	int end;
 
-	struct colour_set *cl;
-
 	struct fsm_edge edges[FSM_EDGE_MAX + 1];
 
 	struct fsm_state *next;

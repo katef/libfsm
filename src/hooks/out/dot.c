@@ -184,38 +184,6 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 	assert(f != NULL);
 	assert(s != NULL);
 
-	if (s->cl != NULL) {
-		fprintf(f, "\t%-2u [ ", s->id);
-
-		if (fsm->colour_hooks.print != NULL && s->cl->next == NULL) {
-			fprintf(f, "color = ");
-
-			fsm->colour_hooks.print(fsm, f, s->cl->colour);
-
-			if (!fsm->options.anonymous_states) {
-				fprintf(f, ", fontcolor = ");
-
-				fsm->colour_hooks.print(fsm, f, s->cl->colour);
-			}
-
-			fprintf(f, ", ");
-		}
-
-		fprintf(f, "label = <");
-
-		if (!fsm->options.anonymous_states) {
-			fprintf(f, "%2u", s->id);
-
-			fprintf(f, "<br/>");
-		}
-
-		if (fsm->colour_hooks.print != NULL && s->cl->next != NULL) {
-			printcolours(fsm, s->cl, f);
-		}
-
-		fprintf(f, "> ];\n");
-	}
-
 	/* TODO: findany() here? */
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
@@ -298,38 +266,13 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 					}
 				}
 
-				if (s->cl != NULL && s->cl->next != NULL) {
-					fprintf(f, "<br/>");
-					printcolours(fsm, s->cl, f);
-				}
-
-				fprintf(f, ">");
-
-				if (s->cl != NULL && s->cl->next == NULL && fsm->colour_hooks.print != NULL) {
-					fprintf(f, ", color = ");
-
-					fsm->colour_hooks.print(fsm, f, s->cl->colour);
-				}
-
-				fprintf(f, " ];\n");
+				fprintf(f, "> ];\n");
 			} else {
 				fprintf(f, "\t%-2u -> %-2u [ label = <", s->id, e->state->id);
+
 				escputc(i, f);
 
-				if (s->cl != NULL) {
-					fprintf(f, "<br/>");
-					printcolours(fsm, s->cl, f);
-				}
-
-				fprintf(f, ">");
-
-				if (s->cl != NULL && s->cl->next == NULL && fsm->colour_hooks.print != NULL) {
-					fprintf(f, ", color = ");
-
-					fsm->colour_hooks.print(fsm, f, s->cl->colour);
-				}
-
-				fprintf(f, " ];\n");
+				fprintf(f, "> ];\n");
 			}
 		}
 	}

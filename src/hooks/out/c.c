@@ -220,20 +220,7 @@ void out_c(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "\twhile ((c = fsm_getc(opaque)) != EOF) {\n");
 	fprintf(f, "\t\tswitch (state) {\n");
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		fprintf(f, "\t\tcase S%u:", s->id);
-
-		if (s->cl != NULL && fsm->colour_hooks.print != NULL) {
-			struct colour_set *c;
-
-			fprintf(f, " /*");
-			for (c = s->cl; c != NULL; c = c->next) {
-				fprintf(f, " ");
-				fsm->colour_hooks.print(fsm, f, c->colour);
-			}
-			fprintf(f, " */");
-		}
-
-		fprintf(f, "\n");
+		fprintf(f, "\t\tcase S%u:\n", s->id);
 		singlecase(f, s);
 
 		if (s->next != NULL) {

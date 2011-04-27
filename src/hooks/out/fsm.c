@@ -109,21 +109,6 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 		}
 	}
 
-	if (fsm->colour_hooks.print != NULL) {
-		for (s = fsm->sl; s != NULL; s = s->next) {
-			struct colour_set *c;
-
-			for (c = s->cl; c != NULL; c = c->next) {
-				fprintf(f, "%-2u = \"", s->id);
-
-				/* TODO: escape */
-				fsm->colour_hooks.print(fsm, f, c->colour);
-
-				fprintf(f, "\";\n");
-			}
-		}
-	}
-
 	fprintf(f, "\n");
 
 	start = fsm_getstart(fsm);

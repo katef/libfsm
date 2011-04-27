@@ -8,7 +8,6 @@
 
 #include "internal.h"
 #include "set.h"
-#include "colour.h"
 
 static unsigned int inventid(const struct fsm *fsm) {
 	assert(fsm != NULL);
@@ -78,19 +77,11 @@ fsm_copy(struct fsm *fsm)
 	/* recreate states */
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		struct fsm_state *state;
-		struct colour_set *c;
 
 		state = fsm_addstateid(new, s->id);
 		if (state == NULL) {
 			fsm_free(new);
 			return NULL;
-		}
-
-		for (c = s->cl; c != NULL; c = c->next) {
-			if (!fsm_addstatecolour(new, state, c->colour)) {
-				fsm_free(new);
-				return NULL;
-			}
 		}
 
 		if (fsm_isend(fsm, s)) {
@@ -191,20 +182,9 @@ fsm_union(struct fsm *dst, struct fsm *src)
 	if (src->start != NULL) {
 		if (dst->start == NULL) {
 			dst->start = src->start;
-		} else {
-			struct colour_set *c;
-
-			for (c = src->start->cl; c != NULL; c = c->next) {
-				if (!fsm_addstatecolour(dst, dst->start, c->colour)) {
-					/* TODO: this leaves dst in a questionable state */
-					return 0;
-				}
-			}
-
-			if (!fsm_addedge_epsilon(dst, dst->start, src->start)) {
-				/* TODO: this leaves dst in a questionable state */
-				return 0;
-			}
+		} else if (!fsm_addedge_epsilon(dst, dst->start, src->start)) {
+			/* TODO: this leaves dst in a questionable state */
+			return 0;
 		}
 	} else {
 		/* TODO: src has no start state. rethink during API refactor */
@@ -256,7 +236,6 @@ fsm_addstateid(struct fsm *fsm, unsigned int id)
 
 		new->id  = id;
 		new->end = 0;
-		new->cl  = NULL;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			new->edges[i].sl = NULL;

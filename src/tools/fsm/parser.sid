@@ -18,7 +18,7 @@
 
 	sep;
 	comma;
-	equals;
+	!equals;
 
 	eof;
 	!unknown;
@@ -32,8 +32,6 @@
 	<free>:             (:string) -> ();
 	<free-statelist>;
 
-	<mark-colour>:      (:state, :string) -> ();
-
 	<add-edge-literal>: (:state, :state, :string) -> ();
 	<add-edge-any>:     (:state, :state)          -> ();
 	<add-edge-epsilon>: (:state, :state)          -> ();
@@ -41,7 +39,6 @@
 	<err-expected-sep>;
 	<err-expected-trans>;
 	<err-expected-comma>;
-	<err-expected-equals>;
 	<err-expected-start>;
 	<err-expected-end>;
 	<err-parse>;
@@ -129,33 +126,10 @@
 		};
 	};
 
-	colour = {
-		n = id;
-		s = <add-state>(n);
-
-		{
-			equals;
-		##
-			<err-expected-equals>;
-		};
-
-		c = label;
-
-		{
-			sep;
-		##
-			<err-expected-sep>;
-		};
-
-		<mark-colour>(s, c);
-	};
-
 	things [
 
 		thing = {
 			edge;
-		||
-			colour;
 		};
 
 	] = {

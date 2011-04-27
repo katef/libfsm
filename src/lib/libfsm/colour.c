@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <fsm/colour.h>
+
 #include "internal.h"
 #include "colour.h"
 
@@ -80,42 +82,27 @@ set_addcolour(const struct fsm *fsm, struct colour_set **head, void *colour)
 }
 
 int
-fsm_addstatecolour(struct fsm *fsm, struct fsm_state *state, void *colour)
+fsm_addedgecolour(struct fsm *fsm, struct fsm_edge *edge, void *colour)
 {
-	int e;
-
 	assert(fsm != NULL);
-	assert(state != NULL);
+	assert(edge != NULL);
 
-	if (!set_addcolour(fsm, &state->cl, colour)) {
-		return 0;
-	}
-
-	/* Propogate colour through to all edges present */
-	for (e = 0; e <= FSM_EDGE_MAX; e++) {
-		if (state->edges[e].sl == NULL) {
-			continue;
-		}
-
-		if (!set_addcolour(fsm, &state->edges[e].cl, colour)) {
-			/* TODO: this leaves the state in a questionable ... state */
-			return 0;
-		}
-	}
-
-	return 1;
+	return !!set_addcolour(fsm, &edge->cl, colour);
 }
 
 int
 fsm_addcolour(struct fsm *fsm, void *colour)
 {
 	struct fsm_state *s;
+	int e;
 
 	assert(fsm != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (!set_addcolour(fsm, &s->cl, colour)) {
-			return 0;
+		for (e = 0; e <= FSM_EDGE_MAX; e++) {
+			if (!fsm_addedgecolour(fsm, &s->edges[e], colour)) {
+				return 0;
+			}
 		}
 	}
 

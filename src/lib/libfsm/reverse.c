@@ -8,7 +8,6 @@
 
 #include "internal.h"
 #include "set.h"
-#include "colour.h"
 
 /* TODO: centralise? */
 static int incomingedges(struct fsm *fsm, struct fsm_state *state) {
@@ -41,14 +40,12 @@ fsm_reverse(struct fsm *fsm)
 	fsm_setoptions(new, &fsm->options);
 
 	/*
-	 * Create states corresponding to the origional FSM's states. Their colour
-	 * values are copied over.
+	 * Create states corresponding to the origional FSM's states.
 	 *
 	 * TODO: possibly centralise with fsm_copy() into a state-copying function
 	 */
 	{
 		struct fsm_state *s;
-		struct colour_set *c;
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
 			struct fsm_state *n;
@@ -57,13 +54,6 @@ fsm_reverse(struct fsm *fsm)
 			if (n == NULL) {
 				fsm_free(new);
 				return 0;
-			}
-
-			for (c = s->cl; c != NULL; c = c->next) {
-				if (!fsm_addstatecolour(new, n, c->colour)) {
-					fsm_free(new);
-					return 0;
-				}
 			}
 		}
 	}

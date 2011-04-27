@@ -63,27 +63,6 @@ static void free_mappings(struct mapping *m) {
 	}
 }
 
-/* Carry through non-NULL opaque values to a newly-created state */
-/* TODO: centralise with fsm_copy */
-static int carrythroughopaques(struct fsm *fsm, struct fsm_state *state, struct state_set *set) {
-	const struct state_set *s;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	for (s = set; s != NULL; s = s->next) {
-		struct colour_set *c;
-
-		for (c = s->state->cl; c != NULL; c = c->next) {
-			if (!fsm_addstatecolour(fsm, state, c->colour)) {
-				return 0;
-			}
-		}
-	}
-
-	return 1;
-}
-
 /* Find if a transition is in a set */
 static int transin(char c, const struct transset *set) {
 	const struct transset *p;
@@ -415,12 +394,6 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 		}
 
 		free_transset(nes);
-
-		/* TODO: document */
-		if (!carrythroughopaques(dfa, curr->dfastate, curr->closure)) {
-			/* TODO: free something? */
-			return 0;
-		}
 
 		/*
 		 * The current DFA state is an end state if any of its associated NFA

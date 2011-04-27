@@ -169,16 +169,6 @@
 		}
 	@};
 
-	<mark-colour>: (s :state, c :string) -> () = @{
-		assert(@s != NULL);
-		assert(@c != NULL);
-
-		if (!fsm_addstatecolour(fsm, @s, @c)) {
-			perror("fsm_addstatecolour");
-			@!;
-		}
-	@};
-
 	<add-edge-literal>: (x :state, y :state, s :string) -> () = @{
 		assert(@s != NULL);
 
@@ -219,10 +209,6 @@
 
 	<err-expected-comma> = @{
 		err_expected("','");
-	@};
-
-	<err-expected-equals> = @{
-		err_expected("'='");
 	@};
 
 	<err-expected-start> = @{

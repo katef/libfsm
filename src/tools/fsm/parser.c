@@ -56,11 +56,11 @@
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
+static void p_edge(fsm, lex_state, act_state);
 static void p_things_C_Cthing(fsm, lex_state, act_state);
 static void p_xstart(fsm, lex_state, act_state, string *);
+static void p_45(fsm, lex_state, act_state);
 static void p_xend(fsm, lex_state, act_state);
-static void p_51(fsm, lex_state, act_state);
-static void p_62(fsm, lex_state, act_state, string *);
 static void p_ids(fsm, lex_state, act_state);
 extern void p_fsm(fsm, lex_state, act_state);
 
@@ -70,13 +70,16 @@ extern void p_fsm(fsm, lex_state, act_state);
 /* BEGINNING OF FUNCTION DEFINITIONS */
 
 static void
-p_things_C_Cthing(fsm fsm, lex_state lex_state, act_state act_state)
+p_edge(fsm fsm, lex_state lex_state, act_state act_state)
 {
 	if ((CURRENT_TERMINAL) == 11) {
 		return;
 	}
 	{
-		string ZI61;
+		string ZIa;
+		string ZIb;
+		state ZIx;
+		state ZIy;
 
 		/* BEGINNING OF INLINE: id */
 		{
@@ -87,13 +90,13 @@ p_things_C_Cthing(fsm fsm, lex_state lex_state, act_state act_state)
 					{
 #line 82 "parser.act"
 
-		ZI61 = xstrdup(lex_tokbuf(lex_state));
-		if (ZI61 == NULL) {
+		ZIa = xstrdup(lex_tokbuf(lex_state));
+		if (ZIa == NULL) {
 			perror("xstrdup");
 			exit(EXIT_FAILURE);
 		}
 	
-#line 97 "parser.c"
+#line 100 "parser.c"
 					}
 					/* END OF EXTRACT: ident */
 					ADVANCE_LEXER;
@@ -105,13 +108,13 @@ p_things_C_Cthing(fsm fsm, lex_state lex_state, act_state act_state)
 					{
 #line 90 "parser.act"
 
-		ZI61 = xstrdup(lex_tokbuf(lex_state));
-		if (ZI61 == NULL) {
+		ZIa = xstrdup(lex_tokbuf(lex_state));
+		if (ZIa == NULL) {
 			perror("xstrdup");
 			exit(EXIT_FAILURE);
 		}
 	
-#line 115 "parser.c"
+#line 118 "parser.c"
 					}
 					/* END OF EXTRACT: label */
 					ADVANCE_LEXER;
@@ -122,207 +125,20 @@ p_things_C_Cthing(fsm fsm, lex_state lex_state, act_state act_state)
 			}
 		}
 		/* END OF INLINE: id */
-		p_62 (fsm, lex_state, act_state, &ZI61);
-		if ((CURRENT_TERMINAL) == 11) {
-			RESTORE_LEXER;
-			goto ZL1;
-		}
-	}
-	return;
-ZL1:;
-	SAVE_LEXER (11);
-	return;
-}
-
-static void
-p_xstart(fsm fsm, lex_state lex_state, act_state act_state, string *ZOn)
-{
-	string ZIn;
-
-	if ((CURRENT_TERMINAL) == 11) {
-		return;
-	}
-	{
-		/* BEGINNING OF INLINE: 39 */
-		{
-			{
-				switch (CURRENT_TERMINAL) {
-				case 3:
-					break;
-				default:
-					goto ZL3;
-				}
-				ADVANCE_LEXER;
-			}
-			goto ZL2;
-		ZL3:;
-			{
-				/* BEGINNING OF ACTION: err-expected-start */
-				{
-#line 230 "parser.act"
-
-		err_expected("'start:'");
-	
-#line 167 "parser.c"
-				}
-				/* END OF ACTION: err-expected-start */
-			}
-		ZL2:;
-		}
-		/* END OF INLINE: 39 */
-		/* BEGINNING OF INLINE: id */
-		{
-			switch (CURRENT_TERMINAL) {
-			case 0:
-				{
-					/* BEGINNING OF EXTRACT: ident */
-					{
-#line 82 "parser.act"
-
-		ZIn = xstrdup(lex_tokbuf(lex_state));
-		if (ZIn == NULL) {
-			perror("xstrdup");
-			exit(EXIT_FAILURE);
-		}
-	
-#line 189 "parser.c"
-					}
-					/* END OF EXTRACT: ident */
-					ADVANCE_LEXER;
-				}
-				break;
-			case 1:
-				{
-					/* BEGINNING OF EXTRACT: label */
-					{
-#line 90 "parser.act"
-
-		ZIn = xstrdup(lex_tokbuf(lex_state));
-		if (ZIn == NULL) {
-			perror("xstrdup");
-			exit(EXIT_FAILURE);
-		}
-	
-#line 207 "parser.c"
-					}
-					/* END OF EXTRACT: label */
-					ADVANCE_LEXER;
-				}
-				break;
-			default:
-				goto ZL1;
-			}
-		}
-		/* END OF INLINE: id */
-		p_51 (fsm, lex_state, act_state);
-		if ((CURRENT_TERMINAL) == 11) {
-			RESTORE_LEXER;
-			goto ZL1;
-		}
-	}
-	goto ZL0;
-ZL1:;
-	SAVE_LEXER (11);
-	return;
-ZL0:;
-	*ZOn = ZIn;
-}
-
-static void
-p_xend(fsm fsm, lex_state lex_state, act_state act_state)
-{
-	if ((CURRENT_TERMINAL) == 11) {
-		return;
-	}
-	{
-		/* BEGINNING OF INLINE: 36 */
-		{
-			{
-				switch (CURRENT_TERMINAL) {
-				case 4:
-					break;
-				default:
-					goto ZL3;
-				}
-				ADVANCE_LEXER;
-			}
-			goto ZL2;
-		ZL3:;
-			{
-				/* BEGINNING OF ACTION: err-expected-end */
-				{
-#line 234 "parser.act"
-
-		err_expected("'end:'");
-	
-#line 259 "parser.c"
-				}
-				/* END OF ACTION: err-expected-end */
-			}
-		ZL2:;
-		}
-		/* END OF INLINE: 36 */
-		p_ids (fsm, lex_state, act_state);
-		p_51 (fsm, lex_state, act_state);
-		if ((CURRENT_TERMINAL) == 11) {
-			RESTORE_LEXER;
-			goto ZL1;
-		}
-	}
-	return;
-ZL1:;
-	SAVE_LEXER (11);
-	return;
-}
-
-static void
-p_51(fsm fsm, lex_state lex_state, act_state act_state)
-{
-	if ((CURRENT_TERMINAL) == 11) {
-		return;
-	}
-	{
 		switch (CURRENT_TERMINAL) {
-		case 6:
+		case 5:
 			break;
 		default:
 			goto ZL1;
 		}
 		ADVANCE_LEXER;
-	}
-	return;
-ZL1:;
-	{
-		/* BEGINNING OF ACTION: err-expected-sep */
+		/* BEGINNING OF INLINE: id */
 		{
-#line 214 "parser.act"
-
-		err_expected("';'");
-	
-#line 303 "parser.c"
-		}
-		/* END OF ACTION: err-expected-sep */
-	}
-}
-
-static void
-p_62(fsm fsm, lex_state lex_state, act_state act_state, string *ZI61)
-{
-	switch (CURRENT_TERMINAL) {
-	case 5:
-		{
-			string ZIb;
-			state ZIx;
-			state ZIy;
-
-			ADVANCE_LEXER;
-			/* BEGINNING OF INLINE: id */
-			{
-				switch (CURRENT_TERMINAL) {
-				case 0:
+			switch (CURRENT_TERMINAL) {
+			case 0:
+				{
+					/* BEGINNING OF EXTRACT: ident */
 					{
-						/* BEGINNING OF EXTRACT: ident */
-						{
 #line 82 "parser.act"
 
 		ZIb = xstrdup(lex_tokbuf(lex_state));
@@ -331,16 +147,16 @@ p_62(fsm fsm, lex_state lex_state, act_state act_state, string *ZI61)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 335 "parser.c"
-						}
-						/* END OF EXTRACT: ident */
-						ADVANCE_LEXER;
+#line 151 "parser.c"
 					}
-					break;
-				case 1:
+					/* END OF EXTRACT: ident */
+					ADVANCE_LEXER;
+				}
+				break;
+			case 1:
+				{
+					/* BEGINNING OF EXTRACT: label */
 					{
-						/* BEGINNING OF EXTRACT: label */
-						{
 #line 90 "parser.act"
 
 		ZIb = xstrdup(lex_tokbuf(lex_state));
@@ -349,30 +165,30 @@ p_62(fsm fsm, lex_state lex_state, act_state act_state, string *ZI61)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 353 "parser.c"
-						}
-						/* END OF EXTRACT: label */
-						ADVANCE_LEXER;
+#line 169 "parser.c"
 					}
-					break;
-				default:
-					goto ZL1;
+					/* END OF EXTRACT: label */
+					ADVANCE_LEXER;
 				}
+				break;
+			default:
+				goto ZL1;
 			}
-			/* END OF INLINE: id */
-			/* BEGINNING OF ACTION: add-state */
-			{
+		}
+		/* END OF INLINE: id */
+		/* BEGINNING OF ACTION: add-state */
+		{
 #line 102 "parser.act"
 
 		struct act_statelist *p;
 
-		assert((*ZI61) != NULL);
+		assert((ZIa) != NULL);
 
 		for (p = act_state->sl; p != NULL; p = p->next) {
 			assert(p->id != NULL);
 			assert(p->state != NULL);
 
-			if (0 == strcmp(p->id, (*ZI61))) {
+			if (0 == strcmp(p->id, (ZIa))) {
 				(ZIx) = p->state;
 				break;
 			}
@@ -387,7 +203,7 @@ p_62(fsm fsm, lex_state lex_state, act_state act_state, string *ZI61)
 				exit(EXIT_FAILURE);
 			}
 
-			new->id = xstrdup((*ZI61));
+			new->id = xstrdup((ZIa));
 			if (new->id == NULL) {
 				perror("xstrdup");
 				exit(EXIT_FAILURE);
@@ -405,11 +221,11 @@ p_62(fsm fsm, lex_state lex_state, act_state act_state, string *ZI61)
 			act_state->sl = new;
 		}
 	
-#line 409 "parser.c"
-			}
-			/* END OF ACTION: add-state */
-			/* BEGINNING OF ACTION: add-state */
-			{
+#line 225 "parser.c"
+		}
+		/* END OF ACTION: add-state */
+		/* BEGINNING OF ACTION: add-state */
+		{
 #line 102 "parser.act"
 
 		struct act_statelist *p;
@@ -453,35 +269,35 @@ p_62(fsm fsm, lex_state lex_state, act_state act_state, string *ZI61)
 			act_state->sl = new;
 		}
 	
-#line 457 "parser.c"
-			}
-			/* END OF ACTION: add-state */
-			/* BEGINNING OF INLINE: 46 */
-			{
-				switch (CURRENT_TERMINAL) {
-				case 2:
+#line 273 "parser.c"
+		}
+		/* END OF ACTION: add-state */
+		/* BEGINNING OF INLINE: 44 */
+		{
+			switch (CURRENT_TERMINAL) {
+			case 2:
+				{
+					ADVANCE_LEXER;
+					/* BEGINNING OF ACTION: add-edge-any */
 					{
-						ADVANCE_LEXER;
-						/* BEGINNING OF ACTION: add-edge-any */
-						{
-#line 198 "parser.act"
+#line 188 "parser.act"
 
 		if (!fsm_addedge_any(fsm, (ZIx), (ZIy))) {
 			perror("fsm_addedge_any");
 			exit(EXIT_FAILURE);
 		}
 	
-#line 475 "parser.c"
-						}
-						/* END OF ACTION: add-edge-any */
+#line 291 "parser.c"
 					}
-					break;
-				case 1:
-					{
-						string ZIs;
+					/* END OF ACTION: add-edge-any */
+				}
+				break;
+			case 1:
+				{
+					string ZIs;
 
-						/* BEGINNING OF EXTRACT: label */
-						{
+					/* BEGINNING OF EXTRACT: label */
+					{
 #line 90 "parser.act"
 
 		ZIs = xstrdup(lex_tokbuf(lex_state));
@@ -490,20 +306,20 @@ p_62(fsm fsm, lex_state lex_state, act_state act_state, string *ZI61)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 494 "parser.c"
-						}
-						/* END OF EXTRACT: label */
-						ADVANCE_LEXER;
-						/* BEGINNING OF ACTION: add-edge-literal */
-						{
-#line 183 "parser.act"
+#line 310 "parser.c"
+					}
+					/* END OF EXTRACT: label */
+					ADVANCE_LEXER;
+					/* BEGINNING OF ACTION: add-edge-literal */
+					{
+#line 173 "parser.act"
 
 		assert((ZIs) != NULL);
 
 		/* TODO: convert to single char in the grammar? */
 		if (strlen((ZIs)) != 1) {
 			fprintf(stderr, "edge literals must have exactly one character\n");
-			goto ZL4;
+			goto ZL5;
 		}
 
 		if (!fsm_addedge_literal(fsm, (ZIx), (ZIy), (ZIs)[0])) {
@@ -511,186 +327,248 @@ p_62(fsm fsm, lex_state lex_state, act_state act_state, string *ZI61)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 515 "parser.c"
-						}
-						/* END OF ACTION: add-edge-literal */
-						/* BEGINNING OF ACTION: free */
-						{
+#line 331 "parser.c"
+					}
+					/* END OF ACTION: add-edge-literal */
+					/* BEGINNING OF ACTION: free */
+					{
 #line 155 "parser.act"
 
 		free((ZIs));
 	
-#line 524 "parser.c"
-						}
-						/* END OF ACTION: free */
+#line 340 "parser.c"
 					}
-					break;
-				default:
+					/* END OF ACTION: free */
+				}
+				break;
+			default:
+				{
+					/* BEGINNING OF ACTION: add-edge-epsilon */
 					{
-						/* BEGINNING OF ACTION: add-edge-epsilon */
-						{
-#line 205 "parser.act"
+#line 195 "parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			perror("fsm_addedge_epsilon");
 			exit(EXIT_FAILURE);
 		}
 	
-#line 540 "parser.c"
-						}
-						/* END OF ACTION: add-edge-epsilon */
+#line 356 "parser.c"
 					}
-					break;
+					/* END OF ACTION: add-edge-epsilon */
 				}
-				goto ZL3;
-			ZL4:;
+				break;
+			}
+			goto ZL4;
+		ZL5:;
+			{
+				/* BEGINNING OF ACTION: err-expected-trans */
 				{
-					/* BEGINNING OF ACTION: err-expected-trans */
-					{
-#line 218 "parser.act"
+#line 208 "parser.act"
 
 		err_expected("transition");
 	
-#line 555 "parser.c"
-					}
-					/* END OF ACTION: err-expected-trans */
+#line 371 "parser.c"
 				}
-			ZL3:;
+				/* END OF ACTION: err-expected-trans */
 			}
-			/* END OF INLINE: 46 */
-			p_51 (fsm, lex_state, act_state);
-			if ((CURRENT_TERMINAL) == 11) {
-				RESTORE_LEXER;
-				goto ZL1;
-			}
+		ZL4:;
 		}
-		break;
-	case 8:
+		/* END OF INLINE: 44 */
+		p_45 (fsm, lex_state, act_state);
+		if ((CURRENT_TERMINAL) == 11) {
+			RESTORE_LEXER;
+			goto ZL1;
+		}
+	}
+	return;
+ZL1:;
+	SAVE_LEXER (11);
+	return;
+}
+
+static void
+p_things_C_Cthing(fsm fsm, lex_state lex_state, act_state act_state)
+{
+	if ((CURRENT_TERMINAL) == 11) {
+		return;
+	}
+	{
+		p_edge (fsm, lex_state, act_state);
+		if ((CURRENT_TERMINAL) == 11) {
+			RESTORE_LEXER;
+			goto ZL1;
+		}
+	}
+	return;
+ZL1:;
+	SAVE_LEXER (11);
+	return;
+}
+
+static void
+p_xstart(fsm fsm, lex_state lex_state, act_state act_state, string *ZOn)
+{
+	string ZIn;
+
+	if ((CURRENT_TERMINAL) == 11) {
+		return;
+	}
+	{
+		/* BEGINNING OF INLINE: 37 */
 		{
-			state ZIs;
-			string ZIc;
-
-			/* BEGINNING OF ACTION: add-state */
 			{
-#line 102 "parser.act"
-
-		struct act_statelist *p;
-
-		assert((*ZI61) != NULL);
-
-		for (p = act_state->sl; p != NULL; p = p->next) {
-			assert(p->id != NULL);
-			assert(p->state != NULL);
-
-			if (0 == strcmp(p->id, (*ZI61))) {
-				(ZIs) = p->state;
-				break;
+				switch (CURRENT_TERMINAL) {
+				case 3:
+					break;
+				default:
+					goto ZL3;
+				}
+				ADVANCE_LEXER;
 			}
-		}
-
-		if (p == NULL) {
-			struct act_statelist *new;
-
-			new = malloc(sizeof *new);
-			if (new == NULL) {
-				perror("malloc");
-				exit(EXIT_FAILURE);
-			}
-
-			new->id = xstrdup((*ZI61));
-			if (new->id == NULL) {
-				perror("xstrdup");
-				exit(EXIT_FAILURE);
-			}
-
-			(ZIs) = fsm_addstate(fsm);
-			if ((ZIs) == NULL) {
-				perror("fsm_addstate");
-				exit(EXIT_FAILURE);
-			}
-
-			new->state = (ZIs);
-
-			new->next = act_state->sl;
-			act_state->sl = new;
-		}
-	
-#line 619 "parser.c"
-			}
-			/* END OF ACTION: add-state */
-			/* BEGINNING OF INLINE: 49 */
+			goto ZL2;
+		ZL3:;
 			{
+				/* BEGINNING OF ACTION: err-expected-start */
 				{
-					switch (CURRENT_TERMINAL) {
-					case 8:
-						break;
-					default:
-						goto ZL6;
-					}
-					ADVANCE_LEXER;
-				}
-				goto ZL5;
-			ZL6:;
-				{
-					/* BEGINNING OF ACTION: err-expected-equals */
-					{
-#line 226 "parser.act"
+#line 216 "parser.act"
 
-		err_expected("'='");
+		err_expected("'start:'");
 	
-#line 642 "parser.c"
-					}
-					/* END OF ACTION: err-expected-equals */
+#line 438 "parser.c"
 				}
-			ZL5:;
+				/* END OF ACTION: err-expected-start */
 			}
-			/* END OF INLINE: 49 */
+		ZL2:;
+		}
+		/* END OF INLINE: 37 */
+		/* BEGINNING OF INLINE: id */
+		{
 			switch (CURRENT_TERMINAL) {
-			case 1:
-				/* BEGINNING OF EXTRACT: label */
+			case 0:
 				{
-#line 90 "parser.act"
+					/* BEGINNING OF EXTRACT: ident */
+					{
+#line 82 "parser.act"
 
-		ZIc = xstrdup(lex_tokbuf(lex_state));
-		if (ZIc == NULL) {
+		ZIn = xstrdup(lex_tokbuf(lex_state));
+		if (ZIn == NULL) {
 			perror("xstrdup");
 			exit(EXIT_FAILURE);
 		}
 	
-#line 661 "parser.c"
+#line 460 "parser.c"
+					}
+					/* END OF EXTRACT: ident */
+					ADVANCE_LEXER;
 				}
-				/* END OF EXTRACT: label */
+				break;
+			case 1:
+				{
+					/* BEGINNING OF EXTRACT: label */
+					{
+#line 90 "parser.act"
+
+		ZIn = xstrdup(lex_tokbuf(lex_state));
+		if (ZIn == NULL) {
+			perror("xstrdup");
+			exit(EXIT_FAILURE);
+		}
+	
+#line 478 "parser.c"
+					}
+					/* END OF EXTRACT: label */
+					ADVANCE_LEXER;
+				}
 				break;
 			default:
 				goto ZL1;
 			}
-			ADVANCE_LEXER;
-			p_51 (fsm, lex_state, act_state);
-			if ((CURRENT_TERMINAL) == 11) {
-				RESTORE_LEXER;
-				goto ZL1;
-			}
-			/* BEGINNING OF ACTION: mark-colour */
-			{
-#line 173 "parser.act"
-
-		assert((ZIs) != NULL);
-		assert((ZIc) != NULL);
-
-		if (!fsm_addstatecolour(fsm, (ZIs), (ZIc))) {
-			perror("fsm_addstatecolour");
+		}
+		/* END OF INLINE: id */
+		p_45 (fsm, lex_state, act_state);
+		if ((CURRENT_TERMINAL) == 11) {
+			RESTORE_LEXER;
 			goto ZL1;
 		}
-	
-#line 686 "parser.c"
-			}
-			/* END OF ACTION: mark-colour */
-		}
-		break;
-	case 11:
+	}
+	goto ZL0;
+ZL1:;
+	SAVE_LEXER (11);
+	return;
+ZL0:;
+	*ZOn = ZIn;
+}
+
+static void
+p_45(fsm fsm, lex_state lex_state, act_state act_state)
+{
+	if ((CURRENT_TERMINAL) == 11) {
 		return;
-	default:
-		goto ZL1;
+	}
+	{
+		switch (CURRENT_TERMINAL) {
+		case 6:
+			break;
+		default:
+			goto ZL1;
+		}
+		ADVANCE_LEXER;
+	}
+	return;
+ZL1:;
+	{
+		/* BEGINNING OF ACTION: err-expected-sep */
+		{
+#line 204 "parser.act"
+
+		err_expected("';'");
+	
+#line 527 "parser.c"
+		}
+		/* END OF ACTION: err-expected-sep */
+	}
+}
+
+static void
+p_xend(fsm fsm, lex_state lex_state, act_state act_state)
+{
+	if ((CURRENT_TERMINAL) == 11) {
+		return;
+	}
+	{
+		/* BEGINNING OF INLINE: 34 */
+		{
+			{
+				switch (CURRENT_TERMINAL) {
+				case 4:
+					break;
+				default:
+					goto ZL3;
+				}
+				ADVANCE_LEXER;
+			}
+			goto ZL2;
+		ZL3:;
+			{
+				/* BEGINNING OF ACTION: err-expected-end */
+				{
+#line 220 "parser.act"
+
+		err_expected("'end:'");
+	
+#line 560 "parser.c"
+				}
+				/* END OF ACTION: err-expected-end */
+			}
+		ZL2:;
+		}
+		/* END OF INLINE: 34 */
+		p_ids (fsm, lex_state, act_state);
+		p_45 (fsm, lex_state, act_state);
+		if ((CURRENT_TERMINAL) == 11) {
+			RESTORE_LEXER;
+			goto ZL1;
+		}
 	}
 	return;
 ZL1:;
@@ -724,7 +602,7 @@ ZL2_ids:;
 			exit(EXIT_FAILURE);
 		}
 	
-#line 728 "parser.c"
+#line 606 "parser.c"
 					}
 					/* END OF EXTRACT: ident */
 					ADVANCE_LEXER;
@@ -742,7 +620,7 @@ ZL2_ids:;
 			exit(EXIT_FAILURE);
 		}
 	
-#line 746 "parser.c"
+#line 624 "parser.c"
 					}
 					/* END OF EXTRACT: label */
 					ADVANCE_LEXER;
@@ -798,7 +676,7 @@ ZL2_ids:;
 			act_state->sl = new;
 		}
 	
-#line 802 "parser.c"
+#line 680 "parser.c"
 		}
 		/* END OF ACTION: add-state */
 		/* BEGINNING OF ACTION: mark-end */
@@ -809,15 +687,15 @@ ZL2_ids:;
 
 		fsm_setend(fsm, (ZIs), 1);
 	
-#line 813 "parser.c"
+#line 691 "parser.c"
 		}
 		/* END OF ACTION: mark-end */
-		/* BEGINNING OF INLINE: 59 */
+		/* BEGINNING OF INLINE: 53 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case 7:
 				{
-					/* BEGINNING OF INLINE: 34 */
+					/* BEGINNING OF INLINE: 32 */
 					{
 						{
 							switch (CURRENT_TERMINAL) {
@@ -833,17 +711,17 @@ ZL2_ids:;
 						{
 							/* BEGINNING OF ACTION: err-expected-comma */
 							{
-#line 222 "parser.act"
+#line 212 "parser.act"
 
 		err_expected("','");
 	
-#line 841 "parser.c"
+#line 719 "parser.c"
 							}
 							/* END OF ACTION: err-expected-comma */
 						}
 					ZL5:;
 					}
-					/* END OF INLINE: 34 */
+					/* END OF INLINE: 32 */
 					/* BEGINNING OF INLINE: ids */
 					goto ZL2_ids;
 					/* END OF INLINE: ids */
@@ -853,7 +731,7 @@ ZL2_ids:;
 				break;
 			}
 		}
-		/* END OF INLINE: 59 */
+		/* END OF INLINE: 53 */
 	}
 	return;
 ZL1:;
@@ -868,9 +746,9 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 		return;
 	}
 	{
-		/* BEGINNING OF INLINE: 60 */
+		/* BEGINNING OF INLINE: 54 */
 		{
-		ZL3_60:;
+		ZL3_54:;
 			switch (CURRENT_TERMINAL) {
 			case 0: case 1:
 				{
@@ -878,14 +756,14 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 					{
 						{
 							p_things_C_Cthing (fsm, lex_state, act_state);
-							/* BEGINNING OF INLINE: 60 */
+							/* BEGINNING OF INLINE: 54 */
 							if ((CURRENT_TERMINAL) == 11) {
 								RESTORE_LEXER;
 								goto ZL1;
 							} else {
-								goto ZL3_60;
+								goto ZL3_54;
 							}
-							/* END OF INLINE: 60 */
+							/* END OF INLINE: 54 */
 						}
 						/*UNREACHED*/
 					}
@@ -896,8 +774,8 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 				break;
 			}
 		}
-		/* END OF INLINE: 60 */
-		/* BEGINNING OF INLINE: 57 */
+		/* END OF INLINE: 54 */
+		/* BEGINNING OF INLINE: 51 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case 3:
@@ -955,7 +833,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 			act_state->sl = new;
 		}
 	
-#line 959 "parser.c"
+#line 837 "parser.c"
 					}
 					/* END OF ACTION: add-state */
 					/* BEGINNING OF ACTION: mark-start */
@@ -966,7 +844,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 
 		fsm_setstart(fsm, (ZIs));
 	
-#line 970 "parser.c"
+#line 848 "parser.c"
 					}
 					/* END OF ACTION: mark-start */
 				}
@@ -975,8 +853,8 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 				break;
 			}
 		}
-		/* END OF INLINE: 57 */
-		/* BEGINNING OF INLINE: 58 */
+		/* END OF INLINE: 51 */
+		/* BEGINNING OF INLINE: 52 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case 4:
@@ -992,7 +870,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 				break;
 			}
 		}
-		/* END OF INLINE: 58 */
+		/* END OF INLINE: 52 */
 		switch (CURRENT_TERMINAL) {
 		case 9:
 			break;
@@ -1016,7 +894,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 			free(p);
 		}
 	
-#line 1020 "parser.c"
+#line 898 "parser.c"
 		}
 		/* END OF ACTION: free-statelist */
 	}
@@ -1025,12 +903,12 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-parse */
 		{
-#line 239 "parser.act"
+#line 225 "parser.act"
 
 		fprintf(stderr, "parse error\n");
 		exit(EXIT_FAILURE);
 	
-#line 1034 "parser.c"
+#line 912 "parser.c"
 		}
 		/* END OF ACTION: err-parse */
 	}
@@ -1038,7 +916,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 272 "parser.act"
+#line 258 "parser.act"
 
 
 	struct fsm *fsm_parse(struct fsm *fsm, FILE *f) {
@@ -1070,6 +948,6 @@ ZL1:;
 		return fsm;
 	}
 
-#line 1074 "parser.c"
+#line 952 "parser.c"
 
 /* END OF FILE */
