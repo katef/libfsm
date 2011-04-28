@@ -216,10 +216,15 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 				 * states, so we can assume each edge has an identical colour
 				 * set per consolidated group of edges.
 				 *
+				 * XXX: this axiom is now violated, and the following applies:
+				 *
 				 * If the ability is ever added for arbitary colours to be
 				 * assigned to edges, than that assumption breaks, and this
 				 * code will need to repeat for each distinct colour set within
 				 * that consolidated group.
+				 *
+				 * I'll update this code later, because it's just an aesthetic
+				 * distraction right now.
 				 */
 
 				bm = bm_empty;
@@ -266,13 +271,53 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 					}
 				}
 
-				fprintf(f, "> ];\n");
+				/* TODO: edge colours aren't correct here; see above */
+				if (fsm->colour_hooks.print != NULL) {
+					if (s->edges[i].cl != NULL && s->edges[i].cl->next == NULL) {
+						fprintf(f, ">");
+						fprintf(f, ", color = ");
+						fsm->colour_hooks.print(fsm, f, s->edges[i].cl->colour);
+
+						fprintf(f, ", fontcolor = ");
+						fsm->colour_hooks.print(fsm, f, s->edges[i].cl->colour);
+					} else if (s->edges[i].cl != NULL) {
+						fprintf(f, "<br/>");
+						printcolours(fsm, s->edges[i].cl, f);
+						fprintf(f, ">");
+					} else {
+						fprintf(f, ">");
+					}
+				} else {
+					fprintf(f, ">");
+				}
+
+				fprintf(f, " ];\n");
 			} else {
 				fprintf(f, "\t%-2u -> %-2u [ label = <", s->id, e->state->id);
 
 				escputc(i, f);
 
-				fprintf(f, "> ];\n");
+				/* TODO: horrible. refactor */
+				if (fsm->colour_hooks.print != NULL) {
+					if (s->edges[i].cl != NULL && s->edges[i].cl->next == NULL) {
+						fprintf(f, ">");
+						fprintf(f, ", color = ");
+						fsm->colour_hooks.print(fsm, f, s->edges[i].cl->colour);
+
+						fprintf(f, ", fontcolor = ");
+						fsm->colour_hooks.print(fsm, f, s->edges[i].cl->colour);
+					} else if (s->edges[i].cl != NULL) {
+						fprintf(f, "<br/>");
+						printcolours(fsm, s->edges[i].cl, f);
+						fprintf(f, ">");
+					} else {
+						fprintf(f, ">");
+					}
+				} else {
+					fprintf(f, ">");
+				}
+
+				fprintf(f, " ];\n");
 			}
 		}
 	}

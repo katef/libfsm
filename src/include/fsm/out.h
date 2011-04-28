@@ -3,6 +3,8 @@
 #ifndef FSM_OUT_H
 #define FSM_OUT_H
 
+#include <stdio.h>
+
 struct fsm;
 
 enum fsm_out {

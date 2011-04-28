@@ -11,7 +11,7 @@
 #include "set.h"
 #include "xalloc.h"
 
-static int fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to, struct fsm_edge *edge) {
+static struct fsm_edge *fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to, struct fsm_edge *edge) {
 	assert(from != NULL);
 	assert(to != NULL);
 	assert(edge != NULL);
@@ -19,13 +19,13 @@ static int fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state
 	(void) fsm;
 
 	if (!set_addstate(&edge->sl, to)) {
-		return 0;
+		return NULL;
 	}
 
-	return 1;
+	return edge;
 }
 
-int
+struct fsm_edge *
 fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
 {
 	assert(fsm != NULL);
@@ -35,7 +35,7 @@ fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 	return fsm_addedge(fsm, from, to, &from->edges[FSM_EDGE_EPSILON]);
 }
 
-int
+struct fsm_edge *
 fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
 {
 	int i;
@@ -50,10 +50,10 @@ fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
 		}
 	}
 
-	return 1;
+	return &from->edges[i];
 }
 
-int
+struct fsm_edge *
 fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	char c)
 {

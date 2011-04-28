@@ -92,6 +92,7 @@ fsm_copy(struct fsm *fsm)
 	/* recreate edges */
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		struct state_set *e;
+		struct colour_set *c;
 		struct fsm_state *from;
 		int i;
 
@@ -127,6 +128,13 @@ fsm_copy(struct fsm *fsm)
 					}
 				}
 			}
+
+			for (c = s->edges[i].cl; c != NULL; c = c->next) {
+				if (!set_addcolour(new, &from->edges[i].cl, c->colour)) {
+					fsm_free(new);
+					return NULL;
+				}
+			}
 		}
 	}
 
@@ -152,6 +160,8 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	dst->sl      = src->sl;
 	dst->start   = src->start;
 	dst->options = src->options;
+
+	dst->colour_hooks = src->colour_hooks;
 
 	free(src);
 }

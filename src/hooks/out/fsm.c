@@ -70,6 +70,7 @@ static const struct fsm_state *findany(const struct fsm_state *state) {
 void out_fsm(const struct fsm *fsm, FILE *f) {
 	struct fsm_state *s;
 	struct state_set *e;
+	struct colour_set *c;
 	struct fsm_state *start;
 	int end;
 
@@ -105,6 +106,19 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 				}
 
 				fprintf(f, ";\n");
+			}
+
+			if (fsm->colour_hooks.print != NULL) {
+				for (c = s->edges[i].cl; c != NULL; c = c->next) {
+					fprintf(f, "%-2u ", s->id);
+					escputc(i, f);
+					fprintf(f, " = \"");
+
+					/* TODO: escapes */
+					fsm->colour_hooks.print(fsm, f, c->colour);
+
+					fprintf(f, "\";\n");
+				}
 			}
 		}
 	}

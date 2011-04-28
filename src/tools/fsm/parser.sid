@@ -32,6 +32,8 @@
 	<free>:             (:string) -> ();
 	<free-statelist>;
 
+	<mark-colour>:      (:state, :string, :string) -> ();
+
 	<add-edge-literal>: (:state, :state, :string) -> ();
 	<add-edge-any>:     (:state, :state)          -> ();
 	<add-edge-epsilon>: (:state, :state)          -> ();
@@ -124,6 +126,29 @@
 		##
 			<err-expected-sep>;
 		};
+	};
+
+	colour = {
+		n = id;
+		s = <add-state>(n);
+
+		l = label;
+
+		{
+			equals;
+		##
+			<err-expected-equals>;
+		};
+
+		c = label;
+
+		{
+			sep;
+		##
+			<err-expected-sep>;
+		};
+
+		<mark-colour>(s, l, c);
 	};
 
 	things [

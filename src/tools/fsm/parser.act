@@ -29,6 +29,7 @@
 	#include <fsm/colour.h>
 
 	#include "libfsm/xalloc.h"
+	#include "libfsm/internal.h"	/* XXX */
 
 	#include "lexer.h"
 	#include "parser.h"
@@ -166,6 +167,22 @@
 
 			free(p->id);
 			free(p);
+		}
+	@};
+
+	<mark-colour>: (s :state, l :string, c :string) -> () = @{
+		assert(@s != NULL);
+		assert(@c != NULL);
+
+		/* TODO: convert to single char in the grammar? */
+		if (strlen(@l) != 1) {
+			fprintf(stderr, "edge literals must have exactly one character\n");
+			@!;
+		}
+
+		if (!fsm_addedgecolour(fsm, &@s->edges[(unsigned char) @l[0]], @c)) {
+			perror("fsm_addedgecolour");
+			@!;
 		}
 	@};
 

@@ -242,10 +242,9 @@ static struct mapping *nextnotdone(struct mapping *ml) {
  * List all states within a set which are reachable via non-epsilon
  * transitions (that is, have a label associated with them).
  *
- * Returns l on success, NULL on error.
  * TODO: maybe simpler to just return the set, rather than take a double pointer
  */
-static struct transset **listnonepsilonstates(struct transset **l, struct state_set *set) {
+static int listnonepsilonstates(struct transset **l, struct state_set *set) {
 	struct state_set *s;
 	struct state_set *e;
 
@@ -270,7 +269,7 @@ static struct transset **listnonepsilonstates(struct transset **l, struct state_
 				p = malloc(sizeof *p);
 				if (p == NULL) {
 					free_transset(*l);
-					return NULL;
+					return 0;
 				}
 
 				p->c = i;
@@ -282,32 +281,41 @@ static struct transset **listnonepsilonstates(struct transset **l, struct state_
 		}
 	}
 
-	return l;
+	return 1;
 }
 
 /*
  * Return a list of all states reachable from set via the given transition.
  */
-static struct state_set *allstatesreachableby(struct state_set *set, char c) {
-	struct state_set *l;
+static int allstatesreachableby(const struct fsm *fsm, struct state_set *set, char c,
+	struct state_set **sl, struct colour_set **cl) {
 	struct state_set *s;
-	struct state_set *e;
 
 	assert(set != NULL);
 
-	l = NULL;
 	for (s = set; s != NULL; s = s->next) {
-		for (e = s->state->edges[(unsigned char) c].sl; e != NULL; e = e->next) {
-			assert(e->state != NULL);
+		struct fsm_edge *to;
+		struct state_set *es;
+		struct colour_set *cs;
 
-			if (!set_addstate(&l, e->state)) {
-				set_free(l);
-				return NULL;
+		to = &s->state->edges[(unsigned char) c];
+
+		for (es = to->sl; es != NULL; es = es->next) {
+			assert(es->state != NULL);
+
+			if (!set_addstate(sl, es->state)) {
+				return 0;
+			}
+		}
+
+		for (cs = to->cl; cs != NULL; cs = cs->next) {
+			if (!set_addcolour(fsm, cl, cs->colour)) {
+				return 0;
 			}
 		}
 	}
 
-	return l;
+	return 1;
 }
 
 /*
@@ -363,22 +371,32 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 		 * states in the NFA.
 		 */
 		/* TODO: document that nes contains only entries with labels set */
-		if (listnonepsilonstates(&nes, curr->closure) == NULL) {
+		if (!listnonepsilonstates(&nes, curr->closure)) {
 			return 0;
 		}
 
 		for (s = nes; s != NULL; s = s->next) {
 			struct fsm_state *new;
+			struct fsm_edge *e;
 			struct state_set *reachable;
+			struct colour_set *colours;
+			struct colour_set *c;
 
 			assert(s->state != NULL);
+
+			reachable = NULL;
+			colours = NULL;
 
 			/*
 			 * Find the closure of the set of all NFA states which are reachable
 			 * through this label, starting from the set of states forming curr's
 			 * closure.
 			 */
-			reachable = allstatesreachableby(curr->closure, s->c);
+			if (!allstatesreachableby(nfa, curr->closure, s->c, &reachable, &colours)) {
+				set_free(reachable);
+				set_freecolours(colours);
+				return 0;
+			}
 
 			new = set_closure(ml, dfa, reachable);
 			set_free(reachable);
@@ -387,10 +405,22 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 				return 0;
 			}
 
-			if (!fsm_addedge_literal(dfa, curr->dfastate, new, s->c)) {
+			e = fsm_addedge_literal(dfa, curr->dfastate, new, s->c);
+			if (e == NULL) {
 				free_transset(nes);
+				set_freecolours(colours);
 				return 0;
 			}
+
+			for (c = colours; c != NULL; c = c->next) {
+				if (!fsm_addedgecolour(dfa, e, c->colour)) {
+					free_transset(nes);
+					set_freecolours(colours);
+					return 0;
+				}
+			}
+
+			set_freecolours(colours);
 		}
 
 		free_transset(nes);
@@ -403,8 +433,6 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 			fsm_setend(dfa, curr->dfastate, 1);
 		}
 	}
-
-	/* TODO: remove epsilon transition now it's not required */
 
 	return 1;
 }
@@ -423,8 +451,13 @@ fsm_todfa(struct fsm *fsm)
 		return 0;
 	}
 
+	/* TODO: centralise cloning these sort of things */
+	fsm_setoptions(dfa, &fsm->options);
+	fsm_setcolourhooks(dfa, &fsm->colour_hooks);
+
 	ml = NULL;
 	r = nfatodfa(&ml, fsm, dfa);
+
 	free_mappings(ml);
 	if (!r) {
 		return 0;

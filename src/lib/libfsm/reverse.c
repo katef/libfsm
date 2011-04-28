@@ -5,6 +5,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/graph.h>
+#include <fsm/colour.h>
 
 #include "internal.h"
 #include "set.h"
@@ -38,6 +39,7 @@ fsm_reverse(struct fsm *fsm)
 	}
 
 	fsm_setoptions(new, &fsm->options);
+	fsm_setcolourhooks(new, &fsm->colour_hooks);
 
 	/*
 	 * Create states corresponding to the origional FSM's states.
@@ -77,6 +79,7 @@ fsm_reverse(struct fsm *fsm)
 		for (s = fsm->sl; s != NULL; s = s->next) {
 			struct fsm_state *to;
 			struct state_set *e;
+			struct colour_set *c;
 			int i;
 
 			to = fsm_getstatebyid(new, s->id);
@@ -86,6 +89,7 @@ fsm_reverse(struct fsm *fsm)
 			for (i = 0; i <= FSM_EDGE_MAX; i++) {
 				for (e = s->edges[i].sl; e != NULL; e = e->next) {
 					struct fsm_state *from;
+					struct fsm_edge *edge;
 
 					assert(e->state != NULL);
 
@@ -95,7 +99,8 @@ fsm_reverse(struct fsm *fsm)
 
 					switch (i) {
 					case FSM_EDGE_EPSILON:
-						if (!fsm_addedge_epsilon(new, from, to)) {
+						edge = fsm_addedge_epsilon(new, from, to);
+						if (edge == NULL) {
 							fsm_free(new);
 							return 0;
 						}
@@ -105,7 +110,16 @@ fsm_reverse(struct fsm *fsm)
 						assert(i >= 0);
 						assert(i <= UCHAR_MAX);
 
-						if (!fsm_addedge_literal(new, from, to, i)) {
+						edge = fsm_addedge_literal(new, from, to, i);
+						if (edge == NULL) {
+							fsm_free(new);
+							return 0;
+						}
+					}
+
+					/* TODO: centralise */
+					for (c = s->edges[i].cl; c != NULL; c = c->next) {
+						if (!fsm_addedgecolour(new, edge, c->colour)) {
 							fsm_free(new);
 							return 0;
 						}
