@@ -14,14 +14,16 @@
 
 #include "parser.h"
 
+#include "../../lib/libfsm/internal.h"	/* XXX */
+
 extern int optind;
 extern char *optarg;
 
 void usage(void) {
-	printf("usage: fsm [-chadmr] [-l <language] [-e <execution> | -q <query] [-u <input>] [<input> [<output>]]\n");
+	printf("usage: fsm [-chadmr] [-l <language] [-e <execution> | -q <query] [-p <colour>] [-u <input>] [<input> [<output>]]\n");
 }
 
-static int colour_compare(const struct fsm *fsm, void *a, void *b) {
+static int colour_hook_compare(const struct fsm *fsm, void *a, void *b) {
 	assert(fsm != NULL);
 	assert(a != NULL);
 	assert(b != NULL);
@@ -30,7 +32,7 @@ static int colour_compare(const struct fsm *fsm, void *a, void *b) {
 }
 
 /* TODO: centralise for convenience, into <fsm/colour.h> */
-static int colour_print(const struct fsm *fsm, FILE *f, void *colour) {
+static int colour_hook_print(const struct fsm *fsm, FILE *f, void *colour) {
 	assert(fsm != NULL);
 	assert(colour != NULL);
 	assert(f != NULL);
@@ -42,8 +44,8 @@ static struct fsm *xnewfsm(void) {
 	struct fsm *new;
 
 	struct fsm_colour_hooks hooks = {
-		colour_compare,
-		colour_print
+		colour_hook_compare,
+		colour_hook_print
 	};
 
 	new = fsm_new();
@@ -110,6 +112,8 @@ int main(int argc, char *argv[]) {
 		unsigned int query:1;
 		enum query { QUERY_DFA, QUERY_END } query_property;
 
+		char *is_pure;
+
 		const char *execute;
 	};
 
@@ -124,7 +128,7 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hal:de:cmrq:u:")) != -1) {
+		while ((c = getopt(argc, argv, "hal:de:cmrp:q:u:")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -167,6 +171,10 @@ int main(int argc, char *argv[]) {
 
 			case 'c':
 				options.consolidate_edges = 1;
+				break;
+
+			case 'p':
+				cli_options.is_pure = optarg;
 				break;
 
 			case 'q':
@@ -250,8 +258,21 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+		if (cli_options.is_pure != NULL) {
+			const struct fsm_state *s;
+
+			/* XXX: breaking abstraction */
+			for (s = fsm->sl; s != NULL; s = s->next) {
+				if (fsm_ispure(fsm, s, cli_options.is_pure)) {
+					printf("%u\n", s->id);
+				}
+			}
+		}
+
 		/* TODO: make optional */
-		fsm_print(fsm, out, format);
+		if (cli_options.is_pure == NULL) {
+			fsm_print(fsm, out, format);
+		}
 
 		if (cli_options.execute != NULL) {
 			int e;
