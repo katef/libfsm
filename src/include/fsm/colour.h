@@ -77,7 +77,7 @@ fsm_setcolourhooks(struct fsm *fsm, const struct fsm_colour_hooks *h);
  * Returns true if a state is pure for a given colour.
  *
  * Pure states are reachable only by not needing to traverse edges or states
- * of another colour.
+ * of another (or no) colour.
  */
 int
 fsm_ispure(const struct fsm *fsm, const struct fsm_state *state, void *colour);
