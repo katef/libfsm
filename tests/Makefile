@@ -8,6 +8,7 @@
 SUBDIR+= todfa
 SUBDIR+= minimize
 #SUBDIR+= split
+SUBDIR+= pure
 
 .include <lx.subdir.mk>
 
