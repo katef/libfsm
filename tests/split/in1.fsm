@@ -10,17 +10,13 @@
 4 -> 6 'x';
 6 -> 8 'c';
 
-0 = "red";
-1 = "red";
-2 = "red";
-5 = "red";
-7 = "red";
+1 'a' = "red";
+2 'b' = "red";
+5 'c' = "red";
 
-0 = "blue";
-3 = "blue";
-4 = "blue";
-6 = "blue";
-8 = "blue";
+3 'a' = "blue";
+4 'x' = "blue";
+6 'c' = "blue";
 
 start: 0;
 end: 7, 8;

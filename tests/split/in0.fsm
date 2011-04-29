@@ -9,15 +9,12 @@
 4 -> 4 'c';
 4 -> 6 'd';
 
-0 = "red";
-1 = "red";
-2 = "red";
-5 = "red";
+1 'a' = "red";
+2 'b' = "red";
 
-0 = "blue";
-3 = "blue";
-4 = "blue";
-6 = "blue";
+3 'a' = "blue";
+4 'c' = "blue";
+4 'd' = "blue";
 
 start: 0;
 end: 5, 6;

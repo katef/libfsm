@@ -7,13 +7,10 @@
 0 -> 3;
 3 -> 4 'x';
 
-0 = "red";
-1 = "red";
-2 = "red";
+1 'a' = "red";
+1 'b' = "red";
 
-0 = "blue";
-3 = "blue";
-4 = "blue";
+3 'x' = "blue";
 
 start: 0;
 end: 2, 4;
