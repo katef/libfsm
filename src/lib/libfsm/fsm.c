@@ -80,57 +80,6 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	free(src);
 }
 
-int
-fsm_union(struct fsm *dst, struct fsm *src)
-{
-	struct fsm_state **sl;
-	struct fsm_state *s;
-
-	assert(dst != NULL);
-	assert(src != NULL);
-
-	/*
-	 * Splice over lists from src to dst.
-	 */
-
-	for (sl = &dst->sl; *sl != NULL; sl = &(*sl)->next) {
-		/* nothing */
-	}
-	*sl = src->sl;
-
-
-	/*
-	 * Add epsilon transition from dst's start state to src's start state.
-	 * XXX: i believe this is incorrect when dst has a transition to dst->start.
-	 */
-	if (src->start != NULL) {
-		if (dst->start == NULL) {
-			dst->start = src->start;
-		} else if (!fsm_addedge_epsilon(dst, dst->start, src->start)) {
-			/* TODO: this leaves dst in a questionable state */
-			return 0;
-		}
-	} else {
-		/* TODO: src has no start state. rethink during API refactor */
-	}
-
-
-	/*
-	 * Renumber incoming states so as not to clash over existing ones.
-	 */
-	for (s = src->sl; s != NULL; s = s->next) {
-		s->id = 0;
-	}
-	for (s = src->sl; s != NULL; s = s->next) {
-		s->id = inventid(dst);
-	}
-
-
-	free(src);
-
-	return 1;
-}
-
 struct fsm_state *
 fsm_addstateid(struct fsm *fsm, unsigned int id)
 {

@@ -20,7 +20,7 @@ extern int optind;
 extern char *optarg;
 
 void usage(void) {
-	printf("usage: fsm [-chadmr] [-l <language] [-e <execution> | -q <query] [-p <colour>] [-u <input>] [<input> [<output>]]\n");
+	printf("usage: fsm [-chadmr] [-l <language] [-e <execution> | -q <query] [-p <colour>] [<input> [<output>]]\n");
 }
 
 static int colour_hook_compare(const struct fsm *fsm, void *a, void *b) {
@@ -38,42 +38,6 @@ static int colour_hook_print(const struct fsm *fsm, FILE *f, void *colour) {
 	assert(f != NULL);
 
 	return fprintf(f, "%s", (const char *) colour);
-}
-
-static struct fsm *xnewfsm(void) {
-	struct fsm *new;
-
-	struct fsm_colour_hooks hooks = {
-		colour_hook_compare,
-		colour_hook_print
-	};
-
-	new = fsm_new();
-	if (new == NULL) {
-		perror("fsm_new");
-		exit(EXIT_FAILURE);
-	}
-
-	fsm_setcolourhooks(new, &hooks);
-
-	return new;
-}
-
-static void union_parse(struct fsm *fsm, FILE *f) {
-	struct fsm *tmp;
-
-	assert(fsm != NULL);
-	assert(f != NULL);
-
-	/* TODO: This ought to come out more nicely when fsm.h's API is refactored */
-	/* TODO: in particular, in unioning with respect to colour hooks */
-
-	tmp = fsm_parse(f);	/* TODO: error-check */
-
-	if (!fsm_union(fsm, tmp)) {
-		perror("fsm_union");
-		exit(EXIT_FAILURE);
-	}
 }
 
 static FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
@@ -121,12 +85,10 @@ int main(int argc, char *argv[]) {
 	static const struct cli_options cli_options_defaults;
 	struct cli_options cli_options = cli_options_defaults;
 
-	fsm = xnewfsm();
-
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hal:de:cmrp:q:u:")) != -1) {
+		while ((c = getopt(argc, argv, "hal:de:cmrp:q:")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -187,25 +149,6 @@ int main(int argc, char *argv[]) {
 				}
 				break;
 
-			case 'u': {
-					FILE *f;
-
-					f = fopen(optarg, "r");
-					if (f == NULL) {
-						perror(optarg);
-						exit(EXIT_FAILURE);
-					}
-
-					if (strrchr(optarg, '.')) {
-						*strrchr(optarg, '.') = '\0';
-					}
-
-					union_parse(fsm, f);
-
-					fclose(f);
-					break;
-				}
-
 			case '?':
 			default:
 				usage();
@@ -227,13 +170,22 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_setoptions(fsm, &options);
-
 	in  = xopen(argc, argv, 0, stdin,  "r");
 	out = xopen(argc, argv, 1, stdout, "w");
 
 	{
-		union_parse(fsm, in);
+		static const struct fsm_colour_hooks hooks = {
+			colour_hook_compare,
+			colour_hook_print
+		};
+
+		fsm = fsm_parse(in);
+		if (fsm == NULL) {
+			exit(EXIT_FAILURE);
+		}
+
+		fsm_setoptions(fsm, &options);
+		fsm_setcolourhooks(fsm, &hooks);
 
 		if (cli_options.reverse) {
 			if (!fsm_reverse(fsm)) {

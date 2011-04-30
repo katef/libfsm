@@ -53,15 +53,6 @@ void
 fsm_move(struct fsm *dst, struct fsm *src);
 
 /*
- * Merge the contents of src into dst by union, and free src.
- * Returns 0 on error.
- *
- * TODO: I don't really like this sort of interface. Reconsider?
- */
-int
-fsm_union(struct fsm *dst, struct fsm *src);
-
-/*
  * Add a state.
  *
  * Returns NULL on error; see errno.
