@@ -44,7 +44,7 @@ fsm_reverse(struct fsm *fsm)
 	/*
 	 * Create states corresponding to the origional FSM's states.
 	 *
-	 * TODO: possibly centralise with fsm_copy() into a state-copying function
+	 * TODO: possibly centralise as a state-copying function
 	 */
 	{
 		struct fsm_state *s;

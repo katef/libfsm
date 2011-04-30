@@ -45,14 +45,6 @@ void
 fsm_free(struct fsm *fsm);
 
 /*
- * Copy an FSM and its contents.
- *
- * Returns NULL on error; see errno.
- */
-struct fsm *
-fsm_copy(struct fsm *fsm);
-
-/*
  * Copy the contents of src over dst, and free src.
  *
  * TODO: I don't really like this sort of interface. Reconsider?
