@@ -18,7 +18,7 @@
 
 	sep;
 	comma;
-	!equals;
+	equals;
 
 	eof;
 	!unknown;
@@ -42,6 +42,7 @@
 	<err-expected-trans>;
 	<err-expected-comma>;
 	<err-expected-start>;
+	<err-expected-equals>;
 	<err-expected-end>;
 	<err-parse>;
 
@@ -155,6 +156,8 @@
 
 		thing = {
 			edge;
+		||
+			colour;
 		};
 
 	] = {

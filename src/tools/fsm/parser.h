@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 78 "parser.act"
+#line 76 "parser.act"
 
 
 	typedef struct fsm *       fsm;
@@ -17,14 +17,12 @@
 	typedef struct act_state * act_state;
 
 	/*
-	 * Parse .fsm input from the given file stream. The fsm passed is expected to
-	 * have been created by fsm_new(); it should not have any existing states.
-	 * TODO: Have this create an fsm, instead
+	 * Parse .fsm input from the given file stream.
 	 */
 	struct fsm *
-	fsm_parse(struct fsm *fsm, FILE *f);
+	fsm_parse(FILE *f);
 
-#line 28 "parser.h"
+#line 26 "parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
@@ -46,8 +44,8 @@ extern void p_fsm(fsm, lex_state, act_state);
 
 /* BEGINNING OF TRAILER */
 
-#line 280 "parser.act"
+#line 282 "parser.act"
 
-#line 52 "parser.h"
+#line 50 "parser.h"
 
 /* END OF FILE */

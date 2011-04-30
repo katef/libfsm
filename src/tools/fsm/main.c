@@ -68,9 +68,7 @@ static void union_parse(struct fsm *fsm, FILE *f) {
 	/* TODO: This ought to come out more nicely when fsm.h's API is refactored */
 	/* TODO: in particular, in unioning with respect to colour hooks */
 
-	tmp = xnewfsm();
-
-	fsm_parse(tmp, f);	/* TODO: error-check */
+	tmp = fsm_parse(f);	/* TODO: error-check */
 
 	if (!fsm_union(fsm, tmp)) {
 		perror("fsm_union");

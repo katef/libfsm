@@ -68,12 +68,10 @@
 	typedef struct act_state * act_state;
 
 	/*
-	 * Parse .fsm input from the given file stream. The fsm passed is expected to
-	 * have been created by fsm_new(); it should not have any existing states.
-	 * TODO: Have this create an fsm, instead
+	 * Parse .fsm input from the given file stream.
 	 */
 	struct fsm *
-	fsm_parse(struct fsm *fsm, FILE *f);
+	fsm_parse(FILE *f);
 
 @};
 
@@ -228,6 +226,10 @@
 		err_expected("','");
 	@};
 
+	<err-expected-equals> = @{
+		err_expected("'='");
+	@};
+
 	<err-expected-start> = @{
 		err_expected("'start:'");
 	@};
@@ -243,15 +245,13 @@
 
 %trailer% @{
 
-	struct fsm *fsm_parse(struct fsm *fsm, FILE *f) {
+	struct fsm *fsm_parse(FILE *f) {
 		struct act_state act_state_s;
 		struct act_state *act_state;
 		struct lex_state *lex_state;
+		struct fsm *new;
 
-		assert(fsm != NULL);
 		assert(f != NULL);
-
-		/* TODO: perhaps create the fsm struct here, rather than passing one in */
 
 		act_state_s.sl = NULL;
 
@@ -264,12 +264,18 @@
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
 
+		new = fsm_new();
+		if (new == NULL) {
+			perror("fsm_new");
+			return NULL;
+		}
+
 		ADVANCE_LEXER;
-		p_fsm(fsm, lex_state, act_state);
+		p_fsm(new, lex_state, act_state);
 
 		lex_free(lex_state);
 
-		return fsm;
+		return new;
 	}
 
 @}, @{
