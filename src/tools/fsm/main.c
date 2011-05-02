@@ -20,7 +20,7 @@ extern int optind;
 extern char *optarg;
 
 void usage(void) {
-	printf("usage: fsm [-chadmr] [-l <language] [-e <execution> | -q <query] [-p <colour>] [<input> [<output>]]\n");
+	printf("usage: fsm [-chadmrs] [-l <language] [-e <execution> | -q <query] [-p <colour>] [<input> [<output>]]\n");
 }
 
 static int colour_hook_compare(const struct fsm *fsm, void *a, void *b) {
@@ -74,6 +74,9 @@ int main(int argc, char *argv[]) {
 		unsigned int query:1;
 		enum query { QUERY_DFA, QUERY_END } query_property;
 
+		/* boolean: split */
+		unsigned int split:1;
+
 		char *is_pure;
 
 		const char *execute;
@@ -88,7 +91,7 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hal:de:cmrp:q:")) != -1) {
+		while ((c = getopt(argc, argv, "hal:de:cmrsp:q:")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -127,6 +130,10 @@ int main(int argc, char *argv[]) {
 
 			case 'r':
 				cli_options.reverse = 1;
+				break;
+
+			case 's':
+				cli_options.split = 1;
 				break;
 
 			case 'c':
@@ -204,6 +211,13 @@ int main(int argc, char *argv[]) {
 		if (cli_options.minimize) {
 			if (!fsm_minimize(fsm)) {
 				perror("fsm_minimize");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		if (cli_options.split) {
+			if (!fsm_split(fsm)) {
+				perror("fsm_split");
 				exit(EXIT_FAILURE);
 			}
 		}
