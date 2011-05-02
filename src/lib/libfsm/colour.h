@@ -18,6 +18,9 @@ struct colour_set *
 set_addcolour(const struct fsm *fsm, struct colour_set **head, void *colour);
 
 void
+set_removecolour(const struct fsm *fsm, struct colour_set **head, void *colour);
+
+void
 set_freecolours(struct colour_set *set);
 
 int

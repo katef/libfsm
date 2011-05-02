@@ -17,8 +17,32 @@ set_freecolours(struct colour_set *set)
 
 	for (c = set; c != NULL; c = next) {
 		next = c->next;
+		/* TODO: callback to free colour? */
 		free(c);
 	}
+}
+
+void
+set_removecolour(const struct fsm *fsm, struct colour_set **head, void *colour)
+{
+	struct colour_set **c;
+
+	assert(fsm != NULL);
+	assert(head != NULL);
+
+	for (c = head; *c != NULL; c = &(*c)->next) {
+		if (colour_compare(fsm, (*c)->colour, colour)) {
+			struct colour_set *next;
+
+			next = (*c)->next;
+			/* TODO: callback to free colour? */
+			free(*c);
+			*c = next;
+			break;
+		}
+	}
+
+	assert(!set_containscolour(fsm, colour, *head));
 }
 
 int
