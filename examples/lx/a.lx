@@ -22,6 +22,7 @@
 /([0-9]+)/ -> $int;
 
 '"' .. '"' {
+	'\"'          -> $str_quote;
 	'\t'          -> $str_tab;
 	'\r'          -> $str_return;
 	'\n'          -> $str_return;
