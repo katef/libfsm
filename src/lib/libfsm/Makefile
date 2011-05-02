@@ -18,6 +18,7 @@ SRCS+= set.c
 SRCS+= state.c
 SRCS+= todfa.c
 SRCS+= pure.c
+SRCS+= split.c
 SRCS+= xalloc.c
 
 .include <lx.obj.mk>
