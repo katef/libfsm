@@ -12,6 +12,25 @@
 #include "libfsm/colour.h"
 #include "libfsm/internal.h"
 
+static unsigned
+indexof(const struct fsm *fsm, const struct fsm_state *state)
+{
+	struct fsm_state *s;
+	int i;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
+		if (s == state) {
+			return i;
+		}
+	}
+
+	assert(!"unreached");
+	return 0;
+}
+
 static void escputc(char c, FILE *f) {
 	assert(f != NULL);
 
@@ -70,10 +89,11 @@ static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
 	return 0;
 }
 
-static void singlecase(FILE *f, struct fsm_state *state) {
+static void singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state) {
 	const struct fsm_state *to;
 	int i;
 
+	assert(fsm != NULL);
 	assert(f != NULL);
 	assert(state != NULL);
 
@@ -116,8 +136,8 @@ static void singlecase(FILE *f, struct fsm_state *state) {
 			}
 
 			/* TODO: pass S%u out to maximum state width */
-			if (state->edges[i].sl->state->id != state->id) {
-				fprintf(f, " state = S%u; continue;\n", state->edges[i].sl->state->id);
+			if (state->edges[i].sl->state != state) {
+				fprintf(f, " state = S%u; continue;\n", indexof(fsm, state->edges[i].sl->state));
 			} else {
 				fprintf(f, "             continue;\n");
 			}
@@ -125,13 +145,13 @@ static void singlecase(FILE *f, struct fsm_state *state) {
 	}
 
 	if (to != NULL) {
-		fprintf(f, "\t\t\tdefault:  state = S%u; continue;\n", to->id);
+		fprintf(f, "\t\t\tdefault:  state = S%u; continue;\n", indexof(fsm, to));
 	}
 
 	fprintf(f, "\t\t\t}\n");
 }
 
-static void stateenum(FILE *f, struct fsm_state *sl) {
+static void stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
 	struct fsm_state *s;
 	int i;
 
@@ -139,7 +159,7 @@ static void stateenum(FILE *f, struct fsm_state *sl) {
 	fprintf(f, "\t\t");
 
 	for (s = sl, i = 1; s != NULL; s = s->next, i++) {
-		fprintf(f, "S%u", s->id);
+		fprintf(f, "S%u", indexof(fsm, s));
 		if (s->next != NULL) {
 			fprintf(f, ", ");
 		}
@@ -181,7 +201,7 @@ static void endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
 		}
 
 		assert(s->end > 0);
-		fprintf(f, "\tcase S%d: return %u;\n", s->id, s->id);
+		fprintf(f, "\tcase S%d: return %u;\n", indexof(fsm, s), indexof(fsm, s));
 	}
 	fprintf(f, "\tdefault: return EOF; /* unexpected EOF */\n");
 	fprintf(f, "\t}\n");
@@ -208,20 +228,20 @@ void out_c(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "\n");
 
 	/* enum of states */
-	stateenum(f, fsm->sl);
+	stateenum(f, fsm, fsm->sl);
 	fprintf(f, "\n");
 
 	/* start state */
 	assert(fsm->start != NULL);
-	fprintf(f, "\tstate = S%u;\n", fsm->start->id);
+	fprintf(f, "\tstate = S%u;\n", indexof(fsm, fsm->start));
 	fprintf(f, "\n");
 
 	/* FSM */
 	fprintf(f, "\twhile ((c = fsm_getc(opaque)) != EOF) {\n");
 	fprintf(f, "\t\tswitch (state) {\n");
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		fprintf(f, "\t\tcase S%u:\n", s->id);
-		singlecase(f, s);
+		fprintf(f, "\t\tcase S%u:\n", indexof(fsm, s));
+		singlecase(f, fsm, s);
 
 		if (s->next != NULL) {
 			fprintf(f, "\n");

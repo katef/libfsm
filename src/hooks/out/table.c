@@ -11,6 +11,25 @@
 #include "libfsm/set.h"
 #include "libfsm/internal.h"
 
+static unsigned
+indexof(const struct fsm *fsm, const struct fsm_state *state)
+{
+	struct fsm_state *s;
+	int i;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
+		if (s == state) {
+			return i;
+		}
+	}
+
+	assert(!"unreached");
+	return 0;
+}
+
 static int escputc(int c, FILE *f) {
 	assert(f != NULL);
 
@@ -71,7 +90,7 @@ void out_table(const struct fsm *fsm, FILE *f) {
 
 	fprintf(f, "%-9s ", "");
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		fprintf(f, "| %-2u ", s->id);
+		fprintf(f, "| %-2u ", indexof(fsm, s));
 	}
 
 	fprintf(f, "\n");
@@ -106,7 +125,7 @@ void out_table(const struct fsm *fsm, FILE *f) {
 			} else {
 				assert(s->edges[i].sl->state != NULL);
 
-				fprintf(f, "| %-2u ", s->edges[i].sl->state->id);
+				fprintf(f, "| %-2u ", indexof(fsm, s->edges[i].sl->state));
 			}
 		}
 

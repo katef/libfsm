@@ -49,13 +49,32 @@ bm_next(const struct bm *bm, int i, int value)
 	return FSM_EDGE_MAX + 1;
 }
 
+static unsigned
+indexof(const struct fsm *fsm, const struct fsm_state *state)
+{
+	struct fsm_state *s;
+	int i;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
+		if (s == state) {
+			return i;
+		}
+	}
+
+	assert(!"unreached");
+	return 0;
+}
+
 /* TODO: centralise */
 static void escputc(int c, FILE *f) {
 	assert(f != NULL);
 
 	switch (c) {
 	case FSM_EDGE_EPSILON:
-		fprintf(f, "&epsilon;");
+		fprintf(f, "E");	/* TODO */
 		return;
 
 	case '\\':
@@ -230,7 +249,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 				bm = bm_empty;
 
 				/* find all edges which go to this state */
-				fprintf(f, "\t%-2u -> %-2u [ label = <", s->id, e->state->id);
+				fprintf(f, "\t%-2u -> %-2u [ label = <", indexof(fsm, s), indexof(fsm, e->state));
 				for (k = 0; k <= FSM_EDGE_MAX; k++) {
 					for (e2 = s->edges[k].sl; e2 != NULL; e2 = e2->next) {
 						if (e2->state == e->state) {
@@ -293,7 +312,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 
 				fprintf(f, " ];\n");
 			} else {
-				fprintf(f, "\t%-2u -> %-2u [ label = <", s->id, e->state->id);
+				fprintf(f, "\t%-2u -> %-2u [ label = <", indexof(fsm, s), indexof(fsm, e->state));
 
 				escputc(i, f);
 
@@ -343,7 +362,7 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
 
 	start = fsm_getstart(fsm);
-	fprintf(f, "\tstart -> %u;\n", start != NULL ? start->id : 0U);
+	fprintf(f, "\tstart -> %u;\n", start != NULL ? indexof(fsm, start) : 0U);
 
 	fprintf(f, "\n");
 
@@ -351,7 +370,7 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 		singlestate(fsm, f, s);
 
 		if (fsm_isend(fsm, s)) {
-			fprintf(f, "\t%-2u [ shape = doublecircle ];\n", s->id);
+			fprintf(f, "\t%-2u [ shape = doublecircle ];\n", indexof(fsm, s));
 		}
 	}
 

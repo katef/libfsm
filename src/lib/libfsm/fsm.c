@@ -9,12 +9,6 @@
 #include "internal.h"
 #include "set.h"
 
-static unsigned int inventid(const struct fsm *fsm) {
-	assert(fsm != NULL);
-
-	return fsm_getmaxid(fsm) + 1;
-}
-
 static void free_contents(struct fsm *fsm) {
 	struct fsm_state *s;
 	struct fsm_state *next;
@@ -81,53 +75,29 @@ fsm_move(struct fsm *dst, struct fsm *src)
 }
 
 struct fsm_state *
-fsm_addstateid(struct fsm *fsm, unsigned int id)
-{
-	struct fsm_state *new;
-
-	assert(fsm != NULL);
-
-	/* Find an existing state */
-	{
-		struct fsm_state *s;
-
-		for (s = fsm->sl; s; s = s->next) {
-			if (s->id == id) {
-				return s;
-			}
-		}
-	}
-
-	/* Otherwise, create a new one */
-	{
-		int i;
-
-		new = malloc(sizeof *new);
-		if (new == NULL) {
-			return NULL;
-		}
-
-		new->id  = id;
-		new->end = 0;
-
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			new->edges[i].sl = NULL;
-			new->edges[i].cl = NULL;
-		}
-
-		new->next = fsm->sl;
-		fsm->sl = new;
-	}
-
-	return new;
-}
-
-struct fsm_state *
 fsm_addstate(struct fsm *fsm)
 {
+	struct fsm_state *new;
+	int i;
+
 	assert(fsm != NULL);
 
-	return fsm_addstateid(fsm, inventid(fsm));
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+		return NULL;
+	}
+
+	new->end = 0;
+
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		new->edges[i].sl = NULL;
+		new->edges[i].cl = NULL;
+	}
+
+	new->next = fsm->sl;
+	fsm->sl = new;
+
+	return new;
 }
 
 void
@@ -192,39 +162,5 @@ fsm_getstart(const struct fsm *fsm)
 	assert(fsm != NULL);
 
 	return fsm->start;
-}
-
-struct fsm_state *
-fsm_getstatebyid(const struct fsm *fsm, unsigned int id)
-{
-	struct fsm_state *s;
-
-	assert(fsm != NULL);
-
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (s->id == id) {
-			return s;
-		}
-	}
-
-	return NULL;
-}
-
-unsigned int
-fsm_getmaxid(const struct fsm *fsm)
-{
-	unsigned int max;
-	struct fsm_state *s;
-
-	assert(fsm != NULL);
-
-	max = 0;
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (s->id > max) {
-			max = s->id;
-		}
-	}
-
-	return max;
 }
 

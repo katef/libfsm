@@ -11,6 +11,25 @@
 #include "internal.h"
 #include "set.h"
 
+/* TODO: centralise? */
+static int
+indexof(const struct fsm *fsm, const struct fsm_state *state)
+{
+	struct fsm_state *s;
+	int i;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
+		if (s == state) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
 struct fsm_state *nextstate(const struct fsm_state *state, char c) {
 	const struct state_set *s;
 
@@ -53,7 +72,7 @@ int fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque)
 		return 0;
 	}
 
-	return state->id;
+	return indexof(fsm, state);
 }
 
 int fsm_sgetc(void *opaque) {

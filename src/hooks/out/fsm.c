@@ -10,6 +10,25 @@
 #include "libfsm/set.h"
 #include "libfsm/colour.h"
 
+static unsigned
+indexof(const struct fsm *fsm, const struct fsm_state *state)
+{
+	struct fsm_state *s;
+	int i;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
+		if (s == state) {
+			return i;
+		}
+	}
+
+	assert(!"unreached");
+	return 0;
+}
+
 static void escputc(char c, FILE *f) {
 	assert(f != NULL);
 
@@ -82,7 +101,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 
 			a = findany(s);
 			if (a != NULL) {
-				fprintf(f, "%-2u -> %2u ?;\n", s->id, a->id);
+				fprintf(f, "%-2u -> %2u ?;\n", indexof(fsm, s), indexof(fsm, a));
 				continue;
 			}
 		}
@@ -91,7 +110,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 			for (e = s->edges[i].sl; e != NULL; e = e->next) {
 				assert(e->state != NULL);
 
-				fprintf(f, "%-2u -> %2u", s->id, e->state->id);
+				fprintf(f, "%-2u -> %2u", indexof(fsm, s), indexof(fsm, e->state));
 
 				/* TODO: print " ?" if all edges are equal */
 
@@ -110,7 +129,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 
 			if (fsm->colour_hooks.print != NULL) {
 				for (c = s->edges[i].cl; c != NULL; c = c->next) {
-					fprintf(f, "%-2u ", s->id);
+					fprintf(f, "%-2u ", indexof(fsm, s));
 					escputc(i, f);
 					fprintf(f, " = \"");
 
@@ -130,7 +149,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 		return;
 	}
 
-	fprintf(f, "start: %u;\n", start->id);
+	fprintf(f, "start: %u;\n", indexof(fsm, start));
 
 	end = 0;
 	for (s = fsm->sl; s != NULL; s = s->next) {
@@ -145,7 +164,7 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		if (fsm_isend(fsm, s)) {
 			end--;
-			fprintf(f, "%u%s", s->id, end > 0 ? ", " : ";\n");
+			fprintf(f, "%u%s", indexof(fsm, s), end > 0 ? ", " : ";\n");
 		}
 	}
 }

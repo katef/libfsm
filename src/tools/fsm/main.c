@@ -210,11 +210,12 @@ int main(int argc, char *argv[]) {
 
 		if (cli_options.is_pure != NULL) {
 			const struct fsm_state *s;
+			unsigned int i;
 
 			/* XXX: breaking abstraction */
-			for (s = fsm->sl; s != NULL; s = s->next) {
+			for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
 				if (fsm_ispure(fsm, s, cli_options.is_pure)) {
-					printf("%u\n", s->id);
+					printf("%u\n", i);
 				}
 			}
 		}

@@ -11,9 +11,14 @@
 #include "set.h"
 
 /* TODO: centralise? */
-static int incomingedges(struct fsm *fsm, struct fsm_state *state) {
-	struct fsm_state *s;
+static int
+incomingedges(const struct fsm *fsm, const struct fsm_state *state)
+{
+	const struct fsm_state *s;
 	int i;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
@@ -24,6 +29,45 @@ static int incomingedges(struct fsm *fsm, struct fsm_state *state) {
 	}
 
 	return 0;
+}
+
+static struct fsm_state *
+getequivalentstate(const struct fsm *new, const struct fsm *fsm, const struct fsm_state *state)
+{
+	struct fsm_state *s1;
+	struct fsm_state *s2;
+
+	assert(new != NULL);
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	for (s1 = fsm->sl, s2 = new->sl; s1 != NULL; s1 = s1->next, s2 = s2->next) {
+		assert(s2 != NULL);
+
+		if (s1 == state) {
+			return s2;
+		}
+	}
+
+	return NULL;
+}
+
+static void
+movetoend(struct fsm *fsm, struct fsm_state *state)
+{
+	struct fsm_state **s;
+
+	assert(fsm != NULL);
+	assert(fsm->start = state);
+
+	fsm->sl = fsm->sl->next;
+
+	for (s = &fsm->sl; *s != NULL; s = &(*s)->next) {
+		/* nothing */
+	}
+
+	*s = state;
+	state->next = NULL;
 }
 
 int
@@ -43,6 +87,7 @@ fsm_reverse(struct fsm *fsm)
 
 	/*
 	 * Create states corresponding to the origional FSM's states.
+	 * These are created in reverse order, but that's okay.
 	 *
 	 * TODO: possibly centralise as a state-copying function
 	 */
@@ -52,7 +97,7 @@ fsm_reverse(struct fsm *fsm)
 		for (s = fsm->sl; s != NULL; s = s->next) {
 			struct fsm_state *n;
 
-			n = fsm_addstateid(new, s->id);
+			n = fsm_addstate(new);
 			if (n == NULL) {
 				fsm_free(new);
 				return 0;
@@ -61,15 +106,16 @@ fsm_reverse(struct fsm *fsm)
 	}
 
 	/*
-	 * The new end state is the previous start state. Because there is exactly
-	 * one start state, the new FSM will have exactly one end state.
+	 * The new end state is the previous start state. Because there is (at most)
+	 * one start state, the new FSM will have at most one end state.
 	 */
 	{
 		struct fsm_state *end;
 
-		end = fsm_getstatebyid(new, fsm->start->id);
-		assert(end != NULL);
-		fsm_setend(new, end, 1);
+		end = getequivalentstate(new, fsm, fsm->start);
+		if (end != NULL) {
+			fsm_setend(new, end, 1);
+		}
 	}
 
 	/* Create reversed edges */
@@ -82,7 +128,7 @@ fsm_reverse(struct fsm *fsm)
 			struct colour_set *c;
 			int i;
 
-			to = fsm_getstatebyid(new, s->id);
+			to = getequivalentstate(new, fsm, s);
 
 			assert(to != NULL);
 
@@ -93,7 +139,7 @@ fsm_reverse(struct fsm *fsm)
 
 					assert(e->state != NULL);
 
-					from = fsm_getstatebyid(new, e->state->id);
+					from = getequivalentstate(new, fsm, e->state);
 
 					assert(from != NULL);
 
@@ -153,7 +199,7 @@ fsm_reverse(struct fsm *fsm)
 
 			assert(s != NULL);
 
-			new->start = fsm_getstatebyid(new, s->id);
+			new->start = getequivalentstate(new, fsm, s);
 			assert(new->start != NULL);
 			break;
 
@@ -171,7 +217,7 @@ fsm_reverse(struct fsm *fsm)
 					continue;
 				}
 
-				state = fsm_getstatebyid(new, s->id);
+				state = getequivalentstate(new, fsm, s);
 				assert(state != NULL);
 
 				if (!incomingedges(new, state)) {
@@ -196,7 +242,7 @@ fsm_reverse(struct fsm *fsm)
 			 * this prevents accidentally transitioning to another route.
 			 */
 			if (s != NULL) {
-				new->start = fsm_getstatebyid(new, s->id);
+				new->start = getequivalentstate(new, fsm, s);
 				assert(new->start != NULL);
 			} else {
 				new->start = fsm_addstate(new);
@@ -204,6 +250,12 @@ fsm_reverse(struct fsm *fsm)
 					fsm_free(new);
 					return 0;
 				}
+
+				/*
+				 * XXX: This hacky mess moves the newly-created start state
+				 * to the end of new->sl, for the sake of getequivalentstate().
+				 */
+				movetoend(new, new->start);
 			}
 
 			for (s = fsm->sl; s != NULL; s = s->next) {
@@ -213,12 +265,12 @@ fsm_reverse(struct fsm *fsm)
 					continue;
 				}
 
-				if (s->id == new->start->id) {
+				state = getequivalentstate(new, fsm, s);
+				assert(state != NULL);
+
+				if (state == new->start) {
 					continue;
 				}
-
-				state = fsm_getstatebyid(new, s->id);
-				assert(state != NULL);
 
 				if (!fsm_addedge_epsilon(new, new->start, state)) {
 					fsm_free(new);
