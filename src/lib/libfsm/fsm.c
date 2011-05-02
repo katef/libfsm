@@ -20,11 +20,32 @@ static void free_contents(struct fsm *fsm) {
 		next = s->next;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
+			set_freecolours(s->edges[i].cl);
 			set_free(s->edges[i].sl);
 		}
 
 		free(s);
 	}
+}
+
+static void
+state_remove(struct fsm_state **head, struct fsm_state *state)
+{
+    struct fsm_state **s;
+
+    assert(head != NULL);
+    assert(state != NULL);
+
+    for (s = head; *s != NULL; s = &(*s)->next) {
+        if (*s == state) {
+            struct fsm_state *next;
+
+            next = (*s)->next;
+            free(*s);
+            *s = next;
+            break;
+        }
+    }
 }
 
 struct fsm *
@@ -98,6 +119,33 @@ fsm_addstate(struct fsm *fsm)
 	fsm->sl = new;
 
 	return new;
+}
+
+void
+fsm_removestate(struct fsm *fsm, struct fsm_state *state)
+{
+	struct fsm_state *s;
+	int i;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		for (i = 0; i <= FSM_EDGE_MAX; i++) {
+			set_remove(&s->edges[i].sl, state);
+		}
+	}
+
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		set_freecolours(state->edges[i].cl);
+		set_free(state->edges[i].sl);
+	}
+
+	if (fsm->start == state) {
+		fsm->start = NULL;
+	}
+
+	state_remove(&fsm->sl, state);
 }
 
 void

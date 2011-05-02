@@ -60,6 +60,12 @@ fsm_move(struct fsm *dst, struct fsm *src);
 struct fsm_state *
 fsm_addstate(struct fsm *fsm);
 
+ /*
+ * Remove a state. Any edges transitioning to this state are also removed.
+ */
+void
+fsm_removestate(struct fsm *fsm, struct fsm_state *state);
+
 /*
  * Add an edge from a given state to a given state, labelled with the given
  * label. If an edge to that state of the same label already exists, the

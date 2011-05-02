@@ -42,21 +42,24 @@ void
 set_remove(struct state_set **head, struct fsm_state *state)
 {
 	struct state_set **s;
-	struct state_set *next;
 
 	assert(head != NULL);
 	assert(state != NULL);
 
 	for (s = head; *s != NULL; s = &(*s)->next) {
-		next = (*s)->next;
+		assert((*s)->state != NULL);
 
-		free(*s);
+		if ((*s)->state == state) {
+			struct state_set *next;
 
-		*s = next;
-
-		assert(!set_contains(state, *head));
-		return;
+			next = (*s)->next;
+			free(*s);
+			*s = next;
+			break;
+		}
 	}
+
+	assert(!set_contains(state, *head));
 }
 
 void
