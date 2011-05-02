@@ -133,7 +133,7 @@
 		n = id;
 		s = <add-state>(n);
 
-		l = label;
+		l = label;	/* TODO: free string */
 
 		{
 			equals;
