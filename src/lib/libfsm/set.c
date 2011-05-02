@@ -63,6 +63,27 @@ set_remove(struct state_set **head, struct fsm_state *state)
 }
 
 void
+set_replace(struct state_set *set, struct fsm_state *old, struct fsm_state *new)
+{
+	struct state_set *s;
+
+	assert(set != NULL);
+	assert(old != NULL);
+	assert(new != NULL);
+
+	assert(!set_contains(new, set));
+
+	for (s = set; s != NULL; s = s->next) {
+		if (s->state == old) {
+			s->state = new;
+			break;
+		}
+	}
+
+	assert(!set_contains(old, set));
+}
+
+void
 set_free(struct state_set *set)
 {
 	struct state_set *s;

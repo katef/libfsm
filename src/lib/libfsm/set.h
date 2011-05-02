@@ -16,6 +16,9 @@ void
 set_remove(struct state_set **head, struct fsm_state *state);
 
 void
+set_replace(struct state_set *set, struct fsm_state *old, struct fsm_state *new);
+
+void
 set_free(struct state_set *set);
 
 /*
