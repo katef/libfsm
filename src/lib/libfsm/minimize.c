@@ -17,7 +17,8 @@ static int equivalent(struct fsm_state *a, struct fsm_state *b) {
 	assert(a != NULL);
 	assert(b != NULL);
 
-	if (a->end != b->end) {
+	/* TODO: is this over-zealous? must we check set equivalence for end colours, too? */
+	if (!!a->cl != !!b->cl) {
 		return 0;
 	}
 
@@ -155,9 +156,14 @@ fsm_minimize(struct fsm *fsm)
 
 	if (!hasend) {
 		struct fsm_state *s;
+		struct colour_set *c;
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
-			fsm_setend(fsm, s, 0);
+			for (c = s->cl; c != NULL; c = c->next) {
+				if (!fsm_addend(fsm, s, c->colour)) {
+					return 0;
+				}
+			}
 		}
 	}
 
@@ -170,7 +176,7 @@ fsm_minimize(struct fsm *fsm)
 	 * This is special-case code; it can only possibly occur for the start
 	 * state.
 	 */
-	if (fsm->start->end || counttargets(fsm->start) > 1) {
+	if (fsm_isend(fsm, fsm->start) || counttargets(fsm->start) > 1) {
 		struct fsm_state *s;
 		struct fsm_state *next;
 

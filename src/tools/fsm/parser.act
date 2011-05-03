@@ -144,10 +144,14 @@
 		fsm_setstart(fsm, @s);
 	@};
 
-	<mark-end>: (s :state) -> () = @{
+	<mark-end>: (s :state, c :string) -> () = @{
 		assert(@s != NULL);
 
-		fsm_setend(fsm, @s, 1);
+		fsm_addend(fsm, @s, @c);
+	@};
+
+	<no-colour>: () -> (c :string) = @{
+		@c = NULL;
 	@};
 
 	<free>: (s :string) -> () = @{

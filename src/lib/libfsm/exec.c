@@ -68,7 +68,7 @@ int fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque)
 		}
 	}
 
-	if (!state->end) {
+	if (!fsm_isend(fsm, state)) {
 		return 0;
 	}
 

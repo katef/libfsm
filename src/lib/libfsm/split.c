@@ -47,8 +47,15 @@ splitstate(struct fsm *fsm, void *colour, struct fsm_state *state)
 		return 0;
 	}
 
-	if (fsm_isend(fsm, state)) {
-		fsm_setend(fsm, new, 1);
+	/* copy end colours; XXX: this should probably be a subset */
+	{
+		struct colour_set *c;
+
+		for (c = state->cl; c != NULL; c = c->next) {
+			if (!fsm_addend(fsm, new, c->colour)) {
+				return 0;
+			}
+		}
 	}
 
 	/* copy incoming edges */
@@ -90,10 +97,13 @@ static int
 splitcolour(struct fsm *fsm, void *colour)
 {
 	struct fsm_state *s;
+	struct fsm_state *next;
 
 	assert(fsm != NULL);
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
+	for (s = fsm->sl; s != NULL; s = next) {
+		next = s->next;
+
 		if (fsm_ispure(fsm, s, colour)) {
 			continue;
 		}

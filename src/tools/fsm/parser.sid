@@ -25,9 +25,11 @@
 
 %productions%
 
-	<add-state>:        (:string) -> (:state);
-	<mark-start>:       (:state)  -> ();
-	<mark-end>:         (:state)  -> ();
+	<add-state>:        (:string)         -> (:state);
+	<mark-start>:       (:state)          -> ();
+	<mark-end>:         (:state, :string) -> ();
+
+	<no-colour>:        ()        -> (:string);
 
 	<free>:             (:string) -> ();
 	<free-statelist>;
@@ -53,20 +55,30 @@
 		n = label;
 	};
 
-	ids = {
+	end-id = {
 		n = id;
+
+		{
+			equals;
+			c = label;
+		||
+			c = <no-colour>;
+		};
+
 		s = <add-state>(n);
-		<mark-end>(s);
+		<mark-end>(s, c);
+	};
+
+	end-ids = {
+		end-id;
 	||
-		ids;
+		end-ids;
 		{
 			comma;
 		##
 			<err-expected-comma>;
 		};
-		n = id;
-		s = <add-state>(n);
-		<mark-end>(s);
+		end-id;
 	};
 
 	xend = {
@@ -76,7 +88,7 @@
 			<err-expected-end>;
 		};
 
-		ids;
+		end-ids;
 
 		{
 			sep;

@@ -200,7 +200,6 @@ static void endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
 			continue;
 		}
 
-		assert(s->end > 0);
 		fprintf(f, "\tcase S%d: return %u;\n", indexof(fsm, s), indexof(fsm, s));
 	}
 	fprintf(f, "\tdefault: return EOF; /* unexpected EOF */\n");

@@ -25,8 +25,10 @@ void usage(void) {
 
 static int colour_hook_compare(const struct fsm *fsm, void *a, void *b) {
 	assert(fsm != NULL);
-	assert(a != NULL);
-	assert(b != NULL);
+
+	if (a == NULL || b == NULL) {
+		return a == b;
+	}
 
 	return 0 == strcmp(a, b);
 }
@@ -34,8 +36,11 @@ static int colour_hook_compare(const struct fsm *fsm, void *a, void *b) {
 /* TODO: centralise for convenience, into <fsm/colour.h> */
 static int colour_hook_print(const struct fsm *fsm, FILE *f, void *colour) {
 	assert(fsm != NULL);
-	assert(colour != NULL);
 	assert(f != NULL);
+
+	if (colour == NULL) {
+		colour = "black";
+	}
 
 	return fprintf(f, "%s", (const char *) colour);
 }

@@ -113,12 +113,14 @@ void
 fsm_setoptions(struct fsm *fsm, const struct fsm_options *options);
 
 /*
- * Mark a given state as being an end state or not. The value of end is treated
- * as a boolean; if zero, the state is not an end state. If non-zero, the state
- * is marked as an end state.
+ * Mark a given state as being an end state or not. The colour specified is
+ * added to the set of colours for that state. A state may hold multiple
+ * colours. The colour specified may be NULL.
+ *
+ * Returns false on error.
  */
-void
-fsm_setend(struct fsm *fsm, struct fsm_state *state, int end);
+int
+fsm_addend(struct fsm *fsm, struct fsm_state *state, void *colour);
 
 /*
  * Return if a given state is an end state.

@@ -8,6 +8,7 @@
 
 #include "internal.h"
 #include "set.h"
+#include "colour.h"
 #include "xalloc.h"
 
 struct mapping {
@@ -35,6 +36,8 @@ static struct mapping *mapping_ensure(struct fsm *fsm, struct mapping **head, st
 
 	/* Otherwise, make a new one */
 	{
+		struct colour_set *c;
+
 		m = malloc(sizeof *m);
 		if (m == NULL) {
 			return 0;
@@ -46,9 +49,16 @@ static struct mapping *mapping_ensure(struct fsm *fsm, struct mapping **head, st
 			return 0;
 		}
 
-		m->new->end = old->end;
-		m->old      = old;
-		m->done     = 0;
+		for (c = old->cl; c != NULL; c = c->next) {
+			if (!fsm_addend(fsm, m->new, c->colour)) {
+				fsm_removestate(fsm, m->new);
+				free(m);
+				return 0;
+			}
+		}
+
+		m->old  = old;
+		m->done = 0;
 
 		m->next = *head;
 		*head = m;
