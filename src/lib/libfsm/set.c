@@ -96,23 +96,6 @@ set_free(struct state_set *set)
 }
 
 int
-set_containsendstate(struct fsm *fsm, struct state_set *set)
-{
-	struct state_set *s;
-
-	assert(fsm != NULL);
-
-	for (s = set; s != NULL; s = s->next) {
-		/* TODO: no need to pass fsm here */
-		if (fsm_isend(fsm, s->state)) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-int
 set_contains(const struct fsm_state *state, const struct state_set *set)
 {
 	const struct state_set *s;

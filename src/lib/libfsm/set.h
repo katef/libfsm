@@ -22,12 +22,6 @@ void
 set_free(struct state_set *set);
 
 /*
- * Return true if any of the states in the set are end states.
- */
-int
-set_containsendstate(struct fsm *fsm, struct state_set *set);
-
-/*
  * Find if a state is in a set.
  */
 int
