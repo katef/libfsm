@@ -105,7 +105,7 @@
 			@!;
 		}
 
-		fsm_setend(re->fsm, @y, 1);
+		re->end = @y;
 	@};
 
 

@@ -56,7 +56,7 @@ re_free(struct re *re)
 
 struct re *
 re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
-	enum re_cflags cflags, enum re_err *err)
+	enum re_cflags cflags, enum re_err *err, void *colour)
 {
 	struct re *new;
 	enum re_err e;
@@ -74,6 +74,13 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	new = comp(getc, opaque, err);
 	if (new == NULL) {
 		return NULL;
+	}
+
+	assert(new->end != NULL);
+
+	if (!fsm_addend(new->fsm, new->end, colour)) {
+		re_free(new);
+		goto error;
 	}
 
 	return new;

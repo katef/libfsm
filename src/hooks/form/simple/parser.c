@@ -306,21 +306,18 @@ p_re__simple(re re, lex_state lex_state, act_state act_state)
 		assert(re->fsm != NULL);
 		/* TODO: assert re is empty */
 		
-		(ZIx) = fsm_addstate(re->fsm);
-		if ((ZIx) == NULL) {
-			goto ZL1;
-		}
-
-		fsm_setstart(re->fsm, (ZIx));
+		(ZIx) = fsm_getstart(re->fsm);
+		assert((ZIx) != NULL);
 
 		(ZIy) = fsm_addstate(re->fsm);
 		if ((ZIy) == NULL) {
 			goto ZL1;
 		}
 
-		fsm_setend(re->fsm, (ZIy), 1);
+		re->end = (ZIy);
 	
 #line 324 "form/simple/parser.c"
+
 		}
 		/* END OF ACTION: make-states */
 		/* BEGINNING OF INLINE: 79 */

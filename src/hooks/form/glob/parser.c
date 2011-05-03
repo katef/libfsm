@@ -2,14 +2,14 @@
  * Automatically generated from the files:
  *	parser.sid
  * and
- *	/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act
+ *	/Users/kate/svn/lx-combined2/src/lib/libre/parser.act
  * by:
  *	sid
  */
 
 /* BEGINNING OF HEADER */
 
-#line 46 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 46 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 
 	#include <assert.h>
@@ -64,7 +64,7 @@ ZL2_list_Hof_Hitems:;
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 192 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 188 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 		(ZIz) = fsm_addstate(re->fsm);
 		if ((ZIz) == NULL) {
@@ -90,7 +90,7 @@ ZL2_list_Hof_Hitems:;
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 199 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 195 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(re->fsm, (ZIz), (ZIy))) {
 			goto ZL1;
@@ -127,7 +127,7 @@ p_list_Hof_Hitems_C_Citem(re re, lex_state lex_state, act_state act_state, t_fsm
 			}
 			/* BEGINNING OF ACTION: count-1 */
 			{
-#line 340 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 336 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (*ZIy);
@@ -146,7 +146,7 @@ p_list_Hof_Hitems_C_Citem(re re, lex_state lex_state, act_state act_state, t_fsm
 			}
 			/* BEGINNING OF ACTION: count-1 */
 			{
-#line 340 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 336 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (*ZIy);
@@ -165,7 +165,7 @@ p_list_Hof_Hitems_C_Citem(re re, lex_state lex_state, act_state act_state, t_fsm
 			}
 			/* BEGINNING OF ACTION: count-0-or-many */
 			{
-#line 290 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 286 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(re->fsm, (ZIx), (*ZIy))) {
 			goto ZL1;
@@ -224,7 +224,7 @@ p_list_Hof_Hitems_C_Cany(re re, lex_state lex_state, act_state act_state, t_fsm_
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-any */
 		{
-#line 216 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 212 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -259,7 +259,7 @@ p_list_Hof_Hitems_C_Cwildcard(re re, lex_state lex_state, act_state act_state, t
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-any */
 		{
-#line 216 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 212 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -290,27 +290,23 @@ p_re__glob(re re, lex_state lex_state, act_state act_state)
 
 		/* BEGINNING OF ACTION: make-states */
 		{
-#line 100 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 100 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 		assert(re != NULL);
 		assert(re->fsm != NULL);
 		/* TODO: assert re is empty */
 		
-		(ZIx) = fsm_addstate(re->fsm);
-		if ((ZIx) == NULL) {
-			goto ZL1;
-		}
-
-		fsm_setstart(re->fsm, (ZIx));
+		(ZIx) = fsm_getstart(re->fsm);
+		assert((ZIx) != NULL);
 
 		(ZIy) = fsm_addstate(re->fsm);
 		if ((ZIy) == NULL) {
 			goto ZL1;
 		}
 
-		fsm_setend(re->fsm, (ZIy), 1);
+		re->end = (ZIy);
 	
-#line 314 "parser.c"
+#line 310 "parser.c"
 		}
 		/* END OF ACTION: make-states */
 		/* BEGINNING OF INLINE: 57 */
@@ -329,13 +325,13 @@ p_re__glob(re re, lex_state lex_state, act_state act_state)
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 199 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 195 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(re->fsm, (ZIx), (ZIy))) {
 			goto ZL3;
 		}
 	
-#line 339 "parser.c"
+#line 335 "parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -346,11 +342,11 @@ p_re__glob(re re, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-items */
 				{
-#line 355 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 351 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 		act_state->err = RE_EXITEMS;
 	
-#line 354 "parser.c"
+#line 350 "parser.c"
 				}
 				/* END OF ACTION: err-expected-items */
 			}
@@ -373,11 +369,11 @@ p_re__glob(re re, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 363 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 359 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 		act_state->err = RE_EXEOF;
 	
-#line 381 "parser.c"
+#line 377 "parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -404,11 +400,11 @@ p_list_Hof_Hitems_C_Cliteral(re re, lex_state lex_state, act_state act_state, t_
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 78 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 78 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 		ZIc = act_state->lex_tokval(lex_state);
 	
-#line 412 "parser.c"
+#line 408 "parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -418,7 +414,7 @@ p_list_Hof_Hitems_C_Cliteral(re re, lex_state lex_state, act_state act_state, t_
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-literal */
 		{
-#line 205 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 201 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -429,7 +425,7 @@ p_list_Hof_Hitems_C_Cliteral(re re, lex_state lex_state, act_state act_state, t_
 			goto ZL1;
 		}
 	
-#line 433 "parser.c"
+#line 429 "parser.c"
 		}
 		/* END OF ACTION: add-literal */
 	}
@@ -441,9 +437,9 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 367 "/Users/kate/svn/lx-combined/trunk/src/lib/libre/parser.act"
+#line 363 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 
-#line 448 "parser.c"
+#line 444 "parser.c"
 
 /* END OF FILE */

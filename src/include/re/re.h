@@ -63,7 +63,7 @@ re_free(struct re *re);
  */
 struct re *
 re_new_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
-	enum re_cflags cflags, enum re_err *err);
+	enum re_cflags cflags, enum re_err *err, void *colour);
 
 /*
  * Return a human-readable string describing a given error code. The string

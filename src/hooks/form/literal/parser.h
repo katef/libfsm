@@ -1,15 +1,15 @@
 /*
  * Automatically generated from the files:
- *	form/literal/parser.sid
+ *	parser.sid
  * and
- *	libre/parser.act
+ *	/Users/kate/svn/lx-combined2/src/lib/libre/parser.act
  * by:
  *	sid
  */
 
 /* BEGINNING OF HEADER */
 
-#line 67 "libre/parser.act"
+#line 67 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 
 	typedef struct re *        re;
@@ -37,16 +37,16 @@
 	                              act_state->lex_tok = tok;                      } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save;  } while (0)
 
-#line 41 "form/literal/parser.h"
+#line 41 "parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
 extern void p_re__literal(re, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 369 "libre/parser.act"
+#line 365 "/Users/kate/svn/lx-combined2/src/lib/libre/parser.act"
 
 
-#line 51 "form/literal/parser.h"
+#line 51 "parser.h"
 
 /* END OF FILE */
