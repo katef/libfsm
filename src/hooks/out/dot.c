@@ -204,6 +204,17 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 	assert(s != NULL);
 
 	/* TODO: findany() here? */
+	if (fsm_isend(fsm, s)) {
+		fprintf(f, "\t%-2u [ label = <", indexof(fsm, s));
+
+		if (!fsm->options.anonymous_states) {
+			fprintf(f, "\\N<br/>");
+		}
+
+		printcolours(fsm, s->cl, f);
+
+		fprintf(f, "> ];\n");
+	}
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		for (e = s->edges[i].sl; e != NULL; e = e->next) {

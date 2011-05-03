@@ -163,8 +163,21 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "end:   ");
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		if (fsm_isend(fsm, s)) {
+			struct colour_set *c;
+
 			end--;
-			fprintf(f, "%u%s", indexof(fsm, s), end > 0 ? ", " : ";\n");
+
+			if (s->cl == NULL) {
+				fprintf(f, "%u", indexof(fsm, s));
+			} else for (c = s->cl; c != NULL; c = c->next) {
+				fprintf(f, "%u = \"%s\"", indexof(fsm, s), c->colour);
+
+				if (c->next != NULL) {
+					fprintf(f, ", ");
+				}
+			}
+
+			fprintf(f, "%s", end > 0 ? ", " : ";\n");
 		}
 	}
 }
