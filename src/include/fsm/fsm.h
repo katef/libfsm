@@ -53,6 +53,14 @@ void
 fsm_move(struct fsm *dst, struct fsm *src);
 
 /*
+ * Merge states from src into dst, and free src.
+ *
+ * TODO: I don't really like this sort of interface. Reconsider?
+ */
+void
+fsm_merge(struct fsm *dst, struct fsm *src);
+
+/*
  * Add a state.
  *
  * Returns NULL on error; see errno.
