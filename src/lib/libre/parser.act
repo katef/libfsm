@@ -97,12 +97,8 @@
 		assert(re->fsm != NULL);
 		/* TODO: assert re is empty */
 		
-		@x = fsm_addstate(re->fsm);
-		if (@x == NULL) {
-			@!;
-		}
-
-		fsm_setstart(re->fsm, @x);
+		@x = fsm_getstart(re->fsm);
+		assert(@x != NULL);
 
 		@y = fsm_addstate(re->fsm);
 		if (@y == NULL) {

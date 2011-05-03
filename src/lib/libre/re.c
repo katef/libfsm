@@ -13,6 +13,7 @@
 
 #include <re/re.h>
 #include <fsm/fsm.h>
+#include <fsm/graph.h>
 
 #include "internal.h"
 
@@ -22,6 +23,7 @@ struct re *
 re_new_empty(void)
 {
 	struct re *new;
+	struct fsm_state *start;
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
@@ -33,6 +35,14 @@ re_new_empty(void)
 		free(new);
 		return NULL;
 	}
+
+	start = fsm_addstate(new->fsm);
+	if (start == NULL) {
+		free(new);
+		return NULL;
+	}
+
+	fsm_setstart(new->fsm, start);
 
 	return new;
 }
@@ -98,11 +108,25 @@ re_strerror(enum re_err err)
 	return NULL;
 }
 
-void *
-re_merge(struct re *re, const struct re *new, void *opaque)
+int
+re_union(struct re *re, struct re *new)
 {
-	/* TODO */
-	return re;
+	assert(re != NULL);
+	assert(new != NULL);
+
+	if (!fsm_minimize(new->fsm)) {
+		return 0;
+	}
+
+	fsm_merge(re->fsm, new->fsm);
+
+	if (!fsm_addedge_epsilon(re->fsm, fsm_getstart(re->fsm), fsm_getstart(new->fsm))) {
+		return 0;
+	}
+
+	free(new);
+
+	return 1;
 }
 
 void *

@@ -43,31 +43,53 @@ enum re_err {
 	RE_EXEOF
 };
 
-/* TODO: make a new empty regexp */
+
+/*
+ * Create a new empty regexp.
+ *
+ * Returns NULL on error.
+ */
 struct re *
 re_new_empty(void);
 
 void
 re_free(struct re *re);
 
-/* TODO: compile a string of the given form */
+/*
+ * Compile a regexp of the given form. The function passed acts as a callback
+ * to acquire each character of the input, in the spirit of fgetc().
+ *
+ * Returns NULL on error.
+ */
 struct re *
 re_new_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
 	enum re_cflags cflags, enum re_err *err);
 
+/*
+ * Return a human-readable string describing a given error code. The string
+ * returned has static storage, and must not be freed.
+ */
 const char *
 re_strerror(enum re_err err);
 
-/* TODO: merge a new re into an existing re. returns opaque of new->re */
-/* TODO: opaque is associated with the new re */
-void *
-re_merge(struct re *re, const struct re *new, void *opaque);
+/*
+ * Merge a new regexp into an existing regexp, and free new.
+ *
+ * Returns false on error.
+ */
+int
+re_union(struct re *re, struct re *new);
 
-/* TODO: a convenience interface in the spirit of strtol() which parses between delimiters (and escapes accordingly) */
-
-/* TODO: match a string. returns opaque of the re which matches (whichever match is the best match) */
+/*
+ * Match a string.
+ *
+ * Returns the colour of the regexp that matched, or NULL for no match.
+ */
 void *
 re_exec(const struct re *re, const char *s, enum re_eflags eflags);
+
+
+/* TODO: a convenience interface in the spirit of strtol() which parses between delimiters (and escapes accordingly) */
 
 
 /*

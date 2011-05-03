@@ -5,7 +5,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <fsm/out.h>
+#include <fsm/graph.h>	/* XXX */
+#include <fsm/out.h>	/* XXX */
 #include <re/re.h>
 
 #include "libre/internal.h"	/* XXX */
@@ -123,16 +124,13 @@ int main(int argc, char *argv[]) {
 					return EXIT_FAILURE;
 				}
 
-				if (!re_merge(re, new, optarg)) {
+				/* TODO: associate optarg with new's end state */
+
+				if (!re_union(re, new)) {
 					perror("re_merge");
 					return EXIT_FAILURE;
 				}
 
-				if (dump) {
-					fsm_print(new->fsm, stdout, FSM_OUT_FSM);
-				}
-
-				re_free(new);
 				break;
 
 			case '?':
@@ -144,6 +142,15 @@ int main(int argc, char *argv[]) {
 
 		argc -= optind;
 		argv += optind;
+	}
+
+	if (!fsm_todfa(re->fsm)) {
+		perror("fsm_todfa");
+		return EXIT_FAILURE;
+	}
+
+	if (dump) {
+		fsm_print(re->fsm, stdout, FSM_OUT_FSM);
 	}
 
 	/* TODO: flags? */
