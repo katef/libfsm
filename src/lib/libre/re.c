@@ -44,6 +44,8 @@ re_new_empty(void)
 
 	fsm_setstart(new->fsm, start);
 
+	new->end = start;	/* for convenience of re_concat() */
+
 	return new;
 }
 
@@ -121,15 +123,40 @@ re_union(struct re *re, struct re *new)
 	assert(re != NULL);
 	assert(new != NULL);
 
+/* TODO: no; this could move the end state
 	if (!fsm_minimize(new->fsm)) {
 		return 0;
 	}
+*/
 
 	fsm_merge(re->fsm, new->fsm);
 
 	if (!fsm_addedge_epsilon(re->fsm, fsm_getstart(re->fsm), fsm_getstart(new->fsm))) {
 		return 0;
 	}
+
+	free(new);
+
+	return 1;
+}
+
+int
+re_concat(struct re *re, struct re *new)
+{
+	assert(re != NULL);
+	assert(re->end != NULL);
+	assert(new != NULL);
+
+	fsm_merge(re->fsm, new->fsm);
+
+	if (!fsm_addedge_epsilon(re->fsm, re->end, fsm_getstart(new->fsm))) {
+		return 0;
+	}
+
+	/* TODO: not sure about this */
+	fsm_removeends(re->fsm, re->end);
+
+	re->end = new->end;
 
 	free(new);
 
