@@ -123,6 +123,12 @@ int
 fsm_addend(struct fsm *fsm, struct fsm_state *state, void *colour);
 
 /*
+ * Remove all end colours from a state.
+ */
+void
+fsm_removeends(struct fsm *fsm, struct fsm_state *state);
+
+/*
  * Return if a given state is an end state.
  */
 int

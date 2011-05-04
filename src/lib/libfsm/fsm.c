@@ -189,6 +189,19 @@ fsm_addend(struct fsm *fsm, struct fsm_state *state, void *colour)
 	return 1;
 }
 
+void
+fsm_removeends(struct fsm *fsm, struct fsm_state *state)
+{
+	(void) fsm;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	set_freecolours(state->cl);
+
+	state->cl = NULL;
+}
+
 int
 fsm_isend(const struct fsm *fsm, const struct fsm_state *state)
 {
