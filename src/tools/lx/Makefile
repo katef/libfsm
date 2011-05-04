@@ -1,33 +1,35 @@
 # $Id$
 
-CFLAGS = -O2 -g -pedantic -std=c89 -Wall -W
-CC = gcc
+.include "Makefile.inc"
 
-#CFLAGS = -Yposix2 -Xp
-#CC = tcc
 
-ALL = main.o lexer.o parser.o
+SID_SID= parser.sid
+SID_ACT= parser.act
 
-all: lx
+.include <lx.sid.mk>
 
-clean:
-	rm -f lx
-	rm -f lexer.c lexer.h parser.c parser.h
-	rm -f $(ALL)
 
-lx: $(ALL)
-	$(CC) -o lx $(CFLAGS) $(ALL)
+CFLAGS+= -I ${BASE_DIR}/src/include
 
-lexer.c:  parser.h
-parser.c: parser.h lexer.h
-main.c:   parser.h
+SRCS+= ast.c
+SRCS+= lexer.c
+SRCS+= parser.c
+#SRCS+= xalloc.c
+SRCS+= main.c
 
-lexer.c lexer.h: lexer.lxi lexer.lct
-	lexi lexer.lxi lexer.lct lexer.c lexer.h
+.include <lx.obj.mk>
 
-parser.c parser.h: parser.sid parser.act
-	sid -s no-numeric-terminals parser.sid parser.act parser.c parser.h
 
-.c.o:
-	$(CC) -o $@ -c $< $(CFLAGS)
+PROG= ${.CURDIR:T}
+
+# TODO: this needs doing properly, including dependencies for libraries being rebuilt
+LDFLAGS= -L${OBJ_DIR}/src/lib/libfsm
+LDFLAGS= -L${OBJ_DIR}/src/lib/libre
+
+#LIBS+= -lfsm
+LIBS+= -lre
+
+.include <lx.prog.mk>
+
+#	sid -s no-numeric-terminals parser.sid parser.act parser.c parser.h
 

@@ -2,16 +2,19 @@
 
 %types%
 
+	string;
+	re;
+
 %terminals%
 
-	pattern_regex;
-	pattern_literal;
+	pattern_regex:   () -> (:string);
+	pattern_literal: () -> (:string);
 
 	map;
 	to;
 	semi;
-	alt;
-	token_name;
+	!alt;
+	token_name: () -> (:string);
 
 	open;
 	close;
@@ -21,8 +24,15 @@
 
 %productions%
 
+	<compile-literal>: (:string) -> (:re);
+	<compile-regex>:   (:string) -> (:re);
+
+	<concat-regex>: (:re, :re) -> (:re);
+
+	!<free>: (:string) -> ();
+
 	<err-syntax>;
-	<err-expected-alt>;
+	!<err-expected-alt>;
 	<err-expected-map>;
 	<err-expected-semi>;
 	<err-expected-to>;
@@ -35,19 +45,29 @@
 
 	token-mapping [
 
-		pattern = {
-			pattern_literal;
+		pattern: () -> (r :re) = {
+			s = pattern_literal;
+			r = <compile-literal>(s);
+/*
+			<free>(s);
+*/
 		||
-			pattern_regex;
+			s = pattern_regex;
+			r = <compile-regex>(s);
+/*
+			<free>(s);
+*/
 		};
 
-		concaternated-patterns = {
-			pattern;
+		concaternated-patterns: () -> (r :re) = {
+			r = pattern;
 		||
-			concaternated-patterns;
-			pattern;
+			a = concaternated-patterns;
+			b = pattern;
+			r = <concat-regex>(a, b);
 		};
 
+/* TODO: I don't think I want these
 		alternative-patterns = {
 			concaternated-patterns;
 		||
@@ -61,9 +81,13 @@
 
 			concaternated-patterns;
 		};
+*/
 
 	] = {
+/*
 		alternative-patterns;
+*/
+		r = concaternated-patterns;
 
 		{
 			$;
@@ -74,7 +98,7 @@
 				<err-expected-map>;
 			};
 
-			token_name;
+			! = token_name;
 		##
 			<err-expected-name>;
 		};

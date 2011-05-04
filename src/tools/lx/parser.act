@@ -12,14 +12,24 @@
 
 %maps%
 
+	string -> string;
+	re     -> re;
+
 %header% @{
 
 	#include <assert.h>
 	#include <stdio.h>
 	#include <stdlib.h>
 
+	#include <re/re.h>
+
 	#include "lexer.h"
 	#include "parser.h"
+	#include "xalloc.h"
+	#include "ast.h"
+
+	typedef char *      string;
+	typedef struct re * re;
 
 	struct act_state {
 		int lex_tok;
@@ -51,43 +61,102 @@
 
 %terminals%
 
+	pattern_regex: () -> (s :string) = @{
+		@s = xstrdup(lex_tokbuf(lex_state));
+		if (@s == NULL) {
+			perror("xstrdup");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
+	pattern_literal: () -> (s :string) = @{
+		@s = xstrdup(lex_tokbuf(lex_state));
+		if (@s == NULL) {
+			perror("xstrdup");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
+	token_name: () -> (s :string) = @{
+		@s = xstrdup(lex_tokbuf(lex_state));
+		if (@s == NULL) {
+			perror("xstrdup");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
 %actions%
+
+	<compile-literal>: (s :string) -> (r :re) = @{
+		assert(@s != NULL);
+
+		@r = re_new_comp(RE_LITERAL, re_getc_str, &@s, 0, NULL, NULL);
+		if (@r == NULL) {
+			/* TODO: use *err */
+			@!;
+		}
+	@};
+
+	<compile-regex>:   (s :string) -> (r :re) = @{
+		assert(@s != NULL);
+
+		@r = re_new_comp(RE_SIMPLE, re_getc_str, &@s, 0, NULL, NULL);
+		if (@r == NULL) {
+			/* TODO: use *err */
+			@!;
+		}
+	@};
+
+	<concat-regex>: (a :re, b :re) -> (r :re) = @{
+		assert(@a != NULL);
+		assert(@b != NULL);
+
+		@r = re_concat(@a, @b);
+		if (@r == NULL) {
+			perror("re_concat");
+			@!;
+		}
+	@};
+
+	<free>: (s :string) -> () = @{
+		free(@s);
+	@};
 
 	<err-syntax> = @{
 		fprintf(stderr, "syntax error\n");
 		exit(EXIT_FAILURE);
 	@};
 
-    <err-expected-alt> = @{
+	<err-expected-alt> = @{
 		err_expected("'|'");
 	@};
 
-    <err-expected-map> = @{
+	<err-expected-map> = @{
 		err_expected("'->'");
 	@};
 
-    <err-expected-semi> = @{
+	<err-expected-semi> = @{
 		err_expected("';'");
 	@};
 
-    <err-expected-to> = @{
+	<err-expected-to> = @{
 		err_expected("'..'");
 	@};
 
-    <err-expected-open> = @{
+	<err-expected-open> = @{
 		err_expected("'{'");
 	@};
 
-    <err-expected-close> = @{
+	<err-expected-close> = @{
 		err_expected("'}'");
 	@};
 
 
-    <err-expected-name> = @{
+	<err-expected-name> = @{
 		err_expected("token name");
 	@};
 
-    <err-expected-list> = @{
+	<err-expected-list> = @{
 		err_expected("list of token mappings or zones");
 	@};
 
