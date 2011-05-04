@@ -30,7 +30,7 @@
  */
 
 static void usage(void) {
-	fprintf(stderr, "usage: re [-h] { [-id] [-lgeb9p] <re> } <string>\n");
+	fprintf(stderr, "usage: re [-h] { [-cid] [-lgeb9ps] <re> } <string>\n");
 }
 
 static enum re_form form(char c) {
@@ -57,6 +57,7 @@ int main(int argc, char *argv[]) {
 	struct re *re;
 	int files;
 	int dump;
+	int (*join)(struct re *re, struct re *new);
 
 	if (argc < 2) {
 		usage();
@@ -71,11 +72,12 @@ int main(int argc, char *argv[]) {
 
 	files = 0;
 	dump  = 0;
+	join  = re_union;
 
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hdil:g:s:")) != -1) {
+		while ((c = getopt(argc, argv, "hcdil:g:s:")) != -1) {
 			struct re *new;
 			enum re_err err;
 
@@ -83,6 +85,10 @@ int main(int argc, char *argv[]) {
 			case 'h':
 				usage();
 				return EXIT_SUCCESS;
+
+			case 'c':
+				join = re_concat;
+				break;
 
 /* TODO:
 			case 'b':
@@ -126,8 +132,8 @@ int main(int argc, char *argv[]) {
 
 				/* TODO: associate optarg with new's end state */
 
-				if (!re_union(re, new)) {
-					perror("re_merge");
+				if (!join(re, new)) {
+					perror("re_union/concat");
 					return EXIT_FAILURE;
 				}
 
