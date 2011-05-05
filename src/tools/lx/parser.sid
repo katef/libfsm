@@ -4,6 +4,8 @@
 
 	string;
 	re;
+	zone;
+	ast;
 
 %terminals%
 
@@ -29,6 +31,12 @@
 
 	<concat-regex>: (:re, :re) -> (:re);
 
+	<make-ast>:     ()                    -> (:ast);
+	<make-zone>:    (:ast)                -> (:zone);
+	<make-mapping>: (:zone, :re, :string) -> ();
+
+	<no-token>: () -> (:string);
+
 	!<free>: (:string) -> ();
 
 	<err-syntax>;
@@ -38,25 +46,20 @@
 	<err-expected-to>;
 	<err-expected-open>;
 	<err-expected-close>;
+	<err-expected-eof>;
 
 	<err-expected-name>;
 	<err-expected-list>;
 
 
-	token-mapping [
+	token-mapping: (z :zone) -> () [
 
 		pattern: () -> (r :re) = {
 			s = pattern_literal;
 			r = <compile-literal>(s);
-/*
-			<free>(s);
-*/
 		||
 			s = pattern_regex;
 			r = <compile-regex>(s);
-/*
-			<free>(s);
-*/
 		};
 
 		concaternated-patterns: () -> (r :re) = {
@@ -67,30 +70,12 @@
 			r = <concat-regex>(a, b);
 		};
 
-/* TODO: I don't think I want these
-		alternative-patterns = {
-			concaternated-patterns;
-		||
-			alternative-patterns;
-
-			{
-				alt;
-			##
-				<err-expected-alt>;
-			};
-
-			concaternated-patterns;
-		};
-*/
-
 	] = {
-/*
-		alternative-patterns;
-*/
 		r = concaternated-patterns;
 
 		{
-			$;
+			t = <no-token>;
+			<make-mapping>(z, r, t);
 		||
 			{
 				map;
@@ -98,16 +83,17 @@
 				<err-expected-map>;
 			};
 
-			! = token_name;
+			t = token_name;
+			<make-mapping>(z, r, t);
 		##
 			<err-expected-name>;
 		};
 	};
 
-	list-of-things [
+	list-of-things: (a :ast, z :zone) -> () [
 
-		token-thing = {
-			token-mapping;
+		token-thing: (z :zone) -> () = {
+			token-mapping(z);
 
 			{
 				semi;
@@ -116,8 +102,9 @@
 			};
 		};
 
-		zone-thing = {
-			token-mapping;
+		zone-thing: (a :ast, z :zone) -> () = {
+			/* TODO: have these as special zone-changing mappings */
+			token-mapping(z);
 
 			{
 				to;
@@ -125,7 +112,10 @@
 				<err-expected-to>;
 			};
 
-			token-mapping;
+			child = <make-zone>(a);
+
+			/* TODO: have these as special zone-changing mappings */
+			token-mapping(child);
 
 			{
 				{
@@ -140,7 +130,7 @@
 					<err-expected-open>;
 				};
 
-				list-of-things;
+				list-of-things(a, child);
 
 				{
 					close;
@@ -152,25 +142,35 @@
 			};
 		};
 
-		thing = {
-			token-thing;
+		thing: (a :ast, z :zone) -> () = {
+			token-thing(z);
 		||
-			zone-thing;
+			zone-thing(a, z);
 		};
 
 	] = {
-		thing;
+		thing(a, z);
 	||
-		list-of-things;
-		thing;
+		list-of-things(a, z);
+		thing(a, z);
 	##
 		<err-expected-list>;
 	};
 
-	lx = {
-		list-of-things;
-		eof;
+	lx: () -> (a :ast) = {
+		a = <make-ast>;
+		z = <make-zone>(a);
+
+		list-of-things(a, z);
+
+		{
+			eof;
+		##
+			<err-expected-eof>;
+		};
 	##
+		a = <make-ast>;
+
 		<err-syntax>;
 	};
 

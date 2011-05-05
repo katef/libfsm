@@ -9,21 +9,24 @@
 
 /* BEGINNING OF HEADER */
 
-#line 60 "parser.act"
+#line 66 "parser.act"
 
 
 	#include <stdio.h>
 
+	#include "ast.h"
+
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
+	typedef struct lx_ast *    ast;
 
-	void lx_parse(FILE *f);
+	struct lx_ast *lx_parse(FILE *f);
 
-#line 23 "parser.h"
+#line 26 "parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
-extern void p_lx(lex_state, act_state);
+extern void p_lx(lex_state, act_state, ast *);
 
 /* BEGINNING OF TERMINAL DEFINITIONS */
 
@@ -41,9 +44,9 @@ extern void p_lx(lex_state, act_state);
 
 /* BEGINNING OF TRAILER */
 
-#line 189 "parser.act"
+#line 238 "parser.act"
 
 
-#line 48 "parser.h"
+#line 51 "parser.h"
 
 /* END OF FILE */

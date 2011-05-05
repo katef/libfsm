@@ -59,21 +59,29 @@ ast_addzone(struct lx_ast *ast)
 }
 
 struct lx_mapping *
-ast_addmapping(struct lx_zone *z, struct re *re, const char *token)
+ast_addmapping(struct lx_zone *z, struct re *re, const char *token, struct lx_zone *to)
 {
 	struct lx_mapping *m;
 
 	assert(z != NULL);
 	assert(re != NULL);
-	assert(token != NULL);
 
 	for (m = z->ml; m != NULL; m = m->next) {
 		assert(m->re != NULL);
-		assert(m->token != NULL);
+
+		if (token == NULL && m->token == NULL) {
+			break;
+		}
+
+		if (token == NULL || m->token == NULL) {
+			continue;
+		}
 
 		if (0 == strcmp(m->token, token)) {
 			break;
 		}
+
+		/* TODO: compare 'to'ness? */
 	}
 
 	if (m == NULL) {
@@ -102,6 +110,8 @@ ast_addmapping(struct lx_zone *z, struct re *re, const char *token)
 	if (!re_union(m->re, re)) {
 		return NULL;
 	}
+
+	/* TODO: associate 'to' and token with re (need a struct just to contain those) */
 
 	return m;
 }

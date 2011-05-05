@@ -14,6 +14,8 @@
 
 	string -> string;
 	re     -> re;
+	zone   -> zone;
+	ast    -> ast;
 
 %header% @{
 
@@ -28,8 +30,9 @@
 	#include "xalloc.h"
 	#include "ast.h"
 
-	typedef char *      string;
-	typedef struct re * re;
+	typedef char *           string;
+	typedef struct re *      re;
+	typedef struct lx_zone * zone;
 
 	struct act_state {
 		int lex_tok;
@@ -52,10 +55,13 @@
 
 	#include <stdio.h>
 
+	#include "ast.h"
+
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
+	typedef struct lx_ast *    ast;
 
-	void lx_parse(FILE *f);
+	struct lx_ast *lx_parse(FILE *f);
 
 @};
 
@@ -111,11 +117,46 @@
 		assert(@a != NULL);
 		assert(@b != NULL);
 
-		@r = re_concat(@a, @b);
-		if (@r == NULL) {
+		if (!re_concat(@a, @b)) {
 			perror("re_concat");
 			@!;
 		}
+
+		@r = @a;
+	@};
+
+	<make-ast>: () -> (a :ast) = @{
+		@a = ast_new();
+		if (@a == NULL) {
+			perror("ast_new");
+			@!;
+		}
+	@};
+
+	<make-zone>: (a :ast) -> (z :zone) = @{
+		assert(@a != NULL);
+
+		@z = ast_addzone(@a);
+		if (@z == NULL) {
+			perror("ast_addzone");
+			@!;
+		}
+	@};
+
+	<make-mapping>: (z :zone, r :re, t :string) -> () = @{
+		assert(@z != NULL);
+		assert(@r != NULL);
+
+		/* TODO: "to" zone, if present */
+
+		if (!ast_addmapping(@z, @r, @t, NULL)) {
+			perror("ast_addmapping");
+			@!;
+		}
+	@};
+
+	<no-token>: () -> (s :string) = @{
+		@s = NULL;
 	@};
 
 	<free>: (s :string) -> () = @{
@@ -151,6 +192,9 @@
 		err_expected("'}'");
 	@};
 
+	<err-expected-eof> = @{
+		err_expected("EOF");
+	@};
 
 	<err-expected-name> = @{
 		err_expected("token name");
@@ -162,26 +206,31 @@
 
 %trailer% @{
 
-	void lx_parse(FILE *f) {
+	struct lx_ast *lx_parse(FILE *f) {
 		struct act_state act_state_s;
 		struct act_state *act_state;
 		struct lex_state *lex_state;
+		struct lx_ast *ast;
 
 		assert(f != NULL);
 
 		lex_state = lex_init(f);
 		if (lex_state == NULL) {
 			perror("lex_init");
-			return;
+			return NULL;
 		}
 
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
 
 		ADVANCE_LEXER;	/* XXX: what if the first token is unrecognised? */
-		p_lx(lex_state, act_state);
+		p_lx(lex_state, act_state, &ast);
+
+		assert(ast != NULL);
 
 		lex_free(lex_state);
+
+		return ast;
 	}
 
 @}, @{

@@ -19,7 +19,7 @@ struct lx_zone *
 ast_addzone(struct lx_ast *ast);
 
 struct lx_mapping *
-ast_addmapping(struct lx_zone *z, struct re *re, const char *token);
+ast_addmapping(struct lx_zone *z, struct re *re, const char *token, struct lx_zone *to);
 
 
 #endif
