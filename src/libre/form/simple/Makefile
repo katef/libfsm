@@ -13,7 +13,7 @@ SID_ACT= ${BASE_DIR}/src/lib/libre/parser.act	# XXX: move this closer?
 .include <lx.sid.mk>
 
 
-CFLAGS+= -I ${BASE_DIR}/src/lib
+CFLAGS+= -I ${BASE_DIR}/src
 CFLAGS+= -I ${BASE_DIR}/src/include
 
 SRCS+= comp.c

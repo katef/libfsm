@@ -14,7 +14,7 @@
 
 #include "parser.h"
 
-#include "../../lib/libfsm/internal.h"	/* XXX */
+#include "libfsm/internal.h"	/* XXX */
 
 extern int optind;
 extern char *optarg;

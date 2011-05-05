@@ -13,7 +13,7 @@ SRCS+= re.c
 .include <lx.obj.mk>
 
 
-PARTS+= src/hooks/form
+PARTS+= src/libre/form
 
 .include <lx.parts.mk>
 
@@ -21,7 +21,7 @@ PARTS+= src/hooks/form
 LIB= ${.CURDIR:T}
 
 # TODO: this needs doing properly, including dependencies for libraries being rebuilt
-LDFLAGS+= -L${OBJ_DIR}/src/lib/libfsm
+LDFLAGS+= -L${OBJ_DIR}/src/libfsm
 
 LIBS+= -lfsm
 

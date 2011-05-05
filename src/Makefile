@@ -3,10 +3,10 @@
 .include "Makefile.inc"
 
 
-SUBDIR+=	hooks
-#SUBDIR+=	include
-SUBDIR+=	lib
-SUBDIR+=	tools
+#SUBDIR+= include
+SUBDIR+= libfsm
+SUBDIR+= libre
+SUBDIR+= bin
 
 .include <lx.subdir.mk>
 

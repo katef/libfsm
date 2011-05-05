@@ -24,7 +24,7 @@ SRCS+= xalloc.c
 .include <lx.obj.mk>
 
 
-PARTS+= src/hooks/out
+PARTS+= src/libfsm/out
 
 .include <lx.parts.mk>
 

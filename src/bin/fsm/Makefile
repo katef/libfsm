@@ -3,10 +3,18 @@
 .include "Makefile.inc"
 
 
-CFLAGS+= -I ${BASE_DIR}/src/lib
+SID_SID= parser.sid
+SID_ACT= parser.act
+
+.include <lx.sid.mk>
+
+
+CFLAGS+= -I ${BASE_DIR}/src
 CFLAGS+= -I ${BASE_DIR}/src/include
 
+SRCS+= lexer.c
 SRCS+= main.c
+SRCS+= parser.c
 
 .include <lx.obj.mk>
 
@@ -14,9 +22,9 @@ SRCS+= main.c
 PROG= ${.CURDIR:T}
 
 # TODO: this needs doing properly, including dependencies for libraries being rebuilt
-LDFLAGS+= -L${OBJ_DIR}/src/lib/libre
+LDFLAGS+= -L${OBJ_DIR}/src/libfsm
 
-LIBS+= -lre
+LIBS+= -lfsm
 
 .include <lx.prog.mk>
 
