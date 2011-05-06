@@ -24,6 +24,7 @@ LIB= ${.CURDIR:T}
 LDFLAGS+= -L${OBJ_DIR}/src/libfsm
 
 LIBS+= -lfsm
+LIB_NS= re_
 
 .include <lx.lib.mk>
 

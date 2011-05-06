@@ -19,14 +19,18 @@ OBJ_SDIR?= ${OBJ_DIR}/${SRCDIR}
 CURDIR!= pwd
 SRCDIR?= ${CURDIR:C/^${BASE_DIR}\///}
 
+UNAME_S!= uname -s
+
 AR=       ar
 AWK=      awk
 ECHO=     echo
 EXIT=     exit
+EGREP=    grep -E
 CC=       gcc
 COPYFILE= install -m 644
 LD=       ld
 MKDIR=    mkdir -p
+NM=       nm
 RANLIB=   ranlib
 RMFILE=   rm
 RMDIR=    rmdir

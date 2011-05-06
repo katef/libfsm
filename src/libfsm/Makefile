@@ -30,6 +30,7 @@ PARTS+= src/libfsm/out
 
 
 LIB= ${.CURDIR:T}
+LIB_NS= fsm_
 
 .include <lx.lib.mk>
 

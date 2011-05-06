@@ -19,6 +19,11 @@ SRCS+= parser.c
 .include <lx.obj.mk>
 
 
+PARTS+= src/adt
+
+.include <lx.parts.mk>
+
+
 PROG= ${.CURDIR:T}
 
 # TODO: this needs doing properly, including dependencies for libraries being rebuilt
