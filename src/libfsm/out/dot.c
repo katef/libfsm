@@ -353,8 +353,23 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 	}
 }
 
-void out_dot(const struct fsm *fsm, FILE *f) {
+void out_dotfrag(const struct fsm *fsm, FILE *f) {
 	struct fsm_state *s;
+	struct fsm_state *start;
+
+	/* TODO: assert! */
+
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		singlestate(fsm, f, s);
+
+		if (fsm_isend(fsm, s)) {
+			fprintf(f, "\t%-2u [ shape = doublecircle ];\n", indexof(fsm, s));
+		}
+	}
+}
+
+
+void out_dot(const struct fsm *fsm, FILE *f) {
 	struct fsm_state *start;
 
 	/* TODO: assert! */
@@ -377,17 +392,7 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 
 	fprintf(f, "\n");
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		singlestate(fsm, f, s);
-
-		if (fsm_isend(fsm, s)) {
-			fprintf(f, "\t%-2u [ shape = doublecircle ];\n", indexof(fsm, s));
-		}
-	}
-
-	if (start == NULL) {
-		fprintf(f, "\t0 [ shape = doublecircle ];\n");
-	}
+	out_dotfrag(fsm, f);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

@@ -16,10 +16,12 @@ fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format)
 	assert(f);
 
 	switch (format) {
-	case FSM_OUT_FSM:   out = out_fsm;   break;
-	case FSM_OUT_DOT:   out = out_dot;   break;
-	case FSM_OUT_TABLE: out = out_table; break;
-	case FSM_OUT_C:     out = out_c;     break;
+	case FSM_OUT_FSM:     out = out_fsm;     break;
+	case FSM_OUT_DOT:     out = out_dot;     break;
+	case FSM_OUT_DOTFRAG: out = out_dotfrag; break;
+	case FSM_OUT_TABLE:   out = out_table;   break;
+	case FSM_OUT_C:       out = out_c;       break;
+	case FSM_OUT_CFRAG:   out = out_cfrag;   break;
 	}
 
 	assert(out != NULL);

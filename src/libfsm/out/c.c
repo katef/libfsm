@@ -206,9 +206,29 @@ static void endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
 	fprintf(f, "\t}\n");
 }
 
-void out_c(const struct fsm *fsm, FILE *f) {
+void out_cfrag(const struct fsm *fsm, FILE *f) {
 	struct fsm_state *s;
 
+	assert(fsm != NULL);
+	assert(fsm_isdfa(fsm));
+
+	/* TODO: prerequisite that the FSM is a DFA */
+
+	fprintf(f, "\twhile ((c = fsm_getc(opaque)) != EOF) {\n");
+	fprintf(f, "\t\tswitch (state) {\n");
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		fprintf(f, "\t\tcase S%u:\n", indexof(fsm, s));
+		singlecase(f, fsm, s);
+
+		if (s->next != NULL) {
+			fprintf(f, "\n");
+		}
+	}
+	fprintf(f, "\t\t}\n");
+	fprintf(f, "\t}\n");
+}
+
+void out_c(const struct fsm *fsm, FILE *f) {
 	assert(fsm != NULL);
 	assert(fsm_isdfa(fsm));
 
@@ -235,19 +255,7 @@ void out_c(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "\tstate = S%u;\n", indexof(fsm, fsm->start));
 	fprintf(f, "\n");
 
-	/* FSM */
-	fprintf(f, "\twhile ((c = fsm_getc(opaque)) != EOF) {\n");
-	fprintf(f, "\t\tswitch (state) {\n");
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		fprintf(f, "\t\tcase S%u:\n", indexof(fsm, s));
-		singlecase(f, fsm, s);
-
-		if (s->next != NULL) {
-			fprintf(f, "\n");
-		}
-	}
-	fprintf(f, "\t\t}\n");
-	fprintf(f, "\t}\n");
+	out_cfrag(fsm, f);
 
 	fprintf(f, "\n");
 
