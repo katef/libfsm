@@ -35,7 +35,6 @@ struct fsm_state {
 struct fsm {
 	struct fsm_state *sl;
 	struct fsm_state *start;
-	struct fsm_options options;
 
 	struct fsm_colour_hooks colour_hooks;
 };

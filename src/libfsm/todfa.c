@@ -473,7 +473,6 @@ fsm_todfa(struct fsm *fsm)
 	}
 
 	/* TODO: centralise cloning these sort of things */
-	fsm_setoptions(dfa, &fsm->options);
 	fsm_setcolourhooks(dfa, &fsm->colour_hooks);
 
 	ml = NULL;

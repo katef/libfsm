@@ -51,7 +51,6 @@ state_remove(struct fsm_state **head, struct fsm_state *state)
 struct fsm *
 fsm_new(void)
 {
-	static const struct fsm_options default_options;
 	struct fsm *new;
 
 	new = malloc(sizeof *new);
@@ -59,9 +58,8 @@ fsm_new(void)
 		return NULL;
 	}
 
-	new->sl      = NULL;
-	new->start   = NULL;
-	new->options = default_options;
+	new->sl    = NULL;
+	new->start = NULL;
 
 	fsm_setcolourhooks(new, NULL);
 
@@ -86,9 +84,8 @@ fsm_move(struct fsm *dst, struct fsm *src)
 
 	free_contents(dst);
 
-	dst->sl      = src->sl;
-	dst->start   = src->start;
-	dst->options = src->options;
+	dst->sl    = src->sl;
+	dst->start = src->start;
 
 	dst->colour_hooks = src->colour_hooks;
 
@@ -163,15 +160,6 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 	}
 
 	state_remove(&fsm->sl, state);
-}
-
-void
-fsm_setoptions(struct fsm *fsm, const struct fsm_options *options)
-{
-	assert(fsm != NULL);
-	assert(options != NULL);
-
-	fsm->options = *options;
 }
 
 int

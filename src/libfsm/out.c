@@ -8,24 +8,29 @@
 #include "out/out.h"
 
 void
-fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format)
+fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format,
+	const struct fsm_outoptions *options)
 {
-	void (*out)(const struct fsm *fsm, FILE *f) = NULL;
+	static const struct fsm_outoptions defaults;
+
+	void (*out)(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) = NULL;
 
 	assert(fsm);
 	assert(f);
 
 	switch (format) {
-	case FSM_OUT_FSM:     out = out_fsm;     break;
-	case FSM_OUT_DOT:     out = out_dot;     break;
-	case FSM_OUT_DOTFRAG: out = out_dotfrag; break;
-	case FSM_OUT_TABLE:   out = out_table;   break;
-	case FSM_OUT_C:       out = out_c;       break;
-	case FSM_OUT_CFRAG:   out = out_cfrag;   break;
+	case FSM_OUT_FSM:   out = out_fsm;   break;
+	case FSM_OUT_DOT:   out = out_dot;   break;
+	case FSM_OUT_TABLE: out = out_table; break;
+	case FSM_OUT_C:     out = out_c;     break;
 	}
 
 	assert(out != NULL);
 
-	out(fsm, f);
+	if (options == NULL) {
+		options = &defaults;
+	}
+
+	out(fsm, f, options);
 }
 

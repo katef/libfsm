@@ -86,12 +86,16 @@ static const struct fsm_state *findany(const struct fsm_state *state) {
 	return state->edges[0].sl->state;
 }
 
-void out_fsm(const struct fsm *fsm, FILE *f) {
+void out_fsm(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
 	struct fsm_state *s;
 	struct state_set *e;
 	struct colour_set *c;
 	struct fsm_state *start;
 	int end;
+
+	assert(fsm != NULL);
+	assert(f != NULL);
+	assert(options != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		int i;
@@ -167,10 +171,15 @@ void out_fsm(const struct fsm *fsm, FILE *f) {
 
 			end--;
 
-			if (s->cl == NULL) {
+			if (s->cl == NULL || fsm->colour_hooks.print == NULL) {
 				fprintf(f, "%u", indexof(fsm, s));
 			} else for (c = s->cl; c != NULL; c = c->next) {
-				fprintf(f, "%u = \"%s\"", indexof(fsm, s), c->colour);
+				fprintf(f, "%u = \"", indexof(fsm, s));
+
+				/* TODO: escapes */
+				fsm->colour_hooks.print(fsm, f, c->colour);
+
+				fprintf(f, "\"");
 
 				if (c->next != NULL) {
 					fprintf(f, ", ");

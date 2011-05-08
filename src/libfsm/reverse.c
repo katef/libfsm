@@ -82,7 +82,6 @@ fsm_reverse(struct fsm *fsm)
 		return 0;
 	}
 
-	fsm_setoptions(new, &fsm->options);
 	fsm_setcolourhooks(new, &fsm->colour_hooks);
 
 	/*

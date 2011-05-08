@@ -195,19 +195,20 @@ static void printcolours(const struct fsm *fsm, const struct colour_set *cl, FIL
 	fprintf(f, "</font>");
 }
 
-static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
+static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, const struct fsm_outoptions *options) {
 	struct state_set *e;
 	int i;
 
 	assert(fsm != NULL);
 	assert(f != NULL);
 	assert(s != NULL);
+	assert(options != NULL);
 
 	/* TODO: findany() here? */
 	if (fsm_isend(fsm, s)) {
 		fprintf(f, "\t%-2u [ label = <", indexof(fsm, s));
 
-		if (!fsm->options.anonymous_states) {
+		if (!options->anonymous_states) {
 			fprintf(f, "\\N<br/>");
 		}
 
@@ -229,7 +230,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 			 * To implement this, we loop through all unique states, rather than
 			 * looping through each edge.
 			 */
-			if (fsm->options.consolidate_edges) {
+			if (options->consolidate_edges) {
 				static const struct bm bm_empty;
 				struct bm bm;
 				struct state_set *e2;
@@ -353,14 +354,15 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s) {
 	}
 }
 
-void out_dotfrag(const struct fsm *fsm, FILE *f) {
+static void out_dotfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
 	struct fsm_state *s;
-	struct fsm_state *start;
 
-	/* TODO: assert! */
+	assert(fsm != NULL);
+	assert(f != NULL);
+	assert(options != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		singlestate(fsm, f, s);
+		singlestate(fsm, f, s, options);
 
 		if (fsm_isend(fsm, s)) {
 			fprintf(f, "\t%-2u [ shape = doublecircle ];\n", indexof(fsm, s));
@@ -369,17 +371,24 @@ void out_dotfrag(const struct fsm *fsm, FILE *f) {
 }
 
 
-void out_dot(const struct fsm *fsm, FILE *f) {
+void out_dot(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
 	struct fsm_state *start;
 
-	/* TODO: assert! */
+	assert(fsm != NULL);
+	assert(f != NULL);
+	assert(options != NULL);
+
+	if (options->fragment) {
+		out_dotfrag(fsm, f, options);
+		return;
+	}
 
 	fprintf(f, "digraph G {\n");
 	fprintf(f, "\trankdir = LR;\n");
 
 	fprintf(f, "\tnode [ shape = circle ];\n");
 
-	if (fsm->options.anonymous_states) {
+	if (options->anonymous_states) {
 		fprintf(f, "\tnode [ label = \"\", width = 0.3 ];\n");
 	}
 
@@ -392,7 +401,7 @@ void out_dot(const struct fsm *fsm, FILE *f) {
 
 	fprintf(f, "\n");
 
-	out_dotfrag(fsm, f);
+	out_dotfrag(fsm, f, options);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

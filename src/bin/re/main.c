@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (dump) {
-		fsm_print(re->fsm, stdout, FSM_OUT_FSM);
+		fsm_print(re->fsm, stdout, FSM_OUT_FSM, NULL);
 	}
 
 	/* TODO: flags? */

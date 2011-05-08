@@ -206,11 +206,13 @@ static void endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
 	fprintf(f, "\t}\n");
 }
 
-void out_cfrag(const struct fsm *fsm, FILE *f) {
+static void out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
 	struct fsm_state *s;
 
 	assert(fsm != NULL);
 	assert(fsm_isdfa(fsm));
+	assert(f != NULL);
+	assert(options != NULL);
 
 	/* TODO: prerequisite that the FSM is a DFA */
 
@@ -228,13 +230,20 @@ void out_cfrag(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "\t}\n");
 }
 
-void out_c(const struct fsm *fsm, FILE *f) {
+void out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
 	assert(fsm != NULL);
 	assert(fsm_isdfa(fsm));
+	assert(f != NULL);
+	assert(options != NULL);
 
 	/* TODO: prerequisite that the FSM is a DFA */
 
 	/* TODO: pass in %s prefix (default to "fsm_") */
+
+	if (options->fragment) {
+		out_cfrag(fsm, f, options);
+		return;
+	}
 
 	fprintf(f, "#include <stdio.h>\n");
 	fprintf(f, "\n");
@@ -255,7 +264,7 @@ void out_c(const struct fsm *fsm, FILE *f) {
 	fprintf(f, "\tstate = S%u;\n", indexof(fsm, fsm->start));
 	fprintf(f, "\n");
 
-	out_cfrag(fsm, f);
+	out_cfrag(fsm, f, options);
 
 	fprintf(f, "\n");
 

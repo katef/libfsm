@@ -15,16 +15,6 @@ struct fsm;
 struct fsm_state;
 struct fsm_edge;
 
-struct fsm_options {
-	/* boolean: true indicates to omit names for states in output */
-	unsigned int anonymous_states:1;
-
-	/* boolean: true indicates to optmise aesthetically during output by
-	 * consolidating similar edges, and outputting a single edge with a more
-	 * concise label. */
-	unsigned int consolidate_edges:1;
-};
-
 /*
  * Create a new FSM. This is to be freed with fsm_free(). A structure allocated
  * from fsm_new() is expected to be passed as the "fsm" argument to the
@@ -104,13 +94,6 @@ fsm_addedge_label(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 struct fsm_edge *
 fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	char c);
-
-/*
- * A local copy of *options is taken, so its storage needn't remain around
- * after a call to fsm_setoptions().
- */
-void
-fsm_setoptions(struct fsm *fsm, const struct fsm_options *options);
 
 /*
  * Mark a given state as being an end state or not. The colour specified is

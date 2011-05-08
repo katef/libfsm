@@ -20,7 +20,7 @@ extern int optind;
 extern char *optarg;
 
 void usage(void) {
-	printf("usage: fsm [-chadmrs] [-l <language] [-e <execution> | -q <query] [-p <colour>] [<input> [<output>]]\n");
+	printf("usage: fsm [-chagdmrs] [-l <language>] [-n <prefix>] [-e <execution> | -q <query] [-p <colour>] [<input> [<output>]]\n");
 }
 
 static int colour_hook_compare(const struct fsm *fsm, void *a, void *b) {
@@ -87,8 +87,8 @@ int main(int argc, char *argv[]) {
 		const char *execute;
 	};
 
-	static const struct fsm_options options_defaults;
-	struct fsm_options options = options_defaults;
+	static const struct fsm_outoptions outoptions_defaults;
+	struct fsm_outoptions out_options = outoptions_defaults;
 
 	static const struct cli_options cli_options_defaults;
 	struct cli_options cli_options = cli_options_defaults;
@@ -96,14 +96,22 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hal:de:cmrsp:q:")) != -1) {
+		while ((c = getopt(argc, argv, "hagn:l:de:cmrsp:q:")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
 				exit(EXIT_SUCCESS);
 
 			case 'a':
-				options.anonymous_states = 1;
+				out_options.anonymous_states = 1;
+				break;
+
+			case 'g':
+				out_options.fragment = 1;
+				break;
+
+			case 'n':
+				out_options.prefix = optarg;
 				break;
 
 			case 'l':
@@ -142,7 +150,7 @@ int main(int argc, char *argv[]) {
 				break;
 
 			case 'c':
-				options.consolidate_edges = 1;
+				out_options.consolidate_edges = 1;
 				break;
 
 			case 'p':
@@ -196,7 +204,6 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		fsm_setoptions(fsm, &options);
 		fsm_setcolourhooks(fsm, &hooks);
 
 		if (cli_options.reverse) {
@@ -241,7 +248,7 @@ int main(int argc, char *argv[]) {
 
 		/* TODO: make optional */
 		if (cli_options.is_pure == NULL) {
-			fsm_print(fsm, out, format);
+			fsm_print(fsm, out, format, &out_options);
 		}
 
 		if (cli_options.execute != NULL) {

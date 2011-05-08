@@ -82,11 +82,13 @@ static int notransitions(struct fsm_state *sl, int i) {
 	return 1;
 }
 
-void out_table(const struct fsm *fsm, FILE *f) {
+void out_table(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
 	struct fsm_state *s;
 	int i;
 
-	/* TODO: assert! */
+	assert(fsm != NULL);
+	assert(f != NULL);
+	assert(options != NULL);
 
 	fprintf(f, "%-9s ", "");
 	for (s = fsm->sl; s != NULL; s = s->next) {

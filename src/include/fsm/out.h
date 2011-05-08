@@ -7,13 +7,32 @@
 
 struct fsm;
 
+
+struct fsm_outoptions {
+	/* boolean: true indicates to omit names for states in output */
+	unsigned int anonymous_states:1;
+
+	/* boolean: true indicates to optmise aesthetically during output by
+	 * consolidating similar edges, and outputting a single edge with a more
+	 * concise label. */
+	unsigned int consolidate_edges:1;
+
+	/* boolean: true indicates to produce a fragment of code as output, rather
+	 * than a complete self-contained language. e.g. for FSM_OUT_C, this will
+	 * be the guts of a function, rather than a complete .c file. This is
+	 * intended to be useful for embedding into other code. */
+	unsigned int fragment:1;
+
+	/* a prefix for namespacing generated identifiers. NULL if not required. */
+	const char *prefix;
+};
+
+
 enum fsm_out {
 	FSM_OUT_FSM,
 	FSM_OUT_DOT,
-	FSM_OUT_DOTFRAG,
 	FSM_OUT_TABLE,
-	FSM_OUT_C,
-	FSM_OUT_CFRAG
+	FSM_OUT_C
 };
 
 /*
@@ -25,14 +44,14 @@ enum fsm_out {
  *  FSM_OUT_TABLE - A plaintext state transition matrix.
  *  FSM_OUT_C     - ISO C90 code.
  *
- * The -FRAG equivalents are fragments of code, rather than complete programs.
- * These are intended to be suitable for including into custom code.
+ * The output options may be NULL, indicating to use defaults.
  *
  * TODO: what to return?
  * TODO: explain constraints (e.g. single-character labels for C output)
  */
 void
-fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format);
+fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format,
+	const struct fsm_outoptions *options);
 
 #endif
 
