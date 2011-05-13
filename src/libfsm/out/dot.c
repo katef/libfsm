@@ -53,7 +53,7 @@ static unsigned
 indexof(const struct fsm *fsm, const struct fsm_state *state)
 {
 	struct fsm_state *s;
-	int i;
+	unsigned int i;
 
 	assert(fsm != NULL);
 	assert(state != NULL);

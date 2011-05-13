@@ -12,16 +12,16 @@
 #include "libfsm/colour.h"
 #include "libfsm/internal.h"
 
-static unsigned
+static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)
 {
 	struct fsm_state *s;
-	int i;
+	unsigned int i;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
+	for (s = fsm->sl, i = 1; s != NULL; s = s->next, i++) {
 		if (s == state) {
 			return i;
 		}
@@ -200,7 +200,7 @@ static void endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
 			continue;
 		}
 
-		fprintf(f, "\tcase S%d: return %u;\n", indexof(fsm, s), indexof(fsm, s));
+		fprintf(f, "\tcase S%u: return %u;\n", indexof(fsm, s), indexof(fsm, s));
 	}
 	fprintf(f, "\tdefault: return EOF; /* unexpected EOF */\n");
 	fprintf(f, "\t}\n");
@@ -216,7 +216,6 @@ static void out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoption
 
 	/* TODO: prerequisite that the FSM is a DFA */
 
-	fprintf(f, "\twhile ((c = fsm_getc(opaque)) != EOF) {\n");
 	fprintf(f, "\t\tswitch (state) {\n");
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		fprintf(f, "\t\tcase S%u:\n", indexof(fsm, s));
@@ -227,7 +226,6 @@ static void out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoption
 		}
 	}
 	fprintf(f, "\t\t}\n");
-	fprintf(f, "\t}\n");
 }
 
 void out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
@@ -264,12 +262,14 @@ void out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	fprintf(f, "\tstate = S%u;\n", indexof(fsm, fsm->start));
 	fprintf(f, "\n");
 
+	fprintf(f, "\twhile ((c = fsm_getc(opaque)) != EOF) {\n");
 	out_cfrag(fsm, f, options);
-
+	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 
 	/* end states */
 	endstates(f, fsm, fsm->sl);
+
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
 }
