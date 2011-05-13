@@ -7,19 +7,48 @@
 #include <re/re.h>
 
 
-struct lx_mapping;
-struct lx_zone;
-struct lx_ast;
+struct re;
+
+struct ast_mapping {
+	struct re *re;
+	struct ast_token *token;
+	struct ast_zone  *to;
+
+	struct ast_mapping *next;
+};
+
+struct ast_zone {
+	struct ast_mapping *ml;
+	struct re *re;
+
+	struct ast_zone *next;
+};
+
+struct ast_token {
+	const char *s;
+
+	struct ast_token *next;
+};
+
+struct ast {
+	struct ast_zone  *zl;
+	struct ast_token *tl;
+
+	struct ast_zone *global;
+};
 
 
-struct lx_ast *
+struct ast *
 ast_new(void);
 
-struct lx_zone *
-ast_addzone(struct lx_ast *ast);
+struct ast_token *
+ast_addtoken(struct ast *ast, const char *s);
 
-struct lx_mapping *
-ast_addmapping(struct lx_zone *z, struct re *re, const char *token, struct lx_zone *to);
+struct ast_zone *
+ast_addzone(struct ast *ast);
+
+struct ast_mapping *
+ast_addmapping(struct ast_zone *z, struct re *re, struct ast_token *token, struct ast_zone *to);
 
 
 #endif

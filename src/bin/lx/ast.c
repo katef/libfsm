@@ -9,41 +9,55 @@
 #include "ast.h"
 #include "xalloc.h"
 
-struct lx_mapping {
-	struct re *re;
-	const char *token;
-
-	struct lx_mapping *next;
-};
-
-struct lx_zone {
-	struct lx_mapping *ml;
-
-	struct lx_zone *next;
-};
-
-struct lx_ast {
-	struct lx_zone *zl;
-};
-
-
-struct lx_ast *
+struct ast *
 ast_new(void)
 {
-	struct lx_ast *new;
+	struct ast *new;
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
 
+	new->zl = NULL;
+
 	return new;
 }
 
-struct lx_zone *
-ast_addzone(struct lx_ast *ast)
+struct ast_token *
+ast_addtoken(struct ast *ast, const char *s)
 {
-	struct lx_zone *new;
+	struct ast_token *new;
+
+	assert(s != NULL);
+
+	{
+		struct ast_token *t;
+
+		for (t = ast->tl; t != NULL; t = t->next) {
+			if (0 == strcmp(t->s, s)) {
+				return t;
+			}
+		}
+	}
+
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+		return NULL;
+	}
+
+	new->s = xstrdup(s);
+
+	new->next = ast->tl;
+	ast->tl   = new;
+
+	return new;
+}
+
+struct ast_zone *
+ast_addzone(struct ast *ast)
+{
+	struct ast_zone *new;
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
@@ -51,6 +65,7 @@ ast_addzone(struct lx_ast *ast)
 	}
 
 	new->ml = NULL;
+	new->re = NULL;
 
 	new->next = ast->zl;
 	ast->zl   = new;
@@ -58,10 +73,10 @@ ast_addzone(struct lx_ast *ast)
 	return new;
 }
 
-struct lx_mapping *
-ast_addmapping(struct lx_zone *z, struct re *re, const char *token, struct lx_zone *to)
+struct ast_mapping *
+ast_addmapping(struct ast_zone *z, struct re *re, struct ast_token *token, struct ast_zone *to)
 {
-	struct lx_mapping *m;
+	struct ast_mapping *m;
 
 	assert(z != NULL);
 	assert(re != NULL);
@@ -69,19 +84,9 @@ ast_addmapping(struct lx_zone *z, struct re *re, const char *token, struct lx_zo
 	for (m = z->ml; m != NULL; m = m->next) {
 		assert(m->re != NULL);
 
-		if (token == NULL && m->token == NULL) {
+		if (token == m->token && to == m->to) {
 			break;
 		}
-
-		if (token == NULL || m->token == NULL) {
-			continue;
-		}
-
-		if (0 == strcmp(m->token, token)) {
-			break;
-		}
-
-		/* TODO: compare 'to'ness? */
 	}
 
 	if (m == NULL) {
@@ -96,22 +101,20 @@ ast_addmapping(struct lx_zone *z, struct re *re, const char *token, struct lx_zo
 			return NULL;
 		}
 
-		m->token = xstrdup(token);
-		if (m->token == NULL) {
-			re_free(m->re);
-			free(m);
-			return NULL;
-		}
+		m->token = token;
+		m->to    = to;
 
 		m->next = z->ml;
 		z->ml   = m;
 	}
 
-	if (!re_union(m->re, re)) {
+	if (!re_addend(re, m)) {
 		return NULL;
 	}
 
-	/* TODO: associate 'to' and token with re (need a struct just to contain those) */
+	if (!re_union(m->re, re)) {
+		return NULL;
+	}
 
 	return m;
 }

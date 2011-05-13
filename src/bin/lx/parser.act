@@ -30,9 +30,10 @@
 	#include "xalloc.h"
 	#include "ast.h"
 
-	typedef char *           string;
-	typedef struct re *      re;
-	typedef struct lx_zone * zone;
+	typedef char *               string;
+	typedef struct re *          re;
+	typedef struct ast_zone *    zone;
+	typedef struct ast_mapping * mapping;
 
 	struct act_state {
 		int lex_tok;
@@ -59,9 +60,9 @@
 
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
-	typedef struct lx_ast *    ast;
+	typedef struct ast *       ast;
 
-	struct lx_ast *lx_parse(FILE *f);
+	struct ast *lx_parse(FILE *f);
 
 @};
 
@@ -96,7 +97,9 @@
 	<compile-literal>: (s :string) -> (r :re) = @{
 		assert(@s != NULL);
 
-		@r = re_new_comp(RE_LITERAL, re_getc_str, &@s, 0, NULL, NULL);
+		/* TODO: add colour */
+
+		@r = re_new_comp(RE_LITERAL, re_getc_str, &@s, 0, NULL);
 		if (@r == NULL) {
 			/* TODO: use *err */
 			@!;
@@ -106,7 +109,9 @@
 	<compile-regex>:   (s :string) -> (r :re) = @{
 		assert(@s != NULL);
 
-		@r = re_new_comp(RE_SIMPLE, re_getc_str, &@s, 0, NULL, NULL);
+		/* TODO: add colour */
+
+		@r = re_new_comp(RE_SIMPLE, re_getc_str, &@s, 0, NULL);
 		if (@r == NULL) {
 			/* TODO: use *err */
 			@!;
@@ -143,20 +148,43 @@
 		}
 	@};
 
-	<make-mapping>: (z :zone, r :re, t :string) -> () = @{
-		assert(@z != NULL);
+	<make-mapping>: (a :ast, from :zone, to :zone, r :re, t :string) -> () = @{
+		struct ast_token *t;
+		struct ast_mapping *m;
+
+		assert(@from != NULL);
 		assert(@r != NULL);
 
-		/* TODO: "to" zone, if present */
+		if (@t != NULL) {
+			t = ast_addtoken(@a, @t);
+			if (t == NULL) {
+				perror("ast_addtoken");
+				@!;
+			}
+		} else {
+			t = NULL;
+		}
 
-		if (!ast_addmapping(@z, @r, @t, NULL)) {
+		m = ast_addmapping(@from, @r, t, @to);
+		if (m == NULL) {
 			perror("ast_addmapping");
 			@!;
 		}
 	@};
 
+	<set-globalzone>: (a :ast, z :zone) -> () = @{
+		assert(@a != NULL);
+		assert(@z != NULL);
+
+		@a->global = @z;
+	@};
+
 	<no-token>: () -> (s :string) = @{
 		@s = NULL;
+	@};
+
+	<no-zone>: () -> (z :zone) = @{
+		@z = NULL;
 	@};
 
 	<free>: (s :string) -> () = @{
@@ -196,21 +224,17 @@
 		err_expected("EOF");
 	@};
 
-	<err-expected-name> = @{
-		err_expected("token name");
-	@};
-
 	<err-expected-list> = @{
 		err_expected("list of token mappings or zones");
 	@};
 
 %trailer% @{
 
-	struct lx_ast *lx_parse(FILE *f) {
+	struct ast *lx_parse(FILE *f) {
 		struct act_state act_state_s;
 		struct act_state *act_state;
 		struct lex_state *lex_state;
-		struct lx_ast *ast;
+		struct ast *ast;
 
 		assert(f != NULL);
 

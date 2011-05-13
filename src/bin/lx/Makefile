@@ -9,6 +9,7 @@ SID_ACT= parser.act
 .include <lx.sid.mk>
 
 
+CFLAGS+= -I ${BASE_DIR}/src
 CFLAGS+= -I ${BASE_DIR}/src/include
 
 SRCS+= ast.c
@@ -16,11 +17,13 @@ SRCS+= lexer.c
 SRCS+= parser.c
 #SRCS+= xalloc.c
 SRCS+= main.c
+SRCS+= out.c
 
 .include <lx.obj.mk>
 
 
 PARTS+= src/adt
+PARTS+= src/bin/lx/out
 
 .include <lx.parts.mk>
 

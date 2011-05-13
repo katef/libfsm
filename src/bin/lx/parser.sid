@@ -31,11 +31,14 @@
 
 	<concat-regex>: (:re, :re) -> (:re);
 
-	<make-ast>:     ()                    -> (:ast);
-	<make-zone>:    (:ast)                -> (:zone);
-	<make-mapping>: (:zone, :re, :string) -> ();
+	<make-ast>:     ()                                 -> (:ast);
+	<make-zone>:    (:ast)                             -> (:zone);
+	<make-mapping>: (:ast, :zone, :zone, :re, :string) -> ();
+
+	<set-globalzone>: (:ast, :zone) -> ();
 
 	<no-token>: () -> (:string);
+	<no-zone>:  () -> (:zone);
 
 	!<free>: (:string) -> ();
 
@@ -48,11 +51,10 @@
 	<err-expected-close>;
 	<err-expected-eof>;
 
-	<err-expected-name>;
 	<err-expected-list>;
 
 
-	token-mapping: (z :zone) -> () [
+	token-mapping: () -> (r :re, t :string) [
 
 		pattern: () -> (r :re) = {
 			s = pattern_literal;
@@ -75,7 +77,6 @@
 
 		{
 			t = <no-token>;
-			<make-mapping>(z, r, t);
 		||
 			{
 				map;
@@ -84,16 +85,13 @@
 			};
 
 			t = token_name;
-			<make-mapping>(z, r, t);
-		##
-			<err-expected-name>;
 		};
 	};
 
 	list-of-things: (a :ast, z :zone) -> () [
 
-		token-thing: (z :zone) -> () = {
-			token-mapping(z);
+		token-thing: (a :ast, z :zone) -> (r :re, t :string) = {
+			(r, t) = token-mapping;
 
 			{
 				semi;
@@ -102,9 +100,8 @@
 			};
 		};
 
-		zone-thing: (a :ast, z :zone) -> () = {
-			/* TODO: have these as special zone-changing mappings */
-			token-mapping(z);
+		zone-thing: (a :ast, parent :zone) -> () = {
+			(r1, t1) = token-mapping();
 
 			{
 				to;
@@ -112,10 +109,12 @@
 				<err-expected-to>;
 			};
 
+			(r2, t2) = token-mapping();
+
 			child = <make-zone>(a);
 
-			/* TODO: have these as special zone-changing mappings */
-			token-mapping(child);
+			<make-mapping>(a, parent, child, r1, t1);
+			<make-mapping>(a, child, parent, r2, t2);
 
 			{
 				{
@@ -143,7 +142,9 @@
 		};
 
 		thing: (a :ast, z :zone) -> () = {
-			token-thing(z);
+			(r, t) = token-thing(a, z);
+			to = <no-zone>;
+			<make-mapping>(a, z, to, r, t);
 		||
 			zone-thing(a, z);
 		};
@@ -160,6 +161,8 @@
 	lx: () -> (a :ast) = {
 		a = <make-ast>;
 		z = <make-zone>(a);
+
+		<set-globalzone>(a, z);
 
 		list-of-things(a, z);
 
