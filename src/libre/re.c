@@ -58,7 +58,7 @@ re_free(struct re *re)
 
 struct re *
 re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
-	enum re_cflags cflags, enum re_err *err, void *colour)
+	enum re_cflags cflags, enum re_err *err)
 {
 	struct re *new;
 	enum re_err e;
@@ -70,7 +70,7 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	case RE_LITERAL: comp = comp_literal; break;
 	case RE_GLOB:    comp = comp_glob;    break;
 	case RE_SIMPLE:  comp = comp_simple;  break;
-	default: e = RE_EBADFORM;             goto error;
+	default: e = RE_EBADFORM;             return NULL;
 	}
 
 	new = comp(getc, opaque, err);
@@ -80,20 +80,7 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 
 	assert(new->end != NULL);
 
-	if (!fsm_addend(new->fsm, new->end, colour)) {
-		re_free(new);
-		goto error;
-	}
-
 	return new;
-
-error:
-
-	if (err != NULL) {
-		*err = e;
-	}
-
-	return NULL;
 }
 
 const char *
@@ -118,16 +105,19 @@ re_strerror(enum re_err err)
 }
 
 int
+re_addend(struct re *re, void *colour)
+{
+	assert(re != NULL);
+	assert(re->end != NULL);
+
+	return fsm_addend(re->fsm, re->end, colour);
+}
+
+int
 re_union(struct re *re, struct re *new)
 {
 	assert(re != NULL);
 	assert(new != NULL);
-
-/* TODO: no; this could move the end state
-	if (!fsm_minimize(new->fsm)) {
-		return 0;
-	}
-*/
 
 	fsm_merge(re->fsm, new->fsm);
 

@@ -63,7 +63,7 @@ re_free(struct re *re);
  */
 struct re *
 re_new_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
-	enum re_cflags cflags, enum re_err *err, void *colour);
+	enum re_cflags cflags, enum re_err *err);
 
 /*
  * Return a human-readable string describing a given error code. The string
@@ -71,6 +71,12 @@ re_new_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
  */
 const char *
 re_strerror(enum re_err err);
+
+/*
+ * Returns false on error.
+ */
+int
+re_addend(struct re *re, void *colour);
 
 /*
  * Merge a new regexp into an existing regexp as set union of the two languages,
