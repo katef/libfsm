@@ -58,6 +58,15 @@ out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "#define LX_H\n");
 	fprintf(f, "\n");
 
+	fprintf(f, "struct lx {\n");
+	fprintf(f, "\tint (*getc)(void *opaque);\n");
+	fprintf(f, "\tvoid (*ungetc)(int c, void *opaque);\n");
+	fprintf(f, "\tvoid *opaque;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tenum lx_token (*z)(struct lx *lx);\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+
 	out_tokens(ast, f);
 	fprintf(f, "\n");
 
