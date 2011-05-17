@@ -149,64 +149,94 @@ static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
 	return 0;
 }
 
-static void singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state) {
-	const struct fsm_state *to;
+static void singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z, const struct fsm *fsm, struct fsm_state *state) {
 	int i;
 
 	assert(fsm != NULL);
+	assert(ast != NULL);
+	assert(z != NULL);
 	assert(f != NULL);
 	assert(state != NULL);
 
-	/* TODO: move this out into a count function */
-	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (state->edges[i].sl != NULL) {
-			break;
-		}
-	}
+	/* TODO: if greedy and state is an end state, skip this state */
 
 	/* no edges */
 	/* TODO: could centralise this with libfsm with internal options passed, perhaps */
-	if (i > UCHAR_MAX) {
-		fprintf(f, "\t\t\treturn TOK_ERROR;\n");
-		return;
-	}
 
 	fprintf(f, "\t\t\tswitch (c) {\n");
 
-	/* "any" edge */
-	to = findany(state);
-
-	/* usual case */
-	if (to == NULL) {
-		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (state->edges[i].sl == NULL) {
-				continue;
-			}
-
-			assert(state->edges[i].sl->state != NULL);
-			assert(state->edges[i].sl->next  == NULL);
-
-			fprintf(f, "\t\t\tcase '");
-			escputc(i, f);
-			fprintf(f, "':");
-
-			/* non-unique states fall through */
-			if (contains(state->edges, i + 1, state->edges[i].sl->state)) {
-				fprintf(f, "\n");
-				continue;
-			}
-
-			/* TODO: pass S%u out to maximum state width */
-			if (state->edges[i].sl->state != state) {
-				fprintf(f, " state = S%u; continue;\n", indexof(fsm, state->edges[i].sl->state));
-			} else {
-				fprintf(f, "	     continue;\n");
-			}
+	for (i = 0; i <= UCHAR_MAX; i++) {
+		if (state->edges[i].sl == NULL) {
+			continue;
 		}
+
+		assert(state->edges[i].sl->state != NULL);
+		assert(state->edges[i].sl->next  == NULL);
+
+		fprintf(f, "\t\t\tcase '");
+		escputc(i, f);
+		fprintf(f, "':");
+
+		/* non-unique states fall through */
+		if (contains(state->edges, i + 1, state->edges[i].sl->state)) {
+			fprintf(f, "\n");
+			continue;
+		}
+
+		/* TODO: pass S%u out to maximum state width */
+		if (state->edges[i].sl->state != state) {
+			fprintf(f, " state = S%u;      continue;\n", indexof(fsm, state->edges[i].sl->state));
+		} else {
+			fprintf(f, "	          continue;\n");
+		}
+
+		/* TODO: if greedy, and fsm_isend(fsm, state->edges[i].sl->state) then:
+			fprintf(f, "	     return TOK_%s;\n", state->edges[i].sl->state's token);
+		 */
 	}
 
-	if (to != NULL) {
-		fprintf(f, "\t\t\tdefault:  state = S%u; continue;\n", indexof(fsm, to));
+	if (fsm_isend(fsm, state)) {
+		struct ast_mapping *m;
+
+		assert(state->cl != NULL);
+		assert(state->cl->next == NULL);
+		assert(state->cl->colour != NULL);
+
+		m = state->cl->colour;
+
+		fprintf(f, "\t\t\tcase EOF: ");
+		if (m->to == NULL) {
+			fprintf(f, "lx->getc = NULL; ");
+		} else {
+			fprintf(f, "                 ");
+		}
+		fprintf(f, "return ");
+		if (m->to != NULL) {
+			fprintf(f, "lx->z = z%u, ", zindexof(ast, m->to));
+		}
+		if (m->token != NULL) {
+			fprintf(f, "TOK_");
+			out_esctok(f, m->token->s);
+		} else {
+			fprintf(f, "lx->z(lx)");
+		}
+		fprintf(f, ";\n");
+
+		fprintf(f, "\t\t\tdefault:  lx->ungetc(c);   return ");
+		if (m->to != NULL) {
+			fprintf(f, "lx->z = z%u, ", zindexof(ast, m->to));
+		}
+		if (m->token != NULL) {
+			fprintf(f, "TOK_");
+			out_esctok(f, m->token->s);
+		} else {
+			fprintf(f, "lx->z(lx)");
+		}
+		fprintf(f, ";\n"); /* TODO: colour for token */
+	} else {
+		fprintf(f, "\t\t\tcase EOF: lx->getc = NULL; return %s;\n",
+			z == ast->global ? "TOK_EOF" : "TOK_ERROR");
+		fprintf(f, "\t\t\tdefault:  lx->getc = NULL; return TOK_ERROR;\n");
 	}
 
 	fprintf(f, "\t\t\t}\n");
@@ -236,94 +266,40 @@ static void stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
 	fprintf(f, "\t} state;\n");
 }
 
-static void endstates(FILE *f, const struct ast *ast, const struct fsm *fsm, struct fsm_state *sl) {
-	struct fsm_state *s;
-
-	assert(f != NULL);
-	assert(ast != NULL);
-	assert(fsm != NULL);
-	assert(fsm_hasend(fsm));
-
-	/* usual case */
-	fprintf(f, "\t/* end states */\n");
-	fprintf(f, "\tswitch (state) {\n");
-	for (s = sl; s != NULL; s = s->next) {
-		if (!fsm_isend(fsm, s)) {
-			continue;
-		}
-
-/* TODO: TOK_xyz, not indexof */
-/* TODO: and change zone, if .to is non-NULL */
-/* TODO: assert only one zone (if any) */
-/* TODO: assert exactly one token type */
-		fprintf(f, "\tcase S%u: ", indexof(fsm, s));
-
-/* TODO: work with s->cl from here */
-assert(s->cl != NULL);
-assert(s->cl->next == NULL);
-
-/* TODO: so... s->cl->colour should point to an ast_mapping struct */
-/* TODO: for now it's an ast_mapping struct instead... */
-
-{
-struct ast_mapping *m;
-
-m = s->cl->colour;
-assert(m != NULL);
-
-if (m->to != NULL) {
-	fprintf(f, "lx->z = z%u; ", zindexof(ast, m->to));
-} else {
-	fprintf(f, "            ");
-}
-
-if (m->token != NULL) {
-	fprintf(f, "return TOK_");
-	out_esctok(f, m->token->s);
-	fprintf(f, ";\n");
-} else {
-	fprintf(f, "return lx->z(lx);\n");
-}
-
-
-}
-
-	}
-	fprintf(f, "\tdefault: return TOK_EOF; /* unexpected EOF */\n");
-	fprintf(f, "\t}\n");
-}
-
-static void out_cfrag(const struct fsm *fsm, FILE *f) {
+static void out_cfrag(const struct fsm *fsm, const struct ast_zone *z, FILE *f,
+	const struct ast *ast) {
 	struct fsm_state *s;
 
 	assert(fsm != NULL);
 	assert(fsm_isdfa(fsm));
+	assert(z != NULL);
+	assert(ast != NULL);
 	assert(f != NULL);
 
 	/* TODO: prerequisite that the FSM is a DFA */
 
 	fprintf(f, "\t\tswitch (state) {\n");
+
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		fprintf(f, "\t\tcase S%u:\n", indexof(fsm, s));
-		singlecase(f, fsm, s);
+		singlecase(f, ast, z, fsm, s);
 
 		if (s->next != NULL) {
 			fprintf(f, "\n");
 		}
 	}
+
 	fprintf(f, "\t\t}\n");
 }
 
 static void
-out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z, unsigned int i)
+out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
-	/* TODO: prefix z0, z1 etc */
-
 	assert(f != NULL);
 	assert(ast != NULL);
 	assert(z != NULL);
 
-	fprintf(f, "static enum lx_token z%u(struct lx *lx) {\n", i);
+	fprintf(f, "static enum lx_token z%u(struct lx *lx) {\n", zindexof(ast, z));
 	fprintf(f, "\tint c;\n");
 	fprintf(f, "\n");
 
@@ -339,13 +315,9 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z, unsigned int 
 
 	fprintf(f, "\twhile ((c = lx->getc(lx->opaque)) != EOF) {\n");
 
-	out_cfrag(z->re->fsm, f);
+	out_cfrag(z->re->fsm, z, f, ast);
 
 	fprintf(f, "\t}\n");
-	fprintf(f, "\n");
-
-	endstates(f, ast, z->re->fsm, z->re->fsm->sl);
-
 	fprintf(f, "}\n\n");
 }
 
@@ -353,7 +325,6 @@ void
 out_c(const struct ast *ast, FILE *f)
 {
 	const struct ast_zone *z;
-	unsigned int i;
 
 	assert(f != NULL);
 
@@ -361,20 +332,40 @@ out_c(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "#include <assert.h>\n");
+	fprintf(f, "#include <stdio.h>\n");
 	fprintf(f, "\n");
 
-	for (z = ast->zl, i = 0; z != NULL; z = z->next, i++) {
-		out_zone(f, ast, z, i);
+	fprintf(f, "#include LX_HEADER\n");
+	fprintf(f, "\n");
+
+	for (z = ast->zl; z != NULL; z = z->next) {
+		out_zone(f, ast, z);
 	}
 
 	fprintf(f, "enum lx_token lx_nexttoken(struct lx *lx) {\n");
+
+	fprintf(f, "\tenum lx_token t;");
+	fprintf(f, "\n");
 	fprintf(f, "\tassert(lx != NULL);\n");
 	fprintf(f, "\n");
+
+	fprintf(f, "\tif (lx->getc == NULL) {\n");
+	fprintf(f, "\t\treturn TOK_EOF;\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+
 	fprintf(f, "\tif (lx->z == NULL) {\n");
 	fprintf(f, "\t\tlx->z = z%u;\n", zindexof(ast, ast->global));
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
-	fprintf(f, "\treturn lx->z(lx);\n");
+
+	fprintf(f, "\tt = lx->z(lx);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tlx->z = z%u;\n", zindexof(ast, ast->global));
+	fprintf(f, "\n");
+	fprintf(f, "\treturn t;\n");
+
 	fprintf(f, "}\n");
+	fprintf(f, "\n");
 }
 
