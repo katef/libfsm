@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		in = xopen(argc, argv, 0, stdin, "r");
+		in = xopen(argc, argv, 1, stdin, "r");
 	}
 
 	ast = lx_parse(in);
