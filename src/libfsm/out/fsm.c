@@ -130,19 +130,6 @@ void out_fsm(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *option
 
 				fprintf(f, ";\n");
 			}
-
-			if (fsm->colour_hooks.print != NULL) {
-				for (c = s->edges[i].cl; c != NULL; c = c->next) {
-					fprintf(f, "%-2u ", indexof(fsm, s));
-					escputc(i, f);
-					fprintf(f, " = \"");
-
-					/* TODO: escapes */
-					fsm->colour_hooks.print(fsm, f, c->colour);
-
-					fprintf(f, "\";\n");
-				}
-			}
 		}
 	}
 

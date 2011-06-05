@@ -20,7 +20,6 @@ static void free_contents(struct fsm *fsm) {
 		next = s->next;
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			set_freecolours(s->edges[i].cl);
 			set_free(s->edges[i].sl);
 		}
 
@@ -126,7 +125,6 @@ fsm_addstate(struct fsm *fsm)
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		new->edges[i].sl = NULL;
-		new->edges[i].cl = NULL;
 	}
 
 	new->next = fsm->sl;
@@ -151,7 +149,6 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 	}
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		set_freecolours(state->edges[i].cl);
 		set_free(state->edges[i].sl);
 	}
 

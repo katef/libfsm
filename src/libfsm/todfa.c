@@ -288,7 +288,7 @@ static int listnonepsilonstates(struct transset **l, struct state_set *set) {
  * Return a list of all states reachable from set via the given transition.
  */
 static int allstatesreachableby(const struct fsm *fsm, struct state_set *set, char c,
-	struct state_set **sl, struct colour_set **cl) {
+	struct state_set **sl) {
 	struct state_set *s;
 
 	assert(set != NULL);
@@ -296,7 +296,6 @@ static int allstatesreachableby(const struct fsm *fsm, struct state_set *set, ch
 	for (s = set; s != NULL; s = s->next) {
 		struct fsm_edge *to;
 		struct state_set *es;
-		struct colour_set *cs;
 
 		to = &s->state->edges[(unsigned char) c];
 
@@ -304,12 +303,6 @@ static int allstatesreachableby(const struct fsm *fsm, struct state_set *set, ch
 			assert(es->state != NULL);
 
 			if (!set_addstate(sl, es->state)) {
-				return 0;
-			}
-		}
-
-		for (cs = to->cl; cs != NULL; cs = cs->next) {
-			if (!set_addcolour(fsm, cl, cs->colour)) {
 				return 0;
 			}
 		}
@@ -400,22 +393,18 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 			struct fsm_state *new;
 			struct fsm_edge *e;
 			struct state_set *reachable;
-			struct colour_set *colours;
-			struct colour_set *c;
 
 			assert(s->state != NULL);
 
 			reachable = NULL;
-			colours = NULL;
 
 			/*
 			 * Find the closure of the set of all NFA states which are reachable
 			 * through this label, starting from the set of states forming curr's
 			 * closure.
 			 */
-			if (!allstatesreachableby(nfa, curr->closure, s->c, &reachable, &colours)) {
+			if (!allstatesreachableby(nfa, curr->closure, s->c, &reachable)) {
 				set_free(reachable);
-				set_freecolours(colours);
 				return 0;
 			}
 
@@ -429,19 +418,8 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 			e = fsm_addedge_literal(dfa, curr->dfastate, new, s->c);
 			if (e == NULL) {
 				free_transset(nes);
-				set_freecolours(colours);
 				return 0;
 			}
-
-			for (c = colours; c != NULL; c = c->next) {
-				if (!fsm_addedgecolour(dfa, e, c->colour)) {
-					free_transset(nes);
-					set_freecolours(colours);
-					return 0;
-				}
-			}
-
-			set_freecolours(colours);
 		}
 
 		free_transset(nes);

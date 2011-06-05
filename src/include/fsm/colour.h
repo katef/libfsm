@@ -39,30 +39,6 @@ struct fsm_colour_hooks {
 
 
 /*
- * Add user-specified colour data to an edge, and to all edges, respectively.
- *
- * Multiple colours may be assigned to the same edge. Duplicate colours (as
- * determined by the comparison callback specified to fsm_setcompare) are
- * disregarded and silently succeed.
- *
- * A colour is really just an opaque pointer which is passed around by libfsm
- * and never dereferenced, so you can use it to point to application-specific
- * data.
- *
- * There are two types of void * used for user data floating around; these are
- * called colours (as in graph colouring) because they're also used to uniquely
- * identify unambigious subgraphs during graph splitting. The other kind (passed
- * through to callbacks e.g. by fsm_exec and the generated code) have no semantic
- * meaning, and so are just called "opaques", to keep the distinction clear.
- *
- * Returns false on error; see errno.
- */
-int
-fsm_addedgecolour(struct fsm *fsm, struct fsm_edge *edge, void *colour);
-int
-fsm_addcolour(struct fsm *fsm, void *colour);
-
-/*
  * Assign a callbacks used for colour operations. If none have been set, the
  * default behaviour is as if each function is set NULL. This default can be
  * restored by assigning the pointer to the entire hooks struct to be NULL.
@@ -72,15 +48,6 @@ fsm_addcolour(struct fsm *fsm, void *colour);
  */
 void
 fsm_setcolourhooks(struct fsm *fsm, const struct fsm_colour_hooks *h);
-
-/*
- * Returns true if a state is pure for a given colour.
- *
- * Pure states are reachable only by not needing to traverse edges or states
- * of another (or no) colour.
- */
-int
-fsm_ispure(const struct fsm *fsm, const struct fsm_state *state, void *colour);
 
 
 #endif

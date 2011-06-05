@@ -35,19 +35,5 @@ fsm_isdfa(const struct fsm *fsm);
 int
 fsm_minimize(struct fsm *fsm);
 
-/*
- * Split an FSM by colour.
- * TODO: explain what this means
- *
- * The resulting FSM has fsm_ispure() true for all colours for all states.
- *
- * TODO: is the resulting FSM always a DFA?
- * TODO: need the input always be a DFA?
- *
- * Returns false on error; see errno.
- */
-int
-fsm_split(struct fsm *fsm);
-
 #endif
 

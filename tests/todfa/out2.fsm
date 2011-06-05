@@ -3,11 +3,6 @@
 0 -> 1 'a';
 1 -> 2 'b';
 
-0 'a' = "red";
-0 'a' = "blue";
-
-1 'b' = "blue";
-
 start: 0;
-end: 1, 2;
+end: 1 = "red", 2 = "blue";
 

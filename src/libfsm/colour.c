@@ -105,34 +105,6 @@ set_addcolour(const struct fsm *fsm, struct colour_set **head, void *colour)
 	return new;
 }
 
-int
-fsm_addedgecolour(struct fsm *fsm, struct fsm_edge *edge, void *colour)
-{
-	assert(fsm != NULL);
-	assert(edge != NULL);
-
-	return !!set_addcolour(fsm, &edge->cl, colour);
-}
-
-int
-fsm_addcolour(struct fsm *fsm, void *colour)
-{
-	struct fsm_state *s;
-	int e;
-
-	assert(fsm != NULL);
-
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		for (e = 0; e <= FSM_EDGE_MAX; e++) {
-			if (!fsm_addedgecolour(fsm, &s->edges[e], colour)) {
-				return 0;
-			}
-		}
-	}
-
-	return 1;
-}
-
 void
 fsm_setcolourhooks(struct fsm *fsm, const struct fsm_colour_hooks *h)
 {

@@ -26,7 +26,6 @@
 	#include <string.h>
 
 	#include <fsm/fsm.h>
-	#include <fsm/colour.h>
 
 	#include "libfsm/xalloc.h"
 	#include "libfsm/internal.h"	/* XXX */
@@ -172,22 +171,6 @@
 		}
 	@};
 
-	<mark-colour>: (s :state, l :string, c :string) -> () = @{
-		assert(@s != NULL);
-		assert(@c != NULL);
-
-		/* TODO: convert to single char in the grammar? */
-		if (strlen(@l) != 1) {
-			fprintf(stderr, "edge literals must have exactly one character\n");
-			@!;
-		}
-
-		if (!fsm_addedgecolour(fsm, &@s->edges[(unsigned char) @l[0]], @c)) {
-			perror("fsm_addedgecolour");
-			@!;
-		}
-	@};
-
 	<add-edge-literal>: (x :state, y :state, s :string) -> () = @{
 		assert(@s != NULL);
 
@@ -228,10 +211,6 @@
 
 	<err-expected-comma> = @{
 		err_expected("','");
-	@};
-
-	<err-expected-equals> = @{
-		err_expected("'='");
 	@};
 
 	<err-expected-start> = @{

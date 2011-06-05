@@ -10,7 +10,9 @@
 	<!-- TODO: use base.xsl for css location etc -->
 
 	<xsl:template match="/">
+<!--
 		<xsl:processing-instruction name="xml-stylesheet">href="http://www.libfsm.org/css/dot.css" type="text/css"</xsl:processing-instruction>
+-->
 		<xsl:comment>kate` on freenode. kate@elide.org</xsl:comment>
 
 		<xsl:apply-templates/>
@@ -90,9 +92,11 @@
 	<xsl:template match="/svg:svg/@height"/>
 	<xsl:template match="/svg:svg/@viewBox"/>
 -->
+<!--
 	<xsl:template match="@fill[. != 'none']"/>
 	<xsl:template match="@font-family"/>
 	<xsl:template match="@stroke"/>
+-->
 	<xsl:template match="@id"/>
 	<xsl:template match="@class"/>
 	<xsl:template match="svg:title"/>

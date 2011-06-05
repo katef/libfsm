@@ -7,11 +7,6 @@
 3 -> 4 'a';
 4 -> 5 'b';
 
-1 'a' = "red";
-
-3 'a' = "blue";
-4 'b' = "blue";
-
 start: 0;
-end: 2, 5;
+end: 2 = "red", 5 = "blue";
 

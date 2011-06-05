@@ -20,7 +20,6 @@ enum fsm_edge_type {
 
 struct fsm_edge {
 	struct state_set  *sl;
-	struct colour_set *cl;
 };
 
 struct fsm_state {

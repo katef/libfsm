@@ -20,7 +20,7 @@ extern int optind;
 extern char *optarg;
 
 void usage(void) {
-	printf("usage: fsm [-chagdmrs] [-l <language>] [-n <prefix>] [-e <execution> | -q <query] [-p <colour>] [<input> [<output>]]\n");
+	printf("usage: fsm [-chagdmr] [-l <language>] [-n <prefix>] [-e <execution> | -q <query] [<input> [<output>]]\n");
 }
 
 static int colour_hook_compare(const struct fsm *fsm, void *a, void *b) {
@@ -79,11 +79,6 @@ int main(int argc, char *argv[]) {
 		unsigned int query:1;
 		enum query { QUERY_DFA, QUERY_END } query_property;
 
-		/* boolean: split */
-		unsigned int split:1;
-
-		char *is_pure;
-
 		const char *execute;
 	};
 
@@ -96,7 +91,7 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hagn:l:de:cmrsp:q:")) != -1) {
+		while ((c = getopt(argc, argv, "hagn:l:de:cmrq:")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -145,16 +140,8 @@ int main(int argc, char *argv[]) {
 				cli_options.reverse = 1;
 				break;
 
-			case 's':
-				cli_options.split = 1;
-				break;
-
 			case 'c':
 				out_options.consolidate_edges = 1;
-				break;
-
-			case 'p':
-				cli_options.is_pure = optarg;
 				break;
 
 			case 'q':
@@ -227,29 +214,8 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		if (cli_options.split) {
-			if (!fsm_split(fsm)) {
-				perror("fsm_split");
-				exit(EXIT_FAILURE);
-			}
-		}
-
-		if (cli_options.is_pure != NULL) {
-			const struct fsm_state *s;
-			unsigned int i;
-
-			/* XXX: breaking abstraction */
-			for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
-				if (fsm_ispure(fsm, s, cli_options.is_pure)) {
-					printf("%u\n", i);
-				}
-			}
-		}
-
 		/* TODO: make optional */
-		if (cli_options.is_pure == NULL) {
-			fsm_print(fsm, out, format, &out_options);
-		}
+		fsm_print(fsm, out, format, &out_options);
 
 		if (cli_options.execute != NULL) {
 			int e;

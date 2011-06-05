@@ -302,53 +302,13 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 					}
 				}
 
-				/* TODO: edge colours aren't correct here; see above */
-				if (fsm->colour_hooks.print != NULL) {
-					if (s->edges[i].cl != NULL && s->edges[i].cl->next == NULL) {
-						fprintf(f, ">");
-						fprintf(f, ", color = ");
-						fsm->colour_hooks.print(fsm, f, s->edges[i].cl->colour);
-
-						fprintf(f, ", fontcolor = ");
-						fsm->colour_hooks.print(fsm, f, s->edges[i].cl->colour);
-					} else if (s->edges[i].cl != NULL) {
-						fprintf(f, "<br/>");
-						printcolours(fsm, s->edges[i].cl, f);
-						fprintf(f, ">");
-					} else {
-						fprintf(f, ">");
-					}
-				} else {
-					fprintf(f, ">");
-				}
-
-				fprintf(f, " ];\n");
+				fprintf(f, "> ];\n");
 			} else {
 				fprintf(f, "\t%-2u -> %-2u [ label = <", indexof(fsm, s), indexof(fsm, e->state));
 
 				escputc(i, f);
 
-				/* TODO: horrible. refactor */
-				if (fsm->colour_hooks.print != NULL) {
-					if (s->edges[i].cl != NULL && s->edges[i].cl->next == NULL) {
-						fprintf(f, ">");
-						fprintf(f, ", color = ");
-						fsm->colour_hooks.print(fsm, f, s->edges[i].cl->colour);
-
-						fprintf(f, ", fontcolor = ");
-						fsm->colour_hooks.print(fsm, f, s->edges[i].cl->colour);
-					} else if (s->edges[i].cl != NULL) {
-						fprintf(f, "<br/>");
-						printcolours(fsm, s->edges[i].cl, f);
-						fprintf(f, ">");
-					} else {
-						fprintf(f, ">");
-					}
-				} else {
-					fprintf(f, ">");
-				}
-
-				fprintf(f, " ];\n");
+				fprintf(f, "> ];\n");
 			}
 		}
 	}

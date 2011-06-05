@@ -34,8 +34,6 @@
 	<free>:             (:string) -> ();
 	<free-statelist>;
 
-	<mark-colour>:      (:state, :string, :string) -> ();
-
 	<add-edge-literal>: (:state, :state, :string) -> ();
 	<add-edge-any>:     (:state, :state)          -> ();
 	<add-edge-epsilon>: (:state, :state)          -> ();
@@ -44,7 +42,6 @@
 	<err-expected-trans>;
 	<err-expected-comma>;
 	<err-expected-start>;
-	<err-expected-equals>;
 	<err-expected-end>;
 	<err-parse>;
 
@@ -141,47 +138,16 @@
 		};
 	};
 
-	colour = {
-		n = id;
-		s = <add-state>(n);
-
-		l = label;	/* TODO: free string */
-
-		{
-			equals;
-		##
-			<err-expected-equals>;
-		};
-
-		c = label;
-
-		{
-			sep;
-		##
-			<err-expected-sep>;
-		};
-
-		<mark-colour>(s, l, c);
-	};
-
-	things [
-
-		thing = {
-			edge;
-		||
-			colour;
-		};
-
-	] = {
-		things;
-		thing;
+	edges = {
+		edges;
+		edge;
 	||
-		thing;
+		edge;
 	};
 
 	fsm = {
 		{
-			things;
+			edges;
 		||
 			$;
 		};

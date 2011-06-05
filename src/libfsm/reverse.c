@@ -172,14 +172,6 @@ fsm_reverse(struct fsm *fsm)
 							return 0;
 						}
 					}
-
-					/* TODO: centralise */
-					for (c = s->edges[i].cl; c != NULL; c = c->next) {
-						if (!fsm_addedgecolour(new, edge, c->colour)) {
-							fsm_free(new);
-							return 0;
-						}
-					}
 				}
 			}
 		}
