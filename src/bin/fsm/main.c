@@ -54,12 +54,13 @@ static int query(struct fsm *fsm, const char *name) {
 		const char *name;
 		int (*f)(const struct fsm *);
 	} a[] = {
-		{ "isdfa",     fsm_isdfa  },
-		{ "dfa",       fsm_isdfa  },
-		{ "hasend",    fsm_hasend },
-		{ "end",       fsm_hasend },
-		{ "accept",    fsm_hasend },
-		{ "hasaccept", fsm_hasend }
+		{ "iscomplete", fsm_iscomplete },
+		{ "isdfa",      fsm_isdfa      },
+		{ "dfa",        fsm_isdfa      },
+		{ "hasend",     fsm_hasend     },
+		{ "end",        fsm_hasend     },
+		{ "accept",     fsm_hasend     },
+		{ "hasaccept",  fsm_hasend     }
 	};
 
 	assert(fsm != NULL);
@@ -83,6 +84,7 @@ static void transform(struct fsm *fsm, const char *name) {
 		const char *name;
 		int (*f)(struct fsm *);
 	} a[] = {
+		{ "complete", fsm_complete },
 		{ "reverse",  fsm_reverse  },
 		{ "rev",      fsm_reverse  },
 		{ "dfa",      fsm_todfa    },
