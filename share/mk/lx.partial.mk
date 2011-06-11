@@ -20,9 +20,8 @@ ${OBJ_SDIR}/_partial.o:
 
 all:: ${OBJ_SDIR}/_partial.o
 
-# TODO: if empty directory, also rmdir OBJ_SDIR (since we created it)
-clean::
-. if exists(${OBJ_SDIR}/_partial.o)
-	${RMFILE} ${OBJ_SDIR}/_partial.o
-. endif
+
+CLEAN+= ${OBJ_SDIR}/_partial.o
+
+.include <lx.clean.mk>
 

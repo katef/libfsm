@@ -18,11 +18,8 @@ ${OBJ_SDIR}/${src:C/.c$/.o/}: ${src}
 all:: ${OBJ_SDIR}/${obj}
 .endfor
 
-# TODO: if empty directory, also rmdir OBJ_SDIR (since we created it)
-clean::
-.for obj in ${OBJS}
-. if exists(${OBJ_SDIR}/${obj})
-	${RMFILE} ${OBJ_SDIR}/${obj}
-. endif
-.endfor
+
+CLEAN+= ${OBJS:S/^/${OBJ_SDIR}\//}
+
+.include <lx.clean.mk>
 

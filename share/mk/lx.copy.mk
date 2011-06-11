@@ -26,15 +26,8 @@ ${OBJ_SDIR}/${file:T}: ${file}
 	${COPYFILE} ${.ALLSRC} ${.TARGET}
 .endfor
 
-.for file in ${FILES}
-all:: ${OBJ_SDIR}/${file:T}
-.endfor
 
-# TODO: if empty directory, also rmdir OBJ_SDIR (since we created it)
-clean::
-.for file in ${FILES}
-. if exists(${OBJ_SDIR}/${file:T})
-	${RMFILE} ${OBJ_SDIR}/${file:T}
-. endif
-.endfor
+CLEAN+= ${FILES:/^/${OBJ_SDIR}\//}
+
+.include <lx.clean.mk>
 

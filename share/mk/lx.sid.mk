@@ -21,12 +21,9 @@ ${SID_C} ${SID_H}:
 
 regen:: ${SID_C} ${SID_H}
 
-# TODO: if empty directory, also rmdir OBJ_SDIR (since we created it)
-regen-clean::
-.if exists(${SID_C})
-	${RMFILE} ${SID_C}
-.endif
-.if exists(${SID_H})
-	${RMFILE} ${SID_H}
-.endif
+
+CLEANREGEN+= ${SID_C}
+CLEANREGEN+= ${SID_H}
+
+.include <lx.clean.mk>
 

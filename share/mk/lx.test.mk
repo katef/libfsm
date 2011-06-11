@@ -63,19 +63,14 @@ all:: ${OBJ_SDIR}/${test:T:R}.svg
 
 all:: ${OBJ_SDIR}/index.xhtml
 
-# TODO: if empty directory, also rmdir OBJ_SDIR (since we created it)
-clean::
-.if exists(${OBJ_SDIR}/index.xhtml)
-	${RMFILE} ${OBJ_SDIR}/index.xhtml
-.endif
+
+CLEAN+= ${OBJ_SDIR}/index.xhtml
 .for test in ${TESTS}
-. if exists(${OBJ_SDIR}/${test:R}.svg)
-	${RMFILE} ${OBJ_SDIR}/${test:R}.svg
-. endif
+CLEAN:= ${CLEAN} ${OBJ_SDIR}/${test:R}.svg
 .endfor
 .for test in ${TESTS:Min*.fsm}
-. if exists(${OBJ_SDIR}/${test:C/^in/actual/:R}.svg)
-	${RMFILE} ${OBJ_SDIR}/${test:C/^in/actual/:R}.svg
-. endif
+CLEAN:= ${CLEAN} ${OBJ_SDIR}/${test:C/^in/actual/:R}.svg
 .endfor
+
+.include <lx.clean.mk>
 

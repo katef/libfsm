@@ -26,9 +26,8 @@ ${OBJ_SDIR}/${PROG}:
 
 all:: ${OBJ_SDIR}/${PROG}
 
-# TODO: if empty directory, also rmdir OBJ_SDIR (since we created it)
-clean::
-. if exists(${OBJ_SDIR}/${PROG}})
-	${RMFILE} ${OBJ_SDIR}/${PROG}
-. endif
+
+CLEAN+= ${OBJ_SDIR}/${PROG}
+
+.include <lx.clean.mk>
 

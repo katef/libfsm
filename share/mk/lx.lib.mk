@@ -57,18 +57,11 @@ ${OBJ_SDIR}/${LIB}.${LIBEXT_STATIC}: ${OBJ_SDIR}/${LIB}.o
 all:: ${OBJ_SDIR}/${LIB}.${LIBEXT_DYNAMIC}
 all:: ${OBJ_SDIR}/${LIB}.${LIBEXT_STATIC}
 
-# TODO: if empty directory, also rmdir OBJ_SDIR (since we created it)
-clean::
-. if exists(${OBJ_SDIR}/${LIB}.o.syms)
-	${RMFILE} ${OBJ_SDIR}/${LIB}.o.syms
-. endif
-. if exists(${OBJ_SDIR}/${LIB}.o.all)
-	${RMFILE} ${OBJ_SDIR}/${LIB}.o.all
-. endif
-. if exists(${OBJ_SDIR}/${LIB}.${LIBEXT_STATIC})
-	${RMFILE} ${OBJ_SDIR}/${LIB}.${LIBEXT_STATIC}
-. endif
-. if exists(${OBJ_SDIR}/${LIB}.${LIBEXT_DYNAMIC})
-	${RMFILE} ${OBJ_SDIR}/${LIB}.${LIBEXT_DYNAMIC}
-. endif
+
+CLEAN+= ${OBJ_SDIR}/${LIB}.o.syms
+CLEAN+= ${OBJ_SDIR}/${LIB}.o.all
+CLEAN+= ${OBJ_SDIR}/${LIB}.${LIBEXT_STATIC}
+CLEAN+= ${OBJ_SDIR}/${LIB}.${LIBEXT_DYNAMIC}
+
+.include <lx.clean.mk>
 

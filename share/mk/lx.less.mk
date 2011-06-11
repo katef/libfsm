@@ -24,11 +24,10 @@ ${OBJ_SDIR}/${less:T:R}.css: ${less}
 all:: ${OBJ_SDIR}/${less:T:R}.css
 .endfor
 
-# TODO: if empty directory, also rmdir OBJ_SDIR (since we created it)
-clean::
+
 .for less in ${LESS}
-. if exists(${OBJ_SDIR}/${less:T:R}.css)
-	${RMFILE} ${OBJ_SDIR}/${less:T:R}.css
-. endif
+CLEAN:= ${CLEAN} ${OBJ_SDIR}/${less:T:R}.css
 .endfor
+
+.include <lx.clean.mk>
 
