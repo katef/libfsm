@@ -89,7 +89,6 @@ static const struct fsm_state *findany(const struct fsm_state *state) {
 void out_fsm(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
 	struct fsm_state *s;
 	struct state_set *e;
-	struct colour_set *c;
 	struct fsm_state *start;
 	int end;
 

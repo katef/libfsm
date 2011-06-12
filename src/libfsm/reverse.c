@@ -132,7 +132,6 @@ fsm_reverse(struct fsm *fsm)
 		for (s = fsm->sl; s != NULL; s = s->next) {
 			struct fsm_state *to;
 			struct state_set *e;
-			struct colour_set *c;
 			int i;
 
 			to = equivalent(new, fsm, s);
