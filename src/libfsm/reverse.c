@@ -31,21 +31,22 @@ incomingedges(const struct fsm *fsm, const struct fsm_state *state)
 	return 0;
 }
 
+/* TODO: centralise */
 static struct fsm_state *
-getequivalentstate(const struct fsm *new, const struct fsm *fsm, const struct fsm_state *state)
+equivalent(const struct fsm *new, const struct fsm *fsm, const struct fsm_state *state)
 {
-	struct fsm_state *s1;
-	struct fsm_state *s2;
+	struct fsm_state *p;
+	struct fsm_state *q;
 
 	assert(new != NULL);
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	for (s1 = fsm->sl, s2 = new->sl; s1 != NULL; s1 = s1->next, s2 = s2->next) {
-		assert(s2 != NULL);
+	for (p = fsm->sl, q = new->sl; p != NULL; p = p->next, q = q->next) {
+		assert(q != NULL);
 
-		if (s1 == state) {
-			return s2;
+		if (p == state) {
+			return q;
 		}
 	}
 
@@ -87,17 +88,13 @@ fsm_reverse(struct fsm *fsm)
 	/*
 	 * Create states corresponding to the origional FSM's states.
 	 * These are created in reverse order, but that's okay.
-	 *
-	 * TODO: possibly centralise as a state-copying function
 	 */
+	/* TODO: possibly centralise as a state-copying function */
 	{
 		struct fsm_state *s;
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
-			struct fsm_state *n;
-
-			n = fsm_addstate(new);
-			if (n == NULL) {
+			if (!fsm_addstate(new)) {
 				fsm_free(new);
 				return 0;
 			}
@@ -115,7 +112,7 @@ fsm_reverse(struct fsm *fsm)
 		struct fsm_state *s;
 		struct colour_set *c;
 
-		end = getequivalentstate(new, fsm, fsm->start);
+		end = equivalent(new, fsm, fsm->start);
 		if (end != NULL) {
 			for (s = fsm->sl; s != NULL; s = s->next) {
 				for (c = s->cl; c != NULL; c = c->next) {
@@ -138,7 +135,7 @@ fsm_reverse(struct fsm *fsm)
 			struct colour_set *c;
 			int i;
 
-			to = getequivalentstate(new, fsm, s);
+			to = equivalent(new, fsm, s);
 
 			assert(to != NULL);
 
@@ -149,7 +146,7 @@ fsm_reverse(struct fsm *fsm)
 
 					assert(e->state != NULL);
 
-					from = getequivalentstate(new, fsm, e->state);
+					from = equivalent(new, fsm, e->state);
 
 					assert(from != NULL);
 
@@ -201,7 +198,7 @@ fsm_reverse(struct fsm *fsm)
 
 			assert(s != NULL);
 
-			new->start = getequivalentstate(new, fsm, s);
+			new->start = equivalent(new, fsm, s);
 			assert(new->start != NULL);
 			break;
 
@@ -219,7 +216,7 @@ fsm_reverse(struct fsm *fsm)
 					continue;
 				}
 
-				state = getequivalentstate(new, fsm, s);
+				state = equivalent(new, fsm, s);
 				assert(state != NULL);
 
 				if (!incomingedges(new, state)) {
@@ -244,7 +241,7 @@ fsm_reverse(struct fsm *fsm)
 			 * this prevents accidentally transitioning to another route.
 			 */
 			if (s != NULL) {
-				new->start = getequivalentstate(new, fsm, s);
+				new->start = equivalent(new, fsm, s);
 				assert(new->start != NULL);
 			} else {
 				new->start = fsm_addstate(new);
@@ -255,7 +252,7 @@ fsm_reverse(struct fsm *fsm)
 
 				/*
 				 * XXX: This hacky mess moves the newly-created start state
-				 * to the end of new->sl, for the sake of getequivalentstate().
+				 * to the end of new->sl, for the sake of equivalent().
 				 */
 				movetoend(new, new->start);
 			}
@@ -267,7 +264,7 @@ fsm_reverse(struct fsm *fsm)
 					continue;
 				}
 
-				state = getequivalentstate(new, fsm, s);
+				state = equivalent(new, fsm, s);
 				assert(state != NULL);
 
 				if (state == new->start) {
