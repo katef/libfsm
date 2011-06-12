@@ -8,7 +8,7 @@
 #include "internal.h"
 #include "set.h"
 
-/* TODO: centralise? */
+/* TODO: centralise? or optimise by folding into the loops below? */
 static struct fsm_state *
 equivalent(const struct fsm *a, const struct fsm *b, const struct fsm_state *state)
 {
@@ -94,6 +94,6 @@ fsm_copy(const struct fsm *fsm)
 
 	new->start = equivalent(fsm, new, fsm->start);
 
-	return NULL;
+	return new;
 }
 
