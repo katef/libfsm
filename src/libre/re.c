@@ -49,13 +49,6 @@ re_new_empty(void)
 	return new;
 }
 
-void
-re_free(struct re *re)
-{
-	fsm_free(re->fsm);
-	free(re);
-}
-
 struct re *
 re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	enum re_cflags cflags, enum re_err *err)
@@ -81,6 +74,42 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	assert(new->end != NULL);
 
 	return new;
+}
+
+struct re *
+re_new_copy(const struct re *re, enum re_cflags cflags, enum re_err *err)
+{
+	struct re *new;
+
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+		return NULL;
+	}
+
+	new->fsm = fsm_copy(re->fsm);
+
+	if (cflags & RE_REVERSE) {
+		if (!fsm_reverse(re->fsm)) {
+			re_free(re);
+			return NULL;
+		}
+	}
+
+	if (cflags & RE_COMPLEMENT) {
+		if (!fsm_complement(re->fsm, TODO)) {
+			re_free(re);
+			return NULL;
+		}
+	}
+
+	new->end = NULL;	/* TODO: what to do about this? */
+}
+
+void
+re_free(struct re *re)
+{
+	fsm_free(re->fsm);
+	free(re);
 }
 
 const char *

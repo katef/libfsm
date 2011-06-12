@@ -18,13 +18,15 @@ enum re_form {
 };
 
 enum re_cflags {
-	RE_ICASE   = (1 << 0),
-	RE_NEWLINE = (1 << 1)
+	RE_ICASE      = 1 << 0,
+	RE_NEWLINE    = 1 << 1,
+	RE_REVERSE    = 1 << 2,
+	RE_COMPLEMENT = 1 << 3
 };
 
 enum re_eflags {
-	RE_NOTBOL  = (1 << 0),
-	RE_NOTEOL  = (1 << 1)
+	RE_NOTBOL  = 1 << 0,
+	RE_NOTEOL  = 1 << 1
 };
 
 enum re_err {
@@ -52,9 +54,6 @@ enum re_err {
 struct re *
 re_new_empty(void);
 
-void
-re_free(struct re *re);
-
 /*
  * Compile a regexp of the given form. The function passed acts as a callback
  * to acquire each character of the input, in the spirit of fgetc().
@@ -64,6 +63,17 @@ re_free(struct re *re);
 struct re *
 re_new_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
 	enum re_cflags cflags, enum re_err *err);
+
+/*
+ * Copy a regexp. This permits passing different compilation flags, which may
+ * be used to create regexps similar to the origional, but (for example)
+ * reversed or complemented.
+ */
+struct re *
+re_new_copy(const struct re *re, enum re_cflags cflags, enum re_err *err);
+
+void
+re_free(struct re *re);
 
 /*
  * Return a human-readable string describing a given error code. The string
