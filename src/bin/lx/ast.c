@@ -46,6 +46,7 @@ ast_addtoken(struct ast *ast, const char *s)
 		return NULL;
 	}
 
+	/* TODO: could append after new's storage */
 	new->s = xstrdup(s);
 
 	new->next = ast->tl;
