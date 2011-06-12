@@ -15,8 +15,8 @@ fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format,
 
 	void (*out)(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) = NULL;
 
-	assert(fsm);
-	assert(f);
+	assert(fsm != NULL);
+	assert(f != NULL);
 
 	switch (format) {
 	case FSM_OUT_FSM:   out = out_fsm;   break;
