@@ -6,14 +6,15 @@
 CFLAGS+= -I ${BASE_DIR}/src/hooks
 CFLAGS+= -I ${BASE_DIR}/src/include
 
+SRCS+= colour.c
 SRCS+= complement.c
-SRCS+= edge.c
 SRCS+= complete.c
+SRCS+= copy.c
+SRCS+= edge.c
 SRCS+= exec.c
 SRCS+= fsm.c
 SRCS+= isdfa.c
 SRCS+= minimize.c
-SRCS+= colour.c
 SRCS+= out.c
 SRCS+= reverse.c
 SRCS+= set.c

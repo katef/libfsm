@@ -35,6 +35,12 @@ void
 fsm_free(struct fsm *fsm);
 
 /*
+ * Duplicate an FSM.
+ */
+struct fsm *
+fsm_copy(const struct fsm *fsm);
+
+/*
  * Copy the contents of src over dst, and free src.
  *
  * TODO: I don't really like this sort of interface. Reconsider?
