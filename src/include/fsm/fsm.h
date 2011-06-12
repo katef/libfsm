@@ -130,6 +130,17 @@ int
 fsm_hasend(const struct fsm *fsm);
 
 /*
+ * Return the end state (if there is just one), or add epsilon edges from all
+ * end states (which are un-marked as if by fsm_removeends) to a new state, and
+ * return that newly-created state. The new state inherits colours from the
+ * previous end states.
+ *
+ * Returns NULL on error, or if there is no end state.
+ */
+struct fsm_state *
+fsm_collateends(struct fsm *fsm);
+
+/*
  * Register a given state as the start state for an FSM. There may only be one
  * start state; this assignment displaces a previous start-state, if a previous
  * start state exists.

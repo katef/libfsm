@@ -6,6 +6,7 @@
 CFLAGS+= -I ${BASE_DIR}/src/hooks
 CFLAGS+= -I ${BASE_DIR}/src/include
 
+SRCS+= collate.c
 SRCS+= colour.c
 SRCS+= complement.c
 SRCS+= complete.c
