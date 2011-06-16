@@ -68,65 +68,42 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	return 0;
 }
 
-/* TODO: centralise */
 static void escputc(int c, FILE *f) {
+	size_t i;
+
+	struct {
+		int in;
+		const char *out;
+	} esc[] = {
+		{ FSM_EDGE_EPSILON, "&epsilon;" },	/* TODO */
+
+		{ '&',  "&amp;"  },
+		{ '\"', "&quot;" },
+		{ '\\', "\\\\"   },
+		{ '\n', "\\n"    },
+		{ '\r', "\\r"    },
+		{ '\f', "\\f"    },
+		{ '\v', "\\v"    },
+		{ '\t', "\\t"    },
+
+		{ '|',  "\'|\'"  },
+		{ ',',  "\',\'"  },
+		{ '.',  "\'.\'"  },
+		{ '_',  "\'_\'"  }
+	};
+
 	assert(f != NULL);
-
-	switch (c) {
-	case FSM_EDGE_EPSILON:
-		fprintf(f, "E");	/* TODO */
-		return;
-
-	case '\\':
-		fprintf(f, "\\\\");
-		return;
-
-	case '\n':
-		fprintf(f, "\\n");
-		return;
-
-	case '\r':
-		fprintf(f, "\\r");
-		return;
-
-	case '\f':
-		fprintf(f, "\\f");
-		return;
-
-	case '\v':
-		fprintf(f, "\\v");
-		return;
-
-	case '\t':
-		fprintf(f, "\\t");
-		return;
-
-	case ' ':
-		fprintf(f, "&lsquo; &rsquo;");
-		return;
-
-	case '\"':
-		fprintf(f, "&lsquo;\\\"&rsquo;");
-		return;
-
-	case '\'':
-		fprintf(f, "&lsquo;\\'&rsquo;");
-		return;
-
-	case '.':
-		fprintf(f, "&lsquo;.&rsquo;");
-		return;
-
-	case '|':
-		fprintf(f, "&lsquo;|&rsquo;");
-		return;
-
-	/* TODO: others */
-	}
 
 	if (!isprint(c)) {
 		fprintf(f, "0x%x", (unsigned char) c);
 		return;
+	}
+
+	for (i = 0; i < sizeof esc / sizeof *esc; i++) {
+		if (esc[i].in == c) {
+			fputs(esc[i].out, f);
+			return;
+		}
 	}
 
 	putc(c, f);

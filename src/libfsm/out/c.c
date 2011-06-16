@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -31,20 +32,38 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	return 0;
 }
 
-static void escputc(char c, FILE *f) {
+static void escputc(int c, FILE *f) {
+	size_t i;
+
+	struct {
+		int in;
+		const char *out;
+	} esc[] = {
+		{ '\"', "\\\"" },
+		{ '\\', "\\\\" },
+		{ '\n', "\\n"  },
+		{ '\r', "\\r"  },
+		{ '\f', "\\f"  },
+		{ '\v', "\\v"  },
+		{ '\t', "\\t"  }
+	};
+
+	assert(c != FSM_EDGE_EPSILON);
 	assert(f != NULL);
 
-	switch (c) {
-	case '\"':
-		fprintf(f, "\\\"");
+	if (!isprint(c)) {
+		fprintf(f, "\\x%x", (unsigned char) c);
 		return;
-
-		/* TODO: others */
-
-	default:
-		/* TODO: if (isprint(c)) { putc(c, f); } else { hex } */
-		putc(c, f);
 	}
+
+	for (i = 0; i < sizeof esc / sizeof *esc; i++) {
+		if (esc[i].in == c) {
+			fputs(esc[i].out, f);
+			return;
+		}
+	}
+
+	putc(c, f);
 }
 
 /* TODO: refactor for when FSM_EDGE_ANY goes; it is an "any" transition if all

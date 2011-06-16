@@ -1,5 +1,6 @@
 /* $Id$ */
 
+#include <ctype.h>
 #include <assert.h>
 #include <stdio.h>
 
@@ -29,25 +30,38 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	return 0;
 }
 
-static void escputc(char c, FILE *f) {
+static void escputc(int c, FILE *f) {
+	size_t i;
+
+	struct {
+		int in;
+		const char *out;
+	} esc[] = {
+		{ '\"', "\\\"" },
+		{ '\\', "\\\\" },
+		{ '\n', "\\n"  },
+		{ '\r', "\\r"  },
+		{ '\f', "\\f"  },
+		{ '\v', "\\v"  },
+		{ '\t', "\\t"  }
+	};
+
+	assert(c != FSM_EDGE_EPSILON);
 	assert(f != NULL);
 
-	switch (c) {
-	case '\'':
-		fprintf(f, "\"'\"");
+	if (!isprint(c)) {
+		fprintf(f, "\\x%x", (unsigned char) c);
 		return;
-
-	case '\"':
-		fprintf(f, "'\"'");
-		return;
-
-	/* TODO: others */
-
-	default:
-		putc('\'', f);
-		putc(c, f);
-		putc('\'', f);
 	}
+
+	for (i = 0; i < sizeof esc / sizeof *esc; i++) {
+		if (esc[i].in == c) {
+			fputs(esc[i].out, f);
+			return;
+		}
+	}
+
+	putc(c, f);
 }
 
 /* TODO: centralise */
@@ -122,8 +136,9 @@ void out_fsm(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *option
 					break;
 
 				default:
-					putc(' ', f);
+					fputs(" \'", f);
 					escputc(i, f);
+					putc('\'', f);
 					break;
 				}
 
