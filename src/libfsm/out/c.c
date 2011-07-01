@@ -66,29 +66,48 @@ static void escputc(int c, FILE *f) {
 	putc(c, f);
 }
 
-/* TODO: refactor for when FSM_EDGE_ANY goes; it is an "any" transition if all
- * labels transition to the same state. centralise that, perhaps */
-static const struct fsm_state *findany(const struct fsm_state *state) {
-	struct state_set *e;
-	int i;
+/* TODO: centralise (perhaps into libfsm's API itself?) */
+static struct fsm_state *findmode(const struct fsm_state *state) {
+	struct fsm_state *mode;
+	unsigned int freq;
+	int i, j;
 
-	assert(state != NULL);
+	mode = NULL;
+	freq = 1;
+
+	/* TODO: DFA only */
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
+		unsigned int curr;
+
 		if (state->edges[i].sl == NULL) {
-			return NULL;
+			continue;
 		}
 
-		for (e = state->edges[i].sl; e != NULL; e = e->next) {
-			if (e->state != state->edges[0].sl->state) {
-				return NULL;
+/* TODO: loop through all states instead; this can be done equally well for an NFA state */
+		assert(state->edges[i].sl->state != NULL);
+		assert(state->edges[i].sl->next == NULL);
+
+		curr = 0;
+
+/* TODO: remaining ones with same state */
+		for (j = i + 1; j <= UCHAR_MAX; j++) {
+			if (state->edges[j].sl == NULL) {
+				continue;
 			}
+
+			if (state->edges[j].sl->state == state->edges[i].sl->state) {
+				curr++;
+			}
+		}
+
+		if (curr > freq) {
+			freq = curr;
+			mode = state->edges[i].sl->state;
 		}
 	}
 
-	assert(state->edges[0].sl != NULL);
-
-	return state->edges[0].sl->state;
+	return mode;
 }
 
 /* Return true if the edges after o contains state */
@@ -109,7 +128,6 @@ static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
 }
 
 static void singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state) {
-	const struct fsm_state *to;
 	int i;
 
 	assert(fsm != NULL);
@@ -131,11 +149,12 @@ static void singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state) 
 
 	fprintf(f, "\t\t\tswitch (c) {\n");
 
-	/* "any" edge */
-	to = findany(state);
-
 	/* usual case */
-	if (to == NULL) {
+	{
+		struct fsm_state *mode;
+
+		mode = findmode(state);
+
 		for (i = 0; i <= UCHAR_MAX; i++) {
 			if (state->edges[i].sl == NULL) {
 				continue;
@@ -143,6 +162,10 @@ static void singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state) 
 
 			assert(state->edges[i].sl->state != NULL);
 			assert(state->edges[i].sl->next  == NULL);
+
+			if (state->edges[i].sl->state == mode) {
+				continue;
+			}
 
 			fprintf(f, "\t\t\tcase '");
 			escputc(i, f);
@@ -161,10 +184,12 @@ static void singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state) 
 				fprintf(f, "             continue;\n");
 			}
 		}
-	}
 
-	if (to != NULL) {
-		fprintf(f, "\t\t\tdefault:  state = S%u; continue;\n", indexof(fsm, to));
+		if (mode != NULL) {
+			fprintf(f, "\t\t\tdefault:  state = S%u; continue;\n", indexof(fsm, mode));
+		} else {
+			fprintf(f, "\t\t\tdefault:  return TOK_ERROR;\n");	/* TODO: right? */
+		}
 	}
 
 	fprintf(f, "\t\t\t}\n");
