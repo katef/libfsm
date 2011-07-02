@@ -43,7 +43,7 @@ LESSCSS=  lessc    # from lesscss.org
 XSLTPROC= xsltproc # from xmlsoft.org
 XMLLINT=  xmllint  # from xmlsoft.org
 
-FSM=      ${OBJ_DIR}/src/tools/fsm/fsm
+FSM=      ${OBJ_DIR}/src/bin/fsm/fsm
 
 CFLAGS=
 SIDFLAGS=  -l ansi-c
