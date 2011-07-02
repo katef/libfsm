@@ -102,6 +102,18 @@ fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 	char c);
 
 /*
+ * Find the mode (as in median, mode and average) of the set of states to which
+ * all edges from a given state transition. This is not stable (as in sort order
+ * stability); if two desination states have equal frequency, then one is chosen
+ * arbitrarily to be considered the mode.
+ *
+ * A target state is only considered as a mode if it has more than one occurance.
+ * Returns NULL if there is no mode (e.g. the given state has no edges).
+ */
+struct fsm_state *
+fsm_findmode(const struct fsm_state *state);
+
+/*
  * Mark a given state as being an end state or not. The colour specified is
  * added to the set of colours for that state. A state may hold multiple
  * colours. The colour specified may be NULL.

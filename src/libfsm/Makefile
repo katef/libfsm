@@ -15,6 +15,7 @@ SRCS+= edge.c
 SRCS+= exec.c
 SRCS+= fsm.c
 SRCS+= isdfa.c
+SRCS+= mode.c
 SRCS+= minimize.c
 SRCS+= out.c
 SRCS+= reverse.c
