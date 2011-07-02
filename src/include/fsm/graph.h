@@ -4,6 +4,7 @@
 #define FSM_GRAPH_H
 
 struct fsm;
+struct fsm_state;
 
 /*
  * Reverse the given fsm. This may result in an NFA.
@@ -43,7 +44,7 @@ int
 fsm_complete(struct fsm *fsm);
 
 /*
- * Returns true if a given FSM is complete.
+ * Returns true if a given FSM is complete, or if a given state is complete.
  *
  * To be complete means that every state has an edge for all letters in the
  * alphabet (sigma). The alphabet for libfsm is all values expressible by an
@@ -51,6 +52,9 @@ fsm_complete(struct fsm *fsm);
  */
 int
 fsm_iscomplete(const struct fsm *fsm);
+int
+fsm_iscompletestate(const struct fsm *fsm, const struct fsm_state *state);
+
 
 /*
  * Minimize an FSM to its canonical form.
