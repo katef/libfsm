@@ -25,7 +25,7 @@ ZONE pattern_string: "\"" -> <flush> ... "\"" -> $pattern_literal {
 	TOKEN DEFAULT -> <push>(#0);
 }
 
-ZONE pattern_regex: "/" -> <flush>, <push>(#0) ... "/" -> <push>(#0), <flags>, $pattern_regex {
+ZONE pattern_regex: "/" -> <flush> ... "/" -> <flags>, $pattern_regex {
 	GROUP white = "";
 	TOKEN DEFAULT -> <push>(#0);
 }

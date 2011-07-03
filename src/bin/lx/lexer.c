@@ -152,12 +152,6 @@ lexi_read_token_pattern_regex(struct lexi_state *state)
 	start: {
 		int c0 = lexi_readchar(state);
 		if (c0 == '/') {
-			/* ACTION <push> */
-			{
-
-	push(state->lex_state, c0);
-			}
-			/* END ACTION <push> */
 			/* ACTION <flags> */
 			{
 
@@ -373,12 +367,6 @@ lexi_read_token(struct lexi_state *state)
 	state->lex_state->tokbuf[0] = '\0';
 				}
 				/* END ACTION <flush> */
-				/* ACTION <push> */
-				{
-
-	push(state->lex_state, c0);
-				}
-				/* END ACTION <push> */
 				return lexi_read_token_pattern_regex(state);
 			}
 
