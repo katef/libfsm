@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <limits.h>
+#include <string.h>	/* XXX: memset */
 
 #include <fsm/fsm.h>
 
@@ -13,7 +14,7 @@
 #include "libfsm/colour.h"
 
 struct bm {
-	unsigned char map[(FSM_EDGE_MAX + 1) / CHAR_BIT];
+	unsigned char map[FSM_EDGE_MAX / CHAR_BIT + 1];
 };
 
 static int bm_get(struct bm *bm, size_t i) {
@@ -75,7 +76,7 @@ static void escputc(int c, FILE *f) {
 		int in;
 		const char *out;
 	} esc[] = {
-		{ FSM_EDGE_EPSILON, "&epsilon;" },	/* TODO */
+		{ FSM_EDGE_EPSILON, "&#x3B5;" },
 
 		{ '&',  "&amp;"  },
 		{ '\"', "&quot;" },
@@ -86,7 +87,7 @@ static void escputc(int c, FILE *f) {
 		{ '\v', "\\v"    },
 		{ '\t', "\\t"    },
 
-		{ '|',  "\'|\'"  },
+		{ '|',  "\'|\'"  },	/* TODO: single quotes? lsquo? */
 		{ ',',  "\',\'"  },
 		{ '.',  "\'.\'"  },
 		{ '_',  "\'_\'"  }
@@ -94,16 +95,16 @@ static void escputc(int c, FILE *f) {
 
 	assert(f != NULL);
 
-	if (!isprint(c)) {
-		fprintf(f, "0x%x", (unsigned char) c);
-		return;
-	}
-
 	for (i = 0; i < sizeof esc / sizeof *esc; i++) {
 		if (esc[i].in == c) {
 			fputs(esc[i].out, f);
 			return;
 		}
+	}
+
+	if (!isprint(c)) {
+		fprintf(f, "0x%x", (unsigned char) c);
+		return;
 	}
 
 	putc(c, f);
@@ -185,10 +186,6 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 	if (fsm_isend(fsm, s)) {
 		fprintf(f, "\t%-2u [ label = <", indexof(fsm, s));
 
-		if (!options->anonymous_states) {
-			fprintf(f, "\\N<br/>");
-		}
-
 		printcolours(fsm, s->cl, f);
 
 		fprintf(f, "> ];\n");
@@ -214,34 +211,28 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 				int hi, lo;
 				int k;
 
+
 				/* unique states only */
 				if (contains(s->edges, i + 1, e->state)) {
 					continue;
 				}
 
-				/*
-				 * Currently edges' colours are inherited from their "from"
-				 * states, so we can assume each edge has an identical colour
-				 * set per consolidated group of edges.
-				 *
-				 * XXX: this axiom is now violated, and the following applies:
-				 *
-				 * If the ability is ever added for arbitary colours to be
-				 * assigned to edges, than that assumption breaks, and this
-				 * code will need to repeat for each distinct colour set within
-				 * that consolidated group.
-				 *
-				 * I'll update this code later, because it's just an aesthetic
-				 * distraction right now.
-				 */
+				fprintf(f, "\t%-2u -> %-2u [ label = <", indexof(fsm, s), indexof(fsm, e->state));
 
 				bm = bm_empty;
 
 				/* find all edges which go to this state */
-				fprintf(f, "\t%-2u -> %-2u [ label = <", indexof(fsm, s), indexof(fsm, e->state));
 				for (k = 0; k <= FSM_EDGE_MAX; k++) {
 					for (e2 = s->edges[k].sl; e2 != NULL; e2 = e2->next) {
 						if (e2->state == e->state) {
+							/*
+							 * This confused me for a while. Duplicate edges in
+							 * NFA such as a|a|b|c are actually only stored once
+							 * per transition (i.e. a|b|c), because the sets in
+							 * set.c do not have duplicate elements.
+							 */
+							assert(!bm_get(&bm, k));
+
 							bm_set(&bm, k);
 						}
 					}
@@ -251,7 +242,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 				hi = -1;
 				for (;;) {
 					lo = bm_next(&bm, hi, 1);	/* start of range */
-					if (lo == FSM_EDGE_MAX + 1) {
+					if (lo > UCHAR_MAX) {
 						break;
 					}
 
@@ -260,9 +251,13 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 					}
 
 					hi = bm_next(&bm, lo, 0);	/* end of range */
+					if (hi > UCHAR_MAX) {
+						hi = UCHAR_MAX;
+					}
 
 					assert(hi > lo);
 
+					/* TODO: use [abc] syntax instead */
 					switch (hi - lo) {
 					case 1:
 					case 2:
@@ -277,6 +272,14 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 						escputc(hi - 1, f);
 						break;
 					}
+				}
+
+				if (bm_get(&bm, FSM_EDGE_EPSILON)) {
+					if (hi != -1) {
+						fputc('|', f);
+					}
+
+					escputc(FSM_EDGE_EPSILON, f);
 				}
 
 				fprintf(f, "> ];\n");
