@@ -50,16 +50,25 @@ bm_next(const struct bm *bm, int i, int value)
 }
 
 static unsigned int
-bm_single(const struct bm *bm)
+bm_count(const struct bm *bm)
 {
-	size_t i;
+	unsigned char c;
+	unsigned int count;
+	size_t n;
 
 	assert(bm != NULL);
 
-	i = bm_next(bm, -1, 1);
-	i = bm_next(bm,  i, 1);
+	count = 0;
 
-	return i == FSM_EDGE_MAX + 1;
+	/* this could be faster using richard hamming's method */
+	for (n = 0; n < sizeof bm->map; n++) {
+		/* counting bits set for an element, peter wegner's method */
+		for (c = bm->map[n]; c != 0; c &= c - 1) {
+			count++;
+		}
+	}
+
+	return count;
 }
 
 static unsigned
@@ -99,6 +108,7 @@ static void escputc(int c, FILE *f) {
 		{ '\v', "\\v"    },
 		{ '\t', "\\t"    },
 
+		{ '^',  "\\^"    },
 		{ '|',  "\\|"    },
 		{ '[',  "\\["    },
 		{ ']',  "\\]"    },
@@ -116,7 +126,7 @@ static void escputc(int c, FILE *f) {
 	}
 
 	if (!isprint(c)) {
-		fprintf(f, "0x%x", (unsigned char) c);
+		fprintf(f, "\\x%x", (unsigned char) c);
 		return;
 	}
 
@@ -204,94 +214,11 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 		fprintf(f, "> ];\n");
 	}
 
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		for (e = s->edges[i].sl; e != NULL; e = e->next) {
-			assert(e->state != NULL);
+	if (!options->consolidate_edges) {
+		for (i = 0; i <= FSM_EDGE_MAX; i++) {
+			for (e = s->edges[i].sl; e != NULL; e = e->next) {
+				assert(e->state != NULL);
 
-			/*
-			 * The consolidate_edges option is an aesthetic optimisation.
-			 * For a state which has multiple edges all transitioning to the same
-			 * state, all these edges are combined into a single edge, labelled
-			 * with a more concise form of all their literal values.
-			 *
-			 * To implement this, we loop through all unique states, rather than
-			 * looping through each edge.
-			 */
-			if (options->consolidate_edges) {
-				static const struct bm bm_empty;
-				struct bm bm;
-				struct state_set *e2;
-				int hi, lo;
-				int k;
-				int single;
-
-				/* unique states only */
-				if (contains(s->edges, i + 1, e->state)) {
-					continue;
-				}
-
-				bm = bm_empty;
-
-				/* find all edges which go to this state */
-				for (k = 0; k <= FSM_EDGE_MAX; k++) {
-					for (e2 = s->edges[k].sl; e2 != NULL; e2 = e2->next) {
-						if (e2->state == e->state) {
-							/*
-							 * This confused me for a while. Duplicate edges in
-							 * NFA such as [aabc] are actually only stored once
-							 * per transition (i.e. [abc], because the sets in
-							 * set.c do not have duplicate elements.
-							 */
-							assert(!bm_get(&bm, k));
-
-							bm_set(&bm, k);
-						}
-					}
-				}
-
-				single = bm_single(&bm);
-
-				fprintf(f, "\t%-2u -> %-2u [ label = <%s",
-					indexof(fsm, s), indexof(fsm, e->state),
-					single ? "" : "[");
-
-				/* now print the edges we found */
-				hi = -1;
-				for (;;) {
-					lo = bm_next(&bm, hi, 1);	/* start of range */
-					if (lo > UCHAR_MAX) {
-						break;
-					}
-
-					hi = bm_next(&bm, lo, 0);	/* end of range */
-					if (hi > UCHAR_MAX) {
-						hi = UCHAR_MAX;
-					}
-
-					assert(hi > lo);
-
-					switch (hi - lo) {
-					case 1:
-					case 2:
-					case 3:
-						escputc(lo, f);
-						hi = lo;
-						continue;
-
-					default:
-						escputc(lo, f);
-						fprintf(f, "-");
-						escputc(hi - 1, f);
-						break;
-					}
-				}
-
-				if (bm_get(&bm, FSM_EDGE_EPSILON)) {
-					escputc(FSM_EDGE_EPSILON, f);
-				}
-
-				fprintf(f, "%s> ];\n", single ? "" : "]");
-			} else {
 				fprintf(f, "\t%-2u -> %-2u [ label = <",
 					indexof(fsm, s), indexof(fsm, e->state));
 
@@ -299,6 +226,122 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 
 				fprintf(f, "> ];\n");
 			}
+		}
+
+		return;
+	}
+
+	/*
+	 * The consolidate_edges option is an aesthetic optimisation.
+	 * For a state which has multiple edges all transitioning to the same state,
+	 * all these edges are combined into a single edge, labelled with a more
+	 * concise form of all their values.
+	 *
+	 * To implement this, we loop through all unique states, rather than
+	 * looping through each edge.
+	 */
+	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+		for (e = s->edges[i].sl; e != NULL; e = e->next) {
+			static const struct bm bm_empty;
+			struct bm bm;
+			struct state_set *e2;
+			int hi, lo;
+			int k;
+			int count;
+			enum { MODE_INVERT, MODE_SINGLE, MODE_ANY, MODE_MANY } mode;
+
+			assert(e->state != NULL);
+
+			/* unique states only */
+			if (contains(s->edges, i + 1, e->state)) {
+				continue;
+			}
+
+			bm = bm_empty;
+
+			/* find all edges which go to this state */
+			for (k = 0; k <= FSM_EDGE_MAX; k++) {
+				for (e2 = s->edges[k].sl; e2 != NULL; e2 = e2->next) {
+					if (e2->state != e->state) {
+						continue;
+					}
+
+					/*
+					 * Duplicate edges in NFA such as [aabc] are actually only
+					 * stored once per transition (i.e. [abc]), because the sets
+					 * in set.c do not have duplicate elements.
+					 */
+					assert(!bm_get(&bm, k));
+
+					bm_set(&bm, k);
+				}
+			}
+
+			count = bm_count(&bm);
+
+			assert(count > 0);
+
+			if (count == 1) {
+				mode = MODE_SINGLE;
+			} else if (bm_next(&bm, UCHAR_MAX, 1) != FSM_EDGE_MAX + 1) {
+				mode = MODE_MANY;
+			} else if (count == UCHAR_MAX + 1) {
+				mode = MODE_ANY;
+			} else if (count <= UCHAR_MAX / 2) {
+				mode = MODE_MANY;
+			} else {
+				mode = MODE_INVERT;
+			}
+
+			if (mode == MODE_ANY) {
+				fprintf(f, "\t%-2u -> %-2u [ label = </./> ];\n",
+					indexof(fsm, s), indexof(fsm, e->state));
+				continue;
+			}
+
+			fprintf(f, "\t%-2u -> %-2u [ label = <%s%s",
+				indexof(fsm, s), indexof(fsm, e->state),
+				mode == MODE_SINGLE ? "" : "[",
+				mode != MODE_INVERT ? "" : "^");
+
+			/* now print the edges we found */
+			hi = -1;
+			for (;;) {
+				/* start of range */
+				lo = bm_next(&bm, hi, mode != MODE_INVERT);
+				if (lo > UCHAR_MAX) {
+					break;
+				}
+
+				/* end of range */
+				hi = bm_next(&bm, lo, mode == MODE_INVERT);
+				if (hi > UCHAR_MAX) {
+					hi = UCHAR_MAX;
+				}
+
+				assert(hi > lo);
+
+				switch (hi - lo) {
+				case 1:
+				case 2:
+				case 3:
+					escputc(lo, f);
+					hi = lo;
+					continue;
+
+				default:
+					escputc(lo, f);
+					fprintf(f, "-");
+					escputc(hi - 1, f);
+					break;
+				}
+			}
+
+			if (bm_get(&bm, FSM_EDGE_EPSILON)) {
+				escputc(FSM_EDGE_EPSILON, f);
+			}
+
+			fprintf(f, "%s> ];\n", mode == MODE_SINGLE ? "" : "]");
 		}
 	}
 }
