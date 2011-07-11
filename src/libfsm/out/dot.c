@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <limits.h>
-#include <string.h>	/* XXX: memset */
 
 #include <fsm/fsm.h>
 
@@ -50,6 +49,19 @@ bm_next(const struct bm *bm, int i, int value)
 	return FSM_EDGE_MAX + 1;
 }
 
+static unsigned int
+bm_single(const struct bm *bm)
+{
+	size_t i;
+
+	assert(bm != NULL);
+
+	i = bm_next(bm, -1, 1);
+	i = bm_next(bm,  i, 1);
+
+	return i == FSM_EDGE_MAX + 1;
+}
+
 static unsigned
 indexof(const struct fsm *fsm, const struct fsm_state *state)
 {
@@ -87,10 +99,11 @@ static void escputc(int c, FILE *f) {
 		{ '\v', "\\v"    },
 		{ '\t', "\\t"    },
 
-		{ '|',  "\'|\'"  },	/* TODO: single quotes? lsquo? */
-		{ ',',  "\',\'"  },
-		{ '.',  "\'.\'"  },
-		{ '_',  "\'_\'"  }
+		{ '|',  "\\|"    },
+		{ '[',  "\\["    },
+		{ ']',  "\\]"    },
+		{ '_',  "\\_"    },
+		{ '-',  "\\-"    }
 	};
 
 	assert(f != NULL);
@@ -210,14 +223,12 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 				struct state_set *e2;
 				int hi, lo;
 				int k;
-
+				int single;
 
 				/* unique states only */
 				if (contains(s->edges, i + 1, e->state)) {
 					continue;
 				}
-
-				fprintf(f, "\t%-2u -> %-2u [ label = <", indexof(fsm, s), indexof(fsm, e->state));
 
 				bm = bm_empty;
 
@@ -227,8 +238,8 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 						if (e2->state == e->state) {
 							/*
 							 * This confused me for a while. Duplicate edges in
-							 * NFA such as a|a|b|c are actually only stored once
-							 * per transition (i.e. a|b|c), because the sets in
+							 * NFA such as [aabc] are actually only stored once
+							 * per transition (i.e. [abc], because the sets in
 							 * set.c do not have duplicate elements.
 							 */
 							assert(!bm_get(&bm, k));
@@ -238,16 +249,18 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 					}
 				}
 
+				single = bm_single(&bm);
+
+				fprintf(f, "\t%-2u -> %-2u [ label = <%s",
+					indexof(fsm, s), indexof(fsm, e->state),
+					single ? "" : "[");
+
 				/* now print the edges we found */
 				hi = -1;
 				for (;;) {
 					lo = bm_next(&bm, hi, 1);	/* start of range */
 					if (lo > UCHAR_MAX) {
 						break;
-					}
-
-					if (hi != -1) {
-						fputc('|', f);
 					}
 
 					hi = bm_next(&bm, lo, 0);	/* end of range */
@@ -257,7 +270,6 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 
 					assert(hi > lo);
 
-					/* TODO: use [abc] syntax instead */
 					switch (hi - lo) {
 					case 1:
 					case 2:
@@ -268,23 +280,20 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 
 					default:
 						escputc(lo, f);
-						fprintf(f, "..");
+						fprintf(f, "-");
 						escputc(hi - 1, f);
 						break;
 					}
 				}
 
 				if (bm_get(&bm, FSM_EDGE_EPSILON)) {
-					if (hi != -1) {
-						fputc('|', f);
-					}
-
 					escputc(FSM_EDGE_EPSILON, f);
 				}
 
-				fprintf(f, "> ];\n");
+				fprintf(f, "%s> ];\n", single ? "" : "]");
 			} else {
-				fprintf(f, "\t%-2u -> %-2u [ label = <", indexof(fsm, s), indexof(fsm, e->state));
+				fprintf(f, "\t%-2u -> %-2u [ label = <",
+					indexof(fsm, s), indexof(fsm, e->state));
 
 				escputc(i, f);
 
