@@ -42,6 +42,13 @@
 
 3 -> 2;
 
+
+2 -> 8 'N';
+2 -> 8 'F';
+2 -> 8 'F';	# ignored due to duplicate destination state
+2 -> 9 'F';	# not ignored due to different destination state
+2 -> 8 'A';
+
 start: 0;
-end: 3;
+end: 3, 8, 9;
 
