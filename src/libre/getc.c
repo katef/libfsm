@@ -24,7 +24,7 @@ re_getc_str(void *opaque)
 
 	(*s)++;
 
-	return c;
+	return (unsigned char) c;
 }
 
 int
