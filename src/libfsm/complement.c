@@ -14,7 +14,7 @@
 int
 fsm_complement(struct fsm *fsm, void *colour)
 {
-	const struct fsm_state *s;
+	struct fsm_state *s;
 	int i;
 
 	assert(fsm != NULL);
@@ -28,21 +28,11 @@ fsm_complement(struct fsm *fsm, void *colour)
 	 */
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		for (i = 0; i <= UCHAR_MAX; i++) {
-			struct fsm_state *to;
-
-			assert(s->edges[i].sl != NULL);
-			assert(s->edges[i].sl->state != NULL);
-			assert(s->edges[i].sl->next == NULL);
-
-			to = s->edges[i].sl->state;
-
-			if (fsm_isend(fsm, to)) {
-				fsm_removeends(fsm, to);
-			} else if (!fsm_addend(fsm, to, colour)) {
-				/* TODO: deal with error */
-				return 0;
-			}
+		if (fsm_isend(fsm, s)) {
+			fsm_removeends(fsm, s);
+		} else if (!fsm_addend(fsm, s, colour)) {
+			/* TODO: deal with error */
+			return 0;
 		}
 	}
 
