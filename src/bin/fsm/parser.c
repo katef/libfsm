@@ -280,7 +280,7 @@ p_edge(fsm fsm, lex_state lex_state, act_state act_state)
 					ADVANCE_LEXER;
 					/* BEGINNING OF ACTION: add-edge-any */
 					{
-#line 190 "parser.act"
+#line 193 "parser.act"
 
 		if (!fsm_addedge_any(fsm, (ZIx), (ZIy))) {
 			perror("fsm_addedge_any");
@@ -312,7 +312,7 @@ p_edge(fsm fsm, lex_state lex_state, act_state act_state)
 					ADVANCE_LEXER;
 					/* BEGINNING OF ACTION: add-edge-literal */
 					{
-#line 175 "parser.act"
+#line 178 "parser.act"
 
 		assert((ZIs) != NULL);
 
@@ -332,7 +332,7 @@ p_edge(fsm fsm, lex_state lex_state, act_state act_state)
 					/* END OF ACTION: add-edge-literal */
 					/* BEGINNING OF ACTION: free */
 					{
-#line 157 "parser.act"
+#line 160 "parser.act"
 
 		free((ZIs));
 	
@@ -345,7 +345,7 @@ p_edge(fsm fsm, lex_state lex_state, act_state act_state)
 				{
 					/* BEGINNING OF ACTION: add-edge-epsilon */
 					{
-#line 197 "parser.act"
+#line 200 "parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			perror("fsm_addedge_epsilon");
@@ -363,7 +363,7 @@ p_edge(fsm fsm, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-trans */
 				{
-#line 210 "parser.act"
+#line 213 "parser.act"
 
 		err_expected("transition");
 	
@@ -416,7 +416,7 @@ ZL2_end_Hids:;
 						{
 							/* BEGINNING OF ACTION: err-expected-comma */
 							{
-#line 214 "parser.act"
+#line 217 "parser.act"
 
 		err_expected("','");
 	
@@ -472,7 +472,7 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state, string *ZOn)
 			{
 				/* BEGINNING OF ACTION: err-expected-start */
 				{
-#line 218 "parser.act"
+#line 221 "parser.act"
 
 		err_expected("'start:'");
 	
@@ -561,7 +561,7 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-expected-sep */
 		{
-#line 206 "parser.act"
+#line 209 "parser.act"
 
 		err_expected("';'");
 	
@@ -594,7 +594,7 @@ p_xend(fsm fsm, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-end */
 				{
-#line 222 "parser.act"
+#line 225 "parser.act"
 
 		err_expected("'end:'");
 	
@@ -626,7 +626,6 @@ p_end_Hid(fsm fsm, lex_state lex_state, act_state act_state)
 	}
 	{
 		string ZIn;
-		string ZIc;
 		state ZIs;
 
 		/* BEGINNING OF INLINE: id */
@@ -644,7 +643,7 @@ p_end_Hid(fsm fsm, lex_state lex_state, act_state act_state)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 648 "parser.c"
+#line 647 "parser.c"
 					}
 					/* END OF EXTRACT: ident */
 					ADVANCE_LEXER;
@@ -662,7 +661,7 @@ p_end_Hid(fsm fsm, lex_state lex_state, act_state act_state)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 666 "parser.c"
+#line 665 "parser.c"
 					}
 					/* END OF EXTRACT: label */
 					ADVANCE_LEXER;
@@ -673,50 +672,6 @@ p_end_Hid(fsm fsm, lex_state lex_state, act_state act_state)
 			}
 		}
 		/* END OF INLINE: id */
-		/* BEGINNING OF INLINE: 32 */
-		{
-			switch (CURRENT_TERMINAL) {
-			case 8:
-				{
-					ADVANCE_LEXER;
-					switch (CURRENT_TERMINAL) {
-					case 1:
-						/* BEGINNING OF EXTRACT: label */
-						{
-#line 88 "parser.act"
-
-		ZIc = xstrdup(lex_tokbuf(lex_state));
-		if (ZIc == NULL) {
-			perror("xstrdup");
-			exit(EXIT_FAILURE);
-		}
-	
-#line 695 "parser.c"
-						}
-						/* END OF EXTRACT: label */
-						break;
-					default:
-						goto ZL1;
-					}
-					ADVANCE_LEXER;
-				}
-				break;
-			default:
-				{
-					/* BEGINNING OF ACTION: no-colour */
-					{
-#line 153 "parser.act"
-
-		(ZIc) = NULL;
-	
-#line 713 "parser.c"
-					}
-					/* END OF ACTION: no-colour */
-				}
-				break;
-			}
-		}
-		/* END OF INLINE: 32 */
 		/* BEGINNING OF ACTION: add-state */
 		{
 #line 100 "parser.act"
@@ -762,7 +717,7 @@ p_end_Hid(fsm fsm, lex_state lex_state, act_state act_state)
 			act_state->sl = new;
 		}
 	
-#line 766 "parser.c"
+#line 721 "parser.c"
 		}
 		/* END OF ACTION: add-state */
 		/* BEGINNING OF ACTION: mark-end */
@@ -771,11 +726,58 @@ p_end_Hid(fsm fsm, lex_state lex_state, act_state act_state)
 
 		assert((ZIs) != NULL);
 
-		fsm_addend(fsm, (ZIs), (ZIc));
+		fsm_setend(fsm, (ZIs), 1);
 	
-#line 777 "parser.c"
+#line 732 "parser.c"
 		}
 		/* END OF ACTION: mark-end */
+		/* BEGINNING OF INLINE: 33 */
+		{
+			switch (CURRENT_TERMINAL) {
+			case 8:
+				{
+					string ZIc;
+
+					ADVANCE_LEXER;
+					switch (CURRENT_TERMINAL) {
+					case 1:
+						/* BEGINNING OF EXTRACT: label */
+						{
+#line 88 "parser.act"
+
+		ZIc = xstrdup(lex_tokbuf(lex_state));
+		if (ZIc == NULL) {
+			perror("xstrdup");
+			exit(EXIT_FAILURE);
+		}
+	
+#line 755 "parser.c"
+						}
+						/* END OF EXTRACT: label */
+						break;
+					default:
+						goto ZL1;
+					}
+					ADVANCE_LEXER;
+					/* BEGINNING OF ACTION: add-colour */
+					{
+#line 153 "parser.act"
+
+		assert((ZIs) != NULL);
+		assert((ZIc) != NULL);
+
+		fsm_addcolour(fsm, (ZIs), (ZIc));
+	
+#line 772 "parser.c"
+					}
+					/* END OF ACTION: add-colour */
+				}
+				break;
+			default:
+				break;
+			}
+		}
+		/* END OF INLINE: 33 */
 	}
 	return;
 ZL1:;
@@ -877,7 +879,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 			act_state->sl = new;
 		}
 	
-#line 881 "parser.c"
+#line 883 "parser.c"
 					}
 					/* END OF ACTION: add-state */
 					/* BEGINNING OF ACTION: mark-start */
@@ -888,7 +890,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 
 		fsm_setstart(fsm, (ZIs));
 	
-#line 892 "parser.c"
+#line 894 "parser.c"
 					}
 					/* END OF ACTION: mark-start */
 				}
@@ -924,7 +926,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: free-statelist */
 		{
-#line 172 "parser.act"
+#line 175 "parser.act"
 
 		struct act_statelist *p;
 		struct act_statelist *next;
@@ -938,7 +940,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 			free(p);
 		}
 	
-#line 942 "parser.c"
+#line 944 "parser.c"
 		}
 		/* END OF ACTION: free-statelist */
 	}
@@ -947,12 +949,12 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-parse */
 		{
-#line 227 "parser.act"
+#line 230 "parser.act"
 
 		fprintf(stderr, "parse error\n");
 		exit(EXIT_FAILURE);
 	
-#line 956 "parser.c"
+#line 958 "parser.c"
 		}
 		/* END OF ACTION: err-parse */
 	}
@@ -960,7 +962,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 264 "parser.act"
+#line 267 "parser.act"
 
 
 	struct fsm *fsm_parse(FILE *f) {
@@ -996,6 +998,6 @@ ZL1:;
 		return new;
 	}
 
-#line 1000 "parser.c"
+#line 1002 "parser.c"
 
 /* END OF FILE */

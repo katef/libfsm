@@ -14,6 +14,7 @@
 #include <re/re.h>
 #include <fsm/fsm.h>
 #include <fsm/graph.h>
+#include <fsm/colour.h>
 
 #include "internal.h"
 
@@ -81,28 +82,49 @@ re_new_copy(const struct re *re, enum re_cflags cflags, enum re_err *err)
 {
 	struct re *new;
 
+	assert(re != NULL);
+	assert(re->fsm != NULL);
+
 	new = malloc(sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
 
 	new->fsm = fsm_copy(re->fsm);
+	if (new->fsm == NULL) {
+		re_free(new);
+		return NULL;
+	}
 
 	if (cflags & RE_REVERSE) {
-		if (!fsm_reverse(re->fsm)) {
-			re_free(re);
+		if (!fsm_reverse(new->fsm)) {
+			re_free(new);
 			return NULL;
 		}
 	}
 
 	if (cflags & RE_COMPLEMENT) {
-		if (!fsm_complement(re->fsm, TODO)) {
-			re_free(re);
+		if (!fsm_complement(new->fsm)) {
+			re_free(new);
 			return NULL;
 		}
 	}
 
-	new->end = NULL;	/* TODO: what to do about this? */
+	assert(fsm_hasend(new->fsm));
+
+	new->end = fsm_collateends(new->fsm);
+	if (new->end == NULL) {
+		re_free(new);
+		return NULL;
+	}
+
+	assert(fsm_isend(new->fsm, new->end));
+
+	fsm_setend(new->fsm, new->end, 0);
+
+	assert(!fsm_hasend(new->fsm));
+
+	return new;
 }
 
 void
@@ -139,7 +161,9 @@ re_addend(struct re *re, void *colour)
 	assert(re != NULL);
 	assert(re->end != NULL);
 
-	return fsm_addend(re->fsm, re->end, colour);
+	fsm_setend(re->fsm, re->end, 1);
+
+	return fsm_addcolour(re->fsm, re->end, colour);
 }
 
 int
@@ -173,7 +197,9 @@ re_concat(struct re *re, struct re *new)
 	}
 
 	/* TODO: not sure about this */
-	fsm_removeends(re->fsm, re->end);
+	fsm_removecolours(re->fsm, re->end);
+
+	fsm_setend(re->fsm, re->end, 0);
 
 	re->end = new->end;
 

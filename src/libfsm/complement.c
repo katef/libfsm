@@ -9,13 +9,11 @@
 
 #include "internal.h"
 #include "set.h"
-#include "colour.h"
 
 int
-fsm_complement(struct fsm *fsm, void *colour)
+fsm_complement(struct fsm *fsm)
 {
 	struct fsm_state *s;
-	int i;
 
 	assert(fsm != NULL);
 	assert(fsm_isdfa(fsm));
@@ -28,12 +26,7 @@ fsm_complement(struct fsm *fsm, void *colour)
 	 */
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (fsm_isend(fsm, s)) {
-			fsm_removeends(fsm, s);
-		} else if (!fsm_addend(fsm, s, colour)) {
-			/* TODO: deal with error */
-			return 0;
-		}
+		fsm_setend(fsm, s, !fsm_isend(fsm, s));
 	}
 
 	return 1;

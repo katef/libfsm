@@ -47,10 +47,6 @@ static int colour_hook_print(const struct fsm *fsm, FILE *f, void *colour) {
 	return fprintf(f, "%s", (const char *) colour);
 }
 
-static int complement(struct fsm *fsm) {
-	return fsm_complement(fsm, "black");
-}
-
 static int query(struct fsm *fsm, const char *name) {
 	size_t i;
 
@@ -88,15 +84,15 @@ static void transform(struct fsm *fsm, const char *name) {
 		const char *name;
 		int (*f)(struct fsm *);
 	} a[] = {
-		{ "complete",   fsm_complete },
-		{ "complement", complement   },
-		{ "invert",     complement   },
-		{ "reverse",    fsm_reverse  },
-		{ "rev",        fsm_reverse  },
-		{ "dfa",        fsm_todfa    },
-		{ "todfa",      fsm_todfa    },
-		{ "min",        fsm_minimize },
-		{ "minimize",   fsm_minimize }
+		{ "complete",   fsm_complete   },
+		{ "complement", fsm_complement },
+		{ "invert",     fsm_complement },
+		{ "reverse",    fsm_reverse    },
+		{ "rev",        fsm_reverse    },
+		{ "dfa",        fsm_todfa      },
+		{ "todfa",      fsm_todfa      },
+		{ "min",        fsm_minimize   },
+		{ "minimize",   fsm_minimize   }
 	};
 
 	assert(fsm != NULL);

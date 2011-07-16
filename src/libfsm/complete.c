@@ -84,7 +84,6 @@ int
 fsm_iscomplete(const struct fsm *fsm)
 {
 	struct fsm_state *s;
-	size_t i;
 
 	assert(fsm != NULL);
 

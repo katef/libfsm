@@ -105,6 +105,34 @@ set_addcolour(const struct fsm *fsm, struct colour_set **head, void *colour)
 	return new;
 }
 
+int
+fsm_addcolour(struct fsm *fsm, struct fsm_state *state, void *colour)
+{
+	(void) fsm;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	if (!set_addcolour(fsm, &state->cl, colour)) {
+		return 0;
+	}
+
+	return 1;
+}
+
+void
+fsm_removecolours(struct fsm *fsm, struct fsm_state *state)
+{
+	(void) fsm;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	set_freecolours(state->cl);
+
+	state->cl = NULL;
+}
+
 void
 fsm_setcolourhooks(struct fsm *fsm, const struct fsm_colour_hooks *h)
 {

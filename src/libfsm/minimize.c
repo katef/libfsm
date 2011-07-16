@@ -160,7 +160,7 @@ fsm_minimize(struct fsm *fsm)
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
 			for (c = s->cl; c != NULL; c = c->next) {
-				if (!fsm_addend(fsm, s, c->colour)) {
+				if (!fsm_addcolour(fsm, s, c->colour)) {
 					return 0;
 				}
 			}

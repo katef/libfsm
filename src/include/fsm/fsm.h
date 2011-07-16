@@ -114,20 +114,12 @@ struct fsm_state *
 fsm_findmode(const struct fsm_state *state);
 
 /*
- * Mark a given state as being an end state or not. The colour specified is
- * added to the set of colours for that state. A state may hold multiple
- * colours. The colour specified may be NULL.
- *
- * Returns false on error.
- */
-int
-fsm_addend(struct fsm *fsm, struct fsm_state *state, void *colour);
-
-/*
- * Remove all end colours from a state.
+ * Mark a given state as being an end state or not. The value of end is treated
+ * as a boolean; if zero, the state is not an end state. If non-zero, the state
+ * is marked as an end state.
  */
 void
-fsm_removeends(struct fsm *fsm, struct fsm_state *state);
+fsm_setend(struct fsm *fsm, struct fsm_state *state, int end);
 
 /*
  * Return if a given state is an end state.
@@ -144,8 +136,7 @@ fsm_hasend(const struct fsm *fsm);
 /*
  * Return the end state (if there is just one), or add epsilon edges from all
  * end states (which are un-marked as if by fsm_removeends) to a new state, and
- * return that newly-created state. The new state inherits colours from the
- * previous end states.
+ * return that newly-created state.
  *
  * Returns NULL on error, or if there is no end state.
  */

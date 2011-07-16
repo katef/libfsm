@@ -68,8 +68,15 @@ fsm_copy(const struct fsm *fsm)
 		int i;
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
+			struct fsm_state *equiv;
+
+			equiv = equivalent(fsm, new, s);
+			assert(equiv != NULL);
+
+			fsm_setend(new, equiv, fsm_isend(fsm, s));
+
 			for (c = s->cl; c != NULL; c = c->next) {
-				if (!fsm_addend(new, equivalent(fsm, new, s), c->colour)) {
+				if (!fsm_addcolour(new, equiv, c->colour)) {
 					fsm_free(new);
 					return NULL;
 				}
@@ -80,7 +87,7 @@ fsm_copy(const struct fsm *fsm)
 					struct fsm_state *newfrom;
 					struct fsm_state *newto;
 
-					newfrom = equivalent(fsm, new, s);
+					newfrom = equiv;
 					newto   = equivalent(fsm, new, to->state);
 
 					if (!set_addstate(&newfrom->edges[i].sl, newto)) {

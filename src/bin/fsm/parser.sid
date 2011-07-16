@@ -27,9 +27,8 @@
 
 	<add-state>:        (:string)         -> (:state);
 	<mark-start>:       (:state)          -> ();
-	<mark-end>:         (:state, :string) -> ();
-
-	<no-colour>:        ()        -> (:string);
+	<mark-end>:         (:state)          -> ();
+	<add-colour>:       (:state, :string) -> ();
 
 	<free>:             (:string) -> ();
 	<free-statelist>;
@@ -55,15 +54,18 @@
 	end-id = {
 		n = id;
 
+		s = <add-state>(n);
+
+		<mark-end>(s);
+
 		{
 			equals;
 			c = label;
-		||
-			c = <no-colour>;
-		};
 
-		s = <add-state>(n);
-		<mark-end>(s, c);
+			<add-colour>(s, c);
+		||
+			$;
+		};
 	};
 
 	end-ids = {

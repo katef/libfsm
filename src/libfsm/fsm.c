@@ -121,7 +121,8 @@ fsm_addstate(struct fsm *fsm)
 		return NULL;
 	}
 
-	new->cl = NULL;
+	new->end = 0;
+	new->cl  = NULL;
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		new->edges[i].sl = NULL;
@@ -159,32 +160,15 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 	state_remove(&fsm->sl, state);
 }
 
-int
-fsm_addend(struct fsm *fsm, struct fsm_state *state, void *colour)
-{
-	(void) fsm;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	if (!set_addcolour(fsm, &state->cl, colour)) {
-		return 0;
-	}
-
-	return 1;
-}
-
 void
-fsm_removeends(struct fsm *fsm, struct fsm_state *state)
+fsm_setend(struct fsm *fsm, struct fsm_state *state, int end)
 {
 	(void) fsm;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	set_freecolours(state->cl);
-
-	state->cl = NULL;
+	state->end = !!end;
 }
 
 int
@@ -195,7 +179,7 @@ fsm_isend(const struct fsm *fsm, const struct fsm_state *state)
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	return state->cl != NULL;
+	return !!state->end;
 }
 
 int

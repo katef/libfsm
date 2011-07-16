@@ -49,8 +49,10 @@ static struct mapping *mapping_ensure(struct fsm *fsm, struct mapping **head, st
 			return 0;
 		}
 
+		fsm_setend(fsm, m->new, fsm_isend(fsm, old));
+
 		for (c = old->cl; c != NULL; c = c->next) {
-			if (!fsm_addend(fsm, m->new, c->colour)) {
+			if (!fsm_addcolour(fsm, m->new, c->colour)) {
 				fsm_removestate(fsm, m->new);
 				free(m);
 				return 0;

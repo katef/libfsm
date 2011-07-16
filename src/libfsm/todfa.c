@@ -312,9 +312,9 @@ static int allstatesreachableby(const struct fsm *fsm, struct state_set *set, ch
 }
 
 /*
- * Merge all end colours (if any) from a set of states to a single state.
+ * Merge all colours (if any) from a set of states to a single state.
  */
-static int carrythroughendcolours(struct state_set *set, struct fsm *fsm, struct fsm_state *state) {
+static int carrythrough(struct state_set *set, struct fsm *fsm, struct fsm_state *state) {
 	struct state_set *s;
 	struct colour_set *c;
 
@@ -322,8 +322,12 @@ static int carrythroughendcolours(struct state_set *set, struct fsm *fsm, struct
 	assert(state != NULL);
 
 	for (s = set ; s != NULL; s = s->next) {
+		if (fsm_isend(fsm, s->state)) {
+			fsm_setend(fsm, state, 1);
+		}
+
 		for (c = s->state->cl; c != NULL; c = c->next) {
-			if (!fsm_addend(fsm, state, c->colour)) {
+			if (!fsm_addcolour(fsm, state, c->colour)) {
 				return 0;
 			}
 		}
@@ -428,7 +432,7 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 		 * The current DFA state is an end state if any of its associated NFA
 		 * states are end states; all of their end colours are merged.
 		 */
-		if (!carrythroughendcolours(curr->closure, dfa, curr->dfastate)) {
+		if (!carrythrough(curr->closure, dfa, curr->dfastate)) {
 			return 0;
 		}
 	}

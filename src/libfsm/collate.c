@@ -40,17 +40,10 @@ fsm_collateends(struct fsm *fsm)
 		}
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
-			struct colour_set *c;
+			/* TODO: skip 'new'? */
 
 			if (!fsm_isend(fsm, s)) {
 				continue;
-			}
-
-			for (c = s->cl; c != NULL; c = c->next) {
-				if (!set_addcolour(fsm, &s->cl, c->colour)) {
-					/* TODO: free new */
-					return NULL;
-				}
 			}
 
 			if (!fsm_addedge_epsilon(fsm, s, new)) {
@@ -58,8 +51,10 @@ fsm_collateends(struct fsm *fsm)
 				return NULL;
 			}
 
-			fsm_removeends(fsm, s);
+			fsm_setend(fsm, s, 0);
 		}
+
+		/* TODO: mark 'new' as end? */
 
 		return new;
 	}

@@ -15,13 +15,12 @@ int
 fsm_reverse(struct fsm *fsm);
 
 /*
- * Complement the given fsm. The colour passed is used to mark new end states,
- * as per fsm_addend().
+ * Complement the given fsm.
  *
  * Returns 1 on success, or 0 on error.
  */
 int
-fsm_complement(struct fsm *fsm, void *colour);
+fsm_complement(struct fsm *fsm);
 
 /*
  * Convert an fsm to a DFA.

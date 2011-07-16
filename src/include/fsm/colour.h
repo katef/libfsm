@@ -39,6 +39,25 @@ struct fsm_colour_hooks {
 
 
 /*
+ * Add a colour to the (possibly empty) set of colours for the given state.
+ * The state passed must be an end state as per fsm_isend().
+ *
+ * A state may hold multiple colours. The colour specified may be NULL.
+ *
+ * Returns false on error.
+ */
+int
+fsm_addcolour(struct fsm *fsm, struct fsm_state *state, void *colour);
+
+/*
+ * Remove all end colours from a state.
+ * The state passed must be an end state as per fsm_isend().
+ */
+void
+fsm_removecolours(struct fsm *fsm, struct fsm_state *state);
+
+
+/*
  * Assign a callbacks used for colour operations. If none have been set, the
  * default behaviour is as if each function is set NULL. This default can be
  * restored by assigning the pointer to the entire hooks struct to be NULL.
