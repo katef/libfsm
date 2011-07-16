@@ -18,7 +18,7 @@ OBJS?=	${SRCS:C/.c$/.o/}
 .for test in ${TESTS:Min*.fsm}
 ${OBJ_SDIR}/${test:C/^in/actual/}: ${test}
 	@${MKDIR} "${OBJ_SDIR}"
-	${FSM} -l fsm ${FSMFLAGS} ${TESTFLAGS} ${.ALLSRC} ${.TARGET}
+	${FSM} -l fsm -o ${.TARGET} ${FSMFLAGS} ${TESTFLAGS} < ${.ALLSRC}
 .endfor
 
 .for test in ${TESTS:Min*.fsm}
@@ -29,11 +29,11 @@ TESTS+= ${OBJ_SDIR}/${test:C/^in/actual/}
 ${OBJ_SDIR}/${test:T:R}.dot: ${test}
 	@${MKDIR} "${OBJ_SDIR}"
 . if defined(TEST_HILIGHT) && ${test:T:Mactual*.fsm} != ""
-	${FSM} -a -l dot ${FSMFLAGS} ${.ALLSRC} ${.TARGET:R}-hl.dot
+	${FSM} -a -l dot -o ${.TARGET:R}-hl.dot ${FSMFLAGS} < ${.ALLSRC}
 	${TEST_HILIGHT} ${.ALLSRC} | ${GVPR} -c -f ${BASE_DIR}/share/bin/hilight.gvpr \
 		${.TARGET:R}-hl.dot > ${.TARGET}
 . else
-	${FSM} -a -l dot ${FSMFLAGS} ${.ALLSRC} ${.TARGET}
+	${FSM} -a -l dot -o ${.TARGET} ${FSMFLAGS} < ${.ALLSRC}
 . endif
 .endfor
 
