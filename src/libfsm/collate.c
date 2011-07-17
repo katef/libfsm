@@ -7,6 +7,7 @@
 
 #include "internal.h"
 #include "set.h"
+#include "colour.h"
 
 struct fsm_state *
 fsm_collateends(struct fsm *fsm)
@@ -39,11 +40,24 @@ fsm_collateends(struct fsm *fsm)
 			return NULL;
 		}
 
+		fsm_setend(fsm, new, 1);
+
 		for (s = fsm->sl; s != NULL; s = s->next) {
-			/* TODO: skip 'new'? */
+			struct colour_set *c;
+
+			if (s == new) {
+				continue;
+			}
 
 			if (!fsm_isend(fsm, s)) {
 				continue;
+			}
+
+			for (c = s->cl; c != NULL; c = c->next) {
+				if (!fsm_addcolour(fsm, new, c->colour)) {
+					/* TODO: free new */
+					return NULL;
+				}
 			}
 
 			if (!fsm_addedge_epsilon(fsm, s, new)) {
@@ -54,7 +68,7 @@ fsm_collateends(struct fsm *fsm)
 			fsm_setend(fsm, s, 0);
 		}
 
-		/* TODO: mark 'new' as end? */
+		assert(fsm_isend(fsm, new));
 
 		return new;
 	}
