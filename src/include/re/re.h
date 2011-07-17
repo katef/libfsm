@@ -86,7 +86,7 @@ re_strerror(enum re_err err);
  * Returns false on error.
  */
 int
-re_addend(struct re *re, void *colour);
+re_addcolour(struct re *re, void *colour);
 
 /*
  * Merge a new regexp into an existing regexp as set union of the two languages,

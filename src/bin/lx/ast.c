@@ -109,7 +109,7 @@ ast_addmapping(struct ast_zone *z, struct re *re, struct ast_token *token, struc
 		z->ml   = m;
 	}
 
-	if (!re_addend(re, m)) {
+	if (!re_addcolour(re, m)) {
 		return NULL;
 	}
 

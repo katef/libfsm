@@ -74,6 +74,8 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 
 	assert(new->end != NULL);
 
+	fsm_setend(new->fsm, new->end, 1);
+
 	return new;
 }
 
@@ -156,12 +158,10 @@ re_strerror(enum re_err err)
 }
 
 int
-re_addend(struct re *re, void *colour)
+re_addcolour(struct re *re, void *colour)
 {
 	assert(re != NULL);
 	assert(re->end != NULL);
-
-	fsm_setend(re->fsm, re->end, 1);
 
 	return fsm_addcolour(re->fsm, re->end, colour);
 }
