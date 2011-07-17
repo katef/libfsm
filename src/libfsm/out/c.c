@@ -66,50 +66,6 @@ static void escputc(int c, FILE *f) {
 	putc(c, f);
 }
 
-/* TODO: centralise (perhaps into libfsm's API itself?) */
-static struct fsm_state *findmode(const struct fsm_state *state) {
-	struct fsm_state *mode;
-	unsigned int freq;
-	int i, j;
-
-	mode = NULL;
-	freq = 1;
-
-	/* TODO: DFA only */
-
-	for (i = 0; i <= UCHAR_MAX; i++) {
-		unsigned int curr;
-
-		if (state->edges[i].sl == NULL) {
-			continue;
-		}
-
-/* TODO: loop through all states instead; this can be done equally well for an NFA state */
-		assert(state->edges[i].sl->state != NULL);
-		assert(state->edges[i].sl->next == NULL);
-
-		curr = 0;
-
-/* TODO: remaining ones with same state */
-		for (j = i + 1; j <= UCHAR_MAX; j++) {
-			if (state->edges[j].sl == NULL) {
-				continue;
-			}
-
-			if (state->edges[j].sl->state == state->edges[i].sl->state) {
-				curr++;
-			}
-		}
-
-		if (curr > freq) {
-			freq = curr;
-			mode = state->edges[i].sl->state;
-		}
-	}
-
-	return mode;
-}
-
 /* Return true if the edges after o contains state */
 /* TODO: centralise */
 static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
@@ -153,7 +109,7 @@ static void singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state) 
 	{
 		struct fsm_state *mode;
 
-		mode = findmode(state);
+		mode = fsm_iscompletestate(fsm, state) ? fsm_findmode(state) : NULL;
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
 			if (state->edges[i].sl == NULL) {
@@ -177,7 +133,7 @@ static void singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state) 
 				continue;
 			}
 
-			/* TODO: pass S%u out to maximum state width */
+			/* TODO: pad S%u out to maximum state width */
 			if (state->edges[i].sl->state != state) {
 				fprintf(f, " state = S%u; continue;\n", indexof(fsm, state->edges[i].sl->state));
 			} else {
