@@ -106,6 +106,17 @@ re_new_copy(const struct re *re, enum re_cflags cflags, enum re_err *err)
 	}
 
 	if (cflags & RE_COMPLEMENT) {
+		if (!fsm_todfa(new->fsm)) {
+			re_free(new);
+			return NULL;
+		}
+
+		if (!fsm_complete(new->fsm)) {
+			re_free(new);
+			return NULL;
+		}
+
+		/* XXX: breaking abstraction */
 		if (!fsm_complement(new->fsm)) {
 			re_free(new);
 			return NULL;
