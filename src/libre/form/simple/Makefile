@@ -8,7 +8,7 @@ SIDFLAGS+= -s no-numeric-terminals
 SIDFLAGS+= -s no-terminals
 
 SID_SID= parser.sid
-SID_ACT= ${BASE_DIR}/src/libre/parser.act	# XXX: move this closer?
+SID_ACT= ${BASE_DIR}/src/libre/parser.act
 
 .include <lx.sid.mk>
 
