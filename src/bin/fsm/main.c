@@ -73,7 +73,7 @@ static int query(struct fsm *fsm, const char *name) {
 	}
 
 	fprintf(stderr, "unrecognised query; valid queries are: "
-		"isdfa, hasend\n");
+		"iscomplete, isdfa, hasend\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -109,7 +109,7 @@ static void transform(struct fsm *fsm, const char *name) {
 	}
 
 	fprintf(stderr, "unrecognised transformation; valid transformations are: "
-		"reverse, todfa, minimize\n");
+		"complete, complement, reverse, todfa, minimize\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -158,6 +158,7 @@ int main(int argc, char *argv[]) {
 			colour_hook_print
 		};
 
+		/* XXX: makes no sense for e.g. fsm -h */
 		fsm = fsm_parse(stdin);
 		if (fsm == NULL) {
 			exit(EXIT_FAILURE);
