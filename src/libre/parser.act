@@ -26,7 +26,6 @@
 
 	#include <assert.h>
 	#include <stdlib.h>
-	#include <stdio.h>	/* XXX */
 	#include <limits.h>
 
 	#include <fsm/fsm.h>
