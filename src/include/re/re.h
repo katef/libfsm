@@ -25,8 +25,9 @@ enum re_cflags {
 };
 
 enum re_eflags {
-	RE_NOTBOL  = 1 << 0,
-	RE_NOTEOL  = 1 << 1
+	RE_NOTBOL = 1 << 0,
+	RE_NOTEOL = 1 << 1,
+	RE_GREEDY = 1 << 2
 };
 
 enum re_err {
@@ -70,7 +71,7 @@ re_new_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
  * reversed or complemented.
  */
 struct re *
-re_new_copy(const struct re *re, enum re_cflags cflags, enum re_err *err);
+re_new_copy(const struct re *re, enum re_cflags cflags);
 
 void
 re_free(struct re *re);

@@ -80,12 +80,13 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 }
 
 struct re *
-re_new_copy(const struct re *re, enum re_cflags cflags, enum re_err *err)
+re_new_copy(const struct re *re, enum re_cflags cflags)
 {
 	struct re *new;
 
 	assert(re != NULL);
 	assert(re->fsm != NULL);
+	assert(re->end != NULL);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
@@ -132,10 +133,6 @@ re_new_copy(const struct re *re, enum re_cflags cflags, enum re_err *err)
 	}
 
 	assert(fsm_isend(new->fsm, new->end));
-
-	fsm_setend(new->fsm, new->end, 0);
-
-	assert(!fsm_hasend(new->fsm));
 
 	return new;
 }
