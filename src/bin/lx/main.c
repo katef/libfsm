@@ -36,6 +36,37 @@ static FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mo
 	return f;
 }
 
+void print_diagnostic(struct fsm_state *state) {
+	struct ast_mapping *m1;
+	struct ast_mapping *m2;
+	const char *t1;
+	const char *t2;
+	const struct colour_set *c;
+
+	m1 = state->cl->colour;
+
+	/*
+	 * TODO: intersect conflicting regexps, and output exactly the language
+	 * which conflicts (rendered as a regexp by fsm_reduce):
+	 *
+	 *   "patterns which match /ab.*c/ map to $token1, $token2"
+	 *   "conflicts: /ab.*c/ -> $token1, $token2;"
+	 *
+	 * Show all known conflicts before exiting
+	 */
+
+	for (c = state->cl->next; c != NULL; c = c->next) {
+		m2 = c->colour;
+
+		t1 = m1->token == NULL ? "(null)" : m1->token->s;
+		t2 = m2->token == NULL ? "(null)" : m2->token->s;
+
+		/* TODO: give some useful output */
+		fprintf(stderr, "conflict -> $%s/%p and -> $%s/%p\n", t1,
+			(void *) m1->to, t2, (void *) m2->to);
+	}
+}
+
 int main(int argc, char *argv[]) {
 	struct ast *ast;
 	enum lx_out format = LX_OUT_C;
@@ -147,6 +178,11 @@ int main(int argc, char *argv[]) {
 		struct ast_zone  *z;
 		struct fsm_state *s;
 
+		assert(ast->zl != NULL);
+
+		/* TODO: check for: no end states (same as no tokens?) */
+		/* TODO: check for reserved token names (ERROR, EOF etc) */
+
 		for (z = ast->zl; z != NULL; z = z->next) {
 			assert(z->re != NULL);
 
@@ -158,7 +194,8 @@ int main(int argc, char *argv[]) {
 				assert(s->cl != NULL);
 
 				if (s->cl->next != NULL) {
-					fprintf(stderr, "conflict\n");  /* TODO: give some useful output */
+					/* TODO: cli option to dump conflicting .fsm */
+					print_diagnostic(s);
 					return EXIT_FAILURE;
 				}
 			}
