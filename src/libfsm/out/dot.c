@@ -101,6 +101,8 @@ static void escputc(int c, FILE *f) {
 
 		{ '&',  "&amp;"  },
 		{ '\"', "&quot;" },
+		{ '<',  "&#x3C;" },
+		{ '>',  "&#x3E;" },
 		{ '\\', "\\\\"   },
 		{ '\n', "\\n"    },
 		{ '\r', "\\r"    },
@@ -205,9 +207,12 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 	assert(s != NULL);
 	assert(options != NULL);
 
-	/* TODO: findany() here? */
 	if (fsm_isend(fsm, s)) {
 		fprintf(f, "\t%-2u [ label = <", indexof(fsm, s));
+
+		if (!options->anonymous_states) {
+			fprintf(f, "%u<br/>", indexof(fsm, s));
+		}
 
 		printcolours(fsm, s->cl, f);
 
@@ -244,7 +249,6 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 		for (e = s->edges[i].sl; e != NULL; e = e->next) {
 			static const struct bm bm_empty;
 			struct bm bm;
-			struct state_set *e2;
 			int hi, lo;
 			int k;
 			int count;
@@ -259,20 +263,9 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 
 			bm = bm_empty;
 
-			/* find all edges which go to this state */
+			/* find all edges which go from this state to the same target state */
 			for (k = 0; k <= FSM_EDGE_MAX; k++) {
-				for (e2 = s->edges[k].sl; e2 != NULL; e2 = e2->next) {
-					if (e2->state != e->state) {
-						continue;
-					}
-
-					/*
-					 * Duplicate edges in NFA such as [aabc] are actually only
-					 * stored once per transition (i.e. [abc]), because the sets
-					 * in set.c do not have duplicate elements.
-					 */
-					assert(!bm_get(&bm, k));
-
+				if (set_contains(e->state, s->edges[k].sl)) {
 					bm_set(&bm, k);
 				}
 			}
