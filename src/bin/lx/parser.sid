@@ -29,7 +29,8 @@
 	<compile-literal>: (:string) -> (:re);
 	<compile-regex>:   (:string) -> (:re);
 
-	<concat-regex>: (:re, :re) -> (:re);
+	<concat-regex>:     (:re, :re) -> (:re);
+	<complement-regex>: (:re)      -> (:re);
 
 	<make-ast>:     ()                                 -> (:ast);
 	<make-zone>:    (:ast)                             -> (:zone);
@@ -38,7 +39,7 @@
 	<set-globalzone>: (:ast, :zone) -> ();
 
 	<no-token>: () -> (:string);
-	<no-zone>:  () -> (:zone);
+	<no-to>:    () -> (:zone);	/* TODO: rename target? */
 
 	!<free>: (:string) -> ();
 
@@ -101,7 +102,7 @@
 		};
 
 		zone-thing: (a :ast, parent :zone) -> () = {
-			(r1, t1) = token-mapping();
+			(r1, t1) = token-mapping;
 
 			{
 				to;
@@ -109,12 +110,9 @@
 				<err-expected-to>;
 			};
 
-			(r2, t2) = token-mapping();
+			(r2, t2) = token-mapping;
 
 			child = <make-zone>(a);
-
-			<make-mapping>(a, parent, child, r1, t1);
-			<make-mapping>(a, child, parent, r2, t2);
 
 			{
 				{
@@ -122,6 +120,21 @@
 				##
 					<err-expected-semi>;
 				};
+
+				/*
+				 * This is an implicit zone, written: /r1/ .. /r2/;
+				 * which is equivalent to: /r1/ .. /r2/ { /r2/v; }
+				 * (i.e. discard everything which is not the exiting regexp.)
+				 *
+				 * If you want a zone where every character (other than the
+				 * exiting regexp) is treated as an error, then explicitly
+				 * specify an empty zone instead: /r1/ .. /r2/ { }
+				 */
+
+				x = <no-to>;
+				y = <complement-regex>(r2);
+				z = <no-token>;
+				<make-mapping>(a, child, x, y, z);
 			||
 				{
 					open;
@@ -139,11 +152,14 @@
 			##
 				<err-expected-list>;
 			};
+
+			<make-mapping>(a, parent, child, r1, t1);
+			<make-mapping>(a, child, parent, r2, t2);
 		};
 
 		thing: (a :ast, z :zone) -> () = {
 			(r, t) = token-thing(a, z);
-			to = <no-zone>;
+			to = <no-to>;
 			<make-mapping>(a, z, to, r, t);
 		||
 			zone-thing(a, z);

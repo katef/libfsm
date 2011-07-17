@@ -24,6 +24,7 @@
 	#include <stdlib.h>
 
 	#include <re/re.h>
+	#include "../../libre/internal.h"	/* XXX */
 
 	#include "lexer.h"
 	#include "parser.h"
@@ -97,8 +98,7 @@
 	<compile-literal>: (s :string) -> (r :re) = @{
 		assert(@s != NULL);
 
-		/* TODO: add colour */
-
+		/* TODO: handle error codes */
 		@r = re_new_comp(RE_LITERAL, re_getc_str, &@s, 0, NULL);
 		if (@r == NULL) {
 			/* TODO: use *err */
@@ -109,8 +109,7 @@
 	<compile-regex>:   (s :string) -> (r :re) = @{
 		assert(@s != NULL);
 
-		/* TODO: add colour */
-
+		/* TODO: handle error codes */
 		@r = re_new_comp(RE_SIMPLE, re_getc_str, &@s, 0, NULL);
 		if (@r == NULL) {
 			/* TODO: use *err */
@@ -152,7 +151,9 @@
 		struct ast_token *t;
 		struct ast_mapping *m;
 
+		assert(@a != NULL);
 		assert(@from != NULL);
+		assert(@from != @to);
 		assert(@r != NULL);
 
 		if (@t != NULL) {
@@ -183,8 +184,19 @@
 		@s = NULL;
 	@};
 
-	<no-zone>: () -> (z :zone) = @{
+	<no-to>: () -> (z :zone) = @{
 		@z = NULL;
+	@};
+
+	<complement-regex>: (r :re) -> (new :re) = @{
+		assert(@r != NULL);
+
+		/* TODO: handle error codes */
+		@new = re_new_copy(@r, RE_COMPLEMENT);
+		if (@new == NULL) {
+			perror("re_new_copy");
+			@!;
+		}
 	@};
 
 	<free>: (s :string) -> () = @{
