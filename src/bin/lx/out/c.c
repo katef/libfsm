@@ -372,30 +372,60 @@ out_c(const struct ast *ast, FILE *f)
 		out_zone(f, ast, z);
 	}
 
-	fprintf(f, "enum lx_token lx_nexttoken(struct lx *lx) {\n");
+	{
+		struct ast_token *t;
 
-	fprintf(f, "\tenum lx_token t;\n");
-	fprintf(f, "\n");
-	fprintf(f, "\tassert(lx != NULL);\n");
+		fprintf(f, "const char *lx_name(enum lx_token t) {\n");
+
+		fprintf(f, "\tswitch (t) {\n");
+
+		for (t = ast->tl; t != NULL; t = t->next) {
+			fprintf(f, "\tcase TOK_");
+			out_esctok(f, t->s);
+			fprintf(f, ": return \"");
+			out_esctok(f, t->s);
+			fprintf(f, "\";\n");
+		}
+
+		fprintf(f, "\tcase TOK_EOF:   return \"EOF\";\n");
+		fprintf(f, "\tcase TOK_ERROR: return \"ERROR\";\n");
+
+		fprintf(f, "\tdefault: return \"?\";\n");
+
+		fprintf(f, "\t}\n");
+
+		fprintf(f, "}\n");
+	}
+
 	fprintf(f, "\n");
 
-	fprintf(f, "\tif (lx->getc == NULL) {\n");
-	fprintf(f, "\t\treturn TOK_EOF;\n");
-	fprintf(f, "\t}\n");
-	fprintf(f, "\n");
+	{
+		fprintf(f, "enum lx_token lx_nexttoken(struct lx *lx) {\n");
 
-	fprintf(f, "\tif (lx->z == NULL) {\n");
-	fprintf(f, "\t\tlx->z = z%u;\n", zindexof(ast, ast->global));
-	fprintf(f, "\t}\n");
-	fprintf(f, "\n");
+		fprintf(f, "\tenum lx_token t;\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tassert(lx != NULL);\n");
+		fprintf(f, "\n");
 
-	fprintf(f, "\tt = lx->z(lx);\n");
-	fprintf(f, "\n");
-	fprintf(f, "\tlx->z = z%u;\n", zindexof(ast, ast->global));
-	fprintf(f, "\n");
-	fprintf(f, "\treturn t;\n");
+		fprintf(f, "\tif (lx->getc == NULL) {\n");
+		fprintf(f, "\t\treturn TOK_EOF;\n");
+		fprintf(f, "\t}\n");
+		fprintf(f, "\n");
 
-	fprintf(f, "}\n");
+		fprintf(f, "\tif (lx->z == NULL) {\n");
+		fprintf(f, "\t\tlx->z = z%u;\n", zindexof(ast, ast->global));
+		fprintf(f, "\t}\n");
+		fprintf(f, "\n");
+
+		fprintf(f, "\tt = lx->z(lx);\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tlx->z = z%u;\n", zindexof(ast, ast->global));
+		fprintf(f, "\n");
+		fprintf(f, "\treturn t;\n");
+
+		fprintf(f, "}\n");
+	}
+
 	fprintf(f, "\n");
 }
 

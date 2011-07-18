@@ -71,6 +71,9 @@ out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
+	fprintf(f, "const char *lx_name(enum lx_token t);\n");
+	fprintf(f, "\n");
+
 	fprintf(f, "enum lx_token lx_nexttoken(struct lx *lx);\n");
 	fprintf(f, "\n");
 
