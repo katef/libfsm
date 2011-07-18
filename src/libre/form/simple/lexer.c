@@ -63,7 +63,15 @@ nexttoken_esc(struct lex_state *state)
 
 	c = state->f(state->opaque);
 
-	state->c = c;
+	switch (c) {
+	case '\\': state->c = '\\'; break;
+	case 't':  state->c = '\t'; break;
+	case 'n':  state->c = '\n'; break;
+	case 'r':  state->c = '\r'; break;
+	case 'v':  state->c = '\v'; break;
+	case 'f':  state->c = '\f'; break;
+	default:   state->c = c;    break;
+	}
 
 	switch (c) {
 	case EOF: return TOK_EOF;
