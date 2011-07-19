@@ -80,7 +80,7 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
+	for (s = fsm->sl, i = 1; s != NULL; s = s->next, i++) {
 		if (s == state) {
 			return i;
 		}
@@ -208,7 +208,9 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 	assert(options != NULL);
 
 	if (fsm_isend(fsm, s)) {
-		fprintf(f, "\t%-2u [ label = <", indexof(fsm, s));
+		fprintf(f, "\t%sS%-2u [ label = <",
+			options->prefix != NULL ? options->prefix : "",
+			indexof(fsm, s));
 
 		if (!options->anonymous_states) {
 			fprintf(f, "%u<br/>", indexof(fsm, s));
@@ -224,8 +226,11 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 			for (e = s->edges[i].sl; e != NULL; e = e->next) {
 				assert(e->state != NULL);
 
-				fprintf(f, "\t%-2u -> %-2u [ label = <",
-					indexof(fsm, s), indexof(fsm, e->state));
+				fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
+					options->prefix != NULL ? options->prefix : "",
+					indexof(fsm, s),
+					options->prefix != NULL ? options->prefix : "",
+					indexof(fsm, e->state));
 
 				escputc(i, f);
 
@@ -287,13 +292,19 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 			}
 
 			if (mode == MODE_ANY) {
-				fprintf(f, "\t%-2u -> %-2u [ label = </./> ];\n",
-					indexof(fsm, s), indexof(fsm, e->state));
+				fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = </./> ];\n",
+					options->prefix != NULL ? options->prefix : "",
+					indexof(fsm, s),
+					options->prefix != NULL ? options->prefix : "",
+					indexof(fsm, e->state));
 				continue;
 			}
 
-			fprintf(f, "\t%-2u -> %-2u [ label = <%s%s",
-				indexof(fsm, s), indexof(fsm, e->state),
+			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <%s%s",
+				options->prefix != NULL ? options->prefix : "",
+				indexof(fsm, s),
+				options->prefix != NULL ? options->prefix : "",
+				indexof(fsm, e->state),
 				mode == MODE_SINGLE ? "" : "[",
 				mode != MODE_INVERT ? "" : "^");
 
@@ -350,7 +361,9 @@ static void out_dotfrag(const struct fsm *fsm, FILE *f, const struct fsm_outopti
 		singlestate(fsm, f, s, options);
 
 		if (fsm_isend(fsm, s)) {
-			fprintf(f, "\t%-2u [ shape = doublecircle ];\n", indexof(fsm, s));
+			fprintf(f, "\t%sS%-2u [ shape = doublecircle ];\n",
+				options->prefix != NULL ? options->prefix : "",
+				indexof(fsm, s));
 		}
 	}
 }
@@ -382,7 +395,9 @@ void out_dot(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *option
 	fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
 
 	start = fsm_getstart(fsm);
-	fprintf(f, "\tstart -> %u;\n", start != NULL ? indexof(fsm, start) : 0U);
+	fprintf(f, "\tstart -> %sS%u;\n",
+		options->prefix != NULL ? options->prefix : "",
+		 start != NULL ? indexof(fsm, start) : 0U);
 
 	fprintf(f, "\n");
 
