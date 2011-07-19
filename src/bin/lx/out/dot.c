@@ -14,107 +14,6 @@
 #include "../internal.h"
 
 
-/* TODO: centralise */
-static void escputc(int c, FILE *f) {
-	assert(f != NULL);
-
-	switch (c) {
-	case FSM_EDGE_EPSILON:
-		fprintf(f, "E");	/* TODO */
-		return;
-
-#if 0
-	case '\\':
-		fprintf(f, "\\\\");
-		return;
-
-	case '\n':
-		fprintf(f, "\\n");
-		return;
-
-	case '\r':
-		fprintf(f, "\\r");
-		return;
-
-	case '\f':
-		fprintf(f, "\\f");
-		return;
-
-	case '\v':
-		fprintf(f, "\\v");
-		return;
-
-	case '\t':
-		fprintf(f, "\\t");
-		return;
-
-	case ' ':
-		/* fprintf(f, "&lsquo; &rsquo;"); */
-		fprintf(f, "' '");
-		return;
-
-	case '\"':
-		/* fprintf(f, "&lsquo;\\\"&rsquo;"); */
-		fprintf(f, "'\\\"'");
-		return;
-
-	case '\'':
-		/* fprintf(f, "&lsquo;\\'&rsquo;"); */
-		fprintf(f, "'\\''");
-		return;
-
-	case '.':
-		/* fprintf(f, "&lsquo;.&rsquo;"); */
-		fprintf(f, "'.'");
-		return;
-
-	case '|':
-		/* fprintf(f, "&lsquo;|&rsquo;"); */
-		fprintf(f, "'|'");
-		return;
-#endif
-
-	case '<':
-		/* fprintf(f, "&lsquo;<&rsquo;"); */
-		fprintf(f, "'<'");
-		return;
-
-	case '>':
-		/* fprintf(f, "&lsquo;>&rsquo;"); */
-		fprintf(f, "'>'");
-		return;
-
-	case '&':
-		/* fprintf(f, "&lsquo;&amp;&rsquo;"); */
-		fprintf(f, "'amp'");
-		return;
-
-	case ']':
-		/* fprintf(f, "&lsquo;=&rsquo;"); */
-		fprintf(f, "'cs'");
-		return;
-
-	case '[':
-		/* fprintf(f, "&lsquo;=&rsquo;"); */
-		fprintf(f, "'os'");
-		return;
-
-	case '=':
-		/* fprintf(f, "&lsquo;=&rsquo;"); */
-		fprintf(f, "equals");
-		return;
-
-	/* TODO: others */
-	}
-
-	if (!isprint(c)) {
-		fprintf(f, "0x%x", (unsigned char) c);
-		return;
-	}
-
-	putc(c, f);
-}
-
 /* TODO: centralise with libfsm */
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)
@@ -165,14 +64,6 @@ static void singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 	assert(z != NULL);
 	assert(s != NULL);
 
-	fprintf(f, "\t\tz%uS%u;\n",
-		zindexof(ast, z), indexof(fsm, s));
-
-	if (fsm->start == s) {
-		fprintf(f, "\t\t{ rank = min; z%uS%u; }\n",
-			zindexof(ast, z), indexof(fsm, s));
-	}
-
 	if (!fsm_isend(fsm, s)) {
 		return;
 	}
@@ -186,49 +77,17 @@ static void singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 	if (m->token != NULL) {
 		assert(m->token->s != NULL);
 
-		fprintf(f, "\t\tz%uS%u [ shape = doublecircle, label = \"$%s\" ];\n",
+		fprintf(f, "\t\tz%uS%u -> z%uS%u_tok [ color = gray ];\n",
+			zindexof(ast, z), indexof(fsm, s),
+			zindexof(ast, z), indexof(fsm, s));
+
+		fprintf(f, "\t\tz%uS%u_tok [ shape = plaintext, label = \"$%s\" ];\n",
 			zindexof(ast, z), indexof(fsm, s),
 			m->token->s);
 	}
-}
-
-static void edgesstate(const struct fsm *fsm, FILE *f, const struct ast *ast,
-	const struct ast_zone *z, const struct fsm_state *s) {
-	struct ast_mapping *m;
-	struct state_set *e;
-	int i;
-
-	assert(fsm != NULL);
-	assert(f != NULL);
-	assert(ast != NULL);
-	assert(z != NULL);
-	assert(s != NULL);
-
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		for (e = s->edges[i].sl; e != NULL; e = e->next) {
-			assert(e->state != NULL);
-			fprintf(f, "\t\tz%uS%u -> z%uS%u [ label = <",
-				zindexof(ast, z), indexof(fsm, s),
-				zindexof(ast, z), indexof(fsm, e->state));
-
-			escputc(i, f);
-
-			fprintf(f, "> ];\n");
-		}
-	}
-
-	if (!fsm_isend(fsm, s)) {
-		return;
-	}
-
-	assert(s->cl != NULL);
-	assert(s->cl->next == NULL);
-	assert(s->cl->colour != NULL);
-
-	m = s->cl->colour;
 
 	if (m->to == NULL) {
-		fprintf(f, "\t\tz%uS%u -> z%uS%u [ style = dashed ];\n",
+		fprintf(f, "\t\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
 			zindexof(ast, z), indexof(fsm, s),
 			zindexof(ast, ast->global), indexof(ast->global->re->fsm, ast->global->re->fsm->start));
 	} else if (m->to == z) {
@@ -236,7 +95,7 @@ static void edgesstate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 		assert(m->to->re->fsm != NULL);
 		assert(m->to->re->fsm->start != NULL);
 
-		fprintf(f, "\t\tz%uS%u -> z%uS%u [ style = dashed ];\n",
+		fprintf(f, "\t\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
 			zindexof(ast, z), indexof(fsm, s),
 			zindexof(ast, z), indexof(z->re->fsm, z->re->fsm->start));
 	} else {
@@ -244,7 +103,7 @@ static void edgesstate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 		assert(m->to->re->fsm != NULL);
 		assert(m->to->re->fsm->start != NULL);
 
-		fprintf(f, "\t\tz%uS%u -> z%uS%u [ style = dashed ];\n",
+		fprintf(f, "\t\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
 			zindexof(ast, z), indexof(fsm, s),
 			zindexof(ast, m->to), indexof(m->to->re->fsm, m->to->re->fsm->start));
 	}
@@ -253,8 +112,7 @@ static void edgesstate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 static void
 out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
-	const struct fsm_state *s;
-	/* TODO: prefix z0, z1 etc */
+	struct fsm_state *s;
 
 	assert(f != NULL);
 	assert(ast != NULL);
@@ -264,11 +122,26 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(z->re->fsm->start != NULL);
 
 	fprintf(f, "\tsubgraph cluster_z%u {\n", zindexof(ast, z));
+	fprintf(f, "\t\tcolor = gray;\n");
 
 	if (z == ast->global) {
 		fprintf(f, "\t\tlabel = <z%u<br/>(global)>;\n", zindexof(ast, z));
 	} else {
 		fprintf(f, "\t\tlabel = <z%u>;\n", zindexof(ast, z));
+	}
+
+	{
+		struct fsm_outoptions o = { 0 };
+		char prefix[128];
+
+		snprintf(prefix, sizeof prefix, "z%u", zindexof(ast, z));
+
+		o.anonymous_states  = 1;
+		o.consolidate_edges = 1;
+		o.fragment          = 1;
+		o.prefix            = prefix;
+
+		fsm_print(z->re->fsm, f, FSM_OUT_DOT, &o);
 	}
 
 	for (s = z->re->fsm->sl; s != NULL; s = s->next) {
@@ -277,24 +150,6 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 	fprintf(f, "\t}\n");
 	fprintf(f, "\t\n");
-}
-
-static void
-out_zoneedges(FILE *f, const struct ast *ast, const struct ast_zone *z)
-{
-	const struct fsm_state *s;
-	/* TODO: prefix z0, z1 etc */
-
-	assert(f != NULL);
-	assert(ast != NULL);
-	assert(z != NULL);
-	assert(z->re != NULL);
-	assert(z->re->fsm != NULL);
-	assert(z->re->fsm->start != NULL);
-
-	for (s = z->re->fsm->sl; s != NULL; s = s->next) {
-		edgesstate(z->re->fsm, f, ast, z, s);
-	}
 }
 
 void
@@ -310,18 +165,13 @@ out_dot(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "\tstart [ shape = plaintext ];\n");
-	fprintf(f, "\tstart -> z%uS%u\n",
-		zindexof(ast, ast->global), indexof(ast->global->re->fsm, ast->global->re->fsm->start));
+	fprintf(f, "\tstart -> z%uS%u [ color = gray ];\n",
+		zindexof(ast, ast->global),
+		indexof(ast->global->re->fsm, ast->global->re->fsm->start));
 	fprintf(f, "\n");
 
 	for (z = ast->zl; z != NULL; z = z->next) {
 		out_zone(f, ast, z);
-	}
-
-	fprintf(f, "\n");
-
-	for (z = ast->zl; z != NULL; z = z->next) {
-		out_zoneedges(f, ast, z);
 	}
 
 	fprintf(f, "}\n");
