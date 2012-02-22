@@ -1,0 +1,157 @@
+/* $Id$ */
+/* $Id$ */
+/* indentation at the left of the page */
+/* horizontal padding around chunky items (e.g. table rows, menu links) */
+/* (vertical "padding" is iferred from the line-height) */
+/* $Id$ */
+/* $Id$ */
+/* indentation at the left of the page */
+/* horizontal padding around chunky items (e.g. table rows, menu links) */
+/* (vertical "padding" is iferred from the line-height) */
+dl {
+  margin: 18px 0;
+}
+dl dt {
+  font-weight: bold;
+}
+dl dd {
+  margin: 0 0 18px 20px;
+}
+ul, ol {
+  margin: 0;
+  padding: 0 0 0 20px;
+}
+/* intentionally off-grid */
+ul li, ol li {
+  margin-bottom: 9px;
+}
+/* intentionally off-grid */
+li p, dl dd p {
+  margin: 0 0 9px 0;
+}
+/* $Id$ */
+/* $Id$ */
+/* indentation at the left of the page */
+/* horizontal padding around chunky items (e.g. table rows, menu links) */
+/* (vertical "padding" is iferred from the line-height) */
+h1, h2, h3 {
+  font-weight: normal;
+  font-size: 14px;
+  line-height: 18px;
+  margin: 0;
+}
+div.body h1 {
+  letter-spacing: 0px;
+}
+div.body h2 {
+  letter-spacing: 1px;
+}
+h1 {
+  line-height: 54px;
+  font-size: 35px;
+  margin: 0;
+  margin-bottom: 18px;
+}
+h2 {
+  line-height: 54px;
+  font-size: 21px;
+  margin: 0;
+}
+h3 {
+  font-size: 14px;
+  font-weight: bold;
+}
+h4 {
+  font-size: 14px;
+  font-weight: bold;
+}
+/* $Id$ */
+/* $Id$ */
+/* indentation at the left of the page */
+/* horizontal padding around chunky items (e.g. table rows, menu links) */
+/* (vertical "padding" is iferred from the line-height) */
+table th.table-sortable:hover {
+  cursor: pointer;
+  background-color: #eee;
+}
+table th.table-sortable:hover:after {
+  color: #ccc;
+}
+table th.table-notype {
+  border-color: darkred;
+  background-color: pink;
+}
+table th.table-descending:after {
+  content: "\25B2";
+}
+table th.table-ascending:after {
+  content: "\25BC";
+}
+table th.table-sorted:after {
+  min-width: 1em;
+  text-align: right;
+  padding-left: 1em;
+  color: #ddd;
+  display: block;
+  float: right;
+  cursor: pointer;
+}
+table th {
+  background-color: #f7f7f7;
+}
+table {
+  margin: 16px 6px;
+  /* -2px for the borders */
+
+  border-collapse: collapse;
+  border-left: solid 1px #ddd;
+  border-bottom: solid 1px #ddd;
+}
+/*
+ * I can't find a way to space tables nicely, and keep them as multiples of the
+ * baseline. So I'm having them intentionally off-grid (perhaps a little
+ * ironic, for a table). Perhaps I can write some javascript which spaces their
+ * containing element to restore vertical rythm for following elements.
+ */
+table th, table td {
+  padding: 0 13px;
+  /* -1px for the border */
+
+  line-height: 26px;
+  /* -1px for the border */
+
+  font-size: 13px;
+  vertical-align: top;
+  border-top: solid 1px #ddd;
+  border-right: solid 1px #ddd;
+  border-left: none;
+  border-bottom: none;
+}
+/* TODO: this should be output and appended to common.css */
+/* TODO: main focus here is on baseline for vertical rythm */
+div.body {
+  padding: 18px 0;
+}
+a {
+  text-decoration: underline;
+}
+body {
+  background-color: #fff;
+  font-family: verdana, tahoma, sans-serif;
+  font-size: 14px;
+  color: #555;
+  line-height: 18px;
+}
+body, p, dd {
+  text-align: justify;
+}
+p {
+  margin: 0 0 18px 0;
+}
+blockquote {
+  margin: 0 20px 18px 20px;
+  color: #999;
+}
+pre {
+  margin: 0;
+}

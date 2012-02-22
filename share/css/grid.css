@@ -1,0 +1,128 @@
+/* $Id$ */
+/* $Id$ */
+/* indentation at the left of the page */
+/* horizontal padding around chunky items (e.g. table rows, menu links) */
+/* (vertical "padding" is iferred from the line-height) */
+/* TODO: this should be output and appended to common.css */
+/* TODO: maybe use less's @import to do that... call files e.g. common.grid.css and common.typography.css etc */
+/* Origionally based on blueprint's grid.grid-css */
+/* A container should group all your columns. */
+.grid-container {
+  width: 960px;
+  margin: 0 auto;
+}
+/* Clearing floats without extra markup
+	 Based on How To Clear Floats Without Structural Markup by PiE
+	 [http://www.positioniseverything.net/easyclearing.html] */
+.grid-clearfix:after, .grid-container:after {
+  content: "\0020";
+  display: block;
+  height: 0;
+  clear: both;
+  visibility: hidden;
+  overflow: hidden;
+}
+.grid-clearfix, .grid-container {
+  display: block;
+}
+/* Sets up basic grid floating and margin. */
+.grid-column,
+.grid-span-1,
+.grid-span-2,
+.grid-span-3,
+.grid-span-4,
+.grid-span-5,
+.grid-span-6 {
+  float: left;
+  margin-right: 20px;
+}
+/* The last column in a row needs this class. */
+.grid-last {
+  margin-right: 0;
+}
+/* Use these classes to set the width of a column. */
+.grid-span-1 {
+  width: 100px;
+}
+.grid-span-2 {
+  width: 220px;
+}
+.grid-span-3 {
+  width: 340px;
+}
+.grid-span-4 {
+  width: 460px;
+}
+.grid-span-5 {
+  width: 580px;
+}
+.grid-span-6 {
+  width: 700px;
+}
+.grid-span-7 {
+  width: 820px;
+}
+.grid-span-8 {
+  width: 940px;
+}
+.grid-span-8 {
+  margin-right: 0;
+}
+/* Add these to a column to append empty cols. */
+.grid-append-1 {
+  padding-right: 120px;
+}
+.grid-append-2 {
+  padding-right: 240px;
+}
+.grid-append-3 {
+  padding-right: 360px;
+}
+.grid-append-4 {
+  padding-right: 480px;
+}
+.grid-append-5 {
+  padding-right: 600px;
+}
+.grid-append-6 {
+  padding-right: 720px;
+}
+.grid-append-7 {
+  padding-right: 840px;
+}
+.grid-append-8 {
+  padding-right: 960px;
+}
+/* Add these to a column to prepend empty cols. */
+.grid-prepend-1 {
+  padding-left: 120px;
+}
+.grid-prepend-2 {
+  padding-left: 240px;
+}
+.grid-prepend-3 {
+  padding-left: 360px;
+}
+.grid-prepend-4 {
+  padding-left: 480px;
+}
+.grid-prepend-5 {
+  padding-left: 600px;
+}
+.grid-prepend-6 {
+  padding-left: 720px;
+}
+.grid-prepend-7 {
+  padding-left: 840px;
+}
+.grid-prepend-8 {
+  padding-left: 960px;
+}
+/* Border on right hand side of a column. */
+.grid-border {
+  /* Note this assumes @grid-gutter is even */
+
+  padding-right: 9px;
+  margin-right: 10px;
+  border-right: 1px solid;
+}

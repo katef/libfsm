@@ -1,0 +1,48 @@
+/* $Id$ */
+
+@import "config.less";
+
+@import "lists.less";
+@import "headings.less";
+@import "tables.less";
+
+
+/* TODO: this should be output and appended to common.css */
+
+/* TODO: main focus here is on baseline for vertical rythm */
+
+
+
+div.body {
+	padding: @grid-baseline 0;
+}
+
+a {
+	text-decoration: underline;
+}
+
+body {
+	background-color: #fff;
+	font-family: verdana, tahoma, sans-serif;
+font-size: @grid-basefont;
+color: #555;
+	line-height: @grid-baseline;
+}
+
+body, p, dd {
+    text-align: justify;
+}
+
+p {
+	margin: 0 0 @grid-baseline 0;
+}
+
+blockquote {
+	margin: 0 @grid-indent @grid-baseline @grid-indent;
+	color: #999;
+}
+
+pre {
+	margin: 0;
+}
+

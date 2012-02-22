@@ -1,0 +1,33 @@
+/* $Id$ */
+
+@import "config.less";
+
+
+dl {
+	margin: @grid-baseline 0;
+}
+
+dl dt {
+	font-weight: bold;
+}
+
+dl dd {
+	margin: 0 0 @grid-baseline @grid-indent;
+}
+
+ul, ol {
+	margin: 0;
+	padding: 0 0 0 @grid-indent;
+}
+
+/* intentionally off-grid */
+ul li, ol li {
+	margin-bottom: (@grid-baseline / 2);
+}
+
+/* intentionally off-grid */
+li p,
+dl dd p {
+	margin: 0 0 (@grid-baseline / 2) 0;
+}
+

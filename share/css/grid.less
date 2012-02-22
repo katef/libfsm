@@ -1,0 +1,97 @@
+/* $Id$ */
+
+@import "config.less";
+
+
+/* TODO: this should be output and appended to common.css */
+/* TODO: maybe use less's @import to do that... call files e.g. common.grid.css and common.typography.css etc */
+
+/* Origionally based on blueprint's grid.grid-css */
+
+
+/* A container should group all your columns. */
+.grid-container {
+	width: @grid-total;
+	margin: 0 auto;
+}
+
+
+/* Clearing floats without extra markup
+	 Based on How To Clear Floats Without Structural Markup by PiE
+	 [http://www.positioniseverything.net/easyclearing.html] */
+
+.grid-clearfix:after, .grid-container:after {
+	content: "\0020";
+	display: block;
+	height: 0;
+	clear: both;
+	visibility: hidden;
+	overflow: hidden;
+}
+
+.grid-clearfix, .grid-container {
+	display: block;
+}
+
+
+
+/* Sets up basic grid floating and margin. */
+.grid-column,
+.grid-span-1,
+.grid-span-2,
+.grid-span-3,
+.grid-span-4,
+.grid-span-5,
+.grid-span-6 {
+	float: left;
+	margin-right: @grid-gutter;
+}
+
+/* The last column in a row needs this class. */
+.grid-last { margin-right: 0; }
+
+/* Use these classes to set the width of a column. */
+.grid-width (@cols) { width: (@grid-col * @cols + @grid-gutter * (@cols - 1)); }
+.grid-span-1  { .grid-width( 1); }
+.grid-span-2  { .grid-width( 2); }
+.grid-span-3  { .grid-width( 3); }
+.grid-span-4  { .grid-width( 4); }
+.grid-span-5  { .grid-width( 5); }
+.grid-span-6  { .grid-width( 6); }
+.grid-span-7  { .grid-width( 7); }
+.grid-span-8  { .grid-width( 8); }
+
+.grid-span-8 { .grid-last; }
+
+
+/* Add these to a column to append empty cols. */
+.grid-append (@cols) { padding-right: (@cols * (@grid-col + @grid-gutter)); }
+.grid-append-1  { .grid-append( 1); }
+.grid-append-2  { .grid-append( 2); }
+.grid-append-3  { .grid-append( 3); }
+.grid-append-4  { .grid-append( 4); }
+.grid-append-5  { .grid-append( 5); }
+.grid-append-6  { .grid-append( 6); }
+.grid-append-7  { .grid-append( 7); }
+.grid-append-8  { .grid-append( 8); }
+
+/* Add these to a column to prepend empty cols. */
+.grid-prepend (@cols) { padding-left: (@cols * (@grid-col + @grid-gutter)); }
+.grid-prepend-1  { .grid-prepend( 1); }
+.grid-prepend-2  { .grid-prepend( 2); }
+.grid-prepend-3  { .grid-prepend( 3); }
+.grid-prepend-4  { .grid-prepend( 4); }
+.grid-prepend-5  { .grid-prepend( 5); }
+.grid-prepend-6  { .grid-prepend( 6); }
+.grid-prepend-7  { .grid-prepend( 7); }
+.grid-prepend-8  { .grid-prepend( 8); }
+
+
+/* Border on right hand side of a column. */
+.grid-border {
+	/* Note this assumes @grid-gutter is even */
+	padding-right: (@grid-gutter / 2 - 1px);
+	margin-right:  (@grid-gutter / 2);
+	border-right: 1px solid;
+}
+

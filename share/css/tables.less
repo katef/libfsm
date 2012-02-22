@@ -1,0 +1,66 @@
+/* $Id$ */
+
+@import "config.less";
+
+
+table th.table-sortable:hover {
+	cursor: pointer;
+	background-color: #eee;
+}
+
+table th.table-sortable:hover:after {
+	color: #ccc;
+}
+
+table th.table-notype {
+	border-color: darkred;
+	background-color: pink;
+}
+
+table th.table-descending:after {
+	content: "\25B2";
+}
+
+table th.table-ascending:after {
+	content: "\25BC";
+}
+
+table th.table-sorted:after {
+	min-width: 1em;
+	text-align: right;
+	padding-left: 1em;
+	color: #ddd;
+	display: block;
+	float: right;
+	cursor: pointer;
+}
+
+
+table th {
+	background-color: #f7f7f7;
+}
+
+table {
+	margin: (@grid-baseline - 2px) (@grid-indent - @grid-basefont);	/* -2px for the borders */
+	border-collapse: collapse;
+	border-left: solid 1px #ddd;
+	border-bottom: solid 1px #ddd;
+}
+
+/*
+ * I can't find a way to space tables nicely, and keep them as multiples of the
+ * baseline. So I'm having them intentionally off-grid (perhaps a little
+ * ironic, for a table). Perhaps I can write some javascript which spaces their
+ * containing element to restore vertical rythm for following elements.
+ */
+table th, table td {
+	padding: 0 (@grid-pad-sides - 1px);	/* -1px for the border */
+	line-height: (@grid-baseline * 1.5 - 1px);	/* -1px for the border */
+	font-size: (@grid-basefont - 1px);
+	vertical-align: top;
+	border-top: solid 1px #ddd;
+	border-right: solid 1px #ddd;
+	border-left: none;
+	border-bottom: none;
+}
+
