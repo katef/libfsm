@@ -1,0 +1,96 @@
+/* $Id$ */
+
+svg.dot {
+	color: #eee;
+}
+
+svg.dot path, svg.dot polygon, svg.dot ellipse {
+	stroke: #444;
+}
+
+svg.dot polygon {
+	fill: #555;
+}
+
+svg.dot path {
+	fill: none ! important;
+}
+
+svg.dot a {
+	text-decoration: none;
+	cursor: pointer;
+}
+
+svg.dot a text {
+	font-family: verdana, sans-serif;
+	fill: #444;
+}
+
+/* this gives the mouse something to hover over */
+svg.dot ellipse {
+	fill: white;
+	fill-opacity: 0.0;
+}
+
+svg.dot ellipse.inner {
+	fill-opacity: 0 ! important;
+}
+
+/* a for node, g for edge. .hoveredge is for the <menu> */
+/* XXX: not sure if i like the effect .hoveredge has for <menu> */
+svg.dot a.hoveredge path,
+svg.dot a.hoveredge polygon,
+svg.dot a:hover ellipse, svg.dot a:hover path,
+svg.dot a.hover ellipse, svg.dot g.hover path,
+svg.dot a:hover polygon,
+svg.dot g.hover polygon {
+	stroke: #1b5;
+	stroke-width: 2px;
+	fill: #1b5;
+}
+
+svg.dot a:hover text,
+svg.dot a:visited:hover text,
+svg.dot a:link:hover text {
+	fill: #1b5;
+}
+
+svg.dot a:hover ellipse,
+svg.dot a.hover ellipse,
+svg.dot a.highlight:hover ellipse,
+svg.dot a:hover ellipse.highlight {
+	fill-opacity: 0.3;
+}
+
+/* node highlighting for inlined dot */
+svg.dot path.highlight,
+svg.dot polygon.highlight,
+svg.dot a.highlight path,
+svg.dot a.highlight polygon {
+	stroke: #1b5;
+	stroke-width: 1.25px;
+}
+
+svg.dot polygon.highlight,
+svg.dot text.highlight,
+svg.dot a.highlight polygon,
+svg.dot a.highlight text {
+	fill: #1b5;
+}
+
+svg.dot ellipse.highlight,
+svg.dot a.highlight ellipse {
+	stroke-width: 1.25px;
+	stroke: #1b5;
+	fill: #1b5;
+	fill-opacity: 0.15;
+}
+
+svg.dot a:hover ellipse.highlight,
+svg.dot a.highlight:hover ellipse.highlight,
+svg.dot a.highlight:hover ellipse,
+svg.dot a.highlight:hover path,
+svg.dot a.highlight:hover polygon {
+	stroke-width: 2px;
+}
+
