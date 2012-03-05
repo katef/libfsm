@@ -12,7 +12,23 @@
 	<!--
 		TODO: elide gv: nodes under $dot.inline
 		TODO: don't strip colours for inlined dot (except black, etc)
+		TODO: use SVG's arrows; see <marker>
 	-->
+
+	<!-- TODO: once per page -->
+	<xsl:template name="dot-defs">
+<defs>
+<!-- XXX: preserveAspectRatio -->
+	<symbol id="dot-node" preserveAspectRatio="xMidYMid meet" viewBox="-20 -20 40 40" stroke="red">
+		<circle r="11"/>
+	</symbol>
+
+	<symbol id="dot-end" preserveAspectRatio="xMidYMid meet" viewBox="-20 -20 40 40" stroke="blue">
+		<circle class="inner" r="11"/>
+		<circle r="15"/>
+	</symbol>
+</defs>
+	</xsl:template>
 
 	<xsl:template match="svg:svg">
 		<xsl:copy>
@@ -24,8 +40,15 @@
 				</xsl:attribute>
 			</xsl:if>
 
+<xsl:call-template name="dot-defs"/>
+
+
 			<xsl:apply-templates select="node()"/>
 		</xsl:copy>
+
+		<xsl:if test="not($dot.inline)">
+			<xsl:apply-templates select=".//svg:g[@class = 'node']//svg:ellipse" mode="css"/>
+		</xsl:if>
 	</xsl:template>
 
 	<xsl:template match="svg:*">
@@ -42,26 +65,27 @@
 		<xsl:copy/>
 	</xsl:template>
 
-	<xsl:template match="svg:ellipse">
-		<xsl:element name="{name()}">
-			<xsl:if test="following-sibling::svg:ellipse or @stroke = 'white'">
+	<xsl:template match="svg:ellipse[    preceding-sibling::svg:ellipse ]"/>
+	<xsl:template match="svg:ellipse[not(preceding-sibling::svg:ellipse)]">
+		<use x="{@cx - 20}" y="{@cy - 20}" width="40" height="40">
+			<xsl:attribute name="xlink:href">
+				<xsl:choose>
+					<xsl:when test="following-sibling::svg:ellipse">
+						<xsl:text>#dot-end</xsl:text>
+					</xsl:when>
+
+					<xsl:otherwise>
+						<xsl:text>#dot-node</xsl:text>
+					</xsl:otherwise>
+				</xsl:choose>
+			</xsl:attribute>
+
+			<xsl:if test="@stroke = 'white'">
 				<xsl:attribute name="class">
-					<xsl:if test="following-sibling::svg:ellipse">
-						<xsl:text>inner</xsl:text>
-					</xsl:if>
-
-					<xsl:if test="following-sibling::svg:ellipse and @stroke = 'white'">
-						<xsl:text> </xsl:text>
-					</xsl:if>
-
-					<xsl:if test="@stroke = 'white'">
-						<xsl:text>highlight</xsl:text>
-					</xsl:if>
+					<xsl:text>highlight</xsl:text>
 				</xsl:attribute>
 			</xsl:if>
-
-			<xsl:apply-templates select="@*|node()"/>
-		</xsl:element>
+		</use>
 	</xsl:template>
 
 	<xsl:template match="svg:polygon|svg:path">
@@ -121,9 +145,12 @@
 		</xsl:copy>
 	</xsl:template>
 
+	<!-- TODO: get rid of all $dot.inline; override everything from menu.xsl -->
 	<xsl:template match="svg:g[@class = 'node']">
 		<xsl:variable name="id" select="svg:title"/>
 
+<!-- TODO: a HTML <a>? -->
+<!-- first get the nodes right, then rework the <a>s -->
 		<a>
 			<xsl:if test="not($dot.inline)">
 				<xsl:attribute name="gv:node">
