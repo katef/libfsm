@@ -168,17 +168,8 @@
 					<xsl:text> &#8211; libfsm</xsl:text>
 				</title>
 
-<link rel="stylesheet" type="text/css" media="only screen and (min-width: 971px)                        " href="{$libfsm.url.www}/css/layout8.css"/>
-<link rel="stylesheet" type="text/css" media="only screen and (min-width: 721px) and (max-width:  970px)" href="{$libfsm.url.www}/css/layout6.css"/>
-<link rel="stylesheet" type="text/css" media="only screen and (min-width: 481px) and (max-width:  720px)" href="{$libfsm.url.www}/css/layout4.css"/>
-<link rel="stylesheet" type="text/css" media="only screen and                        (max-width:  480px)" href="{$libfsm.url.www}/css/layout3.css"/>
-
 				<!-- TODO: maybe a node set is better, after all -->
 				<!-- TODO: drop the unneccessary attributes for (x)html5 -->
-<!-- TODO: obsoleted by style.less
-					' ', $libfsm.url.www, '/css/grid.css',
-					' ', $libfsm.url.www, '/css/typography.css',
--->
 				<xsl:for-each select="str:tokenize(concat(
 					' ', 'http://fonts.googleapis.com/css?family=Quattrocento',
 					' ', $css))">
