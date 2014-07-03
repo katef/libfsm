@@ -17,7 +17,7 @@
 	#include <stdlib.h>
 
 	#include <re/re.h>
-	#include "../../libre/internal.h"	/* XXX */
+	#include "libre/internal.h"	/* XXX */
 
 	#include <adt/xalloc.h>
 

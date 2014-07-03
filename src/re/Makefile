@@ -14,10 +14,10 @@ SRCS+= main.c
 PROG= ${.CURDIR:T}
 
 # TODO: this needs doing properly, including dependencies for libraries being rebuilt
-#LDFLAGS+= -L${OBJ_DIR}/src/libfsm
+LDFLAGS+= -L${OBJ_DIR}/src/libfsm
 LDFLAGS+= -L${OBJ_DIR}/src/libre
 
-#LIBS+= -lfsm
+LIBS+= -lfsm
 LIBS+= -lre
 
 .include <lx.prog.mk>

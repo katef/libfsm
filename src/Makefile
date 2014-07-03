@@ -4,10 +4,14 @@
 
 
 SUBDIR+= adt
+
 #SUBDIR+= include
 SUBDIR+= libfsm
 SUBDIR+= libre
-SUBDIR+= bin
+
+SUBDIR+= fsm
+SUBDIR+= lx
+SUBDIR+= re
 
 .include <lx.subdir.mk>
 

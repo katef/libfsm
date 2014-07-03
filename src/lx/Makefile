@@ -22,7 +22,7 @@ SRCS+= out.c
 
 
 PARTS+= src/adt
-PARTS+= src/bin/lx/out
+PARTS+= src/lx/out
 
 .include <lx.parts.mk>
 
@@ -30,10 +30,10 @@ PARTS+= src/bin/lx/out
 PROG= ${.CURDIR:T}
 
 # TODO: this needs doing properly, including dependencies for libraries being rebuilt
-#LDFLAGS= -L${OBJ_DIR}/src/libfsm
-LDFLAGS= -L${OBJ_DIR}/src/libre
+LDFLAGS+= -L${OBJ_DIR}/src/libfsm
+LDFLAGS+= -L${OBJ_DIR}/src/libre
 
-#LIBS+= -lfsm
+LIBS+= -lfsm
 LIBS+= -lre
 
 .include <lx.prog.mk>
