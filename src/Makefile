@@ -5,7 +5,6 @@
 
 SUBDIR+= adt
 
-#SUBDIR+= include
 SUBDIR+= libfsm
 SUBDIR+= libre
 

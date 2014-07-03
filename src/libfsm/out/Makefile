@@ -4,7 +4,7 @@
 
 
 CFLAGS+= -I ${BASE_DIR}/src
-CFLAGS+= -I ${BASE_DIR}/src/include
+CFLAGS+= -I ${BASE_DIR}/include
 
 SRCS+= c.c
 SRCS+= dot.c

@@ -10,7 +10,7 @@ SID_ACT= parser.act
 
 
 CFLAGS+= -I ${BASE_DIR}/src
-CFLAGS+= -I ${BASE_DIR}/src/include
+CFLAGS+= -I ${BASE_DIR}/include
 
 SRCS+= ast.c
 SRCS+= lexer.c

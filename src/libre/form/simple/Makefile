@@ -14,7 +14,7 @@ SID_ACT= ${BASE_DIR}/src/libre/parser.act
 
 
 CFLAGS+= -I ${BASE_DIR}/src
-CFLAGS+= -I ${BASE_DIR}/src/include
+CFLAGS+= -I ${BASE_DIR}/include
 
 SRCS+= comp.c
 SRCS+= lexer.c

@@ -5,7 +5,7 @@
 
 #CFLAGS+= -I ${BASE_DIR}/src/lib
 CFLAGS+= -I ${BASE_DIR}/src/hooks
-CFLAGS+= -I ${BASE_DIR}/src/include
+CFLAGS+= -I ${BASE_DIR}/include
 
 SRCS+= getc.c
 SRCS+= re.c

@@ -3,7 +3,7 @@
 .include "Makefile.inc"
 
 
-CFLAGS+= -I ${BASE_DIR}/src/include
+CFLAGS+= -I ${BASE_DIR}/include
 
 SRCS+= xalloc.c
 
