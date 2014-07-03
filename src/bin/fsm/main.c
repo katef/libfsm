@@ -1,6 +1,6 @@
 /* $Id$ */
 
-#define _POSIX_SOURCE 2
+#define _POSIX_C_SOURCE 2
 
 #include <unistd.h>
 
