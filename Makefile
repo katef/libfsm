@@ -4,6 +4,7 @@
 
 
 #SUBDIR+= doc
+#SUBDIR+= include
 SUBDIR+= src
 SUBDIR+= tests
 
