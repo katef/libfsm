@@ -7,7 +7,10 @@
 	xmlns:xlink="http://www.w3.org/1999/xlink"
 	xmlns:gv="http://xml.libfsm.org/gv">
 
+<!-- XXX:
 	<xsl:param name="dot.inline" select="false()"/>
+-->
+	<xsl:param name="dot.inline" select="true()"/>
 
 	<!--
 		TODO: elide gv: nodes under $dot.inline
@@ -15,22 +18,9 @@
 		TODO: use SVG's arrows; see <marker>
 	-->
 
-	<!-- TODO: once per page -->
-	<xsl:template name="dot-defs">
-<defs>
-<!-- XXX: preserveAspectRatio -->
-	<symbol id="dot-node" preserveAspectRatio="xMidYMid meet" viewBox="-20 -20 40 40" stroke="red">
-		<circle r="11"/>
-	</symbol>
-
-	<symbol id="dot-end" preserveAspectRatio="xMidYMid meet" viewBox="-20 -20 40 40" stroke="blue">
-		<circle class="inner" r="11"/>
-		<circle r="15"/>
-	</symbol>
-</defs>
-	</xsl:template>
-
 	<xsl:template match="svg:svg">
+<xsl:processing-instruction name="xml-stylesheet">href="file:///home/kate/svn/www/var/libfsm-css/style.css" type="text/css"</xsl:processing-instruction>
+
 		<xsl:copy>
 			<xsl:apply-templates select="@*"/>
 
@@ -39,9 +29,6 @@
 					<xsl:text>dot</xsl:text>
 				</xsl:attribute>
 			</xsl:if>
-
-<xsl:call-template name="dot-defs"/>
-
 
 			<xsl:apply-templates select="node()"/>
 		</xsl:copy>
@@ -67,32 +54,37 @@
 
 	<xsl:template match="svg:ellipse[    preceding-sibling::svg:ellipse ]"/>
 	<xsl:template match="svg:ellipse[not(preceding-sibling::svg:ellipse)]">
-		<use x="{@cx - 20}" y="{@cy - 20}" width="40" height="40">
-			<xsl:attribute name="xlink:href">
-				<xsl:choose>
-					<xsl:when test="following-sibling::svg:ellipse">
-						<xsl:text>#dot-end</xsl:text>
-					</xsl:when>
+		<xsl:if test="@rx != @ry">
+			<xsl:message terminate="yes">
+				<xsl:text>ellipse rx=</xsl:text>
+				<xsl:value-of select="@rx"/>
+				<xsl:text> != ry=</xsl:text>
+				<xsl:value-of select="@ry"/>
+				<xsl:text>&#10;</xsl:text>
+			</xsl:message>
+		</xsl:if>
 
-					<xsl:otherwise>
-						<xsl:text>#dot-node</xsl:text>
-					</xsl:otherwise>
-				</xsl:choose>
-			</xsl:attribute>
+		<xsl:variable name="r" select="@rx"/>
 
-			<xsl:if test="@stroke = 'white'">
-				<xsl:attribute name="class">
-					<xsl:text>highlight</xsl:text>
-				</xsl:attribute>
-			</xsl:if>
-		</use>
+		<xsl:choose>
+			<xsl:when test="following-sibling::svg:ellipse">
+				<circle cx="{@cx}" cy="{@cy}" r="{$r + 0}" class="inner blue"/>
+				<circle cx="{@cx}" cy="{@cy}" r="{$r + 3}" class="blue"/>
+			</xsl:when>
+
+			<xsl:otherwise>
+				<circle cx="{@cx}" cy="{@cy}" r="{$r}" class="blue"/>
+			</xsl:otherwise>
+		</xsl:choose>
 	</xsl:template>
+<!-- TODO: isn't there a double border? -->
 
 	<xsl:template match="svg:polygon|svg:path">
 		<xsl:element name="{name()}">
 			<xsl:if test="@stroke = 'white'">
 				<xsl:attribute name="class">
 					<xsl:text>highlight</xsl:text>
+<xsl:text> blue</xsl:text>
 				</xsl:attribute>
 			</xsl:if>
 
