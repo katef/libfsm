@@ -12,10 +12,12 @@
 		These may be overridden by makefiles, on the command line for xsltproc.
 	-->
 
-	<xsl:param name="libfsm.ext"  select="'xhtml'"/>
+	<xsl:param name="libfsm.ext"  select="'xhtml5'"/>
 
-	<xsl:param name="libfsm.url.man" select="'http://man.libfsm.org'"/>
-	<xsl:param name="libfsm.url.www" select="'http://www.libfsm.org'"/>
+	<xsl:param name="libfsm.url.man"  select="'http://man.libfsm.org'"/>
+	<xsl:param name="libfsm.url.www"  select="'http://www.libfsm.org'"/>
+	<xsl:param name="libfsm.url.blog" select="'http://blog.libfsm.org'"/>
+	<xsl:param name="libfsm.url.rest" select="'http://rest.libfsm.org'"/>
 
 </xsl:stylesheet>
 
