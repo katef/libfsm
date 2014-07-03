@@ -1,10 +1,13 @@
 /* $Id$ */
 
+#define _POSIX_SOURCE 2
+
+#include <unistd.h>
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include <fsm/graph.h> /* XXX */
 #include <re/re.h>
