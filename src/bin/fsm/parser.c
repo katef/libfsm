@@ -19,7 +19,8 @@
 
 	#include <fsm/fsm.h>
 
-	#include "libfsm/xalloc.h"
+	#include <adt/xalloc.h>
+
 	#include "libfsm/internal.h"	/* XXX */
 
 	#include "lexer.h"

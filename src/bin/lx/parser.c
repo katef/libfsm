@@ -19,9 +19,10 @@
 	#include <re/re.h>
 	#include "../../libre/internal.h"	/* XXX */
 
+	#include <adt/xalloc.h>
+
 	#include "lexer.h"
 	#include "parser.h"
-	#include "xalloc.h"
 	#include "ast.h"
 
 	typedef char *               string;

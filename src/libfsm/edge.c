@@ -7,9 +7,10 @@
 
 #include <fsm/fsm.h>
 
+#include <adt/xalloc.h>
+
 #include "internal.h"
 #include "set.h"
-#include "xalloc.h"
 
 static struct fsm_edge *fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to, struct fsm_edge *edge) {
 	assert(from != NULL);

@@ -15,7 +15,6 @@ CFLAGS+= -I ${BASE_DIR}/src/include
 SRCS+= ast.c
 SRCS+= lexer.c
 SRCS+= parser.c
-#SRCS+= xalloc.c
 SRCS+= main.c
 SRCS+= out.c
 

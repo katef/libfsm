@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "xalloc.h"
+#include <adt/xalloc.h>
 
 char *xstrdup(const char *s) {
 	char *new;

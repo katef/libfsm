@@ -22,7 +22,6 @@ SRCS+= reverse.c
 SRCS+= set.c
 SRCS+= state.c
 SRCS+= todfa.c
-SRCS+= xalloc.c
 
 .include <lx.obj.mk>
 

@@ -6,8 +6,9 @@
 
 #include <re/re.h>
 
+#include <adt/xalloc.h>
+
 #include "ast.h"
-#include "xalloc.h"
 
 struct ast *
 ast_new(void)

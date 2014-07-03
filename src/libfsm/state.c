@@ -6,10 +6,11 @@
 
 #include <fsm/fsm.h>
 
+#include <adt/xalloc.h>
+
 #include "internal.h"
 #include "set.h"
 #include "colour.h"
-#include "xalloc.h"
 
 struct mapping {
 	struct fsm_state *old;
