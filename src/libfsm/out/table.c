@@ -82,7 +82,7 @@ static int notransitions(struct fsm_state *sl, int i) {
 	return 1;
 }
 
-void out_table(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
+void fsm_out_table(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
 	struct fsm_state *s;
 	int i;
 

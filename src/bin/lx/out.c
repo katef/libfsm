@@ -16,9 +16,9 @@ lx_print(struct ast *ast, FILE *f, enum lx_out format)
 	assert(f != NULL);
 
 	switch (format) {
-	case LX_OUT_C:   out = out_c;   break;
-	case LX_OUT_H:   out = out_h;   break;
-	case LX_OUT_DOT: out = out_dot; break;
+	case LX_OUT_C:   out = lx_out_c;   break;
+	case LX_OUT_H:   out = lx_out_h;   break;
+	case LX_OUT_DOT: out = lx_out_dot; break;
 	}
 
 	assert(out != NULL);

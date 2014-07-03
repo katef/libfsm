@@ -7,11 +7,11 @@
 
 struct ast;
 
-void out_c(const struct ast *ast, FILE *f);
+void lx_out_c(const struct ast *ast, FILE *f);
 
-void out_h(const struct ast *ast, FILE *f);
+void lx_out_h(const struct ast *ast, FILE *f);
 
-void out_dot(const struct ast *ast, FILE *f);
+void lx_out_dot(const struct ast *ast, FILE *f);
 
 #endif
 

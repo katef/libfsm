@@ -153,7 +153,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 void
-out_dot(const struct ast *ast, FILE *f)
+lx_out_dot(const struct ast *ast, FILE *f)
 {
 	const struct ast_zone *z;
 

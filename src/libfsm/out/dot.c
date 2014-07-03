@@ -368,8 +368,7 @@ static void out_dotfrag(const struct fsm *fsm, FILE *f, const struct fsm_outopti
 	}
 }
 
-
-void out_dot(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
+void fsm_out_dot(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
 	struct fsm_state *start;
 
 	assert(fsm != NULL);

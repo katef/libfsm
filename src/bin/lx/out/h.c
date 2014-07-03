@@ -46,7 +46,7 @@ out_tokens(const struct ast *ast, FILE *f)
 }
 
 void
-out_h(const struct ast *ast, FILE *f)
+lx_out_h(const struct ast *ast, FILE *f)
 {
 	assert(ast != NULL);
 	assert(f != NULL);

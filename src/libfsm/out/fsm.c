@@ -100,7 +100,7 @@ static const struct fsm_state *findany(const struct fsm_state *state) {
 	return state->edges[0].sl->state;
 }
 
-void out_fsm(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
+void fsm_out_fsm(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
 	struct fsm_state *s;
 	struct state_set *e;
 	struct fsm_state *start;

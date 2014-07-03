@@ -228,7 +228,7 @@ static void out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoption
 	fprintf(f, "\t\t}\n");
 }
 
-void out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
+void fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
 	assert(fsm != NULL);
 	assert(fsm_isdfa(fsm));
 	assert(f != NULL);
