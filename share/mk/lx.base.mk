@@ -21,16 +21,25 @@ SRCDIR?= ${CURDIR:C/^${BASE_DIR}\///}
 
 UNAME_S!= uname -s
 
+.if "${UNAME_S}" == "Darwin"
+SHAREDFLAGNAME= -dylib
+.endif
+
 AR=       ar
 AWK=      awk
 ECHO=     echo
 EXIT=     exit
 EGREP=    grep -E
+FIND=     find
 CC=       gcc
+COPYEXEC= install -m 755
 COPYFILE= install -m 644
 LD=       ld
+LDPART=   ${LD} -r
+LDSHARED= ${LD} ${SHAREDFLAGNAME:U-shared}
 MKDIR=    mkdir -p
 NM=       nm
+OBJCOPY=  objcopy
 RANLIB=   ranlib
 RMFILE=   rm
 RMDIR=    rmdir
@@ -48,7 +57,20 @@ FSM=      ${OBJ_DIR}/src/bin/fsm/fsm
 CFLAGS=
 SIDFLAGS=  -l ansi-c
 LEXIFLAGS=
+LDFLAGS=
 XSLTFLAGS= --nonet --novalid --nowrite --nomkdir --xincludestyle
 XMLFLAGS=  --nonet --nsclean --format
 DOTFLAGS=
+
+.if ${UNAME_S} == "OpenBSD"
+LDFLAGS+= --warn-common
+.endif
+
+.if defined(NDEBUG) && ${UNAME_S} == "OpenBSD"
+LDFLAGS+= -O1
+.endif
+
+.if defined(NDEBUG)
+OBJCOPYFLAGS+= -g
+.endif
 

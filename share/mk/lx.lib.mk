@@ -18,7 +18,7 @@
 	@${EXIT} 1
 .endif
 
-.if ${UNAME_S} == "Darwin"
+.if "${UNAME_S}" == "Darwin"
 LIBEXT_DYNAMIC?= dylib
 LIBEXT_STATIC?=  a
 .else
@@ -37,17 +37,21 @@ ${OBJ_SDIR}/${LIB}.o: ${OBJ_SDIR}/${obj}
 ${OBJ_SDIR}/${LIB}.o.syms: ${OBJ_SDIR}/${LIB}.o.all
 
 ${OBJ_SDIR}/${LIB}.o:
-	${LD} -r -o ${.TARGET}.all ${.ALLSRC}
-	${NM} -g ${.TARGET}.all | ${AWK} '{ print $$3 }' | ${EGREP} "^_?${LIB_NS}" > ${.TARGET}.syms
-.if ${UNAME_S} == "Darwin"
-	${LD} -r -o ${.TARGET} -x -exported_symbols_list ${.TARGET}.syms ${.TARGET}.all
+	${LDPART} -o ${.TARGET}.all ${.ALLSRC}
+	${NM} -g ${.TARGET}.all | cut -f 3 -d ' ' | ${EGREP} "^_?${LIB_NS}" > ${.TARGET}.abi
+.if "${UNAME_S}" == "Darwin"
+	${LDPART} -o ${.TARGET} -x -exported_symbols_list ${.TARGET}.abi ${.TARGET}.all
+.elif "${UNAME_S}" == "OpenBSD"
+	${OBJCOPY} ${OBJCOPYFLAGS} --keep-global-symbols=${.TARGET}.abi ${.TARGET}.all ${.TARGET}
 .else
 	${COPYFILE} ${.TARGET}.all ${.TARGET}
 .endif
 
 ${OBJ_SDIR}/${LIB}.${LIBEXT_DYNAMIC}: ${OBJ_SDIR}/${LIB}.o
 	@${MKDIR} ${OBJ_SDIR}
-	${LD} -dylib -o ${.TARGET} ${LDFLAGS} -r ${.ALLSRC} ${LIBS}
+#	${LDSHARED} -o ${.TARGET} ${LDFLAGS} ${.ALLSRC} ${LIBS}
+	# XXX:
+	gcc -shared -o ${.TARGET} ${LDFLAGS} ${.ALLSRC} ${LIBS}
 
 ${OBJ_SDIR}/${LIB}.${LIBEXT_STATIC}: ${OBJ_SDIR}/${LIB}.o
 	@${MKDIR} ${OBJ_SDIR}
