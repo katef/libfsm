@@ -3,9 +3,9 @@
 .include "Makefile.inc"
 
 
-#SUBDIR+=	doc
-SUBDIR+=	src
-SUBDIR+=	tests
+#SUBDIR+= doc
+SUBDIR+= src
+SUBDIR+= tests
 
 .include <lx.subdir.mk>
 
