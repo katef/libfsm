@@ -28,9 +28,10 @@ TESTS+= ${OBJ_SDIR}/${test:C/^in/actual/}
 .for test in ${TESTS}
 ${OBJ_SDIR}/${test:T:R}.dot: ${test}
 	@${MKDIR} "${OBJ_SDIR}"
-. if defined(TEST_HILIGHT) && ${test:T:Mactual*.fsm} != ""
+. if defined(TEST_HILIGHT) && !empty(${test:T:Mactual*.fsm})
 	${FSM} -a -l dot -o ${.TARGET:R}-hl.dot ${FSMFLAGS} < ${.ALLSRC}
-	${TEST_HILIGHT} ${.ALLSRC} | ${GVPR} -c -f ${BASE_DIR}/share/bin/hilight.gvpr \
+	${TEST_HILIGHT} ${.ALLSRC} \
+	| ${GVPR} -c -f ${BASE_DIR}/share/bin/hilight.gvpr \
 		${.TARGET:R}-hl.dot > ${.TARGET}
 . else
 	${FSM} -a -l dot -o ${.TARGET} ${FSMFLAGS} < ${.ALLSRC}
