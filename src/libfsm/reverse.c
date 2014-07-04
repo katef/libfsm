@@ -5,7 +5,6 @@
 
 #include <fsm/fsm.h>
 #include <fsm/graph.h>
-#include <fsm/colour.h>
 
 #include "internal.h"
 #include "set.h"
@@ -83,8 +82,6 @@ fsm_reverse(struct fsm *fsm)
 		return 0;
 	}
 
-	fsm_setcolourhooks(new, &fsm->colour_hooks);
-
 	/*
 	 * Create states corresponding to the origional FSM's states.
 	 * These are created in reverse order, but that's okay.
@@ -104,26 +101,13 @@ fsm_reverse(struct fsm *fsm)
 	/*
 	 * The new end state is the previous start state. Because there is (at most)
 	 * one start state, the new FSM will have at most one end state.
-	 *
-	 * End colours are carried through from the previous end states.
 	 */
 	{
 		struct fsm_state *end;
-		struct fsm_state *s;
-		struct colour_set *c;
 
 		end = equivalent(new, fsm, fsm->start);
 		if (end != NULL) {
 			fsm_setend(new, end, 1);
-
-			for (s = fsm->sl; s != NULL; s = s->next) {
-				for (c = s->cl; c != NULL; c = c->next) {
-					if (!fsm_addcolour(new, end, c->colour)) {
-						fsm_free(new);
-						return 0;
-					}
-				}
-			}
 		}
 	}
 

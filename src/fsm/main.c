@@ -11,7 +11,6 @@
 #include <stdlib.h>
 
 #include <fsm/fsm.h>
-#include <fsm/colour.h>
 #include <fsm/graph.h>
 #include <fsm/out.h>
 #include <fsm/exec.h>
@@ -26,28 +25,6 @@ FILE *out;
 void usage(void) {
 	printf("usage: fsm [-chagdpmr] [-o <file> ] [-P <file>] [-l <language>] [-n <prefix>]\n"
 	       "           [-t <transformation>] [-e <execution> | -q <query>]\n");
-}
-
-static int colour_hook_compare(const struct fsm *fsm, void *a, void *b) {
-	assert(fsm != NULL);
-
-	if (a == NULL || b == NULL) {
-		return a == b;
-	}
-
-	return 0 == strcmp(a, b);
-}
-
-/* TODO: centralise for convenience, into <fsm/colour.h> */
-static int colour_hook_print(const struct fsm *fsm, FILE *f, void *colour) {
-	assert(fsm != NULL);
-	assert(f != NULL);
-
-	if (colour == NULL) {
-		colour = "black";
-	}
-
-	return fprintf(f, "%s", (const char *) colour);
 }
 
 static int query(struct fsm *fsm, const char *name) {
@@ -155,19 +132,10 @@ int main(int argc, char *argv[]) {
 	static const struct fsm_outoptions outoptions_defaults;
 	struct fsm_outoptions out_options = outoptions_defaults;
 
-	{
-		static const struct fsm_colour_hooks hooks = {
-			colour_hook_compare,
-			colour_hook_print
-		};
-
-		/* XXX: makes no sense for e.g. fsm -h */
-		fsm = fsm_parse(stdin);
-		if (fsm == NULL) {
-			exit(EXIT_FAILURE);
-		}
-
-		fsm_setcolourhooks(fsm, &hooks);
+	/* XXX: makes no sense for e.g. fsm -h */
+	fsm = fsm_parse(stdin);
+	if (fsm == NULL) {
+		exit(EXIT_FAILURE);
 	}
 
 	atexit(cleanup);

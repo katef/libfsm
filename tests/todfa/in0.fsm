@@ -10,5 +10,5 @@
 4 -> 6 'd';
 
 start: 0;
-end: 5 = "red", 6 = "blue";
+end: 5, 6;
 

@@ -43,8 +43,6 @@ fsm_copy(const struct fsm *fsm)
 		return NULL;
 	}
 
-	fsm_setcolourhooks(new, &fsm->colour_hooks);
-
 	/*
 	 * Create states corresponding to the origional FSM's states.
 	 * These are created in reverse order, but that's okay.
@@ -62,7 +60,6 @@ fsm_copy(const struct fsm *fsm)
 	}
 
 	{
-		struct colour_set *c;
 		struct state_set *to;
 		struct fsm_state *s;
 		int i;
@@ -74,13 +71,6 @@ fsm_copy(const struct fsm *fsm)
 			assert(equiv != NULL);
 
 			fsm_setend(new, equiv, fsm_isend(fsm, s));
-
-			for (c = s->cl; c != NULL; c = c->next) {
-				if (!fsm_addcolour(new, equiv, c->colour)) {
-					fsm_free(new);
-					return NULL;
-				}
-			}
 
 			for (i = 0; i <= FSM_EDGE_MAX; i++) {
 				for (to = s->edges[i].sl; to != NULL; to = to->next) {

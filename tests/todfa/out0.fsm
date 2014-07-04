@@ -8,5 +8,5 @@
 1 -> 4 'd';
 
 start: 0;
-end: 2 = "red", 4 = "blue";
+end: 2, 4;
 

@@ -9,7 +9,6 @@
 #include "out.h"
 #include "libfsm/internal.h"
 #include "libfsm/set.h"
-#include "libfsm/colour.h"
 
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)
@@ -168,26 +167,9 @@ void fsm_out_fsm(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *op
 	fprintf(f, "end:   ");
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		if (fsm_isend(fsm, s)) {
-			struct colour_set *c;
-
 			end--;
 
-			if (s->cl == NULL || fsm->colour_hooks.print == NULL) {
-				fprintf(f, "%u", indexof(fsm, s));
-			} else for (c = s->cl; c != NULL; c = c->next) {
-				fprintf(f, "%u = \"", indexof(fsm, s));
-
-				/* TODO: escapes */
-				fsm->colour_hooks.print(fsm, f, c->colour);
-
-				fprintf(f, "\"");
-
-				if (c->next != NULL) {
-					fprintf(f, ", ");
-				}
-			}
-
-			fprintf(f, "%s", end > 0 ? ", " : ";\n");
+			fprintf(f, "%u%s", indexof(fsm, s), end > 0 ? ", " : ";\n");
 		}
 	}
 }

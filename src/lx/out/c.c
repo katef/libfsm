@@ -192,11 +192,7 @@ static void singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 	} else {
 		struct ast_mapping *m;
 
-		assert(state->cl != NULL);
-		assert(state->cl->next == NULL);
-		assert(state->cl->colour != NULL);
-
-		m = state->cl->colour;
+		m = /* TODO: state->cl->colour */ NULL;
 
 		/* XXX: don't need this if complete */
 		fprintf(f, "\t\t\tdefault:  lx->ungetc(c, lx->opaque); return ");
@@ -317,11 +313,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 				continue;
 			}
 
-			assert(s->cl != NULL);
-			assert(s->cl->next == NULL);
-			assert(s->cl->colour != NULL);
-
-			m = s->cl->colour;
+			m = /* TODO: s->cl->colour */ NULL;
 
 			fprintf(f, "\tcase S%u: return ", indexof(z->re->fsm, s));
 

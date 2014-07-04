@@ -8,7 +8,6 @@
 
 #include "internal.h"
 #include "set.h"
-#include "colour.h"
 
 /*
  * A set of states in an NFA.
@@ -311,12 +310,8 @@ static int allstatesreachableby(const struct fsm *fsm, struct state_set *set, ch
 	return 1;
 }
 
-/*
- * Merge all colours (if any) from a set of states to a single state.
- */
-static int carrythrough(struct state_set *set, struct fsm *fsm, struct fsm_state *state) {
+static void carrythrough(struct state_set *set, struct fsm *fsm, struct fsm_state *state) {
 	struct state_set *s;
-	struct colour_set *c;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
@@ -325,15 +320,7 @@ static int carrythrough(struct state_set *set, struct fsm *fsm, struct fsm_state
 		if (fsm_isend(fsm, s->state)) {
 			fsm_setend(fsm, state, 1);
 		}
-
-		for (c = s->state->cl; c != NULL; c = c->next) {
-			if (!fsm_addcolour(fsm, state, c->colour)) {
-				return 0;
-			}
-		}
 	}
-
-	return 1;
 }
 
 /*
@@ -430,11 +417,9 @@ static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
 
 		/*
 		 * The current DFA state is an end state if any of its associated NFA
-		 * states are end states; all of their end colours are merged.
+		 * states are end states.
 		 */
-		if (!carrythrough(curr->closure, dfa, curr->dfastate)) {
-			return 0;
-		}
+		carrythrough(curr->closure, dfa, curr->dfastate);
 	}
 
 	return 1;
@@ -453,9 +438,6 @@ fsm_todfa(struct fsm *fsm)
 	if (dfa == NULL) {
 		return 0;
 	}
-
-	/* TODO: centralise cloning these sort of things */
-	fsm_setcolourhooks(dfa, &fsm->colour_hooks);
 
 	ml = NULL;
 	r = nfatodfa(&ml, fsm, dfa);

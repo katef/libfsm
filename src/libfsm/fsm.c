@@ -4,7 +4,6 @@
 #include <stdlib.h>
 
 #include <fsm/fsm.h>
-#include <fsm/colour.h>
 
 #include "internal.h"
 #include "set.h"
@@ -60,8 +59,6 @@ fsm_new(void)
 	new->sl    = NULL;
 	new->start = NULL;
 
-	fsm_setcolourhooks(new, NULL);
-
 	return new;
 }
 
@@ -85,8 +82,6 @@ fsm_move(struct fsm *dst, struct fsm *src)
 
 	dst->sl    = src->sl;
 	dst->start = src->start;
-
-	dst->colour_hooks = src->colour_hooks;
 
 	free(src);
 }
@@ -122,7 +117,6 @@ fsm_addstate(struct fsm *fsm)
 	}
 
 	new->end = 0;
-	new->cl  = NULL;
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		new->edges[i].sl = NULL;

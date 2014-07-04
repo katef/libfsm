@@ -44,9 +44,8 @@ void print_diagnostic(struct fsm_state *state) {
 	struct ast_mapping *m2;
 	const char *t1;
 	const char *t2;
-	const struct colour_set *c;
 
-	m1 = state->cl->colour;
+	m1 = /* TODO: state->cl->colour */ NULL;
 
 	/*
 	 * TODO: intersect conflicting regexps, and output exactly the language
@@ -58,8 +57,8 @@ void print_diagnostic(struct fsm_state *state) {
 	 * Show all known conflicts before exiting
 	 */
 
-	for (c = state->cl->next; c != NULL; c = c->next) {
-		m2 = c->colour;
+	/* TODO: for (c = state->cl->next; c != NULL; c = c->next) */ {
+		m2 = /* TODO: c->colour */ NULL;
 
 		t1 = m1->token == NULL ? "(null)" : m1->token->s;
 		t2 = m2->token == NULL ? "(null)" : m2->token->s;
@@ -194,9 +193,8 @@ int main(int argc, char *argv[]) {
 					continue;
 				}
 
-				assert(s->cl != NULL);
-
-				if (s->cl->next != NULL) {
+				/* TODO: if s->cl->next != NULL then >= 2 FSMs accept the same input */
+				if (0 /* TODO: s->cl->next != NULL */) {
 					/* TODO: cli option to dump conflicting .fsm */
 					print_diagnostic(s);
 					return EXIT_FAILURE;

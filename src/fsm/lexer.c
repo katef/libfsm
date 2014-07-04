@@ -191,10 +191,6 @@ lexi_read_token(struct lexi_state *state)
 				return lex_eof;
 			}
 
-		case '=': {
-				return lex_equals;
-			}
-
 		case ',': {
 				return lex_comma;
 			}

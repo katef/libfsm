@@ -10,7 +10,6 @@
 
 #include "internal.h"
 #include "set.h"
-#include "colour.h"
 
 struct mapping {
 	struct fsm_state *old;
@@ -37,8 +36,6 @@ static struct mapping *mapping_ensure(struct fsm *fsm, struct mapping **head, st
 
 	/* Otherwise, make a new one */
 	{
-		struct colour_set *c;
-
 		m = malloc(sizeof *m);
 		if (m == NULL) {
 			return 0;
@@ -51,14 +48,6 @@ static struct mapping *mapping_ensure(struct fsm *fsm, struct mapping **head, st
 		}
 
 		fsm_setend(fsm, m->new, fsm_isend(fsm, old));
-
-		for (c = old->cl; c != NULL; c = c->next) {
-			if (!fsm_addcolour(fsm, m->new, c->colour)) {
-				fsm_removestate(fsm, m->new);
-				free(m);
-				return 0;
-			}
-		}
 
 		m->old  = old;
 		m->done = 0;
@@ -162,8 +151,6 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 					}
 					break;
 				}
-
-				/* TODO: duplicate colour sets */
 			}
 		}
 

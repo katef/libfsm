@@ -4,5 +4,5 @@
 1 -> 2 'b';
 
 start: 0;
-end: 1 = "red", 2 = "red";
+end: 1, 2;
 

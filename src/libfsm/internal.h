@@ -7,8 +7,6 @@
 
 #include <fsm/fsm.h>
 
-#include "colour.h"
-
 
 /* TODO: +2 for SOL, EOL */
 /* TODO: +lots for FSM_EDGE_* */
@@ -25,8 +23,6 @@ struct fsm_edge {
 struct fsm_state {
 	unsigned int end:1;
 
-	struct colour_set *cl;
-
 	struct fsm_edge edges[FSM_EDGE_MAX + 1];
 
 	struct fsm_state *next;
@@ -36,8 +32,6 @@ struct fsm_state {
 struct fsm {
 	struct fsm_state *sl;
 	struct fsm_state *start;
-
-	struct fsm_colour_hooks colour_hooks;
 };
 
 

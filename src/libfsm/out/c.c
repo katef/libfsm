@@ -10,7 +10,6 @@
 
 #include "out.h"
 #include "libfsm/set.h"
-#include "libfsm/colour.h"
 #include "libfsm/internal.h"
 
 static unsigned int

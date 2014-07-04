@@ -17,18 +17,13 @@ static int equivalent(struct fsm_state *a, struct fsm_state *b) {
 	assert(a != NULL);
 	assert(b != NULL);
 
-	/* TODO: is this over-zealous? must we check set equivalence for end colours, too? */
-	if (!!a->cl != !!b->cl) {
-		return 0;
-	}
-
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		if (!set_equal(a->edges[i].sl, b->edges[i].sl)) {
 			return 0;
 		}
 	}
 
-	/* TODO: anything else? colours? */
+	/* TODO: anything else? */
 
 	return 1;
 }
@@ -99,8 +94,6 @@ static void removestate(struct fsm *fsm, struct fsm_state *state) {
 
 			free(*s);
 
-			/* TODO: free colours */
-
 			*s = next;
 
 			return;
@@ -155,16 +148,7 @@ fsm_minimize(struct fsm *fsm)
 	}
 
 	if (!hasend) {
-		struct fsm_state *s;
-		struct colour_set *c;
-
-		for (s = fsm->sl; s != NULL; s = s->next) {
-			for (c = s->cl; c != NULL; c = c->next) {
-				if (!fsm_addcolour(fsm, s, c->colour)) {
-					return 0;
-				}
-			}
-		}
+		/* XXX: what happened to this? */
 	}
 
 	/*
@@ -189,8 +173,6 @@ fsm_minimize(struct fsm *fsm)
 
 			if (equivalent(fsm->start, s)) {
 				removestate(fsm, fsm->start);
-
-				/* TODO: merge colour sets? */
 
 				fsm->start = s;
 

@@ -18,17 +18,15 @@
 
 	sep;
 	comma;
-	equals;
 
 	eof;
 	!unknown;
 
 %productions%
 
-	<add-state>:        (:string)         -> (:state);
-	<mark-start>:       (:state)          -> ();
-	<mark-end>:         (:state)          -> ();
-	<add-colour>:       (:state, :string) -> ();
+	<add-state>:        (:string) -> (:state);
+	<mark-start>:       (:state)  -> ();
+	<mark-end>:         (:state)  -> ();
 
 	<free>:             (:string) -> ();
 	<free-statelist>;
@@ -57,15 +55,6 @@
 		s = <add-state>(n);
 
 		<mark-end>(s);
-
-		{
-			equals;
-			c = label;
-
-			<add-colour>(s, c);
-		||
-			$;
-		};
 	};
 
 	end-ids = {

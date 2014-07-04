@@ -68,11 +68,7 @@ static void singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 		return;
 	}
 
-	assert(s->cl != NULL);
-	assert(s->cl->next == NULL);
-	assert(s->cl->colour != NULL);
-
-	m = s->cl->colour;
+	m = /* TODO: s->cl->colour */ NULL;
 
 	if (m->token != NULL) {
 		assert(m->token->s != NULL);

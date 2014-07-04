@@ -10,7 +10,6 @@
 #include "out.h"
 #include "libfsm/internal.h"
 #include "libfsm/set.h"
-#include "libfsm/colour.h"
 
 struct bm {
 	unsigned char map[FSM_EDGE_MAX / CHAR_BIT + 1];
@@ -162,42 +161,6 @@ static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
 	return 0;
 }
 
-static void printcolours(const struct fsm *fsm, const struct colour_set *cl, FILE *f) {
-	const struct colour_set *c;
-
-	assert(fsm != NULL);
-	assert(f != NULL);
-
-	if (cl == NULL) {
-		return;
-	}
-
-	if (fsm->colour_hooks.print == NULL) {
-		return;
-	}
-
-	fprintf(f, "<font point-size = \"12\">");
-
-	for (c = cl; c != NULL; c = c->next) {
-		fprintf(f, "<font color = \"");
-
-		fsm->colour_hooks.print(fsm, f, c->colour);
-
-		fprintf(f, "\">");
-
-		/* TODO: html escapes */
-		fsm->colour_hooks.print(fsm, f, c->colour);
-
-		fprintf(f, "</font>");
-
-		if (c->next != NULL) {
-			fprintf(f, ",");
-		}
-	}
-
-	fprintf(f, "</font>");
-}
-
 static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, const struct fsm_outoptions *options) {
 	struct state_set *e;
 	int i;
@@ -213,10 +176,8 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 			indexof(fsm, s));
 
 		if (!options->anonymous_states) {
-			fprintf(f, "%u<br/>", indexof(fsm, s));
+			fprintf(f, "%u", indexof(fsm, s));
 		}
-
-		printcolours(fsm, s->cl, f);
 
 		fprintf(f, "> ];\n");
 	}

@@ -14,7 +14,6 @@
 #include <re/re.h>
 #include <fsm/fsm.h>
 #include <fsm/graph.h>
-#include <fsm/colour.h>
 
 #include "internal.h"
 
@@ -166,15 +165,6 @@ re_strerror(enum re_err err)
 }
 
 int
-re_addcolour(struct re *re, void *colour)
-{
-	assert(re != NULL);
-	assert(re->end != NULL);
-
-	return fsm_addcolour(re->fsm, re->end, colour);
-}
-
-int
 re_union(struct re *re, struct re *new)
 {
 	assert(re != NULL);
@@ -204,9 +194,6 @@ re_concat(struct re *re, struct re *new)
 		return 0;
 	}
 
-	/* TODO: not sure about this */
-	fsm_removecolours(re->fsm, re->end);
-
 	fsm_setend(re->fsm, re->end, 0);
 
 	re->end = new->end;
@@ -216,10 +203,9 @@ re_concat(struct re *re, struct re *new)
 	return 1;
 }
 
-void *
+void
 re_exec(const struct re *re, const char *s, enum re_eflags eflags)
 {
 	/* TODO */
-	return NULL;
 }
 

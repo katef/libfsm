@@ -84,12 +84,6 @@ const char *
 re_strerror(enum re_err err);
 
 /*
- * Returns false on error.
- */
-int
-re_addcolour(struct re *re, void *colour);
-
-/*
  * Merge a new regexp into an existing regexp as set union of the two languages,
  * and free new.
  *
@@ -110,9 +104,9 @@ re_concat(struct re *re, struct re *new);
 /*
  * Match a string.
  *
- * Returns the colour of the regexp that matched, or NULL for no match.
+ * TODO: Return the regexp that matched, or NULL for no match.
  */
-void *
+void
 re_exec(const struct re *re, const char *s, enum re_eflags eflags);
 
 
