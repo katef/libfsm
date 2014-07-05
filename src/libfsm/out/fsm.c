@@ -66,20 +66,6 @@ escputc(int c, FILE *f)
 }
 
 /* TODO: centralise */
-static void
-escputs(const char *s, FILE *f)
-{
-	const char *p;
-
-	assert(f != NULL);
-	assert(s != NULL);
-
-	for (p = s; *p != '\0'; p++) {
-		escputc(*p, f);
-	}
-}
-
-/* TODO: centralise */
 static const struct fsm_state *
 findany(const struct fsm_state *state)
 {

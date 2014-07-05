@@ -140,19 +140,6 @@ escputc(int c, FILE *f)
 	putc(c, f);
 }
 
-static void
-escputs(const char *s, FILE *f)
-{
-	const char *p;
-
-	assert(f != NULL);
-	assert(s != NULL);
-
-	for (p = s; *p != '\0'; p++) {
-		escputc(*p, f);
-	}
-}
-
 /* Return true if the edges after o contains state */
 static int
 contains(struct fsm_edge edges[], int o, struct fsm_state *state)
