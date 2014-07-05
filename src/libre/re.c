@@ -54,7 +54,6 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	enum re_cflags cflags, enum re_err *err)
 {
 	struct re *new;
-	enum re_err e;
 	struct re *(*comp)(int (*getc)(void *opaque), void *opaque, enum re_err *err);
 
 	assert(getc != NULL);
