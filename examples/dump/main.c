@@ -6,13 +6,17 @@
 
 #include "lexer.h"
 
-static int lx_getc(void *opaque) {
+static int
+lx_getc(void *opaque)
+{
 	assert(opaque != NULL);
 
 	return fgetc(opaque);
 }
 
-static void lx_ungetc(int c, void *opaque) {
+static void
+lx_ungetc(int c, void *opaque)
+{
 	assert(opaque != NULL);
 	assert(c >= 0);
 
@@ -22,7 +26,9 @@ static void lx_ungetc(int c, void *opaque) {
 	}
 }
 
-int main(void) {
+int
+main(void)
+{
 	enum lx_token t;
 	struct lx lx = { 0 };
 

@@ -54,8 +54,10 @@ zindexof(const struct ast *ast, const struct ast_zone *zone)
 	return 0;
 }
 
-static void singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
-	const struct ast_zone *z, const struct fsm_state *s) {
+static void
+singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
+	const struct ast_zone *z, const struct fsm_state *s)
+{
 	struct ast_mapping *m;
 
 	assert(fsm != NULL);

@@ -20,7 +20,9 @@ struct mapping {
 	struct mapping *next;
 };
 
-static struct mapping *mapping_ensure(struct fsm *fsm, struct mapping **head, struct fsm_state *old) {
+static struct mapping *
+mapping_ensure(struct fsm *fsm, struct mapping **head, struct fsm_state *old)
+{
 	struct mapping *m;
 
 	assert(fsm != NULL);
@@ -59,7 +61,9 @@ static struct mapping *mapping_ensure(struct fsm *fsm, struct mapping **head, st
 	return m;
 }
 
-static void mapping_free(struct mapping *mapping) {
+static void
+mapping_free(struct mapping *mapping)
+{
 	struct mapping *next;
 	struct mapping *m;
 
@@ -70,7 +74,9 @@ static void mapping_free(struct mapping *mapping) {
 	}
 }
 
-static struct mapping *getnextnotdone(struct mapping *mapping) {
+static struct mapping *
+getnextnotdone(struct mapping *mapping)
+{
 	struct mapping *m;
 
 	assert(mapping != NULL);

@@ -30,7 +30,9 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	return 0;
 }
 
-static int escputc(int c, FILE *f) {
+static int
+escputc(int c, FILE *f)
+{
 	assert(f != NULL);
 
 	switch (c) {
@@ -54,7 +56,9 @@ static int escputc(int c, FILE *f) {
 	}
 }
 
-static void hr(FILE *f, struct fsm_state *sl) {
+static void
+hr(FILE *f, struct fsm_state *sl)
+{
 	struct fsm_state *s;
 
 	assert(f != NULL);
@@ -67,7 +71,9 @@ static void hr(FILE *f, struct fsm_state *sl) {
 	fprintf(f, "\n");
 }
 
-static int notransitions(struct fsm_state *sl, int i) {
+static int
+notransitions(struct fsm_state *sl, int i)
+{
 	struct fsm_state *s;
 
 	assert(i >= 0);
@@ -82,7 +88,10 @@ static int notransitions(struct fsm_state *sl, int i) {
 	return 1;
 }
 
-void fsm_out_table(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
+void
+fsm_out_table(const struct fsm *fsm, FILE *f,
+	const struct fsm_outoptions *options)
+{
 	struct fsm_state *s;
 	int i;
 

@@ -31,7 +31,9 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	return 0;
 }
 
-static void escputc(int c, FILE *f) {
+static void
+escputc(int c, FILE *f)
+{
 	size_t i;
 
 	struct {
@@ -67,7 +69,9 @@ static void escputc(int c, FILE *f) {
 
 /* Return true if the edges after o contains state */
 /* TODO: centralise */
-static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
+static int
+contains(struct fsm_edge edges[], int o, struct fsm_state *state)
+{
 	int i;
 
 	assert(edges != NULL);
@@ -82,7 +86,9 @@ static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
 	return 0;
 }
 
-static void singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state) {
+static void
+singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state)
+{
 	int i;
 
 	assert(fsm != NULL);
@@ -150,7 +156,9 @@ static void singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state) 
 	fprintf(f, "\t\t\t}\n");
 }
 
-static void stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
+static void
+stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
+{
 	struct fsm_state *s;
 	int i;
 
@@ -173,7 +181,9 @@ static void stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
 	fprintf(f, "\t} state;\n");
 }
 
-static void endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
+static void
+endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
+{
 	struct fsm_state *s;
 
 	/* no end states */
@@ -205,7 +215,9 @@ static void endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
 	fprintf(f, "\t}\n");
 }
 
-static void out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
+static void
+out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
+{
 	struct fsm_state *s;
 
 	assert(fsm != NULL);
@@ -227,7 +239,9 @@ static void out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoption
 	fprintf(f, "\t\t}\n");
 }
 
-void fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
+void
+fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
+{
 	assert(fsm != NULL);
 	assert(fsm_isdfa(fsm));
 	assert(f != NULL);

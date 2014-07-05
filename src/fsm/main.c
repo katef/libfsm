@@ -22,12 +22,16 @@ extern char *optarg;
 
 FILE *out;
 
-void usage(void) {
+static void
+usage(void)
+{
 	printf("usage: fsm [-chagdpmr] [-o <file> ] [-P <file>] [-l <language>] [-n <prefix>]\n"
 	       "           [-t <transformation>] [-e <execution> | -q <query>]\n");
 }
 
-static int query(struct fsm *fsm, const char *name) {
+static int
+query(struct fsm *fsm, const char *name)
+{
 	size_t i;
 
 	struct {
@@ -57,7 +61,9 @@ static int query(struct fsm *fsm, const char *name) {
 	exit(EXIT_FAILURE);
 }
 
-static void transform(struct fsm *fsm, const char *name) {
+static void
+transform(struct fsm *fsm, const char *name)
+{
 	size_t i;
 
 	struct {
@@ -93,7 +99,9 @@ static void transform(struct fsm *fsm, const char *name) {
 	exit(EXIT_FAILURE);
 }
 
-static enum fsm_out language(const char *name) {
+static enum fsm_out
+language(const char *name)
+{
 	size_t i;
 
 	struct {
@@ -119,13 +127,17 @@ static enum fsm_out language(const char *name) {
 	exit(EXIT_FAILURE);
 }
 
-static void cleanup(void) {
+static void
+cleanup(void)
+{
 	if (out != NULL) {
 		fclose(out);
 	}
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	enum fsm_out format = FSM_OUT_FSM;
 	struct fsm *fsm;
 

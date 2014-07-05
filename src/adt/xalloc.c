@@ -5,7 +5,9 @@
 
 #include <adt/xalloc.h>
 
-char *xstrdup(const char *s) {
+char *
+xstrdup(const char *s)
+{
 	char *new;
 
 	new = malloc(strlen(s) + 1);

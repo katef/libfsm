@@ -12,7 +12,11 @@
 #include "internal.h"
 #include "set.h"
 
-static struct fsm_edge *fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to, struct fsm_edge *edge) {
+static struct fsm_edge *
+fsm_addedge(struct fsm *fsm,
+	struct fsm_state *from, struct fsm_state *to,
+	struct fsm_edge *edge)
+{
 	assert(from != NULL);
 	assert(to != NULL);
 	assert(edge != NULL);
@@ -27,7 +31,8 @@ static struct fsm_edge *fsm_addedge(struct fsm *fsm, struct fsm_state *from, str
 }
 
 struct fsm_edge *
-fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
+fsm_addedge_epsilon(struct fsm *fsm,
+	struct fsm_state *from, struct fsm_state *to)
 {
 	assert(fsm != NULL);
 	assert(from != NULL);
@@ -37,7 +42,8 @@ fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 }
 
 struct fsm_edge *
-fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
+fsm_addedge_any(struct fsm *fsm,
+	struct fsm_state *from, struct fsm_state *to)
 {
 	int i;
 
@@ -55,7 +61,8 @@ fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to)
 }
 
 struct fsm_edge *
-fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
+fsm_addedge_literal(struct fsm *fsm,
+	struct fsm_state *from, struct fsm_state *to,
 	char c)
 {
 	assert(fsm != NULL);

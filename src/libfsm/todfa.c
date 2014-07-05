@@ -42,7 +42,9 @@ struct mapping {
 	struct mapping *next;
 };
 
-static void free_transset(struct transset *set) {
+static void
+free_transset(struct transset *set)
+{
 	struct transset *p;
 	struct transset *next;
 
@@ -52,7 +54,9 @@ static void free_transset(struct transset *set) {
 	}
 }
 
-static void free_mappings(struct mapping *m) {
+static void
+free_mappings(struct mapping *m)
+{
 	struct mapping *p;
 	struct mapping *next;
 
@@ -63,7 +67,9 @@ static void free_mappings(struct mapping *m) {
 }
 
 /* Find if a transition is in a set */
-static int transin(char c, const struct transset *set) {
+static int
+transin(char c, const struct transset *set)
+{
 	const struct transset *p;
 
 	for (p = set; p != NULL; p = p->next) {
@@ -84,7 +90,9 @@ static int transin(char c, const struct transset *set) {
  * The association of DFA states to epsilon closures in the NFA is stored in
  * the mapping list ml for future reference.
  */
-static struct mapping *addtoml(struct fsm *dfa, struct mapping **ml, struct state_set *closure) {
+static struct mapping *
+addtoml(struct fsm *dfa, struct mapping **ml, struct state_set *closure)
+{
 	struct mapping *m;
 
 	/* use existing mapping if present */
@@ -129,7 +137,9 @@ static struct mapping *addtoml(struct fsm *dfa, struct mapping **ml, struct stat
  *
  * Returns closure on success, NULL on error.
  */
-static struct state_set **epsilon_closure(const struct fsm_state *state, struct state_set **closure) {
+static struct state_set **
+epsilon_closure(const struct fsm_state *state, struct state_set **closure)
+{
 	struct state_set *s;
 	struct state_set *e;
 
@@ -171,7 +181,9 @@ static struct state_set **epsilon_closure(const struct fsm_state *state, struct 
  * Return the DFA state associated with the closure of a given NFA state.
  * Create the DFA state if neccessary.
  */
-static struct fsm_state *state_closure(struct mapping **ml, struct fsm *dfa, const struct fsm_state *nfastate) {
+static struct fsm_state *
+state_closure(struct mapping **ml, struct fsm *dfa, const struct fsm_state *nfastate)
+{
 	struct state_set *ec;
 	struct mapping *m;
 
@@ -201,7 +213,9 @@ static struct fsm_state *state_closure(struct mapping **ml, struct fsm *dfa, con
  * Return the DFA state associated with the closure of a set of given NFA
  * states. Create the DFA state if neccessary.
  */
-static struct fsm_state *set_closure(struct mapping **ml, struct fsm *dfa, struct state_set *set) {
+static struct fsm_state *
+set_closure(struct mapping **ml, struct fsm *dfa, struct state_set *set)
+{
 	struct state_set *ec;
 	struct mapping *m;
 	struct state_set *s;
@@ -225,7 +239,9 @@ static struct fsm_state *set_closure(struct mapping **ml, struct fsm *dfa, struc
 /*
  * Return an arbitary mapping which isn't marked "done" yet.
  */
-static struct mapping *nextnotdone(struct mapping *ml) {
+static struct mapping *
+nextnotdone(struct mapping *ml)
+{
 	struct mapping *m;
 
 	for (m = ml; m != NULL; m = m->next) {
@@ -243,7 +259,9 @@ static struct mapping *nextnotdone(struct mapping *ml) {
  *
  * TODO: maybe simpler to just return the set, rather than take a double pointer
  */
-static int listnonepsilonstates(struct transset **l, struct state_set *set) {
+static int
+listnonepsilonstates(struct transset **l, struct state_set *set)
+{
 	struct state_set *s;
 	struct state_set *e;
 
@@ -286,8 +304,10 @@ static int listnonepsilonstates(struct transset **l, struct state_set *set) {
 /*
  * Return a list of all states reachable from set via the given transition.
  */
-static int allstatesreachableby(const struct fsm *fsm, struct state_set *set, char c,
-	struct state_set **sl) {
+static int
+allstatesreachableby(const struct fsm *fsm, struct state_set *set, char c,
+	struct state_set **sl)
+{
 	struct state_set *s;
 
 	assert(set != NULL);
@@ -310,7 +330,9 @@ static int allstatesreachableby(const struct fsm *fsm, struct state_set *set, ch
 	return 1;
 }
 
-static void carrythrough(struct state_set *set, struct fsm *fsm, struct fsm_state *state) {
+static void
+carrythrough(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
+{
 	struct state_set *s;
 
 	assert(fsm != NULL);
@@ -341,7 +363,9 @@ static void carrythrough(struct state_set *set, struct fsm *fsm, struct fsm_stat
  *
  * TODO: returning an int is a little cumbersome here. Why not return an fsm?
  */
-static int nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa) {
+static int
+nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa)
+{
 	struct mapping *curr;
 
 	/*

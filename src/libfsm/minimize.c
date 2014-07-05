@@ -11,7 +11,9 @@
 #include "set.h"
 
 /* TODO: explain not true equivalence; only intended for use here */
-static int equivalent(struct fsm_state *a, struct fsm_state *b) {
+static int
+equivalent(struct fsm_state *a, struct fsm_state *b)
+{
 	int i;
 
 	assert(a != NULL);
@@ -30,7 +32,9 @@ static int equivalent(struct fsm_state *a, struct fsm_state *b) {
 
 /* Return true if the edges after o contains state */
 /* TODO: centralise */
-static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
+static int
+contains(struct fsm_edge edges[], int o, struct fsm_state *state)
+{
 	int i;
 
 	assert(edges != NULL);
@@ -47,7 +51,9 @@ static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
 
 /* Count the number of distinct states to which a state transitions */
 /* TODO: centralise? */
-static unsigned int counttargets(struct fsm_state *state) {
+static unsigned int
+counttargets(struct fsm_state *state)
+{
 	unsigned int count;
 	int i;
 
@@ -75,7 +81,9 @@ static unsigned int counttargets(struct fsm_state *state) {
 }
 
 /* TODO: centralise */
-static void removestate(struct fsm *fsm, struct fsm_state *state) {
+static void
+removestate(struct fsm *fsm, struct fsm_state *state)
+{
 	struct fsm_state **s;
 	int i;
 

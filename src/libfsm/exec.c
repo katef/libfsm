@@ -30,7 +30,9 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	return -1;
 }
 
-struct fsm_state *nextstate(const struct fsm_state *state, char c) {
+struct fsm_state *
+nextstate(const struct fsm_state *state, char c)
+{
 	const struct state_set *s;
 
 	assert(state != NULL);
@@ -46,7 +48,10 @@ struct fsm_state *nextstate(const struct fsm_state *state, char c) {
 	return s->state;
 }
 
-int fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque) {
+int
+fsm_exec(const struct fsm *fsm,
+	int (*fsm_getc)(void *opaque), void *opaque)
+{
 	struct fsm_state *state;
 	int c;
 
@@ -75,7 +80,9 @@ int fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque)
 	return indexof(fsm, state);
 }
 
-int fsm_sgetc(void *opaque) {
+int
+fsm_sgetc(void *opaque)
+{
 	const char **s = opaque;
 	char c;
 

@@ -20,12 +20,16 @@
 
 #include "ast.h"
 
-static void usage(void) {
+static
+void usage(void)
+{
 	printf("usage: lx [-h] [-l <language>] <input>\n");
 }
 
 /* TODO: centralise */
-static FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mode) {
+static FILE *
+xopen(int argc, char * const argv[], int i, FILE *f, const char *mode)
+{
 	if (argc <= i || 0 == strcmp("-", argv[i])) {
 		return f;
 	}
@@ -39,7 +43,9 @@ static FILE *xopen(int argc, char * const argv[], int i, FILE *f, const char *mo
 	return f;
 }
 
-void print_diagnostic(struct fsm_state *state) {
+void
+print_diagnostic(struct fsm_state *state)
+{
 	struct ast_mapping *m1;
 	struct ast_mapping *m2;
 	const char *t1;
@@ -69,7 +75,9 @@ void print_diagnostic(struct fsm_state *state) {
 	}
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	struct ast *ast;
 	enum lx_out format = LX_OUT_C;
 	FILE *in;

@@ -34,11 +34,15 @@
 #include <fsm/out.h>
 #include <fsm/exec.h>
 
-void usage(void) {
+static void
+usage(void)
+{
 	printf("usage: glob [-h] [-q] <glob> <string>\n");
 }
 
-static int match_getc(void *opaque) {
+static int
+match_getc(void *opaque)
+{
 	const char **s = opaque;
 	unsigned char c;
 
@@ -52,7 +56,9 @@ static int match_getc(void *opaque) {
 	return c == '\0' ? EOF : c;
 }
 
-static int match(const struct fsm *fsm, const char *s) {
+static int
+match(const struct fsm *fsm, const char *s)
+{
 	assert(fsm != NULL);
 	assert(fsm_isdfa(fsm));
 	assert(s != NULL);
@@ -60,7 +66,9 @@ static int match(const struct fsm *fsm, const char *s) {
 	return fsm_exec(fsm, match_getc, &s);
 }
 
-static struct fsm *compile(const char *glob) {
+static struct fsm *
+compile(const char *glob)
+{
 	struct fsm *fsm;
 	struct fsm_state *state;
 	const char *p;
@@ -144,7 +152,9 @@ static struct fsm *compile(const char *glob) {
 	return fsm;
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	struct fsm *fsm;
 	int quiet = 0;
 	int matched;

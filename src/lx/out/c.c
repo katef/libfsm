@@ -68,7 +68,9 @@ zindexof(const struct ast *ast, const struct ast_zone *zone)
 	return 0;
 }
 
-static void escputc(char c, FILE *f) {
+static void
+escputc(char c, FILE *f)
+{
 	assert(f != NULL);
 
 	if (!isprint(c) && !isspace(c)) {
@@ -110,7 +112,9 @@ xset_contains(const struct fsm_state *state, const struct state_set *set)
 
 /* Return true if the edges after o contains state */
 /* TODO: centralise */
-static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
+static int
+contains(struct fsm_edge edges[], int o, struct fsm_state *state)
+{
 	int i;
 
 	assert(edges != NULL);
@@ -125,7 +129,10 @@ static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
 	return 0;
 }
 
-static void singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z, const struct fsm *fsm, struct fsm_state *state) {
+static void
+singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
+	const struct fsm *fsm, struct fsm_state *state)
+{
 	struct fsm_state *mode;
 	int i;
 
@@ -214,7 +221,9 @@ done:
 }
 
 /* TODO: centralise with libfsm */
-static void stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl) {
+static void
+stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
+{
 	struct fsm_state *s;
 	int i;
 

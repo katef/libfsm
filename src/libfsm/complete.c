@@ -10,7 +10,6 @@
 #include "internal.h"
 #include "set.h"
 
-
 int
 fsm_complete(struct fsm *fsm)
 {

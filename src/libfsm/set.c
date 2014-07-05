@@ -63,7 +63,8 @@ set_remove(struct state_set **head, struct fsm_state *state)
 }
 
 void
-set_replace(struct state_set *set, struct fsm_state *old, struct fsm_state *new)
+set_replace(struct state_set *set,
+	struct fsm_state *old, struct fsm_state *new)
 {
 	struct state_set *s;
 
@@ -110,7 +111,9 @@ set_contains(const struct fsm_state *state, const struct state_set *set)
 }
 
 /* Find if a is a subset of b */
-static int subsetof(const struct state_set *a, const struct state_set *b) {
+static int
+subsetof(const struct state_set *a, const struct state_set *b)
+{
 	const struct state_set *s;
 
 	for (s = a; s != NULL; s = s->next) {

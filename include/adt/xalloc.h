@@ -6,7 +6,8 @@
 /*
  * Duplicate a string. Returns NULL on error.
  */
-char *xstrdup(const char *s);
+char *
+xstrdup(const char *s);
 
 #endif
 

@@ -10,7 +10,8 @@
 
 /* TODO: centralise? or optimise by folding into the loops below? */
 static struct fsm_state *
-equivalent(const struct fsm *a, const struct fsm *b, const struct fsm_state *state)
+equivalent(const struct fsm *a, const struct fsm *b,
+	const struct fsm_state *state)
 {
 	struct fsm_state *p;
 	struct fsm_state *q;

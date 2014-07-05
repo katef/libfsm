@@ -8,7 +8,9 @@
 #include "internal.h"
 #include "set.h"
 
-static void free_contents(struct fsm *fsm) {
+static void
+free_contents(struct fsm *fsm)
+{
 	struct fsm_state *s;
 	struct fsm_state *next;
 	int i;
@@ -29,21 +31,21 @@ static void free_contents(struct fsm *fsm) {
 static void
 state_remove(struct fsm_state **head, struct fsm_state *state)
 {
-    struct fsm_state **s;
+	struct fsm_state **s;
 
-    assert(head != NULL);
-    assert(state != NULL);
+	assert(head != NULL);
+	assert(state != NULL);
 
-    for (s = head; *s != NULL; s = &(*s)->next) {
-        if (*s == state) {
-            struct fsm_state *next;
+	for (s = head; *s != NULL; s = &(*s)->next) {
+		if (*s == state) {
+			struct fsm_state *next;
 
-            next = (*s)->next;
-            free(*s);
-            *s = next;
-            break;
-        }
-    }
+			next = (*s)->next;
+			free(*s);
+			*s = next;
+			break;
+		}
+	}
 }
 
 struct fsm *

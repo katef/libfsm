@@ -29,7 +29,9 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	return 0;
 }
 
-static void escputc(int c, FILE *f) {
+static void
+escputc(int c, FILE *f)
+{
 	size_t i;
 
 	struct {
@@ -64,7 +66,9 @@ static void escputc(int c, FILE *f) {
 }
 
 /* TODO: centralise */
-static void escputs(const char *s, FILE *f) {
+static void
+escputs(const char *s, FILE *f)
+{
 	const char *p;
 
 	assert(f != NULL);
@@ -76,7 +80,9 @@ static void escputs(const char *s, FILE *f) {
 }
 
 /* TODO: centralise */
-static const struct fsm_state *findany(const struct fsm_state *state) {
+static const struct fsm_state *
+findany(const struct fsm_state *state)
+{
 	struct state_set *e;
 	int i;
 
@@ -99,7 +105,10 @@ static const struct fsm_state *findany(const struct fsm_state *state) {
 	return state->edges[0].sl->state;
 }
 
-void fsm_out_fsm(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
+void
+fsm_out_fsm(const struct fsm *fsm, FILE *f,
+	const struct fsm_outoptions *options)
+{
 	struct fsm_state *s;
 	struct state_set *e;
 	struct fsm_state *start;

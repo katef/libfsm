@@ -32,11 +32,15 @@
  * ./re -e '^012.*abc$' -b '[a-z]_xx$' -g 'abc*def' "some string" "some other string"
  */
 
-static void usage(void) {
+static void
+usage(void)
+{
 	fprintf(stderr, "usage: re [-h] { [-cid] [-lgeb9ps] <re> } <string>\n");
 }
 
-static enum re_form form(char c) {
+static enum
+re_form form(char c)
+{
 	switch (c) {
 /* TODO:
 	case 'e': return RE_ERE;
@@ -56,7 +60,9 @@ static enum re_form form(char c) {
 	assert(!"unreached");
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	struct re *re;
 	int files;
 	int dump;

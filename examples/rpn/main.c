@@ -11,7 +11,9 @@ int stack[20];
 unsigned int n;
 
 
-static int pop(void) {
+static int
+pop(void)
+{
 	if (n == 0) {
 		return 0;
 	}
@@ -19,7 +21,9 @@ static int pop(void) {
 	return stack[--n];
 }
 
-static void push(int i) {
+static void
+push(int i)
+{
 	if (n == sizeof stack / sizeof *stack) {
 		fprintf(stderr, "stack overflow\n");
 		exit(1);
@@ -28,13 +32,17 @@ static void push(int i) {
 	stack[n++] = i;
 }
 
-static int lx_getc(void *opaque) {
+static int
+lx_getc(void *opaque)
+{
 	assert(opaque != NULL);
 
 	return fgetc(opaque);
 }
 
-static void lx_ungetc(int c, void *opaque) {
+static void
+lx_ungetc(int c, void *opaque)
+{
 	assert(opaque != NULL);
 	assert(c >= 0);
 
@@ -44,8 +52,10 @@ static void lx_ungetc(int c, void *opaque) {
 	}
 }
 
-int main(void) {
-	struct lx lx;
+int
+main(void)
+{
+	struct lx lx = { 0 };
 
 	lx.getc   = lx_getc;
 	lx.ungetc = lx_ungetc;

@@ -15,14 +15,18 @@ struct bm {
 	unsigned char map[FSM_EDGE_MAX / CHAR_BIT + 1];
 };
 
-static int bm_get(struct bm *bm, size_t i) {
+static int
+bm_get(struct bm *bm, size_t i)
+{
 	assert(bm != NULL);
 	assert(i <= FSM_EDGE_MAX);
 
 	return bm->map[i / CHAR_BIT] & (1 << i % CHAR_BIT);
 }
 
-static void bm_set(struct bm *bm, size_t i) {
+static void
+bm_set(struct bm *bm, size_t i)
+{
 	assert(bm != NULL);
 	assert(i <= FSM_EDGE_MAX);
 
@@ -89,7 +93,9 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	return 0;
 }
 
-static void escputc(int c, FILE *f) {
+static void
+escputc(int c, FILE *f)
+{
 	size_t i;
 
 	struct {
@@ -134,7 +140,9 @@ static void escputc(int c, FILE *f) {
 	putc(c, f);
 }
 
-static void escputs(const char *s, FILE *f) {
+static void
+escputs(const char *s, FILE *f)
+{
 	const char *p;
 
 	assert(f != NULL);
@@ -146,7 +154,9 @@ static void escputs(const char *s, FILE *f) {
 }
 
 /* Return true if the edges after o contains state */
-static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
+static int
+contains(struct fsm_edge edges[], int o, struct fsm_state *state)
+{
 	int i;
 
 	assert(edges != NULL);
@@ -161,7 +171,10 @@ static int contains(struct fsm_edge edges[], int o, struct fsm_state *state) {
 	return 0;
 }
 
-static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, const struct fsm_outoptions *options) {
+static void
+singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
+	const struct fsm_outoptions *options)
+{
 	struct state_set *e;
 	int i;
 
@@ -311,7 +324,10 @@ static void singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s, con
 	}
 }
 
-static void out_dotfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
+static void
+out_dotfrag(const struct fsm *fsm, FILE *f,
+	const struct fsm_outoptions *options)
+{
 	struct fsm_state *s;
 
 	assert(fsm != NULL);
@@ -329,7 +345,10 @@ static void out_dotfrag(const struct fsm *fsm, FILE *f, const struct fsm_outopti
 	}
 }
 
-void fsm_out_dot(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) {
+void
+fsm_out_dot(const struct fsm *fsm, FILE *f,
+	const struct fsm_outoptions *options)
+{
 	struct fsm_state *start;
 
 	assert(fsm != NULL);

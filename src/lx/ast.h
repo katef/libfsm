@@ -48,7 +48,8 @@ struct ast_zone *
 ast_addzone(struct ast *ast);
 
 struct ast_mapping *
-ast_addmapping(struct ast_zone *z, struct re *re, struct ast_token *token, struct ast_zone *to);
+ast_addmapping(struct ast_zone *z, struct re *re,
+	struct ast_token *token, struct ast_zone *to);
 
 
 #endif
