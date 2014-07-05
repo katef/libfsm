@@ -331,10 +331,11 @@ allstatesreachableby(const struct fsm *fsm, struct state_set *set, char c,
 }
 
 static void
-carrythrough(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
+carryend(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 {
 	struct state_set *s;
 
+	assert(set != NULL); /* TODO: right? */
 	assert(fsm != NULL);
 	assert(state != NULL);
 
@@ -358,13 +359,14 @@ carrythrough(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
  * "Modern compiler implementation", which has a detailed description of this
  * process.
  *
- * As all DFA are NFA; for a DFA this has no semantic effect other than
+ * As all DFA are NFA; for a DFA this has no semantic effect (other than
  * renumbering states as a side-effect of constructing the new FSM).
  *
  * TODO: returning an int is a little cumbersome here. Why not return an fsm?
  */
 static int
-nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa)
+nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa,
+	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *))
 {
 	struct mapping *curr;
 
@@ -443,14 +445,24 @@ nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa)
 		 * The current DFA state is an end state if any of its associated NFA
 		 * states are end states.
 		 */
-		carrythrough(curr->closure, dfa, curr->dfastate);
+		carryend(curr->closure, dfa, curr->dfastate);
+
+		/*
+		 * Carry through opaque values, if present. This isn't anything to do
+		 * with the DFA conversion; it's meaningful only to the caller.
+		 */
+		/* XXX: possibly have callback in fsm struct, instead. like the colour hooks */
+		if (carryopaque != NULL) {
+			carryopaque(curr->closure, dfa, curr->dfastate);
+		}
 	}
 
 	return 1;
 }
 
 int
-fsm_todfa(struct fsm *fsm)
+fsm_todfa_opaque(struct fsm *fsm,
+	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *))
 {
 	struct mapping *ml;
 	struct fsm *dfa;
@@ -464,7 +476,7 @@ fsm_todfa(struct fsm *fsm)
 	}
 
 	ml = NULL;
-	r = nfatodfa(&ml, fsm, dfa);
+	r = nfatodfa(&ml, fsm, dfa, carryopaque);
 
 	free_mappings(ml);
 	if (!r) {
@@ -477,5 +489,11 @@ fsm_todfa(struct fsm *fsm)
 	fsm_move(fsm, dfa);
 
 	return 1;
+}
+
+int
+fsm_todfa(struct fsm *fsm)
+{
+	return fsm_todfa_opaque(fsm, NULL);
 }
 

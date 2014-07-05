@@ -25,6 +25,8 @@ struct fsm_state {
 
 	struct fsm_edge edges[FSM_EDGE_MAX + 1];
 
+	void *opaque;
+
 	struct fsm_state *next;
 };
 

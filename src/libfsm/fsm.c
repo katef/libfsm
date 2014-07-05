@@ -124,6 +124,8 @@ fsm_addstate(struct fsm *fsm)
 		new->edges[i].sl = NULL;
 	}
 
+	new->opaque = NULL;
+
 	new->next = fsm->sl;
 	fsm->sl = new;
 

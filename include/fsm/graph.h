@@ -5,6 +5,7 @@
 
 struct fsm;
 struct fsm_state;
+struct state_set;
 
 /*
  * Reverse the given fsm. This may result in an NFA.
@@ -29,6 +30,11 @@ fsm_complement(struct fsm *fsm);
  */
 int
 fsm_todfa(struct fsm *fsm);
+
+/* TODO: explain */
+int
+fsm_todfa_opaque(struct fsm *fsm,
+	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *));
 
 /*
  * Returns true if a given FSM is a DFA.
