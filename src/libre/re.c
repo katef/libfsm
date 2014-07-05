@@ -62,7 +62,10 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	case RE_LITERAL: comp = comp_literal; break;
 	case RE_GLOB:    comp = comp_glob;    break;
 	case RE_SIMPLE:  comp = comp_simple;  break;
-	default: e = RE_EBADFORM;             return NULL;
+
+	default:
+		*err = RE_EBADFORM;
+		return NULL;
 	}
 
 	new = comp(getc, opaque, err);
