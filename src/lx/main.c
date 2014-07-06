@@ -24,7 +24,7 @@
 static
 void usage(void)
 {
-	printf("usage: lx [-h] [-l <language>] <input>\n");
+	printf("usage: lx [-h] [-g] [-l <language>] <input>\n");
 }
 
 /* TODO: centralise */
@@ -103,11 +103,14 @@ main(int argc, char *argv[])
 	struct ast *ast;
 	enum lx_out format = LX_OUT_C;
 	FILE *in;
+	int g;
+
+	g = 0;
 
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hvl:")) != -1) {
+		while ((c = getopt(argc, argv, "hvl:g")) != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -126,6 +129,10 @@ main(int argc, char *argv[])
 				}
 				break;
 
+			case 'g':
+				g = 1;
+				break;
+
 			case '?':
 			default:
 				usage();
@@ -142,6 +149,11 @@ main(int argc, char *argv[])
 		}
 
 		in = xopen(argc, argv, 1, stdin, "r");
+	}
+
+	if (g && format != LX_OUT_DOT) {
+		fprintf(stderr, "-g is for dot output only\n");
+		exit(EXIT_FAILURE);
 	}
 
 	ast = lx_parse(in);
@@ -182,9 +194,11 @@ main(int argc, char *argv[])
 				assert(m->re != NULL);
 				assert(m->re->fsm != NULL);
 
-				/* XXX: abstraction */
-				if (!fsm_minimize(m->re->fsm)) {
-					return EXIT_FAILURE;
+				if (!g) {
+					/* XXX: abstraction */
+					if (!fsm_minimize(m->re->fsm)) {
+						return EXIT_FAILURE;
+					}
 				}
 
 				/* potentially invalidated by fsm_minimize */
@@ -206,9 +220,11 @@ main(int argc, char *argv[])
 				m->re = NULL;   /* TODO: free properly somehow? or clone first? */
 			}
 
-			/* TODO: note this makes re->end invalid. that's what i get for breaking abstraction */
-			if (!fsm_todfa_opaque(z->re->fsm, carryopaque)) {
-				return EXIT_FAILURE;
+			if (!g) {
+				/* TODO: note this makes re->end invalid. that's what i get for breaking abstraction */
+				if (!fsm_todfa_opaque(z->re->fsm, carryopaque)) {
+					return EXIT_FAILURE;
+				}
 			}
 		}
 	}
