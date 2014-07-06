@@ -77,11 +77,7 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 	if (m->token != NULL) {
 		assert(m->token->s != NULL);
 
-		fprintf(f, "\t\tz%uS%u -> z%uS%u_tok [ color = gray ];\n",
-			zindexof(ast, z), indexof(fsm, s),
-			zindexof(ast, z), indexof(fsm, s));
-
-		fprintf(f, "\t\tz%uS%u_tok [ shape = plaintext, label = \"$%s\" ];\n",
+		fprintf(f, "\t\tz%uS%u [ label = \"$%s\" ];\n",
 			zindexof(ast, z), indexof(fsm, s),
 			m->token->s);
 	}
@@ -165,7 +161,7 @@ lx_out_dot(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "\tstart [ shape = plaintext ];\n");
-	fprintf(f, "\tstart -> z%uS%u [ color = gray ];\n",
+	fprintf(f, "\tstart -> z%uS%u;\n",
 		zindexof(ast, ast->global),
 		indexof(ast->global->re->fsm, ast->global->re->fsm->start));
 	fprintf(f, "\n");
