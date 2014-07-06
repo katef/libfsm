@@ -339,7 +339,7 @@ carryend(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	for (s = set ; s != NULL; s = s->next) {
+	for (s = set; s != NULL; s = s->next) {
 		if (fsm_isend(fsm, s->state)) {
 			fsm_setend(fsm, state, 1);
 		}
