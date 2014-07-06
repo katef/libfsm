@@ -131,10 +131,10 @@ main(int argc, char *argv[])
 				usage();
 				exit(EXIT_FAILURE);
 			}
-
-			argc -= optind;
-			argv += optind;
 		}
+
+		argc -= optind;
+		argv += optind;
 
 		if (argc > 1) {
 			usage();
