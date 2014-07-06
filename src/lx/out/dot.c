@@ -74,31 +74,26 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 
 	assert(m != NULL);
 
+	fprintf(f, "\t\tz%uS%u [ label = <",
+		zindexof(ast, z), indexof(fsm, s));
+
 	if (m->token != NULL) {
 		assert(m->token->s != NULL);
 
-		fprintf(f, "\t\tz%uS%u [ label = \"$%s\" ];\n",
-			zindexof(ast, z), indexof(fsm, s),
-			m->token->s);
+		fprintf(f, "$%s", m->token->s);
 	}
 
-	if (m->to == NULL) {
-		fprintf(f, "\t\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
-			zindexof(ast, z), indexof(fsm, s),
-			zindexof(ast, ast->global), indexof(ast->global->re->fsm, ast->global->re->fsm->start));
-	} else if (m->to == z) {
-		assert(m->to->re != NULL);
-		assert(m->to->re->fsm != NULL);
-		assert(m->to->re->fsm->start != NULL);
+	if (m->token != NULL && m->to != NULL) {
+		fprintf(f, "<br/>");
+	}
 
-		fprintf(f, "\t\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
-			zindexof(ast, z), indexof(fsm, s),
-			zindexof(ast, z), indexof(z->re->fsm, z->re->fsm->start));
-	} else {
-		assert(m->to->re != NULL);
-		assert(m->to->re->fsm != NULL);
-		assert(m->to->re->fsm->start != NULL);
+	if (m->to != NULL) {
+		fprintf(f, "z%u", zindexof(ast, m->to));
+	}
 
+	fprintf(f, "> ];\n");
+
+	if (m->to != NULL) {
 		fprintf(f, "\t\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
 			zindexof(ast, z), indexof(fsm, s),
 			zindexof(ast, m->to), indexof(m->to->re->fsm, m->to->re->fsm->start));
@@ -125,6 +120,16 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	} else {
 		fprintf(f, "\t\tlabel = <z%u>;\n", zindexof(ast, z));
 	}
+
+/* XXX: only if not showing transitions between zones:
+	fprintf(f, "\tz%u_start [ shape = plaintext ];\n",
+		zindexof(ast, z));
+	fprintf(f, "\tz%u_start -> z%uS%u;\n",
+		zindexof(ast, z),
+		zindexof(ast, z),
+		indexof(z->re->fsm, z->re->fsm->start));
+	fprintf(f, "\n");
+*/
 
 	{
 		struct fsm_outoptions o = { 0 };
