@@ -70,7 +70,9 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 		return;
 	}
 
-	m = /* TODO: s->cl->colour */ NULL;
+	m = s->opaque;
+
+	assert(m != NULL);
 
 	if (m->token != NULL) {
 		assert(m->token->s != NULL);

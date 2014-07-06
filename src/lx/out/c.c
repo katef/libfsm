@@ -197,9 +197,11 @@ singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		/* XXX: don't need this if complete */
 		fprintf(f, "\t\t\tdefault:  lx->getc = NULL; return TOK_ERROR;\n");
 	} else {
-		struct ast_mapping *m;
+		const struct ast_mapping *m;
 
-		m = /* TODO: state->cl->colour */ NULL;
+		m = state->opaque;
+
+		assert(m != NULL);
 
 		/* XXX: don't need this if complete */
 		fprintf(f, "\t\t\tdefault:  lx->ungetc(c, lx->opaque); return ");
@@ -212,7 +214,7 @@ singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		} else {
 			fprintf(f, "lx->z(lx)");
 		}
-		fprintf(f, ";\n"); /* TODO: colour for token */
+		fprintf(f, ";\n");
 	}
 
 done:
@@ -316,13 +318,15 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		fprintf(f, "\tswitch (state) {\n");
 
 		for (s = z->re->fsm->sl; s != NULL; s = s->next) {
-			struct ast_mapping *m;
+			const struct ast_mapping *m;
 
 			if (!fsm_isend(z->re->fsm, s)) {
 				continue;
 			}
 
-			m = /* TODO: s->cl->colour */ NULL;
+			m = s->opaque;
+
+			assert(m != NULL);
 
 			fprintf(f, "\tcase S%u: return ", indexof(z->re->fsm, s));
 

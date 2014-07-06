@@ -15,8 +15,9 @@
 #include "parser.h"
 #include "internal.h"
 
-#include "libfsm/internal.h" /* XXX */
 #include "libre/internal.h" /* XXX */
+#include "libfsm/internal.h" /* XXX */
+#include "libfsm/set.h" /* XXX */
 
 #include "ast.h"
 
@@ -43,36 +44,57 @@ xopen(int argc, char * const argv[], int i, FILE *f, const char *mode)
 	return f;
 }
 
-void
-print_diagnostic(struct fsm_state *state)
+static void
+carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 {
-	struct ast_mapping *m1;
-	struct ast_mapping *m2;
-	const char *t1;
-	const char *t2;
+	struct state_set *s;
 
-	m1 = /* TODO: state->cl->colour */ NULL;
+	assert(set != NULL); /* TODO: right? */
+	assert(fsm != NULL);
+	assert(state != NULL);
+	assert(state->opaque == NULL);
+
+	if (!fsm_isend(fsm, state)) {
+		return;
+	}
 
 	/*
-	 * TODO: intersect conflicting regexps, and output exactly the language
-	 * which conflicts (rendered as a regexp by fsm_reduce):
+	 * Here we mark newly-created DFA states with the same AST mapping
+	 * as from their corresponding source NFA states. These are the mappings
+	 * which indicate which lexical token (and zone transition) is produced
+	 * from each accepting state in a particular regexp.
 	 *
-	 *   "patterns which match /ab.*c/ map to $token1, $token2"
-	 *   "conflicts: /ab.*c/ -> $token1, $token2;"
-	 *
-	 * Show all known conflicts before exiting
+	 * Because all the accepting states belong to the same regexp, they
+	 * should all have the same mapping. So we nominate one to use for the
+	 * opaque value and check all other accepting states are the same.
 	 */
 
-	/* TODO: for (c = state->cl->next; c != NULL; c = c->next) */ {
-		m2 = /* TODO: c->colour */ NULL;
-
-		t1 = m1->token == NULL ? "(null)" : m1->token->s;
-		t2 = m2->token == NULL ? "(null)" : m2->token->s;
-
-		/* TODO: give some useful output */
-		fprintf(stderr, "conflict -> $%s/%p and -> $%s/%p\n", t1,
-			(void *) m1->to, t2, (void *) m2->to);
+	for (s = set; s != NULL; s = s->next) {
+		if (fsm_isend(fsm, s->state)) {
+			state->opaque = s->state->opaque;
+			break;
+		}
 	}
+
+	assert(state->opaque != NULL);
+
+	for (s = set; s != NULL; s = s->next) {
+		if (!fsm_isend(fsm, s->state)) {
+			continue;
+		}
+
+		if (s->state->opaque != state->opaque) {
+			goto error;
+		}
+	}
+
+	return;
+
+error:
+
+	state->opaque = NULL;
+
+	return;
 }
 
 int
@@ -155,6 +177,8 @@ main(int argc, char *argv[])
 			}
 
 			for (m = z->ml; m != NULL; m = m->next) {
+				struct fsm_state *s;
+
 				assert(m->re != NULL);
 				assert(m->re->fsm != NULL);
 
@@ -167,6 +191,14 @@ main(int argc, char *argv[])
 				/* TODO: maybe it would be convenient to re-find this, if neccessary */
 				m->re->end = NULL;
 
+				/* Attach this mapping to each end state for this regexp */
+				for (s = m->re->fsm->sl; s != NULL; s = s->next) {
+					if (fsm_isend(m->re->fsm, s)) {
+						assert(s->opaque == NULL);
+						s->opaque = m;
+					}
+				}
+
 				if (!re_union(z->re, m->re)) {
 					return EXIT_FAILURE;
 				}
@@ -175,7 +207,7 @@ main(int argc, char *argv[])
 			}
 
 			/* TODO: note this makes re->end invalid. that's what i get for breaking abstraction */
-			if (!fsm_todfa(z->re->fsm)) {
+			if (!fsm_todfa_opaque(z->re->fsm, carryopaque)) {
 				return EXIT_FAILURE;
 			}
 		}
@@ -187,28 +219,40 @@ main(int argc, char *argv[])
 	{
 		struct ast_zone  *z;
 		struct fsm_state *s;
+		int e;
 
 		assert(ast->zl != NULL);
 
 		/* TODO: check for: no end states (same as no tokens?) */
 		/* TODO: check for reserved token names (ERROR, EOF etc) */
+		/* TODO: don't forget to indicate zone in error messages */
+
+		e = 0;
 
 		for (z = ast->zl; z != NULL; z = z->next) {
 			assert(z->re != NULL);
+			assert(z->ml != NULL);
 
+			if (fsm_isend(z->re->fsm, z->re->fsm->start)) {
+				fprintf(stderr, "start state accepts\n"); /* TODO */
+				e = 1;
+			}
+
+			/* pick up conflicts flagged by carryopaque() */
 			for (s = z->re->fsm->sl; s != NULL; s = s->next) {
 				if (!fsm_isend(z->re->fsm, s)) {
 					continue;
 				}
 
-				/* TODO: if s->cl->next != NULL then >= 2 FSMs accept the same input */
-				if (0 /* TODO: s->cl->next != NULL */) {
-					/* TODO: cli option to dump conflicting .fsm */
-					print_diagnostic(s);
-					return EXIT_FAILURE;
+				if (s->opaque == NULL) {
+					fprintf(stderr, "opaque conflict\n"); /* TODO */
+					e = 1;
 				}
 			}
+		}
 
+		if (e) {
+			return EXIT_FAILURE;
 		}
 	}
 
