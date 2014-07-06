@@ -270,7 +270,9 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 	/* TODO: prerequisite that the FSM is a DFA */
 
-	fprintf(f, "static enum lx_token z%u(struct lx *lx) {\n", zindexof(ast, z));
+	fprintf(f, "static enum lx_token\n");
+	fprintf(f, "z%u(struct lx *lx)\n", zindexof(ast, z));
+	fprintf(f, "{\n");
 	fprintf(f, "\tint c;\n");
 	fprintf(f, "\n");
 
@@ -380,7 +382,9 @@ lx_out_c(const struct ast *ast, FILE *f)
 	{
 		struct ast_token *t;
 
-		fprintf(f, "const char *lx_name(enum lx_token t) {\n");
+		fprintf(f, "const char *\n");
+		fprintf(f, "lx_name(enum lx_token t)\n");
+		fprintf(f, "{\n");
 
 		fprintf(f, "\tswitch (t) {\n");
 
@@ -405,7 +409,9 @@ lx_out_c(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 
 	{
-		fprintf(f, "enum lx_token lx_nexttoken(struct lx *lx) {\n");
+		fprintf(f, "enum lx_token\n");
+		fprintf(f, "lx_nexttoken(struct lx *lx)\n");
+		fprintf(f, "{\n");
 
 		fprintf(f, "\tenum lx_token t;\n");
 		fprintf(f, "\n");
