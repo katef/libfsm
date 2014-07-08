@@ -1,8 +1,9 @@
 /* $Id$ */
 
 #include <assert.h>
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
+#include <errno.h>
 
 #include <adt/set.h>
 
@@ -63,7 +64,11 @@ fsm_exec(const struct fsm *fsm,
 
 	/* TODO: pass struct of callbacks to call during each event; transitions etc */
 
-	assert(fsm_isdfa(fsm));
+	if (!fsm_isdfa(fsm)) {
+		errno = EINVAL;
+		return 0;
+	}
+
 	assert(fsm->start != NULL);
 	state = fsm->start;
 

@@ -15,8 +15,20 @@ fsm_complement(struct fsm *fsm)
 	struct fsm_state *s;
 
 	assert(fsm != NULL);
-	assert(fsm_isdfa(fsm));
-	assert(fsm_iscomplete(fsm));
+
+	if (!fsm_isdfa(fsm)) {
+		if (!fsm_todfa(fsm)) {
+			fsm_free(fsm);
+			return 0;
+		}
+	}
+
+	if (!fsm_iscomplete(fsm)) {
+		if (!fsm_complete(fsm)) {
+			re_free(fsm);
+			return 0;
+		}
+	}
 
 	/*
 	 * For a Complete DFA, the complement of the language matched is given by
