@@ -25,7 +25,7 @@ fsm_complement(struct fsm *fsm)
 
 	if (!fsm_iscomplete(fsm)) {
 		if (!fsm_complete(fsm)) {
-			re_free(fsm);
+			fsm_free(fsm);
 			return 0;
 		}
 	}
