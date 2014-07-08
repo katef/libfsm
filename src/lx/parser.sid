@@ -30,7 +30,7 @@
 	<compile-regex>:   (:string) -> (:re);
 
 	<concat-regex>:     (:re, :re) -> (:re);
-	<complement-regex>: (:re)      -> (:re);
+	<complement-regex>: (:re)      -> ();
 
 	<make-ast>:     ()                                 -> (:ast);
 	<make-zone>:    (:ast)                             -> (:zone);
@@ -132,9 +132,9 @@
 				 */
 
 				x = <no-to>;
-				y = <complement-regex>(r2);
-				z = <no-token>;
-				<make-mapping>(a, child, x, y, z);
+				y = <no-token>;
+				<complement-regex>(r2);
+				<make-mapping>(a, child, x, r2, y);
 			||
 				{
 					open;

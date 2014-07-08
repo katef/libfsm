@@ -189,13 +189,11 @@
 		@z = NULL;
 	@};
 
-	<complement-regex>: (r :re) -> (new :re) = @{
+	<complement-regex>: (r :re) -> () = @{
 		assert(@r != NULL);
 
-		/* TODO: handle error codes */
-		@new = re_new_copy(@r, RE_COMPLEMENT);
-		if (@new == NULL) {
-			perror("re_new_copy");
+		if (!fsm_complement(@r->fsm)) {
+			perror("fsm_complement");
 			@!;
 		}
 	@};
