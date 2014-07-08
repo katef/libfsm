@@ -4,11 +4,12 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#include <adt/set.h>
+
 #include <fsm/fsm.h>
 #include <fsm/graph.h>
 
 #include "internal.h"
-#include "set.h"
 
 /* TODO: explain not true equivalence; only intended for use here */
 static int

@@ -5,11 +5,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <adt/set.h>
+
 #include <fsm/fsm.h>
 #include <fsm/graph.h>
 
 #include "out.h"
-#include "libfsm/set.h"
 #include "libfsm/internal.h"
 
 static unsigned int

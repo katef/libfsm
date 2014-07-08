@@ -4,10 +4,11 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <adt/set.h>
+
 #include <fsm/fsm.h>
 
 #include "internal.h"
-#include "set.h"
 
 static int
 isdfastate(const struct fsm_state *state)

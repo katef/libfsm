@@ -3,6 +3,8 @@
 #ifndef SET_H
 #define SET_H
 
+struct fsm_state;
+
 struct state_set {
 	struct fsm_state *state;
 	struct state_set *next;

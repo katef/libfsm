@@ -6,7 +6,6 @@
 #include <fsm/fsm.h>
 
 #include "internal.h"
-#include "set.h"
 
 struct fsm_state *
 fsm_collateends(struct fsm *fsm)

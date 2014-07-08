@@ -4,12 +4,12 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-#include <fsm/fsm.h>
-
+#include <adt/set.h>
 #include <adt/xalloc.h>
 
+#include <fsm/fsm.h>
+
 #include "internal.h"
-#include "set.h"
 
 struct mapping {
 	struct fsm_state *old;

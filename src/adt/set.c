@@ -3,8 +3,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "internal.h"
-#include "set.h"
+#include <adt/set.h>
 
 struct state_set *
 set_addstate(struct state_set **head, struct fsm_state *state)

@@ -5,12 +5,12 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#include <fsm/fsm.h>
-
+#include <adt/set.h>
 #include <adt/xalloc.h>
 
+#include <fsm/fsm.h>
+
 #include "internal.h"
-#include "set.h"
 
 static struct fsm_edge *
 fsm_addedge(struct fsm *fsm,

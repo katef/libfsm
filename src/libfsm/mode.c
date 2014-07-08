@@ -3,10 +3,11 @@
 #include <assert.h>
 #include <stddef.h>
 
+#include <adt/set.h>
+
 #include <fsm/fsm.h>
 
 #include "internal.h"
-#include "set.h"
 
 struct fsm_state *
 fsm_findmode(const struct fsm_state *state)

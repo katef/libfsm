@@ -4,11 +4,12 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include <adt/set.h>
+
 #include <fsm/fsm.h>
 
 #include "out.h"
 #include "libfsm/internal.h"
-#include "libfsm/set.h"
 
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)

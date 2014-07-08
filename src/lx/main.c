@@ -9,7 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <adt/set.h>
+
 #include <fsm/graph.h> /* XXX */
+
 #include <re/re.h>
 
 #include "parser.h"
@@ -17,7 +20,6 @@
 
 #include "libre/internal.h" /* XXX */
 #include "libfsm/internal.h" /* XXX */
-#include "libfsm/set.h" /* XXX */
 
 #include "ast.h"
 

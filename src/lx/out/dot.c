@@ -7,7 +7,6 @@
 #include <fsm/out.h>
 
 #include "libfsm/internal.h" /* XXX */
-#include "libfsm/set.h"      /* XXX */
 #include "libre/internal.h"	 /* XXX */
 
 #include "../ast.h"

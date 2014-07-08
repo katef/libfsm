@@ -4,12 +4,13 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#include <adt/set.h>
+
 #include <fsm/out.h>
 #include <fsm/graph.h>
 
 #include "libre/internal.h"	 /* XXX */
 #include "libfsm/internal.h" /* XXX */
-#include "libfsm/set.h"      /* XXX */
 
 #include "../ast.h"
 #include "../internal.h"

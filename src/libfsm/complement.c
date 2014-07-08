@@ -8,7 +8,6 @@
 #include <fsm/graph.h>
 
 #include "internal.h"
-#include "set.h"
 
 int
 fsm_complement(struct fsm *fsm)

@@ -18,7 +18,6 @@ SRCS+= mode.c
 SRCS+= minimize.c
 SRCS+= out.c
 SRCS+= reverse.c
-SRCS+= set.c
 SRCS+= state.c
 SRCS+= todfa.c
 

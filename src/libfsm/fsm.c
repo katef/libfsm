@@ -3,10 +3,11 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <adt/set.h>
+
 #include <fsm/fsm.h>
 
 #include "internal.h"
-#include "set.h"
 
 static void
 free_contents(struct fsm *fsm)

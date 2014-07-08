@@ -3,10 +3,11 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <adt/set.h>
+
 #include <fsm/fsm.h>
 
 #include "internal.h"
-#include "set.h"
 
 /* TODO: centralise? or optimise by folding into the loops below? */
 static struct fsm_state *

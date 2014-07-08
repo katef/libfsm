@@ -4,11 +4,12 @@
 #include <stddef.h>
 #include <limits.h>
 
+#include <adt/set.h>
+
 #include <fsm/fsm.h>
 #include <fsm/graph.h>
 
 #include "internal.h"
-#include "set.h"
 
 int
 fsm_complete(struct fsm *fsm)

@@ -5,11 +5,12 @@
 #include <ctype.h>
 #include <limits.h>
 
+#include <adt/set.h>
+
 #include <fsm/fsm.h>
 
 #include "out.h"
 #include "libfsm/internal.h"
-#include "libfsm/set.h"
 
 struct bm {
 	unsigned char map[FSM_EDGE_MAX / CHAR_BIT + 1];
