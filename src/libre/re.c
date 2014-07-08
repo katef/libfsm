@@ -80,64 +80,6 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	return new;
 }
 
-struct re *
-re_new_copy(const struct re *re, enum re_cflags cflags)
-{
-	struct re *new;
-
-	assert(re != NULL);
-	assert(re->fsm != NULL);
-	assert(re->end != NULL);
-
-	new = malloc(sizeof *new);
-	if (new == NULL) {
-		return NULL;
-	}
-
-	new->fsm = fsm_copy(re->fsm);
-	if (new->fsm == NULL) {
-		re_free(new);
-		return NULL;
-	}
-
-	if (cflags & RE_REVERSE) {
-		if (!fsm_reverse(new->fsm)) {
-			re_free(new);
-			return NULL;
-		}
-	}
-
-	if (cflags & RE_COMPLEMENT) {
-		if (!fsm_todfa(new->fsm)) {
-			re_free(new);
-			return NULL;
-		}
-
-		if (!fsm_complete(new->fsm)) {
-			re_free(new);
-			return NULL;
-		}
-
-		/* XXX: breaking abstraction */
-		if (!fsm_complement(new->fsm)) {
-			re_free(new);
-			return NULL;
-		}
-	}
-
-	assert(fsm_hasend(new->fsm));
-
-	new->end = fsm_collateends(new->fsm);
-	if (new->end == NULL) {
-		re_free(new);
-		return NULL;
-	}
-
-	assert(fsm_isend(new->fsm, new->end));
-
-	return new;
-}
-
 void
 re_free(struct re *re)
 {
