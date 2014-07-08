@@ -276,7 +276,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	fprintf(f, "\tstate = S%u;\n", indexof(fsm, fsm->start));
 	fprintf(f, "\n");
 
-	fprintf(f, "\twhile ((c = fsm_getc(opaque)) != EOF) {\n");
+	fprintf(f, "\twhile (c = fsm_getc(opaque), c != EOF) {\n");
 	out_cfrag(fsm, f, options);
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");

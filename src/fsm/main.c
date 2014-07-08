@@ -155,7 +155,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hagn:l:de:o:cmrt:pP:q:")) != -1) {
+		while (c = getopt(argc, argv, "hagn:l:de:o:cmrt:pP:q:"), c != -1) {
 			switch (c) {
 			case 'a': out_options.anonymous_states  = 1;      break;
 			case 'g': out_options.fragment          = 1;      break;

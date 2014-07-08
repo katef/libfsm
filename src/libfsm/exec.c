@@ -67,7 +67,7 @@ fsm_exec(const struct fsm *fsm,
 	assert(fsm->start != NULL);
 	state = fsm->start;
 
-	while ((c = fsm_getc(opaque)) != EOF) {
+	while (c = fsm_getc(opaque), c != EOF) {
 		state = nextstate(state, c);
 		if (state == NULL) {
 			return 0;

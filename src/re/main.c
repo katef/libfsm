@@ -86,7 +86,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while ((c = getopt(argc, argv, "hcdil:g:s:")) != -1) {
+		while (c = getopt(argc, argv, "hcdil:g:s:"), c != -1) {
 			struct re *new;
 			enum re_err err;
 
