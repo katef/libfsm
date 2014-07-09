@@ -2,14 +2,14 @@
  * Automatically generated from the files:
  *	form/simple/parser.sid
  * and
- *	libre/parser.act
+ *	parser.act
  * by:
  *	sid
  */
 
 /* BEGINNING OF HEADER */
 
-#line 67 "libre/parser.act"
+#line 67 "parser.act"
 
 
 	typedef struct re *        re;
@@ -44,7 +44,7 @@
 extern void p_re__simple(re, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 369 "libre/parser.act"
+#line 365 "parser.act"
 
 
 #line 51 "form/simple/parser.h"

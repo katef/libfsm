@@ -16,8 +16,6 @@
  */
 struct re {
 	struct fsm *fsm;
-
-	struct fsm_state *end;
 };
 
 #endif

@@ -12,7 +12,9 @@
 #include <string.h>
 
 #include <re/re.h>
+
 #include <fsm/fsm.h>
+#include <fsm/bool.h>
 #include <fsm/graph.h>
 
 #include "internal.h"
@@ -44,8 +46,6 @@ re_new_empty(void)
 
 	fsm_setstart(new->fsm, start);
 
-	new->end = start;	/* for convenience of re_concat() */
-
 	return new;
 }
 
@@ -72,10 +72,6 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	if (new == NULL) {
 		return NULL;
 	}
-
-	assert(new->end != NULL);
-
-	fsm_setend(new->fsm, new->end, 1);
 
 	return new;
 }
@@ -114,13 +110,10 @@ re_union(struct re *re, struct re *new)
 	assert(re != NULL);
 	assert(new != NULL);
 
-	fsm_merge(re->fsm, new->fsm);
-
-	if (!fsm_addedge_epsilon(re->fsm, fsm_getstart(re->fsm), fsm_getstart(new->fsm))) {
+	re->fsm = fsm_union(re->fsm, new->fsm);
+	if (re->fsm == NULL) {
 		return 0;
 	}
-
-	free(new);
 
 	return 1;
 }
@@ -129,20 +122,12 @@ int
 re_concat(struct re *re, struct re *new)
 {
 	assert(re != NULL);
-	assert(re->end != NULL);
 	assert(new != NULL);
 
-	fsm_merge(re->fsm, new->fsm);
-
-	if (!fsm_addedge_epsilon(re->fsm, re->end, fsm_getstart(new->fsm))) {
+	re->fsm = fsm_concat(re->fsm, new->fsm);
+	if (re->fsm == NULL) {
 		return 0;
 	}
-
-	fsm_setend(re->fsm, re->end, 0);
-
-	re->end = new->end;
-
-	free(new);
 
 	return 1;
 }

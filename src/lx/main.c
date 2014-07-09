@@ -203,10 +203,6 @@ main(int argc, char *argv[])
 					}
 				}
 
-				/* potentially invalidated by fsm_minimize */
-				/* TODO: maybe it would be convenient to re-find this, if neccessary */
-				m->re->end = NULL;
-
 				/* Attach this mapping to each end state for this regexp */
 				for (s = m->re->fsm->sl; s != NULL; s = s->next) {
 					if (fsm_isend(m->re->fsm, s)) {
@@ -223,7 +219,6 @@ main(int argc, char *argv[])
 			}
 
 			if (!g) {
-				/* TODO: note this makes re->end invalid. that's what i get for breaking abstraction */
 				if (!fsm_todfa_opaque(z->re->fsm, carryopaque)) {
 					return EXIT_FAILURE;
 				}
