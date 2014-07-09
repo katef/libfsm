@@ -104,34 +104,6 @@ re_strerror(enum re_err err)
 	return NULL;
 }
 
-int
-re_union(struct re *re, struct re *new)
-{
-	assert(re != NULL);
-	assert(new != NULL);
-
-	re->fsm = fsm_union(re->fsm, new->fsm);
-	if (re->fsm == NULL) {
-		return 0;
-	}
-
-	return 1;
-}
-
-int
-re_concat(struct re *re, struct re *new)
-{
-	assert(re != NULL);
-	assert(new != NULL);
-
-	re->fsm = fsm_concat(re->fsm, new->fsm);
-	if (re->fsm == NULL) {
-		return 0;
-	}
-
-	return 1;
-}
-
 void
 re_exec(const struct re *re, const char *s, enum re_eflags eflags)
 {

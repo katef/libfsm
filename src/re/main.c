@@ -8,8 +8,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <fsm/graph.h>	/* XXX */
 #include <fsm/out.h>	/* XXX */
+#include <fsm/bool.h>
+#include <fsm/graph.h>
+
 #include <re/re.h>
 
 #include "libre/internal.h"	/* XXX */
@@ -66,7 +68,7 @@ main(int argc, char *argv[])
 	struct re *re;
 	int files;
 	int dump;
-	int (*join)(struct re *re, struct re *new);
+	struct fsm *(*join)(struct fsm *, struct fsm *);
 
 	if (argc < 2) {
 		usage();
@@ -81,7 +83,7 @@ main(int argc, char *argv[])
 
 	files = 0;
 	dump  = 0;
-	join  = re_union;
+	join  = fsm_union;
 
 	{
 		int c;
@@ -96,7 +98,7 @@ main(int argc, char *argv[])
 				return EXIT_SUCCESS;
 
 			case 'c':
-				join = re_concat;
+				join = fsm_concat;
 				break;
 
 /* TODO:
@@ -143,8 +145,9 @@ main(int argc, char *argv[])
 
 				/* TODO: associate optarg with new's end state */
 
-				if (!join(re, new)) {
-					perror("re_union/concat");
+				re->fsm = join(re->fsm, new->fsm);
+				if (re->fsm == NULL) {
+					perror("fsm_union/concat");
 					return EXIT_FAILURE;
 				}
 

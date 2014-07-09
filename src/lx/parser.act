@@ -24,6 +24,7 @@
 	#include <stdlib.h>
 
 	#include <fsm/bool.h>
+	#include <fsm/graph.h>
 
 	#include <re/re.h>
 	#include "libre/internal.h"	/* XXX */
@@ -124,12 +125,15 @@
 		assert(@a != NULL);
 		assert(@b != NULL);
 
-		if (!re_concat(@a, @b)) {
+		@a->fsm = fsm_concat(@a->fsm, @b->fsm);
+		if (@a->fsm == NULL) {
 			perror("re_concat");
 			@!;
 		}
 
 		@r = @a;
+
+		free(@b);
 	@};
 
 	<make-ast>: () -> (a :ast) = @{

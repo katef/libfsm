@@ -74,24 +74,6 @@ const char *
 re_strerror(enum re_err err);
 
 /*
- * Merge a new regexp into an existing regexp as set union of the two languages,
- * and free new.
- *
- * Returns false on error.
- */
-int
-re_union(struct re *re, struct re *new);
-
-/*
- * Merge a new regexp into an existing regexp as a concatenation of the two
- * languages, and free new.
- *
- * Returns false on error.
- */
-int
-re_concat(struct re *re, struct re *new);
-
-/*
  * Match a string.
  *
  * TODO: Return the regexp that matched, or NULL for no match.

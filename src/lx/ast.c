@@ -6,9 +6,13 @@
 
 #include <re/re.h>
 
+#include <fsm/bool.h>
+
 #include <adt/xalloc.h>
 
 #include "ast.h"
+
+#include "libre/internal.h" /* XXX */
 
 struct ast *
 ast_new(void)
@@ -113,7 +117,9 @@ ast_addmapping(struct ast_zone *z, struct re *re,
 
 	/* TODO: re_addcolour(re, m) */
 
-	if (!re_union(m->re, re)) {
+	m->re->fsm = fsm_union(m->re->fsm, re->fsm);
+	free(re); /* XXX: abstraction */
+	if (m->re->fsm == NULL) {
 		return NULL;
 	}
 

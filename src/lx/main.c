@@ -11,6 +11,7 @@
 
 #include <adt/set.h>
 
+#include <fsm/bool.h>
 #include <fsm/graph.h> /* XXX */
 
 #include <re/re.h>
@@ -211,7 +212,8 @@ main(int argc, char *argv[])
 					}
 				}
 
-				if (!re_union(z->re, m->re)) {
+				z->re->fsm = fsm_union(z->re->fsm, m->re->fsm);
+				if (z->re->fsm == NULL) {
 					return EXIT_FAILURE;
 				}
 
