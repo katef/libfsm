@@ -30,6 +30,12 @@ int
 set_contains(const struct fsm_state *state, const struct state_set *set);
 
 /*
+ * Find if a is a subset of b
+ */
+int
+subsetof(const struct state_set *a, const struct state_set *b);
+
+/*
  * Compare two sets of states for equality.
  */
 int

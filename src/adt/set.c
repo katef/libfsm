@@ -109,8 +109,7 @@ set_contains(const struct fsm_state *state, const struct state_set *set)
 	return 0;
 }
 
-/* Find if a is a subset of b */
-static int
+int
 subsetof(const struct state_set *a, const struct state_set *b)
 {
 	const struct state_set *s;
