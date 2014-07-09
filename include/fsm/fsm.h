@@ -49,12 +49,14 @@ void
 fsm_move(struct fsm *dst, struct fsm *src);
 
 /*
- * Merge states from src into dst, and free src.
+ * Merge states from a and b. This is a memory-management operation only;
+ * the storage for the two sets of states is combined, but no edges are added.
  *
- * TODO: I don't really like this sort of interface. Reconsider?
+ * The resulting FSM has two disjoint sets, and no start state.
+ * Cannot return NULL.
  */
-void
-fsm_merge(struct fsm *dst, struct fsm *src);
+struct fsm *
+fsm_merge(struct fsm *a, struct fsm *b);
 
 /*
  * Add a state.

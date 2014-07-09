@@ -16,14 +16,6 @@ int
 fsm_reverse(struct fsm *fsm);
 
 /*
- * Complement the given fsm.
- *
- * Returns 1 on success, or 0 on error.
- */
-int
-fsm_complement(struct fsm *fsm);
-
-/*
  * Convert an fsm to a DFA.
  *
  * Returns false on error; see errno.
@@ -68,6 +60,12 @@ fsm_iscompletestate(const struct fsm *fsm, const struct fsm_state *state);
  */
 int
 fsm_minimize(struct fsm *fsm);
+
+/*
+ * Concatenate b after a. This is not commutative.
+ */
+struct fsm *
+fsm_concat(struct fsm *a, struct fsm *b);
 
 #endif
 

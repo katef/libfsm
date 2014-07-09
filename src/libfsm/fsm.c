@@ -89,23 +89,6 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	free(src);
 }
 
-void
-fsm_merge(struct fsm *dst, struct fsm *src)
-{
-	struct fsm_state **s;
-
-	assert(src != NULL);
-	assert(dst != NULL);
-
-	for (s = &dst->sl; *s != NULL; s = &(*s)->next) {
-		/* nothing */
-	}
-
-	*s = src->sl;
-
-	free(src);
-}
-
 struct fsm_state *
 fsm_addstate(struct fsm *fsm)
 {

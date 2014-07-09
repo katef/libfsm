@@ -19,7 +19,13 @@ fsm_complete(struct fsm *fsm)
 	size_t i;
 
 	assert(fsm != NULL);
-	assert(fsm_isdfa(fsm));
+
+	if (!fsm_isdfa(fsm)) {
+		if (!fsm_todfa(fsm)) {
+			fsm_free(fsm);
+			return 0;
+		}
+	}
 
 	if (fsm_iscomplete(fsm)) {
 		return 1;

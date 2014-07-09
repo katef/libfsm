@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <fsm/fsm.h>
+#include <fsm/bool.h>
 #include <fsm/graph.h>
 
 #include "internal.h"
@@ -15,13 +16,6 @@ fsm_complement(struct fsm *fsm)
 	struct fsm_state *s;
 
 	assert(fsm != NULL);
-
-	if (!fsm_isdfa(fsm)) {
-		if (!fsm_todfa(fsm)) {
-			fsm_free(fsm);
-			return 0;
-		}
-	}
 
 	if (!fsm_iscomplete(fsm)) {
 		if (!fsm_complete(fsm)) {

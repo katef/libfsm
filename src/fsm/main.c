@@ -11,6 +11,7 @@
 #include <stdlib.h>
 
 #include <fsm/fsm.h>
+#include <fsm/bool.h>
 #include <fsm/graph.h>
 #include <fsm/out.h>
 #include <fsm/exec.h>

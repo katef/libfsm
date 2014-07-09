@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include <fsm/fsm.h>
 
@@ -16,11 +17,18 @@ fsm_collateends(struct fsm *fsm)
 
 	assert(fsm != NULL);
 
+	if (!fsm_hasend(fsm)) {
+		errno = EINVAL;
+		return NULL;
+	}
+
 	/* TODO: centralise */
 	endcount = 0;
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		endcount += !!fsm_isend(fsm, s);
 	}
+
+	assert(endcount != 0);
 
 	switch (endcount) {
 	case 0:

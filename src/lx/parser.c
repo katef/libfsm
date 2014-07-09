@@ -16,6 +16,8 @@
 	#include <stdio.h>
 	#include <stdlib.h>
 
+	#include <fsm/bool.h>
+
 	#include <re/re.h>
 	#include "libre/internal.h"	/* XXX */
 
