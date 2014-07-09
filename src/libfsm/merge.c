@@ -20,7 +20,7 @@ fsm_merge(struct fsm *a, struct fsm *b)
 		/* empty */
 	}
 
-	*s = a->sl;
+	*s = b->sl;
 
 	b->sl = NULL;
 	fsm_free(b);
