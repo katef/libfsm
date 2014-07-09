@@ -59,23 +59,6 @@ escputc(int c, FILE *f)
 	}
 }
 
-static int
-notransitions(struct fsm_state *sl, int i)
-{
-	struct fsm_state *s;
-
-	assert(i >= 0);
-	assert(i <= FSM_EDGE_MAX);
-
-	for (s = sl; s != NULL; s = s->next) {
-		if (s->edges[i].sl != NULL) {
-			return 0;
-		}
-	}
-
-	return 1;
-}
-
 void
 fsm_out_csv(const struct fsm *fsm, FILE *f,
 	const struct fsm_outoptions *options)
