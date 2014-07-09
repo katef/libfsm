@@ -6,7 +6,7 @@
 /*
  * TODO: This API needs quite some refactoring. Mostly we ought to operate
  * in-place, else the user would only free() everything. Having an explicit
- * copy interface leaves the option for duplicating, if they wish. However be
+ * clone interface leaves the option for duplicating, if they wish. However be
  * careful about leaving things in an indeterminate state; everything ought to
  * be atomic.
  */
@@ -38,7 +38,7 @@ fsm_free(struct fsm *fsm);
  * Duplicate an FSM.
  */
 struct fsm *
-fsm_copy(const struct fsm *fsm);
+fsm_clone(const struct fsm *fsm);
 
 /*
  * Copy the contents of src over dst, and free src.

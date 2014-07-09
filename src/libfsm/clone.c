@@ -34,7 +34,7 @@ equivalent(const struct fsm *a, const struct fsm *b,
 }
 
 struct fsm *
-fsm_copy(const struct fsm *fsm)
+fsm_clone(const struct fsm *fsm)
 {
 	struct fsm *new;
 
@@ -49,7 +49,7 @@ fsm_copy(const struct fsm *fsm)
 	 * Create states corresponding to the origional FSM's states.
 	 * These are created in reverse order, but that's okay.
 	 */
-	/* TODO: possibly centralise as a state-copying function */
+	/* TODO: possibly centralise as a state-cloning function */
 	{
 		struct fsm_state *s;
 
