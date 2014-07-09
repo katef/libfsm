@@ -184,7 +184,6 @@ void
 fsm_setstart(struct fsm *fsm, struct fsm_state *state)
 {
 	assert(fsm != NULL);
-	assert(state != NULL);
 
 	fsm->start = state;
 }
