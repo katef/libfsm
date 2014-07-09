@@ -12,8 +12,6 @@
 
 #include "ast.h"
 
-#include "libre/internal.h" /* XXX */
-
 struct ast *
 ast_new(void)
 {
@@ -70,8 +68,8 @@ ast_addzone(struct ast *ast)
 		return NULL;
 	}
 
-	new->ml = NULL;
-	new->re = NULL;
+	new->ml   = NULL;
+	new->fsm  = NULL;
 
 	new->next = ast->zl;
 	ast->zl   = new;
@@ -80,16 +78,16 @@ ast_addzone(struct ast *ast)
 }
 
 struct ast_mapping *
-ast_addmapping(struct ast_zone *z, struct re *re,
+ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 	struct ast_token *token, struct ast_zone *to)
 {
 	struct ast_mapping *m;
 
 	assert(z != NULL);
-	assert(re != NULL);
+	assert(fsm != NULL);
 
 	for (m = z->ml; m != NULL; m = m->next) {
-		assert(m->re != NULL);
+		assert(m->fsm != NULL);
 
 		if (token == m->token && to == m->to) {
 			break;
@@ -102,8 +100,8 @@ ast_addmapping(struct ast_zone *z, struct re *re,
 			return NULL;
 		}
 
-		m->re = re_new_empty();
-		if (m->re == NULL) {
+		m->fsm = re_new_empty();
+		if (m->fsm == NULL) {
 			free(m);
 			return NULL;
 		}
@@ -115,11 +113,10 @@ ast_addmapping(struct ast_zone *z, struct re *re,
 		z->ml   = m;
 	}
 
-	/* TODO: re_addcolour(re, m) */
+	/* TODO: re_addcolour(fsm, m) */
 
-	m->re->fsm = fsm_union(m->re->fsm, re->fsm);
-	free(re); /* XXX: abstraction */
-	if (m->re->fsm == NULL) {
+	m->fsm = fsm_union(m->fsm, fsm);
+	if (m->fsm == NULL) {
 		return NULL;
 	}
 

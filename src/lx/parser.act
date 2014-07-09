@@ -13,7 +13,7 @@
 %maps%
 
 	string -> string;
-	re     -> re;
+	fsm    -> fsm;
 	zone   -> zone;
 	ast    -> ast;
 
@@ -27,7 +27,6 @@
 	#include <fsm/graph.h>
 
 	#include <re/re.h>
-	#include "libre/internal.h"	/* XXX */
 
 	#include <adt/xalloc.h>
 
@@ -36,7 +35,7 @@
 	#include "ast.h"
 
 	typedef char *               string;
-	typedef struct re *          re;
+	typedef struct fsm *         fsm;
 	typedef struct ast_zone *    zone;
 	typedef struct ast_mapping * mapping;
 
@@ -99,7 +98,7 @@
 
 %actions%
 
-	<compile-literal>: (s :string) -> (r :re) = @{
+	<compile-literal>: (s :string) -> (r :fsm) = @{
 		assert(@s != NULL);
 
 		/* TODO: handle error codes */
@@ -110,7 +109,7 @@
 		}
 	@};
 
-	<compile-regex>:   (s :string) -> (r :re) = @{
+	<compile-regex>:   (s :string) -> (r :fsm) = @{
 		assert(@s != NULL);
 
 		/* TODO: handle error codes */
@@ -121,19 +120,15 @@
 		}
 	@};
 
-	<concat-regex>: (a :re, b :re) -> (r :re) = @{
+	<concat-regex>: (a :fsm, b :fsm) -> (q :fsm) = @{
 		assert(@a != NULL);
 		assert(@b != NULL);
 
-		@a->fsm = fsm_concat(@a->fsm, @b->fsm);
-		if (@a->fsm == NULL) {
-			perror("re_concat");
+		@q = fsm_concat(@a, @b);
+		if (@q == NULL) {
+			perror("fsm_concat");
 			@!;
 		}
-
-		@r = @a;
-
-		free(@b);
 	@};
 
 	<make-ast>: () -> (a :ast) = @{
@@ -154,7 +149,7 @@
 		}
 	@};
 
-	<make-mapping>: (a :ast, from :zone, to :zone, r :re, t :string) -> () = @{
+	<make-mapping>: (a :ast, from :zone, to :zone, r :fsm, t :string) -> () = @{
 		struct ast_token *t;
 		struct ast_mapping *m;
 
@@ -195,10 +190,10 @@
 		@z = NULL;
 	@};
 
-	<complement-regex>: (r :re) -> () = @{
+	<complement-regex>: (r :fsm) -> () = @{
 		assert(@r != NULL);
 
-		if (!fsm_complement(@r->fsm)) {
+		if (!fsm_complement(@r)) {
 			perror("fsm_complement");
 			@!;
 		}

@@ -9,10 +9,10 @@
 
 /* BEGINNING OF HEADER */
 
-#line 67 "parser.act"
+#line 65 "parser.act"
 
 
-	typedef struct re *        re;
+	typedef struct fsm *       fsm;
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
 
@@ -41,10 +41,10 @@
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
-extern void p_re__simple(re, lex_state, act_state);
+extern void p_re__simple(fsm, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 365 "parser.act"
+#line 362 "parser.act"
 
 
 #line 51 "form/simple/parser.h"

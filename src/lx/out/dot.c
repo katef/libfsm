@@ -7,7 +7,6 @@
 #include <fsm/out.h>
 
 #include "libfsm/internal.h" /* XXX */
-#include "libre/internal.h"	 /* XXX */
 
 #include "../ast.h"
 #include "../internal.h"
@@ -95,7 +94,7 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 	if (m->to != NULL) {
 		fprintf(f, "\t\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
 			zindexof(ast, z), indexof(fsm, s),
-			zindexof(ast, m->to), indexof(m->to->re->fsm, m->to->re->fsm->start));
+			zindexof(ast, m->to), indexof(m->to->fsm, m->to->fsm->start));
 	}
 }
 
@@ -107,9 +106,8 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(f != NULL);
 	assert(ast != NULL);
 	assert(z != NULL);
-	assert(z->re != NULL);
-	assert(z->re->fsm != NULL);
-	assert(z->re->fsm->start != NULL);
+	assert(z->fsm != NULL);
+	assert(z->fsm->start != NULL);
 
 	fprintf(f, "\tsubgraph cluster_z%u {\n", zindexof(ast, z));
 	fprintf(f, "\t\tcolor = gray;\n");
@@ -126,7 +124,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tz%u_start -> z%uS%u;\n",
 		zindexof(ast, z),
 		zindexof(ast, z),
-		indexof(z->re->fsm, z->re->fsm->start));
+		indexof(z->fsm, z->fsm->start));
 	fprintf(f, "\n");
 */
 
@@ -141,11 +139,11 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		o.fragment          = 1;
 		o.prefix            = prefix;
 
-		fsm_print(z->re->fsm, f, FSM_OUT_DOT, &o);
+		fsm_print(z->fsm, f, FSM_OUT_DOT, &o);
 	}
 
-	for (s = z->re->fsm->sl; s != NULL; s = s->next) {
-		singlestate(z->re->fsm, f, ast, z, s);
+	for (s = z->fsm->sl; s != NULL; s = s->next) {
+		singlestate(z->fsm, f, ast, z, s);
 	}
 
 	fprintf(f, "\t}\n");
@@ -167,7 +165,7 @@ lx_out_dot(const struct ast *ast, FILE *f)
 	fprintf(f, "\tstart [ shape = plaintext ];\n");
 	fprintf(f, "\tstart -> z%uS%u;\n",
 		zindexof(ast, ast->global),
-		indexof(ast->global->re->fsm, ast->global->re->fsm->start));
+		indexof(ast->global->fsm, ast->global->fsm->start));
 	fprintf(f, "\n");
 
 	for (z = ast->zl; z != NULL; z = z->next) {

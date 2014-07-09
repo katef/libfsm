@@ -3,7 +3,7 @@
 %types%
 
 	string;
-	re;
+	fsm;
 	zone;
 	ast;
 
@@ -26,15 +26,15 @@
 
 %productions%
 
-	<compile-literal>: (:string) -> (:re);
-	<compile-regex>:   (:string) -> (:re);
+	<compile-literal>: (:string) -> (:fsm);
+	<compile-regex>:   (:string) -> (:fsm);
 
-	<concat-regex>:     (:re, :re) -> (:re);
-	<complement-regex>: (:re)      -> ();
+	<concat-regex>:     (:fsm, :fsm) -> (:fsm);
+	<complement-regex>: (:fsm)       -> ();
 
-	<make-ast>:     ()                                 -> (:ast);
-	<make-zone>:    (:ast)                             -> (:zone);
-	<make-mapping>: (:ast, :zone, :zone, :re, :string) -> ();
+	<make-ast>:     ()                                  -> (:ast);
+	<make-zone>:    (:ast)                              -> (:zone);
+	<make-mapping>: (:ast, :zone, :zone, :fsm, :string) -> ();
 
 	<set-globalzone>: (:ast, :zone) -> ();
 
@@ -55,9 +55,9 @@
 	<err-expected-list>;
 
 
-	token-mapping: () -> (r :re, t :string) [
+	token-mapping: () -> (r :fsm, t :string) [
 
-		pattern: () -> (r :re) = {
+		pattern: () -> (r :fsm) = {
 			s = pattern_literal;
 			r = <compile-literal>(s);
 		||
@@ -65,12 +65,12 @@
 			r = <compile-regex>(s);
 		};
 
-		concaternated-patterns: () -> (r :re) = {
-			r = pattern;
+		concaternated-patterns: () -> (q :fsm) = {
+			q = pattern;
 		||
 			a = concaternated-patterns;
 			b = pattern;
-			r = <concat-regex>(a, b);
+			q = <concat-regex>(a, b);
 		};
 
 	] = {
@@ -91,7 +91,7 @@
 
 	list-of-things: (a :ast, z :zone) -> () [
 
-		token-thing: (a :ast, z :zone) -> (r :re, t :string) = {
+		token-thing: (a :ast, z :zone) -> (r :fsm, t :string) = {
 			(r, t) = token-mapping;
 
 			{

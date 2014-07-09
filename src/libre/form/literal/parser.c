@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 46 "parser.act"
+#line 44 "parser.act"
 
 
 	#include <assert.h>
@@ -23,15 +23,13 @@
 	#include "parser.h"
 	#include "lexer.h"
 
-	#include "libre/internal.h"
-
 	typedef char     t_char;
 	typedef unsigned t_unsigned;
 	typedef char *   t_grp;
 
 	typedef struct fsm_state * t_fsm__state;
 
-#line 35 "form/literal/parser.c"
+#line 33 "form/literal/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -40,9 +38,9 @@
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
-extern void p_re__literal(re, lex_state, act_state);
-static void p_list_Hof_Hliterals_C_Cliteral(re, lex_state, act_state, t_fsm__state, t_fsm__state);
-static void p_list_Hof_Hliterals(re, lex_state, act_state, t_fsm__state, t_fsm__state);
+extern void p_re__literal(fsm, lex_state, act_state);
+static void p_list_Hof_Hliterals_C_Cliteral(fsm, lex_state, act_state, t_fsm__state, t_fsm__state);
+static void p_list_Hof_Hliterals(fsm, lex_state, act_state, t_fsm__state, t_fsm__state);
 
 /* BEGINNING OF STATIC VARIABLES */
 
@@ -50,7 +48,7 @@ static void p_list_Hof_Hliterals(re, lex_state, act_state, t_fsm__state, t_fsm__
 /* BEGINNING OF FUNCTION DEFINITIONS */
 
 void
-p_re__literal(re re, lex_state lex_state, act_state act_state)
+p_re__literal(fsm fsm, lex_state lex_state, act_state act_state)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -61,23 +59,22 @@ p_re__literal(re re, lex_state lex_state, act_state act_state)
 
 		/* BEGINNING OF ACTION: make-states */
 		{
-#line 100 "parser.act"
+#line 97 "parser.act"
 
-		assert(re != NULL);
-		assert(re->fsm != NULL);
-		/* TODO: assert re is empty */
+		assert(fsm != NULL);
+		/* TODO: assert fsm is empty */
 
-		(ZIx) = fsm_getstart(re->fsm);
+		(ZIx) = fsm_getstart(fsm);
 		assert((ZIx) != NULL);
 
-		(ZIy) = fsm_addstate(re->fsm);
+		(ZIy) = fsm_addstate(fsm);
 		if ((ZIy) == NULL) {
 			goto ZL1;
 		}
 
-		fsm_setend(re->fsm, (ZIy), 1);
+		fsm_setend(fsm, (ZIy), 1);
 	
-#line 81 "form/literal/parser.c"
+#line 78 "form/literal/parser.c"
 		}
 		/* END OF ACTION: make-states */
 		/* BEGINNING OF INLINE: 51 */
@@ -85,7 +82,7 @@ p_re__literal(re re, lex_state lex_state, act_state act_state)
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
 				{
-					p_list_Hof_Hliterals (re, lex_state, act_state, ZIx, ZIy);
+					p_list_Hof_Hliterals (fsm, lex_state, act_state, ZIx, ZIy);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 						RESTORE_LEXER;
 						goto ZL3;
@@ -96,13 +93,13 @@ p_re__literal(re re, lex_state lex_state, act_state act_state)
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 195 "parser.act"
+#line 192 "parser.act"
 
-		if (!fsm_addedge_epsilon(re->fsm, (ZIx), (ZIy))) {
+		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			goto ZL3;
 		}
 	
-#line 106 "form/literal/parser.c"
+#line 103 "form/literal/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -113,11 +110,11 @@ p_re__literal(re re, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-items */
 				{
-#line 351 "parser.act"
+#line 348 "parser.act"
 
 		act_state->err = RE_EXITEMS;
 	
-#line 121 "form/literal/parser.c"
+#line 118 "form/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-items */
 			}
@@ -140,11 +137,11 @@ p_re__literal(re re, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 359 "parser.act"
+#line 356 "parser.act"
 
 		act_state->err = RE_EXEOF;
 	
-#line 148 "form/literal/parser.c"
+#line 145 "form/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -159,7 +156,7 @@ ZL1:;
 }
 
 static void
-p_list_Hof_Hliterals_C_Cliteral(re re, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
+p_list_Hof_Hliterals_C_Cliteral(fsm fsm, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -171,11 +168,11 @@ p_list_Hof_Hliterals_C_Cliteral(re re, lex_state lex_state, act_state act_state,
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 78 "parser.act"
+#line 76 "parser.act"
 
 		ZIc = act_state->lex_tokval(lex_state);
 	
-#line 179 "form/literal/parser.c"
+#line 176 "form/literal/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -185,28 +182,28 @@ p_list_Hof_Hliterals_C_Cliteral(re re, lex_state lex_state, act_state act_state,
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-literal */
 		{
-#line 201 "parser.act"
+#line 198 "parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
 
 		/* TODO: check c is legal? */
 
-		if (!fsm_addedge_literal(re->fsm, (ZIx), (ZIy), (ZIc))) {
+		if (!fsm_addedge_literal(fsm, (ZIx), (ZIy), (ZIc))) {
 			goto ZL1;
 		}
 	
-#line 200 "form/literal/parser.c"
+#line 197 "form/literal/parser.c"
 		}
 		/* END OF ACTION: add-literal */
 		/* BEGINNING OF ACTION: count-1 */
 		{
-#line 336 "parser.act"
+#line 333 "parser.act"
 
 		(void) (ZIx);
 		(void) (ZIy);
 	
-#line 210 "form/literal/parser.c"
+#line 207 "form/literal/parser.c"
 		}
 		/* END OF ACTION: count-1 */
 	}
@@ -217,7 +214,7 @@ ZL1:;
 }
 
 static void
-p_list_Hof_Hliterals(re re, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
+p_list_Hof_Hliterals(fsm fsm, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -228,17 +225,17 @@ ZL2_list_Hof_Hliterals:;
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 188 "parser.act"
+#line 185 "parser.act"
 
-		(ZIz) = fsm_addstate(re->fsm);
+		(ZIz) = fsm_addstate(fsm);
 		if ((ZIz) == NULL) {
 			goto ZL1;
 		}
 	
-#line 239 "form/literal/parser.c"
+#line 236 "form/literal/parser.c"
 		}
 		/* END OF ACTION: add-concat */
-		p_list_Hof_Hliterals_C_Cliteral (re, lex_state, act_state, ZIx, ZIz);
+		p_list_Hof_Hliterals_C_Cliteral (fsm, lex_state, act_state, ZIx, ZIz);
 		/* BEGINNING OF INLINE: 49 */
 		{
 			switch (CURRENT_TERMINAL) {
@@ -254,13 +251,13 @@ ZL2_list_Hof_Hliterals:;
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 195 "parser.act"
+#line 192 "parser.act"
 
-		if (!fsm_addedge_epsilon(re->fsm, (ZIz), (ZIy))) {
+		if (!fsm_addedge_epsilon(fsm, (ZIz), (ZIy))) {
 			goto ZL1;
 		}
 	
-#line 264 "form/literal/parser.c"
+#line 261 "form/literal/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -280,9 +277,9 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 363 "parser.act"
+#line 360 "parser.act"
 
 
-#line 287 "form/literal/parser.c"
+#line 284 "form/literal/parser.c"
 
 /* END OF FILE */

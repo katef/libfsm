@@ -8,13 +8,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <fsm/fsm.h>
 #include <fsm/out.h>	/* XXX */
 #include <fsm/bool.h>
 #include <fsm/graph.h>
 
 #include <re/re.h>
-
-#include "libre/internal.h"	/* XXX */
 
 /*
  * TODO: match a regexp against arguments. return $? if all match
@@ -65,7 +64,7 @@ re_form form(char c)
 int
 main(int argc, char *argv[])
 {
-	struct re *re;
+	struct fsm *fsm;
 	int files;
 	int dump;
 	struct fsm *(*join)(struct fsm *, struct fsm *);
@@ -75,8 +74,8 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	re = re_new_empty();
-	if (re == NULL) {
+	fsm = re_new_empty();
+	if (fsm == NULL) {
 		perror("re_new_empty");
 		return EXIT_FAILURE;
 	}
@@ -89,7 +88,7 @@ main(int argc, char *argv[])
 		int c;
 
 		while (c = getopt(argc, argv, "hcdil:g:s:"), c != -1) {
-			struct re *new;
+			struct fsm *new;
 			enum re_err err;
 
 			switch (c) {
@@ -145,8 +144,8 @@ main(int argc, char *argv[])
 
 				/* TODO: associate optarg with new's end state */
 
-				re->fsm = join(re->fsm, new->fsm);
-				if (re->fsm == NULL) {
+				fsm = join(fsm, new);
+				if (fsm == NULL) {
 					perror("fsm_union/concat");
 					return EXIT_FAILURE;
 				}
@@ -164,19 +163,19 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (!fsm_todfa(re->fsm)) {
+	if (!fsm_todfa(fsm)) {
 		perror("fsm_todfa");
 		return EXIT_FAILURE;
 	}
 
 	if (dump) {
-		fsm_print(re->fsm, stdout, FSM_OUT_FSM, NULL);
+		fsm_print(fsm, stdout, FSM_OUT_FSM, NULL);
 	}
 
 	/* TODO: flags? */
-	re_exec(re, argv[0], 0);
+	re_exec(fsm, argv[0], 0);
 
-	re_free(re);
+	fsm_free(fsm);
 
 	return EXIT_SUCCESS;
 }

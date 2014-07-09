@@ -9,7 +9,6 @@
 #include <fsm/out.h>
 #include <fsm/graph.h>
 
-#include "libre/internal.h"	 /* XXX */
 #include "libfsm/internal.h" /* XXX */
 
 #include "../ast.h"
@@ -264,9 +263,8 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
 	assert(f != NULL);
 	assert(z != NULL);
-	assert(z->re != NULL);
-	assert(z->re->fsm != NULL);
-	assert(fsm_isdfa(z->re->fsm));
+	assert(z->fsm != NULL);
+	assert(fsm_isdfa(z->fsm));
 	assert(ast != NULL);
 
 	/* TODO: prerequisite that the FSM is a DFA */
@@ -277,15 +275,15 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tint c;\n");
 	fprintf(f, "\n");
 
-	stateenum(f, z->re->fsm, z->re->fsm->sl);
+	stateenum(f, z->fsm, z->fsm->sl);
 	fprintf(f, "\n");
 
 	fprintf(f, "\tassert(lx != NULL);\n");
 	fprintf(f, "\tassert(lx->getc != NULL);\n");
 	fprintf(f, "\n");
 
-	assert(z->re->fsm->start != NULL);
-	fprintf(f, "\tstate = S%u;\n", indexof(z->re->fsm, z->re->fsm->start));
+	assert(z->fsm->start != NULL);
+	fprintf(f, "\tstate = S%u;\n", indexof(z->fsm, z->fsm->start));
 	fprintf(f, "\n");
 
 	{
@@ -295,9 +293,9 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 		fprintf(f, "\t\tswitch (state) {\n");
 
-		for (s = z->re->fsm->sl; s != NULL; s = s->next) {
-			fprintf(f, "\t\tcase S%u:\n", indexof(z->re->fsm, s));
-			singlecase(f, ast, z, z->re->fsm, s);
+		for (s = z->fsm->sl; s != NULL; s = s->next) {
+			fprintf(f, "\t\tcase S%u:\n", indexof(z->fsm, s));
+			singlecase(f, ast, z, z->fsm, s);
 
 			if (s->next != NULL) {
 				fprintf(f, "\n");
@@ -320,10 +318,10 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 		fprintf(f, "\tswitch (state) {\n");
 
-		for (s = z->re->fsm->sl; s != NULL; s = s->next) {
+		for (s = z->fsm->sl; s != NULL; s = s->next) {
 			const struct ast_mapping *m;
 
-			if (!fsm_isend(z->re->fsm, s)) {
+			if (!fsm_isend(z->fsm, s)) {
 				continue;
 			}
 
@@ -331,7 +329,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 			assert(m != NULL);
 
-			fprintf(f, "\tcase S%u: return ", indexof(z->re->fsm, s));
+			fprintf(f, "\tcase S%u: return ", indexof(z->fsm, s));
 
 			/* note: no point in changing zone here, because getc is now NULL */
 

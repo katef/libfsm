@@ -3,7 +3,7 @@
 #ifndef RE_H
 #define RE_H
 
-struct re;
+struct fsm;
 
 enum re_form {
 /* TODO:
@@ -50,7 +50,7 @@ enum re_err {
  *
  * Returns NULL on error.
  */
-struct re *
+struct fsm *
 re_new_empty(void);
 
 /*
@@ -59,12 +59,9 @@ re_new_empty(void);
  *
  * Returns NULL on error.
  */
-struct re *
+struct fsm *
 re_new_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
 	enum re_cflags cflags, enum re_err *err);
-
-void
-re_free(struct re *re);
 
 /*
  * Return a human-readable string describing a given error code. The string
@@ -79,7 +76,7 @@ re_strerror(enum re_err err);
  * TODO: Return the regexp that matched, or NULL for no match.
  */
 void
-re_exec(const struct re *re, const char *s, enum re_eflags eflags);
+re_exec(const struct fsm *fsm, const char *s, enum re_eflags eflags);
 
 
 /* TODO: a convenience interface in the spirit of strtol() which parses between delimiters (and escapes accordingly) */

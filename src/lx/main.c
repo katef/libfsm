@@ -12,14 +12,13 @@
 #include <adt/set.h>
 
 #include <fsm/bool.h>
-#include <fsm/graph.h> /* XXX */
+#include <fsm/graph.h>
 
 #include <re/re.h>
 
 #include "parser.h"
 #include "internal.h"
 
-#include "libre/internal.h" /* XXX */
 #include "libfsm/internal.h" /* XXX */
 
 #include "ast.h"
@@ -184,44 +183,41 @@ main(int argc, char *argv[])
 		struct ast_mapping *m;
 
 		for (z = ast->zl; z != NULL; z = z->next) {
-			assert(z->re == NULL);
+			assert(z->fsm == NULL);
 
-			z->re = re_new_empty();
-			if (z->re == NULL) {
+			z->fsm = re_new_empty();
+			if (z->fsm == NULL) {
 				return EXIT_FAILURE;
 			}
 
 			for (m = z->ml; m != NULL; m = m->next) {
 				struct fsm_state *s;
 
-				assert(m->re != NULL);
-				assert(m->re->fsm != NULL);
+				assert(m->fsm != NULL);
 
 				if (!g) {
 					/* XXX: abstraction */
-					if (!fsm_minimize(m->re->fsm)) {
+					if (!fsm_minimize(m->fsm)) {
 						return EXIT_FAILURE;
 					}
 				}
 
 				/* Attach this mapping to each end state for this regexp */
-				for (s = m->re->fsm->sl; s != NULL; s = s->next) {
-					if (fsm_isend(m->re->fsm, s)) {
+				for (s = m->fsm->sl; s != NULL; s = s->next) {
+					if (fsm_isend(m->fsm, s)) {
 						assert(s->opaque == NULL);
 						s->opaque = m;
 					}
 				}
 
-				z->re->fsm = fsm_union(z->re->fsm, m->re->fsm);
-				if (z->re->fsm == NULL) {
+				z->fsm = fsm_union(z->fsm, m->fsm);
+				if (z->fsm == NULL) {
 					return EXIT_FAILURE;
 				}
-
-				m->re = NULL;   /* TODO: free properly somehow? or clone first? */
 			}
 
 			if (!g) {
-				if (!fsm_todfa_opaque(z->re->fsm, carryopaque)) {
+				if (!fsm_todfa_opaque(z->fsm, carryopaque)) {
 					return EXIT_FAILURE;
 				}
 			}
@@ -245,17 +241,17 @@ main(int argc, char *argv[])
 		e = 0;
 
 		for (z = ast->zl; z != NULL; z = z->next) {
-			assert(z->re != NULL);
-			assert(z->ml != NULL);
+			assert(z->fsm != NULL);
+			assert(z->ml  != NULL);
 
-			if (fsm_isend(z->re->fsm, z->re->fsm->start)) {
+			if (fsm_isend(z->fsm, z->fsm->start)) {
 				fprintf(stderr, "start state accepts\n"); /* TODO */
 				e = 1;
 			}
 
 			/* pick up conflicts flagged by carryopaque() */
-			for (s = z->re->fsm->sl; s != NULL; s = s->next) {
-				if (!fsm_isend(z->re->fsm, s)) {
+			for (s = z->fsm->sl; s != NULL; s = s->next) {
+				if (!fsm_isend(z->fsm, s)) {
 					continue;
 				}
 

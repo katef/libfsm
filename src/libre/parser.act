@@ -16,7 +16,7 @@
 
 %persistents%
 
-	re        :re;
+	fsm       :fsm;
 	lex_state :lex_state;
 	act_state :act_state;
 
@@ -35,8 +35,6 @@
 	#include "parser.h"
 	#include "lexer.h"
 
-	#include "libre/internal.h"
-
 	typedef char     t_char;
 	typedef unsigned t_unsigned;
 	typedef char *   t_grp;
@@ -45,7 +43,7 @@
 
 @}, @{
 
-	typedef struct re *        re;
+	typedef struct fsm *       fsm;
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
 
@@ -93,19 +91,18 @@
 %actions%
 
 	<make-states>: () -> (x :fsm_state, y :fsm_state) = @{
-		assert(re != NULL);
-		assert(re->fsm != NULL);
-		/* TODO: assert re is empty */
+		assert(fsm != NULL);
+		/* TODO: assert fsm is empty */
 
-		@x = fsm_getstart(re->fsm);
+		@x = fsm_getstart(fsm);
 		assert(@x != NULL);
 
-		@y = fsm_addstate(re->fsm);
+		@y = fsm_addstate(fsm);
 		if (@y == NULL) {
 			@!;
 		}
 
-		fsm_setend(re->fsm, @y, 1);
+		fsm_setend(fsm, @y, 1);
 	@};
 
 
@@ -159,7 +156,7 @@
 				continue;
 			}
 
-			if (!fsm_addedge_literal(re->fsm, @x, @y, (char) i)) {
+			if (!fsm_addedge_literal(fsm, @x, @y, (char) i)) {
 				@!;
 			}
 		}
@@ -185,14 +182,14 @@
 	 */
 
 	<add-concat>: () -> (s :fsm_state) = @{
-		@s = fsm_addstate(re->fsm);
+		@s = fsm_addstate(fsm);
 		if (@s == NULL) {
 			@!;
 		}
 	@};
 
 	<add-epsilon>: (x :fsm_state, y: fsm_state) -> () = @{
-		if (!fsm_addedge_epsilon(re->fsm, @x, @y)) {
+		if (!fsm_addedge_epsilon(fsm, @x, @y)) {
 			@!;
 		}
 	@};
@@ -203,7 +200,7 @@
 
 		/* TODO: check c is legal? */
 
-		if (!fsm_addedge_literal(re->fsm, @x, @y, @c)) {
+		if (!fsm_addedge_literal(fsm, @x, @y, @c)) {
 			@!;
 		}
 	@};
@@ -212,7 +209,7 @@
 		assert(@x != NULL);
 		assert(@y != NULL);
 
-		if (!fsm_addedge_any(re->fsm, @x, @y)) {
+		if (!fsm_addedge_any(fsm, @x, @y)) {
 			@!;
 		}
 	@};
@@ -254,19 +251,19 @@
 		b = @y;
 
 		for (i = 1; i < @n; i++) {
-			a = fsm_state_duplicatesubgraphx(re->fsm, @x, &b);
+			a = fsm_state_duplicatesubgraphx(fsm, @x, &b);
 			if (a == NULL) {
 				@!;
 			}
 
 			/* TODO: could elide this epsilon if fsm_state_duplicatesubgraphx()
 			 * took an extra parameter giving it a m->new for the start state */
-			if (!fsm_addedge_epsilon(re->fsm, @y, a)) {
+			if (!fsm_addedge_epsilon(fsm, @y, a)) {
 				@!;
 			}
 
 			if (i >= @m) {
-				if (!fsm_addedge_epsilon(re->fsm, @y, b)) {
+				if (!fsm_addedge_epsilon(fsm, @y, b)) {
 					@!;
 				}
 			}
@@ -277,17 +274,17 @@
 	@};
 
 	<count-0-or-1>: (x :fsm_state, y :fsm_state) -> () = @{
-		if (!fsm_addedge_epsilon(re->fsm, @x, @y)) {
+		if (!fsm_addedge_epsilon(fsm, @x, @y)) {
 			@!;
 		}
 	@};
 
 	<count-0-or-many>: (x :fsm_state, y :fsm_state &) -> () = @{
-		if (!fsm_addedge_epsilon(re->fsm, @x, @y)) {
+		if (!fsm_addedge_epsilon(fsm, @x, @y)) {
 			@!;
 		}
 
-		if (!fsm_addedge_epsilon(re->fsm, @y, @x)) {
+		if (!fsm_addedge_epsilon(fsm, @y, @x)) {
 			@!;
 		}
 
@@ -296,12 +293,12 @@
 		{
 			struct fsm_state *z;
 
-			z = fsm_addstate(re->fsm);
+			z = fsm_addstate(fsm);
 			if (z == NULL) {
 				@!;
 			}
 
-			if (!fsm_addedge_epsilon(re->fsm, @y, z)) {
+			if (!fsm_addedge_epsilon(fsm, @y, z)) {
 				@!;
 			}
 
@@ -310,7 +307,7 @@
 	@};
 
 	<count-1-or-many>: (x :fsm_state, y :fsm_state &) -> () = @{
-		if (!fsm_addedge_epsilon(re->fsm, @y, @x)) {
+		if (!fsm_addedge_epsilon(fsm, @y, @x)) {
 			@!;
 		}
 
@@ -319,12 +316,12 @@
 		{
 			struct fsm_state *z;
 
-			z = fsm_addstate(re->fsm);
+			z = fsm_addstate(fsm);
 			if (z == NULL) {
 				@!;
 			}
 
-			if (!fsm_addedge_epsilon(re->fsm, @y, z)) {
+			if (!fsm_addedge_epsilon(fsm, @y, z)) {
 				@!;
 			}
 

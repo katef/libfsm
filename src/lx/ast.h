@@ -4,13 +4,10 @@
 #define LX_AST_H
 
 
-#include <re/re.h>
-
-
-struct re;
+struct fsm;
 
 struct ast_mapping {
-	struct re *re;
+	struct fsm *fsm;
 	struct ast_token *token;
 	struct ast_zone  *to;
 
@@ -19,7 +16,7 @@ struct ast_mapping {
 
 struct ast_zone {
 	struct ast_mapping *ml;
-	struct re *re;
+	struct fsm *fsm;
 
 	struct ast_zone *next;
 };
@@ -48,7 +45,7 @@ struct ast_zone *
 ast_addzone(struct ast *ast);
 
 struct ast_mapping *
-ast_addmapping(struct ast_zone *z, struct re *re,
+ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 	struct ast_token *token, struct ast_zone *to);
 
 

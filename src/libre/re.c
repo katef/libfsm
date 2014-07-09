@@ -17,44 +17,41 @@
 #include <fsm/bool.h>
 #include <fsm/graph.h>
 
-#include "internal.h"
-
 #include "form/comp.h"
 
-struct re *
+struct fsm *
 re_new_empty(void)
 {
-	struct re *new;
+	struct fsm *new;
 	struct fsm_state *start;
 
-	new = malloc(sizeof *new);
+	new = fsm_new();
 	if (new == NULL) {
 		return NULL;
 	}
 
-	new->fsm = fsm_new();
-	if (new->fsm == NULL) {
-		free(new);
-		return NULL;
-	}
-
-	start = fsm_addstate(new->fsm);
+	start = fsm_addstate(new);
 	if (start == NULL) {
-		free(new);
-		return NULL;
+		goto error;
 	}
 
-	fsm_setstart(new->fsm, start);
+	fsm_setstart(new, start);
 
 	return new;
+
+error:
+
+	fsm_free(new);
+
+	return NULL;
 }
 
-struct re *
+struct fsm *
 re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	enum re_cflags cflags, enum re_err *err)
 {
-	struct re *new;
-	struct re *(*comp)(int (*getc)(void *opaque), void *opaque, enum re_err *err);
+	struct fsm *new;
+	struct fsm *(*comp)(int (*getc)(void *opaque), void *opaque, enum re_err *err);
 
 	assert(getc != NULL);
 
@@ -74,13 +71,6 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	}
 
 	return new;
-}
-
-void
-re_free(struct re *re)
-{
-	fsm_free(re->fsm);
-	free(re);
 }
 
 const char *
@@ -105,7 +95,7 @@ re_strerror(enum re_err err)
 }
 
 void
-re_exec(const struct re *re, const char *s, enum re_eflags eflags)
+re_exec(const struct fsm *fsm, const char *s, enum re_eflags eflags)
 {
 	/* TODO */
 }
