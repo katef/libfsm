@@ -131,7 +131,7 @@ fsm_concat(struct fsm *a, struct fsm *b)
 		return NULL;
 	}
 
-	ea = fsm_collateends(a);
+	ea = fsm_collate(a, fsm_isend);
 	if (ea == NULL) {
 		return NULL;
 	}

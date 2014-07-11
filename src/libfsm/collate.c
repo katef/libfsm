@@ -9,35 +9,32 @@
 #include "internal.h"
 
 struct fsm_state *
-fsm_collateends(struct fsm *fsm)
+fsm_collate(struct fsm *fsm,
+	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
 	struct fsm_state *new;
 	struct fsm_state *s;
-	int endcount;
+	unsigned int count;
 
 	assert(fsm != NULL);
-
-	if (!fsm_hasend(fsm)) {
-		errno = EINVAL;
-		return NULL;
-	}
+	assert(predicate != NULL);
 
 	/* TODO: centralise */
-	endcount = 0;
+	count = 0;
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		endcount += !!fsm_isend(fsm, s);
+		count += !!predicate(fsm, s);
 	}
 
-	assert(endcount != 0);
-
-	switch (endcount) {
+	switch (count) {
 	case 0:
+		errno = 0; /* XXX: bad form */
 		return NULL;
 
 	case 1:
-		for (s = fsm->sl; !fsm_isend(fsm, s); s = s->next) {
+		for (s = fsm->sl; !predicate(fsm, s); s = s->next) {
 			assert(s->next != NULL);
 		}
+
 		return s;
 
 	default:
@@ -46,14 +43,12 @@ fsm_collateends(struct fsm *fsm)
 			return NULL;
 		}
 
-		fsm_setend(fsm, new, 1);
-
 		for (s = fsm->sl; s != NULL; s = s->next) {
 			if (s == new) {
 				continue;
 			}
 
-			if (!fsm_isend(fsm, s)) {
+			if (!predicate(fsm, s)) {
 				continue;
 			}
 
@@ -61,11 +56,7 @@ fsm_collateends(struct fsm *fsm)
 				/* TODO: free new */
 				return NULL;
 			}
-
-			fsm_setend(fsm, s, 0);
 		}
-
-		assert(fsm_isend(fsm, new));
 
 		return new;
 	}

@@ -136,14 +136,14 @@ int
 fsm_hasend(const struct fsm *fsm);
 
 /*
- * Return the end state (if there is just one), or add epsilon edges from all
- * end states (which are un-marked as if by fsm_removeends) to a new state, and
- * return that newly-created state.
+ * Return state (if there is just one), or add epsilon edges from all states,
+ * for which the given predicate is true.
  *
- * Returns NULL on error, or if there is no end state.
+ * Returns NULL on error, or if there is no state.
  */
 struct fsm_state *
-fsm_collateends(struct fsm *fsm);
+fsm_collate(struct fsm *fsm,
+	int (*predicate)(const struct fsm *, const struct fsm_state *));
 
 /*
  * Register a given state as the start state for an FSM. There may only be one
