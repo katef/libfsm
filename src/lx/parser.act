@@ -20,15 +20,19 @@
 %header% @{
 
 	#include <assert.h>
-	#include <stdio.h>
 	#include <stdlib.h>
+	#include <stdio.h>
+	#include <errno.h>
 
+	#include <adt/xalloc.h>
+
+	#include <fsm/fsm.h>
 	#include <fsm/bool.h>
 	#include <fsm/graph.h>
 
 	#include <re/re.h>
 
-	#include <adt/xalloc.h>
+	#include "libfsm/internal.h"
 
 	#include "lexer.h"
 	#include "parser.h"
@@ -54,6 +58,22 @@
 	static void err_expected(const char *token) {
 		fprintf(stderr, "syntax error: expected %s\n", token);
 		exit(EXIT_FAILURE);
+	}
+
+	static int notend(const struct fsm *fsm, const struct fsm_state *state) {
+		return !fsm_isend(fsm, state);
+	}
+
+	static int trapstate(const struct fsm *fsm, const struct fsm_state *state) {
+		if (state == fsm_getstart(fsm)) {
+			return 0;
+		}
+
+		if (fsm_isend(fsm, state)) {
+			return 0;
+		}
+
+		return 1;
 	}
 
 @}, @{
@@ -120,17 +140,6 @@
 		}
 	@};
 
-	<concat-regex>: (a :fsm, b :fsm) -> (q :fsm) = @{
-		assert(@a != NULL);
-		assert(@b != NULL);
-
-		@q = fsm_concat(@a, @b);
-		if (@q == NULL) {
-			perror("fsm_concat");
-			@!;
-		}
-	@};
-
 	<make-ast>: () -> (a :ast) = @{
 		@a = ast_new();
 		if (@a == NULL) {
@@ -190,11 +199,53 @@
 		@z = NULL;
 	@};
 
-	<complement-regex>: (r :fsm) -> () = @{
+	<trap>: (r :fsm) -> () = @{
+		struct fsm_state *trap;
+		struct fsm_state *s;
+
+		if (!fsm_complete(@r, notend)) {
+			perror("fsm_complete");
+			@!;
+		}
+
+		trap = fsm_collate(@r, trapstate);
+		if (trap == NULL && errno != 0) { /* XXX: hackish */
+			if (trap == NULL) {
+				perror("fsm_collate");
+				@!;
+			}
+		}
+
+		for (s = @r->sl; s != NULL; s = s->next) {
+			fsm_setend(@r, s, 0);
+		}
+
+		if (trap != NULL) {
+			assert(trap != fsm_getstart(@r));
+
+			fsm_setend(@r, trap, 1);
+
+			/* TODO: must set opaque here, i think */
+		}
+	@};
+
+	<op-concat>: (a :fsm, b :fsm) -> (q :fsm) = @{
+		assert(@a != NULL);
+		assert(@b != NULL);
+
+		@q = fsm_concat(@a, @b);
+		if (@q == NULL) {
+			perror("fsm_concat");
+			@!;
+		}
+	@};
+
+	<clone>: (r :fsm) -> (q :fsm) = @{
 		assert(@r != NULL);
 
-		if (!fsm_complement(@r)) {
-			perror("fsm_complement");
+		@q = fsm_clone(@r);
+		if (@q == NULL) {
+			perror("fsm_clone");
 			@!;
 		}
 	@};

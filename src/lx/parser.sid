@@ -29,8 +29,9 @@
 	<compile-literal>: (:string) -> (:fsm);
 	<compile-regex>:   (:string) -> (:fsm);
 
-	<concat-regex>:     (:fsm, :fsm) -> (:fsm);
-	<complement-regex>: (:fsm)       -> ();
+	<trap>: (:fsm) -> ();
+
+	<op-concat>:      (:fsm, :fsm) -> (:fsm);
 
 	<make-ast>:     ()                                  -> (:ast);
 	<make-zone>:    (:ast)                              -> (:zone);
@@ -41,6 +42,7 @@
 	<no-token>: () -> (:string);
 	<no-to>:    () -> (:zone);	/* TODO: rename target? */
 
+	<clone>: (:fsm) -> (:fsm);
 	!<free>: (:string) -> ();
 
 	<err-syntax>;
@@ -70,7 +72,7 @@
 		||
 			a = concaternated-patterns;
 			b = pattern;
-			q = <concat-regex>(a, b);
+			q = <op-concat>(a, b);
 		};
 
 	] = {
@@ -123,7 +125,7 @@
 
 				/*
 				 * This is an implicit zone, written: /r1/ .. /r2/;
-				 * which is equivalent to: /r1/ .. /r2/ { /r2/v; }
+				 * which is equivalent to: /r1/ .. /r2/ { /r2/v - ""; }
 				 * (i.e. discard everything which is not the exiting regexp.)
 				 *
 				 * If you want a zone where every character (other than the
@@ -133,8 +135,11 @@
 
 				x = <no-to>;
 				y = <no-token>;
-				<complement-regex>(r2);
-				<make-mapping>(a, child, x, r2, y);
+
+				v = <clone>(r2);
+				<trap>(v);
+
+				<make-mapping>(a, child, x, v, y);
 			||
 				{
 					open;
