@@ -12,13 +12,16 @@
 #include "internal.h"
 
 int
-fsm_complete(struct fsm *fsm)
+fsm_complete(struct fsm *fsm,
+	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
 	struct fsm_state *new;
 	struct fsm_state *s;
+	unsigned int count;
 	size_t i;
 
 	assert(fsm != NULL);
+	assert(predicate != NULL);
 
 	if (!fsm_isdfa(fsm)) {
 		if (!fsm_todfa(fsm)) {
@@ -27,7 +30,19 @@ fsm_complete(struct fsm *fsm)
 		}
 	}
 
+/* XXX: makes no sense wrt predicate
 	if (fsm_iscomplete(fsm)) {
+		return 1;
+	}
+*/
+
+	/* TODO: centralise */
+	count = 0;
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		count += !!predicate(fsm, s);
+	}
+
+	if (count == 0) {
 		return 1;
 	}
 
@@ -52,6 +67,10 @@ fsm_complete(struct fsm *fsm)
 	}
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
+		if (!predicate(fsm, s)) {
+			continue;
+		}
+
 		for (i = 0; i <= UCHAR_MAX; i++) {
 			if (s->edges[i].sl != NULL) {
 				continue;

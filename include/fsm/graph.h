@@ -38,7 +38,8 @@ fsm_isdfa(const struct fsm *fsm);
  * Make a DFA complete, as per fsm_iscomplete.
  */
 int
-fsm_complete(struct fsm *fsm);
+fsm_complete(struct fsm *fsm,
+	int (*predicate)(const struct fsm *, const struct fsm_state *));
 
 /*
  * Returns true if a given FSM is complete, or if a given state is complete.

@@ -71,7 +71,9 @@ transform(struct fsm *fsm, const char *name)
 		const char *name;
 		int (*f)(struct fsm *);
 	} a[] = {
+/* XXX: needs predicate
 		{ "complete",   fsm_complete   },
+*/
 		{ "complement", fsm_complement },
 		{ "invert",     fsm_complement },
 		{ "reverse",    fsm_reverse    },
