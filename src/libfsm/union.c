@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <limits.h>
+#include <errno.h>
 
 #include <adt/set.h>
 
@@ -83,8 +84,12 @@ fsm_union(struct fsm *a, struct fsm *b)
 	assert(a != NULL);
 	assert(b != NULL);
 
-	sa = a->start;
-	sb = b->start;
+	sa = fsm_getstart(a);
+	sb = fsm_getstart(b);
+	if (sa == NULL || sb == NULL) {
+		errno = EINVAL;
+		return NULL;
+	}
 
 	q = fsm_merge(a, b);
 	assert(q != NULL);
