@@ -67,5 +67,11 @@ fsm_minimize(struct fsm *fsm);
 struct fsm *
 fsm_concat(struct fsm *a, struct fsm *b);
 
+/*
+ * Subtract b from a. This is not commutative.
+ */
+struct fsm *
+fsm_subtract(struct fsm *a, struct fsm *b);
+
 #endif
 

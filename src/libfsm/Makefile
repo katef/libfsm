@@ -28,6 +28,7 @@ SRCS+= merge.c
 SRCS+= concat.c
 SRCS+= union.c
 SRCS+= intersect.c
+SRCS+= subtract.c
 
 .include <lx.obj.mk>
 
