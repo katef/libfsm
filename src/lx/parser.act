@@ -140,6 +140,17 @@
 		}
 	@};
 
+	/* equivalent to <compile-literal>("") but with less machination */
+	<empty-regex>: () -> (r :fsm) = @{
+		@r = re_new_empty();
+		if (@r == NULL) {
+			perror("re_new_empty");
+			@!;
+		}
+
+		fsm_setend(@r, fsm_getstart(@r), 1);
+	@};
+
 	<make-ast>: () -> (a :ast) = @{
 		@a = ast_new();
 		if (@a == NULL) {
@@ -226,6 +237,35 @@
 			fsm_setend(@r, trap, 1);
 
 			/* TODO: must set opaque here, i think */
+		}
+	@};
+
+	<op-complement>: (r :fsm) -> () = @{
+		assert(@r != NULL);
+
+		if (!fsm_complement(@r)) {
+			perror("fsm_complement");
+			@!;
+		}
+	@};
+
+	<op-complete>: (r :fsm) -> () = @{
+		assert(@r != NULL);
+
+		if (!fsm_complete(@r)) {
+			perror("fsm_complete");
+			@!;
+		}
+	@};
+
+	<op-subtract>: (a :fsm, b :fsm) -> (q :fsm) = @{
+		assert(@a != NULL);
+		assert(@b != NULL);
+
+		@q = fsm_subtract(@a, @b);
+		if (@q == NULL) {
+			perror("fsm_subtract");
+			@!;
 		}
 	@};
 

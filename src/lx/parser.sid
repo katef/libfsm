@@ -29,8 +29,13 @@
 	<compile-literal>: (:string) -> (:fsm);
 	<compile-regex>:   (:string) -> (:fsm);
 
+	!<empty-regex>: () -> (:fsm); /* TODO: proper name for matching the empty string? */
+
 	<trap>: (:fsm) -> ();
 
+	!<op-complement>: (:fsm)       -> ();
+	!<op-complete>:   (:fsm)       -> ();
+	!<op-subtract>:   (:fsm, :fsm) -> (:fsm);
 	<op-concat>:      (:fsm, :fsm) -> (:fsm);
 
 	<make-ast>:     ()                                  -> (:ast);
