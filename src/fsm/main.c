@@ -81,8 +81,8 @@ transform(struct fsm *fsm, const char *name)
 		{ "determinise", fsm_determinise },
 		{ "dfa",         fsm_determinise },
 		{ "todfa",       fsm_determinise },
-		{ "min",         fsm_minimize    },
-		{ "minimize",    fsm_minimize    }
+		{ "min",         fsm_minimise    },
+		{ "minimise",    fsm_minimise    }
 	};
 
 	assert(fsm != NULL);
@@ -99,7 +99,7 @@ transform(struct fsm *fsm, const char *name)
 	}
 
 	fprintf(stderr, "unrecognised transformation; valid transformations are: "
-		"complete, complement, reverse, determinise, minimize\n");
+		"complete, complement, reverse, determinise, minimise\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -199,7 +199,7 @@ main(int argc, char *argv[])
 			case 'l': format = language(optarg);     break;
 
 			case 'd': transform(fsm, "determinise"); break;
-			case 'm': transform(fsm, "minimize");    break;
+			case 'm': transform(fsm, "minimise");    break;
 			case 'r': transform(fsm, "reverse");     break;
 			case 't': transform(fsm, optarg);        break;
 

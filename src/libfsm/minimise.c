@@ -111,7 +111,7 @@ removestate(struct fsm *fsm, struct fsm_state *state)
 }
 
 int
-fsm_minimize(struct fsm *fsm)
+fsm_minimise(struct fsm *fsm)
 {
 	int r;
 	int hasend;

@@ -5,7 +5,7 @@
  * constructing a DFA from the given globing string. A similar technique
  * could be used to implement regular expressions.
  *
- * The minimized DFA constructed is output to stdout, unless the -q option
+ * The minimised DFA constructed is output to stdout, unless the -q option
  * is passed to quieten the output.
  *
  * Supported special characters are:
@@ -191,7 +191,7 @@ main(int argc, char *argv[])
 	fsm = compile(argv[0]);
 	assert(fsm != NULL);
 
-	if (!fsm_minimize(fsm)) {
+	if (!fsm_minimise(fsm)) {
 		exit(EXIT_FAILURE);
 	}
 

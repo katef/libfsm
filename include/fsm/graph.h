@@ -60,7 +60,7 @@ fsm_iscompletestate(const struct fsm *fsm, const struct fsm_state *state);
  * Returns false on error; see errno.
  */
 int
-fsm_minimize(struct fsm *fsm);
+fsm_minimise(struct fsm *fsm);
 
 /*
  * Concatenate b after a. This is not commutative.

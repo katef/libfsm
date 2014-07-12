@@ -191,7 +191,7 @@ fsm_reverse(struct fsm *fsm)
 		case 0:
 			/*
 			 * Transition to all states. I don't like this at all, but it is
-			 * required to be able to minimize automata with no end states.
+			 * required to be able to minimise automata with no end states.
 			 */
 
 		default:

@@ -6,7 +6,7 @@
 #SUBDIR+= consolidate
 #SUBDIR+= duplicate
 SUBDIR+= determinise
-SUBDIR+= minimize
+SUBDIR+= minimise
 SUBDIR+= reverse
 
 .include <lx.subdir.mk>

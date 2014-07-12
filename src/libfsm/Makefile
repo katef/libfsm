@@ -20,7 +20,7 @@ SRCS+= state.c
 # unary operators
 SRCS+= complement.c
 SRCS+= determinise.c
-SRCS+= minimize.c
+SRCS+= minimise.c
 SRCS+= reverse.c
 
 # binary operators

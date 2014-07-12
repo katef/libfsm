@@ -197,7 +197,7 @@ main(int argc, char *argv[])
 
 				if (!g) {
 					/* XXX: abstraction */
-					if (!fsm_minimize(m->fsm)) {
+					if (!fsm_minimise(m->fsm)) {
 						return EXIT_FAILURE;
 					}
 				}
