@@ -12,6 +12,7 @@
 #include <adt/set.h>
 
 #include <fsm/bool.h>
+#include <fsm/pred.h>
 #include <fsm/graph.h>
 
 #include <re/re.h>

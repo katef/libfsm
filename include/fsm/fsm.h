@@ -124,12 +124,6 @@ void
 fsm_setend(struct fsm *fsm, struct fsm_state *state, int end);
 
 /*
- * Return if a given state is an end state.
- */
-int
-fsm_isend(const struct fsm *fsm, const struct fsm_state *state);
-
-/*
  * Return true if a given FSM has an end state.
  */
 int

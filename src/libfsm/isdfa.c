@@ -6,14 +6,19 @@
 
 #include <adt/set.h>
 
-#include <fsm/fsm.h>
+#include <fsm/pred.h>
 
 #include "internal.h"
 
-static int
-isdfastate(const struct fsm_state *state)
+/* TODO: rename fsm_isdfa */
+int
+fsm_isdfastate(const struct fsm *fsm, const struct fsm_state *state)
 {
 	int i;
+
+	assert(fsm != NULL);
+
+	(void) fsm;
 
 	/*
 	 * DFA may not have epsilon edges.
@@ -54,7 +59,7 @@ fsm_isdfa(const struct fsm *fsm)
 	}
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (!isdfastate(s)) {
+		if (!fsm_isdfastate(fsm, s)) {
 			return 0;
 		}
 	}

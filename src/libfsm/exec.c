@@ -8,6 +8,7 @@
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
+#include <fsm/pred.h>
 #include <fsm/exec.h>
 #include <fsm/graph.h>
 

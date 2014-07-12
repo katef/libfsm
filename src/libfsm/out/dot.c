@@ -11,6 +11,7 @@
 #include <adt/bitmap.h>
 
 #include <fsm/fsm.h>
+#include <fsm/pred.h>
 
 #include "out.h"
 

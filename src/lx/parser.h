@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 91 "parser.act"
+#line 92 "parser.act"
 
 
 	#include <stdio.h>
@@ -44,7 +44,7 @@ extern void p_lx(lex_state, act_state, ast *);
 
 /* BEGINNING OF TRAILER */
 
-#line 367 "parser.act"
+#line 368 "parser.act"
 
 
 #line 51 "parser.h"

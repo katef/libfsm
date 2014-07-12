@@ -7,6 +7,7 @@
 #include <adt/set.h>
 
 #include <fsm/out.h>
+#include <fsm/pred.h>
 #include <fsm/graph.h>
 
 #include "libfsm/internal.h" /* XXX */

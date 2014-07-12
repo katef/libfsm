@@ -5,6 +5,7 @@
 #include <ctype.h>
 
 #include <fsm/out.h>
+#include <fsm/pred.h>
 
 #include "libfsm/internal.h" /* XXX */
 

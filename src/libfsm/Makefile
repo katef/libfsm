@@ -12,7 +12,6 @@ SRCS+= clone.c
 SRCS+= edge.c
 SRCS+= exec.c
 SRCS+= fsm.c
-SRCS+= isdfa.c
 SRCS+= mode.c
 SRCS+= out.c
 SRCS+= state.c
@@ -29,6 +28,10 @@ SRCS+= concat.c
 SRCS+= union.c
 SRCS+= intersect.c
 SRCS+= subtract.c
+
+# predicates
+SRCS+= isdfa.c
+SRCS+= isend.c
 
 .include <lx.obj.mk>
 

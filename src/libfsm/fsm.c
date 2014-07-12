@@ -153,33 +153,6 @@ fsm_setend(struct fsm *fsm, struct fsm_state *state, int end)
 	state->end = !!end;
 }
 
-int
-fsm_isend(const struct fsm *fsm, const struct fsm_state *state)
-{
-	(void) fsm;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	return !!state->end;
-}
-
-int
-fsm_hasend(const struct fsm *fsm)
-{
-	const struct fsm_state *s;
-
-	assert(fsm != NULL);
-
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (fsm_isend(fsm, s)) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
 void
 fsm_setstart(struct fsm *fsm, struct fsm_state *state)
 {

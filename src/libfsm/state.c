@@ -8,6 +8,7 @@
 #include <adt/xalloc.h>
 
 #include <fsm/fsm.h>
+#include <fsm/pred.h>
 
 #include "internal.h"
 
