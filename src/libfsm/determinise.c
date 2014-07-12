@@ -366,7 +366,7 @@ carryend(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
  * TODO: returning an int is a little cumbersome here. Why not return an fsm?
  */
 static int
-nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa,
+determinise(struct mapping **ml, struct fsm *nfa, struct fsm *dfa,
 	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *))
 {
 	struct mapping *curr;
@@ -462,7 +462,7 @@ nfatodfa(struct mapping **ml, struct fsm *nfa, struct fsm *dfa,
 }
 
 int
-fsm_todfa_opaque(struct fsm *fsm,
+fsm_determinise_opaque(struct fsm *fsm,
 	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *))
 {
 	struct mapping *ml;
@@ -477,7 +477,7 @@ fsm_todfa_opaque(struct fsm *fsm,
 	}
 
 	ml = NULL;
-	r = nfatodfa(&ml, fsm, dfa, carryopaque);
+	r = determinise(&ml, fsm, dfa, carryopaque);
 
 	free_mappings(ml);
 	if (!r) {
@@ -493,8 +493,8 @@ fsm_todfa_opaque(struct fsm *fsm,
 }
 
 int
-fsm_todfa(struct fsm *fsm)
+fsm_determinise(struct fsm *fsm)
 {
-	return fsm_todfa_opaque(fsm, NULL);
+	return fsm_determinise_opaque(fsm, NULL);
 }
 

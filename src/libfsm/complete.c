@@ -24,7 +24,7 @@ fsm_complete(struct fsm *fsm,
 	assert(predicate != NULL);
 
 	if (!fsm_isdfa(fsm)) {
-		if (!fsm_todfa(fsm)) {
+		if (!fsm_determinise(fsm)) {
 			fsm_free(fsm);
 			return 0;
 		}

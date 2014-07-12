@@ -19,9 +19,9 @@ SRCS+= state.c
 
 # unary operators
 SRCS+= complement.c
+SRCS+= determinise.c
 SRCS+= minimize.c
 SRCS+= reverse.c
-SRCS+= todfa.c
 
 # binary operators
 SRCS+= merge.c

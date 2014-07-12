@@ -217,7 +217,7 @@ main(int argc, char *argv[])
 			}
 
 			if (!g) {
-				if (!fsm_todfa_opaque(z->fsm, carryopaque)) {
+				if (!fsm_determinise_opaque(z->fsm, carryopaque)) {
 					return EXIT_FAILURE;
 				}
 			}

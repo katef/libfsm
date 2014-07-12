@@ -140,7 +140,7 @@ fsm_minimize(struct fsm *fsm)
 			return 0;
 		}
 
-		r = fsm_todfa(fsm);
+		r = fsm_determinise(fsm);
 		if (!r) {
 			return 0;
 		}
@@ -150,7 +150,7 @@ fsm_minimize(struct fsm *fsm)
 			return 0;
 		}
 
-		r = fsm_todfa(fsm);
+		r = fsm_determinise(fsm);
 		if (!r) {
 			return 0;
 		}

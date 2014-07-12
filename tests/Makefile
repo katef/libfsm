@@ -5,7 +5,7 @@
 
 #SUBDIR+= consolidate
 #SUBDIR+= duplicate
-SUBDIR+= todfa
+SUBDIR+= determinise
 SUBDIR+= minimize
 SUBDIR+= reverse
 

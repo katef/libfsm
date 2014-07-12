@@ -21,11 +21,11 @@ fsm_reverse(struct fsm *fsm);
  * Returns false on error; see errno.
  */
 int
-fsm_todfa(struct fsm *fsm);
+fsm_determinise(struct fsm *fsm);
 
 /* TODO: explain */
 int
-fsm_todfa_opaque(struct fsm *fsm,
+fsm_determinise_opaque(struct fsm *fsm,
 	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *));
 
 /*

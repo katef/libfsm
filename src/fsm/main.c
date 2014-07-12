@@ -72,16 +72,17 @@ transform(struct fsm *fsm, const char *name)
 		int (*f)(struct fsm *);
 	} a[] = {
 /* XXX: needs predicate
-		{ "complete",   fsm_complete   },
+		{ "complete",   fsm_complete    },
 */
-		{ "complement", fsm_complement },
-		{ "invert",     fsm_complement },
-		{ "reverse",    fsm_reverse    },
-		{ "rev",        fsm_reverse    },
-		{ "dfa",        fsm_todfa      },
-		{ "todfa",      fsm_todfa      },
-		{ "min",        fsm_minimize   },
-		{ "minimize",   fsm_minimize   }
+		{ "complement",  fsm_complement  },
+		{ "invert",      fsm_complement  },
+		{ "reverse",     fsm_reverse     },
+		{ "rev",         fsm_reverse     },
+		{ "determinise", fsm_determinise },
+		{ "dfa",         fsm_determinise },
+		{ "todfa",       fsm_determinise },
+		{ "min",         fsm_minimize    },
+		{ "minimize",    fsm_minimize    }
 	};
 
 	assert(fsm != NULL);
@@ -98,7 +99,7 @@ transform(struct fsm *fsm, const char *name)
 	}
 
 	fprintf(stderr, "unrecognised transformation; valid transformations are: "
-		"complete, complement, reverse, todfa, minimize\n");
+		"complete, complement, reverse, determinise, minimize\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -195,14 +196,14 @@ main(int argc, char *argv[])
 				}
 				break;
 
-			case 'l': format = language(optarg);  break;
+			case 'l': format = language(optarg);     break;
 
-			case 'd': transform(fsm, "todfa");    break;
-			case 'm': transform(fsm, "minimize"); break;
-			case 'r': transform(fsm, "reverse");  break;
-			case 't': transform(fsm, optarg);     break;
+			case 'd': transform(fsm, "determinise"); break;
+			case 'm': transform(fsm, "minimize");    break;
+			case 'r': transform(fsm, "reverse");     break;
+			case 't': transform(fsm, optarg);        break;
 
-			case 'q': exit(query(fsm, optarg));   break;
+			case 'q': exit(query(fsm, optarg));      break;
 
 			case 'h':
 				usage();

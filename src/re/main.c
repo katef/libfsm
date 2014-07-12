@@ -163,8 +163,8 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (!fsm_todfa(fsm)) {
-		perror("fsm_todfa");
+	if (!fsm_determinise(fsm)) {
+		perror("fsm_determinise");
 		return EXIT_FAILURE;
 	}
 
