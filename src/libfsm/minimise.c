@@ -53,15 +53,15 @@ contains(struct fsm_edge edges[], int o, struct fsm_state *state)
 
 /* Count the number of distinct states to which a state transitions */
 /* TODO: centralise? */
-static unsigned int
+static unsigned
 counttargets(struct fsm_state *state)
 {
-	unsigned int count;
+	unsigned n;
 	int i;
 
 	assert(state != NULL);
 
-	count = 0;
+	n = 0;
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		if (state->edges[i].sl == NULL) {
@@ -76,10 +76,10 @@ counttargets(struct fsm_state *state)
 		/* Note that this assumes the state is a DFA state */
 		assert(state->edges[i].sl->next == NULL);
 
-		count++;
+		n++;
 	}
 
-	return count;
+	return n;
 }
 
 /* TODO: centralise */

@@ -168,14 +168,11 @@ fsm_reverse(struct fsm *fsm)
 	 */
 	{
 		struct fsm_state *s;
-		int endcount;
+		unsigned n;
 
-		endcount = 0;
-		for (s = fsm->sl; s != NULL; s = s->next) {
-			endcount += !!fsm_isend(fsm, s);
-		}
+		n = fsm_count(fsm, fsm_isend);
 
-		switch (endcount) {
+		switch (n) {
 		case 1:
 			for (s = fsm->sl; s != NULL; s = s->next) {
 				if (fsm_isend(fsm, s)) {
@@ -199,7 +196,7 @@ fsm_reverse(struct fsm *fsm)
 			for (s = fsm->sl; s != NULL; s = s->next) {
 				struct fsm_state *state;
 
-				if (endcount > 0 && !fsm_isend(fsm, s)) {
+				if (n > 0 && !fsm_isend(fsm, s)) {
 					continue;
 				}
 
@@ -247,7 +244,7 @@ fsm_reverse(struct fsm *fsm)
 			for (s = fsm->sl; s != NULL; s = s->next) {
 				struct fsm_state *state;
 
-				if (endcount > 0 && !fsm_isend(fsm, s)) {
+				if (n > 0 && !fsm_isend(fsm, s)) {
 					continue;
 				}
 

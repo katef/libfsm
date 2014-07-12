@@ -190,18 +190,10 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 	struct fsm_state *s;
 
 	/* no end states */
-	{
-		int endcount;
-
-		endcount = 0;
-		for (s = sl; s != NULL; s = s->next) {
-			endcount += !!fsm_isend(fsm, s);
-		}
-
-		if (endcount == 0) {
-			printf("\treturn EOF; /* unexpected EOF */\n");
-			return;
-		}
+	/* TODO: use !fsm_has() instead */
+	if (fsm_count(fsm, fsm_isend) == 0) {
+		printf("\treturn EOF; /* unexpected EOF */\n");
+		return;
 	}
 
 	/* usual case */

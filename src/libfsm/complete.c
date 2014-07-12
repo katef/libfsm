@@ -18,7 +18,6 @@ fsm_complete(struct fsm *fsm,
 {
 	struct fsm_state *new;
 	struct fsm_state *s;
-	unsigned int count;
 	size_t i;
 
 	assert(fsm != NULL);
@@ -37,13 +36,8 @@ fsm_complete(struct fsm *fsm,
 	}
 */
 
-	/* TODO: centralise */
-	count = 0;
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		count += !!predicate(fsm, s);
-	}
-
-	if (count == 0) {
+	/* TODO: use if (!fsm_has()) instead */
+	if (fsm_count(fsm, predicate) == 0) {
 		return 1;
 	}
 

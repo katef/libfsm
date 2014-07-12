@@ -14,18 +14,11 @@ fsm_collate(struct fsm *fsm,
 {
 	struct fsm_state *new;
 	struct fsm_state *s;
-	unsigned int count;
 
 	assert(fsm != NULL);
 	assert(predicate != NULL);
 
-	/* TODO: centralise */
-	count = 0;
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		count += !!predicate(fsm, s);
-	}
-
-	switch (count) {
+	switch (fsm_count(fsm, predicate)) {
 	case 0:
 		errno = 0; /* XXX: bad form */
 		return NULL;
