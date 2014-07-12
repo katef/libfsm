@@ -109,12 +109,11 @@
 		/* not */
 		{
 			! = SOL;
+			list-of-terms(g);
 			<invert-group>(g);
 		||
-			$;
+			list-of-terms(g);
 		};
-
-		list-of-terms(g);
 
 		<group-to-states>(g, x, y);
 
