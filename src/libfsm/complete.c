@@ -7,6 +7,7 @@
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
+#include <fsm/pred.h>
 #include <fsm/graph.h>
 
 #include "internal.h"
@@ -23,7 +24,7 @@ fsm_complete(struct fsm *fsm,
 	assert(fsm != NULL);
 	assert(predicate != NULL);
 
-	if (!fsm_isdfa(fsm)) {
+	if (!fsm_predicate(fsm, fsm_isdfa)) {
 		if (!fsm_determinise(fsm)) {
 			fsm_free(fsm);
 			return 0;

@@ -14,7 +14,7 @@ int
 fsm_isend(const struct fsm *fsm, const struct fsm_state *state);
 
 int
-fsm_isdfastate(const struct fsm *fsm, const struct fsm_state *state);
+fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state);
 
 #endif
 

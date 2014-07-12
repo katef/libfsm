@@ -30,6 +30,7 @@
 #include <unistd.h>
 
 #include <fsm/fsm.h>
+#include <fsm/pred.h>
 #include <fsm/graph.h>
 #include <fsm/out.h>
 #include <fsm/exec.h>
@@ -60,7 +61,7 @@ static int
 match(const struct fsm *fsm, const char *s)
 {
 	assert(fsm != NULL);
-	assert(fsm_isdfa(fsm));
+	assert(fsm_predicate(fsm, fsm_isdfa));
 	assert(s != NULL);
 
 	return fsm_exec(fsm, match_getc, &s);

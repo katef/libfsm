@@ -29,12 +29,6 @@ fsm_determinise_opaque(struct fsm *fsm,
 	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *));
 
 /*
- * Returns true if a given FSM is a DFA.
- */
-int
-fsm_isdfa(const struct fsm *fsm);
-
-/*
  * Make a DFA complete, as per fsm_iscomplete.
  */
 int

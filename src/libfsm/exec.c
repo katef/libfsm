@@ -65,7 +65,7 @@ fsm_exec(const struct fsm *fsm,
 
 	/* TODO: pass struct of callbacks to call during each event; transitions etc */
 
-	if (!fsm_isdfa(fsm)) {
+	if (!fsm_predicate(fsm, fsm_isdfa)) {
 		errno = EINVAL;
 		return 0;
 	}

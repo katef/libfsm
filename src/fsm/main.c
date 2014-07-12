@@ -12,6 +12,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
+#include <fsm/pred.h>
 #include <fsm/graph.h>
 #include <fsm/out.h>
 #include <fsm/exec.h>
@@ -37,15 +38,17 @@ query(struct fsm *fsm, const char *name)
 
 	struct {
 		const char *name;
-		int (*f)(const struct fsm *);
+		int (*predicate)(const struct fsm *, const struct fsm_state *);
 	} a[] = {
-		{ "iscomplete", fsm_iscomplete },
 		{ "isdfa",      fsm_isdfa      },
-		{ "dfa",        fsm_isdfa      },
+		{ "dfa",        fsm_isdfa      }
+/* XXX:
+		{ "iscomplete", fsm_iscomplete },
 		{ "hasend",     fsm_hasend     },
 		{ "end",        fsm_hasend     },
 		{ "accept",     fsm_hasend     },
 		{ "hasaccept",  fsm_hasend     }
+*/
 	};
 
 	assert(fsm != NULL);
@@ -53,7 +56,7 @@ query(struct fsm *fsm, const char *name)
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].f(fsm);
+			return fsm_predicate(fsm, a[i].predicate);
 		}
 	}
 

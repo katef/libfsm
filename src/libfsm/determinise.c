@@ -486,7 +486,7 @@ fsm_determinise_opaque(struct fsm *fsm,
 	}
 
 	/* TODO: can assert a whole bunch of things about the dfa, here */
-	assert(fsm_isdfa(dfa));
+	assert(fsm_predicate(dfa, fsm_isdfa));
 
 	fsm_move(fsm, dfa);
 

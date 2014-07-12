@@ -10,15 +10,19 @@
 
 #include "internal.h"
 
-/* TODO: rename fsm_isdfa */
 int
-fsm_isdfastate(const struct fsm *fsm, const struct fsm_state *state)
+fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state)
 {
 	int i;
 
 	assert(fsm != NULL);
 
-	(void) fsm;
+	/*
+	 * DFA must have a start state (and therfore at least one state).
+	 */
+	if (fsm_getstart(fsm) == NULL) {
+		return 0;
+	}
 
 	/*
 	 * DFA may not have epsilon edges.
@@ -36,30 +40,6 @@ fsm_isdfastate(const struct fsm *fsm, const struct fsm_state *state)
 		}
 
 		if (state->edges[i].sl->next != NULL) {
-			return 0;
-		}
-	}
-
-	return 1;
-}
-
-int
-fsm_isdfa(const struct fsm *fsm)
-{
-	const struct fsm_state *s;
-
-	assert(fsm != NULL);
-
-	if (fsm->sl == NULL) {
-		return 0;
-	}
-
-	if (fsm->start == NULL) {
-		return 0;
-	}
-
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (!fsm_isdfastate(fsm, s)) {
 			return 0;
 		}
 	}

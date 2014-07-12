@@ -1,9 +1,10 @@
 /* $Id$ */
 
 #include <assert.h>
-#include <ctype.h>
-#include <stdio.h>
 #include <string.h>
+#include <ctype.h>
+#include <errno.h>
+#include <stdio.h>
 
 #include <adt/set.h>
 
@@ -223,7 +224,7 @@ out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	struct fsm_state *s;
 
 	assert(fsm != NULL);
-	assert(fsm_isdfa(fsm));
+	assert(fsm_predicate(fsm, fsm_isdfa));
 	assert(f != NULL);
 	assert(options != NULL);
 
@@ -245,11 +246,13 @@ void
 fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 {
 	assert(fsm != NULL);
-	assert(fsm_isdfa(fsm));
 	assert(f != NULL);
 	assert(options != NULL);
 
-	/* TODO: prerequisite that the FSM is a DFA */
+	if (!fsm_predicate(fsm, fsm_isdfa)) {
+		errno = EINVAL;
+		return;
+	}
 
 	/* TODO: pass in %s prefix (default to "fsm_") */
 
