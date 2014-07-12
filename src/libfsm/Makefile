@@ -15,6 +15,7 @@ SRCS+= fsm.c
 SRCS+= mode.c
 SRCS+= out.c
 SRCS+= state.c
+SRCS+= predicate.c
 
 # unary operators
 SRCS+= complement.c
