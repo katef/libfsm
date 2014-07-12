@@ -90,7 +90,7 @@ contains(struct fsm_edge edges[], int o, struct fsm_state *state)
 	assert(state != NULL);
 
 	for (i = o; i <= FSM_EDGE_MAX; i++) {
-		if (set_contains(state, edges[i].sl)) {
+		if (set_contains(edges[i].sl, state)) {
 			return 1;
 		}
 	}
@@ -171,7 +171,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 
 			/* find all edges which go from this state to the same target state */
 			for (k = 0; k <= FSM_EDGE_MAX; k++) {
-				if (set_contains(e->state, s->edges[k].sl)) {
+				if (set_contains(s->edges[k].sl, e->state)) {
 					bm_set(&bm, k);
 				}
 			}

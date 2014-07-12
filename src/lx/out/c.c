@@ -97,7 +97,7 @@ escputc(char c, FILE *f)
 
 /* XXX: centralise */
 static int
-xset_contains(const struct fsm_state *state, const struct state_set *set)
+xset_contains(const struct state_set *set, const struct fsm_state *state)
 {
 	const struct state_set *s;
 
@@ -121,7 +121,7 @@ contains(struct fsm_edge edges[], int o, struct fsm_state *state)
 	assert(state != NULL);
 
 	for (i = o; i <= UCHAR_MAX; i++) {
-		if (xset_contains(state, edges[i].sl)) {
+		if (xset_contains(edges[i].sl, state)) {
 			return 1;
 		}
 	}

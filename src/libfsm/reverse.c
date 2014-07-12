@@ -22,7 +22,7 @@ incomingedges(const struct fsm *fsm, const struct fsm_state *state)
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			if (set_contains(state, s->edges[i].sl)) {
+			if (set_contains(s->edges[i].sl, state)) {
 				return 1;
 			}
 		}

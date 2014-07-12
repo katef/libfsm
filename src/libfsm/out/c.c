@@ -79,7 +79,7 @@ contains(struct fsm_edge edges[], int o, struct fsm_state *state)
 	assert(state != NULL);
 
 	for (i = o; i <= UCHAR_MAX; i++) {
-		if (set_contains(state, edges[i].sl)) {
+		if (set_contains(edges[i].sl, state)) {
 			return 1;
 		}
 	}

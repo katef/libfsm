@@ -82,7 +82,7 @@ fsm_out_csv(const struct fsm *fsm, FILE *f,
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			for (e = s->edges[i].sl; e != NULL; e = e->next) {
-				if (set_contains(e->state, s->edges[i].sl)) {
+				if (set_contains(s->edges[i].sl, e->state)) {
 					bm_set(&bm, i);
 				}
 			}

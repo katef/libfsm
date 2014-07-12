@@ -35,7 +35,7 @@ fsm_findmode(const struct fsm_state *state)
 
 			/* count the remaining edes which have the same target */
 			for (j = i + 1; j <= UCHAR_MAX; j++) {
-				curr += set_contains(s->state, state->edges[j].sl);
+				curr += set_contains(state->edges[j].sl, s->state);
 			}
 
 			if (curr > mode.freq) {

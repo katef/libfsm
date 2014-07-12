@@ -58,7 +58,7 @@ set_remove(struct state_set **head, struct fsm_state *state)
 		}
 	}
 
-	assert(!set_contains(state, *head));
+	assert(!set_contains(*head, state));
 }
 
 void
@@ -71,7 +71,7 @@ set_replace(struct state_set *set,
 	assert(old != NULL);
 	assert(new != NULL);
 
-	assert(!set_contains(new, set));
+	assert(!set_contains(set, new));
 
 	for (s = set; s != NULL; s = s->next) {
 		if (s->state == old) {
@@ -80,7 +80,7 @@ set_replace(struct state_set *set,
 		}
 	}
 
-	assert(!set_contains(old, set));
+	assert(!set_contains(set, old));
 }
 
 void
@@ -96,7 +96,7 @@ set_free(struct state_set *set)
 }
 
 int
-set_contains(const struct fsm_state *state, const struct state_set *set)
+set_contains(const struct state_set *set, const struct fsm_state *state)
 {
 	const struct state_set *s;
 
@@ -115,7 +115,7 @@ subsetof(const struct state_set *a, const struct state_set *b)
 	const struct state_set *s;
 
 	for (s = a; s != NULL; s = s->next) {
-		if (!set_contains(s->state, b)) {
+		if (!set_contains(b, s->state)) {
 			return 0;
 		}
 	}

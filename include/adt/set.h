@@ -27,7 +27,7 @@ set_free(struct state_set *set);
  * Find if a state is in a set.
  */
 int
-set_contains(const struct fsm_state *state, const struct state_set *set);
+set_contains(const struct state_set *set, const struct fsm_state *state);
 
 /*
  * Find if a is a subset of b
