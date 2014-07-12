@@ -16,5 +16,13 @@ fsm_isend(const struct fsm *fsm, const struct fsm_state *state);
 int
 fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state);
 
+/*
+ * To be complete means that a state has an edge for all letters in the
+ * alphabet (sigma). The alphabet for libfsm is all values expressible by an
+ * unsigned octet.
+ */
+int
+fsm_iscomplete(const struct fsm *fsm, const struct fsm_state *state);
+
 #endif
 

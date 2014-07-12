@@ -31,7 +31,7 @@ fsm_complement(struct fsm *fsm)
 
 	assert(fsm != NULL);
 
-	if (!fsm_iscomplete(fsm)) {
+	if (!fsm_predicate(fsm, fsm_iscomplete)) {
 		if (!fsm_complete(fsm, pred_all)) {
 			fsm_free(fsm);
 			return 0;

@@ -37,6 +37,7 @@ SRCS+= subtract.c
 # predicates
 SRCS+= isdfa.c
 SRCS+= isend.c
+SRCS+= iscomplete.c
 
 .include <lx.obj.mk>
 

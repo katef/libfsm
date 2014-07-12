@@ -151,7 +151,7 @@ singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 
 	fprintf(f, "\t\t\tswitch (c) {\n");
 
-	mode = fsm_iscompletestate(fsm, state) ? fsm_findmode(state) : NULL;
+	mode = fsm_iscomplete(fsm, state) ? fsm_findmode(state) : NULL;
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
 		if (state->edges[i].sl == NULL) {

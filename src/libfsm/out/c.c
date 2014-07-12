@@ -117,7 +117,7 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state)
 	{
 		struct fsm_state *mode;
 
-		mode = fsm_iscompletestate(fsm, state) ? fsm_findmode(state) : NULL;
+		mode = fsm_iscomplete(fsm, state) ? fsm_findmode(state) : NULL;
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
 			if (state->edges[i].sl == NULL) {

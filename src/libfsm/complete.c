@@ -30,12 +30,6 @@ fsm_complete(struct fsm *fsm,
 		}
 	}
 
-/* XXX: makes no sense wrt predicate
-	if (fsm_iscomplete(fsm)) {
-		return 1;
-	}
-*/
-
 	if (!fsm_has(fsm, predicate) == 0) {
 		return 1;
 	}
@@ -74,45 +68,6 @@ fsm_complete(struct fsm *fsm,
 				/* TODO: free stuff */
 				return 0;
 			}
-		}
-	}
-
-	return 1;
-}
-
-int
-fsm_iscompletestate(const struct fsm *fsm, const struct fsm_state *state)
-{
-	size_t i;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	/* TODO: assert state is in fsm->sl */
-
-	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (state->edges[i].sl == NULL) {
-			return 0;
-		}
-	}
-
-	return 1;
-}
-
-int
-fsm_iscomplete(const struct fsm *fsm)
-{
-	struct fsm_state *s;
-
-	assert(fsm != NULL);
-
-	if (fsm->sl == NULL) {
-		return 0;
-	}
-
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (!fsm_iscompletestate(fsm, s)) {
-			return 0;
 		}
 	}
 
