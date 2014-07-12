@@ -175,6 +175,13 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 	struct fsm_state **x);
 
 /*
+ * Count states for which the given predicate is true.
+ */
+unsigned
+fsm_count(const struct fsm *fsm,
+	int (*predicate)(const struct fsm *, const struct fsm_state *));
+
+/*
  * Run a given predicate against all states in an FSM.
  *
  * Returns true if the predicate is true for every state and false otherwise.

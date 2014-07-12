@@ -15,6 +15,9 @@ SRCS+= fsm.c
 SRCS+= mode.c
 SRCS+= out.c
 SRCS+= state.c
+
+# iterators
+SRCS+= count.c
 SRCS+= predicate.c
 
 # unary operators
