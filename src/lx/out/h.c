@@ -40,6 +40,7 @@ out_tokens(const struct ast *ast, FILE *f)
 	}
 
 	fprintf(f, "\tTOK_EOF,\n");
+	fprintf(f, "\tTOK_SKIP,\n");
 	fprintf(f, "\tTOK_ERROR\n");
 
 	fprintf(f, "};\n");
