@@ -214,6 +214,8 @@
 		struct fsm_state *trap;
 		struct fsm_state *s;
 
+		assert(@r != NULL);
+
 		if (!fsm_complete(@r, notend)) {
 			perror("fsm_complete");
 			@!;
