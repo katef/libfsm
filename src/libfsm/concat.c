@@ -120,7 +120,7 @@ fsm_concat(struct fsm *a, struct fsm *b)
 	assert(a != NULL);
 	assert(b != NULL);
 
-	if (!fsm_hasend(a)) {
+	if (!fsm_has(a, fsm_isend)) {
 		errno = EINVAL;
 		return NULL;
 	}

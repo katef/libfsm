@@ -124,12 +124,6 @@ void
 fsm_setend(struct fsm *fsm, struct fsm_state *state, int end);
 
 /*
- * Return true if a given FSM has an end state.
- */
-int
-fsm_hasend(const struct fsm *fsm);
-
-/*
  * Return state (if there is just one), or add epsilon edges from all states,
  * for which the given predicate is true.
  *

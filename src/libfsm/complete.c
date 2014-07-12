@@ -36,8 +36,7 @@ fsm_complete(struct fsm *fsm,
 	}
 */
 
-	/* TODO: use if (!fsm_has()) instead */
-	if (fsm_count(fsm, predicate) == 0) {
+	if (!fsm_has(fsm, predicate) == 0) {
 		return 1;
 	}
 
