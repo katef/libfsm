@@ -31,24 +31,6 @@ nonepsilonedges(const struct fsm *fsm, const struct fsm_state *state)
 }
 
 /* TODO: centralise */
-static int
-outgoingedges(const struct fsm *fsm, const struct fsm_state *state)
-{
-	int i;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		if (state->edges[i].sl != NULL) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-/* TODO: centralise */
 static void
 set_merge(struct state_set **dst, struct state_set *src)
 {
@@ -136,7 +118,7 @@ fsm_concat(struct fsm *a, struct fsm *b)
 	 * two states instead.
 	 */
 
-	if (!outgoingedges(q, ea) || !fsm_hasincoming(q, sb)) {
+	if (!fsm_hasoutgoing(q, ea) || !fsm_hasincoming(q, sb)) {
 		if (!state_merge(q, ea, sb)) {
 			goto error;
 		}

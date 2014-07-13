@@ -30,5 +30,8 @@ fsm_iscomplete(const struct fsm *fsm, const struct fsm_state *state);
 int
 fsm_hasincoming(const struct fsm *fsm, const struct fsm_state *state);
 
+int
+fsm_hasoutgoing(const struct fsm *fsm, const struct fsm_state *state);
+
 #endif
 

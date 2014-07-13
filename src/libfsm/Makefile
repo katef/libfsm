@@ -40,6 +40,7 @@ SRCS+= isdfa.c
 SRCS+= isend.c
 SRCS+= iscomplete.c
 SRCS+= hasincoming.c
+SRCS+= hasoutgoing.c
 
 .include <lx.obj.mk>
 
