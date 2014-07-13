@@ -13,24 +13,6 @@
 #include "internal.h"
 
 /* TODO: centralise */
-static int
-nonepsilonedges(const struct fsm *fsm, const struct fsm_state *state)
-{
-	int i;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (state->edges[i].sl != NULL) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-/* TODO: centralise */
 static void
 set_merge(struct state_set **dst, struct state_set *src)
 {
