@@ -11,19 +11,6 @@
 
 #include "internal.h"
 
-/* TODO: centralise */
-static int
-pred_all(const struct fsm *fsm, const struct fsm_state *state)
-{
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	(void) fsm;
-	(void) state;
-
-	return 1;
-}
-
 int
 fsm_complement(struct fsm *fsm)
 {
@@ -32,7 +19,7 @@ fsm_complement(struct fsm *fsm)
 	assert(fsm != NULL);
 
 	if (!fsm_predicate(fsm, fsm_iscomplete)) {
-		if (!fsm_complete(fsm, pred_all)) {
+		if (!fsm_complete(fsm, fsm_isany)) {
 			fsm_free(fsm);
 			return 0;
 		}

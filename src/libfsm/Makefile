@@ -35,6 +35,7 @@ SRCS+= intersect.c
 SRCS+= subtract.c
 
 # predicates
+SRCS+= isany.c
 SRCS+= isdfa.c
 SRCS+= isend.c
 SRCS+= iscomplete.c

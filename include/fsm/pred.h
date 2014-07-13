@@ -11,6 +11,9 @@ struct fsm;
 struct fsm_state;
 
 int
+fsm_isany(const struct fsm *fsm, const struct fsm_state *state);
+
+int
 fsm_isend(const struct fsm *fsm, const struct fsm_state *state);
 
 int
