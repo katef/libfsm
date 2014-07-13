@@ -8,32 +8,9 @@
 #include <adt/set.h>
 
 #include <fsm/bool.h>
+#include <fsm/pred.h>
 
 #include "internal.h"
-
-/* TODO: centralise */
-static int
-incomingedges(const struct fsm *fsm, const struct fsm_state *state)
-{
-	const struct fsm_state *s;
-	const struct state_set *e;
-	int i;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (e = state->edges[i].sl; e != NULL; e = e->next) {
-				if (e->state == state) {
-					return 1;
-				}
-			}
-		}
-	}
-
-	return 0;
-}
 
 /* TODO: centralise */
 static void
@@ -110,8 +87,8 @@ fsm_union(struct fsm *a, struct fsm *b)
 	 * state if they have no incoming edges.
 	 */
 
-	ia = incomingedges(q, sa);
-	ib = incomingedges(q, sb);
+	ia = fsm_hasincoming(q, sa);
+	ib = fsm_hasincoming(q, sb);
 
 	if (!ia && !ib) {
 		sq = state_merge(q, sa, sb);

@@ -11,27 +11,6 @@
 
 #include "internal.h"
 
-/* TODO: centralise? */
-static int
-incomingedges(const struct fsm *fsm, const struct fsm_state *state)
-{
-	const struct fsm_state *s;
-	int i;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			if (set_contains(s->edges[i].sl, state)) {
-				return 1;
-			}
-		}
-	}
-
-	return 0;
-}
-
 /* TODO: centralise */
 static struct fsm_state *
 equivalent(const struct fsm *new, const struct fsm *fsm, const struct fsm_state *state)
@@ -203,7 +182,7 @@ fsm_reverse(struct fsm *fsm)
 				state = equivalent(new, fsm, s);
 				assert(state != NULL);
 
-				if (!incomingedges(new, state)) {
+				if (!fsm_hasincoming(new, state)) {
 					break;
 				}
 			}
