@@ -268,7 +268,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(f != NULL);
 	assert(z != NULL);
 	assert(z->fsm != NULL);
-	assert(fsm_predicate(z->fsm, fsm_isdfa));
+	assert(fsm_all(z->fsm, fsm_isdfa));
 	assert(ast != NULL);
 
 	/* TODO: prerequisite that the FSM is a DFA */
@@ -363,7 +363,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 	assert(f != NULL);
 
 	for (z = ast->zl; z != NULL; z = z->next) {
-		if (!fsm_predicate(z->fsm, fsm_isdfa)) {
+		if (!fsm_all(z->fsm, fsm_isdfa)) {
 			errno = EINVAL;
 			return;
 		}

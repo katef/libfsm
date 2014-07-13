@@ -9,7 +9,7 @@
 #include "internal.h"
 
 int
-fsm_predicate(const struct fsm *fsm,
+fsm_all(const struct fsm *fsm,
 	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
 	const struct fsm_state *s;

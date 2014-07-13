@@ -19,7 +19,7 @@ SRCS+= state.c
 # iterators
 SRCS+= count.c
 SRCS+= has.c
-SRCS+= predicate.c
+SRCS+= all.c
 
 # unary operators
 SRCS+= complement.c

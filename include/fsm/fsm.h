@@ -188,7 +188,7 @@ fsm_has(const struct fsm *fsm,
  * Returns true if the predicate is true for every state and false otherwise.
  */
 int
-fsm_predicate(const struct fsm *fsm,
+fsm_all(const struct fsm *fsm,
 	int (*predicate)(const struct fsm *, const struct fsm_state *));
 
 #endif

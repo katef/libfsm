@@ -23,7 +23,7 @@ fsm_complete(struct fsm *fsm,
 	assert(fsm != NULL);
 	assert(predicate != NULL);
 
-	if (!fsm_predicate(fsm, fsm_isdfa)) {
+	if (!fsm_all(fsm, fsm_isdfa)) {
 		if (!fsm_determinise(fsm)) {
 			fsm_free(fsm);
 			return 0;

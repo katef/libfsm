@@ -56,7 +56,7 @@ query(struct fsm *fsm, const char *name)
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return fsm_predicate(fsm, a[i].predicate);
+			return fsm_all(fsm, a[i].predicate);
 		}
 	}
 

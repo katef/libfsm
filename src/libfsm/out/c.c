@@ -215,7 +215,7 @@ out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	struct fsm_state *s;
 
 	assert(fsm != NULL);
-	assert(fsm_predicate(fsm, fsm_isdfa));
+	assert(fsm_all(fsm, fsm_isdfa));
 	assert(f != NULL);
 	assert(options != NULL);
 
@@ -240,7 +240,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	assert(f != NULL);
 	assert(options != NULL);
 
-	if (!fsm_predicate(fsm, fsm_isdfa)) {
+	if (!fsm_all(fsm, fsm_isdfa)) {
 		errno = EINVAL;
 		return;
 	}
