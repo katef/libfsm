@@ -197,7 +197,7 @@ singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 
 	if (!fsm_isend(fsm, state)) {
 		/* XXX: don't need this if complete */
-		fprintf(f, "\t\t\tdefault:  lx->getc = NULL; return TOK_ERROR;\n");
+		fprintf(f, "\t\t\tdefault:  lx->lgetc = NULL; return TOK_ERROR;\n");
 	} else {
 		const struct ast_mapping *m;
 
@@ -206,7 +206,7 @@ singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		assert(m != NULL);
 
 		/* XXX: don't need this if complete */
-		fprintf(f, "\t\t\tdefault:  lx->ungetc(c, lx->opaque); return ");
+		fprintf(f, "\t\t\tdefault:  lx_ungetc(lx, c); return ");
 		if (m->to != NULL) {
 			fprintf(f, "lx->z = z%u, ", zindexof(ast, m->to));
 		}
@@ -263,6 +263,63 @@ out_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 static void
+out_io(FILE *f)
+{
+	/* TODO: consider passing char *c, and return int 0/-1 for error */
+	fprintf(f, "static int\n");
+	fprintf(f, "lx_getc(struct lx *lx)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tint c;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(lx != NULL);\n");
+	fprintf(f, "\tassert(lx->lgetc != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tif (lx->c != EOF) {\n");
+	fprintf(f, "\t\tc = lx->c, lx->c = EOF;\n");
+	fprintf(f, "\t} else {\n");
+	fprintf(f, "\t\tc = lx->lgetc(lx);\n");
+	fprintf(f, "\t\tif (c == EOF) {\n");
+	fprintf(f, "\t\t\treturn EOF;\n");
+	fprintf(f, "\t\t}\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tif (c == '\\n') {\n");
+	fprintf(f, "\t\tlx->line++;\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tlx->byte++;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tif (lx->push != NULL) {\n");
+	fprintf(f, "\t\tif (-1 == lx->push(lx, c)) {\n");
+	fprintf(f, "\t\t\treturn EOF;\n");
+	fprintf(f, "\t\t}\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\treturn c;\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "static void\n");
+	fprintf(f, "lx_ungetc(struct lx *lx, int c)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tassert(lx != NULL);\n");
+	fprintf(f, "\tassert(lx->c == EOF);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tlx->c = c;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tif (lx->pop != NULL) {\n");
+	fprintf(f, "\t\tlx->pop(lx);\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tif (c == '\\n') {\n");
+	fprintf(f, "\t\tlx->line--;\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tlx->byte--;\n");
+	fprintf(f, "}\n");
+}
+
+static void
 out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
 	assert(f != NULL);
@@ -283,7 +340,6 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\n");
 
 	fprintf(f, "\tassert(lx != NULL);\n");
-	fprintf(f, "\tassert(lx->getc != NULL);\n");
 	fprintf(f, "\n");
 
 	assert(z->fsm->start != NULL);
@@ -293,7 +349,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	{
 		struct fsm_state *s;
 
-		fprintf(f, "\twhile (c = lx->getc(lx->opaque), c != EOF) {\n");
+		fprintf(f, "\twhile (c = lx_getc(lx), c != EOF) {\n");
 
 		fprintf(f, "\t\tswitch (state) {\n");
 
@@ -316,7 +372,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	{
 		struct fsm_state *s;
 
-		fprintf(f, "\tlx->getc = NULL;\n");
+		fprintf(f, "\tlx->lgetc = NULL;\n");
 
 		fprintf(f, "\n");
 
@@ -385,6 +441,9 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	fprintf(f, "\n");
 
+	out_io(f);
+	fprintf(f, "\n");
+
 	for (z = ast->zl; z != NULL; z = z->next) {
 		out_zone(f, ast, z);
 	}
@@ -421,7 +480,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	{
 		fprintf(f, "enum lx_token\n");
-		fprintf(f, "lx_nexttoken(struct lx *lx)\n");
+		fprintf(f, "lx_next(struct lx *lx)\n");
 		fprintf(f, "{\n");
 
 		fprintf(f, "\tenum lx_token t;\n");
@@ -429,7 +488,10 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "\tassert(lx != NULL);\n");
 		fprintf(f, "\n");
 
-		fprintf(f, "\tif (lx->getc == NULL) {\n");
+		fprintf(f, "\tlx->c = EOF;\n");
+		fprintf(f, "\n");
+
+		fprintf(f, "\tif (lx->lgetc == NULL) {\n");
 		fprintf(f, "\t\treturn TOK_EOF;\n");
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");

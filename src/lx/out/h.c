@@ -64,9 +64,17 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "struct lx {\n");
-	fprintf(f, "\tint (*getc)(void *opaque);\n");
-	fprintf(f, "\tvoid (*ungetc)(int c, void *opaque);\n");
+	fprintf(f, "\tint (*lgetc)(struct lx *lx);\n");
 	fprintf(f, "\tvoid *opaque;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tint c; /* lx_ungetc buffer */\n");
+	fprintf(f, "\tunsigned line;\n");
+	fprintf(f, "\tunsigned byte;\n");
+	fprintf(f, "\n");
+	/* TODO: push/pop/clear for token buffer */
+	fprintf(f, "\tint (*push) (struct lx *lx, int c);\n");
+	fprintf(f, "\tint (*pop)  (struct lx *lx);\n");
+	fprintf(f, "\tint (*clear)(struct lx *lx);\n");
 	fprintf(f, "\n");
 	fprintf(f, "\tenum lx_token (*z)(struct lx *lx);\n");
 	fprintf(f, "};\n");
@@ -75,7 +83,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "const char *lx_name(enum lx_token t);\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "enum lx_token lx_nexttoken(struct lx *lx);\n");
+	fprintf(f, "enum lx_token lx_next(struct lx *lx);\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "#endif\n");
