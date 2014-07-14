@@ -263,6 +263,95 @@ out_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 static void
+out_lgetc(FILE *f)
+{
+	fprintf(f, "int\n");
+	fprintf(f, "lx_fgetc(struct lx *lx)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tassert(lx != NULL);\n");
+	fprintf(f, "\tassert(lx->opaque != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\treturn fgetc(lx->opaque);\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "int\n");
+	fprintf(f, "lx_sgetc(struct lx *lx)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tchar *s;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(lx != NULL);\n");
+	fprintf(f, "\tassert(lx->opaque != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\ts = lx->opaque;\n");
+	fprintf(f, "\tif (*s == '\\0') {\n");
+	fprintf(f, "\t\treturn EOF;\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\treturn lx->opaque = s + 1, *s;\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "int\n");
+	fprintf(f, "lx_agetc(struct lx *lx)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tstruct lx_arr *a;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(lx != NULL);\n");
+	fprintf(f, "\tassert(lx->opaque != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\ta = lx->opaque;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(a != NULL);\n");
+	fprintf(f, "\tassert(a->p != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tif (a->len == 0) {\n");
+	fprintf(f, "\t\treturn EOF;\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\treturn a->len--, *a->p++;\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+
+	/* TODO: POSIX only */
+	fprintf(f, "int\n");
+	fprintf(f, "lx_dgetc(struct lx *lx)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tstruct lx_fd *d;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(lx != NULL);\n");
+	fprintf(f, "\tassert(lx->opaque != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\td = lx->opaque;\n");
+	fprintf(f, "\tassert(d->fd != -1);\n");
+	fprintf(f, "\tassert(d->p != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tif (d->len == 0) {\n");
+	fprintf(f, "\t\tssize_t r;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\tassert(fcntl(d->fd, F_GETFL) & O_NONBLOCK == 0);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\td->p = (char *) d + sizeof *d;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\tr = read(d->fd, d->p, d->bufsz);\n");
+	fprintf(f, "\t\tif (r == -1) {\n");
+	fprintf(f, "\t\t\tassert(errno != EAGAIN);\n");
+	fprintf(f, "\t\t\treturn EOF;\n");
+	fprintf(f, "\t\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\tif (r == 0) {\n");
+	fprintf(f, "\t\t\treturn EOF;\n");
+	fprintf(f, "\t\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\td->len = r;\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\treturn d->len--, *d->p++;\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+}
+
+static void
 out_io(FILE *f)
 {
 	/* TODO: consider passing char *c, and return int 0/-1 for error */
@@ -430,6 +519,12 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	fprintf(f, "#include <assert.h>\n");
 	fprintf(f, "#include <stdio.h>\n");
+	fprintf(f, "#include <errno.h>\n");
+	fprintf(f, "\n");
+
+	/* TODO: POSIX only */
+	fprintf(f, "#include <unistd.h>\n");
+	fprintf(f, "#include <fcntl.h>\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "#include LX_HEADER\n");
@@ -442,6 +537,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 
 	out_io(f);
+	out_lgetc(f);
 	fprintf(f, "\n");
 
 	for (z = ast->zl; z != NULL; z = z->next) {

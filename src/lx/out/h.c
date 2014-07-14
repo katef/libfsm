@@ -80,10 +80,34 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
+	fprintf(f, "/* opaque for lx_agetc */\n");
+	fprintf(f, "struct lx_arr {\n");
+	fprintf(f, "\tchar *p;\n");
+	fprintf(f, "\tsize_t len;\n");
+	fprintf(f, "};\n");
+	fprintf(f, "\n");
+
+	/* TODO: posix only */
+	fprintf(f, "/* opaque for lx_fdgetc */\n");
+	fprintf(f, "struct lx_fd {\n");
+	fprintf(f, "\tchar *p;\n");
+	fprintf(f, "\tsize_t len;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tint fd;\n");
+	fprintf(f, "\tsize_t bufsz; /* number of bytes allocated after this struct */\n");
+	fprintf(f, "};\n");
+	fprintf(f, "\n");
+
 	fprintf(f, "const char *lx_name(enum lx_token t);\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "enum lx_token lx_next(struct lx *lx);\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "int lx_fgetc(struct lx *lx);\n"); /* TODO: stdio only */
+	fprintf(f, "int lx_sgetc(struct lx *lx);\n");
+	fprintf(f, "int lx_agetc(struct lx *lx);\n");
+	fprintf(f, "int lx_dgetc(struct lx *lx);\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "#endif\n");
