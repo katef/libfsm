@@ -584,9 +584,6 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "\tassert(lx != NULL);\n");
 		fprintf(f, "\n");
 
-		fprintf(f, "\tlx->c = EOF;\n");
-		fprintf(f, "\n");
-
 		fprintf(f, "\tif (lx->lgetc == NULL) {\n");
 		fprintf(f, "\t\treturn TOK_EOF;\n");
 		fprintf(f, "\t}\n");
