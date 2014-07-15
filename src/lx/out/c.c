@@ -406,6 +406,7 @@ out_io(FILE *f)
 	fprintf(f, "\n");
 	fprintf(f, "\tlx->byte--;\n");
 	fprintf(f, "}\n");
+	fprintf(f, "\n");
 }
 
 static void
@@ -538,7 +539,6 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	out_io(f);
 	out_lgetc(f);
-	fprintf(f, "\n");
 
 	for (z = ast->zl; z != NULL; z = z->next) {
 		out_zone(f, ast, z);
