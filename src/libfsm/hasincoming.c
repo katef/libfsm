@@ -21,7 +21,7 @@ fsm_hasincoming(const struct fsm *fsm, const struct fsm_state *state)
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (e = state->edges[i].sl; e != NULL; e = e->next) {
+			for (e = s->edges[i].sl; e != NULL; e = e->next) {
 				if (e->state == state) {
 					return 1;
 				}
