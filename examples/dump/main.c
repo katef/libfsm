@@ -1,29 +1,32 @@
 /* $Id$ */
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
 
-#include "lexer.h"
+#include LX_HEADER
+
+char a[256]; /* XXX: bounds check, and local by lx->tokbuf opaque */
+char *p;
 
 static int
-lx_getc(void *opaque)
+push(struct lx *lx, char c)
 {
-	assert(opaque != NULL);
+	(void) lx;
 
-	return fgetc(opaque);
+	assert(lx != NULL);
+	assert(c != EOF);
+
+	*p++ = c;
 }
 
-static void
-lx_ungetc(int c, void *opaque)
+static int
+pop(struct lx *lx)
 {
-	assert(opaque != NULL);
-	assert(c >= 0);
+	(void) lx;
 
-	if (EOF == ungetc(c, opaque)) {
-		perror("ungetc");
-		exit(1);
-	}
+	p--;
 }
 
 int
@@ -32,17 +35,47 @@ main(void)
 	enum lx_token t;
 	struct lx lx = { 0 };
 
-	lx.getc   = lx_getc;
-	lx.ungetc = lx_ungetc;
+	lx.lgetc  = lx_fgetc;
 	lx.opaque = stdin;
+
+	lx.push = push;
+	lx.pop  = pop;
+
+	/* TODO: make an lx_init() for this, plus other fields */
+	lx.c = EOF;
 
 	do {
 
-		t = lx_nexttoken(&lx);
+		p = a;
 
-		printf("<%s>\n", lx_name(t));
+		t = lx_next(&lx);
+		switch (t) {
+		case TOK_EOF:
+			printf("%u: <EOF>\n", lx.byte);
+			break;
 
-	} while (t != TOK_ERROR && t != TOK_EOF);
+		case TOK_SKIP:
+			continue;
+
+		case TOK_ERROR:
+			perror("lx_next");
+			break;
+
+		case TOK_UNKNOWN:
+			fprintf(stderr, "%u: lexically uncategorised: '%.*s'\n",
+				lx.byte,
+				(int) (p - a), a);
+			break;
+
+		default:
+			printf("%u: <%s '%.*s'>\n",
+				lx.byte,
+				lx_name(t),
+				(int) (p - a), a);
+			break;
+		}
+
+	} while (t != TOK_ERROR && t != TOK_EOF && t != TOK_UNKNOWN);
 
 	return t == TOK_ERROR;
 }
