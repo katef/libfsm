@@ -15,6 +15,8 @@ fsm_hasoutgoing(const struct fsm *fsm, const struct fsm_state *state)
 	assert(fsm != NULL);
 	assert(state != NULL);
 
+	(void) fsm;
+
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		if (state->edges[i].sl != NULL) {
 			return 1;
