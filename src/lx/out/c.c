@@ -197,7 +197,7 @@ singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 
 	if (!fsm_isend(fsm, state)) {
 		/* XXX: don't need this if complete */
-		fprintf(f, "\t\t\tdefault:  lx->lgetc = NULL; return TOK_ERROR;\n");
+		fprintf(f, "\t\t\tdefault:  lx->lgetc = NULL; return TOK_UNKNOWN;\n");
 	} else {
 		const struct ast_mapping *m;
 
@@ -493,7 +493,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			}
 		}
 
-		fprintf(f, "\tdefault: return TOK_ERROR;\n");
+		fprintf(f, "\tdefault: errno = EINVAL; return TOK_ERROR;\n");
 
 		fprintf(f, "\t}\n");
 	}
@@ -561,9 +561,10 @@ lx_out_c(const struct ast *ast, FILE *f)
 			fprintf(f, "\";\n");
 		}
 
-		fprintf(f, "\tcase TOK_EOF:   return \"EOF\";\n");
-		fprintf(f, "\tcase TOK_SKIP:  return \"SKIP\";\n");
-		fprintf(f, "\tcase TOK_ERROR: return \"ERROR\";\n");
+		fprintf(f, "\tcase TOK_EOF:     return \"EOF\";\n");
+		fprintf(f, "\tcase TOK_SKIP:    return \"SKIP\";\n");
+		fprintf(f, "\tcase TOK_ERROR:   return \"ERROR\";\n");
+		fprintf(f, "\tcase TOK_UNKNOWN: return \"UNKNOWN\";\n");
 
 		fprintf(f, "\tdefault: return \"?\";\n");
 
