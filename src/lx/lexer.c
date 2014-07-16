@@ -18,7 +18,7 @@
 
 	struct lex_state {
 		struct lexi_state lexi_state;
-		char tokbuf[20];
+		char tokbuf[120];
 		FILE *file;
 	};
 
