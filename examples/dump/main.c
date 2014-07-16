@@ -35,14 +35,13 @@ main(void)
 	enum lx_token t;
 	struct lx lx = { 0 };
 
+	lx_init(&lx);
+
 	lx.lgetc  = lx_fgetc;
 	lx.opaque = stdin;
 
 	lx.push = push;
 	lx.pop  = pop;
-
-	/* TODO: make an lx_init() for this, plus other fields */
-	lx.c = EOF;
 
 	do {
 
