@@ -13,21 +13,6 @@
 #include "internal.h"
 
 /* TODO: centralise */
-static void
-set_merge(struct state_set **dst, struct state_set *src)
-{
-	struct state_set **p;
-
-	assert(dst != NULL);
-
-	for (p = dst; *p != NULL; p = &(*p)->next) {
-		/* nothing */
-	}
-
-	*p = src;
-}
-
-/* TODO: centralise */
 static struct fsm_state *
 state_merge(struct fsm *q, struct fsm_state *a, struct fsm_state *b)
 {

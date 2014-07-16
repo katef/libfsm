@@ -129,3 +129,17 @@ set_equal(const struct state_set *a, const struct state_set *b)
 	return subsetof(a, b) && subsetof(b, a);
 }
 
+void
+set_merge(struct state_set **dst, struct state_set *src)
+{
+	struct state_set **p;
+
+	assert(dst != NULL);
+
+	for (p = dst; *p != NULL; p = &(*p)->next) {
+		/* nothing */
+	}
+
+	*p = src;
+}
+

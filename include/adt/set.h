@@ -41,5 +41,8 @@ subsetof(const struct state_set *a, const struct state_set *b);
 int
 set_equal(const struct state_set *a, const struct state_set *b);
 
+void
+set_merge(struct state_set **dst, struct state_set *src);
+
 #endif
 
