@@ -615,8 +615,6 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 		fprintf(f, "\tt = lx->z(lx);\n");
 		fprintf(f, "\n");
-		fprintf(f, "\tlx->z = z%u;\n", zindexof(ast, ast->global));
-		fprintf(f, "\n");
 		fprintf(f, "\treturn t;\n");
 
 		fprintf(f, "}\n");
