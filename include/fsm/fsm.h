@@ -169,6 +169,14 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 	struct fsm_state **x);
 
 /*
+ * Merge two states. A new state is returned.
+ *
+ * Cannot return NULL.
+ */
+struct fsm_state *
+fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b);
+
+/*
  * Count states for which the given predicate is true.
  */
 unsigned

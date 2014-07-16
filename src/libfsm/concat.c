@@ -5,35 +5,11 @@
 #include <limits.h>
 #include <errno.h>
 
-#include <adt/set.h>
-
+#include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/graph.h>
 
 #include "internal.h"
-
-/* TODO: centralise */
-static struct fsm_state *
-state_merge(struct fsm *q, struct fsm_state *a, struct fsm_state *b)
-{
-	int i;
-
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		/* there should be no common elements, because a and b are from different FSMs */
-		/* TODO: make a set_distinct() or set_disjoint() or somesuch */
-		assert(a->edges[i].sl == NULL || !subsetof(a->edges[i].sl, b->edges[i].sl));
-		assert(b->edges[i].sl == NULL || !subsetof(b->edges[i].sl, a->edges[i].sl));
-
-		set_merge(&a->edges[i].sl, b->edges[i].sl);
-
-		b->edges[i].sl = NULL;
-	}
-
-	/* TODO: could just use internal state_remove(), since no edges transition to to b */
-	fsm_removestate(q, b);
-
-	return a;
-}
 
 struct fsm *
 fsm_concat(struct fsm *a, struct fsm *b)
@@ -86,7 +62,7 @@ fsm_concat(struct fsm *a, struct fsm *b)
 	 */
 
 	if (!fsm_hasoutgoing(q, ea) || !fsm_hasincoming(q, sb)) {
-		if (!state_merge(q, ea, sb)) {
+		if (!fsm_mergestates(q, ea, sb)) {
 			goto error;
 		}
 	} else {
