@@ -432,6 +432,11 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tassert(lx != NULL);\n");
 	fprintf(f, "\n");
 
+	fprintf(f, "\tif (lx->clear != NULL) {\n");
+	fprintf(f, "\t\tlx->clear(lx);\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+
 	assert(z->fsm->start != NULL);
 	fprintf(f, "\tstate = S%u;\n", indexof(z->fsm, z->fsm->start));
 	fprintf(f, "\n");

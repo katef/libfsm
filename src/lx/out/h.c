@@ -72,7 +72,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "\tunsigned line;\n");
 	fprintf(f, "\tunsigned byte;\n");
 	fprintf(f, "\n");
-	/* TODO: push/pop/clear for token buffer */
+	fprintf(f, "\tvoid *buf;\n");
 	fprintf(f, "\tint (*push) (struct lx *lx, char c);\n");
 	fprintf(f, "\tint (*pop)  (struct lx *lx);\n");
 	fprintf(f, "\tint (*clear)(struct lx *lx);\n");
