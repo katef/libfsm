@@ -167,6 +167,7 @@ lx_out_dot(const struct ast *ast, FILE *f)
 	fprintf(f, "\tstart -> z%uS%u;\n",
 		zindexof(ast, ast->global),
 		indexof(ast->global->fsm, ast->global->fsm->start));
+	fprintf(f, "\t{ rank = min; start; }\n");
 	fprintf(f, "\n");
 
 	for (z = ast->zl; z != NULL; z = z->next) {
