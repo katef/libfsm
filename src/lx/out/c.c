@@ -571,9 +571,27 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "\t}\n");
 
 		fprintf(f, "}\n");
+		fprintf(f, "\n");
 	}
 
-	fprintf(f, "\n");
+	{
+		fprintf(f, "void\n");
+		fprintf(f, "lx_init(struct lx *lx)\n");
+		fprintf(f, "{\n");
+		fprintf(f, "\tconst static struct lx lx_default;\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tassert(lx != NULL);\n");
+		fprintf(f, "\n");
+		fprintf(f, "\t*lx = lx_default;\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tlx->c = EOF;\n");
+		fprintf(f, "\tlx->z = NULL;\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tlx->line = 0;\n");
+		fprintf(f, "\tlx->byte = 0;\n");
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
 
 	{
 		fprintf(f, "enum lx_token\n");

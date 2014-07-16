@@ -102,6 +102,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "const char *lx_name(enum lx_token t);\n");
 	fprintf(f, "\n");
 
+	fprintf(f, "void lx_init(struct lx *lx);\n");
 	fprintf(f, "enum lx_token lx_next(struct lx *lx);\n");
 	fprintf(f, "\n");
 
