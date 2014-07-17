@@ -53,9 +53,6 @@ main(void)
 			printf("%u: <EOF>\n", lx.byte);
 			break;
 
-		case TOK_SKIP:
-			continue;
-
 		case TOK_ERROR:
 			perror("lx_next");
 			break;

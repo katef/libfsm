@@ -210,9 +210,7 @@ singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		if (m->to != NULL) {
 			fprintf(f, "lx->z = z%u, ", zindexof(ast, m->to));
 		}
-		if (m->token == NULL && m->to == NULL) {
-			fprintf(f, "TOK_SKIP");
-		} else if (m->token != NULL) {
+		if (m->token != NULL) {
 			fprintf(f, "TOK_");
 			out_esctok(f, m->token->s);
 		} else {
@@ -567,7 +565,6 @@ lx_out_c(const struct ast *ast, FILE *f)
 		}
 
 		fprintf(f, "\tcase TOK_EOF:     return \"EOF\";\n");
-		fprintf(f, "\tcase TOK_SKIP:    return \"SKIP\";\n");
 		fprintf(f, "\tcase TOK_ERROR:   return \"ERROR\";\n");
 		fprintf(f, "\tcase TOK_UNKNOWN: return \"UNKNOWN\";\n");
 
