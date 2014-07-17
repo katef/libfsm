@@ -17,6 +17,28 @@
 #include "../ast.h"
 #include "../internal.h"
 
+static int
+skip(const struct fsm *fsm, const struct fsm_state *state)
+{
+	struct ast_mapping *m;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	if (!fsm_isend(fsm, state)) {
+		return 1;
+	}
+
+	m = state->opaque;
+
+	assert(m != NULL);
+
+	if (m->token == NULL) {
+		return 1;
+	}
+
+	return 0;
+}
 
 /* TODO: centralise */
 static void
@@ -377,12 +399,6 @@ out_io(FILE *f)
 	fprintf(f, "\n");
 	fprintf(f, "\tlx->byte++;\n");
 	fprintf(f, "\n");
-	fprintf(f, "\tif (lx->push != NULL) {\n");
-	fprintf(f, "\t\tif (-1 == lx->push(lx, c)) {\n");
-	fprintf(f, "\t\t\treturn EOF;\n");
-	fprintf(f, "\t\t}\n");
-	fprintf(f, "\t}\n");
-	fprintf(f, "\n");
 	fprintf(f, "\treturn c;\n");
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
@@ -440,10 +456,48 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tstate = S%u;\n", indexof(z->fsm, z->fsm->start));
 	fprintf(f, "\n");
 
+	fprintf(f, "\twhile (c = lx_getc(lx), c != EOF) {\n");
+
 	{
 		struct fsm_state *s;
 
-		fprintf(f, "\twhile (c = lx_getc(lx), c != EOF) {\n");
+		fprintf(f, "\t\tswitch (state) {\n");
+
+		for (s = z->fsm->sl; s != NULL; s = s->next) {
+			int r;
+
+			r = fsm_reachable(z->fsm, s, skip);
+			if (r == -1) {
+				return;
+			}
+
+			if (!r) {
+				continue;
+			}
+
+			fprintf(f, "\t\tcase S%u:\n", indexof(z->fsm, s));
+		}
+
+		if (fsm_has(z->fsm, skip)) {
+			fprintf(f, "\t\t\tbreak;\n");
+			fprintf(f, "\n");
+		}
+
+		fprintf(f, "\t\tdefault:\n");
+		fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
+		fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, c)) {\n");
+		fprintf(f, "\t\t\t\t\treturn EOF;\n");
+		fprintf(f, "\t\t\t\t}\n");
+		fprintf(f, "\t\t\t}\n");
+		fprintf(f, "\t\t\tbreak;\n");
+		fprintf(f, "\n");
+
+		fprintf(f, "\t\t}\n");
+		fprintf(f, "\n");
+	}
+
+	{
+		struct fsm_state *s;
 
 		fprintf(f, "\t\tswitch (state) {\n");
 
@@ -457,9 +511,9 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		}
 
 		fprintf(f, "\t\t}\n");
-
-		fprintf(f, "\t}\n");
 	}
+
+	fprintf(f, "\t}\n");
 
 	fprintf(f, "\n");
 
