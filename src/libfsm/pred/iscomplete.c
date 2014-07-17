@@ -6,7 +6,7 @@
 
 #include <fsm/pred.h>
 
-#include "internal.h"
+#include "../internal.h"
 
 int
 fsm_iscomplete(const struct fsm *fsm, const struct fsm_state *state)

@@ -34,18 +34,11 @@ SRCS+= union.c
 SRCS+= intersect.c
 SRCS+= subtract.c
 
-# predicates
-SRCS+= isany.c
-SRCS+= isdfa.c
-SRCS+= isend.c
-SRCS+= iscomplete.c
-SRCS+= hasincoming.c
-SRCS+= hasoutgoing.c
-
 .include <lx.obj.mk>
 
 
 PARTS+= src/libfsm/out
+PARTS+= src/libfsm/pred
 
 .include <lx.parts.mk>
 
