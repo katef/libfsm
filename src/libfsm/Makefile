@@ -14,7 +14,8 @@ SRCS+= exec.c
 SRCS+= fsm.c
 SRCS+= mode.c
 SRCS+= out.c
-SRCS+= state.c
+SRCS+= mergestates.c
+SRCS+= subgraph.c
 
 # iterators
 SRCS+= count.c
