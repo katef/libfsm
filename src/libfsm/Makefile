@@ -21,6 +21,7 @@ SRCS+= subgraph.c
 SRCS+= count.c
 SRCS+= has.c
 SRCS+= all.c
+SRCS+= reachable.c
 
 # unary operators
 SRCS+= complement.c
