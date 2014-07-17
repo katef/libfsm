@@ -9,8 +9,9 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+#include <fsm/walk.h>
 
-#include "internal.h"
+#include "../internal.h"
 
 struct list {
 	struct fsm_state *state;

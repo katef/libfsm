@@ -10,6 +10,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+#include <fsm/walk.h>
 #include <fsm/graph.h>
 
 #include "out.h"

@@ -5,7 +5,7 @@
 
 #include <fsm/fsm.h>
 
-#include "internal.h"
+#include "../internal.h"
 
 unsigned
 fsm_count(const struct fsm *fsm,

@@ -5,6 +5,7 @@
 #include <errno.h>
 
 #include <fsm/fsm.h>
+#include <fsm/walk.h>
 
 #include "internal.h"
 

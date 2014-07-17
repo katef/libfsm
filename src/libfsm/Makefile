@@ -17,12 +17,6 @@ SRCS+= out.c
 SRCS+= mergestates.c
 SRCS+= subgraph.c
 
-# iterators
-SRCS+= count.c
-SRCS+= has.c
-SRCS+= all.c
-SRCS+= reachable.c
-
 # unary operators
 SRCS+= complement.c
 SRCS+= determinise.c
@@ -41,6 +35,7 @@ SRCS+= subtract.c
 
 PARTS+= src/libfsm/out
 PARTS+= src/libfsm/pred
+PARTS+= src/libfsm/walk
 
 .include <lx.parts.mk>
 
