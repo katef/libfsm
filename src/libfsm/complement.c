@@ -6,6 +6,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+#include <fsm/walk.h>
 #include <fsm/bool.h>
 #include <fsm/graph.h>
 
