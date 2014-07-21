@@ -29,14 +29,15 @@
 	<compile-literal>: (:string) -> (:fsm);
 	<compile-regex>:   (:string) -> (:fsm);
 
-	!<empty-regex>: () -> (:fsm); /* TODO: proper name for matching the empty string? */
-
-	<trap>: (:fsm) -> ();
+	!<regex-empty>: () -> (:fsm); /* TODO: proper name for matching the empty string? */
+	<regex-any>:    () -> (:fsm);
 
 	!<op-complement>: (:fsm)       -> ();
 	!<op-complete>:   (:fsm)       -> ();
 	!<op-subtract>:   (:fsm, :fsm) -> (:fsm);
 	<op-concat>:      (:fsm, :fsm) -> (:fsm);
+
+	<subtract-exit>:  (:fsm, :fsm) -> (:fsm);
 
 	<make-ast>:     ()                                  -> (:ast);
 	<make-zone>:    (:ast)                              -> (:zone);
@@ -45,6 +46,7 @@
 	<set-globalzone>: (:ast, :zone) -> ();
 
 	<no-token>: () -> (:string);
+	<no-exit>:  () -> (:fsm);
 	<no-to>:    () -> (:zone);	/* TODO: rename target? */
 
 	<clone>: (:fsm) -> (:fsm);
@@ -60,7 +62,6 @@
 	<err-expected-eof>;
 
 	<err-expected-list>;
-
 
 	token-mapping: () -> (r :fsm, t :string) [
 
@@ -96,10 +97,12 @@
 		};
 	};
 
-	list-of-things: (a :ast, z :zone) -> () [
+	list-of-things: (a :ast, z :zone, exit :fsm) -> () [
 
-		token-thing: (a :ast, z :zone) -> (r :fsm, t :string) = {
+		token-thing: (a :ast, z :zone, exit :fsm) -> (q :fsm, t :string) = {
 			(r, t) = token-mapping;
+
+			q = <subtract-exit>(r, exit);
 
 			{
 				semi;
@@ -108,8 +111,10 @@
 			};
 		};
 
-		zone-thing: (a :ast, parent :zone) -> () = {
+		zone-thing: (a :ast, parent :zone, exit :fsm) -> () = {
 			(r1, t1) = token-mapping;
+
+			q1 = <subtract-exit>(r1, exit);
 
 			{
 				to;
@@ -130,19 +135,30 @@
 
 				/*
 				 * This is an implicit zone, written: /r1/ .. /r2/;
-				 * which is equivalent to: /r1/ .. /r2/ { /r2/v - ""; }
-				 * (i.e. discard everything which is not the exiting regexp.)
+				 * which is equivalent to: /r1/ .. /r2/ { /./ - /r2/; }
+				 * (i.e. discard everything which is not the exiting pattern.)
 				 *
 				 * If you want a zone where every character (other than the
-				 * exiting regexp) is treated as an error, then explicitly
+				 * r2ing pattern) is treated as an error, then explicitly
 				 * specify an empty zone instead: /r1/ .. /r2/ { }
 				 */
 
 				x = <no-to>;
 				y = <no-token>;
 
-				v = <clone>(r2);
-				<trap>(v);
+				/*
+				 * The exit pattern takes precedence over the zone body because
+				 * it matches the shortest expression, rather than the usual
+				 * greedy matching (which could traverse out of its accept state).
+				 *
+				 * This is easier to see visually; there are no transitions out
+				 * of the exit pattern's accepting states because the result of
+				 * subtraction is trimmed of dead states.
+				 */
+
+				u = <clone>(r2);
+				w = <regex-any>;
+				v = <subtract-exit>(w, u);
 
 				<make-mapping>(a, child, x, v, y);
 			||
@@ -152,7 +168,7 @@
 					<err-expected-open>;
 				};
 
-				list-of-things(a, child);
+				list-of-things(a, child, r2);
 
 				{
 					close;
@@ -163,23 +179,34 @@
 				<err-expected-list>;
 			};
 
-			<make-mapping>(a, parent, child, r1, t1);
+			<make-mapping>(a, parent, child, q1, t1);
 			<make-mapping>(a, child, parent, r2, t2);
 		};
 
-		thing: (a :ast, z :zone) -> () = {
-			(r, t) = token-thing(a, z);
+		/*
+		 * All "things" within a zone have the parent zone's exit pattern
+		 * subtracted from them (for an inner zone, the entry pattern
+		 * has its parent's exit pattern subtracted).
+		 *
+		 * This is done just for user convenience; given that matching the
+		 * exit pattern within a zone is illegal anyway (due to conflict),
+		 * it is reasonable to write (for example) /./ and have the exit
+		 * pattern excluded from that.
+		 */
+
+		thing: (a :ast, z :zone, exit :fsm) -> () = {
+			(r, t) = token-thing(a, z, exit);
 			to = <no-to>;
 			<make-mapping>(a, z, to, r, t);
 		||
-			zone-thing(a, z);
+			zone-thing(a, z, exit);
 		};
 
 	] = {
-		thing(a, z);
+		thing(a, z, exit);
 	||
-		list-of-things(a, z);
-		thing(a, z);
+		list-of-things(a, z, exit);
+		thing(a, z, exit);
 	##
 		<err-expected-list>;
 	};
@@ -188,9 +215,11 @@
 		a = <make-ast>;
 		z = <make-zone>(a);
 
+		exit = <no-exit>;
+
 		<set-globalzone>(a, z);
 
-		list-of-things(a, z);
+		list-of-things(a, z, exit);
 
 		{
 			eof;

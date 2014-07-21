@@ -61,22 +61,6 @@
 		exit(EXIT_FAILURE);
 	}
 
-	static int notend(const struct fsm *fsm, const struct fsm_state *state) {
-		return !fsm_isend(fsm, state);
-	}
-
-	static int trapstate(const struct fsm *fsm, const struct fsm_state *state) {
-		if (state == fsm_getstart(fsm)) {
-			return 0;
-		}
-
-		if (fsm_isend(fsm, state)) {
-			return 0;
-		}
-
-		return 1;
-	}
-
 @}, @{
 
 	#include <stdio.h>
@@ -142,7 +126,7 @@
 	@};
 
 	/* equivalent to <compile-literal>("") but with less machination */
-	<empty-regex>: () -> (r :fsm) = @{
+	<regex-empty>: () -> (r :fsm) = @{
 		@r = re_new_empty();
 		if (@r == NULL) {
 			perror("re_new_empty");
@@ -150,6 +134,30 @@
 		}
 
 		fsm_setend(@r, fsm_getstart(@r), 1);
+	@};
+
+	/* equivalent to <compile-regex>(".") but with less machination */
+	<regex-any>: () -> (r :fsm) = @{
+		struct fsm_state *e;
+
+		@r = re_new_empty();
+		if (@r == NULL) {
+			perror("re_new_empty");
+			@!;
+		}
+
+		e = fsm_addstate(@r);
+		if (e == NULL) {
+			perror("fsm_addstate");
+			@!;
+		}
+
+		if (!fsm_addedge_any(@r, fsm_getstart(@r), e)) {
+			perror("fsm_addedge_any");
+			@!;
+		}
+
+		fsm_setend(@r, e, 1);
 	@};
 
 	<make-ast>: () -> (a :ast) = @{
@@ -207,40 +215,12 @@
 		@s = NULL;
 	@};
 
-	<no-to>: () -> (z :zone) = @{
-		@z = NULL;
+	<no-exit>: () -> (r :fsm) = @{
+		@r = NULL;
 	@};
 
-	<trap>: (r :fsm) -> () = @{
-		struct fsm_state *trap;
-		struct fsm_state *s;
-
-		assert(@r != NULL);
-
-		if (!fsm_complete(@r, notend)) {
-			perror("fsm_complete");
-			@!;
-		}
-
-		trap = fsm_collate(@r, trapstate);
-		if (trap == NULL && errno != 0) { /* XXX: hackish */
-			if (trap == NULL) {
-				perror("fsm_collate");
-				@!;
-			}
-		}
-
-		for (s = @r->sl; s != NULL; s = s->next) {
-			fsm_setend(@r, s, 0);
-		}
-
-		if (trap != NULL) {
-			assert(trap != fsm_getstart(@r));
-
-			fsm_setend(@r, trap, 1);
-
-			/* TODO: must set opaque here, i think */
-		}
+	<no-to>: () -> (z :zone) = @{
+		@z = NULL;
 	@};
 
 	<op-complement>: (r :fsm) -> () = @{
@@ -280,6 +260,31 @@
 		if (@q == NULL) {
 			perror("fsm_concat");
 			@!;
+		}
+	@};
+
+	<subtract-exit>: (a :fsm, b :fsm) -> (q :fsm) = @{
+		assert(@a != NULL);
+
+		if (@b == NULL) {
+			@q = @a;
+		} else {
+			@b = fsm_clone(@b);
+			if (@b == NULL) {
+				perror("fsm_clone");
+				@!;
+			}
+
+			@q = fsm_subtract(@a, @b);
+			if (@q == NULL) {
+				perror("fsm_subtract");
+				@!;
+			}
+
+			if (!fsm_trim(@q)) {
+				perror("fsm_trim");
+				@!;
+			}
 		}
 	@};
 
