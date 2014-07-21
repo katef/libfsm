@@ -16,6 +16,7 @@ SRCS+= mode.c
 SRCS+= out.c
 SRCS+= mergestates.c
 SRCS+= subgraph.c
+SRCS+= trim.c
 
 # unary operators
 SRCS+= complement.c

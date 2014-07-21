@@ -176,5 +176,12 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 struct fsm_state *
 fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b);
 
+/*
+ * Trim away "dead" states. More formally, this recursively removes
+ * non-accepting states which have no outgoing edges.
+ */
+int
+fsm_trim(struct fsm *fsm);
+
 #endif
 
