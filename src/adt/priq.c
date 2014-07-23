@@ -65,7 +65,7 @@ priq_push(struct priq **priq,
 }
 
 struct priq *
-priq_find(struct priq *priq, struct fsm_state *state)
+priq_find(struct priq *priq, const struct fsm_state *state)
 {
 	struct priq *p;
 

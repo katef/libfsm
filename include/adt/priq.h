@@ -30,7 +30,7 @@ priq_push(struct priq **priq,
 
 /* XXX: set operation */
 struct priq *
-priq_find(struct priq *priq, struct fsm_state *state);
+priq_find(struct priq *priq, const struct fsm_state *state);
 
 /* XXX: set operation */
 void
