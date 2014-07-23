@@ -39,13 +39,12 @@ fsm_cost_legible(const struct fsm_state *from, const struct fsm_state *to, int c
 		unsigned cost;
 	} a[] = {
 		{ islower,  1 },
-		{ isupper,  3 },
-		{ isalpha,  4 },
-		{ isdigit,  6 },
-		{ ispunct,  8 },
-		{ isspace, 10 },
-		{ isprint, 12 },
-		{ isother, 20 }
+		{ isupper,  2 },
+		{ isdigit,  3 },
+		{ ispunct,  4 },
+		{ isspace,  5 },
+		{ isprint,  8 },
+		{ isother, 10 }
 	};
 
 	/*
