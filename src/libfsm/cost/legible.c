@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <ctype.h>
-#include <stdio.h> /* XXX */
 
 #include <adt/set.h>
 
@@ -64,7 +63,6 @@ fsm_cost_legible(const struct fsm_state *from, const struct fsm_state *to, int c
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (a[i].is(type)) {
-fprintf(stderr, "cost for %c = %u\n", c, a[i].cost);
 			return a[i].cost;
 		}
 	}
