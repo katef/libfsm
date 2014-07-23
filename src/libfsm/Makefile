@@ -18,6 +18,9 @@ SRCS+= mergestates.c
 SRCS+= subgraph.c
 SRCS+= trim.c
 
+# search
+SRCS+= shortest.c
+
 # unary operators
 SRCS+= complement.c
 SRCS+= determinise.c

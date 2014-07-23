@@ -1,0 +1,125 @@
+/* $Id$ */
+
+#include <assert.h>
+#include <stddef.h>
+
+#include <adt/set.h>
+#include <adt/priq.h>
+
+#include <fsm/search.h>
+#include <fsm/cost.h>
+
+#include "internal.h"
+
+struct priq *
+fsm_shortest(const struct fsm *fsm,
+	const struct fsm_state *start, const struct fsm_state *goal,
+	unsigned (*cost)(const struct fsm_state *from, const struct fsm_state *to, int c))
+{
+	struct priq *todo, *done;
+	struct priq *u;
+
+	assert(fsm != NULL);
+	assert(start != NULL);
+	assert(goal != NULL);
+	assert(cost != NULL);
+
+	/*
+	 * We find a least-cost ("shortest") path by Dijkstra's algorithm.
+	 *
+	 * This implementation (like most of libfsm) favours simplicity over
+	 * execution time, as the use-cases here aren't particularly intensive.
+	 * Visited nodes are kept in a seperate "done" set than the unvisited
+	 * "todo" nodes.
+	 *
+	 * Distance between edges (cost) is unsigned, with UINT_MAX to represent
+	 * infinity.
+	 */
+
+	todo = NULL;
+	done = NULL;
+
+	{
+		struct fsm_state *s;
+
+		for (s = fsm->sl; s != NULL; s = s->next) {
+			if (!priq_push(&todo, s, s == fsm_getstart(fsm) ? 0 : FSM_COST_INFINITY)) {
+				goto error;
+			}
+		}
+	}
+
+	while (u = priq_pop(&todo), u != NULL) {
+		const struct state_set *e;
+		int i;
+
+		if (u->cost == FSM_COST_INFINITY) {
+			goto none;
+		}
+
+		priq_move(&done, u);
+
+		if (u->state == goal) {
+			assert(u->prev != NULL);
+			goto done;
+		}
+
+		for (i = 0; i < FSM_EDGE_MAX; i++) {
+			for (e = u->state->edges[i].sl; e != NULL; e = e->next) {
+				struct priq *v;
+				unsigned c;
+
+				v = priq_find(todo, e->state);
+
+				/* visited already */
+				if (v == NULL) {
+					assert(priq_find(done, e->state));
+					continue;
+				}
+
+				assert(v->state == e->state);
+
+				c = cost(u->state, v->state, i);
+
+				/* relax */
+				if (v->cost > u->cost + c) {
+					v->cost = u->cost + c;
+					v->prev = u;
+					v->type = i;
+				}
+			}
+		}
+	}
+
+done:
+
+	priq_free(todo);
+
+	/* TODO: would be more sensible to return a "path" ADT, constructed in order */
+
+	return done;
+
+none:
+
+	priq_free(todo);
+	priq_free(done);
+
+	/*
+	 * No known path to goal.
+	 *
+	 * This is slightly ugly: the idea is to return something non-NULL here;
+	 * so that the caller may distinguish this case from error.
+	 * The state u is used just because it may never be the goal state,
+	 * (otherwise we would have been able to reach it).
+	 */
+
+	return u;
+
+error:
+
+	priq_free(todo);
+	priq_free(done);
+
+	return NULL;
+}
+
