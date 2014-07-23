@@ -14,9 +14,12 @@ SRCS+= exec.c
 SRCS+= fsm.c
 SRCS+= mode.c
 SRCS+= out.c
+SRCS+= trim.c
+SRCS+= example.c
+
+# graph things
 SRCS+= mergestates.c
 SRCS+= subgraph.c
-SRCS+= trim.c
 
 # search
 SRCS+= shortest.c

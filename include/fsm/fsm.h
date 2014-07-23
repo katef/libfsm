@@ -183,5 +183,9 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b);
 int
 fsm_trim(struct fsm *fsm);
 
+int
+fsm_example(struct fsm *fsm, const struct fsm_state *goal,
+	char *buf, size_t bufsz);
+
 #endif
 
