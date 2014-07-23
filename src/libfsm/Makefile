@@ -37,6 +37,7 @@ SRCS+= subtract.c
 PARTS+= src/libfsm/out
 PARTS+= src/libfsm/pred
 PARTS+= src/libfsm/walk
+PARTS+= src/libfsm/cost
 
 .include <lx.parts.mk>
 
