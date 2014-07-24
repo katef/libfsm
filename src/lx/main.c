@@ -49,11 +49,33 @@ xopen(int argc, char * const argv[], int i, FILE *f, const char *mode)
 	return f;
 }
 
+/* TODO: centralise */
+static int
+set_hasdistinctend(const struct fsm *fsm, const struct state_set *set,
+	const struct fsm_state *state)
+{
+	const struct state_set *s;
+
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	for (s = set; s != NULL; s = s->next) {
+		if (!fsm_isend(fsm, s->state)) {
+			continue;
+		}
+
+		if (s->state->opaque != state->opaque) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 static void
 carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 {
 	struct state_set *s;
-	int e;
 
 	assert(set != NULL); /* TODO: right? */
 	assert(fsm != NULL);
@@ -84,20 +106,33 @@ carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 
 	assert(state->opaque != NULL);
 
-	e = 0;
+	if (set_hasdistinctend(fsm, set, state)) {
+		struct ast_mapping *m;
 
-	for (s = set; s != NULL; s = s->next) {
-		if (!fsm_isend(fsm, s->state)) {
-			continue;
+		m = state->opaque;
+		assert(m != NULL);
+
+		for (s = set; s != NULL; s = s->next) {
+			if (!fsm_isend(fsm, s->state)) {
+				continue;
+			}
+
+			if (s->state->opaque == state->opaque) {
+				continue;
+			}
+
+			assert(s->state->opaque != NULL);
+
+			if (!ast_addconflict(&m->conflict, s->state->opaque)) {
+				perror("ast_addconflict");
+				goto error;
+			}
 		}
 
-		if (s->state->opaque != state->opaque) {
-			e = 1;
+		if (!ast_addconflict(&m->conflict, state->opaque)) {
+			perror("ast_addconflict");
+			goto error;
 		}
-	}
-
-	if (e == 1) {
-		goto error;
 	}
 
 	return;
@@ -247,6 +282,8 @@ main(int argc, char *argv[])
 		/* TODO: check for: no end states (same as no tokens?) */
 		/* TODO: check for reserved token names (ERROR, EOF etc) */
 		/* TODO: don't forget to indicate zone in error messages */
+		/* TODO: check for /abc/ -> $a; /abc/ -> $a; */
+		/* TODO: check for /abc+/ -> $a; /abc/ -> $a; */
 
 		e = 0;
 
@@ -261,14 +298,19 @@ main(int argc, char *argv[])
 
 			/* pick up conflicts flagged by carryopaque() */
 			for (s = z->fsm->sl; s != NULL; s = s->next) {
+				struct ast_mapping *m;
+
 				if (!fsm_isend(z->fsm, s)) {
 					continue;
 				}
 
-				if (s->opaque == NULL) {
-					char buf[50];
+				assert(s->opaque != NULL);
+				m = s->opaque;
+
+				if (m->conflict != NULL) {
+					struct mapping_set *p;
+					char buf[50]; /* 50 looks reasonable for an on-screen limit */
 					int n;
-					/* TODO: explain 50 looks reasonable for an on-screen limit */
 
 					n = fsm_example(z->fsm, s, buf, sizeof buf);
 					if (-1 == n) {
@@ -276,11 +318,29 @@ main(int argc, char *argv[])
 						/* TODO: handle error */
 					}
 
-					fprintf(stderr, "example: %s", buf);
-					if (n >= sizeof buf - 1) {
-						fprintf(stderr, "...");
+					fprintf(stderr, "ambiguous mappings to ");
+
+					for (p = m->conflict; p != NULL; p = p->next) {
+						assert(p->m->token != NULL || p->m->to != NULL);
+
+						if (p->m->token != NULL) {
+							fprintf(stderr, "$%s", p->m->token->s);
+						}
+						if (p->m->token != NULL && p->m->to != NULL) {
+							fprintf(stderr, "/");
+						}
+						if (p->m->to != NULL) {
+							fprintf(stderr, "z%p", (void *) p->m->to); /* TODO: zindexof(n->to) */
+						}
+
+						if (p->next != NULL) {
+							fprintf(stderr, ", ");
+						}
 					}
-					fprintf(stderr, "\n");
+
+					/* TODO: escape hex etc */
+					fprintf(stderr, " for example on input '%s%s'\n", buf,
+						n >= sizeof buf - 1 ? "..." : "");
 
 					e = 1;
 				}
