@@ -13,7 +13,7 @@ struct fsm_state;
  * reachable, then the path returned will be non-NULL but will not contain
  * the goal state.
  */
-struct priq *
+struct path *
 fsm_shortest(const struct fsm *fsm,
 	const struct fsm_state *start, const struct fsm_state *goal,
 	unsigned (*cost)(const struct fsm_state *from, const struct fsm_state *to, int c));

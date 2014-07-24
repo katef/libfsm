@@ -5,19 +5,22 @@
 
 #include <adt/set.h>
 #include <adt/priq.h>
+#include <adt/path.h>
 
 #include <fsm/search.h>
 #include <fsm/cost.h>
 
 #include "internal.h"
 
-struct priq *
+struct path *
 fsm_shortest(const struct fsm *fsm,
 	const struct fsm_state *start, const struct fsm_state *goal,
 	unsigned (*cost)(const struct fsm_state *from, const struct fsm_state *to, int c))
 {
 	struct priq *todo, *done;
 	struct priq *u;
+
+	struct path *path;
 
 	assert(fsm != NULL);
 	assert(start != NULL);
@@ -39,6 +42,8 @@ fsm_shortest(const struct fsm *fsm,
 	todo = NULL;
 	done = NULL;
 
+	path = NULL;
+
 	{
 		struct fsm_state *s;
 
@@ -53,11 +58,11 @@ fsm_shortest(const struct fsm *fsm,
 		const struct state_set *e;
 		int i;
 
+		priq_move(&done, u);
+
 		if (u->cost == FSM_COST_INFINITY) {
 			goto none;
 		}
-
-		priq_move(&done, u);
 
 		if (u->state == goal) {
 			assert(u->prev != NULL);
@@ -93,32 +98,46 @@ fsm_shortest(const struct fsm *fsm,
 
 done:
 
-	priq_free(todo);
-
-	/* TODO: would be more sensible to return a "path" ADT, constructed in order */
-
-	return done;
-
-none:
+	for (u = priq_find(done, goal); u != NULL; u = u->prev) {
+		if (!path_push(&path, u->state, u->type)) {
+			goto error;
+		}
+	}
 
 	priq_free(todo);
 	priq_free(done);
+
+	/* TODO: would be more sensible to return a "path" ADT, constructed in order */
+
+	return path;
+
+none:
 
 	/*
 	 * No known path to goal.
 	 *
 	 * This is slightly ugly: the idea is to return something non-NULL here;
 	 * so that the caller may distinguish this case from error.
+	 *
 	 * The state u is used just because it may never be the goal state,
 	 * (otherwise we would have been able to reach it).
 	 */
 
-	return u;
+	if (!path_push(&path, u->state, u->type)) {
+		goto error;
+	}
+
+	priq_free(todo);
+	priq_free(done);
+
+	return path;
 
 error:
 
 	priq_free(todo);
 	priq_free(done);
+
+	path_free(path);
 
 	return NULL;
 }

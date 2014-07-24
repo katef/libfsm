@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <errno.h>
 
-#include <adt/priq.h> /* XXX: path adt */
+#include <adt/path.h>
 
 #include <fsm/fsm.h>
 #include <fsm/cost.h>
@@ -16,8 +16,8 @@ fsm_example(struct fsm *fsm, const struct fsm_state *goal,
 	char *buf, size_t bufsz)
 {
 	const struct fsm_state *start;
-	const struct priq *p;
-	struct priq *path;
+	const struct path *p;
+	struct path *path;
 	size_t n;
 
 	assert(fsm != NULL);
@@ -36,20 +36,24 @@ fsm_example(struct fsm *fsm, const struct fsm_state *goal,
 		return -1;
 	}
 
-	/* TODO: possibly make "path" ADT, which has states and edges */
 	path = fsm_shortest(fsm, fsm_getstart(fsm), goal, fsm_cost_legible);
 	if (path == NULL) {
 		return -1;
 	}
 
-	for (p = priq_find(path, goal), n = 0; p != NULL; p = p->prev, n++) {
+	for (p = path, n = 0; p != NULL; p = p->next, n++) {
 		if (bufsz > 0) {
-			*buf++ = p->prev ? p->type : '\0';
+			*buf++ = p->type;
 			bufsz--;
 		}
 	}
 
-	priq_free(path);
+	if (bufsz > 0) {
+		*buf++ = '\0';
+		bufsz--;
+	}
+
+	path_free(path);
 
 	return n;
 }

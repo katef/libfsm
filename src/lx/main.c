@@ -276,7 +276,7 @@ main(int argc, char *argv[])
 						/* TODO: handle error */
 					}
 
-					fprintf(stderr, "(backwards) example: %s", buf);
+					fprintf(stderr, "example: %s", buf);
 					if (n >= sizeof buf - 1) {
 						fprintf(stderr, "...");
 					}
