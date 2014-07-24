@@ -5,15 +5,17 @@
 #include <unistd.h>
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <adt/set.h>
 
 #include <fsm/bool.h>
 #include <fsm/pred.h>
+#include <fsm/cost.h>
 #include <fsm/graph.h>
+#include <fsm/search.h>
 
 #include <re/re.h>
 
@@ -51,6 +53,7 @@ static void
 carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 {
 	struct state_set *s;
+	int e;
 
 	assert(set != NULL); /* TODO: right? */
 	assert(fsm != NULL);
@@ -81,14 +84,20 @@ carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 
 	assert(state->opaque != NULL);
 
+	e = 0;
+
 	for (s = set; s != NULL; s = s->next) {
 		if (!fsm_isend(fsm, s->state)) {
 			continue;
 		}
 
 		if (s->state->opaque != state->opaque) {
-			goto error;
+			e = 1;
 		}
+	}
+
+	if (e == 1) {
+		goto error;
 	}
 
 	return;
@@ -257,7 +266,22 @@ main(int argc, char *argv[])
 				}
 
 				if (s->opaque == NULL) {
-					fprintf(stderr, "opaque conflict\n"); /* TODO */
+					char buf[50];
+					int n;
+					/* TODO: explain 50 looks reasonable for an on-screen limit */
+
+					n = fsm_example(z->fsm, s, buf, sizeof buf);
+					if (-1 == n) {
+						perror("fsm_example");
+						/* TODO: handle error */
+					}
+
+					fprintf(stderr, "(backwards) example: %s", buf);
+					if (n >= sizeof buf - 1) {
+						fprintf(stderr, "...");
+					}
+					fprintf(stderr, "\n");
+
 					e = 1;
 				}
 			}
