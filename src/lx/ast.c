@@ -106,8 +106,9 @@ ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 			return NULL;
 		}
 
-		m->token = token;
-		m->to    = to;
+		m->token    = token;
+		m->to       = to;
+		m->conflict = NULL;
 
 		m->next = z->ml;
 		z->ml   = m;
@@ -121,5 +122,38 @@ ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 	}
 
 	return m;
+}
+
+/* TODO: merge with adt/set.c */
+struct mapping_set *
+ast_addconflict(struct mapping_set **head, struct ast_mapping *m)
+{
+	struct mapping_set *new;
+
+	assert(head != NULL);
+	assert(m != NULL);
+
+	/* TODO: explain we find duplicate; return success */
+	{
+		struct mapping_set *s;
+
+		for (s = *head; s != NULL; s = s->next) {
+			if (s->m == m) {
+				return s;
+			}
+		}
+	}
+
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+			return NULL;
+	}
+
+	new->m    = m;
+
+	new->next = *head;
+	*head     = new;
+
+	return new;
 }
 
