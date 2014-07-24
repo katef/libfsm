@@ -11,7 +11,7 @@ struct priq {
 
 	/* XXX: specific to shortest.c */
 	struct fsm_state *state;
-	struct priq *prev; /* previous node in shortest path. we could store the edge's character instead */
+	struct priq *prev; /* previous node in shortest path */
 	int type; /* XXX: should really be fsm_edge_type */
 };
 
