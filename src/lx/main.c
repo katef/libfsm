@@ -200,7 +200,7 @@ main(int argc, char *argv[])
 
 	if (g && format != LX_OUT_DOT) {
 		fprintf(stderr, "-g is for dot output only\n");
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
 	ast = lx_parse(in);
@@ -232,6 +232,7 @@ main(int argc, char *argv[])
 
 			z->fsm = re_new_empty();
 			if (z->fsm == NULL) {
+				perror("re_new_empty");
 				return EXIT_FAILURE;
 			}
 
@@ -241,8 +242,8 @@ main(int argc, char *argv[])
 				assert(m->fsm != NULL);
 
 				if (!g) {
-					/* XXX: abstraction */
 					if (!fsm_minimise(m->fsm)) {
+						perror("fsm_minimise");
 						return EXIT_FAILURE;
 					}
 				}
@@ -257,12 +258,14 @@ main(int argc, char *argv[])
 
 				z->fsm = fsm_union(z->fsm, m->fsm);
 				if (z->fsm == NULL) {
+					perror("fsm_union");
 					return EXIT_FAILURE;
 				}
 			}
 
 			if (!g) {
 				if (!fsm_determinise_opaque(z->fsm, carryopaque)) {
+					perror("fsm_determinise_opaque");
 					return EXIT_FAILURE;
 				}
 			}
@@ -315,7 +318,7 @@ main(int argc, char *argv[])
 					n = fsm_example(z->fsm, s, buf, sizeof buf);
 					if (-1 == n) {
 						perror("fsm_example");
-						/* TODO: handle error */
+						return EXIT_FAILURE;
 					}
 
 					fprintf(stderr, "ambiguous mappings to ");
