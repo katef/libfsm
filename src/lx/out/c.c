@@ -539,6 +539,71 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 	fprintf(f, "\tfree(t->a);\n");
 	fprintf(f, "}\n");
+
+	fprintf(f, "int\n");
+	fprintf(f, "lx_fixedpush(struct lx *lx, char c)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tstruct lx_fixedbuf *t;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(lx != NULL);\n");
+	fprintf(f, "\tassert(c != EOF);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tt = lx->buf;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(t != NULL);\n");
+	fprintf(f, "\tassert(t->p != NULL);\n");
+	fprintf(f, "\tassert(t->a != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tif (t->p == t->a + t->len) {\n");
+	fprintf(f, "\t\terrno = ENOMEM;\n");
+	fprintf(f, "\t\treturn -1;\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t*t->p++ = c;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\treturn 0;\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "void\n");
+	fprintf(f, "lx_fixedpop(struct lx *lx)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tstruct lx_fixedbuf *t;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(lx != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tt = lx->buf;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(t != NULL);\n");
+	fprintf(f, "\tassert(t->a != NULL);\n");
+	fprintf(f, "\tassert(t->p >= t->a);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tif (t->p == t->a) {\n");
+	fprintf(f, "\t\treturn;\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tt->p--;\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "int\n");
+	fprintf(f, "lx_fixedclear(struct lx *lx)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tstruct lx_fixedbuf *t;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(lx != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tt = lx->buf;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(t != NULL);\n");
+	fprintf(f, "\tassert(t->p != NULL);\n");
+	fprintf(f, "\tassert(t->a != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tt->p = t->a;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\treturn 0;\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
 }
 
 static void

@@ -7,7 +7,6 @@
 #include "../ast.h"
 #include "../internal.h"
 
-
 /* TODO: centralise */
 static void
 out_esctok(FILE *f, const char *s)
@@ -121,6 +120,18 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
+	fprintf(f, "\t/* fixed-size token buffer */\n");
+	fprintf(f, "\tstruct lx_fixedbuf {\n");
+	fprintf(f, "\t\tchar *p;\n");
+	fprintf(f, "\t\tsize_t len;\n");
+	fprintf(f, "\t#ifdef LX_FIXED_SIZE\n");
+	fprintf(f, "\t\tchar a[LX_FIXED_SIZE];\n");
+	fprintf(f, "\t#else\n");
+	fprintf(f, "\t\tchar *a; /* could be flexible member */\n");
+	fprintf(f, "\t#endif\n");
+	fprintf(f, "\t};\n");
+	fprintf(f, "\n");
+
 	fprintf(f, "/* opaque for lx_agetc */\n");
 	fprintf(f, "struct lx_arr {\n");
 	fprintf(f, "\tchar *p;\n");
@@ -156,6 +167,11 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "void lx_dynpop(struct lx *lx);\n");
 	fprintf(f, "int  lx_dynclear(struct lx *lx);\n");
 	fprintf(f, "void lx_dynfree(struct lx *lx);\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "int  lx_fixedpush(struct lx *lx, char c);\n");
+	fprintf(f, "void lx_fixedpop(struct lx *lx);\n");
+	fprintf(f, "int  lx_fixedclear(struct lx *lx);\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "#endif\n");
