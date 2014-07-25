@@ -120,16 +120,16 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "\t/* fixed-size token buffer */\n");
-	fprintf(f, "\tstruct lx_fixedbuf {\n");
-	fprintf(f, "\t\tchar *p;\n");
-	fprintf(f, "\t\tsize_t len;\n");
-	fprintf(f, "\t#ifdef LX_FIXED_SIZE\n");
-	fprintf(f, "\t\tchar a[LX_FIXED_SIZE];\n");
-	fprintf(f, "\t#else\n");
-	fprintf(f, "\t\tchar *a; /* could be flexible member */\n");
-	fprintf(f, "\t#endif\n");
-	fprintf(f, "\t};\n");
+	fprintf(f, "/* fixed-size token buffer */\n");
+	fprintf(f, "struct lx_fixedbuf {\n");
+	fprintf(f, "\tchar *p;\n");
+	fprintf(f, "\tsize_t len;\n");
+	fprintf(f, "#ifdef LX_FIXED_SIZE\n");
+	fprintf(f, "\tchar a[LX_FIXED_SIZE];\n");
+	fprintf(f, "#else\n");
+	fprintf(f, "\tchar *a; /* could be flexible member */\n");
+	fprintf(f, "#endif\n");
+	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "/* opaque for lx_agetc */\n");
