@@ -350,7 +350,7 @@ out_lgetc(FILE *f)
 	fprintf(f, "\tif (d->len == 0) {\n");
 	fprintf(f, "\t\tssize_t r;\n");
 	fprintf(f, "\n");
-	fprintf(f, "\t\tassert(fcntl(d->fd, F_GETFL) & O_NONBLOCK == 0);\n");
+	fprintf(f, "\t\tassert((fcntl(d->fd, F_GETFL) & O_NONBLOCK) == 0);\n");
 	fprintf(f, "\n");
 	fprintf(f, "\t\td->p = (char *) d + sizeof *d;\n");
 	fprintf(f, "\n");
