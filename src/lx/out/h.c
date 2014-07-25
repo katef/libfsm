@@ -73,7 +73,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 	fprintf(f, "\tvoid *buf;\n");
 	fprintf(f, "\tint  (*push) (struct lx *lx, char c);\n");
-	fprintf(f, "\tint  (*pop)  (struct lx *lx);\n");
+	fprintf(f, "\tvoid (*pop)  (struct lx *lx);\n");
 	fprintf(f, "\tint  (*clear)(struct lx *lx);\n");
 	fprintf(f, "\tvoid (*free) (struct lx *lx);\n");
 	fprintf(f, "\n");
@@ -152,9 +152,9 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "int lx_dgetc(struct lx *lx);\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "int lx_dynpush(struct lx *lx, char c);\n");
-	fprintf(f, "int lx_dynpop(struct lx *lx);\n");
-	fprintf(f, "int lx_dynclear(struct lx *lx);\n");
+	fprintf(f, "int  lx_dynpush(struct lx *lx, char c);\n");
+	fprintf(f, "void lx_dynpop(struct lx *lx);\n");
+	fprintf(f, "int  lx_dynclear(struct lx *lx);\n");
 	fprintf(f, "void lx_dynfree(struct lx *lx);\n");
 	fprintf(f, "\n");
 

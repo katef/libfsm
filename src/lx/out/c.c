@@ -473,7 +473,7 @@ out_buf(FILE *f)
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "int\n");
+	fprintf(f, "void\n");
 	fprintf(f, "lx_dynpop(struct lx *lx)\n");
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_dynbuf *t;\n");
@@ -483,17 +483,14 @@ out_buf(FILE *f)
 	fprintf(f, "\tt = lx->buf;\n");
 	fprintf(f, "\n");
 	fprintf(f, "\tassert(t != NULL);\n");
-	fprintf(f, "\tassert(t->p != NULL);\n");
 	fprintf(f, "\tassert(t->a != NULL);\n");
+	fprintf(f, "\tassert(t->p >= t->a);\n");
 	fprintf(f, "\n");
-	fprintf(f, "\tif (t->p == 0) {\n");
-	fprintf(f, "\t\terrno = EINVAL;\n");
-	fprintf(f, "\t\treturn -1;\n");
+	fprintf(f, "\tif (t->p == t->a) {\n");
+	fprintf(f, "\t\treturn;\n");
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 	fprintf(f, "\tt->p--;\n");
-	fprintf(f, "\n");
-	fprintf(f, "\treturn 0;\n");
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
 
@@ -606,7 +603,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		fprintf(f, "\t\tdefault:\n");
 		fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
 		fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, c)) {\n");
-		fprintf(f, "\t\t\t\t\treturn EOF;\n");
+		fprintf(f, "\t\t\t\t\treturn TOK_ERROR;\n");
 		fprintf(f, "\t\t\t\t}\n");
 		fprintf(f, "\t\t\t}\n");
 		fprintf(f, "\t\t\tbreak;\n");
