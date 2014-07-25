@@ -441,7 +441,7 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 	fprintf(f, "\tif (t->p == t->a + t->len) {\n");
 	fprintf(f, "\t\tsize_t len;\n");
-	fprintf(f, "\t\tvoid *tmp;\n");
+	fprintf(f, "\t\tchar *tmp;\n");
 	fprintf(f, "\n");
 	fprintf(f, "\t\tif (t->len == 0) {\n");
 	fprintf(f, "\t\t\tassert(LX_DYN_LOW > 0);\n");
@@ -507,7 +507,7 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 	fprintf(f, "\tif (t->len > LX_DYN_HIGH) {\n");
 	fprintf(f, "\t\tsize_t len;\n");
-	fprintf(f, "\t\tvoid *tmp;\n");
+	fprintf(f, "\t\tchar *tmp;\n");
 	fprintf(f, "\n");
 	fprintf(f, "\t\tlen = t->len / LX_DYN_FACTOR;\n");
 	fprintf(f, "\n");
