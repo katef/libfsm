@@ -425,6 +425,126 @@ out_io(FILE *f)
 }
 
 static void
+out_buf(FILE *f)
+{
+	fprintf(f, "int\n");
+	fprintf(f, "lx_dynpush(struct lx *lx, char c)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tstruct lx_dynbuf *t;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(lx != NULL);\n");
+	fprintf(f, "\tassert(c != EOF);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tt = lx->buf;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(t != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tif (t->p == t->a + t->len) {\n");
+	fprintf(f, "\t\tsize_t len;\n");
+	fprintf(f, "\t\tvoid *tmp;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\tif (t->len == 0) {\n");
+	fprintf(f, "\t\t\tassert(LX_DYN_LOW > 0);\n");
+	fprintf(f, "\t\t\tlen = LX_DYN_LOW;\n");
+	fprintf(f, "\t\t} else {\n");
+	fprintf(f, "\t\t\tlen = t->len * LX_DYN_FACTOR;\n");
+	fprintf(f, "\t\t\tif (len < t->len) {\n");
+	fprintf(f, "\t\t\t\terrno = ERANGE;\n");
+	fprintf(f, "\t\t\t\treturn -1;\n");
+	fprintf(f, "\t\t\t}\n");
+	fprintf(f, "\t\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\ttmp = realloc(t->a, len);\n");
+	fprintf(f, "\t\tif (tmp == NULL) {\n");
+	fprintf(f, "\t\t\treturn -1;\n");
+	fprintf(f, "\t\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\tt->p   = tmp + (t->p - t->a);\n");
+	fprintf(f, "\t\tt->a   = tmp;\n");
+	fprintf(f, "\t\tt->len = len;\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(t->p != NULL);\n");
+	fprintf(f, "\tassert(t->a != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t*t->p++ = c;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\treturn 0;\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "int\n");
+	fprintf(f, "lx_dynpop(struct lx *lx)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tstruct lx_dynbuf *t;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(lx != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tt = lx->buf;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(t != NULL);\n");
+	fprintf(f, "\tassert(t->p != NULL);\n");
+	fprintf(f, "\tassert(t->a != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tif (t->p == 0) {\n");
+	fprintf(f, "\t\terrno = EINVAL;\n");
+	fprintf(f, "\t\treturn -1;\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tt->p--;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\treturn 0;\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "int\n");
+	fprintf(f, "lx_dynclear(struct lx *lx)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tstruct lx_dynbuf *t;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(lx != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tt = lx->buf;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(t != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tif (t->len > LX_DYN_HIGH) {\n");
+	fprintf(f, "\t\tsize_t len;\n");
+	fprintf(f, "\t\tvoid *tmp;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\tlen = t->len / LX_DYN_FACTOR;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\ttmp = realloc(t->a, len);\n");
+	fprintf(f, "\t\tif (tmp == NULL) {\n");
+	fprintf(f, "\t\t\treturn -1;\n");
+	fprintf(f, "\t\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\tt->a   = tmp;\n");
+	fprintf(f, "\t\tt->len = len;\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tt->p = t->a;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\treturn 0;\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "void\n");
+	fprintf(f, "lx_dynfree(struct lx *lx)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tstruct lx_dynbuf *t;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(lx != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tt = lx->buf;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tassert(t != NULL);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tfree(t->a);\n");
+	fprintf(f, "}\n");
+}
+
+static void
 out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
 	assert(f != NULL);
@@ -578,6 +698,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	fprintf(f, "#include <assert.h>\n");
 	fprintf(f, "#include <stdio.h>\n");
+	fprintf(f, "#include <stdlib.h>\n"); /* TODO: for dynbuf only */
 	fprintf(f, "#include <errno.h>\n");
 	fprintf(f, "\n");
 
@@ -597,6 +718,8 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	out_io(f);
 	out_lgetc(f);
+
+	out_buf(f);
 
 	for (z = ast->zl; z != NULL; z = z->next) {
 		out_zone(f, ast, z);
@@ -671,6 +794,11 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "\n");
 
 		fprintf(f, "\tt = lx->z(lx);\n");
+		fprintf(f, "\tif (lx->lgetc == NULL && lx->free != NULL) {\n");
+		fprintf(f, "\t\tlx->free(lx);\n");
+		fprintf(f, "\t}\n");
+		fprintf(f, "\n");
+
 		fprintf(f, "\n");
 		fprintf(f, "\treturn t;\n");
 

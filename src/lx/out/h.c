@@ -72,11 +72,61 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "\tunsigned byte;\n");
 	fprintf(f, "\n");
 	fprintf(f, "\tvoid *buf;\n");
-	fprintf(f, "\tint (*push) (struct lx *lx, char c);\n");
-	fprintf(f, "\tint (*pop)  (struct lx *lx);\n");
-	fprintf(f, "\tint (*clear)(struct lx *lx);\n");
+	fprintf(f, "\tint  (*push) (struct lx *lx, char c);\n");
+	fprintf(f, "\tint  (*pop)  (struct lx *lx);\n");
+	fprintf(f, "\tint  (*clear)(struct lx *lx);\n");
+	fprintf(f, "\tvoid (*free) (struct lx *lx);\n");
 	fprintf(f, "\n");
 	fprintf(f, "\tenum lx_token (*z)(struct lx *lx);\n");
+	fprintf(f, "};\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "/*\n");
+	fprintf(f, " * The initial buffer size; this ought to be over the typical token length,\n");
+	fprintf(f, " * so as to avoid a run-up of lots of resizing.\n");
+	fprintf(f, " */\n");
+	fprintf(f, "#ifndef LX_DYN_LOW\n");
+	fprintf(f, "#define LX_DYN_LOW 1 << 10\n");
+	fprintf(f, "#endif\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "/*\n");
+	fprintf(f, " * High watermark; if the buffer grows over this, it will resize back down\n");
+	fprintf(f, " * by LX_DYN_FACTOR when no longer in use.\n");
+	fprintf(f, " */\n");
+	fprintf(f, "#ifndef LX_DYN_HIGH\n");
+	fprintf(f, "#define LX_DYN_HIGH 1 << 13\n");
+	fprintf(f, "#endif\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "/*\n");
+	fprintf(f, " * Andrew Koenig said the growth factor should be less than phi, (1 + sqrt(5)) / 2\n");
+	fprintf(f, " * P.J. Plauger said 1.5 works well in practice. (Perhaps because of internal\n");
+	fprintf(f, " * bookkeeping data stored by the allocator.)\n");
+	fprintf(f, " *\n");
+	fprintf(f, " * Non-integer factors here add the constraint that LX_DYN_LOW > 1 because\n");
+	fprintf(f, " * because conversion to size_t truncates, and e.g. 1 * 1.5 == 1 is no good\n");
+	fprintf(f, " * as the requirement is to *increase* a buffer.\n");
+	fprintf(f, " */\n");
+	fprintf(f, "#ifndef LX_DYN_FACTOR\n");
+	fprintf(f, "#define LX_DYN_FACTOR 2\n");
+	fprintf(f, "#endif\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "/* dynamic token buffer */\n");
+	fprintf(f, "struct lx_dynbuf {\n");
+	fprintf(f, "\tchar *p;\n");
+	fprintf(f, "\tsize_t len;\n");
+	fprintf(f, "\tchar *a;\n");
+	fprintf(f, "};\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "struct lx_buf {\n");
+	fprintf(f, "\tvoid *buf;\n");
+	fprintf(f, "\tint  (*push) (struct lx *lx, char c);\n");
+	fprintf(f, "\tint  (*pop)  (struct lx *lx);\n");
+	fprintf(f, "\tint  (*clear)(struct lx *lx);\n");
+	fprintf(f, "\tvoid (*free) (struct lx *lx);\n");
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
@@ -109,6 +159,12 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "int lx_sgetc(struct lx *lx);\n");
 	fprintf(f, "int lx_agetc(struct lx *lx);\n");
 	fprintf(f, "int lx_dgetc(struct lx *lx);\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "int lx_dynpush(struct lx *lx, char c);\n");
+	fprintf(f, "int lx_dynpop(struct lx *lx);\n");
+	fprintf(f, "int lx_dynclear(struct lx *lx);\n");
+	fprintf(f, "void lx_dynfree(struct lx *lx);\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "#endif\n");
