@@ -121,15 +121,6 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "struct lx_buf {\n");
-	fprintf(f, "\tvoid *buf;\n");
-	fprintf(f, "\tint  (*push) (struct lx *lx, char c);\n");
-	fprintf(f, "\tint  (*pop)  (struct lx *lx);\n");
-	fprintf(f, "\tint  (*clear)(struct lx *lx);\n");
-	fprintf(f, "\tvoid (*free) (struct lx *lx);\n");
-	fprintf(f, "};\n");
-	fprintf(f, "\n");
-
 	fprintf(f, "/* opaque for lx_agetc */\n");
 	fprintf(f, "struct lx_arr {\n");
 	fprintf(f, "\tchar *p;\n");
