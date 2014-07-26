@@ -19,6 +19,30 @@
 
 #include "form/comp.h"
 
+int
+re_cflags(const char *s, enum re_cflags *f)
+{
+	const char *p;
+
+	assert(s != NULL);
+	assert(f != NULL);
+
+	*f = 0U;
+
+	for (p = s; *p != '\0'; p++) {
+		switch (*p) {
+		case 'i': *f |= RE_ICASE;   break;
+		case 'g': *f |= RE_NEWLINE; break;
+
+		default:
+			errno = EINVAL;
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 struct fsm *
 re_new_empty(void)
 {

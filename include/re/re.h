@@ -44,6 +44,11 @@ enum re_err {
 	RE_EXEOF
 };
 
+/*
+ * Parse flags. Returns -1 on error.
+ */
+int
+re_cflags(const char *s, enum re_cflags *f);
 
 /*
  * Create a new empty regexp.
