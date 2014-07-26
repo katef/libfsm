@@ -153,6 +153,13 @@
 			fprintf(stderr, "No such variable: %s\n", @s);
 			@!;
 		}
+
+		@r = fsm_clone(@r);
+		if (@r == NULL) {
+			/* TODO: use *err */
+			perror("fsm_clone");
+			@!;
+		}
 	@};
 
 	<compile-literal>: (s :string) -> (r :fsm) = @{
