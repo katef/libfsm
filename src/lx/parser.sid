@@ -17,11 +17,8 @@
 	ESC:  () -> (:char);
 	CHAR: () -> (:char);
 
-	RESTART;
-	REEND: () -> (:cflags);
-
-	STRSTART;
-	STREND;
+	RE: () -> (:cflags);
+	STR;
 
 	CLOSE;
 	OPEN;
@@ -85,22 +82,14 @@
 
 	concaternated-patterns: (z :zone) -> (q :fsm) [
 
-		pattern-escaped: () -> () = {
+		body: () -> () = {
 			c = ESC;
 			<pattern-char>(c);
-			pattern-escaped;
+			body;
 		||
 			c = CHAR;
 			<pattern-char>(c);
-			pattern-escaped;
-		||
-			$;
-		};
-
-		pattern-verbatim: () -> () = {
-			c = CHAR;
-			<pattern-char>(c);
-			pattern-verbatim;
+			body;
 		||
 			$;
 		};
@@ -109,15 +98,13 @@
 			n = IDENT;
 			r = <deref-var>(z, n);
 		||
-			STRSTART;
-			pattern-escaped;
-			STREND;
+			body;
+			STR;
 			s = <pattern-buffer>;
 			r = <compile-literal>(s);
 		||
-			RESTART;
-			pattern-verbatim;
-			f = REEND;
+			body;
+			f = RE;
 			s = <pattern-buffer>;
 			r = <compile-regex>(s, f);
 		};

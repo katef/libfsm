@@ -128,7 +128,7 @@
 		}
 	@};
 
-	REEND: () -> (f :cflags) = @{
+	RE: () -> (f :cflags) = @{
 		assert(lex_state->buf.a[0] == '/');
 
 		/* TODO: submatch addressing */

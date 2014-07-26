@@ -3,12 +3,12 @@
 /[\r\n\t ]+/;
 "#" .. "\n";
 
-"'" -> $strstart .. "'" -> $strend {
+"'" .. "'" -> $str {
 	# XXX: would be /.+/ here but this incorrectly includes /exit/
 	/./ -> $char;
 }
 
-'"' -> $strstart .. '"' -> $strend {
+'"' .. '"' -> $str {
 	'\n'    -> $esc;
 	'\t'    -> $esc;
 	'\r'    -> $esc;
@@ -16,7 +16,7 @@
 	/[^\\]/ -> $char;
 }
 
-'/' -> $restart .. '/' /[i]*/ -> $reend {
+'/' .. '/' /[i]*/ -> $re {
 	/./ -> $char;
 }
 

@@ -318,7 +318,7 @@ z1(struct lx *lx)
 	int c;
 
 	enum {
-		S1, S2, S3
+		S1, S2, S3, S4
 	} state;
 
 	assert(lx != NULL);
@@ -327,7 +327,7 @@ z1(struct lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S3;
+	state = S4;
 
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
@@ -346,19 +346,24 @@ z1(struct lx *lx)
 		switch (state) {
 		case S1:
 			switch (c) {
-			case 'i':	          continue;
-			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_REEND;
+			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_RE;
 			}
 
 		case S2:
 			switch (c) {
-			default:  lx_ungetc(lx, c); return TOK_CHAR;
+			case 'i': state = S1;      continue;
+			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_RE;
 			}
 
 		case S3:
 			switch (c) {
-			case '/': state = S1;      continue;
-			default:  state = S2;     continue;
+			default:  lx_ungetc(lx, c); return TOK_CHAR;
+			}
+
+		case S4:
+			switch (c) {
+			case '/': state = S2;      continue;
+			default:  state = S3;     continue;
 			}
 		}
 	}
@@ -366,8 +371,9 @@ z1(struct lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
-	case S1: return TOK_REEND;
-	case S2: return TOK_CHAR;
+	case S1: return TOK_RE;
+	case S2: return TOK_RE;
+	case S3: return TOK_CHAR;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }
@@ -411,7 +417,7 @@ z2(struct lx *lx)
 
 		case S2:
 			switch (c) {
-			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_STREND;
+			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_STR;
 			}
 
 		case S3:
@@ -441,7 +447,7 @@ z2(struct lx *lx)
 
 	switch (state) {
 	case S1: return TOK_ESC;
-	case S2: return TOK_STREND;
+	case S2: return TOK_STR;
 	case S4: return TOK_CHAR;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
@@ -481,7 +487,7 @@ z3(struct lx *lx)
 		switch (state) {
 		case S1:
 			switch (c) {
-			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_STREND;
+			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_STR;
 			}
 
 		case S2:
@@ -500,7 +506,7 @@ z3(struct lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
-	case S1: return TOK_STREND;
+	case S1: return TOK_STR;
 	case S2: return TOK_CHAR;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
@@ -590,7 +596,10 @@ z5(struct lx *lx)
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
 		case S6:
+		case S7:
 		case S8:
+		case S10:
+		case S13:
 			break;
 
 		default:
@@ -829,7 +838,7 @@ z5(struct lx *lx)
 
 		case S7:
 			switch (c) {
-			default:  lx_ungetc(lx, c); return lx->z = z2, TOK_STRSTART;
+			default:  lx_ungetc(lx, c); return lx->z = z2, lx->z(lx);
 			}
 
 		case S8:
@@ -897,7 +906,7 @@ z5(struct lx *lx)
 
 		case S10:
 			switch (c) {
-			default:  lx_ungetc(lx, c); return lx->z = z3, TOK_STRSTART;
+			default:  lx_ungetc(lx, c); return lx->z = z3, lx->z(lx);
 			}
 
 		case S11:
@@ -914,7 +923,7 @@ z5(struct lx *lx)
 
 		case S13:
 			switch (c) {
-			default:  lx_ungetc(lx, c); return lx->z = z1, TOK_RESTART;
+			default:  lx_ungetc(lx, c); return lx->z = z1, lx->z(lx);
 			}
 
 		case S14:
@@ -1094,10 +1103,10 @@ z5(struct lx *lx)
 	case S3: return TOK_MAP;
 	case S4: return TOK_TOKEN;
 	case S6: return TOK_EOF;
-	case S7: return TOK_STRSTART;
+	case S7: return TOK_EOF;
 	case S8: return TOK_EOF;
-	case S10: return TOK_STRSTART;
-	case S13: return TOK_RESTART;
+	case S10: return TOK_EOF;
+	case S13: return TOK_EOF;
 	case S14: return TOK_SEMI;
 	case S15: return TOK_BIND;
 	case S17: return TOK_OPEN;
@@ -1120,11 +1129,9 @@ lx_name(enum lx_token t)
 	case TOK_SEMI: return "SEMI";
 	case TOK_ALT: return "ALT";
 	case TOK_BIND: return "BIND";
-	case TOK_REEND: return "REEND";
-	case TOK_RESTART: return "RESTART";
+	case TOK_RE: return "RE";
 	case TOK_ESC: return "ESC";
-	case TOK_STREND: return "STREND";
-	case TOK_STRSTART: return "STRSTART";
+	case TOK_STR: return "STR";
 	case TOK_CHAR: return "CHAR";
 	case TOK_EOF:     return "EOF";
 	case TOK_ERROR:   return "ERROR";
