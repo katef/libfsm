@@ -19,6 +19,7 @@ SRCS+= lexer.c
 SRCS+= parser.c
 SRCS+= main.c
 SRCS+= out.c
+SRCS+= var.c
 
 .include <lx.obj.mk>
 
