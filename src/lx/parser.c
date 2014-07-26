@@ -95,6 +95,7 @@ static void p_124(lex_state, act_state, ast *, zone *, string *, fsm *);
 static void
 p_concaternated_Hpatterns_C_Cpattern__regex(lex_state lex_state, act_state act_state)
 {
+ZL2_concaternated_Hpatterns_C_Cpattern__regex:;
 	switch (CURRENT_TERMINAL) {
 	case (TOK_CHAR):
 		{
@@ -109,7 +110,7 @@ p_concaternated_Hpatterns_C_Cpattern__regex(lex_state lex_state, act_state act_s
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 113 "parser.c"
+#line 114 "parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			ADVANCE_LEXER;
@@ -120,25 +121,19 @@ p_concaternated_Hpatterns_C_Cpattern__regex(lex_state lex_state, act_state act_s
 		/* TODO */
 		*lex_state->p++ = (ZIc);
 	
-#line 124 "parser.c"
+#line 125 "parser.c"
 			}
 			/* END OF ACTION: pattern-char */
-			p_concaternated_Hpatterns_C_Cpattern__literal (lex_state, act_state);
-			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
-				RESTORE_LEXER;
-				goto ZL1;
-			}
+			/* BEGINNING OF INLINE: concaternated-patterns::pattern_regex */
+			goto ZL2_concaternated_Hpatterns_C_Cpattern__regex;
+			/* END OF INLINE: concaternated-patterns::pattern_regex */
 		}
-		break;
+		/*UNREACHED*/
 	case (ERROR_TERMINAL):
 		return;
 	default:
 		break;
 	}
-	return;
-ZL1:;
-	SAVE_LEXER ((ERROR_TERMINAL));
-	return;
 }
 
 static void
@@ -168,7 +163,7 @@ ZL1:;
 
 		err_expected("list of token mappings or zones");
 	
-#line 172 "parser.c"
+#line 167 "parser.c"
 		}
 		/* END OF ACTION: err-expected-list */
 	}
@@ -207,7 +202,7 @@ p_concaternated_Hpatterns_C_Cpattern(lex_state lex_state, act_state act_state, f
 
 		lex_state->p = lex_state->a;
 	
-#line 211 "parser.c"
+#line 206 "parser.c"
 			}
 			/* END OF ACTION: pattern-buffer */
 			/* BEGINNING OF ACTION: compile-regex */
@@ -223,7 +218,7 @@ p_concaternated_Hpatterns_C_Cpattern(lex_state lex_state, act_state act_state, f
 			goto ZL1;
 		}
 	
-#line 227 "parser.c"
+#line 222 "parser.c"
 			}
 			/* END OF ACTION: compile-regex */
 		}
@@ -255,7 +250,7 @@ p_concaternated_Hpatterns_C_Cpattern(lex_state lex_state, act_state act_state, f
 
 		lex_state->p = lex_state->a;
 	
-#line 259 "parser.c"
+#line 254 "parser.c"
 			}
 			/* END OF ACTION: pattern-buffer */
 			/* BEGINNING OF ACTION: compile-literal */
@@ -271,7 +266,7 @@ p_concaternated_Hpatterns_C_Cpattern(lex_state lex_state, act_state act_state, f
 			goto ZL1;
 		}
 	
-#line 275 "parser.c"
+#line 270 "parser.c"
 			}
 			/* END OF ACTION: compile-literal */
 		}
@@ -366,7 +361,7 @@ p_list_Hof_Hthings_C_Cthing(lex_state lex_state, act_state act_state, ast ZIa, z
 			}
 		}
 	
-#line 370 "parser.c"
+#line 365 "parser.c"
 			}
 			/* END OF ACTION: subtract-exit */
 			p_124 (lex_state, act_state, &ZIa, &ZIz, &ZI122, &ZI123);
@@ -423,7 +418,7 @@ p_token_Hmapping(lex_state lex_state, act_state act_state, fsm *ZOr, string *ZOt
 
 		err_expected("'->'");
 	
-#line 427 "parser.c"
+#line 422 "parser.c"
 							}
 							/* END OF ACTION: err-expected-map */
 						}
@@ -443,7 +438,7 @@ p_token_Hmapping(lex_state lex_state, act_state act_state, fsm *ZOr, string *ZOt
 			exit(EXIT_FAILURE);
 		}
 	
-#line 447 "parser.c"
+#line 442 "parser.c"
 						}
 						/* END OF EXTRACT: TOKEN */
 						break;
@@ -461,7 +456,7 @@ p_token_Hmapping(lex_state lex_state, act_state act_state, fsm *ZOr, string *ZOt
 
 		(ZIt) = NULL;
 	
-#line 465 "parser.c"
+#line 460 "parser.c"
 					}
 					/* END OF ACTION: no-token */
 				}
@@ -500,7 +495,7 @@ ZL2_concaternated_Hpatterns_C_Cpattern__literal:;
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 504 "parser.c"
+#line 499 "parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			ADVANCE_LEXER;
@@ -511,7 +506,7 @@ ZL2_concaternated_Hpatterns_C_Cpattern__literal:;
 		/* TODO */
 		*lex_state->p++ = (ZIc);
 	
-#line 515 "parser.c"
+#line 510 "parser.c"
 			}
 			/* END OF ACTION: pattern-char */
 			/* BEGINNING OF INLINE: concaternated-patterns::pattern_literal */
@@ -539,7 +534,7 @@ ZL2_concaternated_Hpatterns_C_Cpattern__literal:;
 		default:   ZIc = '\0'; break; /* TODO: handle error */
 		}
 	
-#line 543 "parser.c"
+#line 538 "parser.c"
 			}
 			/* END OF EXTRACT: ESC */
 			ADVANCE_LEXER;
@@ -550,7 +545,7 @@ ZL2_concaternated_Hpatterns_C_Cpattern__literal:;
 		/* TODO */
 		*lex_state->p++ = (ZIc);
 	
-#line 554 "parser.c"
+#line 549 "parser.c"
 			}
 			/* END OF ACTION: pattern-char */
 			/* BEGINNING OF INLINE: concaternated-patterns::pattern_literal */
@@ -589,7 +584,7 @@ ZL1:;
 
 		err_expected("';'");
 	
-#line 593 "parser.c"
+#line 588 "parser.c"
 		}
 		/* END OF ACTION: err-expected-semi */
 	}
@@ -618,7 +613,7 @@ p_list_Hof_Hthings_C_Cbind_Hthing(lex_state lex_state, act_state act_state, ast 
 			exit(EXIT_FAILURE);
 		}
 	
-#line 622 "parser.c"
+#line 617 "parser.c"
 			}
 			/* END OF EXTRACT: IDENT */
 			break;
@@ -646,7 +641,7 @@ p_list_Hof_Hthings_C_Cbind_Hthing(lex_state lex_state, act_state act_state, ast 
 
 		err_expected("'='");
 	
-#line 650 "parser.c"
+#line 645 "parser.c"
 				}
 				/* END OF ACTION: err-expected-bind */
 			}
@@ -685,7 +680,7 @@ p_list_Hof_Hthings_C_Cbind_Hthing(lex_state lex_state, act_state act_state, ast 
 			}
 		}
 	
-#line 689 "parser.c"
+#line 684 "parser.c"
 		}
 		/* END OF ACTION: subtract-exit */
 		p_94 (lex_state, act_state);
@@ -712,7 +707,7 @@ p_list_Hof_Hthings_C_Cbind_Hthing(lex_state lex_state, act_state act_state, ast 
 			goto ZL1;
 		}
 	
-#line 716 "parser.c"
+#line 711 "parser.c"
 		}
 		/* END OF ACTION: add-binding */
 	}
@@ -744,7 +739,7 @@ p_lx(lex_state lex_state, act_state act_state, ast *ZOa)
 			goto ZL1;
 		}
 	
-#line 748 "parser.c"
+#line 743 "parser.c"
 		}
 		/* END OF ACTION: make-ast */
 		/* BEGINNING OF ACTION: make-zone */
@@ -759,7 +754,7 @@ p_lx(lex_state lex_state, act_state act_state, ast *ZOa)
 			goto ZL1;
 		}
 	
-#line 763 "parser.c"
+#line 758 "parser.c"
 		}
 		/* END OF ACTION: make-zone */
 		/* BEGINNING OF ACTION: no-exit */
@@ -768,7 +763,7 @@ p_lx(lex_state lex_state, act_state act_state, ast *ZOa)
 
 		(ZIexit) = NULL;
 	
-#line 772 "parser.c"
+#line 767 "parser.c"
 		}
 		/* END OF ACTION: no-exit */
 		/* BEGINNING OF ACTION: set-globalzone */
@@ -780,7 +775,7 @@ p_lx(lex_state lex_state, act_state act_state, ast *ZOa)
 
 		(ZIa)->global = (ZIz);
 	
-#line 784 "parser.c"
+#line 779 "parser.c"
 		}
 		/* END OF ACTION: set-globalzone */
 		p_list_Hof_Hthings (lex_state, act_state, ZIa, ZIz, ZIexit);
@@ -808,7 +803,7 @@ p_lx(lex_state lex_state, act_state act_state, ast *ZOa)
 
 		err_expected("EOF");
 	
-#line 812 "parser.c"
+#line 807 "parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -829,7 +824,7 @@ ZL1:;
 			goto ZL4;
 		}
 	
-#line 833 "parser.c"
+#line 828 "parser.c"
 		}
 		/* END OF ACTION: make-ast */
 		/* BEGINNING OF ACTION: err-syntax */
@@ -839,7 +834,7 @@ ZL1:;
 		fprintf(stderr, "syntax error\n");
 		exit(EXIT_FAILURE);
 	
-#line 843 "parser.c"
+#line 838 "parser.c"
 		}
 		/* END OF ACTION: err-syntax */
 	}
@@ -923,7 +918,7 @@ ZL2_118:;
 			goto ZL1;
 		}
 	
-#line 927 "parser.c"
+#line 922 "parser.c"
 			}
 			/* END OF ACTION: op-concat */
 			/* BEGINNING OF INLINE: 118 */
@@ -978,7 +973,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 
 		err_expected("'..'");
 	
-#line 982 "parser.c"
+#line 977 "parser.c"
 					}
 					/* END OF ACTION: err-expected-to */
 				}
@@ -1002,7 +997,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 			goto ZL1;
 		}
 	
-#line 1006 "parser.c"
+#line 1001 "parser.c"
 			}
 			/* END OF ACTION: make-zone */
 			/* BEGINNING OF INLINE: 93 */
@@ -1027,7 +1022,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 
 		(ZIx) = NULL;
 	
-#line 1031 "parser.c"
+#line 1026 "parser.c"
 						}
 						/* END OF ACTION: no-to */
 						/* BEGINNING OF ACTION: no-token */
@@ -1036,7 +1031,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 
 		(ZIy) = NULL;
 	
-#line 1040 "parser.c"
+#line 1035 "parser.c"
 						}
 						/* END OF ACTION: no-token */
 						/* BEGINNING OF ACTION: clone */
@@ -1051,7 +1046,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 			goto ZL5;
 		}
 	
-#line 1055 "parser.c"
+#line 1050 "parser.c"
 						}
 						/* END OF ACTION: clone */
 						/* BEGINNING OF ACTION: regex-any */
@@ -1079,7 +1074,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 
 		fsm_setend((ZIw), e, 1);
 	
-#line 1083 "parser.c"
+#line 1078 "parser.c"
 						}
 						/* END OF ACTION: regex-any */
 						/* BEGINNING OF ACTION: subtract-exit */
@@ -1109,7 +1104,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 			}
 		}
 	
-#line 1113 "parser.c"
+#line 1108 "parser.c"
 						}
 						/* END OF ACTION: subtract-exit */
 						/* BEGINNING OF ACTION: add-mapping */
@@ -1140,7 +1135,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 			goto ZL5;
 		}
 	
-#line 1144 "parser.c"
+#line 1139 "parser.c"
 						}
 						/* END OF ACTION: add-mapping */
 					}
@@ -1167,7 +1162,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 
 		err_expected("'{'");
 	
-#line 1171 "parser.c"
+#line 1166 "parser.c"
 								}
 								/* END OF ACTION: err-expected-open */
 							}
@@ -1199,7 +1194,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 
 		err_expected("'}'");
 	
-#line 1203 "parser.c"
+#line 1198 "parser.c"
 								}
 								/* END OF ACTION: err-expected-close */
 							}
@@ -1220,7 +1215,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 
 		err_expected("list of token mappings or zones");
 	
-#line 1224 "parser.c"
+#line 1219 "parser.c"
 					}
 					/* END OF ACTION: err-expected-list */
 				}
@@ -1255,7 +1250,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 			goto ZL1;
 		}
 	
-#line 1259 "parser.c"
+#line 1254 "parser.c"
 			}
 			/* END OF ACTION: add-mapping */
 			/* BEGINNING OF ACTION: add-mapping */
@@ -1286,7 +1281,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 			goto ZL1;
 		}
 	
-#line 1290 "parser.c"
+#line 1285 "parser.c"
 			}
 			/* END OF ACTION: add-mapping */
 		}
@@ -1306,7 +1301,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 
 		(ZIto) = NULL;
 	
-#line 1310 "parser.c"
+#line 1305 "parser.c"
 			}
 			/* END OF ACTION: no-to */
 			/* BEGINNING OF ACTION: add-mapping */
@@ -1337,7 +1332,7 @@ p_124(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI1
 			goto ZL1;
 		}
 	
-#line 1341 "parser.c"
+#line 1336 "parser.c"
 			}
 			/* END OF ACTION: add-mapping */
 		}
@@ -1399,6 +1394,6 @@ ZL1:;
 		return ast;
 	}
 
-#line 1403 "parser.c"
+#line 1398 "parser.c"
 
 /* END OF FILE */

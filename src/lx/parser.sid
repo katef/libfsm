@@ -97,7 +97,7 @@
 		pattern_regex: () -> () = {
 			c = CHAR;
 			<pattern-char>(c);
-			pattern_literal;
+			pattern_regex;
 		||
 			$;
 		};
