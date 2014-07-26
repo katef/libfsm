@@ -146,7 +146,7 @@ ast_addconflict(struct mapping_set **head, struct ast_mapping *m)
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
-			return NULL;
+		return NULL;
 	}
 
 	new->m    = m;
