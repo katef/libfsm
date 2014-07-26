@@ -34,7 +34,7 @@
 	#include "var.h"
 
 	typedef char *               string;
-	typedef enum re_cflags       flags;
+	typedef enum re_cflags       cflags;
 	typedef struct fsm *         fsm;
 	typedef struct ast_zone *    zone;
 	typedef struct ast_mapping * mapping;
@@ -180,7 +180,7 @@ p_concaternated_Hpatterns_C_Cpattern(lex_state lex_state, act_state act_state, z
 		break;
 	case (TOK_RESTART):
 		{
-			flags ZIf;
+			cflags ZIf;
 			string ZIs;
 
 			ADVANCE_LEXER;
@@ -893,7 +893,7 @@ p_list_Hof_Hthings_C_Cthing(lex_state lex_state, act_state act_state, ast ZIa, z
 		break;
 	case (TOK_RESTART):
 		{
-			flags ZIf;
+			cflags ZIf;
 			string ZIs;
 			fsm ZIq;
 			zone ZI132;

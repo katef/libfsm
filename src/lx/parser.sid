@@ -3,7 +3,7 @@
 %types%
 
 	char;
-	flags;
+	cflags;
 	string;
 	fsm;
 	zone;
@@ -18,7 +18,7 @@
 	CHAR: () -> (:char);
 
 	RESTART;
-	REEND: () -> (:flags);
+	REEND: () -> (:cflags);
 
 	STRSTART;
 	STREND;
@@ -43,8 +43,8 @@
 
 	<deref-var>:       (:zone, :string) -> (:fsm);
 
-	<compile-literal>: (:string)         -> (:fsm);
-	<compile-regex>:   (:string, :flags) -> (:fsm);
+	<compile-literal>: (:string)          -> (:fsm);
+	<compile-regex>:   (:string, :cflags) -> (:fsm);
 
 	!<regex-empty>: () -> (:fsm); /* TODO: proper name for matching the empty string? */
 	<regex-any>:    () -> (:fsm);

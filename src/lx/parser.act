@@ -13,7 +13,7 @@
 %maps%
 
 	char   -> char;
-	flags  -> flags;
+	cflags -> cflags;
 	string -> string;
 	fsm    -> fsm;
 	zone   -> zone;
@@ -43,7 +43,7 @@
 	#include "var.h"
 
 	typedef char *               string;
-	typedef enum re_cflags       flags;
+	typedef enum re_cflags       cflags;
 	typedef struct fsm *         fsm;
 	typedef struct ast_zone *    zone;
 	typedef struct ast_mapping * mapping;
@@ -128,7 +128,7 @@
 		}
 	@};
 
-	REEND: () -> (f :flags) = @{
+	REEND: () -> (f :cflags) = @{
 		assert(lex_state->buf.a[0] == '/');
 
 		/* TODO: submatch addressing */
@@ -185,7 +185,7 @@
 		}
 	@};
 
-	<compile-regex>: (s :string, f :flags) -> (r :fsm) = @{
+	<compile-regex>: (s :string, f :cflags) -> (r :fsm) = @{
 		assert(@s != NULL);
 
 		/* TODO: handle error codes */
