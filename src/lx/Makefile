@@ -12,6 +12,8 @@ SID_ACT= parser.act
 CFLAGS+= -I ${BASE_DIR}/src
 CFLAGS+= -I ${BASE_DIR}/include
 
+CFLAGS+= -D LX_HEADER='"lexer.h"'
+
 SRCS+= ast.c
 SRCS+= lexer.c
 SRCS+= parser.c

@@ -2,6 +2,7 @@
 
 %types%
 
+	char;
 	string;
 	fsm;
 	zone;
@@ -9,22 +10,33 @@
 
 %terminals%
 
-	pattern_regex:   () -> (:string);
-	pattern_literal: () -> (:string);
+	TOKEN: () -> (:string);
 
-	map;
-	to;
-	semi;
-	!alt;
-	token_name: () -> (:string);
+	ESC:  () -> (:char);
+	CHAR: () -> (:char);
 
-	open;
-	close;
+	RESTART;
+	REEND;
 
-	!unknown;
-	eof;
+	STRSTART;
+	STREND;
+
+	CLOSE;
+	OPEN;
+
+	MAP;
+	TO;
+	SEMI;
+	!ALT;
+
+	EOF;
+	!ERROR;
+	!UNKNOWN;
 
 %productions%
+
+	<pattern-char>:   (:char) -> ();
+	<pattern-buffer>: ()      -> (:string);
 
 	<compile-literal>: (:string) -> (:fsm);
 	<compile-regex>:   (:string) -> (:fsm);
@@ -65,11 +77,37 @@
 
 	token-mapping: () -> (r :fsm, t :string) [
 
+		pattern_literal: () -> () = {
+			c = ESC;
+			<pattern-char>(c);
+			pattern_literal;
+		||
+			c = CHAR;
+			<pattern-char>(c);
+			pattern_literal;
+		||
+			$;
+		};
+
+		pattern_regex: () -> () = {
+			c = CHAR;
+			<pattern-char>(c);
+			pattern_literal;
+		||
+			$;
+		};
+
 		pattern: () -> (r :fsm) = {
-			s = pattern_literal;
+			STRSTART;
+			pattern_literal;
+			STREND;
+			s = <pattern-buffer>;
 			r = <compile-literal>(s);
 		||
-			s = pattern_regex;
+			RESTART;
+			pattern_regex;
+			REEND;
+			s = <pattern-buffer>;
 			r = <compile-regex>(s);
 		};
 
@@ -88,12 +126,12 @@
 			t = <no-token>;
 		||
 			{
-				map;
+				MAP;
 			##
 				<err-expected-map>;
 			};
 
-			t = token_name;
+			t = TOKEN;
 		};
 	};
 
@@ -105,7 +143,7 @@
 			q = <subtract-exit>(r, exit);
 
 			{
-				semi;
+				SEMI;
 			##
 				<err-expected-semi>;
 			};
@@ -117,7 +155,7 @@
 			q1 = <subtract-exit>(r1, exit);
 
 			{
-				to;
+				TO;
 			##
 				<err-expected-to>;
 			};
@@ -128,7 +166,7 @@
 
 			{
 				{
-					semi;
+					SEMI;
 				##
 					<err-expected-semi>;
 				};
@@ -163,7 +201,7 @@
 				<make-mapping>(a, child, x, v, y);
 			||
 				{
-					open;
+					OPEN;
 				##
 					<err-expected-open>;
 				};
@@ -171,7 +209,7 @@
 				list-of-things(a, child, r2);
 
 				{
-					close;
+					CLOSE;
 				##
 					<err-expected-close>;
 				};
@@ -222,7 +260,7 @@
 		list-of-things(a, z, exit);
 
 		{
-			eof;
+			EOF;
 		##
 			<err-expected-eof>;
 		};

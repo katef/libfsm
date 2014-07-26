@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 76 "parser.act"
+#line 86 "parser.act"
 
 
 	#include <stdio.h>
@@ -27,26 +27,11 @@
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
 extern void p_lx(lex_state, act_state, ast *);
-
-/* BEGINNING OF TERMINAL DEFINITIONS */
-
-#define lex_pattern__regex (0)
-#define lex_unknown (9)
-#define lex_close (8)
-#define lex_token__name (6)
-#define lex_semi (4)
-#define lex_open (7)
-#define lex_eof (10)
-#define lex_map (2)
-#define lex_alt (5)
-#define lex_pattern__literal (1)
-#define lex_to (3)
-
 /* BEGINNING OF TRAILER */
 
-#line 373 "parser.act"
+#line 416 "parser.act"
 
 
-#line 51 "parser.h"
+#line 36 "parser.h"
 
 /* END OF FILE */
