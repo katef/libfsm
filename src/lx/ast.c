@@ -70,6 +70,7 @@ ast_addzone(struct ast *ast)
 
 	new->ml   = NULL;
 	new->fsm  = NULL;
+	new->vl   = NULL;
 
 	new->next = ast->zl;
 	ast->zl   = new;

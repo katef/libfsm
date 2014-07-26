@@ -5,6 +5,7 @@
 
 
 struct fsm;
+struct var;
 
 struct ast_mapping {
 	struct fsm *fsm;
@@ -18,6 +19,7 @@ struct ast_mapping {
 struct ast_zone {
 	struct ast_mapping *ml;
 	struct fsm *fsm;
+	struct var *vl;
 
 	struct ast_zone *next;
 };

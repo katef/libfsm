@@ -4,6 +4,7 @@
 #define LX_H
 
 enum lx_token {
+	TOK_IDENT,
 	TOK_TOKEN,
 	TOK_CLOSE,
 	TOK_OPEN,
@@ -11,6 +12,7 @@ enum lx_token {
 	TOK_TO,
 	TOK_SEMI,
 	TOK_ALT,
+	TOK_BIND,
 	TOK_REEND,
 	TOK_RESTART,
 	TOK_ESC,

@@ -574,7 +574,7 @@ z5(struct lx *lx)
 
 	enum {
 		S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, 
-		S11, S12, S13, S14, S15, S16
+		S11, S12, S13, S14, S15, S16, S17, S18
 	} state;
 
 	assert(lx != NULL);
@@ -583,7 +583,7 @@ z5(struct lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S16;
+	state = S18;
 
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
@@ -796,20 +796,93 @@ z5(struct lx *lx)
 
 		case S13:
 			switch (c) {
-			default:  lx_ungetc(lx, c); return TOK_OPEN;
+			default:  lx_ungetc(lx, c); return TOK_BIND;
 			}
 
 		case S14:
 			switch (c) {
-			default:  lx_ungetc(lx, c); return TOK_ALT;
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+			case 'A':
+			case 'B':
+			case 'C':
+			case 'D':
+			case 'E':
+			case 'F':
+			case 'G':
+			case 'H':
+			case 'I':
+			case 'J':
+			case 'K':
+			case 'L':
+			case 'M':
+			case 'N':
+			case 'O':
+			case 'P':
+			case 'Q':
+			case 'R':
+			case 'S':
+			case 'T':
+			case 'U':
+			case 'V':
+			case 'W':
+			case 'X':
+			case 'Y':
+			case 'Z':
+			case '_':
+			case 'a':
+			case 'b':
+			case 'c':
+			case 'd':
+			case 'e':
+			case 'f':
+			case 'g':
+			case 'h':
+			case 'i':
+			case 'j':
+			case 'k':
+			case 'l':
+			case 'm':
+			case 'n':
+			case 'o':
+			case 'p':
+			case 'q':
+			case 'r':
+			case 's':
+			case 't':
+			case 'u':
+			case 'v':
+			case 'w':
+			case 'x':
+			case 'y':
+			case 'z':	          continue;
+			default:  lx_ungetc(lx, c); return TOK_IDENT;
 			}
 
 		case S15:
 			switch (c) {
-			default:  lx_ungetc(lx, c); return TOK_CLOSE;
+			default:  lx_ungetc(lx, c); return TOK_OPEN;
 			}
 
 		case S16:
+			switch (c) {
+			default:  lx_ungetc(lx, c); return TOK_ALT;
+			}
+
+		case S17:
+			switch (c) {
+			default:  lx_ungetc(lx, c); return TOK_CLOSE;
+			}
+
+		case S18:
 			switch (c) {
 			case '\t':
 			case '\n':
@@ -822,10 +895,74 @@ z5(struct lx *lx)
 			case '-': state = S9;      continue;
 			case '.': state = S10;      continue;
 			case '/': state = S11;      continue;
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
 			case ';': state = S12;      continue;
-			case '{': state = S13;      continue;
-			case '|': state = S14;      continue;
-			case '}': state = S15;      continue;
+			case '=': state = S13;      continue;
+			case 'A':
+			case 'B':
+			case 'C':
+			case 'D':
+			case 'E':
+			case 'F':
+			case 'G':
+			case 'H':
+			case 'I':
+			case 'J':
+			case 'K':
+			case 'L':
+			case 'M':
+			case 'N':
+			case 'O':
+			case 'P':
+			case 'Q':
+			case 'R':
+			case 'S':
+			case 'T':
+			case 'U':
+			case 'V':
+			case 'W':
+			case 'X':
+			case 'Y':
+			case 'Z':
+			case '_':
+			case 'a':
+			case 'b':
+			case 'c':
+			case 'd':
+			case 'e':
+			case 'f':
+			case 'g':
+			case 'h':
+			case 'i':
+			case 'j':
+			case 'k':
+			case 'l':
+			case 'm':
+			case 'n':
+			case 'o':
+			case 'p':
+			case 'q':
+			case 'r':
+			case 's':
+			case 't':
+			case 'u':
+			case 'v':
+			case 'w':
+			case 'x':
+			case 'y':
+			case 'z': state = S14;      continue;
+			case '{': state = S15;      continue;
+			case '|': state = S16;      continue;
+			case '}': state = S17;      continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 		}
@@ -843,9 +980,11 @@ z5(struct lx *lx)
 	case S8: return TOK_STRSTART;
 	case S11: return TOK_RESTART;
 	case S12: return TOK_SEMI;
-	case S13: return TOK_OPEN;
-	case S14: return TOK_ALT;
-	case S15: return TOK_CLOSE;
+	case S13: return TOK_BIND;
+	case S14: return TOK_IDENT;
+	case S15: return TOK_OPEN;
+	case S16: return TOK_ALT;
+	case S17: return TOK_CLOSE;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }
@@ -854,6 +993,7 @@ const char *
 lx_name(enum lx_token t)
 {
 	switch (t) {
+	case TOK_IDENT: return "IDENT";
 	case TOK_TOKEN: return "TOKEN";
 	case TOK_CLOSE: return "CLOSE";
 	case TOK_OPEN: return "OPEN";
@@ -861,6 +1001,7 @@ lx_name(enum lx_token t)
 	case TOK_TO: return "TO";
 	case TOK_SEMI: return "SEMI";
 	case TOK_ALT: return "ALT";
+	case TOK_BIND: return "BIND";
 	case TOK_REEND: return "REEND";
 	case TOK_RESTART: return "RESTART";
 	case TOK_ESC: return "ESC";

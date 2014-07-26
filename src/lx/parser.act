@@ -39,6 +39,7 @@
 	#include "lexer.h"
 	#include "parser.h"
 	#include "ast.h"
+	#include "var.h"
 
 	typedef char *               string;
 	typedef struct fsm *         fsm;
@@ -111,6 +112,14 @@
 	TOKEN: () -> (s :string) = @{
 		/* TODO: submatch addressing */
 		@s = xstrdup(lex_state->buf.a + 1); /* +1 for '$' prefix */
+		if (@s == NULL) {
+			perror("xstrdup");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
+	IDENT: () -> (s :string) = @{
+		@s = xstrdup(lex_state->buf.a);
 		if (@s == NULL) {
 			perror("xstrdup");
 			exit(EXIT_FAILURE);
@@ -208,7 +217,7 @@
 		}
 	@};
 
-	<make-mapping>: (a :ast, from :zone, to :zone, r :fsm, t :string) -> () = @{
+	<add-mapping>: (a :ast, from :zone, to :zone, r :fsm, t :string) -> () = @{
 		struct ast_token *t;
 		struct ast_mapping *m;
 
@@ -230,6 +239,23 @@
 		m = ast_addmapping(@from, @r, t, @to);
 		if (m == NULL) {
 			perror("ast_addmapping");
+			@!;
+		}
+	@};
+
+	<add-binding>: (a :ast, z :zone, n :string, r :fsm) -> () = @{
+		struct var *v;
+
+		assert(@a != NULL);
+		assert(@z != NULL);
+		assert(@n != NULL);
+		assert(@r != NULL);
+
+		(void) @a;
+
+		v = var_bind(&@z->vl, @n, @r);
+		if (v == NULL) {
+			perror("var_bind");
 			@!;
 		}
 	@};
@@ -343,6 +369,10 @@
 
 	<err-expected-map> = @{
 		err_expected("'->'");
+	@};
+
+	<err-expected-bind> = @{
+		err_expected("'='");
 	@};
 
 	<err-expected-semi> = @{

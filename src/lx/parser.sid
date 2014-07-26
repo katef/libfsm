@@ -11,6 +11,7 @@
 %terminals%
 
 	TOKEN: () -> (:string);
+	IDENT: () -> (:string);
 
 	ESC:  () -> (:char);
 	CHAR: () -> (:char);
@@ -24,10 +25,11 @@
 	CLOSE;
 	OPEN;
 
-	MAP;
-	TO;
-	SEMI;
+	BIND;
 	!ALT;
+	SEMI;
+	TO;
+	MAP;
 
 	EOF;
 	!ERROR;
@@ -51,9 +53,11 @@
 
 	<subtract-exit>:  (:fsm, :fsm) -> (:fsm);
 
-	<make-ast>:     ()                                  -> (:ast);
-	<make-zone>:    (:ast)                              -> (:zone);
-	<make-mapping>: (:ast, :zone, :zone, :fsm, :string) -> ();
+	<make-ast>:     ()     -> (:ast);
+	<make-zone>:    (:ast) -> (:zone);
+
+	<add-mapping>: (:ast, :zone, :zone, :fsm, :string) -> ();
+	<add-binding>: (:ast, :zone, :string, :fsm)        -> ();
 
 	<set-globalzone>: (:ast, :zone) -> ();
 
@@ -67,6 +71,7 @@
 	<err-syntax>;
 	!<err-expected-alt>;
 	<err-expected-map>;
+	<err-expected-bind>;
 	<err-expected-semi>;
 	<err-expected-to>;
 	<err-expected-open>;
@@ -75,7 +80,7 @@
 
 	<err-expected-list>;
 
-	token-mapping: () -> (r :fsm, t :string) [
+	concaternated-patterns: () -> (q :fsm) [
 
 		pattern_literal: () -> () = {
 			c = ESC;
@@ -111,15 +116,15 @@
 			r = <compile-regex>(s);
 		};
 
-		concaternated-patterns: () -> (q :fsm) = {
-			q = pattern;
-		||
-			a = concaternated-patterns;
-			b = pattern;
-			q = <op-concat>(a, b);
-		};
-
 	] = {
+		q = pattern;
+	||
+		a = concaternated-patterns;
+		b = pattern;
+		q = <op-concat>(a, b);
+	};
+
+	token-mapping: () -> (r :fsm, t :string) = {
 		r = concaternated-patterns;
 
 		{
@@ -136,6 +141,27 @@
 	};
 
 	list-of-things: (a :ast, z :zone, exit :fsm) -> () [
+
+		bind-thing: (a :ast, z :zone, exit :fsm) -> () = {
+			n = IDENT;
+
+			{
+				BIND;
+			##
+				<err-expected-bind>;
+			};
+
+			r = concaternated-patterns;
+			q = <subtract-exit>(r, exit);
+
+			{
+				SEMI;
+			##
+				<err-expected-semi>;
+			};
+
+			<add-binding>(a, z, n, q);
+		};
 
 		token-thing: (a :ast, z :zone, exit :fsm) -> (q :fsm, t :string) = {
 			(r, t) = token-mapping;
@@ -198,7 +224,7 @@
 				w = <regex-any>;
 				v = <subtract-exit>(w, u);
 
-				<make-mapping>(a, child, x, v, y);
+				<add-mapping>(a, child, x, v, y);
 			||
 				{
 					OPEN;
@@ -217,8 +243,8 @@
 				<err-expected-list>;
 			};
 
-			<make-mapping>(a, parent, child, q1, t1);
-			<make-mapping>(a, child, parent, r2, t2);
+			<add-mapping>(a, parent, child, q1, t1);
+			<add-mapping>(a, child, parent, r2, t2);
 		};
 
 		/*
@@ -233,9 +259,11 @@
 		 */
 
 		thing: (a :ast, z :zone, exit :fsm) -> () = {
+			bind-thing(a, z, exit);
+		||
 			(r, t) = token-thing(a, z, exit);
 			to = <no-to>;
-			<make-mapping>(a, z, to, r, t);
+			<add-mapping>(a, z, to, r, t);
 		||
 			zone-thing(a, z, exit);
 		};
