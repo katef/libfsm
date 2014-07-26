@@ -8,6 +8,7 @@ CFLAGS+= -I ${BASE_DIR}/include
 
 SRCS+= collate.c
 SRCS+= complete.c
+SRCS+= desensitise.c
 SRCS+= clone.c
 SRCS+= edge.c
 SRCS+= exec.c

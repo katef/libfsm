@@ -8,6 +8,14 @@ struct fsm_state;
 struct state_set;
 
 /*
+ * Make the given fsm case-insensitive. This may result in an NFA.
+ *
+ * Returns 1 on success, or 0 on error.
+ */
+int
+fsm_desensitise(struct fsm *fsm);
+
+/*
  * Reverse the given fsm. This may result in an NFA.
  *
  * Returns 1 on success, or 0 on error.
