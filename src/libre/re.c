@@ -95,7 +95,19 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
+	if (cflags & RE_ICASE) {
+		if (!fsm_desensitise(new)) {
+			goto error;
+		}
+	}
+
 	return new;
+
+error:
+
+	fsm_free(new);
+
+	return NULL;
 }
 
 const char *
