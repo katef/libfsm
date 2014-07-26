@@ -17,6 +17,7 @@
 %persistents%
 
 	fsm       :fsm;
+	cflags    :cflags;
 	lex_state :lex_state;
 	act_state :act_state;
 
@@ -44,6 +45,7 @@
 @}, @{
 
 	typedef struct fsm *       fsm;
+	typedef enum re_cflags     cflags;
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
 

@@ -7,15 +7,15 @@
 
 struct fsm *
 comp_literal(int (*f)(void *opaque), void *opaque,
-	enum re_err *err);
+	enum re_cflags cflags, enum re_err *err);
 
 struct fsm *
 comp_glob(int (*f)(void *opaque), void *opaque,
-	enum re_err *err);
+	enum re_cflags cflags, enum re_err *err);
 
 struct fsm *
 comp_simple(int (*f)(void *opaque), void *opaque,
-	enum re_err *err);
+	enum re_cflags cflags, enum re_err *err);
 
 #endif
 

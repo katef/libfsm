@@ -9,10 +9,11 @@
 
 /* BEGINNING OF HEADER */
 
-#line 65 "parser.act"
+#line 67 "parser.act"
 
 
 	typedef struct fsm *       fsm;
+	typedef enum re_cflags     cflags;
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
 
@@ -37,16 +38,16 @@
 	                              act_state->lex_tok = tok;                      } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save;  } while (0)
 
-#line 41 "form/simple/parser.h"
+#line 42 "form/simple/parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
-extern void p_re__simple(fsm, lex_state, act_state);
+extern void p_re__simple(fsm, cflags, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 362 "parser.act"
+#line 364 "parser.act"
 
 
-#line 51 "form/simple/parser.h"
+#line 52 "form/simple/parser.h"
 
 /* END OF FILE */

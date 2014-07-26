@@ -13,7 +13,8 @@
 #include "parser.h"
 
 struct fsm *
-comp_simple(int (*f)(void *opaque), void *opaque, enum re_err *err)
+comp_simple(int (*f)(void *opaque), void *opaque,
+	enum re_cflags cflags, enum re_err *err)
 {
 	struct act_state act_state_s;
 	struct act_state *act_state;
@@ -45,7 +46,7 @@ comp_simple(int (*f)(void *opaque), void *opaque, enum re_err *err)
 	act_state->lex_tokval_u  = lex_simple_tokval_u;
 
 	ADVANCE_LEXER;
-	p_re__simple(new, lex_state, act_state);
+	p_re__simple(new, cflags, lex_state, act_state);
 
 	lex_simple_free(lex_state);
 

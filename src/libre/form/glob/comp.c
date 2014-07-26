@@ -13,7 +13,8 @@
 #include "parser.h"
 
 struct fsm *
-comp_glob(int (*f)(void *opaque), void *opaque, enum re_err *err)
+comp_glob(int (*f)(void *opaque), void *opaque,
+	enum re_cflags cflags, enum re_err *err)
 {
 	struct act_state act_state_s;
 	struct act_state *act_state;
@@ -45,7 +46,7 @@ comp_glob(int (*f)(void *opaque), void *opaque, enum re_err *err)
 	act_state->lex_tokval_u  = NULL;
 
 	ADVANCE_LEXER;
-	p_re__glob(new, lex_state, act_state);
+	p_re__glob(new, cflags, lex_state, act_state);
 
 	/* TODO: no need to malloc lex_state; could use automatic storage */
 	lex_glob_free(lex_state);

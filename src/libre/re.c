@@ -75,7 +75,8 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	enum re_cflags cflags, enum re_err *err)
 {
 	struct fsm *new;
-	struct fsm *(*comp)(int (*getc)(void *opaque), void *opaque, enum re_err *err);
+	struct fsm *(*comp)(int (*getc)(void *opaque), void *opaque,
+		enum re_cflags cflags, enum re_err *err);
 
 	assert(getc != NULL);
 
@@ -89,7 +90,7 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
-	new = comp(getc, opaque, err);
+	new = comp(getc, opaque, cflags, err);
 	if (new == NULL) {
 		return NULL;
 	}

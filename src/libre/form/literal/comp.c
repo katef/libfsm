@@ -13,7 +13,8 @@
 #include "parser.h"
 
 struct fsm *
-comp_literal(int (*f)(void *opaque), void *opaque, enum re_err *err)
+comp_literal(int (*f)(void *opaque), void *opaque,
+	enum re_cflags cflags, enum re_err *err)
 {
 	struct act_state act_state_s;
 	struct act_state *act_state;
@@ -45,7 +46,7 @@ comp_literal(int (*f)(void *opaque), void *opaque, enum re_err *err)
 	act_state->lex_tokval_u  = NULL;
 
 	ADVANCE_LEXER;
-	p_re__literal(new, lex_state, act_state);
+	p_re__literal(new, cflags, lex_state, act_state);
 
 	lex_literal_free(lex_state);
 
