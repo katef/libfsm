@@ -3,6 +3,7 @@
 %types%
 
 	char;
+	flags;
 	string;
 	fsm;
 	zone;
@@ -17,7 +18,7 @@
 	CHAR: () -> (:char);
 
 	RESTART;
-	REEND;
+	REEND: () -> (:flags);
 
 	STRSTART;
 	STREND;
@@ -42,8 +43,8 @@
 
 	<deref-var>:       (:zone, :string) -> (:fsm);
 
-	<compile-literal>: (:string) -> (:fsm);
-	<compile-regex>:   (:string) -> (:fsm);
+	<compile-literal>: (:string)         -> (:fsm);
+	<compile-regex>:   (:string, :flags) -> (:fsm);
 
 	!<regex-empty>: () -> (:fsm); /* TODO: proper name for matching the empty string? */
 	<regex-any>:    () -> (:fsm);
@@ -116,9 +117,9 @@
 		||
 			RESTART;
 			pattern-verbatim;
-			REEND;
+			f = REEND;
 			s = <pattern-buffer>;
-			r = <compile-regex>(s);
+			r = <compile-regex>(s, f);
 		};
 
 	] = {

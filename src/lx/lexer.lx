@@ -16,8 +16,7 @@
 	/[^\\]/ -> $char;
 }
 
-# TODO: '/' .. '/' /([gi]*)/ -> $flags {
-'/' -> $restart .. '/' -> $reend {
+'/' -> $restart .. '/' /[i]*/ -> $reend {
 	/./ -> $char;
 }
 
