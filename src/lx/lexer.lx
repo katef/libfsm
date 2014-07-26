@@ -1,0 +1,34 @@
+# $Id$
+
+/[\r\n\t ]+/;
+"#" .. "\n";
+
+"'" -> $strstart .. "'" -> $strend {
+	# XXX: would be /.+/ here but this incorrectly includes /exit/
+	/./ -> $char;
+}
+
+'"' -> $strstart .. '"' -> $strend {
+	'\n'    -> $esc;
+	'\t'    -> $esc;
+	'\r'    -> $esc;
+	'\\'    -> $esc;
+	/[^\\]/ -> $char;
+}
+
+# TODO: '/' .. '/' /([gi]*)/ -> $flags {
+'/' -> $restart .. '/' -> $reend {
+	/./ -> $char;
+}
+
+'|'  -> $alt;
+';'  -> $semi;
+'..' -> $to;
+'->' -> $map;
+
+'{'  -> $open;
+'}'  -> $close;
+
+# TODO: '$' /([a-z_][a-z0-9_]+)/i -> $token;
+'$' /[A-Za-z0-9_][A-Za-z0-9_]*/ -> $token;
+
