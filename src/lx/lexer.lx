@@ -30,8 +30,9 @@
 '{'  -> $open;
 '}'  -> $close;
 
-# TODO: '$' /([a-z_][a-z0-9_]+)/i -> $token;
-'$' /[A-Za-z0-9_][A-Za-z0-9_]*/ -> $token;
+# TODO: /([a-z_][a-z0-9_]+)/i;
+ident = /([A-Za-z_][A-Za-z0-9_]+)/;
 
-/[A-Za-z0-9_][A-Za-z0-9_]*/ -> $ident;
+'$' ident -> $token;
+ident -> $ident;
 
