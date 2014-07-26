@@ -29,7 +29,7 @@
 extern void p_lx(lex_state, act_state, ast *);
 /* BEGINNING OF TRAILER */
 
-#line 447 "parser.act"
+#line 460 "parser.act"
 
 
 #line 36 "parser.h"

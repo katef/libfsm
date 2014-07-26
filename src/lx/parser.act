@@ -142,6 +142,19 @@
 		lex_state->p = lex_state->a;
 	@};
 
+	<deref-var>: (z :zone, s :string) -> (r :fsm) = @{
+		assert(@s != NULL);
+
+		/* TODO: walk zone tree to root */
+
+		@r = var_find(@z->vl, @s);
+		if (@r == NULL) {
+			/* TODO: use *err */
+			fprintf(stderr, "No such variable: %s\n", @s);
+			@!;
+		}
+	@};
+
 	<compile-literal>: (s :string) -> (r :fsm) = @{
 		assert(@s != NULL);
 

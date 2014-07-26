@@ -40,6 +40,8 @@
 	<pattern-char>:   (:char) -> ();
 	<pattern-buffer>: ()      -> (:string);
 
+	<deref-var>:       (:zone, :string) -> (:fsm);
+
 	<compile-literal>: (:string) -> (:fsm);
 	<compile-regex>:   (:string) -> (:fsm);
 
@@ -80,52 +82,55 @@
 
 	<err-expected-list>;
 
-	concaternated-patterns: () -> (q :fsm) [
+	concaternated-patterns: (z :zone) -> (q :fsm) [
 
-		pattern_literal: () -> () = {
+		pattern-escaped: () -> () = {
 			c = ESC;
 			<pattern-char>(c);
-			pattern_literal;
+			pattern-escaped;
 		||
 			c = CHAR;
 			<pattern-char>(c);
-			pattern_literal;
+			pattern-escaped;
 		||
 			$;
 		};
 
-		pattern_regex: () -> () = {
+		pattern-verbatim: () -> () = {
 			c = CHAR;
 			<pattern-char>(c);
-			pattern_regex;
+			pattern-verbatim;
 		||
 			$;
 		};
 
-		pattern: () -> (r :fsm) = {
+		pattern: (z :zone) -> (r :fsm) = {
+			n = IDENT;
+			r = <deref-var>(z, n);
+		||
 			STRSTART;
-			pattern_literal;
+			pattern-escaped;
 			STREND;
 			s = <pattern-buffer>;
 			r = <compile-literal>(s);
 		||
 			RESTART;
-			pattern_regex;
+			pattern-verbatim;
 			REEND;
 			s = <pattern-buffer>;
 			r = <compile-regex>(s);
 		};
 
 	] = {
-		q = pattern;
+		q = pattern(z);
 	||
-		a = concaternated-patterns;
-		b = pattern;
+		a = concaternated-patterns(z);
+		b = pattern(z);
 		q = <op-concat>(a, b);
 	};
 
-	token-mapping: () -> (r :fsm, t :string) = {
-		r = concaternated-patterns;
+	token-mapping: (z :zone) -> (r :fsm, t :string) = {
+		r = concaternated-patterns(z);
 
 		{
 			t = <no-token>;
@@ -151,7 +156,7 @@
 				<err-expected-bind>;
 			};
 
-			r = concaternated-patterns;
+			r = concaternated-patterns(z);
 			q = <subtract-exit>(r, exit);
 
 			{
@@ -164,7 +169,7 @@
 		};
 
 		token-thing: (a :ast, z :zone, exit :fsm) -> (q :fsm, t :string) = {
-			(r, t) = token-mapping;
+			(r, t) = token-mapping(z);
 
 			q = <subtract-exit>(r, exit);
 
@@ -176,7 +181,7 @@
 		};
 
 		zone-thing: (a :ast, parent :zone, exit :fsm) -> () = {
-			(r1, t1) = token-mapping;
+			(r1, t1) = token-mapping(parent);
 
 			q1 = <subtract-exit>(r1, exit);
 
@@ -186,7 +191,7 @@
 				<err-expected-to>;
 			};
 
-			(r2, t2) = token-mapping;
+			(r2, t2) = token-mapping(parent);
 
 			child = <make-zone>(a);
 
