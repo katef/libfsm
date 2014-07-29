@@ -1,29 +1,14 @@
-# $Id$
+.include "../../share/mk/top.mk"
 
-.include "Makefile.inc"
+SRC += src/re/main.c
 
+PROG += re
 
-CFLAGS+= -I ${BASE_DIR}/src
-CFLAGS+= -I ${BASE_DIR}/include
+.for lib in ${LIB:Mlibfsm} ${LIB:Mlibre}
+${BUILD}/bin/re: ${BUILD}/lib/${lib:R}.a
+.endfor
 
-SRCS+= main.c
-
-.include <lx.obj.mk>
-
-
-PARTS+= src/adt
-
-.include <lx.parts.mk>
-
-
-PROG= ${.CURDIR:T}
-
-# TODO: this needs doing properly, including dependencies for libraries being rebuilt
-LDFLAGS+= -L${OBJ_DIR}/src/libfsm
-LDFLAGS+= -L${OBJ_DIR}/src/libre
-
-LIBS+= -lfsm
-LIBS+= -lre
-
-.include <lx.prog.mk>
+.for src in ${SRC:Msrc/re/*.c}
+${BUILD}/bin/re: ${BUILD}/${src:R}.o
+.endfor
 

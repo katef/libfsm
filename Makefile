@@ -1,12 +1,50 @@
-# $Id$
+.MAKEFLAGS: -r -m share/mk
 
-.include "Makefile.inc"
+# targets
+all::  mkdir .WAIT dep .WAIT lib prog
+dep::
+gen::
+test:: all
+install:: all
+clean::
 
+# things to override
+CC     ?= gcc
+BUILD  ?= build
+PREFIX ?= /usr/local
 
-#SUBDIR+= doc
-#SUBDIR+= include
-SUBDIR+= src
-SUBDIR+= tests
+# layout
+SUBDIR += include/fsm
+SUBDIR += include/re
+SUBDIR += src/adt
+SUBDIR += src/libfsm
+SUBDIR += src/libfsm/cost
+SUBDIR += src/libfsm/out
+SUBDIR += src/libfsm/pred
+SUBDIR += src/libfsm/walk
+SUBDIR += src/libre
+SUBDIR += src/libre/form/literal
+SUBDIR += src/libre/form/glob
+SUBDIR += src/libre/form/simple
+SUBDIR += src/fsm
+SUBDIR += src/re
+SUBDIR += src/lx
+SUBDIR += src/lx/out
 
-.include <lx.subdir.mk>
+INCDIR += include
+
+# TODO: centralise
+#DIR += ${BUILD}/bin
+DIR += ${BUILD}/lib
+
+.include <subdir.mk>
+.include <sid.mk>
+.include <obj.mk>
+.include <dep.mk>
+.include <ar.mk>
+.include <so.mk>
+.include <prog.mk>
+.include <mkdir.mk>
+.include <install.mk>
+.include <clean.mk>
 

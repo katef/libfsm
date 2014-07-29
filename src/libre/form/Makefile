@@ -1,15 +1,6 @@
-# $Id$
+.include "../../../share/mk/top.mk"
 
-.include "Makefile.inc"
-
-
-SUBDIR+=	glob
-SUBDIR+=	literal
-SUBDIR+=	simple
-
-.include <lx.subdir.mk>
-
-.include <lx.parts.mk>
-
-.include <lx.partial.mk>
+SUBDIR += libre/form/glob
+SUBDIR += libre/form/literal
+SUBDIR += libre/form/simple
 

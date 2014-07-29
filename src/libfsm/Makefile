@@ -1,56 +1,47 @@
-# $Id$
+.include "../../share/mk/top.mk"
 
-.include "Makefile.inc"
-
-
-CFLAGS+= -I ${BASE_DIR}/src/hooks
-CFLAGS+= -I ${BASE_DIR}/include
-
-SRCS+= collate.c
-SRCS+= complete.c
-SRCS+= desensitise.c
-SRCS+= clone.c
-SRCS+= edge.c
-SRCS+= exec.c
-SRCS+= fsm.c
-SRCS+= mode.c
-SRCS+= out.c
-SRCS+= trim.c
-SRCS+= example.c
+SRC += src/libfsm/collate.c
+SRC += src/libfsm/complete.c
+SRC += src/libfsm/desensitise.c
+SRC += src/libfsm/clone.c
+SRC += src/libfsm/edge.c
+SRC += src/libfsm/exec.c
+SRC += src/libfsm/fsm.c
+SRC += src/libfsm/mode.c
+SRC += src/libfsm/out.c
+SRC += src/libfsm/trim.c
+SRC += src/libfsm/example.c
 
 # graph things
-SRCS+= mergestates.c
-SRCS+= subgraph.c
+SRC += src/libfsm/mergestates.c
+SRC += src/libfsm/subgraph.c
 
 # search
-SRCS+= shortest.c
+SRC += src/libfsm/shortest.c
 
 # unary operators
-SRCS+= complement.c
-SRCS+= determinise.c
-SRCS+= minimise.c
-SRCS+= reverse.c
+SRC += src/libfsm/complement.c
+SRC += src/libfsm/determinise.c
+SRC += src/libfsm/minimise.c
+SRC += src/libfsm/reverse.c
 
 # binary operators
-SRCS+= merge.c
-SRCS+= concat.c
-SRCS+= union.c
-SRCS+= intersect.c
-SRCS+= subtract.c
+SRC += src/libfsm/merge.c
+SRC += src/libfsm/concat.c
+SRC += src/libfsm/union.c
+SRC += src/libfsm/intersect.c
+SRC += src/libfsm/subtract.c
 
-.include <lx.obj.mk>
+LIB += libfsm
 
+.for src in ${SRC:Msrc/libfsm/*.c}
+${BUILD}/lib/libfsm.o:    ${BUILD}/${src:R}.o
+${BUILD}/lib/libfsm.opic: ${BUILD}/${src:R}.opic
+.endfor
 
-PARTS+= src/libfsm/out
-PARTS+= src/libfsm/pred
-PARTS+= src/libfsm/walk
-PARTS+= src/libfsm/cost
-
-.include <lx.parts.mk>
-
-
-LIB= ${.CURDIR:T}
-LIB_NS= fsm_
-
-.include <lx.lib.mk>
+# XXX: should libfsm.a/.so depend on these, or .o/.opic?
+.for lib in ${LIB:Madt}
+${BUILD}/lib/libfsm.o:    ${BUILD}/lib/${lib:R}.o
+${BUILD}/lib/libfsm.opic: ${BUILD}/lib/${lib:R}.opic
+.endfor
 

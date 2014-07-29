@@ -1,45 +1,31 @@
-# $Id$
+.include "../../share/mk/top.mk"
 
-.include "Makefile.inc"
+SRC += src/lx/ast.c
+SRC += src/lx/lexer.c
+SRC += src/lx/parser.c
+SRC += src/lx/main.c
+SRC += src/lx/out.c
+SRC += src/lx/var.c
 
+.for src in ${SRC:Msrc/lx/parser.c} ${SRC:Msrc/lx/main.c}
+CFLAGS_${src} += -I src # XXX: for internal.h
+DFLAGS_${src} += -I src # XXX: for internal.h
+.endfor
 
-SID_SID= parser.sid
-SID_ACT= parser.act
+.for src in ${SRC:Msrc/lx/lexer.c}
+CFLAGS_${src} += -D LX_HEADER='"lexer.h"'
+DFLAGS_${src} += -D LX_HEADER='"lexer.h"'
+.endfor
 
-.include <lx.sid.mk>
+PARSER += src/lx/parser.sid
 
+PROG += lx
 
-CFLAGS+= -I ${BASE_DIR}/src
-CFLAGS+= -I ${BASE_DIR}/include
+.for lib in ${LIB:Mlibre} ${LIB:Mlibfsm}
+${BUILD}/bin/lx: ${BUILD}/lib/${lib:R}.a
+.endfor
 
-CFLAGS+= -D LX_HEADER='"lexer.h"'
-
-SRCS+= ast.c
-SRCS+= lexer.c
-SRCS+= parser.c
-SRCS+= main.c
-SRCS+= out.c
-SRCS+= var.c
-
-.include <lx.obj.mk>
-
-
-PARTS+= src/adt
-PARTS+= src/lx/out
-
-.include <lx.parts.mk>
-
-
-PROG= ${.CURDIR:T}
-
-# TODO: this needs doing properly, including dependencies for libraries being rebuilt
-LDFLAGS+= -L${OBJ_DIR}/src/libfsm
-LDFLAGS+= -L${OBJ_DIR}/src/libre
-
-LIBS+= -lfsm
-LIBS+= -lre
-
-.include <lx.prog.mk>
-
-#	sid -s no-numeric-terminals parser.sid parser.act parser.c parser.h
+.for src in ${SRC:Msrc/lx/*.c}
+${BUILD}/bin/lx: ${BUILD}/${src:R}.o
+.endfor
 

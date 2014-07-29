@@ -1,15 +1,10 @@
-# $Id$
-
-.include "Makefile.inc"
-
-
-CFLAGS+= -I ${BASE_DIR}/src
-CFLAGS+= -I ${BASE_DIR}/include
+.include "../../../share/mk/top.mk"
 
 # costs
-SRCS+= legible.c
+SRC += src/libfsm/cost/legible.c
 
-.include <lx.obj.mk>
-
-.include <lx.partial.mk>
+.for src in ${SRC:Msrc/libfsm/cost/*.c}
+${BUILD}/lib/libfsm.o:    ${BUILD}/${src:R}.o
+${BUILD}/lib/libfsm.opic: ${BUILD}/${src:R}.opic
+.endfor
 

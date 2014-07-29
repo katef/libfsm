@@ -1,28 +1,19 @@
-# $Id$
+.include "../../../../share/mk/top.mk"
 
-.include "Makefile.inc"
+SRC += src/libre/form/literal/comp.c
+SRC += src/libre/form/literal/lexer.c
+SRC += src/libre/form/literal/parser.c
 
+# TODO: for this parser only
+# SID_CFLAGS+= -s numeric-terminals
 
-SIDFLAGS+= -s numeric-terminals
-SIDFLAGS+= -s no-numeric-terminals
-SIDFLAGS+= -s no-terminals
+# TODO: for this parser only
+# SID_ACT= ${BASE_DIR}/src/libre/parser.act
 
-SID_SID= parser.sid
-SID_ACT= ${BASE_DIR}/src/libre/parser.act
+#PARSER += src/libre/form/literal/parser.sid # TODO: central .act
 
-.include <lx.sid.mk>
-
-
-CFLAGS+= -I ${BASE_DIR}/src
-CFLAGS+= -I ${BASE_DIR}/include
-
-SRCS+= comp.c
-SRCS+= lexer.c
-SRCS+= ${SID_C}
-
-.include <lx.obj.mk>
-
-.include <lx.partial.mk>
-
-comp.c: parser.h
+.for src in ${SRC:Msrc/libre/form/literal/*.c}
+${BUILD}/lib/libre.o:    ${BUILD}/${src:R}.o
+${BUILD}/lib/libre.opic: ${BUILD}/${src:R}.opic
+.endfor
 

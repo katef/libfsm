@@ -1,17 +1,17 @@
 # $Id$
 
-.include "Makefile.inc"
+.include "../../share/mk/top.mk"
 
+SRC += src/adt/bitmap.c
+SRC += src/adt/priq.c
+SRC += src/adt/path.c
+SRC += src/adt/set.c
+SRC += src/adt/xalloc.c
 
-CFLAGS+= -I ${BASE_DIR}/include
+LIB += adt
 
-SRCS+= bitmap.c
-SRCS+= priq.c
-SRCS+= path.c
-SRCS+= set.c
-SRCS+= xalloc.c
-
-.include <lx.obj.mk>
-
-.include <lx.partial.mk>
+.for src in ${SRC:Msrc/adt/*.c}
+${BUILD}/lib/adt.o:    ${BUILD}/${src:R}.o
+${BUILD}/lib/adt.opic: ${BUILD}/${src:R}.opic
+.endfor
 

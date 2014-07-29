@@ -1,30 +1,12 @@
-# $Id$
+.include "../../share/mk/top.mk"
 
-.include "Makefile.inc"
+SRC += src/libre/getc.c
+SRC += src/libre/re.c
 
+LIB += libre
 
-#CFLAGS+= -I ${BASE_DIR}/src/lib
-CFLAGS+= -I ${BASE_DIR}/src/hooks
-CFLAGS+= -I ${BASE_DIR}/include
-
-SRCS+= getc.c
-SRCS+= re.c
-
-.include <lx.obj.mk>
-
-
-PARTS+= src/libre/form
-
-.include <lx.parts.mk>
-
-
-LIB= ${.CURDIR:T}
-
-# TODO: this needs doing properly, including dependencies for libraries being rebuilt
-LDFLAGS+= -L${OBJ_DIR}/src/libfsm
-
-LIBS+= -lfsm
-LIB_NS= re_
-
-.include <lx.lib.mk>
+.for src in ${SRC:Msrc/libre/*.c}
+${BUILD}/lib/libre.o:    ${BUILD}/${src:R}.o
+${BUILD}/lib/libre.opic: ${BUILD}/${src:R}.opic
+.endfor
 

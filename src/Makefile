@@ -1,16 +1,11 @@
-# $Id$
+.include "../share/mk/top.mk"
 
-.include "Makefile.inc"
+SUBDIR += adt
 
+SUBDIR += libfsm
+#SUBDIR += libre
 
-SUBDIR+= adt
-
-SUBDIR+= libfsm
-SUBDIR+= libre
-
-SUBDIR+= fsm
-SUBDIR+= lx
-SUBDIR+= re
-
-.include <lx.subdir.mk>
+SUBDIR += fsm
+#SUBDIR += lx
+#SUBDIR += re
 

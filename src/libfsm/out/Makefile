@@ -1,17 +1,17 @@
-# $Id$
+.include "../../../share/mk/top.mk"
 
-.include "Makefile.inc"
+SRC += src/libfsm/out/c.c
+SRC += src/libfsm/out/csv.c
+SRC += src/libfsm/out/dot.c
+SRC += src/libfsm/out/fsm.c
 
+.for src in ${SRC:Msrc/libfsm/out/*.c}
+CFLAGS_${src} += -I src # XXX: for internal.h
+DFLAGS_${src} += -I src # XXX: for internal.h
+.endfor
 
-CFLAGS+= -I ${BASE_DIR}/src
-CFLAGS+= -I ${BASE_DIR}/include
-
-SRCS+= c.c
-SRCS+= csv.c
-SRCS+= dot.c
-SRCS+= fsm.c
-
-.include <lx.obj.mk>
-
-.include <lx.partial.mk>
+.for src in ${SRC:Msrc/libfsm/out/*.c}
+${BUILD}/lib/libfsm.o:    ${BUILD}/${src:R}.o
+${BUILD}/lib/libfsm.opic: ${BUILD}/${src:R}.opic
+.endfor
 

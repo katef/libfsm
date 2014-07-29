@@ -1,20 +1,15 @@
-# $Id$
-
-.include "Makefile.inc"
-
-
-CFLAGS+= -I ${BASE_DIR}/src
-CFLAGS+= -I ${BASE_DIR}/include
+.include "../../../share/mk/top.mk"
 
 # predicates
-SRCS+= isany.c
-SRCS+= isdfa.c
-SRCS+= isend.c
-SRCS+= iscomplete.c
-SRCS+= hasincoming.c
-SRCS+= hasoutgoing.c
+SRC += src/libfsm/pred/isany.c
+SRC += src/libfsm/pred/isdfa.c
+SRC += src/libfsm/pred/isend.c
+SRC += src/libfsm/pred/iscomplete.c
+SRC += src/libfsm/pred/hasincoming.c
+SRC += src/libfsm/pred/hasoutgoing.c
 
-.include <lx.obj.mk>
-
-.include <lx.partial.mk>
+.for src in ${SRC:Msrc/libfsm/pred/*.c}
+${BUILD}/lib/libfsm.o:    ${BUILD}/${src:R}.o
+${BUILD}/lib/libfsm.opic: ${BUILD}/${src:R}.opic
+.endfor
 

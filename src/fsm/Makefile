@@ -1,35 +1,23 @@
-# $Id$
+.include "../../share/mk/top.mk"
 
-.include "Makefile.inc"
+SRC += src/fsm/lexer.c
+SRC += src/fsm/main.c
+SRC += src/fsm/parser.c
 
+.for src in ${SRC:Msrc/fsm/parser.c}
+CFLAGS_${src} += -I src # XXX: for internal.h
+DFLAGS_${src} += -I src # XXX: for internal.h
+.endfor
 
-SID_SID= parser.sid
-SID_ACT= parser.act
+PARSER += src/fsm/parser.sid
 
-.include <lx.sid.mk>
+PROG += fsm
 
+.for lib in ${LIB:Mlibfsm}
+${BUILD}/bin/fsm: ${BUILD}/lib/${lib:R}.a
+.endfor
 
-CFLAGS+= -I ${BASE_DIR}/src
-CFLAGS+= -I ${BASE_DIR}/include
-
-SRCS+= lexer.c
-SRCS+= main.c
-SRCS+= parser.c
-
-.include <lx.obj.mk>
-
-
-PARTS+= src/adt
-
-.include <lx.parts.mk>
-
-
-PROG= ${.CURDIR:T}
-
-# TODO: this needs doing properly, including dependencies for libraries being rebuilt
-LDFLAGS+= -L${OBJ_DIR}/src/libfsm
-
-LIBS+= -lfsm
-
-.include <lx.prog.mk>
+.for src in ${SRC:Msrc/fsm/*.c}
+${BUILD}/bin/fsm: ${BUILD}/${src:R}.o
+.endfor
 
