@@ -4,13 +4,13 @@ SRC += src/libre/form/literal/comp.c
 SRC += src/libre/form/literal/lexer.c
 SRC += src/libre/form/literal/parser.c
 
-# TODO: for this parser only
-# SID_CFLAGS+= -s numeric-terminals
+PARSER += src/libre/form/literal/parser
 
 # TODO: for this parser only
-# SID_ACT= ${BASE_DIR}/src/libre/parser.act
-
-#PARSER += src/libre/form/literal/parser.sid # TODO: central .act
+.for parser in ${PARSER:Msrc/libre/form/literal/parser}
+SID_CFLAGS_${parser} += -s numeric-terminals
+ACT_${parser} = src/libre/parser.act
+.endfor
 
 .for src in ${SRC:Msrc/libre/form/literal/*.c}
 ${BUILD}/lib/libre.o:    ${BUILD}/${src:R}.o
