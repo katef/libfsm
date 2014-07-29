@@ -8,7 +8,7 @@ SRC += src/adt/path.c
 SRC += src/adt/set.c
 SRC += src/adt/xalloc.c
 
-LIB += adt
+PART += adt
 
 .for src in ${SRC:Msrc/adt/*.c}
 ${BUILD}/lib/adt.o:    ${BUILD}/${src:R}.o

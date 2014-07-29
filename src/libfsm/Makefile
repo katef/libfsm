@@ -39,9 +39,8 @@ ${BUILD}/lib/libfsm.o:    ${BUILD}/${src:R}.o
 ${BUILD}/lib/libfsm.opic: ${BUILD}/${src:R}.opic
 .endfor
 
-# XXX: should libfsm.a/.so depend on these, or .o/.opic?
-.for lib in ${LIB:Madt}
-${BUILD}/lib/libfsm.o:    ${BUILD}/lib/${lib:R}.o
-${BUILD}/lib/libfsm.opic: ${BUILD}/lib/${lib:R}.opic
+.for part in ${PART:Madt}
+${BUILD}/lib/libfsm.a:  ${BUILD}/lib/${part}.o
+${BUILD}/lib/libfsm.so: ${BUILD}/lib/${part}.opic
 .endfor
 
