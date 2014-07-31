@@ -1,15 +1,15 @@
 /*
  * Automatically generated from the files:
- *	parser.sid
+ *	src/lx/parser.sid
  * and
- *	parser.act
+ *	src/lx/parser.act
  * by:
  *	sid
  */
 
 /* BEGINNING OF HEADER */
 
-#line 89 "parser.act"
+#line 90 "src/lx/parser.act"
 
 
 	#include <stdio.h>
@@ -22,16 +22,16 @@
 
 	struct ast *lx_parse(FILE *f);
 
-#line 26 "parser.h"
+#line 26 "src/lx/parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
 extern void p_lx(lex_state, act_state, ast *);
 /* BEGINNING OF TRAILER */
 
-#line 479 "parser.act"
+#line 526 "src/lx/parser.act"
 
 
-#line 36 "parser.h"
+#line 36 "src/lx/parser.h"
 
 /* END OF FILE */

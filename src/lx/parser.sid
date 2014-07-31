@@ -39,6 +39,7 @@
 	<pattern-buffer>: ()      -> (:string);
 
 	<deref-var>:       (:zone, :string) -> (:fsm);
+	<deref-token>:     (:zone, :string) -> (:fsm);
 
 	<compile-literal>: (:string)          -> (:fsm);
 	<compile-regex>:   (:string, :cflags) -> (:fsm);
@@ -97,6 +98,9 @@
 		pattern: (z :zone) -> (r :fsm) = {
 			n = IDENT;
 			r = <deref-var>(z, n);
+		||
+			t = TOKEN;
+			r = <deref-token>(z, t);
 		||
 			body;
 			STR;

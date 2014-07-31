@@ -22,6 +22,7 @@
 %header% @{
 
 	#include <assert.h>
+	#include <string.h>
 	#include <stdlib.h>
 	#include <stdio.h>
 	#include <errno.h>
@@ -171,6 +172,52 @@
 			/* TODO: use *err */
 			perror("fsm_clone");
 			@!;
+		}
+	@};
+
+	<deref-token>: (z :zone, t :string) -> (r :fsm) = @{
+		const struct ast_mapping *m;
+
+		assert(@t != NULL);
+
+		@r = re_new_empty();
+		if (@r == NULL) {
+			perror("re_new_empty");
+			@!;
+		}
+
+		for (m = @z->ml; m != NULL; m = m->next) {
+			struct fsm *fsm;
+			struct fsm_state *s;
+
+			if (m->token == NULL) {
+				continue;
+			}
+
+			if (0 != strcmp(m->token->s, @t)) {
+				continue;
+			}
+
+			fsm = fsm_clone(m->fsm);
+			if (fsm == NULL) {
+				perror("fsm_clone");
+				@!;
+			}
+
+			/*
+			 * We don't want to take these with us, because the output here is a
+			 * general-purpose FSM for which no mapping has yet been made,
+			 * so that it can be used in expressions as for any pattern.
+			 */
+			for (s = fsm->sl; s != NULL; s = s->next) {
+				s->opaque = NULL;
+			}
+
+			@r = fsm_union(@r, fsm);
+			if (@r == NULL) {
+				perror("fsm_determinise_opaque");
+				@!;
+			}
 		}
 	@};
 
