@@ -343,7 +343,7 @@ main(int argc, char *argv[])
 
 					/* TODO: escape hex etc */
 					fprintf(stderr, " for example on input '%s%s'\n", buf,
-						n >= sizeof buf - 1 ? "..." : "");
+						n >= (int) sizeof buf - 1 ? "..." : "");
 
 					e = 1;
 				}
