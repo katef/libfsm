@@ -856,15 +856,17 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "\n");
 
 		fprintf(f, "\tt = lx->z(lx);\n");
-		fprintf(f, "\tif (lx->lgetc == NULL && lx->free != NULL) {\n");
-		fprintf(f, "\t\tlx->free(lx);\n");
-		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
 
 		fprintf(f, "\tif (lx->push != NULL) {\n");
 		fprintf(f, "\t\tif (-1 == lx->push(lx, '\\0')) {\n");
 		fprintf(f, "\t\t\treturn TOK_ERROR;\n");
 		fprintf(f, "\t\t}\n");
+		fprintf(f, "\t}\n");
+		fprintf(f, "\n");
+
+		fprintf(f, "\tif (lx->lgetc == NULL && lx->free != NULL) {\n");
+		fprintf(f, "\t\tlx->free(lx);\n");
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
 

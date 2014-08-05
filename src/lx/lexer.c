@@ -1067,7 +1067,7 @@ lx_name(enum lx_token t)
 void
 lx_init(struct lx *lx)
 {
-	const static struct lx lx_default;
+	static const struct lx lx_default;
 
 	assert(lx != NULL);
 
@@ -1096,14 +1096,15 @@ lx_next(struct lx *lx)
 	}
 
 	t = lx->z(lx);
-	if (lx->lgetc == NULL && lx->free != NULL) {
-		lx->free(lx);
-	}
 
 	if (lx->push != NULL) {
 		if (-1 == lx->push(lx, '\0')) {
 			return TOK_ERROR;
 		}
+	}
+
+	if (lx->lgetc == NULL && lx->free != NULL) {
+		lx->free(lx);
 	}
 
 	return t;
