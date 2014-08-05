@@ -9,7 +9,7 @@ SID_${parser} ?= ${parser:R}.sid
 ACT_${parser} ?= ${parser:R}.act
 
 ${parser:R}.c ${parser:R}.h: ${SID_${parser}} ${ACT_${parser}}
-	${SID} ${SID_CFLAGS} ${SID_CFLAGS_${parser}} $> ${parser:R}.c ${parser:R}.h \
+	${SID} -l ansi-c ${SID_CFLAGS} ${SID_CFLAGS_${parser}} ${.ALLSRC:M*.sid} ${.ALLSRC:M*.act} ${parser:R}.c ${parser:R}.h \
 		|| { rm -f ${parser:R}.c ${parser}.h; false; }
 
 ${parser:R}.h: ${SID_${parser}} ${ACT_${parser}}
