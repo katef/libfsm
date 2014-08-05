@@ -16,7 +16,7 @@ ${parser:R}.h: ${SID_${parser}} ${ACT_${parser}}
 ${parser:R}.c: ${SID_${parser}} ${ACT_${parser}}
 
 test::
-	${SID} -l test SID_${parser}
+	${SID} -l test ${SID_${parser}}
 
 gen:: ${parser:R}.c ${parser:R}.h
 
