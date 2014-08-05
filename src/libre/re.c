@@ -1,11 +1,5 @@
 /* $Id$ */
 
-/*
- * TODO: libre.so API frontend
- * TODO: (other libraries go under form/ somewhere for libre_whatever.so
- * and depend on libre.so.
- */
-
 #include <assert.h>
 #include <stdlib.h>
 #include <errno.h>
