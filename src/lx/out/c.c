@@ -820,7 +820,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "void\n");
 		fprintf(f, "lx_init(struct lx *lx)\n");
 		fprintf(f, "{\n");
-		fprintf(f, "\tconst static struct lx lx_default;\n");
+		fprintf(f, "\tstatic const struct lx lx_default;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(lx != NULL);\n");
 		fprintf(f, "\n");
