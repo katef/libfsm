@@ -16,12 +16,15 @@ lx_print(struct ast *ast, FILE *f, enum lx_out format)
 	assert(f != NULL);
 
 	switch (format) {
-	case LX_OUT_C:   out = lx_out_c;   break;
-	case LX_OUT_H:   out = lx_out_h;   break;
-	case LX_OUT_DOT: out = lx_out_dot; break;
+	case LX_OUT_C:    out = lx_out_c;   break;
+	case LX_OUT_H:    out = lx_out_h;   break;
+	case LX_OUT_DOT:  out = lx_out_dot; break;
+	case LX_OUT_TEST: out = NULL;       break;
 	}
 
-	assert(out != NULL);
+	if (out == NULL) {
+		return;
+	}
 
 	out(ast, f);
 }
