@@ -33,6 +33,7 @@ re_cflags(const char *s, enum re_cflags *f)
 		switch (*p) {
 		case 'i': *f |= RE_ICASE;   break;
 		case 'g': *f |= RE_NEWLINE; break;
+		case 'r': *f |= RE_REVERSE; break;
 
 		default:
 			errno = EINVAL;
@@ -93,6 +94,12 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	new = comp(getc, opaque, cflags, err);
 	if (new == NULL) {
 		return NULL;
+	}
+
+	if (cflags & RE_REVERSE) {
+		if (!fsm_reverse(new)) {
+			goto error;
+		}
 	}
 
 	if (cflags & RE_ICASE) {

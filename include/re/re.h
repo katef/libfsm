@@ -18,14 +18,15 @@ enum re_form {
 };
 
 enum re_cflags {
-	RE_ICASE      = 1 << 0,
-	RE_NEWLINE    = 1 << 1
+	RE_ICASE   = 1 << 0,
+	RE_NEWLINE = 1 << 1,
+	RE_REVERSE = 1 << 2
 };
 
 enum re_eflags {
-	RE_NOTBOL = 1 << 0,
-	RE_NOTEOL = 1 << 1,
-	RE_GREEDY = 1 << 2
+	RE_NOTBOL  = 1 << 0,
+	RE_NOTEOL  = 1 << 1,
+	RE_GREEDY  = 1 << 2
 };
 
 enum re_err {

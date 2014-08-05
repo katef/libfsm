@@ -351,7 +351,8 @@ z1(struct lx *lx)
 
 		case S2:
 			switch (c) {
-			case 'i': state = S1;      continue;
+			case 'i':
+			case 'r': state = S1;      continue;
 			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_RE;
 			}
 
