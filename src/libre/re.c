@@ -96,6 +96,12 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
+	/*
+	 * All cflags operators commute with respect to composition.
+	 * That is, the order of application here does not matter;
+	 * here I'm trying to keep these ordered for efficiency.
+	 */
+
 	if (cflags & RE_REVERSE) {
 		if (!fsm_reverse(new)) {
 			goto error;
