@@ -23,6 +23,7 @@ ast_new(void)
 	}
 
 	new->zl = NULL;
+	new->tl = NULL;
 
 	return new;
 }
