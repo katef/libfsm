@@ -10,7 +10,8 @@ struct ast;
 enum lx_out {
 	LX_OUT_C,
 	LX_OUT_H,
-	LX_OUT_DOT
+	LX_OUT_DOT,
+	LX_OUT_TEST
 };
 
 void

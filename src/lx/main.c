@@ -164,7 +164,9 @@ main(int argc, char *argv[])
 				exit(EXIT_SUCCESS);
 
 			case 'l':
-				if (0 == strcmp(optarg, "dot")) {
+				if (0 == strcmp(optarg, "test")) {
+					format = LX_OUT_TEST;
+				} else if (0 == strcmp(optarg, "dot")) {
 					format = LX_OUT_DOT;
 				} else if (0 == strcmp(optarg, "c")) {
 					format = LX_OUT_C;
