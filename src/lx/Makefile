@@ -17,9 +17,14 @@ CFLAGS_${src} += -D LX_HEADER='"lexer.h"'
 DFLAGS_${src} += -D LX_HEADER='"lexer.h"'
 .endfor
 
+LEXER  += src/lx/lexer.lx
 PARSER += src/lx/parser.sid
 
 PROG += lx
+
+.for src in ${SRC:Msrc/lx/parser.c}
+${src}: src/lx/lexer.h
+.endfor
 
 .for lib in ${LIB:Mlibre} ${LIB:Mlibfsm}
 ${BUILD}/bin/lx: ${BUILD}/lib/${lib:R}.a

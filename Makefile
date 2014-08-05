@@ -37,6 +37,7 @@ DIR += ${BUILD}/lib
 
 .include <subdir.mk>
 .include <sid.mk>
+.include <lx.mk>
 .include <obj.mk>
 .include <dep.mk>
 .include <ar.mk>
