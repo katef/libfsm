@@ -4,7 +4,7 @@
 all::  mkdir .WAIT dep .WAIT lib prog
 dep::
 gen::
-test:: all
+test::
 install:: all
 clean::
 
