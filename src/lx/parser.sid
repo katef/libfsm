@@ -20,14 +20,23 @@
 	RE: () -> (:cflags);
 	STR;
 
-	CLOSE;
-	OPEN;
-
 	BIND;
-	!ALT;
 	SEMI;
 	TO;
 	MAP;
+
+	CLOSE;  OPEN;
+	LPAREN; RPAREN;
+
+	STAR;
+	CROSS;
+	QMARK;
+
+	TILDE;
+	DASH;
+	BANG;
+	DOT;
+	PIPE;
 
 	EOF;
 	!ERROR;
@@ -47,10 +56,17 @@
 	!<regex-empty>: () -> (:fsm); /* TODO: proper name for matching the empty string? */
 	<regex-any>:    () -> (:fsm);
 
-	!<op-complement>: (:fsm)       -> ();
-	!<op-complete>:   (:fsm)       -> ();
-	!<op-subtract>:   (:fsm, :fsm) -> (:fsm);
+	<op-star>:        (:fsm) -> ();
+	<op-cross>:       (:fsm) -> ();
+	<op-qmark>:       (:fsm) -> ();
+	<op-complement>:  (:fsm) -> ();
+	!<op-complete>:   (:fsm) -> ();
+	<op-reverse>:     (:fsm) -> ();
+
 	<op-concat>:      (:fsm, :fsm) -> (:fsm);
+	<op-product>:     (:fsm, :fsm) -> (:fsm);
+	<op-subtract>:    (:fsm, :fsm) -> (:fsm);
+	<op-alt>:         (:fsm, :fsm) -> (:fsm);
 
 	<subtract-exit>:  (:fsm, :fsm) -> (:fsm);
 
@@ -79,9 +95,10 @@
 	<err-expected-close>;
 	<err-expected-eof>;
 
+	<err-expected-thing>;
 	<err-expected-list>;
 
-	concaternated-patterns: (z :zone) -> (q :fsm) [
+	pattern: (z :zone) -> (r :fsm) [
 
 		body: () -> () = {
 			c = ESC;
@@ -95,34 +112,110 @@
 			$;
 		};
 
-		pattern: (z :zone) -> (r :fsm) = {
-			n = IDENT;
-			r = <deref-var>(z, n);
+	] = {
+		n = IDENT;
+		r = <deref-var>(z, n);
+	||
+		t = TOKEN;
+		r = <deref-token>(z, t);
+	||
+		body;
+		STR;
+		s = <pattern-buffer>;
+		r = <compile-literal>(s);
+	||
+		body;
+		f = RE;
+		s = <pattern-buffer>;
+		r = <compile-regex>(s, f);
+	};
+
+	expr: (z :zone) -> (q :fsm) [
+
+		primary-expr: (z :zone) -> (q :fsm) = {
+			q = pattern(z);
 		||
-			t = TOKEN;
-			r = <deref-token>(z, t);
+			LPAREN;
+			q = expr(z);
+			RPAREN;
+		};
+
+		postfix-expr: (z :zone) -> (q :fsm) = {
+			q = primary-expr(z);
 		||
-			body;
-			STR;
-			s = <pattern-buffer>;
-			r = <compile-literal>(s);
+			q = postfix-expr(z);
+			STAR;
+			<op-star>(q);
 		||
-			body;
-			f = RE;
-			s = <pattern-buffer>;
-			r = <compile-regex>(s, f);
+			q = postfix-expr(z);
+			CROSS;
+			<op-cross>(q);
+		||
+			q = postfix-expr(z);
+			QMARK;
+			<op-qmark>(q);
+		};
+
+		prefix-expr: (z :zone) -> (q :fsm) = {
+			q = postfix-expr(z);
+		||
+			TILDE;
+			q = prefix-expr(z);
+			<op-complement>(q);
+		||
+			BANG; /* unary minus might make more sense here */
+			q = prefix-expr(z);
+			<op-reverse>(q);
+		};
+
+		infix-expr: (z :zone) -> (q :fsm) [
+
+			dot-expr: (z :zone) -> (q :fsm) = {
+				q = prefix-expr(z);
+			||
+				a = prefix-expr(z);
+				DOT;
+				b = dot-expr(z);
+				q = <op-product>(a, b);
+			};
+
+			cat-expr: (z :zone) -> (q :fsm) = {
+				q = dot-expr(z);
+			||
+				a = dot-expr(z);
+				/* no operator */
+				b = cat-expr(z);
+				q = <op-concat>(a, b);
+			};
+
+			sub-expr: (z :zone) -> (q :fsm) = {
+				q = cat-expr(z);
+			||
+				a = cat-expr(z);
+				DASH;
+				b = sub-expr(z);
+				q = <op-subtract>(a, b);
+			};
+
+			alt-expr: (z :zone) -> (q :fsm) = {
+				q = sub-expr(z);
+			||
+				a = alt-expr(z);
+				PIPE;
+				b = sub-expr(z);
+				q = <op-alt>(a, b);
+			};
+
+		] = {
+			q = alt-expr(z);
 		};
 
 	] = {
-		q = pattern(z);
-	||
-		a = concaternated-patterns(z);
-		b = pattern(z);
-		q = <op-concat>(a, b);
+		q = infix-expr(z);
 	};
 
 	token-mapping: (z :zone) -> (r :fsm, t :string) = {
-		r = concaternated-patterns(z);
+		r = expr(z);
 
 		{
 			t = <no-token>;
@@ -139,27 +232,6 @@
 
 	list-of-things: (a :ast, z :zone, exit :fsm) -> () [
 
-		bind-thing: (a :ast, z :zone, exit :fsm) -> () = {
-			n = IDENT;
-
-			{
-				BIND;
-			##
-				<err-expected-bind>;
-			};
-
-			r = concaternated-patterns(z);
-			q = <subtract-exit>(r, exit);
-
-			{
-				SEMI;
-			##
-				<err-expected-semi>;
-			};
-
-			<add-binding>(a, z, n, q);
-		};
-
 		token-thing: (a :ast, z :zone, exit :fsm) -> (q :fsm, t :string) = {
 			(r, t) = token-mapping(z);
 
@@ -170,6 +242,27 @@
 			##
 				<err-expected-semi>;
 			};
+		};
+
+		bind-thing: (a :ast, z :zone, exit :fsm) -> () = {
+			n = IDENT;
+
+			{
+				BIND;
+			##
+				<err-expected-bind>;
+			};
+
+			r = expr(z);
+			q = <subtract-exit>(r, exit);
+
+			{
+				SEMI;
+			##
+				<err-expected-semi>;
+			};
+
+			<add-binding>(a, z, n, q);
 		};
 
 		zone-thing: (a :ast, parent :zone, exit :fsm) -> () = {
@@ -256,13 +349,15 @@
 		 */
 
 		thing: (a :ast, z :zone, exit :fsm) -> () = {
-			bind-thing(a, z, exit);
-		||
 			(r, t) = token-thing(a, z, exit);
 			to = <no-to>;
 			<add-mapping>(a, z, to, r, t);
 		||
+			bind-thing(a, z, exit);
+		||
 			zone-thing(a, z, exit);
+		##
+			<err-expected-thing>;
 		};
 
 	] = {

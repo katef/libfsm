@@ -358,6 +358,21 @@
 		@z = NULL;
 	@};
 
+	<op-star>: (r :fsm) -> () = @{
+		fprintf(stderr, "unimplemented\n");
+		@!;
+	@};
+
+	<op-cross>: (r :fsm) -> () = @{
+		fprintf(stderr, "unimplemented\n");
+		@!;
+	@};
+
+	<op-qmark>: (r :fsm) -> () = @{
+		fprintf(stderr, "unimplemented\n");
+		@!;
+	@};
+
 	<op-complement>: (r :fsm) -> () = @{
 		assert(@r != NULL);
 
@@ -376,13 +391,11 @@
 		}
 	@};
 
-	<op-subtract>: (a :fsm, b :fsm) -> (q :fsm) = @{
-		assert(@a != NULL);
-		assert(@b != NULL);
+	<op-reverse>: (r :fsm) -> () = @{
+		assert(@r != NULL);
 
-		@q = fsm_subtract(@a, @b);
-		if (@q == NULL) {
-			perror("fsm_subtract");
+		if (!fsm_reverse(@r)) {
+			perror("fsm_reverse");
 			@!;
 		}
 	@};
@@ -396,6 +409,29 @@
 			perror("fsm_concat");
 			@!;
 		}
+	@};
+
+	<op-product>: (a :fsm, b :fsm) -> (q :fsm) = @{
+		fprintf(stderr, "unimplemented\n");
+		@q = NULL;
+		@!;
+	@};
+
+	<op-subtract>: (a :fsm, b :fsm) -> (q :fsm) = @{
+		assert(@a != NULL);
+		assert(@b != NULL);
+
+		@q = fsm_subtract(@a, @b);
+		if (@q == NULL) {
+			perror("fsm_subtract");
+			@!;
+		}
+	@};
+
+	<op-alt>: (a :fsm, b :fsm) -> (q :fsm) = @{
+		fprintf(stderr, "unimplemented\n");
+		@q = NULL;
+		@!;
 	@};
 
 	<subtract-exit>: (a :fsm, b :fsm) -> (q :fsm) = @{
@@ -474,8 +510,12 @@
 		err_expected("EOF");
 	@};
 
+	<err-expected-thing> = @{
+		err_expected("token mapping, variable binding or zone");
+	@};
+
 	<err-expected-list> = @{
-		err_expected("list of token mappings or zones");
+		err_expected("list of token mapping, variable bindings or zones");
 	@};
 
 %trailer% @{

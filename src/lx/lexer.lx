@@ -21,13 +21,25 @@
 }
 
 '='  -> $bind;
-'|'  -> $alt;
 ';'  -> $semi;
 '..' -> $to;
 '->' -> $map;
 
-'{'  -> $open;
-'}'  -> $close;
+'{' -> $open;   '}' -> $close;
+'(' -> $lparen; ')' -> $rparen;
+
+# regexp operators
+'*' -> $star;
+'+' -> $cross;
+'?' -> $qmark;
+
+# expression operators
+# TODO: complete, intersection
+'~' -> $tilde;
+'-' -> $dash;
+'!' -> $bang;
+'.' -> $dot;
+'|' -> $pipe;
 
 ident = /[a-z_][a-z0-9_]*/i;
 
