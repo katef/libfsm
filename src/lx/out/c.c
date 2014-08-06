@@ -193,10 +193,12 @@ singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		fprintf(f, "':");
 
 		/* non-unique states fall through */
+/* XXX: this is an incorrect optimisation; to re-enable when fixed
 		if (contains(state->edges, i + 1, state->edges[i].sl->state)) {
 			fprintf(f, "\n");
 			continue;
 		}
+*/
 
 		/* TODO: pad S%u out to maximum state width */
 		if (state->edges[i].sl->state != state) {
