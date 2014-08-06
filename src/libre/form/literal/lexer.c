@@ -48,13 +48,11 @@ lex_literal_nexttoken(struct lex_state *state)
 
 	c = state->f(state->opaque);
 	if (c == EOF) {
-fprintf(stderr, "literal c=EOF -> TOK_EOF\n");
 		return TOK_EOF;
 	}
 
 	state->c = c;
 
-fprintf(stderr, "literal c='%c' -> TOK_CHAR/%d\n", c, TOK_CHAR);
 	return TOK_CHAR;
 }
 

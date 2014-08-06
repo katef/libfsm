@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 60 "src/libre/parser.act"
+#line 59 "src/libre/parser.act"
 
 
 	typedef struct fsm *       fsm;
@@ -45,7 +45,7 @@
 extern void p_re__simple(fsm, cflags, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 366 "src/libre/parser.act"
+#line 364 "src/libre/parser.act"
 
 
 #line 52 "src/libre/form/simple/parser.h"
