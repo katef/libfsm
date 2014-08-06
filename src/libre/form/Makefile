@@ -16,7 +16,6 @@ PARSER += src/libre/form/${form}/parser
 
 # TODO: for this parser only
 .for parser in ${PARSER:Msrc/libre/form/${form}/parser}
-SID_CFLAGS_${parser} += -s numeric-terminals
 ACT_${parser} = src/libre/parser.act
 .endfor
 

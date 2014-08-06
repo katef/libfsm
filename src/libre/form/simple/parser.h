@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 59 "src/libre/parser.act"
+#line 60 "src/libre/parser.act"
 
 
 	typedef struct fsm *       fsm;
@@ -32,7 +32,7 @@
 	};
 
 	#define CURRENT_TERMINAL (act_state->lex_tok)
-	#define ERROR_TERMINAL   18
+	#define ERROR_TERMINAL   (TOK_ERROR)
 	#define ADVANCE_LEXER    do { act_state->lex_tok = act_state->lex_nexttoken(lex_state); } while (0)
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok;  \
 	                              act_state->lex_tok = tok;                      } while (0)
@@ -45,7 +45,7 @@
 extern void p_re__simple(fsm, cflags, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 364 "src/libre/parser.act"
+#line 366 "src/libre/parser.act"
 
 
 #line 52 "src/libre/form/simple/parser.h"
