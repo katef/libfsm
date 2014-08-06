@@ -1,15 +1,15 @@
 /*
  * Automatically generated from the files:
- *	form/literal/parser.sid
+ *	src/libre/form/literal/parser.sid
  * and
- *	parser.act
+ *	src/libre/parser.act
  * by:
  *	sid
  */
 
 /* BEGINNING OF HEADER */
 
-#line 67 "parser.act"
+#line 59 "src/libre/parser.act"
 
 
 	typedef struct fsm *       fsm;
@@ -32,22 +32,22 @@
 	};
 
 	#define CURRENT_TERMINAL (act_state->lex_tok)
-	#define ERROR_TERMINAL   (TOK_ERROR)
+	#define ERROR_TERMINAL   15
 	#define ADVANCE_LEXER    do { act_state->lex_tok = act_state->lex_nexttoken(lex_state); } while (0)
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok;  \
 	                              act_state->lex_tok = tok;                      } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save;  } while (0)
 
-#line 42 "form/literal/parser.h"
+#line 42 "src/libre/form/literal/parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
 extern void p_re__literal(fsm, cflags, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 364 "parser.act"
+#line 364 "src/libre/parser.act"
 
 
-#line 52 "form/literal/parser.h"
+#line 52 "src/libre/form/literal/parser.h"
 
 /* END OF FILE */

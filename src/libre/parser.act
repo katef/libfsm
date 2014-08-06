@@ -1,13 +1,5 @@
 /* $Id$ */
 
-/*
- * TODO: actions common to all grammars.
- * globs only use a few; regex parsers use most.
- *
- * TODO: explain that in some cases (e.g. counting) actions are centralised
- * here for the sake of DRY, at the expense of slight overkill.
- */
-
 %prefixes%
 
 	terminal = TOK_;
@@ -91,6 +83,14 @@
 	@};
 
 %actions%
+
+	/*
+	 * These are parser actions common to all grammars provided by libre.
+	 * Globs use only a few of the available actions; regexps use most.
+	 *
+	 * In some cases (e.g. counting) actions are centralised here for
+	 * the sake of DRY, at the expense of slight overkill.
+	 */
 
 	<make-states>: () -> (x :fsm_state, y :fsm_state) = @{
 		assert(fsm != NULL);
