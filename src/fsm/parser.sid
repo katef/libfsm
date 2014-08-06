@@ -2,33 +2,38 @@
 
 %types%
 
+	char;
 	string;
 	state;
 
 %terminals%
 
-	ident: () -> (:string);
-	label: () -> (:string);
-	any;
+	IDENT: () -> (:string);
 
-	start;
-	end;
+	LABEL;
+	CHAR: () -> (:char);
 
-	arrow;
+	START;
+	END;
 
-	sep;
-	comma;
+	TO;
+	ANY;
+	SEP;
+	COMMA;
 
-	eof;
-	!unknown;
+	EOF;
+	!UNKNOWN;
 
 %productions%
+
+	<label-char>:       (:char) -> ();
+	<label-buffer>:     ()      -> (:string);
 
 	<add-state>:        (:string) -> (:state);
 	<mark-start>:       (:state)  -> ();
 	<mark-end>:         (:state)  -> ();
 
-	<free>:             (:string) -> ();
+	!<free>:            (:string) -> ();
 	<free-statelist>;
 
 	<add-edge-literal>: (:state, :state, :string) -> ();
@@ -43,8 +48,24 @@
 	<err-parse>;
 
 
+	label: () -> (n :string) [
+
+		body = {
+			c = CHAR;
+			<label-char>(c);
+			body;
+		||
+			$;
+		};
+
+	] = {
+		body;
+		LABEL;
+		n = <label-buffer>;
+	};
+
 	id: () -> (n :string) = {
-		n = ident;
+		n = IDENT;
 	||
 		n = label;
 	};
@@ -62,7 +83,7 @@
 	||
 		end-ids;
 		{
-			comma;
+			COMMA;
 		##
 			<err-expected-comma>;
 		};
@@ -71,7 +92,7 @@
 
 	xend = {
 		{
-			end;
+			END;
 		##
 			<err-expected-end>;
 		};
@@ -79,7 +100,7 @@
 		end-ids;
 
 		{
-			sep;
+			SEP;
 		##
 			<err-expected-sep>;
 		};
@@ -87,7 +108,7 @@
 
 	xstart: () -> (n :string) = {
 		{
-			start;
+			START;
 		##
 			<err-expected-start>;
 		};
@@ -95,7 +116,7 @@
 		n = id;
 
 		{
-			sep;
+			SEP;
 		##
 			<err-expected-sep>;
 		};
@@ -103,7 +124,7 @@
 
 	edge = {
 		a = id;
-		arrow;
+		TO;
 		b = id;
 
 		x = <add-state>(a);
@@ -112,9 +133,8 @@
 		{
 			s = label;
 			<add-edge-literal>(x, y, s);
-			<free>(s);
 		||
-			any;
+			ANY;
 			<add-edge-any>(x, y);
 		||
 			<add-edge-epsilon>(x, y);
@@ -123,7 +143,7 @@
 		};
 
 		{
-			sep;
+			SEP;
 		##
 			<err-expected-sep>;
 		};
@@ -157,7 +177,7 @@
 			$;
 		};
 
-		eof;
+		EOF;
 
 		<free-statelist>;
 	##

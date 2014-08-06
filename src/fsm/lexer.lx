@@ -1,0 +1,24 @@
+# $Id$
+
+/[\r\n\t ]+/;
+"#" .. "\n";
+
+'"' .. '"' -> $label {
+	# TODO: escaping for special characters
+	/./ -> $char;
+}
+
+"'" .. "'" -> $label {
+	/./ -> $char;
+}
+
+'start:' -> $start;
+'end:'   -> $end;
+
+/[a-z0-9_]+/i -> $ident;
+
+'->' -> $to;
+'?'  -> $any;
+';'  -> $sep;
+','  -> $comma;
+
