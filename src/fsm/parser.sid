@@ -47,15 +47,16 @@
 	<err-expected-end>;
 	<err-parse>;
 
-
 	label: () -> (n :string) [
 
 		body = {
 			c = CHAR;
 			<label-char>(c);
-			body;
-		||
-			$;
+			{
+				body;
+			||
+				$;
+			};
 		};
 
 	] = {
@@ -70,43 +71,43 @@
 		n = label;
 	};
 
-	end-id = {
-		n = id;
+	edges [
 
-		s = <add-state>(n);
+		edge = {
+			a = id;
+			TO;
+			b = id;
 
-		<mark-end>(s);
-	};
+			x = <add-state>(a);
+			y = <add-state>(b);
 
-	end-ids = {
-		end-id;
+			{
+				s = label;
+				<add-edge-literal>(x, y, s);
+			||
+				ANY;
+				<add-edge-any>(x, y);
+			||
+				<add-edge-epsilon>(x, y);
+			##
+				<err-expected-trans>;
+			};
+
+			{
+				SEP;
+			##
+				<err-expected-sep>;
+			};
+		};
+
+	] = {
+		edges;
+		edge;
 	||
-		end-ids;
-		{
-			COMMA;
-		##
-			<err-expected-comma>;
-		};
-		end-id;
+		$;
 	};
 
-	xend = {
-		{
-			END;
-		##
-			<err-expected-end>;
-		};
-
-		end-ids;
-
-		{
-			SEP;
-		##
-			<err-expected-sep>;
-		};
-	};
-
-	xstart: () -> (n :string) = {
+	xstart = {
 		{
 			START;
 		##
@@ -120,62 +121,60 @@
 		##
 			<err-expected-sep>;
 		};
+
+		s = <add-state>(n);
+		<mark-start>(s);
+	||
+		$;
 	};
 
-	edge = {
-		a = id;
-		TO;
-		b = id;
+	xend [
 
-		x = <add-state>(a);
-		y = <add-state>(b);
+		end-id = {
+			n = id;
 
-		{
-			s = label;
-			<add-edge-literal>(x, y, s);
-		||
-			ANY;
-			<add-edge-any>(x, y);
-		||
-			<add-edge-epsilon>(x, y);
-		##
-			<err-expected-trans>;
+			s = <add-state>(n);
+			<mark-end>(s);
 		};
+
+		end-ids = {
+			end-id;
+
+			{
+				{
+					COMMA;
+				##
+					<err-expected-comma>;
+				};
+
+				end-ids;
+			||
+				$;
+			};
+		};
+
+	] = {
+		{
+			END;
+		##
+			<err-expected-end>;
+		};
+
+		end-ids;
 
 		{
 			SEP;
 		##
 			<err-expected-sep>;
 		};
-	};
-
-	edges = {
-		edges;
-		edge;
 	||
-		edge;
+		$;
 	};
 
 	fsm = {
-		{
-			edges;
-		||
-			$;
-		};
-
-		{
-			n = xstart;
-			s = <add-state>(n);
-			<mark-start>(s);
-		||
-			$;
-		};
-
-		{
-			xend;
-		||
-			$;
-		};
+		edges;
+		xstart;
+		xend;
 
 		EOF;
 
