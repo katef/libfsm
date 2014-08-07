@@ -32,6 +32,34 @@ usage(void)
 	       "           [-t <transformation>] [-e <execution> | -q <query>]\n");
 }
 
+static enum fsm_out
+language(const char *name)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		enum fsm_out format;
+	} a[] = {
+		{ "c",   FSM_OUT_C   },
+		{ "csv", FSM_OUT_CSV },
+		{ "dot", FSM_OUT_DOT },
+		{ "fsm", FSM_OUT_FSM }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].format;
+		}
+	}
+
+	fprintf(stderr, "unrecognised output language; valid languages are: "
+		"fsm, dot, table, c\n");
+	exit(EXIT_FAILURE);
+}
+
 static int
 query(struct fsm *fsm, const char *name)
 {
@@ -104,34 +132,6 @@ transform(struct fsm *fsm, const char *name)
 
 	fprintf(stderr, "unrecognised transformation; valid transformations are: "
 		"complete, complement, reverse, determinise, minimise\n");
-	exit(EXIT_FAILURE);
-}
-
-static enum fsm_out
-language(const char *name)
-{
-	size_t i;
-
-	struct {
-		const char *name;
-		enum fsm_out format;
-	} a[] = {
-		{ "c",   FSM_OUT_C   },
-		{ "csv", FSM_OUT_CSV },
-		{ "dot", FSM_OUT_DOT },
-		{ "fsm", FSM_OUT_FSM }
-	};
-
-	assert(name != NULL);
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (0 == strcmp(a[i].name, name)) {
-			return a[i].format;
-		}
-	}
-
-	fprintf(stderr, "unrecognised output language; valid languages are: "
-		"fsm, dot, table, c\n");
 	exit(EXIT_FAILURE);
 }
 

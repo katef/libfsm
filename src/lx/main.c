@@ -32,6 +32,34 @@ void usage(void)
 	printf("usage: lx [-h] [-g] [-l <language>] <input>\n");
 }
 
+static enum lx_out
+language(const char *name)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		enum lx_out format;
+	} a[] = {
+		{ "test", LX_OUT_TEST },
+		{ "dot",  LX_OUT_DOT  },
+		{ "c",    LX_OUT_C    },
+		{ "h",    LX_OUT_H    }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].format;
+		}
+	}
+
+	fprintf(stderr, "unrecognised output language; valid languages are: "
+		"test, dot, c, h\n");
+	exit(EXIT_FAILURE);
+}
+
 /* TODO: centralise */
 static FILE *
 xopen(int argc, char * const argv[], int i, FILE *f, const char *mode)
@@ -164,18 +192,7 @@ main(int argc, char *argv[])
 				exit(EXIT_SUCCESS);
 
 			case 'l':
-				if (0 == strcmp(optarg, "test")) {
-					format = LX_OUT_TEST;
-				} else if (0 == strcmp(optarg, "dot")) {
-					format = LX_OUT_DOT;
-				} else if (0 == strcmp(optarg, "c")) {
-					format = LX_OUT_C;
-				} else if (0 == strcmp(optarg, "h")) {
-					format = LX_OUT_H;
-				} else {
-					fprintf(stderr, "unrecognised output language; valid languages are: c, h, dot\n");
-					exit(EXIT_FAILURE);
-				}
+				format = language(optarg);
 				break;
 
 			case 'g':
