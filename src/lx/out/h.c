@@ -62,14 +62,21 @@ lx_out_h(const struct ast *ast, FILE *f)
 	out_tokens(ast, f);
 	fprintf(f, "\n");
 
+	fprintf(f, "struct lx_pos {\n");
+	fprintf(f, "\tunsigned byte;\n");
+	fprintf(f, "\tunsigned line;\n");
+	fprintf(f, "\tunsigned col;\n");
+	fprintf(f, "};\n");
+	fprintf(f, "\n");
+
 	fprintf(f, "struct lx {\n");
 	fprintf(f, "\tint (*lgetc)(struct lx *lx);\n");
 	fprintf(f, "\tvoid *opaque;\n");
 	fprintf(f, "\n");
 	fprintf(f, "\tint c; /* lx_ungetc buffer */\n");
-	fprintf(f, "\tunsigned byte;\n");
-	fprintf(f, "\tunsigned line;\n");
-	fprintf(f, "\tunsigned col;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tstruct lx_pos start;\n");
+	fprintf(f, "\tstruct lx_pos end;\n");
 	fprintf(f, "\n");
 	fprintf(f, "\tvoid *buf;\n");
 	fprintf(f, "\tint  (*push) (struct lx *lx, char c);\n");

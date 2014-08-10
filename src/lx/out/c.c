@@ -395,12 +395,12 @@ out_io(FILE *f)
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
-	fprintf(f, "\tlx->byte++;\n");
-	fprintf(f, "\tlx->col++;\n");
+	fprintf(f, "\tlx->end.byte++;\n");
+	fprintf(f, "\tlx->end.col++;\n");
 	fprintf(f, "\n");
 	fprintf(f, "\tif (c == '\\n') {\n");
-	fprintf(f, "\t\tlx->line++;\n");
-	fprintf(f, "\t\tlx->col = 0;\n");
+	fprintf(f, "\t\tlx->end.line++;\n");
+	fprintf(f, "\t\tlx->end.col = 0;\n");
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 	fprintf(f, "\treturn c;\n");
@@ -419,12 +419,12 @@ out_io(FILE *f)
 	fprintf(f, "\t\tlx->pop(lx);\n");
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
-	fprintf(f, "\tlx->byte--;\n");
-	fprintf(f, "\tlx->col--;\n");
+	fprintf(f, "\tlx->end.byte--;\n");
+	fprintf(f, "\tlx->end.col--;\n");
 	fprintf(f, "\n");
 	fprintf(f, "\tif (c == '\\n') {\n");
-	fprintf(f, "\t\tlx->line--;\n");
-	fprintf(f, "\t\tlx->col = 0; /* XXX: lost information */\n");
+	fprintf(f, "\t\tlx->end.line--;\n");
+	fprintf(f, "\t\tlx->end.col = 0; /* XXX: lost information */\n");
 	fprintf(f, "\t}\n");
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
@@ -644,6 +644,9 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tstate = S%u;\n", indexof(z->fsm, z->fsm->start));
 	fprintf(f, "\n");
 
+	fprintf(f, "lx->start = lx->end;\n");
+	fprintf(f, "\n");
+
 	fprintf(f, "\twhile (c = lx_getc(lx), c != EOF) {\n");
 
 	{
@@ -835,9 +838,9 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "\tlx->c = EOF;\n");
 		fprintf(f, "\tlx->z = NULL;\n");
 		fprintf(f, "\n");
-		fprintf(f, "\tlx->byte = 0;\n");
-		fprintf(f, "\tlx->line = 1;\n");
-		fprintf(f, "\tlx->col  = 1;\n");
+		fprintf(f, "\tlx->end.byte = 0;\n");
+		fprintf(f, "\tlx->end.line = 1;\n");
+		fprintf(f, "\tlx->end.col  = 1;\n");
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
