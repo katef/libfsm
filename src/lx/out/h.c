@@ -67,8 +67,9 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "\tvoid *opaque;\n");
 	fprintf(f, "\n");
 	fprintf(f, "\tint c; /* lx_ungetc buffer */\n");
-	fprintf(f, "\tunsigned line;\n");
 	fprintf(f, "\tunsigned byte;\n");
+	fprintf(f, "\tunsigned line;\n");
+	fprintf(f, "\tunsigned col;\n");
 	fprintf(f, "\n");
 	fprintf(f, "\tvoid *buf;\n");
 	fprintf(f, "\tint  (*push) (struct lx *lx, char c);\n");
