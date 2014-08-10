@@ -18,13 +18,20 @@ enum lx_token {
 	TOK_UNKNOWN
 };
 
+struct lx_pos {
+	unsigned byte;
+	unsigned line;
+	unsigned col;
+};
+
 struct lx {
 	int (*lgetc)(struct lx *lx);
 	void *opaque;
 
 	int c; /* lx_ungetc buffer */
-	unsigned line;
-	unsigned byte;
+
+	struct lx_pos start;
+	struct lx_pos end;
 
 	void *buf;
 	int  (*push) (struct lx *lx, char c);

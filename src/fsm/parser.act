@@ -66,8 +66,14 @@
 	                              act_state->lex_tok = tok;                     } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
 
-	static void err_expected(const char *token) {
-		fprintf(stderr, "syntax error: expected %s\n", token);
+	static void
+	err_expected(const struct lex_state *lex_state, const char *token)
+	{
+		assert(lex_state != NULL);
+
+		fprintf(stderr, "%u:%u: syntax error: expected %s\n",
+			lex_state->lx.start.line, lex_state->lx.start.col,
+			token);
 		exit(EXIT_FAILURE);
 	}
 
@@ -224,23 +230,23 @@
 
 
 	<err-expected-sep> = @{
-		err_expected("';'");
+		err_expected(lex_state, "';'");
 	@};
 
 	<err-expected-trans> = @{
-		err_expected("transition");
+		err_expected(lex_state, "transition");
 	@};
 
 	<err-expected-comma> = @{
-		err_expected("','");
+		err_expected(lex_state, "','");
 	@};
 
 	<err-expected-start> = @{
-		err_expected("'start:'");
+		err_expected(lex_state, "'start:'");
 	@};
 
 	<err-expected-end> = @{
-		err_expected("'end:'");
+		err_expected(lex_state, "'end:'");
 	@};
 
 	<err-parse> = @{

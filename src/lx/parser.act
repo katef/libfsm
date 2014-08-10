@@ -70,8 +70,14 @@
 	                              act_state->lex_tok = tok;                     } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
 
-	static void err_expected(const char *token) {
-		fprintf(stderr, "syntax error: expected %s\n", token);
+	static void
+	err_expected(const struct lex_state *lex_state, const char *token)
+	{
+		assert(lex_state != NULL);
+
+		fprintf(stderr, "%u:%u: syntax error: expected %s\n",
+			lex_state->lx.start.line, lex_state->lx.start.col,
+			token);
 		exit(EXIT_FAILURE);
 	}
 
@@ -479,43 +485,43 @@
 	@};
 
 	<err-expected-alt> = @{
-		err_expected("'|'");
+		err_expected(lex_state, "'|'");
 	@};
 
 	<err-expected-map> = @{
-		err_expected("'->'");
+		err_expected(lex_state, "'->'");
 	@};
 
 	<err-expected-bind> = @{
-		err_expected("'='");
+		err_expected(lex_state, "'='");
 	@};
 
 	<err-expected-semi> = @{
-		err_expected("';'");
+		err_expected(lex_state, "';'");
 	@};
 
 	<err-expected-to> = @{
-		err_expected("'..'");
+		err_expected(lex_state, "'..'");
 	@};
 
 	<err-expected-open> = @{
-		err_expected("'{'");
+		err_expected(lex_state, "'{'");
 	@};
 
 	<err-expected-close> = @{
-		err_expected("'}'");
+		err_expected(lex_state, "'}'");
 	@};
 
 	<err-expected-eof> = @{
-		err_expected("EOF");
+		err_expected(lex_state, "EOF");
 	@};
 
 	<err-expected-thing> = @{
-		err_expected("token mapping, variable binding or zone");
+		err_expected(lex_state, "mapping, binding or zone");
 	@};
 
 	<err-expected-list> = @{
-		err_expected("list of token mapping, variable bindings or zones");
+		err_expected(lex_state, "list of mappings, bindings or zones");
 	@};
 
 %trailer% @{

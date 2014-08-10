@@ -32,11 +32,13 @@ lx_getc(struct lx *lx)
 		}
 	}
 
-	if (c == '\n') {
-		lx->line++;
-	}
+	lx->end.byte++;
+	lx->end.col++;
 
-	lx->byte++;
+	if (c == '\n') {
+		lx->end.line++;
+		lx->end.col = 0;
+	}
 
 	return c;
 }
@@ -53,11 +55,13 @@ lx_ungetc(struct lx *lx, int c)
 		lx->pop(lx);
 	}
 
-	if (c == '\n') {
-		lx->line--;
-	}
+	lx->end.byte--;
+	lx->end.col--;
 
-	lx->byte--;
+	if (c == '\n') {
+		lx->end.line--;
+		lx->end.col = 0; /* XXX: lost information */
+	}
 }
 
 int
@@ -328,6 +332,8 @@ z1(struct lx *lx)
 
 	state = S3;
 
+lx->start = lx->end;
+
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
 			break;
@@ -387,6 +393,8 @@ z2(struct lx *lx)
 
 	state = S3;
 
+lx->start = lx->end;
+
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
 			break;
@@ -445,6 +453,8 @@ z3(struct lx *lx)
 	}
 
 	state = S3;
+
+lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
@@ -509,6 +519,8 @@ z4(struct lx *lx)
 	}
 
 	state = S21;
+
+lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
@@ -1342,8 +1354,9 @@ lx_init(struct lx *lx)
 	lx->c = EOF;
 	lx->z = NULL;
 
-	lx->line = 0;
-	lx->byte = 0;
+	lx->end.byte = 0;
+	lx->end.line = 1;
+	lx->end.col  = 1;
 }
 
 enum lx_token
