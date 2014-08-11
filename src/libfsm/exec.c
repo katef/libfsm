@@ -15,25 +15,6 @@
 
 #include "internal.h"
 
-/* TODO: centralise? */
-static int
-indexof(const struct fsm *fsm, const struct fsm_state *state)
-{
-	struct fsm_state *s;
-	int i;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
-		if (s == state) {
-			return i;
-		}
-	}
-
-	return -1;
-}
-
 struct fsm_state *
 nextstate(const struct fsm_state *state, char c)
 {
@@ -52,7 +33,7 @@ nextstate(const struct fsm_state *state, char c)
 	return s->state;
 }
 
-int
+struct fsm_state *
 fsm_exec(const struct fsm *fsm,
 	int (*fsm_getc)(void *opaque), void *opaque)
 {
@@ -68,7 +49,7 @@ fsm_exec(const struct fsm *fsm,
 
 	if (!fsm_all(fsm, fsm_isdfa)) {
 		errno = EINVAL;
-		return 0;
+		return NULL;
 	}
 
 	assert(fsm->start != NULL);
@@ -77,15 +58,15 @@ fsm_exec(const struct fsm *fsm,
 	while (c = fsm_getc(opaque), c != EOF) {
 		state = nextstate(state, c);
 		if (state == NULL) {
-			return 0;
+			return NULL;
 		}
 	}
 
 	if (!fsm_isend(fsm, state)) {
-		return 0;
+		return NULL;
 	}
 
-	return indexof(fsm, state);
+	return state;
 }
 
 int

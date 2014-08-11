@@ -170,7 +170,7 @@ main(int argc, char *argv[])
 			case 'c': out_options.consolidate_edges = 1;      break;
 			case 'n': out_options.prefix            = optarg; break;
 
-			case 'e': return fsm_exec(fsm, fsm_sgetc, &optarg);
+			case 'e': return NULL == fsm_exec(fsm, fsm_sgetc, &optarg);
 
 			case 'P':
 				{
