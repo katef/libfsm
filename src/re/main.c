@@ -15,6 +15,8 @@
 
 #include <re/re.h>
 
+#include "libfsm/internal.h" /* XXX */
+
 /*
  * TODO: match a regexp against arguments. return $? if all match
  *
@@ -36,7 +38,7 @@
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re [-h] { [-cid] [-lgeb9ps] <re> } <string>\n");
+	fprintf(stderr, "usage: re [-h] { [-cidm] [-lgeb9ps] <re> } <string>\n");
 }
 
 static enum
@@ -67,6 +69,7 @@ main(int argc, char *argv[])
 	struct fsm *fsm;
 	int files;
 	int dump;
+	int example;
 	struct fsm *(*join)(struct fsm *, struct fsm *);
 
 	if (argc < 2) {
@@ -87,7 +90,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hcdil:g:s:"), c != -1) {
+		while (c = getopt(argc, argv, "hcdil:mg:s:"), c != -1) {
 			struct fsm *new;
 			enum re_err err;
 
@@ -112,6 +115,10 @@ main(int argc, char *argv[])
 
 			case 'i':
 				files = 1;
+				break;
+
+			case 'm':
+				example = 1;
 				break;
 
 			case 'l':
@@ -166,6 +173,28 @@ main(int argc, char *argv[])
 	if (!fsm_determinise(fsm)) {
 		perror("fsm_determinise");
 		return EXIT_FAILURE;
+	}
+
+	if (example) {
+		struct fsm_state *s;
+		char buf[256]; /* TODO */
+		int n;
+
+		for (s = fsm->sl; s != NULL; s = s->next) {
+			if (!fsm_isend(fsm, s)) {
+				continue;
+			}
+
+			n = fsm_example(fsm, s, buf, sizeof buf);
+			if (-1 == n) {
+				perror("fsm_example");
+				return EXIT_FAILURE;
+			}
+
+			/* TODO: escape hex etc */
+			fprintf(stderr, "%s%s\n", buf,
+				n >= (int) sizeof buf - 1 ? "..." : "");
+		}
 	}
 
 	if (dump) {
