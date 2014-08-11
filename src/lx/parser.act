@@ -162,15 +162,22 @@
 	@};
 
 	<deref-var>: (z :zone, s :string) -> (r :fsm) = @{
+		struct ast_zone *z;
+
+		assert(@z != NULL);
 		assert(@s != NULL);
 
-		/* TODO: walk zone tree to root */
+		for (z = @z; z != NULL; z = z->parent) {
+			@r = var_find(z->vl, @s);
+			if (@r != NULL) {
+				break;
+			}
 
-		@r = var_find(@z->vl, @s);
-		if (@r == NULL) {
-			/* TODO: use *err */
-			fprintf(stderr, "No such variable: %s\n", @s);
-			@!;
+			if (@z->parent == NULL) {
+				/* TODO: use *err */
+				fprintf(stderr, "No such variable: %s\n", @s);
+				@!;
+			}
 		}
 
 		@r = fsm_clone(@r);
@@ -292,10 +299,10 @@
 		}
 	@};
 
-	<make-zone>: (a :ast) -> (z :zone) = @{
+	<make-zone>: (a :ast, parent :zone) -> (z :zone) = @{
 		assert(@a != NULL);
 
-		@z = ast_addzone(@a);
+		@z = ast_addzone(@a, @parent);
 		if (@z == NULL) {
 			perror("ast_addzone");
 			@!;
@@ -360,7 +367,7 @@
 		@r = NULL;
 	@};
 
-	<no-to>: () -> (z :zone) = @{
+	<no-zone>: () -> (z :zone) = @{
 		@z = NULL;
 	@};
 

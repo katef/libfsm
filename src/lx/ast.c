@@ -60,7 +60,7 @@ ast_addtoken(struct ast *ast, const char *s)
 }
 
 struct ast_zone *
-ast_addzone(struct ast *ast)
+ast_addzone(struct ast *ast, struct ast_zone *parent)
 {
 	struct ast_zone *new;
 
@@ -72,6 +72,8 @@ ast_addzone(struct ast *ast)
 	new->ml   = NULL;
 	new->fsm  = NULL;
 	new->vl   = NULL;
+
+	new->parent = parent;
 
 	new->next = ast->zl;
 	ast->zl   = new;
@@ -87,6 +89,7 @@ ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 
 	assert(z != NULL);
 	assert(fsm != NULL);
+	assert(to == NULL || to->parent == z); /* XXX: horrible API */
 
 	for (m = z->ml; m != NULL; m = m->next) {
 		assert(m->fsm != NULL);

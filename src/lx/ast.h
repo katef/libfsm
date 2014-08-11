@@ -21,6 +21,7 @@ struct ast_zone {
 	struct fsm *fsm;
 	struct var *vl;
 
+	struct ast_zone *parent;
 	struct ast_zone *next;
 };
 
@@ -50,7 +51,7 @@ struct ast_token *
 ast_addtoken(struct ast *ast, const char *s);
 
 struct ast_zone *
-ast_addzone(struct ast *ast);
+ast_addzone(struct ast *ast, struct ast_zone *parent);
 
 struct ast_mapping *
 ast_addmapping(struct ast_zone *z, struct fsm *fsm,

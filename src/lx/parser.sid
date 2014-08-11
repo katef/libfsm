@@ -70,8 +70,8 @@
 
 	<subtract-exit>:  (:fsm, :fsm) -> (:fsm);
 
-	<make-ast>:     ()     -> (:ast);
-	<make-zone>:    (:ast) -> (:zone);
+	<make-ast>:     ()            -> (:ast);
+	<make-zone>:    (:ast, :zone) -> (:zone);
 
 	<add-mapping>: (:ast, :zone, :zone, :fsm, :string) -> ();
 	<add-binding>: (:ast, :zone, :string, :fsm)        -> ();
@@ -80,7 +80,7 @@
 
 	<no-token>: () -> (:string);
 	<no-exit>:  () -> (:fsm);
-	<no-to>:    () -> (:zone);	/* TODO: rename target? */
+	<no-zone>:  () -> (:zone);
 
 	<clone>: (:fsm) -> (:fsm);
 	!<free>: (:string) -> ();
@@ -278,7 +278,7 @@
 
 			(r2, t2) = token-mapping(parent);
 
-			child = <make-zone>(a);
+			child = <make-zone>(a, parent);
 
 			{
 				{
@@ -297,7 +297,7 @@
 				 * specify an empty zone instead: /r1/ .. /r2/ { }
 				 */
 
-				x = <no-to>;
+				x = <no-zone>;
 				y = <no-token>;
 
 				/*
@@ -350,7 +350,7 @@
 
 		thing: (a :ast, z :zone, exit :fsm) -> () = {
 			(r, t) = token-thing(a, z, exit);
-			to = <no-to>;
+			to = <no-zone>;
 			<add-mapping>(a, z, to, r, t);
 		||
 			bind-thing(a, z, exit);
@@ -370,8 +370,10 @@
 	};
 
 	lx: () -> (a :ast) = {
+		parent = <no-zone>;
+
 		a = <make-ast>;
-		z = <make-zone>(a);
+		z = <make-zone>(a, parent);
 
 		exit = <no-exit>;
 
