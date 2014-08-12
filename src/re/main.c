@@ -11,6 +11,7 @@
 #include <fsm/fsm.h>
 #include <fsm/out.h>	/* XXX */
 #include <fsm/bool.h>
+#include <fsm/pred.h>
 #include <fsm/graph.h>
 
 #include <re/re.h>
