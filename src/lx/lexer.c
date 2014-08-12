@@ -38,7 +38,7 @@ lx_getc(struct lx *lx)
 
 	if (c == '\n') {
 		lx->end.line++;
-		lx->end.col = 0;
+		lx->end.col = 1;
 	}
 
 	return c;
