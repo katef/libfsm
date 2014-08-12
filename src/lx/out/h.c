@@ -164,7 +164,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "void %sinit(struct lx *lx);\n", prefix);
-	fprintf(f, "enum %stoken lx_next(struct lx *lx);\n", prefix);
+	fprintf(f, "enum lx_token %snext(struct lx *lx);\n", prefix);
 	fprintf(f, "\n");
 
 	fprintf(f, "int %sfgetc(struct lx *lx);\n", prefix); /* TODO: stdio only */

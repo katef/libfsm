@@ -284,7 +284,7 @@ out_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(ast != NULL);
 	assert(z != NULL);
 
-	fprintf(f, "static enum %stoken z%u(struct lx *lx);\n", prefix, zindexof(ast, z));
+	fprintf(f, "static enum lx_token z%u(struct lx *lx);\n", zindexof(ast, z));
 }
 
 static void
