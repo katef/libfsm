@@ -16,9 +16,11 @@
 	!PLUS;
 	!DOT;
 	!ALT;
+	!RANGE;
 	!SEP;
-	!OPEN_SUB;   !CLOSE_SUB;
-	!OPEN_GROUP; !CLOSE_GROUP;
+	!OPENSUB;   !CLOSESUB;
+	!OPENGROUP; !CLOSEGROUP;
+	!OPENCOUNT; !CLOSECOUNT;
 	!COUNT: () -> (:unsigned);
 	CHAR: () -> (:char);
 	EOF;

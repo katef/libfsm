@@ -36,28 +36,36 @@
 
 @}, @{
 
+	#include "lexer.h"
+
 	typedef struct fsm *       fsm;
 	typedef enum re_cflags     cflags;
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
 
 	struct act_state {
-		int lex_tok;
-		int lex_tok_save;
+		enum lx_token lex_tok;
+		enum lx_token lex_tok_save;
 		enum re_err err;
 
-		/*
-		 * XXX: This non-portably assumes all struct lex_state * pointers may
-		 * store the same representation. Really it ought to be void * instead.
-		 */
-		int (*lex_nexttoken)(struct lex_state *);
-		char (*lex_tokval)(struct lex_state *);
-		unsigned (*lex_tokval_u)(struct lex_state *);
+		enum lx_token (*lex_next)(struct lx *);
+	};
+
+	struct lex_state {
+		struct lx lx;
+		struct lx_dynbuf buf; /* XXX: unneccessary since we're lexing from a string */
+
+		int (*lgetc)(void *opaque);
+		void *opaque;
+
+		/* TODO: use lx's generated conveniences for the pattern buffer */
+		char a[512];
+		char *p;
 	};
 
 	#define CURRENT_TERMINAL (act_state->lex_tok)
 	#define ERROR_TERMINAL   @$ERROR
-	#define ADVANCE_LEXER    do { act_state->lex_tok = act_state->lex_nexttoken(lex_state); } while (0)
+	#define ADVANCE_LEXER    do { act_state->lex_tok = act_state->lex_next(&lex_state->lx); } while (0)
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok;  \
 	                              act_state->lex_tok = tok;                      } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save;  } while (0)
@@ -67,7 +75,10 @@
 %terminals%
 
 	CHAR: () -> (c :char) = @{
-		@c = act_state->lex_tokval(lex_state);
+		assert(lex_state->buf.a[0] != '\0');
+		assert(lex_state->buf.a[1] == '\0');
+
+		@c = lex_state->buf.a[0];
 	@};
 
 	EOL: () -> (c :char) = @{
@@ -79,7 +90,8 @@
 	@};
 
 	COUNT: () -> (n :unsigned) = @{
-		@n = act_state->lex_tokval_u(lex_state);
+		@n = strtoul(lex_state->buf.a, NULL, 10);
+		/* TODO: range check */
 	@};
 
 %actions%

@@ -9,8 +9,10 @@
 
 /* BEGINNING OF HEADER */
 
-#line 59 "src/libre/parser.act"
+#line 67 "src/libre/parser.act"
 
+
+	#include "lexer.h"
 
 	typedef struct fsm *       fsm;
 	typedef enum re_cflags     cflags;
@@ -18,36 +20,42 @@
 	typedef struct act_state * act_state;
 
 	struct act_state {
-		int lex_tok;
-		int lex_tok_save;
+		enum lx_token lex_tok;
+		enum lx_token lex_tok_save;
 		enum re_err err;
 
-		/*
-		 * XXX: This non-portably assumes all struct lex_state * pointers may
-		 * store the same representation. Really it ought to be void * instead.
-		 */
-		int (*lex_nexttoken)(struct lex_state *);
-		char (*lex_tokval)(struct lex_state *);
-		unsigned (*lex_tokval_u)(struct lex_state *);
+		enum lx_token (*lex_next)(struct lx *);
+	};
+
+	struct lex_state {
+		struct lx lx;
+		struct lx_dynbuf buf; /* XXX: unneccessary since we're lexing from a string */
+
+		int (*lgetc)(void *opaque);
+		void *opaque;
+
+		/* TODO: use lx's generated conveniences for the pattern buffer */
+		char a[512];
+		char *p;
 	};
 
 	#define CURRENT_TERMINAL (act_state->lex_tok)
 	#define ERROR_TERMINAL   (TOK_ERROR)
-	#define ADVANCE_LEXER    do { act_state->lex_tok = act_state->lex_nexttoken(lex_state); } while (0)
+	#define ADVANCE_LEXER    do { act_state->lex_tok = act_state->lex_next(&lex_state->lx); } while (0)
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok;  \
 	                              act_state->lex_tok = tok;                      } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save;  } while (0)
 
-#line 42 "src/libre/form/literal/parser.h"
+#line 50 "src/libre/form/literal/parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
 extern void p_re__literal(fsm, cflags, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 364 "src/libre/parser.act"
+#line 376 "src/libre/parser.act"
 
 
-#line 52 "src/libre/form/literal/parser.h"
+#line 60 "src/libre/form/literal/parser.h"
 
 /* END OF FILE */

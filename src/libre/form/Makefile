@@ -12,10 +12,19 @@ SRC += src/libre/form/${form}/comp.c
 SRC += src/libre/form/${form}/lexer.c
 SRC += src/libre/form/${form}/parser.c
 
-PARSER += src/libre/form/${form}/parser
+LEXER  += src/libre/form/${form}/lexer.lx
+PARSER += src/libre/form/${form}/parser.sid
 
-# TODO: for this parser only
-.for parser in ${PARSER:Msrc/libre/form/${form}/parser}
+.for lexer in ${LEXER:Msrc/libre/form/${form}/lexer.lx}
+LX_CFLAGS_${lexer} += -p lx_${form}_
+.endfor
+
+.for src in ${SRC:Msrc/libre/form/${form}/lexer.c}
+CFLAGS_${src} += -D LX_HEADER='"lexer.h"'
+DFLAGS_${src} += -D LX_HEADER='"lexer.h"'
+.endfor
+
+.for parser in ${PARSER:Msrc/libre/form/${form}/parser.sid}
 ACT_${parser} = src/libre/parser.act
 .endfor
 

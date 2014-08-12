@@ -62,7 +62,7 @@ ZL2_list_Hof_Hitems:;
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 187 "src/libre/parser.act"
+#line 199 "src/libre/parser.act"
 
 		(ZIz) = fsm_addstate(fsm);
 		if ((ZIz) == NULL) {
@@ -73,7 +73,7 @@ ZL2_list_Hof_Hitems:;
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hitems_C_Citem (fsm, cflags, lex_state, act_state, ZIx, &ZIz);
-		/* BEGINNING OF INLINE: 55 */
+		/* BEGINNING OF INLINE: 58 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_QMARK): case (TOK_STAR): case (TOK_CHAR):
@@ -88,7 +88,7 @@ ZL2_list_Hof_Hitems:;
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 194 "src/libre/parser.act"
+#line 206 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIz), (ZIy))) {
 			goto ZL1;
@@ -104,7 +104,7 @@ ZL2_list_Hof_Hitems:;
 				goto ZL1;
 			}
 		}
-		/* END OF INLINE: 55 */
+		/* END OF INLINE: 58 */
 	}
 	return;
 ZL1:;
@@ -125,7 +125,7 @@ p_list_Hof_Hitems_C_Citem(fsm fsm, cflags cflags, lex_state lex_state, act_state
 			}
 			/* BEGINNING OF ACTION: count-1 */
 			{
-#line 335 "src/libre/parser.act"
+#line 347 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (*ZIy);
@@ -144,7 +144,7 @@ p_list_Hof_Hitems_C_Citem(fsm fsm, cflags cflags, lex_state lex_state, act_state
 			}
 			/* BEGINNING OF ACTION: count-1 */
 			{
-#line 335 "src/libre/parser.act"
+#line 347 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (*ZIy);
@@ -163,7 +163,7 @@ p_list_Hof_Hitems_C_Citem(fsm fsm, cflags cflags, lex_state lex_state, act_state
 			}
 			/* BEGINNING OF ACTION: count-0-or-many */
 			{
-#line 285 "src/libre/parser.act"
+#line 297 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (*ZIy))) {
 			goto ZL1;
@@ -222,7 +222,7 @@ p_list_Hof_Hitems_C_Cany(fsm fsm, cflags cflags, lex_state lex_state, act_state 
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-any */
 		{
-#line 211 "src/libre/parser.act"
+#line 223 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -257,7 +257,7 @@ p_list_Hof_Hitems_C_Cwildcard(fsm fsm, cflags cflags, lex_state lex_state, act_s
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-any */
 		{
-#line 211 "src/libre/parser.act"
+#line 223 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -288,7 +288,7 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 
 		/* BEGINNING OF ACTION: make-states */
 		{
-#line 99 "src/libre/parser.act"
+#line 111 "src/libre/parser.act"
 
 		assert(fsm != NULL);
 		/* TODO: assert fsm is empty */
@@ -306,7 +306,7 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 #line 307 "src/libre/form/glob/parser.c"
 		}
 		/* END OF ACTION: make-states */
-		/* BEGINNING OF INLINE: 57 */
+		/* BEGINNING OF INLINE: 60 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_QMARK): case (TOK_STAR): case (TOK_CHAR):
@@ -322,7 +322,7 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 194 "src/libre/parser.act"
+#line 206 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			goto ZL3;
@@ -339,7 +339,7 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-items */
 				{
-#line 350 "src/libre/parser.act"
+#line 362 "src/libre/parser.act"
 
 		act_state->err = RE_EXITEMS;
 	
@@ -349,8 +349,8 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			}
 		ZL2:;
 		}
-		/* END OF INLINE: 57 */
-		/* BEGINNING OF INLINE: 58 */
+		/* END OF INLINE: 60 */
+		/* BEGINNING OF INLINE: 61 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -366,7 +366,7 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 358 "src/libre/parser.act"
+#line 370 "src/libre/parser.act"
 
 		act_state->err = RE_EXEOF;
 	
@@ -376,7 +376,7 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			}
 		ZL4:;
 		}
-		/* END OF INLINE: 58 */
+		/* END OF INLINE: 61 */
 	}
 	return;
 ZL1:;
@@ -397,11 +397,14 @@ p_list_Hof_Hitems_C_Cliteral(fsm fsm, cflags cflags, lex_state lex_state, act_st
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 70 "src/libre/parser.act"
+#line 81 "src/libre/parser.act"
 
-		ZIc = act_state->lex_tokval(lex_state);
+		assert(lex_state->buf.a[0] != '\0');
+		assert(lex_state->buf.a[1] == '\0');
+
+		ZIc = lex_state->buf.a[0];
 	
-#line 405 "src/libre/form/glob/parser.c"
+#line 408 "src/libre/form/glob/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -411,7 +414,7 @@ p_list_Hof_Hitems_C_Cliteral(fsm fsm, cflags cflags, lex_state lex_state, act_st
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-literal */
 		{
-#line 200 "src/libre/parser.act"
+#line 212 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -422,7 +425,7 @@ p_list_Hof_Hitems_C_Cliteral(fsm fsm, cflags cflags, lex_state lex_state, act_st
 			goto ZL1;
 		}
 	
-#line 426 "src/libre/form/glob/parser.c"
+#line 429 "src/libre/form/glob/parser.c"
 		}
 		/* END OF ACTION: add-literal */
 	}
@@ -434,9 +437,9 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 362 "src/libre/parser.act"
+#line 374 "src/libre/parser.act"
 
 
-#line 441 "src/libre/form/glob/parser.c"
+#line 444 "src/libre/form/glob/parser.c"
 
 /* END OF FILE */
