@@ -381,7 +381,7 @@ out_io(FILE *f)
 {
 	/* TODO: consider passing char *c, and return int 0/-1 for error */
 	fprintf(f, "static int\n");
-	fprintf(f, "%sgetc(struct lx *lx)\n", prefix);
+	fprintf(f, "lx_getc(struct lx *lx)\n");
 	fprintf(f, "{\n");
 	fprintf(f, "\tint c;\n");
 	fprintf(f, "\n");
@@ -649,7 +649,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "lx->start = lx->end;\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "\twhile (c = %sgetc(lx), c != EOF) {\n", prefix);
+	fprintf(f, "\twhile (c = lx_getc(lx), c != EOF) {\n");
 
 	{
 		struct fsm_state *s;
