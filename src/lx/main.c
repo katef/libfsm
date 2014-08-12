@@ -24,12 +24,14 @@
 
 #include "libfsm/internal.h" /* XXX */
 
+#include "out/out.h"
+
 #include "ast.h"
 
 static
 void usage(void)
 {
-	printf("usage: lx [-h] [-g] [-l <language>] <input>\n");
+	printf("usage: lx [-h] [-g] [-l <language>] [-p <prefix>] <input>\n");
 }
 
 static enum lx_out
@@ -185,7 +187,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hvl:g"), c != -1) {
+		while (c = getopt(argc, argv, "hvl:p:g"), c != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -193,6 +195,10 @@ main(int argc, char *argv[])
 
 			case 'l':
 				format = language(optarg);
+				break;
+
+			case 'p':
+				prefix = optarg;
 				break;
 
 			case 'g':

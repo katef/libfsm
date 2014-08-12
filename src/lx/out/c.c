@@ -17,6 +17,8 @@
 #include "../ast.h"
 #include "../internal.h"
 
+#include "out.h"
+
 static int
 skip(const struct fsm *fsm, const struct fsm_state *state)
 {
@@ -231,7 +233,7 @@ singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		assert(m != NULL);
 
 		/* XXX: don't need this if complete */
-		fprintf(f, "\t\t\tdefault:  lx_ungetc(lx, c); return ");
+		fprintf(f, "\t\t\tdefault:  %sungetc(lx, c); return ", prefix);
 		if (m->to != NULL) {
 			fprintf(f, "lx->z = z%u, ", zindexof(ast, m->to));
 		}
@@ -282,14 +284,14 @@ out_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(ast != NULL);
 	assert(z != NULL);
 
-	fprintf(f, "static enum lx_token z%u(struct lx *lx);\n", zindexof(ast, z));
+	fprintf(f, "static enum %stoken z%u(struct lx *lx);\n", prefix, zindexof(ast, z));
 }
 
 static void
 out_lgetc(FILE *f)
 {
 	fprintf(f, "int\n");
-	fprintf(f, "lx_fgetc(struct lx *lx)\n");
+	fprintf(f, "%sfgetc(struct lx *lx)\n", prefix);
 	fprintf(f, "{\n");
 	fprintf(f, "\tassert(lx != NULL);\n");
 	fprintf(f, "\tassert(lx->opaque != NULL);\n");
@@ -299,7 +301,7 @@ out_lgetc(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "int\n");
-	fprintf(f, "lx_sgetc(struct lx *lx)\n");
+	fprintf(f, "%ssgetc(struct lx *lx)\n", prefix);
 	fprintf(f, "{\n");
 	fprintf(f, "\tchar *s;\n");
 	fprintf(f, "\n");
@@ -316,7 +318,7 @@ out_lgetc(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "int\n");
-	fprintf(f, "lx_agetc(struct lx *lx)\n");
+	fprintf(f, "%sagetc(struct lx *lx)\n", prefix);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_arr *a;\n");
 	fprintf(f, "\n");
@@ -338,7 +340,7 @@ out_lgetc(FILE *f)
 
 	/* TODO: POSIX only */
 	fprintf(f, "int\n");
-	fprintf(f, "lx_dgetc(struct lx *lx)\n");
+	fprintf(f, "%sdgetc(struct lx *lx)\n", prefix);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_fd *d;\n");
 	fprintf(f, "\n");
@@ -379,7 +381,7 @@ out_io(FILE *f)
 {
 	/* TODO: consider passing char *c, and return int 0/-1 for error */
 	fprintf(f, "static int\n");
-	fprintf(f, "lx_getc(struct lx *lx)\n");
+	fprintf(f, "%sgetc(struct lx *lx)\n", prefix);
 	fprintf(f, "{\n");
 	fprintf(f, "\tint c;\n");
 	fprintf(f, "\n");
@@ -408,7 +410,7 @@ out_io(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "static void\n");
-	fprintf(f, "lx_ungetc(struct lx *lx, int c)\n");
+	fprintf(f, "%sungetc(struct lx *lx, int c)\n", prefix);
 	fprintf(f, "{\n");
 	fprintf(f, "\tassert(lx != NULL);\n");
 	fprintf(f, "\tassert(lx->c == EOF);\n");
@@ -434,7 +436,7 @@ static void
 out_buf(FILE *f)
 {
 	fprintf(f, "int\n");
-	fprintf(f, "lx_dynpush(struct lx *lx, char c)\n");
+	fprintf(f, "%sdynpush(struct lx *lx, char c)\n", prefix);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_dynbuf *t;\n");
 	fprintf(f, "\n");
@@ -480,7 +482,7 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "void\n");
-	fprintf(f, "lx_dynpop(struct lx *lx)\n");
+	fprintf(f, "%sdynpop(struct lx *lx)\n", prefix);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_dynbuf *t;\n");
 	fprintf(f, "\n");
@@ -501,7 +503,7 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "int\n");
-	fprintf(f, "lx_dynclear(struct lx *lx)\n");
+	fprintf(f, "%sdynclear(struct lx *lx)\n", prefix);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_dynbuf *t;\n");
 	fprintf(f, "\n");
@@ -533,7 +535,7 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "void\n");
-	fprintf(f, "lx_dynfree(struct lx *lx)\n");
+	fprintf(f, "%sdynfree(struct lx *lx)\n", prefix);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_dynbuf *t;\n");
 	fprintf(f, "\n");
@@ -547,7 +549,7 @@ out_buf(FILE *f)
 	fprintf(f, "}\n");
 
 	fprintf(f, "int\n");
-	fprintf(f, "lx_fixedpush(struct lx *lx, char c)\n");
+	fprintf(f, "%sfixedpush(struct lx *lx, char c)\n", prefix);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_fixedbuf *t;\n");
 	fprintf(f, "\n");
@@ -572,7 +574,7 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "void\n");
-	fprintf(f, "lx_fixedpop(struct lx *lx)\n");
+	fprintf(f, "%sfixedpop(struct lx *lx)\n", prefix);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_fixedbuf *t;\n");
 	fprintf(f, "\n");
@@ -593,7 +595,7 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "int\n");
-	fprintf(f, "lx_fixedclear(struct lx *lx)\n");
+	fprintf(f, "%sfixedclear(struct lx *lx)\n", prefix);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_fixedbuf *t;\n");
 	fprintf(f, "\n");
@@ -647,7 +649,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "lx->start = lx->end;\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "\twhile (c = lx_getc(lx), c != EOF) {\n");
+	fprintf(f, "\twhile (c = %sgetc(lx), c != EOF) {\n", prefix);
 
 	{
 		struct fsm_state *s;
@@ -800,7 +802,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 		struct ast_token *t;
 
 		fprintf(f, "const char *\n");
-		fprintf(f, "lx_name(enum lx_token t)\n");
+		fprintf(f, "%sname(enum lx_token t)\n", prefix);
 		fprintf(f, "{\n");
 
 		fprintf(f, "\tswitch (t) {\n");
@@ -827,7 +829,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	{
 		fprintf(f, "void\n");
-		fprintf(f, "lx_init(struct lx *lx)\n");
+		fprintf(f, "%sinit(struct lx *lx)\n", prefix);
 		fprintf(f, "{\n");
 		fprintf(f, "\tstatic const struct lx lx_default;\n");
 		fprintf(f, "\n");
@@ -847,7 +849,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	{
 		fprintf(f, "enum lx_token\n");
-		fprintf(f, "lx_next(struct lx *lx)\n");
+		fprintf(f, "%snext(struct lx *lx)\n", prefix);
 		fprintf(f, "{\n");
 
 		fprintf(f, "\tenum lx_token t;\n");

@@ -7,6 +7,8 @@
 #include "../ast.h"
 #include "../internal.h"
 
+#include "out.h"
+
 /* TODO: centralise */
 static void
 out_esctok(FILE *f, const char *s)
@@ -73,7 +75,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "\tint (*lgetc)(struct lx *lx);\n");
 	fprintf(f, "\tvoid *opaque;\n");
 	fprintf(f, "\n");
-	fprintf(f, "\tint c; /* lx_ungetc buffer */\n");
+	fprintf(f, "\tint c; /* %sungetc buffer */\n", prefix);
 	fprintf(f, "\n");
 	fprintf(f, "\tstruct lx_pos start;\n");
 	fprintf(f, "\tstruct lx_pos end;\n");
@@ -140,7 +142,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "/* opaque for lx_agetc */\n");
+	fprintf(f, "/* opaque for %sagetc */\n", prefix);
 	fprintf(f, "struct lx_arr {\n");
 	fprintf(f, "\tchar *p;\n");
 	fprintf(f, "\tsize_t len;\n");
@@ -148,7 +150,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 
 	/* TODO: posix only */
-	fprintf(f, "/* opaque for lx_fdgetc */\n");
+	fprintf(f, "/* opaque for %sfdgetc */\n", prefix);
 	fprintf(f, "struct lx_fd {\n");
 	fprintf(f, "\tchar *p;\n");
 	fprintf(f, "\tsize_t len;\n");
@@ -158,28 +160,28 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "const char *lx_name(enum lx_token t);\n");
+	fprintf(f, "const char *%sname(enum lx_token t);\n", prefix);
 	fprintf(f, "\n");
 
-	fprintf(f, "void lx_init(struct lx *lx);\n");
-	fprintf(f, "enum lx_token lx_next(struct lx *lx);\n");
+	fprintf(f, "void %sinit(struct lx *lx);\n", prefix);
+	fprintf(f, "enum %stoken lx_next(struct lx *lx);\n", prefix);
 	fprintf(f, "\n");
 
-	fprintf(f, "int lx_fgetc(struct lx *lx);\n"); /* TODO: stdio only */
-	fprintf(f, "int lx_sgetc(struct lx *lx);\n");
-	fprintf(f, "int lx_agetc(struct lx *lx);\n");
-	fprintf(f, "int lx_dgetc(struct lx *lx);\n");
+	fprintf(f, "int %sfgetc(struct lx *lx);\n", prefix); /* TODO: stdio only */
+	fprintf(f, "int %ssgetc(struct lx *lx);\n", prefix);
+	fprintf(f, "int %sagetc(struct lx *lx);\n", prefix);
+	fprintf(f, "int %sdgetc(struct lx *lx);\n", prefix);
 	fprintf(f, "\n");
 
-	fprintf(f, "int  lx_dynpush(struct lx *lx, char c);\n");
-	fprintf(f, "void lx_dynpop(struct lx *lx);\n");
-	fprintf(f, "int  lx_dynclear(struct lx *lx);\n");
-	fprintf(f, "void lx_dynfree(struct lx *lx);\n");
+	fprintf(f, "int  %sdynpush(struct lx *lx, char c);\n", prefix);
+	fprintf(f, "void %sdynpop(struct lx *lx);\n", prefix);
+	fprintf(f, "int  %sdynclear(struct lx *lx);\n", prefix);
+	fprintf(f, "void %sdynfree(struct lx *lx);\n", prefix);
 	fprintf(f, "\n");
 
-	fprintf(f, "int  lx_fixedpush(struct lx *lx, char c);\n");
-	fprintf(f, "void lx_fixedpop(struct lx *lx);\n");
-	fprintf(f, "int  lx_fixedclear(struct lx *lx);\n");
+	fprintf(f, "int  %sfixedpush(struct lx *lx, char c);\n", prefix);
+	fprintf(f, "void %sfixedpop(struct lx *lx);\n", prefix);
+	fprintf(f, "int  %sfixedclear(struct lx *lx);\n", prefix);
 	fprintf(f, "\n");
 
 	fprintf(f, "#endif\n");

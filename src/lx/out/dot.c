@@ -12,6 +12,7 @@
 #include "../ast.h"
 #include "../internal.h"
 
+#include "out.h"
 
 /* TODO: centralise with libfsm */
 static unsigned int
@@ -158,7 +159,7 @@ lx_out_dot(const struct ast *ast, FILE *f)
 
 	assert(f != NULL);
 
-	fprintf(f, "digraph G {\n");
+	fprintf(f, "digraph %sG {\n", prefix);
 
 	fprintf(f, "\tnode [ shape = circle, label = \"\" ];\n");
 	fprintf(f, "\n");
