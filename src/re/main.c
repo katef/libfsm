@@ -172,8 +172,8 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (!fsm_determinise(fsm)) {
-		perror("fsm_determinise");
+	if (!fsm_minimise(fsm)) {
+		perror("fsm_minimise");
 		return EXIT_FAILURE;
 	}
 
