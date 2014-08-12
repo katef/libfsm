@@ -646,7 +646,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tstate = S%u;\n", indexof(z->fsm, z->fsm->start));
 	fprintf(f, "\n");
 
-	fprintf(f, "lx->start = lx->end;\n");
+	fprintf(f, "\tlx->start = lx->end;\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "\twhile (c = lx_getc(lx), c != EOF) {\n");
