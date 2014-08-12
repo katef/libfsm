@@ -1,0 +1,32 @@
+# $Id$
+
+'^' -> $sol;
+'$' -> $eol;
+'?' -> $qmark;
+'*' -> $star;
+'+' -> $plus;
+'.' -> $dot;
+'|' -> $alt;
+'(' -> $opensub;
+')' -> $closesub;
+
+esc = '\' /[\\tnrvf]/;
+esc -> $esc;
+
+/[a-zA-Z0-9_]/ -> $char;
+
+'[' -> $opengroup .. ']' -> $closegroup {
+	'^' -> $invert;
+	'-' -> $range;
+
+	esc -> $esc;
+
+	# XXX: not the above
+	/[A-Za-z0-9_]/ -> $char;
+}
+
+'{' -> $opencount .. '}' -> $closecount {
+	','      -> $sep;
+	/[0-9]+/ -> $count;
+}
+
