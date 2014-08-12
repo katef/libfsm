@@ -83,9 +83,10 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	files = 0;
-	dump  = 0;
-	join  = fsm_union;
+	files   = 0;
+	dump    = 0;
+	example = 0;
+	join    = fsm_union;
 
 	{
 		int c;
