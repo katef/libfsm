@@ -79,7 +79,7 @@ re_strerror(enum re_err err);
 /*
  * Match a string.
  *
- * TODO: Return the regexp that matched, or NULL for no match.
+ * Return the accepting state, or NULL for no match.
  */
 struct fsm_state *
 re_exec(const struct fsm *fsm, const char *s, enum re_eflags eflags);
