@@ -81,7 +81,7 @@ re_strerror(enum re_err err);
  *
  * TODO: Return the regexp that matched, or NULL for no match.
  */
-void
+struct fsm_state *
 re_exec(const struct fsm *fsm, const char *s, enum re_eflags eflags);
 
 

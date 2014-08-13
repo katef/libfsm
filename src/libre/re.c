@@ -9,6 +9,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
+#include <fsm/exec.h>
 #include <fsm/graph.h>
 
 #include "form/comp.h"
@@ -138,9 +139,14 @@ re_strerror(enum re_err err)
 	return NULL;
 }
 
-void
+struct fsm_state *
 re_exec(const struct fsm *fsm, const char *s, enum re_eflags eflags)
 {
-	/* TODO */
+	assert(fsm != NULL);
+	assert(s != NULL);
+
+	/* TODO: eflags */
+
+	return fsm_exec(fsm, fsm_sgetc, &s);
 }
 

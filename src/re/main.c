@@ -67,11 +67,12 @@ re_form form(char c)
 int
 main(int argc, char *argv[])
 {
+	struct fsm *(*join)(struct fsm *, struct fsm *);
 	struct fsm *fsm;
 	int files;
 	int dump;
 	int example;
-	struct fsm *(*join)(struct fsm *, struct fsm *);
+	int r;
 
 	if (argc < 2) {
 		usage();
@@ -203,11 +204,19 @@ main(int argc, char *argv[])
 		fsm_print(fsm, stdout, FSM_OUT_FSM, NULL);
 	}
 
-	/* TODO: flags? */
-	re_exec(fsm, argv[0], 0);
+	r = 0;
+
+	{
+		int i;
+
+		for (i = 0; i < argc; i++) {
+			/* TODO: eflags */
+			r += !re_exec(fsm, argv[i], 0);
+		}
+	}
 
 	fsm_free(fsm);
 
-	return EXIT_SUCCESS;
+	return r;
 }
 
