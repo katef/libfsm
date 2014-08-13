@@ -13,7 +13,8 @@
 esc = '\' /[\\tnrvf]/;
 esc -> $esc;
 
-/[a-zA-Z0-9_]/ -> $char;
+# TODO: /./ - the above
+/[^\^\$\?\*\+\.\|\(\)\[\]\{\}\\]/ -> $char;
 
 '[' -> $opengroup .. ']' -> $closegroup {
 	'^' -> $invert;
@@ -21,8 +22,8 @@ esc -> $esc;
 
 	esc -> $esc;
 
-	# XXX: not the above
-	/[A-Za-z0-9_]/ -> $char;
+	# XXX: /./ - the above
+	/[^\^\-]/ -> $char;
 }
 
 '{' -> $opencount .. '}' -> $closecount {
