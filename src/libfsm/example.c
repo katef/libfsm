@@ -12,7 +12,7 @@
 #include <fsm/search.h>
 
 int
-fsm_example(struct fsm *fsm, const struct fsm_state *goal,
+fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 	char *buf, size_t bufsz)
 {
 	const struct fsm_state *start;

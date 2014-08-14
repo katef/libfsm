@@ -184,7 +184,7 @@ int
 fsm_trim(struct fsm *fsm);
 
 int
-fsm_example(struct fsm *fsm, const struct fsm_state *goal,
+fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 	char *buf, size_t bufsz);
 
 #endif
