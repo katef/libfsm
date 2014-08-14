@@ -333,7 +333,7 @@ z1(struct lx *lx)
 
 	state = S4;
 
-lx->start = lx->end;
+	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
@@ -402,7 +402,7 @@ z2(struct lx *lx)
 
 	state = S5;
 
-lx->start = lx->end;
+	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
@@ -432,9 +432,11 @@ lx->start = lx->end;
 		case S3:
 			switch (c) {
 			case '\\': state = S1;      continue;
+			case 'f': state = S1;      continue;
 			case 'n': state = S1;      continue;
 			case 'r': state = S1;      continue;
 			case 't': state = S1;      continue;
+			case 'v': state = S1;      continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
@@ -479,7 +481,7 @@ z3(struct lx *lx)
 
 	state = S3;
 
-lx->start = lx->end;
+	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
@@ -540,7 +542,7 @@ z4(struct lx *lx)
 
 	state = S3;
 
-lx->start = lx->end;
+	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
@@ -606,7 +608,7 @@ z5(struct lx *lx)
 
 	state = S25;
 
-lx->start = lx->end;
+	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {

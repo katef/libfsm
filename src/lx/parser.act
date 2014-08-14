@@ -115,9 +115,11 @@
 		assert(lex_state->buf.a[2] == '\0');
 
 		switch (lex_state->buf.a[1]) {
-		case 'n':  @c = '\n'; break;
 		case 't':  @c = '\t'; break;
+		case 'n':  @c = '\n'; break;
+		case 'v':  @c = '\v'; break;
 		case 'r':  @c = '\r'; break;
+		case 'f':  @c = '\f'; break;
 		case '\\': @c = '\\'; break;
 		default:   @c = '\0'; break; /* TODO: handle error */
 		}
