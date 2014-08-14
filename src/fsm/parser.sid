@@ -45,7 +45,7 @@
 	<err-expected-comma>;
 	<err-expected-start>;
 	<err-expected-end>;
-	<err-parse>;
+	<err-syntax>;
 
 	label: () -> (n :string) [
 
@@ -180,7 +180,7 @@
 
 		<free-statelist>;
 	##
-		<err-parse>;
+		<err-syntax>;
 	};
 
 %entry%

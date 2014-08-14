@@ -22,9 +22,10 @@
 %header% @{
 
 	#include <assert.h>
-	#include <stdio.h>
 	#include <stdlib.h>
 	#include <string.h>
+	#include <stdarg.h>
+	#include <stdio.h>
 
 	#include <fsm/fsm.h>
 
@@ -67,13 +68,24 @@
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
 
 	static void
-	err_expected(const struct lex_state *lex_state, const char *token)
+	err(const struct lex_state *lex_state, const char *fmt, ...)
 	{
 		assert(lex_state != NULL);
 
-		fprintf(stderr, "%u:%u: syntax error: expected %s\n",
-			lex_state->lx.start.line, lex_state->lx.start.col,
-			token);
+		va_list ap;
+
+		va_start(ap, fmt);
+		fprintf(stderr, "%u:%u: ",
+			lex_state->lx.start.line, lex_state->lx.start.col);
+		vfprintf(stderr, fmt, ap);
+		fprintf(stderr, "\n");
+		va_end(ap);
+	}
+
+	static void
+	err_expected(const struct lex_state *lex_state, const char *token)
+	{
+		err(lex_state, "Syntax error: expected %s", token);
 		exit(EXIT_FAILURE);
 	}
 
@@ -204,7 +216,7 @@
 
 		/* TODO: convert to single char in the grammar? */
 		if (strlen(@s) != 1) {
-			fprintf(stderr, "edge literals must have exactly one character\n");
+			err(lex_state, "Edge literals must have exactly one character");
 			@!;
 		}
 
@@ -249,8 +261,8 @@
 		err_expected(lex_state, "'end:'");
 	@};
 
-	<err-parse> = @{
-		fprintf(stderr, "parse error\n");
+	<err-syntax> = @{
+		err(lex_state, "Syntax error");
 		exit(EXIT_FAILURE);
 	@};
 
