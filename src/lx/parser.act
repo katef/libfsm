@@ -258,31 +258,33 @@
 	@};
 
 	<compile-literal>: (s :string) -> (r :fsm) = @{
+		enum re_err e;
 		const char *s;
 
 		assert(@s != NULL);
 
 		s = @s;
 
-		/* TODO: handle error codes */
-		@r = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, NULL);
+		@r = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, &e);
 		if (@r == NULL) {
-			/* TODO: use *err */
+			err(lex_state, "'%s': %s", re_strerror(e));
+			/* TODO: show byte within regex */
 			@!;
 		}
 	@};
 
 	<compile-regex>: (s :string, f :cflags) -> (r :fsm) = @{
+		enum re_err e;
 		const char *s;
 
 		assert(@s != NULL);
 
 		s = @s;
 
-		/* TODO: handle error codes */
-		@r = re_new_comp(RE_SIMPLE, re_getc_str, &s, @f, NULL);
+		@r = re_new_comp(RE_SIMPLE, re_getc_str, &s, @f, &e);
 		if (@r == NULL) {
-			/* TODO: use *err */
+			err(lex_state, "/%s/: %s", @s, re_strerror(e));
+			/* TODO: show byte within regex */
 			@!;
 		}
 	@};
