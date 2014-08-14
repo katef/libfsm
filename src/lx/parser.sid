@@ -83,7 +83,7 @@
 	<no-zone>:  () -> (:zone);
 
 	<clone>: (:fsm) -> (:fsm);
-	!<free>: (:string) -> ();
+	<free>:  (:string) -> ();
 
 	<err-syntax>;
 	!<err-expected-alt>;
@@ -123,11 +123,13 @@
 		STR;
 		s = <pattern-buffer>;
 		r = <compile-literal>(s);
+		<free>(s);
 	||
 		body;
 		f = RE;
 		s = <pattern-buffer>;
 		r = <compile-regex>(s, f);
+		<free>(s);
 	};
 
 	expr: (z :zone) -> (q :fsm) [

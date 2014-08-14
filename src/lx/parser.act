@@ -156,7 +156,16 @@
 		/* TODO */
 		*lex_state->p++ = '\0';
 
-		@s = lex_state->a;
+		/*
+		 * Note we strdup() here because the grammar permits adjacent patterns,
+		 * and so the pattern buffer will be overwritten by the LL(1) one-token
+		 * lookahead.
+		 */
+		@s = xstrdup(lex_state->a);
+		if (@s == NULL) {
+			perror("xstrdup");
+			exit(EXIT_FAILURE);
+		}
 
 		lex_state->p = lex_state->a;
 	@};
@@ -235,10 +244,14 @@
 	@};
 
 	<compile-literal>: (s :string) -> (r :fsm) = @{
+		const char *s;
+
 		assert(@s != NULL);
 
+		s = @s;
+
 		/* TODO: handle error codes */
-		@r = re_new_comp(RE_LITERAL, re_getc_str, &@s, 0, NULL);
+		@r = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, NULL);
 		if (@r == NULL) {
 			/* TODO: use *err */
 			@!;
@@ -246,10 +259,14 @@
 	@};
 
 	<compile-regex>: (s :string, f :cflags) -> (r :fsm) = @{
+		const char *s;
+
 		assert(@s != NULL);
 
+		s = @s;
+
 		/* TODO: handle error codes */
-		@r = re_new_comp(RE_SIMPLE, re_getc_str, &@s, @f, NULL);
+		@r = re_new_comp(RE_SIMPLE, re_getc_str, &s, @f, NULL);
 		if (@r == NULL) {
 			/* TODO: use *err */
 			@!;
