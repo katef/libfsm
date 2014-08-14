@@ -48,8 +48,17 @@ fsm_shortest(const struct fsm *fsm,
 		struct fsm_state *s;
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
-			if (!priq_push(&todo, s, s == fsm_getstart(fsm) ? 0 : FSM_COST_INFINITY)) {
+			u = priq_push(&todo, s, s == fsm_getstart(fsm) ? 0 : FSM_COST_INFINITY);
+			if (u == NULL) {
 				goto error;
+			}
+
+			/*
+			 * We consider the first state to be reached by an epsilon;
+			 * this is effectively the entry into the FSM.
+			 */
+			if (s == fsm_getstart(fsm)) {
+				u->type = FSM_EDGE_EPSILON;
 			}
 		}
 	}
