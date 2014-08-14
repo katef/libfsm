@@ -11,6 +11,8 @@
 #include <fsm/cost.h>
 #include <fsm/search.h>
 
+#include "internal.h"
+
 int
 fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 	char *buf, size_t bufsz)
@@ -42,6 +44,10 @@ fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 	}
 
 	for (p = path, n = 0; p != NULL; p = p->next, n++) {
+		if (p->type == FSM_EDGE_EPSILON) {
+			continue;
+		}
+
 		if (bufsz > 0) {
 			*buf++ = p->type;
 			bufsz--;
