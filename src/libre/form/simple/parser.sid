@@ -14,8 +14,6 @@
 
 %terminals%
 
-	SOL: () -> (:char);
-	EOL: () -> (:char);
 	QMARK;
 	STAR;
 	PLUS;
@@ -26,8 +24,12 @@
 	OPENSUB;   CLOSESUB;
 	OPENGROUP; CLOSEGROUP;
 	OPENCOUNT; CLOSECOUNT;
+
+	SOL:   () -> (:char);
+	EOL:   () -> (:char);
+	CHAR:  () -> (:char);
 	COUNT: () -> (:unsigned);
-	CHAR: () -> (:char);
+
 	EOF;
 	!ERROR;
 

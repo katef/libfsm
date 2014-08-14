@@ -119,7 +119,7 @@ p_group(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm_
 
 					/* BEGINNING OF EXTRACT: SOL */
 					{
-#line 89 "src/libre/parser.act"
+#line 94 "src/libre/parser.act"
 
 		ZI62 = 1;	/* TODO */
 	
@@ -236,8 +236,8 @@ ZL2_list_Hof_Halts_C_Clist_Hof_Hitems:;
 		/* BEGINNING OF INLINE: 75 */
 		{
 			switch (CURRENT_TERMINAL) {
-			case (TOK_SOL): case (TOK_EOL): case (TOK_DOT): case (TOK_OPENSUB):
-			case (TOK_OPENGROUP): case (TOK_CHAR):
+			case (TOK_DOT): case (TOK_OPENSUB): case (TOK_OPENGROUP): case (TOK_SOL):
+			case (TOK_EOL): case (TOK_CHAR):
 				{
 					/* BEGINNING OF INLINE: list-of-alts::list-of-items */
 					ZIx = ZIz;
@@ -328,8 +328,8 @@ p_re__simple(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 		/* BEGINNING OF INLINE: 79 */
 		{
 			switch (CURRENT_TERMINAL) {
-			case (TOK_SOL): case (TOK_EOL): case (TOK_DOT): case (TOK_OPENSUB):
-			case (TOK_OPENGROUP): case (TOK_CHAR):
+			case (TOK_DOT): case (TOK_OPENSUB): case (TOK_OPENGROUP): case (TOK_SOL):
+			case (TOK_EOL): case (TOK_CHAR):
 				{
 					p_list_Hof_Halts (fsm, cflags, lex_state, act_state, ZIx, ZIy);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
@@ -534,7 +534,7 @@ p_list_Hof_Halts_C_Citem(fsm fsm, cflags cflags, lex_state lex_state, act_state 
 					case (TOK_COUNT):
 						/* BEGINNING OF EXTRACT: COUNT */
 						{
-#line 93 "src/libre/parser.act"
+#line 85 "src/libre/parser.act"
 
 		ZI94 = strtoul(lex_state->buf.a, NULL, 10);
 		/* TODO: range check */
@@ -884,7 +884,7 @@ p_95(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm__st
 			case (TOK_COUNT):
 				/* BEGINNING OF EXTRACT: COUNT */
 				{
-#line 93 "src/libre/parser.act"
+#line 85 "src/libre/parser.act"
 
 		ZIn = strtoul(lex_state->buf.a, NULL, 10);
 		/* TODO: range check */
@@ -1012,7 +1012,7 @@ p_literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fs
 				{
 					/* BEGINNING OF EXTRACT: EOL */
 					{
-#line 85 "src/libre/parser.act"
+#line 90 "src/libre/parser.act"
 
 		ZIc = 0;	/* TODO */
 	
@@ -1026,7 +1026,7 @@ p_literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fs
 				{
 					/* BEGINNING OF EXTRACT: SOL */
 					{
-#line 89 "src/libre/parser.act"
+#line 94 "src/libre/parser.act"
 
 		ZIc = 1;	/* TODO */
 	

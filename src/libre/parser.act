@@ -81,17 +81,17 @@
 		@c = lex_state->buf.a[0];
 	@};
 
+	COUNT: () -> (n :unsigned) = @{
+		@n = strtoul(lex_state->buf.a, NULL, 10);
+		/* TODO: range check */
+	@};
+
 	EOL: () -> (c :char) = @{
 		@c = 0;	/* TODO */
 	@};
 
 	SOL: () -> (c :char) = @{
 		@c = 1;	/* TODO */
-	@};
-
-	COUNT: () -> (n :unsigned) = @{
-		@n = strtoul(lex_state->buf.a, NULL, 10);
-		/* TODO: range check */
 	@};
 
 %actions%
