@@ -25,9 +25,10 @@
 	OPENGROUP; CLOSEGROUP;
 	OPENCOUNT; CLOSECOUNT;
 
+	ESC:   () -> (:char);
+	CHAR:  () -> (:char);
 	SOL:   () -> (:char);
 	EOL:   () -> (:char);
-	CHAR:  () -> (:char);
 	COUNT: () -> (:unsigned);
 
 	EOF;
@@ -77,6 +78,8 @@
 		list-of-terms: (g :grp) -> () [
 
 			char: () -> (c :char) = {
+				c = ESC;
+			||
 				c = CHAR;
 			};
 
@@ -126,11 +129,13 @@
 
 	literal: (x :fsm_state, y :fsm_state) -> () = {
 		{
+			c = ESC;
+		||
+			c = CHAR;
+		||
 			c = SOL;
 		||
 			c = EOL;
-		||
-			c = CHAR;
 		};
 		<add-literal>(x, y, c);
 	};

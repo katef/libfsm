@@ -20,9 +20,10 @@
 	!OPENGROUP; !CLOSEGROUP;
 	!OPENCOUNT; !CLOSECOUNT;
 
+	!ESC:   () -> (:char);
+	CHAR:   () -> (:char);
 	!SOL:   () -> (:char);
 	!EOL:   () -> (:char);
-	CHAR:   () -> (:char);
 	!COUNT: () -> (:unsigned);
 
 	EOF;
