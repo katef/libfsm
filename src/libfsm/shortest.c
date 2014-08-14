@@ -107,8 +107,6 @@ done:
 	priq_free(todo);
 	priq_free(done);
 
-	/* TODO: would be more sensible to return a "path" ADT, constructed in order */
-
 	return path;
 
 none:
