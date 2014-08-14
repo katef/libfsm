@@ -61,9 +61,9 @@
 	static void
 	err(const struct lex_state *lex_state, const char *fmt, ...)
 	{
-		assert(lex_state != NULL);
-
 		va_list ap;
+
+		assert(lex_state != NULL);
 
 		va_start(ap, fmt);
 		fprintf(stderr, "%u:%u: ",
