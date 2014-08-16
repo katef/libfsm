@@ -96,6 +96,7 @@ main(int argc, char *argv[])
 		while (c = getopt(argc, argv, "hcdil:mg:s:"), c != -1) {
 			struct fsm *new;
 			enum re_err err;
+			unsigned byte;
 
 			switch (c) {
 			case 'h':
@@ -138,18 +139,17 @@ main(int argc, char *argv[])
 						return EXIT_FAILURE;
 					}
 
-					new = re_new_comp(form(c), re_getc_file, f, 0, &err, NULL);
+					new = re_new_comp(form(c), re_getc_file, f, 0, &err, &byte);
 
 					fclose(f);
 				} else {
-					new = re_new_comp(form(c), re_getc_str, &optarg, 0, &err, NULL);
+					new = re_new_comp(form(c), re_getc_str, &optarg, 0, &err, &byte);
 				}
 
 				/* TODO: addend(new, optarg); */
 
 				if (new == NULL) {
-					/* TODO: show byte offset */
-					fprintf(stderr, "re_new_comp: %s\n", re_strerror(err));
+					fprintf(stderr, "%u: %s\n", byte + 1, re_strerror(err));
 					return EXIT_FAILURE;
 				}
 

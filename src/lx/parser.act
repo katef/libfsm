@@ -60,6 +60,7 @@
 		struct lx_dynbuf buf;
 
 		/* TODO: use lx's generated conveniences for the pattern buffer */
+		struct lx_pos pstart;
 		char a[512];
 		char *p;
 	};
@@ -70,6 +71,23 @@
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
 	                              act_state->lex_tok = tok;                     } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
+
+	static void
+	err_re(const struct lex_state *lex_state, const char *s, unsigned byte,
+		const char *fmt, ...)
+	{
+		va_list ap;
+
+		assert(lex_state != NULL);
+		assert(s != NULL);
+
+		va_start(ap, fmt);
+		fprintf(stderr, "%u:%u: /%s/: ",
+			lex_state->pstart.line, lex_state->pstart.col + byte, s);
+		vfprintf(stderr, fmt, ap);
+		fprintf(stderr, "\n");
+		va_end(ap);
+	}
 
 	static void
 	err(const struct lex_state *lex_state, const char *fmt, ...)
@@ -123,6 +141,11 @@
 		case '\\': @c = '\\'; break;
 		default:   @c = '\0'; break; /* TODO: handle error */
 		}
+
+		/* position of first character */
+		if (lex_state->p == lex_state->a) {
+			lex_state->pstart = lex_state->lx.start;
+		}
 	@};
 
 	CHAR: () -> (c :char) = @{
@@ -130,6 +153,11 @@
 		assert(lex_state->buf.a[1] == '\0');
 
 		@c = lex_state->buf.a[0];
+
+		/* position of first character */
+		if (lex_state->p == lex_state->a) {
+			lex_state->pstart = lex_state->lx.start;
+		}
 	@};
 
 	TOKEN: () -> (s :string) = @{
@@ -153,9 +181,10 @@
 		assert(lex_state->buf.a[0] == '/');
 
 		/* TODO: submatch addressing */
+
 		if (-1 == re_cflags(lex_state->buf.a + 1, &@f)) { /* TODO: +1 for '/' prefix */
-			err(lex_state, "Unrecognised regexp flags: %s", lex_state->buf.a + 1);
-			/* TODO: raise parse error */
+			err(lex_state, "/%s: Unrecognised regexp flags", lex_state->buf.a + 1);
+			exit(EXIT_FAILURE);
 		}
 	@};
 
@@ -258,8 +287,8 @@
 	@};
 
 	<compile-literal>: (s :string) -> (r :fsm) = @{
-		enum re_err e;
 		const char *s;
+		enum re_err e;
 
 		assert(@s != NULL);
 
@@ -274,18 +303,18 @@
 	@};
 
 	<compile-regex>: (s :string, f :cflags) -> (r :fsm) = @{
-		enum re_err e;
 		const char *s;
+		enum re_err e;
+		unsigned byte;
 
 		assert(@s != NULL);
 
 		s = @s;
 
-		@r = re_new_comp(RE_SIMPLE, re_getc_str, &s, @f, &e, NULL);
+		@r = re_new_comp(RE_SIMPLE, re_getc_str, &s, @f, &e, &byte);
 		if (@r == NULL) {
-			err(lex_state, "/%s/: %s", @s, re_strerror(e));
-			/* TODO: show byte within regex */
-			@!;
+			err_re(lex_state, @s, byte, "%s", re_strerror(e));
+			exit(EXIT_FAILURE);
 		}
 	@};
 
