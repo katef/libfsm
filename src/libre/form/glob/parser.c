@@ -73,7 +73,7 @@ ZL2_list_Hof_Hitems:;
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hitems_C_Citem (fsm, cflags, lex_state, act_state, ZIx, &ZIz);
-		/* BEGINNING OF INLINE: 59 */
+		/* BEGINNING OF INLINE: 60 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_QMARK): case (TOK_STAR): case (TOK_CHAR):
@@ -104,7 +104,7 @@ ZL2_list_Hof_Hitems:;
 				goto ZL1;
 			}
 		}
-		/* END OF INLINE: 59 */
+		/* END OF INLINE: 60 */
 	}
 	return;
 ZL1:;
@@ -306,7 +306,7 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 #line 307 "src/libre/form/glob/parser.c"
 		}
 		/* END OF ACTION: make-states */
-		/* BEGINNING OF INLINE: 61 */
+		/* BEGINNING OF INLINE: 62 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_QMARK): case (TOK_STAR): case (TOK_CHAR):
@@ -349,8 +349,8 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			}
 		ZL2:;
 		}
-		/* END OF INLINE: 61 */
-		/* BEGINNING OF INLINE: 62 */
+		/* END OF INLINE: 62 */
+		/* BEGINNING OF INLINE: 63 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -376,7 +376,7 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			}
 		ZL4:;
 		}
-		/* END OF INLINE: 62 */
+		/* END OF INLINE: 63 */
 	}
 	return;
 ZL1:;

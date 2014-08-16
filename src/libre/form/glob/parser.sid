@@ -14,11 +14,13 @@
 	!PLUS;
 	!DOT;
 	!ALT;
-	!RANGE;
 	!SEP;
 	!OPENSUB;   !CLOSESUB;
 	!OPENGROUP; !CLOSEGROUP;
 	!OPENCOUNT; !CLOSECOUNT;
+
+	!INVERT;
+	!RANGE;
 
 	!ESC:   () -> (:char);
 	CHAR:   () -> (:char);

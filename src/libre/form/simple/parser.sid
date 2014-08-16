@@ -19,11 +19,13 @@
 	PLUS;
 	DOT;
 	ALT;
-	RANGE;
 	SEP;
 	OPENSUB;   CLOSESUB;
 	OPENGROUP; CLOSEGROUP;
 	OPENCOUNT; CLOSECOUNT;
+
+	INVERT;
+	RANGE;
 
 	ESC:   () -> (:char);
 	CHAR:  () -> (:char);
@@ -111,9 +113,8 @@
 
 		g = <make-group>;
 
-		/* not */
 		{
-			! = SOL;
+			INVERT;
 			list-of-terms(g);
 			<invert-group>(g);
 		||

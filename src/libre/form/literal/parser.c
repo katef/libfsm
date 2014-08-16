@@ -77,7 +77,7 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 #line 78 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: make-states */
-		/* BEGINNING OF INLINE: 55 */
+		/* BEGINNING OF INLINE: 56 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -120,8 +120,8 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			}
 		ZL2:;
 		}
-		/* END OF INLINE: 55 */
-		/* BEGINNING OF INLINE: 56 */
+		/* END OF INLINE: 56 */
+		/* BEGINNING OF INLINE: 57 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -147,7 +147,7 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			}
 		ZL4:;
 		}
-		/* END OF INLINE: 56 */
+		/* END OF INLINE: 57 */
 	}
 	return;
 ZL1:;
@@ -239,7 +239,7 @@ ZL2_list_Hof_Hliterals:;
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hliterals_C_Cliteral (fsm, cflags, lex_state, act_state, ZIx, ZIz);
-		/* BEGINNING OF INLINE: 53 */
+		/* BEGINNING OF INLINE: 54 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -270,7 +270,7 @@ ZL2_list_Hof_Hliterals:;
 				goto ZL1;
 			}
 		}
-		/* END OF INLINE: 53 */
+		/* END OF INLINE: 54 */
 	}
 	return;
 ZL1:;
