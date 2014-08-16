@@ -68,11 +68,11 @@ error:
 
 struct fsm *
 re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
-	enum re_cflags cflags, enum re_err *err, unsigned *byte)
+	enum re_cflags cflags, struct re_err *err)
 {
 	struct fsm *new;
 	struct fsm *(*comp)(int (*getc)(void *opaque), void *opaque,
-		enum re_cflags cflags, enum re_err *err, unsigned *byte);
+		enum re_cflags cflags, struct re_err *err);
 
 	assert(getc != NULL);
 
@@ -82,11 +82,13 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	case RE_SIMPLE:  comp = comp_simple;  break;
 
 	default:
-		*err = RE_EBADFORM;
+		if (err != NULL) {
+			err->e = RE_EBADFORM;
+		}
 		return NULL;
 	}
 
-	new = comp(getc, opaque, cflags, err, byte);
+	new = comp(getc, opaque, cflags, err);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -119,9 +121,9 @@ error:
 }
 
 const char *
-re_strerror(enum re_err err)
+re_strerror(enum re_errno e)
 {
-	switch (err) {
+	switch (e) {
 	case RE_ESUCCESS: return "Success";
 	case RE_ENOMEM:   return strerror(ENOMEM);
 	case RE_EBADFORM: return "Bad form";

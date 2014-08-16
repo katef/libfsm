@@ -463,7 +463,7 @@ p_re__simple(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 				{
 #line 395 "src/libre/parser.act"
 
-		act_state->err = RE_EXALTS;
+		act_state->e = RE_EXALTS;
 	
 #line 469 "src/libre/form/simple/parser.c"
 				}
@@ -490,7 +490,7 @@ p_re__simple(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 				{
 #line 399 "src/libre/parser.act"
 
-		act_state->err = RE_EXEOF;
+		act_state->e = RE_EXEOF;
 	
 #line 496 "src/libre/form/simple/parser.c"
 				}
@@ -764,7 +764,7 @@ p_list_Hof_Halts_C_Citem(fsm fsm, cflags cflags, lex_state lex_state, act_state 
 				{
 #line 387 "src/libre/parser.act"
 
-		act_state->err = RE_EXCOUNT;
+		act_state->e = RE_EXCOUNT;
 	
 #line 770 "src/libre/form/simple/parser.c"
 				}
@@ -1341,7 +1341,7 @@ ZL1:;
 		{
 #line 383 "src/libre/parser.act"
 
-		act_state->err = RE_EXTERM;
+		act_state->e = RE_EXTERM;
 	
 #line 1347 "src/libre/form/simple/parser.c"
 		}

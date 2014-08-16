@@ -29,7 +29,7 @@ enum re_eflags {
 	RE_GREEDY  = 1 << 2
 };
 
-enum re_err {
+enum re_errno {
 	RE_ESUCCESS,
 	RE_ENOMEM,
 	RE_EBADFORM,
@@ -43,6 +43,11 @@ enum re_err {
 	RE_EXITEMS,
 	RE_EXALTS,
 	RE_EXEOF
+};
+
+struct re_err {
+	enum re_errno e;
+	unsigned byte;
 };
 
 /*
@@ -63,18 +68,19 @@ re_new_empty(void);
  * Compile a regexp of the given form. The function passed acts as a callback
  * to acquire each character of the input, in the spirit of fgetc().
  *
- * Returns NULL on error.
+ * Returns NULL on error. If non-NULL, the *err struct is populated with the
+ * type and 0-indexed byte offset of the error.
  */
 struct fsm *
 re_new_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
-	enum re_cflags cflags, enum re_err *err, unsigned *byte);
+	enum re_cflags cflags, struct re_err *err);
 
 /*
  * Return a human-readable string describing a given error code. The string
  * returned has static storage, and must not be freed.
  */
 const char *
-re_strerror(enum re_err err);
+re_strerror(enum re_errno e);
 
 /*
  * Match a string.

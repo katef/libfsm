@@ -112,7 +112,7 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 				{
 #line 391 "src/libre/parser.act"
 
-		act_state->err = RE_EXITEMS;
+		act_state->e = RE_EXITEMS;
 	
 #line 118 "src/libre/form/literal/parser.c"
 				}
@@ -139,7 +139,7 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 				{
 #line 399 "src/libre/parser.act"
 
-		act_state->err = RE_EXEOF;
+		act_state->e = RE_EXEOF;
 	
 #line 145 "src/libre/form/literal/parser.c"
 				}

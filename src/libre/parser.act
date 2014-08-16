@@ -46,7 +46,7 @@
 	struct act_state {
 		enum lx_token lex_tok;
 		enum lx_token lex_tok_save;
-		enum re_err err;
+		enum re_errno e;
 
 		enum lx_token (*lex_next)(struct lx *);
 	};
@@ -379,23 +379,23 @@
 
 
 	<err-expected-term> = @{
-		act_state->err = RE_EXTERM;
+		act_state->e = RE_EXTERM;
 	@};
 
 	<err-expected-count> = @{
-		act_state->err = RE_EXCOUNT;
+		act_state->e = RE_EXCOUNT;
 	@};
 
 	<err-expected-items> = @{
-		act_state->err = RE_EXITEMS;
+		act_state->e = RE_EXITEMS;
 	@};
 
 	<err-expected-alts> = @{
-		act_state->err = RE_EXALTS;
+		act_state->e = RE_EXALTS;
 	@};
 
 	<err-expected-eof> = @{
-		act_state->err = RE_EXEOF;
+		act_state->e = RE_EXEOF;
 	@};
 
 %trailer% @{

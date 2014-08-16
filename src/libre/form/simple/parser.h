@@ -22,7 +22,7 @@
 	struct act_state {
 		enum lx_token lex_tok;
 		enum lx_token lex_tok_save;
-		enum re_err err;
+		enum re_errno e;
 
 		enum lx_token (*lex_next)(struct lx *);
 	};

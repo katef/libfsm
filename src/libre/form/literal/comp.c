@@ -29,7 +29,7 @@ lgetc(struct lx *lx)
 
 struct fsm *
 comp_literal(int (*f)(void *opaque), void *opaque,
-	enum re_cflags cflags, enum re_err *err, unsigned *byte)
+	enum re_cflags cflags, struct re_err *err)
 {
 	struct act_state act_state_s;
 	struct act_state *act_state;
@@ -37,7 +37,7 @@ comp_literal(int (*f)(void *opaque), void *opaque,
 	struct lex_state *lex_state;
 	struct lx *lx;
 	struct fsm *new;
-	enum re_err e;
+	enum re_errno e;
 
 	assert(f != NULL);
 
@@ -76,16 +76,16 @@ lx->free = NULL;
 	/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 	act_state = &act_state_s;
 
-	act_state->err      = RE_ESUCCESS;
+	act_state->e        = RE_ESUCCESS;
 	act_state->lex_next = lx_literal_next;
 
 	ADVANCE_LEXER;
 	p_re__literal(new, cflags, lex_state, act_state);
 
-	if (act_state->err != RE_ESUCCESS) {
+	if (act_state->e != RE_ESUCCESS) {
 		/* TODO: free internals allocated during parsing (are there any?) */
 		fsm_free(new);
-		e = act_state->err;
+		e = act_state->e;
 		goto error;
 	}
 
@@ -94,11 +94,8 @@ lx->free = NULL;
 error:
 
 	if (err != NULL) {
-		*err = e;
-	}
-
-	if (byte != NULL) {
-		*byte = lx->start.byte;
+		err->e    = e;
+		err->byte = lx->start.byte;
 	}
 
 	return NULL;
