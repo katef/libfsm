@@ -293,6 +293,7 @@
 
 		@r = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, &err);
 		if (@r == NULL) {
+			assert(err.e != RE_BADFORM);
 			err_re(lex_state, '\'', @s, &err);
 			exit(EXIT_FAILURE);
 		}
@@ -308,6 +309,7 @@
 
 		@r = re_new_comp(RE_SIMPLE, re_getc_str, &s, @f, &err);
 		if (@r == NULL) {
+			assert(err.e != RE_BADFORM);
 			err_re(lex_state, '/', @s, &err);
 			exit(EXIT_FAILURE);
 		}
