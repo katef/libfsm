@@ -37,7 +37,7 @@ lx_getc(struct lx *lx)
 
 	if (c == '\n') {
 		lx->end.line++;
-		lx->end.col = 0;
+		lx->end.col = 1;
 	}
 
 	return c;
@@ -332,7 +332,7 @@ z1(struct lx *lx)
 
 	state = S3;
 
-lx->start = lx->end;
+	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
@@ -393,7 +393,7 @@ z2(struct lx *lx)
 
 	state = S3;
 
-lx->start = lx->end;
+	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
@@ -454,7 +454,7 @@ z3(struct lx *lx)
 
 	state = S3;
 
-lx->start = lx->end;
+	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
@@ -520,7 +520,7 @@ z4(struct lx *lx)
 
 	state = S21;
 
-lx->start = lx->end;
+	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
 		switch (state) {
