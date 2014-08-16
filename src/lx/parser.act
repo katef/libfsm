@@ -73,7 +73,7 @@
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
 
 	static void
-	err_re(const struct lex_state *lex_state, const char *s, unsigned byte,
+	err_re(const struct lex_state *lex_state, char delim, const char *s, unsigned byte,
 		const char *fmt, ...)
 	{
 		va_list ap;
@@ -82,8 +82,9 @@
 		assert(s != NULL);
 
 		va_start(ap, fmt);
-		fprintf(stderr, "%u:%u: /%s/: ",
-			lex_state->pstart.line, lex_state->pstart.col + byte, s);
+		fprintf(stderr, "%u:%u: %c%s%c: ",
+			lex_state->pstart.line, lex_state->pstart.col + byte,
+			delim, s, delim);
 		vfprintf(stderr, fmt, ap);
 		fprintf(stderr, "\n");
 		va_end(ap);
@@ -289,16 +290,16 @@
 	<compile-literal>: (s :string) -> (r :fsm) = @{
 		const char *s;
 		enum re_err e;
+		unsigned byte;
 
 		assert(@s != NULL);
 
 		s = @s;
 
-		@r = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, &e, NULL);
+		@r = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, &e, &byte);
 		if (@r == NULL) {
-			err(lex_state, "'%s': %s", @s, re_strerror(e));
-			/* TODO: show byte within regex */
-			@!;
+			err_re(lex_state, '\'', @s, byte, "%s", re_strerror(e));
+			exit(EXIT_FAILURE);
 		}
 	@};
 
@@ -313,7 +314,7 @@
 
 		@r = re_new_comp(RE_SIMPLE, re_getc_str, &s, @f, &e, &byte);
 		if (@r == NULL) {
-			err_re(lex_state, @s, byte, "%s", re_strerror(e));
+			err_re(lex_state, '/', @s, byte, "%s", re_strerror(e));
 			exit(EXIT_FAILURE);
 		}
 	@};
