@@ -142,13 +142,19 @@ main(int argc, char *argv[])
 
 					fclose(f);
 				} else {
-					new = re_new_comp(form(c), re_getc_str, &optarg, 0, &err);
+					const char *s;
+
+					s = optarg;
+
+					new = re_new_comp(form(c), re_getc_str, &s, 0, &err);
 				}
 
 				/* TODO: addend(new, optarg); */
 
 				if (new == NULL) {
-					fprintf(stderr, "%u: %s\n", err.byte + 1, re_strerror(err.e));
+					re_perror("re_new_comp", form(c), &err,
+						 files ? optarg : NULL,
+						!files ? optarg : NULL);
 					return EXIT_FAILURE;
 				}
 

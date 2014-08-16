@@ -29,13 +29,17 @@ enum re_eflags {
 	RE_GREEDY  = 1 << 2
 };
 
+enum {
+	RE_SYNTAX = 100
+};
+
 enum re_errno {
 	RE_ESUCCESS,
 	RE_ENOMEM,
 	RE_EBADFORM,
 
-	/* Syntax errors */
-	RE_EXSUB,
+	/* Syntax errors; re_err.byte is populated */
+	RE_EXSUB = RE_SYNTAX,
 	RE_EXTERM,
 	RE_EXGROUP,
 	RE_EXITEM,
@@ -81,6 +85,13 @@ re_new_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
  */
 const char *
 re_strerror(enum re_errno e);
+
+/*
+ * Format an error to stderr.
+ */
+void
+re_perror(const char *func, enum re_form form, const struct re_err *err,
+	const char *file, const char *s);
 
 /*
  * Match a string.
