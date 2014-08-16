@@ -265,7 +265,7 @@
 
 		s = @s;
 
-		@r = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, &e);
+		@r = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, &e, NULL);
 		if (@r == NULL) {
 			err(lex_state, "'%s': %s", re_strerror(e));
 			/* TODO: show byte within regex */
@@ -281,7 +281,7 @@
 
 		s = @s;
 
-		@r = re_new_comp(RE_SIMPLE, re_getc_str, &s, @f, &e);
+		@r = re_new_comp(RE_SIMPLE, re_getc_str, &s, @f, &e, NULL);
 		if (@r == NULL) {
 			err(lex_state, "/%s/: %s", @s, re_strerror(e));
 			/* TODO: show byte within regex */

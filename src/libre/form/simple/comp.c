@@ -29,7 +29,7 @@ lgetc(struct lx *lx)
 
 struct fsm *
 comp_simple(int (*f)(void *opaque), void *opaque,
-	enum re_cflags cflags, enum re_err *err)
+	enum re_cflags cflags, enum re_err *err, unsigned *byte)
 {
 	struct act_state act_state_s;
 	struct act_state *act_state;
@@ -95,6 +95,10 @@ error:
 
 	if (err != NULL) {
 		*err = e;
+	}
+
+	if (byte != NULL) {
+		*byte = lx->start.byte;
 	}
 
 	return NULL;

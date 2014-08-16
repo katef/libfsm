@@ -138,16 +138,17 @@ main(int argc, char *argv[])
 						return EXIT_FAILURE;
 					}
 
-					new = re_new_comp(form(c), re_getc_file, f, 0, &err);
+					new = re_new_comp(form(c), re_getc_file, f, 0, &err, NULL);
 
 					fclose(f);
 				} else {
-					new = re_new_comp(form(c), re_getc_str, &optarg, 0, &err);
+					new = re_new_comp(form(c), re_getc_str, &optarg, 0, &err, NULL);
 				}
 
 				/* TODO: addend(new, optarg); */
 
 				if (new == NULL) {
+					/* TODO: show byte offset */
 					fprintf(stderr, "re_new_comp: %s\n", re_strerror(err));
 					return EXIT_FAILURE;
 				}
