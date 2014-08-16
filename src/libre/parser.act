@@ -74,6 +74,18 @@
 
 %terminals%
 
+	INVERT: () -> (c :char) = @{
+		@c = '^';
+	@};
+
+	RANGE: () -> (c :char) = @{
+		@c = '-';
+	@};
+
+	CLOSEGROUP: () -> (c :char) = @{
+		@c = ']';
+	@};
+
 	ESC: () -> (c :char) = @{
 		assert(lex_state->buf.a[0] == '\\');
 		assert(lex_state->buf.a[1] != '\0');

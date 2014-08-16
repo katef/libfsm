@@ -15,18 +15,19 @@
 	!DOT;
 	!ALT;
 	!SEP;
+
 	!OPENSUB;   !CLOSESUB;
-	!OPENGROUP; !CLOSEGROUP;
+	!OPENGROUP; !CLOSEGROUP: () -> (:char);
 	!OPENCOUNT; !CLOSECOUNT;
 
-	!INVERT;
-	!RANGE;
+	!INVERT: () -> (:char);
+	!RANGE:  () -> (:char);
 
-	!ESC:   () -> (:char);
-	CHAR:   () -> (:char);
-	!SOL:   () -> (:char);
-	!EOL:   () -> (:char);
-	!COUNT: () -> (:unsigned);
+	!ESC:    () -> (:char);
+	CHAR:    () -> (:char);
+	!SOL:    () -> (:char);
+	!EOL:    () -> (:char);
+	!COUNT:  () -> (:unsigned);
 
 	EOF;
 	!ERROR;

@@ -20,18 +20,19 @@
 	DOT;
 	ALT;
 	SEP;
+
 	OPENSUB;   CLOSESUB;
-	OPENGROUP; CLOSEGROUP;
+	OPENGROUP; CLOSEGROUP: () -> (:char);
 	OPENCOUNT; CLOSECOUNT;
 
-	INVERT;
-	RANGE;
+	INVERT: () -> (:char);
+	RANGE:  () -> (:char);
 
-	ESC:   () -> (:char);
-	CHAR:  () -> (:char);
-	SOL:   () -> (:char);
-	EOL:   () -> (:char);
-	COUNT: () -> (:unsigned);
+	ESC:    () -> (:char);
+	CHAR:   () -> (:char);
+	SOL:    () -> (:char);
+	EOL:    () -> (:char);
+	COUNT:  () -> (:unsigned);
 
 	EOF;
 	!ERROR;
@@ -87,8 +88,12 @@
 
 			range: () -> (a :char, b :char) = {
 				a = CHAR;
-				RANGE;
-				b = CHAR;
+				! = RANGE;
+				{
+					b = CHAR;
+				||
+					b = RANGE;
+				};
 			};
 
 			term: (g :grp) -> () = {
@@ -108,24 +113,56 @@
 			term(g);
 		};
 
+		group-body: (g :grp) -> () = {
+			{
+				c = CLOSEGROUP;
+				<group-add-char>(g, c);
+			||
+				c = RANGE;
+				<group-add-char>(g, c);
+			||
+				/*
+				 * XXX: this is atypical, but serves as a workaround for below
+				 * until this can be done lexically by /-$/ -> $char.
+				 */
+				a = CLOSEGROUP;
+				<group-add-char>(g, a);
+				b = RANGE;
+				<group-add-char>(g, b);
+			||
+				$;
+			};
+
+			list-of-terms(g);
+
+			{
+/* XXX: this ought to be permitted, but I can't see how for LL(1)
+				c = RANGE;
+				<group-add-char>(g, c);
+			||
+*/
+				$;
+			};
+		};
+
 	] = {
 		OPENGROUP;
 
 		g = <make-group>;
 
 		{
-			INVERT;
-			list-of-terms(g);
+			! = INVERT;
+			group-body(g);
 			<invert-group>(g);
 		||
-			list-of-terms(g);
+			group-body(g);
 		};
 
 		<group-to-states>(g, x, y);
 
 		<free-group>(g);
 
-		CLOSEGROUP;
+		! = CLOSEGROUP;
 	};
 
 	literal: (x :fsm_state, y :fsm_state) -> () = {
