@@ -1348,7 +1348,7 @@ p_176(lex_state lex_state, act_state act_state, fsm *ZOr)
 
 		(ZIr) = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, &e, NULL);
 		if ((ZIr) == NULL) {
-			err(lex_state, "'%s': %s", re_strerror(e));
+			err(lex_state, "'%s': %s", (ZIs), re_strerror(e));
 			/* TODO: show byte within regex */
 			goto ZL1;
 		}

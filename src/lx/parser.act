@@ -296,7 +296,7 @@
 
 		@r = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, &e, NULL);
 		if (@r == NULL) {
-			err(lex_state, "'%s': %s", re_strerror(e));
+			err(lex_state, "'%s': %s", @s, re_strerror(e));
 			/* TODO: show byte within regex */
 			@!;
 		}
