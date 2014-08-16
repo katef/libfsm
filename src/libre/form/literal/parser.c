@@ -59,7 +59,7 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 
 		/* BEGINNING OF ACTION: make-states */
 		{
-#line 131 "src/libre/parser.act"
+#line 140 "src/libre/parser.act"
 
 		assert(fsm != NULL);
 		/* TODO: assert fsm is empty */
@@ -93,7 +93,7 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 226 "src/libre/parser.act"
+#line 235 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			goto ZL3;
@@ -110,7 +110,7 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-items */
 				{
-#line 382 "src/libre/parser.act"
+#line 391 "src/libre/parser.act"
 
 		act_state->err = RE_EXITEMS;
 	
@@ -137,7 +137,7 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 390 "src/libre/parser.act"
+#line 399 "src/libre/parser.act"
 
 		act_state->err = RE_EXEOF;
 	
@@ -168,7 +168,7 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, cflags cflags, lex_state lex_state, act
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 101 "src/libre/parser.act"
+#line 110 "src/libre/parser.act"
 
 		assert(lex_state->buf.a[0] != '\0');
 		assert(lex_state->buf.a[1] == '\0');
@@ -185,7 +185,7 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, cflags cflags, lex_state lex_state, act
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-literal */
 		{
-#line 232 "src/libre/parser.act"
+#line 241 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -201,7 +201,7 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, cflags cflags, lex_state lex_state, act
 		/* END OF ACTION: add-literal */
 		/* BEGINNING OF ACTION: count-1 */
 		{
-#line 367 "src/libre/parser.act"
+#line 376 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (ZIy);
@@ -228,7 +228,7 @@ ZL2_list_Hof_Hliterals:;
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 219 "src/libre/parser.act"
+#line 228 "src/libre/parser.act"
 
 		(ZIz) = fsm_addstate(fsm);
 		if ((ZIz) == NULL) {
@@ -254,7 +254,7 @@ ZL2_list_Hof_Hliterals:;
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 226 "src/libre/parser.act"
+#line 235 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIz), (ZIy))) {
 			goto ZL1;
@@ -280,7 +280,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 394 "src/libre/parser.act"
+#line 403 "src/libre/parser.act"
 
 
 #line 287 "src/libre/form/literal/parser.c"
