@@ -26,8 +26,11 @@ re_cflags(const char *s, enum re_cflags *f)
 	for (p = s; *p != '\0'; p++) {
 		switch (*p) {
 		case 'i': *f |= RE_ICASE;   break;
-		case 'g': *f |= RE_NEWLINE; break;
+		case 'g': *f |= RE_TEXT;    break;
+		case 'm': *f |= RE_MULTI;   break;
 		case 'r': *f |= RE_REVERSE; break;
+		case 's': *f |= RE_SINGLE;  break;
+		case 'z': *f |= RE_ZONE;    break;
 
 		default:
 			errno = EINVAL;

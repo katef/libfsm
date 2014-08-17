@@ -19,8 +19,11 @@ enum re_form {
 
 enum re_cflags {
 	RE_ICASE   = 1 << 0,
-	RE_NEWLINE = 1 << 1,
-	RE_REVERSE = 1 << 2
+	RE_TEXT    = 1 << 1,
+	RE_MULTI   = 1 << 2,
+	RE_REVERSE = 1 << 3,
+	RE_SINGLE  = 1 << 4,
+	RE_ZONE    = 1 << 5
 };
 
 enum re_eflags {
