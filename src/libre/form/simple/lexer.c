@@ -539,7 +539,7 @@ z3(struct lx *lx)
 
 		case S2: /* e.g. "$" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_EOL;
+			default:  lx_simple_ungetc(lx, c); return TOK_END;
 			}
 
 		case S3: /* e.g. "(" */
@@ -601,7 +601,7 @@ z3(struct lx *lx)
 
 		case S11: /* e.g. "^" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_SOL;
+			default:  lx_simple_ungetc(lx, c); return TOK_START;
 			}
 
 		case S12: /* e.g. "{" */
@@ -642,7 +642,7 @@ z3(struct lx *lx)
 
 	switch (state) {
 	case S1: return TOK_ESC;
-	case S2: return TOK_EOL;
+	case S2: return TOK_END;
 	case S3: return TOK_OPENSUB;
 	case S4: return TOK_CLOSESUB;
 	case S5: return TOK_STAR;
@@ -650,7 +650,7 @@ z3(struct lx *lx)
 	case S7: return TOK_DOT;
 	case S8: return TOK_QMARK;
 	case S9: return TOK_OPENGROUP;
-	case S11: return TOK_SOL;
+	case S11: return TOK_START;
 	case S12: return TOK_OPENCOUNT;
 	case S13: return TOK_ALT;
 	case S14: return TOK_CHAR;
@@ -672,15 +672,15 @@ lx_simple_name(enum lx_token t)
 	case TOK_INVERT: return "INVERT";
 	case TOK_CHAR: return "CHAR";
 	case TOK_ESC: return "ESC";
-	case TOK_CLOSESUB: return "CLOSESUB";
-	case TOK_OPENSUB: return "OPENSUB";
 	case TOK_ALT: return "ALT";
 	case TOK_DOT: return "DOT";
 	case TOK_PLUS: return "PLUS";
 	case TOK_STAR: return "STAR";
 	case TOK_QMARK: return "QMARK";
-	case TOK_EOL: return "EOL";
-	case TOK_SOL: return "SOL";
+	case TOK_END: return "END";
+	case TOK_START: return "START";
+	case TOK_CLOSESUB: return "CLOSESUB";
+	case TOK_OPENSUB: return "OPENSUB";
 	case TOK_EOF:     return "EOF";
 	case TOK_ERROR:   return "ERROR";
 	case TOK_UNKNOWN: return "UNKNOWN";

@@ -30,8 +30,8 @@
 
 	ESC:    () -> (:char);
 	CHAR:   () -> (:char);
-	SOL:    () -> (:char);
-	EOL:    () -> (:char);
+	START:  () -> (:char);
+	END:    () -> (:char);
 	COUNT:  () -> (:unsigned);
 
 	EOF;
@@ -170,12 +170,17 @@
 			c = ESC;
 		||
 			c = CHAR;
-		||
-			c = SOL;
-		||
-			c = EOL;
 		};
 		<add-literal>(x, y, c);
+	};
+
+	predicate: (x :fsm_state, y :fsm_state) -> () = {
+		{
+			c = START;
+		||
+			c = END;
+		};
+		/* TODO */
 	};
 
 	any: (x :fsm_state, y :fsm_state) -> () = {
@@ -192,6 +197,8 @@
 				group(x, y);
 			||
 				literal(x, y);
+			||
+				predicate(x, y);
 			||
 				any(x, y);
 			};

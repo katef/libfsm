@@ -1,14 +1,18 @@
 # $Id$
 
-'^'  -> $sol;
-'$'  -> $eol;
+'('  -> $opensub;
+')'  -> $closesub;
+
+# predicates
+'^'  -> $start;
+'$'  -> $end;
+
+# operators
 '?'  -> $qmark;
 '*'  -> $star;
 '+'  -> $plus;
 '.'  -> $dot;
 '|'  -> $alt;
-'('  -> $opensub;
-')'  -> $closesub;
 
 # standard escapes
 '\\' -> $esc;

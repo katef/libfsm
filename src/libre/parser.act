@@ -110,12 +110,12 @@
 		@c = lex_state->buf.a[0];
 	@};
 
-	EOL: () -> (c :char) = @{
-		@c = 0;	/* TODO */
+	START: () -> (c :char) = @{
+		@c = 1;	/* TODO */
 	@};
 
-	SOL: () -> (c :char) = @{
-		@c = 1;	/* TODO */
+	END: () -> (c :char) = @{
+		@c = 0;	/* TODO */
 	@};
 
 	COUNT: () -> (n :unsigned) = @{
