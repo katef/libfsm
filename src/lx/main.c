@@ -31,7 +31,7 @@
 static
 void usage(void)
 {
-	printf("usage: lx [-h] [-g] [-l <language>] [-p <prefix>] <input>\n");
+	printf("usage: lx [-h] [-g] [-l <language>] [-p <prefix>]\n");
 }
 
 static enum lx_out
@@ -60,23 +60,6 @@ language(const char *name)
 	fprintf(stderr, "unrecognised output language; valid languages are: "
 		"test, dot, c, h\n");
 	exit(EXIT_FAILURE);
-}
-
-/* TODO: centralise */
-static FILE *
-xopen(int argc, char * const argv[], int i, FILE *f, const char *mode)
-{
-	if (argc <= i || 0 == strcmp("-", argv[i])) {
-		return f;
-	}
-
-	f = fopen(argv[i], mode);
-	if (f == NULL) {
-		perror(argv[i]);
-		exit(EXIT_FAILURE);
-	}
-
-	return f;
 }
 
 /* TODO: centralise */
@@ -179,7 +162,6 @@ main(int argc, char *argv[])
 {
 	struct ast *ast;
 	enum lx_out format = LX_OUT_C;
-	FILE *in;
 	int g;
 
 	g = 0;
@@ -215,12 +197,10 @@ main(int argc, char *argv[])
 		argc -= optind;
 		argv += optind;
 
-		if (argc > 1) {
+		if (argc > 0) {
 			usage();
 			exit(EXIT_FAILURE);
 		}
-
-		in = xopen(argc, argv, 1, stdin, "r");
 	}
 
 	if (g && format != LX_OUT_DOT) {
@@ -228,7 +208,7 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	ast = lx_parse(in);
+	ast = lx_parse(stdin);
 	if (ast == NULL) {
 		return EXIT_FAILURE;
 	}
