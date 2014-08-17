@@ -350,15 +350,65 @@ z1(struct lx *lx)
 		}
 
 		switch (state) {
-		case S1: /* e.g. "/i" */
+		case S1: /* e.g. "/a" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_RE;
 			}
 
 		case S2: /* e.g. "/" */
 			switch (c) {
+			case 'A': state = S1;      continue;
+			case 'B': state = S1;      continue;
+			case 'C': state = S1;      continue;
+			case 'D': state = S1;      continue;
+			case 'E': state = S1;      continue;
+			case 'F': state = S1;      continue;
+			case 'G': state = S1;      continue;
+			case 'H': state = S1;      continue;
+			case 'I': state = S1;      continue;
+			case 'J': state = S1;      continue;
+			case 'K': state = S1;      continue;
+			case 'L': state = S1;      continue;
+			case 'M': state = S1;      continue;
+			case 'N': state = S1;      continue;
+			case 'O': state = S1;      continue;
+			case 'P': state = S1;      continue;
+			case 'Q': state = S1;      continue;
+			case 'R': state = S1;      continue;
+			case 'S': state = S1;      continue;
+			case 'T': state = S1;      continue;
+			case 'U': state = S1;      continue;
+			case 'V': state = S1;      continue;
+			case 'W': state = S1;      continue;
+			case 'X': state = S1;      continue;
+			case 'Y': state = S1;      continue;
+			case 'Z': state = S1;      continue;
+			case 'a': state = S1;      continue;
+			case 'b': state = S1;      continue;
+			case 'c': state = S1;      continue;
+			case 'd': state = S1;      continue;
+			case 'e': state = S1;      continue;
+			case 'f': state = S1;      continue;
+			case 'g': state = S1;      continue;
+			case 'h': state = S1;      continue;
 			case 'i': state = S1;      continue;
+			case 'j': state = S1;      continue;
+			case 'k': state = S1;      continue;
+			case 'l': state = S1;      continue;
+			case 'm': state = S1;      continue;
+			case 'n': state = S1;      continue;
+			case 'o': state = S1;      continue;
+			case 'p': state = S1;      continue;
+			case 'q': state = S1;      continue;
 			case 'r': state = S1;      continue;
+			case 's': state = S1;      continue;
+			case 't': state = S1;      continue;
+			case 'u': state = S1;      continue;
+			case 'v': state = S1;      continue;
+			case 'w': state = S1;      continue;
+			case 'x': state = S1;      continue;
+			case 'y': state = S1;      continue;
+			case 'z': state = S1;      continue;
 			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_RE;
 			}
 
