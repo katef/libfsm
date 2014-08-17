@@ -44,6 +44,36 @@ skip(const struct fsm *fsm, const struct fsm_state *state)
 
 /* TODO: centralise */
 static void
+out_escstr(FILE *f, const char *s)
+{
+	const char *p;
+
+	assert(f != NULL);
+	assert(s != NULL);
+
+	for (p = s; *p != '\0'; p++) {
+		if (!isprint((unsigned char) *p)) {
+			fprintf(f, "\\x%02x", *p);
+			continue;
+		}
+
+		switch (*p) {
+		case '\\': fprintf(f, "\\\\");   continue;
+		case '"':  fprintf(f, "\\\"");   continue;
+
+		case '\t': fprintf(f, "\\t");    continue;
+		case '\n': fprintf(f, "\\n");    continue;
+		case '\v': fprintf(f, "\\v");    continue;
+		case '\r': fprintf(f, "\\r");    continue;
+		case '\f': fprintf(f, "\\f");    continue;
+
+		default:   fprintf(f, "%c", *p); continue;
+		}
+	}
+}
+
+/* TODO: centralise */
+static void
 out_esctok(FILE *f, const char *s)
 {
 	const char *p;
@@ -614,7 +644,7 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 }
 
-static void
+static int
 out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
 	assert(f != NULL);
@@ -695,7 +725,19 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		fprintf(f, "\t\tswitch (state) {\n");
 
 		for (s = z->fsm->sl; s != NULL; s = s->next) {
-			fprintf(f, "\t\tcase S%u:\n", indexof(z->fsm, s));
+			char buf[50];
+			int n;
+
+			n = fsm_example(z->fsm, s, buf, sizeof buf);
+			if (-1 == n) {
+				perror("fsm_example");
+				return -1;
+			}
+
+			fprintf(f, "\t\tcase S%u: /* e.g. \"", indexof(z->fsm, s));
+			out_escstr(f, buf);
+			fprintf(f, "%s\" */\n",
+				n >= (int) sizeof buf - 1 ? "..." : "");
 			singlecase(f, ast, z, z->fsm, s);
 
 			if (s->next != NULL) {
@@ -750,6 +792,8 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	}
 
 	fprintf(f, "}\n\n");
+
+	return 0;
 }
 
 void
@@ -795,7 +839,9 @@ lx_out_c(const struct ast *ast, FILE *f)
 	out_buf(f);
 
 	for (z = ast->zl; z != NULL; z = z->next) {
-		out_zone(f, ast, z);
+		if (-1 == out_zone(f, ast, z)) {
+			return; /* XXX: handle error */
+		}
 	}
 
 	{
