@@ -65,17 +65,6 @@
 	<err-expected-alts>;
 	<err-expected-eof>;
 
-
-	list-of-alts: (:fsm_state, :fsm_state) -> ();
-
-	sub: (x :fsm_state, y :fsm_state) -> () = {
-		OPENSUB;
-
-		list-of-alts(x, y);
-
-		CLOSESUB;
-	};
-
 	group: (x :fsm_state, y :fsm_state) -> () [
 
 		list-of-terms: (g :grp) -> () [
@@ -165,42 +154,36 @@
 		! = CLOSEGROUP;
 	};
 
-	literal: (x :fsm_state, y :fsm_state) -> () = {
-		{
-			c = ESC;
-		||
-			c = CHAR;
-		};
-		<add-literal>(x, y, c);
+	literal: () -> (c :char) = {
+		c = ESC;
+	||
+		c = CHAR;
 	};
 
-	predicate: (x :fsm_state, y :fsm_state) -> () = {
-		{
-			c = START;
-		||
-			c = END;
-		};
-		/* TODO */
-	};
-
-	any: (x :fsm_state, y :fsm_state) -> () = {
-		DOT;
-		<add-any>(x, y);
+	predicate: () -> (c :char) = {
+		c = START;
+	||
+		c = END;
 	};
 
 	list-of-alts: (x :fsm_state, y :fsm_state) -> () [
 
-		item: (x :fsm_state, y :fsm_state &) -> () = {
+		atom: (x :fsm_state, y :fsm_state &) -> () = {
 			{
-				sub(x, y);
+				OPENSUB;
+				list-of-alts(x, y);
+				CLOSESUB;
 			||
 				group(x, y);
 			||
-				literal(x, y);
+				c = literal();
+				<add-literal>(x, y, c);
 			||
-				predicate(x, y);
+				c = predicate();
+				/* TODO: <add-predicate>(x, y, c); */
 			||
-				any(x, y);
+				DOT;
+				<add-any>(x, y);
 			};
 
 			{
@@ -231,21 +214,21 @@
 			};
 		};
 
-		list-of-items: (x :fsm_state, y :fsm_state) -> () = {
+		list-of-atoms: (x :fsm_state, y :fsm_state) -> () = {
 			z = <add-concat>;
 
-			item(x, &z);
+			atom(x, &z);
 
 			/* TODO: I don't like this. Refactor somehow? */
 			{
 				<add-epsilon>(z, y);
 			||
-				list-of-items(z, y);
+				list-of-atoms(z, y);
 			};
 		};
 
 		alt: (x :fsm_state, y :fsm_state) -> () = {
-			list-of-items(x, y);
+			list-of-atoms(x, y);
 		};
 
 	] = {
