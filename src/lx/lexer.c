@@ -350,24 +350,24 @@ z1(struct lx *lx)
 		}
 
 		switch (state) {
-		case S1:
+		case S1: /* e.g. "/i" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_RE;
 			}
 
-		case S2:
+		case S2: /* e.g. "/" */
 			switch (c) {
 			case 'i': state = S1;      continue;
 			case 'r': state = S1;      continue;
 			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_RE;
 			}
 
-		case S3:
+		case S3: /* e.g. "a" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_CHAR;
 			}
 
-		case S4:
+		case S4: /* e.g. "" */
 			switch (c) {
 			case '/': state = S2;      continue;
 			default:  state = S3;     continue;
@@ -419,17 +419,17 @@ z2(struct lx *lx)
 		}
 
 		switch (state) {
-		case S1:
+		case S1: /* e.g. "\\f" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_ESC;
 			}
 
-		case S2:
+		case S2: /* e.g. "\"" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_STR;
 			}
 
-		case S3:
+		case S3: /* e.g. "\\" */
 			switch (c) {
 			case '\\': state = S1;      continue;
 			case 'f': state = S1;      continue;
@@ -440,12 +440,12 @@ z2(struct lx *lx)
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
-		case S4:
+		case S4: /* e.g. "a" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_CHAR;
 			}
 
-		case S5:
+		case S5: /* e.g. "" */
 			switch (c) {
 			case '\"': state = S2;      continue;
 			case '\\': state = S3;      continue;
@@ -498,17 +498,17 @@ z3(struct lx *lx)
 		}
 
 		switch (state) {
-		case S1:
+		case S1: /* e.g. "'" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_STR;
 			}
 
-		case S2:
+		case S2: /* e.g. "a" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_CHAR;
 			}
 
-		case S3:
+		case S3: /* e.g. "" */
 			switch (c) {
 			case '\'': state = S1;      continue;
 			default:  state = S2;     continue;
@@ -562,17 +562,17 @@ z4(struct lx *lx)
 		}
 
 		switch (state) {
-		case S1:
+		case S1: /* e.g. "\x0a" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return lx->z = z5, lx->z(lx);
 			}
 
-		case S2:
+		case S2: /* e.g. "a" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return lx->z(lx);
 			}
 
-		case S3:
+		case S3: /* e.g. "" */
 			switch (c) {
 			case '\n': state = S1;      continue;
 			default:  state = S2;     continue;
@@ -630,17 +630,17 @@ z5(struct lx *lx)
 		}
 
 		switch (state) {
-		case S1:
+		case S1: /* e.g. ".." */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_TO;
 			}
 
-		case S2:
+		case S2: /* e.g. "->" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_MAP;
 			}
 
-		case S3:
+		case S3: /* e.g. "$a" */
 			switch (c) {
 			case '0':	          continue;
 			case '1':	          continue;
@@ -708,7 +708,7 @@ z5(struct lx *lx)
 			default:  lx_ungetc(lx, c); return TOK_TOKEN;
 			}
 
-		case S4:
+		case S4: /* e.g. "\x09" */
 			switch (c) {
 			case '\t':	          continue;
 			case '\n':	          continue;
@@ -717,22 +717,22 @@ z5(struct lx *lx)
 			default:  lx_ungetc(lx, c); return lx->z(lx);
 			}
 
-		case S5:
+		case S5: /* e.g. "!" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_BANG;
 			}
 
-		case S6:
+		case S6: /* e.g. "\"" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return lx->z = z2, lx->z(lx);
 			}
 
-		case S7:
+		case S7: /* e.g. "#" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return lx->z = z4, lx->z(lx);
 			}
 
-		case S8:
+		case S8: /* e.g. "$" */
 			switch (c) {
 			case 'A': state = S3;      continue;
 			case 'B': state = S3;      continue;
@@ -790,64 +790,64 @@ z5(struct lx *lx)
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
-		case S9:
+		case S9: /* e.g. "'" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return lx->z = z3, lx->z(lx);
 			}
 
-		case S10:
+		case S10: /* e.g. "(" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_LPAREN;
 			}
 
-		case S11:
+		case S11: /* e.g. ")" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_RPAREN;
 			}
 
-		case S12:
+		case S12: /* e.g. "*" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_STAR;
 			}
 
-		case S13:
+		case S13: /* e.g. "+" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_CROSS;
 			}
 
-		case S14:
+		case S14: /* e.g. "-" */
 			switch (c) {
 			case '>': state = S2;      continue;
 			default:  lx_ungetc(lx, c); return TOK_DASH;
 			}
 
-		case S15:
+		case S15: /* e.g. "." */
 			switch (c) {
 			case '.': state = S1;      continue;
 			default:  lx_ungetc(lx, c); return TOK_DOT;
 			}
 
-		case S16:
+		case S16: /* e.g. "/" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return lx->z = z1, lx->z(lx);
 			}
 
-		case S17:
+		case S17: /* e.g. ";" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_SEMI;
 			}
 
-		case S18:
+		case S18: /* e.g. "=" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_BIND;
 			}
 
-		case S19:
+		case S19: /* e.g. "?" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_QMARK;
 			}
 
-		case S20:
+		case S20: /* e.g. "a" */
 			switch (c) {
 			case '0':	          continue;
 			case '1':	          continue;
@@ -915,27 +915,27 @@ z5(struct lx *lx)
 			default:  lx_ungetc(lx, c); return TOK_IDENT;
 			}
 
-		case S21:
+		case S21: /* e.g. "{" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_OPEN;
 			}
 
-		case S22:
+		case S22: /* e.g. "|" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_PIPE;
 			}
 
-		case S23:
+		case S23: /* e.g. "}" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_CLOSE;
 			}
 
-		case S24:
+		case S24: /* e.g. "~" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return TOK_TILDE;
 			}
 
-		case S25:
+		case S25: /* e.g. "" */
 			switch (c) {
 			case '\t': state = S4;      continue;
 			case '\n': state = S4;      continue;

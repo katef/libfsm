@@ -346,12 +346,12 @@ z1(struct lx *lx)
 		}
 
 		switch (state) {
-		case S1:
+		case S1: /* e.g. "a" */
 			switch (c) {
 			default:  lx_literal_ungetc(lx, c); return TOK_CHAR;
 			}
 
-		case S2:
+		case S2: /* e.g. "" */
 			switch (c) {
 			default:  state = S1;     continue;
 			}

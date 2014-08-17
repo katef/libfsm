@@ -346,22 +346,22 @@ z1(struct lx *lx)
 		}
 
 		switch (state) {
-		case S1:
+		case S1: /* e.g. "*" */
 			switch (c) {
 			default:  lx_glob_ungetc(lx, c); return TOK_STAR;
 			}
 
-		case S2:
+		case S2: /* e.g. "?" */
 			switch (c) {
 			default:  lx_glob_ungetc(lx, c); return TOK_QMARK;
 			}
 
-		case S3:
+		case S3: /* e.g. "a" */
 			switch (c) {
 			default:  lx_glob_ungetc(lx, c); return TOK_CHAR;
 			}
 
-		case S4:
+		case S4: /* e.g. "" */
 			switch (c) {
 			case '*': state = S1;      continue;
 			case '?': state = S2;      continue;
