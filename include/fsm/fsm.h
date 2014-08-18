@@ -82,10 +82,6 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state);
  * - An epsilon transition.
  * - Any character
  * - A literal character. The character '\0' is permitted.
- * - A human-readable label. Empty labels are not legal, and the label may
- *   not be NULL. The contents of the label are duplicated and stored
- *   internally. Therefore the memory passed may be deallocated after a call
- *   to fsm_addedge_label().
  *
  * Returns false on error; see errno.
  */
@@ -94,10 +90,6 @@ fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
 
 struct fsm_edge *
 fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to);
-
-struct fsm_edge *
-fsm_addedge_label(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
-	const char *label);
 
 struct fsm_edge *
 fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
