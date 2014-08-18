@@ -14,6 +14,7 @@ fsm_findmode(const struct fsm_state *state)
 {
 	struct state_set *s;
 	int i, j;
+
 	struct {
 		struct fsm_state *state;
 		unsigned int freq;
