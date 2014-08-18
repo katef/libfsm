@@ -17,9 +17,9 @@ re_strerror(enum re_errno e)
 	case RE_EXSUB:    return "Syntax error: expected sub-expression";
 	case RE_EXTERM:   return "Syntax error: expected group term";
 	case RE_EXGROUP:  return "Syntax error: expected group";
-	case RE_EXITEM:   return "Syntax error: expected item";
+	case RE_EXATOM:   return "Syntax error: expected atom";
 	case RE_EXCOUNT:  return "Syntax error: expected count";
-	case RE_EXITEMS:  return "Syntax error: expected items list";
+	case RE_EXATOMS:  return "Syntax error: expected atoms list";
 	case RE_EXALTS:   return "Syntax error: expected alternative list";
 	case RE_EXEOF:    return "Syntax error: expected EOF";
 	}

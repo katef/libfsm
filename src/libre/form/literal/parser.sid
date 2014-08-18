@@ -6,6 +6,7 @@
 	unsigned;
 	fsm_state;
 	grp;
+	pred;
 
 %terminals%
 
@@ -25,8 +26,8 @@
 
 	!ESC:    () -> (:char);
 	CHAR:    () -> (:char);
-	!START:  () -> (:char);
-	!END:    () -> (:char);
+	!START:  () -> (:pred);
+	!END:    () -> (:pred);
 	!COUNT:  () -> (:unsigned);
 
 	EOF;
@@ -43,10 +44,11 @@
 	!<group-add-range>: (:grp, :char, :char) -> ();
 	!<group-to-states>: (:grp, :fsm_state, :fsm_state) -> ();
 
-	<add-concat>: () -> (:fsm_state);
-	<add-epsilon>: (:fsm_state, :fsm_state) -> ();
+	<add-concat>:  () -> (:fsm_state);
+	<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
 	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
-	!<add-any>: (:fsm_state, :fsm_state) -> ();
+	!<add-pred>:   (:fsm_state, :fsm_state, :pred) -> ();
+	!<add-any>:    (:fsm_state, :fsm_state)        -> ();
 
 	!<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
 	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
@@ -56,7 +58,7 @@
 
 	!<err-expected-term>;
 	!<err-expected-count>;
-	<err-expected-items>;
+	<err-expected-atoms>;
 	!<err-expected-alts>;
 	<err-expected-eof>;
 
@@ -88,7 +90,7 @@
 		||
 			<add-epsilon>(x, y);
 		##
-			<err-expected-items>;	/* TODO: inappropiate? */
+			<err-expected-atoms>;	/* TODO: inappropiate? */
 		};
 
 		{

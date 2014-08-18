@@ -31,6 +31,7 @@
 	typedef char     t_char;
 	typedef unsigned t_unsigned;
 	typedef char *   t_grp;
+	typedef unsigned t_pred; /* TODO */
 
 	typedef struct fsm_state * t_fsm__state;
 
@@ -110,12 +111,12 @@
 		@c = lex_state->buf.a[0];
 	@};
 
-	START: () -> (c :char) = @{
-		@c = 1;	/* TODO */
+	START: () -> (p :pred) = @{
+		@p = 0; /* TODO: depends on cflags */
 	@};
 
-	END: () -> (c :char) = @{
-		@c = 0;	/* TODO */
+	END: () -> (p :pred) = @{
+		@p = 0; /* TODO: depends on cflags */
 	@};
 
 	COUNT: () -> (n :unsigned) = @{
@@ -235,6 +236,17 @@
 		if (!fsm_addedge_epsilon(fsm, @x, @y)) {
 			@!;
 		}
+	@};
+
+	<add-pred>: (x :fsm_state, y :fsm_state, p :pred) -> () = @{
+		assert(@x != NULL);
+		assert(@y != NULL);
+
+/* TODO:
+		if (!fsm_addedge_predicate(fsm, @x, @y, @p)) {
+			@!;
+		}
+*/
 	@};
 
 	<add-literal>: (x :fsm_state, y :fsm_state, c :char) -> () = @{
@@ -386,8 +398,8 @@
 		act_state->e = RE_EXCOUNT;
 	@};
 
-	<err-expected-items> = @{
-		act_state->e = RE_EXITEMS;
+	<err-expected-atoms> = @{
+		act_state->e = RE_EXATOMS;
 	@};
 
 	<err-expected-alts> = @{

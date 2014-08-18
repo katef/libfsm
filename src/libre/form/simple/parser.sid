@@ -11,6 +11,7 @@
 	unsigned;
 	fsm_state;
 	grp;
+	pred;
 
 %terminals%
 
@@ -30,8 +31,8 @@
 
 	ESC:    () -> (:char);
 	CHAR:   () -> (:char);
-	START:  () -> (:char);
-	END:    () -> (:char);
+	START:  () -> (:pred);
+	END:    () -> (:pred);
 	COUNT:  () -> (:unsigned);
 
 	EOF;
@@ -48,10 +49,11 @@
 	<group-add-range>: (:grp, :char, :char) -> ();
 	<group-to-states>: (:grp, :fsm_state, :fsm_state) -> ();
 
-	<add-concat>: () -> (:fsm_state);
-	<add-epsilon>: (:fsm_state, :fsm_state) -> ();
+	<add-concat>:  () -> (:fsm_state);
+	<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
+	<add-pred>:    (:fsm_state, :fsm_state, :pred) -> ();
 	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
-	<add-any>: (:fsm_state, :fsm_state) -> ();
+	<add-any>:     (:fsm_state, :fsm_state)        -> ();
 
 	<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
 	<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
@@ -61,7 +63,7 @@
 
 	<err-expected-term>;
 	<err-expected-count>;
-	!<err-expected-items>;
+	!<err-expected-atoms>;
 	<err-expected-alts>;
 	<err-expected-eof>;
 
@@ -154,33 +156,33 @@
 		! = CLOSEGROUP;
 	};
 
-	literal: () -> (c :char) = {
+	literal: (x :fsm_state, y :fsm_state) -> () = {
 		c = ESC;
+		<add-literal>(x, y, c);
 	||
 		c = CHAR;
+		<add-literal>(x, y, c);
 	};
 
-	predicate: () -> (c :char) = {
-		c = START;
+	anchor: (x :fsm_state, y :fsm_state) -> () = {
+		p = START;
+		<add-pred>(x, y, p);
 	||
-		c = END;
+		p = END;
+		<add-pred>(x, y, p);
 	};
 
-	list-of-alts: (x :fsm_state, y :fsm_state) -> () [
+	expr: (x :fsm_state, y :fsm_state) -> () [
 
 		atom: (x :fsm_state, y :fsm_state &) -> () = {
 			{
 				OPENSUB;
-				list-of-alts(x, y);
+				expr(x, y);
 				CLOSESUB;
 			||
 				group(x, y);
 			||
-				c = literal();
-				<add-literal>(x, y, c);
-			||
-				c = predicate();
-				/* TODO: <add-predicate>(x, y, c); */
+				literal(x, y);
 			||
 				DOT;
 				<add-any>(x, y);
@@ -217,7 +219,11 @@
 		list-of-atoms: (x :fsm_state, y :fsm_state) -> () = {
 			z = <add-concat>;
 
-			atom(x, &z);
+			{
+				anchor(x, z);
+			||
+				atom(x, &z);
+			};
 
 			/* TODO: I don't like this. Refactor somehow? */
 			{
@@ -227,23 +233,29 @@
 			};
 		};
 
-		alt: (x :fsm_state, y :fsm_state) -> () = {
-			list-of-atoms(x, y);
+		list-of-alts: (x :fsm_state, y :fsm_state) -> () [
+
+			alt: (x :fsm_state, y :fsm_state) -> () = {
+				list-of-atoms(x, y);
+			};
+
+		] = {
+			alt(x, y);
+		||
+			list-of-alts(x, y);
+			ALT;
+			alt(x, y);
 		};
 
 	] = {
-		alt(x, y);
-	||
 		list-of-alts(x, y);
-		ALT;
-		alt(x, y);
 	};
 
 	re_simple: () -> () = {
 		(x, y) = <make-states>;
 
 		{
-			list-of-alts(x, y);
+			expr(x, y);
 		||
 			<add-epsilon>(x, y);
 		##
