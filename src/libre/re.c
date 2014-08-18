@@ -23,7 +23,14 @@ re_cflags(const char *s, enum re_cflags *f)
 
 	*f = 0U;
 
+	/* defaults */
+	*f |= RE_ZONE;
+
 	for (p = s; *p != '\0'; p++) {
+		if (*p & RE_ANCHOR) {
+			*f &= ~RE_ANCHOR;
+		}
+
 		switch (*p) {
 		case 'i': *f |= RE_ICASE;   break;
 		case 'g': *f |= RE_TEXT;    break;
