@@ -112,11 +112,27 @@
 	@};
 
 	START: () -> (p :pred) = @{
-		@p = 0; /* TODO: depends on cflags */
+		switch (cflags & RE_ANCHOR) {
+		case RE_TEXT:  @p = RE_SOT; break;
+		case RE_MULTI: @p = RE_SOL; break;
+		case RE_ZONE:  @p = RE_SOZ; break;
+
+		default:
+			/* TODO: raise error */
+			@p = 0x0;
+		}
 	@};
 
 	END: () -> (p :pred) = @{
-		@p = 0; /* TODO: depends on cflags */
+		switch (cflags & RE_ANCHOR) {
+		case RE_TEXT:  @p = RE_EOT; break;
+		case RE_MULTI: @p = RE_EOL; break;
+		case RE_ZONE:  @p = RE_EOZ; break;
+
+		default:
+			/* TODO: raise error */
+			@p = 0x0;
+		}
 	@};
 
 	COUNT: () -> (n :unsigned) = @{

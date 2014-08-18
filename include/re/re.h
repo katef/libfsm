@@ -26,10 +26,22 @@ enum re_cflags {
 	RE_ZONE    = 1 << 5
 };
 
+#define RE_ANCHOR (RE_TEXT | RE_MULTI | RE_ZONE)
+
 enum re_eflags {
 	RE_NOTBOL  = 1 << 0,
 	RE_NOTEOL  = 1 << 1,
 	RE_GREEDY  = 1 << 2
+};
+
+enum re_pred {
+	RE_SOL = 1 << 0,
+	RE_SOZ = 1 << 1,
+	RE_SOT = 1 << 2 | RE_SOL,
+
+	RE_EOL = 1 << 3,
+	RE_EOZ = 1 << 4,
+	RE_EOT = 1 << 5 | RE_EOL
 };
 
 #define RE_SYNTAX 100
