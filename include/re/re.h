@@ -32,9 +32,7 @@ enum re_eflags {
 	RE_GREEDY  = 1 << 2
 };
 
-enum {
-	RE_SYNTAX = 100
-};
+#define RE_SYNTAX 100
 
 enum re_errno {
 	RE_ESUCCESS,
