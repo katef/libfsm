@@ -81,7 +81,7 @@ p_anchor(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm
 
 		default:
 			/* TODO: raise error */
-			ZIp = 0x0;
+			ZIp = 0U;
 		}
 	
 #line 88 "src/libre/form/simple/parser.c"
@@ -121,7 +121,7 @@ p_anchor(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm
 
 		default:
 			/* TODO: raise error */
-			ZIp = 0x0;
+			ZIp = 0U;
 		}
 	
 #line 128 "src/libre/form/simple/parser.c"
