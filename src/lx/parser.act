@@ -279,7 +279,7 @@
 
 		@r = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, &err);
 		if (@r == NULL) {
-			assert(err.e != RE_BADFORM);
+			assert(err.e != RE_EBADFORM);
 			/* TODO: pass filename for .lx source */
 			re_perror("re_new_comp", RE_LITERAL, &err, NULL, @s);
 			exit(EXIT_FAILURE);
@@ -296,7 +296,7 @@
 
 		@r = re_new_comp(RE_SIMPLE, re_getc_str, &s, @f, &err);
 		if (@r == NULL) {
-			assert(err.e != RE_BADFORM);
+			assert(err.e != RE_EBADFORM);
 			/* TODO: pass filename for .lx source */
 			re_perror("re_new_comp", RE_SIMPLE, &err, NULL, @s);
 			exit(EXIT_FAILURE);

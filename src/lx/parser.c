@@ -1271,7 +1271,7 @@ p_176(lex_state lex_state, act_state act_state, fsm *ZOr)
 
 		(ZIr) = re_new_comp(RE_SIMPLE, re_getc_str, &s, (ZIf), &err);
 		if ((ZIr) == NULL) {
-			assert(err.e != RE_BADFORM);
+			assert(err.e != RE_EBADFORM);
 			/* TODO: pass filename for .lx source */
 			re_perror("re_new_comp", RE_SIMPLE, &err, NULL, (ZIs));
 			exit(EXIT_FAILURE);
@@ -1332,7 +1332,7 @@ p_176(lex_state lex_state, act_state act_state, fsm *ZOr)
 
 		(ZIr) = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, &err);
 		if ((ZIr) == NULL) {
-			assert(err.e != RE_BADFORM);
+			assert(err.e != RE_EBADFORM);
 			/* TODO: pass filename for .lx source */
 			re_perror("re_new_comp", RE_LITERAL, &err, NULL, (ZIs));
 			exit(EXIT_FAILURE);
