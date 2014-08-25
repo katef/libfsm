@@ -161,6 +161,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "const char *%sname(enum lx_token t);\n", prefix);
+	fprintf(f, "const char *%sexample(enum lx_token (*z)(struct lx *), enum lx_token t);\n", prefix);
 	fprintf(f, "\n");
 
 	fprintf(f, "void %sinit(struct lx *lx);\n", prefix);

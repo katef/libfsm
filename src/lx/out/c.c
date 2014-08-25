@@ -186,6 +186,56 @@ contains(struct fsm_edge edges[], int o, struct fsm_state *state)
 	return 0;
 }
 
+/*
+ * Given a token, find one of its accepting states which gives
+ * the shortest fsm_example(). This is pretty expensive.
+ */
+static const struct fsm_state *
+shortest_example(const struct fsm *fsm, const struct ast_token *token)
+{
+	const struct fsm_state *goal;
+	struct fsm_state *s;
+	int min;
+
+	assert(fsm != NULL);
+	assert(token != NULL);
+
+	/*
+	 * We're nominating fsm->start to mean the given token was not present
+	 * in this FSM; this is on the premise that the start state cannot
+	 * accept, because lx does not permit empty regexps.
+	 */
+	goal = fsm->start;
+	min  = INT_MAX;
+
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		const struct ast_mapping *m;
+		int n;
+
+		m = s->opaque;
+		if (m == NULL) {
+			continue;
+		}
+
+		if (m->token != token) {
+			continue;
+		}
+
+		n = fsm_example(fsm, s, NULL, 0);
+		if (-1 == n) {
+			perror("fsm_example");
+			return NULL;
+		}
+
+		if (n < min) {
+			min = n;
+			goal = s;
+		}
+	}
+
+	return goal;
+}
+
 static void
 singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 	const struct fsm *fsm, struct fsm_state *state)
@@ -796,6 +846,108 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	return 0;
 }
 
+static void
+out_name(FILE *f, const struct ast *ast)
+{
+	struct ast_token *t;
+
+	assert(f != NULL);
+	assert(ast != NULL);
+
+	fprintf(f, "const char *\n");
+	fprintf(f, "%sname(enum lx_token t)\n", prefix);
+	fprintf(f, "{\n");
+
+	fprintf(f, "\tswitch (t) {\n");
+
+	for (t = ast->tl; t != NULL; t = t->next) {
+		fprintf(f, "\tcase TOK_");
+		out_esctok(f, t->s);
+		fprintf(f, ": return \"");
+		out_esctok(f, t->s);
+		fprintf(f, "\";\n");
+	}
+
+	fprintf(f, "\tcase TOK_EOF:     return \"EOF\";\n");
+	fprintf(f, "\tcase TOK_ERROR:   return \"ERROR\";\n");
+	fprintf(f, "\tcase TOK_UNKNOWN: return \"UNKNOWN\";\n");
+
+	fprintf(f, "\tdefault: return \"?\";\n");
+
+	fprintf(f, "\t}\n");
+
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+}
+
+static int
+out_example(FILE *f, const struct ast *ast)
+{
+	struct ast_token *t;
+	struct ast_zone *z;
+
+	assert(f != NULL);
+	assert(ast != NULL);
+
+	fprintf(f, "const char *\n");
+	fprintf(f, "%sexample(enum lx_token (*z)(struct lx *), enum lx_token t)\n", prefix);
+	fprintf(f, "{\n");
+
+	fprintf(f, "\tassert(z != NULL);\n");
+
+	fprintf(f, "\n");
+
+	for (z = ast->zl; z != NULL; z = z->next) {
+		fprintf(f, "\tif (z == z%u) {\n", zindexof(ast, z));
+		fprintf(f, "\t\tswitch (t) {\n");
+
+		for (t = ast->tl; t != NULL; t = t->next) {
+			const struct fsm_state *s;
+			char buf[50]; /* 50 looks reasonable for an on-screen limit */
+			int n;
+
+			s = shortest_example(z->fsm, t);
+			if (s == NULL) {
+				return -1;
+			}
+
+			if (s == z->fsm->start) {
+				continue;
+			}
+
+			n = fsm_example(z->fsm, s, buf, sizeof buf);
+			if (-1 == n) {
+				perror("fsm_example");
+				return -1;
+			}
+
+			fprintf(f, "\t\tcase TOK_");
+			out_esctok(f, t->s);
+			fprintf(f, ": return \"");
+			out_escstr(f, buf);
+			fprintf(f, "%s", n >= (int) sizeof buf - 1 ? "..." : "");
+			fprintf(f, "\";\n");
+		}
+
+		fprintf(f, "\t\tdefault: goto error;\n");
+
+		fprintf(f, "\t\t}\n");
+
+		fprintf(f, "\t}%s\n", z->next ? " else" : "");
+	}
+
+	fprintf(f, "\n");
+	fprintf(f, "error:\n");
+	fprintf(f, "\n");
+	fprintf(f, "\terrno = EINVAL;\n");
+	fprintf(f, "\treturn NULL;\n");
+
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+
+	return 0;
+}
+
 void
 lx_out_c(const struct ast *ast, FILE *f)
 {
@@ -844,33 +996,10 @@ lx_out_c(const struct ast *ast, FILE *f)
 		}
 	}
 
-	{
-		struct ast_token *t;
+	out_name(f, ast);
 
-		fprintf(f, "const char *\n");
-		fprintf(f, "%sname(enum lx_token t)\n", prefix);
-		fprintf(f, "{\n");
-
-		fprintf(f, "\tswitch (t) {\n");
-
-		for (t = ast->tl; t != NULL; t = t->next) {
-			fprintf(f, "\tcase TOK_");
-			out_esctok(f, t->s);
-			fprintf(f, ": return \"");
-			out_esctok(f, t->s);
-			fprintf(f, "\";\n");
-		}
-
-		fprintf(f, "\tcase TOK_EOF:     return \"EOF\";\n");
-		fprintf(f, "\tcase TOK_ERROR:   return \"ERROR\";\n");
-		fprintf(f, "\tcase TOK_UNKNOWN: return \"UNKNOWN\";\n");
-
-		fprintf(f, "\tdefault: return \"?\";\n");
-
-		fprintf(f, "\t}\n");
-
-		fprintf(f, "}\n");
-		fprintf(f, "\n");
+	if (-1 == out_example(f, ast)) {
+		return;
 	}
 
 	{
