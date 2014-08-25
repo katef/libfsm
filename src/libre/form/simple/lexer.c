@@ -688,6 +688,54 @@ lx_simple_name(enum lx_token t)
 	}
 }
 
+const char *
+lx_simple_example(enum lx_token (*z)(struct lx *), enum lx_token t)
+{
+	assert(z != NULL);
+
+	if (z == z1) {
+		switch (t) {
+		case TOK_CLOSECOUNT: return "}";
+		case TOK_COUNT: return "0";
+		case TOK_SEP: return ",";
+		default: goto error;
+		}
+	} else
+	if (z == z2) {
+		switch (t) {
+		case TOK_CLOSEGROUP: return "]";
+		case TOK_RANGE: return "-";
+		case TOK_INVERT: return "^";
+		case TOK_CHAR: return "a";
+		case TOK_ESC: return "\\f";
+		default: goto error;
+		}
+	} else
+	if (z == z3) {
+		switch (t) {
+		case TOK_OPENCOUNT: return "{";
+		case TOK_OPENGROUP: return "[";
+		case TOK_CHAR: return "a";
+		case TOK_ESC: return "\\f";
+		case TOK_ALT: return "|";
+		case TOK_DOT: return ".";
+		case TOK_PLUS: return "+";
+		case TOK_STAR: return "*";
+		case TOK_QMARK: return "?";
+		case TOK_END: return "$";
+		case TOK_START: return "^";
+		case TOK_CLOSESUB: return ")";
+		case TOK_OPENSUB: return "(";
+		default: goto error;
+		}
+	}
+
+error:
+
+	errno = EINVAL;
+	return NULL;
+}
+
 void
 lx_simple_init(struct lx *lx)
 {

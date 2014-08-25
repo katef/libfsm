@@ -1131,6 +1131,68 @@ lx_name(enum lx_token t)
 	}
 }
 
+const char *
+lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
+{
+	assert(z != NULL);
+
+	if (z == z1) {
+		switch (t) {
+		case TOK_RE: return "/";
+		case TOK_CHAR: return "a";
+		default: goto error;
+		}
+	} else
+	if (z == z2) {
+		switch (t) {
+		case TOK_ESC: return "\\f";
+		case TOK_STR: return "\"";
+		case TOK_CHAR: return "a";
+		default: goto error;
+		}
+	} else
+	if (z == z3) {
+		switch (t) {
+		case TOK_STR: return "'";
+		case TOK_CHAR: return "a";
+		default: goto error;
+		}
+	} else
+	if (z == z4) {
+		switch (t) {
+		default: goto error;
+		}
+	} else
+	if (z == z5) {
+		switch (t) {
+		case TOK_IDENT: return "a";
+		case TOK_TOKEN: return "$a";
+		case TOK_PIPE: return "|";
+		case TOK_DOT: return ".";
+		case TOK_BANG: return "!";
+		case TOK_DASH: return "-";
+		case TOK_TILDE: return "~";
+		case TOK_QMARK: return "?";
+		case TOK_CROSS: return "+";
+		case TOK_STAR: return "*";
+		case TOK_RPAREN: return ")";
+		case TOK_LPAREN: return "(";
+		case TOK_CLOSE: return "}";
+		case TOK_OPEN: return "{";
+		case TOK_MAP: return "->";
+		case TOK_TO: return "..";
+		case TOK_SEMI: return ";";
+		case TOK_BIND: return "=";
+		default: goto error;
+		}
+	}
+
+error:
+
+	errno = EINVAL;
+	return NULL;
+}
+
 void
 lx_init(struct lx *lx)
 {

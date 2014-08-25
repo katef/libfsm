@@ -394,6 +394,26 @@ lx_glob_name(enum lx_token t)
 	}
 }
 
+const char *
+lx_glob_example(enum lx_token (*z)(struct lx *), enum lx_token t)
+{
+	assert(z != NULL);
+
+	if (z == z1) {
+		switch (t) {
+		case TOK_CHAR: return "a";
+		case TOK_QMARK: return "?";
+		case TOK_STAR: return "*";
+		default: goto error;
+		}
+	}
+
+error:
+
+	errno = EINVAL;
+	return NULL;
+}
+
 void
 lx_glob_init(struct lx *lx)
 {

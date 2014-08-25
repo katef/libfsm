@@ -105,6 +105,7 @@ struct lx_fd {
 };
 
 const char *lx_name(enum lx_token t);
+const char *lx_example(enum lx_token (*z)(struct lx *), enum lx_token t);
 
 void lx_init(struct lx *lx);
 enum lx_token lx_next(struct lx *lx);
