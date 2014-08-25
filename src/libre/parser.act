@@ -167,7 +167,7 @@
 
 
 	<make-group>: () -> (g :grp) = @{
-		@g = calloc(UCHAR_MAX, sizeof *@g);
+		@g = calloc(UCHAR_MAX + 1, sizeof *@g);
 		if (@g == NULL) {
 			@!;
 		}

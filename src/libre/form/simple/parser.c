@@ -197,7 +197,7 @@ p_group(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm_
 		{
 #line 170 "src/libre/parser.act"
 
-		(ZIg) = calloc(UCHAR_MAX, sizeof *(ZIg));
+		(ZIg) = calloc(UCHAR_MAX + 1, sizeof *(ZIg));
 		if ((ZIg) == NULL) {
 			goto ZL1;
 		}
