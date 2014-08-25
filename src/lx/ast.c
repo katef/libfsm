@@ -89,7 +89,6 @@ ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 
 	assert(z != NULL);
 	assert(fsm != NULL);
-	assert(to == NULL || to->parent == z); /* XXX: horrible API */
 
 	for (m = z->ml; m != NULL; m = m->next) {
 		assert(m->fsm != NULL);
