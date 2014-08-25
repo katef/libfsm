@@ -741,7 +741,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 			r = fsm_reachable(z->fsm, s, skip);
 			if (r == -1) {
-				return;
+				return -1;
 			}
 
 			if (!r) {
