@@ -159,7 +159,13 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 			int hi, lo;
 			int k;
 			int count; /* TODO: unsigned? */
-			enum { MODE_INVERT, MODE_SINGLE, MODE_ANY, MODE_MANY } mode;
+
+			enum {
+				MODE_INVERT,
+				MODE_SINGLE,
+				MODE_ANY,
+				MODE_MANY
+			} mode;
 
 			assert(e->state != NULL);
 
