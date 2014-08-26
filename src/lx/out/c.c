@@ -775,19 +775,26 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		fprintf(f, "\t\tswitch (state) {\n");
 
 		for (s = z->fsm->sl; s != NULL; s = s->next) {
-			char buf[50];
-			int n;
+			fprintf(f, "\t\tcase S%u:", indexof(z->fsm, s));
 
-			n = fsm_example(z->fsm, s, buf, sizeof buf);
-			if (-1 == n) {
-				perror("fsm_example");
-				return -1;
+			if (s == z->fsm->start) {
+				fprintf(f, " /* start */\n");
+			} else {
+				char buf[50];
+				int n;
+
+				n = fsm_example(z->fsm, s, buf, sizeof buf);
+				if (-1 == n) {
+					perror("fsm_example");
+					return -1;
+				}
+
+				fprintf(f, " /* e.g. \"");
+				out_escstr(f, buf);
+				fprintf(f, "%s\" */\n",
+					n >= (int) sizeof buf - 1 ? "..." : "");
 			}
 
-			fprintf(f, "\t\tcase S%u: /* e.g. \"", indexof(z->fsm, s));
-			out_escstr(f, buf);
-			fprintf(f, "%s\" */\n",
-				n >= (int) sizeof buf - 1 ? "..." : "");
 			singlecase(f, ast, z, z->fsm, s);
 
 			if (s->next != NULL) {
