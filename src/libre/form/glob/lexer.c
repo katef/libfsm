@@ -361,7 +361,7 @@ z1(struct lx *lx)
 			default:  lx_glob_ungetc(lx, c); return TOK_CHAR;
 			}
 
-		case S4: /* e.g. "" */
+		case S4: /* start */
 			switch (c) {
 			case '*': state = S1;      continue;
 			case '?': state = S2;      continue;

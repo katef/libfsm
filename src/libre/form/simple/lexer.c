@@ -373,7 +373,7 @@ z1(struct lx *lx)
 			default:  lx_simple_ungetc(lx, c); return lx->z = z3, TOK_CLOSECOUNT;
 			}
 
-		case S4: /* e.g. "" */
+		case S4: /* start */
 			switch (c) {
 			case ',': state = S1;      continue;
 			case '0': state = S2;      continue;
@@ -474,7 +474,7 @@ z2(struct lx *lx)
 			default:  lx_simple_ungetc(lx, c); return TOK_CHAR;
 			}
 
-		case S7: /* e.g. "" */
+		case S7: /* start */
 			switch (c) {
 			case '-': state = S2;      continue;
 			case '\\': state = S3;      continue;
@@ -619,7 +619,7 @@ z3(struct lx *lx)
 			default:  lx_simple_ungetc(lx, c); return TOK_CHAR;
 			}
 
-		case S15: /* e.g. "" */
+		case S15: /* start */
 			switch (c) {
 			case '$': state = S2;      continue;
 			case '(': state = S3;      continue;
