@@ -10,8 +10,9 @@
 
 	IDENT: () -> (:string);
 
-	LABEL;
+	ESC:  () -> (:char);
 	CHAR: () -> (:char);
+	LABEL;
 
 	START;
 	END;
@@ -50,8 +51,13 @@
 	label: () -> (n :string) [
 
 		body = {
-			c = CHAR;
+			{
+				c = ESC;
+			||
+				c = CHAR;
+			};
 			<label-char>(c);
+
 			{
 				body;
 			||

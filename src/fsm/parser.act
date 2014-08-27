@@ -102,6 +102,23 @@
 
 %terminals%
 
+	ESC: () -> (c :char) = @{
+		assert(lex_state->buf.a[0] == '\\');
+		assert(lex_state->buf.a[1] != '\0');
+		assert(lex_state->buf.a[2] == '\0');
+
+		@c = lex_state->buf.a[1];
+
+		switch (@c) {
+		case 't': @c = '\t'; break;
+		case 'n': @c = '\n'; break;
+		case 'v': @c = '\v'; break;
+		case 'r': @c = '\r'; break;
+		case 'f': @c = '\f'; break;
+		default:             break;
+		}
+	@};
+
 	CHAR: () -> (c :char) = @{
 		assert(lex_state->buf.a[0] != '\0');
 		assert(lex_state->buf.a[1] == '\0');

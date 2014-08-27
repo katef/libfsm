@@ -4,7 +4,8 @@
 "#" .. "\n";
 
 '"' .. '"' -> $label {
-	# TODO: escaping for special characters
+	'\' /[tnvrf]/ -> $esc;
+
 	/./ -> $char;
 }
 
