@@ -236,7 +236,12 @@
 		list-of-alts: (x :fsm_state, y :fsm_state) -> () [
 
 			alt: (x :fsm_state, y :fsm_state) -> () = {
-				list-of-atoms(x, y);
+				z = <add-concat>;
+
+				/* TODO: I don't like this. Refactor somehow? */
+				<add-epsilon>(x, z);
+
+				list-of-atoms(z, y);
 			};
 
 		] = {
