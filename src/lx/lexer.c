@@ -481,6 +481,7 @@ z2(struct lx *lx)
 
 		case S3: /* e.g. "\\" */
 			switch (c) {
+			case '\"': state = S1;      continue;
 			case '\\': state = S1;      continue;
 			case 'f': state = S1;      continue;
 			case 'n': state = S1;      continue;

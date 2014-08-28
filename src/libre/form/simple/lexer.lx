@@ -28,11 +28,11 @@
 '\[' -> $esc; # note no \]
 
 # whitespace escapes
-'\t' -> $esc;
-'\n' -> $esc;
-'\v' -> $esc;
-'\r' -> $esc;
 '\f' -> $esc;
+'\n' -> $esc;
+'\r' -> $esc;
+'\t' -> $esc;
+'\v' -> $esc;
 
 # TODO: /./ - the above
 /[^$?*+.|(){[\^\\]/ -> $char;
@@ -47,11 +47,11 @@
 	'\-' -> $esc;
 
 	# whitespace escapes
-	'\t' -> $esc;
-	'\n' -> $esc;
-	'\v' -> $esc;
-	'\r' -> $esc;
 	'\f' -> $esc;
+	'\n' -> $esc;
+	'\r' -> $esc;
+	'\t' -> $esc;
+	'\v' -> $esc;
 
 	# XXX: /./ - the above
 	/[^\^\-\\]/ -> $char;

@@ -1291,11 +1291,11 @@ p_literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fs
 		ZIc = lex_state->buf.a[1];
 
 		switch (ZIc) {
-		case 't': ZIc = '\t'; break;
-		case 'n': ZIc = '\n'; break;
-		case 'v': ZIc = '\v'; break;
-		case 'r': ZIc = '\r'; break;
 		case 'f': ZIc = '\f'; break;
+		case 'n': ZIc = '\n'; break;
+		case 'r': ZIc = '\r'; break;
+		case 't': ZIc = '\t'; break;
+		case 'v': ZIc = '\v'; break;
 		default:             break;
 		}
 	
@@ -1375,11 +1375,11 @@ p_group_C_Clist_Hof_Hterms_C_Cterm(fsm fsm, cflags cflags, lex_state lex_state, 
 		ZIc = lex_state->buf.a[1];
 
 		switch (ZIc) {
-		case 't': ZIc = '\t'; break;
-		case 'n': ZIc = '\n'; break;
-		case 'v': ZIc = '\v'; break;
-		case 'r': ZIc = '\r'; break;
 		case 'f': ZIc = '\f'; break;
+		case 'n': ZIc = '\n'; break;
+		case 'r': ZIc = '\r'; break;
+		case 't': ZIc = '\t'; break;
+		case 'v': ZIc = '\v'; break;
 		default:             break;
 		}
 	

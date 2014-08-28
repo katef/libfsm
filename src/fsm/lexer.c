@@ -422,12 +422,14 @@ z2(struct lx *lx)
 
 		case S3: /* e.g. "\\" */
 			switch (c) {
+			case '\"': state = S1;      continue;
+			case '\\': state = S1;      continue;
 			case 'f': state = S1;      continue;
 			case 'n': state = S1;      continue;
 			case 'r': state = S1;      continue;
 			case 't': state = S1;      continue;
 			case 'v': state = S1;      continue;
-			default:  lx_ungetc(lx, c); return TOK_CHAR;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
 		case S4: /* e.g. "a" */
@@ -449,7 +451,6 @@ z2(struct lx *lx)
 	switch (state) {
 	case S1: return TOK_ESC;
 	case S2: return TOK_LABEL;
-	case S3: return TOK_CHAR;
 	case S4: return TOK_CHAR;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
@@ -1376,7 +1377,7 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 	if (z == z2) {
 		switch (t) {
 		case TOK_LABEL: return "\"";
-		case TOK_CHAR: return "\\";
+		case TOK_CHAR: return "a";
 		case TOK_ESC: return "\\f";
 		default: goto error;
 		}

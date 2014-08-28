@@ -95,11 +95,11 @@
 		@c = lex_state->buf.a[1];
 
 		switch (@c) {
-		case 't': @c = '\t'; break;
-		case 'n': @c = '\n'; break;
-		case 'v': @c = '\v'; break;
-		case 'r': @c = '\r'; break;
 		case 'f': @c = '\f'; break;
+		case 'n': @c = '\n'; break;
+		case 'r': @c = '\r'; break;
+		case 't': @c = '\t'; break;
+		case 'v': @c = '\v'; break;
 		default:             break;
 		}
 	@};

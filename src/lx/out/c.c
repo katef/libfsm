@@ -61,11 +61,11 @@ out_escstr(FILE *f, const char *s)
 		case '\\': fprintf(f, "\\\\");   continue;
 		case '"':  fprintf(f, "\\\"");   continue;
 
-		case '\t': fprintf(f, "\\t");    continue;
-		case '\n': fprintf(f, "\\n");    continue;
-		case '\v': fprintf(f, "\\v");    continue;
-		case '\r': fprintf(f, "\\r");    continue;
 		case '\f': fprintf(f, "\\f");    continue;
+		case '\n': fprintf(f, "\\n");    continue;
+		case '\r': fprintf(f, "\\r");    continue;
+		case '\t': fprintf(f, "\\t");    continue;
+		case '\v': fprintf(f, "\\v");    continue;
 
 		default:   fprintf(f, "%c", *p); continue;
 		}
