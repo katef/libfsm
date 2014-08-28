@@ -30,6 +30,8 @@
 	RANGE:  () -> (:char);
 
 	ESC:    () -> (:char);
+	OCT:    () -> (:char);
+	HEX:    () -> (:char);
 	CHAR:   () -> (:char);
 	START:  () -> (:pred);
 	END:    () -> (:pred);
@@ -74,13 +76,28 @@
 			char: () -> (c :char) = {
 				c = ESC;
 			||
+				c = OCT;
+			||
+				c = HEX;
+			||
 				c = CHAR;
 			};
 
 			range: () -> (a :char, b :char) = {
-				a = CHAR;
+				{
+					a = OCT;
+				||
+					a = HEX;
+				||
+					a = CHAR;
+				};
+
 				! = RANGE;
 				{
+					b = OCT;
+				||
+					b = HEX;
+				||
 					b = CHAR;
 				||
 					b = RANGE;
@@ -157,18 +174,24 @@
 	};
 
 	literal: (x :fsm_state, y :fsm_state) -> () = {
-		c = ESC;
-		<add-literal>(x, y, c);
-	||
-		c = CHAR;
+		{
+			c = ESC;
+		||
+			c = OCT;
+		||
+			c = HEX;
+		||
+			c = CHAR;
+		};
 		<add-literal>(x, y, c);
 	};
 
 	anchor: (x :fsm_state, y :fsm_state) -> () = {
-		p = START;
-		<add-pred>(x, y, p);
-	||
-		p = END;
+		{
+			p = START;
+		||
+			p = END;
+		};
 		<add-pred>(x, y, p);
 	};
 

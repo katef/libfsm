@@ -23,6 +23,8 @@ enum lx_token {
 	TOK_SEMI,
 	TOK_BIND,
 	TOK_RE,
+	TOK_HEX,
+	TOK_OCT,
 	TOK_ESC,
 	TOK_STR,
 	TOK_CHAR,

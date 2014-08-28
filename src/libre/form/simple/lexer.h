@@ -13,6 +13,8 @@ enum lx_token {
 	TOK_RANGE,
 	TOK_INVERT,
 	TOK_CHAR,
+	TOK_HEX,
+	TOK_OCT,
 	TOK_ESC,
 	TOK_ALT,
 	TOK_DOT,

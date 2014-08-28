@@ -22,10 +22,11 @@
 %header% @{
 
 	#include <assert.h>
-	#include <stdlib.h>
 	#include <string.h>
+	#include <stdlib.h>
 	#include <stdarg.h>
 	#include <stdio.h>
+	#include <errno.h>
 
 	#include <fsm/fsm.h>
 
@@ -103,9 +104,8 @@
 %terminals%
 
 	ESC: () -> (c :char) = @{
-		assert(lex_state->buf.a[0] == '\\');
-		assert(lex_state->buf.a[1] != '\0');
-		assert(lex_state->buf.a[2] == '\0');
+		assert(0 == strncmp(lex_state->buf.a, "\\", 1));
+		assert(2 == strlen(lex_state->buf.a));
 
 		@c = lex_state->buf.a[1];
 
@@ -119,6 +119,60 @@
 		case 'v':  @c = '\v'; break;
 		default:              break;
 		}
+	@};
+
+	OCT: () -> (c :char) = @{
+		unsigned long u;
+		char *e;
+
+		assert(0 == strncmp(lex_state->buf.a, "\\", 1));
+		assert(strlen(lex_state->buf.a) >= 2);
+
+		errno = 0;
+
+		u = strtoul(lex_state->buf.a + 1, &e, 8);
+		assert(*e == '\0');
+
+		if (u > UCHAR_MAX || (u == ULONG_MAX && errno == ERANGE)) {
+			err(lex_state, "octal escape %s out of range: expected \\0..\\%o inclusive",
+				lex_state->buf.a, UCHAR_MAX);
+			exit(EXIT_FAILURE);
+		}
+
+		if (u == ULONG_MAX && errno != 0) {
+			err(lex_state, "%s: %s: expected \\0..\\%o inclusive",
+				lex_state->buf.a, strerror(errno), UCHAR_MAX);
+			exit(EXIT_FAILURE);
+		}
+
+		@c = (unsigned char) u;
+	@};
+
+	HEX: () -> (c :char) = @{
+		unsigned long u;
+		char *e;
+
+		assert(0 == strncmp(lex_state->buf.a, "\\x", 2));
+		assert(strlen(lex_state->buf.a) >= 3);
+
+		errno = 0;
+
+		u = strtoul(lex_state->buf.a + 2, &e, 16);
+		assert(*e == '\0');
+
+		if (u > UCHAR_MAX || (u == ULONG_MAX && errno == ERANGE)) {
+			err(lex_state, "hex escape %s out of range: expected \\x0..\\x%x inclusive",
+				lex_state->buf.a, UCHAR_MAX);
+			exit(EXIT_FAILURE);
+		}
+
+		if (u == ULONG_MAX && errno != 0) {
+			err(lex_state, "%s: %s: expected \\x0..\\x%x inclusive",
+				lex_state->buf.a, strerror(errno), UCHAR_MAX);
+			exit(EXIT_FAILURE);
+		}
+
+		@c = (unsigned char) u;
 	@};
 
 	CHAR: () -> (c :char) = @{
@@ -234,6 +288,7 @@
 		assert(@s != NULL);
 
 		/* TODO: convert to single char in the grammar? */
+fprintf(stderr, "s='%s'\n", @s);
 		if (strlen(@s) != 1) {
 			err(lex_state, "Edge literals must have exactly one character");
 			@!;

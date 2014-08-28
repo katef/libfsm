@@ -13,6 +13,8 @@ enum lx_token {
 	TOK_START,
 	TOK_LABEL,
 	TOK_CHAR,
+	TOK_HEX,
+	TOK_OCT,
 	TOK_ESC,
 	TOK_EOF,
 	TOK_ERROR,

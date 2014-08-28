@@ -11,6 +11,8 @@
 	IDENT: () -> (:string);
 
 	ESC:  () -> (:char);
+	OCT:  () -> (:char);
+	HEX:  () -> (:char);
 	CHAR: () -> (:char);
 	LABEL;
 
@@ -53,6 +55,10 @@
 		body = {
 			{
 				c = ESC;
+			||
+				c = OCT;
+			||
+				c = HEX;
 			||
 				c = CHAR;
 			};

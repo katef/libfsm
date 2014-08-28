@@ -25,6 +25,8 @@
 	!RANGE:  () -> (:char);
 
 	!ESC:    () -> (:char);
+	!OCT:    () -> (:char);
+	!HEX:    () -> (:char);
 	CHAR:    () -> (:char);
 	!START:  () -> (:pred);
 	!END:    () -> (:pred);
