@@ -44,22 +44,24 @@ enum re_pred {
 	RE_EOT = 1 << 5 | RE_EOL
 };
 
-#define RE_SYNTAX 100
+enum {
+	RE_MISC   = 1 << (8 - 1),
+	RE_SYNTAX = 1 << (8 - 2)  /* syntax errors; re_err.byte is populated */
+};
 
 enum re_errno {
-	RE_ESUCCESS,
-	RE_ENOMEM,
-	RE_EBADFORM,
+	RE_ESUCCESS = 0 | RE_MISC,
+	RE_ENOMEM   = 1 | RE_MISC,
+	RE_EBADFORM = 2 | RE_MISC,
 
-	/* Syntax errors; re_err.byte is populated */
-	RE_EXSUB = RE_SYNTAX,
-	RE_EXTERM,
-	RE_EXGROUP,
-	RE_EXATOM,
-	RE_EXCOUNT,
-	RE_EXATOMS,
-	RE_EXALTS,
-	RE_EXEOF
+	RE_EXSUB    = 0 | RE_SYNTAX,
+	RE_EXTERM   = 1 | RE_SYNTAX,
+	RE_EXGROUP  = 2 | RE_SYNTAX,
+	RE_EXATOM   = 3 | RE_SYNTAX,
+	RE_EXCOUNT  = 4 | RE_SYNTAX,
+	RE_EXATOMS  = 5 | RE_SYNTAX,
+	RE_EXALTS   = 6 | RE_SYNTAX,
+	RE_EXEOF    = 7 | RE_SYNTAX
 };
 
 struct re_err {
