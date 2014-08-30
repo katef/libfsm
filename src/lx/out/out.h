@@ -7,7 +7,7 @@
 
 struct ast;
 
-const char *prefix;
+extern const char *prefix;
 
 void
 lx_out_c(const struct ast *ast, FILE *f);
