@@ -62,6 +62,7 @@
 	!<err-expected-count>;
 	<err-expected-atoms>;
 	!<err-expected-alts>;
+	!<err-expected-range>;
 	<err-expected-eof>;
 
 	list-of-atoms: (x :fsm_state, y :fsm_state) -> () [

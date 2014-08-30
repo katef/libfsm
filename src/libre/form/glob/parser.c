@@ -127,7 +127,7 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hatoms_C_Catom (fsm, cflags, lex_state, act_state, ZIx, &ZIz);
-		/* BEGINNING OF INLINE: 64 */
+		/* BEGINNING OF INLINE: 65 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_QMARK): case (TOK_STAR): case (TOK_CHAR):
@@ -158,7 +158,7 @@ ZL2_list_Hof_Hatoms:;
 				goto ZL1;
 			}
 		}
-		/* END OF INLINE: 64 */
+		/* END OF INLINE: 65 */
 	}
 	return;
 ZL1:;
@@ -360,7 +360,7 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 #line 361 "src/libre/form/glob/parser.c"
 		}
 		/* END OF ACTION: make-states */
-		/* BEGINNING OF INLINE: 66 */
+		/* BEGINNING OF INLINE: 67 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_QMARK): case (TOK_STAR): case (TOK_CHAR):
@@ -403,8 +403,8 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			}
 		ZL2:;
 		}
-		/* END OF INLINE: 66 */
-		/* BEGINNING OF INLINE: 67 */
+		/* END OF INLINE: 67 */
+		/* BEGINNING OF INLINE: 68 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -420,7 +420,7 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 479 "src/libre/parser.act"
+#line 483 "src/libre/parser.act"
 
 		act_state->e = RE_EXEOF;
 	
@@ -430,7 +430,7 @@ p_re__glob(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			}
 		ZL4:;
 		}
-		/* END OF INLINE: 67 */
+		/* END OF INLINE: 68 */
 	}
 	return;
 ZL1:;
@@ -440,7 +440,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 483 "src/libre/parser.act"
+#line 487 "src/libre/parser.act"
 
 
 #line 447 "src/libre/form/glob/parser.c"

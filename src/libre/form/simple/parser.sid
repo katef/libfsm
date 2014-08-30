@@ -67,6 +67,7 @@
 	<err-expected-count>;
 	!<err-expected-atoms>;
 	<err-expected-alts>;
+	<err-expected-range>;
 	<err-expected-eof>;
 
 	group: (x :fsm_state, y :fsm_state) -> () [
@@ -92,7 +93,12 @@
 					a = CHAR;
 				};
 
-				! = RANGE;
+				{
+					! = RANGE;
+				##
+					<err-expected-range>;
+				};
+
 				{
 					b = OCT;
 				||

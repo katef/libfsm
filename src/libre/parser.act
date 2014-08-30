@@ -474,6 +474,10 @@
 		act_state->e = RE_EXALTS;
 	@};
 
+	<err-expected-range> = @{
+		act_state->e = RE_EXRANGE;
+	@};
+
 	<err-expected-eof> = @{
 		act_state->e = RE_EXEOF;
 	@};

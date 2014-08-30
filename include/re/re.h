@@ -61,7 +61,8 @@ enum re_errno {
 	RE_EXCOUNT  = 4 | RE_SYNTAX,
 	RE_EXATOMS  = 5 | RE_SYNTAX,
 	RE_EXALTS   = 6 | RE_SYNTAX,
-	RE_EXEOF    = 7 | RE_SYNTAX
+	RE_EXRANGE  = 7 | RE_SYNTAX,
+	RE_EXEOF    = 8 | RE_SYNTAX
 };
 
 struct re_err {

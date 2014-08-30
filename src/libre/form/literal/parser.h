@@ -53,7 +53,7 @@
 extern void p_re__literal(fsm, cflags, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 485 "src/libre/parser.act"
+#line 489 "src/libre/parser.act"
 
 
 #line 60 "src/libre/form/literal/parser.h"
