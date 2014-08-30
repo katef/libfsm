@@ -12,7 +12,7 @@ re_strerror(enum re_errno e)
 {
 	switch (e) {
 	case RE_ESUCCESS: return "Success";
-	case RE_ENOMEM:   return strerror(ENOMEM);
+	case RE_EERRNO:   return strerror(errno);
 	case RE_EBADFORM: return "Bad form";
 	case RE_EXSUB:    return "Syntax error: expected sub-expression";
 	case RE_EXTERM:   return "Syntax error: expected group term";

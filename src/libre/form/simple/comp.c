@@ -43,7 +43,7 @@ comp_simple(int (*f)(void *opaque), void *opaque,
 
 	new = re_new_empty();
 	if (new == NULL) {
-		e = RE_ENOMEM;
+		e = RE_EERRNO;
 		goto error;
 	}
 

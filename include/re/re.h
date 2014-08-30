@@ -51,7 +51,7 @@ enum {
 
 enum re_errno {
 	RE_ESUCCESS = 0 | RE_MISC,
-	RE_ENOMEM   = 1 | RE_MISC,
+	RE_EERRNO   = 1 | RE_MISC,
 	RE_EBADFORM = 2 | RE_MISC,
 
 	RE_EXSUB    = 0 | RE_SYNTAX,
