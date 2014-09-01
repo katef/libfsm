@@ -337,7 +337,9 @@ main(int argc, char *argv[])
 						if (p->m->token != NULL && p->m->to != NULL) {
 							fprintf(stderr, "/");
 						}
-						if (p->m->to != NULL) {
+						if (p->m->to == ast->global) {
+							fprintf(stderr, "global zone");
+						} else if (p->m->to != NULL) {
 							fprintf(stderr, "z%p", (void *) p->m->to); /* TODO: zindexof(n->to) */
 						}
 
