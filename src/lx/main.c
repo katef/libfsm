@@ -31,7 +31,7 @@
 static
 void usage(void)
 {
-	printf("usage: lx [-h] [-g] [-l <language>] [-p <prefix>]\n");
+	printf("usage: lx [-h] [-n] [-l <language>] [-p <prefix>]\n");
 }
 
 static enum lx_out
@@ -162,14 +162,14 @@ main(int argc, char *argv[])
 {
 	struct ast *ast;
 	enum lx_out format = LX_OUT_C;
-	int g;
+	int keep_nfa;
 
-	g = 0;
+	keep_nfa = 0;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hvl:p:g"), c != -1) {
+		while (c = getopt(argc, argv, "hvl:p:n"), c != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -183,8 +183,8 @@ main(int argc, char *argv[])
 				prefix = optarg;
 				break;
 
-			case 'g':
-				g = 1;
+			case 'n':
+				keep_nfa = 1;
 				break;
 
 			case '?':
@@ -203,8 +203,8 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (g && format != LX_OUT_DOT) {
-		fprintf(stderr, "-g is for dot output only\n");
+	if (keep_nfa && format != LX_OUT_DOT) {
+		fprintf(stderr, "-n is for dot output only\n");
 		return EXIT_FAILURE;
 	}
 
@@ -246,7 +246,7 @@ main(int argc, char *argv[])
 
 				assert(m->fsm != NULL);
 
-				if (!g) {
+				if (!keep_nfa) {
 					if (!fsm_minimise(m->fsm)) {
 						perror("fsm_minimise");
 						return EXIT_FAILURE;
@@ -268,7 +268,7 @@ main(int argc, char *argv[])
 				}
 			}
 
-			if (!g) {
+			if (!keep_nfa) {
 				if (!fsm_determinise_opaque(z->fsm, carryopaque)) {
 					perror("fsm_determinise_opaque");
 					return EXIT_FAILURE;

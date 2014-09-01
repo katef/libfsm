@@ -39,7 +39,7 @@
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re [-h] { [-cidm] [-lgeb9ps] <re> } <string>\n");
+	fprintf(stderr, "usage: re [-h] { [-cidmn] [-lgeb9ps] <re> } <string>\n");
 }
 
 static enum
@@ -72,6 +72,7 @@ main(int argc, char *argv[])
 	int files;
 	int dump;
 	int example;
+	int keep_nfa;
 	int r;
 
 	if (argc < 2) {
@@ -85,15 +86,16 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	files   = 0;
-	dump    = 0;
-	example = 0;
-	join    = fsm_union;
+	files    = 0;
+	dump     = 0;
+	example  = 0;
+	keep_nfa = 0;
+	join     = fsm_union;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hcdil:mg:s:"), c != -1) {
+		while (c = getopt(argc, argv, "hcdil:mng:s:"), c != -1) {
 			struct re_err err;
 			struct fsm *new;
 
@@ -122,6 +124,10 @@ main(int argc, char *argv[])
 
 			case 'm':
 				example = 1;
+				break;
+
+			case 'n':
+				keep_nfa = 1;
 				break;
 
 			case 'l':
@@ -179,9 +185,16 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (!fsm_minimise(fsm)) {
-		perror("fsm_minimise");
+	if (keep_nfa && argc > 0) {
+		fprintf(stderr, "-n is not for execution; execution requires a DFA\n");
 		return EXIT_FAILURE;
+	}
+
+	if (!keep_nfa) {
+		if (!fsm_minimise(fsm)) {
+			perror("fsm_minimise");
+			return EXIT_FAILURE;
+		}
 	}
 
 	if (example) {
