@@ -180,7 +180,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'p':
-				prefix = optarg;
+				prefix.api = optarg;
 				break;
 
 			case 'n':

@@ -7,7 +7,9 @@
 
 #include "out/out.h"
 
-const char *prefix = "lx_";
+struct prefix prefix = {
+	"lx_"
+};
 
 void
 lx_print(struct ast *ast, FILE *f, enum lx_out format)
