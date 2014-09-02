@@ -31,7 +31,7 @@
 static
 void usage(void)
 {
-	printf("usage: lx [-h] [-n] [-l <language>] [-p <prefix>]\n");
+	printf("usage: lx [-h] [-n] [-l <language>] [-pt <prefix>]\n");
 }
 
 static enum lx_out
@@ -169,7 +169,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hvl:p:n"), c != -1) {
+		while (c = getopt(argc, argv, "hvl:p:t:n"), c != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -181,6 +181,10 @@ main(int argc, char *argv[])
 
 			case 'p':
 				prefix.api = optarg;
+				break;
+
+			case 't':
+				prefix.tok = optarg;
 				break;
 
 			case 'n':

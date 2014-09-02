@@ -8,7 +8,8 @@
 #include "out/out.h"
 
 struct prefix prefix = {
-	"lx_"
+	"lx_",
+	"TOK_"
 };
 
 void

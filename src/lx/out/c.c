@@ -290,7 +290,7 @@ singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		}
 
 		/* TODO: if greedy, and fsm_isend(fsm, state->edges[i].sl->state) then:
-			fprintf(f, "	     return TOK_%s;\n", state->edges[i].sl->state's token);
+			fprintf(f, "	     return %s%s;\n", prefix.tok, state->edges[i].sl->state's token);
 		 */
 	}
 
@@ -304,7 +304,7 @@ singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 
 	if (!fsm_isend(fsm, state)) {
 		/* XXX: don't need this if complete */
-		fprintf(f, "\t\t\tdefault:  lx->lgetc = NULL; return TOK_UNKNOWN;\n");
+		fprintf(f, "\t\t\tdefault:  lx->lgetc = NULL; return %sUNKNOWN;\n", prefix.tok);
 	} else {
 		const struct ast_mapping *m;
 
@@ -318,7 +318,7 @@ singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 			fprintf(f, "lx->z = z%u, ", zindexof(ast, m->to));
 		}
 		if (m->token != NULL) {
-			fprintf(f, "TOK_");
+			fprintf(f, "%s", prefix.tok);
 			out_esctok(f, m->token->s);
 		} else {
 			fprintf(f, "lx->z(lx)");
@@ -759,7 +759,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		fprintf(f, "\t\tdefault:\n");
 		fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
 		fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, c)) {\n");
-		fprintf(f, "\t\t\t\t\treturn TOK_ERROR;\n");
+		fprintf(f, "\t\t\t\t\treturn %sERROR;\n", prefix.tok);
 		fprintf(f, "\t\t\t\t}\n");
 		fprintf(f, "\t\t\t}\n");
 		fprintf(f, "\t\t\tbreak;\n");
@@ -834,16 +834,16 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			/* note: no point in changing zone here, because getc is now NULL */
 
 			if (m->token == NULL) {
-				fprintf(f, "TOK_EOF;\n");
+				fprintf(f, "%sEOF;\n", prefix.tok);
 			} else {
 				/* TODO: maybe make a printf-like little language to simplify this */
-				fprintf(f, "TOK_");
+				fprintf(f, "%s", prefix.tok);
 				out_esctok(f, m->token->s);
 				fprintf(f, ";\n");
 			}
 		}
 
-		fprintf(f, "\tdefault: errno = EINVAL; return TOK_ERROR;\n");
+		fprintf(f, "\tdefault: errno = EINVAL; return %sERROR;\n", prefix.tok);
 
 		fprintf(f, "\t}\n");
 	}
@@ -868,16 +868,16 @@ out_name(FILE *f, const struct ast *ast)
 	fprintf(f, "\tswitch (t) {\n");
 
 	for (t = ast->tl; t != NULL; t = t->next) {
-		fprintf(f, "\tcase TOK_");
+		fprintf(f, "\tcase %s", prefix.tok);
 		out_esctok(f, t->s);
 		fprintf(f, ": return \"");
 		out_esctok(f, t->s);
 		fprintf(f, "\";\n");
 	}
 
-	fprintf(f, "\tcase TOK_EOF:     return \"EOF\";\n");
-	fprintf(f, "\tcase TOK_ERROR:   return \"ERROR\";\n");
-	fprintf(f, "\tcase TOK_UNKNOWN: return \"UNKNOWN\";\n");
+	fprintf(f, "\tcase %sEOF:     return \"EOF\";\n", prefix.tok);
+	fprintf(f, "\tcase %sERROR:   return \"ERROR\";\n", prefix.tok);
+	fprintf(f, "\tcase %sUNKNOWN: return \"UNKNOWN\";\n", prefix.tok);
 
 	fprintf(f, "\tdefault: return \"?\";\n");
 
@@ -928,7 +928,7 @@ out_example(FILE *f, const struct ast *ast)
 				return -1;
 			}
 
-			fprintf(f, "\t\tcase TOK_");
+			fprintf(f, "\t\tcase %s", prefix.tok);
 			out_esctok(f, t->s);
 			fprintf(f, ": return \"");
 			out_escstr(f, buf);
@@ -1040,7 +1040,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "\n");
 
 		fprintf(f, "\tif (lx->lgetc == NULL) {\n");
-		fprintf(f, "\t\treturn TOK_EOF;\n");
+		fprintf(f, "\t\treturn %sEOF;\n", prefix.tok);
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
 
@@ -1054,7 +1054,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 		fprintf(f, "\tif (lx->push != NULL) {\n");
 		fprintf(f, "\t\tif (-1 == lx->push(lx, '\\0')) {\n");
-		fprintf(f, "\t\t\treturn TOK_ERROR;\n");
+		fprintf(f, "\t\t\treturn %sERROR;\n", prefix.tok);
 		fprintf(f, "\t\t}\n");
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");

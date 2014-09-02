@@ -35,14 +35,14 @@ out_tokens(const struct ast *ast, FILE *f)
 
 	/* TODO: the token prefix needs to be configurable */
 	for (t = ast->tl; t != NULL; t = t->next) {
-		fprintf(f, "\tTOK_");
+		fprintf(f, "\t%s", prefix.tok);
 		out_esctok(f, t->s);
 		fprintf(f, ",\n");
 	}
 
-	fprintf(f, "\tTOK_EOF,\n");
-	fprintf(f, "\tTOK_ERROR,\n");
-	fprintf(f, "\tTOK_UNKNOWN\n");
+	fprintf(f, "\t%sEOF,\n", prefix.tok);
+	fprintf(f, "\t%sERROR,\n", prefix.tok);
+	fprintf(f, "\t%sUNKNOWN\n", prefix.tok);
 
 	fprintf(f, "};\n");
 }
