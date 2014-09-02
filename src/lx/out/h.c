@@ -31,7 +31,7 @@ out_tokens(const struct ast *ast, FILE *f)
 	assert(ast != NULL);
 	assert(f != NULL);
 
-	fprintf(f, "enum lx_token {\n");
+	fprintf(f, "enum %stoken {\n", prefix.api);
 
 	/* TODO: the token prefix needs to be configurable */
 	for (t = ast->tl; t != NULL; t = t->next) {
@@ -86,7 +86,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "\tint  (*clear)(struct lx *lx);\n");
 	fprintf(f, "\tvoid (*free) (struct lx *lx);\n");
 	fprintf(f, "\n");
-	fprintf(f, "\tenum lx_token (*z)(struct lx *lx);\n");
+	fprintf(f, "\tenum %stoken (*z)(struct lx *lx);\n", prefix.api);
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
@@ -160,12 +160,12 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "const char *%sname(enum lx_token t);\n", prefix.api);
-	fprintf(f, "const char *%sexample(enum lx_token (*z)(struct lx *), enum lx_token t);\n", prefix.api);
+	fprintf(f, "const char *%sname(enum %stoken t);\n", prefix.api, prefix.api);
+	fprintf(f, "const char *%sexample(enum %stoken (*z)(struct lx *), enum %stoken t);\n", prefix.api, prefix.api, prefix.api);
 	fprintf(f, "\n");
 
 	fprintf(f, "void %sinit(struct lx *lx);\n", prefix.api);
-	fprintf(f, "enum lx_token %snext(struct lx *lx);\n", prefix.api);
+	fprintf(f, "enum %stoken %snext(struct lx *lx);\n", prefix.api, prefix.api);
 	fprintf(f, "\n");
 
 	fprintf(f, "int %sfgetc(struct lx *lx);\n", prefix.api); /* TODO: stdio only */

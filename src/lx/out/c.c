@@ -364,7 +364,7 @@ out_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(ast != NULL);
 	assert(z != NULL);
 
-	fprintf(f, "static enum lx_token z%u(struct lx *lx);\n", zindexof(ast, z));
+	fprintf(f, "static enum %xtoken z%u(struct lx *lx);\n", prefix.api, zindexof(ast, z));
 }
 
 static void
@@ -705,7 +705,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 	/* TODO: prerequisite that the FSM is a DFA */
 
-	fprintf(f, "static enum lx_token\n");
+	fprintf(f, "static enum %stoken\n", prefix.api);
 	fprintf(f, "z%u(struct lx *lx)\n", zindexof(ast, z));
 	fprintf(f, "{\n");
 	fprintf(f, "\tint c;\n");
@@ -862,7 +862,7 @@ out_name(FILE *f, const struct ast *ast)
 	assert(ast != NULL);
 
 	fprintf(f, "const char *\n");
-	fprintf(f, "%sname(enum lx_token t)\n", prefix.api);
+	fprintf(f, "%sname(enum %stoken t)\n", prefix.api, prefix.api);
 	fprintf(f, "{\n");
 
 	fprintf(f, "\tswitch (t) {\n");
@@ -897,7 +897,7 @@ out_example(FILE *f, const struct ast *ast)
 	assert(ast != NULL);
 
 	fprintf(f, "const char *\n");
-	fprintf(f, "%sexample(enum lx_token (*z)(struct lx *), enum lx_token t)\n", prefix.api);
+	fprintf(f, "%sexample(enum %stoken (*z)(struct lx *), enum %stoken t)\n", prefix.api, prefix.api, prefix.api);
 	fprintf(f, "{\n");
 
 	fprintf(f, "\tassert(z != NULL);\n");
@@ -1030,11 +1030,11 @@ lx_out_c(const struct ast *ast, FILE *f)
 	}
 
 	{
-		fprintf(f, "enum lx_token\n");
+		fprintf(f, "enum %stoken\n", prefix.api);
 		fprintf(f, "%snext(struct lx *lx)\n", prefix.api);
 		fprintf(f, "{\n");
 
-		fprintf(f, "\tenum lx_token t;\n");
+		fprintf(f, "\tenum %stoken t;\n", prefix.api);
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(lx != NULL);\n");
 		fprintf(f, "\n");
