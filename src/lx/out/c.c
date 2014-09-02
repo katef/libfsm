@@ -364,14 +364,15 @@ out_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(ast != NULL);
 	assert(z != NULL);
 
-	fprintf(f, "static enum %xtoken z%u(struct lx *lx);\n", prefix.api, zindexof(ast, z));
+	fprintf(f, "static enum %stoken z%u(struct %slx *lx);\n",
+		prefix.api, zindexof(ast, z), prefix.lx);
 }
 
 static void
 out_lgetc(FILE *f)
 {
 	fprintf(f, "int\n");
-	fprintf(f, "%sfgetc(struct lx *lx)\n", prefix.api);
+	fprintf(f, "%sfgetc(struct %slx *lx)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tassert(lx != NULL);\n");
 	fprintf(f, "\tassert(lx->opaque != NULL);\n");
@@ -381,7 +382,7 @@ out_lgetc(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "int\n");
-	fprintf(f, "%ssgetc(struct lx *lx)\n", prefix.api);
+	fprintf(f, "%ssgetc(struct %slx *lx)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tchar *s;\n");
 	fprintf(f, "\n");
@@ -398,7 +399,7 @@ out_lgetc(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "int\n");
-	fprintf(f, "%sagetc(struct lx *lx)\n", prefix.api);
+	fprintf(f, "%sagetc(struct %slx *lx)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_arr *a;\n");
 	fprintf(f, "\n");
@@ -420,7 +421,7 @@ out_lgetc(FILE *f)
 
 	/* TODO: POSIX only */
 	fprintf(f, "int\n");
-	fprintf(f, "%sdgetc(struct lx *lx)\n", prefix.api);
+	fprintf(f, "%sdgetc(struct %slx *lx)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_fd *d;\n");
 	fprintf(f, "\n");
@@ -461,7 +462,7 @@ out_io(FILE *f)
 {
 	/* TODO: consider passing char *c, and return int 0/-1 for error */
 	fprintf(f, "static int\n");
-	fprintf(f, "lx_getc(struct lx *lx)\n");
+	fprintf(f, "lx_getc(struct %slx *lx)\n", prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tint c;\n");
 	fprintf(f, "\n");
@@ -490,7 +491,7 @@ out_io(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "static void\n");
-	fprintf(f, "%sungetc(struct lx *lx, int c)\n", prefix.api);
+	fprintf(f, "%sungetc(struct %slx *lx, int c)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tassert(lx != NULL);\n");
 	fprintf(f, "\tassert(lx->c == EOF);\n");
@@ -516,7 +517,7 @@ static void
 out_buf(FILE *f)
 {
 	fprintf(f, "int\n");
-	fprintf(f, "%sdynpush(struct lx *lx, char c)\n", prefix.api);
+	fprintf(f, "%sdynpush(struct %slx *lx, char c)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_dynbuf *t;\n");
 	fprintf(f, "\n");
@@ -562,7 +563,7 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "void\n");
-	fprintf(f, "%sdynpop(struct lx *lx)\n", prefix.api);
+	fprintf(f, "%sdynpop(struct %slx *lx)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_dynbuf *t;\n");
 	fprintf(f, "\n");
@@ -583,7 +584,7 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "int\n");
-	fprintf(f, "%sdynclear(struct lx *lx)\n", prefix.api);
+	fprintf(f, "%sdynclear(struct %slx *lx)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_dynbuf *t;\n");
 	fprintf(f, "\n");
@@ -615,7 +616,7 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "void\n");
-	fprintf(f, "%sdynfree(struct lx *lx)\n", prefix.api);
+	fprintf(f, "%sdynfree(struct %slx *lx)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_dynbuf *t;\n");
 	fprintf(f, "\n");
@@ -629,7 +630,7 @@ out_buf(FILE *f)
 	fprintf(f, "}\n");
 
 	fprintf(f, "int\n");
-	fprintf(f, "%sfixedpush(struct lx *lx, char c)\n", prefix.api);
+	fprintf(f, "%sfixedpush(struct %slx *lx, char c)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_fixedbuf *t;\n");
 	fprintf(f, "\n");
@@ -654,7 +655,7 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "void\n");
-	fprintf(f, "%sfixedpop(struct lx *lx)\n", prefix.api);
+	fprintf(f, "%sfixedpop(struct %slx *lx)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_fixedbuf *t;\n");
 	fprintf(f, "\n");
@@ -675,7 +676,7 @@ out_buf(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "int\n");
-	fprintf(f, "%sfixedclear(struct lx *lx)\n", prefix.api);
+	fprintf(f, "%sfixedclear(struct %slx *lx)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tstruct lx_fixedbuf *t;\n");
 	fprintf(f, "\n");
@@ -706,7 +707,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	/* TODO: prerequisite that the FSM is a DFA */
 
 	fprintf(f, "static enum %stoken\n", prefix.api);
-	fprintf(f, "z%u(struct lx *lx)\n", zindexof(ast, z));
+	fprintf(f, "z%u(struct %slx *lx)\n", zindexof(ast, z), prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tint c;\n");
 	fprintf(f, "\n");
@@ -897,7 +898,8 @@ out_example(FILE *f, const struct ast *ast)
 	assert(ast != NULL);
 
 	fprintf(f, "const char *\n");
-	fprintf(f, "%sexample(enum %stoken (*z)(struct lx *), enum %stoken t)\n", prefix.api, prefix.api, prefix.api);
+	fprintf(f, "%sexample(enum %stoken (*z)(struct %slx *), enum %stoken t)\n",
+		prefix.api, prefix.api, prefix.lx, prefix.api);
 	fprintf(f, "{\n");
 
 	fprintf(f, "\tassert(z != NULL);\n");
@@ -1011,9 +1013,9 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	{
 		fprintf(f, "void\n");
-		fprintf(f, "%sinit(struct lx *lx)\n", prefix.api);
+		fprintf(f, "%sinit(struct %slx *lx)\n", prefix.api, prefix.lx);
 		fprintf(f, "{\n");
-		fprintf(f, "\tstatic const struct lx lx_default;\n");
+		fprintf(f, "\tstatic const struct %slx lx_default;\n", prefix.lx);
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(lx != NULL);\n");
 		fprintf(f, "\n");
@@ -1031,7 +1033,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	{
 		fprintf(f, "enum %stoken\n", prefix.api);
-		fprintf(f, "%snext(struct lx *lx)\n", prefix.api);
+		fprintf(f, "%snext(struct %slx *lx)\n", prefix.api, prefix.lx);
 		fprintf(f, "{\n");
 
 		fprintf(f, "\tenum %stoken t;\n", prefix.api);

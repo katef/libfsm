@@ -212,6 +212,10 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	if (0 != strcmp(prefix.api, "lx_")) {
+		prefix.lx = prefix.api;
+	}
+
 	ast = lx_parse(stdin);
 	if (ast == NULL) {
 		return EXIT_FAILURE;

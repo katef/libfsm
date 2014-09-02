@@ -10,6 +10,7 @@ struct ast;
 struct prefix {
 	const char *api;
 	const char *tok;
+	const char *lx;
 };
 
 extern struct prefix prefix;

@@ -9,7 +9,8 @@
 
 struct prefix prefix = {
 	"lx_",
-	"TOK_"
+	"TOK_",
+	""
 };
 
 void

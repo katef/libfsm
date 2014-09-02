@@ -71,8 +71,8 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "struct lx {\n");
-	fprintf(f, "\tint (*lgetc)(struct lx *lx);\n");
+	fprintf(f, "struct %slx {\n", prefix.lx);
+	fprintf(f, "\tint (*lgetc)(struct %slx *lx);\n", prefix.lx);
 	fprintf(f, "\tvoid *opaque;\n");
 	fprintf(f, "\n");
 	fprintf(f, "\tint c; /* %sungetc buffer */\n", prefix.api);
@@ -81,12 +81,12 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "\tstruct lx_pos end;\n");
 	fprintf(f, "\n");
 	fprintf(f, "\tvoid *buf;\n");
-	fprintf(f, "\tint  (*push) (struct lx *lx, char c);\n");
-	fprintf(f, "\tvoid (*pop)  (struct lx *lx);\n");
-	fprintf(f, "\tint  (*clear)(struct lx *lx);\n");
-	fprintf(f, "\tvoid (*free) (struct lx *lx);\n");
+	fprintf(f, "\tint  (*push) (struct %slx *lx, char c);\n", prefix.lx);
+	fprintf(f, "\tvoid (*pop)  (struct %slx *lx);\n", prefix.lx);
+	fprintf(f, "\tint  (*clear)(struct %slx *lx);\n", prefix.lx);
+	fprintf(f, "\tvoid (*free) (struct %slx *lx);\n", prefix.lx);
 	fprintf(f, "\n");
-	fprintf(f, "\tenum %stoken (*z)(struct lx *lx);\n", prefix.api);
+	fprintf(f, "\tenum %stoken (*z)(struct %slx *lx);\n", prefix.api, prefix.lx);
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
@@ -161,28 +161,29 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "const char *%sname(enum %stoken t);\n", prefix.api, prefix.api);
-	fprintf(f, "const char *%sexample(enum %stoken (*z)(struct lx *), enum %stoken t);\n", prefix.api, prefix.api, prefix.api);
+	fprintf(f, "const char *%sexample(enum %stoken (*z)(struct %slx *), enum %stoken t);\n",
+		prefix.api, prefix.api, prefix.lx, prefix.api);
 	fprintf(f, "\n");
 
-	fprintf(f, "void %sinit(struct lx *lx);\n", prefix.api);
-	fprintf(f, "enum %stoken %snext(struct lx *lx);\n", prefix.api, prefix.api);
+	fprintf(f, "void %sinit(struct %slx *lx);\n", prefix.api, prefix.lx);
+	fprintf(f, "enum %stoken %snext(struct %slx *lx);\n", prefix.api, prefix.api, prefix.lx);
 	fprintf(f, "\n");
 
-	fprintf(f, "int %sfgetc(struct lx *lx);\n", prefix.api); /* TODO: stdio only */
-	fprintf(f, "int %ssgetc(struct lx *lx);\n", prefix.api);
-	fprintf(f, "int %sagetc(struct lx *lx);\n", prefix.api);
-	fprintf(f, "int %sdgetc(struct lx *lx);\n", prefix.api);
+	fprintf(f, "int %sfgetc(struct %slx *lx);\n", prefix.api, prefix.lx); /* TODO: stdio only */
+	fprintf(f, "int %ssgetc(struct %slx *lx);\n", prefix.api, prefix.lx);
+	fprintf(f, "int %sagetc(struct %slx *lx);\n", prefix.api, prefix.lx);
+	fprintf(f, "int %sdgetc(struct %slx *lx);\n", prefix.api, prefix.lx);
 	fprintf(f, "\n");
 
-	fprintf(f, "int  %sdynpush(struct lx *lx, char c);\n", prefix.api);
-	fprintf(f, "void %sdynpop(struct lx *lx);\n", prefix.api);
-	fprintf(f, "int  %sdynclear(struct lx *lx);\n", prefix.api);
-	fprintf(f, "void %sdynfree(struct lx *lx);\n", prefix.api);
+	fprintf(f, "int  %sdynpush(struct %slx *lx, char c);\n", prefix.api, prefix.lx);
+	fprintf(f, "void %sdynpop(struct %slx *lx);\n", prefix.api, prefix.lx);
+	fprintf(f, "int  %sdynclear(struct %slx *lx);\n", prefix.api, prefix.lx);
+	fprintf(f, "void %sdynfree(struct %slx *lx);\n", prefix.api, prefix.lx);
 	fprintf(f, "\n");
 
-	fprintf(f, "int  %sfixedpush(struct lx *lx, char c);\n", prefix.api);
-	fprintf(f, "void %sfixedpop(struct lx *lx);\n", prefix.api);
-	fprintf(f, "int  %sfixedclear(struct lx *lx);\n", prefix.api);
+	fprintf(f, "int  %sfixedpush(struct %slx *lx, char c);\n", prefix.api, prefix.lx);
+	fprintf(f, "void %sfixedpop(struct %slx *lx);\n", prefix.api, prefix.lx);
+	fprintf(f, "int  %sfixedclear(struct %slx *lx);\n", prefix.api, prefix.lx);
 	fprintf(f, "\n");
 
 	fprintf(f, "#endif\n");
