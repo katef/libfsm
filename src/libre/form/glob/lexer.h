@@ -3,7 +3,7 @@
 #ifndef LX_H
 #define LX_H
 
-enum lx_token {
+enum lx_glob_token {
 	TOK_CHAR,
 	TOK_QMARK,
 	TOK_STAR,
@@ -18,8 +18,8 @@ struct lx_pos {
 	unsigned col;
 };
 
-struct lx {
-	int (*lgetc)(struct lx *lx);
+struct lx_glob_lx {
+	int (*lgetc)(struct lx_glob_lx *lx);
 	void *opaque;
 
 	int c; /* lx_glob_ungetc buffer */
@@ -28,12 +28,12 @@ struct lx {
 	struct lx_pos end;
 
 	void *buf;
-	int  (*push) (struct lx *lx, char c);
-	void (*pop)  (struct lx *lx);
-	int  (*clear)(struct lx *lx);
-	void (*free) (struct lx *lx);
+	int  (*push) (struct lx_glob_lx *lx, char c);
+	void (*pop)  (struct lx_glob_lx *lx);
+	int  (*clear)(struct lx_glob_lx *lx);
+	void (*free) (struct lx_glob_lx *lx);
 
-	enum lx_token (*z)(struct lx *lx);
+	enum lx_glob_token (*z)(struct lx_glob_lx *lx);
 };
 
 /*
@@ -98,25 +98,25 @@ struct lx_fd {
 	size_t bufsz; /* number of bytes allocated after this struct */
 };
 
-const char *lx_glob_name(enum lx_token t);
-const char *lx_glob_example(enum lx_token (*z)(struct lx *), enum lx_token t);
+const char *lx_glob_name(enum lx_glob_token t);
+const char *lx_glob_example(enum lx_glob_token (*z)(struct lx_glob_lx *), enum lx_glob_token t);
 
-void lx_glob_init(struct lx *lx);
-enum lx_token lx_glob_next(struct lx *lx);
+void lx_glob_init(struct lx_glob_lx *lx);
+enum lx_glob_token lx_glob_next(struct lx_glob_lx *lx);
 
-int lx_glob_fgetc(struct lx *lx);
-int lx_glob_sgetc(struct lx *lx);
-int lx_glob_agetc(struct lx *lx);
-int lx_glob_dgetc(struct lx *lx);
+int lx_glob_fgetc(struct lx_glob_lx *lx);
+int lx_glob_sgetc(struct lx_glob_lx *lx);
+int lx_glob_agetc(struct lx_glob_lx *lx);
+int lx_glob_dgetc(struct lx_glob_lx *lx);
 
-int  lx_glob_dynpush(struct lx *lx, char c);
-void lx_glob_dynpop(struct lx *lx);
-int  lx_glob_dynclear(struct lx *lx);
-void lx_glob_dynfree(struct lx *lx);
+int  lx_glob_dynpush(struct lx_glob_lx *lx, char c);
+void lx_glob_dynpop(struct lx_glob_lx *lx);
+int  lx_glob_dynclear(struct lx_glob_lx *lx);
+void lx_glob_dynfree(struct lx_glob_lx *lx);
 
-int  lx_glob_fixedpush(struct lx *lx, char c);
-void lx_glob_fixedpop(struct lx *lx);
-int  lx_glob_fixedclear(struct lx *lx);
+int  lx_glob_fixedpush(struct lx_glob_lx *lx, char c);
+void lx_glob_fixedpop(struct lx_glob_lx *lx);
+int  lx_glob_fixedclear(struct lx_glob_lx *lx);
 
 #endif
 

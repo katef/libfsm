@@ -10,12 +10,12 @@
 
 #include LX_HEADER
 
-static enum lx_token z1(struct lx *lx);
-static enum lx_token z2(struct lx *lx);
-static enum lx_token z3(struct lx *lx);
+static enum lx_simple_token z1(struct lx_simple_lx *lx);
+static enum lx_simple_token z2(struct lx_simple_lx *lx);
+static enum lx_simple_token z3(struct lx_simple_lx *lx);
 
 static int
-lx_getc(struct lx *lx)
+lx_getc(struct lx_simple_lx *lx)
 {
 	int c;
 
@@ -43,7 +43,7 @@ lx_getc(struct lx *lx)
 }
 
 static void
-lx_simple_ungetc(struct lx *lx, int c)
+lx_simple_ungetc(struct lx_simple_lx *lx, int c)
 {
 	assert(lx != NULL);
 	assert(lx->c == EOF);
@@ -64,7 +64,7 @@ lx_simple_ungetc(struct lx *lx, int c)
 }
 
 int
-lx_simple_fgetc(struct lx *lx)
+lx_simple_fgetc(struct lx_simple_lx *lx)
 {
 	assert(lx != NULL);
 	assert(lx->opaque != NULL);
@@ -73,7 +73,7 @@ lx_simple_fgetc(struct lx *lx)
 }
 
 int
-lx_simple_sgetc(struct lx *lx)
+lx_simple_sgetc(struct lx_simple_lx *lx)
 {
 	char *s;
 
@@ -89,7 +89,7 @@ lx_simple_sgetc(struct lx *lx)
 }
 
 int
-lx_simple_agetc(struct lx *lx)
+lx_simple_agetc(struct lx_simple_lx *lx)
 {
 	struct lx_arr *a;
 
@@ -109,7 +109,7 @@ lx_simple_agetc(struct lx *lx)
 }
 
 int
-lx_simple_dgetc(struct lx *lx)
+lx_simple_dgetc(struct lx_simple_lx *lx)
 {
 	struct lx_fd *d;
 
@@ -144,7 +144,7 @@ lx_simple_dgetc(struct lx *lx)
 }
 
 int
-lx_simple_dynpush(struct lx *lx, char c)
+lx_simple_dynpush(struct lx_simple_lx *lx, char c)
 {
 	struct lx_dynbuf *t;
 
@@ -189,7 +189,7 @@ lx_simple_dynpush(struct lx *lx, char c)
 }
 
 void
-lx_simple_dynpop(struct lx *lx)
+lx_simple_dynpop(struct lx_simple_lx *lx)
 {
 	struct lx_dynbuf *t;
 
@@ -209,7 +209,7 @@ lx_simple_dynpop(struct lx *lx)
 }
 
 int
-lx_simple_dynclear(struct lx *lx)
+lx_simple_dynclear(struct lx_simple_lx *lx)
 {
 	struct lx_dynbuf *t;
 
@@ -240,7 +240,7 @@ lx_simple_dynclear(struct lx *lx)
 }
 
 void
-lx_simple_dynfree(struct lx *lx)
+lx_simple_dynfree(struct lx_simple_lx *lx)
 {
 	struct lx_dynbuf *t;
 
@@ -253,7 +253,7 @@ lx_simple_dynfree(struct lx *lx)
 	free(t->a);
 }
 int
-lx_simple_fixedpush(struct lx *lx, char c)
+lx_simple_fixedpush(struct lx_simple_lx *lx, char c)
 {
 	struct lx_fixedbuf *t;
 
@@ -277,7 +277,7 @@ lx_simple_fixedpush(struct lx *lx, char c)
 }
 
 void
-lx_simple_fixedpop(struct lx *lx)
+lx_simple_fixedpop(struct lx_simple_lx *lx)
 {
 	struct lx_fixedbuf *t;
 
@@ -297,7 +297,7 @@ lx_simple_fixedpop(struct lx *lx)
 }
 
 int
-lx_simple_fixedclear(struct lx *lx)
+lx_simple_fixedclear(struct lx_simple_lx *lx)
 {
 	struct lx_fixedbuf *t;
 
@@ -314,8 +314,8 @@ lx_simple_fixedclear(struct lx *lx)
 	return 0;
 }
 
-static enum lx_token
-z1(struct lx *lx)
+static enum lx_simple_token
+z1(struct lx_simple_lx *lx)
 {
 	int c;
 
@@ -402,8 +402,8 @@ z1(struct lx *lx)
 	}
 }
 
-static enum lx_token
-z2(struct lx *lx)
+static enum lx_simple_token
+z2(struct lx_simple_lx *lx)
 {
 	int c;
 
@@ -576,8 +576,8 @@ z2(struct lx *lx)
 	}
 }
 
-static enum lx_token
-z3(struct lx *lx)
+static enum lx_simple_token
+z3(struct lx_simple_lx *lx)
 {
 	int c;
 
@@ -816,7 +816,7 @@ z3(struct lx *lx)
 }
 
 const char *
-lx_simple_name(enum lx_token t)
+lx_simple_name(enum lx_simple_token t)
 {
 	switch (t) {
 	case TOK_CLOSECOUNT: return "CLOSECOUNT";
@@ -848,7 +848,7 @@ lx_simple_name(enum lx_token t)
 }
 
 const char *
-lx_simple_example(enum lx_token (*z)(struct lx *), enum lx_token t)
+lx_simple_example(enum lx_simple_token (*z)(struct lx_simple_lx *), enum lx_simple_token t)
 {
 	assert(z != NULL);
 
@@ -900,9 +900,9 @@ error:
 }
 
 void
-lx_simple_init(struct lx *lx)
+lx_simple_init(struct lx_simple_lx *lx)
 {
-	static const struct lx lx_default;
+	static const struct lx_simple_lx lx_default;
 
 	assert(lx != NULL);
 
@@ -916,10 +916,10 @@ lx_simple_init(struct lx *lx)
 	lx->end.col  = 1;
 }
 
-enum lx_token
-lx_simple_next(struct lx *lx)
+enum lx_simple_token
+lx_simple_next(struct lx_simple_lx *lx)
 {
-	enum lx_token t;
+	enum lx_simple_token t;
 
 	assert(lx != NULL);
 

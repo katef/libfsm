@@ -8,7 +8,6 @@ FORM += simple
 
 DIR += ${BUILD}/src/libre/form/${form}
 
-SRC += src/libre/form/${form}/comp.c
 SRC += src/libre/form/${form}/lexer.c
 SRC += src/libre/form/${form}/parser.c
 
@@ -22,6 +21,11 @@ LX_CFLAGS_${lexer} += -p lx_${form}_
 .for src in ${SRC:Msrc/libre/form/${form}/lexer.c}
 CFLAGS_${src} += -D LX_HEADER='"lexer.h"'
 DFLAGS_${src} += -D LX_HEADER='"lexer.h"'
+.endfor
+
+.for src in ${SRC:Msrc/libre/form/${form}/parser.c}
+CFLAGS_${src} += -D FORM='${form}'
+DFLAGS_${src} += -D FORM='${form}'
 .endfor
 
 .for parser in ${PARSER:Msrc/libre/form/${form}/parser.sid}

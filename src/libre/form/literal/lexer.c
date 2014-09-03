@@ -10,10 +10,10 @@
 
 #include LX_HEADER
 
-static enum lx_token z1(struct lx *lx);
+static enum lx_literal_token z1(struct lx_literal_lx *lx);
 
 static int
-lx_getc(struct lx *lx)
+lx_getc(struct lx_literal_lx *lx)
 {
 	int c;
 
@@ -41,7 +41,7 @@ lx_getc(struct lx *lx)
 }
 
 static void
-lx_literal_ungetc(struct lx *lx, int c)
+lx_literal_ungetc(struct lx_literal_lx *lx, int c)
 {
 	assert(lx != NULL);
 	assert(lx->c == EOF);
@@ -62,7 +62,7 @@ lx_literal_ungetc(struct lx *lx, int c)
 }
 
 int
-lx_literal_fgetc(struct lx *lx)
+lx_literal_fgetc(struct lx_literal_lx *lx)
 {
 	assert(lx != NULL);
 	assert(lx->opaque != NULL);
@@ -71,7 +71,7 @@ lx_literal_fgetc(struct lx *lx)
 }
 
 int
-lx_literal_sgetc(struct lx *lx)
+lx_literal_sgetc(struct lx_literal_lx *lx)
 {
 	char *s;
 
@@ -87,7 +87,7 @@ lx_literal_sgetc(struct lx *lx)
 }
 
 int
-lx_literal_agetc(struct lx *lx)
+lx_literal_agetc(struct lx_literal_lx *lx)
 {
 	struct lx_arr *a;
 
@@ -107,7 +107,7 @@ lx_literal_agetc(struct lx *lx)
 }
 
 int
-lx_literal_dgetc(struct lx *lx)
+lx_literal_dgetc(struct lx_literal_lx *lx)
 {
 	struct lx_fd *d;
 
@@ -142,7 +142,7 @@ lx_literal_dgetc(struct lx *lx)
 }
 
 int
-lx_literal_dynpush(struct lx *lx, char c)
+lx_literal_dynpush(struct lx_literal_lx *lx, char c)
 {
 	struct lx_dynbuf *t;
 
@@ -187,7 +187,7 @@ lx_literal_dynpush(struct lx *lx, char c)
 }
 
 void
-lx_literal_dynpop(struct lx *lx)
+lx_literal_dynpop(struct lx_literal_lx *lx)
 {
 	struct lx_dynbuf *t;
 
@@ -207,7 +207,7 @@ lx_literal_dynpop(struct lx *lx)
 }
 
 int
-lx_literal_dynclear(struct lx *lx)
+lx_literal_dynclear(struct lx_literal_lx *lx)
 {
 	struct lx_dynbuf *t;
 
@@ -238,7 +238,7 @@ lx_literal_dynclear(struct lx *lx)
 }
 
 void
-lx_literal_dynfree(struct lx *lx)
+lx_literal_dynfree(struct lx_literal_lx *lx)
 {
 	struct lx_dynbuf *t;
 
@@ -251,7 +251,7 @@ lx_literal_dynfree(struct lx *lx)
 	free(t->a);
 }
 int
-lx_literal_fixedpush(struct lx *lx, char c)
+lx_literal_fixedpush(struct lx_literal_lx *lx, char c)
 {
 	struct lx_fixedbuf *t;
 
@@ -275,7 +275,7 @@ lx_literal_fixedpush(struct lx *lx, char c)
 }
 
 void
-lx_literal_fixedpop(struct lx *lx)
+lx_literal_fixedpop(struct lx_literal_lx *lx)
 {
 	struct lx_fixedbuf *t;
 
@@ -295,7 +295,7 @@ lx_literal_fixedpop(struct lx *lx)
 }
 
 int
-lx_literal_fixedclear(struct lx *lx)
+lx_literal_fixedclear(struct lx_literal_lx *lx)
 {
 	struct lx_fixedbuf *t;
 
@@ -312,8 +312,8 @@ lx_literal_fixedclear(struct lx *lx)
 	return 0;
 }
 
-static enum lx_token
-z1(struct lx *lx)
+static enum lx_literal_token
+z1(struct lx_literal_lx *lx)
 {
 	int c;
 
@@ -367,7 +367,7 @@ z1(struct lx *lx)
 }
 
 const char *
-lx_literal_name(enum lx_token t)
+lx_literal_name(enum lx_literal_token t)
 {
 	switch (t) {
 	case TOK_CHAR: return "CHAR";
@@ -379,7 +379,7 @@ lx_literal_name(enum lx_token t)
 }
 
 const char *
-lx_literal_example(enum lx_token (*z)(struct lx *), enum lx_token t)
+lx_literal_example(enum lx_literal_token (*z)(struct lx_literal_lx *), enum lx_literal_token t)
 {
 	assert(z != NULL);
 
@@ -397,9 +397,9 @@ error:
 }
 
 void
-lx_literal_init(struct lx *lx)
+lx_literal_init(struct lx_literal_lx *lx)
 {
-	static const struct lx lx_default;
+	static const struct lx_literal_lx lx_default;
 
 	assert(lx != NULL);
 
@@ -413,10 +413,10 @@ lx_literal_init(struct lx *lx)
 	lx->end.col  = 1;
 }
 
-enum lx_token
-lx_literal_next(struct lx *lx)
+enum lx_literal_token
+lx_literal_next(struct lx_literal_lx *lx)
 {
-	enum lx_token t;
+	enum lx_literal_token t;
 
 	assert(lx != NULL);
 

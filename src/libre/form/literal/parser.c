@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 40 "src/libre/parser.act"
+#line 80 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -22,8 +22,29 @@
 
 	#include <re/re.h>
 
+	#ifndef FORM
+	#error FORM required
+	#endif
+
+	#define PASTE(a, b) a ## b
+	#define CAT(a, b)   PASTE(a, b)
+
+	#define LX_PREFIX CAT(lx_, FORM)
+
+	#define LX_TOKEN  CAT(LX_PREFIX, _token)
+	#define LX_STATE  CAT(LX_PREFIX, _lx)
+	#define LX_NEXT   CAT(LX_PREFIX, _next)
+	#define LX_INIT   CAT(LX_PREFIX, _init)
+
+	#define FORM_COMP CAT(comp_, FORM)
+
+	/* XXX: get rid of this; use same %entry% for all grammars */
+	#define FORM_ENTRY CAT(p_re__, FORM)
+
 	#include "parser.h"
 	#include "lexer.h"
+
+	#include "../comp.h"
 
 	typedef char     t_char;
 	typedef unsigned t_unsigned;
@@ -32,7 +53,32 @@
 
 	typedef struct fsm_state * t_fsm__state;
 
-#line 36 "src/libre/form/literal/parser.c"
+	struct act_state {
+		enum LX_TOKEN lex_tok;
+		enum LX_TOKEN lex_tok_save;
+		enum re_errno e;
+	};
+
+	struct lex_state {
+		struct LX_STATE lx;
+		struct lx_dynbuf buf; /* XXX: unneccessary since we're lexing from a string */
+
+		int (*f)(void *opaque);
+		void *opaque;
+
+		/* TODO: use lx's generated conveniences for the pattern buffer */
+		char a[512];
+		char *p;
+	};
+
+	#define CURRENT_TERMINAL (act_state->lex_tok)
+	#define ERROR_TERMINAL   (TOK_ERROR)
+	#define ADVANCE_LEXER    do { act_state->lex_tok = LX_NEXT(&lex_state->lx); } while (0)
+	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
+	                              act_state->lex_tok = tok;                     } while (0)
+	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
+
+#line 82 "src/libre/form/literal/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -62,7 +108,7 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 
 		/* BEGINNING OF ACTION: make-states */
 		{
-#line 209 "src/libre/parser.act"
+#line 229 "src/libre/parser.act"
 
 		assert(fsm != NULL);
 		/* TODO: assert fsm is empty */
@@ -77,7 +123,7 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 
 		fsm_setend(fsm, (ZIy), 1);
 	
-#line 81 "src/libre/form/literal/parser.c"
+#line 127 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: make-states */
 		/* BEGINNING OF INLINE: 61 */
@@ -96,13 +142,13 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 304 "src/libre/parser.act"
+#line 324 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			goto ZL3;
 		}
 	
-#line 106 "src/libre/form/literal/parser.c"
+#line 152 "src/libre/form/literal/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -113,11 +159,11 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-atoms */
 				{
-#line 471 "src/libre/parser.act"
+#line 491 "src/libre/parser.act"
 
 		act_state->e = RE_EXATOMS;
 	
-#line 121 "src/libre/form/literal/parser.c"
+#line 167 "src/libre/form/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-atoms */
 			}
@@ -140,11 +186,11 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 483 "src/libre/parser.act"
+#line 503 "src/libre/parser.act"
 
 		act_state->e = RE_EXEOF;
 	
-#line 148 "src/libre/form/literal/parser.c"
+#line 194 "src/libre/form/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -171,14 +217,14 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, cflags cflags, lex_state lex_state, act
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 163 "src/libre/parser.act"
+#line 183 "src/libre/parser.act"
 
 		assert(lex_state->buf.a[0] != '\0');
 		assert(lex_state->buf.a[1] == '\0');
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 182 "src/libre/form/literal/parser.c"
+#line 228 "src/libre/form/literal/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -188,7 +234,7 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, cflags cflags, lex_state lex_state, act
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-literal */
 		{
-#line 321 "src/libre/parser.act"
+#line 341 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -199,17 +245,17 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, cflags cflags, lex_state lex_state, act
 			goto ZL1;
 		}
 	
-#line 203 "src/libre/form/literal/parser.c"
+#line 249 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: add-literal */
 		/* BEGINNING OF ACTION: count-1 */
 		{
-#line 456 "src/libre/parser.act"
+#line 476 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (ZIy);
 	
-#line 213 "src/libre/form/literal/parser.c"
+#line 259 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: count-1 */
 	}
@@ -231,14 +277,14 @@ ZL2_list_Hof_Hliterals:;
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 297 "src/libre/parser.act"
+#line 317 "src/libre/parser.act"
 
 		(ZIz) = fsm_addstate(fsm);
 		if ((ZIz) == NULL) {
 			goto ZL1;
 		}
 	
-#line 242 "src/libre/form/literal/parser.c"
+#line 288 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hliterals_C_Cliteral (fsm, cflags, lex_state, act_state, ZIx, ZIz);
@@ -257,13 +303,13 @@ ZL2_list_Hof_Hliterals:;
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 304 "src/libre/parser.act"
+#line 324 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIz), (ZIy))) {
 			goto ZL1;
 		}
 	
-#line 267 "src/libre/form/literal/parser.c"
+#line 313 "src/libre/form/literal/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -283,9 +329,98 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 487 "src/libre/parser.act"
+#line 596 "src/libre/parser.act"
 
 
-#line 290 "src/libre/form/literal/parser.c"
+	static int
+	lgetc(struct LX_STATE *lx)
+	{
+		const struct lex_state *lex_state;
+
+		assert(lx != NULL);
+		assert(lx->opaque != NULL);
+
+		lex_state = lx->opaque;
+
+		assert(lex_state->f != NULL);
+
+		return lex_state->f(lex_state->opaque);
+	}
+
+	struct fsm *
+	FORM_COMP(int (*f)(void *opaque), void *opaque,
+		enum re_cflags cflags, struct re_err *err)
+	{
+		struct act_state  act_state_s;
+		struct act_state *act_state;
+		struct lex_state  lex_state_s;
+		struct lex_state *lex_state;
+
+		struct LX_STATE *lx;
+		struct fsm *new;
+		enum re_errno e;
+
+		assert(f != NULL);
+
+		new = re_new_empty();
+		if (new == NULL) {
+			e = RE_EERRNO;
+			goto error;
+		}
+
+		lex_state    = &lex_state_s;
+		lex_state->p = lex_state->a;
+
+		lx = &lex_state->lx;
+
+		LX_INIT(lx);
+
+		lx->lgetc  = lgetc;
+		lx->opaque = lex_state;
+
+		lex_state->f       = f;
+		lex_state->opaque  = opaque;
+
+		lex_state->buf.a   = NULL;
+		lex_state->buf.len = 0;
+
+		/* XXX: unneccessary since we're lexing from a string */
+		lx->buf   = &lex_state->buf;
+		lx->push  = CAT(LX_PREFIX, _dynpush);
+		lx->pop   = CAT(LX_PREFIX, _dynpop);
+		lx->clear = CAT(LX_PREFIX, _dynclear);
+		lx->free  = CAT(LX_PREFIX, _dynfree);
+
+	/* XXX */
+	lx->free = NULL;
+
+		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
+		act_state = &act_state_s;
+
+		act_state->e = RE_ESUCCESS;
+
+		ADVANCE_LEXER;
+		FORM_ENTRY(new, cflags, lex_state, act_state);
+
+		if (act_state->e != RE_ESUCCESS) {
+			/* TODO: free internals allocated during parsing (are there any?) */
+			fsm_free(new);
+			e = act_state->e;
+			goto error;
+		}
+
+		return new;
+
+	error:
+
+		if (err != NULL) {
+			err->e    = e;
+			err->byte = lx->start.byte;
+		}
+
+		return NULL;
+	}
+
+#line 425 "src/libre/form/literal/parser.c"
 
 /* END OF FILE */

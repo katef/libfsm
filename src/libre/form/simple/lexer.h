@@ -3,7 +3,7 @@
 #ifndef LX_H
 #define LX_H
 
-enum lx_token {
+enum lx_simple_token {
 	TOK_CLOSECOUNT,
 	TOK_OPENCOUNT,
 	TOK_COUNT,
@@ -36,8 +36,8 @@ struct lx_pos {
 	unsigned col;
 };
 
-struct lx {
-	int (*lgetc)(struct lx *lx);
+struct lx_simple_lx {
+	int (*lgetc)(struct lx_simple_lx *lx);
 	void *opaque;
 
 	int c; /* lx_simple_ungetc buffer */
@@ -46,12 +46,12 @@ struct lx {
 	struct lx_pos end;
 
 	void *buf;
-	int  (*push) (struct lx *lx, char c);
-	void (*pop)  (struct lx *lx);
-	int  (*clear)(struct lx *lx);
-	void (*free) (struct lx *lx);
+	int  (*push) (struct lx_simple_lx *lx, char c);
+	void (*pop)  (struct lx_simple_lx *lx);
+	int  (*clear)(struct lx_simple_lx *lx);
+	void (*free) (struct lx_simple_lx *lx);
 
-	enum lx_token (*z)(struct lx *lx);
+	enum lx_simple_token (*z)(struct lx_simple_lx *lx);
 };
 
 /*
@@ -116,25 +116,25 @@ struct lx_fd {
 	size_t bufsz; /* number of bytes allocated after this struct */
 };
 
-const char *lx_simple_name(enum lx_token t);
-const char *lx_simple_example(enum lx_token (*z)(struct lx *), enum lx_token t);
+const char *lx_simple_name(enum lx_simple_token t);
+const char *lx_simple_example(enum lx_simple_token (*z)(struct lx_simple_lx *), enum lx_simple_token t);
 
-void lx_simple_init(struct lx *lx);
-enum lx_token lx_simple_next(struct lx *lx);
+void lx_simple_init(struct lx_simple_lx *lx);
+enum lx_simple_token lx_simple_next(struct lx_simple_lx *lx);
 
-int lx_simple_fgetc(struct lx *lx);
-int lx_simple_sgetc(struct lx *lx);
-int lx_simple_agetc(struct lx *lx);
-int lx_simple_dgetc(struct lx *lx);
+int lx_simple_fgetc(struct lx_simple_lx *lx);
+int lx_simple_sgetc(struct lx_simple_lx *lx);
+int lx_simple_agetc(struct lx_simple_lx *lx);
+int lx_simple_dgetc(struct lx_simple_lx *lx);
 
-int  lx_simple_dynpush(struct lx *lx, char c);
-void lx_simple_dynpop(struct lx *lx);
-int  lx_simple_dynclear(struct lx *lx);
-void lx_simple_dynfree(struct lx *lx);
+int  lx_simple_dynpush(struct lx_simple_lx *lx, char c);
+void lx_simple_dynpop(struct lx_simple_lx *lx);
+int  lx_simple_dynclear(struct lx_simple_lx *lx);
+void lx_simple_dynfree(struct lx_simple_lx *lx);
 
-int  lx_simple_fixedpush(struct lx *lx, char c);
-void lx_simple_fixedpop(struct lx *lx);
-int  lx_simple_fixedclear(struct lx *lx);
+int  lx_simple_fixedpush(struct lx_simple_lx *lx, char c);
+void lx_simple_fixedpop(struct lx_simple_lx *lx);
+int  lx_simple_fixedclear(struct lx_simple_lx *lx);
 
 #endif
 
