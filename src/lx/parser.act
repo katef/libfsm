@@ -475,18 +475,143 @@
 	@};
 
 	<op-star>: (r :fsm) -> () = @{
-		fprintf(stderr, "unimplemented\n");
-		@!;
+		struct fsm_state *start, *end;
+		struct fsm_state *old;
+
+		/* TODO: centralise with libre */
+
+		start = fsm_addstate(@r);
+		if (start == NULL) {
+			perror("fsm_addtstate");
+			@!;
+		}
+
+		end = fsm_addstate(@r);
+		if (end == NULL) {
+			perror("fsm_addtstate");
+			@!;
+		}
+
+		old = fsm_collate(@r, fsm_isend);
+		if (old == NULL) {
+			perror("fsm_collate");
+			@!;
+		}
+
+		if (!fsm_addedge_epsilon(@r, old, end)) {
+			perror("fsm_addedge_epsilon");
+			@!;
+		}
+
+		fsm_setend(@r, old, 0);
+		fsm_setend(@r, end, 1);
+
+		if (!fsm_addedge_epsilon(@r, start, fsm_getstart(@r))) {
+			perror("fsm_addedge_epsilon");
+			@!;
+		}
+
+		if (!fsm_addedge_epsilon(@r, start, end)) {
+			perror("fsm_addedge_epsilon");
+			@!;
+		}
+
+		if (!fsm_addedge_epsilon(@r, end, start)) {
+			perror("fsm_addedge_epsilon");
+			@!;
+		}
+
+		fsm_setstart(@r, start);
 	@};
 
 	<op-cross>: (r :fsm) -> () = @{
-		fprintf(stderr, "unimplemented\n");
-		@!;
+		struct fsm_state *start, *end;
+		struct fsm_state *old;
+
+		/* TODO: centralise with libre */
+
+		start = fsm_addstate(@r);
+		if (start == NULL) {
+			perror("fsm_addtstate");
+			@!;
+		}
+
+		end = fsm_addstate(@r);
+		if (end == NULL) {
+			perror("fsm_addtstate");
+			@!;
+		}
+
+		old = fsm_collate(@r, fsm_isend);
+		if (old == NULL) {
+			perror("fsm_collate");
+			@!;
+		}
+
+		if (!fsm_addedge_epsilon(@r, old, end)) {
+			perror("fsm_addedge_epsilon");
+			@!;
+		}
+
+		fsm_setend(@r, old, 0);
+		fsm_setend(@r, end, 1);
+
+		if (!fsm_addedge_epsilon(@r, start, fsm_getstart(@r))) {
+			perror("fsm_addedge_epsilon");
+			@!;
+		}
+
+		if (!fsm_addedge_epsilon(@r, end, start)) {
+			perror("fsm_addedge_epsilon");
+			@!;
+		}
+
+		fsm_setstart(@r, start);
 	@};
 
 	<op-qmark>: (r :fsm) -> () = @{
-		fprintf(stderr, "unimplemented\n");
-		@!;
+		struct fsm_state *start, *end;
+		struct fsm_state *old;
+
+		/* TODO: centralise with libre */
+
+		start = fsm_addstate(@r);
+		if (start == NULL) {
+			perror("fsm_addtstate");
+			@!;
+		}
+
+		end = fsm_addstate(@r);
+		if (end == NULL) {
+			perror("fsm_addtstate");
+			@!;
+		}
+
+		old = fsm_collate(@r, fsm_isend);
+		if (old == NULL) {
+			perror("fsm_collate");
+			@!;
+		}
+
+		if (!fsm_addedge_epsilon(@r, old, end)) {
+			perror("fsm_addedge_epsilon");
+			@!;
+		}
+
+		fsm_setend(@r, old, 0);
+		fsm_setend(@r, end, 1);
+
+		if (!fsm_addedge_epsilon(@r, start, fsm_getstart(@r))) {
+			perror("fsm_addedge_epsilon");
+			@!;
+		}
+
+		if (!fsm_addedge_epsilon(@r, start, end)) {
+			perror("fsm_addedge_epsilon");
+			@!;
+		}
+
+		fsm_setstart(@r, start);
 	@};
 
 	<op-complement>: (r :fsm) -> () = @{
