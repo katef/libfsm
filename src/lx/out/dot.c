@@ -160,6 +160,7 @@ lx_out_dot(const struct ast *ast, FILE *f)
 	assert(f != NULL);
 
 	fprintf(f, "digraph %sG {\n", prefix.api);
+	fprintf(f, "\trankdir = LR;\n");
 
 	fprintf(f, "\tnode [ shape = circle, label = \"\" ];\n");
 	fprintf(f, "\n");
