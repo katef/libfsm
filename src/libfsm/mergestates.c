@@ -17,10 +17,12 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 
 	/* edges from b */
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		/* there should be no common elements, because a and b are from different FSMs */
-		/* TODO: make a set_distinct() or set_disjoint() or somesuch */
-		assert(a->edges[i].sl == NULL || !subsetof(a->edges[i].sl, b->edges[i].sl));
-		assert(b->edges[i].sl == NULL || !subsetof(b->edges[i].sl, a->edges[i].sl));
+		struct state_set *p;
+
+		/* set_merge assumes no common elements */
+		for (p = b->edges[i].sl; p != NULL; p = p->next) {
+			set_remove(&a->edges[i].sl, p->state);
+		}
 
 		set_merge(&a->edges[i].sl, b->edges[i].sl);
 
