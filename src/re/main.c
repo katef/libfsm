@@ -145,7 +145,7 @@ main(int argc, char *argv[])
 						return EXIT_FAILURE;
 					}
 
-					new = re_new_comp(form(c), re_getc_file, f, 0, &err);
+					new = re_new_comp(form(c), re_fgetc, f, 0, &err);
 
 					fclose(f);
 				} else {
@@ -153,7 +153,7 @@ main(int argc, char *argv[])
 
 					s = optarg;
 
-					new = re_new_comp(form(c), re_getc_str, &s, 0, &err);
+					new = re_new_comp(form(c), re_sgetc, &s, 0, &err);
 				}
 
 				/* TODO: addend(new, optarg); */

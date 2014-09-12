@@ -1518,7 +1518,7 @@ p_179(lex_state lex_state, act_state act_state, fsm *ZOr)
 
 		s = (ZIs);
 
-		(ZIr) = re_new_comp(RE_SIMPLE, re_getc_str, &s, (ZIf), &err);
+		(ZIr) = re_new_comp(RE_SIMPLE, re_sgetc, &s, (ZIf), &err);
 		if ((ZIr) == NULL) {
 			assert(err.e != RE_EBADFORM);
 			/* TODO: pass filename for .lx source */
@@ -1579,7 +1579,7 @@ p_179(lex_state lex_state, act_state act_state, fsm *ZOr)
 
 		s = (ZIs);
 
-		(ZIr) = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, &err);
+		(ZIr) = re_new_comp(RE_LITERAL, re_sgetc, &s, 0, &err);
 		if ((ZIr) == NULL) {
 			assert(err.e != RE_EBADFORM);
 			/* TODO: pass filename for .lx source */

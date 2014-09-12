@@ -110,8 +110,8 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 /*
  * Conveniences for re_new_comp().
  */
-int re_getc_str(void *opaque);  /* expects opaque to be char ** */
-int re_getc_file(void *oapque); /* expects opaque to be FILE */
+int re_sgetc(void *opaque); /* expects opaque to be char ** */
+int re_fgetc(void *oapque); /* expects opaque to be FILE *  */
 
 #endif
 

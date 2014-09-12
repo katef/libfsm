@@ -333,7 +333,7 @@
 
 		s = @s;
 
-		@r = re_new_comp(RE_LITERAL, re_getc_str, &s, 0, &err);
+		@r = re_new_comp(RE_LITERAL, re_sgetc, &s, 0, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADFORM);
 			/* TODO: pass filename for .lx source */
@@ -350,7 +350,7 @@
 
 		s = @s;
 
-		@r = re_new_comp(RE_SIMPLE, re_getc_str, &s, @f, &err);
+		@r = re_new_comp(RE_SIMPLE, re_sgetc, &s, @f, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADFORM);
 			/* TODO: pass filename for .lx source */

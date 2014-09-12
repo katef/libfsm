@@ -6,7 +6,7 @@
 #include <re/re.h>
 
 int
-re_getc_str(void *opaque)
+re_sgetc(void *opaque)
 {
 	char **s;
 	char c;
@@ -28,7 +28,7 @@ re_getc_str(void *opaque)
 }
 
 int
-re_getc_file(void *opaque)
+re_fgetc(void *opaque)
 {
 	FILE *f;
 
