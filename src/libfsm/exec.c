@@ -27,7 +27,6 @@ nextstate(const struct fsm_state *state, char c)
 		return NULL;
 	}
 
-	assert(s->next  != NULL);
 	assert(s->state != NULL);
 
 	return s->state;
