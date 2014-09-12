@@ -229,8 +229,7 @@ main(int argc, char *argv[])
 		int i;
 
 		for (i = 0; i < argc; i++) {
-			/* TODO: eflags */
-			r += !re_exec(fsm, argv[i], 0);
+			r += !re_exec(fsm, argv[i]);
 		}
 	}
 

@@ -28,12 +28,6 @@ enum re_cflags {
 
 #define RE_ANCHOR (RE_TEXT | RE_MULTI | RE_ZONE)
 
-enum re_eflags {
-	RE_NOTBOL  = 1 << 0,
-	RE_NOTEOL  = 1 << 1,
-	RE_GREEDY  = 1 << 2
-};
-
 enum re_pred {
 	RE_SOL = 1 << 0,
 	RE_SOZ = 1 << 1,
@@ -115,7 +109,7 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
  * Return the accepting state, or NULL for no match.
  */
 struct fsm_state *
-re_exec(const struct fsm *fsm, const char *s, enum re_eflags eflags);
+re_exec(const struct fsm *fsm, const char *s);
 
 
 /* TODO: a convenience interface in the spirit of strtol() which parses between delimiters (and escapes accordingly) */
