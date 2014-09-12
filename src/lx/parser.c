@@ -36,7 +36,7 @@
 	#include "var.h"
 
 	typedef char *               string;
-	typedef enum re_cflags       cflags;
+	typedef enum re_flags        flags;
 	typedef struct fsm *         fsm;
 	typedef struct ast_zone *    zone;
 	typedef struct ast_mapping * mapping;
@@ -1464,7 +1464,7 @@ p_179(lex_state lex_state, act_state act_state, fsm *ZOr)
 	switch (CURRENT_TERMINAL) {
 	case (TOK_RE):
 		{
-			cflags ZIf;
+			flags ZIf;
 			string ZIs;
 
 			/* BEGINNING OF EXTRACT: RE */
@@ -1475,7 +1475,7 @@ p_179(lex_state lex_state, act_state act_state, fsm *ZOr)
 
 		/* TODO: submatch addressing */
 
-		if (-1 == re_cflags(lex_state->buf.a + 1, &ZIf)) { /* TODO: +1 for '/' prefix */
+		if (-1 == re_flags(lex_state->buf.a + 1, &ZIf)) { /* TODO: +1 for '/' prefix */
 			err(lex_state, "/%s: Unrecognised regexp flags", lex_state->buf.a + 1);
 			exit(EXIT_FAILURE);
 		}

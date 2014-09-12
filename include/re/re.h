@@ -17,7 +17,7 @@ enum re_form {
 	RE_SIMPLE
 };
 
-enum re_cflags {
+enum re_flags {
 	RE_ICASE   = 1 << 0,
 	RE_TEXT    = 1 << 1,
 	RE_MULTI   = 1 << 2,
@@ -68,7 +68,7 @@ struct re_err {
  * Parse flags. Returns -1 on error.
  */
 int
-re_cflags(const char *s, enum re_cflags *f);
+re_flags(const char *s, enum re_flags *f);
 
 /*
  * Create a new empty regexp.
@@ -87,7 +87,7 @@ re_new_empty(void);
  */
 struct fsm *
 re_new_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
-	enum re_cflags cflags, struct re_err *err);
+	enum re_flags flags, struct re_err *err);
 
 /*
  * Return a human-readable string describing a given error code. The string

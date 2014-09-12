@@ -17,14 +17,14 @@
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
 
-	typedef struct fsm *   fsm;
-	typedef enum re_cflags cflags;
+	typedef struct fsm *  fsm;
+	typedef enum re_flags flags;
 
 #line 24 "src/libre/form/simple/parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
-extern void p_re__simple(fsm, cflags, lex_state, act_state);
+extern void p_re__simple(fsm, flags, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
 #line 598 "src/libre/parser.act"

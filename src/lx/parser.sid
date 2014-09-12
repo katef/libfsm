@@ -3,7 +3,7 @@
 %types%
 
 	char;
-	cflags;
+	flags;
 	string;
 	fsm;
 	zone;
@@ -19,7 +19,7 @@
 	HEX:  () -> (:char);
 	CHAR: () -> (:char);
 
-	RE: () -> (:cflags);
+	RE: () -> (:flags);
 	STR;
 
 	BIND;
@@ -52,8 +52,8 @@
 	<deref-var>:       (:zone, :string) -> (:fsm);
 	<deref-token>:     (:zone, :string) -> (:fsm);
 
-	<compile-literal>: (:string)          -> (:fsm);
-	<compile-regex>:   (:string, :cflags) -> (:fsm);
+	<compile-literal>: (:string)         -> (:fsm);
+	<compile-regex>:   (:string, :flags) -> (:fsm);
 
 	!<regex-empty>: () -> (:fsm); /* TODO: proper name for matching the empty string? */
 	<regex-any>:    () -> (:fsm);

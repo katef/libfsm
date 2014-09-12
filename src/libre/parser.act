@@ -9,7 +9,7 @@
 %persistents%
 
 	fsm       :fsm;
-	cflags    :cflags;
+	flags     :flags;
 	lex_state :lex_state;
 	act_state :act_state;
 
@@ -90,8 +90,8 @@
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
 
-	typedef struct fsm *   fsm;
-	typedef enum re_cflags cflags;
+	typedef struct fsm *  fsm;
+	typedef enum re_flags flags;
 
 @};
 
@@ -184,7 +184,7 @@
 	@};
 
 	START: () -> (p :pred) = @{
-		switch (cflags & RE_ANCHOR) {
+		switch (flags & RE_ANCHOR) {
 		case RE_TEXT:  @p = RE_SOT; break;
 		case RE_MULTI: @p = RE_SOL; break;
 		case RE_ZONE:  @p = RE_SOZ; break;
@@ -196,7 +196,7 @@
 	@};
 
 	END: () -> (p :pred) = @{
-		switch (cflags & RE_ANCHOR) {
+		switch (flags & RE_ANCHOR) {
 		case RE_TEXT:  @p = RE_EOT; break;
 		case RE_MULTI: @p = RE_EOL; break;
 		case RE_ZONE:  @p = RE_EOZ; break;
@@ -521,7 +521,7 @@
 
 	struct fsm *
 	FORM_COMP(int (*f)(void *opaque), void *opaque,
-		enum re_cflags cflags, struct re_err *err)
+		enum re_flags flags, struct re_err *err)
 	{
 		struct act_state  act_state_s;
 		struct act_state *act_state;
@@ -572,7 +572,7 @@
 		act_state->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
-		FORM_ENTRY(new, cflags, lex_state, act_state);
+		FORM_ENTRY(new, flags, lex_state, act_state);
 
 		if (act_state->e != RE_ESUCCESS) {
 			/* TODO: free internals allocated during parsing (are there any?) */

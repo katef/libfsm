@@ -14,7 +14,7 @@
 #include "form/comp.h"
 
 int
-re_cflags(const char *s, enum re_cflags *f)
+re_flags(const char *s, enum re_flags *f)
 {
 	const char *p;
 
@@ -77,11 +77,11 @@ error:
 
 struct fsm *
 re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
-	enum re_cflags cflags, struct re_err *err)
+	enum re_flags flags, struct re_err *err)
 {
 	struct fsm *new;
 	struct fsm *(*comp)(int (*getc)(void *opaque), void *opaque,
-		enum re_cflags cflags, struct re_err *err);
+		enum re_flags flags, struct re_err *err);
 
 	assert(getc != NULL);
 
@@ -97,24 +97,24 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
-	new = comp(getc, opaque, cflags, err);
+	new = comp(getc, opaque, flags, err);
 	if (new == NULL) {
 		return NULL;
 	}
 
 	/*
-	 * All cflags operators commute with respect to composition.
+	 * All flags operators commute with respect to composition.
 	 * That is, the order of application here does not matter;
 	 * here I'm trying to keep these ordered for efficiency.
 	 */
 
-	if (cflags & RE_REVERSE) {
+	if (flags & RE_REVERSE) {
 		if (!fsm_reverse(new)) {
 			goto error;
 		}
 	}
 
-	if (cflags & RE_ICASE) {
+	if (flags & RE_ICASE) {
 		if (!fsm_desensitise(new)) {
 			goto error;
 		}

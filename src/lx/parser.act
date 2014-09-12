@@ -13,7 +13,7 @@
 %maps%
 
 	char   -> char;
-	cflags -> cflags;
+	flags  -> flags;
 	string -> string;
 	fsm    -> fsm;
 	zone   -> zone;
@@ -45,7 +45,7 @@
 	#include "var.h"
 
 	typedef char *               string;
-	typedef enum re_cflags       cflags;
+	typedef enum re_flags        flags;
 	typedef struct fsm *         fsm;
 	typedef struct ast_zone *    zone;
 	typedef struct ast_mapping * mapping;
@@ -216,12 +216,12 @@
 		}
 	@};
 
-	RE: () -> (f :cflags) = @{
+	RE: () -> (f :flags) = @{
 		assert(lex_state->buf.a[0] == '/');
 
 		/* TODO: submatch addressing */
 
-		if (-1 == re_cflags(lex_state->buf.a + 1, &@f)) { /* TODO: +1 for '/' prefix */
+		if (-1 == re_flags(lex_state->buf.a + 1, &@f)) { /* TODO: +1 for '/' prefix */
 			err(lex_state, "/%s: Unrecognised regexp flags", lex_state->buf.a + 1);
 			exit(EXIT_FAILURE);
 		}
@@ -342,7 +342,7 @@
 		}
 	@};
 
-	<compile-regex>: (s :string, f :cflags) -> (r :fsm) = @{
+	<compile-regex>: (s :string, f :flags) -> (r :fsm) = @{
 		struct re_err err;
 		const char *s;
 

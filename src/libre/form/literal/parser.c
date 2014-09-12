@@ -87,9 +87,9 @@
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
-extern void p_re__literal(fsm, cflags, lex_state, act_state);
-static void p_list_Hof_Hliterals_C_Cliteral(fsm, cflags, lex_state, act_state, t_fsm__state, t_fsm__state);
-static void p_list_Hof_Hliterals(fsm, cflags, lex_state, act_state, t_fsm__state, t_fsm__state);
+extern void p_re__literal(fsm, flags, lex_state, act_state);
+static void p_list_Hof_Hliterals_C_Cliteral(fsm, flags, lex_state, act_state, t_fsm__state, t_fsm__state);
+static void p_list_Hof_Hliterals(fsm, flags, lex_state, act_state, t_fsm__state, t_fsm__state);
 
 /* BEGINNING OF STATIC VARIABLES */
 
@@ -97,7 +97,7 @@ static void p_list_Hof_Hliterals(fsm, cflags, lex_state, act_state, t_fsm__state
 /* BEGINNING OF FUNCTION DEFINITIONS */
 
 void
-p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
+p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -131,7 +131,7 @@ p_re__literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
 				{
-					p_list_Hof_Hliterals (fsm, cflags, lex_state, act_state, ZIx, ZIy);
+					p_list_Hof_Hliterals (fsm, flags, lex_state, act_state, ZIx, ZIy);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 						RESTORE_LEXER;
 						goto ZL3;
@@ -205,7 +205,7 @@ ZL1:;
 }
 
 static void
-p_list_Hof_Hliterals_C_Cliteral(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
+p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -266,7 +266,7 @@ ZL1:;
 }
 
 static void
-p_list_Hof_Hliterals(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
+p_list_Hof_Hliterals(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -287,7 +287,7 @@ ZL2_list_Hof_Hliterals:;
 #line 288 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: add-concat */
-		p_list_Hof_Hliterals_C_Cliteral (fsm, cflags, lex_state, act_state, ZIx, ZIz);
+		p_list_Hof_Hliterals_C_Cliteral (fsm, flags, lex_state, act_state, ZIx, ZIz);
 		/* BEGINNING OF INLINE: 59 */
 		{
 			switch (CURRENT_TERMINAL) {
@@ -349,7 +349,7 @@ ZL1:;
 
 	struct fsm *
 	FORM_COMP(int (*f)(void *opaque), void *opaque,
-		enum re_cflags cflags, struct re_err *err)
+		enum re_flags flags, struct re_err *err)
 	{
 		struct act_state  act_state_s;
 		struct act_state *act_state;
@@ -400,7 +400,7 @@ ZL1:;
 		act_state->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
-		FORM_ENTRY(new, cflags, lex_state, act_state);
+		FORM_ENTRY(new, flags, lex_state, act_state);
 
 		if (act_state->e != RE_ESUCCESS) {
 			/* TODO: free internals allocated during parsing (are there any?) */

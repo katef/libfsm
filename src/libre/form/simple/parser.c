@@ -87,23 +87,23 @@
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
-static void p_anchor(fsm, cflags, lex_state, act_state, t_fsm__state, t_fsm__state);
-static void p_expr_C_Clist_Hof_Halts_C_Calt(fsm, cflags, lex_state, act_state, t_fsm__state, t_fsm__state);
-static void p_group(fsm, cflags, lex_state, act_state, t_fsm__state, t_fsm__state);
-static void p_group_C_Cgroup_Hbody(fsm, cflags, lex_state, act_state, t_grp);
-static void p_expr(fsm, cflags, lex_state, act_state, t_fsm__state, t_fsm__state);
-static void p_group_C_Clist_Hof_Hterms(fsm, cflags, lex_state, act_state, t_grp);
-extern void p_re__simple(fsm, cflags, lex_state, act_state);
-static void p_expr_C_Clist_Hof_Hatoms(fsm, cflags, lex_state, act_state, t_fsm__state, t_fsm__state);
-static void p_expr_C_Clist_Hof_Halts(fsm, cflags, lex_state, act_state, t_fsm__state, t_fsm__state);
-static void p_104(fsm, cflags, lex_state, act_state, t_grp, t_grp *);
-static void p_expr_C_Catom(fsm, cflags, lex_state, act_state, t_fsm__state, t_fsm__state *);
-static void p_110(fsm, cflags, lex_state, act_state, t_fsm__state, t_fsm__state, t_fsm__state *, t_fsm__state *);
-static void p_113(fsm, cflags, lex_state, act_state, t_grp *);
-static void p_literal(fsm, cflags, lex_state, act_state, t_fsm__state, t_fsm__state);
-static void p_group_C_Clist_Hof_Hterms_C_Cterm(fsm, cflags, lex_state, act_state, t_grp);
-static void p_119(fsm, cflags, lex_state, act_state, t_grp *, t_char *);
-static void p_121(fsm, cflags, lex_state, act_state, t_fsm__state *, t_fsm__state *, t_unsigned *);
+static void p_anchor(fsm, flags, lex_state, act_state, t_fsm__state, t_fsm__state);
+static void p_expr_C_Clist_Hof_Halts_C_Calt(fsm, flags, lex_state, act_state, t_fsm__state, t_fsm__state);
+static void p_group(fsm, flags, lex_state, act_state, t_fsm__state, t_fsm__state);
+static void p_group_C_Cgroup_Hbody(fsm, flags, lex_state, act_state, t_grp);
+static void p_expr(fsm, flags, lex_state, act_state, t_fsm__state, t_fsm__state);
+static void p_group_C_Clist_Hof_Hterms(fsm, flags, lex_state, act_state, t_grp);
+extern void p_re__simple(fsm, flags, lex_state, act_state);
+static void p_expr_C_Clist_Hof_Hatoms(fsm, flags, lex_state, act_state, t_fsm__state, t_fsm__state);
+static void p_expr_C_Clist_Hof_Halts(fsm, flags, lex_state, act_state, t_fsm__state, t_fsm__state);
+static void p_104(fsm, flags, lex_state, act_state, t_grp, t_grp *);
+static void p_expr_C_Catom(fsm, flags, lex_state, act_state, t_fsm__state, t_fsm__state *);
+static void p_110(fsm, flags, lex_state, act_state, t_fsm__state, t_fsm__state, t_fsm__state *, t_fsm__state *);
+static void p_113(fsm, flags, lex_state, act_state, t_grp *);
+static void p_literal(fsm, flags, lex_state, act_state, t_fsm__state, t_fsm__state);
+static void p_group_C_Clist_Hof_Hterms_C_Cterm(fsm, flags, lex_state, act_state, t_grp);
+static void p_119(fsm, flags, lex_state, act_state, t_grp *, t_char *);
+static void p_121(fsm, flags, lex_state, act_state, t_fsm__state *, t_fsm__state *, t_unsigned *);
 
 /* BEGINNING OF STATIC VARIABLES */
 
@@ -111,7 +111,7 @@ static void p_121(fsm, cflags, lex_state, act_state, t_fsm__state *, t_fsm__stat
 /* BEGINNING OF FUNCTION DEFINITIONS */
 
 static void
-p_anchor(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
+p_anchor(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -128,7 +128,7 @@ p_anchor(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm
 					{
 #line 200 "src/libre/parser.act"
 
-		switch (cflags & RE_ANCHOR) {
+		switch (flags & RE_ANCHOR) {
 		case RE_TEXT:  ZIp = RE_EOT; break;
 		case RE_MULTI: ZIp = RE_EOL; break;
 		case RE_ZONE:  ZIp = RE_EOZ; break;
@@ -150,7 +150,7 @@ p_anchor(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm
 					{
 #line 188 "src/libre/parser.act"
 
-		switch (cflags & RE_ANCHOR) {
+		switch (flags & RE_ANCHOR) {
 		case RE_TEXT:  ZIp = RE_SOT; break;
 		case RE_MULTI: ZIp = RE_SOL; break;
 		case RE_ZONE:  ZIp = RE_SOZ; break;
@@ -195,7 +195,7 @@ ZL1:;
 }
 
 static void
-p_expr_C_Clist_Hof_Halts_C_Calt(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
+p_expr_C_Clist_Hof_Halts_C_Calt(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -226,7 +226,7 @@ p_expr_C_Clist_Hof_Halts_C_Calt(fsm fsm, cflags cflags, lex_state lex_state, act
 #line 227 "src/libre/form/simple/parser.c"
 		}
 		/* END OF ACTION: add-epsilon */
-		p_expr_C_Clist_Hof_Hatoms (fsm, cflags, lex_state, act_state, ZIz, ZIy);
+		p_expr_C_Clist_Hof_Hatoms (fsm, flags, lex_state, act_state, ZIz, ZIy);
 		if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 			RESTORE_LEXER;
 			goto ZL1;
@@ -239,7 +239,7 @@ ZL1:;
 }
 
 static void
-p_group(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
+p_group(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -284,7 +284,7 @@ p_group(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm_
 					}
 					/* END OF EXTRACT: INVERT */
 					ADVANCE_LEXER;
-					p_group_C_Cgroup_Hbody (fsm, cflags, lex_state, act_state, ZIg);
+					p_group_C_Cgroup_Hbody (fsm, flags, lex_state, act_state, ZIg);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 						RESTORE_LEXER;
 						goto ZL1;
@@ -309,7 +309,7 @@ p_group(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm_
 			case (TOK_CLOSEGROUP): case (TOK_RANGE): case (TOK_ESC): case (TOK_OCT):
 			case (TOK_HEX): case (TOK_CHAR):
 				{
-					p_group_C_Cgroup_Hbody (fsm, cflags, lex_state, act_state, ZIg);
+					p_group_C_Cgroup_Hbody (fsm, flags, lex_state, act_state, ZIg);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 						RESTORE_LEXER;
 						goto ZL1;
@@ -378,7 +378,7 @@ ZL1:;
 }
 
 static void
-p_group_C_Cgroup_Hbody(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_grp ZIg)
+p_group_C_Cgroup_Hbody(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_grp ZIg)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -412,7 +412,7 @@ p_group_C_Cgroup_Hbody(fsm fsm, cflags cflags, lex_state lex_state, act_state ac
 #line 413 "src/libre/form/simple/parser.c"
 					}
 					/* END OF ACTION: group-add-char */
-					p_113 (fsm, cflags, lex_state, act_state, &ZIg);
+					p_113 (fsm, flags, lex_state, act_state, &ZIg);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 						RESTORE_LEXER;
 						goto ZL1;
@@ -451,7 +451,7 @@ p_group_C_Cgroup_Hbody(fsm fsm, cflags cflags, lex_state lex_state, act_state ac
 			}
 		}
 		/* END OF INLINE: 72 */
-		p_group_C_Clist_Hof_Hterms (fsm, cflags, lex_state, act_state, ZIg);
+		p_group_C_Clist_Hof_Hterms (fsm, flags, lex_state, act_state, ZIg);
 		/* BEGINNING OF INLINE: 73 */
 		{
 			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
@@ -468,13 +468,13 @@ ZL1:;
 }
 
 static void
-p_expr(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
+p_expr(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
 	}
 	{
-		p_expr_C_Clist_Hof_Halts (fsm, cflags, lex_state, act_state, ZIx, ZIy);
+		p_expr_C_Clist_Hof_Halts (fsm, flags, lex_state, act_state, ZIx, ZIy);
 		if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 			RESTORE_LEXER;
 			goto ZL1;
@@ -487,7 +487,7 @@ ZL1:;
 }
 
 static void
-p_group_C_Clist_Hof_Hterms(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_grp ZI102)
+p_group_C_Clist_Hof_Hterms(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_grp ZI102)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -495,8 +495,8 @@ p_group_C_Clist_Hof_Hterms(fsm fsm, cflags cflags, lex_state lex_state, act_stat
 	{
 		t_grp ZI103;
 
-		p_group_C_Clist_Hof_Hterms_C_Cterm (fsm, cflags, lex_state, act_state, ZI102);
-		p_104 (fsm, cflags, lex_state, act_state, ZI102, &ZI103);
+		p_group_C_Clist_Hof_Hterms_C_Cterm (fsm, flags, lex_state, act_state, ZI102);
+		p_104 (fsm, flags, lex_state, act_state, ZI102, &ZI103);
 		if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 			RESTORE_LEXER;
 			goto ZL1;
@@ -509,7 +509,7 @@ ZL1:;
 }
 
 void
-p_re__simple(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
+p_re__simple(fsm fsm, flags flags, lex_state lex_state, act_state act_state)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -545,7 +545,7 @@ p_re__simple(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state)
 			case (TOK_OCT): case (TOK_HEX): case (TOK_CHAR): case (TOK_START):
 			case (TOK_END):
 				{
-					p_expr (fsm, cflags, lex_state, act_state, ZIx, ZIy);
+					p_expr (fsm, flags, lex_state, act_state, ZIx, ZIy);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 						RESTORE_LEXER;
 						goto ZL3;
@@ -619,7 +619,7 @@ ZL1:;
 }
 
 static void
-p_expr_C_Clist_Hof_Hatoms(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
+p_expr_C_Clist_Hof_Hatoms(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -645,7 +645,7 @@ ZL2_expr_C_Clist_Hof_Hatoms:;
 			switch (CURRENT_TERMINAL) {
 			case (TOK_START): case (TOK_END):
 				{
-					p_anchor (fsm, cflags, lex_state, act_state, ZIx, ZIz);
+					p_anchor (fsm, flags, lex_state, act_state, ZIx, ZIz);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 						RESTORE_LEXER;
 						goto ZL1;
@@ -655,7 +655,7 @@ ZL2_expr_C_Clist_Hof_Hatoms:;
 			case (TOK_DOT): case (TOK_OPENSUB): case (TOK_OPENGROUP): case (TOK_ESC):
 			case (TOK_OCT): case (TOK_HEX): case (TOK_CHAR):
 				{
-					p_expr_C_Catom (fsm, cflags, lex_state, act_state, ZIx, &ZIz);
+					p_expr_C_Catom (fsm, flags, lex_state, act_state, ZIx, &ZIz);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 						RESTORE_LEXER;
 						goto ZL1;
@@ -706,7 +706,7 @@ ZL1:;
 }
 
 static void
-p_expr_C_Clist_Hof_Halts(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm__state ZI106, t_fsm__state ZI107)
+p_expr_C_Clist_Hof_Halts(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm__state ZI106, t_fsm__state ZI107)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -715,8 +715,8 @@ p_expr_C_Clist_Hof_Halts(fsm fsm, cflags cflags, lex_state lex_state, act_state 
 		t_fsm__state ZI108;
 		t_fsm__state ZI109;
 
-		p_expr_C_Clist_Hof_Halts_C_Calt (fsm, cflags, lex_state, act_state, ZI106, ZI107);
-		p_110 (fsm, cflags, lex_state, act_state, ZI106, ZI107, &ZI108, &ZI109);
+		p_expr_C_Clist_Hof_Halts_C_Calt (fsm, flags, lex_state, act_state, ZI106, ZI107);
+		p_110 (fsm, flags, lex_state, act_state, ZI106, ZI107, &ZI108, &ZI109);
 		if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 			RESTORE_LEXER;
 			goto ZL1;
@@ -729,7 +729,7 @@ ZL1:;
 }
 
 static void
-p_104(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_grp ZI102, t_grp *ZO103)
+p_104(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_grp ZI102, t_grp *ZO103)
 {
 	t_grp ZI103;
 
@@ -737,7 +737,7 @@ ZL2_104:;
 	switch (CURRENT_TERMINAL) {
 	case (TOK_ESC): case (TOK_OCT): case (TOK_HEX): case (TOK_CHAR):
 		{
-			p_group_C_Clist_Hof_Hterms_C_Cterm (fsm, cflags, lex_state, act_state, ZI102);
+			p_group_C_Clist_Hof_Hterms_C_Cterm (fsm, flags, lex_state, act_state, ZI102);
 			/* BEGINNING OF INLINE: 104 */
 			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 				RESTORE_LEXER;
@@ -765,7 +765,7 @@ ZL0:;
 }
 
 static void
-p_expr_C_Catom(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state *ZIy)
+p_expr_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state *ZIy)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -796,7 +796,7 @@ p_expr_C_Catom(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state,
 			case (TOK_OPENSUB):
 				{
 					ADVANCE_LEXER;
-					p_expr (fsm, cflags, lex_state, act_state, ZIx, *ZIy);
+					p_expr (fsm, flags, lex_state, act_state, ZIx, *ZIy);
 					switch (CURRENT_TERMINAL) {
 					case (TOK_CLOSESUB):
 						break;
@@ -811,7 +811,7 @@ p_expr_C_Catom(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state,
 				break;
 			case (TOK_OPENGROUP):
 				{
-					p_group (fsm, cflags, lex_state, act_state, ZIx, *ZIy);
+					p_group (fsm, flags, lex_state, act_state, ZIx, *ZIy);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 						RESTORE_LEXER;
 						goto ZL1;
@@ -820,7 +820,7 @@ p_expr_C_Catom(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state,
 				break;
 			case (TOK_ESC): case (TOK_OCT): case (TOK_HEX): case (TOK_CHAR):
 				{
-					p_literal (fsm, cflags, lex_state, act_state, ZIx, *ZIy);
+					p_literal (fsm, flags, lex_state, act_state, ZIx, *ZIy);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 						RESTORE_LEXER;
 						goto ZL1;
@@ -857,7 +857,7 @@ p_expr_C_Catom(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state,
 						goto ZL4;
 					}
 					ADVANCE_LEXER;
-					p_121 (fsm, cflags, lex_state, act_state, &ZIx, ZIy, &ZI120);
+					p_121 (fsm, flags, lex_state, act_state, &ZIx, ZIy, &ZI120);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 						RESTORE_LEXER;
 						goto ZL4;
@@ -989,7 +989,7 @@ ZL1:;
 }
 
 static void
-p_110(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm__state ZI106, t_fsm__state ZI107, t_fsm__state *ZO108, t_fsm__state *ZO109)
+p_110(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm__state ZI106, t_fsm__state ZI107, t_fsm__state *ZO108, t_fsm__state *ZO109)
 {
 	t_fsm__state ZI108;
 	t_fsm__state ZI109;
@@ -999,7 +999,7 @@ ZL2_110:;
 	case (TOK_ALT):
 		{
 			ADVANCE_LEXER;
-			p_expr_C_Clist_Hof_Halts_C_Calt (fsm, cflags, lex_state, act_state, ZI106, ZI107);
+			p_expr_C_Clist_Hof_Halts_C_Calt (fsm, flags, lex_state, act_state, ZI106, ZI107);
 			/* BEGINNING OF INLINE: 110 */
 			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 				RESTORE_LEXER;
@@ -1029,7 +1029,7 @@ ZL0:;
 }
 
 static void
-p_113(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_grp *ZIg)
+p_113(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_grp *ZIg)
 {
 	switch (CURRENT_TERMINAL) {
 	case (TOK_RANGE):
@@ -1067,7 +1067,7 @@ p_113(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_grp *Z
 }
 
 static void
-p_literal(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
+p_literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm__state ZIx, t_fsm__state ZIy)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
@@ -1221,7 +1221,7 @@ ZL1:;
 }
 
 static void
-p_group_C_Clist_Hof_Hterms_C_Cterm(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_grp ZIg)
+p_group_C_Clist_Hof_Hterms_C_Cterm(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_grp ZIg)
 {
 	switch (CURRENT_TERMINAL) {
 	case (TOK_CHAR):
@@ -1241,7 +1241,7 @@ p_group_C_Clist_Hof_Hterms_C_Cterm(fsm fsm, cflags cflags, lex_state lex_state, 
 			}
 			/* END OF EXTRACT: CHAR */
 			ADVANCE_LEXER;
-			p_119 (fsm, cflags, lex_state, act_state, &ZIg, &ZI118);
+			p_119 (fsm, flags, lex_state, act_state, &ZIg, &ZI118);
 			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 				RESTORE_LEXER;
 				goto ZL1;
@@ -1321,7 +1321,7 @@ p_group_C_Clist_Hof_Hterms_C_Cterm(fsm fsm, cflags cflags, lex_state lex_state, 
 			}
 			/* END OF EXTRACT: HEX */
 			ADVANCE_LEXER;
-			p_119 (fsm, cflags, lex_state, act_state, &ZIg, &ZI116);
+			p_119 (fsm, flags, lex_state, act_state, &ZIg, &ZI116);
 			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 				RESTORE_LEXER;
 				goto ZL1;
@@ -1365,7 +1365,7 @@ p_group_C_Clist_Hof_Hterms_C_Cterm(fsm fsm, cflags cflags, lex_state lex_state, 
 			}
 			/* END OF EXTRACT: OCT */
 			ADVANCE_LEXER;
-			p_119 (fsm, cflags, lex_state, act_state, &ZIg, &ZI114);
+			p_119 (fsm, flags, lex_state, act_state, &ZIg, &ZI114);
 			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 				RESTORE_LEXER;
 				goto ZL1;
@@ -1393,7 +1393,7 @@ ZL1:;
 }
 
 static void
-p_119(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_grp *ZIg, t_char *ZI118)
+p_119(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_grp *ZIg, t_char *ZI118)
 {
 	switch (CURRENT_TERMINAL) {
 	case (TOK_RANGE):
@@ -1589,7 +1589,7 @@ ZL1:;
 }
 
 static void
-p_121(fsm fsm, cflags cflags, lex_state lex_state, act_state act_state, t_fsm__state *ZIx, t_fsm__state *ZIy, t_unsigned *ZI120)
+p_121(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm__state *ZIx, t_fsm__state *ZIy, t_unsigned *ZI120)
 {
 	switch (CURRENT_TERMINAL) {
 	case (TOK_CLOSECOUNT):
@@ -1747,7 +1747,7 @@ ZL1:;
 
 	struct fsm *
 	FORM_COMP(int (*f)(void *opaque), void *opaque,
-		enum re_cflags cflags, struct re_err *err)
+		enum re_flags flags, struct re_err *err)
 	{
 		struct act_state  act_state_s;
 		struct act_state *act_state;
@@ -1798,7 +1798,7 @@ ZL1:;
 		act_state->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
-		FORM_ENTRY(new, cflags, lex_state, act_state);
+		FORM_ENTRY(new, flags, lex_state, act_state);
 
 		if (act_state->e != RE_ESUCCESS) {
 			/* TODO: free internals allocated during parsing (are there any?) */
