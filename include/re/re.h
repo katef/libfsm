@@ -103,14 +103,6 @@ void
 re_perror(const char *func, enum re_form form, const struct re_err *err,
 	const char *file, const char *s);
 
-/*
- * Match a string.
- *
- * Return the accepting state, or NULL for no match.
- */
-struct fsm_state *
-re_exec(const struct fsm *fsm, const char *s);
-
 
 /* TODO: a convenience interface in the spirit of strtol() which parses between delimiters (and escapes accordingly) */
 

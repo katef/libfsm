@@ -8,7 +8,6 @@
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
-#include <fsm/exec.h>
 #include <fsm/graph.h>
 
 #include "form/comp.h"
@@ -127,14 +126,5 @@ error:
 	fsm_free(new);
 
 	return NULL;
-}
-
-struct fsm_state *
-re_exec(const struct fsm *fsm, const char *s)
-{
-	assert(fsm != NULL);
-	assert(s != NULL);
-
-	return fsm_exec(fsm, fsm_sgetc, &s);
 }
 

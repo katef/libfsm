@@ -12,6 +12,7 @@
 #include <fsm/out.h>	/* XXX */
 #include <fsm/bool.h>
 #include <fsm/pred.h>
+#include <fsm/exec.h>
 #include <fsm/graph.h>
 
 #include <re/re.h>
@@ -229,7 +230,7 @@ main(int argc, char *argv[])
 		int i;
 
 		for (i = 0; i < argc; i++) {
-			r += !re_exec(fsm, argv[i]);
+			r += !fsm_exec(fsm, fsm_sgetc, &argv[i]);
 		}
 	}
 
