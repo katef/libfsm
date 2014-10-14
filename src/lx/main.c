@@ -337,10 +337,10 @@ main(int argc, char *argv[])
 					fprintf(stderr, "ambiguous mappings to ");
 
 					for (p = m->conflict; p != NULL; p = p->next) {
-						assert(p->m->token != NULL || p->m->to != NULL);
-
 						if (p->m->token != NULL) {
 							fprintf(stderr, "$%s", p->m->token->s);
+						} else if (p->m->to == NULL) {
+							fprintf(stderr, "skip");
 						}
 						if (p->m->token != NULL && p->m->to != NULL) {
 							fprintf(stderr, "/");
