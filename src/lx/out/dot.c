@@ -99,31 +99,42 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 	fprintf(f, "\t\tz%uS%u [ label = <",
 		zindexof(ast, z), indexof(fsm, s));
 
-	mapping(m, f, ast);
-
-	if (m->conflict != NULL && (m->token != NULL || m->to != NULL)) {
+	if (m->conflict != NULL) {
 		const struct mapping_set *p;
 
-		fprintf(f, "<br/>");
 		fprintf(f, "<font color=\"red\">");
 
 		for (p = m->conflict; p != NULL; p = p->next) {
 			mapping(p->m, f, ast);
 
 			if (p->next != NULL) {
-				fprintf(f, " ");
+				fprintf(f, "<br/>");
 			}
 		}
 
 		fprintf(f, "</font>");
+	} else {
+		mapping(m, f, ast);
 	}
 
 	fprintf(f, "> ];\n");
 
-	if (m->to != NULL) {
-		fprintf(f, "\t\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
-			zindexof(ast, z), indexof(fsm, s),
-			zindexof(ast, m->to), indexof(m->to->fsm, m->to->fsm->start));
+	if (m->conflict != NULL) {
+		const struct mapping_set *p;
+
+		for (p = m->conflict; p != NULL; p = p->next) {
+			if (p->m->to != NULL) {
+				fprintf(f, "\t\tz%uS%u -> z%uS%u [ color = red, style = dashed ];\n",
+					zindexof(ast, z), indexof(fsm, s),
+					zindexof(ast, p->m->to), indexof(p->m->to->fsm, p->m->to->fsm->start));
+			}
+		}
+	} else {
+		if (m->to != NULL) {
+			fprintf(f, "\t\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
+				zindexof(ast, z), indexof(fsm, s),
+				zindexof(ast, m->to), indexof(m->to->fsm, m->to->fsm->start));
+		}
 	}
 }
 
