@@ -55,6 +55,28 @@ zindexof(const struct ast *ast, const struct ast_zone *zone)
 }
 
 static void
+mapping(const struct ast_mapping *m, FILE *f, const struct ast *ast)
+{
+	assert(m != NULL);
+	assert(m->conflict == NULL);
+	assert(f != NULL);
+
+	if (m->token != NULL) {
+		assert(m->token->s != NULL);
+
+		fprintf(f, "$%s", m->token->s);
+	}
+
+	if (m->token != NULL && m->to != NULL) {
+		fprintf(f, "<br/>");
+	}
+
+	if (m->to != NULL) {
+		fprintf(f, "z%u", zindexof(ast, m->to));
+	}
+}
+
+static void
 singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 	const struct ast_zone *z, const struct fsm_state *s)
 {
@@ -77,18 +99,23 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 	fprintf(f, "\t\tz%uS%u [ label = <",
 		zindexof(ast, z), indexof(fsm, s));
 
-	if (m->token != NULL) {
-		assert(m->token->s != NULL);
+	mapping(m, f, ast);
 
-		fprintf(f, "$%s", m->token->s);
-	}
+	if (m->conflict != NULL && (m->token != NULL || m->to != NULL)) {
+		const struct mapping_set *p;
 
-	if (m->token != NULL && m->to != NULL) {
 		fprintf(f, "<br/>");
-	}
+		fprintf(f, "<font color=\"red\">");
 
-	if (m->to != NULL) {
-		fprintf(f, "z%u", zindexof(ast, m->to));
+		for (p = m->conflict; p != NULL; p = p->next) {
+			mapping(p->m, f, ast);
+
+			if (p->next != NULL) {
+				fprintf(f, " ");
+			}
+		}
+
+		fprintf(f, "</font>");
 	}
 
 	fprintf(f, "> ];\n");
