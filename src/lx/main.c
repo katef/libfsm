@@ -16,7 +16,6 @@
 #include <fsm/cost.h>
 #include <fsm/graph.h>
 #include <fsm/search.h>
-#include <fsm/out.h> /* XXX */
 
 #include <re/re.h>
 
