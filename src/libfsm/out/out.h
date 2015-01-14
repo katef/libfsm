@@ -23,5 +23,9 @@ void
 fsm_out_fsm(const struct fsm *fsm, FILE *f,
 	const struct fsm_outoptions *options);
 
+void
+fsm_out_json(const struct fsm *fsm, FILE *f,
+	const struct fsm_outoptions *options);
+
 #endif
 

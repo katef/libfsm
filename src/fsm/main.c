@@ -41,10 +41,11 @@ language(const char *name)
 		const char *name;
 		enum fsm_out format;
 	} a[] = {
-		{ "c",   FSM_OUT_C   },
-		{ "csv", FSM_OUT_CSV },
-		{ "dot", FSM_OUT_DOT },
-		{ "fsm", FSM_OUT_FSM }
+		{ "c",    FSM_OUT_C    },
+		{ "csv",  FSM_OUT_CSV  },
+		{ "dot",  FSM_OUT_DOT  },
+		{ "fsm",  FSM_OUT_FSM  },
+		{ "json", FSM_OUT_JSON }
 	};
 
 	assert(name != NULL);
@@ -56,7 +57,7 @@ language(const char *name)
 	}
 
 	fprintf(stderr, "unrecognised output language; valid languages are: "
-		"fsm, dot, table, c\n");
+		"c, csv, dot, fsm, json\n");
 	exit(EXIT_FAILURE);
 }
 
