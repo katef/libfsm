@@ -16,6 +16,7 @@
 #include <fsm/cost.h>
 #include <fsm/graph.h>
 #include <fsm/search.h>
+#include <fsm/out.h> /* XXX */
 
 #include <re/re.h>
 
@@ -365,7 +366,7 @@ main(int argc, char *argv[])
 			}
 		}
 
-		if (e) {
+		if (e && format != LX_OUT_DOT) {
 			return EXIT_FAILURE;
 		}
 	}
