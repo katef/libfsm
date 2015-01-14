@@ -186,6 +186,12 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		singlestate(z->fsm, f, ast, z, s);
 	}
 
+	/* a start state should not accept */
+	if (fsm_isend(z->fsm, z->fsm->start)) {
+		fprintf(f, "\t\tz%uS%u [ color = red ];\n",
+			zindexof(ast, z), indexof(z->fsm, z->fsm->start));
+	}
+
 	fprintf(f, "\t}\n");
 	fprintf(f, "\t\n");
 }
