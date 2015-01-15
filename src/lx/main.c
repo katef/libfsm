@@ -57,8 +57,14 @@ language(const char *name)
 		}
 	}
 
-	fprintf(stderr, "unrecognised output language; valid languages are: "
-		"test, dot, c, h\n");
+	fprintf(stderr, "unrecognised output language; valid languages are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
 	exit(EXIT_FAILURE);
 }
 
