@@ -1,0 +1,28 @@
+/*
+ * Building regexps by fragments of NFA.
+ * r1 | r2
+ */
+
+digraph G {
+	rankdir = LR;
+	node [ shape = circle, width = 0.4, label = "" ];
+
+	S1 -> S2 [ label = <&epsilon;> ];
+	S1 -> S3 [ label = <&epsilon;> ];
+
+	subgraph cluster_0 {
+		style = rounded;
+		label = "r1";
+		S2 -> S4 [ style = invis ];
+	}
+
+	subgraph cluster_1 {
+		style = rounded;
+		label = "r2";
+		S3 -> S5 [ style = invis ];
+	}
+
+	S4 -> S6 [ label = <&epsilon;> ];
+	S5 -> S6 [ label = <&epsilon;> ];
+}
+

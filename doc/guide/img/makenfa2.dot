@@ -1,0 +1,15 @@
+/*
+ * Building regexps by fragments of NFA.
+ * a
+ */
+
+digraph G {
+	rankdir = LR;
+	node [ shape = circle, width = 0.4, label = "" ];
+
+	start [ shape = none, label = "" ];
+	start -> S1 [ style = invis ];
+
+	S1 -> S2 [ label = <a> ];
+}
+
