@@ -44,6 +44,7 @@
 # TODO: complete, intersection
 '~' -> $tilde;
 '-' -> $dash;
+'\' -> $dash; # synonym for '-'
 '!' -> $bang;
 '.' -> $dot;
 '|' -> $pipe;
