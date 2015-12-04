@@ -35,10 +35,13 @@
 	QMARK;
 
 	TILDE;
-	DASH;
 	BANG;
+	HAT;
+
+	DASH;
 	DOT;
 	PIPE;
+	AND;
 
 	EOF;
 	!ERROR;
@@ -62,12 +65,13 @@
 	<op-cross>:       (:fsm) -> ();
 	<op-qmark>:       (:fsm) -> ();
 	<op-complement>:  (:fsm) -> ();
-	!<op-complete>:   (:fsm) -> ();
+	<op-complete>:    (:fsm) -> ();
 	<op-reverse>:     (:fsm) -> ();
 
 	<op-concat>:      (:fsm, :fsm) -> (:fsm);
 	<op-product>:     (:fsm, :fsm) -> (:fsm);
 	<op-subtract>:    (:fsm, :fsm) -> (:fsm);
+	<op-intersect>:   (:fsm, :fsm) -> (:fsm);
 	<op-alt>:         (:fsm, :fsm) -> (:fsm);
 
 	<subtract-exit>:  (:fsm, :fsm) -> (:fsm);
@@ -174,6 +178,10 @@
 			BANG; /* unary minus might make more sense here */
 			q = prefix-expr(z);
 			<op-reverse>(q);
+		||
+			HAT;
+			q = prefix-expr(z);
+			<op-complete>(q);
 		};
 
 		infix-expr: (z :zone) -> (q :fsm) [
@@ -205,12 +213,21 @@
 				q = <op-subtract>(a, b);
 			};
 
-			alt-expr: (z :zone) -> (q :fsm) = {
+			and-expr: (z :zone) -> (q :fsm) = {
 				q = sub-expr(z);
+			||
+				a = and-expr(z);
+				AND;
+				b = sub-expr(z);
+				q = <op-intersect>(a, b);
+			};
+
+			alt-expr: (z :zone) -> (q :fsm) = {
+				q = and-expr(z);
 			||
 				a = alt-expr(z);
 				PIPE;
-				b = sub-expr(z);
+				b = and-expr(z);
 				q = <op-alt>(a, b);
 			};
 

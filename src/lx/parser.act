@@ -626,7 +626,7 @@
 	<op-complete>: (r :fsm) -> () = @{
 		assert(@r != NULL);
 
-		if (!fsm_complete(@r)) {
+		if (!fsm_complete(@r, fsm_isany)) {
 			perror("fsm_complete");
 			@!;
 		}
@@ -667,6 +667,12 @@
 			perror("fsm_subtract");
 			@!;
 		}
+	@};
+
+	<op-intersect>: (a :fsm, b :fsm) -> (q :fsm) = @{
+		fprintf(stderr, "unimplemented\n");
+		@q = NULL;
+		@!;
 	@};
 
 	<op-alt>: (a :fsm, b :fsm) -> (q :fsm) = @{

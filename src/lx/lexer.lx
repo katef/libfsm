@@ -40,14 +40,17 @@
 '+' -> $cross;
 '?' -> $qmark;
 
-# expression operators
-# TODO: complete, intersection
+# prefix operators
 '~' -> $tilde;
+'!' -> $bang;
+'^' -> $hat; # complete
+
+# binary operators
 '-' -> $dash;
 '\' -> $dash; # synonym for '-'
-'!' -> $bang;
 '.' -> $dot;
 '|' -> $pipe;
+'&' -> $and; # intersection
 
 ident = /[a-z_][a-z0-9_]*/i;
 
