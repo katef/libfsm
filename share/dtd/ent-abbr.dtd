@@ -1,0 +1,14 @@
+<!-- $Id$ -->
+
+<!ENTITY cli    "<acronym role='Command-Line Interface'>CLI</acronym>">
+<!ENTITY api    "<acronym role='Application Programing Interface'>API</acronym>">
+<!ENTITY ascii  "<acronym role='American Standard Code for Information Interchange'>ASCII</acronym>">
+<!ENTITY posix  "<acronym>POSIX</acronym>">
+<!ENTITY iso    "<acronym>ISO</acronym>">
+
+<!-- TODO: generate from glossary! -->
+<!ENTITY fsm    "<acronym role='Finite State Machine'>FSM</acronym>">
+<!ENTITY dfa    "<acronym role='Deterministic Finite Automata'>DFA</acronym>">
+<!ENTITY nfa    "<acronym role='Non-Deterministic Finite Automata'>DFA</acronym>">
+
+

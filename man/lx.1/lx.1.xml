@@ -1,0 +1,168 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry SYSTEM "minidocbook.dtd" [
+
+	<!ENTITY stdin.lit  "<literal>stdin</literal>">
+	<!ENTITY stdout.lit "<literal>stdout</literal>">
+
+	<!ENTITY l.opt "<option>-l</option>&nbsp;&lang.arg;">
+	<!ENTITY p.opt "<option>-p</option>">
+	<!ENTITY t.opt "<option>-t</option>">
+	<!ENTITY n.opt "<option>-n</option>">
+
+	<!ENTITY h.opt "<option>-h</option>">
+	<!ENTITY v.opt "<option>-v</option>">
+
+<!-- XXX: literal or code? be consistent wrt other manpages -->
+	<!ENTITY c.lit    "<literal>c</literal>">
+	<!ENTITY c.lit    "<literal>c</literal>">
+	<!ENTITY dot.lit  "<literal>dot</literal>">
+
+]>
+
+<refentry>
+	<refentryinfo>
+		<productname>lx</productname>
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>lx</refentrytitle>
+		<manvolnum>1</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>lx</refname>
+		<refpurpose>Lexer generator</refpurpose>
+	</refnamediv>
+
+	<refsynopsisdiv>
+		<cmdsynopsis>
+			<command>lx</command>
+
+			<arg choice="opt">&l.opt;</arg>
+			<arg choice="opt">&p.opt;</arg>
+			<arg choice="opt">&t.opt;</arg>
+			<arg choice="opt">&n.opt;</arg>
+		</cmdsynopsis>
+
+		<cmdsynopsis>
+			<command>lx</command>
+
+			<group choice="req">
+				<arg choice="plain">&h.opt;</arg>
+<!-- TODO:
+				<arg choice="plain">&v.opt;</arg>
+-->
+			</group>
+		</cmdsynopsis>
+	</refsynopsisdiv>
+
+	<refsection>
+		<title>Description</title>
+
+TODO
+TODO: similar to lex, lexi
+
+&lx.5; syntax
+read from &stdin.lit;
+output to &stdout.lit;
+Dot output is not subject to checks for semantic errors
+	</refsection>
+
+	<refsection>
+		<title>Options</title>
+
+		<variablelist>
+			<varlistentry>
+				<term>&l.opt;</term>
+
+				<listitem>
+					<para>TODO: language</para>
+
+					<table>
+						<col align="left"/>
+						<col align="left"/>
+
+						<thead>
+							<tr>
+								<th>Language</th>
+								<th>Name</th>
+							</tr>
+						</thead>
+
+						<tbody>
+							<tr>
+								<td><literal>test</literal></td>
+								<td>Test</td> <!-- TODO: ... -->
+							</tr>
+							<tr>
+								<td><literal>dot</literal></td>
+								<td>Graphviz Dot format</td>
+							</tr>
+							<tr>
+								<td><literal>c</literal> (Default)</td>
+								<td>&iso; C90 Lexer source</td>
+							</tr>
+							<tr>
+								<td><literal>h</literal></td>
+								<td>&iso; C90 Header</td>
+							</tr>
+						</tbody>
+					</table>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&p.opt;</term>
+
+				<listitem>
+					<para>TODO: prefix.api</para>
+"lx_" default?
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&t.opt;</term>
+
+				<listitem>
+					<para>TODO: prefix.tok</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&n.opt;</term>
+
+				<listitem>
+					<para>TODO: keep_nfa</para>
+fprintf(stderr, "-n is for dot output only\n");
+				</listitem>
+			</varlistentry>
+
+
+<!-- TODO:
+			<varlistentry>
+				<term>&v.opt;</term>
+
+				<listitem>
+					<para>Causes &lx.1; to print its version number.</para>
+				</listitem>
+			</varlistentry>
+-->
+
+			<varlistentry>
+				<term>&h.opt;</term>
+
+				<listitem>
+					<para>Causes &lx.1; to print command-line usage help.</para>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+	</refsection>
+
+	<refsection>
+		<title>See Also</title>
+
+		<para>&lex.1;, &lexi.1;, &fsm.3;, &re.3;,
+			&simple.5re;, &literal.5re;, &lx.5;.</para>
+	</refsection>
+</refentry>
+

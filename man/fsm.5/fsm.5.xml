@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE refentry SYSTEM "minidocbook.dtd">
+
+<refentry>
+
+	<refentryinfo>
+		<productname>fsm</productname>
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>fsm</refentrytitle>
+		<manvolnum>5</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>fsm</refname>
+		<refpurpose>Finite State Machine description syntax</refpurpose>
+	</refnamediv>
+
+	<refsection>
+<!--
+		TDB. Probably going to change, because I don't like the current syntax much.
+
+		<title>Lexical conventions</title>
+
+		<para>Whitespace is not syntactically significant.</para>
+
+		<para>Comments begin with <code>#</code> and run to the end of the line.</para>
+-->
+		<title>Syntax</title>
+	</refsection>
+
+	<refsection>
+		<title>See Also</title>
+
+		<para>&fsm.1;, &re.1;.</para>
+
+<!--
+		<para>&lx-userguide.doc;.</para>
+-->
+	</refsection>
+
+</refentry>
+

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE refentry SYSTEM "minidocbook.dtd" [
+	<!ENTITY r  "<replaceable>r</replaceable>">
+	<!ENTITY r1 "<replaceable>r1</replaceable>">
+	<!ENTITY r2 "<replaceable>r2</replaceable>">
+]>
+
+<refentry>
+
+	<refentryinfo>
+		<productname>glob</productname>
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>glob</refentrytitle>
+		<manvolnum>5re</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>glob</refname>
+		<refpurpose>glob pattern syntax</refpurpose>
+	</refnamediv>
+
+	<refsection>
+<para>
+- what a glob is
+- not a regexp
+
+- list of atoms
+</para>
+
+		<table>
+			<col align="left"/>
+			<col align="left"/>
+
+			<thead>
+				<tr>
+					<th>Atom</th>
+					<th>Meaning</th>
+				</tr>
+			</thead>
+
+			<tbody>
+				<tr>
+					<td><replaceable>a</replaceable></td>
+					<td>Literal character</td>
+				</tr>
+				<tr>
+					<td><code>\</code><replaceable>...</replaceable></td>
+					<td>TODO escape</td>
+				</tr>
+				<tr>
+					<td><code>?</code></td>
+					<td></td>
+				</tr>
+				<tr>
+					<td><code>*</code></td>
+					<td></td>
+				</tr>
+				<tr>
+					<td><code>[...]</code></td>
+					<td>TODO: do we have these? ! to invert</td>
+				</tr>
+			</tbody>
+		</table>
+
+	</refsection>
+
+	<refsection>
+		<title>See Also</title>
+
+		<para>&re.1;, &re.3;, &literal.5re;, &simple.5re;.</para>
+	</refsection>
+
+</refentry>
+

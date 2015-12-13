@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE refentry SYSTEM "minidocbook.dtd">
+
+<refentry>
+
+	<refentryinfo>
+		<productname>lx</productname>
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>lx</refentrytitle>
+		<manvolnum>5</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>lx</refname>
+		<refpurpose>Lexer generator syntax</refpurpose>
+	</refnamediv>
+
+	<refsection>
+		<title>Lexical conventions</title>
+
+		<para>Whitespace is not syntactically significant.</para>
+
+		<para>Comments begin with <code>#</code> and run to the end of the line.</para>
+
+<!--
+		<para>The following lexical conventions are used within
+			this reference:</para>
+
+		<table>
+			<col align="left"/>
+			<col align="left"/>
+
+			<thead>
+				<tr>
+					<th>Symbol</th>
+					<th>Meaning</th>
+				</tr>
+			</thead>
+
+			<tbody>
+				<tr>
+					<td><replaceable>c</replaceable></td>
+					<td>A single character (including single quote,
+						&ldquo;<literal>'</literal>&rdquo;)</td>
+				</tr>
+				<tr>
+					<td><replaceable>\...</replaceable></td>
+					<td>An escape sequence (see below).</td>
+				</tr>
+				<tr>
+					<td><replaceable>v</replaceable></td>
+					<td>A value in the execution character set,
+						in base 10.</td>
+				</tr>
+				<tr>
+					<td><replaceable>n</replaceable></td>
+					<td>A numerical digit in an appropriate base (case insensitive)</td>
+				</tr>
+				<tr>
+					<td><replaceable>0..9</replaceable>&br;<replaceable>9..0</replaceable></td>
+					<td>A range of ASCII values in base 10,
+						in ascending and descending order, respectively.</td>
+				</tr>
+				<tr>
+					<td><replaceable>'A'..'Z'</replaceable>&br;<replaceable>'Z'..'A'</replaceable></td>
+					<td>A range of characters in ascending descending order,
+						respectively.</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<para>Character ranges may be either digits (<code>'0'..'9'</code>),
+			uppercase (<code>'A'..'Z'</code>)
+			or lowercase (<code>'a'..'z'</code>), but not a mix.
+			Any endpoints within a range may be specified.
+			For example <replaceable>'A'..'Z'</replaceable> could be written
+			as <code>'3'..'7'</code> specifically.
+			All ranges are inclusive.</para>
+
+		<para>The following character escapes are permitted:</para>
+
+		<table>
+			<col align="center"/>
+			<col align="left"/>
+
+			<thead>
+				<tr>
+					<th>Escape</th>
+					<th>Meaning</th>
+				</tr>
+			</thead>
+
+			<tbody>
+				<tr>
+					<td><code>\\</code></td>
+					<td>Backslash</td>
+				</tr>
+				<tr>
+					<td><code>\'</code></td>
+					<td>Single quote</td>
+				</tr>
+				<tr>
+					<td><code>\t</code></td>
+					<td>Horizontal tab</td>
+				</tr>
+				<tr>
+					<td><code>\v</code></td>
+					<td>Vertical tab</td>
+				</tr>
+				<tr>
+					<td><code>\f</code></td>
+					<td>Form feed</td>
+				</tr>
+				<tr>
+					<td><code>\a</code></td>
+					<td>Alert</td>
+				</tr>
+				<tr>
+					<td><code>\b</code></td>
+					<td>Backspace</td>
+				</tr>
+				<tr>
+					<td><code>\r</code></td>
+					<td>Carriage return</td>
+				</tr>
+				<tr>
+					<td><code>\n</code></td>
+					<td>New line</td>
+				</tr>
+				<tr>
+					<td><code>\0nn</code></td>
+					<td>An octal ASCII value of zero or more digits</td>
+				</tr>
+				<tr>
+					<td><code>\xnn</code></td>
+					<td>A hexadecimal ASCII value of one or more digits</td>
+				</tr>
+				<tr>
+					<td><code>\nnn</code></td>
+					<td>A decimal ASCII value of one or more digits</td>
+				</tr>
+			</tbody>
+		</table>
+-->
+	</refsection>
+
+	<refsection>
+		<title>Patterns</title>
+
+		<table>
+			<col align="center"/>
+			<col align="left"/>
+
+			<thead>
+				<tr>
+					<th>Syntax</th>
+					<th>Meaning</th>
+				</tr>
+			</thead>
+
+			<tbody>
+				<tr>
+					<td><code>'xyz'</code></td>
+					<td>String literal without escape sequences</td>
+				</tr>
+
+				<tr>
+					<td><code>"xyz"</code></td>
+					<td>String literal with escape sequences</td>
+				</tr>
+
+				<tr>
+					<td><code>/xyz/</code></td>
+					<td>Regular expression, optionally followed by flags</td>
+				</tr>
+			</tbody>
+		</table>
+	</refsection>
+
+	<refsection>
+		<title>Productions</title>
+
+		<para>Directives are terminated by the statement separator <code>;</code>.</para>
+
+	</refsection>
+
+	<refsection>
+		<title>Expressions</title>
+
+	</refsection>
+
+	<refsection>
+		<title>Unary operators</title>
+
+	</refsection>
+
+	<refsection>
+		<title>Infix operators</title>
+
+	</refsection>
+
+	<refsection>
+		<title>See Also</title>
+
+		<para>&lx.1;, &literal.5re;, &simple.5re;.</para>
+
+<!--
+		<para>&lx-userguide.doc;.</para>
+-->
+	</refsection>
+
+</refentry>
+

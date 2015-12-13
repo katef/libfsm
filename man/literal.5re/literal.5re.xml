@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE refentry SYSTEM "minidocbook.dtd">
+
+<refentry>
+
+	<refentryinfo>
+		<productname>literal</productname>
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>literal</refentrytitle>
+		<manvolnum>5re</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>literal</refname>
+		<refpurpose>string literal syntax</refpurpose>
+	</refnamediv>
+
+	<refsection>
+list of escapes
+	</refsection>
+
+	<refsection>
+		<title>See Also</title>
+
+		<para>&re.1;, &re.3;, &glob.5re;, &simple.5re;.</para>
+	</refsection>
+
+</refentry>
+

@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE refentry SYSTEM "minidocbook.dtd" [
+	<!ENTITY r  "<replaceable>r</replaceable>">
+	<!ENTITY r1 "<replaceable>r1</replaceable>">
+	<!ENTITY r2 "<replaceable>r2</replaceable>">
+]>
+
+<refentry>
+
+	<refentryinfo>
+		<productname>simle</productname>
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>simple</refentrytitle>
+		<manvolnum>5re</manvolnum>
+	</refmeta>
+<!-- TODO: simple only. also document glob -->
+<!-- TODO: use 5re for libre, 5fsm for libfsm, etc -->
+
+	<refnamediv>
+		<refname>simple</refname>
+		<refpurpose>simple regular expression syntax</refpurpose>
+	</refnamediv>
+
+	<refsection>
+		<title>Flags</title>
+
+		<table>
+			<col align="center"/>
+			<col align="left"/>
+
+			<thead>
+				<tr>
+					<th>Flag</th>
+					<th>Value</th>
+					<th>Meaning</th>
+				</tr>
+			</thead>
+
+			<tbody>
+				<tr>
+					<td><code>i</code></td>
+					<td><code>RE_ICASE</code></td>
+					<td>Case insensitive</td>
+				</tr>
+				<tr>
+					<td><code>g</code></td>
+					<td><code>RE_TEXT</code></td>
+					<td>Whole text</td>
+				</tr>
+				<tr>
+					<td><code>m</code></td>
+					<td><code>RE_MULTI</code></td>
+					<td>Multiline</td>
+				</tr>
+				<tr>
+					<td><code>r</code></td>
+					<td><code>RE_REVERSE</code></td>
+					<td>Reverse</td>
+				</tr>
+				<tr>
+					<td><code>s</code></td>
+					<td><code>RE_SINGLE</code></td>
+					<td>Single</td>
+				</tr>
+				<tr>
+					<td><code>z</code></td>
+					<td><code>RE_ZONE</code></td>
+					<td>Zone</td>
+				</tr>
+<!-- TODO: -->
+			</tbody>
+		</table>
+
+	</refsection>
+
+	<refsection>
+		<title>Atoms</title>
+
+		<table>
+			<col align="left"/>
+			<col align="left"/>
+
+			<thead>
+				<tr>
+					<th>Atom</th>
+					<th>Meaning</th>
+				</tr>
+			</thead>
+
+			<tbody>
+				<tr>
+					<td><code>$</code></td>
+					<td>End</td> <!-- TODO: depends on flags -->
+				</tr>
+				<tr>
+					<td><code>^</code></td>
+					<td>Start</td> <!-- TODO: depends on flags -->
+				</tr>
+				<tr>
+					<td><replaceable>a</replaceable></td>
+					<td>Literal character</td>
+				</tr>
+				<tr>
+					<td><code>\</code><replaceable>...</replaceable></td>
+					<td>Escape (see below)</td> <!-- TODO: pink -->
+				</tr>
+				<tr>
+					<td><code>.</code></td>
+					<td>Any character</td>
+				</tr>
+				<tr>
+					<td><code>[</code><replaceable>...</replaceable><code>]</code></td>
+					<td>Range (see below)</td> <!-- TODO: link -->
+				</tr>
+			</tbody>
+		</table>
+
+	</refsection>
+
+	<refsection>
+		<title>Escapes</title>
+
+		<table>
+			<col align="left"/>
+			<col align="left"/>
+
+			<thead>
+				<tr>
+					<th>Escape</th>
+					<th>Value</th>
+				</tr>
+			</thead>
+
+			<tbody>
+<!--
+'\\' -> $esc;
+'\^' -> $esc;
+'\$' -> $esc;
+'\?' -> $esc;
+'\*' -> $esc;
+'\+' -> $esc;
+'\.' -> $esc;
+'\|' -> $esc;
+'\(' -> $esc; '\)' -> $esc;
+'\{' -> $esc; # note no \}
+'\[' -> $esc; # note no \]
+-->
+				<tr>
+					<td><code>\\</code></td>
+					<td>Backslash</td>
+				</tr>
+				<tr>
+					<td><code>\^</code></td>
+					<td>Caret</td>
+				</tr>
+				<tr>
+					<td><code>\$</code></td>
+					<td>Dollar sign</td>
+				</tr>
+				<tr>
+					<td><code>\?</code></td>
+					<td>Question mark</td>
+				</tr>
+				<tr>
+					<td><code>\*</code></td>
+					<td>Asterisk</td>
+				</tr>
+				<tr>
+					<td><code>\+</code></td>
+					<td>Plus sign</td>
+				</tr>
+				<tr>
+					<td><code>\.</code></td>
+					<td>Full stop</td>
+				</tr>
+				<tr>
+					<td><code>\|</code></td>
+					<td>Pipe</td>
+				</tr>
+				<tr>
+					<td><code>\(</code> <code>\)</code></td>
+					<td>Open and close parentheses</td>
+				</tr>
+				<tr>
+					<td><code>\{</code></td>
+					<td>Open curly brace.
+						Note there is no escape for a closing brace.</td>
+				</tr>
+				<tr>
+					<td><code>\[</code></td>
+					<td>Open square bracket.
+						Note there is no escape for a closing square bracket.</td>
+				</tr>
+
+<!--
+'\f' -> $esc;
+'\n' -> $esc;
+'\r' -> $esc;
+'\t' -> $esc;
+'\v' -> $esc;
+-->
+				<tr>
+					<td><code>\f</code></td>
+					<td>Form feed</td>
+				</tr>
+				<tr>
+					<td><code>\n</code></td>
+					<td>New line</td>
+				</tr>
+				<tr>
+					<td><code>\r</code></td>
+					<td>Carriage return</td>
+				</tr>
+				<tr>
+					<td><code>\t</code></td>
+					<td>Horizontal tab</td>
+				</tr>
+				<tr>
+					<td><code>\v</code></td>
+					<td>Vertical tab</td>
+				</tr>
+
+<!--
+'\'  /[0-7]+/     -> $oct;
+'\x' /[0-9a-f]+/i -> $hex;
+-->
+
+<!-- not implemented
+				<tr>
+					<td><code>\0</code><replaceable>nn</replaceable></td>
+					<td>An octal ASCII value of one or more digits</td>
+				</tr>
+-->
+				<tr>
+					<td><code>\x</code><replaceable>nn</replaceable></td>
+					<td>A hexadecimal ASCII value of one or more digits</td>
+<!-- TODO: case insensitive -->
+				</tr>
+				<tr>
+					<td><code>\</code><replaceable>nnn</replaceable></td>
+					<td>A decimal ASCII value of one or more digits</td>
+				</tr>
+			</tbody>
+		</table>
+
+	</refsection>
+
+	<refsection>
+		<title>Ranges</title>
+
+<para>
+<code>[a-z]</code>
+<code>[a--]</code>
+where a and z are character literals or numeric escapes sequences
+^ to invert
+trailing -, but not leading -?
+</para>
+	</refsection>
+
+	<refsection>
+		<title>Operators</title>
+
+		<table>
+			<col align="left"/>
+			<col align="left"/>
+
+			<thead>
+				<tr>
+					<th>Operator</th>
+					<th>Name</th>
+					<th>Meaning</th>
+				</tr>
+			</thead>
+
+<!-- TODO: order by precedence -->
+			<tbody>
+				<tr>
+					<td>&r;</td>
+					<td>Identity</td>
+					<td>Match &r;</td>
+				</tr>
+				<tr>
+					<td><code>(</code>&r;<code>)</code></td>
+					<td role="na">&ndash;</td>
+					<td>Precedence</td>
+				</tr>
+				<tr>
+					<td>&r1;<code>|</code>&r2;</td>
+					<td>Alternate</td>
+					<td>Either &r1; or &r2;</td>
+				</tr>
+				<tr>
+					<td>&r1;&r2;</td>
+					<td>Concatenate</td>
+					<td>&r1; followed by &r2;</td>
+				</tr>
+			</tbody>
+			<tbody>
+				<tr>
+					<td>&r;<code>?</code></td>
+					<td role="na">&ndash;</td>
+					<td>&r; repeats 0 or 1 times</td>
+				</tr>
+				<tr>
+					<td>&r;<code>*</code></td>
+					<td><ulink url="https://en.wikipedia.org/wiki/Kleene_star">Kleene closure</ulink></td>
+<!-- TODO: link to bibliography instead -->
+					<td>&r; repeats 0 or more times</td>
+				</tr>
+				<tr>
+					<td>&r;<code>+</code></td>
+					<td>Kleene Cross [TODO: cite]</td>
+					<td>&r; repeats 1 or more times</td>
+				</tr>
+				<tr>
+					<td>&r;<code>{</code><replaceable>n</replaceable><code>}</code></td>
+					<td role="na">&ndash;</td>
+					<td>&r; repeats <replaceable>n</replaceable> times</td>
+				</tr>
+				<tr>
+					<td>&r;<code>{</code><replaceable>m</replaceable><code>,</code><replaceable>n</replaceable><code>}</code></td>
+					<td role="na">&ndash;</td>
+					<td>&r; repeats <replaceable>m</replaceable> to <replaceable>n</replaceable> times (inclusive)</td>
+				</tr>
+			</tbody>
+		</table>
+
+	</refsection>
+
+<!--
+	<refsection>
+		<title>Groups</title>
+
+		<para>TODO: numbered by first paren</para>
+	</refsection>
+-->
+
+	<refsection>
+		<title>Caveats</title>
+
+<para>
+</para>
+	</refsection>
+
+	<refsection>
+		<title>See Also</title>
+
+		<para>&re.1;, &re.3;, &glob.5re;, &literal.5re;.</para>
+	</refsection>
+
+</refentry>
+
