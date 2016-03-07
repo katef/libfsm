@@ -142,15 +142,22 @@ BEGIN {
 		# count number of self-loops for this node, and increment extension
 		printf "\tl%s := l%s + 1;", head, head
 		print "l := length pp;"
-		printf "pair m; m := (0.5 + 2 * mlog(l%s + 1) / 256) * d%s * unitvector(direction l of pp) shifted %s;\n", head, head, head
-		printf "draw %s -- m withpen pencircle scaled 0.25bp withcolor green;\n", head
+		printf "\tpair m; m := (0.5 + 2 * mlog(l%s + 1) / 256) * d%s * unitvector(direction l of pp) shifted %s;\n", head, head, head
+#		printf "\tdraw %s -- m withpen pencircle scaled 0.25bp withcolor green;\n", head
 
-		printf "path b; b = %s .. p .. m .. q .. %s;\n", head, tail;
+		printf "\tpath b; b = %s .. q .. m .. p .. %s;\n", tail, head;
 	} else {
-		printf "path b; b = %s .. p .. q .. %s;\n", head, tail;
+		printf "\tpath b; b = %s .. q .. p .. %s;\n", tail, head;
+
+		# TODO: explain this. we permit a 2% lengthening threshold relative to graphviz's b-spline
+		# this affects NFA especially
+		print "\tr := arclength b / arclength e;\n";
+		print "\tif (r > 1.02) or (r < 0.87):";
+		print "\t\tb := e;";
+		print "\tfi;";
 	}
 
-	printf "drawarrow reverse (b cutbefore p cutafter q) withpen pencircle scaled 1bp;\n";
+	printf "drawarrow b cutbefore q cutafter p withpen pencircle scaled 1bp;\n";
 }
 
 /^stop$/ {
