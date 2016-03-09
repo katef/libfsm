@@ -101,7 +101,7 @@ BEGIN {
 
 	print "enddef;";
 
-	print "vardef fsmgvedge(expr tail, taildiam, head, headdiam, e, lab, lxy, loops) =";
+	print "vardef fsmgvedge(expr tail, taildiam, head, headdiam, e, lab, loops) =";
 	print "	draw e withpen pencircle scaled 0.25bp withcolor red;";
 
 	# TODO: better explain this
@@ -133,34 +133,24 @@ BEGIN {
 	# TODO: new idea; draw right angle from midpoint, and use that to find intersection with b
 	# this way it should always align for multiple edges, even if on a slant
 
-	print "			draw lxy withpen pencircle scaled 5bp withcolor red;"
 	print "			draw point (length b / 2) of b withpen pencircle scaled 4bp withcolor blue;"
 #	print "			draw tail -- head withpen pencircle scaled 1bp withcolor green;"
 #	print "			draw ml withpen pencircle scaled 5bp withcolor green;"
 
-	print "			if g:"
-	print "				bl := lxy;"
-	print "			else:"
-	print "				bl := point (length b / 2) of b;"
-	print "			fi;"
+	print "			bl := point (length b / 2) of b;"
 
 	# TODO: plus label delta, distancing it from point. make a label function
 	# TODO: maybe an "extend" function, to extend a path in its direction. use dotprod for that?
 
 	# lft | rt | top | bot | ulft | urt | llft | lrt
-	# labels ought to be below, if they're below the straight line from head-tail, or above otherwise
 	# TODO: round label coordinates to grid? quantize rather
 
-	# XXX: if using graphviz's point, label exactly on the spot
-	print "			if g:";
-	# TODO: still want to distance by +/- 4bp or so
-	print "				label(lab, bl);"
+	# labels ought to be below, if they're below the straight line from head-tail, or above otherwise
+	# TODO: find what quadrant the line is, and make this .rt/.lft instead of .top/.bot
+	print "			if ypart bl < ypart ml:" # TODO: threshold for considering "below"
+	print "				label.bot(lab, bl shifted (0, -3bp));"
 	print "			else:"
-	print "				if ypart bl < ypart ml:" # TODO: threshold for considering "below"
-	print "					label.bot(lab, bl shifted (0, -3bp));"
-	print "				else:"
-	print "					label.top(lab, bl shifted (0, +3bp));"
-	print "				fi;"
+	print "				label.top(lab, bl shifted (0, +3bp));"
 	print "			fi;"
 	print "		fi;"
 
@@ -271,7 +261,10 @@ ly    = (a[n * 2 + 7]);
 		label = "";
 	}
 
-	printf "fsmgvedge(%s, %s.diam, %s, %s.diam, e, \"%s\", (%fin, %fin), %s.loops);", tail, tail, head, head, label, lx, ly, head;
+	# TODO: find what time (lx,ly) is along graphviz's edge, e
+	# then pass the time and use that for placing our label on our edge
+
+	printf "fsmgvedge(%s, %s.diam, %s, %s.diam, e, \"%s\", %s.loops);", tail, tail, head, head, label, head;
 
 	if (head == tail) {
 		print "	%s.loops := %s.loops + 1;", head, head
