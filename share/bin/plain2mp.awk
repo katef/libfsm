@@ -43,17 +43,19 @@ BEGIN {
 	# TODO: common stuff for multiple graphs
 	print "pair S[];"
 	print "pair q[];"
-	print "path nS[];"
 	print "path e;"
-
-	# diameter of node
-	print "numeric dS[];"
-
-	# number of self-edges
-	print "numeric lS[];"
 
 	print "ahlength := 10bp;"
 	print "ahangle  := 45;"
+
+	print "path S[].n;"
+
+	# diameter of node
+	print "numeric S[].diam;"
+
+	# number of self-edges
+	print "numeric S[].loops;"
+
 
 #	print "secondarydef v projectedalong w =";
 #	print "	if pair(v) and pair(w):";
@@ -82,7 +84,7 @@ BEGIN {
 	shape  = $9;
 	# TODO: label delimited by <>, may contain spaces
 
-	printf "\tl%s := 0;\n", name
+	printf "\t%s.loops := 0;\n", name
 
 	printf "\t%s := (%fin, %fin);\n", name, x, y
 
@@ -96,20 +98,20 @@ BEGIN {
 	diam = 0.3 + length(label) * 0.05;
 
 	if (shape == "doublecircle") {
-		printf "\td%s = %fin + 8bp;\n", name, diam;
+		printf "\t%s.diam = %fin + 8bp;\n", name, diam;
 	} else {
-		printf "\td%s = %fin;\n", name, diam;
+		printf "\t%s.diam = %fin;\n", name, diam;
 	}
 
 	if (shape == "doublecircle") {
-# TODO: would rather && together paths to n%s or somesuch
-		printf "\tdraw fullcircle scaled (d%s - 8bp) shifted %s withpen pencircle scaled 1bp;\n", name, name
+# TODO: would rather && together paths to %s.n or somesuch
+		printf "\tdraw fullcircle scaled (%s.diam - 8bp) shifted %s withpen pencircle scaled 1bp;\n", name, name
 	}
 
-	printf "\tn%s := fullcircle scaled d%s shifted %s;\n", name, name, name
+	printf "\t%s.n := fullcircle scaled %s.diam shifted %s;\n", name, name, name
 
 	if ($2 != "start") {
-		printf "\tdraw n%s withpen pencircle scaled 1bp;\n", name
+		printf "\tdraw %s.n withpen pencircle scaled 1bp;\n", name
 
 		if (label != "") {
 			printf "\tlabel(\"%s\", %s);\n", label, name
@@ -169,8 +171,8 @@ BEGIN {
 
 	# TODO: better explain this
 	# TODO: explain reversed for q, else we'd find p again, where head == tail
-	printf "pair p; p = e intersectionpoint n%s;\n", head;
-	printf "pair q; q = (reverse e) intersectionpoint n%s;\n", tail;
+	printf "pair p; p = e intersectionpoint %s.n;\n", head;
+	printf "pair q; q = (reverse e) intersectionpoint %s.n;\n", tail;
 
 	# XXX: assuming no space in label
 label = slabel(a[n * 2 + 5]);
@@ -189,9 +191,9 @@ printf "draw %s -- 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;\n",
 
 		# extend loop 1.25 * diameter
 		# count number of self-loops for this node, and increment extension
-		printf "\tl%s := l%s + 1;", head, head
+		printf "\t%s.loops := %s.loops + 1;", head, head
 		print "l := length pp;"
-		printf "\tpair m; m := (0.5 + 2 * mlog(l%s + 1) / 256) * d%s * unitvector(direction l of pp) shifted %s;\n", head, head, head
+		printf "\tpair m; m := (0.5 + 2 * mlog(%s.loops + 1) / 256) * %s.diam * unitvector(direction l of pp) shifted %s;\n", head, head, head
 # u3 = u1 projectedalong u2;
 		printf "\tdraw %s -- m withpen pencircle scaled 0.5bp withcolor green;\n", head
 
