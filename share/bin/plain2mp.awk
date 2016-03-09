@@ -41,6 +41,7 @@ BEGIN {
 
 	# TODO: would be simpler to gvpr to rename start to S0
 	# TODO: common stuff for multiple graphs
+
 	print "pair S[];"
 	print "pair q[];"
 	print "path e;"
@@ -66,6 +67,7 @@ BEGIN {
 #	print "enddef;";
 
 	# TODO: centralise to my equivalent of automata.mp, and include that
+	# TODO: can use 'scantokens' to eval a string, .: don't need to pass diam etc
 
 	print "vardef fsmnode(expr node, diam, final, lab) =";
 	print "	draw fullcircle scaled diam shifted node withpen pencircle scaled 1bp;"
@@ -78,7 +80,7 @@ BEGIN {
 	print "enddef;";
 
 
-	print "vardef fsmedge(expr tail, head, e, lab) =";
+	print "vardef fsmedge(expr tail, head, e, t, lab) =";
 
 	print "	drawarrow e withpen pencircle scaled 1bp;";
 
@@ -86,14 +88,17 @@ BEGIN {
 	print "		pair bl;";
 	print "		pair ml; ml := .5[tail, head];"
 
-	# TODO: new idea; draw right angle from midpoint, and use that to find intersection with b
-	# this way it should always align for multiple edges, even if on a slant
+	print "		if t <> -1:"
+	print "			bl := point t of e;"
+	print "			draw bl withpen pencircle scaled 4bp withcolor blue;"
+	print "		else:"
+	print "			bl := point (length e / 2) of e;"
+	print "			draw bl withpen pencircle scaled 2bp withcolor blue;"
+	print "		fi;"
 
-	print "		draw point (length b / 2) of b withpen pencircle scaled 4bp withcolor blue;"
+#	print "		draw bl withpen pencircle scaled 3bp withcolor blue;"
 #	print "		draw tail -- head withpen pencircle scaled 1bp withcolor green;"
 #	print "		draw ml withpen pencircle scaled 5bp withcolor green;"
-
-	print "		bl := point (length b / 2) of b;"
 
 	# TODO: plus label delta, distancing it from point. make a label function
 	# TODO: maybe an "extend" function, to extend a path in its direction. use dotprod for that?
@@ -114,8 +119,8 @@ BEGIN {
 
 	print "vardef fsmloop(expr node, diam, p, q, lab, loops) ="
 	print "	path pp; pp = node -- 0.5[p, q];"
-	print "	draw p -- q withpen pencircle scaled 0.5bp withcolor green;"
-	print "	draw 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;"
+#	print "	draw p -- q withpen pencircle scaled 0.5bp withcolor green;"
+#	print "	draw 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;"
 	print "	draw node -- 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;"
 
 	# extend loop 1.25 * diameter
@@ -126,11 +131,11 @@ BEGIN {
 	print "	draw node -- m withpen pencircle scaled 0.5bp withcolor green;"
 
 	print "	path b; b := node .. q .. m .. p .. node;"
-	print "	fsmedge(node, node, b cutbefore q cutafter p, lab);"
+	print "	fsmedge(node, node, b cutbefore q cutafter p, -1, lab);"
 
 	print "enddef;";
 
-	print "vardef fsmgvedge(expr tail, taildiam, head, headdiam, e, lab, loops) =";
+	print "vardef fsmgvedge(expr tail, taildiam, head, headdiam, e, pp, lab, loops) =";
 	print "	draw e withpen pencircle scaled 0.25bp withcolor red;";
 
 	# TODO: better explain this
@@ -141,17 +146,46 @@ BEGIN {
 	print "	pair q; q = (reverse e) intersectionpoint st;\n";
 
 	print "	if head = tail:"
+	# TODO: incr loops here
 	print "		fsmloop(head, headdiam, p, q, lab, loops);"
 	print "	else:"
 	print "		path b; b = tail .. q .. p .. head;"
-	# TODO: explain this. we permit a 2% lengthening threshold relative to graphviz's b-spline
-	# this affects NFA especially
-	# XXX: or (arclength b > 6in), but wigglyness would be a better metric
+# TODO: explain this. we permit a 2% lengthening threshold relative to graphviz's b-spline
+# this affects NFA especially
+# XXX: or (arclength b > 6in), but wigglyness would be a better metric
 	print "		r := arclength b / arclength e;";
 	print "		if (r > 1.02) or (r < 0.93):";
 	print "			b := e;"
 	print "		fi;"
-	print "		fsmedge(tail, head, b cutbefore q cutafter p, lab);"
+	print "		b := b cutbefore q cutafter p;"
+	print "		t0 := -1;"
+	print "		if lab <> \"\":"
+# TODO: explain we find what time (lx,ly) is along graphviz's edge, e
+# then pass the time and use that for placing our label on our edge
+# use intersectiontimes to find the time of (lx,ly) along e
+# or find by e cutbefore (lx,ly) and use arctime to find the time wrt e
+# XXX: but lx,ly isn't even on the line. could mirror it about the line head--tail
+# TODO: instead of extending like this, i'd rather use the line's direction,
+# and find a lxy--whatever point on e
+# u3 = u1 projectedalong u2;
+# XXX: but i can't do that here, because e might be switched to a different curve
+# .: pass in pp, not lqq
+print "path qq;"
+print "n := length pp;"
+print "qq := (0, 0)--((arclength pp) * unitvector(direction n of pp));"
+print "path lqq; lqq := pp & (qq shifted point n of pp);"
+#print "draw lqq withpen pencircle scaled 0.25bp withcolor red;"
+
+#print "numeric lll;";
+#print "lll := 1in;"
+#print "path luu; luu := (0, 0) -- lll * unitvector(direction 0 of pp);"
+#print "point whatever of luu = point whatever of b;"
+#print "drawarrow luu shifted point 0 of pp;"
+
+	print "			pair tx; tx = lqq intersectiontimes b;"
+	print "			t0 := ypart tx;" # XXX: cheesy
+	print "		fi;"
+	print "		fsmedge(tail, head, b, t0, lab);"
 	print "	fi;"
 
 	print "enddef;";
@@ -257,12 +291,20 @@ ly    = (a[n * 2 + 7]);
 		label = "";
 	}
 
-	# TODO: find what time (lx,ly) is along graphviz's edge, e
-	# then pass the time and use that for placing our label on our edge
-	# use intersectiontimes to find the time of (lx,ly) along e
-	# or find by e cutbefore (lx,ly) and use arctime to find the time wrt e
+print "path pp;"
 
-	printf "fsmgvedge(%s, %s.diam, %s, %s.diam, e, \"%s\", %s.loops);", tail, tail, head, head, label, head;
+	if (head != tail && label != "") {
+		printf "draw (%fin, %fin) withpen pencircle scaled 3bp withcolor red;", lx, ly
+#		printf "draw (%fin, %fin) reflectedabout(%s, %s) withpen pencircle scaled 1bp withcolor green;", lx, ly, tail, head
+
+		printf "pair lxy; lxy := (%fin, %fin);\n", lx, ly
+		printf "pair llxy; llxy := lxy reflectedabout(%s, %s);\n", tail, head
+
+		print "pp := llxy -- lxy;"
+#		printf "draw pp withpen pencircle scaled 1bp withcolor green;\n"
+	}
+
+	printf "fsmgvedge(%s, %s.diam, %s, %s.diam, e, pp, \"%s\", %s.loops);", tail, tail, head, head, label, head;
 
 	if (head == tail) {
 		print "	%s.loops := %s.loops + 1;", head, head
