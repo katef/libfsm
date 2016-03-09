@@ -57,6 +57,8 @@ BEGIN {
 	# number of self-edges
 	print "numeric S[].loops;"
 
+	print "input fsm.mp;"
+
 
 #	print "secondarydef v projectedalong w =";
 #	print "	if pair(v) and pair(w):";
@@ -66,77 +68,10 @@ BEGIN {
 #	print "	fi";
 #	print "enddef;";
 
-	# TODO: centralise to my equivalent of automata.mp, and include that
 	# TODO: can use 'scantokens' to eval a string, .: don't need to pass diam etc
 
-	print "vardef fsmnode(expr node, diam, final, lab) =";
-	print "	draw fullcircle scaled diam shifted node withpen pencircle scaled 1bp;"
-	print "	if final:"
-	print "		draw fullcircle scaled (diam - 8bp) shifted node withpen pencircle scaled 1bp;"
-	print "	fi;"
-	print "	if lab <> \"\":"
-	print "		label(lab, node);"
-	print "	fi;"
-	print "enddef;";
-
-
-	print "vardef fsmedge(expr tail, head, e, t, lab) =";
-
-	print "	drawarrow e withpen pencircle scaled 1bp;";
-
-	print "	if lab <> \"\":"
-	print "		pair bl;";
-	print "		pair ml; ml := .5[tail, head];"
-
-	print "		if t <> -1:"
-	print "			bl := point t of e;"
-	print "			draw bl withpen pencircle scaled 4bp withcolor blue;"
-	print "		else:"
-	print "			bl := point (length e / 2) of e;"
-	print "			draw bl withpen pencircle scaled 2bp withcolor blue;"
-	print "		fi;"
-
-#	print "		draw bl withpen pencircle scaled 3bp withcolor blue;"
-#	print "		draw tail -- head withpen pencircle scaled 1bp withcolor green;"
-#	print "		draw ml withpen pencircle scaled 5bp withcolor green;"
-
-	# TODO: plus label delta, distancing it from point. make a label function
-	# TODO: maybe an "extend" function, to extend a path in its direction. use dotprod for that?
-
-	# lft | rt | top | bot | ulft | urt | llft | lrt
-	# TODO: round label coordinates to grid? quantize rather
-
-	# labels ought to be below, if they're below the straight line from head-tail, or above otherwise
-	# TODO: find what quadrant the line is, and make this .rt/.lft instead of .top/.bot
-	print "		if ypart bl < ypart ml:" # TODO: threshold for considering "below"
-	print "			label.bot(lab, bl shifted (0, -3bp));"
-	print "		else:"
-	print "			label.top(lab, bl shifted (0, +3bp));"
-	print "		fi;"
-	print "	fi;"
-
-	print "enddef;";
-
-	print "vardef fsmloop(expr node, diam, p, q, lab, loops) ="
-	print "	path pp; pp = node -- 0.5[p, q];"
-#	print "	draw p -- q withpen pencircle scaled 0.5bp withcolor green;"
-#	print "	draw 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;"
-	print "	draw node -- 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;"
-
-	# extend loop 1.25 * diameter
-	# count number of self-loops for this node, and increment extension
-	print "	l := length pp;"
-	print "	pair m; m := (0.5 + 2 * mlog(loops + 2) / 256) * diam * unitvector(direction l of pp) shifted node;"
-	# u3 = u1 projectedalong u2;
-	print "	draw node -- m withpen pencircle scaled 0.5bp withcolor green;"
-
-	print "	path b; b := node .. q .. m .. p .. node;"
-	print "	fsmedge(node, node, b cutbefore q cutafter p, -1, lab);"
-
-	print "enddef;";
-
 	print "vardef fsmgvedge(expr tail, taildiam, head, headdiam, e, pp, lab, loops) =";
-	print "	draw e withpen pencircle scaled 0.25bp withcolor red;";
+#	print "	draw e withpen pencircle scaled 0.25bp withcolor red;";
 
 	# TODO: better explain this
 	# TODO: explain reversed for q, else we'd find p again, where head == tail
@@ -294,7 +229,7 @@ ly    = (a[n * 2 + 7]);
 print "path pp;"
 
 	if (head != tail && label != "") {
-		printf "draw (%fin, %fin) withpen pencircle scaled 3bp withcolor red;", lx, ly
+#		printf "draw (%fin, %fin) withpen pencircle scaled 3bp withcolor red;", lx, ly
 #		printf "draw (%fin, %fin) reflectedabout(%s, %s) withpen pencircle scaled 1bp withcolor green;", lx, ly, tail, head
 
 		printf "pair lxy; lxy := (%fin, %fin);\n", lx, ly
