@@ -65,6 +65,110 @@ BEGIN {
 #	print "	fi";
 #	print "enddef;";
 
+	# TODO: centralise to my equivalent of automata.mp, and include that
+
+	print "vardef fsmnode(expr node, diam, final, lab) =";
+	print "	draw fullcircle scaled diam shifted node withpen pencircle scaled 1bp;"
+	print "	if final:"
+	print "		draw fullcircle scaled (diam - 8bp) shifted node withpen pencircle scaled 1bp;"
+	print "	fi;"
+	print "	if lab <> \"\":"
+	print "		label(lab, node);"
+	print "	fi;"
+	print "enddef;";
+
+
+	print "vardef fsmloop(expr node, diam, p, q, lab, loops) ="
+	print "	path pp; pp = node -- 0.5[p, q];"
+	print "	draw p -- q withpen pencircle scaled 0.5bp withcolor green;"
+	print "	draw 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;"
+	print "	draw node -- 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;"
+
+	# extend loop 1.25 * diameter
+	# count number of self-loops for this node, and increment extension
+	print "	l := length pp;"
+	print "	pair m; m := (0.5 + 2 * mlog(loops + 1) / 256) * diam * unitvector(direction l of pp) shifted node;"
+	# u3 = u1 projectedalong u2;
+	print "	draw node -- m withpen pencircle scaled 0.5bp withcolor green;"
+
+	print "	if lab <> \"\":"
+	# TODO: top or bottom, depending on green line direction
+	print "		label.top(lab, m);"
+	print "	fi;"
+
+	print "	path b; b := node .. q .. m .. p .. node;"
+	print "	drawarrow b cutbefore q cutafter p withpen pencircle scaled 1bp;";
+
+	print "enddef;";
+
+	print "vardef fsmgvedge(expr tail, taildiam, head, headdiam, e, lab, lxy, loops) =";
+	print "	draw e withpen pencircle scaled 0.25bp withcolor red;";
+
+	# TODO: better explain this
+	# TODO: explain reversed for q, else we'd find p again, where head == tail
+	print "	path sn; sn := fullcircle scaled headdiam shifted head;" # outline
+	print "	path st; st := fullcircle scaled taildiam shifted tail;" # outline
+	print "	pair p; p = e intersectionpoint sn;\n";
+	print "	pair q; q = (reverse e) intersectionpoint st;\n";
+
+	print "	if head = tail:"
+	print "		fsmloop(head, headdiam, p, q, lab, loops);"
+	print "	else:"
+
+	print "		path b; b = tail .. q .. p .. head;"
+
+	# TODO: explain this. we permit a 2% lengthening threshold relative to graphviz's b-spline
+	# this affects NFA especially
+	print "		r := arclength b / arclength e;";
+	print "		boolean g; g := (r > 1.02) or (r < 0.93);"; # XXX: or (arclength b > 6in);"; - no, wigglyness instead
+
+	print "		if g:"
+	print "			b := e;"
+	print "		fi;"
+
+	print "		if lab <> \"\":"
+	print "			pair bl;";
+	print "			pair ml; ml := .5[tail, head];"
+
+	# TODO: new idea; draw right angle from midpoint, and use that to find intersection with b
+	# this way it should always align for multiple edges, even if on a slant
+
+	print "			draw lxy withpen pencircle scaled 5bp withcolor red;"
+	print "			draw point (length b / 2) of b withpen pencircle scaled 4bp withcolor blue;"
+#	print "			draw tail -- head withpen pencircle scaled 1bp withcolor green;"
+#	print "			draw ml withpen pencircle scaled 5bp withcolor green;"
+
+	print "			if g:"
+	print "				bl := lxy;"
+	print "			else:"
+	print "				bl := point (length b / 2) of b;"
+	print "			fi;"
+
+	# TODO: plus label delta, distancing it from point. make a label function
+	# TODO: maybe an "extend" function, to extend a path in its direction. use dotprod for that?
+
+	# lft | rt | top | bot | ulft | urt | llft | lrt
+	# labels ought to be below, if they're below the straight line from head-tail, or above otherwise
+	# TODO: round label coordinates to grid? quantize rather
+
+	# XXX: if using graphviz's point, label exactly on the spot
+	print "			if g:";
+	# TODO: still want to distance by +/- 4bp or so
+	print "				label(lab, bl);"
+	print "			else:"
+	print "				if ypart bl < ypart ml:" # TODO: threshold for considering "below"
+	print "					label.bot(lab, bl shifted (0, -3bp));"
+	print "				else:"
+	print "					label.top(lab, bl shifted (0, +3bp));"
+	print "				fi;"
+	print "			fi;"
+	print "		fi;"
+
+	print "	drawarrow b cutbefore q cutafter p withpen pencircle scaled 1bp;";
+
+	print "	fi;"
+
+	print "enddef;";
 }
 
 /^graph / {
@@ -84,9 +188,9 @@ BEGIN {
 	shape  = $9;
 	# TODO: label delimited by <>, may contain spaces
 
-	printf "\t%s.loops := 0;\n", name
-
+	# TODO: quantise node positions
 	printf "\t%s := (%fin, %fin);\n", name, x, y
+	printf "\t%s.loops := 0;\n", name
 
 # TODO: when plotting in graphviz, assume all nodes have the same width (not zero!). enough for "SXX" perhaps
 # that should align them all on the same centre line. and pass fixedsize=true
@@ -97,25 +201,16 @@ BEGIN {
 # ignore graphviz height and width, because it scales with label width and that looks bad for S1 vs S5
 	diam = 0.3 + length(label) * 0.05;
 
-	if (shape == "doublecircle") {
+	final = shape == "doublecircle";
+
+	if (final) {
 		printf "\t%s.diam = %fin + 8bp;\n", name, diam;
 	} else {
 		printf "\t%s.diam = %fin;\n", name, diam;
 	}
 
-	if (shape == "doublecircle") {
-# TODO: would rather && together paths to %s.n or somesuch
-		printf "\tdraw fullcircle scaled (%s.diam - 8bp) shifted %s withpen pencircle scaled 1bp;\n", name, name
-	}
-
-	printf "\t%s.n := fullcircle scaled %s.diam shifted %s;\n", name, name, name
-
 	if ($2 != "start") {
-		printf "\tdraw %s.n withpen pencircle scaled 1bp;\n", name
-
-		if (label != "") {
-			printf "\tlabel(\"%s\", %s);\n", label, name
-		}
+		printf "\tfsmnode(%s, %s.diam, %s, \"%s\");\n", name, name, final ? "true" : "false", label
 	}
 }
 
@@ -167,13 +262,6 @@ BEGIN {
 		printf "\t(%fin, %fin);\n", ox, oy;
 	}
 
-	printf "\tdraw e withpen pencircle scaled 0.25bp withcolor red;\n";
-
-	# TODO: better explain this
-	# TODO: explain reversed for q, else we'd find p again, where head == tail
-	printf "pair p; p = e intersectionpoint %s.n;\n", head;
-	printf "pair q; q = (reverse e) intersectionpoint %s.n;\n", tail;
-
 	# XXX: assuming no space in label
 label = slabel(a[n * 2 + 5]);
 lx    = (a[n * 2 + 6]);
@@ -183,81 +271,11 @@ ly    = (a[n * 2 + 7]);
 		label = "";
 	}
 
+	printf "fsmgvedge(%s, %s.diam, %s, %s.diam, e, \"%s\", (%fin, %fin), %s.loops);", tail, tail, head, head, label, lx, ly, head;
+
 	if (head == tail) {
-		printf "path pp; pp = %s -- 0.5[p, q];\n", head;
-printf "draw p -- q withpen pencircle scaled 0.5bp withcolor green;\n";
-printf "draw 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;\n";
-printf "draw %s -- 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;\n", head;
-
-		# extend loop 1.25 * diameter
-		# count number of self-loops for this node, and increment extension
-		printf "\t%s.loops := %s.loops + 1;", head, head
-		print "l := length pp;"
-		printf "\tpair m; m := (0.5 + 2 * mlog(%s.loops + 1) / 256) * %s.diam * unitvector(direction l of pp) shifted %s;\n", head, head, head
-# u3 = u1 projectedalong u2;
-		printf "\tdraw %s -- m withpen pencircle scaled 0.5bp withcolor green;\n", head
-
-		printf "\tpath b; b = %s .. q .. m .. p .. %s;\n", tail, head;
-
-		if (label != "") {
-			# TODO: top or bottom, depending on green line direction
-			printf "\tlabel.top(\"%s\", m);\n", slabel(label)
-		}
-	} else {
-		printf "\tpath b; b = %s .. q .. p .. %s;\n", tail, head;
-
-		# TODO: explain this. we permit a 2% lengthening threshold relative to graphviz's b-spline
-		# this affects NFA especially
-		print "\tr := arclength b / arclength e;\n";
-		print "\tboolean g; g := (r > 1.02) or (r < 0.93);"; # XXX: or (arclength b > 6in);"; - no, wigglyness instead
-
-		print "\tif g:";
-		print "\t\tb := e;";
-		print "\tfi;";
-
-# if it wouldn't have been a straight line, go via the label point instead:
-# XXX: this idea doesn't work, because i don't know which side of the line the label point would be on
-#printf "\t\tb := %s .. q .. (%fin, %fin) .. p .. %s;\n", tail, lx, ly, head;
-
-		if (label != "") {
-			printf "\tpair bl;\n";
-			printf "\tpair ml; ml := .5[%s, %s];\n", tail, head;
-
-# TODO: new idea; draw right angle from midpoint, and use that to find intersection with b
-# this way it should always align for multiple edges, even if on a slant
-
-printf "draw (%fin, %fin) withpen pencircle scaled 5bp withcolor red;\n", lx, ly
-printf "draw point (length b / 2) of b withpen pencircle scaled 4bp withcolor blue;\n"
-#printf "draw %s -- %s withpen pencircle scaled 1bp withcolor green;\n", tail, head
-#printf "draw ml withpen pencircle scaled 5bp withcolor green;\n"
-
-			print "\tif g:";
-				printf "\t\tbl := (%fin, %fin);", lx, ly;
-			print "\telse:";
-				printf "\t\tbl := point (length b / 2) of b;\n";
-			print "\tfi;";
-
-# TODO: plus label delta, distancing it from point. make a label function
-# TODO: maybe an "extend" function, to extend a path in its direction. use dotprod for that?
-
-			# lft | rt | top | bot | ulft | urt | llft | lrt
-			# labels ought to be below, if they're below the straight line from head-tail, or above otherwise
-			# TODO: round label coordinates to grid? quantize rather
-# XXX: if using graphviz's point, label exactly on the spot
-print "\tif g:";
-# TODO: still want to distance by +/- 4bp or so
-			printf "\t\tlabel(\"%s\", bl);\n", label
-print "\telse:";
-			printf "\tif ypart bl < ypart ml:\n" # TODO: threshold for considering "below"
-			printf "\t\tlabel.bot(\"%s\", bl shifted (0, -3bp));\n", label
-			printf "\telse:\n"
-			printf "\t\tlabel.top(\"%s\", bl shifted (0, +3bp));\n", label
-			printf "\tfi;\n"
-print "\tfi;";
-		}
+		print "	%s.loops := %s.loops + 1;", head, head
 	}
-
-	printf "drawarrow b cutbefore q cutafter p withpen pencircle scaled 1bp;\n";
 }
 
 /^stop$/ {
