@@ -57,10 +57,17 @@ vardef fsmloop(expr node, diam, p, q, lab, loops) =
 %	draw 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;
 %	draw node -- 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;
 
-	% extend loop 1.25 * diameter
+	% TODO: assert loops is integer
+	% TODO: assert loops >= 1
+
 	% count number of self-loops for this node, and increment extension
+	% parameters here are relative to node diameter
+	quotient  := 0.5; % < 0 is more linear, > 1 more loggy
+	expansion := 2.5;
+	minradius := 0.5;
 	l := length pp;
-	d := (1.5 + 2 * mlog(loops + 2) / 256) * diam;
+	d := (minradius + expansion * mlog(quotient * loops + 1) / 256) * diam;
+
 	pair m; m := pp projectby d;
 %	draw node -- m withpen pencircle scaled 0.5bp withcolor green;
 
