@@ -222,11 +222,9 @@ ly    = (a[n * 2 + 7]);
 #		printf "draw llxy -- lxy withpen pencircle scaled 1bp withcolor red;\n"
 	}
 
-	printf "fsmgvedge(%s, %s.diam, %s, %s.diam, e, pp, \"%s\", %s.loops);", tail, tail, head, head, label, head;
-
-	if (head == tail) {
-		print "	%s.loops := %s.loops + 1;", head, head
-	}
+	printf "fsmgvedge(%s, %s.diam, %s, %s.diam, e, pp, \"%s\", %s);",
+		tail, tail, head, head, label,
+		head != tail ? 0 : sprintf("incr %s.loops", head);
 }
 
 /^stop$/ {
