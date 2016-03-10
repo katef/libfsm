@@ -9,10 +9,6 @@
 
 function sname(s)
 {
-	if (s == "start") {
-		return "S0";
-	}
-
 	return s;
 }
 
@@ -39,7 +35,6 @@ gsub(/>/, "", s)
 
 BEGIN {
 
-	# TODO: would be simpler to gvpr to rename start to S0
 	# TODO: common stuff for multiple graphs
 
 	print "path e;"
@@ -121,12 +116,7 @@ BEGIN {
 
 	final = shape == "doublecircle";
 
-	# TODO: want fsm.mp to automatically enter to the start state. maybe fsmstart(S1);
-	# so we would not make S0 here, and nor would we make an edge from S0
-	if ($2 == "start") {
-		printf "\tS0 = (%fin, %fin);\n", x, y
-		printf "\tS0.diam := 0.3in;\n"
-	} else {
+	if ($2 != "start") {
 		printf "\tfsmstate(%s)(%fin, %s, \"%s\") (%fin, %fin);\n", name, diam, final ? "true" : "false", label, x, y
 	}
 }
@@ -137,6 +127,11 @@ BEGIN {
 	tail = sname($2);
 	head = sname($3);
 	n    = $4;
+
+# TODO: pretty sure i have head, tail the wrong way around...
+if (tail == "start") {
+	printf "\tfsmstart(%s);\n", head
+} else {
 
 	v = split($0, a, " ");
 	# TODO: assert n < v - whatever
@@ -210,6 +205,7 @@ ly    = (a[n * 2 + 7]);
 	}
 
 	printf "fsmgvedge(%s, %s)(pp, \"%s\") e;\n", tail, head, label;
+}
 }
 
 /^stop$/ {

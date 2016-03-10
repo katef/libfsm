@@ -8,6 +8,18 @@ secondarydef p projectby d =
 	(point 0 of p) + (d / arclength p) * ((point 1 of p) - (point 0 of p))
 enddef;
 
+vardef fsmstart(suffix n) =
+	pair start;
+
+	% TODO: assert n is a pair
+
+	% TODO: share with fsmedge perhaps
+	% TODO: parameterise 1.5
+	start := n shifted (-1.5n.diam, 0);
+
+	fsmedge(start, n)(-1, "") start -- n;
+enddef;
+
 vardef fsmstate(suffix n)(expr d, final, lab) expr c =
 	n       := c;
 	n.diam  := d;
