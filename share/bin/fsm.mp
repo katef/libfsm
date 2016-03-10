@@ -1,4 +1,9 @@
 
+% find a point some distance along a path's extension
+secondarydef p projectby d =
+	(point 0 of p) + (d / arclength p) * ((point 1 of p) - (point 0 of p))
+enddef;
+
 vardef fsmnode(expr node, diam, final, lab) =
 	draw fullcircle scaled diam shifted node withpen pencircle scaled 1bp;
 	if final:
@@ -26,9 +31,7 @@ vardef fsmedge(expr tail, head, e, t, lab) =
 %			draw bl withpen pencircle scaled 2bp withcolor blue;
 		fi;
 
-%		draw bl withpen pencircle scaled 3bp withcolor blue;
-%		draw tail -- head withpen pencircle scaled 1bp withcolor green;
-%		draw ml withpen pencircle scaled 5bp withcolor green;
+%		draw tail -- head withpen pencircle scaled 0.5bp withcolor green dashed evenly;
 
 		% TODO: plus label delta, distancing it from point. make a label function
 		% TODO: maybe an "extend" function, to extend a path in its direction. use dotprod for that?
@@ -57,8 +60,8 @@ vardef fsmloop(expr node, diam, p, q, lab, loops) =
 	% extend loop 1.25 * diameter
 	% count number of self-loops for this node, and increment extension
 	l := length pp;
-	pair m; m := (0.5 + 2 * mlog(loops + 2) / 256) * diam * unitvector(direction l of pp) shifted node;
-	% u3 = u1 projectedalong u2;
+	d := (1.5 + 2 * mlog(loops + 2) / 256) * diam;
+	pair m; m := pp projectby d;
 %	draw node -- m withpen pencircle scaled 0.5bp withcolor green;
 
 	path b; b := node .. q .. m .. p .. node;

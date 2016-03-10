@@ -59,19 +59,10 @@ BEGIN {
 
 	print "input fsm.mp;"
 
-
-#	print "secondarydef v projectedalong w =";
-#	print "	if pair(v) and pair(w):";
-#	print "		(v dotprod w) / (w dotprod w) * w";
-#	print "	else:";
-#	print "		errmessage \"arguments must be pairs\"";
-#	print "	fi";
-#	print "enddef;";
-
 	# TODO: can use 'scantokens' to eval a string, .: don't need to pass diam etc
 
 	print "vardef fsmgvedge(expr tail, taildiam, head, headdiam, e, pp, lab, loops) =";
-#	print "	draw e withpen pencircle scaled 0.25bp withcolor red;";
+	print "	draw e withpen pencircle scaled 0.25bp withcolor red;";
 
 	# TODO: better explain this
 	# TODO: explain reversed for q, else we'd find p again, where head == tail
@@ -100,24 +91,8 @@ BEGIN {
 # use intersectiontimes to find the time of (lx,ly) along e
 # or find by e cutbefore (lx,ly) and use arctime to find the time wrt e
 # XXX: but lx,ly isn't even on the line. could mirror it about the line head--tail
-# TODO: instead of extending like this, i'd rather use the line's direction,
-# and find a lxy--whatever point on e
-# u3 = u1 projectedalong u2;
-# XXX: but i can't do that here, because e might be switched to a different curve
-# .: pass in pp, not lqq
-print "path qq;"
-print "n := length pp;"
-print "qq := (0, 0)--((arclength pp) * unitvector(direction n of pp));"
-print "path lqq; lqq := pp & (qq shifted point n of pp);"
-#print "draw lqq withpen pencircle scaled 0.25bp withcolor red;"
 
-#print "numeric lll;";
-#print "lll := 1in;"
-#print "path luu; luu := (0, 0) -- lll * unitvector(direction 0 of pp);"
-#print "point whatever of luu = point whatever of b;"
-#print "drawarrow luu shifted point 0 of pp;"
-
-	print "			pair tx; tx = lqq intersectiontimes b;"
+	print "			pair tx; tx = pp intersectiontimes b;"
 	print "			t0 := ypart tx;" # XXX: cheesy
 	print "		fi;"
 	print "		fsmedge(tail, head, b, t0, lab);"
@@ -226,17 +201,25 @@ ly    = (a[n * 2 + 7]);
 		label = "";
 	}
 
-print "path pp;"
+	print "path pp;"
 
 	if (head != tail && label != "") {
 #		printf "draw (%fin, %fin) withpen pencircle scaled 3bp withcolor red;", lx, ly
-#		printf "draw (%fin, %fin) reflectedabout(%s, %s) withpen pencircle scaled 1bp withcolor green;", lx, ly, tail, head
+#		printf "draw (%fin, %fin) reflectedabout(%s, %s) withpen pencircle scaled 2bp withcolor red;", lx, ly, tail, head
 
 		printf "pair lxy; lxy := (%fin, %fin);\n", lx, ly
 		printf "pair llxy; llxy := lxy reflectedabout(%s, %s);\n", tail, head
+		print "path lpp; lpp := llxy -- lxy;"
 
-		print "pp := llxy -- lxy;"
-#		printf "draw pp withpen pencircle scaled 1bp withcolor green;\n"
+		# XXX: i dislike this indeed! but at least the extension is constant
+		# TODO: instead of extending like this, i'd rather use the line's direction,
+		# and find a lxy--whatever point on e
+		print "pair ja; ja = lpp projectby +2in;"
+		print "pair jb; jb = lpp projectby -2in;"
+		print "pp := ja -- jb;"
+
+#		printf "draw pp withpen pencircle scaled 0.5bp withcolor green;\n"
+#		printf "draw llxy -- lxy withpen pencircle scaled 1bp withcolor red;\n"
 	}
 
 	printf "fsmgvedge(%s, %s.diam, %s, %s.diam, e, pp, \"%s\", %s.loops);", tail, tail, head, head, label, head;
