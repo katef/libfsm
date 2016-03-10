@@ -1,5 +1,6 @@
 
 pair    S[];       % centre of state
+path    S[].perim; % outline of state
 numeric S[].diam;  % diameter
 numeric S[].loops; % number of self-edges
 
@@ -14,10 +15,13 @@ vardef fsmstart(suffix n) =
 	% TODO: assert n is a pair
 
 	% TODO: share with fsmedge perhaps
-	% TODO: parameterise 1.5
-	start := n shifted (-1.5n.diam, 0);
+	% TODO: parameterise 1.75
+	start := n shifted (-1.75n.diam, 0);
 
-	fsmedge(start, n)(-1, "") start -- n;
+	path e; e := start -- n;
+	pair p; p := e intersectionpoint n.perim;
+
+	drawarrow e cutafter p withpen pencircle scaled 1bp;
 enddef;
 
 vardef fsmstate(suffix n)(expr d, final, lab) expr c =
@@ -27,10 +31,12 @@ vardef fsmstate(suffix n)(expr d, final, lab) expr c =
 
 	% TODO: assert c is a pair
 
-	draw fullcircle scaled n.diam shifted n;
+	n.perim = fullcircle scaled n.diam shifted n;
+	draw n.perim withpen pencircle scaled 1bp;
 	if final:
 		n.diam := n.diam + 8bp;
-		draw fullcircle scaled n.diam shifted n;
+		n.perim := fullcircle scaled n.diam shifted n;
+		draw n.perim withpen pencircle scaled 1bp;
 	fi;
 
 	if lab <> \"\":
@@ -40,14 +46,16 @@ enddef;
 
 vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 
-	drawarrow e withpen pencircle scaled 1bp;
-
 	% TODO: assert tail, head are pairs
 	% TODO: assert t is a time
 	% TODO: assert lab is a string
 	% TODO: assert e is a path
 
-	% TODO: account for node diameter here
+	% TODO: explain reversed for q, else we'd find p again, where head == tail
+	pair p; p := e           intersectionpoint head.perim;
+	pair q; q := (reverse e) intersectionpoint tail.perim;
+
+	drawarrow e cutbefore q cutafter p withpen pencircle scaled 1bp;
 
 	if lab <> \"\":
 		pair bl;

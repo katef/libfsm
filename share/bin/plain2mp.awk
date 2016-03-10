@@ -67,8 +67,8 @@ BEGIN {
 	print "		r := arclength b / arclength e;";
 	print "		if (r > 1.02) or (r < 0.93):";
 	print "			b := e;"
+					# TODO: maybe best to have tail .. e .. head
 	print "		fi;"
-	print "		b := b cutbefore q cutafter p;"
 	print "		t0 := -1;"
 	print "		if lab <> \"\":"
 # TODO: explain we find what time (lx,ly) is along graphviz's edge, e
