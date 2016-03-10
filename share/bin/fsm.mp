@@ -1,23 +1,41 @@
 
+pair    S[];       % centre of state
+numeric S[].diam;  % diameter
+numeric S[].loops; % number of self-edges
+
 % find a point some distance along a path's extension
 secondarydef p projectby d =
 	(point 0 of p) + (d / arclength p) * ((point 1 of p) - (point 0 of p))
 enddef;
 
-vardef fsmnode(expr node, diam, final, lab) =
-	draw fullcircle scaled diam shifted node withpen pencircle scaled 1bp;
+vardef fsmstate(suffix n)(expr d, final, lab) expr c =
+	n       := c;
+	n.diam  := d;
+	n.loops := 0;
+
+	% TODO: assert c is a pair
+
+	draw fullcircle scaled n.diam shifted n;
 	if final:
-		draw fullcircle scaled (diam - 8bp) shifted node withpen pencircle scaled 1bp;
+		n.diam := n.diam + 8bp;
+		draw fullcircle scaled n.diam shifted n;
 	fi;
+
 	if lab <> \"\":
-		label(lab, node);
+		label(lab, n);
 	fi;
 enddef;
 
-
-vardef fsmedge(expr tail, head, e, t, lab) =
+vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 
 	drawarrow e withpen pencircle scaled 1bp;
+
+	% TODO: assert tail, head are pairs
+	% TODO: assert t is a time
+	% TODO: assert lab is a string
+	% TODO: assert e is a path
+
+	% TODO: account for node diameter here
 
 	if lab <> \"\":
 		pair bl;
@@ -51,8 +69,8 @@ vardef fsmedge(expr tail, head, e, t, lab) =
 
 enddef;
 
-vardef fsmloop(expr node, diam, p, q, lab, loops) =
-	path pp; pp = node -- 0.5[p, q];
+vardef fsmloop(suffix n)(expr p, q, lab) =
+	path pp; pp := n -- 0.5[p, q];
 %	draw p -- q withpen pencircle scaled 0.5bp withcolor green;
 %	draw 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;
 %	draw node -- 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;
@@ -66,13 +84,14 @@ vardef fsmloop(expr node, diam, p, q, lab, loops) =
 	expansion := 2.5;
 	minradius := 0.5;
 	l := length pp;
-	d := (minradius + expansion * mlog(quotient * loops + 1) / 256) * diam;
+	d := (minradius + expansion * mlog(quotient * n.loops + 1) / 256) * n.diam;
 
 	pair m; m := pp projectby d;
-%	draw node -- m withpen pencircle scaled 0.5bp withcolor green;
+%	draw n -- m withpen pencircle scaled 0.5bp withcolor green;
 
-	path b; b := node .. q .. m .. p .. node;
-	fsmedge(node, node, b cutbefore q cutafter p, -1, lab);
+	% TODO: when cutting is done in fsmedge, no need to do it here
+	path b; b := n .. q .. m .. p .. n;
+	fsmedge(n, n)(-1, lab) b cutbefore q cutafter p;
 
 enddef;
 

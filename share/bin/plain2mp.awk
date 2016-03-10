@@ -42,38 +42,28 @@ BEGIN {
 	# TODO: would be simpler to gvpr to rename start to S0
 	# TODO: common stuff for multiple graphs
 
-	print "pair S[];"
-	print "pair q[];"
 	print "path e;"
 
 	print "ahlength := 10bp;"
 	print "ahangle  := 45;"
 
-	print "path S[].n;"
-
-	# diameter of node
-	print "numeric S[].diam;"
-
-	# number of self-edges
-	print "numeric S[].loops;"
-
 	print "input fsm.mp;"
 
 	# TODO: can use 'scantokens' to eval a string, .: don't need to pass diam etc
 
-	print "vardef fsmgvedge(expr tail, taildiam, head, headdiam, e, pp, lab, loops) =";
+	print "vardef fsmgvedge(suffix tail, head)(expr pp, lab) expr e =";
 	print "	draw e withpen pencircle scaled 0.25bp withcolor red;";
 
 	# TODO: better explain this
 	# TODO: explain reversed for q, else we'd find p again, where head == tail
-	print "	path sn; sn := fullcircle scaled headdiam shifted head;" # outline
-	print "	path st; st := fullcircle scaled taildiam shifted tail;" # outline
+	print "	path sn; sn := fullcircle scaled head.diam shifted head;" # outline
+	print "	path st; st := fullcircle scaled tail.diam shifted tail;" # outline
 	print "	pair p; p = e intersectionpoint sn;\n";
 	print "	pair q; q = (reverse e) intersectionpoint st;\n";
 
 	print "	if head = tail:"
-	# TODO: incr loops here
-	print "		fsmloop(head, headdiam, p, q, lab, loops);"
+	print "		head.loops := head.loops + 1;"
+	print "		fsmloop(head)(p, q, lab);"
 	print "	else:"
 	print "		path b; b = tail .. q .. p .. head;"
 # TODO: explain this. we permit a 2% lengthening threshold relative to graphviz's b-spline
@@ -95,7 +85,7 @@ BEGIN {
 	print "			pair tx; tx = pp intersectiontimes b;"
 	print "			t0 := ypart tx;" # XXX: cheesy
 	print "		fi;"
-	print "		fsmedge(tail, head, b, t0, lab);"
+	print "		fsmedge(tail, head)(t0, lab) b;"
 	print "	fi;"
 
 	print "enddef;";
@@ -119,8 +109,6 @@ BEGIN {
 	# TODO: label delimited by <>, may contain spaces
 
 	# TODO: quantise node positions
-	printf "\t%s := (%fin, %fin);\n", name, x, y
-	printf "\t%s.loops := 0;\n", name
 
 # TODO: when plotting in graphviz, assume all nodes have the same width (not zero!). enough for "SXX" perhaps
 # that should align them all on the same centre line. and pass fixedsize=true
@@ -133,14 +121,13 @@ BEGIN {
 
 	final = shape == "doublecircle";
 
-	if (final) {
-		printf "\t%s.diam = %fin + 8bp;\n", name, diam;
+	# TODO: want fsm.mp to automatically enter to the start state. maybe fsmstart(S1);
+	# so we would not make S0 here, and nor would we make an edge from S0
+	if ($2 == "start") {
+		printf "\tS0 = (%fin, %fin);\n", x, y
+		printf "\tS0.diam := 0.3in;\n"
 	} else {
-		printf "\t%s.diam = %fin;\n", name, diam;
-	}
-
-	if ($2 != "start") {
-		printf "\tfsmnode(%s, %s.diam, %s, \"%s\");\n", name, name, final ? "true" : "false", label
+		printf "\tfsmstate(%s)(%fin, %s, \"%s\") (%fin, %fin);\n", name, diam, final ? "true" : "false", label, x, y
 	}
 }
 
@@ -222,9 +209,7 @@ ly    = (a[n * 2 + 7]);
 #		printf "draw llxy -- lxy withpen pencircle scaled 1bp withcolor red;\n"
 	}
 
-	printf "fsmgvedge(%s, %s.diam, %s, %s.diam, e, pp, \"%s\", %s);",
-		tail, tail, head, head, label,
-		head != tail ? 0 : sprintf("incr %s.loops", head);
+	printf "fsmgvedge(%s, %s)(pp, \"%s\") e;\n", tail, head, label;
 }
 
 /^stop$/ {
