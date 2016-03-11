@@ -39,7 +39,7 @@ BEGIN {
 
 	print "path e;"
 
-	print "ahlength := 10bp;"
+	print "ahlength := 8bp;" # TODO: multiple of space between double circles
 	print "ahangle  := 45;"
 
 	print "input fsm.mp;"
