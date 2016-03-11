@@ -120,6 +120,8 @@ vardef fsmloop(suffix n)(expr p, q, lab) =
 	% TODO: assert loops is integer
 	% TODO: assert loops >= 1
 
+	n.loops := n.loops + 1;
+
 	% count number of self-loops for this node, and increment extension
 	% parameters here are relative to node diameter
 	quotient  := 0.5; % < 0 is more linear, > 1 more loggy

@@ -55,7 +55,6 @@ BEGIN {
 	print "	pair q; q = (reverse e) intersectionpoint tail.perim;\n";
 
 	print "	if head = tail:"
-	print "		head.loops := head.loops + 1;"
 	print "		fsmloop(head)(q, p, lab);"
 	print "	else:"
 	print "		path b; b = tail .. q .. p .. head;"
