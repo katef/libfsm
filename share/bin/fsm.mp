@@ -111,7 +111,13 @@ vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 
 enddef;
 
-vardef fsmloop(suffix n)(expr p, q, lab) =
+vardef fsmloop(suffix n)(expr t, lab) =
+	% TODO: parameterise 0.5 for whatever suitable arc. This is unitless;
+	% doesn't need to be proportional to node diam,
+	% because n.perim is already relative to that.
+	p := point (t - 0.5) of n.perim;
+	q := point (t + 0.5) of n.perim;
+
 	path pp; pp := n -- 0.5[p, q];
 %	draw p -- q withpen pencircle scaled 0.5bp withcolor green;
 %	draw 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;

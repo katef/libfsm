@@ -55,7 +55,11 @@ BEGIN {
 	print "	pair q; q = (reverse e) intersectionpoint tail.perim;\n";
 
 	print "	if head = tail:"
-	print "		fsmloop(head)(q, p, lab);"
+	print "		numeric t; t = arctime (arclength e / 2) of e;"
+	print "		path m; m = head -- point t of e;"
+	print "		numeric ta; (ta, whatever) = head.perim intersectiontimes m;"
+#	print "		draw point ta of head.perim withpen pencircle scaled 4bp withcolor red;"
+	print "		fsmloop(head)(ta, lab);"
 	print "	else:"
 	print "		path b; b = tail .. q .. p .. head;"
 # TODO: explain this. we permit a 2% lengthening threshold relative to graphviz's b-spline
