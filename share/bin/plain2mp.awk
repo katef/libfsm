@@ -51,14 +51,12 @@ BEGIN {
 
 	# TODO: better explain this
 	# TODO: explain reversed for q, else we'd find p again, where head == tail
-	print "	path sn; sn := fullcircle scaled head.diam shifted head;" # outline
-	print "	path st; st := fullcircle scaled tail.diam shifted tail;" # outline
-	print "	pair p; p = e intersectionpoint sn;\n";
-	print "	pair q; q = (reverse e) intersectionpoint st;\n";
+	print "	pair p; p = e           intersectionpoint head.perim;\n";
+	print "	pair q; q = (reverse e) intersectionpoint tail.perim;\n";
 
 	print "	if head = tail:"
 	print "		head.loops := head.loops + 1;"
-	print "		fsmloop(head)(p, q, lab);"
+	print "		fsmloop(head)(q, p, lab);"
 	print "	else:"
 	print "		path b; b = tail .. q .. p .. head;"
 # TODO: explain this. we permit a 2% lengthening threshold relative to graphviz's b-spline
@@ -67,7 +65,6 @@ BEGIN {
 	print "		r := arclength b / arclength e;";
 	print "		if (r > 1.02) or (r < 0.93):";
 	print "			b := e;"
-					# TODO: maybe best to have tail .. e .. head
 	print "		fi;"
 	print "		t0 := -1;"
 	print "		if lab <> \"\":"
@@ -149,7 +146,12 @@ if (tail == "start") {
 	# last two points (control, knot) are ontop of each other, in the head node
 	# coordinates are in inches
 
-	printf "\te :=\n";
+	# We connect graphviz's path to endpoints at each node's centre, to ensure
+	# a path between nodes does intersect with each node. This is just to be on
+	# the safe side; the graphviz endpoints ought to be inside the node anyway
+	# due to -Etailclip=false and -Eheadclip=false.
+
+	printf "\te := %s .. \n", tail;
 	for (i = 1; i <= n - 1; i += 3) {
 		# knot
 		ox = a[(i + 0) * 2 + 3];
@@ -171,7 +173,7 @@ if (tail == "start") {
 		# knot
 		ox = a[(n + 0) * 2 + 3];
 		oy = a[(n + 0) * 2 + 4];
-		printf "\t(%fin, %fin);\n", ox, oy;
+		printf "\t(%fin, %fin) .. %s;\n", ox, oy, head;
 	}
 
 	# XXX: assuming no space in label
