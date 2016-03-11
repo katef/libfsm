@@ -21,9 +21,10 @@ vardef fsmstart(suffix n) =
 	start := n shifted (-1.75n.diam - edgegap, 0);
 
 	path e; e := start -- n;
-	pair p; p := e intersectionpoint n.perim;
 
-	drawarrow e cutafter p withpen pencircle scaled 1bp;
+	(t0, whatever) = e intersectiontimes n.perim;
+
+	drawarrow subpath(0, t0) of e withpen pencircle scaled 1bp;
 enddef;
 
 vardef fsmstate(suffix n)(expr d, final, lab) expr c =
@@ -49,17 +50,33 @@ vardef fsmstate(suffix n)(expr d, final, lab) expr c =
 enddef;
 
 vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
+	numeric ta, tb;
 
 	% TODO: assert tail, head are pairs
 	% TODO: assert t is a time
 	% TODO: assert lab is a string
 	% TODO: assert e is a path
 
-	% TODO: explain reversed for q, else we'd find p again, where head == tail
-	pair p; p := e           intersectionpoint head.perim;
-	pair q; q := (reverse e) intersectionpoint tail.perim;
+%	draw e withcolor red;
 
-	drawarrow e cutbefore q cutafter p withpen pencircle scaled 1bp;
+	% Edges are drawn from node centre points for caller simplicity. Here we
+	% find the subpath which excludes the regions inside the nodes at each end,
+	% so as to draw an arrow from the perimeter of one node to the next.
+	%
+	% For self loops, the head is the same as the tail. It's also possible for
+	% an edge to intersect a node multiple times. But intersectiontimes always
+	% finds the first intersection, so the usual approach would be to iteratively
+	% cut the path after each point to find each of the remaining intersections.
+	%
+	% However, we're interested in just the first and last intersection points.
+	% My solution here is to find the latter point along the reverse of e,
+	% and then to subtract that from e's length to give a time in terms of
+	% e in its forward direction.
+
+	(           ta, whatever) =         e intersectiontimes tail.perim;
+	(length e - tb, whatever) = reverse e intersectiontimes head.perim;
+
+	drawarrow subpath(ta, tb) of e withpen pencircle scaled 1bp;
 
 	if lab <> \"\":
 		pair bl;
@@ -69,6 +86,7 @@ vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 			bl := point t of e;
 %			draw bl withpen pencircle scaled 4bp withcolor blue;
 		else:
+			% XXX: find midpoint by arclength instead
 			bl := point (length e / 2) of e;
 %			draw bl withpen pencircle scaled 2bp withcolor blue;
 		fi;
@@ -97,7 +115,7 @@ vardef fsmloop(suffix n)(expr p, q, lab) =
 	path pp; pp := n -- 0.5[p, q];
 %	draw p -- q withpen pencircle scaled 0.5bp withcolor green;
 %	draw 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;
-%	draw node -- 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;
+%	draw n -- 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;
 
 	% TODO: assert loops is integer
 	% TODO: assert loops >= 1
@@ -113,9 +131,7 @@ vardef fsmloop(suffix n)(expr p, q, lab) =
 	pair m; m := pp projectby d;
 %	draw n -- m withpen pencircle scaled 0.5bp withcolor green;
 
-	% TODO: when cutting is done in fsmedge, no need to do it here
-	path b; b := n .. q .. m .. p .. n;
-	fsmedge(n, n)(-1, lab) b cutbefore q cutafter p;
+	fsmedge(n, n)(-1, lab) n .. q .. m .. p .. n;
 
 enddef;
 
