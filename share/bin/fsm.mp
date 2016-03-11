@@ -4,6 +4,8 @@ path    S[].perim; % outline of state
 numeric S[].diam;  % diameter
 numeric S[].loops; % number of self-edges
 
+edgegap := 0bp; % gap between edge endpoints and states. e.g. 10bp
+
 % find a point some distance along a path's extension
 secondarydef p projectby d =
 	(point 0 of p) + (d / arclength p) * ((point 1 of p) - (point 0 of p))
@@ -16,7 +18,7 @@ vardef fsmstart(suffix n) =
 
 	% TODO: share with fsmedge perhaps
 	% TODO: parameterise 1.75
-	start := n shifted (-1.75n.diam, 0);
+	start := n shifted (-1.75n.diam - edgegap, 0);
 
 	path e; e := start -- n;
 	pair p; p := e intersectionpoint n.perim;
@@ -38,6 +40,8 @@ vardef fsmstate(suffix n)(expr d, final, lab) expr c =
 		n.perim := fullcircle scaled n.diam shifted n;
 		draw n.perim withpen pencircle scaled 1bp;
 	fi;
+
+	n.perim := fullcircle scaled (n.diam + edgegap) shifted n;
 
 	if lab <> \"\":
 		label(lab, n);
