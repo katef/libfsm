@@ -114,10 +114,10 @@ BEGIN {
 # ignore graphviz height and width, because it scales with label width and that looks bad for S1 vs S5
 	diam = 0.3 + length(label) * 0.05;
 
-	final = shape == "doublecircle";
+	isend = shape == "doublecircle";
 
 	if ($2 != "start") {
-		printf "\tfsmstate(%s)(%fin, %s, \"%s\") (%fin, %fin);\n", name, diam, final ? "true" : "false", label, x, y
+		printf "\tfsmstate(%s)(%fin, %s, \"%s\") (%fin, %fin);\n", name, diam, isend? "true" : "false", label, x, y
 	}
 }
 

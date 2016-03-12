@@ -29,16 +29,18 @@ vardef fsmstart(suffix n) =
 	drawarrow subpath(0, t0) of e withpen pencircle scaled 1bp;
 enddef;
 
-vardef fsmstate(suffix n)(expr d, final, lab) expr c =
+vardef fsmstate(suffix n)(expr d, isend, lab) expr c =
 	n       := c;
 	n.diam  := d;
 	n.loops := 0;
 
 	% TODO: assert c is a pair
+	% TODO: assert isend is boolean
+	% TODO: assert lab is a string
 
 	n.perim = fullcircle scaled n.diam shifted n;
 	draw n.perim withpen pencircle scaled 1bp;
-	if final:
+	if isend:
 		n.diam := n.diam + 8bp;
 		n.perim := fullcircle scaled n.diam shifted n;
 		draw n.perim withpen pencircle scaled 1bp;
