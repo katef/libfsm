@@ -103,8 +103,7 @@ vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 			bl = point t of e;
 %			draw bl withpen pencircle scaled 4bp withcolor blue;
 		else:
-			% XXX: find midpoint by arclength instead
-			bl = point (length e / 2) of e;
+			bl = point (arctime (arclength e / 2) of e) of e;
 %			draw bl withpen pencircle scaled 2bp withcolor blue;
 		fi;
 
