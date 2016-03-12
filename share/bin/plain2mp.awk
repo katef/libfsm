@@ -39,9 +39,6 @@ BEGIN {
 
 	print "path e;"
 
-	print "ahlength := 8bp;" # TODO: multiple of space between double circles
-	print "ahangle  := 45;"
-
 	print "input fsm.mp;"
 
 	# TODO: can use 'scantokens' to eval a string, .: don't need to pass diam etc

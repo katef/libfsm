@@ -5,8 +5,22 @@ numeric S[].diam;  % diameter
 numeric S[].loops; % number of self-edges
 
 edgegap := 0bp; % gap between edge endpoints and states. e.g. 10bp
+endgap  := 8bp; % gap between inner and outer circle for end states
 
+% time (as a subpath of fullcircle) of the arc between loop endpoints.
+% larger means a wider stance for the loop; 0 means the loop will be
+% a straight line. Negatives will cause the loop to be drawn in reverse.
+looptime := 1.0;
+
+% self-loop parameters here are relative to node diameter
+quotient  := 0.5; % < 0 is more linear, > 1 more loggy
+expansion := 2.5;
+minradius := 0.5;
+
+% metapost variables
 labeloffset := 4bp;
+ahlength    := 8bp; % TODO: multiple of space between double circles
+ahangle     := 45;
 
 % find a point some distance along a path's extension
 secondarydef p projectby d =
@@ -41,7 +55,7 @@ vardef fsmstate(suffix n)(expr d, isend, lab) expr c =
 	n.perim = fullcircle scaled n.diam shifted n;
 	draw n.perim withpen pencircle scaled 1bp;
 	if isend:
-		n.diam := n.diam + 8bp;
+		n.diam := n.diam + endgap;
 		n.perim := fullcircle scaled n.diam shifted n;
 		draw n.perim withpen pencircle scaled 1bp;
 	fi;
@@ -116,27 +130,21 @@ vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 enddef;
 
 vardef fsmloop(suffix n)(expr t, lab) =
-	% TODO: parameterise 0.5 for whatever suitable arc. This is unitless;
-	% doesn't need to be proportional to node diam,
-	% because n.perim is already relative to that.
-	p := point (t - 0.5) of n.perim;
-	q := point (t + 0.5) of n.perim;
+	% TODO: assert lab is a string
+	% TODO: assert loops is integer
+	% TODO: assert loops >= 0
+
+	p := point (t - looptime / 2) of n.perim;
+	q := point (t + looptime / 2) of n.perim;
 
 	path pp; pp := n -- 0.5[p, q];
 %	draw p -- q withpen pencircle scaled 0.5bp withcolor green;
 %	draw 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;
 %	draw n -- 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;
 
-	% TODO: assert loops is integer
-	% TODO: assert loops >= 1
-
 	n.loops := n.loops + 1;
 
 	% count number of self-loops for this node, and increment extension
-	% parameters here are relative to node diameter
-	quotient  := 0.5; % < 0 is more linear, > 1 more loggy
-	expansion := 2.5;
-	minradius := 0.5;
 	l := length pp;
 	d := (minradius + expansion * mlog(quotient * n.loops + 1) / 256) * n.diam;
 
