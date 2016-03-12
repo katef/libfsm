@@ -6,6 +6,8 @@ numeric S[].loops; % number of self-edges
 
 edgegap := 0bp; % gap between edge endpoints and states. e.g. 10bp
 
+labeloffset := 4bp;
+
 % find a point some distance along a path's extension
 secondarydef p projectby d =
 	(point 0 of p) + (d / arclength p) * ((point 1 of p) - (point 0 of p))
@@ -103,9 +105,9 @@ vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 		% TODO: find what quadrant the line is, and make this .rt/.lft instead of .top/.bot
 		% TODO: threshold for considering "below"
 		if ypart bl < ypart ml:
-			label.bot(lab, bl shifted (0, -3bp));
+			label.bot(lab, bl);
 		else:
-			label.top(lab, bl shifted (0, +3bp));
+			label.top(lab, bl);
 		fi;
 	fi;
 
