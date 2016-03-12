@@ -191,16 +191,16 @@ ly    = (a[n * 2 + 7]);
 #		printf "draw (%fin, %fin) withpen pencircle scaled 3bp withcolor red;", lx, ly
 #		printf "draw (%fin, %fin) reflectedabout(%s, %s) withpen pencircle scaled 2bp withcolor red;", lx, ly, tail, head
 
-		printf "pair lxy; lxy := (%fin, %fin);\n", lx, ly
-		printf "pair llxy; llxy := lxy reflectedabout(%s, %s);\n", tail, head
-		print "path lpp; lpp := llxy -- lxy;"
+		printf "pair lxy; lxy = (%fin, %fin);\n", lx, ly
+		printf "pair llxy; llxy = lxy reflectedabout(%s, %s);\n", tail, head
+		print "path lpp; lpp = llxy -- lxy;"
 
 		# XXX: i dislike this indeed! but at least the extension is constant
 		# TODO: instead of extending like this, i'd rather use the line's direction,
 		# and find a lxy--whatever point on e
 		print "pair ja; ja = lpp projectby +2in;"
 		print "pair jb; jb = lpp projectby -2in;"
-		print "pp := ja -- jb;"
+		print "pp = ja -- jb;"
 
 #		printf "draw pp withpen pencircle scaled 0.5bp withcolor green;\n"
 #		printf "draw llxy -- lxy withpen pencircle scaled 1bp withcolor red;\n"

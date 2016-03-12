@@ -34,9 +34,9 @@ vardef fsmstart(suffix n) =
 
 	% TODO: share with fsmedge perhaps
 	% TODO: parameterise 1.75
-	start := n shifted (-1.75n.diam - edgegap, 0);
+	start = n shifted (-1.75n.diam - edgegap, 0);
 
-	path e; e := start -- n;
+	path e; e = start -- n;
 
 	(t0, whatever) = e intersectiontimes n.perim;
 
@@ -98,14 +98,13 @@ vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 
 	if lab <> \"\":
 		pair bl;
-		pair ml; ml := .5[tail, head];
 
 		if t <> -1:
-			bl := point t of e;
+			bl = point t of e;
 %			draw bl withpen pencircle scaled 4bp withcolor blue;
 		else:
 			% XXX: find midpoint by arclength instead
-			bl := point (length e / 2) of e;
+			bl = point (length e / 2) of e;
 %			draw bl withpen pencircle scaled 2bp withcolor blue;
 		fi;
 
@@ -120,7 +119,7 @@ vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 		% labels ought to be below, if they're below the straight line from head-tail, or above otherwise
 		% TODO: find what quadrant the line is, and make this .rt/.lft instead of .top/.bot
 		% TODO: threshold for considering "below"
-		if ypart bl < ypart ml:
+		if ypart bl < ypart .5[tail, head]:
 			label.bot(lab, bl);
 		else:
 			label.top(lab, bl);
@@ -130,14 +129,19 @@ vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 enddef;
 
 vardef fsmloop(suffix n)(expr t, lab) =
+	pair p, q;
+	pair m;
+	numeric l;
+	numeric d;
+
 	% TODO: assert lab is a string
 	% TODO: assert loops is integer
 	% TODO: assert loops >= 0
 
-	p := point (t - looptime / 2) of n.perim;
-	q := point (t + looptime / 2) of n.perim;
+	p = point (t - looptime / 2) of n.perim;
+	q = point (t + looptime / 2) of n.perim;
 
-	path pp; pp := n -- 0.5[p, q];
+	pp := n -- 0.5[p, q];
 %	draw p -- q withpen pencircle scaled 0.5bp withcolor green;
 %	draw 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;
 %	draw n -- 0.5[p, q] withpen pencircle scaled 0.8bp withcolor green;
@@ -145,10 +149,10 @@ vardef fsmloop(suffix n)(expr t, lab) =
 	n.loops := n.loops + 1;
 
 	% count number of self-loops for this node, and increment extension
-	l := length pp;
-	d := (minradius + expansion * mlog(quotient * n.loops + 1) / 256) * n.diam;
+	l = length pp;
+	d = (minradius + expansion * mlog(quotient * n.loops + 1) / 256) * n.diam;
 
-	pair m; m := pp projectby d;
+	m = pp projectby d;
 %	draw n -- m withpen pencircle scaled 0.5bp withcolor green;
 
 	fsmedge(n, n)(-1, lab) n .. q .. m .. p .. n;
