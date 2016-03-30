@@ -37,6 +37,8 @@ BEGIN {
 
 	# TODO: common stuff for multiple graphs
 
+	loopangle = 0; # angle by which to tilt loops. 0 is vertical
+
 	print "path e;"
 
 	print "input fsm.mp;"
@@ -56,7 +58,7 @@ BEGIN {
 	print "		path m; m = head -- point t of e;"
 	print "		numeric ta; (ta, whatever) = head.perim intersectiontimes m;"
 #	print "		draw point ta of head.perim withpen pencircle scaled 4bp withcolor red;"
-	print "		fsmloop(head)(ta, lab);"
+	printf "		fsmloop(head)(ta - (length fullcircle * %f / 360), lab);\n", loopangle
 	print "	else:"
 	print "		path b; b = tail .. q .. p .. head;"
 # TODO: explain this. we permit a 2% lengthening threshold relative to graphviz's b-spline
