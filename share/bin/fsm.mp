@@ -27,6 +27,32 @@ secondarydef p projectby d =
 	(point 0 of p) + (d / arclength p) * ((point 1 of p) - (point 0 of p))
 enddef;
 
+vardef fsmlabel(expr t, lab) expr e =
+	% TODO: assert t is a time
+	% TODO: assert lab is a string
+	% TODO: assert e is a path
+
+	% lft | rt | top | bot | ulft | urt | llft | lrt
+	% TODO: round label coordinates to grid? quantize rather
+	% TODO: fuzzy threshold for considering near enough to be on the line
+	% TODO: plus label delta, distancing it from point. make a label function
+	% TODO: translate and rotate path to position at origin;
+	% then find label "side" (i.e. concave/convex) from there, and translate that back
+
+	pair bl; bl = point t of e;
+
+	draw bl withpen pencircle scaled 3bp withcolor blue;
+
+	numeric gradient; gradient = (angle direction t of e); % mod 180;
+
+	path tangent; tangent := (-.125in, 0) -- (.125in, 0);
+%	tangent := tangent rotated gradient shifted bl;
+%	draw tangent withcolor blue;
+
+	path labv; labv := (0, -8bp) -- (0, +8bp);
+	draw labv rotated gradient shifted bl withpen pencircle scaled 0.5bp;
+enddef;
+
 vardef fsmstart(suffix n) =
 	pair start;
 
@@ -76,6 +102,7 @@ vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 	% TODO: assert e is a path
 
 %	draw e withcolor red;
+%	draw tail -- head withpen pencircle scaled 0.5bp withcolor green dashed evenly;
 
 	% Edges are drawn from node centre points for caller simplicity. Here we
 	% find the subpath which excludes the regions inside the nodes at each end,
@@ -97,34 +124,16 @@ vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 	drawarrow subpath(ta, tb) of e withpen pencircle scaled 1bp;
 
 	if lab <> \"\":
-		pair bl;
+		numeric tx; % time at which to place label
 
 		if t <> -1:
-			bl = point t of e;
-%			draw bl withpen pencircle scaled 4bp withcolor blue;
+			tx = t;
 		else:
-			bl = point (arctime (arclength e / 2) of e) of e;
-%			draw bl withpen pencircle scaled 2bp withcolor blue;
+			tx = arctime (arclength e / 2) of e;
 		fi;
 
-%		draw tail -- head withpen pencircle scaled 0.5bp withcolor green dashed evenly;
-
-		% TODO: plus label delta, distancing it from point. make a label function
-		% TODO: maybe an "extend" function, to extend a path in its direction. use dotprod for that?
-
-		% lft | rt | top | bot | ulft | urt | llft | lrt
-		% TODO: round label coordinates to grid? quantize rather
-
-		% labels ought to be below, if they're below the straight line from head-tail, or above otherwise
-		% TODO: find what quadrant the line is, and make this .rt/.lft instead of .top/.bot
-		% TODO: threshold for considering "below"
-		if ypart bl < ypart .5[tail, head]:
-			label.bot(lab, bl);
-		else:
-			label.top(lab, bl);
-		fi;
+		fsmlabel(tx, lab) e;
 	fi;
-
 enddef;
 
 vardef fsmloop(suffix n)(expr t, lab) =
