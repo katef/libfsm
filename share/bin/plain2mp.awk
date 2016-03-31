@@ -46,7 +46,7 @@ BEGIN {
 	# TODO: can use 'scantokens' to eval a string, .: don't need to pass diam etc
 
 	print "vardef fsmgvedge(suffix tail, head)(expr pp, lab) expr e =";
-	print "	draw e withpen pencircle scaled 0.25bp withcolor red;";
+#	print "	draw e withpen pencircle scaled 0.25bp withcolor red;";
 
 	# TODO: better explain this
 	# TODO: explain reversed for q, else we'd find p again, where head == tail

@@ -18,7 +18,7 @@ expansion := 2.5;
 minradius := 0.5;
 
 % metapost variables
-labeloffset := 4bp;
+labeloffset := 8bp;
 ahlength    := 8bp; % TODO: multiple of space between double circles
 ahangle     := 45;
 
@@ -27,30 +27,61 @@ secondarydef p projectby d =
 	(point 0 of p) + (d / arclength p) * ((point 1 of p) - (point 0 of p))
 enddef;
 
-vardef fsmlabel(expr t, lab) expr e =
+vardef fsmlabel(suffix tail, head)(expr t, lab) expr e =
 	% TODO: assert t is a time
 	% TODO: assert lab is a string
 	% TODO: assert e is a path
 
-	% lft | rt | top | bot | ulft | urt | llft | lrt
+	% The position for the label is placed according to the angle at that
+	% point in the curve, outset to either side. The side from which to outset
+	% the label depends on whether the curve is convex or concave at that point.
+	% This is found here by shifting and roating the curve to be horizontal from
+	% the origin, and seeing if the label's point is above or below 0.
+
 	% TODO: round label coordinates to grid? quantize rather
 	% TODO: fuzzy threshold for considering near enough to be on the line
-	% TODO: plus label delta, distancing it from point. make a label function
-	% TODO: translate and rotate path to position at origin;
-	% then find label "side" (i.e. concave/convex) from there, and translate that back
 
-	pair bl; bl = point t of e;
+	% tail is the start point of the line. so shifting to -tail negates that offset,
+	% effectively moving the line to start from the origin.
+	pair clt; clt = tail shifted -tail;
+	pair clh; clh = head shifted -tail;
+%	draw clt -- clh withcolor green dashed evenly;
 
-	draw bl withpen pencircle scaled 3bp withcolor blue;
+	% draw (tail shifted -tail) -- (head shifted -tail) withcolor green dashed evenly;
+	%draw e shifted -tail withcolor green;
 
-	numeric gradient; gradient = (angle direction t of e); % mod 180;
+	% now angle(clh) should be the angle of the clt -- clh.
+	% i think that could also be calculated as angle(head - tail)
+	numeric a;
 
-	path tangent; tangent := (-.125in, 0) -- (.125in, 0);
-%	tangent := tangent rotated gradient shifted bl;
-%	draw tangent withcolor blue;
+	if clh = (0, 0):
+		a = 0;
+	else:
+		a = angle clh;
+	fi;
 
-	path labv; labv := (0, -8bp) -- (0, +8bp);
-	draw labv rotated gradient shifted bl withpen pencircle scaled 0.5bp;
+	% TODO: save this transformation (type transform), to inverse it later
+	path ce; ce = e shifted -tail rotated -a;
+%	draw ce withpen pencircle scaled 0.5bp withcolor green;
+
+	pair bl; bl = point t of ce;
+%	draw bl withpen pencircle scaled 3bp withcolor blue;
+
+	pair c;
+
+	if ypart bl >= 0:
+		c = (0,  labeloffset);
+	else:
+		c = (0, -labeloffset);
+	fi;
+
+	numeric gradient; gradient = (angle direction t of ce); % mod 180;
+
+	pair cc; cc = c rotated gradient shifted bl;
+%	draw bl -- cc withpen pencircle scaled 0.5bp;
+
+	% TODO: inverse transform
+	label(lab, cc rotated a shifted tail);
 enddef;
 
 vardef fsmstart(suffix n) =
@@ -102,7 +133,6 @@ vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 	% TODO: assert e is a path
 
 %	draw e withcolor red;
-%	draw tail -- head withpen pencircle scaled 0.5bp withcolor green dashed evenly;
 
 	% Edges are drawn from node centre points for caller simplicity. Here we
 	% find the subpath which excludes the regions inside the nodes at each end,
@@ -132,7 +162,7 @@ vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 			tx = arctime (arclength e / 2) of e;
 		fi;
 
-		fsmlabel(tx, lab) e;
+		fsmlabel(tail, head)(tx, lab) e;
 	fi;
 enddef;
 
