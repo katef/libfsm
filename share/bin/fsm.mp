@@ -40,6 +40,7 @@ vardef fsmlabel(suffix tail, head)(expr t, lab) expr e =
 
 	% TODO: round label coordinates to grid? quantize rather
 	% TODO: fuzzy threshold for considering near enough to be on the line
+	% TODO: account for label string length
 
 	% tail is the start point of the line. so shifting to -tail negates that offset,
 	% effectively moving the line to start from the origin.
@@ -60,28 +61,24 @@ vardef fsmlabel(suffix tail, head)(expr t, lab) expr e =
 		a = angle clh;
 	fi;
 
-	% TODO: save this transformation (type transform), to inverse it later
-	path ce; ce = e shifted -tail rotated -a;
-%	draw ce withpen pencircle scaled 0.5bp withcolor green;
+	transform tt;
+	tt = identity shifted -tail rotated -a;
+
+	path ce; ce = e transformed tt;
+	draw ce withpen pencircle scaled 0.5bp withcolor green;
 
 	pair bl; bl = point t of ce;
-%	draw bl withpen pencircle scaled 3bp withcolor blue;
+	draw bl withpen pencircle scaled 3bp withcolor blue;
 
 	pair c;
-
-	if ypart bl >= 0:
-		c = (0,  labeloffset);
-	else:
-		c = (0, -labeloffset);
-	fi;
+	c = (0, if ypart bl < 0: - fi labeloffset);
 
 	numeric gradient; gradient = (angle direction t of ce); % mod 180;
 
 	pair cc; cc = c rotated gradient shifted bl;
-%	draw bl -- cc withpen pencircle scaled 0.5bp;
+	draw bl -- cc withpen pencircle scaled 0.5bp;
 
-	% TODO: inverse transform
-	label(lab, cc rotated a shifted tail);
+	label(lab, cc transformed inverse tt);
 enddef;
 
 vardef fsmstart(suffix n) =
