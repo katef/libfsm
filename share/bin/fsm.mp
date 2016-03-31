@@ -7,6 +7,8 @@ numeric S[].loops; % number of self-edges
 edgegap := 0bp; % gap between edge endpoints and states. e.g. 10bp
 endgap  := 8bp; % gap between inner and outer circle for end states
 
+boolean inlinesinglelabs; inlinesinglelabs = false; % unconventional, but sometimes it helps
+
 % time (as a subpath of fullcircle) of the arc between loop endpoints.
 % larger means a wider stance for the loop; 0 means the loop will be
 % a straight line. Negatives will cause the loop to be drawn in reverse.
@@ -65,19 +67,39 @@ vardef fsmlabel(suffix tail, head)(expr t, lab) expr e =
 	tt = identity shifted -tail rotated -a;
 
 	path ce; ce = e transformed tt;
-	draw ce withpen pencircle scaled 0.5bp withcolor green;
+%	draw ce withpen pencircle scaled 0.5bp withcolor green;
 
 	pair bl; bl = point t of ce;
-	draw bl withpen pencircle scaled 3bp withcolor blue;
+%	draw bl withpen pencircle scaled 3bp withcolor blue;
+
+	numeric o;
+	if inlinesinglelabs and (length lab = 1): % and (tail <> head):
+		o = 0bp;
+	else:
+		o = labeloffset;
+	fi;
 
 	pair c;
-	c = (0, if ypart bl < 0: - fi labeloffset);
+	c = (0, if ypart bl < 0: - fi o);
 
 	numeric gradient; gradient = (angle direction t of ce); % mod 180;
 
 	pair cc; cc = c rotated gradient shifted bl;
-	draw bl -- cc withpen pencircle scaled 0.5bp;
+%	draw bl -- cc withpen pencircle scaled 0.5bp;
 
+	if o = 0bp:
+		begingroup
+			if head <> tail:
+				interim linecap := squared;
+			fi;
+
+			numeric tz; tz = 3bp; % XXX: need a better way to find text size
+			path tb; tb = (-tz * length lab / 2, 0) -- (+tz * length lab / 2, 0);
+			draw (tb shifted bl) transformed inverse tt withpen pencircle scaled (tz * 1.75) withcolor white; % XXX: hacky wrt transparent background
+  		endgroup;
+	fi;
+
+	% TODO: option to rotate label to gradient
 	label(lab, cc transformed inverse tt);
 enddef;
 
@@ -85,6 +107,8 @@ vardef fsmstart(suffix n) =
 	pair start;
 
 	% TODO: assert n is a pair
+
+	% TODO: option to draw a notch rather than an arrow
 
 	% TODO: share with fsmedge perhaps
 	% TODO: parameterise 1.75
@@ -156,6 +180,7 @@ vardef fsmedge(suffix tail, head)(expr t, lab) expr e =
 		if t <> -1:
 			tx = t;
 		else:
+			% TODO: account for offset due to arrowhead size
 			tx = arctime (arclength e / 2) of e;
 		fi;
 
