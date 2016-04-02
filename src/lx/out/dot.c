@@ -58,7 +58,6 @@ static void
 mapping(const struct ast_mapping *m, FILE *f, const struct ast *ast)
 {
 	assert(m != NULL);
-	assert(m->conflict == NULL);
 	assert(f != NULL);
 
 	if (m->token != NULL) {
