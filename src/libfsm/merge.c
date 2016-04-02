@@ -16,9 +16,8 @@ fsm_merge(struct fsm *a, struct fsm *b)
 	assert(a != NULL);
 	assert(b != NULL);
 
-	for (s = &a->sl; *s != NULL; s = &(*s)->next) {
-		/* empty */
-	}
+	for (s = &a->sl; *s != NULL; s = &(*s)->next)
+		;
 
 	*s = b->sl;
 
