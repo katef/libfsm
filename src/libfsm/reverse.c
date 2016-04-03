@@ -44,9 +44,8 @@ movetoend(struct fsm *fsm, struct fsm_state *state)
 
 	fsm->sl = fsm->sl->next;
 
-	for (s = &fsm->sl; *s != NULL; s = &(*s)->next) {
-		/* nothing */
-	}
+	for (s = &fsm->sl; *s != NULL; s = &(*s)->next)
+		;
 
 	*s = state;
 	state->next = NULL;

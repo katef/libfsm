@@ -136,9 +136,8 @@ set_merge(struct state_set **dst, struct state_set *src)
 
 	assert(dst != NULL);
 
-	for (p = dst; *p != NULL; p = &(*p)->next) {
-		/* nothing */
-	}
+	for (p = dst; *p != NULL; p = &(*p)->next)
+		;
 
 	*p = src;
 }
