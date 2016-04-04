@@ -14,6 +14,8 @@
 
 #include "out.h"
 
+static int anonymous_states = 1;
+
 /* TODO: centralise with libfsm */
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)
@@ -87,36 +89,46 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 	assert(z != NULL);
 	assert(s != NULL);
 
-	if (!fsm_isend(fsm, s)) {
-		return;
-	}
-
-	m = s->opaque;
-
-	assert(m != NULL);
+	/* here we're overriding the labels FSM_OUT_DOT produced */
 
 	fprintf(f, "\t\tz%uS%u [ label = <",
 		zindexof(ast, z), indexof(fsm, s));
 
-	if (m->conflict != NULL) {
-		const struct mapping_set *p;
+	if (!anonymous_states) {
+		fprintf(f, "%u<br/>", indexof(fsm, s));
+	}
 
-		fprintf(f, "<font color=\"red\">");
+	if (fsm_isend(fsm, s)) {
 
-		for (p = m->conflict; p != NULL; p = p->next) {
-			mapping(p->m, f, ast);
+		m = s->opaque;
 
-			if (p->next != NULL) {
-				fprintf(f, "<br/>");
+		assert(m != NULL);
+
+		if (m->conflict != NULL) {
+			const struct mapping_set *p;
+
+			fprintf(f, "<font color=\"red\">");
+
+			for (p = m->conflict; p != NULL; p = p->next) {
+				mapping(p->m, f, ast);
+
+				if (p->next != NULL) {
+					fprintf(f, "<br/>");
+				}
 			}
+
+			fprintf(f, "</font>");
+		} else {
+			mapping(m, f, ast);
 		}
 
-		fprintf(f, "</font>");
-	} else {
-		mapping(m, f, ast);
 	}
 
 	fprintf(f, "> ];\n");
+
+	if (!fsm_isend(fsm, s)) {
+		return;
+	}
 
 	if (m->conflict != NULL) {
 		const struct mapping_set *p;
@@ -173,7 +185,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 		snprintf(prefix, sizeof prefix, "z%u", zindexof(ast, z));
 
-		o.anonymous_states  = 1;
+		o.anonymous_states  = anonymous_states;
 		o.consolidate_edges = 1;
 		o.fragment          = 1;
 		o.prefix            = prefix;
@@ -205,7 +217,12 @@ lx_out_dot(const struct ast *ast, FILE *f)
 	fprintf(f, "digraph %sG {\n", prefix.api);
 	fprintf(f, "\trankdir = LR;\n");
 
-	fprintf(f, "\tnode [ shape = circle, label = \"\" ];\n");
+	fprintf(f, "\tnode [ shape = circle ];\n");
+
+	if (anonymous_states) {
+		fprintf(f, "\tnode [ label = \"\", width = 0.3 ];\n");
+	}
+
 	fprintf(f, "\n");
 
 	fprintf(f, "\tstart [ shape = plaintext ];\n");
