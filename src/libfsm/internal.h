@@ -27,6 +27,10 @@ struct fsm_state {
 
 	void *opaque;
 
+#ifdef DEBUG_TODFA
+	struct state_set *nfasl;
+#endif
+
 	struct fsm_state *next;
 };
 
@@ -34,6 +38,10 @@ struct fsm_state {
 struct fsm {
 	struct fsm_state *sl;
 	struct fsm_state *start;
+
+#ifdef DEBUG_TODFA
+	struct fsm *nfa;
+#endif
 };
 
 

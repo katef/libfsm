@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#include <adt/set.h>
+
 #include <fsm/out.h>
 #include <fsm/pred.h>
 
@@ -123,6 +125,29 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 		}
 
 	}
+
+	/* TODO: centralise with libfsm */
+#ifdef DEBUG_TODFA
+	if (s->nfasl != NULL) {
+		struct state_set *q;
+
+		assert(fsm->nfa != NULL);
+
+		fprintf(f, "<br/>");
+
+		fprintf(f, "{");
+
+		for (q = s->nfasl; q != NULL; q = q->next) {
+			fprintf(f, "%u", indexof(fsm->nfa, q->state));
+
+			if (q->next != NULL) {
+				fprintf(f, ",");
+			}
+		}
+
+		fprintf(f, "}");
+	}
+#endif
 
 	fprintf(f, "> ];\n");
 

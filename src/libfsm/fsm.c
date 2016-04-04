@@ -62,6 +62,10 @@ fsm_new(void)
 	new->sl    = NULL;
 	new->start = NULL;
 
+#ifdef DEBUG_TODFA
+	new->nfa   = NULL;
+#endif
+
 	return new;
 }
 
@@ -109,6 +113,10 @@ fsm_addstate(struct fsm *fsm)
 	}
 
 	new->opaque = NULL;
+
+#ifdef DEBUG_TODFA
+	new->nfasl = NULL;
+#endif
 
 	new->next = fsm->sl;
 	fsm->sl = new;

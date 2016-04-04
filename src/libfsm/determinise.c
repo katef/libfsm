@@ -444,6 +444,18 @@ determinise(struct mapping **ml, struct fsm *nfa, struct fsm *dfa,
 
 		free_transset(nes);
 
+#ifdef DEBUG_TODFA
+		{
+			struct state_set *q;
+
+			for (q = curr->closure; q != NULL; q = q->next) {
+				if (!set_addstate(&curr->dfastate->nfasl, q->state)) {
+					return 0;
+				}
+			}
+		}
+#endif
+
 		/*
 		 * The current DFA state is an end state if any of its associated NFA
 		 * states are end states.
@@ -488,6 +500,19 @@ fsm_determinise_opaque(struct fsm *fsm,
 
 	/* TODO: can assert a whole bunch of things about the dfa, here */
 	assert(fsm_all(dfa, fsm_isdfa));
+
+#ifdef DEBUG_TODFA
+	fsm->nfa = fsm_new();
+	if (fsm->nfa == NULL) {
+		return 0;
+	}
+
+	*fsm->nfa = *fsm;
+
+	/* for fsm_move's free contents */
+	fsm->sl    = NULL;
+	fsm->start = NULL;
+#endif
 
 	fsm_move(fsm, dfa);
 
