@@ -55,10 +55,15 @@ fsm_clone(const struct fsm *fsm)
 		struct fsm_state *s;
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
-			if (!fsm_addstate(new)) {
+			struct fsm_state *q;
+
+			q = fsm_addstate(new);
+			if (q == NULL) {
 				fsm_free(new);
 				return NULL;
 			}
+
+			q->opaque = s->opaque;
 		}
 	}
 
