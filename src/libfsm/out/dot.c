@@ -112,14 +112,12 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 	assert(s != NULL);
 	assert(options != NULL);
 
-	if (fsm_isend(fsm, s)) {
+	if (!options->anonymous_states) {
 		fprintf(f, "\t%sS%-2u [ label = <",
 			options->prefix != NULL ? options->prefix : "",
 			indexof(fsm, s));
 
-		if (!options->anonymous_states) {
-			fprintf(f, "%u", indexof(fsm, s));
-		}
+		fprintf(f, "%u", indexof(fsm, s));
 
 		fprintf(f, "> ];\n");
 	}
