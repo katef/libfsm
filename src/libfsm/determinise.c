@@ -364,14 +364,27 @@ carryend(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
  *
  * As all DFA are NFA; for a DFA this has no semantic effect (other than
  * renumbering states as a side-effect of constructing the new FSM).
- *
- * TODO: returning an int is a little cumbersome here. Why not return an fsm?
  */
-static int
-determinise(struct mapping **ml, struct fsm *nfa, struct fsm *dfa,
+static struct fsm *
+determinise(struct fsm *nfa,
 	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *))
 {
 	struct mapping *curr;
+	struct mapping *ml;
+	struct fsm *dfa;
+
+	assert(fsm != NULL);
+
+	dfa = fsm_new();
+	if (dfa == NULL) {
+		return NULL;
+	}
+
+#ifdef DEBUG_TODFA
+	dfa->nfa = nfa;
+#endif
+
+	ml = NULL;
 
 	/*
 	 * The epsilon closure of the NFA's start state is the DFA's start state.
@@ -380,10 +393,10 @@ determinise(struct mapping **ml, struct fsm *nfa, struct fsm *dfa,
 	{
 		struct fsm_state *dfastart;
 
-		dfastart = state_closure(ml, dfa, fsm_getstart(nfa));
+		dfastart = state_closure(&ml, dfa, fsm_getstart(nfa));
 		if (dfastart == NULL) {
 			/* TODO: error */
-			return 0;
+			goto error;
 		}
 
 		fsm_setstart(dfa, dfastart);
@@ -392,7 +405,7 @@ determinise(struct mapping **ml, struct fsm *nfa, struct fsm *dfa,
 	/*
 	 * While there are still DFA states remaining to be "done", process each.
 	 */
-	for (curr = *ml; (curr = nextnotdone(*ml)) != NULL; curr->done = 1) {
+	for (curr = ml; (curr = nextnotdone(ml)) != NULL; curr->done = 1) {
 		struct transset *s;
 		struct transset *nes;
 
@@ -406,7 +419,7 @@ determinise(struct mapping **ml, struct fsm *nfa, struct fsm *dfa,
 		 */
 		/* TODO: document that nes contains only entries with labels set */
 		if (!listnonepsilonstates(&nes, curr->closure)) {
-			return 0;
+			goto error;
 		}
 
 		for (s = nes; s != NULL; s = s->next) {
@@ -425,20 +438,20 @@ determinise(struct mapping **ml, struct fsm *nfa, struct fsm *dfa,
 			 */
 			if (!allstatesreachableby(nfa, curr->closure, s->c, &reachable)) {
 				set_free(reachable);
-				return 0;
+				goto error;
 			}
 
-			new = set_closure(ml, dfa, reachable);
+			new = set_closure(&ml, dfa, reachable);
 			set_free(reachable);
 			if (new == NULL) {
 				free_transset(nes);
-				return 0;
+				goto error;
 			}
 
 			e = fsm_addedge_literal(dfa, curr->dfastate, new, s->c);
 			if (e == NULL) {
 				free_transset(nes);
-				return 0;
+				goto error;
 			}
 		}
 
@@ -450,7 +463,7 @@ determinise(struct mapping **ml, struct fsm *nfa, struct fsm *dfa,
 
 			for (q = curr->closure; q != NULL; q = q->next) {
 				if (!set_addstate(&curr->dfastate->nfasl, q->state)) {
-					return 0;
+					goto error;
 				}
 			}
 		}
@@ -472,42 +485,45 @@ determinise(struct mapping **ml, struct fsm *nfa, struct fsm *dfa,
 		}
 	}
 
-	return 1;
+	free_mappings(ml);
+
+	/* TODO: can assert a whole bunch of things about the dfa, here */
+	assert(fsm_all(dfa, fsm_isdfa));
+
+	return dfa;
+
+error:
+
+	free_mappings(ml);
+	fsm_free(dfa);
+
+	return NULL;
 }
 
 int
 fsm_determinise_opaque(struct fsm *fsm,
 	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *))
 {
-	struct mapping *ml;
 	struct fsm *dfa;
-	int r;
+#ifdef DEBUG_TODFA
+	struct fsm *nfa;
+#endif
 
-	assert(fsm != NULL);
-
-	dfa = fsm_new();
+	dfa = determinise(fsm, carryopaque);
 	if (dfa == NULL) {
 		return 0;
 	}
 
-	ml = NULL;
-	r = determinise(&ml, fsm, dfa, carryopaque);
-
-	free_mappings(ml);
-	if (!r) {
-		return 0;
-	}
-
-	/* TODO: can assert a whole bunch of things about the dfa, here */
-	assert(fsm_all(dfa, fsm_isdfa));
-
 #ifdef DEBUG_TODFA
-	fsm->nfa = fsm_new();
-	if (fsm->nfa == NULL) {
+	nfa = fsm_new();
+	if (nfa == NULL) {
 		return 0;
 	}
 
-	*fsm->nfa = *fsm;
+	assert(dfa->nfa == fsm);
+
+	nfa->sl    = fsm->sl;
+	nfa->start = fsm->start;
 
 	/* for fsm_move's free contents */
 	fsm->sl    = NULL;
@@ -515,6 +531,10 @@ fsm_determinise_opaque(struct fsm *fsm,
 #endif
 
 	fsm_move(fsm, dfa);
+
+#ifdef DEBUG_TODFA
+	fsm->nfa = nfa;
+#endif
 
 	return 1;
 }
