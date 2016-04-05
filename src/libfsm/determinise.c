@@ -505,9 +505,6 @@ fsm_determinise_opaque(struct fsm *fsm,
 	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *))
 {
 	struct fsm *dfa;
-#ifdef DEBUG_TODFA
-	struct fsm *nfa;
-#endif
 
 	dfa = determinise(fsm, carryopaque);
 	if (dfa == NULL) {
@@ -515,15 +512,16 @@ fsm_determinise_opaque(struct fsm *fsm,
 	}
 
 #ifdef DEBUG_TODFA
-	nfa = fsm_new();
-	if (nfa == NULL) {
+	fsm->nfa = fsm_new();
+	if (fsm->nfa == NULL) {
 		return 0;
 	}
 
+	assert(fsm->nfa == NULL);
 	assert(dfa->nfa == fsm);
 
-	nfa->sl    = fsm->sl;
-	nfa->start = fsm->start;
+	fsm->nfa->sl    = fsm->sl;
+	fsm->nfa->start = fsm->start;
 
 	/* for fsm_move's free contents */
 	fsm->sl    = NULL;
@@ -531,10 +529,6 @@ fsm_determinise_opaque(struct fsm *fsm,
 #endif
 
 	fsm_move(fsm, dfa);
-
-#ifdef DEBUG_TODFA
-	fsm->nfa = nfa;
-#endif
 
 	return 1;
 }
