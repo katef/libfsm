@@ -68,32 +68,11 @@ language(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-/* TODO: centralise */
-static int
-set_hasdistinctend(const struct fsm *fsm, const struct state_set *set,
-	const struct fsm_state *state)
-{
-	const struct state_set *s;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	for (s = set; s != NULL; s = s->next) {
-		if (!fsm_isend(fsm, s->state)) {
-			continue;
-		}
-
-		if (s->state->opaque != state->opaque) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
 static void
 carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 {
+	struct mapping_set *conflict;
+	struct ast_mapping *m;
 	struct state_set *s;
 
 	assert(set != NULL); /* TODO: right? */
@@ -118,45 +97,84 @@ carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 
 	for (s = set; s != NULL; s = s->next) {
 		if (fsm_isend(fsm, s->state)) {
-			state->opaque = s->state->opaque;
+			m = s->state->opaque;
 			break;
 		}
 	}
 
-	assert(state->opaque != NULL);
+	assert(m != NULL);
 
-	if (set_hasdistinctend(fsm, set, state)) {
-		struct ast_mapping *m;
+	conflict = NULL;
 
-		m = state->opaque;
-		assert(m != NULL);
+	for (s = set; s != NULL; s = s->next) {
+		struct ast_mapping *p;
 
-		for (s = set; s != NULL; s = s->next) {
-			if (!fsm_isend(fsm, s->state)) {
-				continue;
-			}
-
-			if (s->state->opaque == state->opaque) {
-				continue;
-			}
-
-			assert(s->state->opaque != NULL);
-
-			if (!ast_addconflict(&m->conflict, s->state->opaque)) {
-				perror("ast_addconflict");
-				goto error;
-			}
+		if (!fsm_isend(fsm, s->state)) {
+			continue;
 		}
 
-		if (!ast_addconflict(&m->conflict, state->opaque)) {
+		assert(s->state->opaque != NULL);
+
+		p = s->state->opaque;
+
+		if (m->to == p->to && m->token == p->token) {
+			continue;
+		}
+
+		if (!ast_addconflict(&conflict, p)) {
 			perror("ast_addconflict");
 			goto error;
 		}
 	}
 
+	/* if anything conflicts with m, then m is part of the conflicting set */
+	if (conflict != NULL) {
+		if (!ast_addconflict(&conflict, m)) {
+			perror("ast_addconflict");
+			goto error;
+		}
+	}
+
+	/*
+	 * An ast_mapping is allocated in order to potentially hold
+	 * conflicting mappings, if any are found.
+	 *
+	 * We can't point to an existing ast_mapping in this case,
+	 * because a conflict set may not be the same in all DFA states
+	 * where the same .to/.token are used.
+	 * This is the case for /aa(aa)+/ -> $x; /aaa(aaa)+/ -> $y;
+	 * where $y appears in both a conflicting and non-conflicting DFA state.
+	 *
+	 * If there isn't a conflict, the DFA state point to an existing
+	 * mapping. It doesn't matter which one.
+	 */
+	if (conflict == NULL) {
+		assert(m->conflict == NULL);
+
+		state->opaque = m;
+	} else {
+		struct ast_mapping *new;
+
+		new = malloc(sizeof *new);
+		if (new == NULL) {
+			goto error;
+		}
+
+		new->token    = m->token;
+		new->to       = m->to;
+
+		new->fsm      = NULL;
+		new->next     = NULL;
+		new->conflict = conflict; /* private to this DFA state */
+
+		state->opaque = new;
+	}
+
 	return;
 
 error:
+
+	/* XXX: free conflict set */
 
 	state->opaque = NULL;
 
@@ -377,6 +395,30 @@ main(int argc, char *argv[])
 	}
 
 	/* TODO: free ast */
+	/* TODO: free DFA ast_mappings, created in carryopaque, iff making a DFA. i.e. those which have non-NULL conflict sets */
+	if (!keep_nfa) {
+		struct ast_zone *z;
+		struct ast_mapping *m;
+		const struct fsm_state *s;
+
+		for (z = ast->zl; z != NULL; z = z->next) {
+			for (s = z->fsm->sl; s != NULL; s = s->next) {
+				if (!fsm_isend(z->fsm, s)) {
+					continue;
+				}
+
+				if (s->opaque != NULL) {
+					m = s->opaque;
+
+					assert(m->next == NULL);
+					assert(m->fsm == NULL);
+
+					/* TODO: free m->conflict, allocated in carryopaque */
+					(void) m->conflict;
+				}
+			}
+		}
+	}
 
 	lx_print(ast, stdout, format);
 
