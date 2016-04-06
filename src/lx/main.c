@@ -111,8 +111,8 @@ carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 	 * which indicate which lexical token (and zone transition) is produced
 	 * from each accepting state in a particular regexp.
 	 *
-	 * Because all the accepting states belong to the same regexp, they
-	 * should all have the same mapping. So we nominate one to use for the
+	 * Because all the accepting states are reachable together, they
+	 * should all share the same mapping. So we nominate one to use for the
 	 * opaque value and check all other accepting states are the same.
 	 */
 
@@ -267,7 +267,7 @@ main(int argc, char *argv[])
 					}
 				}
 
-				/* Attach this mapping to each end state for this regexp */
+				/* Attach this mapping to each end state for this FSM */
 				for (s = m->fsm->sl; s != NULL; s = s->next) {
 					if (fsm_isend(m->fsm, s)) {
 						assert(s->opaque == NULL);
