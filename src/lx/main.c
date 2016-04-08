@@ -68,6 +68,72 @@ language(const char *name)
 	exit(EXIT_FAILURE);
 }
 
+static enum api_tokbuf
+lang_tokbuf(const char *name)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		enum api_tokbuf tokbuf;
+	} a[] = {
+		{ "dyn",   API_DYNBUF   },
+		{ "fixed", API_FIXEDBUF }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].tokbuf;
+		}
+	}
+
+	fprintf(stderr, "unrecognised token buffer scheme; valid schemes are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
+	exit(EXIT_FAILURE);
+}
+
+static enum api_tokbuf
+lang_getc(const char *name)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		enum api_getc getc;
+	} a[] = {
+		{ "fgetc",  API_FGETC  },
+		{ "sgetc",  API_SGETC  },
+		{ "agetc",  API_AGETC  },
+		{ "fdgetc", API_FDGETC }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].getc;
+		}
+	}
+
+	fprintf(stderr, "unrecognised getc scheme; valid schemes are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
+	exit(EXIT_FAILURE);
+}
+
 static void
 carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 {
@@ -193,11 +259,19 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hvl:p:t:n"), c != -1) {
+		while (c = getopt(argc, argv, "hvb:c:l:p:t:n"), c != -1) {
 			switch (c) {
 			case 'h':
 				usage();
 				exit(EXIT_SUCCESS);
+
+			case 'b':
+				api_tokbuf |= lang_tokbuf(optarg);
+				break;
+
+			case 'c':
+				api_getc |= lang_getc(optarg);
+				break;
 
 			case 'l':
 				format = language(optarg);
@@ -232,7 +306,17 @@ main(int argc, char *argv[])
 	}
 
 	if (keep_nfa && format != LX_OUT_DOT) {
-		fprintf(stderr, "-n is for dot output only\n");
+		fprintf(stderr, "-n is for .dot output only\n");
+		return EXIT_FAILURE;
+	}
+
+	if (api_tokbuf && (format != LX_OUT_C && format != LX_OUT_H)) {
+		fprintf(stderr, "-b is for .c/.h output only\n");
+		return EXIT_FAILURE;
+	}
+
+	if (api_getc && (format != LX_OUT_C && format != LX_OUT_H)) {
+		fprintf(stderr, "-c is for .c/.h output only\n");
 		return EXIT_FAILURE;
 	}
 

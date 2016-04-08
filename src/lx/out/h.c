@@ -90,75 +90,83 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "/*\n");
-	fprintf(f, " * The initial buffer size; this ought to be over the typical token length,\n");
-	fprintf(f, " * so as to avoid a run-up of lots of resizing.\n");
-	fprintf(f, " */\n");
-	fprintf(f, "#ifndef LX_DYN_LOW\n");
-	fprintf(f, "#define LX_DYN_LOW 1 << 10\n");
-	fprintf(f, "#endif\n");
-	fprintf(f, "\n");
+	if (api_tokbuf & API_DYNBUF) {
+		fprintf(f, "/*\n");
+		fprintf(f, " * The initial buffer size; this ought to be over the typical token length,\n");
+		fprintf(f, " * so as to avoid a run-up of lots of resizing.\n");
+		fprintf(f, " */\n");
+		fprintf(f, "#ifndef LX_DYN_LOW\n");
+		fprintf(f, "#define LX_DYN_LOW 1 << 10\n");
+		fprintf(f, "#endif\n");
+		fprintf(f, "\n");
 
-	fprintf(f, "/*\n");
-	fprintf(f, " * High watermark; if the buffer grows over this, it will resize back down\n");
-	fprintf(f, " * by LX_DYN_FACTOR when no longer in use.\n");
-	fprintf(f, " */\n");
-	fprintf(f, "#ifndef LX_DYN_HIGH\n");
-	fprintf(f, "#define LX_DYN_HIGH 1 << 13\n");
-	fprintf(f, "#endif\n");
-	fprintf(f, "\n");
+		fprintf(f, "/*\n");
+		fprintf(f, " * High watermark; if the buffer grows over this, it will resize back down\n");
+		fprintf(f, " * by LX_DYN_FACTOR when no longer in use.\n");
+		fprintf(f, " */\n");
+		fprintf(f, "#ifndef LX_DYN_HIGH\n");
+		fprintf(f, "#define LX_DYN_HIGH 1 << 13\n");
+		fprintf(f, "#endif\n");
+		fprintf(f, "\n");
 
-	fprintf(f, "/*\n");
-	fprintf(f, " * Andrew Koenig said the growth factor should be less than phi, (1 + sqrt(5)) / 2\n");
-	fprintf(f, " * P.J. Plauger said 1.5 works well in practice. (Perhaps because of internal\n");
-	fprintf(f, " * bookkeeping data stored by the allocator.)\n");
-	fprintf(f, " *\n");
-	fprintf(f, " * Non-integer factors here add the constraint that LX_DYN_LOW > 1 because\n");
-	fprintf(f, " * because conversion to size_t truncates, and e.g. 1 * 1.5 == 1 is no good\n");
-	fprintf(f, " * as the requirement is to *increase* a buffer.\n");
-	fprintf(f, " */\n");
-	fprintf(f, "#ifndef LX_DYN_FACTOR\n");
-	fprintf(f, "#define LX_DYN_FACTOR 2\n");
-	fprintf(f, "#endif\n");
-	fprintf(f, "\n");
+		fprintf(f, "/*\n");
+		fprintf(f, " * Andrew Koenig said the growth factor should be less than phi, (1 + sqrt(5)) / 2\n");
+		fprintf(f, " * P.J. Plauger said 1.5 works well in practice. (Perhaps because of internal\n");
+		fprintf(f, " * bookkeeping data stored by the allocator.)\n");
+		fprintf(f, " *\n");
+		fprintf(f, " * Non-integer factors here add the constraint that LX_DYN_LOW > 1 because\n");
+		fprintf(f, " * because conversion to size_t truncates, and e.g. 1 * 1.5 == 1 is no good\n");
+		fprintf(f, " * as the requirement is to *increase* a buffer.\n");
+		fprintf(f, " */\n");
+		fprintf(f, "#ifndef LX_DYN_FACTOR\n");
+		fprintf(f, "#define LX_DYN_FACTOR 2\n");
+		fprintf(f, "#endif\n");
+		fprintf(f, "\n");
 
-	fprintf(f, "/* dynamic token buffer */\n");
-	fprintf(f, "struct lx_dynbuf {\n");
-	fprintf(f, "\tchar *p;\n");
-	fprintf(f, "\tsize_t len;\n");
-	fprintf(f, "\tchar *a;\n");
-	fprintf(f, "};\n");
-	fprintf(f, "\n");
+		fprintf(f, "/* dynamic token buffer */\n");
+		fprintf(f, "struct lx_dynbuf {\n");
+		fprintf(f, "\tchar *p;\n");
+		fprintf(f, "\tsize_t len;\n");
+		fprintf(f, "\tchar *a;\n");
+		fprintf(f, "};\n");
+		fprintf(f, "\n");
+	}
 
-	fprintf(f, "/* fixed-size token buffer */\n");
-	fprintf(f, "struct lx_fixedbuf {\n");
-	fprintf(f, "\tchar *p;\n");
-	fprintf(f, "\tsize_t len;\n");
-	fprintf(f, "#ifdef LX_FIXED_SIZE\n");
-	fprintf(f, "\tchar a[LX_FIXED_SIZE];\n");
-	fprintf(f, "#else\n");
-	fprintf(f, "\tchar *a; /* could be flexible member */\n");
-	fprintf(f, "#endif\n");
-	fprintf(f, "};\n");
-	fprintf(f, "\n");
+	if (api_tokbuf & API_FIXEDBUF) {
+		fprintf(f, "/* fixed-size token buffer */\n");
+		fprintf(f, "struct lx_fixedbuf {\n");
+		fprintf(f, "\tchar *p;\n");
+		fprintf(f, "\tsize_t len;\n");
+		fprintf(f, "#ifdef LX_FIXED_SIZE\n");
+		fprintf(f, "\tchar a[LX_FIXED_SIZE];\n");
+		fprintf(f, "#else\n");
+		fprintf(f, "\tchar *a; /* could be flexible member */\n");
+		fprintf(f, "#endif\n");
+		fprintf(f, "};\n");
+		fprintf(f, "\n");
+	}
 
-	fprintf(f, "/* opaque for %sagetc */\n", prefix.api);
-	fprintf(f, "struct lx_arr {\n");
-	fprintf(f, "\tchar *p;\n");
-	fprintf(f, "\tsize_t len;\n");
-	fprintf(f, "};\n");
-	fprintf(f, "\n");
+	if (api_tokbuf & API_AGETC) {
+		fprintf(f, "/* opaque for %sagetc */\n", prefix.api);
+		fprintf(f, "struct lx_arr {\n");
+		fprintf(f, "\tchar *p;\n");
+		fprintf(f, "\tsize_t len;\n");
+		fprintf(f, "};\n");
+		fprintf(f, "\n");
+	}
 
-	/* TODO: posix only */
-	fprintf(f, "/* opaque for %sfdgetc */\n", prefix.api);
-	fprintf(f, "struct lx_fd {\n");
-	fprintf(f, "\tchar *p;\n");
-	fprintf(f, "\tsize_t len;\n");
-	fprintf(f, "\n");
-	fprintf(f, "\tint fd;\n");
-	fprintf(f, "\tsize_t bufsz; /* number of bytes allocated after this struct */\n");
-	fprintf(f, "};\n");
-	fprintf(f, "\n");
+	if (api_tokbuf & API_FDGETC) {
+		/* TODO: posix only */
+		fprintf(f, "/* opaque for %sfdgetc */\n", prefix.api);
+		fprintf(f, "struct lx_fd {\n");
+		fprintf(f, "\tchar *p;\n");
+		fprintf(f, "\tsize_t len;\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tint fd;\n");
+		fprintf(f, "\tsize_t bufsz; /* number of bytes allocated after this struct */\n");
+		fprintf(f, "};\n");
+		fprintf(f, "\n");
+	}
 
 	fprintf(f, "const char *%sname(enum %stoken t);\n", prefix.api, prefix.api);
 	fprintf(f, "const char *%sexample(enum %stoken (*z)(struct %slx *), enum %stoken t);\n",
@@ -169,22 +177,36 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "enum %stoken %snext(struct %slx *lx);\n", prefix.api, prefix.api, prefix.lx);
 	fprintf(f, "\n");
 
-	fprintf(f, "int %sfgetc(struct %slx *lx);\n", prefix.api, prefix.lx); /* TODO: stdio only */
-	fprintf(f, "int %ssgetc(struct %slx *lx);\n", prefix.api, prefix.lx);
-	fprintf(f, "int %sagetc(struct %slx *lx);\n", prefix.api, prefix.lx);
-	fprintf(f, "int %sdgetc(struct %slx *lx);\n", prefix.api, prefix.lx);
-	fprintf(f, "\n");
+	if (api_tokbuf & API_FGETC) {
+		fprintf(f, "int %sfgetc(struct %slx *lx);\n", prefix.api, prefix.lx); /* TODO: stdio only */
+	}
+	if (api_tokbuf & API_SGETC) {
+		fprintf(f, "int %ssgetc(struct %slx *lx);\n", prefix.api, prefix.lx);
+	}
+	if (api_tokbuf & API_AGETC) {
+		fprintf(f, "int %sagetc(struct %slx *lx);\n", prefix.api, prefix.lx);
+	}
+	if (api_tokbuf & API_FDGETC) {
+		fprintf(f, "int %sdgetc(struct %slx *lx);\n", prefix.api, prefix.lx);
+	}
+	if (api_tokbuf) {
+		fprintf(f, "\n");
+	}
 
-	fprintf(f, "int  %sdynpush(struct %slx *lx, char c);\n", prefix.api, prefix.lx);
-	fprintf(f, "void %sdynpop(struct %slx *lx);\n", prefix.api, prefix.lx);
-	fprintf(f, "int  %sdynclear(struct %slx *lx);\n", prefix.api, prefix.lx);
-	fprintf(f, "void %sdynfree(struct %slx *lx);\n", prefix.api, prefix.lx);
-	fprintf(f, "\n");
+	if (api_tokbuf & API_DYNBUF) {
+		fprintf(f, "int  %sdynpush(struct %slx *lx, char c);\n", prefix.api, prefix.lx);
+		fprintf(f, "void %sdynpop(struct %slx *lx);\n", prefix.api, prefix.lx);
+		fprintf(f, "int  %sdynclear(struct %slx *lx);\n", prefix.api, prefix.lx);
+		fprintf(f, "void %sdynfree(struct %slx *lx);\n", prefix.api, prefix.lx);
+		fprintf(f, "\n");
+	}
 
-	fprintf(f, "int  %sfixedpush(struct %slx *lx, char c);\n", prefix.api, prefix.lx);
-	fprintf(f, "void %sfixedpop(struct %slx *lx);\n", prefix.api, prefix.lx);
-	fprintf(f, "int  %sfixedclear(struct %slx *lx);\n", prefix.api, prefix.lx);
-	fprintf(f, "\n");
+	if (api_tokbuf & API_FIXEDBUF) {
+		fprintf(f, "int  %sfixedpush(struct %slx *lx, char c);\n", prefix.api, prefix.lx);
+		fprintf(f, "void %sfixedpop(struct %slx *lx);\n", prefix.api, prefix.lx);
+		fprintf(f, "int  %sfixedclear(struct %slx *lx);\n", prefix.api, prefix.lx);
+		fprintf(f, "\n");
+	}
 
 	fprintf(f, "#endif\n");
 	fprintf(f, "\n");

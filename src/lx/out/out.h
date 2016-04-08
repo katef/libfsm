@@ -15,6 +15,21 @@ struct prefix {
 
 extern struct prefix prefix;
 
+enum api_tokbuf {
+	API_DYNBUF   = 1 << 0,
+	API_FIXEDBUF = 1 << 1
+};
+
+enum api_getc {
+	API_FGETC  = 1 << 0,
+	API_SGETC  = 1 << 1,
+	API_AGETC  = 1 << 2,
+	API_FDGETC = 1 << 3
+};
+
+enum api_tokbuf api_tokbuf;
+enum api_getc   api_getc;
+
 void
 lx_out_c(const struct ast *ast, FILE *f);
 
