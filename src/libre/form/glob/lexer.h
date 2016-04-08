@@ -72,32 +72,6 @@ struct lx_dynbuf {
 	char *a;
 };
 
-/* fixed-size token buffer */
-struct lx_fixedbuf {
-	char *p;
-	size_t len;
-#ifdef LX_FIXED_SIZE
-	char a[LX_FIXED_SIZE];
-#else
-	char *a; /* could be flexible member */
-#endif
-};
-
-/* opaque for lx_glob_agetc */
-struct lx_arr {
-	char *p;
-	size_t len;
-};
-
-/* opaque for lx_glob_fdgetc */
-struct lx_fd {
-	char *p;
-	size_t len;
-
-	int fd;
-	size_t bufsz; /* number of bytes allocated after this struct */
-};
-
 const char *lx_glob_name(enum lx_glob_token t);
 const char *lx_glob_example(enum lx_glob_token (*z)(struct lx_glob_lx *), enum lx_glob_token t);
 
@@ -105,18 +79,11 @@ void lx_glob_init(struct lx_glob_lx *lx);
 enum lx_glob_token lx_glob_next(struct lx_glob_lx *lx);
 
 int lx_glob_fgetc(struct lx_glob_lx *lx);
-int lx_glob_sgetc(struct lx_glob_lx *lx);
-int lx_glob_agetc(struct lx_glob_lx *lx);
-int lx_glob_dgetc(struct lx_glob_lx *lx);
 
 int  lx_glob_dynpush(struct lx_glob_lx *lx, char c);
 void lx_glob_dynpop(struct lx_glob_lx *lx);
 int  lx_glob_dynclear(struct lx_glob_lx *lx);
 void lx_glob_dynfree(struct lx_glob_lx *lx);
-
-int  lx_glob_fixedpush(struct lx_glob_lx *lx, char c);
-void lx_glob_fixedpop(struct lx_glob_lx *lx);
-int  lx_glob_fixedclear(struct lx_glob_lx *lx);
 
 #endif
 

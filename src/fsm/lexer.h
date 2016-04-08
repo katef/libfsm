@@ -81,32 +81,6 @@ struct lx_dynbuf {
 	char *a;
 };
 
-/* fixed-size token buffer */
-struct lx_fixedbuf {
-	char *p;
-	size_t len;
-#ifdef LX_FIXED_SIZE
-	char a[LX_FIXED_SIZE];
-#else
-	char *a; /* could be flexible member */
-#endif
-};
-
-/* opaque for lx_agetc */
-struct lx_arr {
-	char *p;
-	size_t len;
-};
-
-/* opaque for lx_fdgetc */
-struct lx_fd {
-	char *p;
-	size_t len;
-
-	int fd;
-	size_t bufsz; /* number of bytes allocated after this struct */
-};
-
 const char *lx_name(enum lx_token t);
 const char *lx_example(enum lx_token (*z)(struct lx *), enum lx_token t);
 
@@ -114,18 +88,11 @@ void lx_init(struct lx *lx);
 enum lx_token lx_next(struct lx *lx);
 
 int lx_fgetc(struct lx *lx);
-int lx_sgetc(struct lx *lx);
-int lx_agetc(struct lx *lx);
-int lx_dgetc(struct lx *lx);
 
 int  lx_dynpush(struct lx *lx, char c);
 void lx_dynpop(struct lx *lx);
 int  lx_dynclear(struct lx *lx);
 void lx_dynfree(struct lx *lx);
-
-int  lx_fixedpush(struct lx *lx, char c);
-void lx_fixedpop(struct lx *lx);
-int  lx_fixedclear(struct lx *lx);
 
 #endif
 

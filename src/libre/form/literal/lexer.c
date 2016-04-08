@@ -5,9 +5,6 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include <unistd.h>
-#include <fcntl.h>
-
 #include LX_HEADER
 
 static enum lx_literal_token z1(struct lx_literal_lx *lx);
@@ -68,77 +65,6 @@ lx_literal_fgetc(struct lx_literal_lx *lx)
 	assert(lx->opaque != NULL);
 
 	return fgetc(lx->opaque);
-}
-
-int
-lx_literal_sgetc(struct lx_literal_lx *lx)
-{
-	char *s;
-
-	assert(lx != NULL);
-	assert(lx->opaque != NULL);
-
-	s = lx->opaque;
-	if (*s == '\0') {
-		return EOF;
-	}
-
-	return lx->opaque = s + 1, *s;
-}
-
-int
-lx_literal_agetc(struct lx_literal_lx *lx)
-{
-	struct lx_arr *a;
-
-	assert(lx != NULL);
-	assert(lx->opaque != NULL);
-
-	a = lx->opaque;
-
-	assert(a != NULL);
-	assert(a->p != NULL);
-
-	if (a->len == 0) {
-		return EOF;
-	}
-
-	return a->len--, *a->p++;
-}
-
-int
-lx_literal_dgetc(struct lx_literal_lx *lx)
-{
-	struct lx_fd *d;
-
-	assert(lx != NULL);
-	assert(lx->opaque != NULL);
-
-	d = lx->opaque;
-	assert(d->fd != -1);
-	assert(d->p != NULL);
-
-	if (d->len == 0) {
-		ssize_t r;
-
-		assert((fcntl(d->fd, F_GETFL) & O_NONBLOCK) == 0);
-
-		d->p = (char *) d + sizeof *d;
-
-		r = read(d->fd, d->p, d->bufsz);
-		if (r == -1) {
-			assert(errno != EAGAIN);
-			return EOF;
-		}
-
-		if (r == 0) {
-			return EOF;
-		}
-
-		d->len = r;
-	}
-
-	return d->len--, *d->p++;
 }
 
 int
@@ -250,68 +176,6 @@ lx_literal_dynfree(struct lx_literal_lx *lx)
 
 	free(t->a);
 }
-int
-lx_literal_fixedpush(struct lx_literal_lx *lx, char c)
-{
-	struct lx_fixedbuf *t;
-
-	assert(lx != NULL);
-	assert(c != EOF);
-
-	t = lx->buf;
-
-	assert(t != NULL);
-	assert(t->p != NULL);
-	assert(t->a != NULL);
-
-	if (t->p == t->a + t->len) {
-		errno = ENOMEM;
-		return -1;
-	}
-
-	*t->p++ = c;
-
-	return 0;
-}
-
-void
-lx_literal_fixedpop(struct lx_literal_lx *lx)
-{
-	struct lx_fixedbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
-
-	assert(t != NULL);
-	assert(t->a != NULL);
-	assert(t->p >= t->a);
-
-	if (t->p == t->a) {
-		return;
-	}
-
-	t->p--;
-}
-
-int
-lx_literal_fixedclear(struct lx_literal_lx *lx)
-{
-	struct lx_fixedbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
-
-	assert(t != NULL);
-	assert(t->p != NULL);
-	assert(t->a != NULL);
-
-	t->p = t->a;
-
-	return 0;
-}
-
 static enum lx_literal_token
 z1(struct lx_literal_lx *lx)
 {
