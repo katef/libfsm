@@ -100,7 +100,7 @@ lang_tokbuf(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static enum api_tokbuf
+static enum api_getc
 lang_getc(const char *name)
 {
 	size_t i;
