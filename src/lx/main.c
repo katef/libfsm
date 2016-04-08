@@ -31,7 +31,7 @@
 static
 void usage(void)
 {
-	printf("usage: lx [-h] [-n] [-l <language>] [-pt <prefix>]\n");
+	printf("usage: lx [-h] [-n] [-b <tokbuf>] [-c <getc>] [-l <language>] [-pt <prefix>]\n");
 }
 
 static enum lx_out
