@@ -15,7 +15,7 @@ LEXER  += src/libre/form/${form}/lexer.lx
 PARSER += src/libre/form/${form}/parser.sid
 
 .for lexer in ${LEXER:Msrc/libre/form/${form}/lexer.lx}
-LX_CFLAGS_${lexer} += -p lx_${form}_
+LX_CFLAGS_${lexer} += -p lx_${form}_ -b dyn
 .endfor
 
 .for src in ${SRC:Msrc/libre/form/${form}/lexer.c}

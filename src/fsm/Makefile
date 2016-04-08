@@ -17,6 +17,8 @@ DFLAGS_${src} += -D LX_HEADER='"lexer.h"'
 LEXER  += src/fsm/lexer.lx
 PARSER += src/fsm/parser.sid
 
+LX_CFLAGS_src/fsm/lexer.lx += -b dyn -c fgetc
+
 PROG += fsm
 
 .for src in ${SRC:Msrc/lx/parser.c}
