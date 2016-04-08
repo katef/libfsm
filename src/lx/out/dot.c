@@ -208,7 +208,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		struct fsm_outoptions o = { 0 };
 		char prefix[128];
 
-		snprintf(prefix, sizeof prefix, "z%u", zindexof(ast, z));
+		(void) sprintf(prefix, "z%u", zindexof(ast, z));
 
 		o.anonymous_states  = anonymous_states;
 		o.consolidate_edges = 1;
