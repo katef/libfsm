@@ -745,8 +745,9 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 	{
 		struct fsm_state *s;
+		int has_skips;
 
-		fprintf(f, "\t\tswitch (state) {\n");
+		has_skips = 0;
 
 		for (s = z->fsm->sl; s != NULL; s = s->next) {
 			int r;
@@ -756,29 +757,56 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 				return -1;
 			}
 
-			if (!r) {
-				continue;
+			if (r) {
+				has_skips = 1;
+				break;
+			}
+		}
+
+		/*
+		 * An optimisation to avoid pushing to the token buffer, where all
+		 * states reachable henceforth skip, rather than emitting a token.
+		 */
+		if (has_skips) {
+			fprintf(f, "\t\tswitch (state) {\n");
+
+			for (s = z->fsm->sl; s != NULL; s = s->next) {
+				int r;
+
+				r = fsm_reachable(z->fsm, s, skip);
+				if (r == -1) {
+					return -1;
+				}
+
+				if (!r) {
+					continue;
+				}
+
+				fprintf(f, "\t\tcase S%u:\n", indexof(z->fsm, s));
 			}
 
-			fprintf(f, "\t\tcase S%u:\n", indexof(z->fsm, s));
-		}
-
-		if (fsm_has(z->fsm, skip)) {
 			fprintf(f, "\t\t\tbreak;\n");
 			fprintf(f, "\n");
+
+			fprintf(f, "\t\tdefault:\n");
+			fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
+			fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, c)) {\n");
+			fprintf(f, "\t\t\t\t\treturn %sERROR;\n", prefix.tok);
+			fprintf(f, "\t\t\t\t}\n");
+			fprintf(f, "\t\t\t}\n");
+			fprintf(f, "\t\t\tbreak;\n");
+			fprintf(f, "\n");
+
+			fprintf(f, "\t\t}\n");
+			fprintf(f, "\n");
+		} else {
+			fprintf(f, "\t\tif (lx->push != NULL) {\n");
+			fprintf(f, "\t\t\tif (-1 == lx->push(lx, c)) {\n");
+			fprintf(f, "\t\t\t\treturn %sERROR;\n", prefix.tok);
+			fprintf(f, "\t\t\t}\n");
+			fprintf(f, "\t\t}\n");
+			fprintf(f, "\n");
 		}
-
-		fprintf(f, "\t\tdefault:\n");
-		fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
-		fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, c)) {\n");
-		fprintf(f, "\t\t\t\t\treturn %sERROR;\n", prefix.tok);
-		fprintf(f, "\t\t\t\t}\n");
-		fprintf(f, "\t\t\t}\n");
-		fprintf(f, "\t\t\tbreak;\n");
-		fprintf(f, "\n");
-
-		fprintf(f, "\t\t}\n");
-		fprintf(f, "\n");
 	}
 
 	{
