@@ -198,17 +198,10 @@ z1(struct lx_simple_lx *lx)
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
-		switch (state) {
-			break;
-
-		default:
-			if (lx->push != NULL) {
-				if (-1 == lx->push(lx, c)) {
-					return TOK_ERROR;
-				}
+		if (lx->push != NULL) {
+			if (-1 == lx->push(lx, c)) {
+				return TOK_ERROR;
 			}
-			break;
-
 		}
 
 		switch (state) {
@@ -287,17 +280,10 @@ z2(struct lx_simple_lx *lx)
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
-		switch (state) {
-			break;
-
-		default:
-			if (lx->push != NULL) {
-				if (-1 == lx->push(lx, c)) {
-					return TOK_ERROR;
-				}
+		if (lx->push != NULL) {
+			if (-1 == lx->push(lx, c)) {
+				return TOK_ERROR;
 			}
-			break;
-
 		}
 
 		switch (state) {
@@ -461,17 +447,10 @@ z3(struct lx_simple_lx *lx)
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
-		switch (state) {
-			break;
-
-		default:
-			if (lx->push != NULL) {
-				if (-1 == lx->push(lx, c)) {
-					return TOK_ERROR;
-				}
+		if (lx->push != NULL) {
+			if (-1 == lx->push(lx, c)) {
+				return TOK_ERROR;
 			}
-			break;
-
 		}
 
 		switch (state) {
