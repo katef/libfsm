@@ -464,7 +464,7 @@ z3(struct lx *lx)
 		}
 
 		switch (state) {
-		case S1: /* e.g. "'" */
+		case S1: /* e.g. "\'" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return lx->z = z5, TOK_STR;
 			}
@@ -528,7 +528,7 @@ z4(struct lx *lx)
 		}
 
 		switch (state) {
-		case S1: /* e.g. "\x0a" */
+		case S1: /* e.g. "\n" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return lx->z = z5, lx->z(lx);
 			}
@@ -674,7 +674,7 @@ z5(struct lx *lx)
 			default:  lx_ungetc(lx, c); return TOK_TOKEN;
 			}
 
-		case S4: /* e.g. "\x09" */
+		case S4: /* e.g. "\t" */
 			switch (c) {
 			case '\t':	          continue;
 			case '\n':	          continue;
@@ -761,7 +761,7 @@ z5(struct lx *lx)
 			default:  lx_ungetc(lx, c); return TOK_AND;
 			}
 
-		case S10: /* e.g. "'" */
+		case S10: /* e.g. "\'" */
 			switch (c) {
 			default:  lx_ungetc(lx, c); return lx->z = z3, lx->z(lx);
 			}
@@ -1096,7 +1096,7 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 	} else
 	if (z == z3) {
 		switch (t) {
-		case TOK_STR: return "'";
+		case TOK_STR: return "\'";
 		case TOK_CHAR: return "a";
 		default: goto error;
 		}
