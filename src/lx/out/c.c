@@ -125,7 +125,7 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	for (s = fsm->sl, i = 1; s != NULL; s = s->next, i++) {
+	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
 		if (s == state) {
 			return i;
 		}
@@ -144,7 +144,7 @@ zindexof(const struct ast *ast, const struct ast_zone *zone)
 	assert(ast != NULL);
 	assert(zone != NULL);
 
-	for (z = ast->zl, i = 1; z != NULL; z = z->next, i++) {
+	for (z = ast->zl, i = 0; z != NULL; z = z->next, i++) {
 		if (z == zone) {
 			return i;
 		}

@@ -25,7 +25,7 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	for (s = fsm->sl, i = 1; s != NULL; s = s->next, i++) {
+	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
 		if (s == state) {
 			return i;
 		}
