@@ -110,9 +110,6 @@ fsm_out_json(const struct fsm *fsm, FILE *f,
 
 			fprintf(f, "\t\t{\n");
 
-			fprintf(f, "\t\t\t\"id\":  \"s%u\",\n",
-				indexof(fsm, s));
-
 			fprintf(f, "\t\t\t\"end\": %s,\n",
 				fsm_isend(fsm, s) ? "true" : "false");
 
@@ -139,7 +136,7 @@ fsm_out_json(const struct fsm *fsm, FILE *f,
 
 					fprintf(f, ", ");
 
-					fprintf(f, "\"to\": \"s%u\"",
+					fprintf(f, "\"to\": %u",
 						indexof(fsm, e->state));
 
 					fprintf(f, "}%s\n", hasmore(s, e, i) ? "," : "");
@@ -162,7 +159,7 @@ fsm_out_json(const struct fsm *fsm, FILE *f,
 			return;
 		}
 
-		fprintf(f, "\t\"start\": \"s%u\"\n", indexof(fsm, start));
+		fprintf(f, "\t\"start\": %u\n", indexof(fsm, start));
 	}
 
 	fprintf(f, "}\n");
