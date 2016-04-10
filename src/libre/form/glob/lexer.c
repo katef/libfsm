@@ -7,7 +7,7 @@
 
 #include LX_HEADER
 
-static enum lx_glob_token z1(struct lx_glob_lx *lx);
+static enum lx_glob_token z0(struct lx_glob_lx *lx);
 
 static int
 lx_getc(struct lx_glob_lx *lx)
@@ -177,12 +177,12 @@ lx_glob_dynfree(struct lx_glob_lx *lx)
 	free(t->a);
 }
 static enum lx_glob_token
-z1(struct lx_glob_lx *lx)
+z0(struct lx_glob_lx *lx)
 {
 	int c;
 
 	enum {
-		S1, S2, S3, S4
+		S0, S1, S2, S3
 	} state;
 
 	assert(lx != NULL);
@@ -191,7 +191,7 @@ z1(struct lx_glob_lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S4;
+	state = S3;
 
 	lx->start = lx->end;
 
@@ -203,26 +203,26 @@ z1(struct lx_glob_lx *lx)
 		}
 
 		switch (state) {
-		case S1: /* e.g. "*" */
+		case S0: /* e.g. "*" */
 			switch (c) {
 			default:  lx_glob_ungetc(lx, c); return TOK_STAR;
 			}
 
-		case S2: /* e.g. "?" */
+		case S1: /* e.g. "?" */
 			switch (c) {
 			default:  lx_glob_ungetc(lx, c); return TOK_QMARK;
 			}
 
-		case S3: /* e.g. "a" */
+		case S2: /* e.g. "a" */
 			switch (c) {
 			default:  lx_glob_ungetc(lx, c); return TOK_CHAR;
 			}
 
-		case S4: /* start */
+		case S3: /* start */
 			switch (c) {
-			case '*': state = S1;      continue;
-			case '?': state = S2;      continue;
-			default:  state = S3;     continue;
+			case '*': state = S0;      continue;
+			case '?': state = S1;      continue;
+			default:  state = S2;     continue;
 			}
 		}
 	}
@@ -230,9 +230,9 @@ z1(struct lx_glob_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
-	case S1: return TOK_STAR;
-	case S2: return TOK_QMARK;
-	case S3: return TOK_CHAR;
+	case S0: return TOK_STAR;
+	case S1: return TOK_QMARK;
+	case S2: return TOK_CHAR;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }
@@ -256,7 +256,7 @@ lx_glob_example(enum lx_glob_token (*z)(struct lx_glob_lx *), enum lx_glob_token
 {
 	assert(z != NULL);
 
-	if (z == z1) {
+	if (z == z0) {
 		switch (t) {
 		case TOK_CHAR: return "a";
 		case TOK_QMARK: return "?";
@@ -300,7 +300,7 @@ lx_glob_next(struct lx_glob_lx *lx)
 	}
 
 	if (lx->z == NULL) {
-		lx->z = z1;
+		lx->z = z0;
 	}
 
 	t = lx->z(lx);

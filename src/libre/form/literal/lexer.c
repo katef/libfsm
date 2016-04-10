@@ -7,7 +7,7 @@
 
 #include LX_HEADER
 
-static enum lx_literal_token z1(struct lx_literal_lx *lx);
+static enum lx_literal_token z0(struct lx_literal_lx *lx);
 
 static int
 lx_getc(struct lx_literal_lx *lx)
@@ -177,12 +177,12 @@ lx_literal_dynfree(struct lx_literal_lx *lx)
 	free(t->a);
 }
 static enum lx_literal_token
-z1(struct lx_literal_lx *lx)
+z0(struct lx_literal_lx *lx)
 {
 	int c;
 
 	enum {
-		S1, S2
+		S0, S1
 	} state;
 
 	assert(lx != NULL);
@@ -191,7 +191,7 @@ z1(struct lx_literal_lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S2;
+	state = S1;
 
 	lx->start = lx->end;
 
@@ -203,14 +203,14 @@ z1(struct lx_literal_lx *lx)
 		}
 
 		switch (state) {
-		case S1: /* e.g. "a" */
+		case S0: /* e.g. "a" */
 			switch (c) {
 			default:  lx_literal_ungetc(lx, c); return TOK_CHAR;
 			}
 
-		case S2: /* start */
+		case S1: /* start */
 			switch (c) {
-			default:  state = S1;     continue;
+			default:  state = S0;     continue;
 			}
 		}
 	}
@@ -218,7 +218,7 @@ z1(struct lx_literal_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
-	case S1: return TOK_CHAR;
+	case S0: return TOK_CHAR;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }
@@ -240,7 +240,7 @@ lx_literal_example(enum lx_literal_token (*z)(struct lx_literal_lx *), enum lx_l
 {
 	assert(z != NULL);
 
-	if (z == z1) {
+	if (z == z0) {
 		switch (t) {
 		case TOK_CHAR: return "a";
 		default: goto error;
@@ -282,7 +282,7 @@ lx_literal_next(struct lx_literal_lx *lx)
 	}
 
 	if (lx->z == NULL) {
-		lx->z = z1;
+		lx->z = z0;
 	}
 
 	t = lx->z(lx);

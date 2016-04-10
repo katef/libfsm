@@ -7,9 +7,9 @@
 
 #include LX_HEADER
 
+static enum lx_simple_token z0(struct lx_simple_lx *lx);
 static enum lx_simple_token z1(struct lx_simple_lx *lx);
 static enum lx_simple_token z2(struct lx_simple_lx *lx);
-static enum lx_simple_token z3(struct lx_simple_lx *lx);
 
 static int
 lx_getc(struct lx_simple_lx *lx)
@@ -179,12 +179,12 @@ lx_simple_dynfree(struct lx_simple_lx *lx)
 	free(t->a);
 }
 static enum lx_simple_token
-z1(struct lx_simple_lx *lx)
+z0(struct lx_simple_lx *lx)
 {
 	int c;
 
 	enum {
-		S1, S2, S3, S4
+		S0, S1, S2, S3
 	} state;
 
 	assert(lx != NULL);
@@ -193,7 +193,7 @@ z1(struct lx_simple_lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S4;
+	state = S3;
 
 	lx->start = lx->end;
 
@@ -205,12 +205,12 @@ z1(struct lx_simple_lx *lx)
 		}
 
 		switch (state) {
-		case S1: /* e.g. "," */
+		case S0: /* e.g. "," */
 			switch (c) {
 			default:  lx_simple_ungetc(lx, c); return TOK_SEP;
 			}
 
-		case S2: /* e.g. "0" */
+		case S1: /* e.g. "0" */
 			switch (c) {
 			case '0':	          continue;
 			case '1':	          continue;
@@ -225,25 +225,25 @@ z1(struct lx_simple_lx *lx)
 			default:  lx_simple_ungetc(lx, c); return TOK_COUNT;
 			}
 
-		case S3: /* e.g. "}" */
+		case S2: /* e.g. "}" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return lx->z = z3, TOK_CLOSECOUNT;
+			default:  lx_simple_ungetc(lx, c); return lx->z = z2, TOK_CLOSECOUNT;
 			}
 
-		case S4: /* start */
+		case S3: /* start */
 			switch (c) {
-			case ',': state = S1;      continue;
-			case '0': state = S2;      continue;
-			case '1': state = S2;      continue;
-			case '2': state = S2;      continue;
-			case '3': state = S2;      continue;
-			case '4': state = S2;      continue;
-			case '5': state = S2;      continue;
-			case '6': state = S2;      continue;
-			case '7': state = S2;      continue;
-			case '8': state = S2;      continue;
-			case '9': state = S2;      continue;
-			case '}': state = S3;      continue;
+			case ',': state = S0;      continue;
+			case '0': state = S1;      continue;
+			case '1': state = S1;      continue;
+			case '2': state = S1;      continue;
+			case '3': state = S1;      continue;
+			case '4': state = S1;      continue;
+			case '5': state = S1;      continue;
+			case '6': state = S1;      continue;
+			case '7': state = S1;      continue;
+			case '8': state = S1;      continue;
+			case '9': state = S1;      continue;
+			case '}': state = S2;      continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 		}
@@ -252,9 +252,176 @@ z1(struct lx_simple_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
-	case S1: return TOK_SEP;
-	case S2: return TOK_COUNT;
-	case S3: return TOK_CLOSECOUNT;
+	case S0: return TOK_SEP;
+	case S1: return TOK_COUNT;
+	case S2: return TOK_CLOSECOUNT;
+	default: errno = EINVAL; return TOK_ERROR;
+	}
+}
+
+static enum lx_simple_token
+z1(struct lx_simple_lx *lx)
+{
+	int c;
+
+	enum {
+		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9
+		
+	} state;
+
+	assert(lx != NULL);
+
+	if (lx->clear != NULL) {
+		lx->clear(lx);
+	}
+
+	state = S9;
+
+	lx->start = lx->end;
+
+	while (c = lx_getc(lx), c != EOF) {
+		if (lx->push != NULL) {
+			if (-1 == lx->push(lx, c)) {
+				return TOK_ERROR;
+			}
+		}
+
+		switch (state) {
+		case S0: /* e.g. "\\xa" */
+			switch (c) {
+			case '0':	          continue;
+			case '1':	          continue;
+			case '2':	          continue;
+			case '3':	          continue;
+			case '4':	          continue;
+			case '5':	          continue;
+			case '6':	          continue;
+			case '7':	          continue;
+			case '8':	          continue;
+			case '9':	          continue;
+			case 'A':	          continue;
+			case 'B':	          continue;
+			case 'C':	          continue;
+			case 'D':	          continue;
+			case 'E':	          continue;
+			case 'F':	          continue;
+			case 'a':	          continue;
+			case 'b':	          continue;
+			case 'c':	          continue;
+			case 'd':	          continue;
+			case 'e':	          continue;
+			case 'f':	          continue;
+			default:  lx_simple_ungetc(lx, c); return TOK_HEX;
+			}
+
+		case S1: /* e.g. "\\x" */
+			switch (c) {
+			case '0': state = S0;      continue;
+			case '1': state = S0;      continue;
+			case '2': state = S0;      continue;
+			case '3': state = S0;      continue;
+			case '4': state = S0;      continue;
+			case '5': state = S0;      continue;
+			case '6': state = S0;      continue;
+			case '7': state = S0;      continue;
+			case '8': state = S0;      continue;
+			case '9': state = S0;      continue;
+			case 'A': state = S0;      continue;
+			case 'B': state = S0;      continue;
+			case 'C': state = S0;      continue;
+			case 'D': state = S0;      continue;
+			case 'E': state = S0;      continue;
+			case 'F': state = S0;      continue;
+			case 'a': state = S0;      continue;
+			case 'b': state = S0;      continue;
+			case 'c': state = S0;      continue;
+			case 'd': state = S0;      continue;
+			case 'e': state = S0;      continue;
+			case 'f': state = S0;      continue;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+
+		case S2: /* e.g. "\\0" */
+			switch (c) {
+			case '0':	          continue;
+			case '1':	          continue;
+			case '2':	          continue;
+			case '3':	          continue;
+			case '4':	          continue;
+			case '5':	          continue;
+			case '6':	          continue;
+			case '7':	          continue;
+			default:  lx_simple_ungetc(lx, c); return TOK_OCT;
+			}
+
+		case S3: /* e.g. "\\f" */
+			switch (c) {
+			default:  lx_simple_ungetc(lx, c); return TOK_ESC;
+			}
+
+		case S4: /* e.g. "-" */
+			switch (c) {
+			default:  lx_simple_ungetc(lx, c); return TOK_RANGE;
+			}
+
+		case S5: /* e.g. "\\" */
+			switch (c) {
+			case '-': state = S3;      continue;
+			case '0': state = S2;      continue;
+			case '1': state = S2;      continue;
+			case '2': state = S2;      continue;
+			case '3': state = S2;      continue;
+			case '4': state = S2;      continue;
+			case '5': state = S2;      continue;
+			case '6': state = S2;      continue;
+			case '7': state = S2;      continue;
+			case '\\': state = S3;      continue;
+			case '^': state = S3;      continue;
+			case 'f': state = S3;      continue;
+			case 'n': state = S3;      continue;
+			case 'r': state = S3;      continue;
+			case 't': state = S3;      continue;
+			case 'v': state = S3;      continue;
+			case 'x': state = S1;      continue;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+
+		case S6: /* e.g. "]" */
+			switch (c) {
+			default:  lx_simple_ungetc(lx, c); return lx->z = z2, TOK_CLOSEGROUP;
+			}
+
+		case S7: /* e.g. "^" */
+			switch (c) {
+			default:  lx_simple_ungetc(lx, c); return TOK_INVERT;
+			}
+
+		case S8: /* e.g. "a" */
+			switch (c) {
+			default:  lx_simple_ungetc(lx, c); return TOK_CHAR;
+			}
+
+		case S9: /* start */
+			switch (c) {
+			case '-': state = S4;      continue;
+			case '\\': state = S5;      continue;
+			case ']': state = S6;      continue;
+			case '^': state = S7;      continue;
+			default:  state = S8;     continue;
+			}
+		}
+	}
+
+	lx->lgetc = NULL;
+
+	switch (state) {
+	case S0: return TOK_HEX;
+	case S2: return TOK_OCT;
+	case S3: return TOK_ESC;
+	case S4: return TOK_RANGE;
+	case S6: return TOK_CLOSEGROUP;
+	case S7: return TOK_INVERT;
+	case S8: return TOK_CHAR;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }
@@ -265,8 +432,8 @@ z2(struct lx_simple_lx *lx)
 	int c;
 
 	enum {
-		S1, S2, S3, S4, S5, S6, S7, S8, S9, S10
-		
+		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
+		S10, S11, S12, S13, S14, S15, S16, S17
 	} state;
 
 	assert(lx != NULL);
@@ -275,7 +442,7 @@ z2(struct lx_simple_lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S10;
+	state = S17;
 
 	lx->start = lx->end;
 
@@ -287,7 +454,7 @@ z2(struct lx_simple_lx *lx)
 		}
 
 		switch (state) {
-		case S1: /* e.g. "\\xa" */
+		case S0: /* e.g. "\\xa" */
 			switch (c) {
 			case '0':	          continue;
 			case '1':	          continue;
@@ -314,34 +481,34 @@ z2(struct lx_simple_lx *lx)
 			default:  lx_simple_ungetc(lx, c); return TOK_HEX;
 			}
 
-		case S2: /* e.g. "\\x" */
+		case S1: /* e.g. "\\x" */
 			switch (c) {
-			case '0': state = S1;      continue;
-			case '1': state = S1;      continue;
-			case '2': state = S1;      continue;
-			case '3': state = S1;      continue;
-			case '4': state = S1;      continue;
-			case '5': state = S1;      continue;
-			case '6': state = S1;      continue;
-			case '7': state = S1;      continue;
-			case '8': state = S1;      continue;
-			case '9': state = S1;      continue;
-			case 'A': state = S1;      continue;
-			case 'B': state = S1;      continue;
-			case 'C': state = S1;      continue;
-			case 'D': state = S1;      continue;
-			case 'E': state = S1;      continue;
-			case 'F': state = S1;      continue;
-			case 'a': state = S1;      continue;
-			case 'b': state = S1;      continue;
-			case 'c': state = S1;      continue;
-			case 'd': state = S1;      continue;
-			case 'e': state = S1;      continue;
-			case 'f': state = S1;      continue;
+			case '0': state = S0;      continue;
+			case '1': state = S0;      continue;
+			case '2': state = S0;      continue;
+			case '3': state = S0;      continue;
+			case '4': state = S0;      continue;
+			case '5': state = S0;      continue;
+			case '6': state = S0;      continue;
+			case '7': state = S0;      continue;
+			case '8': state = S0;      continue;
+			case '9': state = S0;      continue;
+			case 'A': state = S0;      continue;
+			case 'B': state = S0;      continue;
+			case 'C': state = S0;      continue;
+			case 'D': state = S0;      continue;
+			case 'E': state = S0;      continue;
+			case 'F': state = S0;      continue;
+			case 'a': state = S0;      continue;
+			case 'b': state = S0;      continue;
+			case 'c': state = S0;      continue;
+			case 'd': state = S0;      continue;
+			case 'e': state = S0;      continue;
+			case 'f': state = S0;      continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
-		case S3: /* e.g. "\\0" */
+		case S2: /* e.g. "\\0" */
 			switch (c) {
 			case '0':	          continue;
 			case '1':	          continue;
@@ -354,284 +521,117 @@ z2(struct lx_simple_lx *lx)
 			default:  lx_simple_ungetc(lx, c); return TOK_OCT;
 			}
 
-		case S4: /* e.g. "\\f" */
+		case S3: /* e.g. "\\f" */
 			switch (c) {
 			default:  lx_simple_ungetc(lx, c); return TOK_ESC;
 			}
 
-		case S5: /* e.g. "-" */
-			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_RANGE;
-			}
-
-		case S6: /* e.g. "\\" */
-			switch (c) {
-			case '-': state = S4;      continue;
-			case '0': state = S3;      continue;
-			case '1': state = S3;      continue;
-			case '2': state = S3;      continue;
-			case '3': state = S3;      continue;
-			case '4': state = S3;      continue;
-			case '5': state = S3;      continue;
-			case '6': state = S3;      continue;
-			case '7': state = S3;      continue;
-			case '\\': state = S4;      continue;
-			case '^': state = S4;      continue;
-			case 'f': state = S4;      continue;
-			case 'n': state = S4;      continue;
-			case 'r': state = S4;      continue;
-			case 't': state = S4;      continue;
-			case 'v': state = S4;      continue;
-			case 'x': state = S2;      continue;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-
-		case S7: /* e.g. "]" */
-			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return lx->z = z3, TOK_CLOSEGROUP;
-			}
-
-		case S8: /* e.g. "^" */
-			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_INVERT;
-			}
-
-		case S9: /* e.g. "a" */
-			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_CHAR;
-			}
-
-		case S10: /* start */
-			switch (c) {
-			case '-': state = S5;      continue;
-			case '\\': state = S6;      continue;
-			case ']': state = S7;      continue;
-			case '^': state = S8;      continue;
-			default:  state = S9;     continue;
-			}
-		}
-	}
-
-	lx->lgetc = NULL;
-
-	switch (state) {
-	case S1: return TOK_HEX;
-	case S3: return TOK_OCT;
-	case S4: return TOK_ESC;
-	case S5: return TOK_RANGE;
-	case S7: return TOK_CLOSEGROUP;
-	case S8: return TOK_INVERT;
-	case S9: return TOK_CHAR;
-	default: errno = EINVAL; return TOK_ERROR;
-	}
-}
-
-static enum lx_simple_token
-z3(struct lx_simple_lx *lx)
-{
-	int c;
-
-	enum {
-		S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, 
-		S11, S12, S13, S14, S15, S16, S17, S18
-	} state;
-
-	assert(lx != NULL);
-
-	if (lx->clear != NULL) {
-		lx->clear(lx);
-	}
-
-	state = S18;
-
-	lx->start = lx->end;
-
-	while (c = lx_getc(lx), c != EOF) {
-		if (lx->push != NULL) {
-			if (-1 == lx->push(lx, c)) {
-				return TOK_ERROR;
-			}
-		}
-
-		switch (state) {
-		case S1: /* e.g. "\\xa" */
-			switch (c) {
-			case '0':	          continue;
-			case '1':	          continue;
-			case '2':	          continue;
-			case '3':	          continue;
-			case '4':	          continue;
-			case '5':	          continue;
-			case '6':	          continue;
-			case '7':	          continue;
-			case '8':	          continue;
-			case '9':	          continue;
-			case 'A':	          continue;
-			case 'B':	          continue;
-			case 'C':	          continue;
-			case 'D':	          continue;
-			case 'E':	          continue;
-			case 'F':	          continue;
-			case 'a':	          continue;
-			case 'b':	          continue;
-			case 'c':	          continue;
-			case 'd':	          continue;
-			case 'e':	          continue;
-			case 'f':	          continue;
-			default:  lx_simple_ungetc(lx, c); return TOK_HEX;
-			}
-
-		case S2: /* e.g. "\\x" */
-			switch (c) {
-			case '0': state = S1;      continue;
-			case '1': state = S1;      continue;
-			case '2': state = S1;      continue;
-			case '3': state = S1;      continue;
-			case '4': state = S1;      continue;
-			case '5': state = S1;      continue;
-			case '6': state = S1;      continue;
-			case '7': state = S1;      continue;
-			case '8': state = S1;      continue;
-			case '9': state = S1;      continue;
-			case 'A': state = S1;      continue;
-			case 'B': state = S1;      continue;
-			case 'C': state = S1;      continue;
-			case 'D': state = S1;      continue;
-			case 'E': state = S1;      continue;
-			case 'F': state = S1;      continue;
-			case 'a': state = S1;      continue;
-			case 'b': state = S1;      continue;
-			case 'c': state = S1;      continue;
-			case 'd': state = S1;      continue;
-			case 'e': state = S1;      continue;
-			case 'f': state = S1;      continue;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-
-		case S3: /* e.g. "\\0" */
-			switch (c) {
-			case '0':	          continue;
-			case '1':	          continue;
-			case '2':	          continue;
-			case '3':	          continue;
-			case '4':	          continue;
-			case '5':	          continue;
-			case '6':	          continue;
-			case '7':	          continue;
-			default:  lx_simple_ungetc(lx, c); return TOK_OCT;
-			}
-
-		case S4: /* e.g. "\\f" */
-			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_ESC;
-			}
-
-		case S5: /* e.g. "$" */
+		case S4: /* e.g. "$" */
 			switch (c) {
 			default:  lx_simple_ungetc(lx, c); return TOK_END;
 			}
 
-		case S6: /* e.g. "(" */
+		case S5: /* e.g. "(" */
 			switch (c) {
 			default:  lx_simple_ungetc(lx, c); return TOK_OPENSUB;
 			}
 
-		case S7: /* e.g. ")" */
+		case S6: /* e.g. ")" */
 			switch (c) {
 			default:  lx_simple_ungetc(lx, c); return TOK_CLOSESUB;
 			}
 
-		case S8: /* e.g. "*" */
+		case S7: /* e.g. "*" */
 			switch (c) {
 			default:  lx_simple_ungetc(lx, c); return TOK_STAR;
 			}
 
-		case S9: /* e.g. "+" */
+		case S8: /* e.g. "+" */
 			switch (c) {
 			default:  lx_simple_ungetc(lx, c); return TOK_PLUS;
 			}
 
-		case S10: /* e.g. "." */
+		case S9: /* e.g. "." */
 			switch (c) {
 			default:  lx_simple_ungetc(lx, c); return TOK_DOT;
 			}
 
-		case S11: /* e.g. "?" */
+		case S10: /* e.g. "?" */
 			switch (c) {
 			default:  lx_simple_ungetc(lx, c); return TOK_QMARK;
 			}
 
-		case S12: /* e.g. "[" */
+		case S11: /* e.g. "[" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return lx->z = z2, TOK_OPENGROUP;
+			default:  lx_simple_ungetc(lx, c); return lx->z = z1, TOK_OPENGROUP;
 			}
 
-		case S13: /* e.g. "\\" */
+		case S12: /* e.g. "\\" */
 			switch (c) {
-			case '$': state = S4;      continue;
-			case '(': state = S4;      continue;
-			case ')': state = S4;      continue;
-			case '*': state = S4;      continue;
-			case '+': state = S4;      continue;
-			case '.': state = S4;      continue;
-			case '0': state = S3;      continue;
-			case '1': state = S3;      continue;
-			case '2': state = S3;      continue;
-			case '3': state = S3;      continue;
-			case '4': state = S3;      continue;
-			case '5': state = S3;      continue;
-			case '6': state = S3;      continue;
-			case '7': state = S3;      continue;
-			case '?': state = S4;      continue;
-			case '[': state = S4;      continue;
-			case '\\': state = S4;      continue;
-			case '^': state = S4;      continue;
-			case 'f': state = S4;      continue;
-			case 'n': state = S4;      continue;
-			case 'r': state = S4;      continue;
-			case 't': state = S4;      continue;
-			case 'v': state = S4;      continue;
-			case 'x': state = S2;      continue;
-			case '{': state = S4;      continue;
-			case '|': state = S4;      continue;
+			case '$': state = S3;      continue;
+			case '(': state = S3;      continue;
+			case ')': state = S3;      continue;
+			case '*': state = S3;      continue;
+			case '+': state = S3;      continue;
+			case '.': state = S3;      continue;
+			case '0': state = S2;      continue;
+			case '1': state = S2;      continue;
+			case '2': state = S2;      continue;
+			case '3': state = S2;      continue;
+			case '4': state = S2;      continue;
+			case '5': state = S2;      continue;
+			case '6': state = S2;      continue;
+			case '7': state = S2;      continue;
+			case '?': state = S3;      continue;
+			case '[': state = S3;      continue;
+			case '\\': state = S3;      continue;
+			case '^': state = S3;      continue;
+			case 'f': state = S3;      continue;
+			case 'n': state = S3;      continue;
+			case 'r': state = S3;      continue;
+			case 't': state = S3;      continue;
+			case 'v': state = S3;      continue;
+			case 'x': state = S1;      continue;
+			case '{': state = S3;      continue;
+			case '|': state = S3;      continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
-		case S14: /* e.g. "^" */
+		case S13: /* e.g. "^" */
 			switch (c) {
 			default:  lx_simple_ungetc(lx, c); return TOK_START;
 			}
 
-		case S15: /* e.g. "{" */
+		case S14: /* e.g. "{" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return lx->z = z1, TOK_OPENCOUNT;
+			default:  lx_simple_ungetc(lx, c); return lx->z = z0, TOK_OPENCOUNT;
 			}
 
-		case S16: /* e.g. "|" */
+		case S15: /* e.g. "|" */
 			switch (c) {
 			default:  lx_simple_ungetc(lx, c); return TOK_ALT;
 			}
 
-		case S17: /* e.g. "a" */
+		case S16: /* e.g. "a" */
 			switch (c) {
 			default:  lx_simple_ungetc(lx, c); return TOK_CHAR;
 			}
 
-		case S18: /* start */
+		case S17: /* start */
 			switch (c) {
-			case '$': state = S5;      continue;
-			case '(': state = S6;      continue;
-			case ')': state = S7;      continue;
-			case '*': state = S8;      continue;
-			case '+': state = S9;      continue;
-			case '.': state = S10;      continue;
-			case '?': state = S11;      continue;
-			case '[': state = S12;      continue;
-			case '\\': state = S13;      continue;
-			case '^': state = S14;      continue;
-			case '{': state = S15;      continue;
-			case '|': state = S16;      continue;
-			default:  state = S17;     continue;
+			case '$': state = S4;      continue;
+			case '(': state = S5;      continue;
+			case ')': state = S6;      continue;
+			case '*': state = S7;      continue;
+			case '+': state = S8;      continue;
+			case '.': state = S9;      continue;
+			case '?': state = S10;      continue;
+			case '[': state = S11;      continue;
+			case '\\': state = S12;      continue;
+			case '^': state = S13;      continue;
+			case '{': state = S14;      continue;
+			case '|': state = S15;      continue;
+			default:  state = S16;     continue;
 			}
 		}
 	}
@@ -639,21 +639,21 @@ z3(struct lx_simple_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
-	case S1: return TOK_HEX;
-	case S3: return TOK_OCT;
-	case S4: return TOK_ESC;
-	case S5: return TOK_END;
-	case S6: return TOK_OPENSUB;
-	case S7: return TOK_CLOSESUB;
-	case S8: return TOK_STAR;
-	case S9: return TOK_PLUS;
-	case S10: return TOK_DOT;
-	case S11: return TOK_QMARK;
-	case S12: return TOK_OPENGROUP;
-	case S14: return TOK_START;
-	case S15: return TOK_OPENCOUNT;
-	case S16: return TOK_ALT;
-	case S17: return TOK_CHAR;
+	case S0: return TOK_HEX;
+	case S2: return TOK_OCT;
+	case S3: return TOK_ESC;
+	case S4: return TOK_END;
+	case S5: return TOK_OPENSUB;
+	case S6: return TOK_CLOSESUB;
+	case S7: return TOK_STAR;
+	case S8: return TOK_PLUS;
+	case S9: return TOK_DOT;
+	case S10: return TOK_QMARK;
+	case S11: return TOK_OPENGROUP;
+	case S13: return TOK_START;
+	case S14: return TOK_OPENCOUNT;
+	case S15: return TOK_ALT;
+	case S16: return TOK_CHAR;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }
@@ -695,7 +695,7 @@ lx_simple_example(enum lx_simple_token (*z)(struct lx_simple_lx *), enum lx_simp
 {
 	assert(z != NULL);
 
-	if (z == z1) {
+	if (z == z0) {
 		switch (t) {
 		case TOK_CLOSECOUNT: return "}";
 		case TOK_COUNT: return "0";
@@ -703,7 +703,7 @@ lx_simple_example(enum lx_simple_token (*z)(struct lx_simple_lx *), enum lx_simp
 		default: goto error;
 		}
 	} else
-	if (z == z2) {
+	if (z == z1) {
 		switch (t) {
 		case TOK_CLOSEGROUP: return "]";
 		case TOK_RANGE: return "-";
@@ -715,7 +715,7 @@ lx_simple_example(enum lx_simple_token (*z)(struct lx_simple_lx *), enum lx_simp
 		default: goto error;
 		}
 	} else
-	if (z == z3) {
+	if (z == z2) {
 		switch (t) {
 		case TOK_OPENCOUNT: return "{";
 		case TOK_OPENGROUP: return "[";
@@ -771,7 +771,7 @@ lx_simple_next(struct lx_simple_lx *lx)
 	}
 
 	if (lx->z == NULL) {
-		lx->z = z3;
+		lx->z = z2;
 	}
 
 	t = lx->z(lx);
