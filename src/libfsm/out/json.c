@@ -31,41 +31,40 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	return 0;
 }
 
-static void
+static int
 escputc(int c, FILE *f)
 {
 	size_t i;
 
-	struct {
-		int in;
-		const char *out;
-	} esc[] = {
+	const struct {
+		int c;
+		const char *s;
+	} a[] = {
 		{ '\\', "\\\\" },
 		{ '\"', "\\\"" },
+		{ '/',  "\\/"  },
+
 		{ '\b', "\\b"  },
 		{ '\f', "\\f"  },
 		{ '\n', "\\n"  },
 		{ '\r', "\\r"  },
-		{ '\t', "\\t"  },
-		{ '/',  "\\/"  }
+		{ '\t', "\\t"  }
 	};
 
 	assert(c != FSM_EDGE_EPSILON);
 	assert(f != NULL);
 
-	if (!isprint(c)) {
-		fprintf(f, "\\u%4x", (unsigned char) c);
-		return;
-	}
-
-	for (i = 0; i < sizeof esc / sizeof *esc; i++) {
-		if (esc[i].in == c) {
-			fputs(esc[i].out, f);
-			return;
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (a[i].c == c) {
+			return fputs(a[i].s, f);
 		}
 	}
 
-	putc(c, f);
+	if (!isprint((unsigned char) c)) {
+		return fprintf(f, "\\u%04x", (unsigned char) c);
+	}
+
+	return putc(c, f);
 }
 
 /* XXX: horrible */

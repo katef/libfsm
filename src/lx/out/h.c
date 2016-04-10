@@ -11,7 +11,7 @@
 
 /* TODO: centralise */
 static void
-out_esctok(FILE *f, const char *s)
+esctok(FILE *f, const char *s)
 {
 	const char *p;
 
@@ -36,7 +36,7 @@ out_tokens(const struct ast *ast, FILE *f)
 	/* TODO: the token prefix needs to be configurable */
 	for (t = ast->tl; t != NULL; t = t->next) {
 		fprintf(f, "\t%s", prefix.tok);
-		out_esctok(f, t->s);
+		esctok(f, t->s);
 		fprintf(f, ",\n");
 	}
 

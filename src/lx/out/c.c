@@ -43,38 +43,67 @@ skip(const struct fsm *fsm, const struct fsm_state *state)
 }
 
 /* TODO: centralise */
-static void
-out_escstr(FILE *f, const char *s)
+static int
+escputc(int c, FILE *f)
+{
+	size_t i;
+
+	const struct {
+		int c;
+		const char *s;
+	} a[] = {
+		{ '\\', "\\\\" },
+		{ '\"', "\\\"" },
+		{ '\'', "\\\'" },
+
+		{ '\a', "\\a"  },
+		{ '\b', "\\b"  },
+		{ '\f', "\\f"  },
+		{ '\n', "\\n"  },
+		{ '\r', "\\r"  },
+		{ '\t', "\\t"  },
+		{ '\v', "\\v"  }
+	};
+
+	assert(c != FSM_EDGE_EPSILON);
+	assert(f != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (a[i].c == c) {
+			return fputs(a[i].s, f);
+		}
+	}
+
+	if (!isprint((unsigned char) c)) {
+		return fprintf(f, "\\%03o", (unsigned char) c);
+	}
+
+	return putc(c, f);
+}
+
+/* TODO: centralise, maybe with callback */
+static int
+escputs(FILE *f, const char *s)
 {
 	const char *p;
+	int r;
 
 	assert(f != NULL);
 	assert(s != NULL);
 
 	for (p = s; *p != '\0'; p++) {
-		if (!isprint((unsigned char) *p)) {
-			fprintf(f, "\\x%02x", *p);
-			continue;
-		}
-
-		switch (*p) {
-		case '\\': fprintf(f, "\\\\");   continue;
-		case '"':  fprintf(f, "\\\"");   continue;
-
-		case '\f': fprintf(f, "\\f");    continue;
-		case '\n': fprintf(f, "\\n");    continue;
-		case '\r': fprintf(f, "\\r");    continue;
-		case '\t': fprintf(f, "\\t");    continue;
-		case '\v': fprintf(f, "\\v");    continue;
-
-		default:   fprintf(f, "%c", *p); continue;
+		r = escputc(*p, f);
+		if (r < 0) {
+			return -1;
 		}
 	}
+
+	return 0;
 }
 
 /* TODO: centralise */
 static void
-out_esctok(FILE *f, const char *s)
+esctok(FILE *f, const char *s)
 {
 	const char *p;
 
@@ -123,33 +152,6 @@ zindexof(const struct ast *ast, const struct ast_zone *zone)
 
 	assert(!"unreached");
 	return 0;
-}
-
-static void
-escputc(char c, FILE *f)
-{
-	assert(f != NULL);
-
-	if (!isprint(c) && !isspace(c)) {
-		fprintf(f, "\\x%x", (unsigned char) c);
-		return;
-	}
-
-	switch (c) {
-	case '\\': fprintf(f, "\\\\"); return;
-	case '\"': fprintf(f, "\\\""); return;
-	case '\'': fprintf(f, "\\\'"); return;
-	case '\t': fprintf(f, "\\t");  return;
-	case '\n': fprintf(f, "\\n");  return;
-	case '\v': fprintf(f, "\\v");  return;
-	case '\f': fprintf(f, "\\f");  return;
-	case '\r': fprintf(f, "\\r");  return;
-
-		/* TODO: others */
-
-	default:
-		putc(c, f);
-	}
 }
 
 /* XXX: centralise */
@@ -319,7 +321,7 @@ singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		}
 		if (m->token != NULL) {
 			fprintf(f, "%s", prefix.tok);
-			out_esctok(f, m->token->s);
+			esctok(f, m->token->s);
 		} else {
 			fprintf(f, "lx->z(lx)");
 		}
@@ -830,7 +832,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 				}
 
 				fprintf(f, " /* e.g. \"");
-				out_escstr(f, buf);
+				escputs(f, buf);
 				fprintf(f, "%s\" */\n",
 					n >= (int) sizeof buf - 1 ? "..." : "");
 			}
@@ -878,7 +880,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			} else {
 				/* TODO: maybe make a printf-like little language to simplify this */
 				fprintf(f, "%s", prefix.tok);
-				out_esctok(f, m->token->s);
+				esctok(f, m->token->s);
 				fprintf(f, ";\n");
 			}
 		}
@@ -909,9 +911,9 @@ out_name(FILE *f, const struct ast *ast)
 
 	for (t = ast->tl; t != NULL; t = t->next) {
 		fprintf(f, "\tcase %s", prefix.tok);
-		out_esctok(f, t->s);
+		esctok(f, t->s);
 		fprintf(f, ": return \"");
-		out_esctok(f, t->s);
+		esctok(f, t->s);
 		fprintf(f, "\";\n");
 	}
 
@@ -970,9 +972,9 @@ out_example(FILE *f, const struct ast *ast)
 			}
 
 			fprintf(f, "\t\tcase %s", prefix.tok);
-			out_esctok(f, t->s);
+			esctok(f, t->s);
 			fprintf(f, ": return \"");
-			out_escstr(f, buf);
+			escputs(f, buf);
 			fprintf(f, "%s", n >= (int) sizeof buf - 1 ? "..." : "");
 			fprintf(f, "\";\n");
 		}

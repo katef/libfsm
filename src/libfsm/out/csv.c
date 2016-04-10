@@ -36,27 +36,31 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 static int
 escputc(int c, FILE *f)
 {
+	size_t i;
+
+	const struct {
+		int c;
+		const char *s;
+	} a[] = {
+		{ FSM_EDGE_EPSILON, "\xCE\xB5" }, /* epsilon, U03B5 UTF-8 */
+
+		{ '\"', "\\\"" }
+		/* TODO: others */
+	};
+
 	assert(f != NULL);
 
-	switch (c) {
-	case FSM_EDGE_EPSILON:
-		fprintf(f, "\xCE\xB5"); /* epsilon, U03B5 UTF-8 */
-		return 7;
-
-	case '\"':
-		fprintf(f, "\\\"");
-		return 2;
-
-	/* TODO: others */
-
-	default:
-		if (!isprint(c)) {
-			return printf("0x%02X", (unsigned char) c);
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (a[i].c == c) {
+			return fputs(a[i].s, f);
 		}
-
-		putc(c, f);
-		return 1;
 	}
+
+	if (!isprint((unsigned char) c)) {
+		return printf("0x%02X", (unsigned char) c);
+	}
+
+	return putc(c, f);
 }
 
 void
