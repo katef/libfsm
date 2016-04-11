@@ -228,11 +228,15 @@
 		assert(*e == '\0');
 
 		if (u > UCHAR_MAX || (u == ULONG_MAX && errno == ERANGE)) {
-			/* TODO: range check */
+			err(lex_state, "hex escape %s out of range: expected \\x0..\\x%x inclusive",
+				lex_state->buf.a, UCHAR_MAX);
+			exit(EXIT_FAILURE);
 		}
 
 		if (u == ULONG_MAX && errno != 0) {
-			/* TODO: range check */
+			err(lex_state, "%s: %s: expected \\x0..\\x%x inclusive",
+				lex_state->buf.a, strerror(errno), UCHAR_MAX);
+			exit(EXIT_FAILURE);
 		}
 
 		@c = (unsigned char) u;
