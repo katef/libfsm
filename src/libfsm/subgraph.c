@@ -122,7 +122,7 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 	/* TODO: does this traversal algorithim have a name? */
 	/* TODO: errors leave fsm in a questionable state */
 
-	while ((m = getnextnotdone(mappings)) != NULL) {
+	while (m = getnextnotdone(mappings), m != NULL) {
 		struct state_set *s;
 		int i;
 
