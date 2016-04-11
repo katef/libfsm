@@ -61,7 +61,7 @@ escputc(int c, FILE *f)
 	}
 
 	if (!isprint((unsigned char) c)) {
-		return fprintf(f, "&#x%X;", (unsigned char) c);
+		return fprintf(f, "\\%03o", (unsigned char) c); /* for humans */
 	}
 
 	return putc(c, f);
