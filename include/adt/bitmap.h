@@ -21,5 +21,8 @@ bm_next(const struct bm *bm, int i, int value);
 unsigned int
 bm_count(const struct bm *bm);
 
+void
+bm_invert(struct bm *bm);
+
 #endif
 

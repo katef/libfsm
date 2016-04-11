@@ -66,3 +66,15 @@ bm_count(const struct bm *bm)
 	return count;
 }
 
+void
+bm_invert(struct bm *bm)
+{
+	size_t n;
+
+	assert(bm != NULL);
+
+	for (n = 0; n < sizeof bm->map; n++) {
+		bm->map[n] = ~bm->map[n];
+	}
+}
+
