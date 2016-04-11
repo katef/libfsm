@@ -9,13 +9,15 @@
 
 /* BEGINNING OF HEADER */
 
-#line 80 "src/libre/parser.act"
+#line 82 "src/libre/parser.act"
 
 
 	#include <assert.h>
 	#include <limits.h>
 	#include <string.h>
 	#include <stdlib.h>
+	#include <stdarg.h>
+	#include <stdio.h>
 	#include <errno.h>
 
 	#include <fsm/fsm.h>
@@ -78,7 +80,67 @@
 	                              act_state->lex_tok = tok;                     } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
 
-#line 82 "src/libre/form/literal/parser.c"
+	static void
+	err(const struct lex_state *lex_state, const char *fmt, ...)
+	{
+		va_list ap;
+
+		assert(lex_state != NULL);
+
+		va_start(ap, fmt);
+		fprintf(stderr, "%u:%u: ",
+			lex_state->lx.start.line, lex_state->lx.start.col);
+		vfprintf(stderr, fmt, ap);
+		fprintf(stderr, "\n");
+		va_end(ap);
+	}
+
+	/* TODO: centralise */
+	/* XXX: escaping really depends on dialect */
+	static const char *
+	escchar(char *s, size_t sz, int c)
+	{
+		size_t i;
+
+		const struct {
+			int c;
+			const char *s;
+		} a[] = {
+			{ '\\', "\\\\" },
+
+			{ '^',  "\\^"  },
+			{ '-',  "\\-"  },
+			{ ']',  "\\]"  },
+			{ '[',  "\\["  },
+
+			{ '\f', "\\f"  },
+			{ '\n', "\\n"  },
+			{ '\r', "\\r"  },
+			{ '\t', "\\t"  },
+			{ '\v', "\\v"  }
+		};
+
+		assert(s != NULL);
+		assert(sz >= 5);
+
+		(void) sz;
+
+		for (i = 0; i < sizeof a / sizeof *a; i++) {
+			if (a[i].c == c) {
+				return a[i].s;
+			}
+		}
+
+		if (!isprint((unsigned char) c)) {
+			sprintf(s, "\\x%02X", (unsigned char) c);
+			return s;
+		}
+
+		sprintf(s, "%c", c);
+		return s;
+	}
+
+#line 144 "src/libre/form/literal/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -108,7 +170,7 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state)
 
 		/* BEGINNING OF ACTION: make-states */
 		{
-#line 229 "src/libre/parser.act"
+#line 291 "src/libre/parser.act"
 
 		assert(fsm != NULL);
 		/* TODO: assert fsm is empty */
@@ -123,7 +185,7 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state)
 
 		fsm_setend(fsm, (ZIy), 1);
 	
-#line 127 "src/libre/form/literal/parser.c"
+#line 189 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: make-states */
 		/* BEGINNING OF INLINE: 61 */
@@ -142,13 +204,13 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state)
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 324 "src/libre/parser.act"
+#line 394 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			goto ZL3;
 		}
 	
-#line 152 "src/libre/form/literal/parser.c"
+#line 214 "src/libre/form/literal/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -159,11 +221,11 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-atoms */
 				{
-#line 491 "src/libre/parser.act"
+#line 561 "src/libre/parser.act"
 
 		act_state->e = RE_EXATOMS;
 	
-#line 167 "src/libre/form/literal/parser.c"
+#line 229 "src/libre/form/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-atoms */
 			}
@@ -186,11 +248,11 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 503 "src/libre/parser.act"
+#line 573 "src/libre/parser.act"
 
 		act_state->e = RE_EXEOF;
 	
-#line 194 "src/libre/form/literal/parser.c"
+#line 256 "src/libre/form/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -217,14 +279,14 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 183 "src/libre/parser.act"
+#line 245 "src/libre/parser.act"
 
 		assert(lex_state->buf.a[0] != '\0');
 		assert(lex_state->buf.a[1] == '\0');
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 228 "src/libre/form/literal/parser.c"
+#line 290 "src/libre/form/literal/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -234,7 +296,7 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-literal */
 		{
-#line 341 "src/libre/parser.act"
+#line 411 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -245,17 +307,17 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 			goto ZL1;
 		}
 	
-#line 249 "src/libre/form/literal/parser.c"
+#line 311 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: add-literal */
 		/* BEGINNING OF ACTION: count-1 */
 		{
-#line 476 "src/libre/parser.act"
+#line 546 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (ZIy);
 	
-#line 259 "src/libre/form/literal/parser.c"
+#line 321 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: count-1 */
 	}
@@ -277,14 +339,14 @@ ZL2_list_Hof_Hliterals:;
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 317 "src/libre/parser.act"
+#line 387 "src/libre/parser.act"
 
 		(ZIz) = fsm_addstate(fsm);
 		if ((ZIz) == NULL) {
 			goto ZL1;
 		}
 	
-#line 288 "src/libre/form/literal/parser.c"
+#line 350 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hliterals_C_Cliteral (fsm, flags, lex_state, act_state, ZIx, ZIz);
@@ -303,13 +365,13 @@ ZL2_list_Hof_Hliterals:;
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 324 "src/libre/parser.act"
+#line 394 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIz), (ZIy))) {
 			goto ZL1;
 		}
 	
-#line 313 "src/libre/form/literal/parser.c"
+#line 375 "src/libre/form/literal/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -329,7 +391,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 596 "src/libre/parser.act"
+#line 666 "src/libre/parser.act"
 
 
 	static int
@@ -421,6 +483,6 @@ ZL1:;
 		return NULL;
 	}
 
-#line 425 "src/libre/form/literal/parser.c"
+#line 487 "src/libre/form/literal/parser.c"
 
 /* END OF FILE */
