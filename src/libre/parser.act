@@ -21,6 +21,8 @@
 	#include <limits.h>
 	#include <string.h>
 	#include <stdlib.h>
+	#include <stdarg.h>
+	#include <stdio.h>
 	#include <errno.h>
 
 	#include <fsm/fsm.h>
@@ -82,6 +84,21 @@
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
 	                              act_state->lex_tok = tok;                     } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
+
+	static void
+	err(const struct lex_state *lex_state, const char *fmt, ...)
+	{
+		va_list ap;
+
+		assert(lex_state != NULL);
+
+		va_start(ap, fmt);
+		fprintf(stderr, "%u:%u: ",
+			lex_state->lx.start.line, lex_state->lx.start.col);
+		vfprintf(stderr, fmt, ap);
+		fprintf(stderr, "\n");
+		va_end(ap);
+	}
 
 @}, @{
 
