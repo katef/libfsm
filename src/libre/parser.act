@@ -274,8 +274,26 @@
 	@};
 
 	COUNT: () -> (n :unsigned) = @{
-		@n = strtoul(lex_state->buf.a, NULL, 10);
-		/* TODO: range check */
+		unsigned long u;
+		char *e;
+
+		u = strtoul(lex_state->buf.a, NULL, 10);
+
+		assert(*e == '\0');
+
+		if (u < 1 || u > UINT_MAX || (u == ULONG_MAX && errno == ERANGE)) {
+			err(lex_state, "count %s out of range: expected 1..%u inclusive",
+				lex_state->buf.a, UINT_MAX);
+			exit(EXIT_FAILURE);
+		}
+
+		if (u == ULONG_MAX && errno != 0) {
+			err(lex_state, "%s: %s: expected 0..%u inclusive",
+				lex_state->buf.a, strerror(errno), UINT_MAX);
+			exit(EXIT_FAILURE);
+		}
+
+		@n = (unsigned int) u;
 	@};
 
 %actions%
@@ -457,12 +475,11 @@
 		struct fsm_state *a;
 		struct fsm_state *b;
 
-		if (@m == 0) {
-			@!;
-		}
+		assert(@m != 0);
 
 		if (@n < @m) {
-			@!;
+			err(lex_state, "negative count range {%u,%u}", @m, @n);
+			exit(EXIT_FAILURE);
 		}
 
 		b = @y;
