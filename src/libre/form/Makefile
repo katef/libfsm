@@ -28,6 +28,11 @@ CFLAGS_${src} += -D FORM='${form}'
 DFLAGS_${src} += -D FORM='${form}'
 .endfor
 
+.for src in ${SRC:Msrc/libre/form/${form}/parser.c}
+CFLAGS_${src} += -I src # XXX: for internal.h
+DFLAGS_${src} += -I src # XXX: for internal.h
+.endfor
+
 .for parser in ${PARSER:Msrc/libre/form/${form}/parser.sid}
 ACT_${parser} = src/libre/parser.act
 .endfor

@@ -25,6 +25,10 @@
 	#include <stdio.h>
 	#include <errno.h>
 
+	#include "libfsm/internal.h" /* XXX */
+
+	#include <adt/bitmap.h>
+
 	#include <fsm/fsm.h>
 
 	#include <re/re.h>
@@ -53,10 +57,10 @@
 
 	#include "../comp.h"
 
-	typedef char     t_char;
-	typedef unsigned t_unsigned;
-	typedef char *   t_grp;
-	typedef unsigned t_pred; /* TODO */
+	typedef char        t_char;
+	typedef unsigned    t_unsigned;
+	typedef struct bm * t_bm;
+	typedef unsigned    t_pred; /* TODO */
 
 	typedef struct fsm_state * t_fsm__state;
 
@@ -322,36 +326,32 @@
 	@};
 
 
-	<make-group>: () -> (g :grp) = @{
-		@g = calloc(UCHAR_MAX + 1, sizeof *@g);
+	<make-group>: () -> (g :bm) = @{
+		@g = calloc(sizeof *@g, 1);
 		if (@g == NULL) {
 			@!;
 		}
 	@};
 
-	<free-group>: (g :grp) -> () = @{
+	<free-group>: (g :bm) -> () = @{
 		assert(@g != NULL);
 
 		free(@g);
 	@};
 
-	<invert-group>: (g :grp) -> () = @{
-		int i;
-
+	<invert-group>: (g :bm) -> () = @{
 		assert(@g != NULL);
 
-		for (i = 0; i <= UCHAR_MAX; i++) {
-			@g[i] = !@g[i];
-		}
+		bm_invert(@g);
 	@};
 
-	<group-add-char>: (g :grp, c :char) -> () = @{
+	<group-add-char>: (g :bm, c :char) -> () = @{
 		assert(@g != NULL);
 
-		@g[(unsigned char) @c] = 1;
+		bm_set(@g, (unsigned char) @c);
 	@};
 
-	<group-add-range>: (g :grp, a :char, b :char) -> () = @{
+	<group-add-range>: (g :bm, a :char, b :char) -> () = @{
 		int i;
 
 		assert(@g != NULL);
@@ -365,21 +365,19 @@
 		}
 
 		for (i = (unsigned char) @a; i <= (unsigned char) @b; i++) {
-			@g[i] = 1;
+			bm_set(@g, i);
 		}
 	@};
 
-	<group-to-states>: (g :grp, x :fsm_state, y :fsm_state) -> () = @{
+	<group-to-states>: (g :bm, x :fsm_state, y :fsm_state) -> () = @{
 		int i;
 
 		assert(@g != NULL);
 
 		/* TODO: eventually libfsm will provide a neater mechanism here */
-		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (!@g[i]) {
-				continue;
-			}
 
+		i = -1;
+		while (i = (int) bm_next(@g, i, 1), i <= UCHAR_MAX) {
 			if (!fsm_addedge_literal(fsm, @x, @y, (char) i)) {
 				@!;
 			}

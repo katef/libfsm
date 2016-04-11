@@ -10,7 +10,7 @@
 	char;
 	unsigned;
 	fsm_state;
-	grp;
+	bm;
 	pred;
 
 %terminals%
@@ -44,12 +44,12 @@
 
 	<make-states>: () -> (:fsm_state, :fsm_state);
 
-	<make-group>: () -> (:grp);
-	<free-group>: (:grp) -> ();
-	<invert-group>: (:grp) -> ();
-	<group-add-char>: (:grp, :char) -> ();
-	<group-add-range>: (:grp, :char, :char) -> ();
-	<group-to-states>: (:grp, :fsm_state, :fsm_state) -> ();
+	<make-group>: () -> (:bm);
+	<free-group>: (:bm) -> ();
+	<invert-group>: (:bm) -> ();
+	<group-add-char>: (:bm, :char) -> ();
+	<group-add-range>: (:bm, :char, :char) -> ();
+	<group-to-states>: (:bm, :fsm_state, :fsm_state) -> ();
 
 	<add-concat>:  () -> (:fsm_state);
 	<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
@@ -72,7 +72,7 @@
 
 	group: (x :fsm_state, y :fsm_state) -> () [
 
-		list-of-terms: (g :grp) -> () [
+		list-of-terms: (g :bm) -> () [
 
 			char: () -> (c :char) = {
 				c = ESC;
@@ -110,7 +110,7 @@
 				};
 			};
 
-			term: (g :grp) -> () = {
+			term: (g :bm) -> () = {
 				c = char;
 				<group-add-char>(g, c);
 			||
@@ -127,7 +127,7 @@
 			term(g);
 		};
 
-		group-body: (g :grp) -> () = {
+		group-body: (g :bm) -> () = {
 			{
 				c = CLOSEGROUP;
 				<group-add-char>(g, c);
