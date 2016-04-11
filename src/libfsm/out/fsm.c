@@ -41,7 +41,7 @@ escputc(int c, FILE *f)
 		const char *s;
 	} a[] = {
 		{ '\\', "\\\\" },
-		{ '\'', "\\\'" },
+		{ '\"', "\\\"" },
 
 		{ '\f', "\\f"  },
 		{ '\n', "\\n"  },
@@ -131,9 +131,9 @@ fsm_out_fsm(const struct fsm *fsm, FILE *f,
 					break;
 
 				default:
-					fputs(" \'", f);
+					fputs(" \"", f);
 					escputc(i, f);
-					putc('\'', f);
+					putc('\"', f);
 					break;
 				}
 
