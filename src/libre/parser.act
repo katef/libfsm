@@ -100,6 +100,51 @@
 		va_end(ap);
 	}
 
+	/* TODO: centralise */
+	/* XXX: escaping really depends on dialect */
+	static const char *
+	escchar(char *s, size_t sz, int c)
+	{
+		size_t i;
+
+		const struct {
+			int c;
+			const char *s;
+		} a[] = {
+			{ '\\', "\\\\" },
+
+			{ '^',  "\\^"  },
+			{ '-',  "\\-"  },
+			{ ']',  "\\]"  },
+			{ '[',  "\\["  },
+
+			{ '\f', "\\f"  },
+			{ '\n', "\\n"  },
+			{ '\r', "\\r"  },
+			{ '\t', "\\t"  },
+			{ '\v', "\\v"  }
+		};
+
+		assert(s != NULL);
+		assert(sz >= 5);
+
+		(void) sz;
+
+		for (i = 0; i < sizeof a / sizeof *a; i++) {
+			if (a[i].c == c) {
+				return a[i].s;
+			}
+		}
+
+		if (!isprint((unsigned char) c)) {
+			sprintf(s, "\\x%02X", (unsigned char) c);
+			return s;
+		}
+
+		sprintf(s, "%c", c);
+		return s;
+	}
+
 @}, @{
 
 	#include <re/re.h>
@@ -288,6 +333,14 @@
 		int i;
 
 		assert(@g != NULL);
+
+		if (@b < @a) {
+			char a[5], b[5];
+
+			err(lex_state, "negative range [%s-%s]",
+				escchar(a, sizeof a, @a), escchar(b, sizeof b, @b));
+			exit(EXIT_FAILURE);
+		}
 
 		for (i = (unsigned char) @a; i <= (unsigned char) @b; i++) {
 			@g[i] = 1;
