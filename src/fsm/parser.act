@@ -49,10 +49,6 @@
 	struct lex_state {
 		struct lx lx;
 		struct lx_dynbuf buf;
-
-		/* TODO: use lx's generated conveniences for the pattern buffer */
-		char a[512];
-		char *p;
 	};
 
 	struct act_statelist {
@@ -192,25 +188,6 @@
 
 %actions%
 
-	<label-char>: (c :char) -> () = @{
-		/* TODO */
-		*lex_state->p++ = @c;
-	@};
-
-	<label-buffer>: () -> (s :string) = @{
-		/* TODO */
-		*lex_state->p++ = '\0';
-
-		/*
-		 * Note we needn't strdup() here only because the grammar does not
-		 * permit two adjacent LABELs. If it did, the label buffer would be
-		 * overwritten by the LL(1) one-token lookahead.
-		 */
-		@s = lex_state->a;
-
-		lex_state->p = lex_state->a;
-	@};
-
 	<add-state>: (n :string) -> (s :state) = @{
 		struct act_statelist *p;
 
@@ -284,16 +261,8 @@
 		}
 	@};
 
-	<add-edge-literal>: (x :state, y :state, s :string) -> () = @{
-		assert(@s != NULL);
-
-		/* TODO: convert to single char in the grammar? */
-		if (strlen(@s) != 1) {
-			err(lex_state, "Edge literals must have exactly one character");
-			@!;
-		}
-
-		if (!fsm_addedge_literal(fsm, @x, @y, @s[0])) {
+	<add-edge-literal>: (x :state, y :state, c :char) -> () = @{
+		if (!fsm_addedge_literal(fsm, @x, @y, @c)) {
 			perror("fsm_addedge_literal");
 			exit(EXIT_FAILURE);
 		}
@@ -352,8 +321,6 @@
 		assert(f != NULL);
 
 		lex_state = &lex_state_s;
-
-		lex_state->p = lex_state->a;
 
 		lx = &lex_state->lx;
 

@@ -29,9 +29,6 @@
 
 %productions%
 
-	<label-char>:       (:char) -> ();
-	<label-buffer>:     ()      -> (:string);
-
 	<add-state>:        (:string) -> (:state);
 	<mark-start>:       (:state)  -> ();
 	<mark-end>:         (:state)  -> ();
@@ -39,9 +36,9 @@
 	!<free>:            (:string) -> ();
 	<free-statelist>;
 
-	<add-edge-literal>: (:state, :state, :string) -> ();
-	<add-edge-any>:     (:state, :state)          -> ();
-	<add-edge-epsilon>: (:state, :state)          -> ();
+	<add-edge-literal>: (:state, :state, :char) -> ();
+	<add-edge-any>:     (:state, :state)        -> ();
+	<add-edge-epsilon>: (:state, :state)        -> ();
 
 	<err-expected-sep>;
 	<err-expected-trans>;
@@ -50,37 +47,21 @@
 	<err-expected-end>;
 	<err-syntax>;
 
-	label: () -> (n :string) [
-
-		body = {
-			{
-				c = ESC;
-			||
-				c = OCT;
-			||
-				c = HEX;
-			||
-				c = CHAR;
-			};
-			<label-char>(c);
-
-			{
-				body;
-			||
-				$;
-			};
+	label: () -> (c :char) = {
+		{
+			c = ESC;
+		||
+			c = OCT;
+		||
+			c = HEX;
+		||
+			c = CHAR;
 		};
-
-	] = {
-		body;
 		LABEL;
-		n = <label-buffer>;
 	};
 
 	id: () -> (n :string) = {
 		n = IDENT;
-	||
-		n = label;
 	};
 
 	edges [
@@ -94,8 +75,8 @@
 			y = <add-state>(b);
 
 			{
-				s = label;
-				<add-edge-literal>(x, y, s);
+				c = label;
+				<add-edge-literal>(x, y, c);
 			||
 				ANY;
 				<add-edge-any>(x, y);
