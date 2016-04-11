@@ -47,6 +47,7 @@ escputc(int c, FILE *f)
 
 		{ '&',  "&amp;"  },
 		{ '\"', "&quot;" },
+		{ ']',  "&#x5D;" }, /* yes, even in a HTML label */
 		{ '<',  "&#x3C;" },
 		{ '>',  "&#x3E;" }
 	};
