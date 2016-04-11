@@ -356,7 +356,7 @@
 
 		assert(@g != NULL);
 
-		if (@b < @a) {
+		if ((unsigned char) @b < (unsigned char) @a) {
 			char a[5], b[5];
 
 			err(lex_state, "negative range [%s-%s]",
