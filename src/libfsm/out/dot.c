@@ -160,7 +160,6 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 	 */
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		for (e = s->edges[i].sl; e != NULL; e = e->next) {
-			static const struct bm bm_empty;
 			struct bm bm;
 			int hi, lo;
 			int k;
@@ -180,7 +179,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 				continue;
 			}
 
-			bm = bm_empty;
+			bm_clear(&bm);
 
 			/* find all edges which go from this state to the same target state */
 			for (k = 0; k <= FSM_EDGE_MAX; k++) {

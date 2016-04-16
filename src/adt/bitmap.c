@@ -67,6 +67,16 @@ bm_count(const struct bm *bm)
 }
 
 void
+bm_clear(struct bm *bm)
+{
+	static const struct bm bm_empty;
+
+	assert(bm != NULL);
+
+	*bm = bm_empty;
+}
+
+void
 bm_invert(struct bm *bm)
 {
 	size_t n;
