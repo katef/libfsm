@@ -44,12 +44,11 @@
 
 	<make-states>: () -> (:fsm_state, :fsm_state);
 
-	<make-group>: () -> (:grp);
-	<free-group>: (:grp) -> ();
-	<invert-group>: (:grp) -> ();
-	<group-add-char>: (:grp, :char) -> ();
-	<group-add-range>: (:grp, :char, :char) -> ();
-	<group-to-states>: (:grp, :fsm_state, :fsm_state) -> ();
+	<make-group>:  () -> (:grp);
+	<invert-group>:    (:grp &) -> ();
+	<group-add-char>:  (:grp &, :char) -> ();
+	<group-add-range>: (:grp &, :char, :char) -> ();
+	<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
 
 	<add-concat>:  () -> (:fsm_state);
 	<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
@@ -72,87 +71,86 @@
 
 	group: (x :fsm_state, y :fsm_state) -> () [
 
-		list-of-terms: (g :grp) -> () [
+		char: () -> (c :char) = {
+			c = ESC;
+		||
+			c = OCT;
+		||
+			c = HEX;
+		||
+			c = CHAR;
+		};
 
-			char: () -> (c :char) = {
-				c = ESC;
+		range: () -> (a :char, b :char) = {
+			{
+				a = OCT;
 			||
-				c = OCT;
+				a = HEX;
 			||
-				c = HEX;
-			||
-				c = CHAR;
+				a = CHAR;
 			};
 
-			range: () -> (a :char, b :char) = {
-				{
-					a = OCT;
-				||
-					a = HEX;
-				||
-					a = CHAR;
-				};
-
-				{
-					! = RANGE;
-				##
-					<err-expected-range>;
-				};
-
-				{
-					b = OCT;
-				||
-					b = HEX;
-				||
-					b = CHAR;
-				||
-					b = RANGE;
-				};
+			{
+				! = RANGE;
+			##
+				<err-expected-range>;
 			};
 
-			term: (g :grp) -> () = {
+			{
+				b = OCT;
+			||
+				b = HEX;
+			||
+				b = CHAR;
+			||
+				b = RANGE;
+			};
+		};
+
+		list-of-terms: (g :grp &) -> () = {
+			{
 				c = char;
-				<group-add-char>(g, c);
+				<group-add-char>(&g, c);
 			||
 				(a, b) = range;
-				<group-add-range>(g, a, b);
+				<group-add-range>(&g, a, b);
 			##
 				<err-expected-term>;
 			};
 
-		] = {
-			term(g);
-		||
-			list-of-terms(g);
-			term(g);
+			{
+				$;
+			||
+				list-of-terms(&g);
+			};
 		};
 
-		group-body: (g :grp) -> () = {
+		group-body: (g :grp &) -> () = {
 			{
 				c = CLOSEGROUP;
-				<group-add-char>(g, c);
+				<group-add-char>(&g, c);
 			||
 				c = RANGE;
-				<group-add-char>(g, c);
+				<group-add-char>(&g, c);
 			||
 				/*
 				 * XXX: this is atypical, but serves as a workaround for below
 				 * until this can be done lexically by /-$/ -> $char.
 				 */
 				a = CLOSEGROUP;
-				<group-add-char>(g, a);
+				<group-add-char>(&g, a);
 				b = RANGE;
-				<group-add-char>(g, b);
+				<group-add-char>(&g, b);
 			||
 				$;
 			};
 
-			list-of-terms(g);
+			list-of-terms(&g);
 
 			{
 /* XXX: this ought to be permitted, but I can't see how for LL(1)
 				c = RANGE;
-				<group-add-char>(g, c);
+				<group-add-char>(&g, c);
 			||
 */
 				$;
@@ -166,15 +164,13 @@
 
 		{
 			! = INVERT;
-			group-body(g);
-			<invert-group>(g);
+			group-body(&g);
+			<invert-group>(&g);
 		||
-			group-body(g);
+			group-body(&g);
 		};
 
-		<group-to-states>(g, x, y);
-
-		<free-group>(g);
+		<group-to-states>(&g, x, y);
 
 		! = CLOSEGROUP;
 	};

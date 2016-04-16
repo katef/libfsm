@@ -64,7 +64,7 @@
 	typedef struct fsm_state * t_fsm__state;
 
 	typedef struct {
-		struct bm *set;
+		struct bm set;
 	} t_grp;
 
 	struct act_state {
@@ -330,34 +330,19 @@
 
 
 	<make-group>: () -> (g :grp) = @{
-		@g.set = calloc(sizeof *@g.set, 1);
-		if (@g.set == NULL) {
-			@!;
-		}
+		bm_clear(&@g.set);
 	@};
 
-	<free-group>: (g :grp) -> () = @{
-		assert(@g != NULL);
-
-		free(@g.set);
+	<invert-group>: (g :grp &) -> () = @{
+		bm_invert(&@&g->set);
 	@};
 
-	<invert-group>: (g :grp) -> () = @{
-		assert(@g.set != NULL);
-
-		bm_invert(@g.set);
+	<group-add-char>: (g :grp &, c :char) -> () = @{
+		bm_set(&@&g->set, (unsigned char) @c);
 	@};
 
-	<group-add-char>: (g :grp, c :char) -> () = @{
-		assert(@g.set != NULL);
-
-		bm_set(@g.set, (unsigned char) @c);
-	@};
-
-	<group-add-range>: (g :grp, a :char, b :char) -> () = @{
+	<group-add-range>: (g :grp &, a :char, b :char) -> () = @{
 		int i;
-
-		assert(@g.set != NULL);
 
 		if ((unsigned char) @b < (unsigned char) @a) {
 			char a[5], b[5];
@@ -368,19 +353,17 @@
 		}
 
 		for (i = (unsigned char) @a; i <= (unsigned char) @b; i++) {
-			bm_set(@g.set, i);
+			bm_set(&@&g->set, i);
 		}
 	@};
 
-	<group-to-states>: (g :grp, x :fsm_state, y :fsm_state) -> () = @{
+	<group-to-states>: (g :grp &, x :fsm_state, y :fsm_state) -> () = @{
 		int i;
-
-		assert(@g.set != NULL);
 
 		/* TODO: eventually libfsm will provide a neater mechanism here */
 
 		i = -1;
-		while (i = (int) bm_next(@g.set, i, 1), i <= UCHAR_MAX) {
+		while (i = (int) bm_next(&@&g->set, i, 1), i <= UCHAR_MAX) {
 			if (!fsm_addedge_literal(fsm, @x, @y, (char) i)) {
 				@!;
 			}
