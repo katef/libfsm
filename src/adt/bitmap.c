@@ -8,7 +8,7 @@
 #include <adt/bitmap.h>
 
 int
-bm_get(struct bm *bm, size_t i)
+bm_get(const struct bm *bm, size_t i)
 {
 	assert(bm != NULL);
 	assert(i <= FSM_EDGE_MAX);

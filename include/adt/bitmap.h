@@ -10,7 +10,7 @@ struct bm {
 };
 
 int
-bm_get(struct bm *bm, size_t i);
+bm_get(const struct bm *bm, size_t i);
 
 void
 bm_set(struct bm *bm, size_t i);
