@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 162 "src/libre/parser.act"
+#line 165 "src/libre/parser.act"
 
 
 	#include <re/re.h>
@@ -27,7 +27,7 @@
 extern void p_re__simple(fsm, flags, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 687 "src/libre/parser.act"
+#line 673 "src/libre/parser.act"
 
 
 #line 34 "src/libre/form/simple/parser.h"

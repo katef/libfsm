@@ -895,7 +895,7 @@ ZL2_153:;
 			}
 			/* END OF INLINE: 153 */
 		}
-		/*UNREACHED*/
+		/* UNREACHED */
 	default:
 		{
 			ZI150 = ZI147;
@@ -951,7 +951,7 @@ ZL2_159:;
 			goto ZL2_159;
 			/* END OF INLINE: 159 */
 		}
-		/*UNREACHED*/
+		/* UNREACHED */
 	default:
 		{
 			ZI157 = ZI155;
@@ -1005,7 +1005,7 @@ ZL2_165:;
 			goto ZL2_165;
 			/* END OF INLINE: 165 */
 		}
-		/*UNREACHED*/
+		/* UNREACHED */
 	default:
 		{
 			ZI163 = ZI161;
@@ -1184,7 +1184,7 @@ ZL2_pattern_C_Cbody:;
 			goto ZL2_pattern_C_Cbody;
 			/* END OF INLINE: pattern::body */
 		}
-		/*UNREACHED*/
+		/* UNREACHED */
 	case (ERROR_TERMINAL):
 		return;
 	default:
@@ -1269,7 +1269,7 @@ ZL2_176:;
 						goto ZL2_176;
 						/* END OF INLINE: 176 */
 					}
-					/*UNREACHED*/
+					/* UNREACHED */
 				case (TOK_QMARK):
 					{
 						ADVANCE_LEXER;
@@ -1328,7 +1328,7 @@ ZL2_176:;
 						goto ZL2_176;
 						/* END OF INLINE: 176 */
 					}
-					/*UNREACHED*/
+					/* UNREACHED */
 				case (TOK_STAR):
 					{
 						ADVANCE_LEXER;
@@ -1392,14 +1392,14 @@ ZL2_176:;
 						goto ZL2_176;
 						/* END OF INLINE: 176 */
 					}
-					/*UNREACHED*/
+					/* UNREACHED */
 				default:
 					goto ZL1;
 				}
 			}
 			/* END OF INLINE: 235 */
 		}
-		/*UNREACHED*/
+		/* UNREACHED */
 	default:
 		{
 			ZI175 = ZI170;

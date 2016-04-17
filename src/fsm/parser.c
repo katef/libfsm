@@ -270,7 +270,7 @@ ZL2_edges:;
 			}
 			/* END OF INLINE: edges */
 		}
-		/*UNREACHED*/
+		/* UNREACHED */
 	case (ERROR_TERMINAL):
 		return;
 	default:
@@ -859,7 +859,7 @@ ZL2_xend_C_Cend_Hids:;
 					goto ZL2_xend_C_Cend_Hids;
 					/* END OF INLINE: xend::end-ids */
 				}
-				/*UNREACHED*/
+				/* UNREACHED */
 			case (ERROR_TERMINAL):
 				RESTORE_LEXER;
 				goto ZL1;
