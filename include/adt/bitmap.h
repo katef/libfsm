@@ -27,5 +27,9 @@ bm_clear(struct bm *bm);
 void
 bm_invert(struct bm *bm);
 
+int
+bm_print(FILE *f, const struct bm *bm,
+	int (*escputc)(int c, FILE *f));
+
 #endif
 

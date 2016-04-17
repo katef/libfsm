@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #include "../libfsm/internal.h" /* XXX */
 
@@ -86,5 +87,126 @@ bm_invert(struct bm *bm)
 	for (n = 0; n < sizeof bm->map; n++) {
 		bm->map[n] = ~bm->map[n];
 	}
+}
+
+int
+bm_print(FILE *f, const struct bm *bm,
+	int (*escputc)(int c, FILE *f))
+{
+	int count; /* TODO: unsigned? */
+	int hi, lo;
+	int r, n;
+
+	enum {
+		MODE_INVERT,
+		MODE_SINGLE,
+		MODE_ANY,
+		MODE_MANY
+	} mode;
+
+	assert(f != NULL);
+	assert(bm != NULL);
+	assert(escputc != NULL);
+
+	count = bm_count(bm);
+
+	if (count == 1) {
+		mode = MODE_SINGLE;
+	} else if (bm_next(bm, UCHAR_MAX, 1) != FSM_EDGE_MAX + 1) {
+		mode = MODE_MANY;
+	} else if (count == UCHAR_MAX + 1) {
+		mode = MODE_ANY;
+	} else if (count <= UCHAR_MAX / 2) {
+		mode = MODE_MANY;
+	} else {
+		mode = MODE_INVERT;
+	}
+
+	/* TODO: optionally disable MODE_ANY. maybe provide a mask of modes to allow */
+	/* XXX: all literal characters here really should go through escputc */
+
+	if (mode == MODE_ANY) {
+		return fputs("/./", f);
+	}
+
+	n = 0;
+
+	r = fprintf(f, "%s%s",
+		mode == MODE_SINGLE ? "" : "[",
+		mode != MODE_INVERT ? "" : "^");
+	if (r == -1) {
+		return -1;
+	}
+	n += r;
+
+	hi = -1;
+	for (;;) {
+		/* start of range */
+		lo = bm_next(bm, hi, mode != MODE_INVERT);
+		if (lo > UCHAR_MAX) {
+			break;
+		}
+
+		/* XXX: break range if endpoint belongs to different ctype.h class */
+		/* or: only handle ranges for A-Z, a-z and 0-9 */
+
+		/* end of range */
+		hi = bm_next(bm, lo, mode == MODE_INVERT);
+		if (hi > UCHAR_MAX) {
+			hi = UCHAR_MAX;
+		}
+
+		assert(hi > lo);
+
+		switch (hi - lo) {
+		case 1:
+		case 2:
+		case 3:
+			r = escputc(lo, f);
+			if (r == -1) {
+				return -1;
+			}
+			n += r;
+
+			hi = lo;
+			break;
+
+		default:
+			r = escputc(lo, f);
+			if (r == -1) {
+				return -1;
+			}
+			n += r;
+
+			r = putc('-', f);
+			if (r == -1) {
+				return -1;
+			}
+			n += r;
+
+			r = escputc(hi - 1, f);
+			if (r == -1) {
+				return -1;
+			}
+			n += r;
+			break;
+		}
+	}
+
+	if (bm_get(bm, FSM_EDGE_EPSILON)) {
+		r = escputc(FSM_EDGE_EPSILON, f);
+		if (r == -1) {
+			return -1;
+		}
+		n += r;
+	}
+
+	r = fprintf(f, "%s", mode == MODE_SINGLE ? "" : "]");
+	if (r == -1) {
+		return -1;
+	}
+	n += r;
+
+	return n;
 }
 

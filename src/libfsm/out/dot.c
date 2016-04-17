@@ -161,16 +161,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
 		for (e = s->edges[i].sl; e != NULL; e = e->next) {
 			struct bm bm;
-			int hi, lo;
 			int k;
-			int count; /* TODO: unsigned? */
-
-			enum {
-				MODE_INVERT,
-				MODE_SINGLE,
-				MODE_ANY,
-				MODE_MANY
-			} mode;
 
 			assert(e->state != NULL);
 
@@ -188,77 +179,15 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 				}
 			}
 
-			count = bm_count(&bm);
-
-			assert(count > 0);
-
-			if (count == 1) {
-				mode = MODE_SINGLE;
-			} else if (bm_next(&bm, UCHAR_MAX, 1) != FSM_EDGE_MAX + 1) {
-				mode = MODE_MANY;
-			} else if (count == UCHAR_MAX + 1) {
-				mode = MODE_ANY;
-			} else if (count <= UCHAR_MAX / 2) {
-				mode = MODE_MANY;
-			} else {
-				mode = MODE_INVERT;
-			}
-
-			if (mode == MODE_ANY) {
-				fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = </./> ];\n",
-					options->prefix != NULL ? options->prefix : "",
-					indexof(fsm, s),
-					options->prefix != NULL ? options->prefix : "",
-					indexof(fsm, e->state));
-				continue;
-			}
-
-			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <%s%s",
+			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
 				options->prefix != NULL ? options->prefix : "",
 				indexof(fsm, s),
 				options->prefix != NULL ? options->prefix : "",
-				indexof(fsm, e->state),
-				mode == MODE_SINGLE ? "" : "[",
-				mode != MODE_INVERT ? "" : "^");
+				indexof(fsm, e->state));
 
-			/* now print the edges we found */
-			hi = -1;
-			for (;;) {
-				/* start of range */
-				lo = bm_next(&bm, hi, mode != MODE_INVERT);
-				if (lo > UCHAR_MAX) {
-					break;
-				}
+			(void) bm_print(f, &bm, escputc);
 
-				/* end of range */
-				hi = bm_next(&bm, lo, mode == MODE_INVERT);
-				if (hi > UCHAR_MAX) {
-					hi = UCHAR_MAX;
-				}
-
-				assert(hi > lo);
-
-				switch (hi - lo) {
-				case 1:
-				case 2:
-				case 3:
-					escputc(lo, f);
-					hi = lo;
-					continue;
-
-				default:
-					escputc(lo, f);
-					fprintf(f, "-");
-					escputc(hi - 1, f);
-					break;
-				}
-			}
-
-			if (bm_get(&bm, FSM_EDGE_EPSILON)) {
-				escputc(FSM_EDGE_EPSILON, f);
-			}
-
-			fprintf(f, "%s> ];\n", mode == MODE_SINGLE ? "" : "]");
+			fprintf(f, "> ];\n");
 		}
 	}
 }
