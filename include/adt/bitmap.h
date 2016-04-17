@@ -22,6 +22,9 @@ unsigned int
 bm_count(const struct bm *bm);
 
 void
+bm_clear(struct bm *bm);
+
+void
 bm_invert(struct bm *bm);
 
 #endif
