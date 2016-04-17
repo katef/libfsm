@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "../libfsm/internal.h" /* XXX */
 
@@ -123,6 +124,7 @@ bm_print(FILE *f, const struct bm *bm,
 	}
 
 	/* TODO: optionally disable MODE_ANY. maybe provide a mask of modes to allow */
+	/* TODO: would prefer to show ranges before other characters */
 	/* XXX: all literal characters here really should go through escputc */
 
 	if (mode == MODE_ANY) {
@@ -147,13 +149,45 @@ bm_print(FILE *f, const struct bm *bm,
 			break;
 		}
 
-		/* XXX: break range if endpoint belongs to different ctype.h class */
-		/* or: only handle ranges for A-Z, a-z and 0-9 */
+		if (!isalnum((unsigned char) lo)) {
+			r = escputc(lo, f);
+			if (r == -1) {
+				return -1;
+			}
+			n += r;
+
+			hi = lo;
+			continue;
+		}
 
 		/* end of range */
 		hi = bm_next(bm, lo, mode == MODE_INVERT);
 		if (hi > UCHAR_MAX) {
 			hi = UCHAR_MAX;
+		}
+
+		/* bring down endpoint, if it's past the end of the class */
+		{
+			size_t i;
+
+			const struct {
+				int (*is)(int);
+				int end;
+			} a[] = {
+				{ isdigit, '9' },
+				{ isupper, 'Z' },
+				{ islower, 'z' }
+			};
+
+			/* XXX: assumes ASCII */
+			for (i = 0; i < sizeof a / sizeof *a; i++) {
+				if (a[i].is((unsigned char) lo) && !a[i].is((unsigned char) hi)) {
+					hi = a[i].end + 1;
+					break;
+				}
+			}
+
+			assert(i < sizeof a / sizeof *a);
 		}
 
 		assert(hi > lo);
