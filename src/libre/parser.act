@@ -594,9 +594,10 @@
 		return lex_state->f(lex_state->opaque);
 	}
 
-	struct fsm *
-	FORM_COMP(int (*f)(void *opaque), void *opaque,
-		enum re_flags flags, struct re_err *err)
+	static int
+	parse(int (*f)(void *opaque), void *opaque,
+		void (*entry)(struct fsm *, flags, lex_state, act_state),
+		enum re_flags flags, struct fsm *new, struct re_err *err)
 	{
 		struct act_state  act_state_s;
 		struct act_state *act_state;
@@ -604,16 +605,10 @@
 		struct lex_state *lex_state;
 
 		struct LX_STATE *lx;
-		struct fsm *new;
-		enum re_errno e;
 
 		assert(f != NULL);
-
-		new = re_new_empty();
-		if (new == NULL) {
-			e = RE_EERRNO;
-			goto error;
-		}
+		assert(entry != NULL);
+		assert(new != NULL);
 
 		lex_state    = &lex_state_s;
 		lex_state->p = lex_state->a;
@@ -647,13 +642,41 @@
 		act_state->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
-		FORM_ENTRY(new, flags, lex_state, act_state);
+		entry(new, flags, lex_state, act_state);
 
 		if (act_state->e != RE_ESUCCESS) {
 			/* TODO: free internals allocated during parsing (are there any?) */
-			fsm_free(new);
-			e = act_state->e;
 			goto error;
+		}
+
+		return 0;
+
+	error:
+
+		if (err != NULL) {
+			err->e    = act_state->e;
+			err->byte = lx->start.byte;
+		}
+
+		return -1;
+	}
+
+	struct fsm *
+	FORM_COMP(int (*f)(void *opaque), void *opaque,
+		enum re_flags flags, struct re_err *err)
+	{
+		struct fsm *new;
+
+		assert(f != NULL);
+
+		new = re_new_empty();
+		if (new == NULL) {
+			goto error;
+		}
+
+		if (-1 == parse(f, opaque, FORM_ENTRY, flags, new, err)) {
+			fsm_free(new);
+			return NULL;
 		}
 
 		return new;
@@ -661,8 +684,8 @@
 	error:
 
 		if (err != NULL) {
-			err->e    = e;
-			err->byte = lx->start.byte;
+			err->e    = RE_EERRNO;
+			err->byte = 0;
 		}
 
 		return NULL;
