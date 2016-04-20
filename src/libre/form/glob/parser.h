@@ -27,7 +27,7 @@
 extern void p_re__glob(fsm, flags, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 673 "src/libre/parser.act"
+#line 696 "src/libre/parser.act"
 
 
 #line 34 "src/libre/form/glob/parser.h"
