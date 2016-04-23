@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "var.h"
+
 struct var {
 	const char *name;
 	struct fsm *fsm;
