@@ -12,7 +12,7 @@ struct var {
 	struct var *next;
 };
 
-struct var *
+static struct var *
 find(const struct var *head, const char *name)
 {
 	const struct var *p;
