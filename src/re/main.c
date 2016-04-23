@@ -43,8 +43,8 @@ usage(void)
 	fprintf(stderr, "usage: re [-h] { [-cidmn] [-lgeb9ps] <re> } <string>\n");
 }
 
-static enum
-re_form form(char c)
+static enum re_form
+form(char c)
 {
 	switch (c) {
 /* TODO:
