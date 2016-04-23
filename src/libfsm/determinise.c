@@ -373,7 +373,7 @@ determinise(struct fsm *nfa,
 	struct mapping *ml;
 	struct fsm *dfa;
 
-	assert(fsm != NULL);
+	assert(nfa != NULL);
 
 	dfa = fsm_new();
 	if (dfa == NULL) {
