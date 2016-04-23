@@ -11,7 +11,16 @@
 #include <fsm/graph.h>
 
 #include "form/comp.h"
-#include "form/form.h"
+
+static const struct form {
+	enum re_form form;
+	struct fsm *(*comp)(int (*f)(void *opaque), void *opaque,
+		enum re_flags flags, struct re_err *err);
+} re_form[] = {
+	{ RE_LITERAL, comp_literal },
+	{ RE_GLOB,    comp_glob    },
+	{ RE_SIMPLE,  comp_simple  }
+};
 
 int
 re_flags(const char *s, enum re_flags *f)
