@@ -26,12 +26,15 @@
 	#include <errno.h>
 
 	#include "libfsm/internal.h" /* XXX */
+	#undef INTERNAL_H
 
 	#include <adt/bitmap.h>
 
 	#include <fsm/fsm.h>
 
 	#include <re/re.h>
+
+	#include "libre/internal.h"
 
 	#ifndef FORM
 	#error FORM required
@@ -62,10 +65,7 @@
 	typedef unsigned    t_pred; /* TODO */
 
 	typedef struct fsm_state * t_fsm__state;
-
-	typedef struct {
-		struct bm set;
-	} t_grp;
+	typedef struct re_grp t_grp;
 
 	struct act_state {
 		enum LX_TOKEN lex_tok;
