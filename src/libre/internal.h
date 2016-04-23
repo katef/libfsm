@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef INTERNAL_H
-#define INTERNAL_H
+#ifndef RE_INTERNAL_H
+#define RE_INTERNAL_H
 
 struct re_grp {
 	struct bm set;

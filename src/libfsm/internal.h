@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef INTERNAL_H
-#define INTERNAL_H
+#ifndef FSM_INTERNAL_H
+#define FSM_INTERNAL_H
 
 #include <limits.h>
 

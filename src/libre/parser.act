@@ -26,7 +26,6 @@
 	#include <errno.h>
 
 	#include "libfsm/internal.h" /* XXX */
-	#undef INTERNAL_H
 
 	#include <adt/bitmap.h>
 
