@@ -60,9 +60,9 @@
 
 	#include "../comp.h"
 
-	typedef char        t_char;
-	typedef unsigned    t_unsigned;
-	typedef unsigned    t_pred; /* TODO */
+	typedef char     t_char;
+	typedef unsigned t_unsigned;
+	typedef unsigned t_pred; /* TODO */
 
 	typedef struct fsm_state * t_fsm__state;
 	typedef struct re_grp t_grp;
