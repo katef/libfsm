@@ -27,8 +27,8 @@ enum api_getc {
 	API_FDGETC = 1 << 3
 };
 
-enum api_tokbuf api_tokbuf;
-enum api_getc   api_getc;
+extern enum api_tokbuf api_tokbuf;
+extern enum api_getc   api_getc;
 
 void
 lx_out_c(const struct ast *ast, FILE *f);

@@ -28,6 +28,9 @@
 
 #include "ast.h"
 
+enum api_tokbuf api_tokbuf;
+enum api_getc   api_getc;
+
 static
 void usage(void)
 {
