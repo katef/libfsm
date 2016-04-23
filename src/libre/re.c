@@ -11,6 +11,7 @@
 #include <fsm/graph.h>
 
 #include "form/comp.h"
+#include "form/form.h"
 
 int
 re_flags(const char *s, enum re_flags *f)
@@ -78,25 +79,27 @@ struct fsm *
 re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err)
 {
+	const struct form *f;
 	struct fsm *new;
-	struct fsm *(*comp)(int (*getc)(void *opaque), void *opaque,
-		enum re_flags flags, struct re_err *err);
+	size_t i;
 
 	assert(getc != NULL);
 
-	switch (form) {
-	case RE_LITERAL: comp = comp_literal; break;
-	case RE_GLOB:    comp = comp_glob;    break;
-	case RE_SIMPLE:  comp = comp_simple;  break;
+	for (i = 0; i < sizeof re_form / sizeof *re_form; i++) {
+		if (re_form[i].form == form) {
+			f = &re_form[i];
+			break;
+		}
+	}
 
-	default:
+	if (i == sizeof re_form / sizeof *re_form) {
 		if (err != NULL) {
 			err->e = RE_EBADFORM;
 		}
 		return NULL;
 	}
 
-	new = comp(getc, opaque, flags, err);
+	new = f->comp(getc, opaque, flags, err);
 	if (new == NULL) {
 		return NULL;
 	}
