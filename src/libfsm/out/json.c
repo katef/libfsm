@@ -64,7 +64,7 @@ escputc(int c, FILE *f)
 		return fprintf(f, "\\u%04x", (unsigned char) c);
 	}
 
-	return putc(c, f);
+	return fprintf(f, "%c", c);
 }
 
 /* XXX: horrible */

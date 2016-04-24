@@ -78,7 +78,7 @@ escputc(int c, FILE *f)
 		return fprintf(f, "\\%03o", (unsigned char) c);
 	}
 
-	return putc(c, f);
+	return fprintf(f, "%c", c);
 }
 
 /* TODO: centralise, maybe with callback */

@@ -64,7 +64,7 @@ escputc(int c, FILE *f)
 		return fprintf(f, "\\%03o", (unsigned char) c); /* for humans */
 	}
 
-	return putc(c, f);
+	return fprintf(f, "%c", c);
 }
 
 /* Return true if the edges after o contains state */

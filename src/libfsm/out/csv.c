@@ -60,7 +60,7 @@ escputc(int c, FILE *f)
 		return printf("0x%02X", (unsigned char) c);
 	}
 
-	return putc(c, f);
+	return fprintf(f, "%c", c);
 }
 
 void
