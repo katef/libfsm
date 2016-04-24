@@ -95,7 +95,7 @@ escputs(FILE *f, const char *s)
 
 	for (p = s; *p != '\0'; p++) {
 		r = escputc(*p, f);
-		if (r < 0) {
+		if (r == -1) {
 			return -1;
 		}
 
