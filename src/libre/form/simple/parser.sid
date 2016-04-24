@@ -46,6 +46,7 @@
 
 	<make-group>:  () -> (:grp);
 	<invert-group>:    (:grp &) -> ();
+	<stash-group>:     (:grp &) -> ();
 	<group-add-char>:  (:grp &, :char) -> ();
 	<group-add-range>: (:grp &, :char, :char) -> ();
 	<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
@@ -157,22 +158,33 @@
 			};
 		};
 
+		group-bm: (g :grp &) -> () = {
+			{
+				! = INVERT;
+				group-body(&g);
+				<invert-group>(&g);
+			||
+				group-body(&g);
+			};
+		};
+
+		::group-simple: () -> () = {
+			g = <make-group>;
+
+			group-bm(&g);
+			<stash-group>(&g);
+		};
+
 	] = {
 		OPENGROUP;
 
 		g = <make-group>;
 
-		{
-			! = INVERT;
-			group-body(&g);
-			<invert-group>(&g);
-		||
-			group-body(&g);
-		};
-
-		<group-to-states>(&g, x, y);
+		group-bm(&g);
 
 		! = CLOSEGROUP;
+
+		<group-to-states>(&g, x, y);
 	};
 
 	literal: (x :fsm_state, y :fsm_state) -> () = {
@@ -301,5 +313,5 @@
 
 %entry%
 
-	re_simple;
+	re_simple, group-simple;
 

@@ -41,6 +41,7 @@
 
 	!<make-group>: () -> (:grp);
 	!<invert-group>:    (:grp &) -> ();
+	!<stash-group>:     (:grp &) -> ();
 	!<group-add-char>:  (:grp &, :char) -> ();
 	!<group-add-range>: (:grp &, :char, :char) -> ();
 	!<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();

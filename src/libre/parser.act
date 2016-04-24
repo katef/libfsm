@@ -49,15 +49,18 @@
 	#define LX_NEXT   CAT(LX_PREFIX, _next)
 	#define LX_INIT   CAT(LX_PREFIX, _init)
 
-	#define FORM_COMP CAT(comp_, FORM)
+	#define FORM_COMP  CAT(comp_, FORM)
+	#define FORM_GROUP CAT(group_, FORM)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
-	#define FORM_ENTRY CAT(p_re__, FORM)
+	#define FORM_ENTRY       CAT(p_re__, FORM)
+	#define FORM_GROUP_ENTRY CAT(p_group_H, FORM)
 
 	#include "parser.h"
 	#include "lexer.h"
 
 	#include "../comp.h"
+	#include "../group.h"
 
 	typedef char     t_char;
 	typedef unsigned t_unsigned;
@@ -70,6 +73,7 @@
 		enum LX_TOKEN lex_tok;
 		enum LX_TOKEN lex_tok_save;
 		enum re_errno e;
+		struct re_grp *g; /* for <stash-group> */
 	};
 
 	struct lex_state {
@@ -336,6 +340,11 @@
 		bm_invert(&@&g->set);
 	@};
 
+	<stash-group>: (g :grp &) -> () = @{
+#define PARSE_GROUP
+		*act_state->g = *@&g;
+	@};
+
 	<group-add-char>: (g :grp &, c :char) -> () = @{
 		bm_set(&@&g->set, (unsigned char) @c);
 	@};
@@ -596,7 +605,7 @@
 	static int
 	parse(int (*f)(void *opaque), void *opaque,
 		void (*entry)(struct fsm *, flags, lex_state, act_state),
-		enum re_flags flags, struct fsm *new, struct re_err *err)
+		enum re_flags flags, struct fsm *new, struct re_err *err, t_grp *g)
 	{
 		struct act_state  act_state_s;
 		struct act_state *act_state;
@@ -607,7 +616,6 @@
 
 		assert(f != NULL);
 		assert(entry != NULL);
-		assert(new != NULL);
 
 		lex_state    = &lex_state_s;
 		lex_state->p = lex_state->a;
@@ -639,6 +647,10 @@
 		act_state = &act_state_s;
 
 		act_state->e = RE_ESUCCESS;
+
+		if (g != NULL) {
+			act_state->g = g;
+		}
 
 		ADVANCE_LEXER;
 		entry(new, flags, lex_state, act_state);
@@ -673,7 +685,7 @@
 			goto error;
 		}
 
-		if (-1 == parse(f, opaque, FORM_ENTRY, flags, new, err)) {
+		if (-1 == parse(f, opaque, FORM_ENTRY, flags, new, err, NULL)) {
 			fsm_free(new);
 			return NULL;
 		}
@@ -689,6 +701,41 @@
 
 		return NULL;
 	}
+
+#ifdef PARSE_GROUP
+	int
+	FORM_GROUP(int (*f)(void *opaque), void *opaque,
+		enum re_flags flags, struct re_err *err, struct re_grp *g)
+	{
+		assert(f != NULL);
+		assert(g != NULL);
+
+		/*
+		 * The ::group-$form production provides an entry point to the
+		 * grammar where just a group is parsed and output as a bitmap,
+		 * without constructing an NFA edge for each entry in the set.
+		 *
+		 * We use the same parse() function here so as to use the same
+		 * act/lex_state setup as usual. The problem is that parse() expects
+		 * the entry() callback to take no extra parameters, and so the
+		 * ::group-$form production cannot output a :grp type. In other words,
+		 * its generated function must have the same prototype as the usual
+		 * grammar entry point, which of course does not output a :grp.
+		 *
+		 * So, we have a hacky workaround where ::group-$form calls a
+		 * <stash-group> action which stashes the bitmap in act_state->g,
+		 * which is set here to point to the caller's storage for g.
+		 * This relies on the fact that ::group-$form need only store
+		 * one group at a time, which suits us fine.
+		 */
+
+		if (-1 == parse(f, opaque, FORM_GROUP_ENTRY, flags, NULL, err, g)) {
+			return -1;
+		}
+
+		return 0;
+	}
+#endif
 
 @}, @{
 
