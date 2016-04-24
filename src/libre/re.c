@@ -88,7 +88,7 @@ struct fsm *
 re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err)
 {
-	const struct form *f;
+	const struct form *m;
 	struct fsm *new;
 	size_t i;
 
@@ -96,7 +96,7 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 
 	for (i = 0; i < sizeof re_form / sizeof *re_form; i++) {
 		if (re_form[i].form == form) {
-			f = &re_form[i];
+			m = &re_form[i];
 			break;
 		}
 	}
@@ -108,7 +108,7 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
-	new = f->comp(getc, opaque, flags, err);
+	new = m->comp(getc, opaque, flags, err);
 	if (new == NULL) {
 		return NULL;
 	}
