@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef RE_GROUP_H
-#define RE_GROUP_H
+#ifndef RE_FORM_GROUP_H
+#define RE_FORM_GROUP_H
 
 #include <re/re.h>
 

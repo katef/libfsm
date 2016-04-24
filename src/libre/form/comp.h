@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef RE_COMP_H
-#define RE_COMP_H
+#ifndef RE_FORM_COMP_H
+#define RE_FORM_COMP_H
 
 #include <re/re.h>
 
