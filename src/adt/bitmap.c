@@ -181,8 +181,10 @@ bm_print(FILE *f, const struct bm *bm,
 
 			/* XXX: assumes ASCII */
 			for (i = 0; i < sizeof a / sizeof *a; i++) {
-				if (a[i].is((unsigned char) lo) && !a[i].is((unsigned char) hi)) {
-					hi = a[i].end + 1;
+				if (a[i].is((unsigned char) lo)) {
+					if (!a[i].is((unsigned char) hi)) {
+						hi = a[i].end + 1;
+					}
 					break;
 				}
 			}
