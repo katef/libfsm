@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <re/re.h>
@@ -10,16 +11,26 @@
 #include <fsm/bool.h>
 #include <fsm/graph.h>
 
+#include "../libfsm/internal.h" /* XXX */
+
+#include <adt/bitmap.h>
+
+#include "internal.h"
+
+#include "form/group.h"
 #include "form/comp.h"
 
 static const struct form {
 	enum re_form form;
 	struct fsm *(*comp)(int (*f)(void *opaque), void *opaque,
 		enum re_flags flags, struct re_err *err);
+	int
+	(*group)(int (*f)(void *opaque), void *opaque,
+		enum re_flags flags, struct re_err *err, struct re_grp *g);
 } re_form[] = {
-	{ RE_LITERAL, comp_literal },
-	{ RE_GLOB,    comp_glob    },
-	{ RE_SIMPLE,  comp_simple  }
+	{ RE_LITERAL, comp_literal, NULL         },
+	{ RE_GLOB,    comp_glob,    NULL         },
+	{ RE_SIMPLE,  comp_simple,  group_simple }
 };
 
 int
@@ -142,5 +153,136 @@ error:
 	}
 
 	return NULL;
+}
+
+int
+re_group_print(enum re_form form, int (*getc)(void *opaque), void *opaque,
+	enum re_flags flags, struct re_err *err,
+	FILE *f,
+	int (*escputc)(int c, FILE *f))
+{
+	const struct form *m;
+	struct re_grp g;
+	size_t i;
+	int r;
+
+	assert(getc != NULL);
+	assert(escputc != NULL);
+	assert(f != NULL);
+
+	for (i = 0; i < sizeof re_form / sizeof *re_form; i++) {
+		if (re_form[i].form == form) {
+			m = &re_form[i];
+			break;
+		}
+	}
+
+	if (i == sizeof re_form / sizeof *re_form) {
+		if (err != NULL) {
+			err->e = RE_EBADFORM;
+		}
+		return -1;
+	}
+
+	if (m->group == NULL) {
+		if (err != NULL) {
+			/* TODO: specific error for not supported by this dialect */
+			err->e = RE_EBADFORM;
+		}
+		return -1;
+	}
+
+	if (-1 == m->group(getc, opaque, flags, err, &g)) {
+		return -1;
+	}
+
+	if (flags & RE_ICASE) {
+		/* TODO: bm_desensitise */
+	}
+
+	/* TODO: populate re_err error for non-empty conflict set */
+
+	r = bm_print(f, &g.set, escputc);
+	if (r == -1) {
+		goto error;
+	}
+
+	return r;
+
+error:
+
+	if (err != NULL) {
+		err->e = RE_EERRNO;
+	}
+
+	return -1;
+}
+
+int
+re_group_snprint(enum re_form form, int (*getc)(void *opaque), void *opaque,
+	enum re_flags flags, struct re_err *err,
+	char *s, size_t n,
+	int (*escputc)(int c, FILE *f))
+{
+	const struct form *m;
+	struct re_grp g;
+	size_t i;
+	int r;
+
+	assert(getc != NULL);
+	assert(escputc != NULL);
+
+	if (n == 0) {
+		return 0;
+	}
+
+	assert(s != NULL);
+
+	for (i = 0; i < sizeof re_form / sizeof *re_form; i++) {
+		if (re_form[i].form == form) {
+			m = &re_form[i];
+			break;
+		}
+	}
+
+	if (i == sizeof re_form / sizeof *re_form) {
+		if (err != NULL) {
+			err->e = RE_EBADFORM;
+		}
+		return -1;
+	}
+
+	if (m->group == NULL) {
+		if (err != NULL) {
+			/* TODO: specific error for not supported by this dialect */
+			err->e = RE_EBADFORM;
+		}
+		return -1;
+	}
+
+	if (-1 == m->group(getc, opaque, flags, err, &g)) {
+		return -1;
+	}
+
+	if (flags & RE_ICASE) {
+		/* TODO: bm_desensitise */
+	}
+
+	/* TODO: populate re_err error for non-empty conflict set */
+
+	r = bm_snprint(&g.set, s, n, escputc);
+	if (r == -1) {
+		goto error;
+	}
+
+	return r;
+
+error:
+
+	if (err != NULL) {
+		err->e = RE_EERRNO;
+	}
+
+	return -1;
 }
 
