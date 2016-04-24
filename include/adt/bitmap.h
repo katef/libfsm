@@ -31,5 +31,9 @@ int
 bm_print(FILE *f, const struct bm *bm,
 	int (*escputc)(int c, FILE *f));
 
+int
+bm_snprint(const struct bm *bm, char *s, size_t sz,
+	int (*escputc)(int c, FILE *f));
+
 #endif
 

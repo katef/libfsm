@@ -246,3 +246,75 @@ bm_print(FILE *f, const struct bm *bm,
 	return n;
 }
 
+int
+bm_snprint(const struct bm *bm, char *s, size_t n,
+	int (*escputc)(int c, FILE *f))
+{
+	FILE *f;
+	int r;
+
+	assert(bm != NULL);
+	assert(escputc != NULL);
+
+	if (n == 0) {
+		return 0;
+	}
+
+	assert(s != NULL);
+
+	/*
+	 * I don't two sets of escputc functions (for strings and files),
+	 * so I've nominated to use FILE * as the common interface,
+	 * in order to keep just one kind of escputc.
+	 *
+	 * I also didn't want to duplicate the contents of bm_print(),
+	 * so here I'm opting to print to a temporary file, rewind,
+	 * and read it back for string output. This is not ideal.
+	 */
+
+	f = tmpfile();
+	if (f == NULL) {
+		return -1;
+	}
+
+	r = bm_print(f, bm, escputc);
+	if (r == -1) {
+		goto error;
+	}
+
+	if (n > r + 1) {
+		n = r + 1;
+	}
+
+	rewind(f);
+
+	if (n - 1 != fread(s, 1, n - 1, f)) {
+		/* short read or unexpected zero */
+		goto error;
+	}
+	/* expected zero could also be an error, but we don't mind if it is
+	 * (although setting errno is bad form) */
+
+#ifndef NDEBUG
+	assert(fgetc(f) == EOF);
+	if (ferror(f)) {
+		goto error;
+	}
+	assert(feof(f));
+#endif
+
+	s[n - 1] = '\0';
+
+	if (EOF == fclose(f)) {
+		return -1;
+	}
+
+	return r;
+
+error:
+
+	(void) fclose(f);
+
+	return -1;
+}
+
