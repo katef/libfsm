@@ -137,6 +137,10 @@ error:
 
 	fsm_free(new);
 
+	if (err != NULL) {
+		err->e = RE_EERRNO;
+	}
+
 	return NULL;
 }
 
