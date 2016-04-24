@@ -215,10 +215,10 @@ bm_print(FILE *f, const struct bm *bm,
 			n += r;
 
 			r = putc('-', f);
-			if (r == -1) {
+			if (r == EOF) {
 				return -1;
 			}
-			n += r;
+			n += 1;
 
 			r = escputc(hi - 1, f);
 			if (r == -1) {
