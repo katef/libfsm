@@ -89,18 +89,6 @@ struct fsm *
 re_new_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err);
 
-int
-re_group_print(enum re_form form, int (*getc)(void *opaque), void *opaque,
-	enum re_flags flags, struct re_err *err,
-	FILE *f,
-	int (*escputc)(int c, FILE *f));
-
-int
-re_group_snprint(enum re_form form, int (*getc)(void *opaque), void *opaque,
-    enum re_flags flags, struct re_err *err,
-    char *s, size_t n,
-    int (*escputc)(int c, FILE *f));
-
 /*
  * Return a human-readable string describing a given error code. The string
  * returned has static storage, and must not be freed.

@@ -6,6 +6,7 @@
 #include <errno.h>
 
 #include <re/re.h>
+#include <re/group.h>
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
