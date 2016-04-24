@@ -86,19 +86,23 @@ static int
 escputs(FILE *f, const char *s)
 {
 	const char *p;
-	int r;
+	int r, n;
 
 	assert(f != NULL);
 	assert(s != NULL);
+
+	n = 0;
 
 	for (p = s; *p != '\0'; p++) {
 		r = escputc(*p, f);
 		if (r < 0) {
 			return -1;
 		}
+
+		n += r;
 	}
 
-	return 0;
+	return n;
 }
 
 /* TODO: centralise */
