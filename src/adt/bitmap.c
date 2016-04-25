@@ -94,7 +94,7 @@ int
 bm_print(FILE *f, const struct bm *bm,
 	int (*escputc)(int c, FILE *f))
 {
-	int count; /* TODO: unsigned? */
+	unsigned int count;
 	int hi, lo;
 	int r, n;
 
