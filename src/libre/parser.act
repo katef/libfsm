@@ -110,6 +110,15 @@
 		va_end(ap);
 	}
 
+	static void
+	group_add(t_grp *g, char c)
+	{
+		assert(g != NULL);
+		assert((unsigned char) c != FSM_EDGE_EPSILON);
+
+		bm_set(&g->set, (unsigned char) c);
+	}
+
 	/* TODO: centralise */
 	/* XXX: escaping really depends on dialect */
 	static const char *
@@ -346,7 +355,7 @@
 	@};
 
 	<group-add-char>: (g :grp &, c :char) -> () = @{
-		bm_set(&@&g->set, (unsigned char) @c);
+		group_add(@&g, @c);
 	@};
 
 	<group-add-range>: (g :grp &, a :char, b :char) -> () = @{
@@ -361,7 +370,7 @@
 		}
 
 		for (i = (unsigned char) @a; i <= (unsigned char) @b; i++) {
-			bm_set(&@&g->set, i);
+			group_add(@&g, (char) i);
 		}
 	@};
 
