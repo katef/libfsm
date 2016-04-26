@@ -40,8 +40,11 @@
 
 	<refsynopsisdiv>
 <!--
-fprintf(stderr, "usage: re [-h] { [-cidmn] [-lgeb9ps] <re> } <string>\n");
++fprintf(stderr, "usage: re -d { [-cidmn] [-lgeb9ps] <re> }\n");
++fprintf(stderr, "usage: re -e { [-cidmn] [-lgeb9ps] <re> }\n");
++fprintf(stderr, "usage: re    { [-cidmn] [-lgeb9ps] <re> } <string> ...\n");
 TODO: re-do usage()
+TODO: other than -h, three modes; exec (default), dump, example
 -->
 
 		<cmdsynopsis>

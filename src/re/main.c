@@ -40,7 +40,10 @@
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re [-h] { [-cidmn] [-lgeb9ps] <re> } <string>\n");
+	fprintf(stderr, "usage: re -d { [-cidmn] [-lgeb9ps] <re> }\n");
+	fprintf(stderr, "       re -e { [-cidmn] [-lgeb9ps] <re> }\n");
+	fprintf(stderr, "       re    { [-cidmn] [-lgeb9ps] <re> } <string> ...\n");
+	fprintf(stderr, "       re -h\n");
 }
 
 static enum re_form
@@ -186,8 +189,13 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (keep_nfa && argc > 0) {
-		fprintf(stderr, "-n is not for execution; execution requires a DFA\n");
+	if (dump && example) {
+		fprintf(stderr, "-d and -e are mutually exclusive\n");
+		return EXIT_FAILURE;
+	}
+
+	if ((dump || example) && argc > 0) {
+		fprintf(stderr, "too many arguments\n");
 		return EXIT_FAILURE;
 	}
 
@@ -218,10 +226,19 @@ main(int argc, char *argv[])
 			fprintf(stderr, "%s%s\n", buf,
 				n >= (int) sizeof buf - 1 ? "..." : "");
 		}
+
+		return 0;
 	}
 
 	if (dump) {
 		fsm_print(fsm, stdout, FSM_OUT_FSM, NULL);
+
+		return 0;
+	}
+
+	if (keep_nfa) {
+		fprintf(stderr, "-n is not for execution; execution requires a DFA\n");
+		return EXIT_FAILURE;
 	}
 
 	r = 0;
