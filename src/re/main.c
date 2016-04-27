@@ -42,7 +42,7 @@ usage(void)
 {
 	fprintf(stderr, "usage: re -d { [-cidmn] [-lgeb9ps] <re> }\n");
 	fprintf(stderr, "       re -e { [-cidmn] [-lgeb9ps] <re> }\n");
-	fprintf(stderr, "       re    { [-cidmn] [-lgeb9ps] <re> } <string> ...\n");
+	fprintf(stderr, "       re    { [-cidmn] [-lgeb9ps] <re> } <string>\n");
 	fprintf(stderr, "       re -h\n");
 }
 
@@ -243,13 +243,12 @@ main(int argc, char *argv[])
 
 	r = 0;
 
-	{
-		int i;
-
-		for (i = 0; i < argc; i++) {
-			r += !fsm_exec(fsm, fsm_sgetc, &argv[i]);
-		}
+	if (argc != 1) {
+		fprintf(stderr, "expected single string to match\n"); /* TODO: or filename */
+		return EXIT_FAILURE;
 	}
+
+	r = !fsm_exec(fsm, fsm_sgetc, &argv[0]);
 
 	fsm_free(fsm);
 
