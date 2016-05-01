@@ -21,8 +21,6 @@
 #include "libfsm/internal.h" /* XXX */
 
 /*
- * TODO: match a regexp against arguments. return $? if all match
- *
  * TODO: pass a language option for dumping output.
  * output to various forms, too (print the fsm as ERE, glob, etc)
  * do this through a proper interface, instead of including internal.h
@@ -38,7 +36,7 @@ usage(void)
 	fprintf(stderr, "usage: re -d [-cidmn] <re> ...\n");
 	fprintf(stderr, "       re -e [-cidmn] <re> ...\n");
 	fprintf(stderr, "       re    [-cidmn] <re> ... <string>\n");
-	fprintf(stderr, "       re    [-cidmn] <re> ... -- <string>\n"); /* TODO: multiple strings */
+	fprintf(stderr, "       re    [-cidmn] <re> ... -- <string> ...\n");
 	fprintf(stderr, "       re -h\n");
 }
 
@@ -260,12 +258,13 @@ main(int argc, char *argv[])
 
 	r = 0;
 
-	if (argc != 1) {
-		fprintf(stderr, "expected single string to match\n"); /* TODO: or filename */
-		return EXIT_FAILURE;
-	}
+	{
+		int i;
 
-	r = !fsm_exec(fsm, fsm_sgetc, &argv[0]);
+		for (i = 0; i < argc; i++) {
+			r |= !fsm_exec(fsm, fsm_sgetc, &argv[i]);
+		}
+	}
 
 	fsm_free(fsm);
 
