@@ -37,10 +37,17 @@ fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque);
  *
  *              Where s will be incremented to point to each character in turn.
  *
+ *  fsm_fgetc - To read from a file. Pass a FILE *:
+ *                fsm_exec(fsm, fsm_fgetc, stdin);
+ *
  * TODO: add fsm_fgetc
  */
 int
 fsm_sgetc(void *opaque);
+
+int
+fsm_fgetc(void *opaque);
+
 
 #endif
 

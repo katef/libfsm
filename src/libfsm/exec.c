@@ -87,3 +87,20 @@ fsm_sgetc(void *opaque)
 	return c;
 }
 
+int
+fsm_fgetc(void *opaque)
+{
+	FILE *f = opaque;
+	int c;
+
+	assert(f != NULL);
+
+	c = fgetc(f);
+	if (c == EOF) {
+		/* TODO: distinguish feof from ferror */
+		return EOF;
+	}
+
+	return c;
+}
+
