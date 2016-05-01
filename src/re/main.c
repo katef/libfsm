@@ -5,8 +5,9 @@
 #include <unistd.h>
 
 #include <assert.h>
-#include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <fsm/fsm.h>
 #include <fsm/out.h>	/* XXX */
@@ -29,49 +30,55 @@
  * TODO: accepting a delimiter would be useful: /abc/. perhaps provide that as
  * a convenience function, especially wrt. escaping for lexing. Also convenient
  * for specifying flags: /abc/g
- *
- * getopts:
- * pass optarg for "form" of regex. -g for glob etc
- * remaining argv is string(s) to match
- *
- * ./re -e '^012.*abc$' -b '[a-z]_xx$' -g 'abc*def' "some string" "some other string"
  */
 
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re -d { [-cidmn] [-lgeb9ps] <re> }\n");
-	fprintf(stderr, "       re -e { [-cidmn] [-lgeb9ps] <re> }\n");
-	fprintf(stderr, "       re    { [-cidmn] [-lgeb9ps] <re> } <string>\n");
+	fprintf(stderr, "usage: re -d [-cidmn] <re> ...\n");
+	fprintf(stderr, "       re -e [-cidmn] <re> ...\n");
+	fprintf(stderr, "       re    [-cidmn] <re> ... <string>\n");
+	fprintf(stderr, "       re    [-cidmn] <re> ... -- <string>\n"); /* TODO: multiple strings */
 	fprintf(stderr, "       re -h\n");
 }
 
 static enum re_form
-form(char c)
+form_name(const char *name)
 {
-	switch (c) {
-/* TODO:
-	case 'e': return RE_ERE;
-	case 'b': return RE_BRE;
-	case '9': return RE_PLAN9;
-	case 'p': return RE_PCRE;
-*/
-	case 'l': return RE_LITERAL;
-	case 'g': return RE_GLOB;
-	case 's': return RE_SIMPLE;
+	size_t i;
 
-	default:
-		fprintf(stderr, "unrecognised re form \"%c\"", c);
-		exit(EXIT_FAILURE);
+	struct {
+		const char *name;
+		enum re_form form;
+	} a[] = {
+/* TODO:
+		{ "ere",     RE_ERE     },
+		{ "bre",     RE_BRE     },
+		{ "plan9",   RE_PLAN9   },
+		{ "pcre",    RE_PCRE    },
+*/
+		{ "literal", RE_LITERAL },
+		{ "glob",    RE_GLOB    },
+		{ "simple",  RE_SIMPLE  }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].form;
+		}
 	}
 
-	assert(!"unreached");
+	fprintf(stderr, "unrecognised re form \"%s\"", name);
+	exit(EXIT_FAILURE);
 }
 
 int
 main(int argc, char *argv[])
 {
 	struct fsm *(*join)(struct fsm *, struct fsm *);
+	enum re_form form;
 	struct fsm *fsm;
 	int files;
 	int dump;
@@ -79,7 +86,7 @@ main(int argc, char *argv[])
 	int keep_nfa;
 	int r;
 
-	if (argc < 2) {
+	if (argc < 1) {
 		usage();
 		return EXIT_FAILURE;
 	}
@@ -95,14 +102,12 @@ main(int argc, char *argv[])
 	example  = 0;
 	keep_nfa = 0;
 	join     = fsm_union;
+	form     = RE_SIMPLE;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hcdil:mng:s:"), c != -1) {
-			struct re_err err;
-			struct fsm *new;
-
+		while (c = getopt(argc, argv, "hcdimnr:"), c != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -112,12 +117,6 @@ main(int argc, char *argv[])
 				join = fsm_concat;
 				break;
 
-/* TODO:
-			case 'b':
-			case 'e':
-			case '9':
-			case 'p':
-*/
 			case 'd':
 				dump = 1;
 				break;
@@ -134,48 +133,8 @@ main(int argc, char *argv[])
 				keep_nfa = 1;
 				break;
 
-			case 'l':
-			case 'g':
-			case 's':
-				/* TODO: flags? */
-
-				if (files) {
-					FILE *f;
-
-					f = fopen(optarg, "r");
-					if (f == NULL) {
-						perror(optarg);
-						return EXIT_FAILURE;
-					}
-
-					new = re_new_comp(form(c), re_fgetc, f, 0, &err);
-
-					fclose(f);
-				} else {
-					const char *s;
-
-					s = optarg;
-
-					new = re_new_comp(form(c), re_sgetc, &s, 0, &err);
-				}
-
-				/* TODO: addend(new, optarg); */
-
-				if (new == NULL) {
-					re_perror("re_new_comp", form(c), &err,
-						 files ? optarg : NULL,
-						!files ? optarg : NULL);
-					return EXIT_FAILURE;
-				}
-
-				/* TODO: associate optarg with new's end state */
-
-				fsm = join(fsm, new);
-				if (fsm == NULL) {
-					perror("fsm_union/concat");
-					return EXIT_FAILURE;
-				}
-
+			case 'r':
+				form = form_name(optarg);
 				break;
 
 			case '?':
@@ -192,6 +151,64 @@ main(int argc, char *argv[])
 	if (dump && example) {
 		fprintf(stderr, "-d and -e are mutually exclusive\n");
 		return EXIT_FAILURE;
+	}
+
+	{
+		int i;
+
+		for (i = 0; i < argc - 1; i++) {
+			struct re_err err;
+			struct fsm *new;
+
+			/* TODO: handle possible "form:" prefix */
+
+			if (0 == strcmp(argv[i], "--")) {
+				argc--;
+				argv++;
+
+				break;
+			}
+
+			if (files) {
+				FILE *f;
+
+				f = fopen(argv[i], "r");
+				if (f == NULL) {
+					perror(argv[i]);
+					return EXIT_FAILURE;
+				}
+
+				new = re_new_comp(form, re_fgetc, f, 0, &err);
+
+				fclose(f);
+			} else {
+				const char *s;
+
+				s = argv[i];
+
+				new = re_new_comp(form, re_sgetc, &s, 0, &err);
+			}
+
+			/* TODO: addend(new, argv[i]); */
+
+			if (new == NULL) {
+				re_perror("re_new_comp", form, &err,
+					 files ? argv[i] : NULL,
+					!files ? argv[i] : NULL);
+				return EXIT_FAILURE;
+			}
+
+			/* TODO: associate argv[i] with new's end state */
+
+			fsm = join(fsm, new);
+			if (fsm == NULL) {
+				perror("fsm_union/concat");
+				return EXIT_FAILURE;
+			}
+		}
+
+		argc -= i;
+		argv += i;
 	}
 
 	if ((dump || example) && argc > 0) {
