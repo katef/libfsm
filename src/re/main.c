@@ -136,29 +136,15 @@ main(int argc, char *argv[])
 				join = fsm_concat;
 				break;
 
-			case 'd':
-				dump = 1;
-				break;
-
-			case 'i':
-				ifiles = 1;
-				break;
-
-			case 'x':
-				xfiles = 1;
-				break;
-
-			case 'm':
-				example = 1;
-				break;
-
-			case 'n':
-				keep_nfa = 1;
-				break;
-
 			case 'r':
 				form = form_name(optarg);
 				break;
+
+			case 'd': dump     = 1; break;
+			case 'i': ifiles   = 1; break;
+			case 'x': xfiles   = 1; break;
+			case 'm': example  = 1; break;
+			case 'n': keep_nfa = 1; break;
 
 			case '?':
 			default:
