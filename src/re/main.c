@@ -35,8 +35,8 @@ usage(void)
 {
 	fprintf(stderr, "usage: re -d [-cidmn] <re> ...\n");
 	fprintf(stderr, "       re -e [-cidmn] <re> ...\n");
-	fprintf(stderr, "       re    [-cidmn] <re> ... <string>\n");
-	fprintf(stderr, "       re    [-cidmn] <re> ... -- <string> ...\n");
+	fprintf(stderr, "       re -x [-cidmn] <re> ... [ <file> | -- <file> ... ]\n");
+	fprintf(stderr, "       re    [-cidmn] <re> ... [ <string> | -- <string> ... ]\n");
 	fprintf(stderr, "       re -h\n");
 }
 
@@ -72,13 +72,33 @@ form_name(const char *name)
 	exit(EXIT_FAILURE);
 }
 
+FILE *
+xopen(const char *s)
+{
+	FILE *f;
+
+	assert(s != NULL);
+
+	if (0 == strcmp(s, "-")) {
+		return stdin;
+	}
+
+	f = fopen(s, "r");
+	if (f == NULL) {
+		perror(s);
+		exit(EXIT_FAILURE);
+	}
+
+	return f;
+}
+
 int
 main(int argc, char *argv[])
 {
 	struct fsm *(*join)(struct fsm *, struct fsm *);
 	enum re_form form;
 	struct fsm *fsm;
-	int files;
+	int ifiles, xfiles;
 	int dump;
 	int example;
 	int keep_nfa;
@@ -95,7 +115,8 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	files    = 0;
+	ifiles   = 0;
+	xfiles   = 0;
 	dump     = 0;
 	example  = 0;
 	keep_nfa = 0;
@@ -105,7 +126,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hcdimnr:"), c != -1) {
+		while (c = getopt(argc, argv, "hcdixmnr:"), c != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -120,7 +141,11 @@ main(int argc, char *argv[])
 				break;
 
 			case 'i':
-				files = 1;
+				ifiles = 1;
+				break;
+
+			case 'x':
+				xfiles = 1;
 				break;
 
 			case 'm':
@@ -167,14 +192,10 @@ main(int argc, char *argv[])
 				break;
 			}
 
-			if (files) {
+			if (ifiles) {
 				FILE *f;
 
-				f = fopen(argv[i], "r");
-				if (f == NULL) {
-					perror(argv[i]);
-					return EXIT_FAILURE;
-				}
+				f = xopen(argv[i]);
 
 				new = re_new_comp(form, re_fgetc, f, 0, &err);
 
@@ -191,8 +212,8 @@ main(int argc, char *argv[])
 
 			if (new == NULL) {
 				re_perror("re_new_comp", form, &err,
-					 files ? argv[i] : NULL,
-					!files ? argv[i] : NULL);
+					 ifiles ? argv[i] : NULL,
+					!ifiles ? argv[i] : NULL);
 				return EXIT_FAILURE;
 			}
 
@@ -258,11 +279,29 @@ main(int argc, char *argv[])
 
 	r = 0;
 
+	/* TODO: option to print input texts which match. like grep(1) does.
+	 * This is not the same as printing patterns which match (by associating
+	 * a pattern to the end state), like lx(1) does */
+
 	{
 		int i;
 
 		for (i = 0; i < argc; i++) {
-			r |= !fsm_exec(fsm, fsm_sgetc, &argv[i]);
+			if (xfiles) {
+				FILE *f;
+
+				f = xopen(argv[0]);
+
+				r |= !fsm_exec(fsm, fsm_fgetc, f);
+
+				fclose(f);
+			} else {
+				const char *s;
+
+				s = argv[i];
+
+				r |= !fsm_exec(fsm, fsm_sgetc, &s);
+			}
 		}
 	}
 
