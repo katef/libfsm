@@ -52,7 +52,8 @@ movetoend(struct fsm *fsm, struct fsm_state *state)
 }
 
 int
-fsm_reverse(struct fsm *fsm)
+fsm_reverse_opaque(struct fsm *fsm,
+	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *))
 {
 	struct fsm *new;
 
@@ -89,6 +90,31 @@ fsm_reverse(struct fsm *fsm)
 		end = equivalent(new, fsm, fsm->start);
 		if (end != NULL) {
 			fsm_setend(new, end, 1);
+		}
+
+		/*
+		 * Carry through set of opaque values to the new end state.
+		 * This isn't anything to do with the reversing; it's meaningful
+		 * only to the caller.
+		 */
+		/* XXX: possibly have callback in fsm struct, instead. like the colour hooks */
+		if (end != NULL && carryopaque != NULL) {
+			struct state_set *set;
+			struct fsm_state *s;
+
+			if (fsm_isend(fsm, fsm->start)) {
+				set = NULL;
+
+				if (!set_addstate(&set, s)) {
+					set_free(set);
+					fsm_free(new);
+					return 0;
+				}
+
+				carryopaque(set, new, end);
+
+				set_free(set);
+			}
 		}
 	}
 
@@ -246,5 +272,11 @@ fsm_reverse(struct fsm *fsm)
 	fsm_move(fsm, new);
 
 	return 1;
+}
+
+int
+fsm_reverse(struct fsm *fsm)
+{
+	return fsm_reverse_opaque(fsm, NULL);
 }
 

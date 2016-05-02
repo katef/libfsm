@@ -23,6 +23,11 @@ fsm_desensitise(struct fsm *fsm);
 int
 fsm_reverse(struct fsm *fsm);
 
+/* TODO: explain */
+int
+fsm_reverse_opaque(struct fsm *fsm,
+	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *));
+
 /*
  * Convert an fsm to a DFA.
  *
