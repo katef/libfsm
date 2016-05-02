@@ -92,6 +92,27 @@ xopen(const char *s)
 	return f;
 }
 
+static void
+printexample(FILE *f, const struct fsm *fsm, const struct fsm_state *state)
+{
+	char buf[256]; /* TODO */
+	int n;
+
+	assert(f != NULL);
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	n = fsm_example(fsm, state, buf, sizeof buf);
+	if (-1 == n) {
+		perror("fsm_example");
+		exit(EXIT_FAILURE);
+	}
+
+	/* TODO: escape hex etc */
+	fprintf(f, "%s%s", buf,
+		n >= (int) sizeof buf - 1 ? "..." : "");
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -230,23 +251,14 @@ main(int argc, char *argv[])
 
 	if (example) {
 		struct fsm_state *s;
-		char buf[256]; /* TODO */
-		int n;
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
 			if (!fsm_isend(fsm, s)) {
 				continue;
 			}
 
-			n = fsm_example(fsm, s, buf, sizeof buf);
-			if (-1 == n) {
-				perror("fsm_example");
-				return EXIT_FAILURE;
-			}
-
-			/* TODO: escape hex etc */
-			fprintf(stderr, "%s%s\n", buf,
-				n >= (int) sizeof buf - 1 ? "..." : "");
+			printexample(stdout, fsm, s);
+			printf("\n");
 		}
 
 		return 0;
