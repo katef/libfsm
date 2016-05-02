@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 89 "src/libre/parser.act"
+#line 92 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -28,6 +28,8 @@
 
 	#include <re/re.h>
 
+	#include "libre/internal.h"
+
 	#ifndef FORM
 	#error FORM required
 	#endif
@@ -42,30 +44,31 @@
 	#define LX_NEXT   CAT(LX_PREFIX, _next)
 	#define LX_INIT   CAT(LX_PREFIX, _init)
 
-	#define FORM_COMP CAT(comp_, FORM)
+	#define FORM_COMP  CAT(comp_, FORM)
+	#define FORM_GROUP CAT(group_, FORM)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
-	#define FORM_ENTRY CAT(p_re__, FORM)
+	#define FORM_ENTRY       CAT(p_re__, FORM)
+	#define FORM_GROUP_ENTRY CAT(p_group_H, FORM)
 
 	#include "parser.h"
 	#include "lexer.h"
 
 	#include "../comp.h"
+	#include "../group.h"
 
-	typedef char        t_char;
-	typedef unsigned    t_unsigned;
-	typedef unsigned    t_pred; /* TODO */
+	typedef char     t_char;
+	typedef unsigned t_unsigned;
+	typedef unsigned t_pred; /* TODO */
 
 	typedef struct fsm_state * t_fsm__state;
-
-	typedef struct {
-		struct bm set;
-	} t_grp;
+	typedef struct re_grp t_grp;
 
 	struct act_state {
 		enum LX_TOKEN lex_tok;
 		enum LX_TOKEN lex_tok_save;
 		enum re_errno e;
+		struct re_grp *g; /* for <stash-group> */
 	};
 
 	struct lex_state {
@@ -100,6 +103,15 @@
 		vfprintf(stderr, fmt, ap);
 		fprintf(stderr, "\n");
 		va_end(ap);
+	}
+
+	static void
+	group_add(t_grp *g, char c)
+	{
+		assert(g != NULL);
+		assert((unsigned char) c != FSM_EDGE_EPSILON);
+
+		bm_set(&g->set, (unsigned char) c);
 	}
 
 	/* TODO: centralise */
@@ -147,7 +159,7 @@
 		return s;
 	}
 
-#line 151 "src/libre/form/literal/parser.c"
+#line 163 "src/libre/form/literal/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -177,7 +189,7 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state)
 
 		/* BEGINNING OF ACTION: make-states */
 		{
-#line 320 "src/libre/parser.act"
+#line 332 "src/libre/parser.act"
 
 		assert(fsm != NULL);
 		/* TODO: assert fsm is empty */
@@ -192,10 +204,10 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state)
 
 		fsm_setend(fsm, (ZIy), 1);
 	
-#line 196 "src/libre/form/literal/parser.c"
+#line 208 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: make-states */
-		/* BEGINNING OF INLINE: 60 */
+		/* BEGINNING OF INLINE: 61 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -211,13 +223,13 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state)
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 400 "src/libre/parser.act"
+#line 417 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			goto ZL3;
 		}
 	
-#line 221 "src/libre/form/literal/parser.c"
+#line 233 "src/libre/form/literal/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -228,18 +240,18 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-atoms */
 				{
-#line 566 "src/libre/parser.act"
+#line 583 "src/libre/parser.act"
 
 		act_state->e = RE_EXATOMS;
 	
-#line 236 "src/libre/form/literal/parser.c"
+#line 248 "src/libre/form/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-atoms */
 			}
 		ZL2:;
 		}
-		/* END OF INLINE: 60 */
-		/* BEGINNING OF INLINE: 61 */
+		/* END OF INLINE: 61 */
+		/* BEGINNING OF INLINE: 62 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -255,17 +267,17 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 578 "src/libre/parser.act"
+#line 595 "src/libre/parser.act"
 
 		act_state->e = RE_EXEOF;
 	
-#line 263 "src/libre/form/literal/parser.c"
+#line 275 "src/libre/form/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
 		ZL4:;
 		}
-		/* END OF INLINE: 61 */
+		/* END OF INLINE: 62 */
 	}
 	return;
 ZL1:;
@@ -286,14 +298,14 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 256 "src/libre/parser.act"
+#line 268 "src/libre/parser.act"
 
 		assert(lex_state->buf.a[0] != '\0');
 		assert(lex_state->buf.a[1] == '\0');
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 297 "src/libre/form/literal/parser.c"
+#line 309 "src/libre/form/literal/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -303,7 +315,7 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-literal */
 		{
-#line 417 "src/libre/parser.act"
+#line 434 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -314,17 +326,17 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 			goto ZL1;
 		}
 	
-#line 318 "src/libre/form/literal/parser.c"
+#line 330 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: add-literal */
 		/* BEGINNING OF ACTION: count-1 */
 		{
-#line 551 "src/libre/parser.act"
+#line 568 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (ZIy);
 	
-#line 328 "src/libre/form/literal/parser.c"
+#line 340 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: count-1 */
 	}
@@ -346,18 +358,18 @@ ZL2_list_Hof_Hliterals:;
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 393 "src/libre/parser.act"
+#line 410 "src/libre/parser.act"
 
 		(ZIz) = fsm_addstate(fsm);
 		if ((ZIz) == NULL) {
 			goto ZL1;
 		}
 	
-#line 357 "src/libre/form/literal/parser.c"
+#line 369 "src/libre/form/literal/parser.c"
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hliterals_C_Cliteral (fsm, flags, lex_state, act_state, ZIx, ZIz);
-		/* BEGINNING OF INLINE: 58 */
+		/* BEGINNING OF INLINE: 59 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -372,13 +384,13 @@ ZL2_list_Hof_Hliterals:;
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 400 "src/libre/parser.act"
+#line 417 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIz), (ZIy))) {
 			goto ZL1;
 		}
 	
-#line 382 "src/libre/form/literal/parser.c"
+#line 394 "src/libre/form/literal/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -388,7 +400,7 @@ ZL2_list_Hof_Hliterals:;
 				goto ZL1;
 			}
 		}
-		/* END OF INLINE: 58 */
+		/* END OF INLINE: 59 */
 	}
 	return;
 ZL1:;
@@ -398,7 +410,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 694 "src/libre/parser.act"
+#line 749 "src/libre/parser.act"
 
 
 	static int
@@ -419,7 +431,7 @@ ZL1:;
 	static int
 	parse(int (*f)(void *opaque), void *opaque,
 		void (*entry)(struct fsm *, flags, lex_state, act_state),
-		enum re_flags flags, struct fsm *new, struct re_err *err)
+		enum re_flags flags, struct fsm *new, struct re_err *err, t_grp *g)
 	{
 		struct act_state  act_state_s;
 		struct act_state *act_state;
@@ -430,7 +442,6 @@ ZL1:;
 
 		assert(f != NULL);
 		assert(entry != NULL);
-		assert(new != NULL);
 
 		lex_state    = &lex_state_s;
 		lex_state->p = lex_state->a;
@@ -462,6 +473,10 @@ ZL1:;
 		act_state = &act_state_s;
 
 		act_state->e = RE_ESUCCESS;
+
+		if (g != NULL) {
+			act_state->g = g;
+		}
 
 		ADVANCE_LEXER;
 		entry(new, flags, lex_state, act_state);
@@ -496,7 +511,7 @@ ZL1:;
 			goto error;
 		}
 
-		if (-1 == parse(f, opaque, FORM_ENTRY, flags, new, err)) {
+		if (-1 == parse(f, opaque, FORM_ENTRY, flags, new, err, NULL)) {
 			fsm_free(new);
 			return NULL;
 		}
@@ -513,6 +528,41 @@ ZL1:;
 		return NULL;
 	}
 
-#line 517 "src/libre/form/literal/parser.c"
+#ifdef PARSE_GROUP
+	int
+	FORM_GROUP(int (*f)(void *opaque), void *opaque,
+		enum re_flags flags, struct re_err *err, struct re_grp *g)
+	{
+		assert(f != NULL);
+		assert(g != NULL);
+
+		/*
+		 * The ::group-$form production provides an entry point to the
+		 * grammar where just a group is parsed and output as a bitmap,
+		 * without constructing an NFA edge for each entry in the set.
+		 *
+		 * We use the same parse() function here so as to use the same
+		 * act/lex_state setup as usual. The problem is that parse() expects
+		 * the entry() callback to take no extra parameters, and so the
+		 * ::group-$form production cannot output a :grp type. In other words,
+		 * its generated function must have the same prototype as the usual
+		 * grammar entry point, which of course does not output a :grp.
+		 *
+		 * So, we have a hacky workaround where ::group-$form calls a
+		 * <stash-group> action which stashes the bitmap in act_state->g,
+		 * which is set here to point to the caller's storage for g.
+		 * This relies on the fact that ::group-$form need only store
+		 * one group at a time, which suits us fine.
+		 */
+
+		if (-1 == parse(f, opaque, FORM_GROUP_ENTRY, flags, NULL, err, g)) {
+			return -1;
+		}
+
+		return 0;
+	}
+#endif
+
+#line 567 "src/libre/form/literal/parser.c"
 
 /* END OF FILE */
