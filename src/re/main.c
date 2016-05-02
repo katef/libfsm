@@ -72,7 +72,7 @@ form_name(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-FILE *
+static FILE *
 xopen(const char *s)
 {
 	FILE *f;
