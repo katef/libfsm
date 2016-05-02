@@ -113,7 +113,8 @@ removestate(struct fsm *fsm, struct fsm_state *state)
 }
 
 int
-fsm_minimise(struct fsm *fsm)
+fsm_minimise_opaque(struct fsm *fsm,
+	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *))
 {
 	int r;
 	int hasend;
@@ -137,22 +138,22 @@ fsm_minimise(struct fsm *fsm)
 	 * Brzozowski's algorithm.
 	 */
 	{
-		r = fsm_reverse(fsm);
+		r = fsm_reverse_opaque(fsm, carryopaque);
 		if (!r) {
 			return 0;
 		}
 
-		r = fsm_determinise(fsm);
+		r = fsm_determinise_opaque(fsm, carryopaque);
 		if (!r) {
 			return 0;
 		}
 
-		r = fsm_reverse(fsm);
+		r = fsm_reverse_opaque(fsm, carryopaque);
 		if (!r) {
 			return 0;
 		}
 
-		r = fsm_determinise(fsm);
+		r = fsm_determinise_opaque(fsm, carryopaque);
 		if (!r) {
 			return 0;
 		}
@@ -183,6 +184,9 @@ fsm_minimise(struct fsm *fsm)
 			}
 
 			if (equivalent(fsm->start, s)) {
+				/* XXX: I *think* there's no need to carryopaque() to s,
+				 * since newly-added start states would never have an opaque. */
+
 				removestate(fsm, fsm->start);
 
 				fsm->start = s;
@@ -193,5 +197,11 @@ fsm_minimise(struct fsm *fsm)
 	}
 
 	return 1;
+}
+
+int
+fsm_minimise(struct fsm *fsm)
+{
+	return fsm_minimise_opaque(fsm, NULL);
 }
 

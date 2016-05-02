@@ -56,6 +56,11 @@ fsm_complete(struct fsm *fsm,
 int
 fsm_minimise(struct fsm *fsm);
 
+/* TODO: explain */
+int
+fsm_minimise_opaque(struct fsm *fsm,
+	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *));
+
 /*
  * Concatenate b after a. This is not commutative.
  */
