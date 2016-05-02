@@ -186,7 +186,7 @@ main(int argc, char *argv[])
 	{
 		int i;
 
-		for (i = 0; i < argc - 1; i++) {
+		for (i = 0; i < argc - !(dump || example); i++) {
 			struct re_err err;
 			struct fsm *new;
 
@@ -270,19 +270,19 @@ main(int argc, char *argv[])
 		return 0;
 	}
 
-	if (keep_nfa) {
-		fprintf(stderr, "-n is not for execution; execution requires a DFA\n");
-		return EXIT_FAILURE;
-	}
-
-	r = 0;
-
-	/* TODO: option to print input texts which match. like grep(1) does.
-	 * This is not the same as printing patterns which match (by associating
-	 * a pattern to the end state), like lx(1) does */
-
-	{
+	if (argc > 0) {
 		int i;
+
+		if (keep_nfa) {
+			fprintf(stderr, "-n is not for execution; execution requires a DFA\n");
+			return EXIT_FAILURE;
+		}
+
+		r = 0;
+
+		/* TODO: option to print input texts which match. like grep(1) does.
+		 * This is not the same as printing patterns which match (by associating
+		 * a pattern to the end state), like lx(1) does */
 
 		for (i = 0; i < argc; i++) {
 			if (xfiles) {
