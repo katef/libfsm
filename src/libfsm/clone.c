@@ -62,8 +62,6 @@ fsm_clone(const struct fsm *fsm)
 				fsm_free(new);
 				return NULL;
 			}
-
-			q->opaque = s->opaque;
 		}
 	}
 
@@ -79,6 +77,7 @@ fsm_clone(const struct fsm *fsm)
 			assert(equiv != NULL);
 
 			fsm_setend(new, equiv, fsm_isend(fsm, s));
+			equiv->opaque = s->opaque;
 
 			for (i = 0; i <= FSM_EDGE_MAX; i++) {
 				for (to = s->edges[i].sl; to != NULL; to = to->next) {
