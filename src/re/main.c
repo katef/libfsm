@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include <adt/set.h>
 
@@ -19,6 +20,7 @@
 #include <fsm/graph.h>
 
 #include <re/re.h>
+#include <re/group.h>
 
 #include "libfsm/internal.h" /* XXX */
 
@@ -30,6 +32,7 @@
  * TODO: accepting a delimiter would be useful: /abc/. perhaps provide that as
  * a convenience function, especially wrt. escaping for lexing. Also convenient
  * for specifying flags: /abc/g
+ * TODO: flags; -i for RE_ICASE, -r for RE_REVERSE, etc
  */
 
 struct match {
@@ -77,6 +80,44 @@ form_name(const char *name)
 
 	fprintf(stderr, "unrecognised re form \"%s\"", name);
 	exit(EXIT_FAILURE);
+}
+
+/* TODO: centralise */
+static int
+escputc(int c, FILE *f)
+{
+	size_t i;
+
+	const struct {
+		int c;
+		const char *s;
+	} a[] = {
+		{ '\\', "\\\\" },
+		{ '\'', "\\\'" },
+
+		{ '\a', "\\a"  },
+		{ '\b', "\\b"  },
+		{ '\f', "\\f"  },
+		{ '\n', "\\n"  },
+		{ '\r', "\\r"  },
+		{ '\t', "\\t"  },
+		{ '\v', "\\v"  }
+	};
+
+	assert(c != FSM_EDGE_EPSILON);
+	assert(f != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (a[i].c == c) {
+			return fputs(a[i].s, f);
+		}
+	}
+
+	if (!isprint((unsigned char) c)) {
+		return fprintf(f, "\\%03o", (unsigned char) c);
+	}
+
+	return fprintf(f, "%c", c);
 }
 
 static FILE *
@@ -220,6 +261,7 @@ main(int argc, char *argv[])
 	struct fsm *fsm;
 	int ifiles, xfiles;
 	int dump;
+	int group;
 	int example;
 	int keep_nfa;
 	int patterns;
@@ -240,6 +282,7 @@ main(int argc, char *argv[])
 	ifiles   = 0;
 	xfiles   = 0;
 	dump     = 0;
+	group    = 0;
 	example  = 0;
 	keep_nfa = 0;
 	patterns = 0;
@@ -250,7 +293,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hacdixmnr:p"), c != -1) {
+		while (c = getopt(argc, argv, "hacdgixmnr:p"), c != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -266,6 +309,7 @@ main(int argc, char *argv[])
 
 			case 'a': ambig    = 1; break;
 			case 'd': dump     = 1; break;
+			case 'g': group    = 1; break;
 			case 'i': ifiles   = 1; break;
 			case 'x': xfiles   = 1; break;
 			case 'm': example  = 1; break;
@@ -283,9 +327,52 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (dump && example) {
-		fprintf(stderr, "-d and -m are mutually exclusive\n");
+	if (dump + example + group > 1) {
+		fprintf(stderr, "-d, -g and -m are mutually exclusive\n");
 		return EXIT_FAILURE;
+	}
+
+	if (group) {
+		struct re_err err;
+		int r;
+
+		if (argc != 1) {
+			fprintf(stderr, "expected one group input\n");
+			return EXIT_FAILURE;
+		}
+
+		/* TODO: pick escputc based on *output* dialect.
+		 * centralise with escchar() in parser.act? */
+		/* TODO: re_flags */
+
+		if (ifiles) {
+			FILE *f;
+
+			f = xopen(argv[0]);
+
+			r = re_group_print(form, re_fgetc, f,
+				0, &err, stdout, escputc);
+
+			fclose(f);
+		} else {
+			const char *s;
+
+			s = argv[0];
+
+			r = re_group_print(form, re_sgetc, &s,
+				0, &err, stdout, escputc);
+		}
+
+		if (r == -1) {
+			re_perror("re_group_print", RE_SIMPLE, &err,
+				 ifiles ? argv[0] : NULL,
+				!ifiles ? argv[0] : NULL);
+			return EXIT_FAILURE;
+		}
+
+		printf("\n");
+
+		return 0;
 	}
 
 	if (!dump) {
