@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <adt/set.h>
+
 #include <fsm/fsm.h>
 #include <fsm/out.h>	/* XXX */
 #include <fsm/bool.h>
@@ -30,13 +32,18 @@
  * for specifying flags: /abc/g
  */
 
+struct match {
+	const char *s;
+	struct match *next;
+};
+
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re -d [-cidmn] <re> ...\n");
-	fprintf(stderr, "       re -e [-cidmn] <re> ...\n");
-	fprintf(stderr, "       re -x [-cidmn] <re> ... [ <file> | -- <file> ... ]\n");
-	fprintf(stderr, "       re    [-cidmn] <re> ... [ <string> | -- <string> ... ]\n");
+	fprintf(stderr, "usage: re -d [-acidmn] <re> ...\n");
+	fprintf(stderr, "       re -m [-acidmn] <re> ...\n");
+	fprintf(stderr, "       re -x [-acidmn] <re> ... [ <file> | -- <file> ... ]\n");
+	fprintf(stderr, "       re    [-acidmn] <re> ... [ <string> | -- <string> ... ]\n");
 	fprintf(stderr, "       re -h\n");
 }
 
@@ -92,6 +99,98 @@ xopen(const char *s)
 	return f;
 }
 
+static struct match *
+addmatch(struct match **head, const char *s)
+{
+	struct match *new;
+
+	assert(head != NULL);
+	assert(s != NULL);
+
+	/* TODO: explain we find duplicate; return success */
+	/*
+	 * This is a purposefully shallow comparison (rather than calling strcmp)
+	 * so that 're xyz xyz' will find the ambiguity.
+	 */
+	{
+		struct match *p;
+
+		for (p = *head; p != NULL; p = p->next) {
+			if (p->s == s) {
+				return p;
+			}
+		}
+	}
+
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+		return NULL;
+	}
+
+	new->s = s;
+
+	new->next = *head;
+	*head     = new;
+
+	return new;
+}
+
+static void
+carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
+{
+	struct state_set *s;
+	struct match *m;
+	struct match *matches;
+
+	assert(set != NULL); /* TODO: right? */
+	assert(fsm != NULL);
+	assert(state != NULL);
+
+	if (!fsm_isend(fsm, state)) {
+		return;
+	}
+
+	/*
+	 * Here we mark newly-created DFA states with the same regexp string
+	 * as from their corresponding source NFA states.
+	 *
+	 * Because all the accepting states are reachable together, they
+	 * should all share the same regexp, unless re(1) was invoked with
+	 * a regexp which is a subset of (or equal to) another.
+	 */
+
+	matches = NULL;
+
+	for (s = set; s != NULL; s = s->next) {
+		if (!fsm_isend(fsm, s->state)) {
+			continue;
+		}
+
+		assert(s->state->opaque != NULL);
+
+		for (m = s->state->opaque; m != NULL; m = m->next) {
+			assert(s->state->opaque != NULL);
+
+			if (!addmatch(&matches, m->s)) {
+				perror("addmatch");
+				goto error;
+			}
+		}
+	}
+
+	state->opaque = matches;
+
+	return;
+
+error:
+
+	/* XXX: free matches */
+
+	state->opaque = NULL;
+
+	return;
+}
+
 static void
 printexample(FILE *f, const struct fsm *fsm, const struct fsm_state *state)
 {
@@ -123,6 +222,8 @@ main(int argc, char *argv[])
 	int dump;
 	int example;
 	int keep_nfa;
+	int patterns;
+	int ambig;
 	int r;
 
 	if (argc < 1) {
@@ -141,13 +242,15 @@ main(int argc, char *argv[])
 	dump     = 0;
 	example  = 0;
 	keep_nfa = 0;
+	patterns = 0;
+	ambig    = 0;
 	join     = fsm_union;
 	form     = RE_SIMPLE;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hcdixmnr:"), c != -1) {
+		while (c = getopt(argc, argv, "hacdixmnr:p"), c != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -161,11 +264,13 @@ main(int argc, char *argv[])
 				form = form_name(optarg);
 				break;
 
+			case 'a': ambig    = 1; break;
 			case 'd': dump     = 1; break;
 			case 'i': ifiles   = 1; break;
 			case 'x': xfiles   = 1; break;
 			case 'm': example  = 1; break;
 			case 'n': keep_nfa = 1; break;
+			case 'p': patterns = 1; break;
 
 			case '?':
 			default:
@@ -179,8 +284,16 @@ main(int argc, char *argv[])
 	}
 
 	if (dump && example) {
-		fprintf(stderr, "-d and -e are mutually exclusive\n");
+		fprintf(stderr, "-d and -m are mutually exclusive\n");
 		return EXIT_FAILURE;
+	}
+
+	if (!dump) {
+		keep_nfa = 0;
+	}
+
+	if (keep_nfa) {
+		ambig = 1;
 	}
 
 	{
@@ -215,8 +328,6 @@ main(int argc, char *argv[])
 				new = re_new_comp(form, re_sgetc, &s, 0, &err);
 			}
 
-			/* TODO: addend(new, argv[i]); */
-
 			if (new == NULL) {
 				re_perror("re_new_comp", form, &err,
 					 ifiles ? argv[i] : NULL,
@@ -224,7 +335,39 @@ main(int argc, char *argv[])
 				return EXIT_FAILURE;
 			}
 
+			if (!keep_nfa) {
+				if (!fsm_minimise(new)) {
+					perror("fsm_minimise");
+					return EXIT_FAILURE;
+				}
+			}
+
 			/* TODO: associate argv[i] with new's end state */
+			{
+				struct fsm_state *s;
+
+				/*
+				 * Attach this mapping to each end state for this regexp.
+				 * We could share the same matches struct for all end states
+				 * in the same regexp, but that would be tricky to free().
+				 */
+				for (s = new->sl; s != NULL; s = s->next) {
+					if (fsm_isend(new, s)) {
+						struct match *matches;
+
+						matches = NULL;
+
+						if (!addmatch(&matches, argv[i])) {
+							perror("addmatch");
+							return EXIT_FAILURE;
+						}
+
+						assert(s->opaque == NULL);
+
+						s->opaque = matches;
+					}
+				}
+			}
 
 			fsm = join(fsm, new);
 			if (fsm == NULL) {
@@ -242,10 +385,76 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (!keep_nfa) {
-		if (!fsm_minimise(fsm)) {
-			perror("fsm_minimise");
+	if (!ambig) {
+		const struct fsm_state *s;
+		struct fsm *dfa;
+
+		dfa = fsm_clone(fsm);
+		if (dfa == NULL) {
+			perror("fsm_clone");
 			return EXIT_FAILURE;
+		}
+
+		if (!fsm_determinise_opaque(dfa, carryopaque)) {
+			perror("fsm_determinise_opaque");
+			return EXIT_FAILURE;
+		}
+
+		for (s = dfa->sl; s != NULL; s = s->next) {
+			const struct match *matches;
+
+			if (!fsm_isend(dfa, s)) {
+				continue;
+			}
+
+			assert(s->opaque != NULL);
+
+			matches = s->opaque;
+
+			if (matches->next != NULL) {
+				const struct match *m;
+
+				/* TODO: // delimeters depend on form */
+				/* TODO: would deal with form: prefix here, too */
+
+				fprintf(stderr, "ambigious matches for ");
+				for (m = matches; m != NULL; m = m->next) {
+					/* TODO: print nicely */
+					fprintf(stderr, "/%s/", m->s);
+					if (m->next != NULL) {
+						fprintf(stderr, ", ");
+					}
+				}
+
+				fprintf(stderr, "; for example on input '");
+				printexample(stderr, dfa, s);
+				fprintf(stderr, "'\n");
+
+				/* TODO: consider different error codes */
+				return EXIT_FAILURE;
+			}
+		}
+
+		/* TODO: free opaques */
+
+		fsm_free(dfa);
+	}
+
+	if (!keep_nfa) {
+		/*
+		 * Minimise only when we don't need to keep the end state information
+		 * separated per regexp. Otherwise, convert to a DFA.
+		 */
+		if (!patterns && !example) {
+			if (!fsm_minimise(fsm)) {
+				perror("fsm_minimise");
+				return EXIT_FAILURE;
+			}
+		} else {
+			if (!fsm_determinise_opaque(fsm, carryopaque)) {
+				perror("fsm_determinise_opaque");
+				return EXIT_FAILURE;
+			}
 		}
 	}
 
@@ -257,6 +466,23 @@ main(int argc, char *argv[])
 				continue;
 			}
 
+			/* TODO: would deal with form: prefix here, too */
+			if (patterns) {
+				const struct match *m;
+
+				assert(s->opaque != NULL);
+
+				for (m = s->opaque; m != NULL; m = m->next) {
+					/* TODO: print nicely */
+					printf("/%s/", m->s);
+					if (m->next != NULL) {
+						printf(", ");
+					}
+				}
+
+				printf(": ");
+			}
+
 			printexample(stdout, fsm, s);
 			printf("\n");
 		}
@@ -265,10 +491,15 @@ main(int argc, char *argv[])
 	}
 
 	if (dump) {
+		/* TODO: print examples in comments for end states;
+		 * patterns in comments for the whole FSM */
+
 		fsm_print(fsm, stdout, FSM_OUT_FSM, NULL);
 
 		return 0;
 	}
+
+	r = 0;
 
 	if (argc > 0) {
 		int i;
@@ -278,19 +509,19 @@ main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 
-		r = 0;
-
 		/* TODO: option to print input texts which match. like grep(1) does.
 		 * This is not the same as printing patterns which match (by associating
 		 * a pattern to the end state), like lx(1) does */
 
 		for (i = 0; i < argc; i++) {
+			const struct fsm_state *state;
+
 			if (xfiles) {
 				FILE *f;
 
 				f = xopen(argv[0]);
 
-				r |= !fsm_exec(fsm, fsm_fgetc, f);
+				state = fsm_exec(fsm, fsm_fgetc, f);
 
 				fclose(f);
 			} else {
@@ -298,10 +529,26 @@ main(int argc, char *argv[])
 
 				s = argv[i];
 
-				r |= !fsm_exec(fsm, fsm_sgetc, &s);
+				state = fsm_exec(fsm, fsm_sgetc, &s);
+			}
+
+			if (state == NULL) {
+				r |= 1;
+				continue;
+			}
+
+			if (patterns) {
+				const struct match *m;
+
+				for (m = state->opaque; m != NULL; m = m->next) {
+					/* TODO: print nicely */
+					printf("match: /%s/\n", m->s);
+				}
 			}
 		}
 	}
+
+	/* XXX: free opaques */
 
 	fsm_free(fsm);
 
