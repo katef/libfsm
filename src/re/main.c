@@ -395,7 +395,7 @@ main(int argc, char *argv[])
 	{
 		int i;
 
-		for (i = 0; i < argc - !(dump || example); i++) {
+		for (i = 0; i < argc - !(dump || example || argc <= 1); i++) {
 			struct re_err err;
 			struct fsm *new;
 
