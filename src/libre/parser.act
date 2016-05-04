@@ -116,6 +116,11 @@
 		assert(g != NULL);
 		assert((unsigned char) c != FSM_EDGE_EPSILON);
 
+		if (bm_get(&g->set, (unsigned char) c)) {
+			bm_set(&g->dup, (unsigned char) c);
+			return;
+		}
+
 		bm_set(&g->set, (unsigned char) c);
 	}
 
@@ -162,6 +167,14 @@
 
 		sprintf(s, "%c", c);
 		return s;
+	}
+
+	static int
+	escputc(int c, FILE *f)
+	{
+		char s[5];
+
+		return fputs(escchar(s, sizeof s, c), f);
 	}
 
 @}, @{
@@ -343,10 +356,12 @@
 
 	<make-group>: () -> (g :grp) = @{
 		bm_clear(&@g.set);
+		bm_clear(&@g.dup);
 	@};
 
 	<invert-group>: (g :grp &) -> () = @{
 		bm_invert(&@&g->set);
+		bm_invert(&@&g->dup);
 	@};
 
 	<stash-group>: (g :grp &) -> () = @{
@@ -376,6 +391,31 @@
 
 	<group-to-states>: (g :grp &, x :fsm_state, y :fsm_state) -> () = @{
 		int i;
+
+		if (bm_count(&@&g->dup) > 0) {
+			char set[128], dup[128];
+
+			/* TODO: would like to show the original spelling verbatim, too */
+
+			if (-1 == bm_snprint(&@&g->dup, set, sizeof set, 1, escputc)) {
+				/* TODO: error */
+			}
+
+			if (-1 == bm_snprint(&@&g->set, dup, sizeof dup, 1, escputc)) {
+				/* TODO: error */
+			}
+
+			if (0 == strcmp(set, dup)) {
+				err(lex_state, "redundancy in range: overlap of %s",
+					set);
+			} else {
+				err(lex_state, "redundancy in range: overlap of %s; "
+					"minimal coverage is %s",
+					set, dup);
+			}
+
+			exit(EXIT_FAILURE);
+		}
 
 		/* TODO: eventually libfsm will provide a neater mechanism here */
 

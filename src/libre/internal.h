@@ -5,6 +5,7 @@
 
 struct re_grp {
 	struct bm set;
+	struct bm dup;
 };
 
 #endif
