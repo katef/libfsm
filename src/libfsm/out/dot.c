@@ -185,7 +185,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 				options->prefix != NULL ? options->prefix : "",
 				indexof(fsm, e->state));
 
-			(void) bm_print(f, &bm, escputc);
+			(void) bm_print(f, &bm, 0, escputc);
 
 			fprintf(f, "> ];\n");
 		}

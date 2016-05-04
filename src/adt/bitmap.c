@@ -92,6 +92,7 @@ bm_invert(struct bm *bm)
 
 int
 bm_print(FILE *f, const struct bm *bm,
+	int boxed,
 	int (*escputc)(int c, FILE *f))
 {
 	unsigned int count;
@@ -123,7 +124,10 @@ bm_print(FILE *f, const struct bm *bm,
 		mode = MODE_INVERT;
 	}
 
-	/* TODO: optionally disable MODE_ANY. maybe provide a mask of modes to allow */
+	if (boxed && (mode == MODE_SINGLE || mode == MODE_ANY)) {
+		mode = MODE_MANY;
+	}
+
 	/* TODO: would prefer to show ranges before other characters */
 	/* XXX: all literal characters here really should go through escputc */
 
@@ -248,6 +252,7 @@ bm_print(FILE *f, const struct bm *bm,
 
 int
 bm_snprint(const struct bm *bm, char *s, size_t n,
+	int boxed,
 	int (*escputc)(int c, FILE *f))
 {
 	FILE *f;
@@ -277,7 +282,7 @@ bm_snprint(const struct bm *bm, char *s, size_t n,
 		return -1;
 	}
 
-	r = bm_print(f, bm, escputc);
+	r = bm_print(f, bm, boxed, escputc);
 	if (r == -1) {
 		goto error;
 	}

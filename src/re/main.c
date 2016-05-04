@@ -47,6 +47,7 @@ usage(void)
 	fprintf(stderr, "       re -m [-acidmn] <re> ...\n");
 	fprintf(stderr, "       re -x [-acidmn] <re> ... [ <file> | -- <file> ... ]\n");
 	fprintf(stderr, "       re    [-acidmn] <re> ... [ <string> | -- <string> ... ]\n");
+	fprintf(stderr, "       re -g [-bi] <group>\n");
 	fprintf(stderr, "       re -h\n");
 }
 
@@ -260,6 +261,7 @@ main(int argc, char *argv[])
 	enum re_form form;
 	struct fsm *fsm;
 	int ifiles, xfiles;
+	int boxed;
 	int dump;
 	int group;
 	int example;
@@ -281,6 +283,7 @@ main(int argc, char *argv[])
 
 	ifiles   = 0;
 	xfiles   = 0;
+	boxed    = 0;
 	dump     = 0;
 	group    = 0;
 	example  = 0;
@@ -293,7 +296,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hacdgixmnr:p"), c != -1) {
+		while (c = getopt(argc, argv, "habcdgixmnr:p"), c != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -308,6 +311,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'a': ambig    = 1; break;
+			case 'b': boxed    = 1; break;
 			case 'd': dump     = 1; break;
 			case 'g': group    = 1; break;
 			case 'i': ifiles   = 1; break;
@@ -332,6 +336,11 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	if (boxed && !group) {
+		fprintf(stderr, "-b applies for -g only\n");
+		return EXIT_FAILURE;
+	}
+
 	if (group) {
 		struct re_err err;
 		int r;
@@ -351,7 +360,7 @@ main(int argc, char *argv[])
 			f = xopen(argv[0]);
 
 			r = re_group_print(form, re_fgetc, f,
-				0, &err, stdout, escputc);
+				0, &err, stdout, boxed, escputc);
 
 			fclose(f);
 		} else {
@@ -360,7 +369,7 @@ main(int argc, char *argv[])
 			s = argv[0];
 
 			r = re_group_print(form, re_sgetc, &s,
-				0, &err, stdout, escputc);
+				0, &err, stdout, boxed, escputc);
 		}
 
 		if (r == -1) {

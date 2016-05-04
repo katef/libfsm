@@ -160,6 +160,7 @@ int
 re_group_print(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err,
 	FILE *f,
+	int boxed,
 	int (*escputc)(int c, FILE *f))
 {
 	const struct form *m;
@@ -203,7 +204,7 @@ re_group_print(enum re_form form, int (*getc)(void *opaque), void *opaque,
 
 	/* TODO: populate re_err error for non-empty conflict set */
 
-	r = bm_print(f, &g.set, escputc);
+	r = bm_print(f, &g.set, boxed, escputc);
 	if (r == -1) {
 		goto error;
 	}
@@ -223,6 +224,7 @@ int
 re_group_snprint(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err,
 	char *s, size_t n,
+	int boxed,
 	int (*escputc)(int c, FILE *f))
 {
 	const struct form *m;
@@ -271,7 +273,7 @@ re_group_snprint(enum re_form form, int (*getc)(void *opaque), void *opaque,
 
 	/* TODO: populate re_err error for non-empty conflict set */
 
-	r = bm_snprint(&g.set, s, n, escputc);
+	r = bm_snprint(&g.set, s, n, boxed, escputc);
 	if (r == -1) {
 		goto error;
 	}
