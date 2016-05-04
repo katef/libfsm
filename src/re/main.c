@@ -591,11 +591,6 @@ main(int argc, char *argv[])
 	if (argc > 0) {
 		int i;
 
-		if (keep_nfa) {
-			fprintf(stderr, "-n is not for execution; execution requires a DFA\n");
-			return EXIT_FAILURE;
-		}
-
 		/* TODO: option to print input texts which match. like grep(1) does.
 		 * This is not the same as printing patterns which match (by associating
 		 * a pattern to the end state), like lx(1) does */
