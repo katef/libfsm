@@ -22,6 +22,9 @@ fsm_union(struct fsm *a, struct fsm *b)
 	assert(a != NULL);
 	assert(b != NULL);
 
+	if (a->sl == NULL) { return b; }
+	if (b->sl == NULL) { return a; }
+
 	sa = fsm_getstart(a);
 	sb = fsm_getstart(b);
 	if (sa == NULL || sb == NULL) {
