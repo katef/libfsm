@@ -25,10 +25,6 @@
 #include "libfsm/internal.h" /* XXX */
 
 /*
- * TODO: pass a language option for dumping output.
- * output to various forms, too (print the fsm as ERE, glob, etc)
- * do this through a proper interface, instead of including internal.h
- *
  * TODO: accepting a delimiter would be useful: /abc/. perhaps provide that as
  * a convenience function, especially wrt. escaping for lexing. Also convenient
  * for specifying flags: /abc/g
@@ -43,12 +39,47 @@ struct match {
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re -d [-acidmn] <re> ...\n");
+	fprintf(stderr, "usage: re -d [-acidmn] [-l <language>] <re> ...\n");
 	fprintf(stderr, "       re -m [-acidmn] <re> ...\n");
 	fprintf(stderr, "       re -x [-acidmn] <re> ... [ <file> | -- <file> ... ]\n");
 	fprintf(stderr, "       re    [-acidmn] <re> ... [ <string> | -- <string> ... ]\n");
 	fprintf(stderr, "       re -g [-bi] <group>\n");
 	fprintf(stderr, "       re -h\n");
+}
+
+static enum fsm_out
+language(const char *name)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		enum fsm_out format;
+	} a[] = {
+		{ "c",    FSM_OUT_C    },
+		{ "csv",  FSM_OUT_CSV  },
+		{ "dot",  FSM_OUT_DOT  },
+		{ "fsm",  FSM_OUT_FSM  },
+		{ "json", FSM_OUT_JSON }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].format;
+		}
+	}
+
+	fprintf(stderr, "unrecognised output language; valid languages are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
+	exit(EXIT_FAILURE);
 }
 
 static enum re_form
@@ -259,6 +290,7 @@ main(int argc, char *argv[])
 {
 	struct fsm *(*join)(struct fsm *, struct fsm *);
 	enum re_form form;
+	enum fsm_out format;
 	struct fsm *fsm;
 	int ifiles, xfiles;
 	int boxed;
@@ -292,11 +324,12 @@ main(int argc, char *argv[])
 	ambig    = 0;
 	join     = fsm_union;
 	form     = RE_SIMPLE;
+	format   = FSM_OUT_FSM;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "habcdgixmnr:p"), c != -1) {
+		while (c = getopt(argc, argv, "habcdgil:xmnr:p"), c != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -308,6 +341,10 @@ main(int argc, char *argv[])
 
 			case 'r':
 				form = form_name(optarg);
+				break;
+
+			case 'l':
+				format = language(optarg);
 				break;
 
 			case 'a': ambig    = 1; break;
@@ -590,7 +627,7 @@ main(int argc, char *argv[])
 		/* TODO: print examples in comments for end states;
 		 * patterns in comments for the whole FSM */
 
-		fsm_print(fsm, stdout, FSM_OUT_FSM, NULL);
+		fsm_print(fsm, stdout, format, NULL);
 
 		return 0;
 	}
