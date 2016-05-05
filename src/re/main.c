@@ -307,7 +307,7 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	fsm = re_new_empty();
+	fsm = fsm_new();
 	if (fsm == NULL) {
 		perror("re_new_empty");
 		return EXIT_FAILURE;
