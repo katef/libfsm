@@ -147,8 +147,8 @@ main(int argc, char *argv[])
 	struct fsm *fsm;
 	int print;
 
-	static const struct fsm_outoptions outoptions_defaults;
-	struct fsm_outoptions out_options = outoptions_defaults;
+	static const struct fsm_outoptions o_defaults;
+	struct fsm_outoptions o = o_defaults;
 
 	format = FSM_OUT_FSM;
 	print  = 0;
@@ -164,10 +164,10 @@ main(int argc, char *argv[])
 
 		while (c = getopt(argc, argv, "hagn:l:de:cmrt:pq:"), c != -1) {
 			switch (c) {
-			case 'a': out_options.anonymous_states  = 1;      break;
-			case 'g': out_options.fragment          = 1;      break;
-			case 'c': out_options.consolidate_edges = 1;      break;
-			case 'n': out_options.prefix            = optarg; break;
+			case 'a': o.anonymous_states  = 1;      break;
+			case 'g': o.fragment          = 1;      break;
+			case 'c': o.consolidate_edges = 1;      break;
+			case 'n': o.prefix            = optarg; break;
 
 			case 'e': return NULL == fsm_exec(fsm, fsm_sgetc, &optarg);
 
@@ -205,7 +205,7 @@ main(int argc, char *argv[])
 	}
 
 	if (print) {
-		fsm_print(fsm, stdout, format, &out_options);
+		fsm_print(fsm, stdout, format, &o);
 	}
 
 	fsm_free(fsm);

@@ -205,7 +205,8 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 */
 
 	{
-		struct fsm_outoptions o = { 0 };
+		static const struct fsm_outoptions o_defaults;
+		struct fsm_outoptions o = o_defaults;
 		char prefix[128];
 
 		(void) sprintf(prefix, "z%u", zindexof(ast, z));
