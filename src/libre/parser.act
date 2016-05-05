@@ -611,27 +611,39 @@
 
 
 	<err-expected-term> = @{
-		act_state->e = RE_EXTERM;
+		if (act_state->e == RE_ESUCCESS) {
+			act_state->e = RE_EXTERM;
+		}
 	@};
 
 	<err-expected-count> = @{
-		act_state->e = RE_EXCOUNT;
+		if (act_state->e == RE_ESUCCESS) {
+			act_state->e = RE_EXCOUNT;
+		}
 	@};
 
 	<err-expected-atoms> = @{
-		act_state->e = RE_EXATOMS;
+		if (act_state->e == RE_ESUCCESS) {
+			act_state->e = RE_EXATOMS;
+		}
 	@};
 
 	<err-expected-alts> = @{
-		act_state->e = RE_EXALTS;
+		if (act_state->e == RE_ESUCCESS) {
+			act_state->e = RE_EXALTS;
+		}
 	@};
 
 	<err-expected-range> = @{
-		act_state->e = RE_EXRANGE;
+		if (act_state->e == RE_ESUCCESS) {
+			act_state->e = RE_EXRANGE;
+		}
 	@};
 
 	<err-expected-eof> = @{
-		act_state->e = RE_EXEOF;
+		if (act_state->e == RE_ESUCCESS) {
+			act_state->e = RE_EXEOF;
+		}
 	@};
 
 %trailer% @{
