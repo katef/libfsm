@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include <assert.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -38,6 +39,18 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 		fprintf(stderr, ": %c%s%c", delim, s, delim);
 	}
 
-	fprintf(stderr, ": %s\n", re_strerror(err->e));
+	fprintf(stderr, ": %s", re_strerror(err->e));
+
+	if (err->e == RE_EOVERLAP) {
+		if (0 == strcmp(err->set, err->dup)) {
+			fprintf(stderr, ": overlap of %s",
+				err->dup);
+		} else {
+			fprintf(stderr, ": overlap of %s; minimal coverage is %s",
+				err->dup, err->set);
+		}
+	}
+
+	fprintf(stderr, "\n");
 }
 

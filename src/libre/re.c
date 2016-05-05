@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
 #include <errno.h>
 
@@ -203,34 +202,6 @@ re_group_print(enum re_form form, int (*getc)(void *opaque), void *opaque,
 		/* TODO: bm_desensitise */
 	}
 
-	/* TODO: populate re_err error for non-empty conflict set */
-	/* TODO: centralise conflict set handling. store in re_err; don't print here */
-	if (bm_count(&g.dup) > 0) {
-		char set[128], dup[128];
-
-		/* TODO: would like to show the original spelling verbatim, too */
-
-		if (-1 == bm_snprint(&g.dup, set, sizeof set, 1, escputc)) {
-			return -1;
-		}
-
-		if (-1 == bm_snprint(&g.set, dup, sizeof dup, 1, escputc)) {
-			return -1;
-		}
-
-		/* TODO: show col number */
-		if (0 == strcmp(set, dup)) {
-			fprintf(stderr, "redundancy in range: overlap of %s\n",
-				set);
-		} else {
-			fprintf(stderr, "redundancy in range: overlap of %s; "
-				"minimal coverage is %s\n",
-				set, dup);
-		}
-
-		exit(EXIT_FAILURE);
-	}
-
 	r = bm_print(f, &g.set, boxed, escputc);
 	if (r == -1) {
 		goto error;
@@ -296,34 +267,6 @@ re_group_snprint(enum re_form form, int (*getc)(void *opaque), void *opaque,
 
 	if (flags & RE_ICASE) {
 		/* TODO: bm_desensitise */
-	}
-
-	/* TODO: populate re_err error for non-empty conflict set */
-	/* TODO: centralise conflict set handling. store in re_err; don't print here */
-	if (bm_count(&g.dup) > 0) {
-		char set[128], dup[128];
-
-		/* TODO: would like to show the original spelling verbatim, too */
-
-		if (-1 == bm_snprint(&g.dup, set, sizeof set, 1, escputc)) {
-			return -1;
-		}
-
-		if (-1 == bm_snprint(&g.set, dup, sizeof dup, 1, escputc)) {
-			return -1;
-		}
-
-		/* TODO: show col number */
-		if (0 == strcmp(set, dup)) {
-			fprintf(stderr, "redundancy in range: overlap of %s\n",
-				set);
-		} else {
-			fprintf(stderr, "redundancy in range: overlap of %s; "
-				"minimal coverage is %s\n",
-				set, dup);
-		}
-
-		exit(EXIT_FAILURE);
 	}
 
 	r = bm_snprint(&g.set, s, n, boxed, escputc);

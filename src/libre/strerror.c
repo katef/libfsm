@@ -14,6 +14,9 @@ re_strerror(enum re_errno e)
 	case RE_ESUCCESS: return "Success";
 	case RE_EERRNO:   return strerror(errno);
 	case RE_EBADFORM: return "Bad form";
+
+	case RE_EOVERLAP: return "Redundancy in group";
+
 	case RE_EXSUB:    return "Syntax error: expected sub-expression";
 	case RE_EXTERM:   return "Syntax error: expected group term";
 	case RE_EXGROUP:  return "Syntax error: expected group";

@@ -40,13 +40,16 @@ enum re_pred {
 
 enum {
 	RE_MISC   = 1 << (8 - 1),
-	RE_SYNTAX = 1 << (8 - 2)  /* syntax errors; re_err.byte is populated */
+	RE_GROUP  = 1 << (8 - 2), /* re_err.set/.dup are populated */
+	RE_SYNTAX = 1 << (8 - 3)  /* re_err.byte is populated */
 };
 
 enum re_errno {
 	RE_ESUCCESS = 0 | RE_MISC,
 	RE_EERRNO   = 1 | RE_MISC,
 	RE_EBADFORM = 2 | RE_MISC,
+
+	RE_EOVERLAP = 0 | RE_GROUP,
 
 	RE_EXSUB    = 0 | RE_SYNTAX,
 	RE_EXTERM   = 1 | RE_SYNTAX,
@@ -62,6 +65,10 @@ enum re_errno {
 struct re_err {
 	enum re_errno e;
 	unsigned byte;
+
+	/* populated for RE_GROUP; ignored otherwise */
+	char set[128];
+	char dup[128];
 };
 
 /*

@@ -366,6 +366,13 @@
 
 	<stash-group>: (g :grp &) -> () = @{
 #define PARSE_GROUP
+
+		if (bm_count(&@&g->dup) > 0) {
+			act_state->e  = RE_EOVERLAP;
+			*act_state->g = *@&g;
+			@!;
+		}
+
 		*act_state->g = *@&g;
 	@};
 
@@ -393,28 +400,9 @@
 		int i;
 
 		if (bm_count(&@&g->dup) > 0) {
-			char set[128], dup[128];
-
-			/* TODO: would like to show the original spelling verbatim, too */
-
-			if (-1 == bm_snprint(&@&g->dup, set, sizeof set, 1, escputc)) {
-				/* TODO: error */
-			}
-
-			if (-1 == bm_snprint(&@&g->set, dup, sizeof dup, 1, escputc)) {
-				/* TODO: error */
-			}
-
-			if (0 == strcmp(set, dup)) {
-				err(lex_state, "redundancy in range: overlap of %s",
-					set);
-			} else {
-				err(lex_state, "redundancy in range: overlap of %s; "
-					"minimal coverage is %s",
-					set, dup);
-			}
-
-			exit(EXIT_FAILURE);
+			act_state->e  = RE_EOVERLAP;
+			*act_state->g = *@&g;
+			@!;
 		}
 
 		/* TODO: eventually libfsm will provide a neater mechanism here */
@@ -677,6 +665,7 @@
 
 		assert(f != NULL);
 		assert(entry != NULL);
+		assert(g != NULL);
 
 		lex_state    = &lex_state_s;
 		lex_state->p = lex_state->a;
@@ -708,10 +697,7 @@
 		act_state = &act_state_s;
 
 		act_state->e = RE_ESUCCESS;
-
-		if (g != NULL) {
-			act_state->g = g;
-		}
+		act_state->g = g;
 
 		ADVANCE_LEXER;
 		entry(new, flags, lex_state, act_state);
@@ -728,6 +714,27 @@
 		if (err != NULL) {
 			err->e    = act_state->e;
 			err->byte = lx->start.byte;
+
+			if (err->e & RE_GROUP) {
+				/* TODO: would like to show the original spelling verbatim, too */
+
+				if (-1 == bm_snprint(&g->set, err->set, sizeof err->set, 1, escputc)) {
+					goto error1;
+				}
+
+				if (-1 == bm_snprint(&g->dup, err->dup, sizeof err->dup, 1, escputc)) {
+					goto error1;
+				}
+			}
+		}
+
+		return -1;
+
+	error1:
+
+		if (err != NULL) {
+			err->e    = RE_EERRNO;
+			err->byte = 0;
 		}
 
 		return -1;
@@ -738,6 +745,7 @@
 		enum re_flags flags, struct re_err *err)
 	{
 		struct fsm *new;
+		struct re_grp g; /* for RE_GROUP error reporting only */
 
 		assert(f != NULL);
 
@@ -746,7 +754,7 @@
 			goto error;
 		}
 
-		if (-1 == parse(f, opaque, FORM_ENTRY, flags, new, err, NULL)) {
+		if (-1 == parse(f, opaque, FORM_ENTRY, flags, new, err, &g)) {
 			fsm_free(new);
 			return NULL;
 		}
