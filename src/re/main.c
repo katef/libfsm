@@ -385,7 +385,6 @@ main(int argc, char *argv[])
 
 	if (group) {
 		struct re_err err;
-		int r;
 
 		if (argc != 1) {
 			fprintf(stderr, "expected one group input\n");
