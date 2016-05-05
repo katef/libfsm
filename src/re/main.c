@@ -39,11 +39,10 @@ struct match {
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re -p [-acimnq] [-l <language>] <re> ...\n");
-	fprintf(stderr, "       re -m [-acimnq] <re> ...\n");
-	fprintf(stderr, "       re -x [-acimnq] <re> ... [ <file> | -- <file> ... ]\n");
-	fprintf(stderr, "       re    [-acimnq] <re> ... [ <string> | -- <string> ... ]\n");
-	fprintf(stderr, "       re -g [-bi] <group>\n");
+	fprintf(stderr, "usage: re -p [-iacmnq] [-l <language>] <re> ...\n");
+	fprintf(stderr, "       re -m [-iacmnq] <re> ...\n");
+	fprintf(stderr, "       re    [-iacmnqx] <re> ... [ <text> | -- <text> ... ]\n");
+	fprintf(stderr, "       re -g [-ib] <group>\n");
 	fprintf(stderr, "       re -h\n");
 }
 
