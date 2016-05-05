@@ -628,10 +628,16 @@ main(int argc, char *argv[])
 	}
 
 	if (print) {
+		static const struct fsm_outoptions o_defaults;
+		struct fsm_outoptions o = o_defaults;
+
+		o.anonymous_states  = 1;
+		o.consolidate_edges = 1;
+
 		/* TODO: print examples in comments for end states;
 		 * patterns in comments for the whole FSM */
 
-		fsm_print(fsm, stdout, format, NULL);
+		fsm_print(fsm, stdout, format, &o);
 
 		return 0;
 	}
