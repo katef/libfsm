@@ -23,12 +23,10 @@
 extern int optind;
 extern char *optarg;
 
-FILE *out;
-
 static void
 usage(void)
 {
-	printf("usage: fsm [-chagdpmr] [-o <file> ] [-P <file>] [-l <language>] [-n <prefix>]\n"
+	printf("usage: fsm [-acdhgdmrp] [-l <language>] [-n <prefix>]\n"
 	       "           [-t <transformation>] [-e <execution> | -q <query>]\n");
 }
 
@@ -142,22 +140,18 @@ transform(struct fsm *fsm, const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static void
-cleanup(void)
-{
-	if (out != NULL) {
-		fclose(out);
-	}
-}
-
 int
 main(int argc, char *argv[])
 {
-	enum fsm_out format = FSM_OUT_FSM;
+	enum fsm_out format;
 	struct fsm *fsm;
+	int print;
 
 	static const struct fsm_outoptions outoptions_defaults;
 	struct fsm_outoptions out_options = outoptions_defaults;
+
+	format = FSM_OUT_FSM;
+	print  = 0;
 
 	/* XXX: makes no sense for e.g. fsm -h */
 	fsm = fsm_parse(stdin);
@@ -165,12 +159,10 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	atexit(cleanup);
-
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hagn:l:de:o:cmrt:pP:q:"), c != -1) {
+		while (c = getopt(argc, argv, "hagn:l:de:cmrt:pq:"), c != -1) {
 			switch (c) {
 			case 'a': out_options.anonymous_states  = 1;      break;
 			case 'g': out_options.fragment          = 1;      break;
@@ -179,32 +171,8 @@ main(int argc, char *argv[])
 
 			case 'e': return NULL == fsm_exec(fsm, fsm_sgetc, &optarg);
 
-			case 'P':
-				{
-					FILE *f;
-
-					f = 0 == strcmp(optarg, "-") ? stdout : fopen(optarg, "w");
-					if (f == NULL) {
-						perror(optarg);
-						exit(EXIT_FAILURE);
-					}
-
-					fsm_print(fsm, f, format, &out_options);
-
-					fclose(f);
-				}
-				break;
-
 			case 'p':
-				out = stdout;
-				break;
-
-			case 'o':
-				out = 0 == strcmp(optarg, "-") ? stdout : fopen(optarg, "w");
-				if (out == NULL) {
-					perror(optarg);
-					exit(EXIT_FAILURE);
-				}
+				print = 1;
 				break;
 
 			case 'l': format = language(optarg);     break;
@@ -236,8 +204,8 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (out != NULL) {
-		fsm_print(fsm, out, format, &out_options);
+	if (print) {
+		fsm_print(fsm, stdout, format, &out_options);
 	}
 
 	fsm_free(fsm);

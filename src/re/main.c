@@ -39,10 +39,10 @@ struct match {
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re -d [-acidmnq] [-l <language>] <re> ...\n");
-	fprintf(stderr, "       re -m [-acidmnq] <re> ...\n");
-	fprintf(stderr, "       re -x [-acidmnq] <re> ... [ <file> | -- <file> ... ]\n");
-	fprintf(stderr, "       re    [-acidmnq] <re> ... [ <string> | -- <string> ... ]\n");
+	fprintf(stderr, "usage: re -p [-acimnq] [-l <language>] <re> ...\n");
+	fprintf(stderr, "       re -m [-acimnq] <re> ...\n");
+	fprintf(stderr, "       re -x [-acimnq] <re> ... [ <file> | -- <file> ... ]\n");
+	fprintf(stderr, "       re    [-acimnq] <re> ... [ <string> | -- <string> ... ]\n");
 	fprintf(stderr, "       re -g [-bi] <group>\n");
 	fprintf(stderr, "       re -h\n");
 }
@@ -294,7 +294,7 @@ main(int argc, char *argv[])
 	struct fsm *fsm;
 	int ifiles, xfiles;
 	int boxed;
-	int dump;
+	int print;
 	int group;
 	int example;
 	int keep_nfa;
@@ -316,7 +316,7 @@ main(int argc, char *argv[])
 	ifiles   = 0;
 	xfiles   = 0;
 	boxed    = 0;
-	dump     = 0;
+	print    = 0;
 	group    = 0;
 	example  = 0;
 	keep_nfa = 0;
@@ -329,7 +329,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "habcdgil:xmnr:q"), c != -1) {
+		while (c = getopt(argc, argv, "habcgil:xmnr:pq"), c != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -349,7 +349,7 @@ main(int argc, char *argv[])
 
 			case 'a': ambig    = 1; break;
 			case 'b': boxed    = 1; break;
-			case 'd': dump     = 1; break;
+			case 'p': print    = 1; break;
 			case 'g': group    = 1; break;
 			case 'i': ifiles   = 1; break;
 			case 'x': xfiles   = 1; break;
@@ -368,8 +368,8 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (dump + example + group > 1) {
-		fprintf(stderr, "-d, -g and -m are mutually exclusive\n");
+	if (print + example + group > 1) {
+		fprintf(stderr, "-p, -g and -m are mutually exclusive\n");
 		return EXIT_FAILURE;
 	}
 
@@ -426,7 +426,7 @@ main(int argc, char *argv[])
 		return 0;
 	}
 
-	if (!dump) {
+	if (!print) {
 		keep_nfa = 0;
 	}
 
@@ -437,7 +437,7 @@ main(int argc, char *argv[])
 	{
 		int i;
 
-		for (i = 0; i < argc - !(dump || example || argc <= 1); i++) {
+		for (i = 0; i < argc - !(print || example || argc <= 1); i++) {
 			struct re_err err;
 			struct fsm *new;
 
@@ -518,7 +518,7 @@ main(int argc, char *argv[])
 		argv += i;
 	}
 
-	if ((dump || example) && argc > 0) {
+	if ((print || example) && argc > 0) {
 		fprintf(stderr, "too many arguments\n");
 		return EXIT_FAILURE;
 	}
@@ -628,7 +628,7 @@ main(int argc, char *argv[])
 		return 0;
 	}
 
-	if (dump) {
+	if (print) {
 		/* TODO: print examples in comments for end states;
 		 * patterns in comments for the whole FSM */
 
