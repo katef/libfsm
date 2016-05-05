@@ -39,10 +39,10 @@ struct match {
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re -d [-acidmn] [-l <language>] <re> ...\n");
-	fprintf(stderr, "       re -m [-acidmn] <re> ...\n");
-	fprintf(stderr, "       re -x [-acidmn] <re> ... [ <file> | -- <file> ... ]\n");
-	fprintf(stderr, "       re    [-acidmn] <re> ... [ <string> | -- <string> ... ]\n");
+	fprintf(stderr, "usage: re -d [-acidmnq] [-l <language>] <re> ...\n");
+	fprintf(stderr, "       re -m [-acidmnq] <re> ...\n");
+	fprintf(stderr, "       re -x [-acidmnq] <re> ... [ <file> | -- <file> ... ]\n");
+	fprintf(stderr, "       re    [-acidmnq] <re> ... [ <string> | -- <string> ... ]\n");
 	fprintf(stderr, "       re -g [-bi] <group>\n");
 	fprintf(stderr, "       re -h\n");
 }
@@ -329,7 +329,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "habcdgil:xmnr:p"), c != -1) {
+		while (c = getopt(argc, argv, "habcdgil:xmnr:q"), c != -1) {
 			switch (c) {
 			case 'h':
 				usage();
@@ -355,7 +355,7 @@ main(int argc, char *argv[])
 			case 'x': xfiles   = 1; break;
 			case 'm': example  = 1; break;
 			case 'n': keep_nfa = 1; break;
-			case 'p': patterns = 1; break;
+			case 'q': patterns = 1; break;
 
 			case '?':
 			default:
@@ -375,6 +375,11 @@ main(int argc, char *argv[])
 
 	if (boxed && !group) {
 		fprintf(stderr, "-b applies for -g only\n");
+		return EXIT_FAILURE;
+	}
+
+	if (patterns && group) {
+		fprintf(stderr, "-q does not apply for groups\n");
 		return EXIT_FAILURE;
 	}
 
