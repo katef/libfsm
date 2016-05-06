@@ -86,33 +86,6 @@ re_flags(const char *s, enum re_flags *f)
 }
 
 struct fsm *
-re_new_empty(void)
-{
-	struct fsm *new;
-	struct fsm_state *start;
-
-	new = fsm_new();
-	if (new == NULL) {
-		return NULL;
-	}
-
-	start = fsm_addstate(new);
-	if (start == NULL) {
-		goto error;
-	}
-
-	fsm_setstart(new, start);
-
-	return new;
-
-error:
-
-	fsm_free(new);
-
-	return NULL;
-}
-
-struct fsm *
 re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err)
 {

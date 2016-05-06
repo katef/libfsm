@@ -78,14 +78,6 @@ int
 re_flags(const char *s, enum re_flags *f);
 
 /*
- * Create a new empty regexp.
- *
- * Returns NULL on error.
- */
-struct fsm *
-re_new_empty(void);
-
-/*
  * Compile a regexp of the given form. The function passed acts as a callback
  * to acquire each character of the input, in the spirit of fgetc().
  *
