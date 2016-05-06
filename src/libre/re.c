@@ -86,7 +86,7 @@ re_flags(const char *s, enum re_flags *f)
 }
 
 struct fsm *
-re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
+re_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err)
 {
 	const struct form *m;

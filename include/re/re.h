@@ -85,7 +85,7 @@ re_flags(const char *s, enum re_flags *f);
  * type and 0-indexed byte offset of the error.
  */
 struct fsm *
-re_new_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
+re_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err);
 
 /*
@@ -107,7 +107,7 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 
 
 /*
- * Conveniences for re_new_comp().
+ * Conveniences for re_comp().
  */
 int re_sgetc(void *opaque); /* expects opaque to be char ** */
 int re_fgetc(void *oapque); /* expects opaque to be FILE *  */

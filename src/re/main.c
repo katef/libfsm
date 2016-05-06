@@ -453,7 +453,7 @@ main(int argc, char *argv[])
 
 				f = xopen(argv[i]);
 
-				new = re_new_comp(form, re_fgetc, f, 0, &err);
+				new = re_comp(form, re_fgetc, f, 0, &err);
 
 				fclose(f);
 			} else {
@@ -461,11 +461,11 @@ main(int argc, char *argv[])
 
 				s = argv[i];
 
-				new = re_new_comp(form, re_sgetc, &s, 0, &err);
+				new = re_comp(form, re_sgetc, &s, 0, &err);
 			}
 
 			if (new == NULL) {
-				re_perror("re_new_comp", form, &err,
+				re_perror("re_comp", form, &err,
 					 ifiles ? argv[i] : NULL,
 					!ifiles ? argv[i] : NULL);
 				return EXIT_FAILURE;

@@ -333,11 +333,11 @@
 
 		s = @s;
 
-		@r = re_new_comp(RE_LITERAL, re_sgetc, &s, 0, &err);
+		@r = re_comp(RE_LITERAL, re_sgetc, &s, 0, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADFORM);
 			/* TODO: pass filename for .lx source */
-			re_perror("re_new_comp", RE_LITERAL, &err, NULL, @s);
+			re_perror("re_comp", RE_LITERAL, &err, NULL, @s);
 			exit(EXIT_FAILURE);
 		}
 	@};
@@ -350,11 +350,11 @@
 
 		s = @s;
 
-		@r = re_new_comp(RE_SIMPLE, re_sgetc, &s, @f, &err);
+		@r = re_comp(RE_SIMPLE, re_sgetc, &s, @f, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADFORM);
 			/* TODO: pass filename for .lx source */
-			re_perror("re_new_comp", RE_SIMPLE, &err, NULL, @s);
+			re_perror("re_comp", RE_SIMPLE, &err, NULL, @s);
 			exit(EXIT_FAILURE);
 		}
 	@};
