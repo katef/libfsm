@@ -385,6 +385,10 @@ main(int argc, char *argv[])
 					perror("fsm_union");
 					return EXIT_FAILURE;
 				}
+
+#ifndef NDEBUG
+				m->fsm = NULL;
+#endif
 			}
 
 			if (!keep_nfa) {
