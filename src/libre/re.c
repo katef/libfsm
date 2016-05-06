@@ -21,18 +21,34 @@
 #include "form/group.h"
 #include "form/comp.h"
 
-static const struct form {
+struct form {
 	enum re_form form;
 	struct fsm *(*comp)(int (*f)(void *opaque), void *opaque,
 		enum re_flags flags, struct re_err *err);
 	int
 	(*group)(int (*f)(void *opaque), void *opaque,
 		enum re_flags flags, struct re_err *err, struct re_grp *g);
-} re_form[] = {
-	{ RE_LITERAL, comp_literal, NULL         },
-	{ RE_GLOB,    comp_glob,    NULL         },
-	{ RE_SIMPLE,  comp_simple,  group_simple }
 };
+
+static const struct form *
+re_form(enum re_form form)
+{
+	size_t i;
+
+	const struct form a[] = {
+		{ RE_LITERAL, comp_literal, NULL         },
+		{ RE_GLOB,    comp_glob,    NULL         },
+		{ RE_SIMPLE,  comp_simple,  group_simple }
+	};
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (a[i].form == form) {
+			return &a[i];
+		}
+	}
+
+	return NULL;
+}
 
 int
 re_flags(const char *s, enum re_flags *f)
@@ -102,18 +118,11 @@ re_new_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
 {
 	const struct form *m;
 	struct fsm *new;
-	size_t i;
 
 	assert(getc != NULL);
 
-	for (i = 0; i < sizeof re_form / sizeof *re_form; i++) {
-		if (re_form[i].form == form) {
-			m = &re_form[i];
-			break;
-		}
-	}
-
-	if (i == sizeof re_form / sizeof *re_form) {
+	m = re_form(form);
+	if (m == NULL) {
 		if (err != NULL) {
 			err->e = RE_EBADFORM;
 		}
@@ -165,21 +174,14 @@ re_group_print(enum re_form form, int (*getc)(void *opaque), void *opaque,
 {
 	const struct form *m;
 	struct re_grp g;
-	size_t i;
 	int r;
 
 	assert(getc != NULL);
 	assert(escputc != NULL);
 	assert(f != NULL);
 
-	for (i = 0; i < sizeof re_form / sizeof *re_form; i++) {
-		if (re_form[i].form == form) {
-			m = &re_form[i];
-			break;
-		}
-	}
-
-	if (i == sizeof re_form / sizeof *re_form) {
+	m = re_form(form);
+	if (m == NULL) {
 		if (err != NULL) {
 			err->e = RE_EBADFORM;
 		}
@@ -227,7 +229,6 @@ re_group_snprint(enum re_form form, int (*getc)(void *opaque), void *opaque,
 {
 	const struct form *m;
 	struct re_grp g;
-	size_t i;
 	int r;
 
 	assert(getc != NULL);
@@ -239,14 +240,8 @@ re_group_snprint(enum re_form form, int (*getc)(void *opaque), void *opaque,
 
 	assert(s != NULL);
 
-	for (i = 0; i < sizeof re_form / sizeof *re_form; i++) {
-		if (re_form[i].form == form) {
-			m = &re_form[i];
-			break;
-		}
-	}
-
-	if (i == sizeof re_form / sizeof *re_form) {
+	m = re_form(form);
+	if (m == NULL) {
 		if (err != NULL) {
 			err->e = RE_EBADFORM;
 		}
