@@ -157,7 +157,7 @@
 			exit(EXIT_FAILURE);
 		}
 
-		@c = (unsigned char) u;
+		@c = (char) (unsigned char) u;
 	@};
 
 	HEX: () -> (c :char) = @{
@@ -184,7 +184,7 @@
 			exit(EXIT_FAILURE);
 		}
 
-		@c = (unsigned char) u;
+		@c = (char) (unsigned char) u;
 	@};
 
 	CHAR: () -> (c :char) = @{
