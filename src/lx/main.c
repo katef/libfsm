@@ -354,9 +354,9 @@ main(int argc, char *argv[])
 		for (z = ast->zl; z != NULL; z = z->next) {
 			assert(z->fsm == NULL);
 
-			z->fsm = re_new_empty();
+			z->fsm = fsm_new();
 			if (z->fsm == NULL) {
-				perror("re_new_empty");
+				perror("fsm_new");
 				return EXIT_FAILURE;
 			}
 
