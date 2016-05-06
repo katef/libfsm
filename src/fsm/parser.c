@@ -187,7 +187,7 @@ p_label(fsm fsm, lex_state lex_state, act_state act_state, char *ZOc)
 			exit(EXIT_FAILURE);
 		}
 
-		ZIc = (unsigned char) u;
+		ZIc = (char) (unsigned char) u;
 	
 #line 193 "src/fsm/parser.c"
 					}
@@ -224,7 +224,7 @@ p_label(fsm fsm, lex_state lex_state, act_state act_state, char *ZOc)
 			exit(EXIT_FAILURE);
 		}
 
-		ZIc = (unsigned char) u;
+		ZIc = (char) (unsigned char) u;
 	
 #line 230 "src/fsm/parser.c"
 					}

@@ -619,7 +619,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 			exit(EXIT_FAILURE);
 		}
 
-		ZI115 = (unsigned char) u;
+		ZI115 = (char) (unsigned char) u;
 	
 #line 625 "src/libre/form/simple/parser.c"
 					}
@@ -663,7 +663,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 			exit(EXIT_FAILURE);
 		}
 
-		ZI113 = (unsigned char) u;
+		ZI113 = (char) (unsigned char) u;
 	
 #line 669 "src/libre/form/simple/parser.c"
 					}
@@ -1455,7 +1455,7 @@ p_literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm_
 			exit(EXIT_FAILURE);
 		}
 
-		ZIc = (unsigned char) u;
+		ZIc = (char) (unsigned char) u;
 	
 #line 1461 "src/libre/form/simple/parser.c"
 					}
@@ -1492,7 +1492,7 @@ p_literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_fsm_
 			exit(EXIT_FAILURE);
 		}
 
-		ZIc = (unsigned char) u;
+		ZIc = (char) (unsigned char) u;
 	
 #line 1498 "src/libre/form/simple/parser.c"
 					}
@@ -1625,7 +1625,7 @@ p_118(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_grp *ZIg
 			exit(EXIT_FAILURE);
 		}
 
-		ZIb = (unsigned char) u;
+		ZIb = (char) (unsigned char) u;
 	
 #line 1631 "src/libre/form/simple/parser.c"
 						}
@@ -1662,7 +1662,7 @@ p_118(fsm fsm, flags flags, lex_state lex_state, act_state act_state, t_grp *ZIg
 			exit(EXIT_FAILURE);
 		}
 
-		ZIb = (unsigned char) u;
+		ZIb = (char) (unsigned char) u;
 	
 #line 1668 "src/libre/form/simple/parser.c"
 						}
@@ -1889,7 +1889,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 809 "src/libre/parser.act"
+#line 818 "src/libre/parser.act"
 
 
 	static int
@@ -2001,14 +2001,23 @@ ZL1:;
 		enum re_flags flags, struct re_err *err)
 	{
 		struct fsm *new;
+		struct fsm_state *start;
 		struct re_grp g; /* for RE_GROUP error reporting only */
 
 		assert(f != NULL);
 
-		new = re_new_empty();
+		new = fsm_new();
 		if (new == NULL) {
+			return NULL;
+		}
+
+		start = fsm_addstate(new);
+		if (start == NULL) {
+			fsm_free(new);
 			goto error;
 		}
+
+		fsm_setstart(new, start);
 
 		if (-1 == parse(f, opaque, FORM_ENTRY, flags, new, err, &g)) {
 			fsm_free(new);
@@ -2062,6 +2071,6 @@ ZL1:;
 	}
 #endif
 
-#line 2066 "src/libre/form/simple/parser.c"
+#line 2075 "src/libre/form/simple/parser.c"
 
 /* END OF FILE */

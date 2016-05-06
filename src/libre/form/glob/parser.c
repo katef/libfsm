@@ -584,7 +584,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 809 "src/libre/parser.act"
+#line 818 "src/libre/parser.act"
 
 
 	static int
@@ -696,14 +696,23 @@ ZL1:;
 		enum re_flags flags, struct re_err *err)
 	{
 		struct fsm *new;
+		struct fsm_state *start;
 		struct re_grp g; /* for RE_GROUP error reporting only */
 
 		assert(f != NULL);
 
-		new = re_new_empty();
+		new = fsm_new();
 		if (new == NULL) {
+			return NULL;
+		}
+
+		start = fsm_addstate(new);
+		if (start == NULL) {
+			fsm_free(new);
 			goto error;
 		}
+
+		fsm_setstart(new, start);
 
 		if (-1 == parse(f, opaque, FORM_ENTRY, flags, new, err, &g)) {
 			fsm_free(new);
@@ -757,6 +766,6 @@ ZL1:;
 	}
 #endif
 
-#line 761 "src/libre/form/glob/parser.c"
+#line 770 "src/libre/form/glob/parser.c"
 
 /* END OF FILE */

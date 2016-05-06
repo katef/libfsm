@@ -28,7 +28,7 @@ extern void p_re__simple(fsm, flags, lex_state, act_state);
 extern void p_group_Hsimple(fsm, flags, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 811 "src/libre/parser.act"
+#line 820 "src/libre/parser.act"
 
 
 #line 35 "src/libre/form/simple/parser.h"
