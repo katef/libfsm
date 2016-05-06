@@ -207,14 +207,14 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	{
 		static const struct fsm_outoptions o_defaults;
 		struct fsm_outoptions o = o_defaults;
-		char prefix[128];
+		char p[128];
 
-		(void) sprintf(prefix, "z%u", zindexof(ast, z));
+		(void) sprintf(p, "z%u", zindexof(ast, z));
 
 		o.anonymous_states  = anonymous_states;
 		o.consolidate_edges = 1;
 		o.fragment          = 1;
-		o.prefix            = prefix;
+		o.prefix            = p;
 
 		fsm_print(z->fsm, f, FSM_OUT_DOT, &o);
 	}
