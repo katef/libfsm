@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fsm/fsm.h>
+
 #include <re/re.h>
 
 #include <fsm/bool.h>
@@ -104,7 +106,7 @@ ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 			return NULL;
 		}
 
-		m->fsm = re_new_empty();
+		m->fsm = fsm_new();
 		if (m->fsm == NULL) {
 			free(m);
 			return NULL;

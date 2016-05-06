@@ -284,9 +284,9 @@
 
 		assert(@t != NULL);
 
-		@r = re_new_empty();
+		@r = fsm_new();
 		if (@r == NULL) {
-			perror("re_new_empty");
+			perror("fsm_new");
 			@!;
 		}
 
@@ -363,9 +363,9 @@
 	<regex-any>: () -> (r :fsm) = @{
 		struct fsm_state *e;
 
-		@r = re_new_empty();
+		@r = fsm_new();
 		if (@r == NULL) {
-			perror("re_new_empty");
+			perror("fsm_new");
 			@!;
 		}
 
