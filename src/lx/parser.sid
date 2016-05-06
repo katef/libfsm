@@ -58,7 +58,6 @@
 	<compile-literal>: (:string)         -> (:fsm);
 	<compile-regex>:   (:string, :flags) -> (:fsm);
 
-	!<regex-empty>: () -> (:fsm); /* TODO: proper name for matching the empty string? */
 	<regex-any>:    () -> (:fsm);
 
 	<op-star>:        (:fsm) -> ();

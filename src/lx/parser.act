@@ -359,17 +359,6 @@
 		}
 	@};
 
-	/* equivalent to <compile-literal>("") but with less machination */
-	<regex-empty>: () -> (r :fsm) = @{
-		@r = re_new_empty();
-		if (@r == NULL) {
-			perror("re_new_empty");
-			@!;
-		}
-
-		fsm_setend(@r, fsm_getstart(@r), 1);
-	@};
-
 	/* equivalent to <compile-regex>(".") but with less machination */
 	<regex-any>: () -> (r :fsm) = @{
 		struct fsm_state *e;
