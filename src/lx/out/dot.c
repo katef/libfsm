@@ -16,7 +16,7 @@
 
 #include "out.h"
 
-static int anonymous_states = 1;
+static unsigned int anonymous_states = 1;
 
 /* TODO: centralise with libfsm */
 static unsigned int
