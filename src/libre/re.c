@@ -35,7 +35,7 @@ re_form(enum re_form form)
 {
 	size_t i;
 
-	const struct form a[] = {
+	const static struct form a[] = {
 		{ RE_LITERAL, comp_literal, NULL         },
 		{ RE_GLOB,    comp_glob,    NULL         },
 		{ RE_SIMPLE,  comp_simple,  group_simple }
