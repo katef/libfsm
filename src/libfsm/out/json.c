@@ -94,7 +94,6 @@ fsm_out_json(const struct fsm *fsm, FILE *f,
 {
 	struct fsm_state *s;
 	struct state_set *e;
-	int end;
 
 	assert(fsm != NULL);
 	assert(f != NULL);
