@@ -14,16 +14,16 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 	assert(func != NULL);
 	assert(err != NULL);
 
-	if (err->e & RE_SYNTAX) {
-		fprintf(stderr, "%s: %s\n", func, re_strerror(err->e));
-		return;
-	}
-
 	if (file != NULL) {
-		fprintf(stderr, "%s:", file);
+		fprintf(stderr, "%s", file);
 	}
 
-	fprintf(stderr, "%u", err->byte + 1);
+	if (err->e & RE_SYNTAX) {
+		if (file != NULL) {
+			fprintf(stderr, ":");
+		}
+		fprintf(stderr, "%u", err->byte + 1);
+	}
 
 	if (s == NULL) {
 		fprintf(stderr, ": %s", func);
