@@ -320,7 +320,7 @@
 		unsigned long u;
 		char *e;
 
-		u = strtoul(lex_state->buf.a, NULL, 10);
+		u = strtoul(lex_state->buf.a, &e, 10);
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u < 1 || u > UINT_MAX) {
 			act_state->e = RE_ECOUNTRANGE;
