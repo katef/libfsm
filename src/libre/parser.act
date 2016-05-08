@@ -306,15 +306,13 @@
 
 		u = strtoul(lex_state->buf.a, NULL, 10);
 
-		assert(*e == '\0');
-
-		if (u < 1 || u > UINT_MAX || (u == ULONG_MAX && errno == ERANGE)) {
+		if ((u == ULONG_MAX && errno == ERANGE) || u < 1 || u > UINT_MAX) {
 			err(lex_state, "count %s out of range: expected 1..%u inclusive",
 				lex_state->buf.a, UINT_MAX);
 			exit(EXIT_FAILURE);
 		}
 
-		if (u == ULONG_MAX && errno != 0) {
+		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
 			err(lex_state, "%s: %s: expected 0..%u inclusive",
 				lex_state->buf.a, strerror(errno), UINT_MAX);
 			exit(EXIT_FAILURE);
