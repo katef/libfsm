@@ -19,17 +19,12 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 		fprintf(stderr, "%s", file);
 	}
 
-	if (err->e & RE_SYNTAX) {
-		if (file != NULL) {
-			fprintf(stderr, ":");
-		}
-		fprintf(stderr, "%u", err->byte + 1);
-	}
-
-	if (s == NULL) {
-		fprintf(stderr, ": %s", func);
-	} else {
+	if (s != NULL) {
 		char delim;
+
+		if (file != NULL) {
+			fprintf(stderr, ": ");
+		}
 
 		switch (form) {
 		case RE_LITERAL: delim = '\''; break;
@@ -38,6 +33,22 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 		}
 
 		fprintf(stderr, ": %c%s%c", delim, s, delim);
+	}
+
+	if (err->e & RE_SYNTAX) {
+		if (file != NULL || s != NULL) {
+			fprintf(stderr, ":");
+		}
+
+		fprintf(stderr, "%u", err->byte + 1);
+	}
+
+	if (func != NULL) {
+		if (file != NULL || s != NULL || err->e & RE_SYNTAX) {
+			fprintf(stderr, ": ");
+		}
+
+		fprintf(stderr, "%s", func);
 	}
 
 	switch (err->e) {
