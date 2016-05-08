@@ -32,7 +32,7 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 		default:         delim = '/';  break;
 		}
 
-		fprintf(stderr, ": %c%s%c", delim, s, delim);
+		fprintf(stderr, "%c%s%c", delim, s, delim);
 	}
 
 	if (err->e & RE_SYNTAX) {
