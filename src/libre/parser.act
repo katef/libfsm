@@ -113,7 +113,7 @@
 	}
 
 	static void
-	err(const struct lex_state *lex_state, const char *fmt, ...)
+	xerr(const struct lex_state *lex_state, const char *fmt, ...)
 	{
 		va_list ap;
 
@@ -393,7 +393,7 @@
 		if ((unsigned char) @b < (unsigned char) @a) {
 			char a[5], b[5];
 
-			err(lex_state, "negative range [%s-%s]",
+			xerr(lex_state, "negative range [%s-%s]",
 				escchar(a, sizeof a, @a), escchar(b, sizeof b, @b));
 			exit(EXIT_FAILURE);
 		}
@@ -514,7 +514,7 @@
 		assert(@m != 0);
 
 		if (@n < @m) {
-			err(lex_state, "negative count range {%u,%u}", @m, @n);
+			xerr(lex_state, "negative count range {%u,%u}", @m, @n);
 			exit(EXIT_FAILURE);
 		}
 
