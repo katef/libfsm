@@ -15,7 +15,7 @@
 
 #include "internal.h"
 
-struct fsm_state *
+static struct fsm_state *
 nextstate(const struct fsm_state *state, char c)
 {
 	const struct state_set *s;
