@@ -41,30 +41,38 @@ enum re_pred {
 enum {
 	RE_MISC   = 1 << (8 - 1),
 	RE_GROUP  = 1 << (8 - 2), /* re_err.set/.dup are populated */
-	RE_SYNTAX = 1 << (8 - 3)  /* re_err.byte is populated */
+	RE_ESC    = 1 << (8 - 3), /* re_err.esc is populated */
+	RE_SYNTAX = 1 << (8 - 4)  /* re_err.byte is populated */
 };
 
 enum re_errno {
-	RE_ESUCCESS = 0 | RE_MISC,
-	RE_EERRNO   = 1 | RE_MISC,
-	RE_EBADFORM = 2 | RE_MISC,
+	RE_ESUCCESS  = 0 | RE_MISC,
+	RE_EERRNO    = 1 | RE_MISC,
+	RE_EBADFORM  = 2 | RE_MISC,
 
-	RE_EOVERLAP = 0 | RE_GROUP,
+	RE_EOVERLAP  = 0 | RE_SYNTAX | RE_GROUP,
 
-	RE_EXSUB    = 0 | RE_SYNTAX,
-	RE_EXTERM   = 1 | RE_SYNTAX,
-	RE_EXGROUP  = 2 | RE_SYNTAX,
-	RE_EXATOM   = 3 | RE_SYNTAX,
-	RE_EXCOUNT  = 4 | RE_SYNTAX,
-	RE_EXATOMS  = 5 | RE_SYNTAX,
-	RE_EXALTS   = 6 | RE_SYNTAX,
-	RE_EXRANGE  = 7 | RE_SYNTAX,
-	RE_EXEOF    = 8 | RE_SYNTAX
+	RE_EHEXRANGE = 0 | RE_SYNTAX | RE_ESC,
+	RE_EOCTRANGE = 1 | RE_SYNTAX | RE_ESC,
+
+	RE_EXSUB     = 0 | RE_SYNTAX,
+	RE_EXTERM    = 1 | RE_SYNTAX,
+	RE_EXGROUP   = 2 | RE_SYNTAX,
+	RE_EXATOM    = 3 | RE_SYNTAX,
+	RE_EXCOUNT   = 4 | RE_SYNTAX,
+	RE_EXATOMS   = 5 | RE_SYNTAX,
+	RE_EXALTS    = 6 | RE_SYNTAX,
+	RE_EXRANGE   = 7 | RE_SYNTAX,
+	RE_EXEOF     = 8 | RE_SYNTAX,
+	RE_EXESC     = 9 | RE_SYNTAX
 };
 
 struct re_err {
 	enum re_errno e;
 	unsigned byte;
+
+	/* populated for RE_ESC; ignored otherwise */
+	char esc[32];
 
 	/* populated for RE_GROUP; ignored otherwise */
 	char set[128];

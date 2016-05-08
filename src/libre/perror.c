@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include <assert.h>
+#include <limits.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -39,7 +40,21 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 		fprintf(stderr, ": %c%s%c", delim, s, delim);
 	}
 
-	fprintf(stderr, ": %s", re_strerror(err->e));
+	switch (err->e) {
+	case RE_EHEXRANGE:
+		fprintf(stderr, ": Hex escape %s out of range: expected \\0..\\x%X inclusive",
+			err->esc, UCHAR_MAX);
+		break;
+
+	case RE_EOCTRANGE:
+		fprintf(stderr, ": Octal escape %s out of range: expected \\0..\\%o inclusive",
+			err->esc, UCHAR_MAX);
+		break;
+
+	default:
+		fprintf(stderr, ": %s", re_strerror(err->e));
+		break;
+	}
 
 	if (err->e == RE_EOVERLAP) {
 		if (0 == strcmp(err->set, err->dup)) {

@@ -231,18 +231,15 @@
 		errno = 0;
 
 		u = strtoul(lex_state->buf.a + 1, &e, 8);
-		assert(*e == '\0');
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
-			err(lex_state, "octal escape %s out of range: expected \\0..\\%o inclusive",
-				lex_state->buf.a, UCHAR_MAX);
-			exit(EXIT_FAILURE);
+			act_state->e = RE_EOCTRANGE;
+			@!;
 		}
 
 		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
-			err(lex_state, "%s: %s: expected \\0..\\%o inclusive",
-				lex_state->buf.a, strerror(errno), UCHAR_MAX);
-			exit(EXIT_FAILURE);
+			act_state->e = RE_EXESC;
+			@!;
 		}
 
 		@c = (char) (unsigned char) u;
@@ -258,18 +255,15 @@
 		errno = 0;
 
 		u = strtoul(lex_state->buf.a + 2, &e, 16);
-		assert(*e == '\0');
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
-			err(lex_state, "hex escape %s out of range: expected \\x0..\\x%x inclusive",
-				lex_state->buf.a, UCHAR_MAX);
-			exit(EXIT_FAILURE);
+			act_state->e = RE_EHEXRANGE;
+			@!;
 		}
 
 		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
-			err(lex_state, "%s: %s: expected \\x0..\\x%x inclusive",
-				lex_state->buf.a, strerror(errno), UCHAR_MAX);
-			exit(EXIT_FAILURE);
+			act_state->e = RE_EXESC;
+			@!;
 		}
 
 		@c = (char) (unsigned char) u;
@@ -702,6 +696,12 @@
 
 		ADVANCE_LEXER;
 		entry(new, flags, lex_state, act_state);
+
+		if (act_state->e & RE_ESC && err != NULL) {
+			sprintf(err->esc, "%.*s%s",
+				(int) sizeof err->esc - 3 - 1, lex_state->buf.a,
+				strlen(lex_state->buf.a) > sizeof err->esc - 3 - 1 ? "..." : "");
+		}
 
 		if (act_state->e != RE_ESUCCESS) {
 			/* TODO: free internals allocated during parsing (are there any?) */
