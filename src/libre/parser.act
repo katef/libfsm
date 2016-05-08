@@ -96,6 +96,22 @@
 	                              act_state->lex_tok = tok;                     } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
 
+	/* TODO: centralise perhaps */
+	static void
+	snprintdots(char *s, size_t sz, const char *msg)
+	{
+		size_t n;
+
+		assert(s != NULL);
+		assert(sz > 3);
+		assert(msg != NULL);
+
+		n = sprintf(s, "%.*s", (int) sz - 3 - 1, msg);
+		if (n == sz - 3 - 1) {
+			strcpy(s + sz, "...");
+		}
+	}
+
 	static void
 	err(const struct lex_state *lex_state, const char *fmt, ...)
 	{
@@ -694,9 +710,7 @@
 		entry(new, flags, lex_state, act_state);
 
 		if (act_state->e & RE_ESC && err != NULL) {
-			sprintf(err->esc, "%.*s%s",
-				(int) sizeof err->esc - 3 - 1, lex_state->buf.a,
-				strlen(lex_state->buf.a) > sizeof err->esc - 3 - 1 ? "..." : "");
+			snprintdots(err->esc, sizeof err->esc, lex_state->buf.a);
 		}
 
 		if (act_state->e != RE_ESUCCESS) {
