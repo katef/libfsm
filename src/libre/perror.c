@@ -62,8 +62,23 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 			err->esc, UCHAR_MAX);
 		break;
 
+	case RE_ECOUNTRANGE:
+		fprintf(stderr, ": Count %s out of range: expected 1..%u inclusive",
+			err->esc, UINT_MAX);
+		break;
+
 	default:
 		fprintf(stderr, ": %s", re_strerror(err->e));
+		break;
+	}
+
+	switch (err->e) {
+	case RE_EXESC:
+		fprintf(stderr, " \\0..\\x%X inclusive", UCHAR_MAX);
+		break;
+
+	case RE_EXCOUNT:
+		fprintf(stderr, " 1..%u inclusive", UINT_MAX);
 		break;
 	}
 
