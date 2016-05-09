@@ -22,7 +22,6 @@
 	#include <limits.h>
 	#include <string.h>
 	#include <stdlib.h>
-	#include <stdarg.h>
 	#include <stdio.h>
 	#include <errno.h>
 	#include <ctype.h>
@@ -110,21 +109,6 @@
 		if (n == sz - 3 - 1) {
 			strcpy(s + sz, "...");
 		}
-	}
-
-	static void
-	xerr(const struct lex_state *lex_state, const char *fmt, ...)
-	{
-		va_list ap;
-
-		assert(lex_state != NULL);
-
-		va_start(ap, fmt);
-		fprintf(stderr, "%u:%u: ",
-			lex_state->lx.start.line, lex_state->lx.start.col);
-		vfprintf(stderr, fmt, ap);
-		fprintf(stderr, "\n");
-		va_end(ap);
 	}
 
 	static void
