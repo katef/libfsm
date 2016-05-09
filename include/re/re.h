@@ -52,6 +52,7 @@ enum re_errno {
 
 	RE_EOVERLAP    = 0 | RE_SYNTAX | RE_GROUP,
 	RE_ENEGRANGE   = 1 | RE_SYNTAX | RE_GROUP,
+	RE_ENEGCOUNT   = 2 | RE_SYNTAX | RE_GROUP,
 
 	RE_EHEXRANGE   = 0 | RE_SYNTAX | RE_ESC,
 	RE_EOCTRANGE   = 1 | RE_SYNTAX | RE_ESC,
@@ -72,6 +73,10 @@ enum re_errno {
 struct re_err {
 	enum re_errno e;
 	unsigned byte;
+
+	/* populated for RE_ECOUNTRANGE; ignored otherwise */
+	unsigned m;
+	unsigned n;
 
 	/* populated for RE_ESC; ignored otherwise */
 	char esc[32];

@@ -80,6 +80,10 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 	case RE_EXCOUNT:
 		fprintf(stderr, " 1..%u inclusive", UINT_MAX);
 		break;
+
+	case RE_ENEGCOUNT:
+		fprintf(stderr, " {%u,%u}", err->m, err->n);
+		break;
 	}
 
 	switch (err->e) {

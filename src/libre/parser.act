@@ -545,8 +545,10 @@
 		assert(@m != 0);
 
 		if (@n < @m) {
-			xerr(lex_state, "negative count range {%u,%u}", @m, @n);
-			exit(EXIT_FAILURE);
+			err->e = RE_ENEGCOUNT;
+			err->m = @m;
+			err->n = @n;
+			@!;
 		}
 
 		b = @y;

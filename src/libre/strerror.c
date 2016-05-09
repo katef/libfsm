@@ -16,7 +16,8 @@ re_strerror(enum re_errno e)
 	case RE_EBADFORM:    return "Bad form";
 
 	case RE_EOVERLAP:    return "Redundancy in group";
-	case RE_ENEGRANGE:   return "Negative range";
+	case RE_ENEGRANGE:   return "Negative group range";
+	case RE_ENEGCOUNT:   return "Negative count range";
 
 	case RE_EHEXRANGE:   return "Hex escape out of range";
 	case RE_EOCTRANGE:   return "Octal escape out of range";
