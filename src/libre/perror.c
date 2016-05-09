@@ -82,7 +82,8 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 		break;
 	}
 
-	if (err->e == RE_EOVERLAP) {
+	switch (err->e) {
+	case RE_EOVERLAP:
 		if (0 == strcmp(err->set, err->dup)) {
 			fprintf(stderr, ": overlap of %s",
 				err->dup);
@@ -90,6 +91,11 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 			fprintf(stderr, ": overlap of %s; minimal coverage is %s",
 				err->dup, err->set);
 		}
+		break;
+
+	case RE_ENEGRANGE:
+		fprintf(stderr, " %s", err->set);
+		break;
 	}
 
 	fprintf(stderr, "\n");

@@ -409,9 +409,12 @@
 		if ((unsigned char) @b < (unsigned char) @a) {
 			char a[5], b[5];
 
-			xerr(lex_state, "negative range [%s-%s]",
+			assert(sizeof err->set >= 1 + sizeof a + 1 + sizeof b + 1 + 1);
+
+			sprintf(err->set, "[%s-%s]",
 				escchar(a, sizeof a, @a), escchar(b, sizeof b, @b));
-			exit(EXIT_FAILURE);
+			err->e = RE_ENEGRANGE;
+			@!;
 		}
 
 		for (i = (unsigned char) @a; i <= (unsigned char) @b; i++) {
