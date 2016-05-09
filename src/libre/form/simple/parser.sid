@@ -12,6 +12,7 @@
 	fsm_state;
 	grp;
 	pred;
+	!err;
 
 %terminals%
 

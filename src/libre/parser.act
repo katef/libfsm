@@ -12,6 +12,7 @@
 	flags     :flags;
 	lex_state :lex_state;
 	act_state :act_state;
+	err       :err;
 
 %maps%
 
@@ -73,7 +74,6 @@
 	struct act_state {
 		enum LX_TOKEN lex_tok;
 		enum LX_TOKEN lex_tok_save;
-		enum re_errno e;
 		struct re_grp *g; /* for <stash-group> */
 	};
 
@@ -203,6 +203,7 @@
 
 	typedef struct fsm *  fsm;
 	typedef enum re_flags flags;
+	typedef struct re_err * err;
 
 @};
 
@@ -249,12 +250,13 @@
 		u = strtoul(lex_state->buf.a + 1, &e, 8);
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
-			act_state->e = RE_EOCTRANGE;
+			err->e = RE_EOCTRANGE;
+			snprintdots(err->esc, sizeof err->esc, lex_state->buf.a);
 			@!;
 		}
 
 		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
-			act_state->e = RE_EXESC;
+			err->e = RE_EXESC;
 			@!;
 		}
 
@@ -273,12 +275,13 @@
 		u = strtoul(lex_state->buf.a + 2, &e, 16);
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
-			act_state->e = RE_EHEXRANGE;
+			err->e = RE_EHEXRANGE;
+			snprintdots(err->esc, sizeof err->esc, lex_state->buf.a);
 			@!;
 		}
 
 		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
-			act_state->e = RE_EXESC;
+			err->e = RE_EXESC;
 			@!;
 		}
 
@@ -323,12 +326,13 @@
 		u = strtoul(lex_state->buf.a, &e, 10);
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u < 1 || u > UINT_MAX) {
-			act_state->e = RE_ECOUNTRANGE;
+			err->e = RE_ECOUNTRANGE;
+			snprintdots(err->esc, sizeof err->esc, lex_state->buf.a);
 			@!;
 		}
 
 		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
-			act_state->e = RE_EXCOUNT;
+			err->e = RE_EXCOUNT;
 			@!;
 		}
 
@@ -375,8 +379,20 @@
 #define PARSE_GROUP
 
 		if (bm_count(&@&g->dup) > 0) {
-			act_state->e  = RE_EOVERLAP;
-			*act_state->g = *@&g;
+			err->e  = RE_EOVERLAP;
+
+			/* TODO: would like to show the original spelling verbatim, too */
+
+			if (-1 == bm_snprint(&@&g->set, err->set, sizeof err->set, 1, escputc)) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+
+			if (-1 == bm_snprint(&@&g->dup, err->dup, sizeof err->dup, 1, escputc)) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+
 			@!;
 		}
 
@@ -407,8 +423,20 @@
 		int i;
 
 		if (bm_count(&@&g->dup) > 0) {
-			act_state->e  = RE_EOVERLAP;
-			*act_state->g = *@&g;
+			err->e  = RE_EOVERLAP;
+
+			/* TODO: would like to show the original spelling verbatim, too */
+
+			if (-1 == bm_snprint(&@&g->set, err->set, sizeof err->set, 1, escputc)) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+
+			if (-1 == bm_snprint(&@&g->dup, err->dup, sizeof err->dup, 1, escputc)) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+
 			@!;
 		}
 
@@ -606,38 +634,38 @@
 
 
 	<err-expected-term> = @{
-		if (act_state->e == RE_ESUCCESS) {
-			act_state->e = RE_EXTERM;
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EXTERM;
 		}
 	@};
 
 	<err-expected-count> = @{
-		if (act_state->e == RE_ESUCCESS) {
-			act_state->e = RE_EXCOUNT;
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EXCOUNT;
 		}
 	@};
 
 	<err-expected-atoms> = @{
-		if (act_state->e == RE_ESUCCESS) {
-			act_state->e = RE_EXATOMS;
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EXATOMS;
 		}
 	@};
 
 	<err-expected-alts> = @{
-		if (act_state->e == RE_ESUCCESS) {
-			act_state->e = RE_EXALTS;
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EXALTS;
 		}
 	@};
 
 	<err-expected-range> = @{
-		if (act_state->e == RE_ESUCCESS) {
-			act_state->e = RE_EXRANGE;
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EXRANGE;
 		}
 	@};
 
 	<err-expected-eof> = @{
-		if (act_state->e == RE_ESUCCESS) {
-			act_state->e = RE_EXEOF;
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EXEOF;
 		}
 	@};
 
@@ -660,19 +688,23 @@
 
 	static int
 	parse(int (*f)(void *opaque), void *opaque,
-		void (*entry)(struct fsm *, flags, lex_state, act_state),
+		void (*entry)(struct fsm *, flags, lex_state, act_state, err),
 		enum re_flags flags, struct fsm *new, struct re_err *err, t_grp *g)
 	{
 		struct act_state  act_state_s;
 		struct act_state *act_state;
 		struct lex_state  lex_state_s;
 		struct lex_state *lex_state;
+		struct re_err dummy;
 
 		struct LX_STATE *lx;
 
 		assert(f != NULL);
 		assert(entry != NULL);
-		assert(g != NULL);
+
+		if (err == NULL) {
+			err = &dummy;
+		}
 
 		lex_state    = &lex_state_s;
 		lex_state->p = lex_state->a;
@@ -702,18 +734,14 @@
 
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
-
-		act_state->e = RE_ESUCCESS;
 		act_state->g = g;
 
+		err->e = RE_ESUCCESS;
+
 		ADVANCE_LEXER;
-		entry(new, flags, lex_state, act_state);
+		entry(new, flags, lex_state, act_state, err);
 
-		if (act_state->e & RE_ESC && err != NULL) {
-			snprintdots(err->esc, sizeof err->esc, lex_state->buf.a);
-		}
-
-		if (act_state->e != RE_ESUCCESS) {
+		if (err->e != RE_ESUCCESS) {
 			/* TODO: free internals allocated during parsing (are there any?) */
 			goto error;
 		}
@@ -722,31 +750,7 @@
 
 	error:
 
-		if (err != NULL) {
-			err->e    = act_state->e;
-			err->byte = lx->start.byte;
-
-			if (err->e & RE_GROUP) {
-				/* TODO: would like to show the original spelling verbatim, too */
-
-				if (-1 == bm_snprint(&g->set, err->set, sizeof err->set, 1, escputc)) {
-					goto error1;
-				}
-
-				if (-1 == bm_snprint(&g->dup, err->dup, sizeof err->dup, 1, escputc)) {
-					goto error1;
-				}
-			}
-		}
-
-		return -1;
-
-	error1:
-
-		if (err != NULL) {
-			err->e    = RE_EERRNO;
-			err->byte = 0;
-		}
+		err->byte = lx->start.byte;
 
 		return -1;
 	}
@@ -757,7 +761,6 @@
 	{
 		struct fsm *new;
 		struct fsm_state *start;
-		struct re_grp g; /* for RE_GROUP error reporting only */
 
 		assert(f != NULL);
 
@@ -774,7 +777,7 @@
 
 		fsm_setstart(new, start);
 
-		if (-1 == parse(f, opaque, FORM_ENTRY, flags, new, err, &g)) {
+		if (-1 == parse(f, opaque, FORM_ENTRY, flags, new, err, NULL)) {
 			fsm_free(new);
 			return NULL;
 		}
@@ -783,10 +786,8 @@
 
 	error:
 
-		if (err != NULL) {
-			err->e    = RE_EERRNO;
-			err->byte = 0;
-		}
+		err->e    = RE_EERRNO;
+		err->byte = 0;
 
 		return NULL;
 	}
