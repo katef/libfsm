@@ -1108,13 +1108,13 @@ ZL2_pattern_C_Cbody:;
 		u = strtoul(lex_state->buf.a + 2, &e, 16);
 		assert(*e == '\0');
 
-		if (u > UCHAR_MAX || (u == ULONG_MAX && errno == ERANGE)) {
+		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
 			err(lex_state, "hex escape %s out of range: expected \\x0..\\x%x inclusive",
 				lex_state->buf.a, UCHAR_MAX);
 			exit(EXIT_FAILURE);
 		}
 
-		if (u == ULONG_MAX && errno != 0) {
+		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
 			err(lex_state, "%s: %s: expected \\x0..\\x%x inclusive",
 				lex_state->buf.a, strerror(errno), UCHAR_MAX);
 			exit(EXIT_FAILURE);
@@ -1145,13 +1145,13 @@ ZL2_pattern_C_Cbody:;
 		u = strtoul(lex_state->buf.a + 1, &e, 8);
 		assert(*e == '\0');
 
-		if (u > UCHAR_MAX || (u == ULONG_MAX && errno == ERANGE)) {
+		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
 			err(lex_state, "octal escape %s out of range: expected \\0..\\%o inclusive",
 				lex_state->buf.a, UCHAR_MAX);
 			exit(EXIT_FAILURE);
 		}
 
-		if (u == ULONG_MAX && errno != 0) {
+		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
 			err(lex_state, "%s: %s: expected \\0..\\%o inclusive",
 				lex_state->buf.a, strerror(errno), UCHAR_MAX);
 			exit(EXIT_FAILURE);

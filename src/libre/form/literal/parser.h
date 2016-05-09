@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 190 "src/libre/parser.act"
+#line 192 "src/libre/parser.act"
 
 
 	#include <re/re.h>
@@ -19,17 +19,18 @@
 
 	typedef struct fsm *  fsm;
 	typedef enum re_flags flags;
+	typedef struct re_err * err;
 
-#line 24 "src/libre/form/literal/parser.h"
+#line 25 "src/libre/form/literal/parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
-extern void p_re__literal(fsm, flags, lex_state, act_state);
+extern void p_re__literal(fsm, flags, lex_state, act_state, err);
 /* BEGINNING OF TRAILER */
 
-#line 820 "src/libre/parser.act"
+#line 821 "src/libre/parser.act"
 
 
-#line 34 "src/libre/form/literal/parser.h"
+#line 35 "src/libre/form/literal/parser.h"
 
 /* END OF FILE */
