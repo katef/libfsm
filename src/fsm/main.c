@@ -26,8 +26,10 @@ extern char *optarg;
 static void
 usage(void)
 {
-	printf("usage: fsm [-acdhgdmrp] [-l <language>] [-n <prefix>]\n"
-	       "           [-t <transformation>] [-e <execution> | -q <query>]\n");
+	printf("usage: fsm [-x] [-dmr] [-t <transformation>] {<execution> ...}\n");
+	printf("       fsm [-dmr] [-t <transformation>] {-q <query>}\n");
+	printf("       fsm -p [-cag] [-l <language>] [-n <prefix>] [-dmr] [-t <transformation>]\n");
+	printf("       fsm -h\n");
 }
 
 static enum fsm_out
@@ -66,7 +68,7 @@ language(const char *name)
 }
 
 static int
-query(struct fsm *fsm, const char *name)
+fsmquery(struct fsm *fsm, const char *name)
 {
 	size_t i;
 
@@ -140,18 +142,43 @@ transform(struct fsm *fsm, const char *name)
 	exit(EXIT_FAILURE);
 }
 
+static FILE *
+xopen(const char *s)
+{
+	FILE *f;
+
+	assert(s != NULL);
+
+	if (0 == strcmp(s, "-")) {
+		return stdin;
+	}
+
+	f = fopen(s, "r");
+	if (f == NULL) {
+		perror(s);
+		exit(EXIT_FAILURE);
+	}
+
+	return f;
+}
+
 int
 main(int argc, char *argv[])
 {
 	enum fsm_out format;
 	struct fsm *fsm;
+	int xfiles;
 	int print;
+	int query;
+	int r;
 
 	static const struct fsm_outoptions o_defaults;
 	struct fsm_outoptions o = o_defaults;
 
 	format = FSM_OUT_FSM;
+	xfiles = 0;
 	print  = 0;
+	query  = 0;
 
 	/* XXX: makes no sense for e.g. fsm -h */
 	fsm = fsm_parse(stdin);
@@ -159,21 +186,22 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	r = 0;
+
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hagn:l:de:cmrt:pq:"), c != -1) {
+		while (c = getopt(argc, argv, "hagn:l:d:cmrt:pq:x"), c != -1) {
 			switch (c) {
-			case 'a': o.anonymous_states  = 1;      break;
-			case 'g': o.fragment          = 1;      break;
-			case 'c': o.consolidate_edges = 1;      break;
-			case 'n': o.prefix            = optarg; break;
+			case 'a': o.anonymous_states  = 1;       break;
+			case 'g': o.fragment          = 1;       break;
+			case 'c': o.consolidate_edges = 1;       break;
+			case 'n': o.prefix            = optarg;  break;
 
-			case 'e': return NULL == fsm_exec(fsm, fsm_sgetc, &optarg);
-
-			case 'p':
-				print = 1;
-				break;
+			case 'x': xfiles = 1;                    break;
+			case 'p': print  = 1;                    break;
+			case 'q': query  = 1;
+			          r &= fsmquery(fsm, optarg);    break;
 
 			case 'l': format = language(optarg);     break;
 
@@ -181,8 +209,6 @@ main(int argc, char *argv[])
 			case 'm': transform(fsm, "minimise");    break;
 			case 'r': transform(fsm, "reverse");     break;
 			case 't': transform(fsm, optarg);        break;
-
-			case 'q': exit(query(fsm, optarg));      break;
 
 			case 'h':
 				usage();
@@ -199,9 +225,44 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (argc != 0) {
-		usage();
-		exit(EXIT_FAILURE);
+	if ((argc > 0) + print + query > 1) {
+		fprintf(stderr, "execute, -p and -q are mutually exclusive\n");
+		return EXIT_FAILURE;
+	}
+
+	if (argc > 0) {
+		int i;
+
+		/* TODO: option to print input texts which match. like grep(1) does.
+		 * This is not the same as printing patterns which match (by associating
+		 * a pattern to the end state), like lx(1) does */
+
+		for (i = 0; i < argc; i++) {
+			const struct fsm_state *state;
+
+			if (xfiles) {
+				FILE *f;
+
+				f = xopen(argv[0]);
+
+				state = fsm_exec(fsm, fsm_fgetc, f);
+
+				fclose(f);
+			} else {
+				const char *s;
+
+				s = argv[i];
+
+				state = fsm_exec(fsm, fsm_sgetc, &s);
+			}
+
+			if (state == NULL) {
+				r |= 1;
+				continue;
+			}
+
+			/* TODO: option to print state number? */
+		}
 	}
 
 	if (print) {
@@ -210,6 +271,6 @@ main(int argc, char *argv[])
 
 	fsm_free(fsm);
 
-	return 0;
+	return query ? !r : r;
 }
 
