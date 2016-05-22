@@ -9,7 +9,6 @@
 
 #include <fsm/fsm.h>
 #include <fsm/cost.h>
-#include <fsm/search.h>
 
 #include "internal.h"
 

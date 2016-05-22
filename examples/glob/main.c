@@ -31,9 +31,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
-#include <fsm/graph.h>
 #include <fsm/out.h>
-#include <fsm/exec.h>
 
 static void
 usage(void)

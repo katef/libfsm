@@ -7,8 +7,8 @@
 
 #include <adt/set.h>
 
+#include <fsm/fsm.h>
 #include <fsm/bool.h>
-#include <fsm/graph.h>
 
 #include "internal.h"
 

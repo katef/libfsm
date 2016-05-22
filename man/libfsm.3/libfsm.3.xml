@@ -38,12 +38,9 @@ TODO
 
 		<para><code>&lt;fsm/bool.h&gt;</code>:</para>
 		<para><code>&lt;fsm/cost.h&gt;</code>:</para>
-		<para><code>&lt;fsm/exec.h&gt;</code>:</para>
 		<para><code>&lt;fsm/fsm.h&gt;</code>:</para>
-		<para><code>&lt;fsm/graph.h&gt;</code>:</para>
 		<para><code>&lt;fsm/out.h&gt;</code>:</para>
 		<para><code>&lt;fsm/pred.h&gt;</code>:</para>
-		<para><code>&lt;fsm/search.h&gt;</code>:</para>
 		<para><code>&lt;fsm/walk.h&gt;</code>:</para>
 
 

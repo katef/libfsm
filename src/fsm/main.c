@@ -14,9 +14,7 @@
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/graph.h>
 #include <fsm/out.h>
-#include <fsm/exec.h>
 
 #include "parser.h"
 

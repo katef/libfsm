@@ -10,7 +10,6 @@
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
-#include <fsm/graph.h>
 
 #include "../libfsm/internal.h" /* XXX */
 

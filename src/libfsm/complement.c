@@ -8,7 +8,6 @@
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 #include <fsm/bool.h>
-#include <fsm/graph.h>
 
 #include "internal.h"
 

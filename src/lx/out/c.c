@@ -7,10 +7,10 @@
 
 #include <adt/set.h>
 
+#include <fsm/fsm.h>
 #include <fsm/out.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/graph.h>
 
 #include "libfsm/internal.h" /* XXX */
 

@@ -7,7 +7,7 @@
 #include <adt/priq.h>
 #include <adt/path.h>
 
-#include <fsm/search.h>
+#include <fsm/fsm.h>
 #include <fsm/cost.h>
 
 #include "internal.h"

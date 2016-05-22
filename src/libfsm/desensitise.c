@@ -7,7 +7,6 @@
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
-#include <fsm/graph.h>
 
 #include "internal.h"
 

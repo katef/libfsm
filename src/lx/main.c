@@ -11,11 +11,10 @@
 
 #include <adt/set.h>
 
+#include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/cost.h>
-#include <fsm/graph.h>
-#include <fsm/search.h>
 
 #include <re/re.h>
 

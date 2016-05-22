@@ -122,7 +122,19 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 
 
 /*
- * Conveniences for re_comp().
+ * Callbacks which may be passed to re_comp(). These are conveniences for
+ * common situations; they could equally well be user-defined.
+ *
+ *  re_sgetc - To read from a string. Pass the address of a pointer to the
+ *              first element of a string:
+ *
+ *                const char *s = "abc";
+ *                re_comp(RE_SIMPLE, re_sgetc, &s, 0, NULL);
+ *
+ *              Where s will be incremented to point to each character in turn.
+ *
+ *  re_fgetc - To read from a file. Pass a FILE *:
+ *                re_comp(RE_SIMPLE, re_fgetc, stdin, 0, NULL);
  */
 int re_sgetc(void *opaque); /* expects opaque to be char ** */
 int re_fgetc(void *oapque); /* expects opaque to be FILE *  */

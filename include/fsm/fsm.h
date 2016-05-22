@@ -14,6 +14,8 @@
 struct fsm;
 struct fsm_state;
 struct fsm_edge;
+struct state_set;
+struct path; /* XXX */
 
 /*
  * Create a new FSM. This is to be freed with fsm_free(). A structure allocated
@@ -178,6 +180,121 @@ fsm_trim(struct fsm *fsm);
 int
 fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 	char *buf, size_t bufsz);
+
+/*
+ * Make the given fsm case-insensitive. This may result in an NFA.
+ *
+ * Returns 1 on success, or 0 on error.
+ */
+int
+fsm_desensitise(struct fsm *fsm);
+
+/*
+ * Reverse the given fsm. This may result in an NFA.
+ *
+ * Returns 1 on success, or 0 on error.
+ */
+int
+fsm_reverse(struct fsm *fsm);
+
+/* TODO: explain */
+int
+fsm_reverse_opaque(struct fsm *fsm,
+	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *));
+
+/*
+ * Convert an fsm to a DFA.
+ *
+ * Returns false on error; see errno.
+ */
+int
+fsm_determinise(struct fsm *fsm);
+
+/* TODO: explain */
+int
+fsm_determinise_opaque(struct fsm *fsm,
+	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *));
+
+/*
+ * Make a DFA complete, as per fsm_iscomplete.
+ */
+int
+fsm_complete(struct fsm *fsm,
+	int (*predicate)(const struct fsm *, const struct fsm_state *));
+
+/*
+ * Minimize an FSM to its canonical form.
+ *
+ * Returns false on error; see errno.
+ */
+int
+fsm_minimise(struct fsm *fsm);
+
+/* TODO: explain */
+int
+fsm_minimise_opaque(struct fsm *fsm,
+	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *));
+
+/*
+ * Concatenate b after a. This is not commutative.
+ */
+struct fsm *
+fsm_concat(struct fsm *a, struct fsm *b);
+
+/*
+ * Subtract b from a. This is not commutative.
+ */
+struct fsm *
+fsm_subtract(struct fsm *a, struct fsm *b);
+
+/*
+ * Find the least-cost ("shortest") path between two states.
+ *
+ * A discovered path is returned, or NULL on error. If the goal is not
+ * reachable, then the path returned will be non-NULL but will not contain
+ * the goal state.
+ */
+struct path *
+fsm_shortest(const struct fsm *fsm,
+	const struct fsm_state *start, const struct fsm_state *goal,
+	unsigned (*cost)(const struct fsm_state *from, const struct fsm_state *to, int c));
+
+/*
+ * Execute an FSM reading input from the user-specified callback fsm_getc().
+ * fsm_getc() is passed the opaque pointer given, and is expected to return
+ * either an unsigned character cast to int, or EOF to indicate the end of
+ * input.
+ *
+ * Returns the accepting state on a successful parse (i.e. where execution
+ * ends in an state set by fsm_setend). Returns NULL for unexpected input,
+ * premature EOF, or ending in a state not marked as an end state.
+ *
+ * The returned accepting state is intended to facillitate lookup of
+ * its state opaque value previously set by fsm_setopaque() (not to be
+ * confused with the opaque pointer passed for the fsm_getc callback function).
+ *
+ * The given FSM is expected to be a DFA.
+ */
+struct fsm_state *
+fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque);
+
+/*
+ * Callbacks which may be passed to fsm_exec(). These are conveniences for
+ * common situations; they could equally well be user-defined.
+ *
+ *  fsm_sgetc - To read from a string. Pass the address of a pointer to the
+ *              first element of a string:
+ *
+ *                const char *s = "abc";
+ *                fsm_exec(fsm, fsm_sgetc, &s);
+ *
+ *              Where s will be incremented to point to each character in turn.
+ *
+ *  fsm_fgetc - To read from a file. Pass a FILE *:
+ *                fsm_exec(fsm, fsm_fgetc, stdin);
+ */
+int fsm_sgetc(void *opaque); /* expects opaque to be char ** */
+int fsm_fgetc(void *opaque); /* expects opaque to be FILE *  */
 
 #endif
 
