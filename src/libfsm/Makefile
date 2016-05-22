@@ -11,6 +11,7 @@ SRC += src/libfsm/mode.c
 SRC += src/libfsm/out.c
 SRC += src/libfsm/trim.c
 SRC += src/libfsm/example.c
+SRC += src/libfsm/getc.c
 
 # graph things
 SRC += src/libfsm/mergestates.c
