@@ -24,9 +24,9 @@ extern char *optarg;
 static void
 usage(void)
 {
-	printf("usage: fsm [-x] [-dmr] [-t <transformation>] {<execution> ...}\n");
-	printf("       fsm [-dmr] [-t <transformation>] {-q <query>}\n");
-	printf("       fsm -p [-cag] [-l <language>] [-n <prefix>] [-dmr] [-t <transformation>]\n");
+	printf("usage: fsm -p   [-dmr] [-t <transformation>] [-l <language>] [-acw] [-e <prefix>]\n");
+	printf("       fsm [-x] [-dmr] [-t <transformation>] {<text> ...}\n");
+	printf("       fsm      [-dmr] [-t <transformation>] {-q <query>}\n");
 	printf("       fsm -h\n");
 }
 
@@ -189,12 +189,12 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hagn:l:d:cmrt:pq:x"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwe:" "xpq:l:d:mrt:"), c != -1) {
 			switch (c) {
 			case 'a': o.anonymous_states  = 1;       break;
-			case 'g': o.fragment          = 1;       break;
 			case 'c': o.consolidate_edges = 1;       break;
-			case 'n': o.prefix            = optarg;  break;
+			case 'w': o.fragment          = 1;       break;
+			case 'e': o.prefix            = optarg;  break;
 
 			case 'x': xfiles = 1;                    break;
 			case 'p': print  = 1;                    break;

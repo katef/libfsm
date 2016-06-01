@@ -37,10 +37,10 @@ struct match {
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re -p [-iacmnq] [-l <language>] <re> ...\n");
-	fprintf(stderr, "       re -m [-iacmnq] <re> ...\n");
-	fprintf(stderr, "       re    [-iacmnqx] <re> ... [ <text> | -- <text> ... ]\n");
-	fprintf(stderr, "       re -g [-ib] <group>\n");
+	fprintf(stderr, "usage: re -p   [-inqu] [-l <language>] [-awc] [-e <prefix>] <re> ...\n");
+	fprintf(stderr, "       re -m   [-inqu] <re> ...\n");
+	fprintf(stderr, "       re [-x] [-inqu] <re> ... [ <text> | -- <text> ... ]\n");
+	fprintf(stderr, "       re -g   [-iub] <group>\n");
 	fprintf(stderr, "       re -h\n");
 }
 
@@ -299,6 +299,13 @@ main(int argc, char *argv[])
 	int ambig;
 	int r;
 
+	static const struct fsm_outoptions o_defaults;
+	struct fsm_outoptions o = o_defaults;
+
+	/* note these defaults are the opposite than for fsm(1) */
+	o.anonymous_states  = 1;
+	o.consolidate_edges = 1;
+
 	if (argc < 1) {
 		usage();
 		return EXIT_FAILURE;
@@ -326,13 +333,14 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "habcgil:xmnr:pq"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwe:" "sr:l:" "ubpgixmnq"), c != -1) {
 			switch (c) {
-			case 'h':
-				usage();
-				return EXIT_SUCCESS;
+			case 'a': o.anonymous_states  = 0;       break;
+			case 'c': o.consolidate_edges = 0;       break;
+			case 'w': o.fragment          = 1;       break;
+			case 'e': o.prefix            = optarg;  break;
 
-			case 'c':
+			case 's':
 				join = fsm_concat;
 				break;
 
@@ -344,7 +352,7 @@ main(int argc, char *argv[])
 				format = language(optarg);
 				break;
 
-			case 'a': ambig    = 1; break;
+			case 'u': ambig    = 1; break;
 			case 'b': boxed    = 1; break;
 			case 'p': print    = 1; break;
 			case 'g': group    = 1; break;
@@ -353,6 +361,10 @@ main(int argc, char *argv[])
 			case 'm': example  = 1; break;
 			case 'n': keep_nfa = 1; break;
 			case 'q': patterns = 1; break;
+
+			case 'h':
+				usage();
+				return EXIT_SUCCESS;
 
 			case '?':
 			default:
@@ -625,12 +637,6 @@ main(int argc, char *argv[])
 	}
 
 	if (print) {
-		static const struct fsm_outoptions o_defaults;
-		struct fsm_outoptions o = o_defaults;
-
-		o.anonymous_states  = 1;
-		o.consolidate_edges = 1;
-
 		/* TODO: print examples in comments for end states;
 		 * patterns in comments for the whole FSM */
 

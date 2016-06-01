@@ -33,7 +33,7 @@ enum api_getc   api_getc;
 static
 void usage(void)
 {
-	printf("usage: lx [-h] [-n] [-b <tokbuf>] [-c <getc>] [-l <language>] [-pt <prefix>]\n");
+	printf("usage: lx [-h] [-n] [-b <tokbuf>] [-g <getc>] [-l <language>] [-et <prefix>]\n");
 }
 
 static enum lx_out
@@ -261,25 +261,9 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hvb:c:l:p:t:n"), c != -1) {
+		while (c = getopt(argc, argv, "h" "e:t:" "vb:g:l:n"), c != -1) {
 			switch (c) {
-			case 'h':
-				usage();
-				exit(EXIT_SUCCESS);
-
-			case 'b':
-				api_tokbuf |= lang_tokbuf(optarg);
-				break;
-
-			case 'c':
-				api_getc |= lang_getc(optarg);
-				break;
-
-			case 'l':
-				format = language(optarg);
-				break;
-
-			case 'p':
+			case 'e':
 				prefix.api = optarg;
 				break;
 
@@ -287,9 +271,25 @@ main(int argc, char *argv[])
 				prefix.tok = optarg;
 				break;
 
+			case 'b':
+				api_tokbuf |= lang_tokbuf(optarg);
+				break;
+
+			case 'g':
+				api_getc |= lang_getc(optarg);
+				break;
+
+			case 'l':
+				format = language(optarg);
+				break;
+
 			case 'n':
 				keep_nfa = 1;
 				break;
+
+			case 'h':
+				usage();
+				exit(EXIT_SUCCESS);
 
 			case '?':
 			default:
