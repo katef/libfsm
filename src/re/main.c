@@ -306,12 +306,6 @@ main(int argc, char *argv[])
 	o.anonymous_states  = 1;
 	o.consolidate_edges = 1;
 
-/* XXX: should be done after getopt stuff */
-	if (argc < 1) {
-		usage();
-		return EXIT_FAILURE;
-	}
-
 	ifiles   = 0;
 	xfiles   = 0;
 	boxed    = 0;
@@ -370,6 +364,11 @@ main(int argc, char *argv[])
 
 		argc -= optind;
 		argv += optind;
+	}
+
+	if (argc < 1) {
+		usage();
+		return EXIT_FAILURE;
 	}
 
 	if (print + example + group > 1) {
