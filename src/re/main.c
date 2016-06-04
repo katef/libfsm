@@ -306,14 +306,9 @@ main(int argc, char *argv[])
 	o.anonymous_states  = 1;
 	o.consolidate_edges = 1;
 
+/* XXX: should be done after getopt stuff */
 	if (argc < 1) {
 		usage();
-		return EXIT_FAILURE;
-	}
-
-	fsm = fsm_new();
-	if (fsm == NULL) {
-		perror("fsm_new");
 		return EXIT_FAILURE;
 	}
 
@@ -440,6 +435,12 @@ main(int argc, char *argv[])
 
 	if (keep_nfa) {
 		ambig = 1;
+	}
+
+	fsm = fsm_new();
+	if (fsm == NULL) {
+		perror("fsm_new");
+		return EXIT_FAILURE;
 	}
 
 	{
@@ -633,6 +634,8 @@ main(int argc, char *argv[])
 			printf("\n");
 		}
 
+/* XXX: free fsm */
+
 		return 0;
 	}
 
@@ -641,6 +644,8 @@ main(int argc, char *argv[])
 		 * patterns in comments for the whole FSM */
 
 		fsm_print(fsm, stdout, format, &o);
+
+/* XXX: free fsm */
 
 		return 0;
 	}
