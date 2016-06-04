@@ -423,6 +423,11 @@ main(int argc, char *argv[])
 				0, &err, stdout, boxed, escputc);
 		}
 
+		if (r == -1 && err.e == RE_EBADFORM) {
+			fprintf(stderr, "group syntax not supported by form\n");
+			return EXIT_FAILURE;
+		}
+
 		if (r == -1) {
 			re_perror("re_group_print", RE_SIMPLE, &err,
 				 ifiles ? argv[0] : NULL,
