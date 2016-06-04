@@ -107,7 +107,14 @@ form_name(const char *name)
 		}
 	}
 
-	fprintf(stderr, "unrecognised re form \"%s\"", name);
+	fprintf(stderr, "unrecognised re form \"%s\"; valid forms are: ", name);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
 	exit(EXIT_FAILURE);
 }
 
