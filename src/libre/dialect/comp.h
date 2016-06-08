@@ -14,7 +14,7 @@ comp_glob(int (*f)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err);
 
 struct fsm *
-comp_simple(int (*f)(void *opaque), void *opaque,
+comp_native(int (*f)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err);
 
 #endif

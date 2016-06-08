@@ -235,9 +235,9 @@ TODO: could execute by thompson's NFA instead
 							</tr>
 							<tr>
 								<td><option>-s</option></td>
-								<td><code>RE_SIMPLE</code></td>
-								<td>&simple.5re;</td>
-								<td>&re.3; &ldquo;Simple&rdquo; syntax</td>
+								<td><code>RE_NATIVE</code></td>
+								<td>&native.5re;</td>
+								<td>&re.3; &ldquo;Native&rdquo; syntax</td>
 							</tr>
 						</tbody>
 					</table>
@@ -271,7 +271,7 @@ TODO: could execute by thompson's NFA instead
 		<para>&fsm.1;, &grep.1;, &fsm.3;, &re.3;,
 			&pcre.3;,
 			&fsm_concat.3;, &fsm_union.3;,
-			&literal.5re;, &glob.5re;, &simple.5re;,
+			&literal.5re;, &glob.5re;, &native.5re;,
 			&posix; &re_format.7;, Plan 9 &regexp.7;.</para>
 	</refsection>
 </refentry>

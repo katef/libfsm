@@ -245,7 +245,7 @@ fprintf(stderr, "-n is for dot output only\n");
 		<title>See Also</title>
 
 		<para>&lex.1;, &lexi.1;, &fsm.3;, &re.3;,
-			&simple.5re;, &literal.5re;, &lx.5;.</para>
+			&native.5re;, &literal.5re;, &lx.5;.</para>
 	</refsection>
 </refentry>
 

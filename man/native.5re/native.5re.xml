@@ -8,19 +8,19 @@
 <refentry>
 
 	<refentryinfo>
-		<productname>simle</productname>
+		<productname>native</productname>
 	</refentryinfo>
 
 	<refmeta>
-		<refentrytitle>simple</refentrytitle>
+		<refentrytitle>native</refentrytitle>
 		<manvolnum>5re</manvolnum>
 	</refmeta>
-<!-- TODO: simple only. also document glob -->
+<!-- TODO: native only. also document glob -->
 <!-- TODO: use 5re for libre, 5fsm for libfsm, etc -->
 
 	<refnamediv>
-		<refname>simple</refname>
-		<refpurpose>simple regular expression syntax</refpurpose>
+		<refname>native</refname>
+		<refpurpose>libre native regular expression syntax</refpurpose>
 	</refnamediv>
 
 	<refsection>

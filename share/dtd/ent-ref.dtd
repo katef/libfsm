@@ -37,7 +37,7 @@
 <!ENTITY fsm.5       "<citerefentry><refentrytitle>fsm</refentrytitle>     %vol.5;</citerefentry>">
 <!ENTITY glob.5re    "<citerefentry><refentrytitle>glob</refentrytitle>    %vol.5re;</citerefentry>">
 <!ENTITY literal.5re "<citerefentry><refentrytitle>literal</refentrytitle> %vol.5re;</citerefentry>">
-<!ENTITY simple.5re  "<citerefentry><refentrytitle>simple</refentrytitle>  %vol.5re;</citerefentry>">
+<!ENTITY native.5re  "<citerefentry><refentrytitle>native</refentrytitle>  %vol.5re;</citerefentry>">
 
 <!-- TODO: generate from manpages -->
 

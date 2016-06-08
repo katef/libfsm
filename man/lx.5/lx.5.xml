@@ -204,7 +204,7 @@
 	<refsection>
 		<title>See Also</title>
 
-		<para>&lx.1;, &literal.5re;, &simple.5re;.</para>
+		<para>&lx.1;, &literal.5re;, &native.5re;.</para>
 
 <!--
 		<para>&lx-userguide.doc;.</para>

@@ -37,7 +37,7 @@ re_dialect(enum re_dialect dialect)
 	const static struct dialect a[] = {
 		{ RE_LITERAL, comp_literal, NULL         },
 		{ RE_GLOB,    comp_glob,    NULL         },
-		{ RE_SIMPLE,  comp_simple,  group_simple }
+		{ RE_NATIVE,  comp_native,  group_native }
 	};
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {

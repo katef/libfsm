@@ -3,7 +3,7 @@
 #ifndef LX_H
 #define LX_H
 
-enum lx_simple_token {
+enum lx_native_token {
 	TOK_CLOSECOUNT,
 	TOK_OPENCOUNT,
 	TOK_COUNT,
@@ -36,22 +36,22 @@ struct lx_pos {
 	unsigned col;
 };
 
-struct lx_simple_lx {
-	int (*lgetc)(struct lx_simple_lx *lx);
+struct lx_native_lx {
+	int (*lgetc)(struct lx_native_lx *lx);
 	void *opaque;
 
-	int c; /* lx_simple_ungetc buffer */
+	int c; /* lx_native_ungetc buffer */
 
 	struct lx_pos start;
 	struct lx_pos end;
 
 	void *buf;
-	int  (*push) (struct lx_simple_lx *lx, char c);
-	void (*pop)  (struct lx_simple_lx *lx);
-	int  (*clear)(struct lx_simple_lx *lx);
-	void (*free) (struct lx_simple_lx *lx);
+	int  (*push) (struct lx_native_lx *lx, char c);
+	void (*pop)  (struct lx_native_lx *lx);
+	int  (*clear)(struct lx_native_lx *lx);
+	void (*free) (struct lx_native_lx *lx);
 
-	enum lx_simple_token (*z)(struct lx_simple_lx *lx);
+	enum lx_native_token (*z)(struct lx_native_lx *lx);
 };
 
 /*
@@ -90,18 +90,18 @@ struct lx_dynbuf {
 	char *a;
 };
 
-const char *lx_simple_name(enum lx_simple_token t);
-const char *lx_simple_example(enum lx_simple_token (*z)(struct lx_simple_lx *), enum lx_simple_token t);
+const char *lx_native_name(enum lx_native_token t);
+const char *lx_native_example(enum lx_native_token (*z)(struct lx_native_lx *), enum lx_native_token t);
 
-void lx_simple_init(struct lx_simple_lx *lx);
-enum lx_simple_token lx_simple_next(struct lx_simple_lx *lx);
+void lx_native_init(struct lx_native_lx *lx);
+enum lx_native_token lx_native_next(struct lx_native_lx *lx);
 
-int lx_simple_fgetc(struct lx_simple_lx *lx);
+int lx_native_fgetc(struct lx_native_lx *lx);
 
-int  lx_simple_dynpush(struct lx_simple_lx *lx, char c);
-void lx_simple_dynpop(struct lx_simple_lx *lx);
-int  lx_simple_dynclear(struct lx_simple_lx *lx);
-void lx_simple_dynfree(struct lx_simple_lx *lx);
+int  lx_native_dynpush(struct lx_native_lx *lx, char c);
+void lx_native_dynpop(struct lx_native_lx *lx);
+int  lx_native_dynclear(struct lx_native_lx *lx);
+void lx_native_dynfree(struct lx_native_lx *lx);
 
 #endif
 

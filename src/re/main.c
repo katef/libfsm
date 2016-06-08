@@ -96,7 +96,7 @@ dialect_name(const char *name)
 */
 		{ "literal", RE_LITERAL },
 		{ "glob",    RE_GLOB    },
-		{ "simple",  RE_SIMPLE  }
+		{ "native",  RE_NATIVE  }
 	};
 
 	assert(name != NULL);
@@ -324,7 +324,7 @@ main(int argc, char *argv[])
 	ambig    = 0;
 	join     = fsm_union;
 	format   = FSM_OUT_FSM;
-	dialect  = RE_SIMPLE;
+	dialect  = RE_NATIVE;
 
 	{
 		int c;
@@ -429,7 +429,7 @@ main(int argc, char *argv[])
 		}
 
 		if (r == -1) {
-			re_perror("re_group_print", RE_SIMPLE, &err,
+			re_perror("re_group_print", RE_NATIVE, &err,
 				 ifiles ? argv[0] : NULL,
 				!ifiles ? argv[0] : NULL);
 			return EXIT_FAILURE;

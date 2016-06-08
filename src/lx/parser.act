@@ -349,11 +349,11 @@
 
 		s = @s;
 
-		@r = re_comp(RE_SIMPLE, re_sgetc, &s, @f, &err);
+		@r = re_comp(RE_NATIVE, re_sgetc, &s, @f, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
-			re_perror("re_comp", RE_SIMPLE, &err, NULL, @s);
+			re_perror("re_comp", RE_NATIVE, &err, NULL, @s);
 			exit(EXIT_FAILURE);
 		}
 	@};

@@ -7,12 +7,12 @@
 
 #include LX_HEADER
 
-static enum lx_simple_token z0(struct lx_simple_lx *lx);
-static enum lx_simple_token z1(struct lx_simple_lx *lx);
-static enum lx_simple_token z2(struct lx_simple_lx *lx);
+static enum lx_native_token z0(struct lx_native_lx *lx);
+static enum lx_native_token z1(struct lx_native_lx *lx);
+static enum lx_native_token z2(struct lx_native_lx *lx);
 
 static int
-lx_getc(struct lx_simple_lx *lx)
+lx_getc(struct lx_native_lx *lx)
 {
 	int c;
 
@@ -40,7 +40,7 @@ lx_getc(struct lx_simple_lx *lx)
 }
 
 static void
-lx_simple_ungetc(struct lx_simple_lx *lx, int c)
+lx_native_ungetc(struct lx_native_lx *lx, int c)
 {
 	assert(lx != NULL);
 	assert(lx->c == EOF);
@@ -61,7 +61,7 @@ lx_simple_ungetc(struct lx_simple_lx *lx, int c)
 }
 
 int
-lx_simple_fgetc(struct lx_simple_lx *lx)
+lx_native_fgetc(struct lx_native_lx *lx)
 {
 	assert(lx != NULL);
 	assert(lx->opaque != NULL);
@@ -70,7 +70,7 @@ lx_simple_fgetc(struct lx_simple_lx *lx)
 }
 
 int
-lx_simple_dynpush(struct lx_simple_lx *lx, char c)
+lx_native_dynpush(struct lx_native_lx *lx, char c)
 {
 	struct lx_dynbuf *t;
 
@@ -115,7 +115,7 @@ lx_simple_dynpush(struct lx_simple_lx *lx, char c)
 }
 
 void
-lx_simple_dynpop(struct lx_simple_lx *lx)
+lx_native_dynpop(struct lx_native_lx *lx)
 {
 	struct lx_dynbuf *t;
 
@@ -135,7 +135,7 @@ lx_simple_dynpop(struct lx_simple_lx *lx)
 }
 
 int
-lx_simple_dynclear(struct lx_simple_lx *lx)
+lx_native_dynclear(struct lx_native_lx *lx)
 {
 	struct lx_dynbuf *t;
 
@@ -166,7 +166,7 @@ lx_simple_dynclear(struct lx_simple_lx *lx)
 }
 
 void
-lx_simple_dynfree(struct lx_simple_lx *lx)
+lx_native_dynfree(struct lx_native_lx *lx)
 {
 	struct lx_dynbuf *t;
 
@@ -178,8 +178,8 @@ lx_simple_dynfree(struct lx_simple_lx *lx)
 
 	free(t->a);
 }
-static enum lx_simple_token
-z0(struct lx_simple_lx *lx)
+static enum lx_native_token
+z0(struct lx_native_lx *lx)
 {
 	int c;
 
@@ -207,7 +207,7 @@ z0(struct lx_simple_lx *lx)
 		switch (state) {
 		case S0: /* e.g. "," */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_SEP;
+			default:  lx_native_ungetc(lx, c); return TOK_SEP;
 			}
 
 		case S1: /* e.g. "0" */
@@ -222,12 +222,12 @@ z0(struct lx_simple_lx *lx)
 			case '7':	          continue;
 			case '8':	          continue;
 			case '9':	          continue;
-			default:  lx_simple_ungetc(lx, c); return TOK_COUNT;
+			default:  lx_native_ungetc(lx, c); return TOK_COUNT;
 			}
 
 		case S2: /* e.g. "}" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return lx->z = z2, TOK_CLOSECOUNT;
+			default:  lx_native_ungetc(lx, c); return lx->z = z2, TOK_CLOSECOUNT;
 			}
 
 		case S3: /* start */
@@ -259,8 +259,8 @@ z0(struct lx_simple_lx *lx)
 	}
 }
 
-static enum lx_simple_token
-z1(struct lx_simple_lx *lx)
+static enum lx_native_token
+z1(struct lx_native_lx *lx)
 {
 	int c;
 
@@ -311,7 +311,7 @@ z1(struct lx_simple_lx *lx)
 			case 'd':	          continue;
 			case 'e':	          continue;
 			case 'f':	          continue;
-			default:  lx_simple_ungetc(lx, c); return TOK_HEX;
+			default:  lx_native_ungetc(lx, c); return TOK_HEX;
 			}
 
 		case S1: /* e.g. "\\x" */
@@ -351,17 +351,17 @@ z1(struct lx_simple_lx *lx)
 			case '5':	          continue;
 			case '6':	          continue;
 			case '7':	          continue;
-			default:  lx_simple_ungetc(lx, c); return TOK_OCT;
+			default:  lx_native_ungetc(lx, c); return TOK_OCT;
 			}
 
 		case S3: /* e.g. "\\f" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_ESC;
+			default:  lx_native_ungetc(lx, c); return TOK_ESC;
 			}
 
 		case S4: /* e.g. "-" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_RANGE;
+			default:  lx_native_ungetc(lx, c); return TOK_RANGE;
 			}
 
 		case S5: /* e.g. "\\" */
@@ -388,17 +388,17 @@ z1(struct lx_simple_lx *lx)
 
 		case S6: /* e.g. "]" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return lx->z = z2, TOK_CLOSEGROUP;
+			default:  lx_native_ungetc(lx, c); return lx->z = z2, TOK_CLOSEGROUP;
 			}
 
 		case S7: /* e.g. "^" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_INVERT;
+			default:  lx_native_ungetc(lx, c); return TOK_INVERT;
 			}
 
 		case S8: /* e.g. "a" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_CHAR;
+			default:  lx_native_ungetc(lx, c); return TOK_CHAR;
 			}
 
 		case S9: /* start */
@@ -426,8 +426,8 @@ z1(struct lx_simple_lx *lx)
 	}
 }
 
-static enum lx_simple_token
-z2(struct lx_simple_lx *lx)
+static enum lx_native_token
+z2(struct lx_native_lx *lx)
 {
 	int c;
 
@@ -478,7 +478,7 @@ z2(struct lx_simple_lx *lx)
 			case 'd':	          continue;
 			case 'e':	          continue;
 			case 'f':	          continue;
-			default:  lx_simple_ungetc(lx, c); return TOK_HEX;
+			default:  lx_native_ungetc(lx, c); return TOK_HEX;
 			}
 
 		case S1: /* e.g. "\\x" */
@@ -518,52 +518,52 @@ z2(struct lx_simple_lx *lx)
 			case '5':	          continue;
 			case '6':	          continue;
 			case '7':	          continue;
-			default:  lx_simple_ungetc(lx, c); return TOK_OCT;
+			default:  lx_native_ungetc(lx, c); return TOK_OCT;
 			}
 
 		case S3: /* e.g. "\\f" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_ESC;
+			default:  lx_native_ungetc(lx, c); return TOK_ESC;
 			}
 
 		case S4: /* e.g. "$" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_END;
+			default:  lx_native_ungetc(lx, c); return TOK_END;
 			}
 
 		case S5: /* e.g. "(" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_OPENSUB;
+			default:  lx_native_ungetc(lx, c); return TOK_OPENSUB;
 			}
 
 		case S6: /* e.g. ")" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_CLOSESUB;
+			default:  lx_native_ungetc(lx, c); return TOK_CLOSESUB;
 			}
 
 		case S7: /* e.g. "*" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_STAR;
+			default:  lx_native_ungetc(lx, c); return TOK_STAR;
 			}
 
 		case S8: /* e.g. "+" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_PLUS;
+			default:  lx_native_ungetc(lx, c); return TOK_PLUS;
 			}
 
 		case S9: /* e.g. "." */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_DOT;
+			default:  lx_native_ungetc(lx, c); return TOK_DOT;
 			}
 
 		case S10: /* e.g. "?" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_QMARK;
+			default:  lx_native_ungetc(lx, c); return TOK_QMARK;
 			}
 
 		case S11: /* e.g. "[" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return lx->z = z1, TOK_OPENGROUP;
+			default:  lx_native_ungetc(lx, c); return lx->z = z1, TOK_OPENGROUP;
 			}
 
 		case S12: /* e.g. "\\" */
@@ -599,22 +599,22 @@ z2(struct lx_simple_lx *lx)
 
 		case S13: /* e.g. "^" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_START;
+			default:  lx_native_ungetc(lx, c); return TOK_START;
 			}
 
 		case S14: /* e.g. "{" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return lx->z = z0, TOK_OPENCOUNT;
+			default:  lx_native_ungetc(lx, c); return lx->z = z0, TOK_OPENCOUNT;
 			}
 
 		case S15: /* e.g. "|" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_ALT;
+			default:  lx_native_ungetc(lx, c); return TOK_ALT;
 			}
 
 		case S16: /* e.g. "a" */
 			switch (c) {
-			default:  lx_simple_ungetc(lx, c); return TOK_CHAR;
+			default:  lx_native_ungetc(lx, c); return TOK_CHAR;
 			}
 
 		case S17: /* start */
@@ -659,7 +659,7 @@ z2(struct lx_simple_lx *lx)
 }
 
 const char *
-lx_simple_name(enum lx_simple_token t)
+lx_native_name(enum lx_native_token t)
 {
 	switch (t) {
 	case TOK_CLOSECOUNT: return "CLOSECOUNT";
@@ -691,7 +691,7 @@ lx_simple_name(enum lx_simple_token t)
 }
 
 const char *
-lx_simple_example(enum lx_simple_token (*z)(struct lx_simple_lx *), enum lx_simple_token t)
+lx_native_example(enum lx_native_token (*z)(struct lx_native_lx *), enum lx_native_token t)
 {
 	assert(z != NULL);
 
@@ -743,9 +743,9 @@ error:
 }
 
 void
-lx_simple_init(struct lx_simple_lx *lx)
+lx_native_init(struct lx_native_lx *lx)
 {
-	static const struct lx_simple_lx lx_default;
+	static const struct lx_native_lx lx_default;
 
 	assert(lx != NULL);
 
@@ -759,10 +759,10 @@ lx_simple_init(struct lx_simple_lx *lx)
 	lx->end.col  = 1;
 }
 
-enum lx_simple_token
-lx_simple_next(struct lx_simple_lx *lx)
+enum lx_native_token
+lx_native_next(struct lx_native_lx *lx)
 {
-	enum lx_simple_token t;
+	enum lx_native_token t;
 
 	assert(lx != NULL);
 

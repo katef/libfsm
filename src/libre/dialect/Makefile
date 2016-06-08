@@ -2,7 +2,7 @@
 
 DIALECT += glob
 DIALECT += literal
-DIALECT += simple
+DIALECT += native
 
 .for dialect in ${DIALECT}
 

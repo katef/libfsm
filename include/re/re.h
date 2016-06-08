@@ -14,7 +14,7 @@ enum re_dialect {
 */
 	RE_LITERAL,
 	RE_GLOB,
-	RE_SIMPLE
+	RE_NATIVE
 };
 
 enum re_flags {
@@ -130,12 +130,12 @@ re_perror(const char *func, enum re_dialect dialect, const struct re_err *err,
  *              first element of a string:
  *
  *                const char *s = "abc";
- *                re_comp(RE_SIMPLE, re_sgetc, &s, 0, NULL);
+ *                re_comp(RE_NATIVE, re_sgetc, &s, 0, NULL);
  *
  *              Where s will be incremented to point to each character in turn.
  *
  *  re_fgetc - To read from a file. Pass a FILE *:
- *                re_comp(RE_SIMPLE, re_fgetc, stdin, 0, NULL);
+ *                re_comp(RE_NATIVE, re_fgetc, stdin, 0, NULL);
  */
 int re_sgetc(void *opaque); /* expects opaque to be char ** */
 int re_fgetc(void *oapque); /* expects opaque to be FILE *  */

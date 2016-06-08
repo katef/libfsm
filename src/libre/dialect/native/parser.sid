@@ -169,7 +169,7 @@
 			};
 		};
 
-		::group-simple: () -> () = {
+		::group-native: () -> () = {
 			g = <make-group>;
 
 			group-bm(&g);
@@ -294,7 +294,7 @@
 		list-of-alts(x, y);
 	};
 
-	re_simple: () -> () = {
+	re_native: () -> () = {
 		(x, y) = <make-states>;
 
 		{
@@ -314,5 +314,5 @@
 
 %entry%
 
-	re_simple, group-simple;
+	re_native, group-native;
 

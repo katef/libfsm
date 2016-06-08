@@ -1,6 +1,6 @@
 /*
  * Automatically generated from the files:
- *	src/libre/dialect/simple/parser.sid
+ *	src/libre/dialect/native/parser.sid
  * and
  *	src/libre/parser.act
  * by:
@@ -21,17 +21,17 @@
 	typedef enum re_flags flags;
 	typedef struct re_err * err;
 
-#line 25 "src/libre/dialect/simple/parser.h"
+#line 25 "src/libre/dialect/native/parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
-extern void p_re__simple(fsm, flags, lex_state, act_state, err);
-extern void p_group_Hsimple(fsm, flags, lex_state, act_state, err);
+extern void p_re__native(fsm, flags, lex_state, act_state, err);
+extern void p_group_Hnative(fsm, flags, lex_state, act_state, err);
 /* BEGINNING OF TRAILER */
 
 #line 821 "src/libre/parser.act"
 
 
-#line 36 "src/libre/dialect/simple/parser.h"
+#line 36 "src/libre/dialect/native/parser.h"
 
 /* END OF FILE */
