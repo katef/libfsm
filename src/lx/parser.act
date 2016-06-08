@@ -334,7 +334,7 @@
 
 		@r = re_comp(RE_LITERAL, re_sgetc, &s, 0, &err);
 		if (@r == NULL) {
-			assert(err.e != RE_EBADFORM);
+			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
 			re_perror("re_comp", RE_LITERAL, &err, NULL, @s);
 			exit(EXIT_FAILURE);
@@ -351,7 +351,7 @@
 
 		@r = re_comp(RE_SIMPLE, re_sgetc, &s, @f, &err);
 		if (@r == NULL) {
-			assert(err.e != RE_EBADFORM);
+			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
 			re_perror("re_comp", RE_SIMPLE, &err, NULL, @s);
 			exit(EXIT_FAILURE);

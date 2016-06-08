@@ -5,7 +5,7 @@
 
 struct fsm;
 
-enum re_form {
+enum re_dialect {
 /* TODO:
 	RE_ERE,
 	RE_BRE,
@@ -48,7 +48,7 @@ enum {
 enum re_errno {
 	RE_ESUCCESS    = 0 | RE_MISC,
 	RE_EERRNO      = 1 | RE_MISC,
-	RE_EBADFORM    = 2 | RE_MISC,
+	RE_EBADDIALECT = 2 | RE_MISC,
 
 	RE_EOVERLAP    = 0 | RE_SYNTAX | RE_GROUP,
 	RE_ENEGRANGE   = 1 | RE_SYNTAX | RE_GROUP,
@@ -93,14 +93,14 @@ int
 re_flags(const char *s, enum re_flags *f);
 
 /*
- * Compile a regexp of the given form. The function passed acts as a callback
+ * Compile a regexp of the given dialect. The function passed acts as a callback
  * to acquire each character of the input, in the spirit of fgetc().
  *
  * Returns NULL on error. If non-NULL, the *err struct is populated with the
  * type and 0-indexed byte offset of the error.
  */
 struct fsm *
-re_comp(enum re_form form, int (*f)(void *opaque), void *opaque,
+re_comp(enum re_dialect dialect, int (*f)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err);
 
 /*
@@ -114,7 +114,7 @@ re_strerror(enum re_errno e);
  * Format an error to stderr.
  */
 void
-re_perror(const char *func, enum re_form form, const struct re_err *err,
+re_perror(const char *func, enum re_dialect dialect, const struct re_err *err,
 	const char *file, const char *s);
 
 

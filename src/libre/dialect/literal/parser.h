@@ -1,6 +1,6 @@
 /*
  * Automatically generated from the files:
- *	src/libre/form/literal/parser.sid
+ *	src/libre/dialect/literal/parser.sid
  * and
  *	src/libre/parser.act
  * by:
@@ -21,7 +21,7 @@
 	typedef enum re_flags flags;
 	typedef struct re_err * err;
 
-#line 25 "src/libre/form/literal/parser.h"
+#line 25 "src/libre/dialect/literal/parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
@@ -31,6 +31,6 @@ extern void p_re__literal(fsm, flags, lex_state, act_state, err);
 #line 821 "src/libre/parser.act"
 
 
-#line 35 "src/libre/form/literal/parser.h"
+#line 35 "src/libre/dialect/literal/parser.h"
 
 /* END OF FILE */

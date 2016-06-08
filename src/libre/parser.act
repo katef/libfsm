@@ -36,26 +36,26 @@
 
 	#include "libre/internal.h"
 
-	#ifndef FORM
-	#error FORM required
+	#ifndef DIALECT
+	#error DIALECT required
 	#endif
 
 	#define PASTE(a, b) a ## b
 	#define CAT(a, b)   PASTE(a, b)
 
-	#define LX_PREFIX CAT(lx_, FORM)
+	#define LX_PREFIX CAT(lx_, DIALECT)
 
 	#define LX_TOKEN  CAT(LX_PREFIX, _token)
 	#define LX_STATE  CAT(LX_PREFIX, _lx)
 	#define LX_NEXT   CAT(LX_PREFIX, _next)
 	#define LX_INIT   CAT(LX_PREFIX, _init)
 
-	#define FORM_COMP  CAT(comp_, FORM)
-	#define FORM_GROUP CAT(group_, FORM)
+	#define DIALECT_COMP  CAT(comp_, DIALECT)
+	#define DIALECT_GROUP CAT(group_, DIALECT)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
-	#define FORM_ENTRY       CAT(p_re__, FORM)
-	#define FORM_GROUP_ENTRY CAT(p_group_H, FORM)
+	#define DIALECT_ENTRY       CAT(p_re__, DIALECT)
+	#define DIALECT_GROUP_ENTRY CAT(p_group_H, DIALECT)
 
 	#include "parser.h"
 	#include "lexer.h"
@@ -745,7 +745,7 @@
 	}
 
 	struct fsm *
-	FORM_COMP(int (*f)(void *opaque), void *opaque,
+	DIALECT_COMP(int (*f)(void *opaque), void *opaque,
 		enum re_flags flags, struct re_err *err)
 	{
 		struct fsm *new;
@@ -766,7 +766,7 @@
 
 		fsm_setstart(new, start);
 
-		if (-1 == parse(f, opaque, FORM_ENTRY, flags, new, err, NULL)) {
+		if (-1 == parse(f, opaque, DIALECT_ENTRY, flags, new, err, NULL)) {
 			fsm_free(new);
 			return NULL;
 		}
@@ -783,32 +783,32 @@
 
 #ifdef PARSE_GROUP
 	int
-	FORM_GROUP(int (*f)(void *opaque), void *opaque,
+	DIALECT_GROUP(int (*f)(void *opaque), void *opaque,
 		enum re_flags flags, struct re_err *err, struct re_grp *g)
 	{
 		assert(f != NULL);
 		assert(g != NULL);
 
 		/*
-		 * The ::group-$form production provides an entry point to the
+		 * The ::group-$dialect production provides an entry point to the
 		 * grammar where just a group is parsed and output as a bitmap,
 		 * without constructing an NFA edge for each entry in the set.
 		 *
 		 * We use the same parse() function here so as to use the same
 		 * act/lex_state setup as usual. The problem is that parse() expects
 		 * the entry() callback to take no extra parameters, and so the
-		 * ::group-$form production cannot output a :grp type. In other words,
+		 * ::group-$dialect production cannot output a :grp type. In other words,
 		 * its generated function must have the same prototype as the usual
 		 * grammar entry point, which of course does not output a :grp.
 		 *
-		 * So, we have a hacky workaround where ::group-$form calls a
+		 * So, we have a hacky workaround where ::group-$dialect calls a
 		 * <stash-group> action which stashes the bitmap in act_state->g,
 		 * which is set here to point to the caller's storage for g.
-		 * This relies on the fact that ::group-$form need only store
+		 * This relies on the fact that ::group-$dialect need only store
 		 * one group at a time, which suits us fine.
 		 */
 
-		if (-1 == parse(f, opaque, FORM_GROUP_ENTRY, flags, NULL, err, g)) {
+		if (-1 == parse(f, opaque, DIALECT_GROUP_ENTRY, flags, NULL, err, g)) {
 			return -1;
 		}
 

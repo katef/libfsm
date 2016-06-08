@@ -17,11 +17,11 @@
 
 #include "internal.h"
 
-#include "form/group.h"
-#include "form/comp.h"
+#include "dialect/group.h"
+#include "dialect/comp.h"
 
-struct form {
-	enum re_form form;
+struct dialect {
+	enum re_dialect dialect;
 	struct fsm *(*comp)(int (*f)(void *opaque), void *opaque,
 		enum re_flags flags, struct re_err *err);
 	int
@@ -29,19 +29,19 @@ struct form {
 		enum re_flags flags, struct re_err *err, struct re_grp *g);
 };
 
-static const struct form *
-re_form(enum re_form form)
+static const struct dialect *
+re_dialect(enum re_dialect dialect)
 {
 	size_t i;
 
-	const static struct form a[] = {
+	const static struct dialect a[] = {
 		{ RE_LITERAL, comp_literal, NULL         },
 		{ RE_GLOB,    comp_glob,    NULL         },
 		{ RE_SIMPLE,  comp_simple,  group_simple }
 	};
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].form == form) {
+		if (a[i].dialect == dialect) {
 			return &a[i];
 		}
 	}
@@ -85,18 +85,18 @@ re_flags(const char *s, enum re_flags *f)
 }
 
 struct fsm *
-re_comp(enum re_form form, int (*getc)(void *opaque), void *opaque,
+re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err)
 {
-	const struct form *m;
+	const struct dialect *m;
 	struct fsm *new;
 
 	assert(getc != NULL);
 
-	m = re_form(form);
+	m = re_dialect(dialect);
 	if (m == NULL) {
 		if (err != NULL) {
-			err->e = RE_EBADFORM;
+			err->e = RE_EBADDIALECT;
 		}
 		return NULL;
 	}
@@ -138,13 +138,13 @@ error:
 }
 
 int
-re_group_print(enum re_form form, int (*getc)(void *opaque), void *opaque,
+re_group_print(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err,
 	FILE *f,
 	int boxed,
 	int (*escputc)(int c, FILE *f))
 {
-	const struct form *m;
+	const struct dialect *m;
 	struct re_grp g;
 	int r;
 
@@ -152,10 +152,10 @@ re_group_print(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	assert(escputc != NULL);
 	assert(f != NULL);
 
-	m = re_form(form);
+	m = re_dialect(dialect);
 	if (m == NULL) {
 		if (err != NULL) {
-			err->e = RE_EBADFORM;
+			err->e = RE_EBADDIALECT;
 		}
 		return -1;
 	}
@@ -163,7 +163,7 @@ re_group_print(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	if (m->group == NULL) {
 		if (err != NULL) {
 			/* TODO: specific error for not supported by this dialect */
-			err->e = RE_EBADFORM;
+			err->e = RE_EBADDIALECT;
 		}
 		return -1;
 	}
@@ -193,13 +193,13 @@ error:
 }
 
 int
-re_group_snprint(enum re_form form, int (*getc)(void *opaque), void *opaque,
+re_group_snprint(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err,
 	char *s, size_t n,
 	int boxed,
 	int (*escputc)(int c, FILE *f))
 {
-	const struct form *m;
+	const struct dialect *m;
 	struct re_grp g;
 	int r;
 
@@ -212,10 +212,10 @@ re_group_snprint(enum re_form form, int (*getc)(void *opaque), void *opaque,
 
 	assert(s != NULL);
 
-	m = re_form(form);
+	m = re_dialect(dialect);
 	if (m == NULL) {
 		if (err != NULL) {
-			err->e = RE_EBADFORM;
+			err->e = RE_EBADDIALECT;
 		}
 		return -1;
 	}
@@ -223,7 +223,7 @@ re_group_snprint(enum re_form form, int (*getc)(void *opaque), void *opaque,
 	if (m->group == NULL) {
 		if (err != NULL) {
 			/* TODO: specific error for not supported by this dialect */
-			err->e = RE_EBADFORM;
+			err->e = RE_EBADDIALECT;
 		}
 		return -1;
 	}

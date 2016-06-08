@@ -1,6 +1,6 @@
 /*
  * Automatically generated from the files:
- *	src/libre/form/glob/parser.sid
+ *	src/libre/dialect/glob/parser.sid
  * and
  *	src/libre/parser.act
  * by:
@@ -30,26 +30,26 @@
 
 	#include "libre/internal.h"
 
-	#ifndef FORM
-	#error FORM required
+	#ifndef DIALECT
+	#error DIALECT required
 	#endif
 
 	#define PASTE(a, b) a ## b
 	#define CAT(a, b)   PASTE(a, b)
 
-	#define LX_PREFIX CAT(lx_, FORM)
+	#define LX_PREFIX CAT(lx_, DIALECT)
 
 	#define LX_TOKEN  CAT(LX_PREFIX, _token)
 	#define LX_STATE  CAT(LX_PREFIX, _lx)
 	#define LX_NEXT   CAT(LX_PREFIX, _next)
 	#define LX_INIT   CAT(LX_PREFIX, _init)
 
-	#define FORM_COMP  CAT(comp_, FORM)
-	#define FORM_GROUP CAT(group_, FORM)
+	#define DIALECT_COMP  CAT(comp_, DIALECT)
+	#define DIALECT_GROUP CAT(group_, DIALECT)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
-	#define FORM_ENTRY       CAT(p_re__, FORM)
-	#define FORM_GROUP_ENTRY CAT(p_group_H, FORM)
+	#define DIALECT_ENTRY       CAT(p_re__, DIALECT)
+	#define DIALECT_GROUP_ENTRY CAT(p_group_H, DIALECT)
 
 	#include "parser.h"
 	#include "lexer.h"
@@ -172,7 +172,7 @@
 		return fputs(escchar(s, sizeof s, c), f);
 	}
 
-#line 176 "src/libre/form/glob/parser.c"
+#line 176 "src/libre/dialect/glob/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -213,7 +213,7 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 217 "src/libre/form/glob/parser.c"
+#line 217 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -234,7 +234,7 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 			goto ZL1;
 		}
 	
-#line 238 "src/libre/form/glob/parser.c"
+#line 238 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: add-literal */
 	}
@@ -263,7 +263,7 @@ ZL2_list_Hof_Hatoms:;
 			goto ZL1;
 		}
 	
-#line 267 "src/libre/form/glob/parser.c"
+#line 267 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hatoms_C_Catom (fsm, flags, lex_state, act_state, err, ZIx, &ZIz);
@@ -288,7 +288,7 @@ ZL2_list_Hof_Hatoms:;
 			goto ZL1;
 		}
 	
-#line 292 "src/libre/form/glob/parser.c"
+#line 292 "src/libre/dialect/glob/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -324,7 +324,7 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 		(void) (ZIx);
 		(void) (*ZIy);
 	
-#line 328 "src/libre/form/glob/parser.c"
+#line 328 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: count-1 */
 		}
@@ -343,7 +343,7 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 		(void) (ZIx);
 		(void) (*ZIy);
 	
-#line 347 "src/libre/form/glob/parser.c"
+#line 347 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: count-1 */
 		}
@@ -384,7 +384,7 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 			(*ZIy) = z;
 		}
 	
-#line 388 "src/libre/form/glob/parser.c"
+#line 388 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: count-0-or-many */
 		}
@@ -425,7 +425,7 @@ p_list_Hof_Hatoms_C_Cany(fsm fsm, flags flags, lex_state lex_state, act_state ac
 			goto ZL1;
 		}
 	
-#line 429 "src/libre/form/glob/parser.c"
+#line 429 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: add-any */
 	}
@@ -460,7 +460,7 @@ p_list_Hof_Hatoms_C_Cwildcard(fsm fsm, flags flags, lex_state lex_state, act_sta
 			goto ZL1;
 		}
 	
-#line 464 "src/libre/form/glob/parser.c"
+#line 464 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: add-any */
 	}
@@ -497,7 +497,7 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 
 		fsm_setend(fsm, (ZIy), 1);
 	
-#line 501 "src/libre/form/glob/parser.c"
+#line 501 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: make-states */
 		/* BEGINNING OF INLINE: 68 */
@@ -522,7 +522,7 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 			goto ZL3;
 		}
 	
-#line 526 "src/libre/form/glob/parser.c"
+#line 526 "src/libre/dialect/glob/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -539,7 +539,7 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 			err->e = RE_EXATOMS;
 		}
 	
-#line 543 "src/libre/form/glob/parser.c"
+#line 543 "src/libre/dialect/glob/parser.c"
 				}
 				/* END OF ACTION: err-expected-atoms */
 			}
@@ -568,7 +568,7 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 			err->e = RE_EXEOF;
 		}
 	
-#line 572 "src/libre/form/glob/parser.c"
+#line 572 "src/libre/dialect/glob/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -672,7 +672,7 @@ ZL1:;
 	}
 
 	struct fsm *
-	FORM_COMP(int (*f)(void *opaque), void *opaque,
+	DIALECT_COMP(int (*f)(void *opaque), void *opaque,
 		enum re_flags flags, struct re_err *err)
 	{
 		struct fsm *new;
@@ -693,7 +693,7 @@ ZL1:;
 
 		fsm_setstart(new, start);
 
-		if (-1 == parse(f, opaque, FORM_ENTRY, flags, new, err, NULL)) {
+		if (-1 == parse(f, opaque, DIALECT_ENTRY, flags, new, err, NULL)) {
 			fsm_free(new);
 			return NULL;
 		}
@@ -710,32 +710,32 @@ ZL1:;
 
 #ifdef PARSE_GROUP
 	int
-	FORM_GROUP(int (*f)(void *opaque), void *opaque,
+	DIALECT_GROUP(int (*f)(void *opaque), void *opaque,
 		enum re_flags flags, struct re_err *err, struct re_grp *g)
 	{
 		assert(f != NULL);
 		assert(g != NULL);
 
 		/*
-		 * The ::group-$form production provides an entry point to the
+		 * The ::group-$dialect production provides an entry point to the
 		 * grammar where just a group is parsed and output as a bitmap,
 		 * without constructing an NFA edge for each entry in the set.
 		 *
 		 * We use the same parse() function here so as to use the same
 		 * act/lex_state setup as usual. The problem is that parse() expects
 		 * the entry() callback to take no extra parameters, and so the
-		 * ::group-$form production cannot output a :grp type. In other words,
+		 * ::group-$dialect production cannot output a :grp type. In other words,
 		 * its generated function must have the same prototype as the usual
 		 * grammar entry point, which of course does not output a :grp.
 		 *
-		 * So, we have a hacky workaround where ::group-$form calls a
+		 * So, we have a hacky workaround where ::group-$dialect calls a
 		 * <stash-group> action which stashes the bitmap in act_state->g,
 		 * which is set here to point to the caller's storage for g.
-		 * This relies on the fact that ::group-$form need only store
+		 * This relies on the fact that ::group-$dialect need only store
 		 * one group at a time, which suits us fine.
 		 */
 
-		if (-1 == parse(f, opaque, FORM_GROUP_ENTRY, flags, NULL, err, g)) {
+		if (-1 == parse(f, opaque, DIALECT_GROUP_ENTRY, flags, NULL, err, g)) {
 			return -1;
 		}
 
@@ -743,6 +743,6 @@ ZL1:;
 	}
 #endif
 
-#line 747 "src/libre/form/glob/parser.c"
+#line 747 "src/libre/dialect/glob/parser.c"
 
 /* END OF FILE */

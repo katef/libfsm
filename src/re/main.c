@@ -37,10 +37,10 @@ struct match {
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re -p   [-r <form>] [-inqu] [-l <language>] [-awc] [-e <prefix>] <re> ...\n");
-	fprintf(stderr, "       re -m   [-r <form>] [-inqu] <re> ...\n");
-	fprintf(stderr, "       re [-x] [-r <form>] [-inqu] <re> ... [ <text> | -- <text> ... ]\n");
-	fprintf(stderr, "       re -g   [-r <form>] [-iub] <group>\n");
+	fprintf(stderr, "usage: re -p   [-r <dialect>] [-inqu] [-l <language>] [-awc] [-e <prefix>] <re> ...\n");
+	fprintf(stderr, "       re -m   [-r <dialect>] [-inqu] <re> ...\n");
+	fprintf(stderr, "       re [-x] [-r <dialect>] [-inqu] <re> ... [ <text> | -- <text> ... ]\n");
+	fprintf(stderr, "       re -g   [-r <dialect>] [-iub] <group>\n");
 	fprintf(stderr, "       re -h\n");
 }
 
@@ -79,14 +79,14 @@ language(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static enum re_form
-form_name(const char *name)
+static enum re_dialect
+dialect_name(const char *name)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		enum re_form form;
+		enum re_dialect dialect;
 	} a[] = {
 /* TODO:
 		{ "ere",     RE_ERE     },
@@ -103,11 +103,11 @@ form_name(const char *name)
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].form;
+			return a[i].dialect;
 		}
 	}
 
-	fprintf(stderr, "unrecognised re form \"%s\"; valid forms are: ", name);
+	fprintf(stderr, "unrecognised regexp dialect \"%s\"; valid dialects are: ", name);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		fprintf(stderr, "%s%s",
@@ -293,8 +293,8 @@ int
 main(int argc, char *argv[])
 {
 	struct fsm *(*join)(struct fsm *, struct fsm *);
-	enum re_form form;
 	enum fsm_out format;
+	enum re_dialect dialect;
 	struct fsm *fsm;
 	int ifiles, xfiles;
 	int boxed;
@@ -323,8 +323,8 @@ main(int argc, char *argv[])
 	patterns = 0;
 	ambig    = 0;
 	join     = fsm_union;
-	form     = RE_SIMPLE;
 	format   = FSM_OUT_FSM;
+	dialect  = RE_SIMPLE;
 
 	{
 		int c;
@@ -341,7 +341,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'r':
-				form = form_name(optarg);
+				dialect = dialect_name(optarg);
 				break;
 
 			case 'l':
@@ -410,7 +410,7 @@ main(int argc, char *argv[])
 
 			f = xopen(argv[0]);
 
-			r = re_group_print(form, re_fgetc, f,
+			r = re_group_print(dialect, re_fgetc, f,
 				0, &err, stdout, boxed, escputc);
 
 			fclose(f);
@@ -419,12 +419,12 @@ main(int argc, char *argv[])
 
 			s = argv[0];
 
-			r = re_group_print(form, re_sgetc, &s,
+			r = re_group_print(dialect, re_sgetc, &s,
 				0, &err, stdout, boxed, escputc);
 		}
 
-		if (r == -1 && err.e == RE_EBADFORM) {
-			fprintf(stderr, "group syntax not supported by form\n");
+		if (r == -1 && err.e == RE_EBADDIALECT) {
+			fprintf(stderr, "group syntax not supported by dialect\n");
 			return EXIT_FAILURE;
 		}
 
@@ -461,7 +461,7 @@ main(int argc, char *argv[])
 			struct re_err err;
 			struct fsm *new;
 
-			/* TODO: handle possible "form:" prefix */
+			/* TODO: handle possible "dialect:" prefix */
 
 			if (0 == strcmp(argv[i], "--")) {
 				argc--;
@@ -475,7 +475,7 @@ main(int argc, char *argv[])
 
 				f = xopen(argv[i]);
 
-				new = re_comp(form, re_fgetc, f, 0, &err);
+				new = re_comp(dialect, re_fgetc, f, 0, &err);
 
 				fclose(f);
 			} else {
@@ -483,11 +483,11 @@ main(int argc, char *argv[])
 
 				s = argv[i];
 
-				new = re_comp(form, re_sgetc, &s, 0, &err);
+				new = re_comp(dialect, re_sgetc, &s, 0, &err);
 			}
 
 			if (new == NULL) {
-				re_perror("re_comp", form, &err,
+				re_perror("re_comp", dialect, &err,
 					 ifiles ? argv[i] : NULL,
 					!ifiles ? argv[i] : NULL);
 				return EXIT_FAILURE;
@@ -572,8 +572,8 @@ main(int argc, char *argv[])
 			if (matches->next != NULL) {
 				const struct match *m;
 
-				/* TODO: // delimeters depend on form */
-				/* TODO: would deal with form: prefix here, too */
+				/* TODO: // delimeters depend on dialect */
+				/* TODO: would deal with dialect: prefix here, too */
 
 				fprintf(stderr, "ambigious matches for ");
 				for (m = matches; m != NULL; m = m->next) {
@@ -624,7 +624,7 @@ main(int argc, char *argv[])
 				continue;
 			}
 
-			/* TODO: would deal with form: prefix here, too */
+			/* TODO: would deal with dialect: prefix here, too */
 			if (patterns) {
 				const struct match *m;
 

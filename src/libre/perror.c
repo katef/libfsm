@@ -9,7 +9,7 @@
 #include <re/re.h>
 
 void
-re_perror(const char *func, enum re_form form, const struct re_err *err,
+re_perror(const char *func, enum re_dialect dialect, const struct re_err *err,
 	const char *file, const char *s)
 {
 	assert(func != NULL);
@@ -26,7 +26,7 @@ re_perror(const char *func, enum re_form form, const struct re_err *err,
 			fprintf(stderr, ": ");
 		}
 
-		switch (form) {
+		switch (dialect) {
 		case RE_LITERAL: delim = '\''; break;
 		case RE_GLOB:    delim = '\"'; break;
 		default:         delim = '/';  break;
