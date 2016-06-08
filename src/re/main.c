@@ -423,8 +423,8 @@ main(int argc, char *argv[])
 				0, &err, stdout, boxed, escputc);
 		}
 
-		if (r == -1 && err.e == RE_EBADDIALECT) {
-			fprintf(stderr, "group syntax not supported by dialect\n");
+		if (r == -1 && err.e == RE_EBADGROUP) {
+			fprintf(stderr, "group syntax not supported by regexp dialect\n");
 			return EXIT_FAILURE;
 		}
 

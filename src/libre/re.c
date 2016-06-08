@@ -162,8 +162,7 @@ re_group_print(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	if (m->group == NULL) {
 		if (err != NULL) {
-			/* TODO: specific error for not supported by this dialect */
-			err->e = RE_EBADDIALECT;
+			err->e = RE_EBADGROUP;
 		}
 		return -1;
 	}
@@ -222,8 +221,7 @@ re_group_snprint(enum re_dialect dialect, int (*getc)(void *opaque), void *opaqu
 
 	if (m->group == NULL) {
 		if (err != NULL) {
-			/* TODO: specific error for not supported by this dialect */
-			err->e = RE_EBADDIALECT;
+			err->e = RE_EBADGROUP;
 		}
 		return -1;
 	}
