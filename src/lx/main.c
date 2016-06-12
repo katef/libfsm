@@ -33,7 +33,8 @@ enum api_getc   api_getc;
 static
 void usage(void)
 {
-	printf("usage: lx [-h] [-n] [-b <tokbuf>] [-g <getc>] [-l <language>] [-et <prefix>]\n");
+	printf("usage: lx [-n] [-b <tokbuf>] [-g <getc>] [-l <language>] [-et <prefix>]\n");
+	printf("       lx -h\n");
 }
 
 static enum lx_out

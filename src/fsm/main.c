@@ -24,9 +24,9 @@ extern char *optarg;
 static void
 usage(void)
 {
-	printf("usage: fsm -p   [-dmr] [-t <transformation>] [-l <language>] [-acw] [-e <prefix>]\n");
-	printf("       fsm [-x] [-dmr] [-t <transformation>] {<text> ...}\n");
-	printf("       fsm      [-dmr] [-t <transformation>] {-q <query>}\n");
+	printf("usage: fsm    [-dmr] [-t <transformation>] [-x] {<text> ...}\n");
+	printf("       fsm    [-dmr] [-t <transformation>] {-q <query>}\n");
+	printf("       fsm -p [-dmr] [-t <transformation>] [-l <language>] [-acw] [-e <prefix>]\n");
 	printf("       fsm -h\n");
 }
 
