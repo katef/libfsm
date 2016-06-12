@@ -18,20 +18,29 @@ re_perror(enum re_dialect dialect, const struct re_err *err,
 		fprintf(stderr, "%s", file);
 	}
 
+	/* TODO: centralise pattern printing */
 	if (s != NULL) {
-		char delim;
+		char start, end;
 
 		if (file != NULL) {
 			fprintf(stderr, ": ");
 		}
 
-		switch (dialect) {
-		case RE_LITERAL: delim = '\''; break;
-		case RE_GLOB:    delim = '\"'; break;
-		default:         delim = '/';  break;
+		if (dialect & RE_GROUP) {
+			start = '[';
+			end   = ']';
+		} else {
+			dialect &= ~RE_GROUP;
+
+			switch (dialect) {
+			case RE_LITERAL: start = '\''; end = start; break;
+			case RE_GLOB:    start = '\"'; end = start; break;
+			default:         start = '/';  end = start; break;
+			}
 		}
 
-		fprintf(stderr, "%c%s%c", delim, s, delim);
+		/* TODO: escape per surrounding delim */
+		fprintf(stderr, "%c%s%c", start, s, end);
 	}
 
 	if (err->e & RE_SYNTAX) {
