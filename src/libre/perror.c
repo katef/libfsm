@@ -8,6 +8,31 @@
 
 #include <re/re.h>
 
+static int
+re_fprint(FILE *f, enum re_dialect dialect, const char *s)
+{
+	char start, end;
+
+	assert(f != NULL);
+	assert(s != NULL);
+
+	if (dialect & RE_GROUP) {
+		start = '[';
+		end   = ']';
+	} else {
+		dialect &= ~RE_GROUP;
+
+		switch (dialect) {
+		case RE_LITERAL: start = '\''; end = start; break;
+		case RE_GLOB:    start = '\"'; end = start; break;
+		default:         start = '/';  end = start; break;
+		}
+	}
+
+	/* TODO: escape per surrounding delim */
+	return fprintf(f, "%c%s%c", start, s, end);
+}
+
 void
 re_perror(enum re_dialect dialect, const struct re_err *err,
 	const char *file, const char *s)
@@ -18,29 +43,12 @@ re_perror(enum re_dialect dialect, const struct re_err *err,
 		fprintf(stderr, "%s", file);
 	}
 
-	/* TODO: centralise pattern printing */
 	if (s != NULL) {
-		char start, end;
-
 		if (file != NULL) {
 			fprintf(stderr, ": ");
 		}
 
-		if (dialect & RE_GROUP) {
-			start = '[';
-			end   = ']';
-		} else {
-			dialect &= ~RE_GROUP;
-
-			switch (dialect) {
-			case RE_LITERAL: start = '\''; end = start; break;
-			case RE_GLOB:    start = '\"'; end = start; break;
-			default:         start = '/';  end = start; break;
-			}
-		}
-
-		/* TODO: escape per surrounding delim */
-		fprintf(stderr, "%c%s%c", start, s, end);
+		re_fprint(stderr, dialect, s);
 	}
 
 	if (err->e & RE_SYNTAX) {
