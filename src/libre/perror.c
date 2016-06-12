@@ -9,10 +9,9 @@
 #include <re/re.h>
 
 void
-re_perror(const char *func, enum re_dialect dialect, const struct re_err *err,
+re_perror(enum re_dialect dialect, const struct re_err *err,
 	const char *file, const char *s)
 {
-	assert(func != NULL);
 	assert(err != NULL);
 
 	if (file != NULL) {
@@ -41,14 +40,6 @@ re_perror(const char *func, enum re_dialect dialect, const struct re_err *err,
 		}
 
 		fprintf(stderr, "%u", err->byte + 1);
-	}
-
-	if (func != NULL) {
-		if (file != NULL || s != NULL || err->e & RE_SYNTAX) {
-			fprintf(stderr, ": ");
-		}
-
-		fprintf(stderr, "%s", func);
 	}
 
 	switch (err->e) {

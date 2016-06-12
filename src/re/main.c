@@ -429,7 +429,7 @@ main(int argc, char *argv[])
 		}
 
 		if (r == -1) {
-			re_perror("re_group_print", RE_NATIVE, &err,
+			re_perror(RE_NATIVE, &err,
 				 ifiles ? argv[0] : NULL,
 				!ifiles ? argv[0] : NULL);
 			return EXIT_FAILURE;
@@ -487,7 +487,7 @@ main(int argc, char *argv[])
 			}
 
 			if (new == NULL) {
-				re_perror("re_comp", dialect, &err,
+				re_perror(dialect, &err,
 					 ifiles ? argv[i] : NULL,
 					!ifiles ? argv[i] : NULL);
 				return EXIT_FAILURE;

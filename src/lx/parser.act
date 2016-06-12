@@ -336,7 +336,7 @@
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
-			re_perror("re_comp", RE_LITERAL, &err, NULL, @s);
+			re_perror(RE_LITERAL, &err, NULL, @s);
 			exit(EXIT_FAILURE);
 		}
 	@};
@@ -353,7 +353,7 @@
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
-			re_perror("re_comp", RE_NATIVE, &err, NULL, @s);
+			re_perror(RE_NATIVE, &err, NULL, @s);
 			exit(EXIT_FAILURE);
 		}
 	@};

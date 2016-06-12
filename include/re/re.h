@@ -115,7 +115,7 @@ re_strerror(enum re_errno e);
  * Format an error to stderr.
  */
 void
-re_perror(const char *func, enum re_dialect dialect, const struct re_err *err,
+re_perror(enum re_dialect dialect, const struct re_err *err,
 	const char *file, const char *s);
 
 

@@ -1800,7 +1800,7 @@ p_191(lex_state lex_state, act_state act_state, fsm *ZOr)
 		if ((ZIr) == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
-			re_perror("re_comp", RE_NATIVE, &err, NULL, (ZIs));
+			re_perror(RE_NATIVE, &err, NULL, (ZIs));
 			exit(EXIT_FAILURE);
 		}
 	
@@ -1861,7 +1861,7 @@ p_191(lex_state lex_state, act_state act_state, fsm *ZOr)
 		if ((ZIr) == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
-			re_perror("re_comp", RE_LITERAL, &err, NULL, (ZIs));
+			re_perror(RE_LITERAL, &err, NULL, (ZIs));
 			exit(EXIT_FAILURE);
 		}
 	
