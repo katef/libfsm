@@ -7,7 +7,8 @@
 
 int
 group_native(int (*f)(void *opaque), void *opaque,
-	enum re_flags flags, struct re_err *err, struct re_grp *g);
+	enum re_flags flags, int overlap,
+	struct re_err *err, struct re_grp *g);
 
 #endif
 

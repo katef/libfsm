@@ -411,7 +411,7 @@ main(int argc, char *argv[])
 			f = xopen(argv[0]);
 
 			r = re_group_print(dialect, re_fgetc, f,
-				0, &err, stdout, boxed, escputc);
+				0, ambig, &err, stdout, boxed, escputc);
 
 			fclose(f);
 		} else {
@@ -420,7 +420,7 @@ main(int argc, char *argv[])
 			s = argv[0];
 
 			r = re_group_print(dialect, re_sgetc, &s,
-				0, &err, stdout, boxed, escputc);
+				0, ambig, &err, stdout, boxed, escputc);
 		}
 
 		if (r == -1 && err.e == RE_EBADGROUP) {

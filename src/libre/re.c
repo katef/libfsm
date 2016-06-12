@@ -23,10 +23,13 @@
 struct dialect {
 	enum re_dialect dialect;
 	struct fsm *(*comp)(int (*f)(void *opaque), void *opaque,
-		enum re_flags flags, struct re_err *err);
+		enum re_flags flags, int overlap,
+		struct re_err *err);
+	int overlap;
 	int
 	(*group)(int (*f)(void *opaque), void *opaque,
-		enum re_flags flags, struct re_err *err, struct re_grp *g);
+		enum re_flags flags, int overlap,
+		struct re_err *err, struct re_grp *g);
 };
 
 static const struct dialect *
@@ -35,9 +38,9 @@ re_dialect(enum re_dialect dialect)
 	size_t i;
 
 	const static struct dialect a[] = {
-		{ RE_LITERAL, comp_literal, NULL         },
-		{ RE_GLOB,    comp_glob,    NULL         },
-		{ RE_NATIVE,  comp_native,  group_native }
+		{ RE_LITERAL, comp_literal, 0, NULL         },
+		{ RE_GLOB,    comp_glob,    0, NULL         },
+		{ RE_NATIVE,  comp_native,  0, group_native }
 	};
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
@@ -101,7 +104,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
-	new = m->comp(getc, opaque, flags, err);
+	new = m->comp(getc, opaque, flags, m->overlap, err);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -139,7 +142,8 @@ error:
 
 int
 re_group_print(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
-	enum re_flags flags, struct re_err *err,
+	enum re_flags flags, int overlap,
+	struct re_err *err,
 	FILE *f,
 	int boxed,
 	int (*escputc)(int c, FILE *f))
@@ -167,7 +171,7 @@ re_group_print(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		return -1;
 	}
 
-	if (-1 == m->group(getc, opaque, flags, err, &g)) {
+	if (-1 == m->group(getc, opaque, flags, overlap, err, &g)) {
 		return -1;
 	}
 
@@ -193,7 +197,8 @@ error:
 
 int
 re_group_snprint(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
-	enum re_flags flags, struct re_err *err,
+	enum re_flags flags, int overlap,
+	struct re_err *err,
 	char *s, size_t n,
 	int boxed,
 	int (*escputc)(int c, FILE *f))
@@ -226,7 +231,7 @@ re_group_snprint(enum re_dialect dialect, int (*getc)(void *opaque), void *opaqu
 		return -1;
 	}
 
-	if (-1 == m->group(getc, opaque, flags, err, &g)) {
+	if (-1 == m->group(getc, opaque, flags, overlap, err, &g)) {
 		return -1;
 	}
 

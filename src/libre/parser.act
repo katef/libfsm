@@ -74,6 +74,7 @@
 		enum LX_TOKEN lex_tok;
 		enum LX_TOKEN lex_tok_save;
 		struct re_grp *g; /* for <stash-group> */
+		int overlap; /* permit overlap in groups */
 	};
 
 	struct lex_state {
@@ -362,7 +363,7 @@
 	<stash-group>: (g :grp &) -> () = @{
 #define PARSE_GROUP
 
-		if (bm_count(&@&g->dup) > 0) {
+		if (!act_state->overlap && bm_count(&@&g->dup) > 0) {
 			err->e  = RE_EOVERLAP;
 
 			/* TODO: would like to show the original spelling verbatim, too */
@@ -409,7 +410,7 @@
 	<group-to-states>: (g :grp &, x :fsm_state, y :fsm_state) -> () = @{
 		int i;
 
-		if (bm_count(&@&g->dup) > 0) {
+		if (!act_state->overlap && bm_count(&@&g->dup) > 0) {
 			err->e  = RE_EOVERLAP;
 
 			/* TODO: would like to show the original spelling verbatim, too */
@@ -678,7 +679,8 @@
 	static int
 	parse(int (*f)(void *opaque), void *opaque,
 		void (*entry)(struct fsm *, flags, lex_state, act_state, err),
-		enum re_flags flags, struct fsm *new, struct re_err *err, t_grp *g)
+		enum re_flags flags, int overlap,
+		struct fsm *new, struct re_err *err, t_grp *g)
 	{
 		struct act_state  act_state_s;
 		struct act_state *act_state;
@@ -725,6 +727,8 @@
 		act_state = &act_state_s;
 		act_state->g = g;
 
+		act_state->overlap = overlap;
+
 		err->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
@@ -746,7 +750,8 @@
 
 	struct fsm *
 	DIALECT_COMP(int (*f)(void *opaque), void *opaque,
-		enum re_flags flags, struct re_err *err)
+		enum re_flags flags, int overlap,
+		struct re_err *err)
 	{
 		struct fsm *new;
 		struct fsm_state *start;
@@ -766,7 +771,7 @@
 
 		fsm_setstart(new, start);
 
-		if (-1 == parse(f, opaque, DIALECT_ENTRY, flags, new, err, NULL)) {
+		if (-1 == parse(f, opaque, DIALECT_ENTRY, flags, overlap, new, err, NULL)) {
 			fsm_free(new);
 			return NULL;
 		}
@@ -784,7 +789,8 @@
 #ifdef PARSE_GROUP
 	int
 	DIALECT_GROUP(int (*f)(void *opaque), void *opaque,
-		enum re_flags flags, struct re_err *err, struct re_grp *g)
+		enum re_flags flags, int overlap,
+		struct re_err *err, struct re_grp *g)
 	{
 		assert(f != NULL);
 		assert(g != NULL);
@@ -808,7 +814,7 @@
 		 * one group at a time, which suits us fine.
 		 */
 
-		if (-1 == parse(f, opaque, DIALECT_GROUP_ENTRY, flags, NULL, err, g)) {
+		if (-1 == parse(f, opaque, DIALECT_GROUP_ENTRY, flags, overlap, NULL, err, g)) {
 			return -1;
 		}
 
