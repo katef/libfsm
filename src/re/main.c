@@ -429,7 +429,7 @@ main(int argc, char *argv[])
 		}
 
 		if (r == -1) {
-			re_perror(RE_NATIVE | RE_GROUP, &err,
+			re_perror(dialect | RE_GROUP, &err,
 				 ifiles ? argv[0] : NULL,
 				!ifiles ? argv[0] : NULL);
 			return EXIT_FAILURE;
