@@ -69,6 +69,7 @@
 	!<err-expected-atoms>;
 	<err-expected-alts>;
 	<err-expected-range>;
+	<err-expected-closegroup>;
 	<err-expected-eof>;
 
 	group: (x :fsm_state, y :fsm_state) -> () [
@@ -183,7 +184,11 @@
 
 		group-bm(&g);
 
-		! = CLOSEGROUP;
+		{
+			! = CLOSEGROUP;
+		##
+			<err-expected-closegroup>;
+		};
 
 		<group-to-states>(&g, x, y);
 	};

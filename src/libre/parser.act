@@ -653,6 +653,12 @@
 		}
 	@};
 
+	<err-expected-closegroup> = @{
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EXCLOSEGROUP;
+		}
+	@};
+
 	<err-expected-eof> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
