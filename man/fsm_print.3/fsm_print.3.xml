@@ -1,0 +1,116 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry SYSTEM "minidocbook.dtd" [
+	<!ENTITY libfsm "libfsm">
+]>
+
+<refentry>
+	<refentryinfo>
+		<title>&libfsm; Programmer's Manual</title>
+		<productname>libfsm</productname>
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>fsm.h</refentrytitle>
+		<manvolnum>3</manvolnum>
+	</refmeta>
+
+	<refnamediv id="name">
+		<refname>fsm.h</refname>
+		<refpurpose>FSM API</refpurpose>
+	</refnamediv>
+
+	<refsynopsisdiv>
+<!--
+		<synopsis><xi:include
+			xmlns:xi="http://www.w3.org/2001/XInclude"
+			href="synopsis.c" parse="text"/></synopsis>
+-->
+	</refsynopsisdiv>
+
+	<refsection>
+		<title>Description</title>
+
+TODO
+	</refsection>
+
+	<refsection>
+<para>TODO: options given by <code>struct fsm_outoptions</code>,
+which contains the following fields:</para>
+TODO: options may not be applicable for all languages
+
+		<variablelist>
+			<varlistentry>
+				<term><code>anonymous_states</code></term>
+
+				<listitem>
+					<para>When producing Graphviz output
+						(by <code>FSM_OUT_DOT</code>),
+						draw states anonymously.</para>
+
+					<para>The default is to label each state with a unique
+						identifier.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term><code>consolidate_edges</code></term>
+
+				<listitem>
+					<para>When producing Graphviz output
+						(by <code>FSM_OUT_DOT</code>),
+						draw multiple similar transitions by the same edge.
+						These consolidated edges are labelled to indicate the
+						set of transitions they represent.
+						This is an aesthetic optimisation for sake of producing
+						more legible diagrams.</para>
+
+					<para>The default is to draw each transition as a separate edge.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term><code>fragment</code></term>
+
+				<listitem>
+					<para>When producing C output
+						(by <code>FSM_OUT_C</code>),
+statements suitable for inlining into a function body
+similar in intent to [see also] re2c
+		...
+		</para>
+
+					<para>When producing Graphviz output
+						(by <code>FSM_OUT_DOT</code>),
+		...
+		</para>
+
+					<para>When producing output
+		case 'g': o.fragment          = 1;       break;
+					</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term><code>prefix</code></term>
+
+				<listitem>
+					<para>
+			case 'n': out_options.prefix            = optarg; break;
+					</para>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+	</refsection>
+
+	<refsection>
+		<title>See Also</title>
+
+<!-- TODO
+		<para>&mctd;, &mct_init.3;,
+			&mct_bind.3;, &mct_session_close.3;, &mct_session_add.3;,
+			&mct_event_attach.3;, &mct_event_name.3;, &mct_event_read.3;,
+			&getaddrinfo.3;.</para>
+-->
+	</refsection>
+</refentry>
+

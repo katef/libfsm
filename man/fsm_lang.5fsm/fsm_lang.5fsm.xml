@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE refentry SYSTEM "minidocbook.dtd" [
+		<!ENTITY c.lit    "<literal>c</literal>">
+		<!ENTITY csv.lit  "<literal>csv</literal>">
+		<!ENTITY dot.lit  "<literal>dot</literal>">
+		<!ENTITY fsm.lit  "<literal>fsm</literal>">
+		<!ENTITY json.lit "<literal>json</literal>">
+]>
+
+<refentry>
+
+	<refentryinfo>
+		<productname>fsm</productname>
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>fsm_lang</refentrytitle>
+		<manvolnum>5fsm</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>fsm_lang</refname>
+		<refpurpose>Finite State Machine output languages</refpurpose>
+	</refnamediv>
+
+	<refsection>
+TODO: blurb
+
+		<para>Set the output language for printing by &fsm_print.3;.</para>
+
+		<table>
+			<col align="left"/>
+			<col align="left"/>
+			<col align="left"/>
+
+			<thead>
+				<tr>
+					<th>Identifier</th>
+					<th>Extension</th>
+					<th>Description</th>
+				</tr>
+			</thead>
+
+			<tbody>
+				<tr>
+					<td>&c.lit;</td>
+					<td>&c.ext;</td>
+<!-- TODO: ISO C90, or &ansi; -->
+					<td>Generated parser in TODO standard C.</td>
+				</tr>
+				<tr>
+					<td>&csv.lit;</td>
+					<td>&csv.ext;</td>
+					<td>TODO</td>
+				</tr>
+				<tr>
+					<td>&dot.lit;</td>
+					<td>&dot.ext;</td>
+					<td>TODO</td>
+				</tr>
+				<tr>
+					<td>&fsm.lit; (default)</td>
+					<td>&fsm.ext;</td>
+					<td>TODO</td>
+				</tr>
+				<tr>
+					<td>&json.lit;</td>
+					<td>&json.ext;</td>
+					<td>TODO</td>
+				</tr>
+<!-- TODO
+				<tr>
+					<td>&test.lit;</td>
+					<td role="na" align="center">&ndash;</td>
+					<td>For testing TODO</td>
+				</tr>
+-->
+			</tbody>
+		</table>
+	</refsection>
+
+	<refsection>
+		<title>See Also</title>
+
+		<para>&fsm_print.3;.</para>
+
+<!--
+		<para>&lx-userguide.doc;.</para>
+-->
+	</refsection>
+
+</refentry>
+

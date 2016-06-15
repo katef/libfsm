@@ -8,21 +8,25 @@
 	<!-- TODO: centralise to mdb -->
 	<!ENTITY prefix.arg "<replaceable>prefix</replaceable>">
 
+<!-- XXX: normalise with naming for usage()
+	<!ENTITY execution.lit "<literal>execution</literal>">
+	<!ENTITY query.lit     "<literal>query</literal>">
+-->
+
 	<!ENTITY a.opt "<option>-a</option>">
+	<!ENTITY w.opt "<option>-w</option>">
 	<!ENTITY c.opt "<option>-c</option>">
+	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
+
 	<!ENTITY d.opt "<option>-d</option>">
-	<!ENTITY e.opt "<option>-e</option>&nbsp;&str.arg;">
-	<!ENTITY g.opt "<option>-g</option>">
 	<!ENTITY l.opt "<option>-l</option>&nbsp;&lang.arg;">
 	<!ENTITY m.opt "<option>-m</option>">
-	<!ENTITY n.opt "<option>-n</option>&nbsp;&prefix.arg;">
 	<!ENTITY o.opt "<option>-o</option>&nbsp;&out-file.arg;">
 	<!ENTITY p.opt "<option>-p</option>">
 	<!ENTITY q.opt "<option>-q</option>&nbsp;&name.arg;">
 	<!ENTITY r.opt "<option>-r</option>">
 	<!ENTITY t.opt "<option>-t</option>&nbsp;&name.arg;">
-	<!ENTITY P.opt "<option>-P</option>">
-
+	<!ENTITY x.opt "<option>-x</option>">
 
 	<!ENTITY h.opt "<option>-h</option>">
 	<!ENTITY v.opt "<option>-v</option>">
@@ -53,28 +57,54 @@
 		<cmdsynopsis>
 			<command>fsm</command>
 
-			<arg choice="opt">&a.opt;</arg>
-			<arg choice="opt">&c.opt;</arg>
-			<arg choice="opt">&d.opt;</arg>
-			<arg choice="opt">&g.opt;</arg>
-			<arg choice="opt">&l.opt;</arg>
-			<arg choice="opt">&m.opt;</arg>
-			<arg choice="opt">&n.opt;</arg>
-			<arg choice="opt">&o.opt;</arg>
+			<arg choice="plain">&p.opt;</arg>
+
+			<group>
+				<arg choice="plain">&d.opt;</arg>
+				<arg choice="plain">&m.opt;</arg>
+				<arg choice="plain">&r.opt;</arg>
+				<arg choice="plain">&t.opt;</arg>
+			</group>
 
 			<sbr/>
 
-			<arg choice="opt">&p.opt;</arg>
-			<arg choice="opt">&q.opt;</arg>
-			<arg choice="opt">&r.opt;</arg>
-			<arg choice="opt">&t.opt;</arg>
+			<arg choice="opt">&a.opt;</arg>
+			<arg choice="opt">&c.opt;</arg>
+			<arg choice="opt">&w.opt;</arg>
+			<arg choice="opt">&e.opt;</arg>
+			<arg choice="opt">&l.opt;</arg>
+		</cmdsynopsis>
 
-			<arg choice="opt">&P.opt;</arg>
+		<cmdsynopsis>
+			<command>fsm</command>
 
-			<group choice="opt">
-				<arg choice="plain">&e.opt;</arg>
-				<arg choice="plain">&q.opt;</arg>
+			<arg choice="opt">&x.opt;</arg>
+
+			<group>
+				<arg choice="plain">&d.opt;</arg>
+				<arg choice="plain">&m.opt;</arg>
+				<arg choice="plain">&r.opt;</arg>
+				<arg choice="plain">&t.opt;</arg>
 			</group>
+
+			<sbr/>
+
+			<arg choice="plain" rep="repeat">&str.arg;</arg>
+		</cmdsynopsis>
+
+		<cmdsynopsis>
+			<command>fsm</command>
+
+			<group>
+				<arg choice="plain">&d.opt;</arg>
+				<arg choice="plain">&m.opt;</arg>
+				<arg choice="plain">&r.opt;</arg>
+				<arg choice="plain">&t.opt;</arg>
+			</group>
+
+			<sbr/>
+
+			<arg choice="req" rep="repeat">&q.opt;</arg>
 		</cmdsynopsis>
 
 		<cmdsynopsis>
@@ -82,7 +112,9 @@
 
 			<group choice="req">
 				<arg choice="plain">&h.opt;</arg>
+<!--
 				<arg choice="plain">&v.opt;</arg>
+-->
 			</group>
 		</cmdsynopsis>
 	</refsynopsisdiv>
@@ -91,12 +123,26 @@
 		<title>Description</title>
 
 		<para>&fsm.1; is a command line tool to define and manipulate
-			Finite State Machines.
+			<firstterm>Finite State Machines</firstterm>.
 			It exposes the functionality provided by the &fsm.3; &api;.</para>
 
 		<para>Finite State Machines are defined using the &fsm.5; syntax,
 			which is read from &stdin.lit;.
-			Output is written to &stdout.lit; unless otherwise specified.</para>
+			Various transformations may be applied to the &fsm;.
+			Output is written to &stdout.lit;.</para>
+
+		<para>&fsm.1; is invoked in one of three modes of operation:
+			&p.opt; to print an &fsm;,
+			&q.opt; to query various properties of an &fsm;,
+			and the default is to execute an &fsm;.
+			These modes are mutually exclusive.</para>
+
+		<para>Execution matches against input from arguments,
+			which are used as literal strings by default,
+			and filenames when &x.opt; is given.
+			If no arguments are given, &fsm.1; constructs the &fsm;
+			as usual, and exits with no action.
+			This can be used to effectively validate a <literal>.fsm</literal> file.</para>
 	</refsection>
 
 	<refsection>
@@ -107,11 +153,10 @@
 				<term>&a.opt;</term>
 
 				<listitem>
-					<para>When producing Graphviz output (by <code>-l&nbsp;dot</code>),
-						draw states anonymously.</para>
-
-					<para>The default is to label each state with a unique
-						identifier.</para>
+					<para>Anonymise states,
+						per the <code>anonymous_states</code> option for &fsm_print.3;.
+						The default is to number states,
+					which is the opposite to the equivalent &a.opt; option for &re.1;.</para>
 				</listitem>
 			</varlistentry>
 
@@ -119,14 +164,53 @@
 				<term>&c.opt;</term>
 
 				<listitem>
-					<para>When producing Graphviz output (by <code>-l&nbsp;dot</code>),
-						draw multiple similar transitions by the same edge.
-						These consolidated edges are labelled to indicate the
-						set of transitions they represent.
-						This is an aesthetic optimisation for sake of producing
-						more legible diagrams.</para>
+					<para>Consolidate edges,
+						per the <code>consolidate_edges</code> option for &fsm_print.3;.
+						The default is to output edges independently,
+						which is the opposite to the equivalent &c.opt; option for &re.1;.</para>
+				</listitem>
+			</varlistentry>
 
-					<para>The default is to draw each transition as a separate edge.</para>
+			<varlistentry>
+				<term>&w.opt;</term>
+
+				<listitem>
+					<para>Output a fragment,
+						per the <code>fragment</code> option for &fsm_print.3;.
+						The default is to output a complete file.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&e.opt;</term>
+
+				<listitem>
+					<para>Set a prefix for output,
+						per the <code>prefix</code> option for &fsm_print.3;.
+						The default is to output with no prefix.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&p.opt;</term>
+
+				<listitem>
+					<para>Print the constructed &fsm;, rather than executing it.
+						The output language is specified by <option>-l</option>.</para>
+
+					<para>The output options &a.opt;, &w.opt;, &c.opt; and <option>-e</option>
+						are applicable only when invoked in print mode (&p.opt;);
+						they are otherwise ignored.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&l.opt;</term>
+
+				<listitem>
+					<para>Set the output language for printing by &p.opt;.
+						See &fsm_lang.5fsm; for the supported language identifiers.
+						The default is <literal>fsm</literal>.</para>
 				</listitem>
 			</varlistentry>
 
@@ -139,94 +223,6 @@
 			</varlistentry>
 
 			<varlistentry>
-<!-- -e <execution> -->
-				<term>&e.opt;</term>
-
-				<listitem>
-					<para>
-			case 'e': exec
-					</para>
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
-				<term>&g.opt;</term>
-
-				<listitem>
-					<para>
-			case 'g': out_options.fragment          = 1;      break;
-					</para>
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
-				<term>&l.opt;</term>
-
-				<listitem>
-					<para>
-			case 'l': format = language(optarg);     break;
-					</para>
-TODO: language
-
-<!-- [-l <language>] -->
-<!-- -l language: -->
-
-					<table>
-						<col align="left"/>
-						<col align="left"/>
-						<col align="left"/>
-
-						<thead>
-							<tr>
-								<th>Language</th>
-								<th>Extension</th>
-								<th>Description</th>
-							</tr>
-						</thead>
-
-						<tbody>
-							<tr>
-								<td>&c.lit;</td>
-								<td>&c.ext;</td>
-<!-- TODO: ISO C90, or &ansi; -->
-								<td>Generated parser in TODO standard C.</td>
-							</tr>
-							<tr>
-								<td>&csv.lit;</td>
-								<td>&csv.ext;</td>
-								<td>TODO</td>
-							</tr>
-							<tr>
-								<td>&dot.lit;</td>
-								<td>&dot.ext;</td>
-								<td>TODO</td>
-							</tr>
-							<tr>
-								<td>&fsm.lit;</td>
-								<td>&fsm.ext;</td>
-								<td>TODO</td>
-							</tr>
-							<tr>
-								<td>&json.lit;</td>
-								<td>&json.ext;</td>
-								<td>TODO</td>
-							</tr>
-<!-- TODO
-							<tr>
-								<td>&test.lit;</td>
-								<td role="na" align="center">&ndash;</td>
-								<td>For testing TODO</td>
-							</tr>
--->
-						</tbody>
-					</table>
-
-					<para>The default is &c.lit;.</para>
-
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
 				<term>&m.opt;</term>
 
 				<listitem>
@@ -235,48 +231,97 @@ TODO: language
 			</varlistentry>
 
 			<varlistentry>
-<!-- [-n <prefix>] -->
-				<term>&n.opt;</term>
+				<term>&r.opt;</term>
 
 				<listitem>
-					<para>
-			case 'n': out_options.prefix            = optarg; break;
-					</para>
+					<para>Equivalent to <code>-t&nbsp;reverse</code>.</para>
 				</listitem>
 			</varlistentry>
 
 			<varlistentry>
-<!-- [-o <file> ] -->
-				<term>&o.opt;</term>
+				<term>&t.opt;</term>
 
 				<listitem>
-					<para>
-			case 'o': out = 0 == strcmp(optarg, "-") ? stdout : fopen(optarg, "w");
-					</para>
+					<para>Apply a transformation.
+						Multiple transformations may be given,
+						and are applied in the order given.
+						The available transformations are:</para>
+
+					<table>
+						<col align="left"/>
+						<col align="left"/>
+						<col align="left"/>
+
+						<thead>
+							<tr>
+								<th>Name</th>
+								<th>&api;</th>
+								<th>Description</th>
+							</tr>
+						</thead>
+
+						<tbody>
+<!-- TODO: not implemented
+							<tr>
+								<td><code>complete</code></td>
+								<td>&fsm_complete.3;</td>
+								<td>Make the &fsm; &complete.term;.
+									If the &fsm; is already complete, then this is a no-op.</td>
+							</tr>
+-->
+							<tr>
+								<td><code>complement</code></td>
+								<td rowspan="2">&fsm_complement.3;</td>
+								<td rowspan="2">&complement.term; the &fsm;.
+									Complementing twice gives the original &fsm;.</td>
+							</tr>
+							<tr>
+								<td><code>invert</code></td>
+							</tr>
+							<tr>
+								<td><code>reverse</code></td>
+								<td rowspan="2">&fsm_reverse.3;</td>
+								<td rowspan="2">&reverse.term; the &fsm;.
+									Reversing twice gives the original &fsm;.</td>
+							</tr>
+							<tr>
+								<td><code>rev</code></td>
+							</tr>
+							<tr>
+								<td><code>determinise</code></td>
+								<td rowspan="2">&fsm_determinise.3;</td>
+								<td rowspan="2">Make the &fsm; &deterministic.term;.
+									That is, transform it to a &dfa;.
+									If the &fsm; is already a &dfa;, then this is a no-op.</td>
+							</tr>
+							<tr>
+								<td><code>dfa</code></td>
+							</tr>
+							<tr>
+								<td><code>minimise</code></td>
+								<td rowspan="2">&fsm_minimise.3;</td>
+								<td rowspan="2">Make the &fsm; &minimal.term;.
+									That is, transform it to a canonical state-minimal &dfa;.
+									If the &fsm; is already minimal, then this is a no-op.</td>
+							</tr>
+							<tr>
+								<td><code>min</code></td>
+							</tr>
+						</tbody>
+					</table>
 				</listitem>
 			</varlistentry>
 
 			<varlistentry>
-				<term>&p.opt;</term>
-
-				<listitem>
-					<para>
-			case 'p': out = stdout;
-equivalent to <code>-o&nbsp;-</code>
-					</para>
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
-<!-- -q <query> -->
 				<term>&q.opt;</term>
 
 				<listitem>
-					<para>
-			case 'q': exit(query(fsm, optarg));      break;
-					</para>
+					<para>Query various properties of the &fsm; rather than executing it.
+						A query gives a boolean result.
+						Multiple queries may be given,
+						and their results are <firstterm>and</firstterm>ed together.
+						The result is returned as the exit status.</para>
 
-<!-- TODO: some of these are not implemented -->
 					<table>
 						<col align="left"/>
 						<col align="left"/>
@@ -300,6 +345,7 @@ equivalent to <code>-o&nbsp;-</code>
 							<tr>
 								<td><code>dfa</code></td>
 							</tr>
+<!-- TODO: not implemented
 							<tr>
 								<td><code>iscomplete</code></td>
 								<td>&fsm_iscomplete.3;</td>
@@ -320,105 +366,14 @@ equivalent to <code>-o&nbsp;-</code>
 							<tr>
 								<td><code>accept</code></td>
 							</tr>
+-->
 							<!-- TODO: also final, hasfinal -->
 						</tbody>
 					</table>
 				</listitem>
 			</varlistentry>
 
-			<varlistentry>
-				<term>&r.opt;</term>
-
-				<listitem>
-					<para>Equivalent to <code>-t&nbsp;reverse</code>.</para>
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
-<!-- [-t <transformation>] -->
-				<term>&t.opt;</term>
-
-				<listitem>
-					<para>Apply a transformation.</para>
-
-case 't': transform(fsm, optarg);        break;
-
-					<table>
-						<col align="left"/>
-						<col align="left"/>
-						<col align="left"/>
-
-						<thead>
-							<tr>
-								<th>Name</th>
-								<th>&api;</th>
-								<th>Description</th>
-							</tr>
-						</thead>
-
-						<tbody>
-							<tr>
-<!-- TODO: not implemented -->
-								<td><code>complete</code></td>
-								<td>&fsm_complete.3;</td>
-								<td>Make the &fsm; &complete.term;.</td>
-<!-- TODO: explain if the FSM is already one of these, no-op -->
-							</tr>
-							<tr>
-								<td><code>complement</code></td>
-								<td rowspan="2">&fsm_complement.3;</td>
-								<td rowspan="2">&complement.term; the &fsm;.</td>
-<!-- TODO: explain doing this twice gives you the same thing -->
-							</tr>
-							<tr>
-								<td><code>invert</code></td>
-							</tr>
-							<tr>
-								<td><code>reverse</code></td>
-								<td rowspan="2">&fsm_reverse.3;</td>
-								<td rowspan="2">&reverse.term; the &fsm;.</td>
-<!-- TODO: explain doing this twice gives you the same thing -->
-							</tr>
-							<tr>
-								<td><code>rev</code></td>
-							</tr>
-							<tr>
-								<td><code>determinise</code></td>
-								<td rowspan="2">&fsm_determinise.3;</td>
-								<td rowspan="2">Make the &fsm; &deterministic.term;.
-									That is, transform it to a &dfa;.</td>
-<!-- TODO: explain if the FSM is already one of these, no-op -->
-							</tr>
-							<tr>
-								<td><code>dfa</code></td>
-							</tr>
-							<tr>
-								<td><code>minimise</code></td>
-								<td rowspan="2">&fsm_minimise.3;</td>
-								<td rowspan="2">Make the &fsm; &minimal.term;.
-									That is, transform it to a canonical state-minimal &dfa;.</td>
-<!-- TODO: explain if the FSM is already one of these, no-op -->
-							</tr>
-							<tr>
-								<td><code>min</code></td>
-							</tr>
-						</tbody>
-					</table>
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
-				<term>&P.opt;</term>
-<!-- [-P <file>] -->
-
-				<listitem>
-					<para>
-				FILE *f;
-				f = 0 == strcmp(optarg, "-") ? stdout : fopen(optarg, "w");
-					</para>
-				</listitem>
-			</varlistentry>
-
+<!-- TODO:
 			<varlistentry>
 				<term>&v.opt;</term>
 
@@ -426,15 +381,39 @@ case 't': transform(fsm, optarg);        break;
 					<para>Causes &fsm.1; to print its version number.</para>
 				</listitem>
 			</varlistentry>
+-->
 
 			<varlistentry>
 				<term>&h.opt;</term>
 
 				<listitem>
-					<para>Causes &fsm.1; to print command-line usage help.</para>
+					<para>Print command-line usage help.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&x.opt;</term>
+
+				<listitem>
+					<para>Treat arguments to execute as filenames rather than strings.
+						The files contents are used as input for the &fsm; instead.
+						The default is for arguments to be used as literal strings.</para>
+
+					<para>&x.opt; is only applicable in execute mode;
+						it is otherwise ignored.</para>
 				</listitem>
 			</varlistentry>
 		</variablelist>
+	</refsection>
+
+	<refsection>
+		<title>Exit Status</title>
+
+		<para>Exits <literal>0</literal> on success,
+			or non-zero if an error occurs.
+			In query mode, the result of the query is returned;
+			<literal>0</literal> if the query is true,
+			and non-zero otherwise.</para>
 	</refsection>
 
 	<refsection>

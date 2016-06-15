@@ -249,6 +249,7 @@
 
 	<refsection>
 		<title>Ranges</title>
+<!-- TODO: re(1) calls them groups. which is it? -->
 
 <para>
 <code>[a-z]</code>
@@ -256,6 +257,7 @@
 where a and z are character literals or numeric escapes sequences
 ^ to invert
 trailing -, but not leading -?
+overlapping not permitted
 </para>
 	</refsection>
 

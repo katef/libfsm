@@ -13,8 +13,11 @@
 <!ENTITY % vol.1    "<manvolnum>1</manvolnum>">
 <!ENTITY % vol.3    "<manvolnum>3</manvolnum>">
 <!ENTITY % vol.5    "<manvolnum>5</manvolnum>">
+<!ENTITY % vol.5fsm "<manvolnum>5fsm</manvolnum>">
 <!ENTITY % vol.5re  "<manvolnum>5re</manvolnum>">
-<!ENTITY % vol.3 "<manvolnum>3</manvolnum>">
+<!ENTITY % vol.3    "<manvolnum>3</manvolnum>">
+<!ENTITY % vol.3fsm "<manvolnum>3fsm</manvolnum>">
+<!ENTITY % vol.3re  "<manvolnum>3re</manvolnum>">
 
 <!ENTITY lex.1  "<command>lex</command>(1)">
 <!ENTITY lexi.1 "<command>lexi</command>(1)">
@@ -33,11 +36,13 @@
 <!ENTITY re.3  "<citerefentry><refentrytitle>libre</refentrytitle>  %vol.3;</citerefentry>">
 <!ENTITY fsm.3 "<citerefentry><refentrytitle>libfsm</refentrytitle> %vol.3;</citerefentry>">
 
-<!ENTITY lx.5        "<citerefentry><refentrytitle>lx</refentrytitle>      %vol.5;</citerefentry>">
-<!ENTITY fsm.5       "<citerefentry><refentrytitle>fsm</refentrytitle>     %vol.5;</citerefentry>">
-<!ENTITY glob.5re    "<citerefentry><refentrytitle>glob</refentrytitle>    %vol.5re;</citerefentry>">
-<!ENTITY literal.5re "<citerefentry><refentrytitle>literal</refentrytitle> %vol.5re;</citerefentry>">
-<!ENTITY native.5re  "<citerefentry><refentrytitle>native</refentrytitle>  %vol.5re;</citerefentry>">
+<!ENTITY lx.5           "<citerefentry><refentrytitle>lx</refentrytitle>         %vol.5;</citerefentry>">
+<!ENTITY fsm.5          "<citerefentry><refentrytitle>fsm</refentrytitle>        %vol.5;</citerefentry>">
+<!ENTITY fsm_lang.5fsm  "<citerefentry><refentrytitle>fsm_lang</refentrytitle>   %vol.5fsm;</citerefentry>">
+<!ENTITY re_dialect.5re "<citerefentry><refentrytitle>re_dialect</refentrytitle> %vol.5re;</citerefentry>">
+<!ENTITY glob.5re       "<citerefentry><refentrytitle>glob</refentrytitle>       %vol.5re;</citerefentry>">
+<!ENTITY literal.5re    "<citerefentry><refentrytitle>literal</refentrytitle>    %vol.5re;</citerefentry>">
+<!ENTITY native.5re     "<citerefentry><refentrytitle>native</refentrytitle>     %vol.5re;</citerefentry>">
 
 <!-- TODO: generate from manpages -->
 
@@ -53,6 +58,11 @@
 <!ENTITY fsm_union.3      "<citerefentry><refentrytitle>fsm_union</refentrytitle> %vol.3;</citerefentry>">
 <!ENTITY fsm_concat.3     "<citerefentry><refentrytitle>fsm_concat</refentrytitle> %vol.3;</citerefentry>">
 <!ENTITY fsm_example.3    "<citerefentry><refentrytitle>fsm_example</refentrytitle> %vol.3;</citerefentry>">
+
+<!ENTITY fsm_print.3    "<citerefentry><refentrytitle>fsm_print</refentrytitle> %vol.3;</citerefentry>">
+
+<!ENTITY re_comp.3re    "<citerefentry><refentrytitle>re_comp</refentrytitle> %vol.3re;</citerefentry>">
+<!ENTITY re_group_print.3re "<citerefentry><refentrytitle>re_group_print</refentrytitle> %vol.3re;</citerefentry>">
 
 <!ENTITY lx-userguide.doc "<ulink url='%docs;/lx-userguide/'><citetitle>Lx Users' Guide</citetitle></ulink>">
 

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE refentry SYSTEM "minidocbook.dtd" [
+	<!-- TODO: centralise -->
+	<!ENTITY yes "&#x2714;">
+	<!ENTITY no  "&#x274C;">
+]>
+
+<refentry>
+
+	<refentryinfo>
+		<productname>re</productname>
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>re_dialect</refentrytitle>
+<!-- TODO: maybe 5re, not 5 -->
+		<manvolnum>5re</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>re_dialect</refname>
+		<refpurpose>TODO</refpurpose>
+	</refnamediv>
+
+	<refsection>
+		<para>Dialects are:</para>
+
+		<table>
+			<col align="left"/>
+			<col align="left"/>
+			<col align="center"/>
+			<col align="left"/>
+			<col align="left"/>
+
+			<thead>
+				<tr>
+					<th>Identifier</th>
+					<th>Symbol</th>
+					<th>Groups</th>
+					<th>Specification</th>
+					<th>Name</th>
+				</tr>
+			</thead>
+
+			<tbody>
+<!-- TODO: not implemented:
+				<tr>
+					<td><literal>ere</literal></td>
+					<td><literal>RE_ERE</literal></td>
+					<td>&yes;</td>
+					<td>&posix; &re_format.7;</td>
+					<td>&posix; Extended Regular Expression</td>
+				</tr>
+				<tr>
+					<td><literal>bre</literal></td>
+					<td><literal>RE_BRE</literal></td>
+					<td>&yes;</td>
+					<td>&posix; &re_format.7;</td>
+					<td>&posix; Basic Regular Expression</td>
+				</tr>
+				<tr>
+					<td><literal>plan9</literal></td>
+					<td><literal>RE_PLAN9</literal></td>
+					<td>&yes;</td>
+					<td>Plan 9 &regexp.7;</td>
+					<td>Plan 9 Regular Expression</td>
+				</tr>
+				<tr>
+					<td><literal>pcre</literal></td>
+					<td><literal>RE_PCRE</literal></td>
+					<td>&yes;</td>
+					<td>&pcre.3;</td>
+					<td>Perl Compatible Regular Expressions</td>
+				</tr>
+-->
+				<tr>
+					<td><literal>literal</literal></td>
+					<td><literal>RE_LITERAL</literal></td>
+					<td>&no;</td>
+					<td>&literal.5re;</td>
+					<td>Literal strings</td>
+				</tr>
+				<tr>
+					<td><literal>glob</literal></td>
+					<td><literal>RE_GLOB</literal></td>
+					<td>&no;</td>
+					<td>&glob.5re;</td>
+					<td>Glob patterns</td>
+				</tr>
+				<tr>
+					<td><literal>native</literal></td>
+					<td><literal>RE_NATIVE</literal></td>
+					<td>&yes;</td>
+					<td>&native.5re;</td>
+					<td>&re.3; &ldquo;Native&rdquo; syntax</td>
+				</tr>
+			</tbody>
+		</table>
+	</refsection>
+
+	<refsection>
+		<title>See Also</title>
+
+		<para>&re_comp.3re;.</para>
+
+<!--
+		<para>&lx-userguide.doc;.</para>
+-->
+	</refsection>
+
+</refentry>
+
