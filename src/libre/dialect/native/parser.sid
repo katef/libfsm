@@ -7,6 +7,7 @@
 
 %types%
 
+	pos;
 	char;
 	unsigned;
 	fsm_state;
@@ -24,16 +25,16 @@
 	SEP;
 
 	OPENSUB;   CLOSESUB;
-	OPENGROUP; CLOSEGROUP: () -> (:char);
-	OPENCOUNT; CLOSECOUNT;
+	OPENGROUP: () -> (:pos); CLOSEGROUP: () -> (:char);
+	OPENCOUNT: () -> (:pos); CLOSECOUNT;
 
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char);
 
 	ESC:    () -> (:char);
-	OCT:    () -> (:char);
-	HEX:    () -> (:char);
-	CHAR:   () -> (:char);
+	OCT:    () -> (:char, :pos);
+	HEX:    () -> (:char, :pos);
+	CHAR:   () -> (:char, :pos);
 	START:  () -> (:pred);
 	END:    () -> (:pred);
 	COUNT:  () -> (:unsigned);
@@ -72,26 +73,32 @@
 	<err-expected-closegroup>;
 	<err-expected-eof>;
 
+	<mark-begin>:      () -> (:pos);
+	<mark-groupstart>: (:pos) -> ();
+	<mark-rangestart>: (:pos) -> ();
+	<mark-countstart>: (:pos) -> ();
+
 	group: (x :fsm_state, y :fsm_state) -> () [
 
 		char: () -> (c :char) = {
 			c = ESC;
 		||
-			c = OCT;
+			(c, !) = OCT;
 		||
-			c = HEX;
+			(c, !) = HEX;
 		||
-			c = CHAR;
+			(c, !) = CHAR;
 		};
 
 		range: () -> (a :char, b :char) = {
 			{
-				a = OCT;
+				(a, pos) = OCT;
 			||
-				a = HEX;
+				(a, pos) = HEX;
 			||
-				a = CHAR;
+				(a, pos) = CHAR;
 			};
+			<mark-rangestart>(pos);
 
 			{
 				! = RANGE;
@@ -100,11 +107,11 @@
 			};
 
 			{
-				b = OCT;
+				(b, !) = OCT;
 			||
-				b = HEX;
+				(b, !) = HEX;
 			||
-				b = CHAR;
+				(b, !) = CHAR;
 			||
 				b = RANGE;
 			};
@@ -171,6 +178,14 @@
 		};
 
 		::group-native: () -> () = {
+			/*
+			 * ::group-native is an entry point to the grammar,
+			 * therefore the current position is at the beginning
+			 * of the input stream.
+			 */
+			pos = <mark-begin>;
+			<mark-groupstart>(pos);
+
 			g = <make-group>;
 
 			group-bm(&g);
@@ -178,7 +193,7 @@
 		};
 
 	] = {
-		OPENGROUP;
+		pos = OPENGROUP;
 
 		g = <make-group>;
 
@@ -190,6 +205,7 @@
 			<err-expected-closegroup>;
 		};
 
+		<mark-groupstart>(pos);
 		<group-to-states>(&g, x, y);
 	};
 
@@ -197,11 +213,11 @@
 		{
 			c = ESC;
 		||
-			c = OCT;
+			(c, !) = OCT;
 		||
-			c = HEX;
+			(c, !) = HEX;
 		||
-			c = CHAR;
+			(c, !) = CHAR;
 		};
 		<add-literal>(x, y, c);
 	};
@@ -232,16 +248,18 @@
 			};
 
 			{
-				OPENCOUNT;
+				pos = OPENCOUNT;
 				n = COUNT;
 				CLOSECOUNT;
+				<mark-countstart>(pos);
 				<count-m-to-n>(x, &y, n, n);
 			||
-				OPENCOUNT;
+				pos = OPENCOUNT;
 				m = COUNT;
 				SEP;
 				n = COUNT;
 				CLOSECOUNT;
+				<mark-countstart>(pos);
 				<count-m-to-n>(x, &y, m, n);
 			||
 				QMARK;

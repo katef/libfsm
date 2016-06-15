@@ -67,6 +67,7 @@
 	typedef unsigned t_unsigned;
 	typedef unsigned t_pred; /* TODO */
 
+	typedef struct lx_pos t_pos;
 	typedef struct fsm_state * t_fsm__state;
 	typedef struct re_grp t_grp;
 
@@ -75,6 +76,15 @@
 		enum LX_TOKEN lex_tok_save;
 		struct re_grp *g; /* for <stash-group> */
 		int overlap; /* permit overlap in groups */
+
+		/*
+		 * Lexical positions stored for errors which describe multiple tokens.
+		 * We're able to store these without needing a stack, because these are
+		 * non-recursive productions.
+		 */
+		struct lx_pos groupstart;
+		struct lx_pos rangestart;
+		struct lx_pos countstart;
 	};
 
 	struct lex_state {
@@ -202,8 +212,16 @@
 		@c = '-';
 	@};
 
+	OPENGROUP: () -> (pos :pos) = @{
+		@pos = lex_state->lx.start;
+	@};
+
 	CLOSEGROUP: () -> (c :char) = @{
 		@c = ']';
+	@};
+
+	OPENCOUNT: () -> (pos :pos) = @{
+		@pos = lex_state->lx.start;
 	@};
 
 	ESC: () -> (c :char) = @{
@@ -223,15 +241,18 @@
 		}
 	@};
 
-	OCT: () -> (c :char) = @{
+	OCT: () -> (c :char, pos :pos) = @{
 		unsigned long u;
 		char *e;
 
 		assert(0 == strncmp(lex_state->buf.a, "\\", 1));
 		assert(strlen(lex_state->buf.a) >= 2);
 
+		@pos = lex_state->lx.start;
+
 		errno = 0;
 
+fprintf(stderr, "pos = %u, '%s'\n", lex_state->lx.start.byte, lex_state->buf.a);
 		u = strtoul(lex_state->buf.a + 1, &e, 8);
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
@@ -248,12 +269,14 @@
 		@c = (char) (unsigned char) u;
 	@};
 
-	HEX: () -> (c :char) = @{
+	HEX: () -> (c :char, pos :pos) = @{
 		unsigned long u;
 		char *e;
 
 		assert(0 == strncmp(lex_state->buf.a, "\\x", 2));
 		assert(strlen(lex_state->buf.a) >= 3);
+
+		@pos = lex_state->lx.start;
 
 		errno = 0;
 
@@ -273,9 +296,11 @@
 		@c = (char) (unsigned char) u;
 	@};
 
-	CHAR: () -> (c :char) = @{
+	CHAR: () -> (c :char, pos :pos) = @{
 		assert(lex_state->buf.a[0] != '\0');
 		assert(lex_state->buf.a[1] == '\0');
+
+		@pos = lex_state->lx.start;
 
 		@c = lex_state->buf.a[0];
 	@};
@@ -665,6 +690,16 @@
 		}
 	@};
 
+	<mark-begin>: () -> (pos :pos) = @{
+		@pos.byte = 0;
+		@pos.line = 1;
+		@pos.col  = 1;
+	@};
+
+	<mark-groupstart>: (pos :pos) -> () = @{ act_state->groupstart = @pos; @};
+	<mark-rangestart>: (pos :pos) -> () = @{ act_state->rangestart = @pos; @};
+	<mark-countstart>: (pos :pos) -> () = @{ act_state->countstart = @pos; @};
+
 %trailer% @{
 
 	static int
@@ -749,7 +784,36 @@
 
 	error:
 
-		err->byte = lx->start.byte;
+		/*
+		 * TODO: Three situations for error markers:
+		 *
+		 * The default: err->byte is the start of the next token.
+		 * This is approximately correct as the endpoint of an error,
+		 * but to be exactly correct, the endpoint for the current token
+		 * would need to be stored. This matters more when whitespace exists.
+		 * This should be done for all single-token lexical errors,
+		 * and is currently not implemented.
+		 *
+		 * For RE_SYNTAX errors, a grammatical error is being described,
+		 * so the start of the next token is most relevant. This is a point
+		 * rather than a span. Maybe set a bit to indicate point vs. span.
+		 *
+		 * Some errors describe multiple tokens. For these, the start and end
+		 * bytes belong to different tokens, and therefore need to be stored
+		 * statefully. These are all from non-recursive productions, and so
+		 * a stack isn't needed.
+		 */
+
+		switch (err->e) {
+		case RE_EOVERLAP:  err->byte = act_state->groupstart.byte; break;
+		case RE_ENEGRANGE: err->byte = act_state->rangestart.byte; break;
+		case RE_ENEGCOUNT: err->byte = act_state->countstart.byte; break;
+
+		default:
+			/* TODO: For RE_SYNTAX only, as described above */
+			err->byte = lx->start.byte;
+			break;
+		}
 
 		return -1;
 	}

@@ -2,6 +2,7 @@
 
 %types%
 
+	pos;
 	char;
 	unsigned;
 	fsm_state;
@@ -19,16 +20,16 @@
 	!SEP;
 
 	!OPENSUB;   !CLOSESUB;
-	!OPENGROUP; !CLOSEGROUP: () -> (:char);
-	!OPENCOUNT; !CLOSECOUNT;
+	!OPENGROUP: () -> (:pos); !CLOSEGROUP: () -> (:char);
+	!OPENCOUNT: () -> (:pos); !CLOSECOUNT;
 
 	!INVERT: () -> (:char);
 	!RANGE:  () -> (:char);
 
 	!ESC:    () -> (:char);
-	!OCT:    () -> (:char);
-	!HEX:    () -> (:char);
-	CHAR:    () -> (:char);
+	!OCT:    () -> (:char, :pos);
+	!HEX:    () -> (:char, :pos);
+	CHAR:    () -> (:char, :pos);
 	!START:  () -> (:pred);
 	!END:    () -> (:pred);
 	!COUNT:  () -> (:unsigned);
@@ -67,10 +68,15 @@
 	!<err-expected-closegroup>;
 	<err-expected-eof>;
 
+	!<mark-begin>:      () -> (:pos);
+	!<mark-groupstart>: (:pos) -> ();
+	!<mark-rangestart>: (:pos) -> ();
+	!<mark-countstart>: (:pos) -> ();
+
 	list-of-literals: (x :fsm_state, y :fsm_state) -> () [
 
 		literal: (x :fsm_state, y :fsm_state) -> () = {
-			c = CHAR;
+			(c, !) = CHAR;
 			<add-literal>(x, y, c);
 			<count-1>(x, y);
 		};
