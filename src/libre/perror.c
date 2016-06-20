@@ -56,7 +56,7 @@ re_perror(enum re_dialect dialect, const struct re_err *err,
 			fprintf(stderr, ":");
 		}
 
-		fprintf(stderr, "%u", err->byte + 1);
+		fprintf(stderr, "%u", err->u.pos.byte + 1);
 	}
 
 	switch (err->e) {

@@ -42,7 +42,7 @@ enum {
 	RE_MISC   = 1 << (8 - 1),
 	RE_GROUP  = 1 << (8 - 2), /* re_err.set/.dup are populated */
 	RE_ESC    = 1 << (8 - 3), /* re_err.esc is populated */
-	RE_SYNTAX = 1 << (8 - 4)  /* re_err.byte is populated */
+	RE_SYNTAX = 1 << (8 - 4)  /* re_err.u.pos.byte is populated */
 };
 
 enum re_errno {
@@ -72,9 +72,15 @@ enum re_errno {
 	RE_EXESC        = 10 | RE_SYNTAX
 };
 
+struct re_pos {
+	unsigned byte;
+};
+
 struct re_err {
 	enum re_errno e;
-	unsigned byte;
+	union {
+		struct re_pos pos;
+	} u;
 
 	/* populated for RE_ECOUNTRANGE; ignored otherwise */
 	unsigned m;

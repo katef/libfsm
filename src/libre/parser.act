@@ -787,7 +787,7 @@ fprintf(stderr, "pos = %u, '%s'\n", lex_state->lx.start.byte, lex_state->buf.a);
 		/*
 		 * TODO: Three situations for error markers:
 		 *
-		 * The default: err->byte is the start of the next token.
+		 * The default: err->u.pos.byte is the start of the next token.
 		 * This is approximately correct as the endpoint of an error,
 		 * but to be exactly correct, the endpoint for the current token
 		 * would need to be stored. This matters more when whitespace exists.
@@ -805,13 +805,14 @@ fprintf(stderr, "pos = %u, '%s'\n", lex_state->lx.start.byte, lex_state->buf.a);
 		 */
 
 		switch (err->e) {
-		case RE_EOVERLAP:  err->byte = act_state->groupstart.byte; break;
-		case RE_ENEGRANGE: err->byte = act_state->rangestart.byte; break;
-		case RE_ENEGCOUNT: err->byte = act_state->countstart.byte; break;
+		/* TODO: err->u.mark.start, err->u.mark.end */
+		case RE_EOVERLAP:  err->u.pos.byte = act_state->groupstart.byte; break;
+		case RE_ENEGRANGE: err->u.pos.byte = act_state->rangestart.byte; break;
+		case RE_ENEGCOUNT: err->u.pos.byte = act_state->countstart.byte; break;
 
 		default:
 			/* TODO: For RE_SYNTAX only, as described above */
-			err->byte = lx->start.byte;
+			err->u.pos.byte = lx->start.byte;
 			break;
 		}
 
@@ -850,8 +851,8 @@ fprintf(stderr, "pos = %u, '%s'\n", lex_state->lx.start.byte, lex_state->buf.a);
 
 	error:
 
-		err->e    = RE_EERRNO;
-		err->byte = 0;
+		err->e          = RE_EERRNO;
+		err->u.pos.byte = 0;
 
 		return NULL;
 	}
