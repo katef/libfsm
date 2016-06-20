@@ -252,7 +252,6 @@
 
 		errno = 0;
 
-fprintf(stderr, "pos = %u, '%s'\n", lex_state->lx.start.byte, lex_state->buf.a);
 		u = strtoul(lex_state->buf.a + 1, &e, 8);
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
