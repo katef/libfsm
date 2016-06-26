@@ -39,37 +39,37 @@ enum re_pred {
 };
 
 enum {
-	RE_MISC   = 1 << (8 - 1),
-	RE_GROUP  = 1 << (8 - 2), /* re_err.set/.dup are populated */
-	RE_ESC    = 1 << (8 - 3), /* re_err.esc is populated */
-	RE_SYNTAX = 1 << (8 - 4)  /* re_err.u.pos.byte is populated */
+	RE_MISC  = 1 << (8 - 1),
+	RE_GROUP = 1 << (8 - 2), /* re_err.set/.dup are populated */
+	RE_ESC   = 1 << (8 - 3), /* re_err.esc is populated */
+	RE_MARK  = 1 << (8 - 4)  /* re_err.u.pos.start/.end are populated */
 };
 
 enum re_errno {
-	RE_ESUCCESS     = 0 | RE_MISC,
-	RE_EERRNO       = 1 | RE_MISC,
-	RE_EBADDIALECT  = 2 | RE_MISC,
-	RE_EBADGROUP    = 3 | RE_MISC,
+	RE_ESUCCESS     =  0 | RE_MISC,
+	RE_EERRNO       =  1 | RE_MISC,
+	RE_EBADDIALECT  =  2 | RE_MISC,
+	RE_EBADGROUP    =  3 | RE_MISC,
 
-	RE_EOVERLAP     =  0 | RE_SYNTAX | RE_GROUP,
-	RE_ENEGRANGE    =  1 | RE_SYNTAX | RE_GROUP,
-	RE_ENEGCOUNT    =  2 | RE_SYNTAX | RE_GROUP,
+	RE_EOVERLAP     =  0 | RE_MARK | RE_GROUP,
+	RE_ENEGRANGE    =  1 | RE_MARK | RE_GROUP,
+	RE_ENEGCOUNT    =  2 | RE_MARK | RE_GROUP,
 
-	RE_EHEXRANGE    =  0 | RE_SYNTAX | RE_ESC,
-	RE_EOCTRANGE    =  1 | RE_SYNTAX | RE_ESC,
-	RE_ECOUNTRANGE  =  2 | RE_SYNTAX | RE_ESC,
+	RE_EHEXRANGE    =  0 | RE_MARK | RE_ESC,
+	RE_EOCTRANGE    =  1 | RE_MARK | RE_ESC,
+	RE_ECOUNTRANGE  =  2 | RE_MARK | RE_ESC,
 
-	RE_EXSUB        =  0 | RE_SYNTAX,
-	RE_EXTERM       =  1 | RE_SYNTAX,
-	RE_EXGROUP      =  2 | RE_SYNTAX,
-	RE_EXATOM       =  3 | RE_SYNTAX,
-	RE_EXCOUNT      =  4 | RE_SYNTAX,
-	RE_EXATOMS      =  5 | RE_SYNTAX,
-	RE_EXALTS       =  6 | RE_SYNTAX,
-	RE_EXRANGE      =  7 | RE_SYNTAX,
-	RE_EXCLOSEGROUP =  8 | RE_SYNTAX,
-	RE_EXEOF        =  9 | RE_SYNTAX,
-	RE_EXESC        = 10 | RE_SYNTAX
+	RE_EXSUB        =  0 | RE_MARK,
+	RE_EXTERM       =  1 | RE_MARK,
+	RE_EXGROUP      =  2 | RE_MARK,
+	RE_EXATOM       =  3 | RE_MARK,
+	RE_EXCOUNT      =  4 | RE_MARK,
+	RE_EXATOMS      =  5 | RE_MARK,
+	RE_EXALTS       =  6 | RE_MARK,
+	RE_EXRANGE      =  7 | RE_MARK,
+	RE_EXCLOSEGROUP =  8 | RE_MARK,
+	RE_EXEOF        =  9 | RE_MARK,
+	RE_EXESC        = 10 | RE_MARK
 };
 
 struct re_pos {
@@ -78,9 +78,8 @@ struct re_pos {
 
 struct re_err {
 	enum re_errno e;
-	union {
-		struct re_pos pos;
-	} u;
+	struct re_pos start;
+	struct re_pos end;
 
 	/* populated for RE_ECOUNTRANGE; ignored otherwise */
 	unsigned m;

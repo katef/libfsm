@@ -51,12 +51,18 @@ re_perror(enum re_dialect dialect, const struct re_err *err,
 		re_fprint(stderr, dialect, s);
 	}
 
-	if (err->e & RE_SYNTAX) {
+	if (err->e & RE_MARK) {
+		assert(err->end.byte >= err->start.byte);
+
 		if (file != NULL || s != NULL) {
 			fprintf(stderr, ":");
 		}
 
-		fprintf(stderr, "%u", err->u.pos.byte + 1);
+		if (err->end.byte == err->start.byte) {
+			fprintf(stderr, "%u",    err->start.byte + 1);
+		} else {
+			fprintf(stderr, "%u-%u", err->start.byte + 1, err->end.byte + 1);
+		}
 	}
 
 	switch (err->e) {
