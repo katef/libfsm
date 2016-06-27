@@ -20,16 +20,16 @@
 	!SEP;
 
 	!OPENSUB;   !CLOSESUB;
-	!OPENGROUP: () -> (:pos); !CLOSEGROUP: () -> (:char);
-	!OPENCOUNT: () -> (:pos); !CLOSECOUNT;
+	!OPENGROUP: () -> (:pos, :pos); !CLOSEGROUP: () -> (:char, :pos, :pos);
+	!OPENCOUNT: () -> (:pos, :pos); !CLOSECOUNT: () -> (:pos, :pos);
 
 	!INVERT: () -> (:char);
-	!RANGE:  () -> (:char);
+	!RANGE:  () -> (:char, :pos, :pos);
 
 	!ESC:    () -> (:char);
-	!OCT:    () -> (:char, :pos);
-	!HEX:    () -> (:char, :pos);
-	CHAR:    () -> (:char, :pos);
+	!OCT:    () -> (:char, :pos, :pos);
+	!HEX:    () -> (:char, :pos, :pos);
+	CHAR:    () -> (:char, :pos, :pos);
 	!START:  () -> (:pred);
 	!END:    () -> (:pred);
 	!COUNT:  () -> (:unsigned);
@@ -68,15 +68,15 @@
 	!<err-expected-closegroup>;
 	<err-expected-eof>;
 
-	!<mark-begin>:      () -> (:pos);
-	!<mark-groupstart>: (:pos) -> ();
-	!<mark-rangestart>: (:pos) -> ();
-	!<mark-countstart>: (:pos) -> ();
+	!<mark-begin>: () -> (:pos);
+	!<mark-group>: (:pos, :pos) -> ();
+	!<mark-range>: (:pos, :pos) -> ();
+	!<mark-count>: (:pos, :pos) -> ();
 
 	list-of-literals: (x :fsm_state, y :fsm_state) -> () [
 
 		literal: (x :fsm_state, y :fsm_state) -> () = {
-			(c, !) = CHAR;
+			(c, !, !) = CHAR;
 			<add-literal>(x, y, c);
 			<count-1>(x, y);
 		};

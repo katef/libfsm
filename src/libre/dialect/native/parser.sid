@@ -25,16 +25,16 @@
 	SEP;
 
 	OPENSUB;   CLOSESUB;
-	OPENGROUP: () -> (:pos); CLOSEGROUP: () -> (:char);
-	OPENCOUNT: () -> (:pos); CLOSECOUNT;
+	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
+	OPENCOUNT: () -> (:pos, :pos); CLOSECOUNT: () -> (:pos, :pos);
 
 	INVERT: () -> (:char);
-	RANGE:  () -> (:char);
+	RANGE:  () -> (:char, :pos, :pos);
 
 	ESC:    () -> (:char);
-	OCT:    () -> (:char, :pos);
-	HEX:    () -> (:char, :pos);
-	CHAR:   () -> (:char, :pos);
+	OCT:    () -> (:char, :pos, :pos);
+	HEX:    () -> (:char, :pos, :pos);
+	CHAR:   () -> (:char, :pos, :pos);
 	START:  () -> (:pred);
 	END:    () -> (:pred);
 	COUNT:  () -> (:unsigned);
@@ -73,48 +73,49 @@
 	<err-expected-closegroup>;
 	<err-expected-eof>;
 
-	<mark-begin>:      () -> (:pos);
-	<mark-groupstart>: (:pos) -> ();
-	<mark-rangestart>: (:pos) -> ();
-	<mark-countstart>: (:pos) -> ();
+	<mark-begin>: () -> (:pos);
+	<mark-group>: (:pos, :pos) -> ();
+	<mark-range>: (:pos, :pos) -> ();
+	<mark-count>: (:pos, :pos) -> ();
 
 	group: (x :fsm_state, y :fsm_state) -> () [
 
 		char: () -> (c :char) = {
 			c = ESC;
 		||
-			(c, !) = OCT;
+			(c, !, !) = OCT;
 		||
-			(c, !) = HEX;
+			(c, !, !) = HEX;
 		||
-			(c, !) = CHAR;
+			(c, !, !) = CHAR;
 		};
 
 		range: () -> (a :char, b :char) = {
 			{
-				(a, pos) = OCT;
+				(a, start, !) = OCT;
 			||
-				(a, pos) = HEX;
+				(a, start, !) = HEX;
 			||
-				(a, pos) = CHAR;
+				(a, start, !) = CHAR;
 			};
-			<mark-rangestart>(pos);
 
 			{
-				! = RANGE;
+				(!, !, !) = RANGE;
 			##
 				<err-expected-range>;
 			};
 
 			{
-				(b, !) = OCT;
+				(b, !, end) = OCT;
 			||
-				(b, !) = HEX;
+				(b, !, end) = HEX;
 			||
-				(b, !) = CHAR;
+				(b, !, end) = CHAR;
 			||
-				b = RANGE;
+				(b, !, end) = RANGE;
 			};
+
+			<mark-range>(start, end);
 		};
 
 		list-of-terms: (g :grp &) -> () = {
@@ -137,19 +138,19 @@
 
 		group-body: (g :grp &) -> () = {
 			{
-				c = CLOSEGROUP;
+				(c, !, !) = CLOSEGROUP;
 				<group-add-char>(&g, c);
 			||
-				c = RANGE;
+				(c, !, !) = RANGE;
 				<group-add-char>(&g, c);
 			||
 				/*
 				 * XXX: this is atypical, but serves as a workaround for below
 				 * until this can be done lexically by /-$/ -> $char.
 				 */
-				a = CLOSEGROUP;
+				(a, !, !) = CLOSEGROUP;
 				<group-add-char>(&g, a);
-				b = RANGE;
+				(b, !, !) = RANGE;
 				<group-add-char>(&g, b);
 			||
 				$;
@@ -159,7 +160,7 @@
 
 			{
 /* XXX: this ought to be permitted, but I can't see how for LL(1)
-				c = RANGE;
+				(c, !, !) = RANGE;
 				<group-add-char>(&g, c);
 			||
 */
@@ -183,29 +184,31 @@
 			 * therefore the current position is at the beginning
 			 * of the input stream.
 			 */
-			pos = <mark-begin>;
-			<mark-groupstart>(pos);
+			start = <mark-begin>;
 
 			g = <make-group>;
 
 			group-bm(&g);
+
+end = start; /* XXX: proper end of stream */
+			<mark-group>(start, end);
 			<stash-group>(&g);
 		};
 
 	] = {
-		pos = OPENGROUP;
+		(start, !) = OPENGROUP;
 
 		g = <make-group>;
 
 		group-bm(&g);
 
 		{
-			! = CLOSEGROUP;
+			(!, !, end) = CLOSEGROUP;
+<mark-group>(start, end);
 		##
 			<err-expected-closegroup>;
 		};
 
-		<mark-groupstart>(pos);
 		<group-to-states>(&g, x, y);
 	};
 
@@ -213,11 +216,11 @@
 		{
 			c = ESC;
 		||
-			(c, !) = OCT;
+			(c, !, !) = OCT;
 		||
-			(c, !) = HEX;
+			(c, !, !) = HEX;
 		||
-			(c, !) = CHAR;
+			(c, !, !) = CHAR;
 		};
 		<add-literal>(x, y, c);
 	};
@@ -248,18 +251,18 @@
 			};
 
 			{
-				pos = OPENCOUNT;
+				(start, !) = OPENCOUNT;
 				n = COUNT;
-				CLOSECOUNT;
-				<mark-countstart>(pos);
+				(!, end) = CLOSECOUNT;
+				<mark-count>(start, end);
 				<count-m-to-n>(x, &y, n, n);
 			||
-				pos = OPENCOUNT;
+				(start, !) = OPENCOUNT;
 				m = COUNT;
 				SEP;
 				n = COUNT;
-				CLOSECOUNT;
-				<mark-countstart>(pos);
+				(end, !) = CLOSECOUNT;
+				<mark-count>(start, end);
 				<count-m-to-n>(x, &y, m, n);
 			||
 				QMARK;

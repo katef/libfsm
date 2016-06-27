@@ -87,9 +87,9 @@
 		 * We're able to store these without needing a stack, because these are
 		 * non-recursive productions.
 		 */
-		struct re_pos groupstart;
-		struct re_pos rangestart;
-		struct re_pos countstart;
+		struct re_pos groupstart; struct re_pos groupend;
+		struct re_pos rangestart; struct re_pos rangeend;
+		struct re_pos countstart; struct re_pos countend;
 	};
 
 	struct lex_state {
@@ -223,20 +223,31 @@
 		@c = '^';
 	@};
 
-	RANGE: () -> (c :char) = @{
+	RANGE: () -> (c :char, start :pos, end :pos) = @{
 		@c = '-';
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
 	@};
 
-	OPENGROUP: () -> (pos :pos) = @{
-		@pos = lex_state->lx.start;
+	OPENGROUP: () -> (start :pos, end :pos) = @{
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
 	@};
 
-	CLOSEGROUP: () -> (c :char) = @{
+	CLOSEGROUP: () -> (c :char, start :pos, end :pos) = @{
 		@c = ']';
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
 	@};
 
-	OPENCOUNT: () -> (pos :pos) = @{
-		@pos = lex_state->lx.start;
+	OPENCOUNT: () -> (start :pos, end :pos) = @{
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+	@};
+
+	CLOSECOUNT: () -> (start :pos, end :pos) = @{
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
 	@};
 
 	ESC: () -> (c :char) = @{
@@ -256,14 +267,15 @@
 		}
 	@};
 
-	OCT: () -> (c :char, pos :pos) = @{
+	OCT: () -> (c :char, start :pos, end :pos) = @{
 		unsigned long u;
 		char *e;
 
 		assert(0 == strncmp(lex_state->buf.a, "\\", 1));
 		assert(strlen(lex_state->buf.a) >= 2);
 
-		@pos = lex_state->lx.start;
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
 
 		errno = 0;
 
@@ -283,14 +295,15 @@
 		@c = (char) (unsigned char) u;
 	@};
 
-	HEX: () -> (c :char, pos :pos) = @{
+	HEX: () -> (c :char, start :pos, end :pos) = @{
 		unsigned long u;
 		char *e;
 
 		assert(0 == strncmp(lex_state->buf.a, "\\x", 2));
 		assert(strlen(lex_state->buf.a) >= 3);
 
-		@pos = lex_state->lx.start;
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
 
 		errno = 0;
 
@@ -310,11 +323,12 @@
 		@c = (char) (unsigned char) u;
 	@};
 
-	CHAR: () -> (c :char, pos :pos) = @{
+	CHAR: () -> (c :char, start :pos, end :pos) = @{
 		assert(lex_state->buf.a[0] != '\0');
 		assert(lex_state->buf.a[1] == '\0');
 
-		@pos = lex_state->lx.start;
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
 
 		@c = lex_state->buf.a[0];
 	@};
@@ -710,9 +724,20 @@
 		@pos.col  = 1;
 	@};
 
-	<mark-groupstart>: (pos :pos) -> () = @{ mark(&act_state->groupstart, &@pos); @};
-	<mark-rangestart>: (pos :pos) -> () = @{ mark(&act_state->rangestart, &@pos); @};
-	<mark-countstart>: (pos :pos) -> () = @{ mark(&act_state->countstart, &@pos); @};
+	<mark-group>: (start :pos, end :pos) -> () = @{
+		mark(&act_state->groupstart, &@start);
+		mark(&act_state->groupend,   &@end);
+	@};
+
+	<mark-range>: (start :pos, end :pos) -> () = @{
+		mark(&act_state->rangestart, &@start);
+		mark(&act_state->rangeend,   &@end);
+	@};
+
+	<mark-count>: (start :pos, end :pos) -> () = @{
+		mark(&act_state->countstart, &@start);
+		mark(&act_state->countend,   &@end);
+	@};
 
 %trailer% @{
 
@@ -816,9 +841,9 @@
 
 		switch (err->e) {
 		/* TODO: .end to come from marking a lx_pos in the grammar */
-		case RE_EOVERLAP:  err->start = act_state->groupstart; err->end = err->start; break;
-		case RE_ENEGRANGE: err->start = act_state->rangestart; err->end = err->start; break;
-		case RE_ENEGCOUNT: err->start = act_state->countstart; err->end = err->start; break;
+		case RE_EOVERLAP:  err->start = act_state->groupstart; err->end = act_state->groupend; break;
+		case RE_ENEGRANGE: err->start = act_state->rangestart; err->end = act_state->rangeend; break;
+		case RE_ENEGCOUNT: err->start = act_state->countstart; err->end = act_state->countend; break;
 
 		case RE_EHEXRANGE:
 		case RE_EOCTRANGE:
