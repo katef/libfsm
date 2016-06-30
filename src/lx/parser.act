@@ -360,7 +360,7 @@
 
 	/* equivalent to <compile-regex>(".") but with less machination */
 	<regex-any>: () -> (r :fsm) = @{
-		struct fsm_state *e;
+		struct fsm_state *start, *end;
 
 		@r = fsm_new();
 		if (@r == NULL) {
@@ -368,18 +368,22 @@
 			@!;
 		}
 
-		e = fsm_addstate(@r);
-		if (e == NULL) {
+		start = fsm_addstate(@r);
+		end   = fsm_addstate(@r);
+		if (start == NULL || end == NULL) {
 			perror("fsm_addstate");
+			fsm_free(@r);
 			@!;
 		}
 
-		if (!fsm_addedge_any(@r, fsm_getstart(@r), e)) {
+		if (!fsm_addedge_any(@r, start, end)) {
 			perror("fsm_addedge_any");
+			fsm_free(@r);
 			@!;
 		}
 
-		fsm_setend(@r, e, 1);
+		fsm_setstart(@r, start);
+		fsm_setend(@r, end, 1);
 	@};
 
 	<make-ast>: () -> (a :ast) = @{
