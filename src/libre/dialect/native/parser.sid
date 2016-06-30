@@ -169,13 +169,11 @@
 		};
 
 		group-bm: (g :grp &) -> () = {
-			{
-				! = INVERT;
-				group-body(&g);
-				<invert-group>(&g);
-			||
-				group-body(&g);
-			};
+			! = INVERT;
+			group-body(&g);
+			<invert-group>(&g);
+		||
+			group-body(&g);
 		};
 
 		::group-native: () -> () = {
