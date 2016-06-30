@@ -64,6 +64,10 @@ lx_out_h(const struct ast *ast, FILE *f)
 	out_tokens(ast, f);
 	fprintf(f, "\n");
 
+	fprintf(f, "/*\n");
+	fprintf(f, " * .byte is 0-based.\n");
+	fprintf(f, " * .line and .col are 1-based; 0 means unknown.\n");
+	fprintf(f, " */\n");
 	fprintf(f, "struct lx_pos {\n");
 	fprintf(f, "\tunsigned byte;\n");
 	fprintf(f, "\tunsigned line;\n");
