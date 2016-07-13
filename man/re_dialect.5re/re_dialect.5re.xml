@@ -72,6 +72,20 @@
 					<td>&pcre.3;</td>
 					<td>Perl Compatible Regular Expressions</td>
 				</tr>
+				<tr>
+					<td><literal>js</literal></td>
+					<td><literal>RE_JS</literal></td>
+					<td>&yes;</td>
+					<td>TODO: link to ecma spec?</td>
+					<td>JavaScript Regular Expression</td> TODO: ecmascript? which version?
+				</tr>
+				<tr>
+					<td><literal>python</literal></td>
+					<td><literal>RE_PYTHON</literal></td>
+					<td>&yes;</td>
+					<td>TODO: link to python spec?</td>
+					<td>Python Regular Expression</td> TODO: which version?
+				</tr>
 -->
 				<tr>
 					<td><literal>literal</literal></td>

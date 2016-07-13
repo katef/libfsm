@@ -11,6 +11,8 @@ enum re_dialect {
 	RE_BRE,
 	RE_PLAN9,
 	RE_PCRE,
+	RE_JS,
+	RE_PYTHON,
 */
 	RE_LITERAL,
 	RE_GLOB,
