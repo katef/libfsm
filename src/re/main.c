@@ -577,7 +577,7 @@ main(int argc, char *argv[])
 				/* TODO: // delimeters depend on dialect */
 				/* TODO: would deal with dialect: prefix here, too */
 
-				fprintf(stderr, "ambigious matches for ");
+				fprintf(stderr, "ambiguous matches for ");
 				for (m = matches; m != NULL; m = m->next) {
 					/* TODO: print nicely */
 					fprintf(stderr, "/%s/", m->s);
