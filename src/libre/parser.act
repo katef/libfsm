@@ -363,7 +363,7 @@
 
 		u = strtoul(lex_state->buf.a, &e, 10);
 
-		if ((u == ULONG_MAX && errno == ERANGE) || u < 1 || u > UINT_MAX) {
+		if ((u == ULONG_MAX && errno == ERANGE) || u > UINT_MAX) {
 			err->e = RE_ECOUNTRANGE;
 			snprintdots(err->esc, sizeof err->esc, lex_state->buf.a);
 			@!;
@@ -580,13 +580,17 @@
 		struct fsm_state *a;
 		struct fsm_state *b;
 
-		assert(@m != 0);
-
 		if (@n < @m) {
 			err->e = RE_ENEGCOUNT;
 			err->m = @m;
 			err->n = @n;
 			@!;
+		}
+
+		if (@m == 0) {
+			if (!fsm_addedge_epsilon(fsm, @x, @y)) {
+				@!;
+			}
 		}
 
 		b = @y;
