@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 103 "src/libre/parser.act"
+#line 108 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -72,13 +72,18 @@
 		int overlap; /* permit overlap in groups */
 
 		/*
+		 * Lexical position stored for syntax errors.
+		 */
+		struct re_pos synstart;
+
+		/*
 		 * Lexical positions stored for errors which describe multiple tokens.
 		 * We're able to store these without needing a stack, because these are
 		 * non-recursive productions.
 		 */
-		struct lx_pos groupstart;
-		struct lx_pos rangestart;
-		struct lx_pos countstart;
+		struct re_pos groupstart; struct re_pos groupend;
+		struct re_pos rangestart; struct re_pos rangeend;
+		struct re_pos countstart; struct re_pos countend;
 	};
 
 	struct lex_state {
@@ -95,10 +100,20 @@
 
 	#define CURRENT_TERMINAL (act_state->lex_tok)
 	#define ERROR_TERMINAL   (TOK_ERROR)
-	#define ADVANCE_LEXER    do { act_state->lex_tok = LX_NEXT(&lex_state->lx); } while (0)
+	#define ADVANCE_LEXER    do { mark(&act_state->synstart, &lex_state->lx.start); \
+	                              act_state->lex_tok = LX_NEXT(&lex_state->lx); } while (0)
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
 	                              act_state->lex_tok = tok;                     } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
+
+	static void
+	mark(struct re_pos *r, const struct lx_pos *pos)
+	{
+		assert(r != NULL);
+		assert(pos != NULL);
+
+		r->byte = pos->byte;
+	}
 
 	/* TODO: centralise perhaps */
 	static void
@@ -183,7 +198,7 @@
 		return fputs(escchar(s, sizeof s, c), f);
 	}
 
-#line 187 "src/libre/dialect/glob/parser.c"
+#line 202 "src/libre/dialect/glob/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -213,21 +228,23 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 	{
 		t_char ZIc;
 		t_pos ZI65;
+		t_pos ZI66;
 
 		switch (CURRENT_TERMINAL) {
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 302 "src/libre/parser.act"
+#line 330 "src/libre/parser.act"
 
 		assert(lex_state->buf.a[0] != '\0');
 		assert(lex_state->buf.a[1] == '\0');
 
 		ZI65 = lex_state->lx.start;
+		ZI66   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 231 "src/libre/dialect/glob/parser.c"
+#line 248 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -237,7 +254,7 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-literal */
 		{
-#line 509 "src/libre/parser.act"
+#line 538 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -248,7 +265,7 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 			goto ZL1;
 		}
 	
-#line 252 "src/libre/dialect/glob/parser.c"
+#line 269 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: add-literal */
 	}
@@ -270,18 +287,18 @@ ZL2_list_Hof_Hatoms:;
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 485 "src/libre/parser.act"
+#line 514 "src/libre/parser.act"
 
 		(ZIz) = fsm_addstate(fsm);
 		if ((ZIz) == NULL) {
 			goto ZL1;
 		}
 	
-#line 281 "src/libre/dialect/glob/parser.c"
+#line 298 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hatoms_C_Catom (fsm, flags, lex_state, act_state, err, ZIx, &ZIz);
-		/* BEGINNING OF INLINE: 73 */
+		/* BEGINNING OF INLINE: 74 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_QMARK): case (TOK_STAR): case (TOK_CHAR):
@@ -296,13 +313,13 @@ ZL2_list_Hof_Hatoms:;
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 492 "src/libre/parser.act"
+#line 521 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIz), (ZIy))) {
 			goto ZL1;
 		}
 	
-#line 306 "src/libre/dialect/glob/parser.c"
+#line 323 "src/libre/dialect/glob/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -312,7 +329,7 @@ ZL2_list_Hof_Hatoms:;
 				goto ZL1;
 			}
 		}
-		/* END OF INLINE: 73 */
+		/* END OF INLINE: 74 */
 	}
 	return;
 ZL1:;
@@ -333,12 +350,12 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 			}
 			/* BEGINNING OF ACTION: count-1 */
 			{
-#line 645 "src/libre/parser.act"
+#line 678 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (*ZIy);
 	
-#line 342 "src/libre/dialect/glob/parser.c"
+#line 359 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: count-1 */
 		}
@@ -352,12 +369,12 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 			}
 			/* BEGINNING OF ACTION: count-1 */
 			{
-#line 645 "src/libre/parser.act"
+#line 678 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (*ZIy);
 	
-#line 361 "src/libre/dialect/glob/parser.c"
+#line 378 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: count-1 */
 		}
@@ -371,7 +388,7 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 			}
 			/* BEGINNING OF ACTION: count-0-or-many */
 			{
-#line 595 "src/libre/parser.act"
+#line 628 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (*ZIy))) {
 			goto ZL1;
@@ -398,7 +415,7 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 			(*ZIy) = z;
 		}
 	
-#line 402 "src/libre/dialect/glob/parser.c"
+#line 419 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: count-0-or-many */
 		}
@@ -430,7 +447,7 @@ p_list_Hof_Hatoms_C_Cany(fsm fsm, flags flags, lex_state lex_state, act_state ac
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-any */
 		{
-#line 520 "src/libre/parser.act"
+#line 549 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -439,7 +456,7 @@ p_list_Hof_Hatoms_C_Cany(fsm fsm, flags flags, lex_state lex_state, act_state ac
 			goto ZL1;
 		}
 	
-#line 443 "src/libre/dialect/glob/parser.c"
+#line 460 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: add-any */
 	}
@@ -465,7 +482,7 @@ p_list_Hof_Hatoms_C_Cwildcard(fsm fsm, flags flags, lex_state lex_state, act_sta
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-any */
 		{
-#line 520 "src/libre/parser.act"
+#line 549 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -474,7 +491,7 @@ p_list_Hof_Hatoms_C_Cwildcard(fsm fsm, flags flags, lex_state lex_state, act_sta
 			goto ZL1;
 		}
 	
-#line 478 "src/libre/dialect/glob/parser.c"
+#line 495 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: add-any */
 	}
@@ -496,7 +513,7 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 
 		/* BEGINNING OF ACTION: make-states */
 		{
-#line 365 "src/libre/parser.act"
+#line 394 "src/libre/parser.act"
 
 		assert(fsm != NULL);
 		/* TODO: assert fsm is empty */
@@ -511,10 +528,10 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 
 		fsm_setend(fsm, (ZIy), 1);
 	
-#line 515 "src/libre/dialect/glob/parser.c"
+#line 532 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: make-states */
-		/* BEGINNING OF INLINE: 75 */
+		/* BEGINNING OF INLINE: 76 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_QMARK): case (TOK_STAR): case (TOK_CHAR):
@@ -530,13 +547,13 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 492 "src/libre/parser.act"
+#line 521 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			goto ZL3;
 		}
 	
-#line 540 "src/libre/dialect/glob/parser.c"
+#line 557 "src/libre/dialect/glob/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -547,20 +564,20 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 			{
 				/* BEGINNING OF ACTION: err-expected-atoms */
 				{
-#line 666 "src/libre/parser.act"
+#line 699 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXATOMS;
 		}
 	
-#line 557 "src/libre/dialect/glob/parser.c"
+#line 574 "src/libre/dialect/glob/parser.c"
 				}
 				/* END OF ACTION: err-expected-atoms */
 			}
 		ZL2:;
 		}
-		/* END OF INLINE: 75 */
-		/* BEGINNING OF INLINE: 76 */
+		/* END OF INLINE: 76 */
+		/* BEGINNING OF INLINE: 77 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -576,19 +593,19 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 690 "src/libre/parser.act"
+#line 723 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
 		}
 	
-#line 586 "src/libre/dialect/glob/parser.c"
+#line 603 "src/libre/dialect/glob/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
 		ZL4:;
 		}
-		/* END OF INLINE: 76 */
+		/* END OF INLINE: 77 */
 	}
 	return;
 ZL1:;
@@ -598,7 +615,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 895 "src/libre/parser.act"
+#line 952 "src/libre/parser.act"
 
 
 	static int
@@ -683,35 +700,49 @@ ZL1:;
 
 	error:
 
+		assert(err->e & RE_MARK);
+
 		/*
-		 * TODO: Three situations for error markers:
+		 * Some errors describe multiple tokens; for these, the start and end
+		 * positions belong to potentially different tokens, and therefore need
+		 * to be stored statefully (in act_state). These are all from
+		 * non-recursive productions by design, and so a stack isn't needed.
 		 *
-		 * The default: err->u.pos.byte is the start of the next token.
-		 * This is approximately correct as the endpoint of an error,
-		 * but to be exactly correct, the endpoint for the current token
-		 * would need to be stored. This matters more when whitespace exists.
-		 * This should be done for all single-token lexical errors,
-		 * and is currently not implemented.
+		 * Lexical errors describe a problem with a single token; for these,
+		 * the start and end positions belong to that token.
 		 *
-		 * For RE_SYNTAX errors, a grammatical error is being described,
-		 * so the start of the next token is most relevant. This is a point
-		 * rather than a span. Maybe set a bit to indicate point vs. span.
-		 *
-		 * Some errors describe multiple tokens. For these, the start and end
-		 * bytes belong to different tokens, and therefore need to be stored
-		 * statefully. These are all from non-recursive productions, and so
-		 * a stack isn't needed.
+		 * Syntax errors occur at the first point the order of tokens is known
+		 * to be incorrect, rather than describing a span of bytes. For these,
+		 * the start of the next token is most relevant.
 		 */
 
 		switch (err->e) {
-		/* TODO: err->u.mark.start, err->u.mark.end */
-		case RE_EOVERLAP:  err->u.pos.byte = act_state->groupstart.byte; break;
-		case RE_ENEGRANGE: err->u.pos.byte = act_state->rangestart.byte; break;
-		case RE_ENEGCOUNT: err->u.pos.byte = act_state->countstart.byte; break;
+		/* TODO: .end to come from marking a lx_pos in the grammar */
+		case RE_EOVERLAP:  err->start = act_state->groupstart; err->end = act_state->groupend; break;
+		case RE_ENEGRANGE: err->start = act_state->rangestart; err->end = act_state->rangeend; break;
+		case RE_ENEGCOUNT: err->start = act_state->countstart; err->end = act_state->countend; break;
+
+		case RE_EHEXRANGE:
+		case RE_EOCTRANGE:
+		case RE_ECOUNTRANGE:
+			/*
+			 * Lexical errors: These are always generated for the current token,
+			 * so lx->start/end here is correct because ADVANCE_LEXER has
+			 * not been called.
+			 */
+			mark(&err->start, &lx->start);
+			mark(&err->end,   &lx->end);
+			break;
 
 		default:
-			/* TODO: For RE_SYNTAX only, as described above */
-			err->u.pos.byte = lx->start.byte;
+			/*
+			 * Due to LL(1) lookahead, lx->start/end is the next token.
+			 * This is approximately correct as the position of an error,
+			 * but to be exactly correct, we store the pos for the previous token.
+			 * This is more visible when whitespace exists.
+			 */
+			err->start = act_state->synstart;
+			err->end   = act_state->synstart; /* single point */
 			break;
 		}
 
@@ -750,8 +781,7 @@ ZL1:;
 
 	error:
 
-		err->e          = RE_EERRNO;
-		err->u.pos.byte = 0;
+		err->e = RE_EERRNO;
 
 		return NULL;
 	}
@@ -792,6 +822,6 @@ ZL1:;
 	}
 #endif
 
-#line 796 "src/libre/dialect/glob/parser.c"
+#line 826 "src/libre/dialect/glob/parser.c"
 
 /* END OF FILE */
