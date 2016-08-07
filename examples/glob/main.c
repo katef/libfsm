@@ -59,7 +59,7 @@ static int
 match(const struct fsm *fsm, const char *s)
 {
 	assert(fsm != NULL);
-	assert(fsm_predicate(fsm, fsm_isdfa));
+	assert(fsm_all(fsm, fsm_isdfa));
 	assert(s != NULL);
 
 	return fsm_exec(fsm, match_getc, &s);
