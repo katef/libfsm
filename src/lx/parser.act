@@ -662,15 +662,25 @@
 	@};
 
 	<op-intersect>: (a :fsm, b :fsm) -> (q :fsm) = @{
-		fprintf(stderr, "unimplemented\n");
-		@q = NULL;
-		@!;
+		assert(@a != NULL);
+		assert(@b != NULL);
+
+		@q = fsm_intersect(@a, @b);
+		if (@q == NULL) {
+			perror("fsm_intersect");
+			@!;
+		}
 	@};
 
 	<op-alt>: (a :fsm, b :fsm) -> (q :fsm) = @{
-		fprintf(stderr, "unimplemented\n");
-		@q = NULL;
-		@!;
+		assert(@a != NULL);
+		assert(@b != NULL);
+
+		@q = fsm_union(@a, @b);
+		if (@q == NULL) {
+			perror("fsm_union");
+			@!;
+		}
 	@};
 
 	<subtract-exit>: (a :fsm, b :fsm) -> (q :fsm) = @{
