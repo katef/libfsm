@@ -128,7 +128,8 @@ bm_print(FILE *f, const struct bm *bm,
 		mode = MODE_MANY;
 	}
 
-	/* TODO: would prefer to show ranges before other characters */
+	/* TODO: would prefer to show ranges before other characters.
+	 * maybe best to do that by splitting the bitmap, and using two passes */
 	/* XXX: all literal characters here really should go through escputc */
 
 	if (mode == MODE_ANY) {
