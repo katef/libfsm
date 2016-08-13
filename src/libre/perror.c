@@ -66,9 +66,9 @@ re_perror(enum re_dialect dialect, const struct re_err *err,
 	}
 
 	switch (err->e) {
-	case RE_EHEXRANGE:   fprintf(stderr, ": Hex escape %s out of range"   err->esc); break;
-	case RE_EOCTRANGE:   fprintf(stderr, ": Octal escape %s out of range" err->esc); break;
-	case RE_ECOUNTRANGE: fprintf(stderr, ": Count %s out of range"        err->esc); break;
+	case RE_EHEXRANGE:   fprintf(stderr, ": Hex escape %s out of range",   err->esc); break;
+	case RE_EOCTRANGE:   fprintf(stderr, ": Octal escape %s out of range", err->esc); break;
+	case RE_ECOUNTRANGE: fprintf(stderr, ": Count %s out of range",        err->esc); break;
 
 	default:
 		fprintf(stderr, ": %s", re_strerror(err->e));
