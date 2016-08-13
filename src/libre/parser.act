@@ -410,7 +410,11 @@
 
 	<invert-group>: (g :grp &) -> () = @{
 		bm_invert(&@&g->set);
-		bm_invert(&@&g->dup);
+
+		/*
+		 * Note we don't invert the dup set here; duplicates are always
+		 * kept in the positive.
+		 */
 	@};
 
 	<stash-group>: (g :grp &) -> () = @{
