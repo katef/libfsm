@@ -15,7 +15,7 @@ LEXER  += src/libre/dialect/${dialect}/lexer.lx
 PARSER += src/libre/dialect/${dialect}/parser.sid
 
 .for lexer in ${LEXER:Msrc/libre/dialect/${dialect}/lexer.lx}
-LX_CFLAGS_${lexer} += -p lx_${dialect}_ -b dyn
+LX_CFLAGS_${lexer} += -e lx_${dialect}_ -b dyn
 .endfor
 
 .for src in ${SRC:Msrc/libre/dialect/${dialect}/lexer.c}
