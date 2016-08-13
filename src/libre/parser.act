@@ -720,6 +720,12 @@
 		}
 	@};
 
+	<err-expected-groupbody> = @{
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EXGROUPBODY;
+		}
+	@};
+
 	<err-expected-eof> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;

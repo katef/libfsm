@@ -70,8 +70,9 @@ enum re_errno {
 	RE_EXALTS       =  6 | RE_MARK,
 	RE_EXRANGE      =  7 | RE_MARK,
 	RE_EXCLOSEGROUP =  8 | RE_MARK,
-	RE_EXEOF        =  9 | RE_MARK,
-	RE_EXESC        = 10 | RE_MARK
+	RE_EXGROUPBODY  =  9 | RE_MARK,
+	RE_EXEOF        = 10 | RE_MARK,
+	RE_EXESC        = 11 | RE_MARK
 };
 
 struct re_pos {

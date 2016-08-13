@@ -32,6 +32,7 @@ re_strerror(enum re_errno e)
 	case RE_EXALTS:       return "Syntax error: expected alternative list";
 	case RE_EXRANGE:      return "Syntax error: expected range separator";
 	case RE_EXCLOSEGROUP: return "Syntax error: group is not closed";
+	case RE_EXGROUPBODY:  return "Syntax error: expected group body";
 	case RE_EXEOF:        return "Syntax error: expected EOF";
 	case RE_EXESC:        return "Syntax error: expected character escape";
 	}
