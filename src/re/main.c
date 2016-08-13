@@ -298,6 +298,9 @@ main(int argc, char *argv[])
 	enum fsm_out format;
 	enum re_dialect dialect;
 	struct fsm *fsm;
+	enum re_flags flags;
+	int files;
+	int dump;
 	int ifiles, xfiles;
 	int boxed;
 	int print;
@@ -450,6 +453,11 @@ main(int argc, char *argv[])
 		ambig = 1;
 	}
 
+	if (-1 == re_flags("m", &flags)) {
+		perror("re_flags");
+		return EXIT_FAILURE;
+	}
+
 	fsm = fsm_new();
 	if (fsm == NULL) {
 		perror("fsm_new");
@@ -477,7 +485,7 @@ main(int argc, char *argv[])
 
 				f = xopen(argv[i]);
 
-				new = re_comp(dialect, re_fgetc, f, 0, &err);
+				new = re_comp(dialect, re_fgetc, f, flags, &err);
 
 				fclose(f);
 			} else {
@@ -485,7 +493,7 @@ main(int argc, char *argv[])
 
 				s = argv[i];
 
-				new = re_comp(dialect, re_sgetc, &s, 0, &err);
+				new = re_comp(dialect, re_sgetc, &s, flags, &err);
 			}
 
 			if (new == NULL) {
