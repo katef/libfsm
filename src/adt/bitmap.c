@@ -112,20 +112,16 @@ bm_print(FILE *f, const struct bm *bm,
 
 	count = bm_count(bm);
 
-	if (count == 1) {
+	if (count == 1 && !boxed) {
 		mode = MODE_SINGLE;
 	} else if (bm_next(bm, UCHAR_MAX, 1) != FSM_EDGE_MAX + 1) {
 		mode = MODE_MANY;
-	} else if (count == UCHAR_MAX + 1) {
+	} else if (count == UCHAR_MAX + 1 && !boxed) {
 		mode = MODE_ANY;
 	} else if (count <= UCHAR_MAX / 2) {
 		mode = MODE_MANY;
 	} else {
 		mode = MODE_INVERT;
-	}
-
-	if (boxed && (mode == MODE_SINGLE || mode == MODE_ANY)) {
-		mode = MODE_MANY;
 	}
 
 	/* TODO: would prefer to show ranges before other characters.
