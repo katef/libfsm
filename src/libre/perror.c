@@ -66,20 +66,9 @@ re_perror(enum re_dialect dialect, const struct re_err *err,
 	}
 
 	switch (err->e) {
-	case RE_EHEXRANGE:
-		fprintf(stderr, ": Hex escape %s out of range: expected \\0..\\x%X inclusive",
-			err->esc, UCHAR_MAX);
-		break;
-
-	case RE_EOCTRANGE:
-		fprintf(stderr, ": Octal escape %s out of range: expected \\0..\\%o inclusive",
-			err->esc, UCHAR_MAX);
-		break;
-
-	case RE_ECOUNTRANGE:
-		fprintf(stderr, ": Count %s out of range: expected 1..%u inclusive",
-			err->esc, UINT_MAX);
-		break;
+	case RE_EHEXRANGE:   fprintf(stderr, ": Hex escape %s out of range"   err->esc); break;
+	case RE_EOCTRANGE:   fprintf(stderr, ": Octal escape %s out of range" err->esc); break;
+	case RE_ECOUNTRANGE: fprintf(stderr, ": Count %s out of range"        err->esc); break;
 
 	default:
 		fprintf(stderr, ": %s", re_strerror(err->e));
@@ -87,17 +76,12 @@ re_perror(enum re_dialect dialect, const struct re_err *err,
 	}
 
 	switch (err->e) {
-	case RE_EXESC:
-		fprintf(stderr, " \\0..\\x%X inclusive", UCHAR_MAX);
-		break;
-
-	case RE_EXCOUNT:
-		fprintf(stderr, " 1..%u inclusive", UINT_MAX);
-		break;
-
-	case RE_ENEGCOUNT:
-		fprintf(stderr, " {%u,%u}", err->m, err->n);
-		break;
+	case RE_EHEXRANGE:   fprintf(stderr, ": expected \\0..\\x%X inclusive", UCHAR_MAX); break;
+	case RE_EOCTRANGE:   fprintf(stderr, ": expected \\0..\\%o inclusive",  UCHAR_MAX); break;
+	case RE_ECOUNTRANGE: fprintf(stderr, ": expected 1..%u inclusive",      UINT_MAX);  break;
+	case RE_EXESC:       fprintf(stderr, " \\0..\\x%X inclusive",           UCHAR_MAX); break;
+	case RE_EXCOUNT:     fprintf(stderr, " 1..%u inclusive",                UINT_MAX);  break;
+	case RE_ENEGCOUNT:   fprintf(stderr, " {%u,%u}",                   err->m, err->n); break;
 	}
 
 	switch (err->e) {
