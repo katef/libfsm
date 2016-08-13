@@ -20,7 +20,7 @@ DFLAGS_${src} += -D LX_HEADER='"lexer.h"'
 LEXER  += src/lx/lexer.lx
 PARSER += src/lx/parser.sid
 
-LX_CFLAGS_src/lx/lexer.lx += -b dyn -c fgetc
+LX_CFLAGS_src/lx/lexer.lx += -b dyn -g fgetc
 
 PROG += lx
 
