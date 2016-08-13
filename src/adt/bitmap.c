@@ -265,7 +265,7 @@ bm_snprint(const struct bm *bm, char *s, size_t n,
 	assert(s != NULL);
 
 	/*
-	 * I don't two sets of escputc functions (for strings and files),
+	 * I didn't want two sets of escputc functions (for strings and files),
 	 * so I've nominated to use FILE * as the common interface,
 	 * in order to keep just one kind of escputc.
 	 *
