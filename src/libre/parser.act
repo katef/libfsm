@@ -411,6 +411,10 @@
 	@};
 
 	<invert-group>: (g :grp &) -> () = @{
+		/*
+		 * The bm struct is limited to 0..UCHAR_MAX only; special edges up to
+		 * FSM_EDGE_MAX are not present, and so do not get inverted here.
+		 */
 		bm_invert(&@&g->set);
 
 		/*

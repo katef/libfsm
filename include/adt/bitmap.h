@@ -6,7 +6,7 @@
 struct fsm_state;
 
 struct bm {
-	unsigned char map[FSM_EDGE_MAX / CHAR_BIT + 1];
+	unsigned char map[UCHAR_MAX / CHAR_BIT + 1];
 };
 
 int

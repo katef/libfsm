@@ -14,7 +14,7 @@ struct fsm_outoptions {
 
 	/* boolean: true indicates to optmise aesthetically during output by
 	 * consolidating similar edges, and outputting a single edge with a more
-	 * concise label. */
+	 * concise label. Only character edges are consolidated. */
 	unsigned int consolidate_edges:1;
 
 	/* boolean: true indicates to produce a fragment of code as output, rather

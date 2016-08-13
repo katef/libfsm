@@ -158,7 +158,8 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 	 * To implement this, we loop through all unique states, rather than
 	 * looping through each edge.
 	 */
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+	/* TODO: handle special edges upto FSM_EDGE_MAX separately */
+	for (i = 0; i <= UCHAR_MAX; i++) {
 		for (e = s->edges[i].sl; e != NULL; e = e->next) {
 			struct bm bm;
 			int k;
@@ -173,7 +174,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 			bm_clear(&bm);
 
 			/* find all edges which go from this state to the same target state */
-			for (k = 0; k <= FSM_EDGE_MAX; k++) {
+			for (k = 0; k <= UCHAR_MAX; k++) {
 				if (set_contains(s->edges[k].sl, e->state)) {
 					bm_set(&bm, k);
 				}
@@ -186,6 +187,23 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 				indexof(fsm, e->state));
 
 			(void) bm_print(f, &bm, 0, escputc);
+
+			fprintf(f, "> ];\n");
+		}
+	}
+
+	/*
+	 * Special edges are not consolidated above
+	 */
+	for (i = UCHAR_MAX; i <= FSM_EDGE_MAX; i++) {
+		for (e = s->edges[i].sl; e != NULL; e = e->next) {
+			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
+				options->prefix != NULL ? options->prefix : "",
+				indexof(fsm, s),
+				options->prefix != NULL ? options->prefix : "",
+				indexof(fsm, e->state));
+
+			escputc(i, f);
 
 			fprintf(f, "> ];\n");
 		}

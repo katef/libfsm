@@ -13,7 +13,7 @@ int
 bm_get(const struct bm *bm, size_t i)
 {
 	assert(bm != NULL);
-	assert(i <= FSM_EDGE_MAX);
+	assert(i <= UCHAR_MAX);
 
 	return bm->map[i / CHAR_BIT] & (1 << i % CHAR_BIT);
 }
@@ -22,7 +22,7 @@ void
 bm_set(struct bm *bm, size_t i)
 {
 	assert(bm != NULL);
-	assert(i <= FSM_EDGE_MAX);
+	assert(i <= UCHAR_MAX);
 
 	bm->map[i / CHAR_BIT] |=  (1 << i % CHAR_BIT);
 }
@@ -33,17 +33,17 @@ bm_next(const struct bm *bm, int i, int value)
 	size_t n;
 
 	assert(bm != NULL);
-	assert(i / CHAR_BIT < FSM_EDGE_MAX);
+	assert(i / CHAR_BIT < UCHAR_MAX);
 
 	/* this could be faster by incrementing per element instead of per bit */
-	for (n = i + 1; n <= FSM_EDGE_MAX; n++) {
+	for (n = i + 1; n <= UCHAR_MAX; n++) {
 		/* ...and this could be faster by using peter wegner's method */
 		if (!(bm->map[n / CHAR_BIT] & (1 << n % CHAR_BIT)) == !value) {
 			return n;
 		}
 	}
 
-	return FSM_EDGE_MAX + 1;
+	return UCHAR_MAX + 1;
 }
 
 unsigned int
@@ -114,7 +114,7 @@ bm_print(FILE *f, const struct bm *bm,
 
 	if (count == 1 && !boxed) {
 		mode = MODE_SINGLE;
-	} else if (bm_next(bm, UCHAR_MAX, 1) != FSM_EDGE_MAX + 1) {
+	} else if (bm_next(bm, UCHAR_MAX, 1) != UCHAR_MAX + 1) {
 		mode = MODE_MANY;
 	} else if (count == UCHAR_MAX + 1 && !boxed) {
 		mode = MODE_ANY;
