@@ -69,6 +69,7 @@
 	<err-expected-eof>;
 
 	!<mark-begin>: () -> (:pos);
+	!<mark-end>:   () -> (:pos);
 	!<mark-group>: (:pos, :pos) -> ();
 	!<mark-range>: (:pos, :pos) -> ();
 	!<mark-count>: (:pos, :pos) -> ();

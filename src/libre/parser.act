@@ -81,6 +81,7 @@
 		 * Lexical position stored for syntax errors.
 		 */
 		struct re_pos synstart;
+		struct re_pos synend;
 
 		/*
 		 * Lexical positions stored for errors which describe multiple tokens.
@@ -107,6 +108,7 @@
 	#define CURRENT_TERMINAL (act_state->lex_tok)
 	#define ERROR_TERMINAL   @$ERROR
 	#define ADVANCE_LEXER    do { mark(&act_state->synstart, &lex_state->lx.start); \
+	                              mark(&act_state->synend,   &lex_state->lx.end);   \
 	                              act_state->lex_tok = LX_NEXT(&lex_state->lx); } while (0)
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
 	                              act_state->lex_tok = tok;                     } while (0)
@@ -738,6 +740,16 @@
 		@pos.col  = 1;
 	@};
 
+	<mark-end>: () -> (pos :pos) = @{
+		/*
+		 * Assuming <mark-end> is called when there are no more tokens,
+		 * the end of the lexical stream is the end of the current token.
+		 */
+		@pos.byte = act_state->synend.byte;
+		@pos.line = 0; /* dummy */
+		@pos.col  = 0; /* dummy */
+	@};
+
 	<mark-group>: (start :pos, end :pos) -> () = @{
 		mark(&act_state->groupstart, &@start);
 		mark(&act_state->groupend,   &@end);
@@ -854,7 +866,6 @@
 		 */
 
 		switch (err->e) {
-		/* TODO: .end to come from marking a lx_pos in the grammar */
 		case RE_EOVERLAP:  err->start = act_state->groupstart; err->end = act_state->groupend; break;
 		case RE_ENEGRANGE: err->start = act_state->rangestart; err->end = act_state->rangeend; break;
 		case RE_ENEGCOUNT: err->start = act_state->countstart; err->end = act_state->countend; break;

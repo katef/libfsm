@@ -75,6 +75,7 @@
 	<err-expected-eof>;
 
 	<mark-begin>: () -> (:pos);
+	<mark-end>:   () -> (:pos);
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();
 	<mark-count>: (:pos, :pos) -> ();
@@ -191,7 +192,8 @@
 
 			group-bm(&g);
 
-end = start; /* XXX: proper end of stream */
+			end = <mark-end>;
+
 			<mark-group>(start, end);
 			<stash-group>(&g);
 		};
@@ -205,7 +207,7 @@ end = start; /* XXX: proper end of stream */
 
 		{
 			(!, !, end) = CLOSEGROUP;
-<mark-group>(start, end);
+			<mark-group>(start, end);
 		##
 			<err-expected-closegroup>;
 		};
