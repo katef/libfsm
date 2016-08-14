@@ -171,11 +171,22 @@
 		};
 
 		group-bm: (g :grp &) -> () = {
-			! = INVERT;
-			group-body(&g);
-			<invert-group>(&g);
-		||
-			group-body(&g);
+			(start, !) = OPENGROUP;
+
+			{
+				! = INVERT;
+				group-body(&g);
+				<invert-group>(&g);
+			||
+				group-body(&g);
+			};
+
+			{
+				(!, !, end) = CLOSEGROUP;
+				<mark-group>(start, end);
+			##
+				<err-expected-closegroup>;
+			};
 		##
 			<err-expected-groupbody>;
 		};
@@ -199,8 +210,6 @@
 		};
 
 	] = {
-		(start, !) = OPENGROUP;
-
 		g = <make-group>;
 
 		group-bm(&g);

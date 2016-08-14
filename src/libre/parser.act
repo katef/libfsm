@@ -100,6 +100,9 @@
 		int (*f)(void *opaque);
 		void *opaque;
 
+		/* for lgetc()'s character-shoving */
+		enum { SHOVE_PRE, SHOVE_MID, SHOVE_NONE } shove;
+
 		/* TODO: use lx's generated conveniences for the pattern buffer */
 		char a[512];
 		char *p;
@@ -774,7 +777,8 @@
 	static int
 	lgetc(struct LX_STATE *lx)
 	{
-		const struct lex_state *lex_state;
+		struct lex_state *lex_state;
+		int c;
 
 		assert(lx != NULL);
 		assert(lx->opaque != NULL);
@@ -783,7 +787,24 @@
 
 		assert(lex_state->f != NULL);
 
-		return lex_state->f(lex_state->opaque);
+		/* TODO: document character-shoving FSM */
+		/* XXX: pos will be wrong! decrement it. as if our shoved character didn't exist */
+
+		switch (lex_state->shove) {
+		case SHOVE_PRE:
+			return lex_state->shove = SHOVE_MID, '[';
+
+		case SHOVE_MID:
+			c = lex_state->f(lex_state->opaque);
+			if (c == EOF) {
+				return lex_state->shove = SHOVE_NONE, ']';
+			}
+			return c;
+
+		case SHOVE_NONE:
+			return lex_state->f(lex_state->opaque);
+		}
+
 	}
 
 	static int
@@ -820,10 +841,22 @@
 		lex_state->f       = f;
 		lex_state->opaque  = opaque;
 
+#ifdef PARSE_GROUP
+/* XXX: information leak; i don't like breaking abstraction here. maybe pass in shove instead */
+/* or: store start and end pointers as char *, and make an action: <shove>("[", "]"); */
+		if (entry == DIALECT_GROUP_ENTRY) {
+			lex_state->shove = SHOVE_PRE;
+		} else
+#endif
+		{
+			lex_state->shove = SHOVE_NONE;
+		}
+
 		lex_state->buf.a   = NULL;
 		lex_state->buf.len = 0;
 
 		/* XXX: unneccessary since we're lexing from a string */
+		/* (except for pushing "[" and "]" around ::group-$dialect) */
 		lx->buf   = &lex_state->buf;
 		lx->push  = CAT(LX_PREFIX, _dynpush);
 		lx->pop   = CAT(LX_PREFIX, _dynpop);
