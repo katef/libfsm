@@ -45,10 +45,10 @@
 
 	#define LX_PREFIX CAT(lx_, DIALECT)
 
-	#define LX_TOKEN  CAT(LX_PREFIX, _token)
-	#define LX_STATE  CAT(LX_PREFIX, _lx)
-	#define LX_NEXT   CAT(LX_PREFIX, _next)
-	#define LX_INIT   CAT(LX_PREFIX, _init)
+	#define LX_TOKEN   CAT(LX_PREFIX, _token)
+	#define LX_STATE   CAT(LX_PREFIX, _lx)
+	#define LX_NEXT    CAT(LX_PREFIX, _next)
+	#define LX_INIT    CAT(LX_PREFIX, _init)
 
 	#define DIALECT_COMP  CAT(comp_, DIALECT)
 	#define DIALECT_GROUP CAT(group_, DIALECT)
@@ -100,8 +100,11 @@
 		int (*f)(void *opaque);
 		void *opaque;
 
-		/* for lgetc()'s character-shoving */
-		enum { SHOVE_PRE, SHOVE_MID, SHOVE_NONE } shove;
+		struct {
+			const char *pre;
+			const char *post;
+			enum { SHOVE_PRE, SHOVE_F, SHOVE_POST } state;
+		} shove;
 
 		/* TODO: use lx's generated conveniences for the pattern buffer */
 		char a[512];
@@ -787,25 +790,66 @@
 
 		assert(lex_state->f != NULL);
 
-		/* TODO: document character-shoving FSM */
+		return lex_state->f(lex_state->opaque);
+	}
+
+#ifdef PARSE_GROUP
+	static int
+	lshovec(struct LX_STATE *lx)
+	{
+		struct lex_state *lex_state;
+		int c;
+
+		assert(lx != NULL);
+		assert(lx->opaque != NULL);
+
+		lex_state = lx->opaque;
+
+		assert(lex_state->shove.pre  != NULL);
+		assert(lex_state->shove.post != NULL);
+
+		/*
+		 * Characters are shoved into the input stream by a cheesy FSM which walks
+		 * three input sources in turn; a string to prepend, the lgetc stream,
+		 * and a string to append after the lgetc stream.
+		 * These strings needn't be spellings for complete tokens.
+		 */
+
 		/* XXX: pos will be wrong! decrement it. as if our shoved character didn't exist */
 
-		switch (lex_state->shove) {
-		case SHOVE_PRE:
-			return lex_state->shove = SHOVE_MID, '[';
+		for (;;) {
+			switch (lex_state->shove.state) {
+			case SHOVE_PRE:
+				c = *lex_state->shove.pre;
+				if (c == '\0') {
+					lex_state->shove.state = SHOVE_F;
+					continue;
+				}
 
-		case SHOVE_MID:
-			c = lex_state->f(lex_state->opaque);
-			if (c == EOF) {
-				return lex_state->shove = SHOVE_NONE, ']';
+				lex_state->shove.pre++;
+				return c;
+
+			case SHOVE_F:
+				c = lgetc(lx);
+				if (c == EOF) {
+					lex_state->shove.state = SHOVE_POST;
+					continue;
+				}
+
+				return c;
+
+			case SHOVE_POST:
+				c = *lex_state->shove.post;
+				if (c == '\0') {
+					return EOF;
+				}
+
+				lex_state->shove.post++;
+				return c;
 			}
-			return c;
-
-		case SHOVE_NONE:
-			return lex_state->f(lex_state->opaque);
 		}
-
 	}
+#endif
 
 	static int
 	parse(int (*f)(void *opaque), void *opaque,
@@ -842,15 +886,15 @@
 		lex_state->opaque  = opaque;
 
 #ifdef PARSE_GROUP
-/* XXX: information leak; i don't like breaking abstraction here. maybe pass in shove instead */
-/* or: store start and end pointers as char *, and make an action: <shove>("[", "]"); */
+/* XXX: information leak; i don't like breaking abstraction here. maybe pass in lgetc and lex_state->shove instead */
 		if (entry == DIALECT_GROUP_ENTRY) {
-			lex_state->shove = SHOVE_PRE;
-		} else
-#endif
-		{
-			lex_state->shove = SHOVE_NONE;
+			lex_state->shove.pre   = "[";
+			lex_state->shove.post  = "]";
+			lex_state->shove.state = SHOVE_PRE;
+
+			lx->lgetc  = lshovec;
 		}
+#endif
 
 		lex_state->buf.a   = NULL;
 		lex_state->buf.len = 0;
