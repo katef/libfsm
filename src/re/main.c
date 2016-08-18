@@ -299,8 +299,6 @@ main(int argc, char *argv[])
 	enum re_dialect dialect;
 	struct fsm *fsm;
 	enum re_flags flags;
-	int files;
-	int dump;
 	int ifiles, xfiles;
 	int boxed;
 	int print;
