@@ -230,14 +230,6 @@ bm_print(FILE *f, const struct bm *bm,
 		}
 	}
 
-	if (bm_get(bm, FSM_EDGE_EPSILON)) {
-		r = escputc(FSM_EDGE_EPSILON, f);
-		if (r == -1) {
-			return -1;
-		}
-		n += r;
-	}
-
 	r = fprintf(f, "%s", mode == MODE_SINGLE ? "" : "]");
 	if (r == -1) {
 		return -1;
