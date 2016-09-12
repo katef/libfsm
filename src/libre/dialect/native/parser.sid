@@ -214,13 +214,6 @@
 
 		group-bm(&g);
 
-		{
-			(!, !, end) = CLOSEGROUP;
-			<mark-group>(start, end);
-		##
-			<err-expected-closegroup>;
-		};
-
 		<group-to-states>(&g, x, y);
 	};
 
