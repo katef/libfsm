@@ -501,7 +501,6 @@ main(int argc, char *argv[])
 				if (s->opaque != NULL) {
 					m = s->opaque;
 
-					assert(m->next == NULL);
 					assert(m->fsm == NULL);
 
 					/* TODO: free m->conflict, allocated in carryopaque */
