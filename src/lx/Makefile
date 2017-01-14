@@ -4,7 +4,6 @@ SRC += src/lx/ast.c
 SRC += src/lx/lexer.c
 SRC += src/lx/parser.c
 SRC += src/lx/main.c
-SRC += src/lx/out.c
 SRC += src/lx/var.c
 
 .for src in ${SRC:Msrc/lx/parser.c} ${SRC:Msrc/lx/main.c}

@@ -19,7 +19,6 @@
 #include <re/re.h>
 
 #include "parser.h"
-#include "internal.h"
 
 #include "libfsm/internal.h" /* XXX */
 
@@ -30,6 +29,12 @@
 enum api_tokbuf api_tokbuf;
 enum api_getc   api_getc;
 
+struct prefix prefix = {
+	"lx_",
+	"TOK_",
+	""
+};
+
 static
 void usage(void)
 {
@@ -37,26 +42,27 @@ void usage(void)
 	printf("       lx -h\n");
 }
 
-static enum lx_out
-language(const char *name)
+static void
+(*language(const char *name))
+(const struct ast *ast, FILE *f)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		enum lx_out format;
+		void (*out)(const struct ast *ast, FILE *f);
 	} a[] = {
-		{ "test", LX_OUT_TEST },
-		{ "dot",  LX_OUT_DOT  },
-		{ "c",    LX_OUT_C    },
-		{ "h",    LX_OUT_H    }
+		{ "test", NULL       },
+		{ "dot",  lx_out_dot },
+		{ "c",    lx_out_c   },
+		{ "h",    lx_out_h   }
 	};
 
 	assert(name != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].format;
+			return a[i].out;
 		}
 	}
 
@@ -254,7 +260,7 @@ int
 main(int argc, char *argv[])
 {
 	struct ast *ast;
-	enum lx_out format = LX_OUT_C;
+	void (*out)(const struct ast *ast, FILE *f) = lx_out_c;
 	int keep_nfa;
 
 	keep_nfa = 0;
@@ -281,7 +287,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'l':
-				format = language(optarg);
+				out = language(optarg);
 				break;
 
 			case 'n':
@@ -308,17 +314,17 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (keep_nfa && format != LX_OUT_DOT) {
+	if (keep_nfa && out != lx_out_dot) {
 		fprintf(stderr, "-n is for .dot output only\n");
 		return EXIT_FAILURE;
 	}
 
-	if (api_tokbuf && (format != LX_OUT_C && format != LX_OUT_H)) {
+	if (api_tokbuf && (out != lx_out_c && out != lx_out_h)) {
 		fprintf(stderr, "-b is for .c/.h output only\n");
 		return EXIT_FAILURE;
 	}
 
-	if (api_getc && (format != LX_OUT_C && format != LX_OUT_H)) {
+	if (api_getc && (out != lx_out_c && out != lx_out_h)) {
 		fprintf(stderr, "-c is for .c/.h output only\n");
 		return EXIT_FAILURE;
 	}
@@ -480,7 +486,7 @@ main(int argc, char *argv[])
 			}
 		}
 
-		if (e && format != LX_OUT_DOT) {
+		if (e && out != lx_out_dot) {
 			return EXIT_FAILURE;
 		}
 	}
@@ -510,7 +516,9 @@ main(int argc, char *argv[])
 		}
 	}
 
-	lx_print(ast, stdout, format);
+	if (out != NULL) {
+		out(ast, stdout);
+	}
 
 	return EXIT_SUCCESS;
 }

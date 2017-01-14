@@ -12,7 +12,6 @@
 #include "libfsm/internal.h" /* XXX */
 
 #include "../ast.h"
-#include "../internal.h"
 
 #include "out.h"
 
