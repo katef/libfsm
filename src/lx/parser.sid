@@ -289,6 +289,41 @@
 			<add-binding>(a, z, n, q);
 		};
 
+		oneway-thing: (a :ast, parent :zone, exit :fsm) -> () = {
+			(r1, t1) = token-mapping(parent);
+
+			q1 = <subtract-exit>(r1, exit);
+
+			/*
+			 * A "one-way" zone. The lexer can enter, but never exit.
+			 * These zones cannot be implicit; there must be a body.
+			 */
+
+			r2 = <no-exit>;
+
+			child = <make-zone>(a, parent);
+
+			<add-mapping>(a, parent, child, q1, t1);
+
+			{
+				{
+					OPEN;
+				##
+					<err-expected-open>;
+				};
+
+				list-of-things(a, child, r2);
+
+				{
+					CLOSE;
+				##
+					<err-expected-close>;
+				};
+			##
+				<err-expected-list>;
+			};
+		};
+
 		zone-thing: (a :ast, parent :zone, exit :fsm) -> () = {
 			(r1, t1) = token-mapping(parent);
 
@@ -303,6 +338,9 @@
 			(r2, t2) = token-mapping(parent);
 
 			child = <make-zone>(a, parent);
+
+			<add-mapping>(a, parent, child, q1, t1);
+			<add-mapping>(a, child, parent, r2, t2);
 
 			{
 				{
@@ -356,9 +394,6 @@
 			##
 				<err-expected-list>;
 			};
-
-			<add-mapping>(a, parent, child, q1, t1);
-			<add-mapping>(a, child, parent, r2, t2);
 		};
 
 		/*
@@ -380,6 +415,8 @@
 			bind-thing(a, z, exit);
 		||
 			zone-thing(a, z, exit);
+		||
+			oneway-thing(a, z, exit);
 		##
 			<err-expected-thing>;
 		};
