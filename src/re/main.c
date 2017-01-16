@@ -385,6 +385,11 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	if (print + example + group && xfiles) {
+		fprintf(stderr, "-x applies only when executing\n");
+		return EXIT_FAILURE;
+	}
+
 	if (boxed && !group) {
 		fprintf(stderr, "-b applies for -g only\n");
 		return EXIT_FAILURE;
