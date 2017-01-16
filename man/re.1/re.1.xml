@@ -27,7 +27,7 @@
 	<!ENTITY m.opt "<option>-m</option>">
 	<!ENTITY n.opt "<option>-n</option>">
 	<!ENTITY p.opt "<option>-p</option>">
-	<!ENTITY q.opt "<option>-q</option>">
+	<!ENTITY z.opt "<option>-z</option>">
 	<!ENTITY s.opt "<option>-s</option>">
 	<!ENTITY u.opt "<option>-u</option>">
 	<!ENTITY x.opt "<option>-x</option>">
@@ -71,9 +71,9 @@ group
 			<group>
 				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&n.opt;</arg>
-				<arg choice="plain">&q.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&s.opt;</arg>
+				<arg choice="plain">&z.opt;</arg>
 			</group>
 
 			<arg choice="opt">&a.opt;</arg>
@@ -99,9 +99,9 @@ group
 			<group>
 				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&n.opt;</arg>
-				<arg choice="plain">&q.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&s.opt;</arg>
+				<arg choice="plain">&z.opt;</arg>
 			</group>
 
 			<sbr/>
@@ -119,9 +119,9 @@ group
 			<group>
 				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&n.opt;</arg>
-				<arg choice="plain">&q.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&s.opt;</arg>
+				<arg choice="plain">&z.opt;</arg>
 			</group>
 
 			<sbr/>
@@ -414,7 +414,7 @@ group (for dialects which have them) (rather than a "whole" regexp)
 			</varlistentry>
 
 			<varlistentry>
-				<term>&q.opt;</term>
+				<term>&z.opt;</term>
 
 				<listitem>
 					<para>Print the regexps responsible for each item of output.
@@ -423,7 +423,7 @@ group (for dialects which have them) (rather than a "whole" regexp)
 						When the &u.opt; option is present,
 						multiple regexps may be associated with each item.</para>
 
-					<para>The &q.opt; option is not permitted when invoked in
+					<para>The &z.opt; option is not permitted when invoked in
 						group mode (&g.opt;).</para>
 				</listitem>
 			</varlistentry>

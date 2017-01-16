@@ -37,9 +37,9 @@ struct match {
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re    [-r <dialect>] [-inqus] [-x] <re> ... [ <text> | -- <text> ... ]\n");
-	fprintf(stderr, "       re -p [-r <dialect>] [-inqus] [-l <language>] [-awc] [-e <prefix>] <re> ...\n");
-	fprintf(stderr, "       re -m [-r <dialect>] [-inqus] <re> ...\n");
+	fprintf(stderr, "usage: re    [-r <dialect>] [-inusz] [-x] <re> ... [ <text> | -- <text> ... ]\n");
+	fprintf(stderr, "       re -p [-r <dialect>] [-inusz] [-l <language>] [-awc] [-e <prefix>] <re> ...\n");
+	fprintf(stderr, "       re -m [-r <dialect>] [-inusz] <re> ...\n");
 	fprintf(stderr, "       re -g [-r <dialect>] [-iub] <group>\n");
 	fprintf(stderr, "       re -h\n");
 }
@@ -332,7 +332,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwe:" "sr:l:" "ubpgixmnq"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwe:" "sr:l:" "ubpgixmnz"), c != -1) {
 			switch (c) {
 			case 'a': o.anonymous_states  = 0;       break;
 			case 'c': o.consolidate_edges = 0;       break;
@@ -359,7 +359,7 @@ main(int argc, char *argv[])
 			case 'x': xfiles   = 1; break;
 			case 'm': example  = 1; break;
 			case 'n': keep_nfa = 1; break;
-			case 'q': patterns = 1; break;
+			case 'z': patterns = 1; break;
 
 			case 'h':
 				usage();
@@ -392,7 +392,7 @@ main(int argc, char *argv[])
 	}
 
 	if (patterns && group) {
-		fprintf(stderr, "-q does not apply for groups\n");
+		fprintf(stderr, "-z does not apply for groups\n");
 		return EXIT_FAILURE;
 	}
 
@@ -402,7 +402,7 @@ main(int argc, char *argv[])
 	}
 
 	if (join == fsm_concat && patterns) {
-		fprintf(stderr, "-s is not implemented when printing patterns by -q\n");
+		fprintf(stderr, "-s is not implemented when printing patterns by -z\n");
 		return EXIT_FAILURE;
 	}
 
@@ -545,7 +545,7 @@ main(int argc, char *argv[])
 				}
 			}
 
-			/* TODO: implement concatenating patterns for -s in conjunction with -q.
+			/* TODO: implement concatenating patterns for -s in conjunction with -z.
 			 * Note that depends on the regexp dialect */
 
 			fsm = join(fsm, new);
