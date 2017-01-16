@@ -828,23 +828,26 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		for (s = z->fsm->sl; s != NULL; s = s->next) {
 			fprintf(f, "\t\tcase S%u:", indexof(z->fsm, s));
 
-			if (s == z->fsm->start) {
-				fprintf(f, " /* start */\n");
-			} else {
-				char buf[50];
-				int n;
+			if (~api_exclude & API_COMMENTS) {
+				if (s == z->fsm->start) {
+					fprintf(f, " /* start */");
+				} else {
+					char buf[50];
+					int n;
 
-				n = fsm_example(z->fsm, s, buf, sizeof buf);
-				if (-1 == n) {
-					perror("fsm_example");
-					return -1;
+					n = fsm_example(z->fsm, s, buf, sizeof buf);
+					if (-1 == n) {
+						perror("fsm_example");
+						return -1;
+					}
+
+					fprintf(f, " /* e.g. \"");
+					escputs(f, buf);
+					fprintf(f, "%s\" */",
+						n >= (int) sizeof buf - 1 ? "..." : "");
 				}
-
-				fprintf(f, " /* e.g. \"");
-				escputs(f, buf);
-				fprintf(f, "%s\" */\n",
-					n >= (int) sizeof buf - 1 ? "..." : "");
 			}
+			fprintf(f, "\n");
 
 			singlecase(f, ast, z, z->fsm, s);
 
@@ -1058,10 +1061,14 @@ lx_out_c(const struct ast *ast, FILE *f)
 		}
 	}
 
-	out_name(f, ast);
+	if (~api_exclude & API_NAME) {
+		out_name(f, ast);
+	}
 
-	if (-1 == out_example(f, ast)) {
-		return;
+	if (~api_exclude & API_EXAMPLE) {
+		if (-1 == out_example(f, ast)) {
+			return;
+		}
 	}
 
 	{

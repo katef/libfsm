@@ -26,8 +26,9 @@
 
 #include "ast.h"
 
-enum api_tokbuf api_tokbuf;
-enum api_getc   api_getc;
+enum api_tokbuf  api_tokbuf;
+enum api_getc    api_getc;
+enum api_exclude api_exclude;
 
 struct prefix prefix = {
 	"lx_",
@@ -38,7 +39,7 @@ struct prefix prefix = {
 static
 void usage(void)
 {
-	printf("usage: lx [-n] [-b <tokbuf>] [-g <getc>] [-l <language>] [-et <prefix>]\n");
+	printf("usage: lx [-n] [-b <tokbuf>] [-g <getc>] [-l <language>] [-et <prefix>] [-x <exclude>]\n");
 	printf("       lx -h\n");
 }
 
@@ -133,6 +134,39 @@ lang_getc(const char *name)
 	}
 
 	fprintf(stderr, "unrecognised getc scheme; valid schemes are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
+	exit(EXIT_FAILURE);
+}
+
+static enum api_exclude
+lang_exclude(const char *name)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		enum api_exclude item;
+	} a[] = {
+		{ "name",     API_NAME     },
+		{ "example",  API_EXAMPLE  },
+		{ "comments", API_COMMENTS }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].item;
+		}
+	}
+
+	fprintf(stderr, "unrecognised item to exclude; valid items are: ");
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		fprintf(stderr, "%s%s",
@@ -268,7 +302,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "e:t:" "vb:g:l:n"), c != -1) {
+		while (c = getopt(argc, argv, "h" "e:t:" "vb:g:l:nx:"), c != -1) {
 			switch (c) {
 			case 'e':
 				prefix.api = optarg;
@@ -278,13 +312,9 @@ main(int argc, char *argv[])
 				prefix.tok = optarg;
 				break;
 
-			case 'b':
-				api_tokbuf |= lang_tokbuf(optarg);
-				break;
-
-			case 'g':
-				api_getc |= lang_getc(optarg);
-				break;
+			case 'b': api_tokbuf  |= lang_tokbuf(optarg);  break;
+			case 'g': api_getc    |= lang_getc(optarg);    break;
+			case 'x': api_exclude |= lang_exclude(optarg); break;
 
 			case 'l':
 				out = language(optarg);

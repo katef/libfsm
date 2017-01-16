@@ -171,9 +171,13 @@ lx_out_h(const struct ast *ast, FILE *f)
 		fprintf(f, "\n");
 	}
 
-	fprintf(f, "const char *%sname(enum %stoken t);\n", prefix.api, prefix.api);
-	fprintf(f, "const char *%sexample(enum %stoken (*z)(struct %slx *), enum %stoken t);\n",
-		prefix.api, prefix.api, prefix.lx, prefix.api);
+	if (~api_exclude & API_NAME) {
+		fprintf(f, "const char *%sname(enum %stoken t);\n", prefix.api, prefix.api);
+	}
+	if (~api_exclude & API_EXAMPLE) {
+		fprintf(f, "const char *%sexample(enum %stoken (*z)(struct %slx *), enum %stoken t);\n",
+			prefix.api, prefix.api, prefix.lx, prefix.api);
+	}
 	fprintf(f, "\n");
 
 	fprintf(f, "void %sinit(struct %slx *lx);\n", prefix.api, prefix.lx);
