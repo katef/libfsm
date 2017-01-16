@@ -73,6 +73,7 @@ group
 				<arg choice="plain">&n.opt;</arg>
 				<arg choice="plain">&q.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
+				<arg choice="plain">&s.opt;</arg>
 			</group>
 
 			<arg choice="opt">&a.opt;</arg>
@@ -100,6 +101,7 @@ group
 				<arg choice="plain">&n.opt;</arg>
 				<arg choice="plain">&q.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
+				<arg choice="plain">&s.opt;</arg>
 			</group>
 
 			<sbr/>
@@ -119,6 +121,7 @@ group
 				<arg choice="plain">&n.opt;</arg>
 				<arg choice="plain">&q.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
+				<arg choice="plain">&s.opt;</arg>
 			</group>
 
 			<sbr/>
