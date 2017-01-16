@@ -199,7 +199,7 @@ main(int argc, char *argv[])
 			case 'x': xfiles = 1;                    break;
 			case 'p': print  = 1;                    break;
 			case 'q': query  = 1;
-			          r &= fsm_all(fsm, predicate(optarg));
+			          r |= !fsm_all(fsm, predicate(optarg));
 			          break;
 
 			case 'l': format = language(optarg);     break;
@@ -270,6 +270,6 @@ main(int argc, char *argv[])
 
 	fsm_free(fsm);
 
-	return query ? !r : r;
+	return r;
 }
 
