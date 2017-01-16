@@ -90,7 +90,6 @@ static int
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-fprintf(stderr, "pred: %s\n", a[i].name);
 			return a[i].predicate;
 		}
 	}
