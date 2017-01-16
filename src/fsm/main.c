@@ -66,7 +66,8 @@ language(const char *name)
 }
 
 static int
-fsmquery(struct fsm *fsm, const char *name)
+(*predicate(const char *name))
+(const struct fsm *, const struct fsm_state *)
 {
 	size_t i;
 
@@ -85,12 +86,12 @@ fsmquery(struct fsm *fsm, const char *name)
 */
 	};
 
-	assert(fsm != NULL);
 	assert(name != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return fsm_all(fsm, a[i].predicate);
+fprintf(stderr, "pred: %s\n", a[i].name);
+			return a[i].predicate;
 		}
 	}
 
@@ -199,7 +200,8 @@ main(int argc, char *argv[])
 			case 'x': xfiles = 1;                    break;
 			case 'p': print  = 1;                    break;
 			case 'q': query  = 1;
-			          r &= fsmquery(fsm, optarg);    break;
+			          r &= fsm_all(fsm, predicate(optarg));
+			          break;
 
 			case 'l': format = language(optarg);     break;
 
