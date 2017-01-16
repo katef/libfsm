@@ -37,9 +37,9 @@ struct match {
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re    [-r <dialect>] [-inqu] [-x] <re> ... [ <text> | -- <text> ... ]\n");
-	fprintf(stderr, "       re -p [-r <dialect>] [-inqu] [-l <language>] [-awc] [-e <prefix>] <re> ...\n");
-	fprintf(stderr, "       re -m [-r <dialect>] [-inqu] <re> ...\n");
+	fprintf(stderr, "usage: re    [-r <dialect>] [-inqus] [-x] <re> ... [ <text> | -- <text> ... ]\n");
+	fprintf(stderr, "       re -p [-r <dialect>] [-inqus] [-l <language>] [-awc] [-e <prefix>] <re> ...\n");
+	fprintf(stderr, "       re -m [-r <dialect>] [-inqus] <re> ...\n");
 	fprintf(stderr, "       re -g [-r <dialect>] [-iub] <group>\n");
 	fprintf(stderr, "       re -h\n");
 }
