@@ -307,7 +307,6 @@ main(int argc, char *argv[])
 	int keep_nfa;
 	int patterns;
 	int ambig;
-	int r;
 
 	static const struct fsm_outoptions o_defaults;
 	struct fsm_outoptions o = o_defaults;
@@ -683,54 +682,59 @@ main(int argc, char *argv[])
 		return 0;
 	}
 
-	r = 0;
+	/* execute */
+	{
+		int r;
 
-	if (argc > 0) {
-		int i;
+		r = 0;
 
-		/* TODO: option to print input texts which match. like grep(1) does.
-		 * This is not the same as printing patterns which match (by associating
-		 * a pattern to the end state), like lx(1) does */
+		if (argc > 0) {
+			int i;
 
-		for (i = 0; i < argc; i++) {
-			const struct fsm_state *state;
+			/* TODO: option to print input texts which match. like grep(1) does.
+			 * This is not the same as printing patterns which match (by associating
+			 * a pattern to the end state), like lx(1) does */
 
-			if (xfiles) {
-				FILE *f;
+			for (i = 0; i < argc; i++) {
+				const struct fsm_state *state;
 
-				f = xopen(argv[0]);
+				if (xfiles) {
+					FILE *f;
 
-				state = fsm_exec(fsm, fsm_fgetc, f);
+					f = xopen(argv[0]);
 
-				fclose(f);
-			} else {
-				const char *s;
+					state = fsm_exec(fsm, fsm_fgetc, f);
 
-				s = argv[i];
+					fclose(f);
+				} else {
+					const char *s;
 
-				state = fsm_exec(fsm, fsm_sgetc, &s);
-			}
+					s = argv[i];
 
-			if (state == NULL) {
-				r |= 1;
-				continue;
-			}
+					state = fsm_exec(fsm, fsm_sgetc, &s);
+				}
 
-			if (patterns) {
-				const struct match *m;
+				if (state == NULL) {
+					r |= 1;
+					continue;
+				}
 
-				for (m = state->opaque; m != NULL; m = m->next) {
-					/* TODO: print nicely */
-					printf("match: /%s/\n", m->s);
+				if (patterns) {
+					const struct match *m;
+
+					for (m = state->opaque; m != NULL; m = m->next) {
+						/* TODO: print nicely */
+						printf("match: /%s/\n", m->s);
+					}
 				}
 			}
 		}
+
+		/* XXX: free opaques */
+
+		fsm_free(fsm);
+
+		return r;
 	}
-
-	/* XXX: free opaques */
-
-	fsm_free(fsm);
-
-	return r;
 }
 
