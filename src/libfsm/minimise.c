@@ -159,7 +159,11 @@ fsm_minimise_opaque(struct fsm *fsm,
 	}
 
 	if (!hasend) {
-		/* XXX: what happened to this? */
+		struct fsm_state *s;
+
+		for (s = fsm->sl; s; s = s->next) {
+			fsm_setend(fsm, s, 0);
+		}
 	}
 
 	/*
