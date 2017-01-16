@@ -155,7 +155,8 @@ lang_exclude(const char *name)
 	} a[] = {
 		{ "name",     API_NAME     },
 		{ "example",  API_EXAMPLE  },
-		{ "comments", API_COMMENTS }
+		{ "comments", API_COMMENTS },
+		{ "pos",      API_POS      }
 	};
 
 	assert(name != NULL);

@@ -30,7 +30,8 @@ enum api_getc {
 enum api_exclude {
 	API_NAME     = 1 << 0,
 	API_EXAMPLE  = 1 << 1,
-	API_COMMENTS = 1 << 2
+	API_COMMENTS = 1 << 2,
+	API_POS      = 1 << 3
 };
 
 extern enum api_tokbuf  api_tokbuf;

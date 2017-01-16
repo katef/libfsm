@@ -63,16 +63,18 @@ lx_out_h(const struct ast *ast, FILE *f)
 	out_tokens(ast, f);
 	fprintf(f, "\n");
 
-	fprintf(f, "/*\n");
-	fprintf(f, " * .byte is 0-based.\n");
-	fprintf(f, " * .line and .col are 1-based; 0 means unknown.\n");
-	fprintf(f, " */\n");
-	fprintf(f, "struct lx_pos {\n");
-	fprintf(f, "\tunsigned byte;\n");
-	fprintf(f, "\tunsigned line;\n");
-	fprintf(f, "\tunsigned col;\n");
-	fprintf(f, "};\n");
-	fprintf(f, "\n");
+	if (~api_exclude & API_POS) {
+		fprintf(f, "/*\n");
+		fprintf(f, " * .byte is 0-based.\n");
+		fprintf(f, " * .line and .col are 1-based; 0 means unknown.\n");
+		fprintf(f, " */\n");
+		fprintf(f, "struct lx_pos {\n");
+		fprintf(f, "\tunsigned byte;\n");
+		fprintf(f, "\tunsigned line;\n");
+		fprintf(f, "\tunsigned col;\n");
+		fprintf(f, "};\n");
+		fprintf(f, "\n");
+	}
 
 	fprintf(f, "struct %slx {\n", prefix.lx);
 	fprintf(f, "\tint (*lgetc)(struct %slx *lx);\n", prefix.lx);
@@ -80,9 +82,11 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 	fprintf(f, "\tint c; /* %sungetc buffer */\n", prefix.api);
 	fprintf(f, "\n");
-	fprintf(f, "\tstruct lx_pos start;\n");
-	fprintf(f, "\tstruct lx_pos end;\n");
-	fprintf(f, "\n");
+	if (~api_exclude & API_POS) {
+		fprintf(f, "\tstruct lx_pos start;\n");
+		fprintf(f, "\tstruct lx_pos end;\n");
+		fprintf(f, "\n");
+	}
 	fprintf(f, "\tvoid *buf;\n");
 	fprintf(f, "\tint  (*push) (struct %slx *lx, char c);\n", prefix.lx);
 	fprintf(f, "\tvoid (*pop)  (struct %slx *lx);\n", prefix.lx);
