@@ -396,6 +396,16 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	if (join == fsm_concat && group) {
+		fprintf(stderr, "-s does not apply for groups\n");
+		return EXIT_FAILURE;
+	}
+
+	if (join == fsm_concat && patterns) {
+		fprintf(stderr, "-s is not implemented when printing patterns by -q\n");
+		return EXIT_FAILURE;
+	}
+
 	if (group) {
 		struct re_err err;
 
@@ -534,6 +544,9 @@ main(int argc, char *argv[])
 					}
 				}
 			}
+
+			/* TODO: implement concatenating patterns for -s in conjunction with -q.
+			 * Note that depends on the regexp dialect */
 
 			fsm = join(fsm, new);
 			if (fsm == NULL) {
