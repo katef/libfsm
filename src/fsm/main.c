@@ -189,7 +189,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwe:" "xpq:l:d:mrt:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwe:" "xpq:l:dmrt:"), c != -1) {
 			switch (c) {
 			case 'a': o.anonymous_states  = 1;       break;
 			case 'c': o.consolidate_edges = 1;       break;
