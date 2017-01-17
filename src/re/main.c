@@ -38,6 +38,7 @@ static void
 usage(void)
 {
 	fprintf(stderr, "usage: re    [-r <dialect>] [-inusz] [-x] <re> ... [ <text> | -- <text> ... ]\n");
+	fprintf(stderr, "       re    [-r <dialect>] [-inusz] {-q <query>} <re> ...\n");
 	fprintf(stderr, "       re -p [-r <dialect>] [-inusz] [-l <language>] [-awc] [-e <prefix>] <re> ...\n");
 	fprintf(stderr, "       re -m [-r <dialect>] [-inusz] <re> ...\n");
 	fprintf(stderr, "       re -g [-r <dialect>] [-iub] <group>\n");
@@ -110,6 +111,40 @@ dialect_name(const char *name)
 	}
 
 	fprintf(stderr, "unrecognised regexp dialect \"%s\"; valid dialects are: ", name);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
+	exit(EXIT_FAILURE);
+}
+
+static int
+(*comparison(const char *name))
+(const struct fsm *, const struct fsm *)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		int (*comparison)(const struct fsm *, const struct fsm *);
+	} a[] = {
+		{ "equal",    fsm_equal },
+		{ "isequal",  fsm_equal },
+		{ "areequal", fsm_equal }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].comparison;
+		}
+	}
+
+	fprintf(stderr, "unrecognised comparison; valid comparisons are: ");
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		fprintf(stderr, "%s%s",
@@ -295,6 +330,7 @@ int
 main(int argc, char *argv[])
 {
 	struct fsm *(*join)(struct fsm *, struct fsm *);
+	int (*query)(const struct fsm *, const struct fsm *);
 	enum fsm_out format;
 	enum re_dialect dialect;
 	struct fsm *fsm;
@@ -324,6 +360,7 @@ main(int argc, char *argv[])
 	keep_nfa = 0;
 	patterns = 0;
 	ambig    = 0;
+	query    = NULL;
 	join     = fsm_union;
 	format   = FSM_OUT_FSM;
 	dialect  = RE_NATIVE;
@@ -331,7 +368,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwe:" "sr:l:" "ubpgixmnz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwe:" "sq:r:l:" "ubpgixmnz"), c != -1) {
 			switch (c) {
 			case 'a': o.anonymous_states  = 0;       break;
 			case 'c': o.consolidate_edges = 0;       break;
@@ -342,13 +379,9 @@ main(int argc, char *argv[])
 				join = fsm_concat;
 				break;
 
-			case 'r':
-				dialect = dialect_name(optarg);
-				break;
-
-			case 'l':
-				format = language(optarg);
-				break;
+			case 'q': query   = comparison(optarg);   break;
+			case 'r': dialect = dialect_name(optarg); break;
+			case 'l': format  = language(optarg);     break;
 
 			case 'u': ambig    = 1; break;
 			case 'b': boxed    = 1; break;
@@ -380,12 +413,12 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (print + example + group > 1) {
-		fprintf(stderr, "-p, -g and -m are mutually exclusive\n");
+	if (print + example + group + !!query > 1) {
+		fprintf(stderr, "-p, -g, -m and -q are mutually exclusive\n");
 		return EXIT_FAILURE;
 	}
 
-	if (print + example + group && xfiles) {
+	if (print + example + group + !!query && xfiles) {
 		fprintf(stderr, "-x applies only when executing\n");
 		return EXIT_FAILURE;
 	}
@@ -397,6 +430,11 @@ main(int argc, char *argv[])
 
 	if (patterns && group) {
 		fprintf(stderr, "-z does not apply for groups\n");
+		return EXIT_FAILURE;
+	}
+
+	if (patterns && !!query) {
+		fprintf(stderr, "-z does not apply for querying\n");
 		return EXIT_FAILURE;
 	}
 
@@ -480,9 +518,9 @@ main(int argc, char *argv[])
 	{
 		int i;
 
-		for (i = 0; i < argc - !(print || example || argc <= 1); i++) {
+		for (i = 0; i < argc - !(print || example || !!query || argc <= 1); i++) {
 			struct re_err err;
-			struct fsm *new;
+			struct fsm *new, *q;
 
 			/* TODO: handle possible "dialect:" prefix */
 
@@ -553,15 +591,43 @@ main(int argc, char *argv[])
 			/* TODO: implement concatenating patterns for -s in conjunction with -z.
 			 * Note that depends on the regexp dialect */
 
+			if (query != NULL) {
+				q = fsm_clone(new);
+				if (q == NULL) {
+					perror("fsm_clone");
+					return EXIT_FAILURE;
+				}
+			}
+
 			fsm = join(fsm, new);
 			if (fsm == NULL) {
 				perror("fsm_union/concat");
 				return EXIT_FAILURE;
 			}
+
+			if (query != NULL) {
+				int r;
+
+				r = query(fsm, q);
+				if (r == -1) {
+					perror("query");
+					return EXIT_FAILURE;
+				}
+
+				if (r == 0) {
+					return EXIT_FAILURE;
+				}
+
+				fsm_free(q);
+			}
 		}
 
 		argc -= i;
 		argv += i;
+	}
+
+	if (query) {
+		return EXIT_SUCCESS;
 	}
 
 	if ((print || example) && argc > 0) {

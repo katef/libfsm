@@ -11,9 +11,11 @@
 	<!ENTITY dialect.arg "<replaceable>dialect</replaceable>">
 	<!ENTITY prefix.arg  "<replaceable>prefix</replaceable>">
 	<!ENTITY group.arg   "<replaceable>group</replaceable>">
+	<!ENTITY query.arg   "<replaceable>query</replaceable>">
 
 	<!ENTITY r.opt "<option>-r</option>&nbsp;&dialect.arg;">
 	<!ENTITY l.opt "<option>-l</option>&nbsp;&lang.arg;">
+	<!ENTITY q.opt "<option>-q</option>&nbsp;&query.arg;">
 
 	<!ENTITY a.opt "<option>-a</option>">
 	<!ENTITY w.opt "<option>-w</option>">
@@ -54,13 +56,14 @@
 	<refsynopsisdiv>
 <!--
 TODO: re-do usage()
-TODO: other than -h, five modes:
+TODO: other than -h, six modes:
 five modes:
 exec (default)
 validation
 dump
 example
 group
+query
 -->
 
 		<cmdsynopsis>
@@ -262,6 +265,16 @@ group (for dialects which have them) (rather than a "whole" regexp)
 					<para>Set a prefix for output,
 						per the <code>prefix</code> option for &fsm_print.3;.
 						The default is to output with no prefix.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&q.opt;</term>
+
+				<listitem>
+					<para>Query the constructed &fsm;, rather than executing it.
+						The given query is applied to each &fsm; as it is joined
+						to the &fsm; being constructed.</para>
 				</listitem>
 			</varlistentry>
 
