@@ -207,6 +207,8 @@ carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 	 * opaque value and check all other accepting states are the same.
 	 */
 
+	m = NULL;
+
 	for (s = set; s != NULL; s = s->next) {
 		if (fsm_isend(fsm, s->state)) {
 			m = s->state->opaque;
