@@ -248,6 +248,14 @@ struct fsm *
 fsm_subtract(struct fsm *a, struct fsm *b);
 
 /*
+ * Return 1 if the fsm does not match anything;
+ * 0 if anything matches (including the empty string),
+ * or -1 on error.
+ */
+int
+fsm_empty(struct fsm *fsm);
+
+/*
  * Find the least-cost ("shortest") path between two states.
  *
  * A discovered path is returned, or NULL on error. If the goal is not

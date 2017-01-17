@@ -5,6 +5,7 @@ SRC += src/libfsm/complete.c
 SRC += src/libfsm/desensitise.c
 SRC += src/libfsm/clone.c
 SRC += src/libfsm/edge.c
+SRC += src/libfsm/empty.c
 SRC += src/libfsm/exec.c
 SRC += src/libfsm/fsm.c
 SRC += src/libfsm/mode.c
