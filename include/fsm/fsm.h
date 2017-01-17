@@ -256,6 +256,13 @@ int
 fsm_empty(struct fsm *fsm);
 
 /*
+ * Return 1 if two fsm are equal, 0 if they're not,
+ * or -1 on error.
+ */
+int
+fsm_equal(const struct fsm *a, const struct fsm *b);
+
+/*
  * Find the least-cost ("shortest") path between two states.
  *
  * A discovered path is returned, or NULL on error. If the goal is not
