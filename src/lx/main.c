@@ -25,6 +25,7 @@
 #include "out/out.h"
 
 #include "ast.h"
+#include "tokens.h"
 
 enum api_tokbuf  api_tokbuf;
 enum api_getc    api_getc;
@@ -292,6 +293,75 @@ error:
 	return;
 }
 
+static int
+zone_equal(const struct ast_zone *a, const struct ast_zone *b)
+{
+	struct fsm *x, *y;
+	struct fsm *q;
+	int r;
+
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (!tok_equal(a->fsm, b->fsm)) {
+		return 0;
+	}
+
+	r = fsm_equal(a->fsm, b->fsm);
+	if (r == -1) {
+		return -1;
+	}
+
+	if (!r) {
+		return 0;
+	}
+
+	x = fsm_clone(a->fsm);
+	if (x == NULL) {
+		return -1;
+	}
+
+	y = fsm_clone(b->fsm);
+	if (y == NULL) {
+		fsm_free(y);
+		return -1;
+	}
+
+	q = fsm_union(x, y);
+	if (q == NULL) {
+		fsm_free(x);
+		fsm_free(y);
+		return -1;
+	}
+
+	if (!fsm_determinise_opaque(q, carryopaque)) {
+		fsm_free(q);
+		return -1;
+	}
+
+	{
+		const struct ast_mapping *m;
+		const struct fsm_state *s;
+
+		for (s = q->sl; s != NULL; s = s->next) {
+			if (!fsm_isend(q, s)) {
+				continue;
+			}
+
+			assert(s->opaque != NULL);
+			m = s->opaque;
+
+			if (m->conflict != NULL) {
+				/* TODO: free conflict set */
+				fsm_free(q);
+				return 0;
+			}
+		}
+	}
+
+	return 1;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -436,6 +506,71 @@ main(int argc, char *argv[])
 				}
 			}
 		}
+	}
+
+	/*
+	 * De-duplicate equivalent zones.
+	 * This converts the tree of zones to a DAG.
+	 */
+	{
+		struct ast_zone *z, **p;
+		int changed;
+
+		do {
+			changed = 0;
+
+			for (z = ast->zl; z != NULL; z = z->next) {
+				for (p = &z->next; *p != NULL; p = &(*p)->next) {
+					struct fsm_state *s;
+					struct ast_zone *q;
+					int r;
+
+					r = zone_equal(z, *p);
+					if (r == -1) {
+						perror("zone_equal");
+						exit(EXIT_FAILURE);
+					}
+
+					if (!r) {
+						continue;
+					}
+
+					for (q = ast->zl; q != NULL; q = q->next) {
+						for (s = q->fsm->sl; s != NULL; s = s->next) {
+							struct ast_mapping *m;
+
+							if (!fsm_isend(q->fsm, s)) {
+								continue;
+							}
+
+							assert(s->opaque != NULL);
+							m = s->opaque;
+
+							if (m->to == *p) {
+								m->to = z;
+								/* TODO: this mapping is now possibly a duplicte of another; if so, remove it */
+							}
+						}
+					}
+
+					{
+						struct ast_zone *dead;
+
+						dead = *p;
+
+						*p = dead->next;
+
+						dead->next = NULL;
+						fsm_free(dead->fsm);
+						/* TODO: free dead->ml */
+						/* TODO: free dead->vl? */
+						free(dead);
+					}
+
+					changed = 1;
+				}
+			}
+		} while (changed);
 	}
 
 	/*
