@@ -53,10 +53,11 @@ static void
 		const char *name;
 		void (*out)(const struct ast *ast, FILE *f);
 	} a[] = {
-		{ "test", NULL       },
-		{ "dot",  lx_out_dot },
-		{ "c",    lx_out_c   },
-		{ "h",    lx_out_h   }
+		{ "test", NULL        },
+		{ "dot",  lx_out_dot  },
+		{ "zdot", lx_out_zdot },
+		{ "c",    lx_out_c    },
+		{ "h",    lx_out_h    }
 	};
 
 	assert(name != NULL);

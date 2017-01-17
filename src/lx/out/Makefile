@@ -3,6 +3,7 @@
 SRC += src/lx/out/c.c
 SRC += src/lx/out/h.c
 SRC += src/lx/out/dot.c
+SRC += src/lx/out/zdot.c
 
 .for src in ${SRC:Msrc/lx/out/*.c}
 CFLAGS_${src} += -I src # XXX: for internal.h
