@@ -293,6 +293,8 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *optio
 		}
 	}
 	fprintf(f, "\t\t}\n");
+
+	return 0;
 }
 
 void
