@@ -15,6 +15,8 @@
 #include "out.h"
 #include "libfsm/internal.h"
 
+static int comments = 1; /* XXX: placeholder */
+
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)
 {
@@ -72,6 +74,30 @@ escputc(int c, FILE *f)
 	return fprintf(f, "%c", c);
 }
 
+/* TODO: centralise, maybe with callback */
+static int
+escputs(FILE *f, const char *s)
+{
+	const char *p;
+	int r, n;
+
+	assert(f != NULL);
+	assert(s != NULL);
+
+	n = 0;
+
+	for (p = s; *p != '\0'; p++) {
+		r = escputc(*p, f);
+		if (r == -1) {
+			return -1;
+		}
+
+		n += r;
+	}
+
+	return n;
+}
+
 /* Return true if the edges after o contains state */
 /* TODO: centralise */
 static int
@@ -92,13 +118,15 @@ contains(struct fsm_edge edges[], int o, struct fsm_state *state)
 }
 
 static void
-singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state)
+singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
+	void *opaque)
 {
 	int i;
 
 	assert(fsm != NULL);
 	assert(f != NULL);
 	assert(state != NULL);
+	assert(opaque == NULL);
 
 	/* TODO: move this out into a count function */
 	for (i = 0; i <= UCHAR_MAX; i++) {
@@ -213,8 +241,10 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 	fprintf(f, "\t}\n");
 }
 
-static void
-out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
+int
+fsm_out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options,
+	void (*singlecase)(FILE *, const struct fsm *, struct fsm_state *, void *opaque),
+	void *opaque)
 {
 	struct fsm_state *s;
 
@@ -227,8 +257,30 @@ out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 
 	fprintf(f, "\t\tswitch (state) {\n");
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		fprintf(f, "\t\tcase S%u:\n", indexof(fsm, s));
-		singlecase(f, fsm, s);
+		fprintf(f, "\t\tcase S%u:", indexof(fsm, s));
+
+		if (comments) {
+			if (s == fsm->start) {
+				fprintf(f, " /* start */");
+			} else {
+				char buf[50];
+				int n;
+
+				n = fsm_example(fsm, s, buf, sizeof buf);
+				if (-1 == n) {
+					perror("fsm_example");
+					return -1;
+				}
+
+				fprintf(f, " /* e.g. \"");
+				escputs(f, buf);
+				fprintf(f, "%s\" */",
+					n >= (int) sizeof buf - 1 ? "..." : "");
+			}
+		}
+		fprintf(f, "\n");
+
+		singlecase(f, fsm, s, opaque);
 
 		if (s->next != NULL) {
 			fprintf(f, "\n");
@@ -252,7 +304,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	/* TODO: pass in %s prefix (default to "fsm_") */
 
 	if (options->fragment) {
-		out_cfrag(fsm, f, options);
+		(void) fsm_out_cfrag(fsm, f, options, singlecase, NULL);
 		return;
 	}
 
@@ -276,7 +328,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	fprintf(f, "\n");
 
 	fprintf(f, "\twhile (c = fsm_getc(opaque), c != EOF) {\n");
-	out_cfrag(fsm, f, options);
+	(void) fsm_out_cfrag(fsm, f, options, singlecase, NULL);
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 

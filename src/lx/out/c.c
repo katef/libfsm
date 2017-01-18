@@ -248,17 +248,21 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token)
 }
 
 static void
-singlecase(FILE *f, const struct ast *ast, const struct ast_zone *z,
-	const struct fsm *fsm, struct fsm_state *state)
+singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
+	void *opaque)
 {
 	struct fsm_state *mode;
+	struct ast *ast;
 	int i;
 
 	assert(fsm != NULL);
-	assert(ast != NULL);
-	assert(z != NULL);
 	assert(f != NULL);
 	assert(state != NULL);
+	assert(opaque != NULL);
+
+	ast = opaque;
+
+	assert(ast != NULL);
 
 	/* TODO: assert that there are never no edges? */
 	/* TODO: if greedy and state is an end state, skip this state */
@@ -827,42 +831,16 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	}
 
 	{
-		struct fsm_state *s;
+		static const struct fsm_outoptions o_defaults;
+		struct fsm_outoptions o = o_defaults;
 
-		fprintf(f, "\t\tswitch (state) {\n");
+		/* TODO: populate options */
+		o.anonymous_states  = 1;
+		o.consolidate_edges = 1;
+		o.fragment          = 1;
+		o.prefix            = NULL;
 
-		for (s = z->fsm->sl; s != NULL; s = s->next) {
-			fprintf(f, "\t\tcase S%u:", indexof(z->fsm, s));
-
-			if (~api_exclude & API_COMMENTS) {
-				if (s == z->fsm->start) {
-					fprintf(f, " /* start */");
-				} else {
-					char buf[50];
-					int n;
-
-					n = fsm_example(z->fsm, s, buf, sizeof buf);
-					if (-1 == n) {
-						perror("fsm_example");
-						return -1;
-					}
-
-					fprintf(f, " /* e.g. \"");
-					escputs(f, buf);
-					fprintf(f, "%s\" */",
-						n >= (int) sizeof buf - 1 ? "..." : "");
-				}
-			}
-			fprintf(f, "\n");
-
-			singlecase(f, ast, z, z->fsm, s);
-
-			if (s->next != NULL) {
-				fprintf(f, "\n");
-			}
-		}
-
-		fprintf(f, "\t\t}\n");
+		(void) fsm_out_cfrag(z->fsm, f, &o, singlecase, ast);
 	}
 
 	fprintf(f, "\t}\n");
