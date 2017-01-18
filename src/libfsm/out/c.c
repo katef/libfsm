@@ -67,7 +67,13 @@ escputc(int c, FILE *f)
 		}
 	}
 
-	if (!isprint((unsigned char) c)) {
+	/*
+	 * Escaping '/' here is a lazy way to avoid keeping state when
+	 * emitting '*', '/', since this is used to output example strings
+	 * inside comments.
+	 */
+
+	if (!isprint((unsigned char) c) || c == '/') {
 		return fprintf(f, "\\%03o", (unsigned char) c);
 	}
 
