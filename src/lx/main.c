@@ -547,14 +547,19 @@ main(int argc, char *argv[])
 	if (out != lx_out_h) {
 		struct ast_zone *z, **p;
 		int changed;
-		unsigned int zn;
+		unsigned int zn, zd, zp;
 
 		if (print_progress) {
-			fprintf(stderr, "-- de-duplicate zones:");
-			zn = 0;
+			zp = 1;
 		}
 
 		do {
+			if (print_progress) {
+				fprintf(stderr, "-- de-duplicate zones, pass %u:", zp++);
+				zn = 0;
+				zd = 0;
+			}
+
 			changed = 0;
 
 			for (z = ast->zl; z != NULL; z = z->next) {
@@ -612,15 +617,16 @@ main(int argc, char *argv[])
 					changed = 1;
 
 					if (print_progress) {
-						fprintf(stderr, "(merged)");
+						fprintf(stderr, "*");
+						zd++;
 					}
 				}
 			}
-		} while (changed);
 
-		if (print_progress) {
-			fprintf(stderr, "\n");
-		}
+			if (print_progress) {
+				fprintf(stderr, " (%u deleted)\n", zd);
+			}
+		} while (changed);
 	}
 
 	/*
