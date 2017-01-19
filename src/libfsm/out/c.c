@@ -12,8 +12,8 @@
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 
-#include "out.h"
 #include "libfsm/internal.h"
+#include "libfsm/out.h"
 
 static int comments = 1; /* XXX: placeholder */
 

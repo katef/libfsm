@@ -5,7 +5,7 @@
 
 #include <fsm/out.h>
 
-#include "out/out.h"
+#include "out.h"
 
 void
 fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format,

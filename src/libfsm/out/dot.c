@@ -13,7 +13,7 @@
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 
-#include "out.h"
+#include "libfsm/out.h"
 
 static unsigned
 indexof(const struct fsm *fsm, const struct fsm_state *state)

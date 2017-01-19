@@ -11,9 +11,8 @@
 
 #include "libfsm/internal.h" /* XXX */
 
-#include "../ast.h"
-
-#include "out.h"
+#include "lx/out.h"
+#include "lx/ast.h"
 
 /* TODO: centralise */
 static unsigned int

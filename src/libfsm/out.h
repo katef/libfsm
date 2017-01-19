@@ -1,7 +1,7 @@
 /* $Id$ */
 
-#ifndef OUT_H
-#define OUT_H
+#ifndef FSM_INTERNAL_OUT_H
+#define FSM_INTERNAL_OUT_H
 
 #include <stdio.h>
 

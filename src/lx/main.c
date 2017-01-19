@@ -22,8 +22,7 @@
 
 #include "libfsm/internal.h" /* XXX */
 
-#include "out/out.h"
-
+#include "out.h"
 #include "ast.h"
 #include "tokens.h"
 

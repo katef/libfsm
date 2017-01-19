@@ -11,9 +11,8 @@
 
 #include "libfsm/internal.h" /* XXX */
 
-#include "../ast.h"
-
-#include "out.h"
+#include "lx/out.h"
+#include "lx/ast.h"
 
 static unsigned int anonymous_states = 1;
 

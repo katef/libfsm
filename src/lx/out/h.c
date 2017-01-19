@@ -4,9 +4,8 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#include "../ast.h"
-
-#include "out.h"
+#include "lx/out.h"
+#include "lx/ast.h"
 
 /* TODO: centralise */
 static void

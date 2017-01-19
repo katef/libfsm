@@ -13,10 +13,10 @@
 #include <fsm/walk.h>
 
 #include "libfsm/internal.h" /* XXX */
+#include "libfsm/out.h" /* XXX */
 
-#include "../ast.h"
-
-#include "out.h"
+#include "lx/out.h"
+#include "lx/ast.h"
 
 static int
 skip(const struct fsm *fsm, const struct fsm_state *state)
