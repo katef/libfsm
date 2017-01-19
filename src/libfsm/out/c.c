@@ -11,6 +11,7 @@
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
+#include <fsm/out.h>
 
 #include "libfsm/internal.h"
 #include "libfsm/out.h"
@@ -123,8 +124,25 @@ contains(struct fsm_edge edges[], int o, struct fsm_state *state)
 	return 0;
 }
 
+static int
+leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
+	void *opaque)
+{
+	assert(fsm != NULL);
+	assert(f != NULL);
+	assert(state != NULL);
+	assert(opaque == NULL);
+
+	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
+	 * maybe user defined */
+	fprintf(f, "return TOK_UNKNOWN;");
+
+	return 0;
+}
+
 static void
 singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
+	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, void *),
 	void *opaque)
 {
 	int i;
@@ -132,19 +150,23 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 	assert(fsm != NULL);
 	assert(f != NULL);
 	assert(state != NULL);
-	assert(opaque == NULL);
+	assert(leaf != NULL);
 
-	/* TODO: move this out into a count function */
-	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (state->edges[i].sl != NULL) {
-			break;
+	{
+		/* TODO: move this out into a count function */
+		for (i = 0; i <= UCHAR_MAX; i++) {
+			if (state->edges[i].sl != NULL) {
+				break;
+			}
 		}
-	}
 
-	/* no edges */
-	if (i > UCHAR_MAX) {
-		fprintf(f, "\t\t\treturn 0;\n");
-		return;
+		/* no edges */
+		if (i > UCHAR_MAX) {
+			fprintf(f, "\t\t\t");
+			leaf(f, fsm, state, opaque);
+			fprintf(f, "\n");
+			return;
+		}
 	}
 
 	fprintf(f, "\t\t\tswitch (c) {\n");
@@ -185,12 +207,18 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 			} else {
 				fprintf(f, "             continue;\n");
 			}
+
+			/* TODO: if greedy, and fsm_isend(fsm, state->edges[i].sl->state) then:
+				fprintf(f, "         return %s%s;\n", prefix.tok, state->edges[i].sl->state's token);
+			 */
 		}
 
 		if (mode != NULL) {
 			fprintf(f, "\t\t\tdefault:  state = S%u; continue;\n", indexof(fsm, mode));
 		} else {
-			fprintf(f, "\t\t\tdefault:  return TOK_ERROR;\n");	/* TODO: right? */
+			fprintf(f, "\t\t\tdefault:  ");
+			leaf(f, fsm, state, opaque);
+			fprintf(f, "\n");
 		}
 	}
 
@@ -249,7 +277,7 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 
 int
 fsm_out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options,
-	void (*singlecase)(FILE *, const struct fsm *, struct fsm_state *, void *opaque),
+	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, void *),
 	void *opaque)
 {
 	struct fsm_state *s;
@@ -286,7 +314,7 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *optio
 		}
 		fprintf(f, "\n");
 
-		singlecase(f, fsm, s, opaque);
+		singlecase(f, fsm, s, leaf, opaque);
 
 		if (s->next != NULL) {
 			fprintf(f, "\n");
@@ -312,7 +340,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	/* TODO: pass in %s prefix (default to "fsm_") */
 
 	if (options->fragment) {
-		(void) fsm_out_cfrag(fsm, f, options, singlecase, NULL);
+		(void) fsm_out_cfrag(fsm, f, options, leaf, NULL);
 		return;
 	}
 
@@ -336,7 +364,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	fprintf(f, "\n");
 
 	fprintf(f, "\twhile (c = fsm_getc(opaque), c != EOF) {\n");
-	(void) fsm_out_cfrag(fsm, f, options, singlecase, NULL);
+	(void) fsm_out_cfrag(fsm, f, options, leaf, NULL);
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 

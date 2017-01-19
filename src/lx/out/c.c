@@ -247,103 +247,43 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token)
 	return goal;
 }
 
-static void
-singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
+static int
+leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 	void *opaque)
 {
-	struct fsm_state *mode;
 	struct ast *ast;
-	int i;
+	const struct ast_mapping *m;
 
-	assert(fsm != NULL);
-	assert(f != NULL);
-	assert(state != NULL);
 	assert(opaque != NULL);
 
 	ast = opaque;
 
 	assert(ast != NULL);
 
-	/* TODO: assert that there are never no edges? */
-	/* TODO: if greedy and state is an end state, skip this state */
-
-	/* TODO: could centralise this with libfsm with internal options passed, perhaps */
-
-	fprintf(f, "\t\t\tswitch (c) {\n");
-
-	mode = fsm_iscomplete(fsm, state) ? fsm_findmode(state) : NULL;
-
-	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (state->edges[i].sl == NULL) {
-			continue;
-		}
-
-		assert(state->edges[i].sl->state != NULL);
-		assert(state->edges[i].sl->next  == NULL);
-
-		if (state->edges[i].sl->state == mode) {
-			continue;
-		}
-
-		fprintf(f, "\t\t\tcase '");
-		escputc(i, f);
-		fprintf(f, "':");
-
-		/* non-unique states fall through */
-/* XXX: this is an incorrect optimisation; to re-enable when fixed
-		if (contains(state->edges, i + 1, state->edges[i].sl->state)) {
-			fprintf(f, "\n");
-			continue;
-		}
-*/
-
-		/* TODO: pad S%u out to maximum state width */
-		if (state->edges[i].sl->state != state) {
-			fprintf(f, " state = S%u;      continue;\n", indexof(fsm, state->edges[i].sl->state));
-		} else {
-			fprintf(f, "	          continue;\n");
-		}
-
-		/* TODO: if greedy, and fsm_isend(fsm, state->edges[i].sl->state) then:
-			fprintf(f, "	     return %s%s;\n", prefix.tok, state->edges[i].sl->state's token);
-		 */
-	}
-
-	if (mode != NULL) {
-		/* TODO: state-change as for typical cases */
-		/* TODO: i think... */
-		fprintf(f, "\t\t\tdefault:  state = S%u;     continue;\n",  indexof(fsm, mode));
-
-		goto done;
-	}
-
 	if (!fsm_isend(fsm, state)) {
 		/* XXX: don't need this if complete */
-		fprintf(f, "\t\t\tdefault:  lx->lgetc = NULL; return %sUNKNOWN;\n", prefix.tok);
-	} else {
-		const struct ast_mapping *m;
-
-		m = state->opaque;
-
-		assert(m != NULL);
-
-		/* XXX: don't need this if complete */
-		fprintf(f, "\t\t\tdefault:  %sungetc(lx, c); return ", prefix.api);
-		if (m->to != NULL) {
-			fprintf(f, "lx->z = z%u, ", zindexof(ast, m->to));
-		}
-		if (m->token != NULL) {
-			fprintf(f, "%s", prefix.tok);
-			esctok(f, m->token->s);
-		} else {
-			fprintf(f, "lx->z(lx)");
-		}
-		fprintf(f, ";\n");
+		fprintf(f, "lx->lgetc = NULL; return %sUNKNOWN;", prefix.tok);
+		return 0;
 	}
 
-done:
+	m = state->opaque;
 
-	fprintf(f, "\t\t\t}\n");
+	assert(m != NULL);
+
+	/* XXX: don't need this if complete */
+	fprintf(f, "%sungetc(lx, c); return ", prefix.api);
+	if (m->to != NULL) {
+		fprintf(f, "lx->z = z%u, ", zindexof(ast, m->to));
+	}
+	if (m->token != NULL) {
+		fprintf(f, "%s", prefix.tok);
+		esctok(f, m->token->s);
+	} else {
+		fprintf(f, "lx->z(lx)");
+	}
+	fprintf(f, ";");
+
+	return 0;
 }
 
 /* TODO: centralise with libfsm */
@@ -840,7 +780,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		o.fragment          = 1;
 		o.prefix            = NULL;
 
-		(void) fsm_out_cfrag(z->fsm, f, &o, singlecase, ast);
+		(void) fsm_out_cfrag(z->fsm, f, &o, leaf, ast);
 	}
 
 	fprintf(f, "\t}\n");
