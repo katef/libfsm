@@ -252,32 +252,6 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 	return 0;
 }
 
-/* TODO: centralise with libfsm */
-static void
-stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
-{
-	struct fsm_state *s;
-	int i;
-
-	fprintf(f, "\tenum {\n");
-	fprintf(f, "\t\t");
-
-	for (s = sl, i = 1; s != NULL; s = s->next, i++) {
-		fprintf(f, "S%u", indexof(fsm, s));
-		if (s->next != NULL) {
-			fprintf(f, ", ");
-		}
-
-		if (i % 10 == 0) {
-			fprintf(f, "\n");
-			fprintf(f, "\t\t");
-		}
-	}
-
-	fprintf(f, "\n");
-	fprintf(f, "\t} state;\n");
-}
-
 static void
 out_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
@@ -648,7 +622,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tint c;\n");
 	fprintf(f, "\n");
 
-	stateenum(f, z->fsm, z->fsm->sl);
+	fsm_out_stateenum(f, z->fsm, z->fsm->sl);
 	fprintf(f, "\n");
 
 	fprintf(f, "\tassert(lx != NULL);\n");

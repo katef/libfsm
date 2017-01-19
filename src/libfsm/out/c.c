@@ -225,8 +225,8 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 	fprintf(f, "\t\t\t}\n");
 }
 
-static void
-stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
+void
+fsm_out_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 {
 	struct fsm_state *s;
 	int i;
@@ -355,7 +355,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	fprintf(f, "\n");
 
 	/* enum of states */
-	stateenum(f, fsm, fsm->sl);
+	fsm_out_stateenum(f, fsm, fsm->sl);
 	fprintf(f, "\n");
 
 	/* start state */
