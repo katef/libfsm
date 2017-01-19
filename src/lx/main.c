@@ -473,7 +473,7 @@ main(int argc, char *argv[])
 	 * of which end state is associated with each mapping. In other words,
 	 * without losing track of which regexp maps to which token.
 	 */
-	{
+	if (out != lx_out_h) {
 		struct ast_zone    *z;
 		struct ast_mapping *m;
 		unsigned int zn;
@@ -544,7 +544,7 @@ main(int argc, char *argv[])
 	 * De-duplicate equivalent zones.
 	 * This converts the tree of zones to a DAG.
 	 */
-	{
+	if (out != lx_out_h) {
 		struct ast_zone *z, **p;
 		int changed;
 		unsigned int zn;
@@ -626,7 +626,7 @@ main(int argc, char *argv[])
 	/*
 	 * Semantic checks.
 	 */
-	{
+	if (out != lx_out_h) {
 		struct ast_zone  *z;
 		struct fsm_state *s;
 		int e;
@@ -725,7 +725,10 @@ main(int argc, char *argv[])
 	/* XXX: can do this before semantic checks */
 	/* TODO: free ast */
 	/* TODO: free DFA ast_mappings, created in carryopaque, iff making a DFA. i.e. those which have non-NULL conflict sets */
-	if (!keep_nfa) {
+	if (out == lx_out_h) {
+		/* TODO: special case to avoid overhead; free non-minimized NFA */
+	}
+	if (!keep_nfa && out != lx_out_h) {
 		struct ast_zone *z;
 		struct ast_mapping *m;
 		const struct fsm_state *s;
