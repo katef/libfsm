@@ -45,6 +45,27 @@ void usage(void)
 	printf("       lx -h\n");
 }
 
+/*
+ * True if a zone number is important enough to print, just to cut down
+ * the amount of output to prevent it from flooding the terminal.
+ * This is the sequence n * 10^x where n < 10
+ */
+int
+important(unsigned int n)
+{
+	for (;;) {
+		if (n < 10) {
+			return 1;
+		}
+
+		if ((n % 10) != 0) {
+			return 0;
+		}
+
+		n /= 10;
+	}
+}
+
 static void
 (*language(const char *name))
 (const struct ast *ast, FILE *f)
@@ -487,7 +508,10 @@ main(int argc, char *argv[])
 			assert(z->fsm == NULL);
 
 			if (print_progress) {
-				fprintf(stderr, " z%u", zn++);
+				if (important(zn)) {
+					fprintf(stderr, " z%u", zn);
+				}
+				zn++;
 			}
 
 			z->fsm = fsm_new();
@@ -564,7 +588,10 @@ main(int argc, char *argv[])
 
 			for (z = ast->zl; z != NULL; z = z->next) {
 				if (print_progress) {
-					fprintf(stderr, " z%u", zn++);
+					if (important(zn)) {
+						fprintf(stderr, " z%u", zn);
+					}
+					zn++;
 				}
 
 				for (p = &z->next; *p != NULL; p = &(*p)->next) {
@@ -658,7 +685,10 @@ main(int argc, char *argv[])
 			assert(z->ml  != NULL);
 
 			if (print_progress) {
-				fprintf(stderr, " z%u", zn++);
+				if (important(zn)) {
+					fprintf(stderr, " z%u", zn);
+				}
+				zn++;
 			}
 
 			if (fsm_isend(z->fsm, z->fsm->start)) {

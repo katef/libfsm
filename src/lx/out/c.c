@@ -962,7 +962,10 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	for (z = ast->zl; z != NULL; z = z->next) {
 		if (print_progress) {
-			fprintf(stderr, " z%u", zn++);
+			if (important(zn)) {
+				fprintf(stderr, " z%u", zn);
+			}
+			zn++;
 		}
 
 		if (-1 == out_zone(f, ast, z)) {

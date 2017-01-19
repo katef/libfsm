@@ -400,7 +400,10 @@
 		assert(@a != NULL);
 
 		if (print_progress) {
-			fprintf(stderr, " z%u", act_state->zn++);
+			if (important(act_state->zn)) {
+				fprintf(stderr, " z%u", act_state->zn);
+			}
+			act_state->zn++;
 		}
 
 		@z = ast_addzone(@a, @parent);

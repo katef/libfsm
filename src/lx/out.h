@@ -16,6 +16,7 @@ struct prefix {
 
 extern struct prefix prefix;
 extern int print_progress;
+extern int important(unsigned int n);
 
 enum api_tokbuf {
 	API_DYNBUF   = 1 << 0,
