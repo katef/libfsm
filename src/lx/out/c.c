@@ -163,40 +163,6 @@ zindexof(const struct ast *ast, const struct ast_zone *zone)
 	return 0;
 }
 
-/* XXX: centralise */
-static int
-xset_contains(const struct state_set *set, const struct fsm_state *state)
-{
-	const struct state_set *s;
-
-	for (s = set; s != NULL; s = s->next) {
-		if (s->state == state) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-/* Return true if the edges after o contains state */
-/* TODO: centralise */
-static int
-contains(struct fsm_edge edges[], int o, struct fsm_state *state)
-{
-	int i;
-
-	assert(edges != NULL);
-	assert(state != NULL);
-
-	for (i = o; i <= UCHAR_MAX; i++) {
-		if (xset_contains(edges[i].sl, state)) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
 /*
  * Given a token, find one of its accepting states which gives
  * the shortest fsm_example(). This is pretty expensive.
