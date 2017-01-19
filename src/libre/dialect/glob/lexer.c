@@ -204,25 +204,19 @@ z0(struct lx_glob_lx *lx)
 
 		switch (state) {
 		case S0: /* e.g. "*" */
-			switch (c) {
-			default:  lx_glob_ungetc(lx, c); return TOK_STAR;
-			}
+			lx_glob_ungetc(lx, c); return TOK_STAR;
 
 		case S1: /* e.g. "?" */
-			switch (c) {
-			default:  lx_glob_ungetc(lx, c); return TOK_QMARK;
-			}
+			lx_glob_ungetc(lx, c); return TOK_QMARK;
 
 		case S2: /* e.g. "a" */
-			switch (c) {
-			default:  lx_glob_ungetc(lx, c); return TOK_CHAR;
-			}
+			lx_glob_ungetc(lx, c); return TOK_CHAR;
 
 		case S3: /* start */
 			switch (c) {
-			case '*': state = S0;      continue;
-			case '?': state = S1;      continue;
-			default:  state = S2;     continue;
+			case '*': state = S0; continue;
+			case '?': state = S1; continue;
+			default:  state = S2; continue;
 			}
 		}
 	}

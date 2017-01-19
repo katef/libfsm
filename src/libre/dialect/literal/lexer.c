@@ -204,13 +204,11 @@ z0(struct lx_literal_lx *lx)
 
 		switch (state) {
 		case S0: /* e.g. "a" */
-			switch (c) {
-			default:  lx_literal_ungetc(lx, c); return TOK_CHAR;
-			}
+			lx_literal_ungetc(lx, c); return TOK_CHAR;
 
 		case S1: /* start */
 			switch (c) {
-			default:  state = S0;     continue;
+			default:  state = S0; continue;
 			}
 		}
 	}

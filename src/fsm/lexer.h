@@ -11,16 +11,20 @@ enum lx_token {
 	TOK_IDENT,
 	TOK_END,
 	TOK_START,
-	TOK_LABEL,
 	TOK_CHAR,
 	TOK_HEX,
 	TOK_OCT,
 	TOK_ESC,
+	TOK_LABEL,
 	TOK_EOF,
 	TOK_ERROR,
 	TOK_UNKNOWN
 };
 
+/*
+ * .byte is 0-based.
+ * .line and .col are 1-based; 0 means unknown.
+ */
 struct lx_pos {
 	unsigned byte;
 	unsigned line;

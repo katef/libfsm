@@ -12,6 +12,10 @@ enum lx_glob_token {
 	TOK_UNKNOWN
 };
 
+/*
+ * .byte is 0-based.
+ * .line and .col are 1-based; 0 means unknown.
+ */
 struct lx_pos {
 	unsigned byte;
 	unsigned line;

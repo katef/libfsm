@@ -4,14 +4,14 @@
 #define LX_H
 
 enum lx_native_token {
-	TOK_CLOSECOUNT,
-	TOK_OPENCOUNT,
 	TOK_COUNT,
 	TOK_SEP,
-	TOK_CLOSEGROUP,
-	TOK_OPENGROUP,
+	TOK_CLOSECOUNT,
+	TOK_OPENCOUNT,
 	TOK_RANGE,
 	TOK_INVERT,
+	TOK_CLOSEGROUP,
+	TOK_OPENGROUP,
 	TOK_CHAR,
 	TOK_HEX,
 	TOK_OCT,
@@ -30,6 +30,10 @@ enum lx_native_token {
 	TOK_UNKNOWN
 };
 
+/*
+ * .byte is 0-based.
+ * .line and .col are 1-based; 0 means unknown.
+ */
 struct lx_pos {
 	unsigned byte;
 	unsigned line;
