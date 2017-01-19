@@ -105,25 +105,6 @@ escputs(FILE *f, const char *s)
 	return n;
 }
 
-/* Return true if the edges after o contains state */
-/* TODO: centralise */
-static int
-contains(struct fsm_edge edges[], int o, struct fsm_state *state)
-{
-	int i;
-
-	assert(edges != NULL);
-	assert(state != NULL);
-
-	for (i = o; i <= UCHAR_MAX; i++) {
-		if (set_contains(edges[i].sl, state)) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
 static int
 leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 	void *opaque)
@@ -194,12 +175,14 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 			fprintf(f, "':");
 
 			/* non-unique states fall through */
-/* XXX: this is an incorrect optimisation; to re-enable when fixed
-			if (contains(state->edges, i + 1, state->edges[i].sl->state)) {
+			if (i <= UCHAR_MAX - 1
+			&& state->edges[i + 1].sl != NULL
+			&& state->edges[i + 1].sl->state != mode
+			&& state->edges[i + 1].sl->state == state->edges[i].sl->state)
+			{
 				fprintf(f, "\n");
 				continue;
 			}
-*/
 
 			/* TODO: pad S%u out to maximum state width */
 			if (state->edges[i].sl->state != state) {
