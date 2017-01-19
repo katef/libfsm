@@ -612,7 +612,7 @@ main(int argc, char *argv[])
 					changed = 1;
 
 					if (print_progress) {
-						fprintf(stderr, "(merged)\n");
+						fprintf(stderr, "(merged)");
 					}
 				}
 			}
