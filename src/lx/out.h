@@ -7,6 +7,7 @@
 
 struct ast;
 
+/* TODO: combine all variables here into an lx_outoptions struct */
 struct prefix {
 	const char *api;
 	const char *tok;
@@ -14,6 +15,7 @@ struct prefix {
 };
 
 extern struct prefix prefix;
+extern int print_progress;
 
 enum api_tokbuf {
 	API_DYNBUF   = 1 << 0,

@@ -36,10 +36,12 @@ struct prefix prefix = {
 	""
 };
 
+int print_progress;
+
 static
 void usage(void)
 {
-	printf("usage: lx [-n] [-b <tokbuf>] [-g <getc>] [-l <language>] [-et <prefix>] [-x <exclude>]\n");
+	printf("usage: lx [-nQ] [-b <tokbuf>] [-g <getc>] [-l <language>] [-et <prefix>] [-x <exclude>]\n");
 	printf("       lx -h\n");
 }
 
@@ -371,11 +373,12 @@ main(int argc, char *argv[])
 	int keep_nfa;
 
 	keep_nfa = 0;
+	print_progress = 0;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "e:t:" "vb:g:l:nx:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "e:t:" "vb:g:l:nQx:"), c != -1) {
 			switch (c) {
 			case 'e':
 				prefix.api = optarg;
@@ -395,6 +398,10 @@ main(int argc, char *argv[])
 
 			case 'n':
 				keep_nfa = 1;
+				break;
+
+			case 'Q':
+				print_progress = 1;
 				break;
 
 			case 'h':
@@ -436,9 +443,19 @@ main(int argc, char *argv[])
 		prefix.lx = prefix.api;
 	}
 
-	ast = lx_parse(stdin);
-	if (ast == NULL) {
-		return EXIT_FAILURE;
+	{
+		if (print_progress) {
+			fprintf(stderr, "-- parsing:");
+		}
+
+		ast = lx_parse(stdin);
+		if (ast == NULL) {
+			return EXIT_FAILURE;
+		}
+
+		if (print_progress) {
+			fprintf(stderr, "\n");
+		}
 	}
 
 	/*
@@ -459,9 +476,19 @@ main(int argc, char *argv[])
 	{
 		struct ast_zone    *z;
 		struct ast_mapping *m;
+		unsigned int zn;
+
+		if (print_progress) {
+			fprintf(stderr, "-- AST transform:");
+			zn = 0;
+		}
 
 		for (z = ast->zl; z != NULL; z = z->next) {
 			assert(z->fsm == NULL);
+
+			if (print_progress) {
+				fprintf(stderr, " z%u", zn++);
+			}
 
 			z->fsm = fsm_new();
 			if (z->fsm == NULL) {
@@ -507,6 +534,10 @@ main(int argc, char *argv[])
 				}
 			}
 		}
+
+		if (print_progress) {
+			fprintf(stderr, "\n");
+		}
 	}
 
 	/*
@@ -516,11 +547,21 @@ main(int argc, char *argv[])
 	{
 		struct ast_zone *z, **p;
 		int changed;
+		unsigned int zn;
+
+		if (print_progress) {
+			fprintf(stderr, "-- de-duplicate zones:");
+			zn = 0;
+		}
 
 		do {
 			changed = 0;
 
 			for (z = ast->zl; z != NULL; z = z->next) {
+				if (print_progress) {
+					fprintf(stderr, " z%u", zn++);
+				}
+
 				for (p = &z->next; *p != NULL; p = &(*p)->next) {
 					struct fsm_state *s;
 					struct ast_zone *q;
@@ -569,9 +610,17 @@ main(int argc, char *argv[])
 					}
 
 					changed = 1;
+
+					if (print_progress) {
+						fprintf(stderr, "(merged)\n");
+					}
 				}
 			}
 		} while (changed);
+
+		if (print_progress) {
+			fprintf(stderr, "\n");
+		}
 	}
 
 	/*
@@ -581,6 +630,12 @@ main(int argc, char *argv[])
 		struct ast_zone  *z;
 		struct fsm_state *s;
 		int e;
+		unsigned int zn;
+
+		if (print_progress) {
+			fprintf(stderr, "-- semantic checks:");
+			zn = 0;
+		}
 
 		assert(ast->zl != NULL);
 
@@ -595,6 +650,10 @@ main(int argc, char *argv[])
 		for (z = ast->zl; z != NULL; z = z->next) {
 			assert(z->fsm != NULL);
 			assert(z->ml  != NULL);
+
+			if (print_progress) {
+				fprintf(stderr, " z%u", zn++);
+			}
 
 			if (fsm_isend(z->fsm, z->fsm->start)) {
 				fprintf(stderr, "start state accepts\n"); /* TODO */
@@ -654,11 +713,16 @@ main(int argc, char *argv[])
 			}
 		}
 
+		if (print_progress) {
+			fprintf(stderr, "\n");
+		}
+
 		if (e && out != lx_out_dot) {
 			return EXIT_FAILURE;
 		}
 	}
 
+	/* XXX: can do this before semantic checks */
 	/* TODO: free ast */
 	/* TODO: free DFA ast_mappings, created in carryopaque, iff making a DFA. i.e. those which have non-NULL conflict sets */
 	if (!keep_nfa) {
@@ -684,8 +748,18 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (out != NULL) {
-		out(ast, stdout);
+	{
+		if (print_progress) {
+			fprintf(stderr, "-- Output:");
+		}
+
+		if (out != NULL) {
+			out(ast, stdout);
+		}
+
+		if (print_progress) {
+			fprintf(stderr, "\n");
+		}
 	}
 
 	return EXIT_SUCCESS;

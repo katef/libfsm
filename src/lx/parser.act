@@ -41,6 +41,7 @@
 	#include "lexer.h"
 	#include "parser.h"
 	#include "ast.h"
+	#include "out.h"
 	#include "var.h"
 
 	typedef char *               string;
@@ -52,6 +53,7 @@
 	struct act_state {
 		enum lx_token lex_tok;
 		enum lx_token lex_tok_save;
+		unsigned int zn;
 	};
 
 	struct lex_state {
@@ -396,6 +398,10 @@
 
 	<make-zone>: (a :ast, parent :zone) -> (z :zone) = @{
 		assert(@a != NULL);
+
+		if (print_progress) {
+			fprintf(stderr, " z%u", act_state->zn++);
+		}
 
 		@z = ast_addzone(@a, @parent);
 		if (@z == NULL) {
@@ -801,6 +807,10 @@
 
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
+
+		if (print_progress) {
+			act_state->zn = 0;
+		}
 
 		ADVANCE_LEXER;	/* XXX: what if the first token is unrecognised? */
 		p_lx(lex_state, act_state, &ast);

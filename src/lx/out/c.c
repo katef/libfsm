@@ -267,6 +267,10 @@ static void
 out_lgetc(FILE *f)
 {
 	if (api_tokbuf & API_FGETC) {
+		if (print_progress) {
+			fprintf(stderr, " fgetc");
+		}
+
 		fprintf(f, "int\n");
 		fprintf(f, "%sfgetc(struct %slx *lx)\n", prefix.api, prefix.lx);
 		fprintf(f, "{\n");
@@ -279,6 +283,10 @@ out_lgetc(FILE *f)
 	}
 
 	if (api_tokbuf & API_SGETC) {
+		if (print_progress) {
+			fprintf(stderr, " sgetc");
+		}
+
 		fprintf(f, "int\n");
 		fprintf(f, "%ssgetc(struct %slx *lx)\n", prefix.api, prefix.lx);
 		fprintf(f, "{\n");
@@ -298,6 +306,10 @@ out_lgetc(FILE *f)
 	}
 
 	if (api_tokbuf & API_AGETC) {
+		if (print_progress) {
+			fprintf(stderr, " agetc");
+		}
+
 		fprintf(f, "int\n");
 		fprintf(f, "%sagetc(struct %slx *lx)\n", prefix.api, prefix.lx);
 		fprintf(f, "{\n");
@@ -321,6 +333,10 @@ out_lgetc(FILE *f)
 	}
 
 	if (api_tokbuf & API_FDGETC) {
+		if (print_progress) {
+			fprintf(stderr, " fdgetc");
+		}
+
 		fprintf(f, "int\n");
 		fprintf(f, "%sdgetc(struct %slx *lx)\n", prefix.api, prefix.lx);
 		fprintf(f, "{\n");
@@ -362,6 +378,10 @@ out_lgetc(FILE *f)
 static void
 out_io(FILE *f)
 {
+	if (print_progress) {
+		fprintf(stderr, " io");
+	}
+
 	/* TODO: consider passing char *c, and return int 0/-1 for error */
 	fprintf(f, "static int\n");
 	fprintf(f, "lx_getc(struct %slx *lx)\n", prefix.lx);
@@ -423,6 +443,10 @@ static void
 out_buf(FILE *f)
 {
 	if (api_tokbuf & API_DYNBUF) {
+		if (print_progress) {
+			fprintf(stderr, " dynbuf");
+		}
+
 		fprintf(f, "int\n");
 		fprintf(f, "%sdynpush(struct %slx *lx, char c)\n", prefix.api, prefix.lx);
 		fprintf(f, "{\n");
@@ -538,6 +562,10 @@ out_buf(FILE *f)
 	}
 
 	if (api_tokbuf & API_FIXEDBUF) {
+		if (print_progress) {
+			fprintf(stderr, " fixedbuf");
+		}
+
 		fprintf(f, "int\n");
 		fprintf(f, "%sfixedpush(struct %slx *lx, char c)\n", prefix.api, prefix.lx);
 		fprintf(f, "{\n");
@@ -779,6 +807,10 @@ out_name(FILE *f, const struct ast *ast)
 	assert(f != NULL);
 	assert(ast != NULL);
 
+	if (print_progress) {
+		fprintf(stderr, " name");
+	}
+
 	fprintf(f, "const char *\n");
 	fprintf(f, "%sname(enum %stoken t)\n", prefix.api, prefix.api);
 	fprintf(f, "{\n");
@@ -813,6 +845,10 @@ out_example(FILE *f, const struct ast *ast)
 
 	assert(f != NULL);
 	assert(ast != NULL);
+
+	if (print_progress) {
+		fprintf(stderr, " example");
+	}
 
 	fprintf(f, "const char *\n");
 	fprintf(f, "%sexample(enum %stoken (*z)(struct %slx *), enum %stoken t)\n",
@@ -878,6 +914,7 @@ void
 lx_out_c(const struct ast *ast, FILE *f)
 {
 	const struct ast_zone *z;
+	unsigned int zn;
 
 	assert(f != NULL);
 
@@ -919,7 +956,15 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	out_buf(f);
 
+	if (print_progress) {
+		zn = 0;
+	}
+
 	for (z = ast->zl; z != NULL; z = z->next) {
+		if (print_progress) {
+			fprintf(stderr, " z%u", zn++);
+		}
+
 		if (-1 == out_zone(f, ast, z)) {
 			return; /* XXX: handle error */
 		}

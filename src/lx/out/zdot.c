@@ -66,6 +66,7 @@ void
 lx_out_zdot(const struct ast *ast, FILE *f)
 {
 	const struct ast_zone *z;
+	unsigned int zn;
 
 	assert(f != NULL);
 
@@ -75,7 +76,15 @@ lx_out_zdot(const struct ast *ast, FILE *f)
 	fprintf(f, "\tnode [ shape = plaintext];\n");
 	fprintf(f, "\n");
 
+	if (print_progress) {
+		zn = 0;
+	}
+
 	for (z = ast->zl; z != NULL; z = z->next) {
+		if (print_progress) {
+			fprintf(stderr, " z%u", zn++);
+		}
+
 		fprintf(f, "\tz%u;\n", zindexof(ast, z));
 
 		out_zone(f, ast, z);

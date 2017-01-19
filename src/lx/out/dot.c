@@ -235,6 +235,7 @@ void
 lx_out_dot(const struct ast *ast, FILE *f)
 {
 	const struct ast_zone *z;
+	unsigned int zn;
 
 	assert(f != NULL);
 
@@ -256,7 +257,15 @@ lx_out_dot(const struct ast *ast, FILE *f)
 	fprintf(f, "\t{ rank = min; start; }\n");
 	fprintf(f, "\n");
 
+	if (print_progress) {
+		zn = 0;
+	}
+
 	for (z = ast->zl; z != NULL; z = z->next) {
+		if (print_progress) {
+			fprintf(stderr, " z%u", zn++);
+		}
+
 		out_zone(f, ast, z);
 	}
 
