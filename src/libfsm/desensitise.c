@@ -13,8 +13,7 @@
 int
 fsm_desensitise(struct fsm *fsm)
 {
-	struct fsm_state *s;
-	struct state_set *e;
+	struct fsm_state *s, *e;
 	int i;
 
 	assert(fsm != NULL);
@@ -34,14 +33,14 @@ fsm_desensitise(struct fsm *fsm)
 			l = s->edges[i].sl;
 
 			for (e = set_first(s->edges[u].sl, &iter); e != NULL; e = set_next(&iter)) {
-				if (!set_addstate(&s->edges[i].sl, e->state)) {
+				if (!set_addstate(&s->edges[i].sl, e)) {
 					return 0;
 				}
 			}
 
 			/* items pushed before l have already been done */
 			for (e = set_first(l, &iter); e != NULL; e = set_next(&iter)) {
-				if (!set_addstate(&s->edges[u].sl, e->state)) {
+				if (!set_addstate(&s->edges[u].sl, e)) {
 					return 0;
 				}
 			}

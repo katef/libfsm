@@ -13,8 +13,6 @@ int
 fsm_hasincoming(const struct fsm *fsm, const struct fsm_state *state)
 {
 	const struct fsm_state *s;
-	const struct state_set *e;
-	struct set_iter iter;
 	int i;
 
 	assert(fsm != NULL);

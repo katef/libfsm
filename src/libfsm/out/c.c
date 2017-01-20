@@ -157,14 +157,20 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 		mode = fsm_iscomplete(fsm, state) ? fsm_findmode(state) : NULL;
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (set_empty(state->edges[i].sl)) {
+			struct state_set *set;
+			struct set_iter iter;
+			struct fsm_state *s;
+
+			set = state->edges[i].sl;
+			if (set_empty(set)) {
 				continue;
 			}
 
-			assert(state->edges[i].sl->state != NULL);
-			assert(state->edges[i].sl->next  == NULL);
+			s = set_first(set, &iter);
+			assert(s != NULL);
+			assert(!set_hasnext(&iter));
 
-			if (state->edges[i].sl->state == mode) {
+			if (s == mode) {
 				continue;
 			}
 
@@ -173,18 +179,22 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 			fprintf(f, "':");
 
 			/* non-unique states fall through */
-			if (i <= UCHAR_MAX - 1
-			&& !set_empty(state->edges[i + 1].sl)
-			&& state->edges[i + 1].sl->state != mode
-			&& state->edges[i + 1].sl->state == state->edges[i].sl->state)
-			{
-				fprintf(f, "\n");
-				continue;
+			if (i <= UCHAR_MAX - 1) {
+				struct state_set *nset;
+				struct fsm_state *ns;
+
+				nset = state->edges[i + 1].sl;
+				ns = set_first(nset, &iter);
+
+				if (!set_empty(nset) && ns != mode && ns == s) {
+					fprintf(f, "\n");
+					continue;
+				}
 			}
 
 			/* TODO: pad S%u out to maximum state width */
-			if (state->edges[i].sl->state != state) {
-				fprintf(f, " state = S%u; continue;\n", indexof(fsm, state->edges[i].sl->state));
+			if (s != state) {
+				fprintf(f, " state = S%u; continue;\n", indexof(fsm, s));
 			} else {
 				fprintf(f, "             continue;\n");
 			}

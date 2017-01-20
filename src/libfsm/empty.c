@@ -16,7 +16,6 @@
 int
 fsm_empty(struct fsm *fsm)
 {
-	const struct fsm_state *s;
 
 	assert(fsm != NULL);
 

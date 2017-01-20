@@ -13,7 +13,7 @@ struct fsm_state *
 fsm_findmode(const struct fsm_state *state)
 {
 	struct set_iter iter;
-	struct state_set *s;
+	struct fsm_state *s;
 	int i, j;
 
 	struct {
@@ -30,19 +30,19 @@ fsm_findmode(const struct fsm_state *state)
 		for (s = set_first(state->edges[i].sl, &iter); s != NULL; s = set_next(&iter)) {
 			unsigned int curr;
 
-			assert(s->state != NULL);
-			assert(s->next == NULL);
+			assert(s != NULL);
+			assert(!set_hasnext(&iter));
 
 			curr = 0;
 
 			/* count the remaining edes which have the same target */
 			for (j = i + 1; j <= UCHAR_MAX; j++) {
-				curr += set_contains(state->edges[j].sl, s->state);
+				curr += set_contains(state->edges[j].sl, s);
 			}
 
 			if (curr > mode.freq) {
 				mode.freq  = curr;
-				mode.state = s->state;
+				mode.state = s;
 			}
 		}
 	}

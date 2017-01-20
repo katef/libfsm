@@ -90,7 +90,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 	const struct fsm_outoptions *options)
 {
 	struct set_iter iter;
-	struct state_set *e;
+	struct fsm_state *e;
 	int i;
 
 	assert(fsm != NULL);
@@ -133,13 +133,13 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 	if (!options->consolidate_edges) {
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			for (e = set_first(s->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
-				assert(e->state != NULL);
+				assert(e != NULL);
 
 				fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
 					options->prefix != NULL ? options->prefix : "",
 					indexof(fsm, s),
 					options->prefix != NULL ? options->prefix : "",
-					indexof(fsm, e->state));
+					indexof(fsm, e));
 
 				escputc(i, f);
 
@@ -165,10 +165,10 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 			struct bm bm;
 			int k;
 
-			assert(e->state != NULL);
+			assert(e != NULL);
 
 			/* unique states only */
-			if (contains(s->edges, i + 1, e->state)) {
+			if (contains(s->edges, i + 1, e)) {
 				continue;
 			}
 
@@ -176,7 +176,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 
 			/* find all edges which go from this state to the same target state */
 			for (k = 0; k <= UCHAR_MAX; k++) {
-				if (set_contains(s->edges[k].sl, e->state)) {
+				if (set_contains(s->edges[k].sl, e)) {
 					bm_set(&bm, k);
 				}
 			}
@@ -185,7 +185,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 				options->prefix != NULL ? options->prefix : "",
 				indexof(fsm, s),
 				options->prefix != NULL ? options->prefix : "",
-				indexof(fsm, e->state));
+				indexof(fsm, e));
 
 			(void) bm_print(f, &bm, 0, escputc);
 
@@ -202,7 +202,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 				options->prefix != NULL ? options->prefix : "",
 				indexof(fsm, s),
 				options->prefix != NULL ? options->prefix : "",
-				indexof(fsm, e->state));
+				indexof(fsm, e));
 
 			escputc(i, f);
 

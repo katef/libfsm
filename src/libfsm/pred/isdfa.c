@@ -36,7 +36,6 @@ fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state)
 	 */
 	for (i = 0; i <= UCHAR_MAX; i++) {
 		struct set_iter iter;
-		struct state_set *s;
 
 		if (set_empty(state->edges[i].sl)) {
 			continue;

@@ -252,7 +252,8 @@ addmatch(struct match **head, const char *s)
 static void
 carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 {
-	struct state_set *s;
+	struct set_iter iter;
+	struct fsm_state *s;
 	struct match *m;
 	struct match *matches;
 
@@ -275,15 +276,15 @@ carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 
 	matches = NULL;
 
-	for (s = set; s != NULL; s = s->next) {
-		if (!fsm_isend(fsm, s->state)) {
+	for (s = set_first(set, &iter); s != NULL; s = set_next(&iter)) {
+		if (!fsm_isend(fsm, s)) {
 			continue;
 		}
 
-		assert(s->state->opaque != NULL);
+		assert(s->opaque != NULL);
 
-		for (m = s->state->opaque; m != NULL; m = m->next) {
-			assert(s->state->opaque != NULL);
+		for (m = s->opaque; m != NULL; m = m->next) {
+			assert(s->opaque != NULL);
 
 			if (!addmatch(&matches, m->s)) {
 				perror("addmatch");

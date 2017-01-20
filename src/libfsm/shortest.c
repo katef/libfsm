@@ -64,7 +64,7 @@ fsm_shortest(const struct fsm *fsm,
 	}
 
 	while (u = priq_pop(&todo), u != NULL) {
-		const struct state_set *e;
+		const struct fsm_state *e;
 		struct set_iter iter;
 		int i;
 
@@ -84,15 +84,15 @@ fsm_shortest(const struct fsm *fsm,
 				struct priq *v;
 				unsigned c;
 
-				v = priq_find(todo, e->state);
+				v = priq_find(todo, e);
 
 				/* visited already */
 				if (v == NULL) {
-					assert(priq_find(done, e->state));
+					assert(priq_find(done, e));
 					continue;
 				}
 
-				assert(v->state == e->state);
+				assert(v->state == e);
 
 				c = cost(u->state, v->state, i);
 

@@ -5,7 +5,12 @@
 
 #include <adt/set.h>
 
-struct state_set *
+struct state_set {
+	struct fsm_state *state;
+	struct state_set *next;
+};
+
+struct fsm_state *
 set_addstate(struct state_set **head, struct fsm_state *state)
 {
 	struct state_set *new;
@@ -19,7 +24,7 @@ set_addstate(struct state_set **head, struct fsm_state *state)
 
 		for (s = *head; s != NULL; s = s->next) {
 			if (s->state == state) {
-				return s;
+				return state;
 			}
 		}
 	}
@@ -34,7 +39,7 @@ set_addstate(struct state_set **head, struct fsm_state *state)
 	new->next  = *head;
 	*head      = new;
 
-	return new;
+	return state;
 }
 
 void
@@ -149,24 +154,32 @@ set_empty(struct state_set *set)
 	return set == NULL;
 }
 
-struct state_set *
+struct fsm_state *
 set_first(struct state_set *head, struct set_iter *i)
 {
 
 	assert(i != NULL);
 
 	i->cur = head;
-	return head;
+	if (i->cur == NULL) {
+		return NULL;
+	}
+
+	return i->cur->state;
 }
 
-struct state_set *
+struct fsm_state *
 set_next(struct set_iter *i)
 {
 
 	assert(i != NULL);
 
 	i->cur = i->cur->next;
-	return i->cur;
+	if (i->cur == NULL) {
+		return NULL;
+	}
+
+	return i->cur->state;
 }
 
 int

@@ -123,7 +123,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 		for (s = fsm->sl; s != NULL; s = s->next) {
 			struct fsm_state *to;
 			struct set_iter iter;
-			struct state_set *e;
+			struct fsm_state *e;
 			int i;
 
 			to = equivalent(new, fsm, s);
@@ -135,9 +135,9 @@ fsm_reverse_opaque(struct fsm *fsm,
 					struct fsm_state *from;
 					struct fsm_edge *edge;
 
-					assert(e->state != NULL);
+					assert(e != NULL);
 
-					from = equivalent(new, fsm, e->state);
+					from = equivalent(new, fsm, e);
 
 					assert(from != NULL);
 

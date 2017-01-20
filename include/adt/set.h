@@ -5,20 +5,17 @@
 
 struct fsm_state;
 
-struct state_set {
-	struct fsm_state *state;
-	struct state_set *next;
-};
+struct state_set;
 
 struct set_iter {
 	struct state_set *cur;
 };
 
-struct state_set *
-set_addstate(struct state_set **head, struct fsm_state *state);
+struct fsm_state *
+set_addstate(struct state_set **set, struct fsm_state *state);
 
 void
-set_remove(struct state_set **head, struct fsm_state *state);
+set_remove(struct state_set **set, struct fsm_state *state);
 
 void
 set_replace(struct state_set *set,
@@ -51,10 +48,10 @@ set_merge(struct state_set **dst, struct state_set *src);
 int
 set_empty(struct state_set *set);
 
-struct state_set *
-set_first(struct state_set *head, struct set_iter *i);
+struct fsm_state *
+set_first(struct state_set *set, struct set_iter *i);
 
-struct state_set *
+struct fsm_state *
 set_next(struct set_iter *i);
 
 int

@@ -71,13 +71,13 @@ escputc(int c, FILE *f)
 static const struct fsm_state *
 findany(const struct fsm_state *state)
 {
-	struct state_set *e, *f;
+	struct fsm_state *e, *f;
 	struct set_iter iter;
 	int i;
 
 	assert(state != NULL);
 
-	f = set_first(state->edges[0].sl, &i);
+	f = set_first(state->edges[0].sl, &iter);
 	
 	for (i = 0; i <= UCHAR_MAX; i++) {
 		if (set_empty(state->edges[i].sl)) {
@@ -85,7 +85,7 @@ findany(const struct fsm_state *state)
 		}
 
 		for (e = set_first(state->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
-			if (e->state != f->state) {
+			if (e != f) {
 				return NULL;
 			}
 		}
@@ -100,10 +100,8 @@ void
 fsm_out_fsm(const struct fsm *fsm, FILE *f,
 	const struct fsm_outoptions *options)
 {
+	struct fsm_state *s, *e, *start;
 	struct set_iter iter;
-	struct fsm_state *s;
-	struct state_set *e;
-	struct fsm_state *start;
 	int end;
 
 	assert(fsm != NULL);
@@ -125,9 +123,9 @@ fsm_out_fsm(const struct fsm *fsm, FILE *f,
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			for (e = set_first(s->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
-				assert(e->state != NULL);
+				assert(e != NULL);
 
-				fprintf(f, "%-2u -> %2u", indexof(fsm, s), indexof(fsm, e->state));
+				fprintf(f, "%-2u -> %2u", indexof(fsm, s), indexof(fsm, e));
 
 				/* TODO: print " ?" if all edges are equal */
 

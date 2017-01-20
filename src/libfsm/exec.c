@@ -17,6 +17,8 @@ static struct fsm_state *
 nextstate(const struct fsm_state *state, char c)
 {
 	const struct state_set *s;
+	struct fsm_state *ret;
+	struct set_iter iter;
 
 	assert(state != NULL);
 
@@ -25,9 +27,11 @@ nextstate(const struct fsm_state *state, char c)
 		return NULL;
 	}
 
-	assert(s->state != NULL);
+	ret = set_first(s, &iter);
 
-	return s->state;
+	assert(ret != NULL);
+
+	return ret;
 }
 
 struct fsm_state *

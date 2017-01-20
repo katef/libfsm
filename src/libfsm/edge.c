@@ -12,7 +12,7 @@
 
 #include "internal.h"
 
-static struct state_set *
+static struct fsm_state *
 fsm_addedge(struct fsm_state *from, struct fsm_state *to,
 	enum fsm_edge_type type)
 {
