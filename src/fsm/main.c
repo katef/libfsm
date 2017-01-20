@@ -173,6 +173,8 @@ main(int argc, char *argv[])
 	static const struct fsm_outoptions o_defaults;
 	struct fsm_outoptions o = o_defaults;
 
+	o.comments = 1;
+
 	format = FSM_OUT_FSM;
 	xfiles = 0;
 	print  = 0;

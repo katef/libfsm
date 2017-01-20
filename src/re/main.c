@@ -351,6 +351,8 @@ main(int argc, char *argv[])
 	o.anonymous_states  = 1;
 	o.consolidate_edges = 1;
 
+	o.comments          = 1;
+
 	ifiles   = 0;
 	xfiles   = 0;
 	boxed    = 0;

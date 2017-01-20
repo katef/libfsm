@@ -16,8 +16,6 @@
 #include "libfsm/internal.h"
 #include "libfsm/out.h"
 
-static int comments = 1; /* XXX: placeholder */
-
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)
 {
@@ -276,7 +274,7 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *optio
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		fprintf(f, "\t\tcase S%u:", indexof(fsm, s));
 
-		if (comments) {
+		if (options->comments) {
 			if (s == fsm->start) {
 				fprintf(f, " /* start */");
 			} else {

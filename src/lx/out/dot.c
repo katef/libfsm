@@ -212,6 +212,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		o.anonymous_states  = anonymous_states;
 		o.consolidate_edges = 1;
 		o.fragment          = 1;
+		o.comments          = 1;
 		o.prefix            = p;
 
 		fsm_print(z->fsm, f, FSM_OUT_DOT, &o);

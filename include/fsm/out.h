@@ -23,6 +23,10 @@ struct fsm_outoptions {
 	 * intended to be useful for embedding into other code. */
 	unsigned int fragment:1;
 
+	/* boolean: true indicates to output comments in the generated code,
+	 * where possible. */
+	unsigned int comments:1;
+
 	/* a prefix for namespacing generated identifiers. NULL if not required. */
 	const char *prefix;
 };
