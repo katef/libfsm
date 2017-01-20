@@ -65,6 +65,7 @@ fsm_shortest(const struct fsm *fsm,
 
 	while (u = priq_pop(&todo), u != NULL) {
 		const struct state_set *e;
+		struct set_iter iter;
 		int i;
 
 		priq_move(&done, u);
@@ -79,7 +80,7 @@ fsm_shortest(const struct fsm *fsm,
 		}
 
 		for (i = 0; i < FSM_EDGE_MAX; i++) {
-			for (e = u->state->edges[i].sl; e != NULL; e = e->next) {
+			for (e = set_first(u->state->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
 				struct priq *v;
 				unsigned c;
 

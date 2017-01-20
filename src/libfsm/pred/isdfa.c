@@ -27,7 +27,7 @@ fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state)
 	/*
 	 * DFA may not have epsilon edges.
 	 */
-	if (state->edges[FSM_EDGE_EPSILON].sl != NULL) {
+	if (!set_empty(state->edges[FSM_EDGE_EPSILON].sl)) {
 		return 0;
 	}
 
@@ -35,11 +35,15 @@ fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state)
 	 * DFA may not have duplicate edges.
 	 */
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (state->edges[i].sl == NULL) {
+		struct set_iter iter;
+		struct state_set *s;
+
+		if (set_empty(state->edges[i].sl)) {
 			continue;
 		}
 
-		if (state->edges[i].sl->next != NULL) {
+		(void)set_first(state->edges[i].sl, &iter);
+		if (set_hasnext(&iter)) {
 			return 0;
 		}
 	}

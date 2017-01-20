@@ -69,6 +69,7 @@ fsm_out_csv(const struct fsm *fsm, FILE *f,
 {
 	static const struct bm bm_empty;
 	struct bm bm;
+	struct set_iter iter;
 	struct fsm_state *s;
 	struct state_set *e;
 	int i;
@@ -85,7 +86,8 @@ fsm_out_csv(const struct fsm *fsm, FILE *f,
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (e = s->edges[i].sl; e != NULL; e = e->next) {
+			for (e = set_first(s->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
+				/* XXX: Tautological check */
 				if (set_contains(s->edges[i].sl, e->state)) {
 					bm_set(&bm, i);
 				}
@@ -116,13 +118,13 @@ fsm_out_csv(const struct fsm *fsm, FILE *f,
 		while (n = bm_next(&bm, n, 1), n != FSM_EDGE_MAX + 1) {
 			fprintf(f, ", ");
 
-			if (s->edges[n].sl == NULL) {
+			if (set_empty(s->edges[n].sl)) {
 				fprintf(f, "\"\"");
 			} else {
-				for (e = s->edges[n].sl; e != NULL; e = e->next) {
+				for (e = set_first(s->edges[n].sl, &iter); e != NULL; e = set_next(&iter)) {
 					fprintf(f, "S%u", indexof(fsm, s->edges[n].sl->state));
 
-					if (e->next != NULL) {
+					if (set_hasnext(&iter)) {
 						fprintf(f, " ");
 					}
 				}

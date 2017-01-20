@@ -19,7 +19,7 @@ fsm_iscomplete(const struct fsm *fsm, const struct fsm_state *state)
 	/* TODO: assert state is in fsm->sl */
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (state->edges[i].sl == NULL) {
+		if (set_empty(state->edges[i].sl)) {
 			return 0;
 		}
 	}

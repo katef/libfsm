@@ -89,6 +89,7 @@ static void
 singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 	const struct fsm_outoptions *options)
 {
+	struct set_iter iter;
 	struct state_set *e;
 	int i;
 
@@ -131,7 +132,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 
 	if (!options->consolidate_edges) {
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (e = s->edges[i].sl; e != NULL; e = e->next) {
+			for (e = set_first(s->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
 				assert(e->state != NULL);
 
 				fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
@@ -160,7 +161,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 	 */
 	/* TODO: handle special edges upto FSM_EDGE_MAX separately */
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		for (e = s->edges[i].sl; e != NULL; e = e->next) {
+		for (e = set_first(s->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
 			struct bm bm;
 			int k;
 
@@ -196,7 +197,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 	 * Special edges are not consolidated above
 	 */
 	for (i = UCHAR_MAX; i <= FSM_EDGE_MAX; i++) {
-		for (e = s->edges[i].sl; e != NULL; e = e->next) {
+		for (e = set_first(s->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
 			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
 				options->prefix != NULL ? options->prefix : "",
 				indexof(fsm, s),

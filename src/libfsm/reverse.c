@@ -122,6 +122,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
 			struct fsm_state *to;
+			struct set_iter iter;
 			struct state_set *e;
 			int i;
 
@@ -130,7 +131,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 			assert(to != NULL);
 
 			for (i = 0; i <= FSM_EDGE_MAX; i++) {
-				for (e = s->edges[i].sl; e != NULL; e = e->next) {
+				for (e = set_first(s->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
 					struct fsm_state *from;
 					struct fsm_edge *edge;
 

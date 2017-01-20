@@ -12,6 +12,7 @@
 struct fsm_state *
 fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 {
+	struct set_iter iter;
 	struct fsm_state *s;
 	int i;
 
@@ -20,7 +21,7 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 		struct state_set *p;
 
 		/* set_merge assumes no common elements */
-		for (p = b->edges[i].sl; p != NULL; p = p->next) {
+		for (p = set_first(b->edges[i].sl, &iter); p != NULL; p = set_next(&iter)) {
 			set_remove(&a->edges[i].sl, p->state);
 		}
 

@@ -107,6 +107,7 @@ fsm_reachable(struct fsm *fsm, struct fsm_state *state,
 	}
 
 	while (p = list_nextnotdone(list), p != NULL) {
+		struct set_iter iter;
 		struct state_set *e;
 		int i;
 
@@ -116,7 +117,7 @@ fsm_reachable(struct fsm *fsm, struct fsm_state *state,
 		}
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (e = p->state->edges[i].sl; e != NULL; e = e->next) {
+			for (e = set_first(p->state->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
 				/* not a list operation... */
 				if (list_contains(list, e->state)) {
 					continue;

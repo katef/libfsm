@@ -64,7 +64,7 @@ counttargets(struct fsm_state *state)
 	n = 0;
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		if (state->edges[i].sl == NULL) {
+		if (set_empty(state->edges[i].sl)) {
 			continue;
 		}
 

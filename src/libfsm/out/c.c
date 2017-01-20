@@ -134,7 +134,7 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 	{
 		/* TODO: move this out into a count function */
 		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (state->edges[i].sl != NULL) {
+			if (!set_empty(state->edges[i].sl)) {
 				break;
 			}
 		}
@@ -157,7 +157,7 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 		mode = fsm_iscomplete(fsm, state) ? fsm_findmode(state) : NULL;
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (state->edges[i].sl == NULL) {
+			if (set_empty(state->edges[i].sl)) {
 				continue;
 			}
 
@@ -174,7 +174,7 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 
 			/* non-unique states fall through */
 			if (i <= UCHAR_MAX - 1
-			&& state->edges[i + 1].sl != NULL
+			&& !set_empty(state->edges[i + 1].sl)
 			&& state->edges[i + 1].sl->state != mode
 			&& state->edges[i + 1].sl->state == state->edges[i].sl->state)
 			{

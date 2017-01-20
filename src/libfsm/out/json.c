@@ -69,18 +69,14 @@ escputc(int c, FILE *f)
 
 /* XXX: horrible */
 static int
-hasmore(const struct fsm_state *s, const struct state_set *e, int i)
+hasmore(const struct fsm_state *s, int i)
 {
 	assert(s != NULL);
-
-	if (e->next != NULL) {
-		return 1;
-	}
 
 	i++;
 
 	for ( ; i <= FSM_EDGE_MAX; i++) {
-		if (s->edges[i].sl != NULL) {
+		if (!set_empty(s->edges[i].sl)) {
 			return 1;
 		}
 	}
@@ -92,6 +88,7 @@ void
 fsm_out_json(const struct fsm *fsm, FILE *f,
 	const struct fsm_outoptions *options)
 {
+	struct set_iter iter;
 	struct fsm_state *s;
 	struct state_set *e;
 
@@ -115,7 +112,7 @@ fsm_out_json(const struct fsm *fsm, FILE *f,
 			fprintf(f, "\t\t\t\"edges\": [\n");
 
 			for (i = 0; i <= FSM_EDGE_MAX; i++) {
-				for (e = s->edges[i].sl; e != NULL; e = e->next) {
+				for (e = set_first(s->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
 					assert(e->state != NULL);
 
 					fprintf(f, "\t\t\t\t{ ");
@@ -138,7 +135,7 @@ fsm_out_json(const struct fsm *fsm, FILE *f,
 					fprintf(f, "\"to\": %u",
 						indexof(fsm, e->state));
 
-					fprintf(f, "}%s\n", hasmore(s, e, i) ? "," : "");
+					fprintf(f, "}%s\n", set_hasnext(&iter) && hasmore(s, i) ? "," : "");
 				}
 			}
 

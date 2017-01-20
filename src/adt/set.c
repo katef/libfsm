@@ -5,6 +5,10 @@
 
 #include <adt/set.h>
 
+struct set_iter {
+	struct state_set *cur;
+};
+
 struct state_set *
 set_addstate(struct state_set **head, struct fsm_state *state)
 {
@@ -142,3 +146,38 @@ set_merge(struct state_set **dst, struct state_set *src)
 	*p = src;
 }
 
+int
+set_empty(struct state_set *set)
+{
+
+	return set == NULL;
+}
+
+struct state_set *
+set_first(struct state_set *head, struct set_iter *i)
+{
+
+	assert(i != NULL);
+
+	i->cur = head;
+	return head;
+}
+
+struct state_set *
+set_next(struct set_iter *i)
+{
+
+	assert(i != NULL);
+
+	i->cur = i->cur->next;
+	return i->cur;
+}
+
+int
+set_hasnext(struct set_iter *i)
+{
+
+	assert(i != NULL);
+
+	return i->cur && i->cur->next;
+}

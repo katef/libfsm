@@ -60,7 +60,7 @@ fsm_complete(struct fsm *fsm,
 		}
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (s->edges[i].sl != NULL) {
+			if (!set_empty(s->edges[i].sl)) {
 				continue;
 			}
 

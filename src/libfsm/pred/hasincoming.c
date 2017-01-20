@@ -14,6 +14,7 @@ fsm_hasincoming(const struct fsm *fsm, const struct fsm_state *state)
 {
 	const struct fsm_state *s;
 	const struct state_set *e;
+	struct set_iter iter;
 	int i;
 
 	assert(fsm != NULL);
@@ -21,10 +22,8 @@ fsm_hasincoming(const struct fsm *fsm, const struct fsm_state *state)
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (e = s->edges[i].sl; e != NULL; e = e->next) {
-				if (e->state == state) {
-					return 1;
-				}
+			if (set_contains(s->edges[i].sl, state)) {
+				return 1;
 			}
 		}
 	}

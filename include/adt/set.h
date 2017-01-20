@@ -10,6 +10,8 @@ struct state_set {
 	struct state_set *next;
 };
 
+struct set_iter;
+
 struct state_set *
 set_addstate(struct state_set **head, struct fsm_state *state);
 
@@ -43,6 +45,18 @@ set_equal(const struct state_set *a, const struct state_set *b);
 
 void
 set_merge(struct state_set **dst, struct state_set *src);
+
+int
+set_empty(struct state_set *set);
+
+struct state_set *
+set_first(struct state_set *head, struct set_iter *i);
+
+struct state_set *
+set_next(struct set_iter *i);
+
+int
+set_hasnext(struct set_iter *i);
 
 #endif
 
