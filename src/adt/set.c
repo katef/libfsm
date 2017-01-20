@@ -5,10 +5,6 @@
 
 #include <adt/set.h>
 
-struct set_iter {
-	struct state_set *cur;
-};
-
 struct state_set *
 set_addstate(struct state_set **head, struct fsm_state *state)
 {
