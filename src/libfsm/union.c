@@ -49,22 +49,32 @@ fsm_union(struct fsm *a, struct fsm *b)
 	 *
 	 * a->start and b->start are considered suitable to serve as the start
 	 * state if they have no incoming edges.
+	 *
+	 * This optimisation can be expensive to run, so it's optionally disabled
+	 * by the fsm->tidy_union flag.
 	 */
 
-	ia = fsm_hasincoming(q, sa);
-	ib = fsm_hasincoming(q, sb);
-
-	if (!ia && !ib) {
-		sq = fsm_mergestates(q, sa, sb);
-		sa = sb = sq;
-	} else if (!ia) {
-		sq = sa;
-	} else if (!ib) {
-		sq = sb;
-	} else {
+	if (!a->tidy_union || !b->tidy_union) {
 		sq = fsm_addstate(q);
 		if (sq == NULL) {
 			goto error;
+		}
+	} else {
+		ia = fsm_hasincoming(q, sa);
+		ib = fsm_hasincoming(q, sb);
+
+		if (!ia && !ib) {
+			sq = fsm_mergestates(q, sa, sb);
+			sa = sb = sq;
+		} else if (!ia) {
+			sq = sa;
+		} else if (!ib) {
+			sq = sb;
+		} else {
+			sq = fsm_addstate(q);
+			if (sq == NULL) {
+				goto error;
+			}
 		}
 	}
 

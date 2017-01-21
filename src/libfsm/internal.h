@@ -39,6 +39,8 @@ struct fsm {
 	struct fsm_state *sl;
 	struct fsm_state *start;
 
+	unsigned int tidy_union:1;
+
 #ifdef DEBUG_TODFA
 	struct fsm *nfa;
 #endif
