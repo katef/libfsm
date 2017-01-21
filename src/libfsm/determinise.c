@@ -302,7 +302,10 @@ allstatesreachableby(const struct fsm *fsm, struct set *set, char c,
 	struct set_iter it, jt;
 	struct fsm_state *s;
 
+	assert(fsm != NULL);
 	assert(set != NULL);
+
+	(void) fsm;
 
 	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
 		struct fsm_edge *to;
