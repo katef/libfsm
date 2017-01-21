@@ -276,6 +276,8 @@ bm_snprint(const struct bm *bm, char *s, size_t n,
 		goto error;
 	}
 
+	assert(r >= 0);
+
 	if (n > r + 1) {
 		n = r + 1;
 	}
