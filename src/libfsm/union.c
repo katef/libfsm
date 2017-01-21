@@ -54,7 +54,7 @@ fsm_union(struct fsm *a, struct fsm *b)
 	 * by the fsm->tidy_union flag.
 	 */
 
-	if (!a->tidy_union || !b->tidy_union) {
+	if (!q->tidy_union) {
 		sq = fsm_addstate(q);
 		if (sq == NULL) {
 			goto error;
