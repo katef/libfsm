@@ -387,7 +387,7 @@ ZL2_156:;
 			}
 			/* END OF INLINE: 156 */
 		}
-		/*UNREACHED*/
+		/* UNREACHED */
 	default:
 		{
 			ZI154 = ZI152;
@@ -1388,7 +1388,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 					goto ZL2_group_C_Clist_Hof_Hterms;
 					/* END OF INLINE: group::list-of-terms */
 				}
-				/*UNREACHED*/
+				/* UNREACHED */
 			default:
 				break;
 			}
@@ -1458,7 +1458,7 @@ ZL2_expr_C_Clist_Hof_Hatoms:;
 					goto ZL2_expr_C_Clist_Hof_Hatoms;
 					/* END OF INLINE: expr::list-of-atoms */
 				}
-				/*UNREACHED*/
+				/* UNREACHED */
 			default:
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
@@ -2188,14 +2188,13 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 1054 "src/libre/parser.act"
+#line 1053 "src/libre/parser.act"
 
 
 	static int
 	lgetc(struct LX_STATE *lx)
 	{
 		struct lex_state *lex_state;
-		int c;
 
 		assert(lx != NULL);
 		assert(lx->opaque != NULL);
@@ -2465,6 +2464,6 @@ ZL1:;
 	}
 #endif
 
-#line 2469 "src/libre/dialect/native/parser.c"
+#line 2468 "src/libre/dialect/native/parser.c"
 
 /* END OF FILE */

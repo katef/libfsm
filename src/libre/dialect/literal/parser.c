@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 112 "src/libre/parser.act"
+#line 115 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -39,10 +39,10 @@
 
 	#define LX_PREFIX CAT(lx_, DIALECT)
 
-	#define LX_TOKEN  CAT(LX_PREFIX, _token)
-	#define LX_STATE  CAT(LX_PREFIX, _lx)
-	#define LX_NEXT   CAT(LX_PREFIX, _next)
-	#define LX_INIT   CAT(LX_PREFIX, _init)
+	#define LX_TOKEN   CAT(LX_PREFIX, _token)
+	#define LX_STATE   CAT(LX_PREFIX, _lx)
+	#define LX_NEXT    CAT(LX_PREFIX, _next)
+	#define LX_INIT    CAT(LX_PREFIX, _init)
 
 	#define DIALECT_COMP  CAT(comp_, DIALECT)
 	#define DIALECT_GROUP CAT(group_, DIALECT)
@@ -94,8 +94,11 @@
 		int (*f)(void *opaque);
 		void *opaque;
 
-		/* for lgetc()'s character-shoving */
-		enum { SHOVE_PRE, SHOVE_MID, SHOVE_NONE } shove;
+		struct {
+			const char *pre;
+			const char *post;
+			enum { SHOVE_PRE, SHOVE_F, SHOVE_POST } state;
+		} shove;
 
 		/* TODO: use lx's generated conveniences for the pattern buffer */
 		char a[512];
@@ -203,7 +206,7 @@
 		return fputs(escchar(s, sizeof s, c), f);
 	}
 
-#line 207 "src/libre/dialect/literal/parser.c"
+#line 210 "src/libre/dialect/literal/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -233,7 +236,7 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, er
 
 		/* BEGINNING OF ACTION: make-states */
 		{
-#line 399 "src/libre/parser.act"
+#line 402 "src/libre/parser.act"
 
 		assert(fsm != NULL);
 		/* TODO: assert fsm is empty */
@@ -248,7 +251,7 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, er
 
 		fsm_setend(fsm, (ZIy), 1);
 	
-#line 252 "src/libre/dialect/literal/parser.c"
+#line 255 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: make-states */
 		/* BEGINNING OF INLINE: 71 */
@@ -267,13 +270,13 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, er
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 534 "src/libre/parser.act"
+#line 537 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			goto ZL3;
 		}
 	
-#line 277 "src/libre/dialect/literal/parser.c"
+#line 280 "src/libre/dialect/literal/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -284,13 +287,13 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, er
 			{
 				/* BEGINNING OF ACTION: err-expected-atoms */
 				{
-#line 712 "src/libre/parser.act"
+#line 715 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXATOMS;
 		}
 	
-#line 294 "src/libre/dialect/literal/parser.c"
+#line 297 "src/libre/dialect/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-atoms */
 			}
@@ -313,13 +316,13 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, er
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 742 "src/libre/parser.act"
+#line 745 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
 		}
 	
-#line 323 "src/libre/dialect/literal/parser.c"
+#line 326 "src/libre/dialect/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -348,7 +351,7 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 335 "src/libre/parser.act"
+#line 338 "src/libre/parser.act"
 
 		assert(lex_state->buf.a[0] != '\0');
 		assert(lex_state->buf.a[1] == '\0');
@@ -358,7 +361,7 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 362 "src/libre/dialect/literal/parser.c"
+#line 365 "src/libre/dialect/literal/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -368,7 +371,7 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-literal */
 		{
-#line 551 "src/libre/parser.act"
+#line 554 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -379,17 +382,17 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 			goto ZL1;
 		}
 	
-#line 383 "src/libre/dialect/literal/parser.c"
+#line 386 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: add-literal */
 		/* BEGINNING OF ACTION: count-1 */
 		{
-#line 691 "src/libre/parser.act"
+#line 694 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (ZIy);
 	
-#line 393 "src/libre/dialect/literal/parser.c"
+#line 396 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: count-1 */
 	}
@@ -411,14 +414,14 @@ ZL2_list_Hof_Hliterals:;
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 527 "src/libre/parser.act"
+#line 530 "src/libre/parser.act"
 
 		(ZIz) = fsm_addstate(fsm);
 		if ((ZIz) == NULL) {
 			goto ZL1;
 		}
 	
-#line 422 "src/libre/dialect/literal/parser.c"
+#line 425 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hliterals_C_Cliteral (fsm, flags, lex_state, act_state, err, ZIx, ZIz);
@@ -437,13 +440,13 @@ ZL2_list_Hof_Hliterals:;
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 534 "src/libre/parser.act"
+#line 537 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIz), (ZIy))) {
 			goto ZL1;
 		}
 	
-#line 447 "src/libre/dialect/literal/parser.c"
+#line 450 "src/libre/dialect/literal/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -463,11 +466,27 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 1010 "src/libre/parser.act"
+#line 1053 "src/libre/parser.act"
 
 
 	static int
 	lgetc(struct LX_STATE *lx)
+	{
+		struct lex_state *lex_state;
+
+		assert(lx != NULL);
+		assert(lx->opaque != NULL);
+
+		lex_state = lx->opaque;
+
+		assert(lex_state->f != NULL);
+
+		return lex_state->f(lex_state->opaque);
+	}
+
+#ifdef PARSE_GROUP
+	static int
+	lshovec(struct LX_STATE *lx)
 	{
 		struct lex_state *lex_state;
 		int c;
@@ -477,27 +496,51 @@ ZL1:;
 
 		lex_state = lx->opaque;
 
-		assert(lex_state->f != NULL);
+		assert(lex_state->shove.pre  != NULL);
+		assert(lex_state->shove.post != NULL);
 
-		/* TODO: document character-shoving FSM */
+		/*
+		 * Characters are shoved into the input stream by a cheesy FSM which walks
+		 * three input sources in turn; a string to prepend, the lgetc stream,
+		 * and a string to append after the lgetc stream.
+		 * These strings needn't be spellings for complete tokens.
+		 */
+
 		/* XXX: pos will be wrong! decrement it. as if our shoved character didn't exist */
 
-		switch (lex_state->shove) {
-		case SHOVE_PRE:
-			return lex_state->shove = SHOVE_MID, '[';
+		for (;;) {
+			switch (lex_state->shove.state) {
+			case SHOVE_PRE:
+				c = *lex_state->shove.pre;
+				if (c == '\0') {
+					lex_state->shove.state = SHOVE_F;
+					continue;
+				}
 
-		case SHOVE_MID:
-			c = lex_state->f(lex_state->opaque);
-			if (c == EOF) {
-				return lex_state->shove = SHOVE_NONE, ']';
+				lex_state->shove.pre++;
+				return c;
+
+			case SHOVE_F:
+				c = lgetc(lx);
+				if (c == EOF) {
+					lex_state->shove.state = SHOVE_POST;
+					continue;
+				}
+
+				return c;
+
+			case SHOVE_POST:
+				c = *lex_state->shove.post;
+				if (c == '\0') {
+					return EOF;
+				}
+
+				lex_state->shove.post++;
+				return c;
 			}
-			return c;
-
-		case SHOVE_NONE:
-			return lex_state->f(lex_state->opaque);
 		}
-
 	}
+#endif
 
 	static int
 	parse(int (*f)(void *opaque), void *opaque,
@@ -534,15 +577,15 @@ ZL1:;
 		lex_state->opaque  = opaque;
 
 #ifdef PARSE_GROUP
-/* XXX: information leak; i don't like breaking abstraction here. maybe pass in shove instead */
-/* or: store start and end pointers as char *, and make an action: <shove>("[", "]"); */
+/* XXX: information leak; i don't like breaking abstraction here. maybe pass in lgetc and lex_state->shove instead */
 		if (entry == DIALECT_GROUP_ENTRY) {
-			lex_state->shove = SHOVE_PRE;
-		} else
-#endif
-		{
-			lex_state->shove = SHOVE_NONE;
+			lex_state->shove.pre   = "[";
+			lex_state->shove.post  = "]";
+			lex_state->shove.state = SHOVE_PRE;
+
+			lx->lgetc  = lshovec;
 		}
+#endif
 
 		lex_state->buf.a   = NULL;
 		lex_state->buf.len = 0;
@@ -699,6 +742,6 @@ ZL1:;
 	}
 #endif
 
-#line 703 "src/libre/dialect/literal/parser.c"
+#line 746 "src/libre/dialect/literal/parser.c"
 
 /* END OF FILE */
