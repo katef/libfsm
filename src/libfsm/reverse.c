@@ -52,7 +52,7 @@ movetoend(struct fsm *fsm, struct fsm_state *state)
 
 int
 fsm_reverse_opaque(struct fsm *fsm,
-	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *))
+	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *))
 {
 	struct fsm *new;
 
@@ -99,11 +99,11 @@ fsm_reverse_opaque(struct fsm *fsm,
 		/* XXX: possibly have callback in fsm struct, instead. like the colour hooks */
 		if (end != NULL && carryopaque != NULL) {
 			if (fsm_isend(fsm, fsm->start)) {
-				struct state_set *set;
+				struct set *set;
 
 				set = NULL;
 
-				if (!set_addstate(&set, new->start)) {
+				if (!set_addelem(&set, new->start)) {
 					set_free(set);
 					fsm_free(new);
 					return 0;

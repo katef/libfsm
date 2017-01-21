@@ -157,7 +157,7 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 		mode = fsm_iscomplete(fsm, state) ? fsm_findmode(state) : NULL;
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
-			struct state_set *set;
+			struct set *set;
 			struct set_iter iter;
 			struct fsm_state *s;
 
@@ -180,7 +180,7 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 
 			/* non-unique states fall through */
 			if (i <= UCHAR_MAX - 1) {
-				struct state_set *nset;
+				struct set *nset;
 				struct fsm_state *ns;
 
 				nset = state->edges[i + 1].sl;

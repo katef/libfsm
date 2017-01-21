@@ -250,7 +250,7 @@ addmatch(struct match **head, const char *s)
 }
 
 static void
-carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
+carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 {
 	struct set_iter iter;
 	struct fsm_state *s;

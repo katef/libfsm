@@ -16,7 +16,7 @@
 static struct fsm_state *
 nextstate(const struct fsm_state *state, char c)
 {
-	const struct state_set *s;
+	const struct set *s;
 	struct fsm_state *ret;
 	struct set_iter iter;
 

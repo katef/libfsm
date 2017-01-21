@@ -48,7 +48,7 @@ fsm_complete(struct fsm *fsm,
 	}
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (!set_addstate(&new->edges[i].sl, new)) {
+		if (!set_addelem(&new->edges[i].sl, new)) {
 			/* TODO: free stuff */
 			return 0;
 		}
@@ -64,7 +64,7 @@ fsm_complete(struct fsm *fsm,
 				continue;
 			}
 
-			if (!set_addstate(&s->edges[i].sl, new)) {
+			if (!set_addelem(&s->edges[i].sl, new)) {
 				/* TODO: free stuff */
 				return 0;
 			}

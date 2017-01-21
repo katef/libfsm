@@ -34,7 +34,7 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
 			if (set_contains(s->edges[i].sl, b)) {
-				if (!set_addstate(&s->edges[i].sl, a)) {
+				if (!set_addelem(&s->edges[i].sl, a)) {
 					return NULL;
 				}
 

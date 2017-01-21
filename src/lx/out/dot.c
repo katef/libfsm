@@ -127,7 +127,7 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 	/* TODO: centralise with libfsm */
 #ifdef DEBUG_TODFA
 	if (s->nfasl != NULL) {
-		struct state_set *q;
+		struct set *q;
 
 		assert(fsm->nfa != NULL);
 

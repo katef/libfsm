@@ -33,7 +33,7 @@ struct transset {
  */
 struct mapping {
 	/* The set of NFA states forming the epsilon closure for this DFA state */
-	struct state_set *closure;
+	struct set *closure;
 
 	/* The DFA state associated with this epsilon closure of NFA states */
 	struct fsm_state *dfastate;
@@ -93,7 +93,7 @@ transin(char c, const struct transset *set)
  * the mapping list ml for future reference.
  */
 static struct mapping *
-addtoml(struct fsm *dfa, struct mapping **ml, struct state_set *closure)
+addtoml(struct fsm *dfa, struct mapping **ml, struct set *closure)
 {
 	struct mapping *m;
 
@@ -139,8 +139,8 @@ addtoml(struct fsm *dfa, struct mapping **ml, struct state_set *closure)
  *
  * Returns closure on success, NULL on error.
  */
-static struct state_set **
-epsilon_closure(const struct fsm_state *state, struct state_set **closure)
+static struct set **
+epsilon_closure(const struct fsm_state *state, struct set **closure)
 {
 	struct set_iter iter;
 	struct fsm_state *e;
@@ -153,7 +153,7 @@ epsilon_closure(const struct fsm_state *state, struct state_set **closure)
 		return closure;
 	}
 
-	set_addstate(closure, state);
+	set_addelem(closure, state);
 
 	/* Follow each epsilon transition */
 	for (e = set_first(state->edges[FSM_EDGE_EPSILON].sl, &iter); e != NULL; e = set_next(&iter)) {
@@ -174,7 +174,7 @@ epsilon_closure(const struct fsm_state *state, struct state_set **closure)
 static struct fsm_state *
 state_closure(struct mapping **ml, struct fsm *dfa, const struct fsm_state *nfastate)
 {
-	struct state_set *ec;
+	struct set *ec;
 	struct mapping *m;
 
 	assert(ml != NULL);
@@ -204,10 +204,10 @@ state_closure(struct mapping **ml, struct fsm *dfa, const struct fsm_state *nfas
  * states. Create the DFA state if neccessary.
  */
 static struct fsm_state *
-set_closure(struct mapping **ml, struct fsm *dfa, struct state_set *set)
+set_closure(struct mapping **ml, struct fsm *dfa, struct set *set)
 {
 	struct set_iter iter;
-	struct state_set *ec;
+	struct set *ec;
 	struct mapping *m;
 	struct fsm_state *s;
 
@@ -251,7 +251,7 @@ nextnotdone(struct mapping *ml)
  * TODO: maybe simpler to just return the set, rather than take a double pointer
  */
 static int
-listnonepsilonstates(struct transset **l, struct state_set *set)
+listnonepsilonstates(struct transset **l, struct set *set)
 {
 	struct set_iter iter, jter;
 	struct fsm_state *s, *e;
@@ -296,8 +296,8 @@ listnonepsilonstates(struct transset **l, struct state_set *set)
  * Return a list of all states reachable from set via the given transition.
  */
 static int
-allstatesreachableby(const struct fsm *fsm, struct state_set *set, char c,
-	struct state_set **sl)
+allstatesreachableby(const struct fsm *fsm, struct set *set, char c,
+	struct set **sl)
 {
 	struct set_iter iter;
 	struct fsm_state *s;
@@ -314,7 +314,7 @@ allstatesreachableby(const struct fsm *fsm, struct state_set *set, char c,
 		for (es = set_first(to->sl, &jter); es != NULL; es = set_next(&jter)) {
 			assert(es != NULL);
 
-			if (!set_addstate(sl, es)) {
+			if (!set_addelem(sl, es)) {
 				return 0;
 			}
 		}
@@ -324,7 +324,7 @@ allstatesreachableby(const struct fsm *fsm, struct state_set *set, char c,
 }
 
 static void
-carryend(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
+carryend(struct set *set, struct fsm *fsm, struct fsm_state *state)
 {
 	struct set_iter iter;
 	struct fsm_state *s;
@@ -358,7 +358,7 @@ carryend(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
  */
 static struct fsm *
 determinise(struct fsm *nfa,
-	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *))
+	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *))
 {
 	struct mapping *curr;
 	struct mapping *ml;
@@ -416,7 +416,7 @@ determinise(struct fsm *nfa,
 		for (s = nes; s != NULL; s = s->next) {
 			struct fsm_state *new;
 			struct fsm_edge *e;
-			struct state_set *reachable;
+			struct set *reachable;
 
 			assert(s->state != NULL);
 
@@ -451,10 +451,10 @@ determinise(struct fsm *nfa,
 #ifdef DEBUG_TODFA
 		{
 			struct set_iter iter;
-			struct state_set *q;
+			struct set *q;
 
 			for (q = set_first(curr->closure, &iter); q != NULL; q = set_next(&iter)) {
-				if (!set_addstate(&curr->dfastate->nfasl, q->state)) {
+				if (!set_addelem(&curr->dfastate->nfasl, q->state)) {
 					goto error;
 				}
 			}
@@ -494,7 +494,7 @@ error:
 
 int
 fsm_determinise_opaque(struct fsm *fsm,
-	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *))
+	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *))
 {
 	struct fsm *dfa;
 

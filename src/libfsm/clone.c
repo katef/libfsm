@@ -91,7 +91,7 @@ fsm_clone(const struct fsm *fsm)
 					newfrom = equiv;
 					newto   = equivalent(fsm, new, to);
 
-					if (!set_addstate(&newfrom->edges[i].sl, newto)) {
+					if (!set_addelem(&newfrom->edges[i].sl, newto)) {
 						fsm_free(new);
 						return NULL;
 					}

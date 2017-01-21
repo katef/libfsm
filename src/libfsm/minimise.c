@@ -118,7 +118,7 @@ removestate(struct fsm *fsm, struct fsm_state *state)
 
 int
 fsm_minimise_opaque(struct fsm *fsm,
-	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *))
+	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *))
 {
 	int r;
 	int hasend;

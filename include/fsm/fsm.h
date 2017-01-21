@@ -14,7 +14,7 @@
 struct fsm;
 struct fsm_state;
 struct fsm_edge;
-struct state_set;
+struct set;
 struct path; /* XXX */
 
 /*
@@ -200,7 +200,7 @@ fsm_reverse(struct fsm *fsm);
 /* TODO: explain */
 int
 fsm_reverse_opaque(struct fsm *fsm,
-	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *));
+	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *));
 
 /*
  * Convert an fsm to a DFA.
@@ -213,7 +213,7 @@ fsm_determinise(struct fsm *fsm);
 /* TODO: explain */
 int
 fsm_determinise_opaque(struct fsm *fsm,
-	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *));
+	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *));
 
 /*
  * Make a DFA complete, as per fsm_iscomplete.
@@ -233,7 +233,7 @@ fsm_minimise(struct fsm *fsm);
 /* TODO: explain */
 int
 fsm_minimise_opaque(struct fsm *fsm,
-	void (*carryopaque)(struct state_set *, struct fsm *, struct fsm_state *));
+	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *));
 
 /*
  * Concatenate b after a. This is not commutative.

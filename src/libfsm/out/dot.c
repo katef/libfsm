@@ -107,7 +107,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 
 #ifdef DEBUG_TODFA
 		if (s->nfasl != NULL) {
-			struct state_set *q;
+			struct set *q;
 
 			assert(fsm->nfa != NULL);
 

@@ -203,7 +203,7 @@ lang_exclude(const char *name)
 }
 
 static void
-carryopaque(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
+carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 {
 	struct mapping_set *conflict;
 	struct ast_mapping *m;

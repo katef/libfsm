@@ -9,14 +9,14 @@
 
 #define SET_BASE_CAP		8
 
-struct state_set {
-	struct fsm_state **states;
-	size_t nstates;
+struct set {
+	void **elems;
+	size_t nelems;
 	size_t cap;
 };
 
 static void
-print_set(const char *pref, struct state_set *s)
+print_set(const char *pref, struct set *s)
 {
 	size_t i;
 
@@ -27,9 +27,9 @@ print_set(const char *pref, struct state_set *s)
 		return;
 	}
 
-	fprintf(stderr, "\tnstate: %zu cap: %zu\n\t", s->nstates, s->cap);
-	for (i = 0; i < s->nstates; i++) {
-		fprintf(stderr, "%p ", (void *)s->states[i]);
+	fprintf(stderr, "\tnelem: %zu cap: %zu\n\t", s->nelems, s->cap);
+	for (i = 0; i < s->nelems; i++) {
+		fprintf(stderr, "%p ", (void *)s->elems[i]);
 	}
 	fprintf(stderr, "\n");
 }
@@ -37,19 +37,19 @@ print_set(const char *pref, struct state_set *s)
 /* Search returns where a thing would be if it was inserted
  */
 static size_t
-set_search(struct state_set *set, struct fsm_state *state)
+set_search(struct set *set, void *elem)
 {
 	size_t start, end;
 	size_t mid;
-	void *a = state;
+	void *a = elem;
 
 	start = mid = 0;
-	end = set->nstates;
+	end = set->nelems;
 
 	while (start < end) {
 		void *b;
 		mid = start + (end - start) / 2;
-		b = set->states[mid];
+		b = set->elems[mid];
 		if (a < b) {
 			end = mid;
 		} else if (a > b) {
@@ -62,18 +62,18 @@ set_search(struct state_set *set, struct fsm_state *state)
 	return mid;
 }
 
-struct fsm_state *
-set_addstate(struct state_set **set, struct fsm_state *state)
+void *
+set_addelem(struct set **set, void *elem)
 {
-	struct state_set *s;
+	struct set *s;
 	size_t off = 0;
 
 	assert(set != NULL);
-	assert(state != NULL);
+	assert(elem != NULL);
 
 	s = *set;
 
-	/* If the set is not initialized, go ahead and do that. Insert the new state at
+	/* If the set is not initialized, go ahead and do that. Insert the new elem at
 	 * the front.
 	 */
 	if (s == NULL) {
@@ -82,100 +82,100 @@ set_addstate(struct state_set **set, struct fsm_state *state)
 			return NULL;
 		}
 
-		s->states = malloc(SET_BASE_CAP * sizeof (*s->states));
+		s->elems = malloc(SET_BASE_CAP * sizeof (*s->elems));
 
-		if (s->states == NULL) {
+		if (s->elems == NULL) {
 			return NULL;
 		}
 
-		s->states[0] = state;
-		s->nstates = 1;
+		s->elems[0] = elem;
+		s->nelems = 1;
 		s->cap = SET_BASE_CAP;
 
 		*set = s;
 
-		assert(set_contains(*set, state));
-		return state;
+		assert(set_contains(*set, elem));
+		return elem;
 	}
 
-	/* If the state already exists in the set, return success.
-	 * XXX: Notify on success differently somehow when state was already there than
-	 * if we successfully inserted a non-existing state.
+	/* If the elem already exists in the set, return success.
+	 * XXX: Notify on success differently somehow when elem was already there than
+	 * if we successfully inserted a non-existing elem.
 	 */
 	if (!set_empty(s)) {
-		off = set_search(s, state);
-		if (s->states[off] == state) {
-			return state;
+		off = set_search(s, elem);
+		if (s->elems[off] == elem) {
+			return elem;
 		}
 	}
 
 	/* We're at capacity. Get more */
-	if (s->cap == s->nstates) {
-		struct fsm_state **new;
+	if (s->cap == s->nelems) {
+		void **new;
 
-		new = realloc(s->states, sizeof (*s->states) * (s->cap * 2));
+		new = realloc(s->elems, sizeof (*s->elems) * (s->cap * 2));
 		if (new == NULL) {
 			return NULL;
 		}
 
-		s->states = new;
+		s->elems = new;
 		s->cap *= 2;
 	}
 
-	if (state > s->states[off]) {
+	if (elem > s->elems[off]) {
 		off++;
 	}
 
-	memmove(&s->states[off + 1], &s->states[off],
-	    (s->nstates - off) * sizeof (*s->states));
+	memmove(&s->elems[off + 1], &s->elems[off],
+	    (s->nelems - off) * sizeof (*s->elems));
 
-	s->states[off] = state;
-	s->nstates++;
+	s->elems[off] = elem;
+	s->nelems++;
 
-	assert(set_contains(s, state));
+	assert(set_contains(s, elem));
 
-	return state;
+	return elem;
 }
 
 void
-set_remove(struct state_set **set, struct fsm_state *state)
+set_remove(struct set **set, void *elem)
 {
-	struct state_set *s = *set;
+	struct set *s = *set;
 	size_t off;
 
 	if (set_empty(s)) {
 		return;
 	}
 
-	assert(state != NULL);
+	assert(elem != NULL);
 
-	off = set_search(s, state);
-	if (s->states[off] == state) {
-		if (off < s->nstates) {
-			memmove(&s->states[off], &s->states[off + 1],
-			    (s->nstates - off) * sizeof (*s->states));
+	off = set_search(s, elem);
+	if (s->elems[off] == elem) {
+		if (off < s->nelems) {
+			memmove(&s->elems[off], &s->elems[off + 1],
+			    (s->nelems - off) * sizeof (*s->elems));
 		}
 
-		s->nstates--;
+		s->nelems--;
 	}
 
-	assert(!set_contains(s, state));
+	assert(!set_contains(s, elem));
 }
 
 void
-set_free(struct state_set *set)
+set_free(struct set *set)
 {
 
 	if (set == NULL) {
 		return;
 	}
 
-	free(set->states);
+	free(set->elems);
 	free(set);
 }
 
 int
-set_contains(const struct state_set *set, const struct fsm_state *state)
+set_contains(const struct set *set, const void *elem)
 {
 	size_t off;
 
@@ -183,8 +183,8 @@ set_contains(const struct state_set *set, const struct fsm_state *state)
 		return 0;
 	}
 
-	off = set_search(set, state);
-	if (set->states[off] == state) {
+	off = set_search(set, elem);
+	if (set->elems[off] == elem) {
 		return 1;
 	}
 
@@ -192,7 +192,7 @@ set_contains(const struct state_set *set, const struct fsm_state *state)
 }
 
 int
-subsetof(const struct state_set *a, const struct state_set *b)
+subsetof(const struct set *a, const struct set *b)
 {
 	size_t off;
 
@@ -202,8 +202,8 @@ subsetof(const struct state_set *a, const struct state_set *b)
 		return 1;
 	}
 
-	for (off = 0; off < a->nstates; off++) {
-		if (!set_contains(b, a->states[off])) {
+	for (off = 0; off < a->nelems; off++) {
+		if (!set_contains(b, a->elems[off])) {
 			return 0;
 		}
 	}
@@ -212,13 +212,13 @@ subsetof(const struct state_set *a, const struct state_set *b)
 }
 
 int
-set_equal(const struct state_set *a, const struct state_set *b)
+set_equal(const struct set *a, const struct set *b)
 {
 	return subsetof(a, b) && subsetof(b, a);
 }
 
 void
-set_merge(struct state_set **dst, struct state_set *src)
+set_merge(struct set **dst, struct set *src)
 {
 	size_t i;
 
@@ -226,20 +226,20 @@ set_merge(struct state_set **dst, struct state_set *src)
 		return;
 	}
 
-	for (i = 0; i < src->nstates; i++) {
-		set_addstate(dst, src->states[i]);
+	for (i = 0; i < src->nelems; i++) {
+		set_addelem(dst, src->elems[i]);
 	}
 }
 
 int
-set_empty(struct state_set *set)
+set_empty(struct set *set)
 {
 
-	return set == NULL || set->nstates == 0;
+	return set == NULL || set->nelems == 0;
 }
 
-struct fsm_state *
-set_first(struct state_set *set, struct set_iter *i)
+void *
+set_first(struct set *set, struct set_iter *i)
 {
 
 	assert(i != NULL);
@@ -252,21 +252,21 @@ set_first(struct state_set *set, struct set_iter *i)
 	i->cursor = 0;
 	i->set = set;
 
-	return i->set->states[i->cursor];
+	return i->set->elems[i->cursor];
 }
 
-struct fsm_state *
+void *
 set_next(struct set_iter *i)
 {
 
 	assert(i != NULL);
 
 	i->cursor++;
-	if (i->cursor >= i->set->nstates) {
+	if (i->cursor >= i->set->nelems) {
 		return NULL;
 	}
 
-	return i->set->states[i->cursor];
+	return i->set->elems[i->cursor];
 }
 
 int
@@ -275,5 +275,5 @@ set_hasnext(struct set_iter *i)
 
 	assert(i != NULL);
 
-	return i->set && i->cursor + 1 < i->set->nstates;
+	return i->set && i->cursor + 1 < i->set->nelems;
 }

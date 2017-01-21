@@ -23,7 +23,7 @@ fsm_addedge(struct fsm_state *from, struct fsm_state *to,
 
 	edge = &from->edges[type];
 
-	return set_addstate(&edge->sl, to);
+	return set_addelem(&edge->sl, to);
 }
 
 struct fsm_edge *
