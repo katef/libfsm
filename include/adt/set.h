@@ -49,6 +49,12 @@ set_first(const struct set *set, struct set_iter *it);
 void *
 set_next(struct set_iter *it);
 
+/*
+ * Return the sole item for a singleton set.
+ */
+void *
+set_only(const struct set *set);
+
 int
 set_hasnext(const struct set_iter *it);
 

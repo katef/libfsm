@@ -291,6 +291,17 @@ set_next(struct set_iter *it)
 	return it->set->a[it->i];
 }
 
+void *
+set_only(const struct set *set)
+{
+	assert(set != NULL);
+	assert(set->n >= 1);
+	assert(set->i == 1);
+	assert(set->a[0] != NULL);
+
+	return set->a[0];
+}
+
 int
 set_hasnext(const struct set_iter *it)
 {
