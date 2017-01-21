@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <limits.h>
 
+#include <adt/set.h>
+
 #include <fsm/pred.h>
 
 #include "../internal.h"

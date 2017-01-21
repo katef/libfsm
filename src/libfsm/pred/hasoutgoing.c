@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <stddef.h>
 
+#include <adt/set.h>
+
 #include <fsm/pred.h>
 
 #include "../internal.h"
