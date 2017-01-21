@@ -41,7 +41,7 @@ fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state)
 			continue;
 		}
 
-		(void)set_first(state->edges[i].sl, &it);
+		(void) set_first(state->edges[i].sl, &it);
 		if (set_hasnext(&it)) {
 			return 0;
 		}
