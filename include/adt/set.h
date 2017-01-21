@@ -6,24 +6,24 @@
 struct set;
 
 struct set_iter {
-	size_t cursor;
+	size_t i;
 	const struct set *set;
 };
 
 void *
-set_addelem(struct set **set, void *elem);
+set_add(struct set **set, void *item);
 
 void
-set_remove(struct set **set, void *elem);
+set_remove(struct set **set, void *item);
 
 void
 set_free(struct set *set);
 
 /*
- * Find if a elem is in a set.
+ * Find if an item is in a set.
  */
 int
-set_contains(const struct set *set, const void *elem);
+set_contains(const struct set *set, const void *item);
 
 /*
  * Find if a is a subset of b
@@ -32,7 +32,7 @@ int
 subsetof(const struct set *a, const struct set *b);
 
 /*
- * Compare two sets of elems for equality.
+ * Compare two sets for equality.
  */
 int
 set_equal(const struct set *a, const struct set *b);
@@ -44,13 +44,13 @@ int
 set_empty(const struct set *set);
 
 void *
-set_first(const struct set *set, struct set_iter *i);
+set_first(const struct set *set, struct set_iter *it);
 
 void *
-set_next(struct set_iter *i);
+set_next(struct set_iter *it);
 
 int
-set_hasnext(const struct set_iter *i);
+set_hasnext(const struct set_iter *it);
 
 #endif
 
