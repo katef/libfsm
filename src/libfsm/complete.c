@@ -30,7 +30,7 @@ fsm_complete(struct fsm *fsm,
 		}
 	}
 
-	if (!fsm_has(fsm, predicate) == 0) {
+	if (!fsm_has(fsm, predicate)) {
 		return 1;
 	}
 
