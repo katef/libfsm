@@ -7,7 +7,7 @@ SRC += src/lx/main.c
 SRC += src/lx/tokens.c
 SRC += src/lx/var.c
 
-.for src in ${SRC:Msrc/lx/parser.c} ${SRC:Msrc/lx/main.c} ${SRC:Msrc/lx/tokens.c}
+.for src in ${SRC:Msrc/lx/ast.c} ${SRC:Msrc/lx/parser.c} ${SRC:Msrc/lx/main.c} ${SRC:Msrc/lx/tokens.c}
 CFLAGS_${src} += -I src # XXX: for internal.h
 DFLAGS_${src} += -I src # XXX: for internal.h
 .endfor

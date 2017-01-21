@@ -12,6 +12,8 @@
 
 #include <adt/xalloc.h>
 
+#include "libfsm/internal.h" /* XXX */
+
 #include "ast.h"
 
 struct ast *
@@ -111,6 +113,8 @@ ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 			free(m);
 			return NULL;
 		}
+
+		m->fsm->tidy_union = 0;
 
 		m->token    = token;
 		m->to       = to;
