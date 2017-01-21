@@ -16,7 +16,7 @@ struct set {
 };
 
 static void
-print_set(const char *pref, struct set *s)
+print_set(const char *pref, const struct set *s)
 {
 	size_t i;
 
@@ -37,11 +37,11 @@ print_set(const char *pref, struct set *s)
 /* Search returns where a thing would be if it was inserted
  */
 static size_t
-set_search(struct set *set, void *elem)
+set_search(const struct set *set, const void *elem)
 {
 	size_t start, end;
 	size_t mid;
-	void *a = elem;
+	const void *a = elem;
 
 	start = mid = 0;
 	end = set->nelems;
@@ -242,14 +242,14 @@ set_merge(struct set **dst, struct set *src)
 }
 
 int
-set_empty(struct set *set)
+set_empty(const struct set *set)
 {
 
 	return set == NULL || set->nelems == 0;
 }
 
 void *
-set_first(struct set *set, struct set_iter *i)
+set_first(const struct set *set, struct set_iter *i)
 {
 
 	assert(i != NULL);
@@ -280,7 +280,7 @@ set_next(struct set_iter *i)
 }
 
 int
-set_hasnext(struct set_iter *i)
+set_hasnext(const struct set_iter *i)
 {
 
 	assert(i != NULL);

@@ -7,7 +7,7 @@ struct set;
 
 struct set_iter {
 	size_t cursor;
-	struct set *set;
+	const struct set *set;
 };
 
 void *
@@ -41,16 +41,16 @@ void
 set_merge(struct set **dst, struct set *src);
 
 int
-set_empty(struct set *set);
+set_empty(const struct set *set);
 
 void *
-set_first(struct set *set, struct set_iter *i);
+set_first(const struct set *set, struct set_iter *i);
 
 void *
 set_next(struct set_iter *i);
 
 int
-set_hasnext(struct set_iter *i);
+set_hasnext(const struct set_iter *i);
 
 #endif
 
