@@ -214,7 +214,17 @@ subsetof(const struct set *a, const struct set *b)
 int
 set_equal(const struct set *a, const struct set *b)
 {
-	return subsetof(a, b) && subsetof(b, a);
+	if ((!a && b) || (!b && a)) {
+		return 0;
+	} else if (!a && !b) {
+		return 1;
+	}
+
+	if (a->nelems != b->nelems) {
+		return 0;
+	}
+
+	return 0 == memcmp(a->elems, b->elems, a->nelems * sizeof *a->elems);
 }
 
 void
