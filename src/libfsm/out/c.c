@@ -158,7 +158,6 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
 			struct set *set;
-			struct set_iter it;
 			struct fsm_state *s;
 
 			set = state->edges[i].sl;
@@ -166,10 +165,7 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 				continue;
 			}
 
-			s = set_first(set, &it);
-			assert(s != NULL);
-			assert(!set_hasnext(&it));
-
+			s = set_only(set);
 			if (s == mode) {
 				continue;
 			}
@@ -180,15 +176,17 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 
 			/* non-unique states fall through */
 			if (i <= UCHAR_MAX - 1) {
-				struct set *nset;
-				struct fsm_state *ns;
+				const struct set *nset;
+				const struct fsm_state *ns;
 
 				nset = state->edges[i + 1].sl;
-				ns = set_first(nset, &it);
 
-				if (!set_empty(nset) && ns != mode && ns == s) {
-					fprintf(f, "\n");
-					continue;
+				if (!set_empty(nset)) {
+					ns = set_only(nset);
+					if (ns != mode && ns == s) {
+						fprintf(f, "\n");
+						continue;
+					}
 				}
 			}
 

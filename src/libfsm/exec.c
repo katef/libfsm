@@ -17,21 +17,15 @@ static struct fsm_state *
 nextstate(const struct fsm_state *state, char c)
 {
 	const struct set *s;
-	struct fsm_state *ret;
-	struct set_iter it;
 
 	assert(state != NULL);
 
 	s = state->edges[(unsigned char) c].sl;
-	if (s == NULL) {
+	if (set_empty(s)) {
 		return NULL;
 	}
 
-	ret = set_first(s, &it);
-
-	assert(ret != NULL);
-
-	return ret;
+	return set_only(s);
 }
 
 struct fsm_state *
