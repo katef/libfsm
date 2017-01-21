@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include <fsm/fsm.h>
 #include <fsm/out.h>
 
 #include "out.h"
