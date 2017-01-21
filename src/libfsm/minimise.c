@@ -64,14 +64,14 @@ counttargets(struct fsm_state *state)
 	n = 0;
 
 	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		struct set_iter iter;
+		struct set_iter it;
 		struct fsm_state *s;
 
 		if (set_empty(state->edges[i].sl)) {
 			continue;
 		}
 
-		s = set_first(state->edges[i].sl, &iter);
+		s = set_first(state->edges[i].sl, &it);
 		
 		/* Distinct targets only */
 		if (contains(state->edges, i + 1, s)) {
@@ -79,7 +79,7 @@ counttargets(struct fsm_state *state)
 		}
 
 		/* Note that this assumes the state is a DFA state */
-		assert(!set_hasnext(&iter));
+		assert(!set_hasnext(&it));
 
 		n++;
 	}

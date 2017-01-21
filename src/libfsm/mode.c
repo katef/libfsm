@@ -12,7 +12,7 @@
 struct fsm_state *
 fsm_findmode(const struct fsm_state *state)
 {
-	struct set_iter iter;
+	struct set_iter it;
 	struct fsm_state *s;
 	int i, j;
 
@@ -27,11 +27,11 @@ fsm_findmode(const struct fsm_state *state)
 	assert(state != NULL);
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		for (s = set_first(state->edges[i].sl, &iter); s != NULL; s = set_next(&iter)) {
+		for (s = set_first(state->edges[i].sl, &it); s != NULL; s = set_next(&it)) {
 			unsigned int curr;
 
 			assert(s != NULL);
-			assert(!set_hasnext(&iter));
+			assert(!set_hasnext(&it));
 
 			curr = 0;
 

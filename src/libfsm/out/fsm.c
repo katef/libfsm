@@ -72,19 +72,19 @@ static const struct fsm_state *
 findany(const struct fsm_state *state)
 {
 	struct fsm_state *e, *f;
-	struct set_iter iter;
+	struct set_iter it;
 	int i;
 
 	assert(state != NULL);
 
-	f = set_first(state->edges[0].sl, &iter);
+	f = set_first(state->edges[0].sl, &it);
 	
 	for (i = 0; i <= UCHAR_MAX; i++) {
 		if (set_empty(state->edges[i].sl)) {
 			return NULL;
 		}
 
-		for (e = set_first(state->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
+		for (e = set_first(state->edges[i].sl, &it); e != NULL; e = set_next(&it)) {
 			if (e != f) {
 				return NULL;
 			}
@@ -101,7 +101,7 @@ fsm_out_fsm(const struct fsm *fsm, FILE *f,
 	const struct fsm_outoptions *options)
 {
 	struct fsm_state *s, *e, *start;
-	struct set_iter iter;
+	struct set_iter it;
 	int end;
 
 	assert(fsm != NULL);
@@ -122,7 +122,7 @@ fsm_out_fsm(const struct fsm *fsm, FILE *f,
 		}
 
 		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (e = set_first(s->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
+			for (e = set_first(s->edges[i].sl, &it); e != NULL; e = set_next(&it)) {
 				assert(e != NULL);
 
 				fprintf(f, "%-2u -> %2u", indexof(fsm, s), indexof(fsm, e));

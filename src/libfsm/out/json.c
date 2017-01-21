@@ -88,7 +88,7 @@ void
 fsm_out_json(const struct fsm *fsm, FILE *f,
 	const struct fsm_outoptions *options)
 {
-	struct set_iter iter;
+	struct set_iter it;
 	struct fsm_state *s, *e;
 
 	assert(fsm != NULL);
@@ -111,7 +111,7 @@ fsm_out_json(const struct fsm *fsm, FILE *f,
 			fprintf(f, "\t\t\t\"edges\": [\n");
 
 			for (i = 0; i <= FSM_EDGE_MAX; i++) {
-				for (e = set_first(s->edges[i].sl, &iter); e != NULL; e = set_next(&iter)) {
+				for (e = set_first(s->edges[i].sl, &it); e != NULL; e = set_next(&it)) {
 					assert(e != NULL);
 
 					fprintf(f, "\t\t\t\t{ ");
@@ -134,7 +134,7 @@ fsm_out_json(const struct fsm *fsm, FILE *f,
 					fprintf(f, "\"to\": %u",
 						indexof(fsm, e));
 
-					fprintf(f, "}%s\n", set_hasnext(&iter) && hasmore(s, i) ? "," : "");
+					fprintf(f, "}%s\n", set_hasnext(&it) && hasmore(s, i) ? "," : "");
 				}
 			}
 

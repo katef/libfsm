@@ -252,7 +252,7 @@ addmatch(struct match **head, const char *s)
 static void
 carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 {
-	struct set_iter iter;
+	struct set_iter it;
 	struct fsm_state *s;
 	struct match *m;
 	struct match *matches;
@@ -276,7 +276,7 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 
 	matches = NULL;
 
-	for (s = set_first(set, &iter); s != NULL; s = set_next(&iter)) {
+	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
 		if (!fsm_isend(fsm, s)) {
 			continue;
 		}

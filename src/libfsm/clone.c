@@ -67,7 +67,7 @@ fsm_clone(const struct fsm *fsm)
 
 	{
 		struct fsm_state *s, *to;
-		struct set_iter iter;
+		struct set_iter it;
 		int i;
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
@@ -84,14 +84,14 @@ fsm_clone(const struct fsm *fsm)
 					continue;
 				}
 
-				for (to = set_first(s->edges[i].sl, &iter); to != NULL; to = set_next(&iter)) {
+				for (to = set_first(s->edges[i].sl, &it); to != NULL; to = set_next(&it)) {
 					struct fsm_state *newfrom;
 					struct fsm_state *newto;
 
 					newfrom = equiv;
 					newto   = equivalent(fsm, new, to);
 
-					if (!set_addelem(&newfrom->edges[i].sl, newto)) {
+					if (!set_add(&newfrom->edges[i].sl, newto)) {
 						fsm_free(new);
 						return NULL;
 					}

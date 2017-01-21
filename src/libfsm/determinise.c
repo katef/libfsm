@@ -142,7 +142,7 @@ addtoml(struct fsm *dfa, struct mapping **ml, struct set *closure)
 static struct set **
 epsilon_closure(const struct fsm_state *state, struct set **closure)
 {
-	struct set_iter iter;
+	struct set_iter it;
 	struct fsm_state *e;
 
 	assert(state != NULL);
@@ -153,10 +153,10 @@ epsilon_closure(const struct fsm_state *state, struct set **closure)
 		return closure;
 	}
 
-	set_addelem(closure, state);
+	set_add(closure, state);
 
 	/* Follow each epsilon transition */
-	for (e = set_first(state->edges[FSM_EDGE_EPSILON].sl, &iter); e != NULL; e = set_next(&iter)) {
+	for (e = set_first(state->edges[FSM_EDGE_EPSILON].sl, &it); e != NULL; e = set_next(&it)) {
 		assert(e != NULL);
 
 		if (epsilon_closure(e, closure) == NULL) {
@@ -206,7 +206,7 @@ state_closure(struct mapping **ml, struct fsm *dfa, const struct fsm_state *nfas
 static struct fsm_state *
 set_closure(struct mapping **ml, struct fsm *dfa, struct set *set)
 {
-	struct set_iter iter;
+	struct set_iter it;
 	struct set *ec;
 	struct mapping *m;
 	struct fsm_state *s;
@@ -214,7 +214,7 @@ set_closure(struct mapping **ml, struct fsm *dfa, struct set *set)
 	assert(ml != NULL);
 
 	ec = NULL;
-	for (s = set_first(set, &iter); s != NULL; s = set_next(&iter)) {
+	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
 		if (epsilon_closure(s, &ec) == NULL) {
 			set_free(ec);
 			return NULL;
@@ -253,18 +253,18 @@ nextnotdone(struct mapping *ml)
 static int
 listnonepsilonstates(struct transset **l, struct set *set)
 {
-	struct set_iter iter, jter;
+	struct set_iter it, jt;
 	struct fsm_state *s, *e;
 
 	assert(l != NULL);
 	assert(set != NULL);
 
 	*l = NULL;
-	for (s = set_first(set, &iter); s != NULL; s = set_next(&iter)) {
+	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
 		int i;
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
-			for (e = set_first(s->edges[i].sl, &jter); e != NULL; e = set_next(&jter)) {
+			for (e = set_first(s->edges[i].sl, &jt); e != NULL; e = set_next(&jt)) {
 				struct transset *p;
 
 				assert(e != NULL);
@@ -299,22 +299,21 @@ static int
 allstatesreachableby(const struct fsm *fsm, struct set *set, char c,
 	struct set **sl)
 {
-	struct set_iter iter;
+	struct set_iter it, jt;
 	struct fsm_state *s;
 
 	assert(set != NULL);
 
-	for (s = set_first(set, &iter); s != NULL; s = set_next(&iter)) {
-		struct set_iter jter;
+	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
 		struct fsm_edge *to;
 		struct fsm_state *es;
 
 		to = &s->edges[(unsigned char) c];
 
-		for (es = set_first(to->sl, &jter); es != NULL; es = set_next(&jter)) {
+		for (es = set_first(to->sl, &jt); es != NULL; es = set_next(&jt)) {
 			assert(es != NULL);
 
-			if (!set_addelem(sl, es)) {
+			if (!set_add(sl, es)) {
 				return 0;
 			}
 		}
@@ -326,14 +325,14 @@ allstatesreachableby(const struct fsm *fsm, struct set *set, char c,
 static void
 carryend(struct set *set, struct fsm *fsm, struct fsm_state *state)
 {
-	struct set_iter iter;
+	struct set_iter it;
 	struct fsm_state *s;
 
 	assert(set != NULL); /* TODO: right? */
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	for (s = set_first(set, &iter); s != NULL; s = set_next(&iter)) {
+	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
 		if (fsm_isend(fsm, s)) {
 			fsm_setend(fsm, state, 1);
 		}
@@ -450,11 +449,11 @@ determinise(struct fsm *nfa,
 
 #ifdef DEBUG_TODFA
 		{
-			struct set_iter iter;
+			struct set_iter it;
 			struct set *q;
 
-			for (q = set_first(curr->closure, &iter); q != NULL; q = set_next(&iter)) {
-				if (!set_addelem(&curr->dfastate->nfasl, q->state)) {
+			for (q = set_first(curr->closure, &it); q != NULL; q = set_next(&it)) {
+				if (!set_add(&curr->dfastate->nfasl, q->state)) {
 					goto error;
 				}
 			}

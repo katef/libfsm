@@ -207,7 +207,7 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 {
 	struct mapping_set *conflict;
 	struct ast_mapping *m;
-	struct set_iter iter;
+	struct set_iter it;
 	struct fsm_state *s;
 
 	assert(set != NULL); /* TODO: right? */
@@ -232,7 +232,7 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 
 	m = NULL;
 
-	for (s = set_first(set, &iter); s != NULL; s = set_next(&iter)) {
+	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
 		if (fsm_isend(fsm, s)) {
 			m = s->opaque;
 			break;
@@ -243,7 +243,7 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 
 	conflict = NULL;
 
-	for (s = set_first(set, &iter); s != NULL; s = set_next(&iter)) {
+	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
 		struct ast_mapping *p;
 
 		if (!fsm_isend(fsm, s)) {
