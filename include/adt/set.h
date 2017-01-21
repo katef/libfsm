@@ -4,11 +4,11 @@
 #define SET_H
 
 struct fsm_state;
-
 struct state_set;
 
 struct set_iter {
-	struct state_set *cur;
+	size_t cursor;
+	struct state_set *set;
 };
 
 struct fsm_state *
@@ -16,10 +16,6 @@ set_addstate(struct state_set **set, struct fsm_state *state);
 
 void
 set_remove(struct state_set **set, struct fsm_state *state);
-
-void
-set_replace(struct state_set *set,
-	struct fsm_state *old, struct fsm_state *new);
 
 void
 set_free(struct state_set *set);
