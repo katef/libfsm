@@ -105,7 +105,7 @@ escputs(FILE *f, const char *s)
 
 static int
 leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
-	void *opaque)
+	const void *opaque)
 {
 	assert(fsm != NULL);
 	assert(f != NULL);
@@ -121,8 +121,8 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 
 static void
 singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
-	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, void *),
-	void *opaque)
+	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
+	const void *opaque)
 {
 	int i;
 
@@ -268,8 +268,8 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 
 int
 fsm_out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options,
-	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, void *),
-	void *opaque)
+	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
+	const void *opaque)
 {
 	struct fsm_state *s;
 

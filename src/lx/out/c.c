@@ -215,9 +215,9 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token)
 
 static int
 leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
-	void *opaque)
+	const void *opaque)
 {
-	struct ast *ast;
+	const struct ast *ast;
 	const struct ast_mapping *m;
 
 	assert(opaque != NULL);
