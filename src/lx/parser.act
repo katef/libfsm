@@ -343,6 +343,8 @@
 			re_perror(RE_LITERAL, &err, NULL, @s);
 			exit(EXIT_FAILURE);
 		}
+
+		@r->tidy_union = 0;
 	@};
 
 	<compile-regex>: (s :string, f :flags) -> (r :fsm) = @{
