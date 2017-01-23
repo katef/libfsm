@@ -792,7 +792,7 @@ main(int argc, char *argv[])
 
 	{
 		if (print_progress) {
-			fprintf(stderr, "-- Output:");
+			fprintf(stderr, "-- output:");
 		}
 
 		if (out != NULL) {
