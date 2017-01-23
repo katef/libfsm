@@ -59,13 +59,12 @@ fsm_new(void)
 		return NULL;
 	}
 
-	new->sl         = NULL;
-	new->start      = NULL;
-
-	new->tidy_union = 1;
+	new->sl    = NULL;
+	new->start = NULL;
+	new->tidy  = 1;
 
 #ifdef DEBUG_TODFA
-	new->nfa        = NULL;
+	new->nfa   = NULL;
 #endif
 
 	return new;

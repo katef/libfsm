@@ -62,15 +62,24 @@ fsm_concat(struct fsm *a, struct fsm *b)
 	 * adding the epsilon transiion is unneccessary. As an optimisation,
 	 * we identify situations where it would be equivalent to merge the
 	 * two states instead.
+	 *
+	 * This optimisation can be expensive to run, so it's optionally disabled
+	 * by the fsm->tidy flag.
 	 */
 
-	if (!fsm_hasoutgoing(q, ea) || !fsm_hasincoming(q, sb)) {
-		if (!fsm_mergestates(q, ea, sb)) {
+	if (!q->tidy) {
+		if (!fsm_addedge_epsilon(q, ea, sb)) {
 			goto error;
 		}
 	} else {
-		if (!fsm_addedge_epsilon(q, ea, sb)) {
-			goto error;
+		if (!fsm_hasoutgoing(q, ea) || !fsm_hasincoming(q, sb)) {
+			if (!fsm_mergestates(q, ea, sb)) {
+				goto error;
+			}
+		} else {
+			if (!fsm_addedge_epsilon(q, ea, sb)) {
+				goto error;
+			}
 		}
 	}
 

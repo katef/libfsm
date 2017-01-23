@@ -114,7 +114,7 @@ ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 			return NULL;
 		}
 
-		m->fsm->tidy_union = 0;
+		m->fsm->tidy = 0;
 
 		m->token    = token;
 		m->to       = to;

@@ -51,10 +51,10 @@ fsm_union(struct fsm *a, struct fsm *b)
 	 * state if they have no incoming edges.
 	 *
 	 * This optimisation can be expensive to run, so it's optionally disabled
-	 * by the fsm->tidy_union flag.
+	 * by the fsm->tidy flag.
 	 */
 
-	if (!q->tidy_union) {
+	if (!q->tidy) {
 		sq = fsm_addstate(q);
 		if (sq == NULL) {
 			goto error;

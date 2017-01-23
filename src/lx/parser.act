@@ -291,7 +291,7 @@
 			@!;
 		}
 
-		@r->tidy_union = 0;
+		@r->tidy = 0;
 
 		for (m = @z->ml; m != NULL; m = m->next) {
 			struct fsm *fsm;
@@ -344,7 +344,7 @@
 			exit(EXIT_FAILURE);
 		}
 
-		@r->tidy_union = 0;
+		@r->tidy = 0;
 	@};
 
 	<compile-regex>: (s :string, f :flags) -> (r :fsm) = @{

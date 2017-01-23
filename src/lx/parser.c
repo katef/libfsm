@@ -255,7 +255,7 @@ p_pattern(lex_state lex_state, act_state act_state, zone ZIz, fsm *ZOr)
 			goto ZL1;
 		}
 
-		(ZIr)->tidy_union = 0;
+		(ZIr)->tidy = 0;
 
 		for (m = (ZIz)->ml; m != NULL; m = m->next) {
 			struct fsm *fsm;
@@ -767,7 +767,7 @@ p_list_Hof_Hthings_C_Cthing(lex_state lex_state, act_state act_state, ast ZIa, z
 			goto ZL1;
 		}
 
-		(ZI227)->tidy_union = 0;
+		(ZI227)->tidy = 0;
 
 		for (m = (ZIz)->ml; m != NULL; m = m->next) {
 			struct fsm *fsm;
@@ -1992,7 +1992,7 @@ p_198(lex_state lex_state, act_state act_state, fsm *ZOr)
 			exit(EXIT_FAILURE);
 		}
 
-		(ZIr)->tidy_union = 0;
+		(ZIr)->tidy = 0;
 	
 #line 1998 "src/lx/parser.c"
 			}

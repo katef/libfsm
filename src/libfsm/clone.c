@@ -102,7 +102,7 @@ fsm_clone(const struct fsm *fsm)
 
 	new->start = equivalent(fsm, new, fsm->start);
 
-	new->tidy_union = fsm->tidy_union;
+	new->tidy = fsm->tidy;
 
 	return new;
 }
