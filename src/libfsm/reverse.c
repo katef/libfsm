@@ -197,18 +197,22 @@ fsm_reverse_opaque(struct fsm *fsm,
 			 */
 
 		default:
-			for (s = fsm->sl; s != NULL; s = s->next) {
-				struct fsm_state *state;
+			if (!fsm->tidy) {
+				s = NULL;
+			} else {
+				for (s = fsm->sl; s != NULL; s = s->next) {
+					struct fsm_state *state;
 
-				if (n > 0 && !fsm_isend(fsm, s)) {
-					continue;
-				}
+					if (n > 0 && !fsm_isend(fsm, s)) {
+						continue;
+					}
 
-				state = equivalent(new, fsm, s);
-				assert(state != NULL);
+					state = equivalent(new, fsm, s);
+					assert(state != NULL);
 
-				if (!fsm_hasincoming(new, state)) {
-					break;
+					if (!fsm_hasincoming(new, state)) {
+						break;
+					}
 				}
 			}
 
@@ -227,6 +231,9 @@ fsm_reverse_opaque(struct fsm *fsm,
 			 *
 			 * It is important to use a start state with no incoming edges as
 			 * this prevents accidentally transitioning to another route.
+			 *
+			 * This optimisation can be expensive to run, so it's optionally
+			 * disabled by the fsm->tidy flag.
 			 */
 			if (s != NULL) {
 				new->start = equivalent(new, fsm, s);
