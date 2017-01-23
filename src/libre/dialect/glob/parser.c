@@ -143,7 +143,6 @@
 	group_add(t_grp *g, char c)
 	{
 		assert(g != NULL);
-		assert((unsigned char) c != FSM_EDGE_EPSILON);
 
 		if (bm_get(&g->set, (unsigned char) c)) {
 			bm_set(&g->dup, (unsigned char) c);
@@ -206,7 +205,7 @@
 		return fputs(escchar(s, sizeof s, c), f);
 	}
 
-#line 210 "src/libre/dialect/glob/parser.c"
+#line 209 "src/libre/dialect/glob/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -242,7 +241,7 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 338 "src/libre/parser.act"
+#line 337 "src/libre/parser.act"
 
 		assert(lex_state->buf.a[0] != '\0');
 		assert(lex_state->buf.a[1] == '\0');
@@ -252,7 +251,7 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 256 "src/libre/dialect/glob/parser.c"
+#line 255 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -262,7 +261,7 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-literal */
 		{
-#line 554 "src/libre/parser.act"
+#line 553 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -273,7 +272,7 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 			goto ZL1;
 		}
 	
-#line 277 "src/libre/dialect/glob/parser.c"
+#line 276 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: add-literal */
 	}
@@ -295,14 +294,14 @@ ZL2_list_Hof_Hatoms:;
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 530 "src/libre/parser.act"
+#line 529 "src/libre/parser.act"
 
 		(ZIz) = fsm_addstate(fsm);
 		if ((ZIz) == NULL) {
 			goto ZL1;
 		}
 	
-#line 306 "src/libre/dialect/glob/parser.c"
+#line 305 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hatoms_C_Catom (fsm, flags, lex_state, act_state, err, ZIx, &ZIz);
@@ -321,13 +320,13 @@ ZL2_list_Hof_Hatoms:;
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 537 "src/libre/parser.act"
+#line 536 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIz), (ZIy))) {
 			goto ZL1;
 		}
 	
-#line 331 "src/libre/dialect/glob/parser.c"
+#line 330 "src/libre/dialect/glob/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -358,12 +357,12 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 			}
 			/* BEGINNING OF ACTION: count-1 */
 			{
-#line 694 "src/libre/parser.act"
+#line 693 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (*ZIy);
 	
-#line 367 "src/libre/dialect/glob/parser.c"
+#line 366 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: count-1 */
 		}
@@ -377,12 +376,12 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 			}
 			/* BEGINNING OF ACTION: count-1 */
 			{
-#line 694 "src/libre/parser.act"
+#line 693 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (*ZIy);
 	
-#line 386 "src/libre/dialect/glob/parser.c"
+#line 385 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: count-1 */
 		}
@@ -396,7 +395,7 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 			}
 			/* BEGINNING OF ACTION: count-0-or-many */
 			{
-#line 644 "src/libre/parser.act"
+#line 643 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (*ZIy))) {
 			goto ZL1;
@@ -423,7 +422,7 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 			(*ZIy) = z;
 		}
 	
-#line 427 "src/libre/dialect/glob/parser.c"
+#line 426 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: count-0-or-many */
 		}
@@ -455,7 +454,7 @@ p_list_Hof_Hatoms_C_Cany(fsm fsm, flags flags, lex_state lex_state, act_state ac
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-any */
 		{
-#line 565 "src/libre/parser.act"
+#line 564 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -464,7 +463,7 @@ p_list_Hof_Hatoms_C_Cany(fsm fsm, flags flags, lex_state lex_state, act_state ac
 			goto ZL1;
 		}
 	
-#line 468 "src/libre/dialect/glob/parser.c"
+#line 467 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: add-any */
 	}
@@ -490,7 +489,7 @@ p_list_Hof_Hatoms_C_Cwildcard(fsm fsm, flags flags, lex_state lex_state, act_sta
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-any */
 		{
-#line 565 "src/libre/parser.act"
+#line 564 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -499,7 +498,7 @@ p_list_Hof_Hatoms_C_Cwildcard(fsm fsm, flags flags, lex_state lex_state, act_sta
 			goto ZL1;
 		}
 	
-#line 503 "src/libre/dialect/glob/parser.c"
+#line 502 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: add-any */
 	}
@@ -521,7 +520,7 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 
 		/* BEGINNING OF ACTION: make-states */
 		{
-#line 402 "src/libre/parser.act"
+#line 401 "src/libre/parser.act"
 
 		assert(fsm != NULL);
 		/* TODO: assert fsm is empty */
@@ -536,7 +535,7 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 
 		fsm_setend(fsm, (ZIy), 1);
 	
-#line 540 "src/libre/dialect/glob/parser.c"
+#line 539 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: make-states */
 		/* BEGINNING OF INLINE: 77 */
@@ -555,13 +554,13 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 537 "src/libre/parser.act"
+#line 536 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			goto ZL3;
 		}
 	
-#line 565 "src/libre/dialect/glob/parser.c"
+#line 564 "src/libre/dialect/glob/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -572,13 +571,13 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 			{
 				/* BEGINNING OF ACTION: err-expected-atoms */
 				{
-#line 715 "src/libre/parser.act"
+#line 714 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXATOMS;
 		}
 	
-#line 582 "src/libre/dialect/glob/parser.c"
+#line 581 "src/libre/dialect/glob/parser.c"
 				}
 				/* END OF ACTION: err-expected-atoms */
 			}
@@ -601,13 +600,13 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 745 "src/libre/parser.act"
+#line 744 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
 		}
 	
-#line 611 "src/libre/dialect/glob/parser.c"
+#line 610 "src/libre/dialect/glob/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -623,7 +622,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 1053 "src/libre/parser.act"
+#line 1052 "src/libre/parser.act"
 
 
 	static int
@@ -899,6 +898,6 @@ ZL1:;
 	}
 #endif
 
-#line 903 "src/libre/dialect/glob/parser.c"
+#line 902 "src/libre/dialect/glob/parser.c"
 
 /* END OF FILE */
