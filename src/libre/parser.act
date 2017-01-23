@@ -149,7 +149,6 @@
 	group_add(t_grp *g, char c)
 	{
 		assert(g != NULL);
-		assert((unsigned char) c != FSM_EDGE_EPSILON);
 
 		if (bm_get(&g->set, (unsigned char) c)) {
 			bm_set(&g->dup, (unsigned char) c);
