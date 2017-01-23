@@ -84,35 +84,6 @@ counttargets(struct fsm_state *state)
 	return n;
 }
 
-/* TODO: centralise */
-static void
-removestate(struct fsm *fsm, struct fsm_state *state)
-{
-	struct fsm_state **s;
-	int i;
-
-	assert(fsm != NULL);
-
-	for (s = &fsm->sl; *s != NULL; s = &(*s)->next) {
-		if (*s == state) {
-			struct fsm_state *next;
-
-			next = (*s)->next;
-
-			/* TODO: centralise */
-			for (i = 0; i <= FSM_EDGE_MAX; i++) {
-				set_free((*s)->edges[i].sl);
-			}
-
-			free(*s);
-
-			*s = next;
-
-			return;
-		}
-	}
-}
-
 int
 fsm_minimise_opaque(struct fsm *fsm,
 	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *))
@@ -192,7 +163,7 @@ fsm_minimise_opaque(struct fsm *fsm,
 				/* XXX: I *think* there's no need to carryopaque() to s,
 				 * since newly-added start states would never have an opaque. */
 
-				removestate(fsm, fsm->start);
+				fsm_removestate(fsm, fsm->start);
 
 				fsm->start = s;
 
