@@ -21,6 +21,11 @@ LX_CFLAGS_src/fsm/lexer.lx += -b dyn -g fgetc
 
 PROG += fsm
 
+# SID persistent variables are unused in some productions
+.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+CFLAGS_src/fsm/parser.c += -Wno-unused-parameter
+.endif
+
 .for src in ${SRC:Msrc/lx/parser.c}
 ${src}: src/fsm/lexer.h
 .endfor

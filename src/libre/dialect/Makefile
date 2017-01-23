@@ -37,6 +37,27 @@ DFLAGS_${src} += -I src # XXX: for internal.h
 ACT_${parser} = src/libre/parser.act
 .endfor
 
+# SID persistent variables are unused in some productions
+.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}
+CFLAGS_${src} += -Wno-unused-parameter
+.endfor
+.endif
+
+# Not all dialects use all static functions
+.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}
+CFLAGS_${src} += -Wno-unused-function
+.endfor
+.endif
+
+# Not all dialects use all macros
+.if ${CC:T:Mclang}
+.for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}
+CFLAGS_${src} += -Wno-unused-macros
+.endfor
+.endif
+
 .for src in ${SRC:Msrc/libre/dialect/${dialect}/*.c}
 ${BUILD}/lib/libre.o:    ${BUILD}/${src:R}.o
 ${BUILD}/lib/libre.opic: ${BUILD}/${src:R}.opic
