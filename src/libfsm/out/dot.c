@@ -196,7 +196,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 	/*
 	 * Special edges are not consolidated above
 	 */
-	for (i = UCHAR_MAX; i <= FSM_EDGE_MAX; i++) {
+	for (i = UCHAR_MAX + 1; i <= FSM_EDGE_MAX; i++) {
 		for (e = set_first(s->edges[i].sl, &it); e != NULL; e = set_next(&it)) {
 			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
 				options->prefix != NULL ? options->prefix : "",
