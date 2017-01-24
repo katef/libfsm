@@ -718,9 +718,11 @@
 				@!;
 			}
 
-			if (!fsm_trim(@q)) {
-				perror("fsm_trim");
-				@!;
+			if (@q->tidy) {
+				if (!fsm_trim(@q)) {
+					perror("fsm_trim");
+					@!;
+				}
 			}
 		}
 	@};
