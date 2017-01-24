@@ -362,6 +362,8 @@
 			re_perror(RE_NATIVE, &err, NULL, @s);
 			exit(EXIT_FAILURE);
 		}
+
+		@r->tidy = 0;
 	@};
 
 	/* equivalent to <compile-regex>(".") but with less machination */
@@ -373,6 +375,8 @@
 			perror("fsm_new");
 			@!;
 		}
+
+		@r->tidy = 0;
 
 		start = fsm_addstate(@r);
 		end   = fsm_addstate(@r);
