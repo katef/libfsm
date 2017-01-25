@@ -150,7 +150,13 @@ bm_print(FILE *f, const struct bm *bm,
 			break;
 		}
 
-		if (!isalnum((unsigned char) lo)) {
+		/* end of range */
+		hi = bm_next(bm, lo, mode == MODE_INVERT);
+		if (hi > UCHAR_MAX) {
+			hi = UCHAR_MAX;
+		}
+
+		if (!isalnum((unsigned char) lo) && isalnum((unsigned char) hi)) {
 			r = escputc(lo, f);
 			if (r == -1) {
 				return -1;
@@ -161,14 +167,8 @@ bm_print(FILE *f, const struct bm *bm,
 			continue;
 		}
 
-		/* end of range */
-		hi = bm_next(bm, lo, mode == MODE_INVERT);
-		if (hi > UCHAR_MAX) {
-			hi = UCHAR_MAX;
-		}
-
 		/* bring down endpoint, if it's past the end of the class */
-		{
+		if (isalnum((unsigned char) lo)) {
 			size_t i;
 
 			const struct {
