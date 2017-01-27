@@ -41,6 +41,7 @@
 <!ENTITY fsm_lang.5fsm  "<citerefentry><refentrytitle>fsm_lang</refentrytitle>   %vol.5fsm;</citerefentry>">
 <!ENTITY re_dialect.5re "<citerefentry><refentrytitle>re_dialect</refentrytitle> %vol.5re;</citerefentry>">
 <!ENTITY glob.5re       "<citerefentry><refentrytitle>glob</refentrytitle>       %vol.5re;</citerefentry>">
+<!ENTITY like.5re       "<citerefentry><refentrytitle>like</refentrytitle>       %vol.5re;</citerefentry>">
 <!ENTITY literal.5re    "<citerefentry><refentrytitle>literal</refentrytitle>    %vol.5re;</citerefentry>">
 <!ENTITY native.5re     "<citerefentry><refentrytitle>native</refentrytitle>     %vol.5re;</citerefentry>">
 
