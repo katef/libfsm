@@ -483,7 +483,7 @@ group (for dialects which have them) (rather than a "whole" regexp)
 			&pcre.3;,
 			&fsm_concat.3;, &fsm_union.3;,
 			&fsm_lang.5fsm;,
-			&literal.5re;, &glob.5re;, &native.5re;,
+			&like.5re;, &literal.5re;, &glob.5re;, &native.5re;,
 			&posix; &re_format.7;, Plan 9 &regexp.7;.</para>
 	</refsection>
 </refentry>

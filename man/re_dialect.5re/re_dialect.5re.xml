@@ -88,6 +88,13 @@
 				</tr>
 -->
 				<tr>
+					<td><literal>like</literal></td>
+					<td><literal>RE_LIKE</literal></td>
+					<td>&no;</td>
+					<td>&like.5re;</td>
+					<td>SQL <literal>LIKE</literal> patterns</td>
+				</tr>
+				<tr>
 					<td><literal>literal</literal></td>
 					<td><literal>RE_LITERAL</literal></td>
 					<td>&no;</td>
