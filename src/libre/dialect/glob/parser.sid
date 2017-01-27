@@ -67,6 +67,7 @@
 	!<err-expected-alts>;
 	!<err-expected-range>;
 	!<err-expected-closegroup>;
+	!<err-expected-groupbody>;
 	<err-expected-eof>;
 
 	!<mark-begin>: () -> (:pos);
