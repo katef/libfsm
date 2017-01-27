@@ -5,8 +5,8 @@
 
 enum lx_glob_token {
 	TOK_CHAR,
-	TOK_QMARK,
-	TOK_STAR,
+	TOK_MANY,
+	TOK_ANY,
 	TOK_EOF,
 	TOK_ERROR,
 	TOK_UNKNOWN

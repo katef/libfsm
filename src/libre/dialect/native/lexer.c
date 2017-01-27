@@ -517,7 +517,7 @@ z2(struct lx_native_lx *lx)
 			lx_native_ungetc(lx, c); return TOK_END;
 
 		case S6: /* e.g. "?" */
-			lx_native_ungetc(lx, c); return TOK_QMARK;
+			lx_native_ungetc(lx, c); return TOK_OPT;
 
 		case S7: /* e.g. "*" */
 			lx_native_ungetc(lx, c); return TOK_STAR;
@@ -604,7 +604,7 @@ z2(struct lx_native_lx *lx)
 	case S2: return TOK_OCT;
 	case S4: return TOK_START;
 	case S5: return TOK_END;
-	case S6: return TOK_QMARK;
+	case S6: return TOK_OPT;
 	case S7: return TOK_STAR;
 	case S8: return TOK_PLUS;
 	case S9: return TOK_DOT;
@@ -638,7 +638,7 @@ lx_native_name(enum lx_native_token t)
 	case TOK_DOT: return "DOT";
 	case TOK_PLUS: return "PLUS";
 	case TOK_STAR: return "STAR";
-	case TOK_QMARK: return "QMARK";
+	case TOK_OPT: return "OPT";
 	case TOK_END: return "END";
 	case TOK_START: return "START";
 	case TOK_CLOSESUB: return "CLOSESUB";
@@ -687,7 +687,7 @@ lx_native_example(enum lx_native_token (*z)(struct lx_native_lx *), enum lx_nati
 		case TOK_DOT: return ".";
 		case TOK_PLUS: return "+";
 		case TOK_STAR: return "*";
-		case TOK_QMARK: return "?";
+		case TOK_OPT: return "?";
 		case TOK_END: return "$";
 		case TOK_START: return "^";
 		case TOK_CLOSESUB: return ")";

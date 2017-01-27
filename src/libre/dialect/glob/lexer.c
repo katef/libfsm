@@ -203,19 +203,19 @@ z0(struct lx_glob_lx *lx)
 		}
 
 		switch (state) {
-		case S0: /* e.g. "*" */
-			lx_glob_ungetc(lx, c); return TOK_STAR;
+		case S0: /* e.g. "?" */
+			lx_glob_ungetc(lx, c); return TOK_ANY;
 
-		case S1: /* e.g. "?" */
-			lx_glob_ungetc(lx, c); return TOK_QMARK;
+		case S1: /* e.g. "*" */
+			lx_glob_ungetc(lx, c); return TOK_MANY;
 
 		case S2: /* e.g. "a" */
 			lx_glob_ungetc(lx, c); return TOK_CHAR;
 
 		case S3: /* start */
 			switch (c) {
-			case '*': state = S0; continue;
-			case '?': state = S1; continue;
+			case '*': state = S1; continue;
+			case '?': state = S0; continue;
 			default:  state = S2; continue;
 			}
 		}
@@ -224,8 +224,8 @@ z0(struct lx_glob_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
-	case S0: return TOK_STAR;
-	case S1: return TOK_QMARK;
+	case S0: return TOK_ANY;
+	case S1: return TOK_MANY;
 	case S2: return TOK_CHAR;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
@@ -236,8 +236,8 @@ lx_glob_name(enum lx_glob_token t)
 {
 	switch (t) {
 	case TOK_CHAR: return "CHAR";
-	case TOK_QMARK: return "QMARK";
-	case TOK_STAR: return "STAR";
+	case TOK_MANY: return "MANY";
+	case TOK_ANY: return "ANY";
 	case TOK_EOF:     return "EOF";
 	case TOK_ERROR:   return "ERROR";
 	case TOK_UNKNOWN: return "UNKNOWN";
@@ -253,8 +253,8 @@ lx_glob_example(enum lx_glob_token (*z)(struct lx_glob_lx *), enum lx_glob_token
 	if (z == z0) {
 		switch (t) {
 		case TOK_CHAR: return "a";
-		case TOK_QMARK: return "?";
-		case TOK_STAR: return "*";
+		case TOK_MANY: return "*";
+		case TOK_ANY: return "?";
 		default: goto error;
 		}
 	}

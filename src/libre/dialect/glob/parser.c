@@ -217,8 +217,8 @@
 static void p_list_Hof_Hatoms_C_Cliteral(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fsm__state);
 static void p_list_Hof_Hatoms(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fsm__state);
 static void p_list_Hof_Hatoms_C_Catom(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fsm__state *);
+static void p_list_Hof_Hatoms_C_Cmany(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fsm__state);
 static void p_list_Hof_Hatoms_C_Cany(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fsm__state);
-static void p_list_Hof_Hatoms_C_Cwildcard(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fsm__state);
 extern void p_re__glob(fsm, flags, lex_state, act_state, err);
 
 /* BEGINNING OF STATIC VARIABLES */
@@ -234,8 +234,8 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 	}
 	{
 		t_char ZIc;
-		t_pos ZI66;
 		t_pos ZI67;
+		t_pos ZI68;
 
 		switch (CURRENT_TERMINAL) {
 		case (TOK_CHAR):
@@ -246,8 +246,8 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 		assert(lex_state->buf.a[0] != '\0');
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI66 = lex_state->lx.start;
-		ZI67   = lex_state->lx.end;
+		ZI67 = lex_state->lx.start;
+		ZI68   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
@@ -305,10 +305,10 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hatoms_C_Catom (fsm, flags, lex_state, act_state, err, ZIx, &ZIz);
-		/* BEGINNING OF INLINE: 75 */
+		/* BEGINNING OF INLINE: 76 */
 		{
 			switch (CURRENT_TERMINAL) {
-			case (TOK_QMARK): case (TOK_STAR): case (TOK_CHAR):
+			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
 				{
 					/* BEGINNING OF INLINE: list-of-atoms */
 					ZIx = ZIz;
@@ -336,7 +336,7 @@ ZL2_list_Hof_Hatoms:;
 				goto ZL1;
 			}
 		}
-		/* END OF INLINE: 75 */
+		/* END OF INLINE: 76 */
 	}
 	return;
 ZL1:;
@@ -348,7 +348,7 @@ static void
 p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t_fsm__state ZIx, t_fsm__state *ZIy)
 {
 	switch (CURRENT_TERMINAL) {
-	case (TOK_QMARK):
+	case (TOK_ANY):
 		{
 			p_list_Hof_Hatoms_C_Cany (fsm, flags, lex_state, act_state, err, ZIx, *ZIy);
 			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
@@ -386,9 +386,9 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 			/* END OF ACTION: count-1 */
 		}
 		break;
-	case (TOK_STAR):
+	case (TOK_MANY):
 		{
-			p_list_Hof_Hatoms_C_Cwildcard (fsm, flags, lex_state, act_state, err, ZIx, *ZIy);
+			p_list_Hof_Hatoms_C_Cmany (fsm, flags, lex_state, act_state, err, ZIx, *ZIy);
 			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 				RESTORE_LEXER;
 				goto ZL1;
@@ -439,14 +439,14 @@ ZL1:;
 }
 
 static void
-p_list_Hof_Hatoms_C_Cany(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t_fsm__state ZIx, t_fsm__state ZIy)
+p_list_Hof_Hatoms_C_Cmany(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t_fsm__state ZIx, t_fsm__state ZIy)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
 	}
 	{
 		switch (CURRENT_TERMINAL) {
-		case (TOK_QMARK):
+		case (TOK_MANY):
 			break;
 		default:
 			goto ZL1;
@@ -474,14 +474,14 @@ ZL1:;
 }
 
 static void
-p_list_Hof_Hatoms_C_Cwildcard(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t_fsm__state ZIx, t_fsm__state ZIy)
+p_list_Hof_Hatoms_C_Cany(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t_fsm__state ZIx, t_fsm__state ZIy)
 {
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
 	}
 	{
 		switch (CURRENT_TERMINAL) {
-		case (TOK_STAR):
+		case (TOK_ANY):
 			break;
 		default:
 			goto ZL1;
@@ -538,10 +538,10 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 #line 539 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: make-states */
-		/* BEGINNING OF INLINE: 77 */
+		/* BEGINNING OF INLINE: 78 */
 		{
 			switch (CURRENT_TERMINAL) {
-			case (TOK_QMARK): case (TOK_STAR): case (TOK_CHAR):
+			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
 				{
 					p_list_Hof_Hatoms (fsm, flags, lex_state, act_state, err, ZIx, ZIy);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
@@ -583,8 +583,8 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 			}
 		ZL2:;
 		}
-		/* END OF INLINE: 77 */
-		/* BEGINNING OF INLINE: 78 */
+		/* END OF INLINE: 78 */
+		/* BEGINNING OF INLINE: 79 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -612,7 +612,7 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 			}
 		ZL4:;
 		}
-		/* END OF INLINE: 78 */
+		/* END OF INLINE: 79 */
 	}
 	return;
 ZL1:;

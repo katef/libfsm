@@ -20,7 +20,7 @@ enum lx_native_token {
 	TOK_DOT,
 	TOK_PLUS,
 	TOK_STAR,
-	TOK_QMARK,
+	TOK_OPT,
 	TOK_END,
 	TOK_START,
 	TOK_CLOSESUB,
