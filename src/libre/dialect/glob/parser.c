@@ -234,8 +234,8 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 	}
 	{
 		t_char ZIc;
-		t_pos ZI67;
 		t_pos ZI68;
+		t_pos ZI69;
 
 		switch (CURRENT_TERMINAL) {
 		case (TOK_CHAR):
@@ -246,8 +246,8 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 		assert(lex_state->buf.a[0] != '\0');
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI67 = lex_state->lx.start;
-		ZI68   = lex_state->lx.end;
+		ZI68 = lex_state->lx.start;
+		ZI69   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
@@ -305,7 +305,7 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hatoms_C_Catom (fsm, flags, lex_state, act_state, err, ZIx, &ZIz);
-		/* BEGINNING OF INLINE: 76 */
+		/* BEGINNING OF INLINE: 77 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
@@ -336,7 +336,7 @@ ZL2_list_Hof_Hatoms:;
 				goto ZL1;
 			}
 		}
-		/* END OF INLINE: 76 */
+		/* END OF INLINE: 77 */
 	}
 	return;
 ZL1:;
@@ -538,7 +538,7 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 #line 539 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: make-states */
-		/* BEGINNING OF INLINE: 78 */
+		/* BEGINNING OF INLINE: 79 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
@@ -583,8 +583,8 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 			}
 		ZL2:;
 		}
-		/* END OF INLINE: 78 */
-		/* BEGINNING OF INLINE: 79 */
+		/* END OF INLINE: 79 */
+		/* BEGINNING OF INLINE: 80 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -612,7 +612,7 @@ p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 			}
 		ZL4:;
 		}
-		/* END OF INLINE: 79 */
+		/* END OF INLINE: 80 */
 	}
 	return;
 ZL1:;

@@ -253,7 +253,7 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, er
 #line 254 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: make-states */
-		/* BEGINNING OF INLINE: 72 */
+		/* BEGINNING OF INLINE: 73 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -298,8 +298,8 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, er
 			}
 		ZL2:;
 		}
-		/* END OF INLINE: 72 */
-		/* BEGINNING OF INLINE: 73 */
+		/* END OF INLINE: 73 */
+		/* BEGINNING OF INLINE: 74 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -327,7 +327,7 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, er
 			}
 		ZL4:;
 		}
-		/* END OF INLINE: 73 */
+		/* END OF INLINE: 74 */
 	}
 	return;
 ZL1:;
@@ -343,8 +343,8 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 	}
 	{
 		t_char ZIc;
-		t_pos ZI67;
 		t_pos ZI68;
+		t_pos ZI69;
 
 		switch (CURRENT_TERMINAL) {
 		case (TOK_CHAR):
@@ -355,8 +355,8 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 		assert(lex_state->buf.a[0] != '\0');
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI67 = lex_state->lx.start;
-		ZI68   = lex_state->lx.end;
+		ZI68 = lex_state->lx.start;
+		ZI69   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
@@ -424,7 +424,7 @@ ZL2_list_Hof_Hliterals:;
 		}
 		/* END OF ACTION: add-concat */
 		p_list_Hof_Hliterals_C_Cliteral (fsm, flags, lex_state, act_state, err, ZIx, ZIz);
-		/* BEGINNING OF INLINE: 70 */
+		/* BEGINNING OF INLINE: 71 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -455,7 +455,7 @@ ZL2_list_Hof_Hliterals:;
 				goto ZL1;
 			}
 		}
-		/* END OF INLINE: 70 */
+		/* END OF INLINE: 71 */
 	}
 	return;
 ZL1:;
