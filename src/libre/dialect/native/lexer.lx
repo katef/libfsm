@@ -8,7 +8,7 @@
 '$'  -> $end;
 
 # operators
-'?'  -> $qmark;
+'?'  -> $opt;
 '*'  -> $star;
 '+'  -> $plus;
 '.'  -> $dot;

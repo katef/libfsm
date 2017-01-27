@@ -17,12 +17,14 @@
 
 %terminals%
 
-	QMARK;
-	STAR;
+	!ANY;
+	!MANY;
+	OPT;
 	PLUS;
 	DOT;
 	ALT;
 	SEP;
+	STAR;
 
 	OPENSUB;   CLOSESUB;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
@@ -270,7 +272,7 @@
 				<mark-count>(start, end);
 				<count-m-to-n>(x, &y, m, n);
 			||
-				QMARK;
+				OPT;
 				<count-0-or-1>(x, y);
 			||
 				STAR;

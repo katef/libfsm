@@ -12,12 +12,13 @@
 
 %terminals%
 
-	QMARK;
-	STAR;
+	ANY;
+	MANY;
 	!PLUS;
 	!DOT;
 	!ALT;
 	!SEP;
+	!STAR;
 
 	!OPENSUB;   !CLOSESUB;
 	!OPENGROUP: () -> (:pos, :pos); !CLOSEGROUP: () -> (:char, :pos, :pos);
@@ -82,12 +83,12 @@
 		};
 
 		any: (x :fsm_state, y :fsm_state) -> () = {
-			QMARK;
+			ANY;
 			<add-any>(x, y);
 		};
 
-		wildcard: (x :fsm_state, y :fsm_state) -> () = {
-			STAR;
+		many: (x :fsm_state, y :fsm_state) -> () = {
+			MANY;
 			<add-any>(x, y);
 		};
 
@@ -98,7 +99,7 @@
 			any(x, y);
 			<count-1>(x, y);
 		||
-			wildcard(x, y);
+			many(x, y);
 			<count-0-or-many>(x, &y);
 		};
 
