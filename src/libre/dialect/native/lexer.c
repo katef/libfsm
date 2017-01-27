@@ -205,11 +205,11 @@ z0(struct lx_native_lx *lx)
 		}
 
 		switch (state) {
-		case S0: /* e.g. "}" */
-			lx_native_ungetc(lx, c); return lx->z = z2, TOK_CLOSECOUNT;
-
-		case S1: /* e.g. "," */
+		case S0: /* e.g. "," */
 			lx_native_ungetc(lx, c); return TOK_SEP;
+
+		case S1: /* e.g. "}" */
+			lx_native_ungetc(lx, c); return lx->z = z2, TOK_CLOSECOUNT;
 
 		case S2: /* e.g. "0" */
 			switch (c) {
@@ -228,7 +228,7 @@ z0(struct lx_native_lx *lx)
 
 		case S3: /* start */
 			switch (c) {
-			case ',': state = S1; continue;
+			case ',': state = S0; continue;
 			case '0':
 			case '1':
 			case '2':
@@ -239,7 +239,7 @@ z0(struct lx_native_lx *lx)
 			case '7':
 			case '8':
 			case '9': state = S2; continue;
-			case '}': state = S0; continue;
+			case '}': state = S1; continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 		}
@@ -248,8 +248,8 @@ z0(struct lx_native_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
-	case S0: return TOK_CLOSECOUNT;
-	case S1: return TOK_SEP;
+	case S0: return TOK_SEP;
+	case S1: return TOK_CLOSECOUNT;
 	case S2: return TOK_COUNT;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
@@ -353,16 +353,13 @@ z1(struct lx_native_lx *lx)
 			default:  lx_native_ungetc(lx, c); return TOK_OCT;
 			}
 
-		case S4: /* e.g. "-" */
-			lx_native_ungetc(lx, c); return TOK_RANGE;
-
-		case S5: /* e.g. "^" */
+		case S4: /* e.g. "^" */
 			lx_native_ungetc(lx, c); return TOK_INVERT;
 
-		case S6: /* e.g. "]" */
+		case S5: /* e.g. "]" */
 			lx_native_ungetc(lx, c); return lx->z = z2, TOK_CLOSEGROUP;
 
-		case S7: /* e.g. "\\" */
+		case S6: /* e.g. "\\" */
 			switch (c) {
 			case '-': state = S1; continue;
 			case '0':
@@ -384,15 +381,18 @@ z1(struct lx_native_lx *lx)
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
+		case S7: /* e.g. "-" */
+			lx_native_ungetc(lx, c); return TOK_RANGE;
+
 		case S8: /* e.g. "a" */
 			lx_native_ungetc(lx, c); return TOK_CHAR;
 
 		case S9: /* start */
 			switch (c) {
-			case '-': state = S4; continue;
-			case '\\': state = S7; continue;
-			case ']': state = S6; continue;
-			case '^': state = S5; continue;
+			case '-': state = S7; continue;
+			case '\\': state = S6; continue;
+			case ']': state = S5; continue;
+			case '^': state = S4; continue;
 			default:  state = S8; continue;
 			}
 		}
@@ -404,9 +404,9 @@ z1(struct lx_native_lx *lx)
 	case S0: return TOK_HEX;
 	case S1: return TOK_ESC;
 	case S3: return TOK_OCT;
-	case S4: return TOK_RANGE;
-	case S5: return TOK_INVERT;
-	case S6: return TOK_CLOSEGROUP;
+	case S4: return TOK_INVERT;
+	case S5: return TOK_CLOSEGROUP;
+	case S7: return TOK_RANGE;
 	case S8: return TOK_CHAR;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
@@ -507,31 +507,34 @@ z2(struct lx_native_lx *lx)
 			case 'd':
 			case 'e':
 			case 'f': state = S0; continue;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  lx_native_ungetc(lx, c); return TOK_CHAR;
 			}
 
-		case S4: /* e.g. "^" */
+		case S4: /* e.g. "(" */
+			lx_native_ungetc(lx, c); return TOK_OPENSUB;
+
+		case S5: /* e.g. ")" */
+			lx_native_ungetc(lx, c); return TOK_CLOSESUB;
+
+		case S6: /* e.g. "^" */
 			lx_native_ungetc(lx, c); return TOK_START;
 
-		case S5: /* e.g. "$" */
+		case S7: /* e.g. "$" */
 			lx_native_ungetc(lx, c); return TOK_END;
 
-		case S6: /* e.g. "?" */
+		case S8: /* e.g. "?" */
 			lx_native_ungetc(lx, c); return TOK_OPT;
 
-		case S7: /* e.g. "*" */
+		case S9: /* e.g. "*" */
 			lx_native_ungetc(lx, c); return TOK_STAR;
 
-		case S8: /* e.g. "+" */
+		case S10: /* e.g. "+" */
 			lx_native_ungetc(lx, c); return TOK_PLUS;
 
-		case S9: /* e.g. "." */
+		case S11: /* e.g. "." */
 			lx_native_ungetc(lx, c); return TOK_DOT;
 
-		case S10: /* e.g. "|" */
-			lx_native_ungetc(lx, c); return TOK_ALT;
-
-		case S11: /* e.g. "\\" */
+		case S12: /* e.g. "\\" */
 			switch (c) {
 			case '$': state = S1; continue;
 			case '(':
@@ -559,39 +562,36 @@ z2(struct lx_native_lx *lx)
 			case 'x': state = S3; continue;
 			case '{':
 			case '|': state = S1; continue;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  lx_native_ungetc(lx, c); return TOK_CHAR;
 			}
 
-		case S12: /* e.g. ")" */
-			lx_native_ungetc(lx, c); return TOK_CLOSESUB;
-
-		case S13: /* e.g. "(" */
-			lx_native_ungetc(lx, c); return TOK_OPENSUB;
-
-		case S14: /* e.g. "{" */
+		case S13: /* e.g. "{" */
 			lx_native_ungetc(lx, c); return lx->z = z0, TOK_OPENCOUNT;
 
-		case S15: /* e.g. "a" */
-			lx_native_ungetc(lx, c); return TOK_CHAR;
+		case S14: /* e.g. "|" */
+			lx_native_ungetc(lx, c); return TOK_ALT;
 
-		case S16: /* e.g. "[" */
+		case S15: /* e.g. "[" */
 			lx_native_ungetc(lx, c); return lx->z = z1, TOK_OPENGROUP;
+
+		case S16: /* e.g. "a" */
+			lx_native_ungetc(lx, c); return TOK_CHAR;
 
 		case S17: /* start */
 			switch (c) {
-			case '$': state = S5; continue;
-			case '(': state = S13; continue;
-			case ')': state = S12; continue;
-			case '*': state = S7; continue;
-			case '+': state = S8; continue;
-			case '.': state = S9; continue;
-			case '?': state = S6; continue;
-			case '[': state = S16; continue;
-			case '\\': state = S11; continue;
-			case '^': state = S4; continue;
-			case '{': state = S14; continue;
-			case '|': state = S10; continue;
-			default:  state = S15; continue;
+			case '$': state = S7; continue;
+			case '(': state = S4; continue;
+			case ')': state = S5; continue;
+			case '*': state = S9; continue;
+			case '+': state = S10; continue;
+			case '.': state = S11; continue;
+			case '?': state = S8; continue;
+			case '[': state = S15; continue;
+			case '\\': state = S12; continue;
+			case '^': state = S6; continue;
+			case '{': state = S13; continue;
+			case '|': state = S14; continue;
+			default:  state = S16; continue;
 			}
 		}
 	}
@@ -602,18 +602,20 @@ z2(struct lx_native_lx *lx)
 	case S0: return TOK_HEX;
 	case S1: return TOK_ESC;
 	case S2: return TOK_OCT;
-	case S4: return TOK_START;
-	case S5: return TOK_END;
-	case S6: return TOK_OPT;
-	case S7: return TOK_STAR;
-	case S8: return TOK_PLUS;
-	case S9: return TOK_DOT;
-	case S10: return TOK_ALT;
-	case S12: return TOK_CLOSESUB;
-	case S13: return TOK_OPENSUB;
-	case S14: return TOK_OPENCOUNT;
-	case S15: return TOK_CHAR;
-	case S16: return TOK_OPENGROUP;
+	case S3: return TOK_CHAR;
+	case S4: return TOK_OPENSUB;
+	case S5: return TOK_CLOSESUB;
+	case S6: return TOK_START;
+	case S7: return TOK_END;
+	case S8: return TOK_OPT;
+	case S9: return TOK_STAR;
+	case S10: return TOK_PLUS;
+	case S11: return TOK_DOT;
+	case S12: return TOK_CHAR;
+	case S13: return TOK_OPENCOUNT;
+	case S14: return TOK_ALT;
+	case S15: return TOK_OPENGROUP;
+	case S16: return TOK_CHAR;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }
@@ -626,11 +628,11 @@ lx_native_name(enum lx_native_token t)
 	case TOK_SEP: return "SEP";
 	case TOK_CLOSECOUNT: return "CLOSECOUNT";
 	case TOK_OPENCOUNT: return "OPENCOUNT";
+	case TOK_CHAR: return "CHAR";
 	case TOK_RANGE: return "RANGE";
 	case TOK_INVERT: return "INVERT";
 	case TOK_CLOSEGROUP: return "CLOSEGROUP";
 	case TOK_OPENGROUP: return "OPENGROUP";
-	case TOK_CHAR: return "CHAR";
 	case TOK_HEX: return "HEX";
 	case TOK_OCT: return "OCT";
 	case TOK_ESC: return "ESC";
@@ -665,10 +667,10 @@ lx_native_example(enum lx_native_token (*z)(struct lx_native_lx *), enum lx_nati
 	} else
 	if (z == z1) {
 		switch (t) {
+		case TOK_CHAR: return "a";
 		case TOK_RANGE: return "-";
 		case TOK_INVERT: return "^";
 		case TOK_CLOSEGROUP: return "]";
-		case TOK_CHAR: return "a";
 		case TOK_HEX: return "\\xa";
 		case TOK_OCT: return "\\0";
 		case TOK_ESC: return "\\f";
@@ -678,8 +680,8 @@ lx_native_example(enum lx_native_token (*z)(struct lx_native_lx *), enum lx_nati
 	if (z == z2) {
 		switch (t) {
 		case TOK_OPENCOUNT: return "{";
+		case TOK_CHAR: return "\\";
 		case TOK_OPENGROUP: return "[";
-		case TOK_CHAR: return "a";
 		case TOK_HEX: return "\\xa";
 		case TOK_OCT: return "\\0";
 		case TOK_ESC: return "\\f";
