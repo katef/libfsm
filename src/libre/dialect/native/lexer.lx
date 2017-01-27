@@ -37,9 +37,6 @@
 '\'  /[0-7]+/     -> $oct;
 '\x' /[0-9a-f]+/i -> $hex;
 
-# TODO: /./ - the above
-/[^$?*+.|(){[\^\\]/ -> $char;
-
 '[' -> $opengroup .. ']' -> $closegroup {
 	'^' -> $invert;
 	'-' -> $range;
@@ -67,4 +64,9 @@
 	','      -> $sep;
 	/[0-9]+/ -> $count;
 }
+
+/./ - ($opensub | $closesub | $start | $end
+	| $opt | $star | $plus | $dot | $alt
+	| $esc | $oct | $hex
+	| $opengroup | $opencount) -> $char;
 
