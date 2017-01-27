@@ -96,7 +96,9 @@ dialect_name(const char *name)
 		{ "pcre",    RE_PCRE    },
 		{ "js",      RE_JS      },
 		{ "python",  RE_PYTHON  },
+		{ "sql99",   RE_SQL99   },
 */
+		{ "like",    RE_LIKE    },
 		{ "literal", RE_LITERAL },
 		{ "glob",    RE_GLOB    },
 		{ "native",  RE_NATIVE  }

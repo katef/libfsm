@@ -38,6 +38,7 @@ re_dialect(enum re_dialect dialect)
 	size_t i;
 
 	static const struct dialect a[] = {
+		{ RE_LIKE,    comp_like,    0, NULL         },
 		{ RE_LITERAL, comp_literal, 0, NULL         },
 		{ RE_GLOB,    comp_glob,    0, NULL         },
 		{ RE_NATIVE,  comp_native,  0, group_native }

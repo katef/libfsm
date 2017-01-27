@@ -1,0 +1,142 @@
+/* $Id$ */
+
+%types%
+
+	pos;
+	char;
+	unsigned;
+	fsm_state;
+	grp;
+	pred;
+	!err;
+
+%terminals%
+
+	ANY;
+	MANY;
+	!OPT;
+	!PLUS;
+	!DOT;
+	!ALT;
+	!SEP;
+	!STAR;
+
+	!OPENSUB;   !CLOSESUB;
+	!OPENGROUP: () -> (:pos, :pos); !CLOSEGROUP: () -> (:char, :pos, :pos);
+	!OPENCOUNT: () -> (:pos, :pos); !CLOSECOUNT: () -> (:pos, :pos);
+
+	!INVERT: () -> (:char);
+	!RANGE:  () -> (:char, :pos, :pos);
+
+	!ESC:    () -> (:char);
+	!OCT:    () -> (:char, :pos, :pos);
+	!HEX:    () -> (:char, :pos, :pos);
+	CHAR:    () -> (:char, :pos, :pos);
+	!START:  () -> (:pred);
+	!END:    () -> (:pred);
+	!COUNT:  () -> (:unsigned);
+
+	EOF;
+	!ERROR;
+
+%productions%
+
+	<make-states>: () -> (:fsm_state, :fsm_state);
+
+	!<make-group>: () -> (:grp);
+	!<invert-group>:    (:grp &) -> ();
+	!<stash-group>:     (:grp &) -> ();
+	!<group-add-char>:  (:grp &, :char) -> ();
+	!<group-add-range>: (:grp &, :char, :char) -> ();
+	!<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
+
+	<add-concat>:  () -> (:fsm_state);
+	<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
+	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
+	!<add-pred>:   (:fsm_state, :fsm_state, :pred) -> ();
+	<add-any>:     (:fsm_state, :fsm_state)        -> ();
+
+	!<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
+	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
+	<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
+	!<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
+	<count-1>: (:fsm_state, :fsm_state) -> ();
+
+	!<err-expected-term>;
+	!<err-expected-count>;
+	<err-expected-atoms>;
+	!<err-expected-alts>;
+	!<err-expected-range>;
+	!<err-expected-closegroup>;
+	!<err-expected-groupbody>;
+	<err-expected-eof>;
+
+	!<mark-begin>: () -> (:pos);
+	!<mark-end>:   () -> (:pos);
+	!<mark-group>: (:pos, :pos) -> ();
+	!<mark-range>: (:pos, :pos) -> ();
+	!<mark-count>: (:pos, :pos) -> ();
+
+	list-of-atoms: (x :fsm_state, y :fsm_state) -> () [
+
+		literal: (x :fsm_state, y :fsm_state) -> () = {
+			(c, !, !) = CHAR;
+			<add-literal>(x, y, c);
+		};
+
+		any: (x :fsm_state, y :fsm_state) -> () = {
+			ANY;
+			<add-any>(x, y);
+		};
+
+		many: (x :fsm_state, y :fsm_state) -> () = {
+			MANY;
+			<add-any>(x, y);
+		};
+
+		atom: (x :fsm_state, y :fsm_state &) -> () = {
+			literal(x, y);
+			<count-1>(x, y);
+		||
+			any(x, y);
+			<count-1>(x, y);
+		||
+			many(x, y);
+			<count-0-or-many>(x, &y);
+		};
+
+	] = {
+		z = <add-concat>;
+
+		atom(x, &z);
+
+		{
+			list-of-atoms(z, y);
+		||
+			/* TODO: I don't like this. refactor somehow? */
+			<add-epsilon>(z, y);
+		};
+	};
+
+	re_like: () -> () = {
+		(x, y) = <make-states>;
+
+		{
+			list-of-atoms(x, y);
+		||
+			<add-epsilon>(x, y);
+		##
+			<err-expected-atoms>;
+		};
+
+		{
+			EOF;
+		##
+			<err-expected-eof>;
+		};
+	};
+
+%entry%
+
+	re_like;
+

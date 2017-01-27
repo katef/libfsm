@@ -14,6 +14,7 @@ enum re_dialect {
 	RE_JS,
 	RE_PYTHON,
 */
+	RE_LIKE,
 	RE_LITERAL,
 	RE_GLOB,
 	RE_NATIVE

@@ -1,6 +1,7 @@
 .include "../../../share/mk/top.mk"
 
 DIALECT += glob
+DIALECT += like
 DIALECT += literal
 DIALECT += native
 
