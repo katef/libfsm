@@ -122,12 +122,6 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		}
 	}
 
-	if (flags & RE_ICASE) {
-		if (!fsm_desensitise(new)) {
-			goto error;
-		}
-	}
-
 	return new;
 
 error:

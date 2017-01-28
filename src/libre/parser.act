@@ -211,6 +211,31 @@
 		return fputs(escchar(s, sizeof s, c), f);
 	}
 
+	static int
+	addedge_literal(struct fsm *fsm, enum re_flags flags,
+		struct fsm_state *from, struct fsm_state *to, char c)
+	{
+		assert(fsm != NULL);
+		assert(from != NULL);
+		assert(to != NULL);
+
+		if (flags & RE_ICASE) {
+			if (!fsm_addedge_literal(fsm, from, to, tolower((unsigned char) c))) {
+				return 0;
+			}
+
+			if (!fsm_addedge_literal(fsm, from, to, toupper((unsigned char) c))) {
+				return 0;
+			}
+		} else {
+			if (!fsm_addedge_literal(fsm, from, to, c)) {
+				return 0;
+			}
+		}
+
+		return 1;
+	}
+
 @}, @{
 
 	#include <re/re.h>
@@ -500,7 +525,7 @@
 
 		i = -1;
 		while (i = (int) bm_next(&@&g->set, i, 1), i <= UCHAR_MAX) {
-			if (!fsm_addedge_literal(fsm, @x, @y, (char) i)) {
+			if (!addedge_literal(fsm, flags, @x, @y, (char) i)) {
 				@!;
 			}
 		}
@@ -555,7 +580,7 @@
 
 		/* TODO: check c is legal? */
 
-		if (!fsm_addedge_literal(fsm, @x, @y, @c)) {
+		if (!addedge_literal(fsm, flags, @x, @y, @c)) {
 			@!;
 		}
 	@};
