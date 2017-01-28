@@ -16,7 +16,6 @@
 	MANY;
 	!OPT;
 	!PLUS;
-	!DOT;
 	!ALT;
 	!SEP;
 	!STAR;

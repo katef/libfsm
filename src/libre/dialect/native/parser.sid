@@ -17,11 +17,10 @@
 
 %terminals%
 
-	!ANY;
+	ANY;
 	!MANY;
 	OPT;
 	PLUS;
-	DOT;
 	ALT;
 	SEP;
 	STAR;
@@ -253,7 +252,7 @@
 			||
 				literal(x, y);
 			||
-				DOT;
+				ANY;
 				<add-any>(x, y);
 			};
 
