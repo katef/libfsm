@@ -532,7 +532,7 @@ z2(struct lx_native_lx *lx)
 			lx_native_ungetc(lx, c); return TOK_PLUS;
 
 		case S11: /* e.g. "." */
-			lx_native_ungetc(lx, c); return TOK_DOT;
+			lx_native_ungetc(lx, c); return TOK_ANY;
 
 		case S12: /* e.g. "\\" */
 			switch (c) {
@@ -610,7 +610,7 @@ z2(struct lx_native_lx *lx)
 	case S8: return TOK_OPT;
 	case S9: return TOK_STAR;
 	case S10: return TOK_PLUS;
-	case S11: return TOK_DOT;
+	case S11: return TOK_ANY;
 	case S12: return TOK_CHAR;
 	case S13: return TOK_OPENCOUNT;
 	case S14: return TOK_ALT;
@@ -637,7 +637,7 @@ lx_native_name(enum lx_native_token t)
 	case TOK_OCT: return "OCT";
 	case TOK_ESC: return "ESC";
 	case TOK_ALT: return "ALT";
-	case TOK_DOT: return "DOT";
+	case TOK_ANY: return "ANY";
 	case TOK_PLUS: return "PLUS";
 	case TOK_STAR: return "STAR";
 	case TOK_OPT: return "OPT";
@@ -686,7 +686,7 @@ lx_native_example(enum lx_native_token (*z)(struct lx_native_lx *), enum lx_nati
 		case TOK_OCT: return "\\0";
 		case TOK_ESC: return "\\f";
 		case TOK_ALT: return "|";
-		case TOK_DOT: return ".";
+		case TOK_ANY: return ".";
 		case TOK_PLUS: return "+";
 		case TOK_STAR: return "*";
 		case TOK_OPT: return "?";

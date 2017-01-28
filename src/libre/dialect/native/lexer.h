@@ -17,7 +17,7 @@ enum lx_native_token {
 	TOK_OCT,
 	TOK_ESC,
 	TOK_ALT,
-	TOK_DOT,
+	TOK_ANY,
 	TOK_PLUS,
 	TOK_STAR,
 	TOK_OPT,
