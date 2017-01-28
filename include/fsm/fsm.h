@@ -182,14 +182,6 @@ fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 	char *buf, size_t bufsz);
 
 /*
- * Make the given fsm case-insensitive. This may result in an NFA.
- *
- * Returns 1 on success, or 0 on error.
- */
-int
-fsm_desensitise(struct fsm *fsm);
-
-/*
  * Reverse the given fsm. This may result in an NFA.
  *
  * Returns 1 on success, or 0 on error.
