@@ -25,10 +25,10 @@
 	<!ENTITY b.opt "<option>-b</option>">
 	<!ENTITY d.opt "<option>-d</option>">
 	<!ENTITY g.opt "<option>-g</option>">
-	<!ENTITY i.opt "<option>-i</option>">
 	<!ENTITY m.opt "<option>-m</option>">
 	<!ENTITY n.opt "<option>-n</option>">
 	<!ENTITY p.opt "<option>-p</option>">
+	<!ENTITY y.opt "<option>-y</option>">
 	<!ENTITY z.opt "<option>-z</option>">
 	<!ENTITY s.opt "<option>-s</option>">
 	<!ENTITY u.opt "<option>-u</option>">
@@ -72,10 +72,10 @@ query
 			<arg choice="plain">&p.opt;</arg>
 
 			<group>
-				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&n.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&s.opt;</arg>
+				<arg choice="plain">&y.opt;</arg>
 				<arg choice="plain">&z.opt;</arg>
 			</group>
 
@@ -100,10 +100,10 @@ query
 			<arg choice="plain">&m.opt;</arg>
 
 			<group>
-				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&n.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&s.opt;</arg>
+				<arg choice="plain">&y.opt;</arg>
 				<arg choice="plain">&z.opt;</arg>
 			</group>
 
@@ -120,10 +120,10 @@ query
 			<arg choice="opt">&x.opt;</arg>
 
 			<group>
-				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&n.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&s.opt;</arg>
+				<arg choice="plain">&y.opt;</arg>
 				<arg choice="plain">&z.opt;</arg>
 			</group>
 
@@ -149,9 +149,9 @@ query
 			<arg choice="plain">&g.opt;</arg>
 
 			<group>
-				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&b.opt;</arg>
+				<arg choice="plain">&y.opt;</arg>
 			</group>
 
 			<sbr/>
@@ -370,17 +370,6 @@ group (for dialects which have them) (rather than a "whole" regexp)
 			</varlistentry>
 
 			<varlistentry>
-				<term>&i.opt;</term>
-
-				<listitem>
-					<para>The &i.opt; option specifies that regular expressions
-						are given by filenames instead of strings on the command line.
-						Each file contains a regular expression.</para>
-<!-- TODO: each file could contain a list of regexps -->
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
 				<term>&m.opt;</term>
 
 				<listitem>
@@ -473,6 +462,16 @@ group (for dialects which have them) (rather than a "whole" regexp)
 				</listitem>
 			</varlistentry>
 
+			<varlistentry>
+				<term>&y.opt;</term>
+
+				<listitem>
+					<para>The &y.opt; option specifies that regular expressions
+						are given by filenames instead of strings on the command line.
+						Each file contains a regular expression.</para>
+<!-- TODO: each file could contain a list of regexps -->
+				</listitem>
+			</varlistentry>
 		</variablelist>
 	</refsection>
 

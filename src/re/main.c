@@ -37,11 +37,11 @@ struct match {
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re    [-r <dialect>] [-inusz] [-x] <re> ... [ <text> | -- <text> ... ]\n");
-	fprintf(stderr, "       re    [-r <dialect>] [-inusz] {-q <query>} <re> ...\n");
-	fprintf(stderr, "       re -p [-r <dialect>] [-inusz] [-l <language>] [-awc] [-e <prefix>] <re> ...\n");
-	fprintf(stderr, "       re -m [-r <dialect>] [-inusz] <re> ...\n");
-	fprintf(stderr, "       re -g [-r <dialect>] [-iub] <group>\n");
+	fprintf(stderr, "usage: re    [-r <dialect>] [-nusyz] [-x] <re> ... [ <text> | -- <text> ... ]\n");
+	fprintf(stderr, "       re    [-r <dialect>] [-nusyz] {-q <query>} <re> ...\n");
+	fprintf(stderr, "       re -p [-r <dialect>] [-nusyz] [-l <language>] [-awc] [-e <prefix>] <re> ...\n");
+	fprintf(stderr, "       re -m [-r <dialect>] [-nusyz] <re> ...\n");
+	fprintf(stderr, "       re -g [-r <dialect>] [-uby] <group>\n");
 	fprintf(stderr, "       re -h\n");
 }
 
@@ -338,7 +338,7 @@ main(int argc, char *argv[])
 	enum re_dialect dialect;
 	struct fsm *fsm;
 	enum re_flags flags;
-	int ifiles, xfiles;
+	int xfiles, yfiles;
 	int boxed;
 	int print;
 	int group;
@@ -356,8 +356,8 @@ main(int argc, char *argv[])
 
 	o.comments          = 1;
 
-	ifiles   = 0;
 	xfiles   = 0;
+	yfiles   = 0;
 	boxed    = 0;
 	print    = 0;
 	group    = 0;
@@ -373,7 +373,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwe:" "sq:r:l:" "ubpgixmnz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwe:" "sq:r:l:" "ubpgmnxyz"), c != -1) {
 			switch (c) {
 			case 'a': o.anonymous_states  = 0;       break;
 			case 'c': o.consolidate_edges = 0;       break;
@@ -392,8 +392,8 @@ main(int argc, char *argv[])
 			case 'b': boxed    = 1; break;
 			case 'p': print    = 1; break;
 			case 'g': group    = 1; break;
-			case 'i': ifiles   = 1; break;
 			case 'x': xfiles   = 1; break;
+			case 'y': yfiles   = 1; break;
 			case 'm': example  = 1; break;
 			case 'n': keep_nfa = 1; break;
 			case 'z': patterns = 1; break;
@@ -466,7 +466,7 @@ main(int argc, char *argv[])
 		 * centralise with escchar() in parser.act? */
 		/* TODO: re_flags */
 
-		if (ifiles) {
+		if (yfiles) {
 			FILE *f;
 
 			f = xopen(argv[0]);
@@ -491,8 +491,8 @@ main(int argc, char *argv[])
 
 		if (r == -1) {
 			re_perror(dialect | RE_GROUP, &err,
-				 ifiles ? argv[0] : NULL,
-				!ifiles ? argv[0] : NULL);
+				 yfiles ? argv[0] : NULL,
+				!yfiles ? argv[0] : NULL);
 			return EXIT_FAILURE;
 		}
 
@@ -536,7 +536,7 @@ main(int argc, char *argv[])
 				break;
 			}
 
-			if (ifiles) {
+			if (yfiles) {
 				FILE *f;
 
 				f = xopen(argv[i]);
@@ -554,8 +554,8 @@ main(int argc, char *argv[])
 
 			if (new == NULL) {
 				re_perror(dialect, &err,
-					 ifiles ? argv[i] : NULL,
-					!ifiles ? argv[i] : NULL);
+					 yfiles ? argv[i] : NULL,
+					!yfiles ? argv[i] : NULL);
 				return EXIT_FAILURE;
 			}
 
