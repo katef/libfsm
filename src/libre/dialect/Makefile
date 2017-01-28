@@ -45,6 +45,13 @@ CFLAGS_${src} += -Wno-unused-parameter
 .endfor
 .endif
 
+# SID generates intermediates which are unused in some alts
+.if ${CC:T:Mgcc}
+.for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}
+CFLAGS_${src} += -Wno-unused-but-set-variable
+.endfor
+.endif
+
 # Not all dialects use all static functions
 .if ${CC:T:Mgcc} || ${CC:T:Mclang}
 .for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}
