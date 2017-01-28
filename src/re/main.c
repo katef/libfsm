@@ -26,7 +26,7 @@
  * TODO: accepting a delimiter would be useful: /abc/. perhaps provide that as
  * a convenience function, especially wrt. escaping for lexing. Also convenient
  * for specifying flags: /abc/g
- * TODO: flags; -i for RE_ICASE, -r for RE_REVERSE, etc
+ * TODO: flags; -r for RE_REVERSE, etc
  */
 
 struct match {
@@ -37,11 +37,11 @@ struct match {
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re    [-r <dialect>] [-nusyz] [-x] <re> ... [ <text> | -- <text> ... ]\n");
-	fprintf(stderr, "       re    [-r <dialect>] [-nusyz] {-q <query>} <re> ...\n");
-	fprintf(stderr, "       re -p [-r <dialect>] [-nusyz] [-l <language>] [-awc] [-e <prefix>] <re> ...\n");
-	fprintf(stderr, "       re -m [-r <dialect>] [-nusyz] <re> ...\n");
-	fprintf(stderr, "       re -g [-r <dialect>] [-uby] <group>\n");
+	fprintf(stderr, "usage: re    [-r <dialect>] [-niusyz] [-x] <re> ... [ <text> | -- <text> ... ]\n");
+	fprintf(stderr, "       re    [-r <dialect>] [-niusyz] {-q <query>} <re> ...\n");
+	fprintf(stderr, "       re -p [-r <dialect>] [-niusyz] [-l <language>] [-awc] [-e <prefix>] <re> ...\n");
+	fprintf(stderr, "       re -m [-r <dialect>] [-niusyz] <re> ...\n");
+	fprintf(stderr, "       re -g [-r <dialect>] [-iuby] <group>\n");
 	fprintf(stderr, "       re -h\n");
 }
 
@@ -356,6 +356,7 @@ main(int argc, char *argv[])
 
 	o.comments          = 1;
 
+	flags    = 0U;
 	xfiles   = 0;
 	yfiles   = 0;
 	boxed    = 0;
@@ -373,12 +374,14 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwe:" "sq:r:l:" "ubpgmnxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwe:" "i" "sq:r:l:" "ubpgmnxyz"), c != -1) {
 			switch (c) {
 			case 'a': o.anonymous_states  = 0;       break;
 			case 'c': o.consolidate_edges = 0;       break;
 			case 'w': o.fragment          = 1;       break;
 			case 'e': o.prefix            = optarg;  break;
+
+			case 'i': flags |= RE_ICASE; break;
 
 			case 's':
 				join = fsm_concat;
@@ -509,10 +512,7 @@ main(int argc, char *argv[])
 		ambig = 1;
 	}
 
-	if (-1 == re_flags("m", &flags)) {
-		perror("re_flags");
-		return EXIT_FAILURE;
-	}
+	flags |= RE_MULTI;
 
 	fsm = fsm_new();
 	if (fsm == NULL) {

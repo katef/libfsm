@@ -27,6 +27,7 @@
 	<!ENTITY g.opt "<option>-g</option>">
 	<!ENTITY m.opt "<option>-m</option>">
 	<!ENTITY n.opt "<option>-n</option>">
+	<!ENTITY i.opt "<option>-i</option>">
 	<!ENTITY p.opt "<option>-p</option>">
 	<!ENTITY y.opt "<option>-y</option>">
 	<!ENTITY z.opt "<option>-z</option>">
@@ -73,6 +74,7 @@ query
 
 			<group>
 				<arg choice="plain">&n.opt;</arg>
+				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&s.opt;</arg>
 				<arg choice="plain">&y.opt;</arg>
@@ -101,6 +103,7 @@ query
 
 			<group>
 				<arg choice="plain">&n.opt;</arg>
+				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&s.opt;</arg>
 				<arg choice="plain">&y.opt;</arg>
@@ -121,6 +124,7 @@ query
 
 			<group>
 				<arg choice="plain">&n.opt;</arg>
+				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&s.opt;</arg>
 				<arg choice="plain">&y.opt;</arg>
@@ -149,6 +153,7 @@ query
 			<arg choice="plain">&g.opt;</arg>
 
 			<group>
+				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&b.opt;</arg>
 				<arg choice="plain">&y.opt;</arg>
@@ -389,6 +394,16 @@ group (for dialects which have them) (rather than a "whole" regexp)
 					<para>Set the output language for printing by &p.opt;.
 						See &fsm_lang.5fsm; for the supported language identifiers.
 						The default is <literal>fsm</literal>.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&i.opt;</term>
+
+				<listitem>
+					<para>Make regexps case insensitive,
+					per the <literal>RE_ICASE</literal> flag for &re.3;.
+					The default is for regexps to be case sensitive.</para>
 				</listitem>
 			</varlistentry>
 
