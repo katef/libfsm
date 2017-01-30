@@ -570,8 +570,9 @@ main(int argc, char *argv[])
 	/*
 	 * De-duplicate equivalent zones.
 	 * This converts the tree of zones to a DAG.
+	 * TODO: Fix
 	 */
-	if (out != lx_out_h) {
+	if (0 && out != lx_out_h) {
 		struct ast_zone *z, **p;
 		int changed;
 		unsigned int zn, zd, zp;
