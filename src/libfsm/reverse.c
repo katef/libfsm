@@ -33,23 +33,6 @@ equivalent(const struct fsm *new, const struct fsm *fsm, const struct fsm_state 
 	return NULL;
 }
 
-static void
-movetoend(struct fsm *fsm, struct fsm_state *state)
-{
-	struct fsm_state **s;
-
-	assert(fsm != NULL);
-	assert(fsm->start = state);
-
-	fsm->sl = fsm->sl->next;
-
-	for (s = &fsm->sl; *s != NULL; s = &(*s)->next)
-		;
-
-	*s = state;
-	state->next = NULL;
-}
-
 int
 fsm_reverse_opaque(struct fsm *fsm,
 	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *))
@@ -65,7 +48,8 @@ fsm_reverse_opaque(struct fsm *fsm,
 
 	/*
 	 * Create states corresponding to the origional FSM's states.
-	 * These are created in reverse order, but that's okay.
+	 * These are created in the same order, due to fsm_addstate()
+	 * placing them at fsm->tail.
 	 */
 	/* TODO: possibly centralise as a state-copying function */
 	{
@@ -244,12 +228,6 @@ fsm_reverse_opaque(struct fsm *fsm,
 					fsm_free(new);
 					return 0;
 				}
-
-				/*
-				 * XXX: This hacky mess moves the newly-created start state
-				 * to the end of new->sl, for the sake of equivalent().
-				 */
-				movetoend(new, new->start);
 			}
 
 			for (s = fsm->sl; s != NULL; s = s->next) {

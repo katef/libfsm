@@ -37,6 +37,7 @@ struct fsm_state {
 
 struct fsm {
 	struct fsm_state *sl;
+	struct fsm_state **tail; /* tail of .sl */
 	struct fsm_state *start;
 
 	unsigned int tidy:1;

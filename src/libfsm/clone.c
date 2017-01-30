@@ -76,6 +76,10 @@ fsm_clone(const struct fsm *fsm)
 			equiv = equivalent(fsm, new, s);
 			assert(equiv != NULL);
 
+			if (*fsm->tail == s) {
+				new->tail = &equiv;
+			}
+
 			fsm_setend(new, equiv, fsm_isend(fsm, s));
 			equiv->opaque = s->opaque;
 

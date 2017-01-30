@@ -515,10 +515,12 @@ fsm_determinise_opaque(struct fsm *fsm,
 	assert(dfa->nfa == fsm);
 
 	fsm->nfa->sl    = fsm->sl;
+	fsm->nfa->tail  = fsm->tail;
 	fsm->nfa->start = fsm->start;
 
 	/* for fsm_move's free contents */
 	fsm->sl    = NULL;
+	fsm->tail  = NULL;
 	fsm->start = NULL;
 #endif
 

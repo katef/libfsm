@@ -29,26 +29,6 @@ free_contents(struct fsm *fsm)
 	}
 }
 
-static void
-state_remove(struct fsm_state **head, struct fsm_state *state)
-{
-	struct fsm_state **s;
-
-	assert(head != NULL);
-	assert(state != NULL);
-
-	for (s = head; *s != NULL; s = &(*s)->next) {
-		if (*s == state) {
-			struct fsm_state *next;
-
-			next = (*s)->next;
-			free(*s);
-			*s = next;
-			break;
-		}
-	}
-}
-
 struct fsm *
 fsm_new(void)
 {
@@ -60,6 +40,7 @@ fsm_new(void)
 	}
 
 	new->sl    = NULL;
+	new->tail  = &new->sl;
 	new->start = NULL;
 	new->tidy  = 1;
 
@@ -89,6 +70,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	free_contents(dst);
 
 	dst->sl    = src->sl;
+	dst->tail  = src->tail;
 	dst->start = src->start;
 
 	free(src);
@@ -119,8 +101,9 @@ fsm_addstate(struct fsm *fsm)
 	new->nfasl = NULL;
 #endif
 
-	new->next = fsm->sl;
-	fsm->sl = new;
+	*fsm->tail = new;
+	new->next = NULL;
+	fsm->tail  = &new->next;
 
 	return new;
 }
@@ -128,7 +111,7 @@ fsm_addstate(struct fsm *fsm)
 void
 fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 {
-	struct fsm_state *s;
+	struct fsm_state *s, **p;
 	int i;
 
 	assert(fsm != NULL);
@@ -148,7 +131,19 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 		fsm->start = NULL;
 	}
 
-	state_remove(&fsm->sl, state);
+	for (p = &fsm->sl; *p != NULL; p = &(*p)->next) {
+		if (*p == state) {
+			struct fsm_state *next;
+
+			next = (*p)->next;
+			if (*fsm->tail == *p) {
+				*fsm->tail = next;
+			}
+			free(*p);
+			*p = next;
+			break;
+		}
+	}
 }
 
 void

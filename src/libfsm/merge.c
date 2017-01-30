@@ -16,12 +16,11 @@ fsm_merge(struct fsm *a, struct fsm *b)
 	assert(a != NULL);
 	assert(b != NULL);
 
-	for (s = &a->sl; *s != NULL; s = &(*s)->next)
-		;
+	*a->tail = b->sl;
+	a->tail  = b->tail;
 
-	*s = b->sl;
-
-	b->sl = NULL;
+	b->sl   = NULL;
+	b->tail = NULL;
 	fsm_free(b);
 
 	fsm_setstart(a, NULL);
