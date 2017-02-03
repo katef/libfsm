@@ -205,20 +205,26 @@ set_contains(const struct set *set, const void *item)
 int
 subsetof(const struct set *a, const struct set *b)
 {
-	size_t i;
+	size_t i, j;
+	struct set haystack;
 
-	if ((a == NULL) != (b == NULL)) {
-		return 0;
-	}
-
-	if (a == NULL && b == NULL) {
+	if (a == NULL) {
 		return 1;
 	}
 
+	if (b == NULL) {
+		return 0;
+	}
+
+	haystack = *b;
+
 	for (i = 0; i < a->i; i++) {
-		if (!set_contains(b, a->a[i])) {
+		j = set_search(&haystack, a->a[i]);
+		if (haystack.a[j] != a->a[i]) {
 			return 0;
 		}
+		haystack.a += j;
+		haystack.i -= j;
 	}
 
 	return 1;
