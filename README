@@ -19,6 +19,9 @@ You get:
  re(1)  - command line interface for executing regular expressions
  lx(1)  - lexer generator
 
+Clone with submodules (contains required .mk files):
+
+ ; git clone --recursive https://github.com/katef/libfsm.git
 
 To build and install:
 
