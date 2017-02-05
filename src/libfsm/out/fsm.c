@@ -78,7 +78,7 @@ findany(const struct fsm_state *state)
 	assert(state != NULL);
 
 	f = set_first(state->edges[0].sl, &it);
-	
+
 	for (i = 0; i <= UCHAR_MAX; i++) {
 		if (set_empty(state->edges[i].sl)) {
 			return NULL;
