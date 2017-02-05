@@ -120,13 +120,16 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 }
 
 static void
-singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
+singlecase(FILE *f, const struct fsm *fsm,
+	const struct fsm_outoptions *options,
+	struct fsm_state *state,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
 	const void *opaque)
 {
 	int i;
 
 	assert(fsm != NULL);
+	assert(options != NULL);
 	assert(f != NULL);
 	assert(state != NULL);
 	assert(leaf != NULL);
@@ -148,7 +151,15 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 		}
 	}
 
-	fprintf(f, "\t\t\tswitch (c) {\n");
+	switch (options->io) {
+	case FSM_IO_GETC:
+		fprintf(f, "\t\t\tswitch (c) {\n");
+		break;
+
+	case FSM_IO_STR:
+		fprintf(f, "\t\t\tswitch (*p) {\n");
+		break;
+	}
 
 	/* usual case */
 	{
@@ -303,7 +314,7 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *optio
 		}
 		fprintf(f, "\n");
 
-		singlecase(f, fsm, s, leaf, opaque);
+		singlecase(f, fsm, options, s, leaf, opaque);
 
 		if (s->next != NULL) {
 			fprintf(f, "\n");
@@ -333,19 +344,27 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 		return;
 	}
 
+	fprintf(f, "#include <assert.h>\n");
 	fprintf(f, "#include <stdio.h>\n");
 	fprintf(f, "\n");
 
 	switch (options->io) {
 	case FSM_IO_GETC:
-		fprintf(f, "extern int fsm_getc(void *opaque);\n");
+		fprintf(f, "int fsm_main(int (*fsm_getc)(void *opaque), void *opaque) {\n");
+		fprintf(f, "\tint c;\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tassert(getc != NULL);\n");
+		fprintf(f, "\n");
+		break;
+
+	case FSM_IO_STR:
+		fprintf(f, "int fsm_main(const char *s) {\n");
+		fprintf(f, "\tconst char *p;\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tassert(s != NULL);\n");
 		fprintf(f, "\n");
 		break;
 	}
-
-	fprintf(f, "int fsm_main(void *opaque) {\n");
-	fprintf(f, "\tint c;\n");
-	fprintf(f, "\n");
 
 	/* enum of states */
 	fsm_out_stateenum(f, fsm, fsm->sl);
@@ -359,6 +378,10 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	switch (options->io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\twhile (c = fsm_getc(opaque), c != EOF) {\n");
+		break;
+
+	case FSM_IO_STR:
+		fprintf(f, "\tfor (p = s; *p != '\\0'; p++) {\n");
 		break;
 	}
 

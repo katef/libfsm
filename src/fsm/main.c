@@ -39,7 +39,8 @@ io(const char *name)
 		const char *name;
 		enum fsm_io io;
 	} a[] = {
-		{ "getc", FSM_IO_GETC }
+		{ "getc", FSM_IO_GETC },
+		{ "str",  FSM_IO_STR  }
 	};
 
 	assert(name != NULL);

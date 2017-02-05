@@ -422,7 +422,6 @@ out_io(FILE *f)
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 
-	if (~api_exclude & API_POS) {
 		fprintf(f, "static void\n");
 		fprintf(f, "%sungetc(struct %slx *lx, int c)\n", prefix.api, prefix.lx);
 		fprintf(f, "{\n");

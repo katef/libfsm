@@ -16,7 +16,8 @@ enum fsm_out {
 };
 
 enum fsm_io {
-	FSM_IO_GETC
+	FSM_IO_GETC,
+	FSM_IO_STR
 };
 
 struct fsm_outoptions {
