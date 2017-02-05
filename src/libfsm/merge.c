@@ -11,8 +11,6 @@
 struct fsm *
 fsm_merge(struct fsm *a, struct fsm *b)
 {
-	struct fsm_state **s;
-
 	assert(a != NULL);
 	assert(b != NULL);
 
