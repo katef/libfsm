@@ -213,6 +213,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		o.consolidate_edges = 1;
 		o.fragment          = 1;
 		o.comments          = 1;
+		o.io                = FSM_IO_GETC;
 		o.prefix            = p;
 
 		fsm_print(z->fsm, f, FSM_OUT_DOT, &o);

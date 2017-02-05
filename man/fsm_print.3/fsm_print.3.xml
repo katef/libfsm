@@ -91,6 +91,16 @@ similar in intent to [see also] re2c
 			</varlistentry>
 
 			<varlistentry>
+				<term><code>io</code></term>
+
+				<listitem>
+					<para>
+TODO: enum fsm_io
+					</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
 				<term><code>prefix</code></term>
 
 				<listitem>

@@ -7,6 +7,17 @@
 
 struct fsm;
 
+enum fsm_out {
+	FSM_OUT_C,
+	FSM_OUT_CSV,
+	FSM_OUT_DOT,
+	FSM_OUT_FSM,
+	FSM_OUT_JSON
+};
+
+enum fsm_io {
+	FSM_IO_GETC
+};
 
 struct fsm_outoptions {
 	/* boolean: true indicates to omit names for states in output */
@@ -27,18 +38,13 @@ struct fsm_outoptions {
 	 * where possible. */
 	unsigned int comments:1;
 
+	/* for generated code, what kind of I/O API to generate */
+	enum fsm_io io;
+
 	/* a prefix for namespacing generated identifiers. NULL if not required. */
 	const char *prefix;
 };
 
-
-enum fsm_out {
-	FSM_OUT_C,
-	FSM_OUT_CSV,
-	FSM_OUT_DOT,
-	FSM_OUT_FSM,
-	FSM_OUT_JSON
-};
 
 /*
  * Output an FSM to the given file stream. The output is written in the format

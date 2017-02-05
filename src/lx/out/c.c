@@ -755,6 +755,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		o.consolidate_edges = 1;
 		o.fragment          = 1;
 		o.comments          = !(api_exclude & API_COMMENTS);
+		o.io                = FSM_IO_GETC;
 		o.prefix            = NULL;
 
 		(void) fsm_out_cfrag(z->fsm, f, &o, leaf, ast);

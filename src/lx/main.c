@@ -15,6 +15,7 @@
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/cost.h>
+#include <fsm/out.h>
 
 #include <re/re.h>
 
@@ -41,7 +42,7 @@ int print_progress;
 static
 void usage(void)
 {
-	printf("usage: lx [-nQ] [-b <tokbuf>] [-g <getc>] [-l <language>] [-et <prefix>] [-x <exclude>]\n");
+	printf("usage: lx [-nQ] [-b <tokbuf>] [-g <getc>] [-l <language>] [-et <prefix>] [-k <io>] [-x <exclude>]\n");
 	printf("       lx -h\n");
 }
 
@@ -64,6 +65,37 @@ important(unsigned int n)
 
 		n /= 10;
 	}
+}
+
+static enum fsm_io
+io(const char *name)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		enum fsm_io io;
+	} a[] = {
+		{ "getc", FSM_IO_GETC }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].io;
+		}
+	}
+
+	fprintf(stderr, "unrecognised IO API; valid IO APIs are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
+	exit(EXIT_FAILURE);
 }
 
 static void
@@ -393,15 +425,17 @@ main(int argc, char *argv[])
 {
 	struct ast *ast;
 	void (*out)(const struct ast *ast, FILE *f) = lx_out_c;
+	enum fsm_io fsm_io;
 	int keep_nfa;
 
 	keep_nfa = 0;
 	print_progress = 0;
+	fsm_io = FSM_IO_GETC;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "e:t:" "vb:g:l:nQx:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "e:t:k:" "vb:g:l:nQx:"), c != -1) {
 			switch (c) {
 			case 'e':
 				prefix.api = optarg;
@@ -409,6 +443,10 @@ main(int argc, char *argv[])
 
 			case 't':
 				prefix.tok = optarg;
+				break;
+
+			case 'k':
+				fsm_io = io(optarg);
 				break;
 
 			case 'b': api_tokbuf  |= lang_tokbuf(optarg);  break;
