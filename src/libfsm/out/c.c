@@ -335,9 +335,13 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 
 	fprintf(f, "#include <stdio.h>\n");
 	fprintf(f, "\n");
-	fprintf(f, "extern int fsm_getc(void *opaque);\n");
 
-	fprintf(f, "\n");
+	switch (options->io) {
+	case FSM_IO_GETC:
+		fprintf(f, "extern int fsm_getc(void *opaque);\n");
+		fprintf(f, "\n");
+		break;
+	}
 
 	fprintf(f, "int fsm_main(void *opaque) {\n");
 	fprintf(f, "\tint c;\n");
@@ -352,8 +356,14 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	fprintf(f, "\tstate = S%u;\n", indexof(fsm, fsm->start));
 	fprintf(f, "\n");
 
-	fprintf(f, "\twhile (c = fsm_getc(opaque), c != EOF) {\n");
+	switch (options->io) {
+	case FSM_IO_GETC:
+		fprintf(f, "\twhile (c = fsm_getc(opaque), c != EOF) {\n");
+		break;
+	}
+
 	(void) fsm_out_cfrag(fsm, f, options, leaf, NULL);
+
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 

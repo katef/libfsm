@@ -33,6 +33,7 @@
 	#include <fsm/fsm.h>
 	#include <fsm/bool.h>
 	#include <fsm/pred.h>
+	#include <fsm/out.h>
 
 	#include <re/re.h>
 

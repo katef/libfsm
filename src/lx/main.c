@@ -31,6 +31,8 @@ enum api_tokbuf  api_tokbuf;
 enum api_getc    api_getc;
 enum api_exclude api_exclude;
 
+enum fsm_io fsm_io;
+
 struct prefix prefix = {
 	"lx_",
 	"TOK_",
@@ -425,7 +427,6 @@ main(int argc, char *argv[])
 {
 	struct ast *ast;
 	void (*out)(const struct ast *ast, FILE *f) = lx_out_c;
-	enum fsm_io fsm_io;
 	int keep_nfa;
 
 	keep_nfa = 0;
