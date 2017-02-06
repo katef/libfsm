@@ -78,6 +78,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 	}
 
 	fprintf(f, "struct %slx {\n", prefix.lx);
+
 	switch (fsm_io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\tint (*lgetc)(struct %slx *lx);\n", prefix.lx);
@@ -86,7 +87,13 @@ lx_out_h(const struct ast *ast, FILE *f)
 		fprintf(f, "\tint c; /* %sungetc buffer */\n", prefix.api);
 		fprintf(f, "\n");
 		break;
+
+	case FSM_IO_STR:
+		fprintf(f, "\tconst char *p; /* input string */\n");
+		fprintf(f, "\n");
+		break;
 	}
+
 	if (~api_exclude & API_POS) {
 		fprintf(f, "\tstruct lx_pos start;\n");
 		fprintf(f, "\tstruct lx_pos end;\n");
@@ -100,7 +107,9 @@ lx_out_h(const struct ast *ast, FILE *f)
 		fprintf(f, "\tvoid (*free) (struct %slx *lx);\n", prefix.lx);
 		fprintf(f, "\n");
 	}
+
 	fprintf(f, "\tenum %stoken (*z)(struct %slx *lx);\n", prefix.api, prefix.lx);
+
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
 

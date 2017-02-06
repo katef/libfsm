@@ -9,7 +9,8 @@
 
 /* XXX: perhaps to move under fsm_outoptions alongside .fragment */
 int
-fsm_out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options,
+fsm_out_cfrag(const struct fsm *fsm, FILE *f,
+	const struct fsm_outoptions *options, const char *cp,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
 	const void *opaque);
 
