@@ -158,7 +158,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 	{
 		struct fsm_state *mode;
 
-		mode = fsm_iscomplete(fsm, state) ? fsm_findmode(state) : NULL;
+		mode = fsm_iscomplete(fsm, state) ? fsm_findmode(state, NULL) : NULL;
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
 			struct set *set;

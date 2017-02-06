@@ -10,7 +10,7 @@
 #include "internal.h"
 
 struct fsm_state *
-fsm_findmode(const struct fsm_state *state)
+fsm_findmode(const struct fsm_state *state, unsigned int *freq)
 {
 	struct set_iter it;
 	struct fsm_state *s;
@@ -45,6 +45,10 @@ fsm_findmode(const struct fsm_state *state)
 				mode.state = s;
 			}
 		}
+	}
+
+	if (freq != NULL) {
+		*freq = mode.freq;
 	}
 
 	return mode.state;

@@ -103,11 +103,14 @@ fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *t
  * stability); if two desination states have equal frequency, then one is chosen
  * arbitrarily to be considered the mode.
  *
+ * If non-NULL, the mode's frequency is written out to the freq pointer.
+ *
  * A target state is only considered as a mode if it has more than one occurance.
- * Returns NULL if there is no mode (e.g. the given state has no edges).
+ * Returns NULL if there is no mode (e.g. the given state has no edges),
+ * and *freq is unchanged.
  */
 struct fsm_state *
-fsm_findmode(const struct fsm_state *state);
+fsm_findmode(const struct fsm_state *state, unsigned int *freq);
 
 /*
  * Mark a given state as being an end state or not. The value of end is treated
