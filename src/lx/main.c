@@ -180,7 +180,8 @@ lang_exclude(const char *name)
 		{ "name",     API_NAME     },
 		{ "example",  API_EXAMPLE  },
 		{ "comments", API_COMMENTS },
-		{ "pos",      API_POS      }
+		{ "pos",      API_POS      },
+		{ "buf",      API_BUF      }
 	};
 
 	assert(name != NULL);

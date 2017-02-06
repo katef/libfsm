@@ -422,9 +422,11 @@ out_io(FILE *f)
 	fprintf(f, "\n");
 	fprintf(f, "\tlx->c = c;\n");
 	fprintf(f, "\n");
-	fprintf(f, "\tif (lx->pop != NULL) {\n");
-	fprintf(f, "\t\tlx->pop(lx);\n");
-	fprintf(f, "\t}\n");
+	if (~api_exclude & API_BUF) {
+		fprintf(f, "\tif (lx->pop != NULL) {\n");
+		fprintf(f, "\t\tlx->pop(lx);\n");
+		fprintf(f, "\t}\n");
+	}
 	if (~api_exclude & API_POS) {
 		fprintf(f, "\n");
 		fprintf(f, "\tlx->end.byte--;\n");
@@ -656,10 +658,12 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tassert(lx != NULL);\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "\tif (lx->clear != NULL) {\n");
-	fprintf(f, "\t\tlx->clear(lx);\n");
-	fprintf(f, "\t}\n");
-	fprintf(f, "\n");
+	if (~api_exclude & API_BUF) {
+		fprintf(f, "\tif (lx->clear != NULL) {\n");
+		fprintf(f, "\t\tlx->clear(lx);\n");
+		fprintf(f, "\t}\n");
+		fprintf(f, "\n");
+	}
 
 	assert(z->fsm->start != NULL);
 	fprintf(f, "\tstate = S%u;\n", indexof(z->fsm, z->fsm->start));
@@ -718,22 +722,26 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			fprintf(f, "\n");
 
 			fprintf(f, "\t\tdefault:\n");
-			fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
-			fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, c)) {\n");
-			fprintf(f, "\t\t\t\t\treturn %sERROR;\n", prefix.tok);
-			fprintf(f, "\t\t\t\t}\n");
-			fprintf(f, "\t\t\t}\n");
+			if (~api_exclude & API_BUF) {
+				fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
+				fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, c)) {\n");
+				fprintf(f, "\t\t\t\t\treturn %sERROR;\n", prefix.tok);
+				fprintf(f, "\t\t\t\t}\n");
+				fprintf(f, "\t\t\t}\n");
+			}
 			fprintf(f, "\t\t\tbreak;\n");
 			fprintf(f, "\n");
 
 			fprintf(f, "\t\t}\n");
 			fprintf(f, "\n");
 		} else {
-			fprintf(f, "\t\tif (lx->push != NULL) {\n");
-			fprintf(f, "\t\t\tif (-1 == lx->push(lx, c)) {\n");
-			fprintf(f, "\t\t\t\treturn %sERROR;\n", prefix.tok);
-			fprintf(f, "\t\t\t}\n");
-			fprintf(f, "\t\t}\n");
+			if (~api_exclude & API_BUF) {
+				fprintf(f, "\t\tif (lx->push != NULL) {\n");
+				fprintf(f, "\t\t\tif (-1 == lx->push(lx, c)) {\n");
+				fprintf(f, "\t\t\t\treturn %sERROR;\n", prefix.tok);
+				fprintf(f, "\t\t\t}\n");
+				fprintf(f, "\t\t}\n");
+			}
 			fprintf(f, "\n");
 		}
 	}
@@ -1029,17 +1037,21 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "\tt = lx->z(lx);\n");
 		fprintf(f, "\n");
 
-		fprintf(f, "\tif (lx->push != NULL) {\n");
-		fprintf(f, "\t\tif (-1 == lx->push(lx, '\\0')) {\n");
-		fprintf(f, "\t\t\treturn %sERROR;\n", prefix.tok);
-		fprintf(f, "\t\t}\n");
-		fprintf(f, "\t}\n");
-		fprintf(f, "\n");
+		if (~api_exclude & API_BUF) {
+			fprintf(f, "\tif (lx->push != NULL) {\n");
+			fprintf(f, "\t\tif (-1 == lx->push(lx, '\\0')) {\n");
+			fprintf(f, "\t\t\treturn %sERROR;\n", prefix.tok);
+			fprintf(f, "\t\t}\n");
+			fprintf(f, "\t}\n");
+			fprintf(f, "\n");
+		}
 
-		fprintf(f, "\tif (lx->lgetc == NULL && lx->free != NULL) {\n");
-		fprintf(f, "\t\tlx->free(lx);\n");
-		fprintf(f, "\t}\n");
-		fprintf(f, "\n");
+		if (~api_exclude & API_BUF) {
+			fprintf(f, "\tif (lx->lgetc == NULL && lx->free != NULL) {\n");
+			fprintf(f, "\t\tlx->free(lx);\n");
+			fprintf(f, "\t}\n");
+			fprintf(f, "\n");
+		}
 
 		fprintf(f, "\treturn t;\n");
 

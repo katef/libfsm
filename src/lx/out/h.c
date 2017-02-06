@@ -86,12 +86,14 @@ lx_out_h(const struct ast *ast, FILE *f)
 		fprintf(f, "\tstruct lx_pos end;\n");
 		fprintf(f, "\n");
 	}
-	fprintf(f, "\tvoid *buf;\n");
-	fprintf(f, "\tint  (*push) (struct %slx *lx, char c);\n", prefix.lx);
-	fprintf(f, "\tvoid (*pop)  (struct %slx *lx);\n", prefix.lx);
-	fprintf(f, "\tint  (*clear)(struct %slx *lx);\n", prefix.lx);
-	fprintf(f, "\tvoid (*free) (struct %slx *lx);\n", prefix.lx);
-	fprintf(f, "\n");
+	if (~api_exclude & API_BUF) {
+		fprintf(f, "\tvoid *buf;\n");
+		fprintf(f, "\tint  (*push) (struct %slx *lx, char c);\n", prefix.lx);
+		fprintf(f, "\tvoid (*pop)  (struct %slx *lx);\n", prefix.lx);
+		fprintf(f, "\tint  (*clear)(struct %slx *lx);\n", prefix.lx);
+		fprintf(f, "\tvoid (*free) (struct %slx *lx);\n", prefix.lx);
+		fprintf(f, "\n");
+	}
 	fprintf(f, "\tenum %stoken (*z)(struct %slx *lx);\n", prefix.api, prefix.lx);
 	fprintf(f, "};\n");
 	fprintf(f, "\n");
