@@ -26,8 +26,40 @@ usage(void)
 {
 	printf("usage: fsm    [-dmr] [-t <transformation>] [-x] {<text> ...}\n");
 	printf("       fsm    [-dmr] [-t <transformation>] {-q <query>}\n");
-	printf("       fsm -p [-dmr] [-t <transformation>] [-l <language>] [-acw] [-e <prefix>]\n");
+	printf("       fsm -p [-dmr] [-t <transformation>] [-l <language>] [-acw] [-k <io>] [-e <prefix>]\n");
 	printf("       fsm -h\n");
+}
+
+static enum fsm_io
+io(const char *name)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		enum fsm_io io;
+	} a[] = {
+		{ "getc", FSM_IO_GETC },
+		{ "str",  FSM_IO_STR  }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].io;
+		}
+	}
+
+	fprintf(stderr, "unrecognised IO API; valid IO APIs are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
+	exit(EXIT_FAILURE);
 }
 
 static enum fsm_out
@@ -37,7 +69,7 @@ language(const char *name)
 
 	struct {
 		const char *name;
-		enum fsm_out format;
+		enum fsm_out language;
 	} a[] = {
 		{ "c",    FSM_OUT_C    },
 		{ "csv",  FSM_OUT_CSV  },
@@ -50,7 +82,7 @@ language(const char *name)
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].format;
+			return a[i].language;
 		}
 	}
 
@@ -174,6 +206,7 @@ main(int argc, char *argv[])
 	struct fsm_outoptions o = o_defaults;
 
 	o.comments = 1;
+	o.io       = FSM_IO_GETC;
 
 	format = FSM_OUT_FSM;
 	xfiles = 0;
@@ -191,25 +224,26 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwe:" "xpq:l:dmrt:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwe:k:" "xpq:l:dmrt:"), c != -1) {
 			switch (c) {
-			case 'a': o.anonymous_states  = 1;       break;
-			case 'c': o.consolidate_edges = 1;       break;
-			case 'w': o.fragment          = 1;       break;
-			case 'e': o.prefix            = optarg;  break;
+			case 'a': o.anonymous_states  = 1;          break;
+			case 'c': o.consolidate_edges = 1;          break;
+			case 'w': o.fragment          = 1;          break;
+			case 'e': o.prefix            = optarg;     break;
+			case 'k': o.io                = io(optarg); break;
 
-			case 'x': xfiles = 1;                    break;
-			case 'p': print  = 1;                    break;
+			case 'x': xfiles = 1;                       break;
+			case 'p': print  = 1;                       break;
 			case 'q': query  = 1;
 			          r |= !fsm_all(fsm, predicate(optarg));
 			          break;
 
-			case 'l': format = language(optarg);     break;
+			case 'l': format = language(optarg);        break;
 
-			case 'd': transform(fsm, "determinise"); break;
-			case 'm': transform(fsm, "minimise");    break;
-			case 'r': transform(fsm, "reverse");     break;
-			case 't': transform(fsm, optarg);        break;
+			case 'd': transform(fsm, "determinise");    break;
+			case 'm': transform(fsm, "minimise");       break;
+			case 'r': transform(fsm, "reverse");        break;
+			case 't': transform(fsm, optarg);           break;
 
 			case 'h':
 				usage();

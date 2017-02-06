@@ -42,6 +42,8 @@ extern enum api_tokbuf  api_tokbuf;
 extern enum api_getc    api_getc;
 extern enum api_exclude api_exclude;
 
+extern enum fsm_io fsm_io;
+
 void
 lx_out_c(const struct ast *ast, FILE *f);
 

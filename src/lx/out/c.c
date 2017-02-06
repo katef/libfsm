@@ -18,6 +18,8 @@
 #include "lx/out.h"
 #include "lx/ast.h"
 
+static const char *cp;
+
 static int
 skip(const struct fsm *fsm, const struct fsm_state *state)
 {
@@ -228,7 +230,17 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 
 	if (!fsm_isend(fsm, state)) {
 		/* XXX: don't need this if complete */
-		fprintf(f, "lx->lgetc = NULL; return %sUNKNOWN;", prefix.tok);
+		switch (fsm_io) {
+		case FSM_IO_GETC:
+			fprintf(f, "lx->lgetc = NULL; ");
+			break;
+
+		case FSM_IO_STR:
+			fprintf(f, "lx->p = NULL; ");
+			break;
+		}
+
+		fprintf(f, "return %sUNKNOWN;", prefix.tok);
 		return 0;
 	}
 
@@ -237,7 +249,8 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 	assert(m != NULL);
 
 	/* XXX: don't need this if complete */
-	fprintf(f, "%sungetc(lx, c); return ", prefix.api);
+	fprintf(f, "%sungetc(lx, c); ", prefix.api);
+	fprintf(f, "return ");
 	if (m->to != NULL) {
 		fprintf(f, "lx->z = z%u, ", zindexof(ast, m->to));
 	}
@@ -388,18 +401,37 @@ out_io(FILE *f)
 	fprintf(f, "{\n");
 	fprintf(f, "\tint c;\n");
 	fprintf(f, "\n");
+
 	fprintf(f, "\tassert(lx != NULL);\n");
-	fprintf(f, "\tassert(lx->lgetc != NULL);\n");
-	fprintf(f, "\n");
-	fprintf(f, "\tif (lx->c != EOF) {\n");
-	fprintf(f, "\t\tc = lx->c, lx->c = EOF;\n");
-	fprintf(f, "\t} else {\n");
-	fprintf(f, "\t\tc = lx->lgetc(lx);\n");
-	fprintf(f, "\t\tif (c == EOF) {\n");
-	fprintf(f, "\t\t\treturn EOF;\n");
-	fprintf(f, "\t\t}\n");
-	fprintf(f, "\t}\n");
-	fprintf(f, "\n");
+
+	switch (fsm_io) {
+	case FSM_IO_GETC:
+		fprintf(f, "\tassert(lx->lgetc != NULL);\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tif (lx->c != EOF) {\n");
+		fprintf(f, "\t\tc = lx->c, lx->c = EOF;\n");
+		fprintf(f, "\t} else {\n");
+		fprintf(f, "\t\tc = lx->lgetc(lx);\n");
+		fprintf(f, "\t\tif (c == EOF) {\n");
+		fprintf(f, "\t\t\treturn EOF;\n");
+		fprintf(f, "\t\t}\n");
+		fprintf(f, "\t}\n");
+		fprintf(f, "\n");
+		break;
+
+	case FSM_IO_STR:
+		/*
+		 * For FSM_IO_STR we treat '\0' at the end of input,
+		 * and so there's no need to distinguish it from EOF.
+		 * We return '\0' here to save the assignment.
+		 */
+		fprintf(f, "\tassert(lx->p != NULL);\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tc = *lx->p++;\n");
+		fprintf(f, "\n");
+		break;
+	}
+
 	if (~api_exclude & API_POS) {
 		fprintf(f, "\tlx->end.byte++;\n");
 		fprintf(f, "\tlx->end.col++;\n");
@@ -418,10 +450,24 @@ out_io(FILE *f)
 	fprintf(f, "%sungetc(struct %slx *lx, int c)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	fprintf(f, "\tassert(lx != NULL);\n");
-	fprintf(f, "\tassert(lx->c == EOF);\n");
-	fprintf(f, "\n");
-	fprintf(f, "\tlx->c = c;\n");
-	fprintf(f, "\n");
+
+	switch (fsm_io) {
+	case FSM_IO_GETC:
+		fprintf(f, "\tassert(lx->c == EOF);\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tlx->c = c;\n");
+		fprintf(f, "\n");
+		break;
+
+	case FSM_IO_STR:
+		fprintf(f, "\tassert(lx->p != NULL);\n");
+		fprintf(f, "\tassert(*(lx->p - 1) == c);\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tlx->p--;\n");
+		fprintf(f, "\n");
+		break;
+	}
+
 	if (~api_exclude & API_BUF) {
 		fprintf(f, "\tif (lx->pop != NULL) {\n");
 		fprintf(f, "\t\tlx->pop(lx);\n");
@@ -674,7 +720,15 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		fprintf(f, "\n");
 	}
 
-	fprintf(f, "\twhile (c = lx_getc(lx), c != EOF) {\n");
+	switch (fsm_io) {
+	case FSM_IO_GETC:
+		fprintf(f, "\twhile (c = lx_getc(lx), c != EOF) {\n");
+		break;
+
+	case FSM_IO_STR:
+		fprintf(f, "\twhile (c = lx_getc(lx), c != '\\0') {\n");
+		break;
+	}
 
 	{
 		struct fsm_state *s;
@@ -724,7 +778,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			fprintf(f, "\t\tdefault:\n");
 			if (~api_exclude & API_BUF) {
 				fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
-				fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, c)) {\n");
+				fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, %s)) {\n", cp);
 				fprintf(f, "\t\t\t\t\treturn %sERROR;\n", prefix.tok);
 				fprintf(f, "\t\t\t\t}\n");
 				fprintf(f, "\t\t\t}\n");
@@ -737,7 +791,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		} else {
 			if (~api_exclude & API_BUF) {
 				fprintf(f, "\t\tif (lx->push != NULL) {\n");
-				fprintf(f, "\t\t\tif (-1 == lx->push(lx, c)) {\n");
+				fprintf(f, "\t\t\tif (-1 == lx->push(lx, %s)) {\n", cp);
 				fprintf(f, "\t\t\t\treturn %sERROR;\n", prefix.tok);
 				fprintf(f, "\t\t\t}\n");
 				fprintf(f, "\t\t}\n");
@@ -755,9 +809,10 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		o.consolidate_edges = 1;
 		o.fragment          = 1;
 		o.comments          = !(api_exclude & API_COMMENTS);
+		o.io                = FSM_IO_GETC;
 		o.prefix            = NULL;
 
-		(void) fsm_out_cfrag(z->fsm, f, &o, leaf, ast);
+		(void) fsm_out_cfrag(z->fsm, f, &o, cp, leaf, ast);
 	}
 
 	fprintf(f, "\t}\n");
@@ -767,9 +822,17 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	{
 		struct fsm_state *s;
 
-		fprintf(f, "\tlx->lgetc = NULL;\n");
+		switch (fsm_io) {
+		case FSM_IO_GETC:
+			fprintf(f, "\tlx->lgetc = NULL;\n");
+			fprintf(f, "\n");
+			break;
 
-		fprintf(f, "\n");
+		case FSM_IO_STR:
+			fprintf(f, "\tlx->p = NULL;\n");
+			fprintf(f, "\n");
+			break;
+		}
 
 		fprintf(f, "\tswitch (state) {\n");
 
@@ -927,6 +990,11 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	assert(f != NULL);
 
+	switch (fsm_io) {
+	case FSM_IO_GETC: cp = "c"; break;
+	case FSM_IO_STR:  cp = "c"; break;
+	}
+
 	for (z = ast->zl; z != NULL; z = z->next) {
 		if (!fsm_all(z->fsm, fsm_isdfa)) {
 			errno = EINVAL;
@@ -1002,7 +1070,16 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "\n");
 		fprintf(f, "\t*lx = lx_default;\n");
 		fprintf(f, "\n");
-		fprintf(f, "\tlx->c = EOF;\n");
+
+		switch (fsm_io) {
+		case FSM_IO_GETC:
+			fprintf(f, "\tlx->c = EOF;\n");
+			break;
+
+		case FSM_IO_STR:
+			break;
+		}
+
 		fprintf(f, "\tlx->z = NULL;\n");
 		if (~api_exclude & API_POS) {
 			fprintf(f, "\n");
@@ -1024,8 +1101,18 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "\tassert(lx != NULL);\n");
 		fprintf(f, "\n");
 
-		fprintf(f, "\tif (lx->lgetc == NULL) {\n");
+		switch (fsm_io) {
+		case FSM_IO_GETC:
+			fprintf(f, "\tif (lx->lgetc == NULL) {\n");
+			break;
+
+		case FSM_IO_STR:
+			fprintf(f, "\tif (lx->p == NULL) {\n");
+			break;
+		}
+
 		fprintf(f, "\t\treturn %sEOF;\n", prefix.tok);
+
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
 
@@ -1047,8 +1134,18 @@ lx_out_c(const struct ast *ast, FILE *f)
 		}
 
 		if (~api_exclude & API_BUF) {
-			fprintf(f, "\tif (lx->lgetc == NULL && lx->free != NULL) {\n");
+			switch (fsm_io) {
+			case FSM_IO_GETC:
+				fprintf(f, "\tif (lx->lgetc == NULL && lx->free != NULL) {\n");
+				break;
+
+			case FSM_IO_STR:
+				fprintf(f, "\tif (lx->p == NULL && lx->free != NULL) {\n");
+				break;
+			}
+
 			fprintf(f, "\t\tlx->free(lx);\n");
+
 			fprintf(f, "\t}\n");
 			fprintf(f, "\n");
 		}

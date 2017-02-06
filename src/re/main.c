@@ -39,10 +39,42 @@ usage(void)
 {
 	fprintf(stderr, "usage: re    [-r <dialect>] [-niusyz] [-x] <re> ... [ <text> | -- <text> ... ]\n");
 	fprintf(stderr, "       re    [-r <dialect>] [-niusyz] {-q <query>} <re> ...\n");
-	fprintf(stderr, "       re -p [-r <dialect>] [-niusyz] [-l <language>] [-awc] [-e <prefix>] <re> ...\n");
+	fprintf(stderr, "       re -p [-r <dialect>] [-niusyz] [-l <language>] [-awc] [-k <io>] [-e <prefix>] <re> ...\n");
 	fprintf(stderr, "       re -m [-r <dialect>] [-niusyz] <re> ...\n");
 	fprintf(stderr, "       re -g [-r <dialect>] [-iuby] <group>\n");
 	fprintf(stderr, "       re -h\n");
+}
+
+static enum fsm_io
+io(const char *name)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		enum fsm_io io;
+	} a[] = {
+		{ "getc", FSM_IO_GETC },
+		{ "str",  FSM_IO_STR  }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].io;
+		}
+	}
+
+	fprintf(stderr, "unrecognised IO API; valid IO APIs are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
+	exit(EXIT_FAILURE);
 }
 
 static enum fsm_out
@@ -355,6 +387,7 @@ main(int argc, char *argv[])
 	o.consolidate_edges = 1;
 
 	o.comments          = 1;
+	o.io                = FSM_IO_GETC;
 
 	flags    = 0U;
 	xfiles   = 0;
@@ -374,12 +407,13 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwe:" "i" "sq:r:l:" "ubpgmnxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwe:k:" "i" "sq:r:l:" "ubpgmnxyz"), c != -1) {
 			switch (c) {
-			case 'a': o.anonymous_states  = 0;       break;
-			case 'c': o.consolidate_edges = 0;       break;
-			case 'w': o.fragment          = 1;       break;
-			case 'e': o.prefix            = optarg;  break;
+			case 'a': o.anonymous_states  = 0;          break;
+			case 'c': o.consolidate_edges = 0;          break;
+			case 'w': o.fragment          = 1;          break;
+			case 'e': o.prefix            = optarg;     break;
+			case 'k': o.io                = io(optarg); break;
 
 			case 'i': flags |= RE_ICASE; break;
 
@@ -387,9 +421,9 @@ main(int argc, char *argv[])
 				join = fsm_concat;
 				break;
 
-			case 'q': query   = comparison(optarg);   break;
-			case 'r': dialect = dialect_name(optarg); break;
-			case 'l': format  = language(optarg);     break;
+			case 'q': query   = comparison(optarg);      break;
+			case 'r': dialect = dialect_name(optarg);    break;
+			case 'l': format  = language(optarg);        break;
 
 			case 'u': ambig    = 1; break;
 			case 'b': boxed    = 1; break;

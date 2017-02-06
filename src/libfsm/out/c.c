@@ -120,13 +120,17 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 }
 
 static void
-singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
+singlecase(FILE *f, const struct fsm *fsm,
+	const struct fsm_outoptions *options, const char *cp,
+	struct fsm_state *state,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
 	const void *opaque)
 {
 	int i;
 
 	assert(fsm != NULL);
+	assert(options != NULL);
+	assert(cp != NULL);
 	assert(f != NULL);
 	assert(state != NULL);
 	assert(leaf != NULL);
@@ -148,7 +152,7 @@ singlecase(FILE *f, const struct fsm *fsm, struct fsm_state *state,
 		}
 	}
 
-	fprintf(f, "\t\t\tswitch (c) {\n");
+	fprintf(f, "\t\t\tswitch (%s) {\n", cp);
 
 	/* usual case */
 	{
@@ -265,7 +269,8 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 }
 
 int
-fsm_out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options,
+fsm_out_cfrag(const struct fsm *fsm, FILE *f,
+	const struct fsm_outoptions *options, const char *cp,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
 	const void *opaque)
 {
@@ -275,6 +280,7 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *optio
 	assert(fsm_all(fsm, fsm_isdfa));
 	assert(f != NULL);
 	assert(options != NULL);
+	assert(cp != NULL);
 
 	/* TODO: prerequisite that the FSM is a DFA */
 
@@ -303,7 +309,7 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *optio
 		}
 		fprintf(f, "\n");
 
-		singlecase(f, fsm, s, leaf, opaque);
+		singlecase(f, fsm, options, cp, s, leaf, opaque);
 
 		if (s->next != NULL) {
 			fprintf(f, "\n");
@@ -317,6 +323,8 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *optio
 void
 fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 {
+	const char *cp;
+
 	assert(fsm != NULL);
 	assert(f != NULL);
 	assert(options != NULL);
@@ -328,20 +336,37 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 
 	/* TODO: pass in %s prefix (default to "fsm_") */
 
+	switch (options->io) {
+	case FSM_IO_GETC: cp = "c";  break;
+	case FSM_IO_STR:  cp = "*p"; break;
+	}
+
 	if (options->fragment) {
-		(void) fsm_out_cfrag(fsm, f, options, leaf, NULL);
+		(void) fsm_out_cfrag(fsm, f, options, cp, leaf, NULL);
 		return;
 	}
 
+	fprintf(f, "#include <assert.h>\n");
 	fprintf(f, "#include <stdio.h>\n");
 	fprintf(f, "\n");
-	fprintf(f, "extern int fsm_getc(void *opaque);\n");
 
-	fprintf(f, "\n");
+	switch (options->io) {
+	case FSM_IO_GETC:
+		fprintf(f, "int fsm_main(int (*fsm_getc)(void *opaque), void *opaque) {\n");
+		fprintf(f, "\tint c;\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tassert(getc != NULL);\n");
+		fprintf(f, "\n");
+		break;
 
-	fprintf(f, "int fsm_main(void *opaque) {\n");
-	fprintf(f, "\tint c;\n");
-	fprintf(f, "\n");
+	case FSM_IO_STR:
+		fprintf(f, "int fsm_main(const char *s) {\n");
+		fprintf(f, "\tconst char *p;\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tassert(s != NULL);\n");
+		fprintf(f, "\n");
+		break;
+	}
 
 	/* enum of states */
 	fsm_out_stateenum(f, fsm, fsm->sl);
@@ -352,8 +377,18 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	fprintf(f, "\tstate = S%u;\n", indexof(fsm, fsm->start));
 	fprintf(f, "\n");
 
-	fprintf(f, "\twhile (c = fsm_getc(opaque), c != EOF) {\n");
-	(void) fsm_out_cfrag(fsm, f, options, leaf, NULL);
+	switch (options->io) {
+	case FSM_IO_GETC:
+		fprintf(f, "\twhile (c = fsm_getc(opaque), c != EOF) {\n");
+		break;
+
+	case FSM_IO_STR:
+		fprintf(f, "\tfor (p = s; *p != '\\0'; p++) {\n");
+		break;
+	}
+
+	(void) fsm_out_cfrag(fsm, f, options, cp, leaf, NULL);
+
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 
