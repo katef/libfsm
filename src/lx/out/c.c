@@ -396,6 +396,9 @@ out_io(FILE *f)
 	}
 
 	/* TODO: consider passing char *c, and return int 0/-1 for error */
+	fprintf(f, "#if __STDC_VERSION__ >= 199901L\n");
+	fprintf(f, "inline\n");
+	fprintf(f, "#endif\n");
 	fprintf(f, "static int\n");
 	fprintf(f, "lx_getc(struct %slx *lx)\n", prefix.lx);
 	fprintf(f, "{\n");
@@ -446,6 +449,9 @@ out_io(FILE *f)
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
 
+	fprintf(f, "#if __STDC_VERSION__ >= 199901L\n");
+	fprintf(f, "inline\n");
+	fprintf(f, "#endif\n");
 	fprintf(f, "static void\n");
 	fprintf(f, "%sungetc(struct %slx *lx, int c)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
