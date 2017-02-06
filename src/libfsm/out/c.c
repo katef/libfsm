@@ -126,7 +126,10 @@ singlecase(FILE *f, const struct fsm *fsm,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
 	const void *opaque)
 {
-	int i;
+	struct {
+		struct fsm_state *state;
+		unsigned int freq;
+	} mode;
 
 	assert(fsm != NULL);
 	assert(options != NULL);
@@ -135,7 +138,10 @@ singlecase(FILE *f, const struct fsm *fsm,
 	assert(state != NULL);
 	assert(leaf != NULL);
 
+	/* no edges */
 	{
+		int i;
+
 		/* TODO: move this out into a count function */
 		for (i = 0; i <= UCHAR_MAX; i++) {
 			if (!set_empty(state->edges[i].sl)) {
@@ -143,7 +149,6 @@ singlecase(FILE *f, const struct fsm *fsm,
 			}
 		}
 
-		/* no edges */
 		if (i > UCHAR_MAX) {
 			fprintf(f, "\t\t\t");
 			leaf(f, fsm, state, opaque);
@@ -152,13 +157,29 @@ singlecase(FILE *f, const struct fsm *fsm,
 		}
 	}
 
+	/* all edges go to the same state */
+	{
+		if (fsm_iscomplete(fsm, state)) {
+			mode.state = fsm_findmode(state, &mode.freq);
+		} else {
+			mode.state = NULL;
+		}
+
+		if (mode.state != NULL && mode.freq == UCHAR_MAX) {
+			fprintf(f, "\t\t\t");
+			if (mode.state != state) {
+				fprintf(f, "state = S%u; ", indexof(fsm, mode.state));
+			}
+			fprintf(f, "continue;\n");
+			return;
+		}
+	}
+
 	fprintf(f, "\t\t\tswitch (%s) {\n", cp);
 
 	/* usual case */
 	{
-		struct fsm_state *mode;
-
-		mode = fsm_iscomplete(fsm, state) ? fsm_findmode(state, NULL) : NULL;
+		int i;
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
 			struct set *set;
@@ -170,7 +191,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 			}
 
 			s = set_only(set);
-			if (s == mode) {
+			if (s == mode.state) {
 				continue;
 			}
 
@@ -187,7 +208,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 
 				if (!set_empty(nset)) {
 					ns = set_only(nset);
-					if (ns != mode && ns == s) {
+					if (ns != mode.state && ns == s) {
 						fprintf(f, "\n");
 						continue;
 					}
@@ -196,18 +217,21 @@ singlecase(FILE *f, const struct fsm *fsm,
 
 			/* TODO: pad S%u out to maximum state width */
 			if (s != state) {
-				fprintf(f, " state = S%u; continue;\n", indexof(fsm, s));
-			} else {
-				fprintf(f, "             continue;\n");
+				fprintf(f, " state = S%u;", indexof(fsm, s));
 			}
+			fprintf(f, " continue;\n");
 
 			/* TODO: if greedy, and fsm_isend(fsm, state->edges[i].sl->state) then:
 				fprintf(f, "         return %s%s;\n", prefix.tok, state->edges[i].sl->state's token);
 			 */
 		}
 
-		if (mode != NULL) {
-			fprintf(f, "\t\t\tdefault:  state = S%u; continue;\n", indexof(fsm, mode));
+		if (mode.state != NULL) {
+			fprintf(f, "\t\t\tdefault: ");
+			if (mode.state != state) {
+				fprintf(f, "state = S%u; ", indexof(fsm, mode.state));
+			}
+			fprintf(f, "continue;\n");
 		} else {
 			fprintf(f, "\t\t\tdefault:  ");
 			leaf(f, fsm, state, opaque);
