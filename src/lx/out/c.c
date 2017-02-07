@@ -1086,7 +1086,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 			break;
 		}
 
-		fprintf(f, "\tlx->z = NULL;\n");
+		fprintf(f, "\tlx->z = z%u;\n", zindexof(ast, ast->global));
 		if (~api_exclude & API_POS) {
 			fprintf(f, "\n");
 			fprintf(f, "\tlx->end.byte = 0;\n");
@@ -1105,6 +1105,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "\tenum %stoken t;\n", prefix.api);
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(lx != NULL);\n");
+		fprintf(f, "\tassert(lx->z != NULL);\n");
 		fprintf(f, "\n");
 
 		switch (fsm_io) {
@@ -1119,11 +1120,6 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 		fprintf(f, "\t\treturn %sEOF;\n", prefix.tok);
 
-		fprintf(f, "\t}\n");
-		fprintf(f, "\n");
-
-		fprintf(f, "\tif (lx->z == NULL) {\n");
-		fprintf(f, "\t\tlx->z = z%u;\n", zindexof(ast, ast->global));
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
 
