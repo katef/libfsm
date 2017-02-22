@@ -99,6 +99,7 @@
 		exit(EXIT_FAILURE);
 	}
 
+	static size_t nmappings;
 @}, @{
 
 	#include <stdio.h>
@@ -432,6 +433,7 @@
 		assert(@a != NULL);
 
 		if (print_progress) {
+			nmappings = 0;
 			if (important(act_state->zn)) {
 				fprintf(stderr, " z%u", act_state->zn);
 			}
@@ -468,6 +470,13 @@
 		if (m == NULL) {
 			perror("ast_addmapping");
 			@!;
+		}
+
+		if (print_progress) {
+			if (important(nmappings)) {
+				fprintf(stderr, " m%zu", nmappings);
+			}
+			nmappings++;
 		}
 	@};
 
