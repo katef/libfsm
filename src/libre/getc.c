@@ -39,3 +39,18 @@ re_fgetc(void *opaque)
 	return fgetc(f);
 }
 
+int
+re_bgetc(void *opaque)
+{
+	struct re_buf *b = opaque;
+
+	assert(b != NULL);
+	assert(b->ptr != NULL);
+	assert(b->pos <= b->len);
+
+	if (b->pos == b->len) {
+		return EOF;
+	}
+
+	return (unsigned char) b->ptr[b->pos++];
+}

@@ -97,6 +97,12 @@ struct re_err {
 	char dup[128];
 };
 
+struct re_buf {
+	char *ptr;
+	size_t pos;
+	size_t len;
+};
+
 /*
  * Parse flags. Returns -1 on error.
  */
@@ -149,6 +155,7 @@ re_perror(enum re_dialect dialect, const struct re_err *err,
  */
 int re_sgetc(void *opaque); /* expects opaque to be char ** */
 int re_fgetc(void *oapque); /* expects opaque to be FILE *  */
+int re_bgetc(void *opaque); /* expects opaque to be struct re_buf * */
 
 #endif
 
