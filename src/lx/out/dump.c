@@ -5,9 +5,10 @@
 
 #include <fsm/fsm.h>
 
-#include "libfsm/out.h" /* XXX */
+#include "fsm/out.h"
 
 #include "lx/ast.h"
+#include "lx/out.h"
 
 static void
 out_dump(FILE *f)
@@ -51,29 +52,65 @@ out_dump(FILE *f)
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "static int\n");
-	fprintf(f, "lx_fgetc(struct lx *lx)\n");
-	fprintf(f, "{\n");
-	fprintf(f, "\tassert(lx != NULL);\n");
-	fprintf(f, "\n");
-	fprintf(f, "\t(void) lx;\n");
-	fprintf(f, "\n");
-	fprintf(f, "\treturn fgetc(stdin);\n");
-	fprintf(f, "}\n");
-	fprintf(f, "\n");
+	switch (fsm_io) {
+	case FSM_IO_GETC:
+		fprintf(f, "static int\n");
+		fprintf(f, "lx_fgetc(struct lx *lx)\n");
+		fprintf(f, "{\n");
+		fprintf(f, "\tassert(lx != NULL);\n");
+		fprintf(f, "\n");
+		fprintf(f, "\t(void) lx;\n");
+		fprintf(f, "\n");
+		fprintf(f, "\treturn fgetc(stdin);\n");
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+		break;
+
+	case FSM_IO_STR:
+		break;
+	}
 
 	fprintf(f, "int\n");
-	fprintf(f, "main(void)\n");
+	fprintf(f, "main(int argc, char *argv[])\n");
 	fprintf(f, "{\n");
 	fprintf(f, "\tenum lx_token t;\n");
 	fprintf(f, "\tstruct lx lx = { 0 };\n");
 	fprintf(f, "\n");
 
+	switch (fsm_io) {
+	case FSM_IO_GETC:
+		fprintf(f, "\tif (argc != 1) {\n");
+		fprintf(f, "\t\tfprintf(stderr, \"usage: dump\\n\");\n");
+		fprintf(f, "\t\treturn 1;\n");
+		fprintf(f, "\t}\n");
+		fprintf(f, "\n");
+		break;
+
+	case FSM_IO_STR:
+		fprintf(f, "\tif (argc != 2) {\n");
+		fprintf(f, "\t\tfprintf(stderr, \"usage: dump <str>\\n\");\n");
+		fprintf(f, "\t\treturn 1;\n");
+		fprintf(f, "\t}\n");
+		fprintf(f, "\n");
+		break;
+	}
+
 	fprintf(f, "\tlx_init(&lx);\n");
 	fprintf(f, "\n");
-	fprintf(f, "\tlx.lgetc  = lx_fgetc;\n");
-	fprintf(f, "\tlx.opaque = stdin;\n");
-	fprintf(f, "\n");
+
+	switch (fsm_io) {
+	case FSM_IO_GETC:
+		fprintf(f, "\tlx.lgetc  = lx_fgetc;\n");
+		fprintf(f, "\tlx.opaque = stdin;\n");
+		fprintf(f, "\n");
+		break;
+
+	case FSM_IO_STR:
+		fprintf(f, "\tlx.p = argv[1];\n");
+		fprintf(f, "\n");
+		break;
+	}
+
 	fprintf(f, "\tlx.push = push;\n");
 	fprintf(f, "\tlx.pop  = pop;\n");
 	fprintf(f, "\n");
