@@ -113,6 +113,7 @@ static void
 	} a[] = {
 		{ "test", NULL        },
 		{ "dot",  lx_out_dot  },
+		{ "dump", lx_out_dump },
 		{ "zdot", lx_out_zdot },
 		{ "c",    lx_out_c    },
 		{ "h",    lx_out_h    }

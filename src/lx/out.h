@@ -54,6 +54,9 @@ void
 lx_out_dot(const struct ast *ast, FILE *f);
 
 void
+lx_out_dump(const struct ast *ast, FILE *f);
+
+void
 lx_out_zdot(const struct ast *ast, FILE *f);
 
 #endif
