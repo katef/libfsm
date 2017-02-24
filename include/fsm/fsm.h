@@ -121,6 +121,18 @@ void
 fsm_setend(struct fsm *fsm, struct fsm_state *state, int end);
 
 /*
+ * Set data associated with an end state.
+ */
+void
+fsm_setopaque(struct fsm *fsm, struct fsm_state *state, void *opaque);
+
+/*
+ * Get data associated with an end state.
+ */
+void *
+fsm_getopaque(struct fsm *fsm, struct fsm_state *state);
+
+/*
  * Return state (if there is just one), or add epsilon edges from all states,
  * for which the given predicate is true.
  *
