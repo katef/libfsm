@@ -268,7 +268,7 @@ p_pattern(lex_state lex_state, act_state act_state, zone ZIz, fsm *ZOr)
 		const struct ast_mapping *m;
 
 		assert((ZIt) != NULL);
-		assert((ZIt)->b != NULL);
+		assert((ZIt)->p != NULL);
 
 		(ZIr) = fsm_new();
 		if ((ZIr) == NULL) {
@@ -803,7 +803,7 @@ p_list_Hof_Hthings_C_Cthing(lex_state lex_state, act_state act_state, ast ZIa, z
 		const struct ast_mapping *m;
 
 		assert((ZI226) != NULL);
-		assert((ZI226)->b != NULL);
+		assert((ZI226)->p != NULL);
 
 		(ZI227) = fsm_new();
 		if ((ZI227) == NULL) {

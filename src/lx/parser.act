@@ -302,7 +302,7 @@
 		const struct ast_mapping *m;
 
 		assert(@t != NULL);
-		assert(@t->b != NULL);
+		assert(@t->p != NULL);
 
 		@r = fsm_new();
 		if (@r == NULL) {
