@@ -48,6 +48,7 @@
 	struct string {
 		char *p;
 		size_t l;
+		size_t o;
 	};
 
 	typedef struct string *      string;
@@ -97,6 +98,22 @@
 	{
 		err(lex_state, "Syntax error: expected %s", token);
 		exit(EXIT_FAILURE);
+	}
+
+	static int
+	act_bgetc(void *opaque)
+	{
+		struct string *s = opaque;
+
+		assert(s != NULL);
+		assert(s->p != NULL);
+		assert(s->o <= s->l);
+
+		if (s->o == s->l) {
+			return EOF;
+		}
+
+		return (unsigned char) s->p[s->o++];
 	}
 
 	static size_t nmappings;
@@ -208,6 +225,7 @@
 			exit(EXIT_FAILURE);
 		}
 		@s->l = strlen(@s->p);
+		@s->o = 0;
 	@};
 
 	IDENT: () -> (s :string) = @{
@@ -224,6 +242,7 @@
 		}
 
 		@s->l = strlen(@s->p);
+		@s->o = 0;
 	@};
 
 	RE: () -> (f :flags) = @{
@@ -267,6 +286,9 @@
 		}
 
 		memcpy(@s->p, lex_state->a, @s->l);
+		@s->l--;
+		@s->o = 0;
+
 		lex_state->p = lex_state->a;
 	@};
 
@@ -349,16 +371,11 @@
 
 	<compile-literal>: (s :string) -> (r :fsm) = @{
 		struct re_err err;
-		struct re_buf buf;
 
 		assert(@s != NULL);
 		assert(@s->p != NULL);
 
-		buf.ptr = @s->p;
-		buf.len = @s->l;
-		buf.pos = 0;
-
-		@r = re_comp(RE_LITERAL, re_bgetc, &buf, 0, &err);
+		@r = re_comp(RE_LITERAL, act_bgetc, @s, 0, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
@@ -371,16 +388,11 @@
 
 	<compile-regex>: (s :string, f :flags) -> (r :fsm) = @{
 		struct re_err err;
-		struct re_buf buf;
 
 		assert(@s != NULL);
 		assert(@s->p != NULL);
 
-		buf.ptr = @s->p;
-		buf.len = @s->l;
-		buf.pos = 0;
-
-		@r = re_comp(RE_NATIVE, re_bgetc, &buf, @f, &err);
+		@r = re_comp(RE_NATIVE, act_bgetc, @s, @f, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
