@@ -279,7 +279,7 @@ out_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
 static void
 out_lgetc(FILE *f)
 {
-	if (api_tokbuf & API_FGETC) {
+	if (api_getc & API_FGETC) {
 		if (print_progress) {
 			fprintf(stderr, " fgetc");
 		}
@@ -295,7 +295,7 @@ out_lgetc(FILE *f)
 		fprintf(f, "\n");
 	}
 
-	if (api_tokbuf & API_SGETC) {
+	if (api_getc & API_SGETC) {
 		if (print_progress) {
 			fprintf(stderr, " sgetc");
 		}
@@ -318,7 +318,7 @@ out_lgetc(FILE *f)
 		fprintf(f, "\n");
 	}
 
-	if (api_tokbuf & API_AGETC) {
+	if (api_getc & API_AGETC) {
 		if (print_progress) {
 			fprintf(stderr, " agetc");
 		}
@@ -345,7 +345,7 @@ out_lgetc(FILE *f)
 		fprintf(f, "\n");
 	}
 
-	if (api_tokbuf & API_FDGETC) {
+	if (api_getc & API_FDGETC) {
 		if (print_progress) {
 			fprintf(stderr, " fdgetc");
 		}
@@ -1019,7 +1019,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 	fprintf(f, "#include <errno.h>\n");
 	fprintf(f, "\n");
 
-	if (api_tokbuf & API_FDGETC) {
+	if (api_getc & API_FDGETC) {
 		fprintf(f, "#include <unistd.h>\n");
 		fprintf(f, "#include <fcntl.h>\n");
 		fprintf(f, "\n");

@@ -169,7 +169,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 		fprintf(f, "\n");
 	}
 
-	if (api_tokbuf & API_AGETC) {
+	if (api_getc & API_AGETC) {
 		fprintf(f, "/* opaque for %sagetc */\n", prefix.api);
 		fprintf(f, "struct lx_arr {\n");
 		fprintf(f, "\tchar *p;\n");
@@ -178,7 +178,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 		fprintf(f, "\n");
 	}
 
-	if (api_tokbuf & API_FDGETC) {
+	if (api_getc & API_FDGETC) {
 		/* TODO: posix only */
 		fprintf(f, "/* opaque for %sfdgetc */\n", prefix.api);
 		fprintf(f, "struct lx_fd {\n");
@@ -204,19 +204,19 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "enum %stoken %snext(struct %slx *lx);\n", prefix.api, prefix.api, prefix.lx);
 	fprintf(f, "\n");
 
-	if (api_tokbuf & API_FGETC) {
+	if (api_getc & API_FGETC) {
 		fprintf(f, "int %sfgetc(struct %slx *lx);\n", prefix.api, prefix.lx); /* TODO: stdio only */
 	}
-	if (api_tokbuf & API_SGETC) {
+	if (api_getc & API_SGETC) {
 		fprintf(f, "int %ssgetc(struct %slx *lx);\n", prefix.api, prefix.lx);
 	}
-	if (api_tokbuf & API_AGETC) {
+	if (api_getc & API_AGETC) {
 		fprintf(f, "int %sagetc(struct %slx *lx);\n", prefix.api, prefix.lx);
 	}
-	if (api_tokbuf & API_FDGETC) {
+	if (api_getc & API_FDGETC) {
 		fprintf(f, "int %sdgetc(struct %slx *lx);\n", prefix.api, prefix.lx);
 	}
-	if (api_tokbuf) {
+	if (api_getc) {
 		fprintf(f, "\n");
 	}
 
