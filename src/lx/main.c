@@ -502,6 +502,11 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	if (api_getc && fsm_io != FSM_IO_GETC) {
+		fprintf(stderr, "-g is for -k getc output only\n");
+		return EXIT_FAILURE;
+	}
+
 	if (0 != strcmp(prefix.api, "lx_")) {
 		prefix.lx = prefix.api;
 	}
