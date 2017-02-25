@@ -48,6 +48,7 @@ set_search(const struct set *set, const void *item)
 	size_t mid;
 
 	assert(item != NULL);
+	assert(set != NULL);
 	assert(set->cmp != NULL);
 
 	start = mid = 0;
@@ -216,12 +217,12 @@ set_contains(const struct set *set, const void *item)
 {
 	size_t i;
 
-	assert(item != NULL);
-	assert(set->cmp != NULL);
-
 	if (set_empty(set)) {
 		return NULL;
 	}
+
+	assert(item != NULL);
+	assert(set->cmp != NULL);
 
 	i = set_search(set, item);
 	if (set->cmp(item, set->a[i]) == 0) {
@@ -237,9 +238,6 @@ subsetof(const struct set *a, const struct set *b)
 	size_t i, j;
 	struct set haystack;
 
-	assert(a->cmp != NULL);
-	assert(b->cmp != NULL);
-
 	if (a == NULL) {
 		return 1;
 	}
@@ -247,6 +245,9 @@ subsetof(const struct set *a, const struct set *b)
 	if (b == NULL) {
 		return 0;
 	}
+
+	assert(a->cmp != NULL);
+	assert(b->cmp != NULL);
 
 	if (a->cmp != b->cmp) {
 		return 0;
@@ -327,16 +328,13 @@ set_firstafter(const struct set *set, struct set_iter *it, void *item)
 	int r;
 
 	assert(it != NULL);
-	assert(set->cmp != NULL);
 
 	if (set_empty(set)) {
 		it->set = NULL;
 		return NULL;
 	}
 
-	if (set_empty(set)) {
-		return NULL;
-	}
+	assert(set->cmp != NULL);
 
 	i = set_search(set, item);
 	r = set->cmp(item, set->a[i]);
