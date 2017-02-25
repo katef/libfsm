@@ -13,6 +13,7 @@ struct set {
 	void **a;
 	size_t i;
 	size_t n;
+	int (*cmp)(const void *, const void *);
 };
 
 static void
@@ -43,23 +44,22 @@ print_set(const char *prefix, const struct set *s)
 static size_t
 set_search(const struct set *set, const void *item)
 {
-	const void *p, *q;
 	size_t start, end;
 	size_t mid;
 
 	assert(item != NULL);
-
-	p = item;
+	assert(set->cmp != NULL);
 
 	start = mid = 0;
 	end = set->i;
 
 	while (start < end) {
+		int r;
 		mid = start + (end - start) / 2;
-		q = set->a[mid];
-		if (p < q) {
+		r = set->cmp(item, set->a[mid]);
+		if (r < 0) {
 			end = mid;
-		} else if (p > q) {
+		} else if (r > 0) {
 			start = mid + 1;
 		} else {
 			return mid;
@@ -67,6 +67,37 @@ set_search(const struct set *set, const void *item)
 	}
 
 	return mid;
+}
+
+static int
+set_cmp(const void *a, const void *b)
+{
+
+	return (a > b) - (a < b);
+}
+
+struct set *
+set_create(int (*cmp)(const void *a, const void *b))
+{
+	struct set *s;
+
+	assert(cmp != NULL);
+
+	s = malloc(sizeof *s);
+	if (s == NULL) {
+		return NULL;
+	}
+
+	s->a = malloc(SET_INITIAL * sizeof *s->a);
+	if (s->a == NULL) {
+		return NULL;
+	}
+
+	s->i = 0;
+	s->n = SET_INITIAL;
+	s->cmp = cmp;
+
+	return s;
 }
 
 void *
@@ -82,23 +113,13 @@ set_add(struct set **set, void *item)
 	i = 0;
 
 	/*
-	 * If the set is not initialized, go ahead and do that.
-	 * Insert the new item at the front.
+	 * If the set is not initialized, go ahead and do that with the
+	 * default comparison function and insert the new item at the front.
 	 */
 	if (s == NULL) {
-		s = malloc(sizeof **set);
-		if (s == NULL) {
-			return NULL;
-		}
-
-		s->a = malloc(SET_INITIAL * sizeof *s->a);
-		if (s->a == NULL) {
-			return NULL;
-		}
-
+		s = set_create(set_cmp);
 		s->a[0] = item;
 		s->i = 1;
-		s->n = SET_INITIAL;
 
 		*set = s;
 
@@ -106,6 +127,8 @@ set_add(struct set **set, void *item)
 
 		return item;
 	}
+
+	assert(s->cmp != NULL);
 
 	/*
 	 * If the item already exists in the set, return success.
@@ -116,32 +139,36 @@ set_add(struct set **set, void *item)
 	 */
 	if (!set_empty(s)) {
 		i = set_search(s, item);
-		if (s->a[i] == item) {
+		if (s->cmp(item, s->a[i]) == 0) {
 			return item;
 		}
 	}
 
-	/* We're at capacity. Get more */
-	if (s->i == s->n) {
-		void **new;
+	if (s->i) {
+		/* We're at capacity. Get more */
+		if (s->i == s->n) {
+			void **new;
 
-		new = realloc(s->a, (sizeof *s->a) * (s->n * 2));
-		if (new == NULL) {
-			return NULL;
+			new = realloc(s->a, (sizeof *s->a) * (s->n * 2));
+			if (new == NULL) {
+				return NULL;
+			}
+
+			s->a = new;
+			s->n *= 2;
 		}
 
-		s->a = new;
-		s->n *= 2;
+		if (s->cmp(item, s->a[i]) > 0) {
+			i++;
+		}
+
+		memmove(&s->a[i + 1], &s->a[i], (s->i - i) * (sizeof *s->a));
+		s->a[i] = item;
+		s->i++;
+	} else {
+		s->a[0] = item;
+		s->i = 1;
 	}
-
-	if (item > s->a[i]) {
-		i++;
-	}
-
-	memmove(&s->a[i + 1], &s->a[i], (s->i - i) * (sizeof *s->a));
-
-	s->a[i] = item;
-	s->i++;
 
 	assert(set_contains(s, item));
 
@@ -155,13 +182,14 @@ set_remove(struct set **set, void *item)
 	size_t i;
 
 	assert(item != NULL);
+	assert(s->cmp != NULL);
 
 	if (set_empty(s)) {
 		return;
 	}
 
 	i = set_search(s, item);
-	if (s->a[i] == item) {
+	if (s->cmp(item, s->a[i]) == 0) {
 		if (i < s->i) {
 			memmove(&s->a[i], &s->a[i + 1], (s->i - i) * (sizeof *s->a));
 		}
@@ -183,23 +211,24 @@ set_free(struct set *set)
 	free(set);
 }
 
-int
+void *
 set_contains(const struct set *set, const void *item)
 {
 	size_t i;
 
 	assert(item != NULL);
+	assert(set->cmp != NULL);
 
 	if (set_empty(set)) {
-		return 0;
+		return NULL;
 	}
 
 	i = set_search(set, item);
-	if (set->a[i] == item) {
-		return 1;
+	if (set->cmp(item, set->a[i]) == 0) {
+		return set->a[i];
 	}
 
-	return 0;
+	return NULL;
 }
 
 int
@@ -207,6 +236,9 @@ subsetof(const struct set *a, const struct set *b)
 {
 	size_t i, j;
 	struct set haystack;
+
+	assert(a->cmp != NULL);
+	assert(b->cmp != NULL);
 
 	if (a == NULL) {
 		return 1;
@@ -216,11 +248,15 @@ subsetof(const struct set *a, const struct set *b)
 		return 0;
 	}
 
+	if (a->cmp != b->cmp) {
+		return 0;
+	}
+
 	haystack = *b;
 
 	for (i = 0; i < a->i; i++) {
 		j = set_search(&haystack, a->a[i]);
-		if (haystack.a[j] != a->a[i]) {
+		if (a->cmp(haystack.a[j], a->a[i]) != 0) {
 			return 0;
 		}
 		haystack.a += j;
@@ -281,6 +317,44 @@ set_first(const struct set *set, struct set_iter *it)
 	it->i = 0;
 	it->set = set;
 
+	return it->set->a[it->i];
+}
+
+void *
+set_firstafter(const struct set *set, struct set_iter *it, void *item)
+{
+	size_t i;
+	int r;
+
+	assert(it != NULL);
+	assert(set->cmp != NULL);
+
+	if (set_empty(set)) {
+		it->set = NULL;
+		return NULL;
+	}
+
+	if (set_empty(set)) {
+		return NULL;
+	}
+
+	i = set_search(set, item);
+	r = set->cmp(item, set->a[i]);
+	if (i == 0) {
+		if (r < 0) {
+			it->i = 0;
+		} else {
+			it->i = 1;
+		}
+	} else {
+		if (r < 0) {
+			it->i = i;
+		} else {
+			it->i = i + 1;
+		}
+	}
+
+	it->set = set;
 	return it->set->a[it->i];
 }
 

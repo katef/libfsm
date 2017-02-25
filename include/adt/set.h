@@ -10,6 +10,9 @@ struct set_iter {
 	const struct set *set;
 };
 
+struct set *
+set_create(int (*cmp)(const void *a, const void *b));
+
 void *
 set_add(struct set **set, void *item);
 
@@ -20,9 +23,9 @@ void
 set_free(struct set *set);
 
 /*
- * Find if an item is in a set.
+ * Find if an item is in a set, and return it.
  */
-int
+void *
 set_contains(const struct set *set, const void *item);
 
 /*
@@ -45,6 +48,9 @@ set_empty(const struct set *set);
 
 void *
 set_first(const struct set *set, struct set_iter *it);
+
+void *
+set_firstafter(const struct set *set, struct set_iter *it, void *item);
 
 void *
 set_next(struct set_iter *it);
