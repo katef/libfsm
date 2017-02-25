@@ -36,33 +36,6 @@ out_dump(FILE *f)
 		break;
 
 	default:
-		/* TODO: rename buf */
-		fprintf(f, "char a[256]; /* XXX: bounds check, and local by lx->tokbuf opaque */\n");
-		fprintf(f, "char *p;\n");
-		fprintf(f, "\n");
-
-		fprintf(f, "static int\n");
-		fprintf(f, "push(struct lx *lx, char c)\n");
-		fprintf(f, "{\n");
-		fprintf(f, "\t(void) lx;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\tassert(c != EOF);\n");
-		fprintf(f, "\n");
-		fprintf(f, "\t*p++ = c;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\treturn 0;\n");
-		fprintf(f, "}\n");
-		fprintf(f, "\n");
-
-		fprintf(f, "static void\n");
-		fprintf(f, "pop(struct lx *lx)\n");
-		fprintf(f, "{\n");
-		fprintf(f, "\t(void) lx;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tp--;\n");
-		fprintf(f, "}\n");
-		fprintf(f, "\n");
 		break;
 	}
 
@@ -83,6 +56,17 @@ out_dump(FILE *f)
 	case FSM_IO_STR:
 		break;
 	}
+
+	fprintf(f, "static void\n");
+	fprintf(f, "dump_buf(const char *q, size_t l)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tif (q == NULL) {\n");
+	fprintf(f, "\t\treturn;\n");
+	fprintf(f, "\t}\n");
+	/* TODO: escaping for special characters */
+	fprintf(f, "\t\t\tprintf(\" '%%.*s'\", (int) l, q);\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
 
 	fprintf(f, "int\n");
 	fprintf(f, "main(int argc, char *argv[])\n");
@@ -164,11 +148,6 @@ out_dump(FILE *f)
 		fprintf(f, "\tlx.free  = NULL;\n");
 		fprintf(f, "\n");
 		break;
-
-	default:
-		fprintf(f, "\tlx.push  = push;\n");
-		fprintf(f, "\tlx.pop   = pop;\n");
-		break;
 	}
 
 	fprintf(f, "\tdo {\n");
@@ -181,11 +160,6 @@ out_dump(FILE *f)
 		break;
 
 	case API_FIXEDBUF:
-		break;
-
-	default:
-		fprintf(f, "\t\tp = a;\n");
-		fprintf(f, "\n");
 		break;
 	}
 
@@ -206,9 +180,8 @@ out_dump(FILE *f)
 		break;
 
 	default:
-		fprintf(f, "\t\tassert(p >= a);\n");
-		fprintf(f, "\t\tl = p - a;\n");
-		fprintf(f, "\t\tq = p;\n");
+		fprintf(f, "\t\tl = 0;\n");
+		fprintf(f, "\t\tq = NULL;\n");
 		fprintf(f, "\n");
 		break;
 	}
@@ -230,18 +203,19 @@ out_dump(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "\t\tcase TOK_UNKNOWN:\n");
-	fprintf(f, "\t\t\tprintf(\"lexically uncategorised: '%%.*s'\\n\",\n");
-	fprintf(f, "\t\t\t\t(int) l, q);\n");
+	fprintf(f, "\t\t\tprintf(\"lexically uncategorised:\");\n");
+	fprintf(f, "\t\t\tdump_buf(q, l);\n");
+	fprintf(f, "\t\t\tprintf(\"\\n\");\n");
 	fprintf(f, "\t\t\tbreak;\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "\t\tdefault:\n");
 	if (~api_exclude & API_NAME) {
-		fprintf(f, "\t\t\tprintf(\"<%%s '%%.*s'>\\n\",\n");
-		fprintf(f, "\t\t\t\tlx_name(t),\n");
-		fprintf(f, "\t\t\t\t(int) l, q);\n");
+		fprintf(f, "\t\t\tprintf(\"<%%s\", lx_name(t));\n");
+		fprintf(f, "\t\t\tdump_buf(q, l);\n");
+		fprintf(f, "\t\t\tprintf(\">\\n\");\n");
 	} else {
-		fprintf(f, "\t\t\tprintf(\"<#%%u>\\n\",\n");
+		fprintf(f, "\t\t\tprintf(\"<#%%u>\\n\");\n");
 		fprintf(f, "\t\t\t\t(unsigned) t);\n");
 	}
 	fprintf(f, "\t\t\tbreak;\n");
