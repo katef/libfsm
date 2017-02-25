@@ -67,11 +67,11 @@ fsm_clone(const struct fsm *fsm)
 
 	{
 		struct fsm_state *s, *to;
-		struct set_iter it;
-		int i;
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
 			struct fsm_state *equiv;
+			struct fsm_edge *e;
+			struct set_iter it;
 
 			equiv = equivalent(fsm, new, s);
 			assert(equiv != NULL);
@@ -83,19 +83,17 @@ fsm_clone(const struct fsm *fsm)
 			fsm_setend(new, equiv, fsm_isend(fsm, s));
 			equiv->opaque = s->opaque;
 
-			for (i = 0; i <= FSM_EDGE_MAX; i++) {
-				if (set_empty(s->edges[i].sl)) {
-					continue;
-				}
+			for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
+				struct set_iter jt;
 
-				for (to = set_first(s->edges[i].sl, &it); to != NULL; to = set_next(&it)) {
+				for (to = set_first(e->sl, &jt); to != NULL; to = set_next(&jt)) {
 					struct fsm_state *newfrom;
 					struct fsm_state *newto;
 
 					newfrom = equiv;
 					newto   = equivalent(fsm, new, to);
 
-					if (!set_add(&newfrom->edges[i].sl, newto)) {
+					if (!fsm_addedge(newfrom, newto, e->symbol)) {
 						fsm_free(new);
 						return NULL;
 					}

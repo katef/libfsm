@@ -107,23 +107,25 @@ fsm_reachable(struct fsm *fsm, struct fsm_state *state,
 	}
 
 	while (p = list_nextnotdone(list), p != NULL) {
+		struct fsm_edge *e;
 		struct set_iter it;
-		struct fsm_state *e;
-		int i;
 
 		if (!predicate(fsm, p->state)) {
 			list_free(p);
 			return 0;
 		}
 
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (e = set_first(p->state->edges[i].sl, &it); e != NULL; e = set_next(&it)) {
+		for (e = set_first(p->state->edges, &it); e != NULL; e = set_next(&it)) {
+			struct fsm_state *st;
+			struct set_iter jt;
+
+			for (st = set_first(e->sl, &jt); st != NULL; st = set_next(&jt)) {
 				/* not a list operation... */
-				if (list_contains(list, e)) {
+				if (list_contains(list, st)) {
 					continue;
 				}
 
-				if (!list_push(&list, e)) {
+				if (!list_push(&list, st)) {
 					return -1;
 				}
 			}

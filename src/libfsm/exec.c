@@ -16,16 +16,15 @@
 static struct fsm_state *
 nextstate(const struct fsm_state *state, char c)
 {
-	const struct set *s;
+	struct fsm_edge *e;
 
 	assert(state != NULL);
 
-	s = state->edges[(unsigned char) c].sl;
-	if (set_empty(s)) {
+	if (!(e = fsm_hasedge(state, c))) {
 		return NULL;
 	}
 
-	return set_only(s);
+	return set_only(e->sl);
 }
 
 struct fsm_state *

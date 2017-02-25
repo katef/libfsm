@@ -12,9 +12,9 @@
 struct fsm_state *
 fsm_findmode(const struct fsm_state *state, unsigned int *freq)
 {
+	struct fsm_edge *e;
 	struct set_iter it;
 	struct fsm_state *s;
-	int i, j;
 
 	struct {
 		struct fsm_state *state;
@@ -26,8 +26,16 @@ fsm_findmode(const struct fsm_state *state, unsigned int *freq)
 
 	assert(state != NULL);
 
-	for (i = 0; i <= UCHAR_MAX; i++) {
-		for (s = set_first(state->edges[i].sl, &it); s != NULL; s = set_next(&it)) {
+	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
+		struct set_iter jt;
+
+		if (e->symbol > UCHAR_MAX) {
+			break;
+		}
+
+		for (s = set_first(e->sl, &jt); s != NULL; s = set_next(&jt)) {
+			struct set_iter kt = it;
+			struct fsm_edge *c;
 			unsigned int curr;
 
 			assert(s != NULL);
@@ -35,9 +43,14 @@ fsm_findmode(const struct fsm_state *state, unsigned int *freq)
 
 			curr = 0;
 
-			/* count the remaining edes which have the same target */
-			for (j = i + 1; j <= UCHAR_MAX; j++) {
-				curr += set_contains(state->edges[j].sl, s);
+			/* Count the remaining edes which have the same target.
+			 * This works because the edges are still sorted by
+			 * symbol, so we don't have to walk the whole thing.
+			 */
+			for (c = set_next(&kt); c != NULL; c = set_next(&kt)) {
+				if (set_contains(c->sl, s)) {
+					curr++;
+				}
 			}
 
 			if (curr > mode.freq) {

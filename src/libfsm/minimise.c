@@ -16,13 +16,18 @@
 static int
 equivalent(struct fsm_state *a, struct fsm_state *b)
 {
-	int i;
+	struct fsm_edge *ae, *be;
+	struct set_iter it;
 
 	assert(a != NULL);
 	assert(b != NULL);
 
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		if (!set_equal(a->edges[i].sl, b->edges[i].sl)) {
+	for (ae = set_first(a->edges, &it); ae != NULL; ae = set_next(&it)) {
+		if ((be = fsm_hasedge(b, ae->symbol)) == NULL) {
+			return 0;
+		}
+
+		if (!set_equal(ae->sl, be->sl)) {
 			return 0;
 		}
 	}
@@ -35,15 +40,17 @@ equivalent(struct fsm_state *a, struct fsm_state *b)
 /* Return true if the edges after o contains state */
 /* TODO: centralise */
 static int
-contains(struct fsm_edge edges[], int o, struct fsm_state *state)
+contains(struct set *edges, int o, struct fsm_state *state)
 {
-	int i;
+	struct fsm_edge *e, search;
+	struct set_iter it;
 
 	assert(edges != NULL);
 	assert(state != NULL);
 
-	for (i = o; i <= FSM_EDGE_MAX; i++) {
-		if (set_contains(edges[i].sl, state)) {
+	search.symbol = o;
+	for (e = set_firstafter(edges, &it, &search); e != NULL; e = set_next(&it)) {
+		if (set_contains(e->sl, state)) {
 			return 1;
 		}
 	}
@@ -56,25 +63,26 @@ contains(struct fsm_edge edges[], int o, struct fsm_state *state)
 static unsigned
 counttargets(struct fsm_state *state)
 {
+	struct fsm_edge *e;
+	struct set_iter it;
 	unsigned n;
-	int i;
 
 	assert(state != NULL);
 
 	n = 0;
 
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
+	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
 		struct fsm_state *s;
 
-		if (set_empty(state->edges[i].sl)) {
+		if (set_empty(e->sl)) {
 			continue;
 		}
 
 		/* Note that this assumes the state is a DFA state */
-		s = set_only(state->edges[i].sl);
+		s = set_only(e->sl);
 
 		/* Distinct targets only */
-		if (contains(state->edges, i + 1, s)) {
+		if (contains(state->edges, e->symbol, s)) {
 			continue;
 		}
 

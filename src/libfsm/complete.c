@@ -41,14 +41,15 @@ fsm_complete(struct fsm *fsm,
 	 * to itself. That error state is implicit in most FSMs, but rarely
 	 * actually drawn. The idea here is to explicitly create it.
 	 */
-
 	new = fsm_addstate(fsm);
 	if (new == NULL) {
 		return 0;
 	}
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (!set_add(&new->edges[i].sl, new)) {
+		struct fsm_edge *e;
+		e = fsm_addedge(new, new, i);
+		if (e == NULL) {
 			/* TODO: free stuff */
 			return 0;
 		}
@@ -60,11 +61,11 @@ fsm_complete(struct fsm *fsm,
 		}
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (!set_empty(s->edges[i].sl)) {
+			if (!fsm_hasedge(s, i)) {
 				continue;
 			}
 
-			if (!set_add(&s->edges[i].sl, new)) {
+			if (!fsm_addedge(s, new, i)) {
 				/* TODO: free stuff */
 				return 0;
 			}

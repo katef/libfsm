@@ -123,16 +123,16 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 	/* TODO: errors leave fsm in a questionable state */
 
 	while (m = getnextnotdone(mappings), m != NULL) {
-		struct set_iter it;
+		struct set_iter it, jt;
 		struct fsm_state *s;
-		int i;
+		struct fsm_edge *e;
 
 		if (x != NULL && m->old == *x) {
 			*x = m->new;
 		}
 
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (s = set_first(m->old->edges[i].sl, &it); s != NULL; s = set_next(&it)) {
+		for (e = set_first(m->old->edges, &it); e != NULL; e = set_next(&it)) {
+			for (s = set_first(e->sl, &jt); s != NULL; s = set_next(&jt)) {
 				struct mapping *to;
 
 				assert(s != NULL);
@@ -143,21 +143,8 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 					return NULL;
 				}
 
-				/* TODO: this switch occurs in a few places; centralise it */
-				switch (i) {
-				case FSM_EDGE_EPSILON:
-					if (!fsm_addedge_epsilon(fsm, m->new, to->new)) {
-						mapping_free(mappings);
-						return NULL;
-					}
-					break;
-
-				default:
-					if (!fsm_addedge_literal(fsm, m->new, to->new, i)) {
-						mapping_free(mappings);
-						return NULL;
-					}
-					break;
+				if (!fsm_addedge(m->new, to->new, e->symbol)) {
+					return NULL;
 				}
 			}
 		}
