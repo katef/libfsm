@@ -213,9 +213,14 @@ out_dump(FILE *f)
 		break;
 	}
 
+	if (~api_exclude & API_POS) {
+		fprintf(f, "\t\tprintf(\"%%u: \", lx.start.byte);\n");
+		fprintf(f, "\n");
+	}
+
 	fprintf(f, "\t\tswitch (t) {\n");
 	fprintf(f, "\t\tcase TOK_EOF:\n");
-	fprintf(f, "\t\t\tprintf(\"%%u: <EOF>\\n\", lx.start.byte);\n");
+	fprintf(f, "\t\t\tprintf(\"<EOF>\\n\");\n");
 	fprintf(f, "\t\t\tbreak;\n");
 	fprintf(f, "\n");
 
@@ -225,15 +230,13 @@ out_dump(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "\t\tcase TOK_UNKNOWN:\n");
-	fprintf(f, "\t\t\tfprintf(stderr, \"%%u: lexically uncategorised: '%%.*s'\\n\",\n");
-	fprintf(f, "\t\t\t\tlx.start.byte,\n");
+	fprintf(f, "\t\t\tprintf(\"lexically uncategorised: '%%.*s'\\n\",\n");
 	fprintf(f, "\t\t\t\t(int) l, q);\n");
 	fprintf(f, "\t\t\tbreak;\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "\t\tdefault:\n");
-	fprintf(f, "\t\t\tprintf(\"%%u: <%%s '%%.*s'>\\n\",\n");
-	fprintf(f, "\t\t\t\tlx.start.byte,\n");
+	fprintf(f, "\t\t\tprintf(\"<%%s '%%.*s'>\\n\",\n");
 	fprintf(f, "\t\t\t\tlx_name(t),\n");
 	fprintf(f, "\t\t\t\t(int) l, q);\n");
 	fprintf(f, "\t\t\tbreak;\n");
