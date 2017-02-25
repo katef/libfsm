@@ -236,9 +236,14 @@ out_dump(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "\t\tdefault:\n");
-	fprintf(f, "\t\t\tprintf(\"<%%s '%%.*s'>\\n\",\n");
-	fprintf(f, "\t\t\t\tlx_name(t),\n");
-	fprintf(f, "\t\t\t\t(int) l, q);\n");
+	if (~api_exclude & API_NAME) {
+		fprintf(f, "\t\t\tprintf(\"<%%s '%%.*s'>\\n\",\n");
+		fprintf(f, "\t\t\t\tlx_name(t),\n");
+		fprintf(f, "\t\t\t\t(int) l, q);\n");
+	} else {
+		fprintf(f, "\t\t\tprintf(\"<#%%u>\\n\",\n");
+		fprintf(f, "\t\t\t\t(unsigned) t);\n");
+	}
 	fprintf(f, "\t\t\tbreak;\n");
 	fprintf(f, "\n");
 
