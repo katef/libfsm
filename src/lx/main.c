@@ -498,7 +498,7 @@ main(int argc, char *argv[])
 	}
 
 	if (api_getc && (out != lx_out_c && out != lx_out_h)) {
-		fprintf(stderr, "-c is for .c/.h output only\n");
+		fprintf(stderr, "-g is for .c/.h output only\n");
 		return EXIT_FAILURE;
 	}
 
