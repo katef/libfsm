@@ -186,7 +186,8 @@ lx_out_h(const struct ast *ast, FILE *f)
 		fprintf(f, "\tsize_t len;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tint fd;\n");
-		fprintf(f, "\tsize_t bufsz; /* number of bytes allocated after this struct */\n");
+		fprintf(f, "\tchar *buf;\n");
+		fprintf(f, "\tsize_t bufsz;\n");
 		fprintf(f, "};\n");
 		fprintf(f, "\n");
 	}

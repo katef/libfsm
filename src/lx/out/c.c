@@ -350,6 +350,7 @@ out_lgetc(FILE *f)
 			fprintf(stderr, " fdgetc");
 		}
 
+		/* TODO: keeping both .bufz and .len is silly; use powers of two */
 		fprintf(f, "int\n");
 		fprintf(f, "%sdgetc(struct %slx *lx)\n", prefix.api, prefix.lx);
 		fprintf(f, "{\n");
@@ -360,16 +361,17 @@ out_lgetc(FILE *f)
 		fprintf(f, "\n");
 		fprintf(f, "\td = lx->opaque;\n");
 		fprintf(f, "\tassert(d->fd != -1);\n");
+		fprintf(f, "\tassert(d->buf != NULL);\n");
 		fprintf(f, "\tassert(d->p != NULL);\n");
+		fprintf(f, "\tassert(d->p >= d->buf);\n");
+		fprintf(f, "\tassert(d->p <= d->buf + d->bufsz);\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tif (d->len == 0) {\n");
 		fprintf(f, "\t\tssize_t r;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\t\tassert((fcntl(d->fd, F_GETFL) & O_NONBLOCK) == 0);\n");
 		fprintf(f, "\n");
-		fprintf(f, "\t\td->p = (char *) d + sizeof *d;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\t\tr = read(d->fd, d->p, d->bufsz);\n");
+		fprintf(f, "\t\tr = read(d->fd, d->buf, d->bufsz);\n");
 		fprintf(f, "\t\tif (r == -1) {\n");
 		fprintf(f, "\t\t\tassert(errno != EAGAIN);\n");
 		fprintf(f, "\t\t\treturn EOF;\n");
@@ -379,6 +381,7 @@ out_lgetc(FILE *f)
 		fprintf(f, "\t\t\treturn EOF;\n");
 		fprintf(f, "\t\t}\n");
 		fprintf(f, "\n");
+		fprintf(f, "\t\td->p   = d->buf;\n");
 		fprintf(f, "\t\td->len = r;\n");
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
