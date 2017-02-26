@@ -48,8 +48,7 @@
 
 	struct arr {
 		char *p;
-		size_t l;
-		size_t o;
+		size_t len;
 	};
 
 	typedef struct arr *         arr;
@@ -105,17 +104,18 @@
 	static int
 	act_agetc(void *opaque)
 	{
-		struct arr *a = opaque;
+		struct arr *a;
+
+		a = opaque;
 
 		assert(a != NULL);
 		assert(a->p != NULL);
-		assert(a->o <= a->l);
 
-		if (a->o == a->l) {
+		if (a->len == 0) {
 			return EOF;
 		}
 
-		return (unsigned char) a->p[a->o++];
+		return a->len--, *a->p++;
 	}
 
 	static size_t nmappings;
@@ -250,27 +250,26 @@
 	@};
 
 	<pattern-buffer>: () -> (a :arr) = @{
+		size_t len;
+
 		/*
 		 * Note we copy the string here because the grammar permits adjacent
 		 * patterns; the pattern buffer will be overwritten by the LL(1) one-token
 		 * lookahead.
 		 */
 
-		@a = malloc(sizeof *@a);
+		len = lex_state->p - lex_state->a;
+
+		@a = malloc(sizeof *@a + len);
 		if (@a == NULL) {
 			perror("malloc");
 			exit(EXIT_FAILURE);
 		}
 
-		@a->l = lex_state->p - lex_state->a;
-		@a->p = malloc(@a->l);
-		if (@a->p == NULL) {
-			perror("malloc");
-			exit(EXIT_FAILURE);
-		}
+		@a->len = len;
+		@a->p   = (char *) @a + sizeof *@a;
 
-		memcpy(@a->p, lex_state->a, @a->l);
-		@a->o = 0;
+		memcpy(@a->p, lex_state->a, @a->len);
 
 		lex_state->p = lex_state->a;
 	@};
@@ -355,6 +354,7 @@
 		struct re_err err;
 
 		assert(@a != NULL);
+		assert(@a->p != NULL);
 
 		@r = re_comp(RE_LITERAL, act_agetc, @a, 0, &err);
 		if (@r == NULL) {
@@ -764,7 +764,6 @@
 	@};
 
 	<free-arr>: (a :arr) -> () = @{
-		free(@a->p);
 		free(@a);
 	@};
 
