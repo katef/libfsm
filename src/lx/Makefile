@@ -36,3 +36,23 @@ ${BUILD}/bin/lx: ${BUILD}/lib/${lib:R}.a
 ${BUILD}/bin/lx: ${BUILD}/${src:R}.o
 .endfor
 
+# smoke tests
+test:: ${BUILD}/bin/lx src/lx/lexer.lx
+.for buf in dyn fixed
+.for getc in fgetc fdgetc
+	mkdir -p ${BUILD}/test/dump-lx
+	${BUILD}/bin/lx -b ${buf} -g ${getc} -l dump < src/lx/lexer.lx > ${BUILD}/test/dump-lx/${buf}-${getc}-dump.c
+	${BUILD}/bin/lx -b ${buf} -g ${getc} -l c    < src/lx/lexer.lx > ${BUILD}/test/dump-lx/${buf}-${getc}-lexer.c
+	${BUILD}/bin/lx -b ${buf} -g ${getc} -l h    < src/lx/lexer.lx > ${BUILD}/test/dump-lx/${buf}-${getc}-lexer.h
+	${CC} -o ${BUILD}/test/dump-lx/${buf}-${getc}-dump \
+		-I ${BUILD}/test/${buf}-${getc}dump-lx \
+		-D LX_HEADER='"${buf}-${getc}-lexer.h"' \
+		${CFLAGS} \
+		${BUILD}/test/dump-lx/${buf}-${getc}-dump.c ${BUILD}/test/dump-lx/${buf}-${getc}-lexer.c
+	${BUILD}/test/dump-lx/${buf}-${getc}-dump < src/lx/lexer.lx > ${BUILD}/test/dump-lx/${buf}-${getc}-lexer.tok
+.endfor
+.endfor
+	diff ${BUILD}/test/dump-lx/dyn-fgetc-lexer.tok ${BUILD}/test/dump-lx/dyn-fdgetc-lexer.tok
+	diff ${BUILD}/test/dump-lx/fixed-fgetc-lexer.tok ${BUILD}/test/dump-lx/fixed-fdgetc-lexer.tok
+	diff ${BUILD}/test/dump-lx/dyn-fdgetc-lexer.tok ${BUILD}/test/dump-lx/fixed-fdgetc-lexer.tok
+
