@@ -12,6 +12,7 @@
 
 %maps%
 
+	arr    -> arr;
 	char   -> char;
 	flags  -> flags;
 	string -> string;
@@ -45,13 +46,13 @@
 	#include "out.h"
 	#include "var.h"
 
-	struct string {
+	struct arr {
 		char *p;
-		size_t l;
-		size_t o;
+		size_t len;
 	};
 
-	typedef struct string *      string;
+	typedef struct arr *         arr;
+	typedef char *               string;
 	typedef enum re_flags        flags;
 	typedef struct fsm *         fsm;
 	typedef struct ast_zone *    zone;
@@ -101,19 +102,20 @@
 	}
 
 	static int
-	act_bgetc(void *opaque)
+	act_agetc(void *opaque)
 	{
-		struct string *s = opaque;
+		struct arr *a;
 
-		assert(s != NULL);
-		assert(s->p != NULL);
-		assert(s->o <= s->l);
+		a = opaque;
 
-		if (s->o == s->l) {
+		assert(a != NULL);
+		assert(a->p != NULL);
+
+		if (a->len == 0) {
 			return EOF;
 		}
 
-		return (unsigned char) s->p[s->o++];
+		return a->len--, *a->p++;
 	}
 
 	static size_t nmappings;
@@ -214,35 +216,19 @@
 
 	TOKEN: () -> (s :string) = @{
 		/* TODO: submatch addressing */
-		@s = malloc(sizeof *@s);
+		@s = xstrdup(lex_state->buf.a + 1); /* +1 for '$' prefix */
 		if (@s == NULL) {
-			perror("malloc");
-			exit(EXIT_FAILURE);
-		}
-		@s->p = xstrdup(lex_state->buf.a + 1); /* +1 for '$' prefix */
-		if (@s->p == NULL) {
 			perror("xstrdup");
 			exit(EXIT_FAILURE);
 		}
-		@s->l = strlen(@s->p);
-		@s->o = 0;
 	@};
 
 	IDENT: () -> (s :string) = @{
-		@s = malloc(sizeof *@s);
+		@s = xstrdup(lex_state->buf.a);
 		if (@s == NULL) {
-			perror("malloc");
-			exit(EXIT_FAILURE);
-		}
-
-		@s->p = xstrdup(lex_state->buf.a);
-		if (@s->p == NULL) {
 			perror("xstrdup");
 			exit(EXIT_FAILURE);
 		}
-
-		@s->l = strlen(@s->p);
-		@s->o = 0;
 	@};
 
 	RE: () -> (f :flags) = @{
@@ -263,31 +249,27 @@
 		*lex_state->p++ = @c;
 	@};
 
-	<pattern-buffer>: () -> (s :string) = @{
-		/* TODO */
-		*lex_state->p++ = '\0';
+	<pattern-buffer>: () -> (a :arr) = @{
+		size_t len;
 
 		/*
 		 * Note we copy the string here because the grammar permits adjacent
 		 * patterns; the pattern buffer will be overwritten by the LL(1) one-token
 		 * lookahead.
 		 */
-		@s = malloc(sizeof *@s);
-		if (@s == NULL) {
+
+		len = lex_state->p - lex_state->a;
+
+		@a = malloc(sizeof *@a + len);
+		if (@a == NULL) {
 			perror("malloc");
 			exit(EXIT_FAILURE);
 		}
 
-		@s->l = lex_state->p - lex_state->a;
-		@s->p = malloc(@s->l);
-		if (@s->p == NULL) {
-			perror("malloc");
-			exit(EXIT_FAILURE);
-		}
+		@a->len = len;
+		@a->p   = (char *) @a + sizeof *@a;
 
-		memcpy(@s->p, lex_state->a, @s->l);
-		@s->l--;
-		@s->o = 0;
+		memcpy(@a->p, lex_state->a, @a->len);
 
 		lex_state->p = lex_state->a;
 	@};
@@ -297,17 +279,16 @@
 
 		assert(@z != NULL);
 		assert(@s != NULL);
-		assert(@s->p != NULL);
 
 		for (z = @z; z != NULL; z = z->parent) {
-			@r = var_find(z->vl, @s->p);
+			@r = var_find(z->vl, @s);
 			if (@r != NULL) {
 				break;
 			}
 
 			if (@z->parent == NULL) {
 				/* TODO: use *err */
-				err(lex_state, "No such variable: %s", @s->p);
+				err(lex_state, "No such variable: %s", @s);
 				@!;
 			}
 		}
@@ -324,7 +305,7 @@
 		const struct ast_mapping *m;
 
 		assert(@t != NULL);
-		assert(@t->p != NULL);
+		assert(@t != NULL);
 
 		@r = fsm_new();
 		if (@r == NULL) {
@@ -342,7 +323,7 @@
 				continue;
 			}
 
-			if (0 != strcmp(m->token->s, @t->p)) {
+			if (0 != strcmp(m->token->s, @t)) {
 				continue;
 			}
 
@@ -369,34 +350,34 @@
 		}
 	@};
 
-	<compile-literal>: (s :string) -> (r :fsm) = @{
+	<compile-literal>: (a :arr) -> (r :fsm) = @{
 		struct re_err err;
 
-		assert(@s != NULL);
-		assert(@s->p != NULL);
+		assert(@a != NULL);
+		assert(@a->p != NULL);
 
-		@r = re_comp(RE_LITERAL, act_bgetc, @s, 0, &err);
+		@r = re_comp(RE_LITERAL, act_agetc, @a, 0, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
-			re_perror(RE_LITERAL, &err, NULL, @s->p);
+			re_perror(RE_LITERAL, &err, NULL, @a->p); /* XXX */
 			exit(EXIT_FAILURE);
 		}
 
 		@r->tidy = 0;
 	@};
 
-	<compile-regex>: (s :string, f :flags) -> (r :fsm) = @{
+	<compile-regex>: (a :arr, f :flags) -> (r :fsm) = @{
 		struct re_err err;
 
-		assert(@s != NULL);
-		assert(@s->p != NULL);
+		assert(@a != NULL);
+		assert(@a->p != NULL);
 
-		@r = re_comp(RE_NATIVE, act_bgetc, @s, @f, &err);
+		@r = re_comp(RE_NATIVE, act_agetc, @a, @f, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
-			re_perror(RE_NATIVE, &err, NULL, @s->p);
+			re_perror(RE_NATIVE, &err, NULL, @a->p);
 			exit(EXIT_FAILURE);
 		}
 
@@ -469,7 +450,7 @@
 		assert(@r != NULL);
 
 		if (@t != NULL) {
-			t = ast_addtoken(@a, @t->p);
+			t = ast_addtoken(@a, @t);
 			if (t == NULL) {
 				perror("ast_addtoken");
 				@!;
@@ -499,11 +480,10 @@
 		assert(@z != NULL);
 		assert(@r != NULL);
 		assert(@n != NULL);
-		assert(@n->p != NULL);
 
 		(void) @a;
 
-		v = var_bind(&@z->vl, @n->p, @r);
+		v = var_bind(&@z->vl, @n, @r);
 		if (v == NULL) {
 			perror("var_bind");
 			@!;
@@ -783,8 +763,11 @@
 		}
 	@};
 
-	<free>: (s :string) -> () = @{
-		free(@s->p);
+	<free-arr>: (a :arr) -> () = @{
+		free(@a);
+	@};
+
+	<free-string>: (s :string) -> () = @{
 		free(@s);
 	@};
 

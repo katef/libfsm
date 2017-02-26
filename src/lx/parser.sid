@@ -2,6 +2,7 @@
 
 %types%
 
+	arr;
 	char;
 	flags;
 	string;
@@ -50,13 +51,13 @@
 %productions%
 
 	<pattern-char>:   (:char) -> ();
-	<pattern-buffer>: ()      -> (:string);
+	<pattern-buffer>: ()      -> (:arr);
 
 	<deref-var>:       (:zone, :string) -> (:fsm);
 	<deref-token>:     (:zone, :string) -> (:fsm);
 
-	<compile-literal>: (:string)         -> (:fsm);
-	<compile-regex>:   (:string, :flags) -> (:fsm);
+	<compile-literal>: (:arr)         -> (:fsm);
+	<compile-regex>:   (:arr, :flags) -> (:fsm);
 
 	<regex-any>:    () -> (:fsm);
 
@@ -88,7 +89,8 @@
 	<no-zone>:  () -> (:zone);
 
 	<clone>: (:fsm) -> (:fsm);
-	<free>:  (:string) -> ();
+	<free-arr>:     (:arr)    -> ();
+	!<free-string>: (:string) -> (); /* XXX */
 
 	<err-syntax>;
 	!<err-expected-alt>;
@@ -130,15 +132,15 @@
 	||
 		body;
 		STR;
-		s = <pattern-buffer>;
-		r = <compile-literal>(s);
-		<free>(s);
+		a = <pattern-buffer>;
+		r = <compile-literal>(a);
+		<free-arr>(a);
 	||
 		body;
 		f = RE;
-		s = <pattern-buffer>;
-		r = <compile-regex>(s, f);
-		<free>(s);
+		a = <pattern-buffer>;
+		r = <compile-regex>(a, f);
+		<free-arr>(a);
 	};
 
 	expr: (z :zone) -> (q :fsm) [
