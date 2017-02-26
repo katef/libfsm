@@ -113,6 +113,7 @@ static void
 	} a[] = {
 		{ "test", NULL        },
 		{ "dot",  lx_out_dot  },
+		{ "dump", lx_out_dump },
 		{ "zdot", lx_out_zdot },
 		{ "c",    lx_out_c    },
 		{ "h",    lx_out_h    }
@@ -492,12 +493,12 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (api_tokbuf && (out != lx_out_c && out != lx_out_h)) {
+	if (api_tokbuf && (out != lx_out_c && out != lx_out_h && out != lx_out_dump)) {
 		fprintf(stderr, "-b is for .c/.h output only\n");
 		return EXIT_FAILURE;
 	}
 
-	if (api_getc && (out != lx_out_c && out != lx_out_h)) {
+	if (api_getc && (out != lx_out_c && out != lx_out_h && out != lx_out_dump)) {
 		fprintf(stderr, "-g is for .c/.h output only\n");
 		return EXIT_FAILURE;
 	}

@@ -26,6 +26,7 @@
 <!-- XXX: literal or code? be consistent wrt other manpages -->
 	<!ENTITY c.lit    "<literal>c</literal>">
 	<!ENTITY dot.lit  "<literal>dot</literal>">
+	<!ENTITY dump.lit "<literal>dump</literal>">
 
 ]>
 
@@ -113,6 +114,10 @@ Dot output is not subject to checks for semantic errors
 							<tr>
 								<td><literal>dot</literal></td>
 								<td>Graphviz Dot format</td>
+							</tr>
+							<tr>
+								<td><literal>dump</literal></td>
+								<td>Token dump program</td>
 							</tr>
 							<tr>
 								<td><literal>c</literal> (default)</td>
