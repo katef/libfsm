@@ -238,6 +238,10 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 		case FSM_IO_STR:
 			fprintf(f, "lx->p = NULL; ");
 			break;
+
+		case FSM_IO_PAIR:
+			fprintf(f, "lx->p = NULL; ");
+			break;
 		}
 
 		fprintf(f, "return %sUNKNOWN;", prefix.tok);
@@ -427,11 +431,22 @@ out_io(FILE *f)
 
 	case FSM_IO_STR:
 		/*
-		 * For FSM_IO_STR we treat '\0' at the end of input,
+		 * For FSM_IO_STR we treat '\0' as the end of input,
 		 * and so there's no need to distinguish it from EOF.
 		 * We return '\0' here to save the assignment.
 		 */
 		fprintf(f, "\tassert(lx->p != NULL);\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tc = *lx->p++;\n");
+		fprintf(f, "\n");
+		break;
+
+	case FSM_IO_PAIR:
+		fprintf(f, "\tassert(lx->p != NULL);\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tif (lx->p == lx->e) {\n");
+		fprintf(f, "\t\t\treturn EOF;\n");
+		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tc = *lx->p++;\n");
 		fprintf(f, "\n");
@@ -469,6 +484,14 @@ out_io(FILE *f)
 		break;
 
 	case FSM_IO_STR:
+		fprintf(f, "\tassert(lx->p != NULL);\n");
+		fprintf(f, "\tassert(*(lx->p - 1) == c);\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tlx->p--;\n");
+		fprintf(f, "\n");
+		break;
+
+	case FSM_IO_PAIR:
 		fprintf(f, "\tassert(lx->p != NULL);\n");
 		fprintf(f, "\tassert(*(lx->p - 1) == c);\n");
 		fprintf(f, "\n");
@@ -737,6 +760,10 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	case FSM_IO_STR:
 		fprintf(f, "\twhile (c = lx_getc(lx), c != '\\0') {\n");
 		break;
+
+	case FSM_IO_PAIR:
+		fprintf(f, "\twhile (c = lx_getc(lx), c != EOF) {\n");
+		break;
 	}
 
 	{
@@ -838,6 +865,11 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			break;
 
 		case FSM_IO_STR:
+			fprintf(f, "\tlx->p = NULL;\n");
+			fprintf(f, "\n");
+			break;
+
+		case FSM_IO_PAIR:
 			fprintf(f, "\tlx->p = NULL;\n");
 			fprintf(f, "\n");
 			break;
@@ -1002,6 +1034,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 	switch (fsm_io) {
 	case FSM_IO_GETC: cp = "c"; break;
 	case FSM_IO_STR:  cp = "c"; break;
+	case FSM_IO_PAIR: cp = "c"; break;
 	}
 
 	for (z = ast->zl; z != NULL; z = z->next) {
@@ -1087,6 +1120,9 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 		case FSM_IO_STR:
 			break;
+
+		case FSM_IO_PAIR:
+			break;
 		}
 
 		fprintf(f, "\tlx->z = z%u;\n", zindexof(ast, ast->global));
@@ -1119,6 +1155,10 @@ lx_out_c(const struct ast *ast, FILE *f)
 		case FSM_IO_STR:
 			fprintf(f, "\tif (lx->p == NULL) {\n");
 			break;
+
+		case FSM_IO_PAIR:
+			fprintf(f, "\tif (lx->p == NULL) {\n");
+			break;
 		}
 
 		fprintf(f, "\t\treturn %sEOF;\n", prefix.tok);
@@ -1145,6 +1185,10 @@ lx_out_c(const struct ast *ast, FILE *f)
 				break;
 
 			case FSM_IO_STR:
+				fprintf(f, "\tif (lx->p == NULL && lx->free != NULL) {\n");
+				break;
+
+			case FSM_IO_PAIR:
 				fprintf(f, "\tif (lx->p == NULL && lx->free != NULL) {\n");
 				break;
 			}

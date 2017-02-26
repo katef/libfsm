@@ -66,6 +66,9 @@ out_dump(FILE *f)
 
 	case FSM_IO_STR:
 		break;
+
+	case FSM_IO_PAIR:
+		break;
 	}
 
 	switch (api_getc) {
@@ -163,6 +166,12 @@ out_dump(FILE *f)
 
 	case FSM_IO_STR:
 		fprintf(f, "\tlx.p = argv[1];\n");
+		fprintf(f, "\n");
+		break;
+
+	case FSM_IO_PAIR:
+		fprintf(f, "\tlx.p = argv[1];\n");
+		fprintf(f, "\tlx.e = argv[1] + strlen(argv[1]);\n");
 		fprintf(f, "\n");
 		break;
 	}

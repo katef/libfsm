@@ -363,6 +363,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	switch (options->io) {
 	case FSM_IO_GETC: cp = "c";  break;
 	case FSM_IO_STR:  cp = "*p"; break;
+	case FSM_IO_PAIR: cp = "*p"; break;
 	}
 
 	if (options->fragment) {
@@ -390,6 +391,16 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 		fprintf(f, "\tassert(s != NULL);\n");
 		fprintf(f, "\n");
 		break;
+
+	case FSM_IO_PAIR:
+		fprintf(f, "int fsm_main(const char *b, const char *e) {\n");
+		fprintf(f, "\tconst char *p;\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tassert(b != NULL);\n");
+		fprintf(f, "\tassert(e != NULL);\n");
+		fprintf(f, "\tassert(e > b);\n");
+		fprintf(f, "\n");
+		break;
 	}
 
 	/* enum of states */
@@ -408,6 +419,10 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 
 	case FSM_IO_STR:
 		fprintf(f, "\tfor (p = s; *p != '\\0'; p++) {\n");
+		break;
+
+	case FSM_IO_PAIR:
+		fprintf(f, "\tfor (p = b; *p != e; p++) {\n");
 		break;
 	}
 

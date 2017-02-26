@@ -91,7 +91,11 @@ lx_out_h(const struct ast *ast, FILE *f)
 	case FSM_IO_STR:
 		fprintf(f, "\tconst char *p; /* input string */\n");
 		fprintf(f, "\n");
-		break;
+
+	case FSM_IO_PAIR:
+		fprintf(f, "\tconst char *p; /* input string */\n");
+		fprintf(f, "\tconst char *e; /* one past end of input */\n");
+		fprintf(f, "\n");
 	}
 
 	if (~api_exclude & API_POS) {
