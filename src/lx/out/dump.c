@@ -18,6 +18,7 @@ out_dump(FILE *f)
 	fprintf(f, "#include <assert.h>\n");
 	fprintf(f, "#include <stdlib.h>\n");
 	fprintf(f, "#include <stdio.h>\n");
+	fprintf(f, "#include <string.h>\n");
 	fprintf(f, "#include <ctype.h>\n");
 	fprintf(f, "\n");
 
@@ -39,24 +40,6 @@ out_dump(FILE *f)
 		break;
 	}
 
-	switch (fsm_io) {
-	case FSM_IO_GETC:
-		fprintf(f, "static int\n");
-		fprintf(f, "dump_fgetc(struct lx *lx)\n");
-		fprintf(f, "{\n");
-		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\n");
-		fprintf(f, "\t(void) lx;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\treturn fgetc(stdin);\n");
-		fprintf(f, "}\n");
-		fprintf(f, "\n");
-		break;
-
-	case FSM_IO_STR:
-		break;
-	}
-
 	fprintf(f, "static void\n");
 	fprintf(f, "dump_buf(const char *q, size_t l)\n");
 	fprintf(f, "{\n");
@@ -71,39 +54,99 @@ out_dump(FILE *f)
 	fprintf(f, "int\n");
 	fprintf(f, "main(int argc, char *argv[])\n");
 	fprintf(f, "{\n");
+
 	fprintf(f, "\tenum lx_token t;\n");
 	fprintf(f, "\tstruct lx lx = { 0 };\n");
-	fprintf(f, "\n");
+
+	switch (fsm_io) {
+	case FSM_IO_GETC:
+		fprintf(f, "\tint (*lgetc)(struct lx *lx);\n");
+		fprintf(f, "\tvoid *opaque;\n");
+		break;
+
+	case FSM_IO_STR:
+		break;
+	}
+
+	switch (api_getc) {
+	case API_FGETC:
+		break;
+
+	case API_SGETC:
+		break;
+
+	case API_AGETC:
+		fprintf(f, "\tstruct lx_arr arr;\n");
+		break;
+
+	case API_FDGETC:
+		fprintf(f, "\tstruct lx_fd d;\n");
+		fprintf(f, "\tchar readbuf[BUFSIZ];\n");
+		break;
+	}
 
 	switch (api_tokbuf) {
 	case API_DYNBUF:
 		fprintf(f, "\tstruct lx_dynbuf buf;\n");
-		fprintf(f, "\n");
 		break;
 
 	case API_FIXEDBUF:
 		fprintf(f, "\tstruct lx_fixedbuf buf;\n");
-		fprintf(f, "\n");
 		break;
 
 	default:
 		break;
 	}
 
-	switch (fsm_io) {
-	case FSM_IO_GETC:
+	fprintf(f, "\n");
+
+	if (fsm_io == FSM_IO_GETC && (api_getc != API_AGETC && api_getc != API_SGETC)) {
 		fprintf(f, "\tif (argc != 1) {\n");
 		fprintf(f, "\t\tfprintf(stderr, \"usage: dump\\n\");\n");
 		fprintf(f, "\t\treturn 1;\n");
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
-		break;
-
-	case FSM_IO_STR:
+	} else {
 		fprintf(f, "\tif (argc != 2) {\n");
 		fprintf(f, "\t\tfprintf(stderr, \"usage: dump <str>\\n\");\n");
 		fprintf(f, "\t\treturn 1;\n");
 		fprintf(f, "\t}\n");
+		fprintf(f, "\n");
+	}
+
+	switch (api_getc) {
+	case API_FGETC:
+		fprintf(f, "\tlgetc = lx_fgetc;\n");
+		fprintf(f, "\topaque = stdin;\n");
+		fprintf(f, "\n");
+		break;
+
+	case API_SGETC:
+		fprintf(f, "\tlgetc = lx_sgetc;\n");
+		fprintf(f, "\topaque = argv[1];\n");
+		fprintf(f, "\n");
+		break;
+
+	case API_AGETC:
+		fprintf(f, "\tarr.p   = argv[1];\n");
+		fprintf(f, "\tarr.len = strlen(arr.p);\n");
+		fprintf(f, "\n");
+
+		fprintf(f, "\tlgetc = lx_agetc;\n");
+		fprintf(f, "\topaque = &arr;\n");
+		fprintf(f, "\n");
+		break;
+
+	case API_FDGETC:
+		fprintf(f, "\td.buf   = readbuf;\n");
+		fprintf(f, "\td.bufsz = sizeof readbuf;\n");
+		fprintf(f, "\td.p     = d.buf;\n");
+		fprintf(f, "\td.len   = 0;\n");
+		fprintf(f, "\td.fd    = fileno(stdin);\n");
+		fprintf(f, "\n");
+
+		fprintf(f, "\tlgetc = lx_dgetc;\n");
+		fprintf(f, "\topaque = &d;\n");
 		fprintf(f, "\n");
 		break;
 	}
@@ -113,8 +156,8 @@ out_dump(FILE *f)
 
 	switch (fsm_io) {
 	case FSM_IO_GETC:
-		fprintf(f, "\tlx.lgetc  = dump_fgetc;\n");
-		fprintf(f, "\tlx.opaque = stdin;\n");
+		fprintf(f, "\tlx.lgetc  = lgetc;\n");
+		fprintf(f, "\tlx.opaque = opaque;\n");
 		fprintf(f, "\n");
 		break;
 
@@ -129,6 +172,7 @@ out_dump(FILE *f)
 		fprintf(f, "\tbuf.a   = NULL;\n");
 		fprintf(f, "\tbuf.len = 0;\n");
 		fprintf(f, "\n");
+
 		fprintf(f, "\tlx.buf   = &buf;\n");
 		fprintf(f, "\tlx.push  = lx_dynpush;\n");
 		fprintf(f, "\tlx.pop   = lx_dynpop;\n");
@@ -139,8 +183,10 @@ out_dump(FILE *f)
 
 	case API_FIXEDBUF:
 		fprintf(f, "\tbuf.a   = a;\n");
+		fprintf(f, "\tbuf.p   = buf.a;\n");
 		fprintf(f, "\tbuf.len = sizeof a;\n"); /* XXX: rename .len to .size */
 		fprintf(f, "\n");
+
 		fprintf(f, "\tlx.buf   = &buf;\n");
 		fprintf(f, "\tlx.push  = lx_fixedpush;\n");
 		fprintf(f, "\tlx.pop   = lx_fixedpop;\n");
@@ -154,14 +200,6 @@ out_dump(FILE *f)
 	fprintf(f, "\t\tsize_t l;\n");
 	fprintf(f, "\t\tconst char *q;\n");
 	fprintf(f, "\n");
-
-	switch (api_tokbuf) {
-	case API_DYNBUF:
-		break;
-
-	case API_FIXEDBUF:
-		break;
-	}
 
 	fprintf(f, "\t\tt = lx_next(&lx);\n");
 	fprintf(f, "\n");
