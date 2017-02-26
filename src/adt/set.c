@@ -338,18 +338,16 @@ set_firstafter(const struct set *set, struct set_iter *it, void *item)
 
 	i = set_search(set, item);
 	r = set->cmp(item, set->a[i]);
-	if (i == 0) {
-		if (r < 0) {
-			it->i = 0;
-		} else {
-			it->i = 1;
-		}
-	} else {
-		if (r < 0) {
-			it->i = i;
-		} else {
-			it->i = i + 1;
-		}
+	assert(i <= set->i - 1);
+
+	if (r >= 0 && i == set->i - 1) {
+		it->set = NULL;
+		return NULL;
+	}
+
+	it->i = i;
+	if (r >= 0) {
+		it->i++;
 	}
 
 	it->set = set;
