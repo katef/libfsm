@@ -45,11 +45,12 @@ escputc(int c, FILE *f)
 	} a[] = {
 		{ FSM_EDGE_EPSILON, "&#x3B5;" },
 
-		{ '&',  "&amp;"  },
-		{ '\"', "&quot;" },
-		{ ']',  "&#x5D;" }, /* yes, even in a HTML label */
-		{ '<',  "&#x3C;" },
-		{ '>',  "&#x3E;" }
+		{ '&',  "&amp;"    },
+		{ '\"', "&quot;"   },
+		{ ']',  "&#x5D;"   }, /* yes, even in a HTML label */
+		{ '<',  "&#x3C;"   },
+		{ '>',  "&#x3E;"   },
+		{ ' ',  "&#x2423;" }
 	};
 
 	assert(f != NULL);
