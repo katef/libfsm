@@ -152,7 +152,7 @@ bm_print(FILE *f, const struct bm *bm,
 
 		/* end of range */
 		hi = bm_next(bm, lo, mode == MODE_INVERT);
-		if (hi > UCHAR_MAX) {
+		if (hi > UCHAR_MAX && lo < UCHAR_MAX) {
 			hi = UCHAR_MAX;
 		}
 
