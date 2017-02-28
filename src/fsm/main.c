@@ -72,12 +72,12 @@ language(const char *name)
 		const char *name;
 		enum fsm_out language;
 	} a[] = {
-		{ "c",      FSM_OUT_C      },
-		{ "csv",    FSM_OUT_CSV    },
-		{ "dot",    FSM_OUT_DOT    },
-		{ "fsm",    FSM_OUT_FSM    },
-		{ "json",   FSM_OUT_JSON   },
-		{ "libfsm", FSM_OUT_LIBFSM }
+		{ "api",  FSM_OUT_API  },
+		{ "c",    FSM_OUT_C    },
+		{ "csv",  FSM_OUT_CSV  },
+		{ "dot",  FSM_OUT_DOT  },
+		{ "fsm",  FSM_OUT_FSM  },
+		{ "json", FSM_OUT_JSON }
 	};
 
 	assert(name != NULL);

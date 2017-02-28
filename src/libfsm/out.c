@@ -20,12 +20,12 @@ fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format,
 	assert(f != NULL);
 
 	switch (format) {
-	case FSM_OUT_C:      out = fsm_out_c;      break;
-	case FSM_OUT_CSV:    out = fsm_out_csv;    break;
-	case FSM_OUT_DOT:    out = fsm_out_dot;    break;
-	case FSM_OUT_FSM:    out = fsm_out_fsm;    break;
-	case FSM_OUT_JSON:   out = fsm_out_json;   break;
-	case FSM_OUT_LIBFSM: out = fsm_out_libfsm; break;
+	case FSM_OUT_API:  out = fsm_out_api;  break;
+	case FSM_OUT_C:    out = fsm_out_c;    break;
+	case FSM_OUT_CSV:  out = fsm_out_csv;  break;
+	case FSM_OUT_DOT:  out = fsm_out_dot;  break;
+	case FSM_OUT_FSM:  out = fsm_out_fsm;  break;
+	case FSM_OUT_JSON: out = fsm_out_json; break;
 	}
 
 	assert(out != NULL);

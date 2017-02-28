@@ -97,7 +97,7 @@ findany(const struct fsm_state *state)
 }
 
 void
-fsm_out_libfsm(const struct fsm *fsm, FILE *f,
+fsm_out_api(const struct fsm *fsm, FILE *f,
 	const struct fsm_outoptions *options)
 {
 	struct fsm_state *s, *e, *start;
