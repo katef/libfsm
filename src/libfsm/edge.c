@@ -12,18 +12,32 @@
 
 #include "internal.h"
 
-static struct fsm_state *
-fsm_addedge(struct fsm_state *from, struct fsm_state *to,
-	enum fsm_edge_type type)
+struct fsm_edge *
+fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type)
 {
-	struct fsm_edge *edge;
+	struct fsm_edge *e, new;
 
 	assert(from != NULL);
 	assert(to != NULL);
 
-	edge = &from->edges[type];
+	new.symbol = type;
+	e = set_contains(from->edges, &new);
+	if (e == NULL) {
+		e = malloc(sizeof *e);
+		if (e == NULL) {
+			return NULL;
+		}
 
-	return set_add(&edge->sl, to);
+		e->symbol = type;
+		e->sl = NULL;
+		(void)set_add(&from->edges, e);
+	}
+
+	if (set_add(&e->sl, to) == NULL) {
+		return NULL;
+	}
+
+	return e;
 }
 
 struct fsm_edge *
@@ -36,17 +50,14 @@ fsm_addedge_epsilon(struct fsm *fsm,
 
 	(void) fsm;
 
-	if (!fsm_addedge(from, to, FSM_EDGE_EPSILON)) {
-		return NULL;
-	}
-
-	return &from->edges[FSM_EDGE_EPSILON];
+	return fsm_addedge(from, to, FSM_EDGE_EPSILON);
 }
 
 struct fsm_edge *
 fsm_addedge_any(struct fsm *fsm,
 	struct fsm_state *from, struct fsm_state *to)
 {
+	struct fsm_edge *e;
 	int i;
 
 	assert(fsm != NULL);
@@ -56,12 +67,12 @@ fsm_addedge_any(struct fsm *fsm,
 	(void) fsm;
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (!fsm_addedge(from, to, i)) {
+		if (!(e = fsm_addedge(from, to, i))) {
 			return NULL;
 		}
 	}
 
-	return &from->edges[i];
+	return e;
 }
 
 struct fsm_edge *
@@ -75,10 +86,19 @@ fsm_addedge_literal(struct fsm *fsm,
 
 	(void) fsm;
 
-	if (!fsm_addedge(from, to, (unsigned char) c)) {
+	return fsm_addedge(from, to, (unsigned char) c);
+}
+
+struct fsm_edge *
+fsm_hasedge(const struct fsm_state *s, int c)
+{
+	struct fsm_edge *e, search;
+
+	search.symbol = c;
+	e = set_contains(s->edges, &search);
+	if (e == NULL || set_empty(e->sl)) {
 		return NULL;
 	}
 
-	return &from->edges[(unsigned char) c];
+	return e;
 }
-

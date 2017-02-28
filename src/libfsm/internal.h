@@ -7,6 +7,7 @@
 
 #include <fsm/fsm.h>
 
+struct set;
 
 /* TODO: +2 for SOL, EOL */
 /* TODO: +lots for FSM_EDGE_* */
@@ -18,12 +19,13 @@ enum fsm_edge_type {
 
 struct fsm_edge {
 	struct set *sl;
+	enum fsm_edge_type symbol;
 };
 
 struct fsm_state {
 	unsigned int end:1;
 
-	struct fsm_edge edges[FSM_EDGE_MAX + 1];
+	struct set *edges; /* containing `struct fsm_edge *` */
 
 	void *opaque;
 
@@ -47,6 +49,11 @@ struct fsm {
 #endif
 };
 
+struct fsm_edge *
+fsm_hasedge(const struct fsm_state *s, int c);
+
+struct fsm_edge *
+fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type);
 
 #endif
 

@@ -140,16 +140,11 @@ singlecase(FILE *f, const struct fsm *fsm,
 
 	/* no edges */
 	{
-		int i;
+		struct fsm_edge *e;
+		struct set_iter it;
 
-		/* TODO: move this out into a count function */
-		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (!set_empty(state->edges[i].sl)) {
-				break;
-			}
-		}
-
-		if (i > UCHAR_MAX) {
+		e = set_first(state->edges, &it);
+		if (!e || e->symbol > UCHAR_MAX) {
 			fprintf(f, "\t\t\t");
 			leaf(f, fsm, state, opaque);
 			fprintf(f, "\n");
@@ -179,35 +174,39 @@ singlecase(FILE *f, const struct fsm *fsm,
 
 	/* usual case */
 	{
-		int i;
+		struct fsm_edge *e;
+		struct set_iter it;
 
-		for (i = 0; i <= UCHAR_MAX; i++) {
-			struct set *set;
+		for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
 			struct fsm_state *s;
 
-			set = state->edges[i].sl;
-			if (set_empty(set)) {
+			if (e->symbol > UCHAR_MAX) {
+				break;
+			}
+
+			if (set_empty(e->sl)) {
 				continue;
 			}
 
-			s = set_only(set);
+			s = set_only(e->sl);
 			if (s == mode.state) {
 				continue;
 			}
 
 			fprintf(f, "\t\t\tcase '");
-			escputc(i, f);
+			escputc(e->symbol, f);
 			fprintf(f, "':");
 
 			/* non-unique states fall through */
-			if (i <= UCHAR_MAX - 1) {
-				const struct set *nset;
-				const struct fsm_state *ns;
+			if (e->symbol <= UCHAR_MAX - 1) {
+				const struct fsm_edge *ne;
+				struct set_iter jt;
 
-				nset = state->edges[i + 1].sl;
+				ne = set_firstafter(state->edges, &jt, e);
+				if (ne && ne->symbol == e->symbol + 1 && !set_empty(ne->sl)) {
+					const struct fsm_state *ns;
 
-				if (!set_empty(nset)) {
-					ns = set_only(nset);
+					ns = set_only(ne->sl);
 					if (ns != mode.state && ns == s) {
 						fprintf(f, "\n");
 						continue;

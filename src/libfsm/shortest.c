@@ -64,9 +64,9 @@ fsm_shortest(const struct fsm *fsm,
 	}
 
 	while (u = priq_pop(&todo), u != NULL) {
-		const struct fsm_state *e;
+		const struct fsm_state *s;
+		struct fsm_edge *e;
 		struct set_iter it;
-		int i;
 
 		priq_move(&done, u);
 
@@ -79,28 +79,30 @@ fsm_shortest(const struct fsm *fsm,
 			goto done;
 		}
 
-		for (i = 0; i < FSM_EDGE_MAX; i++) {
-			for (e = set_first(u->state->edges[i].sl, &it); e != NULL; e = set_next(&it)) {
+		for (e = set_first(u->state->edges, &it); e != NULL; e = set_next(&it)) {
+			struct set_iter jt;
+
+			for (s = set_first(e->sl, &jt); s != NULL; s = set_next(&jt)) {
 				struct priq *v;
 				unsigned c;
 
-				v = priq_find(todo, e);
+				v = priq_find(todo, s);
 
 				/* visited already */
 				if (v == NULL) {
-					assert(priq_find(done, e));
+					assert(priq_find(done, s));
 					continue;
 				}
 
-				assert(v->state == e);
+				assert(v->state == s);
 
-				c = cost(u->state, v->state, i);
+				c = cost(u->state, v->state, e->symbol);
 
 				/* relax */
 				if (v->cost > u->cost + c) {
 					v->cost = u->cost + c;
 					v->prev = u;
-					v->type = i;
+					v->type = e->symbol;
 				}
 			}
 		}

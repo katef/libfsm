@@ -12,15 +12,15 @@
 int
 fsm_hasoutgoing(const struct fsm *fsm, const struct fsm_state *state)
 {
-	int i;
+	struct fsm_edge *e;
+	struct set_iter it;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
 
 	(void) fsm;
-
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		if (!set_empty(state->edges[i].sl)) {
+	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
+		if (!set_empty(e->sl)) {
 			return 1;
 		}
 	}

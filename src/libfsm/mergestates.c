@@ -12,33 +12,27 @@
 struct fsm_state *
 fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 {
-	struct set_iter it;
+	struct fsm_edge *e, *f;
 	struct fsm_state *s;
-	int i;
+	struct set_iter it;
 
 	/* edges from b */
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		struct fsm_state *p;
-
-		/* set_merge assumes no common elements */
-		for (p = set_first(b->edges[i].sl, &it); p != NULL; p = set_next(&it)) {
-			set_remove(&a->edges[i].sl, p);
+	for (e = set_first(b->edges, &it); e != NULL; e = set_next(&it)) {
+		struct set_iter jt;
+		for (s = set_first(e->sl, &jt); s != NULL; s = set_next(&jt)) {
+			fsm_addedge(a, s, e->symbol);
 		}
-
-		set_merge(&a->edges[i].sl, b->edges[i].sl);
-
-		b->edges[i].sl = NULL;
 	}
 
 	/* edges to b */
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			if (set_contains(s->edges[i].sl, b)) {
-				if (!set_add(&s->edges[i].sl, a)) {
+		for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
+			if (set_contains(e->sl, b)) {
+				f = fsm_addedge(s, a, e->symbol);
+				if (f == NULL) {
 					return NULL;
 				}
-
-				set_remove(&s->edges[i].sl, b);
+				set_remove(&e->sl, b);
 			}
 		}
 	}

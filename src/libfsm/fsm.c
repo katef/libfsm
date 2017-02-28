@@ -12,19 +12,21 @@
 static void
 free_contents(struct fsm *fsm)
 {
-	struct fsm_state *s;
 	struct fsm_state *next;
-	int i;
+	struct fsm_state *s;
 
 	assert(fsm != NULL);
 
 	for (s = fsm->sl; s != NULL; s = next) {
+		struct set_iter it;
+		struct fsm_edge *e;
 		next = s->next;
 
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			set_free(s->edges[i].sl);
+		for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
+			set_free(e->sl);
 		}
 
+		set_free(s->edges);
 		free(s);
 	}
 }

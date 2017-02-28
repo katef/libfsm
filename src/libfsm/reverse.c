@@ -106,43 +106,31 @@ fsm_reverse_opaque(struct fsm *fsm,
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
 			struct fsm_state *to;
+			struct fsm_state *se;
 			struct set_iter it;
-			struct fsm_state *e;
-			int i;
+			struct fsm_edge *e;
 
 			to = equivalent(new, fsm, s);
 
 			assert(to != NULL);
 
-			for (i = 0; i <= FSM_EDGE_MAX; i++) {
-				for (e = set_first(s->edges[i].sl, &it); e != NULL; e = set_next(&it)) {
+			for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
+				struct set_iter jt;
+
+				for (se = set_first(e->sl, &jt); se != NULL; se = set_next(&jt)) {
 					struct fsm_state *from;
 					struct fsm_edge *edge;
 
-					assert(e != NULL);
+					assert(se != NULL);
 
-					from = equivalent(new, fsm, e);
+					from = equivalent(new, fsm, se);
 
 					assert(from != NULL);
 
-					switch (i) {
-					case FSM_EDGE_EPSILON:
-						edge = fsm_addedge_epsilon(new, from, to);
-						if (edge == NULL) {
-							fsm_free(new);
-							return 0;
-						}
-						break;
-
-					default:
-						assert(i >= 0);
-						assert(i <= UCHAR_MAX);
-
-						edge = fsm_addedge_literal(new, from, to, i);
-						if (edge == NULL) {
-							fsm_free(new);
-							return 0;
-						}
+					edge = fsm_addedge(from, to, e->symbol);
+					if (edge == NULL) {
+						fsm_free(new);
+						return 0;
 					}
 				}
 			}

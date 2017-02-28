@@ -71,12 +71,15 @@ escputc(int c, FILE *f)
 static int
 hasmore(const struct fsm_state *s, int i)
 {
+	struct fsm_edge *e, search;
+	struct set_iter it;
+
 	assert(s != NULL);
 
 	i++;
-
-	for ( ; i <= FSM_EDGE_MAX; i++) {
-		if (!set_empty(s->edges[i].sl)) {
+	search.symbol = i;
+	for (e = set_firstafter(s->edges, &it, &search); e != NULL; e = set_next(&it)) {
+		if (!set_empty(e->sl)) {
 			return 1;
 		}
 	}
@@ -88,8 +91,7 @@ void
 fsm_out_json(const struct fsm *fsm, FILE *f,
 	const struct fsm_outoptions *options)
 {
-	struct set_iter it;
-	struct fsm_state *s, *e;
+	struct fsm_state *s;
 
 	assert(fsm != NULL);
 	assert(f != NULL);
@@ -101,7 +103,8 @@ fsm_out_json(const struct fsm *fsm, FILE *f,
 		fprintf(f, "\t\"states\": [\n");
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
-			int i;
+			struct fsm_edge *e;
+			struct set_iter it;
 
 			fprintf(f, "\t\t{\n");
 
@@ -110,21 +113,24 @@ fsm_out_json(const struct fsm *fsm, FILE *f,
 
 			fprintf(f, "\t\t\t\"edges\": [\n");
 
-			for (i = 0; i <= FSM_EDGE_MAX; i++) {
-				for (e = set_first(s->edges[i].sl, &it); e != NULL; e = set_next(&it)) {
-					assert(e != NULL);
+			for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
+				struct fsm_state *st;
+				struct set_iter jt;
+
+				for (st = set_first(e->sl, &jt); st != NULL; st = set_next(&jt)) {
+					assert(st != NULL);
 
 					fprintf(f, "\t\t\t\t{ ");
 
 					fprintf(f, "\"char\": ");
-					switch (i) {
+					switch (e->symbol) {
 					case FSM_EDGE_EPSILON:
 						fputs(" false", f);
 						break;
 
 					default:
 						fputs(" \"", f);
-						escputc(i, f);
+						escputc(e->symbol, f);
 						putc('\"', f);
 						break;
 					}
@@ -132,9 +138,9 @@ fsm_out_json(const struct fsm *fsm, FILE *f,
 					fprintf(f, ", ");
 
 					fprintf(f, "\"to\": %u",
-						indexof(fsm, e));
+						indexof(fsm, st));
 
-					fprintf(f, "}%s\n", set_hasnext(&it) && hasmore(s, i) ? "," : "");
+					fprintf(f, "}%s\n", set_hasnext(&it) && hasmore(s, e->symbol) ? "," : "");
 				}
 			}
 

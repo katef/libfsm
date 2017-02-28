@@ -71,23 +71,33 @@ escputc(int c, FILE *f)
 static const struct fsm_state *
 findany(const struct fsm_state *state)
 {
-	struct fsm_state *e, *f;
+	struct fsm_state *f, *s;
+	struct fsm_edge *e;
 	struct set_iter it;
-	int i;
+	int esym;
 
 	assert(state != NULL);
 
-	f = set_first(state->edges[0].sl, &it);
+	e = set_first(state->edges, &it);
+	if (e->symbol != 0) {
+		return NULL;
+	}
 
-	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (set_empty(state->edges[i].sl)) {
+	f = set_first(e->sl, &it);
+	esym = e->symbol;
+
+	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
+		if (e->symbol > UCHAR_MAX) {
+			break;
+		}
+
+		if (e->symbol != esym || set_empty(e->sl)) {
 			return NULL;
 		}
 
-		for (e = set_first(state->edges[i].sl, &it); e != NULL; e = set_next(&it)) {
-			if (e != f) {
-				return NULL;
-			}
+		s = set_only(e->sl);
+		if (f != s) {
+			return NULL;
 		}
 	}
 
@@ -100,8 +110,7 @@ void
 fsm_out_fsm(const struct fsm *fsm, FILE *f,
 	const struct fsm_outoptions *options)
 {
-	struct fsm_state *s, *e, *start;
-	struct set_iter it;
+	struct fsm_state *s, *start;
 	int end;
 
 	assert(fsm != NULL);
@@ -109,7 +118,8 @@ fsm_out_fsm(const struct fsm *fsm, FILE *f,
 	assert(options != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		int i;
+		struct fsm_edge *e;
+		struct set_iter it;
 
 		{
 			const struct fsm_state *a;
@@ -121,21 +131,24 @@ fsm_out_fsm(const struct fsm *fsm, FILE *f,
 			}
 		}
 
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (e = set_first(s->edges[i].sl, &it); e != NULL; e = set_next(&it)) {
-				assert(e != NULL);
+		for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
+			struct fsm_state *st;
+			struct set_iter jt;
 
-				fprintf(f, "%-2u -> %2u", indexof(fsm, s), indexof(fsm, e));
+			for (st = set_first(e->sl, &jt); st != NULL; st = set_next(&jt)) {
+				assert(st != NULL);
+
+				fprintf(f, "%-2u -> %2u", indexof(fsm, s), indexof(fsm, st));
 
 				/* TODO: print " ?" if all edges are equal */
 
-				switch (i) {
+				switch (e->symbol) {
 				case FSM_EDGE_EPSILON:
 					break;
 
 				default:
 					fputs(" \"", f);
-					escputc(i, f);
+					escputc(e->symbol, f);
 					putc('\"', f);
 					break;
 				}

@@ -9,6 +9,23 @@
 
 #include "internal.h"
 
+static int
+fsm_state_cmpedges(const void *a, const void *b)
+{
+	const struct fsm_edge *ea, *eb;
+
+	assert(a != NULL);
+	assert(b != NULL);
+
+	ea = a;
+	eb = b;
+
+	/* N.B. various edge iterations rely on the ordering of edges to be in
+	 * ascending order.
+	 */
+	return (ea->symbol > eb->symbol) - (ea->symbol < eb->symbol);
+}
+
 struct fsm_state *
 fsm_addstate(struct fsm *fsm)
 {
@@ -23,11 +40,7 @@ fsm_addstate(struct fsm *fsm)
 	}
 
 	new->end = 0;
-
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		new->edges[i].sl = NULL;
-	}
-
+	new->edges = set_create(fsm_state_cmpedges);
 	new->opaque = NULL;
 
 #ifdef DEBUG_TODFA
@@ -45,20 +58,22 @@ void
 fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 {
 	struct fsm_state *s, **p;
-	int i;
+	struct fsm_edge *e;
+	struct set_iter it;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			set_remove(&s->edges[i].sl, state);
+		for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
+			set_remove(&e->sl, state);
 		}
 	}
 
-	for (i = 0; i <= FSM_EDGE_MAX; i++) {
-		set_free(state->edges[i].sl);
+	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
+		set_free(e->sl);
 	}
+	set_free(state->edges);
 
 	if (fsm->start == state) {
 		fsm->start = NULL;
@@ -78,4 +93,3 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 		}
 	}
 }
-

@@ -111,6 +111,7 @@ addtoml(struct fsm *dfa, struct mapping **ml, struct set *closure)
 		return NULL;
 	}
 
+	assert(closure != NULL);
 	m->closure  = closure;
 	m->dfastate = fsm_addstate(dfa);
 	if (m->dfastate == NULL) {
@@ -142,8 +143,9 @@ addtoml(struct fsm *dfa, struct mapping **ml, struct set *closure)
 static struct set **
 epsilon_closure(const struct fsm_state *state, struct set **closure)
 {
+	struct fsm_state *s;
+	struct fsm_edge *e;
 	struct set_iter it;
-	struct fsm_state *e;
 
 	assert(state != NULL);
 	assert(closure != NULL);
@@ -156,11 +158,13 @@ epsilon_closure(const struct fsm_state *state, struct set **closure)
 	set_add(closure, state);
 
 	/* Follow each epsilon transition */
-	for (e = set_first(state->edges[FSM_EDGE_EPSILON].sl, &it); e != NULL; e = set_next(&it)) {
-		assert(e != NULL);
+	if ((e = fsm_hasedge(state, FSM_EDGE_EPSILON)) != NULL) {
+		for (s = set_first(e->sl, &it); s != NULL; s = set_next(&it)) {
+			assert(s != NULL);
 
-		if (epsilon_closure(e, closure) == NULL) {
-			return NULL;
+			if (epsilon_closure(s, closure) == NULL) {
+				return NULL;
+			}
 		}
 	}
 
@@ -212,6 +216,7 @@ set_closure(struct mapping **ml, struct fsm *dfa, struct set *set)
 	struct fsm_state *s;
 
 	assert(ml != NULL);
+	assert(set != NULL);
 
 	ec = NULL;
 	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
@@ -253,24 +258,32 @@ nextnotdone(struct mapping *ml)
 static int
 listnonepsilonstates(struct transset **l, struct set *set)
 {
-	struct set_iter it, jt;
-	struct fsm_state *s, *e;
+	struct fsm_state *s;
+	struct set_iter it;
 
 	assert(l != NULL);
 	assert(set != NULL);
 
 	*l = NULL;
 	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
-		int i;
+		struct fsm_edge *e;
+		struct set_iter jt;
 
-		for (i = 0; i <= UCHAR_MAX; i++) {
-			for (e = set_first(s->edges[i].sl, &jt); e != NULL; e = set_next(&jt)) {
+		for (e = set_first(s->edges, &jt); e != NULL; e = set_next(&jt)) {
+			struct fsm_state *st;
+			struct set_iter kt;
+
+			if (e->symbol > UCHAR_MAX) {
+				break;
+			}
+
+			for (st = set_first(e->sl, &kt); st != NULL; st = set_next(&kt)) {
 				struct transset *p;
 
-				assert(e != NULL);
+				assert(st != NULL);
 
 				/* Skip transitions we've already got */
-				if (transin(i, *l)) {
+				if (transin(e->symbol, *l)) {
 					continue;
 				}
 
@@ -280,8 +293,8 @@ listnonepsilonstates(struct transset **l, struct set *set)
 					return 0;
 				}
 
-				p->c = i;
-				p->state = e;
+				p->c = e->symbol;
+				p->state = st;
 
 				p->next = *l;
 				*l = p;
@@ -296,28 +309,26 @@ listnonepsilonstates(struct transset **l, struct set *set)
  * Return a list of all states reachable from set via the given transition.
  */
 static int
-allstatesreachableby(const struct fsm *fsm, struct set *set, char c,
-	struct set **sl)
+allstatesreachableby(struct set *set, char c, struct set **sl)
 {
-	struct set_iter it, jt;
 	struct fsm_state *s;
+	struct set_iter it;
 
-	assert(fsm != NULL);
 	assert(set != NULL);
 
-	(void) fsm;
-
 	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
-		struct fsm_edge *to;
 		struct fsm_state *es;
+		struct fsm_edge *to;
 
-		to = &s->edges[(unsigned char) c];
+		if ((to = fsm_hasedge(s, (unsigned char) c)) != NULL) {
+			struct set_iter jt;
 
-		for (es = set_first(to->sl, &jt); es != NULL; es = set_next(&jt)) {
-			assert(es != NULL);
+			for (es = set_first(to->sl, &jt); es != NULL; es = set_next(&jt)) {
+				assert(es != NULL);
 
-			if (!set_add(sl, es)) {
-				return 0;
+				if (!set_add(sl, es)) {
+					return 0;
+				}
 			}
 		}
 	}
@@ -429,7 +440,7 @@ determinise(struct fsm *nfa,
 			 * through this label, starting from the set of states forming curr's
 			 * closure.
 			 */
-			if (!allstatesreachableby(nfa, curr->closure, s->c, &reachable)) {
+			if (!allstatesreachableby(curr->closure, s->c, &reachable)) {
 				set_free(reachable);
 				goto error;
 			}
