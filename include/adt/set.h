@@ -22,6 +22,9 @@ set_remove(struct set **set, void *item);
 void
 set_free(struct set *set);
 
+void
+set_clear(struct set *set);
+
 /*
  * Find if an item is in a set, and return it.
  */
@@ -33,6 +36,12 @@ set_contains(const struct set *set, const void *item);
  */
 int
 subsetof(const struct set *a, const struct set *b);
+
+/*
+ * Compare two sets like memcmp
+ */
+int
+set_cmp(const struct set *a, const struct set *b);
 
 /*
  * Compare two sets for equality.

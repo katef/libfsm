@@ -71,7 +71,7 @@ set_search(const struct set *set, const void *item)
 }
 
 static int
-set_cmp(const void *a, const void *b)
+set_cmpval(const void *a, const void *b)
 {
 
 	return (a > b) - (a < b);
@@ -118,7 +118,7 @@ set_add(struct set **set, void *item)
 	 * default comparison function and insert the new item at the front.
 	 */
 	if (s == NULL) {
-		s = set_create(set_cmp);
+		s = set_create(set_cmpval);
 		s->a[0] = item;
 		s->i = 1;
 
@@ -212,6 +212,16 @@ set_free(struct set *set)
 	free(set);
 }
 
+void
+set_clear(struct set *set)
+{
+	if (set == NULL) {
+		return;
+	}
+
+	set->i = 0;
+}
+
 void *
 set_contains(const struct set *set, const void *item)
 {
@@ -265,6 +275,25 @@ subsetof(const struct set *a, const struct set *b)
 	}
 
 	return 1;
+}
+
+int
+set_cmp(const struct set *a, const struct set *b)
+{
+	if ((a == NULL) != (b == NULL)) {
+		return (a == NULL) - (b == NULL);
+	}
+
+	if (a == NULL && b == NULL) {
+		return 0;
+	}
+
+	if (a->i != b->i) {
+		return a->i - b->i;
+	}
+
+	return memcmp(a->a, b->a, a->i * sizeof *a->a);
+
 }
 
 int
