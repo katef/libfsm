@@ -397,6 +397,7 @@ determinise(struct fsm *nfa,
 	struct fsm *dfa;
 
 	assert(nfa != NULL);
+	assert(dcache != NULL);
 
 	dfa = fsm_new();
 	if (dfa == NULL) {
@@ -542,14 +543,20 @@ fsm_determinise_cacheopaque(struct fsm *fsm,
 	struct fsm *dfa;
 
 	assert(cache != NULL);
-	if (*cache == NULL) {
-		*cache = malloc(sizeof **cache);
-		if (*cache == NULL) {
-			return 0;
-		}
-	}
 
 	dcache = *cache;
+
+	if (dcache == NULL) {
+		dcache = malloc(sizeof *dcache);
+		if (dcache == NULL) {
+			return 0;
+		}
+
+		dcache->mappings = NULL;
+		dcache->trans    = NULL;
+
+		*cache = dcache;
+	}
 
 	dfa = determinise(fsm, carryopaque, dcache);
 	if (dfa == NULL) {
@@ -587,6 +594,7 @@ fsm_determinise_opaque(struct fsm *fsm,
 	void *cache = NULL;
 
 	return fsm_determinise_cacheopaque(fsm, carryopaque, &cache);
+	/* XXX: free dcache? */
 }
 
 int
