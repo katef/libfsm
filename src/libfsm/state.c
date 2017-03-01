@@ -63,6 +63,9 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 	assert(fsm != NULL);
 	assert(state != NULL);
 
+	/* for endcount accounting */
+	fsm_setend(fsm, state, 0);
+
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
 			set_remove(&e->sl, state);
