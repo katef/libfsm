@@ -225,11 +225,15 @@ fsm_determinise_opaque(struct fsm *fsm,
 /*
  * Like fsm_determinise_opaque, but allows the caller to store a pointer to
  * resources used by this API, reducing memory allocation and copy pressure.
+ *
+ * Free the cached data by calling fsm_determinise_freecache().
  */
 int
 fsm_determinise_cacheopaque(struct fsm *fsm,
 	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *),
 	void **cache);
+void
+fsm_determinise_freecache(struct fsm *fsm, void *cache);
 
 /*
  * Make a DFA complete, as per fsm_iscomplete.

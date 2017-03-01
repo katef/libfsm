@@ -587,14 +587,39 @@ fsm_determinise_cacheopaque(struct fsm *fsm,
 	return 1;
 }
 
+void
+fsm_determinise_freecache(struct fsm *fsm, void *cache)
+{
+	struct determinise_cache *dcache;
+
+	(void) fsm;
+
+	if (cache == NULL) {
+		return;
+	}
+
+	dcache = cache;
+
+	free_mappings(dcache->mappings);
+	free_trans(dcache->mappings);
+
+	free(dcache);
+}
+
 int
 fsm_determinise_opaque(struct fsm *fsm,
 	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *))
 {
-	void *cache = NULL;
+	void *cache;
+	int r;
 
-	return fsm_determinise_cacheopaque(fsm, carryopaque, &cache);
-	/* XXX: free dcache? */
+	cache = NULL;
+
+	r = fsm_determinise_cacheopaque(fsm, carryopaque, &cache);
+
+	fsm_determinise_freecache(fsm, cache);
+
+	return r;
 }
 
 int
