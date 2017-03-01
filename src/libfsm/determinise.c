@@ -42,7 +42,7 @@ struct mapping {
 	unsigned int done:1;
 };
 
-struct determinise_cache {
+struct fsm_determinise_cache {
 	struct set *mappings;
 	struct set *trans;
 };
@@ -388,7 +388,7 @@ carryend(struct set *set, struct fsm *fsm, struct fsm_state *state)
 static struct fsm *
 determinise(struct fsm *nfa,
 	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *),
-	struct determinise_cache *dcache)
+	struct fsm_determinise_cache *dcache)
 {
 	struct mapping *curr;
 	struct set *mappings;
@@ -537,28 +537,23 @@ error:
 int
 fsm_determinise_cacheopaque(struct fsm *fsm,
 	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *),
-	void **cache)
+	struct fsm_determinise_cache **dcache)
 {
-	struct determinise_cache *dcache;
 	struct fsm *dfa;
 
-	assert(cache != NULL);
+	assert(dcache != NULL);
 
-	dcache = *cache;
-
-	if (dcache == NULL) {
-		dcache = malloc(sizeof *dcache);
-		if (dcache == NULL) {
+	if (*dcache == NULL) {
+		*dcache = malloc(sizeof **dcache);
+		if (*dcache == NULL) {
 			return 0;
 		}
 
-		dcache->mappings = NULL;
-		dcache->trans    = NULL;
-
-		*cache = dcache;
+		(*dcache)->mappings = NULL;
+		(*dcache)->trans    = NULL;
 	}
 
-	dfa = determinise(fsm, carryopaque, dcache);
+	dfa = determinise(fsm, carryopaque, *dcache);
 	if (dfa == NULL) {
 		return 0;
 	}
@@ -588,17 +583,13 @@ fsm_determinise_cacheopaque(struct fsm *fsm,
 }
 
 void
-fsm_determinise_freecache(struct fsm *fsm, void *cache)
+fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache)
 {
-	struct determinise_cache *dcache;
-
 	(void) fsm;
 
-	if (cache == NULL) {
+	if (dcache == NULL) {
 		return;
 	}
-
-	dcache = cache;
 
 	free_mappings(dcache->mappings);
 	free_trans(dcache->mappings);
@@ -610,14 +601,14 @@ int
 fsm_determinise_opaque(struct fsm *fsm,
 	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *))
 {
-	void *cache;
+	struct fsm_determinise_cache *dcache;
 	int r;
 
-	cache = NULL;
+	dcache = NULL;
 
-	r = fsm_determinise_cacheopaque(fsm, carryopaque, &cache);
+	r = fsm_determinise_cacheopaque(fsm, carryopaque, &dcache);
 
-	fsm_determinise_freecache(fsm, cache);
+	fsm_determinise_freecache(fsm, dcache);
 
 	return r;
 }

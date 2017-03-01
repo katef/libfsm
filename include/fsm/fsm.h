@@ -14,7 +14,8 @@
 struct fsm;
 struct fsm_state;
 struct fsm_edge;
-struct set;
+struct fsm_determinise_cache;
+struct set; /* XXX */
 struct path; /* XXX */
 
 /*
@@ -231,9 +232,9 @@ fsm_determinise_opaque(struct fsm *fsm,
 int
 fsm_determinise_cacheopaque(struct fsm *fsm,
 	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *),
-	void **cache);
+	struct fsm_determinise_cache **dcache);
 void
-fsm_determinise_freecache(struct fsm *fsm, void *cache);
+fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache);
 
 /*
  * Make a DFA complete, as per fsm_iscomplete.
