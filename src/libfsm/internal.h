@@ -7,6 +7,8 @@
 
 #include <fsm/fsm.h>
 
+#define FSM_ENDCOUNT_MAX ULONG_MAX
+
 struct set;
 
 /* TODO: +2 for SOL, EOL */
@@ -43,6 +45,8 @@ struct fsm {
 	struct fsm_state *start;
 
 	unsigned int tidy:1;
+
+	unsigned long endcount;
 
 #ifdef DEBUG_TODFA
 	struct fsm *nfa;

@@ -46,6 +46,8 @@ fsm_new(void)
 	new->start = NULL;
 	new->tidy  = 1;
 
+	new->endcount = 0;
+
 #ifdef DEBUG_TODFA
 	new->nfa   = NULL;
 #endif
