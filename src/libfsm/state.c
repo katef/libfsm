@@ -30,7 +30,6 @@ struct fsm_state *
 fsm_addstate(struct fsm *fsm)
 {
 	struct fsm_state *new;
-	int i;
 
 	assert(fsm != NULL);
 
