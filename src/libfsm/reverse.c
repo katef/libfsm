@@ -38,6 +38,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *))
 {
 	struct fsm *new;
+	struct fsm_state *end;
 
 	assert(fsm != NULL);
 
@@ -45,6 +46,12 @@ fsm_reverse_opaque(struct fsm *fsm,
 	if (new == NULL) {
 		return 0;
 	}
+
+	/*
+	 * The new end state is the previous start state. Because there is (at most)
+	 * one start state, the new FSM will have at most one end state.
+	 */
+	end = NULL;
 
 	/*
 	 * Create states corresponding to the origional FSM's states.
@@ -56,47 +63,42 @@ fsm_reverse_opaque(struct fsm *fsm,
 		struct fsm_state *s;
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
-			if (!fsm_addstate(new)) {
+			struct fsm_state *p;
+
+			p = fsm_addstate(new);
+			if (p == NULL) {
 				fsm_free(new);
 				return 0;
+			}
+
+			if (s == fsm->start) {
+				end = p;
+				fsm_setend(new, end, 1);
 			}
 		}
 	}
 
 	/*
-	 * The new end state is the previous start state. Because there is (at most)
-	 * one start state, the new FSM will have at most one end state.
+	 * Carry through set of opaque values to the new end state.
+	 * This isn't anything to do with the reversing; it's meaningful
+	 * only to the caller.
 	 */
-	{
-		struct fsm_state *end;
+	/* XXX: possibly have callback in fsm struct, instead. like the colour hooks */
+	if (end != NULL && carryopaque != NULL) {
+		if (fsm_isend(fsm, fsm->start)) {
+			struct set *set;
 
-		end = equivalent(new, fsm, fsm->start);
-		if (end != NULL) {
-			fsm_setend(new, end, 1);
-		}
+			set = NULL;
 
-		/*
-		 * Carry through set of opaque values to the new end state.
-		 * This isn't anything to do with the reversing; it's meaningful
-		 * only to the caller.
-		 */
-		/* XXX: possibly have callback in fsm struct, instead. like the colour hooks */
-		if (end != NULL && carryopaque != NULL) {
-			if (fsm_isend(fsm, fsm->start)) {
-				struct set *set;
-
-				set = NULL;
-
-				if (!set_add(&set, new->start)) {
-					set_free(set);
-					fsm_free(new);
-					return 0;
-				}
-
-				carryopaque(set, new, end);
-
+			if (!set_add(&set, new->start)) {
 				set_free(set);
+				fsm_free(new);
+				return 0;
 			}
+
+			carryopaque(set, new, end);
+
+			set_free(set);
 		}
 	}
 
