@@ -75,6 +75,11 @@ fsm_reverse_opaque(struct fsm *fsm,
 				end = p;
 				fsm_setend(new, end, 1);
 			}
+
+			if (fsm->endcount == 1 && fsm_isend(fsm, p)) {
+				assert(new->start == NULL);
+				new->start = p;
+			}
 		}
 	}
 
@@ -149,15 +154,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 
 		switch (fsm->endcount) {
 		case 1:
-			for (s = fsm->sl; s != NULL; s = s->next) {
-				if (fsm_isend(fsm, s)) {
-					break;
-				}
-			}
-
-			assert(s != NULL);
-
-			new->start = equivalent(new, fsm, s);
+			/* already handled above */
 			assert(new->start != NULL);
 			break;
 
