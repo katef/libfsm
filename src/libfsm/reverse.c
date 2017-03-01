@@ -144,11 +144,8 @@ fsm_reverse_opaque(struct fsm *fsm,
 	 */
 	{
 		struct fsm_state *s;
-		unsigned n;
 
-		n = fsm_count(fsm, fsm_isend);
-
-		switch (n) {
+		switch (fsm->endcount) {
 		case 1:
 			for (s = fsm->sl; s != NULL; s = s->next) {
 				if (fsm_isend(fsm, s)) {
@@ -175,7 +172,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 				for (s = fsm->sl; s != NULL; s = s->next) {
 					struct fsm_state *state;
 
-					if (n > 0 && !fsm_isend(fsm, s)) {
+					if (fsm->endcount > 0 && !fsm_isend(fsm, s)) {
 						continue;
 					}
 
@@ -221,7 +218,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 			for (s = fsm->sl; s != NULL; s = s->next) {
 				struct fsm_state *state;
 
-				if (n > 0 && !fsm_isend(fsm, s)) {
+				if (fsm->endcount > 0 && !fsm_isend(fsm, s)) {
 					continue;
 				}
 

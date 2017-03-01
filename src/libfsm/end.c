@@ -17,7 +17,23 @@ fsm_setend(struct fsm *fsm, struct fsm_state *state, int end)
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	state->end = !!end;
+	if (state->end == !!end) {
+		return;
+	}
+
+	switch (end) {
+	case 0:
+		assert(fsm->endcount > 0);
+		fsm->endcount--;
+		state->end = 0;
+		break;
+
+	case 1:
+		assert(fsm->endcount < FSM_ENDCOUNT_MAX);
+		fsm->endcount++;
+		state->end = 1;
+		break;
+	}
 }
 
 void
