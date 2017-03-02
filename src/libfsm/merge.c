@@ -17,6 +17,8 @@ fsm_merge(struct fsm *a, struct fsm *b)
 	*a->tail = b->sl;
 	a->tail  = b->tail;
 
+	a->endcount += b->endcount;
+
 	b->sl   = NULL;
 	b->tail = NULL;
 	fsm_free(b);
