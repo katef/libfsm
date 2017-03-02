@@ -449,6 +449,24 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 #line 450 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: add-state */
+		/* BEGINNING OF ACTION: free */
+		{
+#line 247 "src/fsm/parser.act"
+
+		free((ZIa));
+	
+#line 459 "src/fsm/parser.c"
+		}
+		/* END OF ACTION: free */
+		/* BEGINNING OF ACTION: free */
+		{
+#line 247 "src/fsm/parser.act"
+
+		free((ZIb));
+	
+#line 468 "src/fsm/parser.c"
+		}
+		/* END OF ACTION: free */
 		/* BEGINNING OF INLINE: 44 */
 		{
 			switch (CURRENT_TERMINAL) {
@@ -464,7 +482,7 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 468 "src/fsm/parser.c"
+#line 486 "src/fsm/parser.c"
 					}
 					/* END OF ACTION: add-edge-any */
 				}
@@ -487,7 +505,7 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 491 "src/fsm/parser.c"
+#line 509 "src/fsm/parser.c"
 					}
 					/* END OF ACTION: add-edge-literal */
 				}
@@ -503,7 +521,7 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 507 "src/fsm/parser.c"
+#line 525 "src/fsm/parser.c"
 					}
 					/* END OF ACTION: add-edge-epsilon */
 				}
@@ -518,7 +536,7 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 
 		err_expected(lex_state, "transition");
 	
-#line 522 "src/fsm/parser.c"
+#line 540 "src/fsm/parser.c"
 				}
 				/* END OF ACTION: err-expected-trans */
 			}
@@ -566,7 +584,7 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 
 		err_expected(lex_state, "'start:'");
 	
-#line 570 "src/fsm/parser.c"
+#line 588 "src/fsm/parser.c"
 					}
 					/* END OF ACTION: err-expected-start */
 				}
@@ -588,7 +606,7 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 592 "src/fsm/parser.c"
+#line 610 "src/fsm/parser.c"
 						}
 						/* END OF EXTRACT: IDENT */
 						break;
@@ -649,7 +667,7 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 			act_state->sl = new;
 		}
 	
-#line 653 "src/fsm/parser.c"
+#line 671 "src/fsm/parser.c"
 			}
 			/* END OF ACTION: add-state */
 			/* BEGINNING OF ACTION: mark-start */
@@ -660,9 +678,18 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 
 		fsm_setstart(fsm, (ZIs));
 	
-#line 664 "src/fsm/parser.c"
+#line 682 "src/fsm/parser.c"
 			}
 			/* END OF ACTION: mark-start */
+			/* BEGINNING OF ACTION: free */
+			{
+#line 247 "src/fsm/parser.act"
+
+		free((ZIn));
+	
+#line 691 "src/fsm/parser.c"
+			}
+			/* END OF ACTION: free */
 		}
 		break;
 	case (ERROR_TERMINAL):
@@ -702,7 +729,7 @@ p_xend(fsm fsm, lex_state lex_state, act_state act_state)
 
 		err_expected(lex_state, "'end:'");
 	
-#line 706 "src/fsm/parser.c"
+#line 733 "src/fsm/parser.c"
 					}
 					/* END OF ACTION: err-expected-end */
 				}
@@ -752,7 +779,7 @@ ZL1:;
 
 		err_expected(lex_state, "';'");
 	
-#line 756 "src/fsm/parser.c"
+#line 783 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: err-expected-sep */
 	}
@@ -794,7 +821,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 			free(p);
 		}
 	
-#line 798 "src/fsm/parser.c"
+#line 825 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: free-statelist */
 	}
@@ -808,7 +835,7 @@ ZL1:;
 		err(lex_state, "Syntax error");
 		exit(EXIT_FAILURE);
 	
-#line 812 "src/fsm/parser.c"
+#line 839 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: err-syntax */
 	}
@@ -848,7 +875,7 @@ ZL2_xend_C_Cend_Hids:;
 
 		err_expected(lex_state, "','");
 	
-#line 852 "src/fsm/parser.c"
+#line 879 "src/fsm/parser.c"
 							}
 							/* END OF ACTION: err-expected-comma */
 						}
@@ -900,7 +927,7 @@ p_xend_C_Cend_Hid(fsm fsm, lex_state lex_state, act_state act_state)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 904 "src/fsm/parser.c"
+#line 931 "src/fsm/parser.c"
 					}
 					/* END OF EXTRACT: IDENT */
 					break;
@@ -956,7 +983,7 @@ p_xend_C_Cend_Hid(fsm fsm, lex_state lex_state, act_state act_state)
 			act_state->sl = new;
 		}
 	
-#line 960 "src/fsm/parser.c"
+#line 987 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: add-state */
 		/* BEGINNING OF ACTION: mark-end */
@@ -967,9 +994,18 @@ p_xend_C_Cend_Hid(fsm fsm, lex_state lex_state, act_state act_state)
 
 		fsm_setend(fsm, (ZIs), 1);
 	
-#line 971 "src/fsm/parser.c"
+#line 998 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: mark-end */
+		/* BEGINNING OF ACTION: free */
+		{
+#line 247 "src/fsm/parser.act"
+
+		free((ZIn));
+	
+#line 1007 "src/fsm/parser.c"
+		}
+		/* END OF ACTION: free */
 	}
 	return;
 ZL1:;
@@ -1029,6 +1065,6 @@ ZL1:;
 		return new;
 	}
 
-#line 1033 "src/fsm/parser.c"
+#line 1069 "src/fsm/parser.c"
 
 /* END OF FILE */

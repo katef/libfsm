@@ -33,7 +33,7 @@
 	<mark-start>:       (:state)  -> ();
 	<mark-end>:         (:state)  -> ();
 
-	!<free>:            (:string) -> ();
+	<free>:             (:string) -> ();
 	<free-statelist>;
 
 	<add-edge-literal>: (:state, :state, :char) -> ();
@@ -73,6 +73,9 @@
 
 			x = <add-state>(a);
 			y = <add-state>(b);
+
+			<free>(a);
+			<free>(b);
 
 			{
 				c = label;
@@ -117,6 +120,8 @@
 
 		s = <add-state>(n);
 		<mark-start>(s);
+
+		<free>(n);
 	||
 		$;
 	};
@@ -128,6 +133,8 @@
 
 			s = <add-state>(n);
 			<mark-end>(s);
+
+			<free>(n);
 		};
 
 		end-ids = {
