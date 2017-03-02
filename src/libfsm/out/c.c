@@ -73,7 +73,7 @@ escputc(int c, FILE *f)
 	 */
 
 	if (!isprint((unsigned char) c) || c == '/') {
-		return fprintf(f, "\\%03o", (unsigned char) c);
+		return fprintf(f, "\\x%02x", (unsigned char) c);
 	}
 
 	return fprintf(f, "%c", c);
