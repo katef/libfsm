@@ -17,6 +17,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 {
 	struct fsm *new;
 	struct fsm_state *end;
+	struct set *endset;
 
 	assert(fsm != NULL);
 
@@ -30,6 +31,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 	 * one start state, the new FSM will have at most one end state.
 	 */
 	end = NULL;
+	endset = NULL;
 
 	/*
 	 * Create states corresponding to the origional FSM's states.
@@ -56,9 +58,17 @@ fsm_reverse_opaque(struct fsm *fsm,
 				fsm_setend(new, end, 1);
 			}
 
-			if (fsm->endcount == 1 && fsm_isend(fsm, s)) {
-				assert(new->start == NULL);
-				new->start = p;
+			if (fsm_isend(fsm, s)) {
+				if (!set_add(&endset, s)) {
+					set_free(endset);
+					fsm_free(new);
+					return 0;
+				}
+
+				if (fsm->endcount == 1) {
+					assert(new->start == NULL);
+					new->start = p;
+				}
 			}
 		}
 	}
@@ -69,22 +79,9 @@ fsm_reverse_opaque(struct fsm *fsm,
 	 * only to the caller.
 	 */
 	/* XXX: possibly have callback in fsm struct, instead. like the colour hooks */
-	if (end != NULL && carryopaque != NULL) {
-		if (fsm_isend(fsm, fsm->start)) {
-			struct set *set;
-
-			set = NULL;
-
-			if (!set_add(&set, new->start)) {
-				set_free(set);
-				fsm_free(new);
-				return 0;
-			}
-
-			carryopaque(set, new, end);
-
-			set_free(set);
-		}
+	if (endset != NULL && carryopaque != NULL) {
+		carryopaque(endset, new, end);
+		set_free(endset);
 	}
 
 	/* Create reversed edges */
