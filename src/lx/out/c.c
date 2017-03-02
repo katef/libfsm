@@ -1178,27 +1178,6 @@ lx_out_c(const struct ast *ast, FILE *f)
 			fprintf(f, "\n");
 		}
 
-		if (~api_exclude & API_BUF) {
-			switch (fsm_io) {
-			case FSM_IO_GETC:
-				fprintf(f, "\tif (lx->lgetc == NULL && lx->free != NULL) {\n");
-				break;
-
-			case FSM_IO_STR:
-				fprintf(f, "\tif (lx->p == NULL && lx->free != NULL) {\n");
-				break;
-
-			case FSM_IO_PAIR:
-				fprintf(f, "\tif (lx->p == NULL && lx->free != NULL) {\n");
-				break;
-			}
-
-			fprintf(f, "\t\tlx->free(lx);\n");
-
-			fprintf(f, "\t}\n");
-			fprintf(f, "\n");
-		}
-
 		fprintf(f, "\treturn t;\n");
 
 		fprintf(f, "}\n");
