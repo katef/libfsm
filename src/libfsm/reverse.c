@@ -76,7 +76,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 				fsm_setend(new, end, 1);
 			}
 
-			if (fsm->endcount == 1 && fsm_isend(fsm, p)) {
+			if (fsm->endcount == 1 && fsm_isend(fsm, s)) {
 				assert(new->start == NULL);
 				new->start = p;
 			}
