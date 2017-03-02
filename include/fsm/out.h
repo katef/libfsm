@@ -40,6 +40,11 @@ struct fsm_outoptions {
 	 * where possible. */
 	unsigned int comments:1;
 
+	/* boolean: true indicates to use compiler-specific case ranges in generated
+	 * code, when possible.
+	 */
+	unsigned int case_ranges:1;
+
 	/* for generated code, what kind of I/O API to generate */
 	enum fsm_io io;
 
