@@ -305,10 +305,6 @@ lx_glob_next(struct lx_glob_lx *lx)
 		}
 	}
 
-	if (lx->lgetc == NULL && lx->free != NULL) {
-		lx->free(lx);
-	}
-
 	return t;
 }
 

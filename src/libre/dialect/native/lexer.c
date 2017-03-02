@@ -744,10 +744,6 @@ lx_native_next(struct lx_native_lx *lx)
 		}
 	}
 
-	if (lx->lgetc == NULL && lx->free != NULL) {
-		lx->free(lx);
-	}
-
 	return t;
 }
 

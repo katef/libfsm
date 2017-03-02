@@ -305,10 +305,6 @@ lx_like_next(struct lx_like_lx *lx)
 		}
 	}
 
-	if (lx->lgetc == NULL && lx->free != NULL) {
-		lx->free(lx);
-	}
-
 	return t;
 }
 

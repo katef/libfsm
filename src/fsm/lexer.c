@@ -1348,10 +1348,6 @@ lx_next(struct lx *lx)
 		}
 	}
 
-	if (lx->lgetc == NULL && lx->free != NULL) {
-		lx->free(lx);
-	}
-
 	return t;
 }
 
