@@ -11,28 +11,6 @@
 
 #include "internal.h"
 
-/* TODO: centralise */
-static struct fsm_state *
-equivalent(const struct fsm *new, const struct fsm *fsm, const struct fsm_state *state)
-{
-	struct fsm_state *p;
-	struct fsm_state *q;
-
-	assert(new != NULL);
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	for (p = fsm->sl, q = new->sl; p != NULL; p = p->next, q = q->next) {
-		assert(q != NULL);
-
-		if (p == state) {
-			return q;
-		}
-	}
-
-	return NULL;
-}
-
 int
 fsm_reverse_opaque(struct fsm *fsm,
 	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *))
@@ -70,6 +48,8 @@ fsm_reverse_opaque(struct fsm *fsm,
 				fsm_free(new);
 				return 0;
 			}
+
+			s->equiv = p;
 
 			if (s == fsm->start) {
 				end = p;
@@ -117,7 +97,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 			struct set_iter it;
 			struct fsm_edge *e;
 
-			to = equivalent(new, fsm, s);
+			to = s->equiv;
 
 			assert(to != NULL);
 
@@ -130,7 +110,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 
 					assert(se != NULL);
 
-					from = equivalent(new, fsm, se);
+					from = se->equiv;
 
 					assert(from != NULL);
 
@@ -175,7 +155,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 						continue;
 					}
 
-					state = equivalent(new, fsm, s);
+					state = s->equiv;
 					assert(state != NULL);
 
 					if (!fsm_hasincoming(new, state)) {
@@ -204,7 +184,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 			 * disabled by the fsm->tidy flag.
 			 */
 			if (s != NULL) {
-				new->start = equivalent(new, fsm, s);
+				new->start = s->equiv;
 				assert(new->start != NULL);
 			} else {
 				new->start = fsm_addstate(new);
@@ -221,7 +201,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 					continue;
 				}
 
-				state = equivalent(new, fsm, s);
+				state = s->equiv;
 				assert(state != NULL);
 
 				if (state == new->start) {

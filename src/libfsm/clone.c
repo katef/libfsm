@@ -10,30 +10,6 @@
 
 #include "internal.h"
 
-/* TODO: centralise? or optimise by folding into the loops below? */
-static struct fsm_state *
-equivalent(const struct fsm *a, const struct fsm *b,
-	const struct fsm_state *state)
-{
-	struct fsm_state *p;
-	struct fsm_state *q;
-
-	assert(a != NULL);
-	assert(b != NULL);
-
-	if (state == NULL) {
-		return NULL;
-	}
-
-	for (p = a->sl, q = b->sl; p != NULL && q != NULL; p = p->next, q = q->next) {
-		if (p == state) {
-			return q;
-		}
-	}
-
-	return NULL;
-}
-
 struct fsm *
 fsm_clone(const struct fsm *fsm)
 {
@@ -62,6 +38,8 @@ fsm_clone(const struct fsm *fsm)
 				fsm_free(new);
 				return NULL;
 			}
+
+			s->equiv = q;
 		}
 	}
 
@@ -73,7 +51,7 @@ fsm_clone(const struct fsm *fsm)
 			struct fsm_edge *e;
 			struct set_iter it;
 
-			equiv = equivalent(fsm, new, s);
+			equiv = s->equiv;
 			assert(equiv != NULL);
 
 			if (*fsm->tail == s) {
@@ -91,7 +69,7 @@ fsm_clone(const struct fsm *fsm)
 					struct fsm_state *newto;
 
 					newfrom = equiv;
-					newto   = equivalent(fsm, new, to);
+					newto   = to->equiv;
 
 					if (!fsm_addedge(newfrom, newto, e->symbol)) {
 						fsm_free(new);
@@ -102,7 +80,7 @@ fsm_clone(const struct fsm *fsm)
 		}
 	}
 
-	new->start = equivalent(fsm, new, fsm->start);
+	new->start = fsm->start->equiv;
 
 	new->tidy = fsm->tidy;
 

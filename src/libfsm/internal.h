@@ -31,6 +31,10 @@ struct fsm_state {
 
 	void *opaque;
 
+	/* temporary relation between one FSM and another;
+	 * meaningful within one particular transformation only */
+	struct fsm_state *equiv;
+
 #ifdef DEBUG_TODFA
 	struct set *nfasl;
 #endif
