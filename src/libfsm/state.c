@@ -87,7 +87,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 
 			next = (*p)->next;
 			if (*fsm->tail == *p) {
-				*fsm->tail = next;
+				fsm->tail = p;
 			}
 			free(*p);
 			*p = next;
