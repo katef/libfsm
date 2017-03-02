@@ -195,10 +195,32 @@ singlecase(FILE *f, const struct fsm *fsm,
 
 			fprintf(f, "\t\t\tcase '");
 			escputc(e->symbol, f);
+
+			if (options->case_ranges) {
+				const struct fsm_edge *ne;
+				enum fsm_edge_type p, q;
+				struct set_iter ic, ir;
+				
+				ir = ic = it;
+				p = q = e->symbol;
+				ne = set_next(&ic);
+				while (ne && ne->symbol - q == 1) {
+					q = ne->symbol;
+					ir = ic;
+					ne = set_next(&ic);
+				}
+
+				if (q - p) {
+					fprintf(f, "' ... '");
+					escputc(q, f);
+					it = ir;
+				}
+			}
+
 			fprintf(f, "':");
 
 			/* non-unique states fall through */
-			if (e->symbol <= UCHAR_MAX - 1) {
+			if (!options->case_ranges && e->symbol <= UCHAR_MAX - 1) {
 				const struct fsm_edge *ne;
 				struct set_iter jt;
 
