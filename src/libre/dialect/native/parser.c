@@ -2212,7 +2212,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 1077 "src/libre/parser.act"
+#line 1076 "src/libre/parser.act"
 
 
 	static int
@@ -2344,9 +2344,6 @@ ZL1:;
 		lx->clear = CAT(LX_PREFIX, _dynclear);
 		lx->free  = CAT(LX_PREFIX, _dynfree);
 
-	/* XXX */
-	lx->free = NULL;
-
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
 		act_state->g = g;
@@ -2357,6 +2354,8 @@ ZL1:;
 
 		ADVANCE_LEXER;
 		entry(new, flags, lex_state, act_state, err);
+
+		lx->free(lx);
 
 		if (err->e != RE_ESUCCESS) {
 			/* TODO: free internals allocated during parsing (are there any?) */
@@ -2488,6 +2487,6 @@ ZL1:;
 	}
 #endif
 
-#line 2492 "src/libre/dialect/native/parser.c"
+#line 2491 "src/libre/dialect/native/parser.c"
 
 /* END OF FILE */

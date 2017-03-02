@@ -3191,7 +3191,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 866 "src/lx/parser.act"
+#line 868 "src/lx/parser.act"
 
 
 	struct ast *lx_parse(FILE *f) {
@@ -3234,11 +3234,13 @@ ZL1:;
 		ADVANCE_LEXER;	/* XXX: what if the first token is unrecognised? */
 		p_lx(lex_state, act_state, &ast);
 
+		lx->free(lx);
+
 		assert(ast != NULL);
 
 		return ast;
 	}
 
-#line 3243 "src/lx/parser.c"
+#line 3245 "src/lx/parser.c"
 
 /* END OF FILE */

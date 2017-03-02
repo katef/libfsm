@@ -979,7 +979,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 358 "src/fsm/parser.act"
+#line 360 "src/fsm/parser.act"
 
 
 	struct fsm *fsm_parse(FILE *f) {
@@ -1024,9 +1024,11 @@ ZL1:;
 		ADVANCE_LEXER; /* XXX: what if the first token is unrecognised? */
 		p_fsm(new, lex_state, act_state);
 
+		lx->free(lx);
+
 		return new;
 	}
 
-#line 1031 "src/fsm/parser.c"
+#line 1033 "src/fsm/parser.c"
 
 /* END OF FILE */
