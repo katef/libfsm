@@ -38,9 +38,6 @@ fsm_findmode(const struct fsm_state *state, unsigned int *freq)
 			struct fsm_edge *c;
 			unsigned int curr;
 
-			assert(s != NULL);
-			assert(!set_hasnext(&it));
-
 			curr = 0;
 
 			/* Count the remaining edes which have the same target.
