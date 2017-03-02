@@ -17,6 +17,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 {
 	struct fsm *new;
 	struct fsm_state *end;
+	struct set *endset;
 
 	assert(fsm != NULL);
 
@@ -30,6 +31,15 @@ fsm_reverse_opaque(struct fsm *fsm,
 	 * one start state, the new FSM will have at most one end state.
 	 */
 	end = NULL;
+
+	/*
+	 * The set of the previous end states.
+	 *
+	 * These carry through their opaque values to the new end state.
+	 * This isn't anything to do with the reversing; it's meaningful
+	 * only to the caller.
+	 */
+	endset = NULL;
 
 	/*
 	 * Create states corresponding to the origional FSM's states.
@@ -56,35 +66,24 @@ fsm_reverse_opaque(struct fsm *fsm,
 				fsm_setend(new, end, 1);
 			}
 
-			if (fsm->endcount == 1 && fsm_isend(fsm, s)) {
-				assert(new->start == NULL);
-				new->start = p;
+			if (fsm_isend(fsm, s)) {
+				if (!set_add(&endset, s)) {
+					set_free(endset);
+					fsm_free(new);
+					return 0;
+				}
+
+				if (fsm->endcount == 1) {
+					assert(new->start == NULL);
+					new->start = p;
+				}
 			}
 		}
 	}
 
-	/*
-	 * Carry through set of opaque values to the new end state.
-	 * This isn't anything to do with the reversing; it's meaningful
-	 * only to the caller.
-	 */
 	/* XXX: possibly have callback in fsm struct, instead. like the colour hooks */
 	if (end != NULL && carryopaque != NULL) {
-		if (fsm_isend(fsm, fsm->start)) {
-			struct set *set;
-
-			set = NULL;
-
-			if (!set_add(&set, new->start)) {
-				set_free(set);
-				fsm_free(new);
-				return 0;
-			}
-
-			carryopaque(set, new, end);
-
-			set_free(set);
-		}
+		carryopaque(endset, new, end);
 	}
 
 	/* Create reversed edges */
@@ -116,6 +115,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 
 					edge = fsm_addedge(from, to, e->symbol);
 					if (edge == NULL) {
+						set_free(endset);
 						fsm_free(new);
 						return 0;
 					}
@@ -131,6 +131,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 	 */
 	{
 		struct fsm_state *s;
+		struct set_iter it;
 
 		switch (fsm->endcount) {
 		case 1:
@@ -144,26 +145,33 @@ fsm_reverse_opaque(struct fsm *fsm,
 			 * required to be able to minimise automata with no end states.
 			 */
 
-		default:
-			if (!fsm->tidy) {
-				s = NULL;
-			} else {
-				for (s = fsm->sl; s != NULL; s = s->next) {
-					struct fsm_state *state;
+			new->start = fsm_addstate(new);
+			if (new->start == NULL) {
+				set_free(endset);
+				fsm_free(new);
+				return 0;
+			}
 
-					if (fsm->endcount > 0 && !fsm_isend(fsm, s)) {
-						continue;
-					}
+			for (s = fsm->sl; s != NULL; s = s->next) {
+				struct fsm_state *state;
 
-					state = s->equiv;
-					assert(state != NULL);
+				state = s->equiv;
+				assert(state != NULL);
 
-					if (!fsm_hasincoming(new, state)) {
-						break;
-					}
+				if (state == new->start) {
+					continue;
+				}
+
+				if (!fsm_addedge_epsilon(new, new->start, state)) {
+					set_free(endset);
+					fsm_free(new);
+					return 0;
 				}
 			}
 
+			break;
+
+		default:
 			/*
 			 * The typical case here is to create a new start state, and to
 			 * link it to end states by epsilon transitions.
@@ -183,23 +191,31 @@ fsm_reverse_opaque(struct fsm *fsm,
 			 * This optimisation can be expensive to run, so it's optionally
 			 * disabled by the fsm->tidy flag.
 			 */
+
+			if (!fsm->tidy) {
+				s = NULL;
+			} else {
+				for (s = set_first(endset, &it); s != NULL; s = set_next(&it)) {
+					if (!fsm_hasincoming(new, s)) {
+						break;
+					}
+				}
+			}
+
 			if (s != NULL) {
 				new->start = s->equiv;
 				assert(new->start != NULL);
 			} else {
 				new->start = fsm_addstate(new);
 				if (new->start == NULL) {
+					set_free(endset);
 					fsm_free(new);
 					return 0;
 				}
 			}
 
-			for (s = fsm->sl; s != NULL; s = s->next) {
+			for (s = set_first(endset, &it); s != NULL; s = set_next(&it)) {
 				struct fsm_state *state;
-
-				if (fsm->endcount > 0 && !fsm_isend(fsm, s)) {
-					continue;
-				}
 
 				state = s->equiv;
 				assert(state != NULL);
@@ -209,13 +225,17 @@ fsm_reverse_opaque(struct fsm *fsm,
 				}
 
 				if (!fsm_addedge_epsilon(new, new->start, state)) {
+					set_free(endset);
 					fsm_free(new);
 					return 0;
 				}
 			}
+
 			break;
 		}
 	}
+
+	set_free(endset);
 
 	fsm_move(fsm, new);
 
