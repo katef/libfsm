@@ -79,11 +79,21 @@ findany(const struct fsm_state *state)
 	assert(state != NULL);
 
 	e = set_first(state->edges, &it);
-	if (e->symbol != 0) {
+	if (e == NULL) {
+		return NULL;
+	}
+
+	/* if the first edge is not the first character,
+	 * then we can't possibly have an "any" transition */
+	if (e->symbol != '\0') {
 		return NULL;
 	}
 
 	f = set_first(e->sl, &it);
+	if (f == NULL) {
+		return NULL;
+	}
+
 	esym = e->symbol;
 
 	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
