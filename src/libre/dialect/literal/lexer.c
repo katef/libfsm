@@ -291,10 +291,6 @@ lx_literal_next(struct lx_literal_lx *lx)
 		}
 	}
 
-	if (lx->lgetc == NULL && lx->free != NULL) {
-		lx->free(lx);
-	}
-
 	return t;
 }
 
