@@ -352,6 +352,8 @@
 		ADVANCE_LEXER; /* XXX: what if the first token is unrecognised? */
 		p_fsm(new, lex_state, act_state);
 
+		lx->free(lx);
+
 		return new;
 	}
 

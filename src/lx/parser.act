@@ -858,6 +858,8 @@
 		ADVANCE_LEXER;	/* XXX: what if the first token is unrecognised? */
 		p_lx(lex_state, act_state, &ast);
 
+		lx->free(lx);
+
 		assert(ast != NULL);
 
 		return ast;
