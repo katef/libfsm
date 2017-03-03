@@ -50,9 +50,6 @@ int
 set_equal(const struct set *a, const struct set *b);
 
 int
-set_merge(struct set **dst, struct set *src);
-
-int
 set_empty(const struct set *set);
 
 void *

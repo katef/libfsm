@@ -315,24 +315,6 @@ set_equal(const struct set *a, const struct set *b)
 }
 
 int
-set_merge(struct set **dst, struct set *src)
-{
-	size_t i;
-
-	if (set_empty(src)) {
-		return 0;
-	}
-
-	for (i = 0; i < src->i; i++) {
-		if (!set_add(dst, src->a[i])) {
-			return -1;
-		}
-	}
-
-	return 0;
-}
-
-int
 set_empty(const struct set *set)
 {
 	return set == NULL || set->i == 0;
