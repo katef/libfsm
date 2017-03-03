@@ -73,9 +73,10 @@ fsm_move(struct fsm *dst, struct fsm *src)
 
 	free_contents(dst);
 
-	dst->sl    = src->sl;
-	dst->tail  = src->tail;
-	dst->start = src->start;
+	dst->sl       = src->sl;
+	dst->tail     = src->tail;
+	dst->start    = src->start;
+	dst->endcount = src->endcount;
 
 	free(src);
 }
