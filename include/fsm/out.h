@@ -8,6 +8,7 @@
 struct fsm;
 
 enum fsm_out {
+	FSM_OUT_API,
 	FSM_OUT_C,
 	FSM_OUT_CSV,
 	FSM_OUT_DOT,
@@ -57,6 +58,7 @@ struct fsm_outoptions {
  * Output an FSM to the given file stream. The output is written in the format
  * specified. The available formats are:
  *
+ *  FSM_OUT_API  - C code which calls the fsm(3) API
  *  FSM_OUT_C    - ISO C90 code
  *  FSM_OUT_CSV  - A comma-separated state transition matrix
  *  FSM_OUT_DOT  - Graphviz Dot format, intended for rendering graphically

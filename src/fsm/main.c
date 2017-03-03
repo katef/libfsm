@@ -72,6 +72,7 @@ language(const char *name)
 		const char *name;
 		enum fsm_out language;
 	} a[] = {
+		{ "api",  FSM_OUT_API  },
 		{ "c",    FSM_OUT_C    },
 		{ "csv",  FSM_OUT_CSV  },
 		{ "dot",  FSM_OUT_DOT  },

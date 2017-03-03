@@ -1,5 +1,6 @@
 .include "../../../share/mk/top.mk"
 
+SRC += src/libfsm/out/api.c
 SRC += src/libfsm/out/c.c
 SRC += src/libfsm/out/csv.c
 SRC += src/libfsm/out/dot.c

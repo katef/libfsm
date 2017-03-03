@@ -18,6 +18,10 @@ void
 fsm_out_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl);
 
 void
+fsm_out_api(const struct fsm *fsm, FILE *f,
+	const struct fsm_outoptions *options);
+
+void
 fsm_out_c(const struct fsm *fsm, FILE *f,
 	const struct fsm_outoptions *options);
 
