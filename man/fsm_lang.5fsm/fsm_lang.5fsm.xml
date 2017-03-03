@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!DOCTYPE refentry SYSTEM "minidocbook.dtd" [
+		<!ENTITY api.lit  "<literal>api</literal>">
 		<!ENTITY c.lit    "<literal>c</literal>">
 		<!ENTITY csv.lit  "<literal>csv</literal>">
 		<!ENTITY dot.lit  "<literal>dot</literal>">
@@ -42,6 +43,12 @@ TODO: blurb
 			</thead>
 
 			<tbody>
+				<tr>
+					<td>&api.lit;</td>
+					<td>&c.ext;</td>
+<!-- TODO: ISO C90, or &ansi; -->
+					<td>Calls libfsm API TODO</td>
+				</tr>
 				<tr>
 					<td>&c.lit;</td>
 					<td>&c.ext;</td>
