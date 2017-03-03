@@ -48,6 +48,8 @@ struct fsm {
 	struct fsm_state **tail; /* tail of .sl */
 	struct fsm_state *start;
 
+	unsigned int may_have_epsilons:1;
+
 	unsigned long endcount;
 
 	const struct fsm_options *opt;

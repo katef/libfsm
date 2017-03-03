@@ -51,7 +51,7 @@ fsm_addedge_epsilon(struct fsm *fsm,
 	assert(from != NULL);
 	assert(to != NULL);
 
-	(void) fsm;
+	fsm->may_have_epsilons = 1;
 
 	return fsm_addedge(from, to, FSM_EDGE_EPSILON);
 }

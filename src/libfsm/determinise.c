@@ -535,6 +535,8 @@ determinise(struct fsm *nfa,
 	/* TODO: can assert a whole bunch of things about the dfa, here */
 	assert(fsm_all(dfa, fsm_isdfa));
 
+	dfa->may_have_epsilons = 0;
+
 	return dfa;
 
 error:

@@ -25,6 +25,8 @@ fsm_merge(struct fsm *a, struct fsm *b)
 
 	a->endcount += b->endcount;
 
+	a->may_have_epsilons |= b->may_have_epsilons;
+
 	b->sl   = NULL;
 	b->tail = NULL;
 	fsm_free(b);

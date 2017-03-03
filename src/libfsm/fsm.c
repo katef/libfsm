@@ -53,7 +53,8 @@ fsm_new(const struct fsm_options *opt)
 	new->tail  = &new->sl;
 	new->start = NULL;
 
-	new->endcount = 0;
+	new->endcount          = 0;
+	new->may_have_epsilons = 0;
 
 	new->opt = opt;
 
@@ -87,10 +88,12 @@ fsm_move(struct fsm *dst, struct fsm *src)
 
 	free_contents(dst);
 
-	dst->sl       = src->sl;
-	dst->tail     = src->tail;
-	dst->start    = src->start;
-	dst->endcount = src->endcount;
+	dst->sl    = src->sl;
+	dst->tail  = src->tail;
+	dst->start = src->start;
+
+	dst->endcount     = src->endcount;
+	dst->has_epsilons = src->may_have_epsilons;
 
 	free(src);
 }
