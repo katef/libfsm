@@ -61,7 +61,7 @@ fsm_complete(struct fsm *fsm,
 		}
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (!fsm_hasedge(s, i)) {
+			if (fsm_hasedge(s, i)) {
 				continue;
 			}
 
