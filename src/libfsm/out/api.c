@@ -8,6 +8,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+#include <fsm/walk.h>
 
 #include "libfsm/internal.h"
 
@@ -71,23 +72,43 @@ escputc(int c, FILE *f)
 static const struct fsm_state *
 findany(const struct fsm_state *state)
 {
-	struct fsm_state *e, *f;
+	struct fsm_state *f, *s;
+	struct fsm_edge *e;
 	struct set_iter it;
-	int i;
+	int esym;
 
 	assert(state != NULL);
 
-	f = set_first(state->edges[0].sl, &it);
+	e = set_first(state->edges, &it);
+	if (e == NULL) {
+		return NULL;
+	}
 
-	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (set_empty(state->edges[i].sl)) {
+	/* if the first edge is not the first character,
+	 * then we can't possibly have an "any" transition */
+	if (e->symbol != '\0') {
+		return NULL;
+	}
+
+	f = set_first(e->sl, &it);
+	if (f == NULL) {
+		return NULL;
+	}
+
+	esym = e->symbol;
+
+	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
+		if (e->symbol > UCHAR_MAX) {
+			break;
+		}
+
+		if (e->symbol != esym || set_empty(e->sl)) {
 			return NULL;
 		}
 
-		for (e = set_first(state->edges[i].sl, &it); e != NULL; e = set_next(&it)) {
-			if (e != f) {
-				return NULL;
-			}
+		s = set_only(e->sl);
+		if (f != s) {
+			return NULL;
 		}
 	}
 
@@ -100,10 +121,8 @@ void
 fsm_out_api(const struct fsm *fsm, FILE *f,
 	const struct fsm_outoptions *options)
 {
-	struct fsm_state *s, *e, *start;
-	struct set_iter it;
+	struct fsm_state *s, *start;
 	unsigned n;
-	int end;
 
 	assert(fsm != NULL);
 	assert(f != NULL);
@@ -157,7 +176,8 @@ fsm_out_api(const struct fsm *fsm, FILE *f,
 	fprintf(f, "\n");
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		int i;
+		struct fsm_edge *e;
+		struct set_iter it;
 
 		{
 			const struct fsm_state *a;
@@ -170,20 +190,23 @@ fsm_out_api(const struct fsm *fsm, FILE *f,
 			}
 		}
 
-		for (i = 0; i <= FSM_EDGE_MAX; i++) {
-			for (e = set_first(s->edges[i].sl, &it); e != NULL; e = set_next(&it)) {
-				assert(e != NULL);
+		for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
+			struct fsm_state *st;
+			struct set_iter jt;
 
-				switch (i) {
+			for (st = set_first(e->sl, &jt); st != NULL; st = set_next(&jt)) {
+				assert(st != NULL);
+
+				switch (e->symbol) {
 				case FSM_EDGE_EPSILON:
 					fprintf(f, "\tif (!fsm_addedge_epsilon(fsm, s[%u], s[%u])) { goto error; {\n",
-						indexof(fsm, s), indexof(fsm, e));
+						indexof(fsm, s), indexof(fsm, st));
 					break;
 
 				default:
 					fprintf(f, "\tif (!fsm_addedge_literal(fsm, s[%u], s[%u], '",
-						indexof(fsm, s), indexof(fsm, e));
-					escputc(i, f);
+						indexof(fsm, s), indexof(fsm, st));
+					escputc(e->symbol, f);
 					fprintf(f, "')) { goto error; }\n");
 					break;
 				}
