@@ -81,6 +81,10 @@ contains(struct set *edges, int o, struct fsm_state *state)
 
 	search.symbol = o;
 	for (e = set_firstafter(edges, &it, &search); e != NULL; e = set_next(&it)) {
+		if (e->symbol > UCHAR_MAX) {
+			return 0;
+		}
+
 		if (set_contains(e->sl, state)) {
 			return 1;
 		}
