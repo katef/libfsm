@@ -314,18 +314,22 @@ set_equal(const struct set *a, const struct set *b)
 	return 0 == memcmp(a->a, b->a, a->i * sizeof *a->a);
 }
 
-void
+int
 set_merge(struct set **dst, struct set *src)
 {
 	size_t i;
 
 	if (set_empty(src)) {
-		return;
+		return 0;
 	}
 
 	for (i = 0; i < src->i; i++) {
-		set_add(dst, src->a[i]);
+		if (!set_add(dst, src->a[i])) {
+			return -1;
+		}
 	}
+
+	return 0;
 }
 
 int

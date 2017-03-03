@@ -30,7 +30,10 @@ fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type typ
 
 		e->symbol = type;
 		e->sl = NULL;
-		(void)set_add(&from->edges, e);
+
+		if (!set_add(&from->edges, e)) {
+			return NULL;
+		}
 	}
 
 	if (set_add(&e->sl, to) == NULL) {

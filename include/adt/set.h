@@ -49,7 +49,7 @@ set_cmp(const struct set *a, const struct set *b);
 int
 set_equal(const struct set *a, const struct set *b);
 
-void
+int
 set_merge(struct set **dst, struct set *src);
 
 int

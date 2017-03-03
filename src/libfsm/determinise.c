@@ -137,7 +137,10 @@ addtomappings(struct set *mappings, struct fsm *dfa, struct set *closure)
 
 	m->done = 0;
 
-	set_add(&mappings, m);
+	if (!set_add(&mappings, m)) {
+		free(m);
+		return NULL;
+	}
 
 	return m;
 }
@@ -171,7 +174,9 @@ epsilon_closure(const struct fsm_state *state, struct set **closure)
 		return closure;
 	}
 
-	set_add(closure, state);
+	if (!set_add(closure, state)) {
+		return NULL;
+	}
 
 	/* Follow each epsilon transition */
 	if ((e = fsm_hasedge(state, FSM_EDGE_EPSILON)) != NULL) {
@@ -313,7 +318,11 @@ listnonepsilonstates(struct set *trans, struct set *set)
 				p->c = e->symbol;
 				p->state = st;
 
-				set_add(&trans, p);
+				if (!set_add(&trans, p)) {
+					free(p);
+					free_trans(trans);
+					return 0;
+				}
 			}
 		}
 	}
