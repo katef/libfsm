@@ -1,0 +1,23 @@
+0:0:0:0:0:0:0:0,0:0:0:0:0:0:0:0,unspecified
+0:0:0:0:0:0:0:1,0:0:0:0:0:0:0:1,loopback
+0:0:0:0:0:0:0:2,0:0:0:0:0:fffe:ffff:ffff,internet
+0:0:0:0:0:ffff:0:0,0:0:0:0:0:ffff:ffff:ffff,v4-mapped
+0:0:0:0:1:0:0:0,64:ff9a:ffff:ffff:ffff:ffff:ffff:ffff,internet
+64:ff9b:0:0:0:0:0:0,64:ff9b:0:0:0:0:ffff:ffff,v4/v6 translation
+64:ff9b:0:0:0:1:0:0,99:ffff:ffff:ffff:ffff:ffff:ffff:ffff,internet
+100:0:0:0:0:0:0:0,100:0:0:0:ffff:ffff:ffff:ffff,rfc 6666
+100:0:0:1:0:0:0:0,2000:ffff:ffff:ffff:ffff:ffff:ffff:ffff,internet
+2001:0:0:0:0:0:0:0,2001:0:ffff:ffff:ffff:ffff:ffff:ffff,teredo tunneling
+2001:1:0:0:0:0:0:0,2001:9:ffff:ffff:ffff:ffff:ffff:ffff,internet
+2001:10:0:0:0:0:0:0,2001:1f:ffff:ffff:ffff:ffff:ffff:ffff,deprecated (orchid)
+2001:20:0:0:0:0:0:0,2001:2f:ffff:ffff:ffff:ffff:ffff:ffff,orchid v2
+2001:30:0:0:0:0:0:0,2001:db7:ffff:ffff:ffff:ffff:ffff:ffff,internet
+2001:db8:0:0:0:0:0:0,2001:db8:ffff:ffff:ffff:ffff:ffff:ffff,documentation
+2001:db9:0:0:0:0:0:0,2001:ffff:ffff:ffff:ffff:ffff:ffff:ffff,internet
+2002:0:0:0:0:0:0:0,2002:ffff:ffff:ffff:ffff:ffff:ffff:ffff,6-to-4
+2003:0:0:0:0:0:0:0,fbff:ffff:ffff:ffff:ffff:ffff:ffff:ffff,internet
+fc00:0:0:0:0:0:0:0,fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff,private
+fe00:0:0:0:0:0:0:0,fe7f:ffff:ffff:ffff:ffff:ffff:ffff:ffff,internet
+fe80:0:0:0:0:0:0:0,febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff,link-local
+fec0:0:0:0:0:0:0:0,feff:ffff:ffff:ffff:ffff:ffff:ffff:ffff,internet
+ff00:0:0:0:0:0:0:0,ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff,multicast
