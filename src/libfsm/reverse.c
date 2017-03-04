@@ -196,7 +196,7 @@ fsm_reverse_opaque(struct fsm *fsm,
 				s = NULL;
 			} else {
 				for (s = set_first(endset, &it); s != NULL; s = set_next(&it)) {
-					if (!fsm_hasincoming(new, s)) {
+					if (!fsm_hasincoming(fsm, s)) {
 						break;
 					}
 				}
