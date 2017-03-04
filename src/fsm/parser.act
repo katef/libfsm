@@ -343,7 +343,8 @@
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
 
-		new = fsm_new();
+		/* TODO: pass in fsm_options */
+		new = fsm_new(NULL);
 		if (new == NULL) {
 			perror("fsm_new");
 			return NULL;

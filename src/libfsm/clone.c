@@ -16,8 +16,9 @@ fsm_clone(const struct fsm *fsm)
 	struct fsm *new;
 
 	assert(fsm != NULL);
+	assert(fsm->opt != NULL);
 
-	new = fsm_new();
+	new = fsm_new(fsm->opt);
 	if (new == NULL) {
 		return NULL;
 	}

@@ -307,7 +307,7 @@
 		assert(@t != NULL);
 		assert(@t != NULL);
 
-		@r = fsm_new();
+		@r = fsm_new(NULL);
 		if (@r == NULL) {
 			perror("fsm_new");
 			@!;
@@ -388,7 +388,7 @@
 	<regex-any>: () -> (r :fsm) = @{
 		struct fsm_state *start, *end;
 
-		@r = fsm_new();
+		@r = fsm_new(NULL);
 		if (@r == NULL) {
 			perror("fsm_new");
 			@!;

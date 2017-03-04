@@ -15,6 +15,7 @@
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 #include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "parser.h"
 
@@ -204,8 +205,8 @@ main(int argc, char *argv[])
 	int query;
 	int r;
 
-	static const struct fsm_outoptions o_defaults;
-	struct fsm_outoptions o = o_defaults;
+	static const struct fsm_options o_defaults;
+	struct fsm_options o = o_defaults;
 
 	o.comments = 1;
 	o.io       = FSM_IO_GETC;
@@ -303,7 +304,7 @@ main(int argc, char *argv[])
 	}
 
 	if (print) {
-		fsm_print(fsm, stdout, format, &o);
+		fsm_print(fsm, stdout, format);
 	}
 
 	fsm_free(fsm);

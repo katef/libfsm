@@ -563,7 +563,7 @@ main(int argc, char *argv[])
 				zn++;
 			}
 
-			z->fsm = fsm_new();
+			z->fsm = fsm_new(NULL);
 			if (z->fsm == NULL) {
 				perror("fsm_new");
 				return EXIT_FAILURE;

@@ -13,9 +13,10 @@
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
-#include <fsm/out.h>	/* XXX */
 #include <fsm/bool.h>
 #include <fsm/pred.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include <re/re.h>
 #include <re/group.h>
@@ -381,8 +382,8 @@ main(int argc, char *argv[])
 	int patterns;
 	int ambig;
 
-	static const struct fsm_outoptions o_defaults;
-	struct fsm_outoptions o = o_defaults;
+	static const struct fsm_options o_defaults;
+	struct fsm_options o = o_defaults;
 
 	/* note these defaults are the opposite than for fsm(1) */
 	o.anonymous_states  = 1;
@@ -550,7 +551,7 @@ main(int argc, char *argv[])
 
 	flags |= RE_MULTI;
 
-	fsm = fsm_new();
+	fsm = fsm_new(NULL);
 	if (fsm == NULL) {
 		perror("fsm_new");
 		return EXIT_FAILURE;
@@ -787,7 +788,7 @@ main(int argc, char *argv[])
 		/* TODO: print examples in comments for end states;
 		 * patterns in comments for the whole FSM */
 
-		fsm_print(fsm, stdout, format, &o);
+		fsm_print(fsm, stdout, format);
 
 /* XXX: free fsm */
 

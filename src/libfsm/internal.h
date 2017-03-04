@@ -52,6 +52,8 @@ struct fsm {
 
 	unsigned long endcount;
 
+	const struct fsm_options *opt;
+
 #ifdef DEBUG_TODFA
 	struct fsm *nfa;
 #endif

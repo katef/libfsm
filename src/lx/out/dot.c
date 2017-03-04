@@ -6,8 +6,9 @@
 
 #include <adt/set.h>
 
-#include <fsm/out.h>
 #include <fsm/pred.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "libfsm/internal.h" /* XXX */
 
@@ -203,8 +204,8 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 */
 
 	{
-		static const struct fsm_outoptions o_defaults;
-		struct fsm_outoptions o = o_defaults;
+		static const struct fsm_options o_defaults;
+		struct fsm_options o = o_defaults;
 		char p[128];
 
 		(void) sprintf(p, "z%u", zindexof(ast, z));
@@ -216,7 +217,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		o.io                = FSM_IO_GETC;
 		o.prefix            = p;
 
-		fsm_print(z->fsm, f, FSM_OUT_DOT, &o);
+		fsm_print(z->fsm, f, FSM_OUT_DOT);
 	}
 
 	for (s = z->fsm->sl; s != NULL; s = s->next) {

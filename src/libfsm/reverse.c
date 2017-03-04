@@ -20,8 +20,9 @@ fsm_reverse_opaque(struct fsm *fsm,
 	struct set *endset;
 
 	assert(fsm != NULL);
+	assert(fsm->opt != NULL);
 
-	new = fsm_new();
+	new = fsm_new(fsm->opt);
 	if (new == NULL) {
 		return 0;
 	}

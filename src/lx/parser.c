@@ -273,7 +273,7 @@ p_pattern(lex_state lex_state, act_state act_state, zone ZIz, fsm *ZOr)
 		assert((ZIt) != NULL);
 		assert((ZIt) != NULL);
 
-		(ZIr) = fsm_new();
+		(ZIr) = fsm_new(NULL);
 		if ((ZIr) == NULL) {
 			perror("fsm_new");
 			goto ZL1;
@@ -794,7 +794,7 @@ p_list_Hof_Hthings_C_Cthing(lex_state lex_state, act_state act_state, ast ZIa, z
 		assert((ZI228) != NULL);
 		assert((ZI228) != NULL);
 
-		(ZI229) = fsm_new();
+		(ZI229) = fsm_new(NULL);
 		if ((ZI229) == NULL) {
 			perror("fsm_new");
 			goto ZL1;
@@ -2942,7 +2942,7 @@ p_250(lex_state lex_state, act_state act_state, ast *ZIa, zone *ZIz, string *ZI2
 
 		struct fsm_state *start, *end;
 
-		(ZIw) = fsm_new();
+		(ZIw) = fsm_new(NULL);
 		if ((ZIw) == NULL) {
 			perror("fsm_new");
 			goto ZL5;

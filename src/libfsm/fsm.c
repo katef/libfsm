@@ -6,6 +6,8 @@
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "internal.h"
 
@@ -32,8 +34,9 @@ free_contents(struct fsm *fsm)
 }
 
 struct fsm *
-fsm_new(void)
+fsm_new(const struct fsm_options *opt)
 {
+	static const struct fsm_options o_defaults;
 	struct fsm *new;
 
 	new = malloc(sizeof *new);
@@ -47,6 +50,8 @@ fsm_new(void)
 	new->tidy  = 1;
 
 	new->endcount = 0;
+
+	new->opt = opt != NULL ? opt : &o_defaults;
 
 #ifdef DEBUG_TODFA
 	new->nfa   = NULL;

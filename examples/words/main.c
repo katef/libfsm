@@ -12,7 +12,7 @@ int main(void) {
 	struct fsm_state *start;
 	char s[BUFSIZ];
 
-	fsm = fsm_new();
+	fsm = fsm_new(NULL);
 	if (fsm == NULL) {
 		perror("fsm_new");
 		return 1;
@@ -54,8 +54,8 @@ int main(void) {
 	}
 
 	{
-		static const struct fsm_outoptions o_defaults;
-		struct fsm_outoptions o = o_defaults;
+		static const struct fsm_options o_defaults;
+		struct fsm_options o = o_defaults;
 
 		o.anonymous_states  = 1;
 		o.consolidate_edges = 1;

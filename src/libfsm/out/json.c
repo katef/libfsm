@@ -88,14 +88,12 @@ hasmore(const struct fsm_state *s, int i)
 }
 
 void
-fsm_out_json(const struct fsm *fsm, FILE *f,
-	const struct fsm_outoptions *options)
+fsm_out_json(const struct fsm *fsm, FILE *f)
 {
 	struct fsm_state *s;
 
 	assert(fsm != NULL);
 	assert(f != NULL);
-	assert(options != NULL);
 
 	fprintf(f, "{\n");
 

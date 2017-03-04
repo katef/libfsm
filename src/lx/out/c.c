@@ -8,9 +8,10 @@
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
-#include <fsm/out.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "libfsm/internal.h" /* XXX */
 #include "libfsm/out.h" /* XXX */
@@ -837,8 +838,8 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	}
 
 	{
-		static const struct fsm_outoptions o_defaults;
-		struct fsm_outoptions o = o_defaults;
+		static const struct fsm_options o_defaults;
+		struct fsm_options o = o_defaults;
 
 		/* TODO: populate options */
 		o.anonymous_states  = 1;
@@ -848,7 +849,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		o.io                = FSM_IO_GETC;
 		o.prefix            = NULL;
 
-		(void) fsm_out_cfrag(z->fsm, f, &o, cp, leaf, ast);
+		(void) fsm_out_cfrag(z->fsm, f, cp, leaf, ast);
 	}
 
 	fprintf(f, "\t}\n");

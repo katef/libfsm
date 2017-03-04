@@ -1010,7 +1010,8 @@
 
 		assert(f != NULL);
 
-		new = fsm_new();
+		/* XXX: pass in struct fsm_options */
+		new = fsm_new(NULL);
 		if (new == NULL) {
 			return NULL;
 		}

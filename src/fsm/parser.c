@@ -1015,7 +1015,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 360 "src/fsm/parser.act"
+#line 361 "src/fsm/parser.act"
 
 
 	struct fsm *fsm_parse(FILE *f) {
@@ -1051,7 +1051,8 @@ ZL1:;
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
 
-		new = fsm_new();
+		/* TODO: pass in fsm_options */
+		new = fsm_new(NULL);
 		if (new == NULL) {
 			perror("fsm_new");
 			return NULL;
@@ -1065,6 +1066,6 @@ ZL1:;
 		return new;
 	}
 
-#line 1069 "src/fsm/parser.c"
+#line 1070 "src/fsm/parser.c"
 
 /* END OF FILE */

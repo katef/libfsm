@@ -85,7 +85,7 @@ get_id(char *rec, size_t reclen)
 
 		r->len = reclen;
 		r->id = nrecords++;
-		r->fsm = fsm_new();
+		r->fsm = fsm_new(NULL);
 		if (r->fsm == NULL) {
 			perror("fsm_new");
 			exit(-1);
@@ -525,7 +525,7 @@ main(int argc, char **argv)
 
 	memset(ones, 0xff, sizeof ones);
 
-	fsm = fsm_new();
+	fsm = fsm_new(NULL);
 	if (fsm == NULL) {
 		perror("fsm_new");
 		return -1;
@@ -598,8 +598,8 @@ main(int argc, char **argv)
 		line = 0;
 	}
 
-	static const struct fsm_outoptions o_defaults;
-	struct fsm_outoptions o = o_defaults;
+	static const struct fsm_options o_defaults;
+	struct fsm_options o = o_defaults;
 	o.prefix = NULL;
 	o.anonymous_states = 1;
 	o.consolidate_edges = 1;
