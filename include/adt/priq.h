@@ -28,6 +28,12 @@ struct priq *
 priq_push(struct priq **priq,
 	struct fsm_state *state, unsigned int cost);
 
+/*
+ * Update cost of node in priq.
+ */
+void
+priq_update(struct priq **priq, struct priq *s, unsigned int cost);
+
 /* XXX: set operation */
 struct priq *
 priq_find(struct priq *priq, const struct fsm_state *state);

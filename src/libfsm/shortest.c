@@ -103,6 +103,8 @@ fsm_shortest(const struct fsm *fsm,
 					v->cost = u->cost + c;
 					v->prev = u;
 					v->type = e->symbol;
+
+					priq_update(&todo, v, v->cost);
 				}
 			}
 		}
