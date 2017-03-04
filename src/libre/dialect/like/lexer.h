@@ -82,8 +82,6 @@ const char *lx_like_example(enum lx_like_token (*z)(struct lx_like_lx *), enum l
 void lx_like_init(struct lx_like_lx *lx);
 enum lx_like_token lx_like_next(struct lx_like_lx *lx);
 
-int lx_like_fgetc(struct lx_like_lx *lx);
-
 int  lx_like_dynpush(struct lx_like_lx *lx, char c);
 void lx_like_dynpop(struct lx_like_lx *lx);
 int  lx_like_dynclear(struct lx_like_lx *lx);

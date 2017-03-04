@@ -27,6 +27,35 @@ priq_pop(struct priq **priq)
 	return p;
 }
 
+void
+priq_update(struct priq **priq, struct priq *s, unsigned int cost)
+{
+	struct priq **p, **pp;
+
+	pp = NULL;
+	for (p = priq; *p != NULL; p = &(*p)->next) {
+		if ((*p) == s) {
+			break;
+		}
+		pp = p;
+	}
+
+	if (!pp) {
+		return;
+	}
+
+	(*pp)->next = s->next;
+
+	for (pp = priq; *pp != NULL; pp = &(*pp)->next) {
+		if ((*pp)->cost >= cost) {
+			break;
+		}
+	}
+
+	s->next = *pp;
+	*pp = s;
+}
+
 struct priq *
 priq_push(struct priq **priq,
 	struct fsm_state *state, unsigned int cost)

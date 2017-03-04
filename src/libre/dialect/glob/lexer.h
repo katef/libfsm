@@ -82,8 +82,6 @@ const char *lx_glob_example(enum lx_glob_token (*z)(struct lx_glob_lx *), enum l
 void lx_glob_init(struct lx_glob_lx *lx);
 enum lx_glob_token lx_glob_next(struct lx_glob_lx *lx);
 
-int lx_glob_fgetc(struct lx_glob_lx *lx);
-
 int  lx_glob_dynpush(struct lx_glob_lx *lx, char c);
 void lx_glob_dynpop(struct lx_glob_lx *lx);
 int  lx_glob_dynclear(struct lx_glob_lx *lx);
