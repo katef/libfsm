@@ -80,8 +80,6 @@ const char *lx_literal_example(enum lx_literal_token (*z)(struct lx_literal_lx *
 void lx_literal_init(struct lx_literal_lx *lx);
 enum lx_literal_token lx_literal_next(struct lx_literal_lx *lx);
 
-int lx_literal_fgetc(struct lx_literal_lx *lx);
-
 int  lx_literal_dynpush(struct lx_literal_lx *lx, char c);
 void lx_literal_dynpop(struct lx_literal_lx *lx);
 int  lx_literal_dynclear(struct lx_literal_lx *lx);

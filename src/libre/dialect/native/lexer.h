@@ -100,8 +100,6 @@ const char *lx_native_example(enum lx_native_token (*z)(struct lx_native_lx *), 
 void lx_native_init(struct lx_native_lx *lx);
 enum lx_native_token lx_native_next(struct lx_native_lx *lx);
 
-int lx_native_fgetc(struct lx_native_lx *lx);
-
 int  lx_native_dynpush(struct lx_native_lx *lx, char c);
 void lx_native_dynpop(struct lx_native_lx *lx);
 int  lx_native_dynclear(struct lx_native_lx *lx);
