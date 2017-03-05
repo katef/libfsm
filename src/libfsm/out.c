@@ -9,12 +9,9 @@
 #include "out.h"
 
 void
-fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format,
-	const struct fsm_outoptions *options)
+fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format)
 {
-	static const struct fsm_outoptions defaults;
-
-	void (*out)(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options) = NULL;
+	void (*out)(const struct fsm *fsm, FILE *f) = NULL;
 
 	assert(fsm != NULL);
 	assert(f != NULL);
@@ -30,10 +27,6 @@ fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format,
 
 	assert(out != NULL);
 
-	if (options == NULL) {
-		options = &defaults;
-	}
-
-	out(fsm, f, options);
+	out(fsm, f);
 }
 

@@ -12,6 +12,7 @@
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 #include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "libfsm/internal.h"
 #include "libfsm/out.h"
@@ -121,7 +122,7 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 
 static void
 singlecase(FILE *f, const struct fsm *fsm,
-	const struct fsm_outoptions *options, const char *cp,
+	const char *cp,
 	struct fsm_state *state,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
 	const void *opaque)
@@ -132,7 +133,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 	} mode;
 
 	assert(fsm != NULL);
-	assert(options != NULL);
+	assert(fsm->opt != NULL);
 	assert(cp != NULL);
 	assert(f != NULL);
 	assert(state != NULL);
@@ -196,11 +197,11 @@ singlecase(FILE *f, const struct fsm *fsm,
 			fprintf(f, "\t\t\tcase '");
 			escputc(e->symbol, f);
 
-			if (options->case_ranges) {
+			if (fsm->opt->case_ranges) {
 				const struct fsm_edge *ne;
 				enum fsm_edge_type p, q;
 				struct set_iter ic, ir;
-				
+
 				ir = ic = it;
 				p = q = e->symbol;
 				ne = set_next(&ic);
@@ -220,7 +221,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 			fprintf(f, "':");
 
 			/* non-unique states fall through */
-			if (!options->case_ranges && e->symbol <= UCHAR_MAX - 1) {
+			if (!fsm->opt->case_ranges && e->symbol <= UCHAR_MAX - 1) {
 				const struct fsm_edge *ne;
 				struct set_iter jt;
 
@@ -315,16 +316,16 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 
 int
 fsm_out_cfrag(const struct fsm *fsm, FILE *f,
-	const struct fsm_outoptions *options, const char *cp,
+	const char *cp,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
 	const void *opaque)
 {
 	struct fsm_state *s;
 
 	assert(fsm != NULL);
+	assert(fsm->opt != NULL);
 	assert(fsm_all(fsm, fsm_isdfa));
 	assert(f != NULL);
-	assert(options != NULL);
 	assert(cp != NULL);
 
 	/* TODO: prerequisite that the FSM is a DFA */
@@ -333,7 +334,7 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		fprintf(f, "\t\tcase S%u:", indexof(fsm, s));
 
-		if (options->comments) {
+		if (fsm->opt->comments) {
 			if (s == fsm->start) {
 				fprintf(f, " /* start */");
 			} else {
@@ -354,7 +355,7 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 		}
 		fprintf(f, "\n");
 
-		singlecase(f, fsm, options, cp, s, leaf, opaque);
+		singlecase(f, fsm, cp, s, leaf, opaque);
 
 		if (s->next != NULL) {
 			fprintf(f, "\n");
@@ -366,13 +367,13 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 }
 
 void
-fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
+fsm_out_c(const struct fsm *fsm, FILE *f)
 {
 	const char *cp;
 
 	assert(fsm != NULL);
+	assert(fsm->opt != NULL);
 	assert(f != NULL);
-	assert(options != NULL);
 
 	if (!fsm_all(fsm, fsm_isdfa)) {
 		errno = EINVAL;
@@ -381,14 +382,14 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 
 	/* TODO: pass in %s prefix (default to "fsm_") */
 
-	switch (options->io) {
+	switch (fsm->opt->io) {
 	case FSM_IO_GETC: cp = "c";  break;
 	case FSM_IO_STR:  cp = "*p"; break;
 	case FSM_IO_PAIR: cp = "*p"; break;
 	}
 
-	if (options->fragment) {
-		(void) fsm_out_cfrag(fsm, f, options, cp, leaf, NULL);
+	if (fsm->opt->fragment) {
+		(void) fsm_out_cfrag(fsm, f, cp, leaf, NULL);
 		return;
 	}
 
@@ -396,7 +397,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	fprintf(f, "#include <stdio.h>\n");
 	fprintf(f, "\n");
 
-	switch (options->io) {
+	switch (fsm->opt->io) {
 	case FSM_IO_GETC:
 		fprintf(f, "int fsm_main(int (*fsm_getc)(void *opaque), void *opaque) {\n");
 		fprintf(f, "\tint c;\n");
@@ -433,7 +434,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 	fprintf(f, "\tstate = S%u;\n", indexof(fsm, fsm->start));
 	fprintf(f, "\n");
 
-	switch (options->io) {
+	switch (fsm->opt->io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\twhile (c = fsm_getc(opaque), c != EOF) {\n");
 		break;
@@ -447,7 +448,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f, const struct fsm_outoptions *options)
 		break;
 	}
 
-	(void) fsm_out_cfrag(fsm, f, options, cp, leaf, NULL);
+	(void) fsm_out_cfrag(fsm, f, cp, leaf, NULL);
 
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");

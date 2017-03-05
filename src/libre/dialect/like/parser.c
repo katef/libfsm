@@ -647,7 +647,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 1076 "src/libre/parser.act"
+#line 1077 "src/libre/parser.act"
 
 
 	static int
@@ -851,6 +851,7 @@ ZL1:;
 
 	struct fsm *
 	DIALECT_COMP(int (*f)(void *opaque), void *opaque,
+		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
 		struct re_err *err)
 	{
@@ -859,7 +860,7 @@ ZL1:;
 
 		assert(f != NULL);
 
-		new = fsm_new();
+		new = fsm_new(opt);
 		if (new == NULL) {
 			return NULL;
 		}
@@ -922,6 +923,6 @@ ZL1:;
 	}
 #endif
 
-#line 926 "src/libre/dialect/like/parser.c"
+#line 927 "src/libre/dialect/like/parser.c"
 
 /* END OF FILE */

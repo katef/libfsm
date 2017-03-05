@@ -13,6 +13,7 @@
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/out.h>
+#include <fsm/options.h>
 #include <fsm/pred.h>
 
 #include "../../src/libfsm/out.h" /* XXX */
@@ -62,6 +63,8 @@ RB_GENERATE_STATIC(recmap, record, entry, recmap_cmp)
 
 static unsigned nrecords;
 
+static struct fsm_options opt;
+
 static struct record *
 get_id(char *rec, size_t reclen)
 {
@@ -85,7 +88,7 @@ get_id(char *rec, size_t reclen)
 
 		r->len = reclen;
 		r->id = nrecords++;
-		r->fsm = fsm_new();
+		r->fsm = fsm_new(&opt);
 		if (r->fsm == NULL) {
 			perror("fsm_new");
 			exit(-1);
@@ -481,6 +484,12 @@ main(int argc, char **argv)
 	int oc = 0;
 	int c;
 
+	opt.prefix            = NULL;
+	opt.anonymous_states  = 1;
+	opt.consolidate_edges = 1;
+	opt.case_ranges       = 1;
+	opt.opaque_string     = nl;
+
 	while (c = getopt(argc, argv, "46f:l:Q"), c != -1) {
 		switch (c) {
 		case '4':
@@ -525,7 +534,7 @@ main(int argc, char **argv)
 
 	memset(ones, 0xff, sizeof ones);
 
-	fsm = fsm_new();
+	fsm = fsm_new(&opt);
 	if (fsm == NULL) {
 		perror("fsm_new");
 		return -1;
@@ -598,14 +607,6 @@ main(int argc, char **argv)
 		line = 0;
 	}
 
-	static const struct fsm_outoptions o_defaults;
-	struct fsm_outoptions o = o_defaults;
-	o.prefix = NULL;
-	o.anonymous_states = 1;
-	o.consolidate_edges = 1;
-	o.case_ranges = 1;
-	o.opaque_string = nl;
-
 	struct record *r;
 	RB_FOREACH(r, recmap, &recmap) {
 		if (fsm_minimise_opaque(r->fsm, carryopaque) == 0) {
@@ -651,8 +652,8 @@ main(int argc, char **argv)
 	if (oc) {
 		static const char *cp = "c";
 		/* XXX: This should be possible without private out.h. */
-		fsm_out_cfrag(fsm, stdout, &o, cp, leaf, NULL);
+		fsm_out_cfrag(fsm, stdout, cp, leaf, NULL);
 	} else if (odot) {
-		fsm_print(fsm, stdout, FSM_OUT_DOT, &o);
+		fsm_print(fsm, stdout, FSM_OUT_DOT);
 	}
 }

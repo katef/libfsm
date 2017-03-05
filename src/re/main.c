@@ -13,9 +13,10 @@
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
-#include <fsm/out.h>	/* XXX */
 #include <fsm/bool.h>
 #include <fsm/pred.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include <re/re.h>
 #include <re/group.h>
@@ -33,6 +34,8 @@ struct match {
 	const char *s;
 	struct match *next;
 };
+
+static struct fsm_options opt;
 
 static void
 usage(void)
@@ -381,15 +384,12 @@ main(int argc, char *argv[])
 	int patterns;
 	int ambig;
 
-	static const struct fsm_outoptions o_defaults;
-	struct fsm_outoptions o = o_defaults;
-
 	/* note these defaults are the opposite than for fsm(1) */
-	o.anonymous_states  = 1;
-	o.consolidate_edges = 1;
+	opt.anonymous_states  = 1;
+	opt.consolidate_edges = 1;
 
-	o.comments          = 1;
-	o.io                = FSM_IO_GETC;
+	opt.comments          = 1;
+	opt.io                = FSM_IO_GETC;
 
 	flags    = 0U;
 	xfiles   = 0;
@@ -411,11 +411,11 @@ main(int argc, char *argv[])
 
 		while (c = getopt(argc, argv, "h" "acwe:k:" "i" "sq:r:l:" "ubpgmnxyz"), c != -1) {
 			switch (c) {
-			case 'a': o.anonymous_states  = 0;          break;
-			case 'c': o.consolidate_edges = 0;          break;
-			case 'w': o.fragment          = 1;          break;
-			case 'e': o.prefix            = optarg;     break;
-			case 'k': o.io                = io(optarg); break;
+			case 'a': opt.anonymous_states  = 0;          break;
+			case 'c': opt.consolidate_edges = 0;          break;
+			case 'w': opt.fragment          = 1;          break;
+			case 'e': opt.prefix            = optarg;     break;
+			case 'k': opt.io                = io(optarg); break;
 
 			case 'i': flags |= RE_ICASE; break;
 
@@ -423,9 +423,9 @@ main(int argc, char *argv[])
 				join = fsm_concat;
 				break;
 
-			case 'q': query   = comparison(optarg);      break;
-			case 'r': dialect = dialect_name(optarg);    break;
-			case 'l': format  = language(optarg);        break;
+			case 'q': query   = comparison(optarg);       break;
+			case 'r': dialect = dialect_name(optarg);     break;
+			case 'l': format  = language(optarg);         break;
 
 			case 'u': ambig    = 1; break;
 			case 'b': boxed    = 1; break;
@@ -550,7 +550,7 @@ main(int argc, char *argv[])
 
 	flags |= RE_MULTI;
 
-	fsm = fsm_new();
+	fsm = fsm_new(&opt);
 	if (fsm == NULL) {
 		perror("fsm_new");
 		return EXIT_FAILURE;
@@ -577,7 +577,7 @@ main(int argc, char *argv[])
 
 				f = xopen(argv[i]);
 
-				new = re_comp(dialect, re_fgetc, f, flags, &err);
+				new = re_comp(dialect, re_fgetc, f, &opt, flags, &err);
 
 				fclose(f);
 			} else {
@@ -585,7 +585,7 @@ main(int argc, char *argv[])
 
 				s = argv[i];
 
-				new = re_comp(dialect, re_sgetc, &s, flags, &err);
+				new = re_comp(dialect, re_sgetc, &s, &opt, flags, &err);
 			}
 
 			if (new == NULL) {
@@ -787,7 +787,7 @@ main(int argc, char *argv[])
 		/* TODO: print examples in comments for end states;
 		 * patterns in comments for the whole FSM */
 
-		fsm_print(fsm, stdout, format, &o);
+		fsm_print(fsm, stdout, format);
 
 /* XXX: free fsm */
 

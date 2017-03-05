@@ -74,7 +74,7 @@ compile(const char *glob)
 
 	assert(glob != NULL);
 
-	fsm = fsm_new();
+	fsm = fsm_new(NULL);
 	if (!fsm) {
 		perror("fsm_new");
 		exit(2);

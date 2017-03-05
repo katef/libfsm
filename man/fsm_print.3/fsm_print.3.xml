@@ -34,7 +34,7 @@ TODO
 	</refsection>
 
 	<refsection>
-<para>TODO: options given by <code>struct fsm_outoptions</code>,
+<para>TODO: options given by <code>struct fsm_options</code>,
 which contains the following fields:</para>
 TODO: options may not be applicable for all languages
 

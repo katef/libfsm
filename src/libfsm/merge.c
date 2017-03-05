@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <errno.h>
 
 #include <fsm/bool.h>
 
@@ -13,6 +14,11 @@ fsm_merge(struct fsm *a, struct fsm *b)
 {
 	assert(a != NULL);
 	assert(b != NULL);
+
+	if (a->opt != b->opt) {
+		errno = EINVAL;
+		return NULL;
+	}
 
 	*a->tail = b->sl;
 	a->tail  = b->tail;

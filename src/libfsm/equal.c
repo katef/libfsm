@@ -17,6 +17,14 @@ fsm_equal(const struct fsm *a, const struct fsm *b)
 	struct fsm *q;
 	int r;
 
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (a->opt != b->opt) {
+		errno = EINVAL;
+		return NULL;
+	}
+
 	a = fsm_clone(a);
 	if (a == NULL) {
 		return -1;

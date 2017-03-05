@@ -15,11 +15,14 @@
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 #include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "parser.h"
 
 extern int optind;
 extern char *optarg;
+
+static struct fsm_options opt;
 
 static void
 usage(void)
@@ -204,11 +207,8 @@ main(int argc, char *argv[])
 	int query;
 	int r;
 
-	static const struct fsm_outoptions o_defaults;
-	struct fsm_outoptions o = o_defaults;
-
-	o.comments = 1;
-	o.io       = FSM_IO_GETC;
+	opt.comments = 1;
+	opt.io       = FSM_IO_GETC;
 
 	format = FSM_OUT_FSM;
 	xfiles = 0;
@@ -216,7 +216,7 @@ main(int argc, char *argv[])
 	query  = 0;
 
 	/* XXX: makes no sense for e.g. fsm -h */
-	fsm = fsm_parse(stdin);
+	fsm = fsm_parse(stdin, &opt);
 	if (fsm == NULL) {
 		exit(EXIT_FAILURE);
 	}
@@ -228,24 +228,24 @@ main(int argc, char *argv[])
 
 		while (c = getopt(argc, argv, "h" "acwe:k:" "xpq:l:dmrt:"), c != -1) {
 			switch (c) {
-			case 'a': o.anonymous_states  = 1;          break;
-			case 'c': o.consolidate_edges = 1;          break;
-			case 'w': o.fragment          = 1;          break;
-			case 'e': o.prefix            = optarg;     break;
-			case 'k': o.io                = io(optarg); break;
+			case 'a': opt.anonymous_states  = 1;          break;
+			case 'c': opt.consolidate_edges = 1;          break;
+			case 'w': opt.fragment          = 1;          break;
+			case 'e': opt.prefix            = optarg;     break;
+			case 'k': opt.io                = io(optarg); break;
 
-			case 'x': xfiles = 1;                       break;
-			case 'p': print  = 1;                       break;
+			case 'x': xfiles = 1;                         break;
+			case 'p': print  = 1;                         break;
 			case 'q': query  = 1;
 			          r |= !fsm_all(fsm, predicate(optarg));
 			          break;
 
-			case 'l': format = language(optarg);        break;
+			case 'l': format = language(optarg);          break;
 
-			case 'd': transform(fsm, "determinise");    break;
-			case 'm': transform(fsm, "minimise");       break;
-			case 'r': transform(fsm, "reverse");        break;
-			case 't': transform(fsm, optarg);           break;
+			case 'd': transform(fsm, "determinise");      break;
+			case 'm': transform(fsm, "minimise");         break;
+			case 'r': transform(fsm, "reverse");          break;
+			case 't': transform(fsm, optarg);             break;
 
 			case 'h':
 				usage();
@@ -303,7 +303,7 @@ main(int argc, char *argv[])
 	}
 
 	if (print) {
-		fsm_print(fsm, stdout, format, &o);
+		fsm_print(fsm, stdout, format);
 	}
 
 	fsm_free(fsm);

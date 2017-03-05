@@ -15,6 +15,7 @@ struct fsm;
 struct fsm_state;
 struct fsm_edge;
 struct fsm_determinise_cache;
+struct fsm_options;
 struct set; /* XXX */
 struct path; /* XXX */
 
@@ -23,12 +24,17 @@ struct path; /* XXX */
  * from fsm_new() is expected to be passed as the "fsm" argument to the
  * functions in this API.
  *
+ * An options pointer may be passed for control over various details of
+ * FSM construction and output. This may be NULL, in which case default
+ * options are used.
+ * When non-NULL, the storage pointed to must remain extant until fsm_free().
+ *
  * Returns NULL on error; see errno.
  * TODO: perhaps automatically create a start state, and never have an empty FSM
  * TODO: also fsm_parse should create an FSM, not add into an existing one
  */
 struct fsm *
-fsm_new(void);
+fsm_new(const struct fsm_options *opt);
 
 /*
  * Free a structure created by fsm_new(), and all of its contents.

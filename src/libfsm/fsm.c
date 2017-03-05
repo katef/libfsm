@@ -2,10 +2,13 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "internal.h"
 
@@ -32,9 +35,14 @@ free_contents(struct fsm *fsm)
 }
 
 struct fsm *
-fsm_new(void)
+fsm_new(const struct fsm_options *opt)
 {
+	static const struct fsm_options defaults;
 	struct fsm *new;
+
+	if (opt == NULL) {
+		opt = &defaults;
+	}
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
@@ -47,6 +55,8 @@ fsm_new(void)
 	new->tidy  = 1;
 
 	new->endcount = 0;
+
+	new->opt = opt;
 
 #ifdef DEBUG_TODFA
 	new->nfa   = NULL;
@@ -70,6 +80,11 @@ fsm_move(struct fsm *dst, struct fsm *src)
 {
 	assert(src != NULL);
 	assert(dst != NULL);
+
+	if (dst->opt != src->opt) {
+		errno = EINVAL;
+		return; /* XXX */
+	}
 
 	free_contents(dst);
 

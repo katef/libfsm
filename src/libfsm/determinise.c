@@ -406,9 +406,10 @@ determinise(struct fsm *nfa,
 	struct fsm *dfa;
 
 	assert(nfa != NULL);
+	assert(nfa->opt != NULL);
 	assert(dcache != NULL);
 
-	dfa = fsm_new();
+	dfa = fsm_new(nfa->opt);
 	if (dfa == NULL) {
 		return NULL;
 	}
@@ -550,6 +551,8 @@ fsm_determinise_cacheopaque(struct fsm *fsm,
 {
 	struct fsm *dfa;
 
+	assert(fsm != NULL);
+	assert(fsm->opt != NULL);
 	assert(dcache != NULL);
 
 	if (*dcache == NULL) {
@@ -568,7 +571,7 @@ fsm_determinise_cacheopaque(struct fsm *fsm,
 	}
 
 #ifdef DEBUG_TODFA
-	fsm->nfa = fsm_new();
+	fsm->nfa = fsm_new(fsm->opt);
 	if (fsm->nfa == NULL) {
 		return 0;
 	}

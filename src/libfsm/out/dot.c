@@ -12,6 +12,8 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "libfsm/out.h"
 
@@ -94,20 +96,19 @@ contains(struct set *edges, int o, struct fsm_state *state)
 }
 
 static void
-singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
-	const struct fsm_outoptions *options)
+singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 {
 	struct fsm_edge *e, search;
 	struct set_iter it;
 
 	assert(fsm != NULL);
+	assert(fsm->opt != NULL);
 	assert(f != NULL);
 	assert(s != NULL);
-	assert(options != NULL);
 
-	if (!options->anonymous_states) {
+	if (!fsm->opt->anonymous_states) {
 		fprintf(f, "\t%sS%-2u [ label = <",
-			options->prefix != NULL ? options->prefix : "",
+			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 			indexof(fsm, s));
 
 		fprintf(f, "%u", indexof(fsm, s));
@@ -137,7 +138,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 		fprintf(f, "> ];\n");
 	}
 
-	if (!options->consolidate_edges) {
+	if (!fsm->opt->consolidate_edges) {
 		for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
 			struct fsm_state *st;
 			struct set_iter jt;
@@ -146,9 +147,9 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 				assert(st != NULL);
 
 				fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
-					options->prefix != NULL ? options->prefix : "",
+					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 					indexof(fsm, s),
-					options->prefix != NULL ? options->prefix : "",
+					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 					indexof(fsm, st));
 
 				escputc(e->symbol, f);
@@ -204,9 +205,9 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 			}
 
 			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
-				options->prefix != NULL ? options->prefix : "",
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, s),
-				options->prefix != NULL ? options->prefix : "",
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, st));
 
 			(void) bm_print(f, &bm, 0, escputc);
@@ -225,9 +226,9 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 
 		for (st = set_first(e->sl, &jt); st != NULL; st = set_next(&jt)) {
 			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
-				options->prefix != NULL ? options->prefix : "",
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, s),
-				options->prefix != NULL ? options->prefix : "",
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, st));
 
 			escputc(e->symbol, f);
@@ -238,38 +239,36 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s,
 }
 
 static void
-out_dotfrag(const struct fsm *fsm, FILE *f,
-	const struct fsm_outoptions *options)
+out_dotfrag(const struct fsm *fsm, FILE *f)
 {
 	struct fsm_state *s;
 
 	assert(fsm != NULL);
+	assert(fsm->opt != NULL);
 	assert(f != NULL);
-	assert(options != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		singlestate(fsm, f, s, options);
+		singlestate(fsm, f, s);
 
 		if (fsm_isend(fsm, s)) {
 			fprintf(f, "\t%sS%-2u [ shape = doublecircle ];\n",
-				options->prefix != NULL ? options->prefix : "",
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, s));
 		}
 	}
 }
 
 void
-fsm_out_dot(const struct fsm *fsm, FILE *f,
-	const struct fsm_outoptions *options)
+fsm_out_dot(const struct fsm *fsm, FILE *f)
 {
 	struct fsm_state *start;
 
 	assert(fsm != NULL);
+	assert(fsm->opt != NULL);
 	assert(f != NULL);
-	assert(options != NULL);
 
-	if (options->fragment) {
-		out_dotfrag(fsm, f, options);
+	if (fsm->opt->fragment) {
+		out_dotfrag(fsm, f);
 		return;
 	}
 
@@ -278,7 +277,7 @@ fsm_out_dot(const struct fsm *fsm, FILE *f,
 
 	fprintf(f, "\tnode [ shape = circle ];\n");
 
-	if (options->anonymous_states) {
+	if (fsm->opt->anonymous_states) {
 		fprintf(f, "\tnode [ label = \"\", width = 0.3 ];\n");
 	}
 
@@ -288,12 +287,12 @@ fsm_out_dot(const struct fsm *fsm, FILE *f,
 
 	start = fsm_getstart(fsm);
 	fprintf(f, "\tstart -> %sS%u;\n",
-		options->prefix != NULL ? options->prefix : "",
+		fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 		 start != NULL ? indexof(fsm, start) : 0U);
 
 	fprintf(f, "\n");
 
-	out_dotfrag(fsm, f, options);
+	out_dotfrag(fsm, f);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

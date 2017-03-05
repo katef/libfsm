@@ -8,9 +8,10 @@
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
-#include <fsm/out.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "libfsm/internal.h" /* XXX */
 #include "libfsm/out.h" /* XXX */
@@ -230,7 +231,7 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 
 	if (!fsm_isend(fsm, state)) {
 		/* XXX: don't need this if complete */
-		switch (fsm_io) {
+		switch (opt.io) {
 		case FSM_IO_GETC:
 			fprintf(f, "lx->lgetc = NULL; ");
 			break;
@@ -414,7 +415,7 @@ out_io(FILE *f)
 
 	fprintf(f, "\tassert(lx != NULL);\n");
 
-	switch (fsm_io) {
+	switch (opt.io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\tassert(lx->lgetc != NULL);\n");
 		fprintf(f, "\n");
@@ -475,7 +476,7 @@ out_io(FILE *f)
 	fprintf(f, "{\n");
 	fprintf(f, "\tassert(lx != NULL);\n");
 
-	switch (fsm_io) {
+	switch (opt.io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\tassert(lx->c == EOF);\n");
 		fprintf(f, "\n");
@@ -752,7 +753,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		fprintf(f, "\n");
 	}
 
-	switch (fsm_io) {
+	switch (opt.io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\twhile (c = lx_getc(lx), c != EOF) {\n");
 		break;
@@ -837,18 +838,19 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	}
 
 	{
-		static const struct fsm_outoptions o_defaults;
-		struct fsm_outoptions o = o_defaults;
+		const struct fsm_options *tmp;
+		static const struct fsm_options defaults;
+		struct fsm_options opt = defaults;
 
-		/* TODO: populate options */
-		o.anonymous_states  = 1;
-		o.consolidate_edges = 1;
-		o.fragment          = 1;
-		o.comments          = !(api_exclude & API_COMMENTS);
-		o.io                = FSM_IO_GETC;
-		o.prefix            = NULL;
+		tmp = z->fsm->opt;
 
-		(void) fsm_out_cfrag(z->fsm, f, &o, cp, leaf, ast);
+		opt.fragment = 1; /* XXX */
+
+		z->fsm->opt = &opt;
+
+		(void) fsm_out_cfrag(z->fsm, f, cp, leaf, ast);
+
+		z->fsm->opt = tmp;
 	}
 
 	fprintf(f, "\t}\n");
@@ -858,7 +860,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	{
 		struct fsm_state *s;
 
-		switch (fsm_io) {
+		switch (opt.io) {
 		case FSM_IO_GETC:
 			fprintf(f, "\tlx->lgetc = NULL;\n");
 			fprintf(f, "\n");
@@ -1031,7 +1033,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 	assert(f != NULL);
 
-	switch (fsm_io) {
+	switch (opt.io) {
 	case FSM_IO_GETC: cp = "c"; break;
 	case FSM_IO_STR:  cp = "c"; break;
 	case FSM_IO_PAIR: cp = "c"; break;
@@ -1113,7 +1115,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "\t*lx = lx_default;\n");
 		fprintf(f, "\n");
 
-		switch (fsm_io) {
+		switch (opt.io) {
 		case FSM_IO_GETC:
 			fprintf(f, "\tlx->c = EOF;\n");
 			break;
@@ -1147,7 +1149,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 		fprintf(f, "\tassert(lx->z != NULL);\n");
 		fprintf(f, "\n");
 
-		switch (fsm_io) {
+		switch (opt.io) {
 		case FSM_IO_GETC:
 			fprintf(f, "\tif (lx->lgetc == NULL) {\n");
 			break;

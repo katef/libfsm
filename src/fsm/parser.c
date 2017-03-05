@@ -1015,10 +1015,10 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 360 "src/fsm/parser.act"
+#line 362 "src/fsm/parser.act"
 
 
-	struct fsm *fsm_parse(FILE *f) {
+	struct fsm *fsm_parse(FILE *f, const struct fsm_options *opt) {
 		struct act_state act_state_s;
 		struct act_state *act_state;
 		struct lex_state lex_state_s;
@@ -1027,6 +1027,7 @@ ZL1:;
 		struct lx *lx;
 
 		assert(f != NULL);
+		assert(opt != NULL);
 
 		lex_state = &lex_state_s;
 
@@ -1051,7 +1052,8 @@ ZL1:;
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
 
-		new = fsm_new();
+		/* TODO: pass in fsm_options */
+		new = fsm_new(opt);
 		if (new == NULL) {
 			perror("fsm_new");
 			return NULL;
@@ -1065,6 +1067,6 @@ ZL1:;
 		return new;
 	}
 
-#line 1069 "src/fsm/parser.c"
+#line 1071 "src/fsm/parser.c"
 
 /* END OF FILE */

@@ -11,7 +11,7 @@ int main(void) {
 	struct fsm_state *new;
 	int i;
 
-	fsm = fsm_new();
+	fsm = fsm_new(NULL);
 
 	for (i = 0; i < sizeof s / sizeof *s; i++) {
 		s[i] = fsm_addstate(fsm);

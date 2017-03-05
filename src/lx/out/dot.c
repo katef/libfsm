@@ -6,8 +6,9 @@
 
 #include <adt/set.h>
 
-#include <fsm/out.h>
 #include <fsm/pred.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "libfsm/internal.h" /* XXX */
 
@@ -203,20 +204,23 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 */
 
 	{
-		static const struct fsm_outoptions o_defaults;
-		struct fsm_outoptions o = o_defaults;
+		const struct fsm_options *tmp;
+		static const struct fsm_options defaults;
+		struct fsm_options opt = defaults;
 		char p[128];
+
+		tmp = z->fsm->opt;
 
 		(void) sprintf(p, "z%u", zindexof(ast, z));
 
-		o.anonymous_states  = anonymous_states;
-		o.consolidate_edges = 1;
-		o.fragment          = 1;
-		o.comments          = 1;
-		o.io                = FSM_IO_GETC;
-		o.prefix            = p;
+		opt.fragment = 1; /* XXX */
+		opt.prefix   = p;
 
-		fsm_print(z->fsm, f, FSM_OUT_DOT, &o);
+		z->fsm->opt = &opt;
+
+		fsm_print(z->fsm, f, FSM_OUT_DOT);
+
+		z->fsm->opt = tmp;
 	}
 
 	for (s = z->fsm->sl; s != NULL; s = s->next) {

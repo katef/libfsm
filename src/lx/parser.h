@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 134 "src/lx/parser.act"
+#line 135 "src/lx/parser.act"
 
 
 	#include <stdio.h>
@@ -20,7 +20,7 @@
 	typedef struct act_state * act_state;
 	typedef struct ast *       ast;
 
-	struct ast *lx_parse(FILE *f);
+	struct ast *lx_parse(FILE *f, const struct fsm_options *opt);
 
 #line 26 "src/lx/parser.h"
 
@@ -29,7 +29,7 @@
 extern void p_lx(lex_state, act_state, ast *);
 /* BEGINNING OF TRAILER */
 
-#line 870 "src/lx/parser.act"
+#line 873 "src/lx/parser.act"
 
 
 #line 36 "src/lx/parser.h"

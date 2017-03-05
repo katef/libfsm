@@ -117,15 +117,13 @@ findany(const struct fsm_state *state)
 }
 
 void
-fsm_out_fsm(const struct fsm *fsm, FILE *f,
-	const struct fsm_outoptions *options)
+fsm_out_fsm(const struct fsm *fsm, FILE *f)
 {
 	struct fsm_state *s, *start;
 	int end;
 
 	assert(fsm != NULL);
 	assert(f != NULL);
-	assert(options != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		struct fsm_edge *e;

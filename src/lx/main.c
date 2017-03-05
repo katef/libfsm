@@ -16,6 +16,7 @@
 #include <fsm/pred.h>
 #include <fsm/cost.h>
 #include <fsm/out.h>
+#include <fsm/options.h>
 
 #include <re/re.h>
 
@@ -31,13 +32,13 @@ enum api_tokbuf  api_tokbuf;
 enum api_getc    api_getc;
 enum api_exclude api_exclude;
 
-enum fsm_io fsm_io;
-
 struct prefix prefix = {
 	"lx_",
 	"TOK_",
 	""
 };
+
+struct fsm_options opt;
 
 int print_progress;
 
@@ -434,7 +435,13 @@ main(int argc, char *argv[])
 
 	keep_nfa = 0;
 	print_progress = 0;
-	fsm_io = FSM_IO_GETC;
+
+	/* TODO: populate options */
+	opt.anonymous_states  = 1;
+	opt.consolidate_edges = 1;
+	opt.comments          = 1;
+	opt.io                = FSM_IO_GETC;
+	opt.prefix            = NULL;
 
 	{
 		int c;
@@ -450,7 +457,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'k':
-				fsm_io = io(optarg);
+				opt.io = io(optarg);
 				break;
 
 			case 'b': api_tokbuf  |= lang_tokbuf(optarg);  break;
@@ -504,7 +511,7 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (api_getc && fsm_io != FSM_IO_GETC) {
+	if (api_getc && opt.io != FSM_IO_GETC) {
 		fprintf(stderr, "-g is for -k getc output only\n");
 		return EXIT_FAILURE;
 	}
@@ -513,12 +520,16 @@ main(int argc, char *argv[])
 		prefix.lx = prefix.api;
 	}
 
+	if ((api_exclude & API_COMMENTS) != 0) {
+		opt.comments = 0;
+	}
+
 	{
 		if (print_progress) {
 			fprintf(stderr, "-- parsing:");
 		}
 
-		ast = lx_parse(stdin);
+		ast = lx_parse(stdin, &opt);
 		if (ast == NULL) {
 			return EXIT_FAILURE;
 		}
@@ -563,7 +574,7 @@ main(int argc, char *argv[])
 				zn++;
 			}
 
-			z->fsm = fsm_new();
+			z->fsm = fsm_new(&opt);
 			if (z->fsm == NULL) {
 				perror("fsm_new");
 				return EXIT_FAILURE;

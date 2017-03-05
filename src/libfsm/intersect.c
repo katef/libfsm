@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <limits.h>
+#include <errno.h>
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
@@ -16,6 +17,11 @@ fsm_intersect(struct fsm *a, struct fsm *b)
 
 	assert(a != NULL);
 	assert(b != NULL);
+
+	if (a->opt != b->opt) {
+		errno = EINVAL;
+		return NULL;
+	}
 
 	/*
 	 * This is intersection implemented in terms of complements and union,
