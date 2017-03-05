@@ -128,6 +128,12 @@ void
 fsm_setend(struct fsm *fsm, struct fsm_state *state, int end);
 
 /*
+ * Set data associated with all end states.
+ */
+void
+fsm_setendopaque(struct fsm *fsm, void *opaque);
+
+/*
  * Set data associated with an end state.
  */
 void
