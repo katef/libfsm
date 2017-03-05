@@ -252,11 +252,12 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 	assert(set != NULL); /* TODO: right? */
 	assert(fsm != NULL);
 	assert(state != NULL);
-	assert(fsm_getopaque(fsm, state) == NULL);
 
 	if (!fsm_isend(fsm, state)) {
 		return;
 	}
+
+	assert(fsm_getopaque(fsm, state) == NULL);
 
 	/*
 	 * Here we mark newly-created DFA states with the same AST mapping
