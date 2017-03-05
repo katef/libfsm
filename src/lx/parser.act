@@ -344,7 +344,7 @@
 
 			@r = fsm_union(@r, fsm);
 			if (@r == NULL) {
-				perror("fsm_determinise_opaque");
+				perror("fsm_union");
 				@!;
 			}
 		}
