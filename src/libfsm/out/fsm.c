@@ -8,6 +8,8 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "libfsm/internal.h"
 
@@ -65,6 +67,30 @@ escputc(int c, FILE *f)
 	}
 
 	return fprintf(f, "%c", c);
+}
+
+/* TODO: centralise, maybe with callback */
+static int
+escputs(FILE *f, const char *s)
+{
+	const char *p;
+	int r, n;
+
+	assert(f != NULL);
+	assert(s != NULL);
+
+	n = 0;
+
+	for (p = s; *p != '\0'; p++) {
+		r = escputc(*p, f);
+		if (r == -1) {
+			return -1;
+		}
+
+		n += r;
+	}
+
+	return n;
 }
 
 /* TODO: centralise */
@@ -161,7 +187,29 @@ fsm_out_fsm(const struct fsm *fsm, FILE *f)
 					break;
 				}
 
-				fprintf(f, ";\n");
+				fprintf(f, ";");
+
+				if (fsm->opt->comments) {
+					if (st == fsm->start) {
+						fprintf(f, " # start");
+					} else {
+						char buf[50];
+						int n;
+
+						n = fsm_example(fsm, st, buf, sizeof buf);
+						if (-1 == n) {
+							perror("fsm_example");
+							return;
+						}
+
+						fprintf(f, " # e.g. \"");
+						escputs(f, buf);
+						fprintf(f, "%s\"",
+							n >= (int) sizeof buf - 1 ? "..." : "");
+					}
+				}
+
+				fprintf(f, "\n");
 			}
 		}
 	}
