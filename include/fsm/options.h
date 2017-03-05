@@ -3,6 +3,11 @@
 #ifndef FSM_OPTIONS_H
 #define FSM_OPTIONS_H
 
+struct fsm;
+struct fsm_state;
+
+struct set; /* XXX */
+
 struct fsm_options {
 	/* boolean: true indicates to go to extra lengths in order to produce
 	 * neater-looking FSMs for certian operations. This usually means finding
@@ -38,6 +43,9 @@ struct fsm_options {
 
 	/* a prefix for namespacing generated identifiers. NULL if not required. */
 	const char *prefix;
+
+	/* TODO: explain */
+	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *);
 };
 
 #endif

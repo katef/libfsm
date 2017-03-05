@@ -606,9 +606,15 @@ main(int argc, char **argv)
 
 	struct record *r;
 	RB_FOREACH(r, recmap, &recmap) {
-		if (fsm_minimise_opaque(r->fsm, carryopaque) == 0) {
-			perror("fsm_minimise_opaque");
-			exit(-1);
+		{
+			opt.carryopaque = carryopaque;
+
+			if (fsm_minimise(r->fsm) == 0) {
+				perror("fsm_minimise");
+				exit(-1);
+			}
+
+			opt.carryopaque = NULL;
 		}
 
 		if (!fsm_union(fsm, r->fsm)) {
@@ -634,12 +640,18 @@ main(int argc, char **argv)
 		tstart = time(NULL);
 	}
 
-	struct fsm_determinise_cache *cache = NULL;
-	if (fsm_determinise_cacheopaque(fsm, carryopaque, &cache) == 0) {
-		perror("fsm_determinise_cacheopaque");
-		exit(-1);
+	{
+		opt.carryopaque = carryopaque;
+
+		struct fsm_determinise_cache *cache = NULL;
+		if (fsm_determinise_cache(fsm, &cache) == 0) {
+			perror("fsm_determinise_cache");
+			exit(-1);
+		}
+		fsm_determinise_freecache(fsm, cache);
+
+		opt.carryopaque = NULL;
 	}
-	fsm_determinise_freecache(fsm, cache);
 
 	if (progress) {
 		tend = time(NULL);

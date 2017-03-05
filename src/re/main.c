@@ -684,9 +684,15 @@ main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 
-		if (!fsm_determinise_opaque(dfa, carryopaque)) {
-			perror("fsm_determinise_opaque");
-			return EXIT_FAILURE;
+		{
+			opt.carryopaque = carryopaque;
+
+			if (!fsm_determinise(dfa)) {
+				perror("fsm_determinise");
+				return EXIT_FAILURE;
+			}
+
+			opt.carryopaque = NULL;
 		}
 
 		for (s = dfa->sl; s != NULL; s = s->next) {
@@ -739,10 +745,14 @@ main(int argc, char *argv[])
 				return EXIT_FAILURE;
 			}
 		} else {
-			if (!fsm_determinise_opaque(fsm, carryopaque)) {
-				perror("fsm_determinise_opaque");
+			opt.carryopaque = carryopaque;
+
+			if (!fsm_determinise(fsm)) {
+				perror("fsm_determinise");
 				return EXIT_FAILURE;
 			}
+
+			opt.carryopaque = NULL;
 		}
 	}
 

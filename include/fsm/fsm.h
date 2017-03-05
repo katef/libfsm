@@ -217,11 +217,6 @@ fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 int
 fsm_reverse(struct fsm *fsm);
 
-/* TODO: explain */
-int
-fsm_reverse_opaque(struct fsm *fsm,
-	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *));
-
 /*
  * Convert an fsm to a DFA.
  *
@@ -230,11 +225,6 @@ fsm_reverse_opaque(struct fsm *fsm,
 int
 fsm_determinise(struct fsm *fsm);
 
-/* TODO: explain */
-int
-fsm_determinise_opaque(struct fsm *fsm,
-	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *));
-
 /*
  * Like fsm_determinise_opaque, but allows the caller to store a pointer to
  * resources used by this API, reducing memory allocation and copy pressure.
@@ -242,8 +232,7 @@ fsm_determinise_opaque(struct fsm *fsm,
  * Free the cached data by calling fsm_determinise_freecache().
  */
 int
-fsm_determinise_cacheopaque(struct fsm *fsm,
-	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *),
+fsm_determinise_cache(struct fsm *fsm,
 	struct fsm_determinise_cache **dcache);
 void
 fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache);
@@ -262,11 +251,6 @@ fsm_complete(struct fsm *fsm,
  */
 int
 fsm_minimise(struct fsm *fsm);
-
-/* TODO: explain */
-int
-fsm_minimise_opaque(struct fsm *fsm,
-	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *));
 
 /*
  * Concatenate b after a. This is not commutative.

@@ -398,9 +398,15 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 		return -1;
 	}
 
-	if (!fsm_determinise_opaque(q, carryopaque)) {
-		fsm_free(q);
-		return -1;
+	{
+		opt.carryopaque = carryopaque;
+
+		if (!fsm_determinise(q)) {
+			fsm_free(q);
+			return -1;
+		}
+
+		opt.carryopaque = NULL;
 	}
 
 	{
@@ -605,10 +611,14 @@ main(int argc, char *argv[])
 			}
 
 			if (!keep_nfa) {
-				if (!fsm_determinise_opaque(z->fsm, carryopaque)) {
-					perror("fsm_determinise_opaque");
+				opt.carryopaque = carryopaque;
+
+				if (!fsm_determinise(z->fsm)) {
+					perror("fsm_determinise");
 					return EXIT_FAILURE;
 				}
+
+				opt.carryopaque = NULL;
 			}
 		}
 

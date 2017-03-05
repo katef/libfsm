@@ -93,8 +93,7 @@ counttargets(struct fsm_state *state)
 }
 
 int
-fsm_minimise_opaque(struct fsm *fsm,
-	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *))
+fsm_minimise(struct fsm *fsm)
 {
 	int r;
 	int hasend;
@@ -118,22 +117,22 @@ fsm_minimise_opaque(struct fsm *fsm,
 	 * Brzozowski's algorithm.
 	 */
 	{
-		r = fsm_reverse_opaque(fsm, carryopaque);
+		r = fsm_reverse(fsm);
 		if (!r) {
 			return 0;
 		}
 
-		r = fsm_determinise_opaque(fsm, carryopaque);
+		r = fsm_determinise(fsm);
 		if (!r) {
 			return 0;
 		}
 
-		r = fsm_reverse_opaque(fsm, carryopaque);
+		r = fsm_reverse(fsm);
 		if (!r) {
 			return 0;
 		}
 
-		r = fsm_determinise_opaque(fsm, carryopaque);
+		r = fsm_determinise(fsm);
 		if (!r) {
 			return 0;
 		}
@@ -181,11 +180,5 @@ fsm_minimise_opaque(struct fsm *fsm,
 	}
 
 	return 1;
-}
-
-int
-fsm_minimise(struct fsm *fsm)
-{
-	return fsm_minimise_opaque(fsm, NULL);
 }
 
