@@ -204,22 +204,23 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 */
 
 	{
+		const struct fsm_options *tmp;
 		static const struct fsm_options defaults;
 		struct fsm_options opt = defaults;
 		char p[128];
 
+		tmp = z->fsm->opt;
+
 		(void) sprintf(p, "z%u", zindexof(ast, z));
 
-		opt.anonymous_states  = anonymous_states;
-		opt.consolidate_edges = 1;
-		opt.fragment          = 1;
-		opt.comments          = 1;
-		opt.io                = FSM_IO_GETC;
-		opt.prefix            = p;
+		opt.fragment = 1; /* XXX */
+		opt.prefix   = p;
 
-		z->fsm->opt = &opt; /* XXX */
+		z->fsm->opt = &opt;
 
 		fsm_print(z->fsm, f, FSM_OUT_DOT);
+
+		z->fsm->opt = tmp;
 	}
 
 	for (s = z->fsm->sl; s != NULL; s = s->next) {

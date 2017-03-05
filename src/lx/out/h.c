@@ -5,6 +5,7 @@
 #include <ctype.h>
 
 #include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "lx/out.h"
 #include "lx/ast.h"
@@ -79,7 +80,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 
 	fprintf(f, "struct %slx {\n", prefix.lx);
 
-	switch (fsm_io) {
+	switch (opt.io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\tint (*lgetc)(struct %slx *lx);\n", prefix.lx);
 		fprintf(f, "\tvoid *opaque;\n");

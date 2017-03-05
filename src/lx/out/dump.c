@@ -4,6 +4,8 @@
 #include <stdio.h>
 
 #include <fsm/fsm.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "fsm/out.h"
 
@@ -58,7 +60,7 @@ out_dump(FILE *f)
 	fprintf(f, "\tenum lx_token t;\n");
 	fprintf(f, "\tstruct lx lx = { 0 };\n");
 
-	switch (fsm_io) {
+	switch (opt.io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\tint (*lgetc)(struct lx *lx);\n");
 		fprintf(f, "\tvoid *opaque;\n");
@@ -103,7 +105,7 @@ out_dump(FILE *f)
 
 	fprintf(f, "\n");
 
-	if (fsm_io == FSM_IO_GETC && (api_getc != API_AGETC && api_getc != API_SGETC)) {
+	if (opt.io == FSM_IO_GETC && (api_getc != API_AGETC && api_getc != API_SGETC)) {
 		fprintf(f, "\tif (argc != 1) {\n");
 		fprintf(f, "\t\tfprintf(stderr, \"usage: dump\\n\");\n");
 		fprintf(f, "\t\treturn 1;\n");
@@ -157,7 +159,7 @@ out_dump(FILE *f)
 	fprintf(f, "\tlx_init(&lx);\n");
 	fprintf(f, "\n");
 
-	switch (fsm_io) {
+	switch (opt.io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\tlx.lgetc  = lgetc;\n");
 		fprintf(f, "\tlx.opaque = opaque;\n");
