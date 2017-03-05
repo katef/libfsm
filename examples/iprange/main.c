@@ -107,7 +107,6 @@ get_id(char *rec, size_t reclen)
 			exit(-1);
 		}
 		fsm_setend(r->fsm, r->end, 1);
-		fsm_setopaque(r->fsm, r->end, r);
 
 		memset(r->regs, 0, sizeof r->regs);
 
@@ -606,16 +605,12 @@ main(int argc, char **argv)
 
 	struct record *r;
 	RB_FOREACH(r, recmap, &recmap) {
-		{
-			opt.carryopaque = carryopaque;
-
-			if (fsm_minimise(r->fsm) == 0) {
-				perror("fsm_minimise");
-				exit(-1);
-			}
-
-			opt.carryopaque = NULL;
+		if (fsm_minimise(r->fsm) == 0) {
+			perror("fsm_minimise");
+			exit(-1);
 		}
+
+		fsm_setendopaque(r->fsm, r);
 
 		if (!fsm_union(fsm, r->fsm)) {
 			perror("fsm_union");
