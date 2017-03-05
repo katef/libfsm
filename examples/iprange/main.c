@@ -107,7 +107,6 @@ get_id(char *rec, size_t reclen)
 			exit(-1);
 		}
 		fsm_setend(r->fsm, r->end, 1);
-		fsm_setopaque(r->fsm, r->end, r);
 
 		memset(r->regs, 0, sizeof r->regs);
 
@@ -606,10 +605,12 @@ main(int argc, char **argv)
 
 	struct record *r;
 	RB_FOREACH(r, recmap, &recmap) {
-		if (fsm_minimise_opaque(r->fsm, carryopaque) == 0) {
-			perror("fsm_minimise_opaque");
+		if (fsm_minimise(r->fsm) == 0) {
+			perror("fsm_minimise");
 			exit(-1);
 		}
+
+		fsm_setendopaque(r->fsm, r);
 
 		if (!fsm_union(fsm, r->fsm)) {
 			perror("fsm_union");
@@ -634,12 +635,18 @@ main(int argc, char **argv)
 		tstart = time(NULL);
 	}
 
-	struct fsm_determinise_cache *cache = NULL;
-	if (fsm_determinise_cacheopaque(fsm, carryopaque, &cache) == 0) {
-		perror("fsm_determinise_cacheopaque");
-		exit(-1);
+	{
+		opt.carryopaque = carryopaque;
+
+		struct fsm_determinise_cache *cache = NULL;
+		if (fsm_determinise_cache(fsm, &cache) == 0) {
+			perror("fsm_determinise_cache");
+			exit(-1);
+		}
+		fsm_determinise_freecache(fsm, cache);
+
+		opt.carryopaque = NULL;
 	}
-	fsm_determinise_freecache(fsm, cache);
 
 	if (progress) {
 		tend = time(NULL);

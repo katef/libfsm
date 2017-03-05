@@ -320,11 +320,9 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 			continue;
 		}
 
-		assert(s->opaque != NULL);
+		assert(fsm_getopaque(fsm, s) != NULL);
 
-		for (m = s->opaque; m != NULL; m = m->next) {
-			assert(s->opaque != NULL);
-
+		for (m = fsm_getopaque(fsm, s); m != NULL; m = m->next) {
 			if (!addmatch(&matches, m->s)) {
 				perror("addmatch");
 				goto error;
@@ -332,7 +330,7 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 		}
 	}
 
-	state->opaque = matches;
+	fsm_setopaque(fsm, state, matches);
 
 	return;
 
@@ -340,7 +338,7 @@ error:
 
 	/* XXX: free matches */
 
-	state->opaque = NULL;
+	fsm_setopaque(fsm, state, NULL);
 
 	return;
 }
@@ -608,8 +606,9 @@ main(int argc, char *argv[])
 
 				/*
 				 * Attach this mapping to each end state for this regexp.
-				 * We could share the same matches struct for all end states
-				 * in the same regexp, but that would be tricky to free().
+				 * XXX: we should share the same matches struct for all end states
+				 * in the same regexp, and keep an argc-sized array of pointers to free().
+				 * XXX: then use fsm_setendopaque() here.
 				 */
 				for (s = new->sl; s != NULL; s = s->next) {
 					if (fsm_isend(new, s)) {
@@ -622,9 +621,8 @@ main(int argc, char *argv[])
 							return EXIT_FAILURE;
 						}
 
-						assert(s->opaque == NULL);
-
-						s->opaque = matches;
+						assert(fsm_getopaque(new, s) == NULL);
+						fsm_setopaque(new, s, matches);
 					}
 				}
 			}
@@ -686,9 +684,15 @@ main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 
-		if (!fsm_determinise_opaque(dfa, carryopaque)) {
-			perror("fsm_determinise_opaque");
-			return EXIT_FAILURE;
+		{
+			opt.carryopaque = carryopaque;
+
+			if (!fsm_determinise(dfa)) {
+				perror("fsm_determinise");
+				return EXIT_FAILURE;
+			}
+
+			opt.carryopaque = NULL;
 		}
 
 		for (s = dfa->sl; s != NULL; s = s->next) {
@@ -698,9 +702,8 @@ main(int argc, char *argv[])
 				continue;
 			}
 
-			assert(s->opaque != NULL);
-
-			matches = s->opaque;
+			matches = fsm_getopaque(dfa, s);
+			assert(matches != NULL);
 
 			if (matches->next != NULL) {
 				const struct match *m;
@@ -742,10 +745,14 @@ main(int argc, char *argv[])
 				return EXIT_FAILURE;
 			}
 		} else {
-			if (!fsm_determinise_opaque(fsm, carryopaque)) {
-				perror("fsm_determinise_opaque");
+			opt.carryopaque = carryopaque;
+
+			if (!fsm_determinise(fsm)) {
+				perror("fsm_determinise");
 				return EXIT_FAILURE;
 			}
+
+			opt.carryopaque = NULL;
 		}
 	}
 
@@ -761,9 +768,9 @@ main(int argc, char *argv[])
 			if (patterns) {
 				const struct match *m;
 
-				assert(s->opaque != NULL);
+				assert(fsm_getopaque(fsm, s) != NULL);
 
-				for (m = s->opaque; m != NULL; m = m->next) {
+				for (m = fsm_getopaque(fsm, s); m != NULL; m = m->next) {
 					/* TODO: print nicely */
 					printf("/%s/", m->s);
 					if (m->next != NULL) {
@@ -834,7 +841,9 @@ main(int argc, char *argv[])
 				if (patterns) {
 					const struct match *m;
 
-					for (m = state->opaque; m != NULL; m = m->next) {
+					assert(fsm_getopaque(fsm, state) != NULL);
+
+					for (m = fsm_getopaque(fsm, state); m != NULL; m = m->next) {
 						/* TODO: print nicely */
 						printf("match: /%s/\n", m->s);
 					}

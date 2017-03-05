@@ -310,7 +310,7 @@ p_pattern(lex_state lex_state, act_state act_state, zone ZIz, fsm *ZOr)
 
 			(ZIr) = fsm_union((ZIr), fsm);
 			if ((ZIr) == NULL) {
-				perror("fsm_determinise_opaque");
+				perror("fsm_union");
 				goto ZL1;
 			}
 		}
@@ -829,7 +829,7 @@ p_list_Hof_Hthings_C_Cthing(lex_state lex_state, act_state act_state, ast ZIa, z
 
 			(ZI229) = fsm_union((ZI229), fsm);
 			if ((ZI229) == NULL) {
-				perror("fsm_determinise_opaque");
+				perror("fsm_union");
 				goto ZL1;
 			}
 		}

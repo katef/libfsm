@@ -9,6 +9,8 @@
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "internal.h"
 
@@ -396,7 +398,6 @@ carryend(struct set *set, struct fsm *fsm, struct fsm_state *state)
  */
 static struct fsm *
 determinise(struct fsm *nfa,
-	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *),
 	struct fsm_determinise_cache *dcache)
 {
 	struct mapping *curr;
@@ -524,8 +525,8 @@ determinise(struct fsm *nfa,
 		 * with the DFA conversion; it's meaningful only to the caller.
 		 */
 		/* XXX: possibly have callback in fsm struct, instead. like the colour hooks */
-		if (carryopaque != NULL) {
-			carryopaque(curr->closure, dfa, curr->dfastate);
+		if (dfa->opt->carryopaque != NULL) {
+			dfa->opt->carryopaque(curr->closure, dfa, curr->dfastate);
 		}
 	}
 
@@ -545,8 +546,7 @@ error:
 }
 
 int
-fsm_determinise_cacheopaque(struct fsm *fsm,
-	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *),
+fsm_determinise_cache(struct fsm *fsm,
 	struct fsm_determinise_cache **dcache)
 {
 	struct fsm *dfa;
@@ -565,7 +565,7 @@ fsm_determinise_cacheopaque(struct fsm *fsm,
 		(*dcache)->trans    = NULL;
 	}
 
-	dfa = determinise(fsm, carryopaque, *dcache);
+	dfa = determinise(fsm, *dcache);
 	if (dfa == NULL) {
 		return 0;
 	}
@@ -610,24 +610,17 @@ fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache)
 }
 
 int
-fsm_determinise_opaque(struct fsm *fsm,
-	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *))
+fsm_determinise(struct fsm *fsm)
 {
 	struct fsm_determinise_cache *dcache;
 	int r;
 
 	dcache = NULL;
 
-	r = fsm_determinise_cacheopaque(fsm, carryopaque, &dcache);
+	r = fsm_determinise_cache(fsm, &dcache);
 
 	fsm_determinise_freecache(fsm, dcache);
 
 	return r;
-}
-
-int
-fsm_determinise(struct fsm *fsm)
-{
-	return fsm_determinise_opaque(fsm, NULL);
 }
 

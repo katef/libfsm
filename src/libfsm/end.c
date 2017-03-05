@@ -6,6 +6,7 @@
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
+#include <fsm/pred.h>
 
 #include "internal.h"
 
@@ -37,6 +38,20 @@ fsm_setend(struct fsm *fsm, struct fsm_state *state, int end)
 }
 
 void
+fsm_setendopaque(struct fsm *fsm, void *opaque)
+{
+	struct fsm_state *s;
+
+	assert(fsm != NULL);
+
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		if (fsm_isend(fsm, s)) {
+			fsm_setopaque(fsm, s, opaque);
+		}
+	}
+}
+
+void
 fsm_setopaque(struct fsm *fsm, struct fsm_state *state, void *opaque)
 {
 	(void) fsm;
@@ -50,7 +65,7 @@ fsm_setopaque(struct fsm *fsm, struct fsm_state *state, void *opaque)
 }
 
 void *
-fsm_getopaque(struct fsm *fsm, struct fsm_state *state)
+fsm_getopaque(struct fsm *fsm, const struct fsm_state *state)
 {
 	(void) fsm;
 

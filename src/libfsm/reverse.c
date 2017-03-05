@@ -14,8 +14,7 @@
 #include "internal.h"
 
 int
-fsm_reverse_opaque(struct fsm *fsm,
-	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *))
+fsm_reverse(struct fsm *fsm)
 {
 	struct fsm *new;
 	struct fsm_state *end;
@@ -84,9 +83,8 @@ fsm_reverse_opaque(struct fsm *fsm,
 		}
 	}
 
-	/* XXX: possibly have callback in fsm struct, instead. like the colour hooks */
-	if (end != NULL && carryopaque != NULL) {
-		carryopaque(endset, new, end);
+	if (end != NULL && fsm->opt->carryopaque != NULL) {
+		fsm->opt->carryopaque(endset, new, end);
 	}
 
 	/* Create reversed edges */
@@ -243,11 +241,5 @@ fsm_reverse_opaque(struct fsm *fsm,
 	fsm_move(fsm, new);
 
 	return 1;
-}
-
-int
-fsm_reverse(struct fsm *fsm)
-{
-	return fsm_reverse_opaque(fsm, NULL);
 }
 

@@ -252,11 +252,12 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 	assert(set != NULL); /* TODO: right? */
 	assert(fsm != NULL);
 	assert(state != NULL);
-	assert(state->opaque == NULL);
 
 	if (!fsm_isend(fsm, state)) {
 		return;
 	}
+
+	assert(fsm_getopaque(fsm, state) == NULL);
 
 	/*
 	 * Here we mark newly-created DFA states with the same AST mapping
@@ -273,7 +274,7 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 
 	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
 		if (fsm_isend(fsm, s)) {
-			m = s->opaque;
+			m = fsm_getopaque(fsm, s);
 			break;
 		}
 	}
@@ -289,9 +290,9 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 			continue;
 		}
 
-		assert(s->opaque != NULL);
+		assert(fsm_getopaque(fsm, s) != NULL);
 
-		p = s->opaque;
+		p = fsm_getopaque(fsm, s);
 
 		if (m->to == p->to && m->token == p->token) {
 			continue;
@@ -327,7 +328,7 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 	if (conflict == NULL) {
 		assert(m->conflict == NULL);
 
-		state->opaque = m;
+		fsm_setopaque(fsm, state, m);
 	} else {
 		struct ast_mapping *new;
 
@@ -343,7 +344,7 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 		new->next     = NULL;
 		new->conflict = conflict; /* private to this DFA state */
 
-		state->opaque = new;
+		fsm_setopaque(fsm, state, new);
 	}
 
 	return;
@@ -352,7 +353,7 @@ error:
 
 	/* XXX: free conflict set */
 
-	state->opaque = NULL;
+	fsm_setopaque(fsm, state, NULL);
 
 	return;
 }
@@ -398,9 +399,15 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 		return -1;
 	}
 
-	if (!fsm_determinise_opaque(q, carryopaque)) {
-		fsm_free(q);
-		return -1;
+	{
+		opt.carryopaque = carryopaque;
+
+		if (!fsm_determinise(q)) {
+			fsm_free(q);
+			return -1;
+		}
+
+		opt.carryopaque = NULL;
 	}
 
 	{
@@ -412,8 +419,8 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 				continue;
 			}
 
-			assert(s->opaque != NULL);
-			m = s->opaque;
+			m = fsm_getopaque(q, s);
+			assert(m != NULL);
 
 			if (m->conflict != NULL) {
 				/* TODO: free conflict set */
@@ -581,8 +588,6 @@ main(int argc, char *argv[])
 			}
 
 			for (m = z->ml; m != NULL; m = m->next) {
-				struct fsm_state *s;
-
 				assert(m->fsm != NULL);
 
 				if (!keep_nfa) {
@@ -593,12 +598,7 @@ main(int argc, char *argv[])
 				}
 
 				/* Attach this mapping to each end state for this FSM */
-				for (s = m->fsm->sl; s != NULL; s = s->next) {
-					if (fsm_isend(m->fsm, s)) {
-						assert(s->opaque == NULL);
-						s->opaque = m;
-					}
-				}
+				fsm_setendopaque(m->fsm, m);
 
 				z->fsm = fsm_union(z->fsm, m->fsm);
 				if (z->fsm == NULL) {
@@ -612,10 +612,14 @@ main(int argc, char *argv[])
 			}
 
 			if (!keep_nfa) {
-				if (!fsm_determinise_opaque(z->fsm, carryopaque)) {
-					perror("fsm_determinise_opaque");
+				opt.carryopaque = carryopaque;
+
+				if (!fsm_determinise(z->fsm)) {
+					perror("fsm_determinise");
 					return EXIT_FAILURE;
 				}
+
+				opt.carryopaque = NULL;
 			}
 		}
 
