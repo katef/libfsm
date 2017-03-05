@@ -52,7 +52,6 @@ fsm_new(const struct fsm_options *opt)
 	new->sl    = NULL;
 	new->tail  = &new->sl;
 	new->start = NULL;
-	new->tidy  = 1;
 
 	new->endcount = 0;
 

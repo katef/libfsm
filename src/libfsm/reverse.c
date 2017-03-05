@@ -8,6 +8,8 @@
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "internal.h"
 
@@ -190,10 +192,10 @@ fsm_reverse_opaque(struct fsm *fsm,
 			 * this prevents accidentally transitioning to another route.
 			 *
 			 * This optimisation can be expensive to run, so it's optionally
-			 * disabled by the fsm->tidy flag.
+			 * disabled by the opt->tidy flag.
 			 */
 
-			if (!fsm->tidy) {
+			if (!fsm->opt->tidy) {
 				s = NULL;
 			} else {
 				for (s = set_first(endset, &it); s != NULL; s = set_next(&it)) {

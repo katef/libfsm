@@ -83,8 +83,6 @@ fsm_clone(const struct fsm *fsm)
 
 	new->start = fsm->start->equiv;
 
-	new->tidy = fsm->tidy;
-
 	return new;
 }
 

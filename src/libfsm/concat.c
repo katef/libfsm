@@ -8,6 +8,8 @@
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "internal.h"
 
@@ -69,10 +71,10 @@ fsm_concat(struct fsm *a, struct fsm *b)
 	 * two states instead.
 	 *
 	 * This optimisation can be expensive to run, so it's optionally disabled
-	 * by the fsm->tidy flag.
+	 * by the opt->tidy flag.
 	 */
 
-	if (!q->tidy) {
+	if (!q->opt->tidy) {
 		if (!fsm_addedge_epsilon(q, ea, sb)) {
 			goto error;
 		}

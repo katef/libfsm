@@ -8,6 +8,8 @@
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "internal.h"
 
@@ -56,10 +58,10 @@ fsm_union(struct fsm *a, struct fsm *b)
 	 * state if they have no incoming edges.
 	 *
 	 * This optimisation can be expensive to run, so it's optionally disabled
-	 * by the fsm->tidy flag.
+	 * by the opt->tidy flag.
 	 */
 
-	if (!q->tidy) {
+	if (!q->opt->tidy) {
 		sq = fsm_addstate(q);
 		if (sq == NULL) {
 			goto error;

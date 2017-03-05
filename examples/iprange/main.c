@@ -547,9 +547,6 @@ main(int argc, char **argv)
 	}
 	fsm_setstart(fsm, fsmstart);
 
-	/* XXX: This should be possible without internal.h */
-	fsm->tidy = 0;
-
 	unsigned line = 0;
 	time_t tstart, tend;
 	if (progress) {

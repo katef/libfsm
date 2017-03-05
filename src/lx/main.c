@@ -580,8 +580,6 @@ main(int argc, char *argv[])
 				return EXIT_FAILURE;
 			}
 
-			z->fsm->tidy = 0;
-
 			for (m = z->ml; m != NULL; m = m->next) {
 				struct fsm_state *s;
 
