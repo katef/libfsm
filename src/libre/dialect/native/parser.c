@@ -2416,6 +2416,7 @@ ZL1:;
 
 	struct fsm *
 	DIALECT_COMP(int (*f)(void *opaque), void *opaque,
+		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
 		struct re_err *err)
 	{
@@ -2424,8 +2425,7 @@ ZL1:;
 
 		assert(f != NULL);
 
-		/* XXX: pass in struct fsm_options */
-		new = fsm_new(NULL);
+		new = fsm_new(opt);
 		if (new == NULL) {
 			return NULL;
 		}

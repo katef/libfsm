@@ -1015,10 +1015,10 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 361 "src/fsm/parser.act"
+#line 362 "src/fsm/parser.act"
 
 
-	struct fsm *fsm_parse(FILE *f) {
+	struct fsm *fsm_parse(FILE *f, const struct fsm_options *opt) {
 		struct act_state act_state_s;
 		struct act_state *act_state;
 		struct lex_state lex_state_s;
@@ -1027,6 +1027,7 @@ ZL1:;
 		struct lx *lx;
 
 		assert(f != NULL);
+		assert(opt != NULL);
 
 		lex_state = &lex_state_s;
 
@@ -1052,7 +1053,7 @@ ZL1:;
 		act_state = &act_state_s;
 
 		/* TODO: pass in fsm_options */
-		new = fsm_new(NULL);
+		new = fsm_new(opt);
 		if (new == NULL) {
 			perror("fsm_new");
 			return NULL;
@@ -1066,6 +1067,6 @@ ZL1:;
 		return new;
 	}
 
-#line 1070 "src/fsm/parser.c"
+#line 1071 "src/fsm/parser.c"
 
 /* END OF FILE */
