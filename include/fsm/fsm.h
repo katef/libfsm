@@ -143,7 +143,7 @@ fsm_setopaque(struct fsm *fsm, struct fsm_state *state, void *opaque);
  * Get data associated with an end state.
  */
 void *
-fsm_getopaque(struct fsm *fsm, struct fsm_state *state);
+fsm_getopaque(struct fsm *fsm, const struct fsm_state *state);
 
 /*
  * Return state (if there is just one), or add epsilon edges from all states,
