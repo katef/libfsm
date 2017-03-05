@@ -13,6 +13,7 @@
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/out.h>
+#include <fsm/options.h>
 #include <fsm/pred.h>
 
 #include "../../src/libfsm/out.h" /* XXX */
@@ -651,8 +652,8 @@ main(int argc, char **argv)
 	if (oc) {
 		static const char *cp = "c";
 		/* XXX: This should be possible without private out.h. */
-		fsm_out_cfrag(fsm, stdout, &o, cp, leaf, NULL);
+		fsm_out_cfrag(fsm, stdout, cp, leaf, NULL);
 	} else if (odot) {
-		fsm_print(fsm, stdout, FSM_OUT_DOT, &o);
+		fsm_print(fsm, stdout, FSM_OUT_DOT);
 	}
 }

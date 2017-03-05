@@ -41,7 +41,7 @@ int main(void) {
 
 		fprintf(stderr, "%s\n", s);
 
-		r = re_comp(RE_LITERAL, re_sgetc, &p, 0, &e);
+		r = re_comp(RE_LITERAL, re_sgetc, &p, &opt, 0, &e);
 		if (r == NULL) {
 			re_perror(RE_LITERAL, &e, NULL, s);
 			return 1;
