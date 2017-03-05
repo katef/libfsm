@@ -4,15 +4,21 @@
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/out.h>
+#include <fsm/options.h>
 
 #include <re/re.h>
+
+static struct fsm_options opt;
 
 int main(void) {
 	struct fsm *fsm;
 	struct fsm_state *start;
 	char s[BUFSIZ];
 
-	fsm = fsm_new(NULL);
+	opt.anonymous_states  = 1;
+	opt.consolidate_edges = 1;
+
+	fsm = fsm_new(&opt);
 	if (fsm == NULL) {
 		perror("fsm_new");
 		return 1;
@@ -53,15 +59,7 @@ int main(void) {
 		return 1;
 	}
 
-	{
-		static const struct fsm_options o_defaults;
-		struct fsm_options o = o_defaults;
-
-		o.anonymous_states  = 1;
-		o.consolidate_edges = 1;
-
-		fsm_print(fsm, stdout, FSM_OUT_DOT, &o);
-	}
+	fsm_print(fsm, stdout, FSM_OUT_DOT);
 
 	return 0;
 }

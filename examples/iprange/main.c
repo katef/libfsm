@@ -62,6 +62,8 @@ RB_GENERATE_STATIC(recmap, record, entry, recmap_cmp)
 
 static unsigned nrecords;
 
+static struct fsm_options opt;
+
 static struct record *
 get_id(char *rec, size_t reclen)
 {
@@ -85,7 +87,7 @@ get_id(char *rec, size_t reclen)
 
 		r->len = reclen;
 		r->id = nrecords++;
-		r->fsm = fsm_new(NULL);
+		r->fsm = fsm_new(&opt);
 		if (r->fsm == NULL) {
 			perror("fsm_new");
 			exit(-1);
@@ -481,6 +483,12 @@ main(int argc, char **argv)
 	int oc = 0;
 	int c;
 
+	opt.prefix            = NULL;
+	opt.anonymous_states  = 1;
+	opt.consolidate_edges = 1;
+	opt.case_ranges       = 1;
+	opt.opaque_string     = nl;
+
 	while (c = getopt(argc, argv, "46f:l:Q"), c != -1) {
 		switch (c) {
 		case '4':
@@ -525,7 +533,7 @@ main(int argc, char **argv)
 
 	memset(ones, 0xff, sizeof ones);
 
-	fsm = fsm_new(NULL);
+	fsm = fsm_new(&opt);
 	if (fsm == NULL) {
 		perror("fsm_new");
 		return -1;
@@ -597,14 +605,6 @@ main(int argc, char **argv)
 		tstart = time(NULL);
 		line = 0;
 	}
-
-	static const struct fsm_options o_defaults;
-	struct fsm_options o = o_defaults;
-	o.prefix = NULL;
-	o.anonymous_states = 1;
-	o.consolidate_edges = 1;
-	o.case_ranges = 1;
-	o.opaque_string = nl;
 
 	struct record *r;
 	RB_FOREACH(r, recmap, &recmap) {

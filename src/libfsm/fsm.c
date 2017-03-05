@@ -36,8 +36,12 @@ free_contents(struct fsm *fsm)
 struct fsm *
 fsm_new(const struct fsm_options *opt)
 {
-	static const struct fsm_options o_defaults;
+	static const struct fsm_options defaults;
 	struct fsm *new;
+
+	if (opt == NULL) {
+		opt = &defaults;
+	}
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
@@ -51,7 +55,7 @@ fsm_new(const struct fsm_options *opt)
 
 	new->endcount = 0;
 
-	new->opt = opt != NULL ? opt : &o_defaults;
+	new->opt = opt;
 
 #ifdef DEBUG_TODFA
 	new->nfa   = NULL;

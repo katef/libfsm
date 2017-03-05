@@ -838,16 +838,18 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	}
 
 	{
-		static const struct fsm_options o_defaults;
-		struct fsm_options o = o_defaults;
+		static const struct fsm_options defaults;
+		struct fsm_options opt = defaults;
 
 		/* TODO: populate options */
-		o.anonymous_states  = 1;
-		o.consolidate_edges = 1;
-		o.fragment          = 1;
-		o.comments          = !(api_exclude & API_COMMENTS);
-		o.io                = FSM_IO_GETC;
-		o.prefix            = NULL;
+		opt.anonymous_states  = 1;
+		opt.consolidate_edges = 1;
+		opt.fragment          = 1;
+		opt.comments          = !(api_exclude & API_COMMENTS);
+		opt.io                = FSM_IO_GETC;
+		opt.prefix            = NULL;
+
+		z->fsm->opt = &opt; /* XXX */
 
 		(void) fsm_out_cfrag(z->fsm, f, cp, leaf, ast);
 	}
