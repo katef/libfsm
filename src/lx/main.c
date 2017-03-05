@@ -16,6 +16,7 @@
 #include <fsm/pred.h>
 #include <fsm/cost.h>
 #include <fsm/out.h>
+#include <fsm/options.h>
 
 #include <re/re.h>
 
@@ -38,6 +39,8 @@ struct prefix prefix = {
 	"TOK_",
 	""
 };
+
+struct fsm_options opt;
 
 int print_progress;
 
@@ -518,7 +521,7 @@ main(int argc, char *argv[])
 			fprintf(stderr, "-- parsing:");
 		}
 
-		ast = lx_parse(stdin);
+		ast = lx_parse(stdin, &opt);
 		if (ast == NULL) {
 			return EXIT_FAILURE;
 		}
@@ -563,7 +566,7 @@ main(int argc, char *argv[])
 				zn++;
 			}
 
-			z->fsm = fsm_new(NULL);
+			z->fsm = fsm_new(&opt);
 			if (z->fsm == NULL) {
 				perror("fsm_new");
 				return EXIT_FAILURE;

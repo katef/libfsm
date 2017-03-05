@@ -62,6 +62,7 @@
 		enum lx_token lex_tok;
 		enum lx_token lex_tok_save;
 		unsigned int zn;
+		const struct fsm_options *opt;
 	};
 
 	struct lex_state {
@@ -129,7 +130,7 @@
 	typedef struct act_state * act_state;
 	typedef struct ast *       ast;
 
-	struct ast *lx_parse(FILE *f);
+	struct ast *lx_parse(FILE *f, const struct fsm_options *opt);
 
 @};
 
@@ -307,7 +308,7 @@
 		assert(@t != NULL);
 		assert(@t != NULL);
 
-		@r = fsm_new(NULL);
+		@r = fsm_new(act_state->opt);
 		if (@r == NULL) {
 			perror("fsm_new");
 			@!;
@@ -356,7 +357,7 @@
 		assert(@a != NULL);
 		assert(@a->p != NULL);
 
-		@r = re_comp(RE_LITERAL, act_agetc, @a, NULL, 0, &err);
+		@r = re_comp(RE_LITERAL, act_agetc, @a, act_state->opt, 0, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
@@ -373,7 +374,7 @@
 		assert(@a != NULL);
 		assert(@a->p != NULL);
 
-		@r = re_comp(RE_NATIVE, act_agetc, @a, NULL, @f, &err);
+		@r = re_comp(RE_NATIVE, act_agetc, @a, act_state->opt, @f, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
@@ -388,7 +389,7 @@
 	<regex-any>: () -> (r :fsm) = @{
 		struct fsm_state *start, *end;
 
-		@r = fsm_new(NULL);
+		@r = fsm_new(act_state->opt);
 		if (@r == NULL) {
 			perror("fsm_new");
 			@!;
@@ -818,7 +819,7 @@
 
 %trailer% @{
 
-	struct ast *lx_parse(FILE *f) {
+	struct ast *lx_parse(FILE *f, const struct fsm_options *opt) {
 		struct act_state act_state_s;
 		struct act_state *act_state;
 		struct lex_state lex_state_s;
@@ -850,6 +851,8 @@
 
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
+
+		act_state->opt = opt;
 
 		if (print_progress) {
 			act_state->zn = 0;

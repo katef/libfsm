@@ -108,7 +108,7 @@ ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 			return NULL;
 		}
 
-		m->fsm = fsm_new(NULL);
+		m->fsm = fsm_new(fsm->opt);
 		if (m->fsm == NULL) {
 			free(m);
 			return NULL;
