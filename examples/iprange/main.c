@@ -218,20 +218,20 @@ gen_range(struct record *r, unsigned ipv, int prefix_octs, unsigned char range_s
 
 	if (prefix_octs < 0) {
 		gen_edge_range(r, 0, octets, range_start, range_end, noct + 1, 1);
-		goto end;
-	} else {
-		for (int i = 0; i <= prefix_octs; i++) {
-			int final = 0;
+		return;
+	}
 
-			if ((i == prefix_octs && range_start == 0 && range_end == 255) ||
-			    (i == noct)) {
-				final = 1;
-			}
-			gen_edge_range(r, i, octets, octets[i], octets[i], noct + 1, final);
-			
-			if (final) {
-				goto end;
-			}
+	for (int i = 0; i <= prefix_octs; i++) {
+		int final = 0;
+
+		if ((i == prefix_octs && range_start == 0 && range_end == 255) ||
+		    (i == noct)) {
+			final = 1;
+		}
+		gen_edge_range(r, i, octets, octets[i], octets[i], noct + 1, final);
+
+		if (final) {
+			return;
 		}
 	}
 
