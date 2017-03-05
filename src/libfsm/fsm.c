@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include <adt/set.h>
 
@@ -79,6 +80,11 @@ fsm_move(struct fsm *dst, struct fsm *src)
 {
 	assert(src != NULL);
 	assert(dst != NULL);
+
+	if (dst->opt != src->opt) {
+		errno = EINVAL;
+		return; /* XXX */
+	}
 
 	free_contents(dst);
 

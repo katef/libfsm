@@ -21,6 +21,11 @@ fsm_concat(struct fsm *a, struct fsm *b)
 	assert(a != NULL);
 	assert(b != NULL);
 
+	if (a->opt != b->opt) {
+		errno = EINVAL;
+		return NULL;
+	}
+
 	if (a->sl == NULL) { return b; }
 	if (b->sl == NULL) { return a; }
 

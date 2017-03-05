@@ -17,6 +17,14 @@ fsm_subtract(struct fsm *a, struct fsm *b)
 {
 	struct fsm *q;
 
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (a->opt != b->opt) {
+		errno = EINVAL;
+		return NULL;
+	}
+
 	/*
 	 * a - b is implemented as: a & ~b
 	 */
