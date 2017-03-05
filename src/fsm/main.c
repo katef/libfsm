@@ -216,7 +216,7 @@ main(int argc, char *argv[])
 	query  = 0;
 
 	/* XXX: makes no sense for e.g. fsm -h */
-	fsm = fsm_parse(stdin);
+	fsm = fsm_parse(stdin, &opt);
 	if (fsm == NULL) {
 		exit(EXIT_FAILURE);
 	}

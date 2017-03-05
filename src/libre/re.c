@@ -23,6 +23,7 @@
 struct dialect {
 	enum re_dialect dialect;
 	struct fsm *(*comp)(int (*f)(void *opaque), void *opaque,
+		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
 		struct re_err *err);
 	int overlap;
@@ -90,6 +91,7 @@ re_flags(const char *s, enum re_flags *f)
 
 struct fsm *
 re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
+	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err)
 {
 	const struct dialect *m;
@@ -105,7 +107,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
-	new = m->comp(getc, opaque, flags, m->overlap, err);
+	new = m->comp(getc, opaque, opt, flags, m->overlap, err);
 	if (new == NULL) {
 		return NULL;
 	}

@@ -4,6 +4,7 @@
 #define RE_H
 
 struct fsm;
+struct fsm_options;
 
 enum re_dialect {
 /* TODO:
@@ -112,6 +113,7 @@ re_flags(const char *s, enum re_flags *f);
  */
 struct fsm *
 re_comp(enum re_dialect dialect, int (*f)(void *opaque), void *opaque,
+	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err);
 
 /*

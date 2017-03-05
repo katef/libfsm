@@ -93,7 +93,7 @@
 	typedef struct fsm *       fsm;
 
 	struct fsm *
-	fsm_parse(FILE *f);
+	fsm_parse(FILE *f, const struct fsm_options *opt);
 
 @};
 
@@ -310,7 +310,7 @@
 
 %trailer% @{
 
-	struct fsm *fsm_parse(FILE *f) {
+	struct fsm *fsm_parse(FILE *f, const struct fsm_options *opt) {
 		struct act_state act_state_s;
 		struct act_state *act_state;
 		struct lex_state lex_state_s;
@@ -319,6 +319,7 @@
 		struct lx *lx;
 
 		assert(f != NULL);
+		assert(opt != NULL);
 
 		lex_state = &lex_state_s;
 
@@ -344,7 +345,7 @@
 		act_state = &act_state_s;
 
 		/* TODO: pass in fsm_options */
-		new = fsm_new(NULL);
+		new = fsm_new(opt);
 		if (new == NULL) {
 			perror("fsm_new");
 			return NULL;
