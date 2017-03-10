@@ -1,8 +1,5 @@
-/* $Id$ */
-
 #ifndef LX_AST_H
 #define LX_AST_H
-
 
 struct fsm;
 struct var;
@@ -42,7 +39,6 @@ struct ast {
 
 	struct ast_zone *global;
 };
-
 
 struct ast *
 ast_new(void);

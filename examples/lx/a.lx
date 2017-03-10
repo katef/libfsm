@@ -1,5 +1,3 @@
-# $Id$
-
 # Three types of pattern:
 #  'literal' - no escaping
 #  "string"  - with C-style escaped characters \r, \n etc

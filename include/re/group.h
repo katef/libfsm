@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef RE_GROUP_H
 #define RE_GROUP_H
 

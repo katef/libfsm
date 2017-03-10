@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef RE_H
 #define RE_H
 

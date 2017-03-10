@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef FSM_BOOL_H
 #define FSM_BOOL_H
 

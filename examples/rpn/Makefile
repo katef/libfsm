@@ -1,5 +1,3 @@
-# $Id$
-
 LX?= ../../build/src/bin/lx/lx
 CC?= gcc
 

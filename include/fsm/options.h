@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef FSM_OPTIONS_H
 #define FSM_OPTIONS_H
 

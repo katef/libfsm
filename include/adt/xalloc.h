@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef XALLOC_H
 #define XALLOC_H
 

@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef LX_TOKENS_H
 #define LX_TOKENS_H
 

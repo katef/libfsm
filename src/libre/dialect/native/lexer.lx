@@ -1,5 +1,3 @@
-# $Id$
-
 '('  -> $opensub;
 ')'  -> $closesub;
 

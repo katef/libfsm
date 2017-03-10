@@ -1,5 +1,3 @@
-# $Id$
-
 CFLAGS = -O0 -g3 -pedantic -std=c99 -Wall -W # -fPIC -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 CC = gcc
 

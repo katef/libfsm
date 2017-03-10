@@ -1786,13 +1786,13 @@ z4(struct lx *lx)
 
 		case S12: /* e.g. "-" */
 			switch (c) {
-			case '>': state = S27; continue;
+			case '>': state = S26; continue;
 			default:  lx_ungetc(lx, c); return TOK_DASH;
 			}
 
 		case S13: /* e.g. "." */
 			switch (c) {
-			case '.': state = S26; continue;
+			case '.': state = S27; continue;
 			default:  lx_ungetc(lx, c); return TOK_DOT;
 			}
 
@@ -1962,11 +1962,11 @@ z4(struct lx *lx)
 			default:  lx_ungetc(lx, c); return TOK_TOKEN;
 			}
 
-		case S26: /* e.g. ".." */
-			lx_ungetc(lx, c); return TOK_TO;
-
-		case S27: /* e.g. "->" */
+		case S26: /* e.g. "->" */
 			lx_ungetc(lx, c); return TOK_MAP;
+
+		case S27: /* e.g. ".." */
+			lx_ungetc(lx, c); return TOK_TO;
 		}
 	}
 
@@ -1997,8 +1997,8 @@ z4(struct lx *lx)
 	case S23: return TOK_CLOSE;
 	case S24: return TOK_TILDE;
 	case S25: return TOK_TOKEN;
-	case S26: return TOK_TO;
-	case S27: return TOK_MAP;
+	case S26: return TOK_MAP;
+	case S27: return TOK_TO;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }

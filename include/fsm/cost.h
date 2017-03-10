@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef FSM_COST_H
 #define FSM_COST_H
 

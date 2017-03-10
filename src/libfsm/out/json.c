@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #include <ctype.h>
 #include <assert.h>
 #include <stdio.h>

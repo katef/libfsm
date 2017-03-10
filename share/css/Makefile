@@ -1,5 +1,3 @@
-# $Id$
-
 all: grid.css typography.css grid.png
 
 .PHONY: grid.png

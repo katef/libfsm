@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef FSM_WALK_H
 #define FSM_WALK_H
 

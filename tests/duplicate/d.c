@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #include <stdio.h>
 
 #include <fsm/fsm.h>

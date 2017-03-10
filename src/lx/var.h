@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef LX_VAR_H
 #define LX_VAR_H
 

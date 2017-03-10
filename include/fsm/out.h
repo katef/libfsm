@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef FSM_OUT_H
 #define FSM_OUT_H
 

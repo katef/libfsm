@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef LX_INTERNAL_OUT_H
 #define LX_INTERNAL_OUT_H
 

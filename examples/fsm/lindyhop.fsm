@@ -1,5 +1,3 @@
-# $Id$
-
 closed -> open   'swingout';
 open   -> closed 'lindycircle';
 open   -> open   'lindyturn';

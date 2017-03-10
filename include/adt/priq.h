@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef PRIQ_H
 #define PRIQ_H
 

@@ -1,5 +1,3 @@
-/* $Id$ */
-
 #ifndef RE_DIALECT_COMP_H
 #define RE_DIALECT_COMP_H
 

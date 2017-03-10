@@ -1,5 +1,3 @@
-/* $Id$ */
-
 /*
  * An example illustrating glob(3)-like matching for strings by internally
  * constructing a DFA from the given globing string. A similar technique

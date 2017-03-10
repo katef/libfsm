@@ -1,5 +1,3 @@
-# $Id$
-
 CFLAGS = -O2 -g -pedantic -std=c89 -Wall -W
 CC = gcc
 
