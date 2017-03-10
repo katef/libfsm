@@ -213,8 +213,10 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 		(void) sprintf(p, "z%u", zindexof(ast, z));
 
-		opt.fragment = 1; /* XXX */
-		opt.prefix   = p;
+		opt.fragment          = 1; /* XXX */
+		opt.consolidate_edges = z->fsm->opt->consolidate_edges;
+		opt.comments          = z->fsm->opt->comments;
+		opt.prefix            = p;
 
 		z->fsm->opt = &opt;
 

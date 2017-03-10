@@ -844,7 +844,9 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 		tmp = z->fsm->opt;
 
-		opt.fragment = 1; /* XXX */
+		opt.fragment    = 1; /* XXX */
+		opt.comments    = z->fsm->opt->comments;
+		opt.case_ranges = z->fsm->opt->case_ranges;
 
 		z->fsm->opt = &opt;
 
