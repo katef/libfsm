@@ -1,3 +1,9 @@
+/*
+ * Copyright 2008-2017 Katherine Flavel
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #ifndef FSM_WALK_H
 #define FSM_WALK_H
 

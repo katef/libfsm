@@ -1,3 +1,9 @@
+/*
+ * Copyright 2008-2017 Katherine Flavel
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #ifndef LX_INTERNAL_OUT_H
 #define LX_INTERNAL_OUT_H
 

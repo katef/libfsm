@@ -1,3 +1,8 @@
+%
+% Copyright 2008-2017 Katherine Flavel
+%
+% See LICENCE for the full copyright terms.
+%
 
 pair    S[];       % centre of state
 path    S[].perim; % outline of state

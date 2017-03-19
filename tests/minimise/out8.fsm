@@ -1,3 +1,9 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
 # [12]+c?2
 
 1 -> 2 '1';

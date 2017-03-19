@@ -1,5 +1,11 @@
 #!/usr/bin/awk
 
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
 # TODO:
 # cat nfa.dot | dot -Tplain > /tmp/a.mp \
 # && mpost -s 'outputformat="svg"' -s 'outputtemplate="%j-%c.%o"' /tmp/a.mp

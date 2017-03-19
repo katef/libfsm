@@ -1,3 +1,9 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
 # Three types of pattern:
 #  'literal' - no escaping
 #  "string"  - with C-style escaped characters \r, \n etc

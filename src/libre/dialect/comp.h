@@ -1,3 +1,9 @@
+/*
+ * Copyright 2008-2017 Katherine Flavel
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #ifndef RE_DIALECT_COMP_H
 #define RE_DIALECT_COMP_H
 

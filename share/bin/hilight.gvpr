@@ -1,5 +1,10 @@
 #!/usr/bin/env gvpr
-# $Id$
+
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
 
 BEGIN {
 	int i;

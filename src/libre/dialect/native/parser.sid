@@ -1,4 +1,10 @@
 /*
+ * Copyright 2008-2017 Katherine Flavel
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
+/*
  * TODO: explain choices. e.g. i'm not permitting () or ||. only the root expression is allowed to be empty.
  * TODO: explain strategy: pass in x,y endpoints top-down
  */

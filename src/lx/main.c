@@ -1,3 +1,9 @@
+/*
+ * Copyright 2008-2017 Katherine Flavel
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #define _POSIX_C_SOURCE 2
 
 #include <unistd.h>

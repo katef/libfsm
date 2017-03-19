@@ -1,5 +1,11 @@
 #!/usr/bin/perl -w
 
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
 use strict;
 use warnings;
 

@@ -1,5 +1,10 @@
 #!/usr/bin/awk
-# $Id$
+
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
 
 BEGIN {
 	print "<?xml version='1.0'?>"

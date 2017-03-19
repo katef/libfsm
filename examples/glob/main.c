@@ -1,4 +1,10 @@
 /*
+ * Copyright 2008-2017 Katherine Flavel
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
+/*
  * An example illustrating glob(3)-like matching for strings by internally
  * constructing a DFA from the given globing string. A similar technique
  * could be used to implement regular expressions.

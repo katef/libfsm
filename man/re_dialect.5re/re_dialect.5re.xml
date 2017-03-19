@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!--
+	Copyright 2008-2017 Katherine Flavel
+
+	See LICENCE for the full copyright terms.
+-->
+
 <!DOCTYPE refentry SYSTEM "minidocbook.dtd" [
 	<!-- TODO: centralise -->
 	<!ENTITY yes "&#x2714;">
