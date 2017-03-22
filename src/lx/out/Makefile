@@ -7,8 +7,8 @@ SRC += src/lx/out/dump.c
 SRC += src/lx/out/zdot.c
 
 .for src in ${SRC:Msrc/lx/out/*.c}
-CFLAGS_${src} += -I src # XXX: for internal.h
-DFLAGS_${src} += -I src # XXX: for internal.h
+CFLAGS.${src} += -I src # XXX: for internal.h
+DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor
 
 .for src in ${SRC:Msrc/lx/out/*.c}

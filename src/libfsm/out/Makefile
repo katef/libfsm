@@ -8,8 +8,8 @@ SRC += src/libfsm/out/fsm.c
 SRC += src/libfsm/out/json.c
 
 .for src in ${SRC:Msrc/libfsm/out/*.c}
-CFLAGS_${src} += -I src # XXX: for internal.h
-DFLAGS_${src} += -I src # XXX: for internal.h
+CFLAGS.${src} += -I src # XXX: for internal.h
+DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor
 
 .for src in ${SRC:Msrc/libfsm/out/*.c}

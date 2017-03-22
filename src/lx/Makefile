@@ -8,19 +8,19 @@ SRC += src/lx/tokens.c
 SRC += src/lx/var.c
 
 .for src in ${SRC:Msrc/lx/ast.c} ${SRC:Msrc/lx/parser.c} ${SRC:Msrc/lx/main.c} ${SRC:Msrc/lx/tokens.c}
-CFLAGS_${src} += -I src # XXX: for internal.h
-DFLAGS_${src} += -I src # XXX: for internal.h
+CFLAGS.${src} += -I src # XXX: for internal.h
+DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor
 
 .for src in ${SRC:Msrc/lx/lexer.c}
-CFLAGS_${src} += -D LX_HEADER='"lexer.h"'
-DFLAGS_${src} += -D LX_HEADER='"lexer.h"'
+CFLAGS.${src} += -D LX_HEADER='"lexer.h"'
+DFLAGS.${src} += -D LX_HEADER='"lexer.h"'
 .endfor
 
 LEXER  += src/lx/lexer.lx
 PARSER += src/lx/parser.sid
 
-LX_CFLAGS_src/lx/lexer.lx += -b dyn -g fgetc
+LX_CFLAGS.src/lx/lexer.lx += -b dyn -g fgetc
 
 PROG += lx
 

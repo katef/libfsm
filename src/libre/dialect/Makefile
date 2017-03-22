@@ -16,53 +16,53 @@ LEXER  += src/libre/dialect/${dialect}/lexer.lx
 PARSER += src/libre/dialect/${dialect}/parser.sid
 
 .for lexer in ${LEXER:Msrc/libre/dialect/${dialect}/lexer.lx}
-LX_CFLAGS_${lexer} += -e lx_${dialect}_ -b dyn
+LX_CFLAGS.${lexer} += -e lx_${dialect}_ -b dyn
 .endfor
 
 .for src in ${SRC:Msrc/libre/dialect/${dialect}/lexer.c}
-CFLAGS_${src} += -D LX_HEADER='"lexer.h"'
-DFLAGS_${src} += -D LX_HEADER='"lexer.h"'
+CFLAGS.${src} += -D LX_HEADER='"lexer.h"'
+DFLAGS.${src} += -D LX_HEADER='"lexer.h"'
 .endfor
 
 .for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}
-CFLAGS_${src} += -D DIALECT='${dialect}'
-DFLAGS_${src} += -D DIALECT='${dialect}'
+CFLAGS.${src} += -D DIALECT='${dialect}'
+DFLAGS.${src} += -D DIALECT='${dialect}'
 .endfor
 
 .for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}
-CFLAGS_${src} += -I src # XXX: for internal.h
-DFLAGS_${src} += -I src # XXX: for internal.h
+CFLAGS.${src} += -I src # XXX: for internal.h
+DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor
 
 .for parser in ${PARSER:Msrc/libre/dialect/${dialect}/parser.sid}
-ACT_${parser} = src/libre/parser.act
+ACT.${parser} = src/libre/parser.act
 .endfor
 
 # SID persistent variables are unused in some productions
 .if ${CC:T:Mgcc} || ${CC:T:Mclang}
 .for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}
-CFLAGS_${src} += -Wno-unused-parameter
+CFLAGS.${src} += -Wno-unused-parameter
 .endfor
 .endif
 
 # SID generates intermediates which are unused in some alts
 .if ${CC:T:Mgcc}
 .for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}
-CFLAGS_${src} += -Wno-unused-but-set-variable
+CFLAGS.${src} += -Wno-unused-but-set-variable
 .endfor
 .endif
 
 # Not all dialects use all static functions
 .if ${CC:T:Mgcc} || ${CC:T:Mclang}
 .for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}
-CFLAGS_${src} += -Wno-unused-function
+CFLAGS.${src} += -Wno-unused-function
 .endfor
 .endif
 
 # Not all dialects use all macros
 .if ${CC:T:Mclang}
 .for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}
-CFLAGS_${src} += -Wno-unused-macros
+CFLAGS.${src} += -Wno-unused-macros
 .endfor
 .endif
 
