@@ -28,6 +28,7 @@ SUBDIR += src/fsm
 SUBDIR += src/re
 SUBDIR += src/lx
 SUBDIR += src/lx/out
+SUBDIR += pc
 
 INCDIR += include
 
@@ -36,6 +37,7 @@ INCDIR += include
 DIR += ${BUILD}/lib
 
 .include <subdir.mk>
+.include <pc.mk>
 .include <sid.mk>
 .include <lx.mk>
 .include <obj.mk>

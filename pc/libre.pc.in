@@ -1,0 +1,13 @@
+prefix=@prefix@
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: libre
+Description: Regular Expressions
+Version: 0.1
+Requires:
+Requires.private: libfsm
+Libs: -L${libdir} -lre
+Libs.private: -lfsm
+Cflags: -I${includedir}
+

@@ -1,0 +1,13 @@
+prefix=@prefix@
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: libfsm
+Description: Finite State Machines
+Version: 0.1
+Requires:
+Requires.private:
+Libs: -L${libdir} -lfsm
+Libs.private:
+Cflags: -I${includedir}
+
