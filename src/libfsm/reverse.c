@@ -74,9 +74,8 @@ fsm_reverse(struct fsm *fsm)
 						}
 						q = tmp;
 					}
-					/* reversed because it's a description of the edge we wish to create later */
-					q[nq].from = to;
-					q[nq].to = s;
+					q[nq].from = s;
+					q[nq].to = to;
 					q[nq].symbol = e->symbol;
 					nq++;
 				}
@@ -100,9 +99,9 @@ fsm_reverse(struct fsm *fsm)
 			s->end = s == end;
 		}
 
-		/* the FSM now has no edges; add the ones we recorded */
+		/* the FSM now has no edges; add a reversed edge for each one recorded */
 		for (i = 0; i < nq; i++) {
-			fsm_addedge(q[i].from, q[i].to, q[i].symbol);
+			fsm_addedge(q[i].to, q[i].from, q[i].symbol);
 		}
 
 		free(q);
