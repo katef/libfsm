@@ -63,11 +63,16 @@ fsm_reverse(struct fsm *fsm)
 				struct fsm_state *to;
 				struct set_iter jt;
 				for (to = set_first(e->sl, &jt); to != NULL; to = set_next(&jt)) {
-					/*XXX */
 					if (lq <= nq) {
+						void *tmp;
 						lq = lq > 0 ? lq * 2 : 1024;
-						q = realloc(q, lq * sizeof *q);
-						if (!q) abort();
+						tmp = realloc(q, lq * sizeof *q);
+						if (!tmp) {
+							free(q);
+							set_free(endset);
+							return 0;
+						}
+						q = tmp;
 					}
 					/* reversed because it's a description of the edge we wish to create later */
 					q[nq].from = to;
