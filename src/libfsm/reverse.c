@@ -24,6 +24,8 @@ fsm_reverse(struct fsm *fsm)
 	struct fsm_state *end;
 	struct set *endset;
 
+	unsigned long endcount;
+
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
@@ -41,6 +43,8 @@ fsm_reverse(struct fsm *fsm)
 	 * only to the caller.
 	 */
 	endset = NULL;
+
+	endcount = fsm->endcount;
 
 	/* Perform the actual reversal by listing the reversed edges we need,
 	 * destroying all current edges, then adding those.
@@ -90,13 +94,12 @@ fsm_reverse(struct fsm *fsm)
 					return 0;
 				}
 
-				if (fsm->endcount == 1) {
+				if (endcount == 1) {
 					fsm->start = s;
 				}
 			}
 
-			/* deliberately don't go via the API. we'll correct the end count when we're finished with it. */
-			s->end = s == end;
+			fsm_setend(fsm, s, s == end);
 		}
 
 		/* the FSM now has no edges; add a reversed edge for each one recorded */
@@ -121,7 +124,7 @@ fsm_reverse(struct fsm *fsm)
 		struct set_iter it;
 
 
-		switch (fsm->endcount) {
+		switch (endcount) {
 		case 1:
 			/* already handled above */
 			assert(fsm->start != NULL);
@@ -210,8 +213,6 @@ fsm_reverse(struct fsm *fsm)
 	}
 
 	set_free(endset);
-
-	fsm->endcount = end != NULL ? 1 : 0;
 
 	return 1;
 }
