@@ -74,17 +74,23 @@ fsm_reverse(struct fsm *fsm)
 				struct fsm_state *to;
 				struct set_iter jt;
 				for (to = set_first(e->sl, &jt); to != NULL; to = set_next(&jt)) {
-					if (lq <= nq) {
-						void *tmp;
-						lq = lq > 0 ? lq * 2 : 1024;
-						tmp = realloc(q, lq * sizeof *q);
-						if (!tmp) {
-							free(q);
-							set_free(endset);
-							return 0;
-						}
-						q = tmp;
-					}
+					lq++;
+				}
+			}
+		}
+
+		q = malloc(lq * sizeof *q);
+		if (!q) {
+			set_free(endset);
+			return 0;
+		}
+
+		for (s = fsm->sl; s != NULL; s = s->next) {
+			struct fsm_edge *e;
+			for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
+				struct fsm_state *to;
+				struct set_iter jt;
+				for (to = set_first(e->sl, &jt); to != NULL; to = set_next(&jt)) {
 					q[nq].from = s;
 					q[nq].to = to;
 					q[nq].symbol = e->symbol;
