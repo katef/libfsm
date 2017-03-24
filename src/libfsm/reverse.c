@@ -48,7 +48,7 @@ fsm_reverse(struct fsm *fsm)
 	endset = NULL;
 
 	/*
-	 * Create states corresponding to the origional FSM's states.
+	 * Create states corresponding to the original FSM's states.
 	 * These are created in the same order, due to fsm_addstate()
 	 * placing them at fsm->tail.
 	 */
