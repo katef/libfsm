@@ -78,6 +78,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 
 	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
 		set_free(e->sl);
+		free(e);
 	}
 	set_free(state->edges);
 

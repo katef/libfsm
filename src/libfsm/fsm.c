@@ -31,6 +31,7 @@ free_contents(struct fsm *fsm)
 
 		for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
 			set_free(e->sl);
+			free(e);
 		}
 
 		set_free(s->edges);
