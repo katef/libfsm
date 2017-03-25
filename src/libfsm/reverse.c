@@ -54,15 +54,15 @@ fsm_reverse(struct fsm *fsm)
 		struct fsm_state *s;
 		struct set_iter it;
 
-		struct {
-			struct fsm_state *from;
-			struct fsm_state *to;
-			enum fsm_edge_type symbol;
-		} *q = NULL;
-		size_t lq = 0;
-		size_t nq = 0;
-
-		size_t i;
+		struct chain {
+			struct {
+				struct fsm_state *from;
+				struct fsm_state *to;
+				enum fsm_edge_type symbol;
+			} a[1024];
+			size_t i;
+			struct chain *next;
+		} *p = NULL, *q = NULL, **tail = &q;
 
 		/*
 		 * Populate our list of reversed edges. This loop will leave the FSM
@@ -74,21 +74,17 @@ fsm_reverse(struct fsm *fsm)
 				struct fsm_state *to;
 				struct set_iter jt;
 				for (to = set_first(e->sl, &jt); to != NULL; to = set_next(&jt)) {
-					if (lq <= nq) {
-						void *tmp;
-						lq = lq > 0 ? lq * 2 : 1024;
-						tmp = realloc(q, lq * sizeof *q);
-						if (!tmp) {
-							free(q);
-							set_free(endset);
-							return 0;
-						}
-						q = tmp;
+					if (p == NULL || p->i == 1024) {
+						p = malloc(sizeof *p);
+						p->next = NULL;
+						p->i = 0;
+						*tail = p;
+						tail = &p->next;
 					}
-					q[nq].from = s;
-					q[nq].to = to;
-					q[nq].symbol = e->symbol;
-					nq++;
+					p->a[p->i].from = s;
+					p->a[p->i].to = to;
+					p->a[p->i].symbol = e->symbol;
+					p->i++;
 				}
 				set_free(e->sl);
 				free(e);
@@ -110,15 +106,29 @@ fsm_reverse(struct fsm *fsm)
 		}
 
 		/* the FSM now has no edges; add a reversed edge for each one recorded */
-		for (i = 0; i < nq; i++) {
-			if (!fsm_addedge(q[i].to, q[i].from, q[i].symbol)) {
+		{
+			struct chain *n = q;
+			while (n != NULL) {
+				size_t i;
+				for (i = 0; i < n->i; i++) {
+					if (!fsm_addedge(n->a[i].to, n->a[i].from, n->a[i].symbol)) {
+						break;
+					}
+				}
+				n = n->next;
 				free(q);
-				set_free(endset);
+				q = n;
+			}
+
+			if (n != NULL) {
+				while (n != NULL) {
+					n = n->next;
+					free(q);
+					q = n;
+				}
 				return 0;
 			}
 		}
-
-		free(q);
 	}
 
 	if (end != NULL && fsm->opt->carryopaque != NULL) {
