@@ -31,9 +31,10 @@ static struct fsm_options opt;
 static void
 usage(void)
 {
-	printf("usage: fsm    [-dmr] [-t <transformation>] [-x] {<text> ...}\n");
-	printf("       fsm    [-dmr] [-t <transformation>] {-q <query>}\n");
-	printf("       fsm -p [-dmr] [-t <transformation>] [-l <language>] [-acw] [-k <io>] [-e <prefix>]\n");
+	printf("usage: fsm [-x] {<text> ...}\n");
+	printf("       fsm {-p} [-l <language>] [-acw] [-k <io>] [-e <prefix>]\n");
+	printf("       fsm {-dmr | -t <transformation>} [<file>]\n");
+	printf("       fsm {-q <query>} [<file>]\n");
 	printf("       fsm -h\n");
 }
 
@@ -140,8 +141,9 @@ static int
 	exit(EXIT_FAILURE);
 }
 
-static void
-transform(struct fsm *fsm, const char *name)
+static int
+(*transform(const char *name))
+(struct fsm *)
 {
 	size_t i;
 
@@ -163,16 +165,11 @@ transform(struct fsm *fsm, const char *name)
 		{ "minimise",    fsm_minimise    }
 	};
 
-	assert(fsm != NULL);
 	assert(name != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			if (!a[i].f(fsm)) {
-				fprintf(stderr, "couldn't transform\n");
-				exit(EXIT_FAILURE);
-			}
-			return;
+			return a[i].f;
 		}
 	}
 
@@ -208,8 +205,10 @@ main(int argc, char *argv[])
 	struct fsm *fsm;
 	int xfiles;
 	int print;
-	int query;
 	int r;
+
+	int (*query)(const struct fsm *, const struct fsm_state *);
+	int (*uop)(struct fsm *);
 
 	opt.comments = 1;
 	opt.io       = FSM_IO_GETC;
@@ -217,14 +216,10 @@ main(int argc, char *argv[])
 	format = FSM_OUT_FSM;
 	xfiles = 0;
 	print  = 0;
-	query  = 0;
+	query  = NULL;
+	uop    = NULL;
 
-	/* XXX: makes no sense for e.g. fsm -h */
-	fsm = fsm_parse(stdin, &opt);
-	if (fsm == NULL) {
-		exit(EXIT_FAILURE);
-	}
-
+	fsm = NULL;
 	r = 0;
 
 	{
@@ -240,16 +235,14 @@ main(int argc, char *argv[])
 
 			case 'x': xfiles = 1;                         break;
 			case 'p': print  = 1;                         break;
-			case 'q': query  = 1;
-			          r |= !fsm_all(fsm, predicate(optarg));
-			          break;
+			case 'q': query  = predicate(optarg);         break;
 
 			case 'l': format = language(optarg);          break;
 
-			case 'd': transform(fsm, "determinise");      break;
-			case 'm': transform(fsm, "minimise");         break;
-			case 'r': transform(fsm, "reverse");          break;
-			case 't': transform(fsm, optarg);             break;
+			case 'd': uop = transform("determinise");     break;
+			case 'm': uop = transform("minimise");        break;
+			case 'r': uop = transform("reverse");         break;
+			case 't': uop = transform(optarg);            break;
 
 			case 'h':
 				usage();
@@ -266,9 +259,62 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if ((argc > 0) + print + query > 1) {
-		fprintf(stderr, "execute, -p and -q are mutually exclusive\n");
+	if (!!uop + !!query > 1) {
+		fprintf(stderr, "execute, -t and -q are mutually exclusive\n");
 		return EXIT_FAILURE;
+	}
+
+#if 0
+	if (binop != NULL) {
+		if (argc != 2) {
+			usage();
+			return EXIT_FAILURE;
+		}
+
+		a = fsm_parse(xopen(argv[0]), &opt);
+		if (a == NULL) {
+			exit(EXIT_FAILURE);
+		}
+
+		b = fsm_parse(xopen(argv[1]), &opt);
+		if (b == NULL) {
+			exit(EXIT_FAILURE);
+		}
+
+		fsm = binop(a, b);
+		if (fsm == NULL) {
+			exit(EXIT_FAILURE);
+		}
+	}
+#endif
+
+	if (uop != NULL) {
+		if (argc > 1) {
+			usage();
+			return EXIT_FAILURE;
+		}
+
+		fsm = fsm_parse(argc == 0 ? stdin : xopen(argv[0]), &opt);
+		if (fsm == NULL) {
+			exit(EXIT_FAILURE);
+		}
+
+		if (!uop(fsm)) {
+			fprintf(stderr, "couldn't transform\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	if (fsm == NULL) {
+		fsm = fsm_parse(stdin, &opt);
+		if (fsm == NULL) {
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	if (query != NULL) {
+		r |= !fsm_all(fsm, query);
+		return r;
 	}
 
 	if (argc > 0) {
