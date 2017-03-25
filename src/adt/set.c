@@ -105,7 +105,7 @@ set_create(int (*cmp)(const void *a, const void *b))
 	return s;
 }
 
-void *
+enum set_result
 set_add(struct set **set, void *item)
 {
 	struct set *s;
@@ -130,7 +130,7 @@ set_add(struct set **set, void *item)
 
 		assert(set_contains(*set, item));
 
-		return item;
+		return SR_INSERTED;
 	}
 
 	assert(s->cmp != NULL);
@@ -145,7 +145,7 @@ set_add(struct set **set, void *item)
 	if (!set_empty(s)) {
 		i = set_search(s, item);
 		if (s->cmp(item, s->a[i]) == 0) {
-			return item;
+			return SR_FOUND;
 		}
 	}
 
@@ -156,7 +156,7 @@ set_add(struct set **set, void *item)
 
 			new = realloc(s->a, (sizeof *s->a) * (s->n * 2));
 			if (new == NULL) {
-				return NULL;
+				return SR_FAILED;
 			}
 
 			s->a = new;
@@ -177,7 +177,7 @@ set_add(struct set **set, void *item)
 
 	assert(set_contains(s, item));
 
-	return item;
+	return SR_INSERTED;
 }
 
 void

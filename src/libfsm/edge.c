@@ -40,7 +40,7 @@ fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to, enum 
 		}
 	}
 
-	if (set_add(&e->sl, to) == NULL) {
+	if (set_add(&e->sl, to) == SR_FAILED) {
 		return NULL;
 	}
 
