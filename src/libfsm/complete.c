@@ -52,7 +52,7 @@ fsm_complete(struct fsm *fsm,
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
 		struct fsm_edge *e;
-		e = fsm_addedge(new, new, i);
+		e = fsm_addedge(fsm, new, new, i);
 		if (e == NULL) {
 			/* TODO: free stuff */
 			return 0;
@@ -69,7 +69,7 @@ fsm_complete(struct fsm *fsm,
 				continue;
 			}
 
-			if (!fsm_addedge(s, new, i)) {
+			if (!fsm_addedge(fsm, s, new, i)) {
 				/* TODO: free stuff */
 				return 0;
 			}
