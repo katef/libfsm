@@ -111,7 +111,11 @@ fsm_reverse(struct fsm *fsm)
 
 		/* the FSM now has no edges; add a reversed edge for each one recorded */
 		for (i = 0; i < nq; i++) {
-			fsm_addedge(q[i].to, q[i].from, q[i].symbol);
+			if (!fsm_addedge(q[i].to, q[i].from, q[i].symbol)) {
+				free(q);
+				set_free(endset);
+				return 0;
+			}
 		}
 
 		free(q);
