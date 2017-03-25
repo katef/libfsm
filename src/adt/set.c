@@ -247,41 +247,6 @@ set_contains(const struct set *set, const void *item)
 }
 
 int
-subsetof(const struct set *a, const struct set *b)
-{
-	size_t i, j;
-	struct set haystack;
-
-	if (a == NULL) {
-		return 1;
-	}
-
-	if (b == NULL) {
-		return 0;
-	}
-
-	assert(a->cmp != NULL);
-	assert(b->cmp != NULL);
-
-	if (a->cmp != b->cmp) {
-		return 0;
-	}
-
-	haystack = *b;
-
-	for (i = 0; i < a->i; i++) {
-		j = set_search(&haystack, a->a[i]);
-		if (a->cmp(haystack.a[j], a->a[i]) != 0) {
-			return 0;
-		}
-		haystack.a += j;
-		haystack.i -= j;
-	}
-
-	return 1;
-}
-
-int
 set_cmp(const struct set *a, const struct set *b)
 {
 	if ((a == NULL) != (b == NULL)) {

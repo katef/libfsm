@@ -36,12 +36,6 @@ void *
 set_contains(const struct set *set, const void *item);
 
 /*
- * Find if a is a subset of b
- */
-int
-subsetof(const struct set *a, const struct set *b);
-
-/*
  * Compare two sets like memcmp
  */
 int
