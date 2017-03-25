@@ -28,12 +28,29 @@ extern char *optarg;
 
 static struct fsm_options opt;
 
+#define OP_ARITY 0x1
+
+enum op {
+	/* unary */
+	OP_IDENTITY    = (0 << 1) | 1,
+	OP_COMPLETE    = (1 << 1) | 1,
+	OP_COMPLEMENT  = (2 << 1) | 1,
+	OP_REVERSE     = (3 << 1) | 1,
+	OP_DETERMINISE = (4 << 1) | 1,
+	OP_MINIMISE    = (5 << 1) | 1,
+
+	/* binary */
+	OP_CONCAT      = (6 << 1) | 0,
+	OP_UNION       = (7 << 1) | 0,
+	OP_INTERSECT   = (8 << 1) | 0
+};
+
 static void
 usage(void)
 {
 	printf("usage: fsm [-x] {<text> ...}\n");
 	printf("       fsm {-p} [-l <language>] [-acw] [-k <io>] [-e <prefix>]\n");
-	printf("       fsm {-dmr | -t <transformation>} [<file>]\n");
+	printf("       fsm {-dmr | -t <transformation>} [<file.fsm> | <file-a> <file-b>]\n");
 	printf("       fsm {-q <query>} [<file>]\n");
 	printf("       fsm -h\n");
 }
@@ -141,40 +158,45 @@ static int
 	exit(EXIT_FAILURE);
 }
 
-static int
-(*transform(const char *name))
-(struct fsm *)
+static enum op
+op_name(const char *name)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		int (*f)(struct fsm *);
+		enum op op;
 	} a[] = {
-/* XXX: needs predicate
-		{ "complete",   fsm_complete    },
-*/
-		{ "complement",  fsm_complement  },
-		{ "invert",      fsm_complement  },
-		{ "reverse",     fsm_reverse     },
-		{ "rev",         fsm_reverse     },
-		{ "determinise", fsm_determinise },
-		{ "dfa",         fsm_determinise },
-		{ "todfa",       fsm_determinise },
-		{ "min",         fsm_minimise    },
-		{ "minimise",    fsm_minimise    }
+		{ "complete",    OP_COMPLETE    },
+
+		{ "complement",  OP_COMPLEMENT  },
+		{ "invert",      OP_COMPLEMENT  },
+		{ "reverse",     OP_REVERSE     },
+		{ "rev",         OP_REVERSE     },
+		{ "determinise", OP_DETERMINISE },
+		{ "dfa",         OP_DETERMINISE },
+		{ "todfa",       OP_DETERMINISE },
+		{ "min",         OP_MINIMISE    },
+		{ "minimise",    OP_MINIMISE    },
+
+		{ "cat",         OP_CONCAT      },
+		{ "concat",      OP_CONCAT      },
+		{ "union",       OP_UNION       },
+		{ "intersect",   OP_INTERSECT   }
 	};
 
 	assert(name != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].f;
+			return a[i].op;
 		}
 	}
 
-	fprintf(stderr, "unrecognised transformation; valid transformations are: "
-		"complete, complement, reverse, determinise, minimise\n");
+	fprintf(stderr, "unrecognised operation; valid operations are: "
+		"complete, "
+		"complement, invert, reverse, determinise, minimise, "
+		"concat, union, intersect\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -202,13 +224,13 @@ int
 main(int argc, char *argv[])
 {
 	enum fsm_out format;
+	enum op op;
 	struct fsm *fsm;
 	int xfiles;
 	int print;
 	int r;
 
 	int (*query)(const struct fsm *, const struct fsm_state *);
-	int (*uop)(struct fsm *);
 
 	opt.comments = 1;
 	opt.io       = FSM_IO_GETC;
@@ -217,7 +239,7 @@ main(int argc, char *argv[])
 	xfiles = 0;
 	print  = 0;
 	query  = NULL;
-	uop    = NULL;
+	op     = OP_IDENTITY;
 
 	fsm = NULL;
 	r = 0;
@@ -239,10 +261,10 @@ main(int argc, char *argv[])
 
 			case 'l': format = language(optarg);          break;
 
-			case 'd': uop = transform("determinise");     break;
-			case 'm': uop = transform("minimise");        break;
-			case 'r': uop = transform("reverse");         break;
-			case 't': uop = transform(optarg);            break;
+			case 'd': op = op_name("determinise");        break;
+			case 'm': op = op_name("minimise");           break;
+			case 'r': op = op_name("reverse");            break;
+			case 't': op = op_name(optarg);               break;
 
 			case 'h':
 				usage();
@@ -259,57 +281,79 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (!!uop + !!query > 1) {
+	if ((op != OP_IDENTITY) + !!query > 1) {
 		fprintf(stderr, "execute, -t and -q are mutually exclusive\n");
 		return EXIT_FAILURE;
 	}
 
-#if 0
-	if (binop != NULL) {
-		if (argc != 2) {
-			usage();
-			return EXIT_FAILURE;
+	{
+		struct fsm *a, *b;
+		struct fsm *q;
+
+		if ((op & OP_ARITY) == 1) {
+			if (argc > 1) {
+				usage();
+				exit(EXIT_FAILURE);
+			}
+
+			q = fsm_parse((argc == 0) ? stdin : xopen(argv[0]), &opt);
+			if (q == NULL) {
+				exit(EXIT_FAILURE);
+			}
+		} else {
+			if (argc != 2) {
+				usage();
+				exit(EXIT_FAILURE);
+			}
+
+			a = fsm_parse(xopen(argv[0]), &opt);
+			if (a == NULL) {
+				exit(EXIT_FAILURE);
+			}
+
+			b = fsm_parse(xopen(argv[1]), &opt);
+			if (b == NULL) {
+				exit(EXIT_FAILURE);
+			}
 		}
 
-		a = fsm_parse(xopen(argv[0]), &opt);
-		if (a == NULL) {
+		r = 0;
+
+		switch (op) {
+		case OP_IDENTITY:
+			break;
+
+		case OP_COMPLETE:    r = fsm_complete(q, fsm_isany); break;
+
+		case OP_COMPLEMENT:  r = fsm_complement(q);   break;
+		case OP_REVERSE:     r = fsm_reverse(q);      break;
+		case OP_DETERMINISE: r = fsm_determinise(q);  break;
+		case OP_MINIMISE:    r = fsm_minimise(q);     break;
+
+		case OP_CONCAT:      q = fsm_concat(a, b);    break;
+		case OP_UNION:       q = fsm_union(a, b);     break;
+		case OP_INTERSECT:   q = fsm_intersect(a, b); break;
+
+/* TODO:
+		case OP_EQUAL:
+			r = TODO
+			break;
+*/
+
+		default:
+			fprintf(stderr, "unrecognised operation\n");
 			exit(EXIT_FAILURE);
 		}
 
-		b = fsm_parse(xopen(argv[1]), &opt);
-		if (b == NULL) {
+		if (r == -1) {
+			q = NULL;
+		}
+
+		if (q == NULL) {
 			exit(EXIT_FAILURE);
 		}
 
-		fsm = binop(a, b);
-		if (fsm == NULL) {
-			exit(EXIT_FAILURE);
-		}
-	}
-#endif
-
-	if (uop != NULL) {
-		if (argc > 1) {
-			usage();
-			return EXIT_FAILURE;
-		}
-
-		fsm = fsm_parse(argc == 0 ? stdin : xopen(argv[0]), &opt);
-		if (fsm == NULL) {
-			exit(EXIT_FAILURE);
-		}
-
-		if (!uop(fsm)) {
-			fprintf(stderr, "couldn't transform\n");
-			exit(EXIT_FAILURE);
-		}
-	}
-
-	if (fsm == NULL) {
-		fsm = fsm_parse(stdin, &opt);
-		if (fsm == NULL) {
-			exit(EXIT_FAILURE);
-		}
+		fsm = q;
 	}
 
 	if (query != NULL) {
@@ -317,6 +361,7 @@ main(int argc, char *argv[])
 		return r;
 	}
 
+	/* TODO: optional -- to delimit texts as opposed to .fsm filenames */
 	if (argc > 0) {
 		int i;
 
