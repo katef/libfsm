@@ -46,7 +46,8 @@ fsm_reverse(struct fsm *fsm)
 
 	endcount = fsm->endcount;
 
-	/* Perform the actual reversal by listing the reversed edges we need,
+	/*
+	 * Perform the actual reversal by listing the reversed edges we need,
 	 * destroying all current edges, then adding those.
 	 */
 	{
@@ -58,9 +59,15 @@ fsm_reverse(struct fsm *fsm)
 			struct fsm_state *to;
 			enum fsm_edge_type symbol;
 		} *q = NULL;
-		size_t lq = 0, nq = 0;
+		size_t lq = 0;
+		size_t nq = 0;
+
 		size_t i;
 
+		/*
+		 * Populate our list of reversed edges. This loop will leave the FSM
+		 * without any edges at all, but otherwise consistent.
+		 */
 		for (s = fsm->sl; s != NULL; s = s->next) {
 			struct fsm_edge *e;
 			for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
