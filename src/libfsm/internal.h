@@ -53,6 +53,7 @@ struct fsm {
 	struct fsm_state *start;
 
 	unsigned long endcount;
+	unsigned long edges;
 
 	const struct fsm_options *opt;
 

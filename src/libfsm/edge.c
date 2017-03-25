@@ -20,6 +20,7 @@ struct fsm_edge *
 fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type)
 {
 	struct fsm_edge *e, new;
+	enum set_result sr;
 
 	assert(from != NULL);
 	assert(to != NULL);
@@ -40,8 +41,14 @@ fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to, enum 
 		}
 	}
 
-	if (set_add(&e->sl, to) == SR_FAILED) {
+	sr = set_add(&e->sl, to);
+
+	if (sr == SR_FAILED) {
 		return NULL;
+	}
+
+	if (sr != SR_FOUND) {
+		fsm->edges++;
 	}
 
 	return e;
