@@ -333,6 +333,7 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 	assert(cp != NULL);
 
 	/* TODO: prerequisite that the FSM is a DFA */
+	assert(fsm->start != NULL);
 
 	fprintf(f, "\t\tswitch (state) {\n");
 	for (s = fsm->sl; s != NULL; s = s->next) {

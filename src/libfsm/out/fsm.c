@@ -196,7 +196,7 @@ fsm_out_fsm(const struct fsm *fsm, FILE *f)
 				if (fsm->opt->comments) {
 					if (st == fsm->start) {
 						fprintf(f, " # start");
-					} else {
+					} else if (fsm->start != NULL) {
 						char buf[50];
 						int n;
 
