@@ -32,18 +32,19 @@ static struct fsm_options opt;
 
 enum op {
 	/* unary */
-	OP_IDENTITY    = (0 << 1) | 1,
-	OP_COMPLETE    = (1 << 1) | 1,
-	OP_COMPLEMENT  = (2 << 1) | 1,
-	OP_REVERSE     = (3 << 1) | 1,
-	OP_DETERMINISE = (4 << 1) | 1,
-	OP_MINIMISE    = (5 << 1) | 1,
+	OP_IDENTITY    = ( 0 << 1) | 1,
+	OP_COMPLETE    = ( 1 << 1) | 1,
+	OP_COMPLEMENT  = ( 2 << 1) | 1,
+	OP_REVERSE     = ( 3 << 1) | 1,
+	OP_DETERMINISE = ( 4 << 1) | 1,
+	OP_MINIMISE    = ( 5 << 1) | 1,
 
 	/* binary */
-	OP_CONCAT      = (6 << 1) | 0,
-	OP_UNION       = (7 << 1) | 0,
-	OP_INTERSECT   = (8 << 1) | 0,
-	OP_SUBTRACT    = (9 << 1) | 0
+	OP_CONCAT      = ( 6 << 1) | 0,
+	OP_UNION       = ( 7 << 1) | 0,
+	OP_INTERSECT   = ( 8 << 1) | 0,
+	OP_SUBTRACT    = ( 9 << 1) | 0,
+	OP_EQUAL       = (10 << 1) | 0
 };
 
 static void
@@ -186,7 +187,9 @@ op_name(const char *name)
 		{ "intersect",   OP_INTERSECT   },
 		{ "subtract",    OP_SUBTRACT    },
 		{ "sub",         OP_SUBTRACT    },
-		{ "minus",       OP_SUBTRACT    }
+		{ "minus",       OP_SUBTRACT    },
+		{ "equals",      OP_EQUAL       },
+		{ "equal",       OP_EQUAL       }
 	};
 
 	assert(name != NULL);
@@ -200,7 +203,7 @@ op_name(const char *name)
 	fprintf(stderr, "unrecognised operation; valid operations are: "
 		"complete, "
 		"complement, invert, reverse, determinise, minimise, "
-		"concat, union, intersect, subtract\n");
+		"concat, union, intersect, subtract, equal\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -290,6 +293,11 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	if ((op == OP_EQUAL) + !!print > 1) {
+		fprintf(stderr, "-t equal and -p are mutually exclusive\n");
+		return EXIT_FAILURE;
+	}
+
 	{
 		struct fsm *a, *b;
 		struct fsm *q;
@@ -339,11 +347,12 @@ main(int argc, char *argv[])
 		case OP_INTERSECT:   q = fsm_intersect(a, b); break;
 		case OP_SUBTRACT:    q = fsm_subtract(a, b);  break;
 
-/* TODO:
 		case OP_EQUAL:
-			r = TODO
+			r = fsm_equal(a, b);
+			fsm_free(a);
+			fsm_free(b);
+			q = NULL;
 			break;
-*/
 
 		default:
 			fprintf(stderr, "unrecognised operation\n");
@@ -354,20 +363,30 @@ main(int argc, char *argv[])
 			q = NULL;
 		}
 
-		if (q == NULL) {
+		if (op != OP_EQUAL && q == NULL) {
+			perror("fsm_op");
 			exit(EXIT_FAILURE);
+		}
+
+		if (op == OP_EQUAL) {
+			r = !r;
 		}
 
 		fsm = q;
 	}
 
+	if (fsm == NULL) {
+		return r;
+	}
+
+	/* TODO: OP_EQUAL ought to have the same CLI interface as a predicate */
 	if (query != NULL) {
 		r |= !fsm_all(fsm, query);
 		return r;
 	}
 
 	/* TODO: optional -- to delimit texts as opposed to .fsm filenames */
-	if (argc > 0) {
+	if (op == OP_IDENTITY && argc > 0) {
 		int i;
 
 		/* TODO: option to print input texts which match. like grep(1) does.
