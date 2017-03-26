@@ -8,6 +8,9 @@
 #include <limits.h>
 #include <stddef.h>
 
+#include <adt/set.h>
+#include <adt/dlist.h>
+
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 
@@ -16,14 +19,73 @@
 int
 fsm_trim(struct fsm *fsm)
 {
-	struct fsm_state *s;
-	struct fsm_state *next;
-	int r;
+	struct dlist *list;
+	struct dlist *p;
 
-	assert(fsm != NULL);
+	/*
+	 * Iterative depth-first search.
+	 */
+	/* TODO: write in terms of fsm_walk or some common iteration callback */
 
-	do {
-		r = 0;
+	list = NULL;
+
+	if (!dlist_push(&list, fsm_getstart(fsm))) {
+		return -1;
+	}
+
+	while (p = dlist_nextnotdone(list), p != NULL) {
+		struct fsm_edge *e;
+		struct set_iter it;
+
+		for (e = set_first(p->state->edges, &it); e != NULL; e = set_next(&it)) {
+			struct fsm_state *st;
+			struct set_iter jt;
+
+			for (st = set_first(e->sl, &jt); st != NULL; st = set_next(&jt)) {
+				/* not a list operation... */
+				if (dlist_contains(list, st)) {
+					continue;
+				}
+
+				if (!dlist_push(&list, st)) {
+					return -1;
+				}
+			}
+		}
+
+		p->done = 1;
+	}
+
+	/*
+	 * Remove all states which aren't reachable.
+	 * These are a disjoint subgraph.
+	 */
+	{
+		struct fsm_state *s, *next;
+
+		for (s = fsm->sl; s != NULL; s = next) {
+			next = s->next;
+
+			if (!dlist_contains(list, s)) {
+				fsm_removestate(fsm, s);
+			}
+		}
+	}
+
+	dlist_free(list);
+
+	/*
+	 * Remove all states which have no reachable end state henceforth.
+	 * These are a trailing suffix which will never accept.
+	 *
+	 * Note it doesn't matter which order in which these are removed;
+	 * removing a state in the middle will disconnect the remainer of
+	 * the suffix. Then visiting nodes in that newly disjoint subgraph
+	 * will still be found to have no reachable end state, and so are
+	 * also removed.
+	 */
+	{
+		struct fsm_state *s, *next;
 
 		for (s = fsm->sl; s != NULL; s = next) {
 			next = s->next;
@@ -32,12 +94,11 @@ fsm_trim(struct fsm *fsm)
 				continue;
 			}
 
-			if (!fsm_hasoutgoing(fsm, s)) {
+			if (!fsm_reachable(fsm, s, fsm_isend)) {
 				fsm_removestate(fsm, s);
-				r = 1;
 			}
 		}
-	} while (r);
+	}
 
 	return 1;
 }
