@@ -38,13 +38,14 @@ enum op {
 	OP_REVERSE     = ( 3 << 1) | 1,
 	OP_DETERMINISE = ( 4 << 1) | 1,
 	OP_MINIMISE    = ( 5 << 1) | 1,
+	OP_TRIM        = ( 6 << 1) | 1,
 
 	/* binary */
-	OP_CONCAT      = ( 6 << 1) | 0,
-	OP_UNION       = ( 7 << 1) | 0,
-	OP_INTERSECT   = ( 8 << 1) | 0,
-	OP_SUBTRACT    = ( 9 << 1) | 0,
-	OP_EQUAL       = (10 << 1) | 0
+	OP_CONCAT      = ( 7 << 1) | 0,
+	OP_UNION       = ( 8 << 1) | 0,
+	OP_INTERSECT   = ( 9 << 1) | 0,
+	OP_SUBTRACT    = (10 << 1) | 0,
+	OP_EQUAL       = (11 << 1) | 0
 };
 
 static void
@@ -180,6 +181,7 @@ op_name(const char *name)
 		{ "todfa",       OP_DETERMINISE },
 		{ "min",         OP_MINIMISE    },
 		{ "minimise",    OP_MINIMISE    },
+		{ "trim",        OP_TRIM        },
 
 		{ "cat",         OP_CONCAT      },
 		{ "concat",      OP_CONCAT      },
@@ -202,7 +204,7 @@ op_name(const char *name)
 
 	fprintf(stderr, "unrecognised operation; valid operations are: "
 		"complete, "
-		"complement, invert, reverse, determinise, minimise, "
+		"complement, invert, reverse, determinise, minimise, trim, "
 		"concat, union, intersect, subtract, equal\n");
 	exit(EXIT_FAILURE);
 }
@@ -341,6 +343,7 @@ main(int argc, char *argv[])
 		case OP_REVERSE:     r = fsm_reverse(q);      break;
 		case OP_DETERMINISE: r = fsm_determinise(q);  break;
 		case OP_MINIMISE:    r = fsm_minimise(q);     break;
+		case OP_TRIM:        r = fsm_trim(q);         break;
 
 		case OP_CONCAT:      q = fsm_concat(a, b);    break;
 		case OP_UNION:       q = fsm_union(a, b);     break;
