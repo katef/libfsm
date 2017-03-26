@@ -42,7 +42,8 @@ enum op {
 	/* binary */
 	OP_CONCAT      = (6 << 1) | 0,
 	OP_UNION       = (7 << 1) | 0,
-	OP_INTERSECT   = (8 << 1) | 0
+	OP_INTERSECT   = (8 << 1) | 0,
+	OP_SUBTRACT    = (9 << 1) | 0
 };
 
 static void
@@ -182,7 +183,10 @@ op_name(const char *name)
 		{ "cat",         OP_CONCAT      },
 		{ "concat",      OP_CONCAT      },
 		{ "union",       OP_UNION       },
-		{ "intersect",   OP_INTERSECT   }
+		{ "intersect",   OP_INTERSECT   },
+		{ "subtract",    OP_SUBTRACT    },
+		{ "sub",         OP_SUBTRACT    },
+		{ "minus",       OP_SUBTRACT    }
 	};
 
 	assert(name != NULL);
@@ -196,7 +200,7 @@ op_name(const char *name)
 	fprintf(stderr, "unrecognised operation; valid operations are: "
 		"complete, "
 		"complement, invert, reverse, determinise, minimise, "
-		"concat, union, intersect\n");
+		"concat, union, intersect, subtract\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -333,6 +337,7 @@ main(int argc, char *argv[])
 		case OP_CONCAT:      q = fsm_concat(a, b);    break;
 		case OP_UNION:       q = fsm_union(a, b);     break;
 		case OP_INTERSECT:   q = fsm_intersect(a, b); break;
+		case OP_SUBTRACT:    q = fsm_subtract(a, b);  break;
 
 /* TODO:
 		case OP_EQUAL:
