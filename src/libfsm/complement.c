@@ -39,6 +39,10 @@ fsm_complement(struct fsm *fsm)
 		fsm_setend(fsm, s, !fsm_isend(fsm, s));
 	}
 
+	if (!fsm_trim(fsm)) {
+		return 0;
+	}
+
 	return 1;
 }
 
