@@ -333,7 +333,7 @@ handle_line(char *start, char *end, char *rec, size_t reclen)
 		return;
 	}
 
-	while (dbyte < noct) {
+	while (dbyte <= noct) {
 		int szeroes = memcmp(&socts[dbyte], &zeroes, (noct - dbyte) + 1);
 		int eones = memcmp(&eocts[dbyte], &ones, (noct - dbyte) + 1);
 
