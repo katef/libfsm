@@ -324,8 +324,13 @@ handle_line(char *start, char *end, char *rec, size_t reclen)
 	}
 
 	while (dbyte <= noct) {
-		int szeroes = memcmp(&socts[dbyte], &zeroes, (noct - dbyte) + 1);
-		int eones = memcmp(&eocts[dbyte], &ones, (noct - dbyte) + 1);
+		int szeroes, eones;
+
+		szeroes = eones = -1;
+		if (dbyte < noct) {
+			szeroes = memcmp(&socts[dbyte], &zeroes, (noct - dbyte) + 1);
+			eones = memcmp(&eocts[dbyte], &ones, (noct - dbyte) + 1);
+		}
 
 		if (szeroes == 0 && eones == 0) {
 			/*
@@ -336,8 +341,14 @@ handle_line(char *start, char *end, char *rec, size_t reclen)
 			gen_range(r, ipv, dbyte - 1, 0, 255, socts);
 			return;
 		} else {
-			int tzeroes = memcmp(&socts[dbyte + 1], &zeroes, noct - dbyte);
-			int tones = memcmp(&eocts[dbyte + 1], &ones, noct - dbyte);
+			int tzeroes, tones;
+
+			tzeroes = tones = -1;
+			if (dbyte + 1 < noct) {
+				tzeroes = memcmp(&socts[dbyte + 1], &zeroes, noct - dbyte);
+				tones = memcmp(&eocts[dbyte + 1], &ones, noct - dbyte);
+			}
+
 			if (tzeroes == 0 && tones == 0) {
 				gen_range(r, ipv, dbyte - 1, socts[dbyte], eocts[dbyte], socts);
 				return;
