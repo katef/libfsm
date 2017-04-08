@@ -516,7 +516,7 @@ main(int argc, char **argv)
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
 	opt.case_ranges       = 1;
-	opt.opaque_string     = nl;
+	/* opt.opaque_string     = nl; */
 
 	while (c = getopt(argc, argv, "46f:l:Q"), c != -1) {
 		switch (c) {
