@@ -323,16 +323,6 @@ handle_line(char *start, char *end, char *rec, size_t reclen)
 		}
 	}
 
-	/*
-	 * If the addresses differ at the final byte of the address, the
-	 * shortest path still requires all octets. So the only thing we
-	 * can do is complete the range from start to end.
-	 */
-	if (dbyte == noct) {
-		gen_range(r, ipv, noct - 1, socts[noct], eocts[noct], socts);
-		return;
-	}
-
 	while (dbyte <= noct) {
 		int szeroes = memcmp(&socts[dbyte], &zeroes, (noct - dbyte) + 1);
 		int eones = memcmp(&eocts[dbyte], &ones, (noct - dbyte) + 1);
