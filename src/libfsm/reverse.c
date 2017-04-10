@@ -118,7 +118,7 @@ fsm_reverse(struct fsm *fsm)
 
 					assert(from != NULL);
 
-					edge = fsm_addedge(from, to, e->symbol);
+					edge = fsm_addedge(new, from, to, e->symbol);
 					if (edge == NULL) {
 						set_free(endset);
 						fsm_free(new);

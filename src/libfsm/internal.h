@@ -53,6 +53,7 @@ struct fsm {
 	struct fsm_state *start;
 
 	unsigned long endcount;
+	unsigned long edges;
 
 	const struct fsm_options *opt;
 
@@ -65,7 +66,7 @@ struct fsm_edge *
 fsm_hasedge(const struct fsm_state *s, int c);
 
 struct fsm_edge *
-fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type);
+fsm_addedge(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type);
 
 #endif
 

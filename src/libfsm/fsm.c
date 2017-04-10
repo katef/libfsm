@@ -59,6 +59,7 @@ fsm_new(const struct fsm_options *opt)
 	new->start = NULL;
 
 	new->endcount = 0;
+	new->edges = 0;
 
 	new->opt = opt;
 
@@ -96,6 +97,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	dst->tail     = src->tail;
 	dst->start    = src->start;
 	dst->endcount = src->endcount;
+	dst->edges    = src->edges;
 
 	free(src);
 }

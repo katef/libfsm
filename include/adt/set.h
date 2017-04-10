@@ -17,7 +17,13 @@ struct set_iter {
 struct set *
 set_create(int (*cmp)(const void *a, const void *b));
 
-void *
+enum set_result {
+	SR_FAILED,
+	SR_INSERTED,
+	SR_FOUND
+};
+
+enum set_result
 set_add(struct set **set, void *item);
 
 void

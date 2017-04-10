@@ -147,7 +147,7 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 					return NULL;
 				}
 
-				if (!fsm_addedge(m->new, to->new, e->symbol)) {
+				if (!fsm_addedge(fsm, m->new, to->new, e->symbol)) {
 					return NULL;
 				}
 			}
