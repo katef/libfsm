@@ -60,7 +60,7 @@ fsm_addstate(struct fsm *fsm)
 void
 fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 {
-	struct fsm_state *s, **p;
+	struct fsm_state *s;
 	struct fsm_edge *e;
 	struct set_iter it;
 
@@ -86,17 +86,27 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 		fsm->start = NULL;
 	}
 
-	for (p = &fsm->sl; *p != NULL; p = &(*p)->next) {
-		if (*p == state) {
-			struct fsm_state *next;
+	{
+		struct fsm_state **p;
+		struct fsm_state **tail;
 
-			next = (*p)->next;
-			if (*fsm->tail == *p) {
-				fsm->tail = p;
+		tail = &fsm->sl;
+
+		for (p = &fsm->sl; *p != NULL; p = &(*p)->next) {
+			if (*p == state) {
+				struct fsm_state *next;
+
+				if (fsm->tail == &(*p)->next) {
+					fsm->tail = tail;
+				}
+
+				next = (*p)->next;
+				free(*p);
+				*p = next;
+				break;
 			}
-			free(*p);
-			*p = next;
-			break;
+
+			tail = &(*p)->next;
 		}
 	}
 }
