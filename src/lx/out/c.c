@@ -780,7 +780,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		for (s = z->fsm->sl; s != NULL; s = s->next) {
 			int r;
 
-			r = fsm_reachable(z->fsm, s, skip);
+			r = fsm_reachableall(z->fsm, s, skip);
 			if (r == -1) {
 				return -1;
 			}
@@ -801,7 +801,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			for (s = z->fsm->sl; s != NULL; s = s->next) {
 				int r;
 
-				r = fsm_reachable(z->fsm, s, skip);
+				r = fsm_reachableall(z->fsm, s, skip);
 				if (r == -1) {
 					return -1;
 				}

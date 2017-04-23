@@ -14,8 +14,9 @@
 
 #include "../internal.h"
 
-int
+static int
 fsm_reachable(struct fsm *fsm, struct fsm_state *state,
+	int any,
 	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
 	struct dlist *list;
@@ -39,9 +40,16 @@ fsm_reachable(struct fsm *fsm, struct fsm_state *state,
 		struct fsm_edge *e;
 		struct set_iter it;
 
-		if (!predicate(fsm, p->state)) {
-			dlist_free(p);
-			return 0;
+		if (any) {
+			if (predicate(fsm, p->state)) {
+				dlist_free(p);
+				return 1;
+			}
+		} else {
+			if (!predicate(fsm, p->state)) {
+				dlist_free(p);
+				return 0;
+			}
 		}
 
 		for (e = set_first(p->state->edges, &it); e != NULL; e = set_next(&it)) {
@@ -65,6 +73,24 @@ fsm_reachable(struct fsm *fsm, struct fsm_state *state,
 
 	dlist_free(list);
 
-	return 1;
+	if (any) {
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
+int
+fsm_reachableall(struct fsm *fsm, struct fsm_state *state,
+	int (*predicate)(const struct fsm *, const struct fsm_state *))
+{
+	return fsm_reachable(fsm, state, 0, predicate);
+}
+
+int
+fsm_reachableany(struct fsm *fsm, struct fsm_state *state,
+	int (*predicate)(const struct fsm *, const struct fsm_state *))
+{
+	return fsm_reachable(fsm, state, 1, predicate);
 }
 

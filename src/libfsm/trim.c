@@ -94,7 +94,7 @@ fsm_trim(struct fsm *fsm)
 				continue;
 			}
 
-			if (!fsm_reachable(fsm, s, fsm_isend)) {
+			if (!fsm_reachableany(fsm, s, fsm_isend)) {
 				fsm_removestate(fsm, s);
 			}
 		}

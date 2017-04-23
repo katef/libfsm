@@ -37,12 +37,16 @@ fsm_all(const struct fsm *fsm,
  * Assert that the given predicate holds for all states reachable
  * (by epsilon transitions or otherwise) from the given state.
  *
- * Returns 1 if the predicate holds for all states reached, 0 otherwise.
+ * Returns 1 if the predicate holds for all/any states reached, respectively.
+ * Returns 0 otherwise.
  *
  * Returns -1 on error.
  */
 int
-fsm_reachable(struct fsm *fsm, struct fsm_state *state,
+fsm_reachableall(struct fsm *fsm, struct fsm_state *state,
+	int (*predicate)(const struct fsm *, const struct fsm_state *));
+int
+fsm_reachableany(struct fsm *fsm, struct fsm_state *state,
 	int (*predicate)(const struct fsm *, const struct fsm_state *));
 
 #endif
