@@ -331,7 +331,8 @@ main(int argc, char *argv[])
 			}
 		}
 
-		r = 0;
+		/* within this block, r is API convention (true for success) */
+		r = 1;
 
 		switch (op) {
 		case OP_IDENTITY:
@@ -371,12 +372,12 @@ main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 
-		if (op == OP_EQUAL) {
-			r = !r;
-		}
+		r = !r;
 
 		fsm = q;
 	}
+
+	/* henceforth, r is $?-convention (0 for success) */
 
 	if (fsm == NULL) {
 		return r;
