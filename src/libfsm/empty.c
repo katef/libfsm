@@ -20,20 +20,22 @@
 int
 fsm_empty(struct fsm *fsm)
 {
+	struct fsm_state *start;
 
 	assert(fsm != NULL);
 
-	if (!fsm_minimise(fsm)) {
+	start = fsm_getstart(fsm);
+	if (start == NULL) {
+		errno = EINVAL;
 		return -1;
 	}
 
 	/*
-	 * After minimisation, all states are reachable.
-	 * If any state is an end state, the FSM matches something.
+	 * If any reachable state is an end state, the FSM matches something.
 	 * Note this includes the empty string (when the start state matches).
 	 */
 
-	if (fsm_has(fsm, fsm_isend)) {
+	if (fsm_reachableany(fsm, start, fsm_isend)) {
 		return 0;
 	}
 
