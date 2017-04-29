@@ -66,7 +66,7 @@ subsetof(const struct fsm *a, const struct fsm *b)
 		return -1;
 	}
 
-	return !r;
+	return r;
 }
 
 int
