@@ -94,6 +94,11 @@ fsm_trim(struct fsm *fsm)
 				continue;
 			}
 
+			/* XXX: trim away the start state? I am unsure about this. */
+			if (s == fsm_getstart(fsm)) {
+				continue;
+			}
+
 			if (!fsm_reachableany(fsm, s, fsm_isend)) {
 				fsm_removestate(fsm, s);
 			}
