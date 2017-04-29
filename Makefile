@@ -4,12 +4,13 @@
 all::  mkdir .WAIT dep .WAIT lib prog
 dep::
 gen::
-test::
+test:: all
 install:: all
 clean::
 
 # things to override
 CC     ?= gcc
+DOT    ?= dot
 BUILD  ?= build
 PREFIX ?= /usr/local
 
@@ -28,6 +29,9 @@ SUBDIR += src/fsm
 SUBDIR += src/re
 SUBDIR += src/lx
 SUBDIR += src/lx/out
+SUBDIR += tests/determinise
+SUBDIR += tests/minimise
+SUBDIR += tests/reverse
 SUBDIR += pc
 
 INCDIR += include
