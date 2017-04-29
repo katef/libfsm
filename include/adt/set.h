@@ -26,6 +26,9 @@ set_remove(struct set **set, void *item);
 void
 set_free(struct set *set);
 
+size_t
+set_count(const struct set *set);
+
 void
 set_clear(struct set *set);
 

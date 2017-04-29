@@ -216,6 +216,16 @@ set_free(struct set *set)
 	free(set);
 }
 
+size_t
+set_count(const struct set *set)
+{
+	if (set == NULL) {
+		return 0;
+	}
+
+	return set->i;
+}
+
 void
 set_clear(struct set *set)
 {
