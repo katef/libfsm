@@ -26,6 +26,10 @@ equivalent(struct fsm_state *a, struct fsm_state *b)
 	assert(a != NULL);
 	assert(b != NULL);
 
+	if (set_count(a->edges) != set_count(b->edges)) {
+		return 0;
+	}
+
 	for (ae = set_first(a->edges, &it); ae != NULL; ae = set_next(&it)) {
 		if ((be = fsm_hasedge(b, ae->symbol)) == NULL) {
 			return 0;
