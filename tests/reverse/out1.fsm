@@ -1,0 +1,22 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+9 -> 4;
+9 -> 8;
+
+4 -> 3 'c';
+3 -> 2 'b';
+2 -> 1 'a';
+1 -> 0;
+
+8 -> 7 'c';
+7 -> 6 'x';
+6 -> 5 'a';
+5 -> 0;
+
+start: 9;
+end: 0;
+
