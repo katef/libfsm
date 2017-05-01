@@ -64,6 +64,9 @@
 	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
 	<add-any>:     (:fsm_state, :fsm_state)        -> ();
 
+	<capture-set>: () -> (:unsigned);
+	<capture-unset>: (:unsigned) -> ();
+
 	<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
 	<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
 	<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
@@ -249,7 +252,9 @@
 		atom: (x :fsm_state, y :fsm_state &) -> () = {
 			{
 				OPENSUB;
+				n = <capture-set>();
 				expr(x, y);
+				<capture-unset>(n);
 				CLOSESUB;
 			||
 				group(x, y);

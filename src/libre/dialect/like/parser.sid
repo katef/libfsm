@@ -59,6 +59,9 @@
 	!<add-pred>:   (:fsm_state, :fsm_state, :pred) -> ();
 	<add-any>:     (:fsm_state, :fsm_state)        -> ();
 
+	!<capture-set>: () -> (:unsigned);
+	!<capture-unset>: (:unsigned) -> ();
+
 	!<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
 	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
 	<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();

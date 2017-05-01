@@ -35,6 +35,8 @@
 	#include <adt/bitmap.h>
 
 	#include <fsm/fsm.h>
+	#include <fsm/out.h>
+	#include <fsm/options.h>
 
 	#include <re/re.h>
 
@@ -82,6 +84,14 @@
 		int overlap; /* permit overlap in groups */
 
 		/*
+		 * A bitmap of the currently active capturing groups
+		 * (0-indexed; bit 0 represents group 1).
+		 * nmatch is the total number of capturing groups.
+		 */
+		matchset_t matches;
+		unsigned nmatch;
+
+		/*
 		 * Lexical position stored for syntax errors.
 		 */
 		struct re_pos synstart;
@@ -114,6 +124,13 @@
 		char a[512];
 		char *p;
 	};
+
+	/*
+	 * The matches bitmap is 0-indexed, so bit 0 represents group number 1.
+	 * The maximum group number is however many bits fit in the bitmap.
+	 */
+	#define MATCH_BIT(n) (1 << ((n) - 1))
+	#define MATCH_MAX (sizeof act_state->matches * CHAR_BIT)
 
 	#define CURRENT_TERMINAL (act_state->lex_tok)
 	#define ERROR_TERMINAL   @$ERROR
@@ -598,6 +615,31 @@
 		}
 	@};
 
+	<capture-set>: () -> (n :unsigned) = @{
+		if (fsm->opt != NULL && fsm->opt->capture) {
+			assert(act_state->nmatch <= MATCH_MAX);
+
+			if (act_state->nmatch == MATCH_MAX) {
+				err->e = RE_ENMATCHES;
+				@!;
+			}
+
+			@n = ++act_state->nmatch;
+
+			assert(~act_state->matches & MATCH_BIT(@n));
+
+			act_state->matches |=  MATCH_BIT(@n);
+		}
+	@};
+
+	<capture-unset>: (n :unsigned) -> () = @{
+		if (fsm->opt != NULL && fsm->opt->capture) {
+			assert(@n <= MATCH_MAX);
+			assert((act_state->matches & MATCH_BIT(@n)) != 0);
+
+			act_state->matches &= ~MATCH_BIT(@n);
+		}
+	@};
 
 	/*
 	 * The following count repetition operators encapsulate regular expression
@@ -939,6 +981,8 @@
 		act_state->g = g;
 
 		act_state->overlap = overlap;
+		act_state->matches = 0x0;
+		act_state->nmatch  = 0;
 
 		err->e = RE_ESUCCESS;
 

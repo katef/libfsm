@@ -23,6 +23,8 @@ enum fsm_edge_type {
 
 #define FSM_EDGE_MAX FSM_EDGE_EPSILON
 
+typedef unsigned matchset_t;
+
 struct fsm_edge {
 	struct set *sl;
 	enum fsm_edge_type symbol;

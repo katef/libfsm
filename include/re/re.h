@@ -58,6 +58,7 @@ enum re_errno {
 	RE_EERRNO       =  1 | RE_MISC,
 	RE_EBADDIALECT  =  2 | RE_MISC,
 	RE_EBADGROUP    =  3 | RE_MISC,
+	RE_ENMATCHES    =  4 | RE_MISC,
 
 	RE_EOVERLAP     =  0 | RE_MARK | RE_GROUP,
 	RE_ENEGRANGE    =  1 | RE_MARK | RE_GROUP,
