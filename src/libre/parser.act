@@ -234,6 +234,7 @@
 
 	static int
 	addedge_literal(struct fsm *fsm, enum re_flags flags,
+		const matchset_t *matches,
 		struct fsm_state *from, struct fsm_state *to, char c)
 	{
 		assert(fsm != NULL);
@@ -241,16 +242,35 @@
 		assert(to != NULL);
 
 		if (flags & RE_ICASE) {
-			if (!fsm_addedge_literal(fsm, from, to, tolower((unsigned char) c))) {
+			struct fsm_edge *a, *b;
+
+			a = fsm_addedge_literal(fsm, from, to, tolower((unsigned char) c));
+			if (a == NULL) {
 				return 0;
 			}
 
-			if (!fsm_addedge_literal(fsm, from, to, toupper((unsigned char) c))) {
+			if (fsm->opt != NULL && fsm->opt->capture) {
+				a->matches |= *matches;
+			}
+
+			b = fsm_addedge_literal(fsm, from, to, toupper((unsigned char) c));
+			if (b == NULL) {
 				return 0;
 			}
+
+			if (fsm->opt != NULL && fsm->opt->capture) {
+				b->matches |= *matches;
+			}
 		} else {
-			if (!fsm_addedge_literal(fsm, from, to, c)) {
+			struct fsm_edge *e;
+
+			e = fsm_addedge_literal(fsm, from, to, c);
+			if (e == NULL) {
 				return 0;
+			}
+
+			if (fsm->opt != NULL && fsm->opt->capture) {
+				e->matches |= *matches;
 			}
 		}
 
@@ -546,7 +566,7 @@
 
 		i = -1;
 		while (i = (int) bm_next(&@&g->set, i, 1), i <= UCHAR_MAX) {
-			if (!addedge_literal(fsm, flags, @x, @y, (char) i)) {
+			if (!addedge_literal(fsm, flags, &act_state->matches, @x, @y, (char) i)) {
 				@!;
 			}
 		}
@@ -601,7 +621,7 @@
 
 		/* TODO: check c is legal? */
 
-		if (!addedge_literal(fsm, flags, @x, @y, @c)) {
+		if (!addedge_literal(fsm, flags, &act_state->matches, @x, @y, @c)) {
 			@!;
 		}
 	@};

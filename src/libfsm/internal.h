@@ -28,6 +28,7 @@ typedef unsigned matchset_t;
 struct fsm_edge {
 	struct set *sl;
 	enum fsm_edge_type symbol;
+	matchset_t matches;
 };
 
 struct fsm_state {
