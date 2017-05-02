@@ -89,10 +89,9 @@
 		 *
 		 * This is a bitmap of the currently active capturing groups
 		 * (0-indexed; bit 0 represents group 1).
-		 * tagcount is the total number of capturing groups.
+		 * fsm->tagcount is the total number of capturing groups.
 		 */
 		tags_t tags;
-		unsigned tagcount;
 
 		/*
 		 * Lexical position stored for syntax errors.
@@ -127,13 +126,6 @@
 		char a[512];
 		char *p;
 	};
-
-	/*
-	 * The tags bitmap is 0-indexed, so bit 0 represents group number 1.
-	 * The maximum group number is however many bits fit in the bitmap.
-	 */
-	#define TAG_BIT(n) (1 << ((n) - 1))
-	#define TAG_MAX (sizeof act_state->tags * CHAR_BIT)
 
 	#define CURRENT_TERMINAL (act_state->lex_tok)
 	#define ERROR_TERMINAL   @$ERROR
@@ -640,14 +632,14 @@
 
 	<capture-set>: () -> (n :unsigned) = @{
 		if (fsm->opt != NULL && fsm->opt->tags) {
-			assert(act_state->tagcount <= TAG_MAX);
+			assert(fsm->tagcount <= TAG_MAX);
 
-			if (act_state->tagcount == TAG_MAX) {
+			if (fsm->tagcount == TAG_MAX) {
 				err->e = RE_ENMATCHES;
 				@!;
 			}
 
-			@n = ++act_state->tagcount;
+			@n = ++fsm->tagcount;
 
 			assert(~act_state->tags & TAG_BIT(@n));
 
@@ -1003,9 +995,10 @@
 		act_state = &act_state_s;
 		act_state->g = g;
 
-		act_state->overlap  = overlap;
-		act_state->tags     = 0x0;
-		act_state->tagcount = 0;
+		act_state->overlap = overlap;
+		act_state->tags    = 0x0;
+
+		assert(new->tagcount == 0);
 
 		err->e = RE_ESUCCESS;
 

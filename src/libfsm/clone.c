@@ -27,6 +27,8 @@ fsm_clone(const struct fsm *fsm)
 		return NULL;
 	}
 
+	new->tagcount = fsm->tagcount;
+
 	/*
 	 * Create states corresponding to the origional FSM's states.
 	 * These are created in reverse order, but that's okay.

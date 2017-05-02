@@ -32,6 +32,8 @@ fsm_reverse(struct fsm *fsm)
 		return 0;
 	}
 
+	new->tagcount = fsm->tagcount;
+
 	/*
 	 * The new end state is the previous start state. Because there is (at most)
 	 * one start state, the new FSM will have at most one end state.

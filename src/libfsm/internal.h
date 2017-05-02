@@ -23,7 +23,15 @@ enum fsm_edge_type {
 
 #define FSM_EDGE_MAX FSM_EDGE_EPSILON
 
+
 typedef unsigned tags_t;
+
+/*
+ * The tags bitmap is 0-indexed, so bit 0 represents group number 1.
+ * The maximum group number is however many bits fit in the bitmap.
+ */
+#define TAG_BIT(n) (1 << ((n) - 1))
+#define TAG_MAX (sizeof (tags_t) * CHAR_BIT)
 
 struct fsm_edge {
 	struct set *sl;
@@ -56,6 +64,7 @@ struct fsm {
 	struct fsm_state *start;
 
 	unsigned long endcount;
+	unsigned tagcount;
 
 	const struct fsm_options *opt;
 

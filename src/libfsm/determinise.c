@@ -423,6 +423,8 @@ determinise(struct fsm *nfa,
 		return NULL;
 	}
 
+	dfa->tagcount = nfa->tagcount;
+
 #ifdef DEBUG_TODFA
 	dfa->nfa = nfa;
 #endif
@@ -594,6 +596,8 @@ fsm_determinise_cache(struct fsm *fsm,
 	fsm->nfa->sl    = fsm->sl;
 	fsm->nfa->tail  = fsm->tail;
 	fsm->nfa->start = fsm->start;
+
+	fsm->nfa->tagcount = fsm->tagcount;
 
 	/* for fsm_move's free contents */
 	fsm->sl    = NULL;
