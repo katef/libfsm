@@ -52,11 +52,14 @@ fsm_complete(struct fsm *fsm,
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
 		struct fsm_edge *e;
+
 		e = fsm_addedge(new, new, i);
 		if (e == NULL) {
 			/* TODO: free stuff */
 			return 0;
 		}
+
+		e->matches |= 0x0; /* no subexpressions */
 	}
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
@@ -65,14 +68,19 @@ fsm_complete(struct fsm *fsm,
 		}
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
+			struct fsm_edge *e;
+
 			if (fsm_hasedge(s, i)) {
 				continue;
 			}
 
-			if (!fsm_addedge(s, new, i)) {
+			e = fsm_addedge(s, new, i);
+			if (e == NULL) {
 				/* TODO: free stuff */
 				return 0;
 			}
+
+			e->matches |= 0x0; /* no subexpressions */
 		}
 	}
 

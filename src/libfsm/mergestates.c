@@ -23,11 +23,14 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 	/* edges from b */
 	for (e = set_first(b->edges, &it); e != NULL; e = set_next(&it)) {
 		struct set_iter jt;
+
 		for (s = set_first(e->sl, &jt); s != NULL; s = set_next(&jt)) {
 			f = fsm_addedge(a, s, e->symbol);
 			if (f == NULL) {
 				return NULL;
 			}
+
+			f->matches |= e->matches;
 		}
 	}
 
@@ -39,6 +42,9 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 				if (f == NULL) {
 					return NULL;
 				}
+
+				f->matches |= e->matches;
+
 				set_remove(&e->sl, b);
 			}
 		}

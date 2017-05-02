@@ -129,7 +129,7 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 	while (m = getnextnotdone(mappings), m != NULL) {
 		struct set_iter it, jt;
 		struct fsm_state *s;
-		struct fsm_edge *e;
+		struct fsm_edge *e, *f;
 
 		if (x != NULL && m->old == *x) {
 			*x = m->new;
@@ -147,9 +147,12 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 					return NULL;
 				}
 
-				if (!fsm_addedge(m->new, to->new, e->symbol)) {
+				f = fsm_addedge(m->new, to->new, e->symbol);
+				if (f == NULL) {
 					return NULL;
 				}
+
+				f->matches |= e->matches;
 			}
 		}
 

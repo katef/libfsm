@@ -124,6 +124,8 @@ fsm_reverse(struct fsm *fsm)
 						fsm_free(new);
 						return 0;
 					}
+
+					edge->matches |= e->matches;
 				}
 			}
 		}

@@ -72,14 +72,18 @@ fsm_clone(const struct fsm *fsm)
 				for (to = set_first(e->sl, &jt); to != NULL; to = set_next(&jt)) {
 					struct fsm_state *newfrom;
 					struct fsm_state *newto;
+					struct fsm_edge *f;
 
 					newfrom = equiv;
 					newto   = to->equiv;
 
-					if (!fsm_addedge(newfrom, newto, e->symbol)) {
+					f = fsm_addedge(newfrom, newto, e->symbol);
+					if (f == NULL) {
 						fsm_free(new);
 						return NULL;
 					}
+
+					f->matches |= e->matches;
 				}
 			}
 		}
