@@ -30,7 +30,7 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 				return NULL;
 			}
 
-			f->matches |= e->matches;
+			f->tags |= e->tags;
 		}
 	}
 
@@ -43,7 +43,7 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 					return NULL;
 				}
 
-				f->matches |= e->matches;
+				f->tags |= e->tags;
 
 				set_remove(&e->sl, b);
 			}

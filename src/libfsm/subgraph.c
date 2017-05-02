@@ -152,7 +152,7 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 					return NULL;
 				}
 
-				f->matches |= e->matches;
+				f->tags |= e->tags;
 			}
 		}
 

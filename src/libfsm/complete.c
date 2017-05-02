@@ -59,7 +59,7 @@ fsm_complete(struct fsm *fsm,
 			return 0;
 		}
 
-		e->matches |= 0x0; /* no subexpressions */
+		e->tags |= 0x0; /* no subexpressions */
 	}
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
@@ -80,7 +80,7 @@ fsm_complete(struct fsm *fsm,
 				return 0;
 			}
 
-			e->matches |= 0x0; /* no subexpressions */
+			e->tags |= 0x0; /* no subexpressions */
 		}
 	}
 

@@ -84,12 +84,15 @@
 		int overlap; /* permit overlap in groups */
 
 		/*
-		 * A bitmap of the currently active capturing groups
+		 * Capturing groups are implemented using tagged transitions
+		 * in the constructed NFA.
+		 *
+		 * This is a bitmap of the currently active capturing groups
 		 * (0-indexed; bit 0 represents group 1).
-		 * nmatch is the total number of capturing groups.
+		 * tagcount is the total number of capturing groups.
 		 */
-		matchset_t matches;
-		unsigned nmatch;
+		tags_t tags;
+		unsigned tagcount;
 
 		/*
 		 * Lexical position stored for syntax errors.
@@ -126,11 +129,11 @@
 	};
 
 	/*
-	 * The matches bitmap is 0-indexed, so bit 0 represents group number 1.
+	 * The tags bitmap is 0-indexed, so bit 0 represents group number 1.
 	 * The maximum group number is however many bits fit in the bitmap.
 	 */
-	#define MATCH_BIT(n) (1 << ((n) - 1))
-	#define MATCH_MAX (sizeof act_state->matches * CHAR_BIT)
+	#define TAG_BIT(n) (1 << ((n) - 1))
+	#define TAG_MAX (sizeof act_state->tags * CHAR_BIT)
 
 	#define CURRENT_TERMINAL (act_state->lex_tok)
 	#define ERROR_TERMINAL   @$ERROR
@@ -234,7 +237,7 @@
 
 	static int
 	addedge_literal(struct fsm *fsm, enum re_flags flags,
-		const matchset_t *matches,
+		const tags_t *tags,
 		struct fsm_state *from, struct fsm_state *to, char c)
 	{
 		assert(fsm != NULL);
@@ -249,8 +252,8 @@
 				return 0;
 			}
 
-			if (fsm->opt != NULL && fsm->opt->capture) {
-				a->matches |= *matches;
+			if (fsm->opt != NULL && fsm->opt->tags) {
+				a->tags |= *tags;
 			}
 
 			b = fsm_addedge_literal(fsm, from, to, toupper((unsigned char) c));
@@ -258,8 +261,8 @@
 				return 0;
 			}
 
-			if (fsm->opt != NULL && fsm->opt->capture) {
-				b->matches |= *matches;
+			if (fsm->opt != NULL && fsm->opt->tags) {
+				b->tags |= *tags;
 			}
 		} else {
 			struct fsm_edge *e;
@@ -269,8 +272,8 @@
 				return 0;
 			}
 
-			if (fsm->opt != NULL && fsm->opt->capture) {
-				e->matches |= *matches;
+			if (fsm->opt != NULL && fsm->opt->tags) {
+				e->tags |= *tags;
 			}
 		}
 
@@ -566,7 +569,7 @@
 
 		i = -1;
 		while (i = (int) bm_next(&@&g->set, i, 1), i <= UCHAR_MAX) {
-			if (!addedge_literal(fsm, flags, &act_state->matches, @x, @y, (char) i)) {
+			if (!addedge_literal(fsm, flags, &act_state->tags, @x, @y, (char) i)) {
 				@!;
 			}
 		}
@@ -621,7 +624,7 @@
 
 		/* TODO: check c is legal? */
 
-		if (!addedge_literal(fsm, flags, &act_state->matches, @x, @y, @c)) {
+		if (!addedge_literal(fsm, flags, &act_state->tags, @x, @y, @c)) {
 			@!;
 		}
 	@};
@@ -636,28 +639,28 @@
 	@};
 
 	<capture-set>: () -> (n :unsigned) = @{
-		if (fsm->opt != NULL && fsm->opt->capture) {
-			assert(act_state->nmatch <= MATCH_MAX);
+		if (fsm->opt != NULL && fsm->opt->tags) {
+			assert(act_state->tagcount <= TAG_MAX);
 
-			if (act_state->nmatch == MATCH_MAX) {
+			if (act_state->tagcount == TAG_MAX) {
 				err->e = RE_ENMATCHES;
 				@!;
 			}
 
-			@n = ++act_state->nmatch;
+			@n = ++act_state->tagcount;
 
-			assert(~act_state->matches & MATCH_BIT(@n));
+			assert(~act_state->tags & TAG_BIT(@n));
 
-			act_state->matches |=  MATCH_BIT(@n);
+			act_state->tags |=  TAG_BIT(@n);
 		}
 	@};
 
 	<capture-unset>: (n :unsigned) -> () = @{
-		if (fsm->opt != NULL && fsm->opt->capture) {
-			assert(@n <= MATCH_MAX);
-			assert((act_state->matches & MATCH_BIT(@n)) != 0);
+		if (fsm->opt != NULL && fsm->opt->tags) {
+			assert(@n <= TAG_MAX);
+			assert((act_state->tags & TAG_BIT(@n)) != 0);
 
-			act_state->matches &= ~MATCH_BIT(@n);
+			act_state->tags &= ~TAG_BIT(@n);
 		}
 	@};
 
@@ -1000,9 +1003,9 @@
 		act_state = &act_state_s;
 		act_state->g = g;
 
-		act_state->overlap = overlap;
-		act_state->matches = 0x0;
-		act_state->nmatch  = 0;
+		act_state->overlap  = overlap;
+		act_state->tags     = 0x0;
+		act_state->tagcount = 0;
 
 		err->e = RE_ESUCCESS;
 

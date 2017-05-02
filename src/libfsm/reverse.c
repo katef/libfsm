@@ -125,7 +125,7 @@ fsm_reverse(struct fsm *fsm)
 						return 0;
 					}
 
-					edge->matches |= e->matches;
+					edge->tags |= e->tags;
 				}
 			}
 		}

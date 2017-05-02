@@ -83,7 +83,7 @@ fsm_clone(const struct fsm *fsm)
 						return NULL;
 					}
 
-					f->matches |= e->matches;
+					f->tags |= e->tags;
 				}
 			}
 		}

@@ -42,9 +42,9 @@ struct fsm_options {
 	 */
 	unsigned int case_ranges:1;
 
-	/* boolean: true enables cpature for groups.
+	/* boolean: true enables tags for edges.
 	 */
-	unsigned int capture:1;
+	unsigned int tags:1;
 
 	/* for generated code, what kind of I/O API to generate */
 	enum fsm_io io;

@@ -32,8 +32,8 @@ fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type typ
 			return NULL;
 		}
 
-		e->symbol  = type;
-		e->matches = 0x0;
+		e->symbol = type;
+		e->tags   = 0x0;
 
 		e->sl = NULL;
 

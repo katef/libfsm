@@ -340,14 +340,14 @@ listnonepsilonstates(struct set *trans, struct set *set)
  * Return a list of all states reachable from set via the given transition.
  */
 static int
-allstatesreachableby(struct set *set, char c, struct set **sl, matchset_t *matches)
+allstatesreachableby(struct set *set, char c, struct set **sl, tags_t *tags)
 {
 	struct fsm_state *s;
 	struct set_iter it;
 
 	assert(set != NULL);
 	assert(sl != NULL);
-	assert(matches != NULL);
+	assert(tags != NULL);
 
 	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
 		struct fsm_state *es;
@@ -356,7 +356,7 @@ allstatesreachableby(struct set *set, char c, struct set **sl, matchset_t *match
 		if ((to = fsm_hasedge(s, (unsigned char) c)) != NULL) {
 			struct set_iter jt;
 
-			*matches |= to->matches;
+			*tags |= to->tags;
 
 			for (es = set_first(to->sl, &jt); es != NULL; es = set_next(&jt)) {
 				assert(es != NULL);
@@ -479,19 +479,19 @@ determinise(struct fsm *nfa,
 			struct fsm_state *new;
 			struct fsm_edge *e;
 			struct set *reachable;
-			matchset_t matches;
+			tags_t tags;
 
 			assert(t->state != NULL);
 
 			reachable = NULL;
-			matches   = 0x0;
+			tags      = 0x0;
 
 			/*
 			 * Find the closure of the set of all NFA states which are reachable
 			 * through this label, starting from the set of states forming curr's
 			 * closure.
 			 */
-			if (!allstatesreachableby(curr->closure, t->c, &reachable, &matches)) {
+			if (!allstatesreachableby(curr->closure, t->c, &reachable, &tags)) {
 				set_free(reachable);
 				goto error;
 			}
@@ -509,7 +509,7 @@ determinise(struct fsm *nfa,
 				goto error;
 			}
 
-			e->matches |= matches;
+			e->tags |= tags;
 		}
 
 		free_trans(trans);
