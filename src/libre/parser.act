@@ -69,6 +69,7 @@
 	typedef unsigned t_pred; /* TODO */
 
 	typedef struct lx_pos t_pos;
+	typedef struct fsm * t_fsm;
 	typedef struct fsm_state * t_fsm__state;
 	typedef struct re_grp t_grp;
 

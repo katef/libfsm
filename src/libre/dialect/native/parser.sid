@@ -14,6 +14,7 @@
 	pos;
 	char;
 	unsigned;
+	fsm;
 	fsm_state;
 	grp;
 	pred;
