@@ -47,7 +47,6 @@
 
 	!<make-group>: () -> (:grp);
 	!<invert-group>:    (:grp &) -> ();
-	!<stash-group>:     (:grp &) -> ();
 	!<group-add-char>:  (:grp &, :char) -> ();
 	!<group-add-range>: (:grp &, :char, :char) -> ();
 	!<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
@@ -73,8 +72,6 @@
 	!<err-expected-groupbody>;
 	<err-expected-eof>;
 
-	!<mark-begin>: () -> (:pos);
-	!<mark-end>:   () -> (:pos);
 	!<mark-group>: (:pos, :pos) -> ();
 	!<mark-range>: (:pos, :pos) -> ();
 	!<mark-count>: (:pos, :pos) -> ();

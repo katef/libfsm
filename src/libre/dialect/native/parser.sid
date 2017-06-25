@@ -53,7 +53,6 @@
 
 	<make-group>:  () -> (:grp);
 	<invert-group>:    (:grp &) -> ();
-	<stash-group>:     (:grp &) -> ();
 	<group-add-char>:  (:grp &, :char) -> ();
 	<group-add-range>: (:grp &, :char, :char) -> ();
 	<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
@@ -79,8 +78,6 @@
 	<err-expected-groupbody>;
 	<err-expected-eof>;
 
-	<mark-begin>: () -> (:pos);
-	<mark-end>:   () -> (:pos);
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();
 	<mark-count>: (:pos, :pos) -> ();
@@ -194,24 +191,6 @@
 			};
 		##
 			<err-expected-groupbody>;
-		};
-
-		::group-native: () -> () = {
-			/*
-			 * ::group-native is an entry point to the grammar,
-			 * therefore the current position is at the beginning
-			 * of the input stream.
-			 */
-			start = <mark-begin>;
-
-			g = <make-group>;
-
-			group-bm(&g);
-
-			end = <mark-end>;
-
-			<mark-group>(start, end);
-			<stash-group>(&g);
 		};
 
 	] = {
@@ -350,5 +329,5 @@
 
 %entry%
 
-	re_native, group-native;
+	re_native;
 

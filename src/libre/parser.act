@@ -55,17 +55,14 @@
 	#define LX_INIT    CAT(LX_PREFIX, _init)
 
 	#define DIALECT_COMP  CAT(comp_, DIALECT)
-	#define DIALECT_GROUP CAT(group_, DIALECT)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
-	#define DIALECT_ENTRY       CAT(p_re__, DIALECT)
-	#define DIALECT_GROUP_ENTRY CAT(p_group_H, DIALECT)
+	#define DIALECT_ENTRY CAT(p_re__, DIALECT)
 
 	#include "parser.h"
 	#include "lexer.h"
 
 	#include "../comp.h"
-	#include "../group.h"
 
 	typedef char     t_char;
 	typedef unsigned t_unsigned;
@@ -78,7 +75,6 @@
 	struct act_state {
 		enum LX_TOKEN lex_tok;
 		enum LX_TOKEN lex_tok_save;
-		struct re_grp *g; /* for <stash-group> */
 		int overlap; /* permit overlap in groups */
 
 		/*
@@ -103,12 +99,6 @@
 
 		int (*f)(void *opaque);
 		void *opaque;
-
-		struct {
-			const char *pre;
-			const char *post;
-			enum { SHOVE_PRE, SHOVE_F, SHOVE_POST } state;
-		} shove;
 
 		/* TODO: use lx's generated conveniences for the pattern buffer */
 		char a[512];
@@ -457,30 +447,6 @@
 		 */
 	@};
 
-	<stash-group>: (g :grp &) -> () = @{
-#define PARSE_GROUP
-
-		if (!act_state->overlap && bm_count(&@&g->dup) > 0) {
-			err->e  = RE_EOVERLAP;
-
-			/* TODO: would like to show the original spelling verbatim, too */
-
-			if (-1 == bm_snprint(&@&g->set, err->set, sizeof err->set, 1, escputc)) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-
-			if (-1 == bm_snprint(&@&g->dup, err->dup, sizeof err->dup, 1, escputc)) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-
-			@!;
-		}
-
-		*act_state->g = *@&g;
-	@};
-
 	<group-add-char>: (g :grp &, c :char) -> () = @{
 		group_add(@&g, @c);
 	@};
@@ -772,22 +738,6 @@
 		}
 	@};
 
-	<mark-begin>: () -> (pos :pos) = @{
-		@pos.byte = 0;
-		@pos.line = 1;
-		@pos.col  = 1;
-	@};
-
-	<mark-end>: () -> (pos :pos) = @{
-		/*
-		 * Assuming <mark-end> is called when there are no more tokens,
-		 * the end of the lexical stream is the end of the current token.
-		 */
-		@pos.byte = act_state->synend.byte;
-		@pos.line = 0; /* dummy */
-		@pos.col  = 0; /* dummy */
-	@};
-
 	<mark-group>: (start :pos, end :pos) -> () = @{
 		mark(&act_state->groupstart, &@start);
 		mark(&act_state->groupend,   &@end);
@@ -820,69 +770,11 @@
 		return lex_state->f(lex_state->opaque);
 	}
 
-#ifdef PARSE_GROUP
-	static int
-	lshovec(struct LX_STATE *lx)
-	{
-		struct lex_state *lex_state;
-		int c;
-
-		assert(lx != NULL);
-		assert(lx->opaque != NULL);
-
-		lex_state = lx->opaque;
-
-		assert(lex_state->shove.pre  != NULL);
-		assert(lex_state->shove.post != NULL);
-
-		/*
-		 * Characters are shoved into the input stream by a cheesy FSM which walks
-		 * three input sources in turn; a string to prepend, the lgetc stream,
-		 * and a string to append after the lgetc stream.
-		 * These strings needn't be spellings for complete tokens.
-		 */
-
-		/* XXX: pos will be wrong! decrement it. as if our shoved character didn't exist */
-
-		for (;;) {
-			switch (lex_state->shove.state) {
-			case SHOVE_PRE:
-				c = *lex_state->shove.pre;
-				if (c == '\0') {
-					lex_state->shove.state = SHOVE_F;
-					continue;
-				}
-
-				lex_state->shove.pre++;
-				return c;
-
-			case SHOVE_F:
-				c = lgetc(lx);
-				if (c == EOF) {
-					lex_state->shove.state = SHOVE_POST;
-					continue;
-				}
-
-				return c;
-
-			case SHOVE_POST:
-				c = *lex_state->shove.post;
-				if (c == '\0') {
-					return EOF;
-				}
-
-				lex_state->shove.post++;
-				return c;
-			}
-		}
-	}
-#endif
-
 	static int
 	parse(int (*f)(void *opaque), void *opaque,
 		void (*entry)(struct fsm *, flags, lex_state, act_state, err),
 		enum re_flags flags, int overlap,
-		struct fsm *new, struct re_err *err, t_grp *g)
+		struct fsm *new, struct re_err *err)
 	{
 		struct act_state  act_state_s;
 		struct act_state *act_state;
@@ -912,17 +804,6 @@
 		lex_state->f       = f;
 		lex_state->opaque  = opaque;
 
-#ifdef PARSE_GROUP
-/* XXX: information leak; i don't like breaking abstraction here. maybe pass in lgetc and lex_state->shove instead */
-		if (entry == DIALECT_GROUP_ENTRY) {
-			lex_state->shove.pre   = "[";
-			lex_state->shove.post  = "]";
-			lex_state->shove.state = SHOVE_PRE;
-
-			lx->lgetc  = lshovec;
-		}
-#endif
-
 		lex_state->buf.a   = NULL;
 		lex_state->buf.len = 0;
 
@@ -936,7 +817,6 @@
 
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
-		act_state->g = g;
 
 		act_state->overlap = overlap;
 
@@ -955,8 +835,6 @@
 		return 0;
 
 	error:
-
-		assert(err->e & RE_MARK);
 
 		/*
 		 * Some errors describe multiple tokens; for these, the start and end
@@ -1028,7 +906,7 @@
 
 		fsm_setstart(new, start);
 
-		if (-1 == parse(f, opaque, DIALECT_ENTRY, flags, overlap, new, err, NULL)) {
+		if (-1 == parse(f, opaque, DIALECT_ENTRY, flags, overlap, new, err)) {
 			fsm_free(new);
 			return NULL;
 		}
@@ -1041,42 +919,6 @@
 
 		return NULL;
 	}
-
-#ifdef PARSE_GROUP
-	int
-	DIALECT_GROUP(int (*f)(void *opaque), void *opaque,
-		enum re_flags flags, int overlap,
-		struct re_err *err, struct re_grp *g)
-	{
-		assert(f != NULL);
-		assert(g != NULL);
-
-		/*
-		 * The ::group-$dialect production provides an entry point to the
-		 * grammar where just a group is parsed and output as a bitmap,
-		 * without constructing an NFA edge for each entry in the set.
-		 *
-		 * We use the same parse() function here so as to use the same
-		 * act/lex_state setup as usual. The problem is that parse() expects
-		 * the entry() callback to take no extra parameters, and so the
-		 * ::group-$dialect production cannot output a :grp type. In other words,
-		 * its generated function must have the same prototype as the usual
-		 * grammar entry point, which of course does not output a :grp.
-		 *
-		 * So, we have a hacky workaround where ::group-$dialect calls a
-		 * <stash-group> action which stashes the bitmap in act_state->g,
-		 * which is set here to point to the caller's storage for g.
-		 * This relies on the fact that ::group-$dialect need only store
-		 * one group at a time, which suits us fine.
-		 */
-
-		if (-1 == parse(f, opaque, DIALECT_GROUP_ENTRY, flags, overlap, NULL, err, g)) {
-			return -1;
-		}
-
-		return 0;
-	}
-#endif
 
 @}, @{
 

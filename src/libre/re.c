@@ -10,7 +10,6 @@
 #include <errno.h>
 
 #include <re/re.h>
-#include <re/group.h>
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
@@ -21,7 +20,6 @@
 
 #include "internal.h"
 
-#include "dialect/group.h"
 #include "dialect/comp.h"
 
 struct dialect {
@@ -31,10 +29,6 @@ struct dialect {
 		enum re_flags flags, int overlap,
 		struct re_err *err);
 	int overlap;
-	int
-	(*group)(int (*f)(void *opaque), void *opaque,
-		enum re_flags flags, int overlap,
-		struct re_err *err, struct re_grp *g);
 };
 
 static const struct dialect *
@@ -43,10 +37,10 @@ re_dialect(enum re_dialect dialect)
 	size_t i;
 
 	static const struct dialect a[] = {
-		{ RE_LIKE,    comp_like,    0, NULL         },
-		{ RE_LITERAL, comp_literal, 0, NULL         },
-		{ RE_GLOB,    comp_glob,    0, NULL         },
-		{ RE_NATIVE,  comp_native,  0, group_native }
+		{ RE_LIKE,    comp_like,    0 },
+		{ RE_LITERAL, comp_literal, 0 },
+		{ RE_GLOB,    comp_glob,    0 },
+		{ RE_NATIVE,  comp_native,  0 }
 	};
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
@@ -139,120 +133,5 @@ error:
 	}
 
 	return NULL;
-}
-
-int
-re_group_print(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
-	enum re_flags flags, int overlap,
-	struct re_err *err,
-	FILE *f,
-	int boxed,
-	int (*escputc)(int c, FILE *f))
-{
-	const struct dialect *m;
-	struct re_grp g;
-	int r;
-
-	assert(getc != NULL);
-	assert(escputc != NULL);
-	assert(f != NULL);
-
-	m = re_dialect(dialect);
-	if (m == NULL) {
-		if (err != NULL) {
-			err->e = RE_EBADDIALECT;
-		}
-		return -1;
-	}
-
-	if (m->group == NULL) {
-		if (err != NULL) {
-			err->e = RE_EBADGROUP;
-		}
-		return -1;
-	}
-
-	if (-1 == m->group(getc, opaque, flags, overlap, err, &g)) {
-		return -1;
-	}
-
-	if (flags & RE_ICASE) {
-		/* TODO: bm_desensitise */
-	}
-
-	r = bm_print(f, &g.set, boxed, escputc);
-	if (r == -1) {
-		goto error;
-	}
-
-	return r;
-
-error:
-
-	if (err != NULL) {
-		err->e = RE_EERRNO;
-	}
-
-	return -1;
-}
-
-int
-re_group_snprint(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
-	enum re_flags flags, int overlap,
-	struct re_err *err,
-	char *s, size_t n,
-	int boxed,
-	int (*escputc)(int c, FILE *f))
-{
-	const struct dialect *m;
-	struct re_grp g;
-	int r;
-
-	assert(getc != NULL);
-	assert(escputc != NULL);
-
-	if (n == 0) {
-		return 0;
-	}
-
-	assert(s != NULL);
-
-	m = re_dialect(dialect);
-	if (m == NULL) {
-		if (err != NULL) {
-			err->e = RE_EBADDIALECT;
-		}
-		return -1;
-	}
-
-	if (m->group == NULL) {
-		if (err != NULL) {
-			err->e = RE_EBADGROUP;
-		}
-		return -1;
-	}
-
-	if (-1 == m->group(getc, opaque, flags, overlap, err, &g)) {
-		return -1;
-	}
-
-	if (flags & RE_ICASE) {
-		/* TODO: bm_desensitise */
-	}
-
-	r = bm_snprint(&g.set, s, n, boxed, escputc);
-	if (r == -1) {
-		goto error;
-	}
-
-	return r;
-
-error:
-
-	if (err != NULL) {
-		err->e = RE_EERRNO;
-	}
-
-	return -1;
 }
 

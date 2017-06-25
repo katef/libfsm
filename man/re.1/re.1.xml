@@ -29,9 +29,7 @@
 	<!ENTITY c.opt "<option>-c</option>">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
 
-	<!ENTITY b.opt "<option>-b</option>">
 	<!ENTITY d.opt "<option>-d</option>">
-	<!ENTITY g.opt "<option>-g</option>">
 	<!ENTITY m.opt "<option>-m</option>">
 	<!ENTITY n.opt "<option>-n</option>">
 	<!ENTITY i.opt "<option>-i</option>">
@@ -157,25 +155,6 @@ query
 		<cmdsynopsis>
 			<command>re</command>
 
-			<arg choice="plain">&g.opt;</arg>
-
-			<group>
-				<arg choice="plain">&i.opt;</arg>
-				<arg choice="plain">&u.opt;</arg>
-				<arg choice="plain">&b.opt;</arg>
-				<arg choice="plain">&y.opt;</arg>
-			</group>
-
-			<sbr/>
-
-			<arg choice="opt">&r.opt;</arg>
-
-			<arg choice="plain">&group.arg;</arg>
-		</cmdsynopsis>
-
-		<cmdsynopsis>
-			<command>re</command>
-
 			<group choice="req">
 				<arg choice="plain">&h.opt;</arg>
 <!-- TODO: does re(1) have -v?
@@ -209,7 +188,6 @@ query
 		<para>&re.1; is invoked in one of four modes of operation:
 			&p.opt; to print the constructed &fsm;,
 			&m.opt; to print example strings,
-			&g.opt; to parse groups rather than complete expressions (see below),
 			and the default is to execute regular expressions.
 			These modes are mutually exclusive.</para>
 <!--
@@ -315,58 +293,11 @@ group (for dialects which have them) (rather than a "whole" regexp)
 						Erroring for ambiguities applies after multiple regexps are joined,
 						either by union or by concaternation (&s.opt;).</para>
 
-					<para>For group mode only (&g.opt;),
-						&u.opt; permits overlap within the group.
-						This applies for any regexp dialect used.
-						The default is to error when overlaps are present.</para>
-						<!-- -u would otherwise have no purpose -->
-
-					<para>Note that in non-group modes &u.opt; has no effect on
-						the permissability of overlap in groups;
+					<para>&u.opt; has no effect on the permissability of overlap in groups;
 						permissability of overlap depends on the regexp dialect.
 						See see &re_dialect.5re; for which dialects permit overlap in groups.</para>
 
-					<para>For non-group modes,
-						&u.opt; is implied by &n.opt;.</para>
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
-				<term>&g.opt;</term>
-
-				<listitem>
-					<para>Group mode. A single argument is given for input;
-						this argument is the content of a regexp character group.
-						That is, <literal>[</literal><replaceable>...</replaceable><literal>]</literal> without the surrounding square brackets.
-						The minimal form for the group is printed to &stdout.lit;.</para>
-
-					<para>The permitted syntax is the same as when used in-situ in a regexp,
-<!--
-						For regex dialects which provide it,
-						<literal>^</literal> is permitted as usual to invert the group.
--->
-						including character ranges and group inversion by a preceeding
-						<literal>^</literal> for dialects which provide it.</para>
-
-					<para>The <option>-r</option> applies just as when invoked without &g.opt;,
-						specifying the regexp dialect for the given group.
-						Note not all regexp dialects support groups;
-						see &re_dialect.5re; for which are permitted.</para>
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
-				<term>&b.opt;</term>
-
-				<listitem>
-					<para>Ensure group output is always enclosed by
-						<literal>[</literal><replaceable>...</replaceable><literal>]</literal> characters,
-						per the <code>boxed</code> parameter for &re_group_print.3re;.
-						The default is to handle various situations with special syntax,
-						and this option effectively disables those special cases.</para>
-
-					<para>The &b.opt; option is permitted only when invoked in
-						group mode (&g.opt;).</para>
+					<para>&u.opt; is implied by &n.opt;.</para>
 				</listitem>
 			</varlistentry>
 
@@ -446,9 +377,6 @@ group (for dialects which have them) (rather than a "whole" regexp)
 						In execute mode, this is the set of regexps which match each input string.
 						When the &u.opt; option is present,
 						multiple regexps may be associated with each item.</para>
-
-					<para>The &z.opt; option is not permitted when invoked in
-						group mode (&g.opt;).</para>
 				</listitem>
 			</varlistentry>
 
