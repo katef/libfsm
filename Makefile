@@ -15,6 +15,7 @@ BUILD  ?= build
 PREFIX ?= /usr/local
 
 # layout
+SUBDIR += include/adt
 SUBDIR += include/fsm
 SUBDIR += include/re
 SUBDIR += src/adt
