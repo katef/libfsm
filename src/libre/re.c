@@ -16,10 +16,6 @@
 
 #include "../libfsm/internal.h" /* XXX */
 
-#include <adt/bitmap.h>
-
-#include "internal.h"
-
 #include "dialect/comp.h"
 
 struct dialect {
