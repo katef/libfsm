@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 248 "src/libre/parser.act"
+#line 312 "src/libre/parser.act"
 
 
 	#include <re/re.h>
@@ -26,12 +26,11 @@
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
 extern void p_re__native(fsm, flags, lex_state, act_state, err);
-extern void p_group_Hnative(fsm, flags, lex_state, act_state, err);
 /* BEGINNING OF TRAILER */
 
-#line 1077 "src/libre/parser.act"
+#line 1087 "src/libre/parser.act"
 
 
-#line 36 "src/libre/dialect/native/parser.h"
+#line 35 "src/libre/dialect/native/parser.h"
 
 /* END OF FILE */

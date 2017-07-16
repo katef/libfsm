@@ -23,7 +23,6 @@
 #include <fsm/options.h>
 
 #include <re/re.h>
-#include <re/group.h>
 
 #include "libfsm/internal.h" /* XXX */
 
@@ -48,7 +47,6 @@ usage(void)
 	fprintf(stderr, "       re    [-r <dialect>] [-niusyz] {-q <query>} <re> ...\n");
 	fprintf(stderr, "       re -p [-r <dialect>] [-niusyz] [-l <language>] [-awc] [-k <io>] [-e <prefix>] <re> ...\n");
 	fprintf(stderr, "       re -m [-r <dialect>] [-niusyz] <re> ...\n");
-	fprintf(stderr, "       re -g [-r <dialect>] [-iuby] <group>\n");
 	fprintf(stderr, "       re -h\n");
 }
 
@@ -198,44 +196,6 @@ static int
 	exit(EXIT_FAILURE);
 }
 
-/* TODO: centralise */
-static int
-escputc(int c, FILE *f)
-{
-	size_t i;
-
-	const struct {
-		int c;
-		const char *s;
-	} a[] = {
-		{ '\\', "\\\\" },
-		{ '\'', "\\\'" },
-
-		{ '\a', "\\a"  },
-		{ '\b', "\\b"  },
-		{ '\f', "\\f"  },
-		{ '\n', "\\n"  },
-		{ '\r', "\\r"  },
-		{ '\t', "\\t"  },
-		{ '\v', "\\v"  }
-	};
-
-	assert(c != FSM_EDGE_EPSILON);
-	assert(f != NULL);
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].c == c) {
-			return fputs(a[i].s, f);
-		}
-	}
-
-	if (!isprint((unsigned char) c)) {
-		return fprintf(f, "\\%03o", (unsigned char) c);
-	}
-
-	return fprintf(f, "%c", c);
-}
-
 static FILE *
 xopen(const char *s)
 {
@@ -378,9 +338,7 @@ main(int argc, char *argv[])
 	struct fsm *fsm;
 	enum re_flags flags;
 	int xfiles, yfiles;
-	int boxed;
 	int print;
-	int group;
 	int example;
 	int keep_nfa;
 	int patterns;
@@ -396,9 +354,7 @@ main(int argc, char *argv[])
 	flags    = 0U;
 	xfiles   = 0;
 	yfiles   = 0;
-	boxed    = 0;
 	print    = 0;
-	group    = 0;
 	example  = 0;
 	keep_nfa = 0;
 	patterns = 0;
@@ -411,7 +367,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwe:k:" "i" "sq:r:l:" "ubpgmnxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwe:k:" "i" "sq:r:l:" "upmnxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
@@ -430,9 +386,7 @@ main(int argc, char *argv[])
 			case 'l': format  = language(optarg);         break;
 
 			case 'u': ambig    = 1; break;
-			case 'b': boxed    = 1; break;
 			case 'p': print    = 1; break;
-			case 'g': group    = 1; break;
 			case 'x': xfiles   = 1; break;
 			case 'y': yfiles   = 1; break;
 			case 'm': example  = 1; break;
@@ -459,23 +413,8 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (print + example + group + !!query > 1) {
-		fprintf(stderr, "-p, -g, -m and -q are mutually exclusive\n");
-		return EXIT_FAILURE;
-	}
-
-	if (print + example + group + !!query && xfiles) {
+	if (print + example + !!query && xfiles) {
 		fprintf(stderr, "-x applies only when executing\n");
-		return EXIT_FAILURE;
-	}
-
-	if (boxed && !group) {
-		fprintf(stderr, "-b applies for -g only\n");
-		return EXIT_FAILURE;
-	}
-
-	if (patterns && group) {
-		fprintf(stderr, "-z does not apply for groups\n");
 		return EXIT_FAILURE;
 	}
 
@@ -484,62 +423,9 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (join == fsm_concat && group) {
-		fprintf(stderr, "-s does not apply for groups\n");
-		return EXIT_FAILURE;
-	}
-
 	if (join == fsm_concat && patterns) {
 		fprintf(stderr, "-s is not implemented when printing patterns by -z\n");
 		return EXIT_FAILURE;
-	}
-
-	if (group) {
-		struct re_err err;
-		int r;
-
-		if (argc != 1) {
-			fprintf(stderr, "expected one group input\n");
-			return EXIT_FAILURE;
-		}
-
-		/* TODO: pick escputc based on *output* dialect.
-		 * centralise with escchar() in parser.act? */
-		/* TODO: re_flags */
-
-		if (yfiles) {
-			FILE *f;
-
-			f = xopen(argv[0]);
-
-			r = re_group_print(dialect, re_fgetc, f,
-				0, ambig, &err, stdout, boxed, escputc);
-
-			fclose(f);
-		} else {
-			const char *s;
-
-			s = argv[0];
-
-			r = re_group_print(dialect, re_sgetc, &s,
-				0, ambig, &err, stdout, boxed, escputc);
-		}
-
-		if (r == -1 && err.e == RE_EBADGROUP) {
-			fprintf(stderr, "group syntax not supported by regexp dialect\n");
-			return EXIT_FAILURE;
-		}
-
-		if (r == -1) {
-			re_perror(dialect | RE_GROUP, &err,
-				 yfiles ? argv[0] : NULL,
-				!yfiles ? argv[0] : NULL);
-			return EXIT_FAILURE;
-		}
-
-		printf("\n");
-
-		return 0;
 	}
 
 	if (!print) {

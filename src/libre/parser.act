@@ -32,13 +32,10 @@
 
 	#include "libfsm/internal.h" /* XXX */
 
-	#include <adt/bitmap.h>
-
 	#include <fsm/fsm.h>
+	#include <fsm/pred.h>
 
 	#include <re/re.h>
-
-	#include "libre/internal.h"
 
 	#ifndef DIALECT
 	#error DIALECT required
@@ -55,30 +52,38 @@
 	#define LX_INIT    CAT(LX_PREFIX, _init)
 
 	#define DIALECT_COMP  CAT(comp_, DIALECT)
-	#define DIALECT_GROUP CAT(group_, DIALECT)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
-	#define DIALECT_ENTRY       CAT(p_re__, DIALECT)
-	#define DIALECT_GROUP_ENTRY CAT(p_group_H, DIALECT)
+	#define DIALECT_ENTRY CAT(p_re__, DIALECT)
 
 	#include "parser.h"
 	#include "lexer.h"
 
 	#include "../comp.h"
-	#include "../group.h"
+
+	struct grp_fsm {
+		struct fsm *fsm;
+		struct fsm_state *start;
+		struct fsm_state *end;
+	};
+
+	struct grp {
+		struct grp_fsm set;
+		struct grp_fsm dup;
+	};
 
 	typedef char     t_char;
 	typedef unsigned t_unsigned;
 	typedef unsigned t_pred; /* TODO */
 
 	typedef struct lx_pos t_pos;
+	typedef struct fsm * t_fsm;
 	typedef struct fsm_state * t_fsm__state;
-	typedef struct re_grp t_grp;
+	typedef struct grp t_grp;
 
 	struct act_state {
 		enum LX_TOKEN lex_tok;
 		enum LX_TOKEN lex_tok_save;
-		struct re_grp *g; /* for <stash-group> */
 		int overlap; /* permit overlap in groups */
 
 		/*
@@ -103,12 +108,6 @@
 
 		int (*f)(void *opaque);
 		void *opaque;
-
-		struct {
-			const char *pre;
-			const char *post;
-			enum { SHOVE_PRE, SHOVE_F, SHOVE_POST } state;
-		} shove;
 
 		/* TODO: use lx's generated conveniences for the pattern buffer */
 		char a[512];
@@ -147,19 +146,6 @@
 		if (n == sz - 3 - 1) {
 			strcpy(s + sz, "...");
 		}
-	}
-
-	static void
-	group_add(t_grp *g, char c)
-	{
-		assert(g != NULL);
-
-		if (bm_get(&g->set, (unsigned char) c)) {
-			bm_set(&g->dup, (unsigned char) c);
-			return;
-		}
-
-		bm_set(&g->set, (unsigned char) c);
 	}
 
 	/* TODO: centralise */
@@ -238,6 +224,78 @@
 		}
 
 		return 1;
+	}
+
+	static int
+	group_add(struct grp *g, enum re_flags flags, char c)
+	{
+		const struct fsm_state *p;
+		struct grp_fsm *q;
+		char a[2];
+		char *s = a;
+
+		assert(g != NULL);
+
+		a[0] = c;
+		a[1] = '\0';
+
+		errno = 0;
+		p = fsm_exec(g->set.fsm, fsm_sgetc, &s);
+		if (p == NULL && errno != 0) {
+			return -1;
+		}
+
+		if (p == NULL) {
+			q = &g->set;
+		} else {
+			q = &g->dup;
+		}
+
+		if (!addedge_literal(q->fsm, flags, q->start, q->end, c)) {
+			return -1;
+		}
+
+		return 0;
+	}
+
+	static struct fsm *
+	fsm_any(const struct fsm_options *opt)
+	{
+		struct fsm_state *a, *b;
+		struct fsm *fsm;
+
+		assert(opt != NULL);
+
+		fsm = fsm_new(opt);
+		if (fsm == NULL) {
+			return NULL;
+		}
+
+		a = fsm_addstate(fsm);
+		if (a == NULL) {
+			goto error;
+		}
+
+		b = fsm_addstate(fsm);
+		if (b == NULL) {
+			goto error;
+		}
+
+		/* TODO: provide as a class. for utf8, this would be /./ */
+		if (!fsm_addedge_any(fsm, a, b)) {
+			goto error;
+		}
+
+		fsm_setstart(fsm, a);
+		fsm_setend(fsm, b, 1);
+
+		return fsm;
+
+	error:
+
+		fsm_free(fsm);
+
+		return NULL;
 	}
 
 @}, @{
@@ -440,16 +498,71 @@
 
 
 	<make-group>: () -> (g :grp) = @{
-		bm_clear(&@g.set);
-		bm_clear(&@g.dup);
+		{
+			@g.set.fsm = fsm_new(fsm->opt);
+			if (@g.set.fsm == NULL) {
+				@!;
+			}
+
+			@g.set.start = fsm_addstate(@g.set.fsm);
+			if (@g.set.start == NULL) {
+				fsm_free(@g.set.fsm);
+				@!;
+			}
+
+			@g.set.end = fsm_addstate(@g.set.fsm);
+			if (@g.set.end == NULL) {
+				fsm_free(@g.set.fsm);
+				@!;
+			}
+
+			fsm_setstart(@g.set.fsm, @g.set.start);
+			fsm_setend(@g.set.fsm, @g.set.end, 1);
+		}
+
+		{
+			@g.dup.fsm = fsm_new(NULL);
+			if (@g.dup.fsm == NULL) {
+				fsm_free(@g.set.fsm);
+				@!;
+			}
+
+			@g.dup.start = fsm_addstate(@g.dup.fsm);
+			if (@g.dup.start == NULL) {
+				fsm_free(@g.set.fsm);
+				fsm_free(@g.dup.fsm);
+				@!;
+			}
+
+			@g.dup.end = fsm_addstate(@g.dup.fsm);
+			if (@g.dup.end == NULL) {
+				fsm_free(@g.set.fsm);
+				fsm_free(@g.dup.fsm);
+				@!;
+			}
+
+			fsm_setstart(@g.dup.fsm, @g.dup.start);
+			fsm_setend(@g.dup.fsm, @g.dup.end, 1);
+		}
 	@};
 
 	<invert-group>: (g :grp &) -> () = @{
-		/*
-		 * The bm struct is limited to 0..UCHAR_MAX only; special edges up to
-		 * FSM_EDGE_MAX are not present, and so do not get inverted here.
-		 */
-		bm_invert(&@&g->set);
+		struct fsm *any;
+
+		any = fsm_any(fsm->opt);
+		if (any == NULL) {
+			err->e = RE_EERRNO;
+			@!;
+		}
+
+		@&g->set.fsm = fsm_subtract(any, @&g->set.fsm);
+		if (@&g->set.fsm == NULL) {
+			err->e = RE_EERRNO;
+			@!;
+		}
+
+		@&g->set.start = fsm_getstart(@&g->set.fsm);
+		@&g->set.end   = fsm_collate(@&g->set.fsm, fsm_isend);
 
 		/*
 		 * Note we don't invert the dup set here; duplicates are always
@@ -457,32 +570,11 @@
 		 */
 	@};
 
-	<stash-group>: (g :grp &) -> () = @{
-#define PARSE_GROUP
-
-		if (!act_state->overlap && bm_count(&@&g->dup) > 0) {
-			err->e  = RE_EOVERLAP;
-
-			/* TODO: would like to show the original spelling verbatim, too */
-
-			if (-1 == bm_snprint(&@&g->set, err->set, sizeof err->set, 1, escputc)) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-
-			if (-1 == bm_snprint(&@&g->dup, err->dup, sizeof err->dup, 1, escputc)) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-
+	<group-add-char>: (g :grp &, c :char) -> () = @{
+		if (-1 == group_add(@&g, flags, @c)) {
+			err->e = RE_EERRNO;
 			@!;
 		}
-
-		*act_state->g = *@&g;
-	@};
-
-	<group-add-char>: (g :grp &, c :char) -> () = @{
-		group_add(@&g, @c);
 	@};
 
 	<group-add-range>: (g :grp &, a :char, b :char) -> () = @{
@@ -493,46 +585,82 @@
 
 			assert(sizeof err->set >= 1 + sizeof a + 1 + sizeof b + 1 + 1);
 
-			sprintf(err->set, "[%s-%s]",
+			sprintf(err->set, "%s-%s",
 				escchar(a, sizeof a, @a), escchar(b, sizeof b, @b));
 			err->e = RE_ENEGRANGE;
 			@!;
 		}
 
 		for (i = (unsigned char) @a; i <= (unsigned char) @b; i++) {
-			group_add(@&g, (char) i);
+			if (-1 == group_add(@&g, flags, (char) i)) {
+				err->e = RE_EERRNO;
+				@!;
+			}
 		}
 	@};
 
 	<group-to-states>: (g :grp &, x :fsm_state, y :fsm_state) -> () = @{
-		int i;
+		int r;
 
-		if (!act_state->overlap && bm_count(&@&g->dup) > 0) {
-			err->e  = RE_EOVERLAP;
-
-			/* TODO: would like to show the original spelling verbatim, too */
-
-			if (-1 == bm_snprint(&@&g->set, err->set, sizeof err->set, 1, escputc)) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-
-			if (-1 == bm_snprint(&@&g->dup, err->dup, sizeof err->dup, 1, escputc)) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-
+		r = fsm_empty(@&g->dup.fsm);
+		if (r == -1) {
+			err->e = RE_EERRNO;
 			@!;
 		}
 
-		/* TODO: eventually libfsm will provide a neater mechanism here */
+		if (!r) {
+			/* TODO: would like to show the original spelling verbatim, too */
 
-		i = -1;
-		while (i = (int) bm_next(&@&g->set, i, 1), i <= UCHAR_MAX) {
-			if (!addedge_literal(fsm, flags, @x, @y, (char) i)) {
+			/* XXX: this is just one example; really I want to show the entire set */
+			if (-1 == fsm_example(@&g->dup.fsm, @&g->dup.end, err->dup, sizeof err->dup)) {
+				err->e = RE_EERRNO;
 				@!;
 			}
+
+			/* XXX: to return when we can show minimal coverage again */
+			strcpy(err->set, err->dup);
+
+			err->e  = RE_EOVERLAP;
+			@!;
 		}
+
+		if (!fsm_minimise(@&g->set.fsm)) {
+			err->e = RE_EERRNO;
+			@!;
+		}
+
+		@&g->set.start = fsm_getstart(@&g->set.fsm);
+		@&g->set.end   = fsm_collate(@&g->set.fsm, fsm_isend);
+
+		if (@&g->set.end == NULL) {
+			err->e = RE_EERRNO;
+			@!;
+		}
+
+		{
+			struct fsm_state *tmp;
+
+			tmp = fsm_getstart(fsm);
+
+			if (!fsm_merge(fsm, @&g->set.fsm)) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+
+			fsm_setstart(fsm, tmp);
+
+			if (!fsm_addedge_epsilon(fsm, @x, @&g->set.start)) {
+				@!;
+			}
+
+			if (!fsm_addedge_epsilon(fsm, @&g->set.end, @y)) {
+				@!;
+			}
+
+			fsm_free(@&g->dup.fsm);
+		}
+
+		fsm_setend(fsm, @&g->set.end, 0);
 	@};
 
 
@@ -772,22 +900,6 @@
 		}
 	@};
 
-	<mark-begin>: () -> (pos :pos) = @{
-		@pos.byte = 0;
-		@pos.line = 1;
-		@pos.col  = 1;
-	@};
-
-	<mark-end>: () -> (pos :pos) = @{
-		/*
-		 * Assuming <mark-end> is called when there are no more tokens,
-		 * the end of the lexical stream is the end of the current token.
-		 */
-		@pos.byte = act_state->synend.byte;
-		@pos.line = 0; /* dummy */
-		@pos.col  = 0; /* dummy */
-	@};
-
 	<mark-group>: (start :pos, end :pos) -> () = @{
 		mark(&act_state->groupstart, &@start);
 		mark(&act_state->groupend,   &@end);
@@ -820,69 +932,11 @@
 		return lex_state->f(lex_state->opaque);
 	}
 
-#ifdef PARSE_GROUP
-	static int
-	lshovec(struct LX_STATE *lx)
-	{
-		struct lex_state *lex_state;
-		int c;
-
-		assert(lx != NULL);
-		assert(lx->opaque != NULL);
-
-		lex_state = lx->opaque;
-
-		assert(lex_state->shove.pre  != NULL);
-		assert(lex_state->shove.post != NULL);
-
-		/*
-		 * Characters are shoved into the input stream by a cheesy FSM which walks
-		 * three input sources in turn; a string to prepend, the lgetc stream,
-		 * and a string to append after the lgetc stream.
-		 * These strings needn't be spellings for complete tokens.
-		 */
-
-		/* XXX: pos will be wrong! decrement it. as if our shoved character didn't exist */
-
-		for (;;) {
-			switch (lex_state->shove.state) {
-			case SHOVE_PRE:
-				c = *lex_state->shove.pre;
-				if (c == '\0') {
-					lex_state->shove.state = SHOVE_F;
-					continue;
-				}
-
-				lex_state->shove.pre++;
-				return c;
-
-			case SHOVE_F:
-				c = lgetc(lx);
-				if (c == EOF) {
-					lex_state->shove.state = SHOVE_POST;
-					continue;
-				}
-
-				return c;
-
-			case SHOVE_POST:
-				c = *lex_state->shove.post;
-				if (c == '\0') {
-					return EOF;
-				}
-
-				lex_state->shove.post++;
-				return c;
-			}
-		}
-	}
-#endif
-
 	static int
 	parse(int (*f)(void *opaque), void *opaque,
 		void (*entry)(struct fsm *, flags, lex_state, act_state, err),
 		enum re_flags flags, int overlap,
-		struct fsm *new, struct re_err *err, t_grp *g)
+		struct fsm *new, struct re_err *err)
 	{
 		struct act_state  act_state_s;
 		struct act_state *act_state;
@@ -912,17 +966,6 @@
 		lex_state->f       = f;
 		lex_state->opaque  = opaque;
 
-#ifdef PARSE_GROUP
-/* XXX: information leak; i don't like breaking abstraction here. maybe pass in lgetc and lex_state->shove instead */
-		if (entry == DIALECT_GROUP_ENTRY) {
-			lex_state->shove.pre   = "[";
-			lex_state->shove.post  = "]";
-			lex_state->shove.state = SHOVE_PRE;
-
-			lx->lgetc  = lshovec;
-		}
-#endif
-
 		lex_state->buf.a   = NULL;
 		lex_state->buf.len = 0;
 
@@ -936,7 +979,6 @@
 
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
-		act_state->g = g;
 
 		act_state->overlap = overlap;
 
@@ -955,8 +997,6 @@
 		return 0;
 
 	error:
-
-		assert(err->e & RE_MARK);
 
 		/*
 		 * Some errors describe multiple tokens; for these, the start and end
@@ -1028,7 +1068,7 @@
 
 		fsm_setstart(new, start);
 
-		if (-1 == parse(f, opaque, DIALECT_ENTRY, flags, overlap, new, err, NULL)) {
+		if (-1 == parse(f, opaque, DIALECT_ENTRY, flags, overlap, new, err)) {
 			fsm_free(new);
 			return NULL;
 		}
@@ -1041,42 +1081,6 @@
 
 		return NULL;
 	}
-
-#ifdef PARSE_GROUP
-	int
-	DIALECT_GROUP(int (*f)(void *opaque), void *opaque,
-		enum re_flags flags, int overlap,
-		struct re_err *err, struct re_grp *g)
-	{
-		assert(f != NULL);
-		assert(g != NULL);
-
-		/*
-		 * The ::group-$dialect production provides an entry point to the
-		 * grammar where just a group is parsed and output as a bitmap,
-		 * without constructing an NFA edge for each entry in the set.
-		 *
-		 * We use the same parse() function here so as to use the same
-		 * act/lex_state setup as usual. The problem is that parse() expects
-		 * the entry() callback to take no extra parameters, and so the
-		 * ::group-$dialect production cannot output a :grp type. In other words,
-		 * its generated function must have the same prototype as the usual
-		 * grammar entry point, which of course does not output a :grp.
-		 *
-		 * So, we have a hacky workaround where ::group-$dialect calls a
-		 * <stash-group> action which stashes the bitmap in act_state->g,
-		 * which is set here to point to the caller's storage for g.
-		 * This relies on the fact that ::group-$dialect need only store
-		 * one group at a time, which suits us fine.
-		 */
-
-		if (-1 == parse(f, opaque, DIALECT_GROUP_ENTRY, flags, overlap, NULL, err, g)) {
-			return -1;
-		}
-
-		return 0;
-	}
-#endif
 
 @}, @{
 
