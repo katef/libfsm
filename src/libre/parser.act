@@ -33,6 +33,7 @@
 	#include "libfsm/internal.h" /* XXX */
 
 	#include <fsm/fsm.h>
+	#include <fsm/bool.h>
 	#include <fsm/pred.h>
 
 	#include <re/re.h>
@@ -56,19 +57,36 @@
 	/* XXX: get rid of this; use same %entry% for all grammars */
 	#define DIALECT_ENTRY CAT(p_re__, DIALECT)
 
+	#define TOK_CLASS__alnum  TOK_CLASS_ALNUM
+	#define TOK_CLASS__alpha  TOK_CLASS_ALPHA
+	#define TOK_CLASS__ascii  TOK_CLASS_ASCII
+	#define TOK_CLASS__blank  TOK_CLASS_BLANK
+	#define TOK_CLASS__cntrl  TOK_CLASS_CNTRL
+	#define TOK_CLASS__digit  TOK_CLASS_DIGIT
+	#define TOK_CLASS__graph  TOK_CLASS_GRAPH
+	#define TOK_CLASS__lower  TOK_CLASS_LOWER
+	#define TOK_CLASS__print  TOK_CLASS_PRINT
+	#define TOK_CLASS__punct  TOK_CLASS_PUNCT
+	#define TOK_CLASS__space  TOK_CLASS_SPACE
+	#define TOK_CLASS__upper  TOK_CLASS_UPPER
+	#define TOK_CLASS__word   TOK_CLASS_WORD
+	#define TOK_CLASS__xdigit TOK_CLASS_XDIGIT
+
 	#include "parser.h"
 	#include "lexer.h"
 
 	#include "../comp.h"
+	#include "../../class.h"
 
 	struct grp {
 		struct fsm *set;
 		struct fsm *dup;
 	};
 
-	typedef char     t_char;
-	typedef unsigned t_unsigned;
-	typedef unsigned t_pred; /* TODO */
+	typedef char         t_char;
+	typedef const char * t_class;
+	typedef unsigned     t_unsigned;
+	typedef unsigned     t_pred; /* TODO */
 
 	typedef struct lx_pos t_pos;
 	typedef struct fsm * t_fsm;
@@ -395,6 +413,21 @@
 		@end   = lex_state->lx.end;
 	@};
 
+	CLASS_alnum:  () -> (fsm :fsm) = @{ @fsm = class_alnum_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_alpha:  () -> (fsm :fsm) = @{ @fsm = class_alpha_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_ascii:  () -> (fsm :fsm) = @{ @fsm = class_ascii_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_blank:  () -> (fsm :fsm) = @{ @fsm = class_blank_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_cntrl:  () -> (fsm :fsm) = @{ @fsm = class_cntrl_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_digit:  () -> (fsm :fsm) = @{ @fsm = class_digit_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_graph:  () -> (fsm :fsm) = @{ @fsm = class_graph_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_lower:  () -> (fsm :fsm) = @{ @fsm = class_lower_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_print:  () -> (fsm :fsm) = @{ @fsm = class_print_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_punct:  () -> (fsm :fsm) = @{ @fsm = class_punct_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_space:  () -> (fsm :fsm) = @{ @fsm = class_space_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_upper:  () -> (fsm :fsm) = @{ @fsm = class_upper_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_word:   () -> (fsm :fsm) = @{ @fsm = class_word_fsm(fsm->opt);   if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_xdigit: () -> (fsm :fsm) = @{ @fsm = class_xdigit_fsm(fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+
 	ESC: () -> (c :char) = @{
 		assert(lex_state->buf.a[0] == '\\');
 		assert(lex_state->buf.a[1] != '\0');
@@ -589,6 +622,66 @@
 		}
 	@};
 
+	<group-add-class>: (g :grp &, f :fsm) -> () = @{
+		struct fsm *q;
+		int r;
+
+		/* TODO: maybe it is worth using carryopaque, after the entire group is constructed */
+		{
+			struct fsm *a, *b;
+
+			a = fsm_clone(@&g->set);
+			if (a == NULL) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+
+			b = fsm_clone(@f);
+			if (b == NULL) {
+				fsm_free(a);
+				err->e = RE_EERRNO;
+				@!;
+			}
+
+			q = fsm_intersect(a, b);
+			if (q == NULL) {
+				fsm_free(a);
+				fsm_free(b);
+				err->e = RE_EERRNO;
+				@!;
+			}
+
+			r = fsm_empty(q);
+
+			if (r == -1) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+		}
+
+		if (!r) {
+			@&g->dup = fsm_union(@&g->dup, q);
+			if (@&g->dup == NULL) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+		} else {
+			fsm_free(q);
+
+			@&g->set = fsm_union(@&g->set, @f);
+			if (@&g->set == NULL) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+
+			/* we need a DFA here for sake of fsm_exec() identifying duplicates */
+			if (!fsm_determinise(@&g->set)) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+		}
+	@};
+
 	<group-add-range>: (g :grp &, a :char, b :char) -> () = @{
 		int i;
 
@@ -673,6 +766,7 @@
 				fsm_setend(fsm, s, 0);
 
 				if (!fsm_addedge_epsilon(fsm, s, @y)) {
+					err->e = RE_EERRNO;
 					@!;
 				}
 			}
@@ -1083,12 +1177,6 @@
 		}
 
 		return new;
-
-	error:
-
-		err->e = RE_EERRNO;
-
-		return NULL;
 	}
 
 @}, @{

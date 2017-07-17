@@ -37,6 +37,21 @@
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
+	CLASS_alnum:  () -> (:fsm);
+	CLASS_alpha:  () -> (:fsm);
+	CLASS_ascii:  () -> (:fsm);
+	CLASS_blank:  () -> (:fsm);
+	CLASS_cntrl:  () -> (:fsm);
+	CLASS_digit:  () -> (:fsm);
+	CLASS_graph:  () -> (:fsm);
+	CLASS_lower:  () -> (:fsm);
+	CLASS_print:  () -> (:fsm);
+	CLASS_punct:  () -> (:fsm);
+	CLASS_space:  () -> (:fsm);
+	CLASS_upper:  () -> (:fsm);
+	CLASS_word:   () -> (:fsm);
+	CLASS_xdigit: () -> (:fsm);
+
 	ESC:    () -> (:char);
 	OCT:    () -> (:char, :pos, :pos);
 	HEX:    () -> (:char, :pos, :pos);
@@ -55,6 +70,7 @@
 	<make-group>:  () -> (:grp);
 	<invert-group>:    (:grp &) -> ();
 	<group-add-char>:  (:grp &, :char) -> ();
+	<group-add-class>: (:grp &, :fsm) -> ();
 	<group-add-range>: (:grp &, :char, :char) -> ();
 	<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
 
@@ -95,6 +111,36 @@
 			(c, !, !) = CHAR;
 		};
 
+		class: () -> (k :fsm) = {
+			k = CLASS_alnum;
+		||
+			k = CLASS_alpha;
+		||
+			k = CLASS_ascii;
+		||
+			k = CLASS_blank;
+		||
+			k = CLASS_cntrl;
+		||
+			k = CLASS_digit;
+		||
+			k = CLASS_graph;
+		||
+			k = CLASS_lower;
+		||
+			k = CLASS_print;
+		||
+			k = CLASS_punct;
+		||
+			k = CLASS_space;
+		||
+			k = CLASS_upper;
+		||
+			k = CLASS_word;
+		||
+			k = CLASS_xdigit;
+		};
+
 		range: () -> (a :char, b :char) = {
 			{
 				(a, start, !) = OCT;
@@ -127,6 +173,9 @@
 			{
 				c = char;
 				<group-add-char>(&g, c);
+			||
+				k = class;
+				<group-add-class>(&g, k);
 			||
 				(a, b) = range;
 				<group-add-range>(&g, a, b);
