@@ -68,6 +68,7 @@
 	#define TOK_CLASS__print  TOK_CLASS_PRINT
 	#define TOK_CLASS__punct  TOK_CLASS_PUNCT
 	#define TOK_CLASS__space  TOK_CLASS_SPACE
+	#define TOK_CLASS__spchr  TOK_CLASS_SPCHR
 	#define TOK_CLASS__upper  TOK_CLASS_UPPER
 	#define TOK_CLASS__word   TOK_CLASS_WORD
 	#define TOK_CLASS__xdigit TOK_CLASS_XDIGIT
@@ -424,6 +425,7 @@
 	CLASS_print:  () -> (fsm :fsm) = @{ @fsm = class_print_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_punct:  () -> (fsm :fsm) = @{ @fsm = class_punct_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_space:  () -> (fsm :fsm) = @{ @fsm = class_space_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_spchr:  () -> (fsm :fsm) = @{ @fsm = class_spchr_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_upper:  () -> (fsm :fsm) = @{ @fsm = class_upper_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_word:   () -> (fsm :fsm) = @{ @fsm = class_word_fsm(fsm->opt);   if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_xdigit: () -> (fsm :fsm) = @{ @fsm = class_xdigit_fsm(fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};

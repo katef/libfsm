@@ -20,6 +20,7 @@ struct fsm *class_lower_fsm(const struct fsm_options *opt);
 struct fsm *class_print_fsm(const struct fsm_options *opt);
 struct fsm *class_punct_fsm(const struct fsm_options *opt);
 struct fsm *class_space_fsm(const struct fsm_options *opt);
+struct fsm *class_spchr_fsm(const struct fsm_options *opt);
 struct fsm *class_upper_fsm(const struct fsm_options *opt);
 struct fsm *class_word_fsm(const struct fsm_options *opt);
 struct fsm *class_xdigit_fsm(const struct fsm_options *opt);
