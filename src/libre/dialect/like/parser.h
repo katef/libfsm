@@ -28,7 +28,7 @@
 extern void p_re__like(fsm, flags, lex_state, act_state, err);
 /* BEGINNING OF TRAILER */
 
-#line 1184 "src/libre/parser.act"
+#line 1185 "src/libre/parser.act"
 
 
 #line 35 "src/libre/dialect/like/parser.h"
