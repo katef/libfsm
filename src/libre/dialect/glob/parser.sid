@@ -64,6 +64,7 @@
 	!<make-group>: () -> (:grp);
 	!<invert-group>:    (:grp &) -> ();
 	!<group-add-char>:  (:grp &, :char) -> ();
+	!<group-add-class>: (:grp &, :fsm) -> ();
 	!<group-add-range>: (:grp &, :char, :char) -> ();
 	!<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
 
