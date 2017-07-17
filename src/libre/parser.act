@@ -742,10 +742,16 @@
 		/* TODO: centralise as fsm_unionxy() perhaps */
 		{
 			struct fsm_state *a, *b;
-			struct fsm_state *s;
+			struct fsm_state *end;
 
 			a = fsm_getstart(fsm);
 			b = fsm_getstart(@&g->set);
+
+			end = fsm_collate(@&g->set, fsm_isend);
+			if (end == NULL) {
+				err->e = RE_EERRNO;
+				@!;
+			}
 
 			if (!fsm_merge(fsm, @&g->set)) {
 				err->e = RE_EERRNO;
@@ -755,20 +761,15 @@
 			fsm_setstart(fsm, a);
 
 			if (!fsm_addedge_epsilon(fsm, @x, b)) {
+				err->e = RE_EERRNO;
 				@!;
 			}
 
-			for (s = @&g->set->sl; s != NULL; s = s->next) {
-				if (!fsm_isend(@&g->set, s)) {
-					continue;
-				}
+			fsm_setend(fsm, end, 0);
 
-				fsm_setend(fsm, s, 0);
-
-				if (!fsm_addedge_epsilon(fsm, s, @y)) {
-					err->e = RE_EERRNO;
-					@!;
-				}
+			if (!fsm_addedge_epsilon(fsm, end, @y)) {
+				err->e = RE_EERRNO;
+				@!;
 			}
 
 			fsm_free(@&g->dup);
