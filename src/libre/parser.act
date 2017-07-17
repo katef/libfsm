@@ -33,6 +33,7 @@
 	#include "libfsm/internal.h" /* XXX */
 
 	#include <fsm/fsm.h>
+	#include <fsm/bool.h>
 	#include <fsm/pred.h>
 
 	#include <re/re.h>
@@ -56,25 +57,36 @@
 	/* XXX: get rid of this; use same %entry% for all grammars */
 	#define DIALECT_ENTRY CAT(p_re__, DIALECT)
 
+	#define TOK_CLASS__alnum  TOK_CLASS_ALNUM
+	#define TOK_CLASS__alpha  TOK_CLASS_ALPHA
+	#define TOK_CLASS__ascii  TOK_CLASS_ASCII
+	#define TOK_CLASS__blank  TOK_CLASS_BLANK
+	#define TOK_CLASS__cntrl  TOK_CLASS_CNTRL
+	#define TOK_CLASS__digit  TOK_CLASS_DIGIT
+	#define TOK_CLASS__graph  TOK_CLASS_GRAPH
+	#define TOK_CLASS__lower  TOK_CLASS_LOWER
+	#define TOK_CLASS__print  TOK_CLASS_PRINT
+	#define TOK_CLASS__punct  TOK_CLASS_PUNCT
+	#define TOK_CLASS__space  TOK_CLASS_SPACE
+	#define TOK_CLASS__upper  TOK_CLASS_UPPER
+	#define TOK_CLASS__word   TOK_CLASS_WORD
+	#define TOK_CLASS__xdigit TOK_CLASS_XDIGIT
+
 	#include "parser.h"
 	#include "lexer.h"
 
 	#include "../comp.h"
-
-	struct grp_fsm {
-		struct fsm *fsm;
-		struct fsm_state *start;
-		struct fsm_state *end;
-	};
+	#include "../../class.h"
 
 	struct grp {
-		struct grp_fsm set;
-		struct grp_fsm dup;
+		struct fsm *set;
+		struct fsm *dup;
 	};
 
-	typedef char     t_char;
-	typedef unsigned t_unsigned;
-	typedef unsigned t_pred; /* TODO */
+	typedef char         t_char;
+	typedef const char * t_class;
+	typedef unsigned     t_unsigned;
+	typedef unsigned     t_pred; /* TODO */
 
 	typedef struct lx_pos t_pos;
 	typedef struct fsm * t_fsm;
@@ -230,7 +242,8 @@
 	group_add(struct grp *g, enum re_flags flags, char c)
 	{
 		const struct fsm_state *p;
-		struct grp_fsm *q;
+		struct fsm_state *start, *end;
+		struct fsm *fsm;
 		char a[2];
 		char *s = a;
 
@@ -240,18 +253,28 @@
 		a[1] = '\0';
 
 		errno = 0;
-		p = fsm_exec(g->set.fsm, fsm_sgetc, &s);
+		p = fsm_exec(g->set, fsm_sgetc, &s);
 		if (p == NULL && errno != 0) {
 			return -1;
 		}
 
 		if (p == NULL) {
-			q = &g->set;
+			fsm = g->set;
 		} else {
-			q = &g->dup;
+			fsm = g->dup;
 		}
 
-		if (!addedge_literal(q->fsm, flags, q->start, q->end, c)) {
+		start = fsm_getstart(fsm);
+		assert(start != NULL);
+
+		end = fsm_addstate(fsm);
+		if (end == NULL) {
+			return -1;
+		}
+
+		fsm_setend(fsm, end, 1);
+
+		if (!addedge_literal(fsm, flags, start, end, c)) {
 			return -1;
 		}
 
@@ -259,41 +282,87 @@
 	}
 
 	static struct fsm *
-	fsm_any(const struct fsm_options *opt)
+	fsm_new_blank(const struct fsm_options *opt)
 	{
-		struct fsm_state *a, *b;
-		struct fsm *fsm;
+		struct fsm *new;
+		struct fsm_state *start;
 
-		assert(opt != NULL);
-
-		fsm = fsm_new(opt);
-		if (fsm == NULL) {
+		new = fsm_new(opt);
+		if (new == NULL) {
 			return NULL;
 		}
 
-		a = fsm_addstate(fsm);
+		start = fsm_addstate(new);
+		if (start == NULL) {
+			goto error;
+		}
+
+		fsm_setstart(new, start);
+
+		return new;
+
+	error:
+
+		fsm_free(new);
+
+		return NULL;
+	}
+
+	static struct fsm *
+	fsm_new_any(const struct fsm_options *opt)
+	{
+		struct fsm_state *a, *b;
+		struct fsm *new;
+
+		assert(opt != NULL);
+
+		new = fsm_new(opt);
+		if (new == NULL) {
+			return NULL;
+		}
+
+		a = fsm_addstate(new);
 		if (a == NULL) {
 			goto error;
 		}
 
-		b = fsm_addstate(fsm);
+		b = fsm_addstate(new);
 		if (b == NULL) {
 			goto error;
 		}
 
 		/* TODO: provide as a class. for utf8, this would be /./ */
-		if (!fsm_addedge_any(fsm, a, b)) {
+		if (!fsm_addedge_any(new, a, b)) {
 			goto error;
 		}
 
-		fsm_setstart(fsm, a);
-		fsm_setend(fsm, b, 1);
+		fsm_setstart(new, a);
+		fsm_setend(new, b, 1);
 
-		return fsm;
+		return new;
 
 	error:
 
-		fsm_free(fsm);
+		fsm_free(new);
+
+		return NULL;
+	}
+
+	/* XXX: to go when dups show all spellings for group overlap */
+	static const struct fsm_state *
+	fsm_any(const struct fsm *fsm,
+		int (*predicate)(const struct fsm *, const struct fsm_state *))
+	{
+		const struct fsm_state *s;
+
+		assert(fsm != NULL);
+		assert(predicate != NULL);
+
+		for (s = fsm->sl; s != NULL; s = s->next) {
+			if (!predicate(fsm, s)) {
+				return s;
+			}
+		}
 
 		return NULL;
 	}
@@ -343,6 +412,21 @@
 		@start = lex_state->lx.start;
 		@end   = lex_state->lx.end;
 	@};
+
+	CLASS_alnum:  () -> (fsm :fsm) = @{ @fsm = class_alnum_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_alpha:  () -> (fsm :fsm) = @{ @fsm = class_alpha_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_ascii:  () -> (fsm :fsm) = @{ @fsm = class_ascii_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_blank:  () -> (fsm :fsm) = @{ @fsm = class_blank_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_cntrl:  () -> (fsm :fsm) = @{ @fsm = class_cntrl_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_digit:  () -> (fsm :fsm) = @{ @fsm = class_digit_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_graph:  () -> (fsm :fsm) = @{ @fsm = class_graph_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_lower:  () -> (fsm :fsm) = @{ @fsm = class_lower_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_print:  () -> (fsm :fsm) = @{ @fsm = class_print_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_punct:  () -> (fsm :fsm) = @{ @fsm = class_punct_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_space:  () -> (fsm :fsm) = @{ @fsm = class_space_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_upper:  () -> (fsm :fsm) = @{ @fsm = class_upper_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_word:   () -> (fsm :fsm) = @{ @fsm = class_word_fsm(fsm->opt);   if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_xdigit: () -> (fsm :fsm) = @{ @fsm = class_xdigit_fsm(fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 
 	ESC: () -> (c :char) = @{
 		assert(lex_state->buf.a[0] == '\\');
@@ -498,71 +582,32 @@
 
 
 	<make-group>: () -> (g :grp) = @{
-		{
-			@g.set.fsm = fsm_new(fsm->opt);
-			if (@g.set.fsm == NULL) {
-				@!;
-			}
-
-			@g.set.start = fsm_addstate(@g.set.fsm);
-			if (@g.set.start == NULL) {
-				fsm_free(@g.set.fsm);
-				@!;
-			}
-
-			@g.set.end = fsm_addstate(@g.set.fsm);
-			if (@g.set.end == NULL) {
-				fsm_free(@g.set.fsm);
-				@!;
-			}
-
-			fsm_setstart(@g.set.fsm, @g.set.start);
-			fsm_setend(@g.set.fsm, @g.set.end, 1);
+		@g.set = fsm_new_blank(fsm->opt);
+		if (@g.set == NULL) {
+			@!;
 		}
 
-		{
-			@g.dup.fsm = fsm_new(NULL);
-			if (@g.dup.fsm == NULL) {
-				fsm_free(@g.set.fsm);
-				@!;
-			}
-
-			@g.dup.start = fsm_addstate(@g.dup.fsm);
-			if (@g.dup.start == NULL) {
-				fsm_free(@g.set.fsm);
-				fsm_free(@g.dup.fsm);
-				@!;
-			}
-
-			@g.dup.end = fsm_addstate(@g.dup.fsm);
-			if (@g.dup.end == NULL) {
-				fsm_free(@g.set.fsm);
-				fsm_free(@g.dup.fsm);
-				@!;
-			}
-
-			fsm_setstart(@g.dup.fsm, @g.dup.start);
-			fsm_setend(@g.dup.fsm, @g.dup.end, 1);
+		@g.dup = fsm_new_blank(fsm->opt);
+		if (@g.dup == NULL) {
+			fsm_free(@g.set);
+			@!;
 		}
 	@};
 
 	<invert-group>: (g :grp &) -> () = @{
 		struct fsm *any;
 
-		any = fsm_any(fsm->opt);
+		any = fsm_new_any(fsm->opt);
 		if (any == NULL) {
 			err->e = RE_EERRNO;
 			@!;
 		}
 
-		@&g->set.fsm = fsm_subtract(any, @&g->set.fsm);
-		if (@&g->set.fsm == NULL) {
+		@&g->set = fsm_subtract(any, @&g->set);
+		if (@&g->set == NULL) {
 			err->e = RE_EERRNO;
 			@!;
 		}
-
-		@&g->set.start = fsm_getstart(@&g->set.fsm);
-		@&g->set.end   = fsm_collate(@&g->set.fsm, fsm_isend);
 
 		/*
 		 * Note we don't invert the dup set here; duplicates are always
@@ -574,6 +619,66 @@
 		if (-1 == group_add(@&g, flags, @c)) {
 			err->e = RE_EERRNO;
 			@!;
+		}
+	@};
+
+	<group-add-class>: (g :grp &, f :fsm) -> () = @{
+		struct fsm *q;
+		int r;
+
+		/* TODO: maybe it is worth using carryopaque, after the entire group is constructed */
+		{
+			struct fsm *a, *b;
+
+			a = fsm_clone(@&g->set);
+			if (a == NULL) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+
+			b = fsm_clone(@f);
+			if (b == NULL) {
+				fsm_free(a);
+				err->e = RE_EERRNO;
+				@!;
+			}
+
+			q = fsm_intersect(a, b);
+			if (q == NULL) {
+				fsm_free(a);
+				fsm_free(b);
+				err->e = RE_EERRNO;
+				@!;
+			}
+
+			r = fsm_empty(q);
+
+			if (r == -1) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+		}
+
+		if (!r) {
+			@&g->dup = fsm_union(@&g->dup, q);
+			if (@&g->dup == NULL) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+		} else {
+			fsm_free(q);
+
+			@&g->set = fsm_union(@&g->set, @f);
+			if (@&g->set == NULL) {
+				err->e = RE_EERRNO;
+				@!;
+			}
+
+			/* we need a DFA here for sake of fsm_exec() identifying duplicates */
+			if (!fsm_determinise(@&g->set)) {
+				err->e = RE_EERRNO;
+				@!;
+			}
 		}
 	@};
 
@@ -602,17 +707,22 @@
 	<group-to-states>: (g :grp &, x :fsm_state, y :fsm_state) -> () = @{
 		int r;
 
-		r = fsm_empty(@&g->dup.fsm);
+		r = fsm_empty(@&g->dup);
 		if (r == -1) {
 			err->e = RE_EERRNO;
 			@!;
 		}
 
 		if (!r) {
+			const struct fsm_state *end;
+
 			/* TODO: would like to show the original spelling verbatim, too */
 
 			/* XXX: this is just one example; really I want to show the entire set */
-			if (-1 == fsm_example(@&g->dup.fsm, @&g->dup.end, err->dup, sizeof err->dup)) {
+			end = fsm_any(@&g->dup, fsm_isend);
+			assert(end != NULL);
+
+			if (-1 == fsm_example(@&g->dup, end, err->dup, sizeof err->dup)) {
 				err->e = RE_EERRNO;
 				@!;
 			}
@@ -624,43 +734,45 @@
 			@!;
 		}
 
-		if (!fsm_minimise(@&g->set.fsm)) {
+		if (!fsm_minimise(@&g->set)) {
 			err->e = RE_EERRNO;
 			@!;
 		}
 
-		@&g->set.start = fsm_getstart(@&g->set.fsm);
-		@&g->set.end   = fsm_collate(@&g->set.fsm, fsm_isend);
-
-		if (@&g->set.end == NULL) {
-			err->e = RE_EERRNO;
-			@!;
-		}
-
+		/* TODO: centralise as fsm_unionxy() perhaps */
 		{
-			struct fsm_state *tmp;
+			struct fsm_state *a, *b;
+			struct fsm_state *s;
 
-			tmp = fsm_getstart(fsm);
+			a = fsm_getstart(fsm);
+			b = fsm_getstart(@&g->set);
 
-			if (!fsm_merge(fsm, @&g->set.fsm)) {
+			if (!fsm_merge(fsm, @&g->set)) {
 				err->e = RE_EERRNO;
 				@!;
 			}
 
-			fsm_setstart(fsm, tmp);
+			fsm_setstart(fsm, a);
 
-			if (!fsm_addedge_epsilon(fsm, @x, @&g->set.start)) {
+			if (!fsm_addedge_epsilon(fsm, @x, b)) {
 				@!;
 			}
 
-			if (!fsm_addedge_epsilon(fsm, @&g->set.end, @y)) {
-				@!;
+			for (s = @&g->set->sl; s != NULL; s = s->next) {
+				if (!fsm_isend(@&g->set, s)) {
+					continue;
+				}
+
+				fsm_setend(fsm, s, 0);
+
+				if (!fsm_addedge_epsilon(fsm, s, @y)) {
+					err->e = RE_EERRNO;
+					@!;
+				}
 			}
 
-			fsm_free(@&g->dup.fsm);
+			fsm_free(@&g->dup);
 		}
-
-		fsm_setend(fsm, @&g->set.end, 0);
 	@};
 
 
@@ -1051,22 +1163,13 @@
 		struct re_err *err)
 	{
 		struct fsm *new;
-		struct fsm_state *start;
 
 		assert(f != NULL);
 
-		new = fsm_new(opt);
+		new = fsm_new_blank(opt);
 		if (new == NULL) {
 			return NULL;
 		}
-
-		start = fsm_addstate(new);
-		if (start == NULL) {
-			fsm_free(new);
-			goto error;
-		}
-
-		fsm_setstart(new, start);
 
 		if (-1 == parse(f, opaque, DIALECT_ENTRY, flags, overlap, new, err)) {
 			fsm_free(new);
@@ -1074,12 +1177,6 @@
 		}
 
 		return new;
-
-	error:
-
-		err->e = RE_EERRNO;
-
-		return NULL;
 	}
 
 @}, @{

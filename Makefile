@@ -11,6 +11,7 @@ clean::
 # things to override
 CC     ?= gcc
 DOT    ?= dot
+RE     ?= re
 BUILD  ?= build
 PREFIX ?= /usr/local
 
@@ -24,6 +25,7 @@ SUBDIR += src/libfsm/out
 SUBDIR += src/libfsm/pred
 SUBDIR += src/libfsm/walk
 SUBDIR += src/libre
+SUBDIR += src/libre/class
 SUBDIR += src/libre/dialect
 SUBDIR += src/fsm
 SUBDIR += src/re

@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 312 "src/libre/parser.act"
+#line 381 "src/libre/parser.act"
 
 
 	#include <re/re.h>
@@ -28,7 +28,7 @@
 extern void p_re__native(fsm, flags, lex_state, act_state, err);
 /* BEGINNING OF TRAILER */
 
-#line 1087 "src/libre/parser.act"
+#line 1184 "src/libre/parser.act"
 
 
 #line 35 "src/libre/dialect/native/parser.h"
