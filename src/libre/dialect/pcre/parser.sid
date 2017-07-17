@@ -291,6 +291,8 @@
 				<add-epsilon>(x, z);
 
 				list-of-atoms(z, y);
+			||
+				<add-epsilon>(x, y);
 			};
 
 		] = {
@@ -310,8 +312,6 @@
 
 		{
 			expr(x, y);
-		||
-			<add-epsilon>(x, y);
 		##
 			<err-expected-alts>;
 		};
