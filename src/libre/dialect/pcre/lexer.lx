@@ -1,0 +1,76 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+'('  -> $opensub;
+')'  -> $closesub;
+
+# predicates
+'^'  -> $start;
+'$'  -> $end;
+
+# operators
+'?'  -> $opt;
+'*'  -> $star;
+'+'  -> $plus;
+'.'  -> $any;
+'|'  -> $alt;
+
+# standard escapes
+'\\' -> $esc;
+'\^' -> $esc;
+'\$' -> $esc;
+'\?' -> $esc;
+'\*' -> $esc;
+'\+' -> $esc;
+'\.' -> $esc;
+'\|' -> $esc;
+'\(' -> $esc; '\)' -> $esc;
+'\{' -> $esc; # note no \}
+'\[' -> $esc; # note no \]
+
+# whitespace escapes
+'\f' -> $esc;
+'\n' -> $esc;
+'\r' -> $esc;
+'\t' -> $esc;
+'\v' -> $esc;
+
+'\'  /[0-7]+/     -> $oct;
+'\x' /[0-9a-f]+/i -> $hex;
+
+'[' -> $opengroup .. ']' -> $closegroup {
+	'^' -> $invert;
+	'-' -> $range;
+
+	# extension escapes
+	'\\' -> $esc;
+	'\^' -> $esc;
+	'\-' -> $esc;
+
+	# whitespace escapes
+	'\f' -> $esc;
+	'\n' -> $esc;
+	'\r' -> $esc;
+	'\t' -> $esc;
+	'\v' -> $esc;
+
+	'\'  /[0-7]+/     -> $oct;
+	'\x' /[0-9a-f]+/i -> $hex;
+
+	# XXX: /./ - the above
+	/[^\^\-\\]/ -> $char;
+}
+
+'{' -> $opencount .. '}' -> $closecount {
+	','      -> $sep;
+	/[0-9]+/ -> $count;
+}
+
+/./ - ($opensub | $closesub | $start | $end
+	| $opt | $star | $plus | $any | $alt
+	| $esc | $oct | $hex
+	| $opengroup | $opencount) -> $char;
+

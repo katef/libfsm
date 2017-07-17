@@ -23,7 +23,8 @@ enum re_dialect {
 	RE_LITERAL,
 	RE_GLOB,
 	RE_NATIVE,
-	RE_SQL
+	RE_SQL,
+	RE_PCRE
 };
 
 enum re_flags {

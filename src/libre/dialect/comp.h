@@ -39,5 +39,11 @@ comp_sql(int (*f)(void *opaque), void *opaque,
 	enum re_flags flags, int overlap,
 	struct re_err *err);
 
+struct fsm *
+comp_pcre(int (*f)(void *opaque), void *opaque,
+	const struct fsm_options *opt,
+	enum re_flags flags, int overlap,
+	struct re_err *err);
+
 #endif
 

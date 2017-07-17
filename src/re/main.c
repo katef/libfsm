@@ -130,7 +130,6 @@ dialect_name(const char *name)
 		{ "ere",     RE_ERE     },
 		{ "bre",     RE_BRE     },
 		{ "plan9",   RE_PLAN9   },
-		{ "pcre",    RE_PCRE    },
 		{ "js",      RE_JS      },
 		{ "python",  RE_PYTHON  },
 		{ "sql99",   RE_SQL99   },
@@ -139,6 +138,7 @@ dialect_name(const char *name)
 		{ "literal", RE_LITERAL },
 		{ "glob",    RE_GLOB    },
 		{ "native",  RE_NATIVE  },
+		{ "pcre",    RE_PCRE    },
 		{ "sql",     RE_SQL     }
 	};
 
