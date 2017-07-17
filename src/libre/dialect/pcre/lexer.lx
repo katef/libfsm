@@ -4,8 +4,9 @@
 # See LICENCE for the full copyright terms.
 #
 
-'('  -> $opensub;
-')'  -> $closesub;
+'(?:'  -> $opensub;
+'('  -> $opencapture;
+')'  -> $close;
 
 # predicates
 '^'  -> $start;
@@ -69,7 +70,7 @@
 	/[0-9]+/ -> $count;
 }
 
-/./ - ($opensub | $closesub | $start | $end
+/./ - ($opensub | $opencapture | $close | $start | $end
 	| $opt | $star | $plus | $any | $alt
 	| $esc | $oct | $hex
 	| $opengroup | $opencount) -> $char;

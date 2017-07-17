@@ -25,7 +25,7 @@
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
-extern void p_re__native(fsm, flags, lex_state, act_state, err);
+extern void p_re__pcre(fsm, flags, lex_state, act_state, err);
 /* BEGINNING OF TRAILER */
 
 #line 1087 "src/libre/parser.act"

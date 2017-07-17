@@ -4,17 +4,12 @@
  * See LICENCE for the full copyright terms.
  */
 
-/*
- * TODO: explain choices. e.g. i'm not permitting () or ||. only the root expression is allowed to be empty.
- * TODO: explain strategy: pass in x,y endpoints top-down
- */
-
 %types%
 
 	pos;
 	char;
 	unsigned;
-	fsm;
+	!fsm;
 	fsm_state;
 	grp;
 	pred;
@@ -30,7 +25,7 @@
 	SEP;
 	STAR;
 
-	OPENSUB;   CLOSESUB;
+	OPENSUB; OPENCAPTURE; CLOSE;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
 	OPENCOUNT: () -> (:pos, :pos); CLOSECOUNT: () -> (:pos, :pos);
 
@@ -228,9 +223,9 @@
 
 		atom: (x :fsm_state, y :fsm_state &) -> () = {
 			{
-				OPENSUB;
+				{ OPENSUB; || OPENCAPTURE; };
 				expr(x, y);
-				CLOSESUB;
+				CLOSE;
 			||
 				group(x, y);
 			||
@@ -310,7 +305,7 @@
 		list-of-alts(x, y);
 	};
 
-	re_native: () -> () = {
+	re_pcre: () -> () = {
 		(x, y) = <make-states>;
 
 		{
@@ -330,5 +325,5 @@
 
 %entry%
 
-	re_native;
+	re_pcre;
 
