@@ -122,6 +122,13 @@
 					<td>&native.5re;</td>
 					<td>&re.3; &ldquo;Native&rdquo; syntax</td>
 				</tr>
+				<tr>
+					<td><literal>sql</literal></td>
+					<td><literal>RE_SQL</literal></td>
+					<td>&yes;</td>
+					<td>&sql.5re;</td>
+					<td>SQL <code>SIMILAR TO</code> Regular Expression</td>
+				</tr>
 			</tbody>
 		</table>
 	</refsection>

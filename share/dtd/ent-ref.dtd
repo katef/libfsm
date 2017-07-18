@@ -44,6 +44,7 @@
 <!ENTITY like.5re       "<citerefentry><refentrytitle>like</refentrytitle>       %vol.5re;</citerefentry>">
 <!ENTITY literal.5re    "<citerefentry><refentrytitle>literal</refentrytitle>    %vol.5re;</citerefentry>">
 <!ENTITY native.5re     "<citerefentry><refentrytitle>native</refentrytitle>     %vol.5re;</citerefentry>">
+<!ENTITY sql.5re        "<citerefentry><refentrytitle>sql</refentrytitle>        %vol.5re;</citerefentry>">
 
 <!-- TODO: generate from manpages -->
 
