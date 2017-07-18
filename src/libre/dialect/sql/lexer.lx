@@ -1,0 +1,39 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+'_' -> $any;
+'%' -> $many;
+
+'('  -> $opensub;
+')'  -> $closesub;
+
+# operators
+'?'  -> $opt;
+'*'  -> $star;
+'+'  -> $plus;
+'|'  -> $alt;
+
+'[' -> $opengroup .. ']' -> $closegroup {
+	'^' -> $invert;
+	'-' -> $range;
+
+	'[:ALNUM:]'      -> $class_alnum;
+	'[:ALPHA:]'      -> $class_alpha;
+	'[:DIGIT:]'      -> $class_digit;
+	'[:LOWER:]'      -> $class_lower;
+	'[:SPACE:]'      -> $class_spchr;
+	'[:UPPER:]'      -> $class_upper;
+	'[:WHITESPACE:]' -> $class_space;
+
+	# XXX: /./ - the above
+	/[^\^\-]/ -> $char;
+}
+
+/./ - ($any | $many
+	| $opensub | $closesub
+	| $opt | $star | $plus | $alt
+	| $opengroup | $opencount) -> $char;
+

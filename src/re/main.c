@@ -140,7 +140,8 @@ dialect_name(const char *name)
 		{ "like",    RE_LIKE    },
 		{ "literal", RE_LITERAL },
 		{ "glob",    RE_GLOB    },
-		{ "native",  RE_NATIVE  }
+		{ "native",  RE_NATIVE  },
+		{ "sql",     RE_SQL     }
 	};
 
 	assert(name != NULL);

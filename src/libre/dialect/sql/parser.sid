@@ -1,0 +1,328 @@
+/*
+ * Copyright 2008-2017 Katherine Flavel
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
+/*
+ * ISO/IEC 9075-2:1999 (E) ©ISO/IEC
+ * 8.6 <similar predicate>
+ *
+ * https://firebirdsql.org/refdocs/langrefupd25-similar-to.html
+ *
+ * TODO: SQL99 permits an arbitrary optional escape character
+ */
+
+%types%
+
+	pos;
+	char;
+	!unsigned;
+	fsm;
+	fsm_state;
+	grp;
+	pred;
+	!err;
+
+%terminals%
+
+	ANY;
+	MANY;
+	!OPT;
+	PLUS;
+	ALT;
+	!SEP;
+	STAR;
+
+	OPENSUB;   CLOSESUB;
+	OPENGROUP:  () -> (:pos, :pos); CLOSEGROUP:  () -> (:char, :pos, :pos);
+	!OPENCOUNT: () -> (:pos, :pos); !CLOSECOUNT: () -> (:pos, :pos);
+
+	INVERT: () -> (:char);
+	RANGE:  () -> (:char, :pos, :pos);
+
+	CLASS_alnum:   () -> (:fsm);
+	CLASS_alpha:   () -> (:fsm);
+	!CLASS_ascii:  () -> (:fsm);
+	!CLASS_blank:  () -> (:fsm);
+	!CLASS_cntrl:  () -> (:fsm);
+	CLASS_digit:   () -> (:fsm);
+	!CLASS_graph:  () -> (:fsm);
+	CLASS_lower:   () -> (:fsm);
+	!CLASS_print:  () -> (:fsm);
+	!CLASS_punct:  () -> (:fsm);
+	CLASS_space:   () -> (:fsm);
+	CLASS_spchr:   () -> (:fsm);
+	CLASS_upper:   () -> (:fsm);
+	!CLASS_word:   () -> (:fsm);
+	!CLASS_xdigit: () -> (:fsm);
+
+	!ESC:   () -> (:char);
+	!OCT:   () -> (:char, :pos, :pos);
+	!HEX:   () -> (:char, :pos, :pos);
+	CHAR:   () -> (:char, :pos, :pos);
+	!START: () -> (:pred);
+	!END:   () -> (:pred);
+	!COUNT: () -> (:unsigned);
+
+	EOF;
+	!ERROR;
+
+%productions%
+
+	<make-states>: () -> (:fsm_state, :fsm_state);
+
+	<make-group>:  () -> (:grp);
+	<invert-group>:    (:grp &) -> ();
+	<group-add-char>:  (:grp &, :char) -> ();
+	<group-add-class>: (:grp &, :fsm) -> ();
+	<group-add-range>: (:grp &, :char, :char) -> ();
+	<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
+
+	<add-concat>:  () -> (:fsm_state);
+	<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
+	!<add-pred>:   (:fsm_state, :fsm_state, :pred) -> ();
+	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
+	<add-any>:     (:fsm_state, :fsm_state)        -> ();
+
+	!<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
+	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
+	<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
+	<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
+	<count-1>: (:fsm_state, :fsm_state) -> ();
+
+	<err-expected-term>;
+	<err-expected-count>;
+	!<err-expected-atoms>;
+	<err-expected-alts>;
+	<err-expected-range>;
+	<err-expected-closegroup>;
+	<err-expected-groupbody>;
+	<err-expected-eof>;
+
+	<mark-group>: (:pos, :pos) -> ();
+	<mark-range>: (:pos, :pos) -> ();
+	!<mark-count>: (:pos, :pos) -> ();
+
+	group: (x :fsm_state, y :fsm_state) -> () [
+
+		char: () -> (c :char) = {
+			(c, !, !) = CHAR;
+		};
+
+		class: () -> (k :fsm) = {
+			k = CLASS_alnum;
+		||
+			k = CLASS_alpha;
+		||
+			k = CLASS_digit;
+		||
+			k = CLASS_lower;
+		||
+			k = CLASS_space;
+		||
+			k = CLASS_spchr;
+		||
+			k = CLASS_upper;
+		};
+
+		range: () -> (a :char, b :char) = {
+			{
+				(a, start, !) = CHAR;
+			};
+
+			{
+				(!, !, !) = RANGE;
+			##
+				<err-expected-range>;
+			};
+
+			{
+				(b, !, end) = CHAR;
+			||
+				(b, !, end) = RANGE;
+			};
+
+			<mark-range>(start, end);
+		};
+
+		list-of-terms: (g :grp &) -> () = {
+			{
+				c = char;
+				<group-add-char>(&g, c);
+			||
+				k = class;
+				<group-add-class>(&g, k);
+			||
+				(a, b) = range;
+				<group-add-range>(&g, a, b);
+			##
+				<err-expected-term>;
+			};
+
+			{
+				$;
+			||
+				list-of-terms(&g);
+			};
+		};
+
+		group-body: (g :grp &) -> () = {
+			{
+				(c, !, !) = CLOSEGROUP;
+				<group-add-char>(&g, c);
+			||
+				(c, !, !) = RANGE;
+				<group-add-char>(&g, c);
+			||
+				/*
+				 * XXX: this is atypical, but serves as a workaround for below
+				 * until this can be done lexically by /-$/ -> $char.
+				 */
+				(a, !, !) = CLOSEGROUP;
+				<group-add-char>(&g, a);
+				(b, !, !) = RANGE;
+				<group-add-char>(&g, b);
+			||
+				$;
+			};
+
+			list-of-terms(&g);
+
+			{
+/* XXX: this ought to be permitted, but I can't see how for LL(1)
+				(c, !, !) = RANGE;
+				<group-add-char>(&g, c);
+			||
+*/
+				$;
+			};
+		};
+
+		group-bm: (g :grp &) -> () = {
+			(start, !) = OPENGROUP;
+
+			{
+				! = INVERT;
+				group-body(&g);
+				<invert-group>(&g);
+			||
+				group-body(&g);
+			};
+
+			{
+				(!, !, end) = CLOSEGROUP;
+				<mark-group>(start, end);
+			##
+				<err-expected-closegroup>;
+			};
+		##
+			<err-expected-groupbody>;
+		};
+
+	] = {
+		g = <make-group>;
+
+		group-bm(&g);
+
+		<group-to-states>(&g, x, y);
+	};
+
+	literal: (x :fsm_state, y :fsm_state) -> () = {
+		{
+			(c, !, !) = CHAR;
+		};
+		<add-literal>(x, y, c);
+	};
+
+	expr: (x :fsm_state, y :fsm_state) -> () [
+
+		atom: (x :fsm_state, y :fsm_state &) -> () = {
+			{
+				OPENSUB;
+				expr(x, y);
+				CLOSESUB;
+			||
+				group(x, y);
+			||
+				literal(x, y);
+			||
+				ANY;
+				<add-any>(x, y);
+			||
+				MANY;
+				<add-any>(x, y);
+				<count-0-or-many>(x, &y);
+			};
+
+			{
+				STAR;
+				<count-0-or-many>(x, &y);
+			||
+				PLUS;
+				<count-1-or-many>(x, &y);
+			||
+				<count-1>(x, y);
+			##
+				<err-expected-count>;
+			};
+		};
+
+		list-of-atoms: (x :fsm_state, y :fsm_state) -> () = {
+			z = <add-concat>;
+
+			atom(x, &z);
+
+			/* TODO: I don't like this. Refactor somehow? */
+			{
+				<add-epsilon>(z, y);
+			||
+				list-of-atoms(z, y);
+			};
+		};
+
+		list-of-alts: (x :fsm_state, y :fsm_state) -> () [
+
+			alt: (x :fsm_state, y :fsm_state) -> () = {
+				z = <add-concat>;
+
+				/* TODO: I don't like this. Refactor somehow? */
+				<add-epsilon>(x, z);
+
+				list-of-atoms(z, y);
+			};
+
+		] = {
+			alt(x, y);
+		||
+			list-of-alts(x, y);
+			ALT;
+			alt(x, y);
+		};
+
+	] = {
+		list-of-alts(x, y);
+	};
+
+	re_sql: () -> () = {
+		(x, y) = <make-states>;
+
+		{
+			expr(x, y);
+		||
+			<add-epsilon>(x, y);
+		##
+			<err-expected-alts>;
+		};
+
+		{
+			EOF;
+		##
+			<err-expected-eof>;
+		};
+	};
+
+%entry%
+
+	re_sql;
+
