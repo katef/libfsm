@@ -4,6 +4,7 @@ DIALECT += glob
 DIALECT += like
 DIALECT += literal
 DIALECT += native
+DIALECT += sql
 
 .for dialect in ${DIALECT}
 

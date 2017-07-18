@@ -5,15 +5,19 @@
  */
 
 /*
- * TODO: explain choices. e.g. i'm not permitting () or ||. only the root expression is allowed to be empty.
- * TODO: explain strategy: pass in x,y endpoints top-down
+ * ISO/IEC 9075-2:1999 (E) ©ISO/IEC
+ * 8.6 <similar predicate>
+ *
+ * https://firebirdsql.org/refdocs/langrefupd25-similar-to.html
+ *
+ * TODO: SQL99 permits an arbitrary optional escape character
  */
 
 %types%
 
 	pos;
 	char;
-	unsigned;
+	!unsigned;
 	fsm;
 	fsm_state;
 	grp;
@@ -23,43 +27,43 @@
 %terminals%
 
 	ANY;
-	!MANY;
-	OPT;
+	MANY;
+	!OPT;
 	PLUS;
 	ALT;
-	SEP;
+	!SEP;
 	STAR;
 
 	OPENSUB;   CLOSESUB;
-	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
-	OPENCOUNT: () -> (:pos, :pos); CLOSECOUNT: () -> (:pos, :pos);
+	OPENGROUP:  () -> (:pos, :pos); CLOSEGROUP:  () -> (:char, :pos, :pos);
+	!OPENCOUNT: () -> (:pos, :pos); !CLOSECOUNT: () -> (:pos, :pos);
 
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
-	CLASS_alnum:  () -> (:fsm);
-	CLASS_alpha:  () -> (:fsm);
-	CLASS_ascii:  () -> (:fsm);
-	CLASS_blank:  () -> (:fsm);
-	CLASS_cntrl:  () -> (:fsm);
-	CLASS_digit:  () -> (:fsm);
-	CLASS_graph:  () -> (:fsm);
-	CLASS_lower:  () -> (:fsm);
-	CLASS_print:  () -> (:fsm);
-	CLASS_punct:  () -> (:fsm);
-	CLASS_space:  () -> (:fsm);
-	CLASS_spchr:  () -> (:fsm);
-	CLASS_upper:  () -> (:fsm);
-	CLASS_word:   () -> (:fsm);
-	CLASS_xdigit: () -> (:fsm);
+	CLASS_alnum:   () -> (:fsm);
+	CLASS_alpha:   () -> (:fsm);
+	!CLASS_ascii:  () -> (:fsm);
+	!CLASS_blank:  () -> (:fsm);
+	!CLASS_cntrl:  () -> (:fsm);
+	CLASS_digit:   () -> (:fsm);
+	!CLASS_graph:  () -> (:fsm);
+	CLASS_lower:   () -> (:fsm);
+	!CLASS_print:  () -> (:fsm);
+	!CLASS_punct:  () -> (:fsm);
+	CLASS_space:   () -> (:fsm);
+	CLASS_spchr:   () -> (:fsm);
+	CLASS_upper:   () -> (:fsm);
+	!CLASS_word:   () -> (:fsm);
+	!CLASS_xdigit: () -> (:fsm);
 
-	ESC:    () -> (:char);
-	OCT:    () -> (:char, :pos, :pos);
-	HEX:    () -> (:char, :pos, :pos);
+	!ESC:   () -> (:char);
+	!OCT:   () -> (:char, :pos, :pos);
+	!HEX:   () -> (:char, :pos, :pos);
 	CHAR:   () -> (:char, :pos, :pos);
-	START:  () -> (:pred);
-	END:    () -> (:pred);
-	COUNT:  () -> (:unsigned);
+	!START: () -> (:pred);
+	!END:   () -> (:pred);
+	!COUNT: () -> (:unsigned);
 
 	EOF;
 	!ERROR;
@@ -77,12 +81,12 @@
 
 	<add-concat>:  () -> (:fsm_state);
 	<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
-	<add-pred>:    (:fsm_state, :fsm_state, :pred) -> ();
+	!<add-pred>:   (:fsm_state, :fsm_state, :pred) -> ();
 	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
 	<add-any>:     (:fsm_state, :fsm_state)        -> ();
 
-	<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
-	<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
+	!<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
+	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
 	<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
 	<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
 	<count-1>: (:fsm_state, :fsm_state) -> ();
@@ -98,17 +102,11 @@
 
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();
-	<mark-count>: (:pos, :pos) -> ();
+	!<mark-count>: (:pos, :pos) -> ();
 
 	group: (x :fsm_state, y :fsm_state) -> () [
 
 		char: () -> (c :char) = {
-			c = ESC;
-		||
-			(c, !, !) = OCT;
-		||
-			(c, !, !) = HEX;
-		||
 			(c, !, !) = CHAR;
 		};
 
@@ -117,37 +115,19 @@
 		||
 			k = CLASS_alpha;
 		||
-			k = CLASS_ascii;
-		||
-			k = CLASS_blank;
-		||
-			k = CLASS_cntrl;
-		||
 			k = CLASS_digit;
-		||
-			k = CLASS_graph;
 		||
 			k = CLASS_lower;
 		||
-			k = CLASS_print;
-		||
-			k = CLASS_punct;
-		||
 			k = CLASS_space;
 		||
+			k = CLASS_spchr;
+		||
 			k = CLASS_upper;
-		||
-			k = CLASS_word;
-		||
-			k = CLASS_xdigit;
 		};
 
 		range: () -> (a :char, b :char) = {
 			{
-				(a, start, !) = OCT;
-			||
-				(a, start, !) = HEX;
-			||
 				(a, start, !) = CHAR;
 			};
 
@@ -158,10 +138,6 @@
 			};
 
 			{
-				(b, !, end) = OCT;
-			||
-				(b, !, end) = HEX;
-			||
 				(b, !, end) = CHAR;
 			||
 				(b, !, end) = RANGE;
@@ -254,24 +230,9 @@
 
 	literal: (x :fsm_state, y :fsm_state) -> () = {
 		{
-			c = ESC;
-		||
-			(c, !, !) = OCT;
-		||
-			(c, !, !) = HEX;
-		||
 			(c, !, !) = CHAR;
 		};
 		<add-literal>(x, y, c);
-	};
-
-	anchor: (x :fsm_state, y :fsm_state) -> () = {
-		{
-			p = START;
-		||
-			p = END;
-		};
-		<add-pred>(x, y, p);
 	};
 
 	expr: (x :fsm_state, y :fsm_state) -> () [
@@ -288,26 +249,13 @@
 			||
 				ANY;
 				<add-any>(x, y);
+			||
+				MANY;
+				<add-any>(x, y);
+				<count-0-or-many>(x, &y);
 			};
 
 			{
-				(start, !) = OPENCOUNT;
-				n = COUNT;
-				(!, end) = CLOSECOUNT;
-				<mark-count>(start, end);
-				<count-m-to-n>(x, &y, n, n);
-			||
-				(start, !) = OPENCOUNT;
-				m = COUNT;
-				SEP;
-				n = COUNT;
-				(end, !) = CLOSECOUNT;
-				<mark-count>(start, end);
-				<count-m-to-n>(x, &y, m, n);
-			||
-				OPT;
-				<count-0-or-1>(x, y);
-			||
 				STAR;
 				<count-0-or-many>(x, &y);
 			||
@@ -323,11 +271,7 @@
 		list-of-atoms: (x :fsm_state, y :fsm_state) -> () = {
 			z = <add-concat>;
 
-			{
-				anchor(x, z);
-			||
-				atom(x, &z);
-			};
+			atom(x, &z);
 
 			/* TODO: I don't like this. Refactor somehow? */
 			{
@@ -360,7 +304,7 @@
 		list-of-alts(x, y);
 	};
 
-	re_native: () -> () = {
+	re_sql: () -> () = {
 		(x, y) = <make-states>;
 
 		{
@@ -380,5 +324,5 @@
 
 %entry%
 
-	re_native;
+	re_sql;
 

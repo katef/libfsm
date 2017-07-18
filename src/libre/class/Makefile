@@ -11,12 +11,13 @@ CLASS_lower  = [a-z]
 CLASS_print  = [\x20-\x7E]
 CLASS_punct  = [!"\#$$%&'\''()*+,\-./:;<=>?@\\\^_`{|}~]|\[|]
 CLASS_space  = [ \t\r\n\v\f]
+CLASS_spchr  = [ ]
 CLASS_upper  = [A-Z]
 CLASS_word   = [A-Za-z0-9_]
 CLASS_xdigit = [A-Fa-f0-9]
 
 .for class in alnum alpha ascii blank cntrl digit graph lower print \
-	punct space upper word xdigit
+	punct space spchr upper word xdigit
 
 src/libre/class/${class}.c:
 	${RE} -pl api -e class_${class}_ '${CLASS_${class}}' > ${.TARGET}
