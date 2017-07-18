@@ -2,7 +2,7 @@
 libfsm and friends: NFA, DFA, regular expressions and lexical analysis
 
 
-Lexing is the process of categorising a stream of items by their spellings.
+Lexing is the process of categorizing a stream of items by their spellings.
 The output from this process is a stream of tokens, each of a specific lexeme
 category, which are most commonly input to a parser responsible for asserting
 the order of these tokens is valid.
