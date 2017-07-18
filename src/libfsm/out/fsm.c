@@ -6,9 +6,11 @@
 
 #include <ctype.h>
 #include <assert.h>
+#include <limits.h>
 #include <stdio.h>
 
 #include <adt/set.h>
+#include <adt/bitmap.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -104,7 +106,7 @@ findany(const struct fsm_state *state)
 	struct fsm_state *f, *s;
 	struct fsm_edge *e;
 	struct set_iter it;
-	int esym;
+	struct bm bm = { 0 };
 
 	assert(state != NULL);
 
@@ -124,14 +126,12 @@ findany(const struct fsm_state *state)
 		return NULL;
 	}
 
-	esym = e->symbol;
-
 	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
 		if (e->symbol > UCHAR_MAX) {
-			break;
+			return NULL;
 		}
 
-		if (e->symbol != esym || set_empty(e->sl)) {
+		if (set_empty(e->sl)) {
 			return NULL;
 		}
 
@@ -139,6 +139,12 @@ findany(const struct fsm_state *state)
 		if (f != s) {
 			return NULL;
 		}
+
+		bm_set(&bm, e->symbol);
+	}
+
+	if (bm_count(&bm) != UCHAR_MAX + 1U) {
+		return NULL;
 	}
 
 	assert(f != NULL);
