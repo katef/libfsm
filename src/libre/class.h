@@ -11,6 +11,7 @@ struct fsm_options;
 
 struct fsm *class_alnum_fsm(const struct fsm_options *opt);
 struct fsm *class_alpha_fsm(const struct fsm_options *opt);
+struct fsm *class_any_fsm(const struct fsm_options *opt);
 struct fsm *class_ascii_fsm(const struct fsm_options *opt);
 struct fsm *class_blank_fsm(const struct fsm_options *opt);
 struct fsm *class_cntrl_fsm(const struct fsm_options *opt);

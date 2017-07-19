@@ -39,6 +39,7 @@
 
 	CLASS_alnum:  () -> (:fsm);
 	CLASS_alpha:  () -> (:fsm);
+	!CLASS_any:   () -> (:fsm);
 	CLASS_ascii:  () -> (:fsm);
 	CLASS_blank:  () -> (:fsm);
 	CLASS_cntrl:  () -> (:fsm);

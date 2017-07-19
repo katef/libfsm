@@ -59,6 +59,7 @@
 
 	#define TOK_CLASS__alnum  TOK_CLASS_ALNUM
 	#define TOK_CLASS__alpha  TOK_CLASS_ALPHA
+	#define TOK_CLASS__any    TOK_CLASS_ANY
 	#define TOK_CLASS__ascii  TOK_CLASS_ASCII
 	#define TOK_CLASS__blank  TOK_CLASS_BLANK
 	#define TOK_CLASS__cntrl  TOK_CLASS_CNTRL
@@ -416,6 +417,7 @@
 
 	CLASS_alnum:  () -> (fsm :fsm) = @{ @fsm = class_alnum_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_alpha:  () -> (fsm :fsm) = @{ @fsm = class_alpha_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_any:    () -> (fsm :fsm) = @{ @fsm = class_any_fsm(fsm->opt);    if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_ascii:  () -> (fsm :fsm) = @{ @fsm = class_ascii_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_blank:  () -> (fsm :fsm) = @{ @fsm = class_blank_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_cntrl:  () -> (fsm :fsm) = @{ @fsm = class_cntrl_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
