@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 381 "src/libre/parser.act"
+#line 422 "src/libre/parser.act"
 
 
 	#include <re/re.h>
@@ -28,7 +28,7 @@
 extern void p_re__glob(fsm, flags, lex_state, act_state, err);
 /* BEGINNING OF TRAILER */
 
-#line 1185 "src/libre/parser.act"
+#line 1208 "src/libre/parser.act"
 
 
 #line 35 "src/libre/dialect/glob/parser.h"
