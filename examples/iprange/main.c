@@ -450,7 +450,7 @@ important(unsigned n)
 }
 
 static void
-carryopaque(void **set, size_t n, struct fsm *fsm, struct fsm_state *st)
+carryopaque(const void **set, size_t n, struct fsm *fsm, struct fsm_state *st)
 {
 	void *o = NULL;
 	size_t i;
