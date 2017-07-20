@@ -49,7 +49,7 @@
 	CLASS_print:  () -> (:fsm);
 	CLASS_punct:  () -> (:fsm);
 	CLASS_space:  () -> (:fsm);
-	CLASS_spchr:  () -> (:fsm);
+	!CLASS_spchr: () -> (:fsm);
 	CLASS_upper:  () -> (:fsm);
 	CLASS_word:   () -> (:fsm);
 	CLASS_xdigit: () -> (:fsm);
