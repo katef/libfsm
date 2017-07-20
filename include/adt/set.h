@@ -71,5 +71,8 @@ set_only(const struct set *set);
 int
 set_hasnext(const struct set_iter *it);
 
+void * const*
+set_array(const struct set *set);
+
 #endif
 

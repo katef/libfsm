@@ -13,8 +13,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <adt/set.h>
-
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
@@ -246,14 +244,14 @@ lang_exclude(const char *name)
 }
 
 static void
-carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
+carryopaque(void **set, size_t n, struct fsm *fsm, struct fsm_state *state)
 {
 	struct mapping_set *conflict;
 	struct ast_mapping *m;
-	struct set_iter it;
-	struct fsm_state *s;
+	size_t i;
 
 	assert(set != NULL); /* TODO: right? */
+	assert(n > 0); /* TODO: right? */
 	assert(fsm != NULL);
 	assert(state != NULL);
 
@@ -276,9 +274,9 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 
 	m = NULL;
 
-	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
-		if (fsm_isend(fsm, s)) {
-			m = fsm_getopaque(fsm, s);
+	for (i = 0; i < n; i++) {
+		if (fsm_isend(fsm, set[i])) {
+			m = fsm_getopaque(fsm, set[i]);
 			break;
 		}
 	}
@@ -287,16 +285,16 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 
 	conflict = NULL;
 
-	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
+	for (i = 0; i < n; i++) {
 		struct ast_mapping *p;
 
-		if (!fsm_isend(fsm, s)) {
+		if (!fsm_isend(fsm, set[i])) {
 			continue;
 		}
 
-		assert(fsm_getopaque(fsm, s) != NULL);
+		assert(fsm_getopaque(fsm, set[i]) != NULL);
 
-		p = fsm_getopaque(fsm, s);
+		p = fsm_getopaque(fsm, set[i]);
 
 		if (m->to == p->to && m->token == p->token) {
 			continue;

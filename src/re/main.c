@@ -14,8 +14,6 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#include <adt/set.h>
-
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
@@ -254,14 +252,14 @@ addmatch(struct match **head, const char *s)
 }
 
 static void
-carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
+carryopaque(void **set, size_t n, struct fsm *fsm, struct fsm_state *state)
 {
-	struct set_iter it;
-	struct fsm_state *s;
-	struct match *m;
 	struct match *matches;
+	struct match *m;
+	size_t i;
 
 	assert(set != NULL); /* TODO: right? */
+	assert(n > 0); /* TODO: right? */
 	assert(fsm != NULL);
 	assert(state != NULL);
 
@@ -280,14 +278,14 @@ carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *state)
 
 	matches = NULL;
 
-	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
-		if (!fsm_isend(fsm, s)) {
+	for (i = 0; i < n; i++) {
+		if (!fsm_isend(fsm, set[i])) {
 			continue;
 		}
 
-		assert(fsm_getopaque(fsm, s) != NULL);
+		assert(fsm_getopaque(fsm, set[i]) != NULL);
 
-		for (m = fsm_getopaque(fsm, s); m != NULL; m = m->next) {
+		for (m = fsm_getopaque(fsm, set[i]); m != NULL; m = m->next) {
 			if (!addmatch(&matches, m->s)) {
 				perror("addmatch");
 				goto error;
