@@ -845,10 +845,19 @@
 	@};
 
 	<add-any>: (x :fsm_state, y :fsm_state) -> () = @{
+		struct fsm *any;
+
 		assert(@x != NULL);
 		assert(@y != NULL);
 
-		if (!fsm_addedge_any(fsm, @x, @y)) {
+		any = class_any_fsm(fsm->opt);
+		if (any == NULL) {
+			err->e = RE_EERRNO;
+			@!;
+		}
+
+		if (!fsm_unionxy(fsm, any, @x, @y)) {
+			err->e = RE_EERRNO;
 			@!;
 		}
 	@};
