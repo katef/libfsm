@@ -59,6 +59,7 @@
 
 	#define TOK_CLASS__alnum  TOK_CLASS_ALNUM
 	#define TOK_CLASS__alpha  TOK_CLASS_ALPHA
+	#define TOK_CLASS__any    TOK_CLASS_ANY
 	#define TOK_CLASS__ascii  TOK_CLASS_ASCII
 	#define TOK_CLASS__blank  TOK_CLASS_BLANK
 	#define TOK_CLASS__cntrl  TOK_CLASS_CNTRL
@@ -309,6 +310,45 @@
 		return NULL;
 	}
 
+	/* TODO: centralise as fsm_unionxy() perhaps */
+	static int
+	fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state *y)
+	{
+		struct fsm_state *sa, *sb;
+		struct fsm_state *end;
+
+		assert(a != NULL);
+		assert(b != NULL);
+		assert(x != NULL);
+		assert(y != NULL);
+
+		sa = fsm_getstart(a);
+		sb = fsm_getstart(b);
+
+		end = fsm_collate(b, fsm_isend);
+		if (end == NULL) {
+			return 0;
+		}
+
+		if (!fsm_merge(a, b)) {
+			return 0;
+		}
+
+		fsm_setstart(a, sa);
+
+		if (!fsm_addedge_epsilon(a, x, sb)) {
+			return 0;
+		}
+
+		fsm_setend(a, end, 0);
+
+		if (!fsm_addedge_epsilon(a, end, y)) {
+			return 0;
+		}
+
+		return 1;
+	}
+
 	static struct fsm *
 	fsm_new_any(const struct fsm_options *opt)
 	{
@@ -416,6 +456,7 @@
 
 	CLASS_alnum:  () -> (fsm :fsm) = @{ @fsm = class_alnum_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_alpha:  () -> (fsm :fsm) = @{ @fsm = class_alpha_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_any:    () -> (fsm :fsm) = @{ @fsm = class_any_fsm(fsm->opt);    if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_ascii:  () -> (fsm :fsm) = @{ @fsm = class_ascii_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_blank:  () -> (fsm :fsm) = @{ @fsm = class_blank_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_cntrl:  () -> (fsm :fsm) = @{ @fsm = class_cntrl_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
@@ -741,41 +782,12 @@
 			@!;
 		}
 
-		/* TODO: centralise as fsm_unionxy() perhaps */
-		{
-			struct fsm_state *a, *b;
-			struct fsm_state *end;
-
-			a = fsm_getstart(fsm);
-			b = fsm_getstart(@&g->set);
-
-			end = fsm_collate(@&g->set, fsm_isend);
-			if (end == NULL) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-
-			if (!fsm_merge(fsm, @&g->set)) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-
-			fsm_setstart(fsm, a);
-
-			if (!fsm_addedge_epsilon(fsm, @x, b)) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-
-			fsm_setend(fsm, end, 0);
-
-			if (!fsm_addedge_epsilon(fsm, end, @y)) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-
-			fsm_free(@&g->dup);
+		if (!fsm_unionxy(fsm, @&g->set, @x, @y)) {
+			err->e = RE_EERRNO;
+			@!;
 		}
+
+		fsm_free(@&g->dup);
 	@};
 
 
@@ -833,10 +845,19 @@
 	@};
 
 	<add-any>: (x :fsm_state, y :fsm_state) -> () = @{
+		struct fsm *any;
+
 		assert(@x != NULL);
 		assert(@y != NULL);
 
-		if (!fsm_addedge_any(fsm, @x, @y)) {
+		any = class_any_fsm(fsm->opt);
+		if (any == NULL) {
+			err->e = RE_EERRNO;
+			@!;
+		}
+
+		if (!fsm_unionxy(fsm, any, @x, @y)) {
+			err->e = RE_EERRNO;
 			@!;
 		}
 	@};

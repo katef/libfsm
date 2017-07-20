@@ -1,7 +1,8 @@
 .include "../../../share/mk/top.mk"
 
-CLASS_alnum  = [a-zA-Z0-9]
-CLASS_alpha  = [a-zA-Z]
+CLASS_alnum  = [[:alpha:][:digit:]]
+CLASS_alpha  = [[:upper:][:lower:]]
+CLASS_any    = .
 CLASS_ascii  = [\x00-\x7F]
 CLASS_blank  = [ \t]
 CLASS_cntrl  = [\x00-\x1F\x7F]
@@ -13,11 +14,11 @@ CLASS_punct  = [!"\#$$%&'\''()*+,\-./:;<=>?@\\\^_`{|}~]|\[|]
 CLASS_space  = [ \t\r\n\v\f]
 CLASS_spchr  = [ ]
 CLASS_upper  = [A-Z]
-CLASS_word   = [A-Za-z0-9_]
+CLASS_word   = [[:alnum:]_]
 CLASS_xdigit = [A-Fa-f0-9]
 
-.for class in alnum alpha ascii blank cntrl digit graph lower print \
-	punct space spchr upper word xdigit
+.for class in alnum alpha any ascii blank cntrl digit graph lower \
+	print punct space spchr upper word xdigit
 
 src/libre/class/${class}.c:
 	${RE} -pl api -e class_${class}_ '${CLASS_${class}}' > ${.TARGET}
