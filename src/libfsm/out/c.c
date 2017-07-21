@@ -175,7 +175,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 		}
 	}
 
-	fprintf(f, "\t\t\tswitch (%s) {\n", cp);
+	fprintf(f, "\t\t\tswitch ((char) %s) {\n", cp);
 
 	/* usual case */
 	{
