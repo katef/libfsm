@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <limits.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -82,6 +83,22 @@ escputc(int c, FILE *f)
 	}
 
 	return fprintf(f, "%c", c);
+}
+
+/* TODO: centralise */
+static void
+escputchar(int c, FILE *f)
+{
+	/* TODO: or if always_hex */
+
+	if (c > SCHAR_MAX) {
+		fprintf(f, "0x%02x", (unsigned char) c);
+		return;
+	}
+
+	fprintf(f, "'");
+	escputc(c, f);
+	fprintf(f, "'");
 }
 
 /* TODO: centralise, maybe with callback */
@@ -175,7 +192,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 		}
 	}
 
-	fprintf(f, "\t\t\tswitch ((char) %s) {\n", cp);
+	fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
 
 	/* usual case */
 	{
@@ -198,8 +215,8 @@ singlecase(FILE *f, const struct fsm *fsm,
 				continue;
 			}
 
-			fprintf(f, "\t\t\tcase '");
-			escputc(e->symbol, f);
+			fprintf(f, "\t\t\tcase ");
+			escputchar(e->symbol, f);
 
 			if (fsm->opt->case_ranges) {
 				const struct fsm_edge *ne;
@@ -216,13 +233,13 @@ singlecase(FILE *f, const struct fsm *fsm,
 				}
 
 				if (q - p) {
-					fprintf(f, "' ... '");
-					escputc(q, f);
+					fprintf(f, " ... ");
+					escputchar(q, f);
 					it = ir;
 				}
 			}
 
-			fprintf(f, "':");
+			fprintf(f, ":");
 
 			/* non-unique states fall through */
 			if (!fsm->opt->case_ranges && e->symbol <= UCHAR_MAX - 1) {
