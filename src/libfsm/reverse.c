@@ -87,9 +87,7 @@ fsm_reverse(struct fsm *fsm)
 		}
 	}
 
-	if (end != NULL && fsm->opt->carryopaque != NULL) {
-		fsm->opt->carryopaque(endset, new, end);
-	}
+	fsm_carryopaque(fsm, endset, new, end);
 
 	/* Create reversed edges */
 	{

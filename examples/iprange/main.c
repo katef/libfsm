@@ -38,7 +38,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <adt/set.h> /* XXX */
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/out.h>
@@ -451,24 +450,23 @@ important(unsigned n)
 }
 
 static void
-carryopaque(struct set *set, struct fsm *fsm, struct fsm_state *st)
+carryopaque(const struct fsm_state **set, size_t n,
+	struct fsm *fsm, struct fsm_state *st)
 {
-	struct fsm_state *s;
-	struct set_iter it;
 	void *o = NULL;
+	size_t i;
 
-	/* XXX: This should be possible without adt/set.h */
-	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
-		if (!fsm_isend(fsm, s)) {
+	for (i = 0; i < n; i++) {
+		if (!fsm_isend(fsm, set[i])) {
 			continue;
 		}
 
 		if (o == NULL) {
-			o = fsm_getopaque(fsm, s);
+			o = fsm_getopaque(fsm, set[i]);
 			fsm_setopaque(fsm, st, o);
 			continue;
 		} else {
-			assert(o == fsm_getopaque(fsm, s));
+			assert(o == fsm_getopaque(fsm, set[i]));
 		}
 	}
 }

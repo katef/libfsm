@@ -528,10 +528,7 @@ determinise(struct fsm *nfa,
 		 * Carry through opaque values, if present. This isn't anything to do
 		 * with the DFA conversion; it's meaningful only to the caller.
 		 */
-		/* XXX: possibly have callback in fsm struct, instead. like the colour hooks */
-		if (dfa->opt->carryopaque != NULL) {
-			dfa->opt->carryopaque(curr->closure, dfa, curr->dfastate);
-		}
+		fsm_carryopaque(dfa, curr->closure, dfa, curr->dfastate);
 	}
 
 	free_mappings(mappings);

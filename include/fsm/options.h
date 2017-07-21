@@ -10,8 +10,6 @@
 struct fsm;
 struct fsm_state;
 
-struct set; /* XXX */
-
 struct fsm_options {
 	/* boolean: true indicates to go to extra lengths in order to produce
 	 * neater-looking FSMs for certian operations. This usually means finding
@@ -49,7 +47,8 @@ struct fsm_options {
 	const char *prefix;
 
 	/* TODO: explain */
-	void (*carryopaque)(struct set *, struct fsm *, struct fsm_state *);
+	void (*carryopaque)(const struct fsm_state **, size_t,
+		struct fsm *, struct fsm_state *);
 };
 
 #endif

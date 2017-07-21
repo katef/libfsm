@@ -380,3 +380,13 @@ set_hasnext(const struct set_iter *it)
 	return it->set && it->i + 1 < it->set->i;
 }
 
+const void **
+set_array(const struct set *set)
+{
+	if (set == NULL) {
+		return 0;
+	}
+
+	return set->a;
+}
+
