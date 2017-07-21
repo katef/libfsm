@@ -16,6 +16,9 @@
 
 #include "internal.h"
 
+#define ctassert(pred) \
+	switch (0) { case 0: case (pred):; }
+
 static void
 free_contents(struct fsm *fsm)
 {
@@ -98,5 +101,31 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	dst->endcount = src->endcount;
 
 	free(src);
+}
+
+void
+fsm_carryopaque(struct fsm *fsm, const struct set *set,
+	struct fsm *new, struct fsm_state *state)
+{
+	ctassert(sizeof (void *) == sizeof (struct fsm_state *));
+
+	assert(fsm != NULL);
+
+	if (fsm->opt == NULL || fsm->opt->carryopaque == NULL) {
+		return;
+	}
+
+	/*
+	 * Our sets are a void ** treated as an array of elements of type void *.
+	 * Here we're presenting these as if they're an array of elements
+	 * of type struct fsm_state *.
+	 *
+	 * This is not portable because the representations of those types
+	 * need not be compatible in general, hence the compile-time assert
+	 * and the cast here.
+	 */
+
+	fsm->opt->carryopaque((void *) set_array(set), set_count(set),
+		new, state);
 }
 

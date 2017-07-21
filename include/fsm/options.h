@@ -47,7 +47,8 @@ struct fsm_options {
 	const char *prefix;
 
 	/* TODO: explain */
-	void (*carryopaque)(const void **, size_t, struct fsm *, struct fsm_state *);
+	void (*carryopaque)(const struct fsm_state **, size_t,
+		struct fsm *, struct fsm_state *);
 };
 
 #endif

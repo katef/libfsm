@@ -528,10 +528,7 @@ determinise(struct fsm *nfa,
 		 * Carry through opaque values, if present. This isn't anything to do
 		 * with the DFA conversion; it's meaningful only to the caller.
 		 */
-		if (dfa->opt->carryopaque != NULL) {
-			dfa->opt->carryopaque(set_array(curr->closure), set_count(curr->closure),
-				dfa, curr->dfastate);
-		}
+		fsm_carryopaque(dfa, curr->closure, dfa, curr->dfastate);
 	}
 
 	free_mappings(mappings);

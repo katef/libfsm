@@ -252,7 +252,8 @@ addmatch(struct match **head, const char *s)
 }
 
 static void
-carryopaque(const void **set, size_t n, struct fsm *fsm, struct fsm_state *state)
+carryopaque(const struct fsm_state **set, size_t n,
+	struct fsm *fsm, struct fsm_state *state)
 {
 	struct match *matches;
 	struct match *m;
