@@ -214,7 +214,7 @@ z0(struct lx *lx)
 
 		switch (state) {
 		case S0: /* start */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '\x00':
 			case '\x01':
 			case '\x02':
@@ -343,134 +343,134 @@ z0(struct lx *lx)
 			case '}':
 			case '~':
 			case '\x7f':
-			case '\x80':
-			case '\x81':
-			case '\x82':
-			case '\x83':
-			case '\x84':
-			case '\x85':
-			case '\x86':
-			case '\x87':
-			case '\x88':
-			case '\x89':
-			case '\x8a':
-			case '\x8b':
-			case '\x8c':
-			case '\x8d':
-			case '\x8e':
-			case '\x8f':
-			case '\x90':
-			case '\x91':
-			case '\x92':
-			case '\x93':
-			case '\x94':
-			case '\x95':
-			case '\x96':
-			case '\x97':
-			case '\x98':
-			case '\x99':
-			case '\x9a':
-			case '\x9b':
-			case '\x9c':
-			case '\x9d':
-			case '\x9e':
-			case '\x9f':
-			case '\xa0':
-			case '\xa1':
-			case '\xa2':
-			case '\xa3':
-			case '\xa4':
-			case '\xa5':
-			case '\xa6':
-			case '\xa7':
-			case '\xa8':
-			case '\xa9':
-			case '\xaa':
-			case '\xab':
-			case '\xac':
-			case '\xad':
-			case '\xae':
-			case '\xaf':
-			case '\xb0':
-			case '\xb1':
-			case '\xb2':
-			case '\xb3':
-			case '\xb4':
-			case '\xb5':
-			case '\xb6':
-			case '\xb7':
-			case '\xb8':
-			case '\xb9':
-			case '\xba':
-			case '\xbb':
-			case '\xbc':
-			case '\xbd':
-			case '\xbe':
-			case '\xbf':
-			case '\xc0':
-			case '\xc1':
-			case '\xc2':
-			case '\xc3':
-			case '\xc4':
-			case '\xc5':
-			case '\xc6':
-			case '\xc7':
-			case '\xc8':
-			case '\xc9':
-			case '\xca':
-			case '\xcb':
-			case '\xcc':
-			case '\xcd':
-			case '\xce':
-			case '\xcf':
-			case '\xd0':
-			case '\xd1':
-			case '\xd2':
-			case '\xd3':
-			case '\xd4':
-			case '\xd5':
-			case '\xd6':
-			case '\xd7':
-			case '\xd8':
-			case '\xd9':
-			case '\xda':
-			case '\xdb':
-			case '\xdc':
-			case '\xdd':
-			case '\xde':
-			case '\xdf':
-			case '\xe0':
-			case '\xe1':
-			case '\xe2':
-			case '\xe3':
-			case '\xe4':
-			case '\xe5':
-			case '\xe6':
-			case '\xe7':
-			case '\xe8':
-			case '\xe9':
-			case '\xea':
-			case '\xeb':
-			case '\xec':
-			case '\xed':
-			case '\xee':
-			case '\xef':
-			case '\xf0':
-			case '\xf1':
-			case '\xf2':
-			case '\xf3':
-			case '\xf4':
-			case '\xf5':
-			case '\xf6':
-			case '\xf7':
-			case '\xf8':
-			case '\xf9':
-			case '\xfa':
-			case '\xfb':
-			case '\xfc':
-			case '\xfd':
-			case '\xfe':
-			case '\xff': state = S1; continue;
+			case 0x80:
+			case 0x81:
+			case 0x82:
+			case 0x83:
+			case 0x84:
+			case 0x85:
+			case 0x86:
+			case 0x87:
+			case 0x88:
+			case 0x89:
+			case 0x8a:
+			case 0x8b:
+			case 0x8c:
+			case 0x8d:
+			case 0x8e:
+			case 0x8f:
+			case 0x90:
+			case 0x91:
+			case 0x92:
+			case 0x93:
+			case 0x94:
+			case 0x95:
+			case 0x96:
+			case 0x97:
+			case 0x98:
+			case 0x99:
+			case 0x9a:
+			case 0x9b:
+			case 0x9c:
+			case 0x9d:
+			case 0x9e:
+			case 0x9f:
+			case 0xa0:
+			case 0xa1:
+			case 0xa2:
+			case 0xa3:
+			case 0xa4:
+			case 0xa5:
+			case 0xa6:
+			case 0xa7:
+			case 0xa8:
+			case 0xa9:
+			case 0xaa:
+			case 0xab:
+			case 0xac:
+			case 0xad:
+			case 0xae:
+			case 0xaf:
+			case 0xb0:
+			case 0xb1:
+			case 0xb2:
+			case 0xb3:
+			case 0xb4:
+			case 0xb5:
+			case 0xb6:
+			case 0xb7:
+			case 0xb8:
+			case 0xb9:
+			case 0xba:
+			case 0xbb:
+			case 0xbc:
+			case 0xbd:
+			case 0xbe:
+			case 0xbf:
+			case 0xc0:
+			case 0xc1:
+			case 0xc2:
+			case 0xc3:
+			case 0xc4:
+			case 0xc5:
+			case 0xc6:
+			case 0xc7:
+			case 0xc8:
+			case 0xc9:
+			case 0xca:
+			case 0xcb:
+			case 0xcc:
+			case 0xcd:
+			case 0xce:
+			case 0xcf:
+			case 0xd0:
+			case 0xd1:
+			case 0xd2:
+			case 0xd3:
+			case 0xd4:
+			case 0xd5:
+			case 0xd6:
+			case 0xd7:
+			case 0xd8:
+			case 0xd9:
+			case 0xda:
+			case 0xdb:
+			case 0xdc:
+			case 0xdd:
+			case 0xde:
+			case 0xdf:
+			case 0xe0:
+			case 0xe1:
+			case 0xe2:
+			case 0xe3:
+			case 0xe4:
+			case 0xe5:
+			case 0xe6:
+			case 0xe7:
+			case 0xe8:
+			case 0xe9:
+			case 0xea:
+			case 0xeb:
+			case 0xec:
+			case 0xed:
+			case 0xee:
+			case 0xef:
+			case 0xf0:
+			case 0xf1:
+			case 0xf2:
+			case 0xf3:
+			case 0xf4:
+			case 0xf5:
+			case 0xf6:
+			case 0xf7:
+			case 0xf8:
+			case 0xf9:
+			case 0xfa:
+			case 0xfb:
+			case 0xfc:
+			case 0xfd:
+			case 0xfe:
+			case 0xff: state = S1; continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
@@ -478,7 +478,7 @@ z0(struct lx *lx)
 			lx_ungetc(lx, c); return TOK_CHAR;
 
 		case S2: /* e.g. "\x2f" */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case 'A':
 			case 'B':
 			case 'C':
@@ -573,7 +573,7 @@ z1(struct lx *lx)
 
 		switch (state) {
 		case S0: /* start */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '\x00':
 			case '\x01':
 			case '\x02':
@@ -702,134 +702,134 @@ z1(struct lx *lx)
 			case '}':
 			case '~':
 			case '\x7f':
-			case '\x80':
-			case '\x81':
-			case '\x82':
-			case '\x83':
-			case '\x84':
-			case '\x85':
-			case '\x86':
-			case '\x87':
-			case '\x88':
-			case '\x89':
-			case '\x8a':
-			case '\x8b':
-			case '\x8c':
-			case '\x8d':
-			case '\x8e':
-			case '\x8f':
-			case '\x90':
-			case '\x91':
-			case '\x92':
-			case '\x93':
-			case '\x94':
-			case '\x95':
-			case '\x96':
-			case '\x97':
-			case '\x98':
-			case '\x99':
-			case '\x9a':
-			case '\x9b':
-			case '\x9c':
-			case '\x9d':
-			case '\x9e':
-			case '\x9f':
-			case '\xa0':
-			case '\xa1':
-			case '\xa2':
-			case '\xa3':
-			case '\xa4':
-			case '\xa5':
-			case '\xa6':
-			case '\xa7':
-			case '\xa8':
-			case '\xa9':
-			case '\xaa':
-			case '\xab':
-			case '\xac':
-			case '\xad':
-			case '\xae':
-			case '\xaf':
-			case '\xb0':
-			case '\xb1':
-			case '\xb2':
-			case '\xb3':
-			case '\xb4':
-			case '\xb5':
-			case '\xb6':
-			case '\xb7':
-			case '\xb8':
-			case '\xb9':
-			case '\xba':
-			case '\xbb':
-			case '\xbc':
-			case '\xbd':
-			case '\xbe':
-			case '\xbf':
-			case '\xc0':
-			case '\xc1':
-			case '\xc2':
-			case '\xc3':
-			case '\xc4':
-			case '\xc5':
-			case '\xc6':
-			case '\xc7':
-			case '\xc8':
-			case '\xc9':
-			case '\xca':
-			case '\xcb':
-			case '\xcc':
-			case '\xcd':
-			case '\xce':
-			case '\xcf':
-			case '\xd0':
-			case '\xd1':
-			case '\xd2':
-			case '\xd3':
-			case '\xd4':
-			case '\xd5':
-			case '\xd6':
-			case '\xd7':
-			case '\xd8':
-			case '\xd9':
-			case '\xda':
-			case '\xdb':
-			case '\xdc':
-			case '\xdd':
-			case '\xde':
-			case '\xdf':
-			case '\xe0':
-			case '\xe1':
-			case '\xe2':
-			case '\xe3':
-			case '\xe4':
-			case '\xe5':
-			case '\xe6':
-			case '\xe7':
-			case '\xe8':
-			case '\xe9':
-			case '\xea':
-			case '\xeb':
-			case '\xec':
-			case '\xed':
-			case '\xee':
-			case '\xef':
-			case '\xf0':
-			case '\xf1':
-			case '\xf2':
-			case '\xf3':
-			case '\xf4':
-			case '\xf5':
-			case '\xf6':
-			case '\xf7':
-			case '\xf8':
-			case '\xf9':
-			case '\xfa':
-			case '\xfb':
-			case '\xfc':
-			case '\xfd':
-			case '\xfe':
-			case '\xff': state = S1; continue;
+			case 0x80:
+			case 0x81:
+			case 0x82:
+			case 0x83:
+			case 0x84:
+			case 0x85:
+			case 0x86:
+			case 0x87:
+			case 0x88:
+			case 0x89:
+			case 0x8a:
+			case 0x8b:
+			case 0x8c:
+			case 0x8d:
+			case 0x8e:
+			case 0x8f:
+			case 0x90:
+			case 0x91:
+			case 0x92:
+			case 0x93:
+			case 0x94:
+			case 0x95:
+			case 0x96:
+			case 0x97:
+			case 0x98:
+			case 0x99:
+			case 0x9a:
+			case 0x9b:
+			case 0x9c:
+			case 0x9d:
+			case 0x9e:
+			case 0x9f:
+			case 0xa0:
+			case 0xa1:
+			case 0xa2:
+			case 0xa3:
+			case 0xa4:
+			case 0xa5:
+			case 0xa6:
+			case 0xa7:
+			case 0xa8:
+			case 0xa9:
+			case 0xaa:
+			case 0xab:
+			case 0xac:
+			case 0xad:
+			case 0xae:
+			case 0xaf:
+			case 0xb0:
+			case 0xb1:
+			case 0xb2:
+			case 0xb3:
+			case 0xb4:
+			case 0xb5:
+			case 0xb6:
+			case 0xb7:
+			case 0xb8:
+			case 0xb9:
+			case 0xba:
+			case 0xbb:
+			case 0xbc:
+			case 0xbd:
+			case 0xbe:
+			case 0xbf:
+			case 0xc0:
+			case 0xc1:
+			case 0xc2:
+			case 0xc3:
+			case 0xc4:
+			case 0xc5:
+			case 0xc6:
+			case 0xc7:
+			case 0xc8:
+			case 0xc9:
+			case 0xca:
+			case 0xcb:
+			case 0xcc:
+			case 0xcd:
+			case 0xce:
+			case 0xcf:
+			case 0xd0:
+			case 0xd1:
+			case 0xd2:
+			case 0xd3:
+			case 0xd4:
+			case 0xd5:
+			case 0xd6:
+			case 0xd7:
+			case 0xd8:
+			case 0xd9:
+			case 0xda:
+			case 0xdb:
+			case 0xdc:
+			case 0xdd:
+			case 0xde:
+			case 0xdf:
+			case 0xe0:
+			case 0xe1:
+			case 0xe2:
+			case 0xe3:
+			case 0xe4:
+			case 0xe5:
+			case 0xe6:
+			case 0xe7:
+			case 0xe8:
+			case 0xe9:
+			case 0xea:
+			case 0xeb:
+			case 0xec:
+			case 0xed:
+			case 0xee:
+			case 0xef:
+			case 0xf0:
+			case 0xf1:
+			case 0xf2:
+			case 0xf3:
+			case 0xf4:
+			case 0xf5:
+			case 0xf6:
+			case 0xf7:
+			case 0xf8:
+			case 0xf9:
+			case 0xfa:
+			case 0xfb:
+			case 0xfc:
+			case 0xfd:
+			case 0xfe:
+			case 0xff: state = S1; continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
@@ -840,7 +840,7 @@ z1(struct lx *lx)
 			lx_ungetc(lx, c); return lx->z = z4, TOK_STR;
 
 		case S3: /* e.g. "\\" */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '"': state = S4; continue;
 			case '0':
 			case '1':
@@ -864,7 +864,7 @@ z1(struct lx *lx)
 			lx_ungetc(lx, c); return TOK_ESC;
 
 		case S5: /* e.g. "\\0" */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '0':
 			case '1':
 			case '2':
@@ -877,7 +877,7 @@ z1(struct lx *lx)
 			}
 
 		case S6: /* e.g. "\\x" */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '0':
 			case '1':
 			case '2':
@@ -904,7 +904,7 @@ z1(struct lx *lx)
 			}
 
 		case S7: /* e.g. "\\xa" */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '0':
 			case '1':
 			case '2':
@@ -973,7 +973,7 @@ z2(struct lx *lx)
 
 		switch (state) {
 		case S0: /* start */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '\x00':
 			case '\x01':
 			case '\x02':
@@ -1102,134 +1102,134 @@ z2(struct lx *lx)
 			case '}':
 			case '~':
 			case '\x7f':
-			case '\x80':
-			case '\x81':
-			case '\x82':
-			case '\x83':
-			case '\x84':
-			case '\x85':
-			case '\x86':
-			case '\x87':
-			case '\x88':
-			case '\x89':
-			case '\x8a':
-			case '\x8b':
-			case '\x8c':
-			case '\x8d':
-			case '\x8e':
-			case '\x8f':
-			case '\x90':
-			case '\x91':
-			case '\x92':
-			case '\x93':
-			case '\x94':
-			case '\x95':
-			case '\x96':
-			case '\x97':
-			case '\x98':
-			case '\x99':
-			case '\x9a':
-			case '\x9b':
-			case '\x9c':
-			case '\x9d':
-			case '\x9e':
-			case '\x9f':
-			case '\xa0':
-			case '\xa1':
-			case '\xa2':
-			case '\xa3':
-			case '\xa4':
-			case '\xa5':
-			case '\xa6':
-			case '\xa7':
-			case '\xa8':
-			case '\xa9':
-			case '\xaa':
-			case '\xab':
-			case '\xac':
-			case '\xad':
-			case '\xae':
-			case '\xaf':
-			case '\xb0':
-			case '\xb1':
-			case '\xb2':
-			case '\xb3':
-			case '\xb4':
-			case '\xb5':
-			case '\xb6':
-			case '\xb7':
-			case '\xb8':
-			case '\xb9':
-			case '\xba':
-			case '\xbb':
-			case '\xbc':
-			case '\xbd':
-			case '\xbe':
-			case '\xbf':
-			case '\xc0':
-			case '\xc1':
-			case '\xc2':
-			case '\xc3':
-			case '\xc4':
-			case '\xc5':
-			case '\xc6':
-			case '\xc7':
-			case '\xc8':
-			case '\xc9':
-			case '\xca':
-			case '\xcb':
-			case '\xcc':
-			case '\xcd':
-			case '\xce':
-			case '\xcf':
-			case '\xd0':
-			case '\xd1':
-			case '\xd2':
-			case '\xd3':
-			case '\xd4':
-			case '\xd5':
-			case '\xd6':
-			case '\xd7':
-			case '\xd8':
-			case '\xd9':
-			case '\xda':
-			case '\xdb':
-			case '\xdc':
-			case '\xdd':
-			case '\xde':
-			case '\xdf':
-			case '\xe0':
-			case '\xe1':
-			case '\xe2':
-			case '\xe3':
-			case '\xe4':
-			case '\xe5':
-			case '\xe6':
-			case '\xe7':
-			case '\xe8':
-			case '\xe9':
-			case '\xea':
-			case '\xeb':
-			case '\xec':
-			case '\xed':
-			case '\xee':
-			case '\xef':
-			case '\xf0':
-			case '\xf1':
-			case '\xf2':
-			case '\xf3':
-			case '\xf4':
-			case '\xf5':
-			case '\xf6':
-			case '\xf7':
-			case '\xf8':
-			case '\xf9':
-			case '\xfa':
-			case '\xfb':
-			case '\xfc':
-			case '\xfd':
-			case '\xfe':
-			case '\xff': state = S1; continue;
+			case 0x80:
+			case 0x81:
+			case 0x82:
+			case 0x83:
+			case 0x84:
+			case 0x85:
+			case 0x86:
+			case 0x87:
+			case 0x88:
+			case 0x89:
+			case 0x8a:
+			case 0x8b:
+			case 0x8c:
+			case 0x8d:
+			case 0x8e:
+			case 0x8f:
+			case 0x90:
+			case 0x91:
+			case 0x92:
+			case 0x93:
+			case 0x94:
+			case 0x95:
+			case 0x96:
+			case 0x97:
+			case 0x98:
+			case 0x99:
+			case 0x9a:
+			case 0x9b:
+			case 0x9c:
+			case 0x9d:
+			case 0x9e:
+			case 0x9f:
+			case 0xa0:
+			case 0xa1:
+			case 0xa2:
+			case 0xa3:
+			case 0xa4:
+			case 0xa5:
+			case 0xa6:
+			case 0xa7:
+			case 0xa8:
+			case 0xa9:
+			case 0xaa:
+			case 0xab:
+			case 0xac:
+			case 0xad:
+			case 0xae:
+			case 0xaf:
+			case 0xb0:
+			case 0xb1:
+			case 0xb2:
+			case 0xb3:
+			case 0xb4:
+			case 0xb5:
+			case 0xb6:
+			case 0xb7:
+			case 0xb8:
+			case 0xb9:
+			case 0xba:
+			case 0xbb:
+			case 0xbc:
+			case 0xbd:
+			case 0xbe:
+			case 0xbf:
+			case 0xc0:
+			case 0xc1:
+			case 0xc2:
+			case 0xc3:
+			case 0xc4:
+			case 0xc5:
+			case 0xc6:
+			case 0xc7:
+			case 0xc8:
+			case 0xc9:
+			case 0xca:
+			case 0xcb:
+			case 0xcc:
+			case 0xcd:
+			case 0xce:
+			case 0xcf:
+			case 0xd0:
+			case 0xd1:
+			case 0xd2:
+			case 0xd3:
+			case 0xd4:
+			case 0xd5:
+			case 0xd6:
+			case 0xd7:
+			case 0xd8:
+			case 0xd9:
+			case 0xda:
+			case 0xdb:
+			case 0xdc:
+			case 0xdd:
+			case 0xde:
+			case 0xdf:
+			case 0xe0:
+			case 0xe1:
+			case 0xe2:
+			case 0xe3:
+			case 0xe4:
+			case 0xe5:
+			case 0xe6:
+			case 0xe7:
+			case 0xe8:
+			case 0xe9:
+			case 0xea:
+			case 0xeb:
+			case 0xec:
+			case 0xed:
+			case 0xee:
+			case 0xef:
+			case 0xf0:
+			case 0xf1:
+			case 0xf2:
+			case 0xf3:
+			case 0xf4:
+			case 0xf5:
+			case 0xf6:
+			case 0xf7:
+			case 0xf8:
+			case 0xf9:
+			case 0xfa:
+			case 0xfb:
+			case 0xfc:
+			case 0xfd:
+			case 0xfe:
+			case 0xff: state = S1; continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
@@ -1288,7 +1288,7 @@ z3(struct lx *lx)
 
 		switch (state) {
 		case S0: /* start */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '\x00':
 			case '\x01':
 			case '\x02':
@@ -1417,134 +1417,134 @@ z3(struct lx *lx)
 			case '}':
 			case '~':
 			case '\x7f':
-			case '\x80':
-			case '\x81':
-			case '\x82':
-			case '\x83':
-			case '\x84':
-			case '\x85':
-			case '\x86':
-			case '\x87':
-			case '\x88':
-			case '\x89':
-			case '\x8a':
-			case '\x8b':
-			case '\x8c':
-			case '\x8d':
-			case '\x8e':
-			case '\x8f':
-			case '\x90':
-			case '\x91':
-			case '\x92':
-			case '\x93':
-			case '\x94':
-			case '\x95':
-			case '\x96':
-			case '\x97':
-			case '\x98':
-			case '\x99':
-			case '\x9a':
-			case '\x9b':
-			case '\x9c':
-			case '\x9d':
-			case '\x9e':
-			case '\x9f':
-			case '\xa0':
-			case '\xa1':
-			case '\xa2':
-			case '\xa3':
-			case '\xa4':
-			case '\xa5':
-			case '\xa6':
-			case '\xa7':
-			case '\xa8':
-			case '\xa9':
-			case '\xaa':
-			case '\xab':
-			case '\xac':
-			case '\xad':
-			case '\xae':
-			case '\xaf':
-			case '\xb0':
-			case '\xb1':
-			case '\xb2':
-			case '\xb3':
-			case '\xb4':
-			case '\xb5':
-			case '\xb6':
-			case '\xb7':
-			case '\xb8':
-			case '\xb9':
-			case '\xba':
-			case '\xbb':
-			case '\xbc':
-			case '\xbd':
-			case '\xbe':
-			case '\xbf':
-			case '\xc0':
-			case '\xc1':
-			case '\xc2':
-			case '\xc3':
-			case '\xc4':
-			case '\xc5':
-			case '\xc6':
-			case '\xc7':
-			case '\xc8':
-			case '\xc9':
-			case '\xca':
-			case '\xcb':
-			case '\xcc':
-			case '\xcd':
-			case '\xce':
-			case '\xcf':
-			case '\xd0':
-			case '\xd1':
-			case '\xd2':
-			case '\xd3':
-			case '\xd4':
-			case '\xd5':
-			case '\xd6':
-			case '\xd7':
-			case '\xd8':
-			case '\xd9':
-			case '\xda':
-			case '\xdb':
-			case '\xdc':
-			case '\xdd':
-			case '\xde':
-			case '\xdf':
-			case '\xe0':
-			case '\xe1':
-			case '\xe2':
-			case '\xe3':
-			case '\xe4':
-			case '\xe5':
-			case '\xe6':
-			case '\xe7':
-			case '\xe8':
-			case '\xe9':
-			case '\xea':
-			case '\xeb':
-			case '\xec':
-			case '\xed':
-			case '\xee':
-			case '\xef':
-			case '\xf0':
-			case '\xf1':
-			case '\xf2':
-			case '\xf3':
-			case '\xf4':
-			case '\xf5':
-			case '\xf6':
-			case '\xf7':
-			case '\xf8':
-			case '\xf9':
-			case '\xfa':
-			case '\xfb':
-			case '\xfc':
-			case '\xfd':
-			case '\xfe':
-			case '\xff': state = S1; continue;
+			case 0x80:
+			case 0x81:
+			case 0x82:
+			case 0x83:
+			case 0x84:
+			case 0x85:
+			case 0x86:
+			case 0x87:
+			case 0x88:
+			case 0x89:
+			case 0x8a:
+			case 0x8b:
+			case 0x8c:
+			case 0x8d:
+			case 0x8e:
+			case 0x8f:
+			case 0x90:
+			case 0x91:
+			case 0x92:
+			case 0x93:
+			case 0x94:
+			case 0x95:
+			case 0x96:
+			case 0x97:
+			case 0x98:
+			case 0x99:
+			case 0x9a:
+			case 0x9b:
+			case 0x9c:
+			case 0x9d:
+			case 0x9e:
+			case 0x9f:
+			case 0xa0:
+			case 0xa1:
+			case 0xa2:
+			case 0xa3:
+			case 0xa4:
+			case 0xa5:
+			case 0xa6:
+			case 0xa7:
+			case 0xa8:
+			case 0xa9:
+			case 0xaa:
+			case 0xab:
+			case 0xac:
+			case 0xad:
+			case 0xae:
+			case 0xaf:
+			case 0xb0:
+			case 0xb1:
+			case 0xb2:
+			case 0xb3:
+			case 0xb4:
+			case 0xb5:
+			case 0xb6:
+			case 0xb7:
+			case 0xb8:
+			case 0xb9:
+			case 0xba:
+			case 0xbb:
+			case 0xbc:
+			case 0xbd:
+			case 0xbe:
+			case 0xbf:
+			case 0xc0:
+			case 0xc1:
+			case 0xc2:
+			case 0xc3:
+			case 0xc4:
+			case 0xc5:
+			case 0xc6:
+			case 0xc7:
+			case 0xc8:
+			case 0xc9:
+			case 0xca:
+			case 0xcb:
+			case 0xcc:
+			case 0xcd:
+			case 0xce:
+			case 0xcf:
+			case 0xd0:
+			case 0xd1:
+			case 0xd2:
+			case 0xd3:
+			case 0xd4:
+			case 0xd5:
+			case 0xd6:
+			case 0xd7:
+			case 0xd8:
+			case 0xd9:
+			case 0xda:
+			case 0xdb:
+			case 0xdc:
+			case 0xdd:
+			case 0xde:
+			case 0xdf:
+			case 0xe0:
+			case 0xe1:
+			case 0xe2:
+			case 0xe3:
+			case 0xe4:
+			case 0xe5:
+			case 0xe6:
+			case 0xe7:
+			case 0xe8:
+			case 0xe9:
+			case 0xea:
+			case 0xeb:
+			case 0xec:
+			case 0xed:
+			case 0xee:
+			case 0xef:
+			case 0xf0:
+			case 0xf1:
+			case 0xf2:
+			case 0xf3:
+			case 0xf4:
+			case 0xf5:
+			case 0xf6:
+			case 0xf7:
+			case 0xf8:
+			case 0xf9:
+			case 0xfa:
+			case 0xfb:
+			case 0xfc:
+			case 0xfd:
+			case 0xfe:
+			case 0xff: state = S1; continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
@@ -1607,7 +1607,7 @@ z4(struct lx *lx)
 
 		switch (state) {
 		case S0: /* start */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '\t':
 			case '\n': state = S1; continue;
 			case '\r': state = S1; continue;
@@ -1691,7 +1691,7 @@ z4(struct lx *lx)
 			}
 
 		case S1: /* e.g. "\t" */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '\t':
 			case '\n': continue;
 			case '\r': continue;
@@ -1709,7 +1709,7 @@ z4(struct lx *lx)
 			lx_ungetc(lx, c); return lx->z = z3, lx->z(lx);
 
 		case S5: /* e.g. "$" */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case 'A':
 			case 'B':
 			case 'C':
@@ -1785,13 +1785,13 @@ z4(struct lx *lx)
 			lx_ungetc(lx, c); return TOK_CROSS;
 
 		case S12: /* e.g. "-" */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '>': state = S26; continue;
 			default:  lx_ungetc(lx, c); return TOK_DASH;
 			}
 
 		case S13: /* e.g. "." */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '.': state = S27; continue;
 			default:  lx_ungetc(lx, c); return TOK_DOT;
 			}
@@ -1809,7 +1809,7 @@ z4(struct lx *lx)
 			lx_ungetc(lx, c); return TOK_QMARK;
 
 		case S18: /* e.g. "a" */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '0':
 			case '1':
 			case '2':
@@ -1895,7 +1895,7 @@ z4(struct lx *lx)
 			lx_ungetc(lx, c); return TOK_TILDE;
 
 		case S25: /* e.g. "$a" */
-			switch (c) {
+			switch ((unsigned char) c) {
 			case '0':
 			case '1':
 			case '2':
