@@ -424,7 +424,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 		fprintf(f, "int fsm_main(int (*fsm_getc)(void *opaque), void *opaque) {\n");
 		fprintf(f, "\tint c;\n");
 		fprintf(f, "\n");
-		fprintf(f, "\tassert(getc != NULL);\n");
+		fprintf(f, "\tassert(fsm_getc != NULL);\n");
 		fprintf(f, "\n");
 		break;
 
