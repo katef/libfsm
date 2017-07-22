@@ -26,7 +26,7 @@ class_any_fsm(const struct fsm_options *opt)
 		}
 	}
 
-	fsm_addedge_any(fsm, s[0], s[1]);
+	if (!fsm_addedge_any(fsm, s[0], s[1])) { goto error; }
 
 	fsm_setstart(fsm, s[0]);
 	fsm_setend(fsm, s[1], 1);

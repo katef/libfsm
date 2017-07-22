@@ -26,11 +26,9 @@ class_space_fsm(const struct fsm_options *opt)
 		}
 	}
 
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '\t')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '\n')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '\v')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '\f')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '\r')) { goto error; }
+	for (i = 0x09; i <= 0x0d; i++) {
+		if (!fsm_addedge_literal(fsm, s[0], s[1], i)) { goto error; }
+	}
 	if (!fsm_addedge_literal(fsm, s[0], s[1], ' ')) { goto error; }
 
 	fsm_setstart(fsm, s[0]);
