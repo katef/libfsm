@@ -9,6 +9,35 @@
 
 struct fsm_options;
 
+struct fsm *utf8_Cf_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Co_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Cs_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Ll_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Lm_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Lo_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Lt_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Lu_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Mc_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Me_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Mn_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Nd_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Nl_fsm(const struct fsm_options *opt);
+struct fsm *utf8_No_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Pc_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Pd_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Pe_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Pf_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Pi_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Po_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Ps_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Sc_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Sk_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Sm_fsm(const struct fsm_options *opt);
+struct fsm *utf8_So_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Zl_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Zp_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Zs_fsm(const struct fsm_options *opt);
+
 struct fsm *class_alnum_fsm(const struct fsm_options *opt);
 struct fsm *class_alpha_fsm(const struct fsm_options *opt);
 struct fsm *class_any_fsm(const struct fsm_options *opt);

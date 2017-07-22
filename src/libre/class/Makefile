@@ -1,5 +1,20 @@
 .include "../../../share/mk/top.mk"
 
+UCD ?= share/ucd
+UTF8DFA ?= examples/utf8dfa/utf8dfa
+
+.for cat in ${UTF8_CAT}
+
+src/libre/class/utf8_${cat}.c:
+	cat ${UCD}/UnicodeData.txt \
+	| awk -F';' -v cat='${cat}' '$$3 == cat { print $$1 }' \
+	| ${UTF8DFA} -e utf8_${cat}_ \
+	> ${.TARGET}
+
+SRC += src/libre/class/utf8_${cat}.c
+
+.endfor
+
 CLASS_alnum  = [[:alpha:][:digit:]]
 CLASS_alpha  = [[:upper:][:lower:]]
 CLASS_any    = .
