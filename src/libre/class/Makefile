@@ -3,6 +3,23 @@
 UCD ?= share/ucd
 UTF8DFA ?= examples/utf8dfa/utf8dfa
 
+# XXX: Cc excluded
+UTF8_CAT != cat ${UCD}/UnicodeData.txt \
+	| cut -d';' -f3 | sort | uniq | grep -v 'Cc'
+
+.for group in ${UTF8_CAT:C/(.)./\1/:u}
+
+# This could be faster if we kept the minimized DFA for each category
+src/libre/class/utf8_${group}.c:
+	cat ${UCD}/UnicodeData.txt \
+	| awk -F';' -v group='^${group}' '$$3 ~ group { print $$1 }' \
+	| ${UTF8DFA} -e utf8_${group}_ \
+	> ${.TARGET}
+
+SRC += src/libre/class/utf8_${group}.c
+
+.endfor
+
 .for cat in ${UTF8_CAT}
 
 src/libre/class/utf8_${cat}.c:

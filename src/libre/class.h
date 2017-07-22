@@ -9,6 +9,14 @@
 
 struct fsm_options;
 
+struct fsm *utf8_C_fsm(const struct fsm_options *opt);
+struct fsm *utf8_L_fsm(const struct fsm_options *opt);
+struct fsm *utf8_M_fsm(const struct fsm_options *opt);
+struct fsm *utf8_N_fsm(const struct fsm_options *opt);
+struct fsm *utf8_P_fsm(const struct fsm_options *opt);
+struct fsm *utf8_S_fsm(const struct fsm_options *opt);
+struct fsm *utf8_Z_fsm(const struct fsm_options *opt);
+
 struct fsm *utf8_Cf_fsm(const struct fsm_options *opt);
 struct fsm *utf8_Co_fsm(const struct fsm_options *opt);
 struct fsm *utf8_Cs_fsm(const struct fsm_options *opt);
