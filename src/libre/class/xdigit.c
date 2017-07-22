@@ -26,28 +26,15 @@ class_xdigit_fsm(const struct fsm_options *opt)
 		}
 	}
 
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '0')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '1')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '2')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '3')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '4')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '5')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '6')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '7')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '8')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], '9')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'A')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'B')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'C')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'D')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'E')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'F')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'a')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'b')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'c')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'd')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'e')) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'f')) { goto error; }
+	for (i = 0x30; i <= 0x39; i++) { /* '0' .. '9' */
+		if (!fsm_addedge_literal(fsm, s[0], s[1], i)) { goto error; }
+	}
+	for (i = 0x41; i <= 0x46; i++) { /* 'A' .. 'F' */
+		if (!fsm_addedge_literal(fsm, s[0], s[1], i)) { goto error; }
+	}
+	for (i = 0x61; i <= 0x66; i++) { /* 'a' .. 'f' */
+		if (!fsm_addedge_literal(fsm, s[0], s[1], i)) { goto error; }
+	}
 
 	fsm_setstart(fsm, s[0]);
 	fsm_setend(fsm, s[1], 1);
