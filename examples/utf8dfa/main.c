@@ -4,6 +4,10 @@
  * See LICENCE for the full copyright terms.
  */
 
+#define _POSIX_C_SOURCE 2
+
+#include <unistd.h>
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +16,9 @@
 
 #include <fsm/fsm.h>
 #include <fsm/out.h>
+#include <fsm/options.h>
+
+static struct fsm_options opt;
 
 static int
 utf8(int cp, char c[])
@@ -88,11 +95,34 @@ codepoint(struct fsm *fsm, int cp)
 	fsm_setend(fsm, x, 1);
 }
 
-int main(void) {
+int
+main(int argc, char *argv[])
+{
 	struct fsm *fsm;
 	struct fsm_state *start;
 
-	fsm = fsm_new(NULL);
+	{
+		int c;
+
+		while (c = getopt(argc, argv, "e:"), c != -1) {
+			switch (c) {
+			case 'e': opt.prefix = optarg; break;
+
+			case '?':
+			default:
+				return EXIT_FAILURE;
+			}
+		}
+
+		argc -= optind;
+		argv += optind;
+	}
+
+	if (argc > 0) {
+		return EXIT_FAILURE;
+	}
+
+	fsm = fsm_new(&opt);
 	if (fsm == NULL) {
 		perror("fsm_new");
 		exit(1);
@@ -145,8 +175,6 @@ int main(void) {
 		perror("fsm_minimise");
 		exit(1);
 	}
-
-	/* TODO: set prefix, output language, etc */
 
 	fsm_print(fsm, stdout, FSM_OUT_API);
 
