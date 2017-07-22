@@ -78,6 +78,22 @@ escputc(int c, FILE *f)
 }
 
 /* TODO: centralise */
+static void
+escputchar(int c, FILE *f)
+{
+	/* TODO: or if always_hex */
+
+	if (c > SCHAR_MAX) {
+		fprintf(f, "0x%02x", (unsigned char) c);
+		return;
+	}
+
+	fprintf(f, "'");
+	escputc(c, f);
+	fprintf(f, "'");
+}
+
+/* TODO: centralise */
 static const struct fsm_state *
 findany(const struct fsm_state *state)
 {
@@ -216,10 +232,10 @@ fsm_out_api(const struct fsm *fsm, FILE *f)
 					break;
 
 				default:
-					fprintf(f, "\tif (!fsm_addedge_literal(fsm, s[%u], s[%u], '",
+					fprintf(f, "\tif (!fsm_addedge_literal(fsm, s[%u], s[%u], ",
 						indexof(fsm, s), indexof(fsm, st));
-					escputc(e->symbol, f);
-					fprintf(f, "')) { goto error; }\n");
+					escputchar(e->symbol, f);
+					fprintf(f, ")) { goto error; }\n");
 					break;
 				}
 			}
