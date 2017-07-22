@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <limits.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 #include <adt/set.h>
@@ -21,6 +22,21 @@
 #include "libfsm/internal.h"
 
 #include "libfsm/out.h"
+
+static int
+rangeclass(unsigned char x, unsigned char y)
+{
+	int (*a[])(int c) = { isupper, islower, isdigit };
+	size_t i;
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (a[i](x) && a[i](y)) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
 
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)
@@ -93,63 +109,11 @@ escputchar(int c, FILE *f)
 	fprintf(f, "'");
 }
 
-/* TODO: centralise */
-static const struct fsm_state *
-findany(const struct fsm_state *state)
-{
-	struct fsm_state *f, *s;
-	struct fsm_edge *e;
-	struct set_iter it;
-	struct bm bm = { 0 };
-
-	assert(state != NULL);
-
-	e = set_first(state->edges, &it);
-	if (e == NULL) {
-		return NULL;
-	}
-
-	/* if the first edge is not the first character,
-	 * then we can't possibly have an "any" transition */
-	if (e->symbol != '\0') {
-		return NULL;
-	}
-
-	f = set_first(e->sl, &it);
-	if (f == NULL) {
-		return NULL;
-	}
-
-	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
-		if (e->symbol > UCHAR_MAX) {
-			return NULL;
-		}
-
-		if (set_empty(e->sl)) {
-			return NULL;
-		}
-
-		s = set_only(e->sl);
-		if (f != s) {
-			return NULL;
-		}
-
-		bm_set(&bm, e->symbol);
-	}
-
-	if (bm_count(&bm) != UCHAR_MAX + 1U) {
-		return NULL;
-	}
-
-	assert(f != NULL);
-
-	return f;
-}
-
 void
 fsm_out_api(const struct fsm *fsm, FILE *f)
 {
 	struct fsm_state *s, *start;
+	struct bm *a; /* indexed by "to" state number */
 	unsigned n;
 
 	assert(fsm != NULL);
@@ -203,44 +167,84 @@ fsm_out_api(const struct fsm *fsm, FILE *f)
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 
+	a = malloc(n * sizeof *a);
+	if (a == NULL) {
+		/* XXX */
+		return;
+	}
+
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		struct fsm_edge *e;
-		struct set_iter it;
+		struct fsm_state *st;
+		struct set_iter it, jt;
+		unsigned int from, to;
+		unsigned int i;
 
-		{
-			const struct fsm_state *a;
+		from = indexof(fsm, s);
 
-			a = findany(s);
-			if (a != NULL) {
-				fprintf(f, "\tfsm_addedge_any(fsm, s[%u], s[%u]);\n",
-					indexof(fsm, s), indexof(fsm, a));
-				continue;
-			}
+		for (i = 0; i < n; i++) {
+			bm_clear(&a[i]);
 		}
 
 		for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
-			struct fsm_state *st;
-			struct set_iter jt;
-
 			for (st = set_first(e->sl, &jt); st != NULL; st = set_next(&jt)) {
 				assert(st != NULL);
 
-				switch (e->symbol) {
-				case FSM_EDGE_EPSILON:
-					fprintf(f, "\tif (!fsm_addedge_epsilon(fsm, s[%u], s[%u])) { goto error; {\n",
-						indexof(fsm, s), indexof(fsm, st));
-					break;
+				to = indexof(fsm, st);
 
-				default:
+				if (e->symbol == FSM_EDGE_EPSILON) {
+					fprintf(f, "\tif (!fsm_addedge_epsilon(fsm, s[%u], s[%u])) { goto error; }\n",
+						from, to);
+					continue;
+				}
+
+				bm_set(&a[indexof(fsm, st)], e->symbol);
+			}
+		}
+
+		for (i = 0; i < n; i++) {
+			int hi, lo;
+
+			to = i;
+
+			hi = -1;
+
+			for (;;) {
+				/* start of range */
+				lo = bm_next(&a[to], hi, 1);
+				if (lo > UCHAR_MAX) {
+						break;
+				}
+
+				/* end of range */
+				hi = bm_next(&a[to], lo, 0);
+
+				if (lo == 0x00 && hi == UCHAR_MAX + 1) {
+					fprintf(f, "\tif (!fsm_addedge_any(fsm, s[%u], s[%u]))",
+						from, to);
+					fprintf(f, " { goto error; }\n");
+				} else if (lo == hi - 1) {
 					fprintf(f, "\tif (!fsm_addedge_literal(fsm, s[%u], s[%u], ",
-						indexof(fsm, s), indexof(fsm, st));
-					escputchar(e->symbol, f);
+						from, to);
+					escputchar(lo, f);
 					fprintf(f, ")) { goto error; }\n");
-					break;
+				} else {
+					fprintf(f, "\tfor (i = 0x%02x; i <= 0x%02x; i++) {",
+						(unsigned int) lo, (unsigned int) hi - 1);
+					if (rangeclass(lo, hi - 1)) {
+						fprintf(f, " /* '%c' .. '%c' */", (unsigned char) lo, (unsigned char) hi - 1);
+					}
+					fprintf(f, "\n");
+					fprintf(f, "\t\tif (!fsm_addedge_literal(fsm, s[%u], s[%u], i))",
+						from, to);
+					fprintf(f, " { goto error; }\n");
+					fprintf(f, "\t}\n");
 				}
 			}
 		}
 	}
+
+	free(a);
 
 	fprintf(f, "\n");
 
