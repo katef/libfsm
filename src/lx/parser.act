@@ -63,6 +63,8 @@
 	typedef struct ast_zone *    zone;
 	typedef struct ast_mapping * mapping;
 
+	static unsigned int nmappings;
+
 	struct act_state {
 		enum lx_token lex_tok;
 		enum lx_token lex_tok_save;
@@ -124,7 +126,6 @@
 		return a->len--, *a->p++;
 	}
 
-	static size_t nmappings;
 @}, @{
 
 	#include <stdio.h>
@@ -465,7 +466,7 @@
 
 		if (print_progress) {
 			if (important(nmappings)) {
-				fprintf(stderr, " m%zu", nmappings);
+				fprintf(stderr, " m%u", nmappings);
 			}
 			nmappings++;
 		}
