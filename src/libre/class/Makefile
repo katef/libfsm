@@ -50,6 +50,41 @@ SRC += src/libre/class/utf8_${cat}.c
 
 .endfor
 
+src/libre/class/utf8_private.c:
+	printf "F0000..FFFFD\n100000..10FFFD\n" \
+	| ${UTF8DFA} -e utf8_private_ \
+	> ${.TARGET}
+
+SRC += src/libre/class/utf8_private.c
+
+# Plane 15/16 private use range start/end explicitly excluded here
+src/libre/class/utf8_assigned.c:
+	cat ${UCD}/UnicodeData.txt \
+	| grep -v -E '^(F0000|FFFFD|100000|10FFFD)$$' \
+	| cut -d';' -f1 \
+	| ${UTF8DFA} -e utf8_assigned_ \
+	> ${.TARGET}
+
+SRC += src/libre/class/utf8_assigned.c
+
+# borrowed from https://www.w3.org/International/questions/qa-forms-utf-8
+${BUILD}/src/libre/class/utf8_all.re:
+	echo -n > ${.TARGET}
+	echo -n '[\x09\x0A\x0D\x20-\x7E]'            >> ${.TARGET} # ASCII
+	echo -n '|[\xC2-\xDF][\x80-\xBF]'            >> ${.TARGET} # non-overlong 2-byte
+	echo -n '|\xE0[\xA0-\xBF][\x80-\xBF]'        >> ${.TARGET} # excluding overlongs
+	echo -n '|[\xE1-\xEC\xEE\xEF][\x80-\xBF]{2}' >> ${.TARGET} # straight 3-byte
+	echo -n '|\xED[\x80-\x9F][\x80-\xBF]'        >> ${.TARGET} # excluding surrogates
+	echo -n '|\xF0[\x90-\xBF][\x80-\xBF]{2}'     >> ${.TARGET} # planes 1-3
+	echo -n '|[\xF1-\xF3][\x80-\xBF]{3}'         >> ${.TARGET} # planes 4-15
+	echo -n '|\xF4[\x80-\x8F][\x80-\xBF]{2}'     >> ${.TARGET}
+
+src/libre/class/utf8_all.c: ${BUILD}/src/libre/class/utf8_all.re
+	${RE} -pl api -e utf8_all_ -y ${BUILD}/src/libre/class/utf8_all.re \
+	> ${.TARGET}
+
+SRC += src/libre/class/utf8_all.c
+
 CLASS_alnum  = [[:alpha:][:digit:]]
 CLASS_alpha  = [[:upper:][:lower:]]
 CLASS_any    = .
