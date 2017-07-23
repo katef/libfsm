@@ -3,10 +3,10 @@
 UCD ?= share/ucd
 UTF8DFA ?= examples/utf8dfa/utf8dfa
 
-UTF8_SCRIPT != cat ${UCD}/Scripts.txt \
+UNI_SCRIPT != cat ${UCD}/Scripts.txt \
 	| sed 's/\#.*//' | cut -d';' -f2 | sort | uniq
 
-.for script in ${UTF8_SCRIPT}
+.for script in ${UNI_SCRIPT}
 
 src/libre/class/utf8_${script}.c:
 	cat ${UCD}/Scripts.txt \
@@ -22,10 +22,10 @@ SRC += src/libre/class/utf8_${script}.c
 .endfor
 
 # XXX: Cc excluded
-UTF8_CAT != cat ${UCD}/UnicodeData.txt \
+UNI_CAT != cat ${UCD}/UnicodeData.txt \
 	| cut -d';' -f3 | sort | uniq | grep -v 'Cc'
 
-.for group in ${UTF8_CAT:C/(.)./\1/:u}
+.for group in ${UNI_CAT:C/(.)./\1/:u}
 
 # This could be faster if we kept the minimized DFA for each category
 src/libre/class/utf8_${group}.c:
@@ -38,7 +38,7 @@ SRC += src/libre/class/utf8_${group}.c
 
 .endfor
 
-.for cat in ${UTF8_CAT}
+.for cat in ${UNI_CAT}
 
 src/libre/class/utf8_${cat}.c:
 	cat ${UCD}/UnicodeData.txt \
