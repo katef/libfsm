@@ -77,6 +77,25 @@ SRC += src/libre/class/${class}.c
 
 .endfor
 
+gen:: src/libre/class.h
+src/libre/class.h:
+	printf "/* generated */\n" > ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "struct fsm_options;\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "#ifndef RE_CLASS_H\n" >> ${.TARGET}
+	printf "#define RE_CLASS_H\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	for class in ${SRC:Msrc/libre/class/*.c:T:R:Mutf8_*}; do \
+		printf "struct fsm *%s_fsm(const struct fsm_options *);\n" $${class}; \
+	done >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	for class in ${SRC:Msrc/libre/class/*.c:T:R:Nutf8_*}; do \
+		printf "struct fsm *%s_fsm(const struct fsm_options *);\n" class_$${class}; \
+	done >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "#endif\n" >> ${.TARGET}
+
 .for src in ${SRC:Msrc/libre/class/*.c}
 gen:: ${src}
 .endfor
