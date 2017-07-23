@@ -335,7 +335,7 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 	fprintf(f, "\t}\n");
 }
 
-int
+static int
 fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 	const char *cp,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
@@ -404,14 +404,19 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 
 	/* TODO: pass in %s prefix (default to "fsm_") */
 
-	switch (fsm->opt->io) {
-	case FSM_IO_GETC: cp = "c";  break;
-	case FSM_IO_STR:  cp = "*p"; break;
-	case FSM_IO_PAIR: cp = "*p"; break;
+	if (fsm->opt->cp != NULL) {
+		cp = fsm->opt->cp;
+	} else {
+		switch (fsm->opt->io) {
+		case FSM_IO_GETC: cp = "c";  break;
+		case FSM_IO_STR:  cp = "*p"; break;
+		case FSM_IO_PAIR: cp = "*p"; break;
+		}
 	}
 
 	if (fsm->opt->fragment) {
-		(void) fsm_out_cfrag(fsm, f, cp, leaf, NULL);
+		(void) fsm_out_cfrag(fsm, f, cp,
+			fsm->opt->leaf != NULL ? fsm->opt->leaf : leaf, fsm->opt->leaf_opaque);
 		return;
 	}
 
@@ -470,7 +475,8 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 		break;
 	}
 
-	(void) fsm_out_cfrag(fsm, f, cp, leaf, NULL);
+	(void) fsm_out_cfrag(fsm, f, cp,
+		fsm->opt->leaf != NULL ? fsm->opt->leaf : leaf, fsm->opt->leaf_opaque);
 
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");

@@ -43,8 +43,7 @@
 #include <fsm/out.h>
 #include <fsm/options.h>
 #include <fsm/pred.h>
-
-#include "../../src/libfsm/out.h" /* XXX */
+#include <fsm/out.h>
 
 #include "tree.h"
 
@@ -670,9 +669,11 @@ main(int argc, char **argv)
 	}
 
 	if (oc) {
-		static const char *cp = "c";
-		/* XXX: This should be possible without private out.h. */
-		fsm_out_cfrag(fsm, stdout, cp, leaf, NULL);
+		opt.fragment    = 1;
+		opt.cp          = "c";
+		opt.leaf        = leaf;
+		opt.leaf_opaque = NULL;
+		fsm_print(fsm, stdout, FSM_OUT_C);
 	} else if (odot) {
 		fsm_print(fsm, stdout, FSM_OUT_DOT);
 	}

@@ -46,6 +46,13 @@ struct fsm_options {
 	/* a prefix for namespacing generated identifiers. NULL if not required. */
 	const char *prefix;
 
+	/* character pointer, for C code fragment output. NULL for the default. */
+	const char *cp;
+
+	/* TODO: explain. for C code fragment output */
+	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *);
+	void *leaf_opaque;
+
 	/* TODO: explain */
 	void (*carryopaque)(const struct fsm_state **, size_t,
 		struct fsm *, struct fsm_state *);
