@@ -3,6 +3,24 @@
 UCD ?= share/ucd
 UTF8DFA ?= examples/utf8dfa/utf8dfa
 
+UTF8_SCRIPT != cat ${UCD}/Scripts.txt \
+	| sed 's/\#.*//' | cut -d';' -f2 | sort | uniq
+
+.for script in ${UTF8_SCRIPT}
+
+src/libre/class/utf8_${script}.c:
+	cat ${UCD}/Scripts.txt \
+	| sed 's/\#.*//' \
+	| tr -d ' ' \
+	| grep -v '^$$' \
+	| awk -F';' -v script='^${script}' '$$2 ~ script { print $$1 }' \
+	| ${UTF8DFA} -e utf8_${script}_ \
+	> ${.TARGET}
+
+SRC += src/libre/class/utf8_${script}.c
+
+.endfor
+
 # XXX: Cc excluded
 UTF8_CAT != cat ${UCD}/UnicodeData.txt \
 	| cut -d';' -f3 | sort | uniq | grep -v 'Cc'
