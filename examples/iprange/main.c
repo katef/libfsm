@@ -45,7 +45,6 @@
 #include <fsm/pred.h>
 
 #include "../../src/libfsm/out.h" /* XXX */
-#include "../../src/libfsm/internal.h" /* XXX */
 
 #include "tree.h"
 
@@ -471,16 +470,6 @@ carryopaque(const struct fsm_state **set, size_t n,
 	}
 }
 
-const char *
-nl(struct fsm_state *s)
-{
-	struct record *r;
-	struct fsm hack;
-
-	r = fsm_getopaque(&hack, s);
-	return r->rec;
-}
-
 static int
 leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 	const void *opaque)
@@ -515,7 +504,6 @@ main(int argc, char **argv)
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
 	opt.case_ranges       = 1;
-	/* opt.opaque_string     = nl; */
 
 	while (c = getopt(argc, argv, "46f:l:Q"), c != -1) {
 		switch (c) {
