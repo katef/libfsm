@@ -34,7 +34,7 @@ print_set(const char *prefix, const struct set *s)
 		return;
 	}
 
-	fprintf(stderr, "\t%zu of %zu\n", s->i, s->n);
+	fprintf(stderr, "\t%lu of %lu\n", (unsigned long) s->i, (unsigned long) s->n);
 	fprintf(stderr, "\t");
 	for (i = 0; i < s->i; i++) {
 		fprintf(stderr, "%p ", (void *) s->a[i]);
