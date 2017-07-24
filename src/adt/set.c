@@ -20,28 +20,6 @@ struct set {
 	int (*cmp)(const void *, const void *);
 };
 
-static void
-print_set(const char *prefix, const struct set *s)
-{
-	size_t i;
-
-	assert(prefix != NULL);
-
-	fprintf(stderr, "%s (%p):\n", prefix, (void *)s);
-
-	if (set_empty(s)) {
-		fprintf(stderr, "\tempty\n");
-		return;
-	}
-
-	fprintf(stderr, "\t%lu of %lu\n", (unsigned long) s->i, (unsigned long) s->n);
-	fprintf(stderr, "\t");
-	for (i = 0; i < s->i; i++) {
-		fprintf(stderr, "%p ", (void *) s->a[i]);
-	}
-	fprintf(stderr, "\n");
-}
-
 /*
  * Return where an item would be, if it were inserted
  */
