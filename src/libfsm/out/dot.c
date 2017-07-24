@@ -41,6 +41,14 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 }
 
 static int
+escputc_hex(int c, FILE *f)
+{
+	assert(f != NULL);
+
+	return fprintf(f, "\\x%02x", (unsigned char) c); /* for humans */
+}
+
+static int
 escputc(int c, FILE *f)
 {
 	size_t i;
@@ -156,7 +164,11 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 					indexof(fsm, st));
 
-				escputc(e->symbol, f);
+				if (fsm->opt->always_hex) {
+					escputc_hex(e->symbol, f);
+				} else {
+					escputc(e->symbol, f);
+				}
 
 				fprintf(f, "> ];\n");
 			}
@@ -214,7 +226,8 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, st));
 
-			(void) bm_print(f, &bm, 0, escputc);
+			(void) bm_print(f, &bm, 0,
+				fsm->opt->always_hex ? escputc_hex: escputc);
 
 			fprintf(f, "> ];\n");
 		}
@@ -235,7 +248,11 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, st));
 
-			escputc(e->symbol, f);
+			if (fsm->opt->always_hex) {
+				escputc_hex(e->symbol, f);
+			} else {
+				escputc(e->symbol, f);
+			}
 
 			fprintf(f, "> ];\n");
 		}

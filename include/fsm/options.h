@@ -40,6 +40,11 @@ struct fsm_options {
 	 */
 	unsigned int case_ranges:1;
 
+	/* boolean: true indicates to always use hex escape sequences, rather than
+	 * printable characters. This better suits binary data.
+	 */
+	unsigned int always_hex:1;
+
 	/* for generated code, what kind of I/O API to generate */
 	enum fsm_io io;
 

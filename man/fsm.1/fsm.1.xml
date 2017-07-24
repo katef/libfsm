@@ -26,6 +26,7 @@
 	<!ENTITY c.opt "<option>-c</option>">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
 	<!ENTITY k.opt "<option>-k</option>&nbsp;&io.arg;">
+	<!ENTITY X.opt "<option>-X</option>">
 
 	<!ENTITY d.opt "<option>-d</option>">
 	<!ENTITY l.opt "<option>-l</option>&nbsp;&lang.arg;">
@@ -80,6 +81,7 @@
 			<arg choice="opt">&a.opt;</arg>
 			<arg choice="opt">&c.opt;</arg>
 			<arg choice="opt">&w.opt;</arg>
+			<arg choice="opt">&X.opt;</arg>
 			<arg choice="opt">&e.opt;</arg>
 			<arg choice="opt">&k.opt;</arg>
 		</cmdsynopsis>
@@ -176,6 +178,16 @@
 					<para>Output a fragment,
 						per the <code>fragment</code> option for &fsm_print.3;.
 						The default is to output a complete file.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&X.opt;</term>
+
+				<listitem>
+					<para>Always encode byte values in hexadecimal,
+						per the <code>always_hex</code> option for &fsm_print.3;.
+						The default is to only use hex for non-printable characters.</para>
 				</listitem>
 			</varlistentry>
 

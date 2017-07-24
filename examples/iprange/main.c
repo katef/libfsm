@@ -512,6 +512,7 @@ main(int argc, char **argv)
 	int c;
 
 	opt.prefix            = NULL;
+	opt.always_hex        = 1;
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
 	opt.case_ranges       = 1;

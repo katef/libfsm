@@ -43,7 +43,7 @@ usage(void)
 {
 	fprintf(stderr, "usage: re    [-r <dialect>] [-niusyz] [-x] <re> ... [ <text> | -- <text> ... ]\n");
 	fprintf(stderr, "       re    [-r <dialect>] [-niusyz] {-q <query>} <re> ...\n");
-	fprintf(stderr, "       re -p [-r <dialect>] [-niusyz] [-l <language>] [-awc] [-k <io>] [-e <prefix>] <re> ...\n");
+	fprintf(stderr, "       re -p [-r <dialect>] [-niusyz] [-l <language>] [-acwX] [-k <io>] [-e <prefix>] <re> ...\n");
 	fprintf(stderr, "       re -m [-r <dialect>] [-niusyz] <re> ...\n");
 	fprintf(stderr, "       re -h\n");
 }
@@ -367,11 +367,12 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwe:k:" "i" "sq:r:l:" "upmnxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:k:" "i" "sq:r:l:" "upmnxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
 			case 'w': opt.fragment          = 1;          break;
+			case 'X': opt.always_hex        = 1;          break;
 			case 'e': opt.prefix            = optarg;     break;
 			case 'k': opt.io                = io(optarg); break;
 

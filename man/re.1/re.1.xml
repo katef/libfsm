@@ -25,8 +25,9 @@
 	<!ENTITY q.opt "<option>-q</option>&nbsp;&query.arg;">
 
 	<!ENTITY a.opt "<option>-a</option>">
-	<!ENTITY w.opt "<option>-w</option>">
 	<!ENTITY c.opt "<option>-c</option>">
+	<!ENTITY w.opt "<option>-w</option>">
+	<!ENTITY X.opt "<option>-X</option>">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
 
 	<!ENTITY d.opt "<option>-d</option>">
@@ -87,8 +88,9 @@ query
 			</group>
 
 			<arg choice="opt">&a.opt;</arg>
-			<arg choice="opt">&w.opt;</arg>
 			<arg choice="opt">&c.opt;</arg>
+			<arg choice="opt">&w.opt;</arg>
+			<arg choice="opt">&X.opt;</arg>
 			<arg choice="opt">&e.opt;</arg>
 
 			<arg choice="opt">&l.opt;</arg>
@@ -245,6 +247,16 @@ group (for dialects which have them) (rather than a "whole" regexp)
 					<para>Output a fragment,
 						per the <code>fragment</code> option for &fsm_print.3;.
 						The default is to output a complete file.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&X.opt;</term>
+
+				<listitem>
+					<para>Always encode byte values in hexadecimal,
+						per the <code>always_hex</code> option for &fsm_print.3;.
+						The default is to only use hex for non-printable characters.</para>
 				</listitem>
 			</varlistentry>
 

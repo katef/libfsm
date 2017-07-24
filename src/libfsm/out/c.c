@@ -43,7 +43,7 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 
 /* TODO: centralise */
 static int
-escputc(int c, FILE *f)
+escputc(const struct fsm_options *opt, int c, FILE *f)
 {
 	size_t i;
 
@@ -63,8 +63,13 @@ escputc(int c, FILE *f)
 		{ '\v', "\\v"  }
 	};
 
+	assert(opt != NULL);
 	assert(c != FSM_EDGE_EPSILON);
 	assert(f != NULL);
+
+	if (opt->always_hex) {
+		return fprintf(f, "\\x%02x", (unsigned char) c);
+	}
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (a[i].c == c) {
@@ -87,34 +92,36 @@ escputc(int c, FILE *f)
 
 /* TODO: centralise */
 static void
-escputchar(int c, FILE *f)
+escputchar(const struct fsm_options *opt, int c, FILE *f)
 {
-	/* TODO: or if always_hex */
+	assert(opt != NULL);
+	assert(f != NULL);
 
-	if (c > SCHAR_MAX) {
+	if (opt->always_hex || c > SCHAR_MAX) {
 		fprintf(f, "0x%02x", (unsigned char) c);
 		return;
 	}
 
 	fprintf(f, "'");
-	escputc(c, f);
+	escputc(opt, c, f);
 	fprintf(f, "'");
 }
 
 /* TODO: centralise, maybe with callback */
 static int
-escputs(FILE *f, const char *s)
+escputs(const struct fsm_options *opt, FILE *f, const char *s)
 {
 	const char *p;
 	int r, n;
 
+	assert(opt != NULL);
 	assert(f != NULL);
 	assert(s != NULL);
 
 	n = 0;
 
 	for (p = s; *p != '\0'; p++) {
-		r = escputc(*p, f);
+		r = escputc(opt, *p, f);
 		if (r == -1) {
 			return -1;
 		}
@@ -216,7 +223,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 			}
 
 			fprintf(f, "\t\t\tcase ");
-			escputchar(e->symbol, f);
+			escputchar(fsm->opt, e->symbol, f);
 
 			if (fsm->opt->case_ranges) {
 				const struct fsm_edge *ne;
@@ -234,7 +241,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 
 				if (q - p) {
 					fprintf(f, " ... ");
-					escputchar(q, f);
+					escputchar(fsm->opt, q, f);
 					it = ir;
 				}
 			}
@@ -370,7 +377,7 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 				}
 
 				fprintf(f, " /* e.g. \"");
-				escputs(f, buf);
+				escputs(fsm->opt, f, buf);
 				fprintf(f, "%s\" */",
 					n >= (int) sizeof buf - 1 ? "..." : "");
 			}

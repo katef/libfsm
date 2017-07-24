@@ -98,6 +98,25 @@ similar in intent to [see also] re2c
 			</varlistentry>
 
 			<varlistentry>
+				<term><code>always_hex</code></term>
+
+				<listitem>
+					<para>Byte values are escaped in generated code where neccessary
+						for the output language.
+						Other values are output in their printable character form,
+						intended to aid legibility for &fsm;s which operate on text.</para>
+
+					<para>The <code>always_hex</code> option instead outputs these values
+						in escaped hexadecimal form regardless of their printability.
+						This better suits &fsm;s which operate on binary input,
+						where a relation to a particular character value is coincidental.</para>
+
+					<para>The default is to output values in printable character form
+						where possible.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
 				<term><code>io</code></term>
 
 				<listitem>

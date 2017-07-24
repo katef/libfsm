@@ -52,7 +52,7 @@ static void
 usage(void)
 {
 	printf("usage: fsm [-x] {<text> ...}\n");
-	printf("       fsm {-p} [-l <language>] [-acw] [-k <io>] [-e <prefix>]\n");
+	printf("       fsm {-p} [-l <language>] [-acwX] [-k <io>] [-e <prefix>]\n");
 	printf("       fsm {-dmr | -t <transformation>} [<file.fsm> | <file-a> <file-b>]\n");
 	printf("       fsm {-q <query>} [<file>]\n");
 	printf("       fsm -h\n");
@@ -256,11 +256,12 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwe:k:" "xpq:l:dmrt:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:k:" "xpq:l:dmrt:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
 			case 'w': opt.fragment          = 1;          break;
+			case 'X': opt.always_hex        = 1;          break;
 			case 'e': opt.prefix            = optarg;     break;
 			case 'k': opt.io                = io(optarg); break;
 

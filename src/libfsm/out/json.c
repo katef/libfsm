@@ -12,6 +12,8 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 
 #include "libfsm/internal.h"
 #include "libfsm/out.h"
@@ -36,7 +38,7 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 }
 
 static int
-escputc(int c, FILE *f)
+escputc(const struct fsm_options *opt, int c, FILE *f)
 {
 	size_t i;
 
@@ -55,8 +57,13 @@ escputc(int c, FILE *f)
 		{ '\t', "\\t"  }
 	};
 
+	assert(opt != NULL);
 	assert(c != FSM_EDGE_EPSILON);
 	assert(f != NULL);
+
+	if (opt->always_hex) {
+		return fprintf(f, "\\u%04x", (unsigned char) c);
+	}
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (a[i].c == c) {
@@ -132,7 +139,7 @@ fsm_out_json(const struct fsm *fsm, FILE *f)
 
 					default:
 						fputs(" \"", f);
-						escputc(e->symbol, f);
+						escputc(fsm->opt, e->symbol, f);
 						putc('\"', f);
 						break;
 					}

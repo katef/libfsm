@@ -21,6 +21,7 @@
 
 	<!ENTITY n.opt "<option>-n</option>">
 	<!ENTITY Q.opt "<option>-Q</option>">
+	<!ENTITY X.opt "<option>-X</option>">
 	<!ENTITY b.opt "<option>-b</option>&nbsp;&api_tokbuf.arg;">
 	<!ENTITY g.opt "<option>-g</option>&nbsp;&api_getc.arg;">
 	<!ENTITY l.opt "<option>-l</option>&nbsp;&lang.arg;">
@@ -58,6 +59,7 @@
 
 			<arg choice="opt">&n.opt;</arg>
 			<arg choice="opt">&Q.opt;</arg>
+			<arg choice="opt">&X.opt;</arg>
 			<arg choice="opt">&b.opt;</arg>
 			<arg choice="opt">&g.opt;</arg>
 			<arg choice="opt">&l.opt;</arg>
@@ -255,6 +257,16 @@ Dot output is not subject to checks for semantic errors
 
 				<listitem>
 					<para>Print progress to &stderr.lit;.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&X.opt;</term>
+
+				<listitem>
+					<para>Always encode byte values in hexadecimal,
+						per the <code>always_hex</code> option for &fsm_print.3;.
+						The default is to only use hex for non-printable characters.</para>
 				</listitem>
 			</varlistentry>
 

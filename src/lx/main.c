@@ -47,7 +47,7 @@ int print_progress;
 static
 void usage(void)
 {
-	printf("usage: lx [-nQ] [-b <tokbuf>] [-g <getc>] [-l <language>] [-et <prefix>] [-k <io>] [-x <exclude>]\n");
+	printf("usage: lx [-nQX] [-b <tokbuf>] [-g <getc>] [-l <language>] [-et <prefix>] [-k <io>] [-x <exclude>]\n");
 	printf("       lx -h\n");
 }
 
@@ -456,8 +456,12 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "e:t:k:" "vb:g:l:nQx:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "Xe:t:k:" "vb:g:l:nQx:"), c != -1) {
 			switch (c) {
+			case 'X':
+				opt.always_hex = 1;
+				break;
+
 			case 'e':
 				prefix.api = optarg;
 				break;
