@@ -282,8 +282,8 @@ bm_snprint(const struct bm *bm, char *s, size_t n,
 
 	assert(r >= 0);
 
-	if (n > r + 1) {
-		n = r + 1;
+	if (n > (size_t) r + 1) {
+		n = (size_t) r + 1;
 	}
 
 	rewind(f);
