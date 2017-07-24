@@ -10,6 +10,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <errno.h>
@@ -100,6 +101,7 @@ main(int argc, char *argv[])
 {
 	struct fsm *fsm;
 	struct fsm_state *start;
+	enum fsm_out lang;
 
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
@@ -107,12 +109,27 @@ main(int argc, char *argv[])
 	opt.comments          = 0;
 	opt.case_ranges       = 0;
 
+	lang = FSM_OUT_API;
+
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "e:"), c != -1) {
+		while (c = getopt(argc, argv, "e:l:"), c != -1) {
 			switch (c) {
 			case 'e': opt.prefix = optarg; break;
+
+			case 'l':
+				if (strcmp(optarg, "dot") == 0) {
+					lang = FSM_OUT_DOT;
+				} else if (strcmp(optarg, "api") == 0) {
+					lang = FSM_OUT_API;
+				} else if (strcmp(optarg, "c") == 0) {
+					lang = FSM_OUT_C;
+				} else {
+					fprintf(stderr, "Invalid language '%s'", optarg);
+					exit(1);
+				}
+				break;
 
 			case '?':
 			default:
@@ -182,7 +199,7 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	fsm_print(fsm, stdout, FSM_OUT_API);
+	fsm_print(fsm, stdout, lang);
 
 	fsm_free(fsm);
 
