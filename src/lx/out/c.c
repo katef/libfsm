@@ -850,7 +850,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		opt.comments    = z->fsm->opt->comments;
 		opt.case_ranges = z->fsm->opt->case_ranges;
 		opt.leaf        = leaf;
-		opt.leaf_opaque = ast;
+		opt.leaf_opaque = (void *) ast;
 
 		z->fsm->opt = &opt;
 
