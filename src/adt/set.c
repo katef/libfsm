@@ -365,6 +365,6 @@ set_array(const struct set *set)
 		return 0;
 	}
 
-	return set->a;
+	return (const void **) set->a;
 }
 

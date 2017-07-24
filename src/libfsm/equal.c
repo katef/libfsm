@@ -19,25 +19,26 @@ struct fsm *
 subtract(const struct fsm *a, const struct fsm *b)
 {
 	struct fsm *q;
+	struct fsm *x, *y;
 
 	assert(a != NULL);
 	assert(b != NULL);
 
-	a = fsm_clone(a);
-	if (a == NULL) {
+	x = fsm_clone(a);
+	if (x == NULL) {
 		return NULL;
 	}
 
-	b = fsm_clone(b);
-	if (b == NULL) {
-		fsm_free(a);
+	y = fsm_clone(b);
+	if (y == NULL) {
+		fsm_free(x);
 		return NULL;
 	}
 
-	q = fsm_subtract(a, b);
+	q = fsm_subtract(x, y);
 	if (q == NULL) {
-		fsm_free(a);
-		fsm_free(b);
+		fsm_free(x);
+		fsm_free(y);
 		return NULL;
 	}
 

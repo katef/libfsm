@@ -180,7 +180,7 @@ epsilon_closure(const struct fsm_state *state, struct set **closure)
 		return closure;
 	}
 
-	if (!set_add(closure, state)) {
+	if (!set_add(closure, (void *) state)) {
 		return NULL;
 	}
 
