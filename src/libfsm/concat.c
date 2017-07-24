@@ -35,7 +35,7 @@ fsm_concat(struct fsm *a, struct fsm *b)
 	if (a->sl == NULL) { return b; }
 	if (b->sl == NULL) { return a; }
 
-	if (!fsm_has(a, fsm_isend)) {
+	if (!fsm_has(a, NULL, fsm_isend)) {
 		errno = EINVAL;
 		return NULL;
 	}
@@ -47,7 +47,7 @@ fsm_concat(struct fsm *a, struct fsm *b)
 		return NULL;
 	}
 
-	ea = fsm_collate(a, fsm_isend);
+	ea = fsm_collate(a, NULL, fsm_isend);
 	if (ea == NULL) {
 		return NULL;
 	}
@@ -83,7 +83,7 @@ fsm_concat(struct fsm *a, struct fsm *b)
 			goto error;
 		}
 	} else {
-		if (!fsm_hasoutgoing(q, ea) || !fsm_hasincoming(q, sb)) {
+		if (!fsm_hasoutgoing(NULL, q, ea) || !fsm_hasincoming(NULL, q, sb)) {
 			if (!fsm_mergestates(q, ea, sb)) {
 				goto error;
 			}

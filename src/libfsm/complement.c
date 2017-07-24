@@ -22,8 +22,8 @@ fsm_complement(struct fsm *fsm)
 
 	assert(fsm != NULL);
 
-	if (!fsm_all(fsm, fsm_iscomplete)) {
-		if (!fsm_complete(fsm, fsm_isany)) {
+	if (!fsm_all(fsm, NULL, fsm_iscomplete)) {
+		if (!fsm_complete(fsm, NULL, fsm_isany)) {
 			fsm_free(fsm);
 			return 0;
 		}
@@ -36,7 +36,7 @@ fsm_complement(struct fsm *fsm)
 	 */
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		fsm_setend(fsm, s, !fsm_isend(fsm, s));
+		fsm_setend(fsm, s, !fsm_isend(NULL, fsm, s));
 	}
 
 	if (!fsm_trim(fsm)) {

@@ -72,7 +72,7 @@ fsm_reverse(struct fsm *fsm)
 				fsm_setend(new, end, 1);
 			}
 
-			if (fsm_isend(fsm, s)) {
+			if (fsm_isend(NULL, fsm, s)) {
 				if (!set_add(&endset, s)) {
 					set_free(endset);
 					fsm_free(new);
@@ -199,7 +199,7 @@ fsm_reverse(struct fsm *fsm)
 				s = NULL;
 			} else {
 				for (s = set_first(endset, &it); s != NULL; s = set_next(&it)) {
-					if (!fsm_hasincoming(fsm, s)) {
+					if (!fsm_hasincoming(NULL, fsm, s)) {
 						break;
 					}
 				}

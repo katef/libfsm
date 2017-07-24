@@ -71,8 +71,8 @@ fsm_union(struct fsm *a, struct fsm *b)
 			goto error;
 		}
 	} else {
-		ia = fsm_hasincoming(q, sa);
-		ib = fsm_hasincoming(q, sb);
+		ia = fsm_hasincoming(NULL, q, sa);
+		ib = fsm_hasincoming(NULL, q, sb);
 
 		if (!ia && !ib) {
 			sq = fsm_mergestates(q, sa, sb);

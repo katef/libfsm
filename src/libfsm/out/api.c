@@ -149,7 +149,7 @@ fsm_out_api(const struct fsm *fsm, FILE *f)
 	fprintf(f, "\tsize_t i;\n");
 	fprintf(f, "\n");
 
-	n = fsm_count(fsm, fsm_isany);
+	n = fsm_count(fsm, NULL, fsm_isany);
 	fprintf(f, "\tstruct fsm_state *s[%u] = { 0 };\n", n);
 	fprintf(f, "\n");
 
@@ -256,7 +256,7 @@ fsm_out_api(const struct fsm *fsm, FILE *f)
 	fprintf(f, "\tfsm_setstart(fsm, s[%u]);\n", indexof(fsm, start));
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (fsm_isend(fsm, s)) {
+		if (fsm_isend(NULL, fsm, s)) {
 			fprintf(f, "\tfsm_setend(fsm, s[%u], 1);\n", indexof(fsm, s));
 		}
 	}

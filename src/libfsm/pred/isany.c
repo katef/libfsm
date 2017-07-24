@@ -12,11 +12,12 @@
 #include "../internal.h"
 
 int
-fsm_isany(const struct fsm *fsm, const struct fsm_state *state)
+fsm_isany(void *dummy, const struct fsm *fsm, const struct fsm_state *state)
 {
 	assert(fsm != NULL);
 	assert(state != NULL);
 
+	(void) dummy;
 	(void) fsm;
 	(void) state;
 

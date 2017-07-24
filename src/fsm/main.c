@@ -129,13 +129,13 @@ language(const char *name)
 
 static int
 (*predicate(const char *name))
-(const struct fsm *, const struct fsm_state *)
+(void *, const struct fsm *, const struct fsm_state *)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		int (*predicate)(const struct fsm *, const struct fsm_state *);
+		int (*predicate)(void *, const struct fsm *, const struct fsm_state *);
 	} a[] = {
 		{ "isdfa",      fsm_isdfa      },
 		{ "dfa",        fsm_isdfa      }
@@ -239,7 +239,7 @@ main(int argc, char *argv[])
 	int print;
 	int r;
 
-	int (*query)(const struct fsm *, const struct fsm_state *);
+	int (*query)(void *, const struct fsm *, const struct fsm_state *);
 
 	opt.comments = 1;
 	opt.io       = FSM_IO_GETC;
@@ -338,7 +338,7 @@ main(int argc, char *argv[])
 		case OP_IDENTITY:
 			break;
 
-		case OP_COMPLETE:    r = fsm_complete(q, fsm_isany); break;
+		case OP_COMPLETE:    r = fsm_complete(q, NULL, fsm_isany); break;
 
 		case OP_COMPLEMENT:  r = fsm_complement(q);   break;
 		case OP_REVERSE:     r = fsm_reverse(q);      break;
@@ -385,7 +385,7 @@ main(int argc, char *argv[])
 
 	/* TODO: OP_EQUAL ought to have the same CLI interface as a predicate */
 	if (query != NULL) {
-		r |= !fsm_all(fsm, query);
+		r |= !fsm_all(fsm, NULL, query);
 		return r;
 	}
 

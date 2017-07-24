@@ -17,8 +17,8 @@
 #include "internal.h"
 
 int
-fsm_complete(struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+fsm_complete(struct fsm *fsm, void *pred_arg,
+	int (*predicate)(void *, const struct fsm *, const struct fsm_state *))
 {
 	struct fsm_state *new;
 	struct fsm_state *s;
@@ -27,14 +27,14 @@ fsm_complete(struct fsm *fsm,
 	assert(fsm != NULL);
 	assert(predicate != NULL);
 
-	if (!fsm_all(fsm, fsm_isdfa)) {
+	if (!fsm_all(fsm, NULL, fsm_isdfa)) {
 		if (!fsm_determinise(fsm)) {
 			fsm_free(fsm);
 			return 0;
 		}
 	}
 
-	if (!fsm_has(fsm, predicate)) {
+	if (!fsm_has(fsm, pred_arg, predicate)) {
 		return 1;
 	}
 
@@ -60,7 +60,7 @@ fsm_complete(struct fsm *fsm,
 	}
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (!predicate(fsm, s)) {
+		if (!predicate(pred_arg, fsm, s)) {
 			continue;
 		}
 

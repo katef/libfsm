@@ -254,7 +254,7 @@ out_dotfrag(const struct fsm *fsm, FILE *f)
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		singlestate(fsm, f, s);
 
-		if (fsm_isend(fsm, s)) {
+		if (fsm_isend(NULL, fsm, s)) {
 			fprintf(f, "\t%sS%-2u [ shape = doublecircle ];\n",
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, s));

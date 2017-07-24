@@ -54,7 +54,7 @@ mapping_ensure(struct fsm *fsm, struct mapping **head, struct fsm_state *old)
 			return 0;
 		}
 
-		fsm_setend(fsm, m->new, fsm_isend(fsm, old));
+		fsm_setend(fsm, m->new, fsm_isend(NULL, fsm, old));
 
 		m->old  = old;
 		m->done = 0;

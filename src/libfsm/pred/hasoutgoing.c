@@ -14,11 +14,12 @@
 #include "../internal.h"
 
 int
-fsm_hasoutgoing(const struct fsm *fsm, const struct fsm_state *state)
+fsm_hasoutgoing(void *dummy, const struct fsm *fsm, const struct fsm_state *state)
 {
 	struct fsm_edge *e;
 	struct set_iter it;
 
+	(void) dummy;
 	assert(fsm != NULL);
 	assert(state != NULL);
 

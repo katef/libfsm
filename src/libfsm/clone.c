@@ -63,7 +63,7 @@ fsm_clone(const struct fsm *fsm)
 				new->tail = &equiv;
 			}
 
-			fsm_setend(new, equiv, fsm_isend(fsm, s));
+			fsm_setend(new, equiv, fsm_isend(NULL, fsm, s));
 			equiv->opaque = s->opaque;
 
 			for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {

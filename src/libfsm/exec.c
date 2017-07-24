@@ -45,7 +45,7 @@ fsm_exec(const struct fsm *fsm,
 
 	/* TODO: pass struct of callbacks to call during each event; transitions etc */
 
-	if (!fsm_all(fsm, fsm_isdfa)) {
+	if (!fsm_all(fsm, NULL, fsm_isdfa)) {
 		errno = EINVAL;
 		return NULL;
 	}
@@ -60,7 +60,7 @@ fsm_exec(const struct fsm *fsm,
 		}
 	}
 
-	if (!fsm_isend(fsm, state)) {
+	if (!fsm_isend(NULL, fsm, state)) {
 		return NULL;
 	}
 

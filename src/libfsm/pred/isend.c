@@ -12,8 +12,9 @@
 #include "../internal.h"
 
 int
-fsm_isend(const struct fsm *fsm, const struct fsm_state *state)
+fsm_isend(void *dummy, const struct fsm *fsm, const struct fsm_state *state)
 {
+	(void) dummy;
 	assert(fsm != NULL);
 	assert(state != NULL);
 

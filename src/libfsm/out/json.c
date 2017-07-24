@@ -111,7 +111,7 @@ fsm_out_json(const struct fsm *fsm, FILE *f)
 			fprintf(f, "\t\t{\n");
 
 			fprintf(f, "\t\t\t\"end\": %s,\n",
-				fsm_isend(fsm, s) ? "true" : "false");
+				fsm_isend(NULL, fsm, s) ? "true" : "false");
 
 			fprintf(f, "\t\t\t\"edges\": [\n");
 

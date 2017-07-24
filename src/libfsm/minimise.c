@@ -119,7 +119,7 @@ fsm_minimise(struct fsm *fsm)
 	 * state would be marked an end state after minimization. Here the absence
 	 * of an end state is recorded, so that those markings may be removed.
 	 */
-	hasend = fsm_has(fsm, fsm_isend);
+	hasend = fsm_has(fsm, NULL, fsm_isend);
 
 	/*
 	 * Brzozowski's algorithm.
@@ -163,7 +163,7 @@ fsm_minimise(struct fsm *fsm)
 	 * This is special-case code; it can only possibly occur for the start
 	 * state.
 	 */
-	if (fsm_isend(fsm, fsm->start) || counttargets(fsm->start) > 1) {
+	if (fsm_isend(NULL, fsm, fsm->start) || counttargets(fsm->start) > 1) {
 		struct fsm_state *s;
 		struct fsm_state *next;
 

@@ -16,8 +16,8 @@
 
 static int
 fsm_reachable(struct fsm *fsm, struct fsm_state *state,
-	int any,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+	int any, void *pred_arg,
+	int (*predicate)(void *, const struct fsm *, const struct fsm_state *))
 {
 	struct dlist *list;
 	struct dlist *p;
@@ -41,12 +41,12 @@ fsm_reachable(struct fsm *fsm, struct fsm_state *state,
 		struct set_iter it;
 
 		if (any) {
-			if (predicate(fsm, p->state)) {
+			if (predicate(pred_arg, fsm, p->state)) {
 				dlist_free(p);
 				return 1;
 			}
 		} else {
-			if (!predicate(fsm, p->state)) {
+			if (!predicate(pred_arg, fsm, p->state)) {
 				dlist_free(p);
 				return 0;
 			}
@@ -81,16 +81,16 @@ fsm_reachable(struct fsm *fsm, struct fsm_state *state,
 }
 
 int
-fsm_reachableall(struct fsm *fsm, struct fsm_state *state,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+fsm_reachableall(struct fsm *fsm, struct fsm_state *state, void *pred_arg,
+	int (*predicate)(void *, const struct fsm *, const struct fsm_state *))
 {
-	return fsm_reachable(fsm, state, 0, predicate);
+	return fsm_reachable(fsm, state, 0, pred_arg, predicate);
 }
 
 int
-fsm_reachableany(struct fsm *fsm, struct fsm_state *state,
+fsm_reachableany(struct fsm *fsm, struct fsm_state *state, void *pred_arg,
 	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
-	return fsm_reachable(fsm, state, 1, predicate);
+	return fsm_reachable(fsm, state, 1, pred_arg, predicate);
 }
 

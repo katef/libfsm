@@ -26,14 +26,15 @@
 static const char *cp;
 
 static int
-skip(const struct fsm *fsm, const struct fsm_state *state)
+skip(void *dummy, const struct fsm *fsm, const struct fsm_state *state)
 {
 	struct ast_mapping *m;
 
+	(void) dummy;
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	if (!fsm_isend(fsm, state)) {
+	if (!fsm_isend(NULL, fsm, state)) {
 		return 1;
 	}
 
@@ -233,7 +234,7 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 
 	assert(ast != NULL);
 
-	if (!fsm_isend(fsm, state)) {
+	if (!fsm_isend(NULL, fsm, state)) {
 		/* XXX: don't need this if complete */
 		switch (opt.io) {
 		case FSM_IO_GETC:
@@ -724,7 +725,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(f != NULL);
 	assert(z != NULL);
 	assert(z->fsm != NULL);
-	assert(fsm_all(z->fsm, fsm_isdfa));
+	assert(fsm_all(z->fsm, NULL, fsm_isdfa));
 	assert(ast != NULL);
 
 	/* TODO: prerequisite that the FSM is a DFA */
@@ -780,7 +781,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		for (s = z->fsm->sl; s != NULL; s = s->next) {
 			int r;
 
-			r = fsm_reachableall(z->fsm, s, skip);
+			r = fsm_reachableall(z->fsm, s, NULL, skip);
 			if (r == -1) {
 				return -1;
 			}
@@ -801,7 +802,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			for (s = z->fsm->sl; s != NULL; s = s->next) {
 				int r;
 
-				r = fsm_reachableall(z->fsm, s, skip);
+				r = fsm_reachableall(z->fsm, s, NULL, skip);
 				if (r == -1) {
 					return -1;
 				}
@@ -888,7 +889,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		for (s = z->fsm->sl; s != NULL; s = s->next) {
 			const struct ast_mapping *m;
 
-			if (!fsm_isend(z->fsm, s)) {
+			if (!fsm_isend(NULL, z->fsm, s)) {
 				continue;
 			}
 
@@ -1046,7 +1047,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 	}
 
 	for (z = ast->zl; z != NULL; z = z->next) {
-		if (!fsm_all(z->fsm, fsm_isdfa)) {
+		if (!fsm_all(z->fsm, NULL, fsm_isdfa)) {
 			errno = EINVAL;
 			return;
 		}
