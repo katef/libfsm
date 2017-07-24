@@ -150,3 +150,10 @@ ${BUILD}/lib/libre.o:    ${BUILD}/${src:R}.o
 ${BUILD}/lib/libre.opic: ${BUILD}/${src:R}.opic
 .endfor
 
+# libfsm generates unsigned constants which are converted to char
+.if ${CC:T:Mgcc}
+.for src in ${SRC:Msrc/libre/class/*.c}
+CFLAGS.${src} += -Wno-overflow
+.endfor
+.endif
+
