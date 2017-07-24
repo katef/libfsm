@@ -49,5 +49,21 @@ int
 fsm_reachableany(struct fsm *fsm, struct fsm_state *state,
 	int (*predicate)(const struct fsm *, const struct fsm_state *));
 
+/* Allows iterating through the states of the graph with a callback
+ * function.  Takes an opaque pointer that the callback can use for its
+ * own purposes.
+ */
+int
+fsm_walk_states(const struct fsm *fsm, void *opaque,
+	int (*callback)(const struct fsm *, const struct fsm_state *, void *));
+
+/* Allows iterating through the states of the graph with a callback
+ * function.  Takes an opaque pointer that the callback can use for its
+ * own purposes.
+ */
+int
+fsm_walk_edges(const struct fsm *fsm, void *opaque,
+	int (*callback)(const struct fsm *, const struct fsm_state *, unsigned int, const struct fsm_state *, void *));
+
 #endif
 
