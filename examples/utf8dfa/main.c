@@ -101,6 +101,12 @@ main(int argc, char *argv[])
 	struct fsm *fsm;
 	struct fsm_state *start;
 
+	opt.anonymous_states  = 1;
+	opt.consolidate_edges = 1;
+	opt.always_hex        = 0;
+	opt.comments          = 0;
+	opt.case_ranges       = 0;
+
 	{
 		int c;
 
