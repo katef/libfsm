@@ -11,13 +11,6 @@
 
 #include <fsm/out.h>
 
-/* XXX: perhaps to move under fsm_options alongside .fragment */
-int
-fsm_out_cfrag(const struct fsm *fsm, FILE *f,
-	const char *cp,
-	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
-	const void *opaque);
-
 void
 fsm_out_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl);
 

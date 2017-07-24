@@ -23,8 +23,6 @@
 #include "lx/out.h"
 #include "lx/ast.h"
 
-static const char *cp;
-
 static int
 skip(const struct fsm *fsm, const struct fsm_state *state)
 {
@@ -819,7 +817,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			fprintf(f, "\t\tdefault:\n");
 			if (~api_exclude & API_BUF) {
 				fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
-				fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, %s)) {\n", cp);
+				fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, %s)) {\n", opt.cp);
 				fprintf(f, "\t\t\t\t\treturn %sERROR;\n", prefix.tok);
 				fprintf(f, "\t\t\t\t}\n");
 				fprintf(f, "\t\t\t}\n");
@@ -832,7 +830,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		} else {
 			if (~api_exclude & API_BUF) {
 				fprintf(f, "\t\tif (lx->push != NULL) {\n");
-				fprintf(f, "\t\t\tif (-1 == lx->push(lx, %s)) {\n", cp);
+				fprintf(f, "\t\t\tif (-1 == lx->push(lx, %s)) {\n", opt.cp);
 				fprintf(f, "\t\t\t\treturn %sERROR;\n", prefix.tok);
 				fprintf(f, "\t\t\t}\n");
 				fprintf(f, "\t\t}\n");
@@ -851,10 +849,12 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		opt.fragment    = 1; /* XXX */
 		opt.comments    = z->fsm->opt->comments;
 		opt.case_ranges = z->fsm->opt->case_ranges;
+		opt.leaf        = leaf;
+		opt.leaf_opaque = ast;
 
 		z->fsm->opt = &opt;
 
-		(void) fsm_out_cfrag(z->fsm, f, cp, leaf, ast);
+		(void) fsm_out_c(z->fsm, f);
 
 		z->fsm->opt = tmp;
 	}
@@ -1040,9 +1040,9 @@ lx_out_c(const struct ast *ast, FILE *f)
 	assert(f != NULL);
 
 	switch (opt.io) {
-	case FSM_IO_GETC: cp = "c"; break;
-	case FSM_IO_STR:  cp = "c"; break;
-	case FSM_IO_PAIR: cp = "c"; break;
+	case FSM_IO_GETC: opt.cp = "c"; break;
+	case FSM_IO_STR:  opt.cp = "c"; break;
+	case FSM_IO_PAIR: opt.cp = "c"; break;
 	}
 
 	for (z = ast->zl; z != NULL; z = z->next) {

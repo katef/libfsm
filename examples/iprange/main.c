@@ -43,9 +43,7 @@
 #include <fsm/out.h>
 #include <fsm/options.h>
 #include <fsm/pred.h>
-
-#include "../../src/libfsm/out.h" /* XXX */
-#include "../../src/libfsm/internal.h" /* XXX */
+#include <fsm/out.h>
 
 #include "tree.h"
 
@@ -471,16 +469,6 @@ carryopaque(const struct fsm_state **set, size_t n,
 	}
 }
 
-const char *
-nl(struct fsm_state *s)
-{
-	struct record *r;
-	struct fsm hack;
-
-	r = fsm_getopaque(&hack, s);
-	return r->rec;
-}
-
 static int
 leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 	const void *opaque)
@@ -516,7 +504,6 @@ main(int argc, char **argv)
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
 	opt.case_ranges       = 1;
-	/* opt.opaque_string     = nl; */
 
 	while (c = getopt(argc, argv, "46f:l:Q"), c != -1) {
 		switch (c) {
@@ -683,9 +670,11 @@ main(int argc, char **argv)
 	}
 
 	if (oc) {
-		static const char *cp = "c";
-		/* XXX: This should be possible without private out.h. */
-		fsm_out_cfrag(fsm, stdout, cp, leaf, NULL);
+		opt.fragment    = 1;
+		opt.cp          = "c";
+		opt.leaf        = leaf;
+		opt.leaf_opaque = NULL;
+		fsm_print(fsm, stdout, FSM_OUT_C);
 	} else if (odot) {
 		fsm_print(fsm, stdout, FSM_OUT_DOT);
 	}
