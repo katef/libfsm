@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <limits.h>
 #include <errno.h>
 
@@ -97,6 +98,26 @@ codepoint(struct fsm *fsm, int cp)
 }
 
 int
+parse(const char *p, char **e)
+{
+	long l;
+
+	errno = 0;
+	l = strtol(p, e, 16);
+	if ((l == LONG_MAX || l == LONG_MIN) && errno != 0) {
+		fprintf(stderr, "parse error: %s\n", p);
+		exit(1);
+	}
+
+	if (l < 0 || l > INT_MAX) {
+		fprintf(stderr, "hex out of range: %s\n", p);
+		exit(1);
+	}
+
+	return (int) l;
+}
+
+int
 main(int argc, char *argv[])
 {
 	struct fsm *fsm;
@@ -160,10 +181,10 @@ main(int argc, char *argv[])
 	fsm_setstart(fsm, start);
 
 	for (;;) {
-		char buf[8];
+		char buf[16];
 		buf[sizeof buf - 1] = 'x';
 		char *e;
-		long l;
+		int i, lo, hi;
 
 		if (!fgets(buf, sizeof buf, stdin)) {
 			break;
@@ -174,24 +195,27 @@ main(int argc, char *argv[])
 			exit(1);
 		}
 
-		errno = 0;
-		l = strtol(buf, &e, 16);
-		if (*e != '\n' || ((l == LONG_MAX || l == LONG_MIN) && errno != 0)) {
-			fprintf(stderr, "parse error: %s", buf);
+		lo = parse(buf, &e);
+
+		if (0 == strncmp(e, "..", 2)) {
+			hi = parse(e + 2, &e);
+		} else {
+			hi = lo;
+		}
+
+		if (*e != '\n') {
+			fprintf(stderr, "syntax error: %s\n", buf);
 			exit(1);
 		}
 
-		if (l < 0 || l > INT_MAX) {
-			fprintf(stderr, "hex out of range: %s", buf);
-			exit(1);
-		}
+		for (i = lo; i <= hi; i++) {
+			/* XXX: skip surrogates */
+			if (0xd800 <= i && i <= 0xdfff) {
+				continue;
+			}
 
-		/* XXX: skip surrogates */
-		if (0xd800 <= l && l <= 0xdfff) {
-			continue;
+			codepoint(fsm, i);
 		}
-
-		codepoint(fsm, l);
 	}
 
 	if (!fsm_minimise(fsm)) {
