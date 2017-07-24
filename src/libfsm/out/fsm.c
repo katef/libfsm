@@ -106,9 +106,11 @@ findany(const struct fsm_state *state)
 	struct fsm_state *f, *s;
 	struct fsm_edge *e;
 	struct set_iter it;
-	struct bm bm = { 0 };
+	struct bm bm;
 
 	assert(state != NULL);
+
+	bm_clear(&bm);
 
 	e = set_first(state->edges, &it);
 	if (e == NULL) {

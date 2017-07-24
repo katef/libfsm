@@ -70,7 +70,6 @@ escputc(int c, FILE *f)
 void
 fsm_out_csv(const struct fsm *fsm, FILE *f)
 {
-	static const struct bm bm_empty;
 	struct fsm_state *s;
 	struct bm bm;
 	int n;
@@ -78,7 +77,7 @@ fsm_out_csv(const struct fsm *fsm, FILE *f)
 	assert(fsm != NULL);
 	assert(f != NULL);
 
-	bm = bm_empty;
+	bm_clear(&bm);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		struct set_iter it;
