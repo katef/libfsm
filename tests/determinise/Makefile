@@ -1,12 +1,12 @@
 .include "../../share/mk/top.mk"
 
-TEST.tests/determinise != ls -1 tests/determinise/in*.fsm
+TEST.tests/determinise != ls -1 tests/determinise/out*.fsm
 TEST_SRCDIR.tests/determinise = tests/determinise
 TEST_OUTDIR.tests/determinise = ${BUILD}/tests/determinise
 
 FSM=${BUILD}/bin/fsm
 
-.for n in ${TEST.tests/determinise:T:R:C/^in//}
+.for n in ${TEST.tests/determinise:T:R:C/^out//}
 
 test:: ${TEST_OUTDIR.tests/determinise}/got${n}.fsm \
 	${TEST_OUTDIR.tests/determinise}/in${n}.png ${TEST_OUTDIR.tests/determinise}/out${n}.png ${TEST_OUTDIR.tests/determinise}/got${n}.png \
