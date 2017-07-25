@@ -8,20 +8,18 @@ FSM=${BUILD}/bin/fsm
 
 .for n in ${TEST.tests/reverse:T:R:C/^out//}
 
-test:: ${TEST_OUTDIR.tests/reverse}/got${n}.fsm \
+test:: \
+	${TEST_OUTDIR.tests/reverse}/got${n}.fsm \
 	${TEST_OUTDIR.tests/reverse}/res${n}
 
 ${TEST_OUTDIR.tests/reverse}/got${n}.fsm: ${TEST_SRCDIR.tests/reverse}/in${n}.fsm
-	cat ${TEST_SRCDIR.tests/reverse}/in${n}.fsm \
-	| ${FSM} -pr \
-	> ${TEST_OUTDIR.tests/reverse}/got${n}.fsm
+	${FSM} -pr ${.ALLSRC:M*.fsm} \
+	> $@
 
 ${TEST_OUTDIR.tests/reverse}/res${n}: ${TEST_SRCDIR.tests/reverse}/out${n}.fsm ${TEST_OUTDIR.tests/reverse}/got${n}.fsm
-	${FSM} -t equal \
-		${TEST_SRCDIR.tests/reverse}/out${n}.fsm \
-		${TEST_OUTDIR.tests/reverse}/got${n}.fsm; \
+	${FSM} -t equal ${.ALLSRC:M*.fsm}; \
 	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
-	> ${TEST_OUTDIR.tests/reverse}/res${n}
+	> $@
 
 .endfor
 
@@ -33,10 +31,9 @@ ${TEST_OUTDIR.tests/reverse}/res${n}: ${TEST_SRCDIR.tests/reverse}/out${n}.fsm $
 test:: ${TEST_OUTDIR.tests/reverse}/${img}.png
 
 ${TEST_OUTDIR.tests/reverse}/${img}.png: ${TEST_SRCDIR.tests/reverse}/${img}.fsm
-	cat ${TEST_SRCDIR.tests/reverse}/${img}.fsm \
-	| ${FSM} -cp -l dot \
+	${FSM} -cp -l dot ${.ALLSRC:M*.fsm} \
 	| ${DOT} -Tpng \
-	> ${TEST_OUTDIR.tests/reverse}/${img}.png
+	> $@
 
 .endfor
 
@@ -45,10 +42,9 @@ ${TEST_OUTDIR.tests/reverse}/${img}.png: ${TEST_SRCDIR.tests/reverse}/${img}.fsm
 test:: ${TEST_OUTDIR.tests/reverse}/${img}.png
 
 ${TEST_OUTDIR.tests/reverse}/${img}.png: ${TEST_OUTDIR.tests/reverse}/${img}.fsm
-	cat ${TEST_OUTDIR.tests/reverse}/${img}.fsm \
-	| ${FSM} -cp -l dot \
+	${FSM} -cp -l dot ${.ALLSRC:M*.fsm} \
 	| ${DOT} -Tpng \
-	> ${TEST_OUTDIR.tests/reverse}/${img}.png
+	> $@
 
 .endfor
 
