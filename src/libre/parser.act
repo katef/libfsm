@@ -496,7 +496,8 @@
 
 	OCT: () -> (c :char, start :pos, end :pos) = @{
 		unsigned long u;
-		char *e;
+		char *s, *e;
+		int brace = 0;
 
 		assert(0 == strncmp(lex_state->buf.a, "\\", 1));
 		assert(strlen(lex_state->buf.a) >= 2);
@@ -506,12 +507,23 @@
 
 		errno = 0;
 
-		u = strtoul(lex_state->buf.a + 1, &e, 8);
+		s = lex_state->buf.a + 1;
+
+		if (s[0] == 'o' && s[1] == '{') {
+			s += 2;
+			brace = 1;
+		}
+
+		u = strtoul(s, &e, 8);
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
 			err->e = RE_EOCTRANGE;
 			snprintdots(err->esc, sizeof err->esc, lex_state->buf.a);
 			@!;
+		}
+
+		if (brace && *e == '}') {
+			e++;
 		}
 
 		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
@@ -524,7 +536,8 @@
 
 	HEX: () -> (c :char, start :pos, end :pos) = @{
 		unsigned long u;
-		char *e;
+		char *s, *e;
+		int brace = 0;
 
 		assert(0 == strncmp(lex_state->buf.a, "\\x", 2));
 		assert(strlen(lex_state->buf.a) >= 3);
@@ -534,7 +547,14 @@
 
 		errno = 0;
 
-		u = strtoul(lex_state->buf.a + 2, &e, 16);
+		s = lex_state->buf.a + 2;
+
+		if (*s == '{') {
+			s++;
+			brace = 1;
+		}
+
+		u = strtoul(s, &e, 16);
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
 			err->e = RE_EHEXRANGE;
@@ -542,7 +562,11 @@
 			@!;
 		}
 
-		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
+		if (brace && *e == '}') {
+			e++;
+		}
+
+		if ((u == ULONG_MAX && errno != 0) || (*e != '\0')) {
 			err->e = RE_EXESC;
 			@!;
 		}
