@@ -57,8 +57,9 @@ out_dump(FILE *f)
 	fprintf(f, "\tif (q == NULL) {\n");
 	fprintf(f, "\t\treturn;\n");
 	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
 	/* TODO: escaping for special characters */
-	fprintf(f, "\t\t\tprintf(\" '%%.*s'\", (int) l, q);\n");
+	fprintf(f, "\tprintf(\" '%%.*s'\", (int) l, q);\n");
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
 
