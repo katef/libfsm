@@ -34,6 +34,7 @@ SUBDIR += src/lx/out
 SUBDIR += tests/determinise
 SUBDIR += tests/minimise
 SUBDIR += tests/reverse
+SUBDIR += tests
 SUBDIR += pc
 
 INCDIR += include

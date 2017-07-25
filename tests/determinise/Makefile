@@ -8,46 +8,27 @@ FSM=${BUILD}/bin/fsm
 
 .for n in ${TEST.tests/determinise:T:R:C/^out//}
 
-test:: \
-	${TEST_OUTDIR.tests/determinise}/got${n}.fsm \
-	${TEST_OUTDIR.tests/determinise}/res${n}
-
 ${TEST_OUTDIR.tests/determinise}/got${n}.fsm: ${TEST_SRCDIR.tests/determinise}/in${n}.fsm
 	${FSM} -pd ${.ALLSRC:M*.fsm} \
 	> $@
 
-${TEST_OUTDIR.tests/determinise}/res${n}: ${TEST_SRCDIR.tests/determinise}/out${n}.fsm ${TEST_OUTDIR.tests/determinise}/got${n}.fsm
-	${FSM} -t equal ${.ALLSRC:M*.fsm}; \
-	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
-	> $@
+${TEST_OUTDIR.tests/determinise}/res${n}: \
+	${TEST_SRCDIR.tests/determinise}/out${n}.fsm \
+	${TEST_OUTDIR.tests/determinise}/got${n}.fsm
+
+FSMTEST_RESULT += ${TEST_OUTDIR.tests/determinise}/res${n}
 
 .endfor
 
-.if defined(DEBUG)
 .for n in ${TEST.tests/determinise:T:R:C/^out//}
 
-.for img in in${n} out${n}
+${TEST_OUTDIR.tests/determinise}/in${n}.png:  ${TEST_SRCDIR.tests/determinise}/in${n}.fsm
+${TEST_OUTDIR.tests/determinise}/out${n}.png: ${TEST_OUTDIR.tests/determinise}/out${n}.fsm
+${TEST_OUTDIR.tests/determinise}/got${n}.png: ${TEST_OUTDIR.tests/determinise}/got${n}.fsm
 
-test:: ${TEST_OUTDIR.tests/determinise}/${img}.png
-
-${TEST_OUTDIR.tests/determinise}/${img}.png: ${TEST_SRCDIR.tests/determinise}/${img}.fsm
-	${FSM} -cp -l dot ${.ALLSRC:M*.fsm} \
-	| ${DOT} -Tpng \
-	> $@
-
-.endfor
-
-.for img in got${n}
-
-test:: ${TEST_OUTDIR.tests/determinise}/${img}.png
-
-${TEST_OUTDIR.tests/determinise}/${img}.png: ${TEST_OUTDIR.tests/determinise}/${img}.fsm
-	${FSM} -cp -l dot ${.ALLSRC:M*.fsm} \
-	| ${DOT} -Tpng \
-	> $@
-
+.for img in in${n} out${n} got${n}
+FSMTEST_IMG += ${TEST_OUTDIR.tests/determinise}/${img}.png
 .endfor
 
 .endfor
-.endif
 
