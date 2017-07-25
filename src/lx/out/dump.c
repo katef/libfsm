@@ -115,6 +115,8 @@ out_dump(FILE *f)
 		fprintf(f, "\t\treturn 1;\n");
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
+		fprintf(f, "\t(void) argv;\n");
+		fprintf(f, "\n");
 	} else {
 		fprintf(f, "\tif (argc != 2) {\n");
 		fprintf(f, "\t\tfprintf(stderr, \"usage: dump <str>\\n\");\n");
