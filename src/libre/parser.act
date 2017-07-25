@@ -90,7 +90,7 @@
 		struct flags *parent;
 	};
 
-	typedef char     t_char;
+	typedef uint32_t     t_char;
 	typedef const char * t_class;
 	typedef unsigned t_unsigned;
 	typedef unsigned t_pred; /* TODO */
@@ -221,23 +221,89 @@
 	}
 
 	static int
+	utf8encode(uint32_t cp, unsigned char c[])
+	{
+		if (0xd800 <= cp && cp <= 0xdfff) {
+			return 0;
+		}
+
+		if (cp <= 0x7f) {
+			c[0] =  cp;
+			return 1;
+		}
+
+		if (cp <= 0x7ff) {
+			c[0] = (cp >>  6) + 192;
+			c[1] = (cp  & 63) + 128;
+			return 2;
+		}
+
+		if (cp <= 0xffff) {
+			c[0] =  (cp >> 12) + 224;
+			c[1] = ((cp >>  6) &  63) + 128;
+			c[2] =  (cp  & 63) + 128;
+			return 3;
+		}
+
+		if (cp <= 0x10ffff) {
+			c[0] =  (cp >> 18) + 240;
+			c[1] = ((cp >> 12) &  63) + 128;
+			c[2] = ((cp >>  6) &  63) + 128;
+			c[3] =  (cp  & 63) + 128;
+			return 4;
+		}
+
+		return 0;
+	}
+
+	static int
+	add_utf8(struct fsm *fsm,
+		struct fsm_state *from, struct fsm_state *to, uint32_t c)
+	{
+		unsigned char utf8[4];
+		size_t n = utf8encode(c, utf8);
+		size_t i;
+
+		if (n == 0) {
+			return 0;
+		}
+
+		for (i = 0; i < n; i++) {
+			struct fsm_state *s = (i == n - 1) ? to
+			                                   : fsm_addstate(fsm);
+			if (!s) {
+				return 0;
+			}
+			if (!fsm_addedge_literal(fsm, from, s, utf8[i])) {
+				return 0;
+			}
+			from = s;
+		}
+
+		return 1;
+	}
+
+	static int
 	addedge_literal(struct fsm *fsm, enum re_flags flags,
-		struct fsm_state *from, struct fsm_state *to, char c)
+		struct fsm_state *from, struct fsm_state *to, uint32_t c)
 	{
 		assert(fsm != NULL);
 		assert(from != NULL);
 		assert(to != NULL);
 
-		if (flags & RE_ICASE) {
-			if (!fsm_addedge_literal(fsm, from, to, tolower((unsigned char) c))) {
+		/* TODO: casefolding */
+		if ((unsigned char) c <= UCHAR_MAX && (flags & RE_ICASE)) {
+			c = (unsigned char) c;
+
+			if (!add_utf8(fsm, from, to, tolower(c))) {
 				return 0;
 			}
 
-			if (!fsm_addedge_literal(fsm, from, to, toupper((unsigned char) c))) {
+			if (!add_utf8(fsm, from, to, toupper(c))) {
 				return 0;
 			}
 		} else {
-			if (!fsm_addedge_literal(fsm, from, to, c)) {
+			if (!add_utf8(fsm, from, to, c)) {
 				return 0;
 			}
 		}
@@ -246,7 +312,7 @@
 	}
 
 	static int
-	group_add(struct grp *g, enum re_flags flags, char c)
+	group_add(struct grp *g, enum re_flags flags, uint32_t c)
 	{
 		const struct fsm_state *p;
 		struct fsm_state *start, *end;
@@ -508,7 +574,7 @@
 
 		u = strtoul(lex_state->buf.a + 1, &e, 8);
 
-		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
+		if ((u == ULONG_MAX && errno == ERANGE) || u > UINT32_MAX) {
 			err->e = RE_EOCTRANGE;
 			snprintdots(err->esc, sizeof err->esc, lex_state->buf.a);
 			@!;
@@ -519,7 +585,7 @@
 			@!;
 		}
 
-		@c = (char) (unsigned char) u;
+		@c = (uint32_t) u;
 	@};
 
 	HEX: () -> (c :char, start :pos, end :pos) = @{
@@ -536,7 +602,7 @@
 
 		u = strtoul(lex_state->buf.a + 2, &e, 16);
 
-		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
+		if ((u == ULONG_MAX && errno == ERANGE) || u > UINT32_MAX) {
 			err->e = RE_EHEXRANGE;
 			snprintdots(err->esc, sizeof err->esc, lex_state->buf.a);
 			@!;
@@ -547,7 +613,7 @@
 			@!;
 		}
 
-		@c = (char) (unsigned char) u;
+		@c = (uint32_t) u;
 	@};
 
 	CHAR: () -> (c :char, start :pos, end :pos) = @{
