@@ -12,42 +12,45 @@ test:: ${TEST_OUTDIR.tests/reverse}/got${n}.fsm \
 	${TEST_OUTDIR.tests/reverse}/res${n}
 
 ${TEST_OUTDIR.tests/reverse}/got${n}.fsm: ${TEST_SRCDIR.tests/reverse}/in${n}.fsm
-	${FSM} -pr \
-		< ${TEST_SRCDIR.tests/reverse}/in${n}.fsm \
-		> ${TEST_OUTDIR.tests/reverse}/got${n}.fsm
+	cat ${TEST_SRCDIR.tests/reverse}/in${n}.fsm \
+	| ${FSM} -pr \
+	> ${TEST_OUTDIR.tests/reverse}/got${n}.fsm
 
 ${TEST_OUTDIR.tests/reverse}/res${n}: ${TEST_SRCDIR.tests/reverse}/out${n}.fsm ${TEST_OUTDIR.tests/reverse}/got${n}.fsm
-	${FSM} -t equal ${TEST_SRCDIR.tests/reverse}/out${n}.fsm ${TEST_OUTDIR.tests/reverse}/got${n}.fsm; \
-		if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
-			> ${TEST_OUTDIR.tests/reverse}/res${n}
+	${FSM} -t equal \
+		${TEST_SRCDIR.tests/reverse}/out${n}.fsm \
+		${TEST_OUTDIR.tests/reverse}/got${n}.fsm; \
+	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
+	> ${TEST_OUTDIR.tests/reverse}/res${n}
 
 .endfor
 
 .if defined(DEBUG)
 .for n in ${TEST.tests/reverse:T:R:C/^out//}
 
-test:: \
-	${TEST_OUTDIR.tests/reverse}/in${n}.png \
-	${TEST_OUTDIR.tests/reverse}/out${n}.png \
-	${TEST_OUTDIR.tests/reverse}/got${n}.png
+.for img in in${n} out${n}
 
-${TEST_OUTDIR.tests/reverse}/in${n}.png: ${TEST_SRCDIR.tests/reverse}/in${n}.fsm
-	${FSM} -cp -l dot \
-		< ${TEST_SRCDIR.tests/reverse}/in${n}.fsm \
-	| ${DOT} -Tpng \
-		> ${TEST_OUTDIR.tests/reverse}/in${n}.png
+test:: ${TEST_OUTDIR.tests/reverse}/${img}.png
 
-${TEST_OUTDIR.tests/reverse}/out${n}.png: ${TEST_SRCDIR.tests/reverse}/out${n}.fsm
-	${FSM} -cp -l dot \
-		< ${TEST_SRCDIR.tests/reverse}/out${n}.fsm \
+${TEST_OUTDIR.tests/reverse}/${img}.png: ${TEST_SRCDIR.tests/reverse}/${img}.fsm
+	cat ${TEST_SRCDIR.tests/reverse}/${img}.fsm \
+	| ${FSM} -cp -l dot \
 	| ${DOT} -Tpng \
-		> ${TEST_OUTDIR.tests/reverse}/out${n}.png
+	> ${TEST_OUTDIR.tests/reverse}/${img}.png
 
-${TEST_OUTDIR.tests/reverse}/got${n}.png: ${TEST_OUTDIR.tests/reverse}/got${n}.fsm
-	${FSM} -cp -l dot \
-		< ${TEST_OUTDIR.tests/reverse}/got${n}.fsm \
+.endfor
+
+.for img in got${n}
+
+test:: ${TEST_OUTDIR.tests/reverse}/${img}.png
+
+${TEST_OUTDIR.tests/reverse}/${img}.png: ${TEST_OUTDIR.tests/reverse}/${img}.fsm
+	cat ${TEST_OUTDIR.tests/reverse}/${img}.fsm \
+	| ${FSM} -cp -l dot \
 	| ${DOT} -Tpng \
-		> ${TEST_OUTDIR.tests/reverse}/got${n}.png
+	> ${TEST_OUTDIR.tests/reverse}/${img}.png
+
+.endfor
 
 .endfor
 .endif
