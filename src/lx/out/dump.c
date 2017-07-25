@@ -21,6 +21,11 @@ out_dump(FILE *f)
 {
 	assert(f != NULL);
 
+	if (api_getc == API_FDGETC) {
+		fprintf(f, "#define _POSIX_SOURCE\n");
+		fprintf(f, "\n");
+	}
+
 	fprintf(f, "#include <assert.h>\n");
 	fprintf(f, "#include <stdlib.h>\n");
 	fprintf(f, "#include <stdio.h>\n");
