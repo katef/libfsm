@@ -80,7 +80,9 @@ enum re_errno {
 	RE_EXCLOSEGROUP =  8 | RE_MARK,
 	RE_EXGROUPBODY  =  9 | RE_MARK,
 	RE_EXEOF        = 10 | RE_MARK,
-	RE_EXESC        = 11 | RE_MARK
+	RE_EXESC        = 11 | RE_MARK,
+	RE_EFLAG        = 12 | RE_MARK,
+	RE_EXCLOSEFLAGS = 13 | RE_MARK
 };
 
 struct re_pos {

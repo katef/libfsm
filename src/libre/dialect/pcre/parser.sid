@@ -13,6 +13,7 @@
 	fsm_state;
 	grp;
 	pred;
+	re_flags;
 	!err;
 
 %terminals%
@@ -32,6 +33,29 @@
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
+	!CLASS_alnum:  () -> (:fsm);
+	!CLASS_alpha:  () -> (:fsm);
+	!CLASS_any:    () -> (:fsm);
+	!CLASS_ascii:  () -> (:fsm);
+	!CLASS_blank:  () -> (:fsm);
+	!CLASS_cntrl:  () -> (:fsm);
+	!CLASS_digit:  () -> (:fsm);
+	!CLASS_graph:  () -> (:fsm);
+	!CLASS_lower:  () -> (:fsm);
+	!CLASS_print:  () -> (:fsm);
+	!CLASS_punct:  () -> (:fsm);
+	!CLASS_space:  () -> (:fsm);
+	!CLASS_spchr:  () -> (:fsm);
+	!CLASS_upper:  () -> (:fsm);
+	!CLASS_word:   () -> (:fsm);
+	!CLASS_xdigit: () -> (:fsm);
+
+	OPENFLAGS;
+	CLOSEFLAGS;
+	NEGATE;
+	FLAG_UNKNOWN;
+	FLAG_INSENSITIVE: () -> (:re_flags);
+
 	ESC:    () -> (:char);
 	OCT:    () -> (:char, :pos, :pos);
 	HEX:    () -> (:char, :pos, :pos);
@@ -50,6 +74,7 @@
 	<make-group>:  () -> (:grp);
 	<invert-group>:    (:grp &) -> ();
 	<group-add-char>:  (:grp &, :char) -> ();
+	!<group-add-class>: (:grp &, :fsm) -> ();
 	<group-add-range>: (:grp &, :char, :char) -> ();
 	<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
 
@@ -65,6 +90,11 @@
 	<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
 	<count-1>: (:fsm_state, :fsm_state) -> ();
 
+	<push-flags>;
+	<pop-flags>;
+	<set-flag>: (:re_flags) -> ();
+	<clear-flag>: (:re_flags) -> ();
+
 	<err-expected-term>;
 	<err-expected-count>;
 	!<err-expected-atoms>;
@@ -72,6 +102,8 @@
 	<err-expected-range>;
 	<err-expected-closegroup>;
 	<err-expected-groupbody>;
+	<err-unknown-flag>;
+	<err-expected-closeflags>;
 	<err-expected-eof>;
 
 	<mark-group>: (:pos, :pos) -> ();
@@ -219,13 +251,70 @@
 		<add-pred>(x, y, p);
 	};
 
+	inline-flags: () -> () [
+		positive = {
+			{
+				c = FLAG_INSENSITIVE;
+				<set-flag>(c);
+			||
+				FLAG_UNKNOWN;
+				<err-unknown-flag>;
+			};
+
+			{
+				positive;
+			||
+				$;
+			};
+		};
+		negative = {
+			{
+				c = FLAG_INSENSITIVE;
+				<clear-flag>(c);
+			||
+				FLAG_UNKNOWN;
+				<err-unknown-flag>;
+			};
+
+			{
+				negative;
+			||
+				$;
+			};
+		};
+	] = {
+		OPENFLAGS;
+
+		{
+			positive;
+		||
+			$;
+		};
+
+		{
+			NEGATE;
+			negative;
+		||
+			$;
+		};
+
+		CLOSEFLAGS;
+	##
+		<err-expected-closeflags>;
+	};
+
 	expr: (x :fsm_state, y :fsm_state) -> () [
 
 		atom: (x :fsm_state, y :fsm_state &) -> () = {
 			{
 				{ OPENSUB; || OPENCAPTURE; };
+				<push-flags>;
 				expr(x, y);
+				<pop-flags>;
 				CLOSE;
+			||
+				inline-flags;
+				<add-epsilon>(x, y);
 			||
 				group(x, y);
 			||

@@ -10,6 +10,7 @@
 static enum lx_pcre_token z0(struct lx_pcre_lx *lx);
 static enum lx_pcre_token z1(struct lx_pcre_lx *lx);
 static enum lx_pcre_token z2(struct lx_pcre_lx *lx);
+static enum lx_pcre_token z3(struct lx_pcre_lx *lx);
 
 #if __STDC_VERSION__ >= 199901L
 inline
@@ -238,7 +239,7 @@ z0(struct lx_pcre_lx *lx)
 			}
 
 		case S3: /* e.g. "}" */
-			lx_pcre_ungetc(lx, c); return lx->z = z2, TOK_CLOSECOUNT;
+			lx_pcre_ungetc(lx, c); return lx->z = z3, TOK_CLOSECOUNT;
 		}
 	}
 
@@ -570,7 +571,7 @@ z1(struct lx_pcre_lx *lx)
 			}
 
 		case S4: /* e.g. "]" */
-			lx_pcre_ungetc(lx, c); return lx->z = z2, TOK_CLOSEGROUP;
+			lx_pcre_ungetc(lx, c); return lx->z = z3, TOK_CLOSEGROUP;
 
 		case S5: /* e.g. "^" */
 			lx_pcre_ungetc(lx, c); return TOK_INVERT;
@@ -663,6 +664,91 @@ z1(struct lx_pcre_lx *lx)
 
 static enum lx_pcre_token
 z2(struct lx_pcre_lx *lx)
+{
+	int c;
+
+	enum {
+		S0, S1, S2, S3, S4
+	} state;
+
+	assert(lx != NULL);
+
+	if (lx->clear != NULL) {
+		lx->clear(lx);
+	}
+
+	state = S0;
+
+	lx->start = lx->end;
+
+	while (c = lx_getc(lx), c != EOF) {
+		if (lx->push != NULL) {
+			if (-1 == lx->push(lx, c)) {
+				return TOK_ERROR;
+			}
+		}
+
+		switch (state) {
+		case S0: /* start */
+			switch (c) {
+			case ')': state = S1; continue;
+			case '-': state = S2; continue;
+			case 'a':
+			case 'b':
+			case 'c':
+			case 'd':
+			case 'e':
+			case 'f':
+			case 'g':
+			case 'h': state = S3; continue;
+			case 'i': state = S4; continue;
+			case 'j':
+			case 'k':
+			case 'l':
+			case 'm':
+			case 'n':
+			case 'o':
+			case 'p':
+			case 'q':
+			case 'r':
+			case 's':
+			case 't':
+			case 'u':
+			case 'v':
+			case 'w':
+			case 'x':
+			case 'y':
+			case 'z': state = S3; continue;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+
+		case S1: /* e.g. ")" */
+			lx_pcre_ungetc(lx, c); return lx->z = z3, TOK_CLOSEFLAGS;
+
+		case S2: /* e.g. "-" */
+			lx_pcre_ungetc(lx, c); return TOK_NEGATE;
+
+		case S3: /* e.g. "a" */
+			lx_pcre_ungetc(lx, c); return TOK_FLAG__UNKNOWN;
+
+		case S4: /* e.g. "i" */
+			lx_pcre_ungetc(lx, c); return TOK_FLAG__INSENSITIVE;
+		}
+	}
+
+	lx->lgetc = NULL;
+
+	switch (state) {
+	case S1: return TOK_CLOSEFLAGS;
+	case S2: return TOK_NEGATE;
+	case S3: return TOK_FLAG__UNKNOWN;
+	case S4: return TOK_FLAG__INSENSITIVE;
+	default: errno = EINVAL; return TOK_ERROR;
+	}
+}
+
+static enum lx_pcre_token
+z3(struct lx_pcre_lx *lx)
 {
 	int c;
 
@@ -1024,7 +1110,7 @@ z2(struct lx_pcre_lx *lx)
 		case S14: /* e.g. "(?" */
 			switch (c) {
 			case ':': state = S15; continue;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  lx_pcre_ungetc(lx, c); return lx->z = z2, TOK_OPENFLAGS;
 			}
 
 		case S15: /* e.g. "(?:" */
@@ -1118,6 +1204,7 @@ z2(struct lx_pcre_lx *lx)
 	case S11: return TOK_START;
 	case S12: return TOK_OPENCOUNT;
 	case S13: return TOK_ALT;
+	case S14: return TOK_OPENFLAGS;
 	case S15: return TOK_OPENSUB;
 	case S16: return TOK_ESC;
 	case S17: return TOK_OCT;
@@ -1139,6 +1226,11 @@ lx_pcre_name(enum lx_pcre_token t)
 	case TOK_INVERT: return "INVERT";
 	case TOK_CLOSEGROUP: return "CLOSEGROUP";
 	case TOK_OPENGROUP: return "OPENGROUP";
+	case TOK_FLAG__UNKNOWN: return "FLAG__UNKNOWN";
+	case TOK_FLAG__INSENSITIVE: return "FLAG__INSENSITIVE";
+	case TOK_NEGATE: return "NEGATE";
+	case TOK_CLOSEFLAGS: return "CLOSEFLAGS";
+	case TOK_OPENFLAGS: return "OPENFLAGS";
 	case TOK_HEX: return "HEX";
 	case TOK_OCT: return "OCT";
 	case TOK_ESC: return "ESC";
@@ -1186,9 +1278,19 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 	} else
 	if (z == z2) {
 		switch (t) {
+		case TOK_FLAG__UNKNOWN: return "a";
+		case TOK_FLAG__INSENSITIVE: return "i";
+		case TOK_NEGATE: return "-";
+		case TOK_CLOSEFLAGS: return ")";
+		default: goto error;
+		}
+	} else
+	if (z == z3) {
+		switch (t) {
 		case TOK_OPENCOUNT: return "{";
 		case TOK_CHAR: return "a";
 		case TOK_OPENGROUP: return "[";
+		case TOK_OPENFLAGS: return "(?";
 		case TOK_HEX: return "\\xa";
 		case TOK_OCT: return "\\0";
 		case TOK_ESC: return "\\f";
@@ -1222,7 +1324,7 @@ lx_pcre_init(struct lx_pcre_lx *lx)
 	*lx = lx_default;
 
 	lx->c = EOF;
-	lx->z = z2;
+	lx->z = z3;
 
 	lx->end.byte = 0;
 	lx->end.line = 1;

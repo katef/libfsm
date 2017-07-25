@@ -28,6 +28,8 @@ re_strerror(enum re_errno e)
 	case RE_EOCTRANGE:    return "Octal escape out of range";
 	case RE_ECOUNTRANGE:  return "Count out of range";
 
+	case RE_EFLAG:        return "Unknown control flag";
+
 	case RE_EXSUB:        return "Syntax error: expected sub-expression";
 	case RE_EXTERM:       return "Syntax error: expected group term";
 	case RE_EXGROUP:      return "Syntax error: expected group";
@@ -40,6 +42,7 @@ re_strerror(enum re_errno e)
 	case RE_EXGROUPBODY:  return "Syntax error: expected group body";
 	case RE_EXEOF:        return "Syntax error: expected EOF";
 	case RE_EXESC:        return "Syntax error: expected character escape";
+	case RE_EXCLOSEFLAGS: return "Syntax error: flags are not closed";
 	}
 
 	assert(!"unreached");

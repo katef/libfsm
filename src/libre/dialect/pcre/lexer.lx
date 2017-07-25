@@ -42,6 +42,12 @@
 '\'  /[0-7]+/     -> $oct;
 '\x' /[0-9a-f]+/i -> $hex;
 
+'(?' -> $openflags .. ')' -> $closeflags {
+	'-' -> $negate;
+	'i' -> $flag__insensitive;
+	/[a-z]/ - /[i]/ -> $flag__unknown;
+}
+
 '[' -> $opengroup .. ']' -> $closegroup {
 	'^' -> $invert;
 	'-' -> $range;

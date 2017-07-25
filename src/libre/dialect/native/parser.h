@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 422 "src/libre/parser.act"
+#line 428 "src/libre/parser.act"
 
 
 	#include <re/re.h>
@@ -18,7 +18,7 @@
 	typedef struct act_state * act_state;
 
 	typedef struct fsm *  fsm;
-	typedef enum re_flags flags;
+	typedef struct flags *flags;
 	typedef struct re_err * err;
 
 #line 25 "src/libre/dialect/native/parser.h"
@@ -28,7 +28,7 @@
 extern void p_re__native(fsm, flags, lex_state, act_state, err);
 /* BEGINNING OF TRAILER */
 
-#line 1208 "src/libre/parser.act"
+#line 1259 "src/libre/parser.act"
 
 
 #line 35 "src/libre/dialect/native/parser.h"
