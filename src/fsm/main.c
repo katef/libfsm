@@ -20,6 +20,7 @@
 #include <fsm/walk.h>
 #include <fsm/out.h>
 #include <fsm/options.h>
+#include <fsm/table.h>
 
 #include "parser.h"
 
@@ -100,12 +101,13 @@ language(const char *name)
 		const char *name;
 		enum fsm_out language;
 	} a[] = {
-		{ "api",  FSM_OUT_API  },
-		{ "c",    FSM_OUT_C    },
-		{ "csv",  FSM_OUT_CSV  },
-		{ "dot",  FSM_OUT_DOT  },
-		{ "fsm",  FSM_OUT_FSM  },
-		{ "json", FSM_OUT_JSON }
+		{ "api",   FSM_OUT_API   },
+		{ "c",     FSM_OUT_C     },
+		{ "csv",   FSM_OUT_CSV   },
+		{ "dot",   FSM_OUT_DOT   },
+		{ "fsm",   FSM_OUT_FSM   },
+		{ "json",  FSM_OUT_JSON  },
+		{ "table", FSM_OUT_TABLE }
 	};
 
 	assert(name != NULL);
