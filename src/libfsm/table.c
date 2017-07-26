@@ -178,6 +178,91 @@ error:
 	return NULL;
 }
 
+struct fsm *
+fsm_from_table(const struct fsm_table *tbl, const struct fsm_options *opts)
+{
+	struct fsm *fsm;
+	struct fsm_state **states;
+	size_t i,n;
+
+	assert(tbl != NULL);
+
+	fsm = NULL;
+	states = NULL;
+
+	states = malloc(tbl->nstates * sizeof states[0]);
+	if (states == NULL) {
+		goto error;
+	}
+
+	fsm = fsm_new(opts);
+	if (fsm == NULL) {
+		goto error;
+	}
+
+	n = tbl->nstates;
+	for (i=0; i < n; i++) {
+		states[i] = NULL;
+	}
+
+	for (i=0; i < n; i++) {
+		struct fsm_state *st;
+		if (st = fsm_addstate(fsm), st == NULL) {
+			goto error;
+		}
+		states[i] = st;
+	}
+
+	if (tbl->start != (size_t)-1) {
+		assert(tbl->start < tbl->nstates);
+		fsm_setstart(fsm, states[tbl->start]);
+	}
+
+	n = tbl->nend;
+	for (i=0; i < n; i++) {
+		size_t ind;
+
+		ind = tbl->endstates[i].state;
+		assert(ind <= tbl->nstates);
+
+		fsm_setend(fsm, states[ind], 1);
+	}
+
+	n = tbl->nedges;
+	for (i=0; i < n; i++) {
+		struct fsm_state *src, *dst;
+		size_t si,di;
+
+		si = tbl->edges[i].src;
+		di = tbl->edges[i].dst;
+
+		assert(si > 0 && si <= tbl->nstates);
+		assert(di > 0 && di <= tbl->nstates);
+
+		src = states[si-1];
+		dst = states[di-1];
+
+		fsm_addedge(src, dst, (enum fsm_edge_type)tbl->edges[i].lbl);
+	}
+
+	free(states);
+	return fsm;
+
+error:
+	if (states != NULL) {
+		for (i=0; i < tbl->nstates; i++) {
+			free(states[i]);
+		}
+		free(states);
+	}
+
+	if (fsm != NULL) {
+		fsm_free(fsm);
+	}
+
+	return NULL;
+}
+
 void
 fsm_table_free(struct fsm_table *t)
 {
@@ -186,3 +271,144 @@ fsm_table_free(struct fsm_table *t)
 	free(t->edges);
 	free(t);
 }
+
+struct fsm_table *
+fsm_read_table(FILE *f)
+{
+	unsigned long nstates, start, nend, nedges;
+	size_t lineno = 0;
+	size_t i;
+	int nf, nchar;
+	char line[1024];
+	char *r;
+
+	struct fsm_table *tbl = NULL;
+
+	/* XXX - avoid using fixed buffer in the future */
+	lineno++;
+	if (r = fgets(line,sizeof line, f), r == NULL) {
+		goto eof_or_error;
+	}
+
+	if (line[strlen(line)-1] != '\n') {
+		goto line_too_long;
+	}
+
+	nstates = 0;
+	start   = 0;
+	nend    = 0;
+	nedges  = 0;
+	nf = sscanf(line, "%lu %lu %lu %lu\n%n", &nstates, &start, &nend, &nedges, &nchar);
+	if (nf != 4 || line[nchar] != '\0') {
+		goto bad_line;
+	}
+
+	if (start > nstates) {
+		goto bad_state;
+	}
+
+	tbl = malloc(sizeof *tbl);
+	if (tbl == NULL) {
+		goto error;
+	}
+
+	tbl->endstates = NULL;
+	tbl->edges = NULL;
+
+	tbl->endstates = malloc(nend * sizeof tbl->endstates[0]);
+	if (tbl->endstates == NULL) {
+		goto error;
+	}
+
+	tbl->edges = malloc(nedges * sizeof tbl->edges[0]);
+	if (tbl->edges == NULL) {
+		goto error;
+	}
+	tbl->nstates = nstates;
+	tbl->start   = start-1;
+	tbl->nend    = nend;
+	tbl->nedges  = nedges;
+
+	for (i=0; i < nend; i++) {
+		unsigned long st;
+
+		lineno++;
+		if (r = fgets(line,sizeof line, f), r == NULL) {
+			goto eof_or_error;
+		}
+
+		if (line[strlen(line)-1] != '\n') {
+			goto line_too_long;
+		}
+
+		/* XXX - need to check for more than one thing on the line */
+		if (sscanf(line, "%lu\n%n", &st, &nchar) != 1) {
+			goto bad_line;
+		}
+		if (line[nchar] != '\0') {
+			goto bad_line;
+		}
+		if ((st < 1) || (st > nstates)) {
+			goto bad_state;
+		}
+
+		tbl->endstates[i].state = st-1;
+		tbl->endstates[i].opaque = NULL;
+	}
+
+	for (i=0; i < nedges; i++) {
+		unsigned long src, dst;
+		unsigned int lbl;
+
+		lineno++;
+		if (r = fgets(line, sizeof line, f), r == NULL) {
+			goto eof_or_error;
+		}
+
+		if (line[strlen(line)-1] != '\n') {
+			goto line_too_long;
+		}
+
+		/* XXX - need to check for more than one thing on the line */
+		if (sscanf(line, "%lu %u %lu\n%n", &src, &lbl, &dst, &nchar) != 3) {
+			goto bad_line;
+		}
+
+		if (line[nchar] != '\0') {
+			goto bad_line;
+		}
+
+		if ((src < 1) || (src > nstates) || (dst < 1) || (dst > nstates)) {
+			goto bad_state;
+		}
+
+		tbl->edges[i].src = src;
+		tbl->edges[i].lbl = lbl;
+		tbl->edges[i].dst = dst;
+	}
+
+	return tbl;
+
+eof_or_error:
+	if (feof(f)) {
+		errno = EPERM;
+	}
+	goto error;
+
+line_too_long:
+bad_line:
+bad_state:
+	errno = EPERM;
+	goto error;
+
+error:
+	if (tbl != NULL) {
+		free(tbl->endstates);
+		free(tbl->edges);
+		free(tbl);
+	}
+	return NULL;
+}
+
+
+

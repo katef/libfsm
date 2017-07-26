@@ -1,6 +1,7 @@
 #ifndef FSM_TABLE_H
 #define FSM_TABLE_H
 
+#include <stdio.h>
 #include <stdlib.h>
 
 struct fsm;
@@ -30,8 +31,14 @@ struct fsm_table {
 struct fsm_table *
 fsm_table(const struct fsm *fsm);
 
+struct fsm *
+fsm_from_table(const struct fsm_table *tbl, const struct fsm_options *opts);
+
 void
 fsm_table_free(struct fsm_table *t);
+
+struct fsm_table *
+fsm_read_table(FILE *f);
 
 #endif
 
