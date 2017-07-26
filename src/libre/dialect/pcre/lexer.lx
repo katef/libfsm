@@ -80,6 +80,10 @@
 	/[0-9]+/ -> $count;
 }
 
+'\Q' .. '\E' {
+	/./ -> $char;
+}
+
 /./ - ($opensub | $opencapture | $close | $start | $end
 	| $opt | $star | $plus | $any | $alt
 	| $esc | $oct | $hex
