@@ -9,10 +9,11 @@
 	pos;
 	char;
 	unsigned;
-	fsm;
+	!fsm;
 	fsm_state;
 	grp;
 	pred;
+	!re_flags;
 	!err;
 
 %terminals%
@@ -48,6 +49,12 @@
 	!CLASS_word:   () -> (:fsm);
 	!CLASS_xdigit: () -> (:fsm);
 
+	!OPENFLAGS;
+	!CLOSEFLAGS;
+	!NEGATE;
+	!FLAG_UNKNOWN;
+	!FLAG_INSENSITIVE: () -> (:re_flags);
+
 	!ESC:    () -> (:char);
 	!OCT:    () -> (:char, :pos, :pos);
 	!HEX:    () -> (:char, :pos, :pos);
@@ -82,12 +89,19 @@
 	!<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
 	<count-1>: (:fsm_state, :fsm_state) -> ();
 
+	!<push-flags>;
+	!<pop-flags>;
+	!<set-flag>: (:re_flags) -> ();
+	!<clear-flag>: (:re_flags) -> ();
+
 	!<err-expected-term>;
 	!<err-expected-count>;
 	<err-expected-atoms>;
 	!<err-expected-alts>;
 	!<err-expected-range>;
 	!<err-expected-closegroup>;
+	!<err-unknown-flag>;
+	!<err-expected-closeflags>;
 	!<err-expected-groupbody>;
 	<err-expected-eof>;
 

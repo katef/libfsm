@@ -1,6 +1,6 @@
 /*
  * Automatically generated from the files:
- *	src/libre/dialect/literal/parser.sid
+ *	src/libre/dialect/pcre/parser.sid
  * and
  *	src/libre/parser.act
  * by:
@@ -21,16 +21,16 @@
 	typedef struct flags *flags;
 	typedef struct re_err * err;
 
-#line 25 "src/libre/dialect/literal/parser.h"
+#line 25 "src/libre/dialect/pcre/parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
-extern void p_re__literal(fsm, flags, lex_state, act_state, err);
+extern void p_re__pcre(fsm, flags, lex_state, act_state, err);
 /* BEGINNING OF TRAILER */
 
 #line 1259 "src/libre/parser.act"
 
 
-#line 35 "src/libre/dialect/literal/parser.h"
+#line 35 "src/libre/dialect/pcre/parser.h"
 
 /* END OF FILE */

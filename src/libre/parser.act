@@ -85,14 +85,20 @@
 		struct fsm *dup;
 	};
 
-	typedef char         t_char;
+	struct flags {
+		enum re_flags flags;
+		struct flags *parent;
+	};
+
+	typedef char     t_char;
 	typedef const char * t_class;
-	typedef unsigned     t_unsigned;
-	typedef unsigned     t_pred; /* TODO */
+	typedef unsigned t_unsigned;
+	typedef unsigned t_pred; /* TODO */
 
 	typedef struct lx_pos t_pos;
 	typedef struct fsm * t_fsm;
 	typedef struct fsm_state * t_fsm__state;
+	typedef enum re_flags t_re__flags;
 	typedef struct grp t_grp;
 
 	struct act_state {
@@ -416,7 +422,7 @@
 	typedef struct act_state * act_state;
 
 	typedef struct fsm *  fsm;
-	typedef enum re_flags flags;
+	typedef struct flags *flags;
 	typedef struct re_err * err;
 
 @};
@@ -555,7 +561,7 @@
 	@};
 
 	START: () -> (p :pred) = @{
-		switch (flags & RE_ANCHOR) {
+		switch (flags->flags & RE_ANCHOR) {
 		case RE_TEXT:  @p = RE_SOT; break;
 		case RE_MULTI: @p = RE_SOL; break;
 		case RE_ZONE:  @p = RE_SOZ; break;
@@ -567,7 +573,7 @@
 	@};
 
 	END: () -> (p :pred) = @{
-		switch (flags & RE_ANCHOR) {
+		switch (flags->flags & RE_ANCHOR) {
 		case RE_TEXT:  @p = RE_EOT; break;
 		case RE_MULTI: @p = RE_EOL; break;
 		case RE_ZONE:  @p = RE_EOZ; break;
@@ -596,6 +602,10 @@
 		}
 
 		@n = (unsigned int) u;
+	@};
+
+	FLAG_INSENSITIVE: () -> (flag :re_flags) = @{
+		@flag = RE_ICASE;
 	@};
 
 %actions%
@@ -659,7 +669,7 @@
 	@};
 
 	<group-add-char>: (g :grp &, c :char) -> () = @{
-		if (-1 == group_add(@&g, flags, @c)) {
+		if (-1 == group_add(@&g, flags->flags, @c)) {
 			err->e = RE_EERRNO;
 			@!;
 		}
@@ -740,7 +750,7 @@
 		}
 
 		for (i = (unsigned char) @a; i <= (unsigned char) @b; i++) {
-			if (-1 == group_add(@&g, flags, (char) i)) {
+			if (-1 == group_add(@&g, flags->flags, (char) i)) {
 				err->e = RE_EERRNO;
 				@!;
 			}
@@ -839,7 +849,7 @@
 
 		/* TODO: check c is legal? */
 
-		if (!addedge_literal(fsm, flags, @x, @y, @c)) {
+		if (!addedge_literal(fsm, flags->flags, @x, @y, @c)) {
 			@!;
 		}
 	@};
@@ -988,6 +998,32 @@
 	@};
 
 
+	<push-flags>: () -> () = @{
+		struct flags *n = malloc(sizeof *n);
+		if (n == NULL) {
+			@!;
+		}
+		n->parent = flags;
+		n->flags = flags->flags;
+		flags = n;
+	@};
+
+	<pop-flags>: () -> () = @{
+		struct flags *t = flags->parent;
+		assert(t != NULL);
+		free(flags);
+		flags = t;
+	@};
+
+	<set-flag>: (flag: re_flags) -> () = @{
+		flags->flags |= @flag;
+	@};
+
+	<clear-flag>: (flag: re_flags) -> () = @{
+		flags->flags &= ~@flag;
+	@};
+
+
 	<err-expected-term> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXTERM;
@@ -1027,6 +1063,18 @@
 	<err-expected-groupbody> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXGROUPBODY;
+		}
+	@};
+
+	<err-unknown-flag> = @{
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EFLAG;
+		}
+	@};
+
+	<err-expected-closeflags> = @{
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EXCLOSEFLAGS;
 		}
 	@};
 
@@ -1071,7 +1119,7 @@
 	static int
 	parse(int (*f)(void *opaque), void *opaque,
 		void (*entry)(struct fsm *, flags, lex_state, act_state, err),
-		enum re_flags flags, int overlap,
+		struct flags *flags, int overlap,
 		struct fsm *new, struct re_err *err)
 	{
 		struct act_state  act_state_s;
@@ -1187,6 +1235,9 @@
 		struct re_err *err)
 	{
 		struct fsm *new;
+		struct flags top, *fl = &top;
+
+		top.flags = flags;
 
 		assert(f != NULL);
 
@@ -1195,7 +1246,7 @@
 			return NULL;
 		}
 
-		if (-1 == parse(f, opaque, DIALECT_ENTRY, flags, overlap, new, err)) {
+		if (-1 == parse(f, opaque, DIALECT_ENTRY, fl, overlap, new, err)) {
 			fsm_free(new);
 			return NULL;
 		}

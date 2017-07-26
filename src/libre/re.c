@@ -37,6 +37,7 @@ re_dialect(enum re_dialect dialect)
 		{ RE_LITERAL, comp_literal, 0 },
 		{ RE_GLOB,    comp_glob,    0 },
 		{ RE_NATIVE,  comp_native,  0 },
+		{ RE_PCRE,    comp_pcre,    0 },
 		{ RE_SQL,     comp_sql,     1 }
 	};
 

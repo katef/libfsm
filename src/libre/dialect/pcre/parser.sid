@@ -4,21 +4,16 @@
  * See LICENCE for the full copyright terms.
  */
 
-/*
- * TODO: explain choices. e.g. i'm not permitting () or ||. only the root expression is allowed to be empty.
- * TODO: explain strategy: pass in x,y endpoints top-down
- */
-
 %types%
 
 	pos;
 	char;
 	unsigned;
-	fsm;
+	!fsm;
 	fsm_state;
 	grp;
 	pred;
-	!re_flags;
+	re_flags;
 	!err;
 
 %terminals%
@@ -31,35 +26,35 @@
 	SEP;
 	STAR;
 
-	OPENSUB;   CLOSESUB;
+	OPENSUB; OPENCAPTURE; CLOSE;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
 	OPENCOUNT: () -> (:pos, :pos); CLOSECOUNT: () -> (:pos, :pos);
 
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
-	CLASS_alnum:  () -> (:fsm);
-	CLASS_alpha:  () -> (:fsm);
-	!CLASS_any:   () -> (:fsm);
-	CLASS_ascii:  () -> (:fsm);
-	CLASS_blank:  () -> (:fsm);
-	CLASS_cntrl:  () -> (:fsm);
-	CLASS_digit:  () -> (:fsm);
-	CLASS_graph:  () -> (:fsm);
-	CLASS_lower:  () -> (:fsm);
-	CLASS_print:  () -> (:fsm);
-	CLASS_punct:  () -> (:fsm);
-	CLASS_space:  () -> (:fsm);
-	!CLASS_spchr: () -> (:fsm);
-	CLASS_upper:  () -> (:fsm);
-	CLASS_word:   () -> (:fsm);
-	CLASS_xdigit: () -> (:fsm);
+	!CLASS_alnum:  () -> (:fsm);
+	!CLASS_alpha:  () -> (:fsm);
+	!CLASS_any:    () -> (:fsm);
+	!CLASS_ascii:  () -> (:fsm);
+	!CLASS_blank:  () -> (:fsm);
+	!CLASS_cntrl:  () -> (:fsm);
+	!CLASS_digit:  () -> (:fsm);
+	!CLASS_graph:  () -> (:fsm);
+	!CLASS_lower:  () -> (:fsm);
+	!CLASS_print:  () -> (:fsm);
+	!CLASS_punct:  () -> (:fsm);
+	!CLASS_space:  () -> (:fsm);
+	!CLASS_spchr:  () -> (:fsm);
+	!CLASS_upper:  () -> (:fsm);
+	!CLASS_word:   () -> (:fsm);
+	!CLASS_xdigit: () -> (:fsm);
 
-	!OPENFLAGS;
-	!CLOSEFLAGS;
-	!NEGATE;
-	!FLAG_UNKNOWN;
-	!FLAG_INSENSITIVE: () -> (:re_flags);
+	OPENFLAGS;
+	CLOSEFLAGS;
+	NEGATE;
+	FLAG_UNKNOWN;
+	FLAG_INSENSITIVE: () -> (:re_flags);
 
 	ESC:    () -> (:char);
 	OCT:    () -> (:char, :pos, :pos);
@@ -79,7 +74,7 @@
 	<make-group>:  () -> (:grp);
 	<invert-group>:    (:grp &) -> ();
 	<group-add-char>:  (:grp &, :char) -> ();
-	<group-add-class>: (:grp &, :fsm) -> ();
+	!<group-add-class>: (:grp &, :fsm) -> ();
 	<group-add-range>: (:grp &, :char, :char) -> ();
 	<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
 
@@ -95,10 +90,10 @@
 	<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
 	<count-1>: (:fsm_state, :fsm_state) -> ();
 
-	!<push-flags>;
-	!<pop-flags>;
-	!<set-flag>: (:re_flags) -> ();
-	!<clear-flag>: (:re_flags) -> ();
+	<push-flags>;
+	<pop-flags>;
+	<set-flag>: (:re_flags) -> ();
+	<clear-flag>: (:re_flags) -> ();
 
 	<err-expected-term>;
 	<err-expected-count>;
@@ -106,11 +101,9 @@
 	<err-expected-alts>;
 	<err-expected-range>;
 	<err-expected-closegroup>;
-	!<err-unknown-flag>;
-	!<err-expected-closeflags>;
 	<err-expected-groupbody>;
-	!<err-unknown-flag>;
-	!<err-expected-closeflags>;
+	<err-unknown-flag>;
+	<err-expected-closeflags>;
 	<err-expected-eof>;
 
 	<mark-group>: (:pos, :pos) -> ();
@@ -127,36 +120,6 @@
 			(c, !, !) = HEX;
 		||
 			(c, !, !) = CHAR;
-		};
-
-		class: () -> (k :fsm) = {
-			k = CLASS_alnum;
-		||
-			k = CLASS_alpha;
-		||
-			k = CLASS_ascii;
-		||
-			k = CLASS_blank;
-		||
-			k = CLASS_cntrl;
-		||
-			k = CLASS_digit;
-		||
-			k = CLASS_graph;
-		||
-			k = CLASS_lower;
-		||
-			k = CLASS_print;
-		||
-			k = CLASS_punct;
-		||
-			k = CLASS_space;
-		||
-			k = CLASS_upper;
-		||
-			k = CLASS_word;
-		||
-			k = CLASS_xdigit;
 		};
 
 		range: () -> (a :char, b :char) = {
@@ -191,9 +154,6 @@
 			{
 				c = char;
 				<group-add-char>(&g, c);
-			||
-				k = class;
-				<group-add-class>(&g, k);
 			||
 				(a, b) = range;
 				<group-add-range>(&g, a, b);
@@ -291,13 +251,70 @@
 		<add-pred>(x, y, p);
 	};
 
+	inline-flags: () -> () [
+		positive = {
+			{
+				c = FLAG_INSENSITIVE;
+				<set-flag>(c);
+			||
+				FLAG_UNKNOWN;
+				<err-unknown-flag>;
+			};
+
+			{
+				positive;
+			||
+				$;
+			};
+		};
+		negative = {
+			{
+				c = FLAG_INSENSITIVE;
+				<clear-flag>(c);
+			||
+				FLAG_UNKNOWN;
+				<err-unknown-flag>;
+			};
+
+			{
+				negative;
+			||
+				$;
+			};
+		};
+	] = {
+		OPENFLAGS;
+
+		{
+			positive;
+		||
+			$;
+		};
+
+		{
+			NEGATE;
+			negative;
+		||
+			$;
+		};
+
+		CLOSEFLAGS;
+	##
+		<err-expected-closeflags>;
+	};
+
 	expr: (x :fsm_state, y :fsm_state) -> () [
 
 		atom: (x :fsm_state, y :fsm_state &) -> () = {
 			{
-				OPENSUB;
+				{ OPENSUB; || OPENCAPTURE; };
+				<push-flags>;
 				expr(x, y);
-				CLOSESUB;
+				<pop-flags>;
+				CLOSE;
+			||
+				inline-flags;
+				<add-epsilon>(x, y);
 			||
 				group(x, y);
 			||
@@ -363,6 +380,8 @@
 				<add-epsilon>(x, z);
 
 				list-of-atoms(z, y);
+			||
+				<add-epsilon>(x, y);
 			};
 
 		] = {
@@ -377,13 +396,11 @@
 		list-of-alts(x, y);
 	};
 
-	re_native: () -> () = {
+	re_pcre: () -> () = {
 		(x, y) = <make-states>;
 
 		{
 			expr(x, y);
-		||
-			<add-epsilon>(x, y);
 		##
 			<err-expected-alts>;
 		};
@@ -397,5 +414,5 @@
 
 %entry%
 
-	re_native;
+	re_pcre;
 
