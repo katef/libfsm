@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -231,6 +232,32 @@ xopen(const char *s)
 	return f;
 }
 
+static struct fsm *
+read_table(FILE *f, const struct fsm_options *options)
+{
+	struct fsm_table *t;
+	struct fsm *fsm;
+
+	t = fsm_read_table(f);
+	if (t == NULL) {
+		if (errno == EPERM) {
+			printf("error in format while reading table format\n");
+		} else {
+			perror("reading table format");
+		}
+		exit(EXIT_FAILURE);
+	}
+
+	fsm = fsm_from_table(t, options);
+	if (fsm == NULL) {
+		perror("converting to FSM");
+		exit(EXIT_FAILURE);
+	}
+
+	fsm_table_free(t);
+	return fsm;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -239,9 +266,11 @@ main(int argc, char *argv[])
 	struct fsm *fsm;
 	int xfiles;
 	int print;
+	int readtable;
 	int r;
 
 	int (*query)(const struct fsm *, const struct fsm_state *);
+	struct fsm *(*reader)(FILE *, const struct fsm_options *);
 
 	opt.comments = 1;
 	opt.io       = FSM_IO_GETC;
@@ -258,7 +287,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:" "xpq:l:dmrt:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:k:" "Txpq:l:dmrt:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
@@ -267,9 +296,10 @@ main(int argc, char *argv[])
 			case 'e': opt.prefix            = optarg;     break;
 			case 'k': opt.io                = io(optarg); break;
 
-			case 'x': xfiles = 1;                         break;
-			case 'p': print  = 1;                         break;
-			case 'q': query  = predicate(optarg);         break;
+			case 'x': xfiles    = 1;                      break;
+			case 'p': print     = 1;                      break;
+			case 'T': readtable = 1;                      break;
+			case 'q': query     = predicate(optarg);      break;
 
 			case 'l': format = language(optarg);          break;
 
@@ -293,6 +323,8 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
+	reader = readtable ? read_table : fsm_parse;
+
 	if ((op != OP_IDENTITY) + !!query > 1) {
 		fprintf(stderr, "execute, -t and -q are mutually exclusive\n");
 		return EXIT_FAILURE;
@@ -313,7 +345,7 @@ main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 			}
 
-			q = fsm_parse((argc == 0) ? stdin : xopen(argv[0]), &opt);
+			q = reader((argc == 0) ? stdin : xopen(argv[0]), &opt);
 			if (q == NULL) {
 				exit(EXIT_FAILURE);
 			}
@@ -323,12 +355,12 @@ main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 			}
 
-			a = fsm_parse(xopen(argv[0]), &opt);
+			a = reader(xopen(argv[0]), &opt);
 			if (a == NULL) {
 				exit(EXIT_FAILURE);
 			}
 
-			b = fsm_parse(xopen(argv[1]), &opt);
+			b = reader(xopen(argv[1]), &opt);
 			if (b == NULL) {
 				exit(EXIT_FAILURE);
 			}
