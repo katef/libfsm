@@ -81,6 +81,10 @@ fsm_equal(const struct fsm *a, const struct fsm *b)
 		return -1;
 	}
 
+	if (fsm_empty(a) && fsm_empty(b)) {
+		return 1;
+	}
+
 	/*
 	 * The subset operation is not commutative; sets are equal
 	 * when one set is a subset of the other and vice versa.
