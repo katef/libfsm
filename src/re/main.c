@@ -264,7 +264,7 @@ carryopaque(const struct fsm_state **set, size_t n,
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	if (!fsm_isend(fsm, state)) {
+	if (!fsm_isend(NULL, fsm, state)) {
 		return;
 	}
 
@@ -280,7 +280,7 @@ carryopaque(const struct fsm_state **set, size_t n,
 	matches = NULL;
 
 	for (i = 0; i < n; i++) {
-		if (!fsm_isend(fsm, set[i])) {
+		if (!fsm_isend(NULL, fsm, set[i])) {
 			continue;
 		}
 
@@ -502,7 +502,7 @@ main(int argc, char *argv[])
 				 * XXX: then use fsm_setendopaque() here.
 				 */
 				for (s = new->sl; s != NULL; s = s->next) {
-					if (fsm_isend(new, s)) {
+					if (fsm_isend(NULL, new, s)) {
 						struct match *matches;
 
 						matches = NULL;
@@ -589,7 +589,7 @@ main(int argc, char *argv[])
 		for (s = dfa->sl; s != NULL; s = s->next) {
 			const struct match *matches;
 
-			if (!fsm_isend(dfa, s)) {
+			if (!fsm_isend(NULL, dfa, s)) {
 				continue;
 			}
 
@@ -651,7 +651,7 @@ main(int argc, char *argv[])
 		struct fsm_state *s;
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
-			if (!fsm_isend(fsm, s)) {
+			if (!fsm_isend(NULL, fsm, s)) {
 				continue;
 			}
 

@@ -14,10 +14,11 @@
 #include "../internal.h"
 
 int
-fsm_hasincoming(const struct fsm *fsm, const struct fsm_state *state)
+fsm_hasincoming(void *dummy, const struct fsm *fsm, const struct fsm_state *state)
 {
 	const struct fsm_state *s;
 
+	(void) dummy;
 	assert(fsm != NULL);
 	assert(state != NULL);
 

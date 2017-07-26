@@ -516,7 +516,7 @@ p_list_Hof_Hthings_C_Cthing(lex_state lex_state, act_state act_state, ast ZIa, z
 
 		assert((ZI194) != NULL);
 
-		if (!fsm_complete((ZI194), fsm_isany)) {
+		if (!fsm_complete((ZI194), NULL, fsm_isany)) {
 			perror("fsm_complete");
 			goto ZL1;
 		}
@@ -1383,7 +1383,7 @@ ZL2_182:;
 			goto ZL1;
 		}
 
-		old = fsm_collate((ZIq), fsm_isend);
+		old = fsm_collate((ZIq), NULL, fsm_isend);
 		if (old == NULL) {
 			perror("fsm_collate");
 			goto ZL1;
@@ -1442,7 +1442,7 @@ ZL2_182:;
 			goto ZL1;
 		}
 
-		old = fsm_collate((ZIq), fsm_isend);
+		old = fsm_collate((ZIq), NULL, fsm_isend);
 		if (old == NULL) {
 			perror("fsm_collate");
 			goto ZL1;
@@ -1501,7 +1501,7 @@ ZL2_182:;
 			goto ZL1;
 		}
 
-		old = fsm_collate((ZIq), fsm_isend);
+		old = fsm_collate((ZIq), NULL, fsm_isend);
 		if (old == NULL) {
 			perror("fsm_collate");
 			goto ZL1;
@@ -1634,7 +1634,7 @@ p_expr_C_Cprefix_Hexpr(lex_state lex_state, act_state act_state, zone ZIz, fsm *
 
 		assert((ZIq) != NULL);
 
-		if (!fsm_complete((ZIq), fsm_isany)) {
+		if (!fsm_complete((ZIq), NULL, fsm_isany)) {
 			perror("fsm_complete");
 			goto ZL1;
 		}

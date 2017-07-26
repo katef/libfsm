@@ -526,7 +526,7 @@
 			@!;
 		}
 
-		old = fsm_collate(@r, fsm_isend);
+		old = fsm_collate(@r, NULL, fsm_isend);
 		if (old == NULL) {
 			perror("fsm_collate");
 			@!;
@@ -576,7 +576,7 @@
 			@!;
 		}
 
-		old = fsm_collate(@r, fsm_isend);
+		old = fsm_collate(@r, NULL, fsm_isend);
 		if (old == NULL) {
 			perror("fsm_collate");
 			@!;
@@ -621,7 +621,7 @@
 			@!;
 		}
 
-		old = fsm_collate(@r, fsm_isend);
+		old = fsm_collate(@r, NULL, fsm_isend);
 		if (old == NULL) {
 			perror("fsm_collate");
 			@!;
@@ -660,7 +660,7 @@
 	<op-complete>: (r :fsm) -> () = @{
 		assert(@r != NULL);
 
-		if (!fsm_complete(@r, fsm_isany)) {
+		if (!fsm_complete(@r, NULL, fsm_isany)) {
 			perror("fsm_complete");
 			@!;
 		}

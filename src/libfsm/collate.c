@@ -14,8 +14,8 @@
 #include "internal.h"
 
 struct fsm_state *
-fsm_collate(struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+fsm_collate(struct fsm *fsm, void *pred_arg,
+	int (*predicate)(void *, const struct fsm *, const struct fsm_state *))
 {
 	struct fsm_state *new;
 	struct fsm_state *s;
@@ -23,13 +23,13 @@ fsm_collate(struct fsm *fsm,
 	assert(fsm != NULL);
 	assert(predicate != NULL);
 
-	switch (fsm_count(fsm, predicate)) {
+	switch (fsm_count(fsm, pred_arg, predicate)) {
 	case 0:
 		errno = 0; /* XXX: bad form */
 		return NULL;
 
 	case 1:
-		for (s = fsm->sl; !predicate(fsm, s); s = s->next) {
+		for (s = fsm->sl; !predicate(pred_arg, fsm, s); s = s->next) {
 			assert(s->next != NULL);
 		}
 
@@ -46,7 +46,7 @@ fsm_collate(struct fsm *fsm,
 				continue;
 			}
 
-			if (!predicate(fsm, s)) {
+			if (!predicate(pred_arg, fsm, s)) {
 				continue;
 			}
 

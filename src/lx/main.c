@@ -256,7 +256,7 @@ carryopaque(const struct fsm_state **set, size_t n,
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	if (!fsm_isend(fsm, state)) {
+	if (!fsm_isend(NULL, fsm, state)) {
 		return;
 	}
 
@@ -276,7 +276,7 @@ carryopaque(const struct fsm_state **set, size_t n,
 	m = NULL;
 
 	for (i = 0; i < n; i++) {
-		if (fsm_isend(fsm, set[i])) {
+		if (fsm_isend(NULL, fsm, set[i])) {
 			m = fsm_getopaque(fsm, set[i]);
 			break;
 		}
@@ -289,7 +289,7 @@ carryopaque(const struct fsm_state **set, size_t n,
 	for (i = 0; i < n; i++) {
 		struct ast_mapping *p;
 
-		if (!fsm_isend(fsm, set[i])) {
+		if (!fsm_isend(NULL, fsm, set[i])) {
 			continue;
 		}
 
@@ -418,7 +418,7 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 		const struct fsm_state *s;
 
 		for (s = q->sl; s != NULL; s = s->next) {
-			if (!fsm_isend(q, s)) {
+			if (!fsm_isend(NULL, q, s)) {
 				continue;
 			}
 
@@ -685,7 +685,7 @@ main(int argc, char *argv[])
 						for (s = q->fsm->sl; s != NULL; s = s->next) {
 							struct ast_mapping *m;
 
-							if (!fsm_isend(q->fsm, s)) {
+							if (!fsm_isend(NULL, q->fsm, s)) {
 								continue;
 							}
 
@@ -763,7 +763,7 @@ main(int argc, char *argv[])
 				zn++;
 			}
 
-			if (fsm_isend(z->fsm, z->fsm->start)) {
+			if (fsm_isend(NULL, z->fsm, z->fsm->start)) {
 				fprintf(stderr, "start state accepts\n"); /* TODO */
 				e = 1;
 			}
@@ -772,7 +772,7 @@ main(int argc, char *argv[])
 			for (s = z->fsm->sl; s != NULL; s = s->next) {
 				struct ast_mapping *m;
 
-				if (!fsm_isend(z->fsm, s)) {
+				if (!fsm_isend(NULL, z->fsm, s)) {
 					continue;
 				}
 
@@ -843,7 +843,7 @@ main(int argc, char *argv[])
 
 		for (z = ast->zl; z != NULL; z = z->next) {
 			for (s = z->fsm->sl; s != NULL; s = s->next) {
-				if (!fsm_isend(z->fsm, s)) {
+				if (!fsm_isend(NULL, z->fsm, s)) {
 					continue;
 				}
 

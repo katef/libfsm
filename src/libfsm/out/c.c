@@ -183,7 +183,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 
 	/* all edges go to the same state */
 	{
-		if (fsm_iscomplete(fsm, state)) {
+		if (fsm_iscomplete(NULL, fsm, state)) {
 			mode.state = fsm_findmode(state, &mode.freq);
 		} else {
 			mode.state = NULL;
@@ -323,7 +323,7 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 	struct fsm_state *s;
 
 	/* no end states */
-	if (!fsm_has(fsm, fsm_isend)) {
+	if (!fsm_has(fsm, NULL, fsm_isend)) {
 		printf("\treturn EOF; /* unexpected EOF */\n");
 		return;
 	}
@@ -332,7 +332,7 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 	fprintf(f, "\t/* end states */\n");
 	fprintf(f, "\tswitch (state) {\n");
 	for (s = sl; s != NULL; s = s->next) {
-		if (!fsm_isend(fsm, s)) {
+		if (!fsm_isend(NULL, fsm, s)) {
 			continue;
 		}
 
@@ -352,7 +352,7 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
-	assert(fsm_all(fsm, fsm_isdfa));
+	assert(fsm_all(fsm, NULL, fsm_isdfa));
 	assert(f != NULL);
 	assert(cp != NULL);
 
@@ -404,7 +404,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 	assert(fsm->opt != NULL);
 	assert(f != NULL);
 
-	if (!fsm_all(fsm, fsm_isdfa)) {
+	if (!fsm_all(fsm, NULL, fsm_isdfa)) {
 		errno = EINVAL;
 		return;
 	}

@@ -13,8 +13,8 @@
 #include "../internal.h"
 
 unsigned
-fsm_count(const struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+fsm_count(const struct fsm *fsm, void *pred_arg,
+	int (*predicate)(void *, const struct fsm *, const struct fsm_state *))
 {
 	const struct fsm_state *s;
 	unsigned n;
@@ -25,7 +25,7 @@ fsm_count(const struct fsm *fsm,
 	n = 0;
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		n += !!predicate(fsm, s);
+		n += !!predicate(pred_arg, fsm, s);
 	}
 
 	return n;

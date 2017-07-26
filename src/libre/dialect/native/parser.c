@@ -315,7 +315,7 @@
 		sa = fsm_getstart(a);
 		sb = fsm_getstart(b);
 
-		end = fsm_collate(b, fsm_isend);
+		end = fsm_collate(b, NULL, fsm_isend);
 		if (end == NULL) {
 			return 0;
 		}
@@ -381,8 +381,8 @@
 
 	/* XXX: to go when dups show all spellings for group overlap */
 	static const struct fsm_state *
-	fsm_any(const struct fsm *fsm,
-		int (*predicate)(const struct fsm *, const struct fsm_state *))
+	fsm_any(const struct fsm *fsm, void *pred_arg,
+		int (*predicate)(void *, const struct fsm *, const struct fsm_state *))
 	{
 		const struct fsm_state *s;
 
@@ -390,7 +390,7 @@
 		assert(predicate != NULL);
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
-			if (!predicate(fsm, s)) {
+			if (!predicate(pred_arg, fsm, s)) {
 				return s;
 			}
 		}
@@ -647,7 +647,7 @@ p_group(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err,
 			/* TODO: would like to show the original spelling verbatim, too */
 
 			/* XXX: this is just one example; really I want to show the entire set */
-			end = fsm_any((&ZIg)->dup, fsm_isend);
+			end = fsm_any((&ZIg)->dup, NULL, fsm_isend);
 			assert(end != NULL);
 
 			if (-1 == fsm_example((&ZIg)->dup, end, err->dup, sizeof err->dup)) {

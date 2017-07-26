@@ -15,13 +15,13 @@ struct fsm;
 struct fsm_state;
 
 int
-fsm_isany(const struct fsm *fsm, const struct fsm_state *state);
+fsm_isany(void *, const struct fsm *fsm, const struct fsm_state *state);
 
 int
-fsm_isend(const struct fsm *fsm, const struct fsm_state *state);
+fsm_isend(void *, const struct fsm *fsm, const struct fsm_state *state);
 
 int
-fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state);
+fsm_isdfa(void *, const struct fsm *fsm, const struct fsm_state *state);
 
 /*
  * To be complete means that a state has an edge for all letters in the
@@ -29,13 +29,13 @@ fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state);
  * unsigned octet.
  */
 int
-fsm_iscomplete(const struct fsm *fsm, const struct fsm_state *state);
+fsm_iscomplete(void *, const struct fsm *fsm, const struct fsm_state *state);
 
 int
-fsm_hasincoming(const struct fsm *fsm, const struct fsm_state *state);
+fsm_hasincoming(void *, const struct fsm *fsm, const struct fsm_state *state);
 
 int
-fsm_hasoutgoing(const struct fsm *fsm, const struct fsm_state *state);
+fsm_hasoutgoing(void *, const struct fsm *fsm, const struct fsm_state *state);
 
 #endif
 

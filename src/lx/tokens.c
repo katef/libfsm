@@ -28,7 +28,7 @@ tok_contains(const struct fsm *fsm, const char *s)
 	for (p = fsm->sl; p != NULL; p = p->next) {
 		const struct ast_mapping *m;
 
-		if (!fsm_isend(fsm, p)) {
+		if (!fsm_isend(NULL, fsm, p)) {
 			continue;
 		}
 
@@ -58,7 +58,7 @@ tok_subsetof(const struct fsm *a, const struct fsm *b)
 	for (p = a->sl; p != NULL; p = p->next) {
 		const struct ast_mapping *m;
 
-		if (!fsm_isend(a, p)) {
+		if (!fsm_isend(NULL, a, p)) {
 			continue;
 		}
 

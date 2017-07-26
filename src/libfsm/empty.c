@@ -35,7 +35,7 @@ fsm_empty(struct fsm *fsm)
 	 * Note this includes the empty string (when the start state matches).
 	 */
 
-	if (fsm_reachableany(fsm, start, fsm_isend)) {
+	if (fsm_reachableany(fsm, start, NULL, fsm_isend)) {
 		return 0;
 	}
 

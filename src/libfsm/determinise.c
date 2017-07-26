@@ -378,7 +378,7 @@ carryend(struct set *set, struct fsm *fsm, struct fsm_state *state)
 	assert(state != NULL);
 
 	for (s = set_first(set, &it); s != NULL; s = set_next(&it)) {
-		if (fsm_isend(fsm, s)) {
+		if (fsm_isend(NULL, fsm, s)) {
 			fsm_setend(fsm, state, 1);
 		}
 	}
@@ -534,7 +534,7 @@ determinise(struct fsm *nfa,
 	free_mappings(mappings);
 
 	/* TODO: can assert a whole bunch of things about the dfa, here */
-	assert(fsm_all(dfa, fsm_isdfa));
+	assert(fsm_all(dfa, NULL, fsm_isdfa));
 
 	return dfa;
 

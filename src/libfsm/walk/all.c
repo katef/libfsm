@@ -13,8 +13,8 @@
 #include "../internal.h"
 
 int
-fsm_all(const struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+fsm_all(const struct fsm *fsm, void *pred_arg,
+	int (*predicate)(void *, const struct fsm *, const struct fsm_state *))
 {
 	const struct fsm_state *s;
 
@@ -22,7 +22,7 @@ fsm_all(const struct fsm *fsm,
 	assert(predicate != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (!predicate(fsm, s)) {
+		if (!predicate(pred_arg, fsm, s)) {
 			return 0;
 		}
 	}

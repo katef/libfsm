@@ -237,7 +237,7 @@ fsm_out_fsm(const struct fsm *fsm, FILE *f)
 
 	end = 0;
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		end += !!fsm_isend(fsm, s);
+		end += !!fsm_isend(NULL, fsm, s);
 	}
 
 	if (end == 0) {
@@ -246,7 +246,7 @@ fsm_out_fsm(const struct fsm *fsm, FILE *f)
 
 	fprintf(f, "end:   ");
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (fsm_isend(fsm, s)) {
+		if (fsm_isend(NULL, fsm, s)) {
 			end--;
 
 			fprintf(f, "%u%s", indexof(fsm, s), end > 0 ? ", " : ";\n");

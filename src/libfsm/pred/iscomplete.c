@@ -15,12 +15,13 @@
 #include "../internal.h"
 
 int
-fsm_iscomplete(const struct fsm *fsm, const struct fsm_state *state)
+fsm_iscomplete(void *dummy, const struct fsm *fsm, const struct fsm_state *state)
 {
 	struct fsm_edge *e;
 	struct set_iter it;
 	size_t i;
 
+	(void) dummy;
 	assert(fsm != NULL);
 	assert(state != NULL);
 

@@ -156,8 +156,8 @@ fsm_getopaque(struct fsm *fsm, const struct fsm_state *state);
  * Returns NULL on error, or if there is no state.
  */
 struct fsm_state *
-fsm_collate(struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *));
+fsm_collate(struct fsm *fsm, void *pred_arg,
+	int (*predicate)(void *, const struct fsm *, const struct fsm_state *));
 
 /*
  * Register a given state as the start state for an FSM. There may only be one
@@ -247,8 +247,8 @@ fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache)
  * Make a DFA complete, as per fsm_iscomplete.
  */
 int
-fsm_complete(struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *));
+fsm_complete(struct fsm *fsm, void *pred_arg,
+	int (*predicate)(void *, const struct fsm *, const struct fsm_state *));
 
 /*
  * Minimize an FSM to its canonical form.

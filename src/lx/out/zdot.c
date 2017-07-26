@@ -52,7 +52,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	for (s = z->fsm->sl; s != NULL; s = s->next) {
 		struct ast_mapping *m;
 
-		if (fsm_isend(z->fsm, s)) {
+		if (fsm_isend(NULL, z->fsm, s)) {
 			m = s->opaque;
 
 			if (m->to == NULL) {

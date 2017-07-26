@@ -49,7 +49,7 @@ fsm_setendopaque(struct fsm *fsm, void *opaque)
 	assert(fsm != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (fsm_isend(fsm, s)) {
+		if (fsm_isend(NULL, fsm, s)) {
 			fsm_setopaque(fsm, s, opaque);
 		}
 	}

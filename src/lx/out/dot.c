@@ -103,7 +103,7 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 		fprintf(f, "%u<br/>", indexof(fsm, s));
 	}
 
-	if (fsm_isend(fsm, s)) {
+	if (fsm_isend(NULL, fsm, s)) {
 
 		m = s->opaque;
 
@@ -154,7 +154,7 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 
 	fprintf(f, "> ];\n");
 
-	if (!fsm_isend(fsm, s)) {
+	if (!fsm_isend(NULL, fsm, s)) {
 		return;
 	}
 
@@ -234,7 +234,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	}
 
 	/* a start state should not accept */
-	if (fsm_isend(z->fsm, z->fsm->start)) {
+	if (fsm_isend(NULL, z->fsm, z->fsm->start)) {
 		fprintf(f, "\t\tz%uS%u [ color = red ];\n",
 			zindexof(ast, z), indexof(z->fsm, z->fsm->start));
 	}
