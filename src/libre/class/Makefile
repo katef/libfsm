@@ -68,18 +68,16 @@ src/libre/class/utf8_assigned.c:
 SRC += src/libre/class/utf8_assigned.c
 
 # borrowed from https://www.w3.org/International/questions/qa-forms-utf-8
-${BUILD}/src/libre/class/utf8_all.re:
-	echo -n > ${.TARGET}
-	echo -n '[\x09\x0A\x0D\x20-\x7E]'            >> ${.TARGET} # ASCII
-	echo -n '|[\xC2-\xDF][\x80-\xBF]'            >> ${.TARGET} # non-overlong 2-byte
-	echo -n '|\xE0[\xA0-\xBF][\x80-\xBF]'        >> ${.TARGET} # excluding overlongs
-	echo -n '|[\xE1-\xEC\xEE\xEF][\x80-\xBF]{2}' >> ${.TARGET} # straight 3-byte
-	echo -n '|\xED[\x80-\x9F][\x80-\xBF]'        >> ${.TARGET} # excluding surrogates
-	echo -n '|\xF0[\x90-\xBF][\x80-\xBF]{2}'     >> ${.TARGET} # planes 1-3
-	echo -n '|[\xF1-\xF3][\x80-\xBF]{3}'         >> ${.TARGET} # planes 4-15
-	echo -n '|\xF4[\x80-\x8F][\x80-\xBF]{2}'     >> ${.TARGET}
-
-src/libre/class/utf8_all.c: ${BUILD}/src/libre/class/utf8_all.re
+src/libre/class/utf8_all.c:
+	echo -n > ${BUILD}/${.TARGET:R}.re
+	echo -n '[\x09\x0A\x0D\x20-\x7E]'            >> ${BUILD}/${.TARGET:R}.re # ASCII
+	echo -n '|[\xC2-\xDF][\x80-\xBF]'            >> ${BUILD}/${.TARGET:R}.re # non-overlong 2-byte
+	echo -n '|\xE0[\xA0-\xBF][\x80-\xBF]'        >> ${BUILD}/${.TARGET:R}.re # excluding overlongs
+	echo -n '|[\xE1-\xEC\xEE\xEF][\x80-\xBF]{2}' >> ${BUILD}/${.TARGET:R}.re # straight 3-byte
+	echo -n '|\xED[\x80-\x9F][\x80-\xBF]'        >> ${BUILD}/${.TARGET:R}.re # excluding surrogates
+	echo -n '|\xF0[\x90-\xBF][\x80-\xBF]{2}'     >> ${BUILD}/${.TARGET:R}.re # planes 1-3
+	echo -n '|[\xF1-\xF3][\x80-\xBF]{3}'         >> ${BUILD}/${.TARGET:R}.re # planes 4-15
+	echo -n '|\xF4[\x80-\x8F][\x80-\xBF]{2}'     >> ${BUILD}/${.TARGET:R}.re
 	${RE} -pl api -e utf8_all_ -y ${BUILD}/src/libre/class/utf8_all.re \
 	> ${.TARGET}
 
