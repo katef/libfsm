@@ -536,7 +536,6 @@ out_buf(FILE *f)
 		fprintf(f, "\tstruct lx_dynbuf *t;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\tassert(c != EOF);\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tt = lx->buf;\n");
 		fprintf(f, "\n");
@@ -655,7 +654,6 @@ out_buf(FILE *f)
 		fprintf(f, "\tstruct lx_fixedbuf *t;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\tassert(c != EOF);\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tt = lx->buf;\n");
 		fprintf(f, "\n");
