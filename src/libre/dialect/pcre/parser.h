@@ -17,20 +17,21 @@
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
 
-	typedef struct fsm *  fsm;
+	typedef struct fsm * fsm;
+	typedef struct fsm_state * t_fsm__state;
 	typedef struct flags *flags;
 	typedef struct re_err * err;
 
-#line 25 "src/libre/dialect/pcre/parser.h"
+#line 26 "src/libre/dialect/pcre/parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
-extern void p_re__pcre(fsm, flags, lex_state, act_state, err);
+extern void p_re__pcre(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fsm__state);
 /* BEGINNING OF TRAILER */
 
-#line 1259 "src/libre/parser.act"
+#line 1261 "src/libre/parser.act"
 
 
-#line 35 "src/libre/dialect/pcre/parser.h"
+#line 36 "src/libre/dialect/pcre/parser.h"
 
 /* END OF FILE */

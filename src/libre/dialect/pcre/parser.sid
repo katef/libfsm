@@ -69,8 +69,6 @@
 
 %productions%
 
-	<make-states>: () -> (:fsm_state, :fsm_state);
-
 	<make-group>:  () -> (:grp);
 	<invert-group>:    (:grp &) -> ();
 	<group-add-char>:  (:grp &, :char) -> ();
@@ -396,9 +394,7 @@
 		list-of-alts(x, y);
 	};
 
-	re_pcre: () -> () = {
-		(x, y) = <make-states>;
-
+	re_pcre: (x :fsm_state, y :fsm_state) -> () = {
 		{
 			expr(x, y);
 		##

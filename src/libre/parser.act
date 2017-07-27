@@ -97,7 +97,6 @@
 
 	typedef struct lx_pos t_pos;
 	typedef struct fsm * t_fsm;
-	typedef struct fsm_state * t_fsm__state;
 	typedef enum re_flags t_re__flags;
 	typedef struct grp t_grp;
 
@@ -421,7 +420,8 @@
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
 
-	typedef struct fsm *  fsm;
+	typedef struct fsm * fsm;
+	typedef struct fsm_state * t_fsm__state;
 	typedef struct flags *flags;
 	typedef struct re_err * err;
 
@@ -617,22 +617,6 @@
 	 * In some cases (e.g. counting) actions are centralised here for
 	 * the sake of DRY, at the expense of slight overkill.
 	 */
-
-	<make-states>: () -> (x :fsm_state, y :fsm_state) = @{
-		assert(fsm != NULL);
-		/* TODO: assert fsm is empty */
-
-		@x = fsm_getstart(fsm);
-		assert(@x != NULL);
-
-		@y = fsm_addstate(fsm);
-		if (@y == NULL) {
-			@!;
-		}
-
-		fsm_setend(fsm, @y, 1);
-	@};
-
 
 	<make-group>: () -> (g :grp) = @{
 		@g.set = fsm_new_blank(fsm->opt);
@@ -1118,9 +1102,11 @@
 
 	static int
 	parse(int (*f)(void *opaque), void *opaque,
-		void (*entry)(struct fsm *, flags, lex_state, act_state, err),
+		void (*entry)(struct fsm *, flags, lex_state, act_state, err,
+			struct fsm_state *, struct fsm_state *),
 		struct flags *flags, int overlap,
-		struct fsm *new, struct re_err *err)
+		struct fsm *new, struct re_err *err,
+		struct fsm_state *x, struct fsm_state *y)
 	{
 		struct act_state  act_state_s;
 		struct act_state *act_state;
@@ -1169,7 +1155,7 @@
 		err->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
-		entry(new, flags, lex_state, act_state, err);
+		entry(new, flags, lex_state, act_state, err, x, y);
 
 		lx->free(lx);
 
@@ -1235,6 +1221,7 @@
 		struct re_err *err)
 	{
 		struct fsm *new;
+		struct fsm_state *x, *y;
 		struct flags top, *fl = &top;
 
 		top.flags = flags;
@@ -1246,12 +1233,27 @@
 			return NULL;
 		}
 
-		if (-1 == parse(f, opaque, DIALECT_ENTRY, fl, overlap, new, err)) {
-			fsm_free(new);
-			return NULL;
+		x = fsm_getstart(new);
+		assert(x != NULL);
+
+		y = fsm_addstate(new);
+		if (y == NULL) {
+			goto error;
+		}
+
+		fsm_setend(new, y, 1);
+
+		if (-1 == parse(f, opaque, DIALECT_ENTRY, fl, overlap, new, err, x, y)) {
+			goto error;
 		}
 
 		return new;
+
+	error:
+
+		fsm_free(new);
+
+		return NULL;
 	}
 
 @}, @{
