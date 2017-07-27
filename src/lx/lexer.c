@@ -83,7 +83,6 @@ lx_dynpush(struct lx *lx, char c)
 	struct lx_dynbuf *t;
 
 	assert(lx != NULL);
-	assert(c != EOF);
 
 	t = lx->buf;
 

@@ -70,7 +70,6 @@ lx_literal_dynpush(struct lx_literal_lx *lx, char c)
 	struct lx_dynbuf *t;
 
 	assert(lx != NULL);
-	assert(c != EOF);
 
 	t = lx->buf;
 
