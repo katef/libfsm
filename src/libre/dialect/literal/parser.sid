@@ -69,8 +69,6 @@
 
 %productions%
 
-	<make-states>: () -> (:fsm_state, :fsm_state);
-
 	!<make-group>: () -> (:grp);
 	!<invert-group>:    (:grp &) -> ();
 	!<group-add-char>:  (:grp &, :char) -> ();
@@ -130,9 +128,7 @@
 		};
 	};
 
-	re_literal: () -> () = {
-		(x, y) = <make-states>;
-
+	re_literal: (x :fsm_state, y :fsm_state) -> () = {
 		{
 			list-of-literals(x, y);
 		||
