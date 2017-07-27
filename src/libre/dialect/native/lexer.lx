@@ -38,8 +38,8 @@
 '\t' -> $esc;
 '\v' -> $esc;
 
-'\'  /[0-7]+/     -> $oct;
-'\x' /[0-9a-f]+/i -> $hex;
+'\'  /[0-7]{1,3}/   -> $oct;
+'\x' /[0-9a-f]{2}/i -> $hex;
 
 '[' -> $opengroup .. ']' -> $closegroup {
 	'^' -> $invert;
