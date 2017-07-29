@@ -133,7 +133,7 @@ findany(const struct fsm_state *state)
 			return NULL;
 		}
 
-		if (set_empty(e->sl)) {
+		if (set_count(e->sl) != 1) {
 			return NULL;
 		}
 
