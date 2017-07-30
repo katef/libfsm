@@ -523,7 +523,7 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 			{
 #line 557 "src/libre/parser.act"
 
-		assert(lex_state->buf.a[0] != '\0');
+		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
 		ZI94 = lex_state->lx.start;

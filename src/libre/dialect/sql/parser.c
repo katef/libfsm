@@ -800,7 +800,7 @@ p_177(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t
 						{
 #line 557 "src/libre/parser.act"
 
-		assert(lex_state->buf.a[0] != '\0');
+		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
 		ZI110 = lex_state->lx.start;
@@ -1041,7 +1041,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 					{
 #line 557 "src/libre/parser.act"
 
-		assert(lex_state->buf.a[0] != '\0');
+		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
 		ZI175 = lex_state->lx.start;
@@ -1786,7 +1786,7 @@ p_literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err er
 					{
 #line 557 "src/libre/parser.act"
 
-		assert(lex_state->buf.a[0] != '\0');
+		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
 		ZI140 = lex_state->lx.start;

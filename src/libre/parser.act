@@ -551,7 +551,7 @@
 	@};
 
 	CHAR: () -> (c :char, start :pos, end :pos) = @{
-		assert(lex_state->buf.a[0] != '\0');
+		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
 		@start = lex_state->lx.start;
