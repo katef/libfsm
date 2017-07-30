@@ -44,6 +44,9 @@ INCDIR += include
 #DIR += ${BUILD}/bin
 DIR += ${BUILD}/lib
 
+test::
+	grep FAIL ${BUILD}/tests/*/res*; [ $$? -ne 0 ]
+
 .include <subdir.mk>
 .include <pc.mk>
 .include <sid.mk>
