@@ -37,22 +37,50 @@ ${BUILD}/bin/lx: ${BUILD}/${src:R}.o
 .endfor
 
 # smoke tests
-test:: ${BUILD}/bin/lx src/lx/lexer.lx
+
+DIR += ${BUILD}/tests/dump-lx
+
 .for buf in dyn fixed
 .for getc in fgetc fdgetc
-	mkdir -p ${BUILD}/tests/dump-lx
-	${BUILD}/bin/lx -b ${buf} -g ${getc} -l dump < src/lx/lexer.lx > ${BUILD}/tests/dump-lx/${buf}-${getc}-dump.c
-	${BUILD}/bin/lx -b ${buf} -g ${getc} -l c    < src/lx/lexer.lx > ${BUILD}/tests/dump-lx/${buf}-${getc}-lexer.c
-	${BUILD}/bin/lx -b ${buf} -g ${getc} -l h    < src/lx/lexer.lx > ${BUILD}/tests/dump-lx/${buf}-${getc}-lexer.h
-	${CC} -o ${BUILD}/tests/dump-lx/${buf}-${getc}-dump \
+
+${BUILD}/tests/dump-lx/${buf}-${getc}-lexer.tok: ${BUILD}/tests/dump-lx/${buf}-${getc}-dump src/lx/lexer.lx
+	${BUILD}/tests/dump-lx/${buf}-${getc}-dump < src/lx/lexer.lx > $@
+
+${BUILD}/tests/dump-lx/${buf}-${getc}-dump: ${BUILD}/tests/dump-lx/${buf}-${getc}-dump.c ${BUILD}/tests/dump-lx/${buf}-${getc}-lexer.c ${BUILD}/tests/dump-lx/${buf}-${getc}-lexer.h
+	${CC} -o $@ \
 		-I ${BUILD}/tests/${buf}-${getc}dump-lx \
 		-D LX_HEADER='"${buf}-${getc}-lexer.h"' \
 		${CFLAGS} \
-		${BUILD}/tests/dump-lx/${buf}-${getc}-dump.c ${BUILD}/tests/dump-lx/${buf}-${getc}-lexer.c
-	${BUILD}/tests/dump-lx/${buf}-${getc}-dump < src/lx/lexer.lx > ${BUILD}/tests/dump-lx/${buf}-${getc}-lexer.tok
+		${.ALLSRC:M*.c}
+
+${BUILD}/tests/dump-lx/${buf}-${getc}-dump.c: src/lx/lexer.lx
+	${BUILD}/bin/lx -b ${buf} -g ${getc} -l dump < src/lx/lexer.lx > $@
+
+${BUILD}/tests/dump-lx/${buf}-${getc}-lexer.c: src/lx/lexer.lx
+	${BUILD}/bin/lx -b ${buf} -g ${getc} -l c    < src/lx/lexer.lx > $@
+
+${BUILD}/tests/dump-lx/${buf}-${getc}-lexer.h: src/lx/lexer.lx
+	${BUILD}/bin/lx -b ${buf} -g ${getc} -l h    < src/lx/lexer.lx > $@
+
 .endfor
 .endfor
-	diff ${BUILD}/tests/dump-lx/dyn-fgetc-lexer.tok ${BUILD}/tests/dump-lx/dyn-fdgetc-lexer.tok
-	diff ${BUILD}/tests/dump-lx/fixed-fgetc-lexer.tok ${BUILD}/tests/dump-lx/fixed-fdgetc-lexer.tok
-	diff ${BUILD}/tests/dump-lx/dyn-fdgetc-lexer.tok ${BUILD}/tests/dump-lx/fixed-fdgetc-lexer.tok
+
+.for n in 0 1 2
+test:: ${BUILD}/tests/dump-lx/res${n}
+.endfor
+
+${BUILD}/tests/dump-lx/res0: ${BUILD}/tests/dump-lx/dyn-fgetc-lexer.tok ${BUILD}/tests/dump-lx/dyn-fdgetc-lexer.tok
+	diff ${.ALLSRC:M*.tok}; \
+	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
+	> $@
+
+${BUILD}/tests/dump-lx/res1: ${BUILD}/tests/dump-lx/fixed-fgetc-lexer.tok ${BUILD}/tests/dump-lx/fixed-fdgetc-lexer.tok
+	diff ${.ALLSRC:M*.tok}; \
+	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
+	> $@
+
+${BUILD}/tests/dump-lx/res2: ${BUILD}/tests/dump-lx/dyn-fdgetc-lexer.tok  ${BUILD}/tests/dump-lx/fixed-fdgetc-lexer.tok
+	diff ${.ALLSRC:M*.tok}; \
+	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
+	> $@
 
