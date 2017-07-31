@@ -179,7 +179,7 @@ z0(struct lx_sql_lx *lx)
 	int c;
 
 	enum {
-		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
+		NONE, S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
 		S10, S11, S12, S13, S14, S15, S16, S17, S18, S19, 
 		S20, S21, S22, S23, S24, S25, S26, S27, S28, S29, 
 		S30, S31, S32, S33, S34, S35, S36, S37, S38, S39, 
@@ -193,11 +193,15 @@ z0(struct lx_sql_lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S0;
+	state = NONE;
 
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
+		if (state == NONE) {
+			state = S0;
+		}
+
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx, c)) {
 				return TOK_ERROR;
@@ -527,7 +531,7 @@ z0(struct lx_sql_lx *lx)
 
 		case S12: /* e.g. "[:W" */
 			switch ((unsigned char) c) {
-			case 'H': state = S25; continue;
+			case 'H': state = S28; continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
@@ -596,37 +600,37 @@ z0(struct lx_sql_lx *lx)
 
 		case S24: /* e.g. "[:SPA" */
 			switch ((unsigned char) c) {
-			case 'C': state = S27; continue;
+			case 'C': state = S25; continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
-		case S25: /* e.g. "[:WH" */
+		case S25: /* e.g. "[:SPAC" */
 			switch ((unsigned char) c) {
-			case 'I': state = S26; continue;
+			case 'E': state = S26; continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
-		case S26: /* e.g. "[:WHI" */
+		case S26: /* e.g. "[:SPACE" */
 			switch ((unsigned char) c) {
-			case 'T': state = S38; continue;
+			case ':': state = S27; continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
-		case S27: /* e.g. "[:SPAC" */
-			switch ((unsigned char) c) {
-			case 'E': state = S28; continue;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-
-		case S28: /* e.g. "[:SPACE" */
-			switch ((unsigned char) c) {
-			case ':': state = S29; continue;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-
-		case S29: /* e.g. "[:SPACE:" */
+		case S27: /* e.g. "[:SPACE:" */
 			switch ((unsigned char) c) {
 			case ']': state = S47; continue;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+
+		case S28: /* e.g. "[:WH" */
+			switch ((unsigned char) c) {
+			case 'I': state = S29; continue;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+
+		case S29: /* e.g. "[:WHI" */
+			switch ((unsigned char) c) {
+			case 'T': state = S38; continue;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 
@@ -792,6 +796,7 @@ z0(struct lx_sql_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
+	case NONE: return TOK_EOF;
 	case S1: return TOK_CHAR;
 	case S2: return TOK_RANGE;
 	case S3: return TOK_CHAR;
@@ -814,7 +819,7 @@ z1(struct lx_sql_lx *lx)
 	int c;
 
 	enum {
-		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
+		NONE, S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
 		S10
 	} state;
 
@@ -824,11 +829,15 @@ z1(struct lx_sql_lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S0;
+	state = NONE;
 
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
+		if (state == NONE) {
+			state = S0;
+		}
+
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx, c)) {
 				return TOK_ERROR;
@@ -1132,6 +1141,7 @@ z1(struct lx_sql_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
+	case NONE: return TOK_EOF;
 	case S1: return TOK_CHAR;
 	case S2: return TOK_MANY;
 	case S3: return TOK_OPENSUB;

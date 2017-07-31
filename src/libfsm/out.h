@@ -12,7 +12,8 @@
 #include <fsm/out.h>
 
 void
-fsm_out_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl);
+fsm_out_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl,
+	int none);
 
 void
 fsm_out_api(const struct fsm *fsm, FILE *f);

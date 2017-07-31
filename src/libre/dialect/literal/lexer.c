@@ -178,7 +178,7 @@ z0(struct lx_literal_lx *lx)
 	int c;
 
 	enum {
-		S0, S1
+		NONE, S0, S1
 	} state;
 
 	assert(lx != NULL);
@@ -187,11 +187,15 @@ z0(struct lx_literal_lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S0;
+	state = NONE;
 
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
+		if (state == NONE) {
+			state = S0;
+		}
+
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx, c)) {
 				return TOK_ERROR;
@@ -468,6 +472,7 @@ z0(struct lx_literal_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
+	case NONE: return TOK_EOF;
 	case S1: return TOK_CHAR;
 	default: errno = EINVAL; return TOK_ERROR;
 	}

@@ -178,7 +178,7 @@ z0(struct lx_glob_lx *lx)
 	int c;
 
 	enum {
-		S0, S1, S2, S3
+		NONE, S0, S1, S2, S3
 	} state;
 
 	assert(lx != NULL);
@@ -187,11 +187,15 @@ z0(struct lx_glob_lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S0;
+	state = NONE;
 
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
+		if (state == NONE) {
+			state = S0;
+		}
+
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx, c)) {
 				return TOK_ERROR;
@@ -474,6 +478,7 @@ z0(struct lx_glob_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
+	case NONE: return TOK_EOF;
 	case S1: return TOK_CHAR;
 	case S2: return TOK_MANY;
 	case S3: return TOK_ANY;

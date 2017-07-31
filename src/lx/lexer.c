@@ -191,7 +191,7 @@ z0(struct lx *lx)
 	int c;
 
 	enum {
-		S0, S1, S2
+		NONE, S0, S1, S2
 	} state;
 
 	assert(lx != NULL);
@@ -200,11 +200,15 @@ z0(struct lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S0;
+	state = NONE;
 
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
+		if (state == NONE) {
+			state = S0;
+		}
+
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx, c)) {
 				return TOK_ERROR;
@@ -538,6 +542,7 @@ z0(struct lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
+	case NONE: return TOK_EOF;
 	case S1: return TOK_CHAR;
 	case S2: return TOK_RE;
 	default: errno = EINVAL; return TOK_ERROR;
@@ -550,7 +555,7 @@ z1(struct lx *lx)
 	int c;
 
 	enum {
-		S0, S1, S2, S3, S4, S5, S6, S7
+		NONE, S0, S1, S2, S3, S4, S5, S6, S7
 	} state;
 
 	assert(lx != NULL);
@@ -559,11 +564,15 @@ z1(struct lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S0;
+	state = NONE;
 
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
+		if (state == NONE) {
+			state = S0;
+		}
+
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx, c)) {
 				return TOK_ERROR;
@@ -934,6 +943,7 @@ z1(struct lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
+	case NONE: return TOK_EOF;
 	case S1: return TOK_CHAR;
 	case S2: return TOK_STR;
 	case S3: return TOK_CHAR;
@@ -950,7 +960,7 @@ z2(struct lx *lx)
 	int c;
 
 	enum {
-		S0, S1, S2
+		NONE, S0, S1, S2
 	} state;
 
 	assert(lx != NULL);
@@ -959,11 +969,15 @@ z2(struct lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S0;
+	state = NONE;
 
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
+		if (state == NONE) {
+			state = S0;
+		}
+
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx, c)) {
 				return TOK_ERROR;
@@ -1243,6 +1257,7 @@ z2(struct lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
+	case NONE: return TOK_EOF;
 	case S1: return TOK_CHAR;
 	case S2: return TOK_STR;
 	default: errno = EINVAL; return TOK_ERROR;
@@ -1255,7 +1270,7 @@ z3(struct lx *lx)
 	int c;
 
 	enum {
-		S0, S1, S2
+		NONE, S0, S1, S2
 	} state;
 
 	assert(lx != NULL);
@@ -1264,11 +1279,15 @@ z3(struct lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S0;
+	state = NONE;
 
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
+		if (state == NONE) {
+			state = S0;
+		}
+
 		switch (state) {
 		case S0:
 		case S1:
@@ -1558,6 +1577,7 @@ z3(struct lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
+	case NONE: return TOK_EOF;
 	case S1: return TOK_EOF;
 	case S2: return TOK_EOF;
 	default: errno = EINVAL; return TOK_ERROR;
@@ -1570,7 +1590,7 @@ z4(struct lx *lx)
 	int c;
 
 	enum {
-		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
+		NONE, S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
 		S10, S11, S12, S13, S14, S15, S16, S17, S18, S19, 
 		S20, S21, S22, S23, S24, S25, S26, S27
 	} state;
@@ -1581,11 +1601,15 @@ z4(struct lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S0;
+	state = NONE;
 
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
+		if (state == NONE) {
+			state = S0;
+		}
+
 		switch (state) {
 		case S1:
 		case S3:
@@ -1972,6 +1996,7 @@ z4(struct lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
+	case NONE: return TOK_EOF;
 	case S1: return TOK_EOF;
 	case S2: return TOK_BANG;
 	case S3: return TOK_EOF;
