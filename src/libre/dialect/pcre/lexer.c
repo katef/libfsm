@@ -181,7 +181,7 @@ z0(struct lx_pcre_lx *lx)
 	int c;
 
 	enum {
-		S0, S1, S2, S3
+		NONE, S0, S1, S2, S3
 	} state;
 
 	assert(lx != NULL);
@@ -190,11 +190,15 @@ z0(struct lx_pcre_lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S0;
+	state = NONE;
 
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
+		if (state == NONE) {
+			state = S0;
+		}
+
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx, c)) {
 				return TOK_ERROR;
@@ -245,6 +249,7 @@ z0(struct lx_pcre_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
+	case NONE: return TOK_EOF;
 	case S1: return TOK_SEP;
 	case S2: return TOK_COUNT;
 	case S3: return TOK_CLOSECOUNT;
@@ -258,7 +263,7 @@ z1(struct lx_pcre_lx *lx)
 	int c;
 
 	enum {
-		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9
+		NONE, S0, S1, S2, S3, S4, S5, S6, S7, S8, S9
 		
 	} state;
 
@@ -268,11 +273,15 @@ z1(struct lx_pcre_lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S0;
+	state = NONE;
 
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
+		if (state == NONE) {
+			state = S0;
+		}
+
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx, c)) {
 				return TOK_ERROR;
@@ -650,6 +659,7 @@ z1(struct lx_pcre_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
+	case NONE: return TOK_EOF;
 	case S1: return TOK_CHAR;
 	case S2: return TOK_RANGE;
 	case S4: return TOK_CLOSEGROUP;
@@ -667,7 +677,7 @@ z2(struct lx_pcre_lx *lx)
 	int c;
 
 	enum {
-		S0, S1, S2, S3, S4
+		NONE, S0, S1, S2, S3, S4
 	} state;
 
 	assert(lx != NULL);
@@ -676,11 +686,15 @@ z2(struct lx_pcre_lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S0;
+	state = NONE;
 
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
+		if (state == NONE) {
+			state = S0;
+		}
+
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx, c)) {
 				return TOK_ERROR;
@@ -738,6 +752,7 @@ z2(struct lx_pcre_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
+	case NONE: return TOK_EOF;
 	case S1: return TOK_CLOSEFLAGS;
 	case S2: return TOK_NEGATE;
 	case S3: return TOK_FLAG__UNKNOWN;
@@ -752,7 +767,7 @@ z3(struct lx_pcre_lx *lx)
 	int c;
 
 	enum {
-		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
+		NONE, S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
 		S10, S11, S12, S13, S14, S15, S16, S17, S18, S19
 		
 	} state;
@@ -763,11 +778,15 @@ z3(struct lx_pcre_lx *lx)
 		lx->clear(lx);
 	}
 
-	state = S0;
+	state = NONE;
 
 	lx->start = lx->end;
 
 	while (c = lx_getc(lx), c != EOF) {
+		if (state == NONE) {
+			state = S0;
+		}
+
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx, c)) {
 				return TOK_ERROR;
@@ -1190,6 +1209,7 @@ z3(struct lx_pcre_lx *lx)
 	lx->lgetc = NULL;
 
 	switch (state) {
+	case NONE: return TOK_EOF;
 	case S1: return TOK_CHAR;
 	case S2: return TOK_END;
 	case S3: return TOK_OPENCAPTURE;
