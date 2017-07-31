@@ -39,10 +39,24 @@
 '\t' -> $esc;
 '\v' -> $esc;
 
+# perl/unix-ish escapes
+'\a' -> $esc;
+'\c' /./ -> $control;
+
+# perl character class escapes
+'\d' -> $class_digit;
+'\D' -> $class_ndigit
+'\w' -> $class_word;
+'\W' -> $class_nword;
+'\s' -> $class_blank;
+'\S' -> $class_nblank;
+
 '\'  /[0-7]{1,3}/      -> $oct;
 '\o{' /[0-7]+/i '}'    -> $oct;
 '\x' /[0-9a-f]{1,2}/i  -> $hex;
 '\x{' /[0-9a-f]+/i '}' -> $hex;
+
+/\\./ - ($esc | $control | $oct | $hex | '\Q') -> $invalid;
 
 '(?' -> $openflags .. ')' -> $closeflags {
 	'-' -> $negate;

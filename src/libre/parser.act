@@ -485,6 +485,7 @@
 		@c = lex_state->buf.a[1];
 
 		switch (@c) {
+		case 'a': @c = '\a'; break;
 		case 'f': @c = '\f'; break;
 		case 'n': @c = '\n'; break;
 		case 'r': @c = '\r'; break;
@@ -492,6 +493,19 @@
 		case 'v': @c = '\v'; break;
 		default:             break;
 		}
+	@};
+
+	CONTROL: () -> (c :char) = @{
+		assert(lex_state->buf.a[0] == '\\');
+		assert(lex_state->buf.a[1] == 'c');
+		assert(lex_state->buf.a[2] != '\0');
+		assert(lex_state->buf.a[3] != '\0');
+
+		@c = lex_state->buf.a[2];
+		if (@c > 127) {
+			@!;
+		}
+		@c = (uint32_t) ((((int32_t) toupper((unsigned char)@c)) - 64) % 128 + 128) % 128;
 	@};
 
 	OCT: () -> (c :char, start :pos, end :pos) = @{
