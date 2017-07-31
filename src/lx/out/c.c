@@ -731,7 +731,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tint c;\n");
 	fprintf(f, "\n");
 
-	fsm_out_stateenum(f, z->fsm, z->fsm->sl);
+	fsm_out_stateenum(f, z->fsm, z->fsm->sl, 1);
 	fprintf(f, "\n");
 
 	fprintf(f, "\tassert(lx != NULL);\n");
@@ -745,7 +745,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	}
 
 	assert(z->fsm->start != NULL);
-	fprintf(f, "\tstate = S%u;\n", indexof(z->fsm, z->fsm->start));
+	fprintf(f, "\tstate = NONE;\n");
 	fprintf(f, "\n");
 
 	if (~api_exclude & API_POS) {
@@ -766,6 +766,11 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		fprintf(f, "\twhile (c = lx_getc(lx), c != EOF) {\n");
 		break;
 	}
+
+	fprintf(f, "\t\tif (state == NONE) {\n");
+	fprintf(f, "\t\t\tstate = S%u;\n", indexof(z->fsm, z->fsm->start));
+	fprintf(f, "\t\t}\n");
+	fprintf(f, "\n");
 
 	{
 		struct fsm_state *s;
@@ -882,6 +887,8 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		}
 
 		fprintf(f, "\tswitch (state) {\n");
+
+		fprintf(f, "\tcase NONE: return %sEOF;\n", prefix.tok);
 
 		for (s = z->fsm->sl; s != NULL; s = s->next) {
 			const struct ast_mapping *m;
