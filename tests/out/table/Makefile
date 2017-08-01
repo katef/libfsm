@@ -1,5 +1,9 @@
 .include "../../../../../share/mk/top.mk"
 
+# dot works very slowly for these graphs, so disable .png generation by
+# default
+OPT_TABLE_PNGS = 0
+
 TEST.tests/out/table != ls -1 tests/out/table/in*.fsm
 TEST_SRCDIR.tests/out/table = tests/out/table
 TEST_OUTDIR.tests/out/table = ${BUILD}/tests/out/table
@@ -24,6 +28,8 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/out/table}/res${n}
 
 .endfor
 
+.if ${OPT_TABLE_PNGS} == 1
+
 .for n in ${TEST.tests/out/table:T:R:C/^in//}
 
 ${TEST_OUTDIR.tests/out/table}/in${n}.png:  ${TEST_SRCDIR.tests/out/table}/in${n}.fsm
@@ -34,4 +40,6 @@ FSMTEST_IMG += ${TEST_OUTDIR.tests/out/table}/${img}.png
 .endfor
 
 .endfor
+
+.endif
 
