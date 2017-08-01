@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <errno.h>
 
@@ -90,6 +91,7 @@ lx_dynpush(struct lx *lx, char c)
 
 	if (t->p == t->a + t->len) {
 		size_t len;
+		ptrdiff_t off;
 		char *tmp;
 
 		if (t->len == 0) {
@@ -103,12 +105,13 @@ lx_dynpush(struct lx *lx, char c)
 			}
 		}
 
+		off = t->p - t->a;
 		tmp = realloc(t->a, len);
 		if (tmp == NULL) {
 			return -1;
 		}
 
-		t->p   = tmp + (t->p - t->a);
+		t->p   = tmp + off;
 		t->a   = tmp;
 		t->len = len;
 	}
