@@ -161,12 +161,8 @@ fsm_numedges(const struct fsm *fsm)
 		const struct fsm_edge *e;
 
 		for (e = set_first(src->edges, &ei); e != NULL; e=set_next(&ei)) {
-			struct set_iter di;
-			const struct fsm_state *dst;
-			for (dst = set_first(e->sl, &di); dst != NULL; dst=set_next(&di)) {
-				assert(n+1>n); /* handle overflow with more grace? */
-				n++;
-			}
+			assert(n + set_count(e->sl) > n); /* handle overflow with more grace? */
+			n += set_count(e->sl);
 		}
 	}
 
