@@ -543,6 +543,7 @@ out_buf(FILE *f)
 		fprintf(f, "\n");
 		fprintf(f, "\tif (t->p == t->a + t->len) {\n");
 		fprintf(f, "\t\tsize_t len;\n");
+		fprintf(f, "\t\tptrdiff_t off;\n");
 		fprintf(f, "\t\tchar *tmp;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\t\tif (t->len == 0) {\n");
@@ -556,12 +557,13 @@ out_buf(FILE *f)
 		fprintf(f, "\t\t\t}\n");
 		fprintf(f, "\t\t}\n");
 		fprintf(f, "\n");
+		fprintf(f, "\t\toff = t->p - t->a;\n");
 		fprintf(f, "\t\ttmp = realloc(t->a, len);\n");
 		fprintf(f, "\t\tif (tmp == NULL) {\n");
 		fprintf(f, "\t\t\treturn -1;\n");
 		fprintf(f, "\t\t}\n");
 		fprintf(f, "\n");
-		fprintf(f, "\t\tt->p   = tmp + (t->p - t->a);\n");
+		fprintf(f, "\t\tt->p   = tmp + off;\n");
 		fprintf(f, "\t\tt->a   = tmp;\n");
 		fprintf(f, "\t\tt->len = len;\n");
 		fprintf(f, "\t}\n");
@@ -1063,6 +1065,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 	fprintf(f, "#include <assert.h>\n");
 	fprintf(f, "#include <stdio.h>\n");
 	if (api_tokbuf & API_DYNBUF) {
+		fprintf(f, "#include <stddef.h>\n");
 		fprintf(f, "#include <stdlib.h>\n");
 	}
 	fprintf(f, "#include <errno.h>\n");
