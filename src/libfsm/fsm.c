@@ -129,3 +129,42 @@ fsm_carryopaque(struct fsm *fsm, const struct set *set,
 		new, state);
 }
 
+unsigned int
+fsm_countstates(const struct fsm *fsm)
+{
+	unsigned int n = 0;
+	const struct fsm_state *s;
+	/*
+	 * XXX - this walks the list and counts and should be replaced
+	 * with something better when possible
+	 */
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		assert(n+1>n); /* handle overflow with more grace? */
+		n++;
+	}
+
+	return n;
+}
+
+unsigned int
+fsm_countedges(const struct fsm *fsm)
+{
+	unsigned int n = 0;
+	const struct fsm_state *src;
+
+	/*
+	 * XXX - this counts all src,lbl,dst tuples individually and
+	 * should be replaced with something better when possible
+	 */
+	for (src = fsm->sl; src != NULL; src = src->next) {
+		struct set_iter ei;
+		const struct fsm_edge *e;
+
+		for (e = set_first(src->edges, &ei); e != NULL; e=set_next(&ei)) {
+			assert(n + set_count(e->sl) > n); /* handle overflow with more grace? */
+			n += set_count(e->sl);
+		}
+	}
+
+	return n;
+}
