@@ -442,11 +442,12 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 	fprintf(f, "#include <stdio.h>\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "int %smain", prefix);
+	fprintf(f, "int\n%smain", prefix);
 
 	switch (fsm->opt->io) {
 	case FSM_IO_GETC:
-		fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque) {\n");
+		fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
+		fprintf(f, "{\n");
 		fprintf(f, "\tint c;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(fsm_getc != NULL);\n");
@@ -454,7 +455,8 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 		break;
 
 	case FSM_IO_STR:
-		fprintf(f, "(const char *s) {\n");
+		fprintf(f, "(const char *s)\n");
+		fprintf(f, "{\n");
 		fprintf(f, "\tconst char *p;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(s != NULL);\n");
@@ -462,7 +464,8 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 		break;
 
 	case FSM_IO_PAIR:
-		fprintf(f, "(const char *b, const char *e) {\n");
+		fprintf(f, "(const char *b, const char *e)\n");
+		fprintf(f, "{\n");
 		fprintf(f, "\tconst char *p;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(b != NULL);\n");
