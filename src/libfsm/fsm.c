@@ -129,10 +129,10 @@ fsm_carryopaque(struct fsm *fsm, const struct set *set,
 		new, state);
 }
 
-unsigned long
-fsm_numstates(const struct fsm *fsm)
+unsigned int
+fsm_countstates(const struct fsm *fsm)
 {
-	unsigned long n = 0;
+	unsigned int n = 0;
 	const struct fsm_state *s;
 	/*
 	 * XXX - this walks the list and counts and should be replaced
@@ -146,10 +146,10 @@ fsm_numstates(const struct fsm *fsm)
 	return n;
 }
 
-unsigned long
-fsm_numedges(const struct fsm *fsm)
+unsigned int
+fsm_countedges(const struct fsm *fsm)
 {
-	unsigned long n = 0;
+	unsigned int n = 0;
 	const struct fsm_state *src;
 
 	/*
