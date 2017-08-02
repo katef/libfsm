@@ -266,7 +266,7 @@ main(int argc, char *argv[])
 	struct fsm *fsm;
 	int xfiles;
 	int print;
-	int readtable;
+	int readtable = 0;
 	int r;
 
 	int (*query)(const struct fsm *, const struct fsm_state *);
