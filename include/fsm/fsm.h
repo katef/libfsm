@@ -174,6 +174,18 @@ struct fsm_state *
 fsm_getstart(const struct fsm *fsm);
 
 /*
+ * Returns the number of states in the FSM
+ */
+unsigned long
+fsm_numstates(const struct fsm *fsm);
+
+/*
+ * Returns the number of edges in the FSM
+ */
+unsigned long
+fsm_numedges(const struct fsm *fsm);
+
+/*
  * Duplicate a state and all its targets. This traverses the edges leading out
  * from the state, to the states to which those point, and so on. It does not
  * include edges going *to* the given state, or its descendants.
