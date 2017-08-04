@@ -18,7 +18,7 @@
 #include "internal.h"
 
 static struct fsm_state *
-nextstate(const struct fsm_state *state, char c)
+nextstate(const struct fsm_state *state, int c)
 {
 	struct fsm_edge *e;
 
