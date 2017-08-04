@@ -74,6 +74,9 @@
 	#define TOK_CLASS__word   TOK_CLASS_WORD
 	#define TOK_CLASS__xdigit TOK_CLASS_XDIGIT
 
+	#define TOK_CLASS__nspace  TOK_CLASS_NSPACE
+	#define TOK_CLASS__ndigit  TOK_CLASS_NDIGIT
+
 	#include "parser.h"
 	#include "lexer.h"
 
@@ -413,6 +416,23 @@
 		return NULL;
 	}
 
+	static struct fsm *
+	negate(struct fsm *class, const struct fsm_options *opt)
+	{
+		struct fsm *any;
+
+		any = class_any_fsm(opt);
+
+		if (any == NULL || class == NULL) {
+			if (any) fsm_free(any);
+			if (class) fsm_free(class);
+		};
+
+		class = fsm_subtract(any, class);
+
+		return class;
+	}
+
 @}, @{
 
 	#include <re/re.h>
@@ -477,6 +497,9 @@
 	CLASS_word:   () -> (fsm :fsm) = @{ @fsm = class_word_fsm(fsm->opt);   if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_xdigit: () -> (fsm :fsm) = @{ @fsm = class_xdigit_fsm(fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 
+	CLASS_ndigit: () -> (fsm :fsm) = @{ @fsm = class_digit_fsm(fsm->opt); @fsm = negate(@fsm, fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_nspace: () -> (fsm :fsm) = @{ @fsm = class_space_fsm(fsm->opt); @fsm = negate(@fsm, fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+
 	ESC: () -> (c :char) = @{
 		assert(lex_state->buf.a[0] == '\\');
 		assert(lex_state->buf.a[1] != '\0');
@@ -493,6 +516,14 @@
 		case 'v': @c = '\v'; break;
 		default:             break;
 		}
+	@};
+
+	NOESC: () -> (c :char) = @{
+		assert(lex_state->buf.a[0] == '\\');
+		assert(lex_state->buf.a[1] != '\0');
+		assert(lex_state->buf.a[2] == '\0');
+
+		@c = lex_state->buf.a[1];
 	@};
 
 	CONTROL: () -> (c :char) = @{
@@ -894,6 +925,12 @@
 		}
 	@};
 
+	<add-class>: (x :fsm_state, y :fsm_state, c :fsm) -> () = @{
+		if (!fsm_unionxy(fsm, @c, @x, @y)) {
+			err->e = RE_EERRNO;
+			@!;
+		}
+	@};
 
 	/*
 	 * The following count repetition operators encapsulate regular expression

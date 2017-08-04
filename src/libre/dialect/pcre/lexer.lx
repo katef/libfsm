@@ -45,18 +45,21 @@
 
 # perl character class escapes
 '\d' -> $class_digit;
-'\D' -> $class_ndigit
+'\D' -> $class_ndigit;
 '\w' -> $class_word;
 '\W' -> $class_nword;
-'\s' -> $class_blank;
-'\S' -> $class_nblank;
+'\s' -> $class_space;
+'\S' -> $class_nspace;
+
+class = '\' /[dDwWsS]/;
 
 '\'  /[0-7]{1,3}/      -> $oct;
 '\o{' /[0-7]+/i '}'    -> $oct;
 '\x' /[0-9a-f]{1,2}/i  -> $hex;
 '\x{' /[0-9a-f]+/i '}' -> $hex;
 
-/\\./ - ($esc | $control | $oct | $hex | '\Q') -> $invalid;
+'\' /./ - ($esc | $control | $oct | $hex | '\Q' | class) -> $noesc;
+'\' -> $invalid;
 
 '(?' -> $openflags .. ')' -> $closeflags {
 	'-' -> $negate;
@@ -100,6 +103,6 @@
 
 /./ - ($opensub | $opencapture | $close | $start | $end
 	| $opt | $star | $plus | $any | $alt
-	| $esc | $oct | $hex
+	| $esc | $oct | $hex | $invalid
 	| $opengroup | $opencount) -> $char;
 
