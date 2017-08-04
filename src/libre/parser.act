@@ -221,6 +221,47 @@
 	}
 
 	static int
+	utf8decode(const unsigned char *c, uint32_t *out)
+	{
+		uint32_t r = 0;
+		int i, cb;
+
+		if ((c[0] & 0x80) == 0) {
+			*out = c[0];
+			return 1;
+		}
+
+		if ((c[0] & 0xc0) == 0x80) {
+			return 0;
+		}
+
+		if ((c[0] & 0xe0) == 0xc0) {
+			cb = 1;
+			r = c[0] & 0x1f;
+		} else if ((c[0] & 0xf0) == 0xe0) {
+			cb = 2;
+			r = c[0] & 0x0f;
+		} else if ((c[0] & 0xf8) == 0xf0) {
+			cb = 3;
+			r = c[0] & 0x07;
+		} else {
+			return 0;
+		}
+
+		for (i = 0; i < cb; i++) {
+			if ((c[i + 1] & 0xc0) != 0x80) {
+				return 0;
+			}
+
+			r <<= 6;
+			r |= c[i + 1] & 0x3f;
+		}
+
+		*out = r;
+		return 1;
+	}
+
+	static int
 	utf8encode(uint32_t cp, unsigned char c[])
 	{
 		if (0xd800 <= cp && cp <= 0xdfff) {
