@@ -44,8 +44,11 @@ ${BUILD}/lib/libfsm.o:    ${BUILD}/${src:R}.o
 ${BUILD}/lib/libfsm.opic: ${BUILD}/${src:R}.opic
 .endfor
 
+# XXX: kmkf ought to provide a way to abstract platform-dependent
+# library names here
 .for part in ${PART:Madt}
-${BUILD}/lib/libfsm.a:  ${BUILD}/lib/${part}.o
-${BUILD}/lib/libfsm.so: ${BUILD}/lib/${part}.opic
+${BUILD}/lib/libfsm.a:     ${BUILD}/lib/${part}.o
+${BUILD}/lib/libfsm.so:    ${BUILD}/lib/${part}.opic
+${BUILD}/lib/libfsm.dylib: ${BUILD}/lib/${part}.opic
 .endfor
 
