@@ -395,6 +395,9 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 			fprintf(f, "\n");
 		}
 	}
+	fprintf(f, "\n");
+	fprintf(f, "\t\tdefault:\n");
+	fprintf(f, "\t\t\t; /* unreached */\n");
 	fprintf(f, "\t\t}\n");
 
 	return 0;
