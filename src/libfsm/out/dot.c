@@ -220,11 +220,17 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 				}
 			}
 
-			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
+			fprintf(f, "\t%sS%-2u -> %sS%-2u [ ",
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, s),
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, st));
+
+			if (bm_count(&bm) > 4) {
+				fprintf(f, "weight = 3, ");
+			}
+
+			fprintf(f, "label = <");
 
 			(void) bm_print(f, &bm, 0,
 				fsm->opt->always_hex ? escputc_hex: escputc);
@@ -242,7 +248,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 		struct set_iter jt;
 
 		for (st = set_first(e->sl, &jt); st != NULL; st = set_next(&jt)) {
-			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
+			fprintf(f, "\t%sS%-2u -> %sS%-2u [ weight = 1, label = <",
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, s),
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
@@ -297,6 +303,7 @@ fsm_out_dot(const struct fsm *fsm, FILE *f)
 	fprintf(f, "\trankdir = LR;\n");
 
 	fprintf(f, "\tnode [ shape = circle ];\n");
+	fprintf(f, "\tedge [ weight = 2 ];\n");
 
 	if (fsm->opt->anonymous_states) {
 		fprintf(f, "\tnode [ label = \"\", width = 0.3 ];\n");
