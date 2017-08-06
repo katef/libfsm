@@ -386,11 +386,8 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 
 		singlecase(f, fsm, cp, s, leaf, opaque);
 
-		if (s->next != NULL) {
-			fprintf(f, "\n");
-		}
+		fprintf(f, "\n");
 	}
-	fprintf(f, "\n");
 	fprintf(f, "\t\tdefault:\n");
 	fprintf(f, "\t\t\t; /* unreached */\n");
 	fprintf(f, "\t\t}\n");
