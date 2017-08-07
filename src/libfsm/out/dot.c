@@ -309,6 +309,7 @@ fsm_out_dot(const struct fsm *fsm, FILE *f)
 		fprintf(f, "\tnode [ label = \"\", width = 0.3 ];\n");
 	}
 
+	fprintf(f, "\troot = start;\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
