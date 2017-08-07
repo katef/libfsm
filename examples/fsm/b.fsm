@@ -1,0 +1,19 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+# render with circo
+
+1  -> 2a "a";
+2a -> 2b "b";
+2b -> 2  "c";
+
+2  -> 1a "d";
+1a -> 1b "e";
+1b -> 1  "f";
+
+start: 1;
+end: 2;
+

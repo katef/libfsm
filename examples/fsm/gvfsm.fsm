@@ -1,0 +1,27 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+# Adapted from http://graphviz.org/Gallery/directed/fsm.html
+# .fsm format (and libfsm in general) only allows a single character per edge
+
+9 -> 2 "B"; # S(B)
+9 -> 1 "S"; # S(S)
+1 -> 3 "$"; # S($end)
+2 -> 4 "A"; # S(A)
+2 -> 6 "b"; # S(b)
+2 -> 5 "a"; # S(a)
+5 -> 5 "a"; # S(a)
+5 -> 7 "b"; # S(b)
+6 -> 6 "b"; # S(b)
+6 -> 5 "a"; # S(a)
+7 -> 5 "a"; # S(a)
+7 -> 8 "b"; # S(b)
+8 -> 5 "a"; # S(a)
+8 -> 6 "b"; # S(b)
+
+start: 9;
+end:   3, 4, 8;
+
