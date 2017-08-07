@@ -1,0 +1,30 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+/[ \n\t\r]+/;
+
+/[0-9]+/   -> $int;
+/[0-9]+u/i -> $uint;
+
+/[0-9]+/ '.' /[0-9]*f?/i           -> $float;
+/[0-9]+/ '.' /[0-9]*e[+\-][0-9]+/i -> $float;
+
+# TODO: possible candidates for group capture
+"'" .. "'" -> $char_end {
+	'\' '\'   -> $char_esc;
+	'\' "'"   -> $char_esc;
+	/./ - '\' -> $char;
+}
+
+'"' -> $str_start .. '"' -> $str_end {
+	'\t' -> $str_esc;
+	'\n' -> $str_esc;
+	'\\' -> $str_esc;
+	'\"' -> $str_esc;
+
+	/[^"\\]+/ -> $str_lit;
+}
+

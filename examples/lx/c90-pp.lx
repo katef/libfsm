@@ -1,0 +1,96 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+# 3.1 LEXICAL ELEMENTS
+#
+#          token:
+#                  keyword
+#                  identifier
+#                  constant
+#                  string-literal
+#                  operator
+#                  punctuator
+#
+#          preprocessing-token:
+#                  header-name
+#                  identifier
+#                  pp-number
+#                  character-constant
+#                  string-literal
+#                  operator
+#                  punctuator
+#                  each non-white-space character that cannot be one of
+#                  the above
+
+
+# 2.2.1 Character sets
+#
+# Both the basic source and basic execution character sets shall have
+# at least the following members: the 26 upper-case letters of the
+# English alphabet
+#
+#         A  B  C  D  E  F  G  H  I  J  K  L  M
+#         N  O  P  Q  R  S  T  U  V  W  X  Y  Z
+
+upper = /[A-Z]/;
+
+
+# the 26 lower-case letters of the English alphabet
+#
+#         a  b  c  d  e  f  g  h  i  j  k  l  m
+#         n  o  p  q  r  s  t  u  v  w  x  y  z
+
+lower = /[a-z]/;
+
+# the 10 decimal digits
+#
+#         0  1  2  3  4  5  6  7  8  9
+
+digits = /[0-9]/;
+
+
+# the following 29 graphic characters
+#
+#         !  "  #  %  &  '  (  )  *  +  ,  -  .  /  :
+#         ;  <  =  >  ?  [  \  ]  ^  _  {  |  }  ~
+
+graphic = /[!"#%&'()*+,.:;<=>?_{|}~]/
+        | '/' | '^' | '[' | '\' | ']' | '-';
+
+source = upper | lower | digits | graphic;
+
+
+# 3.1.7 Header names
+#
+#          header-name:
+#                  < h-char-sequence>
+#                  " q-char-sequence"
+#          h-char-sequence:
+#                  h-char
+#                  h-char-sequence h-char
+#
+#          q-char-sequence:
+#                  q-char
+#                  q-char-sequence q-char
+#
+#
+#          h-char:
+#                  any member of the source character set except
+#                           the new-line character and >
+#
+#          q-char:
+#                  any member of the source character set except
+#                           the new-line character and "
+#
+
+h_char = source - ('\n' | '>');
+q_char = source - ('\n' | '"');
+
+'<' h_char+ '>' -> $h_char_sequence;
+'<' q_char+ '>' -> $q_char_sequence;
+
+
+

@@ -1,0 +1,48 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+# A rough model of sid's .act files
+
+/[ \t\n]+/;
+
+'/*' .. '*/';
+'//' .. '\n';
+
+':' -> $type;
+'=' -> $def;
+',' -> $sep;
+'&' -> $ref;
+';' -> $semi;
+
+'(' -> $open;
+')' -> $close;
+
+'->' -> $to;
+
+# TODO: permit '-' inside a group without escaping
+# TODO: good candidates for group capture
+'%' /[a-z_][a-z_\-]*/i '%' -> $builtin; # XXX: missing epsilon for +!
+'<' /[a-z_][a-z_\-]*/i '>' -> $action;
+    /[a-z_][a-z_\-]*/i     -> $ident;
+
+'@{' .. '@}' {
+
+	/[^@]+/ -> $act_str;
+
+	'@@' -> $act_at;
+	'@!' -> $act_bang;
+	'@.' -> $act_dot;
+	'@>' -> $act_adv;
+
+	'@:' /[a-z_]+/i -> $act_label;
+	'@&' /[a-z_]+/i -> $act_ref;
+	'@=' /[a-z_]+/i -> $act_assign;
+	'@$' /[a-z_]+/i -> $act_token;
+
+	'@'  /[a-z_]+/i -> $act_ident;
+
+}
+

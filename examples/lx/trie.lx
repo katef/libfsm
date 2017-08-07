@@ -1,0 +1,22 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+'hi'      -> $hi;
+'hei'     -> $hi;
+'hej'     -> $hi;
+'halo'    -> $hi;
+'hullo'   -> $hi;
+'hallo'   -> $hi;
+'alo'     -> $hi;
+'allo'    -> $hi;
+'hallo'   -> $hi;
+
+'goodday'     -> $hi;
+'goodmorning' -> $hi;
+
+'goodbye' -> $bye;
+/bye+/    -> $bye;
+
