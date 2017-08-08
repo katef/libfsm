@@ -500,7 +500,7 @@
 	CLASS_ndigit: () -> (fsm :fsm) = @{ @fsm = class_digit_fsm(fsm->opt); @fsm = negate(@fsm, fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_nspace: () -> (fsm :fsm) = @{ @fsm = class_space_fsm(fsm->opt); @fsm = negate(@fsm, fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 
-	ESC: () -> (c :char) = @{
+	ESC: () -> (c :char, start :pos, end :pos) = @{
 		assert(lex_state->buf.a[0] == '\\');
 		assert(lex_state->buf.a[1] != '\0');
 		assert(lex_state->buf.a[2] == '\0');
@@ -516,27 +516,36 @@
 		case 'v': @c = '\v'; break;
 		default:             break;
 		}
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
 	@};
 
-	NOESC: () -> (c :char) = @{
+	NOESC: () -> (c :char, start :pos, end :pos) = @{
 		assert(lex_state->buf.a[0] == '\\');
 		assert(lex_state->buf.a[1] != '\0');
 		assert(lex_state->buf.a[2] == '\0');
 
 		@c = lex_state->buf.a[1];
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
 	@};
 
-	CONTROL: () -> (c :char) = @{
+	CONTROL: () -> (c :char, start :pos, end :pos) = @{
 		assert(lex_state->buf.a[0] == '\\');
 		assert(lex_state->buf.a[1] == 'c');
 		assert(lex_state->buf.a[2] != '\0');
-		assert(lex_state->buf.a[3] != '\0');
+		assert(lex_state->buf.a[3] == '\0');
 
 		@c = lex_state->buf.a[2];
 		if (@c > 127) {
 			@!;
 		}
 		@c = (uint32_t) ((((int32_t) toupper((unsigned char)@c)) - 64) % 128 + 128) % 128;
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
 	@};
 
 	OCT: () -> (c :char, start :pos, end :pos) = @{
