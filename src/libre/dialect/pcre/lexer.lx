@@ -105,6 +105,21 @@ class = '\' /[dDwWsS]/;
 	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | class) -> $noesc;
 	'\' -> $invalid;
 
+	'[:alnum:]'  -> $class_alnum;
+	'[:alpha:]'  -> $class_alpha;
+	'[:ascii:]'  -> $class_ascii;
+	'[:blank:]'  -> $class_blank;
+	'[:cntrl:]'  -> $class_cntrl;
+	'[:digit:]'  -> $class_digit;
+	'[:graph:]'  -> $class_graph;
+	'[:lower:]'  -> $class_lower;
+	'[:print:]'  -> $class_print;
+	'[:punct:]'  -> $class_punct;
+	'[:space:]'  -> $class_space;
+	'[:upper:]'  -> $class_upper;
+	'[:word:]'   -> $class_word;
+	'[:xdigit:]' -> $class_xdigit;
+
 	# XXX: /./ - the above
 	/[^\^\-\\]/ -> $char;
 }
