@@ -1012,60 +1012,70 @@
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXTERM;
 		}
+		@!;
 	@};
 
 	<err-expected-count> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXCOUNT;
 		}
+		@!;
 	@};
 
 	<err-expected-atoms> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXATOMS;
 		}
+		@!;
 	@};
 
 	<err-expected-alts> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXALTS;
 		}
+		@!;
 	@};
 
 	<err-expected-range> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXRANGE;
 		}
+		@!;
 	@};
 
 	<err-expected-closegroup> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXCLOSEGROUP;
 		}
+		@!;
 	@};
 
 	<err-expected-groupbody> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXGROUPBODY;
 		}
+		@!;
 	@};
 
 	<err-unknown-flag> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EFLAG;
 		}
+		@!;
 	@};
 
 	<err-expected-closeflags> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXCLOSEFLAGS;
 		}
+		@!;
 	@};
 
 	<err-expected-eof> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
 		}
+		@!;
 	@};
 
 	<mark-group>: (start :pos, end :pos) -> () = @{
