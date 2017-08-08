@@ -358,13 +358,17 @@
 		const struct fsm_state *p;
 		struct fsm_state *start, *end;
 		struct fsm *fsm;
-		char a[2];
+		char a[5];
 		char *s = a;
+		unsigned n;
 
 		assert(g != NULL);
 
-		a[0] = c;
-		a[1] = '\0';
+		n = utf8encode(c, a);
+		if (n == 0) {
+			return -1;
+		}
+		a[n] = '\0';
 
 		errno = 0;
 		p = fsm_exec(g->set, fsm_sgetc, &s);
@@ -827,9 +831,9 @@
 	@};
 
 	<group-add-range>: (g :grp &, a :char, b :char) -> () = @{
-		int i;
+		uint32_t i;
 
-		if ((unsigned char) @b < (unsigned char) @a) {
+		if (@b < @a) {
 			char a[5], b[5];
 
 			assert(sizeof err->set >= 1 + sizeof a + 1 + sizeof b + 1 + 1);
@@ -840,8 +844,8 @@
 			@!;
 		}
 
-		for (i = (unsigned char) @a; i <= (unsigned char) @b; i++) {
-			if (-1 == group_add(@&g, flags->flags, (char) i)) {
+		for (i = @a; i <= @b; i++) {
+			if (-1 == group_add(@&g, flags->flags, i)) {
 				err->e = RE_EERRNO;
 				@!;
 			}
