@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 137 "src/libre/parser.act"
+#line 23 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -456,7 +456,7 @@ p_re__sql(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err er
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 814 "src/libre/parser.act"
+#line 813 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			goto ZL3;
@@ -473,13 +473,14 @@ p_re__sql(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err er
 			{
 				/* BEGINNING OF ACTION: err-expected-alts */
 				{
-#line 1033 "src/libre/parser.act"
+#line 1032 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXALTS;
 		}
+		goto ZL1;
 	
-#line 483 "src/libre/dialect/sql/parser.c"
+#line 484 "src/libre/dialect/sql/parser.c"
 				}
 				/* END OF ACTION: err-expected-alts */
 			}
@@ -502,13 +503,14 @@ p_re__sql(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err er
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 1069 "src/libre/parser.act"
+#line 1074 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
 		}
+		goto ZL1;
 	
-#line 512 "src/libre/dialect/sql/parser.c"
+#line 514 "src/libre/dialect/sql/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -516,6 +518,10 @@ p_re__sql(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err er
 		}
 		/* END OF INLINE: 157 */
 	}
+	return;
+ZL1:;
+	SAVE_LEXER ((ERROR_TERMINAL));
+	return;
 }
 
 static void
@@ -529,25 +535,25 @@ p_expr_C_Clist_Hof_Halts_C_Calt(fsm fsm, flags flags, lex_state lex_state, act_s
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 807 "src/libre/parser.act"
+#line 806 "src/libre/parser.act"
 
 		(ZIz) = fsm_addstate(fsm);
 		if ((ZIz) == NULL) {
 			goto ZL1;
 		}
 	
-#line 540 "src/libre/dialect/sql/parser.c"
+#line 546 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: add-concat */
 		/* BEGINNING OF ACTION: add-epsilon */
 		{
-#line 814 "src/libre/parser.act"
+#line 813 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIz))) {
 			goto ZL1;
 		}
 	
-#line 551 "src/libre/dialect/sql/parser.c"
+#line 557 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: add-epsilon */
 		p_expr_C_Clist_Hof_Hatoms (fsm, flags, lex_state, act_state, err, ZIz, ZIy);
@@ -614,26 +620,26 @@ p_173(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t
 
 			/* BEGINNING OF EXTRACT: RANGE */
 			{
-#line 437 "src/libre/parser.act"
+#line 436 "src/libre/parser.act"
 
 		ZIb = '-';
 		ZI127 = lex_state->lx.start;
 		ZI128   = lex_state->lx.end;
 	
-#line 624 "src/libre/dialect/sql/parser.c"
+#line 630 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF EXTRACT: RANGE */
 			ADVANCE_LEXER;
 			/* BEGINNING OF ACTION: group-add-char */
 			{
-#line 656 "src/libre/parser.act"
+#line 655 "src/libre/parser.act"
 
 		if (-1 == group_add((ZIg), flags->flags, (ZIb))) {
 			err->e = RE_EERRNO;
 			goto ZL1;
 		}
 	
-#line 637 "src/libre/dialect/sql/parser.c"
+#line 643 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: group-add-char */
 		}
@@ -660,7 +666,7 @@ p_group(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err,
 
 		/* BEGINNING OF ACTION: make-group */
 		{
-#line 622 "src/libre/parser.act"
+#line 621 "src/libre/parser.act"
 
 		(ZIg).set = fsm_new_blank(fsm->opt);
 		if ((ZIg).set == NULL) {
@@ -673,7 +679,7 @@ p_group(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err,
 			goto ZL1;
 		}
 	
-#line 677 "src/libre/dialect/sql/parser.c"
+#line 683 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: make-group */
 		p_group_C_Cgroup_Hbm (fsm, flags, lex_state, act_state, err, &ZIg);
@@ -683,7 +689,7 @@ p_group(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err,
 		}
 		/* BEGINNING OF ACTION: group-to-states */
 		{
-#line 747 "src/libre/parser.act"
+#line 744 "src/libre/parser.act"
 
 		int r;
 
@@ -726,7 +732,7 @@ p_group(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err,
 
 		fsm_free((&ZIg)->dup);
 	
-#line 730 "src/libre/dialect/sql/parser.c"
+#line 736 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: group-to-states */
 	}
@@ -756,13 +762,13 @@ p_177(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t
 					case (TOK_RANGE):
 						/* BEGINNING OF EXTRACT: RANGE */
 						{
-#line 437 "src/libre/parser.act"
+#line 436 "src/libre/parser.act"
 
 		ZI106 = '-';
 		ZI107 = lex_state->lx.start;
 		ZI108   = lex_state->lx.end;
 	
-#line 766 "src/libre/dialect/sql/parser.c"
+#line 772 "src/libre/dialect/sql/parser.c"
 						}
 						/* END OF EXTRACT: RANGE */
 						break;
@@ -781,8 +787,9 @@ p_177(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXRANGE;
 		}
+		goto ZL1;
 	
-#line 786 "src/libre/dialect/sql/parser.c"
+#line 793 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF ACTION: err-expected-range */
 				}
@@ -798,7 +805,7 @@ p_177(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t
 
 						/* BEGINNING OF EXTRACT: CHAR */
 						{
-#line 557 "src/libre/parser.act"
+#line 553 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
@@ -808,7 +815,7 @@ p_177(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t
 
 		ZIb = lex_state->buf.a[0];
 	
-#line 812 "src/libre/dialect/sql/parser.c"
+#line 819 "src/libre/dialect/sql/parser.c"
 						}
 						/* END OF EXTRACT: CHAR */
 						ADVANCE_LEXER;
@@ -820,13 +827,13 @@ p_177(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t
 
 						/* BEGINNING OF EXTRACT: RANGE */
 						{
-#line 437 "src/libre/parser.act"
+#line 436 "src/libre/parser.act"
 
 		ZIb = '-';
 		ZI112 = lex_state->lx.start;
 		ZIend   = lex_state->lx.end;
 	
-#line 830 "src/libre/dialect/sql/parser.c"
+#line 837 "src/libre/dialect/sql/parser.c"
 						}
 						/* END OF EXTRACT: RANGE */
 						ADVANCE_LEXER;
@@ -839,17 +846,17 @@ p_177(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t
 			/* END OF INLINE: 109 */
 			/* BEGINNING OF ACTION: mark-range */
 			{
-#line 1077 "src/libre/parser.act"
+#line 1086 "src/libre/parser.act"
 
 		mark(&act_state->rangestart, &(*ZI175));
 		mark(&act_state->rangeend,   &(ZIend));
 	
-#line 848 "src/libre/dialect/sql/parser.c"
+#line 855 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: mark-range */
 			/* BEGINNING OF ACTION: group-add-range */
 			{
-#line 725 "src/libre/parser.act"
+#line 722 "src/libre/parser.act"
 
 		int i;
 
@@ -871,7 +878,7 @@ p_177(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t
 			}
 		}
 	
-#line 875 "src/libre/dialect/sql/parser.c"
+#line 882 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: group-add-range */
 		}
@@ -880,14 +887,14 @@ p_177(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t
 		{
 			/* BEGINNING OF ACTION: group-add-char */
 			{
-#line 656 "src/libre/parser.act"
+#line 655 "src/libre/parser.act"
 
 		if (-1 == group_add((ZIg), flags->flags, (*ZI174))) {
 			err->e = RE_EERRNO;
 			goto ZL1;
 		}
 	
-#line 891 "src/libre/dialect/sql/parser.c"
+#line 898 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: group-add-char */
 		}
@@ -919,26 +926,26 @@ p_group_C_Cgroup_Hbody(fsm fsm, flags flags, lex_state lex_state, act_state act_
 
 					/* BEGINNING OF EXTRACT: CLOSEGROUP */
 					{
-#line 448 "src/libre/parser.act"
+#line 447 "src/libre/parser.act"
 
 		ZI170 = ']';
 		ZI171 = lex_state->lx.start;
 		ZI172   = lex_state->lx.end;
 	
-#line 929 "src/libre/dialect/sql/parser.c"
+#line 936 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF EXTRACT: CLOSEGROUP */
 					ADVANCE_LEXER;
 					/* BEGINNING OF ACTION: group-add-char */
 					{
-#line 656 "src/libre/parser.act"
+#line 655 "src/libre/parser.act"
 
 		if (-1 == group_add((ZIg), flags->flags, (ZI170))) {
 			err->e = RE_EERRNO;
 			goto ZL1;
 		}
 	
-#line 942 "src/libre/dialect/sql/parser.c"
+#line 949 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF ACTION: group-add-char */
 					p_173 (fsm, flags, lex_state, act_state, err, ZIg);
@@ -956,26 +963,26 @@ p_group_C_Cgroup_Hbody(fsm fsm, flags flags, lex_state lex_state, act_state act_
 
 					/* BEGINNING OF EXTRACT: RANGE */
 					{
-#line 437 "src/libre/parser.act"
+#line 436 "src/libre/parser.act"
 
 		ZIc = '-';
 		ZI123 = lex_state->lx.start;
 		ZI124   = lex_state->lx.end;
 	
-#line 966 "src/libre/dialect/sql/parser.c"
+#line 973 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF EXTRACT: RANGE */
 					ADVANCE_LEXER;
 					/* BEGINNING OF ACTION: group-add-char */
 					{
-#line 656 "src/libre/parser.act"
+#line 655 "src/libre/parser.act"
 
 		if (-1 == group_add((ZIg), flags->flags, (ZIc))) {
 			err->e = RE_EERRNO;
 			goto ZL1;
 		}
 	
-#line 979 "src/libre/dialect/sql/parser.c"
+#line 986 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF ACTION: group-add-char */
 				}
@@ -1039,7 +1046,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 
 					/* BEGINNING OF EXTRACT: CHAR */
 					{
-#line 557 "src/libre/parser.act"
+#line 553 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
@@ -1049,7 +1056,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 
 		ZI174 = lex_state->buf.a[0];
 	
-#line 1053 "src/libre/dialect/sql/parser.c"
+#line 1060 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF EXTRACT: CHAR */
 					ADVANCE_LEXER;
@@ -1074,7 +1081,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 								{
 #line 463 "src/libre/parser.act"
  ZIk = class_alnum_fsm(fsm->opt);  if (ZIk == NULL) { err->e = RE_EERRNO; goto ZL4; } 
-#line 1078 "src/libre/dialect/sql/parser.c"
+#line 1085 "src/libre/dialect/sql/parser.c"
 								}
 								/* END OF EXTRACT: CLASS_alnum */
 								ADVANCE_LEXER;
@@ -1086,7 +1093,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 								{
 #line 464 "src/libre/parser.act"
  ZIk = class_alpha_fsm(fsm->opt);  if (ZIk == NULL) { err->e = RE_EERRNO; goto ZL4; } 
-#line 1090 "src/libre/dialect/sql/parser.c"
+#line 1097 "src/libre/dialect/sql/parser.c"
 								}
 								/* END OF EXTRACT: CLASS_alpha */
 								ADVANCE_LEXER;
@@ -1098,7 +1105,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 								{
 #line 469 "src/libre/parser.act"
  ZIk = class_digit_fsm(fsm->opt);  if (ZIk == NULL) { err->e = RE_EERRNO; goto ZL4; } 
-#line 1102 "src/libre/dialect/sql/parser.c"
+#line 1109 "src/libre/dialect/sql/parser.c"
 								}
 								/* END OF EXTRACT: CLASS_digit */
 								ADVANCE_LEXER;
@@ -1110,7 +1117,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 								{
 #line 471 "src/libre/parser.act"
  ZIk = class_lower_fsm(fsm->opt);  if (ZIk == NULL) { err->e = RE_EERRNO; goto ZL4; } 
-#line 1114 "src/libre/dialect/sql/parser.c"
+#line 1121 "src/libre/dialect/sql/parser.c"
 								}
 								/* END OF EXTRACT: CLASS_lower */
 								ADVANCE_LEXER;
@@ -1122,7 +1129,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 								{
 #line 474 "src/libre/parser.act"
  ZIk = class_space_fsm(fsm->opt);  if (ZIk == NULL) { err->e = RE_EERRNO; goto ZL4; } 
-#line 1126 "src/libre/dialect/sql/parser.c"
+#line 1133 "src/libre/dialect/sql/parser.c"
 								}
 								/* END OF EXTRACT: CLASS_space */
 								ADVANCE_LEXER;
@@ -1134,7 +1141,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 								{
 #line 475 "src/libre/parser.act"
  ZIk = class_spchr_fsm(fsm->opt);  if (ZIk == NULL) { err->e = RE_EERRNO; goto ZL4; } 
-#line 1138 "src/libre/dialect/sql/parser.c"
+#line 1145 "src/libre/dialect/sql/parser.c"
 								}
 								/* END OF EXTRACT: CLASS_spchr */
 								ADVANCE_LEXER;
@@ -1146,7 +1153,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 								{
 #line 476 "src/libre/parser.act"
  ZIk = class_upper_fsm(fsm->opt);  if (ZIk == NULL) { err->e = RE_EERRNO; goto ZL4; } 
-#line 1150 "src/libre/dialect/sql/parser.c"
+#line 1157 "src/libre/dialect/sql/parser.c"
 								}
 								/* END OF EXTRACT: CLASS_upper */
 								ADVANCE_LEXER;
@@ -1159,7 +1166,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 					/* END OF INLINE: group::class */
 					/* BEGINNING OF ACTION: group-add-class */
 					{
-#line 670 "src/libre/parser.act"
+#line 662 "src/libre/parser.act"
 
 		struct fsm *q;
 		int r;
@@ -1219,7 +1226,7 @@ ZL2_group_C_Clist_Hof_Hterms:;
 			}
 		}
 	
-#line 1223 "src/libre/dialect/sql/parser.c"
+#line 1230 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF ACTION: group-add-class */
 				}
@@ -1232,13 +1239,14 @@ ZL2_group_C_Clist_Hof_Hterms:;
 			{
 				/* BEGINNING OF ACTION: err-expected-term */
 				{
-#line 1015 "src/libre/parser.act"
+#line 1011 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXTERM;
 		}
+		goto ZL1;
 	
-#line 1242 "src/libre/dialect/sql/parser.c"
+#line 1250 "src/libre/dialect/sql/parser.c"
 				}
 				/* END OF ACTION: err-expected-term */
 			}
@@ -1262,6 +1270,10 @@ ZL2_group_C_Clist_Hof_Hterms:;
 		}
 		/* END OF INLINE: 117 */
 	}
+	return;
+ZL1:;
+	SAVE_LEXER ((ERROR_TERMINAL));
+	return;
 }
 
 static void
@@ -1276,14 +1288,14 @@ ZL2_expr_C_Clist_Hof_Hatoms:;
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 807 "src/libre/parser.act"
+#line 806 "src/libre/parser.act"
 
 		(ZIz) = fsm_addstate(fsm);
 		if ((ZIz) == NULL) {
 			goto ZL1;
 		}
 	
-#line 1287 "src/libre/dialect/sql/parser.c"
+#line 1299 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: add-concat */
 		p_expr_C_Catom (fsm, flags, lex_state, act_state, err, ZIx, &ZIz);
@@ -1303,13 +1315,13 @@ ZL2_expr_C_Clist_Hof_Hatoms:;
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 814 "src/libre/parser.act"
+#line 813 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIz), (ZIy))) {
 			goto ZL1;
 		}
 	
-#line 1313 "src/libre/dialect/sql/parser.c"
+#line 1325 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF ACTION: add-epsilon */
 				}
@@ -1341,12 +1353,12 @@ p_group_C_Cgroup_Hbm(fsm fsm, flags flags, lex_state lex_state, act_state act_st
 		case (TOK_OPENGROUP):
 			/* BEGINNING OF EXTRACT: OPENGROUP */
 			{
-#line 443 "src/libre/parser.act"
+#line 442 "src/libre/parser.act"
 
 		ZIstart = lex_state->lx.start;
 		ZI132   = lex_state->lx.end;
 	
-#line 1350 "src/libre/dialect/sql/parser.c"
+#line 1362 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF EXTRACT: OPENGROUP */
 			break;
@@ -1363,11 +1375,11 @@ p_group_C_Cgroup_Hbm(fsm fsm, flags flags, lex_state lex_state, act_state act_st
 
 					/* BEGINNING OF EXTRACT: INVERT */
 					{
-#line 433 "src/libre/parser.act"
+#line 432 "src/libre/parser.act"
 
 		ZI134 = '^';
 	
-#line 1371 "src/libre/dialect/sql/parser.c"
+#line 1383 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF EXTRACT: INVERT */
 					ADVANCE_LEXER;
@@ -1378,7 +1390,7 @@ p_group_C_Cgroup_Hbm(fsm fsm, flags flags, lex_state lex_state, act_state act_st
 					}
 					/* BEGINNING OF ACTION: invert-group */
 					{
-#line 640 "src/libre/parser.act"
+#line 634 "src/libre/parser.act"
 
 		struct fsm *any;
 
@@ -1399,7 +1411,7 @@ p_group_C_Cgroup_Hbm(fsm fsm, flags flags, lex_state lex_state, act_state act_st
 		 * kept in the positive.
 		 */
 	
-#line 1403 "src/libre/dialect/sql/parser.c"
+#line 1415 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF ACTION: invert-group */
 				}
@@ -1431,13 +1443,13 @@ p_group_C_Cgroup_Hbm(fsm fsm, flags flags, lex_state lex_state, act_state act_st
 				case (TOK_CLOSEGROUP):
 					/* BEGINNING OF EXTRACT: CLOSEGROUP */
 					{
-#line 448 "src/libre/parser.act"
+#line 447 "src/libre/parser.act"
 
 		ZI136 = ']';
 		ZI137 = lex_state->lx.start;
 		ZIend   = lex_state->lx.end;
 	
-#line 1441 "src/libre/dialect/sql/parser.c"
+#line 1453 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF EXTRACT: CLOSEGROUP */
 					break;
@@ -1447,12 +1459,12 @@ p_group_C_Cgroup_Hbm(fsm fsm, flags flags, lex_state lex_state, act_state act_st
 				ADVANCE_LEXER;
 				/* BEGINNING OF ACTION: mark-group */
 				{
-#line 1072 "src/libre/parser.act"
+#line 1081 "src/libre/parser.act"
 
 		mark(&act_state->groupstart, &(ZIstart));
 		mark(&act_state->groupend,   &(ZIend));
 	
-#line 1456 "src/libre/dialect/sql/parser.c"
+#line 1468 "src/libre/dialect/sql/parser.c"
 				}
 				/* END OF ACTION: mark-group */
 			}
@@ -1461,13 +1473,14 @@ p_group_C_Cgroup_Hbm(fsm fsm, flags flags, lex_state lex_state, act_state act_st
 			{
 				/* BEGINNING OF ACTION: err-expected-closegroup */
 				{
-#line 1045 "src/libre/parser.act"
+#line 1046 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXCLOSEGROUP;
 		}
+		goto ZL1;
 	
-#line 1471 "src/libre/dialect/sql/parser.c"
+#line 1484 "src/libre/dialect/sql/parser.c"
 				}
 				/* END OF ACTION: err-expected-closegroup */
 			}
@@ -1480,16 +1493,22 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-expected-groupbody */
 		{
-#line 1051 "src/libre/parser.act"
+#line 1053 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXGROUPBODY;
 		}
+		goto ZL5;
 	
-#line 1490 "src/libre/dialect/sql/parser.c"
+#line 1504 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: err-expected-groupbody */
 	}
+	goto ZL0;
+ZL5:;
+	SAVE_LEXER ((ERROR_TERMINAL));
+	return;
+ZL0:;
 }
 
 static void
@@ -1530,7 +1549,7 @@ p_expr_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, e
 					ADVANCE_LEXER;
 					/* BEGINNING OF ACTION: add-any */
 					{
-#line 844 "src/libre/parser.act"
+#line 841 "src/libre/parser.act"
 
 		struct fsm *any;
 
@@ -1548,7 +1567,7 @@ p_expr_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, e
 			goto ZL1;
 		}
 	
-#line 1552 "src/libre/dialect/sql/parser.c"
+#line 1571 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF ACTION: add-any */
 				}
@@ -1558,7 +1577,7 @@ p_expr_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, e
 					ADVANCE_LEXER;
 					/* BEGINNING OF ACTION: add-any */
 					{
-#line 844 "src/libre/parser.act"
+#line 841 "src/libre/parser.act"
 
 		struct fsm *any;
 
@@ -1576,12 +1595,12 @@ p_expr_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, e
 			goto ZL1;
 		}
 	
-#line 1580 "src/libre/dialect/sql/parser.c"
+#line 1599 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF ACTION: add-any */
 					/* BEGINNING OF ACTION: count-0-or-many */
 					{
-#line 930 "src/libre/parser.act"
+#line 929 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (*ZIy))) {
 			goto ZL1;
@@ -1608,7 +1627,7 @@ p_expr_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, e
 			(*ZIy) = z;
 		}
 	
-#line 1612 "src/libre/dialect/sql/parser.c"
+#line 1631 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF ACTION: count-0-or-many */
 				}
@@ -1660,7 +1679,7 @@ p_expr_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, e
 					ADVANCE_LEXER;
 					/* BEGINNING OF ACTION: count-1-or-many */
 					{
-#line 957 "src/libre/parser.act"
+#line 956 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (*ZIy), (ZIx))) {
 			goto ZL4;
@@ -1683,7 +1702,7 @@ p_expr_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, e
 			(*ZIy) = z;
 		}
 	
-#line 1687 "src/libre/dialect/sql/parser.c"
+#line 1706 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF ACTION: count-1-or-many */
 				}
@@ -1693,7 +1712,7 @@ p_expr_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, e
 					ADVANCE_LEXER;
 					/* BEGINNING OF ACTION: count-0-or-many */
 					{
-#line 930 "src/libre/parser.act"
+#line 929 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (*ZIy))) {
 			goto ZL4;
@@ -1720,7 +1739,7 @@ p_expr_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, e
 			(*ZIy) = z;
 		}
 	
-#line 1724 "src/libre/dialect/sql/parser.c"
+#line 1743 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF ACTION: count-0-or-many */
 				}
@@ -1729,12 +1748,12 @@ p_expr_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, e
 				{
 					/* BEGINNING OF ACTION: count-1 */
 					{
-#line 980 "src/libre/parser.act"
+#line 979 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (*ZIy);
 	
-#line 1738 "src/libre/dialect/sql/parser.c"
+#line 1757 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF ACTION: count-1 */
 				}
@@ -1745,13 +1764,14 @@ p_expr_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, e
 			{
 				/* BEGINNING OF ACTION: err-expected-count */
 				{
-#line 1021 "src/libre/parser.act"
+#line 1018 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXCOUNT;
 		}
+		goto ZL1;
 	
-#line 1755 "src/libre/dialect/sql/parser.c"
+#line 1775 "src/libre/dialect/sql/parser.c"
 				}
 				/* END OF ACTION: err-expected-count */
 			}
@@ -1784,7 +1804,7 @@ p_literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err er
 				case (TOK_CHAR):
 					/* BEGINNING OF EXTRACT: CHAR */
 					{
-#line 557 "src/libre/parser.act"
+#line 553 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
@@ -1794,7 +1814,7 @@ p_literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err er
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 1798 "src/libre/dialect/sql/parser.c"
+#line 1818 "src/libre/dialect/sql/parser.c"
 					}
 					/* END OF EXTRACT: CHAR */
 					break;
@@ -1807,7 +1827,7 @@ p_literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err er
 		/* END OF INLINE: 139 */
 		/* BEGINNING OF ACTION: add-literal */
 		{
-#line 831 "src/libre/parser.act"
+#line 830 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -1818,7 +1838,7 @@ p_literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err er
 			goto ZL1;
 		}
 	
-#line 1822 "src/libre/dialect/sql/parser.c"
+#line 1842 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: add-literal */
 	}
@@ -1830,7 +1850,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 1259 "src/libre/parser.act"
+#line 1096 "src/libre/parser.act"
 
 
 	static int
@@ -2004,6 +2024,6 @@ ZL1:;
 		return NULL;
 	}
 
-#line 2008 "src/libre/dialect/sql/parser.c"
+#line 2028 "src/libre/dialect/sql/parser.c"
 
 /* END OF FILE */

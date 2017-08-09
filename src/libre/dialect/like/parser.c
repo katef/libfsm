@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 137 "src/libre/parser.act"
+#line 23 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -439,7 +439,7 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 557 "src/libre/parser.act"
+#line 553 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
@@ -459,7 +459,7 @@ p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_stat
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-literal */
 		{
-#line 831 "src/libre/parser.act"
+#line 830 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -492,7 +492,7 @@ ZL2_list_Hof_Hatoms:;
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 807 "src/libre/parser.act"
+#line 806 "src/libre/parser.act"
 
 		(ZIz) = fsm_addstate(fsm);
 		if ((ZIz) == NULL) {
@@ -518,7 +518,7 @@ ZL2_list_Hof_Hatoms:;
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 814 "src/libre/parser.act"
+#line 813 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIz), (ZIy))) {
 			goto ZL1;
@@ -555,7 +555,7 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 			}
 			/* BEGINNING OF ACTION: count-1 */
 			{
-#line 980 "src/libre/parser.act"
+#line 979 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (*ZIy);
@@ -574,7 +574,7 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 			}
 			/* BEGINNING OF ACTION: count-1 */
 			{
-#line 980 "src/libre/parser.act"
+#line 979 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (*ZIy);
@@ -593,7 +593,7 @@ p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state a
 			}
 			/* BEGINNING OF ACTION: count-0-or-many */
 			{
-#line 930 "src/libre/parser.act"
+#line 929 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (*ZIy))) {
 			goto ZL1;
@@ -652,7 +652,7 @@ p_list_Hof_Hatoms_C_Cmany(fsm fsm, flags flags, lex_state lex_state, act_state a
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-any */
 		{
-#line 844 "src/libre/parser.act"
+#line 841 "src/libre/parser.act"
 
 		struct fsm *any;
 
@@ -696,7 +696,7 @@ p_list_Hof_Hatoms_C_Cany(fsm fsm, flags flags, lex_state lex_state, act_state ac
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-any */
 		{
-#line 844 "src/libre/parser.act"
+#line 841 "src/libre/parser.act"
 
 		struct fsm *any;
 
@@ -747,7 +747,7 @@ p_re__like(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 814 "src/libre/parser.act"
+#line 813 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			goto ZL3;
@@ -764,13 +764,14 @@ p_re__like(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 			{
 				/* BEGINNING OF ACTION: err-expected-atoms */
 				{
-#line 1027 "src/libre/parser.act"
+#line 1025 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXATOMS;
 		}
+		goto ZL1;
 	
-#line 774 "src/libre/dialect/like/parser.c"
+#line 775 "src/libre/dialect/like/parser.c"
 				}
 				/* END OF ACTION: err-expected-atoms */
 			}
@@ -793,13 +794,14 @@ p_re__like(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 1069 "src/libre/parser.act"
+#line 1074 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
 		}
+		goto ZL1;
 	
-#line 803 "src/libre/dialect/like/parser.c"
+#line 805 "src/libre/dialect/like/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -807,11 +809,15 @@ p_re__like(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 		}
 		/* END OF INLINE: 106 */
 	}
+	return;
+ZL1:;
+	SAVE_LEXER ((ERROR_TERMINAL));
+	return;
 }
 
 /* BEGINNING OF TRAILER */
 
-#line 1259 "src/libre/parser.act"
+#line 1096 "src/libre/parser.act"
 
 
 	static int
@@ -985,6 +991,6 @@ p_re__like(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err e
 		return NULL;
 	}
 
-#line 989 "src/libre/dialect/like/parser.c"
+#line 995 "src/libre/dialect/like/parser.c"
 
 /* END OF FILE */
