@@ -54,7 +54,7 @@ struct fsm_determinise_cache {
 };
 
 static void
-free_trans(struct set *trans)
+clear_trans(struct set *trans)
 {
 	struct set_iter it;
 	struct trans *t;
@@ -67,7 +67,7 @@ free_trans(struct set *trans)
 }
 
 static void
-free_mappings(struct set *mappings)
+clear_mappings(struct set *mappings)
 {
 	struct set_iter it;
 	struct mapping *m;
@@ -317,7 +317,7 @@ listnonepsilonstates(struct set *trans, struct set *set)
 
 				p = malloc(sizeof *p);
 				if (p == NULL) {
-					free_trans(trans);
+					clear_trans(trans);
 					return 0;
 				}
 
@@ -326,7 +326,7 @@ listnonepsilonstates(struct set *trans, struct set *set)
 
 				if (!set_add(&trans, p)) {
 					free(p);
-					free_trans(trans);
+					clear_trans(trans);
 					return 0;
 				}
 			}
@@ -493,18 +493,18 @@ determinise(struct fsm *nfa,
 			new = set_closure(mappings, dfa, reachable);
 			set_free(reachable);
 			if (new == NULL) {
-				free_trans(trans);
+				clear_trans(trans);
 				goto error;
 			}
 
 			e = fsm_addedge_literal(dfa, curr->dfastate, new, t->c);
 			if (e == NULL) {
-				free_trans(trans);
+				clear_trans(trans);
 				goto error;
 			}
 		}
 
-		free_trans(trans);
+		clear_trans(trans);
 
 #ifdef DEBUG_TODFA
 		{
@@ -531,7 +531,7 @@ determinise(struct fsm *nfa,
 		fsm_carryopaque(dfa, curr->closure, dfa, curr->dfastate);
 	}
 
-	free_mappings(mappings);
+	clear_mappings(mappings);
 
 	/* TODO: can assert a whole bunch of things about the dfa, here */
 	assert(fsm_all(dfa, fsm_isdfa));
@@ -540,7 +540,7 @@ determinise(struct fsm *nfa,
 
 error:
 
-	free_mappings(mappings);
+	clear_mappings(mappings);
 	fsm_free(dfa);
 
 	return NULL;
@@ -604,8 +604,8 @@ fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache)
 		return;
 	}
 
-	free_mappings(dcache->mappings);
-	free_trans(dcache->trans);
+	clear_mappings(dcache->mappings);
+	clear_trans(dcache->trans);
 
 	if (dcache->mappings != NULL) {
 		set_free(dcache->mappings);
