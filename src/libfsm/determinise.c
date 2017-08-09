@@ -605,7 +605,7 @@ fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache)
 	}
 
 	free_mappings(dcache->mappings);
-	free_trans(dcache->mappings);
+	free_trans(dcache->trans);
 
 	if (dcache->mappings != NULL) {
 		set_free(dcache->mappings);
