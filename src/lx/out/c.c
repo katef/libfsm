@@ -799,7 +799,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\n");
 
-	{
+	if (~api_exclude & API_BUF) {
 		struct fsm_state *s;
 		int has_skips;
 
@@ -845,26 +845,22 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			fprintf(f, "\n");
 
 			fprintf(f, "\t\tdefault:\n");
-			if (~api_exclude & API_BUF) {
-				fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
-				fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, %s)) {\n", opt.cp);
-				fprintf(f, "\t\t\t\t\treturn %sERROR;\n", prefix.tok);
-				fprintf(f, "\t\t\t\t}\n");
-				fprintf(f, "\t\t\t}\n");
-			}
+			fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
+			fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, %s)) {\n", opt.cp);
+			fprintf(f, "\t\t\t\t\treturn %sERROR;\n", prefix.tok);
+			fprintf(f, "\t\t\t\t}\n");
+			fprintf(f, "\t\t\t}\n");
 			fprintf(f, "\t\t\tbreak;\n");
 			fprintf(f, "\n");
 
 			fprintf(f, "\t\t}\n");
 			fprintf(f, "\n");
 		} else {
-			if (~api_exclude & API_BUF) {
-				fprintf(f, "\t\tif (lx->push != NULL) {\n");
-				fprintf(f, "\t\t\tif (-1 == lx->push(lx, %s)) {\n", opt.cp);
-				fprintf(f, "\t\t\t\treturn %sERROR;\n", prefix.tok);
-				fprintf(f, "\t\t\t}\n");
-				fprintf(f, "\t\t}\n");
-			}
+			fprintf(f, "\t\tif (lx->push != NULL) {\n");
+			fprintf(f, "\t\t\tif (-1 == lx->push(lx, %s)) {\n", opt.cp);
+			fprintf(f, "\t\t\t\treturn %sERROR;\n", prefix.tok);
+			fprintf(f, "\t\t\t}\n");
+			fprintf(f, "\t\t}\n");
 			fprintf(f, "\n");
 		}
 	}
