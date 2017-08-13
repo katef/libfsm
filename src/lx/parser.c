@@ -3184,7 +3184,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 869 "src/lx/parser.act"
+#line 868 "src/lx/parser.act"
 
 
 	struct ast *lx_parse(FILE *f, const struct fsm_options *opt) {
@@ -3213,7 +3213,6 @@ ZL1:;
 
 		lx->buf   = &lex_state->buf;
 		lx->push  = lx_dynpush;
-		lx->pop   = lx_dynpop;
 		lx->clear = lx_dynclear;
 		lx->free  = lx_dynfree;
 
@@ -3236,6 +3235,6 @@ ZL1:;
 		return ast;
 	}
 
-#line 3240 "src/lx/parser.c"
+#line 3239 "src/lx/parser.c"
 
 /* END OF FILE */

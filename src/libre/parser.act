@@ -1153,7 +1153,6 @@
 		/* (except for pushing "[" and "]" around ::group-$dialect) */
 		lx->buf   = &lex_state->buf;
 		lx->push  = CAT(LX_PREFIX, _dynpush);
-		lx->pop   = CAT(LX_PREFIX, _dynpop);
 		lx->clear = CAT(LX_PREFIX, _dynclear);
 		lx->free  = CAT(LX_PREFIX, _dynfree);
 

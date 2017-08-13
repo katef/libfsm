@@ -843,7 +843,6 @@
 
 		lx->buf   = &lex_state->buf;
 		lx->push  = lx_dynpush;
-		lx->pop   = lx_dynpop;
 		lx->clear = lx_dynclear;
 		lx->free  = lx_dynfree;
 
