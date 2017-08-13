@@ -111,10 +111,10 @@ lx_out_h(const struct ast *ast, FILE *f)
 		fprintf(f, "\n");
 	}
 	if (~api_exclude & API_BUF) {
-		fprintf(f, "\tvoid *buf;\n");
-		fprintf(f, "\tint  (*push) (struct %slx *lx, char c);\n", prefix.lx);
-		fprintf(f, "\tint  (*clear)(struct %slx *lx);\n", prefix.lx);
-		fprintf(f, "\tvoid (*free) (struct %slx *lx);\n", prefix.lx);
+		fprintf(f, "\tvoid *buf_opaque;\n");
+		fprintf(f, "\tint  (*push) (void *buf_opaque, char c);\n");
+		fprintf(f, "\tint  (*clear)(void *buf_opaque);\n");
+		fprintf(f, "\tvoid (*free) (void *buf_opaque);\n");
 		fprintf(f, "\n");
 	}
 
@@ -232,15 +232,15 @@ lx_out_h(const struct ast *ast, FILE *f)
 	}
 
 	if (api_tokbuf & API_DYNBUF) {
-		fprintf(f, "int  %sdynpush(struct %slx *lx, char c);\n", prefix.api, prefix.lx);
-		fprintf(f, "int  %sdynclear(struct %slx *lx);\n", prefix.api, prefix.lx);
-		fprintf(f, "void %sdynfree(struct %slx *lx);\n", prefix.api, prefix.lx);
+		fprintf(f, "int  %sdynpush(void *buf_opaque, char c);\n", prefix.api);
+		fprintf(f, "int  %sdynclear(void *buf_opaque);\n", prefix.api);
+		fprintf(f, "void %sdynfree(void *buf_opaque);\n", prefix.api);
 		fprintf(f, "\n");
 	}
 
 	if (api_tokbuf & API_FIXEDBUF) {
-		fprintf(f, "int  %sfixedpush(struct %slx *lx, char c);\n", prefix.api, prefix.lx);
-		fprintf(f, "int  %sfixedclear(struct %slx *lx);\n", prefix.api, prefix.lx);
+		fprintf(f, "int  %sfixedpush(void *buf_opaque, char c);\n", prefix.api);
+		fprintf(f, "int  %sfixedclear(void *buf_opaque);\n", prefix.api);
 		fprintf(f, "\n");
 	}
 

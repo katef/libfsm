@@ -526,13 +526,9 @@ out_buf(FILE *f)
 		}
 
 		fprintf(f, "int\n");
-		fprintf(f, "%sdynpush(struct %slx *lx, char c)\n", prefix.api, prefix.lx);
+		fprintf(f, "%sdynpush(void *buf_opaque, char c)\n", prefix.api);
 		fprintf(f, "{\n");
-		fprintf(f, "\tstruct lx_dynbuf *t;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tt = lx->buf;\n");
+		fprintf(f, "\tstruct lx_dynbuf *t = buf_opaque;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(t != NULL);\n");
 		fprintf(f, "\n");
@@ -573,13 +569,9 @@ out_buf(FILE *f)
 		fprintf(f, "\n");
 
 		fprintf(f, "int\n");
-		fprintf(f, "%sdynclear(struct %slx *lx)\n", prefix.api, prefix.lx);
+		fprintf(f, "%sdynclear(void *buf_opaque)\n", prefix.api);
 		fprintf(f, "{\n");
-		fprintf(f, "\tstruct lx_dynbuf *t;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tt = lx->buf;\n");
+		fprintf(f, "\tstruct lx_dynbuf *t = buf_opaque;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(t != NULL);\n");
 		fprintf(f, "\n");
@@ -605,13 +597,9 @@ out_buf(FILE *f)
 		fprintf(f, "\n");
 
 		fprintf(f, "void\n");
-		fprintf(f, "%sdynfree(struct %slx *lx)\n", prefix.api, prefix.lx);
+		fprintf(f, "%sdynfree(void *buf_opaque)\n", prefix.api);
 		fprintf(f, "{\n");
-		fprintf(f, "\tstruct lx_dynbuf *t;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tt = lx->buf;\n");
+		fprintf(f, "\tstruct lx_dynbuf *t = buf_opaque;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(t != NULL);\n");
 		fprintf(f, "\n");
@@ -625,13 +613,9 @@ out_buf(FILE *f)
 		}
 
 		fprintf(f, "int\n");
-		fprintf(f, "%sfixedpush(struct %slx *lx, char c)\n", prefix.api, prefix.lx);
+		fprintf(f, "%sfixedpush(void *buf_opaque, char c)\n", prefix.api);
 		fprintf(f, "{\n");
-		fprintf(f, "\tstruct lx_fixedbuf *t;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tt = lx->buf;\n");
+		fprintf(f, "\tstruct lx_fixedbuf *t = buf_opaque;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(t != NULL);\n");
 		fprintf(f, "\tassert(t->p != NULL);\n");
@@ -649,13 +633,9 @@ out_buf(FILE *f)
 		fprintf(f, "\n");
 
 		fprintf(f, "int\n");
-		fprintf(f, "%sfixedclear(struct %slx *lx)\n", prefix.api, prefix.lx);
+		fprintf(f, "%sfixedclear(void *buf_opaque)\n", prefix.api);
 		fprintf(f, "{\n");
-		fprintf(f, "\tstruct lx_fixedbuf *t;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tt = lx->buf;\n");
+		fprintf(f, "\tstruct lx_fixedbuf *t = buf_opaque;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(t != NULL);\n");
 		fprintf(f, "\tassert(t->p != NULL);\n");
@@ -719,7 +699,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 	if (~api_exclude & API_BUF) {
 		fprintf(f, "\tif (lx->clear != NULL) {\n");
-		fprintf(f, "\t\tlx->clear(lx);\n");
+		fprintf(f, "\t\tlx->clear(lx->buf_opaque);\n");
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
 	}
@@ -820,7 +800,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 			fprintf(f, "\t\tdefault:\n");
 			fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
-			fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, %s)) {\n", opt.cp);
+			fprintf(f, "\t\t\t\tif (-1 == lx->push(lx->buf_opaque, %s)) {\n", opt.cp);
 			fprintf(f, "\t\t\t\t\treturn %sERROR;\n", prefix.tok);
 			fprintf(f, "\t\t\t\t}\n");
 			fprintf(f, "\t\t\t}\n");
@@ -831,7 +811,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		} else {
 			fprintf(f, "\n");
 			fprintf(f, "\t\tif (lx->push != NULL) {\n");
-			fprintf(f, "\t\t\tif (-1 == lx->push(lx, %s)) {\n", opt.cp);
+			fprintf(f, "\t\t\tif (-1 == lx->push(lx->buf_opaque, %s)) {\n", opt.cp);
 			fprintf(f, "\t\t\t\treturn %sERROR;\n", prefix.tok);
 			fprintf(f, "\t\t\t}\n");
 			fprintf(f, "\t\t}\n");
@@ -1161,7 +1141,7 @@ lx_out_c(const struct ast *ast, FILE *f)
 
 		if (~api_exclude & API_BUF) {
 			fprintf(f, "\tif (lx->push != NULL) {\n");
-			fprintf(f, "\t\tif (-1 == lx->push(lx, '\\0')) {\n");
+			fprintf(f, "\t\tif (-1 == lx->push(lx->buf_opaque, '\\0')) {\n");
 			fprintf(f, "\t\t\treturn %sERROR;\n", prefix.tok);
 			fprintf(f, "\t\t}\n");
 			fprintf(f, "\t}\n");
