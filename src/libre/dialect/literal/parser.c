@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 23 "src/libre/parser.act"
+#line 137 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -444,7 +444,7 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, er
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 813 "src/libre/parser.act"
+#line 814 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			goto ZL3;
@@ -461,7 +461,7 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, er
 			{
 				/* BEGINNING OF ACTION: err-expected-atoms */
 				{
-#line 1025 "src/libre/parser.act"
+#line 1029 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXATOMS;
@@ -491,7 +491,7 @@ p_re__literal(fsm fsm, flags flags, lex_state lex_state, act_state act_state, er
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 1074 "src/libre/parser.act"
+#line 1078 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
@@ -527,7 +527,7 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 553 "src/libre/parser.act"
+#line 557 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
@@ -547,7 +547,7 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: add-literal */
 		{
-#line 830 "src/libre/parser.act"
+#line 831 "src/libre/parser.act"
 
 		assert((ZIx) != NULL);
 		assert((ZIy) != NULL);
@@ -563,7 +563,7 @@ p_list_Hof_Hliterals_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_s
 		/* END OF ACTION: add-literal */
 		/* BEGINNING OF ACTION: count-1 */
 		{
-#line 979 "src/libre/parser.act"
+#line 980 "src/libre/parser.act"
 
 		(void) (ZIx);
 		(void) (ZIy);
@@ -590,7 +590,7 @@ ZL2_list_Hof_Hliterals:;
 
 		/* BEGINNING OF ACTION: add-concat */
 		{
-#line 806 "src/libre/parser.act"
+#line 807 "src/libre/parser.act"
 
 		(ZIz) = fsm_addstate(fsm);
 		if ((ZIz) == NULL) {
@@ -616,7 +616,7 @@ ZL2_list_Hof_Hliterals:;
 				{
 					/* BEGINNING OF ACTION: add-epsilon */
 					{
-#line 813 "src/libre/parser.act"
+#line 814 "src/libre/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIz), (ZIy))) {
 			goto ZL1;
@@ -642,7 +642,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 1096 "src/libre/parser.act"
+#line 1268 "src/libre/parser.act"
 
 
 	static int
@@ -703,7 +703,6 @@ ZL1:;
 		/* (except for pushing "[" and "]" around ::group-$dialect) */
 		lx->buf   = &lex_state->buf;
 		lx->push  = CAT(LX_PREFIX, _dynpush);
-		lx->pop   = CAT(LX_PREFIX, _dynpop);
 		lx->clear = CAT(LX_PREFIX, _dynclear);
 		lx->free  = CAT(LX_PREFIX, _dynfree);
 
@@ -816,6 +815,6 @@ ZL1:;
 		return NULL;
 	}
 
-#line 820 "src/libre/dialect/literal/parser.c"
+#line 819 "src/libre/dialect/literal/parser.c"
 
 /* END OF FILE */

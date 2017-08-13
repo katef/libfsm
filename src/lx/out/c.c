@@ -503,11 +503,6 @@ out_io(FILE *f)
 		break;
 	}
 
-	if (~api_exclude & API_BUF) {
-		fprintf(f, "\tif (lx->pop != NULL) {\n");
-		fprintf(f, "\t\tlx->pop(lx);\n");
-		fprintf(f, "\t}\n");
-	}
 	if (~api_exclude & API_POS) {
 		fprintf(f, "\n");
 		fprintf(f, "\tlx->end.byte--;\n");
@@ -574,27 +569,6 @@ out_buf(FILE *f)
 		fprintf(f, "\t*t->p++ = c;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\treturn 0;\n");
-		fprintf(f, "}\n");
-		fprintf(f, "\n");
-
-		fprintf(f, "void\n");
-		fprintf(f, "%sdynpop(struct %slx *lx)\n", prefix.api, prefix.lx);
-		fprintf(f, "{\n");
-		fprintf(f, "\tstruct lx_dynbuf *t;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tt = lx->buf;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tassert(t != NULL);\n");
-		fprintf(f, "\tassert(t->a != NULL);\n");
-		fprintf(f, "\tassert(t->p >= t->a);\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tif (t->p == t->a) {\n");
-		fprintf(f, "\t\treturn;\n");
-		fprintf(f, "\t}\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tt->p--;\n");
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 
@@ -671,27 +645,6 @@ out_buf(FILE *f)
 		fprintf(f, "\t*t->p++ = c;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\treturn 0;\n");
-		fprintf(f, "}\n");
-		fprintf(f, "\n");
-
-		fprintf(f, "void\n");
-		fprintf(f, "%sfixedpop(struct %slx *lx)\n", prefix.api, prefix.lx);
-		fprintf(f, "{\n");
-		fprintf(f, "\tstruct lx_fixedbuf *t;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tt = lx->buf;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tassert(t != NULL);\n");
-		fprintf(f, "\tassert(t->a != NULL);\n");
-		fprintf(f, "\tassert(t->p >= t->a);\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tif (t->p == t->a) {\n");
-		fprintf(f, "\t\treturn;\n");
-		fprintf(f, "\t}\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tt->p--;\n");
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 
@@ -800,6 +753,26 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\n");
 
 	{
+		const struct fsm_options *tmp;
+		static const struct fsm_options defaults;
+		struct fsm_options opt = defaults;
+
+		tmp = z->fsm->opt;
+
+		opt.fragment    = 1; /* XXX */
+		opt.comments    = z->fsm->opt->comments;
+		opt.case_ranges = z->fsm->opt->case_ranges;
+		opt.leaf        = leaf;
+		opt.leaf_opaque = (void *) ast;
+
+		z->fsm->opt = &opt;
+
+		(void) fsm_out_c(z->fsm, f);
+
+		z->fsm->opt = tmp;
+	}
+
+	if (~api_exclude & API_BUF) {
 		struct fsm_state *s;
 		int has_skips;
 
@@ -824,6 +797,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		 * states reachable henceforth skip, rather than emitting a token.
 		 */
 		if (has_skips) {
+			fprintf(f, "\n");
 			fprintf(f, "\t\tswitch (state) {\n");
 
 			for (s = z->fsm->sl; s != NULL; s = s->next) {
@@ -845,48 +819,23 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			fprintf(f, "\n");
 
 			fprintf(f, "\t\tdefault:\n");
-			if (~api_exclude & API_BUF) {
-				fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
-				fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, %s)) {\n", opt.cp);
-				fprintf(f, "\t\t\t\t\treturn %sERROR;\n", prefix.tok);
-				fprintf(f, "\t\t\t\t}\n");
-				fprintf(f, "\t\t\t}\n");
-			}
+			fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
+			fprintf(f, "\t\t\t\tif (-1 == lx->push(lx, %s)) {\n", opt.cp);
+			fprintf(f, "\t\t\t\t\treturn %sERROR;\n", prefix.tok);
+			fprintf(f, "\t\t\t\t}\n");
+			fprintf(f, "\t\t\t}\n");
 			fprintf(f, "\t\t\tbreak;\n");
 			fprintf(f, "\n");
 
 			fprintf(f, "\t\t}\n");
-			fprintf(f, "\n");
 		} else {
-			if (~api_exclude & API_BUF) {
-				fprintf(f, "\t\tif (lx->push != NULL) {\n");
-				fprintf(f, "\t\t\tif (-1 == lx->push(lx, %s)) {\n", opt.cp);
-				fprintf(f, "\t\t\t\treturn %sERROR;\n", prefix.tok);
-				fprintf(f, "\t\t\t}\n");
-				fprintf(f, "\t\t}\n");
-			}
 			fprintf(f, "\n");
+			fprintf(f, "\t\tif (lx->push != NULL) {\n");
+			fprintf(f, "\t\t\tif (-1 == lx->push(lx, %s)) {\n", opt.cp);
+			fprintf(f, "\t\t\t\treturn %sERROR;\n", prefix.tok);
+			fprintf(f, "\t\t\t}\n");
+			fprintf(f, "\t\t}\n");
 		}
-	}
-
-	{
-		const struct fsm_options *tmp;
-		static const struct fsm_options defaults;
-		struct fsm_options opt = defaults;
-
-		tmp = z->fsm->opt;
-
-		opt.fragment    = 1; /* XXX */
-		opt.comments    = z->fsm->opt->comments;
-		opt.case_ranges = z->fsm->opt->case_ranges;
-		opt.leaf        = leaf;
-		opt.leaf_opaque = (void *) ast;
-
-		z->fsm->opt = &opt;
-
-		(void) fsm_out_c(z->fsm, f);
-
-		z->fsm->opt = tmp;
 	}
 
 	fprintf(f, "\t}\n");

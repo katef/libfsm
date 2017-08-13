@@ -52,9 +52,6 @@ lx_glob_ungetc(struct lx_glob_lx *lx, int c)
 
 	lx->c = c;
 
-	if (lx->pop != NULL) {
-		lx->pop(lx);
-	}
 
 	lx->end.byte--;
 	lx->end.col--;
@@ -111,26 +108,6 @@ lx_glob_dynpush(struct lx_glob_lx *lx, char c)
 	return 0;
 }
 
-void
-lx_glob_dynpop(struct lx_glob_lx *lx)
-{
-	struct lx_dynbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
-
-	assert(t != NULL);
-	assert(t->a != NULL);
-	assert(t->p >= t->a);
-
-	if (t->p == t->a) {
-		return;
-	}
-
-	t->p--;
-}
-
 int
 lx_glob_dynclear(struct lx_glob_lx *lx)
 {
@@ -181,7 +158,7 @@ z0(struct lx_glob_lx *lx)
 	int c;
 
 	enum {
-		NONE, S0, S1, S2, S3
+		S0, S1, S2, S3, NONE
 	} state;
 
 	assert(lx != NULL);
@@ -197,12 +174,6 @@ z0(struct lx_glob_lx *lx)
 	while (c = lx_getc(lx), c != EOF) {
 		if (state == NONE) {
 			state = S0;
-		}
-
-		if (lx->push != NULL) {
-			if (-1 == lx->push(lx, c)) {
-				return TOK_ERROR;
-			}
 		}
 
 		switch (state) {
@@ -249,8 +220,8 @@ z0(struct lx_glob_lx *lx)
 			case '&':
 			case '\'':
 			case '(':
-			case ')': state = S1; continue;
-			case '*': state = S2; continue;
+			case ')': state = S1; break;
+			case '*': state = S2; break;
 			case '+':
 			case ',':
 			case '-':
@@ -270,8 +241,8 @@ z0(struct lx_glob_lx *lx)
 			case ';':
 			case '<':
 			case '=':
-			case '>': state = S1; continue;
-			case '?': state = S3; continue;
+			case '>': state = S1; break;
+			case '?': state = S3; break;
 			case '@':
 			case 'A':
 			case 'B':
@@ -463,9 +434,10 @@ z0(struct lx_glob_lx *lx)
 			case 0xfc:
 			case 0xfd:
 			case 0xfe:
-			case 0xff: state = S1; continue;
+			case 0xff: state = S1; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
+			break;
 
 		case S1: /* e.g. "a" */
 			lx_glob_ungetc(lx, c); return TOK_CHAR;
@@ -475,6 +447,15 @@ z0(struct lx_glob_lx *lx)
 
 		case S3: /* e.g. "?" */
 			lx_glob_ungetc(lx, c); return TOK_ANY;
+
+		default:
+			; /* unreached */
+		}
+
+		if (lx->push != NULL) {
+			if (-1 == lx->push(lx, c)) {
+				return TOK_ERROR;
+			}
 		}
 	}
 

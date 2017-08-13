@@ -31,7 +31,6 @@ struct lx_literal_lx {
 
 	void *buf;
 	int  (*push) (struct lx_literal_lx *lx, char c);
-	void (*pop)  (struct lx_literal_lx *lx);
 	int  (*clear)(struct lx_literal_lx *lx);
 	void (*free) (struct lx_literal_lx *lx);
 
@@ -81,7 +80,6 @@ void lx_literal_init(struct lx_literal_lx *lx);
 enum lx_literal_token lx_literal_next(struct lx_literal_lx *lx);
 
 int  lx_literal_dynpush(struct lx_literal_lx *lx, char c);
-void lx_literal_dynpop(struct lx_literal_lx *lx);
 int  lx_literal_dynclear(struct lx_literal_lx *lx);
 void lx_literal_dynfree(struct lx_literal_lx *lx);
 

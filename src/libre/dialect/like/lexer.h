@@ -33,7 +33,6 @@ struct lx_like_lx {
 
 	void *buf;
 	int  (*push) (struct lx_like_lx *lx, char c);
-	void (*pop)  (struct lx_like_lx *lx);
 	int  (*clear)(struct lx_like_lx *lx);
 	void (*free) (struct lx_like_lx *lx);
 
@@ -83,7 +82,6 @@ void lx_like_init(struct lx_like_lx *lx);
 enum lx_like_token lx_like_next(struct lx_like_lx *lx);
 
 int  lx_like_dynpush(struct lx_like_lx *lx, char c);
-void lx_like_dynpop(struct lx_like_lx *lx);
 int  lx_like_dynclear(struct lx_like_lx *lx);
 void lx_like_dynfree(struct lx_like_lx *lx);
 

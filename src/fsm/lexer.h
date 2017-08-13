@@ -42,7 +42,6 @@ struct lx {
 
 	void *buf;
 	int  (*push) (struct lx *lx, char c);
-	void (*pop)  (struct lx *lx);
 	int  (*clear)(struct lx *lx);
 	void (*free) (struct lx *lx);
 
@@ -94,7 +93,6 @@ enum lx_token lx_next(struct lx *lx);
 int lx_fgetc(struct lx *lx);
 
 int  lx_dynpush(struct lx *lx, char c);
-void lx_dynpop(struct lx *lx);
 int  lx_dynclear(struct lx *lx);
 void lx_dynfree(struct lx *lx);
 

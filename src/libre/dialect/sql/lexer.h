@@ -50,7 +50,6 @@ struct lx_sql_lx {
 
 	void *buf;
 	int  (*push) (struct lx_sql_lx *lx, char c);
-	void (*pop)  (struct lx_sql_lx *lx);
 	int  (*clear)(struct lx_sql_lx *lx);
 	void (*free) (struct lx_sql_lx *lx);
 
@@ -100,7 +99,6 @@ void lx_sql_init(struct lx_sql_lx *lx);
 enum lx_sql_token lx_sql_next(struct lx_sql_lx *lx);
 
 int  lx_sql_dynpush(struct lx_sql_lx *lx, char c);
-void lx_sql_dynpop(struct lx_sql_lx *lx);
 int  lx_sql_dynclear(struct lx_sql_lx *lx);
 void lx_sql_dynfree(struct lx_sql_lx *lx);
 
