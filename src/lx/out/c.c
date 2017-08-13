@@ -503,11 +503,6 @@ out_io(FILE *f)
 		break;
 	}
 
-	if (~api_exclude & API_BUF) {
-		fprintf(f, "\tif (lx->pop != NULL) {\n");
-		fprintf(f, "\t\tlx->pop(lx);\n");
-		fprintf(f, "\t}\n");
-	}
 	if (~api_exclude & API_POS) {
 		fprintf(f, "\n");
 		fprintf(f, "\tlx->end.byte--;\n");
@@ -799,6 +794,26 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\n");
 
+	{
+		const struct fsm_options *tmp;
+		static const struct fsm_options defaults;
+		struct fsm_options opt = defaults;
+
+		tmp = z->fsm->opt;
+
+		opt.fragment    = 1; /* XXX */
+		opt.comments    = z->fsm->opt->comments;
+		opt.case_ranges = z->fsm->opt->case_ranges;
+		opt.leaf        = leaf;
+		opt.leaf_opaque = (void *) ast;
+
+		z->fsm->opt = &opt;
+
+		(void) fsm_out_c(z->fsm, f);
+
+		z->fsm->opt = tmp;
+	}
+
 	if (~api_exclude & API_BUF) {
 		struct fsm_state *s;
 		int has_skips;
@@ -824,6 +839,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		 * states reachable henceforth skip, rather than emitting a token.
 		 */
 		if (has_skips) {
+			fprintf(f, "\n");
 			fprintf(f, "\t\tswitch (state) {\n");
 
 			for (s = z->fsm->sl; s != NULL; s = s->next) {
@@ -854,35 +870,14 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			fprintf(f, "\n");
 
 			fprintf(f, "\t\t}\n");
-			fprintf(f, "\n");
 		} else {
+			fprintf(f, "\n");
 			fprintf(f, "\t\tif (lx->push != NULL) {\n");
 			fprintf(f, "\t\t\tif (-1 == lx->push(lx, %s)) {\n", opt.cp);
 			fprintf(f, "\t\t\t\treturn %sERROR;\n", prefix.tok);
 			fprintf(f, "\t\t\t}\n");
 			fprintf(f, "\t\t}\n");
-			fprintf(f, "\n");
 		}
-	}
-
-	{
-		const struct fsm_options *tmp;
-		static const struct fsm_options defaults;
-		struct fsm_options opt = defaults;
-
-		tmp = z->fsm->opt;
-
-		opt.fragment    = 1; /* XXX */
-		opt.comments    = z->fsm->opt->comments;
-		opt.case_ranges = z->fsm->opt->case_ranges;
-		opt.leaf        = leaf;
-		opt.leaf_opaque = (void *) ast;
-
-		z->fsm->opt = &opt;
-
-		(void) fsm_out_c(z->fsm, f);
-
-		z->fsm->opt = tmp;
 	}
 
 	fprintf(f, "\t}\n");

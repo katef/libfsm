@@ -194,7 +194,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 			if (mode.state != state) {
 				fprintf(f, "state = S%u; ", indexof(fsm, mode.state));
 			}
-			fprintf(f, "continue;\n");
+			fprintf(f, "break;\n");
 			return;
 		}
 	}
@@ -269,7 +269,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 			if (s != state) {
 				fprintf(f, " state = S%u;", indexof(fsm, s));
 			}
-			fprintf(f, " continue;\n");
+			fprintf(f, " break;\n");
 
 			/* TODO: if greedy, and fsm_isend(fsm, state->edges[i].sl->state) then:
 				fprintf(f, "         return %s%s;\n", prefix.tok, state->edges[i].sl->state's token);
@@ -281,7 +281,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 			if (mode.state != state) {
 				fprintf(f, "state = S%u; ", indexof(fsm, mode.state));
 			}
-			fprintf(f, "continue;\n");
+			fprintf(f, "break;\n");
 		} else {
 			fprintf(f, "\t\t\tdefault:  ");
 			leaf(f, fsm, state, opaque);
@@ -290,6 +290,8 @@ singlecase(FILE *f, const struct fsm *fsm,
 	}
 
 	fprintf(f, "\t\t\t}\n");
+
+	fprintf(f, "\t\t\tbreak;\n");
 }
 
 static void
