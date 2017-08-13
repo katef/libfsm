@@ -33,7 +33,6 @@ struct lx_glob_lx {
 
 	void *buf;
 	int  (*push) (struct lx_glob_lx *lx, char c);
-	void (*pop)  (struct lx_glob_lx *lx);
 	int  (*clear)(struct lx_glob_lx *lx);
 	void (*free) (struct lx_glob_lx *lx);
 
@@ -83,7 +82,6 @@ void lx_glob_init(struct lx_glob_lx *lx);
 enum lx_glob_token lx_glob_next(struct lx_glob_lx *lx);
 
 int  lx_glob_dynpush(struct lx_glob_lx *lx, char c);
-void lx_glob_dynpop(struct lx_glob_lx *lx);
 int  lx_glob_dynclear(struct lx_glob_lx *lx);
 void lx_glob_dynfree(struct lx_glob_lx *lx);
 

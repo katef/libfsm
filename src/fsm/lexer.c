@@ -55,9 +55,6 @@ lx_ungetc(struct lx *lx, int c)
 
 	lx->c = c;
 
-	if (lx->pop != NULL) {
-		lx->pop(lx);
-	}
 
 	lx->end.byte--;
 	lx->end.col--;
@@ -123,26 +120,6 @@ lx_dynpush(struct lx *lx, char c)
 	return 0;
 }
 
-void
-lx_dynpop(struct lx *lx)
-{
-	struct lx_dynbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
-
-	assert(t != NULL);
-	assert(t->a != NULL);
-	assert(t->p >= t->a);
-
-	if (t->p == t->a) {
-		return;
-	}
-
-	t->p--;
-}
-
 int
 lx_dynclear(struct lx *lx)
 {
@@ -193,7 +170,7 @@ z0(struct lx *lx)
 	int c;
 
 	enum {
-		NONE, S0, S1, S2
+		S0, S1, S2, NONE
 	} state;
 
 	assert(lx != NULL);
@@ -209,12 +186,6 @@ z0(struct lx *lx)
 	while (c = lx_getc(lx), c != EOF) {
 		if (state == NONE) {
 			state = S0;
-		}
-
-		if (lx->push != NULL) {
-			if (-1 == lx->push(lx, c)) {
-				return TOK_ERROR;
-			}
 		}
 
 		switch (state) {
@@ -258,8 +229,8 @@ z0(struct lx *lx)
 			case '#':
 			case '$':
 			case '%':
-			case '&': state = S1; continue;
-			case '\'': state = S2; continue;
+			case '&': state = S1; break;
+			case '\'': state = S2; break;
 			case '(':
 			case ')':
 			case '*':
@@ -475,15 +446,25 @@ z0(struct lx *lx)
 			case 0xfc:
 			case 0xfd:
 			case 0xfe:
-			case 0xff: state = S1; continue;
+			case 0xff: state = S1; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
+			break;
 
 		case S1: /* e.g. "a" */
 			lx_ungetc(lx, c); return TOK_CHAR;
 
 		case S2: /* e.g. "\'" */
 			lx_ungetc(lx, c); return lx->z = z3, TOK_LABEL;
+
+		default:
+			; /* unreached */
+		}
+
+		if (lx->push != NULL) {
+			if (-1 == lx->push(lx, c)) {
+				return TOK_ERROR;
+			}
 		}
 	}
 
@@ -503,7 +484,7 @@ z1(struct lx *lx)
 	int c;
 
 	enum {
-		NONE, S0, S1, S2, S3, S4, S5, S6, S7
+		S0, S1, S2, S3, S4, S5, S6, S7, NONE
 	} state;
 
 	assert(lx != NULL);
@@ -519,12 +500,6 @@ z1(struct lx *lx)
 	while (c = lx_getc(lx), c != EOF) {
 		if (state == NONE) {
 			state = S0;
-		}
-
-		if (lx->push != NULL) {
-			if (-1 == lx->push(lx, c)) {
-				return TOK_ERROR;
-			}
 		}
 
 		switch (state) {
@@ -563,8 +538,8 @@ z1(struct lx *lx)
 			case '\x1e':
 			case '\x1f':
 			case ' ':
-			case '!': state = S1; continue;
-			case '"': state = S2; continue;
+			case '!': state = S1; break;
+			case '"': state = S2; break;
 			case '#':
 			case '$':
 			case '%':
@@ -621,8 +596,8 @@ z1(struct lx *lx)
 			case 'X':
 			case 'Y':
 			case 'Z':
-			case '[': state = S1; continue;
-			case '\\': state = S3; continue;
+			case '[': state = S1; break;
+			case '\\': state = S3; break;
 			case ']':
 			case '^':
 			case '_':
@@ -785,9 +760,10 @@ z1(struct lx *lx)
 			case 0xfc:
 			case 0xfd:
 			case 0xfe:
-			case 0xff: state = S1; continue;
+			case 0xff: state = S1; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
+			break;
 
 		case S1: /* e.g. "a" */
 			lx_ungetc(lx, c); return TOK_CHAR;
@@ -797,7 +773,7 @@ z1(struct lx *lx)
 
 		case S3: /* e.g. "\\" */
 			switch ((unsigned char) c) {
-			case '"': state = S4; continue;
+			case '"': state = S4; break;
 			case '0':
 			case '1':
 			case '2':
@@ -805,16 +781,17 @@ z1(struct lx *lx)
 			case '4':
 			case '5':
 			case '6':
-			case '7': state = S5; continue;
-			case '\\': state = S4; continue;
-			case 'f': state = S4; continue;
-			case 'n': state = S4; continue;
-			case 'r': state = S4; continue;
-			case 't': state = S4; continue;
-			case 'v': state = S4; continue;
-			case 'x': state = S6; continue;
+			case '7': state = S5; break;
+			case '\\': state = S4; break;
+			case 'f': state = S4; break;
+			case 'n': state = S4; break;
+			case 'r': state = S4; break;
+			case 't': state = S4; break;
+			case 'v': state = S4; break;
+			case 'x': state = S6; break;
 			default:  lx_ungetc(lx, c); return TOK_CHAR;
 			}
+			break;
 
 		case S4: /* e.g. "\\f" */
 			lx_ungetc(lx, c); return TOK_ESC;
@@ -828,9 +805,10 @@ z1(struct lx *lx)
 			case '4':
 			case '5':
 			case '6':
-			case '7': continue;
+			case '7': break;
 			default:  lx_ungetc(lx, c); return TOK_OCT;
 			}
+			break;
 
 		case S6: /* e.g. "\\x" */
 			switch ((unsigned char) c) {
@@ -843,21 +821,22 @@ z1(struct lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': state = S7; continue;
+			case '9': state = S7; break;
 			case 'A':
 			case 'B':
 			case 'C':
 			case 'D':
 			case 'E':
-			case 'F': state = S7; continue;
+			case 'F': state = S7; break;
 			case 'a':
 			case 'b':
 			case 'c':
 			case 'd':
 			case 'e':
-			case 'f': state = S7; continue;
+			case 'f': state = S7; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
+			break;
 
 		case S7: /* e.g. "\\xa" */
 			switch ((unsigned char) c) {
@@ -870,20 +849,30 @@ z1(struct lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': continue;
+			case '9': break;
 			case 'A':
 			case 'B':
 			case 'C':
 			case 'D':
 			case 'E':
-			case 'F': continue;
+			case 'F': break;
 			case 'a':
 			case 'b':
 			case 'c':
 			case 'd':
 			case 'e':
-			case 'f': continue;
+			case 'f': break;
 			default:  lx_ungetc(lx, c); return TOK_HEX;
+			}
+			break;
+
+		default:
+			; /* unreached */
+		}
+
+		if (lx->push != NULL) {
+			if (-1 == lx->push(lx, c)) {
+				return TOK_ERROR;
 			}
 		}
 	}
@@ -908,7 +897,7 @@ z2(struct lx *lx)
 	int c;
 
 	enum {
-		NONE, S0, S1, S2
+		S0, S1, S2, NONE
 	} state;
 
 	assert(lx != NULL);
@@ -927,22 +916,6 @@ z2(struct lx *lx)
 		}
 
 		switch (state) {
-		case S0:
-		case S1:
-		case S2:
-			break;
-
-		default:
-			if (lx->push != NULL) {
-				if (-1 == lx->push(lx, c)) {
-					return TOK_ERROR;
-				}
-			}
-			break;
-
-		}
-
-		switch (state) {
 		case S0: /* start */
 			switch ((unsigned char) c) {
 			case '\x00':
@@ -954,8 +927,8 @@ z2(struct lx *lx)
 			case '\x06':
 			case '\a':
 			case '\b':
-			case '\t': state = S1; continue;
-			case '\n': state = S2; continue;
+			case '\t': state = S1; break;
+			case '\n': state = S2; break;
 			case '\v':
 			case '\f':
 			case '\r':
@@ -1200,15 +1173,35 @@ z2(struct lx *lx)
 			case 0xfc:
 			case 0xfd:
 			case 0xfe:
-			case 0xff: state = S1; continue;
+			case 0xff: state = S1; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
+			break;
 
 		case S1: /* e.g. "a" */
 			lx_ungetc(lx, c); return lx->z(lx);
 
 		case S2: /* e.g. "\n" */
 			lx_ungetc(lx, c); return lx->z = z3, lx->z(lx);
+
+		default:
+			; /* unreached */
+		}
+
+		switch (state) {
+		case S0:
+		case S1:
+		case S2:
+			break;
+
+		default:
+			if (lx->push != NULL) {
+				if (-1 == lx->push(lx, c)) {
+					return TOK_ERROR;
+				}
+			}
+			break;
+
 		}
 	}
 
@@ -1228,9 +1221,9 @@ z3(struct lx *lx)
 	int c;
 
 	enum {
-		NONE, S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
+		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
 		S10, S11, S12, S13, S14, S15, S16, S17, S18, S19, 
-		S20
+		S20, NONE
 	} state;
 
 	assert(lx != NULL);
@@ -1249,34 +1242,17 @@ z3(struct lx *lx)
 		}
 
 		switch (state) {
-		case S1:
-		case S2:
-		case S3:
-		case S4:
-			break;
-
-		default:
-			if (lx->push != NULL) {
-				if (-1 == lx->push(lx, c)) {
-					return TOK_ERROR;
-				}
-			}
-			break;
-
-		}
-
-		switch (state) {
 		case S0: /* start */
 			switch ((unsigned char) c) {
 			case '\t':
-			case '\n': state = S1; continue;
-			case '\r': state = S1; continue;
-			case ' ': state = S1; continue;
-			case '"': state = S2; continue;
-			case '#': state = S3; continue;
-			case '\'': state = S4; continue;
-			case ',': state = S5; continue;
-			case '-': state = S6; continue;
+			case '\n': state = S1; break;
+			case '\r': state = S1; break;
+			case ' ': state = S1; break;
+			case '"': state = S2; break;
+			case '#': state = S3; break;
+			case '\'': state = S4; break;
+			case ',': state = S5; break;
+			case '-': state = S6; break;
 			case '0':
 			case '1':
 			case '2':
@@ -1286,9 +1262,9 @@ z3(struct lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': state = S7; continue;
-			case ';': state = S8; continue;
-			case '?': state = S9; continue;
+			case '9': state = S7; break;
+			case ';': state = S8; break;
+			case '?': state = S9; break;
 			case 'A':
 			case 'B':
 			case 'C':
@@ -1314,13 +1290,13 @@ z3(struct lx *lx)
 			case 'W':
 			case 'X':
 			case 'Y':
-			case 'Z': state = S7; continue;
-			case '_': state = S7; continue;
+			case 'Z': state = S7; break;
+			case '_': state = S7; break;
 			case 'a':
 			case 'b':
 			case 'c':
-			case 'd': state = S7; continue;
-			case 'e': state = S10; continue;
+			case 'd': state = S7; break;
+			case 'e': state = S10; break;
 			case 'f':
 			case 'g':
 			case 'h':
@@ -1333,26 +1309,28 @@ z3(struct lx *lx)
 			case 'o':
 			case 'p':
 			case 'q':
-			case 'r': state = S7; continue;
-			case 's': state = S11; continue;
+			case 'r': state = S7; break;
+			case 's': state = S11; break;
 			case 't':
 			case 'u':
 			case 'v':
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S7; continue;
+			case 'z': state = S7; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
+			break;
 
 		case S1: /* e.g. "\t" */
 			switch ((unsigned char) c) {
 			case '\t':
-			case '\n': continue;
-			case '\r': continue;
-			case ' ': continue;
+			case '\n': break;
+			case '\r': break;
+			case ' ': break;
 			default:  lx_ungetc(lx, c); return lx->z(lx);
 			}
+			break;
 
 		case S2: /* e.g. """ */
 			lx_ungetc(lx, c); return lx->z = z1, lx->z(lx);
@@ -1368,9 +1346,10 @@ z3(struct lx *lx)
 
 		case S6: /* e.g. "-" */
 			switch ((unsigned char) c) {
-			case '>': state = S12; continue;
+			case '>': state = S12; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
+			break;
 
 		case S7: /* e.g. "a" */
 			switch ((unsigned char) c) {
@@ -1383,7 +1362,7 @@ z3(struct lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': continue;
+			case '9': break;
 			case 'A':
 			case 'B':
 			case 'C':
@@ -1409,8 +1388,8 @@ z3(struct lx *lx)
 			case 'W':
 			case 'X':
 			case 'Y':
-			case 'Z': continue;
-			case '_': continue;
+			case 'Z': break;
+			case '_': break;
 			case 'a':
 			case 'b':
 			case 'c':
@@ -1436,9 +1415,10 @@ z3(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': continue;
+			case 'z': break;
 			default:  lx_ungetc(lx, c); return TOK_IDENT;
 			}
+			break;
 
 		case S8: /* e.g. ";" */
 			lx_ungetc(lx, c); return TOK_SEP;
@@ -1457,7 +1437,7 @@ z3(struct lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': state = S7; continue;
+			case '9': state = S7; break;
 			case 'A':
 			case 'B':
 			case 'C':
@@ -1483,8 +1463,8 @@ z3(struct lx *lx)
 			case 'W':
 			case 'X':
 			case 'Y':
-			case 'Z': state = S7; continue;
-			case '_': state = S7; continue;
+			case 'Z': state = S7; break;
+			case '_': state = S7; break;
 			case 'a':
 			case 'b':
 			case 'c':
@@ -1497,8 +1477,8 @@ z3(struct lx *lx)
 			case 'j':
 			case 'k':
 			case 'l':
-			case 'm': state = S7; continue;
-			case 'n': state = S18; continue;
+			case 'm': state = S7; break;
+			case 'n': state = S18; break;
 			case 'o':
 			case 'p':
 			case 'q':
@@ -1510,9 +1490,10 @@ z3(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S7; continue;
+			case 'z': state = S7; break;
 			default:  lx_ungetc(lx, c); return TOK_IDENT;
 			}
+			break;
 
 		case S11: /* e.g. "s" */
 			switch ((unsigned char) c) {
@@ -1525,7 +1506,7 @@ z3(struct lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': state = S7; continue;
+			case '9': state = S7; break;
 			case 'A':
 			case 'B':
 			case 'C':
@@ -1551,8 +1532,8 @@ z3(struct lx *lx)
 			case 'W':
 			case 'X':
 			case 'Y':
-			case 'Z': state = S7; continue;
-			case '_': state = S7; continue;
+			case 'Z': state = S7; break;
+			case '_': state = S7; break;
 			case 'a':
 			case 'b':
 			case 'c':
@@ -1571,16 +1552,17 @@ z3(struct lx *lx)
 			case 'p':
 			case 'q':
 			case 'r':
-			case 's': state = S7; continue;
-			case 't': state = S13; continue;
+			case 's': state = S7; break;
+			case 't': state = S13; break;
 			case 'u':
 			case 'v':
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S7; continue;
+			case 'z': state = S7; break;
 			default:  lx_ungetc(lx, c); return TOK_IDENT;
 			}
+			break;
 
 		case S12: /* e.g. "->" */
 			lx_ungetc(lx, c); return TOK_TO;
@@ -1596,7 +1578,7 @@ z3(struct lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': state = S7; continue;
+			case '9': state = S7; break;
 			case 'A':
 			case 'B':
 			case 'C':
@@ -1622,9 +1604,9 @@ z3(struct lx *lx)
 			case 'W':
 			case 'X':
 			case 'Y':
-			case 'Z': state = S7; continue;
-			case '_': state = S7; continue;
-			case 'a': state = S14; continue;
+			case 'Z': state = S7; break;
+			case '_': state = S7; break;
+			case 'a': state = S14; break;
 			case 'b':
 			case 'c':
 			case 'd':
@@ -1649,9 +1631,10 @@ z3(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S7; continue;
+			case 'z': state = S7; break;
 			default:  lx_ungetc(lx, c); return TOK_IDENT;
 			}
+			break;
 
 		case S14: /* e.g. "sta" */
 			switch ((unsigned char) c) {
@@ -1664,7 +1647,7 @@ z3(struct lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': state = S7; continue;
+			case '9': state = S7; break;
 			case 'A':
 			case 'B':
 			case 'C':
@@ -1690,8 +1673,8 @@ z3(struct lx *lx)
 			case 'W':
 			case 'X':
 			case 'Y':
-			case 'Z': state = S7; continue;
-			case '_': state = S7; continue;
+			case 'Z': state = S7; break;
+			case '_': state = S7; break;
 			case 'a':
 			case 'b':
 			case 'c':
@@ -1708,8 +1691,8 @@ z3(struct lx *lx)
 			case 'n':
 			case 'o':
 			case 'p':
-			case 'q': state = S7; continue;
-			case 'r': state = S15; continue;
+			case 'q': state = S7; break;
+			case 'r': state = S15; break;
 			case 's':
 			case 't':
 			case 'u':
@@ -1717,9 +1700,10 @@ z3(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S7; continue;
+			case 'z': state = S7; break;
 			default:  lx_ungetc(lx, c); return TOK_IDENT;
 			}
+			break;
 
 		case S15: /* e.g. "star" */
 			switch ((unsigned char) c) {
@@ -1732,7 +1716,7 @@ z3(struct lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': state = S7; continue;
+			case '9': state = S7; break;
 			case 'A':
 			case 'B':
 			case 'C':
@@ -1758,8 +1742,8 @@ z3(struct lx *lx)
 			case 'W':
 			case 'X':
 			case 'Y':
-			case 'Z': state = S7; continue;
-			case '_': state = S7; continue;
+			case 'Z': state = S7; break;
+			case '_': state = S7; break;
 			case 'a':
 			case 'b':
 			case 'c':
@@ -1778,16 +1762,17 @@ z3(struct lx *lx)
 			case 'p':
 			case 'q':
 			case 'r':
-			case 's': state = S7; continue;
-			case 't': state = S16; continue;
+			case 's': state = S7; break;
+			case 't': state = S16; break;
 			case 'u':
 			case 'v':
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S7; continue;
+			case 'z': state = S7; break;
 			default:  lx_ungetc(lx, c); return TOK_IDENT;
 			}
+			break;
 
 		case S16: /* e.g. "start" */
 			switch ((unsigned char) c) {
@@ -1800,8 +1785,8 @@ z3(struct lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': state = S7; continue;
-			case ':': state = S17; continue;
+			case '9': state = S7; break;
+			case ':': state = S17; break;
 			case 'A':
 			case 'B':
 			case 'C':
@@ -1827,8 +1812,8 @@ z3(struct lx *lx)
 			case 'W':
 			case 'X':
 			case 'Y':
-			case 'Z': state = S7; continue;
-			case '_': state = S7; continue;
+			case 'Z': state = S7; break;
+			case '_': state = S7; break;
 			case 'a':
 			case 'b':
 			case 'c':
@@ -1854,9 +1839,10 @@ z3(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S7; continue;
+			case 'z': state = S7; break;
 			default:  lx_ungetc(lx, c); return TOK_IDENT;
 			}
+			break;
 
 		case S17: /* e.g. "start:" */
 			lx_ungetc(lx, c); return TOK_START;
@@ -1872,7 +1858,7 @@ z3(struct lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': state = S7; continue;
+			case '9': state = S7; break;
 			case 'A':
 			case 'B':
 			case 'C':
@@ -1898,12 +1884,12 @@ z3(struct lx *lx)
 			case 'W':
 			case 'X':
 			case 'Y':
-			case 'Z': state = S7; continue;
-			case '_': state = S7; continue;
+			case 'Z': state = S7; break;
+			case '_': state = S7; break;
 			case 'a':
 			case 'b':
-			case 'c': state = S7; continue;
-			case 'd': state = S19; continue;
+			case 'c': state = S7; break;
+			case 'd': state = S19; break;
 			case 'e':
 			case 'f':
 			case 'g':
@@ -1925,9 +1911,10 @@ z3(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S7; continue;
+			case 'z': state = S7; break;
 			default:  lx_ungetc(lx, c); return TOK_IDENT;
 			}
+			break;
 
 		case S19: /* e.g. "end" */
 			switch ((unsigned char) c) {
@@ -1940,8 +1927,8 @@ z3(struct lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': state = S7; continue;
-			case ':': state = S20; continue;
+			case '9': state = S7; break;
+			case ':': state = S20; break;
 			case 'A':
 			case 'B':
 			case 'C':
@@ -1967,8 +1954,8 @@ z3(struct lx *lx)
 			case 'W':
 			case 'X':
 			case 'Y':
-			case 'Z': state = S7; continue;
-			case '_': state = S7; continue;
+			case 'Z': state = S7; break;
+			case '_': state = S7; break;
 			case 'a':
 			case 'b':
 			case 'c':
@@ -1994,12 +1981,33 @@ z3(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S7; continue;
+			case 'z': state = S7; break;
 			default:  lx_ungetc(lx, c); return TOK_IDENT;
 			}
+			break;
 
 		case S20: /* e.g. "end:" */
 			lx_ungetc(lx, c); return TOK_END;
+
+		default:
+			; /* unreached */
+		}
+
+		switch (state) {
+		case S1:
+		case S2:
+		case S3:
+		case S4:
+			break;
+
+		default:
+			if (lx->push != NULL) {
+				if (-1 == lx->push(lx, c)) {
+					return TOK_ERROR;
+				}
+			}
+			break;
+
 		}
 	}
 

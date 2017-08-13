@@ -52,9 +52,6 @@ lx_literal_ungetc(struct lx_literal_lx *lx, int c)
 
 	lx->c = c;
 
-	if (lx->pop != NULL) {
-		lx->pop(lx);
-	}
 
 	lx->end.byte--;
 	lx->end.col--;
@@ -111,26 +108,6 @@ lx_literal_dynpush(struct lx_literal_lx *lx, char c)
 	return 0;
 }
 
-void
-lx_literal_dynpop(struct lx_literal_lx *lx)
-{
-	struct lx_dynbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
-
-	assert(t != NULL);
-	assert(t->a != NULL);
-	assert(t->p >= t->a);
-
-	if (t->p == t->a) {
-		return;
-	}
-
-	t->p--;
-}
-
 int
 lx_literal_dynclear(struct lx_literal_lx *lx)
 {
@@ -181,7 +158,7 @@ z0(struct lx_literal_lx *lx)
 	int c;
 
 	enum {
-		NONE, S0, S1
+		S0, S1, NONE
 	} state;
 
 	assert(lx != NULL);
@@ -197,12 +174,6 @@ z0(struct lx_literal_lx *lx)
 	while (c = lx_getc(lx), c != EOF) {
 		if (state == NONE) {
 			state = S0;
-		}
-
-		if (lx->push != NULL) {
-			if (-1 == lx->push(lx, c)) {
-				return TOK_ERROR;
-			}
 		}
 
 		switch (state) {
@@ -463,12 +434,22 @@ z0(struct lx_literal_lx *lx)
 			case 0xfc:
 			case 0xfd:
 			case 0xfe:
-			case 0xff: state = S1; continue;
+			case 0xff: state = S1; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
+			break;
 
 		case S1: /* e.g. "a" */
 			lx_literal_ungetc(lx, c); return TOK_CHAR;
+
+		default:
+			; /* unreached */
+		}
+
+		if (lx->push != NULL) {
+			if (-1 == lx->push(lx, c)) {
+				return TOK_ERROR;
+			}
 		}
 	}
 

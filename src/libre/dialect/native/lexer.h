@@ -65,7 +65,6 @@ struct lx_native_lx {
 
 	void *buf;
 	int  (*push) (struct lx_native_lx *lx, char c);
-	void (*pop)  (struct lx_native_lx *lx);
 	int  (*clear)(struct lx_native_lx *lx);
 	void (*free) (struct lx_native_lx *lx);
 
@@ -115,7 +114,6 @@ void lx_native_init(struct lx_native_lx *lx);
 enum lx_native_token lx_native_next(struct lx_native_lx *lx);
 
 int  lx_native_dynpush(struct lx_native_lx *lx, char c);
-void lx_native_dynpop(struct lx_native_lx *lx);
 int  lx_native_dynclear(struct lx_native_lx *lx);
 void lx_native_dynfree(struct lx_native_lx *lx);
 
