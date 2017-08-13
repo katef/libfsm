@@ -198,7 +198,6 @@ out_dump(FILE *f)
 
 		fprintf(f, "\tlx.buf   = &buf;\n");
 		fprintf(f, "\tlx.push  = lx_dynpush;\n");
-		fprintf(f, "\tlx.pop   = lx_dynpop;\n");
 		fprintf(f, "\tlx.clear = lx_dynclear;\n");
 		fprintf(f, "\tlx.free  = lx_dynfree;\n");
 		fprintf(f, "\n");
@@ -212,7 +211,6 @@ out_dump(FILE *f)
 
 		fprintf(f, "\tlx.buf   = &buf;\n");
 		fprintf(f, "\tlx.push  = lx_fixedpush;\n");
-		fprintf(f, "\tlx.pop   = lx_fixedpop;\n");
 		fprintf(f, "\tlx.clear = lx_fixedclear;\n");
 		fprintf(f, "\tlx.free  = NULL;\n");
 		fprintf(f, "\n");
