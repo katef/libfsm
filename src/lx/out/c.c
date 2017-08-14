@@ -295,9 +295,9 @@ out_lgetc(FILE *f)
 		fprintf(f, "%sfgetc(struct %slx *lx)\n", prefix.api, prefix.lx);
 		fprintf(f, "{\n");
 		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\tassert(lx->opaque != NULL);\n");
+		fprintf(f, "\tassert(lx->getc_opaque != NULL);\n");
 		fprintf(f, "\n");
-		fprintf(f, "\treturn fgetc(lx->opaque);\n");
+		fprintf(f, "\treturn fgetc(lx->getc_opaque);\n");
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
@@ -313,14 +313,14 @@ out_lgetc(FILE *f)
 		fprintf(f, "\tchar *s;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\tassert(lx->opaque != NULL);\n");
+		fprintf(f, "\tassert(lx->getc_opaque != NULL);\n");
 		fprintf(f, "\n");
-		fprintf(f, "\ts = lx->opaque;\n");
+		fprintf(f, "\ts = lx->getc_opaque;\n");
 		fprintf(f, "\tif (*s == '\\0') {\n");
 		fprintf(f, "\t\treturn EOF;\n");
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
-		fprintf(f, "\treturn lx->opaque = s + 1, *s;\n");
+		fprintf(f, "\treturn lx->getc_opaque = s + 1, *s;\n");
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
@@ -336,9 +336,9 @@ out_lgetc(FILE *f)
 		fprintf(f, "\tstruct lx_arr *a;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\tassert(lx->opaque != NULL);\n");
+		fprintf(f, "\tassert(lx->getc_opaque != NULL);\n");
 		fprintf(f, "\n");
-		fprintf(f, "\ta = lx->opaque;\n");
+		fprintf(f, "\ta = lx->getc_opaque;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(a != NULL);\n");
 		fprintf(f, "\tassert(a->p != NULL);\n");
@@ -364,9 +364,9 @@ out_lgetc(FILE *f)
 		fprintf(f, "\tstruct lx_fd *d;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(lx != NULL);\n");
-		fprintf(f, "\tassert(lx->opaque != NULL);\n");
+		fprintf(f, "\tassert(lx->getc_opaque != NULL);\n");
 		fprintf(f, "\n");
-		fprintf(f, "\td = lx->opaque;\n");
+		fprintf(f, "\td = lx->getc_opaque;\n");
 		fprintf(f, "\tassert(d->fd != -1);\n");
 		fprintf(f, "\tassert(d->buf != NULL);\n");
 		fprintf(f, "\tassert(d->p != NULL);\n");

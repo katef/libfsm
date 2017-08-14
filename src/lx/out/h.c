@@ -87,7 +87,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 	switch (opt.io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\tint (*lgetc)(struct %slx *lx);\n", prefix.lx);
-		fprintf(f, "\tvoid *opaque;\n");
+		fprintf(f, "\tvoid *getc_opaque;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tint c; /* %sungetc buffer */\n", prefix.api);
 		fprintf(f, "\n");

@@ -73,7 +73,7 @@ out_dump(FILE *f)
 	switch (opt.io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\tint (*lgetc)(struct lx *lx);\n");
-		fprintf(f, "\tvoid *opaque;\n");
+		fprintf(f, "\tvoid *getc_opaque;\n");
 		break;
 
 	case FSM_IO_STR:
@@ -134,13 +134,13 @@ out_dump(FILE *f)
 	switch (api_getc) {
 	case API_FGETC:
 		fprintf(f, "\tlgetc = lx_fgetc;\n");
-		fprintf(f, "\topaque = stdin;\n");
+		fprintf(f, "\tgetc_opaque = stdin;\n");
 		fprintf(f, "\n");
 		break;
 
 	case API_SGETC:
 		fprintf(f, "\tlgetc = lx_sgetc;\n");
-		fprintf(f, "\topaque = argv[1];\n");
+		fprintf(f, "\tgetc_opaque = argv[1];\n");
 		fprintf(f, "\n");
 		break;
 
@@ -150,7 +150,7 @@ out_dump(FILE *f)
 		fprintf(f, "\n");
 
 		fprintf(f, "\tlgetc = lx_agetc;\n");
-		fprintf(f, "\topaque = &arr;\n");
+		fprintf(f, "\tgetc_opaque = &arr;\n");
 		fprintf(f, "\n");
 		break;
 
@@ -163,7 +163,7 @@ out_dump(FILE *f)
 		fprintf(f, "\n");
 
 		fprintf(f, "\tlgetc = lx_dgetc;\n");
-		fprintf(f, "\topaque = &d;\n");
+		fprintf(f, "\tgetc_opaque = &d;\n");
 		fprintf(f, "\n");
 		break;
 	}
@@ -173,8 +173,8 @@ out_dump(FILE *f)
 
 	switch (opt.io) {
 	case FSM_IO_GETC:
-		fprintf(f, "\tlx.lgetc  = lgetc;\n");
-		fprintf(f, "\tlx.opaque = opaque;\n");
+		fprintf(f, "\tlx.lgetc       = lgetc;\n");
+		fprintf(f, "\tlx.getc_opaque = getc_opaque;\n");
 		fprintf(f, "\n");
 		break;
 
