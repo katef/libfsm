@@ -320,7 +320,7 @@ out_lgetc(FILE *f)
 		fprintf(f, "\t\treturn EOF;\n");
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
-		fprintf(f, "\treturn lx->getc_opaque = s + 1, *s;\n");
+		fprintf(f, "\treturn lx->getc_opaque = s + 1, (unsigned char) *s;\n");
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
@@ -347,7 +347,7 @@ out_lgetc(FILE *f)
 		fprintf(f, "\t\treturn EOF;\n");
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
-		fprintf(f, "\treturn a->len--, *a->p++;\n");
+		fprintf(f, "\treturn a->len--, (unsigned char) *a->p++;\n");
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}

@@ -109,7 +109,7 @@
 			return EOF;
 		}
 
-		return a->len--, *a->p++;
+		return a->len--, (unsigned char) *a->p++;
 	}
 
 #line 116 "src/lx/parser.c"

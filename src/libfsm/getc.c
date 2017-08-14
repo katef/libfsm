@@ -29,7 +29,7 @@ fsm_sgetc(void *opaque)
 
 	(*s)++;
 
-	return c;
+	return (unsigned char) c;
 }
 
 int
