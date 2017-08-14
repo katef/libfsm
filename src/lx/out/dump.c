@@ -88,6 +88,7 @@ out_dump(FILE *f)
 		break;
 
 	case API_SGETC:
+		fprintf(f, "\tconst char *s;\n");
 		break;
 
 	case API_AGETC:
@@ -139,8 +140,11 @@ out_dump(FILE *f)
 		break;
 
 	case API_SGETC:
+		fprintf(f, "\ts = argv[1];\n");
+		fprintf(f, "\n");
+
 		fprintf(f, "\tlgetc = lx_sgetc;\n");
-		fprintf(f, "\tgetc_opaque = argv[1];\n");
+		fprintf(f, "\tgetc_opaque = &s;\n");
 		fprintf(f, "\n");
 		break;
 
