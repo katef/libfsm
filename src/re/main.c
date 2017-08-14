@@ -466,7 +466,7 @@ main(int argc, char *argv[])
 
 				f = xopen(argv[i]);
 
-				new = re_comp(dialect, re_fgetc, f, &opt, flags, &err);
+				new = re_comp(dialect, fsm_fgetc, f, &opt, flags, &err);
 
 				fclose(f);
 			} else {
@@ -474,7 +474,7 @@ main(int argc, char *argv[])
 
 				s = argv[i];
 
-				new = re_comp(dialect, re_sgetc, &s, &opt, flags, &err);
+				new = re_comp(dialect, fsm_sgetc, &s, &opt, flags, &err);
 			}
 
 			if (new == NULL) {
