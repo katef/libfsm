@@ -20,6 +20,7 @@ fsm_sgetc(void *opaque)
 	char c;
 
 	assert(s != NULL);
+	assert(*s != NULL);
 
 	c = **s;
 
