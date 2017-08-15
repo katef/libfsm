@@ -73,7 +73,7 @@ out_dump(FILE *f)
 	switch (opt.io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\tint (*lgetc)(struct lx *lx);\n");
-		fprintf(f, "\tvoid *opaque;\n");
+		fprintf(f, "\tvoid *getc_opaque;\n");
 		break;
 
 	case FSM_IO_STR:
@@ -88,6 +88,7 @@ out_dump(FILE *f)
 		break;
 
 	case API_SGETC:
+		fprintf(f, "\tconst char *s;\n");
 		break;
 
 	case API_AGETC:
@@ -134,13 +135,16 @@ out_dump(FILE *f)
 	switch (api_getc) {
 	case API_FGETC:
 		fprintf(f, "\tlgetc = lx_fgetc;\n");
-		fprintf(f, "\topaque = stdin;\n");
+		fprintf(f, "\tgetc_opaque = stdin;\n");
 		fprintf(f, "\n");
 		break;
 
 	case API_SGETC:
+		fprintf(f, "\ts = argv[1];\n");
+		fprintf(f, "\n");
+
 		fprintf(f, "\tlgetc = lx_sgetc;\n");
-		fprintf(f, "\topaque = argv[1];\n");
+		fprintf(f, "\tgetc_opaque = &s;\n");
 		fprintf(f, "\n");
 		break;
 
@@ -150,7 +154,7 @@ out_dump(FILE *f)
 		fprintf(f, "\n");
 
 		fprintf(f, "\tlgetc = lx_agetc;\n");
-		fprintf(f, "\topaque = &arr;\n");
+		fprintf(f, "\tgetc_opaque = &arr;\n");
 		fprintf(f, "\n");
 		break;
 
@@ -163,7 +167,7 @@ out_dump(FILE *f)
 		fprintf(f, "\n");
 
 		fprintf(f, "\tlgetc = lx_dgetc;\n");
-		fprintf(f, "\topaque = &d;\n");
+		fprintf(f, "\tgetc_opaque = &d;\n");
 		fprintf(f, "\n");
 		break;
 	}
@@ -173,8 +177,8 @@ out_dump(FILE *f)
 
 	switch (opt.io) {
 	case FSM_IO_GETC:
-		fprintf(f, "\tlx.lgetc  = lgetc;\n");
-		fprintf(f, "\tlx.opaque = opaque;\n");
+		fprintf(f, "\tlx.lgetc       = lgetc;\n");
+		fprintf(f, "\tlx.getc_opaque = getc_opaque;\n");
 		fprintf(f, "\n");
 		break;
 
@@ -196,10 +200,10 @@ out_dump(FILE *f)
 		fprintf(f, "\tbuf.len = 0;\n");
 		fprintf(f, "\n");
 
-		fprintf(f, "\tlx.buf   = &buf;\n");
-		fprintf(f, "\tlx.push  = lx_dynpush;\n");
-		fprintf(f, "\tlx.clear = lx_dynclear;\n");
-		fprintf(f, "\tlx.free  = lx_dynfree;\n");
+		fprintf(f, "\tlx.buf_opaque = &buf;\n");
+		fprintf(f, "\tlx.push       = lx_dynpush;\n");
+		fprintf(f, "\tlx.clear      = lx_dynclear;\n");
+		fprintf(f, "\tlx.free       = lx_dynfree;\n");
 		fprintf(f, "\n");
 		break;
 
@@ -209,10 +213,10 @@ out_dump(FILE *f)
 		fprintf(f, "\tbuf.len = sizeof a;\n"); /* XXX: rename .len to .size */
 		fprintf(f, "\n");
 
-		fprintf(f, "\tlx.buf   = &buf;\n");
-		fprintf(f, "\tlx.push  = lx_fixedpush;\n");
-		fprintf(f, "\tlx.clear = lx_fixedclear;\n");
-		fprintf(f, "\tlx.free  = NULL;\n");
+		fprintf(f, "\tlx.buf_opaque = &buf;\n");
+		fprintf(f, "\tlx.push       = lx_fixedpush;\n");
+		fprintf(f, "\tlx.clear      = lx_fixedclear;\n");
+		fprintf(f, "\tlx.free       = NULL;\n");
 		fprintf(f, "\n");
 		break;
 	}

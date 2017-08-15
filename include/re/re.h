@@ -118,6 +118,19 @@ re_flags(const char *s, enum re_flags *f);
  *
  * Returns NULL on error. If non-NULL, the *err struct is populated with the
  * type and 0-indexed byte offset of the error.
+ *
+ * libfsm provides getc callbacks suitable for use with re_comp; see <fsm/fsm.h>.
+ * For example:
+ *
+ *     const char *s = "abc";
+ *     re_comp(RE_NATIVE, fsm_sgetc, &s, 0, NULL);
+ *
+ * and:
+ *
+ *     re_comp(RE_NATIVE, fsm_fgetc, stdin, 0, NULL);
+ *
+ * There's nothing special about libfsm's implementation of these; they could
+ * equally well be user defined.
  */
 struct fsm *
 re_comp(enum re_dialect dialect, int (*f)(void *opaque), void *opaque,
@@ -140,25 +153,6 @@ re_perror(enum re_dialect dialect, const struct re_err *err,
 
 
 /* TODO: a convenience interface in the spirit of strtol() which parses between delimiters (and escapes accordingly) */
-
-
-/*
- * Callbacks which may be passed to re_comp(). These are conveniences for
- * common situations; they could equally well be user-defined.
- *
- *  re_sgetc - To read from a string. Pass the address of a pointer to the
- *              first element of a string:
- *
- *                const char *s = "abc";
- *                re_comp(RE_NATIVE, re_sgetc, &s, 0, NULL);
- *
- *              Where s will be incremented to point to each character in turn.
- *
- *  re_fgetc - To read from a file. Pass a FILE *:
- *                re_comp(RE_NATIVE, re_fgetc, stdin, 0, NULL);
- */
-int re_sgetc(void *opaque); /* expects opaque to be char ** */
-int re_fgetc(void *oapque); /* expects opaque to be FILE *  */
 
 #endif
 

@@ -24,17 +24,17 @@ struct lx_pos {
 
 struct lx_like_lx {
 	int (*lgetc)(struct lx_like_lx *lx);
-	void *opaque;
+	void *getc_opaque;
 
 	int c; /* lx_like_ungetc buffer */
 
 	struct lx_pos start;
 	struct lx_pos end;
 
-	void *buf;
-	int  (*push) (struct lx_like_lx *lx, char c);
-	int  (*clear)(struct lx_like_lx *lx);
-	void (*free) (struct lx_like_lx *lx);
+	void *buf_opaque;
+	int  (*push) (void *buf_opaque, char c);
+	int  (*clear)(void *buf_opaque);
+	void (*free) (void *buf_opaque);
 
 	enum lx_like_token (*z)(struct lx_like_lx *lx);
 };
@@ -81,9 +81,9 @@ const char *lx_like_example(enum lx_like_token (*z)(struct lx_like_lx *), enum l
 void lx_like_init(struct lx_like_lx *lx);
 enum lx_like_token lx_like_next(struct lx_like_lx *lx);
 
-int  lx_like_dynpush(struct lx_like_lx *lx, char c);
-int  lx_like_dynclear(struct lx_like_lx *lx);
-void lx_like_dynfree(struct lx_like_lx *lx);
+int  lx_like_dynpush(void *buf_opaque, char c);
+int  lx_like_dynclear(void *buf_opaque);
+void lx_like_dynfree(void *buf_opaque);
 
 #endif
 

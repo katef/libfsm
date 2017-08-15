@@ -1,6 +1,5 @@
 .include "../../share/mk/top.mk"
 
-SRC += src/libre/getc.c
 SRC += src/libre/re.c
 SRC += src/libre/strerror.c
 SRC += src/libre/perror.c

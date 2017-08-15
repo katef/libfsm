@@ -1035,16 +1035,16 @@ ZL1:;
 
 		lx_init(lx);
 
-		lx->lgetc  = lx_fgetc;
-		lx->opaque = f;
+		lx->lgetc       = lx_fgetc;
+		lx->getc_opaque = f;
 
 		lex_state->buf.a   = NULL;
 		lex_state->buf.len = 0;
 
-		lx->buf   = &lex_state->buf;
-		lx->push  = lx_dynpush;
-		lx->clear = lx_dynclear;
-		lx->free  = lx_dynfree;
+		lx->buf_opaque = &lex_state->buf;
+		lx->push       = lx_dynpush;
+		lx->clear      = lx_dynclear;
+		lx->free       = lx_dynfree;
 
 		act_state_s.sl = NULL;
 
@@ -1061,7 +1061,7 @@ ZL1:;
 		ADVANCE_LEXER; /* XXX: what if the first token is unrecognised? */
 		p_fsm(new, lex_state, act_state);
 
-		lx->free(lx);
+		lx->free(lx->buf_opaque);
 
 		return new;
 	}

@@ -64,13 +64,9 @@ lx_sql_ungetc(struct lx_sql_lx *lx, int c)
 }
 
 int
-lx_sql_dynpush(struct lx_sql_lx *lx, char c)
+lx_sql_dynpush(void *buf_opaque, char c)
 {
-	struct lx_dynbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
+	struct lx_dynbuf *t = buf_opaque;
 
 	assert(t != NULL);
 
@@ -110,13 +106,9 @@ lx_sql_dynpush(struct lx_sql_lx *lx, char c)
 }
 
 int
-lx_sql_dynclear(struct lx_sql_lx *lx)
+lx_sql_dynclear(void *buf_opaque)
 {
-	struct lx_dynbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
+	struct lx_dynbuf *t = buf_opaque;
 
 	assert(t != NULL);
 
@@ -141,13 +133,9 @@ lx_sql_dynclear(struct lx_sql_lx *lx)
 }
 
 void
-lx_sql_dynfree(struct lx_sql_lx *lx)
+lx_sql_dynfree(void *buf_opaque)
 {
-	struct lx_dynbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
+	struct lx_dynbuf *t = buf_opaque;
 
 	assert(t != NULL);
 
@@ -170,7 +158,7 @@ z0(struct lx_sql_lx *lx)
 	assert(lx != NULL);
 
 	if (lx->clear != NULL) {
-		lx->clear(lx);
+		lx->clear(lx->buf_opaque);
 	}
 
 	state = NONE;
@@ -818,7 +806,7 @@ z0(struct lx_sql_lx *lx)
 		}
 
 		if (lx->push != NULL) {
-			if (-1 == lx->push(lx, c)) {
+			if (-1 == lx->push(lx->buf_opaque, c)) {
 				return TOK_ERROR;
 			}
 		}
@@ -857,7 +845,7 @@ z1(struct lx_sql_lx *lx)
 	assert(lx != NULL);
 
 	if (lx->clear != NULL) {
-		lx->clear(lx);
+		lx->clear(lx->buf_opaque);
 	}
 
 	state = NONE;
@@ -1167,7 +1155,7 @@ z1(struct lx_sql_lx *lx)
 		}
 
 		if (lx->push != NULL) {
-			if (-1 == lx->push(lx, c)) {
+			if (-1 == lx->push(lx->buf_opaque, c)) {
 				return TOK_ERROR;
 			}
 		}
@@ -1297,7 +1285,7 @@ lx_sql_next(struct lx_sql_lx *lx)
 	t = lx->z(lx);
 
 	if (lx->push != NULL) {
-		if (-1 == lx->push(lx, '\0')) {
+		if (-1 == lx->push(lx->buf_opaque, '\0')) {
 			return TOK_ERROR;
 		}
 	}
