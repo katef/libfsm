@@ -288,7 +288,7 @@ fsm_subtract(struct fsm *a, struct fsm *b);
  * or -1 on error.
  */
 int
-fsm_empty(struct fsm *fsm);
+fsm_empty(const struct fsm *fsm);
 
 /*
  * Return 1 if two fsm are equal, 0 if they're not,

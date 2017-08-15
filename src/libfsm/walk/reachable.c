@@ -15,7 +15,7 @@
 #include "../internal.h"
 
 static int
-fsm_reachable(struct fsm *fsm, struct fsm_state *state,
+fsm_reachable(const struct fsm *fsm, struct fsm_state *state,
 	int any,
 	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
@@ -81,14 +81,14 @@ fsm_reachable(struct fsm *fsm, struct fsm_state *state,
 }
 
 int
-fsm_reachableall(struct fsm *fsm, struct fsm_state *state,
+fsm_reachableall(const struct fsm *fsm, struct fsm_state *state,
 	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
 	return fsm_reachable(fsm, state, 0, predicate);
 }
 
 int
-fsm_reachableany(struct fsm *fsm, struct fsm_state *state,
+fsm_reachableany(const struct fsm *fsm, struct fsm_state *state,
 	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
 	return fsm_reachable(fsm, state, 1, predicate);

@@ -18,7 +18,7 @@
 #include "internal.h"
 
 int
-fsm_empty(struct fsm *fsm)
+fsm_empty(const struct fsm *fsm)
 {
 	struct fsm_state *start;
 
