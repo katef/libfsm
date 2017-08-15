@@ -63,13 +63,9 @@ lx_glob_ungetc(struct lx_glob_lx *lx, int c)
 }
 
 int
-lx_glob_dynpush(struct lx_glob_lx *lx, char c)
+lx_glob_dynpush(void *buf_opaque, char c)
 {
-	struct lx_dynbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
+	struct lx_dynbuf *t = buf_opaque;
 
 	assert(t != NULL);
 
@@ -109,13 +105,9 @@ lx_glob_dynpush(struct lx_glob_lx *lx, char c)
 }
 
 int
-lx_glob_dynclear(struct lx_glob_lx *lx)
+lx_glob_dynclear(void *buf_opaque)
 {
-	struct lx_dynbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
+	struct lx_dynbuf *t = buf_opaque;
 
 	assert(t != NULL);
 
@@ -140,13 +132,9 @@ lx_glob_dynclear(struct lx_glob_lx *lx)
 }
 
 void
-lx_glob_dynfree(struct lx_glob_lx *lx)
+lx_glob_dynfree(void *buf_opaque)
 {
-	struct lx_dynbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
+	struct lx_dynbuf *t = buf_opaque;
 
 	assert(t != NULL);
 
@@ -164,7 +152,7 @@ z0(struct lx_glob_lx *lx)
 	assert(lx != NULL);
 
 	if (lx->clear != NULL) {
-		lx->clear(lx);
+		lx->clear(lx->buf_opaque);
 	}
 
 	state = NONE;
@@ -453,7 +441,7 @@ z0(struct lx_glob_lx *lx)
 		}
 
 		if (lx->push != NULL) {
-			if (-1 == lx->push(lx, c)) {
+			if (-1 == lx->push(lx->buf_opaque, c)) {
 				return TOK_ERROR;
 			}
 		}
@@ -536,7 +524,7 @@ lx_glob_next(struct lx_glob_lx *lx)
 	t = lx->z(lx);
 
 	if (lx->push != NULL) {
-		if (-1 == lx->push(lx, '\0')) {
+		if (-1 == lx->push(lx->buf_opaque, '\0')) {
 			return TOK_ERROR;
 		}
 	}

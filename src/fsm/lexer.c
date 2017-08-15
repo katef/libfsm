@@ -69,19 +69,15 @@ int
 lx_fgetc(struct lx *lx)
 {
 	assert(lx != NULL);
-	assert(lx->opaque != NULL);
+	assert(lx->getc_opaque != NULL);
 
-	return fgetc(lx->opaque);
+	return fgetc(lx->getc_opaque);
 }
 
 int
-lx_dynpush(struct lx *lx, char c)
+lx_dynpush(void *buf_opaque, char c)
 {
-	struct lx_dynbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
+	struct lx_dynbuf *t = buf_opaque;
 
 	assert(t != NULL);
 
@@ -121,13 +117,9 @@ lx_dynpush(struct lx *lx, char c)
 }
 
 int
-lx_dynclear(struct lx *lx)
+lx_dynclear(void *buf_opaque)
 {
-	struct lx_dynbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
+	struct lx_dynbuf *t = buf_opaque;
 
 	assert(t != NULL);
 
@@ -152,13 +144,9 @@ lx_dynclear(struct lx *lx)
 }
 
 void
-lx_dynfree(struct lx *lx)
+lx_dynfree(void *buf_opaque)
 {
-	struct lx_dynbuf *t;
-
-	assert(lx != NULL);
-
-	t = lx->buf;
+	struct lx_dynbuf *t = buf_opaque;
 
 	assert(t != NULL);
 
@@ -176,7 +164,7 @@ z0(struct lx *lx)
 	assert(lx != NULL);
 
 	if (lx->clear != NULL) {
-		lx->clear(lx);
+		lx->clear(lx->buf_opaque);
 	}
 
 	state = NONE;
@@ -462,7 +450,7 @@ z0(struct lx *lx)
 		}
 
 		if (lx->push != NULL) {
-			if (-1 == lx->push(lx, c)) {
+			if (-1 == lx->push(lx->buf_opaque, c)) {
 				return TOK_ERROR;
 			}
 		}
@@ -490,7 +478,7 @@ z1(struct lx *lx)
 	assert(lx != NULL);
 
 	if (lx->clear != NULL) {
-		lx->clear(lx);
+		lx->clear(lx->buf_opaque);
 	}
 
 	state = NONE;
@@ -871,7 +859,7 @@ z1(struct lx *lx)
 		}
 
 		if (lx->push != NULL) {
-			if (-1 == lx->push(lx, c)) {
+			if (-1 == lx->push(lx->buf_opaque, c)) {
 				return TOK_ERROR;
 			}
 		}
@@ -903,7 +891,7 @@ z2(struct lx *lx)
 	assert(lx != NULL);
 
 	if (lx->clear != NULL) {
-		lx->clear(lx);
+		lx->clear(lx->buf_opaque);
 	}
 
 	state = NONE;
@@ -1196,7 +1184,7 @@ z2(struct lx *lx)
 
 		default:
 			if (lx->push != NULL) {
-				if (-1 == lx->push(lx, c)) {
+				if (-1 == lx->push(lx->buf_opaque, c)) {
 					return TOK_ERROR;
 				}
 			}
@@ -1229,7 +1217,7 @@ z3(struct lx *lx)
 	assert(lx != NULL);
 
 	if (lx->clear != NULL) {
-		lx->clear(lx);
+		lx->clear(lx->buf_opaque);
 	}
 
 	state = NONE;
@@ -2002,7 +1990,7 @@ z3(struct lx *lx)
 
 		default:
 			if (lx->push != NULL) {
-				if (-1 == lx->push(lx, c)) {
+				if (-1 == lx->push(lx->buf_opaque, c)) {
 					return TOK_ERROR;
 				}
 			}
@@ -2139,7 +2127,7 @@ lx_next(struct lx *lx)
 	t = lx->z(lx);
 
 	if (lx->push != NULL) {
-		if (-1 == lx->push(lx, '\0')) {
+		if (-1 == lx->push(lx->buf_opaque, '\0')) {
 			return TOK_ERROR;
 		}
 	}

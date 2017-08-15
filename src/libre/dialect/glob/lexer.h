@@ -24,17 +24,17 @@ struct lx_pos {
 
 struct lx_glob_lx {
 	int (*lgetc)(struct lx_glob_lx *lx);
-	void *opaque;
+	void *getc_opaque;
 
 	int c; /* lx_glob_ungetc buffer */
 
 	struct lx_pos start;
 	struct lx_pos end;
 
-	void *buf;
-	int  (*push) (struct lx_glob_lx *lx, char c);
-	int  (*clear)(struct lx_glob_lx *lx);
-	void (*free) (struct lx_glob_lx *lx);
+	void *buf_opaque;
+	int  (*push) (void *buf_opaque, char c);
+	int  (*clear)(void *buf_opaque);
+	void (*free) (void *buf_opaque);
 
 	enum lx_glob_token (*z)(struct lx_glob_lx *lx);
 };
@@ -81,9 +81,9 @@ const char *lx_glob_example(enum lx_glob_token (*z)(struct lx_glob_lx *), enum l
 void lx_glob_init(struct lx_glob_lx *lx);
 enum lx_glob_token lx_glob_next(struct lx_glob_lx *lx);
 
-int  lx_glob_dynpush(struct lx_glob_lx *lx, char c);
-int  lx_glob_dynclear(struct lx_glob_lx *lx);
-void lx_glob_dynfree(struct lx_glob_lx *lx);
+int  lx_glob_dynpush(void *buf_opaque, char c);
+int  lx_glob_dynclear(void *buf_opaque);
+void lx_glob_dynfree(void *buf_opaque);
 
 #endif
 

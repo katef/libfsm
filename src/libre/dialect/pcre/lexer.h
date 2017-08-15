@@ -48,17 +48,17 @@ struct lx_pos {
 
 struct lx_pcre_lx {
 	int (*lgetc)(struct lx_pcre_lx *lx);
-	void *opaque;
+	void *getc_opaque;
 
 	int c; /* lx_pcre_ungetc buffer */
 
 	struct lx_pos start;
 	struct lx_pos end;
 
-	void *buf;
-	int  (*push) (struct lx_pcre_lx *lx, char c);
-	int  (*clear)(struct lx_pcre_lx *lx);
-	void (*free) (struct lx_pcre_lx *lx);
+	void *buf_opaque;
+	int  (*push) (void *buf_opaque, char c);
+	int  (*clear)(void *buf_opaque);
+	void (*free) (void *buf_opaque);
 
 	enum lx_pcre_token (*z)(struct lx_pcre_lx *lx);
 };
@@ -105,9 +105,9 @@ const char *lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum l
 void lx_pcre_init(struct lx_pcre_lx *lx);
 enum lx_pcre_token lx_pcre_next(struct lx_pcre_lx *lx);
 
-int  lx_pcre_dynpush(struct lx_pcre_lx *lx, char c);
-int  lx_pcre_dynclear(struct lx_pcre_lx *lx);
-void lx_pcre_dynfree(struct lx_pcre_lx *lx);
+int  lx_pcre_dynpush(void *buf_opaque, char c);
+int  lx_pcre_dynclear(void *buf_opaque);
+void lx_pcre_dynfree(void *buf_opaque);
 
 #endif
 

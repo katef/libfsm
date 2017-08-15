@@ -3205,16 +3205,16 @@ ZL1:;
 
 		lx_init(lx);
 
-		lx->lgetc  = lx_fgetc;
-		lx->opaque = f;
+		lx->lgetc       = lx_fgetc;
+		lx->getc_opaque = f;
 
 		lex_state->buf.a   = NULL;
 		lex_state->buf.len = 0;
 
-		lx->buf   = &lex_state->buf;
-		lx->push  = lx_dynpush;
-		lx->clear = lx_dynclear;
-		lx->free  = lx_dynfree;
+		lx->buf_opaque = &lex_state->buf;
+		lx->push       = lx_dynpush;
+		lx->clear      = lx_dynclear;
+		lx->free       = lx_dynfree;
 
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
@@ -3228,7 +3228,7 @@ ZL1:;
 		ADVANCE_LEXER;	/* XXX: what if the first token is unrecognised? */
 		p_lx(lex_state, act_state, &ast);
 
-		lx->free(lx);
+		lx->free(lx->buf_opaque);
 
 		assert(ast != NULL);
 

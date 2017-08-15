@@ -22,17 +22,17 @@ struct lx_pos {
 
 struct lx_literal_lx {
 	int (*lgetc)(struct lx_literal_lx *lx);
-	void *opaque;
+	void *getc_opaque;
 
 	int c; /* lx_literal_ungetc buffer */
 
 	struct lx_pos start;
 	struct lx_pos end;
 
-	void *buf;
-	int  (*push) (struct lx_literal_lx *lx, char c);
-	int  (*clear)(struct lx_literal_lx *lx);
-	void (*free) (struct lx_literal_lx *lx);
+	void *buf_opaque;
+	int  (*push) (void *buf_opaque, char c);
+	int  (*clear)(void *buf_opaque);
+	void (*free) (void *buf_opaque);
 
 	enum lx_literal_token (*z)(struct lx_literal_lx *lx);
 };
@@ -79,9 +79,9 @@ const char *lx_literal_example(enum lx_literal_token (*z)(struct lx_literal_lx *
 void lx_literal_init(struct lx_literal_lx *lx);
 enum lx_literal_token lx_literal_next(struct lx_literal_lx *lx);
 
-int  lx_literal_dynpush(struct lx_literal_lx *lx, char c);
-int  lx_literal_dynclear(struct lx_literal_lx *lx);
-void lx_literal_dynfree(struct lx_literal_lx *lx);
+int  lx_literal_dynpush(void *buf_opaque, char c);
+int  lx_literal_dynclear(void *buf_opaque);
+void lx_literal_dynfree(void *buf_opaque);
 
 #endif
 

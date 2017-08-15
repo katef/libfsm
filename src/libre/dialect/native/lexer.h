@@ -56,17 +56,17 @@ struct lx_pos {
 
 struct lx_native_lx {
 	int (*lgetc)(struct lx_native_lx *lx);
-	void *opaque;
+	void *getc_opaque;
 
 	int c; /* lx_native_ungetc buffer */
 
 	struct lx_pos start;
 	struct lx_pos end;
 
-	void *buf;
-	int  (*push) (struct lx_native_lx *lx, char c);
-	int  (*clear)(struct lx_native_lx *lx);
-	void (*free) (struct lx_native_lx *lx);
+	void *buf_opaque;
+	int  (*push) (void *buf_opaque, char c);
+	int  (*clear)(void *buf_opaque);
+	void (*free) (void *buf_opaque);
 
 	enum lx_native_token (*z)(struct lx_native_lx *lx);
 };
@@ -113,9 +113,9 @@ const char *lx_native_example(enum lx_native_token (*z)(struct lx_native_lx *), 
 void lx_native_init(struct lx_native_lx *lx);
 enum lx_native_token lx_native_next(struct lx_native_lx *lx);
 
-int  lx_native_dynpush(struct lx_native_lx *lx, char c);
-int  lx_native_dynclear(struct lx_native_lx *lx);
-void lx_native_dynfree(struct lx_native_lx *lx);
+int  lx_native_dynpush(void *buf_opaque, char c);
+int  lx_native_dynclear(void *buf_opaque);
+void lx_native_dynfree(void *buf_opaque);
 
 #endif
 

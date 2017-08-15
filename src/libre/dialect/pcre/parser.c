@@ -2630,9 +2630,9 @@ ZL1:;
 		struct lex_state *lex_state;
 
 		assert(lx != NULL);
-		assert(lx->opaque != NULL);
+		assert(lx->getc_opaque != NULL);
 
-		lex_state = lx->opaque;
+		lex_state = lx->getc_opaque;
 
 		assert(lex_state->f != NULL);
 
@@ -2669,8 +2669,8 @@ ZL1:;
 
 		LX_INIT(lx);
 
-		lx->lgetc  = lgetc;
-		lx->opaque = lex_state;
+		lx->lgetc       = lgetc;
+		lx->getc_opaque = lex_state;
 
 		lex_state->f       = f;
 		lex_state->opaque  = opaque;
@@ -2680,10 +2680,10 @@ ZL1:;
 
 		/* XXX: unneccessary since we're lexing from a string */
 		/* (except for pushing "[" and "]" around ::group-$dialect) */
-		lx->buf   = &lex_state->buf;
-		lx->push  = CAT(LX_PREFIX, _dynpush);
-		lx->clear = CAT(LX_PREFIX, _dynclear);
-		lx->free  = CAT(LX_PREFIX, _dynfree);
+		lx->buf_opaque = &lex_state->buf;
+		lx->push       = CAT(LX_PREFIX, _dynpush);
+		lx->clear      = CAT(LX_PREFIX, _dynclear);
+		lx->free       = CAT(LX_PREFIX, _dynfree);
 
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
@@ -2695,7 +2695,7 @@ ZL1:;
 		ADVANCE_LEXER;
 		entry(new, flags, lex_state, act_state, err, x, y);
 
-		lx->free(lx);
+		lx->free(lx->buf_opaque);
 
 		if (err->e != RE_ESUCCESS) {
 			/* TODO: free internals allocated during parsing (are there any?) */

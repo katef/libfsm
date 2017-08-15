@@ -33,17 +33,17 @@ struct lx_pos {
 
 struct lx {
 	int (*lgetc)(struct lx *lx);
-	void *opaque;
+	void *getc_opaque;
 
 	int c; /* lx_ungetc buffer */
 
 	struct lx_pos start;
 	struct lx_pos end;
 
-	void *buf;
-	int  (*push) (struct lx *lx, char c);
-	int  (*clear)(struct lx *lx);
-	void (*free) (struct lx *lx);
+	void *buf_opaque;
+	int  (*push) (void *buf_opaque, char c);
+	int  (*clear)(void *buf_opaque);
+	void (*free) (void *buf_opaque);
 
 	enum lx_token (*z)(struct lx *lx);
 };
@@ -92,9 +92,9 @@ enum lx_token lx_next(struct lx *lx);
 
 int lx_fgetc(struct lx *lx);
 
-int  lx_dynpush(struct lx *lx, char c);
-int  lx_dynclear(struct lx *lx);
-void lx_dynfree(struct lx *lx);
+int  lx_dynpush(void *buf_opaque, char c);
+int  lx_dynclear(void *buf_opaque);
+void lx_dynfree(void *buf_opaque);
 
 #endif
 
