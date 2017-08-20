@@ -103,9 +103,11 @@ merge(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 	if (end) {
 		fsm_setend(fsm, q, 1);
 
-		fsm_carryopaque(fsm, dummy, fsm, q);
+		if (!set_empty(dummy)) {
+			fsm_carryopaque(fsm, dummy, fsm, q);
 
-		set_free(dummy);
+			set_free(dummy);
+		}
 	}
 
 	{
@@ -114,6 +116,8 @@ merge(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 		if (!selfepsilonstate(q, &dummy)) {
 			return 0;
 		}
+
+		(void) dummy;
 	}
 
 	return q;
@@ -370,8 +374,23 @@ propogateend(struct fsm *fsm, int *changed)
 				}
 
 				if (!fsm_isend(fsm, s)) {
-					/* TODO: carry opaques */
+					struct set *dummy;
+					void *opaque;
+
 					fsm_setend(fsm, s, 1);
+
+					dummy = NULL;
+
+					opaque = fsm_getopaque(fsm, to);
+					if (opaque != NULL && !set_add(&dummy, opaque)) {
+						return 0; /* XXX */
+					}
+
+					if (!set_empty(dummy)) {
+						fsm_carryopaque(fsm, dummy, fsm, s);
+					}
+
+					set_free(dummy);
 
 					*changed = 1;
 				}
