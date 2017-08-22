@@ -69,7 +69,7 @@ fsm_setopaque(struct fsm *fsm, struct fsm_state *state, void *opaque)
 }
 
 void *
-fsm_getopaque(struct fsm *fsm, const struct fsm_state *state)
+fsm_getopaque(const struct fsm *fsm, const struct fsm_state *state)
 {
 	(void) fsm;
 
