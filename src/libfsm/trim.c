@@ -22,6 +22,7 @@ fsm_trim(struct fsm *fsm)
 {
 	struct dlist *list;
 	struct dlist *p;
+	struct fsm_state *start;
 
 	/*
 	 * Iterative depth-first search.
@@ -30,8 +31,11 @@ fsm_trim(struct fsm *fsm)
 
 	list = NULL;
 
-	if (!dlist_push(&list, fsm_getstart(fsm))) {
-		return -1;
+	start = fsm_getstart(fsm);
+	if (start != NULL) {
+		if (!dlist_push(&list, start)) {
+			return -1;
+		}
 	}
 
 	while (p = dlist_nextnotdone(list), p != NULL) {
