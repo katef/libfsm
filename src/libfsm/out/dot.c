@@ -45,6 +45,10 @@ escputc_hex(int c, FILE *f)
 {
 	assert(f != NULL);
 
+	if (c == FSM_EDGE_EPSILON) {
+		return fputs("&#x3B5;", f);
+	}
+
 	return fprintf(f, "\\x%02x", (unsigned char) c); /* for humans */
 }
 
