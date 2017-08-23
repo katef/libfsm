@@ -423,6 +423,16 @@ determinise(struct fsm *nfa,
 	dfa->nfa = nfa;
 #endif
 
+	if (nfa->endcount == 0) {
+		dfa->start = fsm_addstate(dfa);
+		if (dfa->start == NULL) {
+			fsm_free(dfa);
+			return NULL;
+		}
+
+		return dfa;
+	}
+
 	if (dcache->mappings == NULL) {
 		dcache->mappings = set_create(cmp_mapping);
 	}

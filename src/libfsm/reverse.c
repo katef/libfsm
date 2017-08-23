@@ -32,6 +32,18 @@ fsm_reverse(struct fsm *fsm)
 		return 0;
 	}
 
+	if (fsm->endcount == 0) {
+		new->start = fsm_addstate(new);
+		if (new->start == NULL) {
+			fsm_free(new);
+			return 0;
+		}
+
+		fsm_move(fsm, new);
+
+		return 1;
+	}
+
 	/*
 	 * The new end state is the previous start state. Because there is (at most)
 	 * one start state, the new FSM will have at most one end state.
@@ -127,114 +139,79 @@ fsm_reverse(struct fsm *fsm)
 		}
 	}
 
+	assert(fsm->endcount != 0);
+
+	if (fsm->endcount == 1) {
+		/* already handled above */
+		assert(new->start != NULL);
+	}
+
 	/*
 	 * Mark the new start state. If there's only one state, we can indicate it
 	 * directly. Otherwise we will be starting from a group of states, linked
 	 * together by epsilon transitions.
 	 */
-	{
+	if (fsm->endcount > 1) {
 		struct fsm_state *s;
 		struct set_iter it;
 
-		switch (fsm->endcount) {
-		case 1:
-			/* already handled above */
+		/*
+		 * The typical case here is to create a new start state, and to
+		 * link it to end states by epsilon transitions.
+		 *
+		 * An optimisation: if we found an end state with no incoming
+		 * edges, that state is nominated as a new start state. This is
+		 * equivalent to adding a new start state, and linking out from
+		 * that, except it does not need to introduce a new state.
+		 * Otherwise, we need to create a new start state as per usual.
+		 *
+		 * In either case, the start is linked to the other new start
+		 * states by epsilons.
+		 *
+		 * It is important to use a start state with no incoming edges as
+		 * this prevents accidentally transitioning to another route.
+		 *
+		 * This optimisation can be expensive to run, so it's optionally
+		 * disabled by the opt->tidy flag.
+		 */
+
+		if (0 || !fsm->opt->tidy) {
+			s = NULL;
+		} else {
+			for (s = set_first(endset, &it); s != NULL; s = set_next(&it)) {
+				if (!fsm_hasincoming(fsm, s)) {
+					break;
+				}
+			}
+		}
+
+		if (s != NULL) {
+			new->start = s->equiv;
 			assert(new->start != NULL);
-			break;
-
-		case 0:
-			/*
-			 * Transition to all states. I don't like this at all, but it is
-			 * required to be able to minimise automata with no end states.
-			 */
-
+		} else {
 			new->start = fsm_addstate(new);
 			if (new->start == NULL) {
 				set_free(endset);
 				fsm_free(new);
 				return 0;
 			}
+		}
 
-			for (s = fsm->sl; s != NULL; s = s->next) {
-				struct fsm_state *state;
+		for (s = set_first(endset, &it); s != NULL; s = set_next(&it)) {
+			struct fsm_state *state;
 
-				state = s->equiv;
-				assert(state != NULL);
+			state = s->equiv;
+			assert(state != NULL);
 
-				if (state == new->start) {
-					continue;
-				}
-
-				if (!fsm_addedge_epsilon(new, new->start, state)) {
-					set_free(endset);
-					fsm_free(new);
-					return 0;
-				}
+			if (state == new->start) {
+				continue;
 			}
 
-			break;
-
-		default:
-			/*
-			 * The typical case here is to create a new start state, and to
-			 * link it to end states by epsilon transitions.
-			 *
-			 * An optimisation: if we found an end state with no incoming
-			 * edges, that state is nominated as a new start state. This is
-			 * equivalent to adding a new start state, and linking out from
-			 * that, except it does not need to introduce a new state.
-			 * Otherwise, we need to create a new start state as per usual.
-			 *
-			 * In either case, the start is linked to the other new start
-			 * states by epsilons.
-			 *
-			 * It is important to use a start state with no incoming edges as
-			 * this prevents accidentally transitioning to another route.
-			 *
-			 * This optimisation can be expensive to run, so it's optionally
-			 * disabled by the opt->tidy flag.
-			 */
-
-			if (!fsm->opt->tidy) {
-				s = NULL;
-			} else {
-				for (s = set_first(endset, &it); s != NULL; s = set_next(&it)) {
-					if (!fsm_hasincoming(fsm, s)) {
-						break;
-					}
-				}
+			if (!fsm_addedge_epsilon(new, new->start, state)) {
+				set_free(endset);
+				fsm_free(new);
+				return 0;
 			}
-
-			if (s != NULL) {
-				new->start = s->equiv;
-				assert(new->start != NULL);
-			} else {
-				new->start = fsm_addstate(new);
-				if (new->start == NULL) {
-					set_free(endset);
-					fsm_free(new);
-					return 0;
-				}
-			}
-
-			for (s = set_first(endset, &it); s != NULL; s = set_next(&it)) {
-				struct fsm_state *state;
-
-				state = s->equiv;
-				assert(state != NULL);
-
-				if (state == new->start) {
-					continue;
-				}
-
-				if (!fsm_addedge_epsilon(new, new->start, state)) {
-					set_free(endset);
-					fsm_free(new);
-					return 0;
-				}
-			}
-
-			break;
 		}
 	}
 
