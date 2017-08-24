@@ -1,0 +1,14 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+0 -> 1 'a';
+
+# unreachable
+2 -> 3 'b';
+
+start: 0;
+end: 3;
+
