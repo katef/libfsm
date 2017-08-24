@@ -104,22 +104,8 @@ int
 fsm_minimise(struct fsm *fsm)
 {
 	int r;
-	int hasend;
 
 	assert(fsm != NULL);
-
-	/*
-	 * This is a special case to account for FSMs with no end state; end states
-	 * become start states during reversal. If no end state is present, a start
-	 * state is neccessarily invented. That'll become an end state again after
-	 * the second reversal, and then merged out to all states during conversion
-	 * to a DFA.
-	 *
-	 * The net effect of that is that for an FSM with no end states, every
-	 * state would be marked an end state after minimization. Here the absence
-	 * of an end state is recorded, so that those markings may be removed.
-	 */
-	hasend = fsm_has(fsm, fsm_isend);
 
 	/*
 	 * Brzozowski's algorithm.
@@ -143,14 +129,6 @@ fsm_minimise(struct fsm *fsm)
 		r = fsm_determinise(fsm);
 		if (!r) {
 			return 0;
-		}
-	}
-
-	if (!hasend) {
-		struct fsm_state *s;
-
-		for (s = fsm->sl; s; s = s->next) {
-			fsm_setend(fsm, s, 0);
 		}
 	}
 
