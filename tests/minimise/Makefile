@@ -16,9 +16,9 @@ FSM=${BUILD}/bin/fsm
 
 ${TEST_OUTDIR.tests/minimise-rdrd}/got${n}.fsm: ${TEST_SRCDIR.tests/minimise}/in${n}.fsm
 	  ${FSM} -pr ${.ALLSRC:M*.fsm} \
-	| ${FSM} -pd ${.ALLSRC:M*.fsm} \
-	| ${FSM} -pr ${.ALLSRC:M*.fsm} \
-	| ${FSM} -pd ${.ALLSRC:M*.fsm} \
+	| ${FSM} -pd \
+	| ${FSM} -pr \
+	| ${FSM} -pd \
 	> $@
 
 ${TEST_OUTDIR.tests/minimise-rdrd}/res${n}: \
