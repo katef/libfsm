@@ -388,6 +388,12 @@
 							</tr>
 -->
 							<!-- TODO: also final, hasfinal -->
+							<tr>
+								<td><code>count</code></td>
+								<td rowspan="1">&fsm_countstates.3;</td>
+								<td rowspan="1">Count of the number of states in the &fsm;.
+									Printed to &stdout.lit;; exit status is always true.</td>
+							</tr>
 						</tbody>
 					</table>
 				</listitem>

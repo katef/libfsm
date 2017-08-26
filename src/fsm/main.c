@@ -48,6 +48,16 @@ enum op {
 	OP_EQUAL       = (11 << 1) | 0
 };
 
+static int
+query_countstates(const struct fsm *fsm, const struct fsm_state *state)
+{
+	(void) fsm;
+	(void) state;
+
+	/* never called */
+	abort();
+}
+
 static void
 usage(void)
 {
@@ -137,8 +147,9 @@ static int
 		const char *name;
 		int (*predicate)(const struct fsm *, const struct fsm_state *);
 	} a[] = {
-		{ "isdfa",      fsm_isdfa      },
-		{ "dfa",        fsm_isdfa      }
+		{ "isdfa",      fsm_isdfa         },
+		{ "dfa",        fsm_isdfa         },
+		{ "count",      query_countstates }
 /* XXX:
 		{ "iscomplete", fsm_iscomplete },
 		{ "hasend",     fsm_hasend     },
@@ -157,7 +168,7 @@ static int
 	}
 
 	fprintf(stderr, "unrecognised query; valid queries are: "
-		"iscomplete, isdfa, hasend\n");
+		"iscomplete, isdfa, hasend, count\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -386,8 +397,14 @@ main(int argc, char *argv[])
 
 	/* TODO: OP_EQUAL ought to have the same CLI interface as a predicate */
 	if (query != NULL) {
-		r |= !fsm_all(fsm, query);
-		return r;
+		/* XXX: this symbol is used like an enum here. It's a bit of a kludge */
+		if (query == query_countstates) {
+			printf("%u\n", fsm_countstates(fsm));
+			return 0;
+		} else {
+			r |= !fsm_all(fsm, query);
+			return r;
+		}
 	}
 
 	/* TODO: optional -- to delimit texts as opposed to .fsm filenames */
