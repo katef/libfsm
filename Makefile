@@ -18,6 +18,7 @@ PREFIX ?= /usr/local
 # layout
 SUBDIR += include/fsm
 SUBDIR += include/re
+SUBDIR += include
 SUBDIR += src/adt
 SUBDIR += src/libfsm/cost
 SUBDIR += src/libfsm/out
@@ -31,6 +32,7 @@ SUBDIR += src/fsm
 SUBDIR += src/re
 SUBDIR += src/lx/out
 SUBDIR += src/lx
+SUBDIR += src
 SUBDIR += tests/determinise
 SUBDIR += tests/literal
 SUBDIR += tests/minimise
