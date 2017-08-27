@@ -42,10 +42,6 @@ SUBDIR += pc
 
 INCDIR += include
 
-# TODO: centralise
-#DIR += ${BUILD}/bin
-DIR += ${BUILD}/lib
-
 test::
 	grep FAIL ${BUILD}/tests/*/res*; [ $$? -ne 0 ]
 
