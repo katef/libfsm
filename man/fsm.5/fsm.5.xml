@@ -37,6 +37,44 @@
 		<title>Syntax</title>
 	</refsection>
 
+<!--
+
+File Format
+
+The format of .fsm files is rather simple. Lexical conventions are:
+
+ * Whitespace is ignored
+ * Comments begin # and run to the end of the line
+
+States are named numerically. State IDs are non-sequential positive integers starting from 1. The value 0 is reserved for internal use, and thus may not be used in the .fsm file format.
+
+Edges are one of the following kinds of transition:
+
+ * Labels, for human-readable strings. Empty labels are not legal.
+ * Character literals, for execution as a DFA
+ * Epsilon transitions
+ * Any character (a single-character wild-card)
+
+Examples:
+
+0 -> 1;       # illegal (0 is reserved)
+1 -> 2;       # epsilon
+2 -> 3 "";    # illegal (empty label)
+4 -> 4 "abc"; # label
+5 -> 5 'x';   # literal
+6 -> 6 'xx';  # illegal
+7 -> 7 '';    # illegal (empty literal)
+8 -> 8 ?;     # any
+
+End states are optional. Exactly one start state must be specified:
+
+start: 1;
+end: 2, 3, 4; # a list of several end states
+
+There are some examples showing how the format looks in practice.
+
+-->
+
 	<refsection>
 		<title>See Also</title>
 
