@@ -51,7 +51,7 @@ fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 			continue;
 		}
 
-		if (bufsz > 0) {
+		if (bufsz > 1) {
 			*buf++ = p->type;
 			bufsz--;
 		}
