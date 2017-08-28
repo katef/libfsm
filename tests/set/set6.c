@@ -12,7 +12,7 @@ int cmp_int(const void *a_, const void *b_) {
 int *next_int(void) {
 	static int n = 0;
 	int *p = malloc(sizeof *p);
-	assert(p);
+	if (p == NULL) abort();
 	*p = n++;
 	return p;
 }
