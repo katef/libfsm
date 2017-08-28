@@ -710,15 +710,7 @@
 	@};
 
 	<invert-group>: (g :grp &) -> () = @{
-		struct fsm *any;
-
-		any = fsm_new_any(fsm->opt);
-		if (any == NULL) {
-			err->e = RE_EERRNO;
-			@!;
-		}
-
-		@&g->set = fsm_subtract(any, @&g->set);
+		@&g->set = negate(@&g->set, fsm->opt);
 		if (@&g->set == NULL) {
 			err->e = RE_EERRNO;
 			@!;
