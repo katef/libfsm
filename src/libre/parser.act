@@ -74,6 +74,9 @@
 	#define TOK_CLASS__word   TOK_CLASS_WORD
 	#define TOK_CLASS__xdigit TOK_CLASS_XDIGIT
 
+	#define TOK_CLASS__nspace  TOK_CLASS_NSPACE
+	#define TOK_CLASS__ndigit  TOK_CLASS_NDIGIT
+
 	#include "parser.h"
 	#include "lexer.h"
 
@@ -413,6 +416,23 @@
 		return NULL;
 	}
 
+	static struct fsm *
+	negate(struct fsm *class, const struct fsm_options *opt)
+	{
+		struct fsm *any;
+
+		any = class_any_fsm(opt);
+
+		if (any == NULL || class == NULL) {
+			if (any) fsm_free(any);
+			if (class) fsm_free(class);
+		};
+
+		class = fsm_subtract(any, class);
+
+		return class;
+	}
+
 @}, @{
 
 	#include <re/re.h>
@@ -477,7 +497,10 @@
 	CLASS_word:   () -> (fsm :fsm) = @{ @fsm = class_word_fsm(fsm->opt);   if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 	CLASS_xdigit: () -> (fsm :fsm) = @{ @fsm = class_xdigit_fsm(fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 
-	ESC: () -> (c :char) = @{
+	CLASS_ndigit: () -> (fsm :fsm) = @{ @fsm = class_digit_fsm(fsm->opt); @fsm = negate(@fsm, fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_nspace: () -> (fsm :fsm) = @{ @fsm = class_space_fsm(fsm->opt); @fsm = negate(@fsm, fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+
+	ESC: () -> (c :char, start :pos, end :pos) = @{
 		assert(lex_state->buf.a[0] == '\\');
 		assert(lex_state->buf.a[1] != '\0');
 		assert(lex_state->buf.a[2] == '\0');
@@ -485,6 +508,7 @@
 		@c = lex_state->buf.a[1];
 
 		switch (@c) {
+		case 'a': @c = '\a'; break;
 		case 'f': @c = '\f'; break;
 		case 'n': @c = '\n'; break;
 		case 'r': @c = '\r'; break;
@@ -492,11 +516,42 @@
 		case 'v': @c = '\v'; break;
 		default:             break;
 		}
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+	@};
+
+	NOESC: () -> (c :char, start :pos, end :pos) = @{
+		assert(lex_state->buf.a[0] == '\\');
+		assert(lex_state->buf.a[1] != '\0');
+		assert(lex_state->buf.a[2] == '\0');
+
+		@c = lex_state->buf.a[1];
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+	@};
+
+	CONTROL: () -> (c :char, start :pos, end :pos) = @{
+		assert(lex_state->buf.a[0] == '\\');
+		assert(lex_state->buf.a[1] == 'c');
+		assert(lex_state->buf.a[2] != '\0');
+		assert(lex_state->buf.a[3] == '\0');
+
+		@c = lex_state->buf.a[2];
+		if ((unsigned char) @c > 127) {
+			@!;
+		}
+		@c = (uint32_t) ((((int32_t) toupper((unsigned char)@c)) - 64) % 128 + 128) % 128;
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
 	@};
 
 	OCT: () -> (c :char, start :pos, end :pos) = @{
 		unsigned long u;
-		char *e;
+		char *s, *e;
+		int brace = 0;
 
 		assert(0 == strncmp(lex_state->buf.a, "\\", 1));
 		assert(strlen(lex_state->buf.a) >= 2);
@@ -506,12 +561,23 @@
 
 		errno = 0;
 
-		u = strtoul(lex_state->buf.a + 1, &e, 8);
+		s = lex_state->buf.a + 1;
+
+		if (s[0] == 'o' && s[1] == '{') {
+			s += 2;
+			brace = 1;
+		}
+
+		u = strtoul(s, &e, 8);
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
 			err->e = RE_EOCTRANGE;
 			snprintdots(err->esc, sizeof err->esc, lex_state->buf.a);
 			@!;
+		}
+
+		if (brace && *e == '}') {
+			e++;
 		}
 
 		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
@@ -524,7 +590,8 @@
 
 	HEX: () -> (c :char, start :pos, end :pos) = @{
 		unsigned long u;
-		char *e;
+		char *s, *e;
+		int brace = 0;
 
 		assert(0 == strncmp(lex_state->buf.a, "\\x", 2));
 		assert(strlen(lex_state->buf.a) >= 3);
@@ -534,7 +601,14 @@
 
 		errno = 0;
 
-		u = strtoul(lex_state->buf.a + 2, &e, 16);
+		s = lex_state->buf.a + 2;
+
+		if (*s == '{') {
+			s++;
+			brace = 1;
+		}
+
+		u = strtoul(s, &e, 16);
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
 			err->e = RE_EHEXRANGE;
@@ -542,7 +616,11 @@
 			@!;
 		}
 
-		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
+		if (brace && *e == '}') {
+			e++;
+		}
+
+		if ((u == ULONG_MAX && errno != 0) || (*e != '\0')) {
 			err->e = RE_EXESC;
 			@!;
 		}
@@ -632,15 +710,7 @@
 	@};
 
 	<invert-group>: (g :grp &) -> () = @{
-		struct fsm *any;
-
-		any = fsm_new_any(fsm->opt);
-		if (any == NULL) {
-			err->e = RE_EERRNO;
-			@!;
-		}
-
-		@&g->set = fsm_subtract(any, @&g->set);
+		@&g->set = negate(@&g->set, fsm->opt);
 		if (@&g->set == NULL) {
 			err->e = RE_EERRNO;
 			@!;
@@ -856,6 +926,12 @@
 		}
 	@};
 
+	<add-class>: (x :fsm_state, y :fsm_state, c :fsm) -> () = @{
+		if (!fsm_unionxy(fsm, @c, @x, @y)) {
+			err->e = RE_EERRNO;
+			@!;
+		}
+	@};
 
 	/*
 	 * The following count repetition operators encapsulate regular expression

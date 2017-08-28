@@ -9,7 +9,7 @@
 	pos;
 	char;
 	unsigned;
-	!fsm;
+	fsm;
 	fsm_state;
 	grp;
 	pred;
@@ -39,16 +39,19 @@
 	!CLASS_ascii:  () -> (:fsm);
 	!CLASS_blank:  () -> (:fsm);
 	!CLASS_cntrl:  () -> (:fsm);
-	!CLASS_digit:  () -> (:fsm);
+	CLASS_digit:  () -> (:fsm);
 	!CLASS_graph:  () -> (:fsm);
 	!CLASS_lower:  () -> (:fsm);
 	!CLASS_print:  () -> (:fsm);
 	!CLASS_punct:  () -> (:fsm);
-	!CLASS_space:  () -> (:fsm);
+	CLASS_space:  () -> (:fsm);
 	!CLASS_spchr:  () -> (:fsm);
 	!CLASS_upper:  () -> (:fsm);
 	!CLASS_word:   () -> (:fsm);
 	!CLASS_xdigit: () -> (:fsm);
+
+	CLASS_ndigit: () -> (:fsm);
+	CLASS_nspace: () -> (:fsm);
 
 	OPENFLAGS;
 	CLOSEFLAGS;
@@ -56,13 +59,15 @@
 	FLAG_UNKNOWN;
 	FLAG_INSENSITIVE: () -> (:re_flags);
 
-	ESC:    () -> (:char);
-	OCT:    () -> (:char, :pos, :pos);
-	HEX:    () -> (:char, :pos, :pos);
-	CHAR:   () -> (:char, :pos, :pos);
-	START:  () -> (:pred);
-	END:    () -> (:pred);
-	COUNT:  () -> (:unsigned);
+	ESC:     () -> (:char, :pos, :pos);
+	NOESC:   () -> (:char, :pos, :pos);
+	CONTROL: () -> (:char, :pos, :pos);
+	OCT:     () -> (:char, :pos, :pos);
+	HEX:     () -> (:char, :pos, :pos);
+	CHAR:    () -> (:char, :pos, :pos);
+	START:   () -> (:pred);
+	END:     () -> (:pred);
+	COUNT:   () -> (:unsigned);
 
 	EOF;
 	!ERROR;
@@ -72,7 +77,7 @@
 	<make-group>:  () -> (:grp);
 	<invert-group>:    (:grp &) -> ();
 	<group-add-char>:  (:grp &, :char) -> ();
-	!<group-add-class>: (:grp &, :fsm) -> ();
+	<group-add-class>: (:grp &, :fsm) -> ();
 	<group-add-range>: (:grp &, :char, :char) -> ();
 	<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
 
@@ -81,6 +86,7 @@
 	<add-pred>:    (:fsm_state, :fsm_state, :pred) -> ();
 	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
 	<add-any>:     (:fsm_state, :fsm_state)        -> ();
+	<add-class>:   (:fsm_state, :fsm_state, :fsm)  -> ();
 
 	<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
 	<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
@@ -108,10 +114,24 @@
 	<mark-range>: (:pos, :pos) -> ();
 	<mark-count>: (:pos, :pos) -> ();
 
+	pcre-class: () -> (f :fsm) = {
+		f = CLASS_digit;
+	||
+		f = CLASS_ndigit;
+	||
+		f = CLASS_space;
+	||
+		f = CLASS_nspace;
+	};
+
 	group: (x :fsm_state, y :fsm_state) -> () [
 
 		char: () -> (c :char) = {
-			c = ESC;
+			(c, !, !) = ESC;
+		||
+			(c, !, !) = CONTROL;
+		||
+			(c, !, !) = NOESC;
 		||
 			(c, !, !) = OCT;
 		||
@@ -122,6 +142,12 @@
 
 		range: () -> (a :char, b :char) = {
 			{
+				(a, start, !) = ESC;
+			||
+				(a, start, !) = CONTROL;
+			||
+				(a, start, !) = NOESC;
+			||
 				(a, start, !) = OCT;
 			||
 				(a, start, !) = HEX;
@@ -136,6 +162,10 @@
 			};
 
 			{
+				(b, !, end) = ESC;
+			||
+				(b, !, end) = CONTROL;
+			||
 				(b, !, end) = OCT;
 			||
 				(b, !, end) = HEX;
@@ -152,6 +182,9 @@
 			{
 				c = char;
 				<group-add-char>(&g, c);
+			||
+				f = pcre-class;
+				<group-add-class>(&g, f);
 			||
 				(a, b) = range;
 				<group-add-range>(&g, a, b);
@@ -229,7 +262,11 @@
 
 	literal: (x :fsm_state, y :fsm_state) -> () = {
 		{
-			c = ESC;
+			(c, !, !) = ESC;
+		||
+			(c, !, !) = CONTROL;
+		||
+			(c, !, !) = NOESC;
 		||
 			(c, !, !) = OCT;
 		||
@@ -317,6 +354,9 @@
 				group(x, y);
 			||
 				literal(x, y);
+			||
+				f = pcre-class;
+				<add-class>(x, y, f);
 			||
 				ANY;
 				<add-any>(x, y);

@@ -39,13 +39,32 @@
 '\t' -> $esc;
 '\v' -> $esc;
 
-'\'  /[0-7]+/     -> $oct;
-'\x' /[0-9a-f]+/i -> $hex;
+# perl/unix-ish escapes
+'\a' -> $esc;
+'\c' /./ -> $control;
+
+# perl character class escapes
+'\d' -> $class_digit;
+'\D' -> $class_ndigit;
+'\w' -> $class_word;
+'\W' -> $class_nword;
+'\s' -> $class_space;
+'\S' -> $class_nspace;
+
+class = '\' /[dDwWsS]/;
+
+'\'   /[0-7]{1,3}/     -> $oct;
+'\o{' /[0-7]+/i '}'    -> $oct;
+'\x'  /[0-9a-f]{1,2}/i -> $hex;
+'\x{' /[0-9a-f]+/i '}' -> $hex;
+
+'\' /./ - ($esc | $control | $oct | $hex | '\Q' | class) -> $noesc;
+'\' -> $invalid;
 
 '(?' -> $openflags .. ')' -> $closeflags {
 	'-' -> $negate;
 	'i' -> $flag__insensitive;
-	/[a-z]/ - /[i]/ -> $flag__unknown;
+	/[a-z]/ - $flag__insensitive -> $flag__unknown;
 }
 
 '[' -> $opengroup .. ']' -> $closegroup {
@@ -64,8 +83,42 @@
 	'\t' -> $esc;
 	'\v' -> $esc;
 
-	'\'  /[0-7]+/     -> $oct;
-	'\x' /[0-9a-f]+/i -> $hex;
+	# perl/unix-ish escapes
+	'\a' -> $esc;
+	'\c' /./ -> $control;
+
+	# perl character class escapes
+	'\d' -> $class_digit;
+	'\D' -> $class_ndigit;
+	'\w' -> $class_word;
+	'\W' -> $class_nword;
+	'\s' -> $class_space;
+	'\S' -> $class_nspace;
+
+	class = '\' /[dDwWsS]/;
+
+	'\'   /[0-7]{1,3}/     -> $oct;
+	'\o{' /[0-7]+/i '}'    -> $oct;
+	'\x'  /[0-9a-f]{1,2}/i -> $hex;
+	'\x{' /[0-9a-f]+/i '}' -> $hex;
+
+	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | class) -> $noesc;
+	'\' -> $invalid;
+
+	'[:alnum:]'  -> $class_alnum;
+	'[:alpha:]'  -> $class_alpha;
+	'[:ascii:]'  -> $class_ascii;
+	'[:blank:]'  -> $class_blank;
+	'[:cntrl:]'  -> $class_cntrl;
+	'[:digit:]'  -> $class_digit;
+	'[:graph:]'  -> $class_graph;
+	'[:lower:]'  -> $class_lower;
+	'[:print:]'  -> $class_print;
+	'[:punct:]'  -> $class_punct;
+	'[:space:]'  -> $class_space;
+	'[:upper:]'  -> $class_upper;
+	'[:word:]'   -> $class_word;
+	'[:xdigit:]' -> $class_xdigit;
 
 	# XXX: /./ - the above
 	/[^\^\-\\]/ -> $char;
@@ -76,8 +129,12 @@
 	/[0-9]+/ -> $count;
 }
 
+'\Q' .. '\E' {
+	/./ -> $char;
+}
+
 /./ - ($opensub | $opencapture | $close | $start | $end
 	| $opt | $star | $plus | $any | $alt
-	| $esc | $oct | $hex
+	| $esc | $oct | $hex | $invalid
 	| $opengroup | $opencount) -> $char;
 
