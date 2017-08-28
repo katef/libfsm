@@ -29,5 +29,8 @@ fsm_out_fsm(const struct fsm *fsm, FILE *f);
 void
 fsm_out_json(const struct fsm *fsm, FILE *f);
 
+void
+fsm_out_table(const struct fsm *fsm, FILE *f);
+
 #endif
 

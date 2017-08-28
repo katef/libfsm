@@ -38,6 +38,9 @@ SRC += src/libfsm/union.c
 SRC += src/libfsm/intersect.c
 SRC += src/libfsm/subtract.c
 
+# array-based adjacency list representation
+SRC += src/libfsm/table.c
+
 LIB += libfsm
 
 .for src in ${SRC:Msrc/libfsm/*.c}

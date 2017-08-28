@@ -38,6 +38,7 @@ SUBDIR += tests/determinise
 SUBDIR += tests/literal
 SUBDIR += tests/minimise
 SUBDIR += tests/reverse
+SUBDIR += tests/out/table
 SUBDIR += tests
 SUBDIR += pc
 

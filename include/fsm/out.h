@@ -17,7 +17,8 @@ enum fsm_out {
 	FSM_OUT_CSV,
 	FSM_OUT_DOT,
 	FSM_OUT_FSM,
-	FSM_OUT_JSON
+	FSM_OUT_JSON,
+	FSM_OUT_TABLE
 };
 
 enum fsm_io {
