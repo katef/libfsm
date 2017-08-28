@@ -1,3 +1,9 @@
+/*
+ * Copyright 2017 Ed Kellett
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #include <assert.h>
 #include <stdlib.h>
 #include <adt/set.h>
