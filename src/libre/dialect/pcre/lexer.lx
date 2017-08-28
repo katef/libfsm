@@ -64,7 +64,7 @@ class = '\' /[dDwWsS]/;
 '(?' -> $openflags .. ')' -> $closeflags {
 	'-' -> $negate;
 	'i' -> $flag__insensitive;
-	/[a-z]/ - /[i]/ -> $flag__unknown;
+	/[a-z]/ - $flag__insensitive -> $flag__unknown;
 }
 
 '[' -> $opengroup .. ']' -> $closegroup {
