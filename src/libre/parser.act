@@ -539,7 +539,7 @@
 		assert(lex_state->buf.a[3] == '\0');
 
 		@c = lex_state->buf.a[2];
-		if (@c > 127) {
+		if ((unsigned char) @c > 127) {
 			@!;
 		}
 		@c = (uint32_t) ((((int32_t) toupper((unsigned char)@c)) - 64) % 128 + 128) % 128;
