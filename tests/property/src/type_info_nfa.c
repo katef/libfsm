@@ -104,9 +104,58 @@ free_nfa_spec(void *instance, void *type_env)
 	free(spec);
 }
 
+//#define AS_C
+
 static void
 print_nfa_spec(FILE *f, const void *instance, void *type_env)
 {
+#ifdef AS_C
+	struct nfa_spec *spec = (struct nfa_spec *)instance;
+	(void)type_env;
+	fprintf(f, "struct fsm *nfa = fsm_new(&fsm_options);\n");
+	fprintf(f, "struct fsm_state *states[%zd] = { [0] = NULL };\n",
+		spec->state_count);
+
+	fprintf(f, "\n// first pass: states\n");
+	for (size_t i = 0; i < spec->state_count; i++) {
+		fprintf(f, "states[%zd] = fsm_addstate(nfa); ", i);
+		fprintf(f, "assert(states[%zd]); ", i);
+		if (spec->states[i]->is_end) {
+			fprintf(f, "fsm_setend(nfa, states[%zd], 1);\n", i);
+		} else {
+			fprintf(f, "\n");
+		}
+	}
+	fprintf(f, "fsm_setstart(nfa, states[0]);\n");
+
+	fprintf(f, "\n// second pass: edges\n");
+
+	for (size_t si = 0; si < spec->state_count; si++) {
+		struct nfa_state *s = spec->states[si];
+		for (size_t ei = 0; ei < s->edge_count; ei++) {
+			struct nfa_edge *e = &s->edges[ei];
+			size_t to = e->to % spec->state_count;
+			switch (e->t) {
+			case NFA_EDGE_EPSILON:
+				fprintf(f,
+				    "if (!fsm_addedge_epsilon(nfa, states[%zd], %zd)) { assert(false); }\n",
+				    si, to);
+				break;
+			case NFA_EDGE_ANY:
+				fprintf(f,
+				    "if (!fsm_addedge_any(nfa, states[%zd], %zd)) { assert(false); }\n",
+				    si, to);
+				break;
+			case NFA_EDGE_LITERAL:
+				fprintf(f,
+				    "if (!fsm_addedge_literal(nfa, states[%zd], %zd, (char)0x%02x)) { assert(false); }\n",
+				    si, to, e->u.literal.byte);
+				break;
+			}
+			
+		}
+	}
+#else
 	struct nfa_spec *spec = (struct nfa_spec *)instance;
 	(void)type_env;
 	fprintf(f, "NFA#%p, [", (void *)spec);
@@ -144,6 +193,7 @@ print_nfa_spec(FILE *f, const void *instance, void *type_env)
 			}
 		}
 	}
+#endif
 }
 
 const struct theft_type_info type_info_nfa = {

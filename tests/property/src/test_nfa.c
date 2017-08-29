@@ -3,7 +3,8 @@
 #include "type_info_nfa.h"
 #include "type_info_fsm_literal.h"
 
-/* TODO: fsm_equal, with peturbed edges */
+/* In test_nfa_slow.c */
+bool test_nfa_regress_slow_determinise(void);
 
 static struct fsm *
 nfa_of_spec(struct nfa_spec *spec, bool shuffle);
@@ -17,18 +18,18 @@ prop_nfa_operations_should_not_impact_matching(struct theft *t,
 static enum theft_trial_res
 prop_nfa_edge_order_should_not_matter(struct theft *t,
     void *arg1);
+static enum theft_trial_res
+prop_slow_determinise(struct theft *t, void *arg1);
+static enum theft_trial_res
+prop_nfa_minimise_should_not_add_states(struct theft *t,
+    void *arg1);
 
 static enum theft_hook_shrink_pre_res
 shrink_pre(const struct theft_hook_shrink_pre_info *info,
-    void *type_env)
+    void *hook_env)
 {
-	(void)type_env;
 	(void)info;
-
-	/* FIXME: shrink_pre_info should have a pointer to *t */
-
-#if 0
-	struct test_env *env = theft_hook_get_env(t);
+	struct test_env *env = hook_env;
 	assert(env->tag == 'E');
 
 	struct timeval tv;
@@ -53,7 +54,6 @@ shrink_pre(const struct theft_hook_shrink_pre_info *info,
 		    __func__, tv.tv_sec - env->started_second);
 		return THEFT_HOOK_SHRINK_PRE_HALT;
 	}
-#endif
 
 	return THEFT_HOOK_SHRINK_PRE_CONTINUE;
 }
@@ -270,7 +270,7 @@ static bool apply_ops(struct test_env *env, struct nfa_spec *nfa_spec,
 	return true;
 }
 
-static const struct fsm_options fsm_options = {
+const struct fsm_options test_nfa_fsm_options = {
 	.anonymous_states = 1,
 	.consolidate_edges = 1,
 	.always_hex = 1,
@@ -279,7 +279,7 @@ static const struct fsm_options fsm_options = {
 static struct fsm *nfa_of_spec(struct nfa_spec *spec, bool shuffle)
 {
 	(void)shuffle;		/* TODO */
-	struct fsm *nfa = fsm_new(&fsm_options);
+	struct fsm *nfa = fsm_new(&test_nfa_fsm_options);
 	if (nfa == NULL) { return NULL; }
 
 	struct fsm_state *states[spec->state_count];
@@ -307,7 +307,7 @@ static struct fsm *nfa_of_spec(struct nfa_spec *spec, bool shuffle)
 		
 		for (size_t ei = 0; ei < s->edge_count; ei++) {
 			struct nfa_edge *e = &s->edges[pv ? pv[ei] : ei];
-			struct  fsm_state *to = states[e->to % spec->state_count];
+			struct fsm_state *to = states[e->to % spec->state_count];
 			switch (e->t) {
 			case NFA_EDGE_EPSILON:
 				if (!fsm_addedge_epsilon(nfa,
@@ -410,7 +410,7 @@ prop_nfa_edge_order_should_not_matter(struct theft *t,
 
 static bool nfa_regress_minimise_false_positive(void)
 {
-	struct fsm *nfa = fsm_new(&fsm_options);
+	struct fsm *nfa = fsm_new(&test_nfa_fsm_options);
 	assert(nfa);
 
 	#define STATE_COUNT 2
@@ -450,7 +450,7 @@ static bool nfa_regress_minimise_false_positive(void)
 
 static bool segfault_fsm_trim(void)
 {
-	struct fsm *nfa = fsm_new(&fsm_options);
+	struct fsm *nfa = fsm_new(&test_nfa_fsm_options);
 
 	struct fsm_state *s0 = fsm_addstate(nfa);
 	(void)s0;
@@ -461,6 +461,139 @@ static bool segfault_fsm_trim(void)
 	return true;
 }
 
+static bool nfa_slow_determinise(void)
+{
+	theft_seed seed = theft_seed_of_time();
+	//seed = 0xe0083991257118b0LLU;
+
+	struct test_env env = {
+		.tag = 'E',
+		.verbosity = 0,
+		.shrink_timeout = 60,
+	};
+
+	struct theft_run_config cfg = {
+		.name = __func__,
+		.prop1 = prop_slow_determinise,
+		.type_info = { &type_info_nfa, },
+		.hooks = {
+			.trial_pre = trial_pre_fail_once,
+			.trial_post = trial_post_inc_verbosity,
+			.shrink_pre = shrink_pre,
+			.env = &env,
+		},
+		.seed = seed,
+		.fork = {
+			.enable = true,
+		},
+	};
+	enum theft_run_res res = theft_run(&cfg);
+	return res == THEFT_RUN_PASS;
+}
+
+static enum theft_trial_res
+prop_slow_determinise(struct theft *t, void *arg1)
+{
+	struct test_env *env = theft_hook_get_env(t);
+	assert(env->tag == 'E');
+	uint8_t verbosity = env->verbosity;
+
+	struct nfa_spec *nfa_spec = (struct nfa_spec *)arg1;
+	assert(nfa_spec->tag == 'N');
+
+	if (nfa_spec->state_count == 0) {
+		return THEFT_TRIAL_SKIP;
+	}
+
+	struct fsm *nfa = nfa_of_spec(nfa_spec, false);
+	if (nfa == NULL) { return THEFT_TRIAL_ERROR; }
+
+	struct timeval pre, post;
+	if (-1 == gettimeofday(&pre, NULL)) { assert(false); return false; }
+	if (!fsm_determinise(nfa)) {
+		fprintf(stdout, "FAIL: determinise\n");
+		return THEFT_TRIAL_ERROR;
+	}
+	if (-1 == gettimeofday(&post, NULL)) { assert(false); return false; }
+	size_t elapsed_msec = 1000*(post.tv_sec - pre.tv_sec) +
+	    (post.tv_usec/1000 - pre.tv_usec/1000);
+
+	if (verbosity > 0) {
+		fprintf(stdout, "%s: fsm_determinise took %zd msec\n",
+		    __func__, elapsed_msec);
+	}
+	enum theft_trial_res res = elapsed_msec < 2000
+	    ? THEFT_TRIAL_PASS
+	    : THEFT_TRIAL_FAIL;
+
+	fsm_free(nfa);
+	return res;
+}
+
+static bool nfa_minimise_should_not_add_states(void)
+{
+	theft_seed seed = theft_seed_of_time();
+
+	struct test_env env = {
+		.tag = 'E',
+		.verbosity = 0,
+		.shrink_timeout = 10 * 60,
+	};
+
+	struct theft_run_config cfg = {
+		.name = __func__,
+		.prop1 = prop_nfa_minimise_should_not_add_states,
+		.type_info = { &type_info_nfa, },
+		.hooks = {
+			.trial_pre = trial_pre_fail_once,
+			.trial_post = trial_post_inc_verbosity,
+			.shrink_pre = shrink_pre,
+			.env = &env,
+		},
+		.seed = seed,
+		.fork = {
+			.enable = true,
+		},
+	};
+	enum theft_run_res res = theft_run(&cfg);
+	return res == THEFT_RUN_PASS;
+}
+
+static enum theft_trial_res
+prop_nfa_minimise_should_not_add_states(struct theft *t,
+    void *arg1)
+{
+	struct test_env *env = theft_hook_get_env(t);
+	assert(env->tag == 'E');
+	uint8_t verbosity = env->verbosity;
+
+	struct nfa_spec *nfa_spec = (struct nfa_spec *)arg1;
+	assert(nfa_spec->tag == 'N');
+	if (nfa_spec->state_count == 0) { return THEFT_TRIAL_SKIP; }
+
+	struct fsm *nfa = nfa_of_spec(nfa_spec, false);
+	if (nfa == NULL) { return THEFT_TRIAL_ERROR; }
+
+	const size_t count_before = fsm_count(nfa, fsm_isany);
+	if (!fsm_minimise(nfa)) {
+		if (verbosity > 0) {
+			fprintf(stdout, "%s: fsm_minimise failure\n", __func__);
+		}
+		return THEFT_TRIAL_ERROR;
+	}
+	const size_t count_after = fsm_count(nfa, fsm_isany);
+
+	if (verbosity > 0) {
+		fprintf(stdout, "%s: before %zd => after %zd\n",
+		    __func__, count_before, count_after);
+	}
+
+	fsm_free(nfa);
+	return count_after <= count_before
+	    ? THEFT_TRIAL_PASS
+	    : THEFT_TRIAL_FAIL;
+}
+
 void register_test_nfa(void) {
 	reg_test("nfa_operations_should_not_impact_matching",
 	    nfa_operations_should_not_impact_matching);
@@ -468,6 +601,12 @@ void register_test_nfa(void) {
 	    nfa_edge_order_should_not_matter);
 	reg_test("nfa_regress_minimise_false_positive",
 	    nfa_regress_minimise_false_positive);
+	reg_test("nfa_slow_determinise",
+	    nfa_slow_determinise);
+	reg_test("nfa_regress_slow_determinise",
+	    test_nfa_regress_slow_determinise);
 
 	reg_test("segfault_fsm_trim", segfault_fsm_trim);
+
+	reg_test("nfa_minimise_should_not_add_states", nfa_minimise_should_not_add_states);
 }

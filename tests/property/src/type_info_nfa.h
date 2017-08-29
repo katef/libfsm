@@ -3,6 +3,8 @@
 
 #include "test_libfsm.h"
 
+extern const struct fsm_options test_nfa_fsm_options;
+
 enum nfa_edge_type {
 	NFA_EDGE_ANY,
 	NFA_EDGE_EPSILON,
@@ -29,13 +31,14 @@ struct nfa_state {
 
 enum nfa_op {
 	NFA_OP_NOP,
-	NFA_OP_MINIMISE,
 	NFA_OP_DETERMINISE,
 	NFA_OP_TRIM,
-	NFA_OP_DOUBLE_REVERSE,
+
 	NFA_OP_TYPE_COUNT,
 
-	/* skip this for now */
+	/* skip all below here for now */
+	NFA_OP_DOUBLE_REVERSE,
+	NFA_OP_MINIMISE,
 	NFA_OP_DOUBLE_COMPLEMENT,
 };
 

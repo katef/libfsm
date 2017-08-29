@@ -24,6 +24,7 @@ OBJS=	${BUILD}/main.o \
 	${BUILD}/test_adt_set.o \
 	${BUILD}/test_literals.o \
 	${BUILD}/test_nfa.o \
+	${BUILD}/test_nfa_slow.o \
 	${BUILD}/test_re_parser.o \
 	${BUILD}/test_re_parser_literal.o \
 	${BUILD}/test_re_parser_pcre.o \
