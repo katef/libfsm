@@ -1,5 +1,4 @@
 PROJECT=test_libfsm
-SRC=src
 BUILD=build
 
 all: ${BUILD}/${PROJECT}
@@ -46,14 +45,14 @@ test: run
 ${BUILD}/test_libfsm: ${OBJS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
 
-${BUILD}/%.o: ${SRC}/%.c | ${BUILD}
+${BUILD}/%.o: %.c | ${BUILD}
 	${CC} -c -o $@ ${CFLAGS} $<
 
 ${BUILD}:
 	mkdir -p ${BUILD}
 
 ${BUILD}/*.o: Makefile
-${BUILD}/*.o: ${SRC}/*.h
+${BUILD}/*.o: *.h
 ${BUILD}/*.o: ${LIBFSM_LIB}/libfsm.a ${LIBFSM_LIB}/libre.a
 
 clean:
