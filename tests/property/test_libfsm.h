@@ -56,6 +56,7 @@ typedef bool test_fun1(uintptr_t arg);
 void reg_test(const char *name, test_fun *test);
 void reg_test1(const char *name, test_fun1 *test, uintptr_t arg);
 
+/* Register tests within a module. */
 void register_test_literals(void);
 void register_test_re(void);
 void register_test_adt_priq(void);

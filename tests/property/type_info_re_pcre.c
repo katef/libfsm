@@ -501,7 +501,6 @@ static bool build_exp_match(struct theft *t,
 			fprintf(stdout, "%016" PRIx64 "%016" PRIx64 "%016" PRIx64 "%016" PRIx64"\n",
 			    set[0], set[1], set[2], set[3]);
 		}
-		assert(any);	/* no 0-character sets */
 		break;
 	}
 	case PN_ALT:

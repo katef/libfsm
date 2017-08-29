@@ -41,8 +41,15 @@ struct state {
 
 static struct state state;
 
-static void usage(void) {
-	fprintf(stderr, "Usage: " EXEC_NAME " [-v] [-f] [-n testname]\n");
+static void usage(const char *exec_name) {
+	fprintf(stderr,
+	    "Usage: %s [-hvlf] [-n <NAME_FILTER>]\n"
+	    "  -h:           help\n"
+	    "  -v:           increase verbosity\n"
+	    "  -l:           list tests by name\n"
+	    "  -f:           halt after first failure\n"
+	    "  -n <STRING>:  only run tests STRING in the name\n",
+		exec_name);
 	exit(1);
 }
 
@@ -97,7 +104,7 @@ static void parse_args(int argc, char **argv, struct state *s) {
              case '?':
              default:
 	     case 'h':
-		     usage();
+		     usage(argv[0]);
 		     break;
              case 'v':
                      s->verbosity++;
