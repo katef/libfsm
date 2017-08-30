@@ -542,7 +542,7 @@
 		if ((unsigned char) @c > 127) {
 			@!;
 		}
-		@c = (uint32_t) ((((int32_t) toupper((unsigned char)@c)) - 64) % 128 + 128) % 128;
+		@c = (((toupper((unsigned char)@c)) - 64) % 128 + 128) % 128;
 
 		@start = lex_state->lx.start;
 		@end   = lex_state->lx.end;
