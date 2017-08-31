@@ -111,7 +111,6 @@ fsm_minimise(struct fsm *fsm)
 	 * Brzozowski's algorithm.
 	 */
 	{
-		if (!fsm_trim(fsm)) { return 0; }
 		r = fsm_reverse(fsm);
 		if (!r) {
 			return 0;
@@ -122,7 +121,6 @@ fsm_minimise(struct fsm *fsm)
 			return 0;
 		}
 
-		if (!fsm_trim(fsm)) { return 0; }
 		r = fsm_reverse(fsm);
 		if (!r) {
 			return 0;
