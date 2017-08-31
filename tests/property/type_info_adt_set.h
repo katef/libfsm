@@ -17,9 +17,6 @@ enum set_op_type {
 	SET_OP_TYPE_COUNT,
 };
 
-// TODO: set_cmp, set_equal: sets constructed in different orders
-
-
 struct set_op {
 	enum set_op_type t;
 	union {

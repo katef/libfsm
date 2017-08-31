@@ -19,23 +19,6 @@ static const char literals[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV
 
 //#define LOG_VERBOSE
 
-/* TODO: named character classes
-  alnum       alphanumeric
-  alpha       alphabetic
-  ascii       0-127
-  blank       space or tab
-  cntrl       control character
-  digit       decimal digit
-  graph       printing, excluding space
-  lower       lower case letter
-  print       printing, including space
-  punct       printing, excluding alphanumeric
-  space       white space
-  upper       upper case letter
-  word        same as \w
-  xdigit      hexadecimal digit
-*/
-
 struct error_counter {
 	bool used;
         uint8_t counter;
@@ -113,12 +96,12 @@ gen_pcre_node(struct theft *t)
 		n->u.dot.unused = 0xdead;
 		break;
 	case PN_LITERAL:
-		/* FIXME: what's a good upper length bound here? */
+		/* Use a relatively small upper bound for literal length. */
 		n->u.literal.size = theft_random_bits(t, 4) + 1;
 		for (size_t i = 0; i < n->u.literal.size; i++) {
 			uint8_t index = theft_random_bits(t, 6);
 			assert(index < 64);
-			/* TODO: just alphanumeric characters for now */
+			/* Just use alphanumeric literals */
 			buf[i] = literals[index];
 		}
 		n->u.literal.string = malloc(n->u.literal.size + 1);
@@ -238,7 +221,6 @@ static bool flatten(struct flatten_env *env, const struct pcre_node *node)
 			if (!buf_append(env->b, '^', false)) { return false; }
 		}
 
-		/* FIXME: range */
 		for (size_t i = 0; i < 256; i++) {
 			if (node->u.bracket.set[i / 64] & (1LLU << (i % 64))) {
 				unsigned char c = (unsigned char)i;
@@ -427,7 +409,8 @@ static bool build_exp_match(struct theft *t,
 	case PN_QUESTION:
 		/* to be or not to be */
 		if (counter_timed_out(bomb)) {
-			/* FIXME: this could cause false false negatives */
+			/* Note: this can cause false negatives if used
+			 * next to other repetition operators. */
 			counter_used(bomb);
 
 			/* apply it twice, no zero times or once */
@@ -674,12 +657,11 @@ static bool build_exp_class_flag(struct theft *t, struct buf *buf,
 			
 			case BRACKET_CLASS_WORD:
 			{
-				/* FIXME */
-				static const char alpha[] =
-				    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+				static const char word[] =
+				    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789";
 				byte = inject_error
 				    ? 0x80
-				    : alpha[theft_random_choice(t, sizeof(alpha))];
+				    : word[theft_random_choice(t, sizeof(word))];
 				break;
 			}
 			

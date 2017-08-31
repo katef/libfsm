@@ -50,8 +50,7 @@ static bool test_union_literals(void)
 
 		.seed = seed,
 		.fork = {
-			//.enable = true,
-			.timeout = 100, /* FIXME */
+			.enable = true,
 		},
 	};
 	enum theft_run_res res = theft_run(&cfg);

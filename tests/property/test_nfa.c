@@ -284,7 +284,6 @@ const struct fsm_options test_nfa_fsm_options = {
 
 static struct fsm *nfa_of_spec(struct nfa_spec *spec, bool shuffle)
 {
-	(void)shuffle;		/* TODO */
 	struct fsm *nfa = fsm_new(&test_nfa_fsm_options);
 	if (nfa == NULL) { return NULL; }
 

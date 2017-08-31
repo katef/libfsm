@@ -329,7 +329,8 @@ static bool op_move(struct model *m, struct priq_op *op, struct priq **p)
 	(void)p;
 
 	assert(op->t == PRIQ_OP_MOVE);
-	/* FIXME */
+	/* FIXME: The way this function is used is unclear;
+	 * figure out how to model it before adding it to the test set. */
 	assert(false);
 }
 

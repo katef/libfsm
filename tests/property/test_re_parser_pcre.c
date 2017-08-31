@@ -8,12 +8,9 @@
 
 #include "type_info_re.h"
 
-/* TODO:
- * - [:digit:]
- * - malformed regexes / negative testing
- * - ^ and $
- *
- * */
+/* Not yet implemented:
+ * - ^ and $ anchors
+ * - other PCRE extensions */
 
 static bool check_pos_matches(uint8_t verbosity, struct fsm *fsm,
     const uint8_t *re_string, size_t re_size,

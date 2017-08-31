@@ -178,7 +178,7 @@ static enum theft_trial_res prop_set_equality(struct theft *t, void *arg1)
 		return THEFT_TRIAL_FAIL;
 	}
 
-	/* TODO: iterate both */
+	/* Other invariants: possibly iterate over both pairwise? */
 	
 	set_free(set_a);
 	set_free(set_b);
