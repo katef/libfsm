@@ -1,3 +1,9 @@
+/*
+ * Copyright 2017 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #ifndef TYPE_INFO_NFA_H
 #define TYPE_INFO_NFA_H
 

@@ -1,3 +1,9 @@
+/*
+ * Copyright 2017 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #include "test_libfsm.h"
 
 int scanner_next(void *opaque)

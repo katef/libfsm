@@ -1,3 +1,9 @@
+/*
+ * Copyright 2017 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #ifndef BUF_H
 #define BUF_H
 

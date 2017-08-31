@@ -1,3 +1,9 @@
+/*
+ * Copyright 2017 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #ifndef TEST_LIBFSM_H
 #define TEST_LIBFSM_H
 
