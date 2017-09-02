@@ -4,7 +4,7 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "test_libfsm.h"
+#include "fuzz_libfsm.h"
 
 #include "type_info_re.h"
 

@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef TEST_LIBFSM_H
-#define TEST_LIBFSM_H
+#ifndef FUZZ_LIBFSM_H
+#define FUZZ_LIBFSM_H
 
 #include <stdlib.h>
 #include <stdint.h>

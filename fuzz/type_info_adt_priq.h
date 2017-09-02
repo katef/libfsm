@@ -7,7 +7,7 @@
 #ifndef TYPE_INFO_ADT_PRIQ_H
 #define TYPE_INFO_ADT_PRIQ_H
 
-#include "test_libfsm.h"
+#include "fuzz_libfsm.h"
 
 enum priq_op_type {
 	PRIQ_OP_POP,

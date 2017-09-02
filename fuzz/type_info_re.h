@@ -7,7 +7,7 @@
 #ifndef TYPE_INFO_RE_H
 #define TYPE_INFO_RE_H
 
-#include "test_libfsm.h"
+#include "fuzz_libfsm.h"
 #include "buf.h"
 
 /* Property idea: (a|b) should be the same as union[a, b]  */

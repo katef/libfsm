@@ -4,7 +4,7 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "test_libfsm.h"
+#include "fuzz_libfsm.h"
 
 int scanner_next(void *opaque)
 {

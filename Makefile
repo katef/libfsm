@@ -44,10 +44,10 @@ SUBDIR += tests/literal
 SUBDIR += tests/minimise
 SUBDIR += tests/reverse
 SUBDIR += tests/set
-.if !empty(.TARGETS:Mfuzz)
-SUBDIR += tests/property
-.endif
 SUBDIR += tests
+.if !empty(.TARGETS:Mfuzz)
+SUBDIR += fuzz
+.endif
 SUBDIR += pc
 
 INCDIR += include

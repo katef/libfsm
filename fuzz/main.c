@@ -4,14 +4,14 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "test_libfsm.h"
+#include "fuzz_libfsm.h"
 
 #include <unistd.h>
 #include <getopt.h>
 
 #include "type_info_fsm_literal.h"
 
-#define EXEC_NAME "test_libfsm"
+#define EXEC_NAME "fuzz_libfsm"
 
 enum test_type {
 	TEST0,

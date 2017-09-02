@@ -7,7 +7,7 @@
 #ifndef TYPE_INFO_FSM_LITERAL_H
 #define TYPE_INFO_FSM_LITERAL_H
 
-#include "test_libfsm.h"
+#include "fuzz_libfsm.h"
 
 /* This will allocate up to this many literal strings. */
 #define FSM_MAX_LITERALS 64
