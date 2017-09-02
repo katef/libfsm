@@ -40,6 +40,10 @@ Building depends on:
 
  * ar, ld, and a bunch of other stuff you probably already have.
 
+Fuzzing depends on the theft property-based testing library:
+
+ * https://github.com/silentbicycle/theft
+   Tests are currently based on the libtheft 0.4.2 API.
 
 Ideas, comments or bugs: kate@elide.org
 
