@@ -35,13 +35,13 @@ PROPNAME.test_libfsm += re_parser_LITERAL
 PROPNAME.test_libfsm += re_parser_PCRE
 
 PROPNAME.test_libfsm += re_PCRE_minimize
-PROPNAME.test_libfsm += re_aBx # TODO: name re_regress_aBx
 # PROPNAME.test_libfsm += re_regress1
 # PROPNAME.test_libfsm += re_regress2
 # PROPNAME.test_libfsm += re_regress3
 # PROPNAME.test_libfsm += re_regress4
 # PROPNAME.test_libfsm += re_regress5
 # PROPNAME.test_libfsm += re_regress6
+# PROPNAME.test_libfsm += re_regress_aBx
 PROPNAME.test_libfsm += re_regress
 
 # PROPNAME.test_libfsm += segfault_fsm_trim

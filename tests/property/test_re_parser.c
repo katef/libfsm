@@ -117,7 +117,7 @@ bool test_re_regress6(void)
 	return res;
 }
 
-bool test_re_aBx(void)
+bool test_re_regress_aBx(void)
 {
 	uint8_t re[] = "[aBx]*a";
 	uint8_t str[] = "aBxa";
@@ -187,7 +187,7 @@ void register_test_re(void)
 	reg_test("re_regress5", test_re_regress5);
 	reg_test("re_regress6", test_re_regress6);
 
-	reg_test("re_aBx", test_re_aBx);
+	reg_test("re_regress_aBx", test_re_regress_aBx);
 
 	reg_test1("re_parser_LITERAL", test_re_parser, RE_LITERAL);
 	reg_test1("re_parser_PCRE", test_re_parser, RE_PCRE);
