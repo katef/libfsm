@@ -5,6 +5,7 @@ all::  mkdir .WAIT dep .WAIT lib prog
 dep::
 gen::
 test:: all
+fuzz:: all
 install:: all
 uninstall::
 clean::
@@ -15,6 +16,10 @@ DOT    ?= dot
 RE     ?= re
 BUILD  ?= build
 PREFIX ?= /usr/local
+
+.if !empty(.TARGETS:Mfuzz)
+PKG += libtheft
+.endif
 
 # layout
 SUBDIR += include/fsm
@@ -39,6 +44,9 @@ SUBDIR += tests/literal
 SUBDIR += tests/minimise
 SUBDIR += tests/reverse
 SUBDIR += tests/set
+.if !empty(.TARGETS:Mfuzz)
+SUBDIR += tests/property
+.endif
 SUBDIR += tests
 SUBDIR += pc
 
@@ -50,6 +58,7 @@ test::
 .include <subdir.mk>
 .include <pc.mk>
 .include <sid.mk>
+.include <pkgconf.mk>
 .include <lx.mk>
 .include <obj.mk>
 .include <dep.mk>

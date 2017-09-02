@@ -1,60 +1,52 @@
-PROJECT=test_libfsm
-BUILD=build
+.include "../../share/mk/top.mk"
 
-all: ${BUILD}/${PROJECT}
+SRC += tests/property/main.c
+SRC += tests/property/test_adt_priq.c
+SRC += tests/property/test_adt_set.c
+SRC += tests/property/test_literals.c
+SRC += tests/property/test_nfa.c
+SRC += tests/property/test_nfa_slow.c
+SRC += tests/property/test_re_parser.c
+SRC += tests/property/test_re_parser_literal.c
+SRC += tests/property/test_re_parser_pcre.c
+SRC += tests/property/buf.c
+SRC += tests/property/util.c
+SRC += tests/property/type_info_fsm_literal.c
+SRC += tests/property/type_info_nfa.c
+SRC += tests/property/type_info_re.c
+SRC += tests/property/type_info_re_literal.c
+SRC += tests/property/type_info_re_pcre.c
+SRC += tests/property/type_info_adt_priq.c
+SRC += tests/property/type_info_adt_set.c
 
-LIBFSM_PATH=../..
-LIBFSM_INCLUDE=${LIBFSM_PATH}/include
-LIBFSM_LIB=${LIBFSM_PATH}/${BUILD}/lib
+.for src in ${SRC:Mtests/property/*.c}
+CFLAGS.${src} += -D_POSIX_C_SOURCE=200809L
+CFLAGS.${src} += -std=c99
+.endfor
 
-THEFT_INCLUDE=/usr/local/include
-THEFT_LIB=/usr/local/lib
+.for src in ${SRC:Mtests/property/*.c}
+DFLAGS.${src} += -D_POSIX_C_SOURCE=200809L
+DFLAGS.${src} += -std=c99
+.endfor
 
-STD=	-std=c99
-OPT=	-O3
-WARN=	-Wall -Wextra -pedantic
+.for src in ${SRC:Mtests/property/*.c}
+CFLAGS.${src} += ${CFLAGS.libtheft}
+DFLAGS.${src} += ${CFLAGS.libtheft}
+.endfor
 
-CDEFS=	-D_POSIX_C_SOURCE=200809L
-CFLAGS=	${STD} ${WARN} -g ${OPT} ${CDEFS} -I${THEFT_INCLUDE} -I${LIBFSM_INCLUDE}
-LDFLAGS= -L${THEFT_LIB} -L${LIBFSM_LIB} -ltheft -lm -lfsm -lre
+LFLAGS.test_libfsm += ${LIBS.libtheft}
 
-OBJS=	${BUILD}/main.o \
-	${BUILD}/test_adt_priq.o \
-	${BUILD}/test_adt_set.o \
-	${BUILD}/test_literals.o \
-	${BUILD}/test_nfa.o \
-	${BUILD}/test_nfa_slow.o \
-	${BUILD}/test_re_parser.o \
-	${BUILD}/test_re_parser_literal.o \
-	${BUILD}/test_re_parser_pcre.o \
-	${BUILD}/buf.o \
-	${BUILD}/util.o \
-	${BUILD}/type_info_fsm_literal.o \
-	${BUILD}/type_info_nfa.o \
-	${BUILD}/type_info_re.o \
-	${BUILD}/type_info_re_literal.o \
-	${BUILD}/type_info_re_pcre.o \
-	${BUILD}/type_info_adt_priq.o \
-	${BUILD}/type_info_adt_set.o \
+${BUILD}/tests/property/test_libfsm: ${BUILD}
+	${CC} -o $@ ${LFLAGS} ${.ALLSRC:M*.o} ${.ALLSRC:M*.a} ${LFLAGS.test_libfsm}
 
-run: ${BUILD}/${PROJECT}
-	${BUILD}/${PROJECT}
+fuzz:: ${BUILD}/tests/property/test_libfsm
+	${BUILD}/tests/property/test_libfsm
 
-test: run
+.for lib in ${LIB:Mlibfsm} ${LIB:Mlibre}
+${BUILD}/tests/property/test_libfsm: ${BUILD}/lib/${lib:R}.a
+.endfor
 
-${BUILD}/test_libfsm: ${OBJS}
-	${CC} -o $@ ${OBJS} ${LDFLAGS}
-
-${BUILD}/%.o: %.c | ${BUILD}
-	${CC} -c -o $@ ${CFLAGS} $<
-
-${BUILD}:
-	mkdir -p ${BUILD}
-
-${BUILD}/*.o: Makefile
-${BUILD}/*.o: *.h
-${BUILD}/*.o: ${LIBFSM_LIB}/libfsm.a ${LIBFSM_LIB}/libre.a
-
-clean:
-	rm -rf ${BUILD}
+.for src in ${SRC:Mtests/property/*.c}
+${BUILD}/tests/property/test_libfsm: ${BUILD}/${src:R}.o
+.endfor
 
