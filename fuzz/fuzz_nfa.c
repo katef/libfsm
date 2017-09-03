@@ -553,22 +553,6 @@ nfa_regress_minimise_false_positive(void)
 }
 
 static bool
-segfault_fsm_trim(void)
-{
-	struct fsm *nfa = fsm_new(&test_nfa_fsm_options);
-
-	struct fsm_state *s0 = fsm_addstate(nfa);
-
-	(void) s0; /* XXX */
-
-	fsm_trim(nfa);  // segfaults without `fsm_setstart(nfa, s0);`
-
-	fsm_free(nfa);
-
-	return true;
-}
-
-static bool
 nfa_slow_determinise(void)
 {
 	enum theft_run_res res;
@@ -748,8 +732,6 @@ register_test_nfa(void)
 		nfa_slow_determinise);
 	reg_test("nfa_regress_slow_determinise",
 		test_nfa_regress_slow_determinise);
-
-	reg_test("segfault_fsm_trim", segfault_fsm_trim);
 
 	reg_test("nfa_minimise_should_not_add_states", nfa_minimise_should_not_add_states);
 }

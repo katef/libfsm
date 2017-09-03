@@ -44,9 +44,6 @@ PROPNAME.fuzz_libfsm += re_PCRE_minimize
 # PROPNAME.fuzz_libfsm += re_regress_aBx
 PROPNAME.fuzz_libfsm += re_regress
 
-# PROPNAME.fuzz_libfsm += segfault_fsm_trim
-PROPNAME.fuzz_libfsm += segfault
-
 PROPNAME.fuzz_libfsm += union_literals
 
 .for src in ${SRC:Mfuzz/*.c}
