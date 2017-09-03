@@ -15,7 +15,7 @@
 
 enum test_type {
 	TEST0,
-	TEST1,
+	TEST1
 };
 
 struct test_link {
@@ -47,21 +47,24 @@ struct state {
 
 static struct state state;
 
-static void usage(const char *exec_name) {
+static void
+usage(const char *exec_name)
+{
 	fprintf(stderr,
-	    "Usage: %s [-hvlf] [-n <NAME_FILTER>]\n"
-	    "  -h:           help\n"
-	    "  -v:           increase verbosity\n"
-	    "  -l:           list tests by name\n"
-	    "  -f:           halt after first failure\n"
-	    "  -n <STRING>:  only run tests STRING in the name\n",
+		"Usage: %s [-hvlf] [-n <NAME_FILTER>]\n"
+		"  -h:		   help\n"
+		"  -v:		   increase verbosity\n"
+		"  -l:		   list tests by name\n"
+		"  -f:		   halt after first failure\n"
+		"  -n <STRING>:  only run tests STRING in the name\n",
 		exec_name);
 	exit(1);
 }
 
-void reg_test(const char *name, test_fun *test)
+void
+reg_test(const char *name, test_fun *test)
 {
-	struct test_link *link = calloc(1, sizeof(*link));
+	struct test_link *link = calloc(1, sizeof *link);
 	assert(link);
 	*link = (struct test_link) {
 		.next = state.tests,
@@ -73,10 +76,12 @@ void reg_test(const char *name, test_fun *test)
 	state.tests = link;
 }
 
-void reg_test1(const char *name, test_fun1 *test, uintptr_t arg)
+void
+reg_test1(const char *name, test_fun1 *test, uintptr_t arg)
 {
-	struct test_link *link = calloc(1, sizeof(*link));
+	struct test_link *link = calloc(1, sizeof *link);
 	assert(link);
+
 	*link = (struct test_link) {
 		.next = state.tests,
 		.name = name,
@@ -90,60 +95,56 @@ void reg_test1(const char *name, test_fun1 *test, uintptr_t arg)
 	state.tests = link;
 }
 
-int test_get_verbosity(void) { return state.verbosity; }
-
-#define CHECK(CALL)						       \
-	do {							       \
-		tests++;					       \
-		if (CALL) {					       \
-			pass++;					       \
-		} else {					       \
-			fail++;					       \
-		}					               \
-       	} while (0)
-
-static void parse_args(int argc, char **argv, struct state *s) {
-     int ch;
-
-     while ((ch = getopt(argc, argv, "hvfln:")) != -1) {
-             switch (ch) {
-             case '?':
-             default:
-	     case 'h':
-		     usage(argv[0]);
-		     break;
-             case 'v':
-                     s->verbosity++;
-                     break;
-	     case 'l':
-		     s->list = true;
-		     break;
-	     case 'f':
-		     s->first_fail = true;
-		     break;
-             case 'n':
-		     s->filter = optarg;
-                     break;
-             }
-     }
+int
+test_get_verbosity(void)
+{
+	return state.verbosity;
 }
 
-static void register_tests(void) {
+#define CHECK(CALL)						   \
+	do {								   \
+		tests++;						   \
+		if (CALL) {						   \
+			pass++;						   \
+		} else {						   \
+			fail++;						   \
+		}								   \
+   	} while (0)
+
+int
+main(int argc, char **argv)
+{
+	struct test_link *link;
+
+	{
+		 int c;
+
+		 while (c = getopt(argc, argv, "hvfln:"), c != -1) {
+			 switch (c) {
+			 case 'v': state.verbosity++;         break;
+			 case 'l': state.list       = true;   break;
+			 case 'f': state.first_fail = true;   break;
+			 case 'n': state.filter     = optarg; break;
+
+			 case 'h':
+			 case '?':
+			 default:
+				 usage(argv[0]);
+				 break;
+			 }
+		 }
+	}
+
 	register_test_literals();
 	register_test_re();
 	register_test_adt_priq();
 	register_test_adt_set();
 	register_test_nfa();
-}
 
-int main(int argc, char **argv)
-{
-	parse_args(argc, argv, &state);
+	for (link = state.tests; link; link = link->next) {
+		bool hit, pass;
 
-	register_tests();
-
-	for (struct test_link *link = state.tests; link; link = link->next) {
-		bool hit = false;
+		hit = false;
 		if (state.filter != NULL) {
 			size_t offset = 0;
 			size_t filter_len = strlen(state.filter);
@@ -158,48 +159,52 @@ int main(int argc, char **argv)
 			hit = true; /* no filter */
 		}
 
-		if (hit) {
-			if (state.verbosity > 0 || state.list) {
-				printf("== TEST %s\n", link->name);
-			}
+		if (!hit) {
+			continue;
+		}
 
-			if (state.list) { continue; }
+		if (state.verbosity > 0 || state.list) {
+			printf("== TEST %s\n", link->name);
+		}
 
-			bool pass = false;
-			switch (link->type) {
-			case TEST0:
-				pass = link->u.test0.fun();
-				break;
-			case TEST1:
-				pass = link->u.test1.fun(link->u.test1.arg);
-				break;
-			default:
-				assert(false);
-			}
+		if (state.list) {
+			continue;
+		}
 
-			state.test_count++;
-			if (pass) {
-				state.pass++;
-				if (state.verbosity > 0) {
-					printf("PASS %s\n", link->name);
-				} else {
-					printf(".");
-				}
+		pass = false;
+		switch (link->type) {
+		case TEST0: pass = link->u.test0.fun();                  break;
+		case TEST1: pass = link->u.test1.fun(link->u.test1.arg); break;
+
+		default:
+			assert(false);
+			break;
+		}
+
+		state.test_count++;
+		if (pass) {
+			state.pass++;
+			if (state.verbosity > 0) {
+				printf("PASS %s\n", link->name);
 			} else {
-				state.fail++;
-				if (state.verbosity > 0) {
-					printf("FAIL %s\n", link->name);
-				} else {
-					printf("F");
-				}
-				if (state.first_fail) {
-					break;
-				}
+				printf(".");
+			}
+		} else {
+			state.fail++;
+			if (state.verbosity > 0) {
+				printf("FAIL %s\n", link->name);
+			} else {
+				printf("F");
+			}
+			if (state.first_fail) {
+				break;
 			}
 		}
 	}
 
 	printf("\n\n-- pass %zd, fail %zd, tests %zd\n",
-	    state.pass, state.fail, state.test_count);
+		state.pass, state.fail, state.test_count);
+
 	return (state.fail == 0 ? 0 : 1);
 }
+

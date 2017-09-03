@@ -15,7 +15,7 @@ enum priq_op_type {
 	PRIQ_OP_UPDATE,
 	PRIQ_OP_TYPE_COUNT,
 
-	PRIQ_OP_MOVE, 		/* not yet implemented */
+	PRIQ_OP_MOVE /* not yet implemented */
 };
 
 struct priq_op {

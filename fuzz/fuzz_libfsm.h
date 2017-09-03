@@ -7,16 +7,18 @@
 #ifndef FUZZ_LIBFSM_H
 #define FUZZ_LIBFSM_H
 
+#include <sys/time.h>
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <assert.h>
 #include <string.h>
 #include <inttypes.h>
 #include <ctype.h>
-#include <sys/time.h>
+
+#include <unistd.h>
 
 #include <theft.h>
 
@@ -27,6 +29,7 @@
 #include <fsm/options.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
+
 #include <re/re.h>
 
 struct test_env {
@@ -34,7 +37,7 @@ struct test_env {
 	enum re_dialect dialect;
 	uint8_t verbosity;
 	struct theft_print_trial_result_env print_env;
-	size_t shrink_timeout;  // in seconds
+	size_t shrink_timeout; /* in seconds */
 	size_t started_second;
 	size_t last_trace_second;
 };

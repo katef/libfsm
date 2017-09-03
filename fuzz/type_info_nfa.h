@@ -14,7 +14,7 @@ extern const struct fsm_options test_nfa_fsm_options;
 enum nfa_edge_type {
 	NFA_EDGE_ANY,
 	NFA_EDGE_EPSILON,
-	NFA_EDGE_LITERAL,
+	NFA_EDGE_LITERAL
 };
 
 struct nfa_edge {

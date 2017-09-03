@@ -13,7 +13,7 @@
 /* Property idea: (a|b) should be the same as union[a, b]  */
 
 struct test_re_info {
-	char tag; // 'r'
+	char tag; /* 'r' */
 	enum re_dialect dialect;
 
 	size_t size;
@@ -40,33 +40,33 @@ struct test_re_info {
 };
 
 enum pcre_node_type {
-	PN_DOT,			/* . */
-	PN_LITERAL,		/* x */
-	PN_QUESTION,		/* (x)? */
-	PN_KLEENE,		/* (x)* */
-	PN_PLUS,		/* (x)+ */
-	PN_BRACKET,		/* [x] or [^x]*/
-	PN_ALT,			/* (x|y|z) */
-	PCRE_NODE_TYPE_COUNT,
+	PN_DOT,      /* . */
+	PN_LITERAL,  /* x */
+	PN_QUESTION, /* (x)? */
+	PN_KLEENE,   /* (x)* */
+	PN_PLUS,     /* (x)+ */
+	PN_BRACKET,  /* [x] or [^x]*/
+	PN_ALT,      /* (x|y|z) */
+	PCRE_NODE_TYPE_COUNT
 };
 
 enum pcre_bracket_class {
-	BRACKET_CLASS_ALNUM =  0x0001,	/* alphanumeric */
-	BRACKET_CLASS_ALPHA =  0x0002,	/* alphabetic */
-	BRACKET_CLASS_ASCII =  0x0004,	/* 0-127 */
-	BRACKET_CLASS_BLANK =  0x0008,	/* space or tab */
-	BRACKET_CLASS_CNTRL =  0x0010,	/* control character */
-	BRACKET_CLASS_DIGIT =  0x0020,	/* decimal digit */
-	BRACKET_CLASS_GRAPH =  0x0040,	/* printing, excluding space */
-	BRACKET_CLASS_LOWER =  0x0080,	/* lower case letter */
-	BRACKET_CLASS_PRINT =  0x0100,	/* printing, including space */
-	BRACKET_CLASS_PUNCT =  0x0200,	/* printing, excluding alphanumeric */
-	BRACKET_CLASS_SPACE =  0x0400,	/* white space */
-	BRACKET_CLASS_UPPER =  0x0800,	/* upper case letter */
-	BRACKET_CLASS_WORD =   0x1000,	/* same as \w */
-	BRACKET_CLASS_XDIGIT = 0x2000,	/* hexadecimal digit */
-	BRACKET_CLASS_MASK =   0x3FFF,
-	BRACKET_CLASS_COUNT = 14,
+	BRACKET_CLASS_ALNUM  = 0x0001, /* alphanumeric */
+	BRACKET_CLASS_ALPHA  = 0x0002, /* alphabetic */
+	BRACKET_CLASS_ASCII  = 0x0004, /* 0-127 */
+	BRACKET_CLASS_BLANK  = 0x0008, /* space or tab */
+	BRACKET_CLASS_CNTRL  = 0x0010, /* control character */
+	BRACKET_CLASS_DIGIT  = 0x0020, /* decimal digit */
+	BRACKET_CLASS_GRAPH  = 0x0040, /* printing, excluding space */
+	BRACKET_CLASS_LOWER  = 0x0080, /* lower case letter */
+	BRACKET_CLASS_PRINT  = 0x0100, /* printing, including space */
+	BRACKET_CLASS_PUNCT  = 0x0200, /* printing, excluding alphanumeric */
+	BRACKET_CLASS_SPACE  = 0x0400, /* white space */
+	BRACKET_CLASS_UPPER  = 0x0800, /* upper case letter */
+	BRACKET_CLASS_WORD   = 0x1000, /* same as \w */
+	BRACKET_CLASS_XDIGIT = 0x2000, /* hexadecimal digit */
+	BRACKET_CLASS_MASK   = 0x3FFF,
+	BRACKET_CLASS_COUNT  = 14
 };
 
 /* Tagged union for a DAG of pcre nodes */
@@ -91,9 +91,9 @@ struct pcre_node {
 		struct {
 			struct pcre_node *inner;
 		} plus;
-		struct {	/* bit-set of chars in group */
+		struct { /* bit-set of chars in group */
 			bool negated;
-			uint64_t set[256 / (8*sizeof(uint64_t))];
+			uint64_t set[256 / (8 * sizeof (uint64_t))];
 			enum pcre_bracket_class class_flags;
 		} bracket;
 		struct {
@@ -111,7 +111,7 @@ struct flatten_env {
 
 extern const struct theft_type_info type_info_re;
 
-bool type_info_re_literal_build_info(struct theft *t, 
+bool type_info_re_literal_build_info(struct theft *t,
     struct test_re_info *info);
 
 bool type_info_re_pcre_build_info(struct theft *t,

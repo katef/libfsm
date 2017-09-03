@@ -10,11 +10,11 @@
 #include "fuzz_libfsm.h"
 
 enum set_op_type {
-	// set_create and set_free are called once, by the test fixture.
+	/* set_create and set_free are called once, by the test fixture. */
 	SET_OP_ADD,
 	SET_OP_REMOVE,
 	SET_OP_CLEAR,
-	SET_OP_TYPE_COUNT,
+	SET_OP_TYPE_COUNT
 };
 
 struct set_op {

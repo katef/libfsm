@@ -52,6 +52,9 @@ PROPNAME.fuzz_libfsm += union_literals
 .for src in ${SRC:Mfuzz/*.c}
 CFLAGS.${src} += -D_POSIX_C_SOURCE=200809L
 CFLAGS.${src} += -std=c99
+.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+CFLAGS.${src} += -Wdeclaration-after-statement
+.endif
 .endfor
 
 .for src in ${SRC:Mfuzz/*.c}

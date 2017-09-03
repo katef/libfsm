@@ -11,7 +11,9 @@
 bool test_nfa_regress_slow_determinise(void)
 {
 	struct fsm *nfa = fsm_new(&test_nfa_fsm_options);
-	struct fsm_state *states[153] = { [0] = NULL };
+	struct fsm_state *states[153] = { NULL };
+	struct timeval pre, post;
+	size_t elapsed_msec;
 
 	// first pass: states
 	states[0] = fsm_addstate(nfa); assert(states[0]);
@@ -1165,16 +1167,25 @@ bool test_nfa_regress_slow_determinise(void)
 	if (!fsm_addedge_epsilon(nfa, states[152], states[17])) { assert(false); }
 	if (!fsm_addedge_literal(nfa, states[152], states[37], (char)0x22)) { assert(false); }
 
-	struct timeval pre, post;
-	if (-1 == gettimeofday(&pre, NULL)) { assert(false); return false; }
+	if (-1 == gettimeofday(&pre, NULL)) {
+		assert(false);
+		return false;
+	}
+
 	if (!fsm_determinise(nfa)) {
 		fprintf(stdout, "FAIL: determinise\n");
 		return THEFT_TRIAL_ERROR;
 	}
-	if (-1 == gettimeofday(&post, NULL)) { assert(false); return false; }
-	size_t elapsed_msec = 1000*(post.tv_sec - pre.tv_sec) +
-	    (post.tv_usec/1000 - pre.tv_usec/1000);
+
+	if (-1 == gettimeofday(&post, NULL)) {
+		assert(false);
+		return false;
+	}
+
+	elapsed_msec = 1000 * (post.tv_sec - pre.tv_sec)
+		+ (post.tv_usec / 1000 - pre.tv_usec / 1000);
 	printf("fsm_determinise: %zd msec\n", elapsed_msec);
 	fsm_free(nfa);
+
 	return elapsed_msec < 2000;
 }

@@ -8,29 +8,42 @@
 
 #include "type_info_re.h"
 
-bool test_re_parser_literal(uint8_t verbosity,
-    const uint8_t *re, size_t re_size,
-    size_t count, const struct string_pair *pairs)
+bool
+test_re_parser_literal(uint8_t verbosity,
+	const uint8_t *re, size_t re_size,
+	size_t count, const struct string_pair *pairs)
 {
-	enum re_flags flags = RE_MULTI;
-	struct re_err err = { .e = 0 };
-	const struct fsm_options fsm_config = {
-		.anonymous_states = 1,
-		.consolidate_edges = 1,
+	struct re_err err;
+	struct fsm *fsm;
+	size_t i;
+
+	const struct fsm_options opt = {
+		.anonymous_states  = 1,
+		.consolidate_edges = 1
 	};
 
-	struct scanner s = { .tag = 'S', .str = re, .size = re_size, };
-	struct fsm *fsm = re_comp(RE_LITERAL, scanner_next, &s,
-	    &fsm_config, flags, &err);
+	{
+		struct scanner s = {
+			.tag   = 'S',
+			.magic = &s.magic,
+			.str   = re,
+			.size  = re_size
+		};
+
+		fsm = re_comp(RE_LITERAL, scanner_next, &s, &opt, RE_MULTI, &err);
+
+		assert(s.str == re);
+		assert(s.magic == &s.magic);
+	}
 
 	/* Invalid RE: did we flag an error? */
 	if (fsm == NULL) {
 		if (err.e == RE_ESUCCESS) {
 			LOG_FAIL(verbosity, "Expected error, got RE_ESUCCESS\n");
 			return false;
-		} else {
-			return true;
 		}
+
+		return true;
 	}
 
 	if (!fsm_determinise(fsm)) {
@@ -39,13 +52,21 @@ bool test_re_parser_literal(uint8_t verbosity,
 	}
 
 	/* Valid RE: check if expected strings are matched */
-	for (size_t i = 0; i < count; i++) {
-		s = (struct scanner) {
-			.tag = 'S',
-			.str = pairs[i].string,
-			.size = pairs[i].size,
+	for (i = 0; i < count; i++) {
+		struct fsm_state *st;
+
+		struct scanner s = {
+			.tag   = 'S',
+			.magic = &s.magic,
+			.str   = pairs[i].string,
+			.size  = pairs[i].size
 		};
-		struct fsm_state *st = fsm_exec(fsm, scanner_next, &s);
+
+		st = fsm_exec(fsm, scanner_next, &s);
+
+		assert(s.str == pairs[i].string);
+		assert(s.magic == &s.magic);
+
 		if (verbosity > 0) {
 			fsm_print(fsm, stderr, FSM_OUT_DOT);
 		}
@@ -59,10 +80,13 @@ bool test_re_parser_literal(uint8_t verbosity,
 	}
 
 	fsm_free(fsm);
+
 	return true;
 
 fail:
+
 	fsm_free(fsm);
+
 	return false;
 }
 
