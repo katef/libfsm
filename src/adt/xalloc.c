@@ -4,8 +4,10 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include <stdlib.h>
+#include <assert.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #include <adt/xalloc.h>
 
@@ -20,5 +22,50 @@ xstrdup(const char *s)
 	}
 
 	return strcpy(new, s);
+}
+
+void *
+xmalloc(size_t sz)
+{
+	void *p;
+
+	p = malloc(sz);
+	if (p == NULL) {
+		perror("malloc");
+		abort();
+	}
+
+	return p;
+}
+
+void *
+xcalloc(size_t count, size_t sz)
+{
+	void *p;
+
+	p = calloc(count, sz);
+	if (p == NULL) {
+		perror("calloc");
+		abort();
+	}
+
+	return p;
+}
+
+void *
+xrealloc(void *p, size_t sz)
+{
+	void *q;
+
+	/* This is legal and frees p, but confusing; use free() instead */
+	assert(sz != 0);
+
+	q = realloc(p, sz);
+	if (q == NULL) {
+		perror("realloc");
+		abort();
+	}
+
+	return q;
 }
 
