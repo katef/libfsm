@@ -9,7 +9,7 @@
 #include "type_info_re.h"
 
 /* in test_re_parser_pcre.c */
-bool test_re_PCRE_minimize(void);
+bool test_re_pcre_minimize(void);
 
 static enum theft_trial_res
 prop_re(struct theft *t, void *arg1)
@@ -208,8 +208,8 @@ register_test_re(void)
 
 	reg_test("re_regress_aBx", test_re_regress_aBx);
 
-	reg_test1("re_parser_LITERAL", test_re_parser, RE_LITERAL);
-	reg_test1("re_parser_PCRE", test_re_parser, RE_PCRE);
-	reg_test("re_PCRE_minimize", test_re_PCRE_minimize);
+	reg_test1("re_parser_literal", test_re_parser, RE_LITERAL);
+	reg_test1("re_parser_pcre", test_re_parser, RE_PCRE);
+	reg_test("re_pcre_minimize", test_re_pcre_minimize);
 }
 

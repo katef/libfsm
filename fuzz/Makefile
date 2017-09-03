@@ -31,10 +31,10 @@ PROPNAME.fuzz_libfsm += nfa_regress_minimise_false_positive
 PROPNAME.fuzz_libfsm += nfa_regress_slow_determinise
 # PROPNAME.fuzz_libfsm += nfa_slow_determinise # TODO: too slow for now
 
-PROPNAME.fuzz_libfsm += re_parser_LITERAL
-PROPNAME.fuzz_libfsm += re_parser_PCRE
+PROPNAME.fuzz_libfsm += re_parser_literal
+PROPNAME.fuzz_libfsm += re_parser_pcre
 
-PROPNAME.fuzz_libfsm += re_PCRE_minimize
+PROPNAME.fuzz_libfsm += re_pcre_minimize
 # PROPNAME.fuzz_libfsm += re_regress1
 # PROPNAME.fuzz_libfsm += re_regress2
 # PROPNAME.fuzz_libfsm += re_regress3

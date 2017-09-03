@@ -146,7 +146,7 @@ fail:
 }
 
 bool
-test_re_PCRE_minimize(void)
+test_re_pcre_minimize(void)
 {
 	struct theft_type_info arg_info;
 	enum theft_run_res res;
