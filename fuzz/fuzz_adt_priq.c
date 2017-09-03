@@ -6,7 +6,8 @@
 
 #include "type_info_adt_priq.h"
 
-#include "adt/priq.h"
+#include <adt/priq.h>
+#include <adt/xalloc.h>
 
 struct record {
 	size_t gen;
@@ -353,17 +354,9 @@ prop_priq_operations(struct theft *t, void *arg1)
 	(void) s;
 	(void) env;
 
-	/* init model */
-	m = calloc(1, sizeof *m);
-	if (m == NULL) {
-		return THEFT_TRIAL_ERROR;
-	}
+	m = xcalloc(1, sizeof *m);
 
-	m->records = calloc(s->count, sizeof *m->records);
-	if (m->records == NULL) {
-		return THEFT_TRIAL_ERROR;
-	}
-
+	m->records = xcalloc(s->count, sizeof *m->records);
 	m->env = env;
 	m->count = s->count;
 

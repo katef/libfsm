@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#include <adt/xalloc.h>
+
 #include "type_info_fsm_literal.h"
 
 #define EXEC_NAME "fuzz_libfsm"
@@ -64,8 +66,10 @@ usage(const char *exec_name)
 void
 reg_test(const char *name, test_fun *test)
 {
-	struct test_link *link = calloc(1, sizeof *link);
-	assert(link);
+	struct test_link *link;
+
+	link = xmalloc(sizeof *link);
+
 	*link = (struct test_link) {
 		.next = state.tests,
 		.name = name,
@@ -79,8 +83,9 @@ reg_test(const char *name, test_fun *test)
 void
 reg_test1(const char *name, test_fun1 *test, uintptr_t arg)
 {
-	struct test_link *link = calloc(1, sizeof *link);
-	assert(link);
+	struct test_link *link;
+
+	link = xmalloc(sizeof *link);
 
 	*link = (struct test_link) {
 		.next = state.tests,

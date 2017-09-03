@@ -8,6 +8,8 @@
 
 #include <ctype.h>
 
+#include <adt/xalloc.h>
+
 static enum theft_alloc_res
 fsm_literal_alloc(struct theft *t, void *penv, void **output)
 {
@@ -29,11 +31,8 @@ fsm_literal_alloc(struct theft *t, void *penv, void **output)
 	count = theft_random_bits(t, literal_bits);
 	assert(count <= FSM_MAX_LITERALS);
 	alloc_size = sizeof *res + count * sizeof (struct string_pair);
-	res = malloc(alloc_size);
-	if (res == NULL) {
-		fprintf(stderr, "ERROR %d\n", __LINE__);
-		return THEFT_ALLOC_ERROR;
-	}
+	res = xmalloc(alloc_size);
+
 	memset(res, 0x00, alloc_size);
 
 	{
@@ -79,19 +78,11 @@ fsm_literal_alloc(struct theft *t, void *penv, void **output)
 				break;
 			}
 
-			lit = malloc(lit_size + 1);
-			if (lit == NULL) {
-				for (size_t i = 0; i < lit_i; i++) {
-					free(res->pairs[i].string);
-					res->pairs[i].string = NULL;
-				}
-				free(res);
-				fprintf(stderr, "ERROR %d\n", __LINE__);
-				return THEFT_ALLOC_ERROR;
-			}
+			lit = xmalloc(lit_size + 1);
 
 			memcpy(lit, buf, lit_size);
 			lit[lit_size] = '\0';
+
 			res->pairs[lit_i].string = lit;
 			res->pairs[lit_i].size = lit_size;
 			//hexdump(stdout, lit, lit_size);

@@ -8,6 +8,8 @@
 
 #include <string.h>
 
+#include <adt/xalloc.h>
+
 bool
 type_info_re_literal_build_info(struct theft *t,
 	struct test_re_info *info)
@@ -22,10 +24,7 @@ type_info_re_literal_build_info(struct theft *t,
 	}
 
 	/* a 64-bit-aligned buffer */
-	buf64 = malloc(size + 1 + sizeof *buf64);
-	if (buf64 == NULL) {
-		return false;
-	}
+	buf64 = xmalloc(size + 1 + sizeof *buf64);
 
 	buf = (uint8_t *) buf64;
 	if (buf == NULL) {
@@ -39,13 +38,7 @@ type_info_re_literal_build_info(struct theft *t,
 	info->size      = size;
 	info->string    = buf;
 	info->pos_count = 1;
-	info->pos_pairs = calloc(1, sizeof (struct string_pair));
-
-	if (info->pos_pairs == NULL) {
-		free(buf);
-		return false;
-	}
-
+	info->pos_pairs = xcalloc(1, sizeof (struct string_pair));
 	info->pos_pairs[0].size   = size;
 	info->pos_pairs[0].string = buf;
 

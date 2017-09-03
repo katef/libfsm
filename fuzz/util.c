@@ -6,6 +6,8 @@
 
 #include "fuzz_libfsm.h"
 
+#include <adt/xalloc.h>
+
 int
 scanner_next(void *opaque)
 {
@@ -141,10 +143,7 @@ gen_permutation_vector(size_t length, uint32_t seed)
 	size_t offset;
 	uint32_t mask;
 
-	res = calloc(length, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
+	res = xcalloc(length, sizeof *res);
 
 	/*
 	 * This is a linear congruential random number generator,

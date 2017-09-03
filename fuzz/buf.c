@@ -9,6 +9,8 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include <adt/xalloc.h>
+
 #define LOG(...)
 
 #define DEF_CEIL2 4
@@ -21,16 +23,10 @@ buf_new(void)
 {
 	struct buf *new;
 
-	new = calloc(1, sizeof *new);
-	if (new == NULL) {
-		return NULL;
-	}
+	new = xcalloc(1, sizeof *new);
 
-	new->buf = malloc(1LLU << DEF_CEIL2);
-	if (new->buf == NULL) {
-		free(new);
-		return NULL;
-	}
+	new->buf = xmalloc(1LLU << DEF_CEIL2);
+
 	new->ceil2 = DEF_CEIL2;
 
 	LOG("NEW %p(%p)\n", (void *) new, (void *) new->buf);
@@ -70,10 +66,7 @@ buf_grow(struct buf *buf, size_t size)
 		}
 	}
 
-	nbuf = realloc(buf->buf, nsize);
-	if (nbuf == NULL) {
-		return false;
-	}
+	nbuf = xrealloc(buf->buf, nsize);
 
 	buf->ceil2 = nceil2;
 	buf->buf   = nbuf;

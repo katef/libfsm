@@ -9,6 +9,8 @@
 #include <string.h>
 #include <limits.h>
 
+#include <adt/xalloc.h>
+
 static const char literals[] =
 	"abcdefghijklmnopqrstuvwxyz"
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -49,10 +51,7 @@ type_info_re_pcre_build_info(struct theft *t,
 	info->string = flatten_re_tree(env, info->u.pcre.head, &info->size);
 
 	info->pos_count = 1 + theft_random_bits(t, 3);  // 1 -- 9 strings
-	info->pos_pairs = calloc(info->pos_count, sizeof (struct string_pair));
-	if (info->pos_pairs == NULL) {
-		return false;
-	}
+	info->pos_pairs = xcalloc(info->pos_count, sizeof (struct string_pair));
 
 	for (size_t i = 0; i < info->pos_count; i++) {
 		uint8_t *positive;
@@ -69,10 +68,7 @@ type_info_re_pcre_build_info(struct theft *t,
 	}
 
 	info->neg_count = 1 + theft_random_bits(t, 3);  // 1 -- 9 strings
-	info->neg_pairs = calloc(info->neg_count, sizeof (struct string_pair));
-	if (info->neg_pairs == NULL) {
-		return false;
-	}
+	info->neg_pairs = xcalloc(info->neg_count, sizeof (struct string_pair));
 
 	for (size_t i = 0; i < info->neg_count; i++) {
 		uint8_t *negative;
@@ -105,7 +101,7 @@ gen_pcre_node(struct theft *t)
 
 	buf = (uint8_t *) buf64;
 
-	n = calloc(1, sizeof *n);
+	n = xcalloc(1, sizeof *n);
 
 	n->t = theft_random_choice(t, PCRE_NODE_TYPE_COUNT);
 
@@ -124,8 +120,7 @@ gen_pcre_node(struct theft *t)
 			buf[i] = literals[index];
 		}
 
-		n->u.literal.string = malloc(n->u.literal.size + 1);
-		assert(n->u.literal.string);
+		n->u.literal.string = xmalloc(n->u.literal.size + 1);
 
 		memcpy(n->u.literal.string, buf, n->u.literal.size);
 		n->u.literal.string[n->u.literal.size] = '\0';
@@ -155,8 +150,7 @@ gen_pcre_node(struct theft *t)
 
 	case PN_ALT:
 		n->u.alt.count = 1 + theft_random_bits(t, 2);
-		n->u.alt.alts = calloc(n->u.alt.count, sizeof (struct pcre_node *));
-		assert(n->u.alt.alts);
+		n->u.alt.alts = xcalloc(n->u.alt.count, sizeof (struct pcre_node *));
 		for (size_t i = 0; i < n->u.alt.count; i++) {
 			n->u.alt.alts[i] = gen_pcre_node(t);
 			assert(n->u.alt.alts[i]);
@@ -459,8 +453,7 @@ flatten_re_tree(struct test_env *test_env, const struct pcre_node *re_tree,
 
 	*psize = env.b->size;
 
-	res = malloc(env.b->size + 1);
-	assert(res);
+	res = xmalloc(env.b->size + 1);
 
 	memcpy(res, env.b->buf, env.b->size);
 	res[env.b->size] = '\0';
@@ -874,8 +867,7 @@ gen_expected_match(struct theft *t,
 		return NULL;
 	}
 
-	res = malloc(buf->size + 1);
-	assert(res);
+	res = xmalloc(buf->size + 1);
 
 	memcpy(res, buf->buf, buf->size);
 	*size = buf->size;

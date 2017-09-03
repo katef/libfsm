@@ -6,6 +6,8 @@
 
 #include "type_info_adt_priq.h"
 
+#include <adt/xalloc.h>
+
 static enum theft_alloc_res
 alloc(struct theft *t, void *type_env, void **output)
 {
@@ -35,10 +37,7 @@ alloc(struct theft *t, void *type_env, void **output)
 
 	alloc_size = sizeof *res + count * sizeof *res->ops;
 
-	res = calloc(1, alloc_size);
-	if (res == NULL) {
-		return THEFT_ALLOC_ERROR;
-	}
+	res = xcalloc(1, alloc_size);
 
 	for (size_t i = 0; i < count; i++) {
 		struct priq_op *op;

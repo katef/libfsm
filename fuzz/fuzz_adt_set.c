@@ -6,7 +6,8 @@
 
 #include "type_info_adt_set.h"
 
-#include "adt/set.h"
+#include <adt/set.h>
+#include <adt/xalloc.h>
 
 struct model {
 	struct set_hook_env *env;
@@ -308,13 +309,9 @@ prop_set_operations(struct theft *t, void *arg1)
 	assert(item_ceil > 64);
 	alloc_size = sizeof *m + (item_ceil / 8) + sizeof (uint64_t);
 
-	m = calloc(1, alloc_size);
-	if (m == NULL) {
-		return THEFT_TRIAL_ERROR;
-	}
+	m = xcalloc(1, alloc_size);
 
 	m->env = env;
-
 	m->bit_count = item_ceil;
 	assert((m->bit_count % 64) == 0);
 

@@ -8,6 +8,8 @@
 
 #include <ctype.h>
 
+#include <adt/xalloc.h>
+
 /*
  * Expose the NFA-of-PRNG-stream callback, because it's used
  * as part of other tests too.
@@ -33,15 +35,9 @@ type_info_nfa_alloc(struct theft *t, void *type_env, void **output)
 
 	(void) type_env;
 
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return THEFT_ALLOC_ERROR;
-	}
+	res = xcalloc(1, sizeof *res);
 
-	states = calloc(state_count, sizeof *states);
-	if (states == NULL) {
-		return THEFT_ALLOC_ERROR;
-	}
+	states = xcalloc(state_count, sizeof *states);
 
 	op_count = theft_random_bits(t, NFA_OPS_BITS);
 	for (size_t i = 0; i < op_count; i++) {
@@ -81,10 +77,8 @@ type_info_nfa_alloc(struct theft *t, void *type_env, void **output)
 		edge_count = theft_random_bits(t, edge_bits);
 		alloc_size = sizeof (struct nfa_state)
 			+ edge_count * sizeof (struct nfa_edge);
-		state = malloc(alloc_size);
-		if (state == NULL) {
-			return THEFT_ALLOC_ERROR;
-		}
+		state = xmalloc(alloc_size);
+
 		memset(state, 0x00, alloc_size);
 
 		state->id = i;

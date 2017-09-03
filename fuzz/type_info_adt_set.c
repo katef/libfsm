@@ -6,6 +6,8 @@
 
 #include "type_info_adt_set.h"
 
+#include <adt/xalloc.h>
+
 static enum theft_alloc_res
 alloc_scen(struct theft *t, void *type_env, void **output)
 {
@@ -30,10 +32,7 @@ alloc_scen(struct theft *t, void *type_env, void **output)
 	count = theft_random_bits(t, env->count_bits) + 1;
 
 	alloc_size = sizeof *res + count * sizeof *res->ops;
-	res = malloc(alloc_size);
-	if (res == NULL) {
-		return THEFT_ALLOC_ERROR;
-	}
+	res = xmalloc(alloc_size);
 
 	memset(res, 0x00, alloc_size);
 
@@ -130,10 +129,7 @@ alloc_seq(struct theft *t, void *type_env, void **output)
 	count = theft_random_bits(t, env->count_bits) + 1;
 
 	alloc_size = sizeof (struct set_sequence) + count * sizeof (uint16_t);
-	res = calloc(1, alloc_size);
-	if (res == NULL) {
-		return THEFT_ALLOC_ERROR;
-	}
+	res = xcalloc(1, alloc_size);
 
 	res->count = count;
 	res->shuffle_seed = theft_random_bits(t, 8);
@@ -203,10 +199,7 @@ theft_info_adt_sequence_permuted(struct set_sequence *seq)
 		return NULL;
 	}
 
-	res = calloc(seq->count, sizeof *res);
-	if (res == NULL) {
-		return res;
-	}
+	res = xcalloc(seq->count, sizeof *res);
 
 	for (size_t i = 0; i < seq->count; i++) {
 		assert(pv[i] < seq->count);

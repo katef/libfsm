@@ -9,6 +9,8 @@
 #include <string.h>
 #include <limits.h>
 
+#include <adt/xalloc.h>
+
 static enum theft_alloc_res
 re_alloc(struct theft *t, void *penv, void **output)
 {
@@ -20,10 +22,7 @@ re_alloc(struct theft *t, void *penv, void **output)
 
 	assert(env->tag == 'E');
 
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return THEFT_ALLOC_ERROR;
-	}
+	res = xcalloc(1, sizeof *res);
 
 	res->tag = 'r';
 
