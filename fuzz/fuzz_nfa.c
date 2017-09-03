@@ -352,22 +352,16 @@ nfa_of_spec(struct nfa_spec *spec, bool shuffle)
 		return NULL;
 	}
 
-	memset(states, 0x00, sizeof states);
-
 	/* First pass, create states */
 	for (size_t i = 0; i < spec->state_count; i++) {
-		struct fsm_state *curr;
-
-		curr = fsm_addstate(nfa);
-		if (curr == NULL) {
+		states[i] = fsm_addstate(nfa);
+		if (states[i] == NULL) {
 			return NULL;
 		}
 
 		if (spec->states[i]->is_end) {
-			fsm_setend(nfa, curr, 1);
+			fsm_setend(nfa, states[i], 1);
 		}
-
-		states[i] = curr;
 	}
 
 	fsm_setstart(nfa, states[0]);

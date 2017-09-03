@@ -340,25 +340,27 @@ op_move(struct model *m, struct priq_op *op, struct priq **p)
 static enum theft_trial_res
 prop_priq_operations(struct theft *t, void *arg1)
 {
-	struct priq_scenario *s;
+	struct priq_scenario *s = arg1;
 	struct priq_hook_env *env;
 	size_t op_i;
 	struct priq *p;
 	struct model *m;
 
-	s = arg1;
 	env = theft_hook_get_env(t);
 
 	assert(env->tag == 'p');
 
-	(void) s;
-	(void) env;
+	m = xmalloc(sizeof *m);
 
-	m = xcalloc(1, sizeof *m);
-
+	m->env     = env;
+	m->count   = s->count;
+	m->used    = 0;
 	m->records = xcalloc(s->count, sizeof *m->records);
-	m->env = env;
-	m->count = s->count;
+	m->gen     = 0;
+
+	if (m->records == NULL) {
+		return THEFT_TRIAL_ERROR;
+	}
 
 	p = NULL;
 

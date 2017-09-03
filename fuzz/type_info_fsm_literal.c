@@ -15,9 +15,14 @@ fsm_literal_alloc(struct theft *t, void *penv, void **output)
 {
 	struct test_env *env;
 	struct fsm_literal_scen *res;
-	size_t alloc_size;
 	const uint8_t literal_bits = 6;
 	size_t count;
+
+#define LITERAL_MAX 256
+	uint64_t buf64[LITERAL_MAX + 1];
+#undef LITERAL_MAX
+	char *buf = (char *) buf64;
+	size_t lit_i;
 
 	if (penv == NULL) {
 		penv = theft_hook_get_env(t);
@@ -30,68 +35,59 @@ fsm_literal_alloc(struct theft *t, void *penv, void **output)
 
 	count = theft_random_bits(t, literal_bits);
 	assert(count <= FSM_MAX_LITERALS);
-	alloc_size = sizeof *res + count * sizeof (struct string_pair);
-	res = xmalloc(alloc_size);
 
-	memset(res, 0x00, alloc_size);
+	res = xmalloc(sizeof *res + count * sizeof *res->pairs);
 
-	{
-#define LITERAL_MAX 256
-		uint64_t buf64[LITERAL_MAX + 1];
-#undef LITERAL_MAX
-		char *buf = (char *) buf64;
-		size_t lit_i;
+	for (lit_i = 0; lit_i < count; lit_i++) {
+		size_t lit_size;
+		bool duplicates;
+		uint8_t *lit;
 
-		for (lit_i = 0; lit_i < count; lit_i++) {
-			size_t lit_size;
-			bool duplicates;
-			uint8_t *lit;
+		lit_size = theft_random_bits(t, 8);
+		if (lit_size == 0) {
+			lit_size = 1;
+		}
 
-			lit_size = theft_random_bits(t, 8);
-			if (lit_size == 0) {
-				lit_size = 1;
+		memset(buf64, 0x00, sizeof buf64);
+
+		theft_random_bits_bulk(t, 8*lit_size, buf64);
+
+		/* Make sure string is 0-terminated. The string can
+		 * contain inline zeroes, though. */
+		buf[lit_size] = '\0';
+
+		/*
+		 * If we find a duplicate, then just finish up the set.
+		 * This will cause dead ends in the state space, leading
+		 * to exploring elsewhere.
+		 */
+		duplicates = false;
+		for (size_t i = 0; i < lit_i; i++) {
+			if (res->pairs[i].size != lit_size) {
+				continue;
 			}
-			memset(buf64, 0x00, sizeof buf64);
-
-			theft_random_bits_bulk(t, 8*lit_size, buf64);
-
-			/* Make sure string is 0-terminated. The string can
-			 * contain inline zeroes, though. */
-			buf[lit_size] = '\0';
-
-			/*
-			 * If we find a duplicate, then just finish up the set.
-			 * This will cause dead ends in the state space, leading
-			 * to exploring elsewhere.
-			 */
-			duplicates = false;
-			for (size_t i = 0; i < lit_i; i++) {
-				if (res->pairs[i].size != lit_size) {
-					continue;
-				}
-				if (0 == memcmp(res->pairs[i].string, buf, lit_size)) {
-					duplicates = true;
-					break;
-				}
-			}
-			if (duplicates) {
+			if (0 == memcmp(res->pairs[i].string, buf, lit_size)) {
+				duplicates = true;
 				break;
 			}
-
-			lit = xmalloc(lit_size + 1);
-
-			memcpy(lit, buf, lit_size);
-			lit[lit_size] = '\0';
-
-			res->pairs[lit_i].string = lit;
-			res->pairs[lit_i].size = lit_size;
-			//hexdump(stdout, lit, lit_size);
 		}
-		res->count = lit_i;
+		if (duplicates) {
+			break;
+		}
 
-		res->tag = 'L';
-		res->verbosity = env->verbosity;
+		lit = xmalloc(lit_size + 1);
+
+		memcpy(lit, buf, lit_size);
+		lit[lit_size] = '\0';
+
+		res->pairs[lit_i].string = lit;
+		res->pairs[lit_i].size   = lit_size;
+		//hexdump(stdout, lit, lit_size);
 	}
+
+	res->tag       = 'L';
+	res->verbosity = env->verbosity;
+	res->count     = lit_i;
 
 	*output = res;
 

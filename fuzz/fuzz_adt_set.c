@@ -222,7 +222,6 @@ op_clear(struct model *m, struct set *set)
 
 	set_clear(set);
 
-	/* update model */
 	memset(m->bits, 0x00, m->bit_count / 8);
 
 	return true;
@@ -294,26 +293,27 @@ postcondition(struct model *m, struct set *set)
 static enum theft_trial_res
 prop_set_operations(struct theft *t, void *arg1)
 {
-	size_t item_ceil;
-	size_t alloc_size;
-	struct model *m;
 	struct set_scenario *s = arg1;
+	struct set_hook_env *env;
+	size_t item_ceil;
+	struct model *m;
 	struct set *set;
 	size_t i;
 
-	struct set_hook_env *env = theft_hook_get_env(t);
+	env = theft_hook_get_env(t);
 	assert(env->tag == 's');
 
-	/* init model */
 	item_ceil = 1LLU << env->item_bits;
 	assert(item_ceil > 64);
-	alloc_size = sizeof *m + (item_ceil / 8) + sizeof (uint64_t);
 
-	m = xcalloc(1, alloc_size);
+	m = xmalloc(sizeof *m + (item_ceil / 8) + sizeof *m->bits);
 
-	m->env = env;
+	m->env       = env;
 	m->bit_count = item_ceil;
+
 	assert((m->bit_count % 64) == 0);
+
+	memset(m->bits, 0x00, (item_ceil / 8) + sizeof *m->bits);
 
 	set = set_create(cmp_item);
 	if (set == NULL) {

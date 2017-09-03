@@ -14,7 +14,6 @@ alloc(struct theft *t, void *type_env, void **output)
 	struct priq_hook_env *env;
 	struct priq_scenario *res;
 	size_t count;
-	size_t alloc_size;
 
 	(void) type_env;
 
@@ -35,9 +34,9 @@ alloc(struct theft *t, void *type_env, void **output)
 
 	count = theft_random_bits(t, env->count_bits) + 1;
 
-	alloc_size = sizeof *res + count * sizeof *res->ops;
+	res = xmalloc(sizeof *res + count * sizeof *res->ops);
 
-	res = xcalloc(1, alloc_size);
+	res->count = count;
 
 	for (size_t i = 0; i < count; i++) {
 		struct priq_op *op;
@@ -67,8 +66,6 @@ alloc(struct theft *t, void *type_env, void **output)
 			break;
 		}
 	}
-
-	res->count = count;
 
 	*output = res;
 

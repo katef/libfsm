@@ -35,9 +35,10 @@ type_info_nfa_alloc(struct theft *t, void *type_env, void **output)
 
 	(void) type_env;
 
-	res = xcalloc(1, sizeof *res);
+	res = xmalloc(sizeof *res);
 
-	states = xcalloc(state_count, sizeof *states);
+	res->tag    = 'N';
+	res->states = xmalloc(state_count * sizeof *states);
 
 	op_count = theft_random_bits(t, NFA_OPS_BITS);
 	for (size_t i = 0; i < op_count; i++) {
@@ -61,9 +62,8 @@ type_info_nfa_alloc(struct theft *t, void *type_env, void **output)
 #endif
 
 	for (size_t i = 0; i < state_count; i++) {
-		size_t edge_count;
-		size_t alloc_size;
 		struct nfa_state *state;
+		size_t edge_count;
 
 		/*
 		 * Introduce a second way to reduce the state count;
@@ -75,17 +75,14 @@ type_info_nfa_alloc(struct theft *t, void *type_env, void **output)
 		}
 
 		edge_count = theft_random_bits(t, edge_bits);
-		alloc_size = sizeof (struct nfa_state)
-			+ edge_count * sizeof (struct nfa_edge);
-		state = xmalloc(alloc_size);
 
-		memset(state, 0x00, alloc_size);
+		state = xmalloc(sizeof *state + edge_count * sizeof *state->edges);
 
 		state->id = i;
 
 		/*
 		 * 1 in (1<<N) odds of being an end state; using the highest
-		 * value means it will get simplied away quickly
+		 * value means it will get simplified away quickly
 		 */
 		state->is_end = ((1U << end_bits) - 1 == theft_random_bits(t, end_bits));
 		state->shuffle_seed = theft_random_bits(t, 29);
@@ -115,13 +112,12 @@ type_info_nfa_alloc(struct theft *t, void *type_env, void **output)
 
 			e->to = theft_random_choice(t, state_count);
 		}
+
 		state->edge_count = edge_count;
 
-		states[i] = state;
+		res->states[i]   = state;
 	}
 
-	res->tag = 'N';
-	res->states = states;
 	res->state_count = state_count;
 
 	*output = res;

@@ -23,11 +23,12 @@ buf_new(void)
 {
 	struct buf *new;
 
-	new = xcalloc(1, sizeof *new);
+	new = xmalloc(sizeof *new);
 
-	new->buf = xmalloc(1LLU << DEF_CEIL2);
-
+	new->size  = 0;
+	new->buf   = xmalloc(1LLU << DEF_CEIL2);
 	new->ceil2 = DEF_CEIL2;
+	new->stack = NULL;
 
 	LOG("NEW %p(%p)\n", (void *) new, (void *) new->buf);
 

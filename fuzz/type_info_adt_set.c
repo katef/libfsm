@@ -11,11 +11,11 @@
 static enum theft_alloc_res
 alloc_scen(struct theft *t, void *type_env, void **output)
 {
+	struct set_hook_env *env;
 	struct set_scenario *res;
 	size_t count;
-	size_t alloc_size;
 
-	struct set_hook_env *env = theft_hook_get_env(t);
+	env = theft_hook_get_env(t);
 
 	assert(env->tag == 's');
 
@@ -31,14 +31,17 @@ alloc_scen(struct theft *t, void *type_env, void **output)
 
 	count = theft_random_bits(t, env->count_bits) + 1;
 
-	alloc_size = sizeof *res + count * sizeof *res->ops;
-	res = xmalloc(alloc_size);
+	res = xmalloc(sizeof *res + count * sizeof *res->ops);
 
-	memset(res, 0x00, alloc_size);
+	res->count = count;
 
 	for (size_t i = 0; i < count; i++) {
-		struct set_op *op = &res->ops[i];
+		struct set_op *op;
+
+		op = &res->ops[i];
+
 		op->t = theft_random_choice(t, SET_OP_TYPE_COUNT);
+
 		switch (op->t) {
 		case SET_OP_ADD:
 			op->u.add.item = theft_random_bits(t, env->item_bits);
@@ -56,8 +59,6 @@ alloc_scen(struct theft *t, void *type_env, void **output)
 			break;
 		}
 	}
-
-	res->count = count;
 
 	*output = res;
 
@@ -111,7 +112,7 @@ alloc_seq(struct theft *t, void *type_env, void **output)
 {
 	struct set_hook_env *env;
 	struct set_sequence *res;
-	size_t alloc_size, count;
+	size_t count;
 
 	(void) type_env;
 
@@ -128,11 +129,11 @@ alloc_seq(struct theft *t, void *type_env, void **output)
 
 	count = theft_random_bits(t, env->count_bits) + 1;
 
-	alloc_size = sizeof (struct set_sequence) + count * sizeof (uint16_t);
-	res = xcalloc(1, alloc_size);
+	res = xmalloc(sizeof *res + count * sizeof *res->values);
 
-	res->count = count;
+	res->count        = count;
 	res->shuffle_seed = theft_random_bits(t, 8);
+
 	for (size_t i = 0; i < count; i++) {
 		res->values[i] = theft_random_bits(t, 16);
 	}
@@ -199,7 +200,7 @@ theft_info_adt_sequence_permuted(struct set_sequence *seq)
 		return NULL;
 	}
 
-	res = xcalloc(seq->count, sizeof *res);
+	res = xmalloc(seq->count * sizeof *res);
 
 	for (size_t i = 0; i < seq->count; i++) {
 		assert(pv[i] < seq->count);
