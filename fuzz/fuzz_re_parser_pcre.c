@@ -37,6 +37,17 @@ test_re_parser_pcre(uint8_t verbosity,
 	struct re_err err;
 	struct fsm *fsm;
 
+	const struct fsm_options opt = {
+		.anonymous_states  = 1,
+		.consolidate_edges = 1,
+		.always_hex        = 1
+	};
+
+	struct string_pair pair = {
+		.string = (uint8_t *) re_string,
+		.size   = re_size
+	};
+
 #define TIME(TV) do { if (-1 == gettimeofday(TV, NULL)) { assert(false); } } while(0)
 #define ELAPSED(PRE, POST)						  \
 	(1000 * (POST.tv_sec - PRE.tv_sec))						  \
@@ -54,25 +65,7 @@ test_re_parser_pcre(uint8_t verbosity,
 
 	TIME(&pre);
 
-	{
-		const struct fsm_options opt = {
-			.anonymous_states  = 1,
-			.consolidate_edges = 1,
-			.always_hex        = 1
-		};
-
-		struct scanner s = {
-			.tag   = 'S',
-			.magic = &s.magic,
-			.str   = (uint8_t *) re_string,
-			.size  = re_size
-		};
-
-		fsm = re_comp(RE_PCRE, scanner_next, &s, &opt, RE_MULTI, &err);
-
-		assert(s.str == (uint8_t *) re_string);
-		assert(s.magic == &s.magic);
-	}
+	fsm = wrap_re_comp(RE_PCRE, &pair, &opt, &err);
 
 	TIME(&post);
 
@@ -186,8 +179,20 @@ prop_re_minimise(struct theft *t, void *arg1)
 	struct test_re_info *info = arg1;
 	struct test_env *env;
 	uint8_t verbosity;
-	struct fsm *fsm;
 	unsigned int state_count_pre, state_count_post;
+	struct re_err err;
+	struct fsm *fsm;
+
+	const struct fsm_options opt = {
+		.anonymous_states  = 1,
+		.consolidate_edges = 1,
+		.always_hex        = 1
+	};
+
+	struct string_pair pair = {
+		.string = (uint8_t *) info->string,
+		.size   = info->size
+	};
 
 	assert(info->string);
 
@@ -195,29 +200,9 @@ prop_re_minimise(struct theft *t, void *arg1)
 	assert(env->tag == 'E');
 	verbosity = env->verbosity;
 
-	{
-		struct re_err err = { .e = 0 };
-
-		const struct fsm_options opt = {
-			.anonymous_states  = 1,
-			.consolidate_edges = 1,
-			.always_hex        = 1
-		};
-
-		struct scanner s = {
-			.tag   = 'S',
-			.magic = &s.magic,
-			.str   = (uint8_t *) info->string,
-			.size  = info->size
-		};
-
-		fsm = re_comp(RE_PCRE, scanner_next, &s, &opt, RE_MULTI, &err);
-		if (fsm == NULL) {
-			return check_error(verbosity, &err);
-		}
-
-		assert(s.str == (uint8_t *) info->string);
-		assert(s.magic == &s.magic);
+	fsm = wrap_re_comp(RE_PCRE, &pair, &opt, &err);
+	if (fsm == NULL) {
+		return check_error(verbosity, &err);
 	}
 
 	state_count_pre = fsm_count(fsm, fsm_isany);
@@ -298,19 +283,7 @@ check_pos_matches(uint8_t verbosity, struct fsm *fsm,
 
 		TIME(&pre);
 
-		{
-			struct scanner s = {
-				.tag   = 'S',
-				.magic = &s.magic,
-				.str   = pos_pairs[i].string,
-				.size  = pos_pairs[i].size,
-			};
-
-			st = fsm_exec(fsm, scanner_next, &s);
-
-			assert(s.str == pos_pairs[i].string);
-			assert(s.magic == &s.magic);
-		}
+		st = wrap_fsm_exec(fsm, &pos_pairs[i]);
 
 		TIME(&post);
 
@@ -380,19 +353,7 @@ check_neg_matches(uint8_t verbosity, struct fsm *fsm,
 
 		TIME(&pre);
 
-		{
-			struct scanner s = {
-				.tag   = 'S',
-				.magic = &s.magic,
-				.str   = neg_pairs[i].string,
-				.size  = neg_pairs[i].size,
-			};
-
-			st = fsm_exec(fsm, scanner_next, &s);
-
-			assert(s.str == neg_pairs[i].string);
-			assert(s.magic == &s.magic);
-		}
+		st = wrap_fsm_exec(fsm, &neg_pairs[i]);
 
 		TIME(&post);
 

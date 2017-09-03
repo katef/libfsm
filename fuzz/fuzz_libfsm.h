@@ -47,17 +47,8 @@ struct string_pair {
 	uint8_t *string;
 };
 
-struct scanner {
-	char tag;
-	void *magic;
-	const uint8_t *str;
-	size_t size;
-	size_t offset;
-};
-
 void print_or_hexdump(FILE *f, const uint8_t *buf, size_t size);
 void hexdump(FILE *f, const uint8_t *buf, size_t size);
-int scanner_next(void *opaque);
 
 typedef bool test_fun(void);
 typedef bool test_fun1(uintptr_t arg);
@@ -97,6 +88,13 @@ size_t delta_msec(const struct timeval *pre, const struct timeval *post);
 
 size_t *gen_permutation_vector(size_t length, uint32_t seed);
 
+struct fsm_state *
+wrap_fsm_exec(struct fsm *fsm, const struct string_pair *pair);
+
+struct fsm *
+wrap_re_comp(enum re_dialect dialect, const struct string_pair *pair,
+	const struct fsm_options *opt,
+	struct re_err *err);
 
 #define LOG_OUT stdout
 

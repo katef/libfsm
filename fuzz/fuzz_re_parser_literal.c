@@ -17,26 +17,18 @@ test_re_parser_literal(uint8_t verbosity,
 	struct fsm *fsm;
 	size_t i;
 
+	struct string_pair pair = {
+		.string = (uint8_t *) re,
+		.size   = re_size
+	};
+
 	const struct fsm_options opt = {
 		.anonymous_states  = 1,
 		.consolidate_edges = 1
 	};
 
-	{
-		struct scanner s = {
-			.tag   = 'S',
-			.magic = &s.magic,
-			.str   = re,
-			.size  = re_size
-		};
+	fsm = wrap_re_comp(RE_LITERAL, &pair, &opt, &err);
 
-		fsm = re_comp(RE_LITERAL, scanner_next, &s, &opt, RE_MULTI, &err);
-
-		assert(s.str == re);
-		assert(s.magic == &s.magic);
-	}
-
-	/* Invalid RE: did we flag an error? */
 	if (fsm == NULL) {
 		if (err.e == RE_ESUCCESS) {
 			LOG_FAIL(verbosity, "Expected error, got RE_ESUCCESS\n");
@@ -55,17 +47,7 @@ test_re_parser_literal(uint8_t verbosity,
 	for (i = 0; i < count; i++) {
 		struct fsm_state *st;
 
-		struct scanner s = {
-			.tag   = 'S',
-			.magic = &s.magic,
-			.str   = pairs[i].string,
-			.size  = pairs[i].size
-		};
-
-		st = fsm_exec(fsm, scanner_next, &s);
-
-		assert(s.str == pairs[i].string);
-		assert(s.magic == &s.magic);
+		st = wrap_fsm_exec(fsm, &pairs[i]);
 
 		if (verbosity > 0) {
 			fsm_print(fsm, stderr, FSM_OUT_DOT);

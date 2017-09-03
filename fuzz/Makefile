@@ -1,6 +1,10 @@
 .include "../share/mk/top.mk"
 
 SRC += fuzz/main.c
+SRC += fuzz/buf.c
+SRC += fuzz/util.c
+SRC += fuzz/wrap.c
+
 SRC += fuzz/fuzz_adt_priq.c
 SRC += fuzz/fuzz_adt_set.c
 SRC += fuzz/fuzz_literals.c
@@ -9,8 +13,7 @@ SRC += fuzz/fuzz_nfa_slow.c
 SRC += fuzz/fuzz_re_parser.c
 SRC += fuzz/fuzz_re_parser_literal.c
 SRC += fuzz/fuzz_re_parser_pcre.c
-SRC += fuzz/buf.c
-SRC += fuzz/util.c
+
 SRC += fuzz/type_info_fsm_literal.c
 SRC += fuzz/type_info_nfa.c
 SRC += fuzz/type_info_re.c

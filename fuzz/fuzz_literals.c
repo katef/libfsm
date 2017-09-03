@@ -125,25 +125,18 @@ add_literal(struct fsm *fsm, const uint8_t *string, size_t size, intptr_t id)
 {
 	struct fsm *new;
 	struct fsm *res;
-	enum re_flags flags = RE_MULTI;
 	struct re_err err;
 
-	struct scanner s = {
-		.tag    = 'S',
-		.magic  = &s.magic,
-		.str    = string,
-		.size   = size,
-		.offset = 0
+	struct string_pair pair = {
+		.string = (uint8_t *) string,
+		.size   = size
 	};
 
-	new = re_comp(RE_LITERAL, scanner_next, &s, &opt, flags, &err);
+	new = wrap_re_comp(RE_LITERAL, &pair, &opt, &err);
 	if (new == NULL) {
 		re_perror(RE_LITERAL, &err, NULL, (const char *) string);
 		return NULL;
 	}
-
-	assert(s.str == string);
-	assert(s.magic == &s.magic);
 
 	fsm_setendopaque(new, (void *) id);
 
@@ -160,15 +153,9 @@ add_literal(struct fsm *fsm, const uint8_t *string, size_t size, intptr_t id)
 static bool
 check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, intptr_t id)
 {
+	struct fsm_state *st;
 	intptr_t count;
 	intptr_t opaque;
-	struct fsm_state *st;
-
-	struct scanner s = {
-		.tag  = 'S',
-		.str  = scen->pairs[id].string,
-		.size = scen->pairs[id].size
-	};
 
 	count = (intptr_t) scen->count;
 
@@ -177,8 +164,8 @@ check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, intptr_t id)
 	assert(id < count);
 	assert(scen->pairs[id].size > 0);
 
-	st = fsm_exec(fsm, scanner_next, &s);
-	assert(s.str == scen->pairs[id].string);
+	st = wrap_fsm_exec(fsm, &scen->pairs[id]);
+
 	if (st == NULL) {
 		if (scen->verbosity > 0) {
 			printf("FAIL: fsm_exec failure\n");

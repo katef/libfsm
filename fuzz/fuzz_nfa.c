@@ -171,11 +171,7 @@ prop_nfa_operations_should_not_impact_matching(struct theft *t,
 			continue;
 		}
 
-		st = fsm_exec(nfa, scanner_next, & (struct scanner) {
-				.tag  = 'S',
-				.str  = literals->pairs[i].string,
-				.size = literals->pairs[i].size,
-			});
+		st = wrap_fsm_exec(nfa, &literals->pairs[i]);
 
 		match[i] = (st != NULL);
 	}
@@ -198,18 +194,18 @@ prop_nfa_operations_should_not_impact_matching(struct theft *t,
 
 	/* Second pass -- note if anything's match status changed */
 	for (size_t i = 0; i < literals->count; i++) {
-		struct scanner s = {
-			.tag = 'S',
-			.str = literals->pairs[i].string,
-			.size = literals->pairs[i].size,
-		};
-		struct fsm_state *st = fsm_exec(nfa, scanner_next, &s);
-		bool nmatch = (st != NULL);
+		struct fsm_state *st;
+		bool nmatch;
+
+		st = wrap_fsm_exec(nfa, &literals->pairs[i]);
+
+		nmatch = (st != NULL);
 		if (match[i] != nmatch) {
 			if (verbosity > 0) {
 				fprintf(stdout, "FAIL string %zd: match was %d, now %d\n",
 					i, match[i], nmatch);
 			}
+
 			return THEFT_TRIAL_FAIL;
 		}
 	}
@@ -505,6 +501,10 @@ nfa_regress_minimise_false_positive(void)
 #define STATE_COUNT 2
 	struct fsm_state *states[STATE_COUNT];
 	uint8_t str[] = { 0x00 };
+	struct string_pair pair = {
+		.string = str,
+		.size   = sizeof str
+	};
 
 	nfa = fsm_new(&test_nfa_fsm_options);
 	assert(nfa); /* XXX */
@@ -533,11 +533,7 @@ nfa_regress_minimise_false_positive(void)
 	printf("AFTER fsm_minimise\n");
 	fsm_print(nfa, stdout, FSM_OUT_DOT);
 
-	st = fsm_exec(nfa, scanner_next, & (struct scanner) {
-			.tag  = 'S',
-			.str  = str,
-			.size = sizeof str
-		});
+	st = wrap_fsm_exec(nfa, &pair);
 
 	match = (st != NULL);
 

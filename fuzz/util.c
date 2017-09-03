@@ -8,25 +8,6 @@
 
 #include <adt/xalloc.h>
 
-int
-scanner_next(void *opaque)
-{
-	struct scanner *s;
-	unsigned char c;
-
-	s = opaque;
-	assert(s->tag == 'S');
-
-	if (s->offset == s->size) {
-		return EOF;
-	}
-
-	c = s->str[s->offset];
-	s->offset++;
-
-	return (int) c;
-}
-
 void
 print_or_hexdump(FILE *f, const uint8_t *buf, size_t size)
 {
