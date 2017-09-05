@@ -193,6 +193,7 @@ static struct pair *new_pair(struct bywalk_arena *A, struct fsm_state *a, struct
 	if (combined == NULL) {
 		return NULL;
 	}
+	combined->equiv = NULL;
 
 	p->a = a;
 	p->b = b;
