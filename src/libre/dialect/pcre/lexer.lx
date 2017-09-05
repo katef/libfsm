@@ -122,6 +122,10 @@ class = '\' /[dDwWsS]/;
 
 	# XXX: /./ - the above
 	/[^\^\-\\]/ -> $char;
+
+	'\Q' .. '\E' {
+		/./ -> $char;
+	}
 }
 
 '{' -> $opencount .. '}' -> $closecount {
