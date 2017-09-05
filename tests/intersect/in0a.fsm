@@ -1,0 +1,15 @@
+#
+# Copyright 2017 Shannon F. Stewman
+#
+# See LICENCE for the full copyright terms.
+#
+
+0  ->  1 "b"; # e.g. "b"
+0  ->  2 "f"; # e.g. "f"
+1  ->  5 "a"; # e.g. "ba"
+2  ->  3 "o"; # e.g. "fo"
+3  ->  4 "o"; # e.g. "bar"
+5  ->  4 "r"; # e.g. "bar"
+
+start: 0;
+end:   4;
