@@ -1,0 +1,9 @@
+0  ->  2 "b"; # e.g. "ab"
+1  ->  0 "a"; # e.g. "a"
+1  ->  1 "b"; # start
+2  ->  3 "a"; # e.g. "aba"
+2  ->  2 "b"; # e.g. "ab"
+3  ->  1 "b"; # start
+
+start: 1;
+end:   1;

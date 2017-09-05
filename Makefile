@@ -40,6 +40,7 @@ SUBDIR += src/lx/out
 SUBDIR += src/lx
 SUBDIR += src
 SUBDIR += tests/isdfa
+SUBDIR += tests/intersect
 SUBDIR += tests/determinise
 SUBDIR += tests/glob
 SUBDIR += tests/like
