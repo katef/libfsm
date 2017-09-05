@@ -20,8 +20,7 @@ ${TEST_OUTDIR.tests/intersect}/got${n}_0.fsm: ${TEST_SRCDIR.tests/intersect}/in$
 
 ${TEST_OUTDIR.tests/intersect}/res${n}: \
 	${TEST_SRCDIR.tests/intersect}/out${n}.fsm \
-	${TEST_OUTDIR.tests/intersect}/got${n}.fsm \
-	${TEST_OUTDIR.tests/intersect}/got${n}_0.fsm
+	${TEST_OUTDIR.tests/intersect}/got${n}.fsm
 
 FSMTEST_RESULT += ${TEST_OUTDIR.tests/intersect}/res${n}
 
