@@ -4,7 +4,7 @@
 # See LICENCE for the full copyright terms.
 #
 
-# (abc|def)+
+# (abc|def)*
 
 0 -> 1 'a';
 1 -> 2 'b';
