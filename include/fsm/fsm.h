@@ -53,6 +53,10 @@ fsm_free(struct fsm *fsm);
 struct fsm *
 fsm_clone(const struct fsm *fsm);
 
+/* Returns the options of an FSM */
+const struct fsm_options *
+fsm_getoptions(const struct fsm *fsm);
+
 /*
  * Copy the contents of src over dst, and free src.
  *
