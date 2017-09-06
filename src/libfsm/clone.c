@@ -15,14 +15,14 @@
 #include "internal.h"
 
 struct fsm *
-fsm_clone(const struct fsm *fsm)
+fsm_clone_with_opts(const struct fsm *fsm, const struct fsm_options *opts)
 {
 	struct fsm *new;
 
 	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
+	assert(opts != NULL);
 
-	new = fsm_new(fsm->opt);
+	new = fsm_new(opts);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -88,5 +88,11 @@ fsm_clone(const struct fsm *fsm)
 	new->start = fsm->start->equiv;
 
 	return new;
+}
+
+struct fsm *
+fsm_clone(const struct fsm *fsm)
+{
+	return fsm_clone_with_opts(fsm, fsm->opt);
 }
 
