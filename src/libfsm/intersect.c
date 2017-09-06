@@ -334,6 +334,7 @@ intersection_walk_edges(struct bywalk_arena *A, struct fsm *a, struct fsm *b, st
 
 	assert(start != NULL);
 
+	/* This performs the actual intersection by a depth-first search. */
 	qa = start->a;
 	qb = start->b;
 	qc = start->comb;
@@ -343,17 +344,20 @@ intersection_walk_edges(struct bywalk_arena *A, struct fsm *a, struct fsm *b, st
 	assert(qc != NULL);
 
 	if (qc->equiv != NULL) {
-		/* already visited */
+		/* already visited combined state */
 		return 1;
 	}
 
-	/* mark as visited */
+	/* mark combined state as visited */
 	qc->equiv = qc;
 
 	for (ea = set_first(qa->edges, &ei); ea != NULL; ea=set_next(&ei)) {
 		struct set_iter dia, dib;
 		const struct fsm_state *da, *db;
 
+                /* For each A in alphabet:
+                 *   if an edge exists with label A in both FSMs, follow it
+                 */
 		eb = fsm_hasedge(qb, ea->symbol);
 		if (eb == NULL) {
 			continue;
@@ -370,6 +374,7 @@ intersection_walk_edges(struct bywalk_arena *A, struct fsm *a, struct fsm *b, st
 					return 0;
 				}
 
+                                /* depth-first traversal of the graphs */
 				if (!intersection_walk_edges(A, a,b, dst)) {
 					return 0;
 				}
@@ -381,24 +386,3 @@ intersection_walk_edges(struct bywalk_arena *A, struct fsm *a, struct fsm *b, st
 }
 
 
-	/*   Loop:
-	 *   2. Pop a state qcomb=(q0,q1) off the queue.  If queue is
-	 *      empty, break loop and goto step 6.
-	 *
-	 *   3. Mark state qcomb as visited.
-	 *
-	 *   4. For each A in alphabet:
-	 *      if delta0(q0,A) -> q0' and delta1(q1,A) -> q1'
-	 *      then:
-	 *
-	 *      a) Find or create combined state qcomb' = (q0',q1').
-	 *      b) Add edge (qcomb, A, qcomb') to the edge list.
-	 *      c) If qcomb' has not been visited, add qcomb' to the
-	 *         queue.
-	 *
-	 *   5. Continue loop (step 2)
-	 *
-	 *   6. Build the combined DFA from the combined states and
-	 *   edges.
-	 *
-	 */
