@@ -54,6 +54,16 @@ struct fsm *
 fsm_clone(const struct fsm *fsm);
 
 /*
+ * Duplicate an FSM, replacing the options
+ */
+struct fsm *
+fsm_clone_with_opts(const struct fsm *fsm, const struct fsm_options *opts);
+
+/* Returns the options of an FSM */
+const struct fsm_options *
+fsm_getoptions(const struct fsm *fsm);
+
+/*
  * Copy the contents of src over dst, and free src.
  *
  * TODO: I don't really like this sort of interface. Reconsider?
