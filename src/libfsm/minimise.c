@@ -26,26 +26,25 @@ fsm_minimise(struct fsm *fsm)
 	/*
 	 * Brzozowski's algorithm.
 	 */
-	{
-		r = fsm_reverse(fsm);
-		if (!r) {
-			return 0;
-		}
 
-		r = fsm_determinise(fsm);
-		if (!r) {
-			return 0;
-		}
+	r = fsm_reverse(fsm);
+	if (!r) {
+		return 0;
+	}
 
-		r = fsm_reverse(fsm);
-		if (!r) {
-			return 0;
-		}
+	r = fsm_determinise(fsm);
+	if (!r) {
+		return 0;
+	}
 
-		r = fsm_determinise(fsm);
-		if (!r) {
-			return 0;
-		}
+	r = fsm_reverse(fsm);
+	if (!r) {
+		return 0;
+	}
+
+	r = fsm_determinise(fsm);
+	if (!r) {
+		return 0;
 	}
 
 	return 1;
