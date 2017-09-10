@@ -82,6 +82,18 @@ fsm_free(struct fsm *fsm)
 	free(fsm);
 }
 
+const struct fsm_options *
+fsm_getoptions(const struct fsm *fsm)
+{
+	return fsm->opt;
+}
+
+void
+fsm_setoptions(struct fsm *fsm, const struct fsm_options *opts)
+{
+	fsm->opt = opts;
+}
+
 void
 fsm_move(struct fsm *dst, struct fsm *src)
 {
