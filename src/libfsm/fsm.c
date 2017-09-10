@@ -89,6 +89,12 @@ fsm_getoptions(const struct fsm *fsm)
 }
 
 void
+fsm_setoptions(struct fsm *fsm, const struct fsm_options *opts)
+{
+	fsm->opt = opts;
+}
+
+void
 fsm_move(struct fsm *dst, struct fsm *src)
 {
 	assert(src != NULL);

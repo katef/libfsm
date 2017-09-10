@@ -57,6 +57,10 @@ fsm_clone(const struct fsm *fsm);
 const struct fsm_options *
 fsm_getoptions(const struct fsm *fsm);
 
+/* Sets the options of an FSM */
+void
+fsm_setoptions(struct fsm *fsm, const struct fsm_options *opts);
+
 /*
  * Copy the contents of src over dst, and free src.
  *
