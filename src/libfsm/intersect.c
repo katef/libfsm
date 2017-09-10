@@ -137,7 +137,7 @@ free_bywalk(struct bywalk_arena *A)
 
 static struct pair *alloc_pair(struct bywalk_arena *A)
 {
-	static const struct pair zero = { NULL, NULL, NULL }; /* <-- C89 ugliness :( */
+	static const struct pair zero;
 
 	struct pair *item;
 	struct pair_pool *pool;
@@ -250,7 +250,6 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
 	 */
 
 	static const struct bywalk_arena zero;
-
 	struct bywalk_arena A = zero;
 
 	struct fsm *new = NULL;
@@ -274,7 +273,7 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
 	sb = fsm_getstart(b);
 
 	if (sa == NULL || sb == NULL) {
-		/* intersection will be empty.  XXX - is this an error? */
+		/* intersection will be empty.  XXX - should this be an error? */
 		goto finish;
 	}
 
@@ -286,6 +285,7 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
 	assert(pair0->a == sa);
 	assert(pair0->b == sb);
 	assert(pair0->comb != NULL);
+        assert(pair0->comb->equiv == NULL); /* comb not yet been traversed */
 
 	fsm_setstart(A.new, pair0->comb);
 	if (!intersection_walk_edges(&A, a,b, pair0)) {
