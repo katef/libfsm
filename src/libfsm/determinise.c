@@ -203,7 +203,8 @@ epsilon_closure(const struct fsm_state *state, struct set **closure)
  * Create the DFA state if neccessary.
  */
 static struct fsm_state *
-state_closure(struct set *mappings, struct fsm *dfa, const struct fsm_state *nfastate)
+state_closure(struct set *mappings, struct fsm *dfa, const struct fsm_state *nfastate,
+	int includeself)
 {
 	struct mapping *m;
 	struct set *ec;
@@ -216,6 +217,15 @@ state_closure(struct set *mappings, struct fsm *dfa, const struct fsm_state *nfa
 	if (epsilon_closure(nfastate, &ec) == NULL) {
 		set_free(ec);
 		return NULL;
+	}
+
+	if (!includeself) {
+		set_remove(&ec, (void *) nfastate);
+
+		if (set_count(ec) == 0) {
+			set_free(ec);
+			ec = NULL;
+		}
 	}
 
 	if (ec == NULL) {
@@ -450,9 +460,34 @@ determinise(struct fsm *nfa,
 	 * This is not yet "done"; it starts off the loop below.
 	 */
 	{
+		const struct fsm_state *nfastart;
 		struct fsm_state *dfastart;
+		int includeself = 1;
 
-		dfastart = state_closure(mappings, dfa, fsm_getstart(nfa));
+		nfastart = fsm_getstart(nfa);
+
+		/*
+		 * As a special case for Brzozowski's algorithm, fsm_determinise() is
+		 * expected to produce a minimal DFA for its invocation after the second
+		 * reversal. Since we do not provide multiple start states, fsm_reverse()
+		 * may introduce a new start state which transitions to several states.
+		 * This is the situation we detect here.
+		 *
+		 * This fabricated start state is then excluded from its epsilon closure,
+		 * so that the closures for its destination states are found equivalent,
+		 * because they also do not include the start state.
+		 *
+		 * If you pass an equivalent NFA where this is not the case (for example,
+		 * with the start state containing an epsilon edge to itself), we regard
+		 * this as any other DFA, and minimal output is not guaranteed.
+		 */
+		if (!fsm_isend(nfa, nfastart)
+			&& fsm_epsilonsonly(nfa, nfastart) && !fsm_hasincoming(nfa, nfastart))
+		{
+			includeself = 0;
+		}
+
+		dfastart = state_closure(mappings, dfa, nfastart, includeself);
 		if (dfastart == NULL) {
 			/* TODO: error */
 			goto error;
