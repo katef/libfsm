@@ -19,7 +19,8 @@
 
 #include "internal.h"
 
-enum { PAIR_POOL_SIZE = 1024 };
+/* XXX - revisit what would be a good size for this. */
+enum { STATE_TUPLE_POOL_SIZE = 1024 };
 
 struct fsm *
 fsm_intersect(struct fsm *a, struct fsm *b)
@@ -72,21 +73,25 @@ error:
 	return NULL;
 }
 
-struct pair {
+/* Tuple (a,b,comb) for intersection.  a & b are the states of the original
+ * FSMs.  comb is the state of the combined FSM.
+ */
+struct state_tuple {
 	struct fsm_state *a;
 	struct fsm_state *b;
 	struct fsm_state *comb;
 };
 
-static int cmp_pair(const void *a, const void *b)
+/* comparison of state_tuples for the (ordered) set */
+static int cmp_state_tuple(const void *a, const void *b)
 {
-	const struct pair *pa = a, *pb = b;
+	const struct state_tuple *pa = a, *pb = b;
 	ptrdiff_t delta;
 	delta = pa->a - pb->a;
 	if (delta < 0) {
 		return -1;
 	}
-	
+
 	if (delta > 0) {
 		return 1;
 	}
@@ -103,13 +108,13 @@ static int cmp_pair(const void *a, const void *b)
 	return 0;
 }
 
-struct pair_pool {
-	struct pair_pool *next;
-	struct pair items[PAIR_POOL_SIZE];
+struct state_tuple_pool {
+	struct state_tuple_pool *next;
+	struct state_tuple items[STATE_TUPLE_POOL_SIZE];
 };
 
 struct bywalk_arena {
-	struct pair_pool *head;
+	struct state_tuple_pool *head;
 	size_t top;
 
 	struct fsm *new;
@@ -119,7 +124,7 @@ struct bywalk_arena {
 static void
 free_bywalk(struct bywalk_arena *A)
 {
-	struct pair_pool *p, *next;
+	struct state_tuple_pool *p, *next;
 
 	if (A->states) {
 		set_free(A->states);
@@ -135,12 +140,12 @@ free_bywalk(struct bywalk_arena *A)
 	}
 }
 
-static struct pair *alloc_pair(struct bywalk_arena *A)
+static struct state_tuple *alloc_state_tuple(struct bywalk_arena *A)
 {
-	static const struct pair zero;
+	static const struct state_tuple zero;
 
-	struct pair *item;
-	struct pair_pool *pool;
+	struct state_tuple *item;
+	struct state_tuple_pool *pool;
 
 	if (A->head == NULL) {
 		goto new_pool;
@@ -169,9 +174,9 @@ new_pool:
 	return item;
 }
 
-static struct pair *new_pair(struct bywalk_arena *A, struct fsm_state *a, struct fsm_state *b)
+static struct state_tuple *new_state_tuple(struct bywalk_arena *A, struct fsm_state *a, struct fsm_state *b)
 {
-	struct pair lkup, *p;
+	struct state_tuple lkup, *p;
 	struct fsm_state *combined;
 
 	lkup.a = a;
@@ -184,7 +189,7 @@ static struct pair *new_pair(struct bywalk_arena *A, struct fsm_state *a, struct
 		return p;
 	}
 
-	p = alloc_pair(A);
+	p = alloc_state_tuple(A);
 	if (p == NULL) {
 		return NULL;
 	}
@@ -224,7 +229,7 @@ static struct pair *new_pair(struct bywalk_arena *A, struct fsm_state *a, struct
 }
 
 static int
-intersection_walk_edges(struct bywalk_arena *A, struct fsm *a, struct fsm *b, struct pair *start);
+intersection_walk_edges(struct bywalk_arena *A, struct fsm *a, struct fsm *b, struct state_tuple *start);
 
 static void
 mark_equiv_null(struct fsm *fsm);
@@ -254,7 +259,7 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
 
 	struct fsm *new = NULL;
 	struct fsm_state *sa, *sb;
-	struct pair *pair0;
+	struct state_tuple *tup0;
 
 	assert(a != NULL);
 	assert(b != NULL);
@@ -264,7 +269,7 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
 		goto error;
 	}
 
-	A.states = set_create(cmp_pair);
+	A.states = set_create(cmp_state_tuple);
 	if (A.states == NULL) {
 		goto error;
 	}
@@ -273,22 +278,23 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
 	sb = fsm_getstart(b);
 
 	if (sa == NULL || sb == NULL) {
-		/* intersection will be empty.  XXX - should this be an error? */
+                /* if one of the FSMs lacks a start state, the
+                 * intersection will be empty */
 		goto finish;
 	}
 
-	pair0 = new_pair(&A, sa,sb);
-	if (pair0 == NULL) {
+	tup0 = new_state_tuple(&A, sa,sb);
+	if (tup0 == NULL) {
 		goto error;
 	}
 
-	assert(pair0->a == sa);
-	assert(pair0->b == sb);
-	assert(pair0->comb != NULL);
-        assert(pair0->comb->equiv == NULL); /* comb not yet been traversed */
+	assert(tup0->a == sa);
+	assert(tup0->b == sb);
+	assert(tup0->comb != NULL);
+        assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
 
-	fsm_setstart(A.new, pair0->comb);
-	if (!intersection_walk_edges(&A, a,b, pair0)) {
+	fsm_setstart(A.new, tup0->comb);
+	if (!intersection_walk_edges(&A, a,b, tup0)) {
 		goto error;
 	}
 
@@ -320,7 +326,7 @@ mark_equiv_null(struct fsm *fsm)
 }
 
 static int
-intersection_walk_edges(struct bywalk_arena *A, struct fsm *a, struct fsm *b, struct pair *start)
+intersection_walk_edges(struct bywalk_arena *A, struct fsm *a, struct fsm *b, struct state_tuple *start)
 {
 	struct fsm_state *qa, *qb, *qc;
 	struct set_iter ei;
@@ -365,10 +371,10 @@ intersection_walk_edges(struct bywalk_arena *A, struct fsm *a, struct fsm *b, st
 
 		for (da = set_first(ea->sl, &dia); da != NULL; da=set_next(&dia)) {
 			for (db = set_first(eb->sl, &dib); db != NULL; db = set_next(&dib)) {
-				struct pair *dst;
+				struct state_tuple *dst;
 
 				/* FIXME: deal with annoying const-ness here */
-				dst = new_pair(A, (struct fsm_state *)da, (struct fsm_state *)db);
+				dst = new_state_tuple(A, (struct fsm_state *)da, (struct fsm_state *)db);
 
 				if (!fsm_addedge(qc, dst->comb, ea->symbol)) {
 					return 0;
