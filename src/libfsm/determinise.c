@@ -203,7 +203,8 @@ epsilon_closure(const struct fsm_state *state, struct set **closure)
  * Create the DFA state if neccessary.
  */
 static struct fsm_state *
-state_closure(struct set *mappings, struct fsm *dfa, const struct fsm_state *nfastate)
+state_closure(struct set *mappings, struct fsm *dfa, const struct fsm_state *nfastate,
+	int includeself)
 {
 	struct mapping *m;
 	struct set *ec;
@@ -216,6 +217,15 @@ state_closure(struct set *mappings, struct fsm *dfa, const struct fsm_state *nfa
 	if (epsilon_closure(nfastate, &ec) == NULL) {
 		set_free(ec);
 		return NULL;
+	}
+
+	if (!includeself) {
+		set_remove(&ec, (void *) nfastate);
+
+		if (set_count(ec) == 0) {
+			set_free(ec);
+			ec = NULL;
+		}
 	}
 
 	if (ec == NULL) {
@@ -452,7 +462,7 @@ determinise(struct fsm *nfa,
 	{
 		struct fsm_state *dfastart;
 
-		dfastart = state_closure(mappings, dfa, fsm_getstart(nfa));
+		dfastart = state_closure(mappings, dfa, fsm_getstart(nfa), 1);
 		if (dfastart == NULL) {
 			/* TODO: error */
 			goto error;
