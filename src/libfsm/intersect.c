@@ -122,40 +122,40 @@ struct bywalk_arena {
 };
 
 static void
-free_bywalk(struct bywalk_arena *A)
+free_bywalk(struct bywalk_arena *ar)
 {
 	struct state_tuple_pool *p, *next;
 
-	if (A->states) {
-		set_free(A->states);
+	if (ar->states) {
+		set_free(ar->states);
 	}
 
-	if (A->new) {
-		fsm_free(A->new);
+	if (ar->new) {
+		fsm_free(ar->new);
 	}
 
-	for (p = A->head; p != NULL; p = next) {
+	for (p = ar->head; p != NULL; p = next) {
 		next = p->next;
 		free(p);
 	}
 }
 
-static struct state_tuple *alloc_state_tuple(struct bywalk_arena *A)
+static struct state_tuple *alloc_state_tuple(struct bywalk_arena *ar)
 {
 	static const struct state_tuple zero;
 
 	struct state_tuple *item;
 	struct state_tuple_pool *pool;
 
-	if (A->head == NULL) {
+	if (ar->head == NULL) {
 		goto new_pool;
 	}
 
-	if (A->top >= (sizeof A->head->items / sizeof A->head->items[0])) {
+	if (ar->top >= (sizeof ar->head->items / sizeof ar->head->items[0])) {
 		goto new_pool;
 	}
 
-	item = &A->head->items[A->top++];
+	item = &ar->head->items[ar->top++];
 	*item = zero;
 	return item;
 
@@ -165,54 +165,54 @@ new_pool:
 		return NULL;
 	}
 
-	pool->next = A->head;
-	A->head = pool;
-	A->top = 1;
+	pool->next = ar->head;
+	ar->head = pool;
+	ar->top = 1;
 
 	item = &pool->items[0];
 	*item = zero;
 	return item;
 }
 
-static struct state_tuple *new_state_tuple(struct bywalk_arena *A, struct fsm_state *a, struct fsm_state *b)
+static struct state_tuple *new_state_tuple(struct bywalk_arena *ar, struct fsm_state *a, struct fsm_state *b)
 {
 	struct state_tuple lkup, *p;
-	struct fsm_state *combined;
+	struct fsm_state *comb;
 
 	lkup.a = a;
 	lkup.b = b;
 
-	assert(A->states);
+	assert(ar->states);
 
-	p = set_contains(A->states, &lkup);
+	p = set_contains(ar->states, &lkup);
 	if (p != NULL) {
 		return p;
 	}
 
-	p = alloc_state_tuple(A);
+	p = alloc_state_tuple(ar);
 	if (p == NULL) {
 		return NULL;
 	}
 
-	combined = fsm_addstate(A->new);
-	if (combined == NULL) {
+	comb = fsm_addstate(ar->new);
+	if (comb == NULL) {
 		return NULL;
 	}
-	combined->equiv = NULL;
+	comb->equiv = NULL;
 
 	p->a = a;
 	p->b = b;
-	p->comb = combined;
-	if (!set_add(&A->states, p)) {
+	p->comb = comb;
+	if (!set_add(&ar->states, p)) {
 		return NULL;
 	}
 
 	if (a->end && b->end) {
 		const struct fsm_options *opt;
 
-		fsm_setend(A->new, combined, 1);
+		fsm_setend(ar->new, comb, 1);
 
-		opt = A->new->opt;
+		opt = ar->new->opt;
 		if (opt != NULL && opt->carryopaque != NULL) {
 			const struct fsm_state *states[2];
 			states[0] = a;
@@ -221,7 +221,7 @@ static struct state_tuple *new_state_tuple(struct bywalk_arena *A, struct fsm_st
 			 * constructing a set just to pass these two
 			 * states to the carryopaque function
 			 */
-			opt->carryopaque(states, 2, A->new, combined);
+			opt->carryopaque(states, 2, ar->new, comb);
 		}
 	}
 
@@ -229,7 +229,7 @@ static struct state_tuple *new_state_tuple(struct bywalk_arena *A, struct fsm_st
 }
 
 static int
-intersection_walk_edges(struct bywalk_arena *A, struct fsm *a, struct fsm *b, struct state_tuple *start);
+intersection_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start);
 
 static void
 mark_equiv_null(struct fsm *fsm);
@@ -255,7 +255,7 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
 	 */
 
 	static const struct bywalk_arena zero;
-	struct bywalk_arena A = zero;
+	struct bywalk_arena ar = zero;
 
 	struct fsm *new = NULL;
 	struct fsm_state *sa, *sb;
@@ -264,13 +264,13 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
 	assert(a != NULL);
 	assert(b != NULL);
 
-	A.new = fsm_new(a->opt);
-	if (A.new == NULL) {
+	ar.new = fsm_new(a->opt);
+	if (ar.new == NULL) {
 		goto error;
 	}
 
-	A.states = set_create(cmp_state_tuple);
-	if (A.states == NULL) {
+	ar.states = set_create(cmp_state_tuple);
+	if (ar.states == NULL) {
 		goto error;
 	}
 
@@ -283,7 +283,7 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
 		goto finish;
 	}
 
-	tup0 = new_state_tuple(&A, sa,sb);
+	tup0 = new_state_tuple(&ar, sa,sb);
 	if (tup0 == NULL) {
 		goto error;
 	}
@@ -293,23 +293,23 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
 	assert(tup0->comb != NULL);
         assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
 
-	fsm_setstart(A.new, tup0->comb);
-	if (!intersection_walk_edges(&A, a,b, tup0)) {
+	fsm_setstart(ar.new, tup0->comb);
+	if (!intersection_walk_edges(&ar, a,b, tup0)) {
 		goto error;
 	}
 
 finish:
-	new = A.new;
-	A.new = NULL; /* avoid freeing new FSM */
+	new = ar.new;
+	ar.new = NULL; /* avoid freeing new FSM */
 
 	/* reset all equiv fields in the states */
 	mark_equiv_null(new);
 
-	free_bywalk(&A);
+	free_bywalk(&ar);
 	return new;
 
 error:
-	free_bywalk(&A);
+	free_bywalk(&ar);
 	return NULL;
 }
 
@@ -326,7 +326,7 @@ mark_equiv_null(struct fsm *fsm)
 }
 
 static int
-intersection_walk_edges(struct bywalk_arena *A, struct fsm *a, struct fsm *b, struct state_tuple *start)
+intersection_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start)
 {
 	struct fsm_state *qa, *qb, *qc;
 	struct set_iter ei;
@@ -335,8 +335,8 @@ intersection_walk_edges(struct bywalk_arena *A, struct fsm *a, struct fsm *b, st
 	assert(a != NULL);
 	assert(b != NULL);
 
-	assert(A->new != NULL);
-	assert(A->states != NULL);
+	assert(ar->new != NULL);
+	assert(ar->states != NULL);
 
 	assert(start != NULL);
 
@@ -374,14 +374,14 @@ intersection_walk_edges(struct bywalk_arena *A, struct fsm *a, struct fsm *b, st
 				struct state_tuple *dst;
 
 				/* FIXME: deal with annoying const-ness here */
-				dst = new_state_tuple(A, (struct fsm_state *)da, (struct fsm_state *)db);
+				dst = new_state_tuple(ar, (struct fsm_state *)da, (struct fsm_state *)db);
 
 				if (!fsm_addedge(qc, dst->comb, ea->symbol)) {
 					return 0;
 				}
 
                                 /* depth-first traversal of the graphs */
-				if (!intersection_walk_edges(A, a,b, dst)) {
+				if (!intersection_walk_edges(ar, a,b, dst)) {
 					return 0;
 				}
 			}
