@@ -7,8 +7,6 @@
 #ifndef FSM_OPTIONS_H
 #define FSM_OPTIONS_H
 
-#include <fsm/out.h>
-
 struct fsm;
 struct fsm_state;
 

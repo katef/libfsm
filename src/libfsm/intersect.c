@@ -13,7 +13,7 @@
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
-#include <fsm/options.h>
+#include <fsm/out.h>
 #include <fsm/options.h>
 #include <fsm/bool.h>
 
