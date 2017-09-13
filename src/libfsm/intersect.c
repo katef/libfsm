@@ -22,57 +22,6 @@
 /* XXX - revisit what would be a good size for this. */
 enum { STATE_TUPLE_POOL_SIZE = 1024 };
 
-struct fsm *
-fsm_intersect(struct fsm *a, struct fsm *b)
-{
-	struct fsm *q;
-
-	assert(a != NULL);
-	assert(b != NULL);
-
-	if (a->opt != b->opt) {
-		errno = EINVAL;
-		return NULL;
-	}
-
-	/*
-	 * This is intersection implemented in terms of complements and union,
-	 * by DeMorgan's theorem:
-	 *
-	 *     a \n b = ~(~a \u ~b)
-	 *
-	 * This could also be done by walking sets of states through both FSM
-	 * simultaneously, as described by Hopcroft, Motwani and Ullman
-	 * (2001, 2nd ed.) 4.2, Closure under Intersection. However this way
-	 * is simpler to implement.
-	 */
-
-	if (!fsm_complement(a)) {
-		return NULL;
-	}
-
-	if (!fsm_complement(b)) {
-		return NULL;
-	}
-
-	q = fsm_union(a, b);
-	if (q == NULL) {
-		return NULL;
-	}
-
-	if (!fsm_complement(q)) {
-		goto error;
-	}
-
-	return q;
-
-error:
-
-	fsm_free(q);
-
-	return NULL;
-}
-
 /* Tuple (a,b,comb) for intersection.  a & b are the states of the original
  * FSMs.  comb is the state of the combined FSM.
  */
@@ -235,7 +184,7 @@ static void
 mark_equiv_null(struct fsm *fsm);
 
 struct fsm *
-fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
+fsm_intersect(struct fsm *a, struct fsm *b)
 {
 	/* intersection via DFS of the two DFAs.
 	 *

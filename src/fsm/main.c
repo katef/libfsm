@@ -45,8 +45,7 @@ enum op {
 	OP_UNION       = ( 8 << 1) | 0,
 	OP_INTERSECT   = ( 9 << 1) | 0,
 	OP_SUBTRACT    = (10 << 1) | 0,
-	OP_EQUAL       = (11 << 1) | 0,
-	OP_INTERSECT2  = (12 << 1) | 0
+	OP_EQUAL       = (11 << 1) | 0
 };
 
 static int
@@ -199,7 +198,6 @@ op_name(const char *name)
 		{ "concat",      OP_CONCAT      },
 		{ "union",       OP_UNION       },
 		{ "intersect",   OP_INTERSECT   },
-		{ "intersect2",  OP_INTERSECT2  },
 		{ "subtract",    OP_SUBTRACT    },
 		{ "sub",         OP_SUBTRACT    },
 		{ "minus",       OP_SUBTRACT    },
@@ -363,7 +361,6 @@ main(int argc, char *argv[])
 		case OP_CONCAT:      q = fsm_concat(a, b);    break;
 		case OP_UNION:       q = fsm_union(a, b);     break;
 		case OP_INTERSECT:   q = fsm_intersect(a, b); break;
-		case OP_INTERSECT2:  q = fsm_intersect_bywalk(a, b); break;
 		case OP_SUBTRACT:    q = fsm_subtract(a, b);  break;
 
 		case OP_EQUAL:
