@@ -1,0 +1,12 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+/%[0-9a-z]{2}/ -> $esc;
+
+'+' -> $space;
+
+/[^%+]/ -> $char;
+
