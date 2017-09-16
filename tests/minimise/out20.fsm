@@ -1,0 +1,22 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+# non-minimal
+
+ab -> ab '0';
+ab -> cde '1';
+cde -> cde '0';
+
+# wikipedia shows these non-accepting states;
+# we elide them because our minimisation is defined
+# in terms of the language being accepted,
+# rather than the states just as they appear.
+cde -> f '1';
+f -> f '0';
+
+start: ab;
+end: cde;
+

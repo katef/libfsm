@@ -1,0 +1,28 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+# example adapted from wikipedia
+# https://en.wikipedia.org/wiki/DFA_minimization
+
+# render with circo
+
+b -> d '1';
+d -> f '1';
+f -> f '0';
+f -> f '1';
+d -> e '0';
+b -> a '0';
+
+a -> b '0';
+a -> c '1';
+c -> f '1';
+c -> e '0';
+e -> f '1';
+e -> e '0';
+
+start: a;
+end: d, c, e;
+
