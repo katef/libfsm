@@ -1,0 +1,23 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+'/*' .. '*/';
+'//' .. "\n";
+
+# XXX: think about what happens for \"
+# i think the zone-exit regexp will conflict with that
+'"' -> $str_start .. '"' -> $str_end {
+	/\\./  -> $str_esc;
+	/[^"]/ -> $str_char;
+}
+
+"'" -> $quot_start .. "'" -> $quot_end {
+	/\\./  -> $quot_esc;
+	/[^']/ -> $quot_char;
+}
+
+/./ - /["']/ -> $char;
+
