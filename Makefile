@@ -39,6 +39,7 @@ SUBDIR += tests/glob
 SUBDIR += tests/literal
 SUBDIR += tests/minimise
 SUBDIR += tests/reverse
+SUBDIR += tests/union
 SUBDIR += tests/set
 SUBDIR += tests
 SUBDIR += pc
