@@ -36,6 +36,7 @@ SUBDIR += src/lx
 SUBDIR += src
 SUBDIR += tests/determinise
 SUBDIR += tests/glob
+SUBDIR += tests/like
 SUBDIR += tests/literal
 SUBDIR += tests/minimise
 SUBDIR += tests/reverse
