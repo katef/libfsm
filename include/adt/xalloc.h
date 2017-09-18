@@ -13,5 +13,18 @@
 char *
 xstrdup(const char *s);
 
+/*
+ * The following functions are for CLI use only; they exit on error
+ */
+
+void *
+xmalloc(size_t sz);
+
+void *
+xcalloc(size_t count, size_t sz);
+
+void *
+xrealloc(void *p, size_t sz);
+
 #endif
 
