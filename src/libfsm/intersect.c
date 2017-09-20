@@ -171,7 +171,7 @@ static struct state_tuple *new_state_tuple(struct bywalk_arena *ar, struct fsm_s
 
 	a_end = a && a->end;
 	b_end = b && b->end;
-	if (a_end && b_end) {
+	if (!a_end && !b_end) {
 		return p;
 	}
 
