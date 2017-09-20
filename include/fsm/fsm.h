@@ -311,6 +311,9 @@ fsm_concat(struct fsm *a, struct fsm *b);
 struct fsm *
 fsm_subtract(struct fsm *a, struct fsm *b);
 
+struct fsm *
+fsm_subtract_bywalk(struct fsm *a, struct fsm *b);
+
 /*
  * Return 1 if the fsm does not match anything;
  * 0 if anything matches (including the empty string),
