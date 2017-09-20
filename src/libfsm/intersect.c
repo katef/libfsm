@@ -116,10 +116,17 @@ struct state_tuple_pool {
 	struct state_tuple items[STATE_TUPLE_POOL_SIZE];
 };
 
-enum end_condition {
-	END_INTERSECT = 0,
-	END_SUBTRACT  = 1,
-	END_UNION     = 2
+enum {
+	ENDCHECK_NEITHER = 1 << 0x0,
+	ENDCHECK_ONLYB   = 1 << 0x1,
+	ENDCHECK_ONLYA   = 1 << 0x2,
+	ENDCHECK_BOTH    = 1 << 0x3
+};
+
+enum {
+	ENDCHECK_UNION = ENDCHECK_ONLYA | ENDCHECK_ONLYB | ENDCHECK_BOTH,
+	ENDCHECK_INTERSECT = ENDCHECK_BOTH,
+	ENDCHECK_SUBTRACT  = ENDCHECK_ONLYA
 };
 
 struct bywalk_arena {
@@ -129,7 +136,24 @@ struct bywalk_arena {
 	struct fsm *new;
 	struct set *states;
 
-	enum end_condition cond;
+	/* table for which combinations are valid bits.
+	 * There are four combinations:
+	 *
+	 *   a_end  b_end    AB		bit	endcheck
+	 *   false  false    00		0	0x1
+	 *   false  true     01		1	0x2
+	 *   true   false    10		2	0x4
+	 *   true   true     11		3	0x8
+	 *
+	 * Here bit is the bit that expresses whether that combination
+	 * is valid or not.  We need four bits.
+	 *
+	 * Operation	Requirement			endcheck
+	 * intersect    both true			0x8
+	 * subtract     first true, second false	0x4
+	 * union	either true			0xE
+	 */
+	unsigned int endcheck:4;
 };
 
 static void
@@ -190,7 +214,7 @@ static struct state_tuple *new_state_tuple(struct bywalk_arena *ar, struct fsm_s
 	struct state_tuple lkup, *p;
 	struct fsm_state *comb;
 	const struct fsm_options *opt;
-	int a_end, b_end, is_end;
+	int endbit, is_end; 
 
 	lkup.a = a;
 	lkup.b = b;
@@ -220,43 +244,26 @@ static struct state_tuple *new_state_tuple(struct bywalk_arena *ar, struct fsm_s
 		return NULL;
 	}
 
-	a_end = a && a->end;
-	b_end = b && b->end;
-	if (!a_end && !b_end) {
-		return p;
-	}
+	endbit = ((a && a->end) << 1) | (b && b->end);
+	is_end = ar->endcheck & (1 << endbit);
 
-	is_end = 0;
-	switch (ar->cond) {
-	case END_INTERSECT:
-		is_end = a_end && b_end;
-		break;
+	fprintf(stderr, "endbit = %d.  is_end = %d.  endcheck = %d.  a = %p, b = %p, a->end = %d, b->end = %d\n",
+		endbit, is_end, ar->endcheck, (void *)a, (void *)b, a ? (int)a->end : 0, b ? (int)b->end : 0);
 
-	case END_SUBTRACT:
-		is_end = a_end && !b_end;
-		break;
+	if (is_end) {
+		fsm_setend(ar->new, comb, 1);
 
-	case END_UNION:
-		is_end = 1;
-		break;
-	}
-
-	if (!is_end) {
-		return p;
-	}
-
-	fsm_setend(ar->new, comb, 1);
-
-	opt = ar->new->opt;
-	if (opt != NULL && opt->carryopaque != NULL) {
-		const struct fsm_state *states[2];
-		states[0] = a;
-		states[1] = b;
-		/* this is slightly cheesed, but it avoids
-		 * constructing a set just to pass these two
-		 * states to the carryopaque function
-		 */
-		opt->carryopaque(states, 2, ar->new, comb);
+		opt = ar->new->opt;
+		if (opt != NULL && opt->carryopaque != NULL) {
+			const struct fsm_state *states[2];
+			states[0] = a;
+			states[1] = b;
+			/* this is slightly cheesed, but it avoids
+			 * constructing a set just to pass these two
+			 * states to the carryopaque function
+			 */
+			opt->carryopaque(states, 2, ar->new, comb);
+		}
 	}
 
 	return p;
@@ -308,7 +315,7 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
 		goto error;
 	}
 
-	ar.cond = END_INTERSECT;
+	ar.endcheck = ENDCHECK_INTERSECT;
 
 	sa = fsm_getstart(a);
 	sb = fsm_getstart(b);
@@ -486,7 +493,7 @@ fsm_subtract_bywalk(struct fsm *a, struct fsm *b)
 		goto error;
 	}
 
-	ar.cond = END_SUBTRACT;
+	ar.endcheck = ENDCHECK_SUBTRACT;
 
 	tup0 = new_state_tuple(&ar, sa,sb);
 	if (tup0 == NULL) {
