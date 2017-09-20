@@ -90,25 +90,12 @@ static int cmp_state_tuple(const void *a, const void *b)
 
         /* XXX - do we need to specially handle NULLs? */
 
-	delta = pa->a - pb->a;
-	if (delta < 0) {
-		return -1;
+	delta = (pa->a > pb->a) - (pa->a < pb->a);
+	if (delta == 0) {
+		delta = (pa->b > pb->b) - (pa->b < pb->b);
 	}
 
-	if (delta > 0) {
-		return 1;
-	}
-
-	delta = pa->b - pb->b;
-	if (delta < 0) {
-		return -1;
-	}
-
-	if (delta > 0) {
-		return 1;
-	}
-
-	return 0;
+	return delta;
 }
 
 struct state_tuple_pool {
@@ -127,6 +114,12 @@ enum {
 	ENDCHECK_UNION = ENDCHECK_ONLYA | ENDCHECK_ONLYB | ENDCHECK_BOTH,
 	ENDCHECK_INTERSECT = ENDCHECK_BOTH,
 	ENDCHECK_SUBTRACT  = ENDCHECK_ONLYA
+};
+
+enum {
+	EDGECHECK_UNION = ENDCHECK_ONLYA | ENDCHECK_ONLYB | ENDCHECK_BOTH,
+	EDGECHECK_INTERSECT = ENDCHECK_BOTH,
+	EDGECHECK_SUBTRACT  = ENDCHECK_ONLYA | ENDCHECK_BOTH
 };
 
 struct bywalk_arena {
@@ -154,6 +147,7 @@ struct bywalk_arena {
 	 * union	either true			0xE
 	 */
 	unsigned int endcheck:4;
+	unsigned int edgecheck:4; /* same, but for following edges */
 };
 
 static void
@@ -175,7 +169,8 @@ free_bywalk(struct bywalk_arena *ar)
 	}
 }
 
-static struct state_tuple *alloc_state_tuple(struct bywalk_arena *ar)
+static struct state_tuple *
+alloc_state_tuple(struct bywalk_arena *ar)
 {
 	static const struct state_tuple zero;
 
@@ -209,7 +204,8 @@ new_pool:
 	return item;
 }
 
-static struct state_tuple *new_state_tuple(struct bywalk_arena *ar, struct fsm_state *a, struct fsm_state *b)
+static struct state_tuple *
+new_state_tuple(struct bywalk_arena *ar, struct fsm_state *a, struct fsm_state *b)
 {
 	struct state_tuple lkup, *p;
 	struct fsm_state *comb;
@@ -247,9 +243,6 @@ static struct state_tuple *new_state_tuple(struct bywalk_arena *ar, struct fsm_s
 	endbit = ((a && a->end) << 1) | (b && b->end);
 	is_end = ar->endcheck & (1 << endbit);
 
-	fprintf(stderr, "endbit = %d.  is_end = %d.  endcheck = %d.  a = %p, b = %p, a->end = %d, b->end = %d\n",
-		endbit, is_end, ar->endcheck, (void *)a, (void *)b, a ? (int)a->end : 0, b ? (int)b->end : 0);
-
 	if (is_end) {
 		fsm_setend(ar->new, comb, 1);
 
@@ -270,7 +263,7 @@ static struct state_tuple *new_state_tuple(struct bywalk_arena *ar, struct fsm_s
 }
 
 static int
-intersection_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start);
+walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start);
 
 static void
 mark_equiv_null(struct fsm *fsm);
@@ -316,6 +309,7 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
 	}
 
 	ar.endcheck = ENDCHECK_INTERSECT;
+	ar.edgecheck = EDGECHECK_INTERSECT;
 
 	sa = fsm_getstart(a);
 	sb = fsm_getstart(b);
@@ -337,7 +331,7 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
         assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
 
 	fsm_setstart(ar.new, tup0->comb);
-	if (!intersection_walk_edges(&ar, a,b, tup0)) {
+	if (!walk_edges(&ar, a,b, tup0)) {
 		goto error;
 	}
 
@@ -367,75 +361,6 @@ mark_equiv_null(struct fsm *fsm)
 		src->equiv = NULL;
 	}
 }
-
-static int
-intersection_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start)
-{
-	struct fsm_state *qa, *qb, *qc;
-	struct set_iter ei;
-	const struct fsm_edge *ea, *eb;
-
-	assert(a != NULL);
-	assert(b != NULL);
-
-	assert(ar->new != NULL);
-	assert(ar->states != NULL);
-
-	assert(start != NULL);
-
-	/* This performs the actual intersection by a depth-first search. */
-	qa = start->a;
-	qb = start->b;
-	qc = start->comb;
-
-	assert(qa != NULL);
-	assert(qb != NULL);
-	assert(qc != NULL);
-
-	if (qc->equiv != NULL) {
-		/* already visited combined state */
-		return 1;
-	}
-
-	/* mark combined state as visited */
-	qc->equiv = qc;
-
-	for (ea = set_first(qa->edges, &ei); ea != NULL; ea=set_next(&ei)) {
-		struct set_iter dia, dib;
-		const struct fsm_state *da, *db;
-
-                /* For each A in alphabet:
-                 *   if an edge exists with label A in both FSMs, follow it
-                 */
-		eb = fsm_hasedge(qb, ea->symbol);
-		if (eb == NULL) {
-			continue;
-		}
-
-		for (da = set_first(ea->sl, &dia); da != NULL; da=set_next(&dia)) {
-			for (db = set_first(eb->sl, &dib); db != NULL; db = set_next(&dib)) {
-				struct state_tuple *dst;
-
-				/* FIXME: deal with annoying const-ness here */
-				dst = new_state_tuple(ar, (struct fsm_state *)da, (struct fsm_state *)db);
-
-				if (!fsm_addedge(qc, dst->comb, ea->symbol)) {
-					return 0;
-				}
-
-                                /* depth-first traversal of the graphs */
-				if (!intersection_walk_edges(ar, a,b, dst)) {
-					return 0;
-				}
-			}
-		}
-	}
-
-	return 1;
-}
-
-static int
-subtract_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start);
 
 struct fsm *
 fsm_subtract_bywalk(struct fsm *a, struct fsm *b)
@@ -494,6 +419,7 @@ fsm_subtract_bywalk(struct fsm *a, struct fsm *b)
 	}
 
 	ar.endcheck = ENDCHECK_SUBTRACT;
+	ar.edgecheck = EDGECHECK_SUBTRACT;
 
 	tup0 = new_state_tuple(&ar, sa,sb);
 	if (tup0 == NULL) {
@@ -506,16 +432,9 @@ fsm_subtract_bywalk(struct fsm *a, struct fsm *b)
         assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
 
 	fsm_setstart(ar.new, tup0->comb);
-	if (!subtract_walk_edges(&ar, a,b, tup0)) {
+	if (!walk_edges(&ar, a,b, tup0)) {
 		goto error;
 	}
-
-	/* subtraction can have unreachable states.  trim those away. */
-	/*
-	if (!fsm_trim(ar.new)) {
-		goto error;
-	}
-	*/
 
 finish:
 	new = ar.new;
@@ -533,10 +452,10 @@ error:
 }
 
 static int
-subtract_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start)
+walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start)
 {
 	struct fsm_state *qa, *qb, *qc;
-	struct set_iter ei;
+	struct set_iter ei, ej;
 	const struct fsm_edge *ea, *eb;
 
 	assert(a != NULL);
@@ -552,7 +471,7 @@ subtract_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struc
 	qb = start->b;
 	qc = start->comb;
 
-	assert(qa != NULL);
+	assert(qa != NULL || qb != NULL);
 	assert(qc != NULL);
 
 	if (qc->equiv != NULL) {
@@ -563,41 +482,54 @@ subtract_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struc
 	/* mark combined state as visited */
 	qc->equiv = qc;
 
-	for (ea = set_first(qa->edges, &ei); ea != NULL; ea=set_next(&ei)) {
+	ea = qa ? set_first(qa->edges, &ei) : NULL;
+	eb = qb ? set_first(qb->edges, &ej) : NULL;
+	while (ea || eb) {
 		struct set_iter dia, dib;
 		const struct fsm_state *da, *db;
+		int sym, asym, bsym, follow;
 
-                /* For each A in alphabet:
-                 *   if an edge exists with label A in both FSMs, follow it
-                 */
-		eb = qb ? fsm_hasedge(qb, ea->symbol) : NULL;
-		for (da = set_first(ea->sl, &dia); da != NULL; da=set_next(&dia)) {
+		asym = ea ? ea->symbol : INT_MAX;
+		bsym = eb ? eb->symbol : INT_MAX;
+
+		if (asym < bsym) {
+			sym = asym;
+			da = set_first(ea->sl, &dia);
+			db = NULL;
+			ea = set_next(&ei);
+		} else if (asym > bsym) {
+			sym = bsym;
+			da = NULL;
+			db = set_first(eb->sl, &dib);
+			eb = set_next(&ej);
+		} else {
+			sym = ea->symbol;
+			da = set_first(ea->sl, &dia);
 			db = eb ? set_first(eb->sl, &dib) : NULL;
+			ea = set_next(&ei);
+			eb = set_next(&ej);
+		}
 
-			for (;;) {
-				struct state_tuple *dst;
+		follow = ((!!da) << 1) | (!!db);
+		if (!((1<<follow) & ar->edgecheck)) {
+			continue;
+		}
 
-				/* FIXME: deal with annoying const-ness here */
-				dst = new_state_tuple(ar, (struct fsm_state *)da, (struct fsm_state *)db);
+		while (da || db) {
+			struct state_tuple *dst;
 
-				if (!fsm_addedge(qc, dst->comb, ea->symbol)) {
-					return 0;
-				}
+			dst = new_state_tuple(ar, (struct fsm_state *)da, (struct fsm_state *)db);
 
-                                /* depth-first traversal of the graphs */
-				if (!subtract_walk_edges(ar, a,b, dst)) {
-					return 0;
-				}
-
-
-				if (db != NULL) {
-					db = set_next(&dib);
-				}
-
-				if (db == NULL) {
-					break;
-				}
+			if (!fsm_addedge(qc, dst->comb, sym)) {
+				return 0;
 			}
+
+			if (!walk_edges(ar, a, b, dst)) {
+				return 0;
+			}
+
+			da = da ? set_next(&dia) : NULL;
+			db = db ? set_next(&dib) : NULL;
 		}
 	}
 
