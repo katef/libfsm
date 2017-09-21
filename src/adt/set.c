@@ -174,7 +174,7 @@ set_remove(struct set **set, void *item)
 	i = set_search(s, item);
 	if (s->cmp(item, s->a[i]) == 0) {
 		if (i < s->i) {
-			memmove(&s->a[i], &s->a[i + 1], (s->i - i) * (sizeof *s->a));
+			memmove(&s->a[i], &s->a[i + 1], (s->i - i - 1) * (sizeof *s->a));
 		}
 
 		s->i--;
