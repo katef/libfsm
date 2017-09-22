@@ -16,6 +16,8 @@
 #include <fsm/out.h>
 #include <fsm/options.h>
 #include <fsm/bool.h>
+#include <fsm/pred.h>
+#include <fsm/walk.h>
 
 #include "internal.h"
 
@@ -263,6 +265,9 @@ new_state_tuple(struct bywalk_arena *ar, struct fsm_state *a, struct fsm_state *
 }
 
 static int
+intersection_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start);
+
+static int
 walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start);
 
 static void
@@ -298,6 +303,22 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
 	assert(a != NULL);
 	assert(b != NULL);
 
+	/* make sure inputs are DFAs */
+	if (!fsm_all(a, fsm_isdfa)) {
+		if (!fsm_determinise(a)) {
+			goto error;
+		}
+	}
+
+	if (!fsm_all(b, fsm_isdfa)) {
+		if (!fsm_determinise(b)) {
+			goto error;
+		}
+	}
+
+	assert(fsm_all(a, fsm_isdfa));
+	assert(fsm_all(b, fsm_isdfa));
+
 	ar.new = fsm_new(a->opt);
 	if (ar.new == NULL) {
 		goto error;
@@ -331,6 +352,11 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
         assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
 
 	fsm_setstart(ar.new, tup0->comb);
+        /*
+	if (!intersection_walk_edges(&ar, a,b, tup0)) {
+		goto error;
+	}
+        */
 	if (!walk_edges(&ar, a,b, tup0)) {
 		goto error;
 	}
@@ -362,6 +388,72 @@ mark_equiv_null(struct fsm *fsm)
 	}
 }
 
+static int
+intersection_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start)
+{
+	struct fsm_state *qa, *qb, *qc;
+	struct set_iter ei;
+	const struct fsm_edge *ea, *eb;
+
+	assert(a != NULL);
+	assert(b != NULL);
+
+	assert(ar->new != NULL);
+	assert(ar->states != NULL);
+
+	assert(start != NULL);
+
+	/* This performs the actual intersection by a depth-first search. */
+	qa = start->a;
+	qb = start->b;
+	qc = start->comb;
+
+	assert(qa != NULL);
+	assert(qb != NULL);
+	assert(qc != NULL);
+
+	if (qc->equiv != NULL) {
+		/* already visited combined state */
+		return 1;
+	}
+
+	/* mark combined state as visited */
+	qc->equiv = qc;
+
+	for (ea = set_first(qa->edges, &ei); ea != NULL; ea=set_next(&ei)) {
+		struct set_iter dia, dib;
+		const struct fsm_state *da, *db;
+
+                /* For each A in alphabet:
+                 *   if an edge exists with label A in both FSMs, follow it
+                 */
+		eb = fsm_hasedge(qb, ea->symbol);
+		if (eb == NULL) {
+			continue;
+		}
+
+		for (da = set_first(ea->sl, &dia); da != NULL; da=set_next(&dia)) {
+			for (db = set_first(eb->sl, &dib); db != NULL; db = set_next(&dib)) {
+				struct state_tuple *dst;
+
+				/* FIXME: deal with annoying const-ness here */
+				dst = new_state_tuple(ar, (struct fsm_state *)da, (struct fsm_state *)db);
+
+				if (!fsm_addedge(qc, dst->comb, ea->symbol)) {
+					return 0;
+				}
+
+                                /* depth-first traversal of the graphs */
+				if (!intersection_walk_edges(ar, a,b, dst)) {
+					return 0;
+				}
+			}
+		}
+	}
+
+	return 1;
+}
+
 struct fsm *
 fsm_subtract_bywalk(struct fsm *a, struct fsm *b)
 {
@@ -391,6 +483,19 @@ fsm_subtract_bywalk(struct fsm *a, struct fsm *b)
 
 	assert(a != NULL);
 	assert(b != NULL);
+
+	/* make sure inputs are DFAs */
+	if (!fsm_all(a, fsm_isdfa)) {
+		if (!fsm_determinise(a)) {
+			goto error;
+		}
+	}
+
+	if (!fsm_all(b, fsm_isdfa)) {
+		if (!fsm_determinise(b)) {
+			goto error;
+		}
+	}
 
 	sa = fsm_getstart(a);
 	sb = fsm_getstart(b);
@@ -482,6 +587,142 @@ walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_t
 	/* mark combined state as visited */
 	qc->equiv = qc;
 
+        /* If qb == NULL, we can follow edges if ONLYA is allowed. */
+	if (!qb && !(ar->edgecheck & ENDCHECK_ONLYA)) {
+		return 1;
+	}
+
+        /* If qa == NULL, jump ahead to the ONLYB loop */
+        if (!qa) {
+		goto only_b;
+	}
+
+        /* If we can't follow ONLYA or BOTH edges, then jump ahead to
+         * the ONLYB loop */
+        if (!(ar->edgecheck & (ENDCHECK_BOTH|ENDCHECK_ONLYA))) {
+		goto only_b;
+	}
+
+	/* take care of only A and both A&B edges */
+	for (ea = set_first(qa->edges, &ei); ea != NULL; ea=set_next(&ei)) {
+		struct set_iter dia, dib;
+		const struct fsm_state *da, *db;
+
+		eb = qb ? fsm_hasedge(qb, ea->symbol) : NULL;
+
+                /* If eb == NULL we can only follow this edge if ONLYA
+                 * edges are allowed
+                 */
+		if (!eb && !(ar->edgecheck & ENDCHECK_ONLYA)) {
+			continue;
+		}
+
+		for (da = set_first(ea->sl, &dia); da != NULL; da=set_next(&dia)) {
+			db = eb ? set_first(eb->sl, &dib) : NULL;
+
+			for (;;) {
+				struct state_tuple *dst;
+
+				/* FIXME: deal with annoying const-ness here */
+				dst = new_state_tuple(ar, (struct fsm_state *)da, (struct fsm_state *)db);
+
+				assert(dst->comb != NULL);
+				if (!fsm_addedge(qc, dst->comb, ea->symbol)) {
+					return 0;
+				}
+
+				if (dst->comb->equiv == NULL) {
+					/* depth-first traversal of the graphs */
+					if (!walk_edges(ar, a,b, dst)) {
+						return 0;
+					}
+				}
+
+				if (db != NULL) {
+					db = set_next(&dib);
+				}
+
+				if (db == NULL) {
+					break;
+				}
+			}
+		}
+	}
+
+only_b:
+	if (!qb || !(ar->edgecheck & ENDCHECK_ONLYB)) {
+		return 1;
+	}
+
+	/* take care of only B edges */
+	for (eb = set_first(qb->edges, &ej); eb != NULL; eb=set_next(&ej)) {
+		struct set_iter dib;
+		const struct fsm_state *db;
+
+		ea = qa ? fsm_hasedge(qa, eb->symbol) : NULL;
+
+		/* if A has the edge, it's not an only B edge */
+		if (ea != NULL) {
+			continue;
+		}
+
+		for (db = set_first(eb->sl, &dib); db != NULL; db=set_next(&dib)) {
+			for (;;) {
+				struct state_tuple *dst;
+
+				/* FIXME: deal with annoying const-ness here */
+				dst = new_state_tuple(ar, NULL, (struct fsm_state *)db);
+
+				if (!fsm_addedge(qc, dst->comb, eb->symbol)) {
+					return 0;
+				}
+
+				assert(dst != NULL);
+
+				/* depth-first traversal of the graphs */
+				if (dst->comb->equiv == NULL) {
+					if (!walk_edges(ar, a,b, dst)) {
+						return 0;
+					}
+				}
+			}
+		}
+	}
+
+	return 1;
+}
+
+static int
+walk_edges0(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start)
+{
+	struct fsm_state *qa, *qb, *qc;
+	struct set_iter ei, ej;
+	const struct fsm_edge *ea, *eb;
+
+	assert(a != NULL);
+	assert(b != NULL);
+
+	assert(ar->new != NULL);
+	assert(ar->states != NULL);
+
+	assert(start != NULL);
+
+	/* This performs the actual subtraction by a depth-first search. */
+	qa = start->a;
+	qb = start->b;
+	qc = start->comb;
+
+	assert(qa != NULL || qb != NULL);
+	assert(qc != NULL);
+
+	if (qc->equiv != NULL) {
+		/* already visited combined state */
+		return 1;
+	}
+
+	/* mark combined state as visited */
+	qc->equiv = qc;
+
 	ea = qa ? set_first(qa->edges, &ei) : NULL;
 	eb = qb ? set_first(qb->edges, &ej) : NULL;
 	while (ea || eb) {
@@ -503,9 +744,9 @@ walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_t
 			db = set_first(eb->sl, &dib);
 			eb = set_next(&ej);
 		} else {
-			sym = ea->symbol;
+			sym = asym;
 			da = set_first(ea->sl, &dia);
-			db = eb ? set_first(eb->sl, &dib) : NULL;
+			db = set_first(eb->sl, &dib);
 			ea = set_next(&ei);
 			eb = set_next(&ej);
 		}
@@ -530,6 +771,78 @@ walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_t
 
 			da = da ? set_next(&dia) : NULL;
 			db = db ? set_next(&dib) : NULL;
+		}
+	}
+
+	return 1;
+}
+
+static int
+subtract_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start)
+{
+	struct fsm_state *qa, *qb, *qc;
+	struct set_iter ei;
+	const struct fsm_edge *ea, *eb;
+
+	assert(a != NULL);
+	assert(b != NULL);
+
+	assert(ar->new != NULL);
+	assert(ar->states != NULL);
+
+	assert(start != NULL);
+
+	/* This performs the actual subtraction by a depth-first search. */
+	qa = start->a;
+	qb = start->b;
+	qc = start->comb;
+
+	assert(qa != NULL);
+	assert(qc != NULL);
+
+	if (qc->equiv != NULL) {
+		/* already visited combined state */
+		return 1;
+	}
+
+	/* mark combined state as visited */
+	qc->equiv = qc;
+
+	for (ea = set_first(qa->edges, &ei); ea != NULL; ea=set_next(&ei)) {
+		struct set_iter dia, dib;
+		const struct fsm_state *da, *db;
+
+                /* For each A in alphabet:
+                 *   if an edge exists with label A in both FSMs, follow it
+                 */
+		eb = qb ? fsm_hasedge(qb, ea->symbol) : NULL;
+		for (da = set_first(ea->sl, &dia); da != NULL; da=set_next(&dia)) {
+			db = eb ? set_first(eb->sl, &dib) : NULL;
+
+			for (;;) {
+				struct state_tuple *dst;
+
+				/* FIXME: deal with annoying const-ness here */
+				dst = new_state_tuple(ar, (struct fsm_state *)da, (struct fsm_state *)db);
+
+				if (!fsm_addedge(qc, dst->comb, ea->symbol)) {
+					return 0;
+				}
+
+                                /* depth-first traversal of the graphs */
+				if (!subtract_walk_edges(ar, a,b, dst)) {
+					return 0;
+				}
+
+
+				if (db != NULL) {
+					db = set_next(&dib);
+				}
+
+				if (db == NULL) {
+					break;
+				}
+			}
 		}
 	}
 
