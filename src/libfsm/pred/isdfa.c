@@ -42,7 +42,7 @@ fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state)
 	 * DFA may not have duplicate edges.
 	 */
 	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
-		struct set_iter dst_iter;
+		struct set_iter jt;
 
 		if (e->symbol > UCHAR_MAX) {
 			break;
@@ -52,8 +52,8 @@ fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state)
 			continue;
 		}
 
-		(void) set_first(e->sl, &dst_iter);
-		if (set_hasnext(&dst_iter)) {
+		(void) set_first(e->sl, &jt);
+		if (set_hasnext(&jt)) {
 			return 0;
 		}
 	}
