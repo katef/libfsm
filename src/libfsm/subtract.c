@@ -17,7 +17,7 @@
 #include "internal.h"
 
 struct fsm *
-fsm_subtract(struct fsm *a, struct fsm *b)
+fsm_subtract_old(struct fsm *a, struct fsm *b)
 {
 	struct fsm *q;
 
