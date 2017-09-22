@@ -20,35 +20,60 @@ usage() {
 [ -z "${NSEED}" ] && NSEED=100
 [ -z "${SUITE}" ] && SUITE=small
 
+[ -z "${GENGRAPH}" ] && GENGRAPH="`dirname $0`/gengraph.rb"
 [ -z "${FSM}" ] && FSM=./build/bin/fsm
-[ -z "${FUZZ}" ] && FUZZ="fuzz.sfs"
 
-mkdir -p ${FUZZ}
+if [ ! -x "${FSM}" ]; then
+  echo "Cannot find fsm tool at $FSM"
+  echo "Either set FSM variable or run from top level of source"
+  exit 1
+fi
+
+if [ ! -f "${GENGRAPH}" ]; then
+  echo "Cannot find the gengraph.rb script, expected at: $GENGRAPH"
+  echo "Please set the GENGRAPH variable"
+  exit 1
+fi
+
+[ -z "${BUILD}" ] && BUILD="./build"
+if [ -z "${OUTDIR}" ]; then
+  echo "OUTDIR is unset, trying to set from BUILD directory ${BUILD}"
+  if [ ! -d "${BUILD}" ]; then
+    echo "OUTDIR is not set and cannot find BUILD directory ${BUILD}."
+    echo "Either set OUTDIR or BUILD or run from the top level of source"
+    exit 1
+  fi
+
+  OUTDIR="${BUILD}/fuzz/testintsub"
+fi
+
+echo "Output to ${OUTDIR}"
+mkdir -p ${OUTDIR}
 
 i=0
 while [ ${i} -lt ${NSEED} ]; do
   s=$(( ${SEED0} + ${i} ))
 
-  a="${FUZZ}/test-a-${s}.fsm"
-  b="${FUZZ}/test-b-${s}.fsm"
-  ccuc="${FUZZ}/intersect-ccuc-${s}.fsm"
-  out="${FUZZ}/intersect-${s}.fsm"
+  a="${OUTDIR}/test-a-${s}.fsm"
+  b="${OUTDIR}/test-b-${s}.fsm"
+  ccuc="${OUTDIR}/intersect-ccuc-${s}.fsm"
+  out="${OUTDIR}/intersect-${s}.fsm"
 
-  cuc="${FUZZ}/subtract-ccuc-${s}.fsm"
-  sout="${FUZZ}/subtract-${s}.fsm"
+  cuc="${OUTDIR}/subtract-ccuc-${s}.fsm"
+  sout="${OUTDIR}/subtract-${s}.fsm"
 
   case ${SUITE} in
     large)
       # graphs are large and difficult to check by hand, though not bad for
       # testing
-      ruby gengraph.rb ${s} 10 4 3 > $a
-      ruby gengraph.rb ${s} 10 8 3 > $b
+      ruby $GENGRAPH ${s} 10 4 3 > $a
+      ruby $GENGRAPH ${s} 10 8 3 > $b
       ;;
 
     medium)
       # still too large to easily check by hand
-      ruby gengraph.rb ${s} 8 3 3 'abcdef' > $a
-      ruby gengraph.rb ${s} 6 3 4 'abcdef' > $b
+      ruby $GENGRAPH ${s} 8 3 3 'abcdef' > $a
+      ruby $GENGRAPH ${s} 6 3 4 'abcdef' > $b
       ;;
 
     small|*)
@@ -56,8 +81,8 @@ while [ ${i} -lt ${NSEED} ]; do
       # the NFAs are small, but can result in large DFAs.
       #
       # uses a reduced alphabet (abcd)
-      ruby gengraph.rb ${s} 4 3 2 'abcd' > $a
-      ruby gengraph.rb ${s} 4 3 1 'abcd' > $b
+      ruby $GENGRAPH ${s} 4 3 2 'abcd' > $a
+      ruby $GENGRAPH ${s} 4 3 1 'abcd' > $b
       ;;
   esac
 
