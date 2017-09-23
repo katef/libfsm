@@ -165,104 +165,6 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data, struct fsm_state *a, struct fsm
 	return p;
 }
 
-struct fsm *
-fsm_intersect(struct fsm *a, struct fsm *b)
-{
-	/* intersection via DFS of the two DFAs.
-	 *
-	 * We do this in a few steps:
-	 *
-	 *   1. Initialize things:
-	 *        a) Initialize state map, which maps (q0,q1) pairs to
-	 *           new states.
-	 *        b) Let start0,start1 be the starting states of the two
-	 *           DFAs.  Allocate a new combined state for
-	 *           (start0,start1) and add the combined state to the
-	 *           queue.
-	 *
-	 *        c) We use the internal state equiv field as a
-	 *           'visited' marker.  If st->equiv == NULL, the
-	 *           state has not yet been visited.
-	 */
-
-	static const struct fsm_walk2_data zero;
-	struct fsm_walk2_data data = zero;
-
-	struct fsm *new = NULL;
-	struct fsm_state *sa, *sb;
-	struct fsm_walk2_tuple *tup0;
-
-	assert(a != NULL);
-	assert(b != NULL);
-
-	/* make sure inputs are DFAs */
-	if (!fsm_all(a, fsm_isdfa)) {
-		if (!fsm_determinise(a)) {
-			goto error;
-		}
-	}
-
-	if (!fsm_all(b, fsm_isdfa)) {
-		if (!fsm_determinise(b)) {
-			goto error;
-		}
-	}
-
-	assert(fsm_all(a, fsm_isdfa));
-	assert(fsm_all(b, fsm_isdfa));
-
-	data.new = fsm_new(a->opt);
-	if (data.new == NULL) {
-		goto error;
-	}
-
-	data.states = set_create(cmp_walk2_tuple);
-	if (data.states == NULL) {
-		goto error;
-	}
-
-	data.edgemask = FSM_WALK2_EDGE_INTERSECT;
-	data.endmask  = FSM_WALK2_END_INTERSECT;
-
-	sa = fsm_getstart(a);
-	sb = fsm_getstart(b);
-
-	if (sa == NULL || sb == NULL) {
-                /* if one of the FSMs lacks a start state, the
-                 * intersection will be empty */
-		goto finish;
-	}
-
-	tup0 = fsm_walk2_tuple_new(&data, sa,sb);
-	if (tup0 == NULL) {
-		goto error;
-	}
-
-	assert(tup0->a == sa);
-	assert(tup0->b == sb);
-	assert(tup0->comb != NULL);
-        assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
-
-	fsm_setstart(data.new, tup0->comb);
-	if (!fsm_walk2_edges(&data, a,b, tup0)) {
-		goto error;
-	}
-
-finish:
-	new = data.new;
-	data.new = NULL; /* avoid freeing new FSM */
-
-	/* reset all equiv fields in the states */
-	fsm_walk2_mark_equiv_null(new);
-
-	fsm_walk2_data_free(&data);
-	return new;
-
-error:
-	fsm_walk2_data_free(&data);
-	return NULL;
-}
-
 /* NULL-ify all the equiv members on the states */
 void
 fsm_walk2_mark_equiv_null(struct fsm *fsm)
@@ -280,108 +182,6 @@ struct fsm *
 fsm_subtract_bywalk(struct fsm *a, struct fsm *b)
 {
 	return fsm_subtract(a,b);
-}
-
-struct fsm *
-fsm_subtract(struct fsm *a, struct fsm *b)
-{
-	/* subtract via DFS of the two DFAs.
-	 *
-	 * We do this in a few steps:
-	 *
-	 *   1. Initialize things:
-	 *        a) Initialize state map, which maps (q0,q1) pairs to
-	 *           new states.
-	 *        b) Let start0,start1 be the starting states of the two
-	 *           DFAs.  Allocate a new combined state for
-	 *           (start0,start1) and add the combined state to the
-	 *           queue.
-	 *
-	 *        c) We use the internal state equiv field as a
-	 *           'visited' marker.  If st->equiv == NULL, the
-	 *           state has not yet been visited.
-	 */
-
-	static const struct fsm_walk2_data zero;
-	struct fsm_walk2_data data = zero;
-
-	struct fsm *new = NULL;
-	struct fsm_state *sa, *sb;
-	struct fsm_walk2_tuple *tup0;
-
-	assert(a != NULL);
-	assert(b != NULL);
-
-	/* make sure inputs are DFAs */
-	if (!fsm_all(a, fsm_isdfa)) {
-		if (!fsm_determinise(a)) {
-			goto error;
-		}
-	}
-
-	if (!fsm_all(b, fsm_isdfa)) {
-		if (!fsm_determinise(b)) {
-			goto error;
-		}
-	}
-
-	sa = fsm_getstart(a);
-	sb = fsm_getstart(b);
-
-	if (sa == NULL) {
-		/* if A lacks a start state, the
-		 * subtraction will be empty */
-		goto finish;
-	}
-
-	if (sb == NULL) {
-		/* if B lacks a start state, the 
-		 * subtraction will be equal to A
-		 */
-		return fsm_clone(a);
-	}
-
-	data.new = fsm_new(a->opt);
-	if (data.new == NULL) {
-		goto error;
-	}
-
-	data.states = set_create(cmp_walk2_tuple);
-	if (data.states == NULL) {
-		goto error;
-	}
-
-	data.edgemask = FSM_WALK2_EDGE_SUBTRACT;
-	data.endmask  = FSM_WALK2_END_SUBTRACT;
-
-	tup0 = fsm_walk2_tuple_new(&data, sa,sb);
-	if (tup0 == NULL) {
-		goto error;
-	}
-
-	assert(tup0->a == sa);
-	assert(tup0->b == sb);
-	assert(tup0->comb != NULL);
-        assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
-
-	fsm_setstart(data.new, tup0->comb);
-	if (!fsm_walk2_edges(&data, a,b, tup0)) {
-		goto error;
-	}
-
-finish:
-	new = data.new;
-	data.new = NULL; /* avoid freeing new FSM */
-
-	/* reset all equiv fields in the states */
-	fsm_walk2_mark_equiv_null(new);
-
-	fsm_walk2_data_free(&data);
-	return new;
-
-error:
-	fsm_walk2_data_free(&data);
-	return NULL;
 }
 
 int
@@ -563,5 +363,120 @@ only_b:
 	}
 
 	return 1;
+}
+
+struct fsm *
+fsm_walk2(struct fsm *a, struct fsm *b, unsigned edgemask, unsigned endmask)
+{
+	static const struct fsm_walk2_data zero;
+	struct fsm_walk2_data data = zero;
+
+	struct fsm *new = NULL;
+	struct fsm_state *sa, *sb;
+	struct fsm_walk2_tuple *tup0;
+
+	assert(a != NULL);
+	assert(b != NULL);
+
+	/* make sure inputs are DFAs */
+	if (!fsm_all(a, fsm_isdfa)) {
+		if (!fsm_determinise(a)) {
+			goto error;
+		}
+	}
+
+	if (!fsm_all(b, fsm_isdfa)) {
+		if (!fsm_determinise(b)) {
+			goto error;
+		}
+	}
+
+	assert(fsm_all(a, fsm_isdfa));
+	assert(fsm_all(b, fsm_isdfa));
+
+	sa = fsm_getstart(a);
+	sb = fsm_getstart(b);
+
+	if (!sa && !sb) {
+		/* if both A and B lack a start states, the
+		 * result will be empty */
+		goto finish;
+	}
+
+	if (sb == NULL) {
+		if (endmask & FSM_WALK2_ONLYA) {
+			/* must be a copy of A */
+			return fsm_clone(a);
+		} 
+		/* !sb and combined states cannot be ONLYA, so the
+		 * result will be empty 
+		 */
+		goto finish;
+	}
+
+	if (sa == NULL) {
+		if (endmask & FSM_WALK2_ONLYB) {
+			/* must be a copy of B */
+			return fsm_clone(b);
+		}
+		/* !sa and combined states cannot be ONLYB, so the
+		 * result will be empty 
+		 */
+		goto finish;
+	}
+
+	data.edgemask = edgemask;
+	data.endmask  = endmask;
+
+	data.new = fsm_new(a->opt);
+	if (data.new == NULL) {
+		goto error;
+	}
+
+	data.states = set_create(cmp_walk2_tuple);
+	if (data.states == NULL) {
+		goto error;
+	}
+
+	tup0 = fsm_walk2_tuple_new(&data, sa,sb);
+	if (tup0 == NULL) {
+		goto error;
+	}
+
+	assert(tup0->a == sa);
+	assert(tup0->b == sb);
+	assert(tup0->comb != NULL);
+	assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
+
+	fsm_setstart(data.new, tup0->comb);
+	if (!fsm_walk2_edges(&data, a,b, tup0)) {
+		goto error;
+	}
+
+finish:
+	new = data.new;
+	data.new = NULL; /* avoid freeing new FSM */
+
+	/* reset all equiv fields in the states */
+        fsm_walk2_mark_equiv_null(new);
+
+	fsm_walk2_data_free(&data);
+	return new;
+
+error:
+	fsm_walk2_data_free(&data);
+	return NULL;
+}
+
+struct fsm *
+fsm_intersect(struct fsm *a, struct fsm *b)
+{
+	return fsm_walk2(a,b, FSM_WALK2_EDGE_INTERSECT, FSM_WALK2_END_INTERSECT);
+}
+
+struct fsm *
+fsm_subtract(struct fsm *a, struct fsm *b)
+{
+	return fsm_walk2(a,b, FSM_WALK2_EDGE_SUBTRACT, FSM_WALK2_END_SUBTRACT);
 }
 

@@ -100,5 +100,8 @@ fsm_walk2_data_free(struct fsm_walk2_data *data);
 void
 fsm_walk2_mark_equiv_null(struct fsm *fsm);
 
+struct fsm *
+fsm_walk2(struct fsm *a, struct fsm *b, unsigned edgemask, unsigned endmask);
+
 #endif /* WALK2_H */
 
