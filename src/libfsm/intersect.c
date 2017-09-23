@@ -25,19 +25,19 @@
 /* XXX - revisit what would be a good size for this. */
 enum { STATE_TUPLE_POOL_SIZE = 1024 };
 
-/* Tuple (a,b,comb) for intersection.  a & b are the states of the original
- * FSMs.  comb is the state of the combined FSM.
+/* Tuple (a,b,comb) for walking the two DFAs.  a & b are the states of
+ * the original FSMs.  Optionally, comb is the state of the combined FSM.
  */
-struct state_tuple {
+struct fsm_walk2_tuple {
 	struct fsm_state *a;
 	struct fsm_state *b;
 	struct fsm_state *comb;
 };
 
-/* comparison of state_tuples for the (ordered) set */
+/* comparison of fsm_walk2_tuples for the (ordered) set */
 static int cmp_state_tuple(const void *a, const void *b)
 {
-	const struct state_tuple *pa = a, *pb = b;
+	const struct fsm_walk2_tuple *pa = a, *pb = b;
 	ptrdiff_t delta;
 
         /* XXX - do we need to specially handle NULLs? */
@@ -50,15 +50,15 @@ static int cmp_state_tuple(const void *a, const void *b)
 	return delta;
 }
 
-struct state_tuple_pool {
-	struct state_tuple_pool *next;
-	struct state_tuple items[STATE_TUPLE_POOL_SIZE];
+struct fsm_walk2_tuple_pool {
+	struct fsm_walk2_tuple_pool *next;
+	struct fsm_walk2_tuple items[STATE_TUPLE_POOL_SIZE];
 };
 
 static void
-free_bywalk(struct bywalk_arena *ar)
+fsm_walk2_arena_free(struct fsm_walk2_arena *ar)
 {
-	struct state_tuple_pool *p, *next;
+	struct fsm_walk2_tuple_pool *p, *next;
 
 	if (ar->states) {
 		set_free(ar->states);
@@ -74,13 +74,13 @@ free_bywalk(struct bywalk_arena *ar)
 	}
 }
 
-static struct state_tuple *
-alloc_state_tuple(struct bywalk_arena *ar)
+static struct fsm_walk2_tuple *
+alloc_state_tuple(struct fsm_walk2_arena *ar)
 {
-	static const struct state_tuple zero;
+	static const struct fsm_walk2_tuple zero;
 
-	struct state_tuple *item;
-	struct state_tuple_pool *pool;
+	struct fsm_walk2_tuple *item;
+	struct fsm_walk2_tuple_pool *pool;
 
 	if (ar->head == NULL) {
 		goto new_pool;
@@ -116,10 +116,10 @@ walk2mask(int has_a, int has_b)
 	return 1 << endbit;
 }
 
-static struct state_tuple *
-new_state_tuple(struct bywalk_arena *ar, struct fsm_state *a, struct fsm_state *b)
+static struct fsm_walk2_tuple *
+new_state_tuple(struct fsm_walk2_arena *ar, struct fsm_state *a, struct fsm_state *b)
 {
-	struct state_tuple lkup, *p;
+	struct fsm_walk2_tuple lkup, *p;
 	struct fsm_state *comb;
 	const struct fsm_options *opt;
 	int is_end; 
@@ -174,7 +174,7 @@ new_state_tuple(struct bywalk_arena *ar, struct fsm_state *a, struct fsm_state *
 }
 
 static int
-walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start);
+walk_edges(struct fsm_walk2_arena *ar, struct fsm *a, struct fsm *b, struct fsm_walk2_tuple *start);
 
 static void
 mark_equiv_null(struct fsm *fsm);
@@ -199,12 +199,12 @@ fsm_intersect(struct fsm *a, struct fsm *b)
 	 *           state has not yet been visited.
 	 */
 
-	static const struct bywalk_arena zero;
-	struct bywalk_arena ar = zero;
+	static const struct fsm_walk2_arena zero;
+	struct fsm_walk2_arena ar = zero;
 
 	struct fsm *new = NULL;
 	struct fsm_state *sa, *sb;
-	struct state_tuple *tup0;
+	struct fsm_walk2_tuple *tup0;
 
 	assert(a != NULL);
 	assert(b != NULL);
@@ -269,11 +269,11 @@ finish:
 	/* reset all equiv fields in the states */
 	mark_equiv_null(new);
 
-	free_bywalk(&ar);
+	fsm_walk2_arena_free(&ar);
 	return new;
 
 error:
-	free_bywalk(&ar);
+	fsm_walk2_arena_free(&ar);
 	return NULL;
 }
 
@@ -316,12 +316,12 @@ fsm_subtract(struct fsm *a, struct fsm *b)
 	 *           state has not yet been visited.
 	 */
 
-	static const struct bywalk_arena zero;
-	struct bywalk_arena ar = zero;
+	static const struct fsm_walk2_arena zero;
+	struct fsm_walk2_arena ar = zero;
 
 	struct fsm *new = NULL;
 	struct fsm_state *sa, *sb;
-	struct state_tuple *tup0;
+	struct fsm_walk2_tuple *tup0;
 
 	assert(a != NULL);
 	assert(b != NULL);
@@ -390,16 +390,16 @@ finish:
 	/* reset all equiv fields in the states */
 	mark_equiv_null(new);
 
-	free_bywalk(&ar);
+	fsm_walk2_arena_free(&ar);
 	return new;
 
 error:
-	free_bywalk(&ar);
+	fsm_walk2_arena_free(&ar);
 	return NULL;
 }
 
 static int
-walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start)
+walk_edges(struct fsm_walk2_arena *ar, struct fsm *a, struct fsm *b, struct fsm_walk2_tuple *start)
 {
 	struct fsm_state *qa, *qb, *qc;
 	struct set_iter ei, ej;
@@ -495,7 +495,7 @@ walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_t
 			 * the loop once, even when db == NULL.
 			 */
 			for (;;) {
-				struct state_tuple *dst;
+				struct fsm_walk2_tuple *dst;
 
 				/* FIXME: deal with annoying const-ness here */
 				dst = new_state_tuple(ar, (struct fsm_state *)da, (struct fsm_state *)db);
@@ -552,7 +552,7 @@ only_b:
 		 */
 		for (db = set_first(eb->sl, &dib); db != NULL; db=set_next(&dib)) {
 			for (;;) {
-				struct state_tuple *dst;
+				struct fsm_walk2_tuple *dst;
 
 				/* FIXME: deal with annoying const-ness here */
 				dst = new_state_tuple(ar, NULL, (struct fsm_state *)db);

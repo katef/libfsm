@@ -48,10 +48,10 @@ enum {
 	FSM_WALK2_END_SUBTRACT  = FSM_WALK2_ONLYA
 };
 
-struct state_tuple_pool;
+struct fsm_walk2_tuple_pool;
 
-struct bywalk_arena {
-	struct state_tuple_pool *head;
+struct fsm_walk2_arena {
+	struct fsm_walk2_tuple_pool *head;
 	size_t top;
 
 	struct fsm *new;
@@ -77,8 +77,6 @@ struct bywalk_arena {
 	unsigned endmask:4;  /* bit table for what states are end states in the combined graph */
 	unsigned edgemask:4; /* bit table for which edges should be followed */
 };
-
-
 
 #endif /* WALK2_H */
 
