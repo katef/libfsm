@@ -23,7 +23,7 @@
 #include "walk2.h"
 
 /* XXX - revisit what would be a good size for this. */
-enum { STATE_TUPLE_POOL_SIZE = 1024 };
+enum { FSM_WALK2_TUPLE_POOL_SIZE = 1024 };
 
 /* Tuple (a,b,comb) for walking the two DFAs.  a & b are the states of
  * the original FSMs.  Optionally, comb is the state of the combined FSM.
@@ -35,7 +35,8 @@ struct fsm_walk2_tuple {
 };
 
 /* comparison of fsm_walk2_tuples for the (ordered) set */
-static int cmp_state_tuple(const void *a, const void *b)
+static int
+cmp_walk2_tuple(const void *a, const void *b)
 {
 	const struct fsm_walk2_tuple *pa = a, *pb = b;
 	ptrdiff_t delta;
@@ -52,45 +53,45 @@ static int cmp_state_tuple(const void *a, const void *b)
 
 struct fsm_walk2_tuple_pool {
 	struct fsm_walk2_tuple_pool *next;
-	struct fsm_walk2_tuple items[STATE_TUPLE_POOL_SIZE];
+	struct fsm_walk2_tuple items[FSM_WALK2_TUPLE_POOL_SIZE];
 };
 
 static void
-fsm_walk2_arena_free(struct fsm_walk2_arena *ar)
+fsm_walk2_data_free(struct fsm_walk2_data *data)
 {
 	struct fsm_walk2_tuple_pool *p, *next;
 
-	if (ar->states) {
-		set_free(ar->states);
+	if (data->states) {
+		set_free(data->states);
 	}
 
-	if (ar->new) {
-		fsm_free(ar->new);
+	if (data->new) {
+		fsm_free(data->new);
 	}
 
-	for (p = ar->head; p != NULL; p = next) {
+	for (p = data->head; p != NULL; p = next) {
 		next = p->next;
 		free(p);
 	}
 }
 
 static struct fsm_walk2_tuple *
-alloc_state_tuple(struct fsm_walk2_arena *ar)
+alloc_walk2_tuple(struct fsm_walk2_data *data)
 {
 	static const struct fsm_walk2_tuple zero;
 
 	struct fsm_walk2_tuple *item;
 	struct fsm_walk2_tuple_pool *pool;
 
-	if (ar->head == NULL) {
+	if (data->head == NULL) {
 		goto new_pool;
 	}
 
-	if (ar->top >= (sizeof ar->head->items / sizeof ar->head->items[0])) {
+	if (data->top >= (sizeof data->head->items / sizeof data->head->items[0])) {
 		goto new_pool;
 	}
 
-	item = &ar->head->items[ar->top++];
+	item = &data->head->items[data->top++];
 	*item = zero;
 	return item;
 
@@ -100,9 +101,9 @@ new_pool:
 		return NULL;
 	}
 
-	pool->next = ar->head;
-	ar->head = pool;
-	ar->top = 1;
+	pool->next = data->head;
+	data->head = pool;
+	data->top = 1;
 
 	item = &pool->items[0];
 	*item = zero;
@@ -117,7 +118,7 @@ walk2mask(int has_a, int has_b)
 }
 
 static struct fsm_walk2_tuple *
-new_state_tuple(struct fsm_walk2_arena *ar, struct fsm_state *a, struct fsm_state *b)
+fsm_walk2_tuple_new(struct fsm_walk2_data *data, struct fsm_state *a, struct fsm_state *b)
 {
 	struct fsm_walk2_tuple lkup, *p;
 	struct fsm_state *comb;
@@ -127,19 +128,19 @@ new_state_tuple(struct fsm_walk2_arena *ar, struct fsm_state *a, struct fsm_stat
 	lkup.a = a;
 	lkup.b = b;
 
-	assert(ar->states);
+	assert(data->states);
 
-	p = set_contains(ar->states, &lkup);
+	p = set_contains(data->states, &lkup);
 	if (p != NULL) {
 		return p;
 	}
 
-	p = alloc_state_tuple(ar);
+	p = alloc_walk2_tuple(data);
 	if (p == NULL) {
 		return NULL;
 	}
 
-	comb = fsm_addstate(ar->new);
+	comb = fsm_addstate(data->new);
 	if (comb == NULL) {
 		return NULL;
 	}
@@ -148,16 +149,16 @@ new_state_tuple(struct fsm_walk2_arena *ar, struct fsm_state *a, struct fsm_stat
 	p->a = a;
 	p->b = b;
 	p->comb = comb;
-	if (!set_add(&ar->states, p)) {
+	if (!set_add(&data->states, p)) {
 		return NULL;
 	}
 
-	is_end = ar->endmask & walk2mask(a && a->end, b && b->end);
+	is_end = data->endmask & walk2mask(a && a->end, b && b->end);
 
 	if (is_end) {
-		fsm_setend(ar->new, comb, 1);
+		fsm_setend(data->new, comb, 1);
 
-		opt = ar->new->opt;
+		opt = data->new->opt;
 		if (opt != NULL && opt->carryopaque != NULL) {
 			const struct fsm_state *states[2];
 			states[0] = a;
@@ -166,7 +167,7 @@ new_state_tuple(struct fsm_walk2_arena *ar, struct fsm_state *a, struct fsm_stat
 			 * constructing a set just to pass these two
 			 * states to the carryopaque function
 			 */
-			opt->carryopaque(states, 2, ar->new, comb);
+			opt->carryopaque(states, 2, data->new, comb);
 		}
 	}
 
@@ -174,7 +175,7 @@ new_state_tuple(struct fsm_walk2_arena *ar, struct fsm_state *a, struct fsm_stat
 }
 
 static int
-walk_edges(struct fsm_walk2_arena *ar, struct fsm *a, struct fsm *b, struct fsm_walk2_tuple *start);
+walk_edges(struct fsm_walk2_data *data, struct fsm *a, struct fsm *b, struct fsm_walk2_tuple *start);
 
 static void
 mark_equiv_null(struct fsm *fsm);
@@ -199,8 +200,8 @@ fsm_intersect(struct fsm *a, struct fsm *b)
 	 *           state has not yet been visited.
 	 */
 
-	static const struct fsm_walk2_arena zero;
-	struct fsm_walk2_arena ar = zero;
+	static const struct fsm_walk2_data zero;
+	struct fsm_walk2_data data = zero;
 
 	struct fsm *new = NULL;
 	struct fsm_state *sa, *sb;
@@ -225,18 +226,18 @@ fsm_intersect(struct fsm *a, struct fsm *b)
 	assert(fsm_all(a, fsm_isdfa));
 	assert(fsm_all(b, fsm_isdfa));
 
-	ar.new = fsm_new(a->opt);
-	if (ar.new == NULL) {
+	data.new = fsm_new(a->opt);
+	if (data.new == NULL) {
 		goto error;
 	}
 
-	ar.states = set_create(cmp_state_tuple);
-	if (ar.states == NULL) {
+	data.states = set_create(cmp_walk2_tuple);
+	if (data.states == NULL) {
 		goto error;
 	}
 
-	ar.edgemask = FSM_WALK2_EDGE_INTERSECT;
-	ar.endmask  = FSM_WALK2_END_INTERSECT;
+	data.edgemask = FSM_WALK2_EDGE_INTERSECT;
+	data.endmask  = FSM_WALK2_END_INTERSECT;
 
 	sa = fsm_getstart(a);
 	sb = fsm_getstart(b);
@@ -247,7 +248,7 @@ fsm_intersect(struct fsm *a, struct fsm *b)
 		goto finish;
 	}
 
-	tup0 = new_state_tuple(&ar, sa,sb);
+	tup0 = fsm_walk2_tuple_new(&data, sa,sb);
 	if (tup0 == NULL) {
 		goto error;
 	}
@@ -257,23 +258,23 @@ fsm_intersect(struct fsm *a, struct fsm *b)
 	assert(tup0->comb != NULL);
         assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
 
-	fsm_setstart(ar.new, tup0->comb);
-	if (!walk_edges(&ar, a,b, tup0)) {
+	fsm_setstart(data.new, tup0->comb);
+	if (!walk_edges(&data, a,b, tup0)) {
 		goto error;
 	}
 
 finish:
-	new = ar.new;
-	ar.new = NULL; /* avoid freeing new FSM */
+	new = data.new;
+	data.new = NULL; /* avoid freeing new FSM */
 
 	/* reset all equiv fields in the states */
 	mark_equiv_null(new);
 
-	fsm_walk2_arena_free(&ar);
+	fsm_walk2_data_free(&data);
 	return new;
 
 error:
-	fsm_walk2_arena_free(&ar);
+	fsm_walk2_data_free(&data);
 	return NULL;
 }
 
@@ -316,8 +317,8 @@ fsm_subtract(struct fsm *a, struct fsm *b)
 	 *           state has not yet been visited.
 	 */
 
-	static const struct fsm_walk2_arena zero;
-	struct fsm_walk2_arena ar = zero;
+	static const struct fsm_walk2_data zero;
+	struct fsm_walk2_data data = zero;
 
 	struct fsm *new = NULL;
 	struct fsm_state *sa, *sb;
@@ -355,20 +356,20 @@ fsm_subtract(struct fsm *a, struct fsm *b)
 		return fsm_clone(a);
 	}
 
-	ar.new = fsm_new(a->opt);
-	if (ar.new == NULL) {
+	data.new = fsm_new(a->opt);
+	if (data.new == NULL) {
 		goto error;
 	}
 
-	ar.states = set_create(cmp_state_tuple);
-	if (ar.states == NULL) {
+	data.states = set_create(cmp_walk2_tuple);
+	if (data.states == NULL) {
 		goto error;
 	}
 
-	ar.edgemask = FSM_WALK2_EDGE_SUBTRACT;
-	ar.endmask  = FSM_WALK2_END_SUBTRACT;
+	data.edgemask = FSM_WALK2_EDGE_SUBTRACT;
+	data.endmask  = FSM_WALK2_END_SUBTRACT;
 
-	tup0 = new_state_tuple(&ar, sa,sb);
+	tup0 = fsm_walk2_tuple_new(&data, sa,sb);
 	if (tup0 == NULL) {
 		goto error;
 	}
@@ -378,28 +379,28 @@ fsm_subtract(struct fsm *a, struct fsm *b)
 	assert(tup0->comb != NULL);
         assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
 
-	fsm_setstart(ar.new, tup0->comb);
-	if (!walk_edges(&ar, a,b, tup0)) {
+	fsm_setstart(data.new, tup0->comb);
+	if (!walk_edges(&data, a,b, tup0)) {
 		goto error;
 	}
 
 finish:
-	new = ar.new;
-	ar.new = NULL; /* avoid freeing new FSM */
+	new = data.new;
+	data.new = NULL; /* avoid freeing new FSM */
 
 	/* reset all equiv fields in the states */
 	mark_equiv_null(new);
 
-	fsm_walk2_arena_free(&ar);
+	fsm_walk2_data_free(&data);
 	return new;
 
 error:
-	fsm_walk2_arena_free(&ar);
+	fsm_walk2_data_free(&data);
 	return NULL;
 }
 
 static int
-walk_edges(struct fsm_walk2_arena *ar, struct fsm *a, struct fsm *b, struct fsm_walk2_tuple *start)
+walk_edges(struct fsm_walk2_data *data, struct fsm *a, struct fsm *b, struct fsm_walk2_tuple *start)
 {
 	struct fsm_state *qa, *qb, *qc;
 	struct set_iter ei, ej;
@@ -408,8 +409,8 @@ walk_edges(struct fsm_walk2_arena *ar, struct fsm *a, struct fsm *b, struct fsm_
 	assert(a != NULL);
 	assert(b != NULL);
 
-	assert(ar->new != NULL);
-	assert(ar->states != NULL);
+	assert(data->new != NULL);
+	assert(data->states != NULL);
 
 	assert(start != NULL);
 
@@ -449,8 +450,8 @@ walk_edges(struct fsm_walk2_arena *ar, struct fsm *a, struct fsm *b, struct fsm_
 	 * For each decision, there are four possible states and two
 	 * possible outcomes (follow/don't-follow and end/not-end).
 	 * These decisions can thus be compactly represented with two
-	 * 4-bit tables.  The follow table is in ar->edgemask.  The end
-	 * state table is in ar->endmask.
+	 * 4-bit tables.  The follow table is in data->edgemask.  The end
+	 * state table is in data->endmask.
 	 *
 	 * There are two major loops, over the edges of A and over the
 	 * edges of B.  In the first loop, we handle the ONLYA and BOTH
@@ -458,7 +459,7 @@ walk_edges(struct fsm_walk2_arena *ar, struct fsm *a, struct fsm *b, struct fsm_
 	 */
 
         /* If qb == NULL, we can follow edges if ONLYA is allowed. */
-	if (!qb && !(ar->edgemask & FSM_WALK2_ONLYA)) {
+	if (!qb && !(data->edgemask & FSM_WALK2_ONLYA)) {
 		return 1;
 	}
 
@@ -469,7 +470,7 @@ walk_edges(struct fsm_walk2_arena *ar, struct fsm *a, struct fsm *b, struct fsm_
 
         /* If we can't follow ONLYA or BOTH edges, then jump ahead to
          * the ONLYB loop */
-        if (!(ar->edgemask & (FSM_WALK2_BOTH|FSM_WALK2_ONLYA))) {
+        if (!(data->edgemask & (FSM_WALK2_BOTH|FSM_WALK2_ONLYA))) {
 		goto only_b;
 	}
 
@@ -483,7 +484,7 @@ walk_edges(struct fsm_walk2_arena *ar, struct fsm *a, struct fsm *b, struct fsm_
                 /* If eb == NULL we can only follow this edge if ONLYA
                  * edges are allowed
                  */
-		if (!eb && !(ar->edgemask & FSM_WALK2_ONLYA)) {
+		if (!eb && !(data->edgemask & FSM_WALK2_ONLYA)) {
 			continue;
 		}
 
@@ -498,7 +499,7 @@ walk_edges(struct fsm_walk2_arena *ar, struct fsm *a, struct fsm *b, struct fsm_
 				struct fsm_walk2_tuple *dst;
 
 				/* FIXME: deal with annoying const-ness here */
-				dst = new_state_tuple(ar, (struct fsm_state *)da, (struct fsm_state *)db);
+				dst = fsm_walk2_tuple_new(data, (struct fsm_state *)da, (struct fsm_state *)db);
 
 				assert(dst != NULL);
 				assert(dst->comb != NULL);
@@ -511,7 +512,7 @@ walk_edges(struct fsm_walk2_arena *ar, struct fsm *a, struct fsm *b, struct fsm_
 				 * yet been visited
 				 */
 				if (dst->comb->equiv == NULL) {
-					if (!walk_edges(ar, a,b, dst)) {
+					if (!walk_edges(data, a,b, dst)) {
 						return 0;
 					}
 				}
@@ -531,7 +532,7 @@ walk_edges(struct fsm_walk2_arena *ar, struct fsm *a, struct fsm *b, struct fsm_
 
 only_b:
 	/* fast exit if ONLYB cases aren't allowed */
-	if (!qb || !(ar->edgemask & FSM_WALK2_ONLYB)) {
+	if (!qb || !(data->edgemask & FSM_WALK2_ONLYB)) {
 		return 1;
 	}
 
@@ -555,7 +556,7 @@ only_b:
 				struct fsm_walk2_tuple *dst;
 
 				/* FIXME: deal with annoying const-ness here */
-				dst = new_state_tuple(ar, NULL, (struct fsm_state *)db);
+				dst = fsm_walk2_tuple_new(data, NULL, (struct fsm_state *)db);
 
 				assert(dst != NULL);
 				assert(dst->comb != NULL);
@@ -568,7 +569,7 @@ only_b:
 				 * yet been visited
 				 */
 				if (dst->comb->equiv == NULL) {
-					if (!walk_edges(ar, a,b, dst)) {
+					if (!walk_edges(data, a,b, dst)) {
 						return 0;
 					}
 				}

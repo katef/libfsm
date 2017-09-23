@@ -50,7 +50,7 @@ enum {
 
 struct fsm_walk2_tuple_pool;
 
-struct fsm_walk2_arena {
+struct fsm_walk2_data {
 	struct fsm_walk2_tuple_pool *head;
 	size_t top;
 
