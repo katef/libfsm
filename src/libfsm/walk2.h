@@ -50,6 +50,15 @@ enum {
 
 struct fsm_walk2_tuple_pool;
 
+/* Tuple (a,b,comb) for walking the two DFAs.  a & b are the states of
+ * the original FSMs.  comb is the state of the combined FSM.
+ */
+struct fsm_walk2_tuple {
+	struct fsm_state *a;
+	struct fsm_state *b;
+	struct fsm_state *comb;
+};
+
 struct fsm_walk2_data {
 	struct fsm_walk2_tuple_pool *head;
 	size_t top;
@@ -77,6 +86,19 @@ struct fsm_walk2_data {
 	unsigned endmask:4;  /* bit table for what states are end states in the combined graph */
 	unsigned edgemask:4; /* bit table for which edges should be followed */
 };
+
+int
+fsm_walk2_edges(struct fsm_walk2_data *data, struct fsm *a, struct fsm *b, struct fsm_walk2_tuple *start);
+
+struct fsm_walk2_tuple *
+fsm_walk2_tuple_new(struct fsm_walk2_data *data, struct fsm_state *a, struct fsm_state *b);
+
+void
+fsm_walk2_data_free(struct fsm_walk2_data *data);
+
+/* Sets all of the equiv members of the states of the fsm to NULL */
+void
+fsm_walk2_mark_equiv_null(struct fsm *fsm);
 
 #endif /* WALK2_H */
 

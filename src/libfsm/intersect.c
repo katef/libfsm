@@ -76,15 +76,6 @@ error:
 	return NULL;
 }
 
-/* Tuple (a,b,comb) for walking the two DFAs.  a & b are the states of
- * the original FSMs.  Optionally, comb is the state of the combined FSM.
- */
-struct fsm_walk2_tuple {
-	struct fsm_state *a;
-	struct fsm_state *b;
-	struct fsm_state *comb;
-};
-
 /* comparison of fsm_walk2_tuples for the (ordered) set */
 static int
 cmp_walk2_tuple(const void *a, const void *b)
@@ -107,7 +98,7 @@ struct fsm_walk2_tuple_pool {
 	struct fsm_walk2_tuple items[FSM_WALK2_TUPLE_POOL_SIZE];
 };
 
-static void
+void
 fsm_walk2_data_free(struct fsm_walk2_data *data)
 {
 	struct fsm_walk2_tuple_pool *p, *next;
@@ -168,7 +159,7 @@ walk2mask(int has_a, int has_b)
 	return 1 << endbit;
 }
 
-static struct fsm_walk2_tuple *
+struct fsm_walk2_tuple *
 fsm_walk2_tuple_new(struct fsm_walk2_data *data, struct fsm_state *a, struct fsm_state *b)
 {
 	struct fsm_walk2_tuple lkup, *p;
@@ -224,12 +215,6 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data, struct fsm_state *a, struct fsm
 
 	return p;
 }
-
-static int
-walk_edges(struct fsm_walk2_data *data, struct fsm *a, struct fsm *b, struct fsm_walk2_tuple *start);
-
-static void
-mark_equiv_null(struct fsm *fsm);
 
 struct fsm *
 fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
@@ -310,7 +295,7 @@ fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
         assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
 
 	fsm_setstart(data.new, tup0->comb);
-	if (!walk_edges(&data, a,b, tup0)) {
+	if (!fsm_walk2_edges(&data, a,b, tup0)) {
 		goto error;
 	}
 
@@ -319,7 +304,7 @@ finish:
 	data.new = NULL; /* avoid freeing new FSM */
 
 	/* reset all equiv fields in the states */
-	mark_equiv_null(new);
+	fsm_walk2_mark_equiv_null(new);
 
 	fsm_walk2_data_free(&data);
 	return new;
@@ -330,8 +315,8 @@ error:
 }
 
 /* NULL-ify all the equiv members on the states */
-static void
-mark_equiv_null(struct fsm *fsm)
+void
+fsm_walk2_mark_equiv_null(struct fsm *fsm)
 {
 	struct fsm_state *src;
 
@@ -425,7 +410,7 @@ fsm_subtract_bywalk(struct fsm *a, struct fsm *b)
         assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
 
 	fsm_setstart(data.new, tup0->comb);
-	if (!walk_edges(&data, a,b, tup0)) {
+	if (!fsm_walk2_edges(&data, a,b, tup0)) {
 		goto error;
 	}
 
@@ -434,7 +419,7 @@ finish:
 	data.new = NULL; /* avoid freeing new FSM */
 
 	/* reset all equiv fields in the states */
-	mark_equiv_null(new);
+	fsm_walk2_mark_equiv_null(new);
 
 	fsm_walk2_data_free(&data);
 	return new;
@@ -444,8 +429,8 @@ error:
 	return NULL;
 }
 
-static int
-walk_edges(struct fsm_walk2_data *data, struct fsm *a, struct fsm *b, struct fsm_walk2_tuple *start)
+int
+fsm_walk2_edges(struct fsm_walk2_data *data, struct fsm *a, struct fsm *b, struct fsm_walk2_tuple *start)
 {
 	struct fsm_state *qa, *qb, *qc;
 	struct set_iter ei, ej;
@@ -475,7 +460,7 @@ walk_edges(struct fsm_walk2_data *data, struct fsm *a, struct fsm *b, struct fsm
 	/* mark combined state as visited */
 	qc->equiv = qc;
 
-	/* walk_edges walks the edges of two graphs, generating combined
+	/* fsm_walk2_edges walks the edges of two graphs, generating combined
 	 * states.
 	 *
 	 * This is a synthesis of two separate walk functions, one for
@@ -557,7 +542,7 @@ walk_edges(struct fsm_walk2_data *data, struct fsm *a, struct fsm *b, struct fsm
 				 * yet been visited
 				 */
 				if (dst->comb->equiv == NULL) {
-					if (!walk_edges(data, a,b, dst)) {
+					if (!fsm_walk2_edges(data, a,b, dst)) {
 						return 0;
 					}
 				}
@@ -614,7 +599,7 @@ only_b:
 				 * yet been visited
 				 */
 				if (dst->comb->equiv == NULL) {
-					if (!walk_edges(data, a,b, dst)) {
+					if (!fsm_walk2_edges(data, a,b, dst)) {
 						return 0;
 					}
 				}
