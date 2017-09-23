@@ -54,23 +54,51 @@ struct state_tuple_pool {
 	struct state_tuple items[STATE_TUPLE_POOL_SIZE];
 };
 
+/* Bit values for walking two fsms together.  Used to constrain what
+ * edges will be followed and what combined states can be considered end
+ * states.
+ *
+ * There are four bits because there are four possible states (NEITHER,
+ * ONLYA, ONLYB, BOTH).  We use these bits as a fast table lookup.
+ *
+ * When walking two graphs, the caller orders them (A,B).  This is
+ * important for some non-commutative binary operations, like
+ * subtraction, where A-B != B-A.
+ *
+ * The names below assume that the order is (A,B), but make no
+ * assumptions about what that means.
+ *
+ * These values can be bitwise OR'd together.  So, to find the states
+ * for subtraction A-B, the mask would be:
+ *      FSM_WALK2_ONLYA | FSM_WALK2_BOTH
+ */
 enum {
-	ENDCHECK_NEITHER = 1 << 0x0,
-	ENDCHECK_ONLYB   = 1 << 0x1,
-	ENDCHECK_ONLYA   = 1 << 0x2,
-	ENDCHECK_BOTH    = 1 << 0x3
+	FSM_WALK2_NEITHER = 1 << 0x0,   /* To complete the four possible states */
+	FSM_WALK2_ONLYB   = 1 << 0x1,   /* Follow edges that B has and A does not */
+	FSM_WALK2_ONLYA   = 1 << 0x2,   /* Follow edges that A has and B does not */
+	FSM_WALK2_BOTH    = 1 << 0x3    /* Follow edges that both A and B have */
 };
 
+/* Constraints for walking edges for union (A|B), intersection (A&B), and
+ * subtraction (A-B)
+ */
 enum {
-	ENDCHECK_UNION = ENDCHECK_ONLYA | ENDCHECK_ONLYB | ENDCHECK_BOTH,
-	ENDCHECK_INTERSECT = ENDCHECK_BOTH,
-	ENDCHECK_SUBTRACT  = ENDCHECK_ONLYA
+	FSM_WALK2_EDGE_UNION     = FSM_WALK2_ONLYA | FSM_WALK2_ONLYB | FSM_WALK2_BOTH,
+	FSM_WALK2_EDGE_INTERSECT = FSM_WALK2_BOTH,
+	FSM_WALK2_EDGE_SUBTRACT  = FSM_WALK2_ONLYA | FSM_WALK2_BOTH
 };
 
+/* Constraints for end states for union (A|B), intersection (A&B), and
+ * subtraction (A-B)
+ *
+ * Notice that the edge constraint for subtraction is different from the
+ * end state constraint.  With subtraction, you want to follow edges
+ * that are either ONLYA or BOTH, but valid end states must be ONLYA.
+ */
 enum {
-	EDGECHECK_UNION = ENDCHECK_ONLYA | ENDCHECK_ONLYB | ENDCHECK_BOTH,
-	EDGECHECK_INTERSECT = ENDCHECK_BOTH,
-	EDGECHECK_SUBTRACT  = ENDCHECK_ONLYA | ENDCHECK_BOTH
+	FSM_WALK2_END_UNION     = FSM_WALK2_ONLYA | FSM_WALK2_ONLYB | FSM_WALK2_BOTH,
+	FSM_WALK2_END_INTERSECT = FSM_WALK2_BOTH,
+	FSM_WALK2_END_SUBTRACT  = FSM_WALK2_ONLYA
 };
 
 struct bywalk_arena {
@@ -83,22 +111,22 @@ struct bywalk_arena {
 	/* table for which combinations are valid bits.
 	 * There are four combinations:
 	 *
-	 *   a_end  b_end    AB		bit	endcheck
+	 *   a_end  b_end    AB		bit	endmask
 	 *   false  false    00		0	0x1
 	 *   false  true     01		1	0x2
 	 *   true   false    10		2	0x4
 	 *   true   true     11		3	0x8
 	 *
 	 * Here bit is the bit that expresses whether that combination
-	 * is valid or not.  We need four bits.
+	 * is a valid end state or not.  We need four bits.
 	 *
-	 * Operation	Requirement			endcheck
+	 * Operation	Requirement			endmask
 	 * intersect    both true			0x8
 	 * subtract     first true, second false	0x4
 	 * union	either true			0xE
 	 */
-	unsigned int endcheck:4;
-	unsigned int edgecheck:4; /* same, but for following edges */
+	unsigned endmask:4;  /* bit table for what states are end states in the combined graph */
+	unsigned edgemask:4; /* bit table for which edges should be followed */
 };
 
 static void
@@ -155,13 +183,20 @@ new_pool:
 	return item;
 }
 
+static unsigned
+walk2mask(int has_a, int has_b)
+{
+	int endbit = (!!has_a << 1) | !!has_b;
+	return 1 << endbit;
+}
+
 static struct state_tuple *
 new_state_tuple(struct bywalk_arena *ar, struct fsm_state *a, struct fsm_state *b)
 {
 	struct state_tuple lkup, *p;
 	struct fsm_state *comb;
 	const struct fsm_options *opt;
-	int endbit, is_end; 
+	int is_end; 
 
 	lkup.a = a;
 	lkup.b = b;
@@ -191,8 +226,7 @@ new_state_tuple(struct bywalk_arena *ar, struct fsm_state *a, struct fsm_state *
 		return NULL;
 	}
 
-	endbit = ((a && a->end) << 1) | (b && b->end);
-	is_end = ar->endcheck & (1 << endbit);
+	is_end = ar->endmask & walk2mask(a && a->end, b && b->end);
 
 	if (is_end) {
 		fsm_setend(ar->new, comb, 1);
@@ -212,9 +246,6 @@ new_state_tuple(struct bywalk_arena *ar, struct fsm_state *a, struct fsm_state *
 
 	return p;
 }
-
-static int
-intersection_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start);
 
 static int
 walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start);
@@ -278,8 +309,8 @@ fsm_intersect(struct fsm *a, struct fsm *b)
 		goto error;
 	}
 
-	ar.endcheck = ENDCHECK_INTERSECT;
-	ar.edgecheck = EDGECHECK_INTERSECT;
+	ar.edgemask = FSM_WALK2_EDGE_INTERSECT;
+	ar.endmask  = FSM_WALK2_END_INTERSECT;
 
 	sa = fsm_getstart(a);
 	sb = fsm_getstart(b);
@@ -301,11 +332,6 @@ fsm_intersect(struct fsm *a, struct fsm *b)
         assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
 
 	fsm_setstart(ar.new, tup0->comb);
-        /*
-	if (!intersection_walk_edges(&ar, a,b, tup0)) {
-		goto error;
-	}
-        */
 	if (!walk_edges(&ar, a,b, tup0)) {
 		goto error;
 	}
@@ -325,6 +351,7 @@ error:
 	return NULL;
 }
 
+/* NULL-ify all the equiv members on the states */
 static void
 mark_equiv_null(struct fsm *fsm)
 {
@@ -335,72 +362,6 @@ mark_equiv_null(struct fsm *fsm)
 	for (src = fsm->sl; src != NULL; src = src->next) {
 		src->equiv = NULL;
 	}
-}
-
-static int
-intersection_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start)
-{
-	struct fsm_state *qa, *qb, *qc;
-	struct set_iter ei;
-	const struct fsm_edge *ea, *eb;
-
-	assert(a != NULL);
-	assert(b != NULL);
-
-	assert(ar->new != NULL);
-	assert(ar->states != NULL);
-
-	assert(start != NULL);
-
-	/* This performs the actual intersection by a depth-first search. */
-	qa = start->a;
-	qb = start->b;
-	qc = start->comb;
-
-	assert(qa != NULL);
-	assert(qb != NULL);
-	assert(qc != NULL);
-
-	if (qc->equiv != NULL) {
-		/* already visited combined state */
-		return 1;
-	}
-
-	/* mark combined state as visited */
-	qc->equiv = qc;
-
-	for (ea = set_first(qa->edges, &ei); ea != NULL; ea=set_next(&ei)) {
-		struct set_iter dia, dib;
-		const struct fsm_state *da, *db;
-
-                /* For each A in alphabet:
-                 *   if an edge exists with label A in both FSMs, follow it
-                 */
-		eb = fsm_hasedge(qb, ea->symbol);
-		if (eb == NULL) {
-			continue;
-		}
-
-		for (da = set_first(ea->sl, &dia); da != NULL; da=set_next(&dia)) {
-			for (db = set_first(eb->sl, &dib); db != NULL; db = set_next(&dib)) {
-				struct state_tuple *dst;
-
-				/* FIXME: deal with annoying const-ness here */
-				dst = new_state_tuple(ar, (struct fsm_state *)da, (struct fsm_state *)db);
-
-				if (!fsm_addedge(qc, dst->comb, ea->symbol)) {
-					return 0;
-				}
-
-                                /* depth-first traversal of the graphs */
-				if (!intersection_walk_edges(ar, a,b, dst)) {
-					return 0;
-				}
-			}
-		}
-	}
-
-	return 1;
 }
 
 struct fsm *
@@ -478,8 +439,8 @@ fsm_subtract(struct fsm *a, struct fsm *b)
 		goto error;
 	}
 
-	ar.endcheck = ENDCHECK_SUBTRACT;
-	ar.edgecheck = EDGECHECK_SUBTRACT;
+	ar.edgemask = FSM_WALK2_EDGE_SUBTRACT;
+	ar.endmask  = FSM_WALK2_END_SUBTRACT;
 
 	tup0 = new_state_tuple(&ar, sa,sb);
 	if (tup0 == NULL) {
@@ -526,7 +487,7 @@ walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_t
 
 	assert(start != NULL);
 
-	/* This performs the actual subtraction by a depth-first search. */
+	/* This performs the actual walk by a depth-first search. */
 	qa = start->a;
 	qb = start->b;
 	qc = start->comb;
@@ -534,16 +495,44 @@ walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_t
 	assert(qa != NULL || qb != NULL);
 	assert(qc != NULL);
 
+	/* fast exit if we've already visited the combined state */
 	if (qc->equiv != NULL) {
-		/* already visited combined state */
 		return 1;
 	}
 
 	/* mark combined state as visited */
 	qc->equiv = qc;
 
+	/* walk_edges walks the edges of two graphs, generating combined
+	 * states.
+	 *
+	 * This is a synthesis of two separate walk functions, one for
+	 * intersecting graphs and one for subtracting them.
+	 *
+	 * Basically, we need to provide some way to iterate over the
+	 * cross-product of the states of both, but in a way that
+	 * satisfies the operators.  There are two decision points:
+	 *
+	 *   1) whether to follow an edge to combined state (qa', qb'),
+	 *      where either qa' or qb' may be NULL
+	 *
+	 *   2) whether a combined state (qa,qb) is an end state of the
+	 *      two graphs, where either qa or qb may be NULL, and
+	 *      either may be an end state.
+	 *
+	 * For each decision, there are four possible states and two
+	 * possible outcomes (follow/don't-follow and end/not-end).
+	 * These decisions can thus be compactly represented with two
+	 * 4-bit tables.  The follow table is in ar->edgemask.  The end
+	 * state table is in ar->endmask.
+	 *
+	 * There are two major loops, over the edges of A and over the
+	 * edges of B.  In the first loop, we handle the ONLYA and BOTH
+	 * cases.  In the second loop we handle the ONLYB cases.
+	 */
+
         /* If qb == NULL, we can follow edges if ONLYA is allowed. */
-	if (!qb && !(ar->edgecheck & ENDCHECK_ONLYA)) {
+	if (!qb && !(ar->edgemask & FSM_WALK2_ONLYA)) {
 		return 1;
 	}
 
@@ -554,7 +543,7 @@ walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_t
 
         /* If we can't follow ONLYA or BOTH edges, then jump ahead to
          * the ONLYB loop */
-        if (!(ar->edgecheck & (ENDCHECK_BOTH|ENDCHECK_ONLYA))) {
+        if (!(ar->edgemask & (FSM_WALK2_BOTH|FSM_WALK2_ONLYA))) {
 		goto only_b;
 	}
 
@@ -568,35 +557,45 @@ walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_t
                 /* If eb == NULL we can only follow this edge if ONLYA
                  * edges are allowed
                  */
-		if (!eb && !(ar->edgecheck & ENDCHECK_ONLYA)) {
+		if (!eb && !(ar->edgemask & FSM_WALK2_ONLYA)) {
 			continue;
 		}
 
 		for (da = set_first(ea->sl, &dia); da != NULL; da=set_next(&dia)) {
 			db = eb ? set_first(eb->sl, &dib) : NULL;
 
+			/* for loop with break to handle the situation where there is no
+			 * corresponding edge in the B graph.  This will * proceed through
+			 * the loop once, even when db == NULL.
+			 */
 			for (;;) {
 				struct state_tuple *dst;
 
 				/* FIXME: deal with annoying const-ness here */
 				dst = new_state_tuple(ar, (struct fsm_state *)da, (struct fsm_state *)db);
 
+				assert(dst != NULL);
 				assert(dst->comb != NULL);
+
 				if (!fsm_addedge(qc, dst->comb, ea->symbol)) {
 					return 0;
 				}
 
+				/* depth-first traversal of the graph, but only traverse if the state has not
+				 * yet been visited
+				 */
 				if (dst->comb->equiv == NULL) {
-					/* depth-first traversal of the graphs */
 					if (!walk_edges(ar, a,b, dst)) {
 						return 0;
 					}
 				}
 
+				/* if db != NULL, fetch the next edge in B */
 				if (db != NULL) {
 					db = set_next(&dib);
 				}
 
+				/* if db == NULL, stop iterating over edges in B */
 				if (db == NULL) {
 					break;
 				}
@@ -605,7 +604,8 @@ walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_t
 	}
 
 only_b:
-	if (!qb || !(ar->edgecheck & ENDCHECK_ONLYB)) {
+	/* fast exit if ONLYB cases aren't allowed */
+	if (!qb || !(ar->edgemask & FSM_WALK2_ONLYB)) {
 		return 1;
 	}
 
@@ -621,6 +621,9 @@ only_b:
 			continue;
 		}
 
+		/* ONLYB loop is simpler because we only deal with
+		 * states in the B graph (the A state is always NULL)
+		 */
 		for (db = set_first(eb->sl, &dib); db != NULL; db=set_next(&dib)) {
 			for (;;) {
 				struct state_tuple *dst;
@@ -628,13 +631,16 @@ only_b:
 				/* FIXME: deal with annoying const-ness here */
 				dst = new_state_tuple(ar, NULL, (struct fsm_state *)db);
 
+				assert(dst != NULL);
+				assert(dst->comb != NULL);
+
 				if (!fsm_addedge(qc, dst->comb, eb->symbol)) {
 					return 0;
 				}
 
-				assert(dst != NULL);
-
-				/* depth-first traversal of the graphs */
+				/* depth-first traversal of the graph, but only traverse if the state has not
+				 * yet been visited
+				 */
 				if (dst->comb->equiv == NULL) {
 					if (!walk_edges(ar, a,b, dst)) {
 						return 0;
@@ -647,159 +653,3 @@ only_b:
 	return 1;
 }
 
-static int
-walk_edges0(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start)
-{
-	struct fsm_state *qa, *qb, *qc;
-	struct set_iter ei, ej;
-	const struct fsm_edge *ea, *eb;
-
-	assert(a != NULL);
-	assert(b != NULL);
-
-	assert(ar->new != NULL);
-	assert(ar->states != NULL);
-
-	assert(start != NULL);
-
-	/* This performs the actual subtraction by a depth-first search. */
-	qa = start->a;
-	qb = start->b;
-	qc = start->comb;
-
-	assert(qa != NULL || qb != NULL);
-	assert(qc != NULL);
-
-	if (qc->equiv != NULL) {
-		/* already visited combined state */
-		return 1;
-	}
-
-	/* mark combined state as visited */
-	qc->equiv = qc;
-
-	ea = qa ? set_first(qa->edges, &ei) : NULL;
-	eb = qb ? set_first(qb->edges, &ej) : NULL;
-	while (ea || eb) {
-		struct set_iter dia, dib;
-		const struct fsm_state *da, *db;
-		int sym, asym, bsym, follow;
-
-		asym = ea ? ea->symbol : INT_MAX;
-		bsym = eb ? eb->symbol : INT_MAX;
-
-		if (asym < bsym) {
-			sym = asym;
-			da = set_first(ea->sl, &dia);
-			db = NULL;
-			ea = set_next(&ei);
-		} else if (asym > bsym) {
-			sym = bsym;
-			da = NULL;
-			db = set_first(eb->sl, &dib);
-			eb = set_next(&ej);
-		} else {
-			sym = asym;
-			da = set_first(ea->sl, &dia);
-			db = set_first(eb->sl, &dib);
-			ea = set_next(&ei);
-			eb = set_next(&ej);
-		}
-
-		follow = ((!!da) << 1) | (!!db);
-		if (!((1<<follow) & ar->edgecheck)) {
-			continue;
-		}
-
-		while (da || db) {
-			struct state_tuple *dst;
-
-			dst = new_state_tuple(ar, (struct fsm_state *)da, (struct fsm_state *)db);
-
-			if (!fsm_addedge(qc, dst->comb, sym)) {
-				return 0;
-			}
-
-			if (!walk_edges(ar, a, b, dst)) {
-				return 0;
-			}
-
-			da = da ? set_next(&dia) : NULL;
-			db = db ? set_next(&dib) : NULL;
-		}
-	}
-
-	return 1;
-}
-
-static int
-subtract_walk_edges(struct bywalk_arena *ar, struct fsm *a, struct fsm *b, struct state_tuple *start)
-{
-	struct fsm_state *qa, *qb, *qc;
-	struct set_iter ei;
-	const struct fsm_edge *ea, *eb;
-
-	assert(a != NULL);
-	assert(b != NULL);
-
-	assert(ar->new != NULL);
-	assert(ar->states != NULL);
-
-	assert(start != NULL);
-
-	/* This performs the actual subtraction by a depth-first search. */
-	qa = start->a;
-	qb = start->b;
-	qc = start->comb;
-
-	assert(qa != NULL);
-	assert(qc != NULL);
-
-	if (qc->equiv != NULL) {
-		/* already visited combined state */
-		return 1;
-	}
-
-	/* mark combined state as visited */
-	qc->equiv = qc;
-
-	for (ea = set_first(qa->edges, &ei); ea != NULL; ea=set_next(&ei)) {
-		struct set_iter dia, dib;
-		const struct fsm_state *da, *db;
-
-                /* For each A in alphabet:
-                 *   if an edge exists with label A in both FSMs, follow it
-                 */
-		eb = qb ? fsm_hasedge(qb, ea->symbol) : NULL;
-		for (da = set_first(ea->sl, &dia); da != NULL; da=set_next(&dia)) {
-			db = eb ? set_first(eb->sl, &dib) : NULL;
-
-			for (;;) {
-				struct state_tuple *dst;
-
-				/* FIXME: deal with annoying const-ness here */
-				dst = new_state_tuple(ar, (struct fsm_state *)da, (struct fsm_state *)db);
-
-				if (!fsm_addedge(qc, dst->comb, ea->symbol)) {
-					return 0;
-				}
-
-                                /* depth-first traversal of the graphs */
-				if (!subtract_walk_edges(ar, a,b, dst)) {
-					return 0;
-				}
-
-
-				if (db != NULL) {
-					db = set_next(&dib);
-				}
-
-				if (db == NULL) {
-					break;
-				}
-			}
-		}
-	}
-
-	return 1;
-}
