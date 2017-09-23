@@ -43,7 +43,7 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/subtract-cuc}/res${n}
 .for n in ${TEST.tests/subtract:T:R:C/^out//}
 
 ${TEST_OUTDIR.tests/subtract}/got${n}.fsm: ${TEST_SRCDIR.tests/subtract}/in${n}a.fsm ${TEST_SRCDIR.tests/subtract}/in${n}b.fsm
-	  ${FSM} -t subtract2 -p ${.ALLSRC:M*.fsm} 	\
+	  ${FSM} -t subtract -p ${.ALLSRC:M*.fsm} 	\
 	| ${FSM} -pm					\
 	> $@
 
