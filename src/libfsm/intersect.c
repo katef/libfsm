@@ -66,9 +66,3 @@ error:
 
 	return NULL;
 }
-
-struct fsm *
-fsm_intersect_bywalk(struct fsm *a, struct fsm *b)
-{
-	return fsm_walk2(a,b, FSM_WALK2_EDGE_INTERSECT, FSM_WALK2_END_INTERSECT);
-}

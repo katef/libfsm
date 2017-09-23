@@ -27,8 +27,5 @@ fsm_union(struct fsm *a, struct fsm *b);
 struct fsm *
 fsm_intersect(struct fsm *a, struct fsm *b);
 
-struct fsm *
-fsm_intersect_bywalk(struct fsm *a, struct fsm *b);
-
 #endif
 
