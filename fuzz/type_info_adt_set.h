@@ -21,10 +21,10 @@ struct set_op {
 	enum set_op_type t;
 	union {
 		struct {
-			uintptr_t item;
+			uintptr_t item; /* 0-based */
 		} add;
 		struct {
-			uintptr_t item;
+			uintptr_t item; /* 0-based */
 		} remove;
 	} u;
 };
