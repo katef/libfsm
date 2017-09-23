@@ -9,12 +9,11 @@
 #include <limits.h>
 #include <errno.h>
 
-#include <adt/set.h>
-
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 
 #include "internal.h"
+#include "walk2.h"
 
 struct fsm *
 fsm_subtract(struct fsm *a, struct fsm *b)
@@ -42,6 +41,12 @@ fsm_subtract(struct fsm *a, struct fsm *b)
 		return NULL;
 	}
 
-	return q;
+        return q;
+}
+
+struct fsm *
+fsm_subtract_bywalk(struct fsm *a, struct fsm *b)
+{
+	return fsm_walk2(a,b, FSM_WALK2_EDGE_SUBTRACT, FSM_WALK2_END_SUBTRACT);
 }
 

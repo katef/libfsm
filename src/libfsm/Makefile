@@ -37,6 +37,7 @@ SRC += src/libfsm/concat.c
 SRC += src/libfsm/union.c
 SRC += src/libfsm/intersect.c
 SRC += src/libfsm/subtract.c
+SRC += src/libfsm/walk2.c
 
 LIB         += libfsm
 SYMS.libfsm += src/libfsm/libfsm.syms
