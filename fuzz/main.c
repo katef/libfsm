@@ -9,6 +9,11 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+
 #include <adt/xalloc.h>
 
 #include "type_info_fsm_literal.h"
@@ -58,9 +63,32 @@ usage(const char *exec_name)
 		"  -v:		   increase verbosity\n"
 		"  -l:		   list tests by name\n"
 		"  -f:		   halt after first failure\n"
-		"  -n <STRING>:  only run tests STRING in the name\n",
+		"  -n <STRING>:  only run tests STRING in the name\n"
+		"  -s <SEED>:	  fuzz from the given seed\n",
 		exec_name);
 	exit(1);
+}
+
+static theft_seed
+parse_seed(const char *s)
+{
+	unsigned long u;
+	char *e;
+
+	errno = 0;
+
+	u = strtoul(s, &e, 16);
+	if (u == ULONG_MAX && errno != 0) {
+		perror(optarg);
+		exit(1);
+	}
+
+	if (s[0] == '\0' || *e != '\0') {
+		fprintf(stderr, "invalid seed\n");
+		exit(1);
+	}
+
+	return u;
 }
 
 void
@@ -127,12 +155,13 @@ main(int argc, char **argv)
 	{
 		 int c;
 
-		 while (c = getopt(argc, argv, "hvfln:"), c != -1) {
+		 while (c = getopt(argc, argv, "hvfln:s:"), c != -1) {
 			 switch (c) {
 			 case 'v': state.verbosity++;         break;
 			 case 'l': state.list       = true;   break;
 			 case 'f': state.first_fail = true;   break;
 			 case 'n': state.filter     = optarg; break;
+			 case 's': seed = parse_seed(optarg); break;
 
 			 case 'h':
 			 case '?':
