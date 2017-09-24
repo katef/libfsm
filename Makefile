@@ -45,6 +45,7 @@ SUBDIR += tests/glob
 SUBDIR += tests/like
 SUBDIR += tests/literal
 SUBDIR += tests/minimise
+SUBDIR += tests/pcre
 SUBDIR += tests/reverse
 SUBDIR += tests/union
 SUBDIR += tests/set

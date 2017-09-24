@@ -36,16 +36,7 @@ PROPNAME.fuzz_libfsm += nfa_regress_slow_determinise
 
 PROPNAME.fuzz_libfsm += re_parser_literal
 PROPNAME.fuzz_libfsm += re_parser_pcre
-
 PROPNAME.fuzz_libfsm += re_pcre_minimize
-# PROPNAME.fuzz_libfsm += re_regress1
-# PROPNAME.fuzz_libfsm += re_regress2
-# PROPNAME.fuzz_libfsm += re_regress3
-# PROPNAME.fuzz_libfsm += re_regress4
-# PROPNAME.fuzz_libfsm += re_regress5
-# PROPNAME.fuzz_libfsm += re_regress6
-# PROPNAME.fuzz_libfsm += re_regress_aBx
-PROPNAME.fuzz_libfsm += re_regress
 
 PROPNAME.fuzz_libfsm += union_literals
 

@@ -1,0 +1,13 @@
+#
+# Copyright 2008-2017 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+0 -> 1 "\x01";
+0 -> 1 '\';
+1 -> 2 ']';
+
+start: 0;
+end: 2;
+
