@@ -75,15 +75,6 @@ enum theft_hook_trial_post_res
 trial_post_inc_verbosity(const struct theft_hook_trial_post_info *info,
     void *penv);
 
-bool test_re_parser_literal(uint8_t verbosity,
-    const uint8_t *re, size_t re_size,
-    size_t count, const struct string_pair *pairs);
-
-bool test_re_parser_pcre(uint8_t verbosity,
-    const uint8_t *re_string, size_t re_size,
-    size_t pos_count, const struct string_pair *pos_pairs,
-    size_t neg_count, const struct string_pair *neg_pairs);
-
 size_t delta_msec(const struct timeval *pre, const struct timeval *post);
 
 size_t *gen_permutation_vector(size_t length, uint32_t seed);

@@ -5,6 +5,7 @@
  */
 
 #include "fuzz_libfsm.h"
+#include "fuzz_re.h"
 
 #include "type_info_re.h"
 

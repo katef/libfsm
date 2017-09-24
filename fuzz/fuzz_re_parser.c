@@ -5,11 +5,9 @@
  */
 
 #include "fuzz_libfsm.h"
+#include "fuzz_re.h"
 
 #include "type_info_re.h"
-
-/* in test_re_parser_pcre.c */
-bool test_re_pcre_minimize(void);
 
 static enum theft_trial_res
 prop_re(struct theft *t, void *arg1)
