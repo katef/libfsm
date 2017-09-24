@@ -41,7 +41,7 @@ prop_re(struct theft *t, void *arg1)
 }
 
 bool
-test_re_parser(uintptr_t arg)
+test_re_parser(theft_seed seed, uintptr_t arg)
 {
 	struct theft_type_info arg_info;
 	enum theft_run_res res;
@@ -76,7 +76,7 @@ test_re_parser(uintptr_t arg)
 			.env = &env,
 		},
 
-		.seed = theft_seed_of_time(),
+		.seed = seed,
 		.fork = {
 			.enable = false,
 		}

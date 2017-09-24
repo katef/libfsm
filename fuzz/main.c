@@ -120,6 +120,9 @@ int
 main(int argc, char **argv)
 {
 	struct test_link *link;
+	theft_seed seed;
+
+	seed = theft_seed_of_time();
 
 	{
 		 int c;
@@ -178,8 +181,8 @@ main(int argc, char **argv)
 
 		pass = false;
 		switch (link->type) {
-		case TEST0: pass = link->u.test0.fun();                  break;
-		case TEST1: pass = link->u.test1.fun(link->u.test1.arg); break;
+		case TEST0: pass = link->u.test0.fun(seed);                    break;
+		case TEST1: pass = link->u.test1.fun(seed, link->u.test1.arg); break;
 
 		default:
 			assert(false);

@@ -65,7 +65,7 @@ shrink_pre(const struct theft_hook_shrink_pre_info *info,
 }
 
 static bool
-nfa_operations_should_not_impact_matching(void)
+nfa_operations_should_not_impact_matching(theft_seed seed)
 {
 	enum theft_run_res res;
 
@@ -93,7 +93,7 @@ nfa_operations_should_not_impact_matching(void)
 			.env = &env,
 		},
 
-		.seed = theft_seed_of_time(),
+		.seed = seed,
 		.fork = {
 			.enable = true,
 			//.timeout = 1000,
@@ -397,7 +397,8 @@ nfa_of_spec(struct nfa_spec *spec, bool shuffle)
 	return nfa;
 }
 
-static bool nfa_edge_order_should_not_matter(void)
+static bool
+nfa_edge_order_should_not_matter(theft_seed seed)
 {
 	enum theft_run_res res;
 
@@ -421,7 +422,7 @@ static bool nfa_edge_order_should_not_matter(void)
 			.env = &env,
 		},
 
-		.seed = theft_seed_of_time(),
+		.seed = seed,
 		.fork = {
 			.enable = true,
 		},
@@ -488,7 +489,7 @@ prop_nfa_edge_order_should_not_matter(struct theft *t,
 }
 
 static bool
-nfa_minimise_should_not_add_states(void)
+nfa_minimise_should_not_add_states(theft_seed seed)
 {
 	enum theft_run_res res;
 
@@ -508,7 +509,7 @@ nfa_minimise_should_not_add_states(void)
 			.shrink_pre = shrink_pre,
 			.env = &env,
 		},
-		.seed = theft_seed_of_time(),
+		.seed = seed,
 		.fork = {
 			.enable = true,
 		},
@@ -572,7 +573,7 @@ register_test_nfa(void)
 		nfa_operations_should_not_impact_matching);
 	reg_test("nfa_edge_order_should_not_matter",
 		nfa_edge_order_should_not_matter);
-
-	reg_test("nfa_minimise_should_not_add_states", nfa_minimise_should_not_add_states);
+	reg_test("nfa_minimise_should_not_add_states",
+		nfa_minimise_should_not_add_states);
 }
 

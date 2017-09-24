@@ -140,7 +140,7 @@ fail:
 }
 
 bool
-test_re_pcre_minimize(void)
+test_re_pcre_minimize(theft_seed seed)
 {
 	struct theft_type_info arg_info;
 	enum theft_run_res res;
@@ -160,7 +160,7 @@ test_re_pcre_minimize(void)
 			.trial_post = trial_post_inc_verbosity,
 			.env = &env,
 		},
-		.seed = theft_seed_of_time(),
+		.seed = seed,
 		.fork = {
 			.enable = false,
 		}

@@ -50,8 +50,8 @@ struct string_pair {
 void print_or_hexdump(FILE *f, const uint8_t *buf, size_t size);
 void hexdump(FILE *f, const uint8_t *buf, size_t size);
 
-typedef bool test_fun(void);
-typedef bool test_fun1(uintptr_t arg);
+typedef bool test_fun(theft_seed);
+typedef bool test_fun1(theft_seed, uintptr_t arg);
 
 void reg_test(const char *name, test_fun *test);
 void reg_test1(const char *name, test_fun1 *test, uintptr_t arg);

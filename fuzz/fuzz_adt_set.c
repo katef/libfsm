@@ -50,7 +50,7 @@ repeat_with_verbose(const struct theft_hook_trial_post_info *info,
 }
 
 static bool
-test_set_operations(uintptr_t limit2)
+test_set_operations(theft_seed seed, uintptr_t limit2)
 {
 	enum theft_run_res res;
 
@@ -68,7 +68,7 @@ test_set_operations(uintptr_t limit2)
 			.trial_post = repeat_with_verbose,
 			.env = &env,
 		},
-		.seed = theft_seed_of_time(),
+		.seed = seed,
 		.trials = 100000,
 		.fork = {
 			.enable = true,
@@ -83,7 +83,7 @@ test_set_operations(uintptr_t limit2)
 }
 
 static bool
-test_set_equality(void)
+test_set_equality(theft_seed seed)
 {
 	enum theft_run_res res;
 
@@ -100,7 +100,7 @@ test_set_equality(void)
 			.trial_post = repeat_with_verbose,
 			.env = &env,
 		},
-		.seed = theft_seed_of_time(),
+		.seed = seed,
 		.trials = 10000,
 		.fork = {
 			.enable = true,
@@ -116,7 +116,8 @@ test_set_equality(void)
 	return res == THEFT_RUN_PASS;
 }
 
-static enum theft_trial_res prop_set_equality(struct theft *t, void *arg1)
+static enum
+theft_trial_res prop_set_equality(struct theft *t, void *arg1)
 {
 	struct set_hook_env *env;
 	struct set_sequence *seq = arg1;

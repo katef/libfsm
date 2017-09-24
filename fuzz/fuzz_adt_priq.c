@@ -67,7 +67,7 @@ repeat_with_verbose(const struct theft_hook_trial_post_info *info,
 }
 
 static bool
-test_priq_operations(uintptr_t limit)
+test_priq_operations(uintptr_t limit, theft_seed seed)
 {
 	enum theft_run_res res;
 
@@ -120,7 +120,7 @@ test_priq_operations(uintptr_t limit)
 			.enable = true,
 		},
 
-		.seed = theft_seed_of_time(),
+		.seed = seed,
 		.always_seed_count = sizeof always_seeds / sizeof *always_seeds,
 		.always_seeds = always_seeds
 	};
