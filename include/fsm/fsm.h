@@ -218,6 +218,15 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
  * Merge two states. A new state is returned.
  *
  * Cannot return NULL.
+ *
+ * Formally, this defines an _equivalence relation_ between the two states.
+ * These are joined and the language of the resulting FSM is a superset of
+ * the given FSM; the FSM produced is a _quotient automaton_.
+ *
+ * Since the NFA in libfsm are in general Thompson NFA (i.e. with epsilon
+ * transitions), merging states here preserves their epsilon edges. This
+ * differs from Hopcroft & Ullman's definition of an equivalence relation,
+ * which is done wrt the power set of each state.
  */
 struct fsm_state *
 fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b);
