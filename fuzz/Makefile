@@ -30,7 +30,6 @@ PROPNAME.fuzz_libfsm += adt
 PROPNAME.fuzz_libfsm += nfa_edge_order_should_not_matter
 PROPNAME.fuzz_libfsm += nfa_minimise_should_not_add_states
 PROPNAME.fuzz_libfsm += nfa_operations_should_not_impact_matching
-PROPNAME.fuzz_libfsm += nfa_regress_minimise_false_positive
 PROPNAME.fuzz_libfsm += nfa_regress_slow_determinise
 # PROPNAME.fuzz_libfsm += nfa_slow_determinise # TODO: too slow for now
 

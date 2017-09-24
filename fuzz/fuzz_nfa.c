@@ -493,56 +493,6 @@ prop_nfa_edge_order_should_not_matter(struct theft *t,
 }
 
 static bool
-nfa_regress_minimise_false_positive(void)
-{
-	struct fsm *nfa;
-	struct fsm_state *st;
-	bool match;
-#define STATE_COUNT 2
-	struct fsm_state *states[STATE_COUNT];
-	uint8_t str[] = { 0x00 };
-	struct string_pair pair = {
-		.string = str,
-		.size   = sizeof str
-	};
-
-	nfa = fsm_new(&test_nfa_fsm_options);
-	assert(nfa); /* XXX */
-
-	for (size_t i = 0; i < STATE_COUNT; i++) {
-		states[i] = fsm_addstate(nfa);
-		assert(states[i]); /* XXX */
-	}
-
-	fsm_setstart(nfa, states[0]);
-
-	if (!fsm_addedge_any(nfa, states[1], states[1])) {
-		assert(false);
-	}
-
-	fsm_setend(nfa, states[STATE_COUNT - 1], 1);
-#undef STATE_COUNT
-
-	printf("BEFORE fsm_minimise\n");
-	fsm_print(nfa, stdout, FSM_OUT_DOT);
-
-	if (!fsm_minimise(nfa)) {
-		assert(false);
-	}
-
-	printf("AFTER fsm_minimise\n");
-	fsm_print(nfa, stdout, FSM_OUT_DOT);
-
-	st = wrap_fsm_exec(nfa, &pair);
-
-	match = (st != NULL);
-
-	fsm_free(nfa);
-
-	return !match;
-}
-
-static bool
 nfa_slow_determinise(void)
 {
 	enum theft_run_res res;
@@ -716,8 +666,6 @@ register_test_nfa(void)
 		nfa_operations_should_not_impact_matching);
 	reg_test("nfa_edge_order_should_not_matter",
 		nfa_edge_order_should_not_matter);
-	reg_test("nfa_regress_minimise_false_positive",
-		nfa_regress_minimise_false_positive);
 	reg_test("nfa_slow_determinise",
 		nfa_slow_determinise);
 	reg_test("nfa_regress_slow_determinise",
