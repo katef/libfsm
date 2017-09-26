@@ -257,6 +257,7 @@ const struct theft_type_info type_info_nfa = {
 const char *
 nfa_op_name(enum nfa_op op)
 {
+fprintf(stderr, "nfa_op %u\n", op);
 	switch (op) {
 	case NFA_OP_NOP:               return "NOP";
 	case NFA_OP_MINIMISE:          return "MINIMISE";

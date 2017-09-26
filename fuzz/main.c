@@ -9,6 +9,11 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+
 #include <adt/xalloc.h>
 
 #include "type_info_fsm_literal.h"
@@ -58,9 +63,38 @@ usage(const char *exec_name)
 		"  -v:		   increase verbosity\n"
 		"  -l:		   list tests by name\n"
 		"  -f:		   halt after first failure\n"
-		"  -n <STRING>:  only run tests STRING in the name\n",
+		"  -n <STRING>:  only run tests STRING in the name\n"
+		"  -s <SEED>:	  fuzz from the given seed\n",
 		exec_name);
 	exit(1);
+}
+
+static theft_seed
+parse_seed(const char *s)
+{
+	unsigned long long u;
+	char *e;
+
+	errno = 0;
+
+	u = strtoull(s, &e, 16);
+	if (u == ULLONG_MAX && errno != 0) {
+		perror(optarg);
+		exit(1);
+	}
+
+	/* XXX: assumes theft_seed is uint64_t */
+	if (u > UINT64_MAX) {
+		fprintf(stderr, "seed out of range\n");
+		exit(1);
+	}
+
+	if (s[0] == '\0' || *e != '\0') {
+		fprintf(stderr, "invalid seed\n");
+		exit(1);
+	}
+
+	return u;
 }
 
 void
@@ -120,16 +154,20 @@ int
 main(int argc, char **argv)
 {
 	struct test_link *link;
+	theft_seed seed;
+
+	seed = theft_seed_of_time();
 
 	{
 		 int c;
 
-		 while (c = getopt(argc, argv, "hvfln:"), c != -1) {
+		 while (c = getopt(argc, argv, "hvfln:s:"), c != -1) {
 			 switch (c) {
 			 case 'v': state.verbosity++;         break;
 			 case 'l': state.list       = true;   break;
 			 case 'f': state.first_fail = true;   break;
 			 case 'n': state.filter     = optarg; break;
+			 case 's': seed = parse_seed(optarg); break;
 
 			 case 'h':
 			 case '?':
@@ -178,8 +216,8 @@ main(int argc, char **argv)
 
 		pass = false;
 		switch (link->type) {
-		case TEST0: pass = link->u.test0.fun();                  break;
-		case TEST1: pass = link->u.test1.fun(link->u.test1.arg); break;
+		case TEST0: pass = link->u.test0.fun(seed);                    break;
+		case TEST1: pass = link->u.test1.fun(seed, link->u.test1.arg); break;
 
 		default:
 			assert(false);

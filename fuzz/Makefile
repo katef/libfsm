@@ -9,7 +9,6 @@ SRC += fuzz/fuzz_adt_priq.c
 SRC += fuzz/fuzz_adt_set.c
 SRC += fuzz/fuzz_literals.c
 SRC += fuzz/fuzz_nfa.c
-SRC += fuzz/fuzz_nfa_slow.c
 SRC += fuzz/fuzz_re_parser.c
 SRC += fuzz/fuzz_re_parser_literal.c
 SRC += fuzz/fuzz_re_parser_pcre.c
@@ -30,22 +29,10 @@ PROPNAME.fuzz_libfsm += adt
 PROPNAME.fuzz_libfsm += nfa_edge_order_should_not_matter
 PROPNAME.fuzz_libfsm += nfa_minimise_should_not_add_states
 PROPNAME.fuzz_libfsm += nfa_operations_should_not_impact_matching
-PROPNAME.fuzz_libfsm += nfa_regress_minimise_false_positive
-PROPNAME.fuzz_libfsm += nfa_regress_slow_determinise
-# PROPNAME.fuzz_libfsm += nfa_slow_determinise # TODO: too slow for now
 
 PROPNAME.fuzz_libfsm += re_parser_literal
 PROPNAME.fuzz_libfsm += re_parser_pcre
-
 PROPNAME.fuzz_libfsm += re_pcre_minimize
-# PROPNAME.fuzz_libfsm += re_regress1
-# PROPNAME.fuzz_libfsm += re_regress2
-# PROPNAME.fuzz_libfsm += re_regress3
-# PROPNAME.fuzz_libfsm += re_regress4
-# PROPNAME.fuzz_libfsm += re_regress5
-# PROPNAME.fuzz_libfsm += re_regress6
-# PROPNAME.fuzz_libfsm += re_regress_aBx
-PROPNAME.fuzz_libfsm += re_regress
 
 PROPNAME.fuzz_libfsm += union_literals
 

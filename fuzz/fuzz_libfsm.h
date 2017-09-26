@@ -50,8 +50,8 @@ struct string_pair {
 void print_or_hexdump(FILE *f, const uint8_t *buf, size_t size);
 void hexdump(FILE *f, const uint8_t *buf, size_t size);
 
-typedef bool test_fun(void);
-typedef bool test_fun1(uintptr_t arg);
+typedef bool test_fun(theft_seed);
+typedef bool test_fun1(theft_seed, uintptr_t arg);
 
 void reg_test(const char *name, test_fun *test);
 void reg_test1(const char *name, test_fun1 *test, uintptr_t arg);
@@ -74,15 +74,6 @@ trial_pre_fail_once(const struct theft_hook_trial_pre_info *info,
 enum theft_hook_trial_post_res
 trial_post_inc_verbosity(const struct theft_hook_trial_post_info *info,
     void *penv);
-
-bool test_re_parser_literal(uint8_t verbosity,
-    const uint8_t *re, size_t re_size,
-    size_t count, const struct string_pair *pairs);
-
-bool test_re_parser_pcre(uint8_t verbosity,
-    const uint8_t *re_string, size_t re_size,
-    size_t pos_count, const struct string_pair *pos_pairs,
-    size_t neg_count, const struct string_pair *neg_pairs);
 
 size_t delta_msec(const struct timeval *pre, const struct timeval *post);
 

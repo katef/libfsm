@@ -25,7 +25,7 @@ static const struct fsm_options opt = {
 };
 
 static bool
-test_union_literals(void)
+test_union_literals(theft_seed seed)
 {
 	enum theft_run_res res;
 	struct theft_type_info arg_info;
@@ -46,7 +46,7 @@ test_union_literals(void)
 			.env = &env,
 		},
 
-		.seed = theft_seed_of_time(),
+		.seed = seed,
 		.fork = {
 			.enable = true,
 		},

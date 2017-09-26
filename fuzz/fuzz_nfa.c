@@ -9,9 +9,6 @@
 #include "type_info_nfa.h"
 #include "type_info_fsm_literal.h"
 
-/* In test_nfa_slow.c */
-bool test_nfa_regress_slow_determinise(void);
-
 static struct fsm *
 nfa_of_spec(struct nfa_spec *spec, bool shuffle);
 
@@ -24,8 +21,6 @@ prop_nfa_operations_should_not_impact_matching(struct theft *t,
 static enum theft_trial_res
 prop_nfa_edge_order_should_not_matter(struct theft *t,
 	void *arg1);
-static enum theft_trial_res
-prop_slow_determinise(struct theft *t, void *arg1);
 static enum theft_trial_res
 prop_nfa_minimise_should_not_add_states(struct theft *t,
 	void *arg1);
@@ -70,7 +65,7 @@ shrink_pre(const struct theft_hook_shrink_pre_info *info,
 }
 
 static bool
-nfa_operations_should_not_impact_matching(void)
+nfa_operations_should_not_impact_matching(theft_seed seed)
 {
 	enum theft_run_res res;
 
@@ -98,7 +93,7 @@ nfa_operations_should_not_impact_matching(void)
 			.env = &env,
 		},
 
-		.seed = theft_seed_of_time(),
+		.seed = seed,
 		.fork = {
 			.enable = true,
 			//.timeout = 1000,
@@ -402,7 +397,8 @@ nfa_of_spec(struct nfa_spec *spec, bool shuffle)
 	return nfa;
 }
 
-static bool nfa_edge_order_should_not_matter(void)
+static bool
+nfa_edge_order_should_not_matter(theft_seed seed)
 {
 	enum theft_run_res res;
 
@@ -426,7 +422,7 @@ static bool nfa_edge_order_should_not_matter(void)
 			.env = &env,
 		},
 
-		.seed = theft_seed_of_time(),
+		.seed = seed,
 		.fork = {
 			.enable = true,
 		},
@@ -493,146 +489,7 @@ prop_nfa_edge_order_should_not_matter(struct theft *t,
 }
 
 static bool
-nfa_regress_minimise_false_positive(void)
-{
-	struct fsm *nfa;
-	struct fsm_state *st;
-	bool match;
-#define STATE_COUNT 2
-	struct fsm_state *states[STATE_COUNT];
-	uint8_t str[] = { 0x00 };
-	struct string_pair pair = {
-		.string = str,
-		.size   = sizeof str
-	};
-
-	nfa = fsm_new(&test_nfa_fsm_options);
-	assert(nfa); /* XXX */
-
-	for (size_t i = 0; i < STATE_COUNT; i++) {
-		states[i] = fsm_addstate(nfa);
-		assert(states[i]); /* XXX */
-	}
-
-	fsm_setstart(nfa, states[0]);
-
-	if (!fsm_addedge_any(nfa, states[1], states[1])) {
-		assert(false);
-	}
-
-	fsm_setend(nfa, states[STATE_COUNT - 1], 1);
-#undef STATE_COUNT
-
-	printf("BEFORE fsm_minimise\n");
-	fsm_print(nfa, stdout, FSM_OUT_DOT);
-
-	if (!fsm_minimise(nfa)) {
-		assert(false);
-	}
-
-	printf("AFTER fsm_minimise\n");
-	fsm_print(nfa, stdout, FSM_OUT_DOT);
-
-	st = wrap_fsm_exec(nfa, &pair);
-
-	match = (st != NULL);
-
-	fsm_free(nfa);
-
-	return !match;
-}
-
-static bool
-nfa_slow_determinise(void)
-{
-	enum theft_run_res res;
-
-	//seed = 0xe0083991257118b0LLU;
-
-	struct test_env env = {
-		.tag = 'E',
-		.verbosity = 0,
-		.shrink_timeout = 60,
-	};
-
-	struct theft_run_config cfg = {
-		.name = __func__,
-		.prop1 = prop_slow_determinise,
-		.type_info = { &type_info_nfa, },
-		.hooks = {
-			.trial_pre = trial_pre_fail_once,
-			.trial_post = trial_post_inc_verbosity,
-			.shrink_pre = shrink_pre,
-			.env = &env,
-		},
-		.seed = theft_seed_of_time(),
-		.fork = {
-			.enable = true,
-		},
-	};
-
-	res = theft_run(&cfg);
-
-	return res == THEFT_RUN_PASS;
-}
-
-static enum theft_trial_res
-prop_slow_determinise(struct theft *t, void *arg1)
-{
-	struct nfa_spec *nfa_spec = arg1;
-	enum theft_trial_res res;
-	struct timeval pre, post;
-	struct test_env *env;
-	struct fsm *nfa;
-	uint8_t verbosity;
-	size_t elapsed_msec;
-
-	env = theft_hook_get_env(t);
-	assert(env->tag == 'E');
-	verbosity = env->verbosity;
-
-	assert(nfa_spec->tag == 'N');
-
-	if (nfa_spec->state_count == 0) {
-		return THEFT_TRIAL_SKIP;
-	}
-
-	nfa = nfa_of_spec(nfa_spec, false);
-	if (nfa == NULL) {
-		return THEFT_TRIAL_ERROR;
-	}
-
-	if (-1 == gettimeofday(&pre, NULL)) {
-		assert(false);
-		return false;
-	}
-	if (!fsm_determinise(nfa)) {
-		fprintf(stdout, "FAIL: determinise\n");
-		return THEFT_TRIAL_ERROR;
-	}
-	if (-1 == gettimeofday(&post, NULL)) {
-		assert(false);
-		return false;
-	}
-	elapsed_msec = 1000 * (post.tv_sec - pre.tv_sec)
-		+ (post.tv_usec / 1000 - pre.tv_usec / 1000);
-
-	if (verbosity > 0) {
-		fprintf(stdout, "%s: fsm_determinise took %zd msec\n",
-			__func__, elapsed_msec);
-	}
-
-	res = elapsed_msec < 2000
-		? THEFT_TRIAL_PASS
-		: THEFT_TRIAL_FAIL;
-
-	fsm_free(nfa);
-
-	return res;
-}
-
-static bool
-nfa_minimise_should_not_add_states(void)
+nfa_minimise_should_not_add_states(theft_seed seed)
 {
 	enum theft_run_res res;
 
@@ -652,7 +509,7 @@ nfa_minimise_should_not_add_states(void)
 			.shrink_pre = shrink_pre,
 			.env = &env,
 		},
-		.seed = theft_seed_of_time(),
+		.seed = seed,
 		.fork = {
 			.enable = true,
 		},
@@ -716,13 +573,7 @@ register_test_nfa(void)
 		nfa_operations_should_not_impact_matching);
 	reg_test("nfa_edge_order_should_not_matter",
 		nfa_edge_order_should_not_matter);
-	reg_test("nfa_regress_minimise_false_positive",
-		nfa_regress_minimise_false_positive);
-	reg_test("nfa_slow_determinise",
-		nfa_slow_determinise);
-	reg_test("nfa_regress_slow_determinise",
-		test_nfa_regress_slow_determinise);
-
-	reg_test("nfa_minimise_should_not_add_states", nfa_minimise_should_not_add_states);
+	reg_test("nfa_minimise_should_not_add_states",
+		nfa_minimise_should_not_add_states);
 }
 
