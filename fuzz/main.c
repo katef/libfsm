@@ -72,14 +72,20 @@ usage(const char *exec_name)
 static theft_seed
 parse_seed(const char *s)
 {
-	unsigned long u;
+	unsigned long long u;
 	char *e;
 
 	errno = 0;
 
-	u = strtoul(s, &e, 16);
-	if (u == ULONG_MAX && errno != 0) {
+	u = strtoull(s, &e, 16);
+	if (u == ULLONG_MAX && errno != 0) {
 		perror(optarg);
+		exit(1);
+	}
+
+	/* XXX: assumes theft_seed is uint64_t */
+	if (u > UINT64_MAX) {
+		fprintf(stderr, "seed out of range\n");
 		exit(1);
 	}
 
