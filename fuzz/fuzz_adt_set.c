@@ -12,7 +12,7 @@
 struct model {
 	struct set_hook_env *env;
 	size_t bit_count;
-	uint64_t bits[]; /* 0-based */
+	uint64_t bits[];
 };
 
 static enum theft_trial_res prop_set_operations(struct theft *t, void *arg1);
@@ -136,8 +136,11 @@ static enum theft_trial_res prop_set_equality(struct theft *t, void *arg1)
 	set_b = set_create(cmp_item);
 
 	for (i = 0; i < seq->count; i++) {
-		(void) set_add(&set_a, (void *) ((uintptr_t) seq->values[i] + 1U)); /* XXX */
-		(void) set_add(&set_b, (void *) ((uintptr_t) permuted[i]    + 1U));
+		assert(seq->values[i] != 0);
+		assert(permuted[i] != 0);
+
+		(void) set_add(&set_a, (void *) ((uintptr_t) seq->values[i])); /* XXX */
+		(void) set_add(&set_b, (void *) ((uintptr_t) permuted[i]));
 	}
 
 	if (!set_equal(set_a, set_b)) {
@@ -178,7 +181,9 @@ op_add(struct model *m, struct set_op *op, struct set **set)
 
 	old_s = *set;
 
-	(void) set_add(set, (void *) ((uintptr_t) op->u.add.item + 1U)); /* XXX */
+	assert(op->u.add.item != 0);
+
+	(void) set_add(set, (void *) ((uintptr_t) op->u.add.item)); /* XXX */
 
 	if (m->env->verbosity > 0) {
 		fprintf(stderr, "ITEM IS %zu (decimal)\n", (size_t) op->u.add.item);
@@ -202,7 +207,9 @@ op_remove(struct model *m, struct set_op *op, struct set **set)
 
 	old_s = *set;
 
-	set_remove(set, (void *) ((uintptr_t) op->u.remove.item + 1U));
+	assert(op->u.remove.item != 0);
+
+	set_remove(set, (void *) ((uintptr_t) op->u.remove.item));
 
 	if (m->env->verbosity > 0) {
 		fprintf(stderr, "REMOVE 0x%" PRIxPTR " to %p => %p\n",
@@ -278,7 +285,7 @@ postcondition(struct model *m, struct set *set)
 			.set = set,
 		};
 
-		uintptr_t first_item = (uintptr_t) set_first(set, &it) - 1U;
+		uintptr_t first_item = (uintptr_t) set_first(set, &it);
 
 		if (model_first == (size_t) -1) {
 			/* this is a bit weird */
