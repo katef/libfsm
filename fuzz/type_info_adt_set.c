@@ -45,10 +45,16 @@ alloc_scen(struct theft *t, void *type_env, void **output)
 		switch (op->t) {
 		case SET_OP_ADD:
 			op->u.add.item = theft_random_bits(t, env->item_bits);
+			if (op->u.add.item == 0) {
+				goto skip;
+			}
 			break;
 
 		case SET_OP_REMOVE:
 			op->u.remove.item = theft_random_bits(t, env->item_bits);
+			if (op->u.remove.item == 0) {
+				goto skip;
+			}
 			break;
 
 		case SET_OP_CLEAR:
@@ -63,6 +69,12 @@ alloc_scen(struct theft *t, void *type_env, void **output)
 	*output = res;
 
 	return THEFT_ALLOC_OK;
+
+skip:
+
+	free(res);
+
+	return THEFT_ALLOC_SKIP;
 }
 
 static void
@@ -136,11 +148,20 @@ alloc_seq(struct theft *t, void *type_env, void **output)
 
 	for (size_t i = 0; i < count; i++) {
 		res->values[i] = theft_random_bits(t, 16);
+		if (res->values[i] == 0) {
+			goto skip;
+		}
 	}
 
 	*output = res;
 
 	return THEFT_ALLOC_OK;
+
+skip:
+
+	free(res);
+
+	return THEFT_ALLOC_SKIP;
 }
 
 static void

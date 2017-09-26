@@ -28,6 +28,9 @@ cmp_item(const void *pa, const void *pb)
 	uintptr_t a = (uintptr_t) pa;
 	uintptr_t b = (uintptr_t) pb;
 
+	assert(pa != NULL);
+	assert(pb != NULL);
+
 	return a < b ? -1 : a > b ? 1 : 0;
 }
 
@@ -134,8 +137,11 @@ theft_trial_res prop_set_equality(struct theft *t, void *arg1)
 	set_b = set_create(cmp_item);
 
 	for (i = 0; i < seq->count; i++) {
-		(void) set_add(&set_a, (void *) (uintptr_t) seq->values[i]); /* XXX */
-		(void) set_add(&set_b, (void *) (uintptr_t) permuted[i]);
+		assert(seq->values[i] != 0);
+		assert(permuted[i] != 0);
+
+		(void) set_add(&set_a, (void *) ((uintptr_t) seq->values[i])); /* XXX */
+		(void) set_add(&set_b, (void *) ((uintptr_t) permuted[i]));
 	}
 
 	if (!set_equal(set_a, set_b)) {
@@ -176,7 +182,9 @@ op_add(struct model *m, struct set_op *op, struct set **set)
 
 	old_s = *set;
 
-	(void) set_add(set, (void *) op->u.add.item); /* XXX */
+	assert(op->u.add.item != 0);
+
+	(void) set_add(set, (void *) ((uintptr_t) op->u.add.item)); /* XXX */
 
 	if (m->env->verbosity > 0) {
 		fprintf(stderr, "ITEM IS %zu (decimal)\n", (size_t) op->u.add.item);
@@ -200,7 +208,9 @@ op_remove(struct model *m, struct set_op *op, struct set **set)
 
 	old_s = *set;
 
-	set_remove(set, (void *) op->u.remove.item);
+	assert(op->u.remove.item != 0);
+
+	set_remove(set, (void *) ((uintptr_t) op->u.remove.item));
 
 	if (m->env->verbosity > 0) {
 		fprintf(stderr, "REMOVE 0x%" PRIxPTR " to %p => %p\n",
