@@ -145,14 +145,24 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data, struct fsm_state *a, struct fsm
 
 		opt = data->new->opt;
 		if (opt != NULL && opt->carryopaque != NULL) {
-			const struct fsm_state *states[2];
-			states[0] = a;
-			states[1] = b;
-			/* this is slightly cheesed, but it avoids
-			 * constructing a set just to pass these two
-			 * states to the carryopaque function
-			 */
-			opt->carryopaque(states, 2, data->new, comb);
+			const struct fsm_state *states[2] = { 0 };
+			size_t nst = 0;
+
+			if (a) {
+				states[nst++] = a;
+			}
+
+			if (b) {
+				states[nst++] = b;
+			}
+
+			if (nst > 0) {
+				/* this is slightly cheesed, but it avoids
+				 * constructing a set just to pass these two
+				 * states to the carryopaque function
+				 */
+				opt->carryopaque(states, nst, data->new, comb);
+			}
 		}
 	}
 
