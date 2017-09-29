@@ -4,7 +4,8 @@ SRC += src/libre/re.c
 SRC += src/libre/strerror.c
 SRC += src/libre/perror.c
 
-LIB += libre
+LIB        += libre
+SYMS.libre += src/libre/libre.syms
 
 .for src in ${SRC:Msrc/libre/*.c}
 ${BUILD}/lib/libre.o:    ${BUILD}/${src:R}.o

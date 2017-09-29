@@ -1,0 +1,4 @@
+re_comp
+re_flags
+re_strerror
+re_perror

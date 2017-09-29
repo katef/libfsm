@@ -38,7 +38,8 @@ SRC += src/libfsm/union.c
 SRC += src/libfsm/intersect.c
 SRC += src/libfsm/subtract.c
 
-LIB += libfsm
+LIB         += libfsm
+SYMS.libfsm += src/libfsm/libfsm.syms
 
 .for src in ${SRC:Msrc/libfsm/*.c}
 ${BUILD}/lib/libfsm.o:    ${BUILD}/${src:R}.o

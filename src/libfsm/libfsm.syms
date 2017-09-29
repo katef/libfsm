@@ -1,0 +1,87 @@
+# <fsm/bool.h>
+fsm_complement
+fsm_union
+fsm_intersect
+
+# <fsm/cost.h>
+fsm_cost_legible
+
+# <fsm/walk.h>
+fsm_all
+fsm_count
+fsm_has
+fsm_reachableall
+fsm_reachableany
+fsm_walk_edges
+fsm_walk_states
+
+# <fsm/pred.h>
+fsm_epsilonsonly
+fsm_isany
+fsm_iscomplete
+fsm_isdfa
+fsm_isend
+fsm_hasedge
+fsm_hasincoming
+fsm_hasoutgoing
+
+# <fsm/out.h>
+fsm_print
+
+# <fsm/fsm.h>
+fsm_clone
+fsm_free
+fsm_new
+fsm_setoptions
+fsm_getoptions
+fsm_move
+fsm_merge
+fsm_addstate
+fsm_removestate
+
+fsm_addedge
+fsm_addedge_any
+fsm_addedge_epsilon
+fsm_addedge_literal
+
+fsm_findmode
+fsm_collate
+fsm_state_duplicatesubgraph
+fsm_state_duplicatesubgraphx
+fsm_mergestates
+
+fsm_setstart
+fsm_getstart
+fsm_setend
+fsm_setendopaque
+fsm_setopaque
+fsm_getopaque
+
+fsm_countedges
+fsm_countstates
+
+fsm_trim
+fsm_reverse
+fsm_determinise
+fsm_determinise_cache
+fsm_determinise_freecache
+fsm_complete
+fsm_minimise
+fsm_pretty
+fsm_concat
+fsm_subtract
+
+fsm_carryopaque
+
+fsm_empty
+fsm_equal
+fsm_shortest
+fsm_example
+
+fsm_exec
+
+# exec
+fsm_fgetc
+fsm_sgetc
+
+fsm_out_c # XXX: workaround for lx
