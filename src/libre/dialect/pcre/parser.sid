@@ -33,22 +33,22 @@
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
-	!CLASS_alnum:  () -> (:fsm);
-	!CLASS_alpha:  () -> (:fsm);
+	CLASS_alnum:  () -> (:fsm);
+	CLASS_alpha:  () -> (:fsm);
 	!CLASS_any:    () -> (:fsm);
-	!CLASS_ascii:  () -> (:fsm);
-	!CLASS_blank:  () -> (:fsm);
-	!CLASS_cntrl:  () -> (:fsm);
+	CLASS_ascii:  () -> (:fsm);
+	CLASS_blank:  () -> (:fsm);
+	CLASS_cntrl:  () -> (:fsm);
 	CLASS_digit:  () -> (:fsm);
-	!CLASS_graph:  () -> (:fsm);
-	!CLASS_lower:  () -> (:fsm);
-	!CLASS_print:  () -> (:fsm);
-	!CLASS_punct:  () -> (:fsm);
+	CLASS_graph:  () -> (:fsm);
+	CLASS_lower:  () -> (:fsm);
+	CLASS_print:  () -> (:fsm);
+	CLASS_punct:  () -> (:fsm);
 	CLASS_space:  () -> (:fsm);
 	!CLASS_spchr:  () -> (:fsm);
-	!CLASS_upper:  () -> (:fsm);
-	!CLASS_word:   () -> (:fsm);
-	!CLASS_xdigit: () -> (:fsm);
+	CLASS_upper:  () -> (:fsm);
+	CLASS_word:   () -> (:fsm);
+	CLASS_xdigit: () -> (:fsm);
 
 	CLASS_ndigit: () -> (:fsm);
 	CLASS_nspace: () -> (:fsm);
@@ -126,6 +126,38 @@
 
 	group: (x :fsm_state, y :fsm_state) -> () [
 
+		class: () -> (k :fsm) = {
+			k = CLASS_alnum;
+		||
+			k = CLASS_alpha;
+		||
+			k = CLASS_ascii;
+		||
+			k = CLASS_blank;
+		||
+			k = CLASS_cntrl;
+		||
+			k = CLASS_digit;
+		||
+			k = CLASS_graph;
+		||
+			k = CLASS_lower;
+		||
+			k = CLASS_print;
+		||
+			k = CLASS_punct;
+		||
+			k = CLASS_space;
+		||
+			k = CLASS_upper;
+		||
+			k = CLASS_word;
+		||
+			k = CLASS_xdigit;
+		||
+			k = pcre-class;
+		};
+
 		char: () -> (c :char) = {
 			(c, !, !) = ESC;
 		||
@@ -183,7 +215,7 @@
 				c = char;
 				<group-add-char>(&g, c);
 			||
-				f = pcre-class;
+				f = class;
 				<group-add-class>(&g, f);
 			||
 				(a, b) = range;
