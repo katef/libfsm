@@ -1,0 +1,24 @@
+#
+# Copyright 2017 Shannon F. Stewman
+#
+# See LICENCE for the full copyright terms.
+#
+
+0  ->  1 "a"; # e.g. "a"
+0  ->  2 "b"; # e.g. "b"
+1  ->  8 "a"; # e.g. "aa"
+1  ->  3 "b"; # e.g. "ba"
+2  ->  3 "a"; # e.g. "ba"
+2  ->  4 "b"; # e.g. "bb"
+3  ->  7 "a"; # e.g. "aab"
+3  ->  5 "b"; # e.g. "bba"
+4  ->  5 "a"; # e.g. "bba"
+4  ->  4 "b"; # e.g. "bb"
+5  ->  6 "a"; # e.g. "bbaa"
+5  ->  5 "b"; # e.g. "bba"
+6  ->  6 "b"; # e.g. "bbaa"
+7  ->  6 "b"; # e.g. "bbaa"
+8  ->  7 "b"; # e.g. "aab"
+
+start: 0;
+end:   6;
