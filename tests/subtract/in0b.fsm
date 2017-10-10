@@ -1,0 +1,12 @@
+#
+# Copyright 2017 Shannon F. Stewman
+#
+# See LICENCE for the full copyright terms.
+#
+
+# fo*
+0  ->  1 "f"; # e.g. "f"
+1  ->  1 "o"; # e.g. "f"
+
+start: 0;
+end:   1;
