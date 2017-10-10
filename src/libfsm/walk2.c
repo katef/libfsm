@@ -1,3 +1,5 @@
+#include "walk2.h"
+
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -14,7 +16,6 @@
 #include <fsm/walk.h>
 
 #include "internal.h"
-#include "walk2.h"
 
 /* XXX - revisit what would be a good size for this. */
 enum { FSM_WALK2_TUPLE_POOL_SIZE = 1024 };

@@ -1,6 +1,8 @@
 #ifndef FSM_WALK2_H
 #define FSM_WALK2_H
 
+#include <stdlib.h>
+
 /* Bit values for walking two fsms together.  Used to constrain what
  * edges will be followed and what combined states can be considered end
  * states.
