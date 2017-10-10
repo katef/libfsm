@@ -6,13 +6,15 @@
 
 #include <assert.h>
 #include <stddef.h>
-#include <limits.h>
 #include <errno.h>
 
 #include <fsm/fsm.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
 #include <fsm/bool.h>
 
 #include "internal.h"
+#include "walk2.h"
 
 struct fsm *
 fsm_intersect(struct fsm *a, struct fsm *b)
@@ -64,4 +66,3 @@ error:
 
 	return NULL;
 }
-
