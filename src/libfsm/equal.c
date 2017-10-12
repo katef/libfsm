@@ -12,6 +12,7 @@
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
+#include <fsm/bool.h>
 
 #include "internal.h"
 

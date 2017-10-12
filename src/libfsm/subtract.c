@@ -6,6 +6,9 @@
 
 #include <stdlib.h>
 
+#include <fsm/fsm.h>
+#include <fsm/bool.h>
+
 #include "walk2.h"
 
 struct fsm;

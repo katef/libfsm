@@ -306,12 +306,6 @@ struct fsm *
 fsm_concat(struct fsm *a, struct fsm *b);
 
 /*
- * Subtract b from a. This is not commutative.
- */
-struct fsm *
-fsm_subtract(struct fsm *a, struct fsm *b);
-
-/*
  * Return 1 if the fsm does not match anything;
  * 0 if anything matches (including the empty string),
  * or -1 on error.
