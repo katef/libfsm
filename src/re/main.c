@@ -32,6 +32,7 @@
  */
 
 struct match {
+	int i;
 	const char *s;
 	struct match *next;
 };
@@ -216,12 +217,17 @@ xopen(const char *s)
 }
 
 static struct match *
-addmatch(struct match **head, const char *s)
+addmatch(struct match **head, int i, const char *s)
 {
 	struct match *new;
 
 	assert(head != NULL);
 	assert(s != NULL);
+
+	if ((1U << i) > INT_MAX) {
+		fprintf(stderr, "Too many patterns for int bitmap\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* TODO: explain we find duplicate; return success */
 	/*
@@ -243,6 +249,7 @@ addmatch(struct match **head, const char *s)
 		return NULL;
 	}
 
+	new->i = i;
 	new->s = s;
 
 	new->next = *head;
@@ -287,7 +294,7 @@ carryopaque(const struct fsm_state **set, size_t n,
 		assert(fsm_getopaque(fsm, set[i]) != NULL);
 
 		for (m = fsm_getopaque(fsm, set[i]); m != NULL; m = m->next) {
-			if (!addmatch(&matches, m->s)) {
+			if (!addmatch(&matches, m->i, m->s)) {
 				perror("addmatch");
 				goto error;
 			}
@@ -326,6 +333,43 @@ printexample(FILE *f, const struct fsm *fsm, const struct fsm_state *state)
 	/* TODO: escape hex etc */
 	fprintf(f, "%s%s", buf,
 		n >= (int) sizeof buf - 1 ? "..." : "");
+}
+
+static int
+endleaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
+	const void *opaque)
+{
+	const struct match *m;
+	int n;
+
+	assert(opaque == NULL);
+	assert(fsm_isend(fsm, state));
+
+	(void) f;
+
+	assert(state->opaque != NULL);
+
+	n = 0;
+
+	for (m = state->opaque; m != NULL; m = m->next) {
+		n |= 1 << m->i;
+	}
+
+	fprintf(f, "return %#x;", (unsigned) n);
+
+	fprintf(f, " /* ");
+
+	for (m = state->opaque; m != NULL; m = m->next) {
+		fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
+
+		if (m->next != NULL) {
+			fprintf(f, ", ");
+		}
+	}
+
+	fprintf(f, " */");
+
+	return 0;
 }
 
 int
@@ -491,7 +535,6 @@ main(int argc, char *argv[])
 				}
 			}
 
-			/* TODO: associate argv[i] with new's end state */
 			{
 				struct fsm_state *s;
 
@@ -507,7 +550,7 @@ main(int argc, char *argv[])
 
 						matches = NULL;
 
-						if (!addmatch(&matches, argv[i])) {
+						if (!addmatch(&matches, i, argv[i])) {
 							perror("addmatch");
 							return EXIT_FAILURE;
 						}
@@ -626,25 +669,25 @@ main(int argc, char *argv[])
 	}
 
 	if (!keep_nfa) {
+		opt.carryopaque = carryopaque;
+
 		/*
 		 * Minimise only when we don't need to keep the end state information
 		 * separated per regexp. Otherwise, convert to a DFA.
 		 */
-		if (!patterns && !example) {
+		if (!patterns && !example && format != FSM_OUT_C) {
 			if (!fsm_minimise(fsm)) {
 				perror("fsm_minimise");
 				return EXIT_FAILURE;
 			}
 		} else {
-			opt.carryopaque = carryopaque;
-
 			if (!fsm_determinise(fsm)) {
 				perror("fsm_determinise");
 				return EXIT_FAILURE;
 			}
-
-			opt.carryopaque = NULL;
 		}
+
+		opt.carryopaque = NULL;
 	}
 
 	if (example) {
@@ -690,6 +733,10 @@ main(int argc, char *argv[])
 				perror("fsm_pretty");
 				return 0;
 			}
+		}
+
+		if (format == FSM_OUT_C) {
+			opt.endleaf = endleaf;
 		}
 
 		fsm_print(fsm, stdout, format);
