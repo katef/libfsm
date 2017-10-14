@@ -397,10 +397,62 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 	return 0;
 }
 
+static void
+fsm_out_c_complete(const struct fsm *fsm, FILE *f)
+{
+	const char *cp;
+
+	assert(fsm != NULL);
+	assert(fsm->opt != NULL);
+	assert(fsm_all(fsm, fsm_isdfa));
+	assert(f != NULL);
+
+	if (fsm->opt->cp != NULL) {
+		cp = fsm->opt->cp;
+	} else {
+		switch (fsm->opt->io) {
+		case FSM_IO_GETC: cp = "c";  break;
+		case FSM_IO_STR:  cp = "*p"; break;
+		case FSM_IO_PAIR: cp = "*p"; break;
+		}
+	}
+
+	/* enum of states */
+	out_stateenum(f, fsm, fsm->sl);
+	fprintf(f, "\n");
+
+	/* start state */
+	assert(fsm->start != NULL);
+	fprintf(f, "\tstate = S%u;\n", indexof(fsm, fsm->start));
+	fprintf(f, "\n");
+
+	switch (fsm->opt->io) {
+	case FSM_IO_GETC:
+		fprintf(f, "\twhile (c = fsm_getc(opaque), c != EOF) {\n");
+		break;
+
+	case FSM_IO_STR:
+		fprintf(f, "\tfor (p = s; *p != '\\0'; p++) {\n");
+		break;
+
+	case FSM_IO_PAIR:
+		fprintf(f, "\tfor (p = b; *p != e; p++) {\n");
+		break;
+	}
+
+	(void) fsm_out_cfrag(fsm, f, cp,
+		fsm->opt->leaf != NULL ? fsm->opt->leaf : leaf, fsm->opt->leaf_opaque);
+
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+
+	/* end states */
+	endstates(f, fsm, fsm->sl);
+}
+
 void
 fsm_out_c(const struct fsm *fsm, FILE *f)
 {
-	const char *cp;
 	const char *prefix;
 
 	assert(fsm != NULL);
@@ -419,19 +471,8 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 		prefix = "fsm_";
 	}
 
-	if (fsm->opt->cp != NULL) {
-		cp = fsm->opt->cp;
-	} else {
-		switch (fsm->opt->io) {
-		case FSM_IO_GETC: cp = "c";  break;
-		case FSM_IO_STR:  cp = "*p"; break;
-		case FSM_IO_PAIR: cp = "*p"; break;
-		}
-	}
-
 	if (fsm->opt->fragment) {
-		(void) fsm_out_cfrag(fsm, f, cp,
-			fsm->opt->leaf != NULL ? fsm->opt->leaf : leaf, fsm->opt->leaf_opaque);
+		fsm_out_c_complete(fsm, f);
 		return;
 	}
 
@@ -472,37 +513,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 		break;
 	}
 
-	/* enum of states */
-	out_stateenum(f, fsm, fsm->sl);
-	fprintf(f, "\n");
-
-	/* start state */
-	assert(fsm->start != NULL);
-	fprintf(f, "\tstate = S%u;\n", indexof(fsm, fsm->start));
-	fprintf(f, "\n");
-
-	switch (fsm->opt->io) {
-	case FSM_IO_GETC:
-		fprintf(f, "\twhile (c = fsm_getc(opaque), c != EOF) {\n");
-		break;
-
-	case FSM_IO_STR:
-		fprintf(f, "\tfor (p = s; *p != '\\0'; p++) {\n");
-		break;
-
-	case FSM_IO_PAIR:
-		fprintf(f, "\tfor (p = b; *p != e; p++) {\n");
-		break;
-	}
-
-	(void) fsm_out_cfrag(fsm, f, cp,
-		fsm->opt->leaf != NULL ? fsm->opt->leaf : leaf, fsm->opt->leaf_opaque);
-
-	fprintf(f, "\t}\n");
-	fprintf(f, "\n");
-
-	/* end states */
-	endstates(f, fsm, fsm->sl);
+	fsm_out_c_complete(fsm, f);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
