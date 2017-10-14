@@ -6,6 +6,9 @@
 
 #include <stdlib.h>
 
+#include <fsm/fsm.h>
+#include <fsm/bool.h>
+
 #include "walk2.h"
 
 struct fsm;
@@ -19,6 +22,8 @@ enum { FSM_WALK2_END_INTERSECT  = FSM_WALK2_BOTH };
 struct fsm *
 fsm_intersect(struct fsm *a, struct fsm *b)
 {
+	struct fsm *q;
+
 	/*
 	 * This is intersection implemented by walking sets of states through
 	 * both FSM simultaneously, as described by Hopcroft, Motwani and Ullman
@@ -30,6 +35,14 @@ fsm_intersect(struct fsm *a, struct fsm *b)
 	 *     a \n b = ~(~a \u ~b)
 	 */
 
-	return fsm_walk2(a,b, FSM_WALK2_EDGE_INTERSECT, FSM_WALK2_END_INTERSECT);
+	q = fsm_walk2(a, b, FSM_WALK2_EDGE_INTERSECT, FSM_WALK2_END_INTERSECT);
+	if (q == NULL) {
+		return NULL;
+	}
+
+	fsm_free(a);
+	fsm_free(b);
+
+	return q;
 }
 

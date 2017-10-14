@@ -27,6 +27,16 @@ enum { FSM_WALK2_END_SUBTRACT  = FSM_WALK2_ONLYA };
 struct fsm *
 fsm_subtract(struct fsm *a, struct fsm *b)
 {
-	return fsm_walk2(a,b, FSM_WALK2_EDGE_SUBTRACT, FSM_WALK2_END_SUBTRACT);
+	struct fsm *q;
+
+	q = fsm_walk2(a, b, FSM_WALK2_EDGE_SUBTRACT, FSM_WALK2_END_SUBTRACT);
+	if (q == NULL) {
+		return NULL;
+	}
+
+	fsm_free(a);
+	fsm_free(b);
+
+	return q;
 }
 
