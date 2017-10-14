@@ -11,14 +11,6 @@
 
 #include "walk2.h"
 
-struct fsm;
-
-/* Constraint for walking edges for intersection (A&B) */
-enum { FSM_WALK2_EDGE_INTERSECT = FSM_WALK2_BOTH };
-
-/* Constraint for end state for intersection (A&B) */
-enum { FSM_WALK2_END_INTERSECT  = FSM_WALK2_BOTH };
-
 struct fsm *
 fsm_intersect(struct fsm *a, struct fsm *b)
 {
@@ -35,7 +27,11 @@ fsm_intersect(struct fsm *a, struct fsm *b)
 	 *     a \n b = ~(~a \u ~b)
 	 */
 
-	q = fsm_walk2(a, b, FSM_WALK2_EDGE_INTERSECT, FSM_WALK2_END_INTERSECT);
+	/*
+	 * The intersection of two FSM consists of only those items which
+	 * are present in _BOTH.
+	 */
+	q = fsm_walk2(a, b, FSM_WALK2_BOTH, FSM_WALK2_BOTH);
 	if (q == NULL) {
 		return NULL;
 	}
