@@ -58,6 +58,10 @@ struct fsm_options {
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *);
 	void *leaf_opaque;
 
+	/* TODO: explain. for C code fragment output */
+	int (*endleaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *);
+	void *endleaf_opaque;
+
 	/* TODO: explain */
 	void (*carryopaque)(const struct fsm_state **, size_t,
 		struct fsm *, struct fsm_state *);

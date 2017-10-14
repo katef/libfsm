@@ -338,7 +338,13 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 			continue;
 		}
 
-		fprintf(f, "\tcase S%u: return %u;\n", indexof(fsm, s), indexof(fsm, s));
+		fprintf(f, "\tcase S%u: ", indexof(fsm, s));
+		if (fsm->opt->endleaf != NULL) {
+			fsm->opt->endleaf(f, fsm, s, fsm->opt->endleaf_opaque);
+		} else {
+			fprintf(f, "return %u;", indexof(fsm, s));
+		}
+		fprintf(f, "\n");
 	}
 	fprintf(f, "\tdefault: return EOF; /* unexpected EOF */\n");
 	fprintf(f, "\t}\n");
