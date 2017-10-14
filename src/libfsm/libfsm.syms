@@ -84,4 +84,4 @@ fsm_exec
 fsm_fgetc
 fsm_sgetc
 
-fsm_out_c # XXX: workaround for lx
+fsm_out_cfrag # XXX: workaround for lx

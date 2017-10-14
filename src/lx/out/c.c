@@ -23,6 +23,13 @@
 #include "lx/out.h"
 #include "lx/ast.h"
 
+/* XXX: abstraction */
+int
+fsm_out_cfrag(const struct fsm *fsm, FILE *f,
+	const char *cp,
+	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
+	const void *opaque);
+
 static int
 skip(const struct fsm *fsm, const struct fsm_state *state)
 {
@@ -744,19 +751,22 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	{
 		const struct fsm_options *tmp;
 		static const struct fsm_options defaults;
-		struct fsm_options opt = defaults;
+		struct fsm_options o = defaults;
 
 		tmp = z->fsm->opt;
 
-		opt.fragment    = 1; /* XXX */
-		opt.comments    = z->fsm->opt->comments;
-		opt.case_ranges = z->fsm->opt->case_ranges;
-		opt.leaf        = leaf;
-		opt.leaf_opaque = (void *) ast;
+		o.comments    = z->fsm->opt->comments;
+		o.case_ranges = z->fsm->opt->case_ranges;
+		o.leaf        = leaf;
+		o.leaf_opaque = (void *) ast;
 
-		z->fsm->opt = &opt;
+		z->fsm->opt = &o;
 
-		(void) fsm_out_c(z->fsm, f);
+		assert(opt.cp != NULL);
+
+		/* XXX: abstraction */
+		(void) fsm_out_cfrag(z->fsm, f, opt.cp,
+			z->fsm->opt->leaf != NULL ? z->fsm->opt->leaf : leaf, z->fsm->opt->leaf_opaque);
 
 		z->fsm->opt = tmp;
 	}

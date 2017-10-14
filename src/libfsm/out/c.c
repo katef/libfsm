@@ -344,7 +344,7 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 	fprintf(f, "\t}\n");
 }
 
-static int
+int
 fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 	const char *cp,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
