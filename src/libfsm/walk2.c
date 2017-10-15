@@ -22,8 +22,10 @@
 #include "internal.h"
 #include "walk2.h"
 
-/* Tuple (a,b,comb) for walking the two DFAs.  a & b are the states of
- * the original FSMs.  comb is the state of the combined FSM.
+/*
+ * 3-tuple (a, b, comb) for walking the two DFAs.
+ * a & b are the states of the original FSMs.
+ * comb is the state of the combined FSM.
  */
 struct fsm_walk2_tuple {
 	struct fsm_state *a;
@@ -38,24 +40,25 @@ struct fsm_walk2_data {
 	struct fsm *new;
 	struct set *states;
 
-	/* table for which combinations are valid bits.
+	/*
+	 * Table for which combinations are valid bits.
 	 * There are four combinations:
 	 *
-	 *   a_end  b_end    AB		bit	endmask
-	 *   false  false    00		0	0x1
-	 *   false  true     01		1	0x2
-	 *   true   false    10		2	0x4
-	 *   true   true     11		3	0x8
+	 *   a_end  b_end    AB  bit endmask
+	 *   false  false    00  0       0x1
+	 *   false  true     01  1       0x2
+	 *   true   false    10  2       0x4
+	 *   true   true     11  3       0x8
 	 *
 	 * Here bit is the bit that expresses whether that combination
-	 * is a valid end state or not.  We need four bits.
+	 * is a valid end state or not. We need four bits.
 	 *
-	 * Operation	Requirement			endmask
-	 * intersect    both true			0x8
-	 * subtract     first true, second false	0x4
-	 * union	either true			0xE
+	 * Operation    Requirement             endmask
+	 * intersect    both true                   0x8
+	 * subtract     first true, second false    0x4
+	 * union        either true                 0xE
 	 */
-	unsigned endmask:4;  /* bit table for what states are end states in the combined graph */
+	unsigned endmask :4; /* bit table for what states are end states in the combined graph */
 	unsigned edgemask:4; /* bit table for which edges should be followed */
 };
 
@@ -66,7 +69,7 @@ cmp_walk2_tuple(const void *a, const void *b)
 	const struct fsm_walk2_tuple *pa = a, *pb = b;
 	ptrdiff_t delta;
 
-        /* XXX - do we need to specially handle NULLs? */
+	/* XXX: do we need to specially handle NULLs? */
 
 	delta = (pa->a > pb->a) - (pa->a < pb->a);
 	if (delta == 0) {
@@ -76,18 +79,19 @@ cmp_walk2_tuple(const void *a, const void *b)
 	return delta;
 }
 
-/* Size of the tuple pool (see comment in struct fsm_walk2_tuple_pool
- * below).
+/*
+ * Size of the tuple pool (see comment in struct fsm_walk2_tuple_pool below).
  *
- * XXX - revisit what would be a good size for this.
+ * XXX: revisit what would be a good size for this.
  */
-enum { FSM_WALK2_TUPLE_POOL_SIZE = 1024 };
+#define FSM_WALK2_TUPLE_POOL_SIZE 1024
 
-/* Allocation pool to allow for easy cleanup of the struct
+/*
+ * Allocation pool to allow for easy cleanup of the struct
  * fsm_walk2_tuple that are allocated while walking the two DFAs.
  *
  * The tuples allocated during walking the DFAs are only needed during
- * the walk.  Pooling the allocation allows all of the tuples to be
+ * the walk. Pooling the allocation allows all of the tuples to be
  * cleaned up at once when the walk is finished.
  */
 struct fsm_walk2_tuple_pool {
@@ -132,9 +136,11 @@ alloc_walk2_tuple(struct fsm_walk2_data *data)
 
 	item = &data->head->items[data->top++];
 	*item = zero;
+
 	return item;
 
 new_pool:
+
 	pool = malloc(sizeof *pool);
 	if (pool == NULL) {
 		return NULL;
@@ -142,10 +148,11 @@ new_pool:
 
 	pool->next = data->head;
 	data->head = pool;
-	data->top = 1;
+	data->top  = 1;
 
 	item = &pool->items[0];
 	*item = zero;
+
 	return item;
 }
 
@@ -156,7 +163,6 @@ walk2mask(int has_a, int has_b)
 		return has_b ? FSM_WALK2_BOTH  : FSM_WALK2_ONLYA;
 	}
 
-	/* !has_a */
 	return has_b ? FSM_WALK2_ONLYB : FSM_WALK2_NEITHER;
 }
 
@@ -167,7 +173,7 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 	struct fsm_walk2_tuple lkup, *p;
 	struct fsm_state *comb;
 	const struct fsm_options *opt;
-	int is_end; 
+	int is_end;
 
 	lkup.a = a;
 	lkup.b = b;
@@ -216,7 +222,8 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 			}
 
 			if (nst > 0) {
-				/* this is slightly cheesed, but it avoids
+				/*
+				 * This is slightly cheesed, but it avoids
 				 * constructing a set just to pass these two
 				 * states to the carryopaque function
 				 */
@@ -273,17 +280,18 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	/* mark combined state as visited */
 	qc->equiv = qc;
 
-	/* fsm_walk2_edges walks the edges of two graphs, generating combined
+	/*
+	 * fsm_walk2_edges walks the edges of two graphs, generating combined
 	 * states.
 	 *
-         * To do this, we need to provide some way to iterate over the
-         * cross-product of the states of both, but in a way that
-         * satisfies the operators.  There are two decision points:
+	 * To do this, we need to provide some way to iterate over the
+	 * cross-product of the states of both, but in a way that
+	 * satisfies the operators. There are two decision points:
 	 *
 	 *   1) whether to follow an edge to combined state (qa', qb'),
 	 *      where either qa' or qb' may be NULL
 	 *
-	 *   2) whether a combined state (qa,qb) is an end state of the
+	 *   2) whether a combined state (qa, qb) is an end state of the
 	 *      two graphs, where either qa or qb may be NULL, and
 	 *      either may be an end state.
 	 *
@@ -298,19 +306,21 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	 * cases.  In the second loop we handle the ONLYB cases.
 	 */
 
-        /* If qb == NULL, we can follow edges if ONLYA is allowed. */
+	/* If qb == NULL, we can follow edges if ONLYA is allowed. */
 	if (!qb && !(data->edgemask & FSM_WALK2_ONLYA)) {
 		return 1;
 	}
 
-        /* If qa == NULL, jump ahead to the ONLYB loop */
-        if (!qa) {
+	/* If qa == NULL, jump ahead to the ONLYB loop */
+	if (!qa) {
 		goto only_b;
 	}
 
-        /* If we can't follow ONLYA or BOTH edges, then jump ahead to
-         * the ONLYB loop */
-        if (!(data->edgemask & (FSM_WALK2_BOTH|FSM_WALK2_ONLYA))) {
+	/*
+	 * If we can't follow ONLYA or BOTH edges, then jump ahead to
+	 * the ONLYB loop
+	 */
+	if (!(data->edgemask & (FSM_WALK2_BOTH|FSM_WALK2_ONLYA))) {
 		goto only_b;
 	}
 
@@ -321,9 +331,10 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 
 		eb = qb ? fsm_hasedge(qb, ea->symbol) : NULL;
 
-                /* If eb == NULL we can only follow this edge if ONLYA
-                 * edges are allowed
-                 */
+		/*
+		 * If eb == NULL we can only follow this edge if ONLYA
+		 * edges are allowed
+		 */
 		if (!eb && !(data->edgemask & FSM_WALK2_ONLYA)) {
 			continue;
 		}
@@ -331,8 +342,9 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 		for (da = set_first(ea->sl, &dia); da != NULL; da=set_next(&dia)) {
 			db = eb ? set_first(eb->sl, &dib) : NULL;
 
-			/* for loop with break to handle the situation where there is no
-			 * corresponding edge in the B graph.  This will * proceed through
+			/*
+			 * for loop with break to handle the situation where there is no
+			 * corresponding edge in the B graph. This will proceed through
 			 * the loop once, even when db == NULL.
 			 */
 			for (;;) {
@@ -349,8 +361,9 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 					return 0;
 				}
 
-				/* depth-first traversal of the graph, but only traverse if the state has not
-				 * yet been visited
+				/*
+				 * depth-first traversal of the graph, but only traverse
+				 * if the state has not yet been visited
 				 */
 				if (dst->comb->equiv == NULL) {
 					if (!fsm_walk2_edges(data, a,b, dst)) {
@@ -372,6 +385,7 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	}
 
 only_b:
+
 	/* fast exit if ONLYB cases aren't allowed */
 	if (!qb || !(data->edgemask & FSM_WALK2_ONLYB)) {
 		return 1;
@@ -389,7 +403,8 @@ only_b:
 			continue;
 		}
 
-		/* ONLYB loop is simpler because we only deal with
+		/*
+		 * ONLYB loop is simpler because we only deal with
 		 * states in the B graph (the A state is always NULL)
 		 */
 		for (db = set_first(eb->sl, &dib); db != NULL; db=set_next(&dib)) {
@@ -397,7 +412,7 @@ only_b:
 				struct fsm_walk2_tuple *dst;
 
 				/* FIXME: deal with annoying const-ness here */
-				dst = fsm_walk2_tuple_new(data, NULL, (struct fsm_state *)db);
+				dst = fsm_walk2_tuple_new(data, NULL, (struct fsm_state *) db);
 
 				assert(dst != NULL);
 				assert(dst->comb != NULL);
@@ -406,8 +421,9 @@ only_b:
 					return 0;
 				}
 
-				/* depth-first traversal of the graph, but only traverse if the state has not
-				 * yet been visited
+				/*
+				 * depth-first traversal of the graph, but only traverse
+				 * if the state has not yet been visited
 				 */
 				if (dst->comb->equiv == NULL) {
 					if (!fsm_walk2_edges(data, a,b, dst)) {
@@ -428,9 +444,9 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 	static const struct fsm_walk2_data zero;
 	struct fsm_walk2_data data = zero;
 
-	struct fsm *new = NULL;
 	struct fsm_state *sa, *sb;
 	struct fsm_walk2_tuple *tup0;
+	struct fsm *new;
 
 	assert(a != NULL);
 	assert(b != NULL);
@@ -442,20 +458,24 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 	sb = fsm_getstart(b);
 
 	if (!sa && !sb) {
-		/* if both A and B lack a start states, the
-		 * result will be empty */
-		goto finish;
+		/*
+		 * if both A and B lack a start states,
+		 * the result will be empty
+		 */
+		goto done;
 	}
 
 	if (sb == NULL) {
 		if (endmask & FSM_WALK2_ONLYA) {
 			/* must be a copy of A */
 			return fsm_clone(a);
-		} 
-		/* !sb and combined states cannot be ONLYA, so the
-		 * result will be empty 
+		}
+
+		/*
+		 * !sb and combined states cannot be ONLYA,
+		 * so the result will be empty
 		 */
-		goto finish;
+		goto done;
 	}
 
 	if (sa == NULL) {
@@ -463,10 +483,12 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 			/* must be a copy of B */
 			return fsm_clone(b);
 		}
-		/* !sa and combined states cannot be ONLYB, so the
-		 * result will be empty 
+
+		/*
+		 * !sa and combined states cannot be ONLYB, so the
+		 * result will be empty
 		 */
-		goto finish;
+		goto done;
 	}
 
 	data.edgemask = edgemask;
@@ -497,18 +519,22 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 		goto error;
 	}
 
-finish:
+done:
+
 	new = data.new;
 	data.new = NULL; /* avoid freeing new FSM */
 
 	/* reset all equiv fields in the states */
-        fsm_walk2_mark_equiv_null(new);
+	fsm_walk2_mark_equiv_null(new);
 
 	fsm_walk2_data_free(&data);
+
 	return new;
 
 error:
+
 	fsm_walk2_data_free(&data);
+
 	return NULL;
 }
 
