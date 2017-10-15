@@ -33,7 +33,8 @@ enum {
 };
 
 struct fsm *
-fsm_walk2(struct fsm *a, struct fsm *b, unsigned edgemask, unsigned endmask);
+fsm_walk2(const struct fsm *a, const struct fsm *b,
+	unsigned edgemask, unsigned endmask);
 
 #endif /* WALK2_H */
 

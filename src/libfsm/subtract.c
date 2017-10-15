@@ -4,10 +4,13 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include <stdlib.h>
+#include <assert.h>
+#include <stddef.h>
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
+#include <fsm/pred.h>
+#include <fsm/walk.h>
 
 #include "walk2.h"
 
@@ -15,6 +18,21 @@ struct fsm *
 fsm_subtract(struct fsm *a, struct fsm *b)
 {
 	struct fsm *q;
+
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (!fsm_all(a, fsm_isdfa)) {
+		if (!fsm_determinise(a)) {
+			return NULL;
+		}
+	}
+
+	if (!fsm_all(b, fsm_isdfa)) {
+		if (!fsm_determinise(b)) {
+			return NULL;
+		}
+	}
 
 	/*
 	 * Notice that the edge constraint for subtraction is different from the

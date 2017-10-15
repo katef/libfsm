@@ -161,7 +161,8 @@ walk2mask(int has_a, int has_b)
 }
 
 static struct fsm_walk2_tuple *
-fsm_walk2_tuple_new(struct fsm_walk2_data *data, struct fsm_state *a, struct fsm_state *b)
+fsm_walk2_tuple_new(struct fsm_walk2_data *data,
+	struct fsm_state *a, struct fsm_state *b)
 {
 	struct fsm_walk2_tuple lkup, *p;
 	struct fsm_state *comb;
@@ -241,7 +242,8 @@ fsm_walk2_mark_equiv_null(struct fsm *fsm)
 }
 
 static int
-fsm_walk2_edges(struct fsm_walk2_data *data, struct fsm *a, struct fsm *b, struct fsm_walk2_tuple *start)
+fsm_walk2_edges(struct fsm_walk2_data *data,
+	const struct fsm *a, const struct fsm *b, struct fsm_walk2_tuple *start)
 {
 	struct fsm_state *qa, *qb, *qc;
 	struct set_iter ei, ej;
@@ -337,7 +339,8 @@ fsm_walk2_edges(struct fsm_walk2_data *data, struct fsm *a, struct fsm *b, struc
 				struct fsm_walk2_tuple *dst;
 
 				/* FIXME: deal with annoying const-ness here */
-				dst = fsm_walk2_tuple_new(data, (struct fsm_state *)da, (struct fsm_state *)db);
+				dst = fsm_walk2_tuple_new(data,
+					(struct fsm_state *) da, (struct fsm_state *) db);
 
 				assert(dst != NULL);
 				assert(dst->comb != NULL);
@@ -419,7 +422,8 @@ only_b:
 }
 
 struct fsm *
-fsm_walk2(struct fsm *a, struct fsm *b, unsigned edgemask, unsigned endmask)
+fsm_walk2(const struct fsm *a, const struct fsm *b,
+	unsigned edgemask, unsigned endmask)
 {
 	static const struct fsm_walk2_data zero;
 	struct fsm_walk2_data data = zero;
@@ -430,19 +434,6 @@ fsm_walk2(struct fsm *a, struct fsm *b, unsigned edgemask, unsigned endmask)
 
 	assert(a != NULL);
 	assert(b != NULL);
-
-	/* make sure inputs are DFAs */
-	if (!fsm_all(a, fsm_isdfa)) {
-		if (!fsm_determinise(a)) {
-			goto error;
-		}
-	}
-
-	if (!fsm_all(b, fsm_isdfa)) {
-		if (!fsm_determinise(b)) {
-			goto error;
-		}
-	}
 
 	assert(fsm_all(a, fsm_isdfa));
 	assert(fsm_all(b, fsm_isdfa));

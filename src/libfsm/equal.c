@@ -13,35 +13,79 @@
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
+#include <fsm/pred.h>
+#include <fsm/walk.h>
 
 #include "internal.h"
 #include "walk2.h"
 
-struct fsm *
-subtract(const struct fsm *a, const struct fsm *b)
+static int
+ensure_dfa(const struct fsm *fsm, struct fsm **dfa)
 {
 	struct fsm *q;
-	struct fsm *x, *y;
+
+	assert(fsm != NULL);
+	assert(dfa != NULL);
+
+	if (fsm_all(fsm, fsm_isdfa)) {
+		*dfa = NULL;
+		return 1;
+	}
+
+	q = fsm_clone(fsm);
+	if (q == NULL) {
+		return 0;
+	}
+
+	if (!fsm_determinise(q)) {
+		fsm_free(q);
+		return 0;
+	}
+
+	*dfa = q;
+
+	return 1;
+}
+
+static struct fsm *
+subtract(const struct fsm *a, const struct fsm *b)
+{
+	struct fsm *pa, *pb;
+	struct fsm *q;
 
 	assert(a != NULL);
 	assert(b != NULL);
+	assert(a->opt == b->opt);
 
-	x = fsm_clone(a);
-	if (x == NULL) {
+	if (!ensure_dfa(a, &pa)) {
 		return NULL;
 	}
 
-	y = fsm_clone(b);
-	if (y == NULL) {
-		fsm_free(x);
+	if (pa != NULL) {
+		a = pa;
+	}
+
+	if (!ensure_dfa(b, &pb)) {
+		if (pa != NULL) {
+			fsm_free(pa);
+		}
 		return NULL;
+	}
+
+	if (pb != NULL) {
+		b = pb;
 	}
 
 	/* see fsm_subtract() */
-	q = fsm_walk2(x, y, FSM_WALK2_ONLYA | FSM_WALK2_BOTH, FSM_WALK2_ONLYA);
+	q = fsm_walk2(a, b, FSM_WALK2_ONLYA | FSM_WALK2_BOTH, FSM_WALK2_ONLYA);
 
-	fsm_free(x);
-	fsm_free(y);
+	if (pa != NULL) {
+		fsm_free(pa);
+	}
+
+	if (pb != NULL) {
+		fsm_free(pb);
+	}
 
 	return q;
 }
