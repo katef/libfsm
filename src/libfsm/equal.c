@@ -15,6 +15,7 @@
 #include <fsm/bool.h>
 
 #include "internal.h"
+#include "walk2.h"
 
 struct fsm *
 subtract(const struct fsm *a, const struct fsm *b)
@@ -36,12 +37,11 @@ subtract(const struct fsm *a, const struct fsm *b)
 		return NULL;
 	}
 
-	q = fsm_subtract(x, y);
-	if (q == NULL) {
-		fsm_free(x);
-		fsm_free(y);
-		return NULL;
-	}
+	/* see fsm_subtract() */
+	q = fsm_walk2(x, y, FSM_WALK2_ONLYA | FSM_WALK2_BOTH, FSM_WALK2_ONLYA);
+
+	fsm_free(x);
+	fsm_free(y);
 
 	return q;
 }
