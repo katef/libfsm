@@ -55,6 +55,7 @@ SUBDIR += tests
 .if !empty(.TARGETS:Mfuzz)
 SUBDIR += fuzz
 .endif
+SUBDIR += bench
 SUBDIR += pc
 
 INCDIR += include
