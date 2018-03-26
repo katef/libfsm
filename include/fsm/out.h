@@ -43,7 +43,7 @@ enum fsm_io {
  * TODO: explain constraints (e.g. single-character labels for C output)
  */
 void
-fsm_print(struct fsm *fsm, FILE *f, enum fsm_out format);
+fsm_print(const struct fsm *fsm, FILE *f, enum fsm_out format);
 
 #endif
 
