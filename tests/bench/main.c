@@ -149,90 +149,20 @@ op_name(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-struct scanner {
-	char tag;
-	void *magic;
-	const char *str;
-	size_t size;
-	size_t offset;
-};
-
-static int
-scanner_next(void *opaque)
-{
-	struct scanner *s;
-	char c;
-
-	s = opaque;
-	assert(s->tag == 'S');
-
-	if (s->offset == s->size) {
-		return EOF;
-	}
-
-	c = s->str[s->offset];
-	s->offset++;
-
-	return (unsigned char) c;
-}
-
-static const struct fsm_options re_options = {
-	.anonymous_states  = 1,
-	.consolidate_edges = 1,
-	.always_hex        = 1
-};
-
-static struct fsm *
-build_fsm(enum re_dialect dialect, const char *re, struct re_err *err)
-{
-	struct fsm *fsm = NULL;
-
-	struct scanner s = {
-		.tag    = 'S',
-		.magic  = &s.magic,
-		.str    = re,
-		.size   = strlen(re),
-		.offset = 0
-	};
-
-	assert(err != NULL);
-
-	fsm = re_comp(dialect, scanner_next, &s, &re_options, RE_MULTI, err);
-
-	assert(s.magic == &s.magic);
-
-	return fsm;
-}
-
-static struct fsm_state *
-exec_fsm(struct fsm *f, const char *input, size_t len)
-{
-	struct fsm_state *state = NULL;
-
-	struct scanner s = {
-		.tag    = 'S',
-		.magic  = &s.magic,
-		.str    = input,
-		.size   = len,
-		.offset = 0
-	};
-
-	state = fsm_exec(f, scanner_next, &s);
-
-	assert(s.str == input);
-	assert(s.magic == &s.magic);
-
-	return state;
-}
-
 static int
 run(struct config *cfg)
 {
 	int res = 0;
-	struct fsm *f = NULL;
+	struct fsm *fsm = NULL;
 	double elapsed = 0.0;
 	const size_t len = (cfg->input ? strlen(cfg->input) : 0);
 	unsigned i;
+
+	static const struct fsm_options opt = {
+		.anonymous_states  = 1,
+		.consolidate_edges = 1,
+		.always_hex        = 1
+	};
 
 	if (cfg->verbosity > 0) {
 		if (cfg->iterations != 1) {
@@ -246,19 +176,21 @@ run(struct config *cfg)
 	}
 
 	for (i = 0; i < cfg->iterations; i++) {
-		/* build a FSM from a regex */
 		struct re_err err;
 		struct timeval pre, post;
+		const char *s;
 
-		f = build_fsm(cfg->dialect, cfg->re, &err);
-		if (f == NULL) {
+		s = cfg->re;
+
+		fsm = re_comp(cfg->dialect, fsm_sgetc, &s, &opt, RE_MULTI, &err);
+		if (fsm == NULL) {
 			re_perror(cfg->dialect, &err, NULL, cfg->re);
 			res = EXIT_FAILURE;
 			goto cleanup;
 		}
 
 		if (cfg->op == OP_MATCH && !cfg->keep_nfa) {
-			if (!fsm_determinise(f)) {
+			if (!fsm_determinise(fsm)) {
 				fprintf(stderr, "FAIL: fsm_determinise\n");
 				res = EXIT_FAILURE;
 				goto cleanup;
@@ -272,7 +204,7 @@ run(struct config *cfg)
 
 		switch (cfg->op) {
 		case OP_COMPLETE:
-			if (!fsm_complete(f, fsm_isany)) {
+			if (!fsm_complete(fsm, fsm_isany)) {
 				fprintf(stderr, "FAIL: fsm_complete\n");
 				res = EXIT_FAILURE;
 				goto cleanup;
@@ -280,7 +212,7 @@ run(struct config *cfg)
 			break;
 
 		case OP_COMPLEMENT:
-			if (!fsm_complement(f)) {
+			if (!fsm_complement(fsm)) {
 				fprintf(stderr, "FAIL: fsm_complement\n");
 				res = EXIT_FAILURE;
 				goto cleanup;
@@ -288,7 +220,7 @@ run(struct config *cfg)
 			break;
 
 		case OP_REVERSE:
-			if (!fsm_reverse(f)) {
+			if (!fsm_reverse(fsm)) {
 				fprintf(stderr, "FAIL: fsm_reverse\n");
 				res = EXIT_FAILURE;
 				goto cleanup;
@@ -296,7 +228,7 @@ run(struct config *cfg)
 			break;
 
 		case OP_DETERMINISE:
-			if (!fsm_determinise(f)) {
+			if (!fsm_determinise(fsm)) {
 				fprintf(stderr, "FAIL: fsm_determinise\n");
 				res = EXIT_FAILURE;
 				goto cleanup;
@@ -304,7 +236,7 @@ run(struct config *cfg)
 			break;
 
 		case OP_MINIMISE:
-			if (!fsm_minimise(f)) {
+			if (!fsm_minimise(fsm)) {
 				fprintf(stderr, "FAIL: fsm_minimise\n");
 				res = EXIT_FAILURE;
 				goto cleanup;
@@ -312,7 +244,7 @@ run(struct config *cfg)
 			break;
 
 		case OP_TRIM:
-			if (!fsm_trim(f)) {
+			if (!fsm_trim(fsm)) {
 				fprintf(stderr, "FAIL: fsm_trim\n");
 				res = EXIT_FAILURE;
 				goto cleanup;
@@ -320,7 +252,13 @@ run(struct config *cfg)
 			break;
 
 		case OP_MATCH: {
-			struct fsm_state *state = exec_fsm(f, cfg->input, len);
+			const char *s;
+			struct fsm_state *state;
+
+			s = cfg->input;
+
+			state = fsm_exec(fsm, fsm_sgetc, &s);
+
 			(void) state; /* may not match */
 			break;
 		}
@@ -341,8 +279,8 @@ run(struct config *cfg)
 			printf("%g ", msec);
 		}
 
-		fsm_free(f);
-		f = NULL;
+		fsm_free(fsm);
+		fsm = NULL;
 	}
 
 	/*
@@ -353,8 +291,8 @@ run(struct config *cfg)
 
 cleanup:
 
-	if (f != NULL) {
-		fsm_free(f);
+	if (fsm != NULL) {
+		fsm_free(fsm);
 	}
 
 	return res;
