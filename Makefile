@@ -51,6 +51,7 @@ SUBDIR += tests/pcre
 SUBDIR += tests/reverse
 SUBDIR += tests/union
 SUBDIR += tests/set
+SUBDIR += tests/bench
 SUBDIR += tests
 .if !empty(.TARGETS:Mfuzz)
 SUBDIR += fuzz
@@ -73,6 +74,9 @@ test::
 .include <so.mk>
 .include <part.mk>
 .include <prog.mk>
+
+STAGE_BUILD := ${STAGE_BUILD:Nbin/bench_*}
+
 .include <mkdir.mk>
 .include <install.mk>
 .include <clean.mk>
