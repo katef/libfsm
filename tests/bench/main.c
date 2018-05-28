@@ -14,7 +14,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
-#include <stdint.h>
 #include <stdbool.h>
 
 #include <fsm/bool.h>
@@ -41,7 +40,7 @@ struct config {
     enum mode mode;
     enum re_dialect dialect;
     int verbosity;
-    size_t iterations;
+    unsigned iterations;
     bool keep_nfa;
     const char *re;
     const char *input;
@@ -153,7 +152,7 @@ mode_name(enum mode m)
 struct scanner {
 	char tag;
 	void *magic;
-	const uint8_t *str;
+	const char *str;
 	size_t size;
 	size_t offset;
 };
@@ -162,7 +161,7 @@ static int
 scanner_next(void *opaque)
 {
 	struct scanner *s;
-	unsigned char c;
+	char c;
 
 	s = opaque;
 	assert(s->tag == 'S');
@@ -174,7 +173,7 @@ scanner_next(void *opaque)
 	c = s->str[s->offset];
 	s->offset++;
 
-	return (int) c;
+	return (unsigned char) c;
 }
 
 static const struct fsm_options re_options = {
@@ -191,17 +190,15 @@ build_fsm(enum re_dialect dialect, const char *re, struct re_err *err)
 	struct scanner s = {
 		.tag    = 'S',
 		.magic  = &s.magic,
-		.str    = (uint8_t *)re,
+		.str    = re,
 		.size   = strlen(re),
 		.offset = 0
 	};
 
-	assert(opt != NULL);
 	assert(err != NULL);
 
 	fsm = re_comp(dialect, scanner_next, &s, &re_options, RE_MULTI, err);
 
-	assert(s.str == pair->string);
 	assert(s.magic == &s.magic);
 
 	return fsm;
@@ -215,7 +212,7 @@ exec_fsm(struct fsm *f, const char *input, size_t len)
 	struct scanner s = {
 		.tag    = 'S',
 		.magic  = &s.magic,
-		.str    = (uint8_t *)input,
+		.str    = input,
 		.size   = len,
 		.offset = 0
 	};
@@ -235,11 +232,11 @@ run(struct config *cfg)
 	struct fsm *f = NULL;
 	double elapsed = 0.0;
 	const size_t len = (cfg->input ? strlen(cfg->input) : 0);
-	size_t iter;
+	unsigned iter;
 
 	if (cfg->verbosity > 0) {
 		if (cfg->iterations != 1) {
-			printf("iterations: %zu, ", cfg->iterations);
+			printf("iterations: %u, ", cfg->iterations);
 		}
 		printf("regex: '%s'[%zu]", cfg->re, strlen(cfg->re));
 		if (cfg->input != NULL) {
@@ -272,7 +269,9 @@ run(struct config *cfg)
 		}
 
 		/* run the operation under test, saving the time */
-		if (-1 == gettimeofday(&pre, NULL)) { assert(false); }
+		if (-1 == gettimeofday(&pre, NULL)) {
+			assert(false);
+		}
 
 		switch (cfg->mode) {
 		case MODE_DETERMINISE:
@@ -341,7 +340,9 @@ run(struct config *cfg)
 		f = NULL;
 	}
 
-	if (cfg->iterations > 1) { printf("] "); }
+	if (cfg->iterations > 1) {
+		printf("] ");
+	}
 
 	/*
 	 * TODO: Would it be worth doing stddev or other calculations here?
