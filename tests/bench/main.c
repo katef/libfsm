@@ -4,7 +4,48 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "bench_libfsm.h"
+#include <sys/time.h>
+
+#include <unistd.h>
+#include <getopt.h>
+
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <errno.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+#include <fsm/bool.h>
+#include <fsm/cost.h>
+#include <fsm/fsm.h>
+#include <fsm/out.h>
+#include <fsm/options.h>
+#include <fsm/pred.h>
+#include <fsm/walk.h>
+
+#include <re/re.h>
+
+enum mode {
+    MODE_DETERMINISE,
+    MODE_MINIMISE,
+    MODE_REVERSE,
+    MODE_TRIM,
+    MODE_COMPLEMENT,
+
+    MODE_MATCH,
+};
+
+struct config {
+    enum mode mode;
+    enum re_dialect dialect;
+    int verbosity;
+    size_t iterations;
+    bool keep_nfa;
+    const char *re;
+    const char *input;
+};
 
 #define bench_libfsm_VERSION_MAJOR 0
 #define bench_libfsm_VERSION_MINOR 1
