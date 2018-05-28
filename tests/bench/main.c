@@ -26,30 +26,27 @@
 
 #include <re/re.h>
 
-enum mode {
-    MODE_DETERMINISE,
-    MODE_MINIMISE,
-    MODE_REVERSE,
-    MODE_TRIM,
-    MODE_COMPLEMENT,
+enum op {
+	OP_COMPLETE,
 
-    MODE_MATCH,
+	OP_COMPLEMENT,
+	OP_DETERMINISE,
+	OP_REVERSE,
+	OP_MINIMISE,
+	OP_TRIM,
+
+	OP_MATCH,
 };
 
 struct config {
-    enum mode mode;
-    enum re_dialect dialect;
-    int verbosity;
-    unsigned iterations;
-    bool keep_nfa;
-    const char *re;
-    const char *input;
+	enum op op;
+	enum re_dialect dialect;
+	int verbosity;
+	unsigned iterations;
+	bool keep_nfa;
+	const char *re;
+	const char *input;
 };
-
-#define bench_libfsm_VERSION_MAJOR 0
-#define bench_libfsm_VERSION_MINOR 1
-#define bench_libfsm_VERSION_PATCH 0
-#define bench_libfsm_AUTHOR "Scott Vokes"
 
 static void
 usage(const char *msg)
@@ -58,18 +55,16 @@ usage(const char *msg)
 		fprintf(stderr, "%s\n\n", msg);
 	}
 
-	fprintf(stderr, "bench_libfsm v. %d.%d.%d by %s\n",
-		bench_libfsm_VERSION_MAJOR, bench_libfsm_VERSION_MINOR,
-		bench_libfsm_VERSION_PATCH, bench_libfsm_AUTHOR);
-	fprintf(stderr,
-		"Usage: bench_libfsm [-h] [-d <dialect>] [-i <iterations>]\n"
-		"    [-m <mode>] [-n] <regex> [<input>]\n"
-		"\n"
-		"-h: Print help.\n"
-		"-d <dialect> can be one of: like literal glob native pcre sql\n"
-		"-m <mode> can be one of: 'd'eterminise, 'm'inimize, 'r'everse\n"
-		"-n: When matching input argument, do not convert NFA to DFA.\n"
-		);
+	fprintf(stderr, "usage: bench_libfsm [-r <dialect>] [-i <iterations>]\n"
+	                "                    [-t <transformation>] [-n] <regex> [<text>]\n");
+	fprintf(stderr, "       bench_libfsm [-h]\n");
+
+	fprintf(stderr, "\n"
+	                "  -h: Print help.\n"
+	                "  -r <dialect> can be one of: like literal glob native pcre sql\n"
+	                "  -t <transformation> can be one of: determinise, minimize, reverse\n"
+	                "  -n: When matching input argument, do not convert NFA to DFA.\n"
+	                );
 }
 
 static enum re_dialect
@@ -116,37 +111,42 @@ dialect_name(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static bool
-mode_of_optarg(const char *optarg, enum mode *m)
+static enum op
+op_name(const char *name)
 {
-	switch (optarg[0]) {
-	case 'c': *m = MODE_COMPLEMENT;  break;
-	case 'd': *m = MODE_DETERMINISE; break;
-	case 'm': *m = MODE_MINIMISE;    break;
-	case 'r': *m = MODE_REVERSE;     break;
-	case 't': *m = MODE_TRIM;        break;
+	size_t i;
 
-	default:
-		return false;
+	struct {
+		const char *name;
+		enum op op;
+	} a[] = {
+		{ "complete",    OP_COMPLETE    },
+
+		{ "complement",  OP_COMPLEMENT  },
+		{ "invert",      OP_COMPLEMENT  },
+		{ "reverse",     OP_REVERSE     },
+		{ "rev",         OP_REVERSE     },
+		{ "determinise", OP_DETERMINISE },
+		{ "dfa",         OP_DETERMINISE },
+		{ "todfa",       OP_DETERMINISE },
+		{ "min",         OP_MINIMISE    },
+		{ "minimise",    OP_MINIMISE    },
+		{ "trim",        OP_TRIM        }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].op;
+		}
 	}
 
-	return true;
-}
-
-static const char *
-mode_name(enum mode m)
-{
-	switch (m) {
-	case MODE_DETERMINISE: return "determinise";
-	case MODE_MINIMISE:    return "minimise";
-	case MODE_REVERSE:     return "reverse";
-	case MODE_MATCH:       return "match";
-	case MODE_TRIM:        return "trim";
-	case MODE_COMPLEMENT:  return "complement";
-
-	default:
-		return "?";
-	}
+	fprintf(stderr, "unrecognised operation; valid operations are: "
+		"complete, "
+		"complement, invert, reverse, determinise, minimise, trim, "
+		"concat, union, intersect, subtract, equal\n");
+	exit(EXIT_FAILURE);
 }
 
 struct scanner {
@@ -232,7 +232,7 @@ run(struct config *cfg)
 	struct fsm *f = NULL;
 	double elapsed = 0.0;
 	const size_t len = (cfg->input ? strlen(cfg->input) : 0);
-	unsigned iter;
+	unsigned i;
 
 	if (cfg->verbosity > 0) {
 		if (cfg->iterations != 1) {
@@ -245,10 +245,7 @@ run(struct config *cfg)
 		printf("\n");
 	}
 
-	printf("%s [%u]: %s", mode_name(cfg->mode), cfg->iterations,
-		cfg->iterations == 1 ? "" : "[ ");
-
-	for (iter = 0; iter < cfg->iterations; iter++) {
+	for (i = 0; i < cfg->iterations; i++) {
 		/* build a FSM from a regex */
 		struct re_err err;
 		struct timeval pre, post;
@@ -260,7 +257,7 @@ run(struct config *cfg)
 			goto cleanup;
 		}
 
-		if (cfg->mode == MODE_MATCH && !cfg->keep_nfa) {
+		if (cfg->op == OP_MATCH && !cfg->keep_nfa) {
 			if (!fsm_determinise(f)) {
 				fprintf(stderr, "FAIL: fsm_determinise\n");
 				res = EXIT_FAILURE;
@@ -273,40 +270,16 @@ run(struct config *cfg)
 			assert(false);
 		}
 
-		switch (cfg->mode) {
-		case MODE_DETERMINISE:
-			if (!fsm_determinise(f)) {
-				fprintf(stderr, "FAIL: fsm_determinise\n");
+		switch (cfg->op) {
+		case OP_COMPLETE:
+			if (!fsm_complete(f, fsm_isany)) {
+				fprintf(stderr, "FAIL: fsm_complete\n");
 				res = EXIT_FAILURE;
 				goto cleanup;
 			}
 			break;
 
-		case MODE_MINIMISE:
-			if (!fsm_minimise(f)) {
-				fprintf(stderr, "FAIL: fsm_minimise\n");
-				res = EXIT_FAILURE;
-				goto cleanup;
-			}
-			break;
-
-		case MODE_REVERSE:
-			if (!fsm_reverse(f)) {
-				fprintf(stderr, "FAIL: fsm_reverse\n");
-				res = EXIT_FAILURE;
-				goto cleanup;
-			}
-			break;
-
-		case MODE_TRIM:
-			if (!fsm_trim(f)) {
-				fprintf(stderr, "FAIL: fsm_trim\n");
-				res = EXIT_FAILURE;
-				goto cleanup;
-			}
-			break;
-
-		case MODE_COMPLEMENT:
+		case OP_COMPLEMENT:
 			if (!fsm_complement(f)) {
 				fprintf(stderr, "FAIL: fsm_complement\n");
 				res = EXIT_FAILURE;
@@ -314,7 +287,39 @@ run(struct config *cfg)
 			}
 			break;
 
-		case MODE_MATCH: {
+		case OP_REVERSE:
+			if (!fsm_reverse(f)) {
+				fprintf(stderr, "FAIL: fsm_reverse\n");
+				res = EXIT_FAILURE;
+				goto cleanup;
+			}
+			break;
+
+		case OP_DETERMINISE:
+			if (!fsm_determinise(f)) {
+				fprintf(stderr, "FAIL: fsm_determinise\n");
+				res = EXIT_FAILURE;
+				goto cleanup;
+			}
+			break;
+
+		case OP_MINIMISE:
+			if (!fsm_minimise(f)) {
+				fprintf(stderr, "FAIL: fsm_minimise\n");
+				res = EXIT_FAILURE;
+				goto cleanup;
+			}
+			break;
+
+		case OP_TRIM:
+			if (!fsm_trim(f)) {
+				fprintf(stderr, "FAIL: fsm_trim\n");
+				res = EXIT_FAILURE;
+				goto cleanup;
+			}
+			break;
+
+		case OP_MATCH: {
 			struct fsm_state *state = exec_fsm(f, cfg->input, len);
 			(void) state; /* may not match */
 			break;
@@ -340,10 +345,6 @@ run(struct config *cfg)
 		f = NULL;
 	}
 
-	if (cfg->iterations > 1) {
-		printf("] ");
-	}
-
 	/*
 	 * TODO: Would it be worth doing stddev or other calculations here?
 	 * The formatting should make it easy to do with awk/etc. otherwise.
@@ -363,18 +364,18 @@ int
 main(int argc, char *argv[])
 {
 	struct config cfg = {
-		.mode = MODE_DETERMINISE,
-		.dialect = RE_PCRE,
+		.op         = OP_DETERMINISE,
+		.dialect    = RE_PCRE,
 		.iterations = 1,
-		.keep_nfa = false,
+		.keep_nfa   = false,
 	};
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "hd:i:m:nv"), c != -1) {
+		while (c = getopt(argc, argv, "hr:i:t:nv"), c != -1) {
 			switch (c) {
-			case 'd':
+			case 'r':
 				cfg.dialect = dialect_name(optarg);
 				break;
 
@@ -385,10 +386,8 @@ main(int argc, char *argv[])
 				}
 				break;
 
-			case 'm':
-				if (!mode_of_optarg(optarg, &cfg.mode)) {
-					usage("Invalid mode");
-				}
+			case 't':
+				cfg.op = op_name(optarg);
 				break;
 
 			case 'n':
@@ -419,11 +418,12 @@ main(int argc, char *argv[])
 	}
 	if (argc > 1) {
 		cfg.input = argv[1];
-		cfg.mode = MODE_MATCH;
+		cfg.op    = OP_MATCH;
 	}
 
 	if (cfg.re == NULL) {
 		usage("Missing required argument: regex");
+		exit(EXIT_FAILURE);
 	}
 
 	return run(&cfg);
