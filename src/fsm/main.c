@@ -4,7 +4,7 @@
  * See LICENCE for the full copyright terms.
  */
 
-#define _POSIX_C_SOURCE 2
+#define _POSIX_C_SOURCE 199309L
 
 #include <unistd.h>
 
@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
@@ -63,7 +64,7 @@ usage(void)
 {
 	printf("usage: fsm [-x] {<text> ...}\n");
 	printf("       fsm {-p} [-l <language>] [-acwX] [-k <io>] [-e <prefix>]\n");
-	printf("       fsm {-dmr | -t <transformation>} [<file.fsm> | <file-a> <file-b>]\n");
+	printf("       fsm {-dmr | -t <transformation>} [-i <iterations>] [<file.fsm> | <file-a> <file-b>]\n");
 	printf("       fsm {-q <query>} [<file>]\n");
 	printf("       fsm -h\n");
 }
@@ -243,6 +244,8 @@ xopen(const char *s)
 int
 main(int argc, char *argv[])
 {
+	unsigned iterations, i;
+	double elapsed;
 	enum fsm_out format;
 	enum op op;
 	struct fsm *fsm;
@@ -261,13 +264,14 @@ main(int argc, char *argv[])
 	query  = NULL;
 	op     = OP_IDENTITY;
 
+	iterations = 1;
 	fsm = NULL;
 	r = 0;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:" "xpq:l:dmrt:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:k:i:" "xpq:l:dmrt:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
@@ -275,6 +279,11 @@ main(int argc, char *argv[])
 			case 'X': opt.always_hex        = 1;          break;
 			case 'e': opt.prefix            = optarg;     break;
 			case 'k': opt.io                = io(optarg); break;
+
+			case 'i':
+				iterations = strtoul(optarg, NULL, 10);
+				/* XXX: error handling */
+				break;
 
 			case 'x': xfiles = 1;                         break;
 			case 'p': print  = 1;                         break;
@@ -312,7 +321,10 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	{
+	elapsed = 0.0;
+
+	for (i = 0; i < iterations; i++) {
+		struct timespec pre, post;
 		struct fsm *a, *b;
 		struct fsm *q;
 
@@ -341,6 +353,11 @@ main(int argc, char *argv[])
 			if (b == NULL) {
 				exit(EXIT_FAILURE);
 			}
+		}
+
+		if (-1 == clock_gettime(CLOCK_MONOTONIC, &pre)) {
+			perror("clock_gettime");
+			exit(EXIT_FAILURE);
 		}
 
 		/* within this block, r is API convention (true for success) */
@@ -379,6 +396,21 @@ main(int argc, char *argv[])
 			q = NULL;
 		}
 
+		if (-1 == clock_gettime(CLOCK_MONOTONIC, &post)) {
+			perror("clock_gettime");
+			exit(EXIT_FAILURE);
+		}
+
+		if (iterations > 1) {
+			double ms;
+
+			ms = 1000.0 * (post.tv_sec  - pre.tv_sec)
+			            + (post.tv_nsec - pre.tv_nsec) / 1e6;
+			elapsed += ms;
+
+			printf("%f ", ms);
+		}
+
 		if (op != OP_EQUAL && q == NULL) {
 			perror("fsm_op");
 			exit(EXIT_FAILURE);
@@ -387,6 +419,10 @@ main(int argc, char *argv[])
 		r = !r;
 
 		fsm = q;
+	}
+
+	if (iterations > 1) {
+		printf("=> total %g ms (avg %g ms)\n", elapsed, elapsed / iterations);
 	}
 
 	/* henceforth, r is $?-convention (0 for success) */

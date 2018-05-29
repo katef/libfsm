@@ -20,12 +20,14 @@
 	<!ENTITY query.lit     "<literal>query</literal>">
 -->
 	<!ENTITY io.arg "<replaceable>io</replaceable>">
+	<!ENTITY iterations.arg "<replaceable>iterations</replaceable>">
 
 	<!ENTITY a.opt "<option>-a</option>">
 	<!ENTITY w.opt "<option>-w</option>">
 	<!ENTITY c.opt "<option>-c</option>">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
 	<!ENTITY k.opt "<option>-k</option>&nbsp;&io.arg;">
+	<!ENTITY i.opt "<option>-i</option>&nbsp;&iterations.arg;">
 	<!ENTITY X.opt "<option>-X</option>">
 
 	<!ENTITY d.opt "<option>-d</option>">
@@ -96,6 +98,7 @@
 				<arg choice="plain">&t.opt;</arg>
 			</group>
 
+			<arg choice="opt">&i.opt;</arg>
 		</cmdsynopsis>
 
 		<cmdsynopsis>
@@ -209,6 +212,17 @@
 				<listitem>
 				</listitem>
 -->
+			</varlistentry>
+
+			<varlistentry>
+				<term>&i.opt;</term>
+
+				<listitem>
+					<para>Iterate a given number of times when applying a
+						transformation per <option>-t</option>.
+						The time taken for each iteration is printed to &stdout.lit;.
+						Times are given in milliseconds.</para>
+				</listitem>
 			</varlistentry>
 
 			<varlistentry>
