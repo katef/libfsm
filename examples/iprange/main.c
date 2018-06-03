@@ -55,8 +55,6 @@ static struct fsm_state *fsmstart;
 static unsigned char zeroes[16];
 static unsigned char ones[16];
 
-static unsigned ipv;
-
 struct record {
 	const char *rec;
 	size_t len;
@@ -99,62 +97,64 @@ get_id(char *rec, size_t reclen)
 	s.rec = rec;
 	s.len = reclen;
 	r = RB_FIND(recmap, &recmap, &s);
+	if (r != NULL) {
+		return r;
+	}
+
+	r = malloc(sizeof *r);
 	if (r == NULL) {
-		r = malloc(sizeof *r);
-		if (r == NULL) {
+		perror("malloc");
+		exit(-1);
+	}
+
+	r->rec = strdup(rec);
+	if (r->rec == NULL) {
+		perror("strdup");
+		exit(-1);
+	}
+
+	r->len = reclen;
+	r->id  = nrecords++;
+	r->fsm = fsm_new(&opt);
+	if (r->fsm == NULL) {
+		perror("fsm_new");
+		exit(-1);
+	}
+
+	r->start = fsm_addstate(r->fsm);
+	if (r->start == NULL) {
+		perror("fsm_addstate");
+		exit(-1);
+	}
+	fsm_setstart(r->fsm, r->start);
+
+	r->end = fsm_addstate(r->fsm);
+	if (r->end == NULL) {
+		perror("fsm_addstate");
+		exit(-1);
+	}
+	fsm_setend(r->fsm, r->end, 1);
+
+	memset(r->regs, 0, sizeof r->regs);
+
+	RB_INSERT(recmap, &recmap, r);
+
+	if (byid == NULL) {
+		byid = malloc(rec_cap * sizeof (*byid));
+		if (byid == NULL) {
 			perror("malloc");
 			exit(-1);
 		}
 
-		r->rec = strdup(rec);
-		if (r->rec == NULL) {
-			perror("strdup");
+		byid[r->id] = r;
+	} else if (r->id == rec_cap) {
+		rec_cap *= 2;
+		void *f = realloc(byid, rec_cap * sizeof (*byid));
+		if (f == NULL) {
+			perror("realloc");
 			exit(-1);
 		}
-
-		r->len = reclen;
-		r->id = nrecords++;
-		r->fsm = fsm_new(&opt);
-		if (r->fsm == NULL) {
-			perror("fsm_new");
-			exit(-1);
-		}
-
-		r->start = fsm_addstate(r->fsm);
-		if (r->start == NULL) {
-			perror("fsm_addstate");
-			exit(-1);
-		}
-		fsm_setstart(r->fsm, r->start);
-
-		r->end = fsm_addstate(r->fsm);
-		if (r->end == NULL) {
-			perror("fsm_addstate");
-			exit(-1);
-		}
-		fsm_setend(r->fsm, r->end, 1);
-
-		memset(r->regs, 0, sizeof r->regs);
-
-		RB_INSERT(recmap, &recmap, r);
-
-		if (byid == NULL) {
-			byid = malloc(rec_cap * sizeof (*byid));
-			if (byid == NULL) {
-				perror("malloc");
-				exit(-1);
-			}
-
-			byid[r->id] = r;
-		} else if (r->id == rec_cap) {
-			rec_cap *= 2;
-			void *f = realloc(byid, rec_cap * sizeof (*byid));
-			if (f == NULL) {
-				perror("realloc");
-				exit(-1);
-			}
-			byid = f;
-		}
+		byid = f;
 	}
 
 	return r;
@@ -174,8 +174,10 @@ usage(void)
 struct fsm_state *
 get_from(struct record *r, unsigned oct)
 {
+	if (oct == 0) {
+		return r->start;
+	}
 
-	if (oct == 0) return r->start;
 	return r->regs[oct - 1].s;
 }
 
@@ -233,17 +235,9 @@ gen_edge_range(struct record *r, unsigned oct, const unsigned char *octs,
 }
 
 static void
-gen_range(struct record *r, unsigned ipv, int prefix_octs, unsigned char range_start,
+gen_range(struct record *r, unsigned noct, int prefix_octs, unsigned char range_start,
     unsigned char range_end, unsigned char *octets)
 {
-	int noct;
-
-	if (ipv == 4) {
-		noct = 3;
-	} else {
-		noct = 15;
-	}
-
 	if (prefix_octs < 0) {
 		gen_edge_range(r, 0, octets, range_start, range_end, noct + 1, 1);
 		return;
@@ -269,50 +263,29 @@ gen_range(struct record *r, unsigned ipv, int prefix_octs, unsigned char range_s
 }
 
 static void
-handle_line(char *start, char *end, char *rec, size_t reclen)
+handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
+	char *rec, size_t reclen)
 {
-	unsigned char *socts, *eocts;
-	struct in6_addr s6, e6;
-	struct in_addr s4, e4;
 	struct record *r;
-	unsigned noct;
+	unsigned dbyte;
+
+	assert(socts != NULL);
+	assert(eocts != NULL);
 
 	r = get_id(rec, reclen);
-
-	if (ipv == 4) {
-		if (inet_pton(AF_INET, start, &s4) != 1 ||
-		    inet_pton(AF_INET, end, &e4) != 1) {
-			perror("inet_pton");
-			exit(-1);
-		}
-
-		socts = (unsigned char *)&s4.s_addr;
-		eocts = (unsigned char *)&e4.s_addr;
-		noct = 3;
-	} else {
-		if (inet_pton(AF_INET6, start, &s6) != 1 ||
-		    inet_pton(AF_INET6, end, &e6) != 1) {
-			perror("inet_pton");
-			exit(-1);
-		}
-
-		socts = (unsigned char *)&s6.s6_addr;
-		eocts = (unsigned char *)&e6.s6_addr;
-		noct = 15;
-	}
 
 	/*
 	 * If we have a /32 or a /128, the shortest path is the whole address.
 	 */
 	if (memcmp(socts, eocts, noct + 1) == 0) {
-		gen_range(r, ipv, noct, 0, 0, socts);
+		gen_range(r, noct, noct, 0, 0, socts);
 		return;
 	}
 
 	/*
 	 * Find the first differing byte in the address.
 	 */
-	unsigned dbyte = 0;
+	dbyte = 0;
 	for (int i = 0; i <= noct; i++) {
 		if (socts[i] != eocts[i]) {
 			dbyte = i;
@@ -322,11 +295,12 @@ handle_line(char *start, char *end, char *rec, size_t reclen)
 
 	while (dbyte <= noct) {
 		int szeroes, eones;
+		int tzeroes, tones;
 
 		szeroes = eones = -1;
 		if (dbyte < noct) {
 			szeroes = memcmp(&socts[dbyte], &zeroes, (noct - dbyte) + 1);
-			eones = memcmp(&eocts[dbyte], &ones, (noct - dbyte) + 1);
+			eones   = memcmp(&eocts[dbyte], &ones,   (noct - dbyte) + 1);
 		}
 
 		if (szeroes == 0 && eones == 0) {
@@ -335,97 +309,97 @@ handle_line(char *start, char *end, char *rec, size_t reclen)
 			 * range, and the final differing bytes are all ones, we complete
 			 * the entire range.
 			 */
-			gen_range(r, ipv, dbyte - 1, 0, 255, socts);
+			gen_range(r, noct, dbyte - 1, 0, 255, socts);
 			return;
-		} else {
-			int tzeroes, tones;
+		}
 
-			tzeroes = tones = -1;
-			if (dbyte + 1 < noct) {
-				tzeroes = memcmp(&socts[dbyte + 1], &zeroes, noct - dbyte);
-				tones = memcmp(&eocts[dbyte + 1], &ones, noct - dbyte);
-			}
+		tzeroes = tones = -1;
+		if (dbyte + 1 < noct) {
+			tzeroes = memcmp(&socts[dbyte + 1], &zeroes, noct - dbyte);
+			tones   = memcmp(&eocts[dbyte + 1], &ones,   noct - dbyte);
+		}
 
-			if (tzeroes == 0 && tones == 0) {
-				gen_range(r, ipv, dbyte - 1, socts[dbyte], eocts[dbyte], socts);
-				return;
-			}
+		if (tzeroes == 0 && tones == 0) {
+			gen_range(r, noct, dbyte - 1, socts[dbyte], eocts[dbyte], socts);
+			return;
+		}
 
+		if (szeroes == 0) {
 			/*
-			 * This means that we have some byte position _after_ the differing
-			 * byte in the start range that is non-zero, or we have some
-			 * differing byte end the end range that is not 255. We want to
-			 * reduce our starting range first, because this guarantees us
-			 * shortest matches later.
+			 * our start position is all zeroes, but our end position doesn't
+			 * consist of ones. this case is complicated, because it includes
+			 * things like 1.0.0.0 - 1.2.255.254, 1.0.0.0 - 1.1.1.1.
 			 */
-			if (szeroes != 0) {
-				int spos = noct;
-
-				/*
-				 * When our start position isn't all zeroes, we need to
-				 * finish a starting range, and we need to finish the longest
-				 * range. For example 1.0.1.0 - 1.2.255.255 must first
-				 * generate `1.0.[1-255]`.
-				 */
-				for (int i = noct; i >= dbyte; i--) {
-					if (socts[i] != 0) {
-						spos = i;
-						break;
-					}
+			gen_range(r, noct, dbyte - 1, socts[dbyte], eocts[dbyte] - 1, socts);
+			socts[dbyte] = eocts[dbyte];
+			dbyte++;
+			for (int i = dbyte; i <= noct; i++) {
+				if (socts[i] != eocts[i]) {
+					dbyte = i;
+					break;
 				}
+			}
 
-				/*
-				 * We complete this range. If we complete a range starting at
-				 * the initial octet, this is special because we need to move
-				 * our range forward only to the ending octet (instead of 255).
-				 */
-				if (spos == dbyte) {
-					gen_range(r, ipv, spos-1, socts[spos], eocts[spos] - 1, socts);
-					for (int i = spos + 1; i <= noct; i++) {
-						socts[i] = 0;
-					}
+			continue;
+		}
 
-					socts[spos] = eocts[spos];
-				} else {
-					gen_range(r, ipv, spos - 1, socts[spos], 255, socts);
-		
-					for (int i = spos; i <= noct; i++) {
-						socts[i] = 0;
-					}
+		/*
+		 * Here we have some byte position _after_ the differing
+		 * byte in the start range that is non-zero, or we have some
+		 * differing byte end the end range that is not 255. We want to
+		 * reduce our starting range first, because this guarantees us
+		 * shortest matches later.
+		 */
 
-					socts[spos - 1]++;
-				}
+		int spos = noct;
 
-				/*
-				 * Now, if we had e.g. 1.0.1.0, we have generated a range of
-				 * `1.0.[1-255]` and updated socts to be `1.1.0.0`. Our range
-				 * in our example would now be 1.1.0.0 - 1.2.255.255. We reset
-				 * our dbyte calculation, since the differing byte could now
-				 * be elsewhere. But it can't be before the original differing
-				 * byte, so we start there.
-				 */
-				for (int i = 0; i <= noct; i++) {
-					if (socts[i] != eocts[i]) {
-						dbyte = i;
-						break;
-					}
-				}
+		/*
+		 * When our start position isn't all zeroes, we need to
+		 * finish a starting range, and we need to finish the longest
+		 * range. For example 1.0.1.0 - 1.2.255.255 must first
+		 * generate `1.0.[1-255]`.
+		 */
+		for (int i = noct; i >= dbyte; i--) {
+			if (socts[i] != 0) {
+				spos = i;
+				break;
+			}
+		}
 
-			} else {
-				/*
-				 * Our start position is all zeroes, but our end position doesn't
-				 * consist of ones. This case is complicated, because it includes
-				 * things like 1.0.0.0 - 1.2.255.254, 1.0.0.0 - 1.1.1.1.
-				 */
-				gen_range(r, ipv, dbyte - 1, socts[dbyte], eocts[dbyte] - 1, socts);
-				socts[dbyte] = eocts[dbyte];	
-				dbyte++;
-				for (int i = dbyte; i <= noct; i++) {
-					if (socts[i] != eocts[i]) {
-						dbyte = i;
-						break;
-					}
-				}
+		/*
+		 * We complete this range. If we complete a range starting at
+		 * the initial octet, this is special because we need to move
+		 * our range forward only to the ending octet (instead of 255).
+		 */
+		if (spos == dbyte) {
+			gen_range(r, noct, spos-1, socts[spos], eocts[spos] - 1, socts);
+			for (int i = spos + 1; i <= noct; i++) {
+				socts[i] = 0;
+			}
+
+			socts[spos] = eocts[spos];
+		} else {
+			gen_range(r, noct, spos - 1, socts[spos], 255, socts);
+
+			for (int i = spos; i <= noct; i++) {
+				socts[i] = 0;
+			}
+
+			socts[spos - 1]++;
+		}
+
+		/*
+		 * Now, if we had e.g. 1.0.1.0, we have generated a range of
+		 * `1.0.[1-255]` and updated socts to be `1.1.0.0`. Our range
+		 * in our example would now be 1.1.0.0 - 1.2.255.255. We reset
+		 * our dbyte calculation, since the differing byte could now
+		 * be elsewhere. But it can't be before the original differing
+		 * byte, so we start there.
+		 */
+		for (int i = 0; i <= noct; i++) {
+			if (socts[i] != eocts[i]) {
+				dbyte = i;
+				break;
 			}
 		}
 	}
@@ -434,17 +408,17 @@ handle_line(char *start, char *end, char *rec, size_t reclen)
 static int
 important(unsigned n)
 {
-        for (;;) {
-                if (n < 10) {
-                        return 1;
-                }
+	for (;;) {
+		if (n < 10) {
+			return 1;
+		}
 
-                if ((n % 10) != 0) {
-                        return 0;
-                }
+		if ((n % 10) != 0) {
+			return 0;
+		}
 
-                n /= 10;
-        }
+		n /= 10;
+	}
 }
 
 static void
@@ -463,9 +437,9 @@ carryopaque(const struct fsm_state **set, size_t n,
 			o = fsm_getopaque(fsm, set[i]);
 			fsm_setopaque(fsm, st, o);
 			continue;
-		} else {
-			assert(o == fsm_getopaque(fsm, set[i]));
 		}
+
+		assert(o == fsm_getopaque(fsm, set[i]));
 	}
 }
 
@@ -493,6 +467,7 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 int
 main(int argc, char **argv)
 {
+	static enum { IPV4, IPV6 } ipv;
 	int progress = 0;
 	FILE *fd = NULL;
 	int odot = 0;
@@ -507,12 +482,9 @@ main(int argc, char **argv)
 
 	while (c = getopt(argc, argv, "46f:l:Q"), c != -1) {
 		switch (c) {
-		case '4':
-			ipv = 4;
-			break;
-		case '6':
-			ipv = 6;
-			break;
+		case '4': ipv = IPV4; break;
+		case '6': ipv = IPV6; break;
+
 		case 'l':
 			if (strcmp(optarg, "dot") == 0) {
 				odot = 1;
@@ -524,6 +496,7 @@ main(int argc, char **argv)
 			}
 
 			break;
+
 		case 'f':
 			fd = fopen(optarg, "r");
 			if (fd == NULL) {
@@ -531,9 +504,11 @@ main(int argc, char **argv)
 				usage();
 			}
 			break;
+
 		case 'Q':
 			progress = 1;
 			break;
+
 		default:
 			usage();
 		}
@@ -569,12 +544,12 @@ main(int argc, char **argv)
 		fprintf(stderr, "Reading lines... ");
 		fflush(stderr);
 	}
-	
+
 	char *buf = NULL;
 	size_t cap = 0;
 	ssize_t len;
 
-	while ((len = getline(&buf, &cap, fd)) > 0) {
+	while (len = getline(&buf, &cap, fd), len > 0) {
 		char *start = buf;
 		char *end = memchr(start, VALUE_SEP, len);
 
@@ -599,7 +574,40 @@ main(int argc, char **argv)
 			*strrchr(rec, '\n') = '\0';
 		}
 
-		handle_line(start, end, rec, len);
+		{
+			struct in6_addr s6, e6;
+			struct in_addr s4, e4;
+			unsigned char *socts, *eocts;
+			unsigned noct;
+
+			switch (ipv) {
+			case IPV4:
+				if (inet_pton(AF_INET, start, &s4) != 1 ||
+					inet_pton(AF_INET, end,   &e4) != 1) {
+					perror("inet_pton");
+					exit(-1);
+				}
+
+				socts = (unsigned char *) &s4.s_addr;
+				eocts = (unsigned char *) &e4.s_addr;
+				noct  = 3;
+				break;
+
+			case IPV6:
+				if (inet_pton(AF_INET6, start, &s6) != 1 ||
+					inet_pton(AF_INET6, end,   &e6) != 1) {
+					perror("inet_pton");
+					exit(-1);
+				}
+
+				socts = (unsigned char *) &s6.s6_addr;
+				eocts = (unsigned char *) &e6.s6_addr;
+				noct  = 15;
+				break;
+			}
+
+			handle_line(socts, eocts, noct, rec, len);
+		}
 
 		if (progress) {
 			tend = time(NULL);
@@ -679,3 +687,4 @@ main(int argc, char **argv)
 		fsm_print(fsm, stdout, FSM_OUT_DOT);
 	}
 }
+
