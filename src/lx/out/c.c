@@ -238,7 +238,8 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 
 	assert(ast != NULL);
 
-	if (!fsm_isend(fsm, state)) {
+	m = fsm_getopaque(fsm, state);
+	if (m == NULL) {
 		/* XXX: don't need this if complete */
 		switch (opt.io) {
 		case FSM_IO_GETC:
@@ -257,10 +258,6 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 		fprintf(f, "return %sUNKNOWN;", prefix.tok);
 		return 0;
 	}
-
-	m = state->opaque;
-
-	assert(m != NULL);
 
 	/* XXX: don't need this if complete */
 	fprintf(f, "%sungetc(lx, c); ", prefix.api);

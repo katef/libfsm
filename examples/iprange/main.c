@@ -451,13 +451,12 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 
 	(void) opaque;
 
-	if (!fsm_isend(fsm, state)) {
+	r = fsm_getopaque(fsm, state);
+	if (r == NULL) {
+		assert(!fsm_isend(fsm, state));
 		fprintf(f, "return -1;");
 		return 0;
 	}
-
-	r = fsm_getopaque(fsm, state);
-	assert(r != NULL);
 
 	fprintf(f, "return 0x%u; /* %s */", r->id, r->rec);
 
