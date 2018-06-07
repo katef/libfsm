@@ -133,13 +133,13 @@ escputs(const struct fsm_options *opt, FILE *f, const char *s)
 }
 
 static int
-leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
-	const void *opaque)
+leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
 {
-	assert(fsm != NULL);
 	assert(f != NULL);
-	assert(state != NULL);
-	assert(opaque == NULL);
+	assert(leaf_opaque == NULL);
+
+	(void) state_opaque;
+	(void) leaf_opaque;
 
 	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
 	 * maybe user defined */
@@ -152,8 +152,8 @@ static void
 singlecase(FILE *f, const struct fsm *fsm,
 	const char *cp,
 	struct fsm_state *state,
-	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
-	const void *opaque)
+	int (*leaf)(FILE *, const void *state_opaque, const void *leaf_opaque),
+	const void *leaf_opaque)
 {
 	struct {
 		struct fsm_state *state;
@@ -175,7 +175,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 		e = set_first(state->edges, &it);
 		if (!e || e->symbol > UCHAR_MAX) {
 			fprintf(f, "\t\t\t");
-			leaf(f, fsm, state, opaque);
+			leaf(f, state->opaque, leaf_opaque);
 			fprintf(f, "\n");
 			return;
 		}
@@ -284,7 +284,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 			fprintf(f, "break;\n");
 		} else {
 			fprintf(f, "\t\t\tdefault:  ");
-			leaf(f, fsm, state, opaque);
+			leaf(f, state->opaque, leaf_opaque);
 			fprintf(f, "\n");
 		}
 	}
@@ -340,7 +340,7 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 
 		fprintf(f, "\tcase S%u: ", indexof(fsm, s));
 		if (fsm->opt->endleaf != NULL) {
-			fsm->opt->endleaf(f, fsm, s, fsm->opt->endleaf_opaque);
+			fsm->opt->endleaf(f, s->opaque, fsm->opt->endleaf_opaque);
 		} else {
 			fprintf(f, "return %u;", indexof(fsm, s));
 		}
@@ -353,8 +353,8 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 int
 fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 	const char *cp,
-	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
-	const void *opaque)
+	int (*leaf)(FILE *, const void *state_opaque, const void *leaf_opaque),
+	const void *leaf_opaque)
 {
 	struct fsm_state *s;
 
@@ -392,7 +392,7 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 		}
 		fprintf(f, "\n");
 
-		singlecase(f, fsm, cp, s, leaf, opaque);
+		singlecase(f, fsm, cp, s, leaf, leaf_opaque);
 
 		fprintf(f, "\n");
 	}

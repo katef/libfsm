@@ -336,22 +336,20 @@ printexample(FILE *f, const struct fsm *fsm, const struct fsm_state *state)
 }
 
 static int
-endleaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
-	const void *opaque)
+endleaf(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 {
 	const struct match *m;
 	int n;
 
-	assert(opaque == NULL);
-	assert(fsm_isend(fsm, state));
+	assert(state_opaque != NULL);
+	assert(endleaf_opaque == NULL);
 
 	(void) f;
-
-	assert(state->opaque != NULL);
+	(void) endleaf_opaque;
 
 	n = 0;
 
-	for (m = state->opaque; m != NULL; m = m->next) {
+	for (m = state_opaque; m != NULL; m = m->next) {
 		n |= 1 << m->i;
 	}
 
@@ -359,7 +357,7 @@ endleaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 
 	fprintf(f, " /* ");
 
-	for (m = state->opaque; m != NULL; m = m->next) {
+	for (m = state_opaque; m != NULL; m = m->next) {
 		fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
 
 		if (m->next != NULL) {

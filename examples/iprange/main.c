@@ -444,16 +444,13 @@ carryopaque(const struct fsm_state **set, size_t n,
 }
 
 static int
-leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
-	const void *opaque)
+leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
 {
-	const struct record *r;
+	const struct record *r = state_opaque;
 
-	(void) opaque;
+	(void) leaf_opaque;
 
-	r = fsm_getopaque(fsm, state);
 	if (r == NULL) {
-		assert(!fsm_isend(fsm, state));
 		fprintf(f, "return -1;");
 		return 0;
 	}

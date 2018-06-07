@@ -27,7 +27,7 @@
 int
 fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 	const char *cp,
-	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
+	int (*leaf)(FILE *, const void *state_opaque, const void *leaf_opaque),
 	const void *opaque);
 
 static int
@@ -226,19 +226,17 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token)
 }
 
 static int
-leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
-	const void *opaque)
+leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
 {
 	const struct ast *ast;
 	const struct ast_mapping *m;
 
-	assert(opaque != NULL);
-
-	ast = opaque;
+	ast = leaf_opaque;
 
 	assert(ast != NULL);
 
-	m = fsm_getopaque(fsm, state);
+	m = state_opaque;
+
 	if (m == NULL) {
 		/* XXX: don't need this if complete */
 		switch (opt.io) {
