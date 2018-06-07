@@ -3,6 +3,8 @@
 SRC += src/libre/re.c
 SRC += src/libre/strerror.c
 SRC += src/libre/perror.c
+SRC += src/libre/re_ast.c
+SRC += src/libre/re_comp.c
 
 LIB        += libre
 SYMS.libre += src/libre/libre.syms

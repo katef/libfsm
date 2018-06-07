@@ -12,7 +12,6 @@
 
 %persistents%
 
-	fsm       :fsm;
 	flags     :flags;
 	lex_state :lex_state;
 	act_state :act_state;
@@ -31,6 +30,7 @@
 	#include <ctype.h>
 
 	#include "libfsm/internal.h" /* XXX */
+	#include "libre/re_ast.h"
 
 	#include <fsm/fsm.h>
 	#include <fsm/bool.h>
@@ -52,7 +52,7 @@
 	#define LX_NEXT    CAT(LX_PREFIX, _next)
 	#define LX_INIT    CAT(LX_PREFIX, _init)
 
-	#define DIALECT_COMP  CAT(comp_, DIALECT)
+	#define DIALECT_PARSE  CAT(parse_re_, DIALECT)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
 	#define DIALECT_ENTRY CAT(p_re__, DIALECT)
@@ -128,7 +128,7 @@
 		struct LX_STATE lx;
 		struct lx_dynbuf buf; /* XXX: unneccessary since we're lexing from a string */
 
-		int (*f)(void *opaque);
+		re_getchar_fun *f;
 		void *opaque;
 
 		/* TODO: use lx's generated conveniences for the pattern buffer */
@@ -445,6 +445,7 @@
 	typedef struct flags *flags;
 	typedef struct re_err * err;
 
+	typedef struct ast_expr * t_ast__expr;
 @};
 
 %terminals%
@@ -1169,6 +1170,18 @@
 		mark(&act_state->countend,   &@end);
 	@};
 
+
+
+
+	/* new AST stuff */
+	<ast-expr-empty>: () -> (n :ast_expr) = @{
+		@n = re_ast_expr_empty();
+	@};
+
+	<ast-expr-literal>: (c :char, r :ast_expr) -> (n :ast_expr) = @{
+		@n = re_ast_expr_literal(@c, @r);
+	@};
+
 %trailer% @{
 
 	static int
@@ -1187,12 +1200,11 @@
 	}
 
 	static int
-	parse(int (*f)(void *opaque), void *opaque,
-		void (*entry)(struct fsm *, flags, lex_state, act_state, err,
-			struct fsm_state *, struct fsm_state *),
+	parse(re_getchar_fun *f, void *opaque,
+		void (*entry)(flags, lex_state, act_state, err,
+			struct ast_expr **),
 		struct flags *flags, int overlap,
-		struct fsm *new, struct re_err *err,
-		struct fsm_state *x, struct fsm_state *y)
+		struct ast_re *new, struct re_err *err)
 	{
 		struct act_state  act_state_s;
 		struct act_state *act_state;
@@ -1240,7 +1252,7 @@
 		err->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
-		entry(new, flags, lex_state, act_state, err, x, y);
+		entry(flags, lex_state, act_state, err, &new->expr);
 
 		lx->free(lx->buf_opaque);
 
@@ -1299,44 +1311,31 @@
 		return -1;
 	}
 
-	struct fsm *
-	DIALECT_COMP(int (*f)(void *opaque), void *opaque,
+	struct ast_re *
+	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
 		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
 		struct re_err *err)
 	{
-		struct fsm *new;
-		struct fsm_state *x, *y;
+		/* struct fsm *new; */
+		struct ast_re *ast;
+		/* struct fsm_state *x, *y; */
 		struct flags top, *fl = &top;
 
 		top.flags = flags;
 
 		assert(f != NULL);
 
-		new = fsm_new_blank(opt);
-		if (new == NULL) {
-			return NULL;
-		}
+		ast = re_ast_new();
 
-		x = fsm_getstart(new);
-		assert(x != NULL);
-
-		y = fsm_addstate(new);
-		if (y == NULL) {
+		if (-1 == parse(f, opaque, DIALECT_ENTRY, fl, overlap, ast, err)) {
 			goto error;
 		}
 
-		fsm_setend(new, y, 1);
-
-		if (-1 == parse(f, opaque, DIALECT_ENTRY, fl, overlap, new, err, x, y)) {
-			goto error;
-		}
-
-		return new;
+		return ast;
 
 	error:
-
-		fsm_free(new);
+		re_ast_free(ast);
 
 		return NULL;
 	}

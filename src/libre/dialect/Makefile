@@ -1,11 +1,11 @@
 .include "../../../share/mk/top.mk"
 
-DIALECT += glob
-DIALECT += like
+# DIALECT += glob
+# DIALECT += like
 DIALECT += literal
-DIALECT += native
-DIALECT += pcre
-DIALECT += sql
+# DIALECT += native
+# DIALECT += pcre
+# DIALECT += sql
 
 .for dialect in ${DIALECT}
 

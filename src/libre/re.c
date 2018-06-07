@@ -18,12 +18,12 @@
 
 #include "dialect/comp.h"
 
+#include "re_ast.h"
+#include "re_comp.h"
+
 struct dialect {
 	enum re_dialect dialect;
-	struct fsm *(*comp)(int (*f)(void *opaque), void *opaque,
-		const struct fsm_options *opt,
-		enum re_flags flags, int overlap,
-		struct re_err *err);
+	re_dialect_parse_fun *parse;
 	int overlap;
 };
 
@@ -32,13 +32,15 @@ re_dialect(enum re_dialect dialect)
 {
 	size_t i;
 
+	/* TODO: convert the rest to parse functions that
+	 * just return an AST. */
 	static const struct dialect a[] = {
-		{ RE_LIKE,    comp_like,    0 },
-		{ RE_LITERAL, comp_literal, 0 },
-		{ RE_GLOB,    comp_glob,    0 },
-		{ RE_NATIVE,  comp_native,  0 },
-		{ RE_PCRE,    comp_pcre,    0 },
-		{ RE_SQL,     comp_sql,     1 }
+		/* { RE_LIKE,    comp_like,    0 }, */
+		{ RE_LITERAL,    parse_re_literal, 0 },
+		/* { RE_GLOB,    comp_glob,    0 }, */
+		/* { RE_NATIVE,  comp_native,  0 }, */
+		/* { RE_PCRE,    comp_pcre,    0 }, */
+		/* { RE_SQL,     comp_sql,     1 } */
 	};
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
@@ -91,6 +93,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err)
 {
 	const struct dialect *m;
+	struct ast_re *ast;
 	struct fsm *new;
 
 	assert(getc != NULL);
@@ -103,11 +106,20 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
-	new = m->comp(getc, opaque, opt, flags, m->overlap, err);
-	if (new == NULL) {
+	ast = m->parse(getc, opaque, opt, flags, m->overlap, err);
+	if (ast == NULL) {
 		return NULL;
 	}
 
+	re_ast_prettyprint(stderr, ast);
+
+	new = re_comp_ast(ast, flags, opt);
+	re_ast_free(ast);
+
+	if (new == NULL) {
+		return NULL;
+	}
+	
 	/*
 	 * All flags operators commute with respect to composition.
 	 * That is, the order of application here does not matter;

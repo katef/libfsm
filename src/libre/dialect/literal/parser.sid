@@ -8,13 +8,14 @@
 
 	pos;
 	char;
-	unsigned;
+	!unsigned;
 	!fsm;
-	fsm_state;
-	grp;
-	pred;
+	!fsm_state;
+	!grp;
+	!pred;
 	!re_flags;
 	!err;
+	ast_expr;
 
 %terminals%
 
@@ -80,9 +81,9 @@
 	!<group-add-range>: (:grp &, :char, :char) -> ();
 	!<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
 
-	<add-concat>:  () -> (:fsm_state);
-	<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
-	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
+	!<add-concat>:  () -> (:fsm_state);
+	!<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
+	!<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
 	!<add-pred>:   (:fsm_state, :fsm_state, :pred) -> ();
 	!<add-any>:    (:fsm_state, :fsm_state)        -> ();
 	!<add-class>:  (:fsm_state, :fsm_state, :fsm)  -> ();
@@ -91,12 +92,15 @@
 	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
 	!<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
 	!<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
-	<count-1>: (:fsm_state, :fsm_state) -> ();
+	!<count-1>: (:fsm_state, :fsm_state) -> ();
 
 	!<push-flags>;
 	!<pop-flags>;
 	!<set-flag>: (:re_flags) -> ();
 	!<clear-flag>: (:re_flags) -> ();
+
+	<ast-expr-empty>: () -> (:ast_expr);
+	<ast-expr-literal>: (:char, :ast_expr) -> (:ast_expr);
 
 	!<err-expected-term>;
 	!<err-expected-count>;
@@ -113,35 +117,33 @@
 	!<mark-range>: (:pos, :pos) -> ();
 	!<mark-count>: (:pos, :pos) -> ();
 
-	list-of-literals: (x :fsm_state, y :fsm_state) -> () [
-
-		literal: (x :fsm_state, y :fsm_state) -> () = {
+	list-of-literal-nodes: () -> (n :ast_expr) [
+		literal: () -> (c :char) = {
 			(c, !, !) = CHAR;
-			<add-literal>(x, y, c);
-			<count-1>(x, y);
 		};
-
 	] = {
-		z = <add-concat>;
-		literal(x, z);
-
+		c = literal;
 		{
-			list-of-literals(z, y);
+			r = list-of-literal-nodes();
+			n = <ast-expr-literal>(c, r);
 		||
-			/* TODO: I don't like this. refactor somehow? */
-			<add-epsilon>(z, y);
+			r = <ast-expr-empty>();
+			n = <ast-expr-literal>(c, r);
 		};
 	};
 
-	re_literal: (x :fsm_state, y :fsm_state) -> () = {
+
+	re_literal: () -> (n :ast_expr) = {
 		{
-			list-of-literals(x, y);
-		||
-			<add-epsilon>(x, y);
+			n = list-of-literal-nodes();
 		##
 			<err-expected-atoms>;	/* TODO: inappropiate? */
-		};
 
+			/* FIXME: shouldn't need this, but sid needs to
+			 * know that this has errored out */
+			n = <ast-expr-empty>();
+		};
+	
 		{
 			EOF;
 		##
