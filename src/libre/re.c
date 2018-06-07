@@ -35,7 +35,7 @@ re_dialect(enum re_dialect dialect)
 	/* TODO: convert the rest to parse functions that
 	 * just return an AST. */
 	static const struct dialect a[] = {
-		/* { RE_LIKE,    comp_like,    0 }, */
+		{ RE_LIKE,       parse_re_like,    0 },
 		{ RE_LITERAL,    parse_re_literal, 0 },
 		{ RE_GLOB,       parse_re_glob,    0 },
 		/* { RE_NATIVE,  comp_native,  0 }, */

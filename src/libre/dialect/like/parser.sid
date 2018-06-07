@@ -8,13 +8,14 @@
 
 	pos;
 	char;
-	unsigned;
+	!unsigned;
 	!fsm;
-	fsm_state;
-	grp;
-	pred;
+	!fsm_state;
+	!grp;
+	!pred;
 	!re_flags;
 	!err;
+	ast_expr;
 
 %terminals%
 
@@ -80,18 +81,18 @@
 	!<group-add-range>: (:grp &, :char, :char) -> ();
 	!<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
 
-	<add-concat>:  () -> (:fsm_state);
-	<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
-	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
+	!<add-concat>:  () -> (:fsm_state);
+	!<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
+	!<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
 	!<add-pred>:   (:fsm_state, :fsm_state, :pred) -> ();
-	<add-any>:     (:fsm_state, :fsm_state)        -> ();
+	!<add-any>:     (:fsm_state, :fsm_state)        -> ();
 	!<add-class>:  (:fsm_state, :fsm_state, :fsm)  -> ();
 
 	!<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
 	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
-	<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
+	!<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
 	!<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
-	<count-1>: (:fsm_state, :fsm_state) -> ();
+	!<count-1>: (:fsm_state, :fsm_state) -> ();
 
 	!<push-flags>;
 	!<pop-flags>;
@@ -113,54 +114,42 @@
 	!<mark-range>: (:pos, :pos) -> ();
 	!<mark-count>: (:pos, :pos) -> ();
 
-	list-of-atoms: (x :fsm_state, y :fsm_state) -> () [
-
-		literal: (x :fsm_state, y :fsm_state) -> () = {
+	list-of-like-nodes: () -> (n :ast_expr) [
+		literal: () -> (c :char) = {
 			(c, !, !) = CHAR;
-			<add-literal>(x, y, c);
 		};
 
-		any: (x :fsm_state, y :fsm_state) -> () = {
+		any: () -> () = {
 			ANY;
-			<add-any>(x, y);
 		};
 
-		many: (x :fsm_state, y :fsm_state) -> () = {
+		many: () -> () = {
 			MANY;
-			<add-any>(x, y);
 		};
-
-		atom: (x :fsm_state, y :fsm_state &) -> () = {
-			literal(x, y);
-			<count-1>(x, y);
-		||
-			any(x, y);
-			<count-1>(x, y);
-		||
-			many(x, y);
-			<count-0-or-many>(x, &y);
-		};
-
 	] = {
-		z = <add-concat>;
-
-		atom(x, &z);
-
 		{
-			list-of-atoms(z, y);
+			c = literal();
+			r = list-of-like-nodes();
+			n = <ast-expr-literal>(c, r);
 		||
-			/* TODO: I don't like this. refactor somehow? */
-			<add-epsilon>(z, y);
+			any();
+			r = list-of-like-nodes();
+			n = <ast-expr-any>(r);
+		||
+			many();
+			r = list-of-like-nodes();
+			n = <ast-expr-many>(r);
+		||
+			n = <ast-expr-empty>();
 		};
 	};
 
-	re_like: (x :fsm_state, y :fsm_state) -> () = {
+	re_like: () -> (n :ast_expr) = {
 		{
-			list-of-atoms(x, y);
-		||
-			<add-epsilon>(x, y);
+			n = list-of-like-nodes();
 		##
 			<err-expected-atoms>;
+			n = <ast-expr-empty>(); /* unreachable */
 		};
 
 		{
