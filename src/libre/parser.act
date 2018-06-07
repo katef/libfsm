@@ -1178,16 +1178,20 @@
 		@n = re_ast_expr_empty();
 	@};
 
-	<ast-expr-literal>: (c :char, r :ast_expr) -> (n :ast_expr) = @{
-		@n = re_ast_expr_literal(@c, @r);
+	<ast-expr-concat>: (l :ast_expr, r :ast_expr) -> (n :ast_expr) = @{
+		@n = re_ast_expr_concat(@l, @r);
 	@};
 
-	<ast-expr-any>: (r :ast_expr) -> (n :ast_expr) = @{
-		@n = re_ast_expr_any(@r);
+	<ast-expr-literal>: (c :char) -> (n :ast_expr) = @{
+		@n = re_ast_expr_literal(@c);
 	@};
 
-	<ast-expr-many>: (r :ast_expr) -> (n :ast_expr) = @{
-		@n = re_ast_expr_many(@r);
+	<ast-expr-any>: () -> (n :ast_expr) = @{
+		@n = re_ast_expr_any();
+	@};
+	
+	<ast-expr-many>: () -> (n :ast_expr) = @{
+		@n = re_ast_expr_many();
 	@};
 
 %trailer% @{

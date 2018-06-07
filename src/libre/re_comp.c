@@ -30,18 +30,19 @@ comp_iter(struct comp_env *env,
 		if (!fsm_addedge_epsilon(env->fsm, x, y)) { return 0; }
 		break;
 
-	case AST_EXPR_LITERAL:
+	case AST_EXPR_CONCAT:
 		z = fsm_addstate(env->fsm);
 		if (z == NULL) { return 0; }
-		if (!addedge_literal(env, x, z, n->u.literal.l.c)) { return 0; }
-		if (!comp_iter(env, z, y, n->u.literal.n)) { return 0; }
+		if (!comp_iter(env, x, z, n->u.concat.l)) { return 0; }
+		if (!comp_iter(env, z, y, n->u.concat.r)) { return 0; }
+		break;
+
+	case AST_EXPR_LITERAL:
+		if (!addedge_literal(env, x, y, n->u.literal.l.c)) { return 0; }
 		break;
 
 	case AST_EXPR_ANY:
-		z = fsm_addstate(env->fsm);
-		if (z == NULL) { return 0; }
-		if (!fsm_addedge_any(env->fsm, x, z)) { return 0; }
-		if (!comp_iter(env, z, y, n->u.any.n)) { return 0; }
+		if (!fsm_addedge_any(env->fsm, x, y)) { return 0; }
 		break;
 
 	case AST_EXPR_MANY:
@@ -50,7 +51,7 @@ comp_iter(struct comp_env *env,
 		if (!fsm_addedge_epsilon(env->fsm, x, z)) { return 0; }
 		if (!fsm_addedge_any(env->fsm, x, z)) { return 0; }
 		if (!fsm_addedge_epsilon(env->fsm, z, x)) { return 0; }
-		if (!comp_iter(env, z, y, n->u.any.n)) { return 0; }
+		if (!fsm_addedge_epsilon(env->fsm, z, y)) { return 0; }
 		break;
 
 	default:

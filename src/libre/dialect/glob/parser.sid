@@ -100,9 +100,10 @@
 	!<clear-flag>: (:re_flags) -> ();
 
 	<ast-expr-empty>: () -> (:ast_expr);
-	<ast-expr-literal>: (:char, :ast_expr) -> (:ast_expr);
-	<ast-expr-any>: (:ast_expr) -> (:ast_expr);
-	<ast-expr-many>: (:ast_expr) -> (:ast_expr);
+	<ast-expr-literal>: (:char) -> (:ast_expr);
+	<ast-expr-concat>: (:ast_expr, :ast_expr) -> (:ast_expr);
+	<ast-expr-any>: () -> (:ast_expr);
+	<ast-expr-many>: () -> (:ast_expr);
 
 	!<err-expected-term>;
 	!<err-expected-count>;
@@ -119,7 +120,7 @@
 	!<mark-range>: (:pos, :pos) -> ();
 	!<mark-count>: (:pos, :pos) -> ();
 
-	list-of-glob-nodes: () -> (n :ast_expr) [
+	list-of-nodes: () -> (n :ast_expr) [
 		literal: () -> (c :char) = {
 			(c, !, !) = CHAR;
 		};
@@ -134,27 +135,28 @@
 	] = {
 		{
 			c = literal();
-			r = list-of-glob-nodes();
-			n = <ast-expr-literal>(c, r);
+			l = <ast-expr-literal>(c);
 		||
 			any();
-			r = list-of-glob-nodes();
-			n = <ast-expr-any>(r);
+			l = <ast-expr-any>();
 		||
-			many();
-			r = list-of-glob-nodes();
-			n = <ast-expr-many>(r);
+		        many();
+			l = <ast-expr-many>();
+		};
+
+		{
+			r = list-of-nodes();
+			n = <ast-expr-concat>(l, r);
 		||
-			n = <ast-expr-empty>();
+			n = l;
 		};
 	};
 
 	re_glob: () -> (n :ast_expr) = {
 		{
-			n = list-of-glob-nodes();
+			n = list-of-nodes();
 		##
-			<err-expected-atoms>;
-			n = <ast-expr-empty>(); /* unreachable */
+			n = <ast-expr-empty>();
 		};
 
 		{
