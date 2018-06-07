@@ -1,5 +1,7 @@
 #include "re_comp.h"
 
+#include <ctype.h>
+
 struct comp_env {
 	struct fsm *fsm;
 	enum re_flags flags;
@@ -19,23 +21,40 @@ comp_iter(struct comp_env *env,
 	    
 	assert(x);
 	assert(y);
-	if (n == NULL) { return; }
+	if (n == NULL) { return 1; }
 
 	/* fprintf(stderr, "%s: type %d\n", __func__, n->t); */
 
 	switch (n->t) {
 	case AST_EXPR_EMPTY:
 		if (!fsm_addedge_epsilon(env->fsm, x, y)) { return 0; }
-		return 1;
+		break;
 
 	case AST_EXPR_LITERAL:
 		z = fsm_addstate(env->fsm);
+		if (z == NULL) { return 0; }
 		if (!addedge_literal(env, x, z, n->u.literal.l.c)) { return 0; }
 		if (!comp_iter(env, z, y, n->u.literal.n)) { return 0; }
 		break;
 
+	case AST_EXPR_ANY:
+		z = fsm_addstate(env->fsm);
+		if (z == NULL) { return 0; }
+		if (!fsm_addedge_any(env->fsm, x, z)) { return 0; }
+		if (!comp_iter(env, z, y, n->u.any.n)) { return 0; }
+		break;
+
+	case AST_EXPR_MANY:
+		z = fsm_addstate(env->fsm);
+		if (z == NULL) { return 0; }
+		if (!fsm_addedge_epsilon(env->fsm, x, z)) { return 0; }
+		if (!fsm_addedge_any(env->fsm, x, z)) { return 0; }
+		if (!fsm_addedge_epsilon(env->fsm, z, x)) { return 0; }
+		if (!comp_iter(env, z, y, n->u.any.n)) { return 0; }
+		break;
+
 	default:
-		assert(false);
+		assert(0);
 	}
 
 	return 1;

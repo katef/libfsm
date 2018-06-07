@@ -1182,6 +1182,14 @@
 		@n = re_ast_expr_literal(@c, @r);
 	@};
 
+	<ast-expr-any>: (r :ast_expr) -> (n :ast_expr) = @{
+		@n = re_ast_expr_any(@r);
+	@};
+
+	<ast-expr-many>: (r :ast_expr) -> (n :ast_expr) = @{
+		@n = re_ast_expr_many(@r);
+	@};
+
 %trailer% @{
 
 	static int

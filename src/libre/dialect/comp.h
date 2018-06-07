@@ -21,6 +21,7 @@ re_dialect_parse_fun(re_getchar_fun *getchar, void *opaque,
 	struct re_err *err);
 
 re_dialect_parse_fun parse_re_literal;
+re_dialect_parse_fun parse_re_glob;
 
 #if 0
 struct fsm *

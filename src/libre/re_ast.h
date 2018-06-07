@@ -56,7 +56,9 @@ struct ast_literal {
 
 enum ast_expr_type {
 	AST_EXPR_EMPTY,
-	AST_EXPR_LITERAL
+	AST_EXPR_LITERAL,
+	AST_EXPR_ANY,
+	AST_EXPR_MANY
 };
 
 struct ast_expr {
@@ -66,6 +68,12 @@ struct ast_expr {
 			struct ast_literal l;
 			struct ast_expr *n;
 		} literal;
+		struct {
+			struct ast_expr *n;
+		} any;
+		struct {
+			struct ast_expr *n;
+		} many;
 	} u;	
 };
 
@@ -80,6 +88,12 @@ re_ast_expr_empty(void);
 
 struct ast_expr *
 re_ast_expr_literal(char c, struct ast_expr *r);
+
+struct ast_expr *
+re_ast_expr_any(struct ast_expr *r);
+
+struct ast_expr *
+re_ast_expr_many(struct ast_expr *r);
 
 void
 re_ast_prettyprint(FILE *f, struct ast_re *ast);

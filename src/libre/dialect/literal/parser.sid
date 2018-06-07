@@ -138,10 +138,7 @@
 			n = list-of-literal-nodes();
 		##
 			<err-expected-atoms>;	/* TODO: inappropiate? */
-
-			/* FIXME: shouldn't need this, but sid needs to
-			 * know that this has errored out */
-			n = <ast-expr-empty>();
+			n = <ast-expr-empty>(); /* unreachable */
 		};
 	
 		{
