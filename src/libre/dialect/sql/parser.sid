@@ -18,12 +18,15 @@
 	pos;
 	char;
 	!unsigned;
-	fsm;
-	fsm_state;
-	grp;
-	pred;
+	!fsm;
+	!fsm_state;
+	!grp;
+	!pred;
 	!re_flags;
 	!err;
+	ast_expr;
+	ast_atom_count_flag;
+        ast_class_id;
 
 %terminals%
 
@@ -36,30 +39,30 @@
 	STAR;
 
 	OPENSUB;   CLOSESUB;
-	OPENGROUP:  () -> (:pos, :pos); CLOSEGROUP:  () -> (:char, :pos, :pos);
+	!OPENGROUP:  () -> (:pos, :pos); !CLOSEGROUP:  () -> (:char, :pos, :pos);
 	!OPENCOUNT: () -> (:pos, :pos); !CLOSECOUNT: () -> (:pos, :pos);
 
-	INVERT: () -> (:char);
-	RANGE:  () -> (:char, :pos, :pos);
+	!INVERT: () -> (:char);
+	!RANGE:  () -> (:char, :pos, :pos);
 
-	CLASS_alnum:   () -> (:fsm);
-	CLASS_alpha:   () -> (:fsm);
-	!CLASS_any:    () -> (:fsm);
-	!CLASS_ascii:  () -> (:fsm);
-	!CLASS_blank:  () -> (:fsm);
-	!CLASS_cntrl:  () -> (:fsm);
-	CLASS_digit:   () -> (:fsm);
-	!CLASS_graph:  () -> (:fsm);
-	CLASS_lower:   () -> (:fsm);
-	!CLASS_print:  () -> (:fsm);
-	!CLASS_punct:  () -> (:fsm);
-	CLASS_space:   () -> (:fsm);
-	CLASS_spchr:   () -> (:fsm);
-	CLASS_upper:   () -> (:fsm);
-	!CLASS_word:   () -> (:fsm);
-	!CLASS_xdigit: () -> (:fsm);
-	!CLASS_ndigit: () -> (:fsm);
-	!CLASS_nspace: () -> (:fsm);
+        !CLASS_alnum:   () -> (:ast_class_id);
+	!CLASS_alpha:   () -> (:ast_class_id);
+	!CLASS_any:    () -> (:ast_class_id);
+	!CLASS_ascii:  () -> (:ast_class_id);
+	!CLASS_blank:  () -> (:ast_class_id);
+	!CLASS_cntrl:  () -> (:ast_class_id);
+	!CLASS_digit:   () -> (:ast_class_id);
+	!CLASS_graph:  () -> (:ast_class_id);
+	!CLASS_lower:   () -> (:ast_class_id);
+	!CLASS_print:  () -> (:ast_class_id);
+	!CLASS_punct:  () -> (:ast_class_id);
+	!CLASS_space:   () -> (:ast_class_id);
+	!CLASS_spchr:   () -> (:ast_class_id);
+	!CLASS_upper:   () -> (:ast_class_id);
+	!CLASS_word:   () -> (:ast_class_id);
+	!CLASS_xdigit: () -> (:ast_class_id);
+	!CLASS_ndigit: () -> (:ast_class_id);
+	!CLASS_nspace: () -> (:ast_class_id);
 
 	!OPENFLAGS;
 	!CLOSEFLAGS;
@@ -82,253 +85,159 @@
 
 %productions%
 
-	<make-group>:  () -> (:grp);
-	<invert-group>:    (:grp &) -> ();
-	<group-add-char>:  (:grp &, :char) -> ();
-	<group-add-class>: (:grp &, :fsm) -> ();
-	<group-add-range>: (:grp &, :char, :char) -> ();
-	<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
+	!<make-group>:  () -> (:grp);
+	!<invert-group>:    (:grp &) -> ();
+	!<group-add-char>:  (:grp &, :char) -> ();
+	!<group-add-class>: (:grp &, :fsm) -> ();
+	!<group-add-range>: (:grp &, :char, :char) -> ();
+	!<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
 
-	<add-concat>:  () -> (:fsm_state);
-	<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
+	!<add-concat>:  () -> (:fsm_state);
+	!<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
 	!<add-pred>:   (:fsm_state, :fsm_state, :pred) -> ();
-	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
-	<add-any>:     (:fsm_state, :fsm_state)        -> ();
+	!<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
+	!<add-any>:     (:fsm_state, :fsm_state)        -> ();
 	!<add-class>:  (:fsm_state, :fsm_state, :fsm)  -> ();
 
 	!<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
 	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
-	<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
-	<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
-	<count-1>: (:fsm_state, :fsm_state) -> ();
+	!<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
+	!<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
+	!<count-1>: (:fsm_state, :fsm_state) -> ();
 
 	!<push-flags>;
 	!<pop-flags>;
 	!<set-flag>: (:re_flags) -> ();
 	!<clear-flag>: (:re_flags) -> ();
 
-	<err-expected-term>;
-	<err-expected-count>;
+	!<err-expected-term>;
+	!<err-expected-count>;
 	!<err-expected-atoms>;
-	<err-expected-alts>;
-	<err-expected-range>;
-	<err-expected-closegroup>;
+	!<err-expected-alts>;
+	!<err-expected-range>;
+	!<err-expected-closegroup>;
 	!<err-unknown-flag>;
 	!<err-expected-closeflags>;
-	<err-expected-groupbody>;
+	!<err-expected-groupbody>;
 	<err-expected-eof>;
 
-	<mark-group>: (:pos, :pos) -> ();
-	<mark-range>: (:pos, :pos) -> ();
+	!<mark-group>: (:pos, :pos) -> ();
+	!<mark-range>: (:pos, :pos) -> ();
 	!<mark-count>: (:pos, :pos) -> ();
 
-	group: (x :fsm_state, y :fsm_state) -> () [
+        <atom-flag-kleene>: () -> (:ast_atom_count_flag);
+        <atom-flag-plus>: () -> (:ast_atom_count_flag);
+        <atom-flag-one>: () -> (:ast_atom_count_flag);
 
-		char: () -> (c :char) = {
-			(c, !, !) = CHAR;
-		};
+	<ast-expr-empty>: () -> (:ast_expr);
+	<ast-expr-literal>: (:char) -> (:ast_expr);
+	<ast-expr-concat>: (:ast_expr, :ast_expr) -> (:ast_expr);
+	<ast-expr-alt>: (:ast_expr, :ast_expr) -> (:ast_expr);
+	!<ast-expr-any>: () -> (:ast_expr);
+	!<ast-expr-many>: () -> (:ast_expr);
 
-		class: () -> (k :fsm) = {
-			k = CLASS_alnum;
+        <ast-expr-atom>: (:ast_expr, :ast_atom_count_flag) -> (:ast_expr);
+        <ast-expr-atom-any>: (:ast_atom_count_flag) -> (:ast_expr);
+        <ast-expr-atom-many>: (:ast_atom_count_flag) -> (:ast_expr);
+
+	expr: () -> (n :ast_expr) [
+                literal: () -> (n :ast_expr) = {
+  			(c, !, !) = CHAR;
+			n = <ast-expr-literal>(c);
+  		};
+
+		atom-suffix: () -> (f :ast_atom_count_flag) = {
+			STAR;
+			f = <atom-flag-kleene>();
 		||
-			k = CLASS_alpha;
+			PLUS;
+			f = <atom-flag-plus>();
 		||
-			k = CLASS_digit;
+			f = <atom-flag-one>();
+		};
+
+		/* TODO: is there a better name than 'atom' for
+		 * this construct?
+		 * maybe better to have a flag for one/kleene/plus,
+		 * and give that to most other AST nodes? */
+		atom: () -> (n :ast_expr) = {
+			OPENSUB;
+			e = expr();
+			CLOSESUB;
+			s = atom-suffix();
+			n = <ast-expr-atom>(e, s);
+		/* ||
+		 * 	e = group();
+		 * 	s = atom-suffix();
+		 * 	n = <ast-expr-atom>(e, s); */
 		||
-			k = CLASS_lower;
+			e = literal();
+			s = atom-suffix();
+			n = <ast-expr-atom>(e, s);
 		||
-			k = CLASS_space;
+			ANY;
+			s = atom-suffix();
+			n = <ast-expr-atom-any>(s);
 		||
-			k = CLASS_spchr;
+			MANY;
+			s = atom-suffix();
+			n = <ast-expr-atom-many>(s);
+		};
+
+		/* group: () -> (n :ast_expr) = {
+		 * 	OPENGROUP;
+		 * 	INVERT;
+		 * 	b = group-body();
+		 * 	CLOSEGROUP;
+		 * 	<ast-expr-group-inverted>(b);
+		 * ||
+		 * 	OPENGROUP;
+		 * 	b = group-body();
+		 * 	CLOSEGROUP;
+		 * 	<ast-expr-group>(b);
+  		 * };
+		 * 
+		 * group-body: () -> (b :group_body) = {
+		 *         h = group-body-head();
+		 * 
+		 * 	m = list-of-terms();
+		 * 
+		 * 	t = group-body-tail();
+		 * 
+		 * 	b = <ast-expr-group-body>(h, m, t);
+		 * };
+		 * 
+                 * list-of-terms: () ->  */
+
+		list-of-atoms: () -> (n :ast_expr) = {
+			n = atom();
 		||
-			k = CLASS_upper;
+			a = atom();
+			r = list-of-atoms();
+			n = <ast-expr-concat>(a,r);
 		};
 
-		range: () -> (a :char, b :char) = {
-			{
-				(a, start, !) = CHAR;
-			};
-
-			{
-				(!, !, !) = RANGE;
-			##
-				<err-expected-range>;
-			};
-
-			{
-				(b, !, end) = CHAR;
-			||
-				(b, !, end) = RANGE;
-			};
-
-			<mark-range>(start, end);
+		alt: () -> (n :ast_expr) = {
+			n = list-of-atoms();
 		};
 
-		list-of-terms: (g :grp &) -> () = {
-			{
-				c = char;
-				<group-add-char>(&g, c);
-			||
-				k = class;
-				<group-add-class>(&g, k);
-			||
-				(a, b) = range;
-				<group-add-range>(&g, a, b);
-			##
-				<err-expected-term>;
-			};
-
-			{
-				$;
-			||
-				list-of-terms(&g);
-			};
-		};
-
-		group-body: (g :grp &) -> () = {
-			{
-				(c, !, !) = CLOSEGROUP;
-				<group-add-char>(&g, c);
-			||
-				(c, !, !) = RANGE;
-				<group-add-char>(&g, c);
-			||
-				/*
-				 * XXX: this is atypical, but serves as a workaround for below
-				 * until this can be done lexically by /-$/ -> $char.
-				 */
-				(a, !, !) = CLOSEGROUP;
-				<group-add-char>(&g, a);
-				(b, !, !) = RANGE;
-				<group-add-char>(&g, b);
-			||
-				$;
-			};
-
-			list-of-terms(&g);
-
-			{
-/* XXX: this ought to be permitted, but I can't see how for LL(1)
-				(c, !, !) = RANGE;
-				<group-add-char>(&g, c);
-			||
-*/
-				$;
-			};
-		};
-
-		group-bm: (g :grp &) -> () = {
-			(start, !) = OPENGROUP;
-
-			{
-				! = INVERT;
-				group-body(&g);
-				<invert-group>(&g);
-			||
-				group-body(&g);
-			};
-
-			{
-				(!, !, end) = CLOSEGROUP;
-				<mark-group>(start, end);
-			##
-				<err-expected-closegroup>;
-			};
-		##
-			<err-expected-groupbody>;
-		};
-
-	] = {
-		g = <make-group>;
-
-		group-bm(&g);
-
-		<group-to-states>(&g, x, y);
-	};
-
-	literal: (x :fsm_state, y :fsm_state) -> () = {
-		{
-			(c, !, !) = CHAR;
-		};
-		<add-literal>(x, y, c);
-	};
-
-	expr: (x :fsm_state, y :fsm_state) -> () [
-
-		atom: (x :fsm_state, y :fsm_state &) -> () = {
-			{
-				OPENSUB;
-				expr(x, y);
-				CLOSESUB;
-			||
-				group(x, y);
-			||
-				literal(x, y);
-			||
-				ANY;
-				<add-any>(x, y);
-			||
-				MANY;
-				<add-any>(x, y);
-				<count-0-or-many>(x, &y);
-			};
-
-			{
-				STAR;
-				<count-0-or-many>(x, &y);
-			||
-				PLUS;
-				<count-1-or-many>(x, &y);
-			||
-				<count-1>(x, y);
-			##
-				<err-expected-count>;
-			};
-		};
-
-		list-of-atoms: (x :fsm_state, y :fsm_state) -> () = {
-			z = <add-concat>;
-
-			atom(x, &z);
-
-			/* TODO: I don't like this. Refactor somehow? */
-			{
-				<add-epsilon>(z, y);
-			||
-				list-of-atoms(z, y);
-			};
-		};
-
-		list-of-alts: (x :fsm_state, y :fsm_state) -> () [
-
-			alt: (x :fsm_state, y :fsm_state) -> () = {
-				z = <add-concat>;
-
-				/* TODO: I don't like this. Refactor somehow? */
-				<add-epsilon>(x, z);
-
-				list-of-atoms(z, y);
-			};
-
-		] = {
-			alt(x, y);
+		list-of-alts: () -> (n :ast_expr) = {
+			n = alt();
 		||
-			list-of-alts(x, y);
+			a = alt();
 			ALT;
-			alt(x, y);
+			r = list-of-alts();
+			n = <ast-expr-alt>(a, r);
 		};
-
 	] = {
-		list-of-alts(x, y);
+		n = list-of-alts();
 	};
 
-	re_sql: (x :fsm_state, y :fsm_state) -> () = {
+	re_sql: () -> (n :ast_expr) = {
 		{
-			expr(x, y);
-		||
-			<add-epsilon>(x, y);
+			n = expr();
 		##
-			<err-expected-alts>;
+			n = <ast-expr-empty>();
 		};
 
 		{

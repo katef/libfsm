@@ -53,6 +53,24 @@ struct ast_literal {
 	/*const*/ char c;
 };
 
+enum ast_class_id {
+	AST_CLASS_ALNUM,
+	AST_CLASS_ALPHA,
+	AST_CLASS_ANY,
+	AST_CLASS_ASCII,
+	AST_CLASS_BLANK,
+	AST_CLASS_CNTRL,
+	AST_CLASS_DIGIT,
+	AST_CLASS_GRAPH,
+	AST_CLASS_LOWER,
+	AST_CLASS_PRINT,
+	AST_CLASS_PUNCT,
+	AST_CLASS_SPACE,
+	AST_CLASS_SPCHR,
+	AST_CLASS_UPPER,
+	AST_CLASS_WORD,
+	AST_CLASS_XDIGIT
+};
 
 enum ast_expr_type {
 	AST_EXPR_EMPTY,
@@ -60,6 +78,12 @@ enum ast_expr_type {
 	AST_EXPR_LITERAL,
 	AST_EXPR_ANY,
 	AST_EXPR_MANY
+};
+
+enum ast_atom_count_flag {
+	AST_ATOM_COUNT_FLAG_KLEENE,
+	AST_ATOM_COUNT_FLAG_PLUS,
+	AST_ATOM_COUNT_FLAG_ONE
 };
 
 struct ast_expr {

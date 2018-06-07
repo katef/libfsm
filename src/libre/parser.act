@@ -102,6 +102,8 @@
 	typedef struct fsm * t_fsm;
 	typedef enum re_flags t_re__flags;
 	typedef struct grp t_grp;
+	typedef enum ast_class_id t_ast__class__id;
+	typedef enum ast_atom_count_flag t_ast__atom__count__flag;
 
 	struct act_state {
 		enum LX_TOKEN lex_tok;
@@ -481,25 +483,25 @@
 		@end   = lex_state->lx.end;
 	@};
 
-	CLASS_alnum:  () -> (fsm :fsm) = @{ @fsm = class_alnum_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_alpha:  () -> (fsm :fsm) = @{ @fsm = class_alpha_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_any:    () -> (fsm :fsm) = @{ @fsm = class_any_fsm(fsm->opt);    if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_ascii:  () -> (fsm :fsm) = @{ @fsm = class_ascii_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_blank:  () -> (fsm :fsm) = @{ @fsm = class_blank_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_cntrl:  () -> (fsm :fsm) = @{ @fsm = class_cntrl_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_digit:  () -> (fsm :fsm) = @{ @fsm = class_digit_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_graph:  () -> (fsm :fsm) = @{ @fsm = class_graph_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_lower:  () -> (fsm :fsm) = @{ @fsm = class_lower_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_print:  () -> (fsm :fsm) = @{ @fsm = class_print_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_punct:  () -> (fsm :fsm) = @{ @fsm = class_punct_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_space:  () -> (fsm :fsm) = @{ @fsm = class_space_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_spchr:  () -> (fsm :fsm) = @{ @fsm = class_spchr_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_upper:  () -> (fsm :fsm) = @{ @fsm = class_upper_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_word:   () -> (fsm :fsm) = @{ @fsm = class_word_fsm(fsm->opt);   if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_xdigit: () -> (fsm :fsm) = @{ @fsm = class_xdigit_fsm(fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_alnum:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_ALNUM; @};
+	CLASS_alpha:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_ALPHA; @};
+	CLASS_any:    () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_ANY; @};
+	CLASS_ascii:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_ASCII; @};
+	CLASS_blank:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_BLANK; @};
+	CLASS_cntrl:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_CNTRL; @};
+	CLASS_digit:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_DIGIT; @};
+	CLASS_graph:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_GRAPH; @};
+	CLASS_lower:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_LOWER; @};
+	CLASS_print:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_PRINT; @};
+	CLASS_punct:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_PUNCT; @};
+	CLASS_space:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_SPACE; @};
+	CLASS_spchr:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_SPCHR; @};
+	CLASS_upper:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_UPPER; @};
+	CLASS_word:   () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_WORD; @};
+	CLASS_xdigit: () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_XDIGIT; @};
 
-	CLASS_ndigit: () -> (fsm :fsm) = @{ @fsm = class_digit_fsm(fsm->opt); @fsm = negate(@fsm, fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_nspace: () -> (fsm :fsm) = @{ @fsm = class_space_fsm(fsm->opt); @fsm = negate(@fsm, fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
+	CLASS_ndigit: () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_DIGIT; @};
+	CLASS_nspace: () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_SPACE; @};
 
 	ESC: () -> (c :char, start :pos, end :pos) = @{
 		assert(lex_state->buf.a[0] == '\\');
@@ -1182,6 +1184,11 @@
 		@n = re_ast_expr_concat(@l, @r);
 	@};
 
+	<ast-expr-alt>: (l :ast_expr, r :ast_expr) -> (n :ast_expr) = @{
+		/* TODO */
+		@n = re_ast_expr_concat(@l, @r);
+	@};
+
 	<ast-expr-literal>: (c :char) -> (n :ast_expr) = @{
 		@n = re_ast_expr_literal(@c);
 	@};
@@ -1193,6 +1200,36 @@
 	<ast-expr-many>: () -> (n :ast_expr) = @{
 		@n = re_ast_expr_many();
 	@};
+
+	<ast-expr-atom-many>: (f :ast_atom_count_flag) -> (n :ast_expr) = @{
+		/* TODO */
+		@n = re_ast_expr_many();
+	@};
+
+	<ast-expr-atom-any>: (f :ast_atom_count_flag) -> (n :ast_expr) = @{
+		/* TODO */
+		@n = re_ast_expr_many();
+	@};
+
+	<ast-expr-atom>: (e :ast_expr, f :ast_atom_count_flag) -> (n :ast_expr) = @{
+		/* TODO */
+		@n = re_ast_expr_empty();
+	@};
+
+
+
+        <atom-flag-kleene>: () -> (f :ast_atom_count_flag) = @{
+		@f = AST_ATOM_COUNT_FLAG_KLEENE;
+	@};
+
+        <atom-flag-plus>: () -> (f :ast_atom_count_flag) = @{
+		@f = AST_ATOM_COUNT_FLAG_PLUS;
+	@};
+
+        <atom-flag-one>: () -> (f :ast_atom_count_flag) = @{
+		@f = AST_ATOM_COUNT_FLAG_ONE;
+	@};
+
 
 %trailer% @{
 

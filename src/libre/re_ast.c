@@ -99,7 +99,6 @@ re_ast_expr_many(void)
 
 
 
-
 #define INDENT(F, IND)							\
 	do {								\
 		size_t i;						\
