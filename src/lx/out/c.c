@@ -478,7 +478,8 @@ out_io(FILE *f)
 		fprintf(f, "\n");
 		fprintf(f, "\tif (c == '\\n') {\n");
 		fprintf(f, "\t\tlx->end.line++;\n");
-		fprintf(f, "\t\tlx->end.col = 1;\n");
+		fprintf(f, "\t\tlx->end.saved_col = lx->end.col - 1;\n");
+		fprintf(f, "\t\tlx->end.col = 0;\n");
 		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
 	}
@@ -526,7 +527,7 @@ out_io(FILE *f)
 		fprintf(f, "\n");
 		fprintf(f, "\tif (c == '\\n') {\n");
 		fprintf(f, "\t\tlx->end.line--;\n");
-		fprintf(f, "\t\tlx->end.col = 0; /* XXX: lost information */\n");
+		fprintf(f, "\t\tlx->end.col = lx->end.saved_col;\n");
 		fprintf(f, "\t}\n");
 	}
 	fprintf(f, "}\n");
