@@ -76,6 +76,7 @@ comp_iter(struct comp_env *env,
 		break;
 
 	case AST_EXPR_MANY:
+		/* FIXME: is z necessary? */
 		NEWSTATE(z);
 		EPSILON(x, z);
 		ANY(x, z);
@@ -83,22 +84,70 @@ comp_iter(struct comp_env *env,
 		EPSILON(z, y);
 		break;
 
-	case AST_EXPR_ATOM:
-		switch (n->u.atom.flag) {
-		case AST_ATOM_COUNT_FLAG_ONE:
-			RECURSE(x, y, n->u.atom.e);
-			break;
-		case AST_ATOM_COUNT_FLAG_KLEENE:
-		case AST_ATOM_COUNT_FLAG_PLUS:
-			FAIL("TODO");
-			/* fallthrough */
-		default:
-			FAIL("<matchfail>");
-			return 0;
-		}
+	case AST_EXPR_KLEENE:
+		EPSILON(x, y);
+		RECURSE(x, y, n->u.alt.l);
+		EPSILON(y, x);
 		break;
 
+	case AST_EXPR_PLUS:
+		RECURSE(x, y, n->u.alt.l);
+		EPSILON(y, x);
+		break;
+
+	case AST_EXPR_OPT:
+		RECURSE(x, y, n->u.alt.l);
+		EPSILON(x, y);
+		break;
+
+	case AST_EXPR_REPEATED:
+	{
+		struct fsm_state *na, *nz;
+		unsigned i, low, high;
+		struct fsm_state *a = NULL;
+		struct fsm_state *b = NULL;
+
+		/* This should have been normalized to [M;N], where
+		 * M < N and both are bounded, and {0,1} is built as
+		 * AST_EXPR_OPT instead. */
+		low = n->u.repeated.low;
+		high = n->u.repeated.high;
+		assert(low < high);
+		assert(low != AST_COUNT_UNBOUNDED);
+		assert(high != AST_COUNT_UNBOUNDED);
+
+		/* Make new beginning/end states for the repeated section,
+		 * build its NFA, and link to its head. */
+		NEWSTATE(na);
+		NEWSTATE(nz);
+		RECURSE(na, nz, n->u.repeated.e);
+		EPSILON(x, na); /* link head to repeated NFA head */
+		b = nz;		/* set the initial tail */
+
+		if (low == 0) { EPSILON(na, nz); } /* can be skipped */
+
+		for (i = 1; i < high; i++) {
+			a = fsm_state_duplicatesubgraphx(env->fsm, na, &b);
+			if (a == NULL) { return 0; }
+
+			/* TODO: could elide this epsilon if fsm_state_duplicatesubgraphx()
+			 * took an extra parameter giving it a m->new for the start state */
+			EPSILON(nz, a);
+
+			/* To the optional part of the repeated count */
+			if (i >= low) { EPSILON(nz, b); }
+
+			na = a;	/* advance head for next duplication */
+			nz = b;	/* advance tail for concenation */
+		}
+
+		EPSILON(nz, y);	     /* tail to last repeated NFA tail */
+		break;
+	}
+
 	default:
+		fprintf(stderr, "%s:%d: <matchfail %d>\n",
+		    __FILE__, __LINE__, n->t);
 		abort();
 	}
 

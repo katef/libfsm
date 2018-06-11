@@ -17,7 +17,7 @@
 
 	pos;
 	char;
-	!unsigned;
+	unsigned;
 	!fsm;
 	!fsm_state;
 	!grp;
@@ -25,22 +25,24 @@
 	!re_flags;
 	!err;
 	ast_expr;
-	ast_atom_count_flag;
+	ast_count;
         ast_class_id;
 
 %terminals%
 
 	ANY;
 	MANY;
-	!OPT;
+	OPT;
 	PLUS;
 	ALT;
-	!SEP;
 	STAR;
 
 	OPENSUB;   CLOSESUB;
 	!OPENGROUP:  () -> (:pos, :pos); !CLOSEGROUP:  () -> (:char, :pos, :pos);
-	!OPENCOUNT: () -> (:pos, :pos); !CLOSECOUNT: () -> (:pos, :pos);
+	OPENCOUNT: () -> (:pos, :pos);
+	COUNT: () -> (:unsigned);
+	SEP;
+	CLOSECOUNT: () -> (:pos, :pos);
 
 	!INVERT: () -> (:char);
 	!RANGE:  () -> (:char, :pos, :pos);
@@ -78,7 +80,6 @@
 	CHAR:     () -> (:char, :pos, :pos);
 	!START:   () -> (:pred);
 	!END:     () -> (:pred);
-	!COUNT:   () -> (:unsigned);
 
 	EOF;
 	!ERROR;
@@ -125,9 +126,12 @@
 	!<mark-range>: (:pos, :pos) -> ();
 	!<mark-count>: (:pos, :pos) -> ();
 
-        <atom-flag-kleene>: () -> (:ast_atom_count_flag);
-        <atom-flag-plus>: () -> (:ast_atom_count_flag);
-        <atom-flag-one>: () -> (:ast_atom_count_flag);
+        <atom-kleene>: () -> (:ast_count);
+        <atom-plus>: () -> (:ast_count);
+        <atom-one>: () -> (:ast_count);
+        <atom-opt>: () -> (:ast_count);
+
+        <expr-count>: (:unsigned, :unsigned) -> (:ast_count);
 
 	<ast-expr-empty>: () -> (:ast_expr);
 	<ast-expr-literal>: (:char) -> (:ast_expr);
@@ -136,9 +140,9 @@
 	!<ast-expr-any>: () -> (:ast_expr);
 	!<ast-expr-many>: () -> (:ast_expr);
 
-        <ast-expr-atom>: (:ast_expr, :ast_atom_count_flag) -> (:ast_expr);
-        <ast-expr-atom-any>: (:ast_atom_count_flag) -> (:ast_expr);
-        <ast-expr-atom-many>: (:ast_atom_count_flag) -> (:ast_expr);
+        <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
+        <ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
+        <ast-expr-atom-many>: (:ast_count) -> (:ast_expr);
 
 	expr: () -> (n :ast_expr) [
                 literal: () -> (n :ast_expr) = {
@@ -146,15 +150,56 @@
 			n = <ast-expr-literal>(c);
   		};
 
-		atom-suffix: () -> (f :ast_atom_count_flag) = {
+		/* TODO: "atom{L,H}" when int(L), int(H) */
+		atom-suffix: () -> (f :ast_count) = {
 			STAR;
-			f = <atom-flag-kleene>();
+			f = <atom-kleene>();
 		||
 			PLUS;
-			f = <atom-flag-plus>();
+			f = <atom-plus>();
 		||
-			f = <atom-flag-one>();
+			OPT;
+			f = <atom-opt>();
+		||
+			(pos_of, pos_ot) = OPENCOUNT;
+			l = COUNT;
+			(pos_cf, pos_ct) = CLOSECOUNT;
+			f = <expr-count>(l, l);
+		||
+			(pos_of, pos_ot) = OPENCOUNT;
+			l = COUNT;
+			SEP;
+			h = COUNT;
+			(pos_cf, pos_ct) = CLOSECOUNT;
+			f = <expr-count>(l, h);
+		||
+			f = <atom-one>();
 		};
+
+		/* group: () -> (n :ast_expr) = {
+		 * 	OPENGROUP;
+		 * 	INVERT;
+		 * 	b = group-body();
+		 * 	CLOSEGROUP;
+		 * 	<ast-expr-group-inverted>(b);
+		 * ||
+		 * 	OPENGROUP;
+		 * 	b = group-body();
+		 * 	CLOSEGROUP;
+		 * 	<ast-expr-group>(b);
+  		 * };
+		 * 
+		 * group-body: () -> (b :group_body) = {
+		 *         h = group-body-head();
+		 * 
+		 * 	m = list-of-terms();
+		 * 
+		 * 	t = group-body-tail();
+		 * 
+		 * 	b = <ast-expr-group-body>(h, m, t);
+		 * };
+		 * 
+                 * list-of-terms: () ->  */
 
 		/* TODO: is there a better name than 'atom' for
 		 * this construct?
@@ -183,31 +228,6 @@
 			s = atom-suffix();
 			n = <ast-expr-atom-many>(s);
 		};
-
-		/* group: () -> (n :ast_expr) = {
-		 * 	OPENGROUP;
-		 * 	INVERT;
-		 * 	b = group-body();
-		 * 	CLOSEGROUP;
-		 * 	<ast-expr-group-inverted>(b);
-		 * ||
-		 * 	OPENGROUP;
-		 * 	b = group-body();
-		 * 	CLOSEGROUP;
-		 * 	<ast-expr-group>(b);
-  		 * };
-		 * 
-		 * group-body: () -> (b :group_body) = {
-		 *         h = group-body-head();
-		 * 
-		 * 	m = list-of-terms();
-		 * 
-		 * 	t = group-body-tail();
-		 * 
-		 * 	b = <ast-expr-group-body>(h, m, t);
-		 * };
-		 * 
-                 * list-of-terms: () ->  */
 
 		list-of-atoms: () -> (n :ast_expr) = {
 			n = atom();

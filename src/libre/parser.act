@@ -103,7 +103,7 @@
 	typedef enum re_flags t_re__flags;
 	typedef struct grp t_grp;
 	typedef enum ast_class_id t_ast__class__id;
-	typedef enum ast_atom_count_flag t_ast__atom__count__flag;
+	typedef struct ast_count t_ast__count;
 
 	struct act_state {
 		enum LX_TOKEN lex_tok;
@@ -142,7 +142,8 @@
 	#define ERROR_TERMINAL   @$ERROR
 	#define ADVANCE_LEXER    do { mark(&act_state->synstart, &lex_state->lx.start); \
 	                              mark(&act_state->synend,   &lex_state->lx.end);   \
-	                              act_state->lex_tok = LX_NEXT(&lex_state->lx); } while (0)
+	                              act_state->lex_tok = LX_NEXT(&lex_state->lx); \
+		} while (0)
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
 	                              act_state->lex_tok = tok;                     } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
@@ -1200,32 +1201,46 @@
 		@n = re_ast_expr_many();
 	@};
 
-	<ast-expr-atom-many>: (f :ast_atom_count_flag) -> (n :ast_expr) = @{
+	<ast-expr-atom-many>: (c :ast_count) -> (n :ast_expr) = @{
 		struct ast_expr *e = re_ast_expr_many();
 		if (e == NULL) { @!; }
-		@n = re_ast_expr_atom(e, @f);
+		@n = re_ast_expr_with_count(e, @c);
 	@};
 
-	<ast-expr-atom-any>: (f :ast_atom_count_flag) -> (n :ast_expr) = @{
+	<ast-expr-atom-any>: (c :ast_count) -> (n :ast_expr) = @{
 		struct ast_expr *e = re_ast_expr_any();
 		if (e == NULL) { @!; }
-		@n = re_ast_expr_atom(e, @f);
+		@n = re_ast_expr_with_count(e, @c);
 	@};
 
-	<ast-expr-atom>: (e :ast_expr, f :ast_atom_count_flag) -> (n :ast_expr) = @{
-		@n = re_ast_expr_atom(@e, @f);
+	<ast-expr-atom>: (e :ast_expr, c :ast_count) -> (n :ast_expr) = @{
+		@n = re_ast_expr_with_count(@e, @c);
 	@};
 
-        <atom-flag-kleene>: () -> (f :ast_atom_count_flag) = @{
-		@f = AST_ATOM_COUNT_FLAG_KLEENE;
+        <atom-kleene>: () -> (c :ast_count) = @{
+		@c = ast_count(0, AST_COUNT_UNBOUNDED);
 	@};
 
-        <atom-flag-plus>: () -> (f :ast_atom_count_flag) = @{
-		@f = AST_ATOM_COUNT_FLAG_PLUS;
+        <atom-plus>: () -> (c :ast_count) = @{
+		@c = ast_count(1, AST_COUNT_UNBOUNDED);
 	@};
 
-        <atom-flag-one>: () -> (f :ast_atom_count_flag) = @{
-		@f = AST_ATOM_COUNT_FLAG_ONE;
+        <atom-one>: () -> (c :ast_count) = @{
+		@c = ast_count(1, 1);
+	@};
+
+        <atom-opt>: () -> (c :ast_count) = @{
+		@c = ast_count(0, 1);
+	@};
+
+        <expr-count>: (l :unsigned, h :unsigned) -> (c :ast_count) = @{
+		if (@h < @l) {
+			err->e = RE_ENEGCOUNT;
+			err->m = @l;
+			err->n = @h;
+			@!;
+		}
+		@c = ast_count(@l, @h);
 	@};
 
 

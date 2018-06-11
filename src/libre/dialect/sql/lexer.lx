@@ -32,8 +32,15 @@
 	/[^\^\-]/ -> $char;
 }
 
+'{' -> $opencount .. '}' -> $closecount {
+     /[0-9]+/ -> $count;
+     ',' -> $sep;
+}
+
+
 /./ - ($any | $many
 	| $opensub | $closesub
 	| $opt | $star | $plus | $alt
-	| $opengroup | $opencount) -> $char;
+	| $opengroup | $closegroup
+	| $opencount | $closecount) -> $char;
 

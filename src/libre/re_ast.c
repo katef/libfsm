@@ -29,8 +29,17 @@ free_iter(struct ast_expr *n)
 		free_iter(n->u.alt.l);
 		free_iter(n->u.alt.r);
 		break;
-	case AST_EXPR_ATOM:
-		free_iter(n->u.atom.e);
+	case AST_EXPR_KLEENE:
+		free_iter(n->u.kleene.e);
+		break;
+	case AST_EXPR_PLUS:
+		free_iter(n->u.plus.e);
+		break;
+	case AST_EXPR_OPT:
+		free_iter(n->u.opt.e);
+		break;
+	case AST_EXPR_REPEATED:
+		free_iter(n->u.repeated.e);
 		break;
 	default:
 		assert(0);
@@ -94,8 +103,7 @@ re_ast_expr_literal(char c)
 	if (res == NULL) { return res; }
 	res->t = AST_EXPR_LITERAL;
 	res->u.literal.l.c = c;
-	LOG("-- %s: %p <- %c\n",
-	    __func__, (void *)res, c);
+	LOG("-- %s: %p <- %c\n", __func__, (void *)res, c);
 	return res;
 }
 
@@ -121,31 +129,73 @@ re_ast_expr_many(void)
 	return res;
 }
 
-static const char *
-atom_flag_str(enum ast_atom_count_flag f)
+struct ast_expr *
+re_ast_kleene(struct ast_expr *e)
 {
-	switch (f) {
-	case AST_ATOM_COUNT_FLAG_KLEENE: return "KLEENE";
-	case AST_ATOM_COUNT_FLAG_PLUS: return "PLUS";
-	case AST_ATOM_COUNT_FLAG_ONE: return "ONE";
-	default: return "<matchfail>";
-	}
+	struct ast_expr *res = calloc(1, sizeof(*res));
+	if (res == NULL) { return res; }
+	res->t = AST_EXPR_KLEENE;
+	res->u.kleene.e = e;
+	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)e);
+	return res;
 }
 
 struct ast_expr *
-re_ast_expr_atom(struct ast_expr *e, enum ast_atom_count_flag flag)
+re_ast_plus(struct ast_expr *e)
 {
-	if (flag == AST_ATOM_COUNT_FLAG_ONE) { return e; }
-
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
-	res->t = AST_EXPR_ATOM;
-	res->u.atom.e = e;
-	res->u.atom.flag = flag;
+	res->t = AST_EXPR_PLUS;
+	res->u.plus.e = e;
+	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)e);
+	return res;
+}
 
-	LOG("-- %s: %p <- %p, %s\n",
-	    __func__, (void *)res,
-	    (void *)e, atom_flag_str(flag));
+struct ast_expr *
+re_ast_opt(struct ast_expr *e)
+{
+	struct ast_expr *res = calloc(1, sizeof(*res));
+	if (res == NULL) { return res; }
+	res->t = AST_EXPR_OPT;
+	res->u.opt.e = e;
+	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)e);
+	return res;
+}
+
+struct ast_expr *
+re_ast_expr_with_count(struct ast_expr *e, struct ast_count count)
+{
+	struct ast_expr *res = NULL;
+	if (count.low > count.high) {
+		fprintf(stderr, "ERROR: low > high (%u, %u)\n",
+		    count.low, count.high);
+		abort();
+	}
+
+	if (count.low == 0) {
+		if (count.high == 0) {		         /* 0,0 -> empty */
+			return re_ast_expr_empty();
+		} else if (count.high == 1) {		 /* 0,1 -> ? */
+			return re_ast_opt(e);
+		} else if (count.high == AST_COUNT_UNBOUNDED) { /* 0,_ -> * */
+			return re_ast_kleene(e);
+		}
+	} else if (count.low == 1) {
+		if (count.high == AST_COUNT_UNBOUNDED) { /* 1,_ -> + */
+			return re_ast_plus(e);
+		} else if (count.high == 1) {	         /* 1,1 -> as-is */
+			return e;
+		}
+	}
+			
+	res = calloc(1, sizeof(*res));
+	if (res == NULL) { return res; }
+	res->t = AST_EXPR_REPEATED;
+	res->u.repeated.e = e;
+	res->u.repeated.low = count.low;
+	res->u.repeated.high = count.high;
+	LOG("-- %s: %p <- %p (%u,%u)\n", __func__, (void *)res,
+	    (void *)e, count.low, count.high);
 	return res;
 }
 
@@ -197,10 +247,22 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 	case AST_EXPR_MANY:
 		fprintf(f, "MANY %p:\n", (void *)n);
 		break;
-	case AST_EXPR_ATOM:	/* FIXME: name */
-		fprintf(f, "ATOM %p: %s\n",
-		    (void *)n, atom_flag_str(n->u.atom.flag));
-		pp_iter(f, indent + 1*IND, n->u.atom.e);
+	case AST_EXPR_KLEENE:
+		fprintf(f, "KLEENE %p\n", (void *)n);
+		pp_iter(f, indent + 1*IND, n->u.kleene.e);
+		break;
+	case AST_EXPR_PLUS:
+		fprintf(f, "PLUS %p\n", (void *)n);
+		pp_iter(f, indent + 1*IND, n->u.plus.e);
+		break;
+	case AST_EXPR_OPT:
+		fprintf(f, "OPT %p\n", (void *)n);
+		pp_iter(f, indent + 1*IND, n->u.opt.e);
+		break;
+	case AST_EXPR_REPEATED:
+		fprintf(f, "REPEATED %p: (%u,%u)\n",
+		    (void *)n, n->u.repeated.low, n->u.repeated.high);
+		pp_iter(f, indent + 1*IND, n->u.repeated.e);
 		break;
 	default:
 		assert(0);
@@ -211,4 +273,13 @@ void
 re_ast_prettyprint(FILE *f, struct ast_re *ast)
 {
 	pp_iter(f, 0, ast->expr);
+}
+
+struct ast_count
+ast_count(unsigned low, unsigned high)
+{
+	struct ast_count res;
+	res.low = low;
+	res.high = high;
+	return res;
 }
