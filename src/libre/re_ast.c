@@ -176,6 +176,9 @@ re_ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 		if (count.high == 0) {		         /* 0,0 -> empty */
 			return re_ast_expr_empty();
 		} else if (count.high == 1) {		 /* 0,1 -> ? */
+			/* This isn't strictly necessary, but avoids
+			 * some unnecessary states and epsilon
+			 * transitions. */
 			return re_ast_opt(e);
 		} else if (count.high == AST_COUNT_UNBOUNDED) { /* 0,_ -> * */
 			return re_ast_kleene(e);
