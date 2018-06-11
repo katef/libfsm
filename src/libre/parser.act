@@ -1185,8 +1185,7 @@
 	@};
 
 	<ast-expr-alt>: (l :ast_expr, r :ast_expr) -> (n :ast_expr) = @{
-		/* TODO */
-		@n = re_ast_expr_concat(@l, @r);
+		@n = re_ast_expr_alt(@l, @r);
 	@};
 
 	<ast-expr-literal>: (c :char) -> (n :ast_expr) = @{
@@ -1202,21 +1201,20 @@
 	@};
 
 	<ast-expr-atom-many>: (f :ast_atom_count_flag) -> (n :ast_expr) = @{
-		/* TODO */
-		@n = re_ast_expr_many();
+		struct ast_expr *e = re_ast_expr_many();
+		if (e == NULL) { @!; }
+		@n = re_ast_expr_atom(e, @f);
 	@};
 
 	<ast-expr-atom-any>: (f :ast_atom_count_flag) -> (n :ast_expr) = @{
-		/* TODO */
-		@n = re_ast_expr_many();
+		struct ast_expr *e = re_ast_expr_any();
+		if (e == NULL) { @!; }
+		@n = re_ast_expr_atom(e, @f);
 	@};
 
 	<ast-expr-atom>: (e :ast_expr, f :ast_atom_count_flag) -> (n :ast_expr) = @{
-		/* TODO */
-		@n = re_ast_expr_empty();
+		@n = re_ast_expr_atom(@e, @f);
 	@};
-
-
 
         <atom-flag-kleene>: () -> (f :ast_atom_count_flag) = @{
 		@f = AST_ATOM_COUNT_FLAG_KLEENE;

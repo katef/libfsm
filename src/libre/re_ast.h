@@ -10,12 +10,18 @@
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 
-#if 0
+#if 1
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define LOG(...)
 #endif
 
+/* Because we're building with -NDEBUG :( */
+#define FAIL(s)					\
+	do {					\
+		fprintf(stderr, s);		\
+		abort();			\
+	} while(0)
 
 /* Parse tree / Abstract syntax tree.
  * None of this should be exposed to the public API. */
@@ -75,9 +81,11 @@ enum ast_class_id {
 enum ast_expr_type {
 	AST_EXPR_EMPTY,
 	AST_EXPR_CONCAT,
+	AST_EXPR_ALT,
 	AST_EXPR_LITERAL,
 	AST_EXPR_ANY,
-	AST_EXPR_MANY
+	AST_EXPR_MANY,
+	AST_EXPR_ATOM
 };
 
 enum ast_atom_count_flag {
@@ -94,8 +102,16 @@ struct ast_expr {
 			struct ast_expr *r;
 		} concat;
 		struct {
+			struct ast_expr *l;
+			struct ast_expr *r;
+		} alt;
+		struct {
 			struct ast_literal l;
 		} literal;
+		struct {
+			struct ast_expr *e;
+			enum ast_atom_count_flag flag;
+		} atom;
 	} u;	
 };
 
@@ -112,6 +128,9 @@ struct ast_expr *
 re_ast_expr_concat(struct ast_expr *l, struct ast_expr *r);
 
 struct ast_expr *
+re_ast_expr_alt(struct ast_expr *l, struct ast_expr *r);
+
+struct ast_expr *
 re_ast_expr_literal(char c);
 
 struct ast_expr *
@@ -119,6 +138,9 @@ re_ast_expr_any(void);
 
 struct ast_expr *
 re_ast_expr_many(void);
+
+struct ast_expr *
+re_ast_expr_atom(struct ast_expr *e, enum ast_atom_count_flag flag);
 
 void
 re_ast_prettyprint(FILE *f, struct ast_re *ast);

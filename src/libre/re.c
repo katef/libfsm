@@ -111,7 +111,10 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
-	/* re_ast_prettyprint(stderr, ast); */
+	/* TODO: this should be a CLI flag or something */
+	if (1) {
+		re_ast_prettyprint(stderr, ast);
+	}
 
 	new = re_comp_ast(ast, flags, opt);
 	re_ast_free(ast);

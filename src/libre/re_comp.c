@@ -18,7 +18,20 @@ comp_iter(struct comp_env *env,
     struct ast_expr *n)
 {
 	struct fsm_state *z;
+
+#define NEWSTATE(NAME)						       \
+	NAME = fsm_addstate(env->fsm);				       \
+	if (NAME == NULL) { return 0; }				       \
+
+#define EPSILON(FROM, TO)					       \
+	if (!fsm_addedge_epsilon(env->fsm, FROM, TO)) { return 0; }
 	    
+#define ANY(FROM, TO)						       \
+	if (!fsm_addedge_any(env->fsm, FROM, TO)) { return 0; }
+
+#define RECURSE(FROM, TO, NODE)					       \
+	if (!comp_iter(env, FROM, TO, NODE)) { return 0; }             \
+
 	assert(x);
 	assert(y);
 	if (n == NULL) { return 1; }
@@ -27,37 +40,71 @@ comp_iter(struct comp_env *env,
 
 	switch (n->t) {
 	case AST_EXPR_EMPTY:
-		if (!fsm_addedge_epsilon(env->fsm, x, y)) { return 0; }
+		EPSILON(x, y);
 		break;
 
 	case AST_EXPR_CONCAT:
-		z = fsm_addstate(env->fsm);
-		if (z == NULL) { return 0; }
-		if (!comp_iter(env, x, z, n->u.concat.l)) { return 0; }
-		if (!comp_iter(env, z, y, n->u.concat.r)) { return 0; }
+		NEWSTATE(z);
+		RECURSE(x, z, n->u.concat.l);
+		RECURSE(z, y, n->u.concat.r);
 		break;
+
+	case AST_EXPR_ALT:
+	{
+		struct fsm_state *la, *lz, *ra, *rz;
+		NEWSTATE(la);
+		NEWSTATE(lz);
+		NEWSTATE(ra);
+		NEWSTATE(rz);
+
+		EPSILON(x, la);
+		EPSILON(x, ra);
+		EPSILON(lz, y);
+		EPSILON(rz, y);
+
+		RECURSE(la, lz, n->u.alt.l);
+		RECURSE(ra, rz, n->u.alt.r);
+		break;
+	}
 
 	case AST_EXPR_LITERAL:
 		if (!addedge_literal(env, x, y, n->u.literal.l.c)) { return 0; }
 		break;
 
 	case AST_EXPR_ANY:
-		if (!fsm_addedge_any(env->fsm, x, y)) { return 0; }
+		ANY(x, y);
 		break;
 
 	case AST_EXPR_MANY:
-		z = fsm_addstate(env->fsm);
-		if (z == NULL) { return 0; }
-		if (!fsm_addedge_epsilon(env->fsm, x, z)) { return 0; }
-		if (!fsm_addedge_any(env->fsm, x, z)) { return 0; }
-		if (!fsm_addedge_epsilon(env->fsm, z, x)) { return 0; }
-		if (!fsm_addedge_epsilon(env->fsm, z, y)) { return 0; }
+		NEWSTATE(z);
+		EPSILON(x, z);
+		ANY(x, z);
+		EPSILON(z, x);
+		EPSILON(z, y);
+		break;
+
+	case AST_EXPR_ATOM:
+		switch (n->u.atom.flag) {
+		case AST_ATOM_COUNT_FLAG_ONE:
+			RECURSE(x, y, n->u.atom.e);
+			break;
+		case AST_ATOM_COUNT_FLAG_KLEENE:
+		case AST_ATOM_COUNT_FLAG_PLUS:
+			FAIL("TODO");
+			/* fallthrough */
+		default:
+			FAIL("<matchfail>");
+			return 0;
+		}
 		break;
 
 	default:
-		assert(0);
+		abort();
 	}
 
+#undef EPSILON
+#undef ANY
+#undef NEWSTATE
 	return 1;
 }
 
