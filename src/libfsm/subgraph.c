@@ -111,6 +111,7 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 	struct mapping *mappings;
 	struct mapping *m;
 	struct mapping *start;
+	struct fsm_state *res;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
@@ -156,8 +157,9 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 		m->done = 1;
 	}
 
+	res = start->new;
 	mapping_free(mappings);
 
-	return start->new;
+	return res;
 }
 
