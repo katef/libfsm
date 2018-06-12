@@ -5,6 +5,7 @@ SRC += src/libre/strerror.c
 SRC += src/libre/perror.c
 SRC += src/libre/re_ast.c
 SRC += src/libre/re_comp.c
+SRC += src/libre/re_class.c
 
 LIB        += libre
 SYMS.libre += src/libre/libre.syms
