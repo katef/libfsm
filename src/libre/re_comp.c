@@ -44,10 +44,15 @@ comp_iter(struct comp_env *env,
 		break;
 
 	case AST_EXPR_CONCAT:
+	{
+		struct fsm_state *z2;
 		NEWSTATE(z);
+		NEWSTATE(z2);
 		RECURSE(x, z, n->u.concat.l);
-		RECURSE(z, y, n->u.concat.r);
+		EPSILON(z, z2);
+		RECURSE(z2, y, n->u.concat.r);
 		break;
+	}
 
 	case AST_EXPR_ALT:
 	{
