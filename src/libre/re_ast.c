@@ -42,7 +42,7 @@ free_iter(struct ast_expr *n)
 		free_iter(n->u.repeated.e);
 		break;
 	case AST_EXPR_CLASS:
-		ast_char_class_free(n->u.class.cc);
+		re_char_class_ast_free(n->u.class.cca);
 		break;
 	default:
 		assert(0);
@@ -206,22 +206,14 @@ re_ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 }
 
 struct ast_expr *
-re_ast_expr_class(enum ast_char_class_flags flags, struct ast_char_class *cc)
+re_ast_expr_char_class(struct re_char_class_ast *cca)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
 
-	if (flags & AST_CHAR_CLASS_FLAG_MINUS) {
-		ast_char_class_add_byte(cc, '-');
-	}
-
-	if (flags & AST_CHAR_CLASS_FLAG_INVERTED) {
-		ast_char_class_invert(cc);
-	}
-
 	res->t = AST_EXPR_CLASS;
-	res->u.class.cc = cc;
-	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)cc);
+	res->u.class.cca = cca;
+	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)cca);
 	return res;
 }
 
@@ -290,9 +282,9 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 		pp_iter(f, indent + 1*IND, n->u.repeated.e);
 		break;
 	case AST_EXPR_CLASS:
-		fprintf(f, "CLASS %p: (", (void *)n);
-		ast_char_class_dump(f, n->u.class.cc);
-		fprintf(f, ")\n");
+		fprintf(f, "CLASS %p: \n", (void *)n);
+		re_char_class_ast_prettyprint(f, n->u.class.cca, indent + IND);
+		fprintf(f, "\n");
 		break;
 	default:
 		assert(0);

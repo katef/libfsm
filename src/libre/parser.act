@@ -31,6 +31,7 @@
 
 	#include "libfsm/internal.h" /* XXX */
 	#include "libre/re_ast.h"
+	#include "libre/re_char_class.h"
 
 	#include <fsm/fsm.h>
 	#include <fsm/bool.h>
@@ -104,8 +105,10 @@
 	typedef struct grp t_grp;
 	typedef enum ast_class_id t_ast__class__id;
 	typedef struct ast_count t_ast__count;
+
+	typedef struct re_char_class_ast * t_char__class__ast;
 	typedef struct ast_char_class * t_char__class;
-	typedef enum ast_char_class_flags t_char__class__flags;
+	typedef enum re_char_class_flags t_char__class__flags;
 
 	struct act_state {
 		enum LX_TOKEN lex_tok;
@@ -1245,36 +1248,64 @@
 		@c = ast_count(@l, @h);
 	@};
 
-	<ast-expr-class>: (hflags: char_class_flags, cc :char_class, tflags: char_class_flags) -> (n :ast_expr) = @{
-		@n = re_ast_expr_class((@hflags | @tflags), @cc);
+/* FIXME */
+	<char-class-ast-literal>: (c :char) -> (n :char_class_ast) = @{
+		@n = re_char_class_ast_literal(@c);
 	@};
 
-	<char-class-new>: () -> (cc :char_class) = @{
-		@cc = ast_char_class_new();
+	<char-class-ast-range>: (from :char, to :char) -> (n :char_class_ast) = @{
+		@n = re_char_class_ast_range(@from, @to);
 	@};
 
-	<char-class-add>: (cc :char_class, c :char) -> () = @{
-		ast_char_class_add_byte(@cc, @c);
+	<char-class-ast-concat>: (l :char_class_ast, r :char_class_ast) -> (n :char_class_ast) = @{
+		@n = re_char_class_ast_concat(@l, @r);
 	@};
 
-	<char-class-add-range>: (cc :char_class, from :char, to :char) -> () = @{
-		ast_char_class_add_range(@cc, @from, @to);
+	<ast-expr-char-class>: (cca :char_class_ast) -> (n :ast_expr) = @{
+		@n = re_ast_expr_char_class(@cca);
+		if (@n == NULL) { @!; }
 	@};
 
-	<char-class-flag-none>: () -> (f :char_class_flags) = @{
-		@f = AST_CHAR_CLASS_FLAG_NONE;
+
+
+
+
+
+
+	/* <char-class-new>: () -> (cc :char_class) = @{
+	 * 	@cc = ast_char_class_new();
+	 * @};
+	 * 
+	 * <char-class-add>: (cc :char_class, c :char) -> () = @{
+	 * 	ast_char_class_add_byte(@cc, @c);
+	 * @};
+	 * 
+	 * <char-class-add-range>: (cc :char_class, from :char, to :char) -> () = @{
+	 * 	ast_char_class_add_range(@cc, @from, @to);
+	 * @};
+	 * 
+	 * <char-class-subtract>: (cc :char_class, mask :char_class) -> () = @{
+	 * 	ast_char_class_mask(@cc, @mask);
+	 * @};
+	 * 
+	 * <char-class-free>: (cc :char_class) -> () = @{
+	 * 	ast_char_class_free(@cc);
+	 * @}; */
+
+	<char-class-ast-flag-none>: () -> (f :char_class_ast) = @{
+		@f = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_NONE);
 	@};
 
-	<char-class-flag-invert>: () -> (f :char_class_flags) = @{
-		@f = AST_CHAR_CLASS_FLAG_INVERTED;
+	<char-class-ast-flag-invert>: () -> (f :char_class_ast) = @{
+		@f = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_INVERTED);
 	@};
 
-	<char-class-flag-minus>: () -> (f :char_class_flags) = @{
-		@f = AST_CHAR_CLASS_FLAG_MINUS;
+	<char-class-ast-flag-minus>: () -> (f :char_class_ast) = @{
+		@f = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_MINUS);
 	@};
 
-	<char-class-flag-invert-minus>: () -> (f :char_class_flags) = @{
-		@f = AST_CHAR_CLASS_FLAG_INVERTED | AST_CHAR_CLASS_FLAG_MINUS;
+	<char-class-ast-flag-invert-minus>: () -> (f :char_class_ast) = @{
+		@f = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_INVERTED | RE_CHAR_CLASS_FLAG_MINUS);
 	@};
 
 	/* <debug-trace>: () -> () = @{

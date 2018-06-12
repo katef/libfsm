@@ -10,7 +10,7 @@
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 
-#include "re_class.h"
+#include "re_char_class.h"
 
 #if 1
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
@@ -129,7 +129,7 @@ struct ast_expr {
 			unsigned high;
 		} repeated;
 		struct {
-			struct ast_char_class *cc;
+			struct re_char_class_ast *cca;
 		} class;
 	} u;	
 };
@@ -162,7 +162,7 @@ struct ast_expr *
 re_ast_expr_with_count(struct ast_expr *e, struct ast_count count);
 
 struct ast_expr *
-re_ast_expr_class(enum ast_char_class_flags flags, struct ast_char_class *cc);
+re_ast_expr_char_class(struct re_char_class_ast *cca);
 
 void
 re_ast_prettyprint(FILE *f, struct ast_re *ast);

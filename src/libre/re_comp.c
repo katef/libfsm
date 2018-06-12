@@ -148,12 +148,16 @@ comp_iter(struct comp_env *env,
 	case AST_EXPR_CLASS:
 	{
 		int i;
-		struct ast_char_class *cc = n->u.class.cc;
+		struct re_char_class_ast *cca = n->u.class.cca;
+		struct re_char_class *cc = re_char_class_ast_compile(cca);
+		if (cc == NULL) { return 0; }
+
 		for (i = 0; i < 256; i++) {
 			if (cc->chars[i/8] & (1U << (i & 0x07))) {
 				if (!addedge_literal(env, x, y, i)) { return 0; }
 			}
 		}
+
 		break;
 	}
 

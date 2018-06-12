@@ -27,8 +27,7 @@
 	ast_expr;
 	ast_count;
         ast_class_id;
-	char_class;
-	char_class_flags;
+	char_class_ast;
 
 %terminals%
 
@@ -142,20 +141,19 @@
 	!<ast-expr-any>: () -> (:ast_expr);
 	!<ast-expr-many>: () -> (:ast_expr);
 
-	<ast-expr-class>: (:char_class_flags, :char_class, :char_class_flags) -> (:ast_expr);
-
         <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
         <ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
         <ast-expr-atom-many>: (:ast_count) -> (:ast_expr);
+	<ast-expr-char-class>: (:char_class_ast) -> (:ast_expr);
 
-	<char-class-new>: () -> (:char_class);
-	<char-class-add>: (:char_class, :char) -> ();
-	<char-class-add-range>: (:char_class, :char, :char) -> ();
+	<char-class-ast-literal>: (:char) -> (:char_class_ast);
+	<char-class-ast-range>: (:char, :char) -> (:char_class_ast);
+	<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 
-	<char-class-flag-none>: () -> (:char_class_flags);
-	<char-class-flag-invert>: () -> (:char_class_flags);
-	<char-class-flag-minus>: () -> (:char_class_flags);
-	<char-class-flag-invert-minus>: () -> (:char_class_flags);
+	<char-class-ast-flag-none>: () -> (:char_class_ast);
+	<char-class-ast-flag-invert>: () -> (:char_class_ast);
+	<char-class-ast-flag-minus>: () -> (:char_class_ast);
+	<char-class-ast-flag-invert-minus>: () -> (:char_class_ast);
 
 	expr: () -> (n :ast_expr) [
                 literal: () -> (n :ast_expr) = {
@@ -163,7 +161,6 @@
 			n = <ast-expr-literal>(c);
   		};
 
-		/* TODO: "atom{L,H}" when int(L), int(H) */
 		atom-suffix: () -> (f :ast_count) = {
 			STAR;
 			f = <atom-kleene>();
@@ -205,60 +202,64 @@
 		 * _ is the ANY character class
 		 * */
 		char-class: () -> (n :ast_expr) [
-			char-class-head: () -> (f :char_class_flags) = {
+			char-class-head: () -> (f :char_class_ast) = {
 				(!) = INVERT;
-				f = <char-class-flag-invert>();
+				f = <char-class-ast-flag-invert>();
 			||
 				(!, !, !) = RANGE;
-				f = <char-class-flag-minus>();
+				f = <char-class-ast-flag-minus>();
 			||
 				(!) = INVERT;
 				(!, !, !) = RANGE;
-				f = <char-class-flag-invert-minus>();
+				f = <char-class-ast-flag-invert-minus>();
 			||
-				f = <char-class-flag-none>();
+				f = <char-class-ast-flag-none>();
 			};
 
-			char-class-tail: () -> (f :char_class_flags) = {
-				/* FIXME: this needs refactoring */
-			/* 	(!, !, !) = RANGE;
-			 * 	f = <char-class-flag-minus>();
-			 * || */
-				f = <char-class-flag-none>();
+			char-class-tail: () -> (f :char_class_ast) = {
+				(!, !, !) = RANGE;
+				f = <char-class-ast-flag-minus>();
+			||
+				f = <char-class-ast-flag-none>();
 			};
 
-			list-of-class-terms: () -> (cc :char_class) = {
+			term: () -> (n :char_class_ast) = {
 				(a, !, !) = CHAR;
 				(!, !, !) = RANGE;
 				(z, !, !) = CHAR;
-				cc = list-of-class-terms();
-				<char-class-add-range>(cc, a, z);
+				n = <char-class-ast-range>(a, z);
 			||
 				(c, !, !) = CHAR;
-				cc = list-of-class-terms();
-				<char-class-add>(cc, c);
-			||
-				cc = <char-class-new>();
+				n = <char-class-ast-literal>(c);
 			};
-
-			    /* TODO: [head body^body tail] */
-			char-class-body: () -> (e :ast_expr) = {
-				h = char-class-head();
-				cc = list-of-class-terms();
-				t = char-class-tail();
-				e = <ast-expr-class>(h, cc, t);
+			    
+			list-of-char-class-terms: () -> (n :char_class_ast) = {
+				l = term();
+				{
+					r = list-of-char-class-terms();
+					n = <char-class-ast-concat>(l, r);
+				||
+					n = l;
+				};
 			};
+			    
+			char-class-ast: () -> (n :ast_expr) = {
+				head = char-class-head();
+				body = list-of-char-class-terms();
+				tail = char-class-tail();
 
+				hb = <char-class-ast-concat>(head, body);
+				hbt = <char-class-ast-concat>(hb, tail);
+				n = <ast-expr-char-class>(hbt);
+			};
 		] = {
 			(!, !) = OPENGROUP;
-			n = char-class-body();
+			n = char-class-ast();
 			(!, !, !) = CLOSEGROUP;
 		};
 
 		/* TODO: is there a better name than 'atom' for
-		 * this construct?
-		 * maybe better to have a flag for one/kleene/plus,
-		 * and give that to most other AST nodes? */
+		 * this construct? it isn't atomic... */
 		atom: () -> (n :ast_expr) = {
 			OPENSUB;
 			e = expr();
