@@ -47,10 +47,17 @@ comp_iter(struct comp_env *env,
 	{
 		struct fsm_state *z2;
 		NEWSTATE(z);
-		NEWSTATE(z2);
-		RECURSE(x, z, n->u.concat.l);
-		EPSILON(z, z2);
-		RECURSE(z2, y, n->u.concat.r);
+		assert(n->u.concat.l != NULL);
+		assert(n->u.concat.r != NULL);
+		if (n->u.concat.l->t == AST_EXPR_LITERAL) {
+			RECURSE(x, z, n->u.concat.l);
+			RECURSE(z, y, n->u.concat.r);
+		} else {
+			NEWSTATE(z2);
+			RECURSE(x, z, n->u.concat.l);
+			EPSILON(z, z2);
+			RECURSE(z2, y, n->u.concat.r);
+		}
 		break;
 	}
 
