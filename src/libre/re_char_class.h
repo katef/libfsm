@@ -29,6 +29,26 @@ enum re_char_class_ast_type {
 	RE_CHAR_CLASS_AST_SUBTRACT
 };
 
+enum ast_class_id {
+	AST_CLASS_ALNUM,
+	AST_CLASS_ALPHA,
+	AST_CLASS_ANY,
+	AST_CLASS_ASCII,
+	AST_CLASS_BLANK,
+	AST_CLASS_CNTRL,
+	AST_CLASS_DIGIT,
+	AST_CLASS_GRAPH,
+	AST_CLASS_LOWER,
+	AST_CLASS_PRINT,
+	AST_CLASS_PUNCT,
+	AST_CLASS_SPACE,
+	AST_CLASS_SPCHR,
+	AST_CLASS_UPPER,
+	AST_CLASS_WORD,
+	AST_CLASS_XDIGIT
+};
+
+
 /* TODO: opaque? */
 struct re_char_class_ast {
 	enum re_char_class_ast_type t;
@@ -45,7 +65,7 @@ struct re_char_class_ast {
 			unsigned char to;
 		} range;
 		struct {
-			const char *name;
+			enum ast_class_id id;
 		} named;
 		struct {
 			enum re_char_class_flags f;
@@ -69,6 +89,9 @@ re_char_class_ast_range(unsigned char from, unsigned char to);
 
 struct re_char_class_ast *
 re_char_class_ast_flags(enum re_char_class_flags flags);
+
+struct re_char_class_ast *
+re_char_class_ast_named_class(enum ast_class_id id);
 
 struct re_char_class_ast *
 re_char_class_ast_subtract(struct re_char_class_ast *ast,

@@ -12,11 +12,14 @@ cc_add_byte(struct re_char_class *cc, unsigned char byte);
 static void
 cc_add_range(struct re_char_class *cc, unsigned char from, unsigned char to);
 
+static int
+cc_add_named_class(struct re_char_class *cc, enum ast_class_id id);
+
 static void
 cc_invert(struct re_char_class *cc);
 
 static void
-cc_mask(struct re_char_class *cc, const struct re_char_class *mask);
+cc_mask(struct re_char_class *cc, struct re_char_class *mask);
 
 void
 cc_dump(FILE *f, struct re_char_class *cc);
@@ -66,6 +69,16 @@ re_char_class_ast_flags(enum re_char_class_flags flags)
 }
 
 struct re_char_class_ast *
+re_char_class_ast_named_class(enum ast_class_id id)
+{
+	struct re_char_class_ast *res = calloc(1, sizeof(*res));
+	if (res == NULL) { return NULL; }
+	res->t = RE_CHAR_CLASS_AST_NAMED;
+	res->u.named.id = id;
+	return res;
+}
+
+struct re_char_class_ast *
 re_char_class_ast_subtract(struct re_char_class_ast *ast,
     struct re_char_class_ast *mask)
 {
@@ -84,6 +97,31 @@ print_char_or_esc(FILE *f, unsigned char c)
 		fprintf(f, "%c", c);
 	} else {
 		fprintf(f, "\\x%02x", c);
+	}
+}
+
+static const char *
+name_id_str(enum ast_class_id id)
+{
+	switch (id) {
+	case AST_CLASS_ALNUM: return "ALNUM";
+	case AST_CLASS_ALPHA: return "ALPHA";
+	case AST_CLASS_ANY: return "ANY";
+	case AST_CLASS_ASCII: return "ASCII";
+	case AST_CLASS_BLANK: return "BLANK";
+	case AST_CLASS_CNTRL: return "CNTRL";
+	case AST_CLASS_DIGIT: return "DIGIT";
+	case AST_CLASS_GRAPH: return "GRAPH";
+	case AST_CLASS_LOWER: return "LOWER";
+	case AST_CLASS_PRINT: return "PRINT";
+	case AST_CLASS_PUNCT: return "PUNCT";
+	case AST_CLASS_SPACE: return "SPACE";
+	case AST_CLASS_SPCHR: return "SPCHR";
+	case AST_CLASS_UPPER: return "UPPER";
+	case AST_CLASS_WORD: return "WORD";
+	case AST_CLASS_XDIGIT: return "XDIGIT";
+	default:
+		return "<matchfail>";
 	}
 }
 
@@ -114,7 +152,7 @@ pp_iter(FILE *f, struct re_char_class_ast *n, size_t indent)
 		break;
 	case RE_CHAR_CLASS_AST_NAMED:
 		fprintf(f, "CLASS-NAMED %p: '%s'\n",
-		    (void *)n, n->u.named.name);
+		    (void *)n, name_id_str(n->u.named.id));
 		break;
 	case RE_CHAR_CLASS_AST_FLAGS:
 		fprintf(f, "CLASS-FLAGS %p: [", (void *)n);
@@ -127,7 +165,7 @@ pp_iter(FILE *f, struct re_char_class_ast *n, size_t indent)
 		fprintf(f, "]\n");
 		break;
 	case RE_CHAR_CLASS_AST_SUBTRACT:
-		fprintf(f, "CLASS-SUBTRACT %p: '", (void *)n);
+		fprintf(f, "CLASS-SUBTRACT %p:\n", (void *)n);
 		pp_iter(f, n->u.subtract.ast, indent + 4);
 		pp_iter(f, n->u.subtract.mask, indent + 4);
 		break;
@@ -199,14 +237,17 @@ comp_iter(struct re_char_class *cc, struct re_char_class_ast *n)
 		cc_add_range(cc, n->u.range.from, n->u.range.to);
 		break;
 	case RE_CHAR_CLASS_AST_NAMED:
-		abort();	/* TODO */
+		if (!cc_add_named_class(cc, n->u.named.id)) { return 0; }
 		break;
 	case RE_CHAR_CLASS_AST_FLAGS:
 		cc->flags |= n->u.flags.f;
 		break;
 	case RE_CHAR_CLASS_AST_SUBTRACT:
 	{
-		struct re_char_class *mask = re_char_class_ast_compile(n->u.subtract.mask);
+		struct re_char_class *mask;
+		if (!comp_iter(cc, n->u.subtract.ast)) { return 0; }
+
+		mask = re_char_class_ast_compile(n->u.subtract.mask);
 		if (mask == NULL) { return 0; }
 		cc_mask(cc, mask);
 		re_char_class_free(mask);
@@ -283,6 +324,66 @@ cc_add_range(struct re_char_class *cc, unsigned char from, unsigned char to)
 	
 }
 
+static int
+cc_add_named_class(struct re_char_class *cc, enum ast_class_id id)
+{
+	unsigned i;
+	typedef int class_predicate_fun(int c);
+	class_predicate_fun *filter = NULL;
+	assert(cc != NULL);
+
+	switch (id) {
+	case AST_CLASS_ALNUM:
+		filter = isalnum; break;
+	case AST_CLASS_ALPHA:
+		filter = isalpha; break;
+	case AST_CLASS_ANY:
+		break;
+	case AST_CLASS_ASCII:
+		/* filter = isascii; */
+		break;
+	case AST_CLASS_BLANK:
+		/* filter = isblank; */
+		break;
+	case AST_CLASS_CNTRL:
+		filter = iscntrl; break;
+	case AST_CLASS_DIGIT:
+		filter = isdigit; break;
+	case AST_CLASS_GRAPH:
+		filter = isgraph; break;
+	case AST_CLASS_LOWER:
+		filter = islower; break;
+	case AST_CLASS_PRINT:
+		filter = isprint; break;
+	case AST_CLASS_PUNCT:
+		filter = ispunct; break;
+	case AST_CLASS_SPACE:
+		filter = isspace; break;
+	case AST_CLASS_SPCHR:
+		/* filter = isspchr; */
+		break;
+	case AST_CLASS_UPPER:
+		filter = isupper; break;
+	case AST_CLASS_WORD:
+		/* filter = isword; */
+		break;
+	case AST_CLASS_XDIGIT:
+		filter = isxdigit; break;
+	default:
+		fprintf(stderr, "(MATCH FAIL)\n");
+		assert(0);
+	}
+
+	if (filter == NULL) {
+		return 0;
+	}
+
+	for (i = 0; i < 256; i++) {
+		if (filter(i)) { cc_add_byte(cc, i); }
+	}
+	return 1;
+}
+
 void
 cc_invert(struct re_char_class *cc)
 {
@@ -293,11 +394,11 @@ cc_invert(struct re_char_class *cc)
 }
 
 void
-cc_mask(struct re_char_class *cc, const struct re_char_class *mask)
+cc_mask(struct re_char_class *cc, struct re_char_class *mask)
 {
 	unsigned i;
 	for (i = 0; i < sizeof(cc->chars)/sizeof(cc->chars[0]); i++) {
-		cc->chars[i] &= mask->chars[i];
+		cc->chars[i] &= ~mask->chars[i];
 	}
 }
 

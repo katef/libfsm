@@ -48,20 +48,20 @@
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
-        !CLASS_alnum:   () -> (:ast_class_id);
-	!CLASS_alpha:   () -> (:ast_class_id);
+        CLASS_alnum:   () -> (:ast_class_id);
+	CLASS_alpha:   () -> (:ast_class_id);
 	!CLASS_any:    () -> (:ast_class_id);
 	!CLASS_ascii:  () -> (:ast_class_id);
 	!CLASS_blank:  () -> (:ast_class_id);
 	!CLASS_cntrl:  () -> (:ast_class_id);
-	!CLASS_digit:   () -> (:ast_class_id);
+	CLASS_digit:   () -> (:ast_class_id);
 	!CLASS_graph:  () -> (:ast_class_id);
-	!CLASS_lower:   () -> (:ast_class_id);
+	CLASS_lower:   () -> (:ast_class_id);
 	!CLASS_print:  () -> (:ast_class_id);
 	!CLASS_punct:  () -> (:ast_class_id);
-	!CLASS_space:   () -> (:ast_class_id);
-	!CLASS_spchr:   () -> (:ast_class_id);
-	!CLASS_upper:   () -> (:ast_class_id);
+	CLASS_space:   () -> (:ast_class_id);
+	CLASS_spchr:   () -> (:ast_class_id);
+	CLASS_upper:   () -> (:ast_class_id);
 	!CLASS_word:   () -> (:ast_class_id);
 	!CLASS_xdigit: () -> (:ast_class_id);
 	!CLASS_ndigit: () -> (:ast_class_id);
@@ -149,6 +149,8 @@
 	<char-class-ast-literal>: (:char) -> (:char_class_ast);
 	<char-class-ast-range>: (:char, :char) -> (:char_class_ast);
 	<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
+	<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
+	<char-class-ast-named-class>: (:ast_class_id) -> (:char_class_ast);
 
 	<char-class-ast-flag-none>: () -> (:char_class_ast);
 	<char-class-ast-flag-invert>: () -> (:char_class_ast);
@@ -217,10 +219,28 @@
 			};
 
 			char-class-tail: () -> (f :char_class_ast) = {
-				(!, !, !) = RANGE;
-				f = <char-class-ast-flag-minus>();
-			||
+			/* This requires LL(2). */
+
+			/* 	(!, !, !) = RANGE;
+			 * 	f = <char-class-ast-flag-minus>();
+			 * || */
 				f = <char-class-ast-flag-none>();
+			};
+
+			named-class: () -> (id :ast_class_id) = {
+				id = CLASS_alnum;
+			||
+				id = CLASS_alpha;
+			||
+				id = CLASS_digit;
+			||
+				id = CLASS_lower;
+			||
+				id = CLASS_spchr;
+			||
+				id = CLASS_upper;
+			||
+				id = CLASS_space;
 			};
 
 			term: () -> (n :char_class_ast) = {
@@ -231,6 +251,9 @@
 			||
 				(c, !, !) = CHAR;
 				n = <char-class-ast-literal>(c);
+			||
+				id = named-class();
+				n = <char-class-ast-named-class>(id);
 			};
 			    
 			list-of-char-class-terms: () -> (n :char_class_ast) = {
@@ -251,11 +274,25 @@
 				hb = <char-class-ast-concat>(head, body);
 				hbt = <char-class-ast-concat>(hb, tail);
 				n = <ast-expr-char-class>(hbt);
+			||
+				head = char-class-head();
+				body = list-of-char-class-terms();
+				tail = char-class-tail();
+				(!) = INVERT;
+				maskhead = char-class-head();
+				maskbody = list-of-char-class-terms();
+				masktail = char-class-tail();
+
+				hb = <char-class-ast-concat>(head, body);
+				hbt = <char-class-ast-concat>(hb, tail);
+
+				mhb = <char-class-ast-concat>(maskhead, maskbody);
+				mhbt = <char-class-ast-concat>(mhb, masktail);
+				masked = <char-class-ast-subtract>(hbt, mhbt);
+				n = <ast-expr-char-class>(masked);
 			};
 		] = {
-			(!, !) = OPENGROUP;
 			n = char-class-ast();
-			(!, !, !) = CLOSEGROUP;
 		};
 
 		/* TODO: is there a better name than 'atom' for
@@ -267,7 +304,9 @@
 			s = atom-suffix();
 			n = <ast-expr-atom>(e, s);
 		||
+			(!, !) = OPENGROUP;
 			e = char-class();
+			(!, !, !) = CLOSEGROUP;
 			s = atom-suffix();
 			n = <ast-expr-atom>(e, s);
 		||

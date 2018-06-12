@@ -1248,7 +1248,6 @@
 		@c = ast_count(@l, @h);
 	@};
 
-/* FIXME */
 	<char-class-ast-literal>: (c :char) -> (n :char_class_ast) = @{
 		@n = re_char_class_ast_literal(@c);
 	@};
@@ -1259,6 +1258,14 @@
 
 	<char-class-ast-concat>: (l :char_class_ast, r :char_class_ast) -> (n :char_class_ast) = @{
 		@n = re_char_class_ast_concat(@l, @r);
+	@};
+
+	<char-class-ast-subtract>: (l :char_class_ast, r :char_class_ast) -> (n :char_class_ast) = @{
+		@n = re_char_class_ast_subtract(@l, @r);
+	@};
+
+	<char-class-ast-named-class>: (id :ast_class_id) -> (n :char_class_ast) = @{
+		@n = re_char_class_ast_named_class(@id);
 	@};
 
 	<ast-expr-char-class>: (cca :char_class_ast) -> (n :ast_expr) = @{
