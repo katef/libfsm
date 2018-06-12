@@ -27,6 +27,8 @@
 	ast_expr;
 	ast_count;
         ast_class_id;
+	char_class;
+	char_class_flags;
 
 %terminals%
 
@@ -38,14 +40,14 @@
 	STAR;
 
 	OPENSUB;   CLOSESUB;
-	!OPENGROUP:  () -> (:pos, :pos); !CLOSEGROUP:  () -> (:char, :pos, :pos);
+	OPENGROUP:  () -> (:pos, :pos); CLOSEGROUP:  () -> (:char, :pos, :pos);
 	OPENCOUNT: () -> (:pos, :pos);
 	COUNT: () -> (:unsigned);
 	SEP;
 	CLOSECOUNT: () -> (:pos, :pos);
 
-	!INVERT: () -> (:char);
-	!RANGE:  () -> (:char, :pos, :pos);
+	INVERT: () -> (:char);
+	RANGE:  () -> (:char, :pos, :pos);
 
         !CLASS_alnum:   () -> (:ast_class_id);
 	!CLASS_alpha:   () -> (:ast_class_id);
@@ -140,9 +142,20 @@
 	!<ast-expr-any>: () -> (:ast_expr);
 	!<ast-expr-many>: () -> (:ast_expr);
 
+	<ast-expr-class>: (:char_class_flags, :char_class, :char_class_flags) -> (:ast_expr);
+
         <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
         <ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
         <ast-expr-atom-many>: (:ast_count) -> (:ast_expr);
+
+	<char-class-new>: () -> (:char_class);
+	<char-class-add>: (:char_class, :char) -> ();
+	<char-class-add-range>: (:char_class, :char, :char) -> ();
+
+	<char-class-flag-none>: () -> (:char_class_flags);
+	<char-class-flag-invert>: () -> (:char_class_flags);
+	<char-class-flag-minus>: () -> (:char_class_flags);
+	<char-class-flag-invert-minus>: () -> (:char_class_flags);
 
 	expr: () -> (n :ast_expr) [
                 literal: () -> (n :ast_expr) = {
@@ -176,30 +189,71 @@
 			f = <atom-one>();
 		};
 
-		/* group: () -> (n :ast_expr) = {
-		 * 	OPENGROUP;
-		 * 	INVERT;
-		 * 	b = group-body();
-		 * 	CLOSEGROUP;
-		 * 	<ast-expr-group-inverted>(b);
-		 * ||
-		 * 	OPENGROUP;
-		 * 	b = group-body();
-		 * 	CLOSEGROUP;
-		 * 	<ast-expr-group>(b);
-  		 * };
-		 * 
-		 * group-body: () -> (b :group_body) = {
-		 *         h = group-body-head();
-		 * 
-		 * 	m = list-of-terms();
-		 * 
-		 * 	t = group-body-tail();
-		 * 
-		 * 	b = <ast-expr-group-body>(h, m, t);
-		 * };
-		 * 
-                 * list-of-terms: () ->  */
+	        /* [abc] -> when it reaches the end, make an empty class, and
+		 *     each character literal / named class / etc. modifies it.
+		 *     
+		 * in the case of the SQL dialect's wonky [abc^def], it should
+		 * create two groups, and then remove anything from the former
+		 * that is in the latter.
+		 *
+		 * [abc] literals
+		 * [a-c] range
+		 * [-^] characters only allowed at the head
+		 * [-] also allowed at the tail (just [-] is ambiguous)
+		 * [[:NAME:]] named character classes
+		 *
+		 * _ is the ANY character class
+		 * */
+		char-class: () -> (n :ast_expr) [
+			char-class-head: () -> (f :char_class_flags) = {
+				(!) = INVERT;
+				f = <char-class-flag-invert>();
+			||
+				(!, !, !) = RANGE;
+				f = <char-class-flag-minus>();
+			||
+				(!) = INVERT;
+				(!, !, !) = RANGE;
+				f = <char-class-flag-invert-minus>();
+			||
+				f = <char-class-flag-none>();
+			};
+
+			char-class-tail: () -> (f :char_class_flags) = {
+				/* FIXME: this needs refactoring */
+			/* 	(!, !, !) = RANGE;
+			 * 	f = <char-class-flag-minus>();
+			 * || */
+				f = <char-class-flag-none>();
+			};
+
+			list-of-class-terms: () -> (cc :char_class) = {
+				(a, !, !) = CHAR;
+				(!, !, !) = RANGE;
+				(z, !, !) = CHAR;
+				cc = list-of-class-terms();
+				<char-class-add-range>(cc, a, z);
+			||
+				(c, !, !) = CHAR;
+				cc = list-of-class-terms();
+				<char-class-add>(cc, c);
+			||
+				cc = <char-class-new>();
+			};
+
+			    /* TODO: [head body^body tail] */
+			char-class-body: () -> (e :ast_expr) = {
+				h = char-class-head();
+				cc = list-of-class-terms();
+				t = char-class-tail();
+				e = <ast-expr-class>(h, cc, t);
+			};
+
+		] = {
+			(!, !) = OPENGROUP;
+			n = char-class-body();
+			(!, !, !) = CLOSEGROUP;
+		};
 
 		/* TODO: is there a better name than 'atom' for
 		 * this construct?
@@ -211,10 +265,10 @@
 			CLOSESUB;
 			s = atom-suffix();
 			n = <ast-expr-atom>(e, s);
-		/* ||
-		 * 	e = group();
-		 * 	s = atom-suffix();
-		 * 	n = <ast-expr-atom>(e, s); */
+		||
+			e = char-class();
+			s = atom-suffix();
+			n = <ast-expr-atom>(e, s);
 		||
 			e = literal();
 			s = atom-suffix();

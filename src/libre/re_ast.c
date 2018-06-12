@@ -41,6 +41,9 @@ free_iter(struct ast_expr *n)
 	case AST_EXPR_REPEATED:
 		free_iter(n->u.repeated.e);
 		break;
+	case AST_EXPR_CLASS:
+		ast_char_class_free(n->u.class.cc);
+		break;
 	default:
 		assert(0);
 	}
@@ -202,6 +205,25 @@ re_ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 	return res;
 }
 
+struct ast_expr *
+re_ast_expr_class(enum ast_char_class_flags flags, struct ast_char_class *cc)
+{
+	struct ast_expr *res = calloc(1, sizeof(*res));
+	if (res == NULL) { return res; }
+
+	if (flags & AST_CHAR_CLASS_FLAG_MINUS) {
+		ast_char_class_add_byte(cc, '-');
+	}
+
+	if (flags & AST_CHAR_CLASS_FLAG_INVERTED) {
+		ast_char_class_invert(cc);
+	}
+
+	res->t = AST_EXPR_CLASS;
+	res->u.class.cc = cc;
+	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)cc);
+	return res;
+}
 
 
 #define INDENT(F, IND)							\
@@ -267,6 +289,11 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 		    (void *)n, n->u.repeated.low, n->u.repeated.high);
 		pp_iter(f, indent + 1*IND, n->u.repeated.e);
 		break;
+	case AST_EXPR_CLASS:
+		fprintf(f, "CLASS %p: (", (void *)n);
+		ast_char_class_dump(f, n->u.class.cc);
+		fprintf(f, ")\n");
+		break;
 	default:
 		assert(0);
 	}
@@ -285,4 +312,97 @@ ast_count(unsigned low, unsigned high)
 	res.low = low;
 	res.high = high;
 	return res;
+}
+
+struct ast_char_class *
+ast_char_class_new(void)
+{
+	struct ast_char_class *res = calloc(1, sizeof(*res));
+	if (res == NULL) { return NULL; }
+	fprintf(stderr, "NEW: ");
+	ast_char_class_dump(stderr, res);
+	fprintf(stderr, "\n");
+	return res;
+}
+
+void
+ast_char_class_free(struct ast_char_class *c)
+{
+	free(c);
+}
+
+static void
+bitset_pos(unsigned char byte, unsigned *pos, unsigned char *bit)
+{
+	*pos = byte / 8;
+	*bit = 1U << (byte & 0x07);
+}
+
+void
+ast_char_class_add_byte(struct ast_char_class *cc, unsigned char byte)
+{
+	unsigned pos;
+	unsigned char bit;
+	assert(cc != NULL);
+	fprintf(stderr, "ADDING 0x%02x\n", byte);
+	bitset_pos(byte, &pos, &bit);
+	cc->chars[pos] |= bit;
+
+	ast_char_class_dump(stderr, cc);
+	fprintf(stderr, "\n");
+}
+
+void
+ast_char_class_add_range(struct ast_char_class *cc, unsigned char from, unsigned char to)
+{
+	unsigned char i;
+	assert(cc != NULL);
+	assert(from <= to);
+	for (i = from; i <= to; i++) {
+		ast_char_class_add_byte(cc, i);		
+	}
+	
+}
+
+void
+ast_char_class_invert(struct ast_char_class *cc)
+{
+	unsigned i;
+	for (i = 0; i < sizeof(cc->chars)/sizeof(cc->chars[0]); i++) {
+		cc->chars[i] = ~cc->chars[i];
+	}
+}
+
+/* void
+ * ast_char_class_add_named_class(struct ast_char_class *c, )
+ * {
+ * 
+ * } */
+
+void
+ast_char_class_mask(struct ast_char_class *cc, const struct ast_char_class *mask)
+{
+	unsigned i;
+	for (i = 0; i < sizeof(cc->chars)/sizeof(cc->chars[0]); i++) {
+		cc->chars[i] &= mask->chars[i];
+	}
+}
+
+void
+ast_char_class_dump(FILE *f, struct ast_char_class *cc)
+{
+	unsigned i;
+	for (i = 0; i < 256; i++) {
+		unsigned pos;
+		unsigned char bit;
+		bitset_pos((unsigned char)i, &pos, &bit);
+		if (cc->chars[pos] & bit) {
+		/* if (c->chars[i/(8*sizeof(c->chars[0]))] & (1U << (i & 0x07))) { */
+			if (isprint(i)) {
+				fprintf(f, "%c", i);
+			} else {
+				fprintf(f, "\\x%02x", i);
+			}
+		}
+	}
 }

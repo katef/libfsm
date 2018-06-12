@@ -104,6 +104,8 @@
 	typedef struct grp t_grp;
 	typedef enum ast_class_id t_ast__class__id;
 	typedef struct ast_count t_ast__count;
+	typedef struct ast_char_class * t_char__class;
+	typedef enum ast_char_class_flags t_char__class__flags;
 
 	struct act_state {
 		enum LX_TOKEN lex_tok;
@@ -1243,6 +1245,41 @@
 		@c = ast_count(@l, @h);
 	@};
 
+	<ast-expr-class>: (hflags: char_class_flags, cc :char_class, tflags: char_class_flags) -> (n :ast_expr) = @{
+		@n = re_ast_expr_class((@hflags | @tflags), @cc);
+	@};
+
+	<char-class-new>: () -> (cc :char_class) = @{
+		@cc = ast_char_class_new();
+	@};
+
+	<char-class-add>: (cc :char_class, c :char) -> () = @{
+		ast_char_class_add_byte(@cc, @c);
+	@};
+
+	<char-class-add-range>: (cc :char_class, from :char, to :char) -> () = @{
+		ast_char_class_add_range(@cc, @from, @to);
+	@};
+
+	<char-class-flag-none>: () -> (f :char_class_flags) = @{
+		@f = AST_CHAR_CLASS_FLAG_NONE;
+	@};
+
+	<char-class-flag-invert>: () -> (f :char_class_flags) = @{
+		@f = AST_CHAR_CLASS_FLAG_INVERTED;
+	@};
+
+	<char-class-flag-minus>: () -> (f :char_class_flags) = @{
+		@f = AST_CHAR_CLASS_FLAG_MINUS;
+	@};
+
+	<char-class-flag-invert-minus>: () -> (f :char_class_flags) = @{
+		@f = AST_CHAR_CLASS_FLAG_INVERTED | AST_CHAR_CLASS_FLAG_MINUS;
+	@};
+
+	/* <debug-trace>: () -> () = @{
+	 * 	fprintf(stderr, "DEBUG-TRACE\n");
+	 * @}; */
 
 %trailer% @{
 

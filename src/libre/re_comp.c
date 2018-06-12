@@ -145,6 +145,18 @@ comp_iter(struct comp_env *env,
 		break;
 	}
 
+	case AST_EXPR_CLASS:
+	{
+		int i;
+		struct ast_char_class *cc = n->u.class.cc;
+		for (i = 0; i < 256; i++) {
+			if (cc->chars[i/8] & (1U << (i & 0x07))) {
+				if (!addedge_literal(env, x, y, i)) { return 0; }
+			}
+		}
+		break;
+	}
+
 	default:
 		fprintf(stderr, "%s:%d: <matchfail %d>\n",
 		    __FILE__, __LINE__, n->t);

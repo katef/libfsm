@@ -88,13 +88,28 @@ enum ast_expr_type {
 	AST_EXPR_KLEENE,
 	AST_EXPR_PLUS,
 	AST_EXPR_OPT,
-	AST_EXPR_REPEATED
+	AST_EXPR_REPEATED,
+	AST_EXPR_CLASS
 };
 
 #define AST_COUNT_UNBOUNDED ((unsigned)-1)
 struct ast_count {
 	unsigned low;
 	unsigned high;
+};
+
+enum ast_char_class_flags {
+	AST_CHAR_CLASS_FLAG_NONE = 0x00,
+	/* the class should be negated, e.g. [^aeiou] */
+	AST_CHAR_CLASS_FLAG_INVERTED = 0x01,
+	/* includes the `-` character, which isn't part of a range */
+	AST_CHAR_CLASS_FLAG_MINUS = 0x02
+};
+
+struct ast_char_class {
+	enum ast_char_class_flags flags;
+	/* This only handles single-byte chars for now. */
+	unsigned char chars[256/8];
 };
 
 struct ast_expr {
@@ -125,6 +140,9 @@ struct ast_expr {
 			unsigned low;
 			unsigned high;
 		} repeated;
+		struct {
+			struct ast_char_class *cc;
+		} class;
 	} u;	
 };
 
@@ -155,10 +173,37 @@ re_ast_expr_many(void);
 struct ast_expr *
 re_ast_expr_with_count(struct ast_expr *e, struct ast_count count);
 
+struct ast_expr *
+re_ast_expr_class(enum ast_char_class_flags flags, struct ast_char_class *cc);
+
 void
 re_ast_prettyprint(FILE *f, struct ast_re *ast);
 
 struct ast_count
 ast_count(unsigned low, unsigned high);
+
+struct ast_char_class *
+ast_char_class_new(void);
+
+void
+ast_char_class_free(struct ast_char_class *c);
+
+void
+ast_char_class_add_byte(struct ast_char_class *c, unsigned char byte);
+
+void
+ast_char_class_add_range(struct ast_char_class *c, unsigned char from, unsigned char to);
+
+void
+ast_char_class_invert(struct ast_char_class *cc);
+
+/* void
+ * ast_char_class_add_named_class(struct ast_char_class *c, unsigned char from, unsigned char to); */
+
+void
+ast_char_class_mask(struct ast_char_class *c, const struct ast_char_class *mask);
+
+void
+ast_char_class_dump(FILE *f, struct ast_char_class *c);
 
 #endif
