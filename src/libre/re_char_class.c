@@ -3,6 +3,8 @@
 
 #include <ctype.h>
 
+#define TRACE_OPERATIONS 0
+
 static void
 cc_free(struct re_char_class *cc);
 
@@ -304,12 +306,14 @@ cc_add_byte(struct re_char_class *cc, unsigned char byte)
 	unsigned pos;
 	unsigned char bit;
 	assert(cc != NULL);
-	fprintf(stderr, "ADDING 0x%02x\n", byte);
 	bitset_pos(byte, &pos, &bit);
 	cc->chars[pos] |= bit;
 
+#if TRACE_OPERATIONS
+	fprintf(stderr, "ADDING 0x%02x\n", byte);
 	cc_dump(stderr, cc);
 	fprintf(stderr, "\n");
+#endif
 }
 
 void

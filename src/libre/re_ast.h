@@ -12,7 +12,7 @@
 
 #include "re_char_class.h"
 
-#if 1
+#if 0
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define LOG(...)
