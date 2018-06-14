@@ -80,7 +80,7 @@ comp_iter(struct comp_env *env,
 	}
 
 	case AST_EXPR_LITERAL:
-		if (!addedge_literal(env, x, y, n->u.literal.l.c)) { return 0; }
+		if (!addedge_literal(env, x, y, n->u.literal.c)) { return 0; }
 		break;
 
 	case AST_EXPR_ANY:

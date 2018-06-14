@@ -18,7 +18,7 @@
 #define LOG(...)
 #endif
 
-/* Because we're building with -NDEBUG :( */
+/* Because we're building with -NDEBUG */
 #define FAIL(s)					\
 	do {					\
 		fprintf(stderr, s);		\
@@ -28,17 +28,6 @@
 /* Parse tree / Abstract syntax tree.
  * None of this should be exposed to the public API. */
 
-/* DIALECTS, in general complexity order :
- * - literal
- * - glob
- * ???
- * - like
- * - sql
- * - native
- * ???
- * - pcre
- * */
-
 /* == literal == */
 
 /* fwd refs */
@@ -46,19 +35,9 @@
 struct ast_re;			/* toplevel struct */
 
 struct ast_expr;		/* expression: main recursive node */
-/* struct ast_flags; */
-/* struct ast_group; */
-struct ast_literal;
-/* struct ast_class; */
-/* struct ast_count; */
 
 struct ast_re {
 	struct ast_expr *expr;
-};
-
-
-struct ast_literal {
-	/*const*/ char c;
 };
 
 enum ast_expr_type {
@@ -93,7 +72,7 @@ struct ast_expr {
 			struct ast_expr *r;
 		} alt;
 		struct {
-			struct ast_literal l;
+			/*const*/ char c;
 		} literal;
 		struct {
 			struct ast_expr *e;

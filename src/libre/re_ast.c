@@ -105,7 +105,7 @@ re_ast_expr_literal(char c)
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
 	res->t = AST_EXPR_LITERAL;
-	res->u.literal.l.c = c;
+	res->u.literal.c = c;
 	LOG("-- %s: %p <- %c\n", __func__, (void *)res, c);
 	return res;
 }
@@ -256,7 +256,7 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 		fprintf(f, "} (%p)\n", (void *)n);
 		break;
 	case AST_EXPR_LITERAL:
-		fprintf(f, "LITERAL %p: '%c'\n", (void *)n, n->u.literal.l.c);
+		fprintf(f, "LITERAL %p: '%c'\n", (void *)n, n->u.literal.c);
 		break;
 	case AST_EXPR_ANY:
 		fprintf(f, "ANY %p:\n", (void *)n);
