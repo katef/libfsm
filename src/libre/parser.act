@@ -1218,6 +1218,10 @@
 		@n = re_ast_expr_with_count(e, @c);
 	@};
 
+        <ast-expr-group>: (e :ast_expr) -> (n :ast_expr) = @{
+		@n = re_ast_expr_group(@e);
+	@};
+
 	<ast-expr-atom>: (e :ast_expr, c :ast_count) -> (n :ast_expr) = @{
 		@n = re_ast_expr_with_count(@e, @c);
 	@};

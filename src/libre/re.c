@@ -20,6 +20,7 @@
 
 #include "re_ast.h"
 #include "re_comp.h"
+#include "re_analysis.h"
 
 struct dialect {
 	enum re_dialect dialect;
@@ -112,6 +113,9 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	if (ast == NULL) {
 		return NULL;
 	}
+
+	/* Do a complete pass over the AST, filling in other details. */
+	re_ast_analysis(ast);
 
 	/* TODO: this should be a CLI flag or something */
 	if (PRETTYPRINT_AST) {

@@ -173,6 +173,11 @@ comp_iter(struct comp_env *env,
 		break;
 	}
 
+	case AST_EXPR_GROUP:
+		/* TODO: annotate the FSM with group match info */
+		RECURSE(x, y, n->u.group.e);
+		break;
+
 	default:
 		fprintf(stderr, "%s:%d: <matchfail %d>\n",
 		    __FILE__, __LINE__, n->t);

@@ -44,6 +44,9 @@ free_iter(struct ast_expr *n)
 	case AST_EXPR_CLASS:
 		re_char_class_ast_free(n->u.class.cca);
 		break;
+	case AST_EXPR_GROUP:
+		free_iter(n->u.group.e);
+		break;
 	default:
 		assert(0);
 	}
@@ -217,6 +220,17 @@ re_ast_expr_char_class(struct re_char_class_ast *cca)
 	return res;
 }
 
+struct ast_expr *
+re_ast_expr_group(struct ast_expr *e)
+{
+	struct ast_expr *res = calloc(1, sizeof(*res));
+	if (res == NULL) { return res; }
+	res->t = AST_EXPR_GROUP;
+	res->u.group.e = e;
+	res->u.group.id = (unsigned)-1; /* not yet assigned */
+	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)e);
+	return res;
+}
 
 #define INDENT(F, IND)							\
 	do {								\
@@ -285,6 +299,10 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 		fprintf(f, "CLASS %p: \n", (void *)n);
 		re_char_class_ast_prettyprint(f, n->u.class.cca, indent + IND);
 		fprintf(f, "\n");
+		break;
+	case AST_EXPR_GROUP:
+		fprintf(f, "GROUP %p: %u\n", (void *)n, n->u.group.id);
+		pp_iter(f, indent + 1*IND, n->u.group.e);
 		break;
 	default:
 		assert(0);
