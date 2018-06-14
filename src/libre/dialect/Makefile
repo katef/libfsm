@@ -4,7 +4,7 @@
 # DIALECT += like
 # DIALECT += literal
 DIALECT += native
-# DIALECT += pcre
+DIALECT += pcre
 DIALECT += sql
 
 .for dialect in ${DIALECT}

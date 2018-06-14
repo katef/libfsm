@@ -15,6 +15,10 @@
 	pred;
 	re_flags;
 	!err;
+	ast_expr;
+        ast_class_id;
+	ast_count;
+	char_class_ast;
 
 %terminals%
 
@@ -26,47 +30,47 @@
 	SEP;
 	STAR;
 
-	OPENSUB; OPENCAPTURE; CLOSE;
+	!OPENSUB; OPENCAPTURE; CLOSE;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
 	OPENCOUNT: () -> (:pos, :pos); CLOSECOUNT: () -> (:pos, :pos);
 
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
-	CLASS_alnum:  () -> (:fsm);
-	CLASS_alpha:  () -> (:fsm);
-	!CLASS_any:    () -> (:fsm);
-	CLASS_ascii:  () -> (:fsm);
-	CLASS_blank:  () -> (:fsm);
-	CLASS_cntrl:  () -> (:fsm);
-	CLASS_digit:  () -> (:fsm);
-	CLASS_graph:  () -> (:fsm);
-	CLASS_lower:  () -> (:fsm);
-	CLASS_print:  () -> (:fsm);
-	CLASS_punct:  () -> (:fsm);
-	CLASS_space:  () -> (:fsm);
-	!CLASS_spchr:  () -> (:fsm);
-	CLASS_upper:  () -> (:fsm);
-	CLASS_word:   () -> (:fsm);
-	CLASS_xdigit: () -> (:fsm);
+	CLASS_alnum:  () -> (:ast_class_id);
+	CLASS_alpha:  () -> (:ast_class_id);
+	!CLASS_any:    () -> (:ast_class_id);
+	CLASS_ascii:  () -> (:ast_class_id);
+	CLASS_blank:  () -> (:ast_class_id);
+	CLASS_cntrl:  () -> (:ast_class_id);
+	CLASS_digit:  () -> (:ast_class_id);
+	CLASS_graph:  () -> (:ast_class_id);
+	CLASS_lower:  () -> (:ast_class_id);
+	CLASS_print:  () -> (:ast_class_id);
+	CLASS_punct:  () -> (:ast_class_id);
+	CLASS_space:  () -> (:ast_class_id);
+	!CLASS_spchr:  () -> (:ast_class_id);
+	CLASS_upper:  () -> (:ast_class_id);
+	CLASS_word:   () -> (:ast_class_id);
+	CLASS_xdigit: () -> (:ast_class_id);
 
-	CLASS_ndigit: () -> (:fsm);
-	CLASS_nspace: () -> (:fsm);
+	!CLASS_ndigit: () -> (:ast_class_id);
+	!CLASS_nspace: () -> (:ast_class_id);
 
-	OPENFLAGS;
-	CLOSEFLAGS;
-	NEGATE;
-	FLAG_UNKNOWN;
-	FLAG_INSENSITIVE: () -> (:re_flags);
+	!OPENFLAGS;
+	!CLOSEFLAGS;
+	!NEGATE;
+	!FLAG_UNKNOWN;
+	!FLAG_INSENSITIVE: () -> (:re_flags);
 
 	ESC:     () -> (:char, :pos, :pos);
-	NOESC:   () -> (:char, :pos, :pos);
-	CONTROL: () -> (:char, :pos, :pos);
+	!NOESC:   () -> (:char, :pos, :pos);
+	!CONTROL: () -> (:char, :pos, :pos);
 	OCT:     () -> (:char, :pos, :pos);
 	HEX:     () -> (:char, :pos, :pos);
 	CHAR:    () -> (:char, :pos, :pos);
-	START:   () -> (:pred);
-	END:     () -> (:pred);
+	!START:   () -> (:pred);
+	!END:     () -> (:pred);
 	COUNT:   () -> (:unsigned);
 
 	EOF;
@@ -74,403 +78,291 @@
 
 %productions%
 
-	<make-group>:  () -> (:grp);
-	<invert-group>:    (:grp &) -> ();
-	<group-add-char>:  (:grp &, :char) -> ();
-	<group-add-class>: (:grp &, :fsm) -> ();
-	<group-add-range>: (:grp &, :char, :char) -> ();
-	<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
+	!<make-group>:  () -> (:grp);
+	!<invert-group>:    (:grp &) -> ();
+	!<group-add-char>:  (:grp &, :char) -> ();
+	!<group-add-class>: (:grp &, :fsm) -> ();
+	!<group-add-range>: (:grp &, :char, :char) -> ();
+	!<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
 
-	<add-concat>:  () -> (:fsm_state);
-	<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
-	<add-pred>:    (:fsm_state, :fsm_state, :pred) -> ();
-	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
-	<add-any>:     (:fsm_state, :fsm_state)        -> ();
-	<add-class>:   (:fsm_state, :fsm_state, :fsm)  -> ();
+	!<add-concat>:  () -> (:fsm_state);
+	!<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
+	!<add-pred>:    (:fsm_state, :fsm_state, :pred) -> ();
+	!<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
+	!<add-any>:     (:fsm_state, :fsm_state)        -> ();
+	!<add-class>:   (:fsm_state, :fsm_state, :fsm)  -> ();
 
-	<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
-	<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
-	<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
-	<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
-	<count-1>: (:fsm_state, :fsm_state) -> ();
+	!<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
+	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
+	!<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
+	!<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
+	!<count-1>: (:fsm_state, :fsm_state) -> ();
 
-	<push-flags>;
-	<pop-flags>;
-	<set-flag>: (:re_flags) -> ();
-	<clear-flag>: (:re_flags) -> ();
+	!<push-flags>;
+	!<pop-flags>;
+	!<set-flag>: (:re_flags) -> ();
+	!<clear-flag>: (:re_flags) -> ();
 
-	<err-expected-term>;
+	!<err-expected-term>;
 	<err-expected-count>;
 	!<err-expected-atoms>;
-	<err-expected-alts>;
+	!<err-expected-alts>;
 	<err-expected-range>;
-	<err-expected-closegroup>;
-	<err-expected-groupbody>;
-	<err-unknown-flag>;
-	<err-expected-closeflags>;
+	!<err-expected-closegroup>;
+	!<err-expected-groupbody>;
+	!<err-unknown-flag>;
+	!<err-expected-closeflags>;
 	<err-expected-eof>;
 
-	<mark-group>: (:pos, :pos) -> ();
-	<mark-range>: (:pos, :pos) -> ();
-	<mark-count>: (:pos, :pos) -> ();
+	!<mark-group>: (:pos, :pos) -> ();
+	!<mark-range>: (:pos, :pos) -> ();
+	!<mark-count>: (:pos, :pos) -> ();
 
-	pcre-class: () -> (f :fsm) = {
-		f = CLASS_digit;
-	||
-		f = CLASS_ndigit;
-	||
-		f = CLASS_space;
-	||
-		f = CLASS_nspace;
-	};
+	<ast-expr-empty>: () -> (:ast_expr);
+	<ast-expr-literal>: (:char) -> (:ast_expr);
+	<ast-expr-concat>: (:ast_expr, :ast_expr) -> (:ast_expr);
+	<ast-expr-alt>: (:ast_expr, :ast_expr) -> (:ast_expr);
+	<ast-expr-any>: () -> (:ast_expr);
+	!<ast-expr-many>: () -> (:ast_expr);
 
-	group: (x :fsm_state, y :fsm_state) -> () [
+        <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
+        !<ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
+        !<ast-expr-atom-many>: (:ast_count) -> (:ast_expr);
+	<ast-expr-char-class>: (:char_class_ast) -> (:ast_expr);
+        <ast-expr-group>: (:ast_expr) -> (:ast_expr);
 
-		class: () -> (k :fsm) = {
-			k = CLASS_alnum;
-		||
-			k = CLASS_alpha;
-		||
-			k = CLASS_ascii;
-		||
-			k = CLASS_blank;
-		||
-			k = CLASS_cntrl;
-		||
-			k = CLASS_digit;
-		||
-			k = CLASS_graph;
-		||
-			k = CLASS_lower;
-		||
-			k = CLASS_print;
-		||
-			k = CLASS_punct;
-		||
-			k = CLASS_space;
-		||
-			k = CLASS_upper;
-		||
-			k = CLASS_word;
-		||
-			k = CLASS_xdigit;
-		||
-			k = pcre-class;
+        <atom-kleene>: () -> (:ast_count);
+        <atom-plus>: () -> (:ast_count);
+        <atom-one>: () -> (:ast_count);
+        <atom-opt>: () -> (:ast_count);
+
+        <expr-count>: (:unsigned, :unsigned) -> (:ast_count);
+
+	<char-class-ast-literal>: (:char) -> (:char_class_ast);
+	<char-class-ast-range>: (:char, :char) -> (:char_class_ast);
+	<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
+	!<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
+	<char-class-ast-named-class>: (:ast_class_id) -> (:char_class_ast);
+
+	<char-class-ast-flag-none>: () -> (:char_class_ast);
+	<char-class-ast-flag-invert>: () -> (:char_class_ast);
+	!<char-class-ast-flag-minus>: () -> (:char_class_ast);
+	!<char-class-ast-flag-invert-minus>: () -> (:char_class_ast);
+
+	expr: () -> (n :ast_expr) [
+		literal: () -> (n :ast_expr) = {
+			{
+				(c, !, !) = ESC;
+				||
+				(c, !, !) = OCT;
+				||
+				(c, !, !) = HEX;
+				||
+				(c, !, !) = CHAR;
+			};
+			n = <ast-expr-literal>(c);
+		};
+		    
+		char-class: () -> (n :ast_expr) [
+			char-class-head: () -> (f :char_class_ast) = {
+				(!) = INVERT;
+				f = <char-class-ast-flag-invert>();
+			||
+				f = <char-class-ast-flag-none>();
+			};
+
+
+			class-literal: () -> (n :char_class_ast) = {
+				{
+					(c, !, !) = ESC;
+					||
+					(c, !, !) = OCT;
+					||
+					(c, !, !) = HEX;
+					||
+					(c, !, !) = CHAR;
+				};
+				n = <char-class-ast-literal>(c);
+	  		};
+
+			class-range: () -> (n :char_class_ast) = {
+				{
+					(a, start, !) = OCT;
+				||
+					(a, start, !) = HEX;
+				||
+					(a, start, !) = CHAR;
+				};
+
+				{
+					(!, !, !) = RANGE;
+				##
+					<err-expected-range>;
+				};
+	
+				{
+					(b, !, end) = OCT;
+				||
+					(b, !, end) = HEX;
+				||
+					(b, !, end) = CHAR;
+				||
+					(b, !, end) = RANGE;
+				};
+	
+				/* <mark-range>(start, end); */
+				n = <char-class-ast-range>(a, b);
+			};
+
+			class-named: () -> (k :ast_class_id) = {
+				k = CLASS_alnum;
+				||
+				k = CLASS_alpha;
+				||
+				k = CLASS_ascii;
+				||
+				k = CLASS_blank;
+				||
+				k = CLASS_cntrl;
+				||
+				k = CLASS_digit;
+				||
+				k = CLASS_graph;
+				||
+				k = CLASS_lower;
+				||
+				k = CLASS_print;
+				||
+				k = CLASS_punct;
+				||
+				k = CLASS_space;
+				||
+				k = CLASS_upper;
+				||
+				k = CLASS_word;
+				||
+				k = CLASS_xdigit;
+			};
+
+			class-term: () -> (n :char_class_ast) = {
+				n = class-literal();
+			||
+				n = class-range();
+			||
+				id = class-named();
+				n = <char-class-ast-named-class>(id);
+			};
+
+			list-of-char-class-terms: () -> (n :char_class_ast) = {
+				l = class-term();
+				{
+					r = list-of-char-class-terms();
+					n = <char-class-ast-concat>(l, r);
+				||
+					n = l;
+				};
+			};
+		] = {
+			(!, !) = OPENGROUP;
+			head = char-class-head();
+			body = list-of-char-class-terms();
+			(!, !, !) = CLOSEGROUP;
+			hb = <char-class-ast-concat>(head, body);
+			n = <ast-expr-char-class>(hb);
 		};
 
-		char: () -> (c :char) = {
-			(c, !, !) = ESC;
-		||
-			(c, !, !) = CONTROL;
-		||
-			(c, !, !) = NOESC;
-		||
-			(c, !, !) = OCT;
-		||
-			(c, !, !) = HEX;
-		||
-			(c, !, !) = CHAR;
-		};
-
-		range: () -> (a :char, b :char) = {
+		atom: () -> (n :ast_expr) = {
 			{
-				(a, start, !) = ESC;
-			||
-				(a, start, !) = CONTROL;
-			||
-				(a, start, !) = NOESC;
-			||
-				(a, start, !) = OCT;
-			||
-				(a, start, !) = HEX;
-			||
-				(a, start, !) = CHAR;
-			};
-
-			{
-				(!, !, !) = RANGE;
-			##
-				<err-expected-range>;
-			};
-
-			{
-				(b, !, end) = ESC;
-			||
-				(b, !, end) = CONTROL;
-			||
-				(b, !, end) = OCT;
-			||
-				(b, !, end) = HEX;
-			||
-				(b, !, end) = CHAR;
-			||
-				(b, !, end) = RANGE;
-			};
-
-			<mark-range>(start, end);
-		};
-
-		list-of-terms: (g :grp &) -> () = {
-			{
-				c = char;
-				<group-add-char>(&g, c);
-			||
-				f = class;
-				<group-add-class>(&g, f);
-			||
-				(a, b) = range;
-				<group-add-range>(&g, a, b);
-			##
-				<err-expected-term>;
-			};
-
-			{
-				$;
-			||
-				list-of-terms(&g);
-			};
-		};
-
-		group-body: (g :grp &) -> () = {
-			{
-				(c, !, !) = CLOSEGROUP;
-				<group-add-char>(&g, c);
-			||
-				(c, !, !) = RANGE;
-				<group-add-char>(&g, c);
-			||
-				/*
-				 * XXX: this is atypical, but serves as a workaround for below
-				 * until this can be done lexically by /-$/ -> $char.
-				 */
-				(a, !, !) = CLOSEGROUP;
-				<group-add-char>(&g, a);
-				(b, !, !) = RANGE;
-				<group-add-char>(&g, b);
-			||
-				$;
-			};
-
-			list-of-terms(&g);
-
-			{
-/* XXX: this ought to be permitted, but I can't see how for LL(1)
-				(c, !, !) = RANGE;
-				<group-add-char>(&g, c);
-			||
-*/
-				$;
-			};
-		};
-
-		group-bm: (g :grp &) -> () = {
-			(start, !) = OPENGROUP;
-
-			{
-				! = INVERT;
-				group-body(&g);
-				<invert-group>(&g);
-			||
-				group-body(&g);
-			};
-
-			{
-				(!, !, end) = CLOSEGROUP;
-				<mark-group>(start, end);
-			##
-				<err-expected-closegroup>;
-			};
-		##
-			<err-expected-groupbody>;
-		};
-
-	] = {
-		g = <make-group>;
-
-		group-bm(&g);
-
-		<group-to-states>(&g, x, y);
-	};
-
-	literal: (x :fsm_state, y :fsm_state) -> () = {
-		{
-			(c, !, !) = ESC;
-		||
-			(c, !, !) = CONTROL;
-		||
-			(c, !, !) = NOESC;
-		||
-			(c, !, !) = OCT;
-		||
-			(c, !, !) = HEX;
-		||
-			(c, !, !) = CHAR;
-		};
-		<add-literal>(x, y, c);
-	};
-
-	anchor: (x :fsm_state, y :fsm_state) -> () = {
-		{
-			p = START;
-		||
-			p = END;
-		};
-		<add-pred>(x, y, p);
-	};
-
-	inline-flags: () -> () [
-		positive = {
-			{
-				c = FLAG_INSENSITIVE;
-				<set-flag>(c);
-			||
-				FLAG_UNKNOWN;
-				<err-unknown-flag>;
-			};
-
-			{
-				positive;
-			||
-				$;
-			};
-		};
-		negative = {
-			{
-				c = FLAG_INSENSITIVE;
-				<clear-flag>(c);
-			||
-				FLAG_UNKNOWN;
-				<err-unknown-flag>;
-			};
-
-			{
-				negative;
-			||
-				$;
-			};
-		};
-	] = {
-		OPENFLAGS;
-
-		{
-			positive;
-		||
-			$;
-		};
-
-		{
-			NEGATE;
-			negative;
-		||
-			$;
-		};
-
-		CLOSEFLAGS;
-	##
-		<err-expected-closeflags>;
-	};
-
-	expr: (x :fsm_state, y :fsm_state) -> () [
-
-		atom: (x :fsm_state, y :fsm_state &) -> () = {
-			{
-				{ OPENSUB; || OPENCAPTURE; };
-				<push-flags>;
-				expr(x, y);
-				<pop-flags>;
+				OPENCAPTURE;
+				g = expr();
+				e = <ast-expr-group>(g);
 				CLOSE;
 			||
-				inline-flags;
-				<add-epsilon>(x, y);
+				OPENSUB;
+				e = expr();
+				CLOSE;
 			||
-				group(x, y);
+				e = char-class();
 			||
-				literal(x, y);
-			||
-				f = pcre-class;
-				<add-class>(x, y, f);
+				e = literal();
 			||
 				ANY;
-				<add-any>(x, y);
+				e = <ast-expr-any>();
 			};
 
 			{
 				(start, !) = OPENCOUNT;
-				n = COUNT;
+				x = COUNT;
 				(!, end) = CLOSECOUNT;
-				<mark-count>(start, end);
-				<count-m-to-n>(x, &y, n, n);
+				c = <expr-count>(x, x);
+				n = <ast-expr-atom>(e, c);
 			||
 				(start, !) = OPENCOUNT;
-				m = COUNT;
+				x = COUNT;
 				SEP;
-				n = COUNT;
+				y = COUNT;
 				(end, !) = CLOSECOUNT;
-				<mark-count>(start, end);
-				<count-m-to-n>(x, &y, m, n);
+				c = <expr-count>(x, y);
+				n = <ast-expr-atom>(e, c);
 			||
 				OPT;
-				<count-0-or-1>(x, y);
+				c = <atom-opt>();
+				n = <ast-expr-atom>(e, c);
 			||
 				STAR;
-				<count-0-or-many>(x, &y);
+				c = <atom-kleene>();
+				n = <ast-expr-atom>(e, c);
 			||
 				PLUS;
-				<count-1-or-many>(x, &y);
+				c = <atom-plus>();
+				n = <ast-expr-atom>(e, c);
 			||
-				<count-1>(x, y);
+				c = <atom-one>();
+				n = <ast-expr-atom>(e, c);
 			##
 				<err-expected-count>;
-			};
-		};
-
-		list-of-atoms: (x :fsm_state, y :fsm_state) -> () = {
-			z = <add-concat>;
-
-			{
-				anchor(x, z);
-			||
-				atom(x, &z);
+				n = e;
 			};
 
-			/* TODO: I don't like this. Refactor somehow? */
-			{
-				<add-epsilon>(z, y);
-			||
-				list-of-atoms(z, y);
-			};
-		};
+                };
 
-		list-of-alts: (x :fsm_state, y :fsm_state) -> () [
+		list-of-atoms: () -> (n :ast_expr) = {
 
-			alt: (x :fsm_state, y :fsm_state) -> () = {
-				z = <add-concat>;
+		/* TODO: start/end anchors */
 
-				/* TODO: I don't like this. Refactor somehow? */
-				<add-epsilon>(x, z);
-
-				list-of-atoms(z, y);
-			||
-				<add-epsilon>(x, y);
-			};
-
-		] = {
-			alt(x, y);
+		/* 	p = START;
+		 * 	st = <ast-expr-start>();
+		 * 	a = atom();
+		 * 	n = <ast-expr-concat>(st,a);
+		 * || */
+			n = atom();
 		||
-			list-of-alts(x, y);
-			ALT;
-			alt(x, y);
+			a = atom();
+			r = list-of-atoms();
+			n = <ast-expr-concat>(a,r);
 		};
 
+		alt: () -> (n :ast_expr) = {
+			n = list-of-atoms();
+		};
+
+		list-of-alts: () -> (n :ast_expr) = {
+			n = alt();
+	  	||
+			a = alt();
+			ALT;
+			r = list-of-alts();
+			n = <ast-expr-alt>(a, r);
+		};
 	] = {
-		list-of-alts(x, y);
+	        n = list-of-alts();
 	};
 
-	re_pcre: (x :fsm_state, y :fsm_state) -> () = {
+	re_pcre: () -> (n :ast_expr) = {
 		{
-			expr(x, y);
+			n = expr();
 		##
-			<err-expected-alts>;
+			n = <ast-expr-empty>();
 		};
 
 		{

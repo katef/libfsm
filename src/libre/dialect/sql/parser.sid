@@ -146,6 +146,7 @@
         <ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
         <ast-expr-atom-many>: (:ast_count) -> (:ast_expr);
 	<ast-expr-char-class>: (:char_class_ast) -> (:ast_expr);
+        <ast-expr-group>: (:ast_expr) -> (:ast_expr);
 
 	<char-class-ast-literal>: (:char) -> (:char_class_ast);
 	<char-class-ast-range>: (:char, :char) -> (:char_class_ast);
@@ -301,7 +302,8 @@
 		atom: () -> (n :ast_expr) = {
 			/* TODO: nest, as match group AST node */
 			OPENSUB;
-			e = expr();
+			g = expr();
+			e = <ast-expr-group>(g);
 			CLOSESUB;
 			s = atom-suffix();
 			n = <ast-expr-atom>(e, s);

@@ -16,6 +16,7 @@
 	!re_flags;
 	!err;
 	ast_expr;
+        !ast_class_id;
 
 %terminals%
 
@@ -34,24 +35,24 @@
 	!INVERT: () -> (:char);
 	!RANGE:  () -> (:char, :pos, :pos);
 
-	!CLASS_alnum:  () -> (:fsm);
-	!CLASS_alpha:  () -> (:fsm);
-	!CLASS_any:    () -> (:fsm);
-	!CLASS_ascii:  () -> (:fsm);
-	!CLASS_blank:  () -> (:fsm);
-	!CLASS_cntrl:  () -> (:fsm);
-	!CLASS_digit:  () -> (:fsm);
-	!CLASS_graph:  () -> (:fsm);
-	!CLASS_lower:  () -> (:fsm);
-	!CLASS_print:  () -> (:fsm);
-	!CLASS_punct:  () -> (:fsm);
-	!CLASS_space:  () -> (:fsm);
-	!CLASS_spchr:  () -> (:fsm);
-	!CLASS_upper:  () -> (:fsm);
-	!CLASS_word:   () -> (:fsm);
-	!CLASS_xdigit: () -> (:fsm);
-	!CLASS_ndigit: () -> (:fsm);
-	!CLASS_nspace: () -> (:fsm);
+	!CLASS_alnum:  () -> (:ast_class_id);
+	!CLASS_alpha:  () -> (:ast_class_id);
+	!CLASS_any:    () -> (:ast_class_id);
+	!CLASS_ascii:  () -> (:ast_class_id);
+	!CLASS_blank:  () -> (:ast_class_id);
+	!CLASS_cntrl:  () -> (:ast_class_id);
+	!CLASS_digit:  () -> (:ast_class_id);
+	!CLASS_graph:  () -> (:ast_class_id);
+	!CLASS_lower:  () -> (:ast_class_id);
+	!CLASS_print:  () -> (:ast_class_id);
+	!CLASS_punct:  () -> (:ast_class_id);
+	!CLASS_space:  () -> (:ast_class_id);
+	!CLASS_spchr:  () -> (:ast_class_id);
+	!CLASS_upper:  () -> (:ast_class_id);
+	!CLASS_word:   () -> (:ast_class_id);
+	!CLASS_xdigit: () -> (:ast_class_id);
+	!CLASS_ndigit: () -> (:ast_class_id);
+	!CLASS_nspace: () -> (:ast_class_id);
 
 	!OPENFLAGS;
 	!CLOSEFLAGS;
@@ -101,7 +102,7 @@
 
 	!<err-expected-term>;
 	!<err-expected-count>;
-	<err-expected-atoms>;
+	!<err-expected-atoms>;
 	!<err-expected-alts>;
 	!<err-expected-range>;
 	!<err-expected-closegroup>;
