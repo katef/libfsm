@@ -132,6 +132,7 @@
         <atom-one>: () -> (:ast_count);
         <atom-opt>: () -> (:ast_count);
 
+/* FIXME: rename to atom-count */
         <expr-count>: (:unsigned, :unsigned) -> (:ast_count);
 
 	<ast-expr-empty>: () -> (:ast_expr);
@@ -298,6 +299,7 @@
 		/* TODO: is there a better name than 'atom' for
 		 * this construct? it isn't atomic... */
 		atom: () -> (n :ast_expr) = {
+			/* TODO: nest, as match group AST node */
 			OPENSUB;
 			e = expr();
 			CLOSESUB;

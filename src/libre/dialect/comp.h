@@ -24,6 +24,8 @@ re_dialect_parse_fun parse_re_literal;
 re_dialect_parse_fun parse_re_glob;
 re_dialect_parse_fun parse_re_like;
 re_dialect_parse_fun parse_re_sql;
+re_dialect_parse_fun parse_re_native;
+re_dialect_parse_fun parse_re_pcre;
 
 #if 0
 struct fsm *

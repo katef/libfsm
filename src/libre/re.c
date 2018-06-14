@@ -27,6 +27,8 @@ struct dialect {
 	int overlap;
 };
 
+#define PRETTYPRINT_AST 0
+
 static const struct dialect *
 re_dialect(enum re_dialect dialect)
 {
@@ -38,7 +40,7 @@ re_dialect(enum re_dialect dialect)
 		/* { RE_LIKE,       parse_re_like,    0 }, */
 		/* { RE_LITERAL,    parse_re_literal, 0 }, */
 		/* { RE_GLOB,       parse_re_glob,    0 }, */
-		/* { RE_NATIVE,  comp_native,  0 }, */
+		{ RE_NATIVE,        parse_re_native,  0 },
 		/* { RE_PCRE,    comp_pcre,    0 }, */
 		{ RE_SQL,           parse_re_sql,     1 }
 	};
@@ -112,7 +114,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	}
 
 	/* TODO: this should be a CLI flag or something */
-	if (1) {
+	if (PRETTYPRINT_AST) {
 		re_ast_prettyprint(stderr, ast);
 	}
 

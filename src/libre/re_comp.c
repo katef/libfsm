@@ -124,7 +124,7 @@ comp_iter(struct comp_env *env,
 		 * AST_EXPR_OPT instead. */
 		low = n->u.repeated.low;
 		high = n->u.repeated.high;
-		assert(low < high);
+		assert(low <= high);
 		assert(low != AST_COUNT_UNBOUNDED);
 		assert(high != AST_COUNT_UNBOUNDED);
 
