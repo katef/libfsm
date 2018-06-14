@@ -61,6 +61,17 @@ struct ast_count {
 	unsigned high;
 };
 
+/*
+ * The following regular expression fragments map to associated fsm states
+ * as follows (transitions written in .fsm format):
+ *
+ *  ab    concat:      1 -> 3 "a"; 3 -> 2 "b";
+ *  a|b   alt:         1 -> 2 "a"; 1 -> 2 "b";
+ *  a     literal:     1 -> 1a; 2a -> 2;
+ *  .     any:         1 -> 2 ?;
+ *  (a)   group:       1 -> 1a; 2a -> 2;
+ *  [abc] char-class:  1 -> 2 "a"; 1 -> 2 "b"; 1 -> 2 "c";
+ */
 struct ast_expr {
 	enum ast_expr_type t;
 	union {
