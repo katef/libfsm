@@ -16,7 +16,9 @@
 	!re_flags;
 	!err;
 	ast_expr;
+	!ast_count;
         !ast_class_id;
+	!char_class_ast;
 
 %terminals%
 
@@ -103,8 +105,33 @@
 	<ast-expr-empty>: () -> (:ast_expr);
 	<ast-expr-literal>: (:char) -> (:ast_expr);
 	<ast-expr-concat>: (:ast_expr, :ast_expr) -> (:ast_expr);
+	!<ast-expr-alt>: (:ast_expr, :ast_expr) -> (:ast_expr);
 	<ast-expr-any>: () -> (:ast_expr);
 	<ast-expr-many>: () -> (:ast_expr);
+
+        !<ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
+        !<ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
+        !<ast-expr-atom-many>: (:ast_count) -> (:ast_expr);
+	!<ast-expr-char-class>: (:char_class_ast) -> (:ast_expr);
+        !<ast-expr-group>: (:ast_expr) -> (:ast_expr);
+
+        !<atom-kleene>: () -> (:ast_count);
+        !<atom-plus>: () -> (:ast_count);
+        !<atom-one>: () -> (:ast_count);
+        !<atom-opt>: () -> (:ast_count);
+
+        !<expr-count>: (:unsigned, :unsigned) -> (:ast_count);
+
+	!<char-class-ast-literal>: (:char) -> (:char_class_ast);
+	!<char-class-ast-range>: (:char, :char) -> (:char_class_ast);
+	!<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
+	!<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
+	!<char-class-ast-named-class>: (:ast_class_id) -> (:char_class_ast);
+
+	!<char-class-ast-flag-none>: () -> (:char_class_ast);
+	!<char-class-ast-flag-invert>: () -> (:char_class_ast);
+	!<char-class-ast-flag-minus>: () -> (:char_class_ast);
+	!<char-class-ast-flag-invert-minus>: () -> (:char_class_ast);
 
 	!<err-expected-term>;
 	!<err-expected-count>;

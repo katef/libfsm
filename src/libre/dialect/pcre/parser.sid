@@ -30,7 +30,7 @@
 	SEP;
 	STAR;
 
-	!OPENSUB; OPENCAPTURE; CLOSE;
+	OPENSUB; OPENCAPTURE; CLOSE;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
 	OPENCOUNT: () -> (:pos, :pos); CLOSECOUNT: () -> (:pos, :pos);
 

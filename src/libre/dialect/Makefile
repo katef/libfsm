@@ -1,8 +1,8 @@
 .include "../../../share/mk/top.mk"
 
-# DIALECT += glob
-# DIALECT += like
-# DIALECT += literal
+DIALECT += glob
+DIALECT += like
+DIALECT += literal
 DIALECT += native
 DIALECT += pcre
 DIALECT += sql
