@@ -480,7 +480,14 @@ out_io(FILE *f)
 		fprintf(f, "\t\tlx->end.line++;\n");
 		fprintf(f, "\t\tlx->end.saved_col = lx->end.col - 1;\n");
 		fprintf(f, "\t\tlx->end.col = 0;\n");
-		fprintf(f, "\t}\n");
+
+                if (opt.io == FSM_IO_STR) {   /* ignore terminating '\0' */
+                    fprintf(f, "\t} else if (c == '\\0') {\n");
+                    fprintf(f, "\t\tlx->end.byte--; /* don't count terminating '\\0' */\n");
+                    fprintf(f, "\t}\n");
+                } else {
+                    fprintf(f, "\t}\n");
+                }
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\treturn c;\n");
