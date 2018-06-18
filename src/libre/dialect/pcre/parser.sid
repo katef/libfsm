@@ -103,20 +103,20 @@
 	!<set-flag>: (:re_flags) -> ();
 	!<clear-flag>: (:re_flags) -> ();
 
-	!<err-expected-term>;
+	<err-expected-term>;
 	<err-expected-count>;
 	!<err-expected-atoms>;
-	!<err-expected-alts>;
+	<err-expected-alts>;
 	<err-expected-range>;
-	!<err-expected-closegroup>;
+	<err-expected-closegroup>;
 	!<err-expected-groupbody>;
 	!<err-unknown-flag>;
 	!<err-expected-closeflags>;
 	<err-expected-eof>;
 
-	!<mark-group>: (:pos, :pos) -> ();
-	!<mark-range>: (:pos, :pos) -> ();
-	!<mark-count>: (:pos, :pos) -> ();
+	<mark-group>: (:pos, :pos) -> ();
+	<mark-range>: (:pos, :pos) -> ();
+	<mark-count>: (:pos, :pos) -> ();
 
 	<ast-expr-empty>: () -> (:ast_expr);
 	<ast-expr-literal>: (:char) -> (:ast_expr);
@@ -128,7 +128,7 @@
         <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
         !<ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
         !<ast-expr-atom-many>: (:ast_count) -> (:ast_expr);
-	<ast-expr-char-class>: (:char_class_ast) -> (:ast_expr);
+	<ast-expr-char-class>: (:char_class_ast, :pos, :pos) -> (:ast_expr);
         <ast-expr-group>: (:ast_expr) -> (:ast_expr);
 
         <atom-kleene>: () -> (:ast_count);
@@ -136,10 +136,10 @@
         <atom-one>: () -> (:ast_count);
         <atom-opt>: () -> (:ast_count);
 
-        <expr-count>: (:unsigned, :unsigned) -> (:ast_count);
+        <expr-count>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
 	<char-class-ast-literal>: (:char) -> (:char_class_ast);
-	<char-class-ast-range>: (:char, :char) -> (:char_class_ast);
+	<char-class-ast-range>: (:char, :pos, :char, :pos) -> (:char_class_ast);
 	<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	!<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	<char-class-ast-named-class>: (:ast_class_id) -> (:char_class_ast);
@@ -210,8 +210,8 @@
 					(b, !, end) = RANGE;
 				};
 	
-				/* <mark-range>(start, end); */
-				n = <char-class-ast-range>(a, b);
+				<mark-range>(start, end);
+				n = <char-class-ast-range>(a, start, b, end);
 			};
 
 			class-named: () -> (k :ast_class_id) = {
@@ -251,6 +251,10 @@
 			||
 				id = class-named();
 				n = <char-class-ast-named-class>(id);
+			##
+				<err-expected-term>;
+                                id = CLASS_blank;  /* workaround sid warning */
+                                n = <char-class-ast-named-class>(id);
 			};
 
 			list-of-char-class-terms: () -> (n :char_class_ast) = {
@@ -263,12 +267,20 @@
 				};
 			};
 		] = {
-			(!, !) = OPENGROUP;
+			(start, !) = OPENGROUP;
 			head = char-class-head();
 			body = list-of-char-class-terms();
-			(!, !, !) = CLOSEGROUP;
+
+                        {
+				(!, !, end) = CLOSEGROUP;
+				<mark-group>(start, end);
+			##
+				<err-expected-closegroup>;
+                                end = start; /* appease sid */
+			};
+
 			hb = <char-class-ast-concat>(head, body);
-			n = <ast-expr-char-class>(hb);
+			n = <ast-expr-char-class>(hb, start, end);
 		};
 
 		atom: () -> (n :ast_expr) = {
@@ -276,11 +288,19 @@
 				OPENCAPTURE;
 				g = expr();
 				e = <ast-expr-group>(g);
-				CLOSE;
+                                {
+					CLOSE;
+                                ##
+                        		<err-expected-alts>;
+				};
 			||
 				OPENSUB;
 				e = expr();
-				CLOSE;
+                                {
+					CLOSE;
+                                ##
+                        		<err-expected-alts>;
+				};
 			||
 				e = char-class();
 			||
@@ -294,7 +314,8 @@
 				(start, !) = OPENCOUNT;
 				x = COUNT;
 				(!, end) = CLOSECOUNT;
-				c = <expr-count>(x, x);
+				<mark-count>(start, end);
+				c = <expr-count>(x, start, x, end);
 				n = <ast-expr-atom>(e, c);
 			||
 				(start, !) = OPENCOUNT;
@@ -302,7 +323,8 @@
 				SEP;
 				y = COUNT;
 				(end, !) = CLOSECOUNT;
-				c = <expr-count>(x, y);
+				<mark-count>(start, end);
+				c = <expr-count>(x, start, y, end);
 				n = <ast-expr-atom>(e, c);
 			||
 				OPT;

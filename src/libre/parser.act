@@ -78,6 +78,15 @@
 	#define TOK_CLASS__nspace  TOK_CLASS_NSPACE
 	#define TOK_CLASS__ndigit  TOK_CLASS_NDIGIT
 
+	/* This is a hack to work around the AST files not being able to include lexer.h. */
+	#define AST_POS_OF_LX_POS(AST_POS, LX_POS)			\
+		do {							\
+			AST_POS.line = LX_POS.line;			\
+			AST_POS.col = LX_POS.col;			\
+			AST_POS.byte = LX_POS.byte;			\
+		} while (0)
+
+
 	#include "parser.h"
 	#include "lexer.h"
 
@@ -1227,37 +1236,47 @@
 	@};
 
         <atom-kleene>: () -> (c :ast_count) = @{
-		@c = ast_count(0, AST_COUNT_UNBOUNDED);
+		@c = ast_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
 	@};
 
         <atom-plus>: () -> (c :ast_count) = @{
-		@c = ast_count(1, AST_COUNT_UNBOUNDED);
+		@c = ast_count(1, NULL, AST_COUNT_UNBOUNDED, NULL);
 	@};
 
         <atom-one>: () -> (c :ast_count) = @{
-		@c = ast_count(1, 1);
+		@c = ast_count(1, NULL, 1, NULL);
 	@};
 
         <atom-opt>: () -> (c :ast_count) = @{
-		@c = ast_count(0, 1);
+		@c = ast_count(0, NULL, 1, NULL);
 	@};
 
-        <expr-count>: (l :unsigned, h :unsigned) -> (c :ast_count) = @{
+        <expr-count>: (l :unsigned, start :pos, h :unsigned, end :pos) -> (c :ast_count) = @{
+		struct ast_pos ast_start, ast_end;
 		if (@h < @l) {
 			err->e = RE_ENEGCOUNT;
 			err->m = @l;
 			err->n = @h;
+			mark(&act_state->countstart, &@start);
+			mark(&act_state->countend,   &@end);
 			@!;
 		}
-		@c = ast_count(@l, @h);
+		AST_POS_OF_LX_POS(ast_start, @start);
+		AST_POS_OF_LX_POS(ast_end, @end);
+
+		@c = ast_count(@l, &ast_start, @h, &ast_end);
 	@};
 
 	<char-class-ast-literal>: (c :char) -> (n :char_class_ast) = @{
 		@n = re_char_class_ast_literal(@c);
 	@};
 
-	<char-class-ast-range>: (from :char, to :char) -> (n :char_class_ast) = @{
-		@n = re_char_class_ast_range(@from, @to);
+	<char-class-ast-range>: (from :char, start :pos, to :char, end :pos) -> (n :char_class_ast) = @{
+		struct ast_pos ast_start, ast_end;
+		AST_POS_OF_LX_POS(ast_start, @start);
+		AST_POS_OF_LX_POS(ast_end, @end);
+
+		@n = re_char_class_ast_range(@from, ast_start, @to, ast_end);
 	@};
 
 	<char-class-ast-concat>: (l :char_class_ast, r :char_class_ast) -> (n :char_class_ast) = @{
@@ -1272,8 +1291,13 @@
 		@n = re_char_class_ast_named_class(@id);
 	@};
 
-	<ast-expr-char-class>: (cca :char_class_ast) -> (n :ast_expr) = @{
-		@n = re_ast_expr_char_class(@cca);
+	<ast-expr-char-class>: (cca :char_class_ast, start :pos, end :pos) -> (n :ast_expr) = @{
+		struct ast_pos ast_start, ast_end;
+		AST_POS_OF_LX_POS(ast_start, @start);
+		AST_POS_OF_LX_POS(ast_end, @end);
+		mark(&act_state->groupstart, &@start);
+		mark(&act_state->groupend,   &@end);
+		@n = re_ast_expr_char_class(@cca, &ast_start, &ast_end);
 		if (@n == NULL) { @!; }
 	@};
 

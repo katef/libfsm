@@ -50,20 +50,23 @@ re_char_class_ast_literal(unsigned char c)
 	if (res == NULL) { return NULL; }
 	res->t = RE_CHAR_CLASS_AST_LITERAL;
 	res->u.literal.c = c;
-	LOG("-- %s: %p <- '%c'", __func__, (void *)res, c);
+	LOG("-- %s: %p <- '%c'\n", __func__, (void *)res, c);
 	return res;
 }
 
 
 struct re_char_class_ast *
-re_char_class_ast_range(unsigned char from, unsigned char to)
+re_char_class_ast_range(unsigned char from, struct ast_pos start,
+    unsigned char to, struct ast_pos end)
 {
 	struct re_char_class_ast *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
 	res->t = RE_CHAR_CLASS_AST_RANGE;
 	res->u.range.from = from;
+	res->u.range.start = start;
 	res->u.range.to = to;
-	LOG("-- %s: %p <- '%c'-'%c'", __func__, (void *)res, from, to);
+	res->u.range.end = end;
+	LOG("-- %s: %p <- '%c'-'%c'\n", __func__, (void *)res, from, to);
 	return res;
 }
 
@@ -84,7 +87,7 @@ re_char_class_ast_named_class(enum ast_class_id id)
 	if (res == NULL) { return NULL; }
 	res->t = RE_CHAR_CLASS_AST_NAMED;
 	res->u.named.id = id;
-	LOG("-- %s: %p <- [:%s:]", __func__, (void *)res, name_id_str(id));
+	LOG("-- %s: %p <- [:%s:]\n", __func__, (void *)res, name_id_str(id));
 	return res;
 }
 
@@ -97,7 +100,7 @@ re_char_class_ast_subtract(struct re_char_class_ast *ast,
 	res->t = RE_CHAR_CLASS_AST_SUBTRACT;
 	res->u.subtract.ast = ast;
 	res->u.subtract.mask = mask;
-	LOG("-- %s: %p <- %p ^ %p", __func__, (void *)res, (void *)ast, (void *)mask);
+	LOG("-- %s: %p <- %p ^ %p\n", __func__, (void *)res, (void *)ast, (void *)mask);
 	return res;
 }
 

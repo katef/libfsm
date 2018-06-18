@@ -58,7 +58,9 @@ enum ast_expr_type {
 #define AST_COUNT_UNBOUNDED ((unsigned)-1)
 struct ast_count {
 	unsigned low;
+	struct ast_pos start;
 	unsigned high;
+	struct ast_pos end;
 };
 
 /*
@@ -102,6 +104,8 @@ struct ast_expr {
 		} repeated;
 		struct {
 			struct re_char_class_ast *cca;
+			struct ast_pos start;
+			struct ast_pos end;
 		} class;
 		struct {
 			struct ast_expr *e;
@@ -138,7 +142,8 @@ struct ast_expr *
 re_ast_expr_with_count(struct ast_expr *e, struct ast_count count);
 
 struct ast_expr *
-re_ast_expr_char_class(struct re_char_class_ast *cca);
+re_ast_expr_char_class(struct re_char_class_ast *cca,
+    const struct ast_pos *start, const struct ast_pos *end);
 
 struct ast_expr *
 re_ast_expr_group(struct ast_expr *e);
@@ -147,6 +152,7 @@ void
 re_ast_prettyprint(FILE *f, struct ast_re *ast);
 
 struct ast_count
-ast_count(unsigned low, unsigned high);
+ast_count(unsigned low, const struct ast_pos *start,
+    unsigned high, const struct ast_pos *end);
 
 #endif

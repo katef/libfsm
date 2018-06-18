@@ -1,5 +1,7 @@
 #include "re_ast.h"
 
+#include <string.h>
+
 struct ast_re *
 re_ast_new(void)
 {
@@ -209,13 +211,16 @@ re_ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 }
 
 struct ast_expr *
-re_ast_expr_char_class(struct re_char_class_ast *cca)
+re_ast_expr_char_class(struct re_char_class_ast *cca,
+    const struct ast_pos *start, const struct ast_pos *end)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
 
 	res->t = AST_EXPR_CLASS;
 	res->u.class.cca = cca;
+	memcpy(&res->u.class.start, start, sizeof *start);
+	memcpy(&res->u.class.end, end, sizeof *end);
 	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)cca);
 	return res;
 }
@@ -316,10 +321,15 @@ re_ast_prettyprint(FILE *f, struct ast_re *ast)
 }
 
 struct ast_count
-ast_count(unsigned low, unsigned high)
+ast_count(unsigned low, const struct ast_pos *start,
+    unsigned high, const struct ast_pos *end)
 {
 	struct ast_count res;
+	memset(&res, 0x00, sizeof res);
 	res.low = low;
 	res.high = high;
+
+	if (start != NULL) { res.start = *start; }
+	if (end != NULL) { res.end = *end; }
 	return res;
 }

@@ -5,6 +5,16 @@
 #include <stdio.h>
 #include <assert.h>
 
+/* This is a duplicate of struct lx_pos, but since we're linking to
+ * code with several distinct lexers, there isn't a clear lexer.h
+ * to include here. The parser sees both definitions, and will
+ * build a `struct ast_pos` in the appropriate places. */
+struct ast_pos {
+	unsigned byte;
+	unsigned line;
+	unsigned col;
+};
+
 enum re_char_class_flags {
 	RE_CHAR_CLASS_FLAG_NONE = 0x00,
 	/* the class should be negated, e.g. [^aeiou] */
@@ -48,7 +58,6 @@ enum ast_class_id {
 	AST_CLASS_XDIGIT
 };
 
-
 /* TODO: opaque? */
 struct re_char_class_ast {
 	enum re_char_class_ast_type t;
@@ -62,7 +71,9 @@ struct re_char_class_ast {
 		} literal;
 		struct {
 			unsigned char from;
+			struct ast_pos start;
 			unsigned char to;
+			struct ast_pos end;
 		} range;
 		struct {
 			enum ast_class_id id;
@@ -85,7 +96,8 @@ struct re_char_class_ast *
 re_char_class_ast_literal(unsigned char c);
 
 struct re_char_class_ast *
-re_char_class_ast_range(unsigned char from, unsigned char to);
+re_char_class_ast_range(unsigned char from, struct ast_pos start,
+    unsigned char to, struct ast_pos end);
 
 struct re_char_class_ast *
 re_char_class_ast_flags(enum re_char_class_flags flags);
