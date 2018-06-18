@@ -9,9 +9,6 @@
 	pos;
 	char;
 	!unsigned;
-	!fsm;
-	!fsm_state;
-	!grp;
 	!pred;
 	!re_flags;
 	!err;
@@ -76,26 +73,6 @@
 	!ERROR;
 
 %productions%
-
-	!<make-group>: () -> (:grp);
-	!<invert-group>:    (:grp &) -> ();
-	!<group-add-char>:  (:grp &, :char) -> ();
-	!<group-add-class>: (:grp &, :fsm) -> ();
-	!<group-add-range>: (:grp &, :char, :char) -> ();
-	!<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
-
-	!<add-concat>:  () -> (:fsm_state);
-	!<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
-	!<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
-	!<add-pred>:   (:fsm_state, :fsm_state, :pred) -> ();
-	!<add-any>:     (:fsm_state, :fsm_state)        -> ();
-	!<add-class>:  (:fsm_state, :fsm_state, :fsm)  -> ();
-
-	!<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
-	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
-	!<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
-	!<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
-	!<count-1>: (:fsm_state, :fsm_state) -> ();
 
 	!<push-flags>;
 	!<pop-flags>;
