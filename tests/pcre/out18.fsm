@@ -1,0 +1,13 @@
+0  ->  1 "a"; # e.g. "a"
+1  ->  2 "b"; # e.g. "ab"
+2  ->  3 "["; # e.g. "ab["
+3  ->  4 "c"; # e.g. "ab[c"
+4  ->  5 "d"; # e.g. "ab[cd"
+5  ->  6 "e"; # e.g. "ab[cde"
+6  ->  7 "]"; # e.g. "ab[cde]"
+7  ->  8 "f"; # e.g. "ab[cde]f"
+8  ->  9 "g"; # e.g. "ab[cde]fg"
+9  -> 10 "\n"; # e.g. "ab[cde]fg\n"
+
+start: 0;
+end:   10;
