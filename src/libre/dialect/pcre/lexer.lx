@@ -87,6 +87,18 @@ class = '\' /[dDwWsS]/;
 	'\a' -> $esc;
 	'\c' /./ -> $control;
 
+        # other metacharacters that can be escaped within square brackets
+        # for consistency's sake, although it isn't strictly necessary
+        '\$' -> $esc;
+        '\.' -> $esc;
+        '\[' -> $esc;
+        '\|' -> $esc;
+        '\(' -> $esc;
+        '\?' -> $esc;
+        '\*' -> $esc;
+        '\+' -> $esc;
+        '\{' -> $esc;
+
 	# perl character class escapes
 	'\d' -> $class_digit;
 	'\D' -> $class_ndigit;
