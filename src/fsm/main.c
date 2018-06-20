@@ -150,9 +150,9 @@ static int
 	} a[] = {
 		{ "isdfa",      fsm_isdfa         },
 		{ "dfa",        fsm_isdfa         },
-		{ "count",      query_countstates }
+		{ "count",      query_countstates },
+		{ "iscomplete", fsm_iscomplete    }
 /* XXX:
-		{ "iscomplete", fsm_iscomplete },
 		{ "hasend",     fsm_hasend     },
 		{ "end",        fsm_hasend     },
 		{ "accept",     fsm_hasend     },
