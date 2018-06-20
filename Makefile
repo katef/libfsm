@@ -39,6 +39,7 @@ SUBDIR += src/re
 SUBDIR += src/lx/out
 SUBDIR += src/lx
 SUBDIR += src
+SUBDIR += tests/iscomplete
 SUBDIR += tests/isdfa
 SUBDIR += tests/intersect
 SUBDIR += tests/subtract
