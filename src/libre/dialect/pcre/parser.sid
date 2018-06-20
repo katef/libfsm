@@ -396,6 +396,9 @@
 
 		list-of-alts: () -> (n :ast_expr) = {
 			n = alt();
+		||
+			/* Explicitly allow e.g. (xyz|) */
+			n = <ast-expr-empty>();
 	  	||
 			a = alt();
 			ALT;
