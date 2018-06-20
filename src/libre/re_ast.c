@@ -2,6 +2,9 @@
 
 #include <string.h>
 
+static void
+re_flags_prettyprint(FILE *f, enum re_flags fl);
+
 struct ast_re *
 re_ast_new(void)
 {
@@ -21,6 +24,7 @@ free_iter(struct ast_expr *n)
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
 	case AST_EXPR_MANY:
+	case AST_EXPR_FLAGS:
 		break;
 
 	case AST_EXPR_CONCAT:
@@ -237,6 +241,21 @@ re_ast_expr_group(struct ast_expr *e)
 	return res;
 }
 
+struct ast_expr *
+re_ast_expr_re_flags(enum re_flags pos, enum re_flags neg)
+{
+	struct ast_expr *res = calloc(1, sizeof(*res));
+	if (res == NULL) { return res; }
+	res->t = AST_EXPR_FLAGS;
+	res->u.flags.pos = pos;
+	res->u.flags.neg = neg;
+	LOG("-- %s: %p <- pos %04x, neg %04x\n", __func__, (void *)res,
+	    (unsigned)pos, (unsigned)neg);
+	return res;
+}
+
+
+
 #define INDENT(F, IND)							\
 	do {								\
 		size_t i;						\
@@ -309,6 +328,13 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 		fprintf(f, "GROUP %p: %u\n", (void *)n, n->u.group.id);
 		pp_iter(f, indent + 1*IND, n->u.group.e);
 		break;
+	case AST_EXPR_FLAGS:
+		fprintf(f, "FLAGS %p: pos:(", (void *)n);
+		re_flags_prettyprint(f, n->u.flags.pos);
+		fprintf(f, "), neg:(");
+		re_flags_prettyprint(f, n->u.flags.neg);
+		fprintf(f, ")\n");
+		break;
 	default:
 		assert(0);
 	}
@@ -318,6 +344,18 @@ void
 re_ast_prettyprint(FILE *f, struct ast_re *ast)
 {
 	pp_iter(f, 0, ast->expr);
+}
+
+static void
+re_flags_prettyprint(FILE *f, enum re_flags fl)
+{
+	const char *sep = "";
+	if (fl & RE_ICASE) { fprintf(f, "%sicase", sep); sep = " "; }
+	if (fl & RE_TEXT) { fprintf(f, "%stext ", sep); sep = " "; }
+	if (fl & RE_MULTI) { fprintf(f, "%smulti ", sep); sep = " "; }
+	if (fl & RE_REVERSE) { fprintf(f, "%sreverse ", sep); sep = " "; }
+	if (fl & RE_SINGLE) { fprintf(f, "%ssingle ", sep); sep = " "; }
+	if (fl & RE_ZONE) { fprintf(f, "%szone ", sep); sep = " "; }
 }
 
 struct ast_count

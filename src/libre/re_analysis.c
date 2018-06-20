@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+
 struct analysis_env {
 	unsigned group_id;
 };
@@ -17,12 +18,14 @@ re_ast_analysis(struct ast_re *ast)
 {
 	struct analysis_env env;
 	if (ast == NULL) { return; }
-
 	memset(&env, 0x00, sizeof(env));
+
 	analysis_iter(&env, ast->expr);
 }
 
 /* Now that the AST is complete, do a pass filling in details. */
+/* TODO: extract traversal from the callback, so the individual
+ * analysis passes have an obvious focus. */
 static void
 analysis_iter(struct analysis_env *env, struct ast_expr *n)
 {
@@ -41,6 +44,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 
 	case AST_EXPR_ANY:
 	case AST_EXPR_MANY:
+	case AST_EXPR_FLAGS:
 		break;
 
 	case AST_EXPR_KLEENE:

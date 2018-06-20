@@ -33,7 +33,8 @@ enum re_flags {
 	RE_MULTI   = 1 << 2,
 	RE_REVERSE = 1 << 3,
 	RE_SINGLE  = 1 << 4,
-	RE_ZONE    = 1 << 5
+	RE_ZONE    = 1 << 5,
+	RE_FLAGS_NONE = 0
 };
 
 #define RE_ANCHOR (RE_TEXT | RE_MULTI | RE_ZONE)

@@ -46,17 +46,36 @@ comp_iter(struct comp_env *env,
 	case AST_EXPR_CONCAT:
 	{
 		struct fsm_state *z2;
+		struct ast_expr *l, *r;
 		NEWSTATE(z);
 		assert(n->u.concat.l != NULL);
 		assert(n->u.concat.r != NULL);
-		if (n->u.concat.l->t == AST_EXPR_LITERAL) {
-			RECURSE(x, z, n->u.concat.l);
-			RECURSE(z, y, n->u.concat.r);
+		l = n->u.concat.l;
+		r = n->u.concat.r;
+		if (l->t == AST_EXPR_FLAGS) {
+			/* Save the current flags in the flags node,
+			 * restore when done evaluating the concat
+			 * node's right subtree. */
+			l->u.flags.saved = env->flags;
+
+			/* Note: in cases like `(?i-i)`, the negative is
+			 * required to take precedence. */
+			env->flags |= l->u.flags.pos;
+			env->flags &=~ l->u.flags.neg;
+		}
+
+		if (l->t == AST_EXPR_LITERAL) {
+			RECURSE(x, z, l);
+			RECURSE(z, y, r);
 		} else {
 			NEWSTATE(z2);
-			RECURSE(x, z, n->u.concat.l);
+			RECURSE(x, z, l);
 			EPSILON(z, z2);
-			RECURSE(z2, y, n->u.concat.r);
+			RECURSE(z2, y, r);
+		}
+
+		if (l->t == AST_EXPR_FLAGS) {
+			env->flags = l->u.flags.saved;
 		}
 		break;
 	}
@@ -174,8 +193,13 @@ comp_iter(struct comp_env *env,
 	}
 
 	case AST_EXPR_GROUP:
-		/* TODO: annotate the FSM with group match info */
 		RECURSE(x, y, n->u.group.e);
+		break;
+
+	case AST_EXPR_FLAGS:
+		/* This is purely a metadata node, handled at analysis
+		 * time; just bridge the start and end nodes. */
+		EPSILON(x, y);
 		break;
 
 	default:

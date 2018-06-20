@@ -12,7 +12,10 @@
 
 #include "re_char_class.h"
 
-#if 0
+#define PRETTYPRINT_AST 0
+#define LOGGING 0
+
+#if LOGGING
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define LOG(...)
@@ -28,18 +31,6 @@
 /* Parse tree / Abstract syntax tree.
  * None of this should be exposed to the public API. */
 
-/* == literal == */
-
-/* fwd refs */
-
-struct ast_re;			/* toplevel struct */
-
-struct ast_expr;		/* expression: main recursive node */
-
-struct ast_re {
-	struct ast_expr *expr;
-};
-
 enum ast_expr_type {
 	AST_EXPR_EMPTY,
 	AST_EXPR_CONCAT,
@@ -52,7 +43,8 @@ enum ast_expr_type {
 	AST_EXPR_OPT,
 	AST_EXPR_REPEATED,
 	AST_EXPR_CLASS,
-	AST_EXPR_GROUP
+	AST_EXPR_GROUP,
+	AST_EXPR_FLAGS
 };
 
 #define AST_COUNT_UNBOUNDED ((unsigned)-1)
@@ -111,7 +103,20 @@ struct ast_expr {
 			struct ast_expr *e;
 			unsigned id;
 		} group;
+		struct {
+			enum re_flags pos;
+			enum re_flags neg;
+			/* Previous flags, saved here and restored
+			 * when done compiling the flags node's subtree.
+			 * Since `struct ast_expr` contains a union,
+			 * this space is already allocated. */
+			enum re_flags saved;
+		} flags;
 	} u;	
+};
+
+struct ast_re {
+	struct ast_expr *expr;
 };
 
 struct ast_re *
@@ -147,6 +152,9 @@ re_ast_expr_char_class(struct re_char_class_ast *cca,
 
 struct ast_expr *
 re_ast_expr_group(struct ast_expr *e);
+
+struct ast_expr *
+re_ast_expr_re_flags(enum re_flags pos, enum re_flags neg);
 
 void
 re_ast_prettyprint(FILE *f, struct ast_re *ast);

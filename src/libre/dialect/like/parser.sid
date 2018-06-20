@@ -80,17 +80,6 @@
 	!<set-flag>: (:re_flags) -> ();
 	!<clear-flag>: (:re_flags) -> ();
 
-	!<err-expected-term>;
-	!<err-expected-count>;
-	!<err-expected-atoms>;
-	!<err-expected-alts>;
-	!<err-expected-range>;
-	!<err-expected-closegroup>;
-	!<err-unknown-flag>;
-	!<err-expected-closeflags>;
-	!<err-expected-groupbody>;
-	<err-expected-eof>;
-
 	<ast-expr-empty>: () -> (:ast_expr);
 	<ast-expr-literal>: (:char) -> (:ast_expr);
 	<ast-expr-concat>: (:ast_expr, :ast_expr) -> (:ast_expr);
@@ -103,6 +92,7 @@
         !<ast-expr-atom-many>: (:ast_count) -> (:ast_expr);
 	!<ast-expr-char-class>: (:char_class_ast, :pos, :pos) -> (:ast_expr);
         !<ast-expr-group>: (:ast_expr) -> (:ast_expr);
+	!<ast-expr-re-flags>: (:re_flags, :re_flags) -> (:ast_expr);
 
         !<atom-kleene>: () -> (:ast_count);
         !<atom-plus>: () -> (:ast_count);
@@ -116,6 +106,20 @@
 	!<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	!<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	!<char-class-ast-named-class>: (:ast_class_id) -> (:char_class_ast);
+
+	!<re-flag-none>: () -> (:re_flags);
+	!<re-flag-union>: (:re_flags, :re_flags) -> (:re_flags);
+
+	!<err-expected-term>;
+	!<err-expected-count>;
+	!<err-expected-atoms>;
+	!<err-expected-alts>;
+	!<err-expected-range>;
+	!<err-expected-closegroup>;
+	!<err-unknown-flag>;
+	!<err-expected-closeflags>;
+	!<err-expected-groupbody>;
+	<err-expected-eof>;
 
 	!<char-class-ast-flag-none>: () -> (:char_class_ast);
 	!<char-class-ast-flag-invert>: () -> (:char_class_ast);

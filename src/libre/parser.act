@@ -967,6 +967,18 @@
 		@f = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_INVERTED | RE_CHAR_CLASS_FLAG_MINUS);
 	@};
 
+	<re-flag-none>: () -> (f :re_flags) = @{
+	        @f = RE_FLAGS_NONE;
+	@};
+
+	<re-flag-union>: (in :re_flags, flag :re_flags) -> (out :re_flags) = @{
+		@out = @in | @flag;
+	@};
+
+	<ast-expr-re-flags>: (pos :re_flags, neg :re_flags) -> (n :ast_expr) = @{
+		@n = re_ast_expr_re_flags(@pos, @neg);
+	@};
+
 %trailer% @{
 
 	static int
