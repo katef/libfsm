@@ -168,8 +168,14 @@ static int
 		}
 	}
 
-	fprintf(stderr, "unrecognised query; valid queries are: "
-		"iscomplete, isdfa, hasend, count\n");
+	fprintf(stderr, "unrecognised query; valid queries are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
 	exit(EXIT_FAILURE);
 }
 
@@ -214,10 +220,14 @@ op_name(const char *name)
 		}
 	}
 
-	fprintf(stderr, "unrecognised operation; valid operations are: "
-		"complete, "
-		"complement, invert, reverse, determinise, minimise, trim, "
-		"concat, union, intersect, subtract, equal\n");
+	fprintf(stderr, "unrecognised operation; valid operations are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
 	exit(EXIT_FAILURE);
 }
 
