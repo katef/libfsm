@@ -41,6 +41,7 @@ SUBDIR += src/lx
 SUBDIR += src
 SUBDIR += tests/iscomplete
 SUBDIR += tests/isdfa
+SUBDIR += tests/hasend
 SUBDIR += tests/intersect
 SUBDIR += tests/subtract
 SUBDIR += tests/determinise

@@ -1,0 +1,8 @@
+
+# The `fsm -q hasend` query searches over all disjoint subgraphs,
+# not just the states which are reachable. This is intentional;
+# use `fsm -t trim` to eliminate those subgraphs.
+
+start: 0;
+end:   1;
+
