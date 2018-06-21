@@ -37,28 +37,23 @@
 '\n' -> $esc;
 '\r' -> $esc;
 '\t' -> $esc;
-'\v' -> $esc;
 
 # perl/unix-ish escapes
 '\a' -> $esc;
 '\c' /./ -> $control;
 
-# perl character class escapes
-'\d' -> $class_digit;
-'\D' -> $class_ndigit;
-'\w' -> $class_word;
-'\W' -> $class_nword;
-'\s' -> $class_space;
-'\S' -> $class_nspace;
-
-class = '\' /[dDwWsS]/;
+# character type escapes
+# Note: these need to be their own lexemes distinct from named character
+# classes such as /[:digit:]/, as they are allowed in different contexts
+char_type = '\' /[dDhHsSvVwWN]/;
+char_type -> $char_type;
 
 '\'   /[0-7]{1,3}/     -> $oct;
 '\o{' /[0-7]+/i '}'    -> $oct;
 '\x'  /[0-9a-f]{1,2}/i -> $hex;
 '\x{' /[0-9a-f]+/i '}' -> $hex;
 
-'\' /./ - ($esc | $control | $oct | $hex | '\Q' | class) -> $noesc;
+'\' /./ - ($esc | $control | $oct | $hex | '\Q' | char_type) -> $noesc;
 '\' -> $invalid;
 
 '(?' -> $openflags .. ')' -> $closeflags {
@@ -81,7 +76,6 @@ class = '\' /[dDwWsS]/;
 	'\n' -> $esc;
 	'\r' -> $esc;
 	'\t' -> $esc;
-	'\v' -> $esc;
 
 	# perl/unix-ish escapes
 	'\a' -> $esc;
@@ -99,24 +93,18 @@ class = '\' /[dDwWsS]/;
         '\+' -> $esc;
         '\{' -> $esc;
 
-	# perl character class escapes
-	'\d' -> $class_digit;
-	'\D' -> $class_ndigit;
-	'\w' -> $class_word;
-	'\W' -> $class_nword;
-	'\s' -> $class_space;
-	'\S' -> $class_nspace;
-
-	class = '\' /[dDwWsS]/;
+	char_type = '\' /[dDhHsSvVwWN]/;
+	char_type -> $char_type;
 
 	'\'   /[0-7]{1,3}/     -> $oct;
 	'\o{' /[0-7]+/i '}'    -> $oct;
 	'\x'  /[0-9a-f]{1,2}/i -> $hex;
 	'\x{' /[0-9a-f]+/i '}' -> $hex;
 
-	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | class) -> $noesc;
+	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | char_type) -> $noesc;
 	'\' -> $invalid;
 
+        # FIXME: negated character classes, e.g. [:^alpha:]
 	'[:alnum:]'  -> $class_alnum;
 	'[:alpha:]'  -> $class_alpha;
 	'[:ascii:]'  -> $class_ascii;

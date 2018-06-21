@@ -39,6 +39,7 @@ enum re_char_class_ast_type {
 	RE_CHAR_CLASS_AST_SUBTRACT
 };
 
+/* These are used for named character classes, such as [:alnum:]. */
 enum ast_class_id {
 	AST_CLASS_ALNUM,
 	AST_CLASS_ALPHA,

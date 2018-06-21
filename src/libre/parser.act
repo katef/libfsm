@@ -113,6 +113,7 @@
 	typedef enum re_flags t_re__flags;
 	typedef struct grp t_grp;
 	typedef enum ast_class_id t_ast__class__id;
+	/* typedef enum ast_char_type_id t_ast__char__type__id; */
 	typedef struct ast_count t_ast__count;
 
 	typedef struct re_char_class_ast * t_char__class__ast;
@@ -699,6 +700,11 @@
 
 		@n = (unsigned int) u;
 	@};
+
+	/* CHAR_TYPE: () -> (id :ast_char_type_id) = @{
+	 * 	/\* TODO *\/
+	 * @}; */
+		
 
 	FLAG_INSENSITIVE: () -> (flag :re_flags) = @{
 		@flag = RE_ICASE;

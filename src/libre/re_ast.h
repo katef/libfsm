@@ -43,6 +43,7 @@ enum ast_expr_type {
 	AST_EXPR_OPT,
 	AST_EXPR_REPEATED,
 	AST_EXPR_CLASS,
+	AST_EXPR_CHAR_TYPE,
 	AST_EXPR_GROUP,
 	AST_EXPR_FLAGS
 };
@@ -53,6 +54,26 @@ struct ast_count {
 	struct ast_pos start;
 	unsigned high;
 	struct ast_pos end;
+};
+
+/* These are used for character type set, such as \D (non-digit)
+ * or \v (vertical whitespace), which can be used in slightly different
+ * ways from named character classes in PCRE. */
+enum ast_char_type_id {
+	/* lowercase: [dhsvw] */
+	AST_CHAR_TYPE_DECIMAL,
+	AST_CHAR_TYPE_HORIZ_WS,
+	AST_CHAR_TYPE_WS,
+	AST_CHAR_TYPE_VERT_WS,
+	AST_CHAR_TYPE_WORD, 	/* [:alnum:] | '_' */
+	/* uppercase: [DHSVWN] */
+	AST_CHAR_TYPE_NON_DECIMAL,
+	AST_CHAR_TYPE_NON_HORIZ_WS,
+	AST_CHAR_TYPE_NON_WS,
+	AST_CHAR_TYPE_NON_VERT_WS,
+	AST_CHAR_TYPE_NON_WORD,
+	/* inverse of /\n/, same as /./, unless DOTALL flag is set */
+	AST_CHAR_TYPE_NON_NL
 };
 
 /*
@@ -99,6 +120,9 @@ struct ast_expr {
 			struct ast_pos start;
 			struct ast_pos end;
 		} class;
+		struct {
+			enum ast_char_type_id id;
+		} char_type;
 		struct {
 			struct ast_expr *e;
 			unsigned id;

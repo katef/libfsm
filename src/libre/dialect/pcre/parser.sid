@@ -20,6 +20,7 @@
 	!err;
 	ast_expr;
         ast_class_id;
+        /* ast_char_type_id; */
 	ast_count;
 	char_class_ast;
 
@@ -75,6 +76,7 @@
 	!START:   () -> (:pred);
 	!END:     () -> (:pred);
 	COUNT:   () -> (:unsigned);
+	/* CHAR_TYPE: () -> (:ast_class_id); */
 
 	EOF;
 	!ERROR;
@@ -150,6 +152,11 @@
 			n = <ast-expr-literal>(c);
 		};
 		    
+		/* char-type: () -> (n :ast_expr) [
+		 * 
+		 * ] = {
+		 * }; */
+
 		char-class: () -> (n :ast_expr) [
 			char-class-head: () -> (f :char_class_ast) = {
 				(!) = INVERT;
