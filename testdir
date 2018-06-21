@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# note: DIR only really works for regex dialects, here
+DIR="$1"
+
+RE=build/bin/re
+#RE=re
+FSM=build/bin/fsm
+
+PASSES=0
+FAILS=0
+
+if [ -z "${DIR}" ]; then
+    echo "usage: $0 DIR"
+else
+    for t in tests/${DIR}/in*.re; do
+        OUT_RE="${t//in/out}"
+        OUT=${OUT_RE/\.re/.fsm}
+        NUM=$(echo ${OUT} | sed -e 's#.*/##' -e 's/fsm/out/')
+
+        # -y <-> "yfiles", meaning, load from file
+        ${RE} -r "${DIR}" -p -y $t > tmp/${NUM} 2>/dev/null
+
+        ${FSM} -t equal "${OUT}" "tmp/${NUM}" 2>/dev/null
+        if [ $? == 0 ];
+        then
+            echo "PASS ${t}"
+            PASSES=$((${PASSES} + 1))
+        else
+            echo "FAIL ${t}"
+            FAILS=$((${FAILS} + 1))
+        fi
+    done
+
+    for t in tests/${DIR}/error*.re; do
+        EXP=${t/\.re/.msg}
+        TMP_OUT=$(echo ${EXP} | sed -e 's#.*/##' -e 's/fsm/err/')
+        ${RE} -r "${DIR}" -p -y $t 2> tmp/${TMP_OUT}
+
+        # echo "=== exp:"
+        # cat ${EXP}
+
+        # echo "=== got:"
+        # cat tmp/${TMP_OUT}
+
+        diff ${EXP} tmp/${TMP_OUT}
+        if [ $? == 0 ];
+        then
+            echo "PASS ${t}"
+            PASSES=$((${PASSES} + 1))
+        else
+            echo "FAIL ${t}"
+            FAILS=$((${FAILS} + 1))
+        fi
+    done
+fi
+
+echo "passes ${PASSES}, fails ${FAILS}"
