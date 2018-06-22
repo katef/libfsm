@@ -56,29 +56,9 @@ struct ast_count {
 	struct ast_pos end;
 };
 
-/* These are used for character type set, such as \D (non-digit)
- * or \v (vertical whitespace), which can be used in slightly different
- * ways from named character classes in PCRE. */
-enum ast_char_type_id {
-	/* lowercase: [dhsvw] */
-	AST_CHAR_TYPE_DECIMAL,
-	AST_CHAR_TYPE_HORIZ_WS,
-	AST_CHAR_TYPE_WS,
-	AST_CHAR_TYPE_VERT_WS,
-	AST_CHAR_TYPE_WORD, 	/* [:alnum:] | '_' */
-	/* uppercase: [DHSVWN] */
-	AST_CHAR_TYPE_NON_DECIMAL,
-	AST_CHAR_TYPE_NON_HORIZ_WS,
-	AST_CHAR_TYPE_NON_WS,
-	AST_CHAR_TYPE_NON_VERT_WS,
-	AST_CHAR_TYPE_NON_WORD,
-	/* inverse of /\n/, same as /./, unless DOTALL flag is set */
-	AST_CHAR_TYPE_NON_NL
-};
-
 /*
  * The following regular expression fragments map to associated fsm states
- * as follows (transitions written in .fsm format):
+= * as follows (transitions written in .fsm format):
  *
  *  ab    concat:      1 -> 3 "a"; 3 -> 2 "b";
  *  a|b   alt:         1 -> 2 "a"; 1 -> 2 "b";
@@ -173,6 +153,9 @@ re_ast_expr_with_count(struct ast_expr *e, struct ast_count count);
 struct ast_expr *
 re_ast_expr_char_class(struct re_char_class_ast *cca,
     const struct ast_pos *start, const struct ast_pos *end);
+
+struct ast_expr *
+re_ast_expr_char_type(enum ast_char_type_id id);
 
 struct ast_expr *
 re_ast_expr_group(struct ast_expr *e);

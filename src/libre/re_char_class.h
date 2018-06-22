@@ -59,6 +59,27 @@ enum ast_class_id {
 	AST_CLASS_XDIGIT
 };
 
+/* These are used for character type set, such as \D (non-digit)
+ * or \v (vertical whitespace), which can be used in slightly different
+ * ways from named character classes in PCRE. They can appear inside
+ * of a character class (including in a range), or on their own. */
+enum ast_char_type_id {
+	/* lowercase: [dhsvw] */
+	AST_CHAR_TYPE_DECIMAL,
+	AST_CHAR_TYPE_HORIZ_WS,
+	AST_CHAR_TYPE_WS,
+	AST_CHAR_TYPE_VERT_WS,
+	AST_CHAR_TYPE_WORD, 	/* [:alnum:] | '_' */
+	/* uppercase: [DHSVWN] */
+	AST_CHAR_TYPE_NON_DECIMAL,
+	AST_CHAR_TYPE_NON_HORIZ_WS,
+	AST_CHAR_TYPE_NON_WS,
+	AST_CHAR_TYPE_NON_VERT_WS,
+	AST_CHAR_TYPE_NON_WORD,
+	/* inverse of /\n/, same as /./, unless DOTALL flag is set */
+	AST_CHAR_TYPE_NON_NL
+};
+
 /* TODO: opaque? */
 struct re_char_class_ast {
 	enum re_char_class_ast_type t;
@@ -120,7 +141,14 @@ re_char_class_ast_free(struct re_char_class_ast *ast);
 struct re_char_class *
 re_char_class_ast_compile(struct re_char_class_ast *cca);
 
+/* Convert a char type (outside of a char class) into a char class.  */
+struct re_char_class *
+re_char_class_type_compile(enum ast_char_type_id id);
+
 void
 ast_char_class_dump(FILE *f, struct re_char_class *c);
+
+void
+re_char_class_free(struct re_char_class *cc);
 
 #endif

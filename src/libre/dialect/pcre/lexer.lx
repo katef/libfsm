@@ -46,7 +46,7 @@
 # Note: these need to be their own lexemes distinct from named character
 # classes such as /[:digit:]/, as they are allowed in different contexts
 char_type = '\' /[dDhHsSvVwWN]/;
-char_type -> $char_type;
+char_type -> $char__type;
 
 '\'   /[0-7]{1,3}/     -> $oct;
 '\o{' /[0-7]+/i '}'    -> $oct;

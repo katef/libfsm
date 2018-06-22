@@ -21,6 +21,7 @@
         ast_class_id;
 	ast_count;
 	char_class_ast;
+        !ast_char_type_id;
 
 %terminals%
 
@@ -73,6 +74,7 @@
 	!START:    () -> (:pred);
 	!END:      () -> (:pred);
 	COUNT:    () -> (:unsigned);
+	!CHAR_TYPE: () -> (:ast_char_type_id);
 
 	EOF;
 	!ERROR;
@@ -92,6 +94,7 @@
 	<ast-expr-char-class>: (:char_class_ast, :pos, :pos) -> (:ast_expr);
         <ast-expr-group>: (:ast_expr) -> (:ast_expr);
 	!<ast-expr-re-flags>: (:re_flags, :re_flags) -> (:ast_expr);
+	!<ast-expr-char-type>: (:ast_char_type_id) -> (:ast_expr);
 
 	!<push-flags>;
 	!<pop-flags>;

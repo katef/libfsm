@@ -25,6 +25,7 @@ free_iter(struct ast_expr *n)
 	case AST_EXPR_ANY:
 	case AST_EXPR_MANY:
 	case AST_EXPR_FLAGS:
+	case AST_EXPR_CHAR_TYPE:
 		break;
 
 	case AST_EXPR_CONCAT:
@@ -230,6 +231,18 @@ re_ast_expr_char_class(struct re_char_class_ast *cca,
 }
 
 struct ast_expr *
+re_ast_expr_char_type(enum ast_char_type_id id)
+{
+	struct ast_expr *res = calloc(1, sizeof(*res));
+	if (res == NULL) { return res; }
+
+	res->t = AST_EXPR_CHAR_TYPE;
+	res->u.char_type.id = id;
+	LOG("-- %s: %p <- %d\n", __func__, (void *)res, id);
+	return res;
+}
+
+struct ast_expr *
 re_ast_expr_group(struct ast_expr *e)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
@@ -323,6 +336,9 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 		fprintf(f, "CLASS %p: \n", (void *)n);
 		re_char_class_ast_prettyprint(f, n->u.class.cca, indent + IND);
 		fprintf(f, "\n");
+		break;
+	case AST_EXPR_CHAR_TYPE:
+		fprintf(f, "CHAR_TYPE %p: %d\n", (void *)n, n->u.char_type.id);
 		break;
 	case AST_EXPR_GROUP:
 		fprintf(f, "GROUP %p: %u\n", (void *)n, n->u.group.id);

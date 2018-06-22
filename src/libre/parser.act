@@ -113,7 +113,7 @@
 	typedef enum re_flags t_re__flags;
 	typedef struct grp t_grp;
 	typedef enum ast_class_id t_ast__class__id;
-	/* typedef enum ast_char_type_id t_ast__char__type__id; */
+	typedef enum ast_char_type_id t_ast__char__type__id;
 	typedef struct ast_count t_ast__count;
 
 	typedef struct re_char_class_ast * t_char__class__ast;
@@ -701,9 +701,10 @@
 		@n = (unsigned int) u;
 	@};
 
-	/* CHAR_TYPE: () -> (id :ast_char_type_id) = @{
-	 * 	/\* TODO *\/
-	 * @}; */
+	CHAR_TYPE: () -> (id :ast_char_type_id) = @{
+		/* TODO use string contents */
+		@id = AST_CHAR_TYPE_DECIMAL;
+	@};
 		
 
 	FLAG_INSENSITIVE: () -> (flag :re_flags) = @{
@@ -956,6 +957,10 @@
 		if (@n == NULL) { @!; }
 	@};
 
+	<ast-expr-char-type>: (id :ast_char_type_id) -> (n :ast_expr) = @{
+		@n = re_ast_expr_char_type(@id);
+		if (@n == NULL) { @!; }
+	@};
 
 	<char-class-ast-flag-none>: () -> (f :char_class_ast) = @{
 		@f = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_NONE);

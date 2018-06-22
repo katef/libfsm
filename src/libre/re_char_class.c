@@ -5,6 +5,9 @@
 
 #define TRACE_OPERATIONS 0
 
+typedef int char_class_filter(int c);
+typedef int char_type_filter(int c);
+
 static void
 cc_free(struct re_char_class *cc);
 
@@ -16,6 +19,9 @@ cc_add_range(struct re_char_class *cc, unsigned char from, unsigned char to);
 
 static int
 cc_add_named_class(struct re_char_class *cc, enum ast_class_id id);
+
+static int
+cc_add_char_type(struct re_char_class *cc, enum ast_char_type_id id);
 
 static void
 cc_invert(struct re_char_class *cc);
@@ -228,7 +234,7 @@ re_char_class_ast_free(struct re_char_class_ast *ast)
 	free_iter(ast);
 }
 
-static void
+void
 re_char_class_free(struct re_char_class *cc)
 {
 	free(cc);
@@ -299,6 +305,18 @@ re_char_class_ast_compile(struct re_char_class_ast *cca)
 	return res;
 }
 
+struct re_char_class *
+re_char_class_type_compile(enum ast_char_type_id id)
+{
+	struct re_char_class *res = calloc(1, sizeof(*res));
+	if (res == NULL) { return NULL; }
+
+	cc_add_char_type(res, id);
+	
+	return res;
+}
+
+
 static void
 bitset_pos(unsigned char byte, unsigned *pos, unsigned char *bit)
 {
@@ -337,15 +355,13 @@ cc_add_range(struct re_char_class *cc, unsigned char from, unsigned char to)
 	for (i = from; i <= to; i++) {
 		cc_add_byte(cc, i);		
 	}
-	
 }
 
 static int
 cc_add_named_class(struct re_char_class *cc, enum ast_class_id id)
 {
 	unsigned i;
-	typedef int class_predicate_fun(int c);
-	class_predicate_fun *filter = NULL;
+	char_class_filter *filter = NULL;
 	assert(cc != NULL);
 
 	switch (id) {
@@ -397,6 +413,100 @@ cc_add_named_class(struct re_char_class *cc, enum ast_class_id id)
 	for (i = 0; i < 256; i++) {
 		if (filter(i)) { cc_add_byte(cc, i); }
 	}
+	return 1;
+}
+
+static int
+f_hws(int c)
+{
+	switch (c) {
+	case ' ':
+	case '\t':
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+static int
+f_vws(int c)
+{
+	switch (c) {
+	case '\x0a':		/* AKA '\n' */
+	case '\x0b':		/* vertical tab */
+	case '\x0c':		/* form feed */
+	case '\x0d':		/* AKA '\r' */
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+static int
+f_word(int c)
+{
+	if (isalnum(c)) { return 1; }
+	if (c == '_') { return 1; }
+	return 0;
+}
+
+static int
+f_nl(int c)
+{
+	return (c == '\n');
+}
+
+static int
+cc_add_char_type(struct re_char_class *cc, enum ast_char_type_id id)
+{
+	int negated;
+	unsigned i;
+	char_type_filter *filter = NULL;
+	assert(cc != NULL);
+
+	switch (id) {
+	case AST_CHAR_TYPE_DECIMAL:
+		filter = isdigit; negated = 0; break;
+	case AST_CHAR_TYPE_HORIZ_WS:
+		filter = f_hws; negated = 0; break;
+	case AST_CHAR_TYPE_WS:
+		filter = isspace; negated = 0; break;
+	case AST_CHAR_TYPE_VERT_WS:
+		filter = f_vws; negated = 0; break;
+	case AST_CHAR_TYPE_WORD:
+		filter = f_word; negated = 0; break;
+
+	/* negated */
+	case AST_CHAR_TYPE_NON_DECIMAL:
+		filter = isdigit; negated = 1; break;
+	case AST_CHAR_TYPE_NON_HORIZ_WS:
+		filter = f_hws; negated = 1; break;
+	case AST_CHAR_TYPE_NON_WS:
+		filter = isspace; negated = 1; break;
+	case AST_CHAR_TYPE_NON_VERT_WS:
+		filter = f_vws; negated = 1; break;
+	case AST_CHAR_TYPE_NON_WORD:
+		filter = f_word; negated = 1; break;
+	case AST_CHAR_TYPE_NON_NL:
+		filter = f_nl; negated = 1; break;
+
+	default:
+		fprintf(stderr, "(MATCH FAIL)\n");
+		assert(0);
+	}
+
+	if (filter == NULL) {
+		return 0;
+	}
+
+	for (i = 0; i < 256; i++) {
+		if (filter(i)) { cc_add_byte(cc, i); }
+	}
+
+	if (negated) {
+		cc_invert(cc);
+	}
+	
 	return 1;
 }
 
