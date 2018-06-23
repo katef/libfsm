@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include <limits.h>
 #include <errno.h>
 #include <stdio.h>
@@ -254,8 +255,7 @@ make_ir(const struct fsm *fsm)
 		if (!fsm->opt->comments) {
 			ir->states[i].example = NULL;
 		} else {
-			/* XXX: examples ought to be up to the number of states in the fsm */
-			char buf[50];
+			char *p;
 			int n;
 
 			if (s == fsm->start) {
@@ -263,22 +263,38 @@ make_ir(const struct fsm *fsm)
 				continue;
 			}
 
-			n = fsm_example(fsm, s, buf, sizeof buf);
-			if (-1 == n) {
-/* XXX:
-perror("fsm_example");
-*/
+			/*
+			 * Example lengths are approximately proportional
+			 * to the number of states in an fsm, and shorter where
+			 * the graph branches often.
+			 */
+			p = malloc(ir->n + 3 + 1);
+			if (p == NULL) {
 				return NULL;
 			}
 
-/* TODO:
-			snprintf(buf, sizeof buf, "%s%s", buf,
-				n >= (int) sizeof buf - 1 ? "..." : "");
+			n = fsm_example(fsm, s, p, ir->n + 1);
+			if (-1 == n) {
+				return NULL;
+			}
 
-			ir->states[i].example = strdup(buf);
-*/
+			if ((size_t) n < ir->n + 1) {
+				char *tmp;
 
-			ir->states[i].example = "TODO";
+				n = strlen(p);
+
+				tmp = realloc(p, n + 1);
+				if (tmp == NULL) {
+					/* XXX */
+					return NULL;
+				}
+
+				p = tmp;
+			} else if ((size_t) n > ir->n + 1) {
+				strcpy(p + ir->n, "...");
+			}
+
+			ir->states[i].example = p;
 		}
 	}
 
