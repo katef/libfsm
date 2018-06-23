@@ -116,6 +116,7 @@ language(const char *name)
 		{ "csv",  FSM_OUT_CSV  },
 		{ "dot",  FSM_OUT_DOT  },
 		{ "fsm",  FSM_OUT_FSM  },
+		{ "ir",   FSM_OUT_IR   },
 		{ "json", FSM_OUT_JSON }
 	};
 

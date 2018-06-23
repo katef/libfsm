@@ -17,6 +17,7 @@ enum fsm_out {
 	FSM_OUT_CSV,
 	FSM_OUT_DOT,
 	FSM_OUT_FSM,
+	FSM_OUT_IR,
 	FSM_OUT_JSON
 };
 
@@ -35,6 +36,7 @@ enum fsm_io {
  *  FSM_OUT_CSV  - A comma-separated state transition matrix
  *  FSM_OUT_DOT  - Graphviz Dot format, intended for rendering graphically
  *  FSM_OUT_FSM  - fsm(5) .fsm format, suitable for parsing by fsm(1)
+ *  FSM_OUT_IR   - Codegen IR
  *  FSM_OUT_JSON - JavaScript Object Notation
  *
  * The output options may be NULL, indicating to use defaults.

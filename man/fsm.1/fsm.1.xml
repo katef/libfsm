@@ -47,6 +47,7 @@
 	<!ENTITY csv.lit  "<literal>csv</literal>">
 	<!ENTITY dot.lit  "<literal>dot</literal>">
 	<!ENTITY fsm.lit  "<literal>fsm</literal>">
+	<!ENTITY ir.lit   "<literal>ir</literal>">
 	<!ENTITY json.lit "<literal>json</literal>">
 ]>
 
