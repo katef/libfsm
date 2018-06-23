@@ -218,10 +218,12 @@ make_ir(const struct fsm *fsm)
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
-	assert(fsm_all(fsm, fsm_isdfa));
-
-	/* TODO: prerequisite that the FSM is a DFA */
 	assert(fsm->start != NULL);
+
+	if (!fsm_all(fsm, fsm_isdfa)) {
+		errno = EINVAL;
+		return NULL;
+	}
 
 	ir = malloc(sizeof *ir);
 	if (ir == NULL) {

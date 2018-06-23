@@ -19,13 +19,14 @@
 
 #include "libfsm/internal.h" /* XXX */
 #include "libfsm/out.h" /* XXX */
+#include "libfsm/out/ir.h" /* XXX */
 
 #include "lx/out.h"
 #include "lx/ast.h"
 
 /* XXX: abstraction */
 int
-fsm_out_cfrag(const struct fsm *fsm, FILE *f,
+fsm_out_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
 	int (*leaf)(FILE *, const void *state_opaque, const void *leaf_opaque),
 	const void *opaque);
@@ -747,6 +748,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		const struct fsm_options *tmp;
 		static const struct fsm_options defaults;
 		struct fsm_options o = defaults;
+		struct ir *ir;
 
 		tmp = z->fsm->opt;
 
@@ -759,9 +761,16 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 		assert(opt.cp != NULL);
 
+		ir = make_ir(z->fsm);
+		if (ir == NULL) {
+			/* TODO */
+		}
+
 		/* XXX: abstraction */
-		(void) fsm_out_cfrag(z->fsm, f, opt.cp,
+		(void) fsm_out_cfrag(f, ir, &o, opt.cp,
 			z->fsm->opt->leaf != NULL ? z->fsm->opt->leaf : leaf, z->fsm->opt->leaf_opaque);
+
+		/* TODO: free ir */
 
 		z->fsm->opt = tmp;
 	}

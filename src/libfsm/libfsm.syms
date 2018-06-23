@@ -85,3 +85,4 @@ fsm_fgetc
 fsm_sgetc
 
 fsm_out_cfrag # XXX: workaround for lx
+make_ir # XXX: workaround for lx

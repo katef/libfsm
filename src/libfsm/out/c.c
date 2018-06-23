@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 #include <limits.h>
 #include <ctype.h>
 #include <errno.h>
@@ -22,22 +23,32 @@
 #include "libfsm/internal.h"
 #include "libfsm/out.h"
 
+#include "ir.h"
+
 static unsigned int
-indexof(const struct fsm *fsm, const struct fsm_state *state)
+ir_indexof(const struct ir *ir, const struct ir_state *cs)
 {
-	struct fsm_state *s;
-	unsigned int i;
+	assert(ir != NULL);
+	assert(cs != NULL);
+	assert(cs >= ir->states);
 
-	assert(fsm != NULL);
-	assert(state != NULL);
+	return cs - ir->states;
+}
 
-	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
-		if (s == state) {
-			return i;
+static int
+ir_hasend(const struct ir *ir)
+{
+	size_t i;
+
+	assert(ir != NULL);
+	assert(ir->states != NULL);
+
+	for (i = 0; i < ir->n; i++) {
+		if (ir->states[i].isend) {
+			return 1;
 		}
 	}
 
-	assert(!"unreached");
 	return 0;
 }
 
@@ -149,145 +160,115 @@ leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
 }
 
 static void
-singlecase(FILE *f, const struct fsm *fsm,
+out_ranges(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+	struct ir_state *cs,
+	struct ir_range *ranges, size_t n)
+{
+	size_t i;
+
+	assert(ir != NULL);
+	assert(opt != NULL);
+	assert(cs != NULL);
+	assert(ranges != NULL);
+
+	for (i = 0; i < n; i++) {
+		size_t j;
+
+		assert(ranges[i].end >= ranges[i].start);
+
+		if (opt->case_ranges && ranges[i].end > ranges[i].start) {
+			fprintf(f, "\t\t\tcase ");
+			escputchar(opt, ranges[i].start, f);
+			fprintf(f, " ... ");
+			escputchar(opt, ranges[i].end, f);
+			fprintf(f, ":");
+		} else for (j = ranges[i].start; j <= ranges[i].end; j++) {
+			fprintf(f, "\t\t\tcase ");
+			escputchar(opt, j, f);
+			fprintf(f, ":");
+
+			if (j + 1 <= ranges[i].end) {
+				fprintf(f, "\n");
+			}
+		}
+
+		/* TODO: fall-through to the following range if its destination is equal */
+
+		/* TODO: pad S%u out to maximum state width */
+		if (ranges[i].to != cs) {
+			fprintf(f, " state = S%u;", ir_indexof(ir, ranges[i].to));
+		}
+		fprintf(f, " break;\n");
+
+		/* TODO: if greedy, and fsm_isend(fsm, state->edges[i].sl->state) then:
+			fprintf(f, "         return %s%s;\n", prefix.tok, state->edges[i].sl->state's token);
+		 */
+	}
+}
+
+static void
+out_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
-	struct fsm_state *state,
+	struct ir_state *cs,
 	int (*leaf)(FILE *, const void *state_opaque, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
-	struct {
-		struct fsm_state *state;
-		unsigned int freq;
-	} mode;
-
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
+	assert(ir != NULL);
+	assert(opt != NULL);
 	assert(cp != NULL);
 	assert(f != NULL);
-	assert(state != NULL);
+	assert(cs != NULL);
 	assert(leaf != NULL);
 
-	/* no edges */
-	{
-		struct fsm_edge *e;
-		struct set_iter it;
+	switch (cs->strategy) {
+	case IR_JUMP:
+		/* TODO */
+		abort();
 
-		e = set_first(state->edges, &it);
-		if (!e || e->symbol > UCHAR_MAX) {
-			fprintf(f, "\t\t\t");
-			leaf(f, state->opaque, leaf_opaque);
-			fprintf(f, "\n");
-			return;
-		}
-	}
+	case IR_NONE:
+		fprintf(f, "\t\t\t");
+		leaf(f, cs->opaque, leaf_opaque);
+		fprintf(f, "\n");
+		return;
 
-	/* all edges go to the same state */
-	{
-		if (fsm_iscomplete(fsm, state)) {
-			mode.state = fsm_findmode(state, &mode.freq);
-		} else {
-			mode.state = NULL;
+	case IR_SAME:
+		fprintf(f, "\t\t\t");
+		if (cs->u.same.to != cs) {
+			fprintf(f, "state = S%u; ", ir_indexof(ir, cs->u.same.to));
 		}
+		fprintf(f, "break;\n");
+		return;
 
-		if (mode.state != NULL && mode.freq == UCHAR_MAX) {
-			fprintf(f, "\t\t\t");
-			if (mode.state != state) {
-				fprintf(f, "state = S%u; ", indexof(fsm, mode.state));
-			}
-			fprintf(f, "break;\n");
-			return;
+	case IR_MANY:
+		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
+
+		out_ranges(f, ir, opt, cs, cs->u.many.ranges, cs->u.many.n);
+
+		fprintf(f, "\t\t\tdefault:  ");
+		leaf(f, cs->opaque, leaf_opaque);
+		fprintf(f, "\n");
+
+		fprintf(f, "\t\t\t}\n");
+		fprintf(f, "\t\t\tbreak;\n");
+		return;
+
+	case IR_MODE:
+		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
+
+		out_ranges(f, ir, opt, cs, cs->u.mode.ranges, cs->u.mode.n);
+
+		fprintf(f, "\t\t\tdefault: ");
+		if (cs->u.mode.mode != cs) {
+			fprintf(f, "state = S%u; ", ir_indexof(ir, cs->u.mode.mode));
 		}
+		fprintf(f, "break;\n");
+
+		fprintf(f, "\t\t\t}\n");
+		fprintf(f, "\t\t\tbreak;\n");
+		return;
 	}
 
 	fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
-
-	/* usual case */
-	{
-		struct fsm_edge *e;
-		struct set_iter it;
-
-		for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
-			struct fsm_state *s;
-
-			if (e->symbol > UCHAR_MAX) {
-				break;
-			}
-
-			if (set_empty(e->sl)) {
-				continue;
-			}
-
-			s = set_only(e->sl);
-			if (s == mode.state) {
-				continue;
-			}
-
-			fprintf(f, "\t\t\tcase ");
-			escputchar(fsm->opt, e->symbol, f);
-
-			if (fsm->opt->case_ranges) {
-				const struct fsm_edge *ne;
-				enum fsm_edge_type p, q;
-				struct set_iter ic, ir;
-
-				ir = ic = it;
-				p = q = e->symbol;
-				ne = set_next(&ic);
-				while (ne && ne->symbol - q == 1) {
-					q = ne->symbol;
-					ir = ic;
-					ne = set_next(&ic);
-				}
-
-				if (q - p) {
-					fprintf(f, " ... ");
-					escputchar(fsm->opt, q, f);
-					it = ir;
-				}
-			}
-
-			fprintf(f, ":");
-
-			/* non-unique states fall through */
-			if (!fsm->opt->case_ranges && e->symbol <= UCHAR_MAX - 1) {
-				const struct fsm_edge *ne;
-				struct set_iter jt;
-
-				ne = set_firstafter(state->edges, &jt, e);
-				if (ne && ne->symbol == e->symbol + 1 && !set_empty(ne->sl)) {
-					const struct fsm_state *ns;
-
-					ns = set_only(ne->sl);
-					if (ns != mode.state && ns == s) {
-						fprintf(f, "\n");
-						continue;
-					}
-				}
-			}
-
-			/* TODO: pad S%u out to maximum state width */
-			if (s != state) {
-				fprintf(f, " state = S%u;", indexof(fsm, s));
-			}
-			fprintf(f, " break;\n");
-
-			/* TODO: if greedy, and fsm_isend(fsm, state->edges[i].sl->state) then:
-				fprintf(f, "         return %s%s;\n", prefix.tok, state->edges[i].sl->state's token);
-			 */
-		}
-
-		if (mode.state != NULL) {
-			fprintf(f, "\t\t\tdefault: ");
-			if (mode.state != state) {
-				fprintf(f, "state = S%u; ", indexof(fsm, mode.state));
-			}
-			fprintf(f, "break;\n");
-		} else {
-			fprintf(f, "\t\t\tdefault:  ");
-			leaf(f, state->opaque, leaf_opaque);
-			fprintf(f, "\n");
-		}
-	}
 
 	fprintf(f, "\t\t\t}\n");
 
@@ -295,21 +276,20 @@ singlecase(FILE *f, const struct fsm *fsm,
 }
 
 static void
-out_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
+out_stateenum(FILE *f, size_t n)
 {
-	struct fsm_state *s;
-	int i;
+	size_t i;
 
 	fprintf(f, "\tenum {\n");
 	fprintf(f, "\t\t");
 
-	for (s = sl, i = 1; s != NULL; s = s->next, i++) {
-		fprintf(f, "S%u", indexof(fsm, s));
-		if (s->next != NULL) {
+	for (i = 0; i < n; i++) {
+		fprintf(f, "S%u", (unsigned) i);
+		if (i + 1 < n) {
 			fprintf(f, ", ");
 		}
 
-		if (i % 10 == 0) {
+		if (i + 1 < n && (i + 1) % 10 == 0) {
 			fprintf(f, "\n");
 			fprintf(f, "\t\t");
 		}
@@ -320,12 +300,16 @@ out_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 }
 
 static void
-endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
+endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 {
-	struct fsm_state *s;
+	size_t i;
+
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(ir != NULL);
 
 	/* no end states */
-	if (!fsm_has(fsm, fsm_isend)) {
+	if (!ir_hasend(ir)) {
 		printf("\treturn EOF; /* unexpected EOF */\n");
 		return;
 	}
@@ -333,16 +317,16 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 	/* usual case */
 	fprintf(f, "\t/* end states */\n");
 	fprintf(f, "\tswitch (state) {\n");
-	for (s = sl; s != NULL; s = s->next) {
-		if (!fsm_isend(fsm, s)) {
+	for (i = 0; i < ir->n; i++) {
+		if (!ir->states[i].isend) {
 			continue;
 		}
 
-		fprintf(f, "\tcase S%u: ", indexof(fsm, s));
-		if (fsm->opt->endleaf != NULL) {
-			fsm->opt->endleaf(f, s->opaque, fsm->opt->endleaf_opaque);
+		fprintf(f, "\tcase S%u: ", ir_indexof(ir, &ir->states[i]));
+		if (opt->endleaf != NULL) {
+			opt->endleaf(f, ir->states[i].opaque, opt->endleaf_opaque);
 		} else {
-			fprintf(f, "return %u;", indexof(fsm, s));
+			fprintf(f, "return %u;", ir_indexof(ir, &ir->states[i]));
 		}
 		fprintf(f, "\n");
 	}
@@ -351,48 +335,35 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 }
 
 int
-fsm_out_cfrag(const struct fsm *fsm, FILE *f,
+fsm_out_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
 	int (*leaf)(FILE *, const void *state_opaque, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
-	struct fsm_state *s;
+	size_t i;
 
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
-	assert(fsm_all(fsm, fsm_isdfa));
 	assert(f != NULL);
+	assert(ir != NULL);
+	assert(opt != NULL);
 	assert(cp != NULL);
-
-	/* TODO: prerequisite that the FSM is a DFA */
-	assert(fsm->start != NULL);
+	assert(ir->start != NULL);
 
 	fprintf(f, "\t\tswitch (state) {\n");
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		fprintf(f, "\t\tcase S%u:", indexof(fsm, s));
+	for (i = 0; i < ir->n; i++) {
+		fprintf(f, "\t\tcase S%u:", ir_indexof(ir, &ir->states[i]));
 
-		if (fsm->opt->comments) {
-			if (s == fsm->start) {
-				fprintf(f, " /* start */");
-			} else {
-				char buf[50];
-				int n;
-
-				n = fsm_example(fsm, s, buf, sizeof buf);
-				if (-1 == n) {
-					perror("fsm_example");
-					return -1;
-				}
-
+		if (opt->comments) {
+			if (ir->states[i].example != NULL) {
 				fprintf(f, " /* e.g. \"");
-				escputs(fsm->opt, f, buf);
-				fprintf(f, "%s\" */",
-					n >= (int) sizeof buf - 1 ? "..." : "");
+				escputs(opt, f, ir->states[i].example);
+				fprintf(f, "\" */");
+			} else if (&ir->states[i] == ir->start) {
+				fprintf(f, " /* start */");
 			}
 		}
 		fprintf(f, "\n");
 
-		singlecase(f, fsm, cp, s, leaf, leaf_opaque);
+		out_singlecase(f, ir, opt, cp, &ir->states[i], leaf, leaf_opaque);
 
 		fprintf(f, "\n");
 	}
@@ -404,19 +375,18 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 }
 
 static void
-fsm_out_c_complete(const struct fsm *fsm, FILE *f)
+fsm_out_c_complete(const struct ir *ir, const struct fsm_options *opt, FILE *f)
 {
 	const char *cp;
 
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
-	assert(fsm_all(fsm, fsm_isdfa));
+	assert(ir != NULL);
+	assert(opt != NULL);
 	assert(f != NULL);
 
-	if (fsm->opt->cp != NULL) {
-		cp = fsm->opt->cp;
+	if (opt->cp != NULL) {
+		cp = opt->cp;
 	} else {
-		switch (fsm->opt->io) {
+		switch (opt->io) {
 		case FSM_IO_GETC: cp = "c";  break;
 		case FSM_IO_STR:  cp = "*p"; break;
 		case FSM_IO_PAIR: cp = "*p"; break;
@@ -424,15 +394,15 @@ fsm_out_c_complete(const struct fsm *fsm, FILE *f)
 	}
 
 	/* enum of states */
-	out_stateenum(f, fsm, fsm->sl);
+	out_stateenum(f, ir->n);
 	fprintf(f, "\n");
 
 	/* start state */
-	assert(fsm->start != NULL);
-	fprintf(f, "\tstate = S%u;\n", indexof(fsm, fsm->start));
+	assert(ir->start != NULL);
+	fprintf(f, "\tstate = S%u;\n", ir_indexof(ir, ir->start));
 	fprintf(f, "\n");
 
-	switch (fsm->opt->io) {
+	switch (opt->io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\twhile (c = fsm_getc(opaque), c != EOF) {\n");
 		break;
@@ -446,29 +416,32 @@ fsm_out_c_complete(const struct fsm *fsm, FILE *f)
 		break;
 	}
 
-	(void) fsm_out_cfrag(fsm, f, cp,
-		fsm->opt->leaf != NULL ? fsm->opt->leaf : leaf, fsm->opt->leaf_opaque);
+	(void) fsm_out_cfrag(f, ir, opt, cp,
+		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
 
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 
 	/* end states */
-	endstates(f, fsm, fsm->sl);
+	endstates(f, opt, ir);
 }
 
 void
 fsm_out_c(const struct fsm *fsm, FILE *f)
 {
+	struct ir *ir;
 	const char *prefix;
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 	assert(f != NULL);
 
-	if (!fsm_all(fsm, fsm_isdfa)) {
-		errno = EINVAL;
+	ir = make_ir(fsm);
+	if (ir == NULL) {
 		return;
 	}
+
+	/* henceforth, no function should be passed struct fsm *, only the ir and options */
 
 	/* TODO: pass in %s prefix (default to "fsm_") */
 	if (fsm->opt->prefix != NULL) {
@@ -478,7 +451,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 	}
 
 	if (fsm->opt->fragment) {
-		fsm_out_c_complete(fsm, f);
+		fsm_out_c_complete(ir, fsm->opt, f);
 		return;
 	}
 
@@ -519,9 +492,11 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 		break;
 	}
 
-	fsm_out_c_complete(fsm, f);
+	fsm_out_c_complete(ir, fsm->opt, f);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
+
+	/* TODO: free ir */
 }
 
