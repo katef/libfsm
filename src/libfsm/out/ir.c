@@ -316,3 +316,39 @@ error:
 	return NULL;
 }
 
+void
+free_ir(struct ir *ir)
+{
+	size_t i;
+
+	assert(ir != NULL);
+
+	for (i = 0; i < ir->n; i++) {
+		free((void *) ir->states[i].example);
+
+		switch (ir->states[i].strategy) {
+		case IR_JUMP:
+			/* TODO */
+			abort();
+
+		case IR_NONE:
+			break;
+
+		case IR_SAME:
+			break;
+
+		case IR_MANY:
+			free(ir->states[i].u.many.ranges);
+			break;
+
+		case IR_MODE:
+			free(ir->states[i].u.mode.ranges);
+			break;
+		}
+	}
+
+	free(ir->states);
+
+	free(ir);
+}
+

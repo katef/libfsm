@@ -71,5 +71,8 @@ struct ir {
 struct ir *
 make_ir(const struct fsm *fsm);
 
+void
+free_ir(struct ir *ir);
+
 #endif
 

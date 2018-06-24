@@ -770,7 +770,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		(void) fsm_out_cfrag(f, ir, &o, opt.cp,
 			z->fsm->opt->leaf != NULL ? z->fsm->opt->leaf : leaf, z->fsm->opt->leaf_opaque);
 
-		/* TODO: free ir */
+		free_ir(ir);
 
 		z->fsm->opt = tmp;
 	}

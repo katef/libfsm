@@ -229,6 +229,6 @@ fsm_out_ir(const struct fsm *fsm, FILE *f)
 
 	fprintf(f, "}\n");
 
-	/* TODO: free stuff */
+	free_ir(ir);
 }
 

@@ -497,6 +497,6 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
 
-	/* TODO: free ir */
+	free_ir(ir);
 }
 
