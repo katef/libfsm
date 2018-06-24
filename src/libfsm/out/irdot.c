@@ -102,6 +102,24 @@ print_endpoint(const struct fsm_options *opt, unsigned char c, FILE *f)
 }
 
 static void
+print_state(const struct ir *ir,
+	const struct ir_state *to, const struct ir_state *self,
+	FILE *f)
+{
+	assert(ir != NULL);
+	assert(self != NULL);
+	assert(f != NULL);
+
+	if (to == NULL) {
+		fprintf(f, "(none)");
+	} else if (to == self) {
+		fprintf(f, "(self)");
+	} else {
+		fprintf(f, "S%u", indexof(ir, to));
+	}
+}
+
+static void
 print_grouprows(const struct fsm_options *opt,
 	const struct ir *ir, const struct ir_state *self,
 	const struct ir_group *groups, size_t n, FILE *f)
@@ -137,11 +155,7 @@ print_grouprows(const struct fsm_options *opt,
 			} else {
 				fprintf(f, "<TD ALIGN='LEFT' PORT='group%u'>",
 					(unsigned) j);
-				if (groups[j].to == self) {
-					fprintf(f, "(self)");
-				} else {
-					fprintf(f, "S%u", indexof(ir, groups[j].to));
-				}
+				print_state(ir, groups[j].to, self, f);
 				fprintf(f, "</TD>");
 			}
 
@@ -206,12 +220,7 @@ print_cs(const struct fsm_options *opt,
 
 	case IR_SAME:
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>to</TD><TD ALIGN='LEFT'>");
-		if (cs->u.same.to == NULL) {
-			fprintf(f, "(none)");
-		} else {
-			fprintf(f, "S%u",
-				indexof(ir, cs->u.same.to));
-		}
+		print_state(ir, cs->u.same.to, cs, f);
 		fprintf(f, "</TD></TR>\n");
 		break;
 
@@ -221,12 +230,7 @@ print_cs(const struct fsm_options *opt,
 
 	case IR_MODE:
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>mode</TD><TD ALIGN='LEFT' PORT='mode'>");
-		if (cs->u.mode.mode == NULL) {
-			fprintf(f, "(none)");
-		} else {
-			fprintf(f, "S%u",
-				indexof(ir, cs->u.mode.mode));
-		}
+		print_state(ir, cs->u.mode.mode, cs, f);
 		fprintf(f, "</TD></TR>\n");
 		print_grouprows(opt, ir, cs, cs->u.mode.groups, cs->u.mode.n, f);
 		break;
@@ -246,7 +250,9 @@ print_cs(const struct fsm_options *opt,
 		break;
 
 	case IR_SAME:
-		if (cs->u.same.to != NULL) {
+		if (cs->u.same.to == cs) {
+			/* no edge drawn */
+		} else if (cs->u.same.to != NULL) {
 			fprintf(f, "\tcs%u -> cs%u;\n",
 				indexof(ir, cs), indexof(ir, cs->u.same.to));
 		}
@@ -257,7 +263,9 @@ print_cs(const struct fsm_options *opt,
 		break;
 
 	case IR_MODE:
-		if (cs->u.mode.mode != NULL) {
+		if (cs->u.mode.mode == cs) {
+			/* no edge drawn */
+		} else if (cs->u.mode.mode != NULL) {
 			fprintf(f, "\tcs%u:mode -> cs%u;\n",
 				indexof(ir, cs), indexof(ir, cs->u.mode.mode));
 		}
