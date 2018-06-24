@@ -48,6 +48,7 @@ strategy_name(enum ir_strategy strategy)
 	}
 }
 
+/* TODO: centralise */
 static int
 escputc_hex(int c, FILE *f)
 {
@@ -56,6 +57,7 @@ escputc_hex(int c, FILE *f)
 	return fprintf(f, "\\x%02x", (unsigned char) c); /* for humans */
 }
 
+/* TODO: centralise */
 static int
 escputc(int c, FILE *f)
 {
@@ -86,6 +88,30 @@ escputc(int c, FILE *f)
 	}
 
 	return fprintf(f, "%c", c);
+}
+
+/* TODO: centralise, maybe with callback */
+static int
+escputs(FILE *f, const char *s)
+{
+	const char *p;
+	int r, n;
+
+	assert(f != NULL);
+	assert(s != NULL);
+
+	n = 0;
+
+	for (p = s; *p != '\0'; p++) {
+		r = escputc(*p, f);
+		if (r == -1) {
+			return -1;
+		}
+
+		n += r;
+	}
+
+	return n;
 }
 
 static void
@@ -208,8 +234,9 @@ print_cs(const struct fsm_options *opt,
 		indexof(ir, cs), strategy_name(cs->strategy));
 
 	if (cs->example != NULL) {
-		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>example</TD><TD ALIGN='LEFT'>%s</TD></TR>\n",
-			cs->example); /* XXX: escape */
+		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>example</TD><TD ALIGN='LEFT'>");
+		escputs(f, cs->example);
+		fprintf(f, "</TD></TR>\n");
 	}
 
 	/* TODO: leaf callback for dot output */
