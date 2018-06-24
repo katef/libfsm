@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include <adt/set.h>
 
@@ -47,12 +48,67 @@ strategy_name(enum ir_strategy strategy)
 	}
 }
 
+static int
+escputc_hex(int c, FILE *f)
+{
+	assert(f != NULL);
+
+	return fprintf(f, "\\x%02x", (unsigned char) c); /* for humans */
+}
+
+static int
+escputc(int c, FILE *f)
+{
+	size_t i;
+
+	const struct {
+		int c;
+		const char *s;
+	} a[] = {
+		{ '&',  "&amp;"    },
+		{ '\"', "&quot;"   },
+		{ ']',  "&#x5D;"   }, /* yes, even in a HTML label */
+		{ '<',  "&#x3C;"   },
+		{ '>',  "&#x3E;"   },
+		{ ' ',  "&#x2423;" }
+	};
+
+	assert(f != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (a[i].c == c) {
+			return fputs(a[i].s, f);
+		}
+	}
+
+	if (!isprint((unsigned char) c)) {
+		return fprintf(f, "\\x%02x", (unsigned char) c); /* for humans */
+	}
+
+	return fprintf(f, "%c", c);
+}
+
 static void
-print_rangerows(const struct ir *ir, const struct ir_state *self,
+print_endpoint(const struct fsm_options *opt, unsigned char c, FILE *f)
+{
+	assert(opt != NULL);
+	assert(f != NULL);
+
+	if (opt->always_hex) {
+		escputc_hex(c, f);
+	} else {
+		escputc(c, f);
+	}
+}
+
+static void
+print_rangerows(const struct fsm_options *opt,
+	const struct ir *ir, const struct ir_state *self,
 	const struct ir_range *ranges, size_t n, FILE *f)
 {
 	size_t i;
 
+	assert(opt != NULL);
 	assert(ir != NULL);
 	assert(ranges != NULL);
 	assert(f != NULL);
@@ -60,11 +116,16 @@ print_rangerows(const struct ir *ir, const struct ir_state *self,
 	for (i = 0; i < n; i++) {
 		fprintf(f, "\t\t  <TR>");
 		if (ranges[i].start == ranges[i].end) {
-			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>\\x%x</TD>",
-				ranges[i].start);
+			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>");
+			print_endpoint(opt, ranges[i].start, f);
+			fprintf(f, "</TD>");
 		} else {
-			fprintf(f, "<TD ALIGN='LEFT'>\\x%x</TD><TD ALIGN='LEFT'>\\x%x</TD>",
-				ranges[i].start, ranges[i].end);
+			fprintf(f, "<TD ALIGN='LEFT'>");
+			print_endpoint(opt, ranges[i].start, f);
+			fprintf(f, "</TD>");
+			fprintf(f, "<TD ALIGN='LEFT'>");
+			print_endpoint(opt, ranges[i].end, f);
+			fprintf(f, "</TD>");
 		}
 		fprintf(f, "<TD ALIGN='LEFT' PORT='range%u'>", (unsigned) i);
 		if (ranges[i].to == self) {
@@ -102,8 +163,10 @@ print_rangelinks(const struct ir *ir, const struct ir_state *self,
 }
 
 static void
-print_cs(const struct ir *ir, const struct ir_state *cs, FILE *f)
+print_cs(const struct fsm_options *opt,
+	const struct ir *ir, const struct ir_state *cs, FILE *f)
 {
+	assert(opt != NULL);
 	assert(ir != NULL);
 	assert(cs != NULL);
 	assert(f != NULL);
@@ -140,7 +203,7 @@ print_cs(const struct ir *ir, const struct ir_state *cs, FILE *f)
 		break;
 
 	case IR_MANY:
-		print_rangerows(ir, cs, cs->u.many.ranges, cs->u.many.n, f);
+		print_rangerows(opt, ir, cs, cs->u.many.ranges, cs->u.many.n, f);
 		break;
 
 	case IR_MODE:
@@ -152,7 +215,7 @@ print_cs(const struct ir *ir, const struct ir_state *cs, FILE *f)
 				indexof(ir, cs->u.mode.mode));
 		}
 		fprintf(f, "</TD></TR>\n");
-		print_rangerows(ir, cs, cs->u.mode.ranges, cs->u.mode.n, f);
+		print_rangerows(opt, ir, cs, cs->u.mode.ranges, cs->u.mode.n, f);
 		break;
 
 	case IR_JUMP:
@@ -224,7 +287,7 @@ fsm_out_ir(const struct fsm *fsm, FILE *f)
 			fprintf(f, "\n");
 		}
 
-		print_cs(ir, &ir->states[i], f);
+		print_cs(fsm->opt, ir, &ir->states[i], f);
 	}
 
 	fprintf(f, "}\n");
