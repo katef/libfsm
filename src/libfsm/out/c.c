@@ -160,43 +160,49 @@ leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
 }
 
 static void
-out_ranges(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+out_groups(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	struct ir_state *cs,
-	struct ir_range *ranges, size_t n)
+	struct ir_group *groups, size_t n)
 {
-	size_t i;
+	size_t j, k;
 
 	assert(ir != NULL);
 	assert(opt != NULL);
 	assert(cs != NULL);
-	assert(ranges != NULL);
+	assert(groups != NULL);
 
-	for (i = 0; i < n; i++) {
-		size_t j;
+	for (j = 0; j < n; j++) {
+		size_t c;
 
-		assert(ranges[i].end >= ranges[i].start);
+		assert(groups[j].ranges != NULL);
 
-		if (opt->case_ranges && ranges[i].end > ranges[i].start) {
-			fprintf(f, "\t\t\tcase ");
-			escputchar(opt, ranges[i].start, f);
-			fprintf(f, " ... ");
-			escputchar(opt, ranges[i].end, f);
-			fprintf(f, ":");
-		} else for (j = ranges[i].start; j <= ranges[i].end; j++) {
-			fprintf(f, "\t\t\tcase ");
-			escputchar(opt, j, f);
-			fprintf(f, ":");
+		for (k = 0; k < groups[j].n; k++) {
+			assert(groups[j].ranges[k].end >= groups[j].ranges[k].start);
 
-			if (j + 1 <= ranges[i].end) {
-				fprintf(f, "\n");
+			if (opt->case_ranges && groups[j].ranges[k].end > groups[j].ranges[k].start) {
+				fprintf(f, "\t\t\tcase ");
+				escputchar(opt, groups[j].ranges[k].start, f);
+				fprintf(f, " ... ");
+				escputchar(opt, groups[j].ranges[k].end, f);
+				fprintf(f, ":");
+
+				if (k + 1 < groups[j].n) {
+					fprintf(f, "\n");
+				}
+			} else for (c = groups[j].ranges[k].start; c <= groups[j].ranges[k].end; c++) {
+				fprintf(f, "\t\t\tcase ");
+				escputchar(opt, c, f);
+				fprintf(f, ":");
+
+				if (k + 1 < groups[j].n || c + 1 <= groups[j].ranges[k].end) {
+					fprintf(f, "\n");
+				}
 			}
 		}
 
-		/* TODO: fall-through to the following range if its destination is equal */
-
 		/* TODO: pad S%u out to maximum state width */
-		if (ranges[i].to != cs) {
-			fprintf(f, " state = S%u;", ir_indexof(ir, ranges[i].to));
+		if (groups[j].to != cs) {
+			fprintf(f, " state = S%u;", ir_indexof(ir, groups[j].to));
 		}
 		fprintf(f, " break;\n");
 
@@ -242,7 +248,7 @@ out_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	case IR_MANY:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
 
-		out_ranges(f, ir, opt, cs, cs->u.many.ranges, cs->u.many.n);
+		out_groups(f, ir, opt, cs, cs->u.many.groups, cs->u.many.n);
 
 		fprintf(f, "\t\t\tdefault:  ");
 		leaf(f, cs->opaque, leaf_opaque);
@@ -255,7 +261,7 @@ out_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	case IR_MODE:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
 
-		out_ranges(f, ir, opt, cs, cs->u.mode.ranges, cs->u.mode.n);
+		out_groups(f, ir, opt, cs, cs->u.mode.groups, cs->u.mode.n);
 
 		fprintf(f, "\t\t\tdefault: ");
 		if (cs->u.mode.mode != cs) {

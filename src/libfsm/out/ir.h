@@ -29,7 +29,12 @@ enum ir_strategy {
 struct ir_range {
 	unsigned char start;
 	unsigned char end;
+};
+
+struct ir_group {
 	const struct ir_state *to;
+	size_t n;
+	struct ir_range *ranges; /* array */
 };
 
 struct ir_state {
@@ -46,13 +51,13 @@ struct ir_state {
 
 		struct {
 			size_t n;
-			struct ir_range *ranges; /* array */
+			struct ir_group *groups; /* array */
 		} many;
 
 		struct {
 			const struct ir_state *mode;
 			size_t n;
-			struct ir_range *ranges; /* array */
+			struct ir_group *groups; /* array */
 		} mode;
 
 		struct {

@@ -24,6 +24,32 @@
 
 #include "ir.h"
 
+struct range {
+	unsigned char start;
+	unsigned char end;
+	const struct fsm_state *to;
+};
+
+static int
+range_cmp(const void *va, const void *vb)
+{
+	const struct range *a = va;
+	const struct range *b = vb;
+
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (a->to < b->to) { return -1; }
+	if (a->to > b->to) { return +1; }
+
+	/* TODO: could assert no overlapping (or adjacent!) ranges here */
+
+	if (a->start < b->start) { return -1; }
+	if (a->start > b->start) { return +1; }
+
+	return 0;
+}
+
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)
 {
@@ -56,25 +82,22 @@ equivalent_cs(const struct fsm *fsm, const struct fsm_state *state,
 	return &ir->states[indexof(fsm, state)];
 }
 
-static struct ir_range *
-make_ranges(const struct fsm *fsm, const struct fsm_state *state, const struct fsm_state *mode,
-	const struct ir *ir, size_t *n)
+static struct ir_group *
+make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct fsm_state *mode,
+	const struct ir *ir, size_t *u)
 {
+	struct range ranges[UCHAR_MAX]; /* worst case */
+	struct ir_group *groups;
 	struct fsm_edge *e;
 	struct set_iter it;
-	struct ir_range *edges;
+	size_t i, j, k;
+	size_t n;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
-	assert(n != NULL);
+	assert(u != NULL);
 
-	edges = malloc(sizeof *edges * UCHAR_MAX); /* worst case */
-	if (edges == NULL) {
-		/* XXX: bail out */
-		return NULL;
-	}
-
-	*n = 0;
+	n = 0;
 
 	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
 		struct fsm_state *s;
@@ -92,10 +115,9 @@ make_ranges(const struct fsm *fsm, const struct fsm_state *state, const struct f
 			continue;
 		}
 
-		edges[*n].start = e->symbol;
-		edges[*n].end   = e->symbol;
-
-		edges[*n].to = equivalent_cs(fsm, s, ir);
+		ranges[n].start = e->symbol;
+		ranges[n].end   = e->symbol;
+		ranges[n].to    = s;
 
 		if (e->symbol <= UCHAR_MAX - 1) {
 			do {
@@ -117,29 +139,84 @@ make_ranges(const struct fsm *fsm, const struct fsm_state *state, const struct f
 					break;
 				}
 
-				edges[*n].end = ne->symbol;
+				ranges[n].end = ne->symbol;
 
 				e = set_next(&it);
 			} while (e != NULL);
 		}
 
-		(*n)++;
+		n++;
 	}
 
-	assert(*n > 0);
+	assert(n > 0);
+
+/*
+TODO: explain we now make a second pass to collate by destination state
+*/
+
+	qsort(ranges, n, sizeof *ranges, range_cmp);
+
+	groups = malloc(sizeof *groups * n); /* worst case */
+	if (groups == NULL) {
+		/* XXX */
+		return NULL;
+	}
+
+	i = 0;
+	j = 0;
+
+	while (i < n) {
+		const struct fsm_state *to;
+
+		to = ranges[i].to;
+
+		groups[j].ranges = malloc(sizeof *groups[j].ranges * (n - i)); /* worst case */
+		if (groups[j].ranges == NULL) {
+			/* XXX */
+			return NULL;
+		}
+
+		k = 0;
+
+		do {
+			groups[j].ranges[k].start = ranges[i].start;
+			groups[j].ranges[k].end   = ranges[i].end;
+
+			i++;
+			k++;
+		} while (i < n && ranges[i].to == to);
+
+		groups[j].to = equivalent_cs(fsm, to, ir);
+		groups[j].n = k;
+
+		{
+			void *tmp;
+
+			tmp = realloc(groups[j].ranges, sizeof *groups[j].ranges * k);
+			if (tmp == NULL) {
+				/* XXX: bail out */
+			}
+
+			groups[j].ranges = tmp;
+		}
+
+		j++;
+	}
+
+	*u = j;
 
 	{
 		void *tmp;
 
-		tmp = realloc(edges, sizeof *edges * *n);
+		tmp = realloc(groups, sizeof *groups * j);
 		if (tmp == NULL) {
 			/* XXX: bail out */
 		}
 
-		edges = tmp;
+		groups = tmp;
 	}
 
-	return edges;
+	return groups;
 }
 
 static int
@@ -188,8 +265,8 @@ make_state(const struct fsm *fsm,
 	if (mode.state != NULL) {
 		cs->strategy = IR_MODE;
 
-		cs->u.mode.ranges = make_ranges(fsm, state, mode.state, ir, &cs->u.mode.n);
-		if (cs->u.mode.ranges == NULL) {
+		cs->u.mode.groups = make_groups(fsm, state, mode.state, ir, &cs->u.mode.n);
+		if (cs->u.mode.groups == NULL) {
 			/* TODO: bail out */
 		}
 
@@ -201,8 +278,8 @@ make_state(const struct fsm *fsm,
 	{
 		cs->strategy = IR_MANY;
 
-		cs->u.many.ranges = make_ranges(fsm, state, NULL, ir, &cs->u.many.n);
-		if (cs->u.many.ranges == NULL) {
+		cs->u.many.groups = make_groups(fsm, state, NULL, ir, &cs->u.many.n);
+		if (cs->u.many.groups == NULL) {
 			/* TODO: bail out */
 		}
 	}
@@ -338,11 +415,11 @@ free_ir(struct ir *ir)
 			break;
 
 		case IR_MANY:
-			free(ir->states[i].u.many.ranges);
+			free(ir->states[i].u.many.groups);
 			break;
 
 		case IR_MODE:
-			free(ir->states[i].u.mode.ranges);
+			free(ir->states[i].u.mode.groups);
 			break;
 		}
 	}

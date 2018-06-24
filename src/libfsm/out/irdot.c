@@ -102,62 +102,75 @@ print_endpoint(const struct fsm_options *opt, unsigned char c, FILE *f)
 }
 
 static void
-print_rangerows(const struct fsm_options *opt,
+print_grouprows(const struct fsm_options *opt,
 	const struct ir *ir, const struct ir_state *self,
-	const struct ir_range *ranges, size_t n, FILE *f)
+	const struct ir_group *groups, size_t n, FILE *f)
 {
-	size_t i;
+	size_t j, k;
 
 	assert(opt != NULL);
 	assert(ir != NULL);
-	assert(ranges != NULL);
+	assert(groups != NULL);
 	assert(f != NULL);
 
-	for (i = 0; i < n; i++) {
-		fprintf(f, "\t\t  <TR>");
-		if (ranges[i].start == ranges[i].end) {
-			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>");
-			print_endpoint(opt, ranges[i].start, f);
-			fprintf(f, "</TD>");
-		} else {
-			fprintf(f, "<TD ALIGN='LEFT'>");
-			print_endpoint(opt, ranges[i].start, f);
-			fprintf(f, "</TD>");
-			fprintf(f, "<TD ALIGN='LEFT'>");
-			print_endpoint(opt, ranges[i].end, f);
-			fprintf(f, "</TD>");
+	for (j = 0; j < n; j++) {
+		assert(groups[j].ranges != NULL);
+
+		for (k = 0; k < groups[j].n; k++) {
+			fprintf(f, "\t\t  <TR>");
+
+			if (groups[j].ranges[k].start == groups[j].ranges[k].end) {
+				fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>");
+				print_endpoint(opt, groups[j].ranges[k].start, f);
+				fprintf(f, "</TD>");
+			} else {
+				fprintf(f, "<TD ALIGN='LEFT'>");
+				print_endpoint(opt, groups[j].ranges[k].start, f);
+				fprintf(f, "</TD>");
+				fprintf(f, "<TD ALIGN='LEFT'>");
+				print_endpoint(opt, groups[j].ranges[k].end, f);
+				fprintf(f, "</TD>");
+			}
+
+			if (k + 1 < groups[j].n) {
+				fprintf(f, "<TD ALIGN='LEFT'>&#x21B4;</TD>");
+			} else {
+				fprintf(f, "<TD ALIGN='LEFT' PORT='group%u'>",
+					(unsigned) j);
+				if (groups[j].to == self) {
+					fprintf(f, "(self)");
+				} else {
+					fprintf(f, "S%u", indexof(ir, groups[j].to));
+				}
+				fprintf(f, "</TD>");
+			}
+
+			fprintf(f, "</TR>\n");
 		}
-		fprintf(f, "<TD ALIGN='LEFT' PORT='range%u'>", (unsigned) i);
-		if (ranges[i].to == self) {
-			fprintf(f, "(self)");
-		} else {
-			fprintf(f, "S%u", indexof(ir, ranges[i].to));
-		}
-		fprintf(f, "</TD></TR>\n");
 	}
 }
 
 static void
-print_rangelinks(const struct ir *ir, const struct ir_state *self,
-	const struct ir_range *ranges, size_t n, FILE *f)
+print_grouplinks(const struct ir *ir, const struct ir_state *self,
+	const struct ir_group *groups, size_t n, FILE *f)
 {
-	size_t i;
+	size_t j;
 
 	assert(ir != NULL);
-	assert(ranges != NULL);
+	assert(groups != NULL);
 	assert(f != NULL);
 
-	for (i = 0; i < n; i++) {
-		if (ranges[i].to == NULL) {
-			fprintf(f, "\tcs%u:range%u -> cs%s;\n",
-				indexof(ir, self), (unsigned) i,
+	for (j = 0; j < n; j++) {
+		if (groups[j].to == NULL) {
+			fprintf(f, "\tcs%u:group%u -> cs%s;\n",
+				indexof(ir, self), (unsigned) j,
 				"(none)");
-		} else if (ranges[i].to == self) {
+		} else if (groups[j].to == self) {
 			/* no edge drawn */
 		} else {
-			fprintf(f, "\tcs%u:range%u -> cs%u;\n",
-				indexof(ir, self), (unsigned) i,
-				indexof(ir, ranges[i].to));
+			fprintf(f, "\tcs%u:group%u -> cs%u;\n",
+				indexof(ir, self), (unsigned) j,
+				indexof(ir, groups[j].to));
 		}
 	}
 }
@@ -203,7 +216,7 @@ print_cs(const struct fsm_options *opt,
 		break;
 
 	case IR_MANY:
-		print_rangerows(opt, ir, cs, cs->u.many.ranges, cs->u.many.n, f);
+		print_grouprows(opt, ir, cs, cs->u.many.groups, cs->u.many.n, f);
 		break;
 
 	case IR_MODE:
@@ -215,7 +228,7 @@ print_cs(const struct fsm_options *opt,
 				indexof(ir, cs->u.mode.mode));
 		}
 		fprintf(f, "</TD></TR>\n");
-		print_rangerows(opt, ir, cs, cs->u.mode.ranges, cs->u.mode.n, f);
+		print_grouprows(opt, ir, cs, cs->u.mode.groups, cs->u.mode.n, f);
 		break;
 
 	case IR_JUMP:
@@ -240,7 +253,7 @@ print_cs(const struct fsm_options *opt,
 		break;
 
 	case IR_MANY:
-		print_rangelinks(ir, cs, cs->u.many.ranges, cs->u.many.n, f);
+		print_grouplinks(ir, cs, cs->u.many.groups, cs->u.many.n, f);
 		break;
 
 	case IR_MODE:
@@ -248,7 +261,7 @@ print_cs(const struct fsm_options *opt,
 			fprintf(f, "\tcs%u:mode -> cs%u;\n",
 				indexof(ir, cs), indexof(ir, cs->u.mode.mode));
 		}
-		print_rangelinks(ir, cs, cs->u.mode.ranges, cs->u.mode.n, f);
+		print_grouplinks(ir, cs, cs->u.mode.groups, cs->u.mode.n, f);
 		break;
 
 	case IR_JUMP:
