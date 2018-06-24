@@ -161,8 +161,8 @@ leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
 
 static void
 out_groups(FILE *f, const struct ir *ir, const struct fsm_options *opt,
-	struct ir_state *cs,
-	struct ir_group *groups, size_t n)
+	const struct ir_state *cs,
+	const struct ir_group *groups, size_t n)
 {
 	size_t j, k;
 
@@ -449,7 +449,6 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 
 	/* henceforth, no function should be passed struct fsm *, only the ir and options */
 
-	/* TODO: pass in %s prefix (default to "fsm_") */
 	if (fsm->opt->prefix != NULL) {
 		prefix = fsm->opt->prefix;
 	} else {

@@ -97,6 +97,14 @@ make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct f
 	assert(state != NULL);
 	assert(u != NULL);
 
+	/*
+	 * The first pass here populates ranges[] by collating consecutive symbols
+	 * which transition to the same FSM state. These ranges are constructed by
+	 * iterating over symbols, and so are populated in symbol order.
+	 * So several ranges may transition to the same state; these are grouped
+	 * in the second pass below.
+	 */
+
 	n = 0;
 
 	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
@@ -150,15 +158,15 @@ make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct f
 
 	assert(n > 0);
 
-/*
-TODO: explain we now make a second pass to collate by destination state
-*/
+	/*
+	 * Now ranges have been identified, the second pass below groups them
+	 * together by their common destination states.
+	 */
 
 	qsort(ranges, n, sizeof *ranges, range_cmp);
 
 	groups = malloc(sizeof *groups * n); /* worst case */
 	if (groups == NULL) {
-		/* XXX */
 		return NULL;
 	}
 
@@ -167,20 +175,21 @@ TODO: explain we now make a second pass to collate by destination state
 
 	while (i < n) {
 		const struct fsm_state *to;
+		struct ir_range *p;
 
 		to = ranges[i].to;
 
-		groups[j].ranges = malloc(sizeof *groups[j].ranges * (n - i)); /* worst case */
-		if (groups[j].ranges == NULL) {
-			/* XXX */
-			return NULL;
+		p = malloc(sizeof *p * (n - i)); /* worst case */
+		if (p == NULL) {
+			j++;
+			goto error;
 		}
 
 		k = 0;
 
 		do {
-			groups[j].ranges[k].start = ranges[i].start;
-			groups[j].ranges[k].end   = ranges[i].end;
+			p[k].start = ranges[i].start;
+			p[k].end   = ranges[i].end;
 
 			i++;
 			k++;
@@ -192,13 +201,16 @@ TODO: explain we now make a second pass to collate by destination state
 		{
 			void *tmp;
 
-			tmp = realloc(groups[j].ranges, sizeof *groups[j].ranges * k);
+			tmp = realloc(p, sizeof *p * k);
 			if (tmp == NULL) {
-				/* XXX: bail out */
+				j++;
+				goto error;
 			}
 
-			groups[j].ranges = tmp;
+			p = tmp;
 		}
+
+		groups[j].ranges = p;
 
 		j++;
 	}
@@ -210,13 +222,23 @@ TODO: explain we now make a second pass to collate by destination state
 
 		tmp = realloc(groups, sizeof *groups * j);
 		if (tmp == NULL) {
-			/* XXX: bail out */
+			goto error;
 		}
 
 		groups = tmp;
 	}
 
 	return groups;
+
+error:
+
+	for (i = 0; i < j; i++) {
+		free((void *) groups[i].ranges);
+	}
+
+	free(groups);
+
+	return NULL;
 }
 
 static int
@@ -267,7 +289,7 @@ make_state(const struct fsm *fsm,
 
 		cs->u.mode.groups = make_groups(fsm, state, mode.state, ir, &cs->u.mode.n);
 		if (cs->u.mode.groups == NULL) {
-			/* TODO: bail out */
+			return -1;
 		}
 
 		cs->u.mode.mode = equivalent_cs(fsm, mode.state, ir);
@@ -280,7 +302,7 @@ make_state(const struct fsm *fsm,
 
 		cs->u.many.groups = make_groups(fsm, state, NULL, ir, &cs->u.many.n);
 		if (cs->u.many.groups == NULL) {
-			/* TODO: bail out */
+			return -1;
 		}
 	}
 
@@ -347,12 +369,13 @@ make_ir(const struct fsm *fsm)
 			 */
 			p = malloc(ir->n + 3 + 1);
 			if (p == NULL) {
-				return NULL;
+				goto error;
 			}
 
 			n = fsm_example(fsm, s, p, ir->n + 1);
 			if (-1 == n) {
-				return NULL;
+				free(p);
+				goto error;
 			}
 
 			if ((size_t) n < ir->n + 1) {
@@ -362,8 +385,8 @@ make_ir(const struct fsm *fsm)
 
 				tmp = realloc(p, n + 1);
 				if (tmp == NULL) {
-					/* XXX */
-					return NULL;
+					free(p);
+					goto error;
 				}
 
 				p = tmp;
@@ -388,7 +411,8 @@ make_ir(const struct fsm *fsm)
 
 error:
 
-	/* TODO: free stuff */
+	ir->n = i;
+	free_ir(ir);
 
 	return NULL;
 }
@@ -415,11 +439,11 @@ free_ir(struct ir *ir)
 			break;
 
 		case IR_MANY:
-			free(ir->states[i].u.many.groups);
+			free((void *) ir->states[i].u.many.groups);
 			break;
 
 		case IR_MODE:
-			free(ir->states[i].u.mode.groups);
+			free((void *) ir->states[i].u.mode.groups);
 			break;
 		}
 	}
