@@ -20,7 +20,7 @@ cc_add_range(struct re_char_class *cc,
     const struct ast_range_endpoint *to);
 
 static int
-cc_add_named_class(struct re_char_class *cc, enum ast_class_id id);
+cc_add_named_class(struct re_char_class *cc, enum ast_char_class_id id);
 
 static int
 cc_add_char_type(struct re_char_class *cc, enum ast_char_type_id id);
@@ -38,13 +38,13 @@ void
 cc_dump(FILE *f, struct re_char_class *cc);
 
 static const char *
-char_class_id_str(enum ast_class_id id);
+char_class_id_str(enum ast_char_class_id id);
 
 static const char *
 char_type_id_str(enum ast_char_type_id id);
 
 static char_filter *
-char_filter_for_class_id(enum ast_class_id id);
+char_filter_for_class_id(enum ast_char_class_id id);
 
 static void
 char_endpoints_for_filter(char_filter *f, unsigned negated,
@@ -117,7 +117,7 @@ re_char_class_ast_flags(enum re_char_class_flags flags)
 }
 
 struct re_char_class_ast *
-re_char_class_ast_named_class(enum ast_class_id id)
+re_char_class_ast_named_class(enum ast_char_class_id id)
 {
 	struct re_char_class_ast *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
@@ -162,25 +162,25 @@ print_char_or_esc(FILE *f, unsigned char c)
 }
 
 static const char *
-char_class_id_str(enum ast_class_id id)
+char_class_id_str(enum ast_char_class_id id)
 {
 	switch (id) {
-	case AST_CLASS_ALNUM: return "ALNUM";
-	case AST_CLASS_ALPHA: return "ALPHA";
-	case AST_CLASS_ANY: return "ANY";
-	case AST_CLASS_ASCII: return "ASCII";
-	case AST_CLASS_BLANK: return "BLANK";
-	case AST_CLASS_CNTRL: return "CNTRL";
-	case AST_CLASS_DIGIT: return "DIGIT";
-	case AST_CLASS_GRAPH: return "GRAPH";
-	case AST_CLASS_LOWER: return "LOWER";
-	case AST_CLASS_PRINT: return "PRINT";
-	case AST_CLASS_PUNCT: return "PUNCT";
-	case AST_CLASS_SPACE: return "SPACE";
-	case AST_CLASS_SPCHR: return "SPCHR";
-	case AST_CLASS_UPPER: return "UPPER";
-	case AST_CLASS_WORD: return "WORD";
-	case AST_CLASS_XDIGIT: return "XDIGIT";
+	case AST_CHAR_CLASS_ALNUM: return "ALNUM";
+	case AST_CHAR_CLASS_ALPHA: return "ALPHA";
+	case AST_CHAR_CLASS_ANY: return "ANY";
+	case AST_CHAR_CLASS_ASCII: return "ASCII";
+	case AST_CHAR_CLASS_BLANK: return "BLANK";
+	case AST_CHAR_CLASS_CNTRL: return "CNTRL";
+	case AST_CHAR_CLASS_DIGIT: return "DIGIT";
+	case AST_CHAR_CLASS_GRAPH: return "GRAPH";
+	case AST_CHAR_CLASS_LOWER: return "LOWER";
+	case AST_CHAR_CLASS_PRINT: return "PRINT";
+	case AST_CHAR_CLASS_PUNCT: return "PUNCT";
+	case AST_CHAR_CLASS_SPACE: return "SPACE";
+	case AST_CHAR_CLASS_SPCHR: return "SPCHR";
+	case AST_CHAR_CLASS_UPPER: return "UPPER";
+	case AST_CHAR_CLASS_WORD: return "WORD";
+	case AST_CHAR_CLASS_XDIGIT: return "XDIGIT";
 	default:
 		return "<matchfail>";
 	}
@@ -190,7 +190,7 @@ char_class_id_str(enum ast_class_id id)
  * greatly reduces the surface area of the types we need to
  * declare in the parser. */
 int
-re_char_class_id_of_name(const char *name, enum ast_class_id *id)
+re_char_class_id_of_name(const char *name, enum ast_char_class_id *id)
 {
 	struct pairs {
 		const char *s;
@@ -198,29 +198,29 @@ re_char_class_id_of_name(const char *name, enum ast_class_id *id)
 	};
 	const struct pairs table[] = {
 		/* the pcre dialect uses lowercase IDs */
-		{ "alnum", AST_CLASS_ALNUM },
-		{ "alpha", AST_CLASS_ALPHA },
-		{ "ascii", AST_CLASS_ASCII },
-		{ "blank", AST_CLASS_BLANK },
-		{ "cntrl", AST_CLASS_CNTRL },
-		{ "digit", AST_CLASS_DIGIT },
-		{ "graph", AST_CLASS_GRAPH },
-		{ "lower", AST_CLASS_LOWER },
-		{ "print", AST_CLASS_PRINT },
-		{ "punct", AST_CLASS_PUNCT },
-		{ "space", AST_CLASS_SPACE },
-		{ "upper", AST_CLASS_UPPER },
-		{ "word", AST_CLASS_WORD },
-		{ "xdigit", AST_CLASS_XDIGIT },
+		{ "alnum", AST_CHAR_CLASS_ALNUM },
+		{ "alpha", AST_CHAR_CLASS_ALPHA },
+		{ "ascii", AST_CHAR_CLASS_ASCII },
+		{ "blank", AST_CHAR_CLASS_BLANK },
+		{ "cntrl", AST_CHAR_CLASS_CNTRL },
+		{ "digit", AST_CHAR_CLASS_DIGIT },
+		{ "graph", AST_CHAR_CLASS_GRAPH },
+		{ "lower", AST_CHAR_CLASS_LOWER },
+		{ "print", AST_CHAR_CLASS_PRINT },
+		{ "punct", AST_CHAR_CLASS_PUNCT },
+		{ "space", AST_CHAR_CLASS_SPACE },
+		{ "upper", AST_CHAR_CLASS_UPPER },
+		{ "word", AST_CHAR_CLASS_WORD },
+		{ "xdigit", AST_CHAR_CLASS_XDIGIT },
 
 		/* the SQL dialect uses uppercase IDs */
-		{ "ALNUM", AST_CLASS_ALNUM },
-		{ "ALPHA", AST_CLASS_ALPHA },
-		{ "DIGIT", AST_CLASS_DIGIT },
-		{ "LOWER", AST_CLASS_LOWER },
-		{ "SPACE", AST_CLASS_SPACE },
-		{ "UPPER", AST_CLASS_UPPER },
-		{ "WHITESPACE", AST_CLASS_SPACE },
+		{ "ALNUM", AST_CHAR_CLASS_ALNUM },
+		{ "ALPHA", AST_CHAR_CLASS_ALPHA },
+		{ "DIGIT", AST_CHAR_CLASS_DIGIT },
+		{ "LOWER", AST_CHAR_CLASS_LOWER },
+		{ "SPACE", AST_CHAR_CLASS_SPACE },
+		{ "UPPER", AST_CHAR_CLASS_UPPER },
+		{ "WHITESPACE", AST_CHAR_CLASS_SPACE },
 	};
 	unsigned i;
 
@@ -588,45 +588,45 @@ cc_add_range(struct re_char_class *cc,
 }
 
 static char_filter *
-char_filter_for_class_id(enum ast_class_id id)
+char_filter_for_class_id(enum ast_char_class_id id)
 {
 	char_filter *filter = NULL;
 	switch (id) {
-	case AST_CLASS_ALNUM:
+	case AST_CHAR_CLASS_ALNUM:
 		filter = isalnum; break;
-	case AST_CLASS_ALPHA:
+	case AST_CHAR_CLASS_ALPHA:
 		filter = isalpha; break;
-	case AST_CLASS_ANY:
+	case AST_CHAR_CLASS_ANY:
 		break;
-	case AST_CLASS_ASCII:
+	case AST_CHAR_CLASS_ASCII:
 		/* filter = isascii; */
 		break;
-	case AST_CLASS_BLANK:
+	case AST_CHAR_CLASS_BLANK:
 		/* filter = isblank; */
 		break;
-	case AST_CLASS_CNTRL:
+	case AST_CHAR_CLASS_CNTRL:
 		filter = iscntrl; break;
-	case AST_CLASS_DIGIT:
+	case AST_CHAR_CLASS_DIGIT:
 		filter = isdigit; break;
-	case AST_CLASS_GRAPH:
+	case AST_CHAR_CLASS_GRAPH:
 		filter = isgraph; break;
-	case AST_CLASS_LOWER:
+	case AST_CHAR_CLASS_LOWER:
 		filter = islower; break;
-	case AST_CLASS_PRINT:
+	case AST_CHAR_CLASS_PRINT:
 		filter = isprint; break;
-	case AST_CLASS_PUNCT:
+	case AST_CHAR_CLASS_PUNCT:
 		filter = ispunct; break;
-	case AST_CLASS_SPACE:
+	case AST_CHAR_CLASS_SPACE:
 		filter = isspace; break;
-	case AST_CLASS_SPCHR:
+	case AST_CHAR_CLASS_SPCHR:
 		/* filter = isspchr; */
 		break;
-	case AST_CLASS_UPPER:
+	case AST_CHAR_CLASS_UPPER:
 		filter = isupper; break;
-	case AST_CLASS_WORD:
+	case AST_CHAR_CLASS_WORD:
 		/* filter = isword; */
 		break;
-	case AST_CLASS_XDIGIT:
+	case AST_CHAR_CLASS_XDIGIT:
 		filter = isxdigit; break;
 	default:
 		fprintf(stderr, "(MATCH FAIL)\n");
@@ -636,7 +636,7 @@ char_filter_for_class_id(enum ast_class_id id)
 }
 
 static int
-cc_add_named_class(struct re_char_class *cc, enum ast_class_id id)
+cc_add_named_class(struct re_char_class *cc, enum ast_char_class_id id)
 {
 	unsigned i;
 	char_filter *filter = NULL;

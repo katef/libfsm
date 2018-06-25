@@ -41,23 +41,23 @@ enum re_char_class_ast_type {
 };
 
 /* These are used for named character classes, such as [:alnum:]. */
-enum ast_class_id {
-	AST_CLASS_ALNUM,
-	AST_CLASS_ALPHA,
-	AST_CLASS_ANY,
-	AST_CLASS_ASCII,
-	AST_CLASS_BLANK,
-	AST_CLASS_CNTRL,
-	AST_CLASS_DIGIT,
-	AST_CLASS_GRAPH,
-	AST_CLASS_LOWER,
-	AST_CLASS_PRINT,
-	AST_CLASS_PUNCT,
-	AST_CLASS_SPACE,
-	AST_CLASS_SPCHR,
-	AST_CLASS_UPPER,
-	AST_CLASS_WORD,
-	AST_CLASS_XDIGIT
+enum ast_char_class_id {
+	AST_CHAR_CLASS_ALNUM,
+	AST_CHAR_CLASS_ALPHA,
+	AST_CHAR_CLASS_ANY,
+	AST_CHAR_CLASS_ASCII,
+	AST_CHAR_CLASS_BLANK,
+	AST_CHAR_CLASS_CNTRL,
+	AST_CHAR_CLASS_DIGIT,
+	AST_CHAR_CLASS_GRAPH,
+	AST_CHAR_CLASS_LOWER,
+	AST_CHAR_CLASS_PRINT,
+	AST_CHAR_CLASS_PUNCT,
+	AST_CHAR_CLASS_SPACE,
+	AST_CHAR_CLASS_SPCHR,
+	AST_CHAR_CLASS_UPPER,
+	AST_CHAR_CLASS_WORD,
+	AST_CHAR_CLASS_XDIGIT
 };
 
 /* These are used for character type set, such as \D (non-digit)
@@ -96,7 +96,7 @@ struct ast_range_endpoint {
 			enum ast_char_type_id id;
 		} char_type;
 		struct {
-			enum ast_class_id id;
+			enum ast_char_class_id id;
 		} char_class;
 	} u;
 };
@@ -119,7 +119,7 @@ struct re_char_class_ast {
 			struct ast_pos end;
 		} range;
 		struct {
-			enum ast_class_id id;
+			enum ast_char_class_id id;
 		} named;
 		struct {
 			enum ast_char_type_id id;
@@ -153,7 +153,7 @@ struct re_char_class_ast *
 re_char_class_ast_flags(enum re_char_class_flags flags);
 
 struct re_char_class_ast *
-re_char_class_ast_named_class(enum ast_class_id id);
+re_char_class_ast_named_class(enum ast_char_class_id id);
 
 struct re_char_class_ast *
 re_char_class_ast_char_type(enum ast_char_type_id id);
@@ -181,7 +181,7 @@ re_char_class_type_id_of_name(const char *name,
     enum ast_char_type_id *id);
 
 int
-re_char_class_id_of_name(const char *name, enum ast_class_id *id);
+re_char_class_id_of_name(const char *name, enum ast_char_class_id *id);
 
 void
 ast_char_class_dump(FILE *f, struct re_char_class *c);

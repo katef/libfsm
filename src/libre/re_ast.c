@@ -48,8 +48,8 @@ free_iter(struct ast_expr *n)
 	case AST_EXPR_REPEATED:
 		free_iter(n->u.repeated.e);
 		break;
-	case AST_EXPR_CLASS:
-		re_char_class_ast_free(n->u.class.cca);
+	case AST_EXPR_CHAR_CLASS:
+		re_char_class_ast_free(n->u.char_class.cca);
 		break;
 	case AST_EXPR_GROUP:
 		free_iter(n->u.group.e);
@@ -222,10 +222,10 @@ re_ast_expr_char_class(struct re_char_class_ast *cca,
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
 
-	res->t = AST_EXPR_CLASS;
-	res->u.class.cca = cca;
-	memcpy(&res->u.class.start, start, sizeof *start);
-	memcpy(&res->u.class.end, end, sizeof *end);
+	res->t = AST_EXPR_CHAR_CLASS;
+	res->u.char_class.cca = cca;
+	memcpy(&res->u.char_class.start, start, sizeof *start);
+	memcpy(&res->u.char_class.end, end, sizeof *end);
 	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)cca);
 	return res;
 }
@@ -332,9 +332,9 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 		    (void *)n, n->u.repeated.low, n->u.repeated.high);
 		pp_iter(f, indent + 1*IND, n->u.repeated.e);
 		break;
-	case AST_EXPR_CLASS:
-		fprintf(f, "CLASS %p: \n", (void *)n);
-		re_char_class_ast_prettyprint(f, n->u.class.cca, indent + IND);
+	case AST_EXPR_CHAR_CLASS:
+		fprintf(f, "CHAR_CLASS %p: \n", (void *)n);
+		re_char_class_ast_prettyprint(f, n->u.char_class.cca, indent + IND);
 		fprintf(f, "\n");
 		break;
 	case AST_EXPR_CHAR_TYPE:

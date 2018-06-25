@@ -60,8 +60,8 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 	case AST_EXPR_REPEATED:
 		analysis_iter(env, n->u.repeated.e);
 		break;
-	case AST_EXPR_CLASS:
-		analysis_char_class(env, n->u.class.cca);
+	case AST_EXPR_CHAR_CLASS:
+		analysis_char_class(env, n->u.char_class.cca);
 		break;
 	case AST_EXPR_GROUP:
 		/* assign group ID */

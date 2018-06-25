@@ -176,10 +176,10 @@ comp_iter(struct comp_env *env,
 		break;
 	}
 
-	case AST_EXPR_CLASS:
+	case AST_EXPR_CHAR_CLASS:
 	{
 		int i;
-		struct re_char_class_ast *cca = n->u.class.cca;
+		struct re_char_class_ast *cca = n->u.char_class.cca;
 		struct re_char_class *cc = re_char_class_ast_compile(cca);
 		if (cc == NULL) { return 0; }
 

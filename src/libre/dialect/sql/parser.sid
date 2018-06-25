@@ -23,7 +23,7 @@
 	!err;
 	ast_expr;
 	ast_count;
-        ast_class_id;
+        ast_char_class_id;
         !ast_char_type_id;
 	char_class_ast;
 	range_endpoint;
@@ -47,7 +47,7 @@
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
-	NAMED_CHAR_CLASS: () -> (:ast_class_id, :pos, :pos);
+	NAMED_CHAR_CLASS: () -> (:ast_char_class_id, :pos, :pos);
 
 	!OPENFLAGS;
 	!CLOSEFLAGS;
@@ -97,7 +97,7 @@
         <char-class-ast-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:char_class_ast);
 	<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
-	<char-class-ast-named-class>: (:ast_class_id) -> (:char_class_ast);
+	<char-class-ast-named-class>: (:ast_char_class_id) -> (:char_class_ast);
 	!<char-class-ast-char-type>: (:ast_char_type_id) -> (:char_class_ast);
 
 	<char-class-ast-flag-none>: () -> (:char_class_ast);
@@ -106,7 +106,7 @@
 	<char-class-ast-flag-invert-minus>: () -> (:char_class_ast);
 
 	<ast-range-endpoint-literal>: (:char) -> (:range_endpoint);
-	!<ast-range-endpoint-char-class>: (:ast_class_id) -> (:range_endpoint);
+	!<ast-range-endpoint-char-class>: (:ast_char_class_id) -> (:range_endpoint);
 	!<ast-range-endpoint-char-type>: (:ast_char_type_id) -> (:range_endpoint);
 
 	!<re-flag-none>: () -> (:re_flags);
@@ -198,7 +198,7 @@
 				f = <char-class-ast-flag-none>();
 			};
 
-			named-class: () -> (id :ast_class_id) = {
+			named-class: () -> (id :ast_char_class_id) = {
                         	(id, !, !) = NAMED_CHAR_CLASS;
 			};
 

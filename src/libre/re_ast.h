@@ -42,7 +42,7 @@ enum ast_expr_type {
 	AST_EXPR_PLUS,
 	AST_EXPR_OPT,
 	AST_EXPR_REPEATED,
-	AST_EXPR_CLASS,
+	AST_EXPR_CHAR_CLASS,
 	AST_EXPR_CHAR_TYPE,
 	AST_EXPR_GROUP,
 	AST_EXPR_FLAGS
@@ -99,7 +99,7 @@ struct ast_expr {
 			struct re_char_class_ast *cca;
 			struct ast_pos start;
 			struct ast_pos end;
-		} class;
+		} char_class;
 		struct {
 			enum ast_char_type_id id;
 		} char_type;

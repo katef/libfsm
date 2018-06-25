@@ -112,7 +112,7 @@
 	typedef struct fsm * t_fsm;
 	typedef enum re_flags t_re__flags;
 	typedef struct grp t_grp;
-	typedef enum ast_class_id t_ast__class__id;
+	typedef enum ast_char_class_id t_ast__char__class__id;
 	typedef enum ast_char_type_id t_ast__char__type__id;
 	typedef struct ast_count t_ast__count;
 
@@ -693,7 +693,7 @@
 		@end   = lex_state->lx.end;
 	@};
 
-	NAMED_CHAR_CLASS: () -> (id :ast_class_id, start :pos, end :pos) = @{
+	NAMED_CHAR_CLASS: () -> (id :ast_char_class_id, start :pos, end :pos) = @{
 		/* enum ast_char_class_type_id type_id; */
 		if (!re_char_class_id_of_name(lex_state->buf.a, &@id)) {
 			@!;
@@ -922,7 +922,7 @@
 		@n = re_char_class_ast_subtract(@l, @r);
 	@};
 
-	<char-class-ast-named-class>: (id :ast_class_id) -> (n :char_class_ast) = @{
+	<char-class-ast-named-class>: (id :ast_char_class_id) -> (n :char_class_ast) = @{
 		@n = re_char_class_ast_named_class(@id);
 	@};
 
@@ -968,7 +968,7 @@
 		@r = range;
 	@};
 
-	<ast-range-endpoint-char-class>: (id :ast_class_id) -> (r :range_endpoint) = @{
+	<ast-range-endpoint-char-class>: (id :ast_char_class_id) -> (r :range_endpoint) = @{
 		struct ast_range_endpoint range;
 		range.t = AST_RANGE_ENDPOINT_CHAR_CLASS;
 		range.u.char_class.id = @id;
