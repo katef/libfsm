@@ -716,35 +716,6 @@
 	 * In some cases (e.g. counting) actions are centralised here for
 	 * the sake of DRY, at the expense of slight overkill.
 	 */
-
-
-
-	<push-flags>: () -> () = @{
-		struct flags *n = malloc(sizeof *n);
-		if (n == NULL) {
-			@!;
-		}
-		n->parent = flags;
-		n->flags = flags->flags;
-		flags = n;
-	@};
-
-	<pop-flags>: () -> () = @{
-		struct flags *t = flags->parent;
-		assert(t != NULL);
-		free(flags);
-		flags = t;
-	@};
-
-	<set-flag>: (flag: re_flags) -> () = @{
-		flags->flags |= @flag;
-	@};
-
-	<clear-flag>: (flag: re_flags) -> () = @{
-		flags->flags &= ~@flag;
-	@};
-
-
 	<err-expected-term> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXTERM;

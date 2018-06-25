@@ -66,11 +66,6 @@
 
 %productions%
 
-	!<push-flags>;
-	!<pop-flags>;
-	!<set-flag>: (:re_flags) -> ();
-	!<clear-flag>: (:re_flags) -> ();
-
 	<err-expected-term>;
 	<err-expected-count>;
 	!<err-expected-atoms>;

@@ -61,11 +61,6 @@
 
 %productions%
 
-	!<push-flags>;
-	!<pop-flags>;
-	!<set-flag>: (:re_flags) -> ();
-	!<clear-flag>: (:re_flags) -> ();
-
 	<ast-expr-empty>: () -> (:ast_expr);
 	<ast-expr-literal>: (:char) -> (:ast_expr);
 	<ast-expr-concat>: (:ast_expr, :ast_expr) -> (:ast_expr);

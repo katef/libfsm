@@ -70,11 +70,6 @@
 
 %productions%
 
-	!<push-flags>;
-	!<pop-flags>;
-	!<set-flag>: (:re_flags) -> ();
-	!<clear-flag>: (:re_flags) -> ();
-
         <atom-kleene>: () -> (:ast_count);
         <atom-plus>: () -> (:ast_count);
         <atom-one>: () -> (:ast_count);
