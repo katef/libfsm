@@ -33,6 +33,9 @@ else
     done
 
     for t in tests/${DIR}/error*.re; do
+        if [ "$t" = "tests/${DIR}/error*.re" ]; then
+            break
+        fi
         EXP=${t/\.re/.msg}
         TMP_OUT=$(echo ${EXP} | sed -e 's#.*/##' -e 's/fsm/err/')
         ${RE} -r "${DIR}" -p -y $t 2> tmp/${TMP_OUT}
