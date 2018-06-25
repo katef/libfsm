@@ -160,6 +160,9 @@
 					(c, !, !) = HEX;
 					||
 					(c, !, !) = CHAR;
+					||
+					(c, !, !) = CONTROL;
+					<err-unsupported>();
 				};
 				n = <char-class-ast-literal>(c);
 	  		};
@@ -182,6 +185,9 @@
 						(c, start, end) = HEX;
 					||
 						(c, start, end) = CHAR;
+					||
+						(c, start, end) = CONTROL;
+						<err-unsupported>();
 					};
 					r = <ast-range-endpoint-literal>(c);
 				};
