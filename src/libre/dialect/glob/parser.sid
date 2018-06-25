@@ -17,6 +17,7 @@
         !ast_class_id;
         !ast_char_type_id;
 	!char_class_ast;
+	!range_endpoint;
 
 %terminals%
 
@@ -35,24 +36,7 @@
 	!INVERT: () -> (:char);
 	!RANGE:  () -> (:char, :pos, :pos);
 
-	!CLASS_alnum:  () -> (:ast_class_id);
-	!CLASS_alpha:  () -> (:ast_class_id);
-	!CLASS_any:    () -> (:ast_class_id);
-	!CLASS_ascii:  () -> (:ast_class_id);
-	!CLASS_blank:  () -> (:ast_class_id);
-	!CLASS_cntrl:  () -> (:ast_class_id);
-	!CLASS_digit:  () -> (:ast_class_id);
-	!CLASS_graph:  () -> (:ast_class_id);
-	!CLASS_lower:  () -> (:ast_class_id);
-	!CLASS_print:  () -> (:ast_class_id);
-	!CLASS_punct:  () -> (:ast_class_id);
-	!CLASS_space:  () -> (:ast_class_id);
-	!CLASS_spchr:  () -> (:ast_class_id);
-	!CLASS_upper:  () -> (:ast_class_id);
-	!CLASS_word:   () -> (:ast_class_id);
-	!CLASS_xdigit: () -> (:ast_class_id);
-	!CLASS_ndigit: () -> (:ast_class_id);
-	!CLASS_nspace: () -> (:ast_class_id);
+	!NAMED_CHAR_CLASS: () -> (:ast_class_id, :pos, :pos);
 
 	!OPENFLAGS;
 	!CLOSEFLAGS;
@@ -69,7 +53,7 @@
 	!START:   () -> (:pred);
 	!END:     () -> (:pred);
 	!COUNT:   () -> (:unsigned);
-	!CHAR_TYPE: () -> (:ast_char_type_id);
+	!CHAR_TYPE: () -> (:ast_char_type_id, :pos, :pos);
 
 	EOF;
 	!ERROR;
@@ -104,15 +88,20 @@
         !<expr-count>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
 	!<char-class-ast-literal>: (:char) -> (:char_class_ast);
-        !<char-class-ast-range>: (:char, :pos, :char, :pos) -> (:char_class_ast);
+        !<char-class-ast-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:char_class_ast);
 	!<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	!<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	!<char-class-ast-named-class>: (:ast_class_id) -> (:char_class_ast);
+	!<char-class-ast-char-type>: (:ast_char_type_id) -> (:char_class_ast);
 
 	!<char-class-ast-flag-none>: () -> (:char_class_ast);
 	!<char-class-ast-flag-invert>: () -> (:char_class_ast);
 	!<char-class-ast-flag-minus>: () -> (:char_class_ast);
 	!<char-class-ast-flag-invert-minus>: () -> (:char_class_ast);
+
+	!<ast-range-endpoint-literal>: (:char) -> (:range_endpoint);
+	!<ast-range-endpoint-char-class>: (:ast_class_id) -> (:range_endpoint);
+	!<ast-range-endpoint-char-type>: (:ast_char_type_id) -> (:range_endpoint);
 
 	!<re-flag-none>: () -> (:re_flags);
 	!<re-flag-union>: (:re_flags, :re_flags) -> (:re_flags);
@@ -127,6 +116,7 @@
 	!<err-expected-closeflags>;
 	!<err-expected-groupbody>;
 	<err-expected-eof>;
+	!<err-unsupported>;
 
 	!<mark-group>: (:pos, :pos) -> ();
 	!<mark-range>: (:pos, :pos) -> ();

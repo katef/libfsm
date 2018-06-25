@@ -35,6 +35,7 @@ enum re_char_class_ast_type {
 	RE_CHAR_CLASS_AST_LITERAL,
 	RE_CHAR_CLASS_AST_RANGE,
 	RE_CHAR_CLASS_AST_NAMED,
+	RE_CHAR_CLASS_AST_CHAR_TYPE,
 	RE_CHAR_CLASS_AST_FLAGS,
 	RE_CHAR_CLASS_AST_SUBTRACT
 };
@@ -80,6 +81,26 @@ enum ast_char_type_id {
 	AST_CHAR_TYPE_NON_NL
 };
 
+enum ast_range_endpoint_type {
+	AST_RANGE_ENDPOINT_LITERAL,
+	AST_RANGE_ENDPOINT_CHAR_TYPE,
+	AST_RANGE_ENDPOINT_CHAR_CLASS
+};
+struct ast_range_endpoint {
+	enum ast_range_endpoint_type t;
+	union {
+		struct {
+			unsigned char c;
+		} literal;
+		struct {
+			enum ast_char_type_id id;
+		} char_type;
+		struct {
+			enum ast_class_id id;
+		} char_class;
+	} u;
+};
+
 /* TODO: opaque? */
 struct re_char_class_ast {
 	enum re_char_class_ast_type t;
@@ -92,14 +113,17 @@ struct re_char_class_ast {
 			unsigned char c;
 		} literal;
 		struct {
-			unsigned char from;
+			struct ast_range_endpoint from;
 			struct ast_pos start;
-			unsigned char to;
+			struct ast_range_endpoint to;
 			struct ast_pos end;
 		} range;
 		struct {
 			enum ast_class_id id;
 		} named;
+		struct {
+			enum ast_char_type_id id;
+		} char_type;
 		struct {
 			enum re_char_class_flags f;
 		} flags;
@@ -118,14 +142,21 @@ struct re_char_class_ast *
 re_char_class_ast_literal(unsigned char c);
 
 struct re_char_class_ast *
-re_char_class_ast_range(unsigned char from, struct ast_pos start,
-    unsigned char to, struct ast_pos end);
+re_char_class_ast_range(const struct ast_range_endpoint *from, struct ast_pos start,
+    const struct ast_range_endpoint *to, struct ast_pos end);
+
+void
+re_char_class_endpoint_span(const struct ast_range_endpoint *r,
+    unsigned char *from, unsigned char *to);
 
 struct re_char_class_ast *
 re_char_class_ast_flags(enum re_char_class_flags flags);
 
 struct re_char_class_ast *
 re_char_class_ast_named_class(enum ast_class_id id);
+
+struct re_char_class_ast *
+re_char_class_ast_char_type(enum ast_char_type_id id);
 
 struct re_char_class_ast *
 re_char_class_ast_subtract(struct re_char_class_ast *ast,
@@ -144,6 +175,13 @@ re_char_class_ast_compile(struct re_char_class_ast *cca);
 /* Convert a char type (outside of a char class) into a char class.  */
 struct re_char_class *
 re_char_class_type_compile(enum ast_char_type_id id);
+
+int
+re_char_class_type_id_of_name(const char *name,
+    enum ast_char_type_id *id);
+
+int
+re_char_class_id_of_name(const char *name, enum ast_class_id *id);
 
 void
 ast_char_class_dump(FILE *f, struct re_char_class *c);

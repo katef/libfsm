@@ -46,6 +46,9 @@
 # Note: these need to be their own lexemes distinct from named character
 # classes such as /[:digit:]/, as they are allowed in different contexts
 char_type = '\' /[dDhHsSvVwWN]/;
+
+# Also note, this needs a double underscore because
+# sid expects any '_' in a C identifier converts to "__".
 char_type -> $char__type;
 
 '\'   /[0-7]{1,3}/     -> $oct;
@@ -94,31 +97,31 @@ char_type -> $char__type;
         '\{' -> $esc;
 
 	char_type = '\' /[dDhHsSvVwWN]/;
-	char_type -> $char_type;
+	char_type -> $char__type;
 
 	'\'   /[0-7]{1,3}/     -> $oct;
 	'\o{' /[0-7]+/i '}'    -> $oct;
 	'\x'  /[0-9a-f]{1,2}/i -> $hex;
 	'\x{' /[0-9a-f]+/i '}' -> $hex;
 
-	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | char_type) -> $noesc;
+	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $char__type) -> $noesc;
 	'\' -> $invalid;
 
         # FIXME: negated character classes, e.g. [:^alpha:]
-	'[:alnum:]'  -> $class_alnum;
-	'[:alpha:]'  -> $class_alpha;
-	'[:ascii:]'  -> $class_ascii;
-	'[:blank:]'  -> $class_blank;
-	'[:cntrl:]'  -> $class_cntrl;
-	'[:digit:]'  -> $class_digit;
-	'[:graph:]'  -> $class_graph;
-	'[:lower:]'  -> $class_lower;
-	'[:print:]'  -> $class_print;
-	'[:punct:]'  -> $class_punct;
-	'[:space:]'  -> $class_space;
-	'[:upper:]'  -> $class_upper;
-	'[:word:]'   -> $class_word;
-	'[:xdigit:]' -> $class_xdigit;
+	'[:alnum:]'  -> $named__char__class;
+	'[:alpha:]'  -> $named__char__class;
+	'[:ascii:]'  -> $named__char__class;
+	'[:blank:]'  -> $named__char__class;
+	'[:cntrl:]'  -> $named__char__class;
+	'[:digit:]'  -> $named__char__class;
+	'[:graph:]'  -> $named__char__class;
+	'[:lower:]'  -> $named__char__class;
+	'[:print:]'  -> $named__char__class;
+	'[:punct:]'  -> $named__char__class;
+	'[:space:]'  -> $named__char__class;
+	'[:upper:]'  -> $named__char__class;
+	'[:word:]'   -> $named__char__class;
+	'[:xdigit:]' -> $named__char__class;
 
 	# XXX: /./ - the above
 	/[^\^\-\\]/ -> $char;

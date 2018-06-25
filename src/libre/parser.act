@@ -120,6 +120,8 @@
 	typedef struct ast_char_class * t_char__class;
 	typedef enum re_char_class_flags t_char__class__flags;
 
+	typedef struct ast_range_endpoint t_range__endpoint;
+
 	struct act_state {
 		enum LX_TOKEN lex_tok;
 		enum LX_TOKEN lex_tok_save;
@@ -499,26 +501,6 @@
 		@end   = lex_state->lx.end;
 	@};
 
-	CLASS_alnum:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_ALNUM; @};
-	CLASS_alpha:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_ALPHA; @};
-	CLASS_any:    () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_ANY; @};
-	CLASS_ascii:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_ASCII; @};
-	CLASS_blank:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_BLANK; @};
-	CLASS_cntrl:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_CNTRL; @};
-	CLASS_digit:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_DIGIT; @};
-	CLASS_graph:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_GRAPH; @};
-	CLASS_lower:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_LOWER; @};
-	CLASS_print:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_PRINT; @};
-	CLASS_punct:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_PUNCT; @};
-	CLASS_space:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_SPACE; @};
-	CLASS_spchr:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_SPCHR; @};
-	CLASS_upper:  () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_UPPER; @};
-	CLASS_word:   () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_WORD; @};
-	CLASS_xdigit: () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_XDIGIT; @};
-
-	CLASS_ndigit: () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_DIGIT; @};
-	CLASS_nspace: () -> (c_id :ast_class_id) = @{ @c_id = AST_CLASS_SPACE; @};
-
 	ESC: () -> (c :char, start :pos, end :pos) = @{
 		assert(lex_state->buf.a[0] == '\\');
 		assert(lex_state->buf.a[1] != '\0');
@@ -701,11 +683,25 @@
 		@n = (unsigned int) u;
 	@};
 
-	CHAR_TYPE: () -> (id :ast_char_type_id) = @{
-		/* TODO use string contents */
-		@id = AST_CHAR_TYPE_DECIMAL;
+	CHAR_TYPE: () -> (id :ast_char_type_id, start :pos, end :pos) = @{
+		/* enum ast_char_class_type_id type_id; */
+		if (!re_char_class_type_id_of_name(lex_state->buf.a, &@id)) {
+			@!;
+		}
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
 	@};
-		
+
+	NAMED_CHAR_CLASS: () -> (id :ast_class_id, start :pos, end :pos) = @{
+		/* enum ast_char_class_type_id type_id; */
+		if (!re_char_class_id_of_name(lex_state->buf.a, &@id)) {
+			@!;
+		}
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+	@};
 
 	FLAG_INSENSITIVE: () -> (flag :re_flags) = @{
 		@flag = RE_ICASE;
@@ -819,6 +815,13 @@
 		@!;
 	@};
 
+	<err-unsupported> = @{
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EXUNSUPPORTD;
+		}
+		@!;
+	@};
+
 	<mark-group>: (start :pos, end :pos) -> () = @{
 		mark(&act_state->groupstart, &@start);
 		mark(&act_state->groupend,   &@end);
@@ -916,23 +919,28 @@
 		@n = re_char_class_ast_literal(@c);
 	@};
 
-	<char-class-ast-range>: (from :char, start :pos, to :char, end :pos) -> (n :char_class_ast) = @{
+	<char-class-ast-range>: (from :range_endpoint, start :pos,
+	    		to :range_endpoint, end :pos) -> (n :char_class_ast) = @{
 		struct ast_pos ast_start, ast_end;
+		unsigned char lower, upper;
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 
-		if ((unsigned char) @from > (unsigned char) @to) {
+		re_char_class_endpoint_span(&@from, &lower, NULL);
+		re_char_class_endpoint_span(&@to, NULL, &upper);
+
+		if (lower > upper) {
 			char a[5], b[5];
-		
+			
 			assert(sizeof err->set >= 1 + sizeof a + 1 + sizeof b + 1 + 1);
-		
+			
 			sprintf(err->set, "%s-%s",
-				escchar(a, sizeof a, @from), escchar(b, sizeof b, @to));
+			    escchar(a, sizeof a, lower), escchar(b, sizeof b, upper));
 			err->e = RE_ENEGRANGE;
 			@!;
 		}
 
-		@n = re_char_class_ast_range(@from, ast_start, @to, ast_end);
+		@n = re_char_class_ast_range(&@from, ast_start, &@to, ast_end);
 	@};
 
 	<char-class-ast-concat>: (l :char_class_ast, r :char_class_ast) -> (n :char_class_ast) = @{
@@ -945,6 +953,10 @@
 
 	<char-class-ast-named-class>: (id :ast_class_id) -> (n :char_class_ast) = @{
 		@n = re_char_class_ast_named_class(@id);
+	@};
+
+	<char-class-ast-char-type>: (id :ast_char_type_id) -> (n :char_class_ast) = @{
+		@n = re_char_class_ast_char_type(@id);
 	@};
 
 	<ast-expr-char-class>: (cca :char_class_ast, start :pos, end :pos) -> (n :ast_expr) = @{
@@ -976,6 +988,27 @@
 
 	<char-class-ast-flag-invert-minus>: () -> (f :char_class_ast) = @{
 		@f = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_INVERTED | RE_CHAR_CLASS_FLAG_MINUS);
+	@};
+
+	<ast-range-endpoint-literal>: (c :char) -> (r :range_endpoint) = @{
+		struct ast_range_endpoint range;
+		range.t = AST_RANGE_ENDPOINT_LITERAL;
+		range.u.literal.c = @c;
+		@r = range;
+	@};
+
+	<ast-range-endpoint-char-class>: (id :ast_class_id) -> (r :range_endpoint) = @{
+		struct ast_range_endpoint range;
+		range.t = AST_RANGE_ENDPOINT_CHAR_CLASS;
+		range.u.char_class.id = @id;
+		@r = range;
+	@};
+
+	<ast-range-endpoint-char-type>: (id :ast_char_type_id) -> (r :range_endpoint) = @{
+		struct ast_range_endpoint range;
+		range.t = AST_RANGE_ENDPOINT_CHAR_TYPE;
+		range.u.char_type.id = @id;
+		@r = range;
 	@};
 
 	<re-flag-none>: () -> (f :re_flags) = @{

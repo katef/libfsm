@@ -23,6 +23,7 @@
         ast_char_type_id;
 	ast_count;
 	char_class_ast;
+	range_endpoint;
 
 %terminals%
 
@@ -41,25 +42,7 @@
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
-	CLASS_alnum:  () -> (:ast_class_id);
-	CLASS_alpha:  () -> (:ast_class_id);
-	!CLASS_any:    () -> (:ast_class_id);
-	CLASS_ascii:  () -> (:ast_class_id);
-	CLASS_blank:  () -> (:ast_class_id);
-	CLASS_cntrl:  () -> (:ast_class_id);
-	CLASS_digit:  () -> (:ast_class_id);
-	CLASS_graph:  () -> (:ast_class_id);
-	CLASS_lower:  () -> (:ast_class_id);
-	CLASS_print:  () -> (:ast_class_id);
-	CLASS_punct:  () -> (:ast_class_id);
-	CLASS_space:  () -> (:ast_class_id);
-	!CLASS_spchr:  () -> (:ast_class_id);
-	CLASS_upper:  () -> (:ast_class_id);
-	CLASS_word:   () -> (:ast_class_id);
-	CLASS_xdigit: () -> (:ast_class_id);
-
-	!CLASS_ndigit: () -> (:ast_class_id);
-	!CLASS_nspace: () -> (:ast_class_id);
+	NAMED_CHAR_CLASS: () -> (:ast_class_id, :pos, :pos);
 
 	OPENFLAGS;
 	CLOSEFLAGS;
@@ -69,14 +52,14 @@
 
 	ESC:     () -> (:char, :pos, :pos);
 	!NOESC:   () -> (:char, :pos, :pos);
-	!CONTROL: () -> (:char, :pos, :pos);
+	CONTROL: () -> (:char, :pos, :pos);
 	OCT:     () -> (:char, :pos, :pos);
 	HEX:     () -> (:char, :pos, :pos);
 	CHAR:    () -> (:char, :pos, :pos);
 	!START:   () -> (:pred);
 	!END:     () -> (:pred);
 	COUNT:   () -> (:unsigned);
-	CHAR_TYPE: () -> (:ast_char_type_id);
+	CHAR_TYPE: () -> (:ast_char_type_id, :pos, :pos);
 
 	EOF;
 	!ERROR;
@@ -98,6 +81,7 @@
 	<err-unknown-flag>;
 	<err-expected-closeflags>;
 	<err-expected-eof>;
+	<err-unsupported>;
 
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();
@@ -126,15 +110,20 @@
         <expr-count>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
 	<char-class-ast-literal>: (:char) -> (:char_class_ast);
-	<char-class-ast-range>: (:char, :pos, :char, :pos) -> (:char_class_ast);
+	<char-class-ast-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:char_class_ast);
 	<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	!<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	<char-class-ast-named-class>: (:ast_class_id) -> (:char_class_ast);
+	<char-class-ast-char-type>: (:ast_char_type_id) -> (:char_class_ast);
 
 	<char-class-ast-flag-none>: () -> (:char_class_ast);
 	<char-class-ast-flag-invert>: () -> (:char_class_ast);
 	!<char-class-ast-flag-minus>: () -> (:char_class_ast);
 	!<char-class-ast-flag-invert-minus>: () -> (:char_class_ast);
+
+	<ast-range-endpoint-literal>: (:char) -> (:range_endpoint);
+	<ast-range-endpoint-char-class>: (:ast_class_id) -> (:range_endpoint);
+	<ast-range-endpoint-char-type>: (:ast_char_type_id) -> (:range_endpoint);
 
 	<re-flag-none>: () -> (:re_flags);
 	<re-flag-union>: (:re_flags, :re_flags) -> (:re_flags);
@@ -154,7 +143,7 @@
 		};
 		    
 		char-type: () -> (n :ast_expr) = {
-			id = CHAR_TYPE;
+			(id, !, !) = CHAR_TYPE;
 			n = <ast-expr-char-type>(id);
 		};
 
@@ -180,13 +169,44 @@
 				n = <char-class-ast-literal>(c);
 	  		};
 
-			class-range: () -> (n :char_class_ast) = {
+			class-named: () -> (k :ast_class_id, start :pos, end :pos) = {
+				(k, start, end) = NAMED_CHAR_CLASS;
+			};
+
+
+			class-char-type: () -> (n :char_class_ast) = {
+				(id, !, !) = CHAR_TYPE;
+				n = <char-class-ast-char-type>(id);
+			};
+
+			class-range: () -> (n :char_class_ast, start :pos, end :pos) [
+				range-endpoint-literal: () -> (r :range_endpoint, start :pos, end :pos) = {
+					{
+						(c, start, end) = OCT;
+					||
+						(c, start, end) = HEX;
+					||
+						(c, start, end) = CHAR;
+					};
+					r = <ast-range-endpoint-literal>(c);
+				};
+
+				range-endpoint-char-class: () -> (r :range_endpoint, start :pos, end :pos) = {
+					(id, start, end) = class-named();
+					r = <ast-range-endpoint-char-class>(id);
+				};
+
+				range-endpoint-char-type: () -> (r :range_endpoint, start :pos, end :pos) = {
+					(id, start, end) = CHAR_TYPE;
+					r = <ast-range-endpoint-char-type>(id);
+				};
+			] = {
 				{
-					(a, start, !) = OCT;
+					(lower, l_start, l_end) = range-endpoint-literal();
 				||
-					(a, start, !) = HEX;
+					(lower, l_start, l_end) = range-endpoint-char-class();
 				||
-					(a, start, !) = CHAR;
+					(lower, l_start, l_end) = range-endpoint-char-type();
 				};
 
 				{
@@ -196,60 +216,35 @@
 				};
 	
 				{
-					(b, !, end) = OCT;
+					(upper, u_start, u_end) = range-endpoint-literal();
 				||
-					(b, !, end) = HEX;
+					(upper, u_start, u_end) = range-endpoint-char-class();
 				||
-					(b, !, end) = CHAR;
+					(upper, u_start, u_end) = range-endpoint-char-type();
 				||
-					(b, !, end) = RANGE;
+					/* allow literal '-' as end of range */
+					(c, u_start, u_end) = RANGE;
+					upper = <ast-range-endpoint-literal>(c);
 				};
 	
-				<mark-range>(start, end);
-				n = <char-class-ast-range>(a, start, b, end);
-			};
-
-			class-named: () -> (k :ast_class_id) = {
-				k = CLASS_alnum;
-				||
-				k = CLASS_alpha;
-				||
-				k = CLASS_ascii;
-				||
-				k = CLASS_blank;
-				||
-				k = CLASS_cntrl;
-				||
-				k = CLASS_digit;
-				||
-				k = CLASS_graph;
-				||
-				k = CLASS_lower;
-				||
-				k = CLASS_print;
-				||
-				k = CLASS_punct;
-				||
-				k = CLASS_space;
-				||
-				k = CLASS_upper;
-				||
-				k = CLASS_word;
-				||
-				k = CLASS_xdigit;
+				<mark-range>(l_start, u_end);
+				start = l_start;
+				end = u_end;
+				n = <char-class-ast-range>(lower, l_start, upper, u_end);
 			};
 
 			class-term: () -> (n :char_class_ast) = {
 				n = class-literal();
 			||
-				n = class-range();
+				(n, !, !) = class-range();
 			||
-				id = class-named();
+				n = class-char-type();
+			||
+				(id, !, !) = class-named();
 				n = <char-class-ast-named-class>(id);
 			##
 				<err-expected-term>;
-                                id = CLASS_blank;  /* workaround sid warning */
-                                n = <char-class-ast-named-class>(id);
+				n = <char-class-ast-flag-none>(); /* appease sid */
 			};
 
 			list-of-char-class-terms: () -> (n :char_class_ast) = {
@@ -344,6 +339,10 @@
 			||
 				ANY;
 				e = <ast-expr-any>();
+			||
+				(!, !, !) = CONTROL;
+				<err-unsupported>();
+				e = <ast-expr-empty>(); /* appease sid */
 			};
 
 			{

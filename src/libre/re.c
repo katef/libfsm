@@ -33,15 +33,13 @@ re_dialect(enum re_dialect dialect)
 {
 	size_t i;
 
-	/* TODO: convert the rest to parse functions that
-	 * just return an AST. */
 	static const struct dialect a[] = {
-		/* { RE_LIKE,       parse_re_like,    0 }, */
-		/* { RE_LITERAL,    parse_re_literal, 0 }, */
-		/* { RE_GLOB,       parse_re_glob,    0 }, */
-		{ RE_NATIVE,        parse_re_native,  0 },
-		{ RE_PCRE,          parse_re_pcre,    0 },
-		{ RE_SQL,           parse_re_sql,     1 }
+		{ RE_LIKE,       parse_re_like,    0 },
+		{ RE_LITERAL,    parse_re_literal, 0 },
+		{ RE_GLOB,       parse_re_glob,    0 },
+		{ RE_NATIVE,     parse_re_native,  0 },
+		{ RE_PCRE,       parse_re_pcre,    0 },
+		{ RE_SQL,        parse_re_sql,     1 }
 	};
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {

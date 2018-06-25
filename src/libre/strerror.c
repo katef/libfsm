@@ -43,6 +43,7 @@ re_strerror(enum re_errno e)
 	case RE_EXEOF:        return "Syntax error: expected EOF";
 	case RE_EXESC:        return "Syntax error: expected character escape";
 	case RE_EXCLOSEFLAGS: return "Syntax error: flags are not closed";
+	case RE_EXUNSUPPORTD: return "Syntax error: unsupported operator";
 	}
 
 	assert(!"unreached");
