@@ -13,11 +13,10 @@ addedge_literal(struct comp_env *env,
     struct fsm_state *from, struct fsm_state *to, char c);
 
 static int
-comp_iter(struct comp_env *env,
+comp_iter_repeated(struct comp_env *env,
     struct fsm_state *x, struct fsm_state *y,
-    struct ast_expr *n)
-{
-	struct fsm_state *z;
+    struct ast_expr_repeated *n);
+
 
 #define NEWSTATE(NAME)						       \
 	NAME = fsm_addstate(env->fsm);				       \
@@ -31,6 +30,14 @@ comp_iter(struct comp_env *env,
 
 #define RECURSE(FROM, TO, NODE)					       \
 	if (!comp_iter(env, FROM, TO, NODE)) { return 0; }             \
+
+
+static int
+comp_iter(struct comp_env *env,
+    struct fsm_state *x, struct fsm_state *y,
+    struct ast_expr *n)
+{
+	struct fsm_state *z;
 
 	assert(x);
 	assert(y);
@@ -115,66 +122,11 @@ comp_iter(struct comp_env *env,
 		EPSILON(z, y);
 		break;
 
-	case AST_EXPR_KLEENE:
-		EPSILON(x, y);
-		RECURSE(x, y, n->u.alt.l);
-		EPSILON(y, x);
-		break;
-
-	case AST_EXPR_PLUS:
-		RECURSE(x, y, n->u.alt.l);
-		EPSILON(y, x);
-		break;
-
-	case AST_EXPR_OPT:
-		RECURSE(x, y, n->u.alt.l);
-		EPSILON(x, y);
-		break;
-
 	case AST_EXPR_REPEATED:
-	{
-		struct fsm_state *na, *nz;
-		unsigned i, low, high;
-		struct fsm_state *a = NULL;
-		struct fsm_state *b = NULL;
-
-		/* This should have been normalized to [M;N], where
-		 * M < N and both are bounded, and {0,1} is built as
-		 * AST_EXPR_OPT instead. */
-		low = n->u.repeated.low;
-		high = n->u.repeated.high;
-		assert(low <= high);
-		assert(low != AST_COUNT_UNBOUNDED);
-		assert(high != AST_COUNT_UNBOUNDED);
-
-		/* Make new beginning/end states for the repeated section,
-		 * build its NFA, and link to its head. */
-		NEWSTATE(na);
-		NEWSTATE(nz);
-		RECURSE(na, nz, n->u.repeated.e);
-		EPSILON(x, na); /* link head to repeated NFA head */
-		b = nz;		/* set the initial tail */
-
-		if (low == 0) { EPSILON(na, nz); } /* can be skipped */
-
-		for (i = 1; i < high; i++) {
-			a = fsm_state_duplicatesubgraphx(env->fsm, na, &b);
-			if (a == NULL) { return 0; }
-
-			/* TODO: could elide this epsilon if fsm_state_duplicatesubgraphx()
-			 * took an extra parameter giving it a m->new for the start state */
-			EPSILON(nz, a);
-
-			/* To the optional part of the repeated count */
-			if (i >= low) { EPSILON(nz, b); }
-
-			na = a;	/* advance head for next duplication */
-			nz = b;	/* advance tail for concenation */
-		}
-
-		EPSILON(nz, y);	     /* tail to last repeated NFA tail */
+		/* REPEATED breaks out into its own function, because
+		 * there are several special cases */
+		if (!comp_iter_repeated(env, x, y, &n->u.repeated)) { return 0; }
 		break;
-	}
 
 	case AST_EXPR_CHAR_CLASS:
 	{
@@ -222,13 +174,71 @@ comp_iter(struct comp_env *env,
 		    __FILE__, __LINE__, n->t);
 		abort();
 	}
+	return 1;
+}
+
+static int
+comp_iter_repeated(struct comp_env *env,
+    struct fsm_state *x, struct fsm_state *y,
+    struct ast_expr_repeated *n)
+{
+	struct fsm_state *na, *nz;
+	unsigned i, low, high;
+	struct fsm_state *a = NULL;
+	struct fsm_state *b = NULL;
+	
+	low = n->low;
+	high = n->high;
+	assert(low <= high);
+
+	if (low == 0 && high == 0) {		                /* {0,0} */
+		EPSILON(x, y);
+	} else if (low == 0 && high == 1) {		        /* '?' */
+		RECURSE(x, y, n->e);
+		EPSILON(x, y);
+	} else if (low == 1 && high == 1) {		        /* {1,1} */
+		RECURSE(x, y, n->e);
+	} else if (low == 0 && high == AST_COUNT_UNBOUNDED) {   /* '*' */
+		EPSILON(x, y);
+		RECURSE(x, y, n->e);
+		EPSILON(y, x);
+	} else if (low == 1 && high == AST_COUNT_UNBOUNDED) {   /* '+' */
+		RECURSE(x, y, n->e);
+		EPSILON(y, x);
+	} else {
+		/* Make new beginning/end states for the repeated section,
+		 * build its NFA, and link to its head. */
+		NEWSTATE(na);
+		NEWSTATE(nz);
+		RECURSE(na, nz, n->e);
+		EPSILON(x, na); /* link head to repeated NFA head */
+		b = nz;		/* set the initial tail */
+		
+		if (low == 0) { EPSILON(na, nz); } /* can be skipped */
+		
+		for (i = 1; i < high; i++) {
+			a = fsm_state_duplicatesubgraphx(env->fsm, na, &b);
+			if (a == NULL) { return 0; }
+			
+			/* TODO: could elide this epsilon if fsm_state_duplicatesubgraphx()
+			 * took an extra parameter giving it a m->new for the start state */
+			EPSILON(nz, a);
+			
+			/* To the optional part of the repeated count */
+			if (i >= low) { EPSILON(nz, b); }
+			
+			na = a;	/* advance head for next duplication */
+			nz = b;	/* advance tail for concenation */
+		}
+		
+		EPSILON(nz, y);	     /* tail to last repeated NFA tail */
+	}
+	return 1;
+}
 
 #undef EPSILON
 #undef ANY
 #undef NEWSTATE
-	return 1;
-}
-
 
 static struct fsm *
 new_blank(const struct fsm_options *opt)

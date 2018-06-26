@@ -48,15 +48,6 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 	case AST_EXPR_CHAR_TYPE:
 		break;
 
-	case AST_EXPR_KLEENE:
-		analysis_iter(env, n->u.kleene.e);
-		break;
-	case AST_EXPR_PLUS:
-		analysis_iter(env, n->u.plus.e);
-		break;
-	case AST_EXPR_OPT:
-		analysis_iter(env, n->u.opt.e);
-		break;
 	case AST_EXPR_REPEATED:
 		analysis_iter(env, n->u.repeated.e);
 		break;

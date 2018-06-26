@@ -72,16 +72,7 @@ struct ast_expr {
 		struct {
 			/*const*/ char c;
 		} literal;
-		struct {
-			struct ast_expr *e;
-		} kleene;
-		struct {
-			struct ast_expr *e;
-		} plus;
-		struct {
-			struct ast_expr *e;
-		} opt;
-		struct {
+		struct ast_expr_repeated {
 			struct ast_expr *e;
 			unsigned low;
 			unsigned high;

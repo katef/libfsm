@@ -32,15 +32,6 @@ free_iter(struct ast_expr *n)
 		free_iter(n->u.alt.l);
 		free_iter(n->u.alt.r);
 		break;
-	case AST_EXPR_KLEENE:
-		free_iter(n->u.kleene.e);
-		break;
-	case AST_EXPR_PLUS:
-		free_iter(n->u.plus.e);
-		break;
-	case AST_EXPR_OPT:
-		free_iter(n->u.opt.e);
-		break;
 	case AST_EXPR_REPEATED:
 		free_iter(n->u.repeated.e);
 		break;
@@ -131,36 +122,6 @@ re_ast_expr_many(void)
 }
 
 struct ast_expr *
-re_ast_kleene(struct ast_expr *e)
-{
-	struct ast_expr *res = calloc(1, sizeof(*res));
-	if (res == NULL) { return res; }
-	res->t = AST_EXPR_KLEENE;
-	res->u.kleene.e = e;
-	return res;
-}
-
-struct ast_expr *
-re_ast_plus(struct ast_expr *e)
-{
-	struct ast_expr *res = calloc(1, sizeof(*res));
-	if (res == NULL) { return res; }
-	res->t = AST_EXPR_PLUS;
-	res->u.plus.e = e;
-	return res;
-}
-
-struct ast_expr *
-re_ast_opt(struct ast_expr *e)
-{
-	struct ast_expr *res = calloc(1, sizeof(*res));
-	if (res == NULL) { return res; }
-	res->t = AST_EXPR_OPT;
-	res->u.opt.e = e;
-	return res;
-}
-
-struct ast_expr *
 re_ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 {
 	struct ast_expr *res = NULL;
@@ -170,25 +131,6 @@ re_ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 		abort();
 	}
 
-	if (count.low == 0) {
-		if (count.high == 0) {		         /* 0,0 -> empty */
-			return re_ast_expr_empty();
-		} else if (count.high == 1) {		 /* 0,1 -> ? */
-			/* This isn't strictly necessary, but avoids
-			 * some unnecessary states and epsilon
-			 * transitions. */
-			return re_ast_opt(e);
-		} else if (count.high == AST_COUNT_UNBOUNDED) { /* 0,_ -> * */
-			return re_ast_kleene(e);
-		}
-	} else if (count.low == 1) {
-		if (count.high == AST_COUNT_UNBOUNDED) { /* 1,_ -> + */
-			return re_ast_plus(e);
-		} else if (count.high == 1) {	         /* 1,1 -> as-is */
-			return e;
-		}
-	}
-			
 	res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
 	res->t = AST_EXPR_REPEATED;

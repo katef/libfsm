@@ -21,6 +21,16 @@ print_range_endpoint(FILE *f, const struct ast_range_endpoint *r);
 	} while(0) 							\
 
 static void
+fprintf_count(FILE *f, unsigned count)
+{
+	if (count == AST_COUNT_UNBOUNDED) {
+		fprintf(f, "inf");
+	} else {
+		fprintf(f, "%u", count);
+	}
+}
+
+static void
 pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 {
 	if (n == NULL) { return; }
@@ -60,21 +70,12 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 	case AST_EXPR_MANY:
 		fprintf(f, "MANY %p:\n", (void *)n);
 		break;
-	case AST_EXPR_KLEENE:
-		fprintf(f, "KLEENE %p\n", (void *)n);
-		pp_iter(f, indent + 1*IND, n->u.kleene.e);
-		break;
-	case AST_EXPR_PLUS:
-		fprintf(f, "PLUS %p\n", (void *)n);
-		pp_iter(f, indent + 1*IND, n->u.plus.e);
-		break;
-	case AST_EXPR_OPT:
-		fprintf(f, "OPT %p\n", (void *)n);
-		pp_iter(f, indent + 1*IND, n->u.opt.e);
-		break;
 	case AST_EXPR_REPEATED:
-		fprintf(f, "REPEATED %p: (%u,%u)\n",
-		    (void *)n, n->u.repeated.low, n->u.repeated.high);
+		fprintf(f, "REPEATED %p: {", (void *)n);
+		fprintf_count(f, n->u.repeated.low);
+		fprintf(f, ",");
+		fprintf_count(f, n->u.repeated.high);
+		fprintf(f, "}\n");
 		pp_iter(f, indent + 1*IND, n->u.repeated.e);
 		break;
 	case AST_EXPR_CHAR_CLASS:
