@@ -131,6 +131,10 @@ re_ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 		abort();
 	}
 
+	if (count.low == 1 && count.high == 1) {
+		return e;	/* skip the useless REPEATED node */
+	}
+
 	res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
 	res->t = AST_EXPR_REPEATED;
