@@ -8,7 +8,11 @@
  * patterns listed at:
  *     http://pcre.org/current/doc/html/pcre2pattern.html
  *
- * Note that not all regex extensions are supported yet. */
+ * Note that not all PCRE regex extensions are supported yet.
+ * For unsupported extensions, our intension is to explicitly
+ * return an 'unsupported' error, rather than treating the
+ * unrecognized syntax incorrectly.
+ * */
 
 %types%
 
