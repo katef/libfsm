@@ -31,6 +31,9 @@ comp_iter_repeated(struct comp_env *env,
 #define RECURSE(FROM, TO, NODE)					       \
 	if (!comp_iter(env, FROM, TO, NODE)) { return 0; }             \
 
+static int
+can_skip_concat_state_and_epsilon(const struct ast_expr *l,
+    const struct ast_expr *r);
 
 static int
 comp_iter(struct comp_env *env,
@@ -42,8 +45,6 @@ comp_iter(struct comp_env *env,
 	assert(x);
 	assert(y);
 	if (n == NULL) { return 1; }
-
-	/* fprintf(stderr, "%s: type %d\n", __func__, n->t); */
 
 	switch (n->t) {
 	case AST_EXPR_EMPTY:
@@ -71,7 +72,8 @@ comp_iter(struct comp_env *env,
 			env->flags &=~ l->u.flags.neg;
 		}
 
-		if (l->t == AST_EXPR_LITERAL) {
+		/* Check if we can safely skip adding a state and epsilon edge */
+		if (can_skip_concat_state_and_epsilon(l, r)) {
 			RECURSE(x, z, l);
 			RECURSE(z, y, r);
 		} else {
@@ -90,18 +92,32 @@ comp_iter(struct comp_env *env,
 	case AST_EXPR_ALT:
 	{
 		struct fsm_state *la, *lz, *ra, *rz;
-		NEWSTATE(la);
-		NEWSTATE(lz);
-		NEWSTATE(ra);
-		NEWSTATE(rz);
+		struct ast_expr *l, *r;
+		assert(n->u.alt.l != NULL);
+		assert(n->u.alt.r != NULL);
 
-		EPSILON(x, la);
-		EPSILON(x, ra);
-		EPSILON(lz, y);
-		EPSILON(rz, y);
+		l = n->u.alt.l;
+		r = n->u.alt.r;
 
-		RECURSE(la, lz, n->u.alt.l);
-		RECURSE(ra, rz, n->u.alt.r);
+		/* Optimization: for (x|y) with two literal characters,
+		 * we don't need to add four states here. */
+		if (l->t == AST_EXPR_LITERAL && r->t == AST_EXPR_LITERAL) {
+			RECURSE(x, y, l);
+			RECURSE(x, y, r);
+		} else {
+			NEWSTATE(la);
+			NEWSTATE(lz);
+			NEWSTATE(ra);
+			NEWSTATE(rz);
+			
+			EPSILON(x, la);
+			EPSILON(x, ra);
+			EPSILON(lz, y);
+			EPSILON(rz, y);
+			
+			RECURSE(la, lz, l);
+			RECURSE(ra, rz, r);
+		}
 		break;
 	}
 
@@ -114,7 +130,6 @@ comp_iter(struct comp_env *env,
 		break;
 
 	case AST_EXPR_MANY:
-		/* FIXME: is z necessary? */
 		NEWSTATE(z);
 		EPSILON(x, z);
 		ANY(x, z);
@@ -239,6 +254,52 @@ comp_iter_repeated(struct comp_env *env,
 #undef EPSILON
 #undef ANY
 #undef NEWSTATE
+
+static int
+can_have_backward_epsilon_edge(const struct ast_expr *e)
+{
+	/* These nodes cannot have a backward epsilon edge */
+	if (e->t == AST_EXPR_LITERAL) { return 0; }
+	if (e->t == AST_EXPR_FLAGS) { return 0; }
+	if (e->t == AST_EXPR_CHAR_CLASS) { return 0; }
+	if (e->t == AST_EXPR_MANY) { return 0; }
+	if (e->t == AST_EXPR_ALT) { return 0; }
+
+	if (e->t == AST_EXPR_REPEATED) {
+		/* 0 and 1 don't have backward epsilon edges */
+		if (e->u.repeated.high <= 1) { return 0; }
+
+		/* The general case for counted repetition already
+		 * allocates one-way guard states around it */
+		if (e->u.repeated.high != AST_COUNT_UNBOUNDED) { return 0; }
+	} else if (e->t == AST_EXPR_GROUP) {
+		return can_have_backward_epsilon_edge(e->u.group.e);
+	}
+
+	return 1;
+}
+
+static int
+can_skip_concat_state_and_epsilon(const struct ast_expr *l,
+    const struct ast_expr *r)
+{
+	/* CONCAT only needs the extra state and epsilon edge when there
+	 * is a backward epsilon node for repetition -- without it, a
+	 * regex such as /a*b*c/ could match "ababc" as well as "aabbc",
+	 * because the backward epsilon for repeating the 'b' would lead
+	 * to a state which has another backward epsilon for repeating
+	 * the 'a'. The extra state functions as a one-way guard,
+	 * keeping the match from looping further back in the FSM than
+	 * intended. */
+
+	if (!can_have_backward_epsilon_edge(l)) { return 1; }
+
+	if (r->t == AST_EXPR_REPEATED) {
+		if (!can_have_backward_epsilon_edge(r)) { return 1; }
+	}
+
+	return 0;
+}
 
 static struct fsm *
 new_blank(const struct fsm_options *opt)
