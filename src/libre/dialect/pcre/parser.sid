@@ -352,19 +352,19 @@
 
 			{
 				(start, !) = OPENCOUNT;
-				x = COUNT;
+				m = COUNT;
 				(!, end) = CLOSECOUNT;
 				<mark-count>(start, end);
-				c = <expr-count>(x, start, x, end);
+				c = <expr-count>(m, start, m, end);
 				node = <ast-expr-atom>(e, c);
 			||
 				(start, !) = OPENCOUNT;
-				x = COUNT;
+				m = COUNT;
 				SEP;
-				y = COUNT;
+				n = COUNT;
 				(end, !) = CLOSECOUNT;
 				<mark-count>(start, end);
-				c = <expr-count>(x, start, y, end);
+				c = <expr-count>(m, start, n, end);
 				node = <ast-expr-atom>(e, c);
 			||
 				OPT;

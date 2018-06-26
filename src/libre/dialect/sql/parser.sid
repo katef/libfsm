@@ -145,16 +145,16 @@
 			f = <atom-opt>();
 		||
 			(pos_of, pos_ot) = OPENCOUNT;
-			l = COUNT;
+			m = COUNT;
 			(pos_cf, pos_ct) = CLOSECOUNT;
-			f = <expr-count>(l, pos_of, l, pos_ct);
+			f = <expr-count>(m, pos_of, m, pos_ct);
 		||
 			(pos_of, pos_ot) = OPENCOUNT;
-			l = COUNT;
+			m = COUNT;
 			SEP;
-			h = COUNT;
+			n = COUNT;
 			(pos_cf, pos_ct) = CLOSECOUNT;
-			f = <expr-count>(l, pos_of, h, pos_ct);
+			f = <expr-count>(m, pos_of, n, pos_ct);
 		||
 			f = <atom-one>();
 		};
