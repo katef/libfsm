@@ -12,7 +12,6 @@ re_ast_new(void)
 static void
 free_iter(struct ast_expr *n)
 {
-	LOG("%s: %p\n", __func__, (void *)n);
 	if (n == NULL) { return; }
 	
 	switch (n->t) {
@@ -72,7 +71,6 @@ re_ast_expr_empty(void)
 	if (res == NULL) { return res; }
 	res->t = AST_EXPR_EMPTY;
 
-	LOG("-- %s: %p\n", __func__, (void *)res);
 	return res;
 }
 
@@ -84,8 +82,6 @@ re_ast_expr_concat(struct ast_expr *l, struct ast_expr *r)
 	res->t = AST_EXPR_CONCAT;
 	res->u.concat.l = l;
 	res->u.concat.r = r;
-	LOG("-- %s: %p <- %p, %p\n",
-	    __func__, (void *)res, (void *)l, (void *)r);
 	assert(l != NULL);
 	assert(r != NULL);
 	return res;
@@ -99,8 +95,6 @@ re_ast_expr_alt(struct ast_expr *l, struct ast_expr *r)
 	res->t = AST_EXPR_ALT;
 	res->u.alt.l = l;
 	res->u.alt.r = r;
-	LOG("-- %s: %p <- %p, %p\n",
-	    __func__, (void *)res, (void *)l, (void *)r);
 	assert(l != NULL);
 	assert(r != NULL);
 	return res;
@@ -113,7 +107,6 @@ re_ast_expr_literal(char c)
 	if (res == NULL) { return res; }
 	res->t = AST_EXPR_LITERAL;
 	res->u.literal.c = c;
-	LOG("-- %s: %p <- %c\n", __func__, (void *)res, c);
 	return res;
 }
 
@@ -124,7 +117,6 @@ re_ast_expr_any(void)
 	if (res == NULL) { return res; }
 	res->t = AST_EXPR_ANY;
 
-	LOG("-- %s: %p\n", __func__, (void *)res);
 	return res;
 }
 
@@ -135,7 +127,6 @@ re_ast_expr_many(void)
 	if (res == NULL) { return res; }
 	res->t = AST_EXPR_MANY;
 
-	LOG("-- %s: %p\n", __func__, (void *)res);
 	return res;
 }
 
@@ -146,7 +137,6 @@ re_ast_kleene(struct ast_expr *e)
 	if (res == NULL) { return res; }
 	res->t = AST_EXPR_KLEENE;
 	res->u.kleene.e = e;
-	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)e);
 	return res;
 }
 
@@ -157,7 +147,6 @@ re_ast_plus(struct ast_expr *e)
 	if (res == NULL) { return res; }
 	res->t = AST_EXPR_PLUS;
 	res->u.plus.e = e;
-	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)e);
 	return res;
 }
 
@@ -168,7 +157,6 @@ re_ast_opt(struct ast_expr *e)
 	if (res == NULL) { return res; }
 	res->t = AST_EXPR_OPT;
 	res->u.opt.e = e;
-	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)e);
 	return res;
 }
 
@@ -207,8 +195,6 @@ re_ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 	res->u.repeated.e = e;
 	res->u.repeated.low = count.low;
 	res->u.repeated.high = count.high;
-	LOG("-- %s: %p <- %p (%u,%u)\n", __func__, (void *)res,
-	    (void *)e, count.low, count.high);
 	return res;
 }
 
@@ -223,7 +209,6 @@ re_ast_expr_char_class(struct re_char_class_ast *cca,
 	res->u.char_class.cca = cca;
 	memcpy(&res->u.char_class.start, start, sizeof *start);
 	memcpy(&res->u.char_class.end, end, sizeof *end);
-	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)cca);
 	return res;
 }
 
@@ -235,7 +220,6 @@ re_ast_expr_char_type(enum ast_char_type_id id)
 
 	res->t = AST_EXPR_CHAR_TYPE;
 	res->u.char_type.id = id;
-	LOG("-- %s: %p <- %d\n", __func__, (void *)res, id);
 	return res;
 }
 
@@ -247,7 +231,6 @@ re_ast_expr_group(struct ast_expr *e)
 	res->t = AST_EXPR_GROUP;
 	res->u.group.e = e;
 	res->u.group.id = (unsigned)-1; /* not yet assigned */
-	LOG("-- %s: %p <- %p\n", __func__, (void *)res, (void *)e);
 	return res;
 }
 
@@ -259,8 +242,6 @@ re_ast_expr_re_flags(enum re_flags pos, enum re_flags neg)
 	res->t = AST_EXPR_FLAGS;
 	res->u.flags.pos = pos;
 	res->u.flags.neg = neg;
-	LOG("-- %s: %p <- pos %04x, neg %04x\n", __func__, (void *)res,
-	    (unsigned)pos, (unsigned)neg);
 	return res;
 }
 

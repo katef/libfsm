@@ -57,8 +57,6 @@ re_char_class_ast_concat(struct re_char_class_ast *l,
 	res->t = RE_CHAR_CLASS_AST_CONCAT;
 	res->u.concat.l = l;
 	res->u.concat.r = r;
-	LOG("-- %s: %p <- %p, %p\n", __func__,
-	    (void *)res, (void *)l, (void *)r);
 	return res;
 }
 
@@ -69,7 +67,6 @@ re_char_class_ast_literal(unsigned char c)
 	if (res == NULL) { return NULL; }
 	res->t = RE_CHAR_CLASS_AST_LITERAL;
 	res->u.literal.c = c;
-	LOG("-- %s: %p <- '%c'\n", __func__, (void *)res, c);
 	return res;
 }
 
@@ -87,13 +84,6 @@ re_char_class_ast_range(const struct ast_range_endpoint *from, struct ast_pos st
 	res->u.range.start = start;
 	res->u.range.to = *to;
 	res->u.range.end = end;
-	LOG("-- %s: %p <- ", __func__, (void *)res);
-#if PRETTYPRINT_AST
-	pp_range_endpoint(stderr, &res->u.range.from);
-	LOG("-");
-	pp_range_endpoint(stderr, &res->u.range.to);
-	LOG("\n");
-#endif
 	return res;
 }
 
@@ -114,7 +104,6 @@ re_char_class_ast_named_class(enum ast_char_class_id id)
 	if (res == NULL) { return NULL; }
 	res->t = RE_CHAR_CLASS_AST_NAMED;
 	res->u.named.id = id;
-	LOG("-- %s: %p <- [:%s:]\n", __func__, (void *)res, char_class_id_str(id));
 	return res;
 }
 
@@ -125,7 +114,6 @@ re_char_class_ast_char_type(enum ast_char_type_id id)
 	if (res == NULL) { return NULL; }
 	res->t = RE_CHAR_CLASS_AST_CHAR_TYPE;
 	res->u.char_type.id = id;
-	LOG("-- %s: %p <- [:%s:]\n", __func__, (void *)res, char_type_id_str(id));
 	return res;
 }
 
@@ -138,7 +126,6 @@ re_char_class_ast_subtract(struct re_char_class_ast *ast,
 	res->t = RE_CHAR_CLASS_AST_SUBTRACT;
 	res->u.subtract.ast = ast;
 	res->u.subtract.mask = mask;
-	LOG("-- %s: %p <- %p ^ %p\n", __func__, (void *)res, (void *)ast, (void *)mask);
 	return res;
 }
 

@@ -123,7 +123,6 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	re_ast_free(ast);
 
 	if (new == NULL) {
-		LOG("re_comp_ast failed\n");
 		return NULL;
 	}
 	

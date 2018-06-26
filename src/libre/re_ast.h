@@ -12,14 +12,6 @@
 
 #include "re_char_class.h"
 
-#define LOGGING 0
-
-#if LOGGING
-#define LOG(...) fprintf(stderr, __VA_ARGS__)
-#else
-#define LOG(...)
-#endif
-
 /* Because we're building with -NDEBUG */
 #define FAIL(s)					\
 	do {					\
