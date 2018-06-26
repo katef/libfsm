@@ -112,7 +112,7 @@
 	!<re-flag-none>: () -> (:re_flags);
 	!<re-flag-union>: (:re_flags, :re_flags) -> (:re_flags);
 
-	!<err-expected-term>;
+	<err-expected-term>;
 	!<err-expected-count>;
 	!<err-expected-atoms>;
 	!<err-expected-alts>;
@@ -218,6 +218,9 @@
 			||
 				id = named-class();
 				node = <char-class-ast-named-class>(id);
+                        ##
+                        	<err-expected-term>();
+                                node = <char-class-ast-flag-none>();
 			};
 			    
 			list-of-char-class-terms: () -> (node :char_class_ast) = {

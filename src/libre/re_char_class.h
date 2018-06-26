@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 
 /* This is a duplicate of struct lx_pos, but since we're linking to
  * code with several distinct lexers, there isn't a clear lexer.h
@@ -171,13 +172,6 @@ re_char_class_ast_compile(struct re_char_class_ast *cca);
 struct re_char_class *
 re_char_class_type_compile(enum ast_char_type_id id);
 
-int
-re_char_class_type_id_of_name(const char *name,
-    enum ast_char_type_id *id);
-
-int
-re_char_class_id_of_name(const char *name, enum ast_char_class_id *id);
-
 void
 ast_char_class_dump(FILE *f, struct re_char_class *c);
 
@@ -190,5 +184,30 @@ re_char_class_type_id_str(enum ast_char_type_id id);
 const char *
 re_char_class_id_str(enum ast_char_class_id id);
 
+
+/* Dialect-specific char class / char type handling.
+ * These are defined in src/libre/dialect/${dialect}/re_dialect_${dialect}.c */
+typedef int
+re_dialect_char_class_lookup(const char *name, enum ast_char_class_id *id);
+typedef int
+re_dialect_char_type_lookup(const char *name, enum ast_char_type_id *id);
+
+re_dialect_char_class_lookup re_char_class_literal;
+re_dialect_char_type_lookup re_char_type_literal;
+
+re_dialect_char_class_lookup re_char_class_like;
+re_dialect_char_type_lookup re_char_type_like;
+
+re_dialect_char_class_lookup re_char_class_glob;
+re_dialect_char_type_lookup re_char_type_glob;
+
+re_dialect_char_class_lookup re_char_class_sql;
+re_dialect_char_type_lookup re_char_type_sql;
+
+re_dialect_char_class_lookup re_char_class_native;
+re_dialect_char_type_lookup re_char_type_native;
+
+re_dialect_char_class_lookup re_char_class_pcre;
+re_dialect_char_type_lookup re_char_type_pcre;
 
 #endif

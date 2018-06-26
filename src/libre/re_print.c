@@ -1,6 +1,8 @@
 #include "re_print.h"
 #include "re_char_class.h"
 
+#include <ctype.h>
+
 static void
 re_flags_print(FILE *f, enum re_flags fl);
 

@@ -20,6 +20,7 @@ re_ast_analysis(struct ast_re *ast)
 	if (ast == NULL) { return; }
 	memset(&env, 0x00, sizeof(env));
 
+	assert(ast->expr != NULL);
 	analysis_iter(&env, ast->expr);
 }
 

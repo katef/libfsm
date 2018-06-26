@@ -10,6 +10,6 @@
 #define PRETTYPRINT_AST 0
 
 void
-re_ast_prettyprint(FILE *f, struct ast_re *ast);
+re_ast_print(FILE *f, struct ast_re *ast);
 
 #endif
