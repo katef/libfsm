@@ -1129,9 +1129,7 @@
 		enum re_flags flags, int overlap,
 		struct re_err *err)
 	{
-		/* struct fsm *new; */
 		struct ast_re *ast;
-		/* struct fsm_state *x, *y; */
 		struct flags top, *fl = &top;
 
 		top.flags = flags;
