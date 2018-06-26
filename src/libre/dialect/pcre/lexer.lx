@@ -44,19 +44,29 @@
 
 # character type escapes
 # Note: these need to be their own lexemes distinct from named character
-# classes such as /[:digit:]/, as they are allowed in different contexts
-char_type = '\' /[dDhHsSvVwWN]/;
-
-# Also note, this needs a double underscore because
-# sid expects any '_' in a C identifier converts to "__".
-char_type -> $char__type;
+# classes such as /[:digit:]/, as they are allowed in different contexts.
+# Also note, this needs a double underscore because sid expects any '_'
+# in a C identifier converts to "__".
+'\d' -> $char__type;
+'\D' -> $char__type;
+'\h' -> $char__type;
+'\H' -> $char__type;
+'\s' -> $char__type;
+'\S' -> $char__type;
+'\v' -> $char__type;
+'\V' -> $char__type;
+'\w' -> $char__type;
+'\W' -> $char__type;
+# This break the uppercase/lowercase symmetry; conceptually, it's the
+# negation of `.`, which matches everything except `\n`.
+'\N' -> $char__type;
 
 '\'   /[0-7]{1,3}/     -> $oct;
 '\o{' /[0-7]+/i '}'    -> $oct;
 '\x'  /[0-9a-f]{1,2}/i -> $hex;
 '\x{' /[0-9a-f]+/i '}' -> $hex;
 
-'\' /./ - ($esc | $control | $oct | $hex | '\Q' | char_type) -> $noesc;
+'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $char__type) -> $noesc;
 '\' -> $invalid;
 
 '(?' -> $openflags .. ')' -> $closeflags {
@@ -96,8 +106,17 @@ char_type -> $char__type;
         '\+' -> $esc;
         '\{' -> $esc;
 
-	char_type = '\' /[dDhHsSvVwWN]/;
-	char_type -> $char__type;
+	'\d' -> $char__type;
+	'\D' -> $char__type;
+	'\h' -> $char__type;
+	'\H' -> $char__type;
+	'\s' -> $char__type;
+	'\S' -> $char__type;
+	'\v' -> $char__type;
+	'\V' -> $char__type;
+	'\w' -> $char__type;
+	'\W' -> $char__type;
+	'\N' -> $char__type;
 
 	'\'   /[0-7]{1,3}/     -> $oct;
 	'\o{' /[0-7]+/i '}'    -> $oct;
