@@ -128,10 +128,10 @@
 	!<mark-range>: (:pos, :pos) -> ();
 	!<mark-count>: (:pos, :pos) -> ();
 
-	expr: () -> (n :ast_expr) [
-                literal: () -> (n :ast_expr) = {
+	expr: () -> (node :ast_expr) [
+                literal: () -> (node :ast_expr) = {
   			(c, !, !) = CHAR;
-			n = <ast-expr-literal>(c);
+			node = <ast-expr-literal>(c);
   		};
 
 		atom-suffix: () -> (f :ast_count) = {
@@ -174,7 +174,7 @@
 		 *
 		 * _ is the ANY character class
 		 * */
-		char-class: () -> (n :ast_expr) [
+		char-class: () -> (node :ast_expr) [
 			char-class-head: () -> (f :char_class_ast) = {
 				(!) = INVERT;
 				f = <char-class-ast-flag-invert>();
@@ -202,7 +202,7 @@
                         	(id, !, !) = NAMED_CHAR_CLASS;
 			};
 
-			term: () -> (n :char_class_ast) = {
+			term: () -> (node :char_class_ast) = {
 				(ca, start, !) = CHAR;
                                 a = <ast-range-endpoint-literal>(ca);
 
@@ -211,26 +211,26 @@
 				(cz, !, end) = CHAR;
                                 z = <ast-range-endpoint-literal>(cz);
 
-				n = <char-class-ast-range>(a, start, z, end);
+				node = <char-class-ast-range>(a, start, z, end);
 			||
 				(c, !, !) = CHAR;
-				n = <char-class-ast-literal>(c);
+				node = <char-class-ast-literal>(c);
 			||
 				id = named-class();
-				n = <char-class-ast-named-class>(id);
+				node = <char-class-ast-named-class>(id);
 			};
 			    
-			list-of-char-class-terms: () -> (n :char_class_ast) = {
+			list-of-char-class-terms: () -> (node :char_class_ast) = {
 				l = term();
 				{
 					r = list-of-char-class-terms();
-					n = <char-class-ast-concat>(l, r);
+					node = <char-class-ast-concat>(l, r);
 				||
-					n = l;
+					node = l;
 				};
 			};
 			    
-			char-class-ast: () -> (n :ast_expr) = {
+			char-class-ast: () -> (node :ast_expr) = {
 				(start, !) = OPENGROUP;
 
 				head = char-class-head();
@@ -240,7 +240,7 @@
 				hb = <char-class-ast-concat>(head, body);
 				hbt = <char-class-ast-concat>(hb, tail);
 				(!, !, end) = CLOSEGROUP;
-				n = <ast-expr-char-class>(hbt, start, end);
+				node = <ast-expr-char-class>(hbt, start, end);
 			||
 				(start, !) = OPENGROUP;
 				head = char-class-head();
@@ -258,68 +258,68 @@
 				mhb = <char-class-ast-concat>(maskhead, maskbody);
 				mhbt = <char-class-ast-concat>(mhb, masktail);
 				masked = <char-class-ast-subtract>(hbt, mhbt);
-				n = <ast-expr-char-class>(masked, start, end);
+				node = <ast-expr-char-class>(masked, start, end);
 			};
 		] = {
-			n = char-class-ast();
+			node = char-class-ast();
 		};
 
 		/* TODO: is there a better name than 'atom' for
 		 * this construct? it isn't atomic... */
-		atom: () -> (n :ast_expr) = {
+		atom: () -> (node :ast_expr) = {
 			OPENSUB;
 			g = expr();
 			e = <ast-expr-group>(g);
 			CLOSESUB;
 			s = atom-suffix();
-			n = <ast-expr-atom>(e, s);
+			node = <ast-expr-atom>(e, s);
 		||
 			e = char-class();
 			s = atom-suffix();
-			n = <ast-expr-atom>(e, s);
+			node = <ast-expr-atom>(e, s);
 		||
 			e = literal();
 			s = atom-suffix();
-			n = <ast-expr-atom>(e, s);
+			node = <ast-expr-atom>(e, s);
 		||
 			ANY;
 			s = atom-suffix();
-			n = <ast-expr-atom-any>(s);
+			node = <ast-expr-atom-any>(s);
 		||
 			MANY;
 			s = atom-suffix();
-			n = <ast-expr-atom-many>(s);
+			node = <ast-expr-atom-many>(s);
 		};
 
-		list-of-atoms: () -> (n :ast_expr) = {
-			n = atom();
+		list-of-atoms: () -> (node :ast_expr) = {
+			node = atom();
 		||
 			a = atom();
 			r = list-of-atoms();
-			n = <ast-expr-concat>(a,r);
+			node = <ast-expr-concat>(a,r);
 		};
 
-		alt: () -> (n :ast_expr) = {
-			n = list-of-atoms();
+		alt: () -> (node :ast_expr) = {
+			node = list-of-atoms();
 		};
 
-		list-of-alts: () -> (n :ast_expr) = {
-			n = alt();
+		list-of-alts: () -> (node :ast_expr) = {
+			node = alt();
 		||
 			a = alt();
 			ALT;
 			r = list-of-alts();
-			n = <ast-expr-alt>(a, r);
+			node = <ast-expr-alt>(a, r);
 		};
 	] = {
-		n = list-of-alts();
+		node = list-of-alts();
 	};
 
-	re_sql: () -> (n :ast_expr) = {
+	re_sql: () -> (node :ast_expr) = {
 		{
-			n = expr();
+			node = expr();
 		||
-			n = <ast-expr-empty>();
+			node = <ast-expr-empty>();
 		};
 
 		{

@@ -118,7 +118,7 @@
 	!<mark-range>: (:pos, :pos) -> ();
 	!<mark-count>: (:pos, :pos) -> ();
 
-	list-of-nodes: () -> (n :ast_expr) [
+	list-of-nodes: () -> (node :ast_expr) [
 		literal: () -> (c :char) = {
 			(c, !, !) = CHAR;
 		};
@@ -128,17 +128,17 @@
 
 		{
 			r = list-of-nodes();
-			n = <ast-expr-concat>(l, r);
+			node = <ast-expr-concat>(l, r);
 		||
-			n = l;
+			node = l;
 		};
 	};
 
-	re_literal: () -> (n :ast_expr) = {
+	re_literal: () -> (node :ast_expr) = {
 		{
-			n = list-of-nodes();
+			node = list-of-nodes();
 		||
-			n = <ast-expr-empty>();
+			node = <ast-expr-empty>();
 		};
 	
 		{

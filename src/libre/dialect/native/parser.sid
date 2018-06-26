@@ -124,8 +124,8 @@
 	<mark-range>: (:pos, :pos) -> ();
 	<mark-count>: (:pos, :pos) -> ();
 
-	expr: () -> (n :ast_expr) [
-		literal: () -> (n :ast_expr) = {
+	expr: () -> (node :ast_expr) [
+		literal: () -> (node :ast_expr) = {
 			{
 				(c, !, !) = ESC;
 				||
@@ -135,10 +135,10 @@
 				||
 				(c, !, !) = CHAR;
 			};
-			n = <ast-expr-literal>(c);
+			node = <ast-expr-literal>(c);
   		};
 
-		char-class: () -> (n :ast_expr) [
+		char-class: () -> (node :ast_expr) [
 			/* TODO: []] [-]] etc.? though they can be escaped. */
 			char-class-head: () -> (f :char_class_ast) = {
 				(!) = INVERT;
@@ -147,7 +147,7 @@
 				f = <char-class-ast-flag-none>();
 			};
 
-			class-literal: () -> (n :char_class_ast) = {
+			class-literal: () -> (node :char_class_ast) = {
 				{
 					(c, !, !) = ESC;
 					||
@@ -157,10 +157,10 @@
 					||
 					(c, !, !) = CHAR;
 				};
-				n = <char-class-ast-literal>(c);
+				node = <char-class-ast-literal>(c);
 	  		};
 
-			class-range: () -> (n :char_class_ast) = {
+			class-range: () -> (node :char_class_ast) = {
 				{
 					(ca, start, !) = OCT;
 				||
@@ -188,33 +188,33 @@
 				z = <ast-range-endpoint-literal>(cz);
 	
 				<mark-range>(start, end);
-				n = <char-class-ast-range>(a, start, z, end);
+				node = <char-class-ast-range>(a, start, z, end);
 			};
 
 			class-named: () -> (id :ast_char_class_id) = {
                         	(id, !, !) = NAMED_CHAR_CLASS;
 			};
 
-			class-term: () -> (n :char_class_ast) = {
-				n = class-literal();
+			class-term: () -> (node :char_class_ast) = {
+				node = class-literal();
 			||
-				n = class-range();
+				node = class-range();
 			||
 				id = class-named();
-				n = <char-class-ast-named-class>(id);
+				node = <char-class-ast-named-class>(id);
 			##
 				<err-expected-term>();
 				/* workaround sid warning */
-                                n = <char-class-ast-flag-none>();
+                                node = <char-class-ast-flag-none>();
 			};
 			    
-			list-of-char-class-terms: () -> (n :char_class_ast) = {
+			list-of-char-class-terms: () -> (node :char_class_ast) = {
 				l = class-term();
 				{
 					r = list-of-char-class-terms();
-					n = <char-class-ast-concat>(l, r);
+					node = <char-class-ast-concat>(l, r);
 				||
-					n = l;
+					node = l;
 				};
 			};
 		] = {
@@ -231,10 +231,10 @@
 			};
 
 			hb = <char-class-ast-concat>(head, body);
-			n = <ast-expr-char-class>(hb, start, end);
+			node = <ast-expr-char-class>(hb, start, end);
 		};
 
-		atom: () -> (n :ast_expr) = {
+		atom: () -> (node :ast_expr) = {
 			{
 				OPENSUB;
 				g = expr();
@@ -259,7 +259,7 @@
 				(!, end) = CLOSECOUNT;
 				<mark-count>(start, end);
 				c = <expr-count>(x, start, x, end);
-				n = <ast-expr-atom>(e, c);
+				node = <ast-expr-atom>(e, c);
 			||
 				(start, !) = OPENCOUNT;
 				x = COUNT;
@@ -268,65 +268,65 @@
 				(end, !) = CLOSECOUNT;
 				<mark-count>(start, end);
 				c = <expr-count>(x, start, y, end);
-				n = <ast-expr-atom>(e, c);
+				node = <ast-expr-atom>(e, c);
 			||
 				OPT;
 				c = <atom-opt>();
-				n = <ast-expr-atom>(e, c);
+				node = <ast-expr-atom>(e, c);
 			||
 				STAR;
 				c = <atom-kleene>();
-				n = <ast-expr-atom>(e, c);
+				node = <ast-expr-atom>(e, c);
 			||
 				PLUS;
 				c = <atom-plus>();
-				n = <ast-expr-atom>(e, c);
+				node = <ast-expr-atom>(e, c);
 			||
 				c = <atom-one>();
-				n = <ast-expr-atom>(e, c);
+				node = <ast-expr-atom>(e, c);
 			##
 				<err-expected-count>;
-				n = e;
+				node = e;
 			};
 		};
 
-		list-of-atoms: () -> (n :ast_expr) = {
+		list-of-atoms: () -> (node :ast_expr) = {
 
 		/* TODO: start/end anchors */
 
 		/* 	p = START;
 		 * 	st = <ast-expr-start>();
 		 * 	a = atom();
-		 * 	n = <ast-expr-concat>(st,a);
+		 * 	node = <ast-expr-concat>(st,a);
 		 * || */
-			n = atom();
+			node = atom();
 		||
 			a = atom();
 			r = list-of-atoms();
-			n = <ast-expr-concat>(a,r);
+			node = <ast-expr-concat>(a,r);
 		};
 
-		alt: () -> (n :ast_expr) = {
-			n = list-of-atoms();
+		alt: () -> (node :ast_expr) = {
+			node = list-of-atoms();
 		};
 
-		list-of-alts: () -> (n :ast_expr) = {
-			n = alt();
+		list-of-alts: () -> (node :ast_expr) = {
+			node = alt();
 	  	||
 			a = alt();
 			ALT;
 			r = list-of-alts();
-			n = <ast-expr-alt>(a, r);
+			node = <ast-expr-alt>(a, r);
 		};
 	] = {
-		n = list-of-alts();
+		node = list-of-alts();
 	};
 
-	re_native: () -> (n :ast_expr) = {
+	re_native: () -> (node :ast_expr) = {
 		{
-			n = expr();
+			node = expr();
 		||
-			n = <ast-expr-empty>();
+			node = <ast-expr-empty>();
 		};
 
 		{
