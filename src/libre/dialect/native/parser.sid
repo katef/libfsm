@@ -325,7 +325,7 @@
 	re_native: () -> (n :ast_expr) = {
 		{
 			n = expr();
-		##
+		||
 			n = <ast-expr-empty>();
 		};
 

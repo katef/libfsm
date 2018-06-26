@@ -153,7 +153,7 @@
 	re_like: () -> (n :ast_expr) = {
 		{
 			n = list-of-nodes();
-		##
+		||
 			n = <ast-expr-empty>();
 		};
 

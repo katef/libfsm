@@ -152,7 +152,7 @@
 	re_glob: () -> (n :ast_expr) = {
 		{
 			n = list-of-nodes();
-		##
+		||
 			n = <ast-expr-empty>();
 		};
 

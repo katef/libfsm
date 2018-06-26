@@ -112,7 +112,7 @@
 	!<err-expected-closeflags>;
 	!<err-expected-groupbody>;
 	<err-expected-eof>;
-	!<err-unsupported>;
+	<err-unsupported>;
 
 	!<mark-group>: (:pos, :pos) -> ();
 	!<mark-range>: (:pos, :pos) -> ();
@@ -137,7 +137,7 @@
 	re_literal: () -> (n :ast_expr) = {
 		{
 			n = list-of-nodes();
-		##
+		||
 			n = <ast-expr-empty>();
 		};
 	
