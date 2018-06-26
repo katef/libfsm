@@ -19,6 +19,7 @@
 #include "dialect/comp.h"
 
 #include "re_ast.h"
+#include "re_print.h"
 #include "re_comp.h"
 #include "re_analysis.h"
 
@@ -115,7 +116,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	/* TODO: this should be a CLI flag or something */
 	if (PRETTYPRINT_AST) {
-		re_ast_prettyprint(stderr, ast);
+		re_ast_print(stderr, ast);
 	}
 
 	new = re_comp_ast(ast, flags, opt);

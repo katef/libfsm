@@ -101,7 +101,6 @@ struct ast_range_endpoint {
 	} u;
 };
 
-/* TODO: opaque? */
 struct re_char_class_ast {
 	enum re_char_class_ast_type t;
 	union {
@@ -163,10 +162,6 @@ re_char_class_ast_subtract(struct re_char_class_ast *ast,
     struct re_char_class_ast *mask);
 
 void
-re_char_class_ast_prettyprint(FILE *f,
-    struct re_char_class_ast *ast, size_t indent);
-
-void
 re_char_class_ast_free(struct re_char_class_ast *ast);
 
 struct re_char_class *
@@ -188,5 +183,12 @@ ast_char_class_dump(FILE *f, struct re_char_class *c);
 
 void
 re_char_class_free(struct re_char_class *cc);
+
+const char *
+re_char_class_type_id_str(enum ast_char_type_id id);
+
+const char *
+re_char_class_id_str(enum ast_char_class_id id);
+
 
 #endif

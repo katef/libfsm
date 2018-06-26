@@ -12,7 +12,6 @@
 
 #include "re_char_class.h"
 
-#define PRETTYPRINT_AST 0
 #define LOGGING 0
 
 #if LOGGING
@@ -162,9 +161,6 @@ re_ast_expr_group(struct ast_expr *e);
 
 struct ast_expr *
 re_ast_expr_re_flags(enum re_flags pos, enum re_flags neg);
-
-void
-re_ast_prettyprint(FILE *f, struct ast_re *ast);
 
 struct ast_count
 ast_count(unsigned low, const struct ast_pos *start,

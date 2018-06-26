@@ -1,0 +1,15 @@
+#ifndef RE_PRINT_H
+#define RE_PRINT_H
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+
+#include "re_ast.h"
+
+#define PRETTYPRINT_AST 0
+
+void
+re_ast_prettyprint(FILE *f, struct ast_re *ast);
+
+#endif

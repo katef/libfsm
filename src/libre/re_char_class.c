@@ -37,12 +37,6 @@ cc_mask(struct re_char_class *cc, struct re_char_class *mask);
 void
 cc_dump(FILE *f, struct re_char_class *cc);
 
-static const char *
-char_class_id_str(enum ast_char_class_id id);
-
-static const char *
-char_type_id_str(enum ast_char_type_id id);
-
 static char_filter *
 char_filter_for_class_id(enum ast_char_class_id id);
 
@@ -53,9 +47,6 @@ char_endpoints_for_filter(char_filter *f, unsigned negated,
 static int
 char_filter_for_char_type_id(enum ast_char_type_id id,
     char_filter **f, unsigned *negated_res);
-
-static void
-pp_range_endpoint(FILE *f, const struct ast_range_endpoint *r);
 
 struct re_char_class_ast *
 re_char_class_ast_concat(struct re_char_class_ast *l,
@@ -151,18 +142,8 @@ re_char_class_ast_subtract(struct re_char_class_ast *ast,
 	return res;
 }
 
-static void
-print_char_or_esc(FILE *f, unsigned char c)
-{
-	if (isprint(c)) {
-		fprintf(f, "%c", c);
-	} else {
-		fprintf(f, "\\x%02x", c);
-	}
-}
-
-static const char *
-char_class_id_str(enum ast_char_class_id id)
+const char *
+re_char_class_id_str(enum ast_char_class_id id)
 {
 	switch (id) {
 	case AST_CHAR_CLASS_ALNUM: return "ALNUM";
@@ -238,8 +219,8 @@ re_char_class_id_of_name(const char *name, enum ast_char_class_id *id)
 	return 0;
 }
 
-static const char *
-char_type_id_str(enum ast_char_type_id id)
+const char *
+re_char_class_type_id_str(enum ast_char_type_id id)
 {
 	switch (id) {
 	case AST_CHAR_TYPE_DECIMAL: return "\\d";
@@ -284,84 +265,6 @@ re_char_class_type_id_of_name(const char *name,
 		return 0;
 	}
 	return 1;
-}
-
-static void
-pp_range_endpoint(FILE *f, const struct ast_range_endpoint *r)
-{
-	switch (r->t) {
-	case AST_RANGE_ENDPOINT_LITERAL:
-		fprintf(f, "'");
-		print_char_or_esc(f, r->u.literal.c);
-		fprintf(f, "'");
-		break;
-	case AST_RANGE_ENDPOINT_CHAR_TYPE:
-		fprintf(f, "%s", char_type_id_str(r->u.char_type.id));
-		break;
-	case AST_RANGE_ENDPOINT_CHAR_CLASS:
-		fprintf(f, "[:%s:]", char_class_id_str(r->u.char_class.id));
-		break;
-	}
-}
-
-static void
-pp_iter(FILE *f, struct re_char_class_ast *n, size_t indent)
-{
-	size_t i;
-	assert(n != NULL);
-	for (i = 0; i < indent; i++) { fprintf(f, " "); }
-
-	switch (n->t) {
-	case RE_CHAR_CLASS_AST_CONCAT:
-		fprintf(f, "CLASS-CONCAT %p: \n", (void *)n);
-		pp_iter(f, n->u.concat.l, indent + 4);
-		pp_iter(f, n->u.concat.r, indent + 4);
-		break;
-	case RE_CHAR_CLASS_AST_LITERAL:
-		fprintf(f, "CLASS-LITERAL %p: '", (void *)n);
-		print_char_or_esc(f, n->u.literal.c);
-		fprintf(f, "'\n");
-		break;
-	case RE_CHAR_CLASS_AST_RANGE:
-		fprintf(f, "CLASS-RANGE %p: ", (void *)n);
-		pp_range_endpoint(f, &n->u.range.from);
-		fprintf(f, "-");
-		pp_range_endpoint(f, &n->u.range.to);
-		fprintf(f, "\n");
-		break;
-	case RE_CHAR_CLASS_AST_NAMED:
-		fprintf(f, "CLASS-NAMED %p: '%s'\n",
-		    (void *)n, char_class_id_str(n->u.named.id));
-		break;
-	case RE_CHAR_CLASS_AST_CHAR_TYPE:
-		fprintf(f, "CLASS-CHAR-TYPE %p: %s\n", (void *)n, char_type_id_str(n->u.char_type.id));
-		break;
-	case RE_CHAR_CLASS_AST_FLAGS:
-		fprintf(f, "CLASS-FLAGS %p: [", (void *)n);
-		if (n->u.flags.f & RE_CHAR_CLASS_FLAG_INVERTED) { 
-			fprintf(f, "^");
-		}
-		if (n->u.flags.f & RE_CHAR_CLASS_FLAG_MINUS) {
-			fprintf(f, "-");
-		}
-		fprintf(f, "]\n");
-		break;
-	case RE_CHAR_CLASS_AST_SUBTRACT:
-		fprintf(f, "CLASS-SUBTRACT %p:\n", (void *)n);
-		pp_iter(f, n->u.subtract.ast, indent + 4);
-		pp_iter(f, n->u.subtract.mask, indent + 4);
-		break;
-	default:
-		fprintf(stderr, "(MATCH FAIL)\n");
-		assert(0);
-	}
-}
-
-void
-re_char_class_ast_prettyprint(FILE *f,
-    struct re_char_class_ast *ast, size_t indent)
-{
-	pp_iter(f, ast, indent);
 }
 
 static void
