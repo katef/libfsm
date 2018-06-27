@@ -21,7 +21,6 @@ free_iter(struct ast_expr *n)
 	case AST_EXPR_ANY:
 	case AST_EXPR_MANY:
 	case AST_EXPR_FLAGS:
-	case AST_EXPR_CHAR_TYPE:
 		break;
 
 	case AST_EXPR_CONCAT:
@@ -155,17 +154,6 @@ re_ast_expr_char_class(struct re_char_class_ast *cca,
 	res->u.char_class.cca = cca;
 	memcpy(&res->u.char_class.start, start, sizeof *start);
 	memcpy(&res->u.char_class.end, end, sizeof *end);
-	return res;
-}
-
-struct ast_expr *
-re_ast_expr_char_type(enum ast_char_type_id id)
-{
-	struct ast_expr *res = calloc(1, sizeof(*res));
-	if (res == NULL) { return res; }
-
-	res->t = AST_EXPR_CHAR_TYPE;
-	res->u.char_type.id = id;
 	return res;
 }
 

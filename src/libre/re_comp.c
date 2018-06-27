@@ -6,6 +6,7 @@ struct comp_env {
 	struct fsm *fsm;
 	enum re_flags flags;
 	const struct fsm_options *opt;
+	struct re_err *err;
 };
 
 static int
@@ -144,21 +145,13 @@ comp_iter(struct comp_env *env,
 		break;
 
 	case AST_EXPR_CHAR_CLASS:
-	{
-		int i;
-		struct re_char_class_ast *cca = n->u.char_class.cca;
-		struct re_char_class *cc = re_char_class_ast_compile(cca);
-		if (cc == NULL) { return 0; }
-
-		for (i = 0; i < 256; i++) {
-			if (cc->chars[i/8] & (1U << (i & 0x07))) {
-				if (!addedge_literal(env, x, y, i)) { return 0; }
-			}
+		if (!re_char_class_ast_compile(n->u.char_class.cca,
+			env->fsm, env->flags, env->err, env->opt, x, y)) {
+			return 0;
 		}
-		re_char_class_free(cc);
 		break;
-	}
 
+#if 0
 	case AST_EXPR_CHAR_TYPE:
 	{
 		int i;
@@ -173,6 +166,7 @@ comp_iter(struct comp_env *env,
 		re_char_class_free(cc);
 		break;
 	}
+#endif
 
 	case AST_EXPR_GROUP:
 		RECURSE(x, y, n->u.group.e);

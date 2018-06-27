@@ -1,17 +1,11 @@
 #include "../../re_char_class.h"
 
-int
-re_char_class_like(const char *name, enum ast_char_class_id *id)
+enum re_dialect_char_class_lookup_res
+re_char_class_like(const char *name, char_class_constructor_fun **res)
 {
 	(void)name;
-	(void)id;
-	return 0;
-}
+	(void)res;
 
-int
-re_char_type_like(const char *name, enum ast_char_type_id *id)
-{
-	(void)name;
-	(void)id;
-	return 0;
+	/* no character classes in this dialect */
+	return RE_CLASS_UNSUPPORTED;
 }

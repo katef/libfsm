@@ -3,70 +3,71 @@
 /* While this could be done via the lexer, doing it here
  * greatly reduces the surface area of the types we need to
  * declare in the parser. */
+#include "../../class.h"
 
-int
-re_char_class_pcre(const char *name, enum ast_char_class_id *id)
+struct pairs {
+	const char *s;
+	char_class_constructor_fun *ctor;
+};
+static const struct pairs class_table[] = {
+	{ "alnum", class_alnum_fsm },
+	{ "alpha", class_alpha_fsm },
+	{ "ascii", class_ascii_fsm },
+	{ "blank", class_blank_fsm },
+	{ "cntrl", class_cntrl_fsm },
+	{ "digit", class_digit_fsm },
+	{ "graph", class_graph_fsm },
+	{ "lower", class_lower_fsm },
+	{ "print", class_print_fsm },
+	{ "punct", class_punct_fsm },
+	{ "space", class_space_fsm },
+	{ "upper", class_upper_fsm },
+	{ "word", class_word_fsm },
+	{ "xdigit", class_xdigit_fsm },
+	{ NULL, NULL },
+};
+		
+static const struct pairs char_type_table[] = {
+	{ "d", class_digit_fsm },
+	{ "h", NULL },		  /* horizontal ws: [ \t] */
+	{ "s", class_space_fsm }, /* [\h\v] */
+	{ "v", NULL },		  /* vertical ws: [\x0a\x0b\x0c\x0d] */
+	{ "w", class_word_fsm },
+
+	{ "D", NULL },		/* [^\d] */
+	{ "H", NULL },		/* [^\h] */
+	{ "S", NULL },		/* [^\s] */
+	{ "V", NULL },		/* [^\v] */
+	{ "W", NULL },		/* [^\w] */
+	{ "N", NULL },		/* [^\n] */
+
+	{ NULL, NULL },
+};
+	
+
+enum re_dialect_char_class_lookup_res
+re_char_class_pcre(const char *name, char_class_constructor_fun **res)
 {
-	struct pairs {
-		const char *s;
-		enum ast_char_type_id id;
-	};
-	const struct pairs table[] = {
-		{ "alnum", AST_CHAR_CLASS_ALNUM },
-		{ "alpha", AST_CHAR_CLASS_ALPHA },
-		{ "ascii", AST_CHAR_CLASS_ASCII },
-		{ "blank", AST_CHAR_CLASS_BLANK },
-		{ "cntrl", AST_CHAR_CLASS_CNTRL },
-		{ "digit", AST_CHAR_CLASS_DIGIT },
-		{ "graph", AST_CHAR_CLASS_GRAPH },
-		{ "lower", AST_CHAR_CLASS_LOWER },
-		{ "print", AST_CHAR_CLASS_PRINT },
-		{ "punct", AST_CHAR_CLASS_PUNCT },
-		{ "space", AST_CHAR_CLASS_SPACE },
-		{ "upper", AST_CHAR_CLASS_UPPER },
-		{ "word", AST_CHAR_CLASS_WORD },
-		{ "xdigit", AST_CHAR_CLASS_XDIGIT },
-	};
-
-	unsigned i;
-
-	if (name == NULL || name[0] != '[' || name[1] != ':') {
-		return 0;
-	}
-	name += 2;
-
-	for (i = 0; i < sizeof(table)/sizeof(table[0]); i++) {
-		if (0 == strncmp(table[i].s, name, strlen(table[i].s))) {
-			*id = table[i].id;
-			return 1;
-		}
-	}
-	return 0;
-}
-
-int
-re_char_type_pcre(const char *name, enum ast_char_type_id *id)
-{
+	const struct pairs *t = NULL;
+	size_t i;
+	assert(res != NULL);
 	assert(name != NULL);
-	assert(id != NULL);
 
-	if (name[0] != '\\') { return 0; }
-	if (name[1] == '\0' || name[2] != '\0') { return 0; }
-
-	switch (name[1]) {
-	case 'd': *id = AST_CHAR_TYPE_DECIMAL; break;
-	case 'h': *id = AST_CHAR_TYPE_HORIZ_WS; break;
-	case 's': *id = AST_CHAR_TYPE_WS; break;
-	case 'v': *id = AST_CHAR_TYPE_VERT_WS; break;
-	case 'w': *id = AST_CHAR_TYPE_WORD; break;
-	case 'D': *id = AST_CHAR_TYPE_NON_DECIMAL; break;
-	case 'H': *id = AST_CHAR_TYPE_NON_HORIZ_WS; break;
-	case 'S': *id = AST_CHAR_TYPE_NON_WS; break;
-	case 'V': *id = AST_CHAR_TYPE_NON_VERT_WS; break;
-	case 'W': *id = AST_CHAR_TYPE_NON_WORD; break;
-	case 'N': *id = AST_CHAR_TYPE_NON_NL; break;
-	default:
-		return 0;
+	if (name[0] == '\\') {
+		name += 1;
+		t = char_type_table;
+	} else if (0 == strncmp("[:", name, 2)) {
+		name += 2;
+		t = class_table;
 	}
-	return 1;
+
+	for (i = 0; t && t[i].s != NULL; i++) {
+		if (0 == strncmp(t[i].s, name, strlen(t[i].s))) {
+			if (t[i].ctor == NULL) { return RE_CLASS_UNSUPPORTED; }
+			*res = t[i].ctor;
+			return RE_CLASS_FOUND;
+		}
+	}	
+
+	return RE_CLASS_NOT_FOUND;
 }

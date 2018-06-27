@@ -24,7 +24,6 @@
 	!err;
 	ast_expr;
         ast_char_class_id;
-        ast_char_type_id;
 	ast_count;
 	char_class_ast;
 	range_endpoint;
@@ -63,7 +62,6 @@
 	!START:   () -> (:pred);
 	!END:     () -> (:pred);
 	COUNT:   () -> (:unsigned);
-	CHAR_TYPE: () -> (:ast_char_type_id, :pos, :pos);
 
 	EOF;
 	!ERROR;
@@ -99,7 +97,6 @@
 	<ast-expr-char-class>: (:char_class_ast, :pos, :pos) -> (:ast_expr);
         <ast-expr-group>: (:ast_expr) -> (:ast_expr);
 	<ast-expr-re-flags>: (:re_flags, :re_flags) -> (:ast_expr);
-	<ast-expr-char-type>: (:ast_char_type_id) -> (:ast_expr);
 
         <atom-kleene>: () -> (:ast_count);
         <atom-plus>: () -> (:ast_count);
@@ -113,7 +110,6 @@
 	<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	!<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	<char-class-ast-named-class>: (:ast_char_class_id) -> (:char_class_ast);
-	<char-class-ast-char-type>: (:ast_char_type_id) -> (:char_class_ast);
 
 	<char-class-ast-flag-none>: () -> (:char_class_ast);
 	<char-class-ast-flag-invert>: () -> (:char_class_ast);
@@ -122,7 +118,6 @@
 
 	<ast-range-endpoint-literal>: (:char) -> (:range_endpoint);
 	<ast-range-endpoint-char-class>: (:ast_char_class_id) -> (:range_endpoint);
-	<ast-range-endpoint-char-type>: (:ast_char_type_id) -> (:range_endpoint);
 
 	<re-flag-none>: () -> (:re_flags);
 	<re-flag-union>: (:re_flags, :re_flags) -> (:re_flags);
@@ -141,11 +136,6 @@
 			node = <ast-expr-literal>(c);
 		};
 		    
-		char-type: () -> (node :ast_expr) = {
-			(id, !, !) = CHAR_TYPE;
-			node = <ast-expr-char-type>(id);
-		};
-
 		char-class: () -> (node :ast_expr) [
 			char-class-head: () -> (f :char_class_ast) = {
 				(!) = INVERT;
@@ -176,11 +166,6 @@
 			};
 
 
-			class-char-type: () -> (node :char_class_ast) = {
-				(id, !, !) = CHAR_TYPE;
-				node = <char-class-ast-char-type>(id);
-			};
-
 			class-range: () -> (node :char_class_ast, start :pos, end :pos) [
 				range-endpoint-literal: () -> (r :range_endpoint, start :pos, end :pos) = {
 					{
@@ -200,18 +185,11 @@
 					(id, start, end) = class-named();
 					r = <ast-range-endpoint-char-class>(id);
 				};
-
-				range-endpoint-char-type: () -> (r :range_endpoint, start :pos, end :pos) = {
-					(id, start, end) = CHAR_TYPE;
-					r = <ast-range-endpoint-char-type>(id);
-				};
 			] = {
 				{
 					(lower, l_start, l_end) = range-endpoint-literal();
 				||
 					(lower, l_start, l_end) = range-endpoint-char-class();
-				||
-					(lower, l_start, l_end) = range-endpoint-char-type();
 				};
 
 				{
@@ -224,8 +202,6 @@
 					(upper, u_start, u_end) = range-endpoint-literal();
 				||
 					(upper, u_start, u_end) = range-endpoint-char-class();
-				||
-					(upper, u_start, u_end) = range-endpoint-char-type();
 				||
 					/* allow literal '-' as end of range */
 					(c, u_start, u_end) = RANGE;
@@ -242,8 +218,6 @@
 				node = class-literal();
 			||
 				(node, !, !) = class-range();
-			||
-				node = class-char-type();
 			||
 				(id, !, !) = class-named();
 				node = <char-class-ast-named-class>(id);
@@ -278,6 +252,12 @@
 			node = <ast-expr-char-class>(hb, start, end);
 		};
 
+		char-type: () -> (node :ast_expr) = {
+				(id, start, end) = NAMED_CHAR_CLASS;
+				named = <char-class-ast-named-class>(id);
+				node = <ast-expr-char-class>(named, start, end);
+		};
+			
                 flags: () -> (node :ast_expr) [
 			flag_set: (i :re_flags) -> (o :re_flags) = {
 				c = FLAG_INSENSITIVE;

@@ -123,6 +123,10 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	re_ast_free(ast);
 
 	if (new == NULL) {
+		fprintf(stderr, "Compilation failed\n");
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EXUNSUPPORTD; /* FIXME */
+		}
 		return NULL;
 	}
 	

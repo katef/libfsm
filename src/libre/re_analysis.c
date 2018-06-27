@@ -46,7 +46,6 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 	case AST_EXPR_ANY:
 	case AST_EXPR_MANY:
 	case AST_EXPR_FLAGS:
-	case AST_EXPR_CHAR_TYPE:
 		break;
 
 	case AST_EXPR_REPEATED:

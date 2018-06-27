@@ -1,42 +1,42 @@
 #include "../../re_char_class.h"
 
-int
-re_char_class_sql(const char *name, enum ast_char_class_id *id)
+#include "../../class.h"
+
+struct pairs {
+	const char *s;
+	char_class_constructor_fun *ctor;
+};
+static const struct pairs class_table[] = {
+	{ "ALNUM", class_alnum_fsm },
+	{ "ALPHA", class_alpha_fsm },
+	{ "DIGIT", class_digit_fsm },
+	{ "LOWER", class_lower_fsm },
+	{ "SPACE", class_space_fsm },
+	{ "UPPER", class_upper_fsm },
+	{ "WHITESPACE", class_space_fsm },
+	{ NULL, NULL },
+};
+
+enum re_dialect_char_class_lookup_res
+re_char_class_sql(const char *name, char_class_constructor_fun **res)
 {
-	struct pairs {
-		const char *s;
-		enum ast_char_type_id id;
-	};
-	const struct pairs table[] = {
-		{ "ALNUM", AST_CHAR_CLASS_ALNUM },
-		{ "ALPHA", AST_CHAR_CLASS_ALPHA },
-		{ "DIGIT", AST_CHAR_CLASS_DIGIT },
-		{ "LOWER", AST_CHAR_CLASS_LOWER },
-		{ "SPACE", AST_CHAR_CLASS_SPACE },
-		{ "UPPER", AST_CHAR_CLASS_UPPER },
-		{ "WHITESPACE", AST_CHAR_CLASS_SPACE },
-	};
+	const struct pairs *t = NULL;
+	size_t i;
+	assert(res != NULL);
+	assert(name != NULL);
 
-	unsigned i;
-
-	if (name == NULL || name[0] != '[' || name[1] != ':') {
-		return 0;
+	if (0 == strncmp("[:", name, 2)) {
+		name += 2;
+		t = class_table;
 	}
-	name += 2;
 
-	for (i = 0; i < sizeof(table)/sizeof(table[0]); i++) {
-		if (0 == strncmp(table[i].s, name, strlen(table[i].s))) {
-			*id = table[i].id;
-			return 1;
+	for (i = 0; t && t[i].s != NULL; i++) {
+		if (0 == strncmp(t[i].s, name, strlen(t[i].s))) {
+			if (t[i].ctor == NULL) { return RE_CLASS_UNSUPPORTED; }
+			*res = t[i].ctor;
+			return RE_CLASS_FOUND;
 		}
-	}
-	return 0;
-}
+	}	
 
-int
-re_char_type_sql(const char *name, enum ast_char_type_id *id)
-{
-	(void)name;
-	(void)id;
-	return 0;
+	return RE_CLASS_NOT_FOUND;
 }

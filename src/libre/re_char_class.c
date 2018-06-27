@@ -1,52 +1,44 @@
 #include "re_char_class.h"
 #include "re_ast.h"
+#include "class.h"
 
 #include <string.h>
 #include <ctype.h>
+#include <limits.h>
+#include <errno.h>
 
-#define TRACE_OPERATIONS 0
+struct re_char_class {
+	enum re_flags flags;
 
-typedef int char_filter(int c);
+	enum re_char_class_flags cc_flags;
 
-static void
-cc_free(struct re_char_class *cc);
+	const struct fsm_options *opt;
+	struct re_err *err;
 
-static void
-cc_add_byte(struct re_char_class *cc, unsigned char byte);
+	/* These are set to NULL once they've been incorporated into the
+	 * overall regex FSM, so they no longer need to be freed by the
+	 * char class functions. */
+	struct fsm *set;
+	struct fsm *dup;
+};
 
-static void
+static int
+link_char_class_into_fsm(struct re_char_class *cc, struct fsm *fsm,
+    struct fsm_state *x, struct fsm_state *y);
+
+static int
+cc_add_char(struct re_char_class *cc, unsigned char byte);
+
+static int
 cc_add_range(struct re_char_class *cc, 
     const struct ast_range_endpoint *from,
     const struct ast_range_endpoint *to);
 
 static int
-cc_add_named_class(struct re_char_class *cc, enum ast_char_class_id id);
+cc_add_named_class(struct re_char_class *cc, char_class_constructor_fun *ctor);
 
 static int
-cc_add_char_type(struct re_char_class *cc, enum ast_char_type_id id);
-
-static int
-cc_add_char_type(struct re_char_class *cc, enum ast_char_type_id id);
-
-static void
 cc_invert(struct re_char_class *cc);
-
-static void
-cc_mask(struct re_char_class *cc, struct re_char_class *mask);
-
-void
-cc_dump(FILE *f, struct re_char_class *cc);
-
-static char_filter *
-char_filter_for_class_id(enum ast_char_class_id id);
-
-static void
-char_endpoints_for_filter(char_filter *f, unsigned negated,
-    unsigned char *low, unsigned char *high);
-
-static int
-char_filter_for_char_type_id(enum ast_char_type_id id,
-    char_filter **f, unsigned *negated_res);
 
 struct re_char_class_ast *
 re_char_class_ast_concat(struct re_char_class_ast *l,
@@ -98,22 +90,12 @@ re_char_class_ast_flags(enum re_char_class_flags flags)
 }
 
 struct re_char_class_ast *
-re_char_class_ast_named_class(enum ast_char_class_id id)
+re_char_class_ast_named_class(char_class_constructor_fun *ctor)
 {
 	struct re_char_class_ast *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
 	res->t = RE_CHAR_CLASS_AST_NAMED;
-	res->u.named.id = id;
-	return res;
-}
-
-struct re_char_class_ast *
-re_char_class_ast_char_type(enum ast_char_type_id id)
-{
-	struct re_char_class_ast *res = calloc(1, sizeof(*res));
-	if (res == NULL) { return NULL; }
-	res->t = RE_CHAR_CLASS_AST_CHAR_TYPE;
-	res->u.char_type.id = id;
+	res->u.named.ctor = ctor;
 	return res;
 }
 
@@ -154,26 +136,6 @@ re_char_class_id_str(enum ast_char_class_id id)
 	}
 }
 
-const char *
-re_char_class_type_id_str(enum ast_char_type_id id)
-{
-	switch (id) {
-	case AST_CHAR_TYPE_DECIMAL: return "\\d";
-	case AST_CHAR_TYPE_HORIZ_WS: return "\\h";
-	case AST_CHAR_TYPE_WS: return "\\s";
-	case AST_CHAR_TYPE_VERT_WS: return "\\v";
-	case AST_CHAR_TYPE_WORD: return "\\w";
-	case AST_CHAR_TYPE_NON_DECIMAL: return "\\D";
-	case AST_CHAR_TYPE_NON_HORIZ_WS: return "\\H";
-	case AST_CHAR_TYPE_NON_WS: return "\\S";
-	case AST_CHAR_TYPE_NON_VERT_WS: return "\\V";
-	case AST_CHAR_TYPE_NON_WORD: return "\\W";
-	case AST_CHAR_TYPE_NON_NL: return "\\N";
-	default:
-		return "<match fail>";
-	}
-}
-
 static void
 free_iter(struct re_char_class_ast *n)
 {
@@ -190,7 +152,6 @@ free_iter(struct re_char_class_ast *n)
 	case RE_CHAR_CLASS_AST_LITERAL:
 	case RE_CHAR_CLASS_AST_RANGE:
 	case RE_CHAR_CLASS_AST_NAMED:
-	case RE_CHAR_CLASS_AST_CHAR_TYPE:
 	case RE_CHAR_CLASS_AST_FLAGS:
 		break;
 
@@ -224,31 +185,21 @@ comp_iter(struct re_char_class *cc, struct re_char_class_ast *n)
 		if (!comp_iter(cc, n->u.concat.r)) { return 0; }
 		break;
 	case RE_CHAR_CLASS_AST_LITERAL:
-		cc_add_byte(cc, n->u.literal.c);
+		if (!cc_add_char(cc, n->u.literal.c)) { return 0; }
 		break;
 	case RE_CHAR_CLASS_AST_RANGE:
-		cc_add_range(cc, &n->u.range.from, &n->u.range.to);
+		if (!cc_add_range(cc, &n->u.range.from, &n->u.range.to)) { return 0; }
 		break;
 	case RE_CHAR_CLASS_AST_NAMED:
-		if (!cc_add_named_class(cc, n->u.named.id)) { return 0; }
-		break;
-	case RE_CHAR_CLASS_AST_CHAR_TYPE:
-		if (!cc_add_char_type(cc, n->u.char_type.id)) { return 0; }
+		if (!cc_add_named_class(cc, n->u.named.ctor)) { return 0; }
 		break;
 	case RE_CHAR_CLASS_AST_FLAGS:
-		cc->flags |= n->u.flags.f;
+		cc->cc_flags |= n->u.flags.f;
 		break;
 	case RE_CHAR_CLASS_AST_SUBTRACT:
-	{
-		struct re_char_class *mask;
-		if (!comp_iter(cc, n->u.subtract.ast)) { return 0; }
-
-		mask = re_char_class_ast_compile(n->u.subtract.mask);
-		if (mask == NULL) { return 0; }
-		cc_mask(cc, mask);
-		re_char_class_free(mask);
+		fprintf(stderr, "TODO %s:%d\n", __FILE__, __LINE__);
+		assert(0);
 		break;
-	}
 	default:
 		fprintf(stderr, "(MATCH FAIL)\n");
 		assert(0);
@@ -257,129 +208,252 @@ comp_iter(struct re_char_class *cc, struct re_char_class_ast *n)
 	return 1;
 }
 
-struct re_char_class *
-re_char_class_ast_compile(struct re_char_class_ast *cca)
+static struct fsm *
+new_blank(const struct fsm_options *opt)
 {
-	struct re_char_class *res = calloc(1, sizeof(*res));
-	if (res == NULL) { return NULL; }
-
-	if (!comp_iter(res, cca)) {
-		cc_free(res);
+	struct fsm *new;
+	struct fsm_state *start;
+	
+	new = fsm_new(opt);
+	if (new == NULL) {
 		return NULL;
 	}
-
-	if (res->flags & RE_CHAR_CLASS_FLAG_MINUS) {
-		cc_add_byte(res, '-');
-		res->flags &=~ RE_CHAR_CLASS_FLAG_MINUS;
-	}
-
-	if (res->flags & RE_CHAR_CLASS_FLAG_INVERTED) {
-		cc_invert(res);
-		res->flags &=~ RE_CHAR_CLASS_FLAG_INVERTED;
-	}
-
-	return res;
-}
-
-struct re_char_class *
-re_char_class_type_compile(enum ast_char_type_id id)
-{
-	struct re_char_class *res = calloc(1, sizeof(*res));
-	if (res == NULL) { return NULL; }
-
-	cc_add_char_type(res, id);
 	
-	return res;
+	start = fsm_addstate(new);
+	if (start == NULL) {
+		goto error;
+	}
+	
+	fsm_setstart(new, start);
+	
+	return new;
+	
+error:
+	
+	fsm_free(new);
+	
+	return NULL;
+}
+
+int
+re_char_class_ast_compile(struct re_char_class_ast *cca,
+    struct fsm *fsm, enum re_flags flags,
+    struct re_err *err, const struct fsm_options *opt,
+    struct fsm_state *x, struct fsm_state *y)
+{
+	struct re_char_class cc;
+	memset(&cc, 0x00, sizeof(cc));
+	
+	cc.set = new_blank(opt);
+	if (cc.set == NULL) { goto cleanup; }
+
+	cc.dup = new_blank(opt);
+	if (cc.dup == NULL) { goto cleanup; }
+
+	cc.opt = opt;
+	cc.err = err;
+	cc.flags = flags;
+
+	if (!comp_iter(&cc, cca)) { goto cleanup; }
+
+	if (cc.cc_flags & RE_CHAR_CLASS_FLAG_INVERTED) {
+		if (!cc_invert(&cc)) { goto cleanup; }
+	}
+
+	if (!link_char_class_into_fsm(&cc, fsm, x, y)) { goto cleanup; }
+
+	return 1;
+
+cleanup:
+	if (cc.set != NULL) { fsm_free(cc.set); }
+	if (cc.dup != NULL) { fsm_free(cc.dup); }
+	return 0;
 }
 
 
-static void
-bitset_pos(unsigned char byte, unsigned *pos, unsigned char *bit)
+
+#include "../libfsm/internal.h" /* XXX */
+
+/* XXX: to go when dups show all spellings for group overlap */
+static const struct fsm_state *
+fsm_any(const struct fsm *fsm,
+    int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
-	*pos = byte / 8;
-	*bit = 1U << (byte & 0x07);
+	const struct fsm_state *s;
+	
+	assert(fsm != NULL);
+	assert(predicate != NULL);
+	
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		if (!predicate(fsm, s)) {
+			return s;
+		}
+	}
+	
+	return NULL;
 }
 
-static void
-cc_free(struct re_char_class *c)
+/* TODO: centralise as fsm_unionxy() perhaps */
+static int
+fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state *y)
 {
-	free(c);
+	struct fsm_state *sa, *sb;
+	struct fsm_state *end;
+	
+	assert(a != NULL);
+	assert(b != NULL);
+	assert(x != NULL);
+	assert(y != NULL);
+	
+	sa = fsm_getstart(a);
+	sb = fsm_getstart(b);
+	
+	end = fsm_collate(b, fsm_isend);
+	if (end == NULL) {
+		return 0;
+	}
+	
+	if (!fsm_merge(a, b)) {
+		return 0;
+	}
+	
+	fsm_setstart(a, sa);
+	
+	if (!fsm_addedge_epsilon(a, x, sb)) {
+		return 0;
+	}
+	
+	fsm_setend(a, end, 0);
+	
+	if (!fsm_addedge_epsilon(a, end, y)) {
+		return 0;
+	}
+	
+	return 1;
 }
 
-void
-cc_add_byte(struct re_char_class *cc, unsigned char byte)
+static int
+link_char_class_into_fsm(struct re_char_class *cc, struct fsm *fsm,
+    struct fsm_state *x, struct fsm_state *y)
 {
-	unsigned pos;
-	unsigned char bit;
+	int is_empty;
+	struct re_err *err = cc->err;
+	is_empty = fsm_empty(cc->dup);
+	if (is_empty == -1) {
+		err->e = RE_EERRNO;
+		return 0;
+	}
+	
+	if (!is_empty) {
+		const struct fsm_state *end;
+		/* TODO: would like to show the original spelling verbatim, too */
+		
+		/* XXX: this is just one example; really I want to show the entire set */
+		end = fsm_any(cc->dup, fsm_isend);
+		assert(end != NULL);
+		
+		if (-1 == fsm_example(cc->dup, end, err->dup, sizeof err->dup)) {
+			err->e = RE_EERRNO;
+			return 0;
+		}
+		
+		/* XXX: to return when we can show minimal coverage again */
+		strcpy(err->set, err->dup);
+		
+		err->e  = RE_EOVERLAP;
+		return 0;
+	}
+	
+	if (!fsm_minimise(cc->set)) {
+		err->e = RE_EERRNO;
+		return 0;
+	}
+	
+	if (!fsm_unionxy(fsm, cc->set, x, y)) {
+		err->e = RE_EERRNO;
+		return 0;
+	}
+	cc->set = NULL;
+
+	fsm_free(cc->dup);
+	cc->dup = NULL;
+		
+	return 1;
+}
+
+/* FIXME: duplication */
+static int
+addedge_literal(struct fsm *fsm, enum re_flags flags,
+    struct fsm_state *from, struct fsm_state *to, char c)
+{
+	assert(fsm != NULL);
+	assert(from != NULL);
+	assert(to != NULL);
+	
+	if (flags & RE_ICASE) {
+		if (!fsm_addedge_literal(fsm, from, to, tolower((unsigned char) c))) {
+			return 0;
+		}
+		
+		if (!fsm_addedge_literal(fsm, from, to, toupper((unsigned char) c))) {
+			return 0;
+		}
+	} else {
+		if (!fsm_addedge_literal(fsm, from, to, c)) {
+			return 0;
+		}
+	}
+	
+	return 1;
+}
+
+int
+cc_add_char(struct re_char_class *cc, unsigned char c)
+{
+	const struct fsm_state *p;
+	struct fsm_state *start, *end;
+	struct fsm *fsm;
+	char a[2];
+	char *s = a;
+	
 	assert(cc != NULL);
-	bitset_pos(byte, &pos, &bit);
-	cc->chars[pos] |= bit;
+	
+	a[0] = c;
+	a[1] = '\0';
+	
+	errno = 0;
+	p = fsm_exec(cc->set, fsm_sgetc, &s);
+	if (p == NULL && errno != 0) {
+		goto fail;
+	}
+	
+	if (p == NULL) {
+		fsm = cc->set;
+	} else {
+		fsm = cc->dup;
+	}
+	
+	start = fsm_getstart(fsm);
+	assert(start != NULL);
+	
+	end = fsm_addstate(fsm);
+	if (end == NULL) {
+		goto fail;
+	}
+	
+	fsm_setend(fsm, end, 1);
+	
+	if (!addedge_literal(fsm, cc->flags, start, end, c)) {
+		goto fail;
+	}
+	
+	return 1;
 
-#if TRACE_OPERATIONS
-	fprintf(stderr, "ADDING 0x%02x\n", byte);
-	cc_dump(stderr, cc);
-	fprintf(stderr, "\n");
-#endif
+fail:
+	return 0;
 }
 
-void
-re_char_class_endpoint_span(const struct ast_range_endpoint *r,
-    unsigned char *from, unsigned char *to)
-{
-	char_filter *f = NULL;
-	assert(r != NULL);
-
-	switch (r->t) {
-	case AST_RANGE_ENDPOINT_LITERAL:
-		if (from != NULL) { *from = r->u.literal.c; }
-		if (to != NULL) { *to = r->u.literal.c; }
-		break;
-	case AST_RANGE_ENDPOINT_CHAR_TYPE:
-	{
-		unsigned negated = 0;
-		char_filter_for_char_type_id(r->u.char_type.id, &f, &negated);
-		char_endpoints_for_filter(f, negated, from, to);
-		break;
-	}
-	case AST_RANGE_ENDPOINT_CHAR_CLASS:
-		f = char_filter_for_class_id(r->u.char_class.id);
-		assert(f != NULL);
-		char_endpoints_for_filter(f, 0, from, to);
-		break;
-	default:
-		assert(0);
-	}
-}
-
-static void
-char_endpoints_for_filter(char_filter *f, unsigned negated,
-    unsigned char *low, unsigned char *high)
-{
-	unsigned i, highest;
-	int has_l = 0, has_h = 0;
-
-	assert(f != NULL);
-	for (i = 0; i < 256; i++) {
-		int match = f(i);
-		if ((negated && match) || (!negated && !match)) {
-			continue;
-		}
-		if (low != NULL && !has_l) {
-			has_l = 1;
-			*low = i;
-			if (high == NULL) { return; }
-		}
-
-		has_h = 1;
-		highest = i;
-	}
-
-	if (high != NULL && has_h) {
-		*high = highest;
-	}
-}
-
-static void
+static int
 cc_add_range(struct re_char_class *cc, 
     const struct ast_range_endpoint *from,
     const struct ast_range_endpoint *to)
@@ -387,226 +461,123 @@ cc_add_range(struct re_char_class *cc,
 	unsigned char lower, upper;
 	unsigned char i;
 
-	re_char_class_endpoint_span(from, &lower, NULL);
-	re_char_class_endpoint_span(to, NULL, &upper);
+	if (from->t != AST_RANGE_ENDPOINT_LITERAL ||
+	    to->t != AST_RANGE_ENDPOINT_LITERAL) {
+		/* not yet supported */
+		return 0;
+	}
+	lower = from->u.literal.c;
+	upper = to->u.literal.c;
 
 	assert(cc != NULL);
 	assert(lower <= upper);
 	for (i = lower; i <= upper; i++) {
-		cc_add_byte(cc, i);		
-	}
-}
-
-static char_filter *
-char_filter_for_class_id(enum ast_char_class_id id)
-{
-	char_filter *filter = NULL;
-	switch (id) {
-	case AST_CHAR_CLASS_ALNUM:
-		filter = isalnum; break;
-	case AST_CHAR_CLASS_ALPHA:
-		filter = isalpha; break;
-	case AST_CHAR_CLASS_ANY:
-		break;
-	case AST_CHAR_CLASS_ASCII:
-		/* filter = isascii; */
-		break;
-	case AST_CHAR_CLASS_BLANK:
-		/* filter = isblank; */
-		break;
-	case AST_CHAR_CLASS_CNTRL:
-		filter = iscntrl; break;
-	case AST_CHAR_CLASS_DIGIT:
-		filter = isdigit; break;
-	case AST_CHAR_CLASS_GRAPH:
-		filter = isgraph; break;
-	case AST_CHAR_CLASS_LOWER:
-		filter = islower; break;
-	case AST_CHAR_CLASS_PRINT:
-		filter = isprint; break;
-	case AST_CHAR_CLASS_PUNCT:
-		filter = ispunct; break;
-	case AST_CHAR_CLASS_SPACE:
-		filter = isspace; break;
-	case AST_CHAR_CLASS_SPCHR:
-		/* filter = isspchr; */
-		break;
-	case AST_CHAR_CLASS_UPPER:
-		filter = isupper; break;
-	case AST_CHAR_CLASS_WORD:
-		/* filter = isword; */
-		break;
-	case AST_CHAR_CLASS_XDIGIT:
-		filter = isxdigit; break;
-	default:
-		fprintf(stderr, "(MATCH FAIL)\n");
-		assert(0);
-	}
-	return filter;
-}
-
-static int
-cc_add_named_class(struct re_char_class *cc, enum ast_char_class_id id)
-{
-	unsigned i;
-	char_filter *filter = NULL;
-	assert(cc != NULL);
-
-	filter = char_filter_for_class_id(id);
-
-	if (filter == NULL) {
-		return 0;
-	}
-
-	for (i = 0; i < 256; i++) {
-		if (filter(i)) { cc_add_byte(cc, i); }
+		if (!cc_add_char(cc, i)) {
+			return 0;
+		}
 	}
 	return 1;
 }
 
 static int
-f_hws(int c)
+cc_add_named_class(struct re_char_class *cc, char_class_constructor_fun *ctor)
 {
-	switch (c) {
-	case ' ':
-	case '\t':
-		return 1;
-	default:
-		return 0;
-	}
-}
+	struct fsm *q;
+	int r;
+	struct re_err *err = cc->err;
+	struct fsm *constructed = ctor(cc->opt);
 
-static int
-f_vws(int c)
-{
-	switch (c) {
-	case '\x0a':		/* AKA '\n' */
-	case '\x0b':		/* vertical tab */
-	case '\x0c':		/* form feed */
-	case '\x0d':		/* AKA '\r' */
-		return 1;
-	default:
-		return 0;
-	}
-}
-
-static int
-f_word(int c)
-{
-	if (isalnum(c)) { return 1; }
-	if (c == '_') { return 1; }
-	return 0;
-}
-
-static int
-f_nl(int c)
-{
-	return (c == '\n');
-}
-
-static int
-char_filter_for_char_type_id(enum ast_char_type_id id,
-    char_filter **f, unsigned *negated_res)
-{
-	char_filter *filter = NULL;
-	unsigned negated = 0;
-
-	switch (id) {
-	case AST_CHAR_TYPE_DECIMAL:
-		filter = isdigit; negated = 0; break;
-	case AST_CHAR_TYPE_HORIZ_WS:
-		filter = f_hws; negated = 0; break;
-	case AST_CHAR_TYPE_WS:
-		filter = isspace; negated = 0; break;
-	case AST_CHAR_TYPE_VERT_WS:
-		filter = f_vws; negated = 0; break;
-	case AST_CHAR_TYPE_WORD:
-		filter = f_word; negated = 0; break;
-
-	/* negated */
-	case AST_CHAR_TYPE_NON_DECIMAL:
-		filter = isdigit; negated = 1; break;
-	case AST_CHAR_TYPE_NON_HORIZ_WS:
-		filter = f_hws; negated = 1; break;
-	case AST_CHAR_TYPE_NON_WS:
-		filter = isspace; negated = 1; break;
-	case AST_CHAR_TYPE_NON_VERT_WS:
-		filter = f_vws; negated = 1; break;
-	case AST_CHAR_TYPE_NON_WORD:
-		filter = f_word; negated = 1; break;
-	case AST_CHAR_TYPE_NON_NL:
-		filter = f_nl; negated = 1; break;
-
-	default:
-		fprintf(stderr, "(MATCH FAIL)\n");
+	if (constructed == NULL) {
+		err->e = RE_EERRNO;
 		return 0;
 	}
 
-	if (filter == NULL) { return 0; }
-	*f = filter;
-	*negated_res = negated;
-
-	return 1;
-}
-
-static int
-cc_add_char_type(struct re_char_class *cc, enum ast_char_type_id id)
-{
-	unsigned i, negated;
-	char_filter *filter = NULL;
-	assert(cc != NULL);
-
-	if (!char_filter_for_char_type_id(id, &filter, &negated)) {
-		return 0;
+	/* TODO: maybe it is worth using carryopaque, after the entire group is constructed */
+	{
+		struct fsm *a, *b;
+		
+		a = fsm_clone(cc->set);
+		if (a == NULL) {
+			err->e = RE_EERRNO;
+			return 0;
+		}
+		
+		b = fsm_clone(constructed);
+		if (b == NULL) {
+			fsm_free(a);
+			err->e = RE_EERRNO;
+			return 0;
+		}
+		
+		q = fsm_intersect(a, b);
+		if (q == NULL) {
+			fsm_free(a);
+			fsm_free(b);
+			err->e = RE_EERRNO;
+			return 0;
+		}
+		
+		r = fsm_empty(q);
+		
+		if (r == -1) {
+			err->e = RE_EERRNO;
+			return 0;
+		}
 	}
-
-	if (filter == NULL) {
-		return 0;
-	}
-
-	for (i = 0; i < 256; i++) {
-		if (filter(i)) { cc_add_byte(cc, i); }
-	}
-
-	if (negated) {
-		cc_invert(cc);
+	
+	if (!r) {
+		cc->dup = fsm_union(cc->dup, q);
+		if (cc->dup == NULL) {
+			err->e = RE_EERRNO;
+			return 0;
+		}
+	} else {
+		fsm_free(q);
+		
+		cc->set = fsm_union(cc->set, constructed);
+		if (cc->set == NULL) {
+			err->e = RE_EERRNO;
+			return 0;
+		}
+		
+		/* we need a DFA here for sake of fsm_exec() identifying duplicates */
+		if (!fsm_determinise(cc->set)) {
+			err->e = RE_EERRNO;
+			return 0;
+		}
 	}
 	
 	return 1;
 }
 
-void
+static struct fsm *
+negate(struct fsm *class, const struct fsm_options *opt)
+{
+	struct fsm *any;
+	
+	any = class_any_fsm(opt);
+	
+	if (any == NULL || class == NULL) {
+		if (any) fsm_free(any);
+		if (class) fsm_free(class);
+	};
+	
+	class = fsm_subtract(any, class);
+	
+	return class;
+}
+
+int
 cc_invert(struct re_char_class *cc)
 {
-	unsigned i;
-	for (i = 0; i < sizeof(cc->chars)/sizeof(cc->chars[0]); i++) {
-		cc->chars[i] = ~cc->chars[i];
-	}
-}
+	struct fsm *inverted = negate(cc->set, cc->opt);
+	if (inverted == NULL) { return 0; }
 
-void
-cc_mask(struct re_char_class *cc, struct re_char_class *mask)
-{
-	unsigned i;
-	for (i = 0; i < sizeof(cc->chars)/sizeof(cc->chars[0]); i++) {
-		cc->chars[i] &= ~mask->chars[i];
-	}
-}
+	cc->set = inverted;
 
-void
-cc_dump(FILE *f, struct re_char_class *cc)
-{
-	unsigned i;
-	for (i = 0; i < 256; i++) {
-		unsigned pos;
-		unsigned char bit;
-		bitset_pos((unsigned char)i, &pos, &bit);
-		if (cc->chars[pos] & bit) {
-			if (isprint(i)) {
-				fprintf(f, "%c", i);
-			} else {
-				fprintf(f, "\\x%02x", i);
-			}
-		}
-	}
+	/*
+	 * Note we don't invert the dup set here; duplicates are always
+	 * kept in the positive.
+	 */
+	return 1;
 }

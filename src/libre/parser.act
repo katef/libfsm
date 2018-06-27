@@ -94,6 +94,7 @@
 
 	#include "../comp.h"
 	#include "../../class.h"
+	#include "../../re_char_class.h"
 
 	struct grp {
 		struct fsm *set;
@@ -114,8 +115,7 @@
 	typedef struct fsm * t_fsm;
 	typedef enum re_flags t_re__flags;
 	typedef struct grp t_grp;
-	typedef enum ast_char_class_id t_ast__char__class__id;
-	typedef enum ast_char_type_id t_ast__char__type__id;
+	typedef char_class_constructor_fun * t_ast__char__class__id;
 	typedef struct ast_count t_ast__count;
 
 	typedef struct re_char_class_ast * t_char__class__ast;
@@ -685,18 +685,21 @@
 		@n = (unsigned int) u;
 	@};
 
-	CHAR_TYPE: () -> (id :ast_char_type_id, start :pos, end :pos) = @{
-		if (!DIALECT_CHAR_TYPE(lex_state->buf.a, &@id)) {
-			@!;
-		}
-
-		@start = lex_state->lx.start;
-		@end   = lex_state->lx.end;
-	@};
-
 	NAMED_CHAR_CLASS: () -> (id :ast_char_class_id, start :pos, end :pos) = @{
-		if (!DIALECT_CHAR_CLASS(lex_state->buf.a, &@id)) {
+		enum re_dialect_char_class_lookup_res res;
+		res = DIALECT_CHAR_CLASS(lex_state->buf.a, &@id);
+
+		switch (res) {
+		default:
+		case RE_CLASS_NOT_FOUND:
+			/* syntax error -- unrecognized class */
 			@!;
+		case RE_CLASS_UNSUPPORTED:
+			err->e = RE_EXUNSUPPORTD;
+			@!;
+		case RE_CLASS_FOUND:
+			/* proceed below */
+			break;
 		}
 
 		@start = lex_state->lx.start;
@@ -897,8 +900,14 @@
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 
-		re_char_class_endpoint_span(&@from, &lower, NULL);
-		re_char_class_endpoint_span(&@to, NULL, &upper);
+		if (@from.t != AST_RANGE_ENDPOINT_LITERAL ||
+		    @to.t != AST_RANGE_ENDPOINT_LITERAL) {
+			err->e = RE_EXUNSUPPORTD;
+			@!;
+		}
+
+		lower = @from.u.literal.c;
+		upper = @to.u.literal.c;
 
 		if (lower > upper) {
 			char a[5], b[5];
@@ -926,10 +935,6 @@
 		@n = re_char_class_ast_named_class(@id);
 	@};
 
-	<char-class-ast-char-type>: (id :ast_char_type_id) -> (n :char_class_ast) = @{
-		@n = re_char_class_ast_char_type(@id);
-	@};
-
 	<ast-expr-char-class>: (cca :char_class_ast, start :pos, end :pos) -> (n :ast_expr) = @{
 		struct ast_pos ast_start, ast_end;
 		AST_POS_OF_LX_POS(ast_start, @start);
@@ -937,11 +942,6 @@
 		mark(&act_state->groupstart, &@start);
 		mark(&act_state->groupend,   &@end);
 		@n = re_ast_expr_char_class(@cca, &ast_start, &ast_end);
-		if (@n == NULL) { @!; }
-	@};
-
-	<ast-expr-char-type>: (id :ast_char_type_id) -> (n :ast_expr) = @{
-		@n = re_ast_expr_char_type(@id);
 		if (@n == NULL) { @!; }
 	@};
 
@@ -971,14 +971,7 @@
 	<ast-range-endpoint-char-class>: (id :ast_char_class_id) -> (r :range_endpoint) = @{
 		struct ast_range_endpoint range;
 		range.t = AST_RANGE_ENDPOINT_CHAR_CLASS;
-		range.u.char_class.id = @id;
-		@r = range;
-	@};
-
-	<ast-range-endpoint-char-type>: (id :ast_char_type_id) -> (r :range_endpoint) = @{
-		struct ast_range_endpoint range;
-		range.t = AST_RANGE_ENDPOINT_CHAR_TYPE;
-		range.u.char_type.id = @id;
+		range.u.char_class.ctor = @id;
 		@r = range;
 	@};
 

@@ -85,9 +85,6 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 		cc_pp_iter(f, n->u.char_class.cca, indent + IND);
 		fprintf(f, "\n");
 		break;
-	case AST_EXPR_CHAR_TYPE:
-		fprintf(f, "CHAR_TYPE %p: %d\n", (void *)n, n->u.char_type.id);
-		break;
 	case AST_EXPR_GROUP:
 		fprintf(f, "GROUP %p: %u\n", (void *)n, n->u.group.id);
 		pp_iter(f, indent + 1*IND, n->u.group.e);
@@ -131,11 +128,8 @@ print_range_endpoint(FILE *f, const struct ast_range_endpoint *r)
 		print_char_or_esc(f, r->u.literal.c);
 		fprintf(f, "'");
 		break;
-	case AST_RANGE_ENDPOINT_CHAR_TYPE:
-		fprintf(f, "%s", re_char_class_type_id_str(r->u.char_type.id));
-		break;
-	case AST_RANGE_ENDPOINT_CHAR_CLASS:
-		fprintf(f, "[:%s:]", re_char_class_id_str(r->u.char_class.id));
+	default:
+		assert(0);
 		break;
 	}
 }
@@ -166,12 +160,8 @@ cc_pp_iter(FILE *f, struct re_char_class_ast *n, size_t indent)
 		fprintf(f, "\n");
 		break;
 	case RE_CHAR_CLASS_AST_NAMED:
-		fprintf(f, "CLASS-NAMED %p: '%s'\n",
-		    (void *)n, re_char_class_id_str(n->u.named.id));
-		break;
-	case RE_CHAR_CLASS_AST_CHAR_TYPE:
-		fprintf(f, "CLASS-CHAR-TYPE %p: %s\n",
-		    (void *)n, re_char_class_type_id_str(n->u.char_type.id));
+		fprintf(f, "CLASS-NAMED %p: (opaque constructor)\n",
+		    (void *)n);
 		break;
 	case RE_CHAR_CLASS_AST_FLAGS:
 		fprintf(f, "CLASS-FLAGS %p: [", (void *)n);

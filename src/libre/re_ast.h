@@ -34,7 +34,6 @@ enum ast_expr_type {
 	AST_EXPR_OPT,
 	AST_EXPR_REPEATED,
 	AST_EXPR_CHAR_CLASS,
-	AST_EXPR_CHAR_TYPE,
 	AST_EXPR_GROUP,
 	AST_EXPR_FLAGS
 };
@@ -82,9 +81,6 @@ struct ast_expr {
 			struct ast_pos start;
 			struct ast_pos end;
 		} char_class;
-		struct {
-			enum ast_char_type_id id;
-		} char_type;
 		struct {
 			struct ast_expr *e;
 			unsigned id;
@@ -135,9 +131,6 @@ re_ast_expr_with_count(struct ast_expr *e, struct ast_count count);
 struct ast_expr *
 re_ast_expr_char_class(struct re_char_class_ast *cca,
     const struct ast_pos *start, const struct ast_pos *end);
-
-struct ast_expr *
-re_ast_expr_char_type(enum ast_char_type_id id);
 
 struct ast_expr *
 re_ast_expr_group(struct ast_expr *e);

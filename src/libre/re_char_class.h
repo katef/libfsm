@@ -6,6 +6,12 @@
 #include <assert.h>
 #include <string.h>
 
+#include <fsm/fsm.h>
+#include <fsm/bool.h>
+#include <fsm/pred.h>
+
+#include <re/re.h>
+
 /* This is a duplicate of struct lx_pos, but since we're linking to
  * code with several distinct lexers, there isn't a clear lexer.h
  * to include here. The parser sees both definitions, and will
@@ -16,19 +22,26 @@ struct ast_pos {
 	unsigned col;
 };
 
+
+/* typedef for character class constructors whose prototypes
+ * appear in class.h -- this typedef should be moved there
+ * later. */
+typedef struct fsm *
+char_class_constructor_fun(const struct fsm_options *opt);
+
+/* For a particular regex dialect, this function will look up
+ * whether a name refers to a known character class, and if so,
+ * return the constructor function for it.
+ * Returns whether lookup suceeded. */
+typedef int
+re_dialect_char_class_fun(const char *name, char_class_constructor_fun **res);
+
 enum re_char_class_flags {
 	RE_CHAR_CLASS_FLAG_NONE = 0x00,
 	/* the class should be negated, e.g. [^aeiou] */
 	RE_CHAR_CLASS_FLAG_INVERTED = 0x01,
 	/* includes the `-` character, which isn't part of a range */
 	RE_CHAR_CLASS_FLAG_MINUS = 0x02
-};
-
-/* TODO: opaque? */
-struct re_char_class {
-	enum re_char_class_flags flags;
-	/* This only handles single-byte chars for now. */
-	unsigned char chars[256/8];
 };
 
 enum re_char_class_ast_type {
@@ -61,27 +74,6 @@ enum ast_char_class_id {
 	AST_CHAR_CLASS_XDIGIT
 };
 
-/* These are used for character type set, such as \D (non-digit)
- * or \v (vertical whitespace), which can be used in slightly different
- * ways from named character classes in PCRE. They can appear inside
- * of a character class (including in a range), or on their own. */
-enum ast_char_type_id {
-	/* lowercase: [dhsvw] */
-	AST_CHAR_TYPE_DECIMAL,
-	AST_CHAR_TYPE_HORIZ_WS,
-	AST_CHAR_TYPE_WS,
-	AST_CHAR_TYPE_VERT_WS,
-	AST_CHAR_TYPE_WORD, 	/* [:alnum:] | '_' */
-	/* uppercase: [DHSVWN] */
-	AST_CHAR_TYPE_NON_DECIMAL,
-	AST_CHAR_TYPE_NON_HORIZ_WS,
-	AST_CHAR_TYPE_NON_WS,
-	AST_CHAR_TYPE_NON_VERT_WS,
-	AST_CHAR_TYPE_NON_WORD,
-	/* inverse of /\n/, same as /./, unless DOTALL flag is set */
-	AST_CHAR_TYPE_NON_NL
-};
-
 enum ast_range_endpoint_type {
 	AST_RANGE_ENDPOINT_LITERAL,
 	AST_RANGE_ENDPOINT_CHAR_TYPE,
@@ -94,10 +86,7 @@ struct ast_range_endpoint {
 			unsigned char c;
 		} literal;
 		struct {
-			enum ast_char_type_id id;
-		} char_type;
-		struct {
-			enum ast_char_class_id id;
+			char_class_constructor_fun *ctor;
 		} char_class;
 	} u;
 };
@@ -119,11 +108,8 @@ struct re_char_class_ast {
 			struct ast_pos end;
 		} range;
 		struct {
-			enum ast_char_class_id id;
+			char_class_constructor_fun *ctor;
 		} named;
-		struct {
-			enum ast_char_type_id id;
-		} char_type;
 		struct {
 			enum re_char_class_flags f;
 		} flags;
@@ -153,10 +139,7 @@ struct re_char_class_ast *
 re_char_class_ast_flags(enum re_char_class_flags flags);
 
 struct re_char_class_ast *
-re_char_class_ast_named_class(enum ast_char_class_id id);
-
-struct re_char_class_ast *
-re_char_class_ast_char_type(enum ast_char_type_id id);
+re_char_class_ast_named_class(char_class_constructor_fun *ctor);
 
 struct re_char_class_ast *
 re_char_class_ast_subtract(struct re_char_class_ast *ast,
@@ -165,21 +148,11 @@ re_char_class_ast_subtract(struct re_char_class_ast *ast,
 void
 re_char_class_ast_free(struct re_char_class_ast *ast);
 
-struct re_char_class *
-re_char_class_ast_compile(struct re_char_class_ast *cca);
-
-/* Convert a char type (outside of a char class) into a char class.  */
-struct re_char_class *
-re_char_class_type_compile(enum ast_char_type_id id);
-
-void
-ast_char_class_dump(FILE *f, struct re_char_class *c);
-
-void
-re_char_class_free(struct re_char_class *cc);
-
-const char *
-re_char_class_type_id_str(enum ast_char_type_id id);
+int
+re_char_class_ast_compile(struct re_char_class_ast *cca,
+    struct fsm *fsm, enum re_flags flags,
+    struct re_err *err, const struct fsm_options *opt,
+    struct fsm_state *x, struct fsm_state *y);
 
 const char *
 re_char_class_id_str(enum ast_char_class_id id);
@@ -187,27 +160,23 @@ re_char_class_id_str(enum ast_char_class_id id);
 
 /* Dialect-specific char class / char type handling.
  * These are defined in src/libre/dialect/${dialect}/re_dialect_${dialect}.c */
-typedef int
-re_dialect_char_class_lookup(const char *name, enum ast_char_class_id *id);
-typedef int
-re_dialect_char_type_lookup(const char *name, enum ast_char_type_id *id);
+enum re_dialect_char_class_lookup_res {
+	/* Unknown class, a syntax error */
+	RE_CLASS_NOT_FOUND,
+	/* Found and supported */
+	RE_CLASS_FOUND,
+	/* Recognized but explicitly not supported */
+	RE_CLASS_UNSUPPORTED = -1
+};
+
+typedef enum re_dialect_char_class_lookup_res
+re_dialect_char_class_lookup(const char *name, char_class_constructor_fun **res);
 
 re_dialect_char_class_lookup re_char_class_literal;
-re_dialect_char_type_lookup re_char_type_literal;
-
 re_dialect_char_class_lookup re_char_class_like;
-re_dialect_char_type_lookup re_char_type_like;
-
 re_dialect_char_class_lookup re_char_class_glob;
-re_dialect_char_type_lookup re_char_type_glob;
-
 re_dialect_char_class_lookup re_char_class_sql;
-re_dialect_char_type_lookup re_char_type_sql;
-
 re_dialect_char_class_lookup re_char_class_native;
-re_dialect_char_type_lookup re_char_type_native;
-
 re_dialect_char_class_lookup re_char_class_pcre;
-re_dialect_char_type_lookup re_char_type_pcre;
 
 #endif
