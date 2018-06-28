@@ -254,6 +254,9 @@
 				hbt = <char-class-ast-concat>(hb, tail);
 				(!, !, end) = CLOSEGROUP;
 
+				/* Marking this unsupported for now */
+                                <err-unsupported>();
+
 				mhb = <char-class-ast-concat>(maskhead, maskbody);
 				mhbt = <char-class-ast-concat>(mhb, masktail);
 				masked = <char-class-ast-subtract>(hbt, mhbt);
