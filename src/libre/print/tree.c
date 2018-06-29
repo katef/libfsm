@@ -4,10 +4,10 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "re_print.h"
-#include "re_char_class.h"
-
 #include <ctype.h>
+
+#include "../re_char_class.h"
+#include "../print.h"
 
 static void
 re_flags_print(FILE *f, enum re_flags fl);
@@ -108,7 +108,7 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 }
 
 void
-re_ast_print(FILE *f, struct ast_re *ast)
+re_ast_print_tree(FILE *f, struct ast_re *ast)
 {
 	pp_iter(f, 0, ast->expr);
 }

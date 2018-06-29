@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef RE_PRINT_H
-#define RE_PRINT_H
+#ifndef RE_INTERNAL_PRINT_H
+#define RE_INTERNAL_PRINT_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,6 +16,6 @@
 #define PRETTYPRINT_AST 0
 
 void
-re_ast_print(FILE *f, struct ast_re *ast);
+re_ast_print_tree(FILE *f, struct ast_re *ast);
 
 #endif

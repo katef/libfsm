@@ -34,6 +34,7 @@ SUBDIR += src/libfsm/walk
 SUBDIR += src/libfsm
 SUBDIR += src/libre/class
 SUBDIR += src/libre/dialect
+SUBDIR += src/libre/print
 SUBDIR += src/libre
 SUBDIR += src/fsm
 SUBDIR += src/re
