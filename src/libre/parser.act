@@ -813,48 +813,48 @@
 
 
 	/* AST construction */
-	<ast-expr-empty>: () -> (n :ast_expr) = @{
-		@n = re_ast_expr_empty();
+	<ast-expr-empty>: () -> (node :ast_expr) = @{
+		@node = re_ast_expr_empty();
 	@};
 
-	<ast-expr-concat>: (l :ast_expr, r :ast_expr) -> (n :ast_expr) = @{
-		@n = re_ast_expr_concat(@l, @r);
+	<ast-expr-concat>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
+		@node = re_ast_expr_concat(@l, @r);
 	@};
 
-	<ast-expr-alt>: (l :ast_expr, r :ast_expr) -> (n :ast_expr) = @{
-		@n = re_ast_expr_alt(@l, @r);
+	<ast-expr-alt>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
+		@node = re_ast_expr_alt(@l, @r);
 	@};
 
-	<ast-expr-literal>: (c :char) -> (n :ast_expr) = @{
-		@n = re_ast_expr_literal(@c);
+	<ast-expr-literal>: (c :char) -> (node :ast_expr) = @{
+		@node = re_ast_expr_literal(@c);
 	@};
 
-	<ast-expr-any>: () -> (n :ast_expr) = @{
-		@n = re_ast_expr_any();
+	<ast-expr-any>: () -> (node :ast_expr) = @{
+		@node = re_ast_expr_any();
 	@};
 	
-	<ast-expr-many>: () -> (n :ast_expr) = @{
-		@n = re_ast_expr_many();
+	<ast-expr-many>: () -> (node :ast_expr) = @{
+		@node = re_ast_expr_many();
 	@};
 
-	<ast-expr-atom-many>: (c :ast_count) -> (n :ast_expr) = @{
+	<ast-expr-atom-many>: (c :ast_count) -> (node :ast_expr) = @{
 		struct ast_expr *e = re_ast_expr_many();
 		if (e == NULL) { @!; }
-		@n = re_ast_expr_with_count(e, @c);
+		@node = re_ast_expr_with_count(e, @c);
 	@};
 
-	<ast-expr-atom-any>: (c :ast_count) -> (n :ast_expr) = @{
+	<ast-expr-atom-any>: (c :ast_count) -> (node :ast_expr) = @{
 		struct ast_expr *e = re_ast_expr_any();
 		if (e == NULL) { @!; }
-		@n = re_ast_expr_with_count(e, @c);
+		@node = re_ast_expr_with_count(e, @c);
 	@};
 
-        <ast-expr-group>: (e :ast_expr) -> (n :ast_expr) = @{
-		@n = re_ast_expr_group(@e);
+        <ast-expr-group>: (e :ast_expr) -> (node :ast_expr) = @{
+		@node = re_ast_expr_group(@e);
 	@};
 
-	<ast-expr-atom>: (e :ast_expr, c :ast_count) -> (n :ast_expr) = @{
-		@n = re_ast_expr_with_count(@e, @c);
+	<ast-expr-atom>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
+		@node = re_ast_expr_with_count(@e, @c);
 	@};
 
         <atom-kleene>: () -> (c :ast_count) = @{
@@ -889,12 +889,12 @@
 		@c = ast_count(@l, &ast_start, @h, &ast_end);
 	@};
 
-	<char-class-ast-literal>: (c :char) -> (n :char_class_ast) = @{
-		@n = re_char_class_ast_literal(@c);
+	<char-class-ast-literal>: (c :char) -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_literal(@c);
 	@};
 
 	<char-class-ast-range>: (from :range_endpoint, start :pos,
-	    		to :range_endpoint, end :pos) -> (n :char_class_ast) = @{
+	    		to :range_endpoint, end :pos) -> (node :char_class_ast) = @{
 		struct ast_pos ast_start, ast_end;
 		unsigned char lower, upper;
 		AST_POS_OF_LX_POS(ast_start, @start);
@@ -920,45 +920,45 @@
 			@!;
 		}
 
-		@n = re_char_class_ast_range(&@from, ast_start, &@to, ast_end);
+		@node = re_char_class_ast_range(&@from, ast_start, &@to, ast_end);
 	@};
 
-	<char-class-ast-concat>: (l :char_class_ast, r :char_class_ast) -> (n :char_class_ast) = @{
-		@n = re_char_class_ast_concat(@l, @r);
+	<char-class-ast-concat>: (l :char_class_ast, r :char_class_ast) -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_concat(@l, @r);
 	@};
 
-	<char-class-ast-subtract>: (l :char_class_ast, r :char_class_ast) -> (n :char_class_ast) = @{
-		@n = re_char_class_ast_subtract(@l, @r);
+	<char-class-ast-subtract>: (l :char_class_ast, r :char_class_ast) -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_subtract(@l, @r);
 	@};
 
-	<char-class-ast-named-class>: (id :ast_char_class_id) -> (n :char_class_ast) = @{
-		@n = re_char_class_ast_named_class(@id);
+	<char-class-ast-named-class>: (id :ast_char_class_id) -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_named_class(@id);
 	@};
 
-	<ast-expr-char-class>: (cca :char_class_ast, start :pos, end :pos) -> (n :ast_expr) = @{
+	<ast-expr-char-class>: (cca :char_class_ast, start :pos, end :pos) -> (node :ast_expr) = @{
 		struct ast_pos ast_start, ast_end;
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 		mark(&act_state->groupstart, &@start);
 		mark(&act_state->groupend,   &@end);
-		@n = re_ast_expr_char_class(@cca, &ast_start, &ast_end);
-		if (@n == NULL) { @!; }
+		@node = re_ast_expr_char_class(@cca, &ast_start, &ast_end);
+		if (@node == NULL) { @!; }
 	@};
 
-	<char-class-ast-flag-none>: () -> (f :char_class_ast) = @{
-		@f = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_NONE);
+	<char-class-ast-flag-none>: () -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_NONE);
 	@};
 
-	<char-class-ast-flag-invert>: () -> (f :char_class_ast) = @{
-		@f = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_INVERTED);
+	<char-class-ast-flag-invert>: () -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_INVERTED);
 	@};
 
-	<char-class-ast-flag-minus>: () -> (f :char_class_ast) = @{
-		@f = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_MINUS);
+	<char-class-ast-flag-minus>: () -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_MINUS);
 	@};
 
-	<char-class-ast-flag-invert-minus>: () -> (f :char_class_ast) = @{
-		@f = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_INVERTED | RE_CHAR_CLASS_FLAG_MINUS);
+	<char-class-ast-flag-invert-minus>: () -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_INVERTED | RE_CHAR_CLASS_FLAG_MINUS);
 	@};
 
 	<ast-range-endpoint-literal>: (c :char) -> (r :range_endpoint) = @{
@@ -983,8 +983,8 @@
 		@out = @in | @flag;
 	@};
 
-	<ast-expr-re-flags>: (pos :re_flags, neg :re_flags) -> (n :ast_expr) = @{
-		@n = re_ast_expr_re_flags(@pos, @neg);
+	<ast-expr-re-flags>: (pos :re_flags, neg :re_flags) -> (node :ast_expr) = @{
+		@node = re_ast_expr_re_flags(@pos, @neg);
 	@};
 
 %trailer% @{
