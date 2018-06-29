@@ -27,6 +27,7 @@ struct dialect {
 	enum re_dialect dialect;
 	re_dialect_parse_fun *parse;
 	int overlap;
+	int implicitly_anchored;
 };
 
 static const struct dialect *
@@ -35,12 +36,12 @@ re_dialect(enum re_dialect dialect)
 	size_t i;
 
 	static const struct dialect a[] = {
-		{ RE_LIKE,       parse_re_like,    0 },
-		{ RE_LITERAL,    parse_re_literal, 0 },
-		{ RE_GLOB,       parse_re_glob,    0 },
-		{ RE_NATIVE,     parse_re_native,  0 },
-		{ RE_PCRE,       parse_re_pcre,    0 },
-		{ RE_SQL,        parse_re_sql,     1 }
+		{ RE_LIKE,       parse_re_like,    0, 1 },
+		{ RE_LITERAL,    parse_re_literal, 0, 1 },
+		{ RE_GLOB,       parse_re_glob,    0, 1 },
+		{ RE_NATIVE,     parse_re_native,  0, 1 },
+		{ RE_PCRE,       parse_re_pcre,    0, 0 },
+		{ RE_SQL,        parse_re_sql,     1, 1 }
 	};
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
@@ -93,9 +94,10 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err)
 {
 	const struct dialect *m;
-	struct ast_re *ast;
-	struct fsm *new;
-
+	struct ast_re *ast = NULL;
+	struct fsm *new = NULL;
+	enum re_analysis_res res;
+	
 	assert(getc != NULL);
 
 	m = re_dialect(dialect);
@@ -106,26 +108,46 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
+	/* Needs explicit ^ $ anchors */
+	if (!m->implicitly_anchored) { flags |= RE_UNANCHORED; }
+
 	ast = m->parse(getc, opaque, opt, flags, m->overlap, err);
 	if (ast == NULL) {
 		return NULL;
 	}
 
 	/* Do a complete pass over the AST, filling in other details. */
-	re_ast_analysis(ast);
+	res = re_ast_analysis(ast);
+
+	if (res < 0) { goto error; }
+
+	ast->unsatisfiable = (res == RE_ANALYSIS_UNSATISFIABLE);
 
 	/* TODO: this should be a CLI flag or something */
 	if (PRETTYPRINT_AST) {
 		re_ast_print(stderr, ast);
 	}
 
+	/* If the RE is inherently unsatisfiable, then free the
+	 * AST and replace it with an empty tombstone node.
+	 * This will compile to an FSM that matches nothing, so
+	 * that unioning it with other regexes will still work. */
+	if (ast->unsatisfiable) {
+		struct ast_expr *unsat = ast->expr;
+		ast->expr = re_ast_expr_tombstone();
+		re_ast_expr_free(unsat);
+	}
+
 	new = re_comp_ast(ast, flags, opt);
 	re_ast_free(ast);
+	ast = NULL;
 
 	if (new == NULL) {
 		fprintf(stderr, "Compilation failed\n");
 		if (err->e == RE_ESUCCESS) {
-			err->e = RE_EXUNSUPPORTD; /* FIXME */
+			/* If we got here, we had a parse error
+			 * without error information set. */
+			assert(0);
 		}
 		return NULL;
 	}
@@ -146,8 +168,8 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 error:
 
-	fsm_free(new);
-
+	if (new != NULL) { fsm_free(new); }
+	if (ast != NULL) { re_ast_free(ast); }
 	if (err != NULL) {
 		err->e = RE_EERRNO;
 	}

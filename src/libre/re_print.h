@@ -7,7 +7,7 @@
 
 #include "re_ast.h"
 
-#define PRETTYPRINT_AST 0
+#define PRETTYPRINT_AST 1
 
 void
 re_ast_print(FILE *f, struct ast_re *ast);

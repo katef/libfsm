@@ -9,7 +9,6 @@
 	pos;
 	char;
 	!unsigned;
-	!pred;
 	!re_flags;
 	!err;
 	ast_expr;
@@ -29,6 +28,9 @@
 	!ALT;
 	!SEP;
 	!STAR;
+
+	!START;
+	!END;
 
 	!OPENSUB;   !CLOSESUB;
 	!OPENGROUP: () -> (:pos, :pos); !CLOSEGROUP: () -> (:char, :pos, :pos);
@@ -51,8 +53,6 @@
 	!OCT:     () -> (:char, :pos, :pos);
 	!HEX:     () -> (:char, :pos, :pos);
 	CHAR:     () -> (:char, :pos, :pos);
-	!START:   () -> (:pred);
-	!END:     () -> (:pred);
 	!COUNT:   () -> (:unsigned);
 
 	EOF;
@@ -73,6 +73,8 @@
 	!<ast-expr-char-class>: (:char_class_ast, :pos, :pos) -> (:ast_expr);
         !<ast-expr-group>: (:ast_expr) -> (:ast_expr);
 	!<ast-expr-re-flags>: (:re_flags, :re_flags) -> (:ast_expr);
+	!<ast-expr-anchor-start>: () -> (:ast_expr);
+	!<ast-expr-anchor-end>: () -> (:ast_expr);
 
         !<atom-kleene>: () -> (:ast_count);
         !<atom-plus>: () -> (:ast_count);
@@ -142,7 +144,8 @@
 			r = list-of-nodes();
 			node = <ast-expr-concat>(l, r);
 		||
-			node = l;
+			r = <ast-expr-empty>;
+			node = <ast-expr-concat>(l, r);
 		};
 	};
 

@@ -25,7 +25,9 @@
 enum ast_expr_type {
 	AST_EXPR_EMPTY,
 	AST_EXPR_CONCAT,
+	AST_EXPR_CONCAT_N,
 	AST_EXPR_ALT,
+	AST_EXPR_ALT_N,
 	AST_EXPR_LITERAL,
 	AST_EXPR_ANY,
 	AST_EXPR_MANY,
@@ -34,8 +36,10 @@ enum ast_expr_type {
 	AST_EXPR_OPT,
 	AST_EXPR_REPEATED,
 	AST_EXPR_CHAR_CLASS,
-	AST_EXPR_GROUP,
-	AST_EXPR_FLAGS
+	AST_EXPR_GROUP,		/* 13 */
+	AST_EXPR_FLAGS,
+	AST_EXPR_ANCHOR,
+	AST_EXPR_TOMBSTONE
 };
 
 #define AST_COUNT_UNBOUNDED ((unsigned)-1)
@@ -46,9 +50,49 @@ struct ast_count {
 	struct ast_pos end;
 };
 
+enum re_ast_anchor_type {
+	RE_AST_ANCHOR_START,
+	RE_AST_ANCHOR_END
+};
+
+/* Flags used during AST analysis. Not all are valid for all node types. */
+enum re_ast_flags {
+	/* literal, char-class: The first state for this node is in the
+	 * epsilon closure of the starting state in the FSM.
+	 *
+	 * repeated, group: The nested expression contains a first state.
+	 *
+	 * concat, alt: The tree contains an end state. (left or right,
+	 * depending on whether it's n->flags or n->u._.flags_r.) */
+	RE_AST_FLAG_FIRST_STATE = 0x01,
+
+	/* The node has a start anchor (^) before its first state that
+	 * consumes input. */
+	RE_AST_FLAG_START_ANCHOR = 0x02,
+
+	/* The last state for this node is in the epsilon closure of
+	 * the end state in the FSM. */
+	RE_AST_FLAG_LAST_STATE = 0x04,
+
+	/* The node has an end anchor after its last state that
+	 * consumes input. */
+	RE_AST_FLAG_END_ANCHOR = 0x08,
+
+	/* The node caused the regex to become unsatisfiable. */
+	RE_AST_FLAG_UNSATISFIABLE = 0x10,
+
+	/* The node is not always evaluated, such as nodes that
+	 * are repeated at least 0 times. */
+	RE_AST_FLAG_NULLABLE = 0x20,
+
+	RE_AST_FLAG_NONE = 0x00
+};
+
+#define NO_GROUP_ID ((unsigned)-1)
+
 /*
  * The following regular expression fragments map to associated fsm states
-= * as follows (transitions written in .fsm format):
+ * as follows (transitions written in .fsm format):
  *
  *  ab    concat:      1 -> 3 "a"; 3 -> 2 "b";
  *  a|b   alt:         1 -> 2 "a"; 1 -> 2 "b";
@@ -59,15 +103,25 @@ struct ast_count {
  */
 struct ast_expr {
 	enum ast_expr_type t;
+	enum re_ast_flags flags;
+
 	union {
 		struct {
 			struct ast_expr *l;
 			struct ast_expr *r;
 		} concat;
 		struct {
+			size_t count;
+			struct ast_expr *n[1];
+		} concat_n;
+		struct {
 			struct ast_expr *l;
 			struct ast_expr *r;
 		} alt;
+		struct {
+			size_t count;
+			struct ast_expr *n[1];
+		} alt_n;
 		struct {
 			/*const*/ char c;
 		} literal;
@@ -94,12 +148,23 @@ struct ast_expr {
 			 * this space is already allocated. */
 			enum re_flags saved;
 		} flags;
+		struct {
+			enum re_ast_anchor_type t;
+		} anchor;
 	} u;	
 };
 
 struct ast_re {
 	struct ast_expr *expr;
+	/* This is set if we can determine ahead of time that the regex
+	 * is inherently unsatisfiable. For example, multiple start/end
+	 * anchors that aren't in nullable groups or different alts.
+	 * While this naming leads to a double-negative, we can't prove
+	 * that the regex is satisfiable, just flag it when it isn't. */
+	int unsatisfiable;
 };
+
+extern struct ast_expr the_empty_node;
 
 struct ast_re *
 re_ast_new(void);
@@ -107,14 +172,26 @@ re_ast_new(void);
 void
 re_ast_free(struct ast_re *ast);
 
+void
+re_ast_expr_free(struct ast_expr *n);
+
 struct ast_expr *
 re_ast_expr_empty(void);
+
+struct ast_expr *
+re_ast_expr_tombstone(void);
 
 struct ast_expr *
 re_ast_expr_concat(struct ast_expr *l, struct ast_expr *r);
 
 struct ast_expr *
+re_ast_expr_concat_n(size_t count);
+
+struct ast_expr *
 re_ast_expr_alt(struct ast_expr *l, struct ast_expr *r);
+
+struct ast_expr *
+re_ast_expr_alt_n(size_t count);
 
 struct ast_expr *
 re_ast_expr_literal(char c);
@@ -137,6 +214,9 @@ re_ast_expr_group(struct ast_expr *e);
 
 struct ast_expr *
 re_ast_expr_re_flags(enum re_flags pos, enum re_flags neg);
+
+struct ast_expr *
+re_ast_expr_anchor(enum re_ast_anchor_type t);
 
 struct ast_count
 ast_count(unsigned low, const struct ast_pos *start,

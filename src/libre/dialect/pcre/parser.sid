@@ -19,7 +19,7 @@
 	pos;
 	char;
 	unsigned;
-	pred;
+	!pred;
 	re_flags;
 	!err;
 	ast_expr;
@@ -37,6 +37,9 @@
 	ALT;
 	SEP;
 	STAR;
+
+	START;
+	END;
 
 	OPENSUB; OPENCAPTURE; CLOSE;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
@@ -59,8 +62,6 @@
 	OCT:     () -> (:char, :pos, :pos);
 	HEX:     () -> (:char, :pos, :pos);
 	CHAR:    () -> (:char, :pos, :pos);
-	!START:   () -> (:pred);
-	!END:     () -> (:pred);
 	COUNT:   () -> (:unsigned);
 
 	EOF;
@@ -97,6 +98,8 @@
 	<ast-expr-char-class>: (:char_class_ast, :pos, :pos) -> (:ast_expr);
         <ast-expr-group>: (:ast_expr) -> (:ast_expr);
 	<ast-expr-re-flags>: (:re_flags, :re_flags) -> (:ast_expr);
+	<ast-expr-anchor-start>: () -> (:ast_expr);
+	<ast-expr-anchor-end>: () -> (:ast_expr);
 
         <atom-kleene>: () -> (:ast_count);
         <atom-plus>: () -> (:ast_count);
@@ -296,6 +299,12 @@
                 };
 
 		atom: () -> (node :ast_expr) = {
+			/* Note that START and END can appear embedded
+			 * within a list of atoms. Whether that makes
+			 * the regex inherently unmatchable depends on
+			 * whether the surrounding context is nullable
+			 * or not, so that's detected after parsing has
+			 * finished. */
 			{
 				OPENCAPTURE;
 				g = expr();
@@ -321,6 +330,12 @@
 				e = literal();
 			||
 				e = flags();
+			||
+				START;
+				e = <ast-expr-anchor-start>();
+			||
+				END;
+				e = <ast-expr-anchor-end>();
 			||
 				ANY;
 				e = <ast-expr-any>();
@@ -369,15 +384,9 @@
                 };
 
 		list-of-atoms: () -> (node :ast_expr) = {
-
-		/* TODO: start/end anchors */
-
-		/* 	p = START;
-		 * 	st = <ast-expr-start>();
-		 * 	a = atom();
-		 * 	node = <ast-expr-concat>(st,a);
-		 * || */
-			node = atom();
+			a = atom();
+			r = <ast-expr-empty>;
+			node = <ast-expr-concat>(a,r);
 		||
 			a = atom();
 			r = list-of-atoms();
@@ -389,18 +398,33 @@
 		};
 
 		list-of-alts: () -> (node :ast_expr) = {
-			node = alt();
+			a = alt();
+			r = <ast-expr-empty>;
+			node = <ast-expr-alt>(a,r);
 		||
 			/* Explicitly allow e.g. (xyz|) */
-			node = <ast-expr-empty>();
+			a = <ast-expr-empty>;
+			r = <ast-expr-empty>;
+			node = <ast-expr-alt>(a,r);
 	  	||
 			a = alt();
 			ALT;
 			r = list-of-alts();
 			node = <ast-expr-alt>(a, r);
+		##
+		        node = <ast-expr-empty>();
+		        <err-expected-alts>;
 		};
 	] = {
-	        node = list-of-alts();
+		/* don't wrap a single alt in an alt chain */
+		node = alt();
+	||
+		/* keep alts into a linked list -- every right node
+		 * is either another alt or empty. */
+		a = alt();
+		ALT;
+		r = list-of-alts();
+		node = <ast-expr-alt>(a, r);
 	};
 
 	re_pcre: () -> (node :ast_expr) = {
