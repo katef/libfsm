@@ -1,3 +1,9 @@
+/*
+ * Copyright 2018 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #include "re_char_class.h"
 #include "re_ast.h"
 #include "class.h"

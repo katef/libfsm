@@ -1,3 +1,9 @@
+/*
+ * Copyright 2018 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #ifndef RE_CHAR_CLASS_H
 #define RE_CHAR_CLASS_H
 
