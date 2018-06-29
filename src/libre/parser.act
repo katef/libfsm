@@ -91,25 +91,17 @@
 	#include "../../class.h"
 	#include "../../re_char_class.h"
 
-	struct grp {
-		struct fsm *set;
-		struct fsm *dup;
-	};
-
 	struct flags {
 		enum re_flags flags;
 		struct flags *parent;
 	};
 
 	typedef char     t_char;
-	typedef const char * t_class;
 	typedef unsigned t_unsigned;
 	typedef unsigned t_pred; /* TODO */
 
 	typedef struct lx_pos t_pos;
-	typedef struct fsm * t_fsm;
 	typedef enum re_flags t_re__flags;
-	typedef struct grp t_grp;
 	typedef char_class_constructor_fun * t_ast__char__class__id;
 	typedef struct ast_count t_ast__count;
 
@@ -232,205 +224,6 @@
 		return s;
 	}
 
-	static int
-	escputc(int c, FILE *f)
-	{
-		char s[5];
-
-		return fputs(escchar(s, sizeof s, c), f);
-	}
-
-	static int
-	addedge_literal(struct fsm *fsm, enum re_flags flags,
-		struct fsm_state *from, struct fsm_state *to, char c)
-	{
-		assert(fsm != NULL);
-		assert(from != NULL);
-		assert(to != NULL);
-
-		if (flags & RE_ICASE) {
-			if (!fsm_addedge_literal(fsm, from, to, tolower((unsigned char) c))) {
-				return 0;
-			}
-
-			if (!fsm_addedge_literal(fsm, from, to, toupper((unsigned char) c))) {
-				return 0;
-			}
-		} else {
-			if (!fsm_addedge_literal(fsm, from, to, c)) {
-				return 0;
-			}
-		}
-
-		return 1;
-	}
-
-	static int
-	group_add(struct grp *g, enum re_flags flags, char c)
-	{
-		const struct fsm_state *p;
-		struct fsm_state *start, *end;
-		struct fsm *fsm;
-		char a[2];
-		char *s = a;
-
-		assert(g != NULL);
-
-		a[0] = c;
-		a[1] = '\0';
-
-		errno = 0;
-		p = fsm_exec(g->set, fsm_sgetc, &s);
-		if (p == NULL && errno != 0) {
-			return -1;
-		}
-
-		if (p == NULL) {
-			fsm = g->set;
-		} else {
-			fsm = g->dup;
-		}
-
-		start = fsm_getstart(fsm);
-		assert(start != NULL);
-
-		end = fsm_addstate(fsm);
-		if (end == NULL) {
-			return -1;
-		}
-
-		fsm_setend(fsm, end, 1);
-
-		if (!addedge_literal(fsm, flags, start, end, c)) {
-			return -1;
-		}
-
-		return 0;
-	}
-
-	static struct fsm *
-	fsm_new_blank(const struct fsm_options *opt)
-	{
-		struct fsm *new;
-		struct fsm_state *start;
-
-		new = fsm_new(opt);
-		if (new == NULL) {
-			return NULL;
-		}
-
-		start = fsm_addstate(new);
-		if (start == NULL) {
-			goto error;
-		}
-
-		fsm_setstart(new, start);
-
-		return new;
-
-	error:
-
-		fsm_free(new);
-
-		return NULL;
-	}
-
-	/* TODO: centralise as fsm_unionxy() perhaps */
-	static int
-	fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state *y)
-	{
-		struct fsm_state *sa, *sb;
-		struct fsm_state *end;
-
-		assert(a != NULL);
-		assert(b != NULL);
-		assert(x != NULL);
-		assert(y != NULL);
-
-		sa = fsm_getstart(a);
-		sb = fsm_getstart(b);
-
-		end = fsm_collate(b, fsm_isend);
-		if (end == NULL) {
-			return 0;
-		}
-
-		if (!fsm_merge(a, b)) {
-			return 0;
-		}
-
-		fsm_setstart(a, sa);
-
-		if (!fsm_addedge_epsilon(a, x, sb)) {
-			return 0;
-		}
-
-		fsm_setend(a, end, 0);
-
-		if (!fsm_addedge_epsilon(a, end, y)) {
-			return 0;
-		}
-
-		return 1;
-	}
-
-	static struct fsm *
-	fsm_new_any(const struct fsm_options *opt)
-	{
-		struct fsm_state *a, *b;
-		struct fsm *new;
-
-		assert(opt != NULL);
-
-		new = fsm_new(opt);
-		if (new == NULL) {
-			return NULL;
-		}
-
-		a = fsm_addstate(new);
-		if (a == NULL) {
-			goto error;
-		}
-
-		b = fsm_addstate(new);
-		if (b == NULL) {
-			goto error;
-		}
-
-		/* TODO: provide as a class. for utf8, this would be /./ */
-		if (!fsm_addedge_any(new, a, b)) {
-			goto error;
-		}
-
-		fsm_setstart(new, a);
-		fsm_setend(new, b, 1);
-
-		return new;
-
-	error:
-
-		fsm_free(new);
-
-		return NULL;
-	}
-
-	static struct fsm *
-	negate(struct fsm *class, const struct fsm_options *opt)
-	{
-		struct fsm *any;
-
-		any = class_any_fsm(opt);
-
-		if (any == NULL || class == NULL) {
-			if (any) fsm_free(any);
-			if (class) fsm_free(class);
-		};
-
-		class = fsm_subtract(any, class);
-
-		return class;
-	}
-
 @}, @{
 
 	#include <re/re.h>
@@ -438,8 +231,6 @@
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
 
-	typedef struct fsm * fsm;
-	typedef struct fsm_state * t_fsm__state;
 	typedef struct flags *flags;
 	typedef struct re_err * err;
 
