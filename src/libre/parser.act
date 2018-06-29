@@ -12,7 +12,6 @@
 
 %persistents%
 
-	fsm       :fsm;
 	flags     :flags;
 	lex_state :lex_state;
 	act_state :act_state;
@@ -30,11 +29,8 @@
 	#include <errno.h>
 	#include <ctype.h>
 
-	#include "libfsm/internal.h" /* XXX */
-
-	#include <fsm/fsm.h>
-	#include <fsm/bool.h>
-	#include <fsm/pred.h>
+	#include "libre/re_ast.h"
+	#include "libre/re_char_class.h"
 
 	#include <re/re.h>
 
@@ -52,7 +48,9 @@
 	#define LX_NEXT    CAT(LX_PREFIX, _next)
 	#define LX_INIT    CAT(LX_PREFIX, _init)
 
-	#define DIALECT_COMP  CAT(comp_, DIALECT)
+	#define DIALECT_PARSE  CAT(parse_re_, DIALECT)
+	#define DIALECT_CHAR_CLASS  CAT(re_char_class_, DIALECT)
+	#define DIALECT_CHAR_TYPE   CAT(re_char_type_, DIALECT)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
 	#define DIALECT_ENTRY CAT(p_re__, DIALECT)
@@ -77,16 +75,21 @@
 	#define TOK_CLASS__nspace  TOK_CLASS_NSPACE
 	#define TOK_CLASS__ndigit  TOK_CLASS_NDIGIT
 
+	/* This is a hack to work around the AST files not being able to include lexer.h. */
+	#define AST_POS_OF_LX_POS(AST_POS, LX_POS)			\
+		do {							\
+			AST_POS.line = LX_POS.line;			\
+			AST_POS.col = LX_POS.col;			\
+			AST_POS.byte = LX_POS.byte;			\
+		} while (0)
+
+
 	#include "parser.h"
 	#include "lexer.h"
 
 	#include "../comp.h"
 	#include "../../class.h"
-
-	struct grp {
-		struct fsm *set;
-		struct fsm *dup;
-	};
+	#include "../../re_char_class.h"
 
 	struct flags {
 		enum re_flags flags;
@@ -94,14 +97,19 @@
 	};
 
 	typedef char     t_char;
-	typedef const char * t_class;
 	typedef unsigned t_unsigned;
 	typedef unsigned t_pred; /* TODO */
 
 	typedef struct lx_pos t_pos;
-	typedef struct fsm * t_fsm;
 	typedef enum re_flags t_re__flags;
-	typedef struct grp t_grp;
+	typedef char_class_constructor_fun * t_ast__char__class__id;
+	typedef struct ast_count t_ast__count;
+
+	typedef struct re_char_class_ast * t_char__class__ast;
+	typedef struct ast_char_class * t_char__class;
+	typedef enum re_char_class_flags t_char__class__flags;
+
+	typedef struct ast_range_endpoint t_range__endpoint;
 
 	struct act_state {
 		enum LX_TOKEN lex_tok;
@@ -128,7 +136,7 @@
 		struct LX_STATE lx;
 		struct lx_dynbuf buf; /* XXX: unneccessary since we're lexing from a string */
 
-		int (*f)(void *opaque);
+		re_getchar_fun *f;
 		void *opaque;
 
 		/* TODO: use lx's generated conveniences for the pattern buffer */
@@ -140,7 +148,8 @@
 	#define ERROR_TERMINAL   @$ERROR
 	#define ADVANCE_LEXER    do { mark(&act_state->synstart, &lex_state->lx.start); \
 	                              mark(&act_state->synend,   &lex_state->lx.end);   \
-	                              act_state->lex_tok = LX_NEXT(&lex_state->lx); } while (0)
+	                              act_state->lex_tok = LX_NEXT(&lex_state->lx); \
+		} while (0)
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
 	                              act_state->lex_tok = tok;                     } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
@@ -215,224 +224,6 @@
 		return s;
 	}
 
-	static int
-	escputc(int c, FILE *f)
-	{
-		char s[5];
-
-		return fputs(escchar(s, sizeof s, c), f);
-	}
-
-	static int
-	addedge_literal(struct fsm *fsm, enum re_flags flags,
-		struct fsm_state *from, struct fsm_state *to, char c)
-	{
-		assert(fsm != NULL);
-		assert(from != NULL);
-		assert(to != NULL);
-
-		if (flags & RE_ICASE) {
-			if (!fsm_addedge_literal(fsm, from, to, tolower((unsigned char) c))) {
-				return 0;
-			}
-
-			if (!fsm_addedge_literal(fsm, from, to, toupper((unsigned char) c))) {
-				return 0;
-			}
-		} else {
-			if (!fsm_addedge_literal(fsm, from, to, c)) {
-				return 0;
-			}
-		}
-
-		return 1;
-	}
-
-	static int
-	group_add(struct grp *g, enum re_flags flags, char c)
-	{
-		const struct fsm_state *p;
-		struct fsm_state *start, *end;
-		struct fsm *fsm;
-		char a[2];
-		char *s = a;
-
-		assert(g != NULL);
-
-		a[0] = c;
-		a[1] = '\0';
-
-		errno = 0;
-		p = fsm_exec(g->set, fsm_sgetc, &s);
-		if (p == NULL && errno != 0) {
-			return -1;
-		}
-
-		if (p == NULL) {
-			fsm = g->set;
-		} else {
-			fsm = g->dup;
-		}
-
-		start = fsm_getstart(fsm);
-		assert(start != NULL);
-
-		end = fsm_addstate(fsm);
-		if (end == NULL) {
-			return -1;
-		}
-
-		fsm_setend(fsm, end, 1);
-
-		if (!addedge_literal(fsm, flags, start, end, c)) {
-			return -1;
-		}
-
-		return 0;
-	}
-
-	static struct fsm *
-	fsm_new_blank(const struct fsm_options *opt)
-	{
-		struct fsm *new;
-		struct fsm_state *start;
-
-		new = fsm_new(opt);
-		if (new == NULL) {
-			return NULL;
-		}
-
-		start = fsm_addstate(new);
-		if (start == NULL) {
-			goto error;
-		}
-
-		fsm_setstart(new, start);
-
-		return new;
-
-	error:
-
-		fsm_free(new);
-
-		return NULL;
-	}
-
-	/* TODO: centralise as fsm_unionxy() perhaps */
-	static int
-	fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state *y)
-	{
-		struct fsm_state *sa, *sb;
-		struct fsm_state *end;
-
-		assert(a != NULL);
-		assert(b != NULL);
-		assert(x != NULL);
-		assert(y != NULL);
-
-		sa = fsm_getstart(a);
-		sb = fsm_getstart(b);
-
-		end = fsm_collate(b, fsm_isend);
-		if (end == NULL) {
-			return 0;
-		}
-
-		if (!fsm_merge(a, b)) {
-			return 0;
-		}
-
-		fsm_setstart(a, sa);
-
-		if (!fsm_addedge_epsilon(a, x, sb)) {
-			return 0;
-		}
-
-		fsm_setend(a, end, 0);
-
-		if (!fsm_addedge_epsilon(a, end, y)) {
-			return 0;
-		}
-
-		return 1;
-	}
-
-	static struct fsm *
-	fsm_new_any(const struct fsm_options *opt)
-	{
-		struct fsm_state *a, *b;
-		struct fsm *new;
-
-		assert(opt != NULL);
-
-		new = fsm_new(opt);
-		if (new == NULL) {
-			return NULL;
-		}
-
-		a = fsm_addstate(new);
-		if (a == NULL) {
-			goto error;
-		}
-
-		b = fsm_addstate(new);
-		if (b == NULL) {
-			goto error;
-		}
-
-		/* TODO: provide as a class. for utf8, this would be /./ */
-		if (!fsm_addedge_any(new, a, b)) {
-			goto error;
-		}
-
-		fsm_setstart(new, a);
-		fsm_setend(new, b, 1);
-
-		return new;
-
-	error:
-
-		fsm_free(new);
-
-		return NULL;
-	}
-
-	/* XXX: to go when dups show all spellings for group overlap */
-	static const struct fsm_state *
-	fsm_any(const struct fsm *fsm,
-		int (*predicate)(const struct fsm *, const struct fsm_state *))
-	{
-		const struct fsm_state *s;
-
-		assert(fsm != NULL);
-		assert(predicate != NULL);
-
-		for (s = fsm->sl; s != NULL; s = s->next) {
-			if (!predicate(fsm, s)) {
-				return s;
-			}
-		}
-
-		return NULL;
-	}
-
-	static struct fsm *
-	negate(struct fsm *class, const struct fsm_options *opt)
-	{
-		struct fsm *any;
-
-		any = class_any_fsm(opt);
-
-		if (any == NULL || class == NULL) {
-			if (any) fsm_free(any);
-			if (class) fsm_free(class);
-		};
-
-		class = fsm_subtract(any, class);
-
-		return class;
-	}
-
 @}, @{
 
 	#include <re/re.h>
@@ -440,11 +231,10 @@
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
 
-	typedef struct fsm * fsm;
-	typedef struct fsm_state * t_fsm__state;
 	typedef struct flags *flags;
 	typedef struct re_err * err;
 
+	typedef struct ast_expr * t_ast__expr;
 @};
 
 %terminals%
@@ -479,26 +269,6 @@
 		@start = lex_state->lx.start;
 		@end   = lex_state->lx.end;
 	@};
-
-	CLASS_alnum:  () -> (fsm :fsm) = @{ @fsm = class_alnum_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_alpha:  () -> (fsm :fsm) = @{ @fsm = class_alpha_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_any:    () -> (fsm :fsm) = @{ @fsm = class_any_fsm(fsm->opt);    if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_ascii:  () -> (fsm :fsm) = @{ @fsm = class_ascii_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_blank:  () -> (fsm :fsm) = @{ @fsm = class_blank_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_cntrl:  () -> (fsm :fsm) = @{ @fsm = class_cntrl_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_digit:  () -> (fsm :fsm) = @{ @fsm = class_digit_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_graph:  () -> (fsm :fsm) = @{ @fsm = class_graph_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_lower:  () -> (fsm :fsm) = @{ @fsm = class_lower_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_print:  () -> (fsm :fsm) = @{ @fsm = class_print_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_punct:  () -> (fsm :fsm) = @{ @fsm = class_punct_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_space:  () -> (fsm :fsm) = @{ @fsm = class_space_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_spchr:  () -> (fsm :fsm) = @{ @fsm = class_spchr_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_upper:  () -> (fsm :fsm) = @{ @fsm = class_upper_fsm(fsm->opt);  if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_word:   () -> (fsm :fsm) = @{ @fsm = class_word_fsm(fsm->opt);   if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_xdigit: () -> (fsm :fsm) = @{ @fsm = class_xdigit_fsm(fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-
-	CLASS_ndigit: () -> (fsm :fsm) = @{ @fsm = class_digit_fsm(fsm->opt); @fsm = negate(@fsm, fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
-	CLASS_nspace: () -> (fsm :fsm) = @{ @fsm = class_space_fsm(fsm->opt); @fsm = negate(@fsm, fsm->opt); if (@fsm == NULL) { err->e = RE_EERRNO; @!; } @};
 
 	ESC: () -> (c :char, start :pos, end :pos) = @{
 		assert(lex_state->buf.a[0] == '\\');
@@ -682,6 +452,27 @@
 		@n = (unsigned int) u;
 	@};
 
+	NAMED_CHAR_CLASS: () -> (id :ast_char_class_id, start :pos, end :pos) = @{
+		enum re_dialect_char_class_lookup_res res;
+		res = DIALECT_CHAR_CLASS(lex_state->buf.a, &@id);
+
+		switch (res) {
+		default:
+		case RE_CLASS_NOT_FOUND:
+			/* syntax error -- unrecognized class */
+			@!;
+		case RE_CLASS_UNSUPPORTED:
+			err->e = RE_EXUNSUPPORTD;
+			@!;
+		case RE_CLASS_FOUND:
+			/* proceed below */
+			break;
+		}
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+	@};
+
 	FLAG_INSENSITIVE: () -> (flag :re_flags) = @{
 		@flag = RE_ICASE;
 	@};
@@ -695,395 +486,6 @@
 	 * In some cases (e.g. counting) actions are centralised here for
 	 * the sake of DRY, at the expense of slight overkill.
 	 */
-
-	<make-group>: () -> (g :grp) = @{
-		@g.set = fsm_new_blank(fsm->opt);
-		if (@g.set == NULL) {
-			@!;
-		}
-
-		@g.dup = fsm_new_blank(fsm->opt);
-		if (@g.dup == NULL) {
-			fsm_free(@g.set);
-			@!;
-		}
-	@};
-
-	<invert-group>: (g :grp &) -> () = @{
-		@&g->set = negate(@&g->set, fsm->opt);
-		if (@&g->set == NULL) {
-			err->e = RE_EERRNO;
-			@!;
-		}
-
-		/*
-		 * Note we don't invert the dup set here; duplicates are always
-		 * kept in the positive.
-		 */
-	@};
-
-	<group-add-char>: (g :grp &, c :char) -> () = @{
-		if (-1 == group_add(@&g, flags->flags, @c)) {
-			err->e = RE_EERRNO;
-			@!;
-		}
-	@};
-
-	<group-add-class>: (g :grp &, f :fsm) -> () = @{
-		struct fsm *q;
-		int r;
-
-		/* TODO: maybe it is worth using carryopaque, after the entire group is constructed */
-		{
-			struct fsm *a, *b;
-
-			a = fsm_clone(@&g->set);
-			if (a == NULL) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-
-			b = fsm_clone(@f);
-			if (b == NULL) {
-				fsm_free(a);
-				err->e = RE_EERRNO;
-				@!;
-			}
-
-			q = fsm_intersect(a, b);
-			if (q == NULL) {
-				fsm_free(a);
-				fsm_free(b);
-				err->e = RE_EERRNO;
-				@!;
-			}
-
-			r = fsm_empty(q);
-
-			if (r == -1) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-		}
-
-		if (!r) {
-			@&g->dup = fsm_union(@&g->dup, q);
-			if (@&g->dup == NULL) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-		} else {
-			fsm_free(q);
-
-			@&g->set = fsm_union(@&g->set, @f);
-			if (@&g->set == NULL) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-
-			/* we need a DFA here for sake of fsm_exec() identifying duplicates */
-			if (!fsm_determinise(@&g->set)) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-		}
-	@};
-
-	<group-add-range>: (g :grp &, a :char, b :char) -> () = @{
-		int i;
-
-		if ((unsigned char) @b < (unsigned char) @a) {
-			char a[5], b[5];
-
-			assert(sizeof err->set >= 1 + sizeof a + 1 + sizeof b + 1 + 1);
-
-			sprintf(err->set, "%s-%s",
-				escchar(a, sizeof a, @a), escchar(b, sizeof b, @b));
-			err->e = RE_ENEGRANGE;
-			@!;
-		}
-
-		for (i = (unsigned char) @a; i <= (unsigned char) @b; i++) {
-			if (-1 == group_add(@&g, flags->flags, (char) i)) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-		}
-	@};
-
-	<group-to-states>: (g :grp &, x :fsm_state, y :fsm_state) -> () = @{
-		int r;
-
-		r = fsm_empty(@&g->dup);
-		if (r == -1) {
-			err->e = RE_EERRNO;
-			@!;
-		}
-
-		if (!r) {
-			const struct fsm_state *end;
-
-			/* TODO: would like to show the original spelling verbatim, too */
-
-			/* XXX: this is just one example; really I want to show the entire set */
-			end = fsm_any(@&g->dup, fsm_isend);
-			assert(end != NULL);
-
-			if (-1 == fsm_example(@&g->dup, end, err->dup, sizeof err->dup)) {
-				err->e = RE_EERRNO;
-				@!;
-			}
-
-			/* XXX: to return when we can show minimal coverage again */
-			strcpy(err->set, err->dup);
-
-			err->e  = RE_EOVERLAP;
-			@!;
-		}
-
-		if (!fsm_minimise(@&g->set)) {
-			err->e = RE_EERRNO;
-			@!;
-		}
-
-		if (!fsm_unionxy(fsm, @&g->set, @x, @y)) {
-			err->e = RE_EERRNO;
-			@!;
-		}
-
-		fsm_free(@&g->dup);
-	@};
-
-
-	/*
-	 * The following regular expression fragments map to associated fsm states
-	 * as follows (transitions written in .fsm format):
-	 *
-	 *  ab    add-concat:  1 -> 3 "a"; 3 -> 2 "b";
-	 *  a|b   add-alt:     1 -> 2 "a"; 1 -> 2 "b";
-	 *  (a)   add-sub:     1 -> 1a; 2a -> 2;
-	 *  [abc] add-group:   1 -> 2 "a"; 1 -> 2 "b"; 1 -> 2 "c";
-	 *  a     add-literal: 1 -> 1a; 2a -> 2;
-	 *  .     add-any:     1 -> 2 ?;
-	 *
-	 * Each of these component parts has exactly one input (1) and exactly one
-	 * output state (2).
-	 * TODO: say that these correspond to "x" and "y"
-	 * TODO: explain that these are stacklike
-	 * TODO: update these comments
-	 */
-
-	<add-concat>: () -> (s :fsm_state) = @{
-		@s = fsm_addstate(fsm);
-		if (@s == NULL) {
-			@!;
-		}
-	@};
-
-	<add-epsilon>: (x :fsm_state, y: fsm_state) -> () = @{
-		if (!fsm_addedge_epsilon(fsm, @x, @y)) {
-			@!;
-		}
-	@};
-
-	<add-pred>: (x :fsm_state, y :fsm_state, p :pred) -> () = @{
-		assert(@x != NULL);
-		assert(@y != NULL);
-
-/* TODO:
-		if (!fsm_addedge_predicate(fsm, @x, @y, @p)) {
-			@!;
-		}
-*/
-	@};
-
-	<add-literal>: (x :fsm_state, y :fsm_state, c :char) -> () = @{
-		assert(@x != NULL);
-		assert(@y != NULL);
-
-		/* TODO: check c is legal? */
-
-		if (!addedge_literal(fsm, flags->flags, @x, @y, @c)) {
-			@!;
-		}
-	@};
-
-	<add-any>: (x :fsm_state, y :fsm_state) -> () = @{
-		struct fsm *any;
-
-		assert(@x != NULL);
-		assert(@y != NULL);
-
-		any = class_any_fsm(fsm->opt);
-		if (any == NULL) {
-			err->e = RE_EERRNO;
-			@!;
-		}
-
-		if (!fsm_unionxy(fsm, any, @x, @y)) {
-			err->e = RE_EERRNO;
-			@!;
-		}
-	@};
-
-	<add-class>: (x :fsm_state, y :fsm_state, c :fsm) -> () = @{
-		if (!fsm_unionxy(fsm, @c, @x, @y)) {
-			err->e = RE_EERRNO;
-			@!;
-		}
-	@};
-
-	/*
-	 * The following count repetition operators encapsulate regular expression
-	 * fragments as follows (transitions written in .fsm format where 1a and 2a
-	 * indicate the a'th occurance of the input and output states 1 and 2 from
-	 * the fragment):
-	 *
-	 *  a{n} count-n:         8 -> 1a; 2a -> 1b; 2b -> ...a; ...b -> na; nb -> 9;
-	 *  a?   count-0-or-1:    8 -> 1a; 2a -> 9; 8 -> 9;
-	 *  a*   count-0-or-many: 8 -> 1a; 2a -> 9; 8 -> 9; 9 -> 8;
-	 *  a+   count-1-or-many: 8 -> 1a; 2a -> 9;         9 -> 8;
-	 *  a    count-1:         8 -> 1a; 2a -> 9;
-	 *
-	 * Each of these component parts has exactly one input (8) and exactly one
-	 * output state (9). Between these states are an appropiate number of
-	 * regex fragments as per <add-*> which begin and end (1) and (2). Each of
-	 * these pairs is lettered a, b, ..., n for ease of identification.
-	 *
-	 * TODO: update for count-m-n
-	 */
-
-	<count-m-to-n>: (x :fsm_state, y :fsm_state &, m :unsigned, n :unsigned) -> () = @{
-		unsigned i;
-		struct fsm_state *a;
-		struct fsm_state *b;
-
-		if (@n < @m) {
-			err->e = RE_ENEGCOUNT;
-			err->m = @m;
-			err->n = @n;
-			@!;
-		}
-
-		if (@m == 0) {
-			if (!fsm_addedge_epsilon(fsm, @x, @y)) {
-				@!;
-			}
-		}
-
-		b = @y;
-
-		for (i = 1; i < @n; i++) {
-			a = fsm_state_duplicatesubgraphx(fsm, @x, &b);
-			if (a == NULL) {
-				@!;
-			}
-
-			/* TODO: could elide this epsilon if fsm_state_duplicatesubgraphx()
-			 * took an extra parameter giving it a m->new for the start state */
-			if (!fsm_addedge_epsilon(fsm, @y, a)) {
-				@!;
-			}
-
-			if (i >= @m) {
-				if (!fsm_addedge_epsilon(fsm, @y, b)) {
-					@!;
-				}
-			}
-
-			@=y = b;
-			@x = a;
-		}
-	@};
-
-	<count-0-or-1>: (x :fsm_state, y :fsm_state) -> () = @{
-		if (!fsm_addedge_epsilon(fsm, @x, @y)) {
-			@!;
-		}
-	@};
-
-	<count-0-or-many>: (x :fsm_state, y :fsm_state &) -> () = @{
-		if (!fsm_addedge_epsilon(fsm, @x, @y)) {
-			@!;
-		}
-
-		if (!fsm_addedge_epsilon(fsm, @y, @x)) {
-			@!;
-		}
-
-		/* isolation guard */
-		/* TODO: centralise */
-		{
-			struct fsm_state *z;
-
-			z = fsm_addstate(fsm);
-			if (z == NULL) {
-				@!;
-			}
-
-			if (!fsm_addedge_epsilon(fsm, @y, z)) {
-				@!;
-			}
-
-			@=y = z;
-		}
-	@};
-
-	<count-1-or-many>: (x :fsm_state, y :fsm_state &) -> () = @{
-		if (!fsm_addedge_epsilon(fsm, @y, @x)) {
-			@!;
-		}
-
-		/* isolation guard */
-		/* TODO: centralise */
-		{
-			struct fsm_state *z;
-
-			z = fsm_addstate(fsm);
-			if (z == NULL) {
-				@!;
-			}
-
-			if (!fsm_addedge_epsilon(fsm, @y, z)) {
-				@!;
-			}
-
-			@=y = z;
-		}
-	@};
-
-	<count-1>: (x :fsm_state, y :fsm_state) -> () = @{
-		(void) @x;
-		(void) @y;
-	@};
-
-
-	<push-flags>: () -> () = @{
-		struct flags *n = malloc(sizeof *n);
-		if (n == NULL) {
-			@!;
-		}
-		n->parent = flags;
-		n->flags = flags->flags;
-		flags = n;
-	@};
-
-	<pop-flags>: () -> () = @{
-		struct flags *t = flags->parent;
-		assert(t != NULL);
-		free(flags);
-		flags = t;
-	@};
-
-	<set-flag>: (flag: re_flags) -> () = @{
-		flags->flags |= @flag;
-	@};
-
-	<clear-flag>: (flag: re_flags) -> () = @{
-		flags->flags &= ~@flag;
-	@};
-
-
 	<err-expected-term> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXTERM;
@@ -1154,6 +556,13 @@
 		@!;
 	@};
 
+	<err-unsupported> = @{
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EXUNSUPPORTD;
+		}
+		@!;
+	@};
+
 	<mark-group>: (start :pos, end :pos) -> () = @{
 		mark(&act_state->groupstart, &@start);
 		mark(&act_state->groupend,   &@end);
@@ -1167,6 +576,182 @@
 	<mark-count>: (start :pos, end :pos) -> () = @{
 		mark(&act_state->countstart, &@start);
 		mark(&act_state->countend,   &@end);
+	@};
+
+
+	/* AST construction */
+	<ast-expr-empty>: () -> (node :ast_expr) = @{
+		@node = re_ast_expr_empty();
+	@};
+
+	<ast-expr-concat>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
+		@node = re_ast_expr_concat(@l, @r);
+	@};
+
+	<ast-expr-alt>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
+		@node = re_ast_expr_alt(@l, @r);
+	@};
+
+	<ast-expr-literal>: (c :char) -> (node :ast_expr) = @{
+		@node = re_ast_expr_literal(@c);
+	@};
+
+	<ast-expr-any>: () -> (node :ast_expr) = @{
+		@node = re_ast_expr_any();
+	@};
+	
+	<ast-expr-many>: () -> (node :ast_expr) = @{
+		@node = re_ast_expr_many();
+	@};
+
+	<ast-expr-atom-many>: (c :ast_count) -> (node :ast_expr) = @{
+		struct ast_expr *e = re_ast_expr_many();
+		if (e == NULL) { @!; }
+		@node = re_ast_expr_with_count(e, @c);
+	@};
+
+	<ast-expr-atom-any>: (c :ast_count) -> (node :ast_expr) = @{
+		struct ast_expr *e = re_ast_expr_any();
+		if (e == NULL) { @!; }
+		@node = re_ast_expr_with_count(e, @c);
+	@};
+
+        <ast-expr-group>: (e :ast_expr) -> (node :ast_expr) = @{
+		@node = re_ast_expr_group(@e);
+	@};
+
+	<ast-expr-atom>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
+		@node = re_ast_expr_with_count(@e, @c);
+	@};
+
+        <atom-kleene>: () -> (c :ast_count) = @{
+		@c = ast_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
+	@};
+
+        <atom-plus>: () -> (c :ast_count) = @{
+		@c = ast_count(1, NULL, AST_COUNT_UNBOUNDED, NULL);
+	@};
+
+        <atom-one>: () -> (c :ast_count) = @{
+		@c = ast_count(1, NULL, 1, NULL);
+	@};
+
+        <atom-opt>: () -> (c :ast_count) = @{
+		@c = ast_count(0, NULL, 1, NULL);
+	@};
+
+        <expr-count>: (l :unsigned, start :pos, h :unsigned, end :pos) -> (c :ast_count) = @{
+		struct ast_pos ast_start, ast_end;
+		if (@h < @l) {
+			err->e = RE_ENEGCOUNT;
+			err->m = @l;
+			err->n = @h;
+			mark(&act_state->countstart, &@start);
+			mark(&act_state->countend,   &@end);
+			@!;
+		}
+		AST_POS_OF_LX_POS(ast_start, @start);
+		AST_POS_OF_LX_POS(ast_end, @end);
+
+		@c = ast_count(@l, &ast_start, @h, &ast_end);
+	@};
+
+	<char-class-ast-literal>: (c :char) -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_literal(@c);
+	@};
+
+	<char-class-ast-range>: (from :range_endpoint, start :pos,
+	    		to :range_endpoint, end :pos) -> (node :char_class_ast) = @{
+		struct ast_pos ast_start, ast_end;
+		unsigned char lower, upper;
+		AST_POS_OF_LX_POS(ast_start, @start);
+		AST_POS_OF_LX_POS(ast_end, @end);
+
+		if (@from.t != AST_RANGE_ENDPOINT_LITERAL ||
+		    @to.t != AST_RANGE_ENDPOINT_LITERAL) {
+			err->e = RE_EXUNSUPPORTD;
+			@!;
+		}
+
+		lower = @from.u.literal.c;
+		upper = @to.u.literal.c;
+
+		if (lower > upper) {
+			char a[5], b[5];
+			
+			assert(sizeof err->set >= 1 + sizeof a + 1 + sizeof b + 1 + 1);
+			
+			sprintf(err->set, "%s-%s",
+			    escchar(a, sizeof a, lower), escchar(b, sizeof b, upper));
+			err->e = RE_ENEGRANGE;
+			@!;
+		}
+
+		@node = re_char_class_ast_range(&@from, ast_start, &@to, ast_end);
+	@};
+
+	<char-class-ast-concat>: (l :char_class_ast, r :char_class_ast) -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_concat(@l, @r);
+	@};
+
+	<char-class-ast-subtract>: (l :char_class_ast, r :char_class_ast) -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_subtract(@l, @r);
+	@};
+
+	<char-class-ast-named-class>: (id :ast_char_class_id) -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_named_class(@id);
+	@};
+
+	<ast-expr-char-class>: (cca :char_class_ast, start :pos, end :pos) -> (node :ast_expr) = @{
+		struct ast_pos ast_start, ast_end;
+		AST_POS_OF_LX_POS(ast_start, @start);
+		AST_POS_OF_LX_POS(ast_end, @end);
+		mark(&act_state->groupstart, &@start);
+		mark(&act_state->groupend,   &@end);
+		@node = re_ast_expr_char_class(@cca, &ast_start, &ast_end);
+		if (@node == NULL) { @!; }
+	@};
+
+	<char-class-ast-flag-none>: () -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_NONE);
+	@};
+
+	<char-class-ast-flag-invert>: () -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_INVERTED);
+	@};
+
+	<char-class-ast-flag-minus>: () -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_MINUS);
+	@};
+
+	<char-class-ast-flag-invert-minus>: () -> (node :char_class_ast) = @{
+		@node = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_INVERTED | RE_CHAR_CLASS_FLAG_MINUS);
+	@};
+
+	<ast-range-endpoint-literal>: (c :char) -> (r :range_endpoint) = @{
+		struct ast_range_endpoint range;
+		range.t = AST_RANGE_ENDPOINT_LITERAL;
+		range.u.literal.c = @c;
+		@r = range;
+	@};
+
+	<ast-range-endpoint-char-class>: (id :ast_char_class_id) -> (r :range_endpoint) = @{
+		struct ast_range_endpoint range;
+		range.t = AST_RANGE_ENDPOINT_CHAR_CLASS;
+		range.u.char_class.ctor = @id;
+		@r = range;
+	@};
+
+	<re-flag-none>: () -> (f :re_flags) = @{
+	        @f = RE_FLAGS_NONE;
+	@};
+
+	<re-flag-union>: (in :re_flags, flag :re_flags) -> (out :re_flags) = @{
+		@out = @in | @flag;
+	@};
+
+	<ast-expr-re-flags>: (pos :re_flags, neg :re_flags) -> (node :ast_expr) = @{
+		@node = re_ast_expr_re_flags(@pos, @neg);
 	@};
 
 %trailer% @{
@@ -1187,12 +772,11 @@
 	}
 
 	static int
-	parse(int (*f)(void *opaque), void *opaque,
-		void (*entry)(struct fsm *, flags, lex_state, act_state, err,
-			struct fsm_state *, struct fsm_state *),
+	parse(re_getchar_fun *f, void *opaque,
+		void (*entry)(flags, lex_state, act_state, err,
+			struct ast_expr **),
 		struct flags *flags, int overlap,
-		struct fsm *new, struct re_err *err,
-		struct fsm_state *x, struct fsm_state *y)
+		struct ast_re *new, struct re_err *err)
 	{
 		struct act_state  act_state_s;
 		struct act_state *act_state;
@@ -1240,7 +824,7 @@
 		err->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
-		entry(new, flags, lex_state, act_state, err, x, y);
+		entry(flags, lex_state, act_state, err, &new->expr);
 
 		lx->free(lx->buf_opaque);
 
@@ -1299,44 +883,29 @@
 		return -1;
 	}
 
-	struct fsm *
-	DIALECT_COMP(int (*f)(void *opaque), void *opaque,
+	struct ast_re *
+	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
 		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
 		struct re_err *err)
 	{
-		struct fsm *new;
-		struct fsm_state *x, *y;
+		struct ast_re *ast;
 		struct flags top, *fl = &top;
 
 		top.flags = flags;
 
 		assert(f != NULL);
 
-		new = fsm_new_blank(opt);
-		if (new == NULL) {
-			return NULL;
-		}
+		ast = re_ast_new();
 
-		x = fsm_getstart(new);
-		assert(x != NULL);
-
-		y = fsm_addstate(new);
-		if (y == NULL) {
+		if (-1 == parse(f, opaque, DIALECT_ENTRY, fl, overlap, ast, err)) {
 			goto error;
 		}
 
-		fsm_setend(new, y, 1);
-
-		if (-1 == parse(f, opaque, DIALECT_ENTRY, fl, overlap, new, err, x, y)) {
-			goto error;
-		}
-
-		return new;
+		return ast;
 
 	error:
-
-		fsm_free(new);
+		re_ast_free(ast);
 
 		return NULL;
 	}
