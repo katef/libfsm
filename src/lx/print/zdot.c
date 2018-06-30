@@ -15,8 +15,8 @@
 
 #include "libfsm/internal.h" /* XXX */
 
-#include "lx/out.h"
 #include "lx/ast.h"
+#include "lx/print.h"
 
 /* TODO: centralise */
 static unsigned int
@@ -39,7 +39,7 @@ zindexof(const struct ast *ast, const struct ast_zone *zone)
 }
 
 static void
-out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
+print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
 	struct fsm_state *s;
 
@@ -67,7 +67,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 void
-lx_out_zdot(const struct ast *ast, FILE *f)
+lx_print_zdot(const struct ast *ast, FILE *f)
 {
 	const struct ast_zone *z;
 	unsigned int zn;
@@ -94,7 +94,7 @@ lx_out_zdot(const struct ast *ast, FILE *f)
 
 		fprintf(f, "\tz%u;\n", zindexof(ast, z));
 
-		out_zone(f, ast, z);
+		print_zone(f, ast, z);
 	}
 
 	fprintf(f, "}\n");

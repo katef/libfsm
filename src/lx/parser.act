@@ -47,7 +47,7 @@
 	#include "lexer.h"
 	#include "parser.h"
 	#include "ast.h"
-	#include "out.h"
+	#include "print.h"
 	#include "var.h"
 
 	struct arr {

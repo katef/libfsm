@@ -19,8 +19,8 @@
 
 #include "libfsm/internal.h" /* XXX */
 
-#include "lx/out.h"
 #include "lx/ast.h"
+#include "lx/print.h"
 
 /* XXX: abstraction */
 int
@@ -279,7 +279,7 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 }
 
 static void
-out_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
+print_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
 	assert(f != NULL);
 	assert(ast != NULL);
@@ -290,7 +290,7 @@ out_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 static void
-out_lgetc(FILE *f)
+print_lgetc(FILE *f)
 {
 	if (api_getc & API_FGETC) {
 		if (print_progress) {
@@ -414,7 +414,7 @@ out_lgetc(FILE *f)
 }
 
 static void
-out_io(FILE *f)
+print_io(FILE *f)
 {
 	if (print_progress) {
 		fprintf(stderr, " io");
@@ -533,7 +533,7 @@ out_io(FILE *f)
 }
 
 static void
-out_buf(FILE *f)
+print_buf(FILE *f)
 {
 	if (api_tokbuf & API_DYNBUF) {
 		if (print_progress) {
@@ -665,7 +665,7 @@ out_buf(FILE *f)
 }
 
 static void
-out_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
+print_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 {
 	struct fsm_state *s;
 	int i;
@@ -690,7 +690,7 @@ out_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 
 
 static int
-out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
+print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
 	assert(f != NULL);
 	assert(z != NULL);
@@ -706,7 +706,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tint c;\n");
 	fprintf(f, "\n");
 
-	out_stateenum(f, z->fsm, z->fsm->sl);
+	print_stateenum(f, z->fsm, z->fsm->sl);
 	fprintf(f, "\n");
 
 	fprintf(f, "\tassert(lx != NULL);\n");
@@ -900,7 +900,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 static void
-out_name(FILE *f, const struct ast *ast)
+print_name(FILE *f, const struct ast *ast)
 {
 	struct ast_token *t;
 
@@ -938,7 +938,7 @@ out_name(FILE *f, const struct ast *ast)
 }
 
 static int
-out_example(FILE *f, const struct ast *ast)
+print_example(FILE *f, const struct ast *ast)
 {
 	struct ast_token *t;
 	struct ast_zone *z;
@@ -1011,7 +1011,7 @@ out_example(FILE *f, const struct ast *ast)
 }
 
 void
-lx_out_c(const struct ast *ast, FILE *f)
+lx_print_c(const struct ast *ast, FILE *f)
 {
 	const struct ast_zone *z;
 	unsigned int zn;
@@ -1053,15 +1053,15 @@ lx_out_c(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 
 	for (z = ast->zl; z != NULL; z = z->next) {
-		out_proto(f, ast, z);
+		print_proto(f, ast, z);
 	}
 
 	fprintf(f, "\n");
 
-	out_io(f);
-	out_lgetc(f);
+	print_io(f);
+	print_lgetc(f);
 
-	out_buf(f);
+	print_buf(f);
 
 	if (print_progress) {
 		zn = 0;
@@ -1075,17 +1075,17 @@ lx_out_c(const struct ast *ast, FILE *f)
 			zn++;
 		}
 
-		if (-1 == out_zone(f, ast, z)) {
+		if (-1 == print_zone(f, ast, z)) {
 			return; /* XXX: handle error */
 		}
 	}
 
 	if (~api_exclude & API_NAME) {
-		out_name(f, ast);
+		print_name(f, ast);
 	}
 
 	if (~api_exclude & API_EXAMPLE) {
-		if (-1 == out_example(f, ast)) {
+		if (-1 == print_example(f, ast)) {
 			return;
 		}
 	}

@@ -11,8 +11,8 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
-#include "lx/out.h"
 #include "lx/ast.h"
+#include "lx/print.h"
 
 /* TODO: centralise */
 static void
@@ -29,7 +29,7 @@ esctok(FILE *f, const char *s)
 }
 
 static void
-out_tokens(const struct ast *ast, FILE *f)
+print_tokens(const struct ast *ast, FILE *f)
 {
 	struct ast_token *t;
 
@@ -53,7 +53,7 @@ out_tokens(const struct ast *ast, FILE *f)
 }
 
 void
-lx_out_h(const struct ast *ast, FILE *f)
+lx_print_h(const struct ast *ast, FILE *f)
 {
 	assert(ast != NULL);
 	assert(f != NULL);
@@ -66,7 +66,7 @@ lx_out_h(const struct ast *ast, FILE *f)
 	fprintf(f, "#define LX_H\n");
 	fprintf(f, "\n");
 
-	out_tokens(ast, f);
+	print_tokens(ast, f);
 	fprintf(f, "\n");
 
 	if (~api_exclude & API_POS) {

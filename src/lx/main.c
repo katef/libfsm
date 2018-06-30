@@ -25,7 +25,7 @@
 
 #include "libfsm/internal.h" /* XXX */
 
-#include "out.h"
+#include "print.h"
 #include "ast.h"
 #include "tokens.h"
 
@@ -104,29 +104,28 @@ io(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static void
-(*language(const char *name))
-(const struct ast *ast, FILE *f)
+static lx_print *
+print_name(const char *name)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		void (*out)(const struct ast *ast, FILE *f);
+		lx_print *f;
 	} a[] = {
-		{ "test", NULL        },
-		{ "dot",  lx_out_dot  },
-		{ "dump", lx_out_dump },
-		{ "zdot", lx_out_zdot },
-		{ "c",    lx_out_c    },
-		{ "h",    lx_out_h    }
+		{ "test", NULL          },
+		{ "dot",  lx_print_dot  },
+		{ "dump", lx_print_dump },
+		{ "zdot", lx_print_zdot },
+		{ "c",    lx_print_c    },
+		{ "h",    lx_print_h    }
 	};
 
 	assert(name != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].out;
+			return a[i].f;
 		}
 	}
 
@@ -439,9 +438,10 @@ int
 main(int argc, char *argv[])
 {
 	struct ast *ast;
-	void (*out)(const struct ast *ast, FILE *f) = lx_out_c;
+	lx_print *print;
 	int keep_nfa;
 
+	print = lx_print_c;
 	keep_nfa = 0;
 	print_progress = 0;
 
@@ -478,7 +478,7 @@ main(int argc, char *argv[])
 			case 'x': api_exclude |= lang_exclude(optarg); break;
 
 			case 'l':
-				out = language(optarg);
+				print = print_name(optarg);
 				break;
 
 			case 'n':
@@ -509,17 +509,17 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (keep_nfa && out != lx_out_dot) {
+	if (keep_nfa && print != lx_print_dot) {
 		fprintf(stderr, "-n is for .dot output only\n");
 		return EXIT_FAILURE;
 	}
 
-	if (api_tokbuf && (out != lx_out_c && out != lx_out_h && out != lx_out_dump)) {
+	if (api_tokbuf && (print != lx_print_c && print != lx_print_h && print != lx_print_dump)) {
 		fprintf(stderr, "-b is for .c/.h output only\n");
 		return EXIT_FAILURE;
 	}
 
-	if (api_getc && (out != lx_out_c && out != lx_out_h && out != lx_out_dump)) {
+	if (api_getc && (print != lx_print_c && print != lx_print_h && print != lx_print_dump)) {
 		fprintf(stderr, "-g is for .c/.h output only\n");
 		return EXIT_FAILURE;
 	}
@@ -567,7 +567,7 @@ main(int argc, char *argv[])
 	 * of which end state is associated with each mapping. In other words,
 	 * without losing track of which regexp maps to which token.
 	 */
-	if (out != lx_out_h) {
+	if (print != lx_print_h) {
 		struct ast_zone    *z;
 		struct ast_mapping *m;
 		unsigned int zn;
@@ -639,7 +639,7 @@ main(int argc, char *argv[])
 	 * This converts the tree of zones to a DAG.
 	 * TODO: Fix
 	 */
-	if (0 && out != lx_out_h) {
+	if (0 && print != lx_print_h) {
 		struct ast_zone *z, **p;
 		int changed;
 		unsigned int zn, zd, zp;
@@ -730,7 +730,7 @@ main(int argc, char *argv[])
 	/*
 	 * Semantic checks.
 	 */
-	if (out != lx_out_h) {
+	if (print != lx_print_h) {
 		struct ast_zone  *z;
 		struct fsm_state *s;
 		int e;
@@ -824,7 +824,7 @@ main(int argc, char *argv[])
 			fprintf(stderr, "\n");
 		}
 
-		if (e && out != lx_out_dot) {
+		if (e && print != lx_print_dot) {
 			return EXIT_FAILURE;
 		}
 	}
@@ -832,10 +832,10 @@ main(int argc, char *argv[])
 	/* XXX: can do this before semantic checks */
 	/* TODO: free ast */
 	/* TODO: free DFA ast_mappings, created in carryopaque, iff making a DFA. i.e. those which have non-NULL conflict sets */
-	if (out == lx_out_h) {
+	if (print == lx_print_h) {
 		/* TODO: special case to avoid overhead; free non-minimized NFA */
 	}
-	if (!keep_nfa && out != lx_out_h) {
+	if (!keep_nfa && print != lx_print_h) {
 		struct ast_zone *z;
 		struct ast_mapping *m;
 		const struct fsm_state *s;
@@ -863,8 +863,8 @@ main(int argc, char *argv[])
 			fprintf(stderr, "-- output:");
 		}
 
-		if (out != NULL) {
-			out(ast, stdout);
+		if (print != NULL) {
+			print(ast, stdout);
 		}
 
 		if (print_progress) {

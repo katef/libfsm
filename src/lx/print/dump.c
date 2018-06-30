@@ -11,11 +11,10 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
-#include "lx/ast.h"
-#include "lx/out.h"
+#include "lx/print.h"
 
 static void
-out_dump(FILE *f)
+print_dump(FILE *f)
 {
 	assert(f != NULL);
 
@@ -293,10 +292,10 @@ out_dump(FILE *f)
 }
 
 void
-lx_out_dump(const struct ast *ast, FILE *f)
+lx_print_dump(const struct ast *ast, FILE *f)
 {
 	(void) ast;
 
-	out_dump(f);
+	print_dump(f);
 }
 
