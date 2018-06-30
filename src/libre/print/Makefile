@@ -1,5 +1,6 @@
 .include "../../../share/mk/top.mk"
 
+SRC += src/libre/print/dot.c
 SRC += src/libre/print/tree.c
 
 .for src in ${SRC:Msrc/libre/print/*.c}
