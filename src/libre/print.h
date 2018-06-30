@@ -19,6 +19,9 @@ void
 re_ast_print_dot(FILE *f, const struct fsm_options *opt, struct ast_re *ast);
 
 void
+re_ast_print_pcre(FILE *f, const struct fsm_options *opt, struct ast_re *ast);
+
+void
 re_ast_print_tree(FILE *f, struct ast_re *ast);
 
 #endif
