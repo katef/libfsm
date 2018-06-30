@@ -14,12 +14,10 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include "libfsm/internal.h"
-
-#include "libfsm/out.h"
 
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)
@@ -161,7 +159,7 @@ findany(const struct fsm_state *state)
 }
 
 void
-fsm_out_fsm(const struct fsm *fsm, FILE *f)
+fsm_print_fsm(const struct fsm *fsm, FILE *f)
 {
 	struct fsm_state *s, *start;
 	int end;

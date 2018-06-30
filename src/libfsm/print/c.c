@@ -16,11 +16,10 @@
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include "libfsm/internal.h"
-#include "libfsm/out.h"
 
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)
@@ -295,7 +294,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 }
 
 static void
-out_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
+print_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 {
 	struct fsm_state *s;
 	int i;
@@ -351,7 +350,7 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 }
 
 int
-fsm_out_cfrag(const struct fsm *fsm, FILE *f,
+fsm_print_cfrag(const struct fsm *fsm, FILE *f,
 	const char *cp,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
 	const void *opaque)
@@ -404,7 +403,7 @@ fsm_out_cfrag(const struct fsm *fsm, FILE *f,
 }
 
 static void
-fsm_out_c_complete(const struct fsm *fsm, FILE *f)
+fsm_print_c_complete(const struct fsm *fsm, FILE *f)
 {
 	const char *cp;
 
@@ -424,7 +423,7 @@ fsm_out_c_complete(const struct fsm *fsm, FILE *f)
 	}
 
 	/* enum of states */
-	out_stateenum(f, fsm, fsm->sl);
+	print_stateenum(f, fsm, fsm->sl);
 	fprintf(f, "\n");
 
 	/* start state */
@@ -446,7 +445,7 @@ fsm_out_c_complete(const struct fsm *fsm, FILE *f)
 		break;
 	}
 
-	(void) fsm_out_cfrag(fsm, f, cp,
+	(void) fsm_print_cfrag(fsm, f, cp,
 		fsm->opt->leaf != NULL ? fsm->opt->leaf : leaf, fsm->opt->leaf_opaque);
 
 	fprintf(f, "\t}\n");
@@ -457,7 +456,7 @@ fsm_out_c_complete(const struct fsm *fsm, FILE *f)
 }
 
 void
-fsm_out_c(const struct fsm *fsm, FILE *f)
+fsm_print_c(const struct fsm *fsm, FILE *f)
 {
 	const char *prefix;
 
@@ -478,7 +477,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 	}
 
 	if (fsm->opt->fragment) {
-		fsm_out_c_complete(fsm, f);
+		fsm_print_c_complete(fsm, f);
 		return;
 	}
 
@@ -519,7 +518,7 @@ fsm_out_c(const struct fsm *fsm, FILE *f)
 		break;
 	}
 
-	fsm_out_c_complete(fsm, f);
+	fsm_print_c_complete(fsm, f);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

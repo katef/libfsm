@@ -16,12 +16,10 @@
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include "libfsm/internal.h"
-
-#include "libfsm/out.h"
 
 static int
 rangeclass(unsigned char x, unsigned char y)
@@ -116,7 +114,7 @@ escputchar(const struct fsm_options *opt, int c, FILE *f)
 }
 
 void
-fsm_out_api(const struct fsm *fsm, FILE *f)
+fsm_print_api(const struct fsm *fsm, FILE *f)
 {
 	struct fsm_state *s, *start;
 	struct bm *a; /* indexed by "to" state number */

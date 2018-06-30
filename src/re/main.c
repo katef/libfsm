@@ -17,7 +17,7 @@
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include <re/re.h>
@@ -82,28 +82,28 @@ io(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static enum fsm_out
-language(const char *name)
+static fsm_print *
+print_name(const char *name)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		enum fsm_out format;
+		fsm_print *f;
 	} a[] = {
-		{ "api",  FSM_OUT_API  },
-		{ "c",    FSM_OUT_C    },
-		{ "csv",  FSM_OUT_CSV  },
-		{ "dot",  FSM_OUT_DOT  },
-		{ "fsm",  FSM_OUT_FSM  },
-		{ "json", FSM_OUT_JSON }
+		{ "api",  fsm_print_api  },
+		{ "c",    fsm_print_c    },
+		{ "csv",  fsm_print_csv  },
+		{ "dot",  fsm_print_dot  },
+		{ "fsm",  fsm_print_fsm  },
+		{ "json", fsm_print_json }
 	};
 
 	assert(name != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].format;
+			return a[i].f;
 		}
 	}
 
@@ -377,12 +377,11 @@ main(int argc, char *argv[])
 {
 	struct fsm *(*join)(struct fsm *, struct fsm *);
 	int (*query)(const struct fsm *, const struct fsm *);
-	enum fsm_out format;
+	fsm_print *print;
 	enum re_dialect dialect;
 	struct fsm *fsm;
 	enum re_flags flags;
 	int xfiles, yfiles;
-	int print;
 	int example;
 	int keep_nfa;
 	int patterns;
@@ -398,14 +397,13 @@ main(int argc, char *argv[])
 	flags    = 0U;
 	xfiles   = 0;
 	yfiles   = 0;
-	print    = 0;
 	example  = 0;
 	keep_nfa = 0;
 	patterns = 0;
 	ambig    = 0;
+	print    = NULL;
 	query    = NULL;
 	join     = fsm_union;
-	format   = FSM_OUT_FSM;
 	dialect  = RE_NATIVE;
 
 	{
@@ -426,12 +424,12 @@ main(int argc, char *argv[])
 				join = fsm_concat;
 				break;
 
+			case 'l': print   = print_name(optarg);       break;
+			case 'p': print   = fsm_print_fsm;            break;
 			case 'q': query   = comparison(optarg);       break;
 			case 'r': dialect = dialect_name(optarg);     break;
-			case 'l': format  = language(optarg);         break;
 
 			case 'u': ambig    = 1; break;
-			case 'p': print    = 1; break;
 			case 'x': xfiles   = 1; break;
 			case 'y': yfiles   = 1; break;
 			case 'm': example  = 1; break;
@@ -458,7 +456,12 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (print + example + !!query && xfiles) {
+	if (!!print + example + !!query > 1) {
+		fprintf(stderr, "-m, -p and -q are mutually exclusive\n");
+		return EXIT_FAILURE;
+	}
+
+	if (!!print + example + !!query && xfiles) {
 		fprintf(stderr, "-x applies only when executing\n");
 		return EXIT_FAILURE;
 	}
@@ -473,7 +476,7 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (!print) {
+	if (print == NULL) {
 		keep_nfa = 0;
 	}
 
@@ -675,7 +678,7 @@ main(int argc, char *argv[])
 		 * Minimise only when we don't need to keep the end state information
 		 * separated per regexp. Otherwise, convert to a DFA.
 		 */
-		if (!patterns && !example && format != FSM_OUT_C) {
+		if (!patterns && !example && print != fsm_print_c) {
 			if (!fsm_minimise(fsm)) {
 				perror("fsm_minimise");
 				return EXIT_FAILURE;
@@ -724,7 +727,7 @@ main(int argc, char *argv[])
 		return 0;
 	}
 
-	if (print) {
+	if (print != NULL) {
 		/* TODO: print examples in comments for end states;
 		 * patterns in comments for the whole FSM */
 
@@ -735,11 +738,11 @@ main(int argc, char *argv[])
 			}
 		}
 
-		if (format == FSM_OUT_C) {
+		if (print == fsm_print_c) {
 			opt.endleaf = endleaf;
 		}
 
-		fsm_print(fsm, stdout, format);
+		print(fsm, stdout);
 
 /* XXX: free fsm */
 

@@ -19,7 +19,7 @@
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include "parser.h"
@@ -102,28 +102,28 @@ io(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static enum fsm_out
-language(const char *name)
+static fsm_print *
+print_name(const char *name)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		enum fsm_out language;
+		fsm_print *f;
 	} a[] = {
-		{ "api",  FSM_OUT_API  },
-		{ "c",    FSM_OUT_C    },
-		{ "csv",  FSM_OUT_CSV  },
-		{ "dot",  FSM_OUT_DOT  },
-		{ "fsm",  FSM_OUT_FSM  },
-		{ "json", FSM_OUT_JSON }
+		{ "api",  fsm_print_api  },
+		{ "c",    fsm_print_c    },
+		{ "csv",  fsm_print_csv  },
+		{ "dot",  fsm_print_dot  },
+		{ "fsm",  fsm_print_fsm  },
+		{ "json", fsm_print_json }
 	};
 
 	assert(name != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].language;
+			return a[i].f;
 		}
 	}
 
@@ -266,11 +266,10 @@ main(int argc, char *argv[])
 {
 	unsigned iterations, i;
 	double elapsed;
-	enum fsm_out format;
+	fsm_print *print;
 	enum op op;
 	struct fsm *fsm;
 	int xfiles;
-	int print;
 	int r;
 
 	int (*query)(const struct fsm *, const struct fsm_state *);
@@ -280,11 +279,10 @@ main(int argc, char *argv[])
 	opt.comments = 1;
 	opt.io       = FSM_IO_GETC;
 
-	format = FSM_OUT_FSM;
 	xfiles = 0;
-	print  = 0;
-	walk   = NULL;
+	print  = NULL;
 	query  = NULL;
+	walk   = NULL;
 	op     = OP_IDENTITY;
 
 	iterations = 1;
@@ -309,10 +307,9 @@ main(int argc, char *argv[])
 				break;
 
 			case 'x': xfiles = 1;                         break;
-			case 'p': print  = 1;                         break;
+			case 'l': print  = print_name(optarg);        break;
+			case 'p': print  = fsm_print_fsm;             break;
 			case 'q': query  = query_name(optarg, &walk); break;
-
-			case 'l': format = language(optarg);          break;
 
 			case 'd': op = op_name("determinise");        break;
 			case 'm': op = op_name("minimise");           break;
@@ -505,8 +502,8 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (print) {
-		fsm_print(fsm, stdout, format);
+	if (print != NULL) {
+		print(fsm, stdout);
 	}
 
 	fsm_free(fsm);

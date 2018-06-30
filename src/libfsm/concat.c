@@ -12,7 +12,6 @@
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/out.h>
 #include <fsm/options.h>
 
 #include "internal.h"

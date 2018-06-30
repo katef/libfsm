@@ -11,7 +11,7 @@
 #include <adt/set.h>
 
 #include <fsm/pred.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include "libfsm/internal.h" /* XXX */
@@ -224,7 +224,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 		z->fsm->opt = &opt;
 
-		fsm_print(z->fsm, f, FSM_OUT_DOT);
+		fsm_print_dot(z->fsm, f);
 
 		z->fsm->opt = tmp;
 	}

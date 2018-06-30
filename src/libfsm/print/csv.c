@@ -15,8 +15,7 @@
 #include <adt/bitmap.h>
 
 #include <fsm/fsm.h>
-
-#include "libfsm/out.h"
+#include <fsm/print.h>
 
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)
@@ -68,7 +67,7 @@ escputc(int c, FILE *f)
 }
 
 void
-fsm_out_csv(const struct fsm *fsm, FILE *f)
+fsm_print_csv(const struct fsm *fsm, FILE *f)
 {
 	struct fsm_state *s;
 	struct bm bm;

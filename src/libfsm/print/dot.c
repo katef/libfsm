@@ -16,10 +16,8 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
-
-#include "libfsm/out.h"
 
 static unsigned
 indexof(const struct fsm *fsm, const struct fsm_state *state)
@@ -270,7 +268,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 }
 
 static void
-out_dotfrag(const struct fsm *fsm, FILE *f)
+print_dotfrag(const struct fsm *fsm, FILE *f)
 {
 	struct fsm_state *s;
 
@@ -290,7 +288,7 @@ out_dotfrag(const struct fsm *fsm, FILE *f)
 }
 
 void
-fsm_out_dot(const struct fsm *fsm, FILE *f)
+fsm_print_dot(const struct fsm *fsm, FILE *f)
 {
 	struct fsm_state *start;
 
@@ -299,7 +297,7 @@ fsm_out_dot(const struct fsm *fsm, FILE *f)
 	assert(f != NULL);
 
 	if (fsm->opt->fragment) {
-		out_dotfrag(fsm, f);
+		print_dotfrag(fsm, f);
 		return;
 	}
 
@@ -325,7 +323,7 @@ fsm_out_dot(const struct fsm *fsm, FILE *f)
 
 	fprintf(f, "\n");
 
-	out_dotfrag(fsm, f);
+	print_dotfrag(fsm, f);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

@@ -14,18 +14,17 @@
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include "libfsm/internal.h" /* XXX */
-#include "libfsm/out.h" /* XXX */
 
 #include "lx/out.h"
 #include "lx/ast.h"
 
 /* XXX: abstraction */
 int
-fsm_out_cfrag(const struct fsm *fsm, FILE *f,
+fsm_print_cfrag(const struct fsm *fsm, FILE *f,
 	const char *cp,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
 	const void *opaque);
@@ -765,7 +764,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		assert(opt.cp != NULL);
 
 		/* XXX: abstraction */
-		(void) fsm_out_cfrag(z->fsm, f, opt.cp,
+		(void) fsm_print_cfrag(z->fsm, f, opt.cp,
 			z->fsm->opt->leaf != NULL ? z->fsm->opt->leaf : leaf, z->fsm->opt->leaf_opaque);
 
 		z->fsm->opt = tmp;

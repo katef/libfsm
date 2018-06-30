@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include "lx/out.h"

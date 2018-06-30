@@ -17,7 +17,6 @@
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/cost.h>
-#include <fsm/out.h>
 #include <fsm/options.h>
 
 #include <re/re.h>
