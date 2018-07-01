@@ -7,9 +7,10 @@
 #include <assert.h>
 #include <string.h>
 #include <limits.h>
-#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
+
+#include <print/esc.h>
 
 #include <adt/set.h>
 
@@ -38,97 +39,6 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 
 	assert(!"unreached");
 	return 0;
-}
-
-/* TODO: centralise */
-static int
-escputc(FILE *f, const struct fsm_options *opt, int c)
-{
-	size_t i;
-
-	const struct {
-		int c;
-		const char *s;
-	} a[] = {
-		{ '\\', "\\\\" },
-		{ '\'', "\\\'" },
-
-		{ '\a', "\\a"  },
-		{ '\b', "\\b"  },
-		{ '\f', "\\f"  },
-		{ '\n', "\\n"  },
-		{ '\r', "\\r"  },
-		{ '\t', "\\t"  },
-		{ '\v', "\\v"  }
-	};
-
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(c != FSM_EDGE_EPSILON);
-
-	if (opt->always_hex) {
-		return fprintf(f, "\\x%02x", (unsigned char) c);
-	}
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].c == c) {
-			return fputs(a[i].s, f);
-		}
-	}
-
-	/*
-	 * Escaping '/' here is a lazy way to avoid keeping state when
-	 * emitting '*', '/', since this is used to output example strings
-	 * inside comments.
-	 */
-
-	if (!isprint((unsigned char) c) || c == '/') {
-		return fprintf(f, "\\x%02x", (unsigned char) c);
-	}
-
-	return fprintf(f, "%c", c);
-}
-
-/* TODO: centralise */
-static void
-escputchar(FILE *f, const struct fsm_options *opt, int c)
-{
-	assert(f != NULL);
-	assert(opt != NULL);
-
-	if (opt->always_hex || c > SCHAR_MAX) {
-		fprintf(f, "0x%02x", (unsigned char) c);
-		return;
-	}
-
-	fprintf(f, "'");
-	escputc(f, opt, c);
-	fprintf(f, "'");
-}
-
-/* TODO: centralise, maybe with callback */
-static int
-escputs(FILE *f, const struct fsm_options *opt, const char *s)
-{
-	const char *p;
-	int r, n;
-
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(s != NULL);
-
-	n = 0;
-
-	for (p = s; *p != '\0'; p++) {
-		r = escputc(f, opt, *p);
-		if (r == -1) {
-			return -1;
-		}
-
-		n += r;
-	}
-
-	return n;
 }
 
 static int
@@ -222,7 +132,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 			}
 
 			fprintf(f, "\t\t\tcase ");
-			escputchar(f, fsm->opt, e->symbol);
+			c_escputcharlit(f, fsm->opt, e->symbol);
 
 			if (fsm->opt->case_ranges) {
 				const struct fsm_edge *ne;
@@ -240,7 +150,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 
 				if (q - p) {
 					fprintf(f, " ... ");
-					escputchar(f, fsm->opt, q);
+					c_escputcharlit(f, fsm->opt, q);
 					it = ir;
 				}
 			}
@@ -390,7 +300,7 @@ fsm_print_cfrag(FILE *f, const struct fsm *fsm,
 				}
 
 				fprintf(f, " /* e.g. \"");
-				escputs(f, fsm->opt, buf);
+				escputs(f, fsm->opt, c_escputc_str, buf);
 				fprintf(f, "%s\" */",
 					n >= (int) sizeof buf - 1 ? "..." : "");
 			}

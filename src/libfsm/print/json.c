@@ -4,9 +4,10 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include <ctype.h>
 #include <assert.h>
 #include <stdio.h>
+
+#include <print/esc.h>
 
 #include <adt/set.h>
 
@@ -34,47 +35,6 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 
 	assert(!"unreached");
 	return 0;
-}
-
-static int
-escputc(FILE *f, const struct fsm_options *opt, int c)
-{
-	size_t i;
-
-	const struct {
-		int c;
-		const char *s;
-	} a[] = {
-		{ '\\', "\\\\" },
-		{ '\"', "\\\"" },
-		{ '/',  "\\/"  },
-
-		{ '\b', "\\b"  },
-		{ '\f', "\\f"  },
-		{ '\n', "\\n"  },
-		{ '\r', "\\r"  },
-		{ '\t', "\\t"  }
-	};
-
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(c != FSM_EDGE_EPSILON);
-
-	if (opt->always_hex) {
-		return fprintf(f, "\\u%04x", (unsigned char) c);
-	}
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].c == c) {
-			return fputs(a[i].s, f);
-		}
-	}
-
-	if (!isprint((unsigned char) c)) {
-		return fprintf(f, "\\u%04x", (unsigned char) c);
-	}
-
-	return fprintf(f, "%c", c);
 }
 
 /* XXX: horrible */
@@ -138,7 +98,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 
 					default:
 						fputs(" \"", f);
-						escputc(f, fsm->opt, e->symbol);
+						json_escputc(f, fsm->opt, e->symbol);
 						putc('\"', f);
 						break;
 					}

@@ -6,27 +6,14 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <ctype.h>
 
 #include <fsm/print.h>
 #include <fsm/options.h>
 
+#include <print/esc.h>
+
 #include "lx/ast.h"
 #include "lx/print.h"
-
-/* TODO: centralise */
-static void
-esctok(FILE *f, const char *s)
-{
-	const char *p;
-
-	assert(f != NULL);
-	assert(s != NULL);
-
-	for (p = s; *p != '\0'; p++) {
-		fputc(isalnum(*p) ? toupper(*p) : '_', f);
-	}
-}
 
 static void
 print_tokens(FILE *f, const struct ast *ast)

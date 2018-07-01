@@ -6,10 +6,11 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <ctype.h>
 #include <limits.h>
 
 #include "libfsm/internal.h" /* XXX: up here for bitmap.h */
+
+#include <print/esc.h>
 
 #include <adt/set.h>
 #include <adt/bitmap.h>
@@ -36,52 +37,6 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 
 	assert(!"unreached");
 	return 0;
-}
-
-static int
-escputc_hex(FILE *f, int c)
-{
-	assert(f != NULL);
-
-	if (c == FSM_EDGE_EPSILON) {
-		return fputs("&#x3B5;", f);
-	}
-
-	return fprintf(f, "\\x%02x", (unsigned char) c); /* for humans */
-}
-
-static int
-escputc(FILE *f, int c)
-{
-	size_t i;
-
-	const struct {
-		int c;
-		const char *s;
-	} a[] = {
-		{ FSM_EDGE_EPSILON, "&#x3B5;" },
-
-		{ '&',  "&amp;"    },
-		{ '\"', "&quot;"   },
-		{ ']',  "&#x5D;"   }, /* yes, even in a HTML label */
-		{ '<',  "&#x3C;"   },
-		{ '>',  "&#x3E;"   },
-		{ ' ',  "&#x2423;" }
-	};
-
-	assert(f != NULL);
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].c == c) {
-			return fputs(a[i].s, f);
-		}
-	}
-
-	if (!isprint((unsigned char) c)) {
-		return fprintf(f, "\\x%02x", (unsigned char) c); /* for humans */
-	}
-
-	return fprintf(f, "%c", c);
 }
 
 /* Return true if the edges after o contains state */
@@ -166,11 +121,7 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 					indexof(fsm, st));
 
-				if (fsm->opt->always_hex) {
-					escputc_hex(f, e->symbol);
-				} else {
-					escputc(f, e->symbol);
-				}
+				dot_escputc_html(f, fsm->opt, e->symbol);
 
 				fprintf(f, "> ];\n");
 			}
@@ -234,8 +185,7 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 
 			fprintf(f, "label = <");
 
-			(void) bm_print(f, &bm, 0,
-				fsm->opt->always_hex ? escputc_hex: escputc);
+			(void) bm_print(f, fsm->opt, &bm, 0, dot_escputc_html);
 
 			fprintf(f, "> ];\n");
 		}
@@ -256,11 +206,7 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, st));
 
-			if (fsm->opt->always_hex) {
-				escputc_hex(f, e->symbol);
-			} else {
-				escputc(f, e->symbol);
-			}
+			dot_escputc_html(f, fsm->opt, e->symbol);
 
 			fprintf(f, "> ];\n");
 		}

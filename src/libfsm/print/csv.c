@@ -7,9 +7,10 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 
 #include "libfsm/internal.h" /* XXX: up here for bitmap.h */
+
+#include <print/esc.h>
 
 #include <adt/set.h>
 #include <adt/bitmap.h>
@@ -36,36 +37,6 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	return 0;
 }
 
-static int
-escputc(FILE *f, int c)
-{
-	size_t i;
-
-	const struct {
-		int c;
-		const char *s;
-	} a[] = {
-		{ FSM_EDGE_EPSILON, "\xCE\xB5" }, /* epsilon, U03B5 UTF-8 */
-
-		{ '\"', "\\\"" }
-		/* TODO: others */
-	};
-
-	assert(f != NULL);
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].c == c) {
-			return fputs(a[i].s, f);
-		}
-	}
-
-	if (!isprint((unsigned char) c)) {
-		return printf("0x%02X", (unsigned char) c);
-	}
-
-	return fprintf(f, "%c", c);
-}
-
 void
 fsm_print_csv(FILE *f, const struct fsm *fsm)
 {
@@ -75,6 +46,7 @@ fsm_print_csv(FILE *f, const struct fsm *fsm)
 
 	assert(f != NULL);
 	assert(fsm != NULL);
+	assert(fsm->opt != NULL);
 
 	bm_clear(&bm);
 
@@ -95,7 +67,7 @@ fsm_print_csv(FILE *f, const struct fsm *fsm)
 
 		while (n = bm_next(&bm, n, 1), n != FSM_EDGE_MAX + 1) {
 			fprintf(f, ",  ");
-			escputc(f, n);
+			csv_escputc(f, fsm->opt, n);
 		}
 
 		fprintf(f, "\n");

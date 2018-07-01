@@ -26,6 +26,7 @@ SUBDIR += include/fsm
 SUBDIR += include/re
 SUBDIR += include
 SUBDIR += src/adt
+SUBDIR += src/print
 SUBDIR += src/libfsm/cost
 SUBDIR += src/libfsm/pred
 SUBDIR += src/libfsm/print

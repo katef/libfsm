@@ -7,7 +7,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <errno.h>
-#include <ctype.h>
 
 #include <adt/set.h>
 
@@ -16,6 +15,8 @@
 #include <fsm/walk.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
+
+#include <print/esc.h>
 
 #include "libfsm/internal.h" /* XXX */
 
@@ -50,89 +51,6 @@ skip(const struct fsm *fsm, const struct fsm_state *state)
 	}
 
 	return 0;
-}
-
-/* TODO: centralise */
-static int
-escputc(FILE *f, int c)
-{
-	size_t i;
-
-	const struct {
-		int c;
-		const char *s;
-	} a[] = {
-		{ '\\', "\\\\" },
-		{ '\"', "\\\"" },
-		{ '\'', "\\\'" },
-
-		{ '\a', "\\a"  },
-		{ '\b', "\\b"  },
-		{ '\f', "\\f"  },
-		{ '\n', "\\n"  },
-		{ '\r', "\\r"  },
-		{ '\t', "\\t"  },
-		{ '\v', "\\v"  }
-	};
-
-	assert(f != NULL);
-	assert(c != FSM_EDGE_EPSILON);
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].c == c) {
-			return fputs(a[i].s, f);
-		}
-	}
-
-	/*
-	 * Escaping '/' here is a lazy way to avoid keeping state when
-	 * emitting '*', '/', since this is used to output example strings
-	 * inside comments.
-	 */
-
-	if (!isprint((unsigned char) c) || c == '/') {
-		return fprintf(f, "\\x%02x", (unsigned char) c);
-	}
-
-	return fprintf(f, "%c", c);
-}
-
-/* TODO: centralise, maybe with callback */
-static int
-escputs(FILE *f, const char *s)
-{
-	const char *p;
-	int r, n;
-
-	assert(f != NULL);
-	assert(s != NULL);
-
-	n = 0;
-
-	for (p = s; *p != '\0'; p++) {
-		r = escputc(f, *p);
-		if (r == -1) {
-			return -1;
-		}
-
-		n += r;
-	}
-
-	return n;
-}
-
-/* TODO: centralise */
-static void
-esctok(FILE *f, const char *s)
-{
-	const char *p;
-
-	assert(f != NULL);
-	assert(s != NULL);
-
-	for (p = s; *p != '\0'; p++) {
-		fputc(isalnum(*p) ? toupper(*p) : '_', f);
-	}
 }
 
 /* TODO: centralise with libfsm */
@@ -986,7 +904,7 @@ print_example(FILE *f, const struct ast *ast)
 			fprintf(f, "\t\tcase %s", prefix.tok);
 			esctok(f, t->s);
 			fprintf(f, ": return \"");
-			escputs(f, buf);
+			escputs(f, z->fsm->opt, c_escputc_str, buf);
 			fprintf(f, "%s", n >= (int) sizeof buf - 1 ? "..." : "");
 			fprintf(f, "\";\n");
 		}

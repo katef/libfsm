@@ -6,12 +6,13 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <ctype.h>
 
 #include <adt/set.h>
 
 #include <fsm/pred.h>
 #include <fsm/print.h>
+
+#include <print/esc.h>
 
 #include "libfsm/internal.h" /* XXX */
 

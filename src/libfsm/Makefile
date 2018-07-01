@@ -48,7 +48,7 @@ ${BUILD}/lib/libfsm.opic: ${BUILD}/${src:R}.opic
 
 # XXX: kmkf ought to provide a way to abstract platform-dependent
 # library names here
-.for part in ${PART:Madt}
+.for part in ${PART:Madt} ${PART:Mprint}
 ${BUILD}/lib/libfsm.a:     ${BUILD}/lib/${part}.o
 ${BUILD}/lib/libfsm.so:    ${BUILD}/lib/${part}.opic
 ${BUILD}/lib/libfsm.dylib: ${BUILD}/lib/${part}.opic
