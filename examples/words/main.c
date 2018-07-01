@@ -9,7 +9,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include <re/re.h>
@@ -47,7 +47,7 @@ int main(void) {
 
 		fprintf(stderr, "%s\n", s);
 
-		r = re_comp(RE_LITERAL, re_sgetc, &p, &opt, 0, &e);
+		r = re_comp(RE_LITERAL, fsm_sgetc, &p, &opt, 0, &e);
 		if (r == NULL) {
 			re_perror(RE_LITERAL, &e, NULL, s);
 			return 1;
@@ -65,7 +65,7 @@ int main(void) {
 		return 1;
 	}
 
-	fsm_print(fsm, stdout, FSM_OUT_DOT);
+	fsm_print_dot(stdout, fsm);
 
 	return 0;
 }

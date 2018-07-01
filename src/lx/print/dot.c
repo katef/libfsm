@@ -6,18 +6,17 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <ctype.h>
 
 #include <adt/set.h>
 
 #include <fsm/pred.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include "libfsm/internal.h" /* XXX */
 
-#include "lx/out.h"
 #include "lx/ast.h"
+#include "lx/print.h"
 
 static unsigned int anonymous_states = 1;
 
@@ -62,7 +61,7 @@ zindexof(const struct ast *ast, const struct ast_zone *zone)
 }
 
 static void
-mapping(const struct ast_mapping *m, FILE *f, const struct ast *ast)
+mapping(FILE *f, const struct ast_mapping *m, const struct ast *ast)
 {
 	assert(m != NULL);
 	assert(f != NULL);
@@ -83,7 +82,7 @@ mapping(const struct ast_mapping *m, FILE *f, const struct ast *ast)
 }
 
 static void
-singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
+singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 	const struct ast_zone *z, const struct fsm_state *s)
 {
 	struct ast_mapping *m;
@@ -115,7 +114,7 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 			fprintf(f, "<font color=\"red\">");
 
 			for (p = m->conflict; p != NULL; p = p->next) {
-				mapping(p->m, f, ast);
+				mapping(f, p->m, ast);
 
 				if (p->next != NULL) {
 					fprintf(f, "<br/>");
@@ -124,7 +123,7 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 
 			fprintf(f, "</font>");
 		} else {
-			mapping(m, f, ast);
+			mapping(f, m, ast);
 		}
 
 	}
@@ -178,7 +177,7 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 }
 
 static void
-out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
+print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
 	struct fsm_state *s;
 
@@ -224,13 +223,13 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 		z->fsm->opt = &opt;
 
-		fsm_print(z->fsm, f, FSM_OUT_DOT);
+		fsm_print_dot(f, z->fsm);
 
 		z->fsm->opt = tmp;
 	}
 
 	for (s = z->fsm->sl; s != NULL; s = s->next) {
-		singlestate(z->fsm, f, ast, z, s);
+		singlestate(f, z->fsm, ast, z, s);
 	}
 
 	/* a start state should not accept */
@@ -244,7 +243,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 void
-lx_out_dot(const struct ast *ast, FILE *f)
+lx_print_dot(FILE *f, const struct ast *ast)
 {
 	const struct ast_zone *z;
 	unsigned int zn;
@@ -281,7 +280,7 @@ lx_out_dot(const struct ast *ast, FILE *f)
 			zn++;
 		}
 
-		out_zone(f, ast, z);
+		print_zone(f, ast, z);
 	}
 
 	fprintf(f, "}\n");

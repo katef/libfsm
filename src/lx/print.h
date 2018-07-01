@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef LX_INTERNAL_OUT_H
-#define LX_INTERNAL_OUT_H
+#ifndef LX_INTERNAL_PRINT_H
+#define LX_INTERNAL_PRINT_H
 
 #include <stdio.h>
 
@@ -48,20 +48,13 @@ extern enum api_exclude api_exclude;
 
 extern struct fsm_options opt;
 
-void
-lx_out_c(const struct ast *ast, FILE *f);
+typedef void (lx_print)(FILE *f, const struct ast *ast);
 
-void
-lx_out_h(const struct ast *ast, FILE *f);
-
-void
-lx_out_dot(const struct ast *ast, FILE *f);
-
-void
-lx_out_dump(const struct ast *ast, FILE *f);
-
-void
-lx_out_zdot(const struct ast *ast, FILE *f);
+lx_print lx_print_c;
+lx_print lx_print_h;
+lx_print lx_print_dot;
+lx_print lx_print_dump;
+lx_print lx_print_zdot;
 
 #endif
 

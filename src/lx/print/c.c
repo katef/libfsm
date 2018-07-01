@@ -7,25 +7,25 @@
 #include <assert.h>
 #include <stdio.h>
 #include <errno.h>
-#include <ctype.h>
 
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
-#include "libfsm/internal.h" /* XXX */
-#include "libfsm/out.h" /* XXX */
+#include <print/esc.h>
 
-#include "lx/out.h"
+#include "libfsm/internal.h" /* XXX */
+
 #include "lx/ast.h"
+#include "lx/print.h"
 
 /* XXX: abstraction */
 int
-fsm_out_cfrag(const struct fsm *fsm, FILE *f,
+fsm_print_cfrag(FILE *f, const struct fsm *fsm,
 	const char *cp,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
 	const void *opaque);
@@ -51,89 +51,6 @@ skip(const struct fsm *fsm, const struct fsm_state *state)
 	}
 
 	return 0;
-}
-
-/* TODO: centralise */
-static int
-escputc(int c, FILE *f)
-{
-	size_t i;
-
-	const struct {
-		int c;
-		const char *s;
-	} a[] = {
-		{ '\\', "\\\\" },
-		{ '\"', "\\\"" },
-		{ '\'', "\\\'" },
-
-		{ '\a', "\\a"  },
-		{ '\b', "\\b"  },
-		{ '\f', "\\f"  },
-		{ '\n', "\\n"  },
-		{ '\r', "\\r"  },
-		{ '\t', "\\t"  },
-		{ '\v', "\\v"  }
-	};
-
-	assert(c != FSM_EDGE_EPSILON);
-	assert(f != NULL);
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].c == c) {
-			return fputs(a[i].s, f);
-		}
-	}
-
-	/*
-	 * Escaping '/' here is a lazy way to avoid keeping state when
-	 * emitting '*', '/', since this is used to output example strings
-	 * inside comments.
-	 */
-
-	if (!isprint((unsigned char) c) || c == '/') {
-		return fprintf(f, "\\x%02x", (unsigned char) c);
-	}
-
-	return fprintf(f, "%c", c);
-}
-
-/* TODO: centralise, maybe with callback */
-static int
-escputs(FILE *f, const char *s)
-{
-	const char *p;
-	int r, n;
-
-	assert(f != NULL);
-	assert(s != NULL);
-
-	n = 0;
-
-	for (p = s; *p != '\0'; p++) {
-		r = escputc(*p, f);
-		if (r == -1) {
-			return -1;
-		}
-
-		n += r;
-	}
-
-	return n;
-}
-
-/* TODO: centralise */
-static void
-esctok(FILE *f, const char *s)
-{
-	const char *p;
-
-	assert(f != NULL);
-	assert(s != NULL);
-
-	for (p = s; *p != '\0'; p++) {
-		fputc(isalnum(*p) ? toupper(*p) : '_', f);
-	}
 }
 
 /* TODO: centralise with libfsm */
@@ -280,7 +197,7 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 }
 
 static void
-out_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
+print_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
 	assert(f != NULL);
 	assert(ast != NULL);
@@ -291,7 +208,7 @@ out_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 static void
-out_lgetc(FILE *f)
+print_lgetc(FILE *f)
 {
 	if (api_getc & API_FGETC) {
 		if (print_progress) {
@@ -415,7 +332,7 @@ out_lgetc(FILE *f)
 }
 
 static void
-out_io(FILE *f)
+print_io(FILE *f)
 {
 	if (print_progress) {
 		fprintf(stderr, " io");
@@ -534,7 +451,7 @@ out_io(FILE *f)
 }
 
 static void
-out_buf(FILE *f)
+print_buf(FILE *f)
 {
 	if (api_tokbuf & API_DYNBUF) {
 		if (print_progress) {
@@ -666,7 +583,7 @@ out_buf(FILE *f)
 }
 
 static void
-out_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
+print_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 {
 	struct fsm_state *s;
 	int i;
@@ -691,7 +608,7 @@ out_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 
 
 static int
-out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
+print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
 	assert(f != NULL);
 	assert(z != NULL);
@@ -707,7 +624,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tint c;\n");
 	fprintf(f, "\n");
 
-	out_stateenum(f, z->fsm, z->fsm->sl);
+	print_stateenum(f, z->fsm, z->fsm->sl);
 	fprintf(f, "\n");
 
 	fprintf(f, "\tassert(lx != NULL);\n");
@@ -765,7 +682,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		assert(opt.cp != NULL);
 
 		/* XXX: abstraction */
-		(void) fsm_out_cfrag(z->fsm, f, opt.cp,
+		(void) fsm_print_cfrag(f, z->fsm, opt.cp,
 			z->fsm->opt->leaf != NULL ? z->fsm->opt->leaf : leaf, z->fsm->opt->leaf_opaque);
 
 		z->fsm->opt = tmp;
@@ -901,7 +818,7 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 static void
-out_name(FILE *f, const struct ast *ast)
+print_name(FILE *f, const struct ast *ast)
 {
 	struct ast_token *t;
 
@@ -939,7 +856,7 @@ out_name(FILE *f, const struct ast *ast)
 }
 
 static int
-out_example(FILE *f, const struct ast *ast)
+print_example(FILE *f, const struct ast *ast)
 {
 	struct ast_token *t;
 	struct ast_zone *z;
@@ -987,7 +904,7 @@ out_example(FILE *f, const struct ast *ast)
 			fprintf(f, "\t\tcase %s", prefix.tok);
 			esctok(f, t->s);
 			fprintf(f, ": return \"");
-			escputs(f, buf);
+			escputs(f, z->fsm->opt, c_escputc_str, buf);
 			fprintf(f, "%s", n >= (int) sizeof buf - 1 ? "..." : "");
 			fprintf(f, "\";\n");
 		}
@@ -1012,12 +929,13 @@ out_example(FILE *f, const struct ast *ast)
 }
 
 void
-lx_out_c(const struct ast *ast, FILE *f)
+lx_print_c(FILE *f, const struct ast *ast)
 {
 	const struct ast_zone *z;
 	unsigned int zn;
 
 	assert(f != NULL);
+	assert(ast != NULL);
 
 	switch (opt.io) {
 	case FSM_IO_GETC: opt.cp = "c"; break;
@@ -1054,15 +972,15 @@ lx_out_c(const struct ast *ast, FILE *f)
 	fprintf(f, "\n");
 
 	for (z = ast->zl; z != NULL; z = z->next) {
-		out_proto(f, ast, z);
+		print_proto(f, ast, z);
 	}
 
 	fprintf(f, "\n");
 
-	out_io(f);
-	out_lgetc(f);
+	print_io(f);
+	print_lgetc(f);
 
-	out_buf(f);
+	print_buf(f);
 
 	if (print_progress) {
 		zn = 0;
@@ -1076,17 +994,17 @@ lx_out_c(const struct ast *ast, FILE *f)
 			zn++;
 		}
 
-		if (-1 == out_zone(f, ast, z)) {
+		if (-1 == print_zone(f, ast, z)) {
 			return; /* XXX: handle error */
 		}
 	}
 
 	if (~api_exclude & API_NAME) {
-		out_name(f, ast);
+		print_name(f, ast);
 	}
 
 	if (~api_exclude & API_EXAMPLE) {
-		if (-1 == out_example(f, ast)) {
+		if (-1 == print_example(f, ast)) {
 			return;
 		}
 	}

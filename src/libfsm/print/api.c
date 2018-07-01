@@ -4,11 +4,13 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include <ctype.h>
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
+
+#include <print/esc.h>
 
 #include <adt/set.h>
 #include <adt/bitmap.h>
@@ -16,12 +18,10 @@
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include "libfsm/internal.h"
-
-#include "libfsm/out.h"
 
 static int
 rangeclass(unsigned char x, unsigned char y)
@@ -57,74 +57,16 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	return 0;
 }
 
-static int
-escputc(const struct fsm_options *opt, int c, FILE *f)
-{
-	size_t i;
-
-	const struct {
-		int c;
-		const char *s;
-	} a[] = {
-		{ '\\', "\\\\" },
-		{ '\"', "\\\"" },
-		{ '\'', "\\\'" },
-
-		{ '\f', "\\f"  },
-		{ '\n', "\\n"  },
-		{ '\r', "\\r"  },
-		{ '\t', "\\t"  },
-		{ '\v', "\\v"  }
-	};
-
-	assert(opt != NULL);
-	assert(c != FSM_EDGE_EPSILON);
-	assert(f != NULL);
-
-	if (opt->always_hex) {
-		return fprintf(f, "\\x%02x", (unsigned char) c);
-	}
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].c == c) {
-			return fputs(a[i].s, f);
-		}
-	}
-
-	if (!isprint((unsigned char) c)) {
-		return fprintf(f, "\\%03o", (unsigned char) c);
-	}
-
-	return fprintf(f, "%c", c);
-}
-
-/* TODO: centralise */
-static void
-escputchar(const struct fsm_options *opt, int c, FILE *f)
-{
-	assert(opt != NULL);
-	assert(f != NULL);
-
-	if (opt->always_hex || c > SCHAR_MAX) {
-		fprintf(f, "0x%02x", (unsigned char) c);
-		return;
-	}
-
-	fprintf(f, "'");
-	escputc(opt, c, f);
-	fprintf(f, "'");
-}
-
 void
-fsm_out_api(const struct fsm *fsm, FILE *f)
+fsm_print_api(FILE *f, const struct fsm *fsm)
 {
 	struct fsm_state *s, *start;
 	struct bm *a; /* indexed by "to" state number */
 	unsigned n;
 
+	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
-	assert(f != NULL);
 
 /* TODO: leaf callback for opaques */
 
@@ -232,7 +174,7 @@ fsm_out_api(const struct fsm *fsm, FILE *f)
 				} else if (lo == hi - 1) {
 					fprintf(f, "\tif (!fsm_addedge_literal(fsm, s[%u], s[%u], ",
 						from, to);
-					escputchar(fsm->opt, lo, f);
+					c_escputcharlit(f, fsm->opt, lo);
 					fprintf(f, ")) { goto error; }\n");
 				} else {
 					fprintf(f, "\tfor (i = 0x%02x; i <= 0x%02x; i++) {",

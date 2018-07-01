@@ -17,7 +17,7 @@
 #include <errno.h>
 
 #include <fsm/fsm.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 static struct fsm_options opt;
@@ -122,7 +122,7 @@ main(int argc, char *argv[])
 {
 	struct fsm *fsm;
 	struct fsm_state *start;
-	enum fsm_out lang;
+	fsm_print *print;
 
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
@@ -130,7 +130,7 @@ main(int argc, char *argv[])
 	opt.comments          = 0;
 	opt.case_ranges       = 0;
 
-	lang = FSM_OUT_API;
+	print = fsm_print_api;
 
 	{
 		int c;
@@ -141,11 +141,11 @@ main(int argc, char *argv[])
 
 			case 'l':
 				if (strcmp(optarg, "dot") == 0) {
-					lang = FSM_OUT_DOT;
+					print = fsm_print_dot;
 				} else if (strcmp(optarg, "api") == 0) {
-					lang = FSM_OUT_API;
+					print = fsm_print_api;
 				} else if (strcmp(optarg, "c") == 0) {
-					lang = FSM_OUT_C;
+					print = fsm_print_c;
 				} else {
 					fprintf(stderr, "Invalid language '%s'", optarg);
 					exit(1);
@@ -223,7 +223,7 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	fsm_print(fsm, stdout, lang);
+	print(stdout, fsm);
 
 	fsm_free(fsm);
 

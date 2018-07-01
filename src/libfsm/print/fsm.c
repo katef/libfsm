@@ -4,22 +4,21 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include <ctype.h>
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>
+
+#include <print/esc.h>
 
 #include <adt/set.h>
 #include <adt/bitmap.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include "libfsm/internal.h"
-
-#include "libfsm/out.h"
 
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)
@@ -38,71 +37,6 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 
 	assert(!"unreached");
 	return 0;
-}
-
-static int
-escputc(const struct fsm_options *opt, int c, FILE *f)
-{
-	size_t i;
-
-	const struct {
-		int c;
-		const char *s;
-	} a[] = {
-		{ '\\', "\\\\" },
-		{ '\"', "\\\"" },
-
-		{ '\f', "\\f"  },
-		{ '\n', "\\n"  },
-		{ '\r', "\\r"  },
-		{ '\t', "\\t"  },
-		{ '\v', "\\v"  }
-	};
-
-	assert(opt != NULL);
-	assert(c != FSM_EDGE_EPSILON);
-	assert(f != NULL);
-
-	if (opt->always_hex) {
-		return fprintf(f, "\\x%02x", (unsigned char) c);
-	}
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].c == c) {
-			return fputs(a[i].s, f);
-		}
-	}
-
-	if (!isprint((unsigned char) c)) {
-		return fprintf(f, "\\x%02x", (unsigned char) c);
-	}
-
-	return fprintf(f, "%c", c);
-}
-
-/* TODO: centralise, maybe with callback */
-static int
-escputs(const struct fsm_options *opt, FILE *f, const char *s)
-{
-	const char *p;
-	int r, n;
-
-	assert(opt != NULL);
-	assert(f != NULL);
-	assert(s != NULL);
-
-	n = 0;
-
-	for (p = s; *p != '\0'; p++) {
-		r = escputc(opt, *p, f);
-		if (r == -1) {
-			return -1;
-		}
-
-		n += r;
-	}
-
-	return n;
 }
 
 /* TODO: centralise */
@@ -161,13 +95,13 @@ findany(const struct fsm_state *state)
 }
 
 void
-fsm_out_fsm(const struct fsm *fsm, FILE *f)
+fsm_print_fsm(FILE *f, const struct fsm *fsm)
 {
 	struct fsm_state *s, *start;
 	int end;
 
-	assert(fsm != NULL);
 	assert(f != NULL);
+	assert(fsm != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		struct fsm_edge *e;
@@ -200,7 +134,7 @@ fsm_out_fsm(const struct fsm *fsm, FILE *f)
 
 				default:
 					fputs(" \"", f);
-					escputc(fsm->opt, e->symbol, f);
+					fsm_escputc(f, fsm->opt, e->symbol);
 					putc('\"', f);
 					break;
 				}
@@ -221,7 +155,7 @@ fsm_out_fsm(const struct fsm *fsm, FILE *f)
 						}
 
 						fprintf(f, " # e.g. \"");
-						escputs(fsm->opt, f, buf);
+						escputs(f, fsm->opt, fsm_escputc, buf);
 						fprintf(f, "%s\"",
 							n >= (int) sizeof buf - 1 ? "..." : "");
 					}

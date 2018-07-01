@@ -7,8 +7,16 @@
 #ifndef FSM_OPTIONS_H
 #define FSM_OPTIONS_H
 
+#include <stdio.h>
+
 struct fsm;
 struct fsm_state;
+
+enum fsm_io {
+	FSM_IO_GETC,
+	FSM_IO_STR,
+	FSM_IO_PAIR
+};
 
 struct fsm_options {
 	/* boolean: true indicates to go to extra lengths in order to produce

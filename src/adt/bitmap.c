@@ -11,6 +11,8 @@
 
 #include "../libfsm/internal.h" /* XXX */
 
+#include <print/esc.h>
+
 #include <adt/bitmap.h>
 
 int
@@ -95,9 +97,9 @@ bm_invert(struct bm *bm)
 }
 
 int
-bm_print(FILE *f, const struct bm *bm,
+bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 	int boxed,
-	int (*escputc)(int c, FILE *f))
+	escputc *escputc)
 {
 	unsigned int count;
 	int hi, lo;
@@ -161,7 +163,7 @@ bm_print(FILE *f, const struct bm *bm,
 		}
 
 		if (!isalnum((unsigned char) lo) && isalnum((unsigned char) hi)) {
-			r = escputc(lo, f);
+			r = escputc(f, opt, lo);
 			if (r == -1) {
 				return -1;
 			}
@@ -203,7 +205,7 @@ bm_print(FILE *f, const struct bm *bm,
 		case 1:
 		case 2:
 		case 3:
-			r = escputc(lo, f);
+			r = escputc(f, opt, lo);
 			if (r == -1) {
 				return -1;
 			}
@@ -213,7 +215,7 @@ bm_print(FILE *f, const struct bm *bm,
 			break;
 
 		default:
-			r = escputc(lo, f);
+			r = escputc(f, opt, lo);
 			if (r == -1) {
 				return -1;
 			}
@@ -225,7 +227,7 @@ bm_print(FILE *f, const struct bm *bm,
 			}
 			n += 1;
 
-			r = escputc(hi - 1, f);
+			r = escputc(f, opt, hi - 1);
 			if (r == -1) {
 				return -1;
 			}
@@ -244,9 +246,10 @@ bm_print(FILE *f, const struct bm *bm,
 }
 
 int
-bm_snprint(const struct bm *bm, char *s, size_t n,
+bm_snprint(const struct bm *bm, const struct fsm_options *opt,
+	char *s, size_t n,
 	int boxed,
-	int (*escputc)(int c, FILE *f))
+	escputc *escputc)
 {
 	FILE *f;
 	int r;
@@ -275,7 +278,7 @@ bm_snprint(const struct bm *bm, char *s, size_t n,
 		return -1;
 	}
 
-	r = bm_print(f, bm, boxed, escputc);
+	r = bm_print(f, opt, bm, boxed, escputc);
 	if (r == -1) {
 		goto error;
 	}

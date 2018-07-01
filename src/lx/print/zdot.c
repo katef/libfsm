@@ -6,17 +6,18 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <ctype.h>
 
 #include <adt/set.h>
 
-#include <fsm/out.h>
 #include <fsm/pred.h>
+#include <fsm/print.h>
+
+#include <print/esc.h>
 
 #include "libfsm/internal.h" /* XXX */
 
-#include "lx/out.h"
 #include "lx/ast.h"
+#include "lx/print.h"
 
 /* TODO: centralise */
 static unsigned int
@@ -39,7 +40,7 @@ zindexof(const struct ast *ast, const struct ast_zone *zone)
 }
 
 static void
-out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
+print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
 	struct fsm_state *s;
 
@@ -67,12 +68,13 @@ out_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 void
-lx_out_zdot(const struct ast *ast, FILE *f)
+lx_print_zdot(FILE *f, const struct ast *ast)
 {
 	const struct ast_zone *z;
 	unsigned int zn;
 
 	assert(f != NULL);
+	assert(ast != NULL);
 
 	fprintf(f, "digraph %sG {\n", prefix.api);
 	fprintf(f, "\trankdir = TB;\n");
@@ -94,7 +96,7 @@ lx_out_zdot(const struct ast *ast, FILE *f)
 
 		fprintf(f, "\tz%u;\n", zindexof(ast, z));
 
-		out_zone(f, ast, z);
+		print_zone(f, ast, z);
 	}
 
 	fprintf(f, "}\n");

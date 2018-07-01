@@ -8,16 +8,13 @@
 #include <stdio.h>
 
 #include <fsm/fsm.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
-#include "fsm/out.h"
-
-#include "lx/ast.h"
-#include "lx/out.h"
+#include "lx/print.h"
 
 static void
-out_dump(FILE *f)
+print_dump(FILE *f)
 {
 	assert(f != NULL);
 
@@ -295,10 +292,13 @@ out_dump(FILE *f)
 }
 
 void
-lx_out_dump(const struct ast *ast, FILE *f)
+lx_print_dump(FILE *f, const struct ast *ast)
 {
+	assert(f != NULL);
+	assert(ast != NULL);
+
 	(void) ast;
 
-	out_dump(f);
+	print_dump(f);
 }
 

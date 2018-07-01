@@ -6,20 +6,19 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <ctype.h>
 #include <limits.h>
 
 #include "libfsm/internal.h" /* XXX: up here for bitmap.h */
+
+#include <print/esc.h>
 
 #include <adt/set.h>
 #include <adt/bitmap.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
-
-#include "libfsm/out.h"
 
 static unsigned
 indexof(const struct fsm *fsm, const struct fsm_state *state)
@@ -38,52 +37,6 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 
 	assert(!"unreached");
 	return 0;
-}
-
-static int
-escputc_hex(int c, FILE *f)
-{
-	assert(f != NULL);
-
-	if (c == FSM_EDGE_EPSILON) {
-		return fputs("&#x3B5;", f);
-	}
-
-	return fprintf(f, "\\x%02x", (unsigned char) c); /* for humans */
-}
-
-static int
-escputc(int c, FILE *f)
-{
-	size_t i;
-
-	const struct {
-		int c;
-		const char *s;
-	} a[] = {
-		{ FSM_EDGE_EPSILON, "&#x3B5;" },
-
-		{ '&',  "&amp;"    },
-		{ '\"', "&quot;"   },
-		{ ']',  "&#x5D;"   }, /* yes, even in a HTML label */
-		{ '<',  "&#x3C;"   },
-		{ '>',  "&#x3E;"   },
-		{ ' ',  "&#x2423;" }
-	};
-
-	assert(f != NULL);
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].c == c) {
-			return fputs(a[i].s, f);
-		}
-	}
-
-	if (!isprint((unsigned char) c)) {
-		return fprintf(f, "\\x%02x", (unsigned char) c); /* for humans */
-	}
-
-	return fprintf(f, "%c", c);
 }
 
 /* Return true if the edges after o contains state */
@@ -112,14 +65,14 @@ contains(struct set *edges, int o, struct fsm_state *state)
 }
 
 static void
-singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
+singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 {
 	struct fsm_edge *e, search;
 	struct set_iter it;
 
+	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
-	assert(f != NULL);
 	assert(s != NULL);
 
 	if (!fsm->opt->anonymous_states) {
@@ -168,11 +121,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 					indexof(fsm, st));
 
-				if (fsm->opt->always_hex) {
-					escputc_hex(e->symbol, f);
-				} else {
-					escputc(e->symbol, f);
-				}
+				dot_escputc_html(f, fsm->opt, e->symbol);
 
 				fprintf(f, "> ];\n");
 			}
@@ -236,8 +185,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 
 			fprintf(f, "label = <");
 
-			(void) bm_print(f, &bm, 0,
-				fsm->opt->always_hex ? escputc_hex: escputc);
+			(void) bm_print(f, fsm->opt, &bm, 0, dot_escputc_html);
 
 			fprintf(f, "> ];\n");
 		}
@@ -258,11 +206,7 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, st));
 
-			if (fsm->opt->always_hex) {
-				escputc_hex(e->symbol, f);
-			} else {
-				escputc(e->symbol, f);
-			}
+			dot_escputc_html(f, fsm->opt, e->symbol);
 
 			fprintf(f, "> ];\n");
 		}
@@ -270,16 +214,16 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 }
 
 static void
-out_dotfrag(const struct fsm *fsm, FILE *f)
+print_dotfrag(FILE *f, const struct fsm *fsm)
 {
 	struct fsm_state *s;
 
+	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
-	assert(f != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		singlestate(fsm, f, s);
+		singlestate(f, fsm, s);
 
 		if (fsm_isend(fsm, s)) {
 			fprintf(f, "\t%sS%-2u [ shape = doublecircle ];\n",
@@ -290,16 +234,16 @@ out_dotfrag(const struct fsm *fsm, FILE *f)
 }
 
 void
-fsm_out_dot(const struct fsm *fsm, FILE *f)
+fsm_print_dot(FILE *f, const struct fsm *fsm)
 {
 	struct fsm_state *start;
 
+	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
-	assert(f != NULL);
 
 	if (fsm->opt->fragment) {
-		out_dotfrag(fsm, f);
+		print_dotfrag(f, fsm);
 		return;
 	}
 
@@ -325,7 +269,7 @@ fsm_out_dot(const struct fsm *fsm, FILE *f)
 
 	fprintf(f, "\n");
 
-	out_dotfrag(fsm, f);
+	print_dotfrag(f, fsm);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
