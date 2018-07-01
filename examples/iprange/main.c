@@ -40,10 +40,9 @@
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
-#include <fsm/out.h>
 #include <fsm/options.h>
 #include <fsm/pred.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 
 #include "tree.h"
 
@@ -682,9 +681,9 @@ main(int argc, char **argv)
 		opt.cp          = "c";
 		opt.leaf        = leaf;
 		opt.leaf_opaque = NULL;
-		fsm_print(fsm, stdout, FSM_OUT_C);
+		fsm_print_c(stdout, fsm);
 	} else if (odot) {
-		fsm_print(fsm, stdout, FSM_OUT_DOT);
+		fsm_print_dot(stdout, fsm);
 	}
 }
 
