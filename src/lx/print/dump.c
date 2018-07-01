@@ -292,8 +292,11 @@ print_dump(FILE *f)
 }
 
 void
-lx_print_dump(const struct ast *ast, FILE *f)
+lx_print_dump(FILE *f, const struct ast *ast)
 {
+	assert(f != NULL);
+	assert(ast != NULL);
+
 	(void) ast;
 
 	print_dump(f);

@@ -48,7 +48,7 @@ extern enum api_exclude api_exclude;
 
 extern struct fsm_options opt;
 
-typedef void (lx_print)(const struct ast *ast, FILE *f);
+typedef void (lx_print)(FILE *f, const struct ast *ast);
 
 lx_print lx_print_c;
 lx_print lx_print_h;

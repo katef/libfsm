@@ -864,7 +864,7 @@ main(int argc, char *argv[])
 		}
 
 		if (print != NULL) {
-			print(ast, stdout);
+			print(stdout, ast);
 		}
 
 		if (print_progress) {

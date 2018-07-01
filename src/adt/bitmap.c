@@ -97,7 +97,7 @@ bm_invert(struct bm *bm)
 int
 bm_print(FILE *f, const struct bm *bm,
 	int boxed,
-	int (*escputc)(int c, FILE *f))
+	int (*escputc)(FILE *f, int c))
 {
 	unsigned int count;
 	int hi, lo;
@@ -161,7 +161,7 @@ bm_print(FILE *f, const struct bm *bm,
 		}
 
 		if (!isalnum((unsigned char) lo) && isalnum((unsigned char) hi)) {
-			r = escputc(lo, f);
+			r = escputc(f, lo);
 			if (r == -1) {
 				return -1;
 			}
@@ -203,7 +203,7 @@ bm_print(FILE *f, const struct bm *bm,
 		case 1:
 		case 2:
 		case 3:
-			r = escputc(lo, f);
+			r = escputc(f, lo);
 			if (r == -1) {
 				return -1;
 			}
@@ -213,7 +213,7 @@ bm_print(FILE *f, const struct bm *bm,
 			break;
 
 		default:
-			r = escputc(lo, f);
+			r = escputc(f, lo);
 			if (r == -1) {
 				return -1;
 			}
@@ -225,7 +225,7 @@ bm_print(FILE *f, const struct bm *bm,
 			}
 			n += 1;
 
-			r = escputc(hi - 1, f);
+			r = escputc(f, hi - 1);
 			if (r == -1) {
 				return -1;
 			}
@@ -246,7 +246,7 @@ bm_print(FILE *f, const struct bm *bm,
 int
 bm_snprint(const struct bm *bm, char *s, size_t n,
 	int boxed,
-	int (*escputc)(int c, FILE *f))
+	int (*escputc)(FILE *f, int c))
 {
 	FILE *f;
 	int r;

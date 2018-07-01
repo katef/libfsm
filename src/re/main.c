@@ -742,7 +742,7 @@ main(int argc, char *argv[])
 			opt.endleaf = endleaf;
 		}
 
-		print(fsm, stdout);
+		print(stdout, fsm);
 
 /* XXX: free fsm */
 

@@ -42,7 +42,7 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 
 /* TODO: centralise */
 static int
-escputc(const struct fsm_options *opt, int c, FILE *f)
+escputc(FILE *f, const struct fsm_options *opt, int c)
 {
 	size_t i;
 
@@ -62,9 +62,9 @@ escputc(const struct fsm_options *opt, int c, FILE *f)
 		{ '\v', "\\v"  }
 	};
 
+	assert(f != NULL);
 	assert(opt != NULL);
 	assert(c != FSM_EDGE_EPSILON);
-	assert(f != NULL);
 
 	if (opt->always_hex) {
 		return fprintf(f, "\\x%02x", (unsigned char) c);
@@ -91,10 +91,10 @@ escputc(const struct fsm_options *opt, int c, FILE *f)
 
 /* TODO: centralise */
 static void
-escputchar(const struct fsm_options *opt, int c, FILE *f)
+escputchar(FILE *f, const struct fsm_options *opt, int c)
 {
-	assert(opt != NULL);
 	assert(f != NULL);
+	assert(opt != NULL);
 
 	if (opt->always_hex || c > SCHAR_MAX) {
 		fprintf(f, "0x%02x", (unsigned char) c);
@@ -102,25 +102,25 @@ escputchar(const struct fsm_options *opt, int c, FILE *f)
 	}
 
 	fprintf(f, "'");
-	escputc(opt, c, f);
+	escputc(f, opt, c);
 	fprintf(f, "'");
 }
 
 /* TODO: centralise, maybe with callback */
 static int
-escputs(const struct fsm_options *opt, FILE *f, const char *s)
+escputs(FILE *f, const struct fsm_options *opt, const char *s)
 {
 	const char *p;
 	int r, n;
 
-	assert(opt != NULL);
 	assert(f != NULL);
+	assert(opt != NULL);
 	assert(s != NULL);
 
 	n = 0;
 
 	for (p = s; *p != '\0'; p++) {
-		r = escputc(opt, *p, f);
+		r = escputc(f, opt, *p);
 		if (r == -1) {
 			return -1;
 		}
@@ -135,8 +135,8 @@ static int
 leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 	const void *opaque)
 {
-	assert(fsm != NULL);
 	assert(f != NULL);
+	assert(fsm != NULL);
 	assert(state != NULL);
 	assert(opaque == NULL);
 
@@ -159,10 +159,10 @@ singlecase(FILE *f, const struct fsm *fsm,
 		unsigned int freq;
 	} mode;
 
+	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 	assert(cp != NULL);
-	assert(f != NULL);
 	assert(state != NULL);
 	assert(leaf != NULL);
 
@@ -222,7 +222,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 			}
 
 			fprintf(f, "\t\t\tcase ");
-			escputchar(fsm->opt, e->symbol, f);
+			escputchar(f, fsm->opt, e->symbol);
 
 			if (fsm->opt->case_ranges) {
 				const struct fsm_edge *ne;
@@ -240,7 +240,7 @@ singlecase(FILE *f, const struct fsm *fsm,
 
 				if (q - p) {
 					fprintf(f, " ... ");
-					escputchar(fsm->opt, q, f);
+					escputchar(f, fsm->opt, q);
 					it = ir;
 				}
 			}
@@ -299,6 +299,9 @@ print_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 	struct fsm_state *s;
 	int i;
 
+	assert(f != NULL);
+	assert(fsm != NULL);
+
 	fprintf(f, "\tenum {\n");
 	fprintf(f, "\t\t");
 
@@ -322,6 +325,9 @@ static void
 endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 {
 	struct fsm_state *s;
+
+	assert(f != NULL);
+	assert(fsm != NULL);
 
 	/* no end states */
 	if (!fsm_has(fsm, fsm_isend)) {
@@ -350,17 +356,17 @@ endstates(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 }
 
 int
-fsm_print_cfrag(const struct fsm *fsm, FILE *f,
+fsm_print_cfrag(FILE *f, const struct fsm *fsm,
 	const char *cp,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
 	const void *opaque)
 {
 	struct fsm_state *s;
 
+	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 	assert(fsm_all(fsm, fsm_isdfa));
-	assert(f != NULL);
 	assert(cp != NULL);
 
 	/* TODO: prerequisite that the FSM is a DFA */
@@ -384,7 +390,7 @@ fsm_print_cfrag(const struct fsm *fsm, FILE *f,
 				}
 
 				fprintf(f, " /* e.g. \"");
-				escputs(fsm->opt, f, buf);
+				escputs(f, fsm->opt, buf);
 				fprintf(f, "%s\" */",
 					n >= (int) sizeof buf - 1 ? "..." : "");
 			}
@@ -403,14 +409,14 @@ fsm_print_cfrag(const struct fsm *fsm, FILE *f,
 }
 
 static void
-fsm_print_c_complete(const struct fsm *fsm, FILE *f)
+fsm_print_c_complete(FILE *f, const struct fsm *fsm)
 {
 	const char *cp;
 
+	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 	assert(fsm_all(fsm, fsm_isdfa));
-	assert(f != NULL);
 
 	if (fsm->opt->cp != NULL) {
 		cp = fsm->opt->cp;
@@ -445,7 +451,7 @@ fsm_print_c_complete(const struct fsm *fsm, FILE *f)
 		break;
 	}
 
-	(void) fsm_print_cfrag(fsm, f, cp,
+	(void) fsm_print_cfrag(f, fsm, cp,
 		fsm->opt->leaf != NULL ? fsm->opt->leaf : leaf, fsm->opt->leaf_opaque);
 
 	fprintf(f, "\t}\n");
@@ -456,13 +462,13 @@ fsm_print_c_complete(const struct fsm *fsm, FILE *f)
 }
 
 void
-fsm_print_c(const struct fsm *fsm, FILE *f)
+fsm_print_c(FILE *f, const struct fsm *fsm)
 {
 	const char *prefix;
 
+	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
-	assert(f != NULL);
 
 	if (!fsm_all(fsm, fsm_isdfa)) {
 		errno = EINVAL;
@@ -477,7 +483,7 @@ fsm_print_c(const struct fsm *fsm, FILE *f)
 	}
 
 	if (fsm->opt->fragment) {
-		fsm_print_c_complete(fsm, f);
+		fsm_print_c_complete(f, fsm);
 		return;
 	}
 
@@ -518,7 +524,7 @@ fsm_print_c(const struct fsm *fsm, FILE *f)
 		break;
 	}
 
-	fsm_print_c_complete(fsm, f);
+	fsm_print_c_complete(f, fsm);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

@@ -28,7 +28,7 @@ struct fsm;
  * TODO: explain constraints
  */
 
-typedef void (fsm_print)(const struct fsm *fsm, FILE *f);
+typedef void (fsm_print)(FILE *f, const struct fsm *fsm);
 
 fsm_print fsm_print_api;
 fsm_print fsm_print_c;

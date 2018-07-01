@@ -56,7 +56,7 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 }
 
 static int
-escputc(const struct fsm_options *opt, int c, FILE *f)
+escputc(FILE *f, const struct fsm_options *opt, int c)
 {
 	size_t i;
 
@@ -75,9 +75,9 @@ escputc(const struct fsm_options *opt, int c, FILE *f)
 		{ '\v', "\\v"  }
 	};
 
+	assert(f != NULL);
 	assert(opt != NULL);
 	assert(c != FSM_EDGE_EPSILON);
-	assert(f != NULL);
 
 	if (opt->always_hex) {
 		return fprintf(f, "\\x%02x", (unsigned char) c);
@@ -98,10 +98,10 @@ escputc(const struct fsm_options *opt, int c, FILE *f)
 
 /* TODO: centralise */
 static void
-escputchar(const struct fsm_options *opt, int c, FILE *f)
+escputchar(FILE *f, const struct fsm_options *opt, int c)
 {
-	assert(opt != NULL);
 	assert(f != NULL);
+	assert(opt != NULL);
 
 	if (opt->always_hex || c > SCHAR_MAX) {
 		fprintf(f, "0x%02x", (unsigned char) c);
@@ -109,20 +109,20 @@ escputchar(const struct fsm_options *opt, int c, FILE *f)
 	}
 
 	fprintf(f, "'");
-	escputc(opt, c, f);
+	escputc(f, opt, c);
 	fprintf(f, "'");
 }
 
 void
-fsm_print_api(const struct fsm *fsm, FILE *f)
+fsm_print_api(FILE *f, const struct fsm *fsm)
 {
 	struct fsm_state *s, *start;
 	struct bm *a; /* indexed by "to" state number */
 	unsigned n;
 
+	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
-	assert(f != NULL);
 
 /* TODO: leaf callback for opaques */
 
@@ -230,7 +230,7 @@ fsm_print_api(const struct fsm *fsm, FILE *f)
 				} else if (lo == hi - 1) {
 					fprintf(f, "\tif (!fsm_addedge_literal(fsm, s[%u], s[%u], ",
 						from, to);
-					escputchar(fsm->opt, lo, f);
+					escputchar(f, fsm->opt, lo);
 					fprintf(f, ")) { goto error; }\n");
 				} else {
 					fprintf(f, "\tfor (i = 0x%02x; i <= 0x%02x; i++) {",

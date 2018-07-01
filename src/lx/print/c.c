@@ -24,7 +24,7 @@
 
 /* XXX: abstraction */
 int
-fsm_print_cfrag(const struct fsm *fsm, FILE *f,
+fsm_print_cfrag(FILE *f, const struct fsm *fsm,
 	const char *cp,
 	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
 	const void *opaque);
@@ -54,7 +54,7 @@ skip(const struct fsm *fsm, const struct fsm_state *state)
 
 /* TODO: centralise */
 static int
-escputc(int c, FILE *f)
+escputc(FILE *f, int c)
 {
 	size_t i;
 
@@ -75,8 +75,8 @@ escputc(int c, FILE *f)
 		{ '\v', "\\v"  }
 	};
 
-	assert(c != FSM_EDGE_EPSILON);
 	assert(f != NULL);
+	assert(c != FSM_EDGE_EPSILON);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (a[i].c == c) {
@@ -110,7 +110,7 @@ escputs(FILE *f, const char *s)
 	n = 0;
 
 	for (p = s; *p != '\0'; p++) {
-		r = escputc(*p, f);
+		r = escputc(f, *p);
 		if (r == -1) {
 			return -1;
 		}
@@ -764,7 +764,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		assert(opt.cp != NULL);
 
 		/* XXX: abstraction */
-		(void) fsm_print_cfrag(z->fsm, f, opt.cp,
+		(void) fsm_print_cfrag(f, z->fsm, opt.cp,
 			z->fsm->opt->leaf != NULL ? z->fsm->opt->leaf : leaf, z->fsm->opt->leaf_opaque);
 
 		z->fsm->opt = tmp;
@@ -1011,12 +1011,13 @@ print_example(FILE *f, const struct ast *ast)
 }
 
 void
-lx_print_c(const struct ast *ast, FILE *f)
+lx_print_c(FILE *f, const struct ast *ast)
 {
 	const struct ast_zone *z;
 	unsigned int zn;
 
 	assert(f != NULL);
+	assert(ast != NULL);
 
 	switch (opt.io) {
 	case FSM_IO_GETC: opt.cp = "c"; break;

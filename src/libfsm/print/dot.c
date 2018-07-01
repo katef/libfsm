@@ -39,7 +39,7 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 }
 
 static int
-escputc_hex(int c, FILE *f)
+escputc_hex(FILE *f, int c)
 {
 	assert(f != NULL);
 
@@ -51,7 +51,7 @@ escputc_hex(int c, FILE *f)
 }
 
 static int
-escputc(int c, FILE *f)
+escputc(FILE *f, int c)
 {
 	size_t i;
 
@@ -110,14 +110,14 @@ contains(struct set *edges, int o, struct fsm_state *state)
 }
 
 static void
-singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
+singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 {
 	struct fsm_edge *e, search;
 	struct set_iter it;
 
+	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
-	assert(f != NULL);
 	assert(s != NULL);
 
 	if (!fsm->opt->anonymous_states) {
@@ -167,9 +167,9 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 					indexof(fsm, st));
 
 				if (fsm->opt->always_hex) {
-					escputc_hex(e->symbol, f);
+					escputc_hex(f, e->symbol);
 				} else {
-					escputc(e->symbol, f);
+					escputc(f, e->symbol);
 				}
 
 				fprintf(f, "> ];\n");
@@ -257,9 +257,9 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 				indexof(fsm, st));
 
 			if (fsm->opt->always_hex) {
-				escputc_hex(e->symbol, f);
+				escputc_hex(f, e->symbol);
 			} else {
-				escputc(e->symbol, f);
+				escputc(f, e->symbol);
 			}
 
 			fprintf(f, "> ];\n");
@@ -268,16 +268,16 @@ singlestate(const struct fsm *fsm, FILE *f, struct fsm_state *s)
 }
 
 static void
-print_dotfrag(const struct fsm *fsm, FILE *f)
+print_dotfrag(FILE *f, const struct fsm *fsm)
 {
 	struct fsm_state *s;
 
+	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
-	assert(f != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		singlestate(fsm, f, s);
+		singlestate(f, fsm, s);
 
 		if (fsm_isend(fsm, s)) {
 			fprintf(f, "\t%sS%-2u [ shape = doublecircle ];\n",
@@ -288,16 +288,16 @@ print_dotfrag(const struct fsm *fsm, FILE *f)
 }
 
 void
-fsm_print_dot(const struct fsm *fsm, FILE *f)
+fsm_print_dot(FILE *f, const struct fsm *fsm)
 {
 	struct fsm_state *start;
 
+	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
-	assert(f != NULL);
 
 	if (fsm->opt->fragment) {
-		print_dotfrag(fsm, f);
+		print_dotfrag(f, fsm);
 		return;
 	}
 
@@ -323,7 +323,7 @@ fsm_print_dot(const struct fsm *fsm, FILE *f)
 
 	fprintf(f, "\n");
 
-	print_dotfrag(fsm, f);
+	print_dotfrag(f, fsm);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

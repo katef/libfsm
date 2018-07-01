@@ -503,7 +503,7 @@ main(int argc, char *argv[])
 	}
 
 	if (print != NULL) {
-		print(fsm, stdout);
+		print(stdout, fsm);
 	}
 
 	fsm_free(fsm);

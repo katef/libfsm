@@ -34,12 +34,12 @@ bm_invert(struct bm *bm);
 int
 bm_print(FILE *f, const struct bm *bm,
 	int boxed,
-	int (*escputc)(int c, FILE *f));
+	int (*escputc)(FILE *f, int c));
 
 int
 bm_snprint(const struct bm *bm, char *s, size_t sz,
 	int boxed,
-	int (*escputc)(int c, FILE *f));
+	int (*escputc)(FILE *f, int c));
 
 #endif
 

@@ -37,7 +37,7 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 }
 
 static int
-escputc(const struct fsm_options *opt, int c, FILE *f)
+escputc(FILE *f, const struct fsm_options *opt, int c)
 {
 	size_t i;
 
@@ -56,9 +56,9 @@ escputc(const struct fsm_options *opt, int c, FILE *f)
 		{ '\t', "\\t"  }
 	};
 
+	assert(f != NULL);
 	assert(opt != NULL);
 	assert(c != FSM_EDGE_EPSILON);
-	assert(f != NULL);
 
 	if (opt->always_hex) {
 		return fprintf(f, "\\u%04x", (unsigned char) c);
@@ -98,12 +98,12 @@ hasmore(const struct fsm_state *s, int i)
 }
 
 void
-fsm_print_json(const struct fsm *fsm, FILE *f)
+fsm_print_json(FILE *f, const struct fsm *fsm)
 {
 	struct fsm_state *s;
 
-	assert(fsm != NULL);
 	assert(f != NULL);
+	assert(fsm != NULL);
 
 	fprintf(f, "{\n");
 
@@ -138,7 +138,7 @@ fsm_print_json(const struct fsm *fsm, FILE *f)
 
 					default:
 						fputs(" \"", f);
-						escputc(fsm->opt, e->symbol, f);
+						escputc(f, fsm->opt, e->symbol);
 						putc('\"', f);
 						break;
 					}

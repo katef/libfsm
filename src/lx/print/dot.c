@@ -62,7 +62,7 @@ zindexof(const struct ast *ast, const struct ast_zone *zone)
 }
 
 static void
-mapping(const struct ast_mapping *m, FILE *f, const struct ast *ast)
+mapping(FILE *f, const struct ast_mapping *m, const struct ast *ast)
 {
 	assert(m != NULL);
 	assert(f != NULL);
@@ -83,7 +83,7 @@ mapping(const struct ast_mapping *m, FILE *f, const struct ast *ast)
 }
 
 static void
-singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
+singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 	const struct ast_zone *z, const struct fsm_state *s)
 {
 	struct ast_mapping *m;
@@ -115,7 +115,7 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 			fprintf(f, "<font color=\"red\">");
 
 			for (p = m->conflict; p != NULL; p = p->next) {
-				mapping(p->m, f, ast);
+				mapping(f, p->m, ast);
 
 				if (p->next != NULL) {
 					fprintf(f, "<br/>");
@@ -124,7 +124,7 @@ singlestate(const struct fsm *fsm, FILE *f, const struct ast *ast,
 
 			fprintf(f, "</font>");
 		} else {
-			mapping(m, f, ast);
+			mapping(f, m, ast);
 		}
 
 	}
@@ -224,13 +224,13 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 		z->fsm->opt = &opt;
 
-		fsm_print_dot(z->fsm, f);
+		fsm_print_dot(f, z->fsm);
 
 		z->fsm->opt = tmp;
 	}
 
 	for (s = z->fsm->sl; s != NULL; s = s->next) {
-		singlestate(z->fsm, f, ast, z, s);
+		singlestate(f, z->fsm, ast, z, s);
 	}
 
 	/* a start state should not accept */
@@ -244,7 +244,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 void
-lx_print_dot(const struct ast *ast, FILE *f)
+lx_print_dot(FILE *f, const struct ast *ast)
 {
 	const struct ast_zone *z;
 	unsigned int zn;

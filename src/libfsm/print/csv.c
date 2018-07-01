@@ -37,7 +37,7 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 }
 
 static int
-escputc(int c, FILE *f)
+escputc(FILE *f, int c)
 {
 	size_t i;
 
@@ -67,14 +67,14 @@ escputc(int c, FILE *f)
 }
 
 void
-fsm_print_csv(const struct fsm *fsm, FILE *f)
+fsm_print_csv(FILE *f, const struct fsm *fsm)
 {
 	struct fsm_state *s;
 	struct bm bm;
 	int n;
 
-	assert(fsm != NULL);
 	assert(f != NULL);
+	assert(fsm != NULL);
 
 	bm_clear(&bm);
 
@@ -95,7 +95,7 @@ fsm_print_csv(const struct fsm *fsm, FILE *f)
 
 		while (n = bm_next(&bm, n, 1), n != FSM_EDGE_MAX + 1) {
 			fprintf(f, ",  ");
-			escputc(n, f);
+			escputc(f, n);
 		}
 
 		fprintf(f, "\n");
