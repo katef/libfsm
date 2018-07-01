@@ -7,6 +7,7 @@
 <!ENTITY iso    "<acronym>ISO</acronym>">
 
 <!-- TODO: generate from glossary! -->
+<!ENTITY ast    "<acronym role='Abstract Syntax Tree'>AST</acronym>">
 <!ENTITY fsm    "<acronym role='Finite State Machine'>FSM</acronym>">
 <!ENTITY dfa    "<acronym role='Deterministic Finite Automata'>DFA</acronym>">
 <!ENTITY nfa    "<acronym role='Non-Deterministic Finite Automata'>NFA</acronym>">

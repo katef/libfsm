@@ -113,11 +113,6 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	/* Do a complete pass over the AST, filling in other details. */
 	re_ast_analysis(ast);
 
-	/* TODO: this should be a CLI flag or something */
-	if (PRETTYPRINT_AST) {
-		re_ast_print_tree(stderr, opt, ast);
-	}
-
 	return ast;
 }
 

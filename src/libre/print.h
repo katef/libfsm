@@ -9,8 +9,6 @@
 
 #include <stdio.h>
 
-#define PRETTYPRINT_AST 0
-
 struct ast_re;
 struct fsm_options;
 
