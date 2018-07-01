@@ -18,33 +18,30 @@
 int
 dot_escputc_html(FILE *f, const struct fsm_options *opt, int c)
 {
-	size_t i;
-
-	const struct {
-		int c;
-		const char *s;
-	} a[] = {
-		{ FSM_EDGE_EPSILON, "&#x3B5;" },
-
-		{ '&',  "&amp;"    },
-		{ '\"', "&quot;"   },
-		{ ']',  "&#x5D;"   }, /* yes, even in a HTML label */
-		{ '<',  "&#x3C;"   },
-		{ '>',  "&#x3E;"   },
-		{ ' ',  "&#x2423;" }
-	};
-
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(c >= 0);
+
+	if (c == FSM_EDGE_EPSILON) {
+		return fputs("&#x3B5;", f);
+	}
+
+	assert(c <= UCHAR_MAX);
 
 	if (opt->always_hex) {
 		return fprintf(f, "\\x%02x", (unsigned char) c);
 	}
 
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].c == c) {
-			return fputs(a[i].s, f);
-		}
+	switch (c) {
+	case '&':  return fputs("&amp;",  f);
+	case '\"': return fputs("&quot;", f);
+	case ']':  return fputs("&#x5D;", f); /* yes, even in a HTML label */
+	case '<':  return fputs("&#x3C;", f);
+	case '>':  return fputs("&#x3E;", f);
+	case ' ':  return fputs("&#x2423;", f);
+
+	default:
+		break;
 	}
 
 	if (!isprint((unsigned char) c)) {

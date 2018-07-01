@@ -13,39 +13,29 @@
 
 #include <print/esc.h>
 
-#include "libfsm/internal.h" /* XXX */
-
 int
 fsm_escputc(FILE *f, const struct fsm_options *opt, int c)
 {
-	size_t i;
-
-	const struct {
-		int c;
-		const char *s;
-	} a[] = {
-		{ '\\', "\\\\" },
-		{ '\"', "\\\"" },
-
-		{ '\f', "\\f"  },
-		{ '\n', "\\n"  },
-		{ '\r', "\\r"  },
-		{ '\t', "\\t"  },
-		{ '\v', "\\v"  }
-	};
-
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(c != FSM_EDGE_EPSILON);
+	assert(c >= 0 && c <= UCHAR_MAX);
 
 	if (opt->always_hex) {
 		return fprintf(f, "\\x%02x", (unsigned char) c);
 	}
 
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].c == c) {
-			return fputs(a[i].s, f);
-		}
+	switch (c) {
+	case '\\': return fputs("\\\\", f);
+	case '\"': return fputs("\\\"", f);
+
+	case '\f': return fputs("\\f", f);
+	case '\n': return fputs("\\n", f);
+	case '\r': return fputs("\\r", f);
+	case '\t': return fputs("\\t", f);
+	case '\v': return fputs("\\v", f);
+
+	default:
+		break;
 	}
 
 	if (!isprint((unsigned char) c)) {
