@@ -7,21 +7,18 @@
 #ifndef RE_INTERNAL_PRINT_H
 #define RE_INTERNAL_PRINT_H
 
-#include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
-
-#include "re_ast.h"
 
 #define PRETTYPRINT_AST 0
 
-void
-re_ast_print_dot(FILE *f, const struct fsm_options *opt, struct ast_re *ast);
+struct ast_re;
+struct fsm_options;
 
-void
-re_ast_print_pcre(FILE *f, const struct fsm_options *opt, struct ast_re *ast);
+typedef void (re_ast_print)(FILE *f, const struct fsm_options *opt,
+	const struct ast_re *ast);
 
-void
-re_ast_print_tree(FILE *f, struct ast_re *ast);
+re_ast_print re_ast_print_dot;
+re_ast_print re_ast_print_pcre;
+re_ast_print re_ast_print_tree;
 
 #endif

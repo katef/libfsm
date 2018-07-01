@@ -9,6 +9,7 @@
 
 #include <print/esc.h>
 
+#include "../re_ast.h"
 #include "../re_char_class.h"
 #include "../print.h"
 
@@ -37,6 +38,9 @@ static void
 pp_iter(FILE *f, const struct fsm_options *opt,
 	const void *parent, struct ast_expr *n)
 {
+	assert(f != NULL);
+	assert(opt != NULL);
+
 	if (n == NULL) { return; }
 
 	if (parent != NULL) {
@@ -108,8 +112,13 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 }
 
 void
-re_ast_print_dot(FILE *f, const struct fsm_options *opt, struct ast_re *ast)
+re_ast_print_dot(FILE *f, const struct fsm_options *opt,
+	const struct ast_re *ast)
 {
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(ast != NULL);
+
 	fprintf(f, "digraph G {\n");
 	fprintf(f, "\tnode [ shape = Mrecord ];\n");
 	fprintf(f, "\tedge [ dir = none ];\n");
@@ -153,6 +162,8 @@ static void
 cc_pp_iter(FILE *f, const struct fsm_options *opt,
 	const void *parent, struct re_char_class_ast *n)
 {
+	assert(f != NULL);
+	assert(opt != NULL);
 	assert(n != NULL);
 
 	if (parent != NULL) {

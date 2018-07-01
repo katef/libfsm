@@ -9,6 +9,7 @@
 
 #include <print/esc.h>
 
+#include "../re_ast.h"
 #include "../re_char_class.h"
 #include "../print.h"
 
@@ -47,6 +48,9 @@ atomic(struct ast_expr *n)
 static void
 pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 {
+	assert(f != NULL);
+	assert(opt != NULL);
+
 	if (n == NULL) { return; }
 
 	switch (n->t) {
@@ -154,8 +158,13 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 }
 
 void
-re_ast_print_pcre(FILE *f, const struct fsm_options *opt, struct ast_re *ast)
+re_ast_print_pcre(FILE *f, const struct fsm_options *opt,
+	const struct ast_re *ast)
 {
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(ast != NULL);
+
 	pp_iter(f, opt, ast->expr);
 
 	fprintf(f, "\n");
@@ -191,6 +200,8 @@ print_range_endpoint(FILE *f, const struct fsm_options *opt,
 static void
 cc_pp_iter(FILE *f, const struct fsm_options *opt, struct re_char_class_ast *n)
 {
+	assert(f != NULL);
+	assert(opt != NULL);
 	assert(n != NULL);
 
 	switch (n->t) {

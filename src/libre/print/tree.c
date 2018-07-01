@@ -6,6 +6,7 @@
 
 #include <ctype.h>
 
+#include "../re_ast.h"
 #include "../re_char_class.h"
 #include "../print.h"
 
@@ -13,7 +14,8 @@ static void
 re_flags_print(FILE *f, enum re_flags fl);
 
 static void
-cc_pp_iter(FILE *f, struct re_char_class_ast *n, size_t indent);
+cc_pp_iter(FILE *f, const struct fsm_options *opt,
+	struct re_char_class_ast *n, size_t indent);
 
 static void
 print_char_or_esc(FILE *f, unsigned char c);
@@ -39,8 +41,11 @@ fprintf_count(FILE *f, unsigned count)
 }
 
 static void
-pp_iter(FILE *f, size_t indent, struct ast_expr *n)
+pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *n)
 {
+	assert(f != NULL);
+	assert(opt != NULL);
+
 	if (n == NULL) { return; }
 	/* assert(n != NULL); */
 	INDENT(f, indent);
@@ -53,19 +58,19 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 		break;
 	case AST_EXPR_CONCAT:
 		fprintf(f, "CONCAT %p: {\n", (void *)n);
-		pp_iter(f, indent + 1*IND, n->u.concat.l);
+		pp_iter(f, opt, indent + 1*IND, n->u.concat.l);
 		INDENT(f, indent);
 		fprintf(f, ", (%p)\n", (void *)n);
-		pp_iter(f, indent + 1*IND, n->u.concat.r);
+		pp_iter(f, opt, indent + 1*IND, n->u.concat.r);
 		INDENT(f, indent);
 		fprintf(f, "} (%p)\n", (void *)n);
 		break;
 	case AST_EXPR_ALT:
 		fprintf(f, "ALT %p: {\n", (void *)n);
-		pp_iter(f, indent + 1*IND, n->u.alt.l);
+		pp_iter(f, opt, indent + 1*IND, n->u.alt.l);
 		INDENT(f, indent);
 		fprintf(f, ", (%p)\n", (void *)n);
-		pp_iter(f, indent + 1*IND, n->u.alt.r);
+		pp_iter(f, opt, indent + 1*IND, n->u.alt.r);
 		INDENT(f, indent);
 		fprintf(f, "} (%p)\n", (void *)n);
 		break;
@@ -84,16 +89,16 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 		fprintf(f, ",");
 		fprintf_count(f, n->u.repeated.high);
 		fprintf(f, "}\n");
-		pp_iter(f, indent + 1*IND, n->u.repeated.e);
+		pp_iter(f, opt, indent + 1*IND, n->u.repeated.e);
 		break;
 	case AST_EXPR_CHAR_CLASS:
 		fprintf(f, "CHAR_CLASS %p: \n", (void *)n);
-		cc_pp_iter(f, n->u.char_class.cca, indent + IND);
+		cc_pp_iter(f, opt, n->u.char_class.cca, indent + IND);
 		fprintf(f, "\n");
 		break;
 	case AST_EXPR_GROUP:
 		fprintf(f, "GROUP %p: %u\n", (void *)n, n->u.group.id);
-		pp_iter(f, indent + 1*IND, n->u.group.e);
+		pp_iter(f, opt, indent + 1*IND, n->u.group.e);
 		break;
 	case AST_EXPR_FLAGS:
 		fprintf(f, "FLAGS %p: pos:(", (void *)n);
@@ -108,9 +113,14 @@ pp_iter(FILE *f, size_t indent, struct ast_expr *n)
 }
 
 void
-re_ast_print_tree(FILE *f, struct ast_re *ast)
+re_ast_print_tree(FILE *f, const struct fsm_options *opt,
+	const struct ast_re *ast)
 {
-	pp_iter(f, 0, ast->expr);
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(ast != NULL);
+
+	pp_iter(f, opt, 0, ast->expr);
 }
 
 static void
@@ -141,17 +151,22 @@ print_range_endpoint(FILE *f, const struct ast_range_endpoint *r)
 }
 
 static void
-cc_pp_iter(FILE *f, struct re_char_class_ast *n, size_t indent)
+cc_pp_iter(FILE *f, const struct fsm_options *opt,
+	struct re_char_class_ast *n, size_t indent)
 {
 	size_t i;
+
+	assert(f != NULL);
+	assert(opt != NULL);
 	assert(n != NULL);
+
 	for (i = 0; i < indent; i++) { fprintf(f, " "); }
 
 	switch (n->t) {
 	case RE_CHAR_CLASS_AST_CONCAT:
 		fprintf(f, "CLASS-CONCAT %p: \n", (void *)n);
-		cc_pp_iter(f, n->u.concat.l, indent + 4);
-		cc_pp_iter(f, n->u.concat.r, indent + 4);
+		cc_pp_iter(f, opt, n->u.concat.l, indent + 4);
+		cc_pp_iter(f, opt, n->u.concat.r, indent + 4);
 		break;
 	case RE_CHAR_CLASS_AST_LITERAL:
 		fprintf(f, "CLASS-LITERAL %p: '", (void *)n);
@@ -181,8 +196,8 @@ cc_pp_iter(FILE *f, struct re_char_class_ast *n, size_t indent)
 		break;
 	case RE_CHAR_CLASS_AST_SUBTRACT:
 		fprintf(f, "CLASS-SUBTRACT %p:\n", (void *)n);
-		cc_pp_iter(f, n->u.subtract.ast, indent + 4);
-		cc_pp_iter(f, n->u.subtract.mask, indent + 4);
+		cc_pp_iter(f, opt, n->u.subtract.ast, indent + 4);
+		cc_pp_iter(f, opt, n->u.subtract.mask, indent + 4);
 		break;
 	default:
 		fprintf(stderr, "(MATCH FAIL)\n");
