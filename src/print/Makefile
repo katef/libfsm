@@ -1,7 +1,6 @@
 .include "../../share/mk/top.mk"
 
 SRC += src/print/c.c
-SRC += src/print/csv.c
 SRC += src/print/dot.c
 SRC += src/print/fsm.c
 SRC += src/print/json.c

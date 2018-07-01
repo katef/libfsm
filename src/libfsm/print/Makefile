@@ -2,7 +2,6 @@
 
 SRC += src/libfsm/print/api.c
 SRC += src/libfsm/print/c.c
-SRC += src/libfsm/print/csv.c
 SRC += src/libfsm/print/dot.c
 SRC += src/libfsm/print/fsm.c
 SRC += src/libfsm/print/json.c

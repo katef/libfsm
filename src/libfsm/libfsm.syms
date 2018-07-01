@@ -28,7 +28,6 @@ fsm_hasoutgoing
 # <fsm/print.h>
 fsm_print_api
 fsm_print_c
-fsm_print_csv
 fsm_print_dot
 fsm_print_fsm
 fsm_print_json
