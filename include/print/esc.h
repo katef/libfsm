@@ -13,6 +13,7 @@ typedef int (escputc)(FILE *f, const struct fsm_options *opt, int c);
 
 escputc c_escputc_char;
 escputc c_escputc_str;
+escputc ebnf_escputc;
 escputc dot_escputc_html;
 escputc fsm_escputc;
 escputc json_escputc;
