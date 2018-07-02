@@ -80,9 +80,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 	case AST_EXPR_ANY:
 		fprintf(f, "ANY %p:\n", (void *)n);
 		break;
-	case AST_EXPR_MANY:
-		fprintf(f, "MANY %p:\n", (void *)n);
-		break;
 	case AST_EXPR_REPEATED:
 		fprintf(f, "REPEATED %p: {", (void *)n);
 		fprintf_count(f, n->u.repeated.low);

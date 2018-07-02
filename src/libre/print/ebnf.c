@@ -37,7 +37,6 @@ atomic(struct ast_expr *n)
 	case AST_EXPR_REPEATED:
 	case AST_EXPR_CONCAT:
 	case AST_EXPR_ALT:
-	case AST_EXPR_MANY:
 		return 0;
 
 	case AST_EXPR_FLAGS:
@@ -117,10 +116,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 	case AST_EXPR_ANY:
 		fprintf(f, "any");
-		break;
-
-	case AST_EXPR_MANY:
-		fprintf(f, "ANY, { ANY }");
 		break;
 
 	case AST_EXPR_REPEATED: {

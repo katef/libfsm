@@ -74,10 +74,6 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "\tn%p [ label = <ANY> ];\n", (void *) n);
 		break;
 
-	case AST_EXPR_MANY:
-		fprintf(f, "\tn%p [ label = <MANY> ];\n", (void *) n);
-		break;
-
 	case AST_EXPR_REPEATED:
 		fprintf(f, "\tn%p [ label = <REPEATED|&#x7b;", (void *) n);
 		fprintf_count(f, n->u.repeated.low);
