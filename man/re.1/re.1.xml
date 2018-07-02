@@ -344,6 +344,20 @@ group (for dialects which have them) (rather than a "whole" regexp)
 					<para>Set the output language for printing by &p.opt;.
 						See &fsm_lang.5fsm; for the supported language identifiers.
 						The default is <literal>fsm</literal>.</para>
+
+					<para>In addition to printing &fsm; per &fsm_lang.5fsm;,
+						&re.1; can also print an &ast; for a regular expression's
+						syntax. The &ast; is printed by specifying one of
+						<literal>ast</literal> (graphviz &dot.lit; output),
+						<literal>ebnf</literal>,
+						or <literal>tree</literal>.</para> <!-- TODO: explain more -->
+
+					<para>An &ast; may also be printed to regular expression
+						syntax, by specifying <literal>pcre</literal>.</para>
+					<!-- TODO: document under re(3) when the API is exposed -->
+
+					<para>When printing &ast; output, only a single regular
+						expression may be given.</para>
 				</listitem>
 			</varlistentry>
 

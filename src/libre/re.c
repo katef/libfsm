@@ -17,9 +17,9 @@
 #include "../libfsm/internal.h" /* XXX */
 
 #include "dialect/comp.h"
+#include "print.h"
 
 #include "re_ast.h"
-#include "re_print.h"
 #include "re_comp.h"
 #include "re_analysis.h"
 
@@ -87,14 +87,13 @@ re_flags(const char *s, enum re_flags *f)
 	return 0;
 }
 
-struct fsm *
-re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
+struct ast_re *
+re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err)
 {
 	const struct dialect *m;
 	struct ast_re *ast;
-	struct fsm *new;
 
 	assert(getc != NULL);
 
@@ -114,9 +113,20 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	/* Do a complete pass over the AST, filling in other details. */
 	re_ast_analysis(ast);
 
-	/* TODO: this should be a CLI flag or something */
-	if (PRETTYPRINT_AST) {
-		re_ast_print(stderr, ast);
+	return ast;
+}
+
+struct fsm *
+re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
+	const struct fsm_options *opt,
+	enum re_flags flags, struct re_err *err)
+{
+	struct ast_re *ast;
+	struct fsm *new;
+
+	ast = re_parse(dialect, getc, opaque, opt, flags, err);
+	if (ast == NULL) {
+		return NULL;
 	}
 
 	new = re_comp_ast(ast, flags, opt);
