@@ -10,7 +10,10 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#include "libfsm/internal.h" /* XXX: up here for bitmap.h */
+
 #include <print/esc.h>
+#include <print/edge.h>
 
 #include <adt/set.h>
 #include <adt/bitmap.h>
@@ -20,8 +23,6 @@
 #include <fsm/walk.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
-
-#include "libfsm/internal.h"
 
 static int
 rangeclass(unsigned char x, unsigned char y)

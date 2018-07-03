@@ -15,11 +15,10 @@
 #include <print/esc.h>
 
 int
-c_escputc_char(FILE *f, const struct fsm_options *opt, int c)
+c_escputc_char(FILE *f, const struct fsm_options *opt, char c)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(c >= 0 && c <= UCHAR_MAX);
 
 	if (opt->always_hex) {
 		return fprintf(f, "\\x%02x", (unsigned char) c);
@@ -49,11 +48,10 @@ c_escputc_char(FILE *f, const struct fsm_options *opt, int c)
 }
 
 int
-c_escputc_str(FILE *f, const struct fsm_options *opt, int c)
+c_escputc_str(FILE *f, const struct fsm_options *opt, char c)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(c >= 0 && c <= UCHAR_MAX);
 
 	if (opt->always_hex) {
 		return fprintf(f, "\\x%03o", (unsigned char) c);
@@ -89,13 +87,12 @@ c_escputc_str(FILE *f, const struct fsm_options *opt, int c)
 }
 
 void
-c_escputcharlit(FILE *f, const struct fsm_options *opt, int c)
+c_escputcharlit(FILE *f, const struct fsm_options *opt, char c)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(c >= 0 && c <= UCHAR_MAX);
 
-	if (opt->always_hex || c > SCHAR_MAX) {
+	if (opt->always_hex || (unsigned char) c > SCHAR_MAX) {
 		fprintf(f, "0x%02x", (unsigned char) c);
 		return;
 	}

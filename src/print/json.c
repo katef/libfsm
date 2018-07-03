@@ -14,11 +14,10 @@
 #include <print/esc.h>
 
 int
-json_escputc(FILE *f, const struct fsm_options *opt, int c)
+json_escputc(FILE *f, const struct fsm_options *opt, char c)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(c >= 0 && c <= UCHAR_MAX);
 
 	if (opt->always_hex) {
 		return fprintf(f, "\\u%04x", (unsigned char) c);

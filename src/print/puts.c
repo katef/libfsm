@@ -13,8 +13,6 @@
 
 #include <print/esc.h>
 
-#include "libfsm/internal.h" /* XXX */
-
 int
 escputs(FILE *f, const struct fsm_options *opt, escputc *escputc,
 	const char *s)

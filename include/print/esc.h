@@ -9,7 +9,7 @@
 
 struct fsm_options;
 
-typedef int (escputc)(FILE *f, const struct fsm_options *opt, int c);
+typedef int (escputc)(FILE *f, const struct fsm_options *opt, char c);
 
 escputc c_escputc_char;
 escputc c_escputc_str;
@@ -20,7 +20,7 @@ escputc json_escputc;
 escputc pcre_escputc;
 
 void
-c_escputcharlit(FILE *f, const struct fsm_options *opt, int c);
+c_escputcharlit(FILE *f, const struct fsm_options *opt, char c);
 
 int
 escputs(FILE *f, const struct fsm_options *opt, escputc *escputc,

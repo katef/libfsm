@@ -8,7 +8,10 @@
 #include <limits.h>
 #include <stdio.h>
 
+#include "libfsm/internal.h" /* XXX: up here for bitmap.h */
+
 #include <print/esc.h>
+#include <print/edge.h>
 
 #include <adt/set.h>
 #include <adt/bitmap.h>
@@ -17,8 +20,6 @@
 #include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
-
-#include "libfsm/internal.h"
 
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)

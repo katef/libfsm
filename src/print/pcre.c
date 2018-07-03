@@ -15,11 +15,10 @@
 #include <print/esc.h>
 
 int
-pcre_escputc(FILE *f, const struct fsm_options *opt, int c)
+pcre_escputc(FILE *f, const struct fsm_options *opt, char c)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(c >= 0 && c <= UCHAR_MAX);
 
 	if (opt->always_hex) {
 		return fprintf(f, "\\x%02x", (unsigned char) c);
