@@ -243,7 +243,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 	{
 		t_ast__expr ZIl;
 
-		/* BEGINNING OF INLINE: 101 */
+		/* BEGINNING OF INLINE: 99 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY):
@@ -279,8 +279,8 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					/* BEGINNING OF INLINE: list-of-nodes::literal */
 					{
 						{
-							t_pos ZI95;
-							t_pos ZI96;
+							t_pos ZI93;
+							t_pos ZI94;
 
 							switch (CURRENT_TERMINAL) {
 							case (TOK_CHAR):
@@ -291,8 +291,8 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI95 = lex_state->lx.start;
-		ZI96   = lex_state->lx.end;
+		ZI93 = lex_state->lx.start;
+		ZI94   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
@@ -320,6 +320,9 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 				break;
 			case (TOK_MANY):
 				{
+					t_ast__expr ZIe;
+					t_ast__count ZIc;
+
 					/* BEGINNING OF INLINE: list-of-nodes::many */
 					{
 						{
@@ -333,23 +336,41 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 						}
 					}
 					/* END OF INLINE: list-of-nodes::many */
-					/* BEGINNING OF ACTION: ast-expr-many */
+					/* BEGINNING OF ACTION: ast-expr-any */
 					{
-#line 603 "src/libre/parser.act"
+#line 599 "src/libre/parser.act"
 
-		(ZIl) = re_ast_expr_many();
+		(ZIe) = re_ast_expr_any();
 	
-#line 343 "src/libre/dialect/like/parser.c"
+#line 346 "src/libre/dialect/like/parser.c"
 					}
-					/* END OF ACTION: ast-expr-many */
+					/* END OF ACTION: ast-expr-any */
+					/* BEGINNING OF ACTION: atom-kleene */
+					{
+#line 617 "src/libre/parser.act"
+
+		(ZIc) = ast_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
+	
+#line 355 "src/libre/dialect/like/parser.c"
+					}
+					/* END OF ACTION: atom-kleene */
+					/* BEGINNING OF ACTION: ast-expr-atom */
+					{
+#line 613 "src/libre/parser.act"
+
+		(ZIl) = re_ast_expr_with_count((ZIe), (ZIc));
+	
+#line 364 "src/libre/dialect/like/parser.c"
+					}
+					/* END OF ACTION: ast-expr-atom */
 				}
 				break;
 			default:
 				goto ZL1;
 			}
 		}
-		/* END OF INLINE: 101 */
-		/* BEGINNING OF INLINE: 103 */
+		/* END OF INLINE: 99 */
+		/* BEGINNING OF INLINE: 102 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
@@ -367,7 +388,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 
 		(ZInode) = re_ast_expr_concat((ZIl), (ZIr));
 	
-#line 371 "src/libre/dialect/like/parser.c"
+#line 392 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-concat */
 				}
@@ -379,7 +400,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 				break;
 			}
 		}
-		/* END OF INLINE: 103 */
+		/* END OF INLINE: 102 */
 	}
 	goto ZL0;
 ZL1:;
@@ -398,7 +419,7 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 		return;
 	}
 	{
-		/* BEGINNING OF INLINE: 107 */
+		/* BEGINNING OF INLINE: 106 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
@@ -418,15 +439,15 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 
 		(ZInode) = re_ast_expr_empty();
 	
-#line 422 "src/libre/dialect/like/parser.c"
+#line 443 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-empty */
 				}
 				break;
 			}
 		}
-		/* END OF INLINE: 107 */
-		/* BEGINNING OF INLINE: 108 */
+		/* END OF INLINE: 106 */
+		/* BEGINNING OF INLINE: 107 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -449,13 +470,13 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 		}
 		goto ZL1;
 	
-#line 453 "src/libre/dialect/like/parser.c"
+#line 474 "src/libre/dialect/like/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
 		ZL3:;
 		}
-		/* END OF INLINE: 108 */
+		/* END OF INLINE: 107 */
 	}
 	goto ZL0;
 ZL1:;
@@ -467,7 +488,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 757 "src/libre/parser.act"
+#line 747 "src/libre/parser.act"
 
 
 	static int
@@ -624,6 +645,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 628 "src/libre/dialect/like/parser.c"
+#line 649 "src/libre/dialect/like/parser.c"
 
 /* END OF FILE */
