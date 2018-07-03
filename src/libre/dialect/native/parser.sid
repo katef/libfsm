@@ -68,11 +68,9 @@
 	<ast-expr-concat>: (:ast_expr, :ast_expr) -> (:ast_expr);
 	<ast-expr-alt>: (:ast_expr, :ast_expr) -> (:ast_expr);
 	<ast-expr-any>: () -> (:ast_expr);
-	!<ast-expr-many>: () -> (:ast_expr);
 
         <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
         !<ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
-        !<ast-expr-atom-many>: (:ast_count) -> (:ast_expr);
 	<ast-expr-char-class>: (:char_class_ast, :pos, :pos) -> (:ast_expr);
         <ast-expr-group>: (:ast_expr) -> (:ast_expr);
 	!<ast-expr-re-flags>: (:re_flags, :re_flags) -> (:ast_expr);

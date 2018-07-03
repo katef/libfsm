@@ -136,14 +136,6 @@ comp_iter(struct comp_env *env,
 		ANY(x, y);
 		break;
 
-	case AST_EXPR_MANY:
-		NEWSTATE(z);
-		EPSILON(x, z);
-		ANY(x, z);
-		EPSILON(z, x);
-		EPSILON(z, y);
-		break;
-
 	case AST_EXPR_REPEATED:
 		/* REPEATED breaks out into its own function, because
 		 * there are several special cases */
@@ -262,7 +254,6 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 	if (e->t == AST_EXPR_LITERAL) { return 0; }
 	if (e->t == AST_EXPR_FLAGS) { return 0; }
 	if (e->t == AST_EXPR_CHAR_CLASS) { return 0; }
-	if (e->t == AST_EXPR_MANY) { return 0; }
 	if (e->t == AST_EXPR_ALT) { return 0; }
 
 	if (e->t == AST_EXPR_REPEATED) {

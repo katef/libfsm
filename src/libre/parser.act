@@ -599,16 +599,6 @@
 	<ast-expr-any>: () -> (node :ast_expr) = @{
 		@node = re_ast_expr_any();
 	@};
-	
-	<ast-expr-many>: () -> (node :ast_expr) = @{
-		@node = re_ast_expr_many();
-	@};
-
-	<ast-expr-atom-many>: (c :ast_count) -> (node :ast_expr) = @{
-		struct ast_expr *e = re_ast_expr_many();
-		if (e == NULL) { @!; }
-		@node = re_ast_expr_with_count(e, @c);
-	@};
 
 	<ast-expr-atom-any>: (c :ast_count) -> (node :ast_expr) = @{
 		struct ast_expr *e = re_ast_expr_any();
