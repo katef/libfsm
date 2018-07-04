@@ -7,12 +7,10 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <limits.h>
 #include <ctype.h>
 
-#include "../libfsm/internal.h" /* XXX */
-
 #include <print/esc.h>
-#include <print/edge.h>
 
 #include <adt/bitmap.h>
 
@@ -100,7 +98,7 @@ bm_invert(struct bm *bm)
 int
 bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 	int boxed,
-	escpute *escpute)
+	escputc *escputc)
 {
 	unsigned int count;
 	int hi, lo;
@@ -115,7 +113,7 @@ bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 
 	assert(f != NULL);
 	assert(bm != NULL);
-	assert(escpute != NULL);
+	assert(escputc != NULL);
 
 	count = bm_count(bm);
 
@@ -133,7 +131,7 @@ bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 
 	/* TODO: would prefer to show ranges before other characters.
 	 * maybe best to do that by splitting the bitmap, and using two passes */
-	/* XXX: all literal characters here really should go through escpute */
+	/* XXX: all literal characters here really should go through escputc */
 
 	if (mode == MODE_ANY) {
 		return fputs("/./", f);
@@ -164,7 +162,7 @@ bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 		}
 
 		if (!isalnum((unsigned char) lo) && isalnum((unsigned char) hi)) {
-			r = escpute(f, opt, lo);
+			r = escputc(f, opt, lo);
 			if (r == -1) {
 				return -1;
 			}
@@ -206,7 +204,7 @@ bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 		case 1:
 		case 2:
 		case 3:
-			r = escpute(f, opt, lo);
+			r = escputc(f, opt, lo);
 			if (r == -1) {
 				return -1;
 			}
@@ -216,7 +214,7 @@ bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 			break;
 
 		default:
-			r = escpute(f, opt, lo);
+			r = escputc(f, opt, lo);
 			if (r == -1) {
 				return -1;
 			}
@@ -228,7 +226,7 @@ bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 			}
 			n += 1;
 
-			r = escpute(f, opt, hi - 1);
+			r = escputc(f, opt, hi - 1);
 			if (r == -1) {
 				return -1;
 			}
@@ -250,13 +248,13 @@ int
 bm_snprint(const struct bm *bm, const struct fsm_options *opt,
 	char *s, size_t n,
 	int boxed,
-	escpute *escpute)
+	escputc *escputc)
 {
 	FILE *f;
 	int r;
 
 	assert(bm != NULL);
-	assert(escpute != NULL);
+	assert(escputc != NULL);
 
 	if (n == 0) {
 		return 0;
@@ -265,9 +263,9 @@ bm_snprint(const struct bm *bm, const struct fsm_options *opt,
 	assert(s != NULL);
 
 	/*
-	 * I didn't want two sets of escpute functions (for strings and files),
+	 * I didn't want two sets of escputc functions (for strings and files),
 	 * so I've nominated to use FILE * as the common interface,
-	 * in order to keep just one kind of escpute.
+	 * in order to keep just one kind of escputc.
 	 *
 	 * I also didn't want to duplicate the contents of bm_print(),
 	 * so here I'm opting to print to a temporary file, rewind,
@@ -279,7 +277,7 @@ bm_snprint(const struct bm *bm, const struct fsm_options *opt,
 		return -1;
 	}
 
-	r = bm_print(f, opt, bm, boxed, escpute);
+	r = bm_print(f, opt, bm, boxed, escputc);
 	if (r == -1) {
 		goto error;
 	}

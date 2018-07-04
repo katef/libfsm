@@ -11,7 +11,6 @@
 
 #include <fsm/options.h>
 
-#include <print/edge.h>
 #include <print/esc.h>
 
 int
@@ -41,19 +40,5 @@ dot_escputc_html(FILE *f, const struct fsm_options *opt, char c)
 	}
 
 	return fprintf(f, "%c", c);
-}
-
-int
-dot_escpute_html(FILE *f, const struct fsm_options *opt, enum fsm_edge_type symbol)
-{
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert((symbol >= 0 && symbol <= UCHAR_MAX) || symbol == FSM_EDGE_EPSILON);
-
-	if (symbol == FSM_EDGE_EPSILON) {
-		return fputs("&#x3B5;", f);
-	}
-
-	return dot_escputc_html(f, opt, (unsigned char) symbol);
 }
 

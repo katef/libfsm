@@ -11,7 +11,6 @@
 #include "libfsm/internal.h" /* XXX: up here for bitmap.h */
 
 #include <print/esc.h>
-#include <print/edge.h>
 
 #include <adt/set.h>
 #include <adt/bitmap.h>
@@ -122,7 +121,14 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 					indexof(fsm, st));
 
-				dot_escputc_html(f, fsm->opt, e->symbol);
+				if (e->symbol <= UCHAR_MAX) {
+					dot_escputc_html(f, fsm->opt, e->symbol);
+				} else if (e->symbol == FSM_EDGE_EPSILON) {
+					fputs("&#x3B5;", f);
+				} else {
+					assert(!"unrecognised special edge");
+					abort();
+				}
 
 				fprintf(f, "> ];\n");
 			}
@@ -207,7 +213,13 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, st));
 
-			dot_escputc_html(f, fsm->opt, e->symbol);
+			assert(e->symbol > UCHAR_MAX);
+			if (e->symbol == FSM_EDGE_EPSILON) {
+				fputs("&#x3B5;", f);
+			} else {
+				assert(!"unrecognised special edge");
+				abort();
+			}
 
 			fprintf(f, "> ];\n");
 		}

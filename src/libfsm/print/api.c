@@ -13,7 +13,6 @@
 #include "libfsm/internal.h" /* XXX: up here for bitmap.h */
 
 #include <print/esc.h>
-#include <print/edge.h>
 
 #include <adt/set.h>
 #include <adt/bitmap.h>

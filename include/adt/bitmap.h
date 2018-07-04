@@ -35,13 +35,13 @@ bm_invert(struct bm *bm);
 int
 bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 	int boxed,
-	escpute *escpute);
+	escputc *escputc);
 
 int
 bm_snprint(const struct bm *bm, const struct fsm_options *opt,
 	char *s, size_t sz,
 	int boxed,
-	escpute *escpute);
+	escputc *escputc);
 
 #endif
 
