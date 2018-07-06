@@ -11,7 +11,7 @@
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include "internal.h"

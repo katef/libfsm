@@ -4,10 +4,10 @@ CC = gcc
 #CFLAGS = -Yposix2 -Xp
 #CC = tcc
 
-CFLAGS += -I ../../src/include
+CFLAGS += -I ../../include
 
-#LDFLAGS += -L ../../src/libfsm -lfsm
-LDFLAGS += ../../src/libfsm/libfsm.a
+#LDFLAGS += -L ../../build/lib -lfsm
+LDFLAGS += ../../build/lib/libfsm.a
 
 all: glob
 

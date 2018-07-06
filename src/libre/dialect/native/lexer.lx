@@ -60,20 +60,20 @@
 	'\'  /[0-7]+/     -> $oct;
 	'\x' /[0-9a-f]+/i -> $hex;
 
-	'[:alnum:]'  -> $class_alnum;
-	'[:alpha:]'  -> $class_alpha;
-	'[:ascii:]'  -> $class_ascii;
-	'[:blank:]'  -> $class_blank;
-	'[:cntrl:]'  -> $class_cntrl;
-	'[:digit:]'  -> $class_digit;
-	'[:graph:]'  -> $class_graph;
-	'[:lower:]'  -> $class_lower;
-	'[:print:]'  -> $class_print;
-	'[:punct:]'  -> $class_punct;
-	'[:space:]'  -> $class_space;
-	'[:upper:]'  -> $class_upper;
-	'[:word:]'   -> $class_word;
-	'[:xdigit:]' -> $class_xdigit;
+	'[:alnum:]'  -> $named__char__class;
+	'[:alpha:]'  -> $named__char__class;
+	'[:ascii:]'  -> $named__char__class;
+	'[:blank:]'  -> $named__char__class;
+	'[:cntrl:]'  -> $named__char__class;
+	'[:digit:]'  -> $named__char__class;
+	'[:graph:]'  -> $named__char__class;
+	'[:lower:]'  -> $named__char__class;
+	'[:print:]'  -> $named__char__class;
+	'[:punct:]'  -> $named__char__class;
+	'[:space:]'  -> $named__char__class;
+	'[:upper:]'  -> $named__char__class;
+	'[:word:]'   -> $named__char__class;
+	'[:xdigit:]' -> $named__char__class;
 
 	# XXX: /./ - the above
 	/[^\^\-\\]/ -> $char;

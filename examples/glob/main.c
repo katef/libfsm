@@ -26,6 +26,8 @@
  * Returns 0 on successful matching, 1 otherwise.
  */
 
+#define _POSIX_C_SOURCE 2
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,7 +37,8 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
+#include <fsm/walk.h>
 
 static void
 usage(void)
@@ -44,29 +47,22 @@ usage(void)
 }
 
 static int
-match_getc(void *opaque)
-{
-	const char **s = opaque;
-	unsigned char c;
-
-	assert(opaque != NULL);
-	assert(*s != NULL);
-
-	/* TODO: simplify? */
-	c = **s;
-	(*s)++;
-
-	return c == '\0' ? EOF : c;
-}
-
-static int
 match(const struct fsm *fsm, const char *s)
 {
+	const struct fsm_state *state;
+
 	assert(fsm != NULL);
 	assert(fsm_all(fsm, fsm_isdfa));
 	assert(s != NULL);
 
-	return fsm_exec(fsm, match_getc, &s);
+	state = fsm_exec(fsm, fsm_sgetc, &s);
+	if (state == NULL) {
+		return 0;
+	}
+
+	assert(fsm_isend(fsm, state));
+
+	return 1;
 }
 
 static struct fsm *
@@ -199,7 +195,7 @@ main(int argc, char *argv[])
 	}
 
 	if (!quiet) {
-		fsm_print(fsm, stdout, FSM_OUT_FSM);
+		fsm_print_fsm(stdout, fsm);
 	}
 
 	matched = match(fsm, argv[1]);

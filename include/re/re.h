@@ -33,7 +33,8 @@ enum re_flags {
 	RE_MULTI   = 1 << 2,
 	RE_REVERSE = 1 << 3,
 	RE_SINGLE  = 1 << 4,
-	RE_ZONE    = 1 << 5
+	RE_ZONE    = 1 << 5,
+	RE_FLAGS_NONE = 0
 };
 
 #define RE_ANCHOR (RE_TEXT | RE_MULTI | RE_ZONE)
@@ -82,7 +83,8 @@ enum re_errno {
 	RE_EXEOF        = 10 | RE_MARK,
 	RE_EXESC        = 11 | RE_MARK,
 	RE_EFLAG        = 12 | RE_MARK,
-	RE_EXCLOSEFLAGS = 13 | RE_MARK
+	RE_EXCLOSEFLAGS = 13 | RE_MARK,
+	RE_EXUNSUPPORTD = 14 | RE_MARK
 };
 
 struct re_pos {
@@ -112,9 +114,14 @@ struct re_err {
 int
 re_flags(const char *s, enum re_flags *f);
 
+/* Callback to acquire each character of the input, in the spirit of fgetc().
+ * opaque can be used to pass in callback-specific state, and is otherwise
+ * opaque to libre. */
+typedef int
+re_getchar_fun(void *opaque);
+
 /*
- * Compile a regexp of the given dialect. The function passed acts as a callback
- * to acquire each character of the input, in the spirit of fgetc().
+ * Compile a regexp of the given dialect.
  *
  * Returns NULL on error. If non-NULL, the *err struct is populated with the
  * type and 0-indexed byte offset of the error.
@@ -133,7 +140,8 @@ re_flags(const char *s, enum re_flags *f);
  * equally well be user defined.
  */
 struct fsm *
-re_comp(enum re_dialect dialect, int (*f)(void *opaque), void *opaque,
+re_comp(enum re_dialect dialect,
+	re_getchar_fun *f, void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err);
 

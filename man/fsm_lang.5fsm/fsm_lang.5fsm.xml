@@ -9,7 +9,6 @@
 <!DOCTYPE refentry SYSTEM "minidocbook.dtd" [
 		<!ENTITY api.lit  "<literal>api</literal>">
 		<!ENTITY c.lit    "<literal>c</literal>">
-		<!ENTITY csv.lit  "<literal>csv</literal>">
 		<!ENTITY dot.lit  "<literal>dot</literal>">
 		<!ENTITY fsm.lit  "<literal>fsm</literal>">
 		<!ENTITY ir.lit   "<literal>ir</literal>">
@@ -62,11 +61,6 @@ TODO: blurb
 					<td>&c.ext;</td>
 <!-- TODO: ISO C90, or &ansi; -->
 					<td>Generated parser in TODO standard C.</td>
-				</tr>
-				<tr>
-					<td>&csv.lit;</td>
-					<td>&csv.ext;</td>
-					<td>TODO</td>
 				</tr>
 				<tr>
 					<td>&dot.lit;</td>

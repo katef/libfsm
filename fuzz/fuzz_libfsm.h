@@ -25,7 +25,7 @@
 #include <fsm/bool.h>
 #include <fsm/cost.h>
 #include <fsm/fsm.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>

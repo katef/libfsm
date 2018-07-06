@@ -17,49 +17,37 @@
 
 	pos;
 	char;
-	!unsigned;
-	fsm;
-	fsm_state;
-	grp;
-	pred;
+	unsigned;
+	!pred;
 	!re_flags;
 	!err;
+	ast_expr;
+	ast_count;
+        ast_char_class_id;
+        !ast_char_type_id;
+	char_class_ast;
+	range_endpoint;
 
 %terminals%
 
 	ANY;
 	MANY;
-	!OPT;
+	OPT;
 	PLUS;
 	ALT;
-	!SEP;
 	STAR;
 
 	OPENSUB;   CLOSESUB;
 	OPENGROUP:  () -> (:pos, :pos); CLOSEGROUP:  () -> (:char, :pos, :pos);
-	!OPENCOUNT: () -> (:pos, :pos); !CLOSECOUNT: () -> (:pos, :pos);
+	OPENCOUNT: () -> (:pos, :pos);
+	COUNT: () -> (:unsigned);
+	SEP;
+	CLOSECOUNT: () -> (:pos, :pos);
 
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
-	CLASS_alnum:   () -> (:fsm);
-	CLASS_alpha:   () -> (:fsm);
-	!CLASS_any:    () -> (:fsm);
-	!CLASS_ascii:  () -> (:fsm);
-	!CLASS_blank:  () -> (:fsm);
-	!CLASS_cntrl:  () -> (:fsm);
-	CLASS_digit:   () -> (:fsm);
-	!CLASS_graph:  () -> (:fsm);
-	CLASS_lower:   () -> (:fsm);
-	!CLASS_print:  () -> (:fsm);
-	!CLASS_punct:  () -> (:fsm);
-	CLASS_space:   () -> (:fsm);
-	CLASS_spchr:   () -> (:fsm);
-	CLASS_upper:   () -> (:fsm);
-	!CLASS_word:   () -> (:fsm);
-	!CLASS_xdigit: () -> (:fsm);
-	!CLASS_ndigit: () -> (:fsm);
-	!CLASS_nspace: () -> (:fsm);
+	NAMED_CHAR_CLASS: () -> (:ast_char_class_id, :pos, :pos);
 
 	!OPENFLAGS;
 	!CLOSEFLAGS;
@@ -75,260 +63,265 @@
 	CHAR:     () -> (:char, :pos, :pos);
 	!START:   () -> (:pred);
 	!END:     () -> (:pred);
-	!COUNT:   () -> (:unsigned);
 
 	EOF;
 	!ERROR;
 
 %productions%
 
-	<make-group>:  () -> (:grp);
-	<invert-group>:    (:grp &) -> ();
-	<group-add-char>:  (:grp &, :char) -> ();
-	<group-add-class>: (:grp &, :fsm) -> ();
-	<group-add-range>: (:grp &, :char, :char) -> ();
-	<group-to-states>: (:grp &, :fsm_state, :fsm_state) -> ();
+        <atom-kleene>: () -> (:ast_count);
+        <atom-plus>: () -> (:ast_count);
+        <atom-one>: () -> (:ast_count);
+        <atom-opt>: () -> (:ast_count);
 
-	<add-concat>:  () -> (:fsm_state);
-	<add-epsilon>: (:fsm_state, :fsm_state)        -> ();
-	!<add-pred>:   (:fsm_state, :fsm_state, :pred) -> ();
-	<add-literal>: (:fsm_state, :fsm_state, :char) -> ();
-	<add-any>:     (:fsm_state, :fsm_state)        -> ();
-	!<add-class>:  (:fsm_state, :fsm_state, :fsm)  -> ();
+/* FIXME: rename to atom-count */
+        <expr-count>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
-	!<count-m-to-n>: (:fsm_state, :fsm_state &, :unsigned, :unsigned) -> ();
-	!<count-0-or-1>: (:fsm_state, :fsm_state) -> ();
-	<count-0-or-many>: (:fsm_state, :fsm_state &) -> ();
-	<count-1-or-many>: (:fsm_state, :fsm_state &) -> ();
-	<count-1>: (:fsm_state, :fsm_state) -> ();
+	<ast-expr-empty>: () -> (:ast_expr);
+	<ast-expr-literal>: (:char) -> (:ast_expr);
+	<ast-expr-concat>: (:ast_expr, :ast_expr) -> (:ast_expr);
+	<ast-expr-alt>: (:ast_expr, :ast_expr) -> (:ast_expr);
+	!<ast-expr-any>: () -> (:ast_expr);
+	!<ast-expr-re-flags>: (:re_flags, :re_flags) -> (:ast_expr);
 
-	!<push-flags>;
-	!<pop-flags>;
-	!<set-flag>: (:re_flags) -> ();
-	!<clear-flag>: (:re_flags) -> ();
+        <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
+        <ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
+	<ast-expr-char-class>: (:char_class_ast, :pos, :pos) -> (:ast_expr);
+        <ast-expr-group>: (:ast_expr) -> (:ast_expr);
+
+	<char-class-ast-literal>: (:char) -> (:char_class_ast);
+        <char-class-ast-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:char_class_ast);
+	<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
+	<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
+	<char-class-ast-named-class>: (:ast_char_class_id) -> (:char_class_ast);
+
+	<char-class-ast-flag-none>: () -> (:char_class_ast);
+	<char-class-ast-flag-invert>: () -> (:char_class_ast);
+	<char-class-ast-flag-minus>: () -> (:char_class_ast);
+	<char-class-ast-flag-invert-minus>: () -> (:char_class_ast);
+
+	<ast-range-endpoint-literal>: (:char) -> (:range_endpoint);
+	!<ast-range-endpoint-char-class>: (:ast_char_class_id) -> (:range_endpoint);
+
+	!<re-flag-none>: () -> (:re_flags);
+	!<re-flag-union>: (:re_flags, :re_flags) -> (:re_flags);
 
 	<err-expected-term>;
-	<err-expected-count>;
+	!<err-expected-count>;
 	!<err-expected-atoms>;
-	<err-expected-alts>;
-	<err-expected-range>;
-	<err-expected-closegroup>;
+	!<err-expected-alts>;
+	!<err-expected-range>;
+	!<err-expected-closegroup>;
 	!<err-unknown-flag>;
 	!<err-expected-closeflags>;
-	<err-expected-groupbody>;
+	!<err-expected-groupbody>;
 	<err-expected-eof>;
+	<err-unsupported>;
 
-	<mark-group>: (:pos, :pos) -> ();
-	<mark-range>: (:pos, :pos) -> ();
+	!<mark-group>: (:pos, :pos) -> ();
+	!<mark-range>: (:pos, :pos) -> ();
 	!<mark-count>: (:pos, :pos) -> ();
 
-	group: (x :fsm_state, y :fsm_state) -> () [
+	expr: () -> (node :ast_expr) [
+                literal: () -> (node :ast_expr) = {
+  			(c, !, !) = CHAR;
+			node = <ast-expr-literal>(c);
+  		};
 
-		char: () -> (c :char) = {
-			(c, !, !) = CHAR;
+		atom-suffix: () -> (f :ast_count) = {
+			STAR;
+			f = <atom-kleene>();
+		||
+			PLUS;
+			f = <atom-plus>();
+		||
+			OPT;
+			f = <atom-opt>();
+		||
+			(pos_of, pos_ot) = OPENCOUNT;
+			m = COUNT;
+			(pos_cf, pos_ct) = CLOSECOUNT;
+			f = <expr-count>(m, pos_of, m, pos_ct);
+		||
+			(pos_of, pos_ot) = OPENCOUNT;
+			m = COUNT;
+			SEP;
+			n = COUNT;
+			(pos_cf, pos_ct) = CLOSECOUNT;
+			f = <expr-count>(m, pos_of, n, pos_ct);
+		||
+			f = <atom-one>();
 		};
 
-		class: () -> (k :fsm) = {
-			k = CLASS_alnum;
-		||
-			k = CLASS_alpha;
-		||
-			k = CLASS_digit;
-		||
-			k = CLASS_lower;
-		||
-			k = CLASS_space;
-		||
-			k = CLASS_spchr;
-		||
-			k = CLASS_upper;
-		};
-
-		range: () -> (a :char, b :char) = {
-			{
-				(a, start, !) = CHAR;
-			};
-
-			{
+	        /* [abc] -> when it reaches the end, make an empty class, and
+		 *     each character literal / named class / etc. modifies it.
+		 *     
+		 * in the case of the SQL dialect's wonky [abc^def], it should
+		 * create two groups, and then remove anything from the former
+		 * that is in the latter.
+		 *
+		 * [abc] literals
+		 * [a-c] range
+		 * [-^] characters only allowed at the head
+		 * [-] also allowed at the tail (just [-] is ambiguous)
+		 * [[:NAME:]] named character classes
+		 *
+		 * _ is the ANY character class
+		 * */
+		char-class: () -> (node :ast_expr) [
+			char-class-head: () -> (f :char_class_ast) = {
+				(!) = INVERT;
+				f = <char-class-ast-flag-invert>();
+			||
 				(!, !, !) = RANGE;
-			##
-				<err-expected-range>;
+				f = <char-class-ast-flag-minus>();
+			||
+				(!) = INVERT;
+				(!, !, !) = RANGE;
+				f = <char-class-ast-flag-invert-minus>();
+			||
+				f = <char-class-ast-flag-none>();
 			};
 
-			{
-				(b, !, end) = CHAR;
-			||
-				(b, !, end) = RANGE;
+			char-class-tail: () -> (f :char_class_ast) = {
+			/* This requires LL(2). */
+
+			/* 	(!, !, !) = RANGE;
+			 * 	f = <char-class-ast-flag-minus>();
+			 * || */
+				f = <char-class-ast-flag-none>();
 			};
 
-			<mark-range>(start, end);
-		};
-
-		list-of-terms: (g :grp &) -> () = {
-			{
-				c = char;
-				<group-add-char>(&g, c);
-			||
-				k = class;
-				<group-add-class>(&g, k);
-			||
-				(a, b) = range;
-				<group-add-range>(&g, a, b);
-			##
-				<err-expected-term>;
+			named-class: () -> (id :ast_char_class_id) = {
+                        	(id, !, !) = NAMED_CHAR_CLASS;
 			};
 
-			{
-				$;
+			term: () -> (node :char_class_ast) = {
+				(ca, start, !) = CHAR;
+                                a = <ast-range-endpoint-literal>(ca);
+
+				(!, !, !) = RANGE;
+
+				(cz, !, end) = CHAR;
+                                z = <ast-range-endpoint-literal>(cz);
+
+				node = <char-class-ast-range>(a, start, z, end);
 			||
-				list-of-terms(&g);
+				(c, !, !) = CHAR;
+				node = <char-class-ast-literal>(c);
+			||
+				id = named-class();
+				node = <char-class-ast-named-class>(id);
+                        ##
+                        	<err-expected-term>();
+                                node = <char-class-ast-flag-none>();
 			};
-		};
-
-		group-body: (g :grp &) -> () = {
-			{
-				(c, !, !) = CLOSEGROUP;
-				<group-add-char>(&g, c);
-			||
-				(c, !, !) = RANGE;
-				<group-add-char>(&g, c);
-			||
-				/*
-				 * XXX: this is atypical, but serves as a workaround for below
-				 * until this can be done lexically by /-$/ -> $char.
-				 */
-				(a, !, !) = CLOSEGROUP;
-				<group-add-char>(&g, a);
-				(b, !, !) = RANGE;
-				<group-add-char>(&g, b);
-			||
-				$;
+			    
+			list-of-char-class-terms: () -> (node :char_class_ast) = {
+				l = term();
+				{
+					r = list-of-char-class-terms();
+					node = <char-class-ast-concat>(l, r);
+				||
+					node = l;
+				};
 			};
+			    
+			char-class-ast: () -> (node :ast_expr) = {
+				(start, !) = OPENGROUP;
 
-			list-of-terms(&g);
+				head = char-class-head();
+				body = list-of-char-class-terms();
+				tail = char-class-tail();
 
-			{
-/* XXX: this ought to be permitted, but I can't see how for LL(1)
-				(c, !, !) = RANGE;
-				<group-add-char>(&g, c);
-			||
-*/
-				$;
-			};
-		};
-
-		group-bm: (g :grp &) -> () = {
-			(start, !) = OPENGROUP;
-
-			{
-				! = INVERT;
-				group-body(&g);
-				<invert-group>(&g);
-			||
-				group-body(&g);
-			};
-
-			{
+				hb = <char-class-ast-concat>(head, body);
+				hbt = <char-class-ast-concat>(hb, tail);
 				(!, !, end) = CLOSEGROUP;
-				<mark-group>(start, end);
-			##
-				<err-expected-closegroup>;
+				node = <ast-expr-char-class>(hbt, start, end);
+			||
+				(start, !) = OPENGROUP;
+				head = char-class-head();
+				body = list-of-char-class-terms();
+				tail = char-class-tail();
+				(!) = INVERT;
+				maskhead = char-class-head();
+				maskbody = list-of-char-class-terms();
+				masktail = char-class-tail();
+
+				hb = <char-class-ast-concat>(head, body);
+				hbt = <char-class-ast-concat>(hb, tail);
+				(!, !, end) = CLOSEGROUP;
+
+				/* Marking this unsupported for now */
+                                <err-unsupported>();
+
+				mhb = <char-class-ast-concat>(maskhead, maskbody);
+				mhbt = <char-class-ast-concat>(mhb, masktail);
+				masked = <char-class-ast-subtract>(hbt, mhbt);
+				node = <ast-expr-char-class>(masked, start, end);
 			};
-		##
-			<err-expected-groupbody>;
-		};
-
-	] = {
-		g = <make-group>;
-
-		group-bm(&g);
-
-		<group-to-states>(&g, x, y);
-	};
-
-	literal: (x :fsm_state, y :fsm_state) -> () = {
-		{
-			(c, !, !) = CHAR;
-		};
-		<add-literal>(x, y, c);
-	};
-
-	expr: (x :fsm_state, y :fsm_state) -> () [
-
-		atom: (x :fsm_state, y :fsm_state &) -> () = {
-			{
-				OPENSUB;
-				expr(x, y);
-				CLOSESUB;
-			||
-				group(x, y);
-			||
-				literal(x, y);
-			||
-				ANY;
-				<add-any>(x, y);
-			||
-				MANY;
-				<add-any>(x, y);
-				<count-0-or-many>(x, &y);
-			};
-
-			{
-				STAR;
-				<count-0-or-many>(x, &y);
-			||
-				PLUS;
-				<count-1-or-many>(x, &y);
-			||
-				<count-1>(x, y);
-			##
-				<err-expected-count>;
-			};
-		};
-
-		list-of-atoms: (x :fsm_state, y :fsm_state) -> () = {
-			z = <add-concat>;
-
-			atom(x, &z);
-
-			/* TODO: I don't like this. Refactor somehow? */
-			{
-				<add-epsilon>(z, y);
-			||
-				list-of-atoms(z, y);
-			};
-		};
-
-		list-of-alts: (x :fsm_state, y :fsm_state) -> () [
-
-			alt: (x :fsm_state, y :fsm_state) -> () = {
-				z = <add-concat>;
-
-				/* TODO: I don't like this. Refactor somehow? */
-				<add-epsilon>(x, z);
-
-				list-of-atoms(z, y);
-			};
-
 		] = {
-			alt(x, y);
-		||
-			list-of-alts(x, y);
-			ALT;
-			alt(x, y);
+			node = char-class-ast();
 		};
 
+		/* TODO: is there a better name than 'atom' for
+		 * this construct? it isn't atomic... */
+		atom: () -> (node :ast_expr) = {
+			OPENSUB;
+			g = expr();
+			e = <ast-expr-group>(g);
+			CLOSESUB;
+			s = atom-suffix();
+			node = <ast-expr-atom>(e, s);
+		||
+			e = char-class();
+			s = atom-suffix();
+			node = <ast-expr-atom>(e, s);
+		||
+			e = literal();
+			s = atom-suffix();
+			node = <ast-expr-atom>(e, s);
+		||
+			ANY;
+			s = atom-suffix();
+			node = <ast-expr-atom-any>(s);
+		||
+			MANY;
+			s = atom-suffix();
+			f = <atom-kleene>();
+			e = <ast-expr-atom-any>(f);
+			node = <ast-expr-atom>(e, s);
+		};
+
+		list-of-atoms: () -> (node :ast_expr) = {
+			node = atom();
+		||
+			a = atom();
+			r = list-of-atoms();
+			node = <ast-expr-concat>(a,r);
+		};
+
+		alt: () -> (node :ast_expr) = {
+			node = list-of-atoms();
+		};
+
+		list-of-alts: () -> (node :ast_expr) = {
+			node = alt();
+		||
+			a = alt();
+			ALT;
+			r = list-of-alts();
+			node = <ast-expr-alt>(a, r);
+		};
 	] = {
-		list-of-alts(x, y);
+		node = list-of-alts();
 	};
 
-	re_sql: (x :fsm_state, y :fsm_state) -> () = {
+	re_sql: () -> (node :ast_expr) = {
 		{
-			expr(x, y);
+			node = expr();
 		||
-			<add-epsilon>(x, y);
-		##
-			<err-expected-alts>;
+			node = <ast-expr-empty>();
 		};
 
 		{

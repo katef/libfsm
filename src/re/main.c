@@ -17,12 +17,14 @@
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include <re/re.h>
 
 #include "libfsm/internal.h" /* XXX */
+#include "libre/re_comp.h" /* XXX */
+#include "libre/print.h" /* XXX */
 
 /*
  * TODO: accepting a delimiter would be useful: /abc/. perhaps provide that as
@@ -82,29 +84,39 @@ io(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static enum fsm_out
-language(const char *name)
+static void
+print_name(const char *name,
+	fsm_print **print_fsm, re_ast_print **print_ast)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		enum fsm_out format;
+		fsm_print    *print_fsm;
+		re_ast_print *print_ast;
 	} a[] = {
-		{ "api",  FSM_OUT_API  },
-		{ "c",    FSM_OUT_C    },
-		{ "csv",  FSM_OUT_CSV  },
-		{ "dot",  FSM_OUT_DOT  },
-		{ "fsm",  FSM_OUT_FSM  },
-		{ "ir",   FSM_OUT_IR   },
-		{ "json", FSM_OUT_JSON }
+		{ "api",  fsm_print_api,  NULL },
+		{ "c",    fsm_print_c,    NULL },
+		{ "dot",  fsm_print_dot,  NULL },
+		{ "fsm",  fsm_print_fsm,  NULL },
+		{ "ir",   fsm_print_ir,   NULL },
+		{ "json", fsm_print_json, NULL },
+
+		{ "tree", NULL, re_ast_print_tree },
+		{ "ebnf", NULL, re_ast_print_ebnf },
+		{ "ast",  NULL, re_ast_print_dot  },
+		{ "pcre", NULL, re_ast_print_pcre }
 	};
 
 	assert(name != NULL);
+	assert(print_fsm != NULL);
+	assert(print_ast != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].format;
+			*print_fsm = a[i].print_fsm;
+			*print_ast = a[i].print_ast;
+			return;
 		}
 	}
 
@@ -376,12 +388,12 @@ main(int argc, char *argv[])
 {
 	struct fsm *(*join)(struct fsm *, struct fsm *);
 	int (*query)(const struct fsm *, const struct fsm *);
-	enum fsm_out format;
+	fsm_print *print_fsm;
+	re_ast_print *print_ast;
 	enum re_dialect dialect;
 	struct fsm *fsm;
 	enum re_flags flags;
 	int xfiles, yfiles;
-	int print;
 	int example;
 	int keep_nfa;
 	int patterns;
@@ -394,18 +406,18 @@ main(int argc, char *argv[])
 	opt.comments          = 1;
 	opt.io                = FSM_IO_GETC;
 
-	flags    = 0U;
-	xfiles   = 0;
-	yfiles   = 0;
-	print    = 0;
-	example  = 0;
-	keep_nfa = 0;
-	patterns = 0;
-	ambig    = 0;
-	query    = NULL;
-	join     = fsm_union;
-	format   = FSM_OUT_FSM;
-	dialect  = RE_NATIVE;
+	flags     = 0U;
+	xfiles    = 0;
+	yfiles    = 0;
+	example   = 0;
+	keep_nfa  = 0;
+	patterns  = 0;
+	ambig     = 0;
+	print_fsm = NULL;
+	print_ast = NULL;
+	query     = NULL;
+	join      = fsm_union;
+	dialect   = RE_NATIVE;
 
 	{
 		int c;
@@ -425,12 +437,15 @@ main(int argc, char *argv[])
 				join = fsm_concat;
 				break;
 
-			case 'q': query   = comparison(optarg);       break;
-			case 'r': dialect = dialect_name(optarg);     break;
-			case 'l': format  = language(optarg);         break;
+			case 'l':
+				print_name(optarg, &print_fsm, &print_ast);
+				break;
+
+			case 'p': print_fsm = fsm_print_fsm;        break;
+			case 'q': query     = comparison(optarg);   break;
+			case 'r': dialect   = dialect_name(optarg); break;
 
 			case 'u': ambig    = 1; break;
-			case 'p': print    = 1; break;
 			case 'x': xfiles   = 1; break;
 			case 'y': yfiles   = 1; break;
 			case 'm': example  = 1; break;
@@ -457,7 +472,12 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (print + example + !!query && xfiles) {
+	if (!!print_fsm + !!print_ast + example + !!query > 1) {
+		fprintf(stderr, "-m, -p and -q are mutually exclusive\n");
+		return EXIT_FAILURE;
+	}
+
+	if (!!print_fsm + !!print_ast + example + !!query && xfiles) {
 		fprintf(stderr, "-x applies only when executing\n");
 		return EXIT_FAILURE;
 	}
@@ -472,12 +492,50 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (!print) {
+	if (print_fsm == NULL) {
 		keep_nfa = 0;
 	}
 
 	if (keep_nfa) {
 		ambig = 1;
+	}
+
+	/* XXX: repetitive */
+	if (print_ast != NULL) {
+		struct ast_re *ast;
+		struct re_err err;
+
+		if (argc != 1) {
+			fprintf(stderr, "single regexp only for this output format\n");
+			return EXIT_FAILURE;
+		}
+
+		if (yfiles) {
+			FILE *f;
+
+			f = xopen(argv[0]);
+
+			ast = re_parse(dialect, fsm_fgetc, f, &opt, flags, &err);
+
+			fclose(f);
+		} else {
+			const char *s;
+
+			s = argv[0];
+
+			ast = re_parse(dialect, fsm_sgetc, &s, &opt, flags, &err);
+		}
+
+		if (ast == NULL) {
+			re_perror(dialect, &err,
+				 yfiles ? argv[0] : NULL,
+				!yfiles ? argv[0] : NULL);
+			return EXIT_FAILURE;
+		}
+
+		print_ast(stdout, &opt, ast);
+
+		return 0;
 	}
 
 	flags |= RE_MULTI;
@@ -491,7 +549,7 @@ main(int argc, char *argv[])
 	{
 		int i;
 
-		for (i = 0; i < argc - !(print || example || !!query || argc <= 1); i++) {
+		for (i = 0; i < argc - !(print_fsm || example || !!query || argc <= 1); i++) {
 			struct re_err err;
 			struct fsm *new, *q;
 
@@ -602,7 +660,7 @@ main(int argc, char *argv[])
 		return EXIT_SUCCESS;
 	}
 
-	if ((print || example) && argc > 0) {
+	if ((print_fsm || example) && argc > 0) {
 		fprintf(stderr, "too many arguments\n");
 		return EXIT_FAILURE;
 	}
@@ -674,7 +732,7 @@ main(int argc, char *argv[])
 		 * Minimise only when we don't need to keep the end state information
 		 * separated per regexp. Otherwise, convert to a DFA.
 		 */
-		if (!patterns && !example && format != FSM_OUT_C) {
+		if (!patterns && !example && print_fsm != fsm_print_c) {
 			if (!fsm_minimise(fsm)) {
 				perror("fsm_minimise");
 				return EXIT_FAILURE;
@@ -723,7 +781,7 @@ main(int argc, char *argv[])
 		return 0;
 	}
 
-	if (print) {
+	if (print_fsm != NULL) {
 		/* TODO: print examples in comments for end states;
 		 * patterns in comments for the whole FSM */
 
@@ -734,11 +792,11 @@ main(int argc, char *argv[])
 			}
 		}
 
-		if (format == FSM_OUT_C) {
+		if (print_fsm == fsm_print_c) {
 			opt.endleaf = endleaf;
 		}
 
-		fsm_print(fsm, stdout, format);
+		print_fsm(stdout, fsm);
 
 /* XXX: free fsm */
 
