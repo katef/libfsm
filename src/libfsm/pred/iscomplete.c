@@ -19,27 +19,27 @@ fsm_iscomplete(const struct fsm *fsm, const struct fsm_state *state)
 {
 	struct fsm_edge *e;
 	struct set_iter it;
+	unsigned n;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	/* epsilon transitions have no effect on completeness */
+	n = 0;
 
 	/* TODO: assert state is in fsm->sl */
 	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
+		/* epsilon transitions have no effect on completeness */
 		if (e->symbol > UCHAR_MAX) {
-			return 1;
+			continue;
 		}
 
 		if (set_empty(e->sl)) {
-			return 0;
+			continue;
 		}
 
-		if (e->symbol == UCHAR_MAX) {
-			return 1;
-		}
+		n++;
 	}
 
-	return 0;
+	return n == UCHAR_MAX + 1;
 }
 
