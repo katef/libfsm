@@ -13,6 +13,17 @@ ${res}:
 
 .endfor
 
+.for res in ${FSMTEST_ERROR}
+
+test:: ${res}
+
+${res}:
+	diff ${.ALLSRC:M*.err}; \
+	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
+	> $@
+
+.endfor
+
 .for img in ${FSMTEST_IMG}
 
 .if defined(DEBUG)

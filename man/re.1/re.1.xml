@@ -452,6 +452,14 @@ group (for dialects which have them) (rather than a "whole" regexp)
 	</refsection>
 
 	<refsection>
+		<title>Exit Status</title>
+
+		<para>Exits <literal>&gt;0</literal> if an error occurs,
+			<literal>2</literal> specifically for unsupported regexp syntax,
+			or <literal>0</literal> on success.</para>
+	</refsection>
+
+	<refsection>
 		<title>See Also</title>
 
 		<para>&fsm.1;, &grep.1;, &fsm.3;, &re.3;,

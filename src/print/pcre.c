@@ -52,7 +52,7 @@ pcre_escputc(FILE *f, const struct fsm_options *opt, char c)
 	}
 
 	if (!isprint((unsigned char) c)) {
-		return fprintf(f, "\\%02x", (unsigned char) c);
+		return fprintf(f, "\\x%02x", (unsigned char) c);
 	}
 
 	return fprintf(f, "%c", c);

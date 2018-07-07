@@ -49,11 +49,13 @@ SUBDIR += tests/glob
 SUBDIR += tests/like
 SUBDIR += tests/literal
 SUBDIR += tests/minimise
+SUBDIR += tests/native
 SUBDIR += tests/pcre
 SUBDIR += tests/pred
 SUBDIR += tests/reverse
 SUBDIR += tests/union
 SUBDIR += tests/set
+SUBDIR += tests/sql
 SUBDIR += tests
 .if !empty(.TARGETS:Mfuzz)
 SUBDIR += fuzz
