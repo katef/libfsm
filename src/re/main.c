@@ -531,6 +531,11 @@ main(int argc, char *argv[])
 			re_perror(dialect, &err,
 				 yfiles ? argv[0] : NULL,
 				!yfiles ? argv[0] : NULL);
+
+			if (err.e == RE_EXUNSUPPORTD) {
+				return 2;
+			}
+
 			return EXIT_FAILURE;
 		}
 
@@ -583,6 +588,11 @@ main(int argc, char *argv[])
 				re_perror(dialect, &err,
 					 yfiles ? argv[i] : NULL,
 					!yfiles ? argv[i] : NULL);
+
+				if (err.e == RE_EXUNSUPPORTD) {
+					return 2;
+				}
+
 				return EXIT_FAILURE;
 			}
 
