@@ -20,7 +20,7 @@ dot_escputc_html(FILE *f, const struct fsm_options *opt, char c)
 	assert(opt != NULL);
 
 	if (opt->always_hex) {
-		return fprintf(f, "\\x%02x", (unsigned char) c);
+		return fprintf(f, "\\x%02x", (unsigned char) c); /* for humans */
 	}
 
 	switch (c) {

@@ -41,7 +41,7 @@ c_escputc_char(FILE *f, const struct fsm_options *opt, char c)
 	}
 
 	if (!isprint((unsigned char) c)) {
-		return fprintf(f, "\\%02x", (unsigned char) c);
+		return fprintf(f, "\\x%02x", (unsigned char) c);
 	}
 
 	return fprintf(f, "%c", c);
@@ -54,7 +54,9 @@ c_escputc_str(FILE *f, const struct fsm_options *opt, char c)
 	assert(opt != NULL);
 
 	if (opt->always_hex) {
-		return fprintf(f, "\\x%03o", (unsigned char) c);
+		/* always numeric, not hex specifically.
+		 * we use octal in strings because it avoids trailing digits. */
+		return fprintf(f, "\\%03o", (unsigned char) c);
 	}
 
 	switch (c) {
@@ -80,7 +82,7 @@ c_escputc_str(FILE *f, const struct fsm_options *opt, char c)
 	 */
 
 	if (!isprint((unsigned char) c) || c == '/') {
-		return fprintf(f, "\\x%03o", (unsigned char) c);
+		return fprintf(f, "\\%03o", (unsigned char) c);
 	}
 
 	return fprintf(f, "%c", c);
