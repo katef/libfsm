@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#include <print/esc.h>
+
 #include <adt/set.h>
 
 #include <fsm/fsm.h>
@@ -32,7 +34,7 @@ indexof(const struct ir *ir, const struct ir_state *cs)
 	return cs - &ir->states[0];
 }
 
-const char *
+static const char *
 strategy_name(enum ir_strategy strategy)
 {
 	switch (strategy) {
@@ -47,93 +49,22 @@ strategy_name(enum ir_strategy strategy)
 	}
 }
 
-/* TODO: centralise */
-static int
-escputc_hex(int c, FILE *f)
-{
-	assert(f != NULL);
-
-	return fprintf(f, "\\x%02x", (unsigned char) c); /* for humans */
-}
-
-/* TODO: centralise */
-static int
-escputc(int c, FILE *f)
-{
-	size_t i;
-
-	const struct {
-		int c;
-		const char *s;
-	} a[] = {
-		{ '&',  "&amp;"    },
-		{ '\"', "&quot;"   },
-		{ ']',  "&#x5D;"   }, /* yes, even in a HTML label */
-		{ '<',  "&#x3C;"   },
-		{ '>',  "&#x3E;"   },
-		{ ' ',  "&#x2423;" }
-	};
-
-	assert(f != NULL);
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].c == c) {
-			return fputs(a[i].s, f);
-		}
-	}
-
-	if (!isprint((unsigned char) c)) {
-		return fprintf(f, "\\x%02x", (unsigned char) c); /* for humans */
-	}
-
-	return fprintf(f, "%c", c);
-}
-
-/* TODO: centralise, maybe with callback */
-static int
-escputs(FILE *f, const char *s)
-{
-	const char *p;
-	int r, n;
-
-	assert(f != NULL);
-	assert(s != NULL);
-
-	n = 0;
-
-	for (p = s; *p != '\0'; p++) {
-		r = escputc(*p, f);
-		if (r == -1) {
-			return -1;
-		}
-
-		n += r;
-	}
-
-	return n;
-}
-
 static void
-print_endpoint(const struct fsm_options *opt, unsigned char c, FILE *f)
+print_endpoint(FILE *f, const struct fsm_options *opt, unsigned char c)
 {
+	assert(f != NULL);
 	assert(opt != NULL);
-	assert(f != NULL);
 
-	if (opt->always_hex) {
-		escputc_hex(c, f);
-	} else {
-		escputc(c, f);
-	}
+	dot_escputc_html(f, opt, c);
 }
 
 static void
-print_state(const struct ir *ir,
-	const struct ir_state *to, const struct ir_state *self,
-	FILE *f)
+print_state(FILE *f, const struct ir *ir,
+	const struct ir_state *to, const struct ir_state *self)
 {
+	assert(f != NULL);
 	assert(ir != NULL);
 	assert(self != NULL);
-	assert(f != NULL);
 
 	if (to == NULL) {
 		fprintf(f, "(none)");
@@ -145,16 +76,16 @@ print_state(const struct ir *ir,
 }
 
 static void
-print_grouprows(const struct fsm_options *opt,
+print_grouprows(FILE *f, const struct fsm_options *opt,
 	const struct ir *ir, const struct ir_state *self,
-	const struct ir_group *groups, size_t n, FILE *f)
+	const struct ir_group *groups, size_t n)
 {
 	size_t j, k;
 
+	assert(f != NULL);
 	assert(opt != NULL);
 	assert(ir != NULL);
 	assert(groups != NULL);
-	assert(f != NULL);
 
 	for (j = 0; j < n; j++) {
 		assert(groups[j].ranges != NULL);
@@ -164,14 +95,14 @@ print_grouprows(const struct fsm_options *opt,
 
 			if (groups[j].ranges[k].start == groups[j].ranges[k].end) {
 				fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>");
-				print_endpoint(opt, groups[j].ranges[k].start, f);
+				print_endpoint(f, opt, groups[j].ranges[k].start);
 				fprintf(f, "</TD>");
 			} else {
 				fprintf(f, "<TD ALIGN='LEFT'>");
-				print_endpoint(opt, groups[j].ranges[k].start, f);
+				print_endpoint(f, opt, groups[j].ranges[k].start);
 				fprintf(f, "</TD>");
 				fprintf(f, "<TD ALIGN='LEFT'>");
-				print_endpoint(opt, groups[j].ranges[k].end, f);
+				print_endpoint(f, opt, groups[j].ranges[k].end);
 				fprintf(f, "</TD>");
 			}
 
@@ -180,7 +111,7 @@ print_grouprows(const struct fsm_options *opt,
 			} else {
 				fprintf(f, "<TD ALIGN='LEFT' PORT='group%u'>",
 					(unsigned) j);
-				print_state(ir, groups[j].to, self, f);
+				print_state(f, ir, groups[j].to, self);
 				fprintf(f, "</TD>");
 			}
 
@@ -190,14 +121,14 @@ print_grouprows(const struct fsm_options *opt,
 }
 
 static void
-print_grouplinks(const struct ir *ir, const struct ir_state *self,
-	const struct ir_group *groups, size_t n, FILE *f)
+print_grouplinks(FILE *f, const struct ir *ir, const struct ir_state *self,
+	const struct ir_group *groups, size_t n)
 {
 	size_t j;
 
+	assert(f != NULL);
 	assert(ir != NULL);
 	assert(groups != NULL);
-	assert(f != NULL);
 
 	for (j = 0; j < n; j++) {
 		if (groups[j].to == NULL) {
@@ -215,13 +146,13 @@ print_grouplinks(const struct ir *ir, const struct ir_state *self,
 }
 
 static void
-print_cs(const struct fsm_options *opt,
-	const struct ir *ir, const struct ir_state *cs, FILE *f)
+print_cs(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir, const struct ir_state *cs)
 {
+	assert(f != NULL);
 	assert(opt != NULL);
 	assert(ir != NULL);
 	assert(cs != NULL);
-	assert(f != NULL);
 
 	if (cs->isend) {
 		fprintf(f, "\tcs%u [ peripheries = 2 ];\n", indexof(ir, cs));
@@ -234,7 +165,7 @@ print_cs(const struct fsm_options *opt,
 
 	if (cs->example != NULL) {
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>example</TD><TD ALIGN='LEFT'>");
-		escputs(f, cs->example);
+		escputs(f, opt, dot_escputc_html, cs->example);
 		fprintf(f, "</TD></TR>\n");
 	}
 
@@ -246,19 +177,19 @@ print_cs(const struct fsm_options *opt,
 
 	case IR_SAME:
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>to</TD><TD ALIGN='LEFT'>");
-		print_state(ir, cs->u.same.to, cs, f);
+		print_state(f, ir, cs->u.same.to, cs);
 		fprintf(f, "</TD></TR>\n");
 		break;
 
 	case IR_MANY:
-		print_grouprows(opt, ir, cs, cs->u.many.groups, cs->u.many.n, f);
+		print_grouprows(f, opt, ir, cs, cs->u.many.groups, cs->u.many.n);
 		break;
 
 	case IR_MODE:
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>mode</TD><TD ALIGN='LEFT' PORT='mode'>");
-		print_state(ir, cs->u.mode.mode, cs, f);
+		print_state(f, ir, cs->u.mode.mode, cs);
 		fprintf(f, "</TD></TR>\n");
-		print_grouprows(opt, ir, cs, cs->u.mode.groups, cs->u.mode.n, f);
+		print_grouprows(f, opt, ir, cs, cs->u.mode.groups, cs->u.mode.n);
 		break;
 
 	case IR_JUMP:
@@ -285,7 +216,7 @@ print_cs(const struct fsm_options *opt,
 		break;
 
 	case IR_MANY:
-		print_grouplinks(ir, cs, cs->u.many.groups, cs->u.many.n, f);
+		print_grouplinks(f, ir, cs, cs->u.many.groups, cs->u.many.n);
 		break;
 
 	case IR_MODE:
@@ -295,7 +226,7 @@ print_cs(const struct fsm_options *opt,
 			fprintf(f, "\tcs%u:mode -> cs%u;\n",
 				indexof(ir, cs), indexof(ir, cs->u.mode.mode));
 		}
-		print_grouplinks(ir, cs, cs->u.mode.groups, cs->u.mode.n, f);
+		print_grouplinks(f, ir, cs, cs->u.mode.groups, cs->u.mode.n);
 		break;
 
 	case IR_JUMP:
@@ -334,7 +265,7 @@ fsm_print_ir(FILE *f, const struct fsm *fsm)
 			fprintf(f, "\n");
 		}
 
-		print_cs(fsm->opt, ir, &ir->states[i], f);
+		print_cs(f, fsm->opt, ir, &ir->states[i]);
 	}
 
 	fprintf(f, "}\n");
