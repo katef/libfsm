@@ -31,6 +31,7 @@ fsm_print_c
 fsm_print_dot
 fsm_print_fsm
 fsm_print_ir
+fsm_print_irjson
 fsm_print_json
 
 # <fsm/fsm.h>

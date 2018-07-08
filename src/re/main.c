@@ -95,17 +95,18 @@ print_name(const char *name,
 		fsm_print    *print_fsm;
 		re_ast_print *print_ast;
 	} a[] = {
-		{ "api",  fsm_print_api,  NULL },
-		{ "c",    fsm_print_c,    NULL },
-		{ "dot",  fsm_print_dot,  NULL },
-		{ "fsm",  fsm_print_fsm,  NULL },
-		{ "ir",   fsm_print_ir,   NULL },
-		{ "json", fsm_print_json, NULL },
+		{ "api",    fsm_print_api,    NULL  },
+		{ "c",      fsm_print_c,      NULL  },
+		{ "dot",    fsm_print_dot,    NULL  },
+		{ "fsm",    fsm_print_fsm,    NULL  },
+		{ "ir",     fsm_print_ir,     NULL  },
+		{ "irjson", fsm_print_irjson, NULL  },
+		{ "json",   fsm_print_json,   NULL  },
 
-		{ "tree", NULL, re_ast_print_tree },
-		{ "ebnf", NULL, re_ast_print_ebnf },
-		{ "ast",  NULL, re_ast_print_dot  },
-		{ "pcre", NULL, re_ast_print_pcre }
+		{ "tree",   NULL, re_ast_print_tree },
+		{ "ebnf",   NULL, re_ast_print_ebnf },
+		{ "ast",    NULL, re_ast_print_dot  },
+		{ "pcre",   NULL, re_ast_print_pcre }
 	};
 
 	assert(name != NULL);

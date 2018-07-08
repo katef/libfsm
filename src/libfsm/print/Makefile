@@ -6,6 +6,7 @@ SRC += src/libfsm/print/dot.c
 SRC += src/libfsm/print/fsm.c
 SRC += src/libfsm/print/ir.c
 SRC += src/libfsm/print/irdot.c
+SRC += src/libfsm/print/irjson.c
 SRC += src/libfsm/print/json.c
 
 .for src in ${SRC:Msrc/libfsm/print/*.c}
