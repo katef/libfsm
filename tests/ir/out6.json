@@ -1,0 +1,23 @@
+{
+	"start": 0,
+	"states": [
+		{
+			"end": false,
+			"strategy": "mode",
+			"mode": 1,
+			"groups": [
+				{
+					"to": null,
+					"ranges": [
+						{ "start": "a", "end": "b" }
+					]
+				}
+			]
+		},
+		{
+			"end": true,
+			"strategy": "none",
+			"example": "d"
+		}
+	]
+}
