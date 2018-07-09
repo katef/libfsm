@@ -25,15 +25,6 @@
 
 #include "ir.h"
 
-static unsigned int
-indexof(const struct ir *ir, const struct ir_state *cs)
-{
-	assert(ir != NULL);
-	assert(cs != NULL);
-
-	return cs - &ir->states[0];
-}
-
 static const char *
 strategy_name(enum ir_strategy strategy)
 {
@@ -61,19 +52,6 @@ print_endpoint(FILE *f, const struct fsm_options *opt, unsigned char c)
 }
 
 static void
-print_state(FILE *f, const struct ir *ir, const struct ir_state *to)
-{
-	assert(f != NULL);
-	assert(ir != NULL);
-
-	if (to == NULL) {
-		fprintf(f, "null");
-	} else {
-		fprintf(f, "%u", indexof(ir, to));
-	}
-}
-
-static void
 print_groups(FILE *f, const struct fsm_options *opt,
 	const struct ir *ir,
 	const struct ir_group *groups, size_t n)
@@ -92,10 +70,7 @@ print_groups(FILE *f, const struct fsm_options *opt,
 
 		fprintf(f, "\t\t\t\t{\n");
 
-		fprintf(f, "\t\t\t\t\t\"to\": ");
-		print_state(f, ir, groups[j].to);
-		fprintf(f, ",\n");
-
+		fprintf(f, "\t\t\t\t\t\"to\": %u,\n", groups[j].to);
 		fprintf(f, "\t\t\t\t\t\"ranges\": [\n");
 
 		for (k = 0; k < groups[j].n; k++) {
@@ -157,9 +132,7 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case IR_SAME:
-		fprintf(f, "\t\t\t\"to\": ");
-		print_state(f, ir, cs->u.same.to);
-		fprintf(f, "\n");
+		fprintf(f, "\t\t\t\"to\": %u\n", cs->u.same.to);
 		break;
 
 	case IR_MANY:
@@ -168,9 +141,7 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case IR_MODE:
-		fprintf(f, "\t\t\t\"mode\": ");
-		print_state(f, ir, cs->u.mode.mode);
-		fprintf(f, ",\n");
+		fprintf(f, "\t\t\t\"mode\": %u,\n", cs->u.mode.mode);
 		fprintf(f, "\t\t\t\"groups\": ");
 		print_groups(f, opt, ir, cs->u.mode.groups, cs->u.mode.n);
 		break;
@@ -200,11 +171,9 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 		return;
 	}
 
-	assert(ir->start != NULL);
-
 	fprintf(f, "{\n");
 
-	fprintf(f, "\t\"start\": %u,\n", indexof(ir, ir->start));
+	fprintf(f, "\t\"start\": %u,\n", ir->start);
 	fprintf(f, "\t\"states\": [\n");
 
 	for (i = 0; i < ir->n; i++) {

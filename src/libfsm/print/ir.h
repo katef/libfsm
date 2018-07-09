@@ -36,7 +36,7 @@ struct ir_range {
  * cannot appear in multiple groups.
  */
 struct ir_group {
-	const struct ir_state *to;
+	unsigned to;
 	size_t n;
 	const struct ir_range *ranges; /* array */
 };
@@ -50,7 +50,7 @@ struct ir_state {
 	enum ir_strategy strategy;
 	union {
 		struct {
-			const struct ir_state *to;
+			unsigned to;
 		} same;
 
 		struct {
@@ -59,20 +59,20 @@ struct ir_state {
 		} many;
 
 		struct {
-			const struct ir_state *mode;
+			unsigned mode;
 			size_t n;
 			const struct ir_group *groups; /* array */
 		} mode;
 
 		struct {
-			const struct ir_state *to[UCHAR_MAX];
+			unsigned to[UCHAR_MAX];
 		} jump;
 	} u;
 };
 
 struct ir {
 	size_t n;
-	const struct ir_state *start;
+	unsigned start;
 	struct ir_state *states; /* array */
 };
 

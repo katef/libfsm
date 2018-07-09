@@ -59,25 +59,20 @@ print_endpoint(FILE *f, const struct fsm_options *opt, unsigned char c)
 }
 
 static void
-print_state(FILE *f, const struct ir *ir,
-	const struct ir_state *to, const struct ir_state *self)
+print_state(FILE *f, unsigned to, unsigned self)
 {
 	assert(f != NULL);
-	assert(ir != NULL);
-	assert(self != NULL);
 
-	if (to == NULL) {
-		fprintf(f, "(none)");
-	} else if (to == self) {
+	if (to == self) {
 		fprintf(f, "(self)");
 	} else {
-		fprintf(f, "S%u", indexof(ir, to));
+		fprintf(f, "S%u", to);
 	}
 }
 
 static void
 print_grouprows(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, const struct ir_state *self,
+	const struct ir *ir, unsigned self,
 	const struct ir_group *groups, size_t n)
 {
 	size_t j, k;
@@ -111,7 +106,7 @@ print_grouprows(FILE *f, const struct fsm_options *opt,
 			} else {
 				fprintf(f, "<TD ALIGN='LEFT' PORT='group%u'>",
 					(unsigned) j);
-				print_state(f, ir, groups[j].to, self);
+				print_state(f, groups[j].to, self);
 				fprintf(f, "</TD>");
 			}
 
@@ -121,26 +116,22 @@ print_grouprows(FILE *f, const struct fsm_options *opt,
 }
 
 static void
-print_grouplinks(FILE *f, const struct ir *ir, const struct ir_state *self,
+print_grouplinks(FILE *f, const struct ir *ir, unsigned self,
 	const struct ir_group *groups, size_t n)
 {
-	size_t j;
+	unsigned j;
 
 	assert(f != NULL);
 	assert(ir != NULL);
 	assert(groups != NULL);
 
 	for (j = 0; j < n; j++) {
-		if (groups[j].to == NULL) {
-			fprintf(f, "\tcs%u:group%u -> cs%s;\n",
-				indexof(ir, self), (unsigned) j,
-				"(none)");
-		} else if (groups[j].to == self) {
+		if (groups[j].to == self) {
 			/* no edge drawn */
 		} else {
 			fprintf(f, "\tcs%u:group%u -> cs%u;\n",
-				indexof(ir, self), (unsigned) j,
-				indexof(ir, groups[j].to));
+				self, j,
+				groups[j].to);
 		}
 	}
 }
@@ -177,19 +168,19 @@ print_cs(FILE *f, const struct fsm_options *opt,
 
 	case IR_SAME:
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>to</TD><TD ALIGN='LEFT'>");
-		print_state(f, ir, cs->u.same.to, cs);
+		print_state(f, cs->u.same.to, indexof(ir, cs));
 		fprintf(f, "</TD></TR>\n");
 		break;
 
 	case IR_MANY:
-		print_grouprows(f, opt, ir, cs, cs->u.many.groups, cs->u.many.n);
+		print_grouprows(f, opt, ir, indexof(ir, cs), cs->u.many.groups, cs->u.many.n);
 		break;
 
 	case IR_MODE:
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>mode</TD><TD ALIGN='LEFT' PORT='mode'>");
-		print_state(f, ir, cs->u.mode.mode, cs);
+		print_state(f, cs->u.mode.mode, indexof(ir, cs));
 		fprintf(f, "</TD></TR>\n");
-		print_grouprows(f, opt, ir, cs, cs->u.mode.groups, cs->u.mode.n);
+		print_grouprows(f, opt, ir, indexof(ir, cs), cs->u.mode.groups, cs->u.mode.n);
 		break;
 
 	case IR_JUMP:
@@ -207,26 +198,26 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case IR_SAME:
-		if (cs->u.same.to == cs) {
+		if (cs->u.same.to == indexof(ir, cs)) {
 			/* no edge drawn */
-		} else if (cs->u.same.to != NULL) {
+		} else {
 			fprintf(f, "\tcs%u -> cs%u;\n",
-				indexof(ir, cs), indexof(ir, cs->u.same.to));
+				indexof(ir, cs), cs->u.same.to);
 		}
 		break;
 
 	case IR_MANY:
-		print_grouplinks(f, ir, cs, cs->u.many.groups, cs->u.many.n);
+		print_grouplinks(f, ir, indexof(ir, cs), cs->u.many.groups, cs->u.many.n);
 		break;
 
 	case IR_MODE:
-		if (cs->u.mode.mode == cs) {
+		if (cs->u.mode.mode == indexof(ir, cs)) {
 			/* no edge drawn */
-		} else if (cs->u.mode.mode != NULL) {
+		} else {
 			fprintf(f, "\tcs%u:mode -> cs%u;\n",
-				indexof(ir, cs), indexof(ir, cs->u.mode.mode));
+				indexof(ir, cs), cs->u.mode.mode);
 		}
-		print_grouplinks(f, ir, cs, cs->u.mode.groups, cs->u.mode.n);
+		print_grouplinks(f, ir, indexof(ir, cs), cs->u.mode.groups, cs->u.mode.n);
 		break;
 
 	case IR_JUMP:
@@ -259,12 +250,10 @@ fsm_print_ir(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\n");
 	fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
 
-	for (i = 0; i < ir->n; i++) {
-		if (&ir->states[i] == ir->start) {
-			fprintf(f, "\tstart -> cs%u;\n", (unsigned) i);
-			fprintf(f, "\n");
-		}
+	fprintf(f, "\tstart -> cs%u;\n", ir->start);
+	fprintf(f, "\n");
 
+	for (i = 0; i < ir->n; i++) {
 		print_cs(f, fsm->opt, ir, &ir->states[i]);
 	}
 

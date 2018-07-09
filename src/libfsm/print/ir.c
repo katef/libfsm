@@ -68,22 +68,9 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 	return 0;
 }
 
-static const struct ir_state *
-equivalent_cs(const struct fsm *fsm, const struct fsm_state *state,
-	const struct ir *ir)
-{
-	assert(fsm != NULL);
-
-	if (state == NULL) {
-		return NULL;
-	}
-
-	return &ir->states[indexof(fsm, state)];
-}
-
 static struct ir_group *
 make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct fsm_state *mode,
-	const struct ir *ir, size_t *u)
+	size_t *u)
 {
 	struct range ranges[UCHAR_MAX]; /* worst case */
 	struct ir_group *groups;
@@ -194,7 +181,7 @@ make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct f
 			k++;
 		} while (i < n && ranges[i].to == to);
 
-		groups[j].to = equivalent_cs(fsm, to, ir);
+		groups[j].to = indexof(fsm, to);
 		groups[j].n = k;
 
 		{
@@ -278,7 +265,7 @@ make_state(const struct fsm *fsm,
 	/* all edges go to the same state */
 	if (mode.state != NULL && mode.freq == UCHAR_MAX) {
 		cs->strategy  = IR_SAME;
-		cs->u.same.to = equivalent_cs(fsm, mode.state, ir);
+		cs->u.same.to = indexof(fsm, mode.state);
 		return 0;
 	}
 
@@ -286,12 +273,12 @@ make_state(const struct fsm *fsm,
 	if (mode.state != NULL) {
 		cs->strategy = IR_MODE;
 
-		cs->u.mode.groups = make_groups(fsm, state, mode.state, ir, &cs->u.mode.n);
+		cs->u.mode.groups = make_groups(fsm, state, mode.state, &cs->u.mode.n);
 		if (cs->u.mode.groups == NULL) {
 			return -1;
 		}
 
-		cs->u.mode.mode = equivalent_cs(fsm, mode.state, ir);
+		cs->u.mode.mode = indexof(fsm, mode.state);
 		return 0;
 	}
 
@@ -299,7 +286,7 @@ make_state(const struct fsm *fsm,
 	{
 		cs->strategy = IR_MANY;
 
-		cs->u.many.groups = make_groups(fsm, state, NULL, ir, &cs->u.many.n);
+		cs->u.many.groups = make_groups(fsm, state, NULL, &cs->u.many.n);
 		if (cs->u.many.groups == NULL) {
 			return -1;
 		}
@@ -343,7 +330,7 @@ make_ir(const struct fsm *fsm)
 		ir->states[i].opaque = s->opaque;
 
 		if (s == fsm->start) {
-			ir->start = &ir->states[i];
+			ir->start = i;
 		}
 
 		if (make_state(fsm, s, ir, &ir->states[i]) == -1) {
