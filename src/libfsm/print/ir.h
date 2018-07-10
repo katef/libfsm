@@ -21,9 +21,10 @@
 enum ir_strategy {
 	IR_NONE = 1 << 0,
 	IR_SAME = 1 << 1,
-	IR_MANY = 1 << 2,
-	IR_MODE = 1 << 3,
-	IR_JUMP = 1 << 4
+	IR_FULL = 1 << 2,
+	IR_MANY = 1 << 3,
+	IR_MODE = 1 << 4,
+	IR_JUMP = 1 << 5
 };
 
 struct ir_range {
@@ -52,6 +53,11 @@ struct ir_state {
 		struct {
 			unsigned to;
 		} same;
+
+		struct {
+			size_t n;
+			const struct ir_group *groups; /* array */
+		} full;
 
 		struct {
 			size_t n;

@@ -40,8 +40,9 @@ strategy_name(enum ir_strategy strategy)
 	switch (strategy) {
 	case IR_NONE: return "NONE";
 	case IR_SAME: return "SAME";
-	case IR_MODE: return "MODE";
+	case IR_FULL: return "FULL";
 	case IR_MANY: return "MANY";
+	case IR_MODE: return "MODE";
 	case IR_JUMP: return "JUMP";
 
 	default:
@@ -172,6 +173,10 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "</TD></TR>\n");
 		break;
 
+	case IR_FULL:
+		print_grouprows(f, opt, ir, indexof(ir, cs), cs->u.full.groups, cs->u.full.n);
+		break;
+
 	case IR_MANY:
 		print_grouprows(f, opt, ir, indexof(ir, cs), cs->u.many.groups, cs->u.many.n);
 		break;
@@ -204,6 +209,10 @@ print_cs(FILE *f, const struct fsm_options *opt,
 			fprintf(f, "\tcs%u -> cs%u;\n",
 				indexof(ir, cs), cs->u.same.to);
 		}
+		break;
+
+	case IR_FULL:
+		print_grouplinks(f, ir, indexof(ir, cs), cs->u.full.groups, cs->u.full.n);
 		break;
 
 	case IR_MANY:

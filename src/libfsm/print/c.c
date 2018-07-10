@@ -154,6 +154,15 @@ out_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		fprintf(f, "break;\n");
 		return;
 
+	case IR_FULL:
+		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
+
+		out_groups(f, ir, opt, ir_indexof(ir, cs), cs->u.full.groups, cs->u.full.n);
+
+		fprintf(f, "\t\t\t}\n");
+		fprintf(f, "\t\t\tbreak;\n");
+		return;
+
 	case IR_MANY:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
 

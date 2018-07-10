@@ -31,8 +31,9 @@ strategy_name(enum ir_strategy strategy)
 	switch (strategy) {
 	case IR_NONE: return "none";
 	case IR_SAME: return "same";
-	case IR_MODE: return "mode";
+	case IR_FULL: return "full";
 	case IR_MANY: return "many";
+	case IR_MODE: return "mode";
 	case IR_JUMP: return "jump";
 
 	default:
@@ -133,6 +134,11 @@ print_cs(FILE *f, const struct fsm_options *opt,
 
 	case IR_SAME:
 		fprintf(f, "\t\t\t\"to\": %u\n", cs->u.same.to);
+		break;
+
+	case IR_FULL:
+		fprintf(f, "\t\t\t\"groups\": ");
+		print_groups(f, opt, ir, cs->u.full.groups, cs->u.full.n);
 		break;
 
 	case IR_MANY:

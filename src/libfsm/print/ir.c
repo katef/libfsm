@@ -282,6 +282,17 @@ make_state(const struct fsm *fsm,
 		return 0;
 	}
 
+	if (fsm_iscomplete(fsm, state)) {
+		cs->strategy = IR_FULL;
+
+		cs->u.full.groups = make_groups(fsm, state, NULL, &cs->u.full.n);
+		if (cs->u.full.groups == NULL) {
+			return -1;
+		}
+
+		return 0;
+	}
+
 	/* usual case */
 	{
 		cs->strategy = IR_MANY;
@@ -422,6 +433,10 @@ free_ir(struct ir *ir)
 			break;
 
 		case IR_SAME:
+			break;
+
+		case IR_FULL:
+			free((void *) ir->states[i].u.full.groups);
 			break;
 
 		case IR_MANY:
