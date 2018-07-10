@@ -3,7 +3,7 @@
 	"states": [
 		{
 			"end": false,
-			"strategy": "mode",
+			"strategy": "dominant",
 			"mode": 1,
 			"groups": [
 				{

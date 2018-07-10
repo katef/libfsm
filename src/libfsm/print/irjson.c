@@ -29,12 +29,12 @@ static const char *
 strategy_name(enum ir_strategy strategy)
 {
 	switch (strategy) {
-	case IR_NONE: return "none";
-	case IR_SAME: return "same";
-	case IR_FULL: return "full";
-	case IR_MANY: return "many";
-	case IR_MODE: return "mode";
-	case IR_JUMP: return "jump";
+	case IR_NONE:     return "none";
+	case IR_SAME:     return "same";
+	case IR_COMPLETE: return "complete";
+	case IR_PARTIAL:  return "partial";
+	case IR_DOMINANT: return "dominant";
+	case IR_TABLE:    return "table";
 
 	default:
 		return "?";
@@ -136,23 +136,23 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "\t\t\t\"to\": %u\n", cs->u.same.to);
 		break;
 
-	case IR_FULL:
+	case IR_COMPLETE:
 		fprintf(f, "\t\t\t\"groups\": ");
-		print_groups(f, opt, ir, cs->u.full.groups, cs->u.full.n);
+		print_groups(f, opt, ir, cs->u.complete.groups, cs->u.complete.n);
 		break;
 
-	case IR_MANY:
+	case IR_PARTIAL:
 		fprintf(f, "\t\t\t\"groups\": ");
-		print_groups(f, opt, ir, cs->u.many.groups, cs->u.many.n);
+		print_groups(f, opt, ir, cs->u.partial.groups, cs->u.partial.n);
 		break;
 
-	case IR_MODE:
-		fprintf(f, "\t\t\t\"mode\": %u,\n", cs->u.mode.mode);
+	case IR_DOMINANT:
+		fprintf(f, "\t\t\t\"mode\": %u,\n", cs->u.dominant.mode);
 		fprintf(f, "\t\t\t\"groups\": ");
-		print_groups(f, opt, ir, cs->u.mode.groups, cs->u.mode.n);
+		print_groups(f, opt, ir, cs->u.dominant.groups, cs->u.dominant.n);
 		break;
 
-	case IR_JUMP:
+	case IR_TABLE:
 		/* TODO */
 		break;
 

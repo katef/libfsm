@@ -3,7 +3,7 @@
 	"states": [
 		{
 			"end": false,
-			"strategy": "many",
+			"strategy": "partial",
 			"groups": [
 				{
 					"to": 1,

@@ -271,22 +271,22 @@ make_state(const struct fsm *fsm,
 
 	/* one dominant mode */
 	if (mode.state != NULL) {
-		cs->strategy = IR_MODE;
+		cs->strategy = IR_DOMINANT;
 
-		cs->u.mode.groups = make_groups(fsm, state, mode.state, &cs->u.mode.n);
-		if (cs->u.mode.groups == NULL) {
+		cs->u.dominant.groups = make_groups(fsm, state, mode.state, &cs->u.dominant.n);
+		if (cs->u.dominant.groups == NULL) {
 			return -1;
 		}
 
-		cs->u.mode.mode = indexof(fsm, mode.state);
+		cs->u.dominant.mode = indexof(fsm, mode.state);
 		return 0;
 	}
 
 	if (fsm_iscomplete(fsm, state)) {
-		cs->strategy = IR_FULL;
+		cs->strategy = IR_COMPLETE;
 
-		cs->u.full.groups = make_groups(fsm, state, NULL, &cs->u.full.n);
-		if (cs->u.full.groups == NULL) {
+		cs->u.complete.groups = make_groups(fsm, state, NULL, &cs->u.complete.n);
+		if (cs->u.complete.groups == NULL) {
 			return -1;
 		}
 
@@ -295,10 +295,10 @@ make_state(const struct fsm *fsm,
 
 	/* usual case */
 	{
-		cs->strategy = IR_MANY;
+		cs->strategy = IR_PARTIAL;
 
-		cs->u.many.groups = make_groups(fsm, state, NULL, &cs->u.many.n);
-		if (cs->u.many.groups == NULL) {
+		cs->u.partial.groups = make_groups(fsm, state, NULL, &cs->u.partial.n);
+		if (cs->u.partial.groups == NULL) {
 			return -1;
 		}
 	}
@@ -425,7 +425,7 @@ free_ir(struct ir *ir)
 		free((void *) ir->states[i].example);
 
 		switch (ir->states[i].strategy) {
-		case IR_JUMP:
+		case IR_TABLE:
 			/* TODO */
 			abort();
 
@@ -435,16 +435,16 @@ free_ir(struct ir *ir)
 		case IR_SAME:
 			break;
 
-		case IR_FULL:
-			free((void *) ir->states[i].u.full.groups);
+		case IR_COMPLETE:
+			free((void *) ir->states[i].u.complete.groups);
 			break;
 
-		case IR_MANY:
-			free((void *) ir->states[i].u.many.groups);
+		case IR_PARTIAL:
+			free((void *) ir->states[i].u.partial.groups);
 			break;
 
-		case IR_MODE:
-			free((void *) ir->states[i].u.mode.groups);
+		case IR_DOMINANT:
+			free((void *) ir->states[i].u.dominant.groups);
 			break;
 		}
 	}

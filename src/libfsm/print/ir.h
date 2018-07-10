@@ -19,12 +19,12 @@
  */
 
 enum ir_strategy {
-	IR_NONE = 1 << 0,
-	IR_SAME = 1 << 1,
-	IR_FULL = 1 << 2,
-	IR_MANY = 1 << 3,
-	IR_MODE = 1 << 4,
-	IR_JUMP = 1 << 5
+	IR_NONE     = 1 << 0,
+	IR_SAME     = 1 << 1,
+	IR_COMPLETE = 1 << 2,
+	IR_PARTIAL  = 1 << 3,
+	IR_DOMINANT = 1 << 4,
+	IR_TABLE    = 1 << 5
 };
 
 struct ir_range {
@@ -57,22 +57,22 @@ struct ir_state {
 		struct {
 			size_t n;
 			const struct ir_group *groups; /* array */
-		} full;
+		} complete;
 
 		struct {
 			size_t n;
 			const struct ir_group *groups; /* array */
-		} many;
+		} partial;
 
 		struct {
 			unsigned mode;
 			size_t n;
 			const struct ir_group *groups; /* array */
-		} mode;
+		} dominant;
 
 		struct {
 			unsigned to[UCHAR_MAX];
-		} jump;
+		} table;
 	} u;
 };
 

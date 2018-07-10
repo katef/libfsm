@@ -136,7 +136,7 @@ out_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	assert(leaf != NULL);
 
 	switch (cs->strategy) {
-	case IR_JUMP:
+	case IR_TABLE:
 		/* TODO */
 		abort();
 
@@ -154,19 +154,19 @@ out_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		fprintf(f, "break;\n");
 		return;
 
-	case IR_FULL:
+	case IR_COMPLETE:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
 
-		out_groups(f, ir, opt, ir_indexof(ir, cs), cs->u.full.groups, cs->u.full.n);
+		out_groups(f, ir, opt, ir_indexof(ir, cs), cs->u.complete.groups, cs->u.complete.n);
 
 		fprintf(f, "\t\t\t}\n");
 		fprintf(f, "\t\t\tbreak;\n");
 		return;
 
-	case IR_MANY:
+	case IR_PARTIAL:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
 
-		out_groups(f, ir, opt, ir_indexof(ir, cs), cs->u.many.groups, cs->u.many.n);
+		out_groups(f, ir, opt, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
 
 		fprintf(f, "\t\t\tdefault:  ");
 		leaf(f, cs->opaque, leaf_opaque);
@@ -176,14 +176,14 @@ out_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		fprintf(f, "\t\t\tbreak;\n");
 		return;
 
-	case IR_MODE:
+	case IR_DOMINANT:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
 
-		out_groups(f, ir, opt, ir_indexof(ir, cs), cs->u.mode.groups, cs->u.mode.n);
+		out_groups(f, ir, opt, ir_indexof(ir, cs), cs->u.dominant.groups, cs->u.dominant.n);
 
 		fprintf(f, "\t\t\tdefault: ");
-		if (cs->u.mode.mode != ir_indexof(ir, cs)) {
-			fprintf(f, "state = S%u; ", cs->u.mode.mode);
+		if (cs->u.dominant.mode != ir_indexof(ir, cs)) {
+			fprintf(f, "state = S%u; ", cs->u.dominant.mode);
 		}
 		fprintf(f, "break;\n");
 

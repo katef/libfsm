@@ -38,12 +38,12 @@ static const char *
 strategy_name(enum ir_strategy strategy)
 {
 	switch (strategy) {
-	case IR_NONE: return "NONE";
-	case IR_SAME: return "SAME";
-	case IR_FULL: return "FULL";
-	case IR_MANY: return "MANY";
-	case IR_MODE: return "MODE";
-	case IR_JUMP: return "JUMP";
+	case IR_NONE:     return "NONE";
+	case IR_SAME:     return "SAME";
+	case IR_COMPLETE: return "COMPLETE";
+	case IR_PARTIAL:  return "PARTIAL";
+	case IR_DOMINANT: return "DOMINANT";
+	case IR_TABLE:    return "TABLE";
 
 	default:
 		return "?";
@@ -173,22 +173,22 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "</TD></TR>\n");
 		break;
 
-	case IR_FULL:
-		print_grouprows(f, opt, ir, indexof(ir, cs), cs->u.full.groups, cs->u.full.n);
+	case IR_COMPLETE:
+		print_grouprows(f, opt, ir, indexof(ir, cs), cs->u.complete.groups, cs->u.complete.n);
 		break;
 
-	case IR_MANY:
-		print_grouprows(f, opt, ir, indexof(ir, cs), cs->u.many.groups, cs->u.many.n);
+	case IR_PARTIAL:
+		print_grouprows(f, opt, ir, indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
 		break;
 
-	case IR_MODE:
+	case IR_DOMINANT:
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>mode</TD><TD ALIGN='LEFT' PORT='mode'>");
-		print_state(f, cs->u.mode.mode, indexof(ir, cs));
+		print_state(f, cs->u.dominant.mode, indexof(ir, cs));
 		fprintf(f, "</TD></TR>\n");
-		print_grouprows(f, opt, ir, indexof(ir, cs), cs->u.mode.groups, cs->u.mode.n);
+		print_grouprows(f, opt, ir, indexof(ir, cs), cs->u.dominant.groups, cs->u.dominant.n);
 		break;
 
-	case IR_JUMP:
+	case IR_TABLE:
 		/* TODO */
 		break;
 
@@ -211,25 +211,25 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		}
 		break;
 
-	case IR_FULL:
-		print_grouplinks(f, ir, indexof(ir, cs), cs->u.full.groups, cs->u.full.n);
+	case IR_COMPLETE:
+		print_grouplinks(f, ir, indexof(ir, cs), cs->u.complete.groups, cs->u.complete.n);
 		break;
 
-	case IR_MANY:
-		print_grouplinks(f, ir, indexof(ir, cs), cs->u.many.groups, cs->u.many.n);
+	case IR_PARTIAL:
+		print_grouplinks(f, ir, indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
 		break;
 
-	case IR_MODE:
-		if (cs->u.mode.mode == indexof(ir, cs)) {
+	case IR_DOMINANT:
+		if (cs->u.dominant.mode == indexof(ir, cs)) {
 			/* no edge drawn */
 		} else {
 			fprintf(f, "\tcs%u:mode -> cs%u;\n",
-				indexof(ir, cs), cs->u.mode.mode);
+				indexof(ir, cs), cs->u.dominant.mode);
 		}
-		print_grouplinks(f, ir, indexof(ir, cs), cs->u.mode.groups, cs->u.mode.n);
+		print_grouplinks(f, ir, indexof(ir, cs), cs->u.dominant.groups, cs->u.dominant.n);
 		break;
 
-	case IR_JUMP:
+	case IR_TABLE:
 		break;
 
 	default:
