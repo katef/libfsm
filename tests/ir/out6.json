@@ -3,15 +3,12 @@
 	"states": [
 		{
 			"end": false,
-			"strategy": "dominant",
+			"strategy": "error",
 			"mode": 1,
+			"error": [
+						{ "start": "a", "end": "c" }
+			],
 			"groups": [
-				{
-					"to": null,
-					"ranges": [
-						{ "start": "a", "end": "b" }
-					]
-				}
 			]
 		},
 		{

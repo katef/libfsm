@@ -11,7 +11,10 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include <print/esc.h>
+
 #include <adt/set.h>
+#include <adt/bitmap.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -27,6 +30,11 @@ struct range {
 	unsigned char start;
 	unsigned char end;
 	const struct fsm_state *to;
+};
+
+struct group_count {
+	size_t j;
+	size_t n;
 };
 
 static int
@@ -227,11 +235,121 @@ error:
 	return NULL;
 }
 
+static void
+find_coverage(const struct ir_group *groups, size_t n, struct bm *bm)
+{
+	size_t j, i;
+	unsigned int e;
+
+	assert(groups != NULL);
+	assert(bm != NULL);
+
+	bm_clear(bm);
+
+	for (j = 0; j < n; j++) {
+		for (i = 0; i < groups[j].n; i++) {
+			assert(groups[j].ranges[i].end >= groups[j].ranges[i].start);
+			for (e = groups[j].ranges[i].start; e <= groups[j].ranges[i].end; e++) {
+				assert(!bm_get(bm, e));
+				bm_set(bm, e);
+			}
+		}
+	}
+}
+
+static struct group_count
+group_max(const struct ir_group *groups, size_t n)
+{
+	struct group_count curr;
+	size_t j, i;
+
+	assert(groups != NULL);
+
+	curr.n = 0;
+
+	for (j = 0; j < n; j++) {
+		size_t n;
+
+		n = 0;
+
+		for (i = 0; i < groups[j].n; i++) {
+			assert(groups[j].ranges[i].end >= groups[j].ranges[i].start);
+			n += groups[j].ranges[i].end - groups[j].ranges[i].start;
+		}
+
+		if (n > curr.n) {
+			curr.n = n;
+			curr.j = j;
+		}
+	}
+
+	return curr;
+}
+
+static struct ir_range *
+make_holes(const struct bm *bm, size_t *n)
+{
+	struct ir_range *ranges;
+	int hi, lo;
+
+	assert(bm != NULL);
+	assert(n != NULL);
+
+	ranges = malloc(sizeof *ranges * UCHAR_MAX); /* worst case */
+	if (ranges == NULL) {
+		return NULL;
+	}
+
+	hi = -1;
+	*n = 0;
+
+	for (;;) {
+		/* start of range */
+		lo = bm_next(bm, hi, 0);
+		if (lo > UCHAR_MAX) {
+			break;
+		}
+
+		/* end of range */
+		hi = bm_next(bm, lo, 1);
+
+		ranges[*n].start = lo;
+		ranges[*n].end   = hi - 1;
+
+		(*n)++;
+	}
+
+	{
+		void *tmp;
+
+		tmp = realloc(ranges, sizeof *ranges * *n);
+		if (tmp == NULL) {
+			goto error;
+		}
+
+		ranges = tmp;
+	}
+
+	return ranges;
+
+error:
+
+	free(ranges);
+
+	return NULL;
+}
+
 static int
 make_state(const struct fsm *fsm,
 	struct fsm_state *state,
 	const struct ir *ir, struct ir_state *cs)
 {
+	struct ir_group *groups;
+	struct group_count max;
+	struct bm bm;
+	size_t hole;
+	size_t n;
+
 	struct {
 		struct fsm_state *state;
 		unsigned int freq;
@@ -269,38 +387,68 @@ make_state(const struct fsm *fsm,
 		return 0;
 	}
 
+	groups = make_groups(fsm, state, mode.state, &n);
+	if (groups == NULL) {
+		return -1;
+	}
+
 	/* one dominant mode */
 	if (mode.state != NULL) {
 		cs->strategy = IR_DOMINANT;
-
-		cs->u.dominant.groups = make_groups(fsm, state, mode.state, &cs->u.dominant.n);
-		if (cs->u.dominant.groups == NULL) {
-			return -1;
-		}
-
+		cs->u.dominant.groups = groups;
+		cs->u.dominant.n = n;
 		cs->u.dominant.mode = indexof(fsm, mode.state);
 		return 0;
 	}
 
-	if (fsm_iscomplete(fsm, state)) {
-		cs->strategy = IR_COMPLETE;
+	find_coverage(groups, n, &bm);
 
-		cs->u.complete.groups = make_groups(fsm, state, NULL, &cs->u.complete.n);
-		if (cs->u.complete.groups == NULL) {
+	hole = UCHAR_MAX - bm_count(&bm);
+
+	if (hole == 0) {
+		assert(fsm_iscomplete(fsm, state));
+		cs->strategy = IR_COMPLETE;
+		cs->u.complete.groups = groups;
+		cs->u.complete.n = n;
+		return 0;
+	}
+
+	max = group_max(groups, n);
+
+	/*
+	 * This isn't always best choice (the worst case is where the hole
+	 * is interlaced over a large region, so the code generation comes
+	 * out larger). But it's a reasonable attempt for typical regexps,
+	 * where holes tend to be mostly contigious.
+	 */
+	if (hole < max.n) {
+		cs->strategy = IR_ERROR;
+		cs->u.error.mode = groups[max.j].to;
+
+		free((void *) groups[max.j].ranges);
+		if (max.j < n) {
+			memmove(groups + max.j, groups + max.j + 1, sizeof *groups * (n - max.j - 1));
+			n--;
+		}
+
+		cs->u.error.error.ranges = make_holes(&bm, &cs->u.error.error.n);
+		if (cs->u.error.error.ranges == NULL) {
+			/* XXX: free stuff */
 			return -1;
 		}
 
+		cs->u.error.groups = groups;
+		cs->u.error.n = n;
 		return 0;
 	}
+
 
 	/* usual case */
 	{
 		cs->strategy = IR_PARTIAL;
 
-		cs->u.partial.groups = make_groups(fsm, state, NULL, &cs->u.partial.n);
-		if (cs->u.partial.groups == NULL) {
-			return -1;
-		}
+		cs->u.partial.groups = groups;
+		cs->u.partial.n = n;
 	}
 
 	return 0;
@@ -437,6 +585,7 @@ free_ir(struct ir *ir)
 
 		case IR_COMPLETE:
 			free((void *) ir->states[i].u.complete.groups);
+/* XXX: need to free ranges too! */
 			break;
 
 		case IR_PARTIAL:
@@ -445,6 +594,11 @@ free_ir(struct ir *ir)
 
 		case IR_DOMINANT:
 			free((void *) ir->states[i].u.dominant.groups);
+			break;
+
+		case IR_ERROR:
+			free((void *) ir->states[i].u.error.error.ranges);
+			free((void *) ir->states[i].u.error.groups);
 			break;
 		}
 	}

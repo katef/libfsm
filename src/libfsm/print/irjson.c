@@ -34,6 +34,7 @@ strategy_name(enum ir_strategy strategy)
 	case IR_COMPLETE: return "complete";
 	case IR_PARTIAL:  return "partial";
 	case IR_DOMINANT: return "dominant";
+	case IR_ERROR:    return "error";
 	case IR_TABLE:    return "table";
 
 	default:
@@ -53,11 +54,40 @@ print_endpoint(FILE *f, const struct fsm_options *opt, unsigned char c)
 }
 
 static void
+print_ranges(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir,
+	const struct ir_range *ranges, size_t n)
+{
+	size_t k;
+
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(ir != NULL);
+	assert(ranges != NULL);
+
+	for (k = 0; k < n; k++) {
+		fprintf(f, "\t\t\t\t\t\t{ ");
+
+		fprintf(f, "\"start\": ");
+		print_endpoint(f, opt, ranges[k].start);
+		fprintf(f, ", ");
+		fprintf(f, "\"end\": ");
+		print_endpoint(f, opt, ranges[k].end);
+
+		fprintf(f, " }");
+		if (k + 1 < n) {
+			fprintf(f, ",");
+		}
+		fprintf(f, "\n");
+	}
+}
+
+static void
 print_groups(FILE *f, const struct fsm_options *opt,
 	const struct ir *ir,
 	const struct ir_group *groups, size_t n)
 {
-	size_t j, k;
+	size_t j;
 
 	assert(f != NULL);
 	assert(opt != NULL);
@@ -73,23 +103,7 @@ print_groups(FILE *f, const struct fsm_options *opt,
 
 		fprintf(f, "\t\t\t\t\t\"to\": %u,\n", groups[j].to);
 		fprintf(f, "\t\t\t\t\t\"ranges\": [\n");
-
-		for (k = 0; k < groups[j].n; k++) {
-			fprintf(f, "\t\t\t\t\t\t{ ");
-
-			fprintf(f, "\"start\": ");
-			print_endpoint(f, opt, groups[j].ranges[k].start);
-			fprintf(f, ", ");
-			fprintf(f, "\"end\": ");
-			print_endpoint(f, opt, groups[j].ranges[k].end);
-
-			fprintf(f, " }");
-			if (k + 1 < groups[j].n) {
-				fprintf(f, ",");
-			}
-			fprintf(f, "\n");
-		}
-
+		print_ranges(f, opt, ir, groups[j].ranges, groups[j].n);
 		fprintf(f, "\t\t\t\t\t]\n");
 
 		fprintf(f, "\t\t\t\t}");
@@ -150,6 +164,15 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "\t\t\t\"mode\": %u,\n", cs->u.dominant.mode);
 		fprintf(f, "\t\t\t\"groups\": ");
 		print_groups(f, opt, ir, cs->u.dominant.groups, cs->u.dominant.n);
+		break;
+
+	case IR_ERROR:
+		fprintf(f, "\t\t\t\"mode\": %u,\n", cs->u.error.mode);
+		fprintf(f, "\t\t\t\"error\": [\n");
+		print_ranges(f, opt, ir, cs->u.error.error.ranges, cs->u.error.error.n);
+		fprintf(f, "\t\t\t],\n");
+		fprintf(f, "\t\t\t\"groups\": ");
+		print_groups(f, opt, ir, cs->u.error.groups, cs->u.error.n);
 		break;
 
 	case IR_TABLE:

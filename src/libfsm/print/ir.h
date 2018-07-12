@@ -14,7 +14,7 @@
  * These nodes are always DFA. No epsilons, No duplicate edge labels,
  * so this IR takes advantage of that.
  *
- * But this is not neccessarily a minimal DFA.Bby this stage,
+ * But this is not neccessarily a minimal DFA. By this stage,
  * we're done with graph algorithmics.
  */
 
@@ -24,7 +24,8 @@ enum ir_strategy {
 	IR_COMPLETE = 1 << 2,
 	IR_PARTIAL  = 1 << 3,
 	IR_DOMINANT = 1 << 4,
-	IR_TABLE    = 1 << 5
+	IR_ERROR    = 1 << 5,
+	IR_TABLE    = 1 << 6
 };
 
 struct ir_range {
@@ -38,6 +39,11 @@ struct ir_range {
  */
 struct ir_group {
 	unsigned to;
+	size_t n;
+	const struct ir_range *ranges; /* array */
+};
+
+struct ir_error {
 	size_t n;
 	const struct ir_range *ranges; /* array */
 };
@@ -69,6 +75,13 @@ struct ir_state {
 			size_t n;
 			const struct ir_group *groups; /* array */
 		} dominant;
+
+		struct {
+			unsigned mode;
+			struct ir_error error;
+			size_t n;
+			const struct ir_group *groups; /* array */
+		} error;
 
 		struct {
 			unsigned to[UCHAR_MAX];
