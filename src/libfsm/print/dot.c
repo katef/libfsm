@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <limits.h>
 
 #include "libfsm/internal.h" /* XXX: up here for bitmap.h */
