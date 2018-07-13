@@ -17,6 +17,8 @@ CFLAGS.${src} += -D LX_HEADER='"lexer.h"'
 DFLAGS.${src} += -D LX_HEADER='"lexer.h"'
 .endfor
 
+LFLAGS.lx += -lpthread
+
 LEXER  += src/lx/lexer.lx
 PARSER += src/lx/parser.sid
 

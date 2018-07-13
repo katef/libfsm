@@ -9,9 +9,12 @@
 #include <unistd.h>
 
 #include <assert.h>
+#include <errno.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
@@ -42,11 +45,17 @@ struct prefix prefix = {
 struct fsm_options opt;
 
 int print_progress;
+int keep_nfa;
+
+struct ast_zone *cur_zone = NULL;
+unsigned zn = 0;
+int zerror = 0;
+pthread_mutex_t zmtx = PTHREAD_MUTEX_INITIALIZER;
 
 static
 void usage(void)
 {
-	printf("usage: lx [-nQX] [-b <tokbuf>] [-g <getc>] [-l <language>] [-et <prefix>] [-k <io>] [-x <exclude>]\n");
+	printf("usage: lx [-nQX] [-C <concurrency>] [-b <tokbuf>] [-g <getc>] [-l <language>] [-et <prefix>] [-k <io>] [-x <exclude>]\n");
 	printf("       lx -h\n");
 }
 
@@ -434,16 +443,163 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 	return 1;
 }
 
+void *
+transform_zone_minimise(void *arg)
+{
+
+	(void)arg;
+
+	for (;;) {
+		struct ast_zone    *z;
+		struct ast_mapping *m;
+
+		pthread_mutex_lock(&zmtx);
+		{
+			z = cur_zone;
+			if (z == NULL || zerror != 0) {
+				pthread_mutex_unlock(&zmtx);
+				return NULL;
+			}
+			cur_zone = cur_zone->next;
+
+			assert(z->fsm == NULL);
+			if (print_progress) {
+				if (important(zn)) {
+					fprintf(stderr, " z%u", zn);
+				}
+				zn++;
+			}
+		}
+		pthread_mutex_unlock(&zmtx);
+
+		z->fsm = fsm_new(&opt);
+		if (z->fsm == NULL) {
+			pthread_mutex_lock(&zmtx);
+			zerror = errno;
+			pthread_mutex_unlock(&zmtx);
+			return "fsm_new";
+		}
+
+		for (m = z->ml; m != NULL; m = m->next) {
+			assert(m->fsm != NULL);
+
+			if (!keep_nfa) {
+				if (!fsm_minimise(m->fsm)) {
+					pthread_mutex_lock(&zmtx);
+					zerror = errno;
+					pthread_mutex_unlock(&zmtx);
+					return "fsm_minimise";
+				}
+			}
+
+			/* Attach this mapping to each end state for this FSM */
+			fsm_setendopaque(m->fsm, m);
+
+			z->fsm = fsm_union(z->fsm, m->fsm);
+			if (z->fsm == NULL) {
+				pthread_mutex_lock(&zmtx);
+				zerror = errno;
+				pthread_mutex_unlock(&zmtx);
+				return "fsm_union";
+			}
+
+#ifndef NDEBUG
+			m->fsm = NULL;
+#endif
+		}
+	}
+}
+
+
+void *
+transform_zone_determinise(void *arg)
+{
+
+	(void)arg;
+
+	for (;;) {
+		struct ast_zone *z;
+
+		pthread_mutex_lock(&zmtx);
+		{
+			z = cur_zone;
+			if (z == NULL || zerror != 0) {
+				pthread_mutex_unlock(&zmtx);
+				return NULL;
+			}
+			cur_zone = cur_zone->next;
+
+			if (print_progress) {
+				if (important(zn)) {
+					fprintf(stderr, " z%u", zn);
+				}
+				zn++;
+			}
+		}
+		pthread_mutex_unlock(&zmtx);
+
+		if (!fsm_determinise(z->fsm)) {
+			pthread_mutex_lock(&zmtx);
+			zerror = errno;
+			pthread_mutex_unlock(&zmtx);
+			return "fsm_determinise";
+		}
+	}
+}
+
+int run_threads(int concurrency, void *(*fn)(void *)) {
+	pthread_t *tds;
+	int i;
+
+	tds = malloc(concurrency * sizeof *tds);
+	if (tds == NULL) {
+		perror("malloc");
+		return EXIT_FAILURE;
+	}
+
+	for (i = 0; i < concurrency; i++) {
+		int r;
+
+		r = pthread_create(&tds[i], NULL, fn, NULL);
+		if (r != 0) {
+			perror("pthread_create");
+			return EXIT_FAILURE;
+		}
+	}
+
+	for (i = 0; i < concurrency; i++) {
+		void *rv;
+		int r;
+
+		r = pthread_join(tds[i], &rv);
+		if (r != 0) {
+			perror("pthread_join");
+			return EXIT_FAILURE;
+		}
+
+		if (rv != NULL) {
+			char *f = rv;
+			errno = zerror;
+			perror(f);
+			return EXIT_FAILURE;
+		}
+	}
+
+	return 0;
+}
+
+
 int
 main(int argc, char *argv[])
 {
 	struct ast *ast;
 	lx_print *print;
-	int keep_nfa;
+	int concurrency;
 
 	print = lx_print_c;
 	keep_nfa = 0;
 	print_progress = 0;
+	concurrency = 4;
 
 	/* TODO: populate options */
 	opt.anonymous_states  = 1;
@@ -455,8 +611,12 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "Xe:t:k:" "vb:g:l:nQx:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "C:Xe:t:k:" "vb:g:l:nQx:"), c != -1) {
 			switch (c) {
+			case 'C':
+				concurrency = atoi(optarg);
+				break;
+
 			case 'X':
 				opt.always_hex = 1;
 				break;
@@ -568,69 +728,36 @@ main(int argc, char *argv[])
 	 * without losing track of which regexp maps to which token.
 	 */
 	if (print != lx_print_h) {
-		struct ast_zone    *z;
-		struct ast_mapping *m;
-		unsigned int zn;
-
 		if (print_progress) {
-			fprintf(stderr, "-- AST transform:");
+			fprintf(stderr, "-- Minimise AST:");
 			zn = 0;
 		}
 
-		for (z = ast->zl; z != NULL; z = z->next) {
-			assert(z->fsm == NULL);
-
-			if (print_progress) {
-				if (important(zn)) {
-					fprintf(stderr, " z%u", zn);
-				}
-				zn++;
-			}
-
-			z->fsm = fsm_new(&opt);
-			if (z->fsm == NULL) {
-				perror("fsm_new");
-				return EXIT_FAILURE;
-			}
-
-			for (m = z->ml; m != NULL; m = m->next) {
-				assert(m->fsm != NULL);
-
-				if (!keep_nfa) {
-					if (!fsm_minimise(m->fsm)) {
-						perror("fsm_minimise");
-						return EXIT_FAILURE;
-					}
-				}
-
-				/* Attach this mapping to each end state for this FSM */
-				fsm_setendopaque(m->fsm, m);
-
-				z->fsm = fsm_union(z->fsm, m->fsm);
-				if (z->fsm == NULL) {
-					perror("fsm_union");
-					return EXIT_FAILURE;
-				}
-
-#ifndef NDEBUG
-				m->fsm = NULL;
-#endif
-			}
-
-			if (!keep_nfa) {
-				opt.carryopaque = carryopaque;
-
-				if (!fsm_determinise(z->fsm)) {
-					perror("fsm_determinise");
-					return EXIT_FAILURE;
-				}
-
-				opt.carryopaque = NULL;
-			}
+		cur_zone = ast->zl;
+		if (run_threads(concurrency, transform_zone_minimise)) {
+			return EXIT_FAILURE;
 		}
 
 		if (print_progress) {
 			fprintf(stderr, "\n");
+		}
+
+		if (!keep_nfa) {
+			if (print_progress) {
+				fprintf(stderr, "-- Determinise AST:");
+				zn = 0;
+			}
+
+			opt.carryopaque = carryopaque;
+			cur_zone = ast->zl;
+			if (run_threads(concurrency, transform_zone_determinise)) {
+				return EXIT_FAILURE;
+			}
+			opt.carryopaque = NULL;
+
+			if (print_progress) {
+				fprintf(stderr, "\n");
+			}
 		}
 	}
 
