@@ -236,6 +236,18 @@ error:
 }
 
 static void
+free_groups(struct ir_group *groups, size_t n)
+{
+	size_t j;
+
+	for (j = 0; j < n; j++) {
+		free((void *) groups[j].ranges);
+	}
+
+	free(groups);
+}
+
+static void
 find_coverage(const struct ir_group *groups, size_t n, struct bm *bm)
 {
 	size_t j, i;
@@ -429,11 +441,12 @@ make_state(const struct fsm *fsm,
 		if (max.j < n) {
 			memmove(groups + max.j, groups + max.j + 1, sizeof *groups * (n - max.j - 1));
 			n--;
+			/* don't bother reallocing down; it's just unneccessary overhead */
 		}
 
 		cs->u.error.error.ranges = make_holes(&bm, &cs->u.error.error.n);
 		if (cs->u.error.error.ranges == NULL) {
-			/* XXX: free stuff */
+			free_groups(groups, n);
 			return -1;
 		}
 
@@ -514,13 +527,13 @@ make_ir(const struct fsm *fsm)
 			 */
 			p = malloc(ir->n + 3 + 1);
 			if (p == NULL) {
-				goto error;
+				goto error_example;
 			}
 
 			n = fsm_example(fsm, s, p, ir->n + 1);
 			if (-1 == n) {
 				free(p);
-				goto error;
+				goto error_example;
 			}
 
 			if ((size_t) n < ir->n + 1) {
@@ -531,7 +544,7 @@ make_ir(const struct fsm *fsm)
 				tmp = realloc(p, n + 1);
 				if (tmp == NULL) {
 					free(p);
-					goto error;
+					goto error_example;
 				}
 
 				p = tmp;
@@ -553,6 +566,11 @@ make_ir(const struct fsm *fsm)
 	 */
 
 	return ir;
+
+error_example:
+
+	ir->states[i].example = NULL;
+	i++;
 
 error:
 
@@ -584,21 +602,24 @@ free_ir(struct ir *ir)
 			break;
 
 		case IR_COMPLETE:
-			free((void *) ir->states[i].u.complete.groups);
-/* XXX: need to free ranges too! */
+			free_groups((void *) ir->states[i].u.complete.groups,
+				ir->states[i].u.complete.n);
 			break;
 
 		case IR_PARTIAL:
-			free((void *) ir->states[i].u.partial.groups);
+			free_groups((void *) ir->states[i].u.partial.groups,
+				ir->states[i].u.partial.n);
 			break;
 
 		case IR_DOMINANT:
-			free((void *) ir->states[i].u.dominant.groups);
+			free_groups((void *) ir->states[i].u.dominant.groups,
+				ir->states[i].u.dominant.n);
 			break;
 
 		case IR_ERROR:
 			free((void *) ir->states[i].u.error.error.ranges);
-			free((void *) ir->states[i].u.error.groups);
+			free_groups((void *) ir->states[i].u.error.groups,
+				ir->states[i].u.error.n);
 			break;
 		}
 	}
