@@ -20,7 +20,7 @@ usage() {
 [ -z "${NSEED}" ] && NSEED=100
 [ -z "${SUITE}" ] && SUITE=small
 
-[ -z "${GENGRAPH}" ] && GENGRAPH="`dirname $0`/gengraph.rb"
+[ -z "${GENGRAPH}" ] && GENGRAPH="`dirname $0`/gengraph"
 [ -z "${FSM}" ] && FSM=./build/bin/fsm
 
 if [ ! -x "${FSM}" ]; then
@@ -30,7 +30,7 @@ if [ ! -x "${FSM}" ]; then
 fi
 
 if [ ! -f "${GENGRAPH}" ]; then
-  echo "Cannot find the gengraph.rb script, expected at: $GENGRAPH"
+  echo "Cannot find the gengraph script, expected at: $GENGRAPH"
   echo "Please set the GENGRAPH variable"
   exit 1
 fi
@@ -66,14 +66,14 @@ while [ ${i} -lt ${NSEED} ]; do
     large)
       # graphs are large and difficult to check by hand, though not bad for
       # testing
-      ruby $GENGRAPH ${s} 10 4 3 > $a
-      ruby $GENGRAPH ${s} 10 8 3 > $b
+      awk -f $GENGRAPH ${s} 10 4 3 > $a
+      awk -f $GENGRAPH ${s} 10 8 3 > $b
       ;;
 
     medium)
       # still too large to easily check by hand
-      ruby $GENGRAPH ${s} 8 3 3 'abcdef' > $a
-      ruby $GENGRAPH ${s} 6 3 4 'abcdef' > $b
+      awk -f $GENGRAPH ${s} 8 3 3 'abcdef' > $a
+      awk -f $GENGRAPH ${s} 6 3 4 'abcdef' > $b
       ;;
 
     small|*)
@@ -81,8 +81,8 @@ while [ ${i} -lt ${NSEED} ]; do
       # the NFAs are small, but can result in large DFAs.
       #
       # uses a reduced alphabet (abcd)
-      ruby $GENGRAPH ${s} 4 3 2 'abcd' > $a
-      ruby $GENGRAPH ${s} 4 3 1 'abcd' > $b
+      awk -f $GENGRAPH ${s} 4 3 2 'abcd' > $a
+      awk -f $GENGRAPH ${s} 4 3 1 'abcd' > $b
       ;;
   esac
 
