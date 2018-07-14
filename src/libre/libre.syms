@@ -2,3 +2,10 @@ re_comp
 re_flags
 re_strerror
 re_perror
+
+# XXX: for re(1)
+re_parse
+re_ast_print_dot
+re_ast_print_ebnf
+re_ast_print_pcre
+re_ast_print_tree

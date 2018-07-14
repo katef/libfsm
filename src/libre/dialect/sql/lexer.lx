@@ -20,20 +20,27 @@
 	'^' -> $invert;
 	'-' -> $range;
 
-	'[:ALNUM:]'      -> $class_alnum;
-	'[:ALPHA:]'      -> $class_alpha;
-	'[:DIGIT:]'      -> $class_digit;
-	'[:LOWER:]'      -> $class_lower;
-	'[:SPACE:]'      -> $class_spchr;
-	'[:UPPER:]'      -> $class_upper;
-	'[:WHITESPACE:]' -> $class_space;
+	'[:ALNUM:]'      -> $named__char__class;
+	'[:ALPHA:]'      -> $named__char__class;
+	'[:DIGIT:]'      -> $named__char__class;
+	'[:LOWER:]'      -> $named__char__class;
+	'[:SPACE:]'      -> $named__char__class;
+	'[:UPPER:]'      -> $named__char__class;
+	'[:WHITESPACE:]' -> $named__char__class;
 
 	# XXX: /./ - the above
 	/[^\^\-]/ -> $char;
 }
 
+'{' -> $opencount .. '}' -> $closecount {
+     /[0-9]+/ -> $count;
+     ',' -> $sep;
+}
+
+
 /./ - ($any | $many
 	| $opensub | $closesub
 	| $opt | $star | $plus | $alt
-	| $opengroup | $opencount) -> $char;
+	| $opengroup | $closegroup
+	| $opencount | $closecount) -> $char;
 

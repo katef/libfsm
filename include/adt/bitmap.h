@@ -8,6 +8,7 @@
 #define BITMAP_H
 
 struct fsm_state;
+struct fsm_options;
 
 struct bm {
 	unsigned char map[UCHAR_MAX / CHAR_BIT + 1];
@@ -32,14 +33,15 @@ void
 bm_invert(struct bm *bm);
 
 int
-bm_print(FILE *f, const struct bm *bm,
+bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 	int boxed,
-	int (*escputc)(int c, FILE *f));
+	escputc *escputc);
 
 int
-bm_snprint(const struct bm *bm, char *s, size_t sz,
+bm_snprint(const struct bm *bm, const struct fsm_options *opt,
+	char *s, size_t sz,
 	int boxed,
-	int (*escputc)(int c, FILE *f));
+	escputc *escputc);
 
 #endif
 

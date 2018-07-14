@@ -4,7 +4,7 @@
  * See LICENCE for the full copyright terms.
  */
 
-#define _POSIX_C_SOURCE 199309L
+#define _POSIX_C_SOURCE 200112L
 
 #include <unistd.h>
 
@@ -19,7 +19,7 @@
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include "parser.h"
@@ -102,28 +102,28 @@ io(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static enum fsm_out
-language(const char *name)
+static fsm_print *
+print_name(const char *name)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		enum fsm_out language;
+		fsm_print *f;
 	} a[] = {
-		{ "api",  FSM_OUT_API  },
-		{ "c",    FSM_OUT_C    },
-		{ "csv",  FSM_OUT_CSV  },
-		{ "dot",  FSM_OUT_DOT  },
-		{ "fsm",  FSM_OUT_FSM  },
-		{ "json", FSM_OUT_JSON }
+		{ "api",  fsm_print_api  },
+		{ "c",    fsm_print_c    },
+		{ "dot",  fsm_print_dot  },
+		{ "fsm",  fsm_print_fsm  },
+		{ "ir",   fsm_print_ir   },
+		{ "json", fsm_print_json }
 	};
 
 	assert(name != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].language;
+			return a[i].f;
 		}
 	}
 
@@ -139,37 +139,53 @@ language(const char *name)
 }
 
 static int
-(*predicate(const char *name))
+(*query_name(const char *name,
+	int (**walk)(const struct fsm *,
+		int (*)(const struct fsm *, const struct fsm_state *))))
 (const struct fsm *, const struct fsm_state *)
 {
 	size_t i;
 
+	/*
+	 * These queries apply to an FSM as a whole.
+	 * fsm_reachableall/any() equivalents are not included here,
+	 * because the same effect may be achieved by OP_TRIM first.
+	 */
+
 	struct {
 		const char *name;
-		int (*predicate)(const struct fsm *, const struct fsm_state *);
+		int (*walk)(const struct fsm *,
+			int (*)(const struct fsm *, const struct fsm_state *));
+		int (*pred)(const struct fsm *, const struct fsm_state *);
 	} a[] = {
-		{ "isdfa",      fsm_isdfa         },
-		{ "dfa",        fsm_isdfa         },
-		{ "count",      query_countstates }
-/* XXX:
-		{ "iscomplete", fsm_iscomplete },
-		{ "hasend",     fsm_hasend     },
-		{ "end",        fsm_hasend     },
-		{ "accept",     fsm_hasend     },
-		{ "hasaccept",  fsm_hasend     }
-*/
+		{ "isdfa",      fsm_all, fsm_isdfa         },
+		{ "dfa",        fsm_all, fsm_isdfa         },
+		{ "count",      NULL,    query_countstates },
+		{ "iscomplete", fsm_all, fsm_iscomplete    },
+		{ "hasend",     fsm_has, fsm_isend         },
+		{ "end",        fsm_has, fsm_isend         },
+		{ "accept",     fsm_has, fsm_isend         },
+		{ "hasaccept",  fsm_has, fsm_isend         }
 	};
 
 	assert(name != NULL);
+	assert(walk != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].predicate;
+			*walk = a[i].walk;
+			return a[i].pred;
 		}
 	}
 
-	fprintf(stderr, "unrecognised query; valid queries are: "
-		"iscomplete, isdfa, hasend, count\n");
+	fprintf(stderr, "unrecognised query; valid queries are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
 	exit(EXIT_FAILURE);
 }
 
@@ -214,10 +230,14 @@ op_name(const char *name)
 		}
 	}
 
-	fprintf(stderr, "unrecognised operation; valid operations are: "
-		"complete, "
-		"complement, invert, reverse, determinise, minimise, trim, "
-		"concat, union, intersect, subtract, equal\n");
+	fprintf(stderr, "unrecognised operation; valid operations are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
 	exit(EXIT_FAILURE);
 }
 
@@ -246,22 +266,23 @@ main(int argc, char *argv[])
 {
 	unsigned iterations, i;
 	double elapsed;
-	enum fsm_out format;
+	fsm_print *print;
 	enum op op;
 	struct fsm *fsm;
 	int xfiles;
-	int print;
 	int r;
 
 	int (*query)(const struct fsm *, const struct fsm_state *);
+	int (*walk )(const struct fsm *,
+		 int (*)(const struct fsm *, const struct fsm_state *));
 
 	opt.comments = 1;
 	opt.io       = FSM_IO_GETC;
 
-	format = FSM_OUT_FSM;
 	xfiles = 0;
-	print  = 0;
+	print  = NULL;
 	query  = NULL;
+	walk   = NULL;
 	op     = OP_IDENTITY;
 
 	iterations = 1;
@@ -286,10 +307,9 @@ main(int argc, char *argv[])
 				break;
 
 			case 'x': xfiles = 1;                         break;
-			case 'p': print  = 1;                         break;
-			case 'q': query  = predicate(optarg);         break;
-
-			case 'l': format = language(optarg);          break;
+			case 'l': print  = print_name(optarg);        break;
+			case 'p': print  = fsm_print_fsm;             break;
+			case 'q': query  = query_name(optarg, &walk); break;
 
 			case 'd': op = op_name("determinise");        break;
 			case 'm': op = op_name("minimise");           break;
@@ -433,12 +453,15 @@ main(int argc, char *argv[])
 
 	/* TODO: OP_EQUAL ought to have the same CLI interface as a predicate */
 	if (query != NULL) {
+		/* TODO: benchmark */
 		/* XXX: this symbol is used like an enum here. It's a bit of a kludge */
 		if (query == query_countstates) {
+			assert(walk == NULL);
 			printf("%u\n", fsm_countstates(fsm));
 			return 0;
 		} else {
-			r |= !fsm_all(fsm, query);
+			assert(walk != NULL);
+			r |= !walk(fsm, query);
 			return r;
 		}
 	}
@@ -479,8 +502,8 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (print) {
-		fsm_print(fsm, stdout, format);
+	if (print != NULL) {
+		print(stdout, fsm);
 	}
 
 	fsm_free(fsm);

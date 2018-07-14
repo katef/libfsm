@@ -1,0 +1,7 @@
+0 -> 1 ?;
+
+1    -> trap ?;
+trap -> trap ?;
+
+start: 0;
+end:   1;

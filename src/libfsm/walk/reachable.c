@@ -15,7 +15,7 @@
 #include "../internal.h"
 
 static int
-fsm_reachable(const struct fsm *fsm, struct fsm_state *state,
+fsm_reachable(const struct fsm *fsm, const struct fsm_state *state,
 	int any,
 	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
@@ -32,7 +32,7 @@ fsm_reachable(const struct fsm *fsm, struct fsm_state *state,
 
 	list = NULL;
 
-	if (!dlist_push(&list, state)) {
+	if (!dlist_push(&list, (struct fsm_state *) state)) {
 		return -1;
 	}
 
@@ -81,14 +81,14 @@ fsm_reachable(const struct fsm *fsm, struct fsm_state *state,
 }
 
 int
-fsm_reachableall(const struct fsm *fsm, struct fsm_state *state,
+fsm_reachableall(const struct fsm *fsm, const struct fsm_state *state,
 	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
 	return fsm_reachable(fsm, state, 0, predicate);
 }
 
 int
-fsm_reachableany(const struct fsm *fsm, struct fsm_state *state,
+fsm_reachableany(const struct fsm *fsm, const struct fsm_state *state,
 	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
 	return fsm_reachable(fsm, state, 1, predicate);

@@ -1,0 +1,9 @@
+{
+	"start": 0,
+	"states": [
+		{
+			"end": true,
+			"strategy": "none",
+		}
+	]
+}

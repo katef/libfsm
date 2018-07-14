@@ -1,0 +1,5 @@
+0 -> 1 'a';
+1 -> 2 'b'; # would be trimmed by fsm -t trim
+
+start: 0;
+end:   1;

@@ -13,6 +13,7 @@ DIR += ${BUILD}/src/libre/dialect/${dialect}
 
 SRC += src/libre/dialect/${dialect}/lexer.c
 SRC += src/libre/dialect/${dialect}/parser.c
+SRC += src/libre/dialect/${dialect}/re_dialect_${dialect}.c
 
 LEXER  += src/libre/dialect/${dialect}/lexer.lx
 PARSER += src/libre/dialect/${dialect}/parser.sid

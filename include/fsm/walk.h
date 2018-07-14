@@ -43,10 +43,10 @@ fsm_all(const struct fsm *fsm,
  * Returns -1 on error.
  */
 int
-fsm_reachableall(const struct fsm *fsm, struct fsm_state *state,
+fsm_reachableall(const struct fsm *fsm, const struct fsm_state *state,
 	int (*predicate)(const struct fsm *, const struct fsm_state *));
 int
-fsm_reachableany(const struct fsm *fsm, struct fsm_state *state,
+fsm_reachableany(const struct fsm *fsm, const struct fsm_state *state,
 	int (*predicate)(const struct fsm *, const struct fsm_state *));
 
 /* Allows iterating through the states of the graph with a callback

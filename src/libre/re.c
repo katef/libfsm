@@ -17,13 +17,15 @@
 #include "../libfsm/internal.h" /* XXX */
 
 #include "dialect/comp.h"
+#include "print.h"
+
+#include "re_ast.h"
+#include "re_comp.h"
+#include "re_analysis.h"
 
 struct dialect {
 	enum re_dialect dialect;
-	struct fsm *(*comp)(int (*f)(void *opaque), void *opaque,
-		const struct fsm_options *opt,
-		enum re_flags flags, int overlap,
-		struct re_err *err);
+	re_dialect_parse_fun *parse;
 	int overlap;
 };
 
@@ -33,12 +35,12 @@ re_dialect(enum re_dialect dialect)
 	size_t i;
 
 	static const struct dialect a[] = {
-		{ RE_LIKE,    comp_like,    0 },
-		{ RE_LITERAL, comp_literal, 0 },
-		{ RE_GLOB,    comp_glob,    0 },
-		{ RE_NATIVE,  comp_native,  0 },
-		{ RE_PCRE,    comp_pcre,    0 },
-		{ RE_SQL,     comp_sql,     1 }
+		{ RE_LIKE,       parse_re_like,    0 },
+		{ RE_LITERAL,    parse_re_literal, 0 },
+		{ RE_GLOB,       parse_re_glob,    0 },
+		{ RE_NATIVE,     parse_re_native,  0 },
+		{ RE_PCRE,       parse_re_pcre,    0 },
+		{ RE_SQL,        parse_re_sql,     1 }
 	};
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
@@ -85,13 +87,13 @@ re_flags(const char *s, enum re_flags *f)
 	return 0;
 }
 
-struct fsm *
-re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
+struct ast_re *
+re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err)
 {
 	const struct dialect *m;
-	struct fsm *new;
+	struct ast_re *ast;
 
 	assert(getc != NULL);
 
@@ -103,11 +105,41 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
-	new = m->comp(getc, opaque, opt, flags, m->overlap, err);
-	if (new == NULL) {
+	ast = m->parse(getc, opaque, opt, flags, m->overlap, err);
+	if (ast == NULL) {
 		return NULL;
 	}
 
+	/* Do a complete pass over the AST, filling in other details. */
+	re_ast_analysis(ast);
+
+	return ast;
+}
+
+struct fsm *
+re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
+	const struct fsm_options *opt,
+	enum re_flags flags, struct re_err *err)
+{
+	struct ast_re *ast;
+	struct fsm *new;
+
+	ast = re_parse(dialect, getc, opaque, opt, flags, err);
+	if (ast == NULL) {
+		return NULL;
+	}
+
+	new = re_comp_ast(ast, flags, opt);
+	re_ast_free(ast);
+
+	if (new == NULL) {
+		fprintf(stderr, "Compilation failed\n");
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EXUNSUPPORTD; /* FIXME */
+		}
+		return NULL;
+	}
+	
 	/*
 	 * All flags operators commute with respect to composition.
 	 * That is, the order of application here does not matter;

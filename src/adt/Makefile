@@ -7,6 +7,11 @@ SRC += src/adt/path.c
 SRC += src/adt/set.c
 SRC += src/adt/xalloc.c
 
+.for src in ${SRC:Msrc/adt/bitmap.c}
+CFLAGS.${src} += -I src # XXX: for internal.h
+DFLAGS.${src} += -I src # XXX: for internal.h
+.endfor
+
 PART += adt
 
 .for src in ${SRC:Msrc/adt/*.c}

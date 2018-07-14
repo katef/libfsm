@@ -40,10 +40,9 @@
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
-#include <fsm/out.h>
 #include <fsm/options.h>
 #include <fsm/pred.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 
 #include "tree.h"
 
@@ -444,20 +443,16 @@ carryopaque(const struct fsm_state **set, size_t n,
 }
 
 static int
-leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
-	const void *opaque)
+leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
 {
-	const struct record *r;
+	const struct record *r = state_opaque;
 
-	(void) opaque;
+	(void) leaf_opaque;
 
-	if (!fsm_isend(fsm, state)) {
+	if (r == NULL) {
 		fprintf(f, "return -1;");
 		return 0;
 	}
-
-	r = fsm_getopaque(fsm, state);
-	assert(r != NULL);
 
 	fprintf(f, "return 0x%u; /* %s */", r->id, r->rec);
 
@@ -682,9 +677,9 @@ main(int argc, char **argv)
 		opt.cp          = "c";
 		opt.leaf        = leaf;
 		opt.leaf_opaque = NULL;
-		fsm_print(fsm, stdout, FSM_OUT_C);
+		fsm_print_c(stdout, fsm);
 	} else if (odot) {
-		fsm_print(fsm, stdout, FSM_OUT_DOT);
+		fsm_print_dot(stdout, fsm);
 	}
 }
 
