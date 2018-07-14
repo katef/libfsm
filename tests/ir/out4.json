@@ -1,0 +1,25 @@
+{
+	"start": 0,
+	"states": [
+		{
+			"end": false,
+			"strategy": "partial",
+			"groups": [
+				{
+					"to": 1,
+					"ranges": [
+						{ "start": "0", "end": "9" },
+						{ "start": "A", "end": "F" },
+						{ "start": "V", "end": "Z" },
+						{ "start": "a", "end": "i" }
+					]
+				}
+			]
+		},
+		{
+			"end": true,
+			"strategy": "none",
+			"example": "a"
+		}
+	]
+}

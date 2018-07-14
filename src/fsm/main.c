@@ -115,6 +115,7 @@ print_name(const char *name)
 		{ "c",    fsm_print_c    },
 		{ "dot",  fsm_print_dot  },
 		{ "fsm",  fsm_print_fsm  },
+		{ "ir",   fsm_print_ir   },
 		{ "json", fsm_print_json }
 	};
 

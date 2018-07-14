@@ -1,0 +1,15 @@
+{
+	"start": 0,
+	"states": [
+		{
+			"end": false,
+			"strategy": "same",
+			"to": 1
+		},
+		{
+			"end": true,
+			"strategy": "none",
+			"example": "a"
+		}
+	]
+}

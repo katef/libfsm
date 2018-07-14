@@ -95,16 +95,18 @@ print_name(const char *name,
 		fsm_print    *print_fsm;
 		re_ast_print *print_ast;
 	} a[] = {
-		{ "api",  fsm_print_api,  NULL },
-		{ "c",    fsm_print_c,    NULL },
-		{ "dot",  fsm_print_dot,  NULL },
-		{ "fsm",  fsm_print_fsm,  NULL },
-		{ "json", fsm_print_json, NULL },
+		{ "api",    fsm_print_api,    NULL  },
+		{ "c",      fsm_print_c,      NULL  },
+		{ "dot",    fsm_print_dot,    NULL  },
+		{ "fsm",    fsm_print_fsm,    NULL  },
+		{ "ir",     fsm_print_ir,     NULL  },
+		{ "irjson", fsm_print_irjson, NULL  },
+		{ "json",   fsm_print_json,   NULL  },
 
-		{ "tree", NULL, re_ast_print_tree },
-		{ "ebnf", NULL, re_ast_print_ebnf },
-		{ "ast",  NULL, re_ast_print_dot  },
-		{ "pcre", NULL, re_ast_print_pcre }
+		{ "tree",   NULL, re_ast_print_tree },
+		{ "ebnf",   NULL, re_ast_print_ebnf },
+		{ "ast",    NULL, re_ast_print_dot  },
+		{ "pcre",   NULL, re_ast_print_pcre }
 	};
 
 	assert(name != NULL);
@@ -348,22 +350,20 @@ printexample(FILE *f, const struct fsm *fsm, const struct fsm_state *state)
 }
 
 static int
-endleaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
-	const void *opaque)
+endleaf(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 {
 	const struct match *m;
 	int n;
 
-	assert(opaque == NULL);
-	assert(fsm_isend(fsm, state));
+	assert(state_opaque != NULL);
+	assert(endleaf_opaque == NULL);
 
 	(void) f;
-
-	assert(state->opaque != NULL);
+	(void) endleaf_opaque;
 
 	n = 0;
 
-	for (m = state->opaque; m != NULL; m = m->next) {
+	for (m = state_opaque; m != NULL; m = m->next) {
 		n |= 1 << m->i;
 	}
 
@@ -371,7 +371,7 @@ endleaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 
 	fprintf(f, " /* ");
 
-	for (m = state->opaque; m != NULL; m = m->next) {
+	for (m = state_opaque; m != NULL; m = m->next) {
 		fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
 
 		if (m->next != NULL) {

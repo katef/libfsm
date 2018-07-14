@@ -300,193 +300,193 @@ z1(struct lx_sql_lx *lx)
 
 		case S7: /* e.g. "[:A" */
 			switch ((unsigned char) c) {
-			case 'L': state = S20; break;
+			case 'L': state = S13; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S8: /* e.g. "[:D" */
 			switch ((unsigned char) c) {
-			case 'I': state = S31; break;
+			case 'I': state = S16; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S9: /* e.g. "[:L" */
 			switch ((unsigned char) c) {
-			case 'O': state = S15; break;
+			case 'O': state = S34; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S10: /* e.g. "[:S" */
 			switch ((unsigned char) c) {
-			case 'P': state = S16; break;
+			case 'P': state = S19; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S11: /* e.g. "[:U" */
 			switch ((unsigned char) c) {
-			case 'P': state = S13; break;
+			case 'P': state = S30; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S12: /* e.g. "[:W" */
 			switch ((unsigned char) c) {
-			case 'H': state = S17; break;
+			case 'H': state = S14; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S13: /* e.g. "[:UP" */
+		case S13: /* e.g. "[:AL" */
 			switch ((unsigned char) c) {
-			case 'P': state = S14; break;
+			case 'N': state = S26; break;
+			case 'P': state = S27; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S14: /* e.g. "[:LOW" */
+		case S14: /* e.g. "[:WH" */
 			switch ((unsigned char) c) {
-			case 'E': state = S34; break;
+			case 'I': state = S15; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S15: /* e.g. "[:LO" */
+		case S15: /* e.g. "[:WHI" */
 			switch ((unsigned char) c) {
-			case 'W': state = S14; break;
+			case 'T': state = S17; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S16: /* e.g. "[:SP" */
+		case S16: /* e.g. "[:DI" */
 			switch ((unsigned char) c) {
-			case 'A': state = S28; break;
+			case 'G': state = S24; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S17: /* e.g. "[:WH" */
+		case S17: /* e.g. "[:WHIT" */
 			switch ((unsigned char) c) {
-			case 'I': state = S18; break;
+			case 'E': state = S18; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S18: /* e.g. "[:WHI" */
-			switch ((unsigned char) c) {
-			case 'T': state = S19; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S19: /* e.g. "[:WHIT" */
-			switch ((unsigned char) c) {
-			case 'E': state = S30; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S20: /* e.g. "[:AL" */
-			switch ((unsigned char) c) {
-			case 'N': state = S21; break;
-			case 'P': state = S22; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S21: /* e.g. "[:ALN" */
-			switch ((unsigned char) c) {
-			case 'U': state = S24; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S22: /* e.g. "[:ALP" */
-			switch ((unsigned char) c) {
-			case 'H': state = S23; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S23: /* e.g. "[:ALPH" */
-			switch ((unsigned char) c) {
-			case 'A': state = S25; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S24: /* e.g. "[:ALNU" */
-			switch ((unsigned char) c) {
-			case 'M': state = S25; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S25: /* e.g. "[:ALNUM" */
-			switch ((unsigned char) c) {
-			case ':': state = S26; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S26: /* e.g. "[:ALNUM:" */
-			switch ((unsigned char) c) {
-			case ']': state = S27; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S27: /* e.g. "[:ALNUM:]" */
-			lx_sql_ungetc(lx, c); return TOK_NAMED__CHAR__CLASS;
-
-		case S28: /* e.g. "[:SPA" */
-			switch ((unsigned char) c) {
-			case 'C': state = S29; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S29: /* e.g. "[:SPAC" */
-			switch ((unsigned char) c) {
-			case 'E': state = S25; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S30: /* e.g. "[:WHITE" */
+		case S18: /* e.g. "[:WHITE" */
 			switch ((unsigned char) c) {
 			case 'S': state = S10; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S31: /* e.g. "[:DI" */
+		case S19: /* e.g. "[:SP" */
 			switch ((unsigned char) c) {
-			case 'G': state = S32; break;
+			case 'A': state = S20; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S32: /* e.g. "[:DIG" */
+		case S20: /* e.g. "[:SPA" */
 			switch ((unsigned char) c) {
-			case 'I': state = S33; break;
+			case 'C': state = S21; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S33: /* e.g. "[:DIGI" */
+		case S21: /* e.g. "[:SPAC" */
 			switch ((unsigned char) c) {
-			case 'T': state = S25; break;
+			case 'E': state = S22; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S34: /* e.g. "[:LOWE" */
+		case S22: /* e.g. "[:ALNUM" */
 			switch ((unsigned char) c) {
-			case 'R': state = S25; break;
+			case ':': state = S23; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S23: /* e.g. "[:ALNUM:" */
+			switch ((unsigned char) c) {
+			case ']': state = S33; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S24: /* e.g. "[:DIG" */
+			switch ((unsigned char) c) {
+			case 'I': state = S25; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S25: /* e.g. "[:DIGI" */
+			switch ((unsigned char) c) {
+			case 'T': state = S22; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S26: /* e.g. "[:ALN" */
+			switch ((unsigned char) c) {
+			case 'U': state = S28; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S27: /* e.g. "[:ALP" */
+			switch ((unsigned char) c) {
+			case 'H': state = S29; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S28: /* e.g. "[:ALNU" */
+			switch ((unsigned char) c) {
+			case 'M': state = S22; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S29: /* e.g. "[:ALPH" */
+			switch ((unsigned char) c) {
+			case 'A': state = S22; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S30: /* e.g. "[:UP" */
+			switch ((unsigned char) c) {
+			case 'P': state = S31; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S31: /* e.g. "[:LOW" */
+			switch ((unsigned char) c) {
+			case 'E': state = S32; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S32: /* e.g. "[:LOWE" */
+			switch ((unsigned char) c) {
+			case 'R': state = S22; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S33: /* e.g. "[:ALNUM:]" */
+			lx_sql_ungetc(lx, c); return TOK_NAMED__CHAR__CLASS;
+
+		case S34: /* e.g. "[:LO" */
+			switch ((unsigned char) c) {
+			case 'W': state = S31; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
@@ -511,7 +511,7 @@ z1(struct lx_sql_lx *lx)
 	case S3: return TOK_CHAR;
 	case S4: return TOK_CLOSEGROUP;
 	case S5: return TOK_INVERT;
-	case S27: return TOK_NAMED__CHAR__CLASS;
+	case S33: return TOK_NAMED__CHAR__CLASS;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }

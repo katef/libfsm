@@ -19,15 +19,16 @@
 #include <print/esc.h>
 
 #include "libfsm/internal.h" /* XXX */
+#include "libfsm/print/ir.h" /* XXX */
 
 #include "lx/ast.h"
 #include "lx/print.h"
 
 /* XXX: abstraction */
 int
-fsm_print_cfrag(FILE *f, const struct fsm *fsm,
+fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
-	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *),
+	int (*leaf)(FILE *, const void *state_opaque, const void *leaf_opaque),
 	const void *opaque);
 
 static int
@@ -143,19 +144,18 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token)
 }
 
 static int
-leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
-	const void *opaque)
+leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
 {
 	const struct ast *ast;
 	const struct ast_mapping *m;
 
-	assert(opaque != NULL);
-
-	ast = opaque;
+	ast = leaf_opaque;
 
 	assert(ast != NULL);
 
-	if (!fsm_isend(fsm, state)) {
+	m = state_opaque;
+
+	if (m == NULL) {
 		/* XXX: don't need this if complete */
 		switch (opt.io) {
 		case FSM_IO_GETC:
@@ -174,10 +174,6 @@ leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
 		fprintf(f, "return %sUNKNOWN;", prefix.tok);
 		return 0;
 	}
-
-	m = state->opaque;
-
-	assert(m != NULL);
 
 	/* XXX: don't need this if complete */
 	fprintf(f, "%sungetc(lx, c); ", prefix.api);
@@ -669,6 +665,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		const struct fsm_options *tmp;
 		static const struct fsm_options defaults;
 		struct fsm_options o = defaults;
+		struct ir *ir;
 
 		tmp = z->fsm->opt;
 
@@ -681,9 +678,16 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 		assert(opt.cp != NULL);
 
+		ir = make_ir(z->fsm);
+		if (ir == NULL) {
+			/* TODO */
+		}
+
 		/* XXX: abstraction */
-		(void) fsm_print_cfrag(f, z->fsm, opt.cp,
+		(void) fsm_print_cfrag(f, ir, &o, opt.cp,
 			z->fsm->opt->leaf != NULL ? z->fsm->opt->leaf : leaf, z->fsm->opt->leaf_opaque);
+
+		free_ir(ir);
 
 		z->fsm->opt = tmp;
 	}

@@ -1,0 +1,59 @@
+{
+	"start": 0,
+	"states": [
+		{
+			"end": false,
+			"strategy": "same",
+			"to": 1
+		},
+		{
+			"end": false,
+			"strategy": "error",
+			"example": "a",
+			"mode": 2,
+			"error": [
+						{ "start": "a", "end": "l" },
+						{ "start": "n", "end": "y" }
+			],
+			"groups": [
+				{
+					"to": 3,
+					"ranges": [
+						{ "start": "z", "end": "z" }
+					]
+				}
+			]
+		},
+		{
+			"end": true,
+			"strategy": "none",
+			"example": "am"
+		},
+		{
+			"end": false,
+			"strategy": "partial",
+			"example": "az",
+			"groups": [
+				{
+					"to": 3,
+					"ranges": [
+						{ "start": "z", "end": "z" }
+					]
+				},
+				{
+					"to": 4,
+					"ranges": [
+						{ "start": "0", "end": "9" },
+						{ "start": "a", "end": "f" }
+					]
+				}
+			]
+		},
+		{
+			"end": false,
+			"strategy": "same",
+			"example": "aza",
+			"to": 2
+		}
+	]
+}

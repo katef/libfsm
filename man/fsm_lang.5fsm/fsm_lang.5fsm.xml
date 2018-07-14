@@ -11,6 +11,7 @@
 		<!ENTITY c.lit    "<literal>c</literal>">
 		<!ENTITY dot.lit  "<literal>dot</literal>">
 		<!ENTITY fsm.lit  "<literal>fsm</literal>">
+		<!ENTITY ir.lit   "<literal>ir</literal>">
 		<!ENTITY json.lit "<literal>json</literal>">
 ]>
 
@@ -69,6 +70,11 @@ TODO: blurb
 				<tr>
 					<td>&fsm.lit; (default)</td>
 					<td>&fsm.ext;</td>
+					<td>TODO</td>
+				</tr>
+				<tr>
+					<td>&ir.lit;</td>
+					<td>&ir.ext;</td>
 					<td>TODO</td>
 				</tr>
 				<tr>
