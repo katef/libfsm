@@ -117,6 +117,21 @@ const struct exp_line lines[] = {
           { TOK_NL,     {  8,   9}, {  2,   1}, {  5,   6},  "\\n" },
       },
     },
+
+    /* Input that ends in a comment. */
+    { "x /* ", 1, 111,
+      {
+          { TOK_IDENT,  {  9,   9}, {  1,   2}, {  0,   1},  "x" },
+      },
+    },
+
+    /* Input that resumes a comment . */
+    { "ignored */ y\n", 2, 111,
+      {
+          { TOK_IDENT,  {  9,   9}, { 12,  13}, { 16,  17},  "y" },
+          { TOK_NL,     {  9,  10}, { 13,   1}, { 17,  18},  "\\n" },
+      },
+    },
 };
 
 int main(int argc, char **argv) {
