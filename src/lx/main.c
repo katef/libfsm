@@ -444,10 +444,9 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 }
 
 void *
-transform_zone_minimise(void *arg)
+zone_minimise(void *arg)
 {
-
-	(void)arg;
+	(void) arg;
 
 	for (;;) {
 		struct ast_zone    *z;
@@ -510,12 +509,10 @@ transform_zone_minimise(void *arg)
 	}
 }
 
-
 void *
-transform_zone_determinise(void *arg)
+zone_determinise(void *arg)
 {
-
-	(void)arg;
+	(void) arg;
 
 	for (;;) {
 		struct ast_zone *z;
@@ -547,9 +544,13 @@ transform_zone_determinise(void *arg)
 	}
 }
 
-int run_threads(int concurrency, void *(*fn)(void *)) {
+int
+run_threads(int concurrency, void *(*fn)(void *))
+{
 	pthread_t *tds;
 	int i;
+
+	assert(fn != NULL);
 
 	tds = malloc(concurrency * sizeof *tds);
 	if (tds == NULL) {
@@ -587,7 +588,6 @@ int run_threads(int concurrency, void *(*fn)(void *)) {
 
 	return 0;
 }
-
 
 int
 main(int argc, char *argv[])
@@ -729,12 +729,12 @@ main(int argc, char *argv[])
 	 */
 	if (print != lx_print_h) {
 		if (print_progress) {
-			fprintf(stderr, "-- Minimise AST:");
+			fprintf(stderr, "-- minimise AST:");
 			zn = 0;
 		}
 
 		cur_zone = ast->zl;
-		if (run_threads(concurrency, transform_zone_minimise)) {
+		if (run_threads(concurrency, zone_minimise)) {
 			return EXIT_FAILURE;
 		}
 
@@ -744,13 +744,13 @@ main(int argc, char *argv[])
 
 		if (!keep_nfa) {
 			if (print_progress) {
-				fprintf(stderr, "-- Determinise AST:");
+				fprintf(stderr, "-- determinise AST:");
 				zn = 0;
 			}
 
 			opt.carryopaque = carryopaque;
 			cur_zone = ast->zl;
-			if (run_threads(concurrency, transform_zone_determinise)) {
+			if (run_threads(concurrency, zone_determinise)) {
 				return EXIT_FAILURE;
 			}
 			opt.carryopaque = NULL;
