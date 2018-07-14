@@ -245,6 +245,11 @@ lx_out_h(const struct ast *ast, FILE *f)
 		fprintf(f, "\n");
 	}
 
+        if (opt.io == FSM_IO_STR) {
+		fprintf(f, "void %sinput_str(struct %slx *lx, const char *p);\n", prefix.api, prefix.lx);
+		fprintf(f, "\n");
+        }
+
 	fprintf(f, "#endif\n");
 	fprintf(f, "\n");
 }

@@ -8,7 +8,7 @@ OBJS=	lxpos_lexer.o \
 GEN=	lxpos_lexer.c \
 	lxpos_lexer.h \
 
-LX=	lx
+LX=	../../build/bin/lx
 
 lxpos: ${OBJS}
 	${CC} -o $@ ${LDFLAGS} ${OBJS}

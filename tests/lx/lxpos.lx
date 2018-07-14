@@ -20,8 +20,7 @@ ident -> $ident;
 '`' ident -> $symbol;
 
 # comment until end of line; disallow '\n'-less end of string
-# TODO: Should `^\x00` be necessary here?
-'//' /[^\x00\n]*/ .. /\n/ -> $nl;
+'//' .. /\n/ -> $nl;
 
 '{' -> $brace_l;
 '}' -> $brace_r;

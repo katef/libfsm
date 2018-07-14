@@ -479,11 +479,12 @@ out_io(FILE *f)
 		fprintf(f, "\tif (c == '\\n') {\n");
 		fprintf(f, "\t\tlx->end.line++;\n");
 		fprintf(f, "\t\tlx->end.saved_col = lx->end.col - 1;\n");
-		fprintf(f, "\t\tlx->end.col = 0;\n");
+		fprintf(f, "\t\tlx->end.col = 1;\n");
 
                 if (opt.io == FSM_IO_STR) {   /* ignore terminating '\0' */
-                    fprintf(f, "\t} else if (c == '\\0') {\n");
-                    fprintf(f, "\t\tlx->end.byte--; /* don't count terminating '\\0' */\n");
+                    fprintf(f, "\t} else if (c == '\\0') { /* don't count terminating '\\0' */\n");
+                    fprintf(f, "\t\tlx->end.byte--;\n");
+                    fprintf(f, "\t\tlx->end.col--;\n");
                     fprintf(f, "\t}\n");
                 } else {
                     fprintf(f, "\t}\n");
@@ -1181,5 +1182,15 @@ lx_out_c(const struct ast *ast, FILE *f)
 	}
 
 	fprintf(f, "\n");
-}
 
+        if (opt.io == FSM_IO_STR) {
+		fprintf(f, "void\n");
+		fprintf(f, "%sinput_str(struct %slx *lx, const char *p)\n", prefix.api, prefix.lx);
+		fprintf(f, "{\n");
+		fprintf(f, "\tassert(lx != NULL);\n");
+		fprintf(f, "\tassert(p != NULL);\n");
+		fprintf(f, "\tlx->end.col = 1;\n");
+		fprintf(f, "\tlx->p = p;\n");
+		fprintf(f, "}\n");
+        }
+}
