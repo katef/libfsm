@@ -26,6 +26,7 @@
 
 #include "ir.h"
 
+/* ranges are inclusive */
 struct range {
 	unsigned char start;
 	unsigned char end;

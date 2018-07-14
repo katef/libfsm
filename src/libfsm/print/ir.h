@@ -28,6 +28,7 @@ enum ir_strategy {
 	IR_TABLE    = 1 << 6
 };
 
+/* ranges are inclusive */
 struct ir_range {
 	unsigned char start;
 	unsigned char end;
