@@ -1,7 +1,7 @@
 #!/usr/bin/awk -f
 
 function usage() {
-    print("gengraph <seed> <num_nodes> <avg_conn> <max_end> <labels>\n");
+    print("gengraph <seed> <num_nodes> <avg_conn> <max_end> <labels> <prob_eps>\n");
     exit(1)
 }
 
@@ -51,12 +51,14 @@ BEGIN {
     def["avg_conn"] = 5
     def["max_end"] = 5
     def["labels"] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    def["prob_eps"] = 0.1
 
     seed =       shift_arg("seed") + 0
     num_nodes =  shift_arg("num_nodes") + 0
     avg_conn =   shift_arg("avg_conn") + 0
     max_end =    shift_arg("max_end") + 0
     labels =     shift_arg("labels") ""
+    prob_eps =   shift_arg("prob_eps") + 0.0
 
     num_edges = int(num_nodes * avg_conn)
     printf("# seed = %d\n", seed)
@@ -64,6 +66,7 @@ BEGIN {
     printf("# avg_conn = %d\n", avg_conn)
     printf("# max_end = %d\n", max_end)
     printf("# num_edges = %d\n", num_edges)
+    printf("# prob_eps = %f\n", prob_eps)
 
     srand(seed)
     gen_edges_and_ends()
@@ -79,8 +82,15 @@ BEGIN {
     for (s_i = 0; s_i < num_nodes; s_i++) {
         for (e_i = 0; e_i < num_nodes; e_i++) {
             edgeset = edges[s_i,e_i]
-            if (edgeset) {
-                for (c_i = 0; c_i < length(edgeset); c_i++) {
+            if (!edgeset) {
+                continue;
+            }
+
+            for (c_i = 0; c_i < length(edgeset); c_i++) {
+                if (rand() < prob_eps) {
+                    printf("%d -> %d;\n",
+                        s_i, e_i)
+                } else {
                     printf("%d -> %d '%s';\n",
                         s_i, e_i, substr(edgeset, c_i, 1))
                 }
