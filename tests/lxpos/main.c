@@ -11,7 +11,7 @@
 #include <err.h>
 #include <errno.h>
 
-#include "lxpos_lexer.h"
+#include "lexer.h"
 
 #define MAX_LINE 4096
 
