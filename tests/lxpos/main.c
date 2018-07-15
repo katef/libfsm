@@ -135,9 +135,13 @@ const struct exp_line lines[] = {
 };
 
 int main(int argc, char **argv) {
-    int li, res = 0;
+    int res = 0;
+	size_t li;
     struct get_char_env env;
     memset(&env, 0x00, sizeof(env));
+
+	(void) argc;
+	(void) argv;
 
     lx_init(&env.lx);
 
@@ -147,10 +151,10 @@ int main(int argc, char **argv) {
     env.lx.free       = lx_dynfree;
 
     for (li = 0; li < sizeof(lines)/sizeof(lines[0]); li++) {
-        int nth_token = 0;
+        unsigned nth_token = 0;
         const struct exp_line *cur = &lines[li];
         unsigned base;
-        printf("\n%d (%lu): %s\n", li, strlen(cur->input), cur->input);
+        printf("\n%u (%u): %s\n", (unsigned) li, (unsigned) strlen(cur->input), cur->input);
 
         /* Set input string; the lexer will get successive characters
          * from it, and then EOF (which is really EOS). */
@@ -198,7 +202,7 @@ int main(int argc, char **argv) {
                 FAIL();
             }
 
-            printf("    -- %d: %s \"%s\" (line [%u,%u], col [%u,%u], byte [%u,%u])\n",
+            printf("    -- %u: %s \"%s\" (line [%u,%u], col [%u,%u], byte [%u,%u])\n",
                 nth_token, lx_name(t), str,
                 line.s, line.e,
                 col.s, col.e,
