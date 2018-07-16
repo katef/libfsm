@@ -59,7 +59,7 @@ SUBDIR += tests/set
 SUBDIR += tests/sql
 SUBDIR += tests
 .if !empty(.TARGETS:Mfuzz)
-SUBDIR += fuzz
+SUBDIR += theft
 .endif
 SUBDIR += pc
 

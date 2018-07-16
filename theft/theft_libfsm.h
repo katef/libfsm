@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef FUZZ_LIBFSM_H
-#define FUZZ_LIBFSM_H
+#ifndef THEFT_LIBFSM_H
+#define THEFT_LIBFSM_H
 
 #include <sys/time.h>
 

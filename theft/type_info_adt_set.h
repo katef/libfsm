@@ -7,7 +7,7 @@
 #ifndef TYPE_INFO_ADT_SET_H
 #define TYPE_INFO_ADT_SET_H
 
-#include "fuzz_libfsm.h"
+#include "theft_libfsm.h"
 
 enum set_op_type {
 	/* set_create and set_free are called once, by the test fixture. */

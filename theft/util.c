@@ -4,7 +4,7 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "fuzz_libfsm.h"
+#include "theft_libfsm.h"
 
 #include <adt/xalloc.h>
 

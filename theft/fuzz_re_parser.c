@@ -4,7 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "fuzz_libfsm.h"
+#include "theft_libfsm.h"
+
 #include "fuzz_re.h"
 
 #include "type_info_re.h"

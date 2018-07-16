@@ -7,7 +7,7 @@
 #ifndef TYPE_INFO_NFA_H
 #define TYPE_INFO_NFA_H
 
-#include "fuzz_libfsm.h"
+#include "theft_libfsm.h"
 
 extern const struct fsm_options test_nfa_fsm_options;
 
