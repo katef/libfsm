@@ -109,7 +109,7 @@ nfa_operations_should_not_impact_matching(theft_seed seed)
 	do {								\
 		if (verbosity > 0) {					\
 			fprintf(stdout, "==== %s ====\n", BANNER);	\
-			fsm_print(nfa, stdout, FSM_OUT_DOT);		\
+			fsm_print_dot(stdout, nfa);			\
 		}							\
 	} while(0)
 

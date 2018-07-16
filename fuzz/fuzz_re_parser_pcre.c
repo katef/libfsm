@@ -112,7 +112,7 @@ test_re_parser_pcre(uint8_t verbosity,
 	}
 
 	if (verbosity > 1) {
-		fsm_print(fsm, LOG_OUT, FSM_OUT_DOT);
+		fsm_print_dot(LOG_OUT, fsm);
 	}
 
 	if (!check_pos_matches(verbosity, fsm,
@@ -300,7 +300,7 @@ check_pos_matches(uint8_t verbosity, struct fsm *fsm,
 		}
 
 		if (verbosity > 1) {
-			fsm_print(fsm, LOG_OUT, FSM_OUT_DOT);
+			fsm_print_dot(LOG_OUT, fsm);
 		}
 		if (st == NULL) {
 			if (verbosity > 0 || 1) {

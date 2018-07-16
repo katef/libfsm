@@ -51,7 +51,7 @@ test_re_parser_literal(uint8_t verbosity,
 		st = wrap_fsm_exec(fsm, &pairs[i]);
 
 		if (verbosity > 0) {
-			fsm_print(fsm, stderr, FSM_OUT_DOT);
+			fsm_print_dot(stderr, fsm);
 		}
 		if (st == NULL) {
 			LOG_FAIL(verbosity, "EXEC FAIL\n");
