@@ -1,7 +1,7 @@
 #!/usr/bin/awk -f
 
 function usage() {
-	print("gengraph <seed> <max_terms> <max_class> <max_m> <max_n> <labels>\n");
+	print("gengraph <seed> <dialect> <max_terms> <max_class> <max_m> <max_n> <labels>\n");
 	exit(1)
 }
 
@@ -90,6 +90,12 @@ function atom_group() {
 	printf(")");
 }
 
+function atom_ncgroup() {
+	printf("(?:");
+	print_term();
+	printf(")");
+}
+
 function op_cat() {
 	printf("");
 }
@@ -144,6 +150,7 @@ function print_term() {
 
 BEGIN {
 	def["seed"]      = 210881
+	def["dialect"]   = native
 	def["max_terms"] = 50
 	def["max_class"] = 5
 	def["max_m"]     = 5
@@ -151,6 +158,7 @@ BEGIN {
 	def["labels"]    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 	seed      = shift_arg("seed") + 0
+	dialect   = shift_arg("dialect") ""
 	max_terms = shift_arg("max_terms") + 0
 	max_class = shift_arg("max_class") + 0
 	max_m     = shift_arg("max_m") + 0
@@ -172,6 +180,7 @@ BEGIN {
 	prob_atom["atom_special"] = 1;
 	prob_atom["atom_class"]   = 1;
 	prob_atom["atom_group"]   = 1;
+	prob_atom["atom_ncgroup"] = 1;
 
 	prob_op["op_cat"]   = 2;
 	prob_op["op_qmark"] = 1;
@@ -186,6 +195,15 @@ BEGIN {
 	prob_class["atom_special"]   = 1;
 	prob_class["class_range"]    = 1;
 	prob_class["class_hexrange"] = 1;
+
+	if (dialect == "native") {
+		prob_atom["atom_ncgroup"] = 0;
+	} else if (dialect == "pcre") {
+		# nothing to disable
+	} else {
+		printf("unsupported dialect: %s\n", dialect);
+		exit(2);
+	}
 
 	populate(prob_atom, d_atom);
 	populate(prob_op, d_op);
