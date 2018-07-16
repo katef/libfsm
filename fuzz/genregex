@@ -1,7 +1,7 @@
 #!/usr/bin/awk -f
 
 function usage() {
-	print("gengraph <seed> <max_terms> <max_m> <max_n> <labels>\n");
+	print("gengraph <seed> <max_terms> <max_class> <max_m> <max_n> <labels>\n");
 	exit(1)
 }
 
@@ -32,15 +32,27 @@ function dispatch(d) {
 	@f();
 }
 
+# start is 1-based
+function print_char(labels, start) {
+	count = length(labels) - start - 1
+	li = start + randint(count)
+	printf("%c", substr(labels, li, 1));
+	return li;
+}
+
+# min is 0-based
+function print_hex(min) {
+	c = min + randint(256 - min);
+	printf("\\x%02x", c);
+	return c;
+}
+
 function atom_char() {
-	count = length(labels)
-	li = randint(count)
-	lbl = substr(labels, li, 1)
-	printf("%c", lbl);
+	print_char(labels, 1);
 }
 
 function atom_hex() {
-	printf("\\x%02x", randint(255));
+	print_hex(0);
 }
 
 function atom_special() {
@@ -53,7 +65,22 @@ function atom_special() {
 
 function atom_class() {
 	printf("[");
-	printf("TOD");
+
+	if (rand() < 0.3) { # XXX: configurable
+		printf("^");
+	}
+
+	num_class = randint(max_class)
+
+	# XXX: should be legal
+	if (num_class == 0) {
+		num_class = 1;
+	}
+
+	for (tx = 0; tx < num_class; tx++) {
+		dispatch(d_class);
+	}
+
 	printf("]");
 }
 
@@ -91,8 +118,20 @@ function op_mn() {
 	printf("{%u,%u}", randint(max_m), max_m + randint(max_n - max_m));
 }
 
+function class_range() {
+	min = print_char(labels, 1);
+	printf("-");
+	print_char(labels, min);
+}
+
+function class_hexrange() {
+	min = print_hex(0);
+	printf("-");
+	print_hex(min);
+}
+
 function print_term() {
-	if (rand() < 0.2) {
+	if (rand() < 0.2) { # XXX: configurable
 		print_term();
 		printf("|");
 		print_term();
@@ -106,12 +145,14 @@ function print_term() {
 BEGIN {
 	def["seed"]      = 210881
 	def["max_terms"] = 50
+	def["max_class"] = 5
 	def["max_m"]     = 5
 	def["max_n"]     = 10
 	def["labels"]    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 	seed      = shift_arg("seed") + 0
 	max_terms = shift_arg("max_terms") + 0
+	max_class = shift_arg("max_class") + 0
 	max_m     = shift_arg("max_m") + 0
 	max_n     = shift_arg("max_n") + 0
 	labels    = shift_arg("labels") ""
@@ -140,8 +181,15 @@ BEGIN {
 	prob_op["op_mx"]    = 1;
 	prob_op["op_mn"]    = 1;
 
+	prob_class["atom_char"]      = 2;
+	prob_class["atom_hex"]       = 1;
+	prob_class["atom_special"]   = 1;
+	prob_class["class_range"]    = 1;
+	prob_class["class_hexrange"] = 1;
+
 	populate(prob_atom, d_atom);
 	populate(prob_op, d_op);
+	populate(prob_class, d_class);
 
 	num_terms = randint(max_terms)
 	if (num_terms == 0 && max_terms >= 1 && rand() > 0.1) {
