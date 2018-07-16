@@ -31,6 +31,15 @@ dot_escputc_html(FILE *f, const struct fsm_options *opt, char c)
 	case '>':  return fputs("&#x3E;", f);
 	case ' ':  return fputs("&#x2423;", f);
 
+	/* for humans */
+	case '\a': return fputs("\\a", f);
+	case '\b': return fputs("\\b", f);
+	case '\f': return fputs("\\f", f);
+	case '\n': return fputs("\\n", f);
+	case '\r': return fputs("\\r", f);
+	case '\t': return fputs("\\t", f);
+	case '\v': return fputs("\\v", f);
+
 	default:
 		break;
 	}
