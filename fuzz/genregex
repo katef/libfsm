@@ -1,0 +1,155 @@
+#!/usr/bin/awk -f
+
+function usage() {
+	print("gengraph <seed> <max_terms> <max_m> <max_n> <labels>\n");
+	exit(1)
+}
+
+function shift_arg(name) {
+	shift_arg_offset++
+	if (ARGV[shift_arg_offset] == "-h") { usage(); }
+	return (ARGC > shift_arg_offset ? ARGV[shift_arg_offset] : def[name])
+}
+
+function randint(x) {
+	return int(rand() * x)
+}
+
+function populate(prob, d) {
+	n = 0;
+	for (f in prob) {
+		for (i = 0; i < prob[f]; i++) {
+			d[n] = f;
+			n++;
+		}
+	}
+}
+
+function dispatch(d) {
+	count = length(d)
+	k = randint(count)
+	f = d[k];
+	@f();
+}
+
+function atom_char() {
+	count = length(labels)
+	li = randint(count)
+	lbl = substr(labels, li, 1)
+	printf("%c", lbl);
+}
+
+function atom_hex() {
+	printf("\\x%02x", randint(255));
+}
+
+function atom_special() {
+	s = "nrtvf\\";
+	count = length(s)
+	li = randint(count)
+	lbl = substr(s, li, 1)
+	printf("\\%s", lbl);
+}
+
+function atom_class() {
+	printf("[");
+	printf("TOD");
+	printf("]");
+}
+
+function atom_group() {
+	printf("(");
+	print_term();
+	printf(")");
+}
+
+function op_cat() {
+	printf("");
+}
+
+function op_qmark() {
+	printf("?");
+}
+
+function op_plus() {
+	printf("+");
+}
+
+function op_star() {
+	printf("*");
+}
+
+function op_m() {
+	printf("{%u}", randint(max_m));
+}
+
+function op_mx() {
+# TODO:	printf("{%u,}", randint(max_m));
+}
+
+function op_mn() {
+	printf("{%u,%u}", randint(max_m), max_m + randint(max_n - max_m));
+}
+
+function print_term() {
+	if (rand() < 0.2) {
+		print_term();
+		printf("|");
+		print_term();
+		return;
+	}
+
+	dispatch(d_atom);
+	dispatch(d_op);
+}
+
+BEGIN {
+	def["seed"]      = 210881
+	def["max_terms"] = 50
+	def["max_m"]     = 5
+	def["max_n"]     = 10
+	def["labels"]    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+	seed      = shift_arg("seed") + 0
+	max_terms = shift_arg("max_terms") + 0
+	max_m     = shift_arg("max_m") + 0
+	max_n     = shift_arg("max_n") + 0
+	labels    = shift_arg("labels") ""
+
+	if (max_n < max_m) {
+		max_n = max_n;
+	}
+
+	srand(seed);
+
+	# relative probabilities
+	# TODO: override from argv
+	# TODO: different dialects would set some of these to 0
+
+	prob_atom["atom_char"]    = 3;
+	prob_atom["atom_hex"]     = 1;
+	prob_atom["atom_special"] = 1;
+	prob_atom["atom_class"]   = 1;
+	prob_atom["atom_group"]   = 1;
+
+	prob_op["op_cat"]   = 2;
+	prob_op["op_qmark"] = 1;
+	prob_op["op_plus"]  = 1;
+	prob_op["op_star"]  = 1;
+	prob_op["op_m"]     = 1;
+	prob_op["op_mx"]    = 1;
+	prob_op["op_mn"]    = 1;
+
+	populate(prob_atom, d_atom);
+	populate(prob_op, d_op);
+
+	num_terms = randint(max_terms)
+	if (num_terms == 0 && max_terms >= 1 && rand() > 0.1) {
+		num_terms = 1;
+	}
+
+	for (t = 0; t < num_terms; t++) {
+		print_term();
+	}
+}
+
