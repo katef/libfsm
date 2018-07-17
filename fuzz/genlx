@@ -1,0 +1,175 @@
+#!/usr/bin/awk -f
+
+function usage() {
+	print("genlx <seed> <max_things>\n");
+	exit(1)
+}
+
+function shift_arg(name) {
+	shift_arg_offset++
+	if (ARGV[shift_arg_offset] == "-h") { usage(); }
+	return (ARGC > shift_arg_offset ? ARGV[shift_arg_offset] : def[name])
+}
+
+function randint(x) {
+	return int(rand() * x)
+}
+
+function populate(prob, d) {
+	n = 0;
+	for (f in prob) {
+		for (i = 0; i < prob[f]; i++) {
+			d[n] = f;
+			n++;
+		}
+	}
+}
+
+function dispatch(d) {
+	count = length(d)
+	k = randint(count)
+	f = d[k];
+	@f();
+}
+
+function print_indent(indent) {
+	while (indent-- > 0) {
+		printf("  ");
+	}
+}
+
+function print_token() {
+	printf("$")
+	printf("t%u", randint(53)); # XXX
+}
+
+function print_var() {
+	printf("v%u", randint(53)); # XXX
+	# TODO: keep stack of variables for zone scope, use when referencing a variable
+	# index by [zone, var]
+}
+
+function genregex(dialect, quote) {
+	printf("%c", quote);
+
+# TODO: pass suitable parameters
+# print("gengraph <seed> <dialect> <max_terms> <max_class> <max_m> <max_n> <labels>\n");
+system("./genregex " randint(100) " " dialect " 5");
+# TODO: escape stuff appropriately
+
+	printf("%c", quote);
+}
+
+function pattern_single() { genregex("literal", "'");  }
+function pattern_double() { genregex("literal", "\""); }
+function pattern_regexp() { genregex("native",  "/");  }
+
+function print_expr() {
+	# TODO: recursive grammar for expressions
+	dispatch(d_pattern);
+}
+
+function print_mapping() {
+	print_expr();
+
+	if (rand() < prob_to) {
+		printf(" -> ");
+		print_token();
+	}
+}
+
+function print_body(zone,    n) {
+	n = randint(max_things)
+	if (n == 0 && max_things >= 1 && rand() > 0.1) {
+		n = 1;
+	}
+
+	while (n-- > 0) {
+		print_indent(zone);
+		dispatch(d_thing);
+	}
+}
+
+function thing_mapping() {
+	print_mapping();
+	print ";"
+}
+
+function thing_skip() {
+	print_mapping();
+	if (rand() > prob_skip) {
+		printf(" .. ");
+		print_mapping();
+	}
+	print ";"
+}
+
+function thing_zone() {
+	print_mapping();
+	if (rand() < prob_exit) {
+		printf(" .. ");
+		print_mapping();
+	}
+	print " {"
+	print_body(++zone);
+	print_indent(--zone);
+	print "}"
+}
+
+function thing_bind() {
+	print_var();
+	printf(" = ");
+	print_expr();
+	print ";"
+}
+
+function thing_special() {
+	s = "nrtvf\\";
+	count = length(s)
+	li = randint(count)
+	lbl = substr(s, li, 1)
+	printf("\\%s", lbl);
+}
+
+function thing_group() {
+	dispatch(d_op);
+
+	printf("(");
+	print_thing();
+	printf(")");
+}
+
+function thing_ncgroup() {
+	printf("(?:");
+	print_thing();
+	printf(")");
+}
+
+BEGIN {
+	def["seed"]       = 210881
+	def["max_things"] = 50
+
+	seed       = shift_arg("seed") + 0
+	max_things = shift_arg("max_things") + 0
+
+	prob_to   = 0.8; # XXX: make configurable
+	prob_skip = 0.5; # XXX: make configurable
+	prob_exit = 0.9; # XXX: make configurable
+
+	srand(seed);
+
+	prob_pattern["pattern_single"] = 1;
+	prob_pattern["pattern_double"] = 1;
+	prob_pattern["pattern_regexp"] = 2;
+
+	prob_thing["thing_mapping"] = 4;
+	prob_thing["thing_skip"]    = 1;
+	prob_thing["thing_zone"]    = 1;
+	prob_thing["thing_bind"]    = 1;
+
+	populate(prob_pattern, d_pattern);
+	populate(prob_thing, d_thing);
+
+	print_body(0);
+}
+
