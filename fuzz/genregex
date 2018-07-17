@@ -66,7 +66,7 @@ function atom_special() {
 function atom_class() {
 	printf("[");
 
-	if (rand() < 0.3) { # XXX: configurable
+	if (rand() < prob_not) {
 		printf("^");
 	}
 
@@ -137,7 +137,7 @@ function class_hexrange() {
 }
 
 function print_term() {
-	if (rand() < 0.2) { # XXX: configurable
+	if (rand() < prob_alt) {
 		print_term();
 		printf("|");
 		print_term();
@@ -156,6 +156,7 @@ BEGIN {
 	def["max_m"]     = 5
 	def["max_n"]     = 10
 	def["labels"]    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	# TODO: full characterset 0..UCHAR_MAX for labels; escape special characters
 
 	seed      = shift_arg("seed") + 0
 	dialect   = shift_arg("dialect") ""
@@ -164,6 +165,10 @@ BEGIN {
 	max_m     = shift_arg("max_m") + 0
 	max_n     = shift_arg("max_n") + 0
 	labels    = shift_arg("labels") ""
+
+	# XXX: make configurable
+	prob_alt = 0.2;
+	prob_not = 0.3;
 
 	if (max_n < max_m) {
 		max_n = max_n;
@@ -196,8 +201,23 @@ BEGIN {
 	prob_class["class_range"]    = 1;
 	prob_class["class_hexrange"] = 1;
 
-	if (dialect == "native") {
-		prob_atom["atom_ncgroup"] = 0;
+	if (dialect == "literal") {
+		prob_alt = 0;
+
+		delete prob_atom["atom_hex"];
+		delete prob_atom["atom_special"];
+		delete prob_atom["atom_class"];
+		delete prob_atom["atom_group"];
+		delete prob_atom["atom_ncgroup"];
+
+		delete prob_op["op_qmark"];
+		delete prob_op["op_plus"];
+		delete prob_op["op_star"];
+		delete prob_op["op_m"];
+		delete prob_op["op_mx"];
+		delete prob_op["op_mn"];
+	} else if (dialect == "native") {
+		delete prob_atom["atom_ncgroup"];
 	} else if (dialect == "pcre") {
 		# nothing to disable
 	} else {
