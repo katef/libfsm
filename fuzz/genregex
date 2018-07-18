@@ -1,7 +1,7 @@
 #!/usr/bin/awk -f
 
 function usage() {
-	print("gengraph <seed> <dialect> <max_terms> <max_class> <max_m> <max_n> <labels>\n");
+	print("genregex <seed> <dialect> <max_terms> <max_class> <max_m> <max_n> <labels>\n");
 	exit(1)
 }
 
@@ -137,6 +137,8 @@ function class_hexrange() {
 }
 
 function print_term() {
+	num_terms--; # fewer terms for deeper nesting
+
 	if (rand() < prob_alt) {
 		print_term();
 		printf("|");
@@ -146,11 +148,13 @@ function print_term() {
 
 	dispatch(d_atom);
 	dispatch(d_op);
+
+	num_terms++;
 }
 
 BEGIN {
 	def["seed"]      = 210881
-	def["dialect"]   = native
+	def["dialect"]   = "native"
 	def["max_terms"] = 50
 	def["max_class"] = 5
 	def["max_m"]     = 5
