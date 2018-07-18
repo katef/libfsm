@@ -15,6 +15,15 @@ function randint(x) {
 	return int(rand() * x)
 }
 
+function randindex(a,    tmp, n, i) {
+	n = 0;
+	for (i in a) {
+		tmp[++n] = i;
+	}
+
+	return tmp[randint(n)];
+}
+
 function populate(prob, d) {
 	n = 0;
 	for (f in prob) {
@@ -23,6 +32,12 @@ function populate(prob, d) {
 			n++;
 		}
 	}
+}
+
+function enable(prob, d, name) {
+	prob[name] = 1;
+	delete d;
+	populate(prob, d);
 }
 
 function dispatch(d) {
@@ -38,15 +53,26 @@ function print_indent(indent) {
 	}
 }
 
-function print_token() {
-	printf("$")
-	printf("t%u", randint(53)); # XXX
+function var_def() {
+	var[varid] = varid; # XXX: bool?
+	printf("v%u", varid);
 }
 
-function print_var() {
-	printf("v%u", randint(53)); # XXX
-	# TODO: keep stack of variables for zone scope, use when referencing a variable
-	# index by [zone, var]
+function var_ref() {
+	printf("v%u", randindex(var));
+}
+
+function tok_def() {
+	if (rand() < 0.5) {
+		tokid++;
+	}
+
+	printf("$")
+	printf("t%u", randint(tokid));
+}
+
+function tok_ref() {
+	printf("$t%u", randint(tokid));
 }
 
 function genregex(dialect, quote) {
@@ -64,6 +90,10 @@ function genregex(dialect, quote) {
 function pattern_single() { genregex("literal", "'");  }
 function pattern_double() { genregex("literal", "\""); }
 function pattern_regexp() { genregex("native",  "/");  }
+
+function term_item() {
+	dispatch(d_item);
+}
 
 function term_parens() {
 	printf("(");
@@ -125,15 +155,21 @@ function print_mapping() {
 
 	if (rand() < prob_to) {
 		printf(" -> ");
-		print_token();
+		tok_def();
+
+		if (tokid == 0) {
+			enable(prob_item, d_item, "tok_ref");
+		}
+
+		tokid++;
 	}
 }
 
 function print_body(zone,    n) {
-	if (zone + 1 > zone_limit) {
-		prob_thing["thing_zone"] = 0;
-		delete d_thing;
-		populate(prob_thing, d_thing);
+	zoneid++;
+
+	if (zoneid > zone_limit) {
+		enable(prob_thing, d_thing, "thing_zone");
 	}
 
 	n = randint(max_things)
@@ -142,6 +178,7 @@ function print_body(zone,    n) {
 	}
 
 	# need at least one thing in a zone
+	print_indent(zone);
 	dispatch(d_thing);
 
 	while (n-- > zone * 2) { # fewer things for deeper zones
@@ -164,23 +201,43 @@ function thing_skip() {
 	print ";"
 }
 
-function thing_zone() {
+function thing_zone(    i, start) {
 	print_mapping();
 	if (rand() < prob_exit) {
 		printf(" .. ");
 		print_mapping();
 	}
+
 	print " {"
+
+	# We keep a single array, var[], for all active variables.
+	# varid is the next index to populate. Before printing a zone body,
+	# the current index is stored. Then when exiting the zone, all entries
+	# between those two values are removed.
+	# In this way we use the function call stack to implement block scope.
+	start = varid;
+
 	print_body(++zone);
 	print_indent(--zone);
+
 	print "}"
+
+	for (i = start; i < varid; i++) {
+		delete var[i];
+	}
 }
 
 function thing_bind() {
-	print_var();
+	var_def();
 	printf(" = ");
 	print_expr();
 	print ";"
+
+	if (varid == 0) {
+		enable(prob_item, d_item, "var_ref");
+	}
+
+	varid++;
 }
 
 function thing_special() {
@@ -229,10 +286,13 @@ BEGIN {
 	prob_thing["thing_zone"]    = 1;
 	prob_thing["thing_bind"]    = 2;
 
-	prob_term["pattern_single"] = 5;
-	prob_term["pattern_double"] = 5;
-	prob_term["pattern_regexp"] = 8;
+	prob_item["pattern_single"] = 1;
+	prob_item["pattern_double"] = 1;
+	prob_item["pattern_regexp"] = 2;
+	prob_item["var_ref"]        = 0;
+	prob_item["tok_ref"]        = 0;
 
+	prob_term["term_item"]   = 8;
 	prob_term["term_parens"] = 2;
 	prob_term["term_star"]   = 2;
 	prob_term["term_cross"]  = 2;
@@ -251,12 +311,17 @@ BEGIN {
 
 	populate(prob_thing, d_thing);
 	populate(prob_term, d_term);
+	populate(prob_item, d_item);
 
 	printf("# seed = %u\n", seed);
 	printf("# max_things = %u\n", max_things);
 	printf("# max_atoms  = %u\n", max_atoms);
 	printf("# zone_limit = %u\n", zone_limit);
 	printf("\n");
+
+	zoneid = 0;
+	tokid  = 0;
+	varid  = 0;
 
 	print_body(0);
 }
