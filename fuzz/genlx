@@ -1,7 +1,7 @@
 #!/usr/bin/awk -f
 
 function usage() {
-	print("genlx <seed> <max_things>\n");
+	print("genlx <seed> <max_things> <zone_limit>\n");
 	exit(1)
 }
 
@@ -52,10 +52,10 @@ function print_var() {
 function genregex(dialect, quote) {
 	printf("%c", quote);
 
-# TODO: pass suitable parameters
-# print("gengraph <seed> <dialect> <max_terms> <max_class> <max_m> <max_n> <labels>\n");
-system("./genregex " randint(100) " " dialect " 5");
-# TODO: escape stuff appropriately
+	system(sprintf("%s %u %s %u %u", genregex_path, randint(1000), dialect, 5, 3));
+	# TODO: escape stuff appropriately
+
+	# TODO: exclude regexps which match the empty string, invoke re(1) to test
 
 	printf("%c", quote);
 }
@@ -64,9 +64,59 @@ function pattern_single() { genregex("literal", "'");  }
 function pattern_double() { genregex("literal", "\""); }
 function pattern_regexp() { genregex("native",  "/");  }
 
-function print_expr() {
+function term_parens() {
+	printf("(");
+	print_term();
+	printf(")");
+}
+
+function print_prefix(op) {
+	printf("%s", op);
+	print_term();
+}
+
+function print_suffix(op) {
+	print_term();
+	printf("%s", op);
+	# XXX: can generate x++
+}
+
+function print_binop(op) {
+	print_term();
+	printf(" %s ", op);
+	print_term();
+}
+
+function term_tilde() { print_prefix("~"); }
+function term_bang()  { print_prefix("!"); }
+function term_hat()   { print_prefix("^"); }
+
+function term_qmark() { print_suffix("?"); }
+function term_cross() { print_suffix("+"); }
+function term_star()  { print_suffix("*"); }
+
+function term_dash()  { print_binop("-");  }
+function term_dot()   { print_binop(".");  }
+function term_pipe()  { print_binop("|");  }
+function term_and()   { print_binop("&");  }
+
+function print_term()
+{
+	# XXX: should split grouped vs. atomic clauses
+	# but !/x/? should still be possible
+	dispatch(d_term);
+}
+
+function print_expr(    n) {
+	print_term();
+
+	n = randint(3) + 1; # XXX: configurable
+
 	# TODO: recursive grammar for expressions
-	dispatch(d_pattern);
+	while (n-- > zone * 2) { # fewer things for deeper zones
+		printf(" ");
+		print_term();
+	}
 }
 
 function print_mapping() {
@@ -79,12 +129,21 @@ function print_mapping() {
 }
 
 function print_body(zone,    n) {
+	if (zone + 1 > zone_limit) {
+		prob_thing["thing_zone"] = 0;
+		delete d_thing;
+		populate(prob_thing, d_thing);
+	}
+
 	n = randint(max_things)
 	if (n == 0 && max_things >= 1 && rand() > 0.1) {
 		n = 1;
 	}
 
-	while (n-- > 0) {
+	# need at least one thing in a zone
+	dispatch(d_thing);
+
+	while (n-- > zone * 2) { # fewer things for deeper zones
 		print_indent(zone);
 		dispatch(d_thing);
 	}
@@ -147,28 +206,54 @@ function thing_ncgroup() {
 
 BEGIN {
 	def["seed"]       = 210881
-	def["max_things"] = 50
+	def["max_things"] = 20
+	def["zone_limit"] = 50
 
 	seed       = shift_arg("seed") + 0
 	max_things = shift_arg("max_things") + 0
+	zone_limit = shift_arg("zone_limit") + 0
 
 	prob_to   = 0.8; # XXX: make configurable
 	prob_skip = 0.5; # XXX: make configurable
 	prob_exit = 0.9; # XXX: make configurable
 
+# TODO: find from argv
+	genregex_path = "./genregex";
+
 	srand(seed);
 
-	prob_pattern["pattern_single"] = 1;
-	prob_pattern["pattern_double"] = 1;
-	prob_pattern["pattern_regexp"] = 2;
-
 	prob_thing["thing_mapping"] = 4;
-	prob_thing["thing_skip"]    = 1;
+	prob_thing["thing_skip"]    = 2;
 	prob_thing["thing_zone"]    = 1;
-	prob_thing["thing_bind"]    = 1;
+	prob_thing["thing_bind"]    = 2;
 
-	populate(prob_pattern, d_pattern);
+	prob_term["pattern_single"] = 5;
+	prob_term["pattern_double"] = 5;
+	prob_term["pattern_regexp"] = 8;
+
+	prob_term["term_parens"] = 2;
+	prob_term["term_star"]   = 2;
+	prob_term["term_cross"]  = 2;
+	prob_term["term_qmark"]  = 2;
+
+	# prefix
+	prob_term["term_tilde"]  = 2;
+	prob_term["term_bang"]   = 2;
+	prob_term["term_hat"]    = 2;
+
+	# binary
+	prob_term["term_dash"]   = 1;
+#	prob_term["term_dot"]    = 0; # XXX: unimplemented
+	prob_term["term_pipe"]   = 1;
+	prob_term["term_and"]    = 1;
+
 	populate(prob_thing, d_thing);
+	populate(prob_term, d_term);
+
+	printf("# seed = %u\n", seed);
+	printf("# max_things = %u\n", max_things);
+	printf("# zone_limit = %u\n", zone_limit);
+	printf("\n");
 
 	print_body(0);
 }
