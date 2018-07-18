@@ -1,7 +1,7 @@
 #!/usr/bin/awk -f
 
 function usage() {
-	print("genlx <seed> <max_things> <zone_limit>\n");
+	print("genlx <seed> <max_things> <max_atoms> <zone_limit>\n");
 	exit(1)
 }
 
@@ -52,7 +52,8 @@ function print_var() {
 function genregex(dialect, quote) {
 	printf("%c", quote);
 
-	system(sprintf("%s %u %s %u %u", genregex_path, randint(1000), dialect, 5, 3));
+	system(sprintf("%s %u %s %u %u", genregex_path, randint(1000),
+		dialect, max_atoms, 1 + max_atoms / 2));
 	# TODO: escape stuff appropriately
 
 	# TODO: exclude regexps which match the empty string, invoke re(1) to test
@@ -207,17 +208,18 @@ function thing_ncgroup() {
 BEGIN {
 	def["seed"]       = 210881
 	def["max_things"] = 20
+	def["max_atoms"]  = 5
 	def["zone_limit"] = 50
 
 	seed       = shift_arg("seed") + 0
 	max_things = shift_arg("max_things") + 0
+	max_atoms  = shift_arg("max_atoms") + 0
 	zone_limit = shift_arg("zone_limit") + 0
 
 	prob_to   = 0.8; # XXX: make configurable
 	prob_skip = 0.5; # XXX: make configurable
 	prob_exit = 0.9; # XXX: make configurable
 
-# TODO: find from argv
 	genregex_path = "./genregex";
 
 	srand(seed);
@@ -252,6 +254,7 @@ BEGIN {
 
 	printf("# seed = %u\n", seed);
 	printf("# max_things = %u\n", max_things);
+	printf("# max_atoms  = %u\n", max_atoms);
 	printf("# zone_limit = %u\n", zone_limit);
 	printf("\n");
 

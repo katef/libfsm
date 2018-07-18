@@ -1,7 +1,7 @@
 #!/usr/bin/awk -f
 
 function usage() {
-	print("genregex <seed> <dialect> <max_terms> <max_class> <max_m> <max_n> <labels>\n");
+	print("genregex <seed> <dialect> <max_atoms> <max_class> <max_m> <max_n> <labels>\n");
 	exit(1)
 }
 
@@ -86,13 +86,13 @@ function atom_class() {
 
 function atom_group() {
 	printf("(");
-	print_term();
+	print_atom();
 	printf(")");
 }
 
 function atom_ncgroup() {
 	printf("(?:");
-	print_term();
+	print_atom();
 	printf(")");
 }
 
@@ -136,26 +136,26 @@ function class_hexrange() {
 	print_hex(min);
 }
 
-function print_term() {
-	num_terms--; # fewer terms for deeper nesting
+function print_atom() {
+	num_atoms--; # fewer terms for deeper nesting
 
 	if (rand() < prob_alt) {
-		print_term();
+		print_atom();
 		printf("|");
-		print_term();
+		print_atom();
 		return;
 	}
 
 	dispatch(d_atom);
 	dispatch(d_op);
 
-	num_terms++;
+	num_atoms++;
 }
 
 BEGIN {
 	def["seed"]      = 210881
 	def["dialect"]   = "native"
-	def["max_terms"] = 50
+	def["max_atoms"] = 50
 	def["max_class"] = 5
 	def["max_m"]     = 5
 	def["max_n"]     = 10
@@ -164,7 +164,7 @@ BEGIN {
 
 	seed      = shift_arg("seed") + 0
 	dialect   = shift_arg("dialect") ""
-	max_terms = shift_arg("max_terms") + 0
+	max_atoms = shift_arg("max_atoms") + 0
 	max_class = shift_arg("max_class") + 0
 	max_m     = shift_arg("max_m") + 0
 	max_n     = shift_arg("max_n") + 0
@@ -233,13 +233,13 @@ BEGIN {
 	populate(prob_op, d_op);
 	populate(prob_class, d_class);
 
-	num_terms = randint(max_terms)
-	if (num_terms == 0 && max_terms >= 1 && rand() > 0.1) {
-		num_terms = 1;
+	num_atoms = randint(max_atoms)
+	if (num_atoms == 0 && max_atoms >= 1 && rand() > 0.1) {
+		num_atoms = 1;
 	}
 
-	for (t = 0; t < num_terms; t++) {
-		print_term();
+	for (t = 0; t < num_atoms; t++) {
+		print_atom();
 	}
 }
 
