@@ -1,7 +1,7 @@
 #!/usr/bin/awk -f
 
 function usage() {
-	print("genregex <seed> <dialect> <max_atoms> <max_class> <max_m> <max_n> <labels>\n");
+	print("genregex <seed> <dialect> <max_atoms> <max_class> <max_m> <max_n>\n");
 	exit(1)
 }
 
@@ -13,6 +13,10 @@ function shift_arg(name) {
 
 function randint(x) {
 	return int(rand() * x)
+}
+
+function randchar(min) {
+	return min + randint(256 - min);
 }
 
 function populate(prob, d) {
@@ -32,35 +36,39 @@ function dispatch(d) {
 	@f();
 }
 
-# start is 1-based
-function print_char(labels, start) {
-	count = length(labels) - start - 1
-	li = start + randint(count)
-	printf("%c", substr(labels, li, 1));
-	return li;
+function print_char(c,    special) {
+	special["\n"] = "n";
+	special["\r"] = "r";
+	special["\t"] = "t";
+	special["\v"] = "v";
+	special["\f"] = "f";
+	special["\\"] = "\\";
+
+	if (c in special) {
+		printf("\\%s", special[c]);
+		return;
+	}
+
+	if (c < 32 || c > 127) {
+		print_hex(c);
+		return;
+	}
+
+	printf("%c", c);
 }
 
-# min is 0-based
-function print_hex(min) {
-	c = min + randint(256 - min);
+function print_hex(c) {
 	printf("\\x%02x", c);
-	return c;
 }
 
-function atom_char() {
-	print_char(labels, 1);
+function atom_char(    c) {
+	c = randchar(0);
+	print_char(c);
 }
 
-function atom_hex() {
-	print_hex(0);
-}
-
-function atom_special() {
-	s = "nrtvf\\";
-	count = length(s)
-	li = randint(count)
-	lbl = substr(s, li, 1)
-	printf("\\%s", lbl);
+function atom_hex(    c) {
+	c = randchar(0);
+	print_hex(c);
 }
 
 function atom_class() {
@@ -124,16 +132,30 @@ function op_mn() {
 	printf("{%u,%u}", randint(max_m), max_m + randint(max_n - max_m));
 }
 
-function class_range() {
-	min = print_char(labels, 1);
-	printf("-");
-	print_char(labels, min);
+function class_char(c) {
+	c = randchar(0);
+	print_char(c);
 }
 
-function class_hexrange() {
-	min = print_hex(0);
+function class_hex() {
+	c = randchar(0);
+	print_hex(c);
+}
+
+function class_range(    m, n) {
+	m = randchar(0);
+	n = randchar(m);
+	print_char(m);
 	printf("-");
-	print_hex(min);
+	print_char(n);
+}
+
+function class_hexrange(    c) {
+	m = randchar(0);
+	n = randchar(m);
+	print_hex(m);
+	printf("-");
+	print_hex(n);
 }
 
 function print_atom() {
@@ -159,8 +181,6 @@ BEGIN {
 	def["max_class"] = 5
 	def["max_m"]     = 5
 	def["max_n"]     = 10
-	def["labels"]    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	# TODO: full characterset 0..UCHAR_MAX for labels; escape special characters
 
 	seed      = shift_arg("seed") + 0
 	dialect   = shift_arg("dialect") ""
@@ -168,7 +188,6 @@ BEGIN {
 	max_class = shift_arg("max_class") + 0
 	max_m     = shift_arg("max_m") + 0
 	max_n     = shift_arg("max_n") + 0
-	labels    = shift_arg("labels") ""
 
 	# XXX: make configurable
 	prob_alt = 0.2;
@@ -186,7 +205,6 @@ BEGIN {
 
 	prob_atom["atom_char"]    = 3;
 	prob_atom["atom_hex"]     = 1;
-	prob_atom["atom_special"] = 1;
 	prob_atom["atom_class"]   = 1;
 	prob_atom["atom_group"]   = 1;
 	prob_atom["atom_ncgroup"] = 1;
@@ -199,9 +217,8 @@ BEGIN {
 	prob_op["op_mx"]    = 1;
 	prob_op["op_mn"]    = 1;
 
-	prob_class["atom_char"]      = 2;
-	prob_class["atom_hex"]       = 1;
-	prob_class["atom_special"]   = 1;
+	prob_class["class_char"]     = 2;
+	prob_class["class_hex"]      = 1;
 	prob_class["class_range"]    = 1;
 	prob_class["class_hexrange"] = 1;
 
@@ -209,7 +226,6 @@ BEGIN {
 		prob_alt = 0;
 
 		delete prob_atom["atom_hex"];
-		delete prob_atom["atom_special"];
 		delete prob_atom["atom_class"];
 		delete prob_atom["atom_group"];
 		delete prob_atom["atom_ncgroup"];
