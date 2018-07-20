@@ -75,21 +75,37 @@ function tok_ref() {
 	printf("$t%u", randint(tokid));
 }
 
-function genregex(dialect, quote,    cmd) {
-	printf("%c", quote);
+function genregex(dialect, quote,    recmd, cmd, r) {
+	# TODO: flag to permit overlapping classes
+	recmd = sprintf("%s -r %s -y - -- ''", re_path, dialect);
 
-	cmd = sprintf("%s %u %s %u %u", genregex_path, randint(1000),
-		dialect, max_atoms, 1 + max_atoms / 2);
-	while ((cmd | getline) > 0) {
-		if (quote != "'") {
-			gsub(quote, "\\" quote, $0);
+	do {
+		cmd = sprintf("%s %u %s %u %u", genregex_path, randint(1000),
+			dialect, max_atoms, 1 + max_atoms / 2);
+
+		if ((cmd | getline) < 0) {
+			printf("error: %s: %s\n", cmd, ERRNO);
+			exit(1);
 		}
-		printf("%s", $0);
+
+		printf("%s", $0) | recmd;
+		r = close(recmd);
+		if (r > 256 || r < 0) { # 256 is exit(1)
+			gsub("'", "\\'", $0);
+			printf("echo '%s' | %s: %s\n", $0, recmd, r);
+			exit(1);
+		}
+
+		# here we loop to skip (syntatically correct) regexps
+		# which match nothing, because those are a semantic error for lx.
+		# re(1) exit status 0 meaning a successful match.
+	} while (r == 0);
+
+	if (quote != "'") {
+		gsub(quote, "\\" quote, $0);
 	}
 
-	# TODO: exclude regexps which match the empty string, invoke re(1) to test
-
-	printf("%c", quote);
+	printf("%c%s%c", quote, $0, quote);
 }
 
 function pattern_single() { genregex("literal", "'");  }
@@ -283,6 +299,7 @@ BEGIN {
 	prob_exit = 0.9; # XXX: make configurable
 
 	genregex_path = "./genregex";
+	re_path       = "../build/bin/re";
 
 	srand(seed);
 
