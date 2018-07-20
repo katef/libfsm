@@ -44,6 +44,17 @@ function print_char(c,    special) {
 	special["\f"] = "f";
 	special["\\"] = "\\";
 
+	if (dialect == "native" || dialect == "pcre") {
+		special["["]  = "[";
+		special["]"]  = "]";
+		special["("]  = "(";
+		special[")"]  = ")";
+		special["|"]  = "|";
+		special["+"]  = "+";
+		special["?"]  = "?";
+		special["*"]  = "*";
+	}
+
 	if (c in special) {
 		printf("\\%s", special[c]);
 		return;
@@ -77,6 +88,8 @@ function atom_class() {
 	if (rand() < prob_not) {
 		printf("^");
 	}
+
+	delete class;
 
 	num_class = randint(max_class)
 
@@ -132,27 +145,107 @@ function op_mn() {
 	printf("{%u,%u}", randint(max_m), max_m + randint(max_n - max_m));
 }
 
-function class_char(c) {
-	c = randchar(0);
+function class_unique_char() {
+	if (length(class) == 256) {
+		return;
+	}
+
+	do {
+		c = randchar(0);
+	} while (c in class);
+
+	class[c] = c;
+
 	print_char(c);
 }
 
-function class_hex() {
-	c = randchar(0);
+function class_unique_hex() {
+	if (length(class) == 256) {
+		return;
+	}
+
+	do {
+		c = randchar(0);
+	} while (c in class);
+
+	class[c] = c;
+
 	print_hex(c);
 }
 
-function class_range(    m, n) {
-	m = randchar(0);
+function class_unique_range(    m, n, c) {
+	if (length(class) == 256) {
+		return;
+	}
+
+	do {
+		m = randchar(0);
+	} while (m in class);
+
 	n = randchar(m);
+
+	for (c = m; c < n; c++) {
+		if (c in class) {
+			n = c - 1;
+			break;
+		}
+
+		class[c] = c;
+	}
+
 	print_char(m);
 	printf("-");
 	print_char(n);
 }
 
-function class_hexrange(    c) {
+function class_unique_hexrange(    c) {
+	if (length(class) == 256) {
+		return;
+	}
+
+	do {
+		m = randchar(0);
+	} while (m in class);
+
+	n = randchar(m);
+
+	for (c = m; c < n; c++) {
+		if (c in class) {
+			n = c - 1;
+			break;
+		}
+
+		class[c] = c;
+	}
+
+	print_hex(m);
+	printf("-");
+	print_hex(n);
+}
+
+function class_nonunique_char() {
+	c = randchar(0);
+	print_char(c);
+}
+
+function class_nonunique_hex() {
+	c = randchar(0);
+	print_hex(c);
+}
+
+function class_nonunique_range(    m, n, c) {
 	m = randchar(0);
 	n = randchar(m);
+
+	print_char(m);
+	printf("-");
+	print_char(n);
+}
+
+function class_nonunique_hexrange(    c) {
+	m = randchar(0);
+	n = randchar(m);
+
 	print_hex(m);
 	printf("-");
 	print_hex(n);
@@ -217,10 +310,15 @@ BEGIN {
 	prob_op["op_mx"]    = 1;
 	prob_op["op_mn"]    = 1;
 
-	prob_class["class_char"]     = 2;
-	prob_class["class_hex"]      = 1;
-	prob_class["class_range"]    = 1;
-	prob_class["class_hexrange"] = 1;
+	prob_class["class_unique_char"]     = 2;
+	prob_class["class_unique_hex"]      = 1;
+	prob_class["class_unique_range"]    = 1;
+	prob_class["class_unique_hexrange"] = 1;
+
+	prob_class["class_nonunique_char"]     = 2;
+	prob_class["class_nonunique_hex"]      = 1;
+	prob_class["class_nonunique_range"]    = 1;
+	prob_class["class_nonunique_hexrange"] = 1;
 
 	if (dialect == "literal") {
 		prob_alt = 0;
@@ -236,10 +334,18 @@ BEGIN {
 		delete prob_op["op_m"];
 		delete prob_op["op_mx"];
 		delete prob_op["op_mn"];
+
+		delete prob_class["class_nonunique_char"];
+		delete prob_class["class_nonunique_hex"];
+		delete prob_class["class_nonunique_range"];
+		delete prob_class["class_nonunique_hexrange"];
 	} else if (dialect == "native") {
 		delete prob_atom["atom_ncgroup"];
 	} else if (dialect == "pcre") {
-		# nothing to disable
+		delete prob_class["class_unique_char"];
+		delete prob_class["class_unique_hex"];
+		delete prob_class["class_unique_range"];
+		delete prob_class["class_unique_hexrange"];
 	} else {
 		printf("unsupported dialect: %s\n", dialect);
 		exit(2);

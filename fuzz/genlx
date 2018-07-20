@@ -76,7 +76,6 @@ function tok_ref() {
 }
 
 function genregex(dialect, quote,    recmd, cmd, r) {
-	# TODO: flag to permit overlapping classes
 	recmd = sprintf("%s -r %s -y - -- ''", re_path, dialect);
 
 	do {
