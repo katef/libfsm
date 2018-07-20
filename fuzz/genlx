@@ -75,12 +75,17 @@ function tok_ref() {
 	printf("$t%u", randint(tokid));
 }
 
-function genregex(dialect, quote) {
+function genregex(dialect, quote,    cmd) {
 	printf("%c", quote);
 
-	system(sprintf("%s %u %s %u %u", genregex_path, randint(1000),
-		dialect, max_atoms, 1 + max_atoms / 2));
-	# TODO: escape stuff appropriately
+	cmd = sprintf("%s %u %s %u %u", genregex_path, randint(1000),
+		dialect, max_atoms, 1 + max_atoms / 2);
+	while ((cmd | getline) > 0) {
+		if (quote != "'") {
+			gsub(quote, "\\" quote, $0);
+		}
+		printf("%s", $0);
+	}
 
 	# TODO: exclude regexps which match the empty string, invoke re(1) to test
 
