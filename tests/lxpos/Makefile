@@ -6,16 +6,34 @@ TEST_OUTDIR.tests/lxpos = ${BUILD}/tests/lxpos
 
 LX?=${BUILD}/bin/lx
 
+# for lx -l test
 LEXER += tests/lxpos/lexer.lx
 
 LX_CFLAGS.tests/lxpos/lexer.lx += -b dyn -k str
 
-${BUILD}/tests/lxpos/lxdump.c: ${BUILD}/tests/lxpos tests/lxpos/lexer.lx
-	${LX} -l dump ${LX_CFLAGS} ${LX_CFLAGS.tests/lxpos/lexer.lx} < ${.ALLSRC:M*.lx} > $@ \
+CFLAGS.${BUILD}/tests/lxpos/lxdump += -I ${BUILD}/tests/lxpos -D LX_HEADER='"lexer.h"'
+
+.for lexer in tests/lxpos/lexer.lx
+
+.for ext in c h
+
+${BUILD}/${lexer:R}.${ext}: ${lexer}
+	${LX} -l ${ext} ${LX_CFLAGS} ${LX_CFLAGS.${lexer}} < ${.ALLSRC:M*.lx} > $@ \
+		|| { rm -f ${lexer:R}.${ext}; false; }
+
+.endfor
+
+${BUILD}/tests/lxpos/lxdump.c: ${lexer} ${BUILD}/tests/lxpos/lexer.h
+	${LX} -l dump ${LX_CFLAGS} ${LX_CFLAGS.${lexer}} < ${.ALLSRC:M*.lx} > $@ \
 		|| { rm -f $@; false; }
 
-${BUILD}/tests/lxpos/lxdump: ${BUILD}/tests/lxpos/lxdump.c tests/lxpos/lexer.c tests/lxpos/lexer.h
-	${CC} -o $@ ${CFLAGS} -I tests/lxpos -D LX_HEADER='"lexer.h"' ${LFLAGS} ${.ALLSRC:M*.o} ${.ALLSRC:M*.c}
+.endfor
+
+${BUILD}/tests/lxpos/lxdump: ${BUILD}/tests/lxpos/lexer.c
+${BUILD}/tests/lxpos/lxdump: ${BUILD}/tests/lxpos/lxdump.c
+
+${BUILD}/tests/lxpos/lxdump:
+	${CC} -o $@ ${CFLAGS} ${CFLAGS.${BUILD}/tests/lxpos/lxdump} ${LFLAGS} ${.ALLSRC:M*.o} ${.ALLSRC:M*.c}
 
 CLEAN += ${BUILD}/tests/lxpos/lxdump
 
