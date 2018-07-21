@@ -169,7 +169,6 @@ z0(struct lx_native_lx *lx)
 		switch (state) {
 		case S0: /* start */
 			switch ((unsigned char) c) {
-			case ',': state = S1; break;
 			case '0':
 			case '1':
 			case '2':
@@ -181,6 +180,7 @@ z0(struct lx_native_lx *lx)
 			case '8':
 			case '9': state = S2; break;
 			case '}': state = S3; break;
+			case ',': state = S1; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
@@ -240,7 +240,8 @@ z1(struct lx_native_lx *lx)
 		S20, S21, S22, S23, S24, S25, S26, S27, S28, S29, 
 		S30, S31, S32, S33, S34, S35, S36, S37, S38, S39, 
 		S40, S41, S42, S43, S44, S45, S46, S47, S48, S49, 
-		S50, S51, S52, S53, S54, S55, S56, S57, S58, NONE
+		S50, S51, S52, S53, S54, S55, S56, S57, S58, S59, 
+		NONE
 	} state;
 
 	assert(lx != NULL);
@@ -314,16 +315,16 @@ z1(struct lx_native_lx *lx)
 
 		case S7: /* e.g. "[:" */
 			switch ((unsigned char) c) {
-			case 'c': state = S10; break;
 			case 'b': state = S9; break;
-			case 'x': state = S18; break;
+			case 'c': state = S10; break;
+			case 'g': state = S12; break;
 			case 's': state = S15; break;
 			case 'w': state = S17; break;
 			case 'l': state = S13; break;
 			case 'p': state = S14; break;
 			case 'u': state = S16; break;
-			case 'g': state = S12; break;
 			case 'd': state = S11; break;
+			case 'x': state = S18; break;
 			case 'a': state = S8; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
@@ -374,8 +375,8 @@ z1(struct lx_native_lx *lx)
 
 		case S14: /* e.g. "[:p" */
 			switch ((unsigned char) c) {
-			case 'u': state = S23; break;
 			case 'r': state = S22; break;
+			case 'u': state = S23; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
@@ -725,10 +726,13 @@ z1(struct lx_native_lx *lx)
 			case 'c':
 			case 'd':
 			case 'e':
-			case 'f': break;
-			default:  lx_native_ungetc(lx, c); return TOK_HEX;
+			case 'f': state = S59; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
+
+		case S59: /* e.g. "\\xaa" */
+			lx_native_ungetc(lx, c); return TOK_HEX;
 
 		default:
 			; /* unreached */
@@ -753,7 +757,7 @@ z1(struct lx_native_lx *lx)
 	case S48: return TOK_NAMED__CHAR__CLASS;
 	case S55: return TOK_ESC;
 	case S56: return TOK_OCT;
-	case S58: return TOK_HEX;
+	case S59: return TOK_HEX;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }
@@ -1054,7 +1058,7 @@ lx_native_example(enum lx_native_token (*z)(struct lx_native_lx *), enum lx_nati
 		case TOK_RANGE: return "-";
 		case TOK_INVERT: return "^";
 		case TOK_CLOSEGROUP: return "]";
-		case TOK_HEX: return "\\xa";
+		case TOK_HEX: return "\\xaa";
 		case TOK_OCT: return "\\0";
 		case TOK_ESC: return "\\f";
 		default: goto error;
