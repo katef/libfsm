@@ -38,15 +38,3 @@ FSMTEST_ERROR += ${TEST_OUTDIR.tests/native}/res${n}
 
 .endfor
 
-.for n in ${TEST.tests/native:T:Mout*.fsm:R:C/^out//}
-
-${TEST_OUTDIR.tests/native}/nfa${n}.png: ${TEST_OUTDIR.tests/native}/nfa${n}.fsm
-${TEST_OUTDIR.tests/native}/out${n}.png: ${TEST_SRCDIR.tests/native}/out${n}.fsm
-${TEST_OUTDIR.tests/native}/got${n}.png: ${TEST_OUTDIR.tests/native}/got${n}.fsm
-
-.for img in nfa${n} out${n} got${n}
-FSMTEST_IMG += ${TEST_OUTDIR.tests/native}/${img}.png
-.endfor
-
-.endfor
-

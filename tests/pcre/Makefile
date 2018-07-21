@@ -61,15 +61,3 @@ FSMTEST_ERROR += ${TEST_OUTDIR.tests/pcre}/res${n}
 
 .endfor
 
-.for n in ${TEST.tests/pcre:T:Mout*.fsm:R:C/^out//}
-
-${TEST_OUTDIR.tests/pcre}/nfa${n}.png: ${TEST_OUTDIR.tests/pcre}/nfa${n}.fsm
-${TEST_OUTDIR.tests/pcre}/out${n}.png: ${TEST_SRCDIR.tests/pcre}/out${n}.fsm
-${TEST_OUTDIR.tests/pcre}/got${n}.png: ${TEST_OUTDIR.tests/pcre}/got${n}.fsm
-
-.for img in nfa${n} out${n} got${n}
-FSMTEST_IMG += ${TEST_OUTDIR.tests/pcre}/${img}.png
-.endfor
-
-.endfor
-

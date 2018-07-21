@@ -24,16 +24,3 @@ ${res}:
 
 .endfor
 
-.for img in ${FSMTEST_IMG}
-
-.if defined(DEBUG)
-test:: ${img}
-.endif
-
-${img}:
-	${FSM} -cp -l dot ${.ALLSRC:M*.fsm} \
-	| ${DOT} -Tpng \
-	> $@
-
-.endfor
-

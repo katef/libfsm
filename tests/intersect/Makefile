@@ -57,32 +57,3 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/intersect}/res${n}
 
 .endfor
 
-.for n in ${TEST.tests/intersect:T:R:C/^out//}
-
-${TEST_OUTDIR.tests/intersect}/in${n}a.png:  ${TEST_SRCDIR.tests/intersect}/in${n}a.fsm
-${TEST_OUTDIR.tests/intersect}/in${n}b.png:  ${TEST_SRCDIR.tests/intersect}/in${n}b.fsm
-${TEST_OUTDIR.tests/intersect}/out${n}.png: ${TEST_SRCDIR.tests/intersect}/out${n}.fsm
-${TEST_OUTDIR.tests/intersect}/got${n}.png: ${TEST_OUTDIR.tests/intersect}/got${n}.fsm
-
-.for img in in${n}a in${n}b out${n} got${n}
-FSMTEST_IMG += ${TEST_OUTDIR.tests/intersect}/${img}.png
-.endfor
-
-.endfor
-
-.for n in ${TEST.tests/intersect:T:R:C/^out//}
-
-${TEST_OUTDIR.tests/intersect-ccuc}/in${n}a.png:   ${TEST_SRCDIR.tests/intersect}/in${n}a.fsm
-${TEST_OUTDIR.tests/intersect-ccuc}/in${n}b.png:   ${TEST_SRCDIR.tests/intersect}/in${n}b.fsm
-${TEST_OUTDIR.tests/intersect-ccuc}/out${n}.png:  ${TEST_SRCDIR.tests/intersect}/out${n}.fsm
-${TEST_OUTDIR.tests/intersect-ccuc}/compl${n}a.png:  ${TEST_OUTDIR.tests/intersect-ccuc}/compl${n}a.fsm
-${TEST_OUTDIR.tests/intersect-ccuc}/compl${n}b.png:  ${TEST_OUTDIR.tests/intersect-ccuc}/compl${n}b.fsm
-${TEST_OUTDIR.tests/intersect-ccuc}/union${n}.png:  ${TEST_OUTDIR.tests/intersect-ccuc}/union${n}.fsm
-${TEST_OUTDIR.tests/intersect-ccuc}/got${n}.png:  ${TEST_OUTDIR.tests/intersect-ccuc}/got${n}.fsm
-
-.for img in in${n}a in${n}b out${n} got${n} compl${n}a compl${n}b union${n}
-FSMTEST_IMG += ${TEST_OUTDIR.tests/intersect-ccuc}/${img}.png
-.endfor
-
-.endfor
-

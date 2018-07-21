@@ -20,15 +20,3 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/determinise}/res${n}
 
 .endfor
 
-.for n in ${TEST.tests/determinise:T:R:C/^out//}
-
-${TEST_OUTDIR.tests/determinise}/in${n}.png:  ${TEST_SRCDIR.tests/determinise}/in${n}.fsm
-${TEST_OUTDIR.tests/determinise}/out${n}.png: ${TEST_SRCDIR.tests/determinise}/out${n}.fsm
-${TEST_OUTDIR.tests/determinise}/got${n}.png: ${TEST_OUTDIR.tests/determinise}/got${n}.fsm
-
-.for img in in${n} out${n} got${n}
-FSMTEST_IMG += ${TEST_OUTDIR.tests/determinise}/${img}.png
-.endfor
-
-.endfor
-

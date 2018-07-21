@@ -24,15 +24,3 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/like}/res${n}
 
 .endfor
 
-.for n in ${TEST.tests/like:T:R:C/^out//}
-
-${TEST_OUTDIR.tests/like}/nfa${n}.png: ${TEST_OUTDIR.tests/like}/nfa${n}.fsm
-${TEST_OUTDIR.tests/like}/out${n}.png: ${TEST_SRCDIR.tests/like}/out${n}.fsm
-${TEST_OUTDIR.tests/like}/got${n}.png: ${TEST_OUTDIR.tests/like}/got${n}.fsm
-
-.for img in nfa${n} out${n} got${n}
-FSMTEST_IMG += ${TEST_OUTDIR.tests/like}/${img}.png
-.endfor
-
-.endfor
-

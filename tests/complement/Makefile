@@ -20,15 +20,3 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/complement}/res${n}
 
 .endfor
 
-.for n in ${TEST.tests/complement:T:R:C/^out//}
-
-${TEST_OUTDIR.tests/complement}/in${n}.png:  ${TEST_SRCDIR.tests/complement}/in${n}.fsm
-${TEST_OUTDIR.tests/complement}/out${n}.png: ${TEST_SRCDIR.tests/complement}/out${n}.fsm
-${TEST_OUTDIR.tests/complement}/got${n}.png: ${TEST_OUTDIR.tests/complement}/got${n}.fsm
-
-.for img in in${n} out${n} got${n}
-FSMTEST_IMG += ${TEST_OUTDIR.tests/complement}/${img}.png
-.endfor
-
-.endfor
-
