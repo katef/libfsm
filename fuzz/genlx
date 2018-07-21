@@ -1,0 +1,349 @@
+#!/usr/bin/awk -f
+
+function usage() {
+	print("genlx <seed> <max_things> <max_atoms> <zone_limit>\n");
+	exit(1)
+}
+
+function shift_arg(name) {
+	shift_arg_offset++
+	if (ARGV[shift_arg_offset] == "-h") { usage(); }
+	return (ARGC > shift_arg_offset ? ARGV[shift_arg_offset] : def[name])
+}
+
+function randint(x) {
+	return int(rand() * x)
+}
+
+function randindex(a,    tmp, n, i) {
+	n = 0;
+	for (i in a) {
+		tmp[++n] = i;
+	}
+
+	return tmp[randint(n)];
+}
+
+function populate(prob, d) {
+	n = 0;
+	for (f in prob) {
+		for (i = 0; i < prob[f]; i++) {
+			d[n] = f;
+			n++;
+		}
+	}
+}
+
+function enable(prob, d, name) {
+	prob[name] = 1;
+	delete d;
+	populate(prob, d);
+}
+
+function dispatch(d) {
+	count = length(d)
+	k = randint(count)
+	f = d[k];
+	@f();
+}
+
+function print_indent(indent) {
+	while (indent-- > 0) {
+		printf("  ");
+	}
+}
+
+function var_def() {
+	var[varid] = varid; # XXX: bool?
+	printf("v%u", varid);
+}
+
+function var_ref() {
+	printf("v%u", randindex(var));
+}
+
+function tok_def() {
+	if (rand() < 0.5) {
+		tokid++;
+	}
+
+	printf("$")
+	printf("t%u", randint(tokid));
+}
+
+function tok_ref() {
+	printf("$t%u", randint(tokid));
+}
+
+function genregex(dialect, quote,    recmd, cmd, r) {
+	recmd = sprintf("%s -r %s -y - -- ''", re_path, dialect);
+
+	do {
+		cmd = sprintf("%s %u %s %u %u", genregex_path, randint(1000),
+			dialect, max_atoms, 1 + max_atoms / 2);
+
+		if ((cmd | getline) < 0) {
+			printf("error: %s: %s\n", cmd, ERRNO);
+			exit(1);
+		}
+
+		printf("%s", $0) | recmd;
+		r = close(recmd);
+		if (r > 256 || r < 0) { # 256 is exit(1)
+			gsub("'", "\\'", $0);
+			printf("echo '%s' | %s: %s\n", $0, recmd, r);
+			exit(1);
+		}
+
+		# here we loop to skip (syntatically correct) regexps
+		# which match nothing, because those are a semantic error for lx.
+		# re(1) exit status 0 meaning a successful match.
+	} while (r == 0);
+
+	if (quote != "'") {
+		gsub(quote, "\\" quote, $0);
+	}
+
+	printf("%c%s%c", quote, $0, quote);
+}
+
+function pattern_single() { genregex("literal", "'");  }
+function pattern_double() { genregex("literal", "\""); }
+function pattern_regexp() { genregex("native",  "/");  }
+
+function term_item() {
+	dispatch(d_item);
+}
+
+function term_parens() {
+	printf("(");
+	print_term();
+	printf(")");
+}
+
+function print_prefix(op) {
+	printf("%s", op);
+	print_term();
+}
+
+function print_suffix(op) {
+	print_term();
+	printf("%s", op);
+	# XXX: can generate x++
+}
+
+function print_binop(op) {
+	print_term();
+	printf(" %s ", op);
+	print_term();
+}
+
+function term_tilde() { print_prefix("~"); }
+function term_bang()  { print_prefix("!"); }
+function term_hat()   { print_prefix("^"); }
+
+function term_qmark() { print_suffix("?"); }
+function term_cross() { print_suffix("+"); }
+function term_star()  { print_suffix("*"); }
+
+function term_dash()  { print_binop("-");  }
+function term_dot()   { print_binop(".");  }
+function term_pipe()  { print_binop("|");  }
+function term_and()   { print_binop("&");  }
+
+function print_term()
+{
+	# XXX: should split grouped vs. atomic clauses
+	# but !/x/? should still be possible
+	dispatch(d_term);
+}
+
+function print_expr(    n) {
+	print_term();
+
+	n = randint(3) + 1; # XXX: configurable
+
+	# TODO: recursive grammar for expressions
+	while (n-- > zone * 2) { # fewer things for deeper zones
+		printf(" ");
+		print_term();
+	}
+}
+
+function print_mapping() {
+	print_expr();
+
+	if (rand() < prob_to) {
+		printf(" -> ");
+		tok_def();
+
+		if (tokid == 0) {
+			enable(prob_item, d_item, "tok_ref");
+		}
+
+		tokid++;
+	}
+}
+
+function print_body(zone,    n) {
+	zoneid++;
+
+	if (zoneid > zone_limit) {
+		enable(prob_thing, d_thing, "thing_zone");
+	}
+
+	n = randint(max_things)
+	if (n == 0 && max_things >= 1 && rand() > 0.1) {
+		n = 1;
+	}
+
+	# need at least one thing in a zone
+	print_indent(zone);
+	dispatch(d_thing);
+
+	while (n-- > zone * 2) { # fewer things for deeper zones
+		print_indent(zone);
+		dispatch(d_thing);
+	}
+}
+
+function thing_mapping() {
+	print_mapping();
+	print ";"
+}
+
+function thing_skip() {
+	print_mapping();
+	if (rand() > prob_skip) {
+		printf(" .. ");
+		print_mapping();
+	}
+	print ";"
+}
+
+function thing_zone(    i, start) {
+	print_mapping();
+	if (rand() < prob_exit) {
+		printf(" .. ");
+		print_mapping();
+	}
+
+	print " {"
+
+	# We keep a single array, var[], for all active variables.
+	# varid is the next index to populate. Before printing a zone body,
+	# the current index is stored. Then when exiting the zone, all entries
+	# between those two values are removed.
+	# In this way we use the function call stack to implement block scope.
+	start = varid;
+
+	print_body(++zone);
+	print_indent(--zone);
+
+	print "}"
+
+	for (i = start; i < varid; i++) {
+		delete var[i];
+	}
+}
+
+function thing_bind() {
+	var_def();
+	printf(" = ");
+	print_expr();
+	print ";"
+
+	if (varid == 0) {
+		enable(prob_item, d_item, "var_ref");
+	}
+
+	varid++;
+}
+
+function thing_special() {
+	s = "nrtvf\\";
+	count = length(s)
+	li = randint(count)
+	lbl = substr(s, li, 1)
+	printf("\\%s", lbl);
+}
+
+function thing_group() {
+	dispatch(d_op);
+
+	printf("(");
+	print_thing();
+	printf(")");
+}
+
+function thing_ncgroup() {
+	printf("(?:");
+	print_thing();
+	printf(")");
+}
+
+BEGIN {
+	def["seed"]       = 210881
+	def["max_things"] = 20
+	def["max_atoms"]  = 5
+	def["zone_limit"] = 50
+
+	seed       = shift_arg("seed") + 0
+	max_things = shift_arg("max_things") + 0
+	max_atoms  = shift_arg("max_atoms") + 0
+	zone_limit = shift_arg("zone_limit") + 0
+
+	prob_to   = 0.8; # XXX: make configurable
+	prob_skip = 0.5; # XXX: make configurable
+	prob_exit = 0.9; # XXX: make configurable
+
+	genregex_path = "./genregex";
+	re_path       = "../build/bin/re";
+
+	srand(seed);
+
+	prob_thing["thing_mapping"] = 4;
+	prob_thing["thing_skip"]    = 2;
+	prob_thing["thing_zone"]    = 1;
+	prob_thing["thing_bind"]    = 2;
+
+	prob_item["pattern_single"] = 1;
+	prob_item["pattern_double"] = 1;
+	prob_item["pattern_regexp"] = 2;
+	prob_item["var_ref"]        = 0;
+	prob_item["tok_ref"]        = 0;
+
+	prob_term["term_item"]   = 8;
+	prob_term["term_parens"] = 2;
+	prob_term["term_star"]   = 2;
+	prob_term["term_cross"]  = 2;
+	prob_term["term_qmark"]  = 2;
+
+	# prefix
+	prob_term["term_tilde"]  = 2;
+	prob_term["term_bang"]   = 2;
+	prob_term["term_hat"]    = 2;
+
+	# binary
+	prob_term["term_dash"]   = 1;
+#	prob_term["term_dot"]    = 0; # XXX: unimplemented
+	prob_term["term_pipe"]   = 1;
+	prob_term["term_and"]    = 1;
+
+	populate(prob_thing, d_thing);
+	populate(prob_term, d_term);
+	populate(prob_item, d_item);
+
+	printf("# seed = %u\n", seed);
+	printf("# max_things = %u\n", max_things);
+	printf("# max_atoms  = %u\n", max_atoms);
+	printf("# zone_limit = %u\n", zone_limit);
+	printf("\n");
+
+	zoneid = 0;
+	tokid  = 0;
+	varid  = 0;
+
+	print_body(0);
+}
+

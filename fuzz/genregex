@@ -1,0 +1,367 @@
+#!/usr/bin/awk -f
+
+function usage() {
+	print("genregex <seed> <dialect> <max_atoms> <max_class> <max_m> <max_n>\n");
+	exit(1)
+}
+
+function shift_arg(name) {
+	shift_arg_offset++
+	if (ARGV[shift_arg_offset] == "-h") { usage(); }
+	return (ARGC > shift_arg_offset ? ARGV[shift_arg_offset] : def[name])
+}
+
+function randint(x) {
+	return int(rand() * x)
+}
+
+function randchar(min) {
+	return min + randint(256 - min);
+}
+
+function populate(prob, d) {
+	n = 0;
+	for (f in prob) {
+		for (i = 0; i < prob[f]; i++) {
+			d[n] = f;
+			n++;
+		}
+	}
+}
+
+function dispatch(d) {
+	count = length(d)
+	k = randint(count)
+	f = d[k];
+	@f();
+}
+
+function print_char(c,    special) {
+	special["\n"] = "n";
+	special["\r"] = "r";
+	special["\t"] = "t";
+	special["\v"] = "v";
+	special["\f"] = "f";
+	special["\\"] = "\\";
+
+	if (dialect == "native" || dialect == "pcre") {
+		special["["]  = "[";
+		special["]"]  = "]";
+		special["("]  = "(";
+		special[")"]  = ")";
+		special["|"]  = "|";
+		special["+"]  = "+";
+		special["?"]  = "?";
+		special["*"]  = "*";
+	}
+
+	if (c in special) {
+		printf("\\%s", special[c]);
+		return;
+	}
+
+	if (c < 32 || c > 127) {
+		print_hex(c);
+		return;
+	}
+
+	printf("%c", c);
+}
+
+function print_hex(c) {
+	printf("\\x%02x", c);
+}
+
+function atom_char(    c) {
+	c = randchar(0);
+	print_char(c);
+}
+
+function atom_hex(    c) {
+	c = randchar(0);
+	print_hex(c);
+}
+
+function atom_class() {
+	printf("[");
+
+	if (rand() < prob_not) {
+		printf("^");
+	}
+
+	delete class;
+
+	num_class = randint(max_class)
+
+	# XXX: should be legal
+	if (num_class == 0) {
+		num_class = 1;
+	}
+
+	for (tx = 0; tx < num_class; tx++) {
+		dispatch(d_class);
+	}
+
+	printf("]");
+}
+
+function atom_group() {
+	printf("(");
+	print_atom();
+	printf(")");
+}
+
+function atom_ncgroup() {
+	printf("(?:");
+	print_atom();
+	printf(")");
+}
+
+function op_cat() {
+	printf("");
+}
+
+function op_qmark() {
+	printf("?");
+}
+
+function op_plus() {
+	printf("+");
+}
+
+function op_star() {
+	printf("*");
+}
+
+function op_m() {
+	printf("{%u}", randint(max_m));
+}
+
+function op_mx() {
+# TODO:	printf("{%u,}", randint(max_m));
+}
+
+function op_mn() {
+	printf("{%u,%u}", randint(max_m), max_m + randint(max_n - max_m));
+}
+
+function class_unique_char() {
+	if (length(class) == 256) {
+		return;
+	}
+
+	do {
+		c = randchar(0);
+	} while (c in class);
+
+	class[c] = c;
+
+	print_char(c);
+}
+
+function class_unique_hex() {
+	if (length(class) == 256) {
+		return;
+	}
+
+	do {
+		c = randchar(0);
+	} while (c in class);
+
+	class[c] = c;
+
+	print_hex(c);
+}
+
+function class_unique_range(    m, n, c) {
+	if (length(class) == 256) {
+		return;
+	}
+
+	do {
+		m = randchar(0);
+	} while (m in class);
+
+	n = randchar(m);
+
+	for (c = m; c < n; c++) {
+		if (c in class) {
+			n = c - 1;
+			break;
+		}
+
+		class[c] = c;
+	}
+
+	print_char(m);
+	printf("-");
+	print_char(n);
+}
+
+function class_unique_hexrange(    c) {
+	if (length(class) == 256) {
+		return;
+	}
+
+	do {
+		m = randchar(0);
+	} while (m in class);
+
+	n = randchar(m);
+
+	for (c = m; c < n; c++) {
+		if (c in class) {
+			n = c - 1;
+			break;
+		}
+
+		class[c] = c;
+	}
+
+	print_hex(m);
+	printf("-");
+	print_hex(n);
+}
+
+function class_nonunique_char() {
+	c = randchar(0);
+	print_char(c);
+}
+
+function class_nonunique_hex() {
+	c = randchar(0);
+	print_hex(c);
+}
+
+function class_nonunique_range(    m, n, c) {
+	m = randchar(0);
+	n = randchar(m);
+
+	print_char(m);
+	printf("-");
+	print_char(n);
+}
+
+function class_nonunique_hexrange(    c) {
+	m = randchar(0);
+	n = randchar(m);
+
+	print_hex(m);
+	printf("-");
+	print_hex(n);
+}
+
+function print_atom() {
+	num_atoms--; # fewer terms for deeper nesting
+
+	if (rand() < prob_alt) {
+		print_atom();
+		printf("|");
+		print_atom();
+		return;
+	}
+
+	dispatch(d_atom);
+	dispatch(d_op);
+
+	num_atoms++;
+}
+
+BEGIN {
+	def["seed"]      = 210881
+	def["dialect"]   = "native"
+	def["max_atoms"] = 50
+	def["max_class"] = 5
+	def["max_m"]     = 5
+	def["max_n"]     = 10
+
+	seed      = shift_arg("seed") + 0
+	dialect   = shift_arg("dialect") ""
+	max_atoms = shift_arg("max_atoms") + 0
+	max_class = shift_arg("max_class") + 0
+	max_m     = shift_arg("max_m") + 0
+	max_n     = shift_arg("max_n") + 0
+
+	# XXX: make configurable
+	prob_alt = 0.2;
+	prob_not = 0.3;
+
+	if (max_n < max_m) {
+		max_n = max_n;
+	}
+
+	srand(seed);
+
+	# relative probabilities
+	# TODO: override from argv
+	# TODO: different dialects would set some of these to 0
+
+	prob_atom["atom_char"]    = 3;
+	prob_atom["atom_hex"]     = 1;
+	prob_atom["atom_class"]   = 1;
+	prob_atom["atom_group"]   = 1;
+	prob_atom["atom_ncgroup"] = 1;
+
+	prob_op["op_cat"]   = 2;
+	prob_op["op_qmark"] = 1;
+	prob_op["op_plus"]  = 1;
+	prob_op["op_star"]  = 1;
+	prob_op["op_m"]     = 1;
+	prob_op["op_mx"]    = 1;
+	prob_op["op_mn"]    = 1;
+
+	prob_class["class_unique_char"]     = 2;
+	prob_class["class_unique_hex"]      = 1;
+	prob_class["class_unique_range"]    = 1;
+	prob_class["class_unique_hexrange"] = 1;
+
+	prob_class["class_nonunique_char"]     = 2;
+	prob_class["class_nonunique_hex"]      = 1;
+	prob_class["class_nonunique_range"]    = 1;
+	prob_class["class_nonunique_hexrange"] = 1;
+
+	if (dialect == "literal") {
+		prob_alt = 0;
+
+		delete prob_atom["atom_hex"];
+		delete prob_atom["atom_class"];
+		delete prob_atom["atom_group"];
+		delete prob_atom["atom_ncgroup"];
+
+		delete prob_op["op_qmark"];
+		delete prob_op["op_plus"];
+		delete prob_op["op_star"];
+		delete prob_op["op_m"];
+		delete prob_op["op_mx"];
+		delete prob_op["op_mn"];
+
+		delete prob_class["class_nonunique_char"];
+		delete prob_class["class_nonunique_hex"];
+		delete prob_class["class_nonunique_range"];
+		delete prob_class["class_nonunique_hexrange"];
+	} else if (dialect == "native") {
+		delete prob_atom["atom_ncgroup"];
+	} else if (dialect == "pcre") {
+		delete prob_class["class_unique_char"];
+		delete prob_class["class_unique_hex"];
+		delete prob_class["class_unique_range"];
+		delete prob_class["class_unique_hexrange"];
+	} else {
+		printf("unsupported dialect: %s\n", dialect);
+		exit(2);
+	}
+
+	populate(prob_atom, d_atom);
+	populate(prob_op, d_op);
+	populate(prob_class, d_class);
+
+	num_atoms = randint(max_atoms)
+	if (num_atoms == 0 && max_atoms >= 1 && rand() > 0.1) {
+		num_atoms = 1;
+	}
+
+	for (t = 0; t < num_atoms; t++) {
+		print_atom();
+	}
+}
+
