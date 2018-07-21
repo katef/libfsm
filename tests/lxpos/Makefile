@@ -1,34 +1,31 @@
-CDEFS += -DLX_HEADER='"lexer.h"'
-CFLAGS += -std=c89 -g -Wall -pedantic ${CDEFS}
-LDFLAGS += 
+.include "../../share/mk/top.mk"
 
-OBJS=	lexer.o \
-	main.o \
+SRC += tests/lxpos/main.c
+SRC += tests/lxpos/lexer.c
 
-GEN=	lexer.c \
-	lexer.h \
+.for src in ${SRC:Mtests/lxpos/lexer.c}
+CFLAGS.${src} += -D LX_HEADER='"lexer.h"'
+DFLAGS.${src} += -D LX_HEADER='"lexer.h"'
+.endfor
 
-LX=	../../build/bin/lx
+LEXER += tests/lxpos/lexer.lx
 
-lxpos: ${OBJS}
-	${CC} -o $@ ${LDFLAGS} ${OBJS}
+LX_CFLAGS.tests/lxpos/lexer.lx += -b dyn -k str
 
-%.o: %.c ${GEN}
-	${CC} -c -o $@ ${CFLAGS} $<
+PROG += lxpos
 
-lexer.o: lexer.c lexer.h
+.for src in ${SRC:Mtests/lxpos/main.c}
+${src}: tests/lxpos/lexer.h
+.endfor
 
-lexer.c: lexer.lx
-	${LX} -l c -b dyn -k str < $< > $@
+.for src in ${SRC:Mtests/lxpos/*.c}
+${BUILD}/bin/lxpos: ${BUILD}/${src:R}.o
+.endfor
 
-lexer.h: lexer.lx
-	${LX} -l h -b dyn -k str < $< > $@
+test:: ${BUILD}/tests/lxpos/res0
 
-lexer.png: lexer.lx
-	${LX} -l dot -k str < $< | dot -Tpng -o $@
+${BUILD}/tests/lxpos/res0: ${BUILD}/tests/lxpos ${BUILD}/bin/lxpos
+	${BUILD}/bin/lxpos > ${BUILD}/tests/lxpos/lxpos.log; \
+	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
+	> $@
 
-check: lxpos
-	./lxpos
-
-clean:
-	rm -f ${GEN} *.o lxpos lexer.png

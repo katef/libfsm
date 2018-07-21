@@ -49,6 +49,7 @@ SUBDIR += tests/determinise
 SUBDIR += tests/glob
 SUBDIR += tests/like
 SUBDIR += tests/literal
+SUBDIR += tests/lxpos
 SUBDIR += tests/minimise
 SUBDIR += tests/native
 SUBDIR += tests/pcre
