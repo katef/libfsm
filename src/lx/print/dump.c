@@ -247,7 +247,19 @@ print_dump(FILE *f)
 	}
 
 	if (~api_exclude & API_POS) {
-		fprintf(f, "\t\tprintf(\"%%u: \", lx.start.byte);\n");
+		fprintf(f, "\t\tprintf(\"%%u\", lx.start.byte);\n");
+		fprintf(f, "\t\tif (lx.end.byte != lx.start.byte) {\n");
+		fprintf(f, "\t\t\tprintf(\"-%%u\", lx.end.byte);\n");
+		fprintf(f, "\t\t}\n");
+		fprintf(f, "\t\tprintf(\":%%u\", lx.start.line);\n");
+		fprintf(f, "\t\tif (lx.end.line != lx.start.line) {\n");
+		fprintf(f, "\t\t\tprintf(\"-%%u\", lx.end.line);\n");
+		fprintf(f, "\t\t}\n");
+		fprintf(f, "\t\tprintf(\",%%u\", lx.start.col);\n");
+		fprintf(f, "\t\tif (lx.end.col != lx.start.col) {\n");
+		fprintf(f, "\t\t\tprintf(\"-%%u\", lx.end.col);\n");
+		fprintf(f, "\t\t}\n");
+		fprintf(f, "\t\tprintf(\": \");\n");
 		fprintf(f, "\n");
 	}
 

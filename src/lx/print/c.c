@@ -391,8 +391,17 @@ print_io(FILE *f)
 		fprintf(f, "\n");
 		fprintf(f, "\tif (c == '\\n') {\n");
 		fprintf(f, "\t\tlx->end.line++;\n");
+		fprintf(f, "\t\tlx->end.saved_col = lx->end.col - 1;\n");
 		fprintf(f, "\t\tlx->end.col = 1;\n");
-		fprintf(f, "\t}\n");
+
+                if (opt.io == FSM_IO_STR) {   /* ignore terminating '\0' */
+                    fprintf(f, "\t} else if (c == '\\0') { /* don't count terminating '\\0' */\n");
+                    fprintf(f, "\t\tlx->end.byte--;\n");
+                    fprintf(f, "\t\tlx->end.col--;\n");
+                    fprintf(f, "\t}\n");
+                } else {
+                    fprintf(f, "\t}\n");
+                }
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\treturn c;\n");
@@ -439,7 +448,7 @@ print_io(FILE *f)
 		fprintf(f, "\n");
 		fprintf(f, "\tif (c == '\\n') {\n");
 		fprintf(f, "\t\tlx->end.line--;\n");
-		fprintf(f, "\t\tlx->end.col = 0; /* XXX: lost information */\n");
+		fprintf(f, "\t\tlx->end.col = lx->end.saved_col;\n");
 		fprintf(f, "\t}\n");
 	}
 	fprintf(f, "}\n");
@@ -1095,5 +1104,15 @@ lx_print_c(FILE *f, const struct ast *ast)
 	}
 
 	fprintf(f, "\n");
-}
 
+        if (opt.io == FSM_IO_STR) {
+		fprintf(f, "void\n");
+		fprintf(f, "%sinput_str(struct %slx *lx, const char *p)\n", prefix.api, prefix.lx);
+		fprintf(f, "{\n");
+		fprintf(f, "\tassert(lx != NULL);\n");
+		fprintf(f, "\tassert(p != NULL);\n");
+		fprintf(f, "\tlx->end.col = 1;\n");
+		fprintf(f, "\tlx->p = p;\n");
+		fprintf(f, "}\n");
+        }
+}

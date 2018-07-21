@@ -59,12 +59,13 @@ lx_print_h(FILE *f, const struct ast *ast)
 	if (~api_exclude & API_POS) {
 		fprintf(f, "/*\n");
 		fprintf(f, " * .byte is 0-based.\n");
-		fprintf(f, " * .line and .col are 1-based; 0 means unknown.\n");
+		fprintf(f, " * .line, .col, and .saved_col are 1-based; 0 means unknown.\n");
 		fprintf(f, " */\n");
 		fprintf(f, "struct lx_pos {\n");
 		fprintf(f, "\tunsigned byte;\n");
 		fprintf(f, "\tunsigned line;\n");
 		fprintf(f, "\tunsigned col;\n");
+		fprintf(f, "\tunsigned saved_col;\n");
 		fprintf(f, "};\n");
 		fprintf(f, "\n");
 	}
@@ -230,6 +231,11 @@ lx_print_h(FILE *f, const struct ast *ast)
 		fprintf(f, "int  %sfixedclear(void *buf_opaque);\n", prefix.api);
 		fprintf(f, "\n");
 	}
+
+        if (opt.io == FSM_IO_STR) {
+		fprintf(f, "void %sinput_str(struct %slx *lx, const char *p);\n", prefix.api, prefix.lx);
+		fprintf(f, "\n");
+        }
 
 	fprintf(f, "#endif\n");
 	fprintf(f, "\n");
