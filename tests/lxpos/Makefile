@@ -9,49 +9,71 @@ LX?=${BUILD}/bin/lx
 # for lx -l test
 LEXER += tests/lxpos/lexer.lx
 
-LX_CFLAGS.tests/lxpos/lexer.lx += -b dyn -k str
+# TODO: avoid iterating over getc for -k of non-getc
+.for buf in dyn fixed
+.for io in str pair getc
 
-CFLAGS.${BUILD}/tests/lxpos/lxdump += -I ${BUILD}/tests/lxpos -D LX_HEADER='"lexer.h"'
+.if ${io} == getc
+getc_list = fgetc fdgetc
+.else
+getc_list = none
+.endif
 
-.for lexer in tests/lxpos/lexer.lx
+.for getc in ${getc_list}
+
+LX_CFLAGS.tests/lxpos/${buf}-${getc}-${io}-lexer.lx = -b ${buf} -k ${io}
+.if ${getc} != none
+LX_CFLAGS.tests/lxpos/${buf}-${getc}-${io}-lexer.lx += -g ${getc}
+.endif
+
+CFLAGS.${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump += -I ${BUILD}/tests/lxpos -D LX_HEADER='"${buf}-${getc}-${io}-lexer.h"'
 
 .for ext in c h
 
-${BUILD}/${lexer:R}.${ext}: ${lexer}
-	${LX} -l ${ext} ${LX_CFLAGS} ${LX_CFLAGS.${lexer}} < ${.ALLSRC:M*.lx} > $@ \
-		|| { rm -f ${lexer:R}.${ext}; false; }
-
-.endfor
-
-${BUILD}/tests/lxpos/lxdump.c: ${lexer} ${BUILD}/tests/lxpos/lexer.h
-	${LX} -l dump ${LX_CFLAGS} ${LX_CFLAGS.${lexer}} < ${.ALLSRC:M*.lx} > $@ \
+${BUILD}/tests/lxpos/${buf}-${getc}-${io}-lexer.${ext}: tests/lxpos/lexer.lx
+	${LX} -l ${ext} ${LX_CFLAGS} ${LX_CFLAGS.tests/lxpos/${buf}-${getc}-${io}-lexer.lx} < ${.ALLSRC:M*.lx} > $@ \
 		|| { rm -f $@; false; }
 
 .endfor
 
-${BUILD}/tests/lxpos/lxdump: ${BUILD}/tests/lxpos/lexer.c
-${BUILD}/tests/lxpos/lxdump: ${BUILD}/tests/lxpos/lxdump.c
+${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump.c: tests/lxpos/lexer.lx
+	${LX} -l dump ${LX_CFLAGS} ${LX_CFLAGS.tests/lxpos/${buf}-${getc}-${io}-lexer.lx} < ${.ALLSRC:M*.lx} > $@ \
+		|| { rm -f $@; false; }
 
-${BUILD}/tests/lxpos/lxdump:
-	${CC} -o $@ ${CFLAGS} ${CFLAGS.${BUILD}/tests/lxpos/lxdump} ${LFLAGS} ${.ALLSRC:M*.o} ${.ALLSRC:M*.c}
+${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump: ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-lexer.h
+${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump: ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-lexer.c
+${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump: ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump.c
 
-CLEAN += ${BUILD}/tests/lxpos/lxdump
+${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump:
+	${CC} -o $@ ${CFLAGS} ${CFLAGS.${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump} ${LFLAGS} ${.ALLSRC:M*.o} ${.ALLSRC:M*.c}
+
+CLEAN += ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump
 
 .for n in ${TEST.tests/lxpos:T:Mout*.dump:R:C/^out//}
 
-${TEST_OUTDIR.tests/lxpos}/got${n}.dump: ${BUILD}/tests/lxpos/lxdump ${TEST_SRCDIR.tests/lxpos}/in${n}.txt
-	cat ${.ALLSRC:M*.txt} \
-	| xargs -0 ${BUILD}/tests/lxpos/lxdump \
+${TEST_OUTDIR.tests/lxpos}/${buf}-${getc}-${io}-got${n}.dump: ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump ${TEST_SRCDIR.tests/lxpos}/in${n}.txt
+.if ${getc} != none
+	cat ${.ALLSRC:M*.txt} getcio=${io} \
+	| ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump \
 	> $@
+.else
+	cat ${.ALLSRC:M*.txt} io=${io} \
+	| xargs -0 ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump \
+	> $@
+.endif
 
-${BUILD}/tests/lxpos/res${n}: ${BUILD}/tests/lxpos/lxdump \
+${BUILD}/tests/lxpos/${buf}-${getc}-${io}-res${n}: ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump \
 	${TEST_SRCDIR.tests/lxpos}/out${n}.dump \
-	${TEST_OUTDIR.tests/lxpos}/got${n}.dump
+	${TEST_OUTDIR.tests/lxpos}/${buf}-${getc}-${io}-got${n}.dump
 	diff ${.ALLSRC:M*.dump}; \
 	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
 	> $@
 
-test:: ${TEST_OUTDIR.tests/lxpos}/res${n}
+test:: ${TEST_OUTDIR.tests/lxpos}/${buf}-${getc}-${io}-res${n}
 
+.endfor
+
+.endfor
+.endfor
 .endfor
 
