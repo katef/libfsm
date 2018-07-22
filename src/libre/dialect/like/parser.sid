@@ -80,6 +80,7 @@
         !<expr-count>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
 	!<char-class-ast-literal>: (:char) -> (:char_class_ast);
+	!<char-class-ast-range-distinct>: (:range_endpoint, :pos, :range_endpoint, :pos) -> ();
         !<char-class-ast-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:char_class_ast);
 	!<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	!<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);

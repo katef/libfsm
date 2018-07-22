@@ -184,8 +184,10 @@ function class_unique_range(    m, n, c) {
 	}
 
 	print_class_char(m);
-	printf("-");
-	print_class_char(n);
+	if (dialect == "native" && n != m) {
+		printf("-");
+		print_class_char(n);
+	}
 }
 
 function class_unique_hexrange(    c) {
@@ -209,8 +211,10 @@ function class_unique_hexrange(    c) {
 	}
 
 	print_hex(m);
-	printf("-");
-	print_hex(n);
+	if (dialect == "native" && n != m) {
+		printf("-");
+		print_hex(n);
+	}
 }
 
 function class_nonunique_char() {

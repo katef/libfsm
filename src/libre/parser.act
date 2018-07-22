@@ -659,6 +659,24 @@
 		if (@node == NULL) { @!; }
 	@};
 
+	<char-class-ast-range-distinct>: (from :range_endpoint, start :pos,
+	    		to :range_endpoint, end :pos) -> () = @{
+		struct ast_pos ast_start, ast_end;
+		AST_POS_OF_LX_POS(ast_start, @start);
+		AST_POS_OF_LX_POS(ast_end, @end);
+
+		if (@from.t != AST_RANGE_ENDPOINT_LITERAL ||
+		    @to.t != AST_RANGE_ENDPOINT_LITERAL) {
+			err->e = RE_EXUNSUPPORTD;
+			@!;
+		}
+
+		if (@from.u.literal.c == @to.u.literal.c) {
+			err->e = RE_EDISTINCT;
+			@!;
+		}
+	@};
+
 	<char-class-ast-range>: (from :range_endpoint, start :pos,
 	    		to :range_endpoint, end :pos) -> (node :char_class_ast) = @{
 		struct ast_pos ast_start, ast_end;
