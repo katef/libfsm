@@ -277,11 +277,12 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 		/* END OF INLINE: list-of-nodes::literal */
 		/* BEGINNING OF ACTION: ast-expr-literal */
 		{
-#line 595 "src/libre/parser.act"
+#line 598 "src/libre/parser.act"
 
 		(ZIl) = re_ast_expr_literal((ZIc));
+		if ((ZIl) == NULL) { goto ZL1; }
 	
-#line 285 "src/libre/dialect/literal/parser.c"
+#line 286 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: ast-expr-literal */
 		/* BEGINNING OF INLINE: 96 */
@@ -298,11 +299,12 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					}
 					/* BEGINNING OF ACTION: ast-expr-concat */
 					{
-#line 587 "src/libre/parser.act"
+#line 588 "src/libre/parser.act"
 
 		(ZInode) = re_ast_expr_concat((ZIl), (ZIr));
+		if ((ZInode) == NULL) { goto ZL1; }
 	
-#line 306 "src/libre/dialect/literal/parser.c"
+#line 308 "src/libre/dialect/literal/parser.c"
 					}
 					/* END OF ACTION: ast-expr-concat */
 				}
@@ -352,8 +354,9 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 #line 583 "src/libre/parser.act"
 
 		(ZInode) = re_ast_expr_empty();
+		if ((ZInode) == NULL) { goto ZL1; }
 	
-#line 357 "src/libre/dialect/literal/parser.c"
+#line 360 "src/libre/dialect/literal/parser.c"
 					}
 					/* END OF ACTION: ast-expr-empty */
 				}
@@ -384,7 +387,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 		}
 		goto ZL1;
 	
-#line 388 "src/libre/dialect/literal/parser.c"
+#line 391 "src/libre/dialect/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -402,7 +405,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 747 "src/libre/parser.act"
+#line 765 "src/libre/parser.act"
 
 
 	static int
@@ -551,6 +554,13 @@ ZL0:;
 			goto error;
 		}
 
+		if (ast->expr == NULL) {
+			/* We shouldn't get here, it means there's error
+			 * checking missing elsewhere. */
+			if (err->e == RE_ESUCCESS) { assert(0); }
+			goto error;
+		}
+
 		return ast;
 
 	error:
@@ -559,6 +569,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 563 "src/libre/dialect/literal/parser.c"
+#line 573 "src/libre/dialect/literal/parser.c"
 
 /* END OF FILE */

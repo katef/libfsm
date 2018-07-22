@@ -263,11 +263,12 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					/* END OF INLINE: list-of-nodes::any */
 					/* BEGINNING OF ACTION: ast-expr-any */
 					{
-#line 599 "src/libre/parser.act"
+#line 603 "src/libre/parser.act"
 
 		(ZIl) = re_ast_expr_any();
+		if ((ZIl) == NULL) { goto ZL1; }
 	
-#line 271 "src/libre/dialect/like/parser.c"
+#line 272 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-any */
 				}
@@ -296,7 +297,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 300 "src/libre/dialect/like/parser.c"
+#line 301 "src/libre/dialect/like/parser.c"
 								}
 								/* END OF EXTRACT: CHAR */
 								break;
@@ -309,11 +310,12 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					/* END OF INLINE: list-of-nodes::literal */
 					/* BEGINNING OF ACTION: ast-expr-literal */
 					{
-#line 595 "src/libre/parser.act"
+#line 598 "src/libre/parser.act"
 
 		(ZIl) = re_ast_expr_literal((ZIc));
+		if ((ZIl) == NULL) { goto ZL1; }
 	
-#line 317 "src/libre/dialect/like/parser.c"
+#line 319 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-literal */
 				}
@@ -338,29 +340,31 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					/* END OF INLINE: list-of-nodes::many */
 					/* BEGINNING OF ACTION: ast-expr-any */
 					{
-#line 599 "src/libre/parser.act"
+#line 603 "src/libre/parser.act"
 
 		(ZIe) = re_ast_expr_any();
+		if ((ZIe) == NULL) { goto ZL1; }
 	
-#line 346 "src/libre/dialect/like/parser.c"
+#line 349 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-any */
 					/* BEGINNING OF ACTION: atom-kleene */
 					{
-#line 617 "src/libre/parser.act"
+#line 625 "src/libre/parser.act"
 
 		(ZIc) = ast_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
 	
-#line 355 "src/libre/dialect/like/parser.c"
+#line 358 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: atom-kleene */
 					/* BEGINNING OF ACTION: ast-expr-atom */
 					{
-#line 613 "src/libre/parser.act"
+#line 620 "src/libre/parser.act"
 
 		(ZIl) = re_ast_expr_with_count((ZIe), (ZIc));
+		if ((ZIl) == NULL) { goto ZL1; }
 	
-#line 364 "src/libre/dialect/like/parser.c"
+#line 368 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-atom */
 				}
@@ -384,11 +388,12 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					}
 					/* BEGINNING OF ACTION: ast-expr-concat */
 					{
-#line 587 "src/libre/parser.act"
+#line 588 "src/libre/parser.act"
 
 		(ZInode) = re_ast_expr_concat((ZIl), (ZIr));
+		if ((ZInode) == NULL) { goto ZL1; }
 	
-#line 392 "src/libre/dialect/like/parser.c"
+#line 397 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-concat */
 				}
@@ -438,8 +443,9 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 #line 583 "src/libre/parser.act"
 
 		(ZInode) = re_ast_expr_empty();
+		if ((ZInode) == NULL) { goto ZL1; }
 	
-#line 443 "src/libre/dialect/like/parser.c"
+#line 449 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-empty */
 				}
@@ -470,7 +476,7 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 		}
 		goto ZL1;
 	
-#line 474 "src/libre/dialect/like/parser.c"
+#line 480 "src/libre/dialect/like/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -488,7 +494,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 747 "src/libre/parser.act"
+#line 765 "src/libre/parser.act"
 
 
 	static int
@@ -637,6 +643,13 @@ ZL0:;
 			goto error;
 		}
 
+		if (ast->expr == NULL) {
+			/* We shouldn't get here, it means there's error
+			 * checking missing elsewhere. */
+			if (err->e == RE_ESUCCESS) { assert(0); }
+			goto error;
+		}
+
 		return ast;
 
 	error:
@@ -645,6 +658,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 649 "src/libre/dialect/like/parser.c"
+#line 662 "src/libre/dialect/like/parser.c"
 
 /* END OF FILE */
