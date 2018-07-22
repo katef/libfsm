@@ -396,6 +396,8 @@
 			ALT;
 			r = list-of-alts();
 			node = <ast-expr-alt>(a, r);
+		##
+			node = <ast-expr-empty>();
 		};
 	] = {
 	        node = list-of-alts();
