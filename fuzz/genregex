@@ -84,8 +84,7 @@ function atom_class() {
 
 	num_class = randint(max_class)
 
-	# XXX: should be legal
-	if (num_class == 0) {
+	if (dialect == "native" && num_class == 0) {
 		num_class = 1;
 	}
 
