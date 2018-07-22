@@ -1,0 +1,28 @@
+
+Authors:
+
+  Kate F <kate@elide.org>
+
+  Devon H. O'Dell <devon.odell@gmail.com>
+  - Performance optimisation
+  - iprange example
+
+  Ed Kellett <e@kellett.im>
+  - PCRE dialect
+
+  Shannon F. Stewman <shannon.stewman@gmail.com>
+  - All sorts of things that needed doing
+
+  Scott Vokes <svokes@fastly.com>
+  - Property-based testing with theft
+  - bench_libfsm
+  - libre AST
+  - PCRE dialect
+
+Contributions, bugfixes, etc:
+
+  Bradley Garagan <bradgaragan@gmail.com>
+  Jarkko Hietaniemi <jhietaniemi@fastly.com>
+  Adam Thomason <adam@fastly.com>
+  Christian Peron <cperon@fastly.com>
+
