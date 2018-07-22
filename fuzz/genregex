@@ -36,25 +36,7 @@ function dispatch(d) {
 	@f();
 }
 
-function print_char(c, special) {
-	special["\n"] = "n";
-	special["\r"] = "r";
-	special["\t"] = "t";
-	special["\v"] = "v";
-	special["\f"] = "f";
-	special["\\"] = "\\";
-
-	if (dialect == "native" || dialect == "pcre") {
-		special["["]  = "[";
-		special["]"]  = "]";
-		special["("]  = "(";
-		special[")"]  = ")";
-		special["|"]  = "|";
-		special["+"]  = "+";
-		special["?"]  = "?";
-		special["*"]  = "*";
-	}
-
+function print_char(c) {
 	if (c in special) {
 		printf("\\%s", special[c]);
 		return;
@@ -68,11 +50,13 @@ function print_char(c, special) {
 	printf("%c", c);
 }
 
-function print_class_char(c,    special) {
-	special["^"]  = "^";
-	special[0x2d] = "-"; # XXX: I don't know why spcial["-"] doesn't work
+function print_class_char(c) {
+	if (c in class_special) {
+		printf("\\%s", class_special[c]);
+		return;
+	}
 
-	print_char(c, special);
+	print_char(c);
 }
 
 function print_hex(c) {
@@ -357,6 +341,27 @@ BEGIN {
 		printf("unsupported dialect: %s\n", dialect);
 		exit(2);
 	}
+
+	if (dialect == "native" || dialect == "pcre") {
+		special["\n"] = "n";
+		special["\r"] = "r";
+		special["\t"] = "t";
+		special["\v"] = "v";
+		special["\f"] = "f";
+		special["\\"] = "\\";
+
+		special["["]  = "[";
+		special["]"]  = "]";
+		special["("]  = "(";
+		special[")"]  = ")";
+		special["|"]  = "|";
+		special["+"]  = "+";
+		special["?"]  = "?";
+		special["*"]  = "*";
+	}
+
+	class_special["^"]  = "^";
+	class_special[0x2d] = "-"; # XXX: I don't know why class_special["-"] doesn't work
 
 	populate(prob_atom, d_atom);
 	populate(prob_op, d_op);
