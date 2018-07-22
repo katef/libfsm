@@ -243,7 +243,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 	{
 		t_ast__expr ZIl;
 
-		/* BEGINNING OF INLINE: 99 */
+		/* BEGINNING OF INLINE: 100 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY):
@@ -280,8 +280,8 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					/* BEGINNING OF INLINE: list-of-nodes::literal */
 					{
 						{
-							t_pos ZI93;
 							t_pos ZI94;
+							t_pos ZI95;
 
 							switch (CURRENT_TERMINAL) {
 							case (TOK_CHAR):
@@ -292,8 +292,8 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI93 = lex_state->lx.start;
-		ZI94   = lex_state->lx.end;
+		ZI94 = lex_state->lx.start;
+		ZI95   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
@@ -373,8 +373,8 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 				goto ZL1;
 			}
 		}
-		/* END OF INLINE: 99 */
-		/* BEGINNING OF INLINE: 102 */
+		/* END OF INLINE: 100 */
+		/* BEGINNING OF INLINE: 103 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
@@ -405,7 +405,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 				break;
 			}
 		}
-		/* END OF INLINE: 102 */
+		/* END OF INLINE: 103 */
 	}
 	goto ZL0;
 ZL1:;
@@ -424,7 +424,7 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 		return;
 	}
 	{
-		/* BEGINNING OF INLINE: 106 */
+		/* BEGINNING OF INLINE: 107 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
@@ -452,8 +452,8 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 				break;
 			}
 		}
-		/* END OF INLINE: 106 */
-		/* BEGINNING OF INLINE: 107 */
+		/* END OF INLINE: 107 */
+		/* BEGINNING OF INLINE: 108 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -482,7 +482,7 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 			}
 		ZL3:;
 		}
-		/* END OF INLINE: 107 */
+		/* END OF INLINE: 108 */
 	}
 	goto ZL0;
 ZL1:;
@@ -494,7 +494,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 765 "src/libre/parser.act"
+#line 783 "src/libre/parser.act"
 
 
 	static int

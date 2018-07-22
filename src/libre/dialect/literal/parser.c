@@ -247,8 +247,8 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 		/* BEGINNING OF INLINE: list-of-nodes::literal */
 		{
 			{
-				t_pos ZI93;
 				t_pos ZI94;
+				t_pos ZI95;
 
 				switch (CURRENT_TERMINAL) {
 				case (TOK_CHAR):
@@ -259,8 +259,8 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI93 = lex_state->lx.start;
-		ZI94   = lex_state->lx.end;
+		ZI94 = lex_state->lx.start;
+		ZI95   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
@@ -285,7 +285,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 #line 286 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: ast-expr-literal */
-		/* BEGINNING OF INLINE: 96 */
+		/* BEGINNING OF INLINE: 97 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -316,7 +316,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 				break;
 			}
 		}
-		/* END OF INLINE: 96 */
+		/* END OF INLINE: 97 */
 	}
 	goto ZL0;
 ZL1:;
@@ -335,7 +335,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 		return;
 	}
 	{
-		/* BEGINNING OF INLINE: 100 */
+		/* BEGINNING OF INLINE: 101 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -363,8 +363,8 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				break;
 			}
 		}
-		/* END OF INLINE: 100 */
-		/* BEGINNING OF INLINE: 101 */
+		/* END OF INLINE: 101 */
+		/* BEGINNING OF INLINE: 102 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -393,7 +393,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			}
 		ZL3:;
 		}
-		/* END OF INLINE: 101 */
+		/* END OF INLINE: 102 */
 	}
 	goto ZL0;
 ZL1:;
@@ -405,7 +405,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 765 "src/libre/parser.act"
+#line 783 "src/libre/parser.act"
 
 
 	static int
