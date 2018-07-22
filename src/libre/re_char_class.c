@@ -465,7 +465,7 @@ cc_add_range(struct re_char_class *cc,
     const struct ast_range_endpoint *to)
 {
 	unsigned char lower, upper;
-	unsigned char i;
+	unsigned int i;
 
 	if (from->t != AST_RANGE_ENDPOINT_LITERAL ||
 	    to->t != AST_RANGE_ENDPOINT_LITERAL) {
