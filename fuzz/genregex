@@ -36,7 +36,7 @@ function dispatch(d) {
 	@f();
 }
 
-function print_char(c,    special) {
+function print_char(c, special) {
 	special["\n"] = "n";
 	special["\r"] = "r";
 	special["\t"] = "t";
@@ -66,6 +66,13 @@ function print_char(c,    special) {
 	}
 
 	printf("%c", c);
+}
+
+function print_class_char(c,    special) {
+	special["^"]  = "^";
+	special[0x2d] = "-"; # XXX: I don't know why spcial["-"] doesn't work
+
+	print_char(c, special);
 }
 
 function print_hex(c) {
@@ -156,7 +163,7 @@ function class_unique_char() {
 
 	class[c] = c;
 
-	print_char(c);
+	print_class_char(c);
 }
 
 function class_unique_hex() {
@@ -193,9 +200,9 @@ function class_unique_range(    m, n, c) {
 		class[c] = c;
 	}
 
-	print_char(m);
+	print_class_char(m);
 	printf("-");
-	print_char(n);
+	print_class_char(n);
 }
 
 function class_unique_hexrange(    c) {
@@ -225,7 +232,7 @@ function class_unique_hexrange(    c) {
 
 function class_nonunique_char() {
 	c = randchar(0);
-	print_char(c);
+	print_class_char(c);
 }
 
 function class_nonunique_hex() {
@@ -237,9 +244,9 @@ function class_nonunique_range(    m, n, c) {
 	m = randchar(0);
 	n = randchar(m);
 
-	print_char(m);
+	print_class_char(m);
 	printf("-");
-	print_char(n);
+	print_class_char(n);
 }
 
 function class_nonunique_hexrange(    c) {
