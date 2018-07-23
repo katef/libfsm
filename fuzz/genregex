@@ -36,41 +36,42 @@ function dispatch(d) {
 	@f();
 }
 
-function print_char(c) {
+function print_esc(i, special,    c) {
+	c = sprintf("%c", i);
+
 	if (c in special) {
-		printf("\\%s", special[c]);
+		printf("%s", special[c]);
 		return;
 	}
 
-	if (c < 32 || c > 127) {
-		print_hex(c);
+	if (i < 32 || i > 127) {
+		print_hex(i);
 		return;
 	}
 
-	printf("%c", c);
+	printf("%c", i);
 }
 
-function print_class_char(c) {
-	if (c in class_special) {
-		printf("\\%s", class_special[c]);
-		return;
-	}
-
-	print_char(c);
+function print_char(i) {
+	print_esc(i, special);
 }
 
-function print_hex(c) {
-	printf("\\x%02x", c);
+function print_class_char(i) {
+	print_esc(i, class_special);
 }
 
-function atom_char(    c) {
-	c = randchar(0);
-	print_char(c);
+function print_hex(i) {
+	printf("\\x%02x", i);
 }
 
-function atom_hex(    c) {
-	c = randchar(0);
-	print_hex(c);
+function atom_char(    i) {
+	i = randchar(0);
+	print_char(i);
+}
+
+function atom_hex(    i) {
+	i = randchar(0);
+	print_hex(i);
 }
 
 function atom_class() {
@@ -135,52 +136,58 @@ function op_mn() {
 	printf("{%u,%u}", randint(max_m), max_m + randint(max_n - max_m));
 }
 
-function class_unique_char() {
+function class_unique_char(    i, k) {
 	if (length(class) == 256) {
 		return;
 	}
 
+	k = 0;
 	do {
-		c = randchar(0);
-	} while (c in class);
+		if (k++ > uniq_limit) { return; }
+		i = randchar(0);
+	} while (i in class);
 
-	class[c] = c;
+	class[i] = i;
 
-	print_class_char(c);
+	print_class_char(i);
 }
 
-function class_unique_hex() {
+function class_unique_hex(    i, k) {
 	if (length(class) == 256) {
 		return;
 	}
 
+	k = 0;
 	do {
-		c = randchar(0);
-	} while (c in class);
+		if (k > uniq_limit) { return; }
+		i = randchar(0);
+	} while (i in class);
 
-	class[c] = c;
+	class[i] = i;
 
-	print_hex(c);
+	print_hex(i);
 }
 
-function class_unique_range(    m, n, c) {
+function class_unique_range(    m, n, i, k) {
 	if (length(class) == 256) {
 		return;
 	}
 
+	k = 0;
 	do {
+		if (k++ > uniq_limit) { return; }
 		m = randchar(0);
 	} while (m in class);
 
 	n = randchar(m);
 
-	for (c = m; c < n; c++) {
-		if (c in class) {
-			n = c - 1;
+	for (i = m; i <= n; i++) {
+		if (i in class) {
+			n = i - 1;
 			break;
 		}
 
-		class[c] = c;
+		class[i] = i;
 	}
 
 	print_class_char(m);
@@ -190,24 +197,26 @@ function class_unique_range(    m, n, c) {
 	}
 }
 
-function class_unique_hexrange(    c) {
+function class_unique_hexrange(    m, n, i, k) {
 	if (length(class) == 256) {
 		return;
 	}
 
+	k = 0;
 	do {
+		if (k++ > uniq_limit) { return; }
 		m = randchar(0);
 	} while (m in class);
 
 	n = randchar(m);
 
-	for (c = m; c < n; c++) {
-		if (c in class) {
-			n = c - 1;
+	for (i = m; i <= n; i++) {
+		if (i in class) {
+			n = i - 1;
 			break;
 		}
 
-		class[c] = c;
+		class[i] = i;
 	}
 
 	print_hex(m);
@@ -217,17 +226,17 @@ function class_unique_hexrange(    c) {
 	}
 }
 
-function class_nonunique_char() {
-	c = randchar(0);
-	print_class_char(c);
+function class_nonunique_char(    i) {
+	i = randchar(0);
+	print_class_char(i);
 }
 
-function class_nonunique_hex() {
-	c = randchar(0);
-	print_hex(c);
+function class_nonunique_hex(    i) {
+	i = randchar(0);
+	print_hex(i);
 }
 
-function class_nonunique_range(    m, n, c) {
+function class_nonunique_range(    m, n) {
 	m = randchar(0);
 	n = randchar(m);
 
@@ -236,7 +245,7 @@ function class_nonunique_range(    m, n, c) {
 	print_class_char(n);
 }
 
-function class_nonunique_hexrange(    c) {
+function class_nonunique_hexrange(    m, n) {
 	m = randchar(0);
 	n = randchar(m);
 
@@ -279,6 +288,7 @@ BEGIN {
 	# XXX: make configurable
 	prob_alt = 0.2;
 	prob_not = 0.3;
+	uniq_limit = 100; # iterations until giving up
 
 	if (max_n < max_m) {
 		max_n = max_n;
@@ -346,25 +356,45 @@ BEGIN {
 	}
 
 	if (dialect == "native" || dialect == "pcre") {
-		special["\n"] = "n";
-		special["\r"] = "r";
-		special["\t"] = "t";
-		special["\v"] = "v";
-		special["\f"] = "f";
-		special["\\"] = "\\";
+		special["\n"] = "\\n";
+		special["\r"] = "\\r";
+		special["\t"] = "\\t";
+		special["\v"] = "\\v";
+		special["\f"] = "\\f";
+		special["\\"] = "\\\\";
 
-		special["["]  = "[";
-		special["]"]  = "]";
-		special["("]  = "(";
-		special[")"]  = ")";
-		special["|"]  = "|";
-		special["+"]  = "+";
-		special["?"]  = "?";
-		special["*"]  = "*";
+		special["^"] = "\\^";
+		special["$"] = "\\$";
+
+		special["{"] = "\\{";
+		special["}"] = "\\}";
+		special["["] = "\\[";
+		special["]"] = "\\]";
+		special["("] = "\\(";
+		special[")"] = "\\)";
+		special["|"] = "\\|";
+		special["+"] = "\\+";
+		special["?"] = "\\?";
+		special["*"] = "\\*";
+		special["."] = "\\.";
 	}
 
-	class_special["^"]  = "^";
-	class_special[0x2d] = "-"; # XXX: I don't know why class_special["-"] doesn't work
+	if (dialect == "native" || dialect == "pcre") {
+		class_special["\n"] = "\\n";
+		class_special["\r"] = "\\r";
+		class_special["\t"] = "\\t";
+		class_special["\v"] = "\\v";
+		class_special["\f"] = "\\f";
+		class_special["\\"] = "\\\\";
+
+		class_special["^"]  = "\\^";
+
+		class_special["["]  = "\\[";
+		class_special["]"]  = "\\]";
+
+		class_special["^"]  = "\\^";
+		class_special["-"]  = "\\-";
+	}
 
 	populate(prob_atom, d_atom);
 	populate(prob_op, d_op);
