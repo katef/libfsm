@@ -156,6 +156,8 @@
 
 			class-range: () -> (node :char_class_ast) = {
 				{
+					(ca, start, !) = ESC;
+				||
 					(ca, start, !) = OCT;
 				||
 					(ca, start, !) = HEX;
@@ -171,6 +173,8 @@
 				};
 	
 				{
+					(cz, !, end) = ESC;
+				||
 					(cz, !, end) = OCT;
 				||
 					(cz, !, end) = HEX;

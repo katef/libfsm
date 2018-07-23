@@ -168,6 +168,8 @@
 			class-range: () -> (node :char_class_ast, start :pos, end :pos) [
 				range-endpoint-literal: () -> (r :range_endpoint, start :pos, end :pos) = {
 					{
+						(c, start, end) = ESC;
+					||
 						(c, start, end) = OCT;
 					||
 						(c, start, end) = HEX;
