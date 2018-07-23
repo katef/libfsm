@@ -37,6 +37,7 @@ lx_getc(struct lx_native_lx *lx)
 
 	if (c == '\n') {
 		lx->end.line++;
+		lx->end.saved_col = lx->end.col - 1;
 		lx->end.col = 1;
 	}
 
@@ -60,7 +61,7 @@ lx_native_ungetc(struct lx_native_lx *lx, int c)
 
 	if (c == '\n') {
 		lx->end.line--;
-		lx->end.col = 0; /* XXX: lost information */
+		lx->end.col = lx->end.saved_col;
 	}
 }
 
@@ -169,6 +170,8 @@ z0(struct lx_native_lx *lx)
 		switch (state) {
 		case S0: /* start */
 			switch ((unsigned char) c) {
+			case '}': state = S3; break;
+			case ',': state = S1; break;
 			case '0':
 			case '1':
 			case '2':
@@ -179,8 +182,6 @@ z0(struct lx_native_lx *lx)
 			case '7':
 			case '8':
 			case '9': state = S2; break;
-			case '}': state = S3; break;
-			case ',': state = S1; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
@@ -287,7 +288,9 @@ z1(struct lx_native_lx *lx)
 		case S4: /* e.g. "\\" */
 			switch ((unsigned char) c) {
 			case '-':
+			case '[':
 			case '\\':
+			case ']':
 			case '^':
 			case 'f':
 			case 'n':
@@ -315,16 +318,16 @@ z1(struct lx_native_lx *lx)
 
 		case S7: /* e.g. "[:" */
 			switch ((unsigned char) c) {
-			case 'b': state = S9; break;
-			case 'c': state = S10; break;
 			case 'g': state = S12; break;
+			case 'c': state = S10; break;
+			case 'b': state = S9; break;
+			case 'u': state = S16; break;
+			case 'p': state = S14; break;
 			case 's': state = S15; break;
 			case 'w': state = S17; break;
-			case 'l': state = S13; break;
-			case 'p': state = S14; break;
-			case 'u': state = S16; break;
-			case 'd': state = S11; break;
 			case 'x': state = S18; break;
+			case 'l': state = S13; break;
+			case 'd': state = S11; break;
 			case 'a': state = S8; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
@@ -375,8 +378,8 @@ z1(struct lx_native_lx *lx)
 
 		case S14: /* e.g. "[:p" */
 			switch ((unsigned char) c) {
-			case 'r': state = S22; break;
 			case 'u': state = S23; break;
+			case 'r': state = S22; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
