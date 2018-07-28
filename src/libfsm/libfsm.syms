@@ -73,7 +73,6 @@ fsm_determinise_cache
 fsm_determinise_freecache
 fsm_complete
 fsm_minimise
-fsm_pretty
 fsm_concat
 fsm_subtract
 

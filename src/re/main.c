@@ -796,13 +796,6 @@ main(int argc, char *argv[])
 		/* TODO: print examples in comments for end states;
 		 * patterns in comments for the whole FSM */
 
-		if (keep_nfa && opt.tidy) {
-			if (!fsm_pretty(fsm)) {
-				perror("fsm_pretty");
-				return 0;
-			}
-		}
-
 		if (print_fsm == fsm_print_c) {
 			opt.endleaf = endleaf;
 		}
