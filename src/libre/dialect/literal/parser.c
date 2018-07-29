@@ -423,13 +423,15 @@ ZL0:;
 		return lex_state->f(lex_state->opaque);
 	}
 
-	static int
-	parse(re_getchar_fun *f, void *opaque,
-		void (*entry)(flags, lex_state, act_state, err,
-			struct ast_expr **),
-		struct flags *flags, int overlap,
-		struct ast_re *new, struct re_err *err)
+	struct ast_re *
+	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
+		const struct fsm_options *opt,
+		enum re_flags flags, int overlap,
+		struct re_err *err)
 	{
+		struct ast_re *ast;
+		struct flags top, *fl = &top;
+
 		struct act_state  act_state_s;
 		struct act_state *act_state;
 		struct lex_state  lex_state_s;
@@ -438,8 +440,11 @@ ZL0:;
 
 		struct LX_STATE *lx;
 
+		top.flags = flags;
+
 		assert(f != NULL);
-		assert(entry != NULL);
+
+		ast = re_ast_new();
 
 		if (err == NULL) {
 			err = &dummy;
@@ -476,7 +481,7 @@ ZL0:;
 		err->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
-		entry(flags, lex_state, act_state, err, &new->expr);
+		DIALECT_ENTRY(fl, lex_state, act_state, err, &ast->expr);
 
 		lx->free(lx->buf_opaque);
 
@@ -485,7 +490,14 @@ ZL0:;
 			goto error;
 		}
 
-		return 0;
+		if (ast->expr == NULL) {
+			/* We shouldn't get here, it means there's error
+			 * checking missing elsewhere. */
+			if (err->e == RE_ESUCCESS) { assert(0); }
+			goto error;
+		}
+
+		return ast;
 
 	error:
 
@@ -532,43 +544,11 @@ ZL0:;
 			break;
 		}
 
-		return -1;
-	}
-
-	struct ast_re *
-	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
-		const struct fsm_options *opt,
-		enum re_flags flags, int overlap,
-		struct re_err *err)
-	{
-		struct ast_re *ast;
-		struct flags top, *fl = &top;
-
-		top.flags = flags;
-
-		assert(f != NULL);
-
-		ast = re_ast_new();
-
-		if (-1 == parse(f, opaque, DIALECT_ENTRY, fl, overlap, ast, err)) {
-			goto error;
-		}
-
-		if (ast->expr == NULL) {
-			/* We shouldn't get here, it means there's error
-			 * checking missing elsewhere. */
-			if (err->e == RE_ESUCCESS) { assert(0); }
-			goto error;
-		}
-
-		return ast;
-
-	error:
 		re_ast_free(ast);
 
 		return NULL;
 	}
 
-#line 573 "src/libre/dialect/literal/parser.c"
+#line 553 "src/libre/dialect/literal/parser.c"
 
 /* END OF FILE */
