@@ -102,6 +102,7 @@ print_name(const char *name,
 		{ "ir",     fsm_print_ir,     NULL  },
 		{ "irjson", fsm_print_irjson, NULL  },
 		{ "json",   fsm_print_json,   NULL  },
+		{ "vcg",    fsm_print_vcg,    NULL  },
 
 		{ "tree",   NULL, re_ast_print_tree },
 		{ "ebnf",   NULL, re_ast_print_ebnf },
