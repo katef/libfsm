@@ -33,6 +33,7 @@ fsm_print_fsm
 fsm_print_ir
 fsm_print_irjson
 fsm_print_json
+fsm_print_vcg
 
 # <fsm/fsm.h>
 fsm_clone

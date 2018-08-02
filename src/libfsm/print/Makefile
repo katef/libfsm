@@ -8,6 +8,7 @@ SRC += src/libfsm/print/ir.c
 SRC += src/libfsm/print/irdot.c
 SRC += src/libfsm/print/irjson.c
 SRC += src/libfsm/print/json.c
+SRC += src/libfsm/print/vcg.c
 
 .for src in ${SRC:Msrc/libfsm/print/*.c}
 CFLAGS.${src} += -I src # XXX: for internal.h

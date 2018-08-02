@@ -19,5 +19,6 @@ re_ast_print re_ast_print_dot;
 re_ast_print re_ast_print_ebnf;
 re_ast_print re_ast_print_pcre;
 re_ast_print re_ast_print_tree;
+re_ast_print re_ast_print_vcg;
 
 #endif
