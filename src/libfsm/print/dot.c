@@ -86,7 +86,7 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 
 #ifdef DEBUG_TODFA
 		if (s->nfasl != NULL) {
-			struct set *q;
+			struct fsm_state *q;
 
 			assert(fsm->nfa != NULL);
 
@@ -94,8 +94,8 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 
 			fprintf(f, "{");
 
-			for (q = s->nfasl; q != NULL; q = q->next) {
-				fprintf(f, "%u", indexof(fsm->nfa, q->state));
+			for (q = set_first(s->nfasl, &it); q != NULL; q = set_next(&it)) {
+				fprintf(f, "%u", indexof(fsm->nfa, q));
 
 				if (q->next != NULL) {
 					fprintf(f, ",");

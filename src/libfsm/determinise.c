@@ -555,7 +555,7 @@ determinise(struct fsm *nfa,
 			struct set *q;
 
 			for (q = set_first(curr->closure, &jt); q != NULL; q = set_next(&jt)) {
-				if (!set_add(&curr->dfastate->nfasl, q->state)) {
+				if (!set_add(&curr->dfastate->nfasl, q)) {
 					goto error;
 				}
 			}
@@ -621,7 +621,6 @@ fsm_determinise_cache(struct fsm *fsm,
 		return 0;
 	}
 
-	assert(fsm->nfa == NULL);
 	assert(dfa->nfa == fsm);
 
 	fsm->nfa->sl    = fsm->sl;
