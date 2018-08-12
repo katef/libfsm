@@ -459,6 +459,24 @@ leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
 	return 0;
 }
 
+static int
+endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
+{
+	const struct record *r;
+
+	assert(f != NULL);
+	assert(state_opaque != NULL);
+	assert(endleaf_opaque == NULL);
+
+	(void) endleaf_opaque;
+
+	r = state_opaque;
+
+	fprintf(f, "label = <%s>", r->rec); /* XXX: escape */
+
+	return 0;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -679,6 +697,8 @@ main(int argc, char **argv)
 		opt.leaf_opaque = NULL;
 		fsm_print_c(stdout, fsm);
 	} else if (odot) {
+		opt.endleaf        = endleaf_dot;
+		opt.endleaf_opaque = NULL;
 		fsm_print_dot(stdout, fsm);
 	}
 }

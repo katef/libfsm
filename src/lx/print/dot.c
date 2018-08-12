@@ -65,6 +65,7 @@ mapping(FILE *f, const struct ast_mapping *m, const struct ast *ast)
 {
 	assert(m != NULL);
 	assert(f != NULL);
+	assert(ast != NULL);
 
 	if (m->token != NULL) {
 		assert(m->token->s != NULL);
@@ -81,6 +82,51 @@ mapping(FILE *f, const struct ast_mapping *m, const struct ast *ast)
 	}
 }
 
+static int
+endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
+{
+	const struct ast_mapping *m;
+	const struct ast *ast;
+
+	assert(f != NULL);
+	assert(state_opaque != NULL);
+	assert(endleaf_opaque != NULL);
+
+	m = state_opaque;
+	ast = endleaf_opaque;
+
+	fprintf(f, "label = <");
+
+/* TODO: would need the fsm for indexing here */
+#if 0
+	if (!anonymous_states) {
+		fprintf(f, "%u<br/>", indexof(fsm, s));
+	}
+#endif
+
+	if (m->conflict != NULL) {
+		const struct mapping_set *p;
+
+		fprintf(f, "<font color=\"red\">");
+
+		for (p = m->conflict; p != NULL; p = p->next) {
+			mapping(f, p->m, ast);
+
+			if (p->next != NULL) {
+				fprintf(f, "<br/>");
+			}
+		}
+
+		fprintf(f, "</font>");
+	} else {
+		mapping(f, m, ast);
+	}
+
+	fprintf(f, ">");
+
+	return 0;
+}
+
 static void
 singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 	const struct ast_zone *z, const struct fsm_state *s)
@@ -93,70 +139,12 @@ singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 	assert(z != NULL);
 	assert(s != NULL);
 
-	/* here we're overriding the labels FSM_OUT_DOT produced */
-
-	fprintf(f, "\t\tz%uS%u [ label = <",
-		zindexof(ast, z), indexof(fsm, s));
-
-	if (!anonymous_states) {
-		fprintf(f, "%u<br/>", indexof(fsm, s));
-	}
-
-	if (fsm_isend(fsm, s)) {
-
-		m = s->opaque;
-
-		assert(m != NULL);
-
-		if (m->conflict != NULL) {
-			const struct mapping_set *p;
-
-			fprintf(f, "<font color=\"red\">");
-
-			for (p = m->conflict; p != NULL; p = p->next) {
-				mapping(f, p->m, ast);
-
-				if (p->next != NULL) {
-					fprintf(f, "<br/>");
-				}
-			}
-
-			fprintf(f, "</font>");
-		} else {
-			mapping(f, m, ast);
-		}
-
-	}
-
-	/* TODO: centralise with libfsm */
-#ifdef DEBUG_TODFA
-	if (s->nfasl != NULL) {
-		struct set_iter it;
-		struct fsm_state *q;
-
-		assert(fsm->nfa != NULL);
-
-		fprintf(f, "<br/>");
-
-		fprintf(f, "{");
-
-		for (q = set_first(s->nfasl, &it); q != NULL; q = set_next(&it)) {
-			fprintf(f, "%u", indexof(fsm->nfa, q));
-
-			if (q->next != NULL) {
-				fprintf(f, ",");
-			}
-		}
-
-		fprintf(f, "}");
-	}
-#endif
-
-	fprintf(f, "> ];\n");
-
 	if (!fsm_isend(fsm, s)) {
 		return;
 	}
+
+	m = s->opaque;
+	assert(m != NULL);
 
 	if (m->conflict != NULL) {
 		const struct mapping_set *p;
@@ -217,10 +205,13 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 		(void) sprintf(p, "z%u", zindexof(ast, z));
 
+		opt.anonymous_states  = anonymous_states;
 		opt.fragment          = 1; /* XXX */
 		opt.consolidate_edges = z->fsm->opt->consolidate_edges;
 		opt.comments          = z->fsm->opt->comments;
 		opt.prefix            = p;
+		opt.endleaf           = endleaf_dot;
+		opt.endleaf_opaque    = (void *) ast;
 
 		z->fsm->opt = &opt;
 

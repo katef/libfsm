@@ -97,7 +97,7 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 			for (q = set_first(s->nfasl, &it); q != NULL; q = set_next(&it)) {
 				fprintf(f, "%u", indexof(fsm->nfa, q));
 
-				if (q->next != NULL) {
+				if (set_hasnext(&it)) {
 					fprintf(f, ",");
 				}
 			}
@@ -238,13 +238,22 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 	assert(fsm->opt != NULL);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		singlestate(f, fsm, s);
-
 		if (fsm_isend(fsm, s)) {
-			fprintf(f, "\t%sS%-2u [ shape = doublecircle ];\n",
+			fprintf(f, "\t%sS%-2u [ shape = doublecircle",
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, s));
+
+			if (fsm->opt->endleaf != NULL) {
+				fprintf(f, ", ");
+				fsm->opt->endleaf(f, s->opaque, fsm->opt->endleaf_opaque);
+			}
+
+			fprintf(f, " ];\n");
 		}
+
+		/* TODO: show example here, unless !opt->comments */
+
+		singlestate(f, fsm, s);
 	}
 }
 

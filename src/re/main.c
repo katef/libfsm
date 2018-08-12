@@ -350,7 +350,7 @@ printexample(FILE *f, const struct fsm *fsm, const struct fsm_state *state)
 }
 
 static int
-endleaf(FILE *f, const void *state_opaque, const void *endleaf_opaque)
+endleaf_c(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 {
 	const struct match *m;
 	int n;
@@ -380,6 +380,49 @@ endleaf(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 	}
 
 	fprintf(f, " */");
+
+	return 0;
+}
+
+static int
+endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
+{
+	const struct match *m;
+
+	assert(f != NULL);
+	assert(state_opaque != NULL);
+	assert(endleaf_opaque == NULL);
+
+	(void) endleaf_opaque;
+
+	fprintf(f, "label = <");
+
+	for (m = state_opaque; m != NULL; m = m->next) {
+		fprintf(f, "#%u", m->i);
+
+		if (m->next != NULL) {
+			fprintf(f, ",");
+		}
+	}
+
+	fprintf(f, ">");
+
+	/* TODO: only if comments */
+	/* TODO: centralise to libfsm/print/dot.c */
+
+#if 0
+	fprintf(f, " # ");
+
+	for (m = state_opaque; m != NULL; m = m->next) {
+		fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
+
+		if (m->next != NULL) {
+			fprintf(f, ", ");
+		}
+	}
+
+	fprintf(f, "\n");
+#endif
 
 	return 0;
 }
@@ -797,7 +840,9 @@ main(int argc, char *argv[])
 		 * patterns in comments for the whole FSM */
 
 		if (print_fsm == fsm_print_c) {
-			opt.endleaf = endleaf;
+			opt.endleaf = endleaf_c;
+		} else if (print_fsm == fsm_print_dot) {
+			opt.endleaf = endleaf_dot;
 		}
 
 		print_fsm(stdout, fsm);
