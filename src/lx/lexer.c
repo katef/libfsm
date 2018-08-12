@@ -39,6 +39,7 @@ lx_getc(struct lx *lx)
 
 	if (c == '\n') {
 		lx->end.line++;
+		lx->end.saved_col = lx->end.col - 1;
 		lx->end.col = 1;
 	}
 
@@ -62,7 +63,7 @@ lx_ungetc(struct lx *lx, int c)
 
 	if (c == '\n') {
 		lx->end.line--;
-		lx->end.col = 0; /* XXX: lost information */
+		lx->end.col = lx->end.saved_col;
 	}
 }
 
@@ -294,8 +295,8 @@ z1(struct lx *lx)
 		switch (state) {
 		case S0: /* start */
 			switch ((unsigned char) c) {
-			case '"': state = S2; break;
 			case '\\': state = S3; break;
+			case '"': state = S2; break;
 			default: state = S1; break;
 			}
 			break;
@@ -583,18 +584,31 @@ z4(struct lx *lx)
 		switch (state) {
 		case S0: /* start */
 			switch ((unsigned char) c) {
-			case '{': state = S21; break;
-			case '.': state = S13; break;
-			case '-': state = S12; break;
-			case '+': state = S11; break;
-			case '*': state = S10; break;
-			case ')': state = S9; break;
-			case '(': state = S8; break;
-			case '\'': state = S7; break;
+			case '#': state = S4; break;
 			case '&': state = S6; break;
+			case '\'': state = S7; break;
+			case '(': state = S8; break;
+			case ')': state = S9; break;
+			case '*': state = S10; break;
+			case '+': state = S11; break;
+			case '-': state = S12; break;
+			case '.': state = S13; break;
+			case '/': state = S14; break;
+			case ';': state = S15; break;
+			case '\t':
+			case '\n':
+			case '\r':
+			case ' ': state = S1; break;
+			case '=': state = S16; break;
 			case '$': state = S5; break;
 			case '"': state = S3; break;
-			case '#': state = S4; break;
+			case '\\': state = S19; break;
+			case '^': state = S20; break;
+			case '|': state = S22; break;
+			case '}': state = S23; break;
+			case '~': state = S24; break;
+			case '!': state = S2; break;
+			case '?': state = S17; break;
 			case 'A':
 			case 'B':
 			case 'C':
@@ -648,20 +662,7 @@ z4(struct lx *lx)
 			case 'x':
 			case 'y':
 			case 'z': state = S18; break;
-			case '?': state = S17; break;
-			case '=': state = S16; break;
-			case ';': state = S15; break;
-			case '/': state = S14; break;
-			case '|': state = S22; break;
-			case '}': state = S23; break;
-			case '~': state = S24; break;
-			case '!': state = S2; break;
-			case '\t':
-			case '\n':
-			case '\r':
-			case ' ': state = S1; break;
-			case '\\': state = S19; break;
-			case '^': state = S20; break;
+			case '{': state = S21; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
@@ -764,14 +765,14 @@ z4(struct lx *lx)
 
 		case S12: /* e.g. "-" */
 			switch ((unsigned char) c) {
-			case '>': state = S26; break;
+			case '>': state = S27; break;
 			default:  lx_ungetc(lx, c); return TOK_DASH;
 			}
 			break;
 
 		case S13: /* e.g. "." */
 			switch ((unsigned char) c) {
-			case '.': state = S27; break;
+			case '.': state = S26; break;
 			default:  lx_ungetc(lx, c); return TOK_DOT;
 			}
 			break;
@@ -944,11 +945,11 @@ z4(struct lx *lx)
 			}
 			break;
 
-		case S26: /* e.g. "->" */
-			lx_ungetc(lx, c); return TOK_MAP;
-
-		case S27: /* e.g. ".." */
+		case S26: /* e.g. ".." */
 			lx_ungetc(lx, c); return TOK_TO;
+
+		case S27: /* e.g. "->" */
+			lx_ungetc(lx, c); return TOK_MAP;
 
 		default:
 			; /* unreached */
@@ -1001,8 +1002,8 @@ z4(struct lx *lx)
 	case S23: return TOK_CLOSE;
 	case S24: return TOK_TILDE;
 	case S25: return TOK_TOKEN;
-	case S26: return TOK_MAP;
-	case S27: return TOK_TO;
+	case S26: return TOK_TO;
+	case S27: return TOK_MAP;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }
@@ -1011,8 +1012,8 @@ const char *
 lx_name(enum lx_token t)
 {
 	switch (t) {
-	case TOK_IDENT: return "IDENT";
 	case TOK_TOKEN: return "TOKEN";
+	case TOK_IDENT: return "IDENT";
 	case TOK_AND: return "AND";
 	case TOK_PIPE: return "PIPE";
 	case TOK_DOT: return "DOT";
@@ -1080,8 +1081,8 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 	} else
 	if (z == z4) {
 		switch (t) {
-		case TOK_IDENT: return "a";
 		case TOK_TOKEN: return "$a";
+		case TOK_IDENT: return "a";
 		case TOK_AND: return "&";
 		case TOK_PIPE: return "|";
 		case TOK_DOT: return ".";
