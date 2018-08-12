@@ -842,7 +842,7 @@ main(int argc, char *argv[])
 		if (print_fsm == fsm_print_c) {
 			opt.endleaf = endleaf_c;
 		} else if (print_fsm == fsm_print_dot) {
-			opt.endleaf = endleaf_dot;
+			opt.endleaf = patterns ? endleaf_dot : NULL;
 		}
 
 		print_fsm(stdout, fsm);
