@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 140 "src/libre/parser.act"
+#line 22 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -20,11 +20,8 @@
 	#include <errno.h>
 	#include <ctype.h>
 
-	#include "libfsm/internal.h" /* XXX */
-
-	#include <fsm/fsm.h>
-	#include <fsm/bool.h>
-	#include <fsm/pred.h>
+	#include "libre/re_ast.h"
+	#include "libre/re_char_class.h"
 
 	#include <re/re.h>
 
@@ -42,7 +39,9 @@
 	#define LX_NEXT    CAT(LX_PREFIX, _next)
 	#define LX_INIT    CAT(LX_PREFIX, _init)
 
-	#define DIALECT_COMP  CAT(comp_, DIALECT)
+	#define DIALECT_PARSE  CAT(parse_re_, DIALECT)
+	#define DIALECT_CHAR_CLASS  CAT(re_char_class_, DIALECT)
+	#define DIALECT_CHAR_TYPE   CAT(re_char_type_, DIALECT)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
 	#define DIALECT_ENTRY CAT(p_re__, DIALECT)
@@ -67,16 +66,21 @@
 	#define TOK_CLASS__nspace  TOK_CLASS_NSPACE
 	#define TOK_CLASS__ndigit  TOK_CLASS_NDIGIT
 
+	/* This is a hack to work around the AST files not being able to include lexer.h. */
+	#define AST_POS_OF_LX_POS(AST_POS, LX_POS)			\
+		do {							\
+			AST_POS.line = LX_POS.line;			\
+			AST_POS.col = LX_POS.col;			\
+			AST_POS.byte = LX_POS.byte;			\
+		} while (0)
+
+
 	#include "parser.h"
 	#include "lexer.h"
 
 	#include "../comp.h"
 	#include "../../class.h"
-
-	struct grp {
-		struct fsm *set;
-		struct fsm *dup;
-	};
+	#include "../../re_char_class.h"
 
 	struct flags {
 		enum re_flags flags;
@@ -84,14 +88,19 @@
 	};
 
 	typedef char     t_char;
-	typedef const char * t_class;
 	typedef unsigned t_unsigned;
 	typedef unsigned t_pred; /* TODO */
 
 	typedef struct lx_pos t_pos;
-	typedef struct fsm * t_fsm;
 	typedef enum re_flags t_re__flags;
-	typedef struct grp t_grp;
+	typedef char_class_constructor_fun * t_ast__char__class__id;
+	typedef struct ast_count t_ast__count;
+
+	typedef struct re_char_class_ast * t_char__class__ast;
+	typedef struct ast_char_class * t_char__class;
+	typedef enum re_char_class_flags t_char__class__flags;
+
+	typedef struct ast_range_endpoint t_range__endpoint;
 
 	struct act_state {
 		enum LX_TOKEN lex_tok;
@@ -118,7 +127,7 @@
 		struct LX_STATE lx;
 		struct lx_dynbuf buf; /* XXX: unneccessary since we're lexing from a string */
 
-		int (*f)(void *opaque);
+		re_getchar_fun *f;
 		void *opaque;
 
 		/* TODO: use lx's generated conveniences for the pattern buffer */
@@ -130,7 +139,8 @@
 	#define ERROR_TERMINAL   (TOK_ERROR)
 	#define ADVANCE_LEXER    do { mark(&act_state->synstart, &lex_state->lx.start); \
 	                              mark(&act_state->synend,   &lex_state->lx.end);   \
-	                              act_state->lex_tok = LX_NEXT(&lex_state->lx); } while (0)
+	                              act_state->lex_tok = LX_NEXT(&lex_state->lx); \
+		} while (0)
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
 	                              act_state->lex_tok = tok;                     } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
@@ -205,225 +215,7 @@
 		return s;
 	}
 
-	static int
-	escputc(int c, FILE *f)
-	{
-		char s[5];
-
-		return fputs(escchar(s, sizeof s, c), f);
-	}
-
-	static int
-	addedge_literal(struct fsm *fsm, enum re_flags flags,
-		struct fsm_state *from, struct fsm_state *to, char c)
-	{
-		assert(fsm != NULL);
-		assert(from != NULL);
-		assert(to != NULL);
-
-		if (flags & RE_ICASE) {
-			if (!fsm_addedge_literal(fsm, from, to, tolower((unsigned char) c))) {
-				return 0;
-			}
-
-			if (!fsm_addedge_literal(fsm, from, to, toupper((unsigned char) c))) {
-				return 0;
-			}
-		} else {
-			if (!fsm_addedge_literal(fsm, from, to, c)) {
-				return 0;
-			}
-		}
-
-		return 1;
-	}
-
-	static int
-	group_add(struct grp *g, enum re_flags flags, char c)
-	{
-		const struct fsm_state *p;
-		struct fsm_state *start, *end;
-		struct fsm *fsm;
-		char a[2];
-		char *s = a;
-
-		assert(g != NULL);
-
-		a[0] = c;
-		a[1] = '\0';
-
-		errno = 0;
-		p = fsm_exec(g->set, fsm_sgetc, &s);
-		if (p == NULL && errno != 0) {
-			return -1;
-		}
-
-		if (p == NULL) {
-			fsm = g->set;
-		} else {
-			fsm = g->dup;
-		}
-
-		start = fsm_getstart(fsm);
-		assert(start != NULL);
-
-		end = fsm_addstate(fsm);
-		if (end == NULL) {
-			return -1;
-		}
-
-		fsm_setend(fsm, end, 1);
-
-		if (!addedge_literal(fsm, flags, start, end, c)) {
-			return -1;
-		}
-
-		return 0;
-	}
-
-	static struct fsm *
-	fsm_new_blank(const struct fsm_options *opt)
-	{
-		struct fsm *new;
-		struct fsm_state *start;
-
-		new = fsm_new(opt);
-		if (new == NULL) {
-			return NULL;
-		}
-
-		start = fsm_addstate(new);
-		if (start == NULL) {
-			goto error;
-		}
-
-		fsm_setstart(new, start);
-
-		return new;
-
-	error:
-
-		fsm_free(new);
-
-		return NULL;
-	}
-
-	/* TODO: centralise as fsm_unionxy() perhaps */
-	static int
-	fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state *y)
-	{
-		struct fsm_state *sa, *sb;
-		struct fsm_state *end;
-
-		assert(a != NULL);
-		assert(b != NULL);
-		assert(x != NULL);
-		assert(y != NULL);
-
-		sa = fsm_getstart(a);
-		sb = fsm_getstart(b);
-
-		end = fsm_collate(b, fsm_isend);
-		if (end == NULL) {
-			return 0;
-		}
-
-		if (!fsm_merge(a, b)) {
-			return 0;
-		}
-
-		fsm_setstart(a, sa);
-
-		if (!fsm_addedge_epsilon(a, x, sb)) {
-			return 0;
-		}
-
-		fsm_setend(a, end, 0);
-
-		if (!fsm_addedge_epsilon(a, end, y)) {
-			return 0;
-		}
-
-		return 1;
-	}
-
-	static struct fsm *
-	fsm_new_any(const struct fsm_options *opt)
-	{
-		struct fsm_state *a, *b;
-		struct fsm *new;
-
-		assert(opt != NULL);
-
-		new = fsm_new(opt);
-		if (new == NULL) {
-			return NULL;
-		}
-
-		a = fsm_addstate(new);
-		if (a == NULL) {
-			goto error;
-		}
-
-		b = fsm_addstate(new);
-		if (b == NULL) {
-			goto error;
-		}
-
-		/* TODO: provide as a class. for utf8, this would be /./ */
-		if (!fsm_addedge_any(new, a, b)) {
-			goto error;
-		}
-
-		fsm_setstart(new, a);
-		fsm_setend(new, b, 1);
-
-		return new;
-
-	error:
-
-		fsm_free(new);
-
-		return NULL;
-	}
-
-	/* XXX: to go when dups show all spellings for group overlap */
-	static const struct fsm_state *
-	fsm_any(const struct fsm *fsm,
-		int (*predicate)(const struct fsm *, const struct fsm_state *))
-	{
-		const struct fsm_state *s;
-
-		assert(fsm != NULL);
-		assert(predicate != NULL);
-
-		for (s = fsm->sl; s != NULL; s = s->next) {
-			if (!predicate(fsm, s)) {
-				return s;
-			}
-		}
-
-		return NULL;
-	}
-
-	static struct fsm *
-	negate(struct fsm *class, const struct fsm_options *opt)
-	{
-		struct fsm *any;
-
-		any = class_any_fsm(opt);
-
-		if (any == NULL || class == NULL) {
-			if (any) fsm_free(any);
-			if (class) fsm_free(class);
-		};
-
-		class = fsm_subtract(any, class);
-
-		return class;
-	}
-
-#line 427 "src/libre/dialect/glob/parser.c"
+#line 219 "src/libre/dialect/glob/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -432,12 +224,8 @@
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
-static void p_list_Hof_Hatoms_C_Cliteral(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fsm__state);
-static void p_list_Hof_Hatoms(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fsm__state);
-static void p_list_Hof_Hatoms_C_Catom(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fsm__state *);
-static void p_list_Hof_Hatoms_C_Cmany(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fsm__state);
-static void p_list_Hof_Hatoms_C_Cany(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fsm__state);
-extern void p_re__glob(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fsm__state);
+static void p_list_Hof_Hnodes(flags, lex_state, act_state, err, t_ast__expr *);
+extern void p_re__glob(flags, lex_state, act_state, err, t_ast__expr *);
 
 /* BEGINNING OF STATIC VARIABLES */
 
@@ -445,399 +233,268 @@ extern void p_re__glob(fsm, flags, lex_state, act_state, err, t_fsm__state, t_fs
 /* BEGINNING OF FUNCTION DEFINITIONS */
 
 static void
-p_list_Hof_Hatoms_C_Cliteral(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t_fsm__state ZIx, t_fsm__state ZIy)
+p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__expr *ZOnode)
 {
+	t_ast__expr ZInode;
+
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
 	}
 	{
-		t_char ZIc;
-		t_pos ZI99;
-		t_pos ZI100;
+		t_ast__expr ZIl;
 
-		switch (CURRENT_TERMINAL) {
-		case (TOK_CHAR):
-			/* BEGINNING OF EXTRACT: CHAR */
-			{
-#line 635 "src/libre/parser.act"
+		/* BEGINNING OF INLINE: 99 */
+		{
+			switch (CURRENT_TERMINAL) {
+			case (TOK_ANY):
+				{
+					/* BEGINNING OF INLINE: list-of-nodes::any */
+					{
+						{
+							switch (CURRENT_TERMINAL) {
+							case (TOK_ANY):
+								break;
+							default:
+								goto ZL1;
+							}
+							ADVANCE_LEXER;
+						}
+					}
+					/* END OF INLINE: list-of-nodes::any */
+					/* BEGINNING OF ACTION: ast-expr-any */
+					{
+#line 603 "src/libre/parser.act"
+
+		(ZIl) = re_ast_expr_any();
+		if ((ZIl) == NULL) { goto ZL1; }
+	
+#line 272 "src/libre/dialect/glob/parser.c"
+					}
+					/* END OF ACTION: ast-expr-any */
+				}
+				break;
+			case (TOK_CHAR):
+				{
+					t_char ZIc;
+
+					/* BEGINNING OF INLINE: list-of-nodes::literal */
+					{
+						{
+							t_pos ZI93;
+							t_pos ZI94;
+
+							switch (CURRENT_TERMINAL) {
+							case (TOK_CHAR):
+								/* BEGINNING OF EXTRACT: CHAR */
+								{
+#line 401 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI99 = lex_state->lx.start;
-		ZI100   = lex_state->lx.end;
+		ZI93 = lex_state->lx.start;
+		ZI94   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 473 "src/libre/dialect/glob/parser.c"
+#line 301 "src/libre/dialect/glob/parser.c"
+								}
+								/* END OF EXTRACT: CHAR */
+								break;
+							default:
+								goto ZL1;
+							}
+							ADVANCE_LEXER;
+						}
+					}
+					/* END OF INLINE: list-of-nodes::literal */
+					/* BEGINNING OF ACTION: ast-expr-literal */
+					{
+#line 598 "src/libre/parser.act"
+
+		(ZIl) = re_ast_expr_literal((ZIc));
+		if ((ZIl) == NULL) { goto ZL1; }
+	
+#line 319 "src/libre/dialect/glob/parser.c"
+					}
+					/* END OF ACTION: ast-expr-literal */
+				}
+				break;
+			case (TOK_MANY):
+				{
+					t_ast__expr ZIe;
+					t_ast__count ZIc;
+
+					/* BEGINNING OF INLINE: list-of-nodes::many */
+					{
+						{
+							switch (CURRENT_TERMINAL) {
+							case (TOK_MANY):
+								break;
+							default:
+								goto ZL1;
+							}
+							ADVANCE_LEXER;
+						}
+					}
+					/* END OF INLINE: list-of-nodes::many */
+					/* BEGINNING OF ACTION: ast-expr-any */
+					{
+#line 603 "src/libre/parser.act"
+
+		(ZIe) = re_ast_expr_any();
+		if ((ZIe) == NULL) { goto ZL1; }
+	
+#line 349 "src/libre/dialect/glob/parser.c"
+					}
+					/* END OF ACTION: ast-expr-any */
+					/* BEGINNING OF ACTION: atom-kleene */
+					{
+#line 625 "src/libre/parser.act"
+
+		(ZIc) = ast_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
+	
+#line 358 "src/libre/dialect/glob/parser.c"
+					}
+					/* END OF ACTION: atom-kleene */
+					/* BEGINNING OF ACTION: ast-expr-atom */
+					{
+#line 620 "src/libre/parser.act"
+
+		(ZIl) = re_ast_expr_with_count((ZIe), (ZIc));
+		if ((ZIl) == NULL) { goto ZL1; }
+	
+#line 368 "src/libre/dialect/glob/parser.c"
+					}
+					/* END OF ACTION: ast-expr-atom */
+				}
+				break;
+			default:
+				goto ZL1;
 			}
-			/* END OF EXTRACT: CHAR */
-			break;
-		default:
-			goto ZL1;
 		}
-		ADVANCE_LEXER;
-		/* BEGINNING OF ACTION: add-literal */
-		{
-#line 901 "src/libre/parser.act"
-
-		assert((ZIx) != NULL);
-		assert((ZIy) != NULL);
-
-		/* TODO: check c is legal? */
-
-		if (!addedge_literal(fsm, flags->flags, (ZIx), (ZIy), (ZIc))) {
-			goto ZL1;
-		}
-	
-#line 494 "src/libre/dialect/glob/parser.c"
-		}
-		/* END OF ACTION: add-literal */
-	}
-	return;
-ZL1:;
-	SAVE_LEXER ((ERROR_TERMINAL));
-	return;
-}
-
-static void
-p_list_Hof_Hatoms(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t_fsm__state ZIx, t_fsm__state ZIy)
-{
-	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
-		return;
-	}
-ZL2_list_Hof_Hatoms:;
-	{
-		t_fsm__state ZIz;
-
-		/* BEGINNING OF ACTION: add-concat */
-		{
-#line 877 "src/libre/parser.act"
-
-		(ZIz) = fsm_addstate(fsm);
-		if ((ZIz) == NULL) {
-			goto ZL1;
-		}
-	
-#line 523 "src/libre/dialect/glob/parser.c"
-		}
-		/* END OF ACTION: add-concat */
-		p_list_Hof_Hatoms_C_Catom (fsm, flags, lex_state, act_state, err, ZIx, &ZIz);
-		/* BEGINNING OF INLINE: 108 */
+		/* END OF INLINE: 99 */
+		/* BEGINNING OF INLINE: 102 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
 				{
-					/* BEGINNING OF INLINE: list-of-atoms */
-					ZIx = ZIz;
-					goto ZL2_list_Hof_Hatoms;
-					/* END OF INLINE: list-of-atoms */
-				}
-				/* UNREACHED */
-			default:
-				{
-					/* BEGINNING OF ACTION: add-epsilon */
-					{
-#line 884 "src/libre/parser.act"
+					t_ast__expr ZIr;
 
-		if (!fsm_addedge_epsilon(fsm, (ZIz), (ZIy))) {
-			goto ZL1;
-		}
-	
-#line 548 "src/libre/dialect/glob/parser.c"
+					p_list_Hof_Hnodes (flags, lex_state, act_state, err, &ZIr);
+					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
+						RESTORE_LEXER;
+						goto ZL1;
 					}
-					/* END OF ACTION: add-epsilon */
+					/* BEGINNING OF ACTION: ast-expr-concat */
+					{
+#line 588 "src/libre/parser.act"
+
+		(ZInode) = re_ast_expr_concat((ZIl), (ZIr));
+		if ((ZInode) == NULL) { goto ZL1; }
+	
+#line 397 "src/libre/dialect/glob/parser.c"
+					}
+					/* END OF ACTION: ast-expr-concat */
 				}
 				break;
-			case (ERROR_TERMINAL):
-				RESTORE_LEXER;
-				goto ZL1;
+			default:
+				{
+					ZInode = ZIl;
+				}
+				break;
 			}
 		}
-		/* END OF INLINE: 108 */
+		/* END OF INLINE: 102 */
 	}
-	return;
+	goto ZL0;
 ZL1:;
 	SAVE_LEXER ((ERROR_TERMINAL));
 	return;
-}
-
-static void
-p_list_Hof_Hatoms_C_Catom(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t_fsm__state ZIx, t_fsm__state *ZIy)
-{
-	switch (CURRENT_TERMINAL) {
-	case (TOK_ANY):
-		{
-			p_list_Hof_Hatoms_C_Cany (fsm, flags, lex_state, act_state, err, ZIx, *ZIy);
-			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
-				RESTORE_LEXER;
-				goto ZL1;
-			}
-			/* BEGINNING OF ACTION: count-1 */
-			{
-#line 1056 "src/libre/parser.act"
-
-		(void) (ZIx);
-		(void) (*ZIy);
-	
-#line 584 "src/libre/dialect/glob/parser.c"
-			}
-			/* END OF ACTION: count-1 */
-		}
-		break;
-	case (TOK_CHAR):
-		{
-			p_list_Hof_Hatoms_C_Cliteral (fsm, flags, lex_state, act_state, err, ZIx, *ZIy);
-			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
-				RESTORE_LEXER;
-				goto ZL1;
-			}
-			/* BEGINNING OF ACTION: count-1 */
-			{
-#line 1056 "src/libre/parser.act"
-
-		(void) (ZIx);
-		(void) (*ZIy);
-	
-#line 603 "src/libre/dialect/glob/parser.c"
-			}
-			/* END OF ACTION: count-1 */
-		}
-		break;
-	case (TOK_MANY):
-		{
-			p_list_Hof_Hatoms_C_Cmany (fsm, flags, lex_state, act_state, err, ZIx, *ZIy);
-			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
-				RESTORE_LEXER;
-				goto ZL1;
-			}
-			/* BEGINNING OF ACTION: count-0-or-many */
-			{
-#line 1006 "src/libre/parser.act"
-
-		if (!fsm_addedge_epsilon(fsm, (ZIx), (*ZIy))) {
-			goto ZL1;
-		}
-
-		if (!fsm_addedge_epsilon(fsm, (*ZIy), (ZIx))) {
-			goto ZL1;
-		}
-
-		/* isolation guard */
-		/* TODO: centralise */
-		{
-			struct fsm_state *z;
-
-			z = fsm_addstate(fsm);
-			if (z == NULL) {
-				goto ZL1;
-			}
-
-			if (!fsm_addedge_epsilon(fsm, (*ZIy), z)) {
-				goto ZL1;
-			}
-
-			(*ZIy) = z;
-		}
-	
-#line 644 "src/libre/dialect/glob/parser.c"
-			}
-			/* END OF ACTION: count-0-or-many */
-		}
-		break;
-	case (ERROR_TERMINAL):
-		return;
-	default:
-		goto ZL1;
-	}
-	return;
-ZL1:;
-	SAVE_LEXER ((ERROR_TERMINAL));
-	return;
-}
-
-static void
-p_list_Hof_Hatoms_C_Cmany(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t_fsm__state ZIx, t_fsm__state ZIy)
-{
-	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
-		return;
-	}
-	{
-		switch (CURRENT_TERMINAL) {
-		case (TOK_MANY):
-			break;
-		default:
-			goto ZL1;
-		}
-		ADVANCE_LEXER;
-		/* BEGINNING OF ACTION: add-any */
-		{
-#line 914 "src/libre/parser.act"
-
-		struct fsm *any;
-
-		assert((ZIx) != NULL);
-		assert((ZIy) != NULL);
-
-		any = class_any_fsm(fsm->opt);
-		if (any == NULL) {
-			err->e = RE_EERRNO;
-			goto ZL1;
-		}
-
-		if (!fsm_unionxy(fsm, any, (ZIx), (ZIy))) {
-			err->e = RE_EERRNO;
-			goto ZL1;
-		}
-	
-#line 694 "src/libre/dialect/glob/parser.c"
-		}
-		/* END OF ACTION: add-any */
-	}
-	return;
-ZL1:;
-	SAVE_LEXER ((ERROR_TERMINAL));
-	return;
-}
-
-static void
-p_list_Hof_Hatoms_C_Cany(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t_fsm__state ZIx, t_fsm__state ZIy)
-{
-	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
-		return;
-	}
-	{
-		switch (CURRENT_TERMINAL) {
-		case (TOK_ANY):
-			break;
-		default:
-			goto ZL1;
-		}
-		ADVANCE_LEXER;
-		/* BEGINNING OF ACTION: add-any */
-		{
-#line 914 "src/libre/parser.act"
-
-		struct fsm *any;
-
-		assert((ZIx) != NULL);
-		assert((ZIy) != NULL);
-
-		any = class_any_fsm(fsm->opt);
-		if (any == NULL) {
-			err->e = RE_EERRNO;
-			goto ZL1;
-		}
-
-		if (!fsm_unionxy(fsm, any, (ZIx), (ZIy))) {
-			err->e = RE_EERRNO;
-			goto ZL1;
-		}
-	
-#line 738 "src/libre/dialect/glob/parser.c"
-		}
-		/* END OF ACTION: add-any */
-	}
-	return;
-ZL1:;
-	SAVE_LEXER ((ERROR_TERMINAL));
-	return;
+ZL0:;
+	*ZOnode = ZInode;
 }
 
 void
-p_re__glob(fsm fsm, flags flags, lex_state lex_state, act_state act_state, err err, t_fsm__state ZIx, t_fsm__state ZIy)
+p_re__glob(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__expr *ZOnode)
 {
+	t_ast__expr ZInode;
+
 	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 		return;
 	}
 	{
-		/* BEGINNING OF INLINE: 110 */
+		/* BEGINNING OF INLINE: 106 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
 				{
-					p_list_Hof_Hatoms (fsm, flags, lex_state, act_state, err, ZIx, ZIy);
+					p_list_Hof_Hnodes (flags, lex_state, act_state, err, &ZInode);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 						RESTORE_LEXER;
-						goto ZL3;
+						goto ZL1;
 					}
 				}
 				break;
 			default:
 				{
-					/* BEGINNING OF ACTION: add-epsilon */
+					/* BEGINNING OF ACTION: ast-expr-empty */
 					{
-#line 884 "src/libre/parser.act"
+#line 583 "src/libre/parser.act"
 
-		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
-			goto ZL3;
-		}
+		(ZInode) = re_ast_expr_empty();
+		if ((ZInode) == NULL) { goto ZL1; }
 	
-#line 777 "src/libre/dialect/glob/parser.c"
+#line 449 "src/libre/dialect/glob/parser.c"
 					}
-					/* END OF ACTION: add-epsilon */
+					/* END OF ACTION: ast-expr-empty */
 				}
 				break;
 			}
-			goto ZL2;
-		ZL3:;
-			{
-				/* BEGINNING OF ACTION: err-expected-atoms */
-				{
-#line 1105 "src/libre/parser.act"
-
-		if (err->e == RE_ESUCCESS) {
-			err->e = RE_EXATOMS;
 		}
-		goto ZL1;
-	
-#line 795 "src/libre/dialect/glob/parser.c"
-				}
-				/* END OF ACTION: err-expected-atoms */
-			}
-		ZL2:;
-		}
-		/* END OF INLINE: 110 */
-		/* BEGINNING OF INLINE: 111 */
+		/* END OF INLINE: 106 */
+		/* BEGINNING OF INLINE: 107 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
 				case (TOK_EOF):
 					break;
 				default:
-					goto ZL5;
+					goto ZL4;
 				}
 				ADVANCE_LEXER;
 			}
-			goto ZL4;
-		ZL5:;
+			goto ZL3;
+		ZL4:;
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 1154 "src/libre/parser.act"
+#line 552 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
 		}
 		goto ZL1;
 	
-#line 825 "src/libre/dialect/glob/parser.c"
+#line 480 "src/libre/dialect/glob/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
-		ZL4:;
+		ZL3:;
 		}
-		/* END OF INLINE: 111 */
+		/* END OF INLINE: 107 */
 	}
-	return;
+	goto ZL0;
 ZL1:;
 	SAVE_LEXER ((ERROR_TERMINAL));
 	return;
+ZL0:;
+	*ZOnode = ZInode;
 }
 
 /* BEGINNING OF TRAILER */
 
-#line 1344 "src/libre/parser.act"
+#line 783 "src/libre/parser.act"
 
 
 	static int
@@ -855,14 +512,15 @@ ZL1:;
 		return lex_state->f(lex_state->opaque);
 	}
 
-	static int
-	parse(int (*f)(void *opaque), void *opaque,
-		void (*entry)(struct fsm *, flags, lex_state, act_state, err,
-			struct fsm_state *, struct fsm_state *),
-		struct flags *flags, int overlap,
-		struct fsm *new, struct re_err *err,
-		struct fsm_state *x, struct fsm_state *y)
+	struct ast_re *
+	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
+		const struct fsm_options *opt,
+		enum re_flags flags, int overlap,
+		struct re_err *err)
 	{
+		struct ast_re *ast;
+		struct flags top, *fl = &top;
+
 		struct act_state  act_state_s;
 		struct act_state *act_state;
 		struct lex_state  lex_state_s;
@@ -871,8 +529,11 @@ ZL1:;
 
 		struct LX_STATE *lx;
 
+		top.flags = flags;
+
 		assert(f != NULL);
-		assert(entry != NULL);
+
+		ast = re_ast_new();
 
 		if (err == NULL) {
 			err = &dummy;
@@ -909,7 +570,7 @@ ZL1:;
 		err->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
-		entry(new, flags, lex_state, act_state, err, x, y);
+		DIALECT_ENTRY(fl, lex_state, act_state, err, &ast->expr);
 
 		lx->free(lx->buf_opaque);
 
@@ -918,7 +579,14 @@ ZL1:;
 			goto error;
 		}
 
-		return 0;
+		if (ast->expr == NULL) {
+			/* We shouldn't get here, it means there's error
+			 * checking missing elsewhere. */
+			if (err->e == RE_ESUCCESS) { assert(0); }
+			goto error;
+		}
+
+		return ast;
 
 	error:
 
@@ -965,51 +633,11 @@ ZL1:;
 			break;
 		}
 
-		return -1;
-	}
-
-	struct fsm *
-	DIALECT_COMP(int (*f)(void *opaque), void *opaque,
-		const struct fsm_options *opt,
-		enum re_flags flags, int overlap,
-		struct re_err *err)
-	{
-		struct fsm *new;
-		struct fsm_state *x, *y;
-		struct flags top, *fl = &top;
-
-		top.flags = flags;
-
-		assert(f != NULL);
-
-		new = fsm_new_blank(opt);
-		if (new == NULL) {
-			return NULL;
-		}
-
-		x = fsm_getstart(new);
-		assert(x != NULL);
-
-		y = fsm_addstate(new);
-		if (y == NULL) {
-			goto error;
-		}
-
-		fsm_setend(new, y, 1);
-
-		if (-1 == parse(f, opaque, DIALECT_ENTRY, fl, overlap, new, err, x, y)) {
-			goto error;
-		}
-
-		return new;
-
-	error:
-
-		fsm_free(new);
+		re_ast_free(ast);
 
 		return NULL;
 	}
 
-#line 1014 "src/libre/dialect/glob/parser.c"
+#line 642 "src/libre/dialect/glob/parser.c"
 
 /* END OF FILE */

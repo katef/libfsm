@@ -1,3 +1,9 @@
+/*
+ * Copyright 2018 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #include "re_char_class.h"
 #include "re_ast.h"
 #include "class.h"
@@ -459,7 +465,7 @@ cc_add_range(struct re_char_class *cc,
     const struct ast_range_endpoint *to)
 {
 	unsigned char lower, upper;
-	unsigned char i;
+	unsigned int i;
 
 	if (from->t != AST_RANGE_ENDPOINT_LITERAL ||
 	    to->t != AST_RANGE_ENDPOINT_LITERAL) {

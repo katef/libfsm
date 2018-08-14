@@ -1,3 +1,9 @@
+/*
+ * Copyright 2018 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #ifndef RE_AST_H
 #define RE_AST_H
 
@@ -30,10 +36,6 @@ enum ast_expr_type {
 	AST_EXPR_ALT_N,
 	AST_EXPR_LITERAL,
 	AST_EXPR_ANY,
-	AST_EXPR_MANY,
-	AST_EXPR_KLEENE,
-	AST_EXPR_PLUS,
-	AST_EXPR_OPT,
 	AST_EXPR_REPEATED,
 	AST_EXPR_CHAR_CLASS,
 	AST_EXPR_GROUP,		/* 13 */
@@ -198,9 +200,6 @@ re_ast_expr_literal(char c);
 
 struct ast_expr *
 re_ast_expr_any(void);
-
-struct ast_expr *
-re_ast_expr_many(void);
 
 struct ast_expr *
 re_ast_expr_with_count(struct ast_expr *e, struct ast_count count);

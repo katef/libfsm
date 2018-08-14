@@ -1,0 +1,22 @@
+{
+	"start": 0,
+	"states": [
+		{
+			"end": false,
+			"strategy": "partial",
+			"groups": [
+				{
+					"to": 1,
+					"ranges": [
+						{ "start": "a", "end": "i" }
+					]
+				}
+			]
+		},
+		{
+			"end": true,
+			"strategy": "none",
+			"example": "a"
+		}
+	]
+}

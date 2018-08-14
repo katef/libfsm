@@ -1,0 +1,39 @@
+# skip whitespace within lines
+/[ \t\r]+/;
+
+# note newlines
+/\n/ -> $nl;
+
+# operators
+/[!@#$%&*=_:,~<>]/ | '^' | '/' | '\\' | '+' | '-' -> $op;
+
+digits = /(0|[1-9][0-9]*)/;
+dec = /\.[0-9]+/;
+exp = /[Ee][+\-]?[0-9]+/;
+
+digits -> $int;
+digits dec exp? -> $float;
+digits dec? exp -> $float;
+
+ident = /[a-zA-Z][a-zA-Z0-9_]*/;
+ident -> $ident;
+'`' ident -> $symbol;
+
+# comment until end of line; disallow '\n'-less end of string
+'//' .. /\n/ -> $nl;
+
+'{' -> $brace_l;
+'}' -> $brace_r;
+'[' -> $bracket_l;
+']' -> $bracket_r;
+';' -> $semicolon;
+
+# block comment; note that these do not nest
+'/*' .. '*/';
+
+# characters
+"'" .. "'" {
+    '\' '\' -> $char_esc;    # '\\'
+    '\' "'" -> $char_esc;    # '\''
+    /./ - '\' -> $char;      # '\a'
+}

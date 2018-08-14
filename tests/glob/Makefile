@@ -24,15 +24,3 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/glob}/res${n}
 
 .endfor
 
-.for n in ${TEST.tests/glob:T:R:C/^out//}
-
-${TEST_OUTDIR.tests/glob}/nfa${n}.png: ${TEST_OUTDIR.tests/glob}/nfa${n}.fsm
-${TEST_OUTDIR.tests/glob}/out${n}.png: ${TEST_SRCDIR.tests/glob}/out${n}.fsm
-${TEST_OUTDIR.tests/glob}/got${n}.png: ${TEST_OUTDIR.tests/glob}/got${n}.fsm
-
-.for img in nfa${n} out${n} got${n}
-FSMTEST_IMG += ${TEST_OUTDIR.tests/glob}/${img}.png
-.endfor
-
-.endfor
-

@@ -9,20 +9,7 @@ enum lx_native_token {
 	TOK_CLOSECOUNT,
 	TOK_OPENCOUNT,
 	TOK_CHAR,
-	TOK_CLASS_XDIGIT,
-	TOK_CLASS_WORD,
-	TOK_CLASS_UPPER,
-	TOK_CLASS_SPACE,
-	TOK_CLASS_PUNCT,
-	TOK_CLASS_PRINT,
-	TOK_CLASS_LOWER,
-	TOK_CLASS_GRAPH,
-	TOK_CLASS_DIGIT,
-	TOK_CLASS_CNTRL,
-	TOK_CLASS_BLANK,
-	TOK_CLASS_ASCII,
-	TOK_CLASS_ALPHA,
-	TOK_CLASS_ALNUM,
+	TOK_NAMED__CHAR__CLASS,
 	TOK_RANGE,
 	TOK_INVERT,
 	TOK_CLOSEGROUP,
@@ -46,12 +33,13 @@ enum lx_native_token {
 
 /*
  * .byte is 0-based.
- * .line and .col are 1-based; 0 means unknown.
+ * .line, .col, and .saved_col are 1-based; 0 means unknown.
  */
 struct lx_pos {
 	unsigned byte;
 	unsigned line;
 	unsigned col;
+	unsigned saved_col;
 };
 
 struct lx_native_lx {

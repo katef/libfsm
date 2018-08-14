@@ -1,3 +1,9 @@
+/*
+ * Copyright 2018 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #include "re_analysis.h"
 #include "re_print.h"
 

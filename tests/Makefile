@@ -13,15 +13,13 @@ ${res}:
 
 .endfor
 
-.for img in ${FSMTEST_IMG}
+.for res in ${FSMTEST_ERROR}
 
-.if defined(DEBUG)
-test:: ${img}
-.endif
+test:: ${res}
 
-${img}:
-	${FSM} -cp -l dot ${.ALLSRC:M*.fsm} \
-	| ${DOT} -Tpng \
+${res}:
+	diff ${.ALLSRC:M*.err}; \
+	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
 	> $@
 
 .endfor

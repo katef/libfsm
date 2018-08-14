@@ -55,31 +55,3 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/subtract}/res${n}
 
 .endfor
 
-.for n in ${TEST.tests/subtract:T:R:C/^out//}
-
-${TEST_OUTDIR.tests/subtract}/in${n}a.png:  ${TEST_SRCDIR.tests/subtract}/in${n}a.fsm
-${TEST_OUTDIR.tests/subtract}/in${n}b.png:  ${TEST_SRCDIR.tests/subtract}/in${n}b.fsm
-${TEST_OUTDIR.tests/subtract}/out${n}.png: ${TEST_SRCDIR.tests/subtract}/out${n}.fsm
-${TEST_OUTDIR.tests/subtract}/got${n}.png: ${TEST_OUTDIR.tests/subtract}/got${n}.fsm
-
-.for img in in${n}a in${n}b out${n} got${n}
-FSMTEST_IMG += ${TEST_OUTDIR.tests/subtract}/${img}.png
-.endfor
-
-.endfor
-
-.for n in ${TEST.tests/subtract:T:R:C/^out//}
-
-${TEST_OUTDIR.tests/subtract-cuc}/in${n}a.png:   ${TEST_SRCDIR.tests/subtract}/in${n}a.fsm
-${TEST_OUTDIR.tests/subtract-cuc}/in${n}b.png:   ${TEST_SRCDIR.tests/subtract}/in${n}b.fsm
-${TEST_OUTDIR.tests/subtract-cuc}/out${n}.png:  ${TEST_SRCDIR.tests/subtract}/out${n}.fsm
-${TEST_OUTDIR.tests/subtract-cuc}/compl${n}a.png:  ${TEST_OUTDIR.tests/subtract-cuc}/compl${n}a.fsm
-${TEST_OUTDIR.tests/subtract-cuc}/union${n}.png:  ${TEST_OUTDIR.tests/subtract-cuc}/union${n}.fsm
-${TEST_OUTDIR.tests/subtract-cuc}/got${n}.png:  ${TEST_OUTDIR.tests/subtract-cuc}/got${n}.fsm
-
-.for img in in${n}a in${n}b out${n} got${n} compl${n}a union${n}
-FSMTEST_IMG += ${TEST_OUTDIR.tests/subtract-cuc}/${img}.png
-.endfor
-
-.endfor
-

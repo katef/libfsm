@@ -12,7 +12,7 @@
 	!re_flags;
 	!err;
 	ast_expr;
-	!ast_count;
+	ast_count;
         !ast_char_class_id;
         !ast_char_type_id;
 	!char_class_ast;
@@ -64,18 +64,16 @@
 	<ast-expr-concat>: (:ast_expr, :ast_expr) -> (:ast_expr);
 	!<ast-expr-alt>: (:ast_expr, :ast_expr) -> (:ast_expr);
 	<ast-expr-any>: () -> (:ast_expr);
-	<ast-expr-many>: () -> (:ast_expr);
 
-        !<ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
+        <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
         !<ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
-        !<ast-expr-atom-many>: (:ast_count) -> (:ast_expr);
 	!<ast-expr-char-class>: (:char_class_ast, :pos, :pos) -> (:ast_expr);
         !<ast-expr-group>: (:ast_expr) -> (:ast_expr);
 	!<ast-expr-re-flags>: (:re_flags, :re_flags) -> (:ast_expr);
 	!<ast-expr-anchor-start>: () -> (:ast_expr);
 	!<ast-expr-anchor-end>: () -> (:ast_expr);
 
-        !<atom-kleene>: () -> (:ast_count);
+        <atom-kleene>: () -> (:ast_count);
         !<atom-plus>: () -> (:ast_count);
         !<atom-one>: () -> (:ast_count);
         !<atom-opt>: () -> (:ast_count);
@@ -83,6 +81,7 @@
         !<expr-count>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
 	!<char-class-ast-literal>: (:char) -> (:char_class_ast);
+	!<char-class-ast-range-distinct>: (:range_endpoint, :pos, :range_endpoint, :pos) -> ();
         !<char-class-ast-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:char_class_ast);
 	!<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	!<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
@@ -135,8 +134,10 @@
 			any();
 			l = <ast-expr-any>();
 		||
-		        many();
-			l = <ast-expr-many>();
+			many();
+			e = <ast-expr-any>();
+			c = <atom-kleene>();
+			l = <ast-expr-atom>(e, c);
 		};
 
 		{

@@ -1,6 +1,6 @@
 .include "../../share/mk/top.mk"
 
-TEST.tests/pcre != ls -1 tests/pcre/out*.fsm
+TEST.tests/pcre != ls -1 tests/pcre/out*.fsm tests/pcre/out*.err
 TEST_SRCDIR.tests/pcre = tests/pcre
 TEST_OUTDIR.tests/pcre = ${BUILD}/tests/pcre
 
@@ -29,7 +29,7 @@ test:: ${TEST_OUTDIR.tests/pcre-pcregrep}/res${n}
 
 .endfor
 
-.for n in ${TEST.tests/pcre:T:R:C/^out//}
+.for n in ${TEST.tests/pcre:T:Mout*.fsm:R:C/^out//}
 
 ${TEST_OUTDIR.tests/pcre}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre}/in${n}.re
 	${RE} -r pcre -py ${.ALLSRC:M*.re} \
@@ -47,15 +47,17 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/pcre}/res${n}
 
 .endfor
 
-.for n in ${TEST.tests/pcre:T:R:C/^out//}
+.for n in ${TEST.tests/pcre:T:Mout*.err:R:C/^out//}
 
-${TEST_OUTDIR.tests/pcre}/nfa${n}.png: ${TEST_OUTDIR.tests/pcre}/nfa${n}.fsm
-${TEST_OUTDIR.tests/pcre}/out${n}.png: ${TEST_SRCDIR.tests/pcre}/out${n}.fsm
-${TEST_OUTDIR.tests/pcre}/got${n}.png: ${TEST_OUTDIR.tests/pcre}/got${n}.fsm
+${TEST_OUTDIR.tests/pcre}/got${n}.err: ${TEST_SRCDIR.tests/pcre}/in${n}.re
+	${RE} -r pcre -py ${.ALLSRC:M*.re} \
+	2> $@; [ $$? -ne 0 ]
 
-.for img in nfa${n} out${n} got${n}
-FSMTEST_IMG += ${TEST_OUTDIR.tests/pcre}/${img}.png
-.endfor
+${TEST_OUTDIR.tests/pcre}/res${n}: \
+	${TEST_SRCDIR.tests/pcre}/out${n}.err \
+	${TEST_OUTDIR.tests/pcre}/got${n}.err
+
+FSMTEST_ERROR += ${TEST_OUTDIR.tests/pcre}/res${n}
 
 .endfor
 

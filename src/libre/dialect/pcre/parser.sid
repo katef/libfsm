@@ -90,11 +90,9 @@
 	<ast-expr-concat>: (:ast_expr, :ast_expr) -> (:ast_expr);
 	<ast-expr-alt>: (:ast_expr, :ast_expr) -> (:ast_expr);
 	<ast-expr-any>: () -> (:ast_expr);
-	!<ast-expr-many>: () -> (:ast_expr);
 
         <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
         !<ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
-        !<ast-expr-atom-many>: (:ast_count) -> (:ast_expr);
 	<ast-expr-char-class>: (:char_class_ast, :pos, :pos) -> (:ast_expr);
         <ast-expr-group>: (:ast_expr) -> (:ast_expr);
 	<ast-expr-re-flags>: (:re_flags, :re_flags) -> (:ast_expr);
@@ -109,6 +107,7 @@
         <expr-count>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
 	<char-class-ast-literal>: (:char) -> (:char_class_ast);
+	!<char-class-ast-range-distinct>: (:range_endpoint, :pos, :range_endpoint, :pos) -> ();
 	<char-class-ast-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:char_class_ast);
 	<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
 	!<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
@@ -172,6 +171,8 @@
 			class-range: () -> (node :char_class_ast, start :pos, end :pos) [
 				range-endpoint-literal: () -> (r :range_endpoint, start :pos, end :pos) = {
 					{
+						(c, start, end) = ESC;
+					||
 						(c, start, end) = OCT;
 					||
 						(c, start, end) = HEX;
@@ -413,7 +414,6 @@
 			node = <ast-expr-alt>(a, r);
 		##
 		        node = <ast-expr-empty>();
-		        <err-expected-alts>;
 		};
 	] = {
 		/* don't wrap a single alt in an alt chain */

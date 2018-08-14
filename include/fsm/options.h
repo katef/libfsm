@@ -7,8 +7,16 @@
 #ifndef FSM_OPTIONS_H
 #define FSM_OPTIONS_H
 
+#include <stdio.h>
+
 struct fsm;
 struct fsm_state;
+
+enum fsm_io {
+	FSM_IO_GETC,
+	FSM_IO_STR,
+	FSM_IO_PAIR
+};
 
 struct fsm_options {
 	/* boolean: true indicates to go to extra lengths in order to produce
@@ -55,11 +63,11 @@ struct fsm_options {
 	const char *cp;
 
 	/* TODO: explain. for C code fragment output */
-	int (*leaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *);
+	int (*leaf)(FILE *, const void *state_opaque, const void *leaf_opaque);
 	void *leaf_opaque;
 
 	/* TODO: explain. for C code fragment output */
-	int (*endleaf)(FILE *, const struct fsm *, const struct fsm_state *, const void *);
+	int (*endleaf)(FILE *, const void *state_opaque, const void *endleaf_opaque);
 	void *endleaf_opaque;
 
 	/* TODO: explain */

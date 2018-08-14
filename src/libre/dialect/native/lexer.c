@@ -37,6 +37,7 @@ lx_getc(struct lx_native_lx *lx)
 
 	if (c == '\n') {
 		lx->end.line++;
+		lx->end.saved_col = lx->end.col - 1;
 		lx->end.col = 1;
 	}
 
@@ -60,7 +61,7 @@ lx_native_ungetc(struct lx_native_lx *lx, int c)
 
 	if (c == '\n') {
 		lx->end.line--;
-		lx->end.col = 0; /* XXX: lost information */
+		lx->end.col = lx->end.saved_col;
 	}
 }
 
@@ -169,6 +170,7 @@ z0(struct lx_native_lx *lx)
 		switch (state) {
 		case S0: /* start */
 			switch ((unsigned char) c) {
+			case '}': state = S3; break;
 			case ',': state = S1; break;
 			case '0':
 			case '1':
@@ -180,7 +182,6 @@ z0(struct lx_native_lx *lx)
 			case '7':
 			case '8':
 			case '9': state = S2; break;
-			case '}': state = S3; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
@@ -241,11 +242,7 @@ z1(struct lx_native_lx *lx)
 		S30, S31, S32, S33, S34, S35, S36, S37, S38, S39, 
 		S40, S41, S42, S43, S44, S45, S46, S47, S48, S49, 
 		S50, S51, S52, S53, S54, S55, S56, S57, S58, S59, 
-		S60, S61, S62, S63, S64, S65, S66, S67, S68, S69, 
-		S70, S71, S72, S73, S74, S75, S76, S77, S78, S79, 
-		S80, S81, S82, S83, S84, S85, S86, S87, S88, S89, 
-		S90, S91, S92, S93, S94, S95, S96, S97, S98, S99, 
-		S100, S101, S102, S103, S104, S105, NONE
+		NONE
 	} state;
 
 	assert(lx != NULL);
@@ -283,14 +280,23 @@ z1(struct lx_native_lx *lx)
 
 		case S3: /* e.g. "[" */
 			switch ((unsigned char) c) {
-			case ':': state = S11; break;
+			case ':': state = S7; break;
 			default:  lx_native_ungetc(lx, c); return TOK_CHAR;
 			}
 			break;
 
 		case S4: /* e.g. "\\" */
 			switch ((unsigned char) c) {
-			case '-': state = S7; break;
+			case '-':
+			case '[':
+			case '\\':
+			case ']':
+			case '^':
+			case 'f':
+			case 'n':
+			case 'r':
+			case 't':
+			case 'v': state = S55; break;
 			case '0':
 			case '1':
 			case '2':
@@ -298,15 +304,8 @@ z1(struct lx_native_lx *lx)
 			case '4':
 			case '5':
 			case '6':
-			case '7': state = S8; break;
-			case '\\': state = S7; break;
-			case '^': state = S7; break;
-			case 'f': state = S7; break;
-			case 'n': state = S7; break;
-			case 'r': state = S7; break;
-			case 't': state = S7; break;
-			case 'v': state = S7; break;
-			case 'x': state = S9; break;
+			case '7': state = S56; break;
+			case 'x': state = S57; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
@@ -317,10 +316,355 @@ z1(struct lx_native_lx *lx)
 		case S6: /* e.g. "^" */
 			lx_native_ungetc(lx, c); return TOK_INVERT;
 
-		case S7: /* e.g. "\\f" */
+		case S7: /* e.g. "[:" */
+			switch ((unsigned char) c) {
+			case 'g': state = S12; break;
+			case 'c': state = S10; break;
+			case 'b': state = S9; break;
+			case 'u': state = S16; break;
+			case 'p': state = S14; break;
+			case 's': state = S15; break;
+			case 'w': state = S17; break;
+			case 'x': state = S18; break;
+			case 'l': state = S13; break;
+			case 'd': state = S11; break;
+			case 'a': state = S8; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S8: /* e.g. "[:a" */
+			switch ((unsigned char) c) {
+			case 'l': state = S25; break;
+			case 's': state = S26; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S9: /* e.g. "[:b" */
+			switch ((unsigned char) c) {
+			case 'l': state = S52; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S10: /* e.g. "[:c" */
+			switch ((unsigned char) c) {
+			case 'n': state = S33; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S11: /* e.g. "[:d" */
+			switch ((unsigned char) c) {
+			case 'i': state = S46; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S12: /* e.g. "[:g" */
+			switch ((unsigned char) c) {
+			case 'r': state = S19; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S13: /* e.g. "[:l" */
+			switch ((unsigned char) c) {
+			case 'o': state = S40; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S14: /* e.g. "[:p" */
+			switch ((unsigned char) c) {
+			case 'u': state = S23; break;
+			case 'r': state = S22; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S15: /* e.g. "[:s" */
+			switch ((unsigned char) c) {
+			case 'p': state = S37; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S16: /* e.g. "[:u" */
+			switch ((unsigned char) c) {
+			case 'p': state = S51; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S17: /* e.g. "[:w" */
+			switch ((unsigned char) c) {
+			case 'o': state = S20; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S18: /* e.g. "[:x" */
+			switch ((unsigned char) c) {
+			case 'd': state = S11; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S19: /* e.g. "[:gr" */
+			switch ((unsigned char) c) {
+			case 'a': state = S38; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S20: /* e.g. "[:wo" */
+			switch ((unsigned char) c) {
+			case 'r': state = S21; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S21: /* e.g. "[:wor" */
+			switch ((unsigned char) c) {
+			case 'd': state = S29; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S22: /* e.g. "[:pr" */
+			switch ((unsigned char) c) {
+			case 'i': state = S24; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S23: /* e.g. "[:pu" */
+			switch ((unsigned char) c) {
+			case 'n': state = S31; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S24: /* e.g. "[:pri" */
+			switch ((unsigned char) c) {
+			case 'n': state = S32; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S25: /* e.g. "[:al" */
+			switch ((unsigned char) c) {
+			case 'n': state = S34; break;
+			case 'p': state = S35; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S26: /* e.g. "[:as" */
+			switch ((unsigned char) c) {
+			case 'c': state = S27; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S27: /* e.g. "[:asc" */
+			switch ((unsigned char) c) {
+			case 'i': state = S28; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S28: /* e.g. "[:asci" */
+			switch ((unsigned char) c) {
+			case 'i': state = S29; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S29: /* e.g. "[:word" */
+			switch ((unsigned char) c) {
+			case ':': state = S30; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S30: /* e.g. "[:word:" */
+			switch ((unsigned char) c) {
+			case ']': state = S48; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S31: /* e.g. "[:pun" */
+			switch ((unsigned char) c) {
+			case 'c': state = S32; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S32: /* e.g. "[:prin" */
+			switch ((unsigned char) c) {
+			case 't': state = S29; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S33: /* e.g. "[:cn" */
+			switch ((unsigned char) c) {
+			case 't': state = S49; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S34: /* e.g. "[:aln" */
+			switch ((unsigned char) c) {
+			case 'u': state = S36; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S35: /* e.g. "[:alp" */
+			switch ((unsigned char) c) {
+			case 'h': state = S43; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S36: /* e.g. "[:alnu" */
+			switch ((unsigned char) c) {
+			case 'm': state = S29; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S37: /* e.g. "[:sp" */
+			switch ((unsigned char) c) {
+			case 'a': state = S44; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S38: /* e.g. "[:gra" */
+			switch ((unsigned char) c) {
+			case 'p': state = S39; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S39: /* e.g. "[:grap" */
+			switch ((unsigned char) c) {
+			case 'h': state = S29; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S40: /* e.g. "[:lo" */
+			switch ((unsigned char) c) {
+			case 'w': state = S41; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S41: /* e.g. "[:low" */
+			switch ((unsigned char) c) {
+			case 'e': state = S42; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S42: /* e.g. "[:lowe" */
+			switch ((unsigned char) c) {
+			case 'r': state = S29; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S43: /* e.g. "[:alph" */
+			switch ((unsigned char) c) {
+			case 'a': state = S29; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S44: /* e.g. "[:spa" */
+			switch ((unsigned char) c) {
+			case 'c': state = S45; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S45: /* e.g. "[:spac" */
+			switch ((unsigned char) c) {
+			case 'e': state = S29; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S46: /* e.g. "[:di" */
+			switch ((unsigned char) c) {
+			case 'g': state = S47; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S47: /* e.g. "[:dig" */
+			switch ((unsigned char) c) {
+			case 'i': state = S32; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S48: /* e.g. "[:word:]" */
+			lx_native_ungetc(lx, c); return TOK_NAMED__CHAR__CLASS;
+
+		case S49: /* e.g. "[:cnt" */
+			switch ((unsigned char) c) {
+			case 'r': state = S50; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S50: /* e.g. "[:cntr" */
+			switch ((unsigned char) c) {
+			case 'l': state = S29; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S51: /* e.g. "[:up" */
+			switch ((unsigned char) c) {
+			case 'p': state = S41; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S52: /* e.g. "[:bl" */
+			switch ((unsigned char) c) {
+			case 'a': state = S53; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S53: /* e.g. "[:bla" */
+			switch ((unsigned char) c) {
+			case 'n': state = S54; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S54: /* e.g. "[:blan" */
+			switch ((unsigned char) c) {
+			case 'k': state = S29; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S55: /* e.g. "\\f" */
 			lx_native_ungetc(lx, c); return TOK_ESC;
 
-		case S8: /* e.g. "\\0" */
+		case S56: /* e.g. "\\0" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -334,7 +678,7 @@ z1(struct lx_native_lx *lx)
 			}
 			break;
 
-		case S9: /* e.g. "\\x" */
+		case S57: /* e.g. "\\x" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -345,24 +689,24 @@ z1(struct lx_native_lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': state = S10; break;
+			case '9':
 			case 'A':
 			case 'B':
 			case 'C':
 			case 'D':
 			case 'E':
-			case 'F': state = S10; break;
+			case 'F':
 			case 'a':
 			case 'b':
 			case 'c':
 			case 'd':
 			case 'e':
-			case 'f': state = S10; break;
+			case 'f': state = S58; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S10: /* e.g. "\\xa" */
+		case S58: /* e.g. "\\xa" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -373,644 +717,25 @@ z1(struct lx_native_lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': break;
+			case '9':
 			case 'A':
 			case 'B':
 			case 'C':
 			case 'D':
 			case 'E':
-			case 'F': break;
+			case 'F':
 			case 'a':
 			case 'b':
 			case 'c':
 			case 'd':
 			case 'e':
-			case 'f': break;
-			default:  lx_native_ungetc(lx, c); return TOK_HEX;
-			}
-			break;
-
-		case S11: /* e.g. "[:" */
-			switch ((unsigned char) c) {
-			case 'a': state = S12; break;
-			case 'b': state = S13; break;
-			case 'c': state = S14; break;
-			case 'd': state = S15; break;
-			case 'g': state = S16; break;
-			case 'l': state = S17; break;
-			case 'p': state = S18; break;
-			case 's': state = S19; break;
-			case 'u': state = S20; break;
-			case 'w': state = S21; break;
-			case 'x': state = S22; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S12: /* e.g. "[:a" */
-			switch ((unsigned char) c) {
-			case 'l': state = S89; break;
-			case 's': state = S90; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S13: /* e.g. "[:b" */
-			switch ((unsigned char) c) {
-			case 'l': state = S23; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S14: /* e.g. "[:c" */
-			switch ((unsigned char) c) {
-			case 'n': state = S24; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S15: /* e.g. "[:d" */
-			switch ((unsigned char) c) {
-			case 'i': state = S31; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S16: /* e.g. "[:g" */
-			switch ((unsigned char) c) {
-			case 'r': state = S25; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S17: /* e.g. "[:l" */
-			switch ((unsigned char) c) {
-			case 'o': state = S36; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S18: /* e.g. "[:p" */
-			switch ((unsigned char) c) {
-			case 'r': state = S77; break;
-			case 'u': state = S78; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S19: /* e.g. "[:s" */
-			switch ((unsigned char) c) {
-			case 'p': state = S27; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S20: /* e.g. "[:u" */
-			switch ((unsigned char) c) {
-			case 'p': state = S38; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S21: /* e.g. "[:w" */
-			switch ((unsigned char) c) {
-			case 'o': state = S29; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S22: /* e.g. "[:x" */
-			switch ((unsigned char) c) {
-			case 'd': state = S53; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S23: /* e.g. "[:bl" */
-			switch ((unsigned char) c) {
-			case 'a': state = S30; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S24: /* e.g. "[:cn" */
-			switch ((unsigned char) c) {
-			case 't': state = S26; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S25: /* e.g. "[:gr" */
-			switch ((unsigned char) c) {
-			case 'a': state = S68; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S26: /* e.g. "[:cnt" */
-			switch ((unsigned char) c) {
-			case 'r': state = S43; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S27: /* e.g. "[:sp" */
-			switch ((unsigned char) c) {
-			case 'a': state = S28; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S28: /* e.g. "[:spa" */
-			switch ((unsigned char) c) {
-			case 'c': state = S49; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S29: /* e.g. "[:wo" */
-			switch ((unsigned char) c) {
-			case 'r': state = S73; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S30: /* e.g. "[:bla" */
-			switch ((unsigned char) c) {
-			case 'n': state = S32; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S31: /* e.g. "[:di" */
-			switch ((unsigned char) c) {
-			case 'g': state = S63; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S32: /* e.g. "[:blan" */
-			switch ((unsigned char) c) {
-			case 'k': state = S33; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S33: /* e.g. "[:blank" */
-			switch ((unsigned char) c) {
-			case ':': state = S34; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S34: /* e.g. "[:blank:" */
-			switch ((unsigned char) c) {
-			case ']': state = S35; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S35: /* e.g. "[:blank:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_BLANK;
-
-		case S36: /* e.g. "[:lo" */
-			switch ((unsigned char) c) {
-			case 'w': state = S37; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S37: /* e.g. "[:low" */
-			switch ((unsigned char) c) {
-			case 'e': state = S39; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S38: /* e.g. "[:up" */
-			switch ((unsigned char) c) {
-			case 'p': state = S44; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S39: /* e.g. "[:lowe" */
-			switch ((unsigned char) c) {
-			case 'r': state = S40; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S40: /* e.g. "[:lower" */
-			switch ((unsigned char) c) {
-			case ':': state = S41; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S41: /* e.g. "[:lower:" */
-			switch ((unsigned char) c) {
-			case ']': state = S42; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S42: /* e.g. "[:lower:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_LOWER;
-
-		case S43: /* e.g. "[:cntr" */
-			switch ((unsigned char) c) {
-			case 'l': state = S60; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S44: /* e.g. "[:upp" */
-			switch ((unsigned char) c) {
-			case 'e': state = S45; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S45: /* e.g. "[:uppe" */
-			switch ((unsigned char) c) {
-			case 'r': state = S46; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S46: /* e.g. "[:upper" */
-			switch ((unsigned char) c) {
-			case ':': state = S47; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S47: /* e.g. "[:upper:" */
-			switch ((unsigned char) c) {
-			case ']': state = S48; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S48: /* e.g. "[:upper:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_UPPER;
-
-		case S49: /* e.g. "[:spac" */
-			switch ((unsigned char) c) {
-			case 'e': state = S50; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S50: /* e.g. "[:space" */
-			switch ((unsigned char) c) {
-			case ':': state = S51; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S51: /* e.g. "[:space:" */
-			switch ((unsigned char) c) {
-			case ']': state = S52; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S52: /* e.g. "[:space:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_SPACE;
-
-		case S53: /* e.g. "[:xd" */
-			switch ((unsigned char) c) {
-			case 'i': state = S54; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S54: /* e.g. "[:xdi" */
-			switch ((unsigned char) c) {
-			case 'g': state = S55; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S55: /* e.g. "[:xdig" */
-			switch ((unsigned char) c) {
-			case 'i': state = S56; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S56: /* e.g. "[:xdigi" */
-			switch ((unsigned char) c) {
-			case 't': state = S57; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S57: /* e.g. "[:xdigit" */
-			switch ((unsigned char) c) {
-			case ':': state = S58; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S58: /* e.g. "[:xdigit:" */
-			switch ((unsigned char) c) {
-			case ']': state = S59; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S59: /* e.g. "[:xdigit:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_XDIGIT;
-
-		case S60: /* e.g. "[:cntrl" */
-			switch ((unsigned char) c) {
-			case ':': state = S61; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S61: /* e.g. "[:cntrl:" */
-			switch ((unsigned char) c) {
-			case ']': state = S62; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S62: /* e.g. "[:cntrl:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_CNTRL;
-
-		case S63: /* e.g. "[:dig" */
-			switch ((unsigned char) c) {
-			case 'i': state = S64; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S64: /* e.g. "[:digi" */
-			switch ((unsigned char) c) {
-			case 't': state = S65; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S65: /* e.g. "[:digit" */
-			switch ((unsigned char) c) {
-			case ':': state = S66; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S66: /* e.g. "[:digit:" */
-			switch ((unsigned char) c) {
-			case ']': state = S67; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S67: /* e.g. "[:digit:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_DIGIT;
-
-		case S68: /* e.g. "[:gra" */
-			switch ((unsigned char) c) {
-			case 'p': state = S69; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S69: /* e.g. "[:grap" */
-			switch ((unsigned char) c) {
-			case 'h': state = S70; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S70: /* e.g. "[:graph" */
-			switch ((unsigned char) c) {
-			case ':': state = S71; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S71: /* e.g. "[:graph:" */
-			switch ((unsigned char) c) {
-			case ']': state = S72; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S72: /* e.g. "[:graph:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_GRAPH;
-
-		case S73: /* e.g. "[:wor" */
-			switch ((unsigned char) c) {
-			case 'd': state = S74; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S74: /* e.g. "[:word" */
-			switch ((unsigned char) c) {
-			case ':': state = S75; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S75: /* e.g. "[:word:" */
-			switch ((unsigned char) c) {
-			case ']': state = S76; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S76: /* e.g. "[:word:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_WORD;
-
-		case S77: /* e.g. "[:pr" */
-			switch ((unsigned char) c) {
-			case 'i': state = S80; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S78: /* e.g. "[:pu" */
-			switch ((unsigned char) c) {
-			case 'n': state = S79; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S79: /* e.g. "[:pun" */
-			switch ((unsigned char) c) {
-			case 'c': state = S85; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S80: /* e.g. "[:pri" */
-			switch ((unsigned char) c) {
-			case 'n': state = S81; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S81: /* e.g. "[:prin" */
-			switch ((unsigned char) c) {
-			case 't': state = S82; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S82: /* e.g. "[:print" */
-			switch ((unsigned char) c) {
-			case ':': state = S83; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S83: /* e.g. "[:print:" */
-			switch ((unsigned char) c) {
-			case ']': state = S84; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S84: /* e.g. "[:print:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_PRINT;
-
-		case S85: /* e.g. "[:punc" */
-			switch ((unsigned char) c) {
-			case 't': state = S86; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S86: /* e.g. "[:punct" */
-			switch ((unsigned char) c) {
-			case ':': state = S87; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S87: /* e.g. "[:punct:" */
-			switch ((unsigned char) c) {
-			case ']': state = S88; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S88: /* e.g. "[:punct:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_PUNCT;
-
-		case S89: /* e.g. "[:al" */
-			switch ((unsigned char) c) {
-			case 'n': state = S96; break;
-			case 'p': state = S97; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S90: /* e.g. "[:as" */
-			switch ((unsigned char) c) {
-			case 'c': state = S91; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S91: /* e.g. "[:asc" */
-			switch ((unsigned char) c) {
-			case 'i': state = S92; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S92: /* e.g. "[:asci" */
-			switch ((unsigned char) c) {
-			case 'i': state = S93; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S93: /* e.g. "[:ascii" */
-			switch ((unsigned char) c) {
-			case ':': state = S94; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S94: /* e.g. "[:ascii:" */
-			switch ((unsigned char) c) {
-			case ']': state = S95; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S95: /* e.g. "[:ascii:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_ASCII;
-
-		case S96: /* e.g. "[:aln" */
-			switch ((unsigned char) c) {
-			case 'u': state = S98; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S97: /* e.g. "[:alp" */
-			switch ((unsigned char) c) {
-			case 'h': state = S100; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S98: /* e.g. "[:alnu" */
-			switch ((unsigned char) c) {
-			case 'm': state = S99; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S99: /* e.g. "[:alnum" */
-			switch ((unsigned char) c) {
-			case ':': state = S104; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S100: /* e.g. "[:alph" */
-			switch ((unsigned char) c) {
-			case 'a': state = S101; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S101: /* e.g. "[:alpha" */
-			switch ((unsigned char) c) {
-			case ':': state = S102; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S102: /* e.g. "[:alpha:" */
-			switch ((unsigned char) c) {
-			case ']': state = S103; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S103: /* e.g. "[:alpha:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_ALPHA;
-
-		case S104: /* e.g. "[:alnum:" */
-			switch ((unsigned char) c) {
-			case ']': state = S105; break;
+			case 'f': state = S59; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S105: /* e.g. "[:alnum:]" */
-			lx_native_ungetc(lx, c); return TOK_CLASS_ALNUM;
+		case S59: /* e.g. "\\xaa" */
+			lx_native_ungetc(lx, c); return TOK_HEX;
 
 		default:
 			; /* unreached */
@@ -1032,23 +757,10 @@ z1(struct lx_native_lx *lx)
 	case S3: return TOK_CHAR;
 	case S5: return TOK_CLOSEGROUP;
 	case S6: return TOK_INVERT;
-	case S7: return TOK_ESC;
-	case S8: return TOK_OCT;
-	case S10: return TOK_HEX;
-	case S35: return TOK_CLASS_BLANK;
-	case S42: return TOK_CLASS_LOWER;
-	case S48: return TOK_CLASS_UPPER;
-	case S52: return TOK_CLASS_SPACE;
-	case S59: return TOK_CLASS_XDIGIT;
-	case S62: return TOK_CLASS_CNTRL;
-	case S67: return TOK_CLASS_DIGIT;
-	case S72: return TOK_CLASS_GRAPH;
-	case S76: return TOK_CLASS_WORD;
-	case S84: return TOK_CLASS_PRINT;
-	case S88: return TOK_CLASS_PUNCT;
-	case S95: return TOK_CLASS_ASCII;
-	case S103: return TOK_CLASS_ALPHA;
-	case S105: return TOK_CLASS_ALNUM;
+	case S48: return TOK_NAMED__CHAR__CLASS;
+	case S55: return TOK_ESC;
+	case S56: return TOK_OCT;
+	case S59: return TOK_HEX;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }
@@ -1127,12 +839,6 @@ z2(struct lx_native_lx *lx)
 
 		case S10: /* e.g. "\\" */
 			switch ((unsigned char) c) {
-			case '$': state = S14; break;
-			case '(':
-			case ')':
-			case '*':
-			case '+': state = S14; break;
-			case '.': state = S14; break;
 			case '0':
 			case '1':
 			case '2':
@@ -1141,18 +847,24 @@ z2(struct lx_native_lx *lx)
 			case '5':
 			case '6':
 			case '7': state = S15; break;
-			case '?': state = S14; break;
+			case '$':
+			case '(':
+			case ')':
+			case '*':
+			case '+':
+			case '.':
+			case '?':
 			case '[':
-			case '\\': state = S14; break;
-			case '^': state = S14; break;
-			case 'f': state = S14; break;
-			case 'n': state = S14; break;
-			case 'r': state = S14; break;
-			case 't': state = S14; break;
-			case 'v': state = S14; break;
-			case 'x': state = S16; break;
+			case '\\':
+			case '^':
+			case 'f':
+			case 'n':
+			case 'r':
+			case 't':
+			case 'v':
 			case '{':
 			case '|': state = S14; break;
+			case 'x': state = S16; break;
 			default:  lx_native_ungetc(lx, c); return TOK_CHAR;
 			}
 			break;
@@ -1178,7 +890,7 @@ z2(struct lx_native_lx *lx)
 			case '4':
 			case '5':
 			case '6':
-			case '7': state = S19; break;
+			case '7': state = S17; break;
 			default:  lx_native_ungetc(lx, c); return TOK_OCT;
 			}
 			break;
@@ -1194,41 +906,13 @@ z2(struct lx_native_lx *lx)
 			case '6':
 			case '7':
 			case '8':
-			case '9': state = S17; break;
+			case '9':
 			case 'A':
 			case 'B':
 			case 'C':
 			case 'D':
 			case 'E':
-			case 'F': state = S17; break;
-			case 'a':
-			case 'b':
-			case 'c':
-			case 'd':
-			case 'e':
-			case 'f': state = S17; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
-			}
-			break;
-
-		case S17: /* e.g. "\\xa" */
-			switch ((unsigned char) c) {
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9': state = S18; break;
-			case 'A':
-			case 'B':
-			case 'C':
-			case 'D':
-			case 'E':
-			case 'F': state = S18; break;
+			case 'F':
 			case 'a':
 			case 'b':
 			case 'c':
@@ -1239,10 +923,7 @@ z2(struct lx_native_lx *lx)
 			}
 			break;
 
-		case S18: /* e.g. "\\xaa" */
-			lx_native_ungetc(lx, c); return TOK_HEX;
-
-		case S19: /* e.g. "\\00" */
+		case S17: /* e.g. "\\00" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -1255,6 +936,37 @@ z2(struct lx_native_lx *lx)
 			default:  lx_native_ungetc(lx, c); return TOK_OCT;
 			}
 			break;
+
+		case S18: /* e.g. "\\xa" */
+			switch ((unsigned char) c) {
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+			case 'A':
+			case 'B':
+			case 'C':
+			case 'D':
+			case 'E':
+			case 'F':
+			case 'a':
+			case 'b':
+			case 'c':
+			case 'd':
+			case 'e':
+			case 'f': state = S19; break;
+			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S19: /* e.g. "\\xaa" */
+			lx_native_ungetc(lx, c); return TOK_HEX;
 
 		case S20: /* e.g. "\\000" */
 			lx_native_ungetc(lx, c); return TOK_OCT;
@@ -1289,8 +1001,8 @@ z2(struct lx_native_lx *lx)
 	case S13: return TOK_ALT;
 	case S14: return TOK_ESC;
 	case S15: return TOK_OCT;
-	case S18: return TOK_HEX;
-	case S19: return TOK_OCT;
+	case S17: return TOK_OCT;
+	case S19: return TOK_HEX;
 	case S20: return TOK_OCT;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
@@ -1305,20 +1017,7 @@ lx_native_name(enum lx_native_token t)
 	case TOK_CLOSECOUNT: return "CLOSECOUNT";
 	case TOK_OPENCOUNT: return "OPENCOUNT";
 	case TOK_CHAR: return "CHAR";
-	case TOK_CLASS_XDIGIT: return "CLASS_XDIGIT";
-	case TOK_CLASS_WORD: return "CLASS_WORD";
-	case TOK_CLASS_UPPER: return "CLASS_UPPER";
-	case TOK_CLASS_SPACE: return "CLASS_SPACE";
-	case TOK_CLASS_PUNCT: return "CLASS_PUNCT";
-	case TOK_CLASS_PRINT: return "CLASS_PRINT";
-	case TOK_CLASS_LOWER: return "CLASS_LOWER";
-	case TOK_CLASS_GRAPH: return "CLASS_GRAPH";
-	case TOK_CLASS_DIGIT: return "CLASS_DIGIT";
-	case TOK_CLASS_CNTRL: return "CLASS_CNTRL";
-	case TOK_CLASS_BLANK: return "CLASS_BLANK";
-	case TOK_CLASS_ASCII: return "CLASS_ASCII";
-	case TOK_CLASS_ALPHA: return "CLASS_ALPHA";
-	case TOK_CLASS_ALNUM: return "CLASS_ALNUM";
+	case TOK_NAMED__CHAR__CLASS: return "NAMED__CHAR__CLASS";
 	case TOK_RANGE: return "RANGE";
 	case TOK_INVERT: return "INVERT";
 	case TOK_CLOSEGROUP: return "CLOSEGROUP";
@@ -1358,24 +1057,11 @@ lx_native_example(enum lx_native_token (*z)(struct lx_native_lx *), enum lx_nati
 	if (z == z1) {
 		switch (t) {
 		case TOK_CHAR: return "a";
-		case TOK_CLASS_XDIGIT: return "[:xdigit:]";
-		case TOK_CLASS_WORD: return "[:word:]";
-		case TOK_CLASS_UPPER: return "[:upper:]";
-		case TOK_CLASS_SPACE: return "[:space:]";
-		case TOK_CLASS_PUNCT: return "[:punct:]";
-		case TOK_CLASS_PRINT: return "[:print:]";
-		case TOK_CLASS_LOWER: return "[:lower:]";
-		case TOK_CLASS_GRAPH: return "[:graph:]";
-		case TOK_CLASS_DIGIT: return "[:digit:]";
-		case TOK_CLASS_CNTRL: return "[:cntrl:]";
-		case TOK_CLASS_BLANK: return "[:blank:]";
-		case TOK_CLASS_ASCII: return "[:ascii:]";
-		case TOK_CLASS_ALPHA: return "[:alpha:]";
-		case TOK_CLASS_ALNUM: return "[:alnum:]";
+		case TOK_NAMED__CHAR__CLASS: return "[:word:]";
 		case TOK_RANGE: return "-";
 		case TOK_INVERT: return "^";
 		case TOK_CLOSEGROUP: return "]";
-		case TOK_HEX: return "\\xa";
+		case TOK_HEX: return "\\xaa";
 		case TOK_OCT: return "\\0";
 		case TOK_ESC: return "\\f";
 		default: goto error;

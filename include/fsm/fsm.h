@@ -288,18 +288,6 @@ int
 fsm_minimise(struct fsm *fsm);
 
 /*
- * "Simplify" an NFA. This is not a formal operation; it is intended
- * just to remove trivial clutter for sake of human legibility.
- *
- * The runtime for this is enormous; do not use it unless you really
- * need to make an NFA easier to look at.
- *
- * Returns false on error; see errno.
- */
-int
-fsm_pretty(struct fsm *fsm);
-
-/*
  * Concatenate b after a. This is not commutative.
  */
 struct fsm *

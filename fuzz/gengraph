@@ -1,0 +1,108 @@
+#!/usr/bin/awk -f
+
+function usage() {
+    print("gengraph <seed> <num_nodes> <avg_conn> <max_end> <labels> <prob_eps>\n");
+    exit(1)
+}
+
+function shift_arg(name) {
+    shift_arg_offset++
+    if (ARGV[shift_arg_offset] == "-h") { usage(); }
+    return (ARGC > shift_arg_offset ? ARGV[shift_arg_offset] : def[name])
+}
+
+function randint(x) {
+    return int(rand() * x)
+}
+
+# set edges and ends
+function gen_edges_and_ends(  end_set, end_count, label_count, src, dst, li, lbl) {
+    end_count = 1 + randint(max_end)
+    for (i = 0; i < end_count; i++) {
+        # duplicates are ignored here
+        end_set[randint(num_nodes)] = 1
+    }
+
+    # sort and make unique
+    for (i = 0; i < num_nodes; i++) {
+        if (end_set[i]) { ends[num_ends++] = i }
+    }
+
+    label_count = length(labels)
+
+    for (i = 0; i < num_edges; i++) {
+        while (1) {
+            src = randint(num_nodes)
+            dst = randint(num_nodes)
+            li = randint(label_count)
+            lbl = substr(labels, li, 1)
+
+            # break if [src,dst] -> label not in edges
+            if (!index(edges[src,dst], lbl)) { break }
+        }
+        # append the label character
+        edges[src,dst] = lbl "" edges[src,dst]
+    }
+}
+
+BEGIN {
+    def["seed"] = 3147837
+    def["num_nodes"] = 100
+    def["avg_conn"] = 5
+    def["max_end"] = 5
+    def["labels"] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    def["prob_eps"] = 0.1
+
+    seed =       shift_arg("seed") + 0
+    num_nodes =  shift_arg("num_nodes") + 0
+    avg_conn =   shift_arg("avg_conn") + 0
+    max_end =    shift_arg("max_end") + 0
+    labels =     shift_arg("labels") ""
+    prob_eps =   shift_arg("prob_eps") + 0.0
+
+    num_edges = int(num_nodes * avg_conn)
+    printf("# seed = %d\n", seed)
+    printf("# num_nodes = %d\n", num_nodes)
+    printf("# avg_conn = %d\n", avg_conn)
+    printf("# max_end = %d\n", max_end)
+    printf("# num_edges = %d\n", num_edges)
+    printf("# prob_eps = %f\n", prob_eps)
+
+    srand(seed)
+    gen_edges_and_ends()
+    start = randint(num_nodes)
+
+    printf("# ends:")
+    for (n in ends) {
+        printf(" %d", ends[n])
+        if (ends[n] >= num_nodes) { exit(1) }
+    }
+    printf("\n")
+
+    for (s_i = 0; s_i < num_nodes; s_i++) {
+        for (e_i = 0; e_i < num_nodes; e_i++) {
+            edgeset = edges[s_i,e_i]
+            if (!edgeset) {
+                continue;
+            }
+
+            for (c_i = 0; c_i < length(edgeset); c_i++) {
+                if (rand() < prob_eps) {
+                    printf("%d -> %d;\n",
+                        s_i, e_i)
+                } else {
+                    printf("%d -> %d '%s';\n",
+                        s_i, e_i, substr(edgeset, c_i, 1))
+                }
+            }
+        }
+    }
+
+    printf("\n")
+    printf("start: %d;\n", start)
+    printf("end:")
+    for (n in ends) {
+        printf("%s%d", n > 0 ? "," : " ", ends[n])
+    }
+    printf(";\n")
+}

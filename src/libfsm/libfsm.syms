@@ -25,8 +25,14 @@ fsm_hasedge
 fsm_hasincoming
 fsm_hasoutgoing
 
-# <fsm/out.h>
-fsm_print
+# <fsm/print.h>
+fsm_print_api
+fsm_print_c
+fsm_print_dot
+fsm_print_fsm
+fsm_print_ir
+fsm_print_irjson
+fsm_print_json
 
 # <fsm/fsm.h>
 fsm_clone
@@ -67,7 +73,6 @@ fsm_determinise_cache
 fsm_determinise_freecache
 fsm_complete
 fsm_minimise
-fsm_pretty
 fsm_concat
 fsm_subtract
 
@@ -84,4 +89,6 @@ fsm_exec
 fsm_fgetc
 fsm_sgetc
 
-fsm_out_cfrag # XXX: workaround for lx
+fsm_print_cfrag # XXX: workaround for lx
+make_ir # XXX: workaround for lx
+free_ir # XXX: workaround for lx

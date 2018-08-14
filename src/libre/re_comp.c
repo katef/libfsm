@@ -1,3 +1,9 @@
+/*
+ * Copyright 2018 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #include "re_comp.h"
 
 #include <ctype.h>
@@ -293,14 +299,6 @@ comp_iter(struct comp_env *env,
 
 	case AST_EXPR_ANY:
 		ANY(x, y);
-		break;
-
-	case AST_EXPR_MANY:
-		NEWSTATE(z);
-		EPSILON(x, z);
-		ANY(x, z);
-		EPSILON(z, x);
-		EPSILON(z, y);
 		break;
 
 	case AST_EXPR_REPEATED:

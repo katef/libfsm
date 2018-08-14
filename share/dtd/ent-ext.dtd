@@ -5,6 +5,5 @@
 
 <!ENTITY c.ext    "<filename>.c</filename>">
 <!ENTITY dot.ext  "<filename>.dot</filename>">
-<!ENTITY csv.ext  "<filename>.csv</filename>">
 <!ENTITY json.ext "<filename>.json</filename>">
 

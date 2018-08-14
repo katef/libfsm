@@ -92,17 +92,17 @@
 	'\a' -> $esc;
 	'\c' /./ -> $control;
 
-        # other metacharacters that can be escaped within square brackets
-        # for consistency's sake, although it isn't strictly necessary
-        '\$' -> $esc;
-        '\.' -> $esc;
-        '\[' -> $esc;
-        '\|' -> $esc;
-        '\(' -> $esc;
-        '\?' -> $esc;
-        '\*' -> $esc;
-        '\+' -> $esc;
-        '\{' -> $esc;
+	# other metacharacters that can be escaped within square brackets
+	# for consistency's sake, although it isn't strictly necessary
+	'\$' -> $esc;
+	'\.' -> $esc;
+	'\[' -> $esc;
+	'\|' -> $esc;
+	'\(' -> $esc;
+	'\?' -> $esc;
+	'\*' -> $esc;
+	'\+' -> $esc;
+	'\{' -> $esc;
 
 	'\d' -> $named__char__class;
 	'\D' -> $named__char__class;
@@ -124,7 +124,7 @@
 	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__char__class) -> $noesc;
 	'\' -> $invalid;
 
-        # FIXME: negated character classes, e.g. [:^alpha:]
+	# FIXME: negated character classes, e.g. [:^alpha:]
 	'[:alnum:]'  -> $named__char__class;
 	'[:alpha:]'  -> $named__char__class;
 	'[:ascii:]'  -> $named__char__class;

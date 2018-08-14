@@ -1,4 +1,4 @@
-LX?= ../../build/src/bin/lx/lx
+LX?= ../../build/bin/lx
 CC?= gcc
 
 CFLAGS+= -ansi -pedantic -Wall -Werror
@@ -13,10 +13,10 @@ clean:
 
 
 lexer.c: lexer.lx
-	${LX} -l c < ${.ALLSRC} > ${.TARGET}
+	${LX} -g fgetc -l c < lexer.lx > lexer.c
 
 lexer.h: lexer.lx
-	${LX} -l h < ${.ALLSRC} > ${.TARGET}
+	${LX} -g fgetc -l h < lexer.lx > lexer.h
 
 lexer.o: lexer.c
 	${CC} -c -DLX_HEADER='"lexer.h"' ${CFLAGS} ${.ALLSRC}

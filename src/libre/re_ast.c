@@ -25,7 +25,6 @@ free_iter(struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_MANY:
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_ANCHOR:
 		break;
@@ -174,16 +173,6 @@ re_ast_expr_any(void)
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
 	res->t = AST_EXPR_ANY;
-
-	return res;
-}
-
-struct ast_expr *
-re_ast_expr_many(void)
-{
-	struct ast_expr *res = calloc(1, sizeof(*res));
-	if (res == NULL) { return res; }
-	res->t = AST_EXPR_MANY;
 
 	return res;
 }

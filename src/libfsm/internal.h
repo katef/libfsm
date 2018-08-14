@@ -15,8 +15,18 @@
 
 struct set;
 
-/* TODO: +2 for SOL, EOL */
-/* TODO: +lots for FSM_EDGE_* */
+/*
+ * The alphabet (Sigma) for libfsm's FSM is arbitrary octets.
+ * These octets may or may not spell out UTF-8 sequences,
+ * depending on the context in which the FSM is used.
+ *
+ * Octets are implemented here as (unsigned char) values in C.
+ * As an implementation detail, we extend this range from 0..UCHAR_MAX
+ * to include "special" edge types after the last valid octet.
+ * Currently the only special edge type is the epsilon transition,
+ * for Thompson NFA.
+ */
+
 enum fsm_edge_type {
 	FSM_EDGE_EPSILON = UCHAR_MAX + 1
 };
@@ -45,7 +55,6 @@ struct fsm_state {
 
 	struct fsm_state *next;
 };
-
 
 struct fsm {
 	struct fsm_state *sl;

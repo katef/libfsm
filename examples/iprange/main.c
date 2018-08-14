@@ -40,10 +40,9 @@
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
-#include <fsm/out.h>
 #include <fsm/options.h>
 #include <fsm/pred.h>
-#include <fsm/out.h>
+#include <fsm/print.h>
 
 #include "tree.h"
 
@@ -197,7 +196,7 @@ get_to(struct record *r, unsigned oct, unsigned noct, const unsigned char *octs)
 	r->regs[oct].s = to;
 	r->regs[oct].c = octs[oct];
 
-	for (int i = oct + 1; i < noct; i++) {
+	for (unsigned i = oct + 1; i < noct; i++) {
 		r->regs[i].s = NULL;
 	}
 
@@ -225,8 +224,8 @@ gen_edge_range(struct record *r, unsigned oct, const unsigned char *octs,
 		assert(r->regs[oct].c == octs[oct]);
 	}
 
-	for (int i = range_start; i <= range_end; i++) {
-		e = fsm_addedge_literal(r->fsm, from, to, i);
+	for (unsigned i = range_start; i <= range_end; i++) {
+		e = fsm_addedge_literal(r->fsm, from, to, (unsigned char) i);
 		if (e == NULL) {
 			perror("fsm_addedge_literal");
 			exit(-1);
@@ -243,10 +242,10 @@ gen_range(struct record *r, unsigned noct, int prefix_octs, unsigned char range_
 		return;
 	}
 
-	for (int i = 0; i <= prefix_octs; i++) {
+	for (unsigned i = 0; (int) i <= prefix_octs; i++) {
 		int final = 0;
 
-		if ((i == prefix_octs && range_start == 0 && range_end == 255) ||
+		if (((int) i == prefix_octs && range_start == 0 && range_end == 255) ||
 		    (i == noct)) {
 			final = 1;
 		}
@@ -257,7 +256,7 @@ gen_range(struct record *r, unsigned noct, int prefix_octs, unsigned char range_
 		}
 	}
 
-	if (prefix_octs != noct) {
+	if (prefix_octs != (int) noct) {
 		gen_edge_range(r, prefix_octs + 1, octets, range_start, range_end, noct, 1);
 	}
 }
@@ -286,7 +285,7 @@ handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
 	 * Find the first differing byte in the address.
 	 */
 	dbyte = 0;
-	for (int i = 0; i <= noct; i++) {
+	for (unsigned i = 0; i <= noct; i++) {
 		if (socts[i] != eocts[i]) {
 			dbyte = i;
 			break;
@@ -333,7 +332,7 @@ handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
 			gen_range(r, noct, dbyte - 1, socts[dbyte], eocts[dbyte] - 1, socts);
 			socts[dbyte] = eocts[dbyte];
 			dbyte++;
-			for (int i = dbyte; i <= noct; i++) {
+			for (unsigned i = dbyte; i <= noct; i++) {
 				if (socts[i] != eocts[i]) {
 					dbyte = i;
 					break;
@@ -351,7 +350,7 @@ handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
 		 * shortest matches later.
 		 */
 
-		int spos = noct;
+		unsigned spos = noct;
 
 		/*
 		 * When our start position isn't all zeroes, we need to
@@ -359,7 +358,7 @@ handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
 		 * range. For example 1.0.1.0 - 1.2.255.255 must first
 		 * generate `1.0.[1-255]`.
 		 */
-		for (int i = noct; i >= dbyte; i--) {
+		for (unsigned i = noct; i >= dbyte; i--) {
 			if (socts[i] != 0) {
 				spos = i;
 				break;
@@ -372,8 +371,8 @@ handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
 		 * our range forward only to the ending octet (instead of 255).
 		 */
 		if (spos == dbyte) {
-			gen_range(r, noct, spos-1, socts[spos], eocts[spos] - 1, socts);
-			for (int i = spos + 1; i <= noct; i++) {
+			gen_range(r, noct, spos - 1, socts[spos], eocts[spos] - 1, socts);
+			for (unsigned i = spos + 1; i <= noct; i++) {
 				socts[i] = 0;
 			}
 
@@ -381,7 +380,7 @@ handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
 		} else {
 			gen_range(r, noct, spos - 1, socts[spos], 255, socts);
 
-			for (int i = spos; i <= noct; i++) {
+			for (unsigned i = spos; i <= noct; i++) {
 				socts[i] = 0;
 			}
 
@@ -396,7 +395,7 @@ handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
 		 * be elsewhere. But it can't be before the original differing
 		 * byte, so we start there.
 		 */
-		for (int i = 0; i <= noct; i++) {
+		for (unsigned i = 0; i <= noct; i++) {
 			if (socts[i] != eocts[i]) {
 				dbyte = i;
 				break;
@@ -444,22 +443,36 @@ carryopaque(const struct fsm_state **set, size_t n,
 }
 
 static int
-leaf(FILE *f, const struct fsm *fsm, const struct fsm_state *state,
-	const void *opaque)
+leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
 {
-	const struct record *r;
+	const struct record *r = state_opaque;
 
-	(void) opaque;
+	(void) leaf_opaque;
 
-	if (!fsm_isend(fsm, state)) {
+	if (r == NULL) {
 		fprintf(f, "return -1;");
 		return 0;
 	}
 
-	r = fsm_getopaque(fsm, state);
-	assert(r != NULL);
-
 	fprintf(f, "return 0x%u; /* %s */", r->id, r->rec);
+
+	return 0;
+}
+
+static int
+endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
+{
+	const struct record *r;
+
+	assert(f != NULL);
+	assert(state_opaque != NULL);
+	assert(endleaf_opaque == NULL);
+
+	(void) endleaf_opaque;
+
+	r = state_opaque;
+
+	fprintf(f, "label = <%s>", r->rec); /* XXX: escape */
 
 	return 0;
 }
@@ -682,9 +695,11 @@ main(int argc, char **argv)
 		opt.cp          = "c";
 		opt.leaf        = leaf;
 		opt.leaf_opaque = NULL;
-		fsm_print(fsm, stdout, FSM_OUT_C);
+		fsm_print_c(stdout, fsm);
 	} else if (odot) {
-		fsm_print(fsm, stdout, FSM_OUT_DOT);
+		opt.endleaf        = endleaf_dot;
+		opt.endleaf_opaque = NULL;
+		fsm_print_dot(stdout, fsm);
 	}
 }
 
