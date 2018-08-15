@@ -1,1 +1,1 @@
-ab[c\Q-][\E]de
+^ab[c\Q-][\E]de$

@@ -6,7 +6,6 @@
 2  ->  3 "c"; # e.g. "abc"
 3  ->  4 "d"; # e.g. "abcd"
 4  ->  5 "e"; # e.g. "abcde"
-5  ->  6 "\n"; # e.g. "abcde\n"
 
 start: 0;
-end:   6;
+end:   5;

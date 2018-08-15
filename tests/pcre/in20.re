@@ -1,1 +1,1 @@
-cheese[3,2}
+^cheese[3,2}$
