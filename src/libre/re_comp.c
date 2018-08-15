@@ -231,8 +231,10 @@ comp_iter(struct comp_env *env,
 		struct fsm_state *z, *zn;
 		struct fsm_state *cur_x = x;
 		const size_t count = n->u.concat_n.count;
+		enum re_flags saved = env->flags;
 		assert(count >= 1);
 		NEWSTATE(z);
+
 		for (i = 0; i < count; i++) {
 			struct ast_expr *cur = n->u.concat_n.n[i];
 			struct ast_expr *next = i == count ? NULL : n->u.concat_n.n[i + 1];
@@ -241,7 +243,7 @@ comp_iter(struct comp_env *env,
 				/* Save the current flags in the flags node,
 				 * restore when done evaluating the concat
 				 * node's right subtree. */
-				cur->u.flags.saved = env->flags;
+				saved = env->flags;
 				
 				/* Note: in cases like `(?i-i)`, the negative is
 				 * required to take precedence. */
@@ -264,11 +266,9 @@ comp_iter(struct comp_env *env,
 			    cur);
 			cur_x = z;
 			z = zn;
-
-			if (cur->t == AST_EXPR_FLAGS) { /* restore flags */
-				env->flags = cur->u.flags.saved;
-			}
 		}
+		env->flags = saved;
+
 		break;
 	}
 

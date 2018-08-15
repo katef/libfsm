@@ -144,11 +144,6 @@ struct ast_expr {
 		struct {
 			enum re_flags pos;
 			enum re_flags neg;
-			/* Previous flags, saved here and restored
-			 * when done compiling the flags node's subtree.
-			 * Since `struct ast_expr` contains a union,
-			 * this space is already allocated. */
-			enum re_flags saved;
 		} flags;
 		struct {
 			enum re_ast_anchor_type t;
