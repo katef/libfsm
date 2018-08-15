@@ -255,7 +255,7 @@ if __name__ == '__main__':
 
             # save the DOT for the NFA, since it's easier to read
             cfn = open(candidate + '.dot', 'w')
-            res = subprocess.call([RE, '-pn', '-ldot', '-r', 'pcre', re],
+            res = subprocess.call([RE, '-n', '-ldot', '-r', 'pcre', re],
                                   stdout=cfn, stderr=dev_null)
             cfn.close()
 
@@ -264,7 +264,7 @@ if __name__ == '__main__':
             scenario.close()
 
             ufn = open(unioned + '.dot', 'w')
-            res = subprocess.call([RE, '-pn', '-ldot', '-r', dialect] + literals,
+            res = subprocess.call([RE, '-n', '-ldot', '-r', dialect] + literals,
                                   stdout=ufn, stderr=dev_null)
             ufn.close()
 
