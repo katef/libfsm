@@ -54,6 +54,7 @@ SUBDIR += tests/literal
 SUBDIR += tests/minimise
 SUBDIR += tests/native
 SUBDIR += tests/pcre
+SUBDIR += tests/pcre-anchor
 SUBDIR += tests/pred
 SUBDIR += tests/reverse
 SUBDIR += tests/union

@@ -8,6 +8,9 @@ RE='build/bin/re'
 FSM='build/bin/fsm'
 DOT='dot'
 
+GEN_TESTS = False
+OUT_TEST_DIR='tests/pcre-anchor'
+
 tests = [
     ## basic start/end anchoring, without nesting/nullability
     { 're': "^abc$",
@@ -216,6 +219,11 @@ if __name__ == '__main__':
         cf = open(candidate, 'w')
         uf = open(unioned, 'w')
 
+        if GEN_TESTS:
+            test_re = open(os.path.join(OUT_TEST_DIR, 'in%d.re' % (i)), 'w')
+            test_re.write(re)
+            test_re.close()
+
         res = subprocess.call([RE, '-p', '-r', 'pcre', re],
                               stdout=cf, stderr=dev_null)
         cf.close()
@@ -225,14 +233,29 @@ if __name__ == '__main__':
             errors += 1
             continue
 
+        if GEN_TESTS:
+            test_out = open(os.path.join(OUT_TEST_DIR, 'out%d.fsm' % (i)), 'w')
+        else:
+            test_out = None
+            
         if len(literals) == 0:
-            uf.write('start: 0;\n') # unsatisfiable DFA
+            unsatisfiable_DFA = 'start: 0;\n'
+            uf.write(unsatisfiable_DFA)
             res = 0
             uf.close()
+
+            if test_out:
+                test_out.write(unsatisfiable_DFA)
+                test_out.close()
         else:
             res = subprocess.call([RE, '-p', '-r', dialect, ] + literals,
                                   stdout=uf, stderr=dev_null)
             uf.close()
+
+            if test_out:
+                res = subprocess.call([RE, '-p', '-r', dialect, ] + literals,
+                                      stdout=test_out, stderr=dev_null)
+                test_out.close()
 
         if res != 0:
             print("ERROR BUILDING UNIONED: %s" % (str(literals)))
