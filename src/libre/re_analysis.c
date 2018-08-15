@@ -5,7 +5,7 @@
  */
 
 #include "re_analysis.h"
-#include "re_print.h"
+#include "print.h"
 
 #include <string.h>
 
@@ -69,8 +69,6 @@ re_ast_analysis(struct ast_re *ast)
 		}
 		return res;
 	}
-
-	/* re_ast_print(stderr, ast); */
 
 	/* Next passes, mark all nodes in a
 	 * first and/or last position. */
@@ -230,7 +228,6 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_MANY:
 		/* no special handling */
 		break;
 
@@ -328,7 +325,6 @@ always_consumes_input(const struct ast_expr *n, int thud)
 	switch (n->t) {
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_MANY:
 	case AST_EXPR_CHAR_CLASS:
 		return 1;
 
@@ -430,7 +426,6 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 	/* These are the types that actually consume input. */
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_MANY:
 	case AST_EXPR_CHAR_CLASS:
 		if (!is_nullable(n)) {
 			env->past_any_consuming = 1;
@@ -548,7 +543,6 @@ assign_firsts(struct ast_expr *n)
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_MANY:
 	case AST_EXPR_CHAR_CLASS:
 		set_flags(n, RE_AST_FLAG_FIRST_STATE);
 		break;
@@ -606,7 +600,6 @@ assign_lasts(struct ast_expr *n) {
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_MANY:
 	case AST_EXPR_CHAR_CLASS:
 		set_flags(n, RE_AST_FLAG_LAST_STATE);
 		break;

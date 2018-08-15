@@ -148,7 +148,6 @@ comp_iter(struct comp_env *env,
     struct fsm_state *x, struct fsm_state *y,
     struct ast_expr *n)
 {
-	struct fsm_state *z;
 	enum link_types link_start, link_end;
 
 	if (n == NULL) { return 1; }
@@ -418,7 +417,6 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_CHAR_CLASS:
-	case AST_EXPR_MANY:
 	case AST_EXPR_ALT_N:
 		return 0;
 	default:
@@ -581,7 +579,6 @@ decide_linking(struct comp_env *env,
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_MANY:
 	case AST_EXPR_CHAR_CLASS:
 
 	case AST_EXPR_CONCAT_N:

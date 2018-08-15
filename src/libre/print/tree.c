@@ -113,11 +113,8 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		size_t i, count = n->u.concat_n.count;
 		fprintf(f, "CONCAT (%u):\n", (unsigned)count);
 
-		/* FIXME: This is very suspicious */
-		if (count > 1000) { assert(0); }
-
 		for (i = 0; i < count; i++) {
-			pp_iter(f, indent + 1*IND, n->u.concat_n.n[i]);
+			pp_iter(f, opt, indent + 1*IND, n->u.concat_n.n[i]);
 		}
 		break;
 	}
@@ -126,7 +123,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		size_t i, count = n->u.alt_n.count;
 		fprintf(f, "ALT (%u):\n", (unsigned)count);
 		for (i = 0; i < count; i++) {
-			pp_iter(f, indent + 1*IND, n->u.alt_n.n[i]);
+			pp_iter(f, opt, indent + 1*IND, n->u.alt_n.n[i]);
 		}
 		break;
 	}

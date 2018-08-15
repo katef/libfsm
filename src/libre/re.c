@@ -95,7 +95,6 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 {
 	const struct dialect *m;
 	struct ast_re *ast = NULL;
-	struct fsm *new = NULL;
 	enum re_analysis_res res;
 	
 	assert(getc != NULL);
@@ -119,11 +118,18 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	/* Do a complete pass over the AST, filling in other details. */
 	res = re_ast_analysis(ast);
 
-	if (res < 0) { goto error; }
+	if (res < 0) { goto cleanup; }
 
 	ast->unsatisfiable = (res == RE_ANALYSIS_UNSATISFIABLE);
 
 	return ast;
+
+cleanup:
+	if (ast != NULL) { re_ast_free(ast); }
+	if (err != NULL) {
+		err->e = RE_EERRNO;
+	}
+	return NULL;
 }
 
 struct fsm *
@@ -133,6 +139,19 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 {
 	struct ast_re *ast;
 	struct fsm *new;
+	const struct dialect *m;
+
+	m = re_dialect(dialect);
+
+	if (m == NULL) {
+		if (err != NULL) {
+			err->e = RE_EBADDIALECT;
+		}
+		return NULL;
+	}
+	if (!m->implicitly_anchored) {
+		flags |= RE_UNANCHORED;
+	}
 
 	ast = re_parse(dialect, getc, opaque, opt, flags, err);
 	if (ast == NULL) {
