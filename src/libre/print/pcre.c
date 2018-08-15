@@ -61,11 +61,32 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		pp_iter(f, opt, n->u.concat.r);
 		break;
 
+	case AST_EXPR_CONCAT_N:
+	{
+		size_t i;
+		for (i = 0; i < n->u.concat_n.count; i++) {
+			pp_iter(f, opt, n->u.concat_n.n[i]);
+		}
+		break;
+	}
+
 	case AST_EXPR_ALT:
 		pp_iter(f, opt, n->u.alt.l);
 		fprintf(f, "|");
 		pp_iter(f, opt, n->u.alt.r);
 		break;
+
+	case AST_EXPR_ALT_N:
+	{
+		size_t i;
+		for (i = 0; i < n->u.alt_n.count; i++) {
+			pp_iter(f, opt, n->u.alt_n.n[i]);
+			if (i < n->u.alt_n.count - 1) {
+				fprintf(f, "|");
+			}
+		}
+		break;
+	}
 
 	case AST_EXPR_LITERAL:
 		pcre_escputc(f, opt, n->u.literal.c);

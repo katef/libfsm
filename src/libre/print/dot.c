@@ -58,11 +58,33 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		pp_iter(f, opt, n, n->u.concat.r);
 		break;
 
+	case AST_EXPR_CONCAT_N:
+	{
+		size_t i;
+		fprintf(f, "\tn%p [ label = <CONCAT|%lu> ];\n",
+		    (void *) n, n->u.concat_n.count);
+		for (i = 0; i < n->u.concat_n.count; i++) {
+			pp_iter(f, opt, n, n->u.concat_n.n[i]);
+		}
+		break;
+	}
+
 	case AST_EXPR_ALT:
 		fprintf(f, "\tn%p [ label = <ALT> ];\n", (void *) n);
 		pp_iter(f, opt, n, n->u.alt.l);
 		pp_iter(f, opt, n, n->u.alt.r);
 		break;
+
+	case AST_EXPR_ALT_N:
+	{
+		size_t i;
+		fprintf(f, "\tn%p [ label = <ALT|%lu> ];\n",
+		    (void *) n, n->u.alt_n.count);
+		for (i = 0; i < n->u.alt_n.count; i++) {
+			pp_iter(f, opt, n, n->u.alt_n.n[i]);
+		}
+		break;
+	}
 
 	case AST_EXPR_LITERAL:
 		fprintf(f, "\tn%p [ label = <LITERAL|", (void *) n);
