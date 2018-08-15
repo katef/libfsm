@@ -308,10 +308,9 @@
 		};
 
 		list-of-alts: () -> (node :ast_expr) = {
-			node = alt();
-			/* a = alt();
-                         * r = <ast-expr-empty>;
-			 * node = <ast-expr-alt>(a, r); */
+			a = alt();
+			r = <ast-expr-empty>;
+			node = <ast-expr-alt>(a,r);
 	  	||
 			a = alt();
 			ALT;
@@ -322,7 +321,18 @@
 			node = <ast-expr-empty>();
 		};
 	] = {
-		node = list-of-alts();
+		/* don't wrap a single alt in an alt chain */
+		node = alt();
+	||
+		/* keep alts into a linked list -- every right node
+		 * is either another alt or empty. */
+		a = alt();
+		ALT;
+		r = list-of-alts();
+		node = <ast-expr-alt>(a, r);
+	##
+		<err-expected-alts>;
+		node = <ast-expr-empty>();
 	};
 
 	re_native: () -> (node :ast_expr) = {

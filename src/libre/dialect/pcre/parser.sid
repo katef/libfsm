@@ -425,6 +425,9 @@
 		ALT;
 		r = list-of-alts();
 		node = <ast-expr-alt>(a, r);
+	##
+		<err-expected-alts>;
+		node = <ast-expr-empty>();
 	};
 
 	re_pcre: () -> (node :ast_expr) = {
