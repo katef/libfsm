@@ -101,9 +101,7 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	m = re_dialect(dialect);
 	if (m == NULL) {
-		if (err != NULL) {
-			err->e = RE_EBADDIALECT;
-		}
+		if (err != NULL) { err->e = RE_EBADDIALECT; }
 		return NULL;
 	}
 
@@ -118,18 +116,15 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	/* Do a complete pass over the AST, filling in other details. */
 	res = re_ast_analysis(ast);
 
-	if (res < 0) { goto cleanup; }
+	if (res < 0) {
+		re_ast_free(ast);
+		if (err != NULL) { err->e = RE_EERRNO; }
+		return NULL;
+	}
 
 	ast->unsatisfiable = (res == RE_ANALYSIS_UNSATISFIABLE);
 
 	return ast;
-
-cleanup:
-	if (ast != NULL) { re_ast_free(ast); }
-	if (err != NULL) {
-		err->e = RE_EERRNO;
-	}
-	return NULL;
 }
 
 struct fsm *
@@ -144,19 +139,13 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	m = re_dialect(dialect);
 
 	if (m == NULL) {
-		if (err != NULL) {
-			err->e = RE_EBADDIALECT;
-		}
+		if (err != NULL) { err->e = RE_EBADDIALECT; }
 		return NULL;
 	}
-	if (!m->implicitly_anchored) {
-		flags |= RE_UNANCHORED;
-	}
+	if (!m->implicitly_anchored) { flags |= RE_UNANCHORED; }
 
 	ast = re_parse(dialect, getc, opaque, opt, flags, err);
-	if (ast == NULL) {
-		return NULL;
-	}
+	if (ast == NULL) { return NULL; }
 
 	/* If the RE is inherently unsatisfiable, then free the
 	 * AST and replace it with an empty tombstone node.
@@ -189,9 +178,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	 */
 
 	if (flags & RE_REVERSE) {
-		if (!fsm_reverse(new)) {
-			goto error;
-		}
+		if (!fsm_reverse(new)) { goto error; }
 	}
 
 	return new;
