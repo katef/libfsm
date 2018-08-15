@@ -62,6 +62,7 @@ fprintf_flags(FILE *f, enum re_ast_flags flags)
 		fprintf(f, ")");
 }
 
+static void
 pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *n)
 {
 	assert(f != NULL);
