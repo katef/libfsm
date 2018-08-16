@@ -49,13 +49,9 @@ fprintf_flags(FILE *f, enum re_ast_flags flags)
 			fprintf(f, "%s", S);				\
 		}
 	
-	PR_FLAG(START_ANCHOR, "^");
 	PR_FLAG(FIRST_STATE, "F");
-	
-	PR_FLAG(END_ANCHOR, "$");
 	PR_FLAG(LAST_STATE, "L");
 	PR_FLAG(UNSATISFIABLE, "X");
-	
 	PR_FLAG(NULLABLE, "0");
 
 	#undef PR_FLAG

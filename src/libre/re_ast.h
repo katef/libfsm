@@ -59,33 +59,20 @@ enum re_ast_anchor_type {
 
 /* Flags used during AST analysis. Not all are valid for all node types. */
 enum re_ast_flags {
-	/* literal, char-class: The first state for this node is in the
-	 * epsilon closure of the starting state in the FSM.
-	 *
-	 * repeated, group: The nested expression contains a first state.
-	 *
-	 * concat, alt: The tree contains an end state. (left or right,
-	 * depending on whether it's n->flags or n->u._.flags_r.) */
+	/* The node can appear at the beginning of input,
+	 * possibly preceded by other nullable nodes. */
 	RE_AST_FLAG_FIRST_STATE = 0x01,
 
-	/* The node has a start anchor (^) before its first state that
-	 * consumes input. */
-	RE_AST_FLAG_START_ANCHOR = 0x02,
-
-	/* The last state for this node is in the epsilon closure of
-	 * the end state in the FSM. */
-	RE_AST_FLAG_LAST_STATE = 0x04,
-
-	/* The node has an end anchor after its last state that
-	 * consumes input. */
-	RE_AST_FLAG_END_ANCHOR = 0x08,
+	/* This node can appear at the end of input, possibly
+	 * followed by nullable nodes. */
+	RE_AST_FLAG_LAST_STATE = 0x02,
 
 	/* The node caused the regex to become unsatisfiable. */
-	RE_AST_FLAG_UNSATISFIABLE = 0x10,
+	RE_AST_FLAG_UNSATISFIABLE = 0x04,
 
 	/* The node is not always evaluated, such as nodes that
 	 * are repeated at least 0 times. */
-	RE_AST_FLAG_NULLABLE = 0x20,
+	RE_AST_FLAG_NULLABLE = 0x08,
 
 	RE_AST_FLAG_NONE = 0x00
 };

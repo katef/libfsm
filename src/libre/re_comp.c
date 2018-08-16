@@ -601,7 +601,8 @@ decide_linking(struct comp_env *env,
 	switch (side) {
 	case LINK_START:
 	{
-		const int start = (n->flags & RE_AST_FLAG_START_ANCHOR) != 0;
+		const int start = (n->t == AST_EXPR_ANCHOR
+		    && n->u.anchor.t == RE_AST_ANCHOR_START);
 		const int first = (n->flags & RE_AST_FLAG_FIRST_STATE) != 0;
 		const int nullable = (n->flags & RE_AST_FLAG_NULLABLE) != 0;
 		(void)nullable;
@@ -628,7 +629,8 @@ decide_linking(struct comp_env *env,
 
 	case LINK_END:
 	{
-		const int end = (n->flags & RE_AST_FLAG_END_ANCHOR) != 0;
+		const int end = (n->t == AST_EXPR_ANCHOR
+		    && n->u.anchor.t == RE_AST_ANCHOR_END);
 		const int last = (n->flags & RE_AST_FLAG_LAST_STATE) != 0;
 		const int nullable = (n->flags & RE_AST_FLAG_NULLABLE) != 0;
 		(void)nullable;

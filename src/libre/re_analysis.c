@@ -405,8 +405,6 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				assert(0 == (n->flags & RE_AST_FLAG_FIRST_STATE));
 				return RE_ANALYSIS_UNSATISFIABLE;
 			}
-
-			set_flags(n, RE_AST_FLAG_START_ANCHOR);
 		} else if (n->u.anchor.t == RE_AST_ANCHOR_END) {
 			if (env->followed_by_consuming) {
 				/* See above: This is a near perfect subset of
@@ -417,7 +415,6 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				set_flags(n, RE_AST_FLAG_UNSATISFIABLE);
 				return RE_ANALYSIS_UNSATISFIABLE;
 			}
-			set_flags(n, RE_AST_FLAG_END_ANCHOR);
 		} else {
 			assert(0);
 		}
