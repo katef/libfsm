@@ -197,6 +197,12 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		fprintf(f, ")");
 		break;
 
+	case AST_EXPR_ANCHOR:
+		assert(n->u.anchor.t == RE_AST_ANCHOR_START
+		    || n->u.anchor.t == RE_AST_ANCHOR_END);
+		fprintf(f, "%s", n->u.anchor.t == RE_AST_ANCHOR_START ? "START" : "END");
+		break;
+
 	case AST_EXPR_FLAGS:
 		abort();
 

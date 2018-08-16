@@ -160,6 +160,12 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		fprintf(f, ")");
 		break;
 
+	case AST_EXPR_ANCHOR:
+		assert(n->u.anchor.t == RE_AST_ANCHOR_START
+		    || n->u.anchor.t == RE_AST_ANCHOR_END);
+		fprintf(f, "%s", n->u.anchor.t == RE_AST_ANCHOR_START ? "^" : "$");
+		break;
+
 	case AST_EXPR_FLAGS:
 		fprintf(f, "\tn%p [ label = <{FLAGS|{+", (void *) n);
 		re_flags_print(f, n->u.flags.pos);
