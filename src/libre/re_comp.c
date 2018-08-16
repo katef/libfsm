@@ -24,6 +24,7 @@ struct comp_env {
 	 * Also, some states in a first/last context need to link
 	 * directly to the overall start/end states, either in
 	 * place of or along with the adjacent states. */
+	struct ast_expr *root;
 	struct fsm_state *start;
 	struct fsm_state *end;
 	struct fsm_state *start_any_loop;
@@ -105,6 +106,7 @@ re_comp_ast(struct ast_re *ast,
 
 	env.start = x;
 	env.end = y;
+	env.root = ast->expr;
 
 	if (!comp_iter(&env, x, y, ast->expr)) { goto error; }
 
@@ -228,16 +230,18 @@ comp_iter(struct comp_env *env,
 	case AST_EXPR_CONCAT_N:
 	{
 		size_t i;
-		struct fsm_state *z, *zn;
+		struct fsm_state *z, *right;
 		struct fsm_state *cur_x = x;
 		const size_t count = n->u.concat_n.count;
 		enum re_flags saved = env->flags;
 		assert(count >= 1);
+
 		NEWSTATE(z);
 
 		for (i = 0; i < count; i++) {
 			struct ast_expr *cur = n->u.concat_n.n[i];
-			struct ast_expr *next = i == count ? NULL : n->u.concat_n.n[i + 1];
+			struct ast_expr *next = i == count - 1
+			    ? NULL : n->u.concat_n.n[i + 1];
 
 			if (cur->t == AST_EXPR_FLAGS) {
 				/* Save the current flags in the flags node,
@@ -251,8 +255,8 @@ comp_iter(struct comp_env *env,
 				env->flags &=~ cur->u.flags.neg;
 			}
 
-			NEWSTATE(zn);
-			if (next != NULL && !can_skip_concat_state_and_epsilon(cur, next)) {
+			if (next != NULL
+			    && !can_skip_concat_state_and_epsilon(cur, next)) {
 				/* If nullable, add an extra state & epsilion
 				 * as a one-way gate */
 				struct fsm_state *diode;
@@ -261,11 +265,15 @@ comp_iter(struct comp_env *env,
 				cur_x = diode;
 			}
 
-			RECURSE(cur_x,
-			    (i < n->u.concat_n.count - 1 ? z : y),
-			    cur);
-			cur_x = z;
-			z = zn;
+			right = (i < count - 1 ? z : y);
+			RECURSE(cur_x, right, cur);
+
+			if (i < count - 1) {
+				struct fsm_state *zn;
+				cur_x = z;
+				NEWSTATE(zn);
+				z = zn;
+			}
 		}
 		env->flags = saved;
 
@@ -275,20 +283,15 @@ comp_iter(struct comp_env *env,
 	case AST_EXPR_ALT_N:
 	{
 		size_t i;
-		struct fsm_state *alt_a, *alt_z;
 		const size_t count = n->u.alt_n.count;
 		assert(count > 1);
-		
+
 		for (i = 0; i < count; i++) {
-			struct ast_expr *cur = n->u.alt_n.n[i];
-			assert(cur != NULL);
-			NEWSTATE(alt_a);
-			NEWSTATE(alt_z);
-			EPSILON(x, alt_a);
-			EPSILON(alt_z, y);
-			RECURSE(alt_a, alt_z, cur);
-		}
-		
+			/* CONCAT handles adding extra states and
+			 * epsilons when necessary, so there isn't much
+			 * more to do here. */
+			RECURSE(x, y, n->u.alt_n.n[i]);
+		}		
 		break;
 	}
 
@@ -418,6 +421,7 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_CHAR_CLASS:
 	case AST_EXPR_ALT_N:
+	case AST_EXPR_ANCHOR:
 		return 0;
 	default:
 		break;
@@ -564,6 +568,7 @@ decide_linking(struct comp_env *env,
 	assert(env != NULL);
 
 	if (!(env->flags & RE_UNANCHORED)) { return LINK_TOP_DOWN; }	
+	if (n == env->root) { return LINK_TOP_DOWN; }
 
 	switch (n->t) {
 	case AST_EXPR_EMPTY:
