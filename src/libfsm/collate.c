@@ -51,7 +51,7 @@ fsm_collate(struct fsm *fsm,
 			}
 
 			if (!fsm_addedge_epsilon(fsm, s, new)) {
-				/* TODO: free new */
+				fsm_removestate(fsm, new);
 				return NULL;
 			}
 		}

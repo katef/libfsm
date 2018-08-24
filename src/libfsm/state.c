@@ -37,7 +37,7 @@ fsm_addstate(struct fsm *fsm)
 
 	assert(fsm != NULL);
 
-	new = malloc(sizeof *new);
+	new = fsm->alloc.cb(NULL, sizeof *new, fsm->alloc.opaque);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -63,9 +63,12 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 	struct fsm_state *s;
 	struct fsm_edge *e;
 	struct set_iter it;
+	struct alloc_closure *alloc;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
+
+	alloc = &fsm->alloc;
 
 	/* for endcount accounting */
 	fsm_setend(fsm, state, 0);
@@ -78,7 +81,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 
 	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
 		set_free(e->sl);
-		free(e);
+		(void)alloc->cb(e, 0, alloc->opaque);
 	}
 	set_free(state->edges);
 
@@ -101,7 +104,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 				}
 
 				next = (*p)->next;
-				free(*p);
+				(void)alloc->cb(*p, 0, alloc->opaque);
 				*p = next;
 				break;
 			}

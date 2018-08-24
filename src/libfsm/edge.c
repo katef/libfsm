@@ -17,7 +17,8 @@
 #include "internal.h"
 
 struct fsm_edge *
-fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type)
+fsm_addedge(struct alloc_closure *alloc,
+    struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type)
 {
 	struct fsm_edge *e, new;
 
@@ -27,7 +28,7 @@ fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type typ
 	new.symbol = type;
 	e = set_contains(from->edges, &new);
 	if (e == NULL) {
-		e = malloc(sizeof *e);
+		e = alloc->cb(NULL, sizeof *e, alloc->opaque);
 		if (e == NULL) {
 			return NULL;
 		}
@@ -57,7 +58,7 @@ fsm_addedge_epsilon(struct fsm *fsm,
 
 	(void) fsm;
 
-	return fsm_addedge(from, to, FSM_EDGE_EPSILON);
+	return fsm_addedge(&fsm->alloc, from, to, FSM_EDGE_EPSILON);
 }
 
 struct fsm_edge *
@@ -74,7 +75,7 @@ fsm_addedge_any(struct fsm *fsm,
 	(void) fsm;
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (!(e = fsm_addedge(from, to, i))) {
+		if (!(e = fsm_addedge(&fsm->alloc, from, to, i))) {
 			return NULL;
 		}
 	}
@@ -93,7 +94,7 @@ fsm_addedge_literal(struct fsm *fsm,
 
 	(void) fsm;
 
-	return fsm_addedge(from, to, (unsigned char) c);
+	return fsm_addedge(&fsm->alloc, from, to, (unsigned char) c);
 }
 
 struct fsm_edge *

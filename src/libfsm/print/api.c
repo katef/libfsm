@@ -63,10 +63,13 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 	struct fsm_state *s, *start;
 	struct bm *a; /* indexed by "to" state number */
 	unsigned n;
+	struct alloc_closure *alloc;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
+
+	alloc = (struct alloc_closure *)&fsm->alloc;
 
 /* TODO: leaf callback for opaques */
 
@@ -115,7 +118,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 
-	a = malloc(n * sizeof *a);
+	a = alloc->cb(NULL, n * sizeof *a, alloc->opaque);
 	if (a == NULL) {
 		/* XXX */
 		return;
@@ -192,7 +195,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 		}
 	}
 
-	free(a);
+	(void)alloc->cb(a, 0, alloc->opaque);
 
 	fprintf(f, "\n");
 

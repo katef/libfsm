@@ -9,7 +9,6 @@
 #include <stddef.h>
 
 #include <adt/set.h>
-#include <adt/xalloc.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -29,10 +28,13 @@ static struct mapping *
 mapping_ensure(struct fsm *fsm, struct mapping **head, struct fsm_state *old)
 {
 	struct mapping *m;
+	struct alloc_closure *alloc;
 
 	assert(fsm != NULL);
 	assert(head != NULL);
 	assert(old != NULL);
+
+	alloc = &fsm->alloc;
 
 	/* Find an existing mapping */
 	for (m = *head; m != NULL; m = m->next) {
@@ -43,14 +45,14 @@ mapping_ensure(struct fsm *fsm, struct mapping **head, struct fsm_state *old)
 
 	/* Otherwise, make a new one */
 	{
-		m = malloc(sizeof *m);
+		m = alloc->cb(NULL, sizeof *m, alloc->opaque);
 		if (m == NULL) {
 			return 0;
 		}
 
 		m->new = fsm_addstate(fsm);
 		if (m->new == NULL) {
-			free(m);
+			(void)alloc->cb(m, 0, alloc->opaque);
 			return 0;
 		}
 
@@ -67,7 +69,7 @@ mapping_ensure(struct fsm *fsm, struct mapping **head, struct fsm_state *old)
 }
 
 static void
-mapping_free(struct mapping *mapping)
+mapping_free(struct alloc_closure *alloc, struct mapping *mapping)
 {
 	struct mapping *next;
 	struct mapping *m;
@@ -75,7 +77,7 @@ mapping_free(struct mapping *mapping)
 	for (m = mapping; m != NULL; m = next) {
 		next = m->next;
 
-		free(m);
+		(void)alloc->cb(m, 0, alloc->opaque);
 	}
 }
 
@@ -112,9 +114,12 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 	struct mapping *m;
 	struct mapping *start;
 	struct fsm_state *res;
+	struct alloc_closure *alloc;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
+
+	alloc = &fsm->alloc;
 
 	mappings = NULL;
 
@@ -144,11 +149,11 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 
 				to = mapping_ensure(fsm, &mappings, s);
 				if (to == NULL) {
-					mapping_free(mappings);
+					mapping_free(alloc, mappings);
 					return NULL;
 				}
 
-				if (!fsm_addedge(m->new, to->new, e->symbol)) {
+				if (!fsm_addedge(alloc, m->new, to->new, e->symbol)) {
 					return NULL;
 				}
 			}
@@ -158,7 +163,7 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 	}
 
 	res = start->new;
-	mapping_free(mappings);
+	mapping_free(alloc, mappings);
 
 	return res;
 }

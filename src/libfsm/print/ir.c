@@ -87,10 +87,13 @@ make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct f
 	struct set_iter it;
 	size_t i, j, k;
 	size_t n;
+	struct alloc_closure *alloc;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
 	assert(u != NULL);
+
+	alloc = (struct alloc_closure *)&fsm->alloc;
 
 	/*
 	 * The first pass here populates ranges[] by collating consecutive symbols
@@ -160,7 +163,7 @@ make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct f
 
 	qsort(ranges, n, sizeof *ranges, range_cmp);
 
-	groups = malloc(sizeof *groups * n); /* worst case */
+	groups = alloc->cb(NULL, sizeof *groups * n, alloc->opaque); /* worst case */
 	if (groups == NULL) {
 		return NULL;
 	}
@@ -174,7 +177,7 @@ make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct f
 
 		to = ranges[i].to;
 
-		p = malloc(sizeof *p * (n - i)); /* worst case */
+		p = alloc->cb(NULL, sizeof *p * (n - i), alloc->opaque); /* worst case */
 		if (p == NULL) {
 			j++;
 			goto error;
@@ -196,7 +199,7 @@ make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct f
 		{
 			void *tmp;
 
-			tmp = realloc(p, sizeof *p * k);
+			tmp = alloc->cb(p, sizeof *p * k, alloc->opaque);
 			if (tmp == NULL) {
 				j++;
 				goto error;
@@ -215,7 +218,7 @@ make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct f
 	{
 		void *tmp;
 
-		tmp = realloc(groups, sizeof *groups * j);
+		tmp = alloc->cb(groups, sizeof *groups * j, alloc->opaque);
 		if (tmp == NULL) {
 			goto error;
 		}
@@ -228,24 +231,24 @@ make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct f
 error:
 
 	for (i = 0; i < j; i++) {
-		free((void *) groups[i].ranges);
+		(void)alloc->cb((void *) groups[i].ranges, 0, alloc->opaque);
 	}
 
-	free(groups);
+	(void)alloc->cb(groups, 0, alloc->opaque);
 
 	return NULL;
 }
 
 static void
-free_groups(struct ir_group *groups, size_t n)
+free_groups(struct alloc_closure *alloc, struct ir_group *groups, size_t n)
 {
 	size_t j;
 
 	for (j = 0; j < n; j++) {
-		free((void *) groups[j].ranges);
+		(void)alloc->cb((void *) groups[j].ranges, 0, alloc->opaque);
 	}
 
-	free(groups);
+	(void)alloc->cb(groups, 0, alloc->opaque);
 }
 
 static void
@@ -300,7 +303,7 @@ group_max(const struct ir_group *groups, size_t n)
 }
 
 static struct ir_range *
-make_holes(const struct bm *bm, size_t *n)
+make_holes(struct alloc_closure *alloc, const struct bm *bm, size_t *n)
 {
 	struct ir_range *ranges;
 	int hi, lo;
@@ -308,7 +311,7 @@ make_holes(const struct bm *bm, size_t *n)
 	assert(bm != NULL);
 	assert(n != NULL);
 
-	ranges = malloc(sizeof *ranges * UCHAR_MAX); /* worst case */
+	ranges = alloc->cb(NULL, sizeof *ranges * UCHAR_MAX, alloc->opaque); /* worst case */
 	if (ranges == NULL) {
 		return NULL;
 	}
@@ -335,7 +338,7 @@ make_holes(const struct bm *bm, size_t *n)
 	{
 		void *tmp;
 
-		tmp = realloc(ranges, sizeof *ranges * *n);
+		tmp = alloc->cb(ranges, sizeof *ranges * *n, alloc->opaque);
 		if (tmp == NULL) {
 			goto error;
 		}
@@ -347,7 +350,7 @@ make_holes(const struct bm *bm, size_t *n)
 
 error:
 
-	free(ranges);
+	(void)alloc->cb(ranges, 0, alloc->opaque);
 
 	return NULL;
 }
@@ -362,6 +365,7 @@ make_state(const struct fsm *fsm,
 	struct bm bm;
 	size_t hole;
 	size_t n;
+	struct alloc_closure *alloc;
 
 	struct {
 		struct fsm_state *state;
@@ -372,6 +376,8 @@ make_state(const struct fsm *fsm,
 	assert(fsm->opt != NULL);
 	assert(state != NULL);
 	assert(ir != NULL);
+
+	alloc = (struct alloc_closure *)&fsm->alloc;
 
 	/* TODO: IR_TABLE */
 
@@ -438,16 +444,16 @@ make_state(const struct fsm *fsm,
 		cs->strategy = IR_ERROR;
 		cs->u.error.mode = groups[max.j].to;
 
-		free((void *) groups[max.j].ranges);
+		(void)alloc->cb((void *) groups[max.j].ranges, 0, alloc->opaque);
 		if (max.j < n) {
 			memmove(groups + max.j, groups + max.j + 1, sizeof *groups * (n - max.j - 1));
 			n--;
 			/* don't bother reallocing down; it's just unneccessary overhead */
 		}
 
-		cs->u.error.error.ranges = make_holes(&bm, &cs->u.error.error.n);
+		cs->u.error.error.ranges = make_holes(alloc, &bm, &cs->u.error.error.n);
 		if (cs->u.error.error.ranges == NULL) {
-			free_groups(groups, n);
+			free_groups(alloc, groups, n);
 			return -1;
 		}
 
@@ -474,25 +480,29 @@ make_ir(const struct fsm *fsm)
 	struct ir *ir;
 	struct fsm_state *s;
 	size_t i;
+	struct alloc_closure *alloc;
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 	assert(fsm->start != NULL);
+
+	alloc = (struct alloc_closure *)&fsm->alloc;
 
 	if (!fsm_all(fsm, fsm_isdfa)) {
 		errno = EINVAL;
 		return NULL;
 	}
 
-	ir = malloc(sizeof *ir);
+	ir = alloc->cb(NULL, sizeof *ir, alloc->opaque);
 	if (ir == NULL) {
 		return NULL;
 	}
+	ir->alloc = alloc;
 
 	ir->n      = fsm_countstates(fsm);
-	ir->states = malloc(sizeof *ir->states * ir->n);
+	ir->states = alloc->cb(NULL, sizeof *ir->states * ir->n, alloc->opaque);
 	if (ir->states == NULL) {
-		free(ir);
+		(void)alloc->cb(ir, 0, alloc->opaque);
 		return NULL;
 	}
 
@@ -526,14 +536,14 @@ make_ir(const struct fsm *fsm)
 			 * to the number of states in an fsm, and shorter where
 			 * the graph branches often.
 			 */
-			p = malloc(ir->n + 3 + 1);
+			p = alloc->cb(NULL, ir->n + 3 + 1, alloc->opaque);
 			if (p == NULL) {
 				goto error_example;
 			}
 
 			n = fsm_example(fsm, s, p, ir->n + 1);
 			if (-1 == n) {
-				free(p);
+				(void)alloc->cb(p, 0, alloc->opaque);
 				goto error_example;
 			}
 
@@ -542,9 +552,9 @@ make_ir(const struct fsm *fsm)
 
 				n = strlen(p);
 
-				tmp = realloc(p, n + 1);
+				tmp = alloc->cb(p, n + 1, alloc->opaque);
 				if (tmp == NULL) {
-					free(p);
+					(void)alloc->cb(p, 0, alloc->opaque);
 					goto error_example;
 				}
 
@@ -585,11 +595,12 @@ void
 free_ir(struct ir *ir)
 {
 	size_t i;
+	struct alloc_closure *alloc = ir->alloc;
 
 	assert(ir != NULL);
 
 	for (i = 0; i < ir->n; i++) {
-		free((void *) ir->states[i].example);
+		(void)alloc->cb((void *) ir->states[i].example, 0, alloc->opaque);
 
 		switch (ir->states[i].strategy) {
 		case IR_TABLE:
@@ -603,30 +614,30 @@ free_ir(struct ir *ir)
 			break;
 
 		case IR_COMPLETE:
-			free_groups((void *) ir->states[i].u.complete.groups,
+			free_groups(alloc, (void *) ir->states[i].u.complete.groups,
 				ir->states[i].u.complete.n);
 			break;
 
 		case IR_PARTIAL:
-			free_groups((void *) ir->states[i].u.partial.groups,
+			free_groups(alloc, (void *) ir->states[i].u.partial.groups,
 				ir->states[i].u.partial.n);
 			break;
 
 		case IR_DOMINANT:
-			free_groups((void *) ir->states[i].u.dominant.groups,
+			free_groups(alloc, (void *) ir->states[i].u.dominant.groups,
 				ir->states[i].u.dominant.n);
 			break;
 
 		case IR_ERROR:
-			free((void *) ir->states[i].u.error.error.ranges);
-			free_groups((void *) ir->states[i].u.error.groups,
+			(void)alloc->cb((void *) ir->states[i].u.error.error.ranges, 0, alloc->opaque);
+			free_groups(alloc, (void *) ir->states[i].u.error.groups,
 				ir->states[i].u.error.n);
 			break;
 		}
 	}
 
-	free(ir->states);
+	(void)alloc->cb(ir->states, 0, alloc->opaque);
 
-	free(ir);
+	(void)alloc->cb(ir, 0, alloc->opaque);
 }
 

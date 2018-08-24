@@ -19,13 +19,29 @@
 #define ctassert(pred) \
 	switch (0) { case 0: case (pred):; }
 
+static void *
+def_alloc(void *p, size_t size, void *opaque)
+{
+	(void)opaque;
+	if (p == NULL) {
+		return malloc(size);
+	} else if (size == 0) {
+		free(p);
+		return NULL;
+	} else {
+		return realloc(p, size);
+	}
+}
+
 static void
 free_contents(struct fsm *fsm)
 {
 	struct fsm_state *next;
 	struct fsm_state *s;
+	struct alloc_closure *alloc;
 
 	assert(fsm != NULL);
+	alloc = &fsm->alloc;
 
 	for (s = fsm->sl; s != NULL; s = next) {
 		struct set_iter it;
@@ -34,25 +50,28 @@ free_contents(struct fsm *fsm)
 
 		for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
 			set_free(e->sl);
-			free(e);
+			(void)alloc->cb(e, 0, alloc->opaque);
 		}
 
 		set_free(s->edges);
-		free(s);
+		(void)alloc->cb(s, 0, alloc->opaque);
 	}
 }
 
 struct fsm *
 fsm_new(const struct fsm_options *opt)
 {
-	static const struct fsm_options defaults;
+	static struct fsm_options defaults;
 	struct fsm *new;
+	fsm_alloc_cb *alloc;
 
 	if (opt == NULL) {
 		opt = &defaults;
 	}
 
-	new = malloc(sizeof *new);
+	alloc = opt->alloc_cb ? opt->alloc_cb : def_alloc;
+
+	new = alloc(NULL, sizeof *new, opt->alloc_opaque);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -60,6 +79,9 @@ fsm_new(const struct fsm_options *opt)
 	new->sl    = NULL;
 	new->tail  = &new->sl;
 	new->start = NULL;
+
+	new->alloc.cb = alloc;
+	new->alloc.opaque = opt->alloc_opaque;
 
 	new->endcount = 0;
 
@@ -79,7 +101,7 @@ fsm_free(struct fsm *fsm)
 
 	free_contents(fsm);
 
-	free(fsm);
+	(void)fsm->alloc.cb(fsm, 0, fsm->alloc.opaque);
 }
 
 const struct fsm_options *
@@ -112,7 +134,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	dst->start    = src->start;
 	dst->endcount = src->endcount;
 
-	free(src);
+	src->alloc.cb(src, 0, src->alloc.opaque);
 }
 
 void

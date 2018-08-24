@@ -99,7 +99,7 @@ struct fsm_walk2_tuple_pool {
 };
 
 static void
-fsm_walk2_data_free(struct fsm_walk2_data *data)
+fsm_walk2_data_free(struct alloc_closure *alloc, struct fsm_walk2_data *data)
 {
 	struct fsm_walk2_tuple_pool *p, *next;
 
@@ -113,12 +113,12 @@ fsm_walk2_data_free(struct fsm_walk2_data *data)
 
 	for (p = data->head; p != NULL; p = next) {
 		next = p->next;
-		free(p);
+		alloc->cb(p, 0, alloc->opaque);
 	}
 }
 
 static struct fsm_walk2_tuple *
-alloc_walk2_tuple(struct fsm_walk2_data *data)
+alloc_walk2_tuple(struct alloc_closure *alloc, struct fsm_walk2_data *data)
 {
 	static const struct fsm_walk2_tuple zero;
 
@@ -140,7 +140,7 @@ alloc_walk2_tuple(struct fsm_walk2_data *data)
 
 new_pool:
 
-	pool = malloc(sizeof *pool);
+	pool = alloc->cb(NULL, sizeof *pool, alloc->opaque);
 	if (pool == NULL) {
 		return NULL;
 	}
@@ -166,7 +166,8 @@ walk2mask(int has_a, int has_b)
 }
 
 static struct fsm_walk2_tuple *
-fsm_walk2_tuple_new(struct fsm_walk2_data *data,
+fsm_walk2_tuple_new(struct alloc_closure *alloc,
+	struct fsm_walk2_data *data,
 	struct fsm_state *a, struct fsm_state *b)
 {
 	struct fsm_walk2_tuple lkup, *p;
@@ -184,7 +185,7 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		return p;
 	}
 
-	p = alloc_walk2_tuple(data);
+	p = alloc_walk2_tuple(alloc, data);
 	if (p == NULL) {
 		return NULL;
 	}
@@ -254,9 +255,12 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	struct fsm_state *qa, *qb, *qc;
 	struct set_iter ei, ej;
 	const struct fsm_edge *ea, *eb;
+	struct alloc_closure *alloc;
 
 	assert(a != NULL);
 	assert(b != NULL);
+
+	alloc = (struct alloc_closure *)&a->alloc;
 
 	assert(data->new != NULL);
 	assert(data->states != NULL);
@@ -350,13 +354,13 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 				struct fsm_walk2_tuple *dst;
 
 				/* FIXME: deal with annoying const-ness here */
-				dst = fsm_walk2_tuple_new(data,
+				dst = fsm_walk2_tuple_new(alloc, data,
 					(struct fsm_state *) da, (struct fsm_state *) db);
 
 				assert(dst != NULL);
 				assert(dst->comb != NULL);
 
-				if (!fsm_addedge(qc, dst->comb, ea->symbol)) {
+				if (!fsm_addedge(alloc, qc, dst->comb, ea->symbol)) {
 					return 0;
 				}
 
@@ -411,12 +415,12 @@ only_b:
 				struct fsm_walk2_tuple *dst;
 
 				/* FIXME: deal with annoying const-ness here */
-				dst = fsm_walk2_tuple_new(data, NULL, (struct fsm_state *) db);
+				dst = fsm_walk2_tuple_new(alloc, data, NULL, (struct fsm_state *) db);
 
 				assert(dst != NULL);
 				assert(dst->comb != NULL);
 
-				if (!fsm_addedge(qc, dst->comb, eb->symbol)) {
+				if (!fsm_addedge(alloc, qc, dst->comb, eb->symbol)) {
 					return 0;
 				}
 
@@ -446,9 +450,12 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 	struct fsm_state *sa, *sb;
 	struct fsm_walk2_tuple *tup0;
 	struct fsm *new;
+	struct alloc_closure *alloc;
 
 	assert(a != NULL);
 	assert(b != NULL);
+
+	alloc = (struct alloc_closure *)&a->alloc;
 
 	assert(fsm_all(a, fsm_isdfa));
 	assert(fsm_all(b, fsm_isdfa));
@@ -503,7 +510,7 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 		goto error;
 	}
 
-	tup0 = fsm_walk2_tuple_new(&data, sa,sb);
+	tup0 = fsm_walk2_tuple_new(alloc, &data, sa,sb);
 	if (tup0 == NULL) {
 		goto error;
 	}
@@ -526,13 +533,13 @@ done:
 	/* reset all equiv fields in the states */
 	fsm_walk2_mark_equiv_null(new);
 
-	fsm_walk2_data_free(&data);
+	fsm_walk2_data_free(alloc, &data);
 
 	return new;
 
 error:
 
-	fsm_walk2_data_free(&data);
+	fsm_walk2_data_free(alloc, &data);
 
 	return NULL;
 }

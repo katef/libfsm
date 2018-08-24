@@ -94,6 +94,7 @@ struct ir {
 	size_t n;
 	unsigned start;
 	struct ir_state *states; /* array */
+	struct alloc_closure *alloc;
 };
 
 /* TODO: can pass in mask of allowed strategies */

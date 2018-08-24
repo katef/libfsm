@@ -76,7 +76,7 @@ fsm_clone(const struct fsm *fsm)
 					newfrom = equiv;
 					newto   = to->equiv;
 
-					if (!fsm_addedge(newfrom, newto, e->symbol)) {
+					if (!fsm_addedge(&new->alloc, newfrom, newto, e->symbol)) {
 						fsm_free(new);
 						return NULL;
 					}

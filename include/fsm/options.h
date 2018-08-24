@@ -18,7 +18,21 @@ enum fsm_io {
 	FSM_IO_PAIR
 };
 
+/* Memory management hook, which should behave like:
+ * 
+ * cb(NULL, size, opaque) -> return malloc(size);
+ * cb(p, 0, opaque) -> free(p); return NULL;
+ * cb(p, new_size, opaque) -> return realloc(p, new_size); */
+typedef void *
+fsm_alloc_cb(void *p, size_t size, void *opaque);
+
 struct fsm_options {
+	/* Memory management hook.
+	 * The corresponding opaque pointer is passed along, and can be
+	 * used for tracking memory usage, pooling memory, etc. */
+	fsm_alloc_cb *alloc_cb;
+	void *alloc_opaque;
+
 	/* boolean: true indicates to go to extra lengths in order to produce
 	 * neater-looking FSMs for certian operations. This usually means finding
 	 * a state which can be re-used, at the cost of runtime.

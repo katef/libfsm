@@ -10,6 +10,7 @@
 #include <limits.h>
 
 #include <fsm/fsm.h>
+#include <fsm/options.h>
 
 #define FSM_ENDCOUNT_MAX ULONG_MAX
 
@@ -56,6 +57,11 @@ struct fsm_state {
 	struct fsm_state *next;
 };
 
+struct alloc_closure {
+	fsm_alloc_cb *cb;
+	void *opaque;
+};
+
 struct fsm {
 	struct fsm_state *sl;
 	struct fsm_state **tail; /* tail of .sl */
@@ -64,6 +70,7 @@ struct fsm {
 	unsigned long endcount;
 
 	const struct fsm_options *opt;
+	struct alloc_closure alloc;
 
 #ifdef DEBUG_TODFA
 	struct fsm *nfa;
@@ -74,7 +81,8 @@ struct fsm_edge *
 fsm_hasedge(const struct fsm_state *s, int c);
 
 struct fsm_edge *
-fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type);
+fsm_addedge(struct alloc_closure *alloc,
+    struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type);
 
 void
 fsm_carryopaque(struct fsm *fsm, const struct set *set,
