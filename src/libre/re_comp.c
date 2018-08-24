@@ -24,7 +24,6 @@ struct comp_env {
 	 * Also, some states in a first/last context need to link
 	 * directly to the overall start/end states, either in
 	 * place of or along with the adjacent states. */
-	struct ast_expr *root;
 	struct fsm_state *start;
 	struct fsm_state *end;
 	struct fsm_state *start_any_loop;
@@ -106,7 +105,6 @@ re_comp_ast(struct ast_re *ast,
 
 	env.start = x;
 	env.end = y;
-	env.root = ast->expr;
 
 	if (!comp_iter(&env, x, y, ast->expr)) { goto error; }
 
@@ -568,7 +566,6 @@ decide_linking(struct comp_env *env,
 	assert(env != NULL);
 
 	if (!(env->flags & RE_UNANCHORED)) { return LINK_TOP_DOWN; }	
-	if (n == env->root) { return LINK_TOP_DOWN; }
 
 	switch (n->t) {
 	case AST_EXPR_EMPTY:
