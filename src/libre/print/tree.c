@@ -41,47 +41,99 @@ fprintf_count(FILE *f, unsigned count)
 }
 
 static void
+fprintf_flags(FILE *f, enum re_ast_flags flags)
+{
+	fprintf(f, "(f: ");
+	#define PR_FLAG(X, S)						\
+		if (0 != (flags & (RE_AST_FLAG_ ## X))) {		\
+			fprintf(f, "%s", S);				\
+		}
+	
+	PR_FLAG(FIRST_STATE, "F");
+	PR_FLAG(LAST_STATE, "L");
+	PR_FLAG(UNSATISFIABLE, "X");
+	PR_FLAG(NULLABLE, "0");
+
+	#undef PR_FLAG
+		fprintf(f, ")");
+}
+
+static void
 pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *n)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 
 	if (n == NULL) { return; }
-	/* assert(n != NULL); */
+
 	INDENT(f, indent);
 
 	#define IND 4
 
+	fprintf(f, "%p", (void *)n);
+	if (n->flags != 0x00) {
+		fprintf(f, " ");
+		fprintf_flags(f, n->flags);
+	}		
+	fprintf(f, " -- ");
+
 	switch (n->t) {
 	case AST_EXPR_EMPTY:
-		fprintf(f, "EMPTY %p\n", (void *)n);
+		fprintf(f, "EMPTY \n");
 		break;
+
+	/* CONCAT and ALT should be removed once CONCAT_N and ALT_N are
+	 * built directly in the parser. */
 	case AST_EXPR_CONCAT:
 		fprintf(f, "CONCAT %p: {\n", (void *)n);
 		pp_iter(f, opt, indent + 1*IND, n->u.concat.l);
 		INDENT(f, indent);
+
 		fprintf(f, ", (%p)\n", (void *)n);
+
 		pp_iter(f, opt, indent + 1*IND, n->u.concat.r);
 		INDENT(f, indent);
 		fprintf(f, "} (%p)\n", (void *)n);
 		break;
+
 	case AST_EXPR_ALT:
 		fprintf(f, "ALT %p: {\n", (void *)n);
 		pp_iter(f, opt, indent + 1*IND, n->u.alt.l);
 		INDENT(f, indent);
+
 		fprintf(f, ", (%p)\n", (void *)n);
 		pp_iter(f, opt, indent + 1*IND, n->u.alt.r);
 		INDENT(f, indent);
 		fprintf(f, "} (%p)\n", (void *)n);
 		break;
+
+	case AST_EXPR_CONCAT_N:
+	{
+		size_t i, count = n->u.concat_n.count;
+		fprintf(f, "CONCAT (%u):\n", (unsigned)count);
+
+		for (i = 0; i < count; i++) {
+			pp_iter(f, opt, indent + 1*IND, n->u.concat_n.n[i]);
+		}
+		break;
+	}
+	case AST_EXPR_ALT_N:
+	{
+		size_t i, count = n->u.alt_n.count;
+		fprintf(f, "ALT (%u):\n", (unsigned)count);
+		for (i = 0; i < count; i++) {
+			pp_iter(f, opt, indent + 1*IND, n->u.alt_n.n[i]);
+		}
+		break;
+	}
 	case AST_EXPR_LITERAL:
-		fprintf(f, "LITERAL %p: '%c'\n", (void *)n, n->u.literal.c);
+		fprintf(f, "LITERAL '%c'\n", n->u.literal.c);
 		break;
 	case AST_EXPR_ANY:
-		fprintf(f, "ANY %p:\n", (void *)n);
+		fprintf(f, "ANY:\n");
 		break;
 	case AST_EXPR_REPEATED:
-		fprintf(f, "REPEATED %p: {", (void *)n);
+		fprintf(f, "REPEATED {");
 		fprintf_count(f, n->u.repeated.low);
 		fprintf(f, ",");
 		fprintf_count(f, n->u.repeated.high);
@@ -98,13 +150,24 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		pp_iter(f, opt, indent + 1*IND, n->u.group.e);
 		break;
 	case AST_EXPR_FLAGS:
-		fprintf(f, "FLAGS %p: pos:(", (void *)n);
+		fprintf(f, "FLAGS pos:(");
 		re_flags_print(f, n->u.flags.pos);
 		fprintf(f, "), neg:(");
 		re_flags_print(f, n->u.flags.neg);
 		fprintf(f, ")\n");
 		break;
+	case AST_EXPR_ANCHOR:
+		fprintf(f, "ANCHOR %s\n",
+		    n->u.anchor.t == RE_AST_ANCHOR_START ? "^"
+		    : n->u.anchor.t == RE_AST_ANCHOR_END ? "$"
+		    : "<matchfail>");
+		break;
+	case AST_EXPR_TOMBSTONE:
+		fprintf(f, "<tombstone>\n");
+		break;
+
 	default:
+		fprintf(stderr, "MATCH FAIL: %d\n", n->t);
 		assert(0);
 	}
 }

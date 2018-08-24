@@ -408,30 +408,6 @@
 		@c = lex_state->buf.a[0];
 	@};
 
-	START: () -> (p :pred) = @{
-		switch (flags->flags & RE_ANCHOR) {
-		case RE_TEXT:  @p = RE_SOT; break;
-		case RE_MULTI: @p = RE_SOL; break;
-		case RE_ZONE:  @p = RE_SOZ; break;
-
-		default:
-			/* TODO: raise error */
-			@p = 0U;
-		}
-	@};
-
-	END: () -> (p :pred) = @{
-		switch (flags->flags & RE_ANCHOR) {
-		case RE_TEXT:  @p = RE_EOT; break;
-		case RE_MULTI: @p = RE_EOL; break;
-		case RE_ZONE:  @p = RE_EOZ; break;
-
-		default:
-			/* TODO: raise error */
-			@p = 0U;
-		}
-	@};
-
 	COUNT: () -> (n :unsigned) = @{
 		unsigned long u;
 		char *e;
@@ -619,7 +595,10 @@
 
 	<ast-expr-atom>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
 		@node = re_ast_expr_with_count(@e, @c);
-		if (@node == NULL) { @!; }
+		if (@node == NULL) {
+			err->e = RE_EXEOF;
+			@!;
+		}
 	@};
 
         <atom-kleene>: () -> (c :ast_count) = @{
@@ -777,6 +756,16 @@
 
 	<ast-expr-re-flags>: (pos :re_flags, neg :re_flags) -> (node :ast_expr) = @{
 		@node = re_ast_expr_re_flags(@pos, @neg);
+		if (@node == NULL) { @!; }
+	@};
+
+	<ast-expr-anchor-start>: () -> (node :ast_expr) = @{
+		@node = re_ast_expr_anchor(RE_AST_ANCHOR_START);
+		if (@node == NULL) { @!; }
+	@};
+
+	<ast-expr-anchor-end>: () -> (node :ast_expr) = @{
+		@node = re_ast_expr_anchor(RE_AST_ANCHOR_END);
 		if (@node == NULL) { @!; }
 	@};
 

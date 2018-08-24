@@ -99,11 +99,33 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		pp_iter(f, opt, n->u.concat.r);
 		break;
 
+	case AST_EXPR_CONCAT_N:
+	{
+		size_t i;
+		for (i = 0; i < n->u.concat_n.count; i++) {
+			pp_iter(f, opt, n->u.concat_n.n[i]);
+			if (i < n->u.concat_n.count - 1) { fprintf(f, ", "); }
+		}
+		break;
+	}
+
 	case AST_EXPR_ALT:
 		pp_iter(f, opt, n->u.alt.l);
 		fprintf(f, " | "); /* XXX: indent */
 		pp_iter(f, opt, n->u.alt.r);
 		break;
+
+	case AST_EXPR_ALT_N:
+	{
+		size_t i;
+		for (i = 0; i < n->u.alt_n.count; i++) {
+			pp_iter(f, opt, n->u.alt_n.n[i]);
+			if (i < n->u.alt_n.count - 1) {
+				fprintf(f, " | "); /* XXX: indent */
+			}
+		}
+		break;
+	}
 
 	case AST_EXPR_LITERAL:
 		fprintf(f, "\'");
@@ -173,6 +195,12 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		fprintf(f, "(");
 		pp_iter(f, opt, n->u.group.e);
 		fprintf(f, ")");
+		break;
+
+	case AST_EXPR_ANCHOR:
+		assert(n->u.anchor.t == RE_AST_ANCHOR_START
+		    || n->u.anchor.t == RE_AST_ANCHOR_END);
+		fprintf(f, "%s", n->u.anchor.t == RE_AST_ANCHOR_START ? "START" : "END");
 		break;
 
 	case AST_EXPR_FLAGS:
