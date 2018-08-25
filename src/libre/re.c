@@ -27,7 +27,7 @@ struct dialect {
 	enum re_dialect dialect;
 	re_dialect_parse_fun *parse;
 	int overlap;
-	int implicitly_anchored;
+	enum re_flags flags; /* ever-present flags which cannot be disabled */
 };
 
 static const struct dialect *
@@ -36,12 +36,12 @@ re_dialect(enum re_dialect dialect)
 	size_t i;
 
 	static const struct dialect a[] = {
-		{ RE_LIKE,       parse_re_like,    0, 1 },
-		{ RE_LITERAL,    parse_re_literal, 0, 1 },
-		{ RE_GLOB,       parse_re_glob,    0, 1 },
-		{ RE_NATIVE,     parse_re_native,  0, 0 },
-		{ RE_PCRE,       parse_re_pcre,    0, 0 },
-		{ RE_SQL,        parse_re_sql,     1, 1 }
+		{ RE_LIKE,    parse_re_like,    0, RE_ANCHORED },
+		{ RE_LITERAL, parse_re_literal, 0, RE_ANCHORED },
+		{ RE_GLOB,    parse_re_glob,    0, RE_ANCHORED },
+		{ RE_NATIVE,  parse_re_native,  0, 0           },
+		{ RE_PCRE,    parse_re_pcre,    0, 0           },
+		{ RE_SQL,     parse_re_sql,     1, RE_ANCHORED }
 	};
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
@@ -106,7 +106,7 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
-	if (m->implicitly_anchored) { flags |= RE_ANCHORED; }
+	flags |= m->flags;
 
 	ast = m->parse(getc, opaque, opt, flags, m->overlap, err);
 	if (ast == NULL) {
@@ -142,7 +142,8 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		if (err != NULL) { err->e = RE_EBADDIALECT; }
 		return NULL;
 	}
-	if (m->implicitly_anchored) { flags |= RE_ANCHORED; }
+
+	flags |= m->flags;
 
 	ast = re_parse(dialect, getc, opaque, opt, flags, err);
 	if (ast == NULL) { return NULL; }
