@@ -39,7 +39,7 @@ re_dialect(enum re_dialect dialect)
 		{ RE_LIKE,       parse_re_like,    0, 1 },
 		{ RE_LITERAL,    parse_re_literal, 0, 1 },
 		{ RE_GLOB,       parse_re_glob,    0, 1 },
-		{ RE_NATIVE,     parse_re_native,  0, 1 },
+		{ RE_NATIVE,     parse_re_native,  0, 0 },
 		{ RE_PCRE,       parse_re_pcre,    0, 0 },
 		{ RE_SQL,        parse_re_sql,     1, 1 }
 	};
