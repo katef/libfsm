@@ -32,8 +32,8 @@
 	SEP;
 	STAR;
 
-        !START;
-        !END;
+	START;
+	END;
 
 	OPENSUB;   CLOSESUB;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
@@ -74,8 +74,8 @@
 	<ast-expr-char-class>: (:char_class_ast, :pos, :pos) -> (:ast_expr);
         <ast-expr-group>: (:ast_expr) -> (:ast_expr);
 	!<ast-expr-re-flags>: (:re_flags, :re_flags) -> (:ast_expr);
-	!<ast-expr-anchor-start>: () -> (:ast_expr);
-	!<ast-expr-anchor-end>: () -> (:ast_expr);
+	<ast-expr-anchor-start>: () -> (:ast_expr);
+	<ast-expr-anchor-end>: () -> (:ast_expr);
 
         <atom-kleene>: () -> (:ast_count);
         <atom-plus>: () -> (:ast_count);
@@ -249,6 +249,12 @@
 				e = char-class();
 			||
 				e = literal();
+			||
+				START;
+				e = <ast-expr-anchor-start>();
+			||
+				END;
+				e = <ast-expr-anchor-end>();
 			||
 				ANY;
 				e = <ast-expr-any>();
