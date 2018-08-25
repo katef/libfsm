@@ -34,7 +34,7 @@ enum re_flags {
 	RE_REVERSE = 1 << 3,
 	RE_SINGLE  = 1 << 4,
 	RE_ZONE    = 1 << 5,
-	RE_UNANCHORED = 1 << 6,
+	RE_ANCHORED = 1 << 6,
 	RE_FLAGS_NONE = 0
 };
 

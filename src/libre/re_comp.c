@@ -520,7 +520,7 @@ intern_start_any_loop(struct comp_env *env)
 	assert(env != NULL);
 	if (env->start_any_loop == NULL) {
 		struct fsm_state *loop;
-		assert(env->flags & RE_UNANCHORED);
+		assert(~env->flags & RE_ANCHORED);
 		assert(env->start != NULL);
 		
 		loop = fsm_addstate(env->fsm);
@@ -540,7 +540,7 @@ intern_end_any_loop(struct comp_env *env)
 	assert(env != NULL);
 	if (env->end_any_loop == NULL) {
 		struct fsm_state *loop;
-		assert(env->flags & RE_UNANCHORED);
+		assert(~env->flags & RE_ANCHORED);
 		assert(env->end != NULL);
 		
 		loop = fsm_addstate(env->fsm);
@@ -563,7 +563,7 @@ decide_linking(struct comp_env *env,
 	assert(n != NULL);
 	assert(env != NULL);
 
-	if (!(env->flags & RE_UNANCHORED)) { return LINK_TOP_DOWN; }	
+	if ((env->flags & RE_ANCHORED)) { return LINK_TOP_DOWN; }	
 
 	switch (n->t) {
 	case AST_EXPR_EMPTY:

@@ -72,12 +72,13 @@ re_flags(const char *s, enum re_flags *f)
 		}
 
 		switch (*p) {
-		case 'i': *f |= RE_ICASE;   break;
-		case 'g': *f |= RE_TEXT;    break;
-		case 'm': *f |= RE_MULTI;   break;
-		case 'r': *f |= RE_REVERSE; break;
-		case 's': *f |= RE_SINGLE;  break;
-		case 'z': *f |= RE_ZONE;    break;
+		case 'a': *f |= RE_ANCHORED; break; /* PCRE's /x/A flag means /^x/ only */
+		case 'i': *f |= RE_ICASE;    break;
+		case 'g': *f |= RE_TEXT;     break;
+		case 'm': *f |= RE_MULTI;    break;
+		case 'r': *f |= RE_REVERSE;  break;
+		case 's': *f |= RE_SINGLE;   break;
+		case 'z': *f |= RE_ZONE;     break;
 
 		default:
 			errno = EINVAL;
@@ -105,8 +106,7 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
-	/* Needs explicit ^ $ anchors */
-	if (!m->implicitly_anchored) { flags |= RE_UNANCHORED; }
+	if (m->implicitly_anchored) { flags |= RE_ANCHORED; }
 
 	ast = m->parse(getc, opaque, opt, flags, m->overlap, err);
 	if (ast == NULL) {
@@ -142,7 +142,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		if (err != NULL) { err->e = RE_EBADDIALECT; }
 		return NULL;
 	}
-	if (!m->implicitly_anchored) { flags |= RE_UNANCHORED; }
+	if (m->implicitly_anchored) { flags |= RE_ANCHORED; }
 
 	ast = re_parse(dialect, getc, opaque, opt, flags, err);
 	if (ast == NULL) { return NULL; }
