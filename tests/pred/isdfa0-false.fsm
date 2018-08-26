@@ -4,12 +4,6 @@
 # max_end   = 2
 # num_edges = 12
 
-# seed      = 79256
-# num_nodes = 4
-# avg_conn  = 3
-# num_edges = 12
-# max_end   = 2
-# ends: 1
 0 -> 0 'a';
 1 -> 0 'd';
 1 -> 1 'b';
