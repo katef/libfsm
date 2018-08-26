@@ -1,41 +1,52 @@
-0  ->  1 "b"; # e.g. "b"
-0  ->  2 "m"; # e.g. "m"
-1  -> 19 "a"; # e.g. "ba"
-2  ->  3 "u"; # e.g. "mu"
-3  ->  4 "s"; # e.g. "mus"
-4  ->  5 "h"; # e.g. "mush"
-5  ->  6 "r"; # e.g. "mushr"
-6  ->  7 "o"; # e.g. "mushro"
-7  ->  8 "o"; # e.g. "mushroo"
-8  ->  9 "m"; # e.g. "mushroom"
-9  -> 10 "m"; # e.g. "mushroomm"
-10 -> 11 "u"; # e.g. "mushroommu"
-11 -> 12 "s"; # e.g. "mushroommus"
-12 -> 13 "h"; # e.g. "mushroommush"
-13 -> 14 "r"; # e.g. "mushroommushr"
-14 -> 15 "o"; # e.g. "mushroommushro"
-15 -> 16 "o"; # e.g. "mushroommushroo"
-16 -> 17 "m"; # e.g. "mushroommushroom"
-17 -> 18 "\n"; # e.g. "mushroommushroom\n"
-19 -> 20 "d"; # e.g. "bad"
-20 -> 21 "g"; # e.g. "badg"
-21 -> 22 "e"; # e.g. "badge"
-22 -> 23 "r"; # e.g. "badger"
-23 -> 24 "b"; # e.g. "badgerb"
-23 ->  2 "m"; # e.g. "m"
-24 -> 25 "a"; # e.g. "badgerba"
-25 -> 26 "d"; # e.g. "badgerbad"
-26 -> 27 "g"; # e.g. "badgerbadg"
-27 -> 28 "e"; # e.g. "badgerbadge"
-28 -> 29 "r"; # e.g. "badgerbadger"
-29 -> 30 "b"; # e.g. "badgerbadgerb"
-29 ->  2 "m"; # e.g. "m"
-30 -> 31 "a"; # e.g. "badgerbadgerba"
-31 -> 32 "d"; # e.g. "badgerbadgerbad"
-32 -> 33 "g"; # e.g. "badgerbadgerbadg"
-33 -> 34 "e"; # e.g. "badgerbadgerbadge"
-34 -> 35 "r"; # e.g. "badgerbadgerbadger"
-35 ->  2 "m"; # e.g. "m"
+
+0  -> 41;
+17 -> 41;
+27 -> 41;
+
+0  -> 11;
+11 -> 12 'b';
+12 -> 13 'a';
+13 -> 14 'd';
+14 -> 15 'g';
+15 -> 16 'e';
+16 -> 17 'r';
+
+17 -> 21;
+21 -> 22 'b';
+22 -> 23 'a';
+23 -> 24 'd';
+24 -> 25 'g';
+25 -> 26 'e';
+26 -> 27 'r';
+
+27 -> 31;
+31 -> 32 'b';
+32 -> 33 'a';
+33 -> 34 'd';
+34 -> 35 'g';
+35 -> 36 'e';
+36 -> 37 'r';
+
+37 -> 41;
+41 -> 42 'm';
+42 -> 43 'u';
+43 -> 44 's';
+44 -> 45 'h';
+45 -> 46 'r';
+46 -> 47 'o';
+47 -> 48 'o';
+48 -> 49 'm';
+
+49 -> 51;
+51 -> 52 'm';
+52 -> 53 'u';
+53 -> 54 's';
+54 -> 55 'h';
+55 -> 56 'r';
+56 -> 57 'o';
+57 -> 58 'o';
+58 -> 59 'm';
 
 start: 0;
-end:   18;
+end:   59;
+
