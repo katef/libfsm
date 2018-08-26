@@ -1,6 +1,10 @@
-0  ->  1 "a"; # e.g. "a"
-1  ->  2 "b"; # e.g. "ab"
-2  ->  3 "c"; # e.g. "abc"
+
+0 -> 1 'a';
+1 -> 2 'b';
+2 -> 3 'c';
+
+# a$c$ is unsatisfiable, and effectively gets removed
 
 start: 0;
 end:   3;
+

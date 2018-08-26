@@ -1,4 +1,8 @@
-0  ->  1 "b"; # e.g. "b"
+
+0 -> 1 'b';
+
+# ^a^ is unsatisfiable, and effectively removed
 
 start: 0;
 end:   1;
+
