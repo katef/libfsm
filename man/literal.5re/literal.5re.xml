@@ -22,6 +22,8 @@
 	<refnamediv>
 		<refname>literal</refname>
 		<refpurpose>string literal syntax</refpurpose>
+
+- implicitly achored
 	</refnamediv>
 
 	<refsection>
