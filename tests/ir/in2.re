@@ -1,1 +1,1 @@
-[abcdef]
+^[abcdef]$
