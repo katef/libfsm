@@ -35,16 +35,16 @@
 			"example": "az",
 			"groups": [
 				{
-					"to": 3,
-					"ranges": [
-						{ "start": "z", "end": "z" }
-					]
-				},
-				{
 					"to": 4,
 					"ranges": [
 						{ "start": "0", "end": "9" },
 						{ "start": "a", "end": "f" }
+					]
+				},
+				{
+					"to": 3,
+					"ranges": [
+						{ "start": "z", "end": "z" }
 					]
 				}
 			]
