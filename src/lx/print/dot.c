@@ -261,16 +261,25 @@ lx_print_dot(FILE *f, const struct ast *ast)
 					zindexof(ast, z), indexof(z->fsm, s));
 			}
 
+			if (z == ast->global) {
+				fprintf(f, "\n");
+				fprintf(f, "\t\tstart [ shape = plaintext ];\n");
+				fprintf(f, "\t\tstart -> z%uS%u;\n",
+					zindexof(ast, ast->global),
+					indexof(ast->global->fsm, ast->global->fsm->start));
+				fprintf(f, "\t\t{ rank = min; start; }\n");
+			}
+
 			fprintf(f, "\t}\n");
 		}
+	} else {
+		fprintf(f, "\n");
+		fprintf(f, "\tstart [ shape = plaintext ];\n");
+		fprintf(f, "\tstart -> z%uS%u;\n",
+			zindexof(ast, ast->global),
+			indexof(ast->global->fsm, ast->global->fsm->start));
+		fprintf(f, "\t{ rank = min; start; }\n");
 	}
-
-	fprintf(f, "\n");
-	fprintf(f, "\tstart [ shape = plaintext ];\n");
-	fprintf(f, "\tstart -> z%uS%u;\n",
-		zindexof(ast, ast->global),
-		indexof(ast->global->fsm, ast->global->fsm->start));
-	fprintf(f, "\t{ rank = min; start; }\n");
 
 	if (print_progress) {
 		zn = 0;
