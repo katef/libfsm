@@ -1,5 +1,9 @@
-0  ->  1 "b"; # e.g. "b"
-1  ->  2 "c"; # e.g. "bc"
+
+0 -> 1 'b';
+1 -> 2 'c';
+
+# a^b is unsatisfiable, and effectively gets removed
 
 start: 0;
 end:   2;
+

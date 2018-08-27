@@ -4,9 +4,10 @@
 # See LICENCE for the full copyright terms.
 #
 
-0  ->  1 "b"; # e.g. "b"
-1  ->  2 "a"; # e.g. "ba"
-2  ->  3 "r"; # e.g. "bar"
+0 -> 1 'b';
+1 -> 2 'a';
+2 -> 3 'r';
 
 start: 0;
 end:   3;
+
