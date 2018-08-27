@@ -253,8 +253,7 @@ comp_iter(struct comp_env *env,
 				env->flags &=~ cur->u.flags.neg;
 			}
 
-			if (next != NULL
-			    && !can_skip_concat_state_and_epsilon(cur, next)) {
+			if (!can_skip_concat_state_and_epsilon(cur, next)) {
 				/* If nullable, add an extra state & epsilion
 				 * as a one-way gate */
 				struct fsm_state *diode;
@@ -452,11 +451,10 @@ can_skip_concat_state_and_epsilon(const struct ast_expr *l,
 	 * keeping the match from looping further back in the FSM than
 	 * intended. */
 	assert(l != NULL);
-	assert(r != NULL);
 
 	if (!can_have_backward_epsilon_edge(l)) { return 1; }
 
-	if (r->t == AST_EXPR_REPEATED) {
+	if (r != NULL && r->t == AST_EXPR_REPEATED) {
 		if (!can_have_backward_epsilon_edge(r)) { return 1; }
 	}
 
