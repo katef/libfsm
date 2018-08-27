@@ -1,1 +1,1 @@
-(fish|goat|cheese)
+^(fish|goat|cheese)$

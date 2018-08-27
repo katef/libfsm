@@ -28,6 +28,8 @@
 	<refnamediv>
 		<refname>native</refname>
 		<refpurpose>libre native regular expression syntax</refpurpose>
+
+- explicitly achored; use ^$ for anchoring
 	</refnamediv>
 
 	<refsection>
@@ -336,6 +338,14 @@ overlapping not permitted
 			</tbody>
 		</table>
 
+	</refsection>
+
+	<refsection>
+		<title>Anchors</title>
+
+		<para>TODO: syntatic precedence,
+permit redunancy
+non-satisfiable situations</para>
 	</refsection>
 
 <!--

@@ -1,1 +1,1 @@
-(badger){0,3}(mushroom){2}
+^(badger){0,3}(mushroom){2}$

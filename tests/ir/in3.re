@@ -1,1 +1,1 @@
-[abcdef]|g|h|i
+^([abcdef]|g|h|i)$

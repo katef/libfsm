@@ -246,6 +246,8 @@
 			err(lex_state, "/%s: Unrecognised regexp flags", lex_state->buf.a + 1);
 			exit(EXIT_FAILURE);
 		}
+
+		@f |= RE_ANCHORED; /* regexps in lx are implicitly anchored */
 	@};
 
 %actions%

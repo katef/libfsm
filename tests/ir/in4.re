@@ -1,1 +1,1 @@
-[abcdef0-9ghiA-FVWXYZ]
+^[abcdef0-9ghiA-FVWXYZ]$

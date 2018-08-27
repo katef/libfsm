@@ -29,6 +29,8 @@
 <para>
 - SQL99's regexps
 
+- implicitly anchored
+
 - list of atoms
 </para>
 
