@@ -176,9 +176,11 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(z->fsm != NULL);
 	assert(z->fsm->start != NULL);
 
-	fprintf(f, "\tsubgraph cluster_z%u {\n", zindexof(ast, z));
-	fprintf(f, "\t\tstyle = rounded;\n");
-	fprintf(f, "\t\tcolor = gray;\n");
+	if (ast->zl->next != NULL) {
+		fprintf(f, "\tsubgraph cluster_z%u {\n", zindexof(ast, z));
+		fprintf(f, "\t\tstyle = rounded;\n");
+		fprintf(f, "\t\tcolor = gray;\n");
+	}
 
 	if (z == ast->global) {
 		fprintf(f, "\t\tlabel = <z%u<br/>(global)>;\n", zindexof(ast, z));
@@ -231,8 +233,10 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			zindexof(ast, z), indexof(z->fsm, z->fsm->start));
 	}
 
-	fprintf(f, "\t}\n");
-	fprintf(f, "\t\n");
+	if (ast->zl->next != NULL) {
+		fprintf(f, "\t}\n");
+		fprintf(f, "\t\n");
+	}
 }
 
 void
