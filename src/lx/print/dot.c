@@ -177,6 +177,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(z->fsm->start != NULL);
 
 	fprintf(f, "\tsubgraph cluster_z%u {\n", zindexof(ast, z));
+	fprintf(f, "\t\tstyle = rounded;\n");
 	fprintf(f, "\t\tcolor = gray;\n");
 
 	if (z == ast->global) {
