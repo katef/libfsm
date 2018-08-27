@@ -151,14 +151,14 @@ singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 
 		for (p = m->conflict; p != NULL; p = p->next) {
 			if (p->m->to != NULL) {
-				fprintf(f, "\t\tz%uS%u -> z%uS%u [ color = red, style = dashed ];\n",
+				fprintf(f, "\tz%uS%u -> z%uS%u [ color = red, style = dashed ];\n",
 					zindexof(ast, z), indexof(fsm, s),
 					zindexof(ast, p->m->to), indexof(p->m->to->fsm, p->m->to->fsm->start));
 			}
 		}
 	} else {
 		if (m->to != NULL) {
-			fprintf(f, "\t\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
+			fprintf(f, "\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
 				zindexof(ast, z), indexof(fsm, s),
 				zindexof(ast, m->to), indexof(m->to->fsm, m->to->fsm->start));
 		}
@@ -176,18 +176,6 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(z->fsm != NULL);
 	assert(z->fsm->start != NULL);
 
-	if (ast->zl->next != NULL) {
-		fprintf(f, "\tsubgraph cluster_z%u {\n", zindexof(ast, z));
-		fprintf(f, "\t\tstyle = rounded;\n");
-		fprintf(f, "\t\tcolor = gray;\n");
-	}
-
-	if (z == ast->global) {
-		fprintf(f, "\t\tlabel = <z%u<br/>(global)>;\n", zindexof(ast, z));
-	} else {
-		fprintf(f, "\t\tlabel = <z%u>;\n", zindexof(ast, z));
-	}
-
 /* XXX: only if not showing transitions between zones:
 	fprintf(f, "\tz%u_start [ shape = plaintext ];\n",
 		zindexof(ast, z));
@@ -197,6 +185,8 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		indexof(z->fsm, z->fsm->start));
 	fprintf(f, "\n");
 */
+
+	fprintf(f, "\t\n");
 
 	{
 		const struct fsm_options *tmp;
@@ -232,11 +222,6 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		fprintf(f, "\t\tz%uS%u [ color = red ];\n",
 			zindexof(ast, z), indexof(z->fsm, z->fsm->start));
 	}
-
-	if (ast->zl->next != NULL) {
-		fprintf(f, "\t}\n");
-		fprintf(f, "\t\n");
-	}
 }
 
 void
@@ -256,14 +241,36 @@ lx_print_dot(FILE *f, const struct ast *ast)
 		fprintf(f, "\tnode [ label = \"\", width = 0.3 ];\n");
 	}
 
-	fprintf(f, "\n");
+	if (ast->zl->next != NULL) {
+		const struct fsm_state *s;
 
+		for (z = ast->zl; z != NULL; z = z->next) {
+			fprintf(f, "\t\n");
+			fprintf(f, "\tsubgraph cluster_z%u {\n", zindexof(ast, z));
+			fprintf(f, "\t\tstyle = rounded;\n");
+			fprintf(f, "\t\tcolor = gray;\n");
+
+			if (z == ast->global) {
+				fprintf(f, "\t\tlabel = <z%u<br/>(global)>;\n", zindexof(ast, z));
+			} else {
+				fprintf(f, "\t\tlabel = <z%u>;\n", zindexof(ast, z));
+			}
+
+			for (s = z->fsm->sl; s != NULL; s = s->next) {
+				fprintf(f, "\t\tz%uS%u;\n",
+					zindexof(ast, z), indexof(z->fsm, s));
+			}
+
+			fprintf(f, "\t}\n");
+		}
+	}
+
+	fprintf(f, "\n");
 	fprintf(f, "\tstart [ shape = plaintext ];\n");
 	fprintf(f, "\tstart -> z%uS%u;\n",
 		zindexof(ast, ast->global),
 		indexof(ast->global->fsm, ast->global->fsm->start));
 	fprintf(f, "\t{ rank = min; start; }\n");
-	fprintf(f, "\n");
 
 	if (print_progress) {
 		zn = 0;
