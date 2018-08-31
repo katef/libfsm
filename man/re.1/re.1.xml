@@ -30,6 +30,7 @@
 	<!ENTITY X.opt "<option>-X</option>">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
 
+	<!ENTITY a.opt "<option>-a</option>">
 	<!ENTITY d.opt "<option>-d</option>">
 	<!ENTITY m.opt "<option>-m</option>">
 	<!ENTITY n.opt "<option>-n</option>">
@@ -80,6 +81,7 @@ query
 
 			<group>
 				<arg choice="plain">&n.opt;</arg>
+				<arg choice="plain">&b.opt;</arg>
 				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&s.opt;</arg>
@@ -110,6 +112,7 @@ query
 
 			<group>
 				<arg choice="plain">&n.opt;</arg>
+				<arg choice="plain">&b.opt;</arg>
 				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&s.opt;</arg>
@@ -131,6 +134,7 @@ query
 
 			<group>
 				<arg choice="plain">&n.opt;</arg>
+				<arg choice="plain">&b.opt;</arg>
 				<arg choice="plain">&i.opt;</arg>
 				<arg choice="plain">&u.opt;</arg>
 				<arg choice="plain">&s.opt;</arg>
@@ -358,6 +362,21 @@ group (for dialects which have them) (rather than a "whole" regexp)
 
 					<para>When printing &ast; output, only a single regular
 						expression may be given.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&b.opt;</term>
+
+				<listitem>
+					<para>Anchor regexps at the start and end,
+						per the <literal>RE_ANCHORED</literal> flag for &re.3;.</para>
+
+					<para>By default most patterns must be anchored using syntax
+						for anchors, typically <code>^</code> and <code>$</code>.
+						For some dialects (for example literal strings and globs),
+						the <literal>RE_ANCHORED</literal> flag is always set,
+						and for these dialects the &b.opt; flag has no effect.</para>
 				</listitem>
 			</varlistentry>
 
