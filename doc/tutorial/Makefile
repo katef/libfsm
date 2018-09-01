@@ -9,6 +9,7 @@ all: re3.svg
 all: re4.svg
 all: re5.svg
 all: trie.svg trie.c
+all: libfsm.svg
 
 re0.svg:
 	${RE} '^a.b([0-9]|ef)*$$' | ${DOT} > $@
@@ -40,4 +41,7 @@ trie.c:
 	| grep -E '^[a-z]+$$' \
 	| xargs ${RE} -zpl c -r literal \
 	> trie.c
+
+libfsm.svg:
+	${RE} -cb '[Ll]ibf+(sm)*' '[Ll]ibre' | ${DOT} > $@
 
