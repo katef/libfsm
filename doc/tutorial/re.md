@@ -24,14 +24,8 @@ The `-i` flag makes a pattern case insensitive, for dialects which do not provid
 
 ## Multiple patterns
 
-Multiple patterns may be given at once,
-and concatenated together by the `-s` flag:
-```
-; re -s -pl dot '^abc$' '^abcde+fx$' '^afx$' | dot
-```
-![re1.svg](re1.svg)
-
-With `-s` absent, multiple patterns are unioned as if given as a single regexp in the form `#0|#1|...`:
+Multiple patterns may be unioned together,
+as if given as a single regexp in the form `#0|#1|...`:
 ```
 ; re -pl dot '^abc$' '^abcde+fx$' '^afx$' | dot
 ```

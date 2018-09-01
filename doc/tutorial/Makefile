@@ -3,7 +3,6 @@ RE ?= ../../build/bin/re -pl dot
 DOT ?= dot -Tsvg -Efontname=sans -Nfontname=sans -Efontsize=15 | rsvg-convert -az .55 -f svg
 
 all: re0.svg
-all: re1.svg
 all: re2.svg
 all: re3.svg
 all: re4.svg
@@ -13,9 +12,6 @@ all: libfsm.svg
 
 re0.svg:
 	${RE} '^a.b([0-9]|ef)*$$' | ${DOT} > $@
-
-re1.svg:
-	${RE} -s  '^abc$$' '^abcde+fx$$' '^afx$$' | ${DOT} > $@
 
 re2.svg:
 	${RE}     '^abc$$' '^abcde+fx$$' '^afx$$' | ${DOT} > $@
