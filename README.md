@@ -4,8 +4,12 @@
     ; re -cb -pl dot '[Ll]ibf+(sm)*' '[Ll]ibre' | dot
 ![libfsm.svg](doc/tutorial/libfsm.svg)
 
-See the [tutorial introduction](doc/tutorial/re.md) for a quick overview
-of the re(1) command line interface.
+Getting started:
+
+ * See the [tutorial introduction](doc/tutorial/re.md) for a quick overview
+   of the re(1) command line interface.
+ * [Compilaton phases](doc/tutorial/phases.md) for typical applications
+   which compile regular expressions to code.
 
 Lexing is the process of categorising a stream of items by their spellings.
 The output from this process is a stream of tokens, each of a specific lexeme

@@ -1,6 +1,7 @@
 
-RE ?= ../../build/bin/re -pl dot
+RE  ?= ../../build/bin/re -pl dot
 DOT ?= dot -Tsvg -Efontname=sans -Nfontname=sans -Efontsize=15 | rsvg-convert -az .55 -f svg
+DIA ?= dia -t svg -e -
 
 all: re0.svg
 all: re2.svg
@@ -9,6 +10,9 @@ all: re4.svg
 all: re5.svg
 all: trie.svg trie.c
 all: libfsm.svg
+all: phases.svg
+all: phase-ast.svg phase-nfa.svg phase-dfa.svg phase-ir.svg phase-code.c
+all: phase-rrd.png
 
 re0.svg:
 	${RE} '^a.b([0-9]|ef)*$$' | ${DOT} > $@
@@ -25,6 +29,27 @@ re4.svg:
 re5.svg:
 	${RE} -r literal 'abc' | ${DOT} > $@
 
+phase-ast.svg:
+	${RE} -pl ast '^ab+c?.?$$' | dot -Tsvg -Efontname=sans -Nfontname=sans -Efontsize=14 | rsvg-convert -az .55 -f svg > $@
+
+phase-rrd.png:
+	${RE} -pl ebnf '^ab+c?.?$$' \
+	| kgt -l iso-ebnf -e rrparcon > /tmp/irrd.py \
+	&& sed -ie "s/\"raildraw_line_size\":         2,/\"raildraw_line_size\":         1,/" /tmp/irrd.py \
+	&& python /tmp/irrd.py /tmp/irrd.py $@
+
+phase-nfa.svg:
+	${RE} -np '^ab+c?.?$$' | fsm -pt trim | fsm -capl dot | ${DOT} > $@
+
+phase-dfa.svg:
+	${RE} -apl dot '^ab+c?.?$$' | ${DOT} > $@
+
+phase-ir.svg:
+	${RE} -pl ir '^ab+c?.?$$' | ${DOT} > $@
+
+phase-code.c:
+	${RE} -pl c '^ab+c?.?$$' > $@
+
 trie.svg:
 	grep '^fine' /usr/share/dict/words \
 	| grep -E '^[a-z]+$$' \
@@ -40,4 +65,7 @@ trie.c:
 
 libfsm.svg:
 	${RE} -cb '[Ll]ibf+(sm)*' '[Ll]ibre' | ${DOT} > $@
+
+phases.svg: phases.dia
+	${DIA} $< | rsvg-convert -az .45 -f svg > $@
 
