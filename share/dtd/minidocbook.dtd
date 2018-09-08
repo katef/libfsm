@@ -1,0 +1,302 @@
+<!-- TODO: explain this. based on from docbook 5.0, but written from scratch -->
+<!-- TODO:	xmlns	CDATA	#FIXED	"http://docbook.org/ns/docbook" -->
+
+
+<!ENTITY % ent-misc SYSTEM "ent-misc.dtd"> %ent-misc;
+<!ENTITY % ent-abbr SYSTEM "ent-abbr.dtd"> %ent-abbr;
+<!ENTITY % ent-ref  SYSTEM "ent-ref.dtd">  %ent-ref;
+<!ENTITY % ent-ext  SYSTEM "ent-ext.dtd">  %ent-ext;
+<!ENTITY % ent-arg  SYSTEM "ent-arg.dtd">  %ent-arg;
+
+<!ENTITY % common.role "
+	role	CDATA	#IMPLIED
+">
+
+<!ENTITY % common.xml '
+	xmlns:xi CDATA #FIXED "http://www.w3.org/2001/XInclude"
+'>
+
+<!ENTITY % common.base '
+	xml:base CDATA #IMPLIED
+'>
+
+<!ENTITY % common.id '
+	id ID #IMPLIED
+'>
+
+<!ENTITY % common.col '
+	align   (left | right  | center) #IMPLIED
+	valign  (top  | middle | bottom) #IMPLIED
+	colspan CDATA                    #IMPLIED
+'>
+
+<!ENTITY % common.cell '
+	rowspan CDATA                    #IMPLIED
+'>
+
+
+<!-- TODO: dissallow these from being empty -->
+<!ENTITY % text.full "(#PCDATA | code | acronym | application
+	| replaceable | option
+	| quote | firstterm | emphasis
+	| footnote
+	| citerefentry | citetitle
+	| ulink | link | xref
+	| superscript | subscript
+	| filename | varname | function | constant | userinput | computeroutput | literal | command)*">
+
+<!ENTITY % text.simple "(#PCDATA | code | acronym | application )*">
+
+<!-- TODO: these shouldn't contain themselves; expand inline... -->
+<!ELEMENT code        %text.full;>
+<!ELEMENT replaceable %text.full;>
+<!ELEMENT acronym     %text.full;>
+<!ELEMENT application %text.full;>
+<!ELEMENT option      %text.full;>
+<!ELEMENT quote       %text.full;>
+<!ELEMENT filename    %text.full;>
+
+<!-- TODO: replace with mathml -->
+<!ELEMENT superscript %text.full;>
+<!ELEMENT subscript   %text.full;>
+
+<!ELEMENT ulink       %text.full;>
+<!ATTLIST ulink
+	url CDATA #REQUIRED
+>
+
+<!ELEMENT link        %text.full;>
+<!ATTLIST link
+	linkend IDREF #REQUIRED
+>
+
+<!ELEMENT xref        %text.full;>
+<!ATTLIST xref
+	linkend IDREF #REQUIRED
+>
+
+
+<!ATTLIST acronym
+	%common.role;
+>
+<!ELEMENT varname        %text.simple;>	<!-- TODO: remove -->
+<!ELEMENT function       %text.simple;>	<!-- TODO: remove -->
+<!ELEMENT constant       %text.simple;>	<!-- TODO: remove -->
+<!ELEMENT userinput      %text.simple;>	<!-- TODO: remove -->
+<!ELEMENT computeroutput %text.simple;>	<!-- TODO: remove -->
+<!ELEMENT literal        %text.simple;>	<!-- TODO: remove -->
+<!ELEMENT command        %text.simple;>	<!-- TODO: remove -->
+
+
+<!ENTITY % section.content "(title, (para
+	| table | informaltable
+	| figure | informalfigure
+	| programlisting | screen | literallayout | blockquote | cmdsynopsis
+	| orderedlist | itemizedlist | variablelist
+	| warning
+	| section)+)">
+
+<!ENTITY % listitem.content "(para
+	| table | informaltable
+	| figure | informalfigure
+	| programlisting | screen | literallayout | blockquote
+	| orderedlist | itemizedlist | variablelist
+	| section)+">
+
+<!ELEMENT listitem %listitem.content;>
+<!ELEMENT warning  %listitem.content;>
+
+<!ELEMENT footnote    (para+)>
+
+<!ELEMENT title      %text.simple;>
+<!ELEMENT citetitle  %text.simple;>
+<!ELEMENT firstterm  %text.simple;>
+<!ELEMENT blockquote %text.simple;>
+<!ELEMENT emphasis   %text.simple;>
+
+<!ELEMENT citerefentry (refentrytitle, manvolnum)>
+
+<!ELEMENT refentry (refmeta, refnamediv, refsynopsisdiv?, refsection*)>
+<!ATTLIST refentry
+	%common.id;
+>
+
+<!ELEMENT book    (bookinfo,    (preface | chapter | appendix)+)>
+<!ATTLIST book
+	%common.xml;
+>
+
+<!ELEMENT article (articleinfo, section+)>
+<!ATTLIST article
+	%common.xml;
+>
+
+<!ELEMENT refmeta (refentrytitle, manvolnum)>
+<!ELEMENT refentrytitle (#PCDATA)>
+<!ELEMENT manvolnum (#PCDATA)>
+
+<!ELEMENT refnamediv (refname, refpurpose)>
+<!ATTLIST refnamediv
+	%common.id;
+>
+
+<!ELEMENT refname (#PCDATA)>
+<!ELEMENT refpurpose (#PCDATA)>
+
+<!ELEMENT refsynopsisdiv (cmdsynopsis | synopsis | para)*>
+<!ATTLIST refsynopsisdiv
+	%common.id;
+>
+
+<!ELEMENT cmdsynopsis (command, (arg | sbr | group)*)>
+
+<!ELEMENT synopsis (#PCDATA)>
+
+<!ELEMENT sbr EMPTY>
+
+<!ELEMENT group (arg)*>
+<!ATTLIST group
+	choice (opt|plain|req)   "opt"
+>
+
+<!ELEMENT arg (#PCDATA | option | replaceable)*>
+<!ATTLIST arg
+	choice (opt|plain|req)   "opt"
+	rep    (repeat|norepeat) "norepeat"
+>
+
+<!ELEMENT abstract       (para+)>
+<!ELEMENT revdescription ((para|programlisting)*)>
+
+<!ELEMENT revhistory (revision+)>
+
+<!ELEMENT date           (#PCDATA)>	<!-- YYYY(-MM(-DD)) -->
+<!ELEMENT revnumber      (#PCDATA)>	<!-- "TLD 1.2.3" -->
+<!ELEMENT authorinitials (#PCDATA)>	<!-- username -->
+<!ELEMENT contrib        (#PCDATA)>
+<!ELEMENT edition        (#PCDATA)> <!-- "Issue 3.0" -->
+
+<!ELEMENT revision (date?, revnumber?, authorinitials?, revdescription?)>
+<!-- "version" means either a release, or creation/destruction of a new project -->
+<!ATTLIST revision
+	role (version | dev | buildsystem | featurechange | docs) #REQUIRED
+>
+
+<!-- TODO: also refentryinfo -->
+<!ELEMENT bookinfo    (title, edition?, authorgroup, pubdate?, copyright+, abstract?, revhistory)>
+<!ELEMENT articleinfo (title, edition?, authorgroup, pubdate?, copyright+, abstract?, revhistory)>
+
+<!ELEMENT authorgroup ((editor | othercredit | corpauthor | author)+)>
+
+<!ELEMENT copyright (year+, holder)>
+
+<!ELEMENT editor      (firstname, surname, affiliation?)>
+<!ELEMENT author      (firstname, surname, affiliation?, contrib?)>
+<!ELEMENT othercredit (firstname, surname, affiliation?, contrib?)>
+<!ATTLIST othercredit
+	class (copyeditor) #REQUIRED
+>
+
+<!ELEMENT corpauthor  (#PCDATA)>
+<!ELEMENT firstname   (#PCDATA)>
+<!ELEMENT surname     (#PCDATA)>
+<!ELEMENT affiliation (orgname)>
+<!ELEMENT orgname     (#PCDATA)>
+
+<!ELEMENT pubdate (#PCDATA)>	<!-- Note we use this for the *first* year of publication -->
+<!ELEMENT year    (#PCDATA)>
+<!ELEMENT holder  (#PCDATA)>
+
+
+<!ELEMENT refsection %section.content;>
+<!ATTLIST refsection
+	%common.id;
+>
+
+<!ELEMENT preface    %section.content;>
+<!ATTLIST preface
+	%common.id;
+	%common.base;
+>
+
+<!ELEMENT chapter    %section.content;>
+<!ATTLIST chapter
+	%common.id;
+	%common.base;
+>
+
+<!ELEMENT appendix   %section.content;>
+<!ATTLIST appendix
+	%common.id;
+	%common.base;
+>
+
+<!ELEMENT section    %section.content;>
+<!ATTLIST section
+	%common.id;
+	%common.base;
+>
+
+<!ELEMENT term     %text.full;>
+
+<!ELEMENT varlistentry (term+, listitem)>
+
+<!ELEMENT orderedlist  (listitem+)>
+<!ELEMENT itemizedlist (listitem+)>
+<!ELEMENT variablelist (varlistentry+)>	<!-- TODO: style="ordered" -->
+
+<!-- TODO: i don't know if @language is useful -->
+<!ELEMENT programlisting %text.full;>
+<!ATTLIST programlisting
+	language (c | cpp | make | bnf | diff
+		| alg | env | tmpl | lxi | make_err | tdf | sid | act | tspec | dump | tnc | tpl) #REQUIRED
+>
+
+<!ELEMENT screen %text.full;>
+
+<!ELEMENT literallayout  %text.full;>
+
+<!ELEMENT para    %text.full;>
+
+<!ELEMENT table (title?, col+, thead, tbody+)>
+<!ELEMENT thead (tr+)>
+<!ELEMENT tbody (tr+)>
+
+<!ELEMENT informaltable (col*, tr+)>
+
+<!-- TODO: i only want th inside thead. how to do that? -->
+<!ELEMENT tr ((td | th)+)>
+
+<!ELEMENT col EMPTY>
+<!ATTLIST col
+	%common.col;
+>
+
+<!ELEMENT td %text.full;>
+<!ATTLIST td
+	%common.role;
+	%common.col;
+	%common.cell;
+>
+
+<!ELEMENT th %text.simple;>
+<!ATTLIST th
+	%common.role;
+	%common.col;
+	%common.cell;
+>
+
+<!ELEMENT informalfigure (graphic | literallayout)>
+
+<!ELEMENT figure (title, (graphic | literallayout))>
+<!ATTLIST figure
+	%common.id;
+>
+
+<!-- TODO: @align shouldn't be here, imo; can <figure> take it? -->
+<!ELEMENT graphic EMPTY>
+<!ATTLIST graphic
+	align (left | right | center) #IMPLIED
+	fileref CDATA #REQUIRED
+>
+

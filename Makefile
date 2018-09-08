@@ -1,7 +1,7 @@
 .MAKEFLAGS: -r -m share/mk
 
 # targets
-all::  mkdir .WAIT dep .WAIT lib prog
+all::  mkdir .WAIT dep .WAIT lib prog man
 dep::
 gen::
 test:: all
@@ -65,6 +65,7 @@ SUBDIR += tests
 SUBDIR += theft
 .endif
 SUBDIR += pc
+SUBDIR += man
 
 INCDIR += include
 
