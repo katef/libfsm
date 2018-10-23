@@ -1,6 +1,15 @@
 
-libfsm and friends: NFA, DFA, regular expressions and lexical analysis
+## libfsm and friends: NFA, DFA, regular expressions and lexical analysis
 
+    ; re -cb -pl dot '[Ll]ibf+(sm)*' '[Ll]ibre' | dot
+![libfsm.svg](doc/tutorial/libfsm.svg)
+
+Getting started:
+
+ * See the [tutorial introduction](doc/tutorial/re.md) for a quick overview
+   of the re(1) command line interface.
+ * [Compilaton phases](doc/tutorial/phases.md) for typical applications
+   which compile regular expressions to code.
 
 Lexing is the process of categorising a stream of items by their spellings.
 The output from this process is a stream of tokens, each of a specific lexeme
@@ -13,23 +22,23 @@ and has no other features.
 
 You get:
 
- libfsm - library for manipulating FSM (NFA and DFA)
- libre  - library for compiling regular expressions to NFA
- fsm(1) - command line interface for FSM
- re(1)  - command line interface for executing regular expressions
- lx(1)  - lexer generator
+ * libfsm — library for manipulating FSM (NFA and DFA)
+ * libre  — library for compiling regular expressions to NFA
+ * fsm(1) — command line interface for FSM
+ * re(1)  — command line interface for executing regular expressions
+ * lx(1)  — lexer generator
 
 Clone with submodules (contains required .mk files):
 
- ; git clone --recursive https://github.com/katef/libfsm.git
+    ; git clone --recursive https://github.com/katef/libfsm.git
 
 To build and install:
 
- ; pmake -r install
+    ; pmake -r install
 
 You can override a few things:
 
- ; CC=clang PREFIX=$HOME pmake -r install
+    ; CC=clang PREFIX=$HOME pmake -r install
 
 Building depends on:
 
@@ -42,7 +51,7 @@ Building depends on:
 
 Fuzzing depends on the theft property-based testing library:
 
- * https://github.com/silentbicycle/theft
+ * https://github.com/silentbicycle/theft  
    Tests are currently based on the libtheft 0.4.2 API.
 
 Ideas, comments or bugs: kate@elide.org
