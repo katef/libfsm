@@ -17,12 +17,12 @@
 	</refentryinfo>
 
 	<refmeta>
-		<refentrytitle>fsm.h</refentrytitle>
+		<refentrytitle>fsm_print</refentrytitle>
 		<manvolnum>3</manvolnum>
 	</refmeta>
 
 	<refnamediv id="name">
-		<refname>fsm.h</refname>
+		<refname>fsm_print</refname>
 		<refpurpose>FSM API</refpurpose>
 	</refnamediv>
 
