@@ -61,11 +61,21 @@ You need bmake for building. In order of preference:
 
 When you see "bmake" in the build instructions above, it means any of these.
 
+To install without building the documentation:
+
+    ; CC=clang PREFIX=$HOME pmake -r -DNODOC install
+
 Building depends on:
 
  * Any BSD make.
  * A C compiler. Any should do, but GCC and clang are best supported.
  * ar, ld, and a bunch of other stuff you probably already have.
+
+Building the documentation depends on:
+
+ * xsltproc(1)
+
+ * Docbook XSLT (and its XML catalog entries)
 
 Fuzzing depends on the theft property-based testing library:
 
