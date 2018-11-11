@@ -63,6 +63,8 @@
 <!ENTITY fsm_concat.3      "<citerefentry><refentrytitle>fsm_concat</refentrytitle> %vol.3;</citerefentry>">
 <!ENTITY fsm_example.3     "<citerefentry><refentrytitle>fsm_example</refentrytitle> %vol.3;</citerefentry>">
 
+<!ENTITY fsm_countstates.3 "<citerefentry><refentrytitle>fsm_countstates</refentrytitle> %vol.3;</citerefentry>">
+
 <!ENTITY fsm_print.3    "<citerefentry><refentrytitle>fsm_print</refentrytitle> %vol.3;</citerefentry>">
 
 <!ENTITY re_comp.3re    "<citerefentry><refentrytitle>re_comp</refentrytitle> %vol.3re;</citerefentry>">

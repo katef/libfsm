@@ -1,3 +1,6 @@
 [submodule "share/git/kmkf"]
 	path = share/git/kmkf
 	url = https://github.com/katef/kmkf
+[submodule "share/git/mdb"]
+	path = share/git/mdb
+	url = https://github.com/katef/minidocbook
