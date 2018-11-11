@@ -3,11 +3,12 @@
 
 # targets
 all::  mkdir .WAIT dep .WAIT lib prog
+doc::  mkdir
 dep::
 gen::
 test:: all
 theft:: all
-install:: all
+install:: all doc
 uninstall::
 clean::
 
@@ -33,6 +34,20 @@ PKG += libtheft
 SUBDIR += include/fsm
 SUBDIR += include/re
 SUBDIR += include
+SUBDIR += man/fsm.1
+SUBDIR += man/re.1
+SUBDIR += man/lx.1
+SUBDIR += man/fsm_print.3
+SUBDIR += man/libfsm.3
+SUBDIR += man/fsm.5
+SUBDIR += man/lx.5
+SUBDIR += man/fsm_lang.5fsm
+SUBDIR += man/glob.5re
+SUBDIR += man/like.5re
+SUBDIR += man/literal.5re
+SUBDIR += man/native.5re
+SUBDIR += man/re_dialect.5re
+SUBDIR += man/sql.5re
 SUBDIR += src/adt
 SUBDIR += src/print
 SUBDIR += src/libfsm/cost
@@ -105,6 +120,7 @@ INCDIR += include
 .include <so.mk>
 .include <part.mk>
 .include <prog.mk>
+.include <man.mk>
 .include <mkdir.mk>
 
 # these are internal tools for development; we don't install them to $PREFIX
