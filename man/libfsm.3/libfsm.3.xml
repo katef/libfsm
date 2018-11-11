@@ -24,7 +24,7 @@
 	</refmeta>
 
 	<refnamediv id="name">
-		<refname>fsm.h</refname>
+		<refname>libfsm</refname> <!-- XXX: docbook roff output uses this for a filename -->
 		<refpurpose>FSM API</refpurpose>
 	</refnamediv>
 
