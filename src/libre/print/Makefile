@@ -2,6 +2,7 @@
 
 SRC += src/libre/print/dot.c
 SRC += src/libre/print/abnf.c
+SRC += src/libre/print/blab.c
 SRC += src/libre/print/pcre.c
 SRC += src/libre/print/tree.c
 

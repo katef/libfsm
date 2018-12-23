@@ -15,6 +15,7 @@ struct fsm_options;
 typedef void (re_ast_print)(FILE *f, const struct fsm_options *opt,
 	const struct ast_re *ast);
 
+re_ast_print re_ast_print_blab;
 re_ast_print re_ast_print_dot;
 re_ast_print re_ast_print_abnf;
 re_ast_print re_ast_print_pcre;
