@@ -128,9 +128,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 	}
 
 	case AST_EXPR_LITERAL:
-		fprintf(f, "%%s\"");
 		abnf_escputc(f, opt, n->u.literal.c);
-		fprintf(f, "\"");
 		break;
 
 	case AST_EXPR_ANY:
@@ -247,31 +245,20 @@ if (n->u.concat.l != NULL && n->u.concat.l->t == RE_CHAR_CLASS_AST_FLAGS) {
 		break;
 
 	case RE_CHAR_CLASS_AST_LITERAL:
-/* TODO: %s only if neccessary */
-		fprintf(f, "%%s\"");
 		abnf_escputc(f, opt, n->u.literal.c);
-		fprintf(f, "\"");
 		break;
 
 	case RE_CHAR_CLASS_AST_RANGE: {
-		int c;
-
 		if (n->u.range.from.t != AST_RANGE_ENDPOINT_LITERAL || n->u.range.to.t != AST_RANGE_ENDPOINT_LITERAL) {
 			fprintf(stderr, "non-literal range endpoint unsupported\n");
 			abort(); /* XXX */
 		}
 
-		for (c = n->u.range.from.u.literal.c; c <= n->u.range.to.u.literal.c; c++) {
-			fprintf(f, "%%s\"");
-			abnf_escputc(f, opt, c);
-			fprintf(f, "\"");
-
-			if (c + 1 <= n->u.range.to.u.literal.c) {
-				fprintf(f, " / ");
-			}
+		fprintf(f, "%%x%02X-%02X",
+			(unsigned char) n->u.range.from.u.literal.c,
+			(unsigned char) n->u.range.to.u.literal.c);
 		}
 		break;
-	}
 
 	case RE_CHAR_CLASS_AST_NAMED:
 		fprintf(f, "TODO"); /* XXX */

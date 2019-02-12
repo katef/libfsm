@@ -20,27 +20,30 @@ abnf_escputc(FILE *f, const struct fsm_options *opt, char c)
 	assert(opt != NULL);
 
 	if (opt->always_hex) {
-		return fprintf(f, "\\x%02x", (unsigned char) c);
+		return fprintf(f, "%%x%02X", (unsigned char) c);
 	}
 
-/* XXX: re-do for ABNF */
 	switch (c) {
-	case '\"': return fputs("\\\"", f);
+	case '\"': return fputs("%x22", f);
 
-	case '\f': return fputs("\\f", f);
-	case '\n': return fputs("\\n", f);
-	case '\r': return fputs("\\r", f);
-	case '\t': return fputs("\\t", f);
-	case '\v': return fputs("\\v", f);
+	case '\f': return fputs("%x0C", f);
+	case '\n': return fputs("%x0A", f);
+	case '\r': return fputs("%x0D", f);
+	case '\t': return fputs("%x09", f);
+	case '\v': return fputs("%x0B", f);
 
 	default:
 		break;
 	}
 
 	if (!isprint((unsigned char) c)) {
-		return fprintf(f, "\\x%02x", (unsigned char) c);
+		return fprintf(f, "%%x%02X", (unsigned char) c);
 	}
 
-	return fprintf(f, "%c", c);
+	if (isalpha((unsigned char) c)) {
+		return fprintf(f, "%%s\"%c\"", c);
+	}
+
+	return fprintf(f, "\"%c\"", c);
 }
 
