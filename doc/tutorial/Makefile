@@ -12,7 +12,7 @@ all: trie.svg trie.c
 all: libfsm.svg
 all: phases.svg
 all: phase-ast.svg phase-nfa.svg phase-dfa.svg phase-ir.svg phase-code.c
-all: phase-rrd.png
+all: phase-rrd.svg
 
 re0.svg:
 	${RE} '^a.b([0-9]|ef)*$$' | ${DOT} > $@
@@ -32,11 +32,9 @@ re5.svg:
 phase-ast.svg:
 	${RE} -pl ast '^ab+c?.?$$' | dot -Tsvg -Efontname=sans -Nfontname=sans -Efontsize=14 | rsvg-convert -az .55 -f svg > $@
 
-phase-rrd.png:
-	${RE} -pl ebnf '^ab+c?.?$$' \
-	| kgt -l iso-ebnf -e rrparcon > /tmp/irrd.py \
-	&& sed -ie "s/\"raildraw_line_size\":         2,/\"raildraw_line_size\":         1,/" /tmp/irrd.py \
-	&& python /tmp/irrd.py /tmp/irrd.py $@
+phase-rrd.svg:
+	${RE} -pl abnf '^ab+c?.?$$' \
+	| kgt -l abnf -e svg > $@
 
 phase-nfa.svg:
 	${RE} -np '^ab+c?.?$$' | fsm -pt trim | fsm -capl dot | ${DOT} > $@
