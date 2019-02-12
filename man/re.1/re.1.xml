@@ -353,7 +353,7 @@ group (for dialects which have them) (rather than a "whole" regexp)
 						&re.1; can also print an &ast; for a regular expression's
 						syntax. The &ast; is printed by specifying one of
 						<literal>ast</literal> (graphviz &dot.lit; output),
-						<literal>ebnf</literal>,
+						<literal>abnf</literal>,
 						or <literal>tree</literal>.</para> <!-- TODO: explain more -->
 
 					<para>An &ast; may also be printed to regular expression

@@ -14,7 +14,7 @@
 #include <print/esc.h>
 
 int
-ebnf_escputc(FILE *f, const struct fsm_options *opt, char c)
+abnf_escputc(FILE *f, const struct fsm_options *opt, char c)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
@@ -23,6 +23,7 @@ ebnf_escputc(FILE *f, const struct fsm_options *opt, char c)
 		return fprintf(f, "\\x%02x", (unsigned char) c);
 	}
 
+/* XXX: re-do for ABNF */
 	switch (c) {
 	case '\"': return fputs("\\\"", f);
 
