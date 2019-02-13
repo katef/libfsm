@@ -1,0 +1,64 @@
+<svg
+  xmlns='http://www.w3.org/2000/svg'
+  xmlns:xlink='http://www.w3.org/1999/xlink'
+
+  viewBox='-20 -50 570 160'
+  width='570' height='160'>
+
+  <style>
+    rect, line, path { stroke-width: 1.5px; stroke: black; fill: transparent; }
+    rect, line, path { stroke-linecap: square; stroke-linejoin: rounded; }
+    path { fill: transparent; }
+    text.literal { font-family: monospace; }
+    line.ellipsis { stroke-dasharray: 1 3.5; }
+  </style>
+
+  <defs>
+    <g id='rrd:station'>
+      <path d='M.5 -6 v12 m 5 0 v-12' class='station'/>
+    </g>
+
+    <g id='rrd:arrow-ltr'>
+      <polyline points='2,-4 10,0 2,4' class='arrow'/>
+    </g>
+    <g id='rrd:arrow-rtl' transform='scale(-1 1) translate(-10 0)'>
+      <use xlink:href='#rrd:arrow-ltr'/>    </g>
+  </defs>
+
+  <g transform='translate(40 0)'>
+    <text x='-40' y='-20'>e:</text>
+    <use xlink:href='#rrd:station' x='0' y='30' transform='scale(-1 1)'/>
+    <use xlink:href='#rrd:station' x='490' y='30'/>
+    <text x='35' y='35' text-anchor='middle' class='prose'>^</text>
+    <rect x='70' y='20' height='20' width='20' rx='8' ry='8' class='literal'/>
+    <text x='80' y='35' text-anchor='middle' class='literal'>a</text>
+    <rect x='140' y='20' height='20' width='20' rx='8' ry='8' class='literal'/>
+    <text x='150' y='35' text-anchor='middle' class='literal'>b</text>
+    <use xlink:href='#rrd:arrow-rtl' x='145' y='50' transform='translate(5 0)'/>
+    <use xlink:href='#rrd:arrow-ltr' x='245' y='0' transform='translate(5 0)'/>
+    <rect x='240' y='20' height='20' width='20' rx='8' ry='8' class='literal'/>
+    <text x='250' y='35' text-anchor='middle' class='literal'>c</text>
+    <use xlink:href='#rrd:arrow-ltr' x='360' y='0' transform='translate(5 0)'/>
+    <text x='365' y='35' text-anchor='middle' class='prose'>TODO</text>
+    <text x='455' y='35' text-anchor='middle' class='prose'>$</text>
+    <path d='M320 10 v10'/>
+    <path d='M410 20 q0 10 10 10'/>
+    <path d='M390 30 h50'/>
+    <path d='M310 30 q10 0 10 -10'/>
+    <path d='M320 10 q0 -10 10 -10 h70 q10 0 10 10 v10'/>
+    <path d='M220 10 v10'/>
+    <path d='M280 20 q0 10 10 10'/>
+    <path d='M260 30 h80'/>
+    <path d='M210 30 q10 0 10 -10'/>
+    <path d='M220 10 q0 -10 10 -10 h40 q10 0 10 10 v10'/>
+    <path d='M120 40 v0 q0 10 10 10 h40 q10 0 10 -10 v0'/>
+    <path d='M170 30 q10 0 10 10'/>
+    <path d='M160 30 h80'/>
+    <path d='M120 40 q0 -10 10 -10'/>
+    <path d='M90 30 h50'/>
+    <path d='M50 30 h20'/>
+    <path d='M470 30 h20'/>
+    <path d='M0 30 h20'/>
+  </g>
+
+</svg>

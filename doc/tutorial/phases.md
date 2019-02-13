@@ -15,17 +15,16 @@ All regexp dialects parse to the same AST (see [re_ast.h](../../src/libre/re_ast
     ; re -pl ast '^ab+c?.?$' | dot
 ![phase-ast.svg](phase-ast.svg)
 
-You can render the AST as an EBNF grammar.
+You can render the AST as an ABNF grammar.
 Since regexps describe a *regular* grammar, no recursion is necessary
 and there is only ever one production:
 
-    ; re -pl ebnf '^ab+c?.?$'
-    e = START, 'a', 'b', { 'b' }, [ 'c' ], [ any ], END
-      ;
+    ; re -pl abnf '^ab+c?.?$'
+    e = <^> %s"a" %s"b" *( %s"b" ) [ %s"c" ] [ <TODO> ] <$> <$>
 
-Here's the same EBNF represented as a railroad diagram
+Here's the same ABNF represented as a railroad diagram
 by [kgt](https://github.com/katef/kgt):
-![phase-rrd.png](phase-rrd.png)
+![phase-rrd.svg](phase-rrd.svg)
 
 ## FSM transformation
 

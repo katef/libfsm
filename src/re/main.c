@@ -104,7 +104,7 @@ print_name(const char *name,
 		{ "json",   fsm_print_json,   NULL  },
 
 		{ "tree",   NULL, re_ast_print_tree },
-		{ "ebnf",   NULL, re_ast_print_ebnf },
+		{ "abnf",   NULL, re_ast_print_abnf },
 		{ "ast",    NULL, re_ast_print_dot  },
 		{ "pcre",   NULL, re_ast_print_pcre }
 	};
