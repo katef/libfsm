@@ -61,27 +61,6 @@ print_grouped(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 }
 
 static void
-pp_repeat(FILE *f, const struct fsm_options *opt, struct ast_expr *n,
-	unsigned m)
-{
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(n != NULL);
-
-	if (m == 0) {
-		return;
-	}
-
-	if (m == 1) {
-		pp_iter(f, opt, n);
-		return;
-	}
-
-	fprintf(f, "%u * ", m);
-	print_grouped(f, opt, n);
-}
-
-static void
 pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 {
 	assert(f != NULL);
@@ -139,46 +118,37 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		unsigned delta;
 		unsigned i;
 
-		if (n->u.repeated.high == AST_COUNT_UNBOUNDED) {
-			pp_repeat(f, opt, n->u.repeated.e, n->u.repeated.low);
-			if (n->u.repeated.low > 0) {
-				fprintf(f, " ");
-			}
-
-			fprintf(f, "*( ");
-			pp_iter(f, opt, n->u.repeated.e);
-			fprintf(f, " )");
-
-			return;
-		}
+		assert(n->u.repeated.low != AST_COUNT_UNBOUNDED);
 
 		if (n->u.repeated.low == 0 && n->u.repeated.high == 1) {
 			fprintf(f, "[ ");
 			pp_iter(f, opt, n->u.repeated.e);
 			fprintf(f, " ]");
-
 			return;
 		}
 
-		pp_repeat(f, opt, n->u.repeated.e, n->u.repeated.low);
-
-		delta = n->u.repeated.high - n->u.repeated.low;
-
-		if (n->u.repeated.low > 0 && delta > 0) {
-			fprintf(f, " ");
-		}
-
-		for (i = 0; i < delta; i++) {
-			fprintf(f, "[ ");
+		if (n->u.repeated.low == 1 && n->u.repeated.high == 1) {
 			pp_iter(f, opt, n->u.repeated.e);
+			return;
+		}
 
-			if (i + 1 < delta) {
-				fprintf(f, " ");
-			}
+		if (n->u.repeated.low == n->u.repeated.high) {
+			fprintf(f, "%u", n->u.repeated.high);
+			print_grouped(f, opt, n->u.repeated.e);
+			return;
 		}
-		for (i = 0; i < delta; i++) {
-			fprintf(f, " ]");
+
+		if (n->u.repeated.low > 0) {
+			fprintf(f, "%u", n->u.repeated.low);
 		}
+
+		fprintf(f, "*");
+
+		if (n->u.repeated.high != AST_COUNT_UNBOUNDED) {
+			fprintf(f, "%u", n->u.repeated.high);
+		}
+
+		print_grouped(f, opt, n->u.repeated.e);
 
 		break;
 	}
