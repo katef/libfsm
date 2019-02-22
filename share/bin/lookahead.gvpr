@@ -1,0 +1,125 @@
+#!/usr/bin/env gvpr
+
+BEGIN {
+	int accepts(node_t n) {
+		return strcmp(n.shape, "doublecircle") == 0;
+	}
+
+	int epsilon(edge_t e) {
+		return hasAttr(e, "style") && strcmp(e.style, "dashed") == 0;
+	}
+
+	string token_name(node_t n) {
+		if(index(n.label, "$") != 0)
+			return "discard";
+		return sub(n.label, "<*");
+	}
+
+	int lookahead[node_t];
+	edge_t next[node_t];
+	node_t longest_for_label[string];
+	int depth, maxdepth;
+	string l;
+	edge_t e;
+	node_t n;
+}
+
+BEG_G {
+	unset(lookahead);
+	unset(next);
+	unset(longest_for_label);
+
+	$tvroot = node($, "start");
+	$tvtype = TV_postfwd;
+}
+
+N {
+	maxdepth = 0;
+	for(e = fstout($); e; e = nxtout(e)) {
+		if(epsilon(e)) {
+			// transitioning between zones always commits to the
+			// previous accepting state first, so no lookahead is
+			// required after that
+			continue;
+		} else if(accepts(e.head)) {
+			// when transitioning to an accepting state, ignore any
+			// lookahead that might be required after that state
+			depth = 0;
+		} else if(e.head in lookahead) {
+			// since this is a post-order traversal, we've already
+			// visited all the out-edges of this node, unless one
+			// of them is a back-edge, in which case we have a
+			// cycle
+			depth = lookahead[e.head];
+		} else {
+			depth = -1;
+		}
+
+		if(depth < 0) {
+			maxdepth = -1;
+			unset(next, $);
+			break;
+		}
+
+		// add one for the edge we traversed to reach a node that had
+		// the given depth
+		++depth;
+
+		if(depth > maxdepth) {
+			maxdepth = depth;
+			next[$] = e;
+		}
+	}
+
+	lookahead[$] = maxdepth;
+
+	if(maxdepth && accepts($)) {
+		l = token_name($);
+		if(!(l in longest_for_label) || lookahead[longest_for_label[l]] < maxdepth)
+			longest_for_label[l] = $;
+	}
+}
+
+END_G {
+	maxdepth = 0;
+	for(longest_for_label[l]) {
+		n = longest_for_label[l];
+		depth = lookahead[n];
+
+		if(depth < 0)
+			continue;
+
+		if(!maxdepth)
+			printf("after accepting, a longest pattern leading to another accept is:\n");
+
+		if(maxdepth >= 0 && depth > maxdepth)
+			maxdepth = depth;
+
+		printf("- %s ", l);
+		for(e = next[n]; ; e = next[e.head]) {
+			if(strcmp(e.label, "\\") == 0)
+				printf("\\\\");
+			else
+				printf("%s", gsub(gsub(e.label, "\\&#x2423;", " "), "\\&quot;", '"'));
+			if(accepts(e.head)) {
+				printf(" %s", token_name(e.head));
+				break;
+			}
+		}
+		printf("\n");
+	}
+
+	for(longest_for_label[l]) {
+		if(lookahead[longest_for_label[l]] >= 0)
+			continue;
+
+		if(maxdepth >= 0)
+			printf("unbounded lookahead required after these tokens:\n");
+
+		maxdepth = -1;
+		printf("- %s\n", l);
+	}
+
+	if(maxdepth >= 0)
+		printf("requires %d characters of lookahead\n", maxdepth);
+}
