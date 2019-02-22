@@ -1,0 +1,59 @@
+#
+# Copyright 2019 Jamey Sharp
+#
+# See LICENCE for the full copyright terms.
+#
+
+# Phase 3 of the C11 standard's translation phases covers decomposing a source
+# file into a sequence of preprocessing tokens. I believe this language
+# specification is a strict implementation of the standard.
+
+hexadecimal_digit = /[0-9a-f]/i;
+hex_quad = hexadecimal_digit hexadecimal_digit hexadecimal_digit hexadecimal_digit;
+universal_character_name = '\u' hex_quad | '\U' hex_quad hex_quad;
+
+identifier_nondigit = /[_a-z]/i | universal_character_name;
+
+identifier_nondigit (identifier_nondigit | /[0-9]/)* -> $identifier;
+
+/\.?[0-9]/ (/[.0-9]/ | identifier_nondigit | /[ep][\-+]/i)* -> $pp_number;
+
+simple_escape_sequence = '\' /['"?\\abfnrtv]/;
+octal_escape_sequence = '\' /[0-7]{1,3}/;
+hexadecimal_escape_sequence = '\x' hexadecimal_digit+;
+
+/(u8?|[UL])?/ '"' -> $string_literal_start .. '"' -> $string_literal_end {
+	simple_escape_sequence -> $escape_simple;
+	octal_escape_sequence -> $escape_octal;
+	hexadecimal_escape_sequence | universal_character_name -> $escape_hex;
+	/[^"\\\n]/ -> $chr;
+}
+
+/[LuU]?/ "'" -> $character_constant_start .. "'" -> $character_constant_end {
+	simple_escape_sequence -> $escape_simple;
+	octal_escape_sequence -> $escape_octal;
+	hexadecimal_escape_sequence | universal_character_name -> $escape_hex;
+	/[^'\\\n]/ -> $chr;
+}
+
+'[' | ']' | '(' | ')' | '{' | '}' | '.' | '->' |
+'++' | '--' | '&' | '*' | '+' | '-' | '~' | '!' |
+'/' | '%' | '<<' | '>>' | '<' | '>' | '<=' | '>=' | '==' | '!=' | '^' | '|' | '&&' | '||' |
+'?' | ':' | ';' | '...' |
+'=' | '*=' | '/=' | '%=' | '+=' | '-=' | '<<=' | '>>=' | '&=' | '^=' | '|=' |
+',' | '#' | '##' |
+'<:' | ':>' | '<%' | '%>' | '%:' | '%:%:' -> $punctuator;
+
+'/*' -> $block_comment_start .. '*/' -> $block_comment_end {
+	/./ -> $chr;
+}
+
+'//' -> $line_comment_start .. /\n+/ -> $newline {
+	/./ -> $chr;
+}
+
+/[ \t\v\f]/+ -> $whitespace;
+
+/\n/+ -> $newline;
+
+/[^"']/ - ($identifier | $pp_number | $punctuator | $block_comment | $line_comment | $whitespace | $newline) -> $other;
