@@ -1,0 +1,44 @@
+#!/bin/sh
+
+set -e
+
+input="$1"
+if ! shift || ! test -f "$input"; then
+	exec >&2
+	echo "usage: $0 <input.lx> [lx options...]"
+	echo "Compiles a demo lexer for the given .lx specification."
+	exit 1
+fi
+
+# If the lx binary isn't on our PATH, assume we're running from the source tree
+# and try to find the built copy of lx there. This relies on `lx -h` having an
+# exit status of 0 and not writing anything to stderr, so that if the shell
+# fails to find lx, the non-zero exit status and the "file not found" error
+# message on stderr are different than a successful result.
+if ! lx -h >/dev/null 2>&1; then
+	builddir="$(dirname "$0")/../../build/bin"
+	PATH="$builddir:$PATH"
+
+	# If we still can't find the binary, the message which the shell prints
+	# to stderr will tell the user what went wrong.
+	if ! lx -h >/dev/null; then
+		echo "looked for lx in \$PATH and \"$builddir\""
+		exit 1
+	fi
+fi
+
+base="$(basename "$input" .lx)"
+
+# Concatenate the C source that lx generates into a single translation unit and
+# pipe that to gcc so we don't need any temporary files. Both the .c and `-l
+# dump` source must come after the .h source so they have access to token
+# declarations and such. Unfortunately the .h template assumes some system
+# headers are included first, but pre-including stdio.h pulls in enough to make
+# it work.
+{
+	lx "$@" -l h < "$input"
+	lx "$@" -l c < "$input"
+	lx "$@" -l dump < "$input"
+} | gcc -Wall -o "$base" -DLX_HEADER=\"/dev/null\" -include stdio.h -x c -
+
+echo "Now run the demo lexer for '$input' with './$base'"
