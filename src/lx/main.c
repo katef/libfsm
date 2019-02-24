@@ -125,6 +125,7 @@ print_name(const char *name)
 		{ "test", NULL          },
 		{ "dot",  lx_print_dot  },
 		{ "dump", lx_print_dump },
+		{ "json", lx_print_json },
 		{ "zdot", lx_print_zdot },
 		{ "c",    lx_print_c    },
 		{ "h",    lx_print_h    }
