@@ -115,9 +115,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 
 	case AST_EXPR_REPEATED: {
-		unsigned delta;
-		unsigned i;
-
 		assert(n->u.repeated.low != AST_COUNT_UNBOUNDED);
 
 		if (n->u.repeated.low == 0 && n->u.repeated.high == 1) {
