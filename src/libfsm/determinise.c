@@ -53,27 +53,27 @@ struct fsm_determinise_cache {
 };
 
 static void
-clear_trans(struct set *trans)
+clear_trans(const struct fsm *fsm, struct set *trans)
 {
 	struct set_iter it;
 	struct trans *t;
 
 	for (t = set_first(trans, &it); t != NULL; t = set_next(&it)) {
-		free(t);
+		f_free(fsm, t);
 	}
 
 	set_clear(trans);
 }
 
 static void
-clear_mappings(struct set *mappings)
+clear_mappings(const struct fsm *fsm, struct set *mappings)
 {
 	struct set_iter it;
 	struct mapping *m;
 
 	for (m = set_first(mappings, &it); m != NULL; m = set_next(&it)) {
 		set_free(m->closure);
-		free(m);
+		f_free(fsm, m);
 	}
 
 	set_clear(mappings);
@@ -127,7 +127,7 @@ addtomappings(struct set *mappings, struct fsm *dfa, struct set *closure)
 	}
 
 	/* else add new DFA state */
-	m = malloc(sizeof *m);
+	m = f_malloc(dfa, sizeof *m);
 	if (m == NULL) {
 		return NULL;
 	}
@@ -136,14 +136,14 @@ addtomappings(struct set *mappings, struct fsm *dfa, struct set *closure)
 	m->closure  = closure;
 	m->dfastate = fsm_addstate(dfa);
 	if (m->dfastate == NULL) {
-		free(m);
+		f_free(dfa, m);
 		return NULL;
 	}
 
 	m->done = 0;
 
 	if (!set_add(&mappings, m)) {
-		free(m);
+		f_free(dfa, m);
 		return NULL;
 	}
 
@@ -293,7 +293,7 @@ nextnotdone(struct set *mappings)
  * TODO: maybe simpler to just return the set, rather than take a double pointer
  */
 static int
-listnonepsilonstates(struct set *trans, struct set *set)
+listnonepsilonstates(const struct fsm *fsm ,struct set *trans, struct set *set)
 {
 	struct fsm_state *s;
 	struct set_iter it;
@@ -324,9 +324,9 @@ listnonepsilonstates(struct set *trans, struct set *set)
 					continue;
 				}
 
-				p = malloc(sizeof *p);
+				p = f_malloc(fsm, sizeof *p);
 				if (p == NULL) {
-					clear_trans(trans);
+					clear_trans(fsm ,trans);
 					return 0;
 				}
 
@@ -334,8 +334,8 @@ listnonepsilonstates(struct set *trans, struct set *set)
 				p->state = st;
 
 				if (!set_add(&trans, p)) {
-					free(p);
-					clear_trans(trans);
+					f_free(fsm, p);
+					clear_trans(fsm, trans);
 					return 0;
 				}
 			}
@@ -511,7 +511,7 @@ determinise(struct fsm *nfa,
 		 * next states in the NFA.
 		 */
 		/* TODO: document that nes contains only entries with labels set */
-		if (!listnonepsilonstates(trans, curr->closure)) {
+		if (!listnonepsilonstates(dfa, trans, curr->closure)) {
 			goto error;
 		}
 
@@ -537,18 +537,18 @@ determinise(struct fsm *nfa,
 			new = set_closure(mappings, dfa, reachable);
 			set_free(reachable);
 			if (new == NULL) {
-				clear_trans(trans);
+				clear_trans(dfa, trans);
 				goto error;
 			}
 
 			e = fsm_addedge_literal(dfa, curr->dfastate, new, t->c);
 			if (e == NULL) {
-				clear_trans(trans);
+				clear_trans(dfa, trans);
 				goto error;
 			}
 		}
 
-		clear_trans(trans);
+		clear_trans(dfa, trans);
 
 #ifdef DEBUG_TODFA
 		{
@@ -575,7 +575,7 @@ determinise(struct fsm *nfa,
 		fsm_carryopaque(dfa, curr->closure, dfa, curr->dfastate);
 	}
 
-	clear_mappings(mappings);
+	clear_mappings(dfa, mappings);
 
 	/* TODO: can assert a whole bunch of things about the dfa, here */
 	assert(fsm_all(dfa, fsm_isdfa));
@@ -584,7 +584,7 @@ determinise(struct fsm *nfa,
 
 error:
 
-	clear_mappings(mappings);
+	clear_mappings(dfa, mappings);
 	fsm_free(dfa);
 
 	return NULL;
@@ -601,7 +601,7 @@ fsm_determinise_cache(struct fsm *fsm,
 	assert(dcache != NULL);
 
 	if (*dcache == NULL) {
-		*dcache = malloc(sizeof **dcache);
+		*dcache = f_malloc(fsm, sizeof **dcache);
 		if (*dcache == NULL) {
 			return 0;
 		}
@@ -647,8 +647,8 @@ fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache)
 		return;
 	}
 
-	clear_mappings(dcache->mappings);
-	clear_trans(dcache->trans);
+	clear_mappings(fsm, dcache->mappings);
+	clear_trans(fsm, dcache->trans);
 
 	if (dcache->mappings != NULL) {
 		set_free(dcache->mappings);
@@ -658,7 +658,7 @@ fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache)
 		set_free(dcache->trans);
 	}
 
-	free(dcache);
+	f_free(fsm, dcache);
 }
 
 int

@@ -37,7 +37,7 @@ fsm_addstate(struct fsm *fsm)
 
 	assert(fsm != NULL);
 
-	new = malloc(sizeof *new);
+	new = f_malloc(fsm, sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -78,7 +78,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 
 	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
 		set_free(e->sl);
-		free(e);
+		f_free(fsm, e);
 	}
 	set_free(state->edges);
 
@@ -101,7 +101,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 				}
 
 				next = (*p)->next;
-				free(*p);
+				f_free(fsm, *p);
 				*p = next;
 				break;
 			}

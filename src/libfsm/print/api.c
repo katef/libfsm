@@ -115,7 +115,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 
-	a = malloc(n * sizeof *a);
+	a = f_malloc(fsm, n * sizeof *a);
 	if (a == NULL) {
 		/* XXX */
 		return;
@@ -192,7 +192,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 		}
 	}
 
-	free(a);
+	f_free(fsm, a);
 
 	fprintf(f, "\n");
 

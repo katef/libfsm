@@ -107,13 +107,13 @@ fsm_walk2_data_free(struct fsm_walk2_data *data)
 		set_free(data->states);
 	}
 
-	if (data->new) {
-		fsm_free(data->new);
-	}
-
 	for (p = data->head; p != NULL; p = next) {
 		next = p->next;
-		free(p);
+		f_free(data->new, p);
+	}
+
+	if (data->new) {
+		fsm_free(data->new);
 	}
 }
 
@@ -140,7 +140,7 @@ alloc_walk2_tuple(struct fsm_walk2_data *data)
 
 new_pool:
 
-	pool = malloc(sizeof *pool);
+	pool = f_malloc(data->new, sizeof *pool);
 	if (pool == NULL) {
 		return NULL;
 	}

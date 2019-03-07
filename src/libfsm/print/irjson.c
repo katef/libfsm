@@ -218,6 +218,6 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 
 	fprintf(f, "}\n");
 
-	free_ir(ir);
+	free_ir(fsm, ir);
 }
 
