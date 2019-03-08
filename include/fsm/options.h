@@ -82,7 +82,7 @@ struct fsm_options {
 		struct fsm *, struct fsm_state *);
 
 	/* closure for custom allocation functions */
-	struct fsm_allocator *allocator;
+	const struct fsm_allocator *allocator;
 };
 
 #endif
