@@ -22,14 +22,14 @@
 void
 f_free(const struct fsm *fsm, void *p)
 {
-	const struct fsm_allocator *a;
+	struct fsm_allocator a;
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
 	a = fsm->opt->allocator;
-	if (a->free != NULL) {
-		a->free(a->opaque, p);
+	if (a.free != NULL) {
+		a.free(a.opaque, p);
 		return;
 	}
 
@@ -39,14 +39,14 @@ f_free(const struct fsm *fsm, void *p)
 void *
 f_malloc(const struct fsm *fsm, size_t sz)
 {
-	const struct fsm_allocator *a;
+	struct fsm_allocator a;
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
 	a = fsm->opt->allocator;
-	if (a->malloc != NULL) {
-		return (a->malloc(a->opaque, sz));
+	if (a.malloc != NULL) {
+		return (a.malloc(a.opaque, sz));
 	}
 
 	return malloc(sz);
@@ -55,14 +55,14 @@ f_malloc(const struct fsm *fsm, size_t sz)
 void *
 f_realloc(const struct fsm*fsm, void *p, size_t sz)
 {
-	const struct fsm_allocator *a;
+	struct fsm_allocator a;
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
 	a = fsm->opt->allocator;
-	if (a->realloc != NULL) {
-		return a->realloc(a->opaque, p, sz);
+	if (a.realloc != NULL) {
+		return a.realloc(a.opaque, p, sz);
 	}
 
 	return realloc(p, sz);
