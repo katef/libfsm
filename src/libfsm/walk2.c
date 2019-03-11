@@ -99,7 +99,7 @@ struct fsm_walk2_tuple_pool {
 };
 
 static void
-fsm_walk2_data_free(struct fsm_walk2_data *data)
+fsm_walk2_data_free(const struct fsm *fsm, struct fsm_walk2_data *data)
 {
 	struct fsm_walk2_tuple_pool *p, *next;
 
@@ -109,7 +109,7 @@ fsm_walk2_data_free(struct fsm_walk2_data *data)
 
 	for (p = data->head; p != NULL; p = next) {
 		next = p->next;
-		f_free(data->new, p);
+		f_free(fsm, p);
 	}
 
 	if (data->new) {
@@ -526,13 +526,13 @@ done:
 	/* reset all equiv fields in the states */
 	fsm_walk2_mark_equiv_null(new);
 
-	fsm_walk2_data_free(&data);
+	fsm_walk2_data_free(a, &data);
 
 	return new;
 
 error:
 
-	fsm_walk2_data_free(&data);
+	fsm_walk2_data_free(a, &data);
 
 	return NULL;
 }
