@@ -25,7 +25,10 @@ SRC += src/libre/class/utf8_${script}.c
 UNI_CAT != cat ${UCD}/UnicodeData.txt \
 	| cut -d';' -f3 | sort | uniq | grep -v 'Cc'
 
-.for group in ${UNI_CAT:C/(.)./\1/:u}
+# some awkwardness to avoid :O:u for OpenBSD make(1)
+UNI_CAT_UNIQ != echo ${UNI_CAT:C/(.)./\1/} | tr ' ' '\n' | sort | uniq
+
+.for group in ${UNI_CAT_UNIQ}
 
 # This could be faster if we kept the minimized DFA for each category
 src/libre/class/utf8_${group}.c:
