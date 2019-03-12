@@ -696,7 +696,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		(void) fsm_print_cfrag(f, ir, &o, opt.cp,
 			z->fsm->opt->leaf != NULL ? z->fsm->opt->leaf : leaf, z->fsm->opt->leaf_opaque);
 
-		free_ir(ir);
+		free_ir(z->fsm, ir);
 
 		z->fsm->opt = tmp;
 	}

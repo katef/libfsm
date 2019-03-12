@@ -8,8 +8,10 @@
 #define FSM_INTERNAL_H
 
 #include <limits.h>
+#include <stdlib.h>
 
 #include <fsm/fsm.h>
+#include <fsm/options.h>
 
 #define FSM_ENDCOUNT_MAX ULONG_MAX
 

@@ -453,6 +453,6 @@ fsm_print_c(FILE *f, const struct fsm *fsm)
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
 
-	free_ir(ir);
+	free_ir(fsm, ir);
 }
 

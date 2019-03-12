@@ -48,6 +48,28 @@ void
 fsm_free(struct fsm *fsm);
 
 /*
+ * Internal free function that invokes free(3) by default, or a user-provided
+ * free function to free memory and perform any custom memory tracking or handling
+ */
+void
+f_free(const struct fsm *fsm, void *p);
+
+/*
+ * Internal malloc function that invokes malloc(3) by default, or a user-provided
+ * malloc function to allocate memory and perform any custom memory tracking or handling
+ */
+void *
+f_malloc(const struct fsm *fsm, size_t sz);
+
+/*
+ * Internal realloc function that invokes realloc(3) by default, or a user-provided
+ * realloc function to re-allocate memory to the specified size and perform
+ * any custom memory tracking or handling
+ */
+void *
+f_realloc(const struct fsm *fsm, void *p, size_t sz);
+
+/*
  * Duplicate an FSM.
  */
 struct fsm *

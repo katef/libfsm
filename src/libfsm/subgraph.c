@@ -43,14 +43,14 @@ mapping_ensure(struct fsm *fsm, struct mapping **head, struct fsm_state *old)
 
 	/* Otherwise, make a new one */
 	{
-		m = malloc(sizeof *m);
+		m = f_malloc(fsm, sizeof *m);
 		if (m == NULL) {
 			return 0;
 		}
 
 		m->new = fsm_addstate(fsm);
 		if (m->new == NULL) {
-			free(m);
+			f_free(fsm, m);
 			return 0;
 		}
 
@@ -67,7 +67,7 @@ mapping_ensure(struct fsm *fsm, struct mapping **head, struct fsm_state *old)
 }
 
 static void
-mapping_free(struct mapping *mapping)
+mapping_free(const struct fsm *fsm, struct mapping *mapping)
 {
 	struct mapping *next;
 	struct mapping *m;
@@ -75,7 +75,7 @@ mapping_free(struct mapping *mapping)
 	for (m = mapping; m != NULL; m = next) {
 		next = m->next;
 
-		free(m);
+		f_free(fsm, m);
 	}
 }
 
@@ -144,7 +144,7 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 
 				to = mapping_ensure(fsm, &mappings, s);
 				if (to == NULL) {
-					mapping_free(mappings);
+					mapping_free(fsm, mappings);
 					return NULL;
 				}
 
@@ -158,7 +158,7 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 	}
 
 	res = start->new;
-	mapping_free(mappings);
+	mapping_free(fsm, mappings);
 
 	return res;
 }
