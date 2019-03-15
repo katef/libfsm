@@ -259,7 +259,7 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		return NULL;
 	}
 
-	is_end = data->endmask & walk2mask(a && a->end, b && b->end);
+	is_end = data->endmask & walk2mask(a != NULL && pred_get(a, PRED_ISEND), b != NULL && pred_get(b, PRED_ISEND));
 
 	if (is_end) {
 		fsm_setend(data->new, comb, 1);

@@ -19,6 +19,6 @@ fsm_isend(const struct fsm *fsm, const struct fsm_state *state)
 
 	(void) fsm;
 
-	return !!state->end;
+	return !!pred_get(state, PRED_ISEND);
 }
 

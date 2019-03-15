@@ -46,13 +46,22 @@ enum fsm_edge_type {
 
 #define FSM_ENDCOUNT_MAX ULONG_MAX
 
+enum fsm_pred {
+	PRED_ISEND       = 1 << 0
+/* TODO:
+	PRED_ISDFA       = 1 << 0,
+	PRED_ISCOMPLETE  = 1 << 1,
+	PRED_HASINCOMING = 1 << 2
+*/
+};
+
 struct fsm_edge {
 	struct state_set *sl;
 	enum fsm_edge_type symbol;
 };
 
 struct fsm_state {
-	unsigned int end:1;
+	unsigned pred; /* enum fsm_pred predicate bitmap */
 
 	struct edge_set *edges; /* containing `struct fsm_edge *` */
 
@@ -92,6 +101,15 @@ fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type typ
 void
 fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
 	struct fsm *new, struct fsm_state *state);
+
+void
+pred_set(struct fsm_state *state, enum fsm_pred pred);
+
+void
+pred_unset(struct fsm_state *state, enum fsm_pred pred);
+
+int
+pred_get(const struct fsm_state *state, enum fsm_pred pred);
 
 #endif
 
