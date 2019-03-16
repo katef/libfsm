@@ -14,34 +14,26 @@
 struct fsm;
 struct fsm_state;
 
-int
-fsm_isany(const struct fsm *fsm, const struct fsm_state *state);
+typedef int (fsm_pred)(const struct fsm *fsm, const struct fsm_state *state);
 
-int
-fsm_isend(const struct fsm *fsm, const struct fsm_state *state);
-
-int
-fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state);
+fsm_pred fsm_isany;
+fsm_pred fsm_isend;
+fsm_pred fsm_isdfa;
 
 /*
  * To be complete means that a state has an edge for all letters in the
  * alphabet (sigma). The alphabet for libfsm is all values expressible by an
  * unsigned octet.
  */
-int
-fsm_iscomplete(const struct fsm *fsm, const struct fsm_state *state);
+fsm_pred fsm_iscomplete;
 
-int
-fsm_hasincoming(const struct fsm *fsm, const struct fsm_state *state);
-
-int
-fsm_hasoutgoing(const struct fsm *fsm, const struct fsm_state *state);
+fsm_pred fsm_hasincoming;
+fsm_pred fsm_hasoutgoing;
 
 /*
  * True iff there are outgoing edges and all are epsilons.
  */
-int
-fsm_epsilonsonly(const struct fsm *fsm, const struct fsm_state *state);
+fsm_pred fsm_epsilonsonly;
 
 #endif
 
