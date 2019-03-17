@@ -24,6 +24,33 @@
 
 #include "parser.h"
 
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+
+/* we're running Darwin/macOS, so we don't necessarily have clock_gettime,
+ * so we do it the ugly way...
+ */
+
+#define CLOCK_MONOTONIC 0
+static int clock_gettime(int clk_id, struct timespec *ts)
+{
+	clock_serv_t cclock;
+	mach_timespec_t mts;
+
+	(void)clk_id;
+
+	host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
+	clock_get_time(cclock, &mts);
+	mach_port_deallocate(mach_task_self(), cclock);
+
+	ts->tv_sec = mts.tv_sec;
+	ts->tv_nsec = mts.tv_nsec;
+
+	return 0;
+}
+#endif /* __MACH__ */
+
 extern int optind;
 extern char *optarg;
 
