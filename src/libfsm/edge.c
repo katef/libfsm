@@ -25,7 +25,7 @@ fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type typ
 	assert(to != NULL);
 
 	new.symbol = type;
-	e = set_contains(from->edges, &new);
+	e = edge_set_contains(from->edges, &new);
 	if (e == NULL) {
 		e = malloc(sizeof *e);
 		if (e == NULL) {
@@ -33,14 +33,14 @@ fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type typ
 		}
 
 		e->symbol = type;
-		e->sl = NULL;
+		e->sl = state_set_create();
 
-		if (!set_add(&from->edges, e)) {
+		if (!edge_set_add(from->edges, e)) {
 			return NULL;
 		}
 	}
 
-	if (set_add(&e->sl, to) == NULL) {
+	if (state_set_add(e->sl, to) == NULL) {
 		return NULL;
 	}
 
@@ -102,8 +102,8 @@ fsm_hasedge(const struct fsm_state *s, int c)
 	struct fsm_edge *e, search;
 
 	search.symbol = c;
-	e = set_contains(s->edges, &search);
-	if (e == NULL || set_empty(e->sl)) {
+	e = edge_set_contains(s->edges, &search);
+	if (e == NULL || state_set_empty(e->sl)) {
 		return NULL;
 	}
 

@@ -20,7 +20,6 @@ struct fsm_state;
 struct fsm_edge;
 struct fsm_determinise_cache;
 struct fsm_options;
-struct set; /* XXX */
 struct path; /* XXX */
 
 /*

@@ -23,10 +23,10 @@ fsm_hasincoming(const struct fsm *fsm, const struct fsm_state *state)
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		struct fsm_edge *e;
-		struct set_iter it;
+		struct edge_iter it;
 
-		for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
-			if (set_contains(e->sl, state)) {
+		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			if (state_set_contains(e->sl, state)) {
 				return 1;
 			}
 		}

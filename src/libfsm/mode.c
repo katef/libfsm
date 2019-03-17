@@ -17,7 +17,7 @@ struct fsm_state *
 fsm_findmode(const struct fsm_state *state, unsigned int *freq)
 {
 	struct fsm_edge *e;
-	struct set_iter it;
+	struct edge_iter it;
 	struct fsm_state *s;
 
 	struct {
@@ -30,15 +30,15 @@ fsm_findmode(const struct fsm_state *state, unsigned int *freq)
 
 	assert(state != NULL);
 
-	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
-		struct set_iter jt;
+	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		struct state_iter jt;
 
 		if (e->symbol > UCHAR_MAX) {
 			break;
 		}
 
-		for (s = set_first(e->sl, &jt); s != NULL; s = set_next(&jt)) {
-			struct set_iter kt = it;
+		for (s = state_set_first(e->sl, &jt); s != NULL; s = state_set_next(&jt)) {
+			struct edge_iter kt = it;
 			struct fsm_edge *c;
 			unsigned int curr;
 
@@ -48,8 +48,8 @@ fsm_findmode(const struct fsm_state *state, unsigned int *freq)
 			 * This works because the edges are still sorted by
 			 * symbol, so we don't have to walk the whole thing.
 			 */
-			for (c = set_next(&kt); c != NULL; c = set_next(&kt)) {
-				if (set_contains(c->sl, s)) {
+			for (c = edge_set_next(&kt); c != NULL; c = edge_set_next(&kt)) {
+				if (state_set_contains(c->sl, s)) {
 					curr++;
 				}
 			}

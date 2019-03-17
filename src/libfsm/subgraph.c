@@ -128,7 +128,8 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 	/* TODO: errors leave fsm in a questionable state */
 
 	while (m = getnextnotdone(mappings), m != NULL) {
-		struct set_iter it, jt;
+		struct edge_iter it;
+		struct state_iter jt;
 		struct fsm_state *s;
 		struct fsm_edge *e;
 
@@ -136,8 +137,8 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 			*x = m->new;
 		}
 
-		for (e = set_first(m->old->edges, &it); e != NULL; e = set_next(&it)) {
-			for (s = set_first(e->sl, &jt); s != NULL; s = set_next(&jt)) {
+		for (e = edge_set_first(m->old->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			for (s = state_set_first(e->sl, &jt); s != NULL; s = state_set_next(&jt)) {
 				struct mapping *to;
 
 				assert(s != NULL);

@@ -30,6 +30,19 @@ fsm_state_cmpedges(const void *a, const void *b)
 	return (ea->symbol > eb->symbol) - (ea->symbol < eb->symbol);
 }
 
+
+static struct edge_set *
+edge_set_create(struct fsm *fsm)
+{
+	static const struct edge_set init;
+
+	struct edge_set *set;
+	set = f_malloc(fsm, sizeof *set);
+	*set = init;
+	set->set = set_create(fsm_state_cmpedges);
+	return set;
+}
+
 struct fsm_state *
 fsm_addstate(struct fsm *fsm)
 {
@@ -43,7 +56,7 @@ fsm_addstate(struct fsm *fsm)
 	}
 
 	new->end = 0;
-	new->edges = set_create(fsm_state_cmpedges);
+	new->edges = edge_set_create(fsm);
 	new->opaque = NULL;
 
 #ifdef DEBUG_TODFA
@@ -62,7 +75,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 {
 	struct fsm_state *s;
 	struct fsm_edge *e;
-	struct set_iter it;
+	struct edge_iter it;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
@@ -71,16 +84,16 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 	fsm_setend(fsm, state, 0);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
-			set_remove(&e->sl, state);
+		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			state_set_remove(e->sl, state);
 		}
 	}
 
-	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
-		set_free(e->sl);
+	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		state_set_free(e->sl);
 		f_free(fsm, e);
 	}
-	set_free(state->edges);
+	edge_set_free(state->edges);
 
 	if (fsm->start == state) {
 		fsm->start = NULL;
