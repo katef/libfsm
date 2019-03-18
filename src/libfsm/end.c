@@ -21,6 +21,7 @@ fsm_setend(struct fsm *fsm, struct fsm_state *state, int end)
 
 	assert(fsm != NULL);
 	assert(state != NULL);
+	assert(pred_known(state, PRED_ISEND));
 
 	if (!!pred_get(state, PRED_ISEND) == !!end) {
 		return;
@@ -30,13 +31,13 @@ fsm_setend(struct fsm *fsm, struct fsm_state *state, int end)
 	case 0:
 		assert(fsm->endcount > 0);
 		fsm->endcount--;
-		pred_unset(state, PRED_ISEND);
+		pred_set(state, PRED_ISEND, 0);
 		break;
 
 	case 1:
 		assert(fsm->endcount < FSM_ENDCOUNT_MAX);
 		fsm->endcount++;
-		pred_set(state, PRED_ISEND);
+		pred_set(state, PRED_ISEND, 1);
 		break;
 	}
 }

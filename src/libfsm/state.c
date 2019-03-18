@@ -45,6 +45,7 @@ fsm_addstate(struct fsm *fsm)
 	}
 
 	new->pred_cache.values = 0U;
+	new->pred_cache.known  = PRED_ISEND;
 	new->edges = edge_set_create(fsm_state_cmpedges);
 	new->opaque = NULL;
 

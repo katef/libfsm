@@ -60,7 +60,7 @@ enum fsm_pred {
 
 struct fsm_pred_cache {
 	unsigned values:8; /* enum fsm_pred predicate bitmap */
-/*	unsigned known :8; */
+	unsigned known :8;
 };
 
 struct fsm_edge {
@@ -110,8 +110,11 @@ void
 fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
 	struct fsm *new, struct fsm_state *state);
 
+int
+pred_known(const struct fsm_state *state, enum fsm_pred pred);
+
 void
-pred_set(struct fsm_state *state, enum fsm_pred pred);
+pred_set(struct fsm_state *state, enum fsm_pred pred, int v);
 
 void
 pred_unset(struct fsm_state *state, enum fsm_pred pred);

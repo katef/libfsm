@@ -29,13 +29,28 @@ pred_cache(const struct fsm_state *state)
 	return (void *) &state->pred_cache;
 }
 
-void
-pred_set(struct fsm_state *state, enum fsm_pred pred)
+int
+pred_known(const struct fsm_state *state, enum fsm_pred pred)
 {
 	assert(state != NULL);
 	assert(pred != 0U);
 
-	pred_cache(state)->values |= pred;
+	return pred_cache(state)->known & pred;
+}
+
+void
+pred_set(struct fsm_state *state, enum fsm_pred pred, int v)
+{
+	assert(state != NULL);
+	assert(pred != 0U);
+
+	if (v) {
+		pred_cache(state)->values |= pred;
+	} else {
+		pred_cache(state)->values &= ~ (unsigned) pred;
+	}
+
+	pred_cache(state)->known |= pred;
 }
 
 void
@@ -44,7 +59,7 @@ pred_unset(struct fsm_state *state, enum fsm_pred pred)
 	assert(state != NULL);
 	assert(pred != 0U);
 
-	pred_cache(state)->values &= ~ (unsigned) pred;
+	pred_cache(state)->known &= ~ (unsigned) pred;
 }
 
 int
