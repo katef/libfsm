@@ -26,6 +26,10 @@ fsm_iscomplete(const struct fsm *fsm, const struct fsm_state *state)
 	assert(fsm != NULL);
 	assert(state != NULL);
 
+	if (pred_known(state, PRED_HASOUTGOING) && !pred_get(state, PRED_HASOUTGOING)) {
+		return 0;
+	}
+
 	n = 0;
 
 	/* TODO: assert state is in fsm->sl */

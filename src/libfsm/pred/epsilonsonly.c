@@ -26,6 +26,10 @@ fsm_epsilonsonly(const struct fsm *fsm, const struct fsm_state *state)
 
 	(void) fsm;
 
+	if (pred_known(state, PRED_HASOUTGOING) && !pred_get(state, PRED_HASOUTGOING)) {
+		return 0;
+	}
+
 	s.symbol = FSM_EDGE_EPSILON;
 	e = edge_set_contains(state->edges, &s);
 	if (e == NULL || state_set_empty(e->sl)) {

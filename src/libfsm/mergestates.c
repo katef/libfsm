@@ -25,6 +25,9 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 	/*
 	 * Here pred_unset(a, PRED_HASINCOMING); would be undesirable,
 	 * where b has no edges to a, and we'd unnecessarily clear the predicate.
+	 *
+	 * For PRED_HASOUTGOING, we let the new edge creation set the predicate
+	 * per usual.
 	 */
 
 	/* edges from b */

@@ -48,11 +48,11 @@ enum fsm_edge_type {
 
 enum fsm_pred {
 	PRED_ISEND        = 1 << 0,
-	PRED_HASINCOMING  = 1 << 1
+	PRED_HASINCOMING  = 1 << 1,
+	PRED_HASOUTGOING  = 1 << 2
 /* TODO:
-	PRED_ISDFA        = 1 << 2,
-	PRED_ISCOMPLETE   = 1 << 3,
-	PRED_HASOUGOING   = 1 << 4,
+	PRED_ISDFA        = 1 << 3,
+	PRED_ISCOMPLETE   = 1 << 4,
 	PRED_EPSILONSONLY = 1 << 5,
 	PRED_UNREACHABLE  = 1 << 6
 */

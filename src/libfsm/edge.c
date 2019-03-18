@@ -27,6 +27,7 @@ fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type typ
 	assert(to != NULL);
 
 	pred_unset(to, PRED_HASINCOMING);
+	pred_set(from, PRED_HASOUTGOING, 1);
 
 	new.symbol = type;
 	e = edge_set_contains(from->edges, &new);
@@ -104,6 +105,10 @@ struct fsm_edge *
 fsm_hasedge(const struct fsm_state *s, int c)
 {
 	struct fsm_edge *e, search;
+
+	if (pred_known(s, PRED_HASOUTGOING) && !pred_get(s, PRED_HASOUTGOING)) {
+		return NULL;
+	}
 
 	search.symbol = c;
 	e = edge_set_contains(s->edges, &search);

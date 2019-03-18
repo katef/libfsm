@@ -64,6 +64,10 @@ fsm_complete(struct fsm *fsm,
 			continue;
 		}
 
+		if (pred_known(s, PRED_HASOUTGOING) && !pred_get(s, PRED_HASOUTGOING)) {
+			return 0;
+		}
+
 		for (i = 0; i <= UCHAR_MAX; i++) {
 			if (fsm_hasedge(s, i)) {
 				continue;
