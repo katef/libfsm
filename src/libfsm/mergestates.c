@@ -22,6 +22,11 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 	struct fsm_state *s;
 	struct edge_iter it;
 
+	/*
+	 * Here pred_unset(a, PRED_HASINCOMING); would be undesirable,
+	 * where b has no edges to a, and we'd unnecessarily clear the predicate.
+	 */
+
 	/* edges from b */
 	for (e = edge_set_first(b->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		struct state_iter jt;

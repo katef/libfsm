@@ -26,6 +26,8 @@ fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type typ
 	assert(from != NULL);
 	assert(to != NULL);
 
+	pred_unset(to, PRED_HASINCOMING);
+
 	new.symbol = type;
 	e = edge_set_contains(from->edges, &new);
 	if (e == NULL) {
