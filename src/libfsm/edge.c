@@ -29,6 +29,10 @@ fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type typ
 	pred_unset(to, PRED_HASINCOMING);
 	pred_set(from, PRED_HASOUTGOING, 1);
 
+	if (pred_known(from, PRED_ISCOMPLETE) && !pred_get(from, PRED_ISCOMPLETE)) {
+		pred_unset(from, PRED_ISCOMPLETE);
+	}
+
 	new.symbol = type;
 	e = edge_set_contains(from->edges, &new);
 	if (e == NULL) {
@@ -83,6 +87,8 @@ fsm_addedge_any(struct fsm *fsm,
 			return NULL;
 		}
 	}
+
+	pred_set((void *) from, PRED_ISCOMPLETE, 1);
 
 	return e;
 }

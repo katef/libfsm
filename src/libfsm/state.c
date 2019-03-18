@@ -45,7 +45,7 @@ fsm_addstate(struct fsm *fsm)
 	}
 
 	new->pred_cache.values = 0U;
-	new->pred_cache.known  = PRED_ISEND | PRED_HASINCOMING | PRED_HASOUTGOING;
+	new->pred_cache.known  = PRED_ISEND | PRED_HASINCOMING | PRED_HASOUTGOING | PRED_ISCOMPLETE;
 	new->edges = edge_set_create(fsm_state_cmpedges);
 	new->opaque = NULL;
 
@@ -77,6 +77,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			state_set_remove(e->sl, state);
 			pred_unset(s, PRED_HASOUTGOING); /* overzealous */
+			pred_unset(s, PRED_ISCOMPLETE);  /* overzealous */
 		}
 	}
 

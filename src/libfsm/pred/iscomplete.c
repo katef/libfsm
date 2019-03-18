@@ -26,7 +26,12 @@ fsm_iscomplete(const struct fsm *fsm, const struct fsm_state *state)
 	assert(fsm != NULL);
 	assert(state != NULL);
 
+	if (pred_known(state, PRED_ISCOMPLETE)) {
+		return pred_get(state, PRED_ISCOMPLETE);
+	}
+
 	if (pred_known(state, PRED_HASOUTGOING) && !pred_get(state, PRED_HASOUTGOING)) {
+		pred_set((void *) state, PRED_ISCOMPLETE, 0);
 		return 0;
 	}
 
@@ -46,6 +51,7 @@ fsm_iscomplete(const struct fsm *fsm, const struct fsm_state *state)
 		n++;
 	}
 
+	pred_set((void *) state, PRED_ISCOMPLETE, n == FSM_SIGMA_COUNT);
 	return n == FSM_SIGMA_COUNT;
 }
 

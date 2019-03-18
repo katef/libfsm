@@ -50,13 +50,9 @@ fsm_complete(struct fsm *fsm,
 		return 0;
 	}
 
-	for (i = 0; i <= UCHAR_MAX; i++) {
-		struct fsm_edge *e;
-		e = fsm_addedge(new, new, i);
-		if (e == NULL) {
-			/* TODO: free stuff */
-			return 0;
-		}
+	if (!fsm_addedge_any(fsm, new, new)) {
+		/* TODO: free stuff */
+		return 0;
 	}
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
@@ -64,20 +60,29 @@ fsm_complete(struct fsm *fsm,
 			continue;
 		}
 
-		if (pred_known(s, PRED_HASOUTGOING) && !pred_get(s, PRED_HASOUTGOING)) {
-			return 0;
+		if (pred_known(s, PRED_ISCOMPLETE) && pred_get(s, PRED_ISCOMPLETE)) {
+			continue;
 		}
 
-		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (fsm_hasedge(s, i)) {
-				continue;
-			}
-
-			if (!fsm_addedge(s, new, i)) {
+		if (pred_known(s, PRED_HASOUTGOING) && !pred_get(s, PRED_HASOUTGOING)) {
+			if (!fsm_addedge_any(fsm, s, new)) {
 				/* TODO: free stuff */
 				return 0;
 			}
+		} else {
+			for (i = 0; i <= UCHAR_MAX; i++) {
+				if (fsm_hasedge(s, i)) {
+					continue;
+				}
+
+				if (!fsm_addedge(s, new, i)) {
+					/* TODO: free stuff */
+					return 0;
+				}
+			}
 		}
+
+		pred_set((void *) s, PRED_ISCOMPLETE, 1);
 	}
 
 	return 1;

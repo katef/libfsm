@@ -30,6 +30,11 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 	 * per usual.
 	 */
 
+	/* non-commutative; we don't care if a has the predicate set already */
+	if (pred_known(b, PRED_ISCOMPLETE) && pred_get(b, PRED_ISCOMPLETE)) {
+		pred_set((void *) a, PRED_ISCOMPLETE, 1);
+	}
+
 	/* edges from b */
 	for (e = edge_set_first(b->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		struct state_iter jt;
