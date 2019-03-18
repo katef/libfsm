@@ -44,7 +44,7 @@ fsm_addstate(struct fsm *fsm)
 		return NULL;
 	}
 
-	new->pred = 0U;
+	new->pred_cache.values = 0U;
 	new->edges = edge_set_create(fsm_state_cmpedges);
 	new->opaque = NULL;
 

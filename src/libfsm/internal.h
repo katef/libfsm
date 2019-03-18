@@ -47,12 +47,20 @@ enum fsm_edge_type {
 #define FSM_ENDCOUNT_MAX ULONG_MAX
 
 enum fsm_pred {
-	PRED_ISEND       = 1 << 0
+	PRED_ISEND        = 1 << 0
 /* TODO:
-	PRED_ISDFA       = 1 << 0,
-	PRED_ISCOMPLETE  = 1 << 1,
-	PRED_HASINCOMING = 1 << 2
+	PRED_ISDFA        = 1 << 1,
+	PRED_ISCOMPLETE   = 1 << 2,
+	PRED_HASINCOMING  = 1 << 3,
+	PRED_HASOUGOING   = 1 << 4,
+	PRED_EPSILONSONLY = 1 << 5,
+	PRED_UNREACHABLE  = 1 << 6
 */
+};
+
+struct fsm_pred_cache {
+	unsigned values:8; /* enum fsm_pred predicate bitmap */
+/*	unsigned known :8; */
 };
 
 struct fsm_edge {
@@ -61,7 +69,7 @@ struct fsm_edge {
 };
 
 struct fsm_state {
-	unsigned pred; /* enum fsm_pred predicate bitmap */
+	struct fsm_pred_cache pred_cache;
 
 	struct edge_set *edges; /* containing `struct fsm_edge *` */
 
