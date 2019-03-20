@@ -83,42 +83,49 @@ main(int argc, char *argv[])
 
 	fsm_print_c(stdout, fsm);
 
-	printf("int main(void) {\n");
+	printf("int\n");
+	printf("main(void)\n");
+	printf("{\n");
 	printf("\tchar s[4096];\n");
 	printf("\tunsigned n;\n");
-	printf("struct timespec pre, post;\n");
+	printf("\tdouble ms;\n");
 	printf("\n");
 
-	printf("if (-1 == clock_gettime(CLOCK_MONOTONIC, &pre)) {\n");
-	printf("	perror(\"clock_gettime\");\n");
-	printf("	exit(EXIT_FAILURE);\n");
-	printf("}\n");
-	printf("\n");
-
+	printf("\tms = 0;\n");
 	printf("\tn = 0;\n");
-	printf("\twhile (fgets(s, sizeof s, stdin) != NULL) {\n");
-	printf("\t\tn += fsm_main(s) != EOF;\n");
-	printf("\t}\n");
 	printf("\n");
 
-	printf("if (-1 == clock_gettime(CLOCK_MONOTONIC, &post)) {\n");
-	printf("	perror(\"clock_gettime\");\n");
-	printf("	exit(EXIT_FAILURE);\n");
-	printf("}\n");
+	printf("\twhile (fgets(s, sizeof s, stdin) != NULL) {\n");
+	printf("\t\tstruct timespec pre, post;\n");
+	printf("\n");
+
+	printf("\t\tif (-1 == clock_gettime(CLOCK_MONOTONIC, &pre)) {\n");
+	printf("\t\t	perror(\"clock_gettime\");\n");
+	printf("\t\t	exit(EXIT_FAILURE);\n");
+	printf("\t\t}\n");
+	printf("\n");
+
+	printf("\t\tn += fsm_main(s) != EOF;\n");
+	printf("\n");
+
+	printf("\t\tif (-1 == clock_gettime(CLOCK_MONOTONIC, &post)) {\n");
+	printf("\t\t	perror(\"clock_gettime\");\n");
+	printf("\t\t	exit(EXIT_FAILURE);\n");
+	printf("\t\t}\n");
 	printf("\n");
 
 /*
-	printf("\tprintf(\"%%u %%s\\n\", n, n == 1 ? \"match\" : \"matches\");\n");
+	printf("\t\tprintf(\"%%u %%s\\n\", n, n == 1 ? \"match\" : \"matches\");\n");
 */
 
-	printf("{\n");
-	printf("	double ms;\n");
+	printf("\t\tms = 1000.0 * (post.tv_sec  - pre.tv_sec)\n");
+	printf("\t\t            + (post.tv_nsec - pre.tv_nsec) / 1e6;\n");
 	printf("\n");
-	printf("	ms = 1000.0 * (post.tv_sec  - pre.tv_sec)\n");
-	printf("				+ (post.tv_nsec - pre.tv_nsec) / 1e6;\n");
+
+	printf("\t}\n");
 	printf("\n");
-	printf("	printf(\"%%f\\n\", ms);\n");
-	printf("}\n");
+
+	printf("\tprintf(\"%%f\\n\", ms);\n");
 	printf("\n");
 
 	printf("\treturn 0;\n");

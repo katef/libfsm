@@ -24,8 +24,8 @@ main(int argc, char *argv[])
 	const char *err;
 	int o;
 	unsigned n;
-	struct timespec pre, post;
 	int flags;
+	double ms;
 
 	flags = 0;
 
@@ -66,15 +66,29 @@ main(int argc, char *argv[])
 	}
 
 	n = 0;
-
-
-	if (-1 == clock_gettime(CLOCK_MONOTONIC, &pre)) {
-		perror("clock_gettime");
-		exit(EXIT_FAILURE);
-	}
+	ms = 0;
 
 	while (fgets(s, sizeof s, stdin) != NULL) {
-		r = pcre_exec(re, e, s, strlen(s) - 1, 0, 0, NULL, 0);
+		struct timespec pre, post;
+		size_t z;
+
+		z = strlen(s);
+
+		if (-1 == clock_gettime(CLOCK_MONOTONIC, &pre)) {
+			perror("clock_gettime");
+			exit(EXIT_FAILURE);
+		}
+
+		r = pcre_exec(re, e, s, z - 1, 0, 0, NULL, 0);
+
+		if (-1 == clock_gettime(CLOCK_MONOTONIC, &post)) {
+			perror("clock_gettime");
+			exit(EXIT_FAILURE);
+		}
+
+		ms += 1000.0 * (post.tv_sec  - pre.tv_sec)
+		             + (post.tv_nsec - pre.tv_nsec) / 1e6;
+
 		if (r == PCRE_ERROR_NOMATCH) {
 			continue;
 		}
@@ -88,25 +102,13 @@ main(int argc, char *argv[])
 		abort();
 	}
 
-	if (-1 == clock_gettime(CLOCK_MONOTONIC, &post)) {
-		perror("clock_gettime");
-		exit(EXIT_FAILURE);
-	}
-
 	pcre_free(re);
 
 /*
 	printf("%u %s\n", n, n == 1 ? "match" : "matches");
 */
 
-	{
-		double ms;
-
-		ms = 1000.0 * (post.tv_sec  - pre.tv_sec)
-					+ (post.tv_nsec - pre.tv_nsec) / 1e6;
-
-		printf("%f\n", ms);
-	}
+	printf("%f\n", ms);
 
 	return 0;
 
