@@ -24,7 +24,7 @@
 
 #include "parser.h"
 
-#ifdef __MACH__
+#if defined(__APPLE__) && defined(__MACH__) && !defined(MACOS_HAS_CLOCK_GETTME)
 #include <mach/clock.h>
 #include <mach/mach.h>
 
@@ -49,7 +49,7 @@ static int clock_gettime(int clk_id, struct timespec *ts)
 
 	return 0;
 }
-#endif /* __MACH__ */
+#endif /* defined(__APPLE__) && defined(__MACH__) && !defined(MACOS_HAS_CLOCK_GETTME) */
 
 extern int optind;
 extern char *optarg;
