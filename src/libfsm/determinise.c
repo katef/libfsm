@@ -7,8 +7,10 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <adt/set.h>
+#include <adt/hashset.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -95,70 +97,8 @@ trans_set_next(struct trans_iter *it)
 	return set_next(&it->iter);
 }
 
-struct mapping_set {
-	struct set *set;
-};
 
-static int
-cmp_mapping(const void *a, const void *b);
-
-struct mapping_set *
-mapping_set_create(struct fsm *fsm)
-{
-	static const struct mapping_set init;
-	struct mapping_set *set;
-
-	set = f_malloc(fsm, sizeof *set); /* XXX - double check with katef */
-	*set = init;
-	set->set = set_create(cmp_mapping);
-	return set;
-}
-
-void
-mapping_set_free(const struct fsm *fsm, struct mapping_set *set)
-{
-	if (set != NULL) {
-		if (set->set != NULL) {
-			set_free(set->set);
-			set->set = NULL;
-		}
-		f_free(fsm,set);
-	}
-}
-
-struct mapping *
-mapping_set_add(struct mapping_set *set, struct mapping *item)
-{
-	return set_add(&set->set, item);
-}
-
-struct mapping *
-mapping_set_contains(const struct mapping_set *set, const struct mapping *item)
-{
-	return set_contains(set->set, item);
-}
-
-void
-mapping_set_clear(struct mapping_set *set)
-{
-	set_clear(set->set);
-}
-
-struct mapping_iter {
-	struct set_iter iter;
-};
-
-static struct mapping *
-mapping_set_first(const struct mapping_set *set, struct mapping_iter *it)
-{
-	return set_first(set->set, &it->iter);
-}
-
-static struct mapping *
-mapping_set_next(struct mapping_iter *it)
-{
-	return set_next(&it->iter);
-}
+/* Mapping and mapping sets */
 
 /*
  * This maps a DFA state onto its associated NFA epsilon closure, such that an
@@ -167,6 +107,7 @@ mapping_set_next(struct mapping_iter *it)
  *
  * These mappings are kept in a list; order does not matter.
  */
+
 struct mapping {
 	/* The set of NFA states forming the epsilon closure for this DFA state */
 	struct state_set *closure;
@@ -177,6 +118,92 @@ struct mapping {
 	/* boolean: are the outgoing edges for dfastate all created? */
 	unsigned int done:1;
 };
+
+/* Uses a hash set and a list to hold the items that are not yet done. */
+struct mapping_set {
+	struct hashset *set;
+};
+
+static int
+cmp_mapping(const void *a, const void *b);
+
+static unsigned long
+hash_mapping(const void *a);
+
+struct mapping_set *
+mapping_set_create(struct fsm *fsm)
+{
+	static const struct mapping_set init;
+	struct mapping_set *set;
+
+	set = f_malloc(fsm, sizeof *set); /* XXX - double check with katef */
+	*set = init;
+	set->set = hashset_create(hash_mapping, cmp_mapping);
+
+	return set;
+}
+
+void
+mapping_set_free(const struct fsm *fsm, struct mapping_set *set)
+{
+	if (set != NULL) {
+		if (set->set != NULL) {
+			hashset_free(set->set);
+			set->set = NULL;
+		}
+
+		f_free(fsm,set);
+	}
+}
+
+struct mapping *
+mapping_set_add(struct mapping_set *set, struct mapping *item)
+{
+	assert(set != NULL);
+	assert(set->set != NULL);
+
+	if (hashset_add(set->set, item) == NULL) {
+		return NULL;
+	}
+
+	return item;
+}
+
+struct mapping *
+mapping_set_contains(const struct mapping_set *set, const struct mapping *item)
+{
+	assert(set != NULL);
+	assert(set->set != NULL);
+
+	return hashset_contains(set->set, item);
+}
+
+void
+mapping_set_clear(struct mapping_set *set)
+{
+	assert(set != NULL);
+	assert(set->set != NULL);
+
+	hashset_clear(set->set);
+}
+
+struct mapping_iter {
+	struct hashset_iter iter;
+};
+
+static struct mapping *
+mapping_set_first(const struct mapping_set *set, struct mapping_iter *it)
+{
+	return hashset_first(set->set, &it->iter);
+}
+
+static struct mapping *
+mapping_set_next(struct mapping_iter *it)
+{
+	return hashset_next(&it->iter);
+}
+
+
 
 struct fsm_determinise_cache {
 	struct mapping_set *mappings;
@@ -236,6 +263,16 @@ cmp_mapping(const void *a, const void *b)
 	mb = b;
 
 	return state_set_cmp(ma->closure, mb->closure);
+}
+
+static unsigned long
+hash_mapping(const void *a)
+{
+	const struct mapping *m = a;
+	const struct fsm_state **states = state_set_array(m->closure);
+	size_t nstates = state_set_count(m->closure);
+
+	return hashrec(states, nstates * sizeof states[0]);
 }
 
 /*
