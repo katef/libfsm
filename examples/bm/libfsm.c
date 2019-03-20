@@ -30,7 +30,7 @@ main(int argc, char *argv[])
 	opt.comments = 0;
 	opt.io = FSM_IO_STR;
 
-	p = s;
+	p = argv[1];
 	fsm = re_comp(RE_PCRE, fsm_sgetc, &p, &opt, 0, &e);
 	if (fsm == NULL) {
 		re_perror(RE_LITERAL, &e, NULL, s);
