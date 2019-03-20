@@ -25,8 +25,35 @@ main(int argc, char *argv[])
 	int o;
 	unsigned n;
 	struct timespec pre, post;
+	int flags;
 
-	re = pcre_compile(argv[1], 0, &err, &o, NULL);
+	flags = 0;
+
+	{
+		int c;
+
+		while (c = getopt(argc, argv, "h" "b"), c != -1) {
+			switch (c) {
+			case 'b':
+				flags |= PCRE_ANCHORED;
+				break;
+
+			case 'h':
+			case '?':
+			default:
+				goto usage;
+			}
+		}
+
+		argc -= optind;
+		argv += optind;
+	}
+
+	if (argc < 1) {
+		goto usage;
+	}
+
+	re = pcre_compile(argv[0], PCRE_ANCHORED, &err, &o, NULL);
 	if (re == NULL) {
 		fprintf(stderr, "pcre_compile: %s\n", err);
 		abort();
@@ -82,5 +109,12 @@ main(int argc, char *argv[])
 	}
 
 	return 0;
+
+usage:
+
+	fprintf(stderr, "usage: pcre [-b] <regexp>\n");
+	fprintf(stderr, "       pcre -h\n");
+
+	return 1;
 }
 

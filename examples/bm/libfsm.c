@@ -4,6 +4,10 @@
  * See LICENCE for the full copyright terms.
  */
 
+#define _POSIX_C_SOURCE 200112L
+
+#include <unistd.h>
+
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -22,6 +26,33 @@ main(int argc, char *argv[])
 	char s[4096];
 	const char *p;
 	struct re_err e;
+	enum re_flags flags;
+
+	flags = 0;
+
+	{
+		int c;
+
+		while (c = getopt(argc, argv, "h" "b"), c != -1) {
+			switch (c) {
+			case 'b':
+				flags |= RE_ANCHORED;
+				break;
+
+			case 'h':
+			case '?':
+			default:
+				goto usage;
+			}
+		}
+
+		argc -= optind;
+		argv += optind;
+	}
+
+	if (argc < 1) {
+		goto usage;
+	}
 
 	opt.tidy = 0;
 	opt.anonymous_states  = 1;
@@ -30,8 +61,8 @@ main(int argc, char *argv[])
 	opt.comments = 0;
 	opt.io = FSM_IO_STR;
 
-	p = argv[1];
-	fsm = re_comp(RE_PCRE, fsm_sgetc, &p, &opt, 0, &e);
+	p = argv[0];
+	fsm = re_comp(RE_PCRE, fsm_sgetc, &p, &opt, flags, &e);
 	if (fsm == NULL) {
 		re_perror(RE_LITERAL, &e, NULL, s);
 		return 1;
@@ -96,5 +127,12 @@ main(int argc, char *argv[])
 	fsm_free(fsm);
 
 	return 0;
+
+usage:
+
+	fprintf(stderr, "usage: libfsm [-b] <regexp>\n");
+	fprintf(stderr, "       libfsm -h\n");
+
+	return 1;
 }
 
