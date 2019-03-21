@@ -42,14 +42,14 @@ static int
 hasmore(const struct fsm_state *s, int i)
 {
 	struct fsm_edge *e, search;
-	struct set_iter it;
+	struct edge_iter it;
 
 	assert(s != NULL);
 
 	i++;
 	search.symbol = i;
-	for (e = set_firstafter(s->edges, &it, &search); e != NULL; e = set_next(&it)) {
-		if (!set_empty(e->sl)) {
+	for (e = edge_set_firstafter(s->edges, &it, &search); e != NULL; e = edge_set_next(&it)) {
+		if (!state_set_empty(e->sl)) {
 			return 1;
 		}
 	}
@@ -72,7 +72,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
 			struct fsm_edge *e;
-			struct set_iter it;
+			struct edge_iter it;
 
 			fprintf(f, "\t\t{\n");
 
@@ -81,11 +81,11 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 
 			fprintf(f, "\t\t\t\"edges\": [\n");
 
-			for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
+			for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct fsm_state *st;
-				struct set_iter jt;
+				struct state_iter jt;
 
-				for (st = set_first(e->sl, &jt); st != NULL; st = set_next(&jt)) {
+				for (st = state_set_first(e->sl, &jt); st != NULL; st = state_set_next(&jt)) {
 					assert(st != NULL);
 
 					fprintf(f, "\t\t\t\t{ ");
@@ -108,7 +108,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 					fprintf(f, "\"to\": %u",
 						indexof(fsm, st));
 
-					fprintf(f, "}%s\n", set_hasnext(&it) && hasmore(s, e->symbol) ? "," : "");
+					fprintf(f, "}%s\n", edge_set_hasnext(&it) && hasmore(s, e->symbol) ? "," : "");
 				}
 			}
 

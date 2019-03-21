@@ -28,7 +28,7 @@ nextstate(const struct fsm_state *state, int c)
 		return NULL;
 	}
 
-	return set_only(e->sl);
+	return state_set_only(e->sl);
 }
 
 struct fsm_state *

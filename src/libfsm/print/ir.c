@@ -84,7 +84,7 @@ make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct f
 	struct range ranges[UCHAR_MAX]; /* worst case */
 	struct ir_group *groups;
 	struct fsm_edge *e;
-	struct set_iter it;
+	struct edge_iter it;
 	size_t i, j, k;
 	size_t n;
 
@@ -102,18 +102,18 @@ make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct f
 
 	n = 0;
 
-	for (e = set_first(state->edges, &it); e != NULL; e = set_next(&it)) {
+	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		struct fsm_state *s;
 
 		if (e->symbol > UCHAR_MAX) {
 			break;
 		}
 
-		if (set_empty(e->sl)) {
+		if (state_set_empty(e->sl)) {
 			continue;
 		}
 
-		s = set_only(e->sl);
+		s = state_set_only(e->sl);
 		if (s == mode) {
 			continue;
 		}
@@ -126,25 +126,25 @@ make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct f
 			do {
 				const struct fsm_edge *ne;
 				const struct fsm_state *ns;
-				struct set_iter jt;
+				struct edge_iter jt;
 
-				ne = set_firstafter(state->edges, &jt, e);
+				ne = edge_set_firstafter(state->edges, &jt, e);
 				if (ne == NULL || ne->symbol != e->symbol + 1) {
 					break;
 				}
 
-				if (set_empty(ne->sl)) {
+				if (state_set_empty(ne->sl)) {
 					break;
 				}
 
-				ns = set_only(ne->sl);
+				ns = state_set_only(ne->sl);
 				if (ns == mode || ns != s) {
 					break;
 				}
 
 				ranges[n].end = ne->symbol;
 
-				e = set_next(&it);
+				e = edge_set_next(&it);
 			} while (e != NULL);
 		}
 
@@ -378,9 +378,9 @@ make_state(const struct fsm *fsm,
 	/* no edges */
 	{
 		struct fsm_edge *e;
-		struct set_iter it;
+		struct edge_iter it;
 
-		e = set_first(state->edges, &it);
+		e = edge_set_first(state->edges, &it);
 		if (!e || e->symbol > UCHAR_MAX) {
 			cs->strategy = IR_NONE;
 			return 0;

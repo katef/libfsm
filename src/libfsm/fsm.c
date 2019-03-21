@@ -78,16 +78,16 @@ free_contents(struct fsm *fsm)
 	assert(fsm != NULL);
 
 	for (s = fsm->sl; s != NULL; s = next) {
-		struct set_iter it;
+		struct edge_iter it;
 		struct fsm_edge *e;
 		next = s->next;
 
-		for (e = set_first(s->edges, &it); e != NULL; e = set_next(&it)) {
-			set_free(e->sl);
+		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			state_set_free(e->sl);
 			f_free(fsm, e);
 		}
 
-		set_free(s->edges);
+		edge_set_free(s->edges);
 		f_free(fsm, s);
 	}
 }
@@ -168,7 +168,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 }
 
 void
-fsm_carryopaque(struct fsm *fsm, const struct set *set,
+fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
 	struct fsm *new, struct fsm_state *state)
 {
 	ctassert(sizeof (void *) == sizeof (struct fsm_state *));
@@ -189,7 +189,7 @@ fsm_carryopaque(struct fsm *fsm, const struct set *set,
 	 * and the cast here.
 	 */
 
-	fsm->opt->carryopaque((void *) set_array(set), set_count(set),
+	fsm->opt->carryopaque((void *) state_set_array(set), state_set_count(set),
 		new, state);
 }
 
@@ -221,12 +221,12 @@ fsm_countedges(const struct fsm *fsm)
 	 * should be replaced with something better when possible
 	 */
 	for (src = fsm->sl; src != NULL; src = src->next) {
-		struct set_iter ei;
+		struct edge_iter ei;
 		const struct fsm_edge *e;
 
-		for (e = set_first(src->edges, &ei); e != NULL; e=set_next(&ei)) {
-			assert(n + set_count(e->sl) > n); /* handle overflow with more grace? */
-			n += set_count(e->sl);
+		for (e = edge_set_first(src->edges, &ei); e != NULL; e=edge_set_next(&ei)) {
+			assert(n + state_set_count(e->sl) > n); /* handle overflow with more grace? */
+			n += state_set_count(e->sl);
 		}
 	}
 
