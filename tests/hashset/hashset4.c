@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Ed Kellett
+ * Copyright 2018 Shannon Stewman
  *
  * See LICENCE for the full copyright terms.
  */
