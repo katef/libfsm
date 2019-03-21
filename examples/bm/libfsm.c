@@ -89,8 +89,10 @@ main(int argc, char *argv[])
 	printf("\tchar s[4096];\n");
 	printf("\tunsigned n;\n");
 	printf("\tdouble ms;\n");
+	printf("\tint i, max;\n");
 	printf("\n");
 
+	printf("\tmax = %d;\n", BM_MAX);
 	printf("\tms = 0;\n");
 	printf("\tn = 0;\n");
 	printf("\n");
@@ -105,7 +107,9 @@ main(int argc, char *argv[])
 	printf("\t\t}\n");
 	printf("\n");
 
-	printf("\t\tn += fsm_main(s) != EOF;\n");
+	printf("\t\tfor (i = 0; i < max; i++) {\n");
+	printf("\t\t\tn += fsm_main(s) != EOF;\n");
+	printf("\t\t}\n");
 	printf("\n");
 
 	printf("\t\tif (-1 == clock_gettime(CLOCK_MONOTONIC, &post)) {\n");
@@ -119,7 +123,7 @@ main(int argc, char *argv[])
 */
 
 	printf("\t\tms = 1000.0 * (post.tv_sec  - pre.tv_sec)\n");
-	printf("\t\t            + (post.tv_nsec - pre.tv_nsec) / 1e6;\n");
+	printf("\t\t            + (post.tv_nsec - pre.tv_nsec) / 1e6 / (double) %d;\n", BM_MAX);
 	printf("\n");
 
 	printf("\t}\n");

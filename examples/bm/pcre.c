@@ -26,7 +26,9 @@ main(int argc, char *argv[])
 	unsigned n;
 	int flags;
 	double ms;
+	int i, max;
 
+	max = BM_MAX;
 	flags = 0;
 
 	{
@@ -79,7 +81,13 @@ main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 
-		r = pcre_exec(re, e, s, z - 1, 0, 0, NULL, 0);
+		for (i = 0; i < max; i++) {
+			r = pcre_exec(re, e, s, z - 1, 0, 0, NULL, 0);
+			if (r != 0 && r != PCRE_ERROR_NOMATCH) {
+				fprintf(stderr, "%d\n", r);
+				abort();
+			}
+		}
 
 		if (-1 == clock_gettime(CLOCK_MONOTONIC, &post)) {
 			perror("clock_gettime");
@@ -87,7 +95,7 @@ main(int argc, char *argv[])
 		}
 
 		ms += 1000.0 * (post.tv_sec  - pre.tv_sec)
-		             + (post.tv_nsec - pre.tv_nsec) / 1e6;
+		             + (post.tv_nsec - pre.tv_nsec) / 1e6 / (double) max;
 
 		if (r == PCRE_ERROR_NOMATCH) {
 			continue;
@@ -95,11 +103,7 @@ main(int argc, char *argv[])
 
 		if (r == 0) {
 			n++;
-			continue;
 		}
-
-		fprintf(stderr, "%d\n", r);
-		abort();
 	}
 
 	pcre_free(re);
