@@ -4,12 +4,12 @@
  * See LICENCE for the full copyright terms.
  */
 
+#include <adt/hashset.h>
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-
-#include <adt/hashset.h>
 
 /* XXX: explore whether we should split the bucket or not */
 
@@ -72,6 +72,7 @@ hashset_initialize(struct hashset *s, size_t nb, float load,
 
 	s->buckets = calloc(nb, sizeof s->buckets[0]);
 	s->maxload = load * nb;
+	s->nbuckets = nb;
 	return (s->buckets != NULL);
 }
 
@@ -185,7 +186,10 @@ hashset_remove(struct hashset *s, void *item)
 void
 hashset_finalize(struct hashset *s)
 {
+	const static struct hashset zero;
+
 	free(s->buckets);
+	*s = zero;
 }
 
 void
