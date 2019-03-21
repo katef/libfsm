@@ -1,0 +1,8 @@
+
+# simple regexps with no repetition
+
+re = re "|" re
+	| re "?"
+	| "(" re ")"
+	| [A-Za-z0-9]+
+
