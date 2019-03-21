@@ -84,6 +84,87 @@ set_create(int (*cmp)(const void *a, const void *b))
 	return set;
 }
 
+static int
+set_bulkcmpval(const void *a, const void *b)
+{
+	const void *pa = ((void **)a)[0], *pb = ((void **)b)[0];
+
+	return (pa > pb) - (pa < pb);
+}
+
+struct set *
+set_create_singleton(int (*cmp)(const void *a, const void *b), void *item)
+{
+	struct set *s;
+
+	s = malloc(sizeof *s);
+	if (s == NULL) {
+		return NULL;
+	}
+
+	s->a = malloc(sizeof *s->a);
+	if (s->a == NULL) {
+		free(s);
+		return NULL;
+	}
+
+	s->a[0] = item;
+	s->i = s->n = 1;
+	s->cmp = (cmp != NULL) ? cmp : set_cmpval;
+
+	return s;
+}
+
+struct set *
+set_create_from_array(void *items[], size_t n, int (*cmp)(const void *a, const void *b), int (*bulkcmp)(const void *, const void *))
+{
+	struct set *s;
+
+	if (n == 0) {
+		return set_create(cmp);
+	}
+
+	s = malloc(sizeof *s);
+	if (s == NULL) {
+		return NULL;
+	}
+
+	s->cmp = (cmp != NULL) ? cmp : set_cmpval;
+
+	if (n > 1) {
+		/* XXX - replace with something better? */
+		qsort((void *)(&items[0]), n, sizeof items[0], (bulkcmp != NULL) ? bulkcmp : set_bulkcmpval);
+	}
+
+	s->i = n;
+	s->n = n;
+	s->a = items;
+
+	return s;
+}
+
+struct set *
+set_copy(const struct set *set)
+{
+	struct set *s;
+	s = malloc(sizeof *s);
+	if (s == NULL) {
+		return NULL;
+	}
+
+	s->cmp = set->cmp;
+	s->a = malloc(set->i * sizeof s->a[0]);
+	if (s->a == NULL) {
+		free(s);
+		return NULL;
+	}
+
+	s->i = s->n = set->i;
+	memcpy(s->a, set->a, s->n * sizeof s->a[0]);
+
+	return s;
+}
+
 void *
 set_add(struct set *set, void *item)
 {

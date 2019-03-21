@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 #include <adt/set.h>
 #include <adt/stateset.h>
@@ -14,6 +15,18 @@ struct state_set *
 state_set_create(void)
 {
 	return (struct state_set *) set_create(NULL);
+}
+
+struct state_set *
+state_set_create_from_array(struct fsm_state **states, size_t n)
+{
+	return (struct state_set *)set_create_from_array((void **)states, n, NULL, NULL);
+}
+
+struct state_set *
+state_set_create_singleton(struct fsm_state *state)
+{
+	return (struct state_set *)set_create_singleton(NULL, state);
 }
 
 void
@@ -105,6 +118,12 @@ state_set_next(struct state_iter *it)
 	assert(it != NULL);
 
 	return set_next(&it->iter);
+}
+
+struct state_set *
+state_set_copy(const struct state_set *src)
+{
+	return (struct state_set *)set_copy((struct set *)src);
 }
 
 int
