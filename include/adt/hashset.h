@@ -1,6 +1,8 @@
 #ifndef HASHSET_H
 #define HASHSET_H
 
+#include <stddef.h>
+
 #define DEFAULT_LOAD 0.66
 #define DEFAULT_NBUCKETS 4
 
@@ -14,7 +16,7 @@ struct hashset {
 	int (*cmp)(const void *,const void *);
 	unsigned long (*hash)(const void *);
 	float load;
-	uint32_t flags;
+	unsigned int flags;
 };
 
 struct hashset_iter {
