@@ -268,19 +268,43 @@ set_closure(struct set *mappings, struct fsm *dfa, struct set *set)
 	return m->dfastate;
 }
 
+struct set_iter_save {
+	struct set_iter iter;
+	int saved;
+};
+
 /*
  * Return an arbitary mapping which isn't marked "done" yet.
  */
 static struct mapping *
-nextnotdone(struct set *mappings)
+nextnotdone(struct set *mappings, struct set_iter_save *sv)
 {
 	struct set_iter it;
 	struct mapping *m;
+	int do_rescan = sv->saved;
 
-	for (m = set_first(mappings, &it); m != NULL; m = set_next(&it)) {
+	assert(sv != NULL);
+
+	if (sv->saved) {
+		it = sv->iter;
+		m = set_next(&it);
+	} else {
+		m = set_first(mappings, &it);
+	}
+
+rescan:
+	for (; m != NULL; m = set_next(&it)) {
 		if (!m->done) {
+			sv->saved = 1;
+			sv->iter = it;
 			return m;
 		}
+	}
+
+	if (do_rescan) {
+		m = set_first(mappings, &it);
+		do_rescan = 0;
+		goto rescan;
 	}
 
 	return NULL;
@@ -413,11 +437,15 @@ static struct fsm *
 determinise(struct fsm *nfa,
 	struct fsm_determinise_cache *dcache)
 {
+	const static struct set_iter_save sv_init;
+
 	struct mapping *curr;
 	struct set *mappings;
 	struct set_iter it;
 	struct set *trans;
 	struct fsm *dfa;
+
+	struct set_iter_save sv;
 
 	assert(nfa != NULL);
 	assert(nfa->opt != NULL);
@@ -498,7 +526,8 @@ determinise(struct fsm *nfa,
 	/*
 	 * While there are still DFA states remaining to be "done", process each.
 	 */
-	for (curr = set_first(mappings, &it); (curr = nextnotdone(mappings)) != NULL; curr->done = 1) {
+	sv = sv_init;
+	for (curr = set_first(mappings, &it); (curr = nextnotdone(mappings, &sv)) != NULL; curr->done = 1) {
 		struct set_iter jt;
 		struct trans *t;
 
