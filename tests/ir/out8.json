@@ -1,0 +1,21 @@
+{
+	"start": 0,
+	"states": [
+		{
+			"end": false,
+			"strategy": "error",
+			"mode": 1,
+			"error": [
+						{ "start": "a", "end": "a" }
+			],
+			"groups": [
+			]
+		},
+		{
+			"end": true,
+			"strategy": "same",
+			"example": "b",
+			"to": 1
+		}
+	]
+}

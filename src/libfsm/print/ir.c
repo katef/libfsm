@@ -81,7 +81,7 @@ static struct ir_group *
 make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct fsm_state *mode,
 	size_t *u)
 {
-	struct range ranges[UCHAR_MAX]; /* worst case */
+	struct range ranges[UCHAR_MAX + 1]; /* worst case */
 	struct ir_group *groups;
 	struct fsm_edge *e;
 	struct edge_iter it;
@@ -308,7 +308,7 @@ make_holes(const struct fsm *fsm, const struct bm *bm, size_t *n)
 	assert(bm != NULL);
 	assert(n != NULL);
 
-	ranges = f_malloc(fsm, sizeof *ranges * UCHAR_MAX); /* worst case */
+	ranges = f_malloc(fsm, sizeof *ranges * (UCHAR_MAX + 1)); /* worst case */
 	if (ranges == NULL) {
 		return NULL;
 	}
@@ -416,7 +416,7 @@ make_state(const struct fsm *fsm,
 
 	find_coverage(groups, n, &bm);
 
-	hole = UCHAR_MAX - bm_count(&bm);
+	hole = UCHAR_MAX + 1 - bm_count(&bm);
 
 	if (hole == 0) {
 		assert(fsm_iscomplete(fsm, state));
