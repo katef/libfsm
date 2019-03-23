@@ -24,7 +24,7 @@
 
 #include "parser.h"
 
-#if defined(__APPLE__) && defined(__MACH__) && !defined(MACOS_HAS_CLOCK_GETTME)
+#if defined(__APPLE__) && defined(__MACH__) && defined(MACOS_HAS_NO_CLOCK_GETTME)
 #include <mach/clock.h>
 #include <mach/mach.h>
 
