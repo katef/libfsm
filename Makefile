@@ -60,6 +60,7 @@ SUBDIR += tests/reverse
 SUBDIR += tests/union
 SUBDIR += tests/set
 SUBDIR += tests/sql
+SUBDIR += tests/hashset
 SUBDIR += tests
 .if !empty(.TARGETS:Mfuzz)
 SUBDIR += theft

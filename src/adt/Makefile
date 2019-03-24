@@ -6,10 +6,17 @@ SRC += src/adt/priq.c
 SRC += src/adt/path.c
 SRC += src/adt/set.c
 SRC += src/adt/xalloc.c
+SRC += src/adt/hashset.c
+SRC += src/adt/siphash.c
 
 .for src in ${SRC:Msrc/adt/bitmap.c}
 CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h
+.endfor
+
+.for src in ${SRC:Msrc/adt/siphash.c}
+CFLAGS.${src} += -std=c99 # XXX: for internal.h
+DFLAGS.${src} += -std=c99 # XXX: for internal.h
 .endfor
 
 PART += adt
