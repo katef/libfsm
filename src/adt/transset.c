@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Shannon F. Stewman
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #include <assert.h>
 #include <stdlib.h>
 
