@@ -336,9 +336,10 @@ hashset_hasnext(struct hashset_iter *it)
 	return hs_hasnext(it->set, &it->i);
 }
 
+/* XXX: cheesing around uint8_t here */
 extern int
-siphash(const uint8_t *in, const size_t inlen, const uint8_t *k,
-            uint8_t *out, const size_t outlen);
+siphash(const unsigned char *in, const size_t inlen, const unsigned char *k,
+            unsigned char *out, const size_t outlen);
 
 /* random key read from /dev/random */
 /* XXX: replace with a seed read from /dev/random at startup... */
