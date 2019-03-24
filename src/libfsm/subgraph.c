@@ -15,6 +15,8 @@
 #include <fsm/pred.h>
 
 #include "internal.h"
+#include "stateset.h"
+#include "edgeset.h"
 
 struct mapping {
 	struct fsm_state *old;

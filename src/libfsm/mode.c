@@ -12,6 +12,8 @@
 #include <fsm/fsm.h>
 
 #include "internal.h"
+#include "stateset.h"
+#include "edgeset.h"
 
 struct fsm_state *
 fsm_findmode(const struct fsm_state *state, unsigned int *freq)

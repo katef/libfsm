@@ -12,6 +12,8 @@
 #include <adt/set.h>
 
 #include "../internal.h"
+#include "../stateset.h"
+#include "../edgeset.h"
 
 /* Allows iterating through the states of the graph with a callback
  * function.  Takes an opaque pointer that the callback can use for its

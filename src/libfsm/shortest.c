@@ -15,6 +15,8 @@
 #include <fsm/cost.h>
 
 #include "internal.h"
+#include "stateset.h"
+#include "edgeset.h"
 
 struct path *
 fsm_shortest(const struct fsm *fsm,

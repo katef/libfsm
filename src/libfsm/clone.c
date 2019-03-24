@@ -13,6 +13,8 @@
 #include <fsm/pred.h>
 
 #include "internal.h"
+#include "stateset.h"
+#include "edgeset.h"
 
 struct fsm *
 fsm_clone(const struct fsm *fsm)

@@ -15,6 +15,8 @@
 #include <fsm/options.h>
 
 #include "internal.h"
+#include "stateset.h"
+#include "edgeset.h"
 
 #define ctassert(pred) \
 	switch (0) { case 0: case (pred):; }

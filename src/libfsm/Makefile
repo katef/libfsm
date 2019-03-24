@@ -1,6 +1,5 @@
 .include "../../share/mk/top.mk"
 
-SRC += src/libfsm/internal.c
 SRC += src/libfsm/collate.c
 SRC += src/libfsm/complete.c
 SRC += src/libfsm/clone.c
@@ -16,6 +15,11 @@ SRC += src/libfsm/state.c
 SRC += src/libfsm/trim.c
 SRC += src/libfsm/example.c
 SRC += src/libfsm/getc.c
+
+SRC += src/libfsm/edgeset.c
+SRC += src/libfsm/stateset.c
+SRC += src/libfsm/mappingset.c
+SRC += src/libfsm/transset.c
 
 # graph things
 SRC += src/libfsm/mergestates.c

@@ -18,6 +18,10 @@
 #include <fsm/options.h>
 
 #include "internal.h"
+#include "mappingset.h"
+#include "transset.h"
+#include "stateset.h"
+#include "edgeset.h"
 
 /*
  * A set of states in an NFA.
@@ -30,75 +34,6 @@ struct trans {
 	const struct fsm_state *state;
 	char c;
 };
-
- 
-struct trans_set {
-	struct set *set;
-};
-
-static int
-cmp_trans(const void *a, const void *b);
-
-static struct trans_set *
-trans_set_create(struct fsm *fsm)
-{
-	static const struct trans_set init;
-	struct trans_set *set;
-
-	set = f_malloc(fsm,sizeof *set); /* XXX - double check with katef */
-	*set = init;
-	set->set = set_create(cmp_trans);
-	return set;
-}
-
-static void
-trans_set_free(struct fsm *fsm, struct trans_set *set)
-{
-	if (set != NULL) {
-		if (set->set != NULL) {
-			set_free(set->set);
-			set->set = NULL;
-		}
-		f_free(fsm,set);
-	}
-}
-
-struct trans_iter {
-	struct set_iter iter;
-};
-
-static struct trans *
-trans_set_add(struct trans_set *set, struct trans *item)
-{
-	return set_add(&set->set, item);
-}
-
-static struct trans *
-trans_set_contains(const struct trans_set *set, const struct trans *item)
-{
-	return set_contains(set->set, item);
-}
-
-static void
-trans_set_clear(struct trans_set *set)
-{
-	set_clear(set->set);
-}
-
-static struct trans *
-trans_set_first(const struct trans_set *set, struct trans_iter *it)
-{
-	return set_first(set->set, &it->iter);
-}
-
-static struct trans *
-trans_set_next(struct trans_iter *it)
-{
-	return set_next(&it->iter);
-}
-
-
-/* Mapping and mapping sets */
 
 /*
  * This maps a DFA state onto its associated NFA epsilon closure, such that an
@@ -118,92 +53,6 @@ struct mapping {
 	/* boolean: are the outgoing edges for dfastate all created? */
 	unsigned int done:1;
 };
-
-/* Uses a hash set and a list to hold the items that are not yet done. */
-struct mapping_set {
-	struct hashset *set;
-};
-
-static int
-cmp_mapping(const void *a, const void *b);
-
-static unsigned long
-hash_mapping(const void *a);
-
-struct mapping_set *
-mapping_set_create(struct fsm *fsm)
-{
-	static const struct mapping_set init;
-	struct mapping_set *set;
-
-	set = f_malloc(fsm, sizeof *set); /* XXX - double check with katef */
-	*set = init;
-	set->set = hashset_create(hash_mapping, cmp_mapping);
-
-	return set;
-}
-
-void
-mapping_set_free(const struct fsm *fsm, struct mapping_set *set)
-{
-	if (set != NULL) {
-		if (set->set != NULL) {
-			hashset_free(set->set);
-			set->set = NULL;
-		}
-
-		f_free(fsm,set);
-	}
-}
-
-struct mapping *
-mapping_set_add(struct mapping_set *set, struct mapping *item)
-{
-	assert(set != NULL);
-	assert(set->set != NULL);
-
-	if (hashset_add(set->set, item) == NULL) {
-		return NULL;
-	}
-
-	return item;
-}
-
-struct mapping *
-mapping_set_contains(const struct mapping_set *set, const struct mapping *item)
-{
-	assert(set != NULL);
-	assert(set->set != NULL);
-
-	return hashset_contains(set->set, item);
-}
-
-void
-mapping_set_clear(struct mapping_set *set)
-{
-	assert(set != NULL);
-	assert(set->set != NULL);
-
-	hashset_clear(set->set);
-}
-
-struct mapping_iter {
-	struct hashset_iter iter;
-};
-
-static struct mapping *
-mapping_set_first(const struct mapping_set *set, struct mapping_iter *it)
-{
-	return hashset_first(set->set, &it->iter);
-}
-
-static struct mapping *
-mapping_set_next(struct mapping_iter *it)
-{
-	return hashset_next(&it->iter);
-}
-
-
 
 struct fsm_determinise_cache {
 	struct mapping_set *mappings;
@@ -639,13 +488,13 @@ determinise(struct fsm *nfa,
 	}
 
 	if (dcache->mappings == NULL) {
-		dcache->mappings = mapping_set_create(nfa);
+		dcache->mappings = mapping_set_create(nfa, hash_mapping, cmp_mapping);
 	}
 	mappings = dcache->mappings;
 	assert(mappings != NULL);
 
 	if (dcache->trans == NULL) {
-		dcache->trans = trans_set_create(nfa);
+		dcache->trans = trans_set_create(nfa, cmp_trans);
 	}
 	trans = dcache->trans;
 	assert(trans != NULL);
@@ -803,8 +652,8 @@ fsm_determinise_cache(struct fsm *fsm,
 			return 0;
 		}
 
-		(*dcache)->mappings = mapping_set_create(fsm);
-		(*dcache)->trans    = trans_set_create(fsm);
+		(*dcache)->mappings = mapping_set_create(fsm, hash_mapping, cmp_mapping);
+		(*dcache)->trans    = trans_set_create(fsm, cmp_trans);
 	}
 
 	dfa = determinise(fsm, *dcache);

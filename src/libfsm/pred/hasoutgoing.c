@@ -12,6 +12,8 @@
 #include <fsm/pred.h>
 
 #include "../internal.h"
+#include "../stateset.h"
+#include "../edgeset.h"
 
 int
 fsm_hasoutgoing(const struct fsm *fsm, const struct fsm_state *state)

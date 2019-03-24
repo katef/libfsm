@@ -15,6 +15,8 @@
 #include <fsm/fsm.h>
 
 #include "internal.h"
+#include "stateset.h"
+#include "edgeset.h"
 
 struct fsm_edge *
 fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type)

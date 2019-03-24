@@ -23,6 +23,9 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
+#include "libfsm/stateset.h"
+#include "libfsm/edgeset.h"
+
 static int
 rangeclass(unsigned char x, unsigned char y)
 {

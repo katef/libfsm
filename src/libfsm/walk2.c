@@ -19,6 +19,8 @@
 #include <fsm/walk.h>
 
 #include "internal.h"
+#include "stateset.h"
+#include "edgeset.h"
 #include "walk2.h"
 
 /*

@@ -16,6 +16,7 @@
 #include <fsm/walk.h>
 
 #include "internal.h"
+#include "stateset.h"
 
 static struct fsm_state *
 nextstate(const struct fsm_state *state, int c)

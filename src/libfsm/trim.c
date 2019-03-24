@@ -16,6 +16,8 @@
 #include <fsm/walk.h>
 
 #include "internal.h"
+#include "stateset.h"
+#include "edgeset.h"
 
 int
 fsm_trim(struct fsm *fsm)

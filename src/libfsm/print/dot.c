@@ -22,6 +22,9 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
+#include "libfsm/stateset.h"
+#include "libfsm/edgeset.h"
+
 static unsigned
 indexof(const struct fsm *fsm, const struct fsm_state *state)
 {

@@ -15,6 +15,8 @@
 #include <fsm/options.h>
 
 #include "internal.h"
+#include "stateset.h"
+#include "edgeset.h"
 
 int
 fsm_reverse(struct fsm *fsm)

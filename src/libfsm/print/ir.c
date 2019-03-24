@@ -23,6 +23,8 @@
 #include <fsm/options.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/stateset.h"
+#include "libfsm/edgeset.h"
 
 #include "ir.h"
 
