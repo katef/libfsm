@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef EDGESET_H
-#define EDGESET_H
+#ifndef ADT_EDGESET_H
+#define ADT_EDGESET_H
 
 struct set;
 struct fsm_edge;

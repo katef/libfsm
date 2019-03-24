@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef SET_H
-#define SET_H
+#ifndef ADT_SET_H
+#define ADT_SET_H
 
 struct set;
 

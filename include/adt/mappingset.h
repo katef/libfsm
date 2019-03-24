@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef MAPPINGSET_H
-#define MAPPINGSET_H
+#ifndef ADT_MAPPINGSET_H
+#define ADT_MAPPINGSET_H
 
 struct mapping_set;
 struct mapping;

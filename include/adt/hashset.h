@@ -1,5 +1,5 @@
-#ifndef HASHSET_H
-#define HASHSET_H
+#ifndef ADT_HASHSET_H
+#define ADT_HASHSET_H
 
 #include <stddef.h>
 
