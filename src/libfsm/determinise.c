@@ -230,6 +230,10 @@ state_closure(struct mapping_set *mappings, struct fsm *dfa, const struct fsm_st
 	assert(mappings != NULL);
 
 	ec = state_set_create();
+	if (ec == NULL) {
+		return NULL;
+	}
+
 	if (epsilon_closure(nfastate, ec) == NULL) {
 		state_set_free(ec);
 		return NULL;
@@ -241,10 +245,6 @@ state_closure(struct mapping_set *mappings, struct fsm *dfa, const struct fsm_st
 
 	if (state_set_count(ec) == 0) {
 		state_set_free(ec);
-		return NULL;
-	}
-
-	if (ec == NULL) {
 		return NULL;
 	}
 
@@ -272,6 +272,10 @@ set_closure(struct mapping_set *mappings, struct fsm *dfa, struct state_set *set
 	assert(mappings != NULL);
 
 	ec = state_set_create();
+	if (ec == NULL) {
+		return NULL;
+	}
+
 	for (s = state_set_first(set, &it); s != NULL; s = state_set_next(&it)) {
 		if (epsilon_closure(s, ec) == NULL) {
 			state_set_free(ec);
@@ -488,13 +492,21 @@ determinise(struct fsm *nfa,
 	}
 
 	if (dcache->mappings == NULL) {
-		dcache->mappings = mapping_set_create(nfa, hash_mapping, cmp_mapping);
+		dcache->mappings = mapping_set_create(hash_mapping, cmp_mapping);
+		if (dcache->mappings == NULL) {
+			fsm_free(dfa);
+			return NULL;
+		}
 	}
 	mappings = dcache->mappings;
-	assert(mappings != NULL);
 
 	if (dcache->trans == NULL) {
-		dcache->trans = trans_set_create(nfa, cmp_trans);
+		dcache->trans = trans_set_create(cmp_trans);
+		if (dcache->trans == NULL) {
+			fsm_free(dfa);
+			mapping_set_free(mappings);
+			return NULL;
+		}
 	}
 	trans = dcache->trans;
 	assert(trans != NULL);
@@ -569,6 +581,9 @@ determinise(struct fsm *nfa,
 			assert(t->state != NULL);
 
 			reachable = state_set_create();
+			if (reachable == NULL) {
+				goto error;
+			}
 
 			/*
 			 * Find the closure of the set of all NFA states which are reachable
@@ -652,8 +667,18 @@ fsm_determinise_cache(struct fsm *fsm,
 			return 0;
 		}
 
-		(*dcache)->mappings = mapping_set_create(fsm, hash_mapping, cmp_mapping);
-		(*dcache)->trans    = trans_set_create(fsm, cmp_trans);
+		(*dcache)->mappings = mapping_set_create(hash_mapping, cmp_mapping);
+		if ((*dcache)->mappings == NULL) {
+			f_free(fsm, *dcache);
+			return 0;
+		}
+
+		(*dcache)->trans    = trans_set_create(cmp_trans);
+		if ((*dcache)->trans == NULL) {
+			mapping_set_free((*dcache)->mappings);
+			f_free(fsm, *dcache);
+			return 0;
+		}
 	}
 
 	dfa = determinise(fsm, *dcache);
@@ -697,11 +722,11 @@ fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache)
 	clear_trans(fsm, dcache->trans);
 
 	if (dcache->mappings != NULL) {
-		mapping_set_free(fsm,dcache->mappings);
+		mapping_set_free(dcache->mappings);
 	}
 
 	if (dcache->trans != NULL) {
-		trans_set_free(fsm,dcache->trans);
+		trans_set_free(dcache->trans);
 	}
 
 	f_free(fsm, dcache);

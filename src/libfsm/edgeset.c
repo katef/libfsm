@@ -1,4 +1,4 @@
-#include <stddef.h>
+#include <assert.h>
 #include <stdlib.h>
 
 #include <adt/set.h>
@@ -12,10 +12,8 @@ edge_set_free(struct edge_set *set)
 		return;
 	}
 
-	if (set->set != NULL) {
-		set_free(set->set);
-		set->set = NULL;
-	}
+	assert(set->set != NULL);
+	set_free(set->set);
 
 	free(set);
 }

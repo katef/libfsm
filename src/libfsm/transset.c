@@ -1,7 +1,5 @@
 #include <assert.h>
-#include <stddef.h>
-
-#include <fsm/fsm.h> /* XXX: for f_alloc */
+#include <stdlib.h>
 
 #include <adt/set.h>
 #include <adt/hashset.h>
@@ -13,30 +11,35 @@ struct trans_set {
 };
 
 struct trans_set *
-trans_set_create(struct fsm *fsm,
-	int (*cmp)(const void *a, const void *b))
+trans_set_create(int (*cmp)(const void *a, const void *b))
 {
-	static const struct trans_set init;
 	struct trans_set *set;
 
 	assert(cmp != NULL);
 
-	set = f_malloc(fsm,sizeof *set); /* XXX - double check with katef */
-	*set = init;
+	set = malloc(sizeof *set);
+	if (set == NULL) {
+		return NULL;
+	}
+
 	set->set = set_create(cmp);
+	if (set->set == NULL) {
+		free(set);
+		return NULL;
+	}
+
 	return set;
 }
 
 void
-trans_set_free(struct fsm *fsm, struct trans_set *set)
+trans_set_free(struct trans_set *set)
 {
-	if (set != NULL) {
-		if (set->set != NULL) {
-			set_free(set->set);
-			set->set = NULL;
-		}
-		f_free(fsm,set);
+	if (set == NULL) {
+		return;
 	}
+
+	set_free(set->set);
+	free(set);
 }
 
 struct trans *

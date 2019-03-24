@@ -8,15 +8,13 @@
 struct state_set *
 state_set_create(void)
 {
-	static const struct state_set init;
 	struct state_set *set;
 
 	set = malloc(sizeof *set);
-	if (!set) {
+	if (set == NULL) {
 		return NULL;
 	}
 
-	*set = init;
 	set->set = NULL;
 
 	return set;
@@ -29,11 +27,7 @@ state_set_free(struct state_set *set)
 		return;
 	}
 
-	if (set->set != NULL) {
-		set_free(set->set);
-		set->set = NULL;
-	}
-
+	set_free(set->set);
 	free(set);
 }
 

@@ -7,7 +7,6 @@
 #ifndef FSM_MAPPINGSET_H
 #define FSM_MAPPINGSET_H
 
-struct fsm;
 struct mapping_set;
 struct mapping;
 
@@ -16,11 +15,10 @@ struct mapping_iter {
 };
 
 struct mapping_set *
-mapping_set_create(struct fsm *fsm,
-	unsigned long (*hash)(const void *a), int (*cmp)(const void *a, const void *b));
+mapping_set_create(unsigned long (*hash)(const void *a), int (*cmp)(const void *a, const void *b));
 
 void
-mapping_set_free(const struct fsm *fsm, struct mapping_set *set);
+mapping_set_free(struct mapping_set *set);
 
 struct mapping *
 mapping_set_add(struct mapping_set *set, struct mapping *item);

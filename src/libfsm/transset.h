@@ -7,7 +7,6 @@
 #ifndef FSM_TRANSSET_H
 #define FSM_TRANSET_H
 
-struct fsm;
 struct trans_set;
 struct trans;
 
@@ -16,11 +15,10 @@ struct trans_iter {
 };
 
 struct trans_set *
-trans_set_create(struct fsm *fsm,
-	int (*cmp)(const void *a, const void *b));
+trans_set_create(int (*cmp)(const void *a, const void *b));
 
 void
-trans_set_free(struct fsm *fsm, struct trans_set *set);
+trans_set_free(struct trans_set *set);
 
 struct trans *
 trans_set_add(struct trans_set *set, struct trans *item);
