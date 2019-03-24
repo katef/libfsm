@@ -87,7 +87,7 @@ hashset_create(unsigned long (*hash)(const void *a),int (*cmp)(const void *a, co
 static int
 rehash(struct hashset *s)
 {
-	const static struct hashset hs_init;
+	static const struct hashset hs_init;
 
 	size_t i,nb,newsz;
 	struct hashset ns;
@@ -186,7 +186,7 @@ hashset_remove(struct hashset *s, void *item)
 void
 hashset_finalize(struct hashset *s)
 {
-	const static struct hashset zero;
+	static const struct hashset zero;
 
 	free(s->buckets);
 	*s = zero;

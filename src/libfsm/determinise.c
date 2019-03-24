@@ -605,7 +605,7 @@ static struct fsm *
 determinise(struct fsm *nfa,
 	struct fsm_determinise_cache *dcache)
 {
-	const static struct mapping_iter_save sv_init;
+	static const struct mapping_iter_save sv_init;
 
 	struct mapping *curr;
 	struct mapping_set *mappings;

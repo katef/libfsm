@@ -21,7 +21,7 @@ int
 main(int argc, char *argv[])
 {
 	struct fsm *fsm;
-	const static struct fsm_options opt_defaults;
+	static const struct fsm_options opt_defaults;
 	struct fsm_options opt = opt_defaults;
 	char s[4096];
 	const char *p;
