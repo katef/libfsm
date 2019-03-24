@@ -10,13 +10,13 @@
 #include <limits.h>
 
 #include <adt/set.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 #include <adt/xalloc.h>
 
 #include <fsm/fsm.h>
 
 #include "internal.h"
-#include "stateset.h"
-#include "edgeset.h"
 
 struct fsm_edge *
 fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type)

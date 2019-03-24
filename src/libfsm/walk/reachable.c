@@ -9,12 +9,12 @@
 
 #include <adt/set.h>
 #include <adt/dlist.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 
 #include <fsm/fsm.h>
 
 #include "../internal.h"
-#include "../stateset.h"
-#include "../edgeset.h"
 
 static int
 fsm_reachable(const struct fsm *fsm, const struct fsm_state *state,

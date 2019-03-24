@@ -3,8 +3,7 @@
 
 #include <adt/set.h>
 #include <adt/hashset.h>
-
-#include "transset.h"
+#include <adt/transset.h>
 
 struct trans_set {
 	struct set *set;

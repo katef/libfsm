@@ -8,13 +8,13 @@
 #include <stdlib.h>
 
 #include <adt/set.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 
 #include "internal.h"
-#include "stateset.h"
-#include "edgeset.h"
 
 struct fsm *
 fsm_clone(const struct fsm *fsm)

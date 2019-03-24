@@ -9,6 +9,11 @@ SRC += src/adt/xalloc.c
 SRC += src/adt/hashset.c
 SRC += src/adt/siphash.c
 
+SRC += src/adt/edgeset.c
+SRC += src/adt/stateset.c
+SRC += src/adt/mappingset.c
+SRC += src/adt/transset.c
+
 .for src in ${SRC:Msrc/adt/bitmap.c}
 CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h

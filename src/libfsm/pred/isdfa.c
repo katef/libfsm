@@ -9,12 +9,12 @@
 #include <string.h>
 
 #include <adt/set.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 
 #include <fsm/pred.h>
 
 #include "../internal.h"
-#include "../stateset.h"
-#include "../edgeset.h"
 
 int
 fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state)

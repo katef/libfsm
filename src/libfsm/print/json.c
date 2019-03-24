@@ -10,6 +10,8 @@
 #include <print/esc.h>
 
 #include <adt/set.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -17,8 +19,6 @@
 #include <fsm/options.h>
 
 #include "libfsm/internal.h"
-#include "libfsm/stateset.h"
-#include "libfsm/edgeset.h"
 
 static unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)

@@ -10,13 +10,13 @@
 #include <adt/set.h>
 #include <adt/priq.h>
 #include <adt/path.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 
 #include <fsm/fsm.h>
 #include <fsm/cost.h>
 
 #include "internal.h"
-#include "stateset.h"
-#include "edgeset.h"
 
 struct path *
 fsm_shortest(const struct fsm *fsm,

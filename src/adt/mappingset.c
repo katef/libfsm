@@ -2,8 +2,7 @@
 #include <stdlib.h>
 
 #include <adt/hashset.h>
-
-#include "mappingset.h"
+#include <adt/mappingset.h>
 
 /* Uses a hash set and a list to hold the items that are not yet done. */
 struct mapping_set {

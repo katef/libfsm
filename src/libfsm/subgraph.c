@@ -9,14 +9,14 @@
 #include <stddef.h>
 
 #include <adt/set.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 #include <adt/xalloc.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 
 #include "internal.h"
-#include "stateset.h"
-#include "edgeset.h"
 
 struct mapping {
 	struct fsm_state *old;

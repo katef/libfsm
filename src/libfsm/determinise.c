@@ -11,6 +11,10 @@
 
 #include <adt/set.h>
 #include <adt/hashset.h>
+#include <adt/mappingset.h>
+#include <adt/transset.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -18,10 +22,6 @@
 #include <fsm/options.h>
 
 #include "internal.h"
-#include "mappingset.h"
-#include "transset.h"
-#include "stateset.h"
-#include "edgeset.h"
 
 /*
  * A set of states in an NFA.

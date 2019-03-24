@@ -8,6 +8,8 @@
 #include <stddef.h>
 
 #include <adt/set.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -15,8 +17,6 @@
 #include <fsm/options.h>
 
 #include "internal.h"
-#include "stateset.h"
-#include "edgeset.h"
 
 int
 fsm_reverse(struct fsm *fsm)

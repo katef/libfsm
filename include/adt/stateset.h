@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef FSM_STATESET_H
-#define FSM_STATESET_H
+#ifndef STATESET_H
+#define STATESET_H
 
 struct set;
 struct fsm_state;

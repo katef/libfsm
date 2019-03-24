@@ -9,14 +9,14 @@
 #include <errno.h>
 
 #include <adt/set.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 
 #include <fsm/fsm.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
 
 #include "internal.h"
-#include "stateset.h"
-#include "edgeset.h"
 
 #define ctassert(pred) \
 	switch (0) { case 0: case (pred):; }

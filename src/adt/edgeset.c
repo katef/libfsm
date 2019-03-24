@@ -2,8 +2,7 @@
 #include <stdlib.h>
 
 #include <adt/set.h>
-
-#include "edgeset.h"
+#include <adt/edgeset.h>
 
 void
 edge_set_free(struct edge_set *set)

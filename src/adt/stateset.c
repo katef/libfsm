@@ -2,8 +2,7 @@
 #include <stdlib.h>
 
 #include <adt/set.h>
-
-#include "stateset.h"
+#include <adt/stateset.h>
 
 struct state_set *
 state_set_create(void)

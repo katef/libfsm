@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef FSM_MAPPINGSET_H
-#define FSM_MAPPINGSET_H
+#ifndef MAPPINGSET_H
+#define MAPPINGSET_H
 
 struct mapping_set;
 struct mapping;

@@ -10,13 +10,13 @@
 #include <errno.h>
 
 #include <adt/set.h>
+#include <adt/stateset.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 
 #include "internal.h"
-#include "stateset.h"
 
 static struct fsm_state *
 nextstate(const struct fsm_state *state, int c)

@@ -8,12 +8,12 @@
 #include <stdlib.h>
 
 #include <adt/set.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 
 #include <fsm/fsm.h>
 
 #include "internal.h"
-#include "stateset.h"
-#include "edgeset.h"
 
 struct fsm_state *
 fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)

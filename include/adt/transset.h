@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef FSM_TRANSSET_H
-#define FSM_TRANSET_H
+#ifndef TRANSSET_H
+#define TRANSET_H
 
 struct trans_set;
 struct trans;
