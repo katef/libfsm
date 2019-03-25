@@ -10,6 +10,8 @@
 #include <limits.h>
 
 #include <adt/set.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 #include <adt/xalloc.h>
 
 #include <fsm/fsm.h>

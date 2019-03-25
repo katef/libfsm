@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef DLIST_H
-#define DLIST_H
+#ifndef ADT_DLIST_H
+#define ADT_DLIST_H
 
 struct fsm_state;
 

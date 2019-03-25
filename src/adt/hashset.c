@@ -1,5 +1,5 @@
 /*
- * Copyright 2018- Shannon Stewman
+ * Copyright 2018-2019 Shannon F. Stewman
  *
  * See LICENCE for the full copyright terms.
  */
@@ -16,6 +16,17 @@
 struct bucket {
 	unsigned long hash;
 	void *item;
+};
+
+struct hashset {
+	size_t nbuckets;
+	size_t nitems;
+	struct bucket *buckets;
+	size_t maxload;
+	int (*cmp)(const void *,const void *);
+	unsigned long (*hash)(const void *);
+	float load;
+	unsigned int flags;
 };
 
 #define TOMBSTONE_HASH (~(0UL))

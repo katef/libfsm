@@ -10,6 +10,7 @@
 #include <errno.h>
 
 #include <adt/set.h>
+#include <adt/stateset.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>

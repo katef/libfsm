@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef PRIQ_H
-#define PRIQ_H
+#ifndef ADT_PRIQ_H
+#define ADT_PRIQ_H
 
 struct fsm_state;
 

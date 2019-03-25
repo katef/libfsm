@@ -16,6 +16,8 @@
 
 #include <adt/set.h>
 #include <adt/bitmap.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>

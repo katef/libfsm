@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef BITMAP_H
-#define BITMAP_H
+#ifndef ADT_BITMAP_H
+#define ADT_BITMAP_H
 
 struct fsm_state;
 struct fsm_options;

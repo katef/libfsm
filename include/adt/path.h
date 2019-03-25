@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef PATH_H
-#define PATH_H
+#ifndef ADT_PATH_H
+#define ADT_PATH_H
 
 struct fsm_state;
 

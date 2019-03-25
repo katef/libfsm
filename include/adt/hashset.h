@@ -1,23 +1,19 @@
-#ifndef HASHSET_H
-#define HASHSET_H
+/*
+ * Copyright 2019 Shannon F. Stewman
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
+#ifndef ADT_HASHSET_H
+#define ADT_HASHSET_H
 
 #include <stddef.h>
 
 #define DEFAULT_LOAD 0.66
 #define DEFAULT_NBUCKETS 4
 
+struct hashset;
 struct bucket;
-
-struct hashset {
-	size_t nbuckets;
-	size_t nitems;
-	struct bucket *buckets;
-	size_t maxload;
-	int (*cmp)(const void *,const void *);
-	unsigned long (*hash)(const void *);
-	float load;
-	unsigned int flags;
-};
 
 struct hashset_iter {
 	size_t i;
