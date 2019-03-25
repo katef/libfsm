@@ -9,9 +9,10 @@
 
 struct set;
 struct fsm_state;
+struct state_set;
 
-struct state_set {
-	struct set *set;
+struct state_iter {
+	struct set_iter iter;
 };
 
 struct state_set *
@@ -31,10 +32,6 @@ state_set_empty(const struct state_set *s);
 
 struct fsm_state *
 state_set_only(const struct state_set *s);
-
-struct state_iter {
-	struct set_iter iter;
-};
 
 struct fsm_state *
 state_set_contains(const struct state_set *set, const struct fsm_state *st);

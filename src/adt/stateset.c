@@ -10,6 +10,10 @@
 #include <adt/set.h>
 #include <adt/stateset.h>
 
+struct state_set {
+	struct set *set;
+};
+
 struct state_set *
 state_set_create(void)
 {

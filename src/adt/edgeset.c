@@ -10,6 +10,29 @@
 #include <adt/set.h>
 #include <adt/edgeset.h>
 
+struct edge_set {
+	struct set *set;
+};
+
+struct edge_set *
+edge_set_create(int (*cmp)(const void *a, const void *b))
+{
+	struct edge_set *set;
+
+	set = malloc(sizeof *set);
+	if (set == NULL) {
+		return NULL;
+	}
+
+	set->set = set_create(cmp);
+	if (set->set == NULL) {
+		free(set);
+		return NULL;
+	}
+
+	return set;
+}
+
 void
 edge_set_free(struct edge_set *set)
 {

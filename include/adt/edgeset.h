@@ -9,14 +9,14 @@
 
 struct set;
 struct fsm_edge;
-
-struct edge_set {
-	struct set *set;
-};
+struct edge_set;
 
 struct edge_iter {
 	struct set_iter iter;
 };
+
+struct edge_set *
+edge_set_create(int (*cmp)(const void *a, const void *b));
 
 void
 edge_set_free(struct edge_set *set);

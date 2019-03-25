@@ -12,18 +12,8 @@
 #define DEFAULT_LOAD 0.66
 #define DEFAULT_NBUCKETS 4
 
+struct hashset;
 struct bucket;
-
-struct hashset {
-	size_t nbuckets;
-	size_t nitems;
-	struct bucket *buckets;
-	size_t maxload;
-	int (*cmp)(const void *,const void *);
-	unsigned long (*hash)(const void *);
-	float load;
-	unsigned int flags;
-};
 
 struct hashset_iter {
 	size_t i;

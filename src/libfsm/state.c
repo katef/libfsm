@@ -32,19 +32,6 @@ fsm_state_cmpedges(const void *a, const void *b)
 	return (ea->symbol > eb->symbol) - (ea->symbol < eb->symbol);
 }
 
-
-static struct edge_set *
-edge_set_create(struct fsm *fsm)
-{
-	static const struct edge_set init;
-
-	struct edge_set *set;
-	set = f_malloc(fsm, sizeof *set);
-	*set = init;
-	set->set = set_create(fsm_state_cmpedges);
-	return set;
-}
-
 struct fsm_state *
 fsm_addstate(struct fsm *fsm)
 {
@@ -58,7 +45,7 @@ fsm_addstate(struct fsm *fsm)
 	}
 
 	new->end = 0;
-	new->edges = edge_set_create(fsm);
+	new->edges = edge_set_create(fsm_state_cmpedges);
 	new->opaque = NULL;
 
 #ifdef DEBUG_TODFA

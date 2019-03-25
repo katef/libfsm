@@ -18,6 +18,17 @@ struct bucket {
 	void *item;
 };
 
+struct hashset {
+	size_t nbuckets;
+	size_t nitems;
+	struct bucket *buckets;
+	size_t maxload;
+	int (*cmp)(const void *,const void *);
+	unsigned long (*hash)(const void *);
+	float load;
+	unsigned int flags;
+};
+
 #define TOMBSTONE_HASH (~(0UL))
 #define UNSET_HASH     (0UL)
 
