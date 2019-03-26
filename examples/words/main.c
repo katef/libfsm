@@ -36,12 +36,11 @@ int main(void) {
 		return 1;
 	}
 
-	fsm_setstart(fsm, start);
-
 	while (fgets(s, sizeof s, stdin) != NULL) {
 		struct fsm *r;
 		struct re_err e;
 		const char *p = s;
+		struct fsm_state *rs;
 
 		s[strcspn(s, "\n")] = '\0';
 
@@ -53,12 +52,21 @@ int main(void) {
 			return 1;
 		}
 
-		fsm = fsm_union(fsm, r);
+		rs = fsm_getstart(r);
+
+		fsm = fsm_merge(fsm, r);
 		if (fsm == NULL) {
-			perror("fsm_union");
+			perror("fsm_merge");
+			return 1;
+		}
+
+		if (!fsm_addedge_epsilon(fsm, start, rs)) {
+			perror("fsm_addedge_epsilon");
 			return 1;
 		}
 	}
+
+	fsm_setstart(fsm, start);
 
 	if (-1 == fsm_minimise(fsm)) {
 		perror("fsm_minimise");

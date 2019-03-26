@@ -451,6 +451,7 @@ zone_minimise(void *arg)
 	for (;;) {
 		struct ast_zone    *z;
 		struct ast_mapping *m;
+		struct fsm_state *start;
 
 		pthread_mutex_lock(&zmtx);
 		{
@@ -479,7 +480,17 @@ zone_minimise(void *arg)
 			return "fsm_new";
 		}
 
+		start = fsm_addstate(z->fsm);
+		if (start == NULL) {
+			pthread_mutex_lock(&zmtx);
+			zerror = errno;
+			pthread_mutex_unlock(&zmtx);
+			return "fsm_addstate";
+		}
+
 		for (m = z->ml; m != NULL; m = m->next) {
+			struct fsm_state *ms;
+
 			assert(m->fsm != NULL);
 
 			if (!keep_nfa) {
@@ -494,7 +505,9 @@ zone_minimise(void *arg)
 			/* Attach this mapping to each end state for this FSM */
 			fsm_setendopaque(m->fsm, m);
 
-			z->fsm = fsm_union(z->fsm, m->fsm);
+			ms = fsm_getstart(m->fsm);
+
+			z->fsm = fsm_merge(z->fsm, m->fsm);
 			if (z->fsm == NULL) {
 				pthread_mutex_lock(&zmtx);
 				zerror = errno;
@@ -505,7 +518,16 @@ zone_minimise(void *arg)
 #ifndef NDEBUG
 			m->fsm = NULL;
 #endif
+
+			if (!fsm_addedge_epsilon(z->fsm, start, ms)) {
+				pthread_mutex_lock(&zmtx);
+				zerror = errno;
+				pthread_mutex_unlock(&zmtx);
+				return "fsm_addedge_epsilon";
+			}
 		}
+
+		fsm_setstart(z->fsm, start);
 	}
 }
 

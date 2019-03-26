@@ -548,7 +548,6 @@ main(int argc, char **argv)
 		perror("fsm_addstate");
 		return -1;
 	}
-	fsm_setstart(fsm, fsmstart);
 
 	unsigned line = 0;
 	time_t tstart, tend;
@@ -642,6 +641,8 @@ main(int argc, char **argv)
 
 	struct record *r;
 	RB_FOREACH(r, recmap, &recmap) {
+		struct fsm_state *start;
+
 		if (fsm_minimise(r->fsm) == 0) {
 			perror("fsm_minimise");
 			exit(-1);
@@ -649,8 +650,17 @@ main(int argc, char **argv)
 
 		fsm_setendopaque(r->fsm, r);
 
-		if (!fsm_union(fsm, r->fsm)) {
-			perror("fsm_union");
+		start = fsm_getstart(r->fsm);
+		assert(start != NULL);
+
+		fsm = fsm_merge(fsm, r->fsm);
+		if (fsm == NULL) {
+			perror("fsm_merge");
+			exit(-1);
+		}
+
+		if (!fsm_addedge_epsilon(fsm, fsmstart, start)) {
+			perror("fsm_addedge_epsilon");
 			exit(-1);
 		}
 
@@ -663,6 +673,8 @@ main(int argc, char **argv)
 			line++;
 		}
 	}
+
+	fsm_setstart(fsm, fsmstart);
 
 	if (progress) {
 		tend = time(NULL);

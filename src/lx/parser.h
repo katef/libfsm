@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 128 "src/lx/parser.act"
+#line 140 "src/lx/parser.act"
 
 
 	#include <stdio.h>
@@ -29,7 +29,7 @@
 extern void p_lx(lex_state, act_state, ast *);
 /* BEGINNING OF TRAILER */
 
-#line 869 "src/lx/parser.act"
+#line 887 "src/lx/parser.act"
 
 
 #line 36 "src/lx/parser.h"

@@ -311,6 +311,7 @@
 
 	<deref-token>: (z :zone, t :string) -> (r :fsm) = @{
 		const struct ast_mapping *m;
+		struct fsm_state *start;
 
 		assert(@t != NULL);
 		assert(@t != NULL);
@@ -321,9 +322,15 @@
 			@!;
 		}
 
+		start = fsm_addstate(@r);
+		if (start == NULL) {
+			perror("fsm_addstate");
+			@!;
+		}
+
 		for (m = @z->ml; m != NULL; m = m->next) {
 			struct fsm *fsm;
-			struct fsm_state *s;
+			struct fsm_state *ms, *s;
 
 			if (m->token == NULL) {
 				continue;
@@ -339,6 +346,8 @@
 				@!;
 			}
 
+			ms = fsm_getstart(fsm);
+
 			/*
 			 * We don't want to take these with us, because the output here is a
 			 * general-purpose FSM for which no mapping has yet been made,
@@ -348,12 +357,19 @@
 				s->opaque = NULL;
 			}
 
-			@r = fsm_union(@r, fsm);
+			@r = fsm_merge(@r, fsm);
 			if (@r == NULL) {
 				perror("fsm_union");
 				@!;
 			}
+
+			if (!fsm_addedge_epsilon(@r, start, ms)) {
+				perror("fsm_addedge_epsilon");
+				@!;
+			}
 		}
+
+		fsm_setstart(@r, start);
 	@};
 
 	<compile-literal>: (a :arr) -> (r :fsm) = @{
