@@ -421,9 +421,6 @@ fsm_print_c(FILE *f, const struct fsm *fsm)
 		fprintf(f, "{\n");
 		fprintf(f, "\tint c;\n");
 		fprintf(f, "\n");
-		fprintf(f, "\tif (fsm_getc == NULL) {\n");
-		fprintf(f, "\t\treturn -1;\n");
-		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
 		break;
 
@@ -432,9 +429,6 @@ fsm_print_c(FILE *f, const struct fsm *fsm)
 		fprintf(f, "{\n");
 		fprintf(f, "\tconst char *p;\n");
 		fprintf(f, "\n");
-		fprintf(f, "\tif (s == NULL) {\n");
-		fprintf(f, "\t\treturn -1;\n");
-		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
 		break;
 
@@ -443,9 +437,6 @@ fsm_print_c(FILE *f, const struct fsm *fsm)
 		fprintf(f, "{\n");
 		fprintf(f, "\tconst char *p;\n");
 		fprintf(f, "\n");
-		fprintf(f, "\tif (b == NULL || e == NULL || b >= e) {\n");
-		fprintf(f, "\t\treturn -1;\n");
-		fprintf(f, "\t}\n");
 		fprintf(f, "\n");
 		break;
 	}

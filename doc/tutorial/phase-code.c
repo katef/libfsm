@@ -3,10 +3,6 @@ fsm_main(int (*fsm_getc)(void *opaque), void *opaque)
 {
 	int c;
 
-	if (fsm_getc == NULL) {
-		return -1;
-	}
-
 	enum {
 		S0, S1, S2, S3, S4
 	} state;
