@@ -269,7 +269,7 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 
 	/* no end states */
 	if (!ir_hasend(ir)) {
-		printf("\treturn EOF; /* unexpected EOF */\n");
+		printf("\treturn -1; /* error */\n");
 		return;
 	}
 
@@ -289,7 +289,7 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 		}
 		fprintf(f, "\n");
 	}
-	fprintf(f, "\tdefault: return EOF; /* unexpected EOF */\n");
+	fprintf(f, "\tdefault: return -1; /* error */\n");
 	fprintf(f, "\t}\n");
 }
 
