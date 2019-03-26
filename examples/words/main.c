@@ -10,6 +10,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
@@ -26,22 +28,29 @@ int main(int argc, char *argv[]) {
 	char s[BUFSIZ];
 	int (*dmf)(struct fsm *);
 	void (*print)(FILE *, const struct fsm *);
+	double ms, mt;
+	int timing;
 
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
 
 	dmf = NULL;
 	print = NULL;
+	timing = 0;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "dmc"), c != -1) {
+		while (c = getopt(argc, argv, "h" "dmct"), c != -1) {
 			switch (c) {
 			case 'd': dmf = fsm_determinise; break;
 			case 'm': dmf = fsm_minimise;    break;
 
 			case 'c': print = fsm_print_dot; break;
+
+			case 't':
+				timing = 1;
+				break;
 
 			case 'h':
 			case '?':
@@ -70,13 +79,22 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
+	ms = 0;
+	mt = 0;
+
 	while (fgets(s, sizeof s, stdin) != NULL) {
 		struct fsm *r;
 		struct re_err e;
 		const char *p = s;
 		struct fsm_state *rs;
+		struct timespec pre, post;
 
 		s[strcspn(s, "\n")] = '\0';
+
+		if (-1 == clock_gettime(CLOCK_MONOTONIC, &pre)) {
+			perror("clock_gettime");
+			exit(EXIT_FAILURE);
+		}
 
 		r = re_comp(RE_LITERAL, fsm_sgetc, &p, &opt, 0, &e);
 		if (r == NULL) {
@@ -96,26 +114,53 @@ int main(int argc, char *argv[]) {
 			perror("fsm_addedge_epsilon");
 			return 1;
 		}
+
+		if (-1 == clock_gettime(CLOCK_MONOTONIC, &post)) {
+			perror("clock_gettime");
+			exit(EXIT_FAILURE);
+		}
+
+		ms += 1000.0 * (post.tv_sec  - pre.tv_sec)
+					 + (post.tv_nsec - pre.tv_nsec) / 1e6;
 	}
 
 	fsm_setstart(fsm, start);
 
 	if (dmf != NULL) {
+		struct timespec pre, post;
+
+		if (-1 == clock_gettime(CLOCK_MONOTONIC, &pre)) {
+			perror("clock_gettime");
+			exit(EXIT_FAILURE);
+		}
+
 		if (-1 == dmf(fsm)) {
 			perror("fsm_determinise/minimise");
 			return 1;
 		}
+
+		if (-1 == clock_gettime(CLOCK_MONOTONIC, &post)) {
+			perror("clock_gettime");
+			exit(EXIT_FAILURE);
+		}
+
+		mt += 1000.0 * (post.tv_sec  - pre.tv_sec)
+					 + (post.tv_nsec - pre.tv_nsec) / 1e6;
 	}
 
 	if (print != NULL) {
 		print(stdout, fsm);
 	}
 
+	if (timing) {
+		printf("construction, reduction, total: %f, %f, %f\n", ms, mt, ms + mt);
+	}
+
 	return 0;
 
 usage:
 
-	fprintf(stderr, "usage: words [-dm]\n");
+	fprintf(stderr, "usage: words [-dmct]\n");
 	fprintf(stderr, "       words -h\n");
 
 	return 1;
