@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 	char s[BUFSIZ];
 	int (*dmf)(struct fsm *);
 	void (*print)(FILE *, const struct fsm *);
-	double ms, mt;
+	unsigned long ms, mt;
 	int timing;
 
 	opt.anonymous_states  = 1;
@@ -82,6 +82,8 @@ int main(int argc, char *argv[]) {
 	ms = 0;
 	mt = 0;
 
+	/* TODO: option to generate random strings instead */
+
 	while (fgets(s, sizeof s, stdin) != NULL) {
 		struct fsm *r;
 		struct re_err e;
@@ -120,8 +122,9 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		ms += 1000.0 * (post.tv_sec  - pre.tv_sec)
-					 + (post.tv_nsec - pre.tv_nsec) / 1e6;
+
+		ms += 1000 * (post.tv_sec - pre.tv_sec)
+		           + ((long) post.tv_nsec - (long) pre.tv_nsec) / 1000000;
 	}
 
 	fsm_setstart(fsm, start);
@@ -144,8 +147,8 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		mt += 1000.0 * (post.tv_sec  - pre.tv_sec)
-					 + (post.tv_nsec - pre.tv_nsec) / 1e6;
+		mt += 1000 * (post.tv_sec - pre.tv_sec)
+		           + ((long) post.tv_nsec - (long) pre.tv_nsec) / 1000000;
 	}
 
 	if (print != NULL) {
@@ -153,7 +156,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (timing) {
-		printf("construction, reduction, total: %f, %f, %f\n", ms, mt, ms + mt);
+		printf("construction, reduction, total: %lu, %lu, %lu\n", ms, mt, ms + mt);
 	}
 
 	return 0;

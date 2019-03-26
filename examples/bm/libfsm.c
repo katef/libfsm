@@ -88,7 +88,7 @@ main(int argc, char *argv[])
 	printf("{\n");
 	printf("\tchar s[4096];\n");
 	printf("\tunsigned n;\n");
-	printf("\tdouble ms;\n");
+	printf("\tunsigned long ms;\n");
 	printf("\tint i, max;\n");
 	printf("\n");
 
@@ -122,14 +122,14 @@ main(int argc, char *argv[])
 	printf("\t\tprintf(\"%%u %%s\\n\", n, n == 1 ? \"match\" : \"matches\");\n");
 */
 
-	printf("\t\tms = 1000.0 * (post.tv_sec  - pre.tv_sec)\n");
-	printf("\t\t            + (post.tv_nsec - pre.tv_nsec) / 1e6 / (double) %d;\n", BM_MAX);
+	printf("\t\tms += 1000.0 * (post.tv_sec  - pre.tv_sec)\n");
+	printf("\t\t             + ((long) post.tv_nsec - (long) pre.tv_nsec) / 1000000 / %d;\n", BM_MAX);
 	printf("\n");
 
 	printf("\t}\n");
 	printf("\n");
 
-	printf("\tprintf(\"%%f\\n\", ms);\n");
+	printf("\tprintf(\"%%lu\\n\", ms);\n");
 	printf("\n");
 
 	printf("\treturn 0;\n");
