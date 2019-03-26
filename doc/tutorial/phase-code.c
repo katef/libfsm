@@ -49,7 +49,7 @@ fsm_main(int (*fsm_getc)(void *opaque), void *opaque)
 	case S2: return 0x1; /* "^ab+c?.?$" */
 	case S3: return 0x1; /* "^ab+c?.?$" */
 	case S4: return 0x1; /* "^ab+c?.?$" */
-	default: return -1; /* error */
+	default: return -1; /* unexpected EOT */
 	}
 }
 

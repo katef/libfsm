@@ -168,7 +168,7 @@ fsm_main(int (*fsm_getc)(void *opaque), void *opaque)
 	case S20: return 0x400; /* "finessing" */
 	case S21: return 0x100; /* "finessed" */
 	case S22: return 0x200; /* "finesses" */
-	default: return -1; /* error */
+	default: return -1; /* unexpected EOT */
 	}
 }
 
