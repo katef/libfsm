@@ -94,3 +94,5 @@ make_ir # XXX: workaround for lx
 free_ir # XXX: workaround for lx
 
 fsm_collect_unreachable_states
+fsm_clear_tmp
+fsm_state_clear_tmp

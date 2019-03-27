@@ -46,7 +46,7 @@ fsm_clone(const struct fsm *fsm)
 				return NULL;
 			}
 
-			s->equiv = q;
+			s->tmp.equiv = q;
 		}
 	}
 
@@ -58,7 +58,7 @@ fsm_clone(const struct fsm *fsm)
 			struct fsm_edge *e;
 			struct edge_iter it;
 
-			equiv = s->equiv;
+			equiv = s->tmp.equiv;
 			assert(equiv != NULL);
 
 			if (*fsm->tail == s) {
@@ -76,7 +76,7 @@ fsm_clone(const struct fsm *fsm)
 					struct fsm_state *newto;
 
 					newfrom = equiv;
-					newto   = to->equiv;
+					newto   = to->tmp.equiv;
 
 					if (!fsm_addedge(newfrom, newto, e->symbol)) {
 						fsm_free(new);
@@ -87,7 +87,9 @@ fsm_clone(const struct fsm *fsm)
 		}
 	}
 
-	new->start = fsm->start->equiv;
+	new->start = fsm->start->tmp.equiv;
+
+	fsm_clear_tmp(new);
 
 	return new;
 }

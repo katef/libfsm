@@ -49,9 +49,17 @@ struct fsm_state {
 
 	void *opaque;
 
-	/* temporary relation between one FSM and another;
-	 * meaningful within one particular transformation only */
-	struct fsm_state *equiv;
+	/* these are only valid within one particular transformation.
+	 * expected to be NULL at start and set back to NULL after. */
+	union {
+		/* temporary relation between one FSM and another */
+		struct fsm_state *equiv;
+		/* used to avoid stack overrun during marking
+		 * inside fsm_collect_unreachable_states. */
+		struct fsm_state *back;
+		/* tracks which states have been visited in walk2 */
+		struct fsm_state *visited;
+	} tmp;
 
 #ifdef DEBUG_TODFA
 	struct set *nfasl;
@@ -83,6 +91,12 @@ fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type typ
 void
 fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
 	struct fsm *new, struct fsm_state *state);
+
+void
+fsm_clear_tmp(struct fsm *fsm);
+
+void
+fsm_state_clear_tmp(struct fsm_state *state);
 
 #endif
 

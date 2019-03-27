@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <adt/set.h>
 #include <adt/stateset.h>
@@ -52,11 +53,19 @@ fsm_addstate(struct fsm *fsm)
 	new->nfasl = NULL;
 #endif
 
+	fsm_state_clear_tmp(new);
+
 	*fsm->tail = new;
 	new->next = NULL;
 	fsm->tail  = &new->next;
 
 	return new;
+}
+
+void
+fsm_state_clear_tmp(struct fsm_state *state)
+{
+	memset(&state->tmp, 0x00, sizeof(state->tmp));
 }
 
 void

@@ -309,3 +309,15 @@ fsm_collect_unreachable_states(struct fsm *fsm)
 	mark_states(fsm->start);
 	sweep_states(fsm);
 }
+
+void
+fsm_clear_tmp(struct fsm *fsm)
+{
+	struct fsm_state *s;
+
+	assert(fsm != NULL);
+
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		fsm_state_clear_tmp(s);
+	}
+}
