@@ -25,7 +25,7 @@ main(int argc, char *argv[])
 	int o;
 	unsigned n;
 	int flags;
-	double ms;
+	unsigned long ms;
 	int i, max;
 
 	max = BM_MAX;
@@ -94,8 +94,8 @@ main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 
-		ms += 1000.0 * (post.tv_sec  - pre.tv_sec)
-		             + (post.tv_nsec - pre.tv_nsec) / 1e6 / (double) max;
+		ms += 1000 * (long) (post.tv_sec - pre.tv_sec)
+		           + ((long) post.tv_nsec - (long) pre.tv_nsec) / 1000000 / max;
 
 		if (r == PCRE_ERROR_NOMATCH) {
 			continue;
@@ -112,7 +112,7 @@ main(int argc, char *argv[])
 	printf("%u %s\n", n, n == 1 ? "match" : "matches");
 */
 
-	printf("%f\n", ms);
+	printf("%lu\n", ms);
 
 	return 0;
 
