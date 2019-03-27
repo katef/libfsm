@@ -43,6 +43,7 @@ struct fsm_edge {
 
 struct fsm_state {
 	unsigned int end:1;
+	unsigned int reachable:1;
 
 	struct edge_set *edges; /* containing `struct fsm_edge *` */
 

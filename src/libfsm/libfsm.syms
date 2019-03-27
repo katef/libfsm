@@ -92,3 +92,5 @@ fsm_sgetc
 fsm_print_cfrag # XXX: workaround for lx
 make_ir # XXX: workaround for lx
 free_ir # XXX: workaround for lx
+
+fsm_collect_unreachable_states

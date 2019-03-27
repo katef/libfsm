@@ -314,6 +314,10 @@ fsm_minimise(struct fsm *fsm);
 struct fsm *
 fsm_concat(struct fsm *a, struct fsm *b);
 
+/* Collect any unreachable states in the graph. */
+void
+fsm_collect_unreachable_states(struct fsm *fsm);
+
 /*
  * Return 1 if the fsm does not match anything;
  * 0 if anything matches (including the empty string),

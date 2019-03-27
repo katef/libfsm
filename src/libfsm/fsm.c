@@ -234,3 +234,78 @@ fsm_countedges(const struct fsm *fsm)
 
 	return n;
 }
+
+static void
+clear_states(struct fsm_state *s)
+{
+	for (; s != NULL; s = s->next) { s->reachable = 0; }
+}
+
+static void
+mark_states(struct fsm_state *s)
+{
+	const struct fsm_edge *e;
+	struct edge_iter edge_iter;
+
+	/* skip if already processed */
+	if (s->reachable) { return; }
+	s->reachable = 1;
+	
+	for (e = edge_set_first(s->edges, &edge_iter); e != NULL; e = edge_set_next(&edge_iter)) {
+		struct state_iter state_iter;
+		struct fsm_state *es;
+		for (es = state_set_first(e->sl, &state_iter); es != NULL; es = state_set_next(&state_iter)) {
+			/* TODO: A long run of transitions could potentially overrun the stack
+			 * here. It should probably use some sort of queue. If struct fsm
+			 * tracked the total number of states in `sl`, then it could allocate
+			 * the worst-case queue upfront, or fail cleanly.
+			 *
+			 * Since `struct fsm_state` contains `equiv`, which is only meaningful
+			 * during a different operation, that could be moved inside a union
+			 * and write a backward link into that field. */
+			mark_states(es);
+ 		}
+	}
+}
+
+void
+sweep_states(struct fsm *fsm)
+{
+	struct fsm_state *prev = NULL;
+	struct fsm_state *s = fsm->sl;
+	struct fsm_state *next;
+	/* This doesn't use fsm_removestate because it would be modifying the
+	 * state graph while traversing it, and any state being removed here
+	 * should (by definition) not be the start, or have any other reachable
+	 * edges referring to it.
+	 *
+	 * There may temporarily be other states in the graph with other
+	 * to it, because the states aren't topologically sorted, but
+	 * they'll be collected soon as well. */
+	while (s != NULL) {
+		next = s->next;
+		if (!s->reachable) {
+			assert(s != fsm->start);
+
+			/* for endcount accounting */
+			fsm_setend(fsm, s, 0);
+
+			/* unlink */
+			if (prev != NULL) { prev->next = next; }
+			if (s == *fsm->tail) { *fsm->tail = prev; }
+			edge_set_free(s->edges);
+			free(s);
+		} else {
+			prev = s;
+		}
+		s = next;
+	}
+}
+
+void
+fsm_collect_unreachable_states(struct fsm *fsm)
+{
+	clear_states(fsm->sl);
+	mark_states(fsm->start);
+	sweep_states(fsm);
+}
