@@ -82,8 +82,6 @@ int main(int argc, char *argv[]) {
 	ms = 0;
 	mt = 0;
 
-	/* TODO: option to generate random strings instead */
-
 	while (fgets(s, sizeof s, stdin) != NULL) {
 		struct fsm *r;
 		struct re_err e;
