@@ -92,7 +92,7 @@ This value is `1 << n` where _n_ is the `#0`, `#1` index we saw for `-z` earlier
     case S20: return 0x400; /* "finessing" */
     case S21: return 0x100; /* "finessed" */
     case S22: return 0x200; /* "finesses" */
-    default: return EOF; /* unexpected EOF */
+    default: return -1; /* unexpected EOT */
     }
 ```
 Input is read in one of several ways:

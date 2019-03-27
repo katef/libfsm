@@ -269,7 +269,7 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 
 	/* no end states */
 	if (!ir_hasend(ir)) {
-		printf("\treturn EOF; /* unexpected EOF */\n");
+		printf("\treturn -1; /* unexpected EOT */\n");
 		return;
 	}
 
@@ -289,7 +289,7 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 		}
 		fprintf(f, "\n");
 	}
-	fprintf(f, "\tdefault: return EOF; /* unexpected EOF */\n");
+	fprintf(f, "\tdefault: return -1; /* unexpected EOT */\n");
 	fprintf(f, "\t}\n");
 }
 
@@ -411,8 +411,6 @@ fsm_print_c(FILE *f, const struct fsm *fsm)
 		return;
 	}
 
-	fprintf(f, "#include <assert.h>\n");
-	fprintf(f, "#include <stdio.h>\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "int\n%smain", prefix);
@@ -423,7 +421,6 @@ fsm_print_c(FILE *f, const struct fsm *fsm)
 		fprintf(f, "{\n");
 		fprintf(f, "\tint c;\n");
 		fprintf(f, "\n");
-		fprintf(f, "\tassert(fsm_getc != NULL);\n");
 		fprintf(f, "\n");
 		break;
 
@@ -432,7 +429,6 @@ fsm_print_c(FILE *f, const struct fsm *fsm)
 		fprintf(f, "{\n");
 		fprintf(f, "\tconst char *p;\n");
 		fprintf(f, "\n");
-		fprintf(f, "\tassert(s != NULL);\n");
 		fprintf(f, "\n");
 		break;
 
@@ -441,9 +437,6 @@ fsm_print_c(FILE *f, const struct fsm *fsm)
 		fprintf(f, "{\n");
 		fprintf(f, "\tconst char *p;\n");
 		fprintf(f, "\n");
-		fprintf(f, "\tassert(b != NULL);\n");
-		fprintf(f, "\tassert(e != NULL);\n");
-		fprintf(f, "\tassert(e > b);\n");
 		fprintf(f, "\n");
 		break;
 	}

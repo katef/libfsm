@@ -1,12 +1,7 @@
-#include <assert.h>
-#include <stdio.h>
-
 int
 fsm_main(int (*fsm_getc)(void *opaque), void *opaque)
 {
 	int c;
-
-	assert(fsm_getc != NULL);
 
 	enum {
 		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
@@ -173,7 +168,7 @@ fsm_main(int (*fsm_getc)(void *opaque), void *opaque)
 	case S20: return 0x400; /* "finessing" */
 	case S21: return 0x100; /* "finessed" */
 	case S22: return 0x200; /* "finesses" */
-	default: return EOF; /* unexpected EOF */
+	default: return -1; /* unexpected EOT */
 	}
 }
 

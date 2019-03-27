@@ -1,12 +1,7 @@
-#include <assert.h>
-#include <stdio.h>
-
 int
 fsm_main(int (*fsm_getc)(void *opaque), void *opaque)
 {
 	int c;
-
-	assert(fsm_getc != NULL);
 
 	enum {
 		S0, S1, S2, S3, S4
@@ -54,7 +49,7 @@ fsm_main(int (*fsm_getc)(void *opaque), void *opaque)
 	case S2: return 0x1; /* "^ab+c?.?$" */
 	case S3: return 0x1; /* "^ab+c?.?$" */
 	case S4: return 0x1; /* "^ab+c?.?$" */
-	default: return EOF; /* unexpected EOF */
+	default: return -1; /* unexpected EOT */
 	}
 }
 
