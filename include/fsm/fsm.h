@@ -314,8 +314,10 @@ fsm_minimise(struct fsm *fsm);
 struct fsm *
 fsm_concat(struct fsm *a, struct fsm *b);
 
-/* Collect any unreachable states in the graph. */
-void
+/* Collect any unreachable states in the graph.
+ * Returns how many states were collected, or -1 on error
+ * (due to allocation failure). */
+int
 fsm_collect_unreachable_states(struct fsm *fsm);
 
 /*

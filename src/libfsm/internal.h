@@ -54,9 +54,6 @@ struct fsm_state {
 	union {
 		/* temporary relation between one FSM and another */
 		struct fsm_state *equiv;
-		/* used to avoid stack overrun during marking
-		 * inside fsm_collect_unreachable_states. */
-		struct fsm_state *back;
 		/* tracks which states have been visited in walk2 */
 		struct fsm_state *visited;
 	} tmp;
