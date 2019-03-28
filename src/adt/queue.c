@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #include "adt/queue.h"
 
 #include <string.h>
