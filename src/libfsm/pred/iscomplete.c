@@ -42,6 +42,6 @@ fsm_iscomplete(const struct fsm *fsm, const struct fsm_state *state)
 		n++;
 	}
 
-	return n == UCHAR_MAX + 1;
+	return n == FSM_SIGMA_COUNT;
 }
 

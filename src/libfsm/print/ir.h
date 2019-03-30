@@ -85,7 +85,7 @@ struct ir_state {
 		} error;
 
 		struct {
-			unsigned to[UCHAR_MAX];
+			unsigned to[FSM_SIGMA_COUNT];
 		} table;
 	} u;
 };

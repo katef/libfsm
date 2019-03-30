@@ -44,7 +44,7 @@ fsm_findmode(const struct fsm_state *state, unsigned int *freq)
 			struct fsm_edge *c;
 			unsigned int curr;
 
-			curr = 0;
+			curr = 1; /* including ourself */
 
 			/* Count the remaining edes which have the same target.
 			 * This works because the edges are still sorted by

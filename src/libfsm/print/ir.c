@@ -83,7 +83,7 @@ static struct ir_group *
 make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct fsm_state *mode,
 	size_t *u)
 {
-	struct range ranges[UCHAR_MAX + 1]; /* worst case */
+	struct range ranges[FSM_SIGMA_COUNT]; /* worst case, one per symbol */
 	struct ir_group *groups;
 	struct fsm_edge *e;
 	struct edge_iter it;
@@ -310,7 +310,7 @@ make_holes(const struct fsm *fsm, const struct bm *bm, size_t *n)
 	assert(bm != NULL);
 	assert(n != NULL);
 
-	ranges = f_malloc(fsm, sizeof *ranges * (UCHAR_MAX + 1)); /* worst case */
+	ranges = f_malloc(fsm, sizeof *ranges * FSM_SIGMA_COUNT); /* worst case */
 	if (ranges == NULL) {
 		return NULL;
 	}
@@ -325,7 +325,7 @@ make_holes(const struct fsm *fsm, const struct bm *bm, size_t *n)
 			break;
 		}
 
-		/* end of range */
+		/* one past the end of range */
 		hi = bm_next(bm, lo, 1);
 
 		ranges[*n].start = lo;
@@ -396,7 +396,7 @@ make_state(const struct fsm *fsm,
 	}
 
 	/* all edges go to the same state */
-	if (mode.state != NULL && mode.freq == UCHAR_MAX) {
+	if (mode.state != NULL && mode.freq == FSM_SIGMA_COUNT) {
 		cs->strategy  = IR_SAME;
 		cs->u.same.to = indexof(fsm, mode.state);
 		return 0;

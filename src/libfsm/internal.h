@@ -16,8 +16,6 @@
 struct edge_set;
 struct state_set;
 
-#define FSM_ENDCOUNT_MAX ULONG_MAX
-
 /*
  * The alphabet (Sigma) for libfsm's FSM is arbitrary octets.
  * These octets may or may not spell out UTF-8 sequences,
@@ -26,15 +24,27 @@ struct state_set;
  * Octets are implemented here as (unsigned char) values in C.
  * As an implementation detail, we extend this range from 0..UCHAR_MAX
  * to include "special" edge types after the last valid octet.
+ *
  * Currently the only special edge type is the epsilon transition,
  * for Thompson NFA.
  */
+
+/*
+ * The number of non-special symbols in the alphabet.
+ * This is the number of symbols with the value <= UCHAR_MAX.
+ */
+#define FSM_SIGMA_COUNT (UCHAR_MAX + 1)
 
 enum fsm_edge_type {
 	FSM_EDGE_EPSILON = UCHAR_MAX + 1
 };
 
+/*
+ * The highest value of an symbol, including special symbols.
+ */
 #define FSM_EDGE_MAX FSM_EDGE_EPSILON
+
+#define FSM_ENDCOUNT_MAX ULONG_MAX
 
 struct fsm_edge {
 	struct state_set *sl;

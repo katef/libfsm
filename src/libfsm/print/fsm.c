@@ -88,7 +88,7 @@ findany(const struct fsm_state *state)
 		bm_set(&bm, e->symbol);
 	}
 
-	if (bm_count(&bm) != UCHAR_MAX + 1U) {
+	if (bm_count(&bm) != FSM_SIGMA_COUNT) {
 		return NULL;
 	}
 
