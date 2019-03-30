@@ -396,7 +396,7 @@ make_state(const struct fsm *fsm,
 	}
 
 	/* all edges go to the same state */
-	if (mode.state != NULL && mode.freq == UCHAR_MAX) {
+	if (mode.state != NULL && mode.freq == UCHAR_MAX + 1) {
 		cs->strategy  = IR_SAME;
 		cs->u.same.to = indexof(fsm, mode.state);
 		return 0;

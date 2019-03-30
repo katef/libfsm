@@ -1,0 +1,24 @@
+{
+	"start": 0,
+	"states": [
+		{
+			"end": false,
+			"strategy": "dominant",
+			"mode": 0,
+			"groups": [
+				{
+					"to": 1,
+					"ranges": [
+						{ "start": "x", "end": "x" }
+					]
+				}
+			]
+		},
+		{
+			"end": true,
+			"strategy": "same",
+			"example": "x",
+			"to": 1
+		}
+	]
+}
