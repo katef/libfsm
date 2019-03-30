@@ -167,7 +167,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 						break;
 				}
 
-				/* end of range */
+				/* one past the end of range */
 				hi = bm_next(&a[to], lo, 0);
 
 				if (lo == 0x00 && hi == UCHAR_MAX + 1) {
