@@ -90,5 +90,20 @@ fsm_state_clear_tmp(struct fsm_state *state);
 struct state_set *
 epsilon_closure(const struct fsm_state *state, struct state_set *closure);
 
+struct state_array {
+	struct fsm_state **states;
+	size_t len;
+	size_t cap;
+};
+
+void
+state_array_clear(struct state_array *arr);
+
+struct state_array *
+state_array_add(struct state_array *arr, struct fsm_state *st);
+
+struct state_array *
+state_array_copy(struct state_array *dst, const struct state_array *src);
+
 #endif
 
