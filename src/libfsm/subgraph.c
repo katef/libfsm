@@ -151,8 +151,15 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 					return NULL;
 				}
 
-				if (!fsm_addedge(m->new, to->new, e->symbol)) {
-					return NULL;
+				if (e->symbol > UCHAR_MAX) {
+					assert(e->symbol == FSM_EDGE_EPSILON);
+					if (!fsm_addedge_epsilon(fsm, m->new, to->new)) {
+						return NULL;
+					}
+				} else {
+					if (!fsm_addedge_literal(fsm, m->new, to->new, e->symbol)) {
+						return NULL;
+					}
 				}
 			}
 		}

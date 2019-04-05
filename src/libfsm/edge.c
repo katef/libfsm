@@ -18,7 +18,7 @@
 
 #include "internal.h"
 
-int
+static int
 fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type)
 {
 	struct fsm_edge *e, new;

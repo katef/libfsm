@@ -47,7 +47,6 @@ fsm_merge
 fsm_addstate
 fsm_removestate
 
-fsm_addedge
 fsm_addedge_any
 fsm_addedge_epsilon
 fsm_addedge_literal

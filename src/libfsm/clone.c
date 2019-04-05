@@ -78,9 +78,17 @@ fsm_clone(const struct fsm *fsm)
 					newfrom = equiv;
 					newto   = to->tmp.equiv;
 
-					if (!fsm_addedge(newfrom, newto, e->symbol)) {
-						fsm_free(new);
-						return NULL;
+					if (e->symbol > UCHAR_MAX) {
+						assert(e->symbol == FSM_EDGE_EPSILON);
+						if (!fsm_addedge_epsilon(new, newfrom, newto)) {
+							fsm_free(new);
+							return NULL;
+						}
+					} else {
+						if (!fsm_addedge_literal(new, newfrom, newto, e->symbol)) {
+							fsm_free(new);
+							return NULL;
+						}
 					}
 				}
 			}

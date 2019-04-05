@@ -25,9 +25,17 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 	/* edges from b */
 	for (e = edge_set_first(b->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		struct state_iter jt;
+
 		for (s = state_set_first(e->sl, &jt); s != NULL; s = state_set_next(&jt)) {
-			if (!fsm_addedge(a, s, e->symbol)) {
-				return NULL;
+			if (e->symbol > UCHAR_MAX) {
+				assert(e->symbol == FSM_EDGE_EPSILON);
+				if (!fsm_addedge_epsilon(fsm, a, s)) {
+					return NULL;
+				}
+			} else {
+				if (!fsm_addedge_literal(fsm, a, s, e->symbol)) {
+					return NULL;
+				}
 			}
 		}
 	}
@@ -35,12 +43,22 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 	/* edges to b */
 	for (s = fsm->sl; s != NULL; s = s->next) {
 		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
-			if (state_set_contains(e->sl, b)) {
-				if (!fsm_addedge(s, a, e->symbol)) {
+			if (!state_set_contains(e->sl, b)) {
+				continue;
+			}
+
+			if (e->symbol > UCHAR_MAX) {
+				assert(e->symbol == FSM_EDGE_EPSILON);
+				if (!fsm_addedge_epsilon(fsm, s, a)) {
 					return NULL;
 				}
-				state_set_remove(e->sl, b);
+			} else {
+				if (!fsm_addedge_literal(fsm, s, a, e->symbol)) {
+					return NULL;
+				}
 			}
+
+			state_set_remove(e->sl, b);
 		}
 	}
 

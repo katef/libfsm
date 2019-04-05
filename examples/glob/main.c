@@ -107,7 +107,7 @@ compile(const char *glob)
 	for (p = glob; *p; p++) {
 		struct fsm_state *new;
 
-		/* TODO: we could omit this; see fsm_addedge() accepting NULL */
+		/* TODO: we could omit this */
 		new = fsm_addstate(fsm);
 		if (!new) {
 			perror("fsm_addstate");

@@ -84,9 +84,6 @@ struct fsm {
 struct fsm_edge *
 fsm_hasedge(const struct fsm_state *s, int c);
 
-int
-fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type);
-
 void
 fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
 	struct fsm *new, struct fsm_state *state);

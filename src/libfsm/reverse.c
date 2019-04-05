@@ -128,10 +128,19 @@ fsm_reverse(struct fsm *fsm)
 
 					assert(from != NULL);
 
-					if (!fsm_addedge(from, to, e->symbol)) {
-						state_set_free(endset);
-						fsm_free(new);
-						return 0;
+					if (e->symbol > UCHAR_MAX) {
+						assert(e->symbol == FSM_EDGE_EPSILON);
+						if (!fsm_addedge_epsilon(new, from, to)) {
+							state_set_free(endset);
+							fsm_free(new);
+							return 0;
+						}
+					} else {
+						if (!fsm_addedge_literal(new, from, to, e->symbol)) {
+							state_set_free(endset);
+							fsm_free(new);
+							return 0;
+						}
 					}
 				}
 			}

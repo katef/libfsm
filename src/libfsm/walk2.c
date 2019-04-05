@@ -347,8 +347,15 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 				assert(dst != NULL);
 				assert(dst->comb != NULL);
 
-				if (!fsm_addedge(qc, dst->comb, ea->symbol)) {
-					return 0;
+				if (ea->symbol > UCHAR_MAX) {
+					assert(ea->symbol == FSM_EDGE_EPSILON);
+					if (!fsm_addedge_epsilon(data->new, qc, dst->comb)) {
+						return 0;
+					}
+				} else {
+					if (!fsm_addedge_literal(data->new, qc, dst->comb, ea->symbol)) {
+						return 0;
+					}
 				}
 
 				/*
@@ -407,8 +414,15 @@ only_b:
 				assert(dst != NULL);
 				assert(dst->comb != NULL);
 
-				if (!fsm_addedge(qc, dst->comb, eb->symbol)) {
-					return 0;
+				if (eb->symbol > UCHAR_MAX) {
+					assert(eb->symbol == FSM_EDGE_EPSILON);
+					if (!fsm_addedge_epsilon(data->new, qc, dst->comb)) {
+						return 0;
+					}
+				} else {
+					if (!fsm_addedge_literal(data->new, qc, dst->comb, eb->symbol)) {
+						return 0;
+					}
 				}
 
 				/*
