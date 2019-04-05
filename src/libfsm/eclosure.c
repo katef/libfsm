@@ -50,7 +50,8 @@ epsilon_closure(const struct fsm_state *state, struct state_set *closure)
 	}
 
 	/* Follow each epsilon transition */
-	if ((e = fsm_hasedge(state, FSM_EDGE_EPSILON)) != NULL) {
+	e = fsm_hasedge_epsilon(state);
+	if (e != NULL) {
 		for (s = state_set_first(e->sl, &it); s != NULL; s = state_set_next(&it)) {
 			assert(s != NULL);
 

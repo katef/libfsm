@@ -55,14 +55,14 @@ fsm_complete(struct fsm *fsm,
 	}
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		size_t i;
+		unsigned i;
 
 		if (!predicate(fsm, s)) {
 			continue;
 		}
 
 		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (fsm_hasedge(s, i)) {
+			if (fsm_hasedge_literal(s, i)) {
 				continue;
 			}
 

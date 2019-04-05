@@ -21,7 +21,6 @@ fsm_isany
 fsm_iscomplete
 fsm_isdfa
 fsm_isend
-fsm_hasedge
 fsm_hasincoming
 fsm_hasoutgoing
 fsm_hasepsilons

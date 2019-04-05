@@ -358,7 +358,7 @@ allstatesreachableby(struct state_set *set, char c, struct state_set *sl)
 		struct fsm_state *es;
 		struct fsm_edge *to;
 
-		if ((to = fsm_hasedge(s, (unsigned char) c)) != NULL) {
+		if ((to = fsm_hasedge_literal(s, c)) != NULL) {
 			struct state_iter jt;
 
 			for (es = state_set_first(to->sl, &jt); es != NULL; es = state_set_next(&jt)) {

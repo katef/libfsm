@@ -98,11 +98,29 @@ fsm_addedge_literal(struct fsm *fsm,
 }
 
 struct fsm_edge *
-fsm_hasedge(const struct fsm_state *s, int c)
+fsm_hasedge_epsilon(const struct fsm_state *s)
 {
 	struct fsm_edge *e, search;
 
-	search.symbol = c;
+	assert(s != NULL);
+
+	search.symbol = FSM_EDGE_EPSILON;
+	e = edge_set_contains(s->edges, &search);
+	if (e == NULL || state_set_empty(e->sl)) {
+		return NULL;
+	}
+
+	return e;
+}
+
+struct fsm_edge *
+fsm_hasedge_literal(const struct fsm_state *s, char c)
+{
+	struct fsm_edge *e, search;
+
+	assert(s != NULL);
+
+	search.symbol = (unsigned char) c;
 	e = edge_set_contains(s->edges, &search);
 	if (e == NULL || state_set_empty(e->sl)) {
 		return NULL;

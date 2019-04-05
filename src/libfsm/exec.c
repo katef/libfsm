@@ -25,7 +25,7 @@ nextstate(const struct fsm_state *state, int c)
 
 	assert(state != NULL);
 
-	if (!(e = fsm_hasedge(state, c))) {
+	if (!(e = fsm_hasedge_literal(state, c))) {
 		return NULL;
 	}
 

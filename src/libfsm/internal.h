@@ -82,7 +82,10 @@ struct fsm {
 };
 
 struct fsm_edge *
-fsm_hasedge(const struct fsm_state *s, int c);
+fsm_hasedge_epsilon(const struct fsm_state *s);
+
+struct fsm_edge *
+fsm_hasedge_literal(const struct fsm_state *s, char c);
 
 void
 fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
