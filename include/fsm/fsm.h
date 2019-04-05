@@ -17,7 +17,6 @@
 
 struct fsm;
 struct fsm_state;
-struct fsm_edge;
 struct fsm_determinise_cache;
 struct fsm_options;
 struct path; /* XXX */
@@ -117,7 +116,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state);
 /*
  * Add an edge from a given state to a given state, labelled with the given
  * label. If an edge to that state of the same label already exists, the
- * existing edge is returned.
+ * existing edge is used instead, and a new edge is not added.
  *
  * Edges may be one of the following types:
  *
@@ -125,15 +124,15 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state);
  * - Any character
  * - A literal character. The character '\0' is permitted.
  *
- * Returns false on error; see errno.
+ * Returns 1 on success, or 0 on error; see errno.
  */
-struct fsm_edge *
+int
 fsm_addedge_epsilon(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to);
 
-struct fsm_edge *
+int
 fsm_addedge_any(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to);
 
-struct fsm_edge *
+int
 fsm_addedge_literal(struct fsm *fsm, struct fsm_state *from, struct fsm_state *to,
 	char c);
 

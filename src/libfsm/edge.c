@@ -18,7 +18,7 @@
 
 #include "internal.h"
 
-struct fsm_edge *
+int
 fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type)
 {
 	struct fsm_edge *e, new;
@@ -31,25 +31,25 @@ fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type typ
 	if (e == NULL) {
 		e = malloc(sizeof *e);
 		if (e == NULL) {
-			return NULL;
+			return 0;
 		}
 
 		e->symbol = type;
 		e->sl = state_set_create();
 
 		if (!edge_set_add(from->edges, e)) {
-			return NULL;
+			return 0;
 		}
 	}
 
 	if (state_set_add(e->sl, to) == NULL) {
-		return NULL;
+		return 0;
 	}
 
-	return e;
+	return 1;
 }
 
-struct fsm_edge *
+int
 fsm_addedge_epsilon(struct fsm *fsm,
 	struct fsm_state *from, struct fsm_state *to)
 {
@@ -62,11 +62,10 @@ fsm_addedge_epsilon(struct fsm *fsm,
 	return fsm_addedge(from, to, FSM_EDGE_EPSILON);
 }
 
-struct fsm_edge *
+int
 fsm_addedge_any(struct fsm *fsm,
 	struct fsm_state *from, struct fsm_state *to)
 {
-	struct fsm_edge *e;
 	int i;
 
 	assert(fsm != NULL);
@@ -76,15 +75,15 @@ fsm_addedge_any(struct fsm *fsm,
 	(void) fsm;
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (!(e = fsm_addedge(from, to, i))) {
-			return NULL;
+		if (!fsm_addedge(from, to, i)) {
+			return 0;
 		}
 	}
 
-	return e;
+	return 1;
 }
 
-struct fsm_edge *
+int
 fsm_addedge_literal(struct fsm *fsm,
 	struct fsm_state *from, struct fsm_state *to,
 	char c)

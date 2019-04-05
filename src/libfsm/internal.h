@@ -84,7 +84,7 @@ struct fsm {
 struct fsm_edge *
 fsm_hasedge(const struct fsm_state *s, int c);
 
-struct fsm_edge *
+int
 fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type);
 
 void

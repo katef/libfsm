@@ -121,7 +121,6 @@ fsm_reverse(struct fsm *fsm)
 
 				for (se = state_set_first(e->sl, &jt); se != NULL; se = state_set_next(&jt)) {
 					struct fsm_state *from;
-					struct fsm_edge *edge;
 
 					assert(se != NULL);
 
@@ -129,8 +128,7 @@ fsm_reverse(struct fsm *fsm)
 
 					assert(from != NULL);
 
-					edge = fsm_addedge(from, to, e->symbol);
-					if (edge == NULL) {
+					if (!fsm_addedge(from, to, e->symbol)) {
 						state_set_free(endset);
 						fsm_free(new);
 						return 0;

@@ -22,7 +22,6 @@ fsm_complete(struct fsm *fsm,
 {
 	struct fsm_state *new;
 	struct fsm_state *s;
-	size_t i;
 
 	assert(fsm != NULL);
 	assert(predicate != NULL);
@@ -50,16 +49,14 @@ fsm_complete(struct fsm *fsm,
 		return 0;
 	}
 
-	for (i = 0; i <= UCHAR_MAX; i++) {
-		struct fsm_edge *e;
-		e = fsm_addedge(new, new, i);
-		if (e == NULL) {
-			/* TODO: free stuff */
-			return 0;
-		}
+	if (!fsm_addedge_any(fsm, new, new)) {
+		/* TODO: free stuff */
+		return 0;
 	}
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
+		size_t i;
+
 		if (!predicate(fsm, s)) {
 			continue;
 		}
@@ -69,7 +66,7 @@ fsm_complete(struct fsm *fsm,
 				continue;
 			}
 
-			if (!fsm_addedge(s, new, i)) {
+			if (!fsm_addedge_literal(fsm, s, new, i)) {
 				/* TODO: free stuff */
 				return 0;
 			}

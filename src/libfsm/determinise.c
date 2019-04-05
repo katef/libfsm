@@ -524,7 +524,6 @@ determinise(struct fsm *nfa,
 
 		for (t = trans_set_first(trans, &jt); t != NULL; t = trans_set_next(&jt)) {
 			struct fsm_state *new;
-			struct fsm_edge *e;
 			struct state_set *reachable;
 
 			assert(t->state != NULL);
@@ -551,8 +550,7 @@ determinise(struct fsm *nfa,
 				goto error;
 			}
 
-			e = fsm_addedge_literal(dfa, curr->dfastate, new, t->c);
-			if (e == NULL) {
+			if (!fsm_addedge_literal(dfa, curr->dfastate, new, t->c)) {
 				clear_trans(dfa, trans);
 				goto error;
 			}
