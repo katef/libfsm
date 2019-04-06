@@ -93,5 +93,8 @@ void
 fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
 	struct fsm *new, struct fsm_state *state);
 
+struct state_set *
+epsilon_closure(const struct fsm_state *state, struct state_set *closure);
+
 #endif
 
