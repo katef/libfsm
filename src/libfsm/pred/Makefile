@@ -8,6 +8,7 @@ SRC += src/libfsm/pred/iscomplete.c
 SRC += src/libfsm/pred/epsilonsonly.c
 SRC += src/libfsm/pred/hasincoming.c
 SRC += src/libfsm/pred/hasoutgoing.c
+SRC += src/libfsm/pred/hasepsilons.c
 
 .for src in ${SRC:Msrc/libfsm/pred/*.c}
 ${BUILD}/lib/libfsm.o:    ${BUILD}/${src:R}.o

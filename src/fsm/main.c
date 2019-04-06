@@ -185,14 +185,16 @@ static int
 			int (*)(const struct fsm *, const struct fsm_state *));
 		int (*pred)(const struct fsm *, const struct fsm_state *);
 	} a[] = {
-		{ "isdfa",      fsm_all, fsm_isdfa         },
-		{ "dfa",        fsm_all, fsm_isdfa         },
-		{ "count",      NULL,    query_countstates },
-		{ "iscomplete", fsm_all, fsm_iscomplete    },
-		{ "hasend",     fsm_has, fsm_isend         },
-		{ "end",        fsm_has, fsm_isend         },
-		{ "accept",     fsm_has, fsm_isend         },
-		{ "hasaccept",  fsm_has, fsm_isend         }
+		{ "isdfa",       fsm_all, fsm_isdfa         },
+		{ "dfa",         fsm_all, fsm_isdfa         },
+		{ "count",       NULL,    query_countstates },
+		{ "iscomplete",  fsm_all, fsm_iscomplete    },
+		{ "hasend",      fsm_has, fsm_isend         },
+		{ "end",         fsm_has, fsm_isend         },
+		{ "accept",      fsm_has, fsm_isend         },
+		{ "hasaccept",   fsm_has, fsm_isend         },
+		{ "hasepsilons", fsm_has, fsm_hasepsilons   },
+		{ "epsilons",    fsm_has, fsm_hasepsilons   }
 	};
 
 	assert(name != NULL);

@@ -38,6 +38,12 @@ int
 fsm_hasoutgoing(const struct fsm *fsm, const struct fsm_state *state);
 
 /*
+ * One or more epsilons.
+ */
+int
+fsm_hasepsilons(const struct fsm *fsm, const struct fsm_state *state);
+
+/*
  * True iff there are outgoing edges and all are epsilons.
  */
 int
