@@ -5,7 +5,7 @@
  */
 
 #ifndef ADT_TRANSSET_H
-#define ADT_TRANSET_H
+#define ADT_TRANSSET_H
 
 struct trans_set;
 struct trans;
