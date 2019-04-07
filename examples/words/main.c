@@ -30,6 +30,7 @@ int main(int argc, char *argv[]) {
 	void (*print)(FILE *, const struct fsm *);
 	unsigned long ms, mt;
 	int timing;
+	int native = 0;
 
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
@@ -41,10 +42,12 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "dmct"), c != -1) {
+		while (c = getopt(argc, argv, "h" "ndmct"), c != -1) {
 			switch (c) {
 			case 'd': dmf = fsm_determinise; break;
 			case 'm': dmf = fsm_minimise;    break;
+
+			case 'n': native = 1;            break;
 
 			case 'c': print = fsm_print_dot; break;
 
@@ -96,9 +99,9 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		r = re_comp(RE_LITERAL, fsm_sgetc, &p, &opt, 0, &e);
+		r = re_comp(native ? RE_NATIVE : RE_LITERAL, fsm_sgetc, &p, &opt, 0, &e);
 		if (r == NULL) {
-			re_perror(RE_LITERAL, &e, NULL, s);
+			re_perror(native ? RE_NATIVE : RE_LITERAL, &e, NULL, s);
 			return 1;
 		}
 
