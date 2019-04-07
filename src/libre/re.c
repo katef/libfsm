@@ -158,13 +158,12 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		re_ast_expr_free(unsat);
 	}
 
-	new = re_comp_ast(ast, flags, opt);
+	new = re_comp_ast(ast, flags, opt, err);
 	re_ast_free(ast);
 	ast = NULL;
 
 	if (new == NULL) {
-		fprintf(stderr, "Compilation failed\n");
-		if (err->e == RE_ESUCCESS) {
+		if (err != NULL && err->e == RE_ESUCCESS) {
 			/* If we got here, we had a parse error
 			 * without error information set. */
 			assert(0);
@@ -188,9 +187,7 @@ error:
 
 	if (new != NULL) { fsm_free(new); }
 	if (ast != NULL) { re_ast_free(ast); }
-	if (err != NULL) {
-		err->e = RE_EERRNO;
-	}
+	if (err != NULL) { err->e = RE_EERRNO; }
 
 	return NULL;
 }
