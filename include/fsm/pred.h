@@ -38,10 +38,24 @@ int
 fsm_hasoutgoing(const struct fsm *fsm, const struct fsm_state *state);
 
 /*
+ * One or more epsilons.
+ */
+int
+fsm_hasepsilons(const struct fsm *fsm, const struct fsm_state *state);
+
+/*
  * True iff there are outgoing edges and all are epsilons.
  */
 int
 fsm_epsilonsonly(const struct fsm *fsm, const struct fsm_state *state);
+
+/*
+ * True if there is more than one edge labelled with the same symbol
+ * reachable from a state. This includes edges from states reached
+ * by epsilon transitions.
+ */
+int
+fsm_hasnondeterminism(const struct fsm *fsm, const struct fsm_state *state);
 
 #endif
 

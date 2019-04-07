@@ -3,6 +3,7 @@
 SRC += src/libfsm/collate.c
 SRC += src/libfsm/complete.c
 SRC += src/libfsm/clone.c
+SRC += src/libfsm/eclosure.c
 SRC += src/libfsm/edge.c
 SRC += src/libfsm/empty.c
 SRC += src/libfsm/end.c

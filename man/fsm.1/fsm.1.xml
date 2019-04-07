@@ -295,14 +295,12 @@
 						</thead>
 
 						<tbody>
-<!-- TODO: not implemented
 							<tr>
 								<td><code>complete</code></td>
 								<td>&fsm_complete.3;</td>
 								<td>Make the &fsm; &complete.term;.
 									If the &fsm; is already complete, then this is a no-op.</td>
 							</tr>
--->
 							<tr>
 								<td><code>complement</code></td>
 								<td rowspan="2">&fsm_complement.3;</td>
@@ -379,7 +377,6 @@
 							<tr>
 								<td><code>dfa</code></td>
 							</tr>
-<!-- TODO: not implemented
 							<tr>
 								<td><code>iscomplete</code></td>
 								<td>&fsm_iscomplete.3;</td>
@@ -400,8 +397,25 @@
 							<tr>
 								<td><code>accept</code></td>
 							</tr>
--->
-							<!-- TODO: also final, hasfinal -->
+							<tr>
+								<td><code>hasnondeterminism</code></td>
+								<td rowspan="2">&fsm_hasnondeterminism.3;</td>
+								<td rowspan="2">True if the &fsm;
+									has one or more transitions labelled with the same
+									symbol, reachable from the same state.</td>
+							</tr>
+							<tr>
+								<td><code>epsilons</code></td>
+							</tr>
+							<tr>
+								<td><code>hasepsilons</code></td>
+								<td rowspan="2">&fsm_hasepsilons.3;</td>
+								<td rowspan="2">True if the &fsm;
+									has one or more epsilon transitions.</td>
+							</tr>
+							<tr>
+								<td><code>epsilons</code></td>
+							</tr>
 							<tr>
 								<td><code>count</code></td>
 								<td rowspan="1">&fsm_countstates.3;</td>

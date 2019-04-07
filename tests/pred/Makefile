@@ -5,6 +5,8 @@ FSM=${BUILD}/bin/fsm
 PRED += hasend
 PRED += iscomplete
 PRED += isdfa
+PRED += hasepsilons
+PRED += hasnondeterminism
 
 .for pred in ${PRED}
 

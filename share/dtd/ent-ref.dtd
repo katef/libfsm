@@ -54,12 +54,14 @@
 <!ENTITY fsm_determinise.3 "<citerefentry><refentrytitle>fsm_determinise</refentrytitle> %vol.3;</citerefentry>">
 <!ENTITY fsm_minimise.3    "<citerefentry><refentrytitle>fsm_minimise</refentrytitle> %vol.3;</citerefentry>">
 
-<!ENTITY fsm_isdfa.3      "<citerefentry><refentrytitle>fsm_isdfa</refentrytitle> %vol.3;</citerefentry>">
-<!ENTITY fsm_iscomplete.3 "<citerefentry><refentrytitle>fsm_iscomplete</refentrytitle> %vol.3;</citerefentry>">
-<!ENTITY fsm_hasend.3     "<citerefentry><refentrytitle>fsm_hasend</refentrytitle> %vol.3;</citerefentry>">
-<!ENTITY fsm_union.3      "<citerefentry><refentrytitle>fsm_union</refentrytitle> %vol.3;</citerefentry>">
-<!ENTITY fsm_concat.3     "<citerefentry><refentrytitle>fsm_concat</refentrytitle> %vol.3;</citerefentry>">
-<!ENTITY fsm_example.3    "<citerefentry><refentrytitle>fsm_example</refentrytitle> %vol.3;</citerefentry>">
+<!ENTITY fsm_isdfa.3       "<citerefentry><refentrytitle>fsm_isdfa</refentrytitle> %vol.3;</citerefentry>">
+<!ENTITY fsm_iscomplete.3  "<citerefentry><refentrytitle>fsm_iscomplete</refentrytitle> %vol.3;</citerefentry>">
+<!ENTITY fsm_hasend.3      "<citerefentry><refentrytitle>fsm_hasend</refentrytitle> %vol.3;</citerefentry>">
+<!ENTITY fsm_hasepsilons.3 "<citerefentry><refentrytitle>fsm_hasepsilons</refentrytitle> %vol.3;</citerefentry>">
+<!ENTITY fsm_hasnondeterminism.3 "<citerefentry><refentrytitle>fsm_hasnondeterminism</refentrytitle> %vol.3;</citerefentry>">
+<!ENTITY fsm_union.3       "<citerefentry><refentrytitle>fsm_union</refentrytitle> %vol.3;</citerefentry>">
+<!ENTITY fsm_concat.3      "<citerefentry><refentrytitle>fsm_concat</refentrytitle> %vol.3;</citerefentry>">
+<!ENTITY fsm_example.3     "<citerefentry><refentrytitle>fsm_example</refentrytitle> %vol.3;</citerefentry>">
 
 <!ENTITY fsm_print.3    "<citerefentry><refentrytitle>fsm_print</refentrytitle> %vol.3;</citerefentry>">
 
