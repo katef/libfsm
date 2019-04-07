@@ -29,7 +29,10 @@ fsm_addstate(struct fsm *fsm)
 		return NULL;
 	}
 
-	new->end = 0;
+	new->end     = 0;
+	new->index   = 0;
+	new->eps_scc = 0;
+
 	new->opaque = NULL;
 
 	/*

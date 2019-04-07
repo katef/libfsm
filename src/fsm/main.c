@@ -324,7 +324,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:i:" "xpq:l:dmrt:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aCcwXe:k:i:" "xpq:l:dmrt:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
@@ -333,6 +333,8 @@ main(int argc, char *argv[])
 			case 'e': opt.prefix            = optarg;     break;
 			case 'k': opt.io                = io(optarg); break;
 
+			case 'C': opt.anonymous_states  = 0;
+				  opt.scc_names         = 1;          break;
 			case 'i':
 				iterations = strtoul(optarg, NULL, 10);
 				/* XXX: error handling */
@@ -531,6 +533,14 @@ main(int argc, char *argv[])
 			}
 
 			/* TODO: option to print state number? */
+		}
+	}
+
+	if (opt.scc_names) {
+		extern int fsm_label_epsilon_scc(struct fsm *fsm);
+		if (fsm_label_epsilon_scc(fsm) < 0) {
+			perror("fsm_label_epsilon_scc");
+			return EXIT_FAILURE;
 		}
 	}
 

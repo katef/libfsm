@@ -466,9 +466,13 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:" "upmnxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aNCcwXe:k:" "bi" "sq:r:l:" "upmnxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
+			case 'N': opt.anonymous_states  = 0;
+				  opt.index_names       = 1;          break;
+			case 'C': opt.anonymous_states  = 0;
+				  opt.scc_names         = 1;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
 			case 'w': opt.fragment          = 1;          break;
 			case 'X': opt.always_hex        = 1;          break;
@@ -800,6 +804,14 @@ main(int argc, char *argv[])
 		}
 
 		opt.carryopaque = NULL;
+	}
+
+	if (keep_nfa && (opt.scc_names || opt.index_names)) {
+		extern int fsm_label_epsilon_scc(struct fsm *fsm);
+		if (fsm_label_epsilon_scc(fsm) < 0) {
+			perror("fsm_label_epsilon_scc");
+			return EXIT_FAILURE;
+		}
 	}
 
 	if (example) {

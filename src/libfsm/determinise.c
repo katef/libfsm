@@ -140,6 +140,437 @@ addtomappings(struct mapping_set *mappings, struct fsm *dfa, struct state_set *c
 	return m;
 }
 
+struct epsilon_state_data {
+	struct fsm_state *st;
+
+	/* these aren't needed after we find the scc */
+	unsigned int scc_label;
+
+	union {
+		struct {
+			unsigned int index;
+			unsigned int lowest;
+			unsigned int onstack:1;
+		} scc;
+
+		struct {
+			/* fast way to determine if a state has been included in
+			 * an epsilon closure.  if this is equal to the scc
+			 * label, then the state has been included.  otherwise,
+			 * it has not.  avoids a hash table for membership.
+			 */
+			unsigned int label;
+		} ec;
+	} tmp;
+};
+
+/* state for finding and memoizing epsilon closures */
+struct epsilon_table {
+	size_t nstates;
+	size_t nscc; /* number of strongly connected components */
+
+	struct epsilon_state_data *states;
+	struct state_set **scc_states;
+	struct state_set **scc_eps_closures;
+};
+
+static int 
+epsilon_table_initialize(struct epsilon_table *tbl, const struct fsm *fsm)
+{
+	static const struct epsilon_table zero_tbl;
+	static const struct epsilon_state_data zero_data;
+
+	struct fsm_state *st;
+	unsigned int i, n;
+
+	assert(tbl != NULL);
+	assert(fsm != NULL);
+
+	*tbl = zero_tbl;
+
+	n = fsm_countstates(fsm);
+	tbl->states = malloc(n * sizeof tbl->states[0]);
+	if (tbl->states == NULL) {
+		return -1;
+	}
+
+	tbl->nstates = n;
+
+	for (i = 0, st = fsm->sl; st != NULL; i++, st = st->next) {
+		st->index = i;
+		tbl->states[i] = zero_data;
+		tbl->states[i].st  = st;
+	}
+
+	return 0;
+}
+
+static void
+epsilon_table_finalize(struct epsilon_table *tbl)
+{
+	unsigned int i;
+
+	if (tbl->states != NULL) {
+		free(tbl->states);
+		tbl->states = NULL;
+	}
+
+	if (tbl->scc_states != NULL) {
+		for (i=0; i < tbl->nscc; i++) {
+			if (tbl->scc_states[i] != NULL) {
+				state_set_free(tbl->scc_states[i]);
+			}
+		}
+
+		free(tbl->scc_states);
+		tbl->scc_states = NULL;
+	}
+
+	if (tbl->scc_eps_closures != NULL) {
+		for (i=0; i < tbl->nscc; i++) {
+			if (tbl->scc_eps_closures[i] != NULL) {
+				state_set_free(tbl->scc_eps_closures[i]);
+			}
+		}
+
+		free(tbl->scc_eps_closures);
+		tbl->scc_eps_closures = NULL;
+	}
+
+	tbl->nstates = 0;
+	tbl->nscc = 0;
+}
+
+/* data for Tarjan's strongly connected components alg */
+struct scc_data {
+	unsigned int *stack;
+
+	unsigned int top; /* holds stack top */
+	unsigned int lbl; /* holds current scc label */
+	unsigned int idx; /* holds current index */
+};
+
+static void
+scc_dfs(struct epsilon_table *tbl, struct scc_data *data, unsigned int st)
+{
+	unsigned int lbl;
+	struct state_iter it;
+	struct state_set *eps;
+	struct fsm_state *s;
+
+	assert(st < tbl->nstates);
+
+	/* invariants:
+	 * 1. beginning this search, nodes must have been visited (index == 0)
+	 * 2. nodes should not be on the node stack (should follow from 1)
+	 */
+	assert(tbl->states[st].tmp.scc.index   == 0);
+	assert(tbl->states[st].tmp.scc.onstack == 0);
+	assert(tbl->states[st].scc_label   == 0);
+
+	data->stack[data->top++] = st; /* data->indexes[st]; */
+
+	tbl->states[st].tmp.scc.index = ++data->idx;
+	assert(data->idx > 0 && "index overflow");
+
+	tbl->states[st].tmp.scc.lowest = tbl->states[st].tmp.scc.index;
+	tbl->states[st].tmp.scc.onstack = 1;
+
+	eps = tbl->states[st].st->epsilons;
+	if (eps == NULL) {
+		goto label;
+	}
+
+	for (s = state_set_first(eps,&it); s != NULL; s = state_set_next(&it)) {
+		unsigned int st1;
+		st1 = s->index;
+
+		if (tbl->states[st1].tmp.scc.index == 0) {
+			scc_dfs(tbl, data, st1);
+			if (tbl->states[st].tmp.scc.lowest > tbl->states[st1].tmp.scc.lowest) {
+				tbl->states[st].tmp.scc.lowest = tbl->states[st1].tmp.scc.lowest;
+			}
+		} else if (tbl->states[st1].tmp.scc.onstack && tbl->states[st].tmp.scc.lowest> tbl->states[st1].tmp.scc.index) {
+			tbl->states[st].tmp.scc.lowest = tbl->states[st1].tmp.scc.index;
+		}
+	}
+
+	assert(tbl->states[st].tmp.scc.lowest <= tbl->states[st].tmp.scc.index);
+	if (tbl->states[st].tmp.scc.index != tbl->states[st].tmp.scc.lowest) {
+		/* not the root of a strongly connected component */
+		return;
+	}
+
+label:
+	/* the root of a strongly connected component */
+	lbl = ++data->lbl;
+	assert(lbl > 0);
+	for (;;) {
+		unsigned int st1;
+
+		assert(data->top > 0);
+		st1 = data->stack[--data->top];
+
+		assert(tbl->states[st1].tmp.scc.onstack != 0);
+		tbl->states[st1].tmp.scc.onstack = 0;
+
+		assert(tbl->states[st1].scc_label == 0);
+		tbl->states[st1].scc_label = lbl;
+
+		if (st == st1) {
+			break;
+		}
+	}
+}
+
+static int
+find_strongly_connected_components(const struct fsm_alloc *a, struct epsilon_table *tbl)
+{
+	static const struct scc_data zero;
+	struct scc_data data;
+	unsigned st;
+
+	data = zero;
+	data.stack = malloc(tbl->nstates * sizeof data.stack[0]);
+	if (data.stack == NULL) {
+		goto error;
+	}
+
+	for (st=0; st < tbl->nstates; st++) {
+		data.stack[st] = 0;
+		tbl->states[st].scc_label = 0;
+
+		tbl->states[st].tmp.scc.index   = 0;
+		tbl->states[st].tmp.scc.lowest  = 0;
+		tbl->states[st].tmp.scc.onstack = 0;
+	}
+
+	for (st=0; st < tbl->nstates; st++) {
+		if (tbl->states[st].tmp.scc.index > 0) {
+			continue;
+		}
+
+		if (tbl->states[st].st->epsilons == NULL) {
+			/* no epsilon edges, so skip the DFS */
+			tbl->states[st].tmp.scc.index = ++data.idx;
+			tbl->states[st].scc_label = ++data.lbl;
+			continue;
+		}
+
+		scc_dfs(tbl, &data, st);
+
+		/* state should be labeled after scc_dfs */
+		assert(tbl->states[st].scc_label > 0);
+	}
+
+	/* set the labels on the fsm_state nodes */
+	{
+		unsigned int st;
+		for (st=0; st < tbl->nstates; st++) {
+			assert(tbl->states[st].st != NULL);
+			tbl->states[st].st->eps_scc = tbl->states[st].scc_label;
+		}
+	}
+
+	/* Build a list of states associated with each SCC so we can generate
+	 * the epsilon closure for each SCC in reverse-topological order.
+	 */
+	{
+		unsigned int i,maxlbl;
+
+		tbl->nscc = maxlbl = data.lbl;
+		tbl->scc_states = malloc(maxlbl * sizeof tbl->scc_states[0]);
+		if (tbl->scc_states == NULL) {
+			goto error;
+		}
+
+		for (i=0; i < maxlbl; i++) {
+			struct state_set *ss;
+			ss = state_set_create(a);
+			
+			if (ss == NULL) {
+				goto error;
+			}
+			tbl->scc_states[i] = ss;
+		}
+
+		/* build sets of states */
+		for (i=0; i < tbl->nstates; i++) {
+			unsigned int lbl = tbl->states[i].scc_label;
+			struct fsm_state *s = tbl->states[i].st;
+
+			assert(lbl > 0 && lbl <= maxlbl);
+			if (!state_set_add(tbl->scc_states[lbl-1], s)) {
+				goto error;
+			}
+		}
+	}
+
+	free(data.stack);
+	return 0;
+
+error:
+	free(data.stack);
+
+	if (tbl->scc_states != NULL) {
+		unsigned int i;
+		for (i = 0; i < tbl->nscc; i++) {
+			if (tbl->scc_states[i] != NULL) {
+				state_set_free(tbl->scc_states[i]);
+			}
+		}
+
+		free(tbl->scc_states);
+		tbl->scc_states = NULL;
+		tbl->nscc = 0;
+	}
+
+	return -1;
+}
+
+static int
+build_epsilon_closures(struct fsm *nfa, struct epsilon_table *tbl)
+{
+	const static struct state_array arr_zero;
+
+	struct state_array arr = arr_zero;
+	struct state_set *closure;
+	unsigned int i,lbl,nlbl;
+
+	if (find_strongly_connected_components(nfa->opt->alloc,tbl) < 0) {
+		return -1;
+	}
+
+	for (i=0; i < tbl->nstates; i++) {
+		tbl->states[i].tmp.ec.label = 0;
+	}
+
+	tbl->scc_eps_closures = calloc(tbl->nscc, sizeof tbl->scc_eps_closures[0]);
+	if (tbl->scc_eps_closures == NULL) {
+		return -1;
+	}
+
+	/* iterate over scc's, building up epsilon closures */
+
+	nlbl = tbl->nscc;
+	for (lbl = 0; lbl < nlbl; lbl++) {
+		struct state_set *lbl_states;
+		struct fsm_state *s;
+		struct state_iter it;
+
+		assert(tbl->scc_eps_closures[lbl] == NULL);
+
+		lbl_states = tbl->scc_states[lbl];
+
+		/* add all states in the component to the epsilon closure set */
+		for (s = state_set_first(lbl_states, &it); s != NULL; s = state_set_next(&it)) {
+			if (!state_array_add(&arr, s)) {
+				goto error;
+			}
+
+			tbl->states[s->index].tmp.ec.label = lbl+1; /* +1 is intentional!  XXX - document why */
+		}
+
+		/* iterate over states reachable from epsilon edges, adding
+		 * their closures
+		 */
+
+		for (s = state_set_first(lbl_states, &it); s != NULL; s = state_set_next(&it)) {
+			struct fsm_state *dst;
+			struct state_set *eps;
+			struct state_iter jt;
+
+			assert(s->index < tbl->nstates);
+
+			eps = tbl->states[s->index].st->epsilons;
+			if (eps == NULL) {
+				continue;
+			}
+
+			for (dst = state_set_first(eps,&jt); dst != NULL; dst = state_set_next(&jt)) {
+				unsigned int dind, dlbl;
+				struct state_set *dst_eps;
+				struct fsm_state *est;
+				struct state_iter kt;
+
+				dind = dst->index;
+				assert(dst->index < tbl->nstates);
+
+				dlbl = tbl->states[dst->index].scc_label;
+				assert(dlbl > 0 && dlbl <= tbl->nscc);
+				assert(dlbl <= lbl+1);
+
+				if (dlbl == lbl+1) {
+					/* ignore states in the same scc */
+					continue;
+				}
+
+				dst_eps = tbl->scc_eps_closures[dlbl-1];
+				assert(dst_eps != NULL);
+
+				for (est = state_set_first(dst_eps,&kt); est != NULL; est = state_set_next(&kt)) {
+					assert(est->index < tbl->nstates);
+
+					if (tbl->states[est->index].tmp.ec.label == lbl+1) { /* +1 is intentional!  XXX - document why */
+						/* already visited */
+						continue;
+					}
+
+					if (!state_array_add(&arr,est)) {
+						goto error;
+					}
+
+					/* mark visited */
+					tbl->states[est->index].tmp.ec.label = lbl+1;
+				}
+			}
+		}
+
+		/* epsilon closure is complete.  convert into a
+		 * state_set and stash it in scc_eps_closure array
+		 * for the current label
+		 */
+
+		assert(arr.len > 0); /* labels should have at least one state, so the epsilon closure should never be empty! */
+
+		closure = state_set_create_from_array(nfa->opt->alloc, arr.states, arr.len);
+		if (closure == NULL) {
+			goto error;
+		}
+
+		tbl->scc_eps_closures[lbl] = closure;
+
+		/* reset for next closure */
+		arr = arr_zero;
+	}
+
+	return 0;
+
+error:
+	if (arr.len > 0) {
+		free(arr.states);
+	}
+
+	return -1;
+}
+
+int fsm_label_epsilon_scc(struct fsm *fsm)
+{
+	const static struct epsilon_table epstbl_init;
+	struct epsilon_table epstbl = epstbl_init;
+	int ret = -1;
+
+	if (epsilon_table_initialize(&epstbl,fsm) < 0) {
+		goto finish;
+	}
+
+	ret = build_epsilon_closures(fsm, &epstbl);
+
+finish:
+	epsilon_table_finalize(&epstbl);
+	return ret;
+}
+
 /*
  * Return the DFA state associated with the closure of a given NFA state.
  * Create the DFA state if neccessary.
