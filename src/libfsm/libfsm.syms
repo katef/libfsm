@@ -25,6 +25,7 @@ fsm_hasedge
 fsm_hasincoming
 fsm_hasoutgoing
 fsm_hasepsilons
+fsm_hasnondeterminism
 
 # <fsm/print.h>
 fsm_print_api

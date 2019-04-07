@@ -398,6 +398,16 @@
 								<td><code>accept</code></td>
 							</tr>
 							<tr>
+								<td><code>hasnondeterminism</code></td>
+								<td rowspan="2">&fsm_hasnondeterminism.3;</td>
+								<td rowspan="2">True if the &fsm;
+									has one or more transitions labelled with the same
+									symbol, reachable from the same state.</td>
+							</tr>
+							<tr>
+								<td><code>epsilons</code></td>
+							</tr>
+							<tr>
 								<td><code>hasepsilons</code></td>
 								<td rowspan="2">&fsm_hasepsilons.3;</td>
 								<td rowspan="2">True if the &fsm;
