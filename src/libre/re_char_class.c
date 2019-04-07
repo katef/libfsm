@@ -292,7 +292,7 @@ fsm_any(const struct fsm *fsm,
 	assert(predicate != NULL);
 	
 	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (!predicate(fsm, s)) {
+		if (predicate(fsm, s)) {
 			return s;
 		}
 	}
@@ -366,6 +366,7 @@ link_char_class_into_fsm(struct re_char_class *cc, struct fsm *fsm,
 		/* XXX: this is just one example; really I want to show the entire set */
 		end = fsm_any(cc->dup, fsm_isend);
 		assert(end != NULL);
+		assert(end != fsm_getstart(cc->dup)); /* due to the structure */
 		
 		if (-1 == fsm_example(cc->dup, end, err->dup, sizeof err->dup)) {
 			err->e = RE_EERRNO;
