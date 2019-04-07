@@ -169,6 +169,7 @@ struct epsilon_table {
 	size_t nstates;
 	size_t nscc; /* number of strongly connected components */
 
+	const struct fsm_alloc *alloc;
 	struct epsilon_state_data *states;
 	struct state_set **scc_states;
 	struct state_set **scc_eps_closures;
@@ -187,6 +188,8 @@ epsilon_table_initialize(struct epsilon_table *tbl, const struct fsm *fsm)
 	assert(fsm != NULL);
 
 	*tbl = zero_tbl;
+
+	tbl->alloc = fsm->opt->alloc;
 
 	n = fsm_countstates(fsm);
 	tbl->states = malloc(n * sizeof tbl->states[0]);
@@ -576,23 +579,27 @@ finish:
  * Create the DFA state if neccessary.
  */
 static struct fsm_state *
-state_closure(struct mapping_set *mappings, struct fsm *dfa, const struct fsm_state *nfastate,
+state_closure(struct epsilon_table *tbl, struct mapping_set *mappings, struct fsm *dfa, const struct fsm_state *nfastate,
 	int includeself)
 {
 	struct mapping *m;
 	struct state_set *ec;
+	unsigned int scclbl;
+
+	(void)epsilon_closure;  /* eliminates gcc warnings */
 
 	assert(dfa != NULL);
 	assert(nfastate != NULL);
 	assert(mappings != NULL);
 
-	ec = state_set_create(dfa->opt->alloc);
-	if (ec == NULL) {
-		return NULL;
-	}
+	assert(nfastate->index < tbl->nstates);
+	
+	scclbl = tbl->states[nfastate->index].scc_label;
+	assert(scclbl > 0 && scclbl <= tbl->nscc);
+	assert(tbl->scc_eps_closures[scclbl-1] != NULL);
 
-	if (epsilon_closure(nfastate, ec) == NULL) {
-		state_set_free(ec);
+	ec = state_set_copy(tbl->scc_eps_closures[scclbl-1]);
+	if (ec == NULL) {
 		return NULL;
 	}
 
@@ -613,42 +620,103 @@ state_closure(struct mapping_set *mappings, struct fsm *dfa, const struct fsm_st
 	return m->dfastate;
 }
 
+static int cmp_single_state(const void *a, const void *b)
+{
+	const struct fsm_state *ea = a, *eb = b;
+	return (ea > eb) - (ea < eb);
+}
+
+static unsigned long hash_single_state(const void *a)
+{
+	const struct fsm_state *st = a;
+	return hashrec(st, sizeof *st);
+}
+
 /*
  * Return the DFA state associated with the closure of a set of given NFA
  * states. Create the DFA state if neccessary.
  */
 static struct fsm_state *
-set_closure(struct mapping_set *mappings, struct fsm *dfa, struct state_set *set)
+set_closure(struct epsilon_table *tbl, struct mapping_set *mappings, struct fsm *dfa, struct state_set *set)
 {
+	static const struct state_array zero_arr;
+
 	struct state_iter it;
 	struct state_set *ec;
 	struct mapping *m;
 	struct fsm_state *s;
+	struct hashset *memb;
+	struct state_array arr;
 
 	assert(set != NULL);
 	assert(mappings != NULL);
 
-	ec = state_set_create(dfa->opt->alloc);
-	if (ec == NULL) {
-		return NULL;
+	/* possible fast path if set has only one state */
+	if (state_set_count(set) == 1) {
+		return state_closure(tbl, mappings, dfa, state_set_only(set), 1);
+	}
+
+	arr = zero_arr;
+
+	memb = hashset_create(tbl->alloc, hash_single_state, cmp_single_state);
+	if (memb == NULL) {
+		goto error;
 	}
 
 	for (s = state_set_first(set, &it); s != NULL; s = state_set_next(&it)) {
-		if (epsilon_closure(s, ec) == NULL) {
-			state_set_free(ec);
-			return NULL;
+		unsigned int scclbl;
+		struct state_set *lc;
+		struct fsm_state *dst;
+		struct state_iter jt;
+
+		assert(s->index < tbl->nstates);
+
+		scclbl = tbl->states[s->index].scc_label;
+
+		assert(scclbl > 0 && scclbl <= tbl->nscc);
+
+		lc = tbl->scc_eps_closures[scclbl-1];
+		for (dst = state_set_first(lc,&jt); dst != NULL; dst = state_set_next(&jt)) {
+			if (hashset_contains(memb, dst)) {
+				continue;
+			}
+
+			if (!hashset_add(memb,dst)) {
+				goto error;
+			}
+
+			if (!state_array_add(&arr,dst)) {
+				goto error;
+			}
 		}
 	}
+
+	assert(arr.len > 0);
+
+	ec = state_set_create_from_array(tbl->alloc, arr.states, arr.len);
+	if (ec == NULL) {
+		goto error;
+	}
+
+	arr.states = NULL;
+	arr.len = 0;
 
 	m = addtomappings(mappings, dfa, ec);
 	if (m == NULL) {
 		state_set_free(ec);
-		return NULL;
+		goto error;
 	}
 
-	/* TODO: test ec */
-
+	hashset_free(memb);
 	return m->dfastate;
+
+error:
+	hashset_free(memb);
+	if (arr.len > 0) {
+		free(arr.states);
+	}
+
+	return NULL;
 }
 
 struct mapping_iter_save {
@@ -710,20 +778,6 @@ carryend(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 	}
 }
 
-static int
-cmp_single_state(const void *a, const void *b)
-{
-	const struct fsm_state *ea = a, *eb = b;
-	return (ea > eb) - (ea < eb);
-}
-
-static unsigned long
-hash_single_state(const void *a)
-{
-	const struct fsm_state *st = a;
-	return hashrec(st, sizeof *st);
-}
-
 /* builds transitions from current dfa state to new dfa states
  *
  * Makes a single pass through each of the nfa states that this dfa state
@@ -734,7 +788,7 @@ hash_single_state(const void *a)
  * the index of the array is the transition symbol.
  */
 static int
-buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *mappings, struct mapping *curr)
+buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct epsilon_table *tbl, struct mapping_set *mappings, struct mapping *curr)
 {
 	struct fsm_state *s;
 	struct state_iter it;
@@ -831,7 +885,7 @@ buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *map
 		 * zero to avoid a free() in finish */
 		memset(&outedges[sym], 0, sizeof outedges[sym]);
 
-		new = set_closure(mappings, dfa, reachable);
+		new = set_closure(tbl, mappings, dfa, reachable);
 		state_set_free(reachable);
 		if (new == NULL) {
 			goto finish;
@@ -886,6 +940,8 @@ determinise(struct fsm *nfa,
 	struct mapping_iter it;
 	struct fsm *dfa;
 
+	struct epsilon_table tbl;
+
 	struct mapping_iter_save sv;
 
 	assert(nfa != NULL);
@@ -915,6 +971,19 @@ determinise(struct fsm *nfa,
 		}
 	}
 	mappings = dcache->mappings;
+
+	if (epsilon_table_initialize(&tbl, nfa) < 0) {
+		mapping_set_free(mappings);
+		fsm_free(dfa);
+		return NULL;
+	}
+
+	if (build_epsilon_closures(nfa, &tbl) < 0) {
+		epsilon_table_finalize(&tbl);
+		mapping_set_free(mappings);
+		fsm_free(dfa);
+		return NULL;
+	}
 
 	/*
 	 * The epsilon closure of the NFA's start state is the DFA's start state.
@@ -948,7 +1017,7 @@ determinise(struct fsm *nfa,
 			includeself = 0;
 		}
 
-		dfastart = state_closure(mappings, dfa, nfastart, includeself);
+		dfastart = state_closure(&tbl,mappings, dfa, nfastart, includeself);
 		if (dfastart == NULL) {
 			/* TODO: error */
 			goto error;
@@ -962,7 +1031,7 @@ determinise(struct fsm *nfa,
 	 */
 	sv = sv_init;
 	for (curr = mapping_set_first(mappings, &it); (curr = nextnotdone(mappings, &sv)) != NULL; curr->done = 1) {
-		if (!buildtransitions(nfa, dfa, mappings, curr)) {
+		if (!buildtransitions(nfa, dfa, &tbl, mappings, curr)) {
 			goto error;
 		}
 
@@ -988,6 +1057,7 @@ determinise(struct fsm *nfa,
 
 error:
 
+	epsilon_table_finalize(&tbl);
 	clear_mappings(dfa, mappings);
 	fsm_free(dfa);
 
