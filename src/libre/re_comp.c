@@ -82,7 +82,8 @@ decide_linking(struct comp_env *env,
 struct fsm *
 re_comp_ast(struct ast_re *ast,
     enum re_flags flags,
-    const struct fsm_options *opt)
+    const struct fsm_options *opt,
+	struct re_err *err)
 {
 	struct fsm_state *x, *y;
 	struct comp_env env;
@@ -94,6 +95,7 @@ re_comp_ast(struct ast_re *ast,
 
 	env.opt = opt;
 	env.flags = flags;
+	env.err = err;
 	
 	x = fsm_getstart(env.fsm);
 	assert(x != NULL);

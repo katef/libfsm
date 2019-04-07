@@ -248,6 +248,7 @@ re_char_class_ast_compile(struct re_char_class_ast *cca,
     struct fsm_state *x, struct fsm_state *y)
 {
 	struct re_char_class cc;
+
 	memset(&cc, 0x00, sizeof(cc));
 	
 	cc.set = new_blank(opt);
@@ -344,14 +345,22 @@ link_char_class_into_fsm(struct re_char_class *cc, struct fsm *fsm,
 {
 	int is_empty;
 	struct re_err *err = cc->err;
+
+	assert(cc != NULL);
+
 	is_empty = fsm_empty(cc->dup);
 	if (is_empty == -1) {
-		err->e = RE_EERRNO;
+		if (err != NULL) { err->e = RE_EERRNO; }
 		return 0;
 	}
 	
 	if (!is_empty) {
 		const struct fsm_state *end;
+
+		if (err == NULL) {
+			return 0;
+		}
+
 		/* TODO: would like to show the original spelling verbatim, too */
 		
 		/* XXX: this is just one example; really I want to show the entire set */
@@ -371,12 +380,12 @@ link_char_class_into_fsm(struct re_char_class *cc, struct fsm *fsm,
 	}
 	
 	if (!fsm_minimise(cc->set)) {
-		err->e = RE_EERRNO;
+		if (err != NULL) { err->e = RE_EERRNO; }
 		return 0;
 	}
 	
 	if (!fsm_unionxy(fsm, cc->set, x, y)) {
-		err->e = RE_EERRNO;
+		if (err != NULL) { err->e = RE_EERRNO; }
 		return 0;
 	}
 	cc->set = NULL;
@@ -494,7 +503,7 @@ cc_add_named_class(struct re_char_class *cc, char_class_constructor_fun *ctor)
 	struct fsm *constructed = ctor(cc->opt);
 
 	if (constructed == NULL) {
-		err->e = RE_EERRNO;
+		if (err != NULL) { err->e = RE_EERRNO; }
 		return 0;
 	}
 
@@ -504,14 +513,14 @@ cc_add_named_class(struct re_char_class *cc, char_class_constructor_fun *ctor)
 		
 		a = fsm_clone(cc->set);
 		if (a == NULL) {
-			err->e = RE_EERRNO;
+			if (err != NULL) { err->e = RE_EERRNO; }
 			return 0;
 		}
 		
 		b = fsm_clone(constructed);
 		if (b == NULL) {
 			fsm_free(a);
-			err->e = RE_EERRNO;
+			if (err != NULL) { err->e = RE_EERRNO; }
 			return 0;
 		}
 		
@@ -519,14 +528,14 @@ cc_add_named_class(struct re_char_class *cc, char_class_constructor_fun *ctor)
 		if (q == NULL) {
 			fsm_free(a);
 			fsm_free(b);
-			err->e = RE_EERRNO;
+			if (err != NULL) { err->e = RE_EERRNO; }
 			return 0;
 		}
 		
 		r = fsm_empty(q);
 		
 		if (r == -1) {
-			err->e = RE_EERRNO;
+			if (err != NULL) { err->e = RE_EERRNO; }
 			return 0;
 		}
 	}
@@ -534,7 +543,7 @@ cc_add_named_class(struct re_char_class *cc, char_class_constructor_fun *ctor)
 	if (!r) {
 		cc->dup = fsm_union(cc->dup, q);
 		if (cc->dup == NULL) {
-			err->e = RE_EERRNO;
+			if (err != NULL) { err->e = RE_EERRNO; }
 			return 0;
 		}
 	} else {
@@ -542,13 +551,13 @@ cc_add_named_class(struct re_char_class *cc, char_class_constructor_fun *ctor)
 		
 		cc->set = fsm_union(cc->set, constructed);
 		if (cc->set == NULL) {
-			err->e = RE_EERRNO;
+			if (err != NULL) { err->e = RE_EERRNO; }
 			return 0;
 		}
 		
 		/* we need a DFA here for sake of fsm_exec() identifying duplicates */
 		if (!fsm_determinise(cc->set)) {
-			err->e = RE_EERRNO;
+			if (err != NULL) { err->e = RE_EERRNO; }
 			return 0;
 		}
 	}
