@@ -938,33 +938,41 @@ main(int argc, char *argv[])
 						return EXIT_FAILURE;
 					}
 
-					fprintf(stderr, "ambiguous mappings to ");
+					/*
+					 * When n == 0, we have two patterns which match the empty string.
+					 * Here we defer to the error about the start state accepting,
+					 * and it seems redundant to also show an error about both patterns
+					 * matching the same input, even if there's a non-empty part.
+					 */
+					if (n > 0) {
+						fprintf(stderr, "ambiguous mappings to ");
 
-					for (p = m->conflict; p != NULL; p = p->next) {
-						if (p->m->token != NULL) {
-							fprintf(stderr, "$%s", p->m->token->s);
-						} else if (p->m->to == NULL) {
-							fprintf(stderr, "skip");
-						}
-						if (p->m->token != NULL && p->m->to != NULL) {
-							fprintf(stderr, "/");
-						}
-						if (p->m->to == ast->global) {
-							fprintf(stderr, "global zone");
-						} else if (p->m->to != NULL) {
-							fprintf(stderr, "z%p", (void *) p->m->to); /* TODO: zindexof(n->to) */
+						for (p = m->conflict; p != NULL; p = p->next) {
+							if (p->m->token != NULL) {
+								fprintf(stderr, "$%s", p->m->token->s);
+							} else if (p->m->to == NULL) {
+								fprintf(stderr, "skip");
+							}
+							if (p->m->token != NULL && p->m->to != NULL) {
+								fprintf(stderr, "/");
+							}
+							if (p->m->to == ast->global) {
+								fprintf(stderr, "global zone");
+							} else if (p->m->to != NULL) {
+								fprintf(stderr, "z%p", (void *) p->m->to); /* TODO: zindexof(n->to) */
+							}
+
+							if (p->next != NULL) {
+								fprintf(stderr, ", ");
+							}
 						}
 
-						if (p->next != NULL) {
-							fprintf(stderr, ", ");
-						}
+						/* TODO: escape hex etc */
+						fprintf(stderr, "; for example on input '%s%s'\n", buf,
+							n >= (int) sizeof buf - 1 ? "..." : "");
+
+						e = 1;
 					}
-
-					/* TODO: escape hex etc */
-					fprintf(stderr, "; for example on input '%s%s'\n", buf,
-						n >= (int) sizeof buf - 1 ? "..." : "");
-
-					e = 1;
 				}
 			}
 		}

@@ -539,7 +539,14 @@ make_ir(const struct fsm *fsm)
 				goto error_example;
 			}
 
-			if ((size_t) n < ir->n + 1) {
+			/*
+			 * The goal state is always reachable for a DFA with
+			 * no "stray" states, but the caller may not trim an FSM.
+			 */
+			if (n == 0) {
+				f_free(fsm, p);
+				p = NULL;
+			} else if ((size_t) n < ir->n + 1) {
 				char *tmp;
 
 				n = strlen(p);

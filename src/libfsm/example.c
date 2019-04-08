@@ -46,7 +46,15 @@ fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 		return -1;
 	}
 
-	for (p = path, n = 0; p != NULL; p = p->next, n++) {
+	if (path != NULL && path->state != start) {
+		/* no known path to goal */
+		n = 0;
+		goto done;
+	}
+
+	n = 0;
+
+	for (p = path; p != NULL; p = p->next) {
 		if (p->type == FSM_EDGE_EPSILON) {
 			continue;
 		}
@@ -55,7 +63,11 @@ fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 			*buf++ = p->type;
 			bufsz--;
 		}
+
+		n++;
 	}
+
+done:
 
 	if (bufsz > 0) {
 		*buf++ = '\0';

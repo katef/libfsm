@@ -157,10 +157,12 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 							return;
 						}
 
-						fprintf(f, " # e.g. \"");
-						escputs(f, fsm->opt, fsm_escputc, buf);
-						fprintf(f, "%s\"",
-							n >= (int) sizeof buf - 1 ? "..." : "");
+						if (n > 0) {
+							fprintf(f, " # e.g. \"");
+							escputs(f, fsm->opt, fsm_escputc, buf);
+							fprintf(f, "%s\"",
+								n >= (int) sizeof buf - 1 ? "..." : "");
+						}
 					}
 				}
 
