@@ -17,6 +17,7 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 struct fsm *
 re_comp_ast(struct ast_re *ast,
     enum re_flags flags,
-    const struct fsm_options *opt);
+    const struct fsm_options *opt,
+	struct re_err *err);
 
 #endif

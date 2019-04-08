@@ -83,7 +83,8 @@ decide_linking(struct comp_env *env,
 struct fsm *
 re_comp_ast(struct ast_re *ast,
     enum re_flags flags,
-    const struct fsm_options *opt)
+    const struct fsm_options *opt,
+	struct re_err *err)
 {
 	struct fsm_state *x, *y;
 	struct comp_env env;
@@ -95,6 +96,7 @@ re_comp_ast(struct ast_re *ast,
 
 	env.opt = opt;
 	env.flags = flags;
+	env.err = err;
 	
 	x = fsm_getstart(env.fsm);
 	assert(x != NULL);
@@ -310,6 +312,16 @@ comp_iter(struct comp_env *env,
 		break;
 
 	case AST_EXPR_CHAR_CLASS:
+		/*
+		 * XXX: this doesn't belong here; it's set as a fall-through.
+		 * Instead we should be populating .start/.end for each node
+		 * in the cca tree.
+		 */
+		if (env->err != NULL) {
+			env->err->start.byte = n->u.char_class.start.byte;
+			env->err->end.byte   = n->u.char_class.end.byte;
+		}
+
 		if (!re_char_class_ast_compile(n->u.char_class.cca,
 			env->fsm, env->flags, env->err, env->opt, x, y)) {
 			return 0;
