@@ -356,6 +356,7 @@ link_char_class_into_fsm(struct re_char_class *cc, struct fsm *fsm,
 	
 	if (!is_empty) {
 		const struct fsm_state *end;
+		int n;
 
 		if (err == NULL) {
 			return 0;
@@ -368,10 +369,14 @@ link_char_class_into_fsm(struct re_char_class *cc, struct fsm *fsm,
 		assert(end != NULL);
 		assert(end != fsm_getstart(cc->dup)); /* due to the structure */
 		
-		if (-1 == fsm_example(cc->dup, end, err->dup, sizeof err->dup)) {
+		n = fsm_example(cc->dup, end, err->dup, sizeof err->dup);
+		if (n == -1) {
 			err->e = RE_EERRNO;
 			return 0;
 		}
+		
+		/* due to the structure */
+		assert(n > 0);
 		
 		/* XXX: to return when we can show minimal coverage again */
 		strcpy(err->set, err->dup);

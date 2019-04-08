@@ -46,6 +46,12 @@ fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 		return -1;
 	}
 
+	if (path != NULL && path->state != start) {
+		/* no known path to goal */
+		n = 0;
+		goto done;
+	}
+
 	n = 0;
 
 	for (p = path; p != NULL; p = p->next) {
@@ -60,6 +66,8 @@ fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 
 		n++;
 	}
+
+done:
 
 	if (bufsz > 0) {
 		*buf++ = '\0';
