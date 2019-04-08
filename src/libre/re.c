@@ -23,6 +23,8 @@
 #include "re_comp.h"
 #include "re_analysis.h"
 
+#include "ac.h"
+
 struct dialect {
 	enum re_dialect dialect;
 	re_dialect_parse_fun *parse;
@@ -190,5 +192,40 @@ error:
 	if (err != NULL) { err->e = RE_EERRNO; }
 
 	return NULL;
+}
+
+struct fsm *
+re_strings(const struct fsm_options *opt, const char *sv[], size_t n, int anchored)
+{
+	struct trie_graph *g;
+	struct fsm *fsm;
+	size_t i;
+
+	g = trie_create();
+	fsm = NULL;
+
+	for (i=0; i < n; i++) {
+		size_t len;
+
+		len = strlen(sv[i]);
+		if (!trie_add_word(g, sv[i], len)) {
+			goto finish;
+		}
+	}
+
+	if (!anchored) {
+		if (trie_add_failure_edges(g) < 0) {
+			goto finish;
+		}
+	}
+
+	fsm = trie_to_fsm(g,opt);
+	if (fsm == NULL) {
+		goto finish;
+	}
+
+finish:
+	trie_free(g);
+	return fsm;
 }
 

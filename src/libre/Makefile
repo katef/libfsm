@@ -7,6 +7,7 @@ SRC += src/libre/re_analysis.c
 SRC += src/libre/re_ast.c
 SRC += src/libre/re_comp.c
 SRC += src/libre/re_char_class.c
+SRC += src/libre/ac.c
 
 LIB        += libre
 SYMS.libre += src/libre/libre.syms

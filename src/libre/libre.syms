@@ -9,3 +9,4 @@ re_ast_print_dot
 re_ast_print_abnf
 re_ast_print_pcre
 re_ast_print_tree
+re_strings
