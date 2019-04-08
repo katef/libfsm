@@ -78,7 +78,7 @@ fsm_reverse(struct fsm *fsm)
 				return 0;
 			}
 
-			s->equiv = p;
+			s->tmp.equiv = p;
 
 			if (s == fsm->start) {
 				end = p;
@@ -112,7 +112,7 @@ fsm_reverse(struct fsm *fsm)
 			struct edge_iter it;
 			struct fsm_edge *e;
 
-			to = s->equiv;
+			to = s->tmp.equiv;
 
 			assert(to != NULL);
 
@@ -125,7 +125,7 @@ fsm_reverse(struct fsm *fsm)
 
 					assert(se != NULL);
 
-					from = se->equiv;
+					from = se->tmp.equiv;
 
 					assert(from != NULL);
 
@@ -187,7 +187,7 @@ fsm_reverse(struct fsm *fsm)
 		}
 
 		if (s != NULL) {
-			new->start = s->equiv;
+			new->start = s->tmp.equiv;
 			assert(new->start != NULL);
 		} else {
 			new->start = fsm_addstate(new);
@@ -201,7 +201,7 @@ fsm_reverse(struct fsm *fsm)
 		for (s = state_set_first(endset, &it); s != NULL; s = state_set_next(&it)) {
 			struct fsm_state *state;
 
-			state = s->equiv;
+			state = s->tmp.equiv;
 			assert(state != NULL);
 
 			if (state == new->start) {
@@ -217,6 +217,8 @@ fsm_reverse(struct fsm *fsm)
 	}
 
 	state_set_free(endset);
+	
+	fsm_clear_tmp(fsm);
 
 	fsm_move(fsm, new);
 

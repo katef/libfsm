@@ -8,6 +8,7 @@ SRC += src/adt/set.c
 SRC += src/adt/xalloc.c
 SRC += src/adt/hashset.c
 SRC += src/adt/siphash.c
+SRC += src/adt/queue.c
 
 SRC += src/adt/edgeset.c
 SRC += src/adt/stateset.c

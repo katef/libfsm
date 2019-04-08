@@ -1,6 +1,7 @@
 .include "../../share/mk/top.mk"
 
 SRC += src/libfsm/collate.c
+SRC += src/libfsm/collect.c
 SRC += src/libfsm/complete.c
 SRC += src/libfsm/clone.c
 SRC += src/libfsm/eclosure.c

@@ -5,6 +5,7 @@
  */
 
 #include "re_comp.h"
+#include "fsm/fsm.h"
 
 #include <ctype.h>
 
@@ -109,6 +110,8 @@ re_comp_ast(struct ast_re *ast,
 	env.end = y;
 
 	if (!comp_iter(&env, x, y, ast->expr)) { goto error; }
+
+	if (-1 == fsm_collect_unreachable_states(env.fsm)) { goto error; }
 
 	return env.fsm;
 

@@ -250,7 +250,8 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 	if (comb == NULL) {
 		return NULL;
 	}
-	comb->equiv = NULL;
+
+	assert(comb->tmp.visited == NULL);
 
 	p->a = a;
 	p->b = b;
@@ -291,19 +292,6 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 	return p;
 }
 
-/* Sets all of the equiv members of the states of the fsm to NULL */
-static void
-fsm_walk2_mark_equiv_null(struct fsm *fsm)
-{
-	struct fsm_state *src;
-
-	assert(fsm != NULL);
-
-	for (src = fsm->sl; src != NULL; src = src->next) {
-		src->equiv = NULL;
-	}
-}
-
 static int
 fsm_walk2_edges(struct fsm_walk2_data *data,
 	const struct fsm *a, const struct fsm *b, struct fsm_walk2_tuple *start)
@@ -329,12 +317,12 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	assert(qc != NULL);
 
 	/* fast exit if we've already visited the combined state */
-	if (qc->equiv != NULL) {
+	if (qc->tmp.visited != NULL) {
 		return 1;
 	}
 
 	/* mark combined state as visited */
-	qc->equiv = qc;
+	qc->tmp.visited = qc;
 
 	/*
 	 * fsm_walk2_edges walks the edges of two graphs, generating combined
@@ -421,7 +409,7 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 				 * depth-first traversal of the graph, but only traverse
 				 * if the state has not yet been visited
 				 */
-				if (dst->comb->equiv == NULL) {
+				if (dst->comb->tmp.visited == NULL) {
 					if (!fsm_walk2_edges(data, a,b, dst)) {
 						return 0;
 					}
@@ -481,7 +469,7 @@ only_b:
 				 * depth-first traversal of the graph, but only traverse
 				 * if the state has not yet been visited
 				 */
-				if (dst->comb->equiv == NULL) {
+				if (dst->comb->tmp.visited == NULL) {
 					if (!fsm_walk2_edges(data, a,b, dst)) {
 						return 0;
 					}
@@ -568,7 +556,7 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 	assert(tup0->a == sa);
 	assert(tup0->b == sb);
 	assert(tup0->comb != NULL);
-	assert(tup0->comb->equiv == NULL); /* comb not yet been traversed */
+	assert(tup0->comb->tmp.visited == NULL); /* comb not yet been traversed */
 
 	fsm_setstart(data.new, tup0->comb);
 	if (!fsm_walk2_edges(&data, a,b, tup0)) {
@@ -580,8 +568,7 @@ done:
 	new = data.new;
 	data.new = NULL; /* avoid freeing new FSM */
 
-	/* reset all equiv fields in the states */
-	fsm_walk2_mark_equiv_null(new);
+	fsm_clear_tmp(new);
 
 	fsm_walk2_data_free(a, &data);
 

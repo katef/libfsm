@@ -234,3 +234,15 @@ fsm_countedges(const struct fsm *fsm)
 
 	return n;
 }
+
+void
+fsm_clear_tmp(struct fsm *fsm)
+{
+	struct fsm_state *s;
+
+	assert(fsm != NULL);
+
+	for (s = fsm->sl; s != NULL; s = s->next) {
+		fsm_state_clear_tmp(s);
+	}
+}
