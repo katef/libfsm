@@ -110,7 +110,7 @@ priq_push(struct priq **priq,
 	new->cost  = cost;
 	new->state = state;
 	new->prev  = NULL;
-	new->type  = -1; /* XXX: nothing meaningful to set here */
+	new->c     = '\0'; /* XXX: nothing meaningful to set here */
 
 	new->next = *p;
 	*p = new;

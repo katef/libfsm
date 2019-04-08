@@ -19,6 +19,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+#include <fsm/walk.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
 
@@ -147,7 +148,7 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 				if (fsm->opt->comments) {
 					if (st == fsm->start) {
 						fprintf(f, " # start");
-					} else if (fsm->start != NULL) {
+					} else if (fsm->start != NULL && !fsm_has(fsm, fsm_hasepsilons)) {
 						char buf[50];
 						int n;
 

@@ -12,11 +12,11 @@ struct fsm_state;
 struct path {
 	struct fsm_state *state;
 	struct path *next;
-	int type; /* XXX: fsm_edge_type is private */
+	char c;
 };
 
 struct path *
-path_push(struct path **head, struct fsm_state *state, int type);
+path_push(struct path **head, struct fsm_state *state, char c);
 
 void
 path_free(struct path *path);

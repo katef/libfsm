@@ -364,6 +364,13 @@ link_char_class_into_fsm(struct re_char_class *cc, struct fsm *fsm,
 
 		/* TODO: would like to show the original spelling verbatim, too */
 		
+		/* fsm_example requires no epsilons;
+		 * TODO: would fsm_glushkovise() here, when we have it */
+		if (!fsm_determinise(cc->dup)) {
+			err->e = RE_EERRNO;
+			return 0;
+		}
+
 		/* XXX: this is just one example; really I want to show the entire set */
 		end = fsm_any(cc->dup, fsm_isend);
 		assert(end != NULL);

@@ -13,6 +13,8 @@
 
 #include <fsm/fsm.h>
 #include <fsm/cost.h>
+#include <fsm/pred.h>
+#include <fsm/walk.h>
 
 #include "internal.h"
 
@@ -26,6 +28,7 @@ fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 	size_t n;
 
 	assert(fsm != NULL);
+	assert(!fsm_has(fsm, fsm_hasepsilons));
 	assert(buf != NULL || bufsz == 0);
 	assert(goal != NULL);
 	/* TODO: assert goal is in fsm */
@@ -46,21 +49,18 @@ fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
 		return -1;
 	}
 
-	if (path != NULL && path->state != start) {
+	n = 0;
+
+	if (path->state != start) {
 		/* no known path to goal */
-		n = 0;
 		goto done;
 	}
 
-	n = 0;
+	assert(path->c == '\0');
 
-	for (p = path; p != NULL; p = p->next) {
-		if (p->type == FSM_EDGE_EPSILON) {
-			continue;
-		}
-
+	for (p = path->next; p != NULL; p = p->next) {
 		if (bufsz > 1) {
-			*buf++ = p->type;
+			*buf++ = p->c;
 			bufsz--;
 		}
 
