@@ -319,12 +319,7 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 		struct state_iter dia, dib;
 		const struct fsm_state *da, *db;
 
-		if (ea->symbol > UCHAR_MAX) {
-			assert(ea->symbol == FSM_EDGE_EPSILON);
-			eb = qb ? fsm_hasedge_epsilon(qb) : NULL;
-		} else {
-			eb = qb ? fsm_hasedge_literal(qb, ea->symbol) : NULL;
-		}
+		eb = qb ? fsm_hasedge_literal(qb, ea->symbol) : NULL;
 
 		/*
 		 * If eb == NULL we can only follow this edge if ONLYA
@@ -352,15 +347,8 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 				assert(dst != NULL);
 				assert(dst->comb != NULL);
 
-				if (ea->symbol > UCHAR_MAX) {
-					assert(ea->symbol == FSM_EDGE_EPSILON);
-					if (!fsm_addedge_epsilon(data->new, qc, dst->comb)) {
-						return 0;
-					}
-				} else {
-					if (!fsm_addedge_literal(data->new, qc, dst->comb, ea->symbol)) {
-						return 0;
-					}
+				if (!fsm_addedge_literal(data->new, qc, dst->comb, ea->symbol)) {
+					return 0;
 				}
 
 				/*
@@ -398,12 +386,7 @@ only_b:
 		struct state_iter dib;
 		const struct fsm_state *db;
 
-		if (eb->symbol > UCHAR_MAX) {
-			assert(eb->symbol == FSM_EDGE_EPSILON);
-			ea = qa ? fsm_hasedge_epsilon(qa) : NULL;
-		} else {
-			ea = qa ? fsm_hasedge_literal(qa, eb->symbol) : NULL;
-		}
+		ea = qa ? fsm_hasedge_literal(qa, eb->symbol) : NULL;
 
 		/* if A has the edge, it's not an only B edge */
 		if (ea != NULL) {
@@ -424,15 +407,8 @@ only_b:
 				assert(dst != NULL);
 				assert(dst->comb != NULL);
 
-				if (eb->symbol > UCHAR_MAX) {
-					assert(eb->symbol == FSM_EDGE_EPSILON);
-					if (!fsm_addedge_epsilon(data->new, qc, dst->comb)) {
-						return 0;
-					}
-				} else {
-					if (!fsm_addedge_literal(data->new, qc, dst->comb, eb->symbol)) {
-						return 0;
-					}
+				if (!fsm_addedge_literal(data->new, qc, dst->comb, eb->symbol)) {
+					return 0;
 				}
 
 				/*
