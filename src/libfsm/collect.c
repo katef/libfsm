@@ -73,6 +73,7 @@ sweep_states(struct fsm *fsm)
 	struct fsm_state *prev = NULL;
 	struct fsm_state *s = fsm->sl;
 	struct fsm_state *next;
+	struct fsm_state **tail;
 	int swept = 0;
 
 	/* This doesn't use fsm_removestate because it would be modifying the
@@ -102,6 +103,14 @@ sweep_states(struct fsm *fsm)
 		}
 		s = next;
 	}
+
+	/* update the tail in case it was collected */
+	for (tail = &fsm->sl; *tail != NULL; tail = &(*tail)->next) {
+		continue;
+	}
+
+	fsm->tail = tail;
+
 	return swept;
 }
 
