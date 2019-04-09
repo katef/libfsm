@@ -88,6 +88,12 @@ edge_set_hasnext(struct edge_iter *it)
 	return set_hasnext(&it->iter);
 }
 
+int
+edge_set_empty(const struct edge_set *set)
+{
+	return set_empty((const struct set *) set);
+}
+
 struct fsm_edge *
 edge_set_only(const struct edge_set *set)
 {
