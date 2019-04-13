@@ -86,28 +86,6 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 
 		fprintf(f, "%u", indexof(fsm, s));
 
-#ifdef DEBUG_TODFA
-		if (s->nfasl != NULL) {
-			struct fsm_state *q;
-
-			assert(fsm->nfa != NULL);
-
-			fprintf(f, "<br/>");
-
-			fprintf(f, "{");
-
-			for (q = edge_set_first(s->nfasl, &it); q != NULL; q = edge_set_next(&it)) {
-				fprintf(f, "%u", indexof(fsm->nfa, q));
-
-				if (edge_set_hasnext(&it)) {
-					fprintf(f, ",");
-				}
-			}
-
-			fprintf(f, "}");
-		}
-#endif
-
 		fprintf(f, "> ];\n");
 	}
 
