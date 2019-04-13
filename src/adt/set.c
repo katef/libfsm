@@ -29,9 +29,9 @@ set_search(const struct set *set, const void *item)
 	size_t start, end;
 	size_t mid;
 
-	assert(item != NULL);
 	assert(set != NULL);
 	assert(set->cmp != NULL);
+	assert(item != NULL);
 
 	start = mid = 0;
 	end = set->i;
@@ -55,7 +55,6 @@ set_search(const struct set *set, const void *item)
 static int
 set_cmpval(const void *a, const void *b)
 {
-
 	return (a > b) - (a < b);
 }
 
@@ -64,7 +63,9 @@ set_create(int (*cmp)(const void *a, const void *b))
 {
 	struct set *s;
 
-	assert(cmp != NULL);
+	if (cmp == NULL) {
+		cmp = set_cmpval;
+	}
 
 	s = malloc(sizeof *s);
 	if (s == NULL) {
@@ -90,35 +91,15 @@ set_add(struct set **set, void *item)
 	size_t i;
 
 	assert(set != NULL);
+	assert(*set != NULL);
+	assert((*set)->cmp != NULL);
 	assert(item != NULL);
 
 	s = *set;
 	i = 0;
 
 	/*
-	 * If the set is not initialized, go ahead and do that with the
-	 * default comparison function and insert the new item at the front.
-	 */
-	if (s == NULL) {
-		s = set_create(set_cmpval);
-		s->a[0] = item;
-		s->i = 1;
-
-		*set = s;
-
-		assert(set_contains(*set, item));
-
-		return item;
-	}
-
-	assert(s->cmp != NULL);
-
-	/*
 	 * If the item already exists in the set, return success.
-	 *
-	 * TODO: Notify on success differently somehow when the item
-	 * was already there, than if we successfully inserted
-	 * a non-existing item.
 	 */
 	if (!set_empty(s)) {
 		i = set_search(s, item);
@@ -161,11 +142,15 @@ set_add(struct set **set, void *item)
 void
 set_remove(struct set **set, void *item)
 {
-	struct set *s = *set;
+	struct set *s;
 	size_t i;
 
+	assert(set != NULL);
+	assert(*set != NULL);
+	assert((*set)->cmp != NULL);
 	assert(item != NULL);
-	assert(s->cmp != NULL);
+
+	s = *set;
 
 	if (set_empty(s)) {
 		return;
@@ -186,9 +171,8 @@ set_remove(struct set **set, void *item)
 void
 set_free(struct set *set)
 {
-	if (set == NULL) {
-		return;
-	}
+	assert(set != NULL);
+	assert(set->a != NULL);
 
 	free(set->a);
 	free(set);
@@ -197,9 +181,8 @@ set_free(struct set *set)
 size_t
 set_count(const struct set *set)
 {
-	if (set == NULL) {
-		return 0;
-	}
+	assert(set != NULL);
+	assert(set->a != NULL);
 
 	return set->i;
 }
@@ -207,9 +190,8 @@ set_count(const struct set *set)
 void
 set_clear(struct set *set)
 {
-	if (set == NULL) {
-		return;
-	}
+	assert(set != NULL);
+	assert(set->a != NULL);
 
 	set->i = 0;
 }
@@ -219,12 +201,13 @@ set_contains(const struct set *set, const void *item)
 {
 	size_t i;
 
+	assert(set != NULL);
+	assert(set->cmp != NULL);
+	assert(item != NULL);
+
 	if (set_empty(set)) {
 		return NULL;
 	}
-
-	assert(item != NULL);
-	assert(set->cmp != NULL);
 
 	i = set_search(set, item);
 	if (set->cmp(item, set->a[i]) == 0) {
@@ -237,32 +220,25 @@ set_contains(const struct set *set, const void *item)
 int
 set_cmp(const struct set *a, const struct set *b)
 {
-	if ((a == NULL) != (b == NULL)) {
-		return (a == NULL) - (b == NULL);
-	}
-
-	if (a == NULL && b == NULL) {
-		return 0;
-	}
+	assert(a != NULL);
+	assert(a->a != NULL);
+	assert(b != NULL);
+	assert(b->a != NULL);
 
 	if (a->i != b->i) {
 		return a->i - b->i;
 	}
 
 	return memcmp(a->a, b->a, a->i * sizeof *a->a);
-
 }
 
 int
 set_equal(const struct set *a, const struct set *b)
 {
-	if ((a == NULL) != (b == NULL)) {
-		return 0;
-	}
-
-	if (a == NULL && b == NULL) {
-		return 1;
-	}
+	assert(a != NULL);
+	assert(a->a != NULL);
+	assert(b != NULL);
+	assert(b->a != NULL);
 
 	if (a->i != b->i) {
 		return 0;
@@ -274,12 +250,16 @@ set_equal(const struct set *a, const struct set *b)
 int
 set_empty(const struct set *set)
 {
-	return set == NULL || set->i == 0;
+	assert(set != NULL);
+
+	return set->i == 0;
 }
 
 void *
 set_first(const struct set *set, struct set_iter *it)
 {
+	assert(set != NULL);
+	assert(set->a != NULL);
 	assert(it != NULL);
 
 	if (set_empty(set)) {
@@ -299,14 +279,15 @@ set_firstafter(const struct set *set, struct set_iter *it, void *item)
 	size_t i;
 	int r;
 
+	assert(set != NULL);
+	assert(set->cmp != NULL);
+	assert(set->a != NULL);
 	assert(it != NULL);
 
 	if (set_empty(set)) {
 		it->set = NULL;
 		return NULL;
 	}
-
-	assert(set->cmp != NULL);
 
 	i = set_search(set, item);
 	r = set->cmp(item, set->a[i]);

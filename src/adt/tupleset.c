@@ -20,7 +20,6 @@ struct tuple_set {
 struct tuple_set *
 tuple_set_create(int (*cmp)(const void *, const void *))
 {
-	static const struct tuple_set init;
 	struct tuple_set *set;
 
 	assert(cmp != NULL);
@@ -29,7 +28,7 @@ tuple_set_create(int (*cmp)(const void *, const void *))
 	if (!set) {
 		return NULL;
 	}
-	*set = init;
+
 	set->set = set_create(cmp);
 	if (set->set == NULL) {
 		free(set);

@@ -24,7 +24,11 @@ state_set_create(void)
 		return NULL;
 	}
 
-	set->set = NULL;
+	set->set = set_create(NULL);
+	if (set->set == NULL) {
+		free(set);
+		return NULL;
+	}
 
 	return set;
 }
