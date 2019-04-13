@@ -34,7 +34,7 @@ void *
 hashset_add(struct hashset *s, void *item);
 
 int
-hashset_remove(struct hashset *s, void *item);
+hashset_remove(struct hashset *s, const void *item);
 
 void
 hashset_free(struct hashset *s);

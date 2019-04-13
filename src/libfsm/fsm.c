@@ -119,10 +119,6 @@ fsm_new(const struct fsm_options *opt)
 
 	new->opt = opt;
 
-#ifdef DEBUG_TODFA
-	new->nfa   = NULL;
-#endif
-
 	return new;
 }
 

@@ -49,10 +49,6 @@ fsm_addstate(struct fsm *fsm)
 	new->edges = edge_set_create(fsm_state_cmpedges);
 	new->opaque = NULL;
 
-#ifdef DEBUG_TODFA
-	new->nfasl = NULL;
-#endif
-
 	fsm_state_clear_tmp(new);
 
 	*fsm->tail = new;

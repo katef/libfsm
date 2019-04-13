@@ -430,10 +430,6 @@ determinise(struct fsm *nfa,
 		return NULL;
 	}
 
-#ifdef DEBUG_TODFA
-	dfa->nfa = nfa;
-#endif
-
 	if (nfa->endcount == 0) {
 		dfa->start = fsm_addstate(dfa);
 		if (dfa->start == NULL) {
@@ -564,18 +560,6 @@ determinise(struct fsm *nfa,
 
 		clear_trans(dfa, trans);
 
-#ifdef DEBUG_TODFA
-		{
-			struct state_set *q;
-
-			for (q = state_set_first(curr->closure, &jt); q != NULL; q = state_set_next(&jt)) {
-				if (!set_add(&curr->dfastate->nfasl, q)) {
-					goto error;
-				}
-			}
-		}
-#endif
-
 		/*
 		 * The current DFA state is an end state if any of its associated NFA
 		 * states are end states.
@@ -638,24 +622,6 @@ fsm_determinise_cache(struct fsm *fsm,
 	if (dfa == NULL) {
 		return 0;
 	}
-
-#ifdef DEBUG_TODFA
-	fsm->nfa = fsm_new(fsm->opt);
-	if (fsm->nfa == NULL) {
-		return 0;
-	}
-
-	assert(dfa->nfa == fsm);
-
-	fsm->nfa->sl    = fsm->sl;
-	fsm->nfa->tail  = fsm->tail;
-	fsm->nfa->start = fsm->start;
-
-	/* for fsm_move's free contents */
-	fsm->sl    = NULL;
-	fsm->tail  = NULL;
-	fsm->start = NULL;
-#endif
 
 	fsm_move(fsm, dfa);
 

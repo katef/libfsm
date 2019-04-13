@@ -13,6 +13,7 @@
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
+#include <adt/tupleset.h>
 
 #include <fsm/fsm.h>
 #include <fsm/options.h>
@@ -34,10 +35,6 @@ struct fsm_walk2_tuple {
 	struct fsm_state *comb;
 };
 
-struct tuple_set {
-	struct set *set;
-};
-
 /* comparison of fsm_walk2_tuples for the (ordered) set */
 static int
 cmp_walk2_tuple(const void *a, const void *b)
@@ -54,57 +51,6 @@ cmp_walk2_tuple(const void *a, const void *b)
 
 	return delta;
 }
-
-struct tuple_set *
-tuple_set_create(const struct fsm *fsm)
-{
-	static const struct tuple_set init;
-	struct tuple_set *set;
-
-	set = f_malloc(fsm, sizeof *set);
-	if (!set) {
-		return NULL;
-	}
-	*set = init;
-	set->set = set_create(cmp_walk2_tuple);
-	if (set->set == NULL) {
-		free(set);
-		return NULL;
-	}
-
-	return set;
-}
-
-void
-tuple_set_free(const struct fsm *fsm, struct tuple_set *set)
-{
-	if (set == NULL) {
-		return;
-	}
-
-	if (set->set != NULL) {
-		set_free(set->set);
-		set->set = NULL;
-	}
-
-	f_free(fsm, set);
-}
-
-static struct fsm_walk2_tuple *
-tuple_set_contains(struct tuple_set *set, const struct fsm_walk2_tuple *item)
-{
-	return set_contains(set->set, (const void *)item);
-}
-
-static struct fsm_walk2_tuple *
-tuple_set_add(struct tuple_set *set, const struct fsm_walk2_tuple *item)
-{
-	return set_add(&set->set, (void *)item);
-}
-
-struct tuple_iter {
-	struct set_iter iter;
-};
 
 struct fsm_walk2_data {
 	struct fsm_walk2_tuple_pool *head;
@@ -161,7 +107,7 @@ fsm_walk2_data_free(const struct fsm *fsm, struct fsm_walk2_data *data)
 	struct fsm_walk2_tuple_pool *p, *next;
 
 	if (data->states) {
-		tuple_set_free(fsm,data->states);
+		tuple_set_free(data->states);
 	}
 
 	for (p = data->head; p != NULL; p = next) {
@@ -543,7 +489,7 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 		goto error;
 	}
 
-	data.states = tuple_set_create(data.new);
+	data.states = tuple_set_create(cmp_walk2_tuple);
 	if (data.states == NULL) {
 		goto error;
 	}

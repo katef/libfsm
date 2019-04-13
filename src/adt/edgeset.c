@@ -5,99 +5,94 @@
  */
 
 #include <assert.h>
-#include <stdlib.h>
+#include <stddef.h>
 
 #include <adt/set.h>
 #include <adt/edgeset.h>
 
-struct edge_set {
-	struct set *set;
-};
-
 struct edge_set *
 edge_set_create(int (*cmp)(const void *a, const void *b))
 {
-	struct edge_set *set;
-
-	set = malloc(sizeof *set);
-	if (set == NULL) {
-		return NULL;
-	}
-
-	set->set = set_create(cmp);
-	if (set->set == NULL) {
-		free(set);
-		return NULL;
-	}
-
-	return set;
+	return (struct edge_set *) set_create(cmp);
 }
 
 void
 edge_set_free(struct edge_set *set)
 {
-	if (set == NULL) {
-		return;
-	}
+	assert(set != NULL);
 
-	assert(set->set != NULL);
-	set_free(set->set);
-
-	free(set);
+	set_free((struct set *) set);
 }
 
 struct fsm_edge *
 edge_set_add(struct edge_set *set, struct fsm_edge *e)
 {
-	return set_add(&set->set, e);
+	assert(set != NULL);
+
+	return set_add((struct set *) set, e);
 }
 
 struct fsm_edge *
 edge_set_contains(const struct edge_set *set, const struct fsm_edge *e)
 {
-	return set_contains(set->set, e);
+	assert(set != NULL);
+
+	return set_contains((const struct set *) set, e);
 }
 
 size_t
 edge_set_count(const struct edge_set *set)
 {
-	return set_count(set->set);
+	assert(set != NULL);
+
+	return set_count((const struct set *) set);
 }
 
 void
 edge_set_remove(struct edge_set *set, const struct fsm_edge *e)
 {
-	set_remove(&set->set, (void *)e);
+	assert(set != NULL);
+
+	set_remove((struct set *) set, e);
 }
 
 struct fsm_edge *
 edge_set_first(struct edge_set *set, struct edge_iter *it)
 {
-	return set_first(set->set, &it->iter);
+	assert(set != NULL);
+
+	return set_first((struct set *) set, &it->iter);
 }
 
 struct fsm_edge *
-edge_set_firstafter(struct edge_set *set, struct edge_iter *it, const struct fsm_edge *e)
+edge_set_firstafter(const struct edge_set *set, struct edge_iter *it, const struct fsm_edge *e)
 {
-	return set_firstafter(set->set, &it->iter, (void *)e);
+	assert(set != NULL);
+
+	return set_firstafter((const struct set *) set, &it->iter, e);
 }
 
 struct fsm_edge *
 edge_set_next(struct edge_iter *it)
 {
+	assert(it != NULL);
+
 	return set_next(&it->iter);
 }
 
 int
 edge_set_hasnext(struct edge_iter *it)
 {
+	assert(it != NULL);
+
 	return set_hasnext(&it->iter);
 }
 
 struct fsm_edge *
-edge_set_only(const struct edge_set *s)
+edge_set_only(const struct edge_set *set)
 {
-	return set_only(s->set);
-}
+	assert(set != NULL);
 
+	return set_only((const struct set *) set);
+}
 

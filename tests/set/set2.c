@@ -18,10 +18,10 @@ int cmp_int(const void *a_, const void *b_) {
 int main(void) {
 	struct set *s = set_create(cmp_int);
 	int a = 1;
-	assert(set_add(&s, &a));
-	assert(set_add(&s, &a));
-	assert(set_add(&s, &a));
-	set_remove(&s, &a);
+	assert(set_add(s, &a));
+	assert(set_add(s, &a));
+	assert(set_add(s, &a));
+	set_remove(s, &a);
 	assert(!set_contains(s, &a));
 	return 0;
 }

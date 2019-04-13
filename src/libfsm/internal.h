@@ -68,10 +68,6 @@ struct fsm_state {
 		struct fsm_state *visited;
 	} tmp;
 
-#ifdef DEBUG_TODFA
-	struct set *nfasl;
-#endif
-
 	struct fsm_state *next;
 };
 
@@ -83,10 +79,6 @@ struct fsm {
 	unsigned long endcount;
 
 	const struct fsm_options *opt;
-
-#ifdef DEBUG_TODFA
-	struct fsm *nfa;
-#endif
 };
 
 struct fsm_edge *
