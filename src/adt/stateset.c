@@ -4,110 +4,113 @@
  * See LICENCE for the full copyright terms.
  */
 
+#include <assert.h>
 #include <stddef.h>
-#include <stdlib.h>
 
 #include <adt/set.h>
 #include <adt/stateset.h>
 
-struct state_set {
-	struct set *set;
-};
-
 struct state_set *
 state_set_create(void)
 {
-	struct state_set *set;
-
-	set = malloc(sizeof *set);
-	if (set == NULL) {
-		return NULL;
-	}
-
-	set->set = set_create(NULL);
-	if (set->set == NULL) {
-		free(set);
-		return NULL;
-	}
-
-	return set;
+	return (struct state_set *) set_create(NULL);
 }
 
 void
 state_set_free(struct state_set *set)
 {
-	if (set == NULL) {
-		return;
-	}
+	assert(set != NULL);
 
-	set_free(set->set);
-	free(set);
+	set_free((struct set *) set);
 }
 
 struct fsm_state *
 state_set_add(struct state_set *set, struct fsm_state *st)
 {
-	return set_add(set->set, st);
+	assert(set != NULL);
+
+	return set_add((struct set *) set, st);
 }
 
 void
 state_set_remove(struct state_set *set, const struct fsm_state *st)
 {
-	set_remove(set->set, (void *)st);
+	assert(set != NULL);
+
+	set_remove((struct set *) set, st);
 }
 
 int
-state_set_empty(const struct state_set *s)
+state_set_empty(const struct state_set *set)
 {
-	return set_empty(s->set);
+	assert(set != NULL);
+
+	return set_empty((const struct set *) set);
 }
 
 struct fsm_state *
-state_set_only(const struct state_set *s)
+state_set_only(const struct state_set *set)
 {
-	return set_only(s->set);
+	assert(set != NULL);
+
+	return set_only((const struct set *) set);
 }
 
 struct fsm_state *
 state_set_contains(const struct state_set *set, const struct fsm_state *st)
 {
-	return set_contains(set->set, st);
+	assert(set != NULL);
+
+	return set_contains((const struct set *) set, st);
 }
 
 size_t
 state_set_count(const struct state_set *set)
 {
-	return set_count(set->set);
+	assert(set != NULL);
+
+	return set_count((const struct set *) set);
 }
 
 struct fsm_state *
 state_set_first(struct state_set *set, struct state_iter *it)
 {
-	return set_first(set->set, &it->iter);
+	assert(set != NULL);
+
+	return set_first((struct set *) set, &it->iter);
 }
 
 struct fsm_state *
 state_set_next(struct state_iter *it)
 {
+	assert(it != NULL);
+
 	return set_next(&it->iter);
 }
 
 int
 state_set_hasnext(struct state_iter *it)
 {
+	assert(it != NULL);
+
 	return set_hasnext(&it->iter);
 }
 
 const struct fsm_state **
 state_set_array(const struct state_set *set)
 {
-	return (const struct fsm_state **)set_array(set->set);
+	assert(set != NULL);
+
+	return (const struct fsm_state **) set_array((const struct set *) set);
 }
 
 int
 state_set_cmp(const struct state_set *a, const struct state_set *b)
 {
-	return set_cmp(a->set, b->set);
+	assert(a != NULL);
+	assert(b != NULL);
+
+	return set_cmp((const struct set *) a, (const struct set *) b);
 }
 
 
