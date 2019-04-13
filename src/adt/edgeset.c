@@ -49,7 +49,7 @@ edge_set_free(struct edge_set *set)
 struct fsm_edge *
 edge_set_add(struct edge_set *set, struct fsm_edge *e)
 {
-	return set_add(&set->set, e);
+	return set_add(set->set, e);
 }
 
 struct fsm_edge *
@@ -67,7 +67,7 @@ edge_set_count(const struct edge_set *set)
 void
 edge_set_remove(struct edge_set *set, const struct fsm_edge *e)
 {
-	set_remove(&set->set, (void *)e);
+	set_remove(set->set, (void *)e);
 }
 
 struct fsm_edge *

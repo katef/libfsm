@@ -47,13 +47,13 @@ state_set_free(struct state_set *set)
 struct fsm_state *
 state_set_add(struct state_set *set, struct fsm_state *st)
 {
-	return set_add(&set->set, st);
+	return set_add(set->set, st);
 }
 
 void
 state_set_remove(struct state_set *set, const struct fsm_state *st)
 {
-	set_remove(&set->set, (void *)st);
+	set_remove(set->set, (void *)st);
 }
 
 int

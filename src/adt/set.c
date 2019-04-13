@@ -61,111 +61,104 @@ set_cmpval(const void *a, const void *b)
 struct set *
 set_create(int (*cmp)(const void *a, const void *b))
 {
-	struct set *s;
+	struct set *set;
 
 	if (cmp == NULL) {
 		cmp = set_cmpval;
 	}
 
-	s = malloc(sizeof *s);
-	if (s == NULL) {
+	set = malloc(sizeof *set);
+	if (set == NULL) {
 		return NULL;
 	}
 
-	s->a = malloc(SET_INITIAL * sizeof *s->a);
-	if (s->a == NULL) {
+	set->a = malloc(SET_INITIAL * sizeof *set->a);
+	if (set->a == NULL) {
 		return NULL;
 	}
 
-	s->i = 0;
-	s->n = SET_INITIAL;
-	s->cmp = cmp;
+	set->i = 0;
+	set->n = SET_INITIAL;
+	set->cmp = cmp;
 
-	return s;
+	return set;
 }
 
 void *
-set_add(struct set **set, void *item)
+set_add(struct set *set, void *item)
 {
-	struct set *s;
 	size_t i;
 
 	assert(set != NULL);
-	assert(*set != NULL);
-	assert((*set)->cmp != NULL);
+	assert(set->cmp != NULL);
 	assert(item != NULL);
 
-	s = *set;
 	i = 0;
 
 	/*
 	 * If the item already exists in the set, return success.
 	 */
-	if (!set_empty(s)) {
-		i = set_search(s, item);
-		if (s->cmp(item, s->a[i]) == 0) {
+	if (!set_empty(set)) {
+		i = set_search(set, item);
+		if (set->cmp(item, set->a[i]) == 0) {
 			return item;
 		}
 	}
 
-	if (s->i) {
+	if (set->i) {
 		/* We're at capacity. Get more */
-		if (s->i == s->n) {
+		if (set->i == set->n) {
 			void **new;
 
-			new = realloc(s->a, (sizeof *s->a) * (s->n * 2));
+			new = realloc(set->a, (sizeof *set->a) * (set->n * 2));
 			if (new == NULL) {
 				return NULL;
 			}
 
-			s->a = new;
-			s->n *= 2;
+			set->a = new;
+			set->n *= 2;
 		}
 
-		if (s->cmp(item, s->a[i]) > 0) {
+		if (set->cmp(item, set->a[i]) > 0) {
 			i++;
 		}
 
-		memmove(&s->a[i + 1], &s->a[i], (s->i - i) * (sizeof *s->a));
-		s->a[i] = item;
-		s->i++;
+		memmove(&set->a[i + 1], &set->a[i], (set->i - i) * (sizeof *set->a));
+		set->a[i] = item;
+		set->i++;
 	} else {
-		s->a[0] = item;
-		s->i = 1;
+		set->a[0] = item;
+		set->i = 1;
 	}
 
-	assert(set_contains(s, item));
+	assert(set_contains(set, item));
 
 	return item;
 }
 
 void
-set_remove(struct set **set, void *item)
+set_remove(struct set *set, void *item)
 {
-	struct set *s;
 	size_t i;
 
 	assert(set != NULL);
-	assert(*set != NULL);
-	assert((*set)->cmp != NULL);
+	assert(set->cmp != NULL);
 	assert(item != NULL);
 
-	s = *set;
-
-	if (set_empty(s)) {
+	if (set_empty(set)) {
 		return;
 	}
 
-	i = set_search(s, item);
-	if (s->cmp(item, s->a[i]) == 0) {
-		if (i < s->i) {
-			memmove(&s->a[i], &s->a[i + 1], (s->i - i - 1) * (sizeof *s->a));
+	i = set_search(set, item);
+	if (set->cmp(item, set->a[i]) == 0) {
+		if (i < set->i) {
+			memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
 		}
 
-		s->i--;
+		set->i--;
 	}
 
-	assert(!set_contains(s, item));
+	assert(!set_contains(set, item));
 }
 
 void

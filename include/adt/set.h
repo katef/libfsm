@@ -18,10 +18,10 @@ struct set *
 set_create(int (*cmp)(const void *a, const void *b));
 
 void *
-set_add(struct set **set, void *item);
+set_add(struct set *set, void *item);
 
 void
-set_remove(struct set **set, void *item);
+set_remove(struct set *set, void *item);
 
 void
 set_free(struct set *set);

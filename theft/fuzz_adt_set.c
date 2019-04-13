@@ -19,8 +19,8 @@ struct model {
 
 static enum theft_trial_res prop_set_operations(struct theft *t, void *arg1);
 static enum theft_trial_res prop_set_equality(struct theft *t, void *arg1);
-static bool op_add(struct model *m, struct set_op *op, struct set **set);
-static bool op_remove(struct model *m, struct set_op *op, struct set **set);
+static bool op_add(struct model *m, struct set_op *op, struct set *set);
+static bool op_remove(struct model *m, struct set_op *op, struct set *set);
 static bool op_clear(struct model *m, struct set *set);
 static bool postcondition(struct model *m, struct set *set);
 
@@ -142,8 +142,8 @@ theft_trial_res prop_set_equality(struct theft *t, void *arg1)
 		assert(seq->values[i] != 0);
 		assert(permuted[i] != 0);
 
-		(void) set_add(&set_a, (void *) ((uintptr_t) seq->values[i])); /* XXX */
-		(void) set_add(&set_b, (void *) ((uintptr_t) permuted[i]));
+		(void) set_add(set_a, (void *) ((uintptr_t) seq->values[i])); /* XXX */
+		(void) set_add(set_b, (void *) ((uintptr_t) permuted[i]));
 	}
 
 	if (!set_equal(set_a, set_b)) {
@@ -176,13 +176,13 @@ get_pos(uintptr_t item, size_t *offset, uint64_t *bit)
 }
 
 static bool
-op_add(struct model *m, struct set_op *op, struct set **set)
+op_add(struct model *m, struct set_op *op, struct set *set)
 {
 	struct set *old_s;
 	size_t offset;
 	uint64_t bit;
 
-	old_s = *set;
+	old_s = set;
 
 	assert(op->u.add.item != 0);
 
@@ -202,13 +202,13 @@ op_add(struct model *m, struct set_op *op, struct set **set)
 }
 
 static bool
-op_remove(struct model *m, struct set_op *op, struct set **set)
+op_remove(struct model *m, struct set_op *op, struct set *set)
 {
 	struct set *old_s;
 	size_t offset;
 	uint64_t bit;
 
-	old_s = *set;
+	old_s = set;
 
 	assert(op->u.remove.item != 0);
 
@@ -341,9 +341,9 @@ prop_set_operations(struct theft *t, void *arg1)
 		op = &s->ops[i];
 
 		switch (op->t) {
-		case SET_OP_ADD:    r = op_add   (m, op, &set); break;
-		case SET_OP_REMOVE: r = op_remove(m, op, &set); break;
-		case SET_OP_CLEAR:  r = op_clear (m, set);      break;
+		case SET_OP_ADD:    r = op_add   (m, op, set); break;
+		case SET_OP_REMOVE: r = op_remove(m, op, set); break;
+		case SET_OP_CLEAR:  r = op_clear (m, set);     break;
 
 		default:
 			return THEFT_TRIAL_ERROR;

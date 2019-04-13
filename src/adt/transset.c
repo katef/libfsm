@@ -50,7 +50,7 @@ trans_set_free(struct trans_set *set)
 struct trans *
 trans_set_add(struct trans_set *set, struct trans *item)
 {
-	return set_add(&set->set, item);
+	return set_add(set->set, item);
 }
 
 struct trans *

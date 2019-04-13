@@ -62,6 +62,6 @@ tuple_set_contains(struct tuple_set *set, const struct fsm_walk2_tuple *item)
 struct fsm_walk2_tuple *
 tuple_set_add(struct tuple_set *set, const struct fsm_walk2_tuple *item)
 {
-	return set_add(&set->set, (void *)item);
+	return set_add(set->set, (void *)item);
 }
 
