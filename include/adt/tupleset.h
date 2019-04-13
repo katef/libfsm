@@ -22,7 +22,7 @@ void
 tuple_set_free(struct tuple_set *set);
 
 struct fsm_walk2_tuple *
-tuple_set_contains(struct tuple_set *set, const struct fsm_walk2_tuple *item);
+tuple_set_contains(const struct tuple_set *set, const struct fsm_walk2_tuple *item);
 
 struct fsm_walk2_tuple *
 tuple_set_add(struct tuple_set *set, const struct fsm_walk2_tuple *item);

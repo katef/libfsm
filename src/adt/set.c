@@ -137,7 +137,7 @@ set_add(struct set *set, void *item)
 }
 
 void
-set_remove(struct set *set, void *item)
+set_remove(struct set *set, const void *item)
 {
 	size_t i;
 
@@ -267,7 +267,7 @@ set_first(const struct set *set, struct set_iter *it)
 }
 
 void *
-set_firstafter(const struct set *set, struct set_iter *it, void *item)
+set_firstafter(const struct set *set, struct set_iter *it, const void *item)
 {
 	size_t i;
 	int r;
