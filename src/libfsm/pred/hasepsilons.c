@@ -18,19 +18,11 @@
 int
 fsm_hasepsilons(const struct fsm *fsm, const struct fsm_state *state)
 {
-	struct fsm_edge *e, s;
-
 	assert(fsm != NULL);
 	assert(state != NULL);
 
 	(void) fsm;
 
-	s.symbol = FSM_EDGE_EPSILON;
-	e = edge_set_contains(state->edges, &s);
-	if (e == NULL || state_set_empty(e->sl)) {
-		return 0;
-	}
-
-	return 1;
+	return !state_set_empty(state->epsilons);
 }
 

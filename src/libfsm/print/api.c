@@ -137,17 +137,20 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 			bm_clear(&a[i]);
 		}
 
+		for (st = state_set_first(s->epsilons, &jt); st != NULL; st = state_set_next(&jt)) {
+			assert(st != NULL);
+
+			to = indexof(fsm, st);
+
+			fprintf(f, "\tif (!fsm_addedge_epsilon(fsm, s[%u], s[%u])) { goto error; }\n",
+				from, to);
+		}
+
 		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			for (st = state_set_first(e->sl, &jt); st != NULL; st = state_set_next(&jt)) {
 				assert(st != NULL);
 
 				to = indexof(fsm, st);
-
-				if (e->symbol == FSM_EDGE_EPSILON) {
-					fprintf(f, "\tif (!fsm_addedge_epsilon(fsm, s[%u], s[%u])) { goto error; }\n",
-						from, to);
-					continue;
-				}
 
 				bm_set(&a[indexof(fsm, st)], e->symbol);
 			}

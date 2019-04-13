@@ -46,8 +46,14 @@ fsm_addstate(struct fsm *fsm)
 	}
 
 	new->end = 0;
+	new->epsilons = state_set_create();
 	new->edges = edge_set_create(fsm_state_cmpedges);
 	new->opaque = NULL;
+
+	if (new->epsilons == NULL || new->edges == NULL) {
+		/* XXX */
+		return NULL;
+	}
 
 	fsm_state_clear_tmp(new);
 
@@ -78,6 +84,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 	fsm_setend(fsm, state, 0);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
+		state_set_remove(s->epsilons, state);
 		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			state_set_remove(e->sl, state);
 		}
@@ -87,6 +94,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 		state_set_free(e->sl);
 		f_free(fsm, e);
 	}
+	state_set_free(state->epsilons);
 	edge_set_free(state->edges);
 
 	if (fsm->start == state) {

@@ -27,8 +27,12 @@ fsm_hasincoming(const struct fsm *fsm, const struct fsm_state *state)
 		struct fsm_edge *e;
 		struct edge_iter it;
 
+		if (state_set_contains(s->epsilons, state)) {
+			return 1;
+		}
+
 		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
-			if (state_set_contains(e->sl, state)) {
+			if (e->sl != NULL && state_set_contains(e->sl, state)) {
 				return 1;
 			}
 		}

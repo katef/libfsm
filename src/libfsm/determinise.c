@@ -307,10 +307,6 @@ listnonepsilonstates(const struct fsm *fsm, struct trans_set *trans, struct stat
 			struct fsm_state *st;
 			struct state_iter kt;
 
-			if (e->symbol > UCHAR_MAX) {
-				break;
-			}
-
 			for (st = state_set_first(e->sl, &kt); st != NULL; st = state_set_next(&kt)) {
 				struct trans *p, search;
 

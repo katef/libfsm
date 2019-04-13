@@ -89,6 +89,7 @@ free_contents(struct fsm *fsm)
 			f_free(fsm, e);
 		}
 
+		state_set_free(s->epsilons);
 		edge_set_free(s->edges);
 		f_free(fsm, s);
 	}

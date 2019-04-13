@@ -18,37 +18,6 @@
 
 #include "internal.h"
 
-static int
-fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type)
-{
-	struct fsm_edge *e, new;
-
-	assert(from != NULL);
-	assert(to != NULL);
-
-	new.symbol = type;
-	e = edge_set_contains(from->edges, &new);
-	if (e == NULL) {
-		e = malloc(sizeof *e);
-		if (e == NULL) {
-			return 0;
-		}
-
-		e->symbol = type;
-		e->sl = state_set_create();
-
-		if (!edge_set_add(from->edges, e)) {
-			return 0;
-		}
-	}
-
-	if (state_set_add(e->sl, to) == NULL) {
-		return 0;
-	}
-
-	return 1;
-}
-
 int
 fsm_addedge_epsilon(struct fsm *fsm,
 	struct fsm_state *from, struct fsm_state *to)
@@ -59,7 +28,11 @@ fsm_addedge_epsilon(struct fsm *fsm,
 
 	(void) fsm;
 
-	return fsm_addedge(from, to, FSM_EDGE_EPSILON);
+	if (!state_set_add(from->epsilons, to)) {
+		return 0;
+	}
+
+	return 1;
 }
 
 int
@@ -72,10 +45,8 @@ fsm_addedge_any(struct fsm *fsm,
 	assert(from != NULL);
 	assert(to != NULL);
 
-	(void) fsm;
-
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (!fsm_addedge(from, to, i)) {
+		if (!fsm_addedge_literal(fsm, from, to, (unsigned char) i)) {
 			return 0;
 		}
 	}
@@ -88,29 +59,36 @@ fsm_addedge_literal(struct fsm *fsm,
 	struct fsm_state *from, struct fsm_state *to,
 	char c)
 {
+	struct fsm_edge *e, new;
+
 	assert(fsm != NULL);
 	assert(from != NULL);
 	assert(to != NULL);
 
-	(void) fsm;
+	new.symbol = c;
+	e = edge_set_contains(from->edges, &new);
+	if (e == NULL) {
+		e = malloc(sizeof *e);
+		if (e == NULL) {
+			return 0;
+		}
 
-	return fsm_addedge(from, to, (unsigned char) c);
-}
+		e->symbol = c;
+		e->sl = state_set_create();
+		if (e->sl == NULL) {
+			return 0;
+		}
 
-struct fsm_edge *
-fsm_hasedge_epsilon(const struct fsm_state *s)
-{
-	struct fsm_edge *e, search;
-
-	assert(s != NULL);
-
-	search.symbol = FSM_EDGE_EPSILON;
-	e = edge_set_contains(s->edges, &search);
-	if (e == NULL || state_set_empty(e->sl)) {
-		return NULL;
+		if (!edge_set_add(from->edges, e)) {
+			return 0;
+		}
 	}
 
-	return e;
+	if (!state_set_add(e->sl, to)) {
+		return 0;
+	}
+
+	return 1;
 }
 
 struct fsm_edge *
@@ -128,3 +106,4 @@ fsm_hasedge_literal(const struct fsm_state *s, char c)
 
 	return e;
 }
+

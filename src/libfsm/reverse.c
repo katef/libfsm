@@ -116,31 +116,29 @@ fsm_reverse(struct fsm *fsm)
 
 			assert(to != NULL);
 
+			{
+				struct state_iter jt;
+
+				for (se = state_set_first(s->epsilons, &jt); se != NULL; se = state_set_next(&jt)) {
+					assert(se->tmp.equiv != NULL);
+
+					if (!fsm_addedge_epsilon(new, se->tmp.equiv, to)) {
+						state_set_free(endset);
+						fsm_free(new);
+						return 0;
+					}
+				}
+			}
 			for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct state_iter jt;
 
 				for (se = state_set_first(e->sl, &jt); se != NULL; se = state_set_next(&jt)) {
-					struct fsm_state *from;
+					assert(se->tmp.equiv != NULL);
 
-					assert(se != NULL);
-
-					from = se->tmp.equiv;
-
-					assert(from != NULL);
-
-					if (e->symbol > UCHAR_MAX) {
-						assert(e->symbol == FSM_EDGE_EPSILON);
-						if (!fsm_addedge_epsilon(new, from, to)) {
-							state_set_free(endset);
-							fsm_free(new);
-							return 0;
-						}
-					} else {
-						if (!fsm_addedge_literal(new, from, to, e->symbol)) {
-							state_set_free(endset);
-							fsm_free(new);
-							return 0;
-						}
+					if (!fsm_addedge_literal(new, se->tmp.equiv, to, e->symbol)) {
+						state_set_free(endset);
+						fsm_free(new);
+						return 0;
 					}
 				}
 			}

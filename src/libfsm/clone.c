@@ -51,44 +51,41 @@ fsm_clone(const struct fsm *fsm)
 	}
 
 	{
-		struct fsm_state *s, *to;
+		struct fsm_state *s;
 
 		for (s = fsm->sl; s != NULL; s = s->next) {
-			struct fsm_state *equiv;
 			struct fsm_edge *e;
 			struct edge_iter it;
 
-			equiv = s->tmp.equiv;
-			assert(equiv != NULL);
+			assert(s->tmp.equiv != NULL);
 
 			if (*fsm->tail == s) {
-				new->tail = &equiv;
+				new->tail = &s->tmp.equiv;
 			}
 
-			fsm_setend(new, equiv, fsm_isend(fsm, s));
-			equiv->opaque = s->opaque;
+			fsm_setend(new, s->tmp.equiv, fsm_isend(fsm, s));
+			s->tmp.equiv->opaque = s->opaque;
+
+			{
+				struct state_iter jt;
+				struct fsm_state *to;
+
+				for (to = state_set_first(s->epsilons, &jt); to != NULL; to = state_set_next(&jt)) {
+					if (!fsm_addedge_epsilon(new, s->tmp.equiv, to->tmp.equiv)) {
+						fsm_free(new);
+						return NULL;
+					}
+				}
+			}
 
 			for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct state_iter jt;
+				struct fsm_state *to;
 
 				for (to = state_set_first(e->sl, &jt); to != NULL; to = state_set_next(&jt)) {
-					struct fsm_state *newfrom;
-					struct fsm_state *newto;
-
-					newfrom = equiv;
-					newto   = to->tmp.equiv;
-
-					if (e->symbol > UCHAR_MAX) {
-						assert(e->symbol == FSM_EDGE_EPSILON);
-						if (!fsm_addedge_epsilon(new, newfrom, newto)) {
-							fsm_free(new);
-							return NULL;
-						}
-					} else {
-						if (!fsm_addedge_literal(new, newfrom, newto, e->symbol)) {
-							fsm_free(new);
-							return NULL;
-						}
+					if (!fsm_addedge_literal(new, s->tmp.equiv, to->tmp.equiv, e->symbol)) {
+						fsm_free(new);
+						return NULL;
 					}
 				}
 			}

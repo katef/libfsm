@@ -18,7 +18,7 @@
 int
 fsm_epsilonsonly(const struct fsm *fsm, const struct fsm_state *state)
 {
-	struct fsm_edge *e, s;
+	struct fsm_edge *e;
 	struct edge_iter it;
 
 	assert(fsm != NULL);
@@ -26,17 +26,11 @@ fsm_epsilonsonly(const struct fsm *fsm, const struct fsm_state *state)
 
 	(void) fsm;
 
-	s.symbol = FSM_EDGE_EPSILON;
-	e = edge_set_contains(state->edges, &s);
-	if (e == NULL || state_set_empty(e->sl)) {
+	if (state_set_empty(state->epsilons)) {
 		return 0;
 	}
 
 	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
-		if (e->symbol == FSM_EDGE_EPSILON) {
-			continue;
-		}
-
 		if (!state_set_empty(e->sl)) {
 			return 0;
 		}

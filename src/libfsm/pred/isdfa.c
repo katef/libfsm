@@ -19,7 +19,7 @@
 int
 fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state)
 {
-	struct fsm_edge *e, s;
+	struct fsm_edge *e;
 	struct edge_iter it;
 
 	assert(fsm != NULL);
@@ -34,9 +34,7 @@ fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state)
 	/*
 	 * DFA may not have epsilon edges.
 	 */
-	s.symbol = FSM_EDGE_EPSILON;
-	e = edge_set_contains(state->edges, &s);
-	if (e != NULL && !state_set_empty(e->sl)) {
+	if (!state_set_empty(state->epsilons)) {
 		return 0;
 	}
 
@@ -45,10 +43,6 @@ fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state)
 	 */
 	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		struct state_iter jt;
-
-		if (e->symbol > UCHAR_MAX) {
-			break;
-		}
 
 		if (state_set_empty(e->sl)) {
 			continue;

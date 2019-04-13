@@ -83,6 +83,27 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 
 			fprintf(f, "\t\t\t\"edges\": [\n");
 
+			{
+				struct fsm_state *st;
+				struct state_iter jt;
+
+				for (st = state_set_first(s->epsilons, &jt); st != NULL; st = state_set_next(&jt)) {
+					assert(st != NULL);
+
+					fprintf(f, "\t\t\t\t{ ");
+
+					fprintf(f, "\"char\": ");
+					fputs(" false", f);
+					fprintf(f, ", ");
+
+					fprintf(f, "\"to\": %u",
+						indexof(fsm, st));
+
+					/* XXX: should count .sl inside an edge */
+					fprintf(f, "}%s\n", !edge_set_empty(s->edges) ? "," : "");
+				}
+			}
+
 			for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct fsm_state *st;
 				struct state_iter jt;
@@ -93,17 +114,9 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 					fprintf(f, "\t\t\t\t{ ");
 
 					fprintf(f, "\"char\": ");
-					switch (e->symbol) {
-					case FSM_EDGE_EPSILON:
-						fputs(" false", f);
-						break;
-
-					default:
-						fputs(" \"", f);
-						json_escputc(f, fsm->opt, e->symbol);
-						putc('\"', f);
-						break;
-					}
+					fputs(" \"", f);
+					json_escputc(f, fsm->opt, e->symbol);
+					putc('\"', f);
 
 					fprintf(f, ", ");
 

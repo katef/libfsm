@@ -25,6 +25,11 @@ fsm_hasoutgoing(const struct fsm *fsm, const struct fsm_state *state)
 	assert(state != NULL);
 
 	(void) fsm;
+
+	if (!state_set_empty(state->epsilons)) {
+		return 1;
+	}
+
 	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		if (!state_set_empty(e->sl)) {
 			return 1;

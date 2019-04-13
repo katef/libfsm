@@ -56,10 +56,6 @@ contains(struct edge_set *edges, int o, struct fsm_state *state)
 
 	search.symbol = o;
 	for (e = edge_set_firstafter(edges, &it, &search); e != NULL; e = edge_set_next(&it)) {
-		if (e->symbol > UCHAR_MAX) {
-			return 0;
-		}
-
 		if (state_set_contains(e->sl, state)) {
 			return 1;
 		}
@@ -71,7 +67,7 @@ contains(struct edge_set *edges, int o, struct fsm_state *state)
 static void
 singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 {
-	struct fsm_edge *e, search;
+	struct fsm_edge *e;
 	struct edge_iter it;
 
 	assert(f != NULL);
@@ -90,6 +86,25 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 	}
 
 	if (!fsm->opt->consolidate_edges) {
+		{
+			struct fsm_state *st;
+			struct state_iter jt;
+
+			for (st = state_set_first(s->epsilons, &jt); st != NULL; st = state_set_next(&jt)) {
+				assert(st != NULL);
+
+				fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
+					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+					indexof(fsm, s),
+					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+					indexof(fsm, st));
+
+				fputs("&#x3B5;", f);
+
+				fprintf(f, "> ];\n");
+			}
+		}
+
 		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			struct fsm_state *st;
 			struct state_iter jt;
@@ -103,14 +118,7 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 					indexof(fsm, st));
 
-				if (e->symbol <= UCHAR_MAX) {
-					dot_escputc_html(f, fsm->opt, e->symbol);
-				} else if (e->symbol == FSM_EDGE_EPSILON) {
-					fputs("&#x3B5;", f);
-				} else {
-					assert(!"unrecognised special edge");
-					abort();
-				}
+				dot_escputc_html(f, fsm->opt, e->symbol);
 
 				fprintf(f, "> ];\n");
 			}
@@ -133,10 +141,6 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 		struct fsm_state *st;
 		struct state_iter jt;
 
-		if (e->symbol > UCHAR_MAX) {
-			break;
-		}
-
 		for (st = state_set_first(e->sl, &jt); st != NULL; st = state_set_next(&jt)) {
 			struct fsm_edge *ne;
 			struct edge_iter kt;
@@ -153,10 +157,6 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 
 			/* find all edges which go from this state to the same target state */
 			for (ne = edge_set_first(s->edges, &kt); ne != NULL; ne = edge_set_next(&kt)) {
-				if (ne->symbol > UCHAR_MAX) {
-					break;
-				}
-
 				if (state_set_contains(ne->sl, st)) {
 					bm_set(&bm, ne->symbol);
 				}
@@ -183,25 +183,18 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 	/*
 	 * Special edges are not consolidated above
 	 */
-	search.symbol = UCHAR_MAX;
-	for (e = edge_set_firstafter(s->edges, &it, &search); e != NULL; e = edge_set_next(&it)) {
+	{
 		struct fsm_state *st;
 		struct state_iter jt;
 
-		for (st = state_set_first(e->sl, &jt); st != NULL; st = state_set_next(&jt)) {
+		for (st = state_set_first(s->epsilons, &jt); st != NULL; st = state_set_next(&jt)) {
 			fprintf(f, "\t%sS%-2u -> %sS%-2u [ weight = 1, label = <",
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, s),
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				indexof(fsm, st));
 
-			assert(e->symbol > UCHAR_MAX);
-			if (e->symbol == FSM_EDGE_EPSILON) {
-				fputs("&#x3B5;", f);
-			} else {
-				assert(!"unrecognised special edge");
-				abort();
-			}
+			fputs("&#x3B5;", f);
 
 			fprintf(f, "> ];\n");
 		}

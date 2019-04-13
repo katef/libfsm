@@ -20,7 +20,7 @@
 #include "internal.h"
 
 /*
- * Return a list of each state in the epsilon closure of the given state.
+ * Return a set of each state in the epsilon closure of the given state.
  * These are all the states reachable through epsilon transitions (that is,
  * without consuming any input by traversing a labelled edge), including the
  * given state itself.
@@ -34,7 +34,6 @@ struct state_set *
 epsilon_closure(const struct fsm_state *state, struct state_set *closure)
 {
 	struct fsm_state *s;
-	struct fsm_edge *e;
 	struct state_iter it;
 
 	assert(state != NULL);
@@ -50,14 +49,11 @@ epsilon_closure(const struct fsm_state *state, struct state_set *closure)
 	}
 
 	/* Follow each epsilon transition */
-	e = fsm_hasedge_epsilon(state);
-	if (e != NULL) {
-		for (s = state_set_first(e->sl, &it); s != NULL; s = state_set_next(&it)) {
-			assert(s != NULL);
+	for (s = state_set_first(state->epsilons, &it); s != NULL; s = state_set_next(&it)) {
+		assert(s != NULL);
 
-			if (epsilon_closure(s, closure) == NULL) {
-				return NULL;
-			}
+		if (epsilon_closure(s, closure) == NULL) {
+			return NULL;
 		}
 	}
 
