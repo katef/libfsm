@@ -18,6 +18,23 @@
 
 #include "internal.h"
 
+static int
+fsm_state_cmpedges(const void *a, const void *b)
+{
+	const struct fsm_edge *ea, *eb;
+
+	assert(a != NULL);
+	assert(b != NULL);
+
+	ea = a;
+	eb = b;
+
+	/* N.B. various edge iterations rely on the ordering of edges to be in
+	 * ascending order.
+	 */
+	return (ea->symbol > eb->symbol) - (ea->symbol < eb->symbol);
+}
+
 int
 fsm_addedge_epsilon(struct fsm *fsm,
 	struct fsm_state *from, struct fsm_state *to)
@@ -27,6 +44,13 @@ fsm_addedge_epsilon(struct fsm *fsm,
 	assert(to != NULL);
 
 	(void) fsm;
+
+	if (from->epsilons == NULL) {
+		from->epsilons = state_set_create();
+		if (from->epsilons == NULL) {
+			return 0;
+		}
+	}
 
 	if (!state_set_add(from->epsilons, to)) {
 		return 0;
@@ -65,6 +89,13 @@ fsm_addedge_literal(struct fsm *fsm,
 	assert(from != NULL);
 	assert(to != NULL);
 
+	if (from->edges == NULL) {
+		from->edges = edge_set_create(fsm_state_cmpedges);
+		if (from->edges == NULL) {
+			return 0;
+		}
+	}
+
 	new.symbol = c;
 	e = edge_set_contains(from->edges, &new);
 	if (e == NULL) {
@@ -97,6 +128,10 @@ fsm_hasedge_literal(const struct fsm_state *s, char c)
 	struct fsm_edge *e, search;
 
 	assert(s != NULL);
+
+	if (s->edges == NULL) {
+		return NULL;
+	}
 
 	search.symbol = (unsigned char) c;
 	e = edge_set_contains(s->edges, &search);
