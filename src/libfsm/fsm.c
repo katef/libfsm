@@ -12,6 +12,7 @@
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
+#include <fsm/alloc.h>
 #include <fsm/fsm.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
@@ -24,50 +25,55 @@
 void
 f_free(const struct fsm *fsm, void *p)
 {
-	struct fsm_allocator a;
+	const struct fsm_allocator *a;
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
 	a = fsm->opt->allocator;
-	if (a.free != NULL) {
-		a.free(a.opaque, p);
-		return;
-	}
 
-	free(p);
+	if (a == NULL) {
+		free(p);
+	} else {
+		assert(a->free != NULL);
+		a->free(a->opaque, p);
+	}
 }
 
 void *
 f_malloc(const struct fsm *fsm, size_t sz)
 {
-	struct fsm_allocator a;
+	const struct fsm_allocator *a;
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
 	a = fsm->opt->allocator;
-	if (a.malloc != NULL) {
-		return (a.malloc(a.opaque, sz));
-	}
 
-	return malloc(sz);
+	if (a == NULL) {
+		return malloc(sz);
+	} else {
+		assert(a->malloc != NULL);
+		return a->malloc(a->opaque, sz);
+	}
 }
 
 void *
 f_realloc(const struct fsm*fsm, void *p, size_t sz)
 {
-	struct fsm_allocator a;
+	const struct fsm_allocator *a;
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
 	a = fsm->opt->allocator;
-	if (a.realloc != NULL) {
-		return a.realloc(a.opaque, p, sz);
-	}
 
-	return realloc(p, sz);
+	if (a == NULL) {
+		return realloc(p, sz);
+	} else {
+		assert(a->realloc != NULL);
+		return a->realloc(a->opaque, p, sz);
+	}
 }
 
 
