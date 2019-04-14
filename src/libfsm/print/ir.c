@@ -107,10 +107,6 @@ make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct f
 	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		struct fsm_state *s;
 
-		if (e->symbol > UCHAR_MAX) {
-			break;
-		}
-
 		if (state_set_empty(e->sl)) {
 			continue;
 		}
@@ -379,11 +375,7 @@ make_state(const struct fsm *fsm,
 
 	/* no edges */
 	{
-		struct fsm_edge *e;
-		struct edge_iter it;
-
-		e = edge_set_first(state->edges, &it);
-		if (!e || e->symbol > UCHAR_MAX) {
+		if (edge_set_empty(state->edges)) {
 			cs->strategy = IR_NONE;
 			return 0;
 		}

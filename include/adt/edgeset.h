@@ -45,6 +45,9 @@ edge_set_next(struct edge_iter *it);
 int
 edge_set_hasnext(struct edge_iter *it);
 
+int
+edge_set_empty(const struct edge_set *s);
+
 struct fsm_edge *
 edge_set_only(const struct edge_set *s);
 

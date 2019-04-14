@@ -21,41 +21,34 @@ struct state_set;
  * These octets may or may not spell out UTF-8 sequences,
  * depending on the context in which the FSM is used.
  *
- * Octets are implemented here as (unsigned char) values in C.
- * As an implementation detail, we extend this range from 0..UCHAR_MAX
- * to include "special" edge types after the last valid octet.
- *
- * Currently the only special edge type is the epsilon transition,
- * for Thompson NFA.
+ * Octets are stored as unsigned char for orderability
+ * independent of the signedness of char.
  */
+
+/*
+ * The highest value of an symbol, the maximum value in Sigma.
+ */
+#define FSM_SIGMA_MAX UCHAR_MAX
 
 /*
  * The number of non-special symbols in the alphabet.
  * This is the number of symbols with the value <= UCHAR_MAX.
  */
-#define FSM_SIGMA_COUNT (UCHAR_MAX + 1)
-
-enum fsm_edge_type {
-	FSM_EDGE_EPSILON = UCHAR_MAX + 1
-};
-
-/*
- * The highest value of an symbol, including special symbols.
- */
-#define FSM_EDGE_MAX FSM_EDGE_EPSILON
+#define FSM_SIGMA_COUNT (FSM_SIGMA_MAX + 1)
 
 #define FSM_ENDCOUNT_MAX ULONG_MAX
 
 struct fsm_edge {
 	struct state_set *sl;
-	enum fsm_edge_type symbol;
+	unsigned char symbol;
 };
 
 struct fsm_state {
 	unsigned int end:1;
 	unsigned int reachable:1;
 
-	struct edge_set *edges; /* containing `struct fsm_edge *` */
+	struct edge_set *edges;
+	struct state_set *epsilons;
 
 	void *opaque;
 
@@ -82,10 +75,7 @@ struct fsm {
 };
 
 struct fsm_edge *
-fsm_hasedge(const struct fsm_state *s, int c);
-
-struct fsm_edge *
-fsm_addedge(struct fsm_state *from, struct fsm_state *to, enum fsm_edge_type type);
+fsm_hasedge_literal(const struct fsm_state *s, char c);
 
 void
 fsm_carryopaque(struct fsm *fsm, const struct state_set *set,

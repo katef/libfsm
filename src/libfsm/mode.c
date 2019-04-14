@@ -35,10 +35,6 @@ fsm_findmode(const struct fsm_state *state, unsigned int *freq)
 	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		struct state_iter jt;
 
-		if (e->symbol > UCHAR_MAX) {
-			break;
-		}
-
 		for (s = state_set_first(e->sl, &jt); s != NULL; s = state_set_next(&jt)) {
 			struct edge_iter kt = it;
 			struct fsm_edge *c;

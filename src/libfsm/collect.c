@@ -43,6 +43,19 @@ mark_states(struct fsm *fsm)
 		if (!queue_pop(q, (void *)&s)) { break; }
 
 		/* enqueue all directly reachable and unmarked, and mark them */
+		{
+			struct state_iter state_iter;
+			struct fsm_state *es;
+			for (es = state_set_first(s->epsilons, &state_iter);
+			     es != NULL;
+			     es = state_set_next(&state_iter)) {
+				if (es->reachable) { continue; }
+				if (!queue_push(q, es)) {
+					goto cleanup;
+				}
+				es->reachable = 1;
+			}
+		}
 		for (e = edge_set_first(s->edges, &edge_iter);
 		     e != NULL;
 		     e = edge_set_next(&edge_iter)) {

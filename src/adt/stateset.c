@@ -19,7 +19,9 @@ state_set_create(void)
 void
 state_set_free(struct state_set *set)
 {
-	assert(set != NULL);
+	if (set == NULL) {
+		return;
+	}
 
 	set_free((struct set *) set);
 }
@@ -28,6 +30,7 @@ struct fsm_state *
 state_set_add(struct state_set *set, struct fsm_state *st)
 {
 	assert(set != NULL);
+	assert(st != NULL);
 
 	return set_add((struct set *) set, st);
 }
@@ -35,7 +38,11 @@ state_set_add(struct state_set *set, struct fsm_state *st)
 void
 state_set_remove(struct state_set *set, const struct fsm_state *st)
 {
-	assert(set != NULL);
+	assert(st != NULL);
+
+	if (set == NULL) {
+		return;
+	}
 
 	set_remove((struct set *) set, st);
 }
@@ -43,7 +50,9 @@ state_set_remove(struct state_set *set, const struct fsm_state *st)
 int
 state_set_empty(const struct state_set *set)
 {
-	assert(set != NULL);
+	if (set == NULL) {
+		return 1;
+	}
 
 	return set_empty((const struct set *) set);
 }
@@ -59,7 +68,11 @@ state_set_only(const struct state_set *set)
 struct fsm_state *
 state_set_contains(const struct state_set *set, const struct fsm_state *st)
 {
-	assert(set != NULL);
+	assert(st != NULL);
+
+	if (set == NULL) {
+		return NULL;
+	}
 
 	return set_contains((const struct set *) set, st);
 }
@@ -67,7 +80,9 @@ state_set_contains(const struct state_set *set, const struct fsm_state *st)
 size_t
 state_set_count(const struct state_set *set)
 {
-	assert(set != NULL);
+	if (set == NULL) {
+		return 0;
+	}
 
 	return set_count((const struct set *) set);
 }
@@ -75,7 +90,11 @@ state_set_count(const struct state_set *set)
 struct fsm_state *
 state_set_first(struct state_set *set, struct state_iter *it)
 {
-	assert(set != NULL);
+	assert(it != NULL);
+
+	if (set == NULL) {
+		return NULL;
+	}
 
 	return set_first((struct set *) set, &it->iter);
 }

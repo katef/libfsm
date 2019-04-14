@@ -28,13 +28,11 @@ fsm_iscomplete(const struct fsm *fsm, const struct fsm_state *state)
 
 	n = 0;
 
+	/* epsilon transitions have no effect on completeness */
+	(void) state->epsilons;
+
 	/* TODO: assert state is in fsm->sl */
 	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
-		/* epsilon transitions have no effect on completeness */
-		if (e->symbol > UCHAR_MAX) {
-			continue;
-		}
-
 		if (state_set_empty(e->sl)) {
 			continue;
 		}

@@ -19,6 +19,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+#include <fsm/walk.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
 
@@ -72,10 +73,6 @@ findany(const struct fsm_state *state)
 	}
 
 	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
-		if (e->symbol > UCHAR_MAX) {
-			return NULL;
-		}
-
 		if (state_set_count(e->sl) != 1) {
 			return NULL;
 		}
@@ -111,6 +108,17 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 		struct edge_iter it;
 
 		{
+			struct fsm_state *st;
+			struct state_iter jt;
+
+			for (st = state_set_first(s->epsilons, &jt); st != NULL; st = state_set_next(&jt)) {
+				assert(st != NULL);
+
+				fprintf(f, "%-2u -> %2u;\n", indexof(fsm, s), indexof(fsm, st));
+			}
+		}
+
+		{
 			const struct fsm_state *a;
 
 			a = findany(s);
@@ -129,25 +137,16 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 
 				fprintf(f, "%-2u -> %2u", indexof(fsm, s), indexof(fsm, st));
 
-				/* TODO: print " ?" if all edges are equal */
-
-				switch (e->symbol) {
-				case FSM_EDGE_EPSILON:
-					break;
-
-				default:
-					fputs(" \"", f);
-					fsm_escputc(f, fsm->opt, e->symbol);
-					putc('\"', f);
-					break;
-				}
+				fputs(" \"", f);
+				fsm_escputc(f, fsm->opt, e->symbol);
+				putc('\"', f);
 
 				fprintf(f, ";");
 
 				if (fsm->opt->comments) {
 					if (st == fsm->start) {
 						fprintf(f, " # start");
-					} else if (fsm->start != NULL) {
+					} else if (fsm->start != NULL && !fsm_has(fsm, fsm_hasepsilons)) {
 						char buf[50];
 						int n;
 

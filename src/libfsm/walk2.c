@@ -319,7 +319,7 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 		struct state_iter dia, dib;
 		const struct fsm_state *da, *db;
 
-		eb = qb ? fsm_hasedge(qb, ea->symbol) : NULL;
+		eb = qb ? fsm_hasedge_literal(qb, ea->symbol) : NULL;
 
 		/*
 		 * If eb == NULL we can only follow this edge if ONLYA
@@ -347,7 +347,7 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 				assert(dst != NULL);
 				assert(dst->comb != NULL);
 
-				if (!fsm_addedge(qc, dst->comb, ea->symbol)) {
+				if (!fsm_addedge_literal(data->new, qc, dst->comb, ea->symbol)) {
 					return 0;
 				}
 
@@ -386,7 +386,7 @@ only_b:
 		struct state_iter dib;
 		const struct fsm_state *db;
 
-		ea = qa ? fsm_hasedge(qa, eb->symbol) : NULL;
+		ea = qa ? fsm_hasedge_literal(qa, eb->symbol) : NULL;
 
 		/* if A has the edge, it's not an only B edge */
 		if (ea != NULL) {
@@ -407,7 +407,7 @@ only_b:
 				assert(dst != NULL);
 				assert(dst->comb != NULL);
 
-				if (!fsm_addedge(qc, dst->comb, eb->symbol)) {
+				if (!fsm_addedge_literal(data->new, qc, dst->comb, eb->symbol)) {
 					return 0;
 				}
 

@@ -31,10 +31,6 @@ state_hasnondeterminism(const struct fsm_state *state, struct bm *bm)
 	for (e = edge_set_first(state->edges, &jt); e != NULL; e = edge_set_next(&jt)) {
 		size_t n;
 
-		if (e->symbol > UCHAR_MAX) {
-			continue;
-		}
-
 		n = state_set_count(e->sl);
 
 		if (n == 0) {

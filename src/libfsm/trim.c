@@ -44,6 +44,22 @@ fsm_trim(struct fsm *fsm)
 		struct fsm_edge *e;
 		struct edge_iter it;
 
+		{
+			struct fsm_state *st;
+			struct state_iter jt;
+
+			for (st = state_set_first(p->state->epsilons, &jt); st != NULL; st = state_set_next(&jt)) {
+				/* not a list operation... */
+				if (dlist_contains(list, st)) {
+					continue;
+				}
+
+				if (!dlist_push(&list, st)) {
+					return -1;
+				}
+			}
+		}
+
 		for (e = edge_set_first(p->state->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			struct fsm_state *st;
 			struct state_iter jt;
@@ -81,6 +97,7 @@ fsm_trim(struct fsm *fsm)
 
 	dlist_free(list);
 
+#if 0
 	/*
 	 * Remove all states which have no reachable end state henceforth.
 	 * These are a trailing suffix which will never accept.
@@ -111,6 +128,7 @@ fsm_trim(struct fsm *fsm)
 			}
 		}
 	}
+#endif
 
 	return 1;
 }

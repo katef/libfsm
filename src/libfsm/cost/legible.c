@@ -23,9 +23,8 @@ isother(int c)
 }
 
 unsigned
-fsm_cost_legible(const struct fsm_state *from, const struct fsm_state *to, int c)
+fsm_cost_legible(const struct fsm_state *from, const struct fsm_state *to, char c)
 {
-	enum fsm_edge_type type;
 	size_t i;
 
 	/*
@@ -33,7 +32,7 @@ fsm_cost_legible(const struct fsm_state *from, const struct fsm_state *to, int c
 	 * sequence is seen as worth avoiding where possible.
  	 *
 	 * Note that although not explicitly encoded here, for the same cost
-	 * (and assuming a suitable character set), lower characater values
+	 * (and assuming a suitable character set), lower character values
 	 * have precedence over higher (e.g. 'a' is preferable to 'z')
 	 * because of the traversal order for edges when searching the graph.
 	 */
@@ -58,14 +57,8 @@ fsm_cost_legible(const struct fsm_state *from, const struct fsm_state *to, int c
 	(void) from;
 	(void) to;
 
-	type = c;
-
-	if (type == FSM_EDGE_EPSILON) {
-		return 0;
-	}
-
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i].is(type)) {
+		if (a[i].is(c)) {
 			return a[i].cost;
 		}
 	}

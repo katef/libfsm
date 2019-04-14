@@ -16,23 +16,6 @@
 
 #include "internal.h"
 
-static int
-fsm_state_cmpedges(const void *a, const void *b)
-{
-	const struct fsm_edge *ea, *eb;
-
-	assert(a != NULL);
-	assert(b != NULL);
-
-	ea = a;
-	eb = b;
-
-	/* N.B. various edge iterations rely on the ordering of edges to be in
-	 * ascending order.
-	 */
-	return (ea->symbol > eb->symbol) - (ea->symbol < eb->symbol);
-}
-
 struct fsm_state *
 fsm_addstate(struct fsm *fsm)
 {
@@ -46,8 +29,16 @@ fsm_addstate(struct fsm *fsm)
 	}
 
 	new->end = 0;
-	new->edges = edge_set_create(fsm_state_cmpedges);
 	new->opaque = NULL;
+
+	/*
+	 * Sets for epsilon and labelled transitions are kept NULL
+	 * until populated; this suits the most nodes in the bodies of
+	 * typical FSM that do not have epsilons, and (less often)
+	 * nodes that have no edges.
+	 */
+	new->epsilons = NULL;
+	new->edges    = NULL;
 
 	fsm_state_clear_tmp(new);
 
@@ -78,6 +69,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 	fsm_setend(fsm, state, 0);
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
+		state_set_remove(s->epsilons, state);
 		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			state_set_remove(e->sl, state);
 		}
@@ -87,6 +79,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 		state_set_free(e->sl);
 		f_free(fsm, e);
 	}
+	state_set_free(state->epsilons);
 	edge_set_free(state->edges);
 
 	if (fsm->start == state) {

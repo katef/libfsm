@@ -10,7 +10,7 @@
 #include <adt/path.h>
 
 struct path *
-path_push(struct path **head, struct fsm_state *state, int type)
+path_push(struct path **head, struct fsm_state *state, char c)
 {
 	struct path *new;
 
@@ -23,7 +23,7 @@ path_push(struct path **head, struct fsm_state *state, int type)
 	}
 
 	new->state = state;
-	new->type  = type;
+	new->c     = c;
 
 	new->next  = *head;
 	*head      = new;

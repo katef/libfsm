@@ -307,10 +307,6 @@ listnonepsilonstates(const struct fsm *fsm, struct trans_set *trans, struct stat
 			struct fsm_state *st;
 			struct state_iter kt;
 
-			if (e->symbol > UCHAR_MAX) {
-				break;
-			}
-
 			for (st = state_set_first(e->sl, &kt); st != NULL; st = state_set_next(&kt)) {
 				struct trans *p, search;
 
@@ -358,7 +354,7 @@ allstatesreachableby(struct state_set *set, char c, struct state_set *sl)
 		struct fsm_state *es;
 		struct fsm_edge *to;
 
-		if ((to = fsm_hasedge(s, (unsigned char) c)) != NULL) {
+		if ((to = fsm_hasedge_literal(s, c)) != NULL) {
 			struct state_iter jt;
 
 			for (es = state_set_first(to->sl, &jt); es != NULL; es = state_set_next(&jt)) {
@@ -524,7 +520,6 @@ determinise(struct fsm *nfa,
 
 		for (t = trans_set_first(trans, &jt); t != NULL; t = trans_set_next(&jt)) {
 			struct fsm_state *new;
-			struct fsm_edge *e;
 			struct state_set *reachable;
 
 			assert(t->state != NULL);
@@ -551,8 +546,7 @@ determinise(struct fsm *nfa,
 				goto error;
 			}
 
-			e = fsm_addedge_literal(dfa, curr->dfastate, new, t->c);
-			if (e == NULL) {
+			if (!fsm_addedge_literal(dfa, curr->dfastate, new, t->c)) {
 				clear_trans(dfa, trans);
 				goto error;
 			}
