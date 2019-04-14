@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include <adt/alloc.h>
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
@@ -37,12 +38,12 @@ free_contents(struct fsm *fsm)
 
 		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			state_set_free(e->sl);
-			f_free(fsm, e);
+			f_free(fsm->opt->allocator, e);
 		}
 
 		state_set_free(s->epsilons);
 		edge_set_free(s->edges);
-		f_free(fsm, s);
+		f_free(fsm->opt->allocator, s);
 	}
 }
 
@@ -58,7 +59,7 @@ fsm_new(const struct fsm_options *opt)
 
 	f.opt = opt;
 
-	new = f_malloc(&f, sizeof *new);
+	new = f_malloc(f.opt->allocator, sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -81,7 +82,7 @@ fsm_free(struct fsm *fsm)
 
 	free_contents(fsm);
 
-	f_free(fsm, fsm);
+	f_free(fsm->opt->allocator, fsm);
 }
 
 const struct fsm_options *
@@ -114,7 +115,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	dst->start    = src->start;
 	dst->endcount = src->endcount;
 
-	f_free(src, src);
+	f_free(src->opt->allocator, src);
 }
 
 void

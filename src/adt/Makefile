@@ -1,5 +1,6 @@
 .include "../../share/mk/top.mk"
 
+SRC += src/adt/alloc.c
 SRC += src/adt/bitmap.c
 SRC += src/adt/dlist.c
 SRC += src/adt/priq.c

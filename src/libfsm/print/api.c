@@ -14,6 +14,7 @@
 
 #include <print/esc.h>
 
+#include <adt/alloc.h>
 #include <adt/set.h>
 #include <adt/bitmap.h>
 #include <adt/stateset.h>
@@ -117,7 +118,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 
-	a = f_malloc(fsm, n * sizeof *a);
+	a = f_malloc(fsm->opt->allocator, n * sizeof *a);
 	if (a == NULL) {
 		/* XXX */
 		return;
@@ -198,7 +199,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 		}
 	}
 
-	f_free(fsm, a);
+	f_free(fsm->opt->allocator, a);
 
 	fprintf(f, "\n");
 
