@@ -387,6 +387,146 @@ carryend(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 	}
 }
 
+static int
+cmp_single_state(const void *a, const void *b)
+{
+	const struct fsm_state *ea = a, *eb = b;
+	return (ea > eb) - (ea < eb);
+}
+
+static unsigned long
+hash_single_state(const void *a)
+{
+	const struct fsm_state *st = a;
+	return hashrec(st, sizeof *st);
+}
+
+/* builds transitions from current dfa state to all new dfa states */
+static int
+buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *mappings, struct mapping *curr)
+{
+	struct fsm_state *s;
+	struct state_iter it;
+	int sym, sym_min, sym_max;
+	int ret = 0;
+
+	struct state_array outedges[FSM_SIGMA_COUNT];
+	struct hashset *outsets[FSM_SIGMA_COUNT];
+
+	assert(fsm != NULL);
+	assert(dfa != NULL);
+	assert(curr != NULL);
+	assert(curr->closure != NULL);
+
+	sym_min = FSM_SIGMA_COUNT;
+	sym_max = -1;
+
+	memset(outedges, 0, sizeof outedges);
+	memset(outsets, 0, sizeof outsets);
+
+	for (s = state_set_first(curr->closure, &it); s != NULL; s = state_set_next(&it)) {
+		struct fsm_edge *e;
+		struct edge_iter jt;
+
+		for (e = edge_set_first(s->edges, &jt); e != NULL; e = edge_set_next(&jt)) {
+			sym = e->symbol;
+
+			assert(sym >= 0);
+			assert(sym < FSM_SIGMA_COUNT);
+
+			if (sym < sym_min) { sym_min = sym; }
+			if (sym > sym_max) { sym_max = sym; }
+
+			/* first edge, we just copy the states */
+			if (outedges[sym].states == NULL) {
+				if (!state_array_copy_set(&outedges[sym], e->sl)) {
+					goto finish;
+				}
+			} else {
+				struct fsm_state *st;
+				struct state_iter kt;
+
+				/* wait for a second edge to make a hash set */
+				if (outsets[sym] == NULL) {
+					size_t i;
+
+					outsets[sym] = hashset_create(hash_single_state, cmp_single_state);
+					if (outsets[sym] == NULL) {
+						goto finish;
+					}
+
+					assert(outedges[sym].states != NULL);
+					assert(outedges[sym].len > 0);
+
+					/* add states from first edge */
+					for (i=0; i < outedges[sym].len; i++) {
+						if (!hashset_add(outsets[sym], outedges[sym].states[i])) {
+							goto finish;
+						}
+					}
+				}
+
+				/* iterate over states, add to state list if they're not already in the set */
+				for (st = state_set_first(e->sl, &kt); st != NULL; st = state_set_next(&kt)) {
+					if (!hashset_contains(outsets[sym], st)) {
+						if (!state_array_add(&outedges[sym], st)) {
+							goto finish;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (sym_min < 0 || sym_max >= FSM_SIGMA_COUNT) {
+		goto finish;
+	}
+
+	for (sym = sym_min; sym <= sym_max; sym++) {
+		struct state_set *reachable;
+		struct fsm_state *new;
+
+		if (outedges[sym].len == 0) {
+			continue;
+		}
+
+		reachable = state_set_create_from_array(outedges[sym].states, outedges[sym].len);
+		if (reachable == NULL) {
+			goto finish;
+		}
+
+		/* reachable now owns the outedge[sym].states array, so reset to
+		 * zero to avoid a free() in finish */
+		memset(&outedges[sym], 0, sizeof outedges[sym]);
+
+		new = set_closure(mappings, dfa, reachable);
+		state_set_free(reachable);
+		if (new == NULL) {
+			goto finish;
+		}
+
+		if (!fsm_addedge_literal(dfa, curr->dfastate, new, sym)) {
+			goto finish;
+		}
+	}
+
+	ret = 1;
+
+finish:
+	for (sym = 0; sym < FSM_SIGMA_COUNT; sym++) {
+		if (outsets[sym] != NULL) {
+			hashset_free(outsets[sym]);
+		}
+
+		if (outedges[sym].states != NULL) {
+			free(outedges[sym].states);
+		}
+	}
+
+	return ret;
+}
+
+
 /*
  * Convert an NFA to a DFA. This is the guts of conversion; it is an
  * implementation of the well-known multiple-states method. This produces a DFA
@@ -502,57 +642,9 @@ determinise(struct fsm *nfa,
 	 */
 	sv = sv_init;
 	for (curr = mapping_set_first(mappings, &it); (curr = nextnotdone(mappings, &sv)) != NULL; curr->done = 1) {
-		struct trans_iter jt;
-		struct trans *t;
-
-		/*
-		 * Loop over every unique non-epsilon transition out of curr's epsilon
-		 * closure.
-		 *
-		 * This is a set of labels. Since curr->closure is already a closure
-		 * (computed on insertion to mappings), these labels directly reach the
-		 * next states in the NFA.
-		 */
-		/* TODO: document that nes contains only entries with labels set */
-		if (!listnonepsilonstates(dfa, trans, curr->closure)) {
+		if (!buildtransitions(nfa, dfa, mappings, curr)) {
 			goto error;
 		}
-
-		for (t = trans_set_first(trans, &jt); t != NULL; t = trans_set_next(&jt)) {
-			struct fsm_state *new;
-			struct state_set *reachable;
-
-			assert(t->state != NULL);
-
-			reachable = state_set_create();
-			if (reachable == NULL) {
-				goto error;
-			}
-
-			/*
-			 * Find the closure of the set of all NFA states which are reachable
-			 * through this label, starting from the set of states forming curr's
-			 * closure.
-			 */
-			if (!allstatesreachableby(curr->closure, t->c, reachable)) {
-				state_set_free(reachable);
-				goto error;
-			}
-
-			new = set_closure(mappings, dfa, reachable);
-			state_set_free(reachable);
-			if (new == NULL) {
-				clear_trans(dfa, trans);
-				goto error;
-			}
-
-			if (!fsm_addedge_literal(dfa, curr->dfastate, new, t->c)) {
-				clear_trans(dfa, trans);
-				goto error;
-			}
-		}
-
-		clear_trans(dfa, trans);
 
 		/*
 		 * The current DFA state is an end state if any of its associated NFA
