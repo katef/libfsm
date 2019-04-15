@@ -5,6 +5,9 @@
 #include <string.h>
 #include <assert.h>
 
+#include <adt/set.h>
+#include <adt/stateset.h>
+
 void
 state_array_clear(struct state_array *arr)
 {
@@ -59,6 +62,38 @@ state_array_copy(struct state_array *dst, const struct state_array *src)
 
 	dst->len = dst->cap = src->len;
 	memcpy(dst->states, src->states, src->len * sizeof src->states[0]);
+
+	return dst;
+}
+
+struct state_array *
+state_array_copy_set(struct state_array *dst, const struct state_set *src)
+{
+	const struct fsm_state **states;
+	size_t n;
+
+	n = state_set_count(src);
+
+	if (dst->cap < n) {
+		struct fsm_state **arr;
+
+		arr = realloc(dst->states, n * sizeof arr[0]);
+		if (arr == NULL) {
+			return NULL;
+		}
+
+		dst->states = arr;
+		dst->cap = n;
+	}
+
+	assert(dst->cap >= n);
+
+	if (n > 0) {
+		states = state_set_array(src);
+		memcpy(dst->states, states, n * sizeof states[0]);
+	}
+
+	dst->len = n;
 
 	return dst;
 }

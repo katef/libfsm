@@ -105,5 +105,8 @@ state_array_add(struct state_array *arr, struct fsm_state *st);
 struct state_array *
 state_array_copy(struct state_array *dst, const struct state_array *src);
 
+struct state_array *
+state_array_copy_set(struct state_array *dst, const struct state_set *src);
+
 #endif
 
