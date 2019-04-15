@@ -86,6 +86,7 @@ sweep_states(struct fsm *fsm)
 	struct fsm_state *prev = NULL;
 	struct fsm_state *s = fsm->sl;
 	struct fsm_state *next;
+	struct fsm_state **new_tail = &fsm->sl;
 	int swept = 0;
 
 	/* This doesn't use fsm_removestate because it would be modifying the
@@ -106,15 +107,17 @@ sweep_states(struct fsm *fsm)
 
 			/* unlink */
 			if (prev != NULL) { prev->next = next; }
-			if (s == *fsm->tail) { *fsm->tail = prev; }
 			edge_set_free(s->edges);
 			free(s);
 			swept++;
 		} else {
+			new_tail = &s->next;
 			prev = s;
 		}
 		s = next;
 	}
+
+	fsm->tail = new_tail;
 	return swept;
 }
 
