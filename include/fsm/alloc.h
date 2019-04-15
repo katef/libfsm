@@ -9,6 +9,7 @@
 
 struct fsm_alloc {
 	void (*free)(void *opaque, void *p);
+	void *(*calloc)(void *opaque, size_t n, size_t sz);
 	void *(*malloc)(void *opaque, size_t sz);
 	void *(*realloc)(void *opaque, void *p, size_t sz);
 	void *opaque;
