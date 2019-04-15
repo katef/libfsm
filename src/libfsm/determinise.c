@@ -315,7 +315,15 @@ hash_single_state(const void *a)
 	return hashrec(st, sizeof *st);
 }
 
-/* builds transitions from current dfa state to all new dfa states */
+/* builds transitions from current dfa state to new dfa states
+ *
+ * Makes a single pass through each of the nfa states that this dfa state
+ * corresponds to and constructs an edge set for each symbol out of the nfa
+ * states.
+ *
+ * It does this in one pass by maintaining an array of destination states where
+ * the index of the array is the transition symbol.
+ */
 static int
 buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *mappings, struct mapping *curr)
 {
