@@ -95,14 +95,14 @@ epsilon_closure(const struct fsm_state *state, struct state_set *closure);
  * free function to free memory and perform any custom memory tracking or handling
  */
 void
-f_free(const struct fsm_allocator *a, void *p);
+f_free(const struct fsm_alloc *a, void *p);
 
 /*
  * Internal malloc function that invokes malloc(3) by default, or a user-provided
  * malloc function to allocate memory and perform any custom memory tracking or handling
  */
 void *
-f_malloc(const struct fsm_allocator *a, size_t sz);
+f_malloc(const struct fsm_alloc *a, size_t sz);
 
 /*
  * Internal realloc function that invokes realloc(3) by default, or a user-provided
@@ -110,7 +110,7 @@ f_malloc(const struct fsm_allocator *a, size_t sz);
  * any custom memory tracking or handling
  */
 void *
-f_realloc(const struct fsm_allocator *a, void *p, size_t sz);
+f_realloc(const struct fsm_alloc *a, void *p, size_t sz);
 
 #endif
 

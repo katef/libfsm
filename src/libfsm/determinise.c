@@ -67,7 +67,7 @@ clear_mappings(const struct fsm *fsm, struct mapping_set *mappings)
 
 	for (m = mapping_set_first(mappings, &it); m != NULL; m = mapping_set_next(&it)) {
 		state_set_free(m->closure);
-		f_free(fsm->opt->allocator, m);
+		f_free(fsm->opt->alloc, m);
 	}
 
 	mapping_set_clear(mappings);
@@ -117,7 +117,7 @@ addtomappings(struct mapping_set *mappings, struct fsm *dfa, struct state_set *c
 	}
 
 	/* else add new DFA state */
-	m = f_malloc(dfa->opt->allocator, sizeof *m);
+	m = f_malloc(dfa->opt->alloc, sizeof *m);
 	if (m == NULL) {
 		return NULL;
 	}
@@ -126,14 +126,14 @@ addtomappings(struct mapping_set *mappings, struct fsm *dfa, struct state_set *c
 	m->closure  = closure;
 	m->dfastate = fsm_addstate(dfa);
 	if (m->dfastate == NULL) {
-		f_free(dfa->opt->allocator, m);
+		f_free(dfa->opt->alloc, m);
 		return NULL;
 	}
 
 	m->done = 0;
 
 	if (!mapping_set_add(mappings, m)) {
-		f_free(dfa->opt->allocator, m);
+		f_free(dfa->opt->alloc, m);
 		return NULL;
 	}
 
@@ -569,14 +569,14 @@ fsm_determinise_cache(struct fsm *fsm,
 	assert(dcache != NULL);
 
 	if (*dcache == NULL) {
-		*dcache = f_malloc(fsm->opt->allocator, sizeof **dcache);
+		*dcache = f_malloc(fsm->opt->alloc, sizeof **dcache);
 		if (*dcache == NULL) {
 			return 0;
 		}
 
 		(*dcache)->mappings = mapping_set_create(hash_mapping, cmp_mapping);
 		if ((*dcache)->mappings == NULL) {
-			f_free(fsm->opt->allocator, *dcache);
+			f_free(fsm->opt->alloc, *dcache);
 			return 0;
 		}
 	}
@@ -606,7 +606,7 @@ fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache)
 		mapping_set_free(dcache->mappings);
 	}
 
-	f_free(fsm->opt->allocator, dcache);
+	f_free(fsm->opt->alloc, dcache);
 }
 
 int

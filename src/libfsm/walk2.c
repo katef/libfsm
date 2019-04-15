@@ -113,7 +113,7 @@ fsm_walk2_data_free(const struct fsm *fsm, struct fsm_walk2_data *data)
 
 	for (p = data->head; p != NULL; p = next) {
 		next = p->next;
-		f_free(fsm->opt->allocator, p);
+		f_free(fsm->opt->alloc, p);
 	}
 
 	if (data->new) {
@@ -144,7 +144,7 @@ alloc_walk2_tuple(struct fsm_walk2_data *data)
 
 new_pool:
 
-	pool = f_malloc(data->new->opt->allocator, sizeof *pool);
+	pool = f_malloc(data->new->opt->alloc, sizeof *pool);
 	if (pool == NULL) {
 		return NULL;
 	}

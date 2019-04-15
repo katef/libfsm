@@ -75,7 +75,7 @@ struct fsm_options {
 		struct fsm *, struct fsm_state *);
 
 	/* custom allocation functions */
-	const struct fsm_allocator *allocator;
+	const struct fsm_alloc *alloc;
 };
 
 #endif

@@ -12,7 +12,7 @@
 #include <fsm/alloc.h>
 
 void
-f_free(const struct fsm_allocator *a, void *p)
+f_free(const struct fsm_alloc *a, void *p)
 {
 	if (a == NULL) {
 		free(p);
@@ -23,7 +23,7 @@ f_free(const struct fsm_allocator *a, void *p)
 }
 
 void *
-f_malloc(const struct fsm_allocator *a, size_t sz)
+f_malloc(const struct fsm_alloc *a, size_t sz)
 {
 	if (a == NULL) {
 		return malloc(sz);
@@ -34,7 +34,7 @@ f_malloc(const struct fsm_allocator *a, size_t sz)
 }
 
 void *
-f_realloc(const struct fsm_allocator *a, void *p, size_t sz)
+f_realloc(const struct fsm_alloc *a, void *p, size_t sz)
 {
 	if (a == NULL) {
 		return realloc(p, sz);

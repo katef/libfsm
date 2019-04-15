@@ -7,7 +7,7 @@
 #ifndef ALLOC_H
 #define ALLOC_H
 
-struct fsm_allocator;
+struct fsm_alloc;
 
 /*
  * Internal allocation functions which invoke malloc(3), free(3) etc by default,
@@ -16,13 +16,13 @@ struct fsm_allocator;
  */
 
 void
-f_free(const struct fsm_allocator *a, void *p);
+f_free(const struct fsm_alloc *a, void *p);
 
 void *
-f_malloc(const struct fsm_allocator *a, size_t sz);
+f_malloc(const struct fsm_alloc *a, size_t sz);
 
 void *
-f_realloc(const struct fsm_allocator *a, void *p, size_t sz);
+f_realloc(const struct fsm_alloc *a, void *p, size_t sz);
 
 #endif
 
