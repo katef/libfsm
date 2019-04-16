@@ -311,7 +311,7 @@ buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *map
 	assert(curr != NULL);
 	assert(curr->closure != NULL);
 
-	sym_min = FSM_SIGMA_COUNT;
+	sym_min = UCHAR_MAX+1;
 	sym_max = -1;
 
 	memset(outedges, 0, sizeof outedges);
@@ -325,7 +325,7 @@ buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *map
 			sym = e->symbol;
 
 			assert(sym >= 0);
-			assert(sym < FSM_SIGMA_COUNT);
+			assert(sym <= UCHAR_MAX);
 
 			if (sym < sym_min) { sym_min = sym; }
 			if (sym > sym_max) { sym_max = sym; }
@@ -371,7 +371,8 @@ buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *map
 		}
 	}
 
-	if (sym_min < 0 || sym_max >= FSM_SIGMA_COUNT) {
+	/* double check that the edge symbols are still within 0..UCHAR_MAX */
+	if (sym_min < 0 || sym_max > UCHAR_MAX) {
 		goto finish;
 	}
 
@@ -406,7 +407,7 @@ buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *map
 	ret = 1;
 
 finish:
-	for (sym = 0; sym < FSM_SIGMA_COUNT; sym++) {
+	for (sym = 0; sym < UCHAR_MAX+1; sym++) {
 		if (outsets[sym] != NULL) {
 			hashset_free(outsets[sym]);
 		}
