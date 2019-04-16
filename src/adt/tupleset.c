@@ -11,11 +11,12 @@
 #include <adt/tupleset.h>
 
 struct tuple_set *
-tuple_set_create(int (*cmp)(const void *, const void *))
+tuple_set_create(const struct fsm_alloc *a,
+	int (*cmp)(const void *, const void *))
 {
 	assert(cmp != NULL);
 
-	return (struct tuple_set *) set_create(cmp);
+	return (struct tuple_set *) set_create(a, cmp);
 }
 
 void

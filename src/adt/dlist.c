@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <adt/alloc.h>
 #include <adt/set.h>
 #include <adt/dlist.h>
 
@@ -17,11 +18,12 @@
  */
 
 struct dlist *
-dlist_push(struct dlist **list, struct fsm_state *state)
+dlist_push(const struct fsm_alloc *a,
+	struct dlist **list, struct fsm_state *state)
 {
 	struct dlist *new;
 
-	new = malloc(sizeof *new);
+	new = f_malloc(a, sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -66,7 +68,7 @@ dlist_contains(const struct dlist *list, const struct fsm_state *state)
 }
 
 void
-dlist_free(struct dlist *list)
+dlist_free(const struct fsm_alloc *a, struct dlist *list)
 {
 	struct dlist *p;
 	struct dlist *next;
@@ -74,7 +76,7 @@ dlist_free(struct dlist *list)
 	for (p = list; p != NULL; p = next) {
 		next = p->next;
 
-		free(p);
+		f_free(a, p);
 	}
 }
 

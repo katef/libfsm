@@ -8,6 +8,7 @@
 #define ADT_EDGESET_H
 
 struct set;
+struct fsm_alloc;
 struct fsm_edge;
 struct edge_set;
 
@@ -16,7 +17,8 @@ struct edge_iter {
 };
 
 struct edge_set *
-edge_set_create(int (*cmp)(const void *a, const void *b));
+edge_set_create(const struct fsm_alloc *a,
+	int (*cmp)(const void *a, const void *b));
 
 void
 edge_set_free(struct edge_set *set);

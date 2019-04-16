@@ -68,7 +68,7 @@ fsm_hasnondeterminism(const struct fsm *fsm, const struct fsm_state *state)
 		return state_hasnondeterminism(state, NULL);
 	}
 
-	ec = state_set_create();
+	ec = state_set_create(fsm->opt->alloc);
 	if (ec == NULL) {
 		return -1;
 	}

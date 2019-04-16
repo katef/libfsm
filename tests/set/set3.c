@@ -16,7 +16,7 @@ int cmp_int(const void *a_, const void *b_) {
 }
 
 int main(void) {
-	struct set *s = set_create(cmp_int);
+	struct set *s = set_create(NULL, cmp_int);
 	struct set_iter iter;
 	int *p;
 	int a[3] = {1, 2, 3};

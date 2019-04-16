@@ -11,9 +11,10 @@
 #include <adt/edgeset.h>
 
 struct edge_set *
-edge_set_create(int (*cmp)(const void *a, const void *b))
+edge_set_create(const struct fsm_alloc *a,
+	int (*cmp)(const void *a, const void *b))
 {
-	return (struct edge_set *) set_create(cmp);
+	return (struct edge_set *) set_create(a, cmp);
 }
 
 void

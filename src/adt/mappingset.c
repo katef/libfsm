@@ -11,13 +11,14 @@
 #include <adt/mappingset.h>
 
 struct mapping_set *
-mapping_set_create(unsigned long (*hash)(const void *a),
+mapping_set_create(const struct fsm_alloc *a,
+	unsigned long (*hash)(const void *a),
 	int (*cmp)(const void *a, const void *b))
 {
 	assert(hash != NULL);
 	assert(cmp != NULL);
 
-	return (struct mapping_set *) hashset_create(hash, cmp);
+	return (struct mapping_set *) hashset_create(a, hash, cmp);
 }
 
 void

@@ -30,7 +30,7 @@ int *next_int(void) {
 }
 
 int main(void) {
-	struct hashset *s = hashset_create(hash_int,cmp_int);
+	struct hashset *s = hashset_create(NULL, hash_int,cmp_int);
 	struct hashset_iter iter;
 	size_t i;
 	int *p;

@@ -9,6 +9,8 @@
 
 #include <stdlib.h>
 
+struct fsm_alloc;
+
 /* Basic fixed-capacity FIFO queue. */
 struct queue;
 
@@ -16,7 +18,7 @@ struct queue;
  * Note that the queue does not resize, all allocation is
  * done once, upfront. */
 struct queue *
-queue_new(size_t max_capacity);
+queue_new(const struct fsm_alloc *a, size_t max_capacity);
 
 /* Push a pointer into the queue. Returns 1 on success,
  * or 0 if full. Note that P can be NULL. */

@@ -490,7 +490,7 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 		goto error;
 	}
 
-	data.states = tuple_set_create(cmp_walk2_tuple);
+	data.states = tuple_set_create(data.new->opt->alloc, cmp_walk2_tuple);
 	if (data.states == NULL) {
 		goto error;
 	}

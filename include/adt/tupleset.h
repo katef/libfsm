@@ -8,6 +8,7 @@
 #define ADT_TUPLESET_H
 
 struct set;
+struct fsm_alloc;
 struct fsm_state;
 struct fsm_walk2_tuple;
 
@@ -16,7 +17,8 @@ struct tuple_iter {
 };
 
 struct tuple_set *
-tuple_set_create(int (*cmp)(const void *, const void *));
+tuple_set_create(const struct fsm_alloc *a,
+	int (*cmp)(const void *, const void *));
 
 void
 tuple_set_free(struct tuple_set *set);

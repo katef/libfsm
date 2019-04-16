@@ -37,7 +37,7 @@ int *next_int(int reset) {
 }
 
 int main(void) {
-	struct hashset *s = hashset_create(hash_int,cmp_int);
+	struct hashset *s = hashset_create(NULL, hash_int,cmp_int);
 	size_t i;
 	for (i = 0; i < 5000; i++) {
 		assert(hashset_add(s, next_int(0)));

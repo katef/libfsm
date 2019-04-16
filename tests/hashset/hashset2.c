@@ -22,7 +22,7 @@ unsigned long hash_int(const void *a_)
 }
 
 int main(void) {
-	struct hashset *s = hashset_create(hash_int,cmp_int);
+	struct hashset *s = hashset_create(NULL, hash_int,cmp_int);
 	int a = 1;
 	assert(hashset_add(s, &a));
 	assert(hashset_add(s, &a));

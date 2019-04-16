@@ -24,7 +24,7 @@ int *next_int(void) {
 }
 
 int main(void) {
-	struct set *s = set_create(cmp_int);
+	struct set *s = set_create(NULL, cmp_int);
 	struct set_iter iter;
 	size_t i;
 	int *p;
