@@ -13,6 +13,7 @@
 #include <adt/hashset.h>
 #include <adt/mappingset.h>
 #include <adt/stateset.h>
+#include <adt/statearray.h>
 #include <adt/edgeset.h>
 
 #include <fsm/fsm.h>

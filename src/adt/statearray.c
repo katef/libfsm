@@ -1,4 +1,4 @@
-#include "internal.h"
+#include <adt/statearray.h>
 
 #include <stddef.h>
 #include <stdlib.h>

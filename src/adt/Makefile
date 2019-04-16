@@ -12,6 +12,7 @@ SRC += src/adt/queue.c
 
 SRC += src/adt/edgeset.c
 SRC += src/adt/stateset.c
+SRC += src/adt/statearray.c
 SRC += src/adt/mappingset.c
 SRC += src/adt/tupleset.c
 
