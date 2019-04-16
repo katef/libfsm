@@ -12,7 +12,6 @@
 #include <adt/set.h>
 #include <adt/hashset.h>
 #include <adt/mappingset.h>
-#include <adt/transset.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
@@ -56,21 +55,7 @@ struct mapping {
 
 struct fsm_determinise_cache {
 	struct mapping_set *mappings;
-	struct trans_set *trans;
 };
-
-static void
-clear_trans(const struct fsm *fsm, struct trans_set *trans)
-{
-	struct trans_iter it;
-	struct trans *t;
-
-	for (t = trans_set_first(trans, &it); t != NULL; t = trans_set_next(&it)) {
-		f_free(fsm, t);
-	}
-
-	trans_set_clear(trans);
-}
 
 static void
 clear_mappings(const struct fsm *fsm, struct mapping_set *mappings)
@@ -84,20 +69,6 @@ clear_mappings(const struct fsm *fsm, struct mapping_set *mappings)
 	}
 
 	mapping_set_clear(mappings);
-}
-
-static int
-cmp_trans(const void *a, const void *b)
-{
-	const struct trans *ta, *tb;
-
-	assert(a != NULL);
-	assert(b != NULL);
-
-	ta = a;
-	tb = b;
-
-	return (ta->c > tb->c) - (ta->c < tb->c);
 }
 
 static int
@@ -474,7 +445,6 @@ determinise(struct fsm *nfa,
 	struct mapping *curr;
 	struct mapping_set *mappings;
 	struct mapping_iter it;
-	struct trans_set *trans;
 	struct fsm *dfa;
 
 	struct mapping_iter_save sv;
@@ -506,17 +476,6 @@ determinise(struct fsm *nfa,
 		}
 	}
 	mappings = dcache->mappings;
-
-	if (dcache->trans == NULL) {
-		dcache->trans = trans_set_create(cmp_trans);
-		if (dcache->trans == NULL) {
-			fsm_free(dfa);
-			mapping_set_free(mappings);
-			return NULL;
-		}
-	}
-	trans = dcache->trans;
-	assert(trans != NULL);
 
 	/*
 	 * The epsilon closure of the NFA's start state is the DFA's start state.
@@ -617,13 +576,6 @@ fsm_determinise_cache(struct fsm *fsm,
 			f_free(fsm, *dcache);
 			return 0;
 		}
-
-		(*dcache)->trans    = trans_set_create(cmp_trans);
-		if ((*dcache)->trans == NULL) {
-			mapping_set_free((*dcache)->mappings);
-			f_free(fsm, *dcache);
-			return 0;
-		}
 	}
 
 	dfa = determinise(fsm, *dcache);
@@ -646,14 +598,9 @@ fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache)
 	}
 
 	clear_mappings(fsm, dcache->mappings);
-	clear_trans(fsm, dcache->trans);
 
 	if (dcache->mappings != NULL) {
 		mapping_set_free(dcache->mappings);
-	}
-
-	if (dcache->trans != NULL) {
-		trans_set_free(dcache->trans);
 	}
 
 	f_free(fsm, dcache);
