@@ -55,5 +55,17 @@ state_set_cmp(const struct state_set *a, const struct state_set *b);
 const struct fsm_state **
 state_set_array(const struct state_set *set);
 
+struct state_set *
+state_set_create_from_array(struct fsm_state **states, size_t n);
+
+struct state_set *
+state_set_create_singleton(struct fsm_state *state);
+
+struct state_set *
+state_set_copy(const struct state_set *src);
+
+struct state_set *
+state_set_copy_into(struct state_set *dst, const struct state_set *src);
+
 #endif
 
