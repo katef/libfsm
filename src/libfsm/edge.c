@@ -46,7 +46,7 @@ fsm_addedge_epsilon(struct fsm *fsm,
 	(void) fsm;
 
 	if (from->epsilons == NULL) {
-		from->epsilons = state_set_create();
+		from->epsilons = state_set_create(fsm->opt->alloc);
 		if (from->epsilons == NULL) {
 			return 0;
 		}
@@ -90,7 +90,7 @@ fsm_addedge_literal(struct fsm *fsm,
 	assert(to != NULL);
 
 	if (from->edges == NULL) {
-		from->edges = edge_set_create(fsm_state_cmpedges);
+		from->edges = edge_set_create(fsm->opt->alloc, fsm_state_cmpedges);
 		if (from->edges == NULL) {
 			return 0;
 		}
@@ -105,7 +105,7 @@ fsm_addedge_literal(struct fsm *fsm,
 		}
 
 		e->symbol = c;
-		e->sl = state_set_create();
+		e->sl = state_set_create(fsm->opt->alloc);
 		if (e->sl == NULL) {
 			return 0;
 		}

@@ -22,7 +22,7 @@ unsigned long hash_int(const void *a_)
 }
 
 int main(void) {
-	struct hashset *s = hashset_create(hash_int,cmp_int);
+	struct hashset *s = hashset_create(NULL, hash_int,cmp_int);
 	/* ensure that a has enough elements that the table has to be
 	 * rehashed a few times
 	 */

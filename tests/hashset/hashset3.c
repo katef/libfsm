@@ -22,7 +22,7 @@ unsigned long hash_int(const void *a_)
 }
 
 int main(void) {
-	struct hashset *s = hashset_create(hash_int,cmp_int);
+	struct hashset *s = hashset_create(NULL, hash_int,cmp_int);
 	struct hashset_iter iter;
 	int *p;
 	int a[3] = {1, 2, 3};

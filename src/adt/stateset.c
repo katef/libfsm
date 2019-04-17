@@ -12,21 +12,23 @@
 #include <adt/stateset.h>
 
 struct state_set *
-state_set_create(void)
+state_set_create(const struct fsm_alloc *a)
 {
-	return (struct state_set *) set_create(NULL);
+	return (struct state_set *) set_create(a, NULL);
 }
 
 struct state_set *
-state_set_create_from_array(struct fsm_state **states, size_t n)
+state_set_create_from_array(const struct fsm_alloc *a,
+	struct fsm_state **states, size_t n)
 {
-	return (struct state_set *)set_create_from_array((void **)states, n, NULL, NULL);
+	return (struct state_set *) set_create_from_array(a, (void **) states, n, NULL, NULL);
 }
 
 struct state_set *
-state_set_create_singleton(struct fsm_state *state)
+state_set_create_singleton(const struct fsm_alloc *a,
+	struct fsm_state *state)
 {
-	return (struct state_set *)set_create_singleton(NULL, state);
+	return (struct state_set *) set_create_singleton(a, NULL, state);
 }
 
 void

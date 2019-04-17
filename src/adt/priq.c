@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <adt/alloc.h>
 #include <adt/priq.h>
 
 struct priq *
@@ -82,7 +83,7 @@ priq_update(struct priq **priq, struct priq *s, unsigned int cost)
 }
 
 struct priq *
-priq_push(struct priq **priq,
+priq_push(const struct fsm_alloc *a, struct priq **priq,
 	struct fsm_state *state, unsigned int cost)
 {
 	struct priq *new;
@@ -102,7 +103,7 @@ priq_push(struct priq **priq,
 		}
 	}
 
-	new = malloc(sizeof *new);
+	new = f_malloc(a, sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -145,14 +146,14 @@ priq_move(struct priq **priq, struct priq *new)
 }
 
 void
-priq_free(struct priq *priq)
+priq_free(const struct fsm_alloc *a, struct priq *priq)
 {
 	struct priq *p;
 	struct priq *next;
 
 	for (p = priq; p != NULL; p = next) {
 		next = p->next;
-		free(p);
+		f_free(a, p);
 	}
 }
 

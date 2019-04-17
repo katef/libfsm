@@ -4,12 +4,13 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include <adt/hashset.h>
-
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
+#include <adt/alloc.h>
+#include <adt/hashset.h>
 
 /* XXX: explore whether we should split the bucket or not */
 
@@ -19,6 +20,7 @@ struct bucket {
 };
 
 struct hashset {
+	const struct fsm_alloc *alloc;
 	size_t nbuckets;
 	size_t nitems;
 	struct bucket *buckets;
@@ -69,11 +71,14 @@ finditem(const struct hashset *s, unsigned long hash, const void *item, size_t *
 }
 
 int
-hashset_initialize(struct hashset *s, size_t nb, float load,
-	unsigned long (*hash)(const void *a),int (*cmp)(const void *a, const void *b))
+hashset_initialize(const struct fsm_alloc *a,
+	struct hashset *s, size_t nb, float load,
+	unsigned long (*hash)(const void *a),
+	int (*cmp)(const void *a, const void *b))
 {
 	static const struct hashset init;
 	*s = init;
+	s->alloc = a;
 	s->hash = hash;
 	s->cmp = cmp;
 	s->load = load;
@@ -81,17 +86,25 @@ hashset_initialize(struct hashset *s, size_t nb, float load,
 		return 1;
 	}
 
-	s->buckets = calloc(nb, sizeof s->buckets[0]);
+	s->buckets = f_calloc(s->alloc, nb, sizeof s->buckets[0]);
 	s->maxload = load * nb;
 	s->nbuckets = nb;
 	return (s->buckets != NULL);
 }
 
 struct hashset *
-hashset_create(unsigned long (*hash)(const void *a),int (*cmp)(const void *a, const void *b))
+hashset_create(const struct fsm_alloc *a,
+	unsigned long (*hash)(const void *a),
+	int (*cmp)(const void *a, const void *b))
 {
-	struct hashset *s = malloc(sizeof *s);
-	hashset_initialize(s, 0,DEFAULT_LOAD, hash,cmp);
+	struct hashset *s;
+
+	s = f_malloc(a, sizeof *s);
+	if (s == NULL) {
+		return NULL;
+	}
+
+	hashset_initialize(a, s, 0,DEFAULT_LOAD, hash,cmp);
 	return s;
 }
 
@@ -108,7 +121,7 @@ rehash(struct hashset *s)
 
 	/* check resizing logic */
 	newsz = (s->nbuckets > 0) ? 2*s->nbuckets : DEFAULT_NBUCKETS;
-	ns.buckets = calloc(newsz, sizeof ns.buckets[0]);
+	ns.buckets = f_calloc(s->alloc, newsz, sizeof ns.buckets[0]);
 	if (ns.buckets == NULL) {
 		return 0;
 	}
@@ -133,7 +146,7 @@ rehash(struct hashset *s)
 		ns.buckets[bi] = b[i];
 	}
 
-	free(s->buckets);
+	f_free(s->alloc, s->buckets);
 	s->nbuckets = ns.nbuckets;
 	s->buckets  = ns.buckets;
 	s->maxload  = ns.maxload;

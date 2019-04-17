@@ -58,7 +58,7 @@ fsm_reverse(struct fsm *fsm)
 	 * This isn't anything to do with the reversing; it's meaningful
 	 * only to the caller.
 	 */
-	endset = state_set_create();
+	endset = state_set_create(fsm->opt->alloc);
 
 	/*
 	 * Create states corresponding to the original FSM's states.

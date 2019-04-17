@@ -25,7 +25,7 @@ static int
 mark_states(struct fsm *fsm)
 {
 	const unsigned state_count = fsm_countstates(fsm);
-	struct queue *q = queue_new(state_count);
+	struct queue *q = queue_new(fsm->opt->alloc, state_count);
 	int res = 0;
 	if (q == NULL) { return 1; }
 

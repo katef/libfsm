@@ -8,10 +8,12 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include <adt/alloc.h>
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
+#include <fsm/alloc.h>
 #include <fsm/fsm.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
@@ -20,56 +22,6 @@
 
 #define ctassert(pred) \
 	switch (0) { case 0: case (pred):; }
-
-void
-f_free(const struct fsm *fsm, void *p)
-{
-	struct fsm_allocator a;
-
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
-
-	a = fsm->opt->allocator;
-	if (a.free != NULL) {
-		a.free(a.opaque, p);
-		return;
-	}
-
-	free(p);
-}
-
-void *
-f_malloc(const struct fsm *fsm, size_t sz)
-{
-	struct fsm_allocator a;
-
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
-
-	a = fsm->opt->allocator;
-	if (a.malloc != NULL) {
-		return (a.malloc(a.opaque, sz));
-	}
-
-	return malloc(sz);
-}
-
-void *
-f_realloc(const struct fsm*fsm, void *p, size_t sz)
-{
-	struct fsm_allocator a;
-
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
-
-	a = fsm->opt->allocator;
-	if (a.realloc != NULL) {
-		return a.realloc(a.opaque, p, sz);
-	}
-
-	return realloc(p, sz);
-}
-
 
 void
 free_contents(struct fsm *fsm)
@@ -86,12 +38,12 @@ free_contents(struct fsm *fsm)
 
 		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			state_set_free(e->sl);
-			f_free(fsm, e);
+			f_free(fsm->opt->alloc, e);
 		}
 
 		state_set_free(s->epsilons);
 		edge_set_free(s->edges);
-		f_free(fsm, s);
+		f_free(fsm->opt->alloc, s);
 	}
 }
 
@@ -107,7 +59,7 @@ fsm_new(const struct fsm_options *opt)
 
 	f.opt = opt;
 
-	new = f_malloc(&f, sizeof *new);
+	new = f_malloc(f.opt->alloc, sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -130,7 +82,7 @@ fsm_free(struct fsm *fsm)
 
 	free_contents(fsm);
 
-	f_free(fsm, fsm);
+	f_free(fsm->opt->alloc, fsm);
 }
 
 const struct fsm_options *
@@ -163,7 +115,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	dst->start    = src->start;
 	dst->endcount = src->endcount;
 
-	f_free(src, src);
+	f_free(src->opt->alloc, src);
 }
 
 void

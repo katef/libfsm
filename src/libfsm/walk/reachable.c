@@ -34,7 +34,7 @@ fsm_reachable(const struct fsm *fsm, const struct fsm_state *state,
 
 	list = NULL;
 
-	if (!dlist_push(&list, (struct fsm_state *) state)) {
+	if (!dlist_push(fsm->opt->alloc, &list, (struct fsm_state *) state)) {
 		return -1;
 	}
 
@@ -44,12 +44,12 @@ fsm_reachable(const struct fsm *fsm, const struct fsm_state *state,
 
 		if (any) {
 			if (predicate(fsm, p->state)) {
-				dlist_free(p);
+				dlist_free(fsm->opt->alloc, p);
 				return 1;
 			}
 		} else {
 			if (!predicate(fsm, p->state)) {
-				dlist_free(p);
+				dlist_free(fsm->opt->alloc, p);
 				return 0;
 			}
 		}
@@ -64,7 +64,7 @@ fsm_reachable(const struct fsm *fsm, const struct fsm_state *state,
 					continue;
 				}
 
-				if (!dlist_push(&list, st)) {
+				if (!dlist_push(fsm->opt->alloc, &list, st)) {
 					return -1;
 				}
 			}
@@ -73,7 +73,7 @@ fsm_reachable(const struct fsm *fsm, const struct fsm_state *state,
 		p->done = 1;
 	}
 
-	dlist_free(list);
+	dlist_free(fsm->opt->alloc, list);
 
 	if (any) {
 		return 0;

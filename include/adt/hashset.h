@@ -12,6 +12,7 @@
 #define DEFAULT_LOAD 0.66
 #define DEFAULT_NBUCKETS 4
 
+struct fsm_alloc;
 struct hashset;
 struct bucket;
 
@@ -21,11 +22,15 @@ struct hashset_iter {
 };
 
 struct hashset *
-hashset_create(unsigned long (*hash)(const void *a),int (*cmp)(const void *a, const void *b));
+hashset_create(const struct fsm_alloc *a,
+	unsigned long (*hash)(const void *a),
+	int (*cmp)(const void *a, const void *b));
 
 int
-hashset_initialize(struct hashset *s, size_t nb, float load,
-	unsigned long (*hash)(const void *a),int (*cmp)(const void *a, const void *b));
+hashset_initialize(const struct fsm_alloc *a,
+	struct hashset *s, size_t nb, float load,
+	unsigned long (*hash)(const void *a),
+	int (*cmp)(const void *a, const void *b));
 
 void
 hashset_finalize(struct hashset *s);

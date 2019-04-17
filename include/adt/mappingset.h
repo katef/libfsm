@@ -7,6 +7,7 @@
 #ifndef ADT_MAPPINGSET_H
 #define ADT_MAPPINGSET_H
 
+struct fsm_alloc;
 struct mapping_set;
 struct mapping;
 
@@ -15,7 +16,9 @@ struct mapping_iter {
 };
 
 struct mapping_set *
-mapping_set_create(unsigned long (*hash)(const void *a), int (*cmp)(const void *a, const void *b));
+mapping_set_create(const struct fsm_alloc *a,
+	unsigned long (*hash)(const void *a),
+	int (*cmp)(const void *a, const void *b));
 
 void
 mapping_set_free(struct mapping_set *set);

@@ -18,13 +18,6 @@ enum fsm_io {
 	FSM_IO_PAIR
 };
 
-struct fsm_allocator {
-	void (*free)(void *opaque, void *p);
-	void *(*malloc)(void *opaque, size_t sz);
-	void *(*realloc)(void *opaque, void *p, size_t sz);
-	void *opaque;
-};
-
 struct fsm_options {
 	/* boolean: true indicates to go to extra lengths in order to produce
 	 * neater-looking FSMs for certian operations. This usually means finding
@@ -81,8 +74,8 @@ struct fsm_options {
 	void (*carryopaque)(const struct fsm_state **, size_t,
 		struct fsm *, struct fsm_state *);
 
-	/* closure for custom allocation functions */
-	const struct fsm_allocator allocator;
+	/* custom allocation functions */
+	const struct fsm_alloc *alloc;
 };
 
 #endif

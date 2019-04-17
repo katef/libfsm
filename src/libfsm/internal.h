@@ -90,5 +90,27 @@ fsm_state_clear_tmp(struct fsm_state *state);
 struct state_set *
 epsilon_closure(const struct fsm_state *state, struct state_set *closure);
 
+/*
+ * Internal free function that invokes free(3) by default, or a user-provided
+ * free function to free memory and perform any custom memory tracking or handling
+ */
+void
+f_free(const struct fsm_alloc *a, void *p);
+
+/*
+ * Internal malloc function that invokes malloc(3) by default, or a user-provided
+ * malloc function to allocate memory and perform any custom memory tracking or handling
+ */
+void *
+f_malloc(const struct fsm_alloc *a, size_t sz);
+
+/*
+ * Internal realloc function that invokes realloc(3) by default, or a user-provided
+ * realloc function to re-allocate memory to the specified size and perform
+ * any custom memory tracking or handling
+ */
+void *
+f_realloc(const struct fsm_alloc *a, void *p, size_t sz);
+
 #endif
 

@@ -11,7 +11,7 @@
 static int
 create_and_free(void)
 {
-	struct queue *q = queue_new(1);
+	struct queue *q = queue_new(NULL, 1);
 	if (q == NULL) { return 0; }
 
 	queue_free(q);
@@ -21,7 +21,7 @@ create_and_free(void)
 static int
 reject_0_capacity(void)
 {
-	struct queue *q = queue_new(0);
+	struct queue *q = queue_new(NULL, 0);
 	if (q != NULL) { return 0; }
 	return 1;
 }
@@ -30,7 +30,7 @@ static int
 push_all_pop_all(size_t limit)
 {
 	size_t i;
-	struct queue *q = queue_new(limit);
+	struct queue *q = queue_new(NULL, limit);
 	if (q == NULL) { return 0; }
 
 	for (i = 0; i < limit; i++) {
@@ -51,7 +51,7 @@ static int
 push_pop_interleave(size_t limit)
 {
 	size_t i;
-	struct queue *q = queue_new(1);
+	struct queue *q = queue_new(NULL, 1);
 	if (q == NULL) { return 0; }
 
 	for (i = 0; i < limit; i++) {
@@ -69,7 +69,7 @@ static int
 detect_empty(size_t limit)
 {
 	size_t i;
-	struct queue *q = queue_new(1);
+	struct queue *q = queue_new(NULL, 1);
 	if (q == NULL) { return 0; }
 
 	for (i = 0; i < limit; i++) {
@@ -89,7 +89,7 @@ static int
 detect_full(size_t limit)
 {
 	size_t i;
-	struct queue *q = queue_new(1);
+	struct queue *q = queue_new(NULL, 1);
 	if (q == NULL) { return 0; }
 
 	for (i = 0; i < limit; i++) {
@@ -110,7 +110,7 @@ static int
 support_NULLs(void)
 {
 	size_t i;
-	struct queue *q = queue_new(100);
+	struct queue *q = queue_new(NULL, 100);
 	if (q == NULL) { return 0; }
 
 	for (i = 0; i < 100; i++) {

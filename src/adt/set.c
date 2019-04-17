@@ -9,11 +9,13 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <adt/alloc.h>
 #include <adt/set.h>
 
 #define SET_INITIAL 8
 
 struct set {
+	const struct fsm_alloc *alloc;
 	void **a;
 	size_t i;
 	size_t n;
@@ -59,7 +61,8 @@ set_cmpval(const void *a, const void *b)
 }
 
 struct set *
-set_create(int (*cmp)(const void *a, const void *b))
+set_create(const struct fsm_alloc *a,
+	int (*cmp)(const void *a, const void *b))
 {
 	struct set *set;
 
@@ -67,16 +70,17 @@ set_create(int (*cmp)(const void *a, const void *b))
 		cmp = set_cmpval;
 	}
 
-	set = malloc(sizeof *set);
+	set = f_malloc(a, sizeof *set);
 	if (set == NULL) {
 		return NULL;
 	}
 
-	set->a = malloc(SET_INITIAL * sizeof *set->a);
+	set->a = f_malloc(a, SET_INITIAL * sizeof *set->a);
 	if (set->a == NULL) {
 		return NULL;
 	}
 
+	set->alloc = a;
 	set->i = 0;
 	set->n = SET_INITIAL;
 	set->cmp = cmp;
@@ -93,21 +97,23 @@ set_bulkcmpval(const void *a, const void *b)
 }
 
 struct set *
-set_create_singleton(int (*cmp)(const void *a, const void *b), void *item)
+set_create_singleton(const struct fsm_alloc *a,
+	int (*cmp)(const void *a, const void *b), void *item)
 {
 	struct set *s;
 
-	s = malloc(sizeof *s);
+	s = f_malloc(a, sizeof *s);
 	if (s == NULL) {
 		return NULL;
 	}
 
-	s->a = malloc(sizeof *s->a);
+	s->a = f_malloc(a, sizeof *s->a);
 	if (s->a == NULL) {
-		free(s);
+		f_free(a, s);
 		return NULL;
 	}
 
+	s->alloc = a;
 	s->a[0] = item;
 	s->i = s->n = 1;
 	s->cmp = (cmp != NULL) ? cmp : set_cmpval;
@@ -116,15 +122,18 @@ set_create_singleton(int (*cmp)(const void *a, const void *b), void *item)
 }
 
 struct set *
-set_create_from_array(void *items[], size_t n, int (*cmp)(const void *a, const void *b), int (*bulkcmp)(const void *, const void *))
+set_create_from_array(const struct fsm_alloc *a,
+	void *items[], size_t n,
+	int (*cmp)(const void *a, const void *b),
+	int (*bulkcmp)(const void *, const void *))
 {
 	struct set *s;
 
 	if (n == 0) {
-		return set_create(cmp);
+		return set_create(a, cmp);
 	}
 
-	s = malloc(sizeof *s);
+	s = f_malloc(a, sizeof *s);
 	if (s == NULL) {
 		return NULL;
 	}
@@ -136,6 +145,7 @@ set_create_from_array(void *items[], size_t n, int (*cmp)(const void *a, const v
 		qsort((void *)(&items[0]), n, sizeof items[0], (bulkcmp != NULL) ? bulkcmp : set_bulkcmpval);
 	}
 
+	s->alloc = a;
 	s->i = n;
 	s->n = n;
 	s->a = items;
@@ -191,7 +201,7 @@ set_add(struct set *set, void *item)
 		if (set->i == set->n) {
 			void **new;
 
-			new = realloc(set->a, (sizeof *set->a) * (set->n * 2));
+			new = f_realloc(set->alloc, set->a, (sizeof *set->a) * (set->n * 2));
 			if (new == NULL) {
 				return NULL;
 			}

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <adt/alloc.h>
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
@@ -23,7 +24,7 @@ fsm_addstate(struct fsm *fsm)
 
 	assert(fsm != NULL);
 
-	new = f_malloc(fsm, sizeof *new);
+	new = f_malloc(fsm->opt->alloc, sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -77,7 +78,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 
 	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		state_set_free(e->sl);
-		f_free(fsm, e);
+		f_free(fsm->opt->alloc, e);
 	}
 	state_set_free(state->epsilons);
 	edge_set_free(state->edges);
@@ -101,7 +102,7 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 				}
 
 				next = (*p)->next;
-				f_free(fsm, *p);
+				f_free(fsm->opt->alloc, *p);
 				*p = next;
 				break;
 			}

@@ -16,7 +16,7 @@ int cmp_int(const void *a_, const void *b_) {
 }
 
 int main(void) {
-	struct set *s = set_create(cmp_int);
+	struct set *s = set_create(NULL, cmp_int);
 	int a[3] = {1, 2, 3};
 	assert(set_add(s, &a[0]));
 	assert(set_add(s, &a[1]));

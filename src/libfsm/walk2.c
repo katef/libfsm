@@ -10,6 +10,7 @@
 #include <limits.h>
 #include <errno.h>
 
+#include <adt/alloc.h>
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
@@ -112,7 +113,7 @@ fsm_walk2_data_free(const struct fsm *fsm, struct fsm_walk2_data *data)
 
 	for (p = data->head; p != NULL; p = next) {
 		next = p->next;
-		f_free(fsm, p);
+		f_free(fsm->opt->alloc, p);
 	}
 
 	if (data->new) {
@@ -143,7 +144,7 @@ alloc_walk2_tuple(struct fsm_walk2_data *data)
 
 new_pool:
 
-	pool = f_malloc(data->new, sizeof *pool);
+	pool = f_malloc(data->new->opt->alloc, sizeof *pool);
 	if (pool == NULL) {
 		return NULL;
 	}
@@ -489,7 +490,7 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 		goto error;
 	}
 
-	data.states = tuple_set_create(cmp_walk2_tuple);
+	data.states = tuple_set_create(data.new->opt->alloc, cmp_walk2_tuple);
 	if (data.states == NULL) {
 		goto error;
 	}

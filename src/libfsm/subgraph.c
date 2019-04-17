@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 
+#include <adt/alloc.h>
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
@@ -45,14 +46,14 @@ mapping_ensure(struct fsm *fsm, struct mapping **head, struct fsm_state *old)
 
 	/* Otherwise, make a new one */
 	{
-		m = f_malloc(fsm, sizeof *m);
+		m = f_malloc(fsm->opt->alloc, sizeof *m);
 		if (m == NULL) {
 			return 0;
 		}
 
 		m->new = fsm_addstate(fsm);
 		if (m->new == NULL) {
-			f_free(fsm, m);
+			f_free(fsm->opt->alloc, m);
 			return 0;
 		}
 
@@ -77,7 +78,7 @@ mapping_free(const struct fsm *fsm, struct mapping *mapping)
 	for (m = mapping; m != NULL; m = next) {
 		next = m->next;
 
-		f_free(fsm, m);
+		f_free(fsm->opt->alloc, m);
 	}
 }
 

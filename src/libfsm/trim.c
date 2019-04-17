@@ -35,7 +35,7 @@ fsm_trim(struct fsm *fsm)
 
 	start = fsm_getstart(fsm);
 	if (start != NULL) {
-		if (!dlist_push(&list, start)) {
+		if (!dlist_push(fsm->opt->alloc, &list, start)) {
 			return -1;
 		}
 	}
@@ -54,7 +54,7 @@ fsm_trim(struct fsm *fsm)
 					continue;
 				}
 
-				if (!dlist_push(&list, st)) {
+				if (!dlist_push(fsm->opt->alloc, &list, st)) {
 					return -1;
 				}
 			}
@@ -70,7 +70,7 @@ fsm_trim(struct fsm *fsm)
 					continue;
 				}
 
-				if (!dlist_push(&list, st)) {
+				if (!dlist_push(fsm->opt->alloc, &list, st)) {
 					return -1;
 				}
 			}
@@ -95,7 +95,7 @@ fsm_trim(struct fsm *fsm)
 		}
 	}
 
-	dlist_free(list);
+	dlist_free(fsm->opt->alloc, list);
 
 #if 0
 	/*

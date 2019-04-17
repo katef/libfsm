@@ -4,12 +4,14 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "adt/queue.h"
-
 #include <string.h>
 #include <assert.h>
 
+#include <adt/alloc.h>
+#include <adt/queue.h>
+
 struct queue {
+	const struct fsm_alloc *alloc;
 	/* Read and write offsets. When rd == wr, the queue is empty. rd
 	 * will always be <= wr, and wr <= capacity. */
 	size_t rd;
@@ -19,16 +21,17 @@ struct queue {
 };
 
 struct queue *
-queue_new(size_t max_capacity)
+queue_new(const struct fsm_alloc *a, size_t max_capacity)
 {
 	struct queue *q;
 	size_t alloc_size;
 	if (max_capacity == 0) { return NULL; }
 	alloc_size = sizeof(*q) + (max_capacity - 1) * sizeof(q->q[0]);
 
-	q = calloc(1, alloc_size);
+	q = f_calloc(a, 1, alloc_size);
 	if (q == NULL) { return NULL; }
 
+	q->alloc = a;
 	q->capacity = max_capacity;
 
 	return q;
@@ -83,5 +86,5 @@ queue_pop(struct queue *q, void **p)
 void
 queue_free(struct queue *q)
 {
-	free(q);
+	f_free(q->alloc, q);
 }
