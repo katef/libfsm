@@ -210,6 +210,11 @@ set_closure(struct mapping_set *mappings, struct fsm *dfa, struct state_set *set
 	}
 
 	m = addtomappings(mappings, dfa, ec);
+	if (m == NULL) {
+		state_set_free(ec);
+		return NULL;
+	}
+
 	/* TODO: test ec */
 
 	return m->dfastate;
