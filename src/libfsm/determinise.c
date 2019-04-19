@@ -169,6 +169,8 @@ struct epsilon_table {
 	size_t nstates;
 	size_t nscc; /* number of strongly connected components */
 
+	unsigned long curr_closure_id;
+
 	const struct fsm_alloc *alloc;
 	struct epsilon_state_data *states;
 	struct state_set **scc_states;
@@ -645,8 +647,8 @@ set_closure(struct epsilon_table *tbl, struct mapping_set *mappings, struct fsm 
 	struct state_set *ec;
 	struct mapping *m;
 	struct fsm_state *s;
-	struct hashset *memb;
 	struct state_array arr;
+	unsigned long curr_closure_id;
 
 	assert(set != NULL);
 	assert(mappings != NULL);
@@ -656,12 +658,17 @@ set_closure(struct epsilon_table *tbl, struct mapping_set *mappings, struct fsm 
 		return state_closure(tbl, mappings, dfa, state_set_only(set), 1);
 	}
 
+	/* new curr_closure_id */
+	curr_closure_id = ++tbl->curr_closure_id;
+
 	arr = zero_arr;
 
+	/*
 	memb = hashset_create(tbl->alloc, hash_single_state, cmp_single_state);
 	if (memb == NULL) {
 		goto error;
 	}
+	*/
 
 	for (s = state_set_first(set, &it); s != NULL; s = state_set_next(&it)) {
 		unsigned int scclbl;
@@ -677,13 +684,11 @@ set_closure(struct epsilon_table *tbl, struct mapping_set *mappings, struct fsm 
 
 		lc = tbl->scc_eps_closures[scclbl-1];
 		for (dst = state_set_first(lc,&jt); dst != NULL; dst = state_set_next(&jt)) {
-			if (hashset_contains(memb, dst)) {
+			if (dst->tmp.eps_closure_id == curr_closure_id) {
 				continue;
 			}
 
-			if (!hashset_add(memb,dst)) {
-				goto error;
-			}
+			dst->tmp.eps_closure_id = curr_closure_id;
 
 			if (!state_array_add(&arr,dst)) {
 				goto error;
@@ -707,11 +712,9 @@ set_closure(struct epsilon_table *tbl, struct mapping_set *mappings, struct fsm 
 		goto error;
 	}
 
-	hashset_free(memb);
 	return m->dfastate;
 
 error:
-	hashset_free(memb);
 	if (arr.len > 0) {
 		free(arr.states);
 	}
@@ -953,6 +956,8 @@ determinise(struct fsm *nfa,
 		return NULL;
 	}
 
+	fsm_clear_tmp(nfa);
+
 	if (nfa->endcount == 0) {
 		dfa->start = fsm_addstate(dfa);
 		if (dfa->start == NULL) {
@@ -1050,6 +1055,8 @@ determinise(struct fsm *nfa,
 
 	clear_mappings(dfa, mappings);
 
+	fsm_clear_tmp(nfa);
+
 	/* TODO: can assert a whole bunch of things about the dfa, here */
 	assert(fsm_all(dfa, fsm_isdfa));
 
@@ -1060,6 +1067,7 @@ error:
 	epsilon_table_finalize(&tbl);
 	clear_mappings(dfa, mappings);
 	fsm_free(dfa);
+	fsm_clear_tmp(nfa);
 
 	return NULL;
 }

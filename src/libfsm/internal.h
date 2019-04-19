@@ -63,7 +63,7 @@ struct fsm_state {
 		struct fsm_state *visited;
 
 		/* epsilon closure */
-		struct state_set *eps_closure;
+		unsigned long eps_closure_id;
 	} tmp;
 
 	struct fsm_state *next;
