@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "aNndmMct"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aNndmMctf"), c != -1) {
 			switch (c) {
 			case 'a': ahocorasick = 1;       break;
 			case 'd': dmf = fsm_determinise; break;
@@ -62,6 +62,7 @@ int main(int argc, char *argv[]) {
 			case 'N': unanchored = 1;        break;
 
 			case 'c': print = fsm_print_dot; break;
+			case 'f': print = fsm_print_fsm; break;
 
 			case 't':
 				timing = 1;
