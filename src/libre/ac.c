@@ -152,7 +152,7 @@ trie_add_failure_edges(struct trie_graph *g) {
 
 	for (sym = 0; sym < 256; sym++) {
 		struct trie_state *st;
-		
+
 		st = g->root->children[sym];
 		if (st == NULL) {
 			continue;
@@ -194,6 +194,8 @@ trie_add_failure_edges(struct trie_graph *g) {
 		}
 	}
 
+	g->root->fail = g->root;
+
 	free(q);
 
 	return 0;
@@ -220,7 +222,23 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm)
 		struct trie_state *nx;
 		struct fsm_state *dst;
 
-		nx = (ts->children[sym] != NULL) ? ts->children[sym] : ts->fail;
+		nx = ts->children[sym];
+		if (nx == NULL) {
+			struct trie_state *f = ts->fail;
+			assert(f != NULL);
+
+			nx = f->children[sym];
+			if (nx == NULL) {
+				assert(f->fail == f);
+
+				/* failure state is the root, which
+				 * has implicit edges back to itself
+				 */
+				nx = f;
+			}
+		}
+
+		assert(nx != NULL);
 		if (nx == NULL) {
 			continue;
 		}
