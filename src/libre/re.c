@@ -195,7 +195,7 @@ error:
 }
 
 struct fsm *
-re_strings(const struct fsm_options *opt, const char *sv[], size_t n, int anchored)
+re_strings(const struct fsm_options *opt, const char *sv[], size_t n, int anchored, int single_match)
 {
 	struct trie_graph *g;
 	struct fsm *fsm;
@@ -219,7 +219,7 @@ re_strings(const struct fsm_options *opt, const char *sv[], size_t n, int anchor
 		}
 	}
 
-	fsm = trie_to_fsm(g,opt);
+	fsm = trie_to_fsm(g,opt, single_match);
 	if (fsm == NULL) {
 		goto finish;
 	}

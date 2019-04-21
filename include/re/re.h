@@ -148,7 +148,7 @@ re_comp(enum re_dialect dialect,
 	enum re_flags flags, struct re_err *err);
 
 struct fsm *
-re_strings(const struct fsm_options *opt, const char *sv[], size_t n, int anchored);
+re_strings(const struct fsm_options *opt, const char *sv[], size_t n, int anchored, int single_match);
 
 /*
  * Return a human-readable string describing a given error code. The string

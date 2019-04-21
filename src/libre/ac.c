@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <assert.h>
 
 #include <ctype.h>
@@ -202,10 +203,14 @@ trie_add_failure_edges(struct trie_graph *g) {
 }
 
 static struct fsm_state *
-trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm)
+trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm, struct fsm_state *single_end)
 {
 	struct fsm_state *st;
 	int sym;
+
+	if (ts->output && single_end) {
+		return single_end;
+	}
 
 	if (ts->st != NULL) {
 		return ts->st;
@@ -243,7 +248,7 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm)
 			continue;
 		}
 
-		dst = trie_to_fsm_state(nx, fsm);
+		dst = trie_to_fsm_state(nx, fsm, single_end);
 		if (dst == NULL) {
 			return NULL;
 		}
@@ -261,14 +266,28 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm)
 }
 
 struct fsm *
-trie_to_fsm(struct trie_graph *g, const struct fsm_options* opts)
+trie_to_fsm(struct trie_graph *g, const struct fsm_options* opts, int single_match)
 {
 	struct fsm *fsm;
-	struct fsm_state *st;
+	struct fsm_state *start, *end;
 
 	fsm = fsm_new(opts);
-	st = trie_to_fsm_state(g->root, fsm);
-	fsm_setstart(fsm,st);
+
+	end = NULL;
+	if (single_match) {
+		int sym;
+		end = fsm_addstate(fsm);
+		for (sym=0; sym <= UCHAR_MAX; sym++) {
+			if (!fsm_addedge_literal(fsm, end, end, sym)) {
+				return NULL;
+			}
+		}
+
+		fsm_setend(fsm, end, 1);
+	}
+
+	start = trie_to_fsm_state(g->root, fsm, end);
+	fsm_setstart(fsm,start);
 
 	return fsm;
 }
