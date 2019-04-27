@@ -34,8 +34,6 @@ re_strings(const struct fsm_options *opts, const char *sv[], size_t n, enum re_s
 		}
 	}
 
-	trie_dump(b->g, stderr);
-
 	fsm = re_strings_builder_build(b);
 
 finish:

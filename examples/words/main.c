@@ -144,8 +144,6 @@ int main(int argc, char *argv[]) {
 					exit(EXIT_FAILURE);
 				}
 
-				fprintf(stderr, "words.len = %zu, words.cap = %zu, newcap = %zu, words.list=%p, wl=%p\n",
-					words.len, words.cap, newcap, (void *)words.list, (void *)wl);
 				memcpy(wl, words.list, words.len * sizeof words.list[0]);
 				free(words.list);
 
