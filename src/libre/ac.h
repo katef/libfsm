@@ -39,7 +39,7 @@ int
 trie_add_failure_edges(struct trie_graph *g);
 
 struct fsm *
-trie_to_fsm(struct trie_graph *g, const struct fsm_options* opts, int single_match);
+trie_to_fsm(struct fsm *fsm, struct trie_graph *g, struct fsm_state *end);
 
 void
 trie_dump(struct trie_graph *g, FILE *f);

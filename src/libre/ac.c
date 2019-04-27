@@ -190,7 +190,12 @@ trie_add_failure_edges(struct trie_graph *g) {
 				assert(fs != NULL);
 			}
 
-			nx->fail = fs;
+			nx->fail = fs->children[sym];
+			if (nx->fail == NULL) {
+				assert(fs == g->root);
+				nx->fail = fs;
+			}
+
 			nx->output = nx->output | fs->output;
 		}
 	}
@@ -224,22 +229,28 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm, struct fsm_state *sing
 	ts->st = st;
 
 	for (sym=0; sym < 256; sym++) {
-		struct trie_state *nx;
+		struct trie_state *nx, *fail;
 		struct fsm_state *dst;
 
+		fail = ts->fail;
 		nx = ts->children[sym];
 		if (nx == NULL) {
-			struct trie_state *f = ts->fail;
-			assert(f != NULL);
+			if (fail == NULL) {
+				continue;
+			}
 
-			nx = f->children[sym];
+			while (fail->children[sym] == NULL && fail->fail != fail) {
+				fail = fail->fail;
+			}
+
+			nx = fail->children[sym];
 			if (nx == NULL) {
-				assert(f->fail == f);
+				assert(fail->fail == fail);
 
 				/* failure state is the root, which
 				 * has implicit edges back to itself
 				 */
-				nx = f;
+				nx = fail;
 			}
 		}
 
@@ -266,25 +277,9 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm, struct fsm_state *sing
 }
 
 struct fsm *
-trie_to_fsm(struct trie_graph *g, const struct fsm_options* opts, int single_match)
+trie_to_fsm(struct fsm *fsm, struct trie_graph *g, struct fsm_state *end)
 {
-	struct fsm *fsm;
-	struct fsm_state *start, *end;
-
-	fsm = fsm_new(opts);
-
-	end = NULL;
-	if (single_match) {
-		int sym;
-		end = fsm_addstate(fsm);
-		for (sym=0; sym <= UCHAR_MAX; sym++) {
-			if (!fsm_addedge_literal(fsm, end, end, sym)) {
-				return NULL;
-			}
-		}
-
-		fsm_setend(fsm, end, 1);
-	}
+	struct fsm_state *start;
 
 	start = trie_to_fsm_state(g->root, fsm, end);
 	fsm_setstart(fsm,start);

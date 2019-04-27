@@ -194,12 +194,53 @@ error:
 	return NULL;
 }
 
+static int
+re_strings_endstate(struct fsm *fsm, struct fsm_state **endp, enum re_strings_flags flags)
+{
+	struct fsm_state *end = NULL;
+	int sym;
+
+	if ((flags & RE_STRINGS_AC_AUTOMATON) || (flags & RE_STRINGS_ANCHOR_RIGHT)) {
+		goto finish;
+	}
+
+	end = fsm_addstate(fsm);
+	if (end == NULL) {
+		goto error;
+	}
+
+	for (sym=0; sym <= UCHAR_MAX; sym++) {
+		if (!fsm_addedge_literal(fsm, end, end, sym)) {
+			goto error;
+		}
+	}
+
+finish:
+	if (end != NULL) {
+		fsm_setend(fsm, end, 1);
+	}
+
+	*endp = end;
+	return 1;
+
+error:
+	*endp = NULL;
+	if (end != NULL) {
+		fsm_removestate(fsm,end);
+	}
+
+	return 0;
+}
+
 struct fsm *
-re_strings(const struct fsm_options *opt, const char *sv[], size_t n, int anchored, int single_match)
+re_strings(const struct fsm_options *opts, const char *sv[], size_t n, enum re_strings_flags flags)
 {
 	struct trie_graph *g;
 	struct fsm *fsm;
+	struct fsm_state *end;
 	size_t i;
+	size_t c = 0;
+	size_t cn = n/100;
 
 	g = trie_create();
 	fsm = NULL;
@@ -211,16 +252,31 @@ re_strings(const struct fsm_options *opt, const char *sv[], size_t n, int anchor
 		if (!trie_add_word(g, sv[i], len)) {
 			goto finish;
 		}
+
+		if (++c == cn) {
+			c=0;
+		}
 	}
 
-	if (!anchored) {
+	if ((flags & RE_STRINGS_ANCHOR_LEFT) == 0) {
 		if (trie_add_failure_edges(g) < 0) {
 			goto finish;
 		}
 	}
 
-	fsm = trie_to_fsm(g,opt, single_match);
+	fsm = fsm_new(opts);
 	if (fsm == NULL) {
+		goto finish;
+	}
+
+	end = NULL;
+	if (!re_strings_endstate(fsm, &end, flags)) {
+		fsm_free(fsm);
+		goto finish;
+	}
+
+	if (!trie_to_fsm(fsm, g, end)) {
+		fsm_free(fsm);
 		goto finish;
 	}
 
