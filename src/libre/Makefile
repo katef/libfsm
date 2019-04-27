@@ -8,6 +8,7 @@ SRC += src/libre/re_ast.c
 SRC += src/libre/re_comp.c
 SRC += src/libre/re_char_class.c
 SRC += src/libre/ac.c
+SRC += src/libre/re_strings.c
 
 LIB        += libre
 SYMS.libre += src/libre/libre.syms

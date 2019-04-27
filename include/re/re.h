@@ -156,6 +156,23 @@ enum re_strings_flags {
 struct fsm *
 re_strings(const struct fsm_options *opt, const char *sv[], size_t n, enum re_strings_flags flags);
 
+struct re_strings_builder;
+
+struct re_strings_builder *
+re_strings_new(const struct fsm_options *opt, enum re_strings_flags flags);
+
+void
+re_strings_free(struct re_strings_builder *b);
+
+int
+re_strings_add(struct re_strings_builder *b, const char *w);
+
+int
+re_strings_add_data(struct re_strings_builder *b, const char *w, size_t wlen);
+
+struct fsm *
+re_strings_builder_build(struct re_strings_builder *b);
+
 /*
  * Return a human-readable string describing a given error code. The string
  * returned has static storage, and must not be freed.
