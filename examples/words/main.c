@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
 
 usage:
 
-	fprintf(stderr, "usage: words [-dmct]\n");
+	fprintf(stderr, "usage: words [-aNndmctf]\n");
 	fprintf(stderr, "       words -h\n");
 
 	return 1;
