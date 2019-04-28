@@ -34,12 +34,7 @@ int main(int argc, char *argv[]) {
 	int ahocorasick = 0;
 	int unanchored = 0;
 	int single_match = 1;
-
-	struct {
-		char **list;
-		size_t len;
-		size_t cap;
-	} words = { NULL, 0, 0 };
+	struct re_strings_builder *b;
 
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
@@ -87,10 +82,9 @@ int main(int argc, char *argv[]) {
 	start = NULL;
 
 	if (ahocorasick) {
-		words.cap = 1024;
-		words.list = malloc(words.cap * sizeof(words.list[0]));
-		if (words.list == NULL) {
-			perror("allocating word list");
+		b = re_strings_new(&opt, unanchored ? 0 : (RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT));
+		if (b == NULL) {
+			perror("re_strings_new");
 			exit(EXIT_FAILURE);
 		}
 	} else {
@@ -125,68 +119,35 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (ahocorasick) {
-			char *w;
-			size_t wlen;
-
-			if (words.len >= words.cap) {
-				size_t newcap;
-				char **wl;
-
-				if (words.cap < 16384) {
-					newcap = words.cap * 2;
-				} else {
-					newcap = words.cap + words.cap/4;
-				}
-
-				wl = malloc(newcap * sizeof wl[0]);
-				if (wl == NULL) {
-					perror("adding word");
-					exit(EXIT_FAILURE);
-				}
-
-				memcpy(wl, words.list, words.len * sizeof words.list[0]);
-				free(words.list);
-
-				words.list = wl;
-				words.cap = newcap;
-			}
-
-			wlen = strlen(p);
-			w = malloc(wlen+1);
-			if (w == NULL) {
-				perror("adding word");
+			if (!re_strings_add(b, s)) {
+				perror("re_strings_add");
 				exit(EXIT_FAILURE);
 			}
-			memcpy(w,p,wlen+1);
+		} else {
+			r = re_comp(native ? RE_NATIVE : RE_LITERAL, fsm_sgetc, &p, &opt, 0, &e);
+			if (r == NULL) {
+				re_perror(native ? RE_NATIVE : RE_LITERAL, &e, NULL, s);
+				return 1;
+			}
 
-			words.list[words.len++] = w;
-			continue;
-		}
+			rs = fsm_getstart(r);
 
-		r = re_comp(native ? RE_NATIVE : RE_LITERAL, fsm_sgetc, &p, &opt, 0, &e);
-		if (r == NULL) {
-			re_perror(native ? RE_NATIVE : RE_LITERAL, &e, NULL, s);
-			return 1;
-		}
+			fsm = fsm_merge(fsm, r);
+			if (fsm == NULL) {
+				perror("fsm_merge");
+				return 1;
+			}
 
-		rs = fsm_getstart(r);
-
-		fsm = fsm_merge(fsm, r);
-		if (fsm == NULL) {
-			perror("fsm_merge");
-			return 1;
-		}
-
-		if (!fsm_addedge_epsilon(fsm, start, rs)) {
-			perror("fsm_addedge_epsilon");
-			return 1;
+			if (!fsm_addedge_epsilon(fsm, start, rs)) {
+				perror("fsm_addedge_epsilon");
+				return 1;
+			}
 		}
 
 		if (-1 == clock_gettime(CLOCK_MONOTONIC, &post)) {
 			perror("clock_gettime");
 			exit(EXIT_FAILURE);
 		}
-
 
 		ms += 1000 * (post.tv_sec - pre.tv_sec)
 		           + ((long) post.tv_nsec - (long) pre.tv_nsec) / 1000000;
@@ -200,9 +161,9 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		fsm = re_strings(&opt, (const char **)words.list, words.len, unanchored ? 0 :  (RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT));
+		fsm = re_strings_builder_build(b);
 		if (fsm == NULL) {
-			perror("converting trie to fsm");
+			perror("re_strings_builder_build");
 			exit(EXIT_FAILURE);
 		}
 
@@ -237,6 +198,10 @@ int main(int argc, char *argv[]) {
 
 		mt += 1000 * (post.tv_sec - pre.tv_sec)
 		           + ((long) post.tv_nsec - (long) pre.tv_nsec) / 1000000;
+	}
+
+	if (ahocorasick) {
+		re_strings_free(b);
 	}
 
 	if (print != NULL) {
