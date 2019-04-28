@@ -7,8 +7,6 @@
 #ifndef AC_H
 #define AC_H
 
-#define MODULE_NAME AC
-
 #include <stdio.h>
 
 struct fsm;
@@ -50,7 +48,5 @@ trie_to_fsm(struct fsm *fsm, struct trie_graph *g, struct fsm_state *end);
 void
 trie_dump(struct trie_graph *g, FILE *f);
 
-#undef MODULE_NAME
-
-#endif /* AC_H */
+#endif
 
