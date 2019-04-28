@@ -9,3 +9,10 @@ re_ast_print_dot
 re_ast_print_abnf
 re_ast_print_pcre
 re_ast_print_tree
+re_strings
+re_strings_new
+re_strings_free
+re_strings_add
+re_strings_add_data
+re_strings_builder_build
+

@@ -23,6 +23,8 @@
 #include "re_comp.h"
 #include "re_analysis.h"
 
+#include "ac.h"
+
 struct dialect {
 	enum re_dialect dialect;
 	re_dialect_parse_fun *parse;
@@ -191,4 +193,3 @@ error:
 
 	return NULL;
 }
-
