@@ -33,7 +33,6 @@ int main(int argc, char *argv[]) {
 	int native = 0;
 	int ahocorasick = 0;
 	int unanchored = 0;
-	int single_match = 1;
 	struct re_strings_builder *b;
 
 	opt.anonymous_states  = 1;
@@ -46,13 +45,12 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "aNndmMctf"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aNndmctf"), c != -1) {
 			switch (c) {
 			case 'a': ahocorasick = 1;       break;
 			case 'd': dmf = fsm_determinise; break;
 			case 'm': dmf = fsm_minimise;    break;
 
-			case 'M': single_match = 0;      break;
 			case 'n': native = 1;            break;
 			case 'N': unanchored = 1;        break;
 
