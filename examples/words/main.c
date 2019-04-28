@@ -19,6 +19,7 @@
 #include <fsm/options.h>
 
 #include <re/re.h>
+#include <re/strings.h>
 
 static struct fsm_options opt;
 
@@ -33,7 +34,7 @@ int main(int argc, char *argv[]) {
 	int native = 0;
 	int ahocorasick = 0;
 	int unanchored = 0;
-	struct trie_graph *g;
+	struct re_strings *g;
 
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
@@ -117,8 +118,8 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (ahocorasick) {
-			if (!re_strings_add(g, s)) {
-				perror("re_strings_add");
+			if (!re_strings_add_str(g, s)) {
+				perror("re_strings_add_str");
 				exit(EXIT_FAILURE);
 			}
 		} else {
@@ -159,7 +160,7 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		fsm = re_strings_builder_build(g,
+		fsm = re_strings_build(g,
 			&opt, unanchored ? 0 : (RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT));
 		if (fsm == NULL) {
 			perror("re_strings_builder_build");

@@ -19,6 +19,7 @@
 #include <fsm/options.h>
 
 #include <re/re.h>
+#include <re/strings.h>
 
 /* This is a heavily customized version of examples/words */
 
