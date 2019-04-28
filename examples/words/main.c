@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
 	int native = 0;
 	int ahocorasick = 0;
 	int unanchored = 0;
-	struct re_strings_builder *b;
+	struct trie_graph *g;
 
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
@@ -80,8 +80,8 @@ int main(int argc, char *argv[]) {
 	start = NULL;
 
 	if (ahocorasick) {
-		b = re_strings_new(&opt, unanchored ? 0 : (RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT));
-		if (b == NULL) {
+		g = re_strings_new();
+		if (g == NULL) {
 			perror("re_strings_new");
 			exit(EXIT_FAILURE);
 		}
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (ahocorasick) {
-			if (!re_strings_add(b, s)) {
+			if (!re_strings_add(g, s)) {
 				perror("re_strings_add");
 				exit(EXIT_FAILURE);
 			}
@@ -159,7 +159,8 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		fsm = re_strings_builder_build(b);
+		fsm = re_strings_builder_build(g,
+			&opt, unanchored ? 0 : (RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT));
 		if (fsm == NULL) {
 			perror("re_strings_builder_build");
 			exit(EXIT_FAILURE);
@@ -174,6 +175,10 @@ int main(int argc, char *argv[]) {
 		           + ((long) post.tv_nsec - (long) pre.tv_nsec) / 1000000;
 	} else {
 		fsm_setstart(fsm, start);
+	}
+
+	if (ahocorasick) {
+		re_strings_free(g);
 	}
 
 	if (dmf != NULL) {
@@ -196,10 +201,6 @@ int main(int argc, char *argv[]) {
 
 		mt += 1000 * (post.tv_sec - pre.tv_sec)
 		           + ((long) post.tv_nsec - (long) pre.tv_nsec) / 1000000;
-	}
-
-	if (ahocorasick) {
-		re_strings_free(b);
 	}
 
 	if (print != NULL) {

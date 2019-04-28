@@ -10,111 +10,86 @@
 
 #include "ac.h"
 
-struct re_strings_builder {
-	struct trie_graph *g;
-	const struct fsm_options *opt;
-	enum re_strings_flags flags;
-};
-
 struct fsm *
-re_strings(const struct fsm_options *opts, const char *sv[], size_t n, enum re_strings_flags flags)
+re_strings(const struct fsm_options *opt, const char *sv[], size_t n, enum re_strings_flags flags)
 {
-	struct re_strings_builder *b = NULL;
+	struct trie_graph *g;
 	struct fsm *fsm = NULL;
 	size_t i;
 
-	b = re_strings_new(opts, flags);
-	if (b == NULL) {
-		goto finish;
+	g = re_strings_new();
+	if (g == NULL) {
+		goto done;
 	}
 
-	for (i=0; i < n; i++) {
-		if (!re_strings_add(b, sv[i])) {
-			goto finish;
+	for (i = 0; i < n; i++) {
+		if (!re_strings_add(g, sv[i])) {
+			goto done;
 		}
 	}
 
-	fsm = re_strings_builder_build(b);
+	fsm = re_strings_builder_build(g, opt, flags);
 
-finish:
-	if (b != NULL) {
-		re_strings_free(b);
+done:
+
+	if (g != NULL) {
+		re_strings_free(g);
 	}
 
 	return fsm;
 }
 
-struct re_strings_builder *
-re_strings_new(const struct fsm_options *opt, enum re_strings_flags flags)
+struct trie_graph *
+re_strings_new(void)
 {
-	struct re_strings_builder *b;
-	static const struct re_strings_builder init;
-
-	b = malloc(sizeof *b);
-	if (b == NULL) {
-		return NULL;
-	}
-
-	*b = init;
-
-	b->g = trie_create();
-	if (b->g == NULL) {
-		free(b);
-		return NULL;
-	}
-
-	b->opt = opt;
-	b->flags = flags;
-
-	return b;
+	return trie_create();
 }
 
 void
-re_strings_free(struct re_strings_builder *b)
+re_strings_free(struct trie_graph *g)
 {
-	if (b->g != NULL) {
-		trie_free(b->g);
-		b->g = NULL;
+	if (g != NULL) {
+		trie_free(g);
 	}
-
-	free(b);
 }
 
 int
-re_strings_add_data(struct re_strings_builder *b, const char *w, size_t wlen)
+re_strings_add_data(struct trie_graph *g, const char *w, size_t wlen)
 {
 	assert(w != NULL);
 	assert(wlen > 0);
 
-	return (trie_add_word(b->g, w, wlen) != NULL);
+	return trie_add_word(g, w, wlen) != NULL;
 }
 
 int
-re_strings_add(struct re_strings_builder *b, const char *w)
+re_strings_add(struct trie_graph *g, const char *w)
 {
 	assert(w != NULL);
-	return re_strings_add_data(b,w,strlen(w));
+
+	return re_strings_add_data(g, w, strlen(w));
 }
 
 struct fsm *
-re_strings_builder_build(struct re_strings_builder *b)
+re_strings_builder_build(struct trie_graph *g,
+	const struct fsm_options *opt, enum re_strings_flags flags)
 {
 	struct fsm *fsm = NULL;
 	struct fsm_state *end = NULL;
 
-	if ((b->flags & RE_STRINGS_ANCHOR_LEFT) == 0) {
-		if (trie_add_failure_edges(b->g) < 0) {
+	if ((flags & RE_STRINGS_ANCHOR_LEFT) == 0) {
+		if (trie_add_failure_edges(g) < 0) {
 			goto error;
 		}
 	}
 
-	fsm = fsm_new(b->opt);
+	fsm = fsm_new(opt);
 	if (fsm == NULL) {
 		goto error;
 	}
 
 	end = NULL;
-	if ((b->flags & RE_STRINGS_AC_AUTOMATON) == 0 && (b->flags & RE_STRINGS_ANCHOR_RIGHT) == 0) {
+	if ((flags & RE_STRINGS_AC_AUTOMATON) == 0 && (flags & RE_STRINGS_ANCHOR_RIGHT) == 0) {
 		int sym;
 
 		end = fsm_addstate(fsm);
@@ -131,7 +106,7 @@ re_strings_builder_build(struct re_strings_builder *b)
 		}
 	}
 
-	if (!trie_to_fsm(fsm, b->g, end)) {
+	if (!trie_to_fsm(fsm, g, end)) {
 		goto error;
 	}
 
