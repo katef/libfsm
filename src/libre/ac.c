@@ -1,14 +1,19 @@
-#include "ac.h"
+/*
+ * Copyright 2019 Shannon F. Stewman
+ *
+ * See LICENCE for the full copyright terms.
+ */
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <limits.h>
-#include <assert.h>
-
-#include <ctype.h>
 #include <string.h>
+#include <limits.h>
+#include <ctype.h>
 
 #include <fsm/fsm.h>
+
+#include "ac.h"
 
 enum { POOL_BLOCK_SIZE = 256 };
 
