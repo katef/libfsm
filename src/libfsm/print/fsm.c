@@ -23,25 +23,6 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
-static unsigned int
-indexof(const struct fsm *fsm, const struct fsm_state *state)
-{
-	struct fsm_state *s;
-	unsigned int i;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
-		if (s == state) {
-			return i;
-		}
-	}
-
-	assert(!"unreached");
-	return 0;
-}
-
 /* TODO: centralise */
 static const struct fsm_state *
 findany(const struct fsm_state *state)

@@ -61,25 +61,6 @@ range_cmp(const void *va, const void *vb)
 	return 0;
 }
 
-static unsigned int
-indexof(const struct fsm *fsm, const struct fsm_state *state)
-{
-	struct fsm_state *s;
-	unsigned int i;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
-		if (s == state) {
-			return i;
-		}
-	}
-
-	assert(!"unreached");
-	return 0;
-}
-
 static struct ir_group *
 make_groups(const struct fsm *fsm, const struct fsm_state *state, const struct fsm_state *mode,
 	size_t *u)

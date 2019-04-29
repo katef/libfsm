@@ -24,25 +24,6 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
-static unsigned
-indexof(const struct fsm *fsm, const struct fsm_state *state)
-{
-	struct fsm_state *s;
-	unsigned int i;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
-		if (s == state) {
-			return i;
-		}
-	}
-
-	assert(!"unreached");
-	return 0;
-}
-
 /* Return true if the edges after o contains state */
 /* TODO: centralise */
 static int
