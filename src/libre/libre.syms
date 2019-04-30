@@ -12,7 +12,7 @@ re_ast_print_tree
 re_strings
 re_strings_new
 re_strings_free
-re_strings_add
+re_strings_add_raw
 re_strings_add_str
 re_strings_build
 
