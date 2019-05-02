@@ -67,9 +67,9 @@ fsm_reverse(struct fsm *fsm)
 	 */
 	/* TODO: possibly centralise as a state-copying function */
 	{
-		struct fsm_state *s;
+		size_t i;
 
-		for (s = fsm->sl; s != NULL; s = s->next) {
+		for (i = 0; i < fsm->statecount; i++) {
 			struct fsm_state *p;
 
 			p = fsm_addstate(new);
@@ -78,15 +78,15 @@ fsm_reverse(struct fsm *fsm)
 				return 0;
 			}
 
-			s->tmp.equiv = p;
+			fsm->states[i]->tmp.equiv = p;
 
-			if (s == fsm->start) {
+			if (fsm->states[i] == fsm->start) {
 				end = p;
 				fsm_setend(new, end, 1);
 			}
 
-			if (fsm_isend(fsm, s)) {
-				if (!state_set_add(endset, s)) {
+			if (fsm_isend(fsm, fsm->states[i])) {
+				if (!state_set_add(endset, fsm->states[i])) {
 					state_set_free(endset);
 					fsm_free(new);
 					return 0;
@@ -104,22 +104,22 @@ fsm_reverse(struct fsm *fsm)
 
 	/* Create reversed edges */
 	{
-		struct fsm_state *s;
+		size_t i;
 
-		for (s = fsm->sl; s != NULL; s = s->next) {
+		for (i = 0; i < fsm->statecount; i++) {
 			struct fsm_state *to;
 			struct fsm_state *se;
 			struct edge_iter it;
 			struct fsm_edge *e;
 
-			to = s->tmp.equiv;
+			to = fsm->states[i]->tmp.equiv;
 
 			assert(to != NULL);
 
 			{
 				struct state_iter jt;
 
-				for (se = state_set_first(s->epsilons, &jt); se != NULL; se = state_set_next(&jt)) {
+				for (se = state_set_first(fsm->states[i]->epsilons, &jt); se != NULL; se = state_set_next(&jt)) {
 					assert(se->tmp.equiv != NULL);
 
 					if (!fsm_addedge_epsilon(new, se->tmp.equiv, to)) {
@@ -129,7 +129,7 @@ fsm_reverse(struct fsm *fsm)
 					}
 				}
 			}
-			for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct state_iter jt;
 
 				for (se = state_set_first(e->sl, &jt); se != NULL; se = state_set_next(&jt)) {

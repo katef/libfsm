@@ -148,7 +148,7 @@ singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 static void
 print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
-	struct fsm_state *s;
+	size_t i;
 
 	assert(f != NULL);
 	assert(ast != NULL);
@@ -193,8 +193,8 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		z->fsm->opt = tmp;
 	}
 
-	for (s = z->fsm->sl; s != NULL; s = s->next) {
-		singlestate(f, z->fsm, ast, z, s);
+	for (i = 0; i < z->fsm->statecount; i++) {
+		singlestate(f, z->fsm, ast, z, z->fsm->states[i]);
 	}
 
 	/* a start state should not accept */
@@ -222,7 +222,7 @@ lx_print_dot(FILE *f, const struct ast *ast)
 	}
 
 	if (ast->zl->next != NULL) {
-		const struct fsm_state *s;
+		size_t i;
 
 		for (z = ast->zl; z != NULL; z = z->next) {
 			fprintf(f, "\t\n");
@@ -236,9 +236,9 @@ lx_print_dot(FILE *f, const struct ast *ast)
 				fprintf(f, "\t\tlabel = <z%u>;\n", zindexof(ast, z));
 			}
 
-			for (s = z->fsm->sl; s != NULL; s = s->next) {
+			for (i = 0; i < z->fsm->statecount; i++) {
 				fprintf(f, "\t\tz%uS%u;\n",
-					zindexof(ast, z), indexof(z->fsm, s));
+					zindexof(ast, z), (unsigned) i);
 			}
 
 			if (z == ast->global) {

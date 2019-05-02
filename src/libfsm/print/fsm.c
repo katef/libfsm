@@ -91,13 +91,14 @@ findany(const struct fsm_state *state)
 void
 fsm_print_fsm(FILE *f, const struct fsm *fsm)
 {
-	struct fsm_state *s, *start;
-	int end;
+	struct fsm_state *start;
+	unsigned s;
+	size_t end;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
+	for (s = 0; s < fsm->statecount; s++) {
 		struct fsm_edge *e;
 		struct edge_iter it;
 
@@ -105,31 +106,31 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 			struct fsm_state *st;
 			struct state_iter jt;
 
-			for (st = state_set_first(s->epsilons, &jt); st != NULL; st = state_set_next(&jt)) {
+			for (st = state_set_first(fsm->states[s]->epsilons, &jt); st != NULL; st = state_set_next(&jt)) {
 				assert(st != NULL);
 
-				fprintf(f, "%-2u -> %2u;\n", indexof(fsm, s), indexof(fsm, st));
+				fprintf(f, "%-2u -> %2u;\n", s, indexof(fsm, st));
 			}
 		}
 
 		{
 			const struct fsm_state *a;
 
-			a = findany(s);
+			a = findany(fsm->states[s]);
 			if (a != NULL) {
-				fprintf(f, "%-2u -> %2u ?;\n", indexof(fsm, s), indexof(fsm, a));
+				fprintf(f, "%-2u -> %2u ?;\n", s, indexof(fsm, a));
 				continue;
 			}
 		}
 
-		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (e = edge_set_first(fsm->states[s]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			struct fsm_state *st;
 			struct state_iter jt;
 
 			for (st = state_set_first(e->sl, &jt); st != NULL; st = state_set_next(&jt)) {
 				assert(st != NULL);
 
-				fprintf(f, "%-2u -> %2u", indexof(fsm, s), indexof(fsm, st));
+				fprintf(f, "%-2u -> %2u", s, indexof(fsm, st));
 
 				fputs(" \"", f);
 				fsm_escputc(f, fsm->opt, e->symbol);
@@ -173,21 +174,18 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 
 	fprintf(f, "start: %u;\n", indexof(fsm, start));
 
-	end = 0;
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		end += !!fsm_isend(fsm, s);
-	}
+	end = fsm->endcount;
 
 	if (end == 0) {
 		return;
 	}
 
 	fprintf(f, "end:   ");
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (fsm_isend(fsm, s)) {
+	for (s = 0; s < fsm->statecount; s++) {
+		if (fsm_isend(fsm, fsm->states[s])) {
 			end--;
 
-			fprintf(f, "%u%s", indexof(fsm, s), end > 0 ? ", " : ";\n");
+			fprintf(f, "%u%s", s, end > 0 ? ", " : ";\n");
 		}
 	}
 }

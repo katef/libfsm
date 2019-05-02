@@ -18,7 +18,7 @@ fsm_collate(struct fsm *fsm,
 	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
 	struct fsm_state *new;
-	struct fsm_state *s;
+	size_t i;
 
 	assert(fsm != NULL);
 	assert(predicate != NULL);
@@ -29,11 +29,10 @@ fsm_collate(struct fsm *fsm,
 		return NULL;
 
 	case 1:
-		for (s = fsm->sl; !predicate(fsm, s); s = s->next) {
-			assert(s->next != NULL);
-		}
+		for (i = 0; !predicate(fsm, fsm->states[i]); i++)
+			;
 
-		return s;
+		return fsm->states[i];
 
 	default:
 		new = fsm_addstate(fsm);
@@ -41,16 +40,16 @@ fsm_collate(struct fsm *fsm,
 			return NULL;
 		}
 
-		for (s = fsm->sl; s != NULL; s = s->next) {
-			if (s == new) {
+		for (i = 0; i < fsm->statecount; i++) {
+			if (fsm->states[i] == new) {
 				continue;
 			}
 
-			if (!predicate(fsm, s)) {
+			if (!predicate(fsm, fsm->states[i])) {
 				continue;
 			}
 
-			if (!fsm_addedge_epsilon(fsm, s, new)) {
+			if (!fsm_addedge_epsilon(fsm, fsm->states[i], new)) {
 				/* TODO: free new */
 				return NULL;
 			}

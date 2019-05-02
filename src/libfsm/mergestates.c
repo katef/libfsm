@@ -19,11 +19,12 @@ struct fsm_state *
 fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 {
 	struct fsm_edge *e;
-	struct fsm_state *s;
 	struct edge_iter it;
+	size_t i;
 
 	/* edges from b */
 	{
+		struct fsm_state *s;
 		struct state_iter jt;
 
 		for (s = state_set_first(b->epsilons, &jt); s != NULL; s = state_set_next(&jt)) {
@@ -33,6 +34,7 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 		}
 	}
 	for (e = edge_set_first(b->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		struct fsm_state *s;
 		struct state_iter jt;
 
 		for (s = state_set_first(e->sl, &jt); s != NULL; s = state_set_next(&jt)) {
@@ -43,20 +45,20 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 	}
 
 	/* edges to b */
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (state_set_contains(s->epsilons, b)) {
-			state_set_remove(s->epsilons, b);
+	for (i = 0; i < fsm->statecount; i++) {
+		if (state_set_contains(fsm->states[i]->epsilons, b)) {
+			state_set_remove(fsm->states[i]->epsilons, b);
 
-			if (!fsm_addedge_epsilon(fsm, s, a)) {
+			if (!fsm_addedge_epsilon(fsm, fsm->states[i], a)) {
 				return NULL;
 			}
 		}
 
-		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			state_set_remove(e->sl, b);
 
 			if (state_set_contains(e->sl, b)) {
-				if (!fsm_addedge_literal(fsm, s, a, e->symbol)) {
+				if (!fsm_addedge_literal(fsm, fsm->states[i], a, e->symbol)) {
 					return NULL;
 				}
 			}

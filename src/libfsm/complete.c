@@ -21,7 +21,7 @@ fsm_complete(struct fsm *fsm,
 	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
 	struct fsm_state *new;
-	struct fsm_state *s;
+	size_t i;
 
 	assert(fsm != NULL);
 	assert(predicate != NULL);
@@ -54,19 +54,19 @@ fsm_complete(struct fsm *fsm,
 		return 0;
 	}
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		unsigned i;
+	for (i = 0; i < fsm->statecount; i++) {
+		unsigned c;
 
-		if (!predicate(fsm, s)) {
+		if (!predicate(fsm, fsm->states[i])) {
 			continue;
 		}
 
-		for (i = 0; i <= UCHAR_MAX; i++) {
-			if (fsm_hasedge_literal(s, i)) {
+		for (c = 0; c <= UCHAR_MAX; c++) {
+			if (fsm_hasedge_literal(fsm->states[i], c)) {
 				continue;
 			}
 
-			if (!fsm_addedge_literal(fsm, s, new, i)) {
+			if (!fsm_addedge_literal(fsm, fsm->states[i], new, c)) {
 				/* TODO: free stuff */
 				return 0;
 			}

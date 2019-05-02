@@ -6,12 +6,51 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include <limits.h>
 #include <errno.h>
 
 #include <fsm/bool.h>
 
 #include "internal.h"
+
+static struct fsm *
+merge(struct fsm *src, struct fsm *dst)
+{
+	assert(src != NULL);
+	assert(dst != NULL);
+
+	if (dst->statealloc < src->statecount + dst->statecount) {
+		void *tmp;
+
+		tmp = f_realloc(dst->opt->alloc, dst->states,
+			(src->statecount + dst->statecount) * sizeof *dst->states);
+		if (tmp == NULL) {
+			return NULL;
+		}
+
+		dst->states = tmp;
+		dst->statealloc += src->statealloc;
+	}
+
+	memcpy(dst->states + dst->statecount, src->states,
+		src->statecount * sizeof *src->states);
+	dst->statecount += src->statecount;
+
+	f_free(src->opt->alloc, src->states);
+	src->states = NULL;
+	src->statealloc = 0;
+	src->statecount = 0;
+
+	dst->endcount += src->endcount;
+
+	fsm_setstart(src, NULL);
+	fsm_setstart(dst, NULL);
+
+	fsm_free(src);
+
+	return dst;
+}
 
 struct fsm *
 fsm_merge(struct fsm *a, struct fsm *b)
@@ -24,17 +63,10 @@ fsm_merge(struct fsm *a, struct fsm *b)
 		return NULL;
 	}
 
-	*a->tail = b->sl;
-	a->tail  = b->tail;
-
-	a->endcount += b->endcount;
-
-	b->sl   = NULL;
-	b->tail = NULL;
-	fsm_free(b);
-
-	fsm_setstart(a, NULL);
-
-	return a;
+	if (a->statealloc >= b->statealloc) {
+		return merge(b, a);
+	} else {
+		return merge(a, b);
+	}
 }
 

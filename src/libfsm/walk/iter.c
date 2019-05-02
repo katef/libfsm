@@ -20,13 +20,13 @@ int
 fsm_walk_states(const struct fsm *fsm, void *opaque,
 	int (*callback)(const struct fsm *, const struct fsm_state *, void *))
 {
-	const struct fsm_state *s;
+	size_t i;
 
 	assert(fsm != NULL);
 	assert(callback != NULL);
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (!callback(fsm, s, opaque)) {
+	for (i = 0; i < fsm->statecount; i++) {
+		if (!callback(fsm, fsm->states[i], opaque)) {
 			return 0;
 		}
 	}
@@ -39,22 +39,22 @@ fsm_walk_edges(const struct fsm *fsm, void *opaque,
 	int (*callback_literal)(const struct fsm *, const struct fsm_state *, const struct fsm_state *, char c, void *),
 	int (*callback_epsilon)(const struct fsm *, const struct fsm_state *, const struct fsm_state *, void *))
 {
-	const struct fsm_state *src;
+	size_t i;
 
 	assert(fsm != NULL);
 	assert(callback_literal != NULL);
 	assert(callback_epsilon != NULL);
 
-	for (src = fsm->sl; src != NULL; src = src->next) {
+	for (i = 0; i < fsm->statecount; i++) {
 		const struct fsm_edge *e;
 		struct edge_iter ei;
 
-		for (e = edge_set_first(src->edges, &ei); e != NULL; e = edge_set_next(&ei)) {
+		for (e = edge_set_first(fsm->states[i]->edges, &ei); e != NULL; e = edge_set_next(&ei)) {
 			const struct fsm_state *dst;
 			struct state_iter di;
 
 			for (dst = state_set_first(e->sl, &di); dst != NULL; dst=state_set_next(&di)) {
-				if (!callback_literal(fsm, src, dst, e->symbol, opaque)) {
+				if (!callback_literal(fsm, fsm->states[i], dst, e->symbol, opaque)) {
 					return 0;
 				}
 			}
@@ -64,8 +64,8 @@ fsm_walk_edges(const struct fsm *fsm, void *opaque,
 			const struct fsm_state *dst;
 			struct state_iter di;
 
-			for (dst = state_set_first(src->epsilons, &di); dst != NULL; dst = state_set_next(&di)) {
-				if (!callback_epsilon(fsm, src, dst, opaque)) {
+			for (dst = state_set_first(fsm->states[i]->epsilons, &di); dst != NULL; dst = state_set_next(&di)) {
+				if (!callback_epsilon(fsm, fsm->states[i], dst, opaque)) {
 					return 0;
 				}
 			}

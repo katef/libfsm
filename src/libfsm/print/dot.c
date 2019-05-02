@@ -185,21 +185,20 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 static void
 print_dotfrag(FILE *f, const struct fsm *fsm)
 {
-	struct fsm_state *s;
+	unsigned i;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (fsm_isend(fsm, s)) {
+	for (i = 0; i < fsm->statecount; i++) {
+		if (fsm_isend(fsm, fsm->states[i])) {
 			fprintf(f, "\t%sS%-2u [ shape = doublecircle",
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				indexof(fsm, s));
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "", i);
 
 			if (fsm->opt->endleaf != NULL) {
 				fprintf(f, ", ");
-				fsm->opt->endleaf(f, s->opaque, fsm->opt->endleaf_opaque);
+				fsm->opt->endleaf(f, fsm->states[i], fsm->opt->endleaf_opaque);
 			}
 
 			fprintf(f, " ];\n");
@@ -207,7 +206,7 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 
 		/* TODO: show example here, unless !opt->comments */
 
-		singlestate(f, fsm, s);
+		singlestate(f, fsm, fsm->states[i]);
 	}
 }
 

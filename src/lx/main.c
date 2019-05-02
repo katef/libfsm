@@ -423,14 +423,14 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 
 	{
 		const struct ast_mapping *m;
-		const struct fsm_state *s;
+		size_t i;
 
-		for (s = q->sl; s != NULL; s = s->next) {
-			if (!fsm_isend(q, s)) {
+		for (i = 0; i < q->statecount; i++) {
+			if (!fsm_isend(q, q->states[i])) {
 				continue;
 			}
 
-			m = fsm_getopaque(q, s);
+			m = fsm_getopaque(q, q->states[i]);
 			assert(m != NULL);
 
 			if (m->conflict != NULL) {
@@ -816,8 +816,8 @@ main(int argc, char *argv[])
 				}
 
 				for (p = &z->next; *p != NULL; p = &(*p)->next) {
-					struct fsm_state *s;
 					struct ast_zone *q;
+					size_t i;
 					int r;
 
 					r = zone_equal(z, *p);
@@ -831,15 +831,15 @@ main(int argc, char *argv[])
 					}
 
 					for (q = ast->zl; q != NULL; q = q->next) {
-						for (s = q->fsm->sl; s != NULL; s = s->next) {
+						for (i = 0; i < q->fsm->statecount; i++) {
 							struct ast_mapping *m;
 
-							if (!fsm_isend(q->fsm, s)) {
+							if (!fsm_isend(q->fsm, q->fsm->states[i])) {
 								continue;
 							}
 
-							assert(s->opaque != NULL);
-							m = s->opaque;
+							assert(q->fsm->states[i]->opaque != NULL);
+							m = q->fsm->states[i]->opaque;
 
 							if (m->to == *p) {
 								m->to = z;
@@ -882,9 +882,9 @@ main(int argc, char *argv[])
 	 */
 	if (print != lx_print_h) {
 		struct ast_zone  *z;
-		struct fsm_state *s;
-		int e;
 		unsigned int zn;
+		size_t i;
+		int e;
 
 		if (print_progress) {
 			fprintf(stderr, "-- semantic checks:");
@@ -918,22 +918,22 @@ main(int argc, char *argv[])
 			}
 
 			/* pick up conflicts flagged by carryopaque() */
-			for (s = z->fsm->sl; s != NULL; s = s->next) {
+			for (i = 0; i < z->fsm->statecount; i++) {
 				struct ast_mapping *m;
 
-				if (!fsm_isend(z->fsm, s)) {
+				if (!fsm_isend(z->fsm, z->fsm->states[i])) {
 					continue;
 				}
 
-				assert(s->opaque != NULL);
-				m = s->opaque;
+				assert(z->fsm->states[i]->opaque != NULL);
+				m = z->fsm->states[i]->opaque;
 
 				if (m->conflict != NULL) {
 					struct mapping_set *p;
 					char buf[50]; /* 50 looks reasonable for an on-screen limit */
 					int n;
 
-					n = fsm_example(z->fsm, s, buf, sizeof buf);
+					n = fsm_example(z->fsm, z->fsm->states[i], buf, sizeof buf);
 					if (-1 == n) {
 						perror("fsm_example");
 						return EXIT_FAILURE;
@@ -996,16 +996,16 @@ main(int argc, char *argv[])
 	if (!keep_nfa && print != lx_print_h) {
 		struct ast_zone *z;
 		struct ast_mapping *m;
-		const struct fsm_state *s;
+		size_t i;
 
 		for (z = ast->zl; z != NULL; z = z->next) {
-			for (s = z->fsm->sl; s != NULL; s = s->next) {
-				if (!fsm_isend(z->fsm, s)) {
+			for (i = 0; i < z->fsm->statecount; i++) {
+				if (!fsm_isend(z->fsm, z->fsm->states[i])) {
 					continue;
 				}
 
-				if (s->opaque != NULL) {
-					m = s->opaque;
+				if (z->fsm->states[i]->opaque != NULL) {
+					m = z->fsm->states[i]->opaque;
 
 					assert(m->fsm == NULL);
 

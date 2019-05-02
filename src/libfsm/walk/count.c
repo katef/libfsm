@@ -16,16 +16,16 @@ unsigned
 fsm_count(const struct fsm *fsm,
 	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
-	const struct fsm_state *s;
 	unsigned n;
+	size_t i;
 
 	assert(fsm != NULL);
 	assert(predicate != NULL);
 
 	n = 0;
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		n += !!predicate(fsm, s);
+	for (i = 0; i < fsm->statecount; i++) {
+		n += !!predicate(fsm, fsm->states[i]);
 	}
 
 	return n;

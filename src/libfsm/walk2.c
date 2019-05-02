@@ -177,7 +177,6 @@ walk2_comb_state(struct fsm *dst_fsm, int is_end,
 	const struct fsm_state *states[2] = { 0 };
 	size_t count;
 	struct fsm tmp;
-	struct fsm_state tmp0, tmp1;
 
     assert(dst_fsm != NULL); 
  
@@ -225,31 +224,9 @@ walk2_comb_state(struct fsm *dst_fsm, int is_end,
 	 * it's only needed briefly and is limited to two states.
 	 */
 
-	/* TODO: tmp.states = states; */
-
-	/* handmade linked list */
-	switch (count) {
-	case 2:
-		tmp0 = *states[0];
-		tmp1 = *states[1];
-		tmp0.next = &tmp1;
-		tmp1.next = NULL;
-		tmp.tail = &tmp1.next;
-		break;
-
-	case 1:
-		tmp0 = *states[0];
-		tmp0.next = NULL;
-		tmp.tail = &tmp0.next;
-		break;
-
-	default:
-		assert(!"unreached");
-	}
-
-	tmp.sl = &tmp0;
-	/* TODO: tmp.statealloc = count; */
-	/* TODO: tmp.statecount = count; */
+	tmp.states = (struct fsm_state **) states;
+	tmp.statealloc = count;
+	tmp.statecount = count;
 	tmp.endcount = a->end + b->end;
 	tmp.start = NULL;
 	tmp.opt = dst_fsm->opt;

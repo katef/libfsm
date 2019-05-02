@@ -60,10 +60,11 @@ fsm_shortest(const struct fsm *fsm,
 	path = NULL;
 
 	{
-		struct fsm_state *s;
+		size_t i;
 
-		for (s = fsm->sl; s != NULL; s = s->next) {
-			u = priq_push(fsm->opt->alloc, &todo, s, s == fsm_getstart(fsm) ? 0 : FSM_COST_INFINITY);
+		for (i = 0; i < fsm->statecount; i++) {
+			u = priq_push(fsm->opt->alloc, &todo, fsm->states[i],
+				fsm->states[i] == fsm_getstart(fsm) ? 0 : FSM_COST_INFINITY);
 			if (u == NULL) {
 				goto error;
 			}
@@ -72,7 +73,7 @@ fsm_shortest(const struct fsm *fsm,
 			 * It's non-sensical to describe the start state as being reached
 			 * by a symbol; this field is not used.
 			 */
-			if (s == fsm_getstart(fsm)) {
+			if (fsm->states[i] == fsm_getstart(fsm)) {
 				u->c = '\0';
 			}
 		}

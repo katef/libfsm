@@ -18,7 +18,7 @@
 int
 fsm_complement(struct fsm *fsm)
 {
-	struct fsm_state *s;
+	size_t i;
 
 	assert(fsm != NULL);
 
@@ -35,8 +35,8 @@ fsm_complement(struct fsm *fsm)
 	 * non-end states as end.
 	 */
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		fsm_setend(fsm, s, !fsm_isend(fsm, s));
+	for (i = 0; i < fsm->statecount; i++) {
+		fsm_setend(fsm, fsm->states[i], !fsm_isend(fsm, fsm->states[i]));
 	}
 
 	if (!fsm_trim(fsm)) {

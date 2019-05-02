@@ -20,14 +20,13 @@
 unsigned int
 indexof(const struct fsm *fsm, const struct fsm_state *state)
 {
-	struct fsm_state *s;
 	unsigned int i;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
 
-	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
-		if (s == state) {
+	for (i = 0; i < fsm->statecount; i++) {
+		if (fsm->states[i] == state) {
 			return i;
 		}
 	}
@@ -62,9 +61,24 @@ fsm_addstate(struct fsm *fsm)
 
 	fsm_state_clear_tmp(new);
 
-	*fsm->tail = new;
-	new->next = NULL;
-	fsm->tail  = &new->next;
+	/* TODO: something better than one contigious realloc */
+	if (fsm->statecount == fsm->statealloc) {
+		const size_t factor = 2; /* a guess */
+		const size_t n = fsm->statealloc * factor;
+		void *tmp;
+
+		tmp = f_realloc(fsm->opt->alloc, fsm->states, n * sizeof *fsm->states);
+		if (tmp == NULL) {
+			f_free(fsm->opt->alloc, new);
+			return NULL;
+		}
+
+		fsm->statealloc = n;
+		fsm->states = tmp;
+	}
+
+	fsm->states[fsm->statecount] = new;
+	fsm->statecount++;
 
 	return new;
 }
@@ -78,9 +92,9 @@ fsm_state_clear_tmp(struct fsm_state *state)
 void
 fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 {
-	struct fsm_state *s;
 	struct fsm_edge *e;
 	struct edge_iter it;
+	size_t i;
 
 	assert(fsm != NULL);
 	assert(state != NULL);
@@ -88,9 +102,9 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 	/* for endcount accounting */
 	fsm_setend(fsm, state, 0);
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		state_set_remove(s->epsilons, state);
-		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
+	for (i = 0; i < fsm->statecount; i++) {
+		state_set_remove(fsm->states[i]->epsilons, state);
+		for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			state_set_remove(e->sl, state);
 		}
 	}
@@ -107,26 +121,18 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 	}
 
 	{
-		struct fsm_state **p;
-		struct fsm_state **tail;
+		size_t j;
 
-		tail = &fsm->sl;
+		j = indexof(fsm, state);
 
-		for (p = &fsm->sl; *p != NULL; p = &(*p)->next) {
-			if (*p == state) {
-				struct fsm_state *next;
+		assert(fsm->statecount > 1);
 
-				if (fsm->tail == &(*p)->next) {
-					fsm->tail = tail;
-				}
-
-				next = (*p)->next;
-				f_free(fsm->opt->alloc, *p);
-				*p = next;
-				break;
-			}
-
-			tail = &(*p)->next;
+		if (fsm->statecount - j > 1) {
+			memmove(&fsm->states[j], &fsm->states[j + 1], sizeof *fsm->states * (fsm->statecount - j - 1));
 		}
+		fsm->statecount--;
 	}
+
+	f_free(fsm->opt->alloc, state);
 }
+

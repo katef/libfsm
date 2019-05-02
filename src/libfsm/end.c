@@ -44,13 +44,13 @@ fsm_setend(struct fsm *fsm, struct fsm_state *state, int end)
 void
 fsm_setendopaque(struct fsm *fsm, void *opaque)
 {
-	struct fsm_state *s;
+	size_t i;
 
 	assert(fsm != NULL);
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (fsm_isend(fsm, s)) {
-			fsm_setopaque(fsm, s, opaque);
+	for (i = 0; i < fsm->statecount; i++) {
+		if (fsm_isend(fsm, fsm->states[i])) {
+			fsm_setopaque(fsm, fsm->states[i], opaque);
 		}
 	}
 }

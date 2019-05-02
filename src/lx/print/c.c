@@ -81,7 +81,7 @@ static const struct fsm_state *
 shortest_example(const struct fsm *fsm, const struct ast_token *token)
 {
 	const struct fsm_state *goal;
-	struct fsm_state *s;
+	size_t i;
 	int min;
 
 	assert(fsm != NULL);
@@ -95,11 +95,11 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token)
 	goal = fsm->start;
 	min  = INT_MAX;
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
+	for (i = 0; i < fsm->statecount; i++) {
 		const struct ast_mapping *m;
 		int n;
 
-		m = s->opaque;
+		m = fsm->states[i]->opaque;
 		if (m == NULL) {
 			continue;
 		}
@@ -108,7 +108,7 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token)
 			continue;
 		}
 
-		n = fsm_example(fsm, s, NULL, 0);
+		n = fsm_example(fsm, fsm->states[i], NULL, 0);
 		if (-1 == n) {
 			perror("fsm_example");
 			return NULL;
@@ -116,7 +116,7 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token)
 
 		if (n < min) {
 			min = n;
-			goal = s;
+			goal = fsm->states[i];
 		}
 	}
 
@@ -568,16 +568,15 @@ print_buf(FILE *f)
 }
 
 static void
-print_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
+print_stateenum(FILE *f, const struct fsm *fsm)
 {
-	struct fsm_state *s;
-	int i;
+	unsigned int i;
 
 	fprintf(f, "\tenum {\n");
 	fprintf(f, "\t\t");
 
-	for (s = sl, i = 1; s != NULL; s = s->next, i++) {
-		fprintf(f, "S%u, ", indexof(fsm, s));
+	for (i = 0; i < fsm->statecount; i++) {
+		fprintf(f, "S%u, ", i + 1);
 
 		if (i % 10 == 0) {
 			fprintf(f, "\n");
@@ -590,7 +589,6 @@ print_stateenum(FILE *f, const struct fsm *fsm, struct fsm_state *sl)
 	fprintf(f, "\n");
 	fprintf(f, "\t} state;\n");
 }
-
 
 static int
 print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
@@ -609,7 +607,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tint c;\n");
 	fprintf(f, "\n");
 
-	print_stateenum(f, z->fsm, z->fsm->sl);
+	print_stateenum(f, z->fsm);
 	fprintf(f, "\n");
 
 	fprintf(f, "\tassert(lx != NULL);\n");
@@ -682,15 +680,15 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	}
 
 	if (~api_exclude & API_BUF) {
-		struct fsm_state *s;
 		int has_skips;
+		size_t i;
 
 		has_skips = 0;
 
-		for (s = z->fsm->sl; s != NULL; s = s->next) {
+		for (i = 0; i < z->fsm->statecount; i++) {
 			int r;
 
-			r = fsm_reachableall(z->fsm, s, skip);
+			r = fsm_reachableall(z->fsm, z->fsm->states[i], skip);
 			if (r == -1) {
 				return -1;
 			}
@@ -709,10 +707,10 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			fprintf(f, "\n");
 			fprintf(f, "\t\tswitch (state) {\n");
 
-			for (s = z->fsm->sl; s != NULL; s = s->next) {
+			for (i = 0; i < z->fsm->statecount; i++) {
 				int r;
 
-				r = fsm_reachableall(z->fsm, s, skip);
+				r = fsm_reachableall(z->fsm, z->fsm->states[i], skip);
 				if (r == -1) {
 					return -1;
 				}
@@ -721,7 +719,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 					continue;
 				}
 
-				fprintf(f, "\t\tcase S%u:\n", indexof(z->fsm, s));
+				fprintf(f, "\t\tcase S%u:\n", (unsigned) i);
 			}
 
 			fprintf(f, "\t\t\tbreak;\n");
@@ -752,7 +750,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\n");
 
 	{
-		struct fsm_state *s;
+		size_t i;
 
 		switch (opt.io) {
 		case FSM_IO_GETC:
@@ -775,18 +773,18 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 		fprintf(f, "\tcase NONE: return %sEOF;\n", prefix.tok);
 
-		for (s = z->fsm->sl; s != NULL; s = s->next) {
+		for (i = 0; i < z->fsm->statecount; i++) {
 			const struct ast_mapping *m;
 
-			if (!fsm_isend(z->fsm, s)) {
+			if (!fsm_isend(z->fsm, z->fsm->states[i])) {
 				continue;
 			}
 
-			m = s->opaque;
+			m = z->fsm->states[i]->opaque;
 
 			assert(m != NULL);
 
-			fprintf(f, "\tcase S%u: return ", indexof(z->fsm, s));
+			fprintf(f, "\tcase S%u: return ", (unsigned) i);
 
 			/* note: no point in changing zone here, because getc is now NULL */
 

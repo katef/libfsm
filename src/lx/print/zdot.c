@@ -42,7 +42,7 @@ zindexof(const struct ast *ast, const struct ast_zone *zone)
 static void
 print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
-	struct fsm_state *s;
+	size_t i;
 
 	assert(f != NULL);
 	assert(ast != NULL);
@@ -50,11 +50,11 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(z->fsm != NULL);
 	assert(z->fsm->start != NULL);
 
-	for (s = z->fsm->sl; s != NULL; s = s->next) {
+	for (i = 0; i < z->fsm->statecount; i++) {
 		struct ast_mapping *m;
 
-		if (fsm_isend(z->fsm, s)) {
-			m = s->opaque;
+		if (fsm_isend(z->fsm, z->fsm->states[i])) {
+			m = z->fsm->states[i]->opaque;
 
 			if (m->to == NULL) {
 				continue;

@@ -61,16 +61,15 @@ struct fsm_state {
 		/* tracks which states have been visited in walk2 */
 		struct fsm_state *visited;
 	} tmp;
-
-	struct fsm_state *next;
 };
 
 struct fsm {
-	struct fsm_state *sl;
-	struct fsm_state **tail; /* tail of .sl */
+	struct fsm_state **states; /* array */
 	struct fsm_state *start;
 
-	unsigned long endcount;
+	size_t statealloc; /* number of elements allocated */
+	size_t statecount; /* number of elements populated */
+	size_t endcount;
 
 	const struct fsm_options *opt;
 };

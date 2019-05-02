@@ -43,7 +43,7 @@ hasmore(const struct fsm_state *s, int i)
 void
 fsm_print_json(FILE *f, const struct fsm *fsm)
 {
-	struct fsm_state *s;
+	size_t i;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
@@ -53,14 +53,14 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 	{
 		fprintf(f, "\t\"states\": [\n");
 
-		for (s = fsm->sl; s != NULL; s = s->next) {
+		for (i = 0; i < fsm->statecount; i++) {
 			struct fsm_edge *e;
 			struct edge_iter it;
 
 			fprintf(f, "\t\t{\n");
 
 			fprintf(f, "\t\t\t\"end\": %s,\n",
-				fsm_isend(fsm, s) ? "true" : "false");
+				fsm_isend(fsm, fsm->states[i]) ? "true" : "false");
 
 			fprintf(f, "\t\t\t\"edges\": [\n");
 
@@ -68,7 +68,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 				struct fsm_state *st;
 				struct state_iter jt;
 
-				for (st = state_set_first(s->epsilons, &jt); st != NULL; st = state_set_next(&jt)) {
+				for (st = state_set_first(fsm->states[i]->epsilons, &jt); st != NULL; st = state_set_next(&jt)) {
 					assert(st != NULL);
 
 					fprintf(f, "\t\t\t\t{ ");
@@ -81,11 +81,11 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 						indexof(fsm, st));
 
 					/* XXX: should count .sl inside an edge */
-					fprintf(f, "}%s\n", !edge_set_empty(s->edges) ? "," : "");
+					fprintf(f, "}%s\n", !edge_set_empty(fsm->states[i]->edges) ? "," : "");
 				}
 			}
 
-			for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct fsm_state *st;
 				struct state_iter jt;
 
@@ -104,13 +104,13 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 					fprintf(f, "\"to\": %u",
 						indexof(fsm, st));
 
-					fprintf(f, "}%s\n", edge_set_hasnext(&it) && hasmore(s, e->symbol) ? "," : "");
+					fprintf(f, "}%s\n", edge_set_hasnext(&it) && hasmore(fsm->states[i], e->symbol) ? "," : "");
 				}
 			}
 
 			fprintf(f, "\t\t\t]\n");
 
-			fprintf(f, "\t\t}%s\n", s->next ? "," : "");
+			fprintf(f, "\t\t}%s\n", (i + 1) < fsm->statecount ? "," : "");
 		}
 
 		fprintf(f, "\t],\n");

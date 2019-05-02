@@ -27,25 +27,25 @@
 void
 free_contents(struct fsm *fsm)
 {
-	struct fsm_state *next;
-	struct fsm_state *s;
+	size_t i;
 
 	assert(fsm != NULL);
 
-	for (s = fsm->sl; s != NULL; s = next) {
+	for (i = 0; i < fsm->statecount; i++) {
 		struct edge_iter it;
 		struct fsm_edge *e;
-		next = s->next;
 
-		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			state_set_free(e->sl);
 			f_free(fsm->opt->alloc, e);
 		}
 
-		state_set_free(s->epsilons);
-		edge_set_free(s->edges);
-		f_free(fsm->opt->alloc, s);
+		state_set_free(fsm->states[i]->epsilons);
+		edge_set_free(fsm->states[i]->edges);
+		f_free(fsm->opt->alloc, fsm->states[i]);
 	}
+
+	f_free(fsm->opt->alloc, fsm->states);
 }
 
 struct fsm *
@@ -65,11 +65,17 @@ fsm_new(const struct fsm_options *opt)
 		return NULL;
 	}
 
-	new->sl    = NULL;
-	new->tail  = &new->sl;
-	new->start = NULL;
+	new->statealloc = 128; /* guess */
+	new->statecount = 0;
+	new->endcount   = 0;
 
-	new->endcount = 0;
+	new->states = f_malloc(f.opt->alloc, new->statealloc * sizeof *new->states);
+	if (new->states == NULL) {
+		f_free(f.opt->alloc, new);
+		return NULL;
+	}
+
+	new->start  = NULL;
 
 	new->opt = opt;
 
@@ -111,10 +117,11 @@ fsm_move(struct fsm *dst, struct fsm *src)
 
 	free_contents(dst);
 
-	dst->sl       = src->sl;
-	dst->tail     = src->tail;
-	dst->start    = src->start;
-	dst->endcount = src->endcount;
+	dst->states     = src->states;
+	dst->start      = src->start;
+	dst->statecount = src->statecount;
+	dst->statealloc = src->statealloc;
+	dst->endcount   = src->endcount;
 
 	f_free(src->opt->alloc, src);
 }
@@ -201,35 +208,26 @@ fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
 unsigned int
 fsm_countstates(const struct fsm *fsm)
 {
-	unsigned int n = 0;
-	const struct fsm_state *s;
-	/*
-	 * XXX - this walks the list and counts and should be replaced
-	 * with something better when possible
-	 */
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		assert(n+1>n); /* handle overflow with more grace? */
-		n++;
-	}
+	assert(fsm != NULL);
 
-	return n;
+	return fsm->statecount;
 }
 
 unsigned int
 fsm_countedges(const struct fsm *fsm)
 {
 	unsigned int n = 0;
-	const struct fsm_state *src;
+	size_t i;
 
 	/*
 	 * XXX - this counts all src,lbl,dst tuples individually and
 	 * should be replaced with something better when possible
 	 */
-	for (src = fsm->sl; src != NULL; src = src->next) {
+	for (i = 0; i < fsm->statecount; i++) {
 		struct edge_iter ei;
 		const struct fsm_edge *e;
 
-		for (e = edge_set_first(src->edges, &ei); e != NULL; e=edge_set_next(&ei)) {
+		for (e = edge_set_first(fsm->states[i]->edges, &ei); e != NULL; e=edge_set_next(&ei)) {
 			assert(n + state_set_count(e->sl) > n); /* handle overflow with more grace? */
 			n += state_set_count(e->sl);
 		}
@@ -241,11 +239,12 @@ fsm_countedges(const struct fsm *fsm)
 void
 fsm_clear_tmp(struct fsm *fsm)
 {
-	struct fsm_state *s;
+	size_t i;
 
 	assert(fsm != NULL);
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		fsm_state_clear_tmp(s);
+	for (i = 0; i < fsm->statecount; i++) {
+		fsm_state_clear_tmp(fsm->states[i]);
 	}
 }
+

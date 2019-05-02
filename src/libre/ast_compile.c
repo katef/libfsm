@@ -104,10 +104,10 @@ fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state 
 
 	/* TODO: centralise as fsm_clearends() or somesuch */
 	{
-		struct fsm_state *s;
+		size_t i;
 
-		for (s = b->sl; s != NULL; s = s->next) {
-			fsm_setend(b, s, 0);
+		for (i = 0; i < b->statecount; i++) {
+			fsm_setend(b, b->states[i], 0);
 		}
 	}
 

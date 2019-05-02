@@ -32,8 +32,8 @@ fsm_union(struct fsm *a, struct fsm *b)
 		return NULL;
 	}
 
-	if (a->sl == NULL) { return b; }
-	if (b->sl == NULL) { return a; }
+	if (a->statecount == 0) { return b; }
+	if (b->statecount == 0) { return a; }
 
 	sa = fsm_getstart(a);
 	sb = fsm_getstart(b);

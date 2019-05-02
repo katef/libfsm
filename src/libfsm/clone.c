@@ -35,9 +35,11 @@ fsm_clone(const struct fsm *fsm)
 	 */
 	/* TODO: possibly centralise as a state-cloning function */
 	{
-		struct fsm_state *s;
+		size_t i;
 
-		for (s = fsm->sl; s != NULL; s = s->next) {
+		/* TODO: malloc and memcpy in one shot, rather than
+		 * calling fsm_addstate() for each state. */
+		for (i = 0; i < fsm->statecount; i++) {
 			struct fsm_state *q;
 
 			q = fsm_addstate(new);
@@ -46,44 +48,40 @@ fsm_clone(const struct fsm *fsm)
 				return NULL;
 			}
 
-			s->tmp.equiv = q;
+			fsm->states[i]->tmp.equiv = q;
 		}
 	}
 
 	{
-		struct fsm_state *s;
+		size_t i;
 
-		for (s = fsm->sl; s != NULL; s = s->next) {
+		for (i = 0; i < fsm->statecount; i++) {
 			struct fsm_edge *e;
 			struct edge_iter it;
 
-			assert(s->tmp.equiv != NULL);
+			assert(fsm->states[i]->tmp.equiv != NULL);
 
-			if (*fsm->tail == s) {
-				new->tail = &s->tmp.equiv;
-			}
-
-			fsm_setend(new, s->tmp.equiv, fsm_isend(fsm, s));
-			s->tmp.equiv->opaque = s->opaque;
+			fsm_setend(new, fsm->states[i]->tmp.equiv, fsm_isend(fsm, fsm->states[i]));
+			fsm->states[i]->tmp.equiv->opaque = fsm->states[i]->opaque;
 
 			{
 				struct state_iter jt;
 				struct fsm_state *to;
 
-				for (to = state_set_first(s->epsilons, &jt); to != NULL; to = state_set_next(&jt)) {
-					if (!fsm_addedge_epsilon(new, s->tmp.equiv, to->tmp.equiv)) {
+				for (to = state_set_first(fsm->states[i]->epsilons, &jt); to != NULL; to = state_set_next(&jt)) {
+					if (!fsm_addedge_epsilon(new, fsm->states[i]->tmp.equiv, to->tmp.equiv)) {
 						fsm_free(new);
 						return NULL;
 					}
 				}
 			}
 
-			for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct state_iter jt;
 				struct fsm_state *to;
 
 				for (to = state_set_first(e->sl, &jt); to != NULL; to = state_set_next(&jt)) {
-					if (!fsm_addedge_literal(new, s->tmp.equiv, to->tmp.equiv, e->symbol)) {
+					if (!fsm_addedge_literal(new, fsm->states[i]->tmp.equiv, to->tmp.equiv, e->symbol)) {
 						fsm_free(new);
 						return NULL;
 					}

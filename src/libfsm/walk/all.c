@@ -16,13 +16,13 @@ int
 fsm_all(const struct fsm *fsm,
 	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
-	const struct fsm_state *s;
+	size_t i;
 
 	assert(fsm != NULL);
 	assert(predicate != NULL);
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (!predicate(fsm, s)) {
+	for (i = 0; i < fsm->statecount; i++) {
+		if (!predicate(fsm, fsm->states[i])) {
 			return 0;
 		}
 	}

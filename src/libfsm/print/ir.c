@@ -448,7 +448,6 @@ struct ir *
 make_ir(const struct fsm *fsm)
 {
 	struct ir *ir;
-	struct fsm_state *s;
 	size_t i;
 
 	assert(fsm != NULL);
@@ -472,17 +471,15 @@ make_ir(const struct fsm *fsm)
 		return NULL;
 	}
 
-	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
+	ir->start = indexof(fsm, fsm_getstart(fsm));
+
+	for (i = 0; i < fsm->statecount; i++) {
 		assert(i < ir->n);
 
-		ir->states[i].isend  = fsm_isend(fsm, s);
-		ir->states[i].opaque = s->opaque;
+		ir->states[i].isend  = fsm_isend(fsm, fsm->states[i]);
+		ir->states[i].opaque = fsm->states[i]->opaque;
 
-		if (s == fsm->start) {
-			ir->start = i;
-		}
-
-		if (make_state(fsm, s, ir, &ir->states[i]) == -1) {
+		if (make_state(fsm, fsm->states[i], ir, &ir->states[i]) == -1) {
 			goto error;
 		}
 
@@ -492,7 +489,7 @@ make_ir(const struct fsm *fsm)
 			char *p;
 			int n;
 
-			if (s == fsm->start) {
+			if (fsm->states[i] == fsm->start) {
 				ir->states[i].example = NULL;
 				continue;
 			}
@@ -507,7 +504,7 @@ make_ir(const struct fsm *fsm)
 				goto error_example;
 			}
 
-			n = fsm_example(fsm, s, p, ir->n + 1);
+			n = fsm_example(fsm, fsm->states[i], p, ir->n + 1);
 			if (-1 == n) {
 				f_free(fsm->opt->alloc, p);
 				goto error_example;
