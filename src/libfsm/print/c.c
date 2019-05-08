@@ -269,7 +269,7 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 
 	/* no end states */
 	if (!ir_hasend(ir)) {
-		printf("\treturn -1; /* unexpected EOT */\n");
+		fprintf(f, "\treturn -1; /* unexpected EOT */\n");
 		return;
 	}
 
