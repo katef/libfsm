@@ -234,6 +234,8 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b);
  * unreachable states (i.e. those in a subgraph which is disjoint from
  * the state state's connected component), and non-end states which
  * do not have a path to an end state.
+ *
+ * Returns how many states were removed, or -1 on error.
  */
 int
 fsm_trim(struct fsm *fsm);
@@ -295,12 +297,6 @@ fsm_minimise(struct fsm *fsm);
  */
 struct fsm *
 fsm_concat(struct fsm *a, struct fsm *b);
-
-/* Collect any unreachable states in the graph.
- * Returns how many states were collected, or -1 on error
- * (due to allocation failure). */
-int
-fsm_collect_unreachable_states(struct fsm *fsm);
 
 /*
  * Return 1 if the fsm does not match anything;
