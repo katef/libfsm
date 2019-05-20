@@ -139,6 +139,9 @@ sweep_states(struct fsm *fsm)
 			if (prev != NULL) {
 				prev->next = next;
 			}
+			if (fsm->sl == s) {
+				fsm->sl = next;
+			}
 
 			edge_set_free(s->edges);
 			free(s);
