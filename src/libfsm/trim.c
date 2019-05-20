@@ -97,39 +97,6 @@ fsm_trim(struct fsm *fsm)
 
 	dlist_free(fsm->opt->alloc, list);
 
-#if 0
-	/*
-	 * Remove all states which have no reachable end state henceforth.
-	 * These are a trailing suffix which will never accept.
-	 *
-	 * Note it doesn't matter which order in which these are removed;
-	 * removing a state in the middle will disconnect the remainer of
-	 * the suffix. Then visiting nodes in that newly disjoint subgraph
-	 * will still be found to have no reachable end state, and so are
-	 * also removed.
-	 */
-	{
-		struct fsm_state *s, *next;
-
-		for (s = fsm->sl; s != NULL; s = next) {
-			next = s->next;
-
-			if (fsm_isend(fsm, s)) {
-				continue;
-			}
-
-			/* XXX: trim away the start state? I am unsure about this. */
-			if (s == fsm_getstart(fsm)) {
-				continue;
-			}
-
-			if (!fsm_reachableany(fsm, s, fsm_isend)) {
-				fsm_removestate(fsm, s);
-			}
-		}
-	}
-#endif
-
 	return 1;
 }
 

@@ -122,7 +122,7 @@ sweep_states(struct fsm *fsm)
 	 * should (by definition) not be the start, or have any other reachable
 	 * edges referring to it.
 	 *
-	 * There may temporarily be other states in the graph with other
+	 * There may temporarily be other states in the graph with other edges
 	 * to it, because the states aren't topologically sorted, but
 	 * they'll be collected soon as well.
 	 */
@@ -163,6 +163,17 @@ fsm_collect_unreachable_states(struct fsm *fsm)
 	if (!mark_states(fsm)) {
 		return -1;
 	}
+
+	/*
+	 * Remove all states which have no reachable end state henceforth.
+	 * These are a trailing suffix which will never accept.
+	 *
+	 * It doesn't matter which order in which these are removed;
+	 * removing a state in the middle will disconnect the remainer of
+	 * the suffix. The nodes in that newly disjoint subgraph
+	 * will still be found to have no reachable end state, and so are
+	 * also removed.
+	 */
 
 	return sweep_states(fsm);
 }
