@@ -18,22 +18,28 @@
 static void
 clear_states(struct fsm_state *s)
 {
-	for (; s != NULL; s = s->next) { s->reachable = 0; }
+	for ( ; s != NULL; s = s->next) {
+		s->reachable = 0;
+	}
 }
 
 static int
 mark_states(struct fsm *fsm)
 {
 	const unsigned state_count = fsm_countstates(fsm);
-	struct queue *q = queue_new(fsm->opt->alloc, state_count);
+	struct queue *q;
 	int res = 0;
-	if (q == NULL) { return 1; }
+
+	q = queue_new(fsm->opt->alloc, state_count);
+	if (q == NULL) {
+		return 1;
+	}
 
 	if (!queue_push(q, fsm->start)) {
 		goto cleanup;
 	}
 	fsm->start->reachable = 1;
-	
+
 	for (;;) {
 		const struct fsm_edge *e;
 		struct edge_iter edge_iter;
@@ -46,28 +52,42 @@ mark_states(struct fsm *fsm)
 		{
 			struct state_iter state_iter;
 			struct fsm_state *es;
+
 			for (es = state_set_first(s->epsilons, &state_iter);
 			     es != NULL;
-			     es = state_set_next(&state_iter)) {
-				if (es->reachable) { continue; }
+			     es = state_set_next(&state_iter))
+			{
+				if (es->reachable) {
+					continue;
+				}
+
 				if (!queue_push(q, es)) {
 					goto cleanup;
 				}
+
 				es->reachable = 1;
 			}
 		}
+
 		for (e = edge_set_first(s->edges, &edge_iter);
 		     e != NULL;
-		     e = edge_set_next(&edge_iter)) {
+		     e = edge_set_next(&edge_iter))
+		{
 			struct state_iter state_iter;
 			struct fsm_state *es;
+
 			for (es = state_set_first(e->sl, &state_iter);
 			     es != NULL;
-			     es = state_set_next(&state_iter)) {
-				if (es->reachable) { continue; }
+			     es = state_set_next(&state_iter))
+			{
+				if (es->reachable) {
+					continue;
+				}
+
 				if (!queue_push(q, es)) {
 					goto cleanup;
 				}
+
 				es->reachable = 1;
 			}
 		}
@@ -76,29 +96,39 @@ mark_states(struct fsm *fsm)
 	res = 1;
 
 cleanup:
-	if (q != NULL) { free(q); }
+
+	if (q != NULL) {
+		free(q);
+	}
+
 	return res;
 }
 
 int
 sweep_states(struct fsm *fsm)
 {
-	struct fsm_state *prev = NULL;
-	struct fsm_state *s = fsm->sl;
-	struct fsm_state *next;
-	struct fsm_state **new_tail = &fsm->sl;
-	int swept = 0;
+	struct fsm_state *prev, *s, *next;
+	struct fsm_state **new_tail;
+	int swept;
 
-	/* This doesn't use fsm_removestate because it would be modifying the
+	prev = NULL;
+	s = fsm->sl;
+	new_tail = &fsm->sl;
+	swept = 0;
+
+	/*
+	 * This doesn't use fsm_removestate because it would be modifying the
 	 * state graph while traversing it, and any state being removed here
 	 * should (by definition) not be the start, or have any other reachable
 	 * edges referring to it.
 	 *
 	 * There may temporarily be other states in the graph with other
 	 * to it, because the states aren't topologically sorted, but
-	 * they'll be collected soon as well. */
+	 * they'll be collected soon as well.
+	 */
 	while (s != NULL) {
 		next = s->next;
+
 		if (!s->reachable) {
 			assert(s != fsm->start);
 
@@ -106,7 +136,10 @@ sweep_states(struct fsm *fsm)
 			fsm_setend(fsm, s, 0);
 
 			/* unlink */
-			if (prev != NULL) { prev->next = next; }
+			if (prev != NULL) {
+				prev->next = next;
+			}
+
 			edge_set_free(s->edges);
 			free(s);
 			swept++;
@@ -114,6 +147,7 @@ sweep_states(struct fsm *fsm)
 			new_tail = &s->next;
 			prev = s;
 		}
+
 		s = next;
 	}
 
@@ -125,6 +159,11 @@ int
 fsm_collect_unreachable_states(struct fsm *fsm)
 {
 	clear_states(fsm->sl);
-	if (!mark_states(fsm)) { return -1; }
+
+	if (!mark_states(fsm)) {
+		return -1;
+	}
+
 	return sweep_states(fsm);
 }
+
