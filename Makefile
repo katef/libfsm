@@ -57,6 +57,7 @@ SUBDIR += tests/pcre
 SUBDIR += tests/pcre-anchor
 SUBDIR += tests/pred
 SUBDIR += tests/reverse
+SUBDIR += tests/trim
 SUBDIR += tests/union
 SUBDIR += tests/set
 SUBDIR += tests/sql
