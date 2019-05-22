@@ -1,5 +1,6 @@
 .include "../../share/mk/top.mk"
 
+STAGE_COPY += include/fsm/alloc.h
 STAGE_COPY += include/fsm/bool.h
 STAGE_COPY += include/fsm/cost.h
 STAGE_COPY += include/fsm/fsm.h
