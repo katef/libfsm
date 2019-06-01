@@ -448,11 +448,14 @@ struct ir *
 make_ir(const struct fsm *fsm)
 {
 	struct ir *ir;
+	const struct fsm_state *start;
 	size_t i;
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
-	assert(fsm->start != NULL);
+
+	start = fsm_getstart(fsm);
+	assert(start != NULL);
 
 	if (!fsm_all(fsm, fsm_isdfa)) {
 		errno = EINVAL;
@@ -489,7 +492,7 @@ make_ir(const struct fsm *fsm)
 			char *p;
 			int n;
 
-			if (fsm->states[i] == fsm->start) {
+			if (fsm->states[i] == start) {
 				ir->states[i].example = NULL;
 				continue;
 			}

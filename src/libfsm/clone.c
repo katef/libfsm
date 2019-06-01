@@ -90,7 +90,14 @@ fsm_clone(const struct fsm *fsm)
 		}
 	}
 
-	new->start = fsm->start->tmp.equiv;
+	{
+		const struct fsm_state *start;
+
+		start = fsm_getstart(fsm);
+		if (start != NULL) {
+			fsm_setstart(new, start->tmp.equiv);
+		}
+	}
 
 	fsm_clear_tmp(new);
 

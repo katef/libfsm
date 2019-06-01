@@ -88,11 +88,11 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token)
 	assert(token != NULL);
 
 	/*
-	 * We're nominating fsm->start to mean the given token was not present
+	 * We're nominating the start state to mean the given token was not present
 	 * in this FSM; this is on the premise that the start state cannot
 	 * accept, because lx does not permit empty regexps.
 	 */
-	goal = fsm->start;
+	goal = fsm_getstart(fsm);
 	min  = INT_MAX;
 
 	for (i = 0; i < fsm->statecount; i++) {
@@ -620,7 +620,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		fprintf(f, "\n");
 	}
 
-	assert(z->fsm->start != NULL);
+	assert(fsm_getstart(z->fsm) != NULL);
 	fprintf(f, "\tstate = NONE;\n");
 	fprintf(f, "\n");
 
@@ -644,7 +644,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	}
 
 	fprintf(f, "\t\tif (state == NONE) {\n");
-	fprintf(f, "\t\t\tstate = S%u;\n", indexof(z->fsm, z->fsm->start));
+	fprintf(f, "\t\t\tstate = S%u;\n", indexof(z->fsm, fsm_getstart(z->fsm)));
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\n");
 
@@ -882,7 +882,7 @@ print_example(FILE *f, const struct ast *ast)
 				return -1;
 			}
 
-			if (s == z->fsm->start) {
+			if (s == fsm_getstart(z->fsm)) {
 				continue;
 			}
 

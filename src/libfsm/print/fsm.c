@@ -139,9 +139,12 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 				fprintf(f, ";");
 
 				if (fsm->opt->comments) {
-					if (st == fsm->start) {
+					const struct fsm_state *start;
+
+					start = fsm_getstart(fsm);
+					if (st == start) {
 						fprintf(f, " # start");
-					} else if (fsm->start != NULL && !fsm_has(fsm, fsm_hasepsilons)) {
+					} else if (start != NULL && !fsm_has(fsm, fsm_hasepsilons)) {
 						char buf[50];
 						int n;
 

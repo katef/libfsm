@@ -133,14 +133,14 @@ singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 			if (p->m->to != NULL) {
 				fprintf(f, "\tz%uS%u -> z%uS%u [ color = red, style = dashed ];\n",
 					zindexof(ast, z), indexof(fsm, s),
-					zindexof(ast, p->m->to), indexof(p->m->to->fsm, p->m->to->fsm->start));
+					zindexof(ast, p->m->to), indexof(p->m->to->fsm, fsm_getstart(p->m->to->fsm)));
 			}
 		}
 	} else {
 		if (m->to != NULL) {
 			fprintf(f, "\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
 				zindexof(ast, z), indexof(fsm, s),
-				zindexof(ast, m->to), indexof(m->to->fsm, m->to->fsm->start));
+				zindexof(ast, m->to), indexof(m->to->fsm, fsm_getstart(m->to->fsm)));
 		}
 	}
 }
@@ -154,7 +154,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(ast != NULL);
 	assert(z != NULL);
 	assert(z->fsm != NULL);
-	assert(z->fsm->start != NULL);
+	assert(fsm_getstart(z->fsm) != NULL);
 
 /* XXX: only if not showing transitions between zones:
 	fprintf(f, "\tz%u_start [ shape = plaintext ];\n",
@@ -162,7 +162,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tz%u_start -> z%uS%u;\n",
 		zindexof(ast, z),
 		zindexof(ast, z),
-		indexof(z->fsm, z->fsm->start));
+		indexof(z->fsm, fsm_getstart(z->fsm)));
 	fprintf(f, "\n");
 */
 
@@ -198,9 +198,9 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	}
 
 	/* a start state should not accept */
-	if (fsm_isend(z->fsm, z->fsm->start)) {
+	if (fsm_isend(z->fsm, fsm_getstart(z->fsm))) {
 		fprintf(f, "\t\tz%uS%u [ color = red ];\n",
-			zindexof(ast, z), indexof(z->fsm, z->fsm->start));
+			zindexof(ast, z), indexof(z->fsm, fsm_getstart(z->fsm)));
 	}
 }
 
@@ -246,7 +246,7 @@ lx_print_dot(FILE *f, const struct ast *ast)
 				fprintf(f, "\t\tstart [ shape = plaintext ];\n");
 				fprintf(f, "\t\tstart -> z%uS%u;\n",
 					zindexof(ast, ast->global),
-					indexof(ast->global->fsm, ast->global->fsm->start));
+					indexof(ast->global->fsm, fsm_getstart(ast->global->fsm)));
 				fprintf(f, "\t\t{ rank = min; start; }\n");
 			}
 
@@ -257,7 +257,7 @@ lx_print_dot(FILE *f, const struct ast *ast)
 		fprintf(f, "\tstart [ shape = plaintext ];\n");
 		fprintf(f, "\tstart -> z%uS%u;\n",
 			zindexof(ast, ast->global),
-			indexof(ast->global->fsm, ast->global->fsm->start));
+			indexof(ast->global->fsm, fsm_getstart(ast->global->fsm)));
 		fprintf(f, "\t{ rank = min; start; }\n");
 	}
 

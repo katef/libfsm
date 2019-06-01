@@ -48,7 +48,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(ast != NULL);
 	assert(z != NULL);
 	assert(z->fsm != NULL);
-	assert(z->fsm->start != NULL);
+	assert(fsm_getstart(z->fsm) != NULL);
 
 	for (i = 0; i < z->fsm->statecount; i++) {
 		struct ast_mapping *m;

@@ -116,8 +116,8 @@ fsm_removestate(struct fsm *fsm, struct fsm_state *state)
 	state_set_free(state->epsilons);
 	edge_set_free(state->edges);
 
-	if (fsm->start == state) {
-		fsm->start = NULL;
+	if (fsm_getstart(fsm) == state) {
+		fsm_setstart(fsm, NULL);
 	}
 
 	{

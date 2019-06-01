@@ -19,6 +19,7 @@ static int
 mark_states(struct fsm *fsm)
 {
 	const unsigned state_count = fsm_countstates(fsm);
+	struct fsm_state *start;
 	struct queue *q;
 	int res = 0;
 
@@ -27,10 +28,15 @@ mark_states(struct fsm *fsm)
 		return 1;
 	}
 
-	if (!queue_push(q, fsm->start)) {
+	start = fsm_getstart(fsm);
+	if (start == NULL) {
+		return 1;
+	}
+
+	if (!queue_push(q, start)) {
 		goto cleanup;
 	}
-	fsm->start->reachable = 1;
+	start->reachable = 1;
 
 	for (;;) {
 		const struct fsm_edge *e;

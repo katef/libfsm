@@ -91,7 +91,7 @@ fsm_shortest(const struct fsm *fsm,
 		}
 
 		if (u->state == goal) {
-			assert(u->prev != NULL || goal == fsm->start);
+			assert(u->prev != NULL || goal == fsm_getstart(fsm));
 			goto done;
 		}
 

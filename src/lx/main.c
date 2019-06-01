@@ -912,7 +912,7 @@ main(int argc, char *argv[])
 				zn++;
 			}
 
-			if (fsm_isend(z->fsm, z->fsm->start)) {
+			if (fsm_isend(z->fsm, fsm_getstart(z->fsm))) {
 				fprintf(stderr, "start state accepts\n"); /* TODO */
 				e = 1;
 			}
