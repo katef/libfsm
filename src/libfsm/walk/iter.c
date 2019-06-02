@@ -16,13 +16,6 @@
 
 #include "../internal.h"
 
-/* Allows iterating through the states of the graph with a callback
- * function.  Takes an opaque pointer that the callback can use for its
- * own purposes.
- *
- * If the callback returns 0, will stop iterating and return 0.
- * Otherwise will call the callback for each state and return 1.
- */
 int
 fsm_walk_states(const struct fsm *fsm, void *opaque,
 	int (*callback)(const struct fsm *, const struct fsm_state *, void *))
@@ -41,28 +34,38 @@ fsm_walk_states(const struct fsm *fsm, void *opaque,
 	return 1;
 }
 
-/* Allows iterating through the states of the graph with a callback
- * function.  Takes an opaque pointer that the callback can use for its
- * own purposes.
- */
 int
 fsm_walk_edges(const struct fsm *fsm, void *opaque,
-	int (*callback)(const struct fsm *, const struct fsm_state *, unsigned int, const struct fsm_state *, void *))
+	int (*callback_literal)(const struct fsm *, const struct fsm_state *, const struct fsm_state *, char c, void *),
+	int (*callback_epsilon)(const struct fsm *, const struct fsm_state *, const struct fsm_state *, void *))
 {
 	const struct fsm_state *src;
 
 	assert(fsm != NULL);
-	assert(callback != NULL);
+	assert(callback_literal != NULL);
+	assert(callback_epsilon != NULL);
 
 	for (src = fsm->sl; src != NULL; src = src->next) {
-		struct edge_iter ei;
 		const struct fsm_edge *e;
+		struct edge_iter ei;
 
-		for (e = edge_set_first(src->edges, &ei); e != NULL; e=edge_set_next(&ei)) {
-			struct state_iter di;
+		for (e = edge_set_first(src->edges, &ei); e != NULL; e = edge_set_next(&ei)) {
 			const struct fsm_state *dst;
+			struct state_iter di;
+
 			for (dst = state_set_first(e->sl, &di); dst != NULL; dst=state_set_next(&di)) {
-				if (!callback(fsm, src, (unsigned int)e->symbol, dst, opaque)) {
+				if (!callback_literal(fsm, src, dst, e->symbol, opaque)) {
+					return 0;
+				}
+			}
+		}
+
+		{
+			const struct fsm_state *dst;
+			struct state_iter di;
+
+			for (dst = state_set_first(src->epsilons, &di); dst != NULL; dst = state_set_next(&di)) {
+				if (!callback_epsilon(fsm, src, dst, opaque)) {
 					return 0;
 				}
 			}
