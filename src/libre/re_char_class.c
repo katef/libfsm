@@ -306,6 +306,7 @@ fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state 
 {
 	struct fsm_state *sa, *sb;
 	struct fsm_state *end;
+	struct fsm *q;
 	
 	assert(a != NULL);
 	assert(b != NULL);
@@ -315,24 +316,23 @@ fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state 
 	sa = fsm_getstart(a);
 	sb = fsm_getstart(b);
 	
-	end = fsm_collate(b, fsm_isend);
+	q = fsm_merge(a, b);
+	assert(q != NULL);
+	
+	fsm_setstart(q, sa);
+	
+	if (!fsm_addedge_epsilon(q, x, sb)) {
+		return 0;
+	}
+	
+	end = fsm_collate(q, fsm_isend);
 	if (end == NULL) {
 		return 0;
 	}
 	
-	if (!fsm_merge(a, b)) {
-		return 0;
-	}
+	fsm_setend(q, end, 0);
 	
-	fsm_setstart(a, sa);
-	
-	if (!fsm_addedge_epsilon(a, x, sb)) {
-		return 0;
-	}
-	
-	fsm_setend(a, end, 0);
-	
-	if (!fsm_addedge_epsilon(a, end, y)) {
+	if (!fsm_addedge_epsilon(q, end, y)) {
 		return 0;
 	}
 	
