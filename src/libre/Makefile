@@ -10,6 +10,11 @@ SRC += src/libre/re_char_class.c
 SRC += src/libre/ac.c
 SRC += src/libre/re_strings.c
 
+.for src in ${SRC:Msrc/libre/re_char_class.c}
+CFLAGS.${src} += -I src # XXX: for internal.h
+DFLAGS.${src} += -I src # XXX: for internal.h
+.endfor
+
 LIB        += libre
 SYMS.libre += src/libre/libre.syms
 
