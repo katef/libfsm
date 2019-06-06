@@ -13,6 +13,8 @@
 #include <limits.h>
 #include <errno.h>
 
+#include "libfsm/internal.h" /* XXX */
+
 struct re_char_class {
 	enum re_flags flags;
 
@@ -306,6 +308,7 @@ fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state 
 {
 	struct fsm_state *sa, *sb;
 	struct fsm_state *end;
+	struct fsm *q;
 	
 	assert(a != NULL);
 	assert(b != NULL);
@@ -320,19 +323,25 @@ fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state 
 		return 0;
 	}
 	
-	if (!fsm_merge(a, b)) {
+	/* TODO: centralise as fsm_clearends() or somesuch */
+	{
+		struct fsm_state *s;
+
+		for (s = b->sl; s != NULL; s = s->next) {
+			fsm_setend(b, s, 0);
+		}
+	}
+	
+	q = fsm_merge(a, b);
+	assert(q != NULL);
+	
+	fsm_setstart(q, sa);
+	
+	if (!fsm_addedge_epsilon(q, x, sb)) {
 		return 0;
 	}
 	
-	fsm_setstart(a, sa);
-	
-	if (!fsm_addedge_epsilon(a, x, sb)) {
-		return 0;
-	}
-	
-	fsm_setend(a, end, 0);
-	
-	if (!fsm_addedge_epsilon(a, end, y)) {
+	if (!fsm_addedge_epsilon(q, end, y)) {
 		return 0;
 	}
 	
