@@ -187,12 +187,11 @@ state_closure(struct mapping_set *mappings, struct fsm *dfa, const struct fsm_st
  * states. Create the DFA state if neccessary.
  */
 static struct fsm_state *
-set_closure(struct mapping_set *mappings, struct fsm *dfa, struct state_set *set)
+set_closure(struct mapping_set *mappings, struct fsm *dfa, struct state_array *set)
 {
-	struct state_iter it;
 	struct state_set *ec;
 	struct mapping *m;
-	struct fsm_state *s;
+	size_t i;
 
 	assert(set != NULL);
 	assert(mappings != NULL);
@@ -202,8 +201,8 @@ set_closure(struct mapping_set *mappings, struct fsm *dfa, struct state_set *set
 		return NULL;
 	}
 
-	for (s = state_set_first(set, &it); s != NULL; s = state_set_next(&it)) {
-		if (epsilon_closure(s, ec) == NULL) {
+	for (i = 0; i < set->len; i++) {
+		if (epsilon_closure(set->states[i], ec) == NULL) {
 			state_set_free(ec);
 			return NULL;
 		}
@@ -384,24 +383,13 @@ buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *map
 	}
 
 	for (sym = sym_min; sym <= sym_max; sym++) {
-		struct state_set *reachable;
 		struct fsm_state *new;
 
 		if (outedges[sym].len == 0) {
 			continue;
 		}
 
-		reachable = state_set_create_from_array(fsm->opt->alloc, outedges[sym].states, outedges[sym].len);
-		if (reachable == NULL) {
-			goto finish;
-		}
-
-		/* reachable now owns the outedge[sym].states array, so reset to
-		 * zero to avoid a free() in finish */
-		memset(&outedges[sym], 0, sizeof outedges[sym]);
-
-		new = set_closure(mappings, dfa, reachable);
-		state_set_free(reachable);
+		new = set_closure(mappings, dfa, &outedges[sym]);
 		if (new == NULL) {
 			goto finish;
 		}
@@ -414,6 +402,7 @@ buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *map
 	ret = 1;
 
 finish:
+
 	for (sym = 0; sym < UCHAR_MAX+1; sym++) {
 		if (outsets[sym] != NULL) {
 			hashset_free(outsets[sym]);
