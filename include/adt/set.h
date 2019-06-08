@@ -24,12 +24,6 @@ set_create_singleton(const struct fsm_alloc *a,
 	int (*cmp)(const void *a, const void *b), void *item);
 
 struct set *
-set_create_from_array(const struct fsm_alloc *a,
-	void *items[], size_t n,
-	int (*cmp)(const void *a, const void *b),
-	int (*bulkcmp)(const void *, const void *));
-
-struct set *
 set_copy(const struct set *set);
 
 void *

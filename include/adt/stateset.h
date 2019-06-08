@@ -57,10 +57,6 @@ const struct fsm_state **
 state_set_array(const struct state_set *set);
 
 struct state_set *
-state_set_create_from_array(const struct fsm_alloc *a,
-	struct fsm_state **states, size_t n);
-
-struct state_set *
 state_set_create_singleton(const struct fsm_alloc *a,
 	struct fsm_state *state);
 

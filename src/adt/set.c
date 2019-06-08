@@ -122,38 +122,6 @@ set_create_singleton(const struct fsm_alloc *a,
 }
 
 struct set *
-set_create_from_array(const struct fsm_alloc *a,
-	void *items[], size_t n,
-	int (*cmp)(const void *a, const void *b),
-	int (*bulkcmp)(const void *, const void *))
-{
-	struct set *s;
-
-	if (n == 0) {
-		return set_create(a, cmp);
-	}
-
-	s = f_malloc(a, sizeof *s);
-	if (s == NULL) {
-		return NULL;
-	}
-
-	s->cmp = (cmp != NULL) ? cmp : set_cmpval;
-
-	if (n > 1) {
-		/* XXX - replace with something better? */
-		qsort((void *)(&items[0]), n, sizeof items[0], (bulkcmp != NULL) ? bulkcmp : set_bulkcmpval);
-	}
-
-	s->alloc = a;
-	s->i = n;
-	s->n = n;
-	s->a = items;
-
-	return s;
-}
-
-struct set *
 set_copy(const struct set *set)
 {
 	struct set *s;
