@@ -112,6 +112,10 @@ int main(int argc, char *argv[]) {
 
 		s[strcspn(s, "\n")] = '\0';
 
+		if (*s == '\0') {
+			continue;
+		}
+
 		if (-1 == clock_gettime(CLOCK_MONOTONIC, &pre)) {
 			perror("clock_gettime");
 			exit(EXIT_FAILURE);
