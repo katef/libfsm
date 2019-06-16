@@ -43,8 +43,7 @@ skip(const struct fsm *fsm, const struct fsm_state *state)
 		return 1;
 	}
 
-	m = state->opaque;
-
+	m = fsm_getopaque(fsm, state);
 	assert(m != NULL);
 
 	if (m->token == NULL) {
@@ -99,7 +98,7 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token)
 		const struct ast_mapping *m;
 		int n;
 
-		m = fsm->states[i]->opaque;
+		m = fsm_getopaque(fsm, fsm->states[i]);
 		if (m == NULL) {
 			continue;
 		}
@@ -780,8 +779,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 				continue;
 			}
 
-			m = z->fsm->states[i]->opaque;
-
+			m = fsm_getopaque(z->fsm, z->fsm->states[i]);
 			assert(m != NULL);
 
 			fprintf(f, "\tcase S%u: return ", (unsigned) i);

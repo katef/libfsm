@@ -54,7 +54,8 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		struct ast_mapping *m;
 
 		if (fsm_isend(z->fsm, z->fsm->states[i])) {
-			m = z->fsm->states[i]->opaque;
+			m = fsm_getopaque(z->fsm, z->fsm->states[i]);
+			assert(m != NULL);
 
 			if (m->to == NULL) {
 				continue;

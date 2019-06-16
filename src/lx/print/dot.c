@@ -123,7 +123,7 @@ singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 		return;
 	}
 
-	m = s->opaque;
+	m = fsm_getopaque(fsm, s);
 	assert(m != NULL);
 
 	if (m->conflict != NULL) {

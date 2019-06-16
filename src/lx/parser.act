@@ -331,7 +331,6 @@
 		for (m = @z->ml; m != NULL; m = m->next) {
 			struct fsm *fsm;
 			struct fsm_state *ms;
-			size_t i;
 
 			if (m->token == NULL) {
 				continue;
@@ -354,9 +353,7 @@
 			 * general-purpose FSM for which no mapping has yet been made,
 			 * so that it can be used in expressions as for any pattern.
 			 */
-			for (i = 0; i < fsm->statecount; i++) {
-				fsm->states[i]->opaque = NULL;
-			}
+			fsm_setendopaque(fsm, NULL);
 
 			@r = fsm_merge(@r, fsm);
 			if (@r == NULL) {

@@ -480,7 +480,7 @@ make_ir(const struct fsm *fsm)
 		assert(i < ir->n);
 
 		ir->states[i].isend  = fsm_isend(fsm, fsm->states[i]);
-		ir->states[i].opaque = fsm->states[i]->opaque;
+		ir->states[i].opaque = fsm_getopaque(fsm, fsm->states[i]);
 
 		if (make_state(fsm, fsm->states[i], ir, &ir->states[i]) == -1) {
 			goto error;

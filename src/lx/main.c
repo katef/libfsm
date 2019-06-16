@@ -838,8 +838,8 @@ main(int argc, char *argv[])
 								continue;
 							}
 
-							assert(q->fsm->states[i]->opaque != NULL);
-							m = q->fsm->states[i]->opaque;
+							m = fsm_getopaque(q->fsm, q->fsm->states[i]);
+							assert(m != NULL);
 
 							if (m->to == *p) {
 								m->to = z;
@@ -925,8 +925,8 @@ main(int argc, char *argv[])
 					continue;
 				}
 
-				assert(z->fsm->states[i]->opaque != NULL);
-				m = z->fsm->states[i]->opaque;
+				m = fsm_getopaque(z->fsm, z->fsm->states[i]);
+				assert(m != NULL);
 
 				if (m->conflict != NULL) {
 					struct mapping_set *p;
@@ -1004,9 +1004,8 @@ main(int argc, char *argv[])
 					continue;
 				}
 
-				if (z->fsm->states[i]->opaque != NULL) {
-					m = z->fsm->states[i]->opaque;
-
+				m = fsm_getopaque(z->fsm, z->fsm->states[i]);
+				if (m != NULL) {
 					assert(m->fsm == NULL);
 
 					/* TODO: free m->conflict, allocated in carryopaque */

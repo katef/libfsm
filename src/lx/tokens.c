@@ -32,8 +32,8 @@ tok_contains(const struct fsm *fsm, const char *s)
 			continue;
 		}
 
-		assert(fsm->states[i]->opaque != NULL);
-		m = fsm->states[i]->opaque;
+		m = fsm_getopaque(fsm, fsm->states[i]);
+		assert(m != NULL);
 
 		if (m->token == NULL) {
 			continue;
@@ -62,8 +62,8 @@ tok_subsetof(const struct fsm *a, const struct fsm *b)
 			continue;
 		}
 
-		assert(a->states[i]->opaque != NULL);
-		m = a->states[i]->opaque;
+		m = fsm_getopaque(a, a->states[i]);
+		assert(m != NULL);
 
 		if (m->token == NULL) {
 			continue;
