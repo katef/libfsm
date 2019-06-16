@@ -54,6 +54,19 @@ findany(const struct fsm_state *state)
 
 	assert(state != NULL);
 
+	/*
+	 * This approach is a little unsatisfying because it will only identify
+	 * situations with one single "any" edge between states. I'd much prefer
+	 * to be able to emit "any" edges for situations like:
+	 *
+	 *  1 -> 2 'x';
+	 *  1 -> 3;
+	 *
+	 * where a given state also has an unrelated edge transitioning elsewhere.
+	 * The current implementation conservatively bails out on that situation
+	 * (because state_set_only() is false), and will emit each edge separately.
+	 */
+
 	bm_clear(&bm);
 
 	e = edge_set_first(state->edges, &it);
