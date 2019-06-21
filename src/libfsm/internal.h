@@ -47,6 +47,8 @@ struct fsm_state {
 	unsigned int end:1;
 	unsigned int reachable:1;
 
+	unsigned int index;     /* index used to label states.  labels are only valid until a state is added or removed */
+
 	struct edge_set *edges;
 	struct state_set *epsilons;
 
@@ -59,9 +61,14 @@ struct fsm_state {
 		struct fsm_state *equiv;
 		/* tracks which states have been visited in walk2 */
 		struct fsm_state *visited;
+
+		/* epsilon closure */
+		unsigned long eps_closure_id;
 	} tmp;
 
 	struct fsm_state *next;
+
+	unsigned int eps_scc; /* epsilon closure strongly-connected components label */
 };
 
 struct fsm {

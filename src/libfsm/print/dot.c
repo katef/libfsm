@@ -80,7 +80,13 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 			indexof(fsm, s));
 
-		fprintf(f, "%u", indexof(fsm, s));
+		if (fsm->opt->scc_names) {
+			fprintf(f, "%u", s->eps_scc);
+		} else if (fsm->opt->index_names) {
+			fprintf(f, "%u", s->index);
+		} else {
+			fprintf(f, "%u", indexof(fsm, s));
+		}
 
 		fprintf(f, "> ];\n");
 	}
