@@ -139,6 +139,9 @@ op_pop(struct model *m, struct priq_op *op, struct priq **p)
 	struct priq *old_p;
 	struct priq *popped;
 	size_t i;
+	bool found;
+	size_t ri;
+	unsigned int lowest;
 
 	assert(op->t == PRIQ_OP_POP);
 
@@ -158,9 +161,9 @@ op_pop(struct model *m, struct priq_op *op, struct priq **p)
 	}
 
 	ASSERT(popped != NULL, "FAIL: pop shouldn't return empty, %zd entries remain\n", m->used);
-	bool found = false;
-	size_t ri = 0;
-	unsigned int lowest = (unsigned int) -1;
+	found = false;
+	ri = 0;
+	lowest = (unsigned int) -1;
 
 	for (i = 0; i < m->used; i++) {
 		struct record *r;
@@ -211,7 +214,7 @@ op_push(struct model *m, struct priq_op *op, struct priq **p)
 
 	fake_state = fake_state_of_id(op->u.push.id);
 	old_p = *p;
-	new_node = priq_push(p, fake_state, op->u.push.cost);
+	new_node = priq_push(NULL, p, fake_state, op->u.push.cost);
 
 	if (m->env->verbosity > 0) {
 		fprintf(stdout, "PUSH: %p w/ [id %zd, cost %u] => %p, new_node %p\n",

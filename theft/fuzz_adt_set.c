@@ -135,8 +135,8 @@ theft_trial_res prop_set_equality(struct theft *t, void *arg1)
 
 	permuted = theft_info_adt_sequence_permuted(seq);
 
-	set_a = set_create(cmp_item);
-	set_b = set_create(cmp_item);
+	set_a = set_create(NULL, cmp_item);
+	set_b = set_create(NULL, cmp_item);
 
 	for (i = 0; i < seq->count; i++) {
 		assert(seq->values[i] != 0);
@@ -190,8 +190,6 @@ op_add(struct model *m, struct set_op *op, struct set *set)
 
 	if (m->env->verbosity > 0) {
 		fprintf(stderr, "ITEM IS %zu (decimal)\n", (size_t) op->u.add.item);
-		fprintf(stderr, "ADD 0x%" PRIxPTR " to %p => %p\n",
-			op->u.add.item, (void *) old_s, (void *) *set);
 	}
 
 	/* update model */
@@ -215,8 +213,8 @@ op_remove(struct model *m, struct set_op *op, struct set *set)
 	set_remove(set, (void *) ((uintptr_t) op->u.remove.item));
 
 	if (m->env->verbosity > 0) {
-		fprintf(stderr, "REMOVE 0x%" PRIxPTR " to %p => %p\n",
-			op->u.remove.item, (void *) old_s, (void *) *set);
+		fprintf(stderr, "REMOVE 0x%" PRIxPTR " to\n",
+			op->u.remove.item);
 	}
 
 	/* update model */
@@ -328,7 +326,7 @@ prop_set_operations(struct theft *t, void *arg1)
 
 	memset(m->bits, 0x00, (item_ceil / 8) + sizeof *m->bits);
 
-	set = set_create(cmp_item);
+	set = set_create(NULL, cmp_item);
 	if (set == NULL) {
 		return THEFT_TRIAL_ERROR;
 	}

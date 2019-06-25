@@ -6,6 +6,7 @@
 
 #include "type_info_adt_set.h"
 
+#include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 #include <adt/xalloc.h>
