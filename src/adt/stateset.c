@@ -18,13 +18,6 @@ state_set_create(const struct fsm_alloc *a)
 }
 
 struct state_set *
-state_set_create_from_array(const struct fsm_alloc *a,
-	struct fsm_state **states, size_t n)
-{
-	return (struct state_set *) set_create_from_array(a, (void **) states, n, NULL, NULL);
-}
-
-struct state_set *
 state_set_create_singleton(const struct fsm_alloc *a,
 	struct fsm_state *state)
 {
