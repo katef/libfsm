@@ -258,6 +258,15 @@ int
 fsm_reverse(struct fsm *fsm);
 
 /*
+ * Convert an NFA with epsilon transitions to a Glushkov NFA without epsilon
+ * transitions.
+ *
+ * Returns false on error; see errno.
+ */
+int
+fsm_glushkovize(struct fsm *fsm);
+
+/*
  * Convert an fsm to a DFA.
  *
  * Returns false on error; see errno.

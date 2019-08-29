@@ -67,6 +67,7 @@ enum op {
 	OP_DETERMINISE = ( 4 << 1) | 1,
 	OP_MINIMISE    = ( 5 << 1) | 1,
 	OP_TRIM        = ( 6 << 1) | 1,
+	OP_GLUSHKOVIZE = (12 << 1) | 1,
 
 	/* binary */
 	OP_CONCAT      = ( 7 << 1) | 0,
@@ -239,9 +240,12 @@ op_name(const char *name)
 		{ "determinise", OP_DETERMINISE },
 		{ "dfa",         OP_DETERMINISE },
 		{ "todfa",       OP_DETERMINISE },
+		{ "glush",       OP_GLUSHKOVIZE },
+		{ "glushovize",  OP_GLUSHKOVIZE },
 		{ "min",         OP_MINIMISE    },
 		{ "minimise",    OP_MINIMISE    },
 		{ "trim",        OP_TRIM        },
+		{ "glushkovize", OP_GLUSHKOVIZE },
 
 		{ "cat",         OP_CONCAT      },
 		{ "concat",      OP_CONCAT      },
@@ -324,7 +328,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:i:" "xpq:l:dmrt:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:k:i:" "xpq:l:dGmrt:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
@@ -347,6 +351,7 @@ main(int argc, char *argv[])
 			case 'm': op = op_name("minimise");           break;
 			case 'r': op = op_name("reverse");            break;
 			case 't': op = op_name(optarg);               break;
+			case 'G': op = op_name("glushkovize");        break;
 
 			case 'h':
 				usage();
@@ -424,6 +429,7 @@ main(int argc, char *argv[])
 		case OP_COMPLEMENT:  r = fsm_complement(q);   break;
 		case OP_REVERSE:     r = fsm_reverse(q);      break;
 		case OP_DETERMINISE: r = fsm_determinise(q);  break;
+		case OP_GLUSHKOVIZE: r = fsm_glushkovize(q);  break;
 		case OP_MINIMISE:    r = fsm_minimise(q);     break;
 		case OP_TRIM:        r = fsm_trim(q);         break;
 

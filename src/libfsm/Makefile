@@ -27,6 +27,7 @@ SRC += src/libfsm/shortest.c
 # unary operators
 SRC += src/libfsm/complement.c
 SRC += src/libfsm/determinise.c
+SRC += src/libfsm/glush.c
 SRC += src/libfsm/minimise.c
 SRC += src/libfsm/reverse.c
 

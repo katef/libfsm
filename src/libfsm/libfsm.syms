@@ -69,6 +69,7 @@ fsm_countstates
 fsm_trim
 fsm_reverse
 fsm_determinise
+fsm_glushkovize
 fsm_determinise_cache
 fsm_determinise_freecache
 fsm_complete
