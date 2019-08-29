@@ -104,12 +104,12 @@ cleanup:
 	return res;
 }
 
-int
+long
 sweep_states(struct fsm *fsm)
 {
 	struct fsm_state *prev, *s, *next;
 	struct fsm_state **new_tail;
-	int swept;
+	long swept;
 
 	prev = NULL;
 	s = fsm->sl;
@@ -161,6 +161,8 @@ sweep_states(struct fsm *fsm)
 int
 fsm_trim(struct fsm *fsm)
 {
+	long ret;
+
 	clear_states(fsm->sl);
 
 	if (!mark_states(fsm)) {
@@ -178,6 +180,13 @@ fsm_trim(struct fsm *fsm)
 	 * also removed.
 	 */
 
-	return sweep_states(fsm);
+	// sweep_states returns a negative value on error, otherwise it returns
+	// the number of states swept.
+	ret = sweep_states(fsm);
+	if (ret < 0) {
+		return ret;
+	}
+	
+	return 1;
 }
 
