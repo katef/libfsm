@@ -104,12 +104,12 @@ cleanup:
 	return res;
 }
 
-int
+long
 sweep_states(struct fsm *fsm)
 {
 	struct fsm_state *prev, *s, *next;
 	struct fsm_state **new_tail;
-	int swept;
+	long swept;
 
 	prev = NULL;
 	s = fsm->sl;
@@ -161,7 +161,7 @@ sweep_states(struct fsm *fsm)
 int
 fsm_trim(struct fsm *fsm)
 {
-	int ret;
+	long ret;
 
 	clear_states(fsm->sl);
 
