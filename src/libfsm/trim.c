@@ -180,8 +180,10 @@ fsm_trim(struct fsm *fsm)
 	 * also removed.
 	 */
 
-	// sweep_states returns a negative value on error, otherwise it returns
-	// the number of states swept.
+	/*
+	 * sweep_states returns a negative value on error, otherwise it returns
+	 * the number of states swept.
+	 */
 	ret = sweep_states(fsm);
 	if (ret < 0) {
 		return ret;
