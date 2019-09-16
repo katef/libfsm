@@ -24,16 +24,9 @@
 
 #include "internal.h"
 
-/*
- * A set of states in an NFA.
- *
- * These have labels naming a transition which was followed to reach the state.
- * This is used for finding which states are reachable by a given label, given
- * a set of several states.
- */
-struct trans {
-	const struct fsm_state *state;
-	char c;
+enum nfa_transform_op {
+	NFA_XFORM_DETERMINISE = 1,
+	NFA_XFORM_GLUSHKOVIZE
 };
 
 /*
@@ -292,6 +285,129 @@ hash_single_state(const void *a)
 	return hashrec(st, sizeof *st);
 }
 
+/* builds transitions of the glushkov NFA
+ *
+ * Makes a single pass through each of the nfa states that the glushkov nfa
+ * state corresponds to and constructs an edge set for each symbol out of the
+ * nfa states.
+ *
+ * It does this in one pass by maintaining an array of destination states where
+ * the index of the array is the transition symbol.
+ */
+static int
+glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *mappings, struct mapping *curr)
+{
+	struct fsm_state *s;
+	struct state_iter it;
+	int sym, sym_min, sym_max;
+	int ret = 0;
+
+	struct state_array outedges[FSM_SIGMA_COUNT];
+	struct hashset *outsets[FSM_SIGMA_COUNT];
+
+	assert(fsm != NULL);
+	assert(dfa != NULL);
+	assert(curr != NULL);
+	assert(curr->closure != NULL);
+
+	sym_min = UCHAR_MAX+1;
+	sym_max = -1;
+
+	memset(outedges, 0, sizeof outedges);
+	memset(outsets, 0, sizeof outsets);
+
+	for (s = state_set_first(curr->closure, &it); s != NULL; s = state_set_next(&it)) {
+		struct fsm_edge *e;
+		struct edge_iter jt;
+
+		for (e = edge_set_first(s->edges, &jt); e != NULL; e = edge_set_next(&jt)) {
+			struct state_iter jt;
+			struct fsm_state *st;
+
+			sym = e->symbol;
+
+			assert(sym >= 0);
+			assert(sym <= UCHAR_MAX);
+
+			if (sym < sym_min) { sym_min = sym; }
+			if (sym > sym_max) { sym_max = sym; }
+
+			/* minor optimization: avoid creating a hash set unless
+			 * a symbol will have more than one state.
+			 *
+			 * This might be something we should do at the end when
+			 * adding the edges to the new Glushkov NFA.  Then we
+			 * could allocate a single hashset and clear it after
+			 * every edge symbol.
+			 */
+			if (outsets[sym] == NULL && outedges[sym].len + state_set_count(e->sl) > 1) {
+				size_t i;
+
+				outsets[sym] = hashset_create(fsm->opt->alloc, hash_single_state, cmp_single_state);
+				if (outsets[sym] == NULL) {
+					goto finish;
+				}
+
+				/* add any existing states */
+				for (i=0; i < outedges[sym].len; i++) {
+					if (!hashset_add(outsets[sym], outedges[sym].states[i])) {
+						goto finish;
+					}
+				}
+			}
+
+			/* iterate over states, add to state list if they're not already in the set */
+			for (st = state_set_first(e->sl, &jt); st != NULL; st = state_set_next(&jt)) {
+				struct fsm_state *st_cl;
+
+				st_cl = state_closure(mappings, dfa, st, 1);
+				if (st_cl == NULL) {
+					goto finish;
+				}
+
+				if (outsets[sym] == NULL || !hashset_contains(outsets[sym], st_cl)) {
+					if (!state_array_add(&outedges[sym], st_cl)) {
+						goto finish;
+					}
+				}
+			}
+		}
+	}
+
+	/* double check that the edge symbols are still within 0..UCHAR_MAX */
+	if (sym_min < 0 || sym_max > UCHAR_MAX) {
+		goto finish;
+	}
+
+	for (sym = sym_min; sym <= sym_max; sym++) {
+		size_t i,n;
+
+		/* is there a way to bulk add these? */
+		n = outedges[sym].len;
+		for (i=0; i < n; i++) {
+			if (!fsm_addedge_literal(dfa, curr->dfastate, outedges[sym].states[i], sym)) {
+				goto finish;
+			}
+		}
+	}
+
+	ret = 1;
+
+finish:
+
+	for (sym = 0; sym < UCHAR_MAX+1; sym++) {
+		if (outsets[sym] != NULL) {
+			hashset_free(outsets[sym]);
+		}
+
+		if (outedges[sym].states != NULL) {
+			free(outedges[sym].states);
+		}
+	}
+
+	return ret;
+}
+
 /* builds transitions from current dfa state to new dfa states
  *
  * Makes a single pass through each of the nfa states that this dfa state
@@ -302,7 +418,7 @@ hash_single_state(const void *a)
  * the index of the array is the transition symbol.
  */
 static int
-buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *mappings, struct mapping *curr)
+dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *mappings, struct mapping *curr)
 {
 	struct fsm_state *s;
 	struct state_iter it;
@@ -434,8 +550,8 @@ finish:
  * renumbering states as a side-effect of constructing the new FSM).
  */
 static struct fsm *
-determinise(struct fsm *nfa,
-	struct fsm_determinise_cache *dcache)
+nfa_transform(struct fsm *nfa,
+	struct fsm_determinise_cache *dcache, enum nfa_transform_op op)
 {
 	static const struct mapping_iter_save sv_init;
 
@@ -516,12 +632,19 @@ determinise(struct fsm *nfa,
 	}
 
 	/*
-	 * While there are still DFA states remaining to be "done", process each.
+	 * While there are still states remaining to be "done", process each.
 	 */
 	sv = sv_init;
 	for (curr = mapping_set_first(mappings, &it); (curr = nextnotdone(mappings, &sv)) != NULL; curr->done = 1) {
-		if (!buildtransitions(nfa, dfa, mappings, curr)) {
-			goto error;
+		/* XXX - may want to hoist this outside the loop to avoid branching */
+		if (op == NFA_XFORM_DETERMINISE) {
+			if (!dfa_buildtransitions(nfa, dfa, mappings, curr)) {
+				goto error;
+			}
+		} else if (op == NFA_XFORM_GLUSHKOVIZE) {
+			if (!glushkov_buildtransitions(nfa, dfa, mappings, curr)) {
+				goto error;
+			}
 		}
 
 		/*
@@ -540,7 +663,8 @@ determinise(struct fsm *nfa,
 	clear_mappings(dfa, mappings);
 
 	/* TODO: can assert a whole bunch of things about the dfa, here */
-	assert(fsm_all(dfa, fsm_isdfa));
+	assert(op != NFA_XFORM_DETERMINISE || fsm_all(dfa, fsm_isdfa));
+	assert(op != NFA_XFORM_GLUSHKOVIZE || fsm_count(dfa, fsm_hasepsilons) == 0);
 
 	return dfa;
 
@@ -552,9 +676,9 @@ error:
 	return NULL;
 }
 
-int
-fsm_determinise_cache(struct fsm *fsm,
-	struct fsm_determinise_cache **dcache)
+static int
+nfa_transform_cache(struct fsm *fsm,
+	struct fsm_determinise_cache **dcache, enum nfa_transform_op op)
 {
 	struct fsm *dfa;
 
@@ -575,7 +699,7 @@ fsm_determinise_cache(struct fsm *fsm,
 		}
 	}
 
-	dfa = determinise(fsm, *dcache);
+	dfa = nfa_transform(fsm, *dcache, op);
 	if (dfa == NULL) {
 		return 0;
 	}
@@ -583,6 +707,13 @@ fsm_determinise_cache(struct fsm *fsm,
 	fsm_move(fsm, dfa);
 
 	return 1;
+}
+
+int
+fsm_determinise_cache(struct fsm *fsm,
+	struct fsm_determinise_cache **dcache)
+{
+	return nfa_transform_cache(fsm, dcache, NFA_XFORM_DETERMINISE);
 }
 
 void
@@ -612,6 +743,21 @@ fsm_determinise(struct fsm *fsm)
 	dcache = NULL;
 
 	r = fsm_determinise_cache(fsm, &dcache);
+
+	fsm_determinise_freecache(fsm, dcache);
+
+	return r;
+}
+
+int
+fsm_glushkovize(struct fsm *fsm)
+{
+	struct fsm_determinise_cache *dcache;
+	int r;
+
+	dcache = NULL;
+
+	r = nfa_transform_cache(fsm, &dcache, NFA_XFORM_GLUSHKOVIZE);
 
 	fsm_determinise_freecache(fsm, dcache);
 
