@@ -636,7 +636,6 @@ nfa_transform(struct fsm *nfa,
 	 */
 	sv = sv_init;
 	for (curr = mapping_set_first(mappings, &it); (curr = nextnotdone(mappings, &sv)) != NULL; curr->done = 1) {
-		/* XXX - may want to hoist this outside the loop to avoid branching */
 		if (op == NFA_XFORM_DETERMINISE) {
 			if (!dfa_buildtransitions(nfa, dfa, mappings, curr)) {
 				goto error;
