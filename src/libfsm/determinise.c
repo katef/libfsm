@@ -310,7 +310,7 @@ glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping
 	assert(curr != NULL);
 	assert(curr->closure != NULL);
 
-	sym_min = UCHAR_MAX+1;
+	sym_min = FSM_SIGMA_MAX;
 	sym_max = -1;
 
 	memset(outedges, 0, sizeof outedges);
@@ -375,7 +375,7 @@ glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping
 	}
 
 	/* double check that the edge symbols are still within 0..UCHAR_MAX */
-	if (sym_min < 0 || sym_max > UCHAR_MAX) {
+	if (sym_min < 0 || sym_max >= FSM_SIGMA_MAX) {
 		goto finish;
 	}
 
@@ -395,7 +395,7 @@ glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping
 
 finish:
 
-	for (sym = 0; sym < UCHAR_MAX+1; sym++) {
+	for (sym = 0; sym < FSM_SIGMA_MAX; sym++) {
 		if (outsets[sym] != NULL) {
 			hashset_free(outsets[sym]);
 		}
