@@ -15,6 +15,7 @@
 
 struct edge_set;
 struct state_set;
+struct state_array;
 
 /*
  * The alphabet (Sigma) for libfsm's FSM is arbitrary octets.
@@ -76,6 +77,9 @@ struct fsm {
 
 struct fsm_edge *
 fsm_hasedge_literal(const struct fsm_state *s, char c);
+
+int
+fsm_addedge_bulk(struct fsm *fsm, struct fsm_state *from, struct fsm_state **to, size_t n, char c);
 
 void
 fsm_carryopaque(struct fsm *fsm, const struct state_set *set,

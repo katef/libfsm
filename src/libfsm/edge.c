@@ -122,6 +122,52 @@ fsm_addedge_literal(struct fsm *fsm,
 	return 1;
 }
 
+int
+fsm_addedge_bulk(struct fsm *fsm, struct fsm_state *from, struct fsm_state **to, size_t n, char c)
+{
+	struct fsm_edge *e, new;
+
+	assert(fsm != NULL);
+	assert(from != NULL);
+	assert(to != NULL);
+
+	if (n == 0) {
+		return 1;
+	}
+
+	if (from->edges == NULL) {
+		from->edges = edge_set_create(fsm->opt->alloc, fsm_state_cmpedges);
+		if (from->edges == NULL) {
+			return 0;
+		}
+	}
+
+	new.symbol = c;
+	e = edge_set_contains(from->edges, &new);
+	if (e == NULL) {
+		e = malloc(sizeof *e);
+		if (e == NULL) {
+			return 0;
+		}
+
+		e->symbol = c;
+		e->sl = state_set_create(fsm->opt->alloc);
+		if (e->sl == NULL) {
+			return 0;
+		}
+
+		if (!edge_set_add(from->edges, e)) {
+			return 0;
+		}
+	}
+
+	if (!state_set_add_bulk(e->sl, to, n)) {
+		return 0;
+	}
+
+	return 1;
+}
+
 struct fsm_edge *
 fsm_hasedge_literal(const struct fsm_state *s, char c)
 {
