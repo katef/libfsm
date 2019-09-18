@@ -46,6 +46,7 @@ SUBDIR += tests/intersect
 SUBDIR += tests/ir
 SUBDIR += tests/subtract
 SUBDIR += tests/determinise
+SUBDIR += tests/glush
 SUBDIR += tests/glob
 SUBDIR += tests/like
 SUBDIR += tests/literal

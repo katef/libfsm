@@ -29,6 +29,9 @@ set_copy(const struct set *set);
 void *
 set_add(struct set *set, void *item);
 
+void *
+set_add_bulk(struct set *set, void **items, size_t n);
+
 void
 set_remove(struct set *set, const void *item);
 

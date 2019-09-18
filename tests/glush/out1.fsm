@@ -1,0 +1,18 @@
+#
+# Copyright 2019 Shannon Stewman
+#
+# See LICENCE for the full copyright terms.
+#
+
+0 -> 1 'a';
+0 -> 2 'a';
+
+1 -> 3 'b';
+2 -> 4 'x';
+
+3 -> 5 'c';
+4 -> 6 'c';
+
+start: 0;
+end: 5, 6;
+

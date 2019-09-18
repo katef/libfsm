@@ -195,6 +195,47 @@ set_add(struct set *set, void *item)
 	return item;
 }
 
+#define BULK_ADD_THRESH 1
+
+void *
+set_add_bulk(struct set *set, void **items, size_t n)
+{
+	size_t newlen;
+
+	if (n <= BULK_ADD_THRESH) {
+		size_t i;
+		for (i = 0; i < n; i++) {
+			if (!set_add(set, items[i])) {
+				return NULL;
+			}
+		}
+
+		return set->a[0];
+	}
+
+	newlen = set->i + n;
+	if (newlen > set->n) {
+		/* need to expand */
+		void **new;
+		size_t newcap;
+
+		newcap = (newlen < 2*set->n) ? 2*set->n : newlen;
+		new = f_realloc(set->alloc, set->a, newcap * sizeof set->a[0]);
+		if (new == NULL) {
+			return NULL;
+		}
+
+		set->a = new;
+		set->n = newcap;
+	}
+
+	memcpy(&set->a[set->i], &items[0], n * sizeof items[0]);
+	set->i += n;
+	qsort(&set->a[0], set->i, sizeof set->a[0], set->cmp);
+
+	return set->a[0];
+}
+
 void
 set_remove(struct set *set, const void *item)
 {

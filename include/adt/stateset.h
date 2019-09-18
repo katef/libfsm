@@ -25,6 +25,9 @@ state_set_free(struct state_set *set);
 struct fsm_state *
 state_set_add(struct state_set *set, struct fsm_state *st);
 
+struct fsm_state *
+state_set_add_bulk(struct state_set *set, struct fsm_state **st, size_t n);
+
 void
 state_set_remove(struct state_set *set, const struct fsm_state *st);
 
