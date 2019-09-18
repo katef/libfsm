@@ -380,12 +380,9 @@ glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping
 	}
 
 	for (sym = sym_min; sym <= sym_max; sym++) {
-		size_t i,n;
-
 		/* is there a way to bulk add these? */
-		n = outedges[sym].len;
-		for (i=0; i < n; i++) {
-			if (!fsm_addedge_literal(dfa, curr->dfastate, outedges[sym].states[i], sym)) {
+		if (outedges[sym].len > 0) {
+			if (!fsm_addedge_bulk(dfa, curr->dfastate, outedges[sym].states, outedges[sym].len, sym)) {
 				goto finish;
 			}
 		}
