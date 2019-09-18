@@ -257,6 +257,14 @@
 			</varlistentry>
 
 			<varlistentry>
+				<term>&G.opt;</term>
+
+				<listitem>
+					<para>Equivalent to <code>-t&nbsp;glushkovise</code>.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
 				<term>&m.opt;</term>
 
 				<listitem>
@@ -328,6 +336,15 @@
 							</tr>
 							<tr>
 								<td><code>dfa</code></td>
+							</tr>
+							<tr>
+								<td><code>glushkovise</code></td>
+								<td rowspan="2">&fsm_glushkovise.3;</td>
+								<td rowspan="2">Eliminate epsilon transitions from the &fsm;, converting a
+									Thompson NFA into a Glushkov NFA.</td>
+							</tr>
+							<tr>
+								<td><code>glush</code></td>
 							</tr>
 							<tr>
 								<td><code>minimise</code></td>
