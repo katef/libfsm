@@ -264,7 +264,7 @@ fsm_reverse(struct fsm *fsm);
  * Returns false on error; see errno.
  */
 int
-fsm_glushkovize(struct fsm *fsm);
+fsm_glushkovise(struct fsm *fsm);
 
 /*
  * Convert an fsm to a DFA.

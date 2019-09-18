@@ -26,7 +26,7 @@
 
 enum nfa_transform_op {
 	NFA_XFORM_DETERMINISE = 1,
-	NFA_XFORM_GLUSHKOVIZE
+	NFA_XFORM_GLUSHKOVISE
 };
 
 /*
@@ -637,7 +637,7 @@ nfa_transform(struct fsm *nfa,
 			if (!dfa_buildtransitions(nfa, dfa, mappings, curr)) {
 				goto error;
 			}
-		} else if (op == NFA_XFORM_GLUSHKOVIZE) {
+		} else if (op == NFA_XFORM_GLUSHKOVISE) {
 			if (!glushkov_buildtransitions(nfa, dfa, mappings, curr)) {
 				goto error;
 			}
@@ -660,7 +660,7 @@ nfa_transform(struct fsm *nfa,
 
 	/* TODO: can assert a whole bunch of things about the dfa, here */
 	assert(op != NFA_XFORM_DETERMINISE || fsm_all(dfa, fsm_isdfa));
-	assert(op != NFA_XFORM_GLUSHKOVIZE || fsm_count(dfa, fsm_hasepsilons) == 0);
+	assert(op != NFA_XFORM_GLUSHKOVISE || fsm_count(dfa, fsm_hasepsilons) == 0);
 
 	return dfa;
 
@@ -746,14 +746,14 @@ fsm_determinise(struct fsm *fsm)
 }
 
 int
-fsm_glushkovize(struct fsm *fsm)
+fsm_glushkovise(struct fsm *fsm)
 {
 	struct fsm_determinise_cache *dcache;
 	int r;
 
 	dcache = NULL;
 
-	r = nfa_transform_cache(fsm, &dcache, NFA_XFORM_GLUSHKOVIZE);
+	r = nfa_transform_cache(fsm, &dcache, NFA_XFORM_GLUSHKOVISE);
 
 	fsm_determinise_freecache(fsm, dcache);
 
