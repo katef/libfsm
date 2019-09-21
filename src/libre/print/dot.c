@@ -125,11 +125,11 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case AST_EXPR_FLAGS:
-		fprintf(f, "\tn%p [ label = <{FLAGS|{+", (void *) n);
+		fprintf(f, "\tn%p [ label = <FLAGS|{+", (void *) n);
 		re_flags_print(f, n->u.flags.pos);
-		fprintf(f, "|-");
+		fprintf(f, "}|{-");
 		re_flags_print(f, n->u.flags.neg);
-		fprintf(f, "> ];\n");
+		fprintf(f, "}> ];\n");
 		break;
 
 	default:
