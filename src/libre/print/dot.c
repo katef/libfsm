@@ -125,11 +125,11 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case AST_EXPR_FLAGS:
-		fprintf(f, "\tn%p [ label = <{FLAGS|{+", (void *) n);
+		fprintf(f, "\tn%p [ label = <FLAGS|{+", (void *) n);
 		re_flags_print(f, n->u.flags.pos);
-		fprintf(f, "|-");
+		fprintf(f, "}|{-");
 		re_flags_print(f, n->u.flags.neg);
-		fprintf(f, "> ];\n");
+		fprintf(f, "}> ];\n");
 		break;
 
 	default:
@@ -160,13 +160,12 @@ re_ast_print_dot(FILE *f, const struct fsm_options *opt,
 static void
 re_flags_print(FILE *f, enum re_flags fl)
 {
-	const char *sep = "";
-	if (fl & RE_ICASE) { fprintf(f, "%si", sep); sep = " "; }
-	if (fl & RE_TEXT) { fprintf(f, "%sg", sep); sep = " "; }
-	if (fl & RE_MULTI) { fprintf(f, "%sm", sep); sep = " "; }
-	if (fl & RE_REVERSE) { fprintf(f, "%sr", sep); sep = " "; }
-	if (fl & RE_SINGLE) { fprintf(f, "%ss", sep); sep = " "; }
-	if (fl & RE_ZONE) { fprintf(f, "%sz", sep); sep = " "; }
+	if (fl & RE_ICASE  ) { fprintf(f, "i"); }
+	if (fl & RE_TEXT   ) { fprintf(f, "g"); }
+	if (fl & RE_MULTI  ) { fprintf(f, "m"); }
+	if (fl & RE_REVERSE) { fprintf(f, "r"); }
+	if (fl & RE_SINGLE ) { fprintf(f, "s"); }
+	if (fl & RE_ZONE   ) { fprintf(f, "z"); }
 }
 
 static void
