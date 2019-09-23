@@ -160,13 +160,12 @@ re_ast_print_dot(FILE *f, const struct fsm_options *opt,
 static void
 re_flags_print(FILE *f, enum re_flags fl)
 {
-	const char *sep = "";
-	if (fl & RE_ICASE) { fprintf(f, "%si", sep); sep = " "; }
-	if (fl & RE_TEXT) { fprintf(f, "%sg", sep); sep = " "; }
-	if (fl & RE_MULTI) { fprintf(f, "%sm", sep); sep = " "; }
-	if (fl & RE_REVERSE) { fprintf(f, "%sr", sep); sep = " "; }
-	if (fl & RE_SINGLE) { fprintf(f, "%ss", sep); sep = " "; }
-	if (fl & RE_ZONE) { fprintf(f, "%sz", sep); sep = " "; }
+	if (fl & RE_ICASE  ) { fprintf(f, "i"); }
+	if (fl & RE_TEXT   ) { fprintf(f, "g"); }
+	if (fl & RE_MULTI  ) { fprintf(f, "m"); }
+	if (fl & RE_REVERSE) { fprintf(f, "r"); }
+	if (fl & RE_SINGLE ) { fprintf(f, "s"); }
+	if (fl & RE_ZONE   ) { fprintf(f, "z"); }
 }
 
 static void
