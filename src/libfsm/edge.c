@@ -9,12 +9,12 @@
 #include <stdlib.h>
 #include <limits.h>
 
+#include <fsm/fsm.h>
+
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 #include <adt/xalloc.h>
-
-#include <fsm/fsm.h>
 
 #include "internal.h"
 
@@ -35,22 +35,20 @@ fsm_state_cmpedges(const void *a, const void *b)
 
 int
 fsm_addedge_epsilon(struct fsm *fsm,
-	struct fsm_state *from, struct fsm_state *to)
+	fsm_state_t from, fsm_state_t to)
 {
 	assert(fsm != NULL);
-	assert(from != NULL);
-	assert(to != NULL);
+	assert(from < fsm->statecount);
+	assert(to < fsm->statecount);
 
-	(void) fsm;
-
-	if (from->epsilons == NULL) {
-		from->epsilons = state_set_create(fsm->opt->alloc);
-		if (from->epsilons == NULL) {
+	if (fsm->states[from]->epsilons == NULL) {
+		fsm->states[from]->epsilons = state_set_create(fsm->opt->alloc);
+		if (fsm->states[from]->epsilons == NULL) {
 			return 0;
 		}
 	}
 
-	if (!state_set_add(from->epsilons, to)) {
+	if (!state_set_add(fsm->states[from]->epsilons, to)) {
 		return 0;
 	}
 
@@ -59,13 +57,13 @@ fsm_addedge_epsilon(struct fsm *fsm,
 
 int
 fsm_addedge_any(struct fsm *fsm,
-	struct fsm_state *from, struct fsm_state *to)
+	fsm_state_t from, fsm_state_t to)
 {
 	int i;
 
 	assert(fsm != NULL);
-	assert(from != NULL);
-	assert(to != NULL);
+	assert(from < fsm->statecount);
+	assert(to < fsm->statecount);
 
 	for (i = 0; i <= UCHAR_MAX; i++) {
 		if (!fsm_addedge_literal(fsm, from, to, (unsigned char) i)) {
@@ -78,24 +76,24 @@ fsm_addedge_any(struct fsm *fsm,
 
 int
 fsm_addedge_literal(struct fsm *fsm,
-	struct fsm_state *from, struct fsm_state *to,
+	fsm_state_t from, fsm_state_t to,
 	char c)
 {
 	struct fsm_edge *e, new;
 
 	assert(fsm != NULL);
-	assert(from != NULL);
-	assert(to != NULL);
+	assert(from < fsm->statecount);
+	assert(to < fsm->statecount);
 
-	if (from->edges == NULL) {
-		from->edges = edge_set_create(fsm->opt->alloc, fsm_state_cmpedges);
-		if (from->edges == NULL) {
+	if (fsm->states[from]->edges == NULL) {
+		fsm->states[from]->edges = edge_set_create(fsm->opt->alloc, fsm_state_cmpedges);
+		if (fsm->states[from]->edges == NULL) {
 			return 0;
 		}
 	}
 
 	new.symbol = c;
-	e = edge_set_contains(from->edges, &new);
+	e = edge_set_contains(fsm->states[from]->edges, &new);
 	if (e == NULL) {
 		e = malloc(sizeof *e);
 		if (e == NULL) {
@@ -108,7 +106,7 @@ fsm_addedge_literal(struct fsm *fsm,
 			return 0;
 		}
 
-		if (!edge_set_add(from->edges, e)) {
+		if (!edge_set_add(fsm->states[from]->edges, e)) {
 			return 0;
 		}
 	}
@@ -121,27 +119,28 @@ fsm_addedge_literal(struct fsm *fsm,
 }
 
 int
-fsm_addedge_bulk(struct fsm *fsm, struct fsm_state *from, struct fsm_state **to, size_t n, char c)
+fsm_addedge_bulk(struct fsm *fsm,
+	fsm_state_t from, fsm_state_t *a, size_t n,
+	char c)
 {
 	struct fsm_edge *e, new;
 
 	assert(fsm != NULL);
-	assert(from != NULL);
-	assert(to != NULL);
+	assert(a != NULL);
 
 	if (n == 0) {
 		return 1;
 	}
 
-	if (from->edges == NULL) {
-		from->edges = edge_set_create(fsm->opt->alloc, fsm_state_cmpedges);
-		if (from->edges == NULL) {
+	if (fsm->states[from]->edges == NULL) {
+		fsm->states[from]->edges = edge_set_create(fsm->opt->alloc, fsm_state_cmpedges);
+		if (fsm->states[from]->edges == NULL) {
 			return 0;
 		}
 	}
 
 	new.symbol = c;
-	e = edge_set_contains(from->edges, &new);
+	e = edge_set_contains(fsm->states[from]->edges, &new);
 	if (e == NULL) {
 		e = malloc(sizeof *e);
 		if (e == NULL) {
@@ -154,12 +153,12 @@ fsm_addedge_bulk(struct fsm *fsm, struct fsm_state *from, struct fsm_state **to,
 			return 0;
 		}
 
-		if (!edge_set_add(from->edges, e)) {
+		if (!edge_set_add(fsm->states[from]->edges, e)) {
 			return 0;
 		}
 	}
 
-	if (!state_set_add_bulk(e->sl, to, n)) {
+	if (!state_set_add_bulk(e->sl, a, n)) {
 		return 0;
 	}
 
@@ -167,18 +166,19 @@ fsm_addedge_bulk(struct fsm *fsm, struct fsm_state *from, struct fsm_state **to,
 }
 
 struct fsm_edge *
-fsm_hasedge_literal(const struct fsm_state *s, char c)
+fsm_hasedge_literal(const struct fsm *fsm, fsm_state_t state, char c)
 {
 	struct fsm_edge *e, search;
 
-	assert(s != NULL);
+	assert(fsm != NULL);
+	assert(state < fsm->statecount);
 
-	if (s->edges == NULL) {
+	if (fsm->states[state]->edges == NULL) {
 		return NULL;
 	}
 
 	search.symbol = (unsigned char) c;
-	e = edge_set_contains(s->edges, &search);
+	e = edge_set_contains(fsm->states[state]->edges, &search);
 	if (e == NULL || state_set_empty(e->sl)) {
 		return NULL;
 	}

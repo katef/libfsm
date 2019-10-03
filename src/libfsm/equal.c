@@ -9,12 +9,12 @@
 #include <limits.h>
 #include <errno.h>
 
-#include <adt/set.h>
-
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
+
+#include <adt/set.h>
 
 #include "internal.h"
 #include "walk2.h"

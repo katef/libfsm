@@ -35,10 +35,10 @@ scanner_next(void *opaque)
 	return (int) c;
 }
 
-struct fsm_state *
-wrap_fsm_exec(struct fsm *fsm, const struct string_pair *pair)
+int
+wrap_fsm_exec(struct fsm *fsm, const struct string_pair *pair, fsm_state_t *state)
 {
-	struct fsm_state *state;
+	int e;
 
 	struct scanner s = {
 		.tag    = 'S',
@@ -48,12 +48,12 @@ wrap_fsm_exec(struct fsm *fsm, const struct string_pair *pair)
 		.offset = 0
 	};
 
-	state = fsm_exec(fsm, scanner_next, &s);
+	e = fsm_exec(fsm, scanner_next, &s, state);
 
 	assert(s.str == pair->string);
 	assert(s.magic == &s.magic);
 
-	return state;
+	return e;
 }
 
 struct fsm *

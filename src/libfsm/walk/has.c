@@ -14,7 +14,7 @@
 
 int
 fsm_has(const struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+	int (*predicate)(const struct fsm *, fsm_state_t))
 {
 	size_t i;
 
@@ -22,7 +22,7 @@ fsm_has(const struct fsm *fsm,
 	assert(predicate != NULL);
 
 	for (i = 0; i < fsm->statecount; i++) {
-		if (predicate(fsm, fsm->states[i])) {
+		if (predicate(fsm, i)) {
 			return 1;
 		}
 	}

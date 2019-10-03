@@ -36,7 +36,7 @@ fsm_complement(struct fsm *fsm)
 	 */
 
 	for (i = 0; i < fsm->statecount; i++) {
-		fsm_setend(fsm, fsm->states[i], !fsm_isend(fsm, fsm->states[i]));
+		fsm_setend(fsm, i, !fsm_isend(fsm, i));
 	}
 
 	if (!fsm_trim(fsm)) {

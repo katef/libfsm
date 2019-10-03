@@ -8,21 +8,18 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include <adt/alloc.h>
-#include <adt/set.h>
-#include <adt/stateset.h>
-#include <adt/edgeset.h>
-
 #include <fsm/alloc.h>
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
 
-#include "internal.h"
+#include <adt/alloc.h>
+#include <adt/set.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 
-#define ctassert(pred) \
-	switch (0) { case 0: case (pred):; }
+#include "internal.h"
 
 void
 free_contents(struct fsm *fsm)
@@ -75,7 +72,7 @@ fsm_new(const struct fsm_options *opt)
 		return NULL;
 	}
 
-	new->start  = NULL;
+	fsm_clearstart(new);
 
 	new->opt = opt;
 
@@ -127,15 +124,14 @@ fsm_move(struct fsm *dst, struct fsm *src)
 }
 
 void
-fsm_carryopaque_array(struct fsm *src_fsm, const struct fsm_state **src_set, size_t n,
-	struct fsm *dst_fsm, struct fsm_state *dst_state)
+fsm_carryopaque_array(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
+	struct fsm *dst_fsm, fsm_state_t dst_state)
 {
-	ctassert(sizeof (void *) == sizeof (struct fsm_state *));
-
 	assert(src_fsm != NULL);
 	assert(src_set != NULL);
 	assert(n > 0);
 	assert(dst_fsm != NULL);
+	assert(dst_state < dst_fsm->statecount);
 	assert(fsm_isend(dst_fsm, dst_state));
 	assert(src_fsm->opt == dst_fsm->opt);
 
@@ -177,14 +173,13 @@ fsm_carryopaque_array(struct fsm *src_fsm, const struct fsm_state **src_set, siz
 
 void
 fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
-	struct fsm *dst_fsm, struct fsm_state *dst_state)
+	struct fsm *dst_fsm, fsm_state_t dst_state)
 {
 	assert(src_fsm != NULL);
 	assert(dst_fsm != NULL);
+	assert(dst_state < dst_fsm->statecount);
 	assert(fsm_isend(dst_fsm, dst_state));
 	assert(src_fsm->opt == dst_fsm->opt);
-
-	ctassert(sizeof (void *) == sizeof (struct fsm_state *));
 
 	/* TODO: right? */
 	if (state_set_empty(src_set)) {
@@ -192,16 +187,12 @@ fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
 	}
 
 	/*
-	 * Our sets are a void ** treated as an array of elements of type void *.
-	 * Here we're presenting these as if they're an array of elements
-	 * of type struct fsm_state *.
-	 *
-	 * This is not portable because the representations of those types
-	 * need not be compatible in general, hence the compile-time assert
-	 * and the cast here.
+	 * Our state set is implemented as an array of fsm_state_t.
+	 * Here we're presenting the underlying array directly,
+	 * because the user-facing API doesn't expose the state set ADT.
 	 */
 
-	fsm_carryopaque_array(src_fsm, (void *) state_set_array(src_set), state_set_count(src_set),
+	fsm_carryopaque_array(src_fsm, state_set_array(src_set), state_set_count(src_set),
 		dst_fsm, dst_state);
 }
 

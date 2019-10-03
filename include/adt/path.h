@@ -11,14 +11,14 @@ struct fsm_alloc;
 struct fsm_state;
 
 struct path {
-	struct fsm_state *state;
+	fsm_state_t state;
 	struct path *next;
 	char c;
 };
 
 struct path *
 path_push(const struct fsm_alloc *a,
-	struct path **head, struct fsm_state *state, char c);
+	struct path **head, fsm_state_t state, char c);
 
 void
 path_free(const struct fsm_alloc *a, struct path *path);

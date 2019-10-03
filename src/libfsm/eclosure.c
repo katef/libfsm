@@ -9,13 +9,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <adt/set.h>
-#include <adt/stateset.h>
-
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 #include <fsm/options.h>
+
+#include <adt/set.h>
+#include <adt/stateset.h>
 
 #include "internal.h"
 
@@ -31,12 +31,13 @@
  * Returns closure on success, NULL on error.
  */
 struct state_set *
-epsilon_closure(const struct fsm_state *state, struct state_set *closure)
+epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set *closure)
 {
-	struct fsm_state *s;
 	struct state_iter it;
+	fsm_state_t s;
 
-	assert(state != NULL);
+	assert(fsm != NULL);
+	assert(state < fsm->statecount);
 	assert(closure != NULL);
 
 	/* Find if the given state is already in the closure */
@@ -44,15 +45,13 @@ epsilon_closure(const struct fsm_state *state, struct state_set *closure)
 		return closure;
 	}
 
-	if (!state_set_add(closure, (void *) state)) {
+	if (!state_set_add(closure, state)) {
 		return NULL;
 	}
 
 	/* Follow each epsilon transition */
-	for (s = state_set_first(state->epsilons, &it); s != NULL; s = state_set_next(&it)) {
-		assert(s != NULL);
-
-		if (epsilon_closure(s, closure) == NULL) {
+	for (state_set_reset(fsm->states[state]->epsilons, &it); state_set_next(&it, &s); ) {
+		if (epsilon_closure(fsm, s, closure) == NULL) {
 			return NULL;
 		}
 	}

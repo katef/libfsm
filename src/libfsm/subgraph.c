@@ -8,20 +8,20 @@
 #include <stdlib.h>
 #include <stddef.h>
 
+#include <fsm/fsm.h>
+#include <fsm/pred.h>
+
 #include <adt/alloc.h>
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 #include <adt/xalloc.h>
 
-#include <fsm/fsm.h>
-#include <fsm/pred.h>
-
 #include "internal.h"
 
 struct mapping {
-	struct fsm_state *old;
-	struct fsm_state *new;
+	fsm_state_t old;
+	fsm_state_t new;
 
 	unsigned int done:1;
 
@@ -29,13 +29,13 @@ struct mapping {
 };
 
 static struct mapping *
-mapping_ensure(struct fsm *fsm, struct mapping **head, struct fsm_state *old)
+mapping_ensure(struct fsm *fsm, struct mapping **head, fsm_state_t old)
 {
 	struct mapping *m;
 
 	assert(fsm != NULL);
 	assert(head != NULL);
-	assert(old != NULL);
+	assert(old < fsm->statecount);
 
 	/* Find an existing mapping */
 	for (m = *head; m != NULL; m = m->next) {
@@ -51,8 +51,7 @@ mapping_ensure(struct fsm *fsm, struct mapping **head, struct fsm_state *old)
 			return 0;
 		}
 
-		m->new = fsm_addstate(fsm);
-		if (m->new == NULL) {
+		if (!fsm_addstate(fsm, &m->new)) {
 			f_free(fsm->opt->alloc, m);
 			return 0;
 		}
@@ -98,26 +97,29 @@ getnextnotdone(struct mapping *mapping)
 	return NULL;
 }
 
-struct fsm_state *
-fsm_state_duplicatesubgraph(struct fsm *fsm, struct fsm_state *state)
+int
+fsm_state_duplicatesubgraph(struct fsm *fsm, fsm_state_t state,
+	fsm_state_t *q)
 {
 	assert(fsm != NULL);
-	assert(state != NULL);
+	assert(state < fsm->statecount);
+	assert(q != NULL);
 
-	return fsm_state_duplicatesubgraphx(fsm, state, NULL);
+	return fsm_state_duplicatesubgraphx(fsm, state, NULL, q);
 }
 
-struct fsm_state *
-fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
-	struct fsm_state **x)
+int
+fsm_state_duplicatesubgraphx(struct fsm *fsm, fsm_state_t state,
+	fsm_state_t *x,
+	fsm_state_t *q)
 {
 	struct mapping *mappings;
 	struct mapping *m;
 	struct mapping *start;
-	struct fsm_state *res;
 
 	assert(fsm != NULL);
-	assert(state != NULL);
+	assert(state < fsm->statecount);
+	assert(q != NULL);
 
 	mappings = NULL;
 
@@ -133,44 +135,40 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 	while (m = getnextnotdone(mappings), m != NULL) {
 		struct edge_iter it;
 		struct state_iter jt;
-		struct fsm_state *s;
 		struct fsm_edge *e;
+		fsm_state_t s;
 
 		if (x != NULL && m->old == *x) {
 			*x = m->new;
 		}
 
 		{
-			for (s = state_set_first(m->old->epsilons, &jt); s != NULL; s = state_set_next(&jt)) {
+			for (state_set_reset(fsm->states[m->old]->epsilons, &jt); state_set_next(&jt, &s); ) {
 				struct mapping *to;
-
-				assert(s != NULL);
 
 				to = mapping_ensure(fsm, &mappings, s);
 				if (to == NULL) {
 					mapping_free(fsm, mappings);
-					return NULL;
+					return 0;
 				}
 
 				if (!fsm_addedge_epsilon(fsm, m->new, to->new)) {
-					return NULL;
+					return 0;
 				}
 			}
 		}
-		for (e = edge_set_first(m->old->edges, &it); e != NULL; e = edge_set_next(&it)) {
-			for (s = state_set_first(e->sl, &jt); s != NULL; s = state_set_next(&jt)) {
+		for (e = edge_set_first(fsm->states[m->old]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &s); ) {
 				struct mapping *to;
-
-				assert(s != NULL);
 
 				to = mapping_ensure(fsm, &mappings, s);
 				if (to == NULL) {
 					mapping_free(fsm, mappings);
-					return NULL;
+					return 0;
 				}
 
 				if (!fsm_addedge_literal(fsm, m->new, to->new, e->symbol)) {
-					return NULL;
+					return 0;
 				}
 			}
 		}
@@ -178,9 +176,9 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, struct fsm_state *state,
 		m->done = 1;
 	}
 
-	res = start->new;
+	*q = start->new;
 	mapping_free(fsm, mappings);
 
-	return res;
+	return 1;
 }
 

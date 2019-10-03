@@ -25,7 +25,7 @@ static struct fsm_options opt;
 
 int main(int argc, char *argv[]) {
 	struct fsm *fsm;
-	struct fsm_state *start;
+	fsm_state_t start;
 	char s[BUFSIZ];
 	int (*dmf)(struct fsm *);
 	void (*print)(FILE *, const struct fsm *);
@@ -78,7 +78,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	fsm = NULL;
-	start = NULL;
 
 	if (ahocorasick) {
 		g = re_strings_new();
@@ -93,8 +92,7 @@ int main(int argc, char *argv[]) {
 			return 1;
 		}
 
-		start = fsm_addstate(fsm);
-		if (start == NULL) {
+		if (!fsm_addstate(fsm, &start)) {
 			perror("fsm_addtate");
 			return 1;
 		}
@@ -104,10 +102,6 @@ int main(int argc, char *argv[]) {
 	mt = 0;
 
 	while (fgets(s, sizeof s, stdin) != NULL) {
-		struct fsm *r;
-		struct re_err e;
-		const char *p = s;
-		struct fsm_state *rs;
 		struct timespec pre, post;
 
 		s[strcspn(s, "\n")] = '\0';
@@ -127,19 +121,28 @@ int main(int argc, char *argv[]) {
 				exit(EXIT_FAILURE);
 			}
 		} else {
+			fsm_state_t base_a, base_b;
+			const char *p = s;
+			struct re_err e;
+			fsm_state_t rs;
+			struct fsm *r;
+
 			r = re_comp(native ? RE_NATIVE : RE_LITERAL, fsm_sgetc, &p, &opt, 0, &e);
 			if (r == NULL) {
 				re_perror(native ? RE_NATIVE : RE_LITERAL, &e, NULL, s);
 				return 1;
 			}
 
-			rs = fsm_getstart(r);
+			(void) fsm_getstart(r, &rs);
 
-			fsm = fsm_merge(fsm, r);
+			fsm = fsm_merge(fsm, r, &base_a, &base_b);
 			if (fsm == NULL) {
 				perror("fsm_merge");
 				return 1;
 			}
+
+			start += base_a;
+			rs    += base_b;
 
 			if (!fsm_addedge_epsilon(fsm, start, rs)) {
 				perror("fsm_addedge_epsilon");

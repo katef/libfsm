@@ -243,7 +243,7 @@ hashset_clear(struct hashset *hashset)
  * Find if an item is in a hashset, and return it.
  */
 static item_t *
-hashset_contains(const struct hashset *hashset, const item_t *item)
+hashset_find(const struct hashset *hashset, const item_t *item)
 {
 	unsigned long h = hashset->hash(item);
 	size_t b = 0;
@@ -270,7 +270,7 @@ hashset_equal(const struct hashset *a, const struct hashset *b)
 	n = a->nbuckets;
 	ab = a->buckets;
 	for (i = 0; i < n; i++) {
-		if (ab[i].item != NULL && !hashset_contains(b, ab[i].item)) {
+		if (ab[i].item != NULL && !hashset_find(b, ab[i].item)) {
 			return 0;
 		}
 	}

@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include <fsm/fsm.h>
+
 #include <adt/queue.h>
 #include <adt/set.h>
 #include <adt/edgeset.h>
@@ -19,7 +21,7 @@ static int
 mark_states(struct fsm *fsm)
 {
 	const unsigned state_count = fsm_countstates(fsm);
-	struct fsm_state *start;
+	fsm_state_t start;
 	struct queue *q;
 	int res = 0;
 
@@ -28,34 +30,30 @@ mark_states(struct fsm *fsm)
 		return 1;
 	}
 
-	start = fsm_getstart(fsm);
-	if (start == NULL) {
+	if (!fsm_getstart(fsm, &start)) {
 		return 1;
 	}
 
 	if (!queue_push(q, start)) {
 		goto cleanup;
 	}
-	start->reachable = 1;
+	fsm->states[start]->reachable = 1;
 
 	for (;;) {
 		const struct fsm_edge *e;
 		struct edge_iter edge_iter;
-		struct fsm_state *s;
+		fsm_state_t s;
 
 		/* pop off queue; break if empty */
-		if (!queue_pop(q, (void *)&s)) { break; }
+		if (!queue_pop(q, &s)) { break; }
 
 		/* enqueue all directly reachable and unmarked, and mark them */
 		{
 			struct state_iter state_iter;
-			struct fsm_state *es;
+			fsm_state_t es;
 
-			for (es = state_set_first(s->epsilons, &state_iter);
-			     es != NULL;
-			     es = state_set_next(&state_iter))
-			{
-				if (es->reachable) {
+			for (state_set_reset(fsm->states[s]->epsilons, &state_iter); state_set_next(&state_iter, &es); ) {
+				if (fsm->states[es]->reachable) {
 					continue;
 				}
 
@@ -63,22 +61,19 @@ mark_states(struct fsm *fsm)
 					goto cleanup;
 				}
 
-				es->reachable = 1;
+				fsm->states[es]->reachable = 1;
 			}
 		}
 
-		for (e = edge_set_first(s->edges, &edge_iter);
+		for (e = edge_set_first(fsm->states[s]->edges, &edge_iter);
 		     e != NULL;
 		     e = edge_set_next(&edge_iter))
 		{
 			struct state_iter state_iter;
-			struct fsm_state *es;
+			fsm_state_t es;
 
-			for (es = state_set_first(e->sl, &state_iter);
-			     es != NULL;
-			     es = state_set_next(&state_iter))
-			{
-				if (es->reachable) {
+			for (state_set_reset(e->sl, &state_iter); state_set_next(&state_iter, &es); ) {
+				if (fsm->states[es]->reachable) {
 					continue;
 				}
 
@@ -86,7 +81,7 @@ mark_states(struct fsm *fsm)
 					goto cleanup;
 				}
 
-				es->reachable = 1;
+				fsm->states[es]->reachable = 1;
 			}
 		}
 	}
@@ -106,7 +101,7 @@ long
 sweep_states(struct fsm *fsm)
 {
 	long swept;
-	size_t i;
+	fsm_state_t i;
 
 	swept = 0;
 
@@ -133,15 +128,12 @@ sweep_states(struct fsm *fsm)
 			continue;
 		}
 
-		/* for endcount accounting */
-		fsm_setend(fsm, fsm->states[i], 0);
-
 		/*
-		 * This state cannot contain transitioning pointing to earlier
+		 * This state cannot contain transitions pointing to earlier
 		 * states, because they have already been removed. So we know
 		 * the current index may not decrease.
 		 */
-		fsm_removestate(fsm, fsm->states[i]);
+		fsm_removestate(fsm, i);
 		swept++;
 	}
 
@@ -152,7 +144,7 @@ int
 fsm_trim(struct fsm *fsm)
 {
 	long ret;
-	size_t i;
+	fsm_state_t i;
 
 	assert(fsm != NULL);
 

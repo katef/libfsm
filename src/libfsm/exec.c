@@ -9,38 +9,44 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include <adt/set.h>
-#include <adt/stateset.h>
-
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 
+#include <adt/set.h>
+#include <adt/stateset.h>
+
 #include "internal.h"
 
-static struct fsm_state *
-nextstate(const struct fsm_state *state, int c)
+static int
+nextstate(const struct fsm *fsm, fsm_state_t state, int c,
+	fsm_state_t *next)
 {
 	struct fsm_edge *e;
 
-	assert(state != NULL);
+	assert(state < fsm->statecount);
+	assert(next != NULL);
 
-	if (!(e = fsm_hasedge_literal(state, c))) {
-		return NULL;
+	e = fsm_hasedge_literal(fsm, state, c);
+	if (e == NULL) {
+		return 0;
 	}
 
-	return state_set_only(e->sl);
+	*next = state_set_only(e->sl);
+	return 1;
 }
 
-struct fsm_state *
+int
 fsm_exec(const struct fsm *fsm,
-	int (*fsm_getc)(void *opaque), void *opaque)
+	int (*fsm_getc)(void *opaque), void *opaque,
+	fsm_state_t *end)
 {
-	struct fsm_state *state;
+	fsm_state_t state;
 	int c;
 
 	assert(fsm != NULL);
 	assert(fsm_getc != NULL);
+	assert(end != NULL);
 
 	/* TODO: check prerequisites; that it has literal edges, DFA, etc */
 
@@ -48,23 +54,25 @@ fsm_exec(const struct fsm *fsm,
 
 	if (!fsm_all(fsm, fsm_isdfa)) {
 		errno = EINVAL;
-		return NULL;
+		return -1;
 	}
 
-	state = fsm_getstart(fsm);
-	assert(state != NULL);
+	if (!fsm_getstart(fsm, &state)) {
+		errno = EINVAL;
+		return -1;
+	}
 
 	while (c = fsm_getc(opaque), c != EOF) {
-		state = nextstate(state, c);
-		if (state == NULL) {
-			return NULL;
+		if (!nextstate(fsm, state, c, &state)) {
+			return 0;
 		}
 	}
 
 	if (!fsm_isend(fsm, state)) {
-		return NULL;
+		return 0;
 	}
 
-	return state;
+	*end = state;
+	return 1;
 }
 

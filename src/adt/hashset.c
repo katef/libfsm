@@ -23,21 +23,6 @@ static const unsigned char hashk[] = {
 };
 
 unsigned long
-hashptr(const void *p)
-{
-	unsigned char v[sizeof p];
-	unsigned long h;
-	unsigned char ha[sizeof h];
-
-	memcpy(&v[0], &p, sizeof p);
-
-	siphash(v, sizeof v, hashk, &ha[0], sizeof ha);
-	memcpy(&h, &ha[0], sizeof h);
-
-	return h;
-}
-
-unsigned long
 hashrec(const void *p, size_t n)
 {
 	unsigned long h = 0;

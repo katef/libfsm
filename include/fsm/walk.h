@@ -15,14 +15,14 @@ struct fsm_state;
  */
 unsigned
 fsm_count(const struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *));
+	int (*predicate)(const struct fsm *, fsm_state_t));
 
 /*
  * Return true if the given predicate is true for any state.
  */
 int
 fsm_has(const struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *));
+	int (*predicate)(const struct fsm *, fsm_state_t));
 
 /*
  * Run a given predicate against all states in an FSM.
@@ -31,7 +31,7 @@ fsm_has(const struct fsm *fsm,
  */
 int
 fsm_all(const struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *));
+	int (*predicate)(const struct fsm *, fsm_state_t));
 
 /*
  * Assert that the given predicate holds for all states reachable
@@ -43,11 +43,11 @@ fsm_all(const struct fsm *fsm,
  * Returns -1 on error.
  */
 int
-fsm_reachableall(const struct fsm *fsm, const struct fsm_state *state,
-	int (*predicate)(const struct fsm *, const struct fsm_state *));
+fsm_reachableall(const struct fsm *fsm, fsm_state_t state,
+	int (*predicate)(const struct fsm *, fsm_state_t));
 int
-fsm_reachableany(const struct fsm *fsm, const struct fsm_state *state,
-	int (*predicate)(const struct fsm *, const struct fsm_state *));
+fsm_reachableany(const struct fsm *fsm, fsm_state_t state,
+	int (*predicate)(const struct fsm *, fsm_state_t));
 
 /*
  * Iterate through the states of an FSM with a callback function.
@@ -59,7 +59,7 @@ fsm_reachableany(const struct fsm *fsm, const struct fsm_state *state,
  */
 int
 fsm_walk_states(const struct fsm *fsm, void *opaque,
-	int (*callback)(const struct fsm *, const struct fsm_state *, void *));
+	int (*callback)(const struct fsm *, fsm_state_t, void *));
 
 /*
  * Iterate through the states of an FSM with callback functions for
@@ -72,8 +72,8 @@ fsm_walk_states(const struct fsm *fsm, void *opaque,
  */
 int
 fsm_walk_edges(const struct fsm *fsm, void *opaque,
-	int (*callback_literal)(const struct fsm *, const struct fsm_state *, const struct fsm_state *, char c, void *),
-	int (*callback_epsilon)(const struct fsm *, const struct fsm_state *, const struct fsm_state *, void *));
+	int (*callback_literal)(const struct fsm *, fsm_state_t, fsm_state_t, char c, void *),
+	int (*callback_epsilon)(const struct fsm *, fsm_state_t, fsm_state_t, void *));
 
 #endif
 

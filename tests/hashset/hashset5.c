@@ -30,6 +30,17 @@ hash_int(const void *a)
 	return hashrec(a, sizeof * (const int *) a);
 }
 
+int
+hashset_contains(const struct hashset *set, const void *item)
+{
+	unsigned long h = hash_int(item);
+	size_t b = 0;
+
+	assert(set != NULL);
+
+	return finditem(set, h, item, &b);
+}
+
 int *next_int(void) {
 	static int n = 0;
 	int *p = malloc(sizeof *p);

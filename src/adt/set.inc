@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include <adt/alloc.h>
+#include <adt/hashset.h>
 
 #define SET_INITIAL 8
 
@@ -209,64 +210,6 @@ set_add(struct set *set, item_t *item)
 	return item;
 }
 
-#define BULK_ADD_THRESH 1
-
-static item_t *
-set_add_bulk(struct set *set, item_t **items, size_t n)
-{
-	size_t newlen;
-
-	if (n <= BULK_ADD_THRESH) {
-		size_t i;
-		for (i = 0; i < n; i++) {
-			if (!set_add(set, items[i])) {
-				return NULL;
-			}
-		}
-
-		return set->a[0];
-	}
-
-	newlen = set->i + n;
-	if (newlen > set->n) {
-		/* need to expand */
-		item_t **new;
-		size_t newcap;
-
-		newcap = (newlen < 2*set->n) ? 2*set->n : newlen;
-		new = f_realloc(set->alloc, set->a, newcap * sizeof set->a[0]);
-		if (new == NULL) {
-			return NULL;
-		}
-
-		set->a = new;
-		set->n = newcap;
-	}
-
-	memcpy(&set->a[set->i], &items[0], n * sizeof items[0]);
-	qsort(&set->a[0], set->i+n, sizeof set->a[0], set->cmp);
-
-	/* remove any duplicates */
-	{
-		size_t i, curr = 1, max = set->i+n;
-		item_t **items = set->a;
-		for (i=1; i < max; i++) {
-			int cmp = set->cmp(&items[i-1], &items[i]);
-
-			assert(cmp <= 0);
-			assert(curr <= i);
-
-			if (cmp != 0) {
-				items[curr++] = items[i];
-			}
-		}
-
-		set->i = curr;
-	}
-
-	return set->a[0];
-}
-
 static void
 set_remove(struct set *set, const item_t *item)
 {
@@ -438,7 +381,7 @@ static const item_t *
 set_array(const struct set *set)
 {
 	if (set == NULL) {
-		return 0;
+		return NULL;
 	}
 
 	return (const item_t *) set->a;

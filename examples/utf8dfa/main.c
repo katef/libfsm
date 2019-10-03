@@ -64,7 +64,7 @@ error:
 static void
 codepoint(struct fsm *fsm, int cp)
 {
-	struct fsm_state *x, *y;
+	fsm_state_t x, y;
 	char c[4];
 	int r, i;
 
@@ -74,14 +74,12 @@ codepoint(struct fsm *fsm, int cp)
 		exit(1);
 	}
 
-	x = fsm_getstart(fsm);
-	assert(x != NULL);
+	(void) fsm_getstart(fsm, &x);
 
 	/* TODO: construct trie, assuming increasing order */
 
 	for (i = 0; i < r; i++) {
-		y = fsm_addstate(fsm);
-		if (y == NULL) {
+		if (!fsm_addstate(fsm, &y)) {
 			perror("fsm_addstate");
 			exit(1);
 		}

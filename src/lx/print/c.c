@@ -32,12 +32,12 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const void *opaque);
 
 static int
-skip(const struct fsm *fsm, const struct fsm_state *state)
+skip(const struct fsm *fsm, fsm_state_t state)
 {
 	struct ast_mapping *m;
 
 	assert(fsm != NULL);
-	assert(state != NULL);
+	assert(state < fsm->statecount);
 
 	if (!fsm_isend(fsm, state)) {
 		return 1;
@@ -76,29 +76,34 @@ zindexof(const struct ast *ast, const struct ast_zone *zone)
  * Given a token, find one of its accepting states which gives
  * the shortest fsm_example(). This is pretty expensive.
  */
-static const struct fsm_state *
-shortest_example(const struct fsm *fsm, const struct ast_token *token)
+static int
+shortest_example(const struct fsm *fsm, const struct ast_token *token,
+	fsm_state_t *q)
 {
-	const struct fsm_state *goal;
-	size_t i;
+	fsm_state_t goal, i;
 	int min;
 
 	assert(fsm != NULL);
 	assert(token != NULL);
+	assert(q != NULL);
 
 	/*
 	 * We're nominating the start state to mean the given token was not present
 	 * in this FSM; this is on the premise that the start state cannot
 	 * accept, because lx does not permit empty regexps.
 	 */
-	goal = fsm_getstart(fsm);
-	min  = INT_MAX;
+	(void) fsm_getstart(fsm, &goal);
+	min = INT_MAX;
 
 	for (i = 0; i < fsm->statecount; i++) {
 		const struct ast_mapping *m;
 		int n;
 
-		m = fsm_getopaque(fsm, fsm->states[i]);
+		if (!fsm_isend(fsm, i)) {
+			continue;
+		}
+
+		m = fsm_getopaque(fsm, i);
 		if (m == NULL) {
 			continue;
 		}
@@ -107,19 +112,20 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token)
 			continue;
 		}
 
-		n = fsm_example(fsm, fsm->states[i], NULL, 0);
+		n = fsm_example(fsm, i, NULL, 0);
 		if (-1 == n) {
 			perror("fsm_example");
-			return NULL;
+			return 0;
 		}
 
 		if (n < min) {
 			min = n;
-			goal = fsm->states[i];
+			goal = i;
 		}
 	}
 
-	return goal;
+	*q = goal;
+	return 1;
 }
 
 static int
@@ -569,7 +575,7 @@ print_buf(FILE *f)
 static void
 print_stateenum(FILE *f, const struct fsm *fsm)
 {
-	unsigned int i;
+	fsm_state_t i;
 
 	fprintf(f, "\tenum {\n");
 	fprintf(f, "\t\t");
@@ -619,7 +625,6 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		fprintf(f, "\n");
 	}
 
-	assert(fsm_getstart(z->fsm) != NULL);
 	fprintf(f, "\tstate = NONE;\n");
 	fprintf(f, "\n");
 
@@ -642,10 +647,19 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		break;
 	}
 
-	fprintf(f, "\t\tif (state == NONE) {\n");
-	fprintf(f, "\t\t\tstate = S%u;\n", indexof(z->fsm, fsm_getstart(z->fsm)));
-	fprintf(f, "\t\t}\n");
-	fprintf(f, "\n");
+	{
+		fsm_state_t start;
+
+		if (!fsm_getstart(z->fsm, &start)) {
+			errno = EINVAL;
+			return -1;
+		}
+
+		fprintf(f, "\t\tif (state == NONE) {\n");
+		fprintf(f, "\t\t\tstate = S%u;\n", start);
+		fprintf(f, "\t\t}\n");
+		fprintf(f, "\n");
+	}
 
 	{
 		const struct fsm_options *tmp;
@@ -680,14 +694,14 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 	if (~api_exclude & API_BUF) {
 		int has_skips;
-		size_t i;
+		fsm_state_t i;
 
 		has_skips = 0;
 
 		for (i = 0; i < z->fsm->statecount; i++) {
 			int r;
 
-			r = fsm_reachableall(z->fsm, z->fsm->states[i], skip);
+			r = fsm_reachableall(z->fsm, i, skip);
 			if (r == -1) {
 				return -1;
 			}
@@ -709,7 +723,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 			for (i = 0; i < z->fsm->statecount; i++) {
 				int r;
 
-				r = fsm_reachableall(z->fsm, z->fsm->states[i], skip);
+				r = fsm_reachableall(z->fsm, i, skip);
 				if (r == -1) {
 					return -1;
 				}
@@ -749,7 +763,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\n");
 
 	{
-		size_t i;
+		fsm_state_t i;
 
 		switch (opt.io) {
 		case FSM_IO_GETC:
@@ -775,11 +789,11 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		for (i = 0; i < z->fsm->statecount; i++) {
 			const struct ast_mapping *m;
 
-			if (!fsm_isend(z->fsm, z->fsm->states[i])) {
+			if (!fsm_isend(z->fsm, i)) {
 				continue;
 			}
 
-			m = fsm_getopaque(z->fsm, z->fsm->states[i]);
+			m = fsm_getopaque(z->fsm, i);
 			assert(m != NULL);
 
 			fprintf(f, "\tcase S%u: return ", (unsigned) i);
@@ -871,16 +885,15 @@ print_example(FILE *f, const struct ast *ast)
 		fprintf(f, "\t\tswitch (t) {\n");
 
 		for (t = ast->tl; t != NULL; t = t->next) {
-			const struct fsm_state *s;
+			fsm_state_t s;
 			char buf[50]; /* 50 looks reasonable for an on-screen limit */
 			int n;
 
-			s = shortest_example(z->fsm, t);
-			if (s == NULL) {
+			if (!shortest_example(z->fsm, t, &s)) {
 				return -1;
 			}
 
-			if (s == fsm_getstart(z->fsm)) {
+			if (!fsm_getstart(z->fsm, &s)) {
 				continue;
 			}
 

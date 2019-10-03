@@ -7,17 +7,18 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <fsm/fsm.h>
+
 #include <adt/alloc.h>
 #include <adt/path.h>
 
 struct path *
 path_push(const struct fsm_alloc *a,
-	struct path **head, struct fsm_state *state, char c)
+	struct path **head, fsm_state_t state, char c)
 {
 	struct path *new;
 
 	assert(head != NULL);
-	assert(state != NULL);
 
 	new = f_malloc(a, sizeof *new);
 	if (new == NULL) {

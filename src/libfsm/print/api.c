@@ -46,7 +46,7 @@ void
 fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 {
 	struct fsm *fsm;
-	struct fsm_state *start, *end;
+	fsm_state_t start, end;
 	struct bm *a; /* indexed by "to" state number */
 	unsigned int from;
 
@@ -64,13 +64,11 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 		return;
 	}
 
-	start = fsm_getstart(fsm);
-	if (start == NULL) {
+	if (!fsm_getstart(fsm, &start)) {
 		goto error;
 	}
 
-	end = fsm_collate(fsm, fsm_isend);
-	if (end == NULL) {
+	if (!fsm_collate(fsm, &end, fsm_isend)) {
 		goto error;
 	}
 
@@ -100,30 +98,25 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 		fprintf(f, "{\n");
 	}
 
-	fprintf(f, "\tstruct fsm_state *s[%lu];\n", (unsigned long) fsm->statecount);
+	fprintf(f, "\tfsm_state_t s[%lu];\n", (unsigned long) fsm->statecount);
 	fprintf(f, "\tsize_t i;\n");
-	fprintf(f, "\n");
-
-	fprintf(f, "\tassert(x != NULL);\n");
-	fprintf(f, "\tassert(y != NULL);\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "\tfor (i = 0; i < %lu; i++) {\n", (unsigned long) fsm->statecount);
 
-	fprintf(f, "\t\tif (i == %u) {\n", indexof(fsm, start));
-	fprintf(f, "\t\t\ts[%u] = x;\n", indexof(fsm, start));
+	fprintf(f, "\t\tif (i == %lu) {\n", (unsigned long) start);
+	fprintf(f, "\t\t\ts[%lu] = x;\n", (unsigned long) start);
 	fprintf(f, "\t\t\tcontinue;\n");
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "\t\tif (i == %u) {\n", indexof(fsm, end));
-	fprintf(f, "\t\t\ts[%u] = y;\n", indexof(fsm, end));
+	fprintf(f, "\t\tif (i == %lu) {\n", (unsigned long) end);
+	fprintf(f, "\t\t\ts[%lu] = y;\n", (unsigned long) end);
 	fprintf(f, "\t\t\tcontinue;\n");
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "\t\ts[i] = fsm_addstate(fsm);\n");
-	fprintf(f, "\t\tif (s[i] == NULL) {\n");
+	fprintf(f, "\t\tif (!fsm_addstate(fsm, &s[i]) {\n");
 	fprintf(f, "\t\t\treturn 0;\n");
 	fprintf(f, "\t\t}\n");
 
@@ -138,31 +131,21 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 
 	for (from = 0; from < fsm->statecount; from++) {
 		struct fsm_edge *e;
-		struct fsm_state *st;
 		struct edge_iter it;
 		struct state_iter jt;
-		unsigned int to;
-		unsigned int i;
+		fsm_state_t i, to;
 
 		for (i = 0; i < fsm->statecount; i++) {
 			bm_clear(&a[i]);
 		}
 
-		for (st = state_set_first(fsm->states[from]->epsilons, &jt); st != NULL; st = state_set_next(&jt)) {
-			assert(st != NULL);
-
-			to = indexof(fsm, st);
-
+		for (state_set_reset(fsm->states[from]->epsilons, &jt); state_set_next(&jt, &to); ) {
 			fprintf(f, "\tif (!fsm_addedge_epsilon(fsm, s[%u], s[%u])) { return 0; }\n",
 				from, to);
 		}
 
 		for (e = edge_set_first(fsm->states[from]->edges, &it); e != NULL; e = edge_set_next(&it)) {
-			for (st = state_set_first(e->sl, &jt); st != NULL; st = state_set_next(&jt)) {
-				assert(st != NULL);
-
-				to = indexof(fsm, st);
-
+			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &to); ) {
 				bm_set(&a[to], e->symbol);
 			}
 		}

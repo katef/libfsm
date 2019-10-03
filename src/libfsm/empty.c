@@ -9,23 +9,22 @@
 #include <limits.h>
 #include <errno.h>
 
-#include <adt/set.h>
-
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
+
+#include <adt/set.h>
 
 #include "internal.h"
 
 int
 fsm_empty(const struct fsm *fsm)
 {
-	struct fsm_state *start;
+	fsm_state_t start;
 
 	assert(fsm != NULL);
 
-	start = fsm_getstart(fsm);
-	if (start == NULL) {
+	if (!fsm_getstart(fsm, &start)) {
 		errno = EINVAL;
 		return -1;
 	}

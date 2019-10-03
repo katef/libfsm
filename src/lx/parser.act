@@ -311,7 +311,7 @@
 
 	<deref-token>: (z :zone, t :string) -> (r :fsm) = @{
 		const struct ast_mapping *m;
-		struct fsm_state *start;
+		fsm_state_t start;
 
 		assert(@t != NULL);
 		assert(@t != NULL);
@@ -322,15 +322,15 @@
 			@!;
 		}
 
-		start = fsm_addstate(@r);
-		if (start == NULL) {
+		if (!fsm_addstate(@r, &start)) {
 			perror("fsm_addstate");
 			@!;
 		}
 
 		for (m = @z->ml; m != NULL; m = m->next) {
 			struct fsm *fsm;
-			struct fsm_state *ms;
+			fsm_state_t base_r, base_fsm;
+			fsm_state_t ms;
 
 			if (m->token == NULL) {
 				continue;
@@ -346,7 +346,7 @@
 				@!;
 			}
 
-			ms = fsm_getstart(fsm);
+			(void) fsm_getstart(fsm, &ms);
 
 			/*
 			 * We don't want to take these with us, because the output here is a
@@ -355,11 +355,14 @@
 			 */
 			fsm_setendopaque(fsm, NULL);
 
-			@r = fsm_merge(@r, fsm);
+			@r = fsm_merge(@r, fsm, &base_r, &base_fsm);
 			if (@r == NULL) {
 				perror("fsm_union");
 				@!;
 			}
+
+			ms    += base_fsm;
+			start += base_r;
 
 			if (!fsm_addedge_epsilon(@r, start, ms)) {
 				perror("fsm_addedge_epsilon");
@@ -402,7 +405,7 @@
 
 	/* equivalent to <compile-regex>(".") but with less machination */
 	<regex-any>: () -> (r :fsm) = @{
-		struct fsm_state *start, *end;
+		fsm_state_t start, end;
 
 		@r = fsm_new(act_state->opt);
 		if (@r == NULL) {
@@ -410,9 +413,13 @@
 			@!;
 		}
 
-		start = fsm_addstate(@r);
-		end   = fsm_addstate(@r);
-		if (start == NULL || end == NULL) {
+		if (!fsm_addstate(@r, &start)) {
+			perror("fsm_addstate");
+			fsm_free(@r);
+			@!;
+		}
+
+		if (!fsm_addstate(@r, &end)) {
 			perror("fsm_addstate");
 			fsm_free(@r);
 			@!;
@@ -524,25 +531,23 @@
 	@};
 
 	<op-star>: (r :fsm) -> () = @{
-		struct fsm_state *start, *end;
-		struct fsm_state *old;
+		fsm_state_t start, end;
+		fsm_state_t old;
+		fsm_state_t rs;
 
 		/* TODO: centralise with libre */
 
-		start = fsm_addstate(@r);
-		if (start == NULL) {
+		if (!fsm_addstate(@r, &start)) {
 			perror("fsm_addtstate");
 			@!;
 		}
 
-		end = fsm_addstate(@r);
-		if (end == NULL) {
+		if (!fsm_addstate(@r, &end)) {
 			perror("fsm_addtstate");
 			@!;
 		}
 
-		old = fsm_collate(@r, fsm_isend);
-		if (old == NULL) {
+		if (!fsm_collate(@r, &old, fsm_isend)) {
 			perror("fsm_collate");
 			@!;
 		}
@@ -555,7 +560,9 @@
 		fsm_setend(@r, old, 0);
 		fsm_setend(@r, end, 1);
 
-		if (!fsm_addedge_epsilon(@r, start, fsm_getstart(@r))) {
+		(void) fsm_getstart(@r, &rs);
+
+		if (!fsm_addedge_epsilon(@r, start, rs)) {
 			perror("fsm_addedge_epsilon");
 			@!;
 		}
@@ -574,25 +581,23 @@
 	@};
 
 	<op-cross>: (r :fsm) -> () = @{
-		struct fsm_state *start, *end;
-		struct fsm_state *old;
+		fsm_state_t start, end;
+		fsm_state_t old;
+		fsm_state_t rs;
 
 		/* TODO: centralise with libre */
 
-		start = fsm_addstate(@r);
-		if (start == NULL) {
+		if (!fsm_addstate(@r, &start)) {
 			perror("fsm_addtstate");
 			@!;
 		}
 
-		end = fsm_addstate(@r);
-		if (end == NULL) {
+		if (!fsm_addstate(@r, &end)) {
 			perror("fsm_addtstate");
 			@!;
 		}
 
-		old = fsm_collate(@r, fsm_isend);
-		if (old == NULL) {
+		if (!fsm_collate(@r, &old, fsm_isend)) {
 			perror("fsm_collate");
 			@!;
 		}
@@ -605,7 +610,9 @@
 		fsm_setend(@r, old, 0);
 		fsm_setend(@r, end, 1);
 
-		if (!fsm_addedge_epsilon(@r, start, fsm_getstart(@r))) {
+		(void) fsm_getstart(@r, &rs);
+
+		if (!fsm_addedge_epsilon(@r, start, rs)) {
 			perror("fsm_addedge_epsilon");
 			@!;
 		}
@@ -619,25 +626,23 @@
 	@};
 
 	<op-qmark>: (r :fsm) -> () = @{
-		struct fsm_state *start, *end;
-		struct fsm_state *old;
+		fsm_state_t start, end;
+		fsm_state_t old;
+		fsm_state_t rs;
 
 		/* TODO: centralise with libre */
 
-		start = fsm_addstate(@r);
-		if (start == NULL) {
+		if (!fsm_addstate(@r, &start)) {
 			perror("fsm_addtstate");
 			@!;
 		}
 
-		end = fsm_addstate(@r);
-		if (end == NULL) {
+		if (!fsm_addstate(@r, &end)) {
 			perror("fsm_addtstate");
 			@!;
 		}
 
-		old = fsm_collate(@r, fsm_isend);
-		if (old == NULL) {
+		if (!fsm_collate(@r, &old, fsm_isend)) {
 			perror("fsm_collate");
 			@!;
 		}
@@ -650,7 +655,9 @@
 		fsm_setend(@r, old, 0);
 		fsm_setend(@r, end, 1);
 
-		if (!fsm_addedge_epsilon(@r, start, fsm_getstart(@r))) {
+		(void) fsm_getstart(@r, &rs);
+
+		if (!fsm_addedge_epsilon(@r, start, rs)) {
 			perror("fsm_addedge_epsilon");
 			@!;
 		}

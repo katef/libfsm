@@ -8,6 +8,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
+#include <errno.h>
+
+#include <fsm/fsm.h>
+#include <fsm/pred.h>
+#include <fsm/walk.h>
+#include <fsm/options.h>
 
 #include <adt/alloc.h>
 #include <adt/set.h>
@@ -17,11 +24,6 @@
 #include <adt/stateset.h>
 #include <adt/statearray.h>
 #include <adt/edgeset.h>
-
-#include <fsm/fsm.h>
-#include <fsm/pred.h>
-#include <fsm/walk.h>
-#include <fsm/options.h>
 
 #include "internal.h"
 
@@ -43,7 +45,7 @@ struct mapping {
 	struct state_set *closure;
 
 	/* The DFA state associated with this epsilon closure of NFA states */
-	struct fsm_state *dfastate;
+	fsm_state_t dfastate;
 
 	/* boolean: are the outgoing edges for dfastate all created? */
 	unsigned int done:1;
@@ -82,10 +84,8 @@ static unsigned long
 hash_mapping(const void *a)
 {
 	const struct mapping *m = a;
-	const struct fsm_state **states = state_set_array(m->closure);
-	size_t nstates = state_set_count(m->closure);
 
-	return hashrec(states, nstates * sizeof states[0]);
+	return state_set_hash(m->closure);
 }
 
 /*
@@ -100,9 +100,19 @@ addtomappings(struct mapping_hashset *mappings, struct fsm *dfa, struct state_se
 {
 	struct mapping *m, search;
 
+	/*
+	 * XXX: here we're using hashset_contains() as a key/value lookup,
+	 * by only hashing part of struct mapping, coming up with the same
+	 * hash for &search and for the stored item, and then retrieving
+	 * the other fields in struct mapping.
+	 *
+	 * Instead it'd be clearer to provide a key/value style API.
+	 */
+
 	/* Use an existing mapping if present */
 	search.closure = closure;
-	if ((m = mapping_hashset_contains(mappings, &search))) {
+	m = mapping_hashset_find(mappings, &search);
+	if (m != NULL) {
 		state_set_free(closure);
 		return m;
 	}
@@ -115,8 +125,7 @@ addtomappings(struct mapping_hashset *mappings, struct fsm *dfa, struct state_se
 
 	assert(closure != NULL);
 	m->closure  = closure;
-	m->dfastate = fsm_addstate(dfa);
-	if (m->dfastate == NULL) {
+	if (!fsm_addstate(dfa, &m->dfastate)) {
 		f_free(dfa->opt->alloc, m);
 		return NULL;
 	}
@@ -135,79 +144,89 @@ addtomappings(struct mapping_hashset *mappings, struct fsm *dfa, struct state_se
  * Return the DFA state associated with the closure of a given NFA state.
  * Create the DFA state if neccessary.
  */
-static struct fsm_state *
-state_closure(struct mapping_hashset *mappings, struct fsm *dfa, const struct fsm_state *nfastate,
-	int includeself)
+static int
+state_closure(struct mapping_hashset *mappings, struct fsm *dfa,
+	const struct fsm *nfa, fsm_state_t nfastate,
+	int includeself,
+	fsm_state_t *dfastate)
 {
 	struct mapping *m;
 	struct state_set *ec;
 
 	assert(dfa != NULL);
-	assert(nfastate != NULL);
+	assert(nfa != NULL);
+	assert(nfastate < nfa->statecount);
 	assert(mappings != NULL);
+	assert(dfastate != NULL);
 
 	ec = state_set_create(dfa->opt->alloc);
 	if (ec == NULL) {
-		return NULL;
+		return 0;
 	}
 
-	if (epsilon_closure(nfastate, ec) == NULL) {
+	if (epsilon_closure(nfa, nfastate, ec) == NULL) {
 		state_set_free(ec);
-		return NULL;
+		return 0;
 	}
 
 	if (!includeself) {
-		state_set_remove(ec, (void *) nfastate);
+		state_set_remove(ec, nfastate);
 	}
 
 	if (state_set_count(ec) == 0) {
 		state_set_free(ec);
-		return NULL;
+		return 0;
 	}
 
 	m = addtomappings(mappings, dfa, ec);
 	if (m == NULL) {
-		return NULL;
+		return 0;
 	}
 
-	return m->dfastate;
+	*dfastate = m->dfastate;
+	return 1;
 }
 
 /*
  * Return the DFA state associated with the closure of a set of given NFA
  * states. Create the DFA state if neccessary.
  */
-static struct fsm_state *
-set_closure(struct mapping_hashset *mappings, struct fsm *dfa, struct state_array *set)
+static int
+set_closure(struct mapping_hashset *mappings, struct fsm *dfa,
+	const struct fsm *nfa, struct state_array *set,
+	fsm_state_t *dfastate)
 {
 	struct state_set *ec;
 	struct mapping *m;
 	size_t i;
 
 	assert(set != NULL);
+	assert(set->states != NULL);
 	assert(mappings != NULL);
+	assert(dfastate != NULL);
 
 	ec = state_set_create(dfa->opt->alloc);
 	if (ec == NULL) {
-		return NULL;
+		return 0;
 	}
 
 	for (i = 0; i < set->len; i++) {
-		if (epsilon_closure(set->states[i], ec) == NULL) {
+		if (epsilon_closure(nfa, set->states[i], ec) == NULL) {
 			state_set_free(ec);
-			return NULL;
+			return 0;
 		}
 	}
 
 	m = addtomappings(mappings, dfa, ec);
 	if (m == NULL) {
 		state_set_free(ec);
-		return NULL;
+		return 0;
 	}
 
 	/* TODO: test ec */
 
-	return m->dfastate;
+	*dfastate = m->dfastate;
+	return 1;
 }
 
 struct mapping_hashset_iter_save {
@@ -235,6 +254,7 @@ nextnotdone(struct mapping_hashset *mappings, struct mapping_hashset_iter_save *
 	}
 
 rescan:
+
 	for (; m != NULL; m = mapping_hashset_next(&it)) {
 		if (!m->done) {
 			sv->saved = 1;
@@ -253,39 +273,28 @@ rescan:
 }
 
 static void
-carryend(const struct fsm *src_fsm, struct state_set *src_set,
-	struct fsm *dst_fsm, struct fsm_state *dst_state)
+carryend(const struct fsm *src_fsm, const struct state_set *src_set,
+	struct fsm *dst_fsm, fsm_state_t dst_state)
 {
 	struct state_iter it;
-	struct fsm_state *s;
+	fsm_state_t s;
 
 	/* src_set is >= 1 because a closure includes the source state */
 	assert(src_fsm != NULL);
 	assert(src_set != NULL && state_set_count(src_set) >= 1);
 	assert(dst_fsm != NULL);
-	assert(dst_state != NULL);
+	assert(dst_state < dst_fsm->statecount);
 
-	for (s = state_set_first(src_set, &it); s != NULL; s = state_set_next(&it)) {
+	for (state_set_reset((void *) src_set, &it); state_set_next(&it, &s); ) {
 		if (fsm_isend(src_fsm, s)) {
 			fsm_setend(dst_fsm, dst_state, 1);
+			break;
 		}
 	}
 }
 
-static unsigned long
-hash_single_state(const void *a)
-{
-	/*
-	 * We need only hash the pointer value here, because states are
-	 * allocated uniquely. Deep comparison is effectively undertaken
-	 * by the entire powerset construction algorithm here, and at
-	 * this point we only need a shallow comparison.
-	 */
-	const struct fsm_state *st = a;
-	return hashptr(st);
-}
-
-/* builds transitions of the glushkov NFA
+/*
+ * Builds transitions of the glushkov NFA
  *
  * Makes a single pass through each of the nfa states that the glushkov nfa
  * state corresponds to and constructs an edge set for each symbol out of the
@@ -298,9 +307,9 @@ static int
 glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 	struct mapping_hashset *mappings, struct mapping *curr)
 {
-	struct fsm_state *s;
 	struct state_iter it;
 	int sym, sym_min, sym_max;
+	fsm_state_t s;
 	int ret = 0;
 
 	struct state_array outedges[FSM_SIGMA_COUNT];
@@ -317,13 +326,13 @@ glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 	memset(outedges, 0, sizeof outedges);
 	memset(outsets, 0, sizeof outsets);
 
-	for (s = state_set_first(curr->closure, &it); s != NULL; s = state_set_next(&it)) {
+	for (state_set_reset(curr->closure, &it); state_set_next(&it, &s); ) {
 		struct fsm_edge *e;
 		struct edge_iter jt;
 
-		for (e = edge_set_first(s->edges, &jt); e != NULL; e = edge_set_next(&jt)) {
-			struct state_iter jt;
-			struct fsm_state *st;
+		for (e = edge_set_first(fsm->states[s]->edges, &jt); e != NULL; e = edge_set_next(&jt)) {
+			struct state_iter kt;
+			fsm_state_t st;
 
 			sym = e->symbol;
 
@@ -344,8 +353,7 @@ glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 			if (outsets[sym] == NULL && outedges[sym].len + state_set_count(e->sl) > 1) {
 				size_t i;
 
-				outsets[sym] = state_hashset_create(fsm->opt->alloc,
-					hash_single_state, fsm_state_cmpval);
+				outsets[sym] = state_hashset_create(fsm->opt->alloc);
 				if (outsets[sym] == NULL) {
 					goto finish;
 				}
@@ -359,11 +367,10 @@ glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 			}
 
 			/* iterate over states, add to state list if they're not already in the set */
-			for (st = state_set_first(e->sl, &jt); st != NULL; st = state_set_next(&jt)) {
-				struct fsm_state *st_cl;
+			for (state_set_reset(e->sl, &kt); state_set_next(&kt, &st); ) {
+				fsm_state_t st_cl;
 
-				st_cl = state_closure(mappings, dfa, st, 1);
-				if (st_cl == NULL) {
+				if (!state_closure(mappings, dfa, fsm, st, 1, &st_cl)) {
 					goto finish;
 				}
 
@@ -382,7 +389,6 @@ glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 	}
 
 	for (sym = sym_min; sym <= sym_max; sym++) {
-		/* is there a way to bulk add these? */
 		if (outedges[sym].len > 0) {
 			if (!fsm_addedge_bulk(dfa, curr->dfastate, outedges[sym].states, outedges[sym].len, sym)) {
 				goto finish;
@@ -407,7 +413,8 @@ finish:
 	return ret;
 }
 
-/* builds transitions from current dfa state to new dfa states
+/*
+ * Build transitions from current dfa state to new dfa states.
  *
  * Makes a single pass through each of the nfa states that this dfa state
  * corresponds to and constructs an edge set for each symbol out of the nfa
@@ -420,9 +427,9 @@ static int
 dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 	struct mapping_hashset *mappings, struct mapping *curr)
 {
-	struct fsm_state *s;
 	struct state_iter it;
 	int sym, sym_min, sym_max;
+	fsm_state_t s;
 	int ret = 0;
 
 	struct state_array outedges[FSM_SIGMA_COUNT];
@@ -439,11 +446,11 @@ dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 	memset(outedges, 0, sizeof outedges);
 	memset(outsets, 0, sizeof outsets);
 
-	for (s = state_set_first(curr->closure, &it); s != NULL; s = state_set_next(&it)) {
+	for (state_set_reset(curr->closure, &it); state_set_next(&it, &s); ) {
 		struct fsm_edge *e;
 		struct edge_iter jt;
 
-		for (e = edge_set_first(s->edges, &jt); e != NULL; e = edge_set_next(&jt)) {
+		for (e = edge_set_first(fsm->states[s]->edges, &jt); e != NULL; e = edge_set_next(&jt)) {
 			sym = e->symbol;
 
 			assert(sym >= 0);
@@ -458,14 +465,14 @@ dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 					goto finish;
 				}
 			} else {
-				struct fsm_state *st;
 				struct state_iter kt;
+				fsm_state_t st;
 
 				/* wait for a second edge to make a hash set */
 				if (outsets[sym] == NULL) {
 					size_t i;
 
-					outsets[sym] = state_hashset_create(fsm->opt->alloc, hash_single_state, fsm_state_cmpval);
+					outsets[sym] = state_hashset_create(fsm->opt->alloc);
 					if (outsets[sym] == NULL) {
 						goto finish;
 					}
@@ -482,7 +489,7 @@ dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 				}
 
 				/* iterate over states, add to state list if they're not already in the set */
-				for (st = state_set_first(e->sl, &kt); st != NULL; st = state_set_next(&kt)) {
+				for (state_set_reset(e->sl, &kt); state_set_next(&kt, &st); ) {
 					if (!state_hashset_contains(outsets[sym], st)) {
 						if (!state_array_add(&outedges[sym], st)) {
 							goto finish;
@@ -499,14 +506,13 @@ dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 	}
 
 	for (sym = sym_min; sym <= sym_max; sym++) {
-		struct fsm_state *new;
+		fsm_state_t new;
 
 		if (outedges[sym].len == 0) {
 			continue;
 		}
 
-		new = set_closure(mappings, dfa, &outedges[sym]);
-		if (new == NULL) {
+		if (!set_closure(mappings, dfa, fsm, &outedges[sym], &new)) {
 			goto finish;
 		}
 
@@ -572,11 +578,14 @@ nfa_transform(struct fsm *nfa,
 	}
 
 	if (nfa->endcount == 0) {
-		dfa->start = fsm_addstate(dfa);
-		if (dfa->start == NULL) {
+		fsm_state_t start;
+
+		if (!fsm_addstate(dfa, &start)) {
 			fsm_free(dfa);
 			return NULL;
 		}
+
+		fsm_setstart(dfa, start);
 
 		return dfa;
 	}
@@ -595,11 +604,14 @@ nfa_transform(struct fsm *nfa,
 	 * This is not yet "done"; it starts off the loop below.
 	 */
 	{
-		const struct fsm_state *nfastart;
-		struct fsm_state *dfastart;
+		fsm_state_t nfastart;
+		fsm_state_t dfastart;
 		int includeself = 1;
 
-		nfastart = fsm_getstart(nfa);
+		if (!fsm_getstart(nfa, &nfastart)) {
+			errno = EINVAL;
+			return NULL;
+		}
 
 		/*
 		 * As a special case for Brzozowski's algorithm, fsm_determinise() is
@@ -622,8 +634,7 @@ nfa_transform(struct fsm *nfa,
 			includeself = 0;
 		}
 
-		dfastart = state_closure(mappings, dfa, nfastart, includeself);
-		if (dfastart == NULL) {
+		if (!state_closure(mappings, dfa, nfa, nfastart, includeself, &dfastart)) {
 			/* TODO: error */
 			goto error;
 		}

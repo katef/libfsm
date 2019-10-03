@@ -20,8 +20,9 @@ struct fsm *
 fsm_concat(struct fsm *a, struct fsm *b)
 {
 	struct fsm *q;
-	struct fsm_state *ea, *sb;
-	struct fsm_state *sq;
+	fsm_state_t ea, sb;
+	fsm_state_t sq;
+	fsm_state_t base_a, base_b;
 
 	assert(a != NULL);
 	assert(b != NULL);
@@ -39,22 +40,23 @@ fsm_concat(struct fsm *a, struct fsm *b)
 		return NULL;
 	}
 
-	sq = fsm_getstart(a);
-	sb = fsm_getstart(b);
-	if (sq == NULL || sb == NULL) {
+	if (!fsm_getstart(a, &sq) || !fsm_getstart(b, &sb)) {
 		errno = EINVAL;
 		return NULL;
 	}
 
-	ea = fsm_collate(a, fsm_isend);
-	if (ea == NULL) {
+	if (!fsm_collate(a, &ea, fsm_isend)) {
 		return NULL;
 	}
 
 	fsm_setend(a, ea, 1);
 
-	q = fsm_merge(a, b);
+	q = fsm_merge(a, b, &base_a, &base_b);
 	assert(q != NULL);
+
+	sq += base_a;
+	ea += base_a;
+	sb += base_b;
 
 	fsm_setend(q, ea, 0);
 
@@ -83,7 +85,7 @@ fsm_concat(struct fsm *a, struct fsm *b)
 		}
 	} else {
 		if (!fsm_hasoutgoing(q, ea) || !fsm_hasincoming(q, sb)) {
-			if (!fsm_mergestates(q, ea, sb)) {
+			if (!fsm_mergestates(q, ea, sb, NULL)) {
 				goto error;
 			}
 		} else {

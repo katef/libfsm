@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <fsm/fsm.h>
 #include <fsm/options.h>
 
 #include <print/esc.h>

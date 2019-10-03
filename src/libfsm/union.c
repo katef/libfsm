@@ -20,8 +20,9 @@ struct fsm *
 fsm_union(struct fsm *a, struct fsm *b)
 {
 	struct fsm *q;
-	struct fsm_state *sa, *sb;
-	struct fsm_state *sq;
+	fsm_state_t sa, sb;
+	fsm_state_t sq;
+	fsm_state_t base_a, base_b;
 	int ia, ib;
 
 	assert(a != NULL);
@@ -35,15 +36,16 @@ fsm_union(struct fsm *a, struct fsm *b)
 	if (a->statecount == 0) { return b; }
 	if (b->statecount == 0) { return a; }
 
-	sa = fsm_getstart(a);
-	sb = fsm_getstart(b);
-	if (sa == NULL || sb == NULL) {
+	if (!fsm_getstart(a, &sa) || !fsm_getstart(b, &sb)) {
 		errno = EINVAL;
 		return NULL;
 	}
 
-	q = fsm_merge(a, b);
+	q = fsm_merge(a, b, &base_a, &base_b);
 	assert(q != NULL);
+
+	sa += base_a;
+	sb += base_b;
 
 	/*
 	 * The canonical approach is to create a new start state, with epsilon
@@ -65,8 +67,7 @@ fsm_union(struct fsm *a, struct fsm *b)
 	 */
 
 	if (!q->opt->tidy) {
-		sq = fsm_addstate(q);
-		if (sq == NULL) {
+		if (!fsm_addstate(q, &sq)) {
 			goto error;
 		}
 	} else {
@@ -74,15 +75,16 @@ fsm_union(struct fsm *a, struct fsm *b)
 		ib = fsm_hasincoming(q, sb);
 
 		if (!ia && !ib) {
-			sq = fsm_mergestates(q, sa, sb);
+			if (!fsm_mergestates(q, sa, sb, &sq)) {
+				goto error;
+			}
 			sa = sb = sq;
 		} else if (!ia) {
 			sq = sa;
 		} else if (!ib) {
 			sq = sb;
 		} else {
-			sq = fsm_addstate(q);
-			if (sq == NULL) {
+			if (!fsm_addstate(q, &sq)) {
 				goto error;
 			}
 		}

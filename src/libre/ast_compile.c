@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
+#include <errno.h>
 #include <ctype.h>
 
 #include <fsm/fsm.h>
@@ -69,36 +69,45 @@ struct comp_env {
 	 * directly to the overall start/end states, either in
 	 * place of or along with the adjacent states.
 	 */
-	struct fsm_state *start;
-	struct fsm_state *end;
-	struct fsm_state *start_any_loop;
-	struct fsm_state *end_any_loop;
+	fsm_state_t start;
+	fsm_state_t end;
+	fsm_state_t start_any_loop;
+	fsm_state_t end_any_loop;
+	int have_start_any_loop;
+	int have_end_any_loop;
 };
 
 static int
 comp_iter(struct comp_env *env,
-	struct fsm_state *x, struct fsm_state *y,
+	fsm_state_t x, fsm_state_t y,
 	struct ast_expr *n);
 
 
 /* TODO: centralise as fsm_unionxy() perhaps */
 static int
-fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state *y)
+fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t x, fsm_state_t y)
 {
-	struct fsm_state *sa, *sb;
-	struct fsm_state *end;
+	fsm_state_t sa, sb;
+	fsm_state_t end;
 	struct fsm *q;
+	fsm_state_t base_b;
 
 	assert(a != NULL);
 	assert(b != NULL);
-	assert(x != NULL);
-	assert(y != NULL);
 
-	sa = fsm_getstart(a);
-	sb = fsm_getstart(b);
+	/* x,y both belong to a */
+	assert(x < a->statecount);
+	assert(y < a->statecount);
 
-	end = fsm_collate(b, fsm_isend);
-	if (end == NULL) {
+	if (!fsm_getstart(a, &sa)) {
+		return 0;
+	}
+
+	if (!fsm_getstart(b, &sb)) {
+		return 0;
+	}
+
+	if (!fsm_collate(b, &end, fsm_isend)) {
 		return 0;
 	}
 
@@ -107,12 +116,17 @@ fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state 
 		size_t i;
 
 		for (i = 0; i < b->statecount; i++) {
-			fsm_setend(b, b->states[i], 0);
+			fsm_setend(b, i, 0);
 		}
 	}
 
-	q = fsm_merge(a, b);
-	assert(q != NULL);
+	q = fsm_mergeab(a, b, &base_b);
+	if (q == NULL) {
+		return 0;
+	}
+
+	sb  += base_b;
+	end += base_b;
 
 	fsm_setstart(q, sa);
 
@@ -140,13 +154,14 @@ expr_compile(struct ast_expr *e, enum re_flags flags,
 
 static int
 addedge_literal(struct comp_env *env,
-	struct fsm_state *from, struct fsm_state *to, char c)
+	fsm_state_t from, fsm_state_t to, char c)
 {
 	struct fsm *fsm = env->fsm;
 	assert(fsm != NULL);
-	assert(from != NULL);
-	assert(to != NULL);
-	
+
+	assert(from < env->fsm->statecount);
+	assert(to < env->fsm->statecount);
+
 	if (env->re_flags & RE_ICASE) {
 		if (!fsm_addedge_literal(fsm, from, to, tolower((unsigned char) c))) {
 			return 0;
@@ -164,68 +179,68 @@ addedge_literal(struct comp_env *env,
 	return 1;
 }
 
-static struct fsm_state *
+static int
 intern_start_any_loop(struct comp_env *env)
 {
-	struct fsm_state *loop;
+	fsm_state_t loop;
 
 	assert(env != NULL);
 
-	if (env->start_any_loop != NULL) {
-		return env->start_any_loop;
+	if (env->have_start_any_loop) {
+		return 1;
 	}
 
 	assert(~env->re_flags & RE_ANCHORED);
-	assert(env->start != NULL);
-		
-	loop = fsm_addstate(env->fsm);
-	if (loop == NULL) {
-		return NULL;
+	assert(env->start < env->fsm->statecount);
+
+	if (!fsm_addstate(env->fsm, &loop)) {
+		return 0;
 	}
 
 	if (!fsm_addedge_any(env->fsm, loop, loop)) {
-		return NULL;
+		return 0;
 	}
 
 	if (!fsm_addedge_epsilon(env->fsm, env->start, loop)) {
-		return NULL;
+		return 0;
 	}
 
 	env->start_any_loop = loop;
+	env->have_start_any_loop = 1;
 
-	return env->start_any_loop;
+	return 1;
 }
 
-static struct fsm_state *
+static int
 intern_end_any_loop(struct comp_env *env)
 {
-	struct fsm_state *loop;
+	fsm_state_t loop;
 
 	assert(env != NULL);
 
-	if (env->end_any_loop != NULL) {
-		return env->end_any_loop;
+	if (env->have_end_any_loop) {
+		return 1;
 	}
 
 	assert(~env->re_flags & RE_ANCHORED);
-	assert(env->end != NULL);
-		
-	loop = fsm_addstate(env->fsm);
-	if (loop == NULL) {
-		return NULL;
+	assert(env->end < env->fsm->statecount);
+
+	if (!fsm_addstate(env->fsm, &loop)) {
+		return 0;
 	}
 
 	if (!fsm_addedge_any(env->fsm, loop, loop)) {
-		return NULL;
+		return 0;
 	}
 
 	if (!fsm_addedge_epsilon(env->fsm, loop, env->end)) {
-		return NULL;
+		return 0;
 	}
 
 	env->end_any_loop = loop;
+	env->have_end_any_loop = 1;
 
-	return env->end_any_loop;
+	return 1;
 }
 
 static int
@@ -303,7 +318,7 @@ can_skip_concat_state_and_epsilon(const struct ast_expr *l,
 
 static enum link_types
 decide_linking(struct comp_env *env,
-	struct fsm_state *x, struct fsm_state *y,
+	fsm_state_t x, fsm_state_t y,
 	struct ast_expr *n, enum link_side side)
 {
 	enum link_types res = LINK_NONE;
@@ -434,33 +449,29 @@ print_linkage(enum link_types t)
 }
 
 #define NEWSTATE(NAME)              \
-    NAME = fsm_addstate(env->fsm);  \
-    if (NAME == NULL) { return 0; }
+    if (!fsm_addstate(env->fsm, &(NAME))) { return 0; }
 
 #define EPSILON(FROM, TO)           \
-    if (!fsm_addedge_epsilon(env->fsm, FROM, TO)) { return 0; }
+    if (!fsm_addedge_epsilon(env->fsm, (FROM), (TO))) { return 0; }
         
 #define ANY(FROM, TO)               \
-    if (!fsm_addedge_any(env->fsm, FROM, TO)) { return 0; }
+    if (!fsm_addedge_any(env->fsm, (FROM), (TO))) { return 0; }
 
 #define LITERAL(FROM, TO, C)        \
-    if (!addedge_literal(env, FROM, TO, C)) { return 0; }
+    if (!addedge_literal(env, (FROM), (TO), (C))) { return 0; }
 
 #define RECURSE(FROM, TO, NODE)     \
-    if (!comp_iter(env, FROM, TO, NODE)) { return 0; }
+    if (!comp_iter(env, (FROM), (TO), (NODE))) { return 0; }
 
 static int
 comp_iter_repeated(struct comp_env *env,
-	struct fsm_state *x, struct fsm_state *y,
+	fsm_state_t x, fsm_state_t y,
 	struct ast_expr_repeated *n)
 {
-	struct fsm_state *a, *b;
-	struct fsm_state *na, *nz;
+	fsm_state_t a, b;
+	fsm_state_t na, nz;
 	unsigned i, low, high;
 
-	a = NULL;
-	b = NULL;
-	
 	low  = n->low;
 	high = n->high;
 
@@ -499,8 +510,7 @@ comp_iter_repeated(struct comp_env *env,
 		}
 		
 		for (i = 1; i < high; i++) {
-			a = fsm_state_duplicatesubgraphx(env->fsm, na, &b);
-			if (a == NULL) {
+			if (!fsm_state_duplicatesubgraphx(env->fsm, na, &b, &a)) {
 				return 0;
 			}
 			
@@ -522,12 +532,13 @@ comp_iter_repeated(struct comp_env *env,
 		/* tail to last repeated NFA tail */
 		EPSILON(nz, y);
 	}
+
 	return 1;
 }
 
 static int
 comp_iter(struct comp_env *env,
-	struct fsm_state *x, struct fsm_state *y,
+	fsm_state_t x, fsm_state_t y,
 	struct ast_expr *n)
 {
 	enum link_types link_start, link_end;
@@ -560,9 +571,13 @@ comp_iter(struct comp_env *env,
 			x = env->start;
 		} else if (link_start & LINK_GLOBAL_SELF_LOOP) {
 			assert((link_start & LINK_GLOBAL) == LINK_NONE);
-			x = intern_start_any_loop(env);
-			assert(env->start_any_loop != NULL);
-			if (x == NULL) { return 0; }
+
+			if (!intern_start_any_loop(env)) {
+				return 0;
+			}
+
+			assert(env->have_start_any_loop);
+			x = env->start_any_loop;
 		}
 	} else {
 		/*
@@ -573,10 +588,14 @@ comp_iter(struct comp_env *env,
 			assert((link_start & LINK_GLOBAL_SELF_LOOP) == LINK_NONE);
 			EPSILON(env->start, x);
 		} else if (link_start & LINK_GLOBAL_SELF_LOOP) {
-			struct fsm_state *start_any_loop = intern_start_any_loop(env);
-			if (start_any_loop == NULL) { return 0; }
 			assert((link_start & LINK_GLOBAL) == LINK_NONE);
-			EPSILON(start_any_loop, x);
+
+			if (!intern_start_any_loop(env)) {
+				return 0;
+			}
+
+			assert(env->have_start_any_loop);
+			EPSILON(env->start_any_loop, x);
 		}
 	}
 
@@ -591,8 +610,13 @@ comp_iter(struct comp_env *env,
 			y = env->end;
 		} else if (link_end & LINK_GLOBAL_SELF_LOOP) {
 			assert((link_end & LINK_GLOBAL) == LINK_NONE);
-			y = intern_end_any_loop(env);
-			if (y == NULL) { return 0; }
+
+			if (!intern_end_any_loop(env)) {
+				return 0;
+			}
+
+			assert(env->have_end_any_loop);
+			y = env->end_any_loop;
 		}
 	} else {
 		/*
@@ -603,15 +627,16 @@ comp_iter(struct comp_env *env,
 			assert((link_end & LINK_GLOBAL_SELF_LOOP) == LINK_NONE);
 			EPSILON(y, env->end);
 		} else if (link_end & LINK_GLOBAL_SELF_LOOP) {
-			struct fsm_state *end_any_loop = intern_end_any_loop(env);
-			if (end_any_loop == NULL) { return 0; }
 			assert((link_end & LINK_GLOBAL) == LINK_NONE);
-			EPSILON(y, end_any_loop);
+
+			if (!intern_end_any_loop(env)) {
+				return 0;
+			}
+
+			assert(env->have_end_any_loop);
+			EPSILON(y, env->end_any_loop);
 		}
 	}
-
-	assert(x != NULL);
-	assert(y != NULL);
 
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
@@ -621,8 +646,8 @@ comp_iter(struct comp_env *env,
 
 	case AST_EXPR_CONCAT:
 	{
-		struct fsm_state *z, *right;
-		struct fsm_state *curr_x;
+		fsm_state_t z, right;
+		fsm_state_t curr_x;
 		enum re_flags saved;
 		size_t i;
 
@@ -661,7 +686,7 @@ comp_iter(struct comp_env *env,
 			 * If nullable, add an extra state & epsilion as a one-way gate
 			 */
 			if (!can_skip_concat_state_and_epsilon(curr, next)) {
-				struct fsm_state *diode;
+				fsm_state_t diode;
 
 				NEWSTATE(diode);
 				EPSILON(curr_x, diode);
@@ -672,7 +697,7 @@ comp_iter(struct comp_env *env,
 			RECURSE(curr_x, right, curr);
 
 			if (i < count - 1) {
-				struct fsm_state *zn;
+				fsm_state_t zn;
 				curr_x = z;
 				NEWSTATE(zn);
 				z = zn;
@@ -835,7 +860,7 @@ ast_compile(const struct ast *ast,
 	const struct fsm_options *opt,
 	struct re_err *err)
 {
-	struct fsm_state *x, *y;
+	fsm_state_t x, y;
 	struct fsm *fsm;
 
 	assert(ast != NULL);
@@ -845,13 +870,11 @@ ast_compile(const struct ast *ast,
 		return NULL;
 	}
 
-	x = fsm_addstate(fsm);
-	if (x == NULL) {
+	if (!fsm_addstate(fsm, &x)) {
 		goto error;
 	}
 
-	y = fsm_addstate(fsm);
-	if (y == NULL) {
+	if (!fsm_addstate(fsm, &y)) {
 		goto error;
 	}
 

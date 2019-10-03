@@ -95,5 +95,6 @@ make_ir # XXX: workaround for lx
 free_ir # XXX: workaround for lx
 indexof # XXX: workaround for lx
 
+fsm_mergeab
 fsm_clear_tmp
 fsm_state_clear_tmp

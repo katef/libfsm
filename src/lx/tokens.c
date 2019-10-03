@@ -20,7 +20,7 @@
 int
 tok_contains(const struct fsm *fsm, const char *s)
 {
-	size_t i;
+	fsm_state_t i;
 
 	assert(fsm != NULL);
 	assert(s != NULL);
@@ -28,11 +28,11 @@ tok_contains(const struct fsm *fsm, const char *s)
 	for (i = 0; i < fsm->statecount; i++) {
 		const struct ast_mapping *m;
 
-		if (!fsm_isend(fsm, fsm->states[i])) {
+		if (!fsm_isend(fsm, i)) {
 			continue;
 		}
 
-		m = fsm_getopaque(fsm, fsm->states[i]);
+		m = fsm_getopaque(fsm, i);
 		assert(m != NULL);
 
 		if (m->token == NULL) {
@@ -50,7 +50,7 @@ tok_contains(const struct fsm *fsm, const char *s)
 int
 tok_subsetof(const struct fsm *a, const struct fsm *b)
 {
-	size_t i;
+	fsm_state_t i;
 
 	assert(a != NULL);
 	assert(b != NULL);
@@ -58,11 +58,11 @@ tok_subsetof(const struct fsm *a, const struct fsm *b)
 	for (i = 0; i < a->statecount; i++) {
 		const struct ast_mapping *m;
 
-		if (!fsm_isend(a, a->states[i])) {
+		if (!fsm_isend(a, i)) {
 			continue;
 		}
 
-		m = fsm_getopaque(a, a->states[i]);
+		m = fsm_getopaque(a, i);
 		assert(m != NULL);
 
 		if (m->token == NULL) {

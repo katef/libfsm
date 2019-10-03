@@ -8,11 +8,11 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include <adt/set.h>
-
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
+
+#include <adt/set.h>
 
 #include "internal.h"
 

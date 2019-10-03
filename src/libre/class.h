@@ -3,10 +3,13 @@
 #ifndef RE_CLASS_H
 #define RE_CLASS_H
 
-struct fsm;
-struct fsm_state;
+#include <stddef.h>
 
-typedef int (class_constructor)(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y);
+#include <fsm/fsm.h>
+
+struct fsm;
+
+typedef int (class_constructor)(struct fsm *fsm, fsm_state_t x, fsm_state_t y);
 
 const char *
 class_name(class_constructor *ctor);

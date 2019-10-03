@@ -12,7 +12,7 @@ struct fsm_state;
 #define FSM_COST_INFINITY UINT_MAX
 
 unsigned
-fsm_cost_legible(const struct fsm_state *from, const struct fsm_state *to, char c);
+fsm_cost_legible(fsm_state_t from, fsm_state_t to, char c);
 
 #endif
 

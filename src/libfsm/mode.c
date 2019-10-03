@@ -7,42 +7,43 @@
 #include <assert.h>
 #include <stddef.h>
 
+#include <fsm/fsm.h>
+
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
-#include <fsm/fsm.h>
-
 #include "internal.h"
 
-struct fsm_state *
-fsm_findmode(const struct fsm_state *state, unsigned int *freq)
+fsm_state_t
+fsm_findmode(const struct fsm *fsm, fsm_state_t state, unsigned int *freq)
 {
 	struct fsm_edge *e;
 	struct edge_iter it;
-	struct fsm_state *s;
+	fsm_state_t s;
 
 	struct {
-		struct fsm_state *state;
+		fsm_state_t state;
 		unsigned int freq;
 	} mode;
 
-	mode.state = NULL;
 	mode.freq = 1;
 
-	assert(state != NULL);
+	assert(fsm != NULL);
+	assert(state < fsm->statecount);
 
-	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
+	for (e = edge_set_first(fsm->states[state]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		struct state_iter jt;
 
-		for (s = state_set_first(e->sl, &jt); s != NULL; s = state_set_next(&jt)) {
+		for (state_set_reset(e->sl, &jt); state_set_next(&jt, &s); ) {
 			struct edge_iter kt = it;
 			struct fsm_edge *c;
 			unsigned int curr;
 
 			curr = 1; /* including ourself */
 
-			/* Count the remaining edes which have the same target.
+			/*
+			 * Count the remaining edes which have the same target.
 			 * This works because the edges are still sorted by
 			 * symbol, so we don't have to walk the whole thing.
 			 */
@@ -62,6 +63,8 @@ fsm_findmode(const struct fsm_state *state, unsigned int *freq)
 	if (freq != NULL) {
 		*freq = mode.freq;
 	}
+
+	assert(mode.freq >= 1);
 
 	return mode.state;
 }

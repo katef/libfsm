@@ -9,6 +9,7 @@
 
 #include <adt/set.h>
 
+#include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/print.h>
 
@@ -42,19 +43,18 @@ zindexof(const struct ast *ast, const struct ast_zone *zone)
 static void
 print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
-	size_t i;
+	fsm_state_t i;
 
 	assert(f != NULL);
 	assert(ast != NULL);
 	assert(z != NULL);
 	assert(z->fsm != NULL);
-	assert(fsm_getstart(z->fsm) != NULL);
 
 	for (i = 0; i < z->fsm->statecount; i++) {
 		struct ast_mapping *m;
 
-		if (fsm_isend(z->fsm, z->fsm->states[i])) {
-			m = fsm_getopaque(z->fsm, z->fsm->states[i]);
+		if (fsm_isend(z->fsm, i)) {
+			m = fsm_getopaque(z->fsm, i);
 			assert(m != NULL);
 
 			if (m->to == NULL) {

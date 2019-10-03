@@ -14,15 +14,15 @@
 
 int
 fsm_all(const struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+	int (*predicate)(const struct fsm *, fsm_state_t))
 {
-	size_t i;
+	fsm_state_t i;
 
 	assert(fsm != NULL);
 	assert(predicate != NULL);
 
 	for (i = 0; i < fsm->statecount; i++) {
-		if (!predicate(fsm, fsm->states[i])) {
+		if (!predicate(fsm, i)) {
 			return 0;
 		}
 	}

@@ -7,39 +7,44 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <fsm/fsm.h>
+
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
-#include <fsm/fsm.h>
-
 #include "internal.h"
 
-struct fsm_state *
-fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
+int
+fsm_mergestates(struct fsm *fsm, fsm_state_t a, fsm_state_t b,
+	fsm_state_t *q)
 {
 	struct fsm_edge *e;
 	struct edge_iter it;
-	size_t i;
+	fsm_state_t i;
+
+	assert(fsm != NULL);
+	assert(a < fsm->statecount);
+	assert(b < fsm->statecount);
 
 	/* edges from b */
 	{
-		struct fsm_state *s;
 		struct state_iter jt;
+		fsm_state_t s;
 
-		for (s = state_set_first(b->epsilons, &jt); s != NULL; s = state_set_next(&jt)) {
+		for (state_set_reset(fsm->states[b]->epsilons, &jt); state_set_next(&jt, &s); ) {
 			if (!fsm_addedge_epsilon(fsm, a, s)) {
-				return NULL;
+				return 0;
 			}
 		}
 	}
-	for (e = edge_set_first(b->edges, &it); e != NULL; e = edge_set_next(&it)) {
-		struct fsm_state *s;
+	for (e = edge_set_first(fsm->states[b]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		struct state_iter jt;
+		fsm_state_t s;
 
-		for (s = state_set_first(e->sl, &jt); s != NULL; s = state_set_next(&jt)) {
+		for (state_set_reset(e->sl, &jt); state_set_next(&jt, &s); ) {
 			if (!fsm_addedge_literal(fsm, a, s, e->symbol)) {
-				return NULL;
+				return 0;
 			}
 		}
 	}
@@ -49,8 +54,8 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 		if (state_set_contains(fsm->states[i]->epsilons, b)) {
 			state_set_remove(fsm->states[i]->epsilons, b);
 
-			if (!fsm_addedge_epsilon(fsm, fsm->states[i], a)) {
-				return NULL;
+			if (!fsm_addedge_epsilon(fsm, i, a)) {
+				return 0;
 			}
 		}
 
@@ -58,8 +63,8 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 			state_set_remove(e->sl, b);
 
 			if (state_set_contains(e->sl, b)) {
-				if (!fsm_addedge_literal(fsm, fsm->states[i], a, e->symbol)) {
-					return NULL;
+				if (!fsm_addedge_literal(fsm, i, a, e->symbol)) {
+					return 0;
 				}
 			}
 		}
@@ -67,6 +72,10 @@ fsm_mergestates(struct fsm *fsm, struct fsm_state *a, struct fsm_state *b)
 
 	fsm_removestate(fsm, b);
 
-	return a;
+	if (q != NULL) {
+		*q = a;
+	}
+
+	return 1;
 }
 

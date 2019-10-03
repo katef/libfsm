@@ -7,12 +7,12 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <fsm/fsm.h>
+#include <fsm/pred.h>
+
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
-
-#include <fsm/fsm.h>
-#include <fsm/pred.h>
 
 #include "internal.h"
 
@@ -40,10 +40,9 @@ fsm_clone(const struct fsm *fsm)
 		/* TODO: malloc and memcpy in one shot, rather than
 		 * calling fsm_addstate() for each state. */
 		for (i = 0; i < fsm->statecount; i++) {
-			struct fsm_state *q;
+			fsm_state_t q;
 
-			q = fsm_addstate(new);
-			if (q == NULL) {
+			if (!fsm_addstate(new, &q)) {
 				fsm_free(new);
 				return NULL;
 			}
@@ -59,17 +58,15 @@ fsm_clone(const struct fsm *fsm)
 			struct fsm_edge *e;
 			struct edge_iter it;
 
-			assert(fsm->states[i]->tmp.equiv != NULL);
-
-			fsm_setend(new, fsm->states[i]->tmp.equiv, fsm_isend(fsm, fsm->states[i]));
-			fsm->states[i]->tmp.equiv->opaque = fsm->states[i]->opaque;
+			fsm_setend(new, fsm->states[i]->tmp.equiv, fsm_isend(fsm, i));
+			new->states[fsm->states[i]->tmp.equiv]->opaque = fsm->states[i]->opaque;
 
 			{
 				struct state_iter jt;
-				struct fsm_state *to;
+				fsm_state_t to;
 
-				for (to = state_set_first(fsm->states[i]->epsilons, &jt); to != NULL; to = state_set_next(&jt)) {
-					if (!fsm_addedge_epsilon(new, fsm->states[i]->tmp.equiv, to->tmp.equiv)) {
+				for (state_set_reset(fsm->states[i]->epsilons, &jt); state_set_next(&jt, &to); ) {
+					if (!fsm_addedge_epsilon(new, fsm->states[i]->tmp.equiv, fsm->states[to]->tmp.equiv)) {
 						fsm_free(new);
 						return NULL;
 					}
@@ -78,10 +75,10 @@ fsm_clone(const struct fsm *fsm)
 
 			for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct state_iter jt;
-				struct fsm_state *to;
+				fsm_state_t to;
 
-				for (to = state_set_first(e->sl, &jt); to != NULL; to = state_set_next(&jt)) {
-					if (!fsm_addedge_literal(new, fsm->states[i]->tmp.equiv, to->tmp.equiv, e->symbol)) {
+				for (state_set_reset(e->sl, &jt); state_set_next(&jt, &to); ) {
+					if (!fsm_addedge_literal(new, fsm->states[i]->tmp.equiv, fsm->states[to]->tmp.equiv, e->symbol)) {
 						fsm_free(new);
 						return NULL;
 					}
@@ -91,11 +88,10 @@ fsm_clone(const struct fsm *fsm)
 	}
 
 	{
-		const struct fsm_state *start;
+		fsm_state_t start;
 
-		start = fsm_getstart(fsm);
-		if (start != NULL) {
-			fsm_setstart(new, start->tmp.equiv);
+		if (fsm_getstart(fsm, &start)) {
+			fsm_setstart(new, fsm->states[start]->tmp.equiv);
 		}
 	}
 

@@ -8,20 +8,19 @@
 #include <stddef.h>
 #include <limits.h>
 
-#include <adt/set.h>
-
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
+
+#include <adt/set.h>
 
 #include "internal.h"
 
 int
 fsm_complete(struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+	int (*predicate)(const struct fsm *, fsm_state_t))
 {
-	struct fsm_state *new;
-	size_t i;
+	fsm_state_t new, i;
 
 	assert(fsm != NULL);
 	assert(predicate != NULL);
@@ -44,8 +43,7 @@ fsm_complete(struct fsm *fsm,
 	 * to itself. That error state is implicit in most FSMs, but rarely
 	 * actually drawn. The idea here is to explicitly create it.
 	 */
-	new = fsm_addstate(fsm);
-	if (new == NULL) {
+	if (!fsm_addstate(fsm, &new)) {
 		return 0;
 	}
 
@@ -57,16 +55,16 @@ fsm_complete(struct fsm *fsm,
 	for (i = 0; i < fsm->statecount; i++) {
 		unsigned c;
 
-		if (!predicate(fsm, fsm->states[i])) {
+		if (!predicate(fsm, i)) {
 			continue;
 		}
 
 		for (c = 0; c <= UCHAR_MAX; c++) {
-			if (fsm_hasedge_literal(fsm->states[i], c)) {
+			if (fsm_hasedge_literal(fsm, i, c)) {
 				continue;
 			}
 
-			if (!fsm_addedge_literal(fsm, fsm->states[i], new, c)) {
+			if (!fsm_addedge_literal(fsm, i, new, c)) {
 				/* TODO: free stuff */
 				return 0;
 			}

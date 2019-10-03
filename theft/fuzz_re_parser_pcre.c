@@ -273,7 +273,8 @@ check_pos_matches(uint8_t verbosity, struct fsm *fsm,
 	}
 
 	for (size_t i = 0; i < pos_count; i++) {
-		struct fsm_state *st;
+		fsm_state_t st;
+		int e;
 
 		if (pos_pairs[i].string == NULL) {
 			if (verbosity > 0) {
@@ -285,7 +286,7 @@ check_pos_matches(uint8_t verbosity, struct fsm *fsm,
 
 		TIME(&pre);
 
-		st = wrap_fsm_exec(fsm, &pos_pairs[i]);
+		e = wrap_fsm_exec(fsm, &pos_pairs[i], &st);
 
 		TIME(&post);
 
@@ -303,7 +304,7 @@ check_pos_matches(uint8_t verbosity, struct fsm *fsm,
 		if (verbosity > 1) {
 			fsm_print_dot(LOG_OUT, fsm);
 		}
-		if (st == NULL) {
+		if (e != 1) {
 			if (verbosity > 0 || 1) {
 				fprintf(LOG_OUT, "\nEXEC FAIL:\nregex \n");
 				hexdump(LOG_OUT, re_string, re_size);
@@ -344,7 +345,8 @@ check_neg_matches(uint8_t verbosity, struct fsm *fsm,
 	}
 
 	for (size_t i = 0; i < neg_count; i++) {
-		struct fsm_state *st;
+		fsm_state_t st;
+		int r;
 
 		if (neg_pairs[i].string == NULL) {
 			if (verbosity > 0) {
@@ -355,7 +357,7 @@ check_neg_matches(uint8_t verbosity, struct fsm *fsm,
 
 		TIME(&pre);
 
-		st = wrap_fsm_exec(fsm, &neg_pairs[i]);
+		r = wrap_fsm_exec(fsm, &neg_pairs[i], &st);
 
 		TIME(&post);
 
@@ -370,7 +372,7 @@ check_neg_matches(uint8_t verbosity, struct fsm *fsm,
 			return false;
 		}
 
-		if (st != NULL && fsm_isend(fsm, st)) {
+		if (!r && fsm_isend(fsm, st)) {
 			if (verbosity > 0) {
 				fprintf(LOG_OUT, "Possible false match:\nregex \n");
 				hexdump(LOG_OUT, re_string, re_size);

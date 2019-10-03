@@ -8,48 +8,48 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <fsm/fsm.h>
+#include <fsm/pred.h>
+
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
-#include <fsm/pred.h>
-
 #include "../internal.h"
 
 int
-fsm_isdfa(const struct fsm *fsm, const struct fsm_state *state)
+fsm_isdfa(const struct fsm *fsm, fsm_state_t state)
 {
 	struct fsm_edge *e;
 	struct edge_iter it;
+	fsm_state_t start;
 
 	assert(fsm != NULL);
+	assert(state < fsm->statecount);
 
 	/*
-	 * DFA must have a start state (and therfore at least one state).
+	 * DFA must have a start state (and therefore at least one state).
 	 */
-	if (fsm_getstart(fsm) == NULL) {
+	if (!fsm_getstart(fsm, &start)) {
 		return 0;
 	}
 
 	/*
 	 * DFA may not have epsilon edges.
 	 */
-	if (!state_set_empty(state->epsilons)) {
+	if (!state_set_empty(fsm->states[state]->epsilons)) {
 		return 0;
 	}
 
 	/*
 	 * DFA may not have duplicate edges.
 	 */
-	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
-		struct state_iter jt;
-
+	for (e = edge_set_first(fsm->states[state]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		if (state_set_empty(e->sl)) {
 			continue;
 		}
 
-		(void) state_set_first(e->sl, &jt);
-		if (state_set_hasnext(&jt)) {
+		if (state_set_count(e->sl) > 1) {
 			return 0;
 		}
 	}

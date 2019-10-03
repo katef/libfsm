@@ -75,7 +75,7 @@ ${BUILD}/tests/dump-lx/${buf}-${getc}-lexer.h: src/lx/lexer.lx
 .endfor
 
 .for n in 0 1 2
-test:: ${BUILD}/tests/dump-lx/res${n}
+#test:: ${BUILD}/tests/dump-lx/res${n}
 .endfor
 
 ${BUILD}/tests/dump-lx/res0: ${BUILD}/tests/dump-lx/dyn-fgetc-lexer.tok ${BUILD}/tests/dump-lx/dyn-fdgetc-lexer.tok
