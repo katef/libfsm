@@ -2,19 +2,15 @@
 
 #include LF_HEADER
 
-#include <assert.h>
 #include <stddef.h>
 
 #include <fsm/fsm.h>
 
 int
-class_nothspace_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
+class_nothspace_fsm(struct fsm *fsm, fsm_state_t x, fsm_state_t y)
 {
-	struct fsm_state *s[2];
+	fsm_state_t s[2];
 	size_t i;
-
-	assert(x != NULL);
-	assert(y != NULL);
 
 	for (i = 0; i < 2; i++) {
 		if (i == 0) {
@@ -27,8 +23,7 @@ class_nothspace_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 			continue;
 		}
 
-		s[i] = fsm_addstate(fsm);
-		if (s[i] == NULL) {
+		if (!fsm_addstate(fsm, &s[i])) {
 			return 0;
 		}
 	}
@@ -42,7 +37,6 @@ class_nothspace_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 	for (i = 0x21; i <= 0xff; i++) {
 		if (!fsm_addedge_literal(fsm, s[0], s[1], i)) { return 0; }
 	}
-
 
 	return 1;
 }

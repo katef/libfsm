@@ -2,19 +2,15 @@
 
 #include LF_HEADER
 
-#include <assert.h>
 #include <stddef.h>
 
 #include <fsm/fsm.h>
 
 int
-utf8_Imperial_Aramaic_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
+utf8_Imperial_Aramaic_fsm(struct fsm *fsm, fsm_state_t x, fsm_state_t y)
 {
-	struct fsm_state *s[5];
+	fsm_state_t s[5];
 	size_t i;
-
-	assert(x != NULL);
-	assert(y != NULL);
 
 	for (i = 0; i < 5; i++) {
 		if (i == 0) {
@@ -27,8 +23,7 @@ utf8_Imperial_Aramaic_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state
 			continue;
 		}
 
-		s[i] = fsm_addstate(fsm);
-		if (s[i] == NULL) {
+		if (!fsm_addstate(fsm, &s[i])) {
 			return 0;
 		}
 	}
@@ -42,7 +37,6 @@ utf8_Imperial_Aramaic_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state
 	for (i = 0x97; i <= 0x9f; i++) {
 		if (!fsm_addedge_literal(fsm, s[3], s[4], i)) { return 0; }
 	}
-
 
 	return 1;
 }

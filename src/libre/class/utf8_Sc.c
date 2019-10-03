@@ -2,19 +2,15 @@
 
 #include LF_HEADER
 
-#include <assert.h>
 #include <stddef.h>
 
 #include <fsm/fsm.h>
 
 int
-utf8_Sc_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
+utf8_Sc_fsm(struct fsm *fsm, fsm_state_t x, fsm_state_t y)
 {
-	struct fsm_state *s[21];
+	fsm_state_t s[21];
 	size_t i;
-
-	assert(x != NULL);
-	assert(y != NULL);
 
 	for (i = 0; i < 21; i++) {
 		if (i == 0) {
@@ -27,8 +23,7 @@ utf8_Sc_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 			continue;
 		}
 
-		s[i] = fsm_addstate(fsm);
-		if (s[i] == NULL) {
+		if (!fsm_addstate(fsm, &s[i])) {
 			return 0;
 		}
 	}
@@ -47,39 +42,38 @@ utf8_Sc_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 	}
 	if (!fsm_addedge_literal(fsm, s[3], s[1], 0x8f)) { return 0; }
 	if (!fsm_addedge_literal(fsm, s[4], s[1], 0x8b)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[5], s[10], 0xa7)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[5], s[11], 0xab)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[5], s[12], 0xaf)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[5], s[13], 0xb8)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[6], s[16], 0x9f)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[7], s[15], 0x82)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[8], s[14], 0xa0)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[9], s[17], 0xb7)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[9], s[18], 0xb9)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[9], s[19], 0xbc)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[9], s[20], 0xbf)) { return 0; }
-	for (i = 0xb2; i <= 0xb3; i++) {
-		if (!fsm_addedge_literal(fsm, s[10], s[1], i)) { return 0; }
-	}
-	if (!fsm_addedge_literal(fsm, s[10], s[1], 0xbb)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[11], s[1], 0xb1)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[12], s[1], 0xb9)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[13], s[1], 0xbf)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[14], s[1], 0xb8)) { return 0; }
-	for (i = 0xa0; i <= 0xbf; i++) {
+	if (!fsm_addedge_literal(fsm, s[5], s[16], 0xa7)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[5], s[17], 0xab)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[5], s[18], 0xaf)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[5], s[19], 0xb8)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[6], s[10], 0x9f)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[7], s[20], 0x82)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[8], s[11], 0xa0)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[9], s[12], 0xb7)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[9], s[13], 0xb9)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[9], s[14], 0xbc)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[9], s[15], 0xbf)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[10], s[1], 0x9b)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[11], s[1], 0xb8)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[12], s[1], 0xbc)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[13], s[1], 0xa9)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[14], s[1], 0x84)) { return 0; }
+	for (i = 0xa0; i <= 0xa1; i++) {
 		if (!fsm_addedge_literal(fsm, s[15], s[1], i)) { return 0; }
 	}
-	if (!fsm_addedge_literal(fsm, s[16], s[1], 0x9b)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[17], s[1], 0xbc)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[18], s[1], 0xa9)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[19], s[1], 0x84)) { return 0; }
-	for (i = 0xa0; i <= 0xa1; i++) {
-		if (!fsm_addedge_literal(fsm, s[20], s[1], i)) { return 0; }
-	}
 	for (i = 0xa5; i <= 0xa6; i++) {
+		if (!fsm_addedge_literal(fsm, s[15], s[1], i)) { return 0; }
+	}
+	for (i = 0xb2; i <= 0xb3; i++) {
+		if (!fsm_addedge_literal(fsm, s[16], s[1], i)) { return 0; }
+	}
+	if (!fsm_addedge_literal(fsm, s[16], s[1], 0xbb)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[17], s[1], 0xb1)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[18], s[1], 0xb9)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[19], s[1], 0xbf)) { return 0; }
+	for (i = 0xa0; i <= 0xbf; i++) {
 		if (!fsm_addedge_literal(fsm, s[20], s[1], i)) { return 0; }
 	}
-
 
 	return 1;
 }

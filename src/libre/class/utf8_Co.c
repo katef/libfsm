@@ -2,19 +2,15 @@
 
 #include LF_HEADER
 
-#include <assert.h>
 #include <stddef.h>
 
 #include <fsm/fsm.h>
 
 int
-utf8_Co_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
+utf8_Co_fsm(struct fsm *fsm, fsm_state_t x, fsm_state_t y)
 {
-	struct fsm_state *s[10];
+	fsm_state_t s[10];
 	size_t i;
-
-	assert(x != NULL);
-	assert(y != NULL);
 
 	for (i = 0; i < 10; i++) {
 		if (i == 0) {
@@ -27,8 +23,7 @@ utf8_Co_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 			continue;
 		}
 
-		s[i] = fsm_addstate(fsm);
-		if (s[i] == NULL) {
+		if (!fsm_addstate(fsm, &s[i])) {
 			return 0;
 		}
 	}
@@ -37,17 +32,16 @@ utf8_Co_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 	if (!fsm_addedge_literal(fsm, s[0], s[2], 0xef)) { return 0; }
 	if (!fsm_addedge_literal(fsm, s[0], s[3], 0xf3)) { return 0; }
 	if (!fsm_addedge_literal(fsm, s[0], s[4], 0xf4)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[1], s[9], 0x80)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[2], s[6], 0xa3)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[1], s[5], 0x80)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[2], s[9], 0xa3)) { return 0; }
 	if (!fsm_addedge_literal(fsm, s[3], s[1], 0xb0)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[3], s[5], 0xbf)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[3], s[6], 0xbf)) { return 0; }
 	if (!fsm_addedge_literal(fsm, s[4], s[1], 0x80)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[4], s[5], 0x8f)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[5], s[7], 0xbf)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[6], s[8], 0xbf)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[4], s[6], 0x8f)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[5], s[8], 0x80)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[6], s[7], 0xbf)) { return 0; }
 	if (!fsm_addedge_literal(fsm, s[7], s[8], 0xbd)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[9], s[8], 0x80)) { return 0; }
-
+	if (!fsm_addedge_literal(fsm, s[9], s[8], 0xbf)) { return 0; }
 
 	return 1;
 }
