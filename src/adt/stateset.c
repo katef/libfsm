@@ -6,10 +6,13 @@
 
 #include <assert.h>
 #include <stddef.h>
-#include <stdlib.h>
 
 #include <adt/set.h>
 #include <adt/stateset.h>
+
+typedef struct fsm_state item_t;
+
+#include "set.inc"
 
 struct state_set *
 state_set_create(const struct fsm_alloc *a)

@@ -5,7 +5,6 @@ SRC += src/adt/bitmap.c
 SRC += src/adt/dlist.c
 SRC += src/adt/priq.c
 SRC += src/adt/path.c
-SRC += src/adt/set.c
 SRC += src/adt/xalloc.c
 SRC += src/adt/hashset.c
 SRC += src/adt/siphash.c
@@ -26,6 +25,13 @@ DFLAGS.${src} += -I src # XXX: for internal.h
 CFLAGS.${src} += -std=c99 # XXX: for internal.h
 DFLAGS.${src} += -std=c99 # XXX: for internal.h
 .endfor
+
+# not all concrete set interfaces use all static functions from set.inc
+.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.for src in ${SRC:Msrc/adt/stateset.c} ${SRC:Msrc/adt/tupleset.c} ${SRC:Msrc/adt/edgeset.c}
+CFLAGS.${src} += -Wno-unused-function  
+.endfor
+.endif
 
 PART += adt
 

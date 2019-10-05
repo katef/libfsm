@@ -10,6 +10,10 @@
 #include <adt/set.h>
 #include <adt/tupleset.h>
 
+typedef struct fsm_walk2_tuple item_t;
+
+#include "set.inc"
+
 struct tuple_set *
 tuple_set_create(const struct fsm_alloc *a,
 	int (*cmp)(const void *, const void *))
@@ -32,7 +36,7 @@ tuple_set_contains(const struct tuple_set *set, const struct fsm_walk2_tuple *it
 {
 	assert(set != NULL);
 
-	return set_contains((struct set *) set, item);
+	return set_contains((const struct set *) set, item);
 }
 
 struct fsm_walk2_tuple *

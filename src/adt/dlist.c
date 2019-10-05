@@ -8,7 +8,6 @@
 #include <stdlib.h>
 
 #include <adt/alloc.h>
-#include <adt/set.h>
 #include <adt/dlist.h>
 
 /*

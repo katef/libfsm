@@ -10,6 +10,10 @@
 #include <adt/set.h>
 #include <adt/edgeset.h>
 
+typedef struct fsm_edge item_t;
+
+#include "set.inc"
+
 struct edge_set *
 edge_set_create(const struct fsm_alloc *a,
 	int (*cmp)(const void *a, const void *b))
