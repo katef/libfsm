@@ -13,6 +13,7 @@
 #include <adt/set.h>
 #include <adt/hashset.h>
 #include <adt/mappinghashset.h>
+#include <adt/statehashset.h>
 #include <adt/stateset.h>
 #include <adt/statearray.h>
 #include <adt/edgeset.h>
@@ -304,7 +305,7 @@ glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 	int ret = 0;
 
 	struct state_array outedges[FSM_SIGMA_COUNT];
-	struct hashset *outsets[FSM_SIGMA_COUNT];
+	struct state_hashset *outsets[FSM_SIGMA_COUNT];
 
 	assert(fsm != NULL);
 	assert(dfa != NULL);
@@ -344,14 +345,15 @@ glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 			if (outsets[sym] == NULL && outedges[sym].len + state_set_count(e->sl) > 1) {
 				size_t i;
 
-				outsets[sym] = hashset_create(fsm->opt->alloc, hash_single_state, cmp_single_state);
+				outsets[sym] = state_hashset_create(fsm->opt->alloc,
+					hash_single_state, cmp_single_state);
 				if (outsets[sym] == NULL) {
 					goto finish;
 				}
 
 				/* add any existing states */
-				for (i=0; i < outedges[sym].len; i++) {
-					if (!hashset_add(outsets[sym], outedges[sym].states[i])) {
+				for (i = 0; i < outedges[sym].len; i++) {
+					if (!state_hashset_add(outsets[sym], outedges[sym].states[i])) {
 						goto finish;
 					}
 				}
@@ -366,7 +368,7 @@ glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 					goto finish;
 				}
 
-				if (outsets[sym] == NULL || !hashset_contains(outsets[sym], st_cl)) {
+				if (outsets[sym] == NULL || !state_hashset_contains(outsets[sym], st_cl)) {
 					if (!state_array_add(&outedges[sym], st_cl)) {
 						goto finish;
 					}
@@ -395,7 +397,7 @@ finish:
 
 	for (sym = 0; sym < FSM_SIGMA_MAX; sym++) {
 		if (outsets[sym] != NULL) {
-			hashset_free(outsets[sym]);
+			state_hashset_free(outsets[sym]);
 		}
 
 		if (outedges[sym].states != NULL) {
@@ -425,7 +427,7 @@ dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 	int ret = 0;
 
 	struct state_array outedges[FSM_SIGMA_COUNT];
-	struct hashset *outsets[FSM_SIGMA_COUNT];
+	struct state_hashset *outsets[FSM_SIGMA_COUNT];
 
 	assert(fsm != NULL);
 	assert(dfa != NULL);
@@ -464,7 +466,7 @@ dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 				if (outsets[sym] == NULL) {
 					size_t i;
 
-					outsets[sym] = hashset_create(fsm->opt->alloc, hash_single_state, cmp_single_state);
+					outsets[sym] = state_hashset_create(fsm->opt->alloc, hash_single_state, cmp_single_state);
 					if (outsets[sym] == NULL) {
 						goto finish;
 					}
@@ -473,8 +475,8 @@ dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 					assert(outedges[sym].len > 0);
 
 					/* add states from first edge */
-					for (i=0; i < outedges[sym].len; i++) {
-						if (!hashset_add(outsets[sym], outedges[sym].states[i])) {
+					for (i = 0; i < outedges[sym].len; i++) {
+						if (!state_hashset_add(outsets[sym], outedges[sym].states[i])) {
 							goto finish;
 						}
 					}
@@ -482,7 +484,7 @@ dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 
 				/* iterate over states, add to state list if they're not already in the set */
 				for (st = state_set_first(e->sl, &kt); st != NULL; st = state_set_next(&kt)) {
-					if (!hashset_contains(outsets[sym], st)) {
+					if (!state_hashset_contains(outsets[sym], st)) {
 						if (!state_array_add(&outedges[sym], st)) {
 							goto finish;
 						}
@@ -520,7 +522,7 @@ finish:
 
 	for (sym = 0; sym < UCHAR_MAX+1; sym++) {
 		if (outsets[sym] != NULL) {
-			hashset_free(outsets[sym]);
+			state_hashset_free(outsets[sym]);
 		}
 
 		if (outedges[sym].states != NULL) {

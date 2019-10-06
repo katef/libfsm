@@ -16,6 +16,7 @@ SRC += src/adt/statearray.c
 SRC += src/adt/tupleset.c
 
 SRC += src/adt/mappinghashset.c
+SRC += src/adt/statehashset.c
 
 .for src in ${SRC:Msrc/adt/bitmap.c}
 CFLAGS.${src} += -I src # XXX: for internal.h
