@@ -25,7 +25,7 @@ struct hashset {
 	size_t nitems;
 	struct bucket *buckets;
 	size_t maxload;
-	int (*cmp)(const void *,const void *);
+	int (*cmp)(const void *, const void *);
 	unsigned long (*hash)(const void *);
 	float load;
 	unsigned int flags;
@@ -35,28 +35,29 @@ struct hashset {
 #define UNSET_HASH     (0UL)
 
 static int
-is_pow2(size_t n) {
+is_pow2(size_t n)
+{
 	return (n & (n-1)) == 0;
 }
 
 static int
-finditem(const struct hashset *s, unsigned long hash, const void *item, size_t *bp)
+finditem(const struct hashset *hashset, unsigned long hash, const void *item, size_t *bp)
 {
-	size_t b,c,nb;
+	size_t b, c, nb;
 
-	if (s->nbuckets == 0) {
+	if (hashset->nbuckets == 0) {
 		return 0;
 	}
 
-	b = is_pow2(s->nbuckets) ? (hash & (s->nbuckets-1)) : (hash % s->nbuckets);
-	nb = s->nbuckets;
+	b = is_pow2(hashset->nbuckets) ? (hash & (hashset->nbuckets-1)) : (hash % hashset->nbuckets);
+	nb = hashset->nbuckets;
 	for (c=0; c < nb; c++) {
-		if (s->buckets[b].hash == hash) {
-			if (item == s->buckets[b].item || s->cmp(item, s->buckets[b].item) == 0) {
+		if (hashset->buckets[b].hash == hash) {
+			if (item == hashset->buckets[b].item || hashset->cmp(item, hashset->buckets[b].item) == 0) {
 				*bp = b;
 				return 1;
 			}
-		} else if (s->buckets[b].item == NULL && s->buckets[b].hash == UNSET_HASH) {
+		} else if (hashset->buckets[b].item == NULL && hashset->buckets[b].hash == UNSET_HASH) {
 			*bp = b;
 			return 0;
 		}
@@ -72,24 +73,24 @@ finditem(const struct hashset *s, unsigned long hash, const void *item, size_t *
 
 int
 hashset_initialize(const struct fsm_alloc *a,
-	struct hashset *s, size_t nb, float load,
+	struct hashset *hashset, size_t nb, float load,
 	unsigned long (*hash)(const void *a),
 	int (*cmp)(const void *a, const void *b))
 {
 	static const struct hashset init;
-	*s = init;
-	s->alloc = a;
-	s->hash = hash;
-	s->cmp = cmp;
-	s->load = load;
+	*hashset = init;
+	hashset->alloc = a;
+	hashset->hash = hash;
+	hashset->cmp = cmp;
+	hashset->load = load;
 	if (nb == 0) {
 		return 1;
 	}
 
-	s->buckets = f_calloc(s->alloc, nb, sizeof s->buckets[0]);
-	s->maxload = load * nb;
-	s->nbuckets = nb;
-	return (s->buckets != NULL);
+	hashset->buckets = f_calloc(hashset->alloc, nb, sizeof hashset->buckets[0]);
+	hashset->maxload = load * nb;
+	hashset->nbuckets = nb;
+	return hashset->buckets != NULL;
 }
 
 struct hashset *
@@ -97,42 +98,43 @@ hashset_create(const struct fsm_alloc *a,
 	unsigned long (*hash)(const void *a),
 	int (*cmp)(const void *a, const void *b))
 {
-	struct hashset *s;
+	struct hashset *new;
 
-	s = f_malloc(a, sizeof *s);
-	if (s == NULL) {
+	new = f_malloc(a, sizeof *new);
+	if (new == NULL) {
 		return NULL;
 	}
 
-	hashset_initialize(a, s, 0,DEFAULT_LOAD, hash,cmp);
-	return s;
+	hashset_initialize(a, new, 0,DEFAULT_LOAD, hash, cmp);
+
+	return new;
 }
 
 static int
-rehash(struct hashset *s)
+rehash(struct hashset *hashset)
 {
 	static const struct hashset hs_init;
 
-	size_t i,nb,newsz;
+	size_t i, nb, newsz;
 	struct hashset ns;
 	struct bucket *b;
 
 	ns = hs_init;
 
 	/* check resizing logic */
-	newsz = (s->nbuckets > 0) ? 2*s->nbuckets : DEFAULT_NBUCKETS;
-	ns.buckets = f_calloc(s->alloc, newsz, sizeof ns.buckets[0]);
+	newsz = (hashset->nbuckets > 0) ? 2 * hashset->nbuckets : DEFAULT_NBUCKETS;
+	ns.buckets = f_calloc(hashset->alloc, newsz, sizeof ns.buckets[0]);
 	if (ns.buckets == NULL) {
 		return 0;
 	}
 
 	ns.nbuckets = newsz;
-	ns.maxload = s->load * newsz;
-	ns.hash = s->hash;
-	ns.cmp  = s->cmp;
+	ns.maxload = hashset->load * newsz;
+	ns.hash = hashset->hash;
+	ns.cmp  = hashset->cmp;
 
-	nb = s->nbuckets;
-	b = s->buckets;
+	nb = hashset->nbuckets;
+	b = hashset->buckets;
 	for (i=0; i < nb; i++) {
 		size_t bi = 0;
 
@@ -146,110 +148,112 @@ rehash(struct hashset *s)
 		ns.buckets[bi] = b[i];
 	}
 
-	f_free(s->alloc, s->buckets);
-	s->nbuckets = ns.nbuckets;
-	s->buckets  = ns.buckets;
-	s->maxload  = ns.maxload;
+	f_free(hashset->alloc, hashset->buckets);
+	hashset->nbuckets = ns.nbuckets;
+	hashset->buckets  = ns.buckets;
+	hashset->maxload  = ns.maxload;
 	return 1;
 }
 
 void *
-hashset_add(struct hashset *s, void *item)
+hashset_add(struct hashset *hashset, void *item)
 {
-	size_t b=0;
-	unsigned long hash = s->hash(item);
+	unsigned long hash = hashset->hash(item);
+	size_t b = 0;
 
-	if (s->buckets == NULL) {
-		if (!rehash(s)) {
+	if (hashset->buckets == NULL) {
+		if (!rehash(hashset)) {
 			return NULL;
 		}
 	}
 
-	if (finditem(s,hash,item,&b)) {
+	if (finditem(hashset, hash, item, &b)) {
 		/* found, return item */
-		return s->buckets[b].item;
+		return hashset->buckets[b].item;
 	}
 
 	/* not found, so add it */
 
 	/* check if we need a rehash */
-	if (s->nitems >= s->maxload) {
-		if (!rehash(s)) {
+	if (hashset->nitems >= hashset->maxload) {
+		if (!rehash(hashset)) {
 			return NULL;
 		}
 
 		/* re-find the first available bucket */
-		finditem(s,hash,item,&b);
+		finditem(hashset, hash, item, &b);
 	}
 
-	s->buckets[b].hash = hash;
-	s->buckets[b].item = item;
+	hashset->buckets[b].hash = hash;
+	hashset->buckets[b].item = item;
 
-	s->nitems++;
+	hashset->nitems++;
 
 	return item;
 }
 
 int
-hashset_remove(struct hashset *s, const void *item)
+hashset_remove(struct hashset *hashset, const void *item)
 {
 	size_t b;
-	unsigned long h = s->hash(item);
+	unsigned long h = hashset->hash(item);
 	b = 0;
-	if (s->nitems == 0 || !finditem(s,h,item,&b)) {
+	if (hashset->nitems == 0 || !finditem(hashset, h, item, &b)) {
 		return 0;
 	}
 
-	s->buckets[b].item = NULL;
-	s->buckets[b].hash = TOMBSTONE_HASH;
-	s->nitems--;
+	hashset->buckets[b].item = NULL;
+	hashset->buckets[b].hash = TOMBSTONE_HASH;
+	hashset->nitems--;
 
 	return 1;
 }
 
 void
-hashset_finalize(struct hashset *s)
+hashset_finalize(struct hashset *hashset)
 {
 	static const struct hashset zero;
 
-	free(s->buckets);
-	*s = zero;
+	free(hashset->buckets);
+	*hashset = zero;
 }
 
 void
-hashset_free(struct hashset *s)
+hashset_free(struct hashset *hashset)
 {
-	if (s != NULL) {
-		hashset_finalize(s);
-		free(s);
+	if (hashset == NULL) {
+		return;
 	}
+
+	hashset_finalize(hashset);
+	free(hashset);
 }
 
 size_t
-hashset_count(const struct hashset *s)
+hashset_count(const struct hashset *hashset)
 {
-	return s->nitems;
+	return hashset->nitems;
 }
 
 void
-hashset_clear(struct hashset *s)
+hashset_clear(struct hashset *hashset)
 {
-	s->nitems = 0;
-	if (s->buckets != NULL) {
-		memset(s->buckets, 0, s->nbuckets * sizeof s->buckets[0]);
+	hashset->nitems = 0;
+	if (hashset->buckets != NULL) {
+		memset(hashset->buckets, 0, hashset->nbuckets * sizeof hashset->buckets[0]);
 	}
 }
 
 /*
- * Find if an item is in a set, and return it.
+ * Find if an item is in a hashset, and return it.
  */
 void *
-hashset_contains(const struct hashset *s, const void *item)
+hashset_contains(const struct hashset *hashset, const void *item)
 {
-	unsigned long h = s->hash(item);
+	unsigned long h = hashset->hash(item);
 	size_t b = 0;
-	if (finditem(s,h,item,&b)) {
-		return s->buckets[b].item;
+	if (finditem(hashset, h, item, &b)) {
+		return hashset->buckets[b].item;
 	}
 
 	return NULL;
@@ -261,7 +265,7 @@ hashset_contains(const struct hashset *s, const void *item)
 int
 hashset_equal(const struct hashset *a, const struct hashset *b)
 {
-	size_t i,n;
+	size_t i, n;
 	struct bucket *ab;
 
 	if (a->nitems != b->nitems) {
@@ -271,7 +275,7 @@ hashset_equal(const struct hashset *a, const struct hashset *b)
 	n = a->nbuckets;
 	ab = a->buckets;
 	for (i=0; i < n; i++) {
-		if (ab[i].item != NULL && !hashset_contains(b,ab[i].item)) {
+		if (ab[i].item != NULL && !hashset_contains(b, ab[i].item)) {
 			return 0;
 		}
 	}
@@ -280,19 +284,19 @@ hashset_equal(const struct hashset *a, const struct hashset *b)
 }
 
 int
-hashset_empty(const struct hashset *s)
+hashset_empty(const struct hashset *hashset)
 {
-	return s->nitems == 0;
+	return hashset->nitems == 0;
 }
 
 static void *
-hs_next(const struct hashset *s, size_t *ip)
+hs_next(const struct hashset *hashset, size_t *ip)
 {
-	size_t i = *ip, nb = s->nbuckets;
+	size_t i = *ip, nb = hashset->nbuckets;
 	for (; i < nb; i++) {
-		if (s->buckets[i].item != NULL) {
+		if (hashset->buckets[i].item != NULL) {
 			*ip = i+1;
-			return s->buckets[i].item;
+			return hashset->buckets[i].item;
 		}
 	}
 
@@ -301,34 +305,34 @@ hs_next(const struct hashset *s, size_t *ip)
 }
 
 void *
-hashset_first(const struct hashset *s, struct hashset_iter *it)
+hashset_first(const struct hashset *hashset, struct hashset_iter *it)
 {
-	it->set = s;
+	it->hashset = hashset;
 	it->i = 0;
-	return hs_next(s, &it->i);
+	return hs_next(hashset, &it->i);
 }
 
 void *
 hashset_next(struct hashset_iter *it)
 {
-	return hs_next(it->set, &it->i);
+	return hs_next(it->hashset, &it->i);
 }
 
 /*
  * Return the sole item for a singleton set.
  */
 void *
-hashset_only(const struct hashset *s)
+hashset_only(const struct hashset *hashset)
 {
-	size_t i,n;
+	size_t i, n;
 	struct bucket *b;
 
-	if (s->nitems == 0) {
+	if (hashset->nitems == 0) {
 		return NULL;
 	}
 
-	n = s->nbuckets;
-	b=s->buckets;
+	n = hashset->nbuckets;
+	b = hashset->buckets;
 	for (i=0; i < n; i++) {
 		if (b[i].item != NULL) {
 			return b[i].item;
@@ -340,11 +344,11 @@ hashset_only(const struct hashset *s)
 }
 
 static int
-hs_hasnext(const struct hashset *s, size_t *ip)
+hs_hasnext(const struct hashset *hashset, size_t *ip)
 {
-	size_t i = *ip, nb = s->nbuckets;
+	size_t i = *ip, nb = hashset->nbuckets;
 	for (; i < nb; i++) {
-		if (s->buckets[i].item != NULL) {
+		if (hashset->buckets[i].item != NULL) {
 			*ip = i;
 			return 1;
 		}
@@ -357,7 +361,7 @@ hs_hasnext(const struct hashset *s, size_t *ip)
 int
 hashset_hasnext(struct hashset_iter *it)
 {
-	return hs_hasnext(it->set, &it->i);
+	return hs_hasnext(it->hashset, &it->i);
 }
 
 /* XXX: cheesing around uint8_t here */
@@ -372,7 +376,8 @@ static const unsigned char hashk[] = {
 };
 
 unsigned long
-hashptr(const void *p) {
+hashptr(const void *p)
+{
 	unsigned char v[sizeof p];
 	unsigned long h;
 	unsigned char ha[sizeof h];
@@ -386,7 +391,8 @@ hashptr(const void *p) {
 }
 
 unsigned long
-hashrec(const void *p, size_t n) {
+hashrec(const void *p, size_t n)
+{
 	const unsigned char *s = p;
 	unsigned long h = 0;
 	unsigned char ha[sizeof h];

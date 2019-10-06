@@ -18,7 +18,7 @@ struct bucket;
 
 struct hashset_iter {
 	size_t i;
-	const struct hashset *set;
+	const struct hashset *hashset;
 };
 
 struct hashset *
@@ -28,33 +28,33 @@ hashset_create(const struct fsm_alloc *a,
 
 int
 hashset_initialize(const struct fsm_alloc *a,
-	struct hashset *s, size_t nb, float load,
+	struct hashset *hashset, size_t nb, float load,
 	unsigned long (*hash)(const void *a),
 	int (*cmp)(const void *a, const void *b));
 
 void
-hashset_finalize(struct hashset *s);
+hashset_finalize(struct hashset *hashset);
 
 void *
-hashset_add(struct hashset *s, void *item);
+hashset_add(struct hashset *hashset, void *item);
 
 int
-hashset_remove(struct hashset *s, const void *item);
+hashset_remove(struct hashset *hashset, const void *item);
 
 void
-hashset_free(struct hashset *s);
+hashset_free(struct hashset *hashset);
 
 size_t
-hashset_count(const struct hashset *s);
+hashset_count(const struct hashset *hashset);
 
 void
-hashset_clear(struct hashset *s);
+hashset_clear(struct hashset *hashset);
 
 /*
  * Find if an item is in a set, and return it.
  */
 void *
-hashset_contains(const struct hashset *s, const void *item);
+hashset_contains(const struct hashset *hashset, const void *item);
 
 /*
  * Compare two sets for equality.
@@ -63,10 +63,10 @@ int
 hashset_equal(const struct hashset *a, const struct hashset *b);
 
 int
-hashset_empty(const struct hashset *s);
+hashset_empty(const struct hashset *hashset);
 
 void *
-hashset_first(const struct hashset *s, struct hashset_iter *it);
+hashset_first(const struct hashset *hashset, struct hashset_iter *it);
 
 void *
 hashset_next(struct hashset_iter *it);
@@ -75,7 +75,7 @@ hashset_next(struct hashset_iter *it);
  * Return the sole item for a singleton set.
  */
 void *
-hashset_only(const struct hashset *set);
+hashset_only(const struct hashset *hashset);
 
 int
 hashset_hasnext(struct hashset_iter *it);

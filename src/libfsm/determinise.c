@@ -12,7 +12,7 @@
 #include <adt/alloc.h>
 #include <adt/set.h>
 #include <adt/hashset.h>
-#include <adt/mappingset.h>
+#include <adt/mappinghashset.h>
 #include <adt/stateset.h>
 #include <adt/statearray.h>
 #include <adt/edgeset.h>
@@ -49,21 +49,21 @@ struct mapping {
 };
 
 struct fsm_determinise_cache {
-	struct mapping_set *mappings;
+	struct mapping_hashset *mappings;
 };
 
 static void
-clear_mappings(const struct fsm *fsm, struct mapping_set *mappings)
+clear_mappings(const struct fsm *fsm, struct mapping_hashset *mappings)
 {
-	struct mapping_iter it;
+	struct mapping_hashset_iter it;
 	struct mapping *m;
 
-	for (m = mapping_set_first(mappings, &it); m != NULL; m = mapping_set_next(&it)) {
+	for (m = mapping_hashset_first(mappings, &it); m != NULL; m = mapping_hashset_next(&it)) {
 		state_set_free(m->closure);
 		f_free(fsm->opt->alloc, m);
 	}
 
-	mapping_set_clear(mappings);
+	mapping_hashset_clear(mappings);
 }
 
 static int
@@ -98,13 +98,13 @@ hash_mapping(const void *a)
  * the mapping set for future reference.
  */
 static struct mapping *
-addtomappings(struct mapping_set *mappings, struct fsm *dfa, struct state_set *closure)
+addtomappings(struct mapping_hashset *mappings, struct fsm *dfa, struct state_set *closure)
 {
 	struct mapping *m, search;
 
 	/* Use an existing mapping if present */
 	search.closure = closure;
-	if ((m = mapping_set_contains(mappings, &search))) {
+	if ((m = mapping_hashset_contains(mappings, &search))) {
 		state_set_free(closure);
 		return m;
 	}
@@ -125,7 +125,7 @@ addtomappings(struct mapping_set *mappings, struct fsm *dfa, struct state_set *c
 
 	m->done = 0;
 
-	if (!mapping_set_add(mappings, m)) {
+	if (!mapping_hashset_add(mappings, m)) {
 		f_free(dfa->opt->alloc, m);
 		return NULL;
 	}
@@ -138,7 +138,7 @@ addtomappings(struct mapping_set *mappings, struct fsm *dfa, struct state_set *c
  * Create the DFA state if neccessary.
  */
 static struct fsm_state *
-state_closure(struct mapping_set *mappings, struct fsm *dfa, const struct fsm_state *nfastate,
+state_closure(struct mapping_hashset *mappings, struct fsm *dfa, const struct fsm_state *nfastate,
 	int includeself)
 {
 	struct mapping *m;
@@ -180,7 +180,7 @@ state_closure(struct mapping_set *mappings, struct fsm *dfa, const struct fsm_st
  * states. Create the DFA state if neccessary.
  */
 static struct fsm_state *
-set_closure(struct mapping_set *mappings, struct fsm *dfa, struct state_array *set)
+set_closure(struct mapping_hashset *mappings, struct fsm *dfa, struct state_array *set)
 {
 	struct state_set *ec;
 	struct mapping *m;
@@ -212,8 +212,8 @@ set_closure(struct mapping_set *mappings, struct fsm *dfa, struct state_array *s
 	return m->dfastate;
 }
 
-struct mapping_iter_save {
-	struct mapping_iter iter;
+struct mapping_hashset_iter_save {
+	struct mapping_hashset_iter iter;
 	int saved;
 };
 
@@ -221,9 +221,9 @@ struct mapping_iter_save {
  * Return an arbitary mapping which isn't marked "done" yet.
  */
 static struct mapping *
-nextnotdone(struct mapping_set *mappings, struct mapping_iter_save *sv)
+nextnotdone(struct mapping_hashset *mappings, struct mapping_hashset_iter_save *sv)
 {
-	struct mapping_iter it;
+	struct mapping_hashset_iter it;
 	struct mapping *m;
 	int do_rescan = sv->saved;
 
@@ -231,13 +231,13 @@ nextnotdone(struct mapping_set *mappings, struct mapping_iter_save *sv)
 
 	if (sv->saved) {
 		it = sv->iter;
-		m = mapping_set_next(&it);
+		m = mapping_hashset_next(&it);
 	} else {
-		m = mapping_set_first(mappings, &it);
+		m = mapping_hashset_first(mappings, &it);
 	}
 
 rescan:
-	for (; m != NULL; m = mapping_set_next(&it)) {
+	for (; m != NULL; m = mapping_hashset_next(&it)) {
 		if (!m->done) {
 			sv->saved = 1;
 			sv->iter = it;
@@ -246,7 +246,7 @@ rescan:
 	}
 
 	if (do_rescan) {
-		m = mapping_set_first(mappings, &it);
+		m = mapping_hashset_first(mappings, &it);
 		do_rescan = 0;
 		goto rescan;
 	}
@@ -295,7 +295,8 @@ hash_single_state(const void *a)
  * the index of the array is the transition symbol.
  */
 static int
-glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *mappings, struct mapping *curr)
+glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
+	struct mapping_hashset *mappings, struct mapping *curr)
 {
 	struct fsm_state *s;
 	struct state_iter it;
@@ -415,7 +416,8 @@ finish:
  * the index of the array is the transition symbol.
  */
 static int
-dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa, struct mapping_set *mappings, struct mapping *curr)
+dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
+	struct mapping_hashset *mappings, struct mapping *curr)
 {
 	struct fsm_state *s;
 	struct state_iter it;
@@ -550,14 +552,14 @@ static struct fsm *
 nfa_transform(struct fsm *nfa,
 	struct fsm_determinise_cache *dcache, enum nfa_transform_op op)
 {
-	static const struct mapping_iter_save sv_init;
+	static const struct mapping_hashset_iter_save sv_init;
 
 	struct mapping *curr;
-	struct mapping_set *mappings;
-	struct mapping_iter it;
+	struct mapping_hashset *mappings;
+	struct mapping_hashset_iter it;
 	struct fsm *dfa;
 
-	struct mapping_iter_save sv;
+	struct mapping_hashset_iter_save sv;
 
 	assert(nfa != NULL);
 	assert(nfa->opt != NULL);
@@ -579,7 +581,7 @@ nfa_transform(struct fsm *nfa,
 	}
 
 	if (dcache->mappings == NULL) {
-		dcache->mappings = mapping_set_create(nfa->opt->alloc, hash_mapping, cmp_mapping);
+		dcache->mappings = mapping_hashset_create(nfa->opt->alloc, hash_mapping, cmp_mapping);
 		if (dcache->mappings == NULL) {
 			fsm_free(dfa);
 			return NULL;
@@ -632,7 +634,10 @@ nfa_transform(struct fsm *nfa,
 	 * While there are still states remaining to be "done", process each.
 	 */
 	sv = sv_init;
-	for (curr = mapping_set_first(mappings, &it); (curr = nextnotdone(mappings, &sv)) != NULL; curr->done = 1) {
+	for (curr = mapping_hashset_first(mappings, &it);
+		(curr = nextnotdone(mappings, &sv)) != NULL;
+		curr->done = 1)
+	{
 		if (op == NFA_XFORM_DETERMINISE) {
 			if (!dfa_buildtransitions(nfa, dfa, mappings, curr)) {
 				goto error;
@@ -688,7 +693,7 @@ nfa_transform_cache(struct fsm *fsm,
 			return 0;
 		}
 
-		(*dcache)->mappings = mapping_set_create(fsm->opt->alloc, hash_mapping, cmp_mapping);
+		(*dcache)->mappings = mapping_hashset_create(fsm->opt->alloc, hash_mapping, cmp_mapping);
 		if ((*dcache)->mappings == NULL) {
 			f_free(fsm->opt->alloc, *dcache);
 			return 0;
@@ -724,7 +729,7 @@ fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache)
 	clear_mappings(fsm, dcache->mappings);
 
 	if (dcache->mappings != NULL) {
-		mapping_set_free(dcache->mappings);
+		mapping_hashset_free(dcache->mappings);
 	}
 
 	f_free(fsm->opt->alloc, dcache);
