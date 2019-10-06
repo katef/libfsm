@@ -55,7 +55,7 @@ finditem(const struct hashset *hashset, unsigned long hash, const item_t *item, 
 	nb = hashset->nbuckets;
 	for (c=0; c < nb; c++) {
 		if (hashset->buckets[b].hash == hash) {
-			if (item == hashset->buckets[b].item || hashset->cmp(item, hashset->buckets[b].item) == 0) {
+			if (item == hashset->buckets[b].item || hashset->cmp(&item, &hashset->buckets[b].item) == 0) {
 				*bp = b;
 				return 1;
 			}

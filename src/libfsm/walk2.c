@@ -40,14 +40,14 @@ struct fsm_walk2_tuple {
 static int
 cmp_walk2_tuple(const void *a, const void *b)
 {
-	const struct fsm_walk2_tuple *pa = a, *pb = b;
+	const struct fsm_walk2_tuple * const *pa = a, * const *pb = b;
 	ptrdiff_t delta;
 
 	/* XXX: do we need to specially handle NULLs? */
 
-	delta = (pa->a > pb->a) - (pa->a < pb->a);
+	delta = ((*pa)->a > (*pb)->a) - ((*pa)->a < (*pb)->a);
 	if (delta == 0) {
-		delta = (pa->b > pb->b) - (pa->b < pb->b);
+		delta = ((*pa)->b > (*pb)->b) - ((*pa)->b < (*pb)->b);
 	}
 
 	return delta;

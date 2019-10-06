@@ -70,15 +70,12 @@ clear_mappings(const struct fsm *fsm, struct mapping_hashset *mappings)
 static int
 cmp_mapping(const void *a, const void *b)
 {
-	const struct mapping *ma, *mb;
+	const struct mapping * const *ma = a, * const *mb = b;
 
-	assert(a != NULL);
-	assert(b != NULL);
+	assert(ma != NULL && *ma != NULL);
+	assert(mb != NULL && *mb != NULL);
 
-	ma = a;
-	mb = b;
-
-	return state_set_cmp(ma->closure, mb->closure);
+	return state_set_cmp((*ma)->closure, (*mb)->closure);
 }
 
 static unsigned long
@@ -272,13 +269,6 @@ carryend(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 	}
 }
 
-static int
-cmp_single_state(const void *a, const void *b)
-{
-	const struct fsm_state *ea = a, *eb = b;
-	return (ea > eb) - (ea < eb);
-}
-
 static unsigned long
 hash_single_state(const void *a)
 {
@@ -346,7 +336,7 @@ glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 				size_t i;
 
 				outsets[sym] = state_hashset_create(fsm->opt->alloc,
-					hash_single_state, cmp_single_state);
+					hash_single_state, fsm_state_cmpval);
 				if (outsets[sym] == NULL) {
 					goto finish;
 				}
@@ -466,7 +456,7 @@ dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 				if (outsets[sym] == NULL) {
 					size_t i;
 
-					outsets[sym] = state_hashset_create(fsm->opt->alloc, hash_single_state, cmp_single_state);
+					outsets[sym] = state_hashset_create(fsm->opt->alloc, hash_single_state, fsm_state_cmpval);
 					if (outsets[sym] == NULL) {
 						goto finish;
 					}

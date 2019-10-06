@@ -21,18 +21,16 @@
 static int
 fsm_state_cmpedges(const void *a, const void *b)
 {
-	const struct fsm_edge *ea, *eb;
+	const struct fsm_edge * const *ea = a, * const *eb = b;
 
 	assert(a != NULL);
 	assert(b != NULL);
 
-	ea = a;
-	eb = b;
-
-	/* N.B. various edge iterations rely on the ordering of edges to be in
+	/*
+	 * N.B. various edge iterations rely on the ordering of edges to be in
 	 * ascending order.
 	 */
-	return (ea->symbol > eb->symbol) - (ea->symbol < eb->symbol);
+	return ((*ea)->symbol > (*eb)->symbol) - ((*ea)->symbol < (*eb)->symbol);
 }
 
 int

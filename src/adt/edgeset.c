@@ -18,6 +18,8 @@ struct edge_set *
 edge_set_create(const struct fsm_alloc *a,
 	int (*cmp)(const void *a, const void *b))
 {
+	assert(cmp != NULL);
+
 	return (struct edge_set *) set_create(a, cmp);
 }
 

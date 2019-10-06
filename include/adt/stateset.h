@@ -16,6 +16,9 @@ struct state_iter {
 	struct set_iter iter;
 };
 
+int
+fsm_state_cmpval(const void *a, const void *b);
+
 struct state_set *
 state_set_create(const struct fsm_alloc *a);
 

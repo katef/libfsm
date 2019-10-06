@@ -22,15 +22,6 @@ struct set {
 };
 
 static int
-set_cmpval(const void *a, const void *b)
-{
-	assert(a != NULL);
-	assert(b != NULL);
-
-	return (a > b) - (a < b);
-}
-
-static int
 set_empty(const struct set *set)
 {
 	assert(set != NULL);
@@ -57,7 +48,7 @@ set_search(const struct set *set, const item_t *item)
 	while (start < end) {
 		int r;
 		mid = start + (end - start) / 2;
-		r = set->cmp(item, set->a[mid]);
+		r = set->cmp(&item, &set->a[mid]);
 		if (r < 0) {
 			end = mid;
 		} else if (r > 0) {
@@ -84,7 +75,7 @@ set_contains(const struct set *set, const item_t *item)
 	}
 
 	i = set_search(set, item);
-	if (set->cmp(item, set->a[i]) == 0) {
+	if (set->cmp(&item, &set->a[i]) == 0) {
 		return set->a[i];
 	}
 
@@ -97,9 +88,7 @@ set_create(const struct fsm_alloc *a,
 {
 	struct set *set;
 
-	if (cmp == NULL) {
-		cmp = set_cmpval;
-	}
+	assert(cmp != NULL);
 
 	set = f_malloc(a, sizeof *set);
 	if (set == NULL) {
@@ -125,6 +114,8 @@ set_create_singleton(const struct fsm_alloc *a,
 {
 	struct set *s;
 
+	assert(cmp != NULL);
+
 	s = f_malloc(a, sizeof *s);
 	if (s == NULL) {
 		return NULL;
@@ -139,7 +130,7 @@ set_create_singleton(const struct fsm_alloc *a,
 	s->alloc = a;
 	s->a[0] = item;
 	s->i = s->n = 1;
-	s->cmp = (cmp != NULL) ? cmp : set_cmpval;
+	s->cmp = cmp;
 
 	return s;
 }
@@ -182,7 +173,7 @@ set_add(struct set *set, item_t *item)
 	 */
 	if (!set_empty(set)) {
 		i = set_search(set, item);
-		if (set->cmp(item, set->a[i]) == 0) {
+		if (set->cmp(&item, &set->a[i]) == 0) {
 			return item;
 		}
 	}
@@ -201,7 +192,7 @@ set_add(struct set *set, item_t *item)
 			set->n *= 2;
 		}
 
-		if (set->cmp(item, set->a[i]) > 0) {
+		if (set->cmp(&item, &set->a[i]) > 0) {
 			i++;
 		}
 
@@ -273,7 +264,7 @@ set_remove(struct set *set, const item_t *item)
 	}
 
 	i = set_search(set, item);
-	if (set->cmp(item, set->a[i]) == 0) {
+	if (set->cmp(&item, &set->a[i]) == 0) {
 		if (i < set->i) {
 			memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
 		}
@@ -377,7 +368,7 @@ set_firstafter(const struct set *set, struct set_iter *it, const item_t *item)
 	}
 
 	i = set_search(set, item);
-	r = set->cmp(item, set->a[i]);
+	r = set->cmp(&item, &set->a[i]);
 	assert(i <= set->i - 1);
 
 	if (r >= 0 && i == set->i - 1) {

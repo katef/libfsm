@@ -14,10 +14,26 @@ typedef struct fsm_state item_t;
 
 #include "set.inc"
 
+int
+fsm_state_cmpval(const void *a, const void *b)
+{
+	const struct fsm_state * const *pa = a, * const *pb = b;
+
+	assert(pa != NULL && *pa != NULL);
+	assert(pb != NULL && *pb != NULL);
+
+	/*
+	 * Each struct fsm_state * is allocated uniquely, so a shallow
+	 * pointer comparison suffices here. With the adjacency list, this
+	 * should eventually become a numeric comparison on a state index.
+	 */
+	return (*pa > *pb) - (*pa < *pb);
+}
+
 struct state_set *
 state_set_create(const struct fsm_alloc *a)
 {
-	return (struct state_set *) set_create(a, NULL);
+	return (struct state_set *) set_create(a, fsm_state_cmpval);
 }
 
 struct state_set *
