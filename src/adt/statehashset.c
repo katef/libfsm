@@ -22,8 +22,7 @@ state_hashset_create(const struct fsm_alloc *a,
 	assert(hash != NULL);
 	assert(cmp != NULL);
 
-	return (struct state_hashset *) hashset_create(a,
-		hash, cmp);
+	return (struct state_hashset *) hashset_create(a, hash, cmp);
 }
 
 void

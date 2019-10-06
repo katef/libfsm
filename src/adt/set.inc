@@ -22,7 +22,7 @@ struct set {
 };
 
 static int
-set_cmpval(const item_t *a, const item_t *b)
+set_cmpval(const void *a, const void *b)
 {
 	assert(a != NULL);
 	assert(b != NULL);
@@ -93,7 +93,7 @@ set_contains(const struct set *set, const item_t *item)
 
 static struct set *
 set_create(const struct fsm_alloc *a,
-	int (*cmp)(const item_t *a, const item_t *b))
+	int (*cmp)(const void *a, const void *b))
 {
 	struct set *set;
 
@@ -119,21 +119,9 @@ set_create(const struct fsm_alloc *a,
 	return set;
 }
 
-static int
-set_bulkcmpval(const void *a, const void *b)
-{
-	assert(a != NULL);
-	assert(b != NULL);
-
-	const void *pa = ((const item_t **) a)[0];
-	const void *pb = ((const item_t **) b)[0];
-
-	return (pa > pb) - (pa < pb);
-}
-
 static struct set *
 set_create_singleton(const struct fsm_alloc *a,
-	int (*cmp)(const item_t *a, const item_t *b), item_t *item)
+	int (*cmp)(const void *a, const void *b), item_t *item)
 {
 	struct set *s;
 

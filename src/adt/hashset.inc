@@ -28,7 +28,7 @@ struct hashset {
 	struct bucket *buckets;
 	size_t maxload;
 	int (*cmp)(const void *, const void *);
-	unsigned long (*hash)(const item_t *);
+	unsigned long (*hash)(const void *);
 	float load;
 	unsigned int flags;
 };
@@ -76,7 +76,7 @@ finditem(const struct hashset *hashset, unsigned long hash, const item_t *item, 
 static int
 hashset_initialize(const struct fsm_alloc *a,
 	struct hashset *hashset, size_t nb, float load,
-	unsigned long (*hash)(const item_t *a),
+	unsigned long (*hash)(const void *a),
 	int (*cmp)(const void *a, const void *b))
 {
 	static const struct hashset init;
@@ -98,7 +98,7 @@ hashset_initialize(const struct fsm_alloc *a,
 
 static struct hashset *
 hashset_create(const struct fsm_alloc *a,
-	unsigned long (*hash)(const item_t *a),
+	unsigned long (*hash)(const void *a),
 	int (*cmp)(const void *a, const void *b))
 {
 	struct hashset *new;

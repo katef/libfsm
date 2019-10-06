@@ -49,7 +49,7 @@ state_set_add(struct state_set *set, struct fsm_state *st)
 struct fsm_state *
 state_set_add_bulk(struct state_set *set, struct fsm_state **st, size_t n)
 {
-	return (struct fsm_state *)set_add_bulk((struct set *)set, (void **)st, n);
+	return (struct fsm_state *)set_add_bulk((struct set *)set, st, n);
 }
 
 void
@@ -154,5 +154,4 @@ state_set_cmp(const struct state_set *a, const struct state_set *b)
 
 	return set_cmp((const struct set *) a, (const struct set *) b);
 }
-
 
