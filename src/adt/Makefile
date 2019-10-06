@@ -6,7 +6,6 @@ SRC += src/adt/dlist.c
 SRC += src/adt/priq.c
 SRC += src/adt/path.c
 SRC += src/adt/xalloc.c
-SRC += src/adt/hashset.c
 SRC += src/adt/siphash.c
 SRC += src/adt/queue.c
 
@@ -15,6 +14,7 @@ SRC += src/adt/stateset.c
 SRC += src/adt/statearray.c
 SRC += src/adt/tupleset.c
 
+SRC += src/adt/hashset.c
 SRC += src/adt/mappinghashset.c
 SRC += src/adt/statehashset.c
 
@@ -31,6 +31,13 @@ DFLAGS.${src} += -std=c99 # XXX: for internal.h
 # not all concrete set interfaces use all static functions from set.inc
 .if ${CC:T:Mgcc} || ${CC:T:Mclang}
 .for src in ${SRC:Msrc/adt/stateset.c} ${SRC:Msrc/adt/tupleset.c} ${SRC:Msrc/adt/edgeset.c}
+CFLAGS.${src} += -Wno-unused-function  
+.endfor
+.endif
+
+# not all concrete hashset interfaces use all static functions from hashset.inc
+.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.for src in ${SRC:Msrc/adt/mappinghashset.c} ${SRC:Msrc/adt/statehashset.c}
 CFLAGS.${src} += -Wno-unused-function  
 .endfor
 .endif

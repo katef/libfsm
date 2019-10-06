@@ -10,6 +10,10 @@
 #include <adt/hashset.h>
 #include <adt/statehashset.h>
 
+typedef struct fsm_state item_t;
+
+#include "hashset.inc"
+
 struct state_hashset *
 state_hashset_create(const struct fsm_alloc *a,
 	unsigned long (*hash)(const void *a),

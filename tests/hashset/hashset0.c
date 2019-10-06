@@ -6,7 +6,12 @@
 
 #include <assert.h>
 #include <stdlib.h>
+
 #include <adt/hashset.h>
+
+typedef int item_t;
+
+#include "hashset.inc"
 
 int cmp_int(const void *a_, const void *b_) {
 	int a = *(const int *)a_, b = *(const int *)b_;

@@ -10,6 +10,10 @@
 #include <adt/hashset.h>
 #include <adt/mappinghashset.h>
 
+typedef struct mapping item_t;
+
+#include "hashset.inc"
+
 struct mapping_hashset *
 mapping_hashset_create(const struct fsm_alloc *a,
 	unsigned long (*hash)(const void *a),
