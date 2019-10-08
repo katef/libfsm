@@ -5,7 +5,7 @@
  */
 
 #ifndef ADT_STATEHASHSET_H
-#define ADT_SATTEHASHSET_H
+#define ADT_STATEHASHSET_H
 
 struct fsm_alloc;
 struct state_hashset;
