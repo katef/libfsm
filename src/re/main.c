@@ -445,6 +445,7 @@ main(int argc, char *argv[])
 	int keep_nfa;
 	int patterns;
 	int ambig;
+	int makevm;
 
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;
@@ -460,6 +461,7 @@ main(int argc, char *argv[])
 	keep_nfa  = 0;
 	patterns  = 0;
 	ambig     = 0;
+	makevm    = 0;
 	print_fsm = NULL;
 	print_ast = NULL;
 	query     = NULL;
@@ -469,7 +471,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:" "upmnxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:" "upMmnxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
@@ -499,6 +501,7 @@ main(int argc, char *argv[])
 			case 'm': example  = 1; break;
 			case 'n': keep_nfa = 1; break;
 			case 'z': patterns = 1; break;
+			case 'M': makevm   = 1; break;
 
 			case 'h':
 				usage();
@@ -527,6 +530,11 @@ main(int argc, char *argv[])
 
 	if (!!print_fsm + !!print_ast + example + !!query && xfiles) {
 		fprintf(stderr, "-x applies only when executing\n");
+		return EXIT_FAILURE;
+	}
+
+	if (keep_nfa && makevm) {
+		fprintf(stderr, "-n and -M cannot be used together\n");
 		return EXIT_FAILURE;
 	}
 
@@ -803,6 +811,13 @@ main(int argc, char *argv[])
 		}
 
 		opt.carryopaque = NULL;
+
+		if (makevm) {
+			struct fsm_dfavm *vm;
+
+			vm = fsm_vm_compile(fsm);
+			fsm_vm_free(vm);
+		}
 	}
 
 	if (example) {
