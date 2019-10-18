@@ -37,6 +37,7 @@ SRC += src/libfsm/union.c
 SRC += src/libfsm/intersect.c
 SRC += src/libfsm/subtract.c
 SRC += src/libfsm/walk2.c
+SRC += src/libfsm/dfavm.c
 
 .for src in ${SRC:Msrc/libfsm/closure.c}
 CFLAGS.${src} += -std=c99
@@ -45,6 +46,11 @@ DFLAGS.${src} += -std=c99
 
 LIB         += libfsm
 SYMS.libfsm += src/libfsm/libfsm.syms
+
+.for src in ${SRC:Msrc/libfsm/dfavm.c}
+CFLAGS.${src} += -std=c99 # XXX: for internal.h
+DFLAGS.${src} += -std=c99 # XXX: for internal.h
+.endfor
 
 .for src in ${SRC:Msrc/libfsm/*.c}
 ${BUILD}/lib/libfsm.o:    ${BUILD}/${src:R}.o

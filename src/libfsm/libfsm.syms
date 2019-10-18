@@ -100,3 +100,7 @@ epsilon_closure_bulk # XXX: workaround for fsm
 closure_free # XXX: workaround for fsm
 
 fsm_mergeab
+
+fsm_vm_compile
+fsm_vm_free
+
