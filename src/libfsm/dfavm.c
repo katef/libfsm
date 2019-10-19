@@ -24,7 +24,7 @@
 //
 //          76543210
 // BR       CCC1DDDD
-// STOP     CCC0xxxE
+// STOP     CCC00xxE
 // FETCH    00001xxE
 //
 // bits marked x are reserved for future use, and should be 0
