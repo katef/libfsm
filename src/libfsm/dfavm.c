@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Shannon F. Stewman
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -17,9 +23,9 @@
 // BRANCH, MATCH, and STOP.  The opcodes for each are:
 //
 //          76543210
-// BR       CC10DDDD
-// STOP     CC00xxxE
-// FETCH    0001xxxE
+// BR       CCC1DDDD
+// STOP     CCC0xxxE
+// FETCH    00001xxE
 //
 // bits marked x are reserved for future use, and should be 0
 //
@@ -28,11 +34,15 @@
 //
 // Comparison bits:
 // 
-// CC
-// 00  always (no compare arg)
-// 01  less than or equal to (one compare arg)
-// 10  greater than or equal to (one compare arg)
-// 11  equal to (one compare arg)
+//   CCC
+//   000  always
+//   001  less than or equal to
+//   010  greater than or equal to
+//   011  equal to
+//   100  not equal to
+//
+//   Comparisons other than 'always' have one comparison argument.  'Always'
+//   comparisons have no comparison arguments.
 //
 // FETCH - fetch instructions
 //
@@ -89,8 +99,9 @@ enum dfavm_instr_bits {
 enum dfavm_cmp_bits {
 	VM_CMP_ALWAYS = 0,
 	VM_CMP_LE     = 1,
-	VM_CMP_EQ     = 2,
-	VM_CMP_GE     = 3,
+	VM_CMP_GE     = 2,
+	VM_CMP_EQ     = 3,
+	VM_CMP_NE     = 4,
 };
 
 enum dfavm_end_bits {
@@ -156,6 +167,7 @@ struct dfavm_assembler {
 	size_t nstates;
 	size_t start;
 
+	uint32_t nbytes;
 	uint32_t count;
 };
 
@@ -181,6 +193,7 @@ print_op(FILE *f, struct dfavm_op *op)
 	case VM_CMP_LE:     cmp = "LE"; break;
 	case VM_CMP_EQ:     cmp = "EQ"; break;
 	case VM_CMP_GE:     cmp = "GE"; break;
+	case VM_CMP_NE:     cmp = "NE"; break;
 	default:            cmp = "??"; break;
 	}
 
@@ -229,7 +242,6 @@ print_op(FILE *f, struct dfavm_op *op)
 	}
 
 	if (op->instr == VM_OP_BRANCH) {
-		if (nargs > 0) { fprintf(f, ", "); }
 		fprintf(f, "%s%ld [st=%lu]", ((nargs>0) ? ", " : " "),
 			(long)op->u.br.rel_dest, (unsigned long)op->u.br.dest_state);
 		nargs++;
@@ -358,12 +370,125 @@ dfavm_opasm_finalize(struct dfavm_assembler *a)
 	(void)a;
 }
 
+struct dfa_table {
+	long tbl[FSM_SIGMA_COUNT];
+
+	int nerr;
+	int ndst;
+
+	int dst_ind_lo;
+	int dst_ind_hi;
+
+	struct {
+		long to;
+		struct ir_range syms;
+	} mode;
+};
+
+static void
+analyze_table(struct dfa_table *table)
+{
+	int i, nerr, ndst, max_run;
+	int run_lo, run_hi;
+	int dst_ind_lo, dst_ind_hi;
+	long lo, dlo, run_to;
+
+	lo = 0;
+	dlo = table->tbl[0];
+
+	nerr = (dlo == -1) ? 1 : 0;
+	ndst = 1-nerr;
+
+	dst_ind_lo = (dlo == -1) ? -1 : 0;
+	dst_ind_hi = dst_ind_lo;
+
+	max_run = 0;
+	run_lo = -1;
+	run_hi = -1;
+	run_to = -1;
+
+	for (i=1; i < FSM_SIGMA_COUNT+1; i++) {
+		long dst = -1;
+
+		if (i < FSM_SIGMA_COUNT) {
+			dst = table->tbl[i];
+			nerr += (dst == -1);
+			ndst += (dst != -1);
+
+			if (dst >= 0) {
+				dst_ind_hi = i;
+				if (dst_ind_lo < 0) {
+					dst_ind_lo = i;
+				}
+			}
+		}
+
+		if (i == FSM_SIGMA_COUNT || dst != dlo) {
+			int len = i - lo;
+
+			if (len > max_run) {
+				max_run = len;
+				run_lo  = lo;
+				run_hi  = i-1;
+				run_to  = dlo;
+			}
+
+			lo = i;
+			dlo = dst;
+		}
+	}
+
+	table->nerr = nerr;
+	table->ndst = ndst;
+
+	table->dst_ind_lo = dst_ind_lo;
+	table->dst_ind_hi = dst_ind_hi;
+
+	if (max_run > 0) {
+		table->mode.to = run_to;
+		table->mode.syms.start = run_lo;
+		table->mode.syms.end   = run_hi;
+	}
+}
+
 static int
-initial_translate_table(struct dfavm_assembler *a, long table[FSM_SIGMA_COUNT], struct dfavm_op **opp)
+initial_translate_table(struct dfavm_assembler *a, struct dfa_table *table, struct dfavm_op **opp)
 {
 	int i,lo;
 
-	/* ... this can definitely be made more intelligent ... */
+	assert(table != NULL);
+
+	analyze_table(table);
+
+	// handle a couple of special cases...
+	if (table->ndst == 1) {
+		int sym;
+		long dst;
+
+		sym = table->dst_ind_lo;
+
+		assert(sym >= 0);
+		assert(sym == table->dst_ind_hi);
+
+		dst = table->tbl[sym];
+
+		assert(dst >= 0);
+		assert((size_t)dst < a->nstates);
+
+		*opp = opasm_new_stop(a, VM_CMP_NE, sym, VM_END_FAIL);
+		if (*opp == NULL) {
+			return -1;
+		}
+		opp = &(*opp)->next;
+
+		*opp = opasm_new_branch(a, VM_CMP_ALWAYS, 0, dst);
+		if (*opp == NULL) {
+			return -1;
+		}
+		opp = &(*opp)->next;
+
+		return 0;
+	}
 
 	lo = 0;
 	for (i=1; i < FSM_SIGMA_COUNT; i++) {
@@ -372,8 +497,8 @@ initial_translate_table(struct dfavm_assembler *a, long table[FSM_SIGMA_COUNT], 
 
 		assert(lo < FSM_SIGMA_COUNT);
 
-		if (table[lo] != table[i]) {
-			dst = table[lo];
+		if (table->tbl[lo] != table->tbl[i]) {
+			dst = table->tbl[lo];
 
 			/* emit instr */
 			int arg = i-1;
@@ -395,10 +520,13 @@ initial_translate_table(struct dfavm_assembler *a, long table[FSM_SIGMA_COUNT], 
 	}
 
 	if (lo < FSM_SIGMA_COUNT-1) {
-		int64_t dst = table[lo];
+		int64_t dst = table->tbl[lo];
 		*opp = (dst < 0)
 			? opasm_new_stop(a, VM_CMP_ALWAYS, 0, VM_END_FAIL)
 			: opasm_new_branch(a, VM_CMP_ALWAYS, 0, dst);
+		if (*opp == NULL) {
+			return -1;
+		}
 		opp = &(*opp)->next;
 	}
 
@@ -421,77 +549,86 @@ ranges_to_table(long table[FSM_SIGMA_COUNT], const struct ir_range *r, const siz
 }
 
 static void
-error_to_table(long table[FSM_SIGMA_COUNT], const struct ir_error *err)
+error_to_table(struct dfa_table *table, const struct ir_error *err)
 {
-	ranges_to_table(table, err->ranges, err->n, -1);
+	ranges_to_table(table->tbl, err->ranges, err->n, -1);
 }
 
 static void
-group_to_table(long table[FSM_SIGMA_COUNT], const struct ir_group *grp)
+group_to_table(struct dfa_table *table, const struct ir_group *grp)
 {
-	ranges_to_table(table, grp->ranges, grp->n, grp->to);
+	ranges_to_table(table->tbl, grp->ranges, grp->n, grp->to);
+}
+
+static void
+dfa_table_init(struct dfa_table *table, long default_dest)
+{
+	static const struct dfa_table zero;
+	int i;
+
+	assert(table != NULL);
+
+	*table = zero;
+
+	for (i=0; i < FSM_SIGMA_COUNT; i++) {
+		table->tbl[i] = default_dest;
+	}
 }
 
 static int
 initial_translate_partial(struct dfavm_assembler *a, struct ir_state *st, struct dfavm_op **opp)
 {
-	long table[FSM_SIGMA_COUNT];
+	struct dfa_table table;
 	size_t i, ngrps;
 
 	assert(st->strategy == IR_PARTIAL);
 
-	for (i=0; i < FSM_SIGMA_COUNT; i++) {
-		table[i] = -1;
-	}
+	dfa_table_init(&table, -1);
 
 	ngrps = st->u.partial.n;
 	for (i=0; i < ngrps; i++) {
-		group_to_table(table, &st->u.partial.groups[i]);
+		group_to_table(&table, &st->u.partial.groups[i]);
 	}
 
-	return initial_translate_table(a, table, opp);
+	return initial_translate_table(a, &table, opp);
 }
 
 static int
 initial_translate_dominant(struct dfavm_assembler *a, struct ir_state *st, struct dfavm_op **opp)
 {
-	long table[FSM_SIGMA_COUNT];
+	struct dfa_table table;
 	size_t i, ngrps;
 
 	assert(st->strategy == IR_DOMINANT);
 
-	for (i=0; i < FSM_SIGMA_COUNT; i++) {
-		table[i] = st->u.dominant.mode;
-	}
+	dfa_table_init(&table, st->u.dominant.mode);
 
 	ngrps = st->u.dominant.n;
 	for (i=0; i < ngrps; i++) {
-		group_to_table(table, &st->u.dominant.groups[i]);
+		group_to_table(&table, &st->u.dominant.groups[i]);
 	}
 
-	return initial_translate_table(a, table, opp);
+	return initial_translate_table(a, &table, opp);
 }
 
 static int
 initial_translate_error(struct dfavm_assembler *a, struct ir_state *st, struct dfavm_op **opp)
 {
-	long table[FSM_SIGMA_COUNT];
+	struct dfa_table table;
 	size_t i, ngrps;
 
 	assert(st->strategy == IR_ERROR);
 
-	for (i=0; i < FSM_SIGMA_COUNT; i++) {
-		table[i] = st->u.error.mode;
-	}
+	dfa_table_init(&table, st->u.error.mode);
 
-	error_to_table(table, &st->u.error.error);
+	error_to_table(&table, &st->u.error.error);
 
 	ngrps = st->u.error.n;
 	for (i=0; i < ngrps; i++) {
-		group_to_table(table, &st->u.error.groups[i]);
+		group_to_table(&table, &st->u.error.groups[i]);
 	}
 
-	return initial_translate_table(a, table, opp);
+	return initial_translate_table(a, &table, opp);
 }
 
 static struct dfavm_op *
@@ -634,6 +771,27 @@ reorder_basic_blocks(struct dfavm_assembler *a)
 
 		assert(opp != NULL);
 		assert(*opp == NULL);
+	}
+
+	/* basic pass to eliminate unnecessary branches; branches to the
+	 * next instruction can be elided
+	 */
+	for (opp = &a->linked; *opp != NULL;) {
+		if ((*opp)->instr != VM_OP_BRANCH) {
+			opp = &(*opp)->next;
+			continue;
+		}
+
+		if ((*opp)->u.br.dest_arg != (*opp)->next) {
+			opp = &(*opp)->next;
+			continue;
+		}
+
+		// branch is to next instruction, eliminate
+		//
+		// condition doesn't matter since both cond and !cond
+		// will end up at the same place
+		*opp = (*opp)->next;
 	}
 }
 
