@@ -10,9 +10,13 @@
 #include <adt/hashset.h>
 #include <adt/mappingset.h>
 
+typedef struct mapping item_t;
+
+#include "hashset.inc"
+
 struct mapping_set *
 mapping_set_create(const struct fsm_alloc *a,
-	unsigned long (*hash)(const void *a),
+	unsigned long (*hash)(const struct mapping *a),
 	int (*cmp)(const void *a, const void *b))
 {
 	assert(hash != NULL);

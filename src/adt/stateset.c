@@ -6,15 +6,34 @@
 
 #include <assert.h>
 #include <stddef.h>
-#include <stdlib.h>
 
 #include <adt/set.h>
 #include <adt/stateset.h>
 
+typedef struct fsm_state item_t;
+
+#include "set.inc"
+
+int
+fsm_state_cmpval(const void *a, const void *b)
+{
+	const struct fsm_state * const *pa = a, * const *pb = b;
+
+	assert(pa != NULL && *pa != NULL);
+	assert(pb != NULL && *pb != NULL);
+
+	/*
+	 * Each struct fsm_state * is allocated uniquely, so a shallow
+	 * pointer comparison suffices here. With the adjacency list, this
+	 * should eventually become a numeric comparison on a state index.
+	 */
+	return (*pa > *pb) - (*pa < *pb);
+}
+
 struct state_set *
 state_set_create(const struct fsm_alloc *a)
 {
-	return (struct state_set *) set_create(a, NULL);
+	return (struct state_set *) set_create(a, fsm_state_cmpval);
 }
 
 struct state_set *
@@ -46,7 +65,7 @@ state_set_add(struct state_set *set, struct fsm_state *st)
 struct fsm_state *
 state_set_add_bulk(struct state_set *set, struct fsm_state **st, size_t n)
 {
-	return (struct fsm_state *)set_add_bulk((struct set *)set, (void **)st, n);
+	return (struct fsm_state *)set_add_bulk((struct set *)set, st, n);
 }
 
 void
@@ -151,5 +170,4 @@ state_set_cmp(const struct state_set *a, const struct state_set *b)
 
 	return set_cmp((const struct set *) a, (const struct set *) b);
 }
-
 

@@ -17,7 +17,7 @@ struct mapping_iter {
 
 struct mapping_set *
 mapping_set_create(const struct fsm_alloc *a,
-	unsigned long (*hash)(const void *a),
+	unsigned long (*hash)(const struct mapping *a),
 	int (*cmp)(const void *a, const void *b));
 
 void
