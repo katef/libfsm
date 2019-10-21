@@ -30,7 +30,6 @@ struct hashset {
 	int (*cmp)(const void *, const void *);
 	unsigned long (*hash)(const void *);
 	float load;
-	unsigned int flags;
 };
 
 #define TOMBSTONE_HASH (~(0UL))
@@ -73,29 +72,6 @@ finditem(const struct hashset *hashset, unsigned long hash, const item_t *item, 
 	return 0;
 }
 
-static int
-hashset_initialize(const struct fsm_alloc *a,
-	struct hashset *hashset, size_t nb, float load,
-	unsigned long (*hash)(const void *a),
-	int (*cmp)(const void *a, const void *b))
-{
-	static const struct hashset init;
-	*hashset = init;
-	hashset->alloc = a;
-	hashset->hash = hash;
-	hashset->cmp = cmp;
-	hashset->load = load;
-	if (nb == 0) {
-		return 1;
-	}
-
-	hashset->buckets = f_calloc(hashset->alloc, nb, sizeof hashset->buckets[0]);
-	hashset->maxload = load * nb;
-	hashset->nbuckets = nb;
-
-	return hashset->buckets != NULL;
-}
-
 static struct hashset *
 hashset_create(const struct fsm_alloc *a,
 	unsigned long (*hash)(const void *a),
@@ -108,7 +84,23 @@ hashset_create(const struct fsm_alloc *a,
 		return NULL;
 	}
 
-	hashset_initialize(a, new, 0,DEFAULT_LOAD, hash, cmp);
+	new->alloc = a;
+	new->hash = hash;
+	new->cmp = cmp;
+	new->load = DEFAULT_LOAD;
+	new->nbuckets = DEFAULT_NBUCKETS;
+	new->maxload = new->load * new->nbuckets;
+	new->nitems = 0;
+
+	if (new->nbuckets == 0) {
+		new->buckets = NULL;
+	} else {
+		new->buckets = f_calloc(new->alloc, new->nbuckets, sizeof new->buckets[0]);
+		if (new->buckets == NULL) {
+			f_free(a, new);
+			return NULL;
+		}
+	}
 
 	return new;
 }
