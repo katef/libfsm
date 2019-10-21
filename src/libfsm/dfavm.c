@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <string.h>
 
 #include <fsm/fsm.h>
 #include "internal.h"
@@ -23,7 +24,7 @@
 // BRANCH, MATCH, and STOP.  The opcodes for each are:
 //
 //          76543210
-// BR       CCC1DDDD
+// BR       CCC10xDD
 // STOP     CCC00xxE
 // FETCH    00001xxE
 //
@@ -75,13 +76,12 @@
 //   Branch instructions always have a signed relative destination argument.
 //   The D bits specify its length:
 //
-//   DDDD
-//   0AAA   11-bit destination, 1-byte destination argument
-//   10AA   18-bit destination, 2-byte destination argument
-//   110x   32-bit destination, 4-byte destination argument, LSB ignored
+//   DD
+//   00    8-bit destination, 1-byte destination argument
+//   01   16-bit destination, 2-byte destination argument
+//   10   32-bit destination, 4-byte destination argument, LSB ignored
 //
-//   for 110x, x should be 0.  x=1 is reserved for future use
-//   111x is also reserved for future use for x=0 and x=1.
+//   DD=11 is reserved for future use
 //
 
 enum dfavm_instr_bits {
@@ -147,8 +147,9 @@ struct dfavm_op {
 };
 
 enum dfavm_state {
-	VM_STOPPED  = 0,
-	VM_MATCHING = 1,
+	VM_FAIL     = -1,
+	VM_MATCHING =  0,
+	VM_SUCCESS  =  1,
 };
 
 struct dfavm_op_pool {
@@ -795,11 +796,11 @@ reorder_basic_blocks(struct dfavm_assembler *a)
 	}
 }
 
-static const long min_dest_1b = -(1L << 10);
-static const long max_dest_1b =  (1L << 10)-1;
+static const long min_dest_1b = INT8_MIN;
+static const long max_dest_1b = INT8_MAX;
 
-static const long min_dest_2b = -(1L << 17);
-static const long max_dest_2b =  (1L << 17)-1;
+static const long min_dest_2b = INT16_MIN;
+static const long max_dest_2b = INT16_MAX;
 
 // static const long min_dest_4b = INT32_MIN;
 // static const long max_dest_4b = INT32_MAX;
@@ -858,6 +859,8 @@ assign_rel_dests(struct dfavm_assembler *a)
 		off += nenc;
 	}
 
+	a->nbytes = off;
+
 	/* iterate until we converge */
 	for (;;) {
 		int nchanged = 0;
@@ -896,13 +899,134 @@ assign_rel_dests(struct dfavm_assembler *a)
 			op->offset = off;
 			off += op->num_encoded_bytes;
 		}
+
+		a->nbytes = off;
 	}
 }
 
 static struct fsm_dfavm *
 encode_opasm(struct dfavm_assembler *a)
 {
-	(void)a;
+	static const struct fsm_dfavm zero;
+
+	struct fsm_dfavm *vm;
+	size_t total_bytes;
+	size_t off;
+	struct dfavm_op *op;
+	unsigned char *enc;
+
+	vm = malloc(sizeof *vm);
+	*vm = zero;
+
+	total_bytes = a->nbytes;
+
+	enc = malloc(total_bytes);
+
+	vm->ops = enc;
+	vm->len = total_bytes;
+
+	for (off = 0, op = a->linked; op != NULL; op = op->next) {
+		unsigned char bytes[6];
+		unsigned char cmp_bits, instr_bits, rest_bits;
+		int nb = 1;
+
+		switch (op->cmp) {
+		case VM_CMP_ALWAYS: cmp_bits = 0x0; break;
+		case VM_CMP_LE:     cmp_bits = 0x1; break;
+		case VM_CMP_GE:     cmp_bits = 0x2; break;
+		case VM_CMP_EQ:     cmp_bits = 0x3; break;
+		case VM_CMP_NE:     cmp_bits = 0x4; break;
+		default:
+			    goto error;
+		}
+
+		if (op->cmp != VM_CMP_ALWAYS) {
+			bytes[1] = op->cmp_arg;
+			nb++;
+		}
+
+		switch (op->instr) {
+		case VM_OP_STOP:
+			instr_bits = 0x0;
+			rest_bits  = (op->u.stop.end_bits == VM_END_SUCC) ? 0x1 : 0x0;
+			break;
+
+		case VM_OP_FETCH:
+			instr_bits = 0x1;
+			rest_bits  = (op->u.stop.end_bits == VM_END_SUCC) ? 0x1 : 0x0;
+			break;
+
+		case VM_OP_BRANCH:
+			instr_bits = 0x2;
+			switch (op->u.br.dest) {
+			case VM_DEST_SHORT:
+				{
+					int8_t dst;
+
+					assert(op->u.br.rel_dest >= INT8_MIN);
+					assert(op->u.br.rel_dest <= INT8_MAX);
+
+					rest_bits = 0;
+
+				       	dst = op->u.br.rel_dest;
+					memcpy(&bytes[nb], &dst, sizeof dst);
+					nb += sizeof dst;
+				}
+				break;
+
+			case VM_DEST_NEAR:
+				{
+					int16_t dst;
+
+					assert(op->u.br.rel_dest >= INT16_MIN);
+					assert(op->u.br.rel_dest <= INT16_MAX);
+
+					rest_bits = 1;
+
+				       	dst = op->u.br.rel_dest;
+					memcpy(&bytes[nb], &dst, sizeof dst);
+					nb += sizeof dst;
+				}
+				break;
+
+			case VM_DEST_FAR:
+				{
+					int32_t dst;
+
+					assert(op->u.br.rel_dest >= INT32_MIN);
+					assert(op->u.br.rel_dest <= INT32_MAX);
+
+					rest_bits = 2;
+
+				       	dst = op->u.br.rel_dest;
+					memcpy(&bytes[nb], &dst, sizeof dst);
+					nb += sizeof dst;
+				}
+				break;
+
+			case VM_DEST_NONE:
+			default:
+				goto error;
+			}
+
+			break;
+
+		default:
+			goto error;
+		}
+
+		memcpy(&enc[off], bytes, nb);
+		off += nb;
+
+		assert(off <= total_bytes);
+	}
+
+	assert(off == total_bytes);
+
+	return vm;
+
+error:
+	/* XXX - cleanup */
 	return NULL;
 }
 
@@ -922,6 +1046,8 @@ dump_states(FILE *f, struct dfavm_assembler *a)
 		fprintf(f, "%6zu |    ", count++);
 		print_op(f, op);
 	}
+
+	fprintf(f, "%6lu total bytes\n", (unsigned long)a->nbytes);
 }
 
 static struct fsm_dfavm *
