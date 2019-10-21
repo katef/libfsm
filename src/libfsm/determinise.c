@@ -272,8 +272,14 @@ carryend(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
 static unsigned long
 hash_single_state(const void *a)
 {
+	/*
+	 * We need only hash the pointer value here, because states are
+	 * allocated uniquely. Deep comparison is effectively undertaken
+	 * by the entire powerset construction algorithm here, and at
+	 * this point we only need a shallow comparison.
+	 */
 	const struct fsm_state *st = a;
-	return hashrec(st, sizeof *st);
+	return hashptr(st);
 }
 
 /* builds transitions of the glushkov NFA
