@@ -111,7 +111,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 
 	case AST_EXPR_ANY:
-		fprintf(f, "<TODO>"); /* XXX: %%x00-FF"); */
+		fprintf(f, "%%x00-FF");
 		break;
 
 	case AST_EXPR_REPEATED: {
