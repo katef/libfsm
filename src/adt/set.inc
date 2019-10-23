@@ -244,8 +244,25 @@ set_add_bulk(struct set *set, item_t **items, size_t n)
 	}
 
 	memcpy(&set->a[set->i], &items[0], n * sizeof items[0]);
-	set->i += n;
-	qsort(&set->a[0], set->i, sizeof set->a[0], set->cmp);
+	qsort(&set->a[0], set->i+n, sizeof set->a[0], set->cmp);
+
+	/* remove any duplicates */
+	{
+		size_t i, curr = 1, max = set->i+n;
+		item_t **items = set->a;
+		for (i=1; i < max; i++) {
+			int cmp = set->cmp(&items[i-1], &items[i]);
+
+			assert(cmp <= 0);
+			assert(curr <= i);
+
+			if (cmp != 0) {
+				items[curr++] = items[i];
+			}
+		}
+
+		set->i = curr;
+	}
 
 	return set->a[0];
 }
