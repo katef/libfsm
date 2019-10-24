@@ -14,8 +14,7 @@
 	ast_expr;
 	!ast_count;
 	!atom_count_flag;
-        !ast_char_class_id;
-        !ast_char_type_id;
+	!ast_char_class_id;
 	!char_class_ast;
 	!range_endpoint;
 

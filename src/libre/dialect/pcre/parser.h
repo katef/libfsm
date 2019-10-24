@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 227 "src/libre/parser.act"
+#line 238 "src/libre/parser.act"
 
 
 	#include <re/re.h>
@@ -28,7 +28,7 @@
 extern void p_re__pcre(flags, lex_state, act_state, err, t_ast__expr *);
 /* BEGINNING OF TRAILER */
 
-#line 915 "src/libre/parser.act"
+#line 917 "src/libre/parser.act"
 
 
 #line 35 "src/libre/dialect/pcre/parser.h"
