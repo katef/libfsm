@@ -146,6 +146,7 @@ struct dfavm_op {
 
 	unsigned char cmp_arg;
 	unsigned char num_encoded_bytes;
+	int in_trace;
 };
 
 enum dfavm_state {
@@ -976,37 +977,71 @@ eliminate_unnecessary_branches(struct dfavm_assembler *a)
 }
 
 static void
-reorder_basic_blocks(struct dfavm_assembler *a)
+order_basic_blocks(struct dfavm_assembler *a)
 {
 	size_t i,n;
 	struct dfavm_op **opp;
+	struct dfavm_op *st;
 
 	/* replace this with something that actually
 	 * orders basic blocks ...
 	 */
 
-	opp = &a->linked;
 	n = a->nstates;
 
-	/* begin with starting state */
-	*opp = a->ops[a->start];
-	opp = find_opchain_end(opp);
-
-	assert(opp != NULL);
-	assert(*opp == NULL);
-
+	/* mark all states as !in_trace */
 	for (i=0; i < n; i++) {
-		if (i == a->start) {
-			continue;
-		}
+		a->ops[i]->in_trace = 0;
+	}
 
-		*opp = a->ops[i];
+	opp = &a->linked;
+	*opp = NULL;
+
+	st = a->ops[a->start];
+	while (st != NULL) {
+		struct dfavm_op *branches[FSM_SIGMA_COUNT];  /* at most FSM_SIGMA_COUNT branches per state */
+		struct dfavm_op *instr;
+		size_t j,count;
+
+		/* add state to trace */
+		*opp = st;
 		opp = find_opchain_end(opp);
 
 		assert(opp != NULL);
 		assert(*opp == NULL);
-	}
 
+		st->in_trace = 1;
+
+		/* look for branches to states not in the trace.
+		 * Start at the last branch and work toward the first.
+		 */
+		count = 0;
+		for (instr=st; instr != NULL; instr=instr->next) {
+			if (instr->instr == VM_OP_BRANCH) {
+				branches[count++] = instr;
+			}
+			assert(count <= sizeof branches/sizeof branches[0]);
+		}
+
+		st = NULL;
+		for (j=count; j > 0; j--) {
+			struct dfavm_op *dest = branches[j-1]->u.br.dest_arg;
+			if (!dest->in_trace) {
+				st = dest;
+				break;
+			}
+		}
+
+		if (st == NULL) {
+			/* look for a new state ... */
+			for (j=0; j < n; j++) {
+				if (!a->ops[j]->in_trace) {
+					st = a->ops[j];
+					break;
+				}
+			}
+		}
+	}
 }
 
 static const long min_dest_1b = INT8_MIN;
@@ -1289,7 +1324,7 @@ dfavm_compile(struct ir *ir)
 
 	fixup_dests(&a);
 
-	reorder_basic_blocks(&a);
+	order_basic_blocks(&a);
 	eliminate_unnecessary_branches(&a);
 
 	assign_rel_dests(&a);
