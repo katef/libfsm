@@ -35,13 +35,6 @@ struct ast_pos {
 typedef struct fsm *
 char_class_constructor_fun(const struct fsm_options *opt);
 
-/* For a particular regex dialect, this function will look up
- * whether a name refers to a known character class, and if so,
- * return the constructor function for it.
- * Returns whether lookup suceeded. */
-typedef int
-re_dialect_char_class_fun(const char *name, char_class_constructor_fun **res);
-
 enum re_char_class_flags {
 	RE_CHAR_CLASS_FLAG_NONE = 0x00,
 	/* the class should be negated, e.g. [^aeiou] */
