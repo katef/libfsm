@@ -60,26 +60,6 @@ enum re_char_class_ast_type {
 	RE_CHAR_CLASS_AST_SUBTRACT
 };
 
-/* These are used for named character classes, such as [:alnum:]. */
-enum ast_char_class_id {
-	AST_CHAR_CLASS_ALNUM,
-	AST_CHAR_CLASS_ALPHA,
-	AST_CHAR_CLASS_ANY,
-	AST_CHAR_CLASS_ASCII,
-	AST_CHAR_CLASS_BLANK,
-	AST_CHAR_CLASS_CNTRL,
-	AST_CHAR_CLASS_DIGIT,
-	AST_CHAR_CLASS_GRAPH,
-	AST_CHAR_CLASS_LOWER,
-	AST_CHAR_CLASS_PRINT,
-	AST_CHAR_CLASS_PUNCT,
-	AST_CHAR_CLASS_SPACE,
-	AST_CHAR_CLASS_SPCHR,
-	AST_CHAR_CLASS_UPPER,
-	AST_CHAR_CLASS_WORD,
-	AST_CHAR_CLASS_XDIGIT
-};
-
 enum ast_range_endpoint_type {
 	AST_RANGE_ENDPOINT_LITERAL,
 	AST_RANGE_ENDPOINT_CHAR_TYPE,
@@ -159,9 +139,6 @@ re_char_class_ast_compile(struct re_char_class_ast *cca,
     struct fsm *fsm, enum re_flags flags,
     struct re_err *err, const struct fsm_options *opt,
     struct fsm_state *x, struct fsm_state *y);
-
-const char *
-re_char_class_id_str(enum ast_char_class_id id);
 
 
 /* Dialect-specific char class / char type handling.

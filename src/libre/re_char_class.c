@@ -119,31 +119,6 @@ re_char_class_ast_subtract(struct re_char_class_ast *ast,
 	return res;
 }
 
-const char *
-re_char_class_id_str(enum ast_char_class_id id)
-{
-	switch (id) {
-	case AST_CHAR_CLASS_ALNUM: return "ALNUM";
-	case AST_CHAR_CLASS_ALPHA: return "ALPHA";
-	case AST_CHAR_CLASS_ANY: return "ANY";
-	case AST_CHAR_CLASS_ASCII: return "ASCII";
-	case AST_CHAR_CLASS_BLANK: return "BLANK";
-	case AST_CHAR_CLASS_CNTRL: return "CNTRL";
-	case AST_CHAR_CLASS_DIGIT: return "DIGIT";
-	case AST_CHAR_CLASS_GRAPH: return "GRAPH";
-	case AST_CHAR_CLASS_LOWER: return "LOWER";
-	case AST_CHAR_CLASS_PRINT: return "PRINT";
-	case AST_CHAR_CLASS_PUNCT: return "PUNCT";
-	case AST_CHAR_CLASS_SPACE: return "SPACE";
-	case AST_CHAR_CLASS_SPCHR: return "SPCHR";
-	case AST_CHAR_CLASS_UPPER: return "UPPER";
-	case AST_CHAR_CLASS_WORD: return "WORD";
-	case AST_CHAR_CLASS_XDIGIT: return "XDIGIT";
-	default:
-		return "<matchfail>";
-	}
-}
-
 static void
 free_iter(struct re_char_class_ast *n)
 {
