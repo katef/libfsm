@@ -7,7 +7,7 @@
 #include <fsm/fsm.h>
 
 struct fsm *
-class_blank_fsm(const struct fsm_options *opt)
+class_hspace_fsm(const struct fsm_options *opt)
 {
 	struct fsm *fsm;
 	size_t i;
@@ -26,8 +26,18 @@ class_blank_fsm(const struct fsm_options *opt)
 		}
 	}
 
+	for (i = 0x00; i <= 0x08; i++) {
+		if (!fsm_addedge_literal(fsm, s[0], s[0], i)) { goto error; }
+	}
+	for (i = 0x0a; i <= 0x1f; i++) {
+		if (!fsm_addedge_literal(fsm, s[0], s[0], i)) { goto error; }
+	}
+	for (i = 0x21; i <= 0xff; i++) {
+		if (!fsm_addedge_literal(fsm, s[0], s[0], i)) { goto error; }
+	}
 	if (!fsm_addedge_literal(fsm, s[0], s[1], '\t')) { goto error; }
 	if (!fsm_addedge_literal(fsm, s[0], s[1], ' ')) { goto error; }
+	if (!fsm_addedge_any(fsm, s[1], s[1])) { goto error; }
 
 	fsm_setstart(fsm, s[0]);
 	fsm_setend(fsm, s[1], 1);

@@ -90,21 +90,30 @@ CLASS_alnum  = [[:alpha:][:digit:]]
 CLASS_alpha  = [[:upper:][:lower:]]
 CLASS_any    = .
 CLASS_ascii  = [\x00-\x7F]
-CLASS_blank  = [ \t]
 CLASS_cntrl  = [\x00-\x1F\x7F]
 CLASS_digit  = [0-9]
 CLASS_graph  = [\x21-\x7E]
+CLASS_hspace = [ \t] # aka blank
 CLASS_lower  = [a-z]
 CLASS_print  = [\x20-\x7E]
 CLASS_punct  = [!"\#$$%&'\''()*+,\-./:;<=>?@\\\^_`{|}~]|\[|]
-CLASS_space  = [ \t\r\n\v\f]
+CLASS_space  = [ \t\x0A\x0B\x0C\x0D]
 CLASS_spchr  = [ ]
 CLASS_upper  = [A-Z]
+CLASS_vspace = [\x0A\x0B\x0C\x0D]
 CLASS_word   = [[:alnum:]_]
 CLASS_xdigit = [A-Fa-f0-9]
 
-.for class in alnum alpha any ascii blank cntrl digit graph lower \
-	print punct space spchr upper word xdigit
+CLASS_notdigit  = [^[:digit:]]
+CLASS_nothspace = [^ \t]
+CLASS_notspace  = [^ [:space:]]
+CLASS_notvspace = [^\x0A\x0B\x0C\x0D]
+CLASS_notword   = [^[:word:]]
+CLASS_notnl     = [^\n]
+
+.for class in alnum alpha any ascii cntrl digit graph hspace lower \
+	print punct space spchr upper vspace word xdigit \
+	notdigit nothspace notspace notvspace notword notnl
 
 src/libre/class/${class}.c:
 	${RE} -pl api -e class_${class}_ '${CLASS_${class}}' > ${.TARGET}

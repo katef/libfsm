@@ -21,7 +21,7 @@ static const struct {
 	{ "[:alnum:]", class_alnum_fsm },
 	{ "[:alpha:]", class_alpha_fsm },
 	{ "[:ascii:]", class_ascii_fsm },
-	{ "[:blank:]", class_blank_fsm },
+	{ "[:blank:]", class_hspace_fsm },
 	{ "[:cntrl:]", class_cntrl_fsm },
 	{ "[:digit:]", class_digit_fsm },
 	{ "[:graph:]", class_graph_fsm },
