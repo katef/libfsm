@@ -33,18 +33,18 @@ static const struct {
 	{ "[:word:]", class_word_fsm },
 	{ "[:xdigit:]", class_xdigit_fsm },
 		
-	{ "\\d", class_digit_fsm },
-	{ "\\h", NULL            }, /* horizontal ws: [ \t] */
-	{ "\\s", class_space_fsm }, /* [\h\v] */
-	{ "\\v", NULL            }, /* vertical ws: [\x0a\x0b\x0c\x0d] */
-	{ "\\w", class_word_fsm  },
+	{ "\\d", class_digit_fsm     },
+	{ "\\h", class_hspace_fsm    },
+	{ "\\s", class_space_fsm     },
+	{ "\\v", class_vspace_fsm    },
+	{ "\\w", class_word_fsm      },
 
-	{ "\\D", NULL }, /* [^\d] */
-	{ "\\H", NULL }, /* [^\h] */
-	{ "\\S", NULL }, /* [^\s] */
-	{ "\\V", NULL }, /* [^\v] */
-	{ "\\W", NULL }, /* [^\w] */
-	{ "\\N", NULL }  /* [^\n] */
+	{ "\\D", class_notdigit_fsm  }, /* [^\d] */
+	{ "\\H", class_nothspace_fsm }, /* [^\h] */
+	{ "\\S", class_notspace_fsm  }, /* [^\s] */
+	{ "\\V", class_notvspace_fsm }, /* [^\v] */
+	{ "\\W", class_notword_fsm   }, /* [^\w] */
+	{ "\\N", class_notnl_fsm     }  /* [^\n] */
 };
 
 enum re_dialect_char_class_lookup_res
@@ -57,9 +57,7 @@ re_char_class_pcre(const char *name, char_class_constructor_fun **res)
 
 	for (i = 0; i < sizeof classes / sizeof *classes; i++) {
 		if (0 == strcmp(classes[i].name, name)) {
-			if (classes[i].ctor == NULL) {
-				return RE_CLASS_UNSUPPORTED;
-			}
+			assert(classes[i].ctor != NULL);
 
 			*res = classes[i].ctor;
 			return RE_CLASS_FOUND;
