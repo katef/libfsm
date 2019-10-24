@@ -98,10 +98,12 @@ enum dfavm_instr_bits {
 
 enum dfavm_cmp_bits {
 	VM_CMP_ALWAYS = 0,
-	VM_CMP_LE     = 1,
-	VM_CMP_GE     = 2,
-	VM_CMP_EQ     = 3,
-	VM_CMP_NE     = 4,
+	VM_CMP_LT     = 1,
+	VM_CMP_LE     = 2,
+	VM_CMP_GE     = 3,
+	VM_CMP_GT     = 4,
+	VM_CMP_EQ     = 5,
+	VM_CMP_NE     = 6,
 };
 
 enum dfavm_end_bits {
@@ -192,9 +194,11 @@ print_op(FILE *f, struct dfavm_op *op)
 
 	switch (op->cmp) {
 	case VM_CMP_ALWAYS: cmp = "";   break;
+	case VM_CMP_LT:     cmp = "LT"; break;
 	case VM_CMP_LE:     cmp = "LE"; break;
 	case VM_CMP_EQ:     cmp = "EQ"; break;
 	case VM_CMP_GE:     cmp = "GE"; break;
+	case VM_CMP_GT:     cmp = "GT"; break;
 	case VM_CMP_NE:     cmp = "NE"; break;
 	default:            cmp = "??"; break;
 	}
@@ -892,6 +896,86 @@ struct dfavm_op **find_opchain_end(struct dfavm_op **opp)
 }
 
 static void
+eliminate_unnecessary_branches(struct dfavm_assembler *a)
+{
+	int count;
+
+	do {
+		struct dfavm_op **opp;
+
+		count = 0;
+
+		/* basic pass to eliminate unnecessary branches; branches to the
+		 * next instruction can be elided
+		 */
+		for (opp = &a->linked; *opp != NULL;) {
+			struct dfavm_op *next, *dest;
+
+			if ((*opp)->instr != VM_OP_BRANCH) {
+				opp = &(*opp)->next;
+				continue;
+			}
+
+			dest = (*opp)->u.br.dest_arg;
+			next = (*opp)->next;
+
+			assert(dest != NULL);
+
+			if (dest == next) {
+				// branch is to next instruction, eliminate
+				//
+				// condition doesn't matter since both cond and !cond
+				// will end up at the same place
+				*opp = next;
+				count++;
+				continue;
+			}
+
+			if (next != NULL && dest == next->next &&
+					(next->instr == VM_OP_BRANCH || next->instr == VM_OP_STOP) &&
+					(*opp)->cmp != VM_CMP_ALWAYS && next->cmp == VM_CMP_ALWAYS) {
+				/* rewrite last two instructions to eliminate a
+				 * branch
+				 */
+				struct dfavm_op rewrite1 = *next, rewrite2 = **opp;  // swapped
+				int ok = 1;
+
+				// invert the condition of current branch
+				switch (rewrite2.cmp) {
+				case VM_CMP_LT: rewrite1.cmp = VM_CMP_GE; break;
+				case VM_CMP_LE: rewrite1.cmp = VM_CMP_GT; break;
+				case VM_CMP_EQ: rewrite1.cmp = VM_CMP_NE; break;
+				case VM_CMP_GE: rewrite1.cmp = VM_CMP_LT; break;
+				case VM_CMP_GT: rewrite1.cmp = VM_CMP_LE; break;
+				case VM_CMP_NE: rewrite1.cmp = VM_CMP_EQ; break;
+
+				case VM_CMP_ALWAYS:
+				default:
+					// something is wrong
+					ok = 0;
+					break;
+				}
+
+				if (ok) {
+					rewrite1.cmp_arg = rewrite2.cmp_arg;
+
+					rewrite2.cmp = VM_CMP_ALWAYS;
+					rewrite2.cmp_arg = 0;
+
+					**opp = rewrite1;
+					*next = rewrite2;
+					count++;
+					continue;
+				}
+			}
+
+			opp = &(*opp)->next;
+		}
+
+	} while (count > 0);
+}
+
+static void
 reorder_basic_blocks(struct dfavm_assembler *a)
 {
 	size_t i,n;
@@ -923,26 +1007,6 @@ reorder_basic_blocks(struct dfavm_assembler *a)
 		assert(*opp == NULL);
 	}
 
-	/* basic pass to eliminate unnecessary branches; branches to the
-	 * next instruction can be elided
-	 */
-	for (opp = &a->linked; *opp != NULL;) {
-		if ((*opp)->instr != VM_OP_BRANCH) {
-			opp = &(*opp)->next;
-			continue;
-		}
-
-		if ((*opp)->u.br.dest_arg != (*opp)->next) {
-			opp = &(*opp)->next;
-			continue;
-		}
-
-		// branch is to next instruction, eliminate
-		//
-		// condition doesn't matter since both cond and !cond
-		// will end up at the same place
-		*opp = (*opp)->next;
-	}
 }
 
 static const long min_dest_1b = INT8_MIN;
@@ -1226,6 +1290,7 @@ dfavm_compile(struct ir *ir)
 	fixup_dests(&a);
 
 	reorder_basic_blocks(&a);
+	eliminate_unnecessary_branches(&a);
 
 	assign_rel_dests(&a);
 
