@@ -8,38 +8,32 @@
 
 #include "../../class.h"
 
-struct pairs {
-	const char *s;
+static const struct {
+	const char *name;
 	char_class_constructor_fun *ctor;
-};
-static const struct pairs class_table[] = {
-	{ "ALNUM", class_alnum_fsm },
-	{ "ALPHA", class_alpha_fsm },
-	{ "DIGIT", class_digit_fsm },
-	{ "LOWER", class_lower_fsm },
-	{ "SPACE", class_space_fsm },
-	{ "UPPER", class_upper_fsm },
-	{ "WHITESPACE", class_space_fsm },
-	{ NULL, NULL },
+} classes[] = {
+	{ "[:ALNUM:]", class_alnum_fsm },
+	{ "[:ALPHA:]", class_alpha_fsm },
+	{ "[:DIGIT:]", class_digit_fsm },
+	{ "[:LOWER:]", class_lower_fsm },
+	{ "[:SPACE:]", class_space_fsm },
+	{ "[:UPPER:]", class_upper_fsm },
+	{ "[:WHITESPACE:]", class_space_fsm }
 };
 
 enum re_dialect_char_class_lookup_res
 re_char_class_sql(const char *name, char_class_constructor_fun **res)
 {
-	const struct pairs *t = NULL;
 	size_t i;
-	assert(res != NULL);
+
 	assert(name != NULL);
+	assert(res != NULL);
 
-	if (0 == strncmp("[:", name, 2)) {
-		name += 2;
-		t = class_table;
-	}
+	for (i = 0; i < sizeof classes / sizeof *classes; i++) {
+		if (0 == strcmp(classes[i].name, name)) {
+			assert(classes[i].ctor != NULL);
 
-	for (i = 0; t && t[i].s != NULL; i++) {
-		if (0 == strncmp(t[i].s, name, strlen(t[i].s))) {
-			if (t[i].ctor == NULL) { return RE_CLASS_UNSUPPORTED; }
-			*res = t[i].ctor;
+			*res = classes[i].ctor;
 			return RE_CLASS_FOUND;
 		}
 	}	
