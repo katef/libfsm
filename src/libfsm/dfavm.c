@@ -161,6 +161,7 @@ struct dfavm_op_pool {
 
 struct dfavm_assembler {
 	struct dfavm_op_pool *pool;
+	struct dfavm_op *freelist;
 
 	struct dfavm_op **ops;
 	struct dfavm_op *linked;
@@ -304,13 +305,44 @@ pool_newop(struct dfavm_op_pool **poolp)
 	return &p->ops[p->top++];
 }
 
+static void
+opasm_free(struct dfavm_assembler *a, struct dfavm_op *op)
+{
+	static const struct dfavm_op zero;
+
+	*op = zero;
+	op->next = a->freelist;
+	a->freelist = op;
+}
+
+static void
+opasm_free_list(struct dfavm_assembler *a, struct dfavm_op *op)
+{
+	struct dfavm_op *next;
+	while (op != NULL) {
+		next = op->next;
+		opasm_free(a,op);
+		op = next;
+	}
+}
+
 static struct dfavm_op *
 opasm_new(struct dfavm_assembler *a, enum dfavm_instr_bits instr, enum dfavm_cmp_bits cmp, unsigned char arg)
 {
+	static const struct dfavm_op zero;
+
 	struct dfavm_op *op;
 
-	op = pool_newop(&a->pool);
+	if (a->freelist != NULL) {
+		op = a->freelist;
+		a->freelist = op->next;
+	} else {
+		op = pool_newop(&a->pool);
+	}
+
 	if (op != NULL) {
+		*op = zero;
+
 		op->count = a->count++;
 
 		op->cmp   = cmp;
@@ -383,16 +415,38 @@ struct dfa_table {
 	struct {
 		long to;
 		struct ir_range syms;
+	} longest_run;
+
+	struct {
+		unsigned char sym[FSM_SIGMA_COUNT];
+		int count;
+	} discontig;
+
+	struct {
+		long to;
+		int count;
 	} mode;
 };
+
+static int
+cmp_mode_dests(const void *a, const void *b) {
+	const long *va = a;
+	const long *vb = b;
+
+	return (*va > *vb) - (*va < *vb);
+}
 
 static void
 analyze_table(struct dfa_table *table)
 {
-	int i, nerr, ndst, max_run;
+	static const struct dfa_table zero;
+
+	int i, lo, nerr, ndst, max_run;
 	int run_lo, run_hi;
 	int dst_ind_lo, dst_ind_hi;
-	long lo, dlo, run_to;
+	long dlo, run_to;
+
+	long mode_dests[FSM_SIGMA_COUNT];
 
 	lo = 0;
 	dlo = table->tbl[0];
@@ -408,6 +462,9 @@ analyze_table(struct dfa_table *table)
 	run_hi = -1;
 	run_to = -1;
 
+	mode_dests[0] = dlo;
+	table->discontig = zero.discontig;
+
 	for (i=1; i < FSM_SIGMA_COUNT+1; i++) {
 		long dst = -1;
 
@@ -422,6 +479,8 @@ analyze_table(struct dfa_table *table)
 					dst_ind_lo = i;
 				}
 			}
+
+			mode_dests[i] = dst;
 		}
 
 		if (i == FSM_SIGMA_COUNT || dst != dlo) {
@@ -432,6 +491,10 @@ analyze_table(struct dfa_table *table)
 				run_lo  = lo;
 				run_hi  = i-1;
 				run_to  = dlo;
+			}
+
+			if (len == 1) {
+				table->discontig.sym[table->discontig.count++] = lo;
 			}
 
 			lo = i;
@@ -446,18 +509,128 @@ analyze_table(struct dfa_table *table)
 	table->dst_ind_hi = dst_ind_hi;
 
 	if (max_run > 0) {
-		table->mode.to = run_to;
-		table->mode.syms.start = run_lo;
-		table->mode.syms.end   = run_hi;
+		table->longest_run.to = run_to;
+		table->longest_run.syms.start = run_lo;
+		table->longest_run.syms.end   = run_hi;
 	}
+
+	table->mode.to = -1;
+	table->mode.count = 0;
+
+	// determine the mode
+	qsort(&mode_dests[0], sizeof mode_dests / sizeof mode_dests[0], sizeof mode_dests[0], cmp_mode_dests);
+
+	for (lo=0,i=1; i < FSM_SIGMA_COUNT+1; i++) {
+		if (i == FSM_SIGMA_COUNT || mode_dests[lo] != mode_dests[i]) {
+			int count = i-lo;
+			if (count > table->mode.count) {
+				table->mode.to    = mode_dests[lo];
+				table->mode.count = count;
+				lo = i;
+			}
+		}
+	}
+}
+
+static int
+xlate_table_ranges(struct dfavm_assembler *a, struct dfa_table *table, struct dfavm_op **opp)
+{
+	int i,lo;
+	int count = 0;
+
+	lo = 0;
+	for (i=1; i < FSM_SIGMA_COUNT; i++) {
+		int64_t dst;
+		struct dfavm_op *op;
+
+		assert(lo < FSM_SIGMA_COUNT);
+
+		if (table->tbl[lo] != table->tbl[i]) {
+			dst = table->tbl[lo];
+
+			/* emit instr */
+			int arg = i-1;
+			enum dfavm_cmp_bits cmp = (i > lo+1) ? VM_CMP_LE : VM_CMP_EQ;
+
+			op = (dst < 0)
+				? opasm_new_stop(a, cmp, arg, VM_END_FAIL)
+				: opasm_new_branch(a, cmp, arg, dst);
+
+			if (op == NULL) {
+				return -1;
+			}
+
+			*opp = op;
+			opp = &(*opp)->next;
+			count++;
+
+			lo = i;
+		}
+	}
+
+	if (lo < FSM_SIGMA_COUNT-1) {
+		int64_t dst = table->tbl[lo];
+		*opp = (dst < 0)
+			? opasm_new_stop(a, VM_CMP_ALWAYS, 0, VM_END_FAIL)
+			: opasm_new_branch(a, VM_CMP_ALWAYS, 0, dst);
+		if (*opp == NULL) {
+			return -1;
+		}
+		opp = &(*opp)->next;
+		count++;
+	}
+
+	return count;
+}
+
+static int
+xlate_table_cases(struct dfavm_assembler *a, struct dfa_table *table, struct dfavm_op **opp)
+{
+	int i, count = 0;
+	int64_t mdst = table->mode.to;
+
+	for (i=0; i < FSM_SIGMA_COUNT; i++) {
+		int64_t dst;
+
+		dst = table->tbl[i];
+
+		if (dst == mdst) {
+			continue;
+		}
+
+		*opp = (dst < 0)
+			? opasm_new_stop(a, VM_CMP_EQ, i, VM_END_FAIL)
+			: opasm_new_branch(a, VM_CMP_EQ, i, dst);
+		if (*opp == NULL) {
+			return -1;
+		}
+		opp = &(*opp)->next;
+		count++;
+	}
+
+	*opp = (mdst < 0)
+		? opasm_new_stop(a, VM_CMP_ALWAYS, 0, VM_END_FAIL)
+		: opasm_new_branch(a, VM_CMP_ALWAYS, 0, mdst);
+	if (*opp == NULL) {
+		return -1;
+	}
+	opp = &(*opp)->next;
+	count++;
+
+	return count;
 }
 
 static int
 initial_translate_table(struct dfavm_assembler *a, struct dfa_table *table, struct dfavm_op **opp)
 {
-	int i,lo;
+	int count, best_count;
+	struct dfavm_op *op, *best_op;
 
+	assert(a     != NULL);
 	assert(table != NULL);
+	assert(opp   != NULL);
+
+	assert(*opp == NULL);
 
 	analyze_table(table);
 
@@ -491,45 +664,20 @@ initial_translate_table(struct dfavm_assembler *a, struct dfa_table *table, stru
 		return 0;
 	}
 
-	lo = 0;
-	for (i=1; i < FSM_SIGMA_COUNT; i++) {
-		int64_t dst;
-		struct dfavm_op *op;
+	best_op = NULL;
+	best_count = xlate_table_ranges(a, table, &best_op);
 
-		assert(lo < FSM_SIGMA_COUNT);
+	op = NULL;
+	count = xlate_table_cases(a, table, &op);
 
-		if (table->tbl[lo] != table->tbl[i]) {
-			dst = table->tbl[lo];
-
-			/* emit instr */
-			int arg = i-1;
-			enum dfavm_cmp_bits cmp = (i > lo+1) ? VM_CMP_LE : VM_CMP_EQ;
-
-			op = (dst < 0)
-				? opasm_new_stop(a, cmp, arg, VM_END_FAIL)
-				: opasm_new_branch(a, cmp, arg, dst);
-
-			if (op == NULL) {
-				return -1;
-			}
-
-			*opp = op;
-			opp = &(*opp)->next;
-
-			lo = i;
-		}
+	if (count < best_count) {
+		opasm_free_list(a,best_op);
+		best_op = op;
+	} else {
+		opasm_free_list(a,op);
 	}
 
-	if (lo < FSM_SIGMA_COUNT-1) {
-		int64_t dst = table->tbl[lo];
-		*opp = (dst < 0)
-			? opasm_new_stop(a, VM_CMP_ALWAYS, 0, VM_END_FAIL)
-			: opasm_new_branch(a, VM_CMP_ALWAYS, 0, dst);
-		if (*opp == NULL) {
-			return -1;
-		}
-		opp = &(*opp)->next;
-	}
+	*opp = best_op;
 
 	return 0;
 }
@@ -648,6 +796,7 @@ initial_translate_state(struct dfavm_assembler *a, struct ir *ir, size_t ind)
 
 	*opp = opasm_new_fetch(a, ind, (st->isend) ? VM_END_SUCC : VM_END_FAIL);
 	opp = &(*opp)->next;
+	assert(*opp == NULL);
 
 	switch (st->strategy) {
 	case IR_NONE:
