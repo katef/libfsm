@@ -51,7 +51,6 @@
 
 	#define DIALECT_PARSE  CAT(parse_re_, DIALECT)
 	#define DIALECT_CHAR_CLASS  CAT(re_char_class_, DIALECT)
-	#define DIALECT_CHAR_TYPE   CAT(re_char_type_, DIALECT)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
 	#define DIALECT_ENTRY CAT(p_re__, DIALECT)
