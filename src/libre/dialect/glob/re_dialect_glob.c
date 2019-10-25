@@ -4,8 +4,10 @@
  * See LICENCE for the full copyright terms.
  */
 
+#include <stddef.h>
+
 #include "../../class.h"
-#include "../../re_char_class.h"
+#include "../../class_lookup.h"
 
 char_class_constructor *
 re_char_class_glob(const char *name)

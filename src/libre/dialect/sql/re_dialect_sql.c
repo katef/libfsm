@@ -4,8 +4,12 @@
  * See LICENCE for the full copyright terms.
  */
 
+#include <assert.h>
+#include <string.h>
+#include <stddef.h>
+
 #include "../../class.h"
-#include "../../re_char_class.h"
+#include "../../class_lookup.h"
 
 static const struct {
 	const char *name;

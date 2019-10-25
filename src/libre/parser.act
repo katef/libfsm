@@ -30,6 +30,7 @@
 	#include <ctype.h>
 
 	#include "libre/class.h"
+	#include "libre/class_lookup.h"
 	#include "libre/re_char_class.h"
 	#include "libre/re_ast.h"
 
