@@ -3,9 +3,13 @@
 #ifndef RE_CLASS_H
 #define RE_CLASS_H
 
+struct fsm;
 struct fsm_options;
 
 typedef struct fsm *(char_class_constructor)(const struct fsm_options *opt);
+
+const char *
+class_name(char_class_constructor *ctor);
 
 char_class_constructor utf8_Adlam_fsm;
 char_class_constructor utf8_Ahom_fsm;

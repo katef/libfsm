@@ -129,9 +129,13 @@ src/libre/class.h:
 	printf "#ifndef RE_CLASS_H\n" >> ${.TARGET}
 	printf "#define RE_CLASS_H\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
+	printf "struct fsm;\n" >> ${.TARGET}
 	printf "struct fsm_options;\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "typedef struct fsm *(char_class_constructor)(const struct fsm_options *opt);\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "const char *\n" >> ${.TARGET}
+	printf "class_name(char_class_constructor *ctor);\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	for class in ${SRC:Msrc/libre/class/*.c:T:R:Mutf8_*}; do \
 		printf "char_class_constructor %s_fsm;\n" $${class}; \
@@ -168,4 +172,46 @@ ${BUILD}/lib/libre.opic: ${BUILD}/${src:R}.opic
 CFLAGS.${src} += -Wno-overflow
 .endfor
 .endif
+
+gen:: src/libre/class_name.c
+src/libre/class_name.c:
+	printf "/* generated */\n" > ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "#include <assert.h>\n" >> ${.TARGET}
+	printf "#include <string.h>\n" >> ${.TARGET}
+	printf "#include <stddef.h>\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "#include \"class.h\"\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "static struct {\n" >> ${.TARGET}
+	printf "\tchar_class_constructor *ctor;\n" >> ${.TARGET}
+	printf "\tconst char *name;\n" >> ${.TARGET}
+	printf "} classes[] = {\n" >> ${.TARGET}
+	for class in ${SRC:Msrc/libre/class/*.c:T:R:Nutf8_*}; do \
+		printf "\t{ class_%s_fsm, \"%s\" },\n" $${class} $${class}; \
+	done >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	for class in ${SRC:Msrc/libre/class/*.c:T:R:Mutf8_*}; do \
+		printf "\t{ %s_fsm, \"%s\" },\n" $${class} "`echo $${class#utf8_} | sed 's/_/ /g'`"; \
+	done >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "\t{ NULL, NULL }\n" >> ${.TARGET} # XXX: workaround to avoid a trailing comma
+	printf "};\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "const char *\n" >> ${.TARGET}
+	printf "class_name(char_class_constructor *ctor)\n" >> ${.TARGET}
+	printf "{\n" >> ${.TARGET}
+	printf "\tsize_t i;\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "\tassert(ctor != NULL);\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "\tfor (i = 0; i < sizeof classes / sizeof *classes; i++) {\n" >> ${.TARGET}
+	printf "\t\tif (ctor == classes[i].ctor) {\n" >> ${.TARGET}
+	printf "\t\t\treturn classes[i].name;\n" >> ${.TARGET}
+	printf "\t\t}\n" >> ${.TARGET}
+	printf "\t}\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "\treturn NULL;\n" >> ${.TARGET}
+	printf "}\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
 
