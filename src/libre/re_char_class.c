@@ -4,14 +4,14 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "re_char_class.h"
-#include "re_ast.h"
-#include "class.h"
-
 #include <string.h>
 #include <ctype.h>
 #include <limits.h>
 #include <errno.h>
+
+#include "class.h"
+#include "re_char_class.h"
+#include "re_ast.h"
 
 #include "libfsm/internal.h" /* XXX */
 
@@ -43,7 +43,7 @@ cc_add_range(struct re_char_class *cc,
     const struct ast_range_endpoint *to);
 
 static int
-cc_add_named_class(struct re_char_class *cc, char_class_constructor_fun *ctor);
+cc_add_named_class(struct re_char_class *cc, char_class_constructor *ctor);
 
 static int
 cc_invert(struct re_char_class *cc);
@@ -98,7 +98,7 @@ re_char_class_ast_flags(enum re_char_class_flags flags)
 }
 
 struct re_char_class_ast *
-re_char_class_ast_named_class(char_class_constructor_fun *ctor)
+re_char_class_ast_named_class(char_class_constructor *ctor)
 {
 	struct re_char_class_ast *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
@@ -492,7 +492,7 @@ cc_add_range(struct re_char_class *cc,
 }
 
 static int
-cc_add_named_class(struct re_char_class *cc, char_class_constructor_fun *ctor)
+cc_add_named_class(struct re_char_class *cc, char_class_constructor *ctor)
 {
 	struct fsm *q;
 	int r;

@@ -9,6 +9,7 @@
 
 #include <print/esc.h>
 
+#include "../class.h"
 #include "../re_ast.h"
 #include "../re_char_class.h"
 #include "../print.h"

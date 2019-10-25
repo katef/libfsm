@@ -4,6 +4,7 @@
  * See LICENCE for the full copyright terms.
  */
 
+#include "../../class.h"
 #include "../../re_char_class.h"
 
 /*
@@ -12,11 +13,9 @@
  * declare in the parser.
  */
 
-#include "../../class.h"
-
 static const struct {
 	const char *name;
-	char_class_constructor_fun *ctor;
+	char_class_constructor *ctor;
 } classes[] = {
 	{ "[:alnum:]", class_alnum_fsm },
 	{ "[:alpha:]", class_alpha_fsm },
@@ -48,7 +47,7 @@ static const struct {
 };
 
 enum re_dialect_char_class_lookup_res
-re_char_class_pcre(const char *name, char_class_constructor_fun **res)
+re_char_class_pcre(const char *name, char_class_constructor **res)
 {
 	size_t i;
 

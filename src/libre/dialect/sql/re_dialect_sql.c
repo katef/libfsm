@@ -4,13 +4,12 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "../../re_char_class.h"
-
 #include "../../class.h"
+#include "../../re_char_class.h"
 
 static const struct {
 	const char *name;
-	char_class_constructor_fun *ctor;
+	char_class_constructor *ctor;
 } classes[] = {
 	{ "[:ALNUM:]", class_alnum_fsm },
 	{ "[:ALPHA:]", class_alpha_fsm },
@@ -22,7 +21,7 @@ static const struct {
 };
 
 enum re_dialect_char_class_lookup_res
-re_char_class_sql(const char *name, char_class_constructor_fun **res)
+re_char_class_sql(const char *name, char_class_constructor **res)
 {
 	size_t i;
 

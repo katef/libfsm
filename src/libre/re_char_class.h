@@ -28,13 +28,6 @@ struct ast_pos {
 	unsigned col;
 };
 
-
-/* typedef for character class constructors whose prototypes
- * appear in class.h -- this typedef should be moved there
- * later. */
-typedef struct fsm *
-char_class_constructor_fun(const struct fsm_options *opt);
-
 enum re_char_class_flags {
 	RE_CHAR_CLASS_FLAG_NONE = 0x00,
 	/* the class should be negated, e.g. [^aeiou] */
@@ -65,7 +58,7 @@ struct ast_range_endpoint {
 			unsigned char c;
 		} literal;
 		struct {
-			char_class_constructor_fun *ctor;
+			char_class_constructor *ctor;
 		} char_class;
 	} u;
 };
@@ -87,7 +80,7 @@ struct re_char_class_ast {
 			struct ast_pos end;
 		} range;
 		struct {
-			char_class_constructor_fun *ctor;
+			char_class_constructor *ctor;
 		} named;
 		struct {
 			enum re_char_class_flags f;
@@ -118,7 +111,7 @@ struct re_char_class_ast *
 re_char_class_ast_flags(enum re_char_class_flags flags);
 
 struct re_char_class_ast *
-re_char_class_ast_named_class(char_class_constructor_fun *ctor);
+re_char_class_ast_named_class(char_class_constructor *ctor);
 
 struct re_char_class_ast *
 re_char_class_ast_subtract(struct re_char_class_ast *ast,
@@ -146,7 +139,7 @@ enum re_dialect_char_class_lookup_res {
 };
 
 typedef enum re_dialect_char_class_lookup_res
-re_dialect_char_class_lookup(const char *name, char_class_constructor_fun **res);
+re_dialect_char_class_lookup(const char *name, char_class_constructor **res);
 
 re_dialect_char_class_lookup re_char_class_literal;
 re_dialect_char_class_lookup re_char_class_like;
