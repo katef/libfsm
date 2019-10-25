@@ -21,6 +21,7 @@
 	#include <ctype.h>
 
 	#include "libre/class.h"
+	#include "libre/class_lookup.h"
 	#include "libre/re_char_class.h"
 	#include "libre/re_ast.h"
 
@@ -42,7 +43,6 @@
 
 	#define DIALECT_PARSE  CAT(parse_re_, DIALECT)
 	#define DIALECT_CHAR_CLASS  CAT(re_char_class_, DIALECT)
-	#define DIALECT_CHAR_TYPE   CAT(re_char_type_, DIALECT)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
 	#define DIALECT_ENTRY CAT(p_re__, DIALECT)
@@ -278,7 +278,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 		/* END OF INLINE: list-of-nodes::literal */
 		/* BEGINNING OF ACTION: ast-expr-literal */
 		{
-#line 576 "src/libre/parser.act"
+#line 566 "src/libre/parser.act"
 
 		(ZIl) = re_ast_expr_literal((ZIc));
 		if ((ZIl) == NULL) { goto ZL1; }
@@ -300,7 +300,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					}
 					/* BEGINNING OF ACTION: ast-expr-concat */
 					{
-#line 566 "src/libre/parser.act"
+#line 556 "src/libre/parser.act"
 
 		(ZInode) = re_ast_expr_concat((ZIl), (ZIr));
 		if ((ZInode) == NULL) { goto ZL1; }
@@ -316,7 +316,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 
 					/* BEGINNING OF ACTION: ast-expr-empty */
 					{
-#line 561 "src/libre/parser.act"
+#line 551 "src/libre/parser.act"
 
 		(ZIr) = re_ast_expr_empty();
 		if ((ZIr) == NULL) { goto ZL1; }
@@ -326,7 +326,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					/* END OF ACTION: ast-expr-empty */
 					/* BEGINNING OF ACTION: ast-expr-concat */
 					{
-#line 566 "src/libre/parser.act"
+#line 556 "src/libre/parser.act"
 
 		(ZInode) = re_ast_expr_concat((ZIl), (ZIr));
 		if ((ZInode) == NULL) { goto ZL1; }
@@ -373,7 +373,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				{
 					/* BEGINNING OF ACTION: ast-expr-empty */
 					{
-#line 561 "src/libre/parser.act"
+#line 551 "src/libre/parser.act"
 
 		(ZInode) = re_ast_expr_empty();
 		if ((ZInode) == NULL) { goto ZL1; }
@@ -402,7 +402,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 533 "src/libre/parser.act"
+#line 523 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
@@ -427,7 +427,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 916 "src/libre/parser.act"
+#line 906 "src/libre/parser.act"
 
 
 	static int
