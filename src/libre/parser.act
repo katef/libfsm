@@ -430,20 +430,10 @@
 	@};
 
 	NAMED_CHAR_CLASS: () -> (id :ast_char_class_id, start :pos, end :pos) = @{
-		enum re_dialect_char_class_lookup_res res;
-		res = DIALECT_CHAR_CLASS(lex_state->buf.a, &@id);
-
-		switch (res) {
-		default:
-		case RE_CLASS_NOT_FOUND:
+		@id = DIALECT_CHAR_CLASS(lex_state->buf.a);
+		if (@id == NULL) {
 			/* syntax error -- unrecognized class */
 			@!;
-		case RE_CLASS_UNSUPPORTED:
-			err->e = RE_EXUNSUPPORTD;
-			@!;
-		case RE_CLASS_FOUND:
-			/* proceed below */
-			break;
 		}
 
 		@start = lex_state->lx.start;

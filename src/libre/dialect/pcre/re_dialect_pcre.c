@@ -70,23 +70,21 @@ pcre_class_name(const char *name)
 	return NULL;
 }
 
-enum re_dialect_char_class_lookup_res
-re_char_class_pcre(const char *name, char_class_constructor **res)
+char_class_constructor *
+re_char_class_pcre(const char *name)
 {
 	size_t i;
 
 	assert(name != NULL);
-	assert(res != NULL);
 
 	for (i = 0; i < sizeof classes / sizeof *classes; i++) {
 		if (0 == strcmp(classes[i].name, name)) {
 			assert(classes[i].ctor != NULL);
 
-			*res = classes[i].ctor;
-			return RE_CLASS_FOUND;
+			return classes[i].ctor;
 		}
 	}	
 
-	return RE_CLASS_NOT_FOUND;
+	return NULL;
 }
 

@@ -127,22 +127,11 @@ re_char_class_ast_compile(struct re_char_class_ast *cca,
     struct fsm_state *x, struct fsm_state *y);
 
 
-/* Dialect-specific char class / char type handling.
- * These are defined in src/libre/dialect/${dialect}/re_dialect_${dialect}.c */
-enum re_dialect_char_class_lookup_res {
-	/* Unknown class, a syntax error */
-	RE_CLASS_NOT_FOUND,
-	/* Found and supported */
-	RE_CLASS_FOUND,
-	/* Recognized but explicitly not supported */
-	RE_CLASS_UNSUPPORTED = -1
-};
-
 const char *
 pcre_class_name(const char *name);
 
-typedef enum re_dialect_char_class_lookup_res
-re_dialect_char_class_lookup(const char *name, char_class_constructor **res);
+typedef char_class_constructor *
+re_dialect_char_class_lookup(const char *name);
 
 re_dialect_char_class_lookup re_char_class_literal;
 re_dialect_char_class_lookup re_char_class_like;

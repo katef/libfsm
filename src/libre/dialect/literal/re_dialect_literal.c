@@ -7,12 +7,11 @@
 #include "../../class.h"
 #include "../../re_char_class.h"
 
-enum re_dialect_char_class_lookup_res
-re_char_class_literal(const char *name, char_class_constructor **res)
+char_class_constructor *
+re_char_class_literal(const char *name)
 {
 	(void) name;
-	(void) res;
 
 	/* no character classes in this dialect */
-	return RE_CLASS_UNSUPPORTED;
+	return NULL;
 }
