@@ -17,6 +17,24 @@ static const struct {
 	const char *name;
 	char_class_constructor *ctor;
 } classes[] = {
+	/*
+	 * The short forms are ordered first for sake of pcre_class_name()
+	 * giving these in preference when rendering out to pcre dialect.
+	 */
+
+	{ "\\d", class_digit_fsm     },
+	{ "\\h", class_hspace_fsm    },
+	{ "\\s", class_space_fsm     },
+	{ "\\v", class_vspace_fsm    },
+	{ "\\w", class_word_fsm      },
+
+	{ "\\D", class_notdigit_fsm  }, /* [^\d] */
+	{ "\\H", class_nothspace_fsm }, /* [^\h] */
+	{ "\\S", class_notspace_fsm  }, /* [^\s] */
+	{ "\\V", class_notvspace_fsm }, /* [^\v] */
+	{ "\\W", class_notword_fsm   }, /* [^\w] */
+	{ "\\N", class_notnl_fsm     }, /* [^\n] */
+
 	{ "[:alnum:]", class_alnum_fsm },
 	{ "[:alpha:]", class_alpha_fsm },
 	{ "[:ascii:]", class_ascii_fsm },
@@ -31,20 +49,26 @@ static const struct {
 	{ "[:upper:]", class_upper_fsm },
 	{ "[:word:]", class_word_fsm },
 	{ "[:xdigit:]", class_xdigit_fsm },
-		
-	{ "\\d", class_digit_fsm     },
-	{ "\\h", class_hspace_fsm    },
-	{ "\\s", class_space_fsm     },
-	{ "\\v", class_vspace_fsm    },
-	{ "\\w", class_word_fsm      },
-
-	{ "\\D", class_notdigit_fsm  }, /* [^\d] */
-	{ "\\H", class_nothspace_fsm }, /* [^\h] */
-	{ "\\S", class_notspace_fsm  }, /* [^\s] */
-	{ "\\V", class_notvspace_fsm }, /* [^\v] */
-	{ "\\W", class_notword_fsm   }, /* [^\w] */
-	{ "\\N", class_notnl_fsm     }  /* [^\n] */
 };
+
+const char *
+pcre_class_name(const char *name)
+{
+	size_t i;
+
+	assert(name != NULL);
+
+	/*
+	 * This is expensive, but for our purposes it doesn't matter yet.
+	 */
+	for (i = 0; i < sizeof classes / sizeof *classes; i++) {
+		if (0 == strcmp(class_name(classes[i].ctor), name)) {
+			return classes[i].name;
+		}
+	}
+
+	return NULL;
+}
 
 enum re_dialect_char_class_lookup_res
 re_char_class_pcre(const char *name, char_class_constructor **res)

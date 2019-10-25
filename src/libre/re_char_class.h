@@ -138,6 +138,9 @@ enum re_dialect_char_class_lookup_res {
 	RE_CLASS_UNSUPPORTED = -1
 };
 
+const char *
+pcre_class_name(const char *name);
+
 typedef enum re_dialect_char_class_lookup_res
 re_dialect_char_class_lookup(const char *name, char_class_constructor **res);
 

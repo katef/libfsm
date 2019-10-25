@@ -46,6 +46,77 @@ atomic(struct ast_expr *n)
 }
 
 static void
+print_class_name(FILE *f, const char *abstract_name)
+{
+	const char *p;
+
+	assert(abstract_name != NULL);
+
+	/*
+	 * We have three different kinds of names to emit here:
+	 *
+	 * - Abstract names which map to corresponding special-purpose
+	 *   pcre syntax. These class names are all lower case.
+	 *
+	 *   This is a many-to-one mapping (pcre has several spellings
+	 *   for the same concept), and we defer to pcre_class_name()
+	 *   to select which is preferred for a given abstract name.
+	 *
+	 * - Abstract names which have no corresponding pcre syntax.
+	 *   These are spelled out explicitly.
+	 *
+	 * - Unicode. These are formatted long-hand, with \p{...}
+	 */
+
+	if (islower((unsigned char) abstract_name[0])) {
+		const char *name;
+		size_t i;
+
+		static const struct {
+			const char *name;
+			const char *syntax;
+		} a[] = {
+			{ "any",   "." },
+			{ "spchr", " " }
+		};
+
+		name = pcre_class_name(abstract_name);
+		if (name != NULL) {
+			/* the name here is an internal string, and assumed to not need escaping */
+			fputs(name, f);
+			return;
+		}
+
+		for (i = 0; i < sizeof a / sizeof *a; i++) {
+			if (0 == strcmp(a[i].name, name)) {
+				fputs(a[i].name, f);
+				return;
+			}
+		}
+	}
+
+	/*
+	 * All non-Unicode class names should have been handled above;
+	 * there should be none remaining which are lowercase and have
+	 * no corresponding special-purpose pcre syntax.
+	 */
+	assert(!islower((unsigned char) abstract_name[0]));
+
+	/* TODO: would handle "not" variants here as \P{...} */
+	/* TODO: would prefer short forms, e.g. \p{Lc} rather than the full name */
+
+	fputs("\\p{", f);
+	for (p = abstract_name; *p != '\0'; p++) {
+		if (*p == ' ') {
+			fputc('_', f);
+		} else {
+			fputc(*p, f);
+		}
+	}
+	fputs("}", f);
+}
+
+static void
 pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 {
 	assert(f != NULL);
@@ -244,7 +315,7 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt, struct re_char_class_ast *n)
 		break;
 
 	case RE_CHAR_CLASS_AST_NAMED:
-		fprintf(f, "[:TODO:]"); /* XXX */
+		print_class_name(f, class_name(n->u.named.ctor));
 		break;
 
 	case RE_CHAR_CLASS_AST_FLAGS:

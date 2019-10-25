@@ -220,7 +220,9 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case RE_CHAR_CLASS_AST_NAMED:
-		fprintf(f, "\tn%p [ label = <CLASS-NAMED|(opaque)> ];\n", (void *) n);
+		/* abstract class names are internal strings, assumed to not need escaping */
+		fprintf(f, "\tn%p [ label = <CLASS-NAMED|%s> ];\n",
+			(void *) n, class_name(n->u.named.ctor));
 		break;
 
 	case RE_CHAR_CLASS_AST_FLAGS:
