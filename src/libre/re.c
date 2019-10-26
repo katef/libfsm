@@ -16,15 +16,13 @@
 
 #include "../libfsm/internal.h" /* XXX */
 
+#include "ac.h"
 #include "class.h"
 #include "print.h"
 #include "ast.h"
 #include "re_comp.h"
-#include "re_analysis.h"
 
 #include "dialect/comp.h"
-
-#include "ac.h"
 
 struct dialect {
 	enum re_dialect dialect;

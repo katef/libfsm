@@ -11,7 +11,6 @@
 #include <re/re.h>
 
 #include "class.h"
-#include "re_analysis.h"
 #include "print.h"
 #include "ast.h"
 
