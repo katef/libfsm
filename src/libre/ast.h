@@ -7,6 +7,8 @@
 #ifndef RE_AST_H
 #define RE_AST_H
 
+struct fsm_state;
+struct fsm_options;
 struct ast_class;
 
 /* This is a duplicate of struct lx_pos, but since we're linking to
