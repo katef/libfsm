@@ -7,13 +7,6 @@
 #ifndef RE_AST_H
 #define RE_AST_H
 
-/* Because we're building with -NDEBUG */
-#define FAIL(s)					\
-	do {					\
-		fprintf(stderr, s);		\
-		abort();			\
-	} while(0)
-
 /* This is a duplicate of struct lx_pos, but since we're linking to
  * code with several distinct lexers, there isn't a clear lexer.h
  * to include here. The parser sees both definitions, and will
