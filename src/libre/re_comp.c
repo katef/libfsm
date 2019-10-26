@@ -4,11 +4,16 @@
  * See LICENCE for the full copyright terms.
  */
 
+#include <assert.h>
 #include <stddef.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <ctype.h>
 
 #include <fsm/fsm.h>
+
+#include <re/re.h>
 
 #include "class.h"
 #include "ast.h"

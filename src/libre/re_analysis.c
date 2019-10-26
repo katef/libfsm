@@ -4,7 +4,11 @@
  * See LICENCE for the full copyright terms.
  */
 
+#include <assert.h>
 #include <string.h>
+#include <stdlib.h>
+
+#include <re/re.h>
 
 #include "class.h"
 #include "re_analysis.h"

@@ -7,16 +7,9 @@
 #ifndef RE_AST_CLASS_H
 #define RE_AST_CLASS_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-
-#include <fsm/fsm.h>
-#include <fsm/bool.h>
-#include <fsm/pred.h>
-
-#include <re/re.h>
+struct fsm;
+struct fsm_state;
+struct fsm_options;
 
 enum re_char_class_flags {
 	RE_CHAR_CLASS_FLAG_NONE = 0x00,

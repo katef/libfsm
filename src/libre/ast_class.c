@@ -4,10 +4,16 @@
  * See LICENCE for the full copyright terms.
  */
 
+#include <assert.h>
 #include <string.h>
 #include <ctype.h>
 #include <limits.h>
 #include <errno.h>
+
+#include <fsm/bool.h>
+#include <fsm/pred.h>
+
+#include <re/re.h>
 
 #include "class.h"
 #include "ast.h"

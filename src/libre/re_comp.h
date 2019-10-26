@@ -8,6 +8,7 @@
 #define RE_COMP_H
 
 struct fsm_options;
+struct ast_re;
 struct re_err;
 
 struct ast_re *

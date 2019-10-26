@@ -29,12 +29,12 @@
 	#include <errno.h>
 	#include <ctype.h>
 
+	#include <re/re.h>
+
 	#include "libre/class.h"
 	#include "libre/class_lookup.h"
 	#include "libre/ast.h"
 	#include "libre/ast_class.h"
-
-	#include <re/re.h>
 
 	#ifndef DIALECT
 	#error DIALECT required

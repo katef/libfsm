@@ -7,15 +7,6 @@
 #ifndef RE_AST_H
 #define RE_AST_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-
-#include <re/re.h>
-
-#include <fsm/fsm.h>
-#include <fsm/bool.h>
-
 /* Because we're building with -NDEBUG */
 #define FAIL(s)					\
 	do {					\

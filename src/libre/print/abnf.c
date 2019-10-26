@@ -4,9 +4,13 @@
  * See LICENCE for the full copyright terms.
  */
 
+#include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+
+#include <re/re.h>
 
 #include <print/esc.h>
 

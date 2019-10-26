@@ -1,6 +1,15 @@
+/*
+ * Copyright 2018 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
 
+#include <assert.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
+#include <re/re.h>
 
 #include "class.h"
 #include "ast.h"
