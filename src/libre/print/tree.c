@@ -6,6 +6,7 @@
 
 #include <ctype.h>
 
+#include "../class.h"
 #include "../re_ast.h"
 #include "../re_char_class.h"
 #include "../print.h"
@@ -241,8 +242,8 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "\n");
 		break;
 	case RE_CHAR_CLASS_AST_NAMED:
-		fprintf(f, "CLASS-NAMED %p: (opaque constructor)\n",
-		    (void *)n);
+		fprintf(f, "CLASS-NAMED %p: %s\n",
+		    (void *)n, class_name(n->u.named.ctor));
 		break;
 	case RE_CHAR_CLASS_AST_FLAGS:
 		fprintf(f, "CLASS-FLAGS %p: [", (void *)n);

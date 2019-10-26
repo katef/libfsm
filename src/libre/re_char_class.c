@@ -4,14 +4,14 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "re_char_class.h"
-#include "re_ast.h"
-#include "class.h"
-
 #include <string.h>
 #include <ctype.h>
 #include <limits.h>
 #include <errno.h>
+
+#include "class.h"
+#include "re_char_class.h"
+#include "re_ast.h"
 
 #include "libfsm/internal.h" /* XXX */
 
@@ -43,7 +43,7 @@ cc_add_range(struct re_char_class *cc,
     const struct ast_range_endpoint *to);
 
 static int
-cc_add_named_class(struct re_char_class *cc, char_class_constructor_fun *ctor);
+cc_add_named_class(struct re_char_class *cc, char_class_constructor *ctor);
 
 static int
 cc_invert(struct re_char_class *cc);
@@ -98,7 +98,7 @@ re_char_class_ast_flags(enum re_char_class_flags flags)
 }
 
 struct re_char_class_ast *
-re_char_class_ast_named_class(char_class_constructor_fun *ctor)
+re_char_class_ast_named_class(char_class_constructor *ctor)
 {
 	struct re_char_class_ast *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
@@ -117,31 +117,6 @@ re_char_class_ast_subtract(struct re_char_class_ast *ast,
 	res->u.subtract.ast = ast;
 	res->u.subtract.mask = mask;
 	return res;
-}
-
-const char *
-re_char_class_id_str(enum ast_char_class_id id)
-{
-	switch (id) {
-	case AST_CHAR_CLASS_ALNUM: return "ALNUM";
-	case AST_CHAR_CLASS_ALPHA: return "ALPHA";
-	case AST_CHAR_CLASS_ANY: return "ANY";
-	case AST_CHAR_CLASS_ASCII: return "ASCII";
-	case AST_CHAR_CLASS_BLANK: return "BLANK";
-	case AST_CHAR_CLASS_CNTRL: return "CNTRL";
-	case AST_CHAR_CLASS_DIGIT: return "DIGIT";
-	case AST_CHAR_CLASS_GRAPH: return "GRAPH";
-	case AST_CHAR_CLASS_LOWER: return "LOWER";
-	case AST_CHAR_CLASS_PRINT: return "PRINT";
-	case AST_CHAR_CLASS_PUNCT: return "PUNCT";
-	case AST_CHAR_CLASS_SPACE: return "SPACE";
-	case AST_CHAR_CLASS_SPCHR: return "SPCHR";
-	case AST_CHAR_CLASS_UPPER: return "UPPER";
-	case AST_CHAR_CLASS_WORD: return "WORD";
-	case AST_CHAR_CLASS_XDIGIT: return "XDIGIT";
-	default:
-		return "<matchfail>";
-	}
 }
 
 static void
@@ -517,7 +492,7 @@ cc_add_range(struct re_char_class *cc,
 }
 
 static int
-cc_add_named_class(struct re_char_class *cc, char_class_constructor_fun *ctor)
+cc_add_named_class(struct re_char_class *cc, char_class_constructor *ctor)
 {
 	struct fsm *q;
 	int r;

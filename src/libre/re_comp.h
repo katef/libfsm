@@ -7,7 +7,8 @@
 #ifndef RE_COMP_H
 #define RE_COMP_H
 
-#include "re_ast.h"
+struct fsm_options;
+struct re_err;
 
 struct ast_re *
 re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,

@@ -4,10 +4,14 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "re_comp.h"
-#include "fsm/fsm.h"
-
 #include <ctype.h>
+#include <stddef.h>
+
+#include <fsm/fsm.h>
+
+#include "class.h"
+#include "re_ast.h"
+#include "re_comp.h"
 
 #define LOG_LINKAGE 0
 

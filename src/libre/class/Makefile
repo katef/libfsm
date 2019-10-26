@@ -90,21 +90,30 @@ CLASS_alnum  = [[:alpha:][:digit:]]
 CLASS_alpha  = [[:upper:][:lower:]]
 CLASS_any    = .
 CLASS_ascii  = [\x00-\x7F]
-CLASS_blank  = [ \t]
 CLASS_cntrl  = [\x00-\x1F\x7F]
 CLASS_digit  = [0-9]
 CLASS_graph  = [\x21-\x7E]
+CLASS_hspace = [ \t] # aka blank
 CLASS_lower  = [a-z]
 CLASS_print  = [\x20-\x7E]
 CLASS_punct  = [!"\#$$%&'\''()*+,\-./:;<=>?@\\\^_`{|}~]|\[|]
-CLASS_space  = [ \t\r\n\v\f]
+CLASS_space  = [[:hspace:][:vspace:]]
 CLASS_spchr  = [ ]
 CLASS_upper  = [A-Z]
+CLASS_vspace = [\x0A\x0B\x0C\x0D]
 CLASS_word   = [[:alnum:]_]
 CLASS_xdigit = [A-Fa-f0-9]
 
-.for class in alnum alpha any ascii blank cntrl digit graph lower \
-	print punct space spchr upper word xdigit
+CLASS_notdigit  = [^[:digit:]]
+CLASS_nothspace = [^[:hspace:]]
+CLASS_notspace  = [^[:space:]]
+CLASS_notvspace = [^[:vspace:]]
+CLASS_notword   = [^[:word:]]
+CLASS_notnl     = [^\n]
+
+.for class in alnum alpha any ascii cntrl digit graph hspace lower \
+	print punct space spchr upper vspace word xdigit \
+	notdigit nothspace notspace notvspace notword notnl
 
 src/libre/class/${class}.c:
 	${RE} -pl api -e class_${class}_ '${CLASS_${class}}' > ${.TARGET}
@@ -117,17 +126,23 @@ gen:: src/libre/class.h
 src/libre/class.h:
 	printf "/* generated */\n" > ${.TARGET}
 	printf "\n" >> ${.TARGET}
-	printf "struct fsm_options;\n" >> ${.TARGET}
-	printf "\n" >> ${.TARGET}
 	printf "#ifndef RE_CLASS_H\n" >> ${.TARGET}
 	printf "#define RE_CLASS_H\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
+	printf "struct fsm;\n" >> ${.TARGET}
+	printf "struct fsm_options;\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "typedef struct fsm *(char_class_constructor)(const struct fsm_options *opt);\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "const char *\n" >> ${.TARGET}
+	printf "class_name(char_class_constructor *ctor);\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
 	for class in ${SRC:Msrc/libre/class/*.c:T:R:Mutf8_*}; do \
-		printf "struct fsm *%s_fsm(const struct fsm_options *);\n" $${class}; \
+		printf "char_class_constructor %s_fsm;\n" $${class}; \
 	done >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	for class in ${SRC:Msrc/libre/class/*.c:T:R:Nutf8_*}; do \
-		printf "struct fsm *%s_fsm(const struct fsm_options *);\n" class_$${class}; \
+		printf "char_class_constructor %s_fsm;\n" class_$${class}; \
 	done >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "#endif\n" >> ${.TARGET}
@@ -157,4 +172,46 @@ ${BUILD}/lib/libre.opic: ${BUILD}/${src:R}.opic
 CFLAGS.${src} += -Wno-overflow
 .endfor
 .endif
+
+gen:: src/libre/class_name.c
+src/libre/class_name.c:
+	printf "/* generated */\n" > ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "#include <assert.h>\n" >> ${.TARGET}
+	printf "#include <string.h>\n" >> ${.TARGET}
+	printf "#include <stddef.h>\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "#include \"class.h\"\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "static struct {\n" >> ${.TARGET}
+	printf "\tchar_class_constructor *ctor;\n" >> ${.TARGET}
+	printf "\tconst char *name;\n" >> ${.TARGET}
+	printf "} classes[] = {\n" >> ${.TARGET}
+	for class in ${SRC:Msrc/libre/class/*.c:T:R:Nutf8_*}; do \
+		printf "\t{ class_%s_fsm, \"%s\" },\n" $${class} $${class}; \
+	done >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	for class in ${SRC:Msrc/libre/class/*.c:T:R:Mutf8_*}; do \
+		printf "\t{ %s_fsm, \"%s\" },\n" $${class} "`echo $${class#utf8_} | sed 's/_/ /g'`"; \
+	done >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "\t{ NULL, NULL }\n" >> ${.TARGET} # XXX: workaround to avoid a trailing comma
+	printf "};\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "const char *\n" >> ${.TARGET}
+	printf "class_name(char_class_constructor *ctor)\n" >> ${.TARGET}
+	printf "{\n" >> ${.TARGET}
+	printf "\tsize_t i;\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "\tassert(ctor != NULL);\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "\tfor (i = 0; i < sizeof classes / sizeof *classes; i++) {\n" >> ${.TARGET}
+	printf "\t\tif (ctor == classes[i].ctor) {\n" >> ${.TARGET}
+	printf "\t\t\treturn classes[i].name;\n" >> ${.TARGET}
+	printf "\t\t}\n" >> ${.TARGET}
+	printf "\t}\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "\treturn NULL;\n" >> ${.TARGET}
+	printf "}\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
 

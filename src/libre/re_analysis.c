@@ -4,10 +4,11 @@
  * See LICENCE for the full copyright terms.
  */
 
+#include <string.h>
+
+#include "class.h"
 #include "re_analysis.h"
 #include "print.h"
-
-#include <string.h>
 
 #define LOG_CONCAT_FLAGS 0
 

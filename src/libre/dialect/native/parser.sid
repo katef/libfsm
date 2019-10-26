@@ -17,7 +17,7 @@
 	!re_flags;
 	!err;
 	ast_expr;
-        ast_char_class_id;
+	ast_char_class_id;
 	ast_count;
 	char_class_ast;
 	range_endpoint;

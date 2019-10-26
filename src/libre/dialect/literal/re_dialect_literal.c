@@ -4,14 +4,16 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "../../re_char_class.h"
+#include <stddef.h>
 
-enum re_dialect_char_class_lookup_res
-re_char_class_literal(const char *name, char_class_constructor_fun **res)
+#include "../../class.h"
+#include "../../class_lookup.h"
+
+char_class_constructor *
+re_char_class_literal(const char *name)
 {
-	(void)name;
-	(void)res;
+	(void) name;
 
 	/* no character classes in this dialect */
-	return RE_CLASS_UNSUPPORTED;
+	return NULL;
 }

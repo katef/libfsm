@@ -16,12 +16,13 @@
 
 #include "../libfsm/internal.h" /* XXX */
 
-#include "dialect/comp.h"
+#include "class.h"
 #include "print.h"
-
 #include "re_ast.h"
 #include "re_comp.h"
 #include "re_analysis.h"
+
+#include "dialect/comp.h"
 
 #include "ac.h"
 
