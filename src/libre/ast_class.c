@@ -21,38 +21,49 @@
 
 #include "libfsm/internal.h" /* XXX */
 
-struct re_char_class {
-	enum re_flags flags;
+/*
+ * Sort of an IR; this is our intermediate state when converting from a
+ * character class's AST to link into an existing FSM. First we construct
+ * stand-alone FSM for just the class, and these are held here.
+ *
+ * This struct is private to this file only, not even exposed as a
+ * partial declaration. I'm reading "cc" as "compiled class", rather
+ * than "character class".
+ */
+struct cc {
+	enum re_flags re_flags;
 
 	enum re_char_class_flags cc_flags;
 
 	const struct fsm_options *opt;
 	struct re_err *err;
 
-	/* These are set to NULL once they've been incorporated into the
+	/*
+	 * These are set to NULL once they've been incorporated into the
 	 * overall regex FSM, so they no longer need to be freed by the
-	 * char class functions. */
+	 * char class functions.
+	 */
 	struct fsm *set;
 	struct fsm *dup;
 };
 
 static int
-link_char_class_into_fsm(struct re_char_class *cc, struct fsm *fsm,
+link_char_class_into_fsm(struct cc *cc, struct fsm *fsm,
     struct fsm_state *x, struct fsm_state *y);
 
 static int
-cc_add_char(struct re_char_class *cc, unsigned char byte);
+cc_add_char(struct cc *cc, unsigned char byte);
 
 static int
-cc_add_range(struct re_char_class *cc, 
+cc_add_range(struct cc *cc, 
     const struct ast_range_endpoint *from,
     const struct ast_range_endpoint *to);
 
 static int
-cc_add_named_class(struct re_char_class *cc, char_class_constructor *ctor);
+cc_add_named_class(struct cc *cc, char_class_constructor *ctor);
 
 static int
-cc_invert(struct re_char_class *cc);
+cc_invert(struct cc *cc);
 
 struct re_char_class_ast *
 re_char_class_ast_concat(struct re_char_class_ast *l,
@@ -158,13 +169,13 @@ re_char_class_ast_free(struct re_char_class_ast *ast)
 }
 
 void
-re_char_class_free(struct re_char_class *cc)
+re_char_class_free(struct cc *cc)
 {
 	free(cc);
 }
 
 static int
-comp_iter(struct re_char_class *cc, struct re_char_class_ast *n)
+comp_iter(struct cc *cc, struct re_char_class_ast *n)
 {
 	assert(cc != NULL);
 	assert(n != NULL);
@@ -230,7 +241,7 @@ re_char_class_ast_compile(struct re_char_class_ast *cca,
     struct re_err *err, const struct fsm_options *opt,
     struct fsm_state *x, struct fsm_state *y)
 {
-	struct re_char_class cc;
+	struct cc cc;
 
 	memset(&cc, 0x00, sizeof(cc));
 	
@@ -242,7 +253,7 @@ re_char_class_ast_compile(struct re_char_class_ast *cca,
 
 	cc.opt = opt;
 	cc.err = err;
-	cc.flags = flags;
+	cc.re_flags = flags;
 
 	if (!comp_iter(&cc, cca)) { goto cleanup; }
 
@@ -330,7 +341,7 @@ fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state 
 }
 
 static int
-link_char_class_into_fsm(struct re_char_class *cc, struct fsm *fsm,
+link_char_class_into_fsm(struct cc *cc, struct fsm *fsm,
     struct fsm_state *x, struct fsm_state *y)
 {
 	int is_empty;
@@ -426,7 +437,7 @@ addedge_literal(struct fsm *fsm, enum re_flags flags,
 }
 
 int
-cc_add_char(struct re_char_class *cc, unsigned char c)
+cc_add_char(struct cc *cc, unsigned char c)
 {
 	const struct fsm_state *p;
 	struct fsm_state *start, *end;
@@ -461,7 +472,7 @@ cc_add_char(struct re_char_class *cc, unsigned char c)
 	
 	fsm_setend(fsm, end, 1);
 	
-	if (!addedge_literal(fsm, cc->flags, start, end, c)) {
+	if (!addedge_literal(fsm, cc->re_flags, start, end, c)) {
 		goto fail;
 	}
 	
@@ -472,7 +483,7 @@ fail:
 }
 
 static int
-cc_add_range(struct re_char_class *cc, 
+cc_add_range(struct cc *cc, 
     const struct ast_range_endpoint *from,
     const struct ast_range_endpoint *to)
 {
@@ -498,7 +509,7 @@ cc_add_range(struct re_char_class *cc,
 }
 
 static int
-cc_add_named_class(struct re_char_class *cc, char_class_constructor *ctor)
+cc_add_named_class(struct cc *cc, char_class_constructor *ctor)
 {
 	struct fsm *q;
 	int r;
@@ -586,7 +597,7 @@ negate(struct fsm *class, const struct fsm_options *opt)
 }
 
 int
-cc_invert(struct re_char_class *cc)
+cc_invert(struct cc *cc)
 {
 	struct fsm *inverted = negate(cc->set, cc->opt);
 	if (inverted == NULL) { return 0; }
