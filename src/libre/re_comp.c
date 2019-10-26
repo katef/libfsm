@@ -4,13 +4,15 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include <ctype.h>
 #include <stddef.h>
+#include <string.h>
+#include <ctype.h>
 
 #include <fsm/fsm.h>
 
 #include "class.h"
-#include "re_ast.h"
+#include "ast.h"
+#include "ast_class.h"
 #include "re_comp.h"
 
 #define LOG_LINKAGE 0

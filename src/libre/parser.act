@@ -31,8 +31,8 @@
 
 	#include "libre/class.h"
 	#include "libre/class_lookup.h"
-	#include "libre/re_char_class.h"
-	#include "libre/re_ast.h"
+	#include "libre/ast.h"
+	#include "libre/ast_class.h"
 
 	#include <re/re.h>
 
@@ -90,7 +90,7 @@
 
 	#include "../comp.h"
 	#include "../../class.h"
-	#include "../../re_char_class.h"
+	#include "../../ast_class.h"
 
 	struct flags {
 		enum re_flags flags;

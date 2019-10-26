@@ -16,14 +16,22 @@
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 
-#include "re_char_class.h"
-
 /* Because we're building with -NDEBUG */
 #define FAIL(s)					\
 	do {					\
 		fprintf(stderr, s);		\
 		abort();			\
 	} while(0)
+
+/* This is a duplicate of struct lx_pos, but since we're linking to
+ * code with several distinct lexers, there isn't a clear lexer.h
+ * to include here. The parser sees both definitions, and will
+ * build a `struct ast_pos` in the appropriate places. */
+struct ast_pos {
+	unsigned byte;
+	unsigned line;
+	unsigned col;
+};
 
 /* Parse tree / Abstract syntax tree.
  * None of this should be exposed to the public API. */

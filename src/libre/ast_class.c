@@ -10,8 +10,8 @@
 #include <errno.h>
 
 #include "class.h"
-#include "re_char_class.h"
-#include "re_ast.h"
+#include "ast.h"
+#include "ast_class.h"
 
 #include "libfsm/internal.h" /* XXX */
 

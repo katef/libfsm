@@ -10,8 +10,9 @@
 #include <print/esc.h>
 
 #include "../class.h"
-#include "../re_ast.h"
-#include "../re_char_class.h"
+#include "../class_lookup.h"
+#include "../ast.h"
+#include "../ast_class.h"
 #include "../print.h"
 
 static void

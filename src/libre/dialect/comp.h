@@ -9,7 +9,7 @@
 
 #include <re/re.h>
 
-#include "../re_ast.h"
+#include "../ast.h"
 
 /* TODO: make overlap a flag */
 

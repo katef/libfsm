@@ -7,7 +7,7 @@
 #ifndef RE_ANALYSIS_H
 #define RE_ANALYSIS_H
 
-#include "re_ast.h"
+struct ast_re;
 
 enum re_analysis_res {
 	RE_ANALYSIS_OK,

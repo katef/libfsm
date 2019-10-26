@@ -9,6 +9,7 @@
 #include "class.h"
 #include "re_analysis.h"
 #include "print.h"
+#include "ast.h"
 
 #define LOG_CONCAT_FLAGS 0
 

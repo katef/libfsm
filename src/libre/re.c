@@ -18,7 +18,7 @@
 
 #include "class.h"
 #include "print.h"
-#include "re_ast.h"
+#include "ast.h"
 #include "re_comp.h"
 #include "re_analysis.h"
 
