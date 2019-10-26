@@ -8,16 +8,16 @@
 #define RE_COMP_H
 
 struct fsm_options;
-struct ast_re;
+struct ast;
 struct re_err;
 
-struct ast_re *
+struct ast *
 re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err);
 
 struct fsm *
-re_comp_ast(struct ast_re *ast,
+re_comp_ast(struct ast *ast,
     enum re_flags flags,
     const struct fsm_options *opt,
 	struct re_err *err);

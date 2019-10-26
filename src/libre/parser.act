@@ -548,44 +548,44 @@
 
 	/* AST construction */
 	<ast-expr-empty>: () -> (node :ast_expr) = @{
-		@node = re_ast_expr_empty();
+		@node = ast_expr_empty();
 		if (@node == NULL) { @!; }
 	@};
 
 	<ast-expr-concat>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
-		@node = re_ast_expr_concat(@l, @r);
+		@node = ast_expr_concat(@l, @r);
 		if (@node == NULL) { @!; }
 	@};
 
 	<ast-expr-alt>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
-		@node = re_ast_expr_alt(@l, @r);
+		@node = ast_expr_alt(@l, @r);
 		if (@node == NULL) { @!; }
 	@};
 
 	<ast-expr-literal>: (c :char) -> (node :ast_expr) = @{
-		@node = re_ast_expr_literal(@c);
+		@node = ast_expr_literal(@c);
 		if (@node == NULL) { @!; }
 	@};
 
 	<ast-expr-any>: () -> (node :ast_expr) = @{
-		@node = re_ast_expr_any();
+		@node = ast_expr_any();
 		if (@node == NULL) { @!; }
 	@};
 
 	<ast-expr-atom-any>: (c :ast_count) -> (node :ast_expr) = @{
-		struct ast_expr *e = re_ast_expr_any();
+		struct ast_expr *e = ast_expr_any();
 		if (e == NULL) { @!; }
-		@node = re_ast_expr_with_count(e, @c);
+		@node = ast_expr_with_count(e, @c);
 		if (@node == NULL) { @!; }
 	@};
 
         <ast-expr-group>: (e :ast_expr) -> (node :ast_expr) = @{
-		@node = re_ast_expr_group(@e);
+		@node = ast_expr_group(@e);
 		if (@node == NULL) { @!; }
 	@};
 
 	<ast-expr-atom>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
-		@node = re_ast_expr_with_count(@e, @c);
+		@node = ast_expr_with_count(@e, @c);
 		if (@node == NULL) {
 			err->e = RE_EXEOF;
 			@!;
@@ -699,7 +699,7 @@
 		AST_POS_OF_LX_POS(ast_end, @end);
 		mark(&act_state->groupstart, &@start);
 		mark(&act_state->groupend,   &@end);
-		@node = re_ast_expr_char_class(@cca, &ast_start, &ast_end);
+		@node = ast_expr_char_class(@cca, &ast_start, &ast_end);
 		if (@node == NULL) { @!; }
 	@};
 
@@ -746,17 +746,17 @@
 	@};
 
 	<ast-expr-re-flags>: (pos :re_flags, neg :re_flags) -> (node :ast_expr) = @{
-		@node = re_ast_expr_re_flags(@pos, @neg);
+		@node = ast_expr_re_flags(@pos, @neg);
 		if (@node == NULL) { @!; }
 	@};
 
 	<ast-expr-anchor-start>: () -> (node :ast_expr) = @{
-		@node = re_ast_expr_anchor(RE_AST_ANCHOR_START);
+		@node = ast_expr_anchor(RE_AST_ANCHOR_START);
 		if (@node == NULL) { @!; }
 	@};
 
 	<ast-expr-anchor-end>: () -> (node :ast_expr) = @{
-		@node = re_ast_expr_anchor(RE_AST_ANCHOR_END);
+		@node = ast_expr_anchor(RE_AST_ANCHOR_END);
 		if (@node == NULL) { @!; }
 	@};
 
@@ -777,13 +777,13 @@
 		return lex_state->f(lex_state->opaque);
 	}
 
-	struct ast_re *
+	struct ast *
 	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
 		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
 		struct re_err *err)
 	{
-		struct ast_re *ast;
+		struct ast *ast;
 		struct flags top, *fl = &top;
 
 		struct act_state  act_state_s;
@@ -798,7 +798,7 @@
 
 		assert(f != NULL);
 
-		ast = re_ast_new();
+		ast = ast_new();
 
 		if (err == NULL) {
 			err = &dummy;
@@ -898,7 +898,7 @@
 			break;
 		}
 
-		re_ast_free(ast);
+		ast_free(ast);
 
 		return NULL;
 	}

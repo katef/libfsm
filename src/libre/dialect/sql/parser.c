@@ -280,7 +280,7 @@ p_re__sql(flags flags, lex_state lex_state, act_state act_state, err err, t_ast_
 					{
 #line 551 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_empty();
+		(ZInode) = ast_expr_empty();
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 287 "src/libre/dialect/sql/parser.c"
@@ -392,7 +392,7 @@ p_expr_C_Cliteral(flags flags, lex_state lex_state, act_state act_state, err err
 		{
 #line 566 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_literal((ZIc));
+		(ZInode) = ast_expr_literal((ZIc));
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 399 "src/libre/dialect/sql/parser.c"
@@ -555,7 +555,7 @@ p_188(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__exp
 			{
 #line 561 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_alt((*ZI186), (ZIr));
+		(ZInode) = ast_expr_alt((*ZI186), (ZIr));
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 562 "src/libre/dialect/sql/parser.c"
@@ -599,7 +599,7 @@ p_189(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__exp
 			{
 #line 556 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_concat((*ZIa), (ZIr));
+		(ZInode) = ast_expr_concat((*ZIa), (ZIr));
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 606 "src/libre/dialect/sql/parser.c"
@@ -615,7 +615,7 @@ p_189(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__exp
 			{
 #line 551 "src/libre/parser.act"
 
-		(ZIr) = re_ast_expr_empty();
+		(ZIr) = ast_expr_empty();
 		if ((ZIr) == NULL) { goto ZL1; }
 	
 #line 622 "src/libre/dialect/sql/parser.c"
@@ -625,7 +625,7 @@ p_189(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__exp
 			{
 #line 556 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_concat((*ZIa), (ZIr));
+		(ZInode) = ast_expr_concat((*ZIa), (ZIr));
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 632 "src/libre/dialect/sql/parser.c"
@@ -990,7 +990,7 @@ p_193(flags flags, lex_state lex_state, act_state act_state, err err, t_pos *ZI1
 		AST_POS_OF_LX_POS(ast_end, (ZIend));
 		mark(&act_state->groupstart, &(*ZI191));
 		mark(&act_state->groupend,   &(ZIend));
-		(ZInode) = re_ast_expr_char_class((ZImasked), &ast_start, &ast_end);
+		(ZInode) = ast_expr_char_class((ZImasked), &ast_start, &ast_end);
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 997 "src/libre/dialect/sql/parser.c"
@@ -1047,7 +1047,7 @@ p_193(flags flags, lex_state lex_state, act_state act_state, err err, t_pos *ZI1
 		AST_POS_OF_LX_POS(ast_end, (ZIend));
 		mark(&act_state->groupstart, &(*ZI191));
 		mark(&act_state->groupend,   &(ZIend));
-		(ZInode) = re_ast_expr_char_class((ZIhbt), &ast_start, &ast_end);
+		(ZInode) = ast_expr_char_class((ZIhbt), &ast_start, &ast_end);
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 1054 "src/libre/dialect/sql/parser.c"
@@ -1312,7 +1312,7 @@ p_200(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__exp
 			{
 #line 561 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_alt((*ZIa), (ZIr));
+		(ZInode) = ast_expr_alt((*ZIa), (ZIr));
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 1319 "src/libre/dialect/sql/parser.c"
@@ -1328,7 +1328,7 @@ p_200(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__exp
 			{
 #line 551 "src/libre/parser.act"
 
-		(ZIr) = re_ast_expr_empty();
+		(ZIr) = ast_expr_empty();
 		if ((ZIr) == NULL) { goto ZL1; }
 	
 #line 1335 "src/libre/dialect/sql/parser.c"
@@ -1338,7 +1338,7 @@ p_200(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__exp
 			{
 #line 561 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_alt((*ZIa), (ZIr));
+		(ZInode) = ast_expr_alt((*ZIa), (ZIr));
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 1345 "src/libre/dialect/sql/parser.c"
@@ -1626,7 +1626,7 @@ ZL1:;
 		{
 #line 551 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_empty();
+		(ZInode) = ast_expr_empty();
 		if ((ZInode) == NULL) { goto ZL2; }
 	
 #line 1633 "src/libre/dialect/sql/parser.c"
@@ -1661,9 +1661,9 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			{
 #line 577 "src/libre/parser.act"
 
-		struct ast_expr *e = re_ast_expr_any();
+		struct ast_expr *e = ast_expr_any();
 		if (e == NULL) { goto ZL1; }
-		(ZInode) = re_ast_expr_with_count(e, (ZIs));
+		(ZInode) = ast_expr_with_count(e, (ZIs));
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 1670 "src/libre/dialect/sql/parser.c"
@@ -1696,9 +1696,9 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			{
 #line 577 "src/libre/parser.act"
 
-		struct ast_expr *e = re_ast_expr_any();
+		struct ast_expr *e = ast_expr_any();
 		if (e == NULL) { goto ZL1; }
-		(ZIe) = re_ast_expr_with_count(e, (ZIf));
+		(ZIe) = ast_expr_with_count(e, (ZIf));
 		if ((ZIe) == NULL) { goto ZL1; }
 	
 #line 1705 "src/libre/dialect/sql/parser.c"
@@ -1708,7 +1708,7 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			{
 #line 588 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_with_count((ZIe), (ZIs));
+		(ZInode) = ast_expr_with_count((ZIe), (ZIs));
 		if ((ZInode) == NULL) {
 			err->e = RE_EXEOF;
 			goto ZL1;
@@ -1735,7 +1735,7 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			{
 #line 583 "src/libre/parser.act"
 
-		(ZIe) = re_ast_expr_group((ZIg));
+		(ZIe) = ast_expr_group((ZIg));
 		if ((ZIe) == NULL) { goto ZL1; }
 	
 #line 1742 "src/libre/dialect/sql/parser.c"
@@ -1757,7 +1757,7 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			{
 #line 588 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_with_count((ZIe), (ZIs));
+		(ZInode) = ast_expr_with_count((ZIe), (ZIs));
 		if ((ZInode) == NULL) {
 			err->e = RE_EXEOF;
 			goto ZL1;
@@ -1783,7 +1783,7 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			{
 #line 588 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_with_count((ZIe), (ZIs));
+		(ZInode) = ast_expr_with_count((ZIe), (ZIs));
 		if ((ZInode) == NULL) {
 			err->e = RE_EXEOF;
 			goto ZL1;
@@ -1809,7 +1809,7 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			{
 #line 588 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_with_count((ZIe), (ZIs));
+		(ZInode) = ast_expr_with_count((ZIe), (ZIs));
 		if ((ZInode) == NULL) {
 			err->e = RE_EXEOF;
 			goto ZL1;
@@ -1925,13 +1925,13 @@ ZL0:;
 		return lex_state->f(lex_state->opaque);
 	}
 
-	struct ast_re *
+	struct ast *
 	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
 		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
 		struct re_err *err)
 	{
-		struct ast_re *ast;
+		struct ast *ast;
 		struct flags top, *fl = &top;
 
 		struct act_state  act_state_s;
@@ -1946,7 +1946,7 @@ ZL0:;
 
 		assert(f != NULL);
 
-		ast = re_ast_new();
+		ast = ast_new();
 
 		if (err == NULL) {
 			err = &dummy;
@@ -2046,7 +2046,7 @@ ZL0:;
 			break;
 		}
 
-		re_ast_free(ast);
+		ast_free(ast);
 
 		return NULL;
 	}

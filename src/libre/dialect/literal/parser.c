@@ -280,7 +280,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 		{
 #line 566 "src/libre/parser.act"
 
-		(ZIl) = re_ast_expr_literal((ZIc));
+		(ZIl) = ast_expr_literal((ZIc));
 		if ((ZIl) == NULL) { goto ZL1; }
 	
 #line 287 "src/libre/dialect/literal/parser.c"
@@ -302,7 +302,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					{
 #line 556 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_concat((ZIl), (ZIr));
+		(ZInode) = ast_expr_concat((ZIl), (ZIr));
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 309 "src/libre/dialect/literal/parser.c"
@@ -318,7 +318,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					{
 #line 551 "src/libre/parser.act"
 
-		(ZIr) = re_ast_expr_empty();
+		(ZIr) = ast_expr_empty();
 		if ((ZIr) == NULL) { goto ZL1; }
 	
 #line 325 "src/libre/dialect/literal/parser.c"
@@ -328,7 +328,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					{
 #line 556 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_concat((ZIl), (ZIr));
+		(ZInode) = ast_expr_concat((ZIl), (ZIr));
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 335 "src/libre/dialect/literal/parser.c"
@@ -375,7 +375,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 					{
 #line 551 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_empty();
+		(ZInode) = ast_expr_empty();
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 382 "src/libre/dialect/literal/parser.c"
@@ -445,13 +445,13 @@ ZL0:;
 		return lex_state->f(lex_state->opaque);
 	}
 
-	struct ast_re *
+	struct ast *
 	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
 		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
 		struct re_err *err)
 	{
-		struct ast_re *ast;
+		struct ast *ast;
 		struct flags top, *fl = &top;
 
 		struct act_state  act_state_s;
@@ -466,7 +466,7 @@ ZL0:;
 
 		assert(f != NULL);
 
-		ast = re_ast_new();
+		ast = ast_new();
 
 		if (err == NULL) {
 			err = &dummy;
@@ -566,7 +566,7 @@ ZL0:;
 			break;
 		}
 
-		re_ast_free(ast);
+		ast_free(ast);
 
 		return NULL;
 	}

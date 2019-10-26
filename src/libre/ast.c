@@ -18,10 +18,10 @@
 /* This is a placeholder for a node that has already been freed. */
 static struct ast_expr the_tombstone;
 
-struct ast_re *
-re_ast_new(void)
+struct ast *
+ast_new(void)
 {
-	struct ast_re *res = calloc(1, sizeof(*res));
+	struct ast *res = calloc(1, sizeof(*res));
 
 	the_tombstone.t = AST_EXPR_TOMBSTONE;
 
@@ -88,20 +88,20 @@ free_iter(struct ast_expr *n)
 }
 
 void
-re_ast_free(struct ast_re *ast)
+ast_free(struct ast *ast)
 {
-	re_ast_expr_free(ast->expr);
+	ast_expr_free(ast->expr);
 	free(ast);
 }
 
 void
-re_ast_expr_free(struct ast_expr *n)
+ast_expr_free(struct ast_expr *n)
 {
 	free_iter(n);
 }
 
 struct ast_expr *
-re_ast_expr_empty(void)
+ast_expr_empty(void)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
@@ -113,13 +113,13 @@ re_ast_expr_empty(void)
 /* Note: this returns a single-instance node, which
  * other functions should not modify. */
 struct ast_expr *
-re_ast_expr_tombstone(void)
+ast_expr_tombstone(void)
 {
 	return &the_tombstone;
 }
 
 struct ast_expr *
-re_ast_expr_concat(struct ast_expr *l, struct ast_expr *r)
+ast_expr_concat(struct ast_expr *l, struct ast_expr *r)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
@@ -132,7 +132,7 @@ re_ast_expr_concat(struct ast_expr *l, struct ast_expr *r)
 }
 
 struct ast_expr *
-re_ast_expr_concat_n(size_t count)
+ast_expr_concat_n(size_t count)
 {
 	struct ast_expr *res;
 	size_t size = sizeof(*res) + (count-1)*sizeof(struct ast_expr *);
@@ -145,7 +145,7 @@ re_ast_expr_concat_n(size_t count)
 }
 
 struct ast_expr *
-re_ast_expr_alt(struct ast_expr *l, struct ast_expr *r)
+ast_expr_alt(struct ast_expr *l, struct ast_expr *r)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
@@ -158,7 +158,7 @@ re_ast_expr_alt(struct ast_expr *l, struct ast_expr *r)
 }
 
 struct ast_expr *
-re_ast_expr_alt_n(size_t count)
+ast_expr_alt_n(size_t count)
 {
 	struct ast_expr *res;
 	size_t size = sizeof(*res) + (count-1)*sizeof(struct ast_expr *);
@@ -171,7 +171,7 @@ re_ast_expr_alt_n(size_t count)
 }
 
 struct ast_expr *
-re_ast_expr_literal(char c)
+ast_expr_literal(char c)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
@@ -181,7 +181,7 @@ re_ast_expr_literal(char c)
 }
 
 struct ast_expr *
-re_ast_expr_any(void)
+ast_expr_any(void)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
@@ -191,7 +191,7 @@ re_ast_expr_any(void)
 }
 
 struct ast_expr *
-re_ast_expr_with_count(struct ast_expr *e, struct ast_count count)
+ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 {
 	struct ast_expr *res = NULL;
 	if (count.low > count.high) {
@@ -217,7 +217,7 @@ re_ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 }
 
 struct ast_expr *
-re_ast_expr_char_class(struct re_char_class_ast *cca,
+ast_expr_char_class(struct re_char_class_ast *cca,
     const struct ast_pos *start, const struct ast_pos *end)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
@@ -231,7 +231,7 @@ re_ast_expr_char_class(struct re_char_class_ast *cca,
 }
 
 struct ast_expr *
-re_ast_expr_group(struct ast_expr *e)
+ast_expr_group(struct ast_expr *e)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
@@ -242,7 +242,7 @@ re_ast_expr_group(struct ast_expr *e)
 }
 
 struct ast_expr *
-re_ast_expr_re_flags(enum re_flags pos, enum re_flags neg)
+ast_expr_re_flags(enum re_flags pos, enum re_flags neg)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
@@ -253,7 +253,7 @@ re_ast_expr_re_flags(enum re_flags pos, enum re_flags neg)
 }
 
 struct ast_expr *
-re_ast_expr_anchor(enum re_ast_anchor_type t)
+ast_expr_anchor(enum ast_anchor_type t)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }

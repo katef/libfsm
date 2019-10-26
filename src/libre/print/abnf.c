@@ -246,8 +246,8 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 }
 
 void
-re_ast_print_abnf(FILE *f, const struct fsm_options *opt,
-	const struct ast_re *ast)
+ast_print_abnf(FILE *f, const struct fsm_options *opt,
+	const struct ast *ast)
 {
 	assert(f != NULL);
 	assert(opt != NULL);

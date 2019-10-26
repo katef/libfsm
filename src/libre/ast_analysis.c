@@ -38,7 +38,7 @@ static int
 is_nullable(const struct ast_expr *n) { return n->flags & RE_AST_FLAG_NULLABLE; }
 
 static void
-set_flags(struct ast_expr *n, enum re_ast_flags f);
+set_flags(struct ast_expr *n, enum ast_flags f);
 
 static int
 always_consumes_input(const struct ast_expr *n, int thud);
@@ -49,7 +49,7 @@ static void
 assign_lasts(struct ast_expr *n);
 
 enum re_analysis_res
-re_ast_analysis(struct ast_re *ast)
+ast_analysis(struct ast *ast)
 {
 	enum re_analysis_res res;
 
@@ -133,21 +133,21 @@ collect_chain(size_t count, struct ast_expr *doomed)
 			res = doomed->u.concat.l;
 
 			assert(doomed->u.concat.r->t == AST_EXPR_EMPTY);
-			doomed->u.concat.l = re_ast_expr_tombstone();
-			re_ast_expr_free(doomed);
+			doomed->u.concat.l = ast_expr_tombstone();
+			ast_expr_free(doomed);
 			assert(res->t != AST_EXPR_CONCAT);
 			return res;
 		} else {
-			struct ast_expr *dst = re_ast_expr_concat_n(count);
+			struct ast_expr *dst = ast_expr_concat_n(count);
 			if (dst == NULL) { return NULL; }
 			
 			for (i = 0; i < count; i++) {
 				struct ast_expr *ndoomed = doomed->u.concat.r;
 				if (!flatten(&doomed->u.concat.l)) { return 0; }
 				dst->u.concat_n.n[i] = doomed->u.concat.l;
-				doomed->u.concat.l = re_ast_expr_tombstone();
-				doomed->u.concat.r = re_ast_expr_tombstone();
-				re_ast_expr_free(doomed);
+				doomed->u.concat.l = ast_expr_tombstone();
+				doomed->u.concat.r = ast_expr_tombstone();
+				ast_expr_free(doomed);
 				doomed = ndoomed;
 				if (i == count - 1) {
 					assert(doomed->t == AST_EXPR_EMPTY);
@@ -160,16 +160,16 @@ collect_chain(size_t count, struct ast_expr *doomed)
 			/* If we get here, it's a parser bug. Right? */
 			assert(0);
 		} else {
-			struct ast_expr *dst = re_ast_expr_alt_n(count);
+			struct ast_expr *dst = ast_expr_alt_n(count);
 			if (dst == NULL) { return NULL; }
 
 			for (i = 0; i < count; i++) {
 				struct ast_expr *ndoomed = doomed->u.alt.r;
 				if (!flatten(&doomed->u.alt.l)) { return 0; }
 				dst->u.alt_n.n[i] = doomed->u.alt.l;
-				doomed->u.alt.l = re_ast_expr_tombstone();
-				doomed->u.alt.r = re_ast_expr_tombstone();
-				re_ast_expr_free(doomed);
+				doomed->u.alt.l = ast_expr_tombstone();
+				doomed->u.alt.r = ast_expr_tombstone();
+				ast_expr_free(doomed);
 				doomed = ndoomed;
 				if (i == count - 1) {
 					assert(doomed->t == AST_EXPR_EMPTY);
@@ -489,8 +489,8 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			if (res == RE_ANALYSIS_UNSATISFIABLE) {
 				/* prune unsatisfiable branch */
 				struct ast_expr *doomed = n->u.alt_n.n[i];
-				n->u.alt_n.n[i] = re_ast_expr_tombstone();
-				re_ast_expr_free(doomed);
+				n->u.alt_n.n[i] = ast_expr_tombstone();
+				ast_expr_free(doomed);
 				continue;
 			} else if (res == RE_ANALYSIS_OK) {
 				any_sat = 1;
@@ -648,7 +648,7 @@ assign_lasts(struct ast_expr *n) {
 }
 
 static void
-set_flags(struct ast_expr *n, enum re_ast_flags f)
+set_flags(struct ast_expr *n, enum ast_flags f)
 {
 	n->flags |= f;
 }

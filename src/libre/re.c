@@ -90,13 +90,13 @@ re_flags(const char *s, enum re_flags *f)
 	return 0;
 }
 
-struct ast_re *
+struct ast *
 re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err)
 {
 	const struct dialect *m;
-	struct ast_re *ast = NULL;
+	struct ast *ast = NULL;
 	enum re_analysis_res res;
 	
 	assert(getc != NULL);
@@ -115,10 +115,10 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	}
 
 	/* Do a complete pass over the AST, filling in other details. */
-	res = re_ast_analysis(ast);
+	res = ast_analysis(ast);
 
 	if (res < 0) {
-		re_ast_free(ast);
+		ast_free(ast);
 		if (err != NULL) { err->e = RE_EERRNO; }
 		return NULL;
 	}
@@ -133,7 +133,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err)
 {
-	struct ast_re *ast;
+	struct ast *ast;
 	struct fsm *new;
 	const struct dialect *m;
 
@@ -155,12 +155,12 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	 * that unioning it with other regexes will still work. */
 	if (ast->unsatisfiable) {
 		struct ast_expr *unsat = ast->expr;
-		ast->expr = re_ast_expr_tombstone();
-		re_ast_expr_free(unsat);
+		ast->expr = ast_expr_tombstone();
+		ast_expr_free(unsat);
 	}
 
 	new = re_comp_ast(ast, flags, opt, err);
-	re_ast_free(ast);
+	ast_free(ast);
 	ast = NULL;
 
 	if (new == NULL) {
@@ -187,7 +187,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 error:
 
 	if (new != NULL) { fsm_free(new); }
-	if (ast != NULL) { re_ast_free(ast); }
+	if (ast != NULL) { ast_free(ast); }
 	if (err != NULL) { err->e = RE_EERRNO; }
 
 	return NULL;

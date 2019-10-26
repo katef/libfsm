@@ -142,8 +142,8 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 }
 
 void
-re_ast_print_dot(FILE *f, const struct fsm_options *opt,
-	const struct ast_re *ast)
+ast_print_dot(FILE *f, const struct fsm_options *opt,
+	const struct ast *ast)
 {
 	assert(f != NULL);
 	assert(opt != NULL);

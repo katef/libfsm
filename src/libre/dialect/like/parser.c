@@ -266,7 +266,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					{
 #line 571 "src/libre/parser.act"
 
-		(ZIl) = re_ast_expr_any();
+		(ZIl) = ast_expr_any();
 		if ((ZIl) == NULL) { goto ZL1; }
 	
 #line 273 "src/libre/dialect/like/parser.c"
@@ -313,7 +313,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					{
 #line 566 "src/libre/parser.act"
 
-		(ZIl) = re_ast_expr_literal((ZIc));
+		(ZIl) = ast_expr_literal((ZIc));
 		if ((ZIl) == NULL) { goto ZL1; }
 	
 #line 320 "src/libre/dialect/like/parser.c"
@@ -343,7 +343,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					{
 #line 571 "src/libre/parser.act"
 
-		(ZIe) = re_ast_expr_any();
+		(ZIe) = ast_expr_any();
 		if ((ZIe) == NULL) { goto ZL1; }
 	
 #line 350 "src/libre/dialect/like/parser.c"
@@ -362,7 +362,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					{
 #line 588 "src/libre/parser.act"
 
-		(ZIl) = re_ast_expr_with_count((ZIe), (ZIc));
+		(ZIl) = ast_expr_with_count((ZIe), (ZIc));
 		if ((ZIl) == NULL) {
 			err->e = RE_EXEOF;
 			goto ZL1;
@@ -394,7 +394,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					{
 #line 556 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_concat((ZIl), (ZIr));
+		(ZInode) = ast_expr_concat((ZIl), (ZIr));
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 401 "src/libre/dialect/like/parser.c"
@@ -410,7 +410,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					{
 #line 551 "src/libre/parser.act"
 
-		(ZIr) = re_ast_expr_empty();
+		(ZIr) = ast_expr_empty();
 		if ((ZIr) == NULL) { goto ZL1; }
 	
 #line 417 "src/libre/dialect/like/parser.c"
@@ -420,7 +420,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					{
 #line 556 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_concat((ZIl), (ZIr));
+		(ZInode) = ast_expr_concat((ZIl), (ZIr));
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 427 "src/libre/dialect/like/parser.c"
@@ -467,7 +467,7 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 					{
 #line 551 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_empty();
+		(ZInode) = ast_expr_empty();
 		if ((ZInode) == NULL) { goto ZL1; }
 	
 #line 474 "src/libre/dialect/like/parser.c"
@@ -537,13 +537,13 @@ ZL0:;
 		return lex_state->f(lex_state->opaque);
 	}
 
-	struct ast_re *
+	struct ast *
 	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
 		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
 		struct re_err *err)
 	{
-		struct ast_re *ast;
+		struct ast *ast;
 		struct flags top, *fl = &top;
 
 		struct act_state  act_state_s;
@@ -558,7 +558,7 @@ ZL0:;
 
 		assert(f != NULL);
 
-		ast = re_ast_new();
+		ast = ast_new();
 
 		if (err == NULL) {
 			err = &dummy;
@@ -658,7 +658,7 @@ ZL0:;
 			break;
 		}
 
-		re_ast_free(ast);
+		ast_free(ast);
 
 		return NULL;
 	}

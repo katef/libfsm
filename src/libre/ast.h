@@ -51,13 +51,13 @@ struct ast_count {
 	struct ast_pos end;
 };
 
-enum re_ast_anchor_type {
+enum ast_anchor_type {
 	RE_AST_ANCHOR_START,
 	RE_AST_ANCHOR_END
 };
 
 /* Flags used during AST analysis. Not all are valid for all node types. */
-enum re_ast_flags {
+enum ast_flags {
 	/* The node can appear at the beginning of input,
 	 * possibly preceded by other nullable nodes. */
 	RE_AST_FLAG_FIRST_STATE = 0x01,
@@ -91,7 +91,7 @@ enum re_ast_flags {
  */
 struct ast_expr {
 	enum ast_expr_type t;
-	enum re_ast_flags flags;
+	enum ast_flags flags;
 
 	union {
 		struct {
@@ -132,12 +132,12 @@ struct ast_expr {
 			enum re_flags neg;
 		} flags;
 		struct {
-			enum re_ast_anchor_type t;
+			enum ast_anchor_type t;
 		} anchor;
 	} u;	
 };
 
-struct ast_re {
+struct ast {
 	struct ast_expr *expr;
 	/* This is set if we can determine ahead of time that the regex
 	 * is inherently unsatisfiable. For example, multiple start/end
@@ -149,54 +149,54 @@ struct ast_re {
 
 extern struct ast_expr the_empty_node;
 
-struct ast_re *
-re_ast_new(void);
+struct ast *
+ast_new(void);
 
 void
-re_ast_free(struct ast_re *ast);
+ast_free(struct ast *ast);
 
 void
-re_ast_expr_free(struct ast_expr *n);
+ast_expr_free(struct ast_expr *n);
 
 struct ast_expr *
-re_ast_expr_empty(void);
+ast_expr_empty(void);
 
 struct ast_expr *
-re_ast_expr_tombstone(void);
+ast_expr_tombstone(void);
 
 struct ast_expr *
-re_ast_expr_concat(struct ast_expr *l, struct ast_expr *r);
+ast_expr_concat(struct ast_expr *l, struct ast_expr *r);
 
 struct ast_expr *
-re_ast_expr_concat_n(size_t count);
+ast_expr_concat_n(size_t count);
 
 struct ast_expr *
-re_ast_expr_alt(struct ast_expr *l, struct ast_expr *r);
+ast_expr_alt(struct ast_expr *l, struct ast_expr *r);
 
 struct ast_expr *
-re_ast_expr_alt_n(size_t count);
+ast_expr_alt_n(size_t count);
 
 struct ast_expr *
-re_ast_expr_literal(char c);
+ast_expr_literal(char c);
 
 struct ast_expr *
-re_ast_expr_any(void);
+ast_expr_any(void);
 
 struct ast_expr *
-re_ast_expr_with_count(struct ast_expr *e, struct ast_count count);
+ast_expr_with_count(struct ast_expr *e, struct ast_count count);
 
 struct ast_expr *
-re_ast_expr_char_class(struct re_char_class_ast *cca,
+ast_expr_char_class(struct re_char_class_ast *cca,
     const struct ast_pos *start, const struct ast_pos *end);
 
 struct ast_expr *
-re_ast_expr_group(struct ast_expr *e);
+ast_expr_group(struct ast_expr *e);
 
 struct ast_expr *
-re_ast_expr_re_flags(enum re_flags pos, enum re_flags neg);
+ast_expr_re_flags(enum re_flags pos, enum re_flags neg);
 
 struct ast_expr *
-re_ast_expr_anchor(enum re_ast_anchor_type t);
+ast_expr_anchor(enum ast_anchor_type t);
 
 struct ast_count
 ast_count(unsigned low, const struct ast_pos *start,
@@ -215,6 +215,6 @@ enum re_analysis_res {
 };
 
 enum re_analysis_res
-re_ast_analysis(struct ast_re *ast);
+ast_analysis(struct ast *ast);
 
 #endif

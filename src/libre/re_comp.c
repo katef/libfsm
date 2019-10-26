@@ -92,7 +92,7 @@ decide_linking(struct comp_env *env,
     struct ast_expr *n, enum link_side side);
 
 struct fsm *
-re_comp_ast(struct ast_re *ast,
+re_comp_ast(struct ast *ast,
     enum re_flags flags,
     const struct fsm_options *opt,
 	struct re_err *err)

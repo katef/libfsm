@@ -46,7 +46,7 @@ fprintf_count(FILE *f, unsigned count)
 }
 
 static void
-fprintf_flags(FILE *f, enum re_ast_flags flags)
+fprintf_flags(FILE *f, enum ast_flags flags)
 {
 	fprintf(f, "(f: ");
 	#define PR_FLAG(X, S)						\
@@ -178,8 +178,8 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 }
 
 void
-re_ast_print_tree(FILE *f, const struct fsm_options *opt,
-	const struct ast_re *ast)
+ast_print_tree(FILE *f, const struct fsm_options *opt,
+	const struct ast *ast)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
