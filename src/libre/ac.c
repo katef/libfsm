@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <stdio.h>
 #include <ctype.h>
 
 #include <fsm/fsm.h>
@@ -17,10 +18,25 @@
 
 enum { POOL_BLOCK_SIZE = 256 };
 
+struct trie_state {
+	struct trie_state *children[256];
+	struct trie_state *fail;
+	struct fsm_state *st;
+	unsigned int index;
+	unsigned int output:1;
+};
+
 struct trie_pool {
 	struct trie_pool *next;
 	struct trie_state *states;
 	size_t n;
+};
+
+struct trie_graph {
+	struct trie_state *root;
+	struct trie_pool *pool;
+	size_t nstates;
+	size_t depth;
 };
 
 static struct trie_state *
