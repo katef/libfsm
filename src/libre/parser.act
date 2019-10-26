@@ -34,7 +34,6 @@
 	#include "libre/class.h"
 	#include "libre/class_lookup.h"
 	#include "libre/ast.h"
-	#include "libre/ast_class.h"
 
 	#ifndef DIALECT
 	#error DIALECT required
@@ -90,7 +89,6 @@
 
 	#include "../comp.h"
 	#include "../../class.h"
-	#include "../../ast_class.h"
 
 	struct flags {
 		enum re_flags flags;

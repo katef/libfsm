@@ -16,7 +16,6 @@
 #include "../class.h"
 #include "../class_lookup.h"
 #include "../ast.h"
-#include "../ast_class.h"
 #include "../print.h"
 
 static void

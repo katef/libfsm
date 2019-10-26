@@ -13,7 +13,6 @@
 
 #include "class.h"
 #include "ast.h"
-#include "ast_class.h"
 
 /* This is a placeholder for a node that has already been freed. */
 static struct ast_expr the_tombstone;

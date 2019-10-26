@@ -17,7 +17,6 @@
 
 #include "class.h"
 #include "ast.h"
-#include "ast_class.h"
 
 #include "libfsm/internal.h" /* XXX */
 
