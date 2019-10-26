@@ -75,6 +75,71 @@ enum ast_flags {
 
 #define NO_GROUP_ID ((unsigned)-1)
 
+enum ast_class_flags {
+	AST_CLASS_FLAG_NONE = 0x00,
+	/* the class should be negated, e.g. [^aeiou] */
+	AST_CLASS_FLAG_INVERTED = 0x01,
+	/* includes the `-` character, which isn't part of a range */
+	AST_CLASS_FLAG_MINUS = 0x02
+};
+
+enum ast_class_type {
+	AST_CLASS_CONCAT,
+	AST_CLASS_LITERAL,
+	AST_CLASS_RANGE,
+	AST_CLASS_NAMED,
+	AST_CLASS_CHAR_TYPE,
+	AST_CLASS_FLAGS,
+	AST_CLASS_SUBTRACT
+};
+
+enum ast_range_endpoint_type {
+	AST_RANGE_ENDPOINT_LITERAL,
+	AST_RANGE_ENDPOINT_CHAR_TYPE,
+	AST_RANGE_ENDPOINT_CHAR_CLASS
+};
+
+struct ast_range_endpoint {
+	enum ast_range_endpoint_type t;
+	union {
+		struct {
+			unsigned char c;
+		} literal;
+		struct {
+			class_constructor *ctor;
+		} class;
+	} u;
+};
+
+struct ast_class {
+	enum ast_class_type t;
+	union {
+		struct {
+			struct ast_class *l;
+			struct ast_class *r;
+		} concat;
+		struct {
+			unsigned char c;
+		} literal;
+		struct {
+			struct ast_range_endpoint from;
+			struct ast_pos start;
+			struct ast_range_endpoint to;
+			struct ast_pos end;
+		} range;
+		struct {
+			class_constructor *ctor;
+		} named;
+		struct {
+			enum ast_class_flags f;
+		} flags;
+		struct {
+			struct ast_class *ast;
+			struct ast_class *mask;
+		} subtract;
+	} u;
+};
+
 /*
  * The following regular expression fragments map to associated fsm states
  * as follows (transitions written in .fsm format):
@@ -144,8 +209,6 @@ struct ast {
 	int unsatisfiable;
 };
 
-extern struct ast_expr the_empty_node;
-
 struct ast *
 ast_new(void);
 
@@ -199,70 +262,6 @@ struct ast_count
 ast_count(unsigned low, const struct ast_pos *start,
     unsigned high, const struct ast_pos *end);
 
-enum ast_class_flags {
-	AST_CLASS_FLAG_NONE = 0x00,
-	/* the class should be negated, e.g. [^aeiou] */
-	AST_CLASS_FLAG_INVERTED = 0x01,
-	/* includes the `-` character, which isn't part of a range */
-	AST_CLASS_FLAG_MINUS = 0x02
-};
-
-enum ast_class_type {
-	AST_CLASS_CONCAT,
-	AST_CLASS_LITERAL,
-	AST_CLASS_RANGE,
-	AST_CLASS_NAMED,
-	AST_CLASS_CHAR_TYPE,
-	AST_CLASS_FLAGS,
-	AST_CLASS_SUBTRACT
-};
-
-enum ast_range_endpoint_type {
-	AST_RANGE_ENDPOINT_LITERAL,
-	AST_RANGE_ENDPOINT_CHAR_TYPE,
-	AST_RANGE_ENDPOINT_CHAR_CLASS
-};
-struct ast_range_endpoint {
-	enum ast_range_endpoint_type t;
-	union {
-		struct {
-			unsigned char c;
-		} literal;
-		struct {
-			class_constructor *ctor;
-		} class;
-	} u;
-};
-
-struct ast_class {
-	enum ast_class_type t;
-	union {
-		struct {
-			struct ast_class *l;
-			struct ast_class *r;
-		} concat;
-		struct {
-			unsigned char c;
-		} literal;
-		struct {
-			struct ast_range_endpoint from;
-			struct ast_pos start;
-			struct ast_range_endpoint to;
-			struct ast_pos end;
-		} range;
-		struct {
-			class_constructor *ctor;
-		} named;
-		struct {
-			enum ast_class_flags f;
-		} flags;
-		struct {
-			struct ast_class *ast;
-			struct ast_class *mask;
-		} subtract;
-	} u;
-};
-
 struct ast_class *
 ast_class_concat(struct ast_class *l,
     struct ast_class *r);
@@ -287,9 +286,6 @@ ast_class_named(class_constructor *ctor);
 struct ast_class *
 ast_class_subtract(struct ast_class *ast,
     struct ast_class *mask);
-
-void
-ast_class_free(struct ast_class *ast);
 
 int
 ast_class_compile(struct ast_class *class,
