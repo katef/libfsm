@@ -322,18 +322,18 @@ comp_iter(struct comp_env *env,
 		if (!comp_iter_repeated(env, x, y, &n->u.repeated)) { return 0; }
 		break;
 
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 		/*
 		 * XXX: this doesn't belong here; it's set as a fall-through.
 		 * Instead we should be populating .start/.end for each node
-		 * in the cca tree.
+		 * in the char class tree.
 		 */
 		if (env->err != NULL) {
-			env->err->start.byte = n->u.char_class.start.byte;
-			env->err->end.byte   = n->u.char_class.end.byte;
+			env->err->start.byte = n->u.class.start.byte;
+			env->err->end.byte   = n->u.class.end.byte;
 		}
 
-		if (!re_char_class_ast_compile(n->u.char_class.cca,
+		if (!ast_class_compile(n->u.class.class,
 			env->fsm, env->flags, env->err, env->opt, x, y)) {
 			return 0;
 		}
@@ -442,7 +442,7 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 	switch (e->t) {
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_FLAGS:
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 	case AST_EXPR_ALT_N:
 	case AST_EXPR_ANCHOR:
 		return 0;
@@ -605,7 +605,7 @@ decide_linking(struct comp_env *env,
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 
 	case AST_EXPR_CONCAT_N:
 	case AST_EXPR_ALT_N:

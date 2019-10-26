@@ -24,7 +24,7 @@ re_flags_print(FILE *f, enum re_flags fl);
 
 static void
 cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	struct re_char_class_ast *n);
+	struct ast_class *n);
 
 static int
 atomic(struct ast_expr *n)
@@ -34,7 +34,7 @@ atomic(struct ast_expr *n)
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
 	case AST_EXPR_REPEATED:
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 	case AST_EXPR_GROUP:
 		return 1;
 
@@ -225,9 +225,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 		fprintf(f, "[");
-		cc_pp_iter(f, opt, n->u.char_class.cca);
+		cc_pp_iter(f, opt, n->u.class.class);
 		fprintf(f, "]");
 		break;
 
@@ -297,42 +297,42 @@ print_range_endpoint(FILE *f, const struct fsm_options *opt,
 }
 
 static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt, struct re_char_class_ast *n)
+cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(n != NULL);
 
 	switch (n->t) {
-	case RE_CHAR_CLASS_AST_CONCAT:
+	case AST_CLASS_CONCAT:
 		cc_pp_iter(f, opt, n->u.concat.l);
 		cc_pp_iter(f, opt, n->u.concat.r);
 		break;
 
-	case RE_CHAR_CLASS_AST_LITERAL:
+	case AST_CLASS_LITERAL:
 		pcre_escputc(f, opt, n->u.literal.c);
 		break;
 
-	case RE_CHAR_CLASS_AST_RANGE:
+	case AST_CLASS_RANGE:
 		print_range_endpoint(f, opt, &n->u.range.from);
 		fprintf(f, "-");
 		print_range_endpoint(f, opt, &n->u.range.to);
 		break;
 
-	case RE_CHAR_CLASS_AST_NAMED:
+	case AST_CLASS_NAMED:
 		print_class_name(f, class_name(n->u.named.ctor));
 		break;
 
-	case RE_CHAR_CLASS_AST_FLAGS:
-		if (n->u.flags.f & RE_CHAR_CLASS_FLAG_INVERTED) {
+	case AST_CLASS_FLAGS:
+		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
 			fprintf(f, "^");
 		}
-		if (n->u.flags.f & RE_CHAR_CLASS_FLAG_MINUS) {
+		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
 			fprintf(f, "-");
 		}
 		break;
 
-	case RE_CHAR_CLASS_AST_SUBTRACT:
+	case AST_CLASS_SUBTRACT:
 		fprintf(f, "\tn%p [ label = <{CLASS-SUBTRACT|{ast|mask}}> ];\n", (void *) n);
 		cc_pp_iter(f, opt, n->u.subtract.ast);
 		cc_pp_iter(f, opt, n->u.subtract.mask);

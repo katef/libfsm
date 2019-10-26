@@ -69,8 +69,8 @@ free_iter(struct ast_expr *n)
 	case AST_EXPR_REPEATED:
 		free_iter(n->u.repeated.e);
 		break;
-	case AST_EXPR_CHAR_CLASS:
-		re_char_class_ast_free(n->u.char_class.cca);
+	case AST_EXPR_CLASS:
+		ast_class_free(n->u.class.class);
 		break;
 	case AST_EXPR_GROUP:
 		free_iter(n->u.group.e);
@@ -217,16 +217,16 @@ ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 }
 
 struct ast_expr *
-ast_expr_char_class(struct re_char_class_ast *cca,
+ast_expr_class(struct ast_class *class,
     const struct ast_pos *start, const struct ast_pos *end)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
 
-	res->t = AST_EXPR_CHAR_CLASS;
-	res->u.char_class.cca = cca;
-	memcpy(&res->u.char_class.start, start, sizeof *start);
-	memcpy(&res->u.char_class.end, end, sizeof *end);
+	res->t = AST_EXPR_CLASS;
+	res->u.class.class = class;
+	memcpy(&res->u.class.start, start, sizeof *start);
+	memcpy(&res->u.class.end, end, sizeof *end);
 	return res;
 }
 

@@ -7,7 +7,7 @@
 #include "class.h"
 
 static struct {
-	char_class_constructor *ctor;
+	class_constructor *ctor;
 	const char *name;
 } classes[] = {
 	{ class_alnum_fsm, "alnum" },
@@ -218,7 +218,7 @@ static struct {
 };
 
 const char *
-class_name(char_class_constructor *ctor)
+class_name(class_constructor *ctor)
 {
 	size_t i;
 

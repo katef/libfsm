@@ -20,7 +20,7 @@ re_flags_print(FILE *f, enum re_flags fl);
 
 static void
 cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	struct re_char_class_ast *n, size_t indent);
+	struct ast_class *n, size_t indent);
 
 static void
 print_char_or_esc(FILE *f, unsigned char c);
@@ -145,9 +145,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		fprintf(f, "}\n");
 		pp_iter(f, opt, indent + 1*IND, n->u.repeated.e);
 		break;
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 		fprintf(f, "CHAR_CLASS %p: \n", (void *)n);
-		cc_pp_iter(f, opt, n->u.char_class.cca, indent + IND);
+		cc_pp_iter(f, opt, n->u.class.class, indent + IND);
 		fprintf(f, "\n");
 		break;
 	case AST_EXPR_GROUP:
@@ -217,7 +217,7 @@ print_range_endpoint(FILE *f, const struct ast_range_endpoint *r)
 
 static void
 cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	struct re_char_class_ast *n, size_t indent)
+	struct ast_class *n, size_t indent)
 {
 	size_t i;
 
@@ -228,38 +228,38 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 	for (i = 0; i < indent; i++) { fprintf(f, " "); }
 
 	switch (n->t) {
-	case RE_CHAR_CLASS_AST_CONCAT:
+	case AST_CLASS_CONCAT:
 		fprintf(f, "CLASS-CONCAT %p: \n", (void *)n);
 		cc_pp_iter(f, opt, n->u.concat.l, indent + 4);
 		cc_pp_iter(f, opt, n->u.concat.r, indent + 4);
 		break;
-	case RE_CHAR_CLASS_AST_LITERAL:
+	case AST_CLASS_LITERAL:
 		fprintf(f, "CLASS-LITERAL %p: '", (void *)n);
 		print_char_or_esc(f, n->u.literal.c);
 		fprintf(f, "'\n");
 		break;
-	case RE_CHAR_CLASS_AST_RANGE:
+	case AST_CLASS_RANGE:
 		fprintf(f, "CLASS-RANGE %p: ", (void *)n);
 		print_range_endpoint(f, &n->u.range.from);
 		fprintf(f, "-");
 		print_range_endpoint(f, &n->u.range.to);
 		fprintf(f, "\n");
 		break;
-	case RE_CHAR_CLASS_AST_NAMED:
+	case AST_CLASS_NAMED:
 		fprintf(f, "CLASS-NAMED %p: %s\n",
 		    (void *)n, class_name(n->u.named.ctor));
 		break;
-	case RE_CHAR_CLASS_AST_FLAGS:
+	case AST_CLASS_FLAGS:
 		fprintf(f, "CLASS-FLAGS %p: [", (void *)n);
-		if (n->u.flags.f & RE_CHAR_CLASS_FLAG_INVERTED) { 
+		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) { 
 			fprintf(f, "^");
 		}
-		if (n->u.flags.f & RE_CHAR_CLASS_FLAG_MINUS) {
+		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
 			fprintf(f, "-");
 		}
 		fprintf(f, "]\n");
 		break;
-	case RE_CHAR_CLASS_AST_SUBTRACT:
+	case AST_CLASS_SUBTRACT:
 		fprintf(f, "CLASS-SUBTRACT %p:\n", (void *)n);
 		cc_pp_iter(f, opt, n->u.subtract.ast, indent + 4);
 		cc_pp_iter(f, opt, n->u.subtract.mask, indent + 4);

@@ -305,7 +305,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		set_flags(n, RE_AST_FLAG_NULLABLE); 
 		break;
 
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 		/* character classes cannot be empty, so they're not nullable */
 		break;
 
@@ -330,7 +330,7 @@ always_consumes_input(const struct ast_expr *n, int thud)
 	switch (n->t) {
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 		return 1;
 
 	case AST_EXPR_CONCAT_N:
@@ -428,7 +428,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 	/* These are the types that actually consume input. */
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 		if (!is_nullable(n)) {
 			env->past_any_consuming = 1;
 		}
@@ -545,7 +545,7 @@ assign_firsts(struct ast_expr *n)
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 		set_flags(n, RE_AST_FLAG_FIRST_STATE);
 		break;
 
@@ -602,7 +602,7 @@ assign_lasts(struct ast_expr *n) {
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 		set_flags(n, RE_AST_FLAG_LAST_STATE);
 		break;
 

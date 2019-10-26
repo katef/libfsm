@@ -13,7 +13,7 @@
 
 static const struct {
 	const char *name;
-	char_class_constructor *ctor;
+	class_constructor *ctor;
 } classes[] = {
 	{ "[:alnum:]", class_alnum_fsm },
 	{ "[:alpha:]", class_alpha_fsm },
@@ -31,8 +31,8 @@ static const struct {
 	{ "[:xdigit:]", class_xdigit_fsm }
 };
 
-char_class_constructor *
-re_char_class_native(const char *name)
+class_constructor *
+re_class_native(const char *name)
 {
 	size_t i;
 

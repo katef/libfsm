@@ -19,7 +19,7 @@
 
 static const struct {
 	const char *name;
-	char_class_constructor *ctor;
+	class_constructor *ctor;
 } classes[] = {
 	/*
 	 * The short forms are ordered first for sake of pcre_class_name()
@@ -74,8 +74,8 @@ pcre_class_name(const char *name)
 	return NULL;
 }
 
-char_class_constructor *
-re_char_class_pcre(const char *name)
+class_constructor *
+re_class_pcre(const char *name)
 {
 	size_t i;
 

@@ -21,7 +21,7 @@
 
 static void
 cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	struct re_char_class_ast *n);
+	struct ast_class *n);
 
 static void
 pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n);
@@ -33,7 +33,7 @@ atomic(struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 	case AST_EXPR_GROUP:
 		return 1;
 
@@ -219,9 +219,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 		fprintf(f, "(");
-		cc_pp_iter(f, opt, n->u.char_class.cca);
+		cc_pp_iter(f, opt, n->u.class.class);
 		fprintf(f, ")");
 		break;
 
@@ -262,15 +262,15 @@ ast_print_abnf(FILE *f, const struct fsm_options *opt,
 }
 
 static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt, struct re_char_class_ast *n)
+cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(n != NULL);
 
 	switch (n->t) {
-	case RE_CHAR_CLASS_AST_CONCAT:
-if (n->u.concat.l != NULL && n->u.concat.l->t == RE_CHAR_CLASS_AST_FLAGS) {
+	case AST_CLASS_CONCAT:
+if (n->u.concat.l != NULL && n->u.concat.l->t == AST_CLASS_FLAGS) {
 	/* XXX */
 	cc_pp_iter(f, opt, n->u.concat.r);
 } else {
@@ -280,11 +280,11 @@ if (n->u.concat.l != NULL && n->u.concat.l->t == RE_CHAR_CLASS_AST_FLAGS) {
 }
 		break;
 
-	case RE_CHAR_CLASS_AST_LITERAL:
+	case AST_CLASS_LITERAL:
 		abnf_escputc(f, opt, n->u.literal.c);
 		break;
 
-	case RE_CHAR_CLASS_AST_RANGE: {
+	case AST_CLASS_RANGE: {
 		if (n->u.range.from.t != AST_RANGE_ENDPOINT_LITERAL || n->u.range.to.t != AST_RANGE_ENDPOINT_LITERAL) {
 			fprintf(stderr, "non-literal range endpoint unsupported\n");
 			abort(); /* XXX */
@@ -296,20 +296,20 @@ if (n->u.concat.l != NULL && n->u.concat.l->t == RE_CHAR_CLASS_AST_FLAGS) {
 		}
 		break;
 
-	case RE_CHAR_CLASS_AST_NAMED:
+	case AST_CLASS_NAMED:
 		print_class_name(f, class_name(n->u.named.ctor));
 		break;
 
-	case RE_CHAR_CLASS_AST_FLAGS:
-		if (n->u.flags.f & RE_CHAR_CLASS_FLAG_INVERTED) {
+	case AST_CLASS_FLAGS:
+		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
 			fprintf(f, "<SOL>");
 		}
-		if (n->u.flags.f & RE_CHAR_CLASS_FLAG_MINUS) {
+		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
 			fprintf(f, "<->"); /* XXX */
 		}
 		break;
 
-	case RE_CHAR_CLASS_AST_SUBTRACT:
+	case AST_CLASS_SUBTRACT:
 		fprintf(stderr, "subtract unsupported\n");
 		abort(); /* XXX */
 

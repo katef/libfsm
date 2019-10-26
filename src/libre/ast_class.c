@@ -33,7 +33,7 @@
 struct cc {
 	enum re_flags re_flags;
 
-	enum re_char_class_flags cc_flags;
+	enum ast_class_flags flags;
 
 	const struct fsm_options *opt;
 	struct re_err *err;
@@ -48,7 +48,7 @@ struct cc {
 };
 
 static int
-link_char_class_into_fsm(struct cc *cc, struct fsm *fsm,
+link_class_into_fsm(struct cc *cc, struct fsm *fsm,
     struct fsm_state *x, struct fsm_state *y);
 
 static int
@@ -60,43 +60,42 @@ cc_add_range(struct cc *cc,
     const struct ast_range_endpoint *to);
 
 static int
-cc_add_named_class(struct cc *cc, char_class_constructor *ctor);
+cc_add_named_class(struct cc *cc, class_constructor *ctor);
 
 static int
 cc_invert(struct cc *cc);
 
-struct re_char_class_ast *
-re_char_class_ast_concat(struct re_char_class_ast *l,
-    struct re_char_class_ast *r)
+struct ast_class *
+ast_class_concat(struct ast_class *l, struct ast_class *r)
 {
-	struct re_char_class_ast *res = calloc(1, sizeof(*res));
+	struct ast_class *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
-	res->t = RE_CHAR_CLASS_AST_CONCAT;
+	res->t = AST_CLASS_CONCAT;
 	res->u.concat.l = l;
 	res->u.concat.r = r;
 	return res;
 }
 
-struct re_char_class_ast *
-re_char_class_ast_literal(unsigned char c)
+struct ast_class *
+ast_class_literal(unsigned char c)
 {
-	struct re_char_class_ast *res = calloc(1, sizeof(*res));
+	struct ast_class *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
-	res->t = RE_CHAR_CLASS_AST_LITERAL;
+	res->t = AST_CLASS_LITERAL;
 	res->u.literal.c = c;
 	return res;
 }
 
-struct re_char_class_ast *
-re_char_class_ast_range(const struct ast_range_endpoint *from, struct ast_pos start,
+struct ast_class *
+ast_class_range(const struct ast_range_endpoint *from, struct ast_pos start,
     const struct ast_range_endpoint *to, struct ast_pos end)
 {
-	struct re_char_class_ast *res = calloc(1, sizeof(*res));
+	struct ast_class *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
 	assert(from != NULL);
 	assert(to != NULL);
 
-	res->t = RE_CHAR_CLASS_AST_RANGE;
+	res->t = AST_CLASS_RANGE;
 	res->u.range.from = *from;
 	res->u.range.start = start;
 	res->u.range.to = *to;
@@ -104,55 +103,55 @@ re_char_class_ast_range(const struct ast_range_endpoint *from, struct ast_pos st
 	return res;
 }
 
-struct re_char_class_ast *
-re_char_class_ast_flags(enum re_char_class_flags flags)
+struct ast_class *
+ast_class_flags(enum ast_class_flags flags)
 {
-	struct re_char_class_ast *res = calloc(1, sizeof(*res));
+	struct ast_class *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
-	res->t = RE_CHAR_CLASS_AST_FLAGS;
+	res->t = AST_CLASS_FLAGS;
 	res->u.flags.f = flags;
 	return res;
 }
 
-struct re_char_class_ast *
-re_char_class_ast_named_class(char_class_constructor *ctor)
+struct ast_class *
+ast_class_named(class_constructor *ctor)
 {
-	struct re_char_class_ast *res = calloc(1, sizeof(*res));
+	struct ast_class *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
-	res->t = RE_CHAR_CLASS_AST_NAMED;
+	res->t = AST_CLASS_NAMED;
 	res->u.named.ctor = ctor;
 	return res;
 }
 
-struct re_char_class_ast *
-re_char_class_ast_subtract(struct re_char_class_ast *ast,
-    struct re_char_class_ast *mask)
+struct ast_class *
+ast_class_subtract(struct ast_class *ast,
+    struct ast_class *mask)
 {
-	struct re_char_class_ast *res = calloc(1, sizeof(*res));
+	struct ast_class *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
-	res->t = RE_CHAR_CLASS_AST_SUBTRACT;
+	res->t = AST_CLASS_SUBTRACT;
 	res->u.subtract.ast = ast;
 	res->u.subtract.mask = mask;
 	return res;
 }
 
 static void
-free_iter(struct re_char_class_ast *n)
+free_iter(struct ast_class *n)
 {
 	assert(n != NULL);
 	switch (n->t) {
-	case RE_CHAR_CLASS_AST_CONCAT:
+	case AST_CLASS_CONCAT:
 		free_iter(n->u.concat.l);
 		free_iter(n->u.concat.r);
 		break;
-	case RE_CHAR_CLASS_AST_SUBTRACT:
+	case AST_CLASS_SUBTRACT:
 		free_iter(n->u.subtract.ast);
 		free_iter(n->u.subtract.mask);
 		break;
-	case RE_CHAR_CLASS_AST_LITERAL:
-	case RE_CHAR_CLASS_AST_RANGE:
-	case RE_CHAR_CLASS_AST_NAMED:
-	case RE_CHAR_CLASS_AST_FLAGS:
+	case AST_CLASS_LITERAL:
+	case AST_CLASS_RANGE:
+	case AST_CLASS_NAMED:
+	case AST_CLASS_FLAGS:
 		break;
 
 	default:
@@ -163,40 +162,34 @@ free_iter(struct re_char_class_ast *n)
 }
 
 void
-re_char_class_ast_free(struct re_char_class_ast *ast)
+ast_class_free(struct ast_class *ast)
 {
 	free_iter(ast);
 }
 
-void
-re_char_class_free(struct cc *cc)
-{
-	free(cc);
-}
-
 static int
-comp_iter(struct cc *cc, struct re_char_class_ast *n)
+comp_iter(struct cc *cc, struct ast_class *n)
 {
 	assert(cc != NULL);
 	assert(n != NULL);
 	switch (n->t) {
-	case RE_CHAR_CLASS_AST_CONCAT:
+	case AST_CLASS_CONCAT:
 		if (!comp_iter(cc, n->u.concat.l)) { return 0; }
 		if (!comp_iter(cc, n->u.concat.r)) { return 0; }
 		break;
-	case RE_CHAR_CLASS_AST_LITERAL:
+	case AST_CLASS_LITERAL:
 		if (!cc_add_char(cc, n->u.literal.c)) { return 0; }
 		break;
-	case RE_CHAR_CLASS_AST_RANGE:
+	case AST_CLASS_RANGE:
 		if (!cc_add_range(cc, &n->u.range.from, &n->u.range.to)) { return 0; }
 		break;
-	case RE_CHAR_CLASS_AST_NAMED:
+	case AST_CLASS_NAMED:
 		if (!cc_add_named_class(cc, n->u.named.ctor)) { return 0; }
 		break;
-	case RE_CHAR_CLASS_AST_FLAGS:
-		cc->cc_flags |= n->u.flags.f;
+	case AST_CLASS_FLAGS:
+		cc->flags |= n->u.flags.f;
 		break;
-	case RE_CHAR_CLASS_AST_SUBTRACT:
+	case AST_CLASS_SUBTRACT:
 		fprintf(stderr, "TODO %s:%d\n", __FILE__, __LINE__);
 		assert(0);
 		break;
@@ -236,7 +229,7 @@ error:
 }
 
 int
-re_char_class_ast_compile(struct re_char_class_ast *cca,
+ast_class_compile(struct ast_class *class,
     struct fsm *fsm, enum re_flags flags,
     struct re_err *err, const struct fsm_options *opt,
     struct fsm_state *x, struct fsm_state *y)
@@ -255,13 +248,13 @@ re_char_class_ast_compile(struct re_char_class_ast *cca,
 	cc.err = err;
 	cc.re_flags = flags;
 
-	if (!comp_iter(&cc, cca)) { goto cleanup; }
+	if (!comp_iter(&cc, class)) { goto cleanup; }
 
-	if (cc.cc_flags & RE_CHAR_CLASS_FLAG_INVERTED) {
+	if (cc.flags & AST_CLASS_FLAG_INVERTED) {
 		if (!cc_invert(&cc)) { goto cleanup; }
 	}
 
-	if (!link_char_class_into_fsm(&cc, fsm, x, y)) { goto cleanup; }
+	if (!link_class_into_fsm(&cc, fsm, x, y)) { goto cleanup; }
 
 	return 1;
 
@@ -341,7 +334,7 @@ fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state 
 }
 
 static int
-link_char_class_into_fsm(struct cc *cc, struct fsm *fsm,
+link_class_into_fsm(struct cc *cc, struct fsm *fsm,
     struct fsm_state *x, struct fsm_state *y)
 {
 	int is_empty;
@@ -509,7 +502,7 @@ cc_add_range(struct cc *cc,
 }
 
 static int
-cc_add_named_class(struct cc *cc, char_class_constructor *ctor)
+cc_add_named_class(struct cc *cc, class_constructor *ctor)
 {
 	struct fsm *q;
 	int r;

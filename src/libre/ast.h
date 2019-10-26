@@ -36,7 +36,7 @@ enum ast_expr_type {
 	AST_EXPR_LITERAL,
 	AST_EXPR_ANY,
 	AST_EXPR_REPEATED,
-	AST_EXPR_CHAR_CLASS,
+	AST_EXPR_CLASS,
 	AST_EXPR_GROUP,
 	AST_EXPR_FLAGS,
 	AST_EXPR_ANCHOR,
@@ -119,10 +119,10 @@ struct ast_expr {
 			unsigned high;
 		} repeated;
 		struct {
-			struct re_char_class_ast *cca;
+			struct ast_class *class;
 			struct ast_pos start;
 			struct ast_pos end;
-		} char_class;
+		} class;
 		struct {
 			struct ast_expr *e;
 			unsigned id;
@@ -186,7 +186,7 @@ struct ast_expr *
 ast_expr_with_count(struct ast_expr *e, struct ast_count count);
 
 struct ast_expr *
-ast_expr_char_class(struct re_char_class_ast *cca,
+ast_expr_class(struct ast_class *class,
     const struct ast_pos *start, const struct ast_pos *end);
 
 struct ast_expr *

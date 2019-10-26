@@ -13,7 +13,7 @@
 
 static const struct {
 	const char *name;
-	char_class_constructor *ctor;
+	class_constructor *ctor;
 } classes[] = {
 	{ "[:ALNUM:]", class_alnum_fsm },
 	{ "[:ALPHA:]", class_alpha_fsm },
@@ -24,8 +24,8 @@ static const struct {
 	{ "[:WHITESPACE:]", class_space_fsm }
 };
 
-char_class_constructor *
-re_char_class_sql(const char *name)
+class_constructor *
+re_class_sql(const char *name)
 {
 	size_t i;
 

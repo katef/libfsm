@@ -17,9 +17,9 @@
 	!re_flags;
 	!err;
 	ast_expr;
-	ast_char_class_id;
+	ast_class_id;
 	ast_count;
-	char_class_ast;
+	ast_class;
 	range_endpoint;
 
 %terminals%
@@ -42,7 +42,7 @@
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
-	NAMED_CHAR_CLASS: () -> (:ast_char_class_id, :pos, :pos);
+	NAMED_CHAR_CLASS: () -> (:ast_class_id, :pos, :pos);
 
 	!OPENFLAGS;
 	!CLOSEFLAGS;
@@ -71,7 +71,7 @@
 
         <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
         !<ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
-	<ast-expr-char-class>: (:char_class_ast, :pos, :pos) -> (:ast_expr);
+	<ast-expr-char-class>: (:ast_class, :pos, :pos) -> (:ast_expr);
         <ast-expr-group>: (:ast_expr) -> (:ast_expr);
 	!<ast-expr-re-flags>: (:re_flags, :re_flags) -> (:ast_expr);
 	<ast-expr-anchor-start>: () -> (:ast_expr);
@@ -84,20 +84,20 @@
 
         <expr-count>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
-	<char-class-ast-literal>: (:char) -> (:char_class_ast);
+	<char-class-ast-literal>: (:char) -> (:ast_class);
 	<char-class-ast-range-distinct>: (:range_endpoint, :pos, :range_endpoint, :pos) -> ();
-	<char-class-ast-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:char_class_ast);
-	<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
-	!<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
-	<char-class-ast-named-class>: (:ast_char_class_id) -> (:char_class_ast);
+	<char-class-ast-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:ast_class);
+	<char-class-ast-concat>: (:ast_class, :ast_class) -> (:ast_class);
+	!<char-class-ast-subtract>: (:ast_class, :ast_class) -> (:ast_class);
+	<char-class-ast-named-class>: (:ast_class_id) -> (:ast_class);
 
-	<char-class-ast-flag-none>: () -> (:char_class_ast);
-	<char-class-ast-flag-invert>: () -> (:char_class_ast);
-	!<char-class-ast-flag-minus>: () -> (:char_class_ast);
-	!<char-class-ast-flag-invert-minus>: () -> (:char_class_ast);
+	<char-class-ast-flag-none>: () -> (:ast_class);
+	<char-class-ast-flag-invert>: () -> (:ast_class);
+	!<char-class-ast-flag-minus>: () -> (:ast_class);
+	!<char-class-ast-flag-invert-minus>: () -> (:ast_class);
 
 	<ast-range-endpoint-literal>: (:char) -> (:range_endpoint);
-	!<ast-range-endpoint-char-class>: (:ast_char_class_id) -> (:range_endpoint);
+	!<ast-range-endpoint-char-class>: (:ast_class_id) -> (:range_endpoint);
 
 	!<re-flag-none>: () -> (:re_flags);
 	!<re-flag-union>: (:re_flags, :re_flags) -> (:re_flags);
@@ -136,14 +136,14 @@
 
 		char-class: () -> (node :ast_expr) [
 			/* TODO: []] [-]] etc.? though they can be escaped. */
-			char-class-head: () -> (f :char_class_ast) = {
+			char-class-head: () -> (f :ast_class) = {
 				(!) = INVERT;
 				f = <char-class-ast-flag-invert>();
 			||
 				f = <char-class-ast-flag-none>();
 			};
 
-			class-literal: () -> (node :char_class_ast) = {
+			class-literal: () -> (node :ast_class) = {
 				{
 					(c, !, !) = ESC;
 					||
@@ -156,7 +156,7 @@
 				node = <char-class-ast-literal>(c);
 	  		};
 
-			class-range: () -> (node :char_class_ast) = {
+			class-range: () -> (node :ast_class) = {
 				{
 					(ca, start, !) = ESC;
 				||
@@ -192,11 +192,11 @@
 				node = <char-class-ast-range>(a, start, z, end);
 			};
 
-			class-named: () -> (id :ast_char_class_id) = {
+			class-named: () -> (id :ast_class_id) = {
                         	(id, !, !) = NAMED_CHAR_CLASS;
 			};
 
-			class-term: () -> (node :char_class_ast) = {
+			class-term: () -> (node :ast_class) = {
 				node = class-literal();
 			||
 				node = class-range();
@@ -209,7 +209,7 @@
                                 node = <char-class-ast-flag-none>();
 			};
 			    
-			list-of-char-class-terms: () -> (node :char_class_ast) = {
+			list-of-char-class-terms: () -> (node :ast_class) = {
 				l = class-term();
 				{
 					r = list-of-char-class-terms();

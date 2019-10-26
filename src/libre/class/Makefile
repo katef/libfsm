@@ -132,17 +132,17 @@ src/libre/class.h:
 	printf "struct fsm;\n" >> ${.TARGET}
 	printf "struct fsm_options;\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
-	printf "typedef struct fsm *(char_class_constructor)(const struct fsm_options *opt);\n" >> ${.TARGET}
+	printf "typedef struct fsm *(class_constructor)(const struct fsm_options *opt);\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "const char *\n" >> ${.TARGET}
-	printf "class_name(char_class_constructor *ctor);\n" >> ${.TARGET}
+	printf "class_name(class_constructor *ctor);\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	for class in ${SRC:Msrc/libre/class/*.c:T:R:Mutf8_*}; do \
-		printf "char_class_constructor %s_fsm;\n" $${class}; \
+		printf "class_constructor %s_fsm;\n" $${class}; \
 	done >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	for class in ${SRC:Msrc/libre/class/*.c:T:R:Nutf8_*}; do \
-		printf "char_class_constructor %s_fsm;\n" class_$${class}; \
+		printf "class_constructor %s_fsm;\n" class_$${class}; \
 	done >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "#endif\n" >> ${.TARGET}
@@ -184,7 +184,7 @@ src/libre/class_name.c:
 	printf "#include \"class.h\"\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "static struct {\n" >> ${.TARGET}
-	printf "\tchar_class_constructor *ctor;\n" >> ${.TARGET}
+	printf "\tclass_constructor *ctor;\n" >> ${.TARGET}
 	printf "\tconst char *name;\n" >> ${.TARGET}
 	printf "} classes[] = {\n" >> ${.TARGET}
 	for class in ${SRC:Msrc/libre/class/*.c:T:R:Nutf8_*}; do \
@@ -199,7 +199,7 @@ src/libre/class_name.c:
 	printf "};\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "const char *\n" >> ${.TARGET}
-	printf "class_name(char_class_constructor *ctor)\n" >> ${.TARGET}
+	printf "class_name(class_constructor *ctor)\n" >> ${.TARGET}
 	printf "{\n" >> ${.TARGET}
 	printf "\tsize_t i;\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
