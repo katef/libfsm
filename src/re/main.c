@@ -23,8 +23,9 @@
 #include <re/re.h>
 
 #include "libfsm/internal.h" /* XXX */
-#include "libre/re_comp.h" /* XXX */
 #include "libre/print.h" /* XXX */
+#include "libre/class.h" /* XXX */
+#include "libre/ast.h" /* XXX */
 
 /*
  * TODO: accepting a delimiter would be useful: /abc/. perhaps provide that as
@@ -560,7 +561,7 @@ main(int argc, char *argv[])
 
 			f = xopen(argv[0]);
 
-			ast = re_parse(dialect, fsm_fgetc, f, &opt, flags, &err);
+			ast = re_parse(dialect, fsm_fgetc, f, &opt, flags, &err, NULL);
 
 			fclose(f);
 		} else {
@@ -568,7 +569,7 @@ main(int argc, char *argv[])
 
 			s = argv[0];
 
-			ast = re_parse(dialect, fsm_sgetc, &s, &opt, flags, &err);
+			ast = re_parse(dialect, fsm_sgetc, &s, &opt, flags, &err, NULL);
 		}
 
 		if (ast == NULL) {

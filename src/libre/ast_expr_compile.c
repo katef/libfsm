@@ -17,7 +17,6 @@
 
 #include "class.h"
 #include "ast.h"
-#include "re_comp.h"
 
 #define LOG_LINKAGE 0
 

@@ -69,9 +69,6 @@ ast_analysis(struct ast *ast)
 		res = analysis_iter(&env, ast->expr);
 	}
 	if (res != RE_ANALYSIS_OK) {
-		if (res == RE_ANALYSIS_UNSATISFIABLE) {
-			ast->unsatisfiable = 1;
-		}
 		return res;
 	}
 

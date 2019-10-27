@@ -201,12 +201,6 @@ struct ast_expr {
 
 struct ast {
 	struct ast_expr *expr;
-	/* This is set if we can determine ahead of time that the regex
-	 * is inherently unsatisfiable. For example, multiple start/end
-	 * anchors that aren't in nullable groups or different alts.
-	 * While this naming leads to a double-negative, we can't prove
-	 * that the regex is satisfiable, just flag it when it isn't. */
-	int unsatisfiable;
 };
 
 struct ast *
@@ -290,10 +284,15 @@ ast_class_subtract(struct ast_class *ast,
 enum re_analysis_res {
 	RE_ANALYSIS_OK,
 
-	/* This is returned if analysis finds a combination of
-	 * requirements that are inherently unsatisfiable -- most
-	 * notably, multiple start or end anchors that aren't
-	 * nullable / in different alternatives. */
+	/*
+	 * This is returned if analysis finds a combination of
+	 * requirements that are inherently unsatisfiable.
+	 *
+	 * For example, multiple start/end anchors that aren't
+	 * in nullable groups or different alts.
+	 * While this naming leads to a double-negative, we can't prove
+	 * that the regex is satisfiable, just flag it when it isn't.
+	 */
 	RE_ANALYSIS_UNSATISFIABLE,
 	RE_ANALYSIS_ERROR_NULL = -1,
 	RE_ANALYSIS_ERROR_MEMORY = -2
@@ -301,6 +300,13 @@ enum re_analysis_res {
 
 enum re_analysis_res
 ast_analysis(struct ast *ast);
+
+/* XXX: exposed for sake of re(1) printing an ast;
+ * it's not part of the <re/re.h> API proper */
+struct ast *
+re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
+	const struct fsm_options *opt,
+	enum re_flags flags, struct re_err *err, int *unsatisfiable);
 
 int
 ast_class_compile(struct ast_class *class,

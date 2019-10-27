@@ -20,7 +20,6 @@
 #include "class.h"
 #include "print.h"
 #include "ast.h"
-#include "re_comp.h"
 
 #include "dialect/comp.h"
 
@@ -93,7 +92,7 @@ re_flags(const char *s, enum re_flags *f)
 struct ast *
 re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct fsm_options *opt,
-	enum re_flags flags, struct re_err *err)
+	enum re_flags flags, struct re_err *err, int *unsatisfiable)
 {
 	const struct dialect *m;
 	struct ast *ast = NULL;
@@ -123,7 +122,9 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
-	ast->unsatisfiable = (res == RE_ANALYSIS_UNSATISFIABLE);
+	if (unsatisfiable != NULL) {
+		*unsatisfiable = (res == RE_ANALYSIS_UNSATISFIABLE);
+	}
 
 	return ast;
 }
@@ -136,9 +137,9 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	struct ast *ast;
 	struct fsm *new;
 	const struct dialect *m;
+	int unsatisfiable;
 
 	m = re_dialect(dialect);
-
 	if (m == NULL) {
 		if (err != NULL) { err->e = RE_EBADDIALECT; }
 		return NULL;
@@ -146,14 +147,14 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	flags |= m->flags;
 
-	ast = re_parse(dialect, getc, opaque, opt, flags, err);
+	ast = re_parse(dialect, getc, opaque, opt, flags, err, &unsatisfiable);
 	if (ast == NULL) { return NULL; }
 
 	/* If the RE is inherently unsatisfiable, then free the
 	 * AST and replace it with an empty tombstone node.
 	 * This will compile to an FSM that matches nothing, so
 	 * that unioning it with other regexes will still work. */
-	if (ast->unsatisfiable) {
+	if (unsatisfiable) {
 		struct ast_expr *unsat = ast->expr;
 		ast->expr = ast_expr_tombstone();
 		ast_expr_free(unsat);
