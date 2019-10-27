@@ -50,7 +50,7 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "\tn%p -> n%p;\n", parent, (void *) n);
 	}
 
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 		fprintf(f, "\tn%p [ label = <EMPTY> ];\n", (void *) n);
 		break;
@@ -120,11 +120,11 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case AST_EXPR_ANCHOR:
-		assert(n->u.anchor.t == RE_AST_ANCHOR_START ||
-		    n->u.anchor.t == RE_AST_ANCHOR_END);
+		assert(n->u.anchor.type == RE_AST_ANCHOR_START ||
+		    n->u.anchor.type == RE_AST_ANCHOR_END);
 		fprintf(f, "\tn%p [ label = <ANCHOR|%c> ];\n",
 		    (void *) n,
-		    n->u.anchor.t == RE_AST_ANCHOR_START ? '^' : '$');
+		    n->u.anchor.type == RE_AST_ANCHOR_START ? '^' : '$');
 		break;
 
 	case AST_EXPR_FLAGS:
@@ -175,7 +175,7 @@ static void
 print_range_endpoint(FILE *f, const struct fsm_options *opt,
 	const struct ast_range_endpoint *r)
 {
-	switch (r->t) {
+	switch (r->type) {
 	case AST_RANGE_ENDPOINT_LITERAL:
 		dot_escputc_html(f, opt, r->u.literal.c);
 		break;
@@ -200,7 +200,7 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 
 	fprintf(f, "\tn%p [ style = \"filled\", fillcolor = \"#eeeeee\" ];\n", (void *) n);
 
-	switch (n->t) {
+	switch (n->type) {
 	case AST_CLASS_CONCAT:
 		fprintf(f, "\tn%p [ label = <CLASS-CONCAT> ];\n", (void *) n);
 		cc_pp_iter(f, opt, n, n->u.concat.l);

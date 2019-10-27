@@ -100,7 +100,7 @@ enum ast_range_endpoint_type {
 };
 
 struct ast_range_endpoint {
-	enum ast_range_endpoint_type t;
+	enum ast_range_endpoint_type type;
 	union {
 		struct {
 			unsigned char c;
@@ -112,7 +112,7 @@ struct ast_range_endpoint {
 };
 
 struct ast_class {
-	enum ast_class_type t;
+	enum ast_class_type type;
 	union {
 		struct {
 			struct ast_class *l;
@@ -152,7 +152,7 @@ struct ast_class {
  *  [abc] char-class:  1 -> 2 "a"; 1 -> 2 "b"; 1 -> 2 "c";
  */
 struct ast_expr {
-	enum ast_expr_type t;
+	enum ast_expr_type type;
 	enum ast_flags flags;
 
 	union {
@@ -194,7 +194,7 @@ struct ast_expr {
 			enum re_flags neg;
 		} flags;
 		struct {
-			enum ast_anchor_type t;
+			enum ast_anchor_type type;
 		} anchor;
 	} u;	
 };
@@ -256,7 +256,7 @@ struct ast_expr *
 ast_expr_re_flags(enum re_flags pos, enum re_flags neg);
 
 struct ast_expr *
-ast_expr_anchor(enum ast_anchor_type t);
+ast_expr_anchor(enum ast_anchor_type type);
 
 struct ast_count
 ast_count(unsigned low, const struct ast_pos *start,

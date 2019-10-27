@@ -22,7 +22,7 @@ ast_new(void)
 {
 	struct ast *res = calloc(1, sizeof(*res));
 
-	the_tombstone.t = AST_EXPR_TOMBSTONE;
+	the_tombstone.type = AST_EXPR_TOMBSTONE;
 
 	return res;
 }
@@ -31,7 +31,7 @@ static void
 class_free_iter(struct ast_class *n)
 {
 	assert(n != NULL);
-	switch (n->t) {
+	switch (n->type) {
 	case AST_CLASS_CONCAT:
 		class_free_iter(n->u.concat.l);
 		class_free_iter(n->u.concat.r);
@@ -57,7 +57,7 @@ free_iter(struct ast_expr *n)
 {
 	if (n == NULL) { return; }
 	
-	switch (n->t) {
+	switch (n->type) {
 	/* These nodes have no subnodes or dynamic allocation */
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
@@ -129,7 +129,7 @@ ast_expr_empty(void)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
-	res->t = AST_EXPR_EMPTY;
+	res->type = AST_EXPR_EMPTY;
 	res->flags = RE_AST_FLAG_NULLABLE;
 	return res;
 }
@@ -147,7 +147,7 @@ ast_expr_concat(struct ast_expr *l, struct ast_expr *r)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
-	res->t = AST_EXPR_CONCAT;
+	res->type = AST_EXPR_CONCAT;
 	res->u.concat.l = l;
 	res->u.concat.r = r;
 	assert(l != NULL);
@@ -162,7 +162,7 @@ ast_expr_concat_n(size_t count)
 	size_t size = sizeof(*res) + (count-1)*sizeof(struct ast_expr *);
 	res = calloc(1, size);
 	if (res == NULL) { return res; }
-	res->t = AST_EXPR_CONCAT_N;
+	res->type = AST_EXPR_CONCAT_N;
 	res->u.concat_n.count = count;
 	/* cells are initialized by caller */
 	return res;
@@ -173,7 +173,7 @@ ast_expr_alt(struct ast_expr *l, struct ast_expr *r)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
-	res->t = AST_EXPR_ALT;
+	res->type = AST_EXPR_ALT;
 	res->u.alt.l = l;
 	res->u.alt.r = r;
 	assert(l != NULL);
@@ -188,7 +188,7 @@ ast_expr_alt_n(size_t count)
 	size_t size = sizeof(*res) + (count-1)*sizeof(struct ast_expr *);
 	res = calloc(1, size);
 	if (res == NULL) { return res; }
-	res->t = AST_EXPR_ALT_N;
+	res->type = AST_EXPR_ALT_N;
 	res->u.alt_n.count = count;
 	/* cells are initialized by caller */
 	return res;
@@ -199,7 +199,7 @@ ast_expr_literal(char c)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
-	res->t = AST_EXPR_LITERAL;
+	res->type = AST_EXPR_LITERAL;
 	res->u.literal.c = c;
 	return res;
 }
@@ -209,7 +209,7 @@ ast_expr_any(void)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
-	res->t = AST_EXPR_ANY;
+	res->type = AST_EXPR_ANY;
 
 	return res;
 }
@@ -229,11 +229,11 @@ ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 	}
 
 	/* Applying a count to a start/end anchor is a syntax error. */
-	if (e->t == AST_EXPR_ANCHOR) { return NULL; }
+	if (e->type == AST_EXPR_ANCHOR) { return NULL; }
 
 	res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
-	res->t = AST_EXPR_REPEATED;
+	res->type = AST_EXPR_REPEATED;
 	res->u.repeated.e = e;
 	res->u.repeated.low = count.low;
 	res->u.repeated.high = count.high;
@@ -247,7 +247,7 @@ ast_expr_class(struct ast_class *class,
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
 
-	res->t = AST_EXPR_CLASS;
+	res->type = AST_EXPR_CLASS;
 	res->u.class.class = class;
 	memcpy(&res->u.class.start, start, sizeof *start);
 	memcpy(&res->u.class.end, end, sizeof *end);
@@ -259,7 +259,7 @@ ast_expr_group(struct ast_expr *e)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
-	res->t = AST_EXPR_GROUP;
+	res->type = AST_EXPR_GROUP;
 	res->u.group.e = e;
 	res->u.group.id = NO_GROUP_ID; /* not yet assigned */
 	return res;
@@ -270,19 +270,19 @@ ast_expr_re_flags(enum re_flags pos, enum re_flags neg)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
-	res->t = AST_EXPR_FLAGS;
+	res->type = AST_EXPR_FLAGS;
 	res->u.flags.pos = pos;
 	res->u.flags.neg = neg;
 	return res;
 }
 
 struct ast_expr *
-ast_expr_anchor(enum ast_anchor_type t)
+ast_expr_anchor(enum ast_anchor_type type)
 {
 	struct ast_expr *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return res; }
-	res->t = AST_EXPR_ANCHOR;
-	res->u.anchor.t = t;
+	res->type = AST_EXPR_ANCHOR;
+	res->u.anchor.type = type;
 	return res;
 }
 
@@ -305,7 +305,7 @@ ast_class_concat(struct ast_class *l, struct ast_class *r)
 {
 	struct ast_class *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
-	res->t = AST_CLASS_CONCAT;
+	res->type = AST_CLASS_CONCAT;
 	res->u.concat.l = l;
 	res->u.concat.r = r;
 	return res;
@@ -316,7 +316,7 @@ ast_class_literal(unsigned char c)
 {
 	struct ast_class *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
-	res->t = AST_CLASS_LITERAL;
+	res->type = AST_CLASS_LITERAL;
 	res->u.literal.c = c;
 	return res;
 }
@@ -330,7 +330,7 @@ ast_class_range(const struct ast_range_endpoint *from, struct ast_pos start,
 	assert(from != NULL);
 	assert(to != NULL);
 
-	res->t = AST_CLASS_RANGE;
+	res->type = AST_CLASS_RANGE;
 	res->u.range.from = *from;
 	res->u.range.start = start;
 	res->u.range.to = *to;
@@ -343,7 +343,7 @@ ast_class_flags(enum ast_class_flags flags)
 {
 	struct ast_class *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
-	res->t = AST_CLASS_FLAGS;
+	res->type = AST_CLASS_FLAGS;
 	res->u.flags.f = flags;
 	return res;
 }
@@ -353,7 +353,7 @@ ast_class_named(class_constructor *ctor)
 {
 	struct ast_class *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
-	res->t = AST_CLASS_NAMED;
+	res->type = AST_CLASS_NAMED;
 	res->u.named.ctor = ctor;
 	return res;
 }
@@ -364,7 +364,7 @@ ast_class_subtract(struct ast_class *ast,
 {
 	struct ast_class *res = calloc(1, sizeof(*res));
 	if (res == NULL) { return NULL; }
-	res->t = AST_CLASS_SUBTRACT;
+	res->type = AST_CLASS_SUBTRACT;
 	res->u.subtract.ast = ast;
 	res->u.subtract.mask = mask;
 	return res;

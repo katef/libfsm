@@ -632,8 +632,8 @@
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 
-		if (@from.t != AST_RANGE_ENDPOINT_LITERAL ||
-		    @to.t != AST_RANGE_ENDPOINT_LITERAL) {
+		if (@from.type != AST_RANGE_ENDPOINT_LITERAL ||
+		    @to.type != AST_RANGE_ENDPOINT_LITERAL) {
 			err->e = RE_EXUNSUPPORTD;
 			@!;
 		}
@@ -651,8 +651,8 @@
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 
-		if (@from.t != AST_RANGE_ENDPOINT_LITERAL ||
-		    @to.t != AST_RANGE_ENDPOINT_LITERAL) {
+		if (@from.type != AST_RANGE_ENDPOINT_LITERAL ||
+		    @to.type != AST_RANGE_ENDPOINT_LITERAL) {
 			err->e = RE_EXUNSUPPORTD;
 			@!;
 		}
@@ -722,14 +722,14 @@
 
 	<ast-range-endpoint-literal>: (c :char) -> (r :range_endpoint) = @{
 		struct ast_range_endpoint range;
-		range.t = AST_RANGE_ENDPOINT_LITERAL;
+		range.type = AST_RANGE_ENDPOINT_LITERAL;
 		range.u.literal.c = @c;
 		@r = range;
 	@};
 
 	<ast-range-endpoint-char-class>: (id :ast_class_id) -> (r :range_endpoint) = @{
 		struct ast_range_endpoint range;
-		range.t = AST_RANGE_ENDPOINT_CHAR_CLASS;
+		range.type = AST_RANGE_ENDPOINT_CHAR_CLASS;
 		range.u.class.ctor = @id;
 		@r = range;
 	@};

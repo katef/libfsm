@@ -28,7 +28,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n);
 static int
 atomic(struct ast_expr *n)
 {
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
@@ -136,7 +136,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 	if (n == NULL) { return; }
 
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 		break;
 
@@ -231,9 +231,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 
 	case AST_EXPR_ANCHOR:
-		assert(n->u.anchor.t == RE_AST_ANCHOR_START
-		    || n->u.anchor.t == RE_AST_ANCHOR_END);
-		fprintf(f, "%s", n->u.anchor.t == RE_AST_ANCHOR_START ? "<^>" : "<$>");
+		assert(n->u.anchor.type == RE_AST_ANCHOR_START
+		    || n->u.anchor.type == RE_AST_ANCHOR_END);
+		fprintf(f, "%s", n->u.anchor.type == RE_AST_ANCHOR_START ? "<^>" : "<$>");
 		break;
 
 	case AST_EXPR_FLAGS:
@@ -267,9 +267,9 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 	assert(opt != NULL);
 	assert(n != NULL);
 
-	switch (n->t) {
+	switch (n->type) {
 	case AST_CLASS_CONCAT:
-if (n->u.concat.l != NULL && n->u.concat.l->t == AST_CLASS_FLAGS) {
+if (n->u.concat.l != NULL && n->u.concat.l->type == AST_CLASS_FLAGS) {
 	/* XXX */
 	cc_pp_iter(f, opt, n->u.concat.r);
 } else {
@@ -284,7 +284,7 @@ if (n->u.concat.l != NULL && n->u.concat.l->t == AST_CLASS_FLAGS) {
 		break;
 
 	case AST_CLASS_RANGE: {
-		if (n->u.range.from.t != AST_RANGE_ENDPOINT_LITERAL || n->u.range.to.t != AST_RANGE_ENDPOINT_LITERAL) {
+		if (n->u.range.from.type != AST_RANGE_ENDPOINT_LITERAL || n->u.range.to.type != AST_RANGE_ENDPOINT_LITERAL) {
 			fprintf(stderr, "non-literal range endpoint unsupported\n");
 			abort(); /* XXX */
 		}

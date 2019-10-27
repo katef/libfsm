@@ -81,7 +81,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 	}		
 	fprintf(f, " -- ");
 
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 		fprintf(f, "EMPTY \n");
 		break;
@@ -162,8 +162,8 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		break;
 	case AST_EXPR_ANCHOR:
 		fprintf(f, "ANCHOR %s\n",
-		    n->u.anchor.t == RE_AST_ANCHOR_START ? "^"
-		    : n->u.anchor.t == RE_AST_ANCHOR_END ? "$"
+		    n->u.anchor.type == RE_AST_ANCHOR_START ? "^"
+		    : n->u.anchor.type == RE_AST_ANCHOR_END ? "$"
 		    : "<matchfail>");
 		break;
 	case AST_EXPR_TOMBSTONE:
@@ -171,7 +171,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		break;
 
 	default:
-		fprintf(stderr, "MATCH FAIL: %d\n", n->t);
+		fprintf(stderr, "MATCH FAIL: %d\n", n->type);
 		assert(0);
 	}
 }
@@ -202,7 +202,7 @@ re_flags_print(FILE *f, enum re_flags fl)
 static void
 print_range_endpoint(FILE *f, const struct ast_range_endpoint *r)
 {
-	switch (r->t) {
+	switch (r->type) {
 	case AST_RANGE_ENDPOINT_LITERAL:
 		fprintf(f, "'");
 		print_char_or_esc(f, r->u.literal.c);
@@ -226,7 +226,7 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 
 	for (i = 0; i < indent; i++) { fprintf(f, " "); }
 
-	switch (n->t) {
+	switch (n->type) {
 	case AST_CLASS_CONCAT:
 		fprintf(f, "CLASS-CONCAT %p: \n", (void *)n);
 		cc_pp_iter(f, opt, n->u.concat.l, indent + 4);

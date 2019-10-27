@@ -235,7 +235,7 @@ comp_iter(struct comp_env *env,
 	assert(x != NULL);
 	assert(y != NULL);
 
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 		EPSILON(x, y);	/* skip these, when possible */
 		break;
@@ -256,7 +256,7 @@ comp_iter(struct comp_env *env,
 			struct ast_expr *next = i == count - 1
 			    ? NULL : n->u.concat_n.n[i + 1];
 
-			if (cur->t == AST_EXPR_FLAGS) {
+			if (cur->type == AST_EXPR_FLAGS) {
 				/* Save the current flags in the flags node,
 				 * restore when done evaluating the concat
 				 * node's right subtree. */
@@ -352,9 +352,9 @@ comp_iter(struct comp_env *env,
 		break;
 
 	case AST_EXPR_ANCHOR:
-		if (n->u.anchor.t == RE_AST_ANCHOR_START) {
+		if (n->u.anchor.type == RE_AST_ANCHOR_START) {
 			EPSILON(env->start, y);
-		} else if (n->u.anchor.t == RE_AST_ANCHOR_END) {
+		} else if (n->u.anchor.type == RE_AST_ANCHOR_END) {
 			EPSILON(x, env->end);
 		} else {
 			assert(0);
@@ -363,7 +363,7 @@ comp_iter(struct comp_env *env,
 
 	default:
 		fprintf(stderr, "%s:%d: <matchfail %d>\n",
-		    __FILE__, __LINE__, n->t);
+		    __FILE__, __LINE__, n->type);
 		abort();
 	}
 	return 1;
@@ -438,7 +438,7 @@ static int
 can_have_backward_epsilon_edge(const struct ast_expr *e)
 {
 	/* These nodes cannot have a backward epsilon edge */
-	switch (e->t) {
+	switch (e->type) {
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_CLASS:
@@ -449,14 +449,14 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 		break;
 	}
 
-	if (e->t == AST_EXPR_REPEATED) {
+	if (e->type == AST_EXPR_REPEATED) {
 		/* 0 and 1 don't have backward epsilon edges */
 		if (e->u.repeated.high <= 1) { return 0; }
 
 		/* The general case for counted repetition already
 		 * allocates one-way guard states around it */
 		if (e->u.repeated.high != AST_COUNT_UNBOUNDED) { return 0; }
-	} else if (e->t == AST_EXPR_GROUP) {
+	} else if (e->type == AST_EXPR_GROUP) {
 		return can_have_backward_epsilon_edge(e->u.group.e);
 	}
 
@@ -479,7 +479,7 @@ can_skip_concat_state_and_epsilon(const struct ast_expr *l,
 
 	if (!can_have_backward_epsilon_edge(l)) { return 1; }
 
-	if (r != NULL && r->t == AST_EXPR_REPEATED) {
+	if (r != NULL && r->type == AST_EXPR_REPEATED) {
 		if (!can_have_backward_epsilon_edge(r)) { return 1; }
 	}
 
@@ -590,15 +590,15 @@ decide_linking(struct comp_env *env,
 
 	if ((env->flags & RE_ANCHORED)) { return LINK_TOP_DOWN; }	
 
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_GROUP:
 		return LINK_TOP_DOWN;
 
 	case AST_EXPR_ANCHOR:
-	        if (n->u.anchor.t == RE_AST_ANCHOR_START
+	        if (n->u.anchor.type == RE_AST_ANCHOR_START
 		    && side == LINK_START) { return LINK_GLOBAL; }
-	        if (n->u.anchor.t == RE_AST_ANCHOR_END
+	        if (n->u.anchor.type == RE_AST_ANCHOR_END
 		    && side == LINK_END) { return LINK_GLOBAL; }
 		return LINK_TOP_DOWN;
 
@@ -621,8 +621,8 @@ decide_linking(struct comp_env *env,
 	switch (side) {
 	case LINK_START:
 	{
-		const int start = (n->t == AST_EXPR_ANCHOR
-		    && n->u.anchor.t == RE_AST_ANCHOR_START);
+		const int start = (n->type == AST_EXPR_ANCHOR
+		    && n->u.anchor.type == RE_AST_ANCHOR_START);
 		const int first = (n->flags & RE_AST_FLAG_FIRST_STATE) != 0;
 		const int nullable = (n->flags & RE_AST_FLAG_NULLABLE) != 0;
 		(void)nullable;
@@ -649,8 +649,8 @@ decide_linking(struct comp_env *env,
 
 	case LINK_END:
 	{
-		const int end = (n->t == AST_EXPR_ANCHOR
-		    && n->u.anchor.t == RE_AST_ANCHOR_END);
+		const int end = (n->type == AST_EXPR_ANCHOR
+		    && n->u.anchor.type == RE_AST_ANCHOR_END);
 		const int last = (n->flags & RE_AST_FLAG_LAST_STATE) != 0;
 		const int nullable = (n->flags & RE_AST_FLAG_NULLABLE) != 0;
 		(void)nullable;

@@ -304,8 +304,8 @@ cc_add_range(struct cc *cc,
 	unsigned char lower, upper;
 	unsigned int i;
 
-	if (from->t != AST_RANGE_ENDPOINT_LITERAL ||
-	    to->t != AST_RANGE_ENDPOINT_LITERAL) {
+	if (from->type != AST_RANGE_ENDPOINT_LITERAL ||
+	    to->type != AST_RANGE_ENDPOINT_LITERAL) {
 		/* not yet supported */
 		return 0;
 	}
@@ -413,7 +413,7 @@ comp_iter(struct cc *cc, struct ast_class *n)
 {
 	assert(cc != NULL);
 	assert(n != NULL);
-	switch (n->t) {
+	switch (n->type) {
 	case AST_CLASS_CONCAT:
 		if (!comp_iter(cc, n->u.concat.l)) { return 0; }
 		if (!comp_iter(cc, n->u.concat.r)) { return 0; }

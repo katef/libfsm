@@ -28,7 +28,7 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 static int
 atomic(struct ast_expr *n)
 {
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
@@ -128,7 +128,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 	if (n == NULL) { return; }
 
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 		break;
 
@@ -237,9 +237,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 
 	case AST_EXPR_ANCHOR:
-		assert(n->u.anchor.t == RE_AST_ANCHOR_START
-		    || n->u.anchor.t == RE_AST_ANCHOR_END);
-		fprintf(f, "%s", n->u.anchor.t == RE_AST_ANCHOR_START ? "^" : "$");
+		assert(n->u.anchor.type == RE_AST_ANCHOR_START
+		    || n->u.anchor.type == RE_AST_ANCHOR_END);
+		fprintf(f, "%s", n->u.anchor.type == RE_AST_ANCHOR_START ? "^" : "$");
 		break;
 
 	case AST_EXPR_FLAGS:
@@ -284,7 +284,7 @@ static void
 print_range_endpoint(FILE *f, const struct fsm_options *opt,
 	const struct ast_range_endpoint *r)
 {
-	switch (r->t) {
+	switch (r->type) {
 	case AST_RANGE_ENDPOINT_LITERAL:
 		pcre_escputc(f, opt, r->u.literal.c);
 		break;
@@ -302,7 +302,7 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 	assert(opt != NULL);
 	assert(n != NULL);
 
-	switch (n->t) {
+	switch (n->type) {
 	case AST_CLASS_CONCAT:
 		cc_pp_iter(f, opt, n->u.concat.l);
 		cc_pp_iter(f, opt, n->u.concat.r);

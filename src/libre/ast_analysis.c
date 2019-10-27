@@ -97,17 +97,17 @@ ast_analysis(struct ast *ast)
 }
 
 static unsigned
-count_chain(const struct ast_expr *n, enum ast_expr_type t)
+count_chain(const struct ast_expr *n, enum ast_expr_type type)
 {
 	unsigned res = 0;
 	for (;;) {
 		assert(n != NULL);
-		if (n->t == AST_EXPR_EMPTY) {
+		if (n->type == AST_EXPR_EMPTY) {
 			return res;
 		} else {
-			assert(n->t == t);
+			assert(n->type == type);
 			res++;
-			switch (t) {
+			switch (type) {
 			case AST_EXPR_CONCAT:
 				n = n->u.concat.r;
 				break;
@@ -126,16 +126,16 @@ static struct ast_expr *
 collect_chain(size_t count, struct ast_expr *doomed)
 {
 	size_t i;
-	if (doomed->t == AST_EXPR_CONCAT) {
+	if (doomed->type == AST_EXPR_CONCAT) {
 		if (count == 1) {
 			struct ast_expr *res = doomed->u.concat.l;
 			if (!flatten(&doomed->u.concat.l)) { return 0; }
 			res = doomed->u.concat.l;
 
-			assert(doomed->u.concat.r->t == AST_EXPR_EMPTY);
+			assert(doomed->u.concat.r->type == AST_EXPR_EMPTY);
 			doomed->u.concat.l = ast_expr_tombstone();
 			ast_expr_free(doomed);
-			assert(res->t != AST_EXPR_CONCAT);
+			assert(res->type != AST_EXPR_CONCAT);
 			return res;
 		} else {
 			struct ast_expr *dst = ast_expr_concat_n(count);
@@ -150,12 +150,12 @@ collect_chain(size_t count, struct ast_expr *doomed)
 				ast_expr_free(doomed);
 				doomed = ndoomed;
 				if (i == count - 1) {
-					assert(doomed->t == AST_EXPR_EMPTY);
+					assert(doomed->type == AST_EXPR_EMPTY);
 				}
 			}
 			return dst;
 		}
-	} else if (doomed->t == AST_EXPR_ALT) {
+	} else if (doomed->type == AST_EXPR_ALT) {
 		if (count == 1) {
 			/* If we get here, it's a parser bug. Right? */
 			assert(0);
@@ -172,7 +172,7 @@ collect_chain(size_t count, struct ast_expr *doomed)
 				ast_expr_free(doomed);
 				doomed = ndoomed;
 				if (i == count - 1) {
-					assert(doomed->t == AST_EXPR_EMPTY);
+					assert(doomed->type == AST_EXPR_EMPTY);
 				}
 			}
 			return dst;
@@ -187,7 +187,7 @@ collect_chain(size_t count, struct ast_expr *doomed)
 static struct ast_expr *
 flatten_iter(struct ast_expr *n)
 {
-	switch (n->t) {
+	switch (n->type) {
 	default:
 		return n;
 
@@ -229,7 +229,7 @@ flatten(struct ast_expr **n)
 static enum re_analysis_res
 analysis_iter(struct analysis_env *env, struct ast_expr *n)
 {
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
@@ -315,7 +315,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 
 	default:
 		fprintf(stderr, "%s:%d: <matchfail %d>\n",
-		    __FILE__, __LINE__, n->t);
+		    __FILE__, __LINE__, n->type);
 		abort();
 	}
 
@@ -327,7 +327,7 @@ always_consumes_input(const struct ast_expr *n, int thud)
 {
 	if (is_nullable(n)) { return 0; }
 
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
 	case AST_EXPR_CLASS:
@@ -372,13 +372,15 @@ always_consumes_input(const struct ast_expr *n, int thud)
 }
 
 static int
-is_start_anchor(const struct ast_expr *n) {
-	return n->t == AST_EXPR_ANCHOR && n->u.anchor.t == RE_AST_ANCHOR_START;
+is_start_anchor(const struct ast_expr *n)
+{
+	return n->type == AST_EXPR_ANCHOR && n->u.anchor.type == RE_AST_ANCHOR_START;
 }
 
 static int
-is_end_anchor(const struct ast_expr *n) {
-	return n->t == AST_EXPR_ANCHOR && n->u.anchor.t == RE_AST_ANCHOR_END;
+is_end_anchor(const struct ast_expr *n)
+{
+	return n->type == AST_EXPR_ANCHOR && n->u.anchor.type == RE_AST_ANCHOR_END;
 }
 
 static enum re_analysis_res
@@ -388,13 +390,13 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 	/* Flag the overall RE as unsatisfiable if there are anchors
 	 * that cannot be simultaneously satisfied. */
 	
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_FLAGS:
 		break;
 
 	case AST_EXPR_ANCHOR:
-		if (n->u.anchor.t == RE_AST_ANCHOR_START) {
+		if (n->u.anchor.type == RE_AST_ANCHOR_START) {
 			/* If it's not possible to get here without consuming
 			 * any input and there's a start anchor, the regex is
 			 * inherently unsatisfiable. */
@@ -410,7 +412,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				assert(0 == (n->flags & RE_AST_FLAG_FIRST_STATE));
 				return RE_ANALYSIS_UNSATISFIABLE;
 			}
-		} else if (n->u.anchor.t == RE_AST_ANCHOR_END) {
+		} else if (n->u.anchor.type == RE_AST_ANCHOR_END) {
 			if (env->followed_by_consuming) {
 				/* See above: This is a near perfect subset of
 				 * unsatisfiable cases, but fails to handle
@@ -532,13 +534,13 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 static void
 assign_firsts(struct ast_expr *n)
 {
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_FLAGS:
 		break;
 
 	case AST_EXPR_ANCHOR:
-		if (n->u.anchor.t == RE_AST_ANCHOR_START) {
+		if (n->u.anchor.type == RE_AST_ANCHOR_START) {
 			set_flags(n, RE_AST_FLAG_FIRST_STATE);
 		}
 		break;
@@ -591,7 +593,7 @@ assign_firsts(struct ast_expr *n)
 
 static void
 assign_lasts(struct ast_expr *n) {
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_FLAGS:
 		break;
