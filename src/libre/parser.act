@@ -844,7 +844,7 @@
 		if (ast->expr == NULL) {
 			/* We shouldn't get here, it means there's error
 			 * checking missing elsewhere. */
-			if (err->e == RE_ESUCCESS) { assert(0); }
+			if (err->e == RE_ESUCCESS) { assert(!"unreached"); }
 			goto error;
 		}
 

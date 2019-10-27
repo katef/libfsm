@@ -45,7 +45,7 @@ atomic(struct ast_expr *n)
 		return 0; /* XXX */
 
 	default:
-		assert(0);
+		assert(!"unreached");
 	}
 }
 
@@ -251,7 +251,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 
 	default:
-		assert(0);
+		assert(!"unreached");
 	}
 }
 
@@ -290,7 +290,7 @@ print_range_endpoint(FILE *f, const struct fsm_options *opt,
 		break;
 
 	default:
-		assert(0);
+		assert(!"unreached");
 		break;
 	}
 }
@@ -338,8 +338,7 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 		break;
 
 	default:
-		fprintf(stderr, "(MATCH FAIL)\n");
-		assert(0);
+		assert(!"unreached");
 	}
 }
 

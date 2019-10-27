@@ -357,14 +357,12 @@ comp_iter(struct comp_env *env,
 		} else if (n->u.anchor.type == RE_AST_ANCHOR_END) {
 			EPSILON(x, env->end);
 		} else {
-			assert(0);
+			assert(!"unreached");
 		}
 		break;
 
 	default:
-		fprintf(stderr, "%s:%d: <matchfail %d>\n",
-		    __FILE__, __LINE__, n->type);
-		abort();
+		assert(!"unreached");
 	}
 	return 1;
 }
@@ -614,8 +612,7 @@ decide_linking(struct comp_env *env,
 		break;
 
 	default:
-        fprintf(stderr, "(MATCH FAIL)\n");
-        assert(0);
+		assert(!"unreached");
 	}
 
 	switch (side) {

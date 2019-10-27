@@ -45,7 +45,7 @@ atomic(struct ast_expr *n)
 		return 0; /* XXX */
 
 	default:
-		assert(0);
+		assert(!"unreached");
 	}
 }
 
@@ -240,7 +240,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		abort();
 
 	default:
-		assert(0);
+		assert(!"unreached");
 	}
 }
 
@@ -285,8 +285,8 @@ if (n->u.concat.l != NULL && n->u.concat.l->type == AST_CLASS_FLAGS) {
 
 	case AST_CLASS_RANGE: {
 		if (n->u.range.from.type != AST_RANGE_ENDPOINT_LITERAL || n->u.range.to.type != AST_RANGE_ENDPOINT_LITERAL) {
-			fprintf(stderr, "non-literal range endpoint unsupported\n");
-			abort(); /* XXX */
+			assert(!"unimplemented");
+			abort();
 		}
 
 		fprintf(f, "%%x%02X-%02X",
@@ -309,16 +309,15 @@ if (n->u.concat.l != NULL && n->u.concat.l->type == AST_CLASS_FLAGS) {
 		break;
 
 	case AST_CLASS_SUBTRACT:
-		fprintf(stderr, "subtract unsupported\n");
-		abort(); /* XXX */
+		assert(!"unimplemented");
+		abort();
 
 		cc_pp_iter(f, opt, n->u.subtract.ast);
 		cc_pp_iter(f, opt, n->u.subtract.mask);
 		break;
 
 	default:
-		fprintf(stderr, "(MATCH FAIL)\n");
-		assert(0);
+		assert(!"unreached");
 	}
 }
 

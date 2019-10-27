@@ -431,12 +431,9 @@ comp_iter(struct cc *cc, struct ast_class *n)
 		cc->flags |= n->u.flags.f;
 		break;
 	case AST_CLASS_SUBTRACT:
-		fprintf(stderr, "TODO %s:%d\n", __FILE__, __LINE__);
-		assert(0);
-		break;
+		assert(!"unimplemented");
 	default:
-		fprintf(stderr, "(MATCH FAIL)\n");
-		assert(0);
+		assert(!"unreached");
 	}
 
 	return 1;

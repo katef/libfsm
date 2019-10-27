@@ -171,8 +171,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		break;
 
 	default:
-		fprintf(stderr, "MATCH FAIL: %d\n", n->type);
-		assert(0);
+		assert(!"unreached");
 	}
 }
 
@@ -209,7 +208,7 @@ print_range_endpoint(FILE *f, const struct ast_range_endpoint *r)
 		fprintf(f, "'");
 		break;
 	default:
-		assert(0);
+		assert(!"unreached");
 		break;
 	}
 }
@@ -264,8 +263,7 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 		cc_pp_iter(f, opt, n->u.subtract.mask, indent + 4);
 		break;
 	default:
-		fprintf(stderr, "(MATCH FAIL)\n");
-		assert(0);
+		assert(!"unreached");
 	}
 }
 

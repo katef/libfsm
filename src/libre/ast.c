@@ -105,7 +105,7 @@ free_iter(struct ast_expr *n)
 		return;
 
 	default:
-		assert(0);
+		assert(!"unreached");
 	}
 
 	free(n);
@@ -218,11 +218,8 @@ struct ast_expr *
 ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 {
 	struct ast_expr *res = NULL;
-	if (count.low > count.high) {
-		fprintf(stderr, "ERROR: low > high (%u, %u)\n",
-		    count.low, count.high);
-		abort();
-	}
+
+	assert(count.low <= count.high);
 
 	if (count.low == 1 && count.high == 1) {
 		return e;	/* skip the useless REPEATED node */

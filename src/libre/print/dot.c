@@ -24,10 +24,6 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 	const void *parent, struct ast_class *n);
 
 static void
-print_range_endpoint(FILE *f, const struct fsm_options *opt,
-	const struct ast_range_endpoint *r);
-
-static void
 fprintf_count(FILE *f, unsigned count)
 {
 	if (count == AST_COUNT_UNBOUNDED) {
@@ -136,7 +132,7 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		break;
 
 	default:
-		assert(0);
+		assert(!"unreached");
 	}
 }
 
@@ -181,7 +177,7 @@ print_range_endpoint(FILE *f, const struct fsm_options *opt,
 		break;
 
 	default:
-		assert(0);
+		assert(!"unreached");
 		break;
 	}
 }
@@ -245,8 +241,7 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 		break;
 
 	default:
-		fprintf(stderr, "(MATCH FAIL)\n");
-		assert(0);
+		assert(!"unreached");
 	}
 }
 

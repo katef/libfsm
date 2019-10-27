@@ -115,7 +115,7 @@ count_chain(const struct ast_expr *n, enum ast_expr_type type)
 				n = n->u.alt.r;
 				break;
 			default:
-				assert(0);
+				assert(!"unreached");
 				break;
 			}
 		}
@@ -158,7 +158,7 @@ collect_chain(size_t count, struct ast_expr *doomed)
 	} else if (doomed->type == AST_EXPR_ALT) {
 		if (count == 1) {
 			/* If we get here, it's a parser bug. Right? */
-			assert(0);
+			assert(!"unreached");
 		} else {
 			struct ast_expr *dst = ast_expr_alt_n(count);
 			if (dst == NULL) { return NULL; }
@@ -178,7 +178,7 @@ collect_chain(size_t count, struct ast_expr *doomed)
 			return dst;
 		}
 	} else {
-		assert(0);
+		assert(!"unreached");
 		return NULL;
 	}
 }
@@ -314,9 +314,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		break;
 
 	default:
-		fprintf(stderr, "%s:%d: <matchfail %d>\n",
-		    __FILE__, __LINE__, n->type);
-		abort();
+		assert(!"unreached");
 	}
 
 	return RE_ANALYSIS_OK;
@@ -423,7 +421,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				return RE_ANALYSIS_UNSATISFIABLE;
 			}
 		} else {
-			assert(0);
+			assert(!"unreached");
 		}
 		break;
 
@@ -523,9 +521,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		break;
 
 	default:
-		fprintf(stderr, "(MATCH FAIL)\n");
-		assert(0);
-		break;
+		assert(!"unreached");
 	    }
 
 	return RE_ANALYSIS_OK;
@@ -585,9 +581,7 @@ assign_firsts(struct ast_expr *n)
 		break;
 
 	default:
-		fprintf(stderr, "(MATCH FAIL)\n");
-		assert(0);
-		break;
+		assert(!"unreached");
 	    }
 }
 
@@ -643,9 +637,7 @@ assign_lasts(struct ast_expr *n) {
 		break;
 
 	default:
-		fprintf(stderr, "(MATCH FAIL)\n");
-		assert(0);
-		break;
+		assert(!"unreached");
 	    }
 }
 
