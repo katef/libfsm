@@ -253,10 +253,10 @@ decide_linking(struct comp_env *env,
 		return LINK_TOP_DOWN;
 
 	case AST_EXPR_ANCHOR:
-		if (n->u.anchor.type == RE_AST_ANCHOR_START && side == LINK_START) {
+		if (n->u.anchor.type == AST_ANCHOR_START && side == LINK_START) {
 			return LINK_GLOBAL;
 		}
-		if (n->u.anchor.type == RE_AST_ANCHOR_END && side == LINK_END) {
+		if (n->u.anchor.type == AST_ANCHOR_END && side == LINK_END) {
 			return LINK_GLOBAL;
 		}
 
@@ -279,8 +279,7 @@ decide_linking(struct comp_env *env,
 
 	switch (side) {
 	case LINK_START: {
-		const int start    = (n->type == AST_EXPR_ANCHOR
-		                     && n->u.anchor.type == RE_AST_ANCHOR_START);
+		const int start    = (n->type == AST_EXPR_ANCHOR && n->u.anchor.type == AST_ANCHOR_START);
 		const int first    = (n->flags & AST_EXPR_FLAG_FIRST) != 0;
 		const int nullable = (n->flags & AST_EXPR_FLAG_NULLABLE) != 0;
 
@@ -307,8 +306,7 @@ decide_linking(struct comp_env *env,
 	}
 
 	case LINK_END: {
-		const int end      = (n->type == AST_EXPR_ANCHOR
-		                      && n->u.anchor.type == RE_AST_ANCHOR_END);
+		const int end      = (n->type == AST_EXPR_ANCHOR && n->u.anchor.type == AST_ANCHOR_END);
 		const int last     = (n->flags & AST_EXPR_FLAG_LAST) != 0;
 		const int nullable = (n->flags & AST_EXPR_FLAG_NULLABLE) != 0;
 
@@ -687,11 +685,11 @@ comp_iter(struct comp_env *env,
 
 	case AST_EXPR_ANCHOR:
 		switch (n->u.anchor.type) {
-		case RE_AST_ANCHOR_START:
+		case AST_ANCHOR_START:
 			EPSILON(env->start, y);
 			break;
 
-		case RE_AST_ANCHOR_END:
+		case AST_ANCHOR_END:
 			EPSILON(x, env->end);
 			break;
 

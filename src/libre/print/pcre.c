@@ -305,9 +305,8 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 
 	case AST_EXPR_ANCHOR:
-		assert(n->u.anchor.type == RE_AST_ANCHOR_START
-		    || n->u.anchor.type == RE_AST_ANCHOR_END);
-		fprintf(f, "%s", n->u.anchor.type == RE_AST_ANCHOR_START ? "^" : "$");
+		assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
+		fprintf(f, "%s", n->u.anchor.type == AST_ANCHOR_START ? "^" : "$");
 		break;
 
 	case AST_EXPR_FLAGS:

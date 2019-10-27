@@ -198,11 +198,10 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case AST_EXPR_ANCHOR:
-		assert(n->u.anchor.type == RE_AST_ANCHOR_START ||
-		    n->u.anchor.type == RE_AST_ANCHOR_END);
+		assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
 		fprintf(f, "\tn%p [ label = <ANCHOR|%c> ];\n",
 		    (void *) n,
-		    n->u.anchor.type == RE_AST_ANCHOR_START ? '^' : '$');
+		    n->u.anchor.type == AST_ANCHOR_START ? '^' : '$');
 		break;
 
 	case AST_EXPR_FLAGS:

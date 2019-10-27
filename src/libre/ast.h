@@ -48,8 +48,8 @@ struct ast_count {
 };
 
 enum ast_anchor_type {
-	RE_AST_ANCHOR_START,
-	RE_AST_ANCHOR_END
+	AST_ANCHOR_START,
+	AST_ANCHOR_END
 };
 
 /*
@@ -104,7 +104,7 @@ enum ast_class_type {
 	AST_CLASS_LITERAL,
 	AST_CLASS_RANGE,
 	AST_CLASS_NAMED,
-	AST_CLASS_CHAR_TYPE,
+/*	AST_CLASS_TYPE, XXX: not implemented */
 	AST_CLASS_FLAGS,
 	AST_CLASS_SUBTRACT
 };
@@ -312,8 +312,8 @@ struct ast_class *
 ast_class_subtract(struct ast_class *ast,
 	struct ast_class *mask);
 
-enum re_analysis_res {
-	RE_ANALYSIS_OK,
+enum ast_analysis_res {
+	AST_ANALYSIS_OK,
 
 	/*
 	 * This is returned if analysis finds a combination of
@@ -324,13 +324,13 @@ enum re_analysis_res {
 	 * While this naming leads to a double-negative, we can't prove
 	 * that the regex is satisfiable, just flag it when it isn't.
 	 */
-	RE_ANALYSIS_UNSATISFIABLE,
+	AST_ANALYSIS_UNSATISFIABLE,
 
-	RE_ANALYSIS_ERROR_NULL   = -1,
-	RE_ANALYSIS_ERROR_MEMORY = -2
+	AST_ANALYSIS_ERROR_NULL   = -1,
+	AST_ANALYSIS_ERROR_MEMORY = -2
 };
 
-enum re_analysis_res
+enum ast_analysis_res
 ast_analysis(struct ast *ast);
 
 /* XXX: exposed for sake of re(1) printing an ast;

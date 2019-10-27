@@ -785,14 +785,14 @@
 	@};
 
 	<ast-expr-anchor-start>: () -> (node :ast_expr) = @{
-		@node = ast_expr_anchor(RE_AST_ANCHOR_START);
+		@node = ast_expr_anchor(AST_ANCHOR_START);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
 	<ast-expr-anchor-end>: () -> (node :ast_expr) = @{
-		@node = ast_expr_anchor(RE_AST_ANCHOR_END);
+		@node = ast_expr_anchor(AST_ANCHOR_END);
 		if (@node == NULL) {
 			@!;
 		}

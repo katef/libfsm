@@ -93,7 +93,7 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 {
 	const struct dialect *m;
 	struct ast *ast = NULL;
-	enum re_analysis_res res;
+	enum ast_analysis_res res;
 	
 	assert(getc != NULL);
 
@@ -120,7 +120,7 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	}
 
 	if (unsatisfiable != NULL) {
-		*unsatisfiable = (res == RE_ANALYSIS_UNSATISFIABLE);
+		*unsatisfiable = (res == AST_ANALYSIS_UNSATISFIABLE);
 	}
 
 	return ast;

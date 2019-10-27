@@ -252,10 +252,8 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		break;
 
 	case AST_EXPR_ANCHOR:
-		fprintf(f, "ANCHOR %s\n",
-		    n->u.anchor.type == RE_AST_ANCHOR_START ? "^"
-		    : n->u.anchor.type == RE_AST_ANCHOR_END ? "$"
-		    : "<matchfail>");
+		assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
+		fprintf(f, "ANCHOR %s\n", n->u.anchor.type == AST_ANCHOR_START ? "^" : "$");
 		break;
 
 	case AST_EXPR_TOMBSTONE:

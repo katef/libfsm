@@ -37,13 +37,13 @@ is_nullable(const struct ast_expr *n)
 static int
 is_start_anchor(const struct ast_expr *n)
 {
-	return n->type == AST_EXPR_ANCHOR && n->u.anchor.type == RE_AST_ANCHOR_START;
+	return n->type == AST_EXPR_ANCHOR && n->u.anchor.type == AST_ANCHOR_START;
 }
 
 static int
 is_end_anchor(const struct ast_expr *n)
 {
-	return n->type == AST_EXPR_ANCHOR && n->u.anchor.type == RE_AST_ANCHOR_END;
+	return n->type == AST_EXPR_ANCHOR && n->u.anchor.type == AST_ANCHOR_END;
 }
 
 static void
@@ -52,7 +52,7 @@ set_flags(struct ast_expr *n, enum ast_expr_flags flags)
 	n->flags |= flags;
 }
 
-static enum re_analysis_res
+static enum ast_analysis_res
 analysis_iter(struct analysis_env *env, struct ast_expr *n)
 {
 	switch (n->type) {
@@ -149,7 +149,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		assert(!"unreached");
 	}
 
-	return RE_ANALYSIS_OK;
+	return AST_ANALYSIS_OK;
 }
 
 static int
@@ -208,10 +208,10 @@ always_consumes_input(const struct ast_expr *n, int thud)
 	}
 }
 
-static enum re_analysis_res
+static enum ast_analysis_res
 analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 {
-	enum re_analysis_res res;
+	enum ast_analysis_res res;
 
 	/*
 	 * Flag the overall RE as unsatisfiable if there are anchors
@@ -225,7 +225,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 	case AST_EXPR_ANCHOR:
 		switch (n->u.anchor.type) {
-		case RE_AST_ANCHOR_START:
+		case AST_ANCHOR_START:
 			/*
 			 * If it's not possible to get here without consuming
 			 * any input and there's a start anchor, the regex is
@@ -244,12 +244,12 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 				set_flags(n, AST_EXPR_FLAG_UNSATISFIABLE);
 				assert(0 == (n->flags & AST_EXPR_FLAG_FIRST));
-				return RE_ANALYSIS_UNSATISFIABLE;
+				return AST_ANALYSIS_UNSATISFIABLE;
 			}
 
 			break;
 
-		case RE_AST_ANCHOR_END:
+		case AST_ANCHOR_END:
 			if (env->followed_by_consuming) {
 				/*
 				 * See above: This is a near perfect subset of
@@ -260,7 +260,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 				assert(0 == (n->flags & AST_EXPR_FLAG_LAST));
 				set_flags(n, AST_EXPR_FLAG_UNSATISFIABLE);
-				return RE_ANALYSIS_UNSATISFIABLE;
+				return AST_ANALYSIS_UNSATISFIABLE;
 			}
 
 			break;
@@ -325,7 +325,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 			env->followed_by_consuming = bak_consuming_after;
 
-			if (res != RE_ANALYSIS_OK) {
+			if (res != AST_ANALYSIS_OK) {
 				return res;
 			}
 		}
@@ -345,13 +345,13 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			memcpy(&bak, env, sizeof(*env));
 
 			res = analysis_iter_anchoring(env, n->u.alt_n.n[i]);
-			if (res == RE_ANALYSIS_UNSATISFIABLE) {
+			if (res == AST_ANALYSIS_UNSATISFIABLE) {
 				/* prune unsatisfiable branch */
 				struct ast_expr *doomed = n->u.alt_n.n[i];
 				n->u.alt_n.n[i] = ast_expr_tombstone();
 				ast_expr_free(doomed);
 				continue;
-			} else if (res == RE_ANALYSIS_OK) {
+			} else if (res == AST_ANALYSIS_OK) {
 				any_sat = 1;
 			} else {
 				return res;
@@ -364,21 +364,21 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		/* An ALT group is only unstaisfiable if they ALL are. */
 		if (!any_sat) {
 			set_flags(n, AST_EXPR_FLAG_UNSATISFIABLE);
-			return RE_ANALYSIS_UNSATISFIABLE;
+			return AST_ANALYSIS_UNSATISFIABLE;
 		}
 		break;
 	}
 
 	case AST_EXPR_REPEATED:
 		res = analysis_iter_anchoring(env, n->u.repeated.e);
-		if (res != RE_ANALYSIS_OK) {
+		if (res != AST_ANALYSIS_OK) {
 			return res;
 		}
 		break;
 
 	case AST_EXPR_GROUP:
 		res = analysis_iter_anchoring(env, n->u.group.e);
-		if (res != RE_ANALYSIS_OK) {
+		if (res != AST_ANALYSIS_OK) {
 			return res;
 		}
 		break;
@@ -387,7 +387,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		assert(!"unreached");
 	}
 
-	return RE_ANALYSIS_OK;
+	return AST_ANALYSIS_OK;
 }
 
 static void
@@ -399,7 +399,7 @@ assign_firsts(struct ast_expr *n)
 		break;
 
 	case AST_EXPR_ANCHOR:
-		if (n->u.anchor.type == RE_AST_ANCHOR_START) {
+		if (n->u.anchor.type == AST_ANCHOR_START) {
 			set_flags(n, AST_EXPR_FLAG_FIRST);
 		}
 		break;
@@ -681,19 +681,19 @@ flatten(struct ast_expr **n)
 	return 1;
 }
 
-enum re_analysis_res
+enum ast_analysis_res
 ast_analysis(struct ast *ast)
 {
-	enum re_analysis_res res;
+	enum ast_analysis_res res;
 
 	if (ast == NULL) {
-		return RE_ANALYSIS_ERROR_NULL;
+		return AST_ANALYSIS_ERROR_NULL;
 	}
 
 	assert(ast->expr != NULL);
 
 	if (!flatten(&ast->expr)) {
-		return RE_ANALYSIS_ERROR_MEMORY;
+		return AST_ANALYSIS_ERROR_MEMORY;
 	}
 
 	/*
@@ -706,7 +706,7 @@ ast_analysis(struct ast *ast)
 		memset(&env, 0x00, sizeof(env));
 
 		res = analysis_iter(&env, ast->expr);
-		if (res != RE_ANALYSIS_OK) {
+		if (res != AST_ANALYSIS_OK) {
 			return res;
 		}
 	}
@@ -729,7 +729,7 @@ ast_analysis(struct ast *ast)
 		struct anchoring_env env;
 		memset(&env, 0x00, sizeof(env));
 		res = analysis_iter_anchoring(&env, ast->expr);
-		if (res != RE_ANALYSIS_OK) { return res; }
+		if (res != AST_ANALYSIS_OK) { return res; }
 	}
 
 	return res;
