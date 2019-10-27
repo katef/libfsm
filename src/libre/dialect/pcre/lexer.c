@@ -826,7 +826,7 @@ z3(struct lx_pcre_lx *lx)
 			break;
 
 		case S53: /* e.g. "\\d" */
-			lx_pcre_ungetc(lx, c); return TOK_NAMED__CHAR__CLASS;
+			lx_pcre_ungetc(lx, c); return TOK_NAMED__CLASS;
 
 		case S54: /* e.g. "[:grap" */
 			switch ((unsigned char) c) {
@@ -1063,7 +1063,7 @@ z3(struct lx_pcre_lx *lx)
 	case S4: return TOK_INVALID;
 	case S5: return TOK_CLOSEGROUP;
 	case S6: return TOK_INVERT;
-	case S53: return TOK_NAMED__CHAR__CLASS;
+	case S53: return TOK_NAMED__CLASS;
 	case S55: return TOK_NOESC;
 	case S56: return TOK_ESC;
 	case S57: return TOK_OCT;
@@ -1337,7 +1337,7 @@ z5(struct lx_pcre_lx *lx)
 			break;
 
 		case S19: /* e.g. "\\d" */
-			lx_pcre_ungetc(lx, c); return TOK_NAMED__CHAR__CLASS;
+			lx_pcre_ungetc(lx, c); return TOK_NAMED__CLASS;
 
 		case S20: /* e.g. "\\Q" */
 			lx_pcre_ungetc(lx, c); return lx->z = z0, lx->z(lx);
@@ -1559,7 +1559,7 @@ z5(struct lx_pcre_lx *lx)
 	case S16: return TOK_NOESC;
 	case S17: return TOK_ESC;
 	case S18: return TOK_OCT;
-	case S19: return TOK_NAMED__CHAR__CLASS;
+	case S19: return TOK_NAMED__CLASS;
 	case S20: return TOK_EOF;
 	case S21: return TOK_NOESC;
 	case S22: return TOK_NOESC;
@@ -1595,7 +1595,7 @@ lx_pcre_name(enum lx_pcre_token t)
 	case TOK_NOESC: return "NOESC";
 	case TOK_HEX: return "HEX";
 	case TOK_OCT: return "OCT";
-	case TOK_NAMED__CHAR__CLASS: return "NAMED__CHAR__CLASS";
+	case TOK_NAMED__CLASS: return "NAMED__CLASS";
 	case TOK_CONTROL: return "CONTROL";
 	case TOK_ESC: return "ESC";
 	case TOK_ALT: return "ALT";
@@ -1650,7 +1650,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_NOESC: return "\\b";
 		case TOK_HEX: return "\\xa";
 		case TOK_OCT: return "\\0";
-		case TOK_NAMED__CHAR__CLASS: return "\\d";
+		case TOK_NAMED__CLASS: return "\\d";
 		case TOK_CONTROL: return "\\ca";
 		case TOK_ESC: return "\\a";
 		default: goto error;
@@ -1675,7 +1675,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_NOESC: return "\\b";
 		case TOK_HEX: return "\\xa";
 		case TOK_OCT: return "\\0";
-		case TOK_NAMED__CHAR__CLASS: return "\\d";
+		case TOK_NAMED__CLASS: return "\\d";
 		case TOK_CONTROL: return "\\ca";
 		case TOK_ESC: return "\\a";
 		case TOK_ALT: return "|";

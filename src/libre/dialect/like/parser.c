@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 149 "src/libre/parser.act"
+#line 146 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -25,7 +25,6 @@
 	#include "libre/class.h"
 	#include "libre/class_lookup.h"
 	#include "libre/ast.h"
-	#include "libre/ast_class.h"
 
 	#ifndef DIALECT
 	#error DIALECT required
@@ -42,7 +41,7 @@
 	#define LX_INIT    CAT(LX_PREFIX, _init)
 
 	#define DIALECT_PARSE  CAT(parse_re_, DIALECT)
-	#define DIALECT_CHAR_CLASS  CAT(re_char_class_, DIALECT)
+	#define DIALECT_CLASS  CAT(re_class_, DIALECT)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
 	#define DIALECT_ENTRY CAT(p_re__, DIALECT)
@@ -81,7 +80,6 @@
 
 	#include "../comp.h"
 	#include "../../class.h"
-	#include "../../ast_class.h"
 
 	struct flags {
 		enum re_flags flags;
@@ -94,12 +92,11 @@
 
 	typedef struct lx_pos t_pos;
 	typedef enum re_flags t_re__flags;
-	typedef char_class_constructor * t_ast__char__class__id;
+	typedef class_constructor * t_ast__class__id;
 	typedef struct ast_count t_ast__count;
 
-	typedef struct re_char_class_ast * t_char__class__ast;
-	typedef struct ast_char_class * t_char__class;
-	typedef enum re_char_class_flags t_char__class__flags;
+	typedef struct ast_class * t_ast__class;
+	typedef enum ast_class_flags t_class__flags;
 
 	typedef struct ast_range_endpoint t_range__endpoint;
 
@@ -216,7 +213,7 @@
 		return s;
 	}
 
-#line 220 "src/libre/dialect/like/parser.c"
+#line 217 "src/libre/dialect/like/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -264,12 +261,12 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					/* END OF INLINE: list-of-nodes::any */
 					/* BEGINNING OF ACTION: ast-expr-any */
 					{
-#line 571 "src/libre/parser.act"
+#line 568 "src/libre/parser.act"
 
 		(ZIl) = ast_expr_any();
 		if ((ZIl) == NULL) { goto ZL1; }
 	
-#line 273 "src/libre/dialect/like/parser.c"
+#line 270 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-any */
 				}
@@ -288,7 +285,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 							case (TOK_CHAR):
 								/* BEGINNING OF EXTRACT: CHAR */
 								{
-#line 406 "src/libre/parser.act"
+#line 403 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
@@ -298,7 +295,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 302 "src/libre/dialect/like/parser.c"
+#line 299 "src/libre/dialect/like/parser.c"
 								}
 								/* END OF EXTRACT: CHAR */
 								break;
@@ -311,12 +308,12 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					/* END OF INLINE: list-of-nodes::literal */
 					/* BEGINNING OF ACTION: ast-expr-literal */
 					{
-#line 566 "src/libre/parser.act"
+#line 563 "src/libre/parser.act"
 
 		(ZIl) = ast_expr_literal((ZIc));
 		if ((ZIl) == NULL) { goto ZL1; }
 	
-#line 320 "src/libre/dialect/like/parser.c"
+#line 317 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-literal */
 				}
@@ -341,26 +338,26 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					/* END OF INLINE: list-of-nodes::many */
 					/* BEGINNING OF ACTION: ast-expr-any */
 					{
-#line 571 "src/libre/parser.act"
+#line 568 "src/libre/parser.act"
 
 		(ZIe) = ast_expr_any();
 		if ((ZIe) == NULL) { goto ZL1; }
 	
-#line 350 "src/libre/dialect/like/parser.c"
+#line 347 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-any */
 					/* BEGINNING OF ACTION: atom-kleene */
 					{
-#line 596 "src/libre/parser.act"
+#line 593 "src/libre/parser.act"
 
 		(ZIc) = ast_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
 	
-#line 359 "src/libre/dialect/like/parser.c"
+#line 356 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: atom-kleene */
 					/* BEGINNING OF ACTION: ast-expr-atom */
 					{
-#line 588 "src/libre/parser.act"
+#line 585 "src/libre/parser.act"
 
 		(ZIl) = ast_expr_with_count((ZIe), (ZIc));
 		if ((ZIl) == NULL) {
@@ -368,7 +365,7 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 			goto ZL1;
 		}
 	
-#line 372 "src/libre/dialect/like/parser.c"
+#line 369 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-atom */
 				}
@@ -392,12 +389,12 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 					}
 					/* BEGINNING OF ACTION: ast-expr-concat */
 					{
-#line 556 "src/libre/parser.act"
+#line 553 "src/libre/parser.act"
 
 		(ZInode) = ast_expr_concat((ZIl), (ZIr));
 		if ((ZInode) == NULL) { goto ZL1; }
 	
-#line 401 "src/libre/dialect/like/parser.c"
+#line 398 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-concat */
 				}
@@ -408,22 +405,22 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 
 					/* BEGINNING OF ACTION: ast-expr-empty */
 					{
-#line 551 "src/libre/parser.act"
+#line 548 "src/libre/parser.act"
 
 		(ZIr) = ast_expr_empty();
 		if ((ZIr) == NULL) { goto ZL1; }
 	
-#line 417 "src/libre/dialect/like/parser.c"
+#line 414 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-empty */
 					/* BEGINNING OF ACTION: ast-expr-concat */
 					{
-#line 556 "src/libre/parser.act"
+#line 553 "src/libre/parser.act"
 
 		(ZInode) = ast_expr_concat((ZIl), (ZIr));
 		if ((ZInode) == NULL) { goto ZL1; }
 	
-#line 427 "src/libre/dialect/like/parser.c"
+#line 424 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-concat */
 				}
@@ -465,12 +462,12 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 				{
 					/* BEGINNING OF ACTION: ast-expr-empty */
 					{
-#line 551 "src/libre/parser.act"
+#line 548 "src/libre/parser.act"
 
 		(ZInode) = ast_expr_empty();
 		if ((ZInode) == NULL) { goto ZL1; }
 	
-#line 474 "src/libre/dialect/like/parser.c"
+#line 471 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-expr-empty */
 				}
@@ -494,14 +491,14 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 523 "src/libre/parser.act"
+#line 520 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
 		}
 		goto ZL1;
 	
-#line 505 "src/libre/dialect/like/parser.c"
+#line 502 "src/libre/dialect/like/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -519,7 +516,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 906 "src/libre/parser.act"
+#line 903 "src/libre/parser.act"
 
 
 	static int
@@ -663,6 +660,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 667 "src/libre/dialect/like/parser.c"
+#line 664 "src/libre/dialect/like/parser.c"
 
 /* END OF FILE */
