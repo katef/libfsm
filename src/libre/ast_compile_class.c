@@ -30,9 +30,7 @@
  */
 struct cc {
 	enum re_flags re_flags;
-
 	enum ast_class_flags flags;
-
 	struct re_err *err;
 
 	/*
@@ -47,8 +45,8 @@ struct cc {
 static struct fsm *
 new_blank(const struct fsm_options *opt)
 {
-	struct fsm *new;
 	struct fsm_state *start;
+	struct fsm *new;
 	
 	new = fsm_new(opt);
 	if (new == NULL) {
@@ -74,7 +72,7 @@ error:
 /* XXX: to go when dups show all spellings for group overlap */
 static const struct fsm_state *
 fsm_any(const struct fsm *fsm,
-    int (*predicate)(const struct fsm *, const struct fsm_state *))
+	int (*predicate)(const struct fsm *, const struct fsm_state *))
 {
 	const struct fsm_state *s;
 	
@@ -139,7 +137,7 @@ fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state 
 /* FIXME: duplication */
 static int
 addedge_literal(struct fsm *fsm, enum re_flags flags,
-    struct fsm_state *from, struct fsm_state *to, char c)
+	struct fsm_state *from, struct fsm_state *to, char c)
 {
 	assert(fsm != NULL);
 	assert(from != NULL);
@@ -181,7 +179,7 @@ negate(struct fsm *class, const struct fsm_options *opt)
 
 static int
 link_class_into_fsm(struct cc *cc, struct fsm *fsm,
-    struct fsm_state *x, struct fsm_state *y)
+	struct fsm_state *x, struct fsm_state *y)
 {
 	int is_empty;
 	struct re_err *err = cc->err;
@@ -241,10 +239,10 @@ link_class_into_fsm(struct cc *cc, struct fsm *fsm,
 		if (err != NULL) { err->e = RE_EERRNO; }
 		return 0;
 	}
-	cc->set = NULL;
 
 	fsm_free(cc->dup);
 	cc->dup = NULL;
+	cc->set = NULL;
 		
 	return 1;
 }
@@ -266,7 +264,7 @@ cc_add_char(struct cc *cc, unsigned char c)
 	errno = 0;
 	p = fsm_exec(cc->set, fsm_sgetc, &s);
 	if (p == NULL && errno != 0) {
-		goto fail;
+		return 0;
 	}
 	
 	if (p == NULL) {
@@ -280,58 +278,58 @@ cc_add_char(struct cc *cc, unsigned char c)
 	
 	end = fsm_addstate(fsm);
 	if (end == NULL) {
-		goto fail;
+		return 0;
 	}
 	
 	fsm_setend(fsm, end, 1);
 	
 	if (!addedge_literal(fsm, cc->re_flags, start, end, c)) {
-		goto fail;
+		return 0;
 	}
 	
 	return 1;
-
-fail:
-	return 0;
 }
 
 static int
 cc_add_range(struct cc *cc, 
-    const struct ast_range_endpoint *from,
-    const struct ast_range_endpoint *to)
+	const struct ast_range_endpoint *from,
+	const struct ast_range_endpoint *to)
 {
 	unsigned char lower, upper;
 	unsigned int i;
 
 	if (from->type != AST_RANGE_ENDPOINT_LITERAL ||
-	    to->type != AST_RANGE_ENDPOINT_LITERAL) {
+		to->type != AST_RANGE_ENDPOINT_LITERAL)
+	{
 		/* not yet supported */
 		return 0;
 	}
+
 	lower = from->u.literal.c;
 	upper = to->u.literal.c;
 
 	assert(cc != NULL);
 	assert(lower <= upper);
+
 	for (i = lower; i <= upper; i++) {
 		if (!cc_add_char(cc, i)) {
 			return 0;
 		}
 	}
+
 	return 1;
 }
 
 static int
 cc_add_named_class(struct cc *cc, class_constructor *ctor)
 {
+	struct fsm *constructed;
 	struct fsm *q;
 	int r;
-	struct re_err *err = cc->err;
-	struct fsm *constructed = ctor(fsm_getoptions(cc->set));
 
+	constructed = ctor(fsm_getoptions(cc->set));
 	if (constructed == NULL) {
-		if (err != NULL) { err->e = RE_EERRNO; }
-		return 0;
+		goto error;
 	}
 
 	/* TODO: maybe it is worth using carryopaque, after the entire group is constructed */
@@ -340,63 +338,68 @@ cc_add_named_class(struct cc *cc, class_constructor *ctor)
 		
 		a = fsm_clone(cc->set);
 		if (a == NULL) {
-			if (err != NULL) { err->e = RE_EERRNO; }
-			return 0;
+			goto error;
 		}
 		
 		b = fsm_clone(constructed);
 		if (b == NULL) {
 			fsm_free(a);
-			if (err != NULL) { err->e = RE_EERRNO; }
-			return 0;
+			goto error;
 		}
 		
 		q = fsm_intersect(a, b);
 		if (q == NULL) {
 			fsm_free(a);
 			fsm_free(b);
-			if (err != NULL) { err->e = RE_EERRNO; }
-			return 0;
+			goto error;
 		}
 		
 		r = fsm_empty(q);
 		
 		if (r == -1) {
-			if (err != NULL) { err->e = RE_EERRNO; }
-			return 0;
+			goto error;
 		}
 	}
 	
 	if (!r) {
 		cc->dup = fsm_union(cc->dup, q);
 		if (cc->dup == NULL) {
-			if (err != NULL) { err->e = RE_EERRNO; }
-			return 0;
+			goto error;
 		}
 	} else {
 		fsm_free(q);
 		
 		cc->set = fsm_union(cc->set, constructed);
 		if (cc->set == NULL) {
-			if (err != NULL) { err->e = RE_EERRNO; }
-			return 0;
+			goto error;
 		}
 		
 		/* we need a DFA here for sake of fsm_exec() identifying duplicates */
 		if (!fsm_determinise(cc->set)) {
-			if (err != NULL) { err->e = RE_EERRNO; }
-			return 0;
+			goto error;
 		}
 	}
 	
 	return 1;
+
+error:
+
+	if (cc->err != NULL) {
+		cc->err->e = RE_EERRNO;
+	}
+
+	return 0;
 }
 
 static int
 cc_invert(struct cc *cc)
 {
-	struct fsm *inverted = negate(cc->set, fsm_getoptions(cc->set));
-	if (inverted == NULL) { return 0; }
+	struct fsm *inverted;
+
+	inverted = negate(cc->set, fsm_getoptions(cc->set));
+	if (inverted == NULL) {
+		return 0;
+	}
 
 	cc->set = inverted;
 
@@ -404,6 +407,7 @@ cc_invert(struct cc *cc)
 	 * Note we don't invert the dup set here; duplicates are always
 	 * kept in the positive.
 	 */
+
 	return 1;
 }
 
@@ -412,25 +416,42 @@ comp_iter(struct cc *cc, const struct ast_class *n)
 {
 	assert(cc != NULL);
 	assert(n != NULL);
+
 	switch (n->type) {
 	case AST_CLASS_CONCAT:
-		if (!comp_iter(cc, n->u.concat.l)) { return 0; }
-		if (!comp_iter(cc, n->u.concat.r)) { return 0; }
+		if (!comp_iter(cc, n->u.concat.l)) {
+			return 0;
+		}
+		if (!comp_iter(cc, n->u.concat.r)) {
+			return 0;
+		}
 		break;
+
 	case AST_CLASS_LITERAL:
-		if (!cc_add_char(cc, n->u.literal.c)) { return 0; }
+		if (!cc_add_char(cc, n->u.literal.c)) {
+			return 0;
+		}
 		break;
+
 	case AST_CLASS_RANGE:
-		if (!cc_add_range(cc, &n->u.range.from, &n->u.range.to)) { return 0; }
+		if (!cc_add_range(cc, &n->u.range.from, &n->u.range.to)) {
+			return 0;
+		}
 		break;
+
 	case AST_CLASS_NAMED:
-		if (!cc_add_named_class(cc, n->u.named.ctor)) { return 0; }
+		if (!cc_add_named_class(cc, n->u.named.ctor)) {
+			return 0;
+		}
 		break;
+
 	case AST_CLASS_FLAGS:
 		cc->flags |= n->u.flags.f;
 		break;
+
 	case AST_CLASS_SUBTRACT:
 		assert(!"unimplemented");
+
 	default:
 		assert(!"unreached");
 	}
@@ -440,9 +461,9 @@ comp_iter(struct cc *cc, const struct ast_class *n)
 
 int
 ast_compile_class(const struct ast_class *class,
-    struct fsm *fsm, enum re_flags flags,
-    struct re_err *err,
-    struct fsm_state *x, struct fsm_state *y)
+	struct fsm *fsm, enum re_flags flags,
+	struct re_err *err,
+	struct fsm_state *x, struct fsm_state *y)
 {
 	const struct fsm_options *opt;
 	struct cc cc;
@@ -452,27 +473,43 @@ ast_compile_class(const struct ast_class *class,
 	opt = fsm_getoptions(fsm);
 
 	cc.set = new_blank(opt);
-	if (cc.set == NULL) { goto cleanup; }
+	if (cc.set == NULL) {
+		goto error;
+	}
 
 	cc.dup = new_blank(opt);
-	if (cc.dup == NULL) { goto cleanup; }
+	if (cc.dup == NULL) {
+		goto error;
+	}
 
 	cc.err = err;
 	cc.re_flags = flags;
 
-	if (!comp_iter(&cc, class)) { goto cleanup; }
-
-	if (cc.flags & AST_CLASS_FLAG_INVERTED) {
-		if (!cc_invert(&cc)) { goto cleanup; }
+	if (!comp_iter(&cc, class)) {
+		goto error;
 	}
 
-	if (!link_class_into_fsm(&cc, fsm, x, y)) { goto cleanup; }
+	if (cc.flags & AST_CLASS_FLAG_INVERTED) {
+		if (!cc_invert(&cc)) {
+			goto error;
+		}
+	}
+
+	if (!link_class_into_fsm(&cc, fsm, x, y)) {
+		goto error;
+	}
 
 	return 1;
 
-cleanup:
-	if (cc.set != NULL) { fsm_free(cc.set); }
-	if (cc.dup != NULL) { fsm_free(cc.dup); }
+error:
+
+	if (cc.set != NULL) {
+		fsm_free(cc.set);
+	}
+	if (cc.dup != NULL) {
+		fsm_free(cc.dup);
+	}
+
 	return 0;
 }
 

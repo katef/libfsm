@@ -29,7 +29,10 @@ static int
 flatten(struct ast_expr **n);
 
 static int
-is_nullable(const struct ast_expr *n) { return n->flags & RE_AST_FLAG_NULLABLE; }
+is_nullable(const struct ast_expr *n)
+{
+	return n->flags & RE_AST_FLAG_NULLABLE;
+}
 
 static int
 is_start_anchor(const struct ast_expr *n)
@@ -59,21 +62,22 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		/* no special handling */
 		break;
 
-	case AST_EXPR_CONCAT_N:
-	{
+	case AST_EXPR_CONCAT_N: {
 		size_t i;
+
 		for (i = 0; i < n->u.concat_n.count; i++) {
 			if (is_nullable(n)) {
 				set_flags(n->u.concat_n.n[i], RE_AST_FLAG_NULLABLE);
 			}
 			analysis_iter(env, n->u.concat_n.n[i]);
 		}
+
 		break;
 	}
 
-	case AST_EXPR_ALT_N:
-	{
+	case AST_EXPR_ALT_N: {
 		size_t i;
+
 		for (i = 0; i < n->u.alt_n.count; i++) {
 			analysis_iter(env, n->u.alt_n.n[i]);
 			/* spread nullability upward */
@@ -90,8 +94,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_REPEATED:
-	{
+	case AST_EXPR_REPEATED: {
 		struct ast_expr *e = n->u.repeated.e;
 		assert(e != NULL);
 
@@ -105,14 +108,18 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 
 		analysis_iter(env, e);
 
-		if (is_nullable(e)) { set_flags(n, RE_AST_FLAG_NULLABLE); }
+		if (is_nullable(e)) {
+			set_flags(n, RE_AST_FLAG_NULLABLE);
+		}
 		break;
 	}
 
-	case AST_EXPR_GROUP:
-	{
+	case AST_EXPR_GROUP: {
 		struct ast_expr *e = n->u.group.e;
-		if (is_nullable(n)) { set_flags(e, RE_AST_FLAG_NULLABLE); }
+
+		if (is_nullable(n)) {
+			set_flags(e, RE_AST_FLAG_NULLABLE);
+		}
 
 		/* assign group ID */
 		env->group_id++;
@@ -120,7 +127,9 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 
 		analysis_iter(env, e);
 
-		if (is_nullable(e)) { set_flags(n, RE_AST_FLAG_NULLABLE); }
+		if (is_nullable(e)) {
+			set_flags(n, RE_AST_FLAG_NULLABLE);
+		}
 		break;
 	}
 
@@ -146,7 +155,9 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 static int
 always_consumes_input(const struct ast_expr *n, int thud)
 {
-	if (is_nullable(n)) { return 0; }
+	if (is_nullable(n)) {
+		return 0;
+	}
 
 	switch (n->type) {
 	case AST_EXPR_LITERAL:
@@ -154,25 +165,27 @@ always_consumes_input(const struct ast_expr *n, int thud)
 	case AST_EXPR_CLASS:
 		return 1;
 
-	case AST_EXPR_CONCAT_N:
-	{
-		size_t i;	/* check if any consume input */
+	case AST_EXPR_CONCAT_N: {
+		size_t i;
+
 		for (i = 0; i < n->u.concat_n.count; i++) {
 			if (always_consumes_input(n->u.concat_n.n[i], thud)) {
 				return 1;
 			}
 		}
+
 		return 0;
 	}
 
-	case AST_EXPR_ALT_N:
-	{
-		size_t i;	/* check if all consume input */
+	case AST_EXPR_ALT_N: {
+		size_t i;
+
 		for (i = 0; i < n->u.alt_n.count; i++) {
 			if (!always_consumes_input(n->u.alt_n.n[i], thud)) {
 				return 0;
 			}
 		}
+
 		return 1;
 	}
 
@@ -184,7 +197,10 @@ always_consumes_input(const struct ast_expr *n, int thud)
 		return 0;
 
 	case AST_EXPR_GROUP:
-		if (thud) { return 1; } /* FIXME */
+		if (thud) {
+			return 1; /* FIXME */
+		}
+
 		return always_consumes_input(n->u.group.e, thud);
 
 	default:
@@ -196,47 +212,68 @@ static enum re_analysis_res
 analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 {
 	enum re_analysis_res res;
-	/* Flag the overall RE as unsatisfiable if there are anchors
-	 * that cannot be simultaneously satisfied. */
-	
+
+	/*
+	 * Flag the overall RE as unsatisfiable if there are anchors
+	 * that cannot be simultaneously satisfied.
+	 */
+
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_FLAGS:
 		break;
 
 	case AST_EXPR_ANCHOR:
-		if (n->u.anchor.type == RE_AST_ANCHOR_START) {
-			/* If it's not possible to get here without consuming
+		switch (n->u.anchor.type) {
+		case RE_AST_ANCHOR_START:
+			/*
+			 * If it's not possible to get here without consuming
 			 * any input and there's a start anchor, the regex is
-			 * inherently unsatisfiable. */
+			 * inherently unsatisfiable.
+			 */
 
 			if (env->past_any_consuming) {
-				set_flags(n, RE_AST_FLAG_UNSATISFIABLE);
-				/* Start anchors that are not in a FIRST position
+				/*
+				 * Start anchors that are not in a FIRST position
 				 * almost perfectly match unsatisfiable start
 				 * anchors, with the exception of multiple start
 				 * anchors in a row (e.g. `^^ab$`). We can't just
 				 * treat them as nullable either, because it messes
-				 * up the results for linking. */
+				 * up the results for linking.
+				 */
+
+				set_flags(n, RE_AST_FLAG_UNSATISFIABLE);
 				assert(0 == (n->flags & RE_AST_FLAG_FIRST_STATE));
 				return RE_ANALYSIS_UNSATISFIABLE;
 			}
-		} else if (n->u.anchor.type == RE_AST_ANCHOR_END) {
+
+			break;
+
+		case RE_AST_ANCHOR_END:
 			if (env->followed_by_consuming) {
-				/* See above: This is a near perfect subset of
+				/*
+				 * See above: This is a near perfect subset of
 				 * unsatisfiable cases, but fails to handle
 				 * redundant $ anchors correctly (including
-				 * ones with arbitrary nesting). */
+				 * ones with arbitrary nesting).
+				 */
+
 				assert(0 == (n->flags & RE_AST_FLAG_LAST_STATE));
 				set_flags(n, RE_AST_FLAG_UNSATISFIABLE);
 				return RE_ANALYSIS_UNSATISFIABLE;
 			}
-		} else {
+
+			break;
+
+		default:
 			assert(!"unreached");
 		}
 		break;
 
-	/* These are the types that actually consume input. */
+	/*
+	 * These are the types that actually consume input.
+	 */
+
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
 	case AST_EXPR_CLASS:
@@ -245,28 +282,36 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		}
 		break;
 
-	case AST_EXPR_CONCAT_N:
-	{
+	case AST_EXPR_CONCAT_N: {
 		size_t i, j;
-		char bak_consuming_after = 0;
+		char bak_consuming_after;
+
+		bak_consuming_after = 0;
 
 		for (i = 0; i < n->u.concat_n.count; i++) {
-			struct ast_expr *child = n->u.concat_n.n[i];
+			struct ast_expr *child;
+
+			child = n->u.concat_n.n[i];
+
 #if LOG_CONCAT_FLAGS
 			fprintf(stderr, "%s: %p: %lu: %p -- past_any %d\n",
 			    __func__, (void *)n, i, (void *)child,
 			    env->past_any_consuming);
 #endif
 
-			/* Before recursing, save and restore whether
-			 * this is followed by anything which always consumes input.
+			/*
+			 * Before recurring, save and restore whether this is
+			 * followed by anything which always consumes input.
 			 *
 			 * TODO: instead of doing a backward sweep for each node,
-			 * do a reverse falsification step as a separate pass? */
+			 * do a reverse falsification step as a separate pass?
+			 */
 			bak_consuming_after = env->followed_by_consuming;
 
-			/* If we don't already know whether this is being followed
-			 * by something that always consumes input, check */
+			/*
+			 * If we don't already know whether this is being followed
+			 * by something that always consumes input, check.
+			 */
 			if (!env->followed_by_consuming) {
 				for (j = i + 1; j < n->u.concat_n.count; j++) {
 					if (always_consumes_input(n->u.concat_n.n[j], 0)) {
@@ -280,23 +325,26 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 			env->followed_by_consuming = bak_consuming_after;
 
-			if (res != RE_ANALYSIS_OK) { return res; }
+			if (res != RE_ANALYSIS_OK) {
+				return res;
+			}
 		}
 
 		break;
 	}
 
-	case AST_EXPR_ALT_N:
-	{
+	case AST_EXPR_ALT_N: {
+		int any_sat;
 		size_t i;
-		int any_sat = 0;
+
+		any_sat = 0;
 
 		for (i = 0; i < n->u.alt_n.count; i++) {
 			struct anchoring_env bak;
+
 			memcpy(&bak, env, sizeof(*env));
 
 			res = analysis_iter_anchoring(env, n->u.alt_n.n[i]);
-
 			if (res == RE_ANALYSIS_UNSATISFIABLE) {
 				/* prune unsatisfiable branch */
 				struct ast_expr *doomed = n->u.alt_n.n[i];
@@ -323,17 +371,21 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 	case AST_EXPR_REPEATED:
 		res = analysis_iter_anchoring(env, n->u.repeated.e);
-		if (res != RE_ANALYSIS_OK) { return res; }
+		if (res != RE_ANALYSIS_OK) {
+			return res;
+		}
 		break;
 
 	case AST_EXPR_GROUP:
 		res = analysis_iter_anchoring(env, n->u.group.e);
-		if (res != RE_ANALYSIS_OK) { return res; }
+		if (res != RE_ANALYSIS_OK) {
+			return res;
+		}
 		break;
 
 	default:
 		assert(!"unreached");
-	    }
+	}
 
 	return RE_ANALYSIS_OK;
 }
@@ -358,22 +410,24 @@ assign_firsts(struct ast_expr *n)
 		set_flags(n, RE_AST_FLAG_FIRST_STATE);
 		break;
 
-	case AST_EXPR_CONCAT_N:
-	{
+	case AST_EXPR_CONCAT_N: {
 		size_t i;
+
 		set_flags(n, RE_AST_FLAG_FIRST_STATE);
 		for (i = 0; i < n->u.concat_n.count; i++) {
 			struct ast_expr *child = n->u.concat_n.n[i];
 			assign_firsts(child);
 
-			if (always_consumes_input(child, 1) || is_start_anchor(child)) { break; }
+			if (always_consumes_input(child, 1) || is_start_anchor(child)) {
+				break;
+			}
 		}
 		break;
 	}
 
-	case AST_EXPR_ALT_N:
-	{
+	case AST_EXPR_ALT_N: {
 		size_t i;
+
 		set_flags(n, RE_AST_FLAG_FIRST_STATE);
 		for (i = 0; i < n->u.alt_n.count; i++) {
 			assign_firsts(n->u.alt_n.n[i]);
@@ -393,11 +447,12 @@ assign_firsts(struct ast_expr *n)
 
 	default:
 		assert(!"unreached");
-	    }
+	}
 }
 
 static void
-assign_lasts(struct ast_expr *n) {
+assign_lasts(struct ast_expr *n)
+{
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_FLAGS:
@@ -413,23 +468,25 @@ assign_lasts(struct ast_expr *n) {
 		set_flags(n, RE_AST_FLAG_LAST_STATE);
 		break;
 
-	case AST_EXPR_CONCAT_N:
-	{
+	case AST_EXPR_CONCAT_N: {
 		size_t i;
+
 		set_flags(n, RE_AST_FLAG_LAST_STATE);
 
 		/* iterate in reverse, break on rollover */
 		for (i = n->u.concat_n.count - 1; i < n->u.concat_n.count; i--) {
 			struct ast_expr *child = n->u.concat_n.n[i];
 			assign_lasts(child);
-			if (always_consumes_input(child, 1) || is_end_anchor(child)) { break; }
+			if (always_consumes_input(child, 1) || is_end_anchor(child)) {
+				break;
+			}
 		}
 		break;
 	}
 
-	case AST_EXPR_ALT_N:
-	{
+	case AST_EXPR_ALT_N: {
 		size_t i;
+
 		set_flags(n, RE_AST_FLAG_LAST_STATE);
 		for (i = 0; i < n->u.alt_n.count; i++) {
 			assign_lasts(n->u.alt_n.n[i]);
@@ -449,31 +506,38 @@ assign_lasts(struct ast_expr *n) {
 
 	default:
 		assert(!"unreached");
-	    }
+	}
 }
 
 static unsigned
 count_chain(const struct ast_expr *n, enum ast_expr_type type)
 {
-	unsigned res = 0;
+	unsigned res;
+
+	res = 0;
+
 	for (;;) {
 		assert(n != NULL);
+
 		if (n->type == AST_EXPR_EMPTY) {
 			return res;
-		} else {
-			assert(n->type == type);
-			res++;
-			switch (type) {
-			case AST_EXPR_CONCAT:
-				n = n->u.concat.r;
-				break;
-			case AST_EXPR_ALT:
-				n = n->u.alt.r;
-				break;
-			default:
-				assert(!"unreached");
-				break;
-			}
+		}
+
+		assert(n->type == type);
+		res++;
+
+		switch (type) {
+		case AST_EXPR_CONCAT:
+			n = n->u.concat.r;
+			break;
+
+		case AST_EXPR_ALT:
+			n = n->u.alt.r;
+			break;
+
+		default:
+			assert(!"unreached");
+			break;
 		}
 	}
 }
@@ -482,58 +546,87 @@ static struct ast_expr *
 collect_chain(size_t count, struct ast_expr *doomed)
 {
 	size_t i;
-	if (doomed->type == AST_EXPR_CONCAT) {
+
+	switch (doomed->type) {
+	case AST_EXPR_CONCAT: {
+		struct ast_expr *dst;
+
 		if (count == 1) {
 			struct ast_expr *res = doomed->u.concat.l;
-			if (!flatten(&doomed->u.concat.l)) { return 0; }
+			if (!flatten(&doomed->u.concat.l)) {
+				return 0;
+			}
 			res = doomed->u.concat.l;
 
 			assert(doomed->u.concat.r->type == AST_EXPR_EMPTY);
 			doomed->u.concat.l = ast_expr_tombstone();
 			ast_expr_free(doomed);
 			assert(res->type != AST_EXPR_CONCAT);
+
 			return res;
-		} else {
-			struct ast_expr *dst = ast_expr_concat_n(count);
-			if (dst == NULL) { return NULL; }
-			
-			for (i = 0; i < count; i++) {
-				struct ast_expr *ndoomed = doomed->u.concat.r;
-				if (!flatten(&doomed->u.concat.l)) { return 0; }
-				dst->u.concat_n.n[i] = doomed->u.concat.l;
-				doomed->u.concat.l = ast_expr_tombstone();
-				doomed->u.concat.r = ast_expr_tombstone();
-				ast_expr_free(doomed);
-				doomed = ndoomed;
-				if (i == count - 1) {
-					assert(doomed->type == AST_EXPR_EMPTY);
-				}
-			}
-			return dst;
 		}
-	} else if (doomed->type == AST_EXPR_ALT) {
+
+		dst = ast_expr_concat_n(count);
+		if (dst == NULL) {
+			return NULL;
+		}
+		
+		for (i = 0; i < count; i++) {
+			struct ast_expr *ndoomed;
+
+			ndoomed = doomed->u.concat.r;
+			if (!flatten(&doomed->u.concat.l)) {
+				return 0;
+			}
+
+			dst->u.concat_n.n[i] = doomed->u.concat.l;
+			doomed->u.concat.l = ast_expr_tombstone();
+			doomed->u.concat.r = ast_expr_tombstone();
+			ast_expr_free(doomed);
+			doomed = ndoomed;
+
+			if (i == count - 1) {
+				assert(doomed->type == AST_EXPR_EMPTY);
+			}
+		}
+		return dst;
+	}
+
+	case AST_EXPR_ALT: {
+		struct ast_expr *dst;
+
 		if (count == 1) {
 			/* If we get here, it's a parser bug. Right? */
 			assert(!"unreached");
-		} else {
-			struct ast_expr *dst = ast_expr_alt_n(count);
-			if (dst == NULL) { return NULL; }
-
-			for (i = 0; i < count; i++) {
-				struct ast_expr *ndoomed = doomed->u.alt.r;
-				if (!flatten(&doomed->u.alt.l)) { return 0; }
-				dst->u.alt_n.n[i] = doomed->u.alt.l;
-				doomed->u.alt.l = ast_expr_tombstone();
-				doomed->u.alt.r = ast_expr_tombstone();
-				ast_expr_free(doomed);
-				doomed = ndoomed;
-				if (i == count - 1) {
-					assert(doomed->type == AST_EXPR_EMPTY);
-				}
-			}
-			return dst;
 		}
-	} else {
+
+		dst = ast_expr_alt_n(count);
+		if (dst == NULL) {
+			return NULL;
+		}
+
+		for (i = 0; i < count; i++) {
+			struct ast_expr *ndoomed;
+
+			ndoomed = doomed->u.alt.r;
+			if (!flatten(&doomed->u.alt.l)) {
+				return 0;
+			}
+
+			dst->u.alt_n.n[i] = doomed->u.alt.l;
+			doomed->u.alt.l = ast_expr_tombstone();
+			doomed->u.alt.r = ast_expr_tombstone();
+			ast_expr_free(doomed);
+			doomed = ndoomed;
+
+			if (i == count - 1) {
+				assert(doomed->type == AST_EXPR_EMPTY);
+			}
+		}
+		return dst;
+	}
+
+	default:
 		assert(!"unreached");
 		return NULL;
 	}
@@ -547,24 +640,28 @@ flatten_iter(struct ast_expr *n)
 	default:
 		return n;
 
-	case AST_EXPR_CONCAT:
-	{
+	case AST_EXPR_CONCAT: {
 		const unsigned count = count_chain(n, AST_EXPR_CONCAT);
 		return collect_chain(count, n);
 	}
 
-	case AST_EXPR_ALT:
-	{
+	case AST_EXPR_ALT: {
 		const unsigned count = count_chain(n, AST_EXPR_ALT);
 		return collect_chain(count, n);
 	}
 
 	case AST_EXPR_GROUP:
-		if (!flatten(&n->u.group.e)) { return NULL; }
+		if (!flatten(&n->u.group.e)) {
+			return NULL;
+		}
+
 		return n;
 
 	case AST_EXPR_REPEATED:
-		if (!flatten(&n->u.repeated.e)) { return NULL; }
+		if (!flatten(&n->u.repeated.e)) {
+			return NULL;
+		}
+
 		return n;
 	}
 }
@@ -573,13 +670,15 @@ static int
 flatten(struct ast_expr **n)
 {
 	struct ast_expr *res;
+
 	res = flatten_iter(*n);
 	if (res == NULL) {
 		return 0;
-	} else {
-		*n = res;
-		return 1;
 	}
+
+	*n = res;
+
+	return 1;
 }
 
 enum re_analysis_res
@@ -587,7 +686,9 @@ ast_analysis(struct ast *ast)
 {
 	enum re_analysis_res res;
 
-	if (ast == NULL) { return RE_ANALYSIS_ERROR_NULL; }
+	if (ast == NULL) {
+		return RE_ANALYSIS_ERROR_NULL;
+	}
 
 	assert(ast->expr != NULL);
 
@@ -595,29 +696,36 @@ ast_analysis(struct ast *ast)
 		return RE_ANALYSIS_ERROR_MEMORY;
 	}
 
-	/* First pass -- track nullability, clean up some artifacts from
-	 * parsing, assign group IDs. */
-        {
+	/*
+	 * First pass -- track nullability, clean up some artifacts from
+	 * parsing, assign group IDs.
+	 */
+	{
 		struct analysis_env env;
+
 		memset(&env, 0x00, sizeof(env));
+
 		res = analysis_iter(&env, ast->expr);
-	}
-	if (res != RE_ANALYSIS_OK) {
-		return res;
+		if (res != RE_ANALYSIS_OK) {
+			return res;
+		}
 	}
 
-	/* Next passes, mark all nodes in a
-	 * first and/or last position. */
-        {
+	/*
+	 * Next passes, mark all nodes in a first and/or last position.
+	 */
+	{
 		assign_firsts(ast->expr);
 		assign_lasts(ast->expr);
 	}
 
-	/* Next pass: set anchoring, now that nullability info from
+	/*
+	 * Next pass: set anchoring, now that nullability info from
 	 * the first pass is in place and some other things have been
 	 * cleaned up, and note whether the regex has any unsatisfiable
-	 * start anchors.*/
-        {
+	 * start anchors.
+	 */
+	{
 		struct anchoring_env env;
 		memset(&env, 0x00, sizeof(env));
 		res = analysis_iter_anchoring(&env, ast->expr);
@@ -626,3 +734,4 @@ ast_analysis(struct ast *ast)
 
 	return res;
 }
+

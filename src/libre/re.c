@@ -147,10 +147,12 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	ast = re_parse(dialect, getc, opaque, opt, flags, err, &unsatisfiable);
 	if (ast == NULL) { return NULL; }
 
-	/* If the RE is inherently unsatisfiable, then free the
+	/*
+	 * If the RE is inherently unsatisfiable, then free the
 	 * AST and replace it with an empty tombstone node.
 	 * This will compile to an FSM that matches nothing, so
-	 * that unioning it with other regexes will still work. */
+	 * that unioning it with other regexes will still work.
+	 */
 	if (unsatisfiable) {
 		ast_expr_free(ast->expr);
 		ast->expr = ast_expr_tombstone();

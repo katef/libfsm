@@ -133,14 +133,14 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 
 	switch (n->type) {
 	case AST_CLASS_CONCAT:
-if (n->u.concat.l != NULL && n->u.concat.l->type == AST_CLASS_FLAGS) {
-	/* XXX */
-	cc_pp_iter(f, opt, n->u.concat.r);
-} else {
-		cc_pp_iter(f, opt, n->u.concat.l);
-		fprintf(f, " / ");
-		cc_pp_iter(f, opt, n->u.concat.r);
-}
+		if (n->u.concat.l != NULL && n->u.concat.l->type == AST_CLASS_FLAGS) {
+			/* XXX */
+			cc_pp_iter(f, opt, n->u.concat.r);
+		} else {
+			cc_pp_iter(f, opt, n->u.concat.l);
+			fprintf(f, " / ");
+			cc_pp_iter(f, opt, n->u.concat.r);
+		}
 		break;
 
 	case AST_CLASS_LITERAL:
@@ -148,7 +148,9 @@ if (n->u.concat.l != NULL && n->u.concat.l->type == AST_CLASS_FLAGS) {
 		break;
 
 	case AST_CLASS_RANGE: {
-		if (n->u.range.from.type != AST_RANGE_ENDPOINT_LITERAL || n->u.range.to.type != AST_RANGE_ENDPOINT_LITERAL) {
+		if (n->u.range.from.type != AST_RANGE_ENDPOINT_LITERAL
+		 || n->u.range.to.type != AST_RANGE_ENDPOINT_LITERAL)
+		{
 			assert(!"unimplemented");
 			abort();
 		}
@@ -191,7 +193,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 	assert(f != NULL);
 	assert(opt != NULL);
 
-	if (n == NULL) { return; }
+	if (n == NULL) {
+		return;
+	}
 
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
@@ -203,9 +207,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		pp_iter(f, opt, n->u.concat.r);
 		break;
 
-	case AST_EXPR_CONCAT_N:
-	{
+	case AST_EXPR_CONCAT_N: {
 		size_t i;
+
 		for (i = 0; i < n->u.concat_n.count; i++) {
 			pp_iter(f, opt, n->u.concat_n.n[i]);
 			if (i < n->u.concat_n.count - 1) { fprintf(f, " "); }
@@ -219,9 +223,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		pp_iter(f, opt, n->u.alt.r);
 		break;
 
-	case AST_EXPR_ALT_N:
-	{
+	case AST_EXPR_ALT_N: {
 		size_t i;
+
 		for (i = 0; i < n->u.alt_n.count; i++) {
 			pp_iter(f, opt, n->u.alt_n.n[i]);
 			if (i < n->u.alt_n.count - 1) {

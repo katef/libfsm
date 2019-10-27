@@ -46,12 +46,13 @@ static void
 re_flags_print(FILE *f, enum re_flags fl)
 {
 	const char *sep = "";
-	if (fl & RE_ICASE) { fprintf(f, "%si", sep); sep = " "; }
-	if (fl & RE_TEXT) { fprintf(f, "%sg", sep); sep = " "; }
-	if (fl & RE_MULTI) { fprintf(f, "%sm", sep); sep = " "; }
+
+	if (fl & RE_ICASE  ) { fprintf(f, "%si", sep); sep = " "; }
+	if (fl & RE_TEXT   ) { fprintf(f, "%sg", sep); sep = " "; }
+	if (fl & RE_MULTI  ) { fprintf(f, "%sm", sep); sep = " "; }
 	if (fl & RE_REVERSE) { fprintf(f, "%sr", sep); sep = " "; }
-	if (fl & RE_SINGLE) { fprintf(f, "%ss", sep); sep = " "; }
-	if (fl & RE_ZONE) { fprintf(f, "%sz", sep); sep = " "; }
+	if (fl & RE_SINGLE ) { fprintf(f, "%ss", sep); sep = " "; }
+	if (fl & RE_ZONE   ) { fprintf(f, "%sz", sep); sep = " "; }
 }
 
 static void

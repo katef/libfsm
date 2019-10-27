@@ -11,18 +11,17 @@ struct fsm_state;
 struct fsm_options;
 struct ast_class;
 
-/* This is a duplicate of struct lx_pos, but since we're linking to
+/*
+ * This is a duplicate of struct lx_pos, but since we're linking to
  * code with several distinct lexers, there isn't a clear lexer.h
  * to include here. The parser sees both definitions, and will
- * build a `struct ast_pos` in the appropriate places. */
+ * build a `struct ast_pos` in the appropriate places.
+ */
 struct ast_pos {
 	unsigned byte;
 	unsigned line;
 	unsigned col;
 };
-
-/* Parse tree / Abstract syntax tree.
- * None of this should be exposed to the public API. */
 
 enum ast_expr_type {
 	AST_EXPR_EMPTY,
@@ -53,34 +52,51 @@ enum ast_anchor_type {
 	RE_AST_ANCHOR_END
 };
 
-/* Flags used during AST analysis. Not all are valid for all node types. */
+/*
+ * Flags used during AST analysis for expression nodes:
+ *
+ * - RE_AST_FLAG_FIRST_STATE
+ *   The node can appear at the beginning of input,
+ *   possibly preceded by other nullable nodes.
+ *
+ * - RE_AST_FLAG_LAST_STATE
+ *   This node can appear at the end of input, possibly
+ *   followed by nullable nodes.
+ *
+ * - RE_AST_FLAG_UNSATISFIABLE
+ *   The node caused the regex to become unsatisfiable.
+ *
+ * - RE_AST_FLAG_NULLABLE
+ *   The node is not always evaluated, such as nodes that
+ *   are repeated at least 0 times.
+ *
+ * Not all are valid for all node types.
+ */
 enum ast_flags {
-	/* The node can appear at the beginning of input,
-	 * possibly preceded by other nullable nodes. */
-	RE_AST_FLAG_FIRST_STATE = 0x01,
-
-	/* This node can appear at the end of input, possibly
-	 * followed by nullable nodes. */
-	RE_AST_FLAG_LAST_STATE = 0x02,
-
-	/* The node caused the regex to become unsatisfiable. */
-	RE_AST_FLAG_UNSATISFIABLE = 0x04,
-
-	/* The node is not always evaluated, such as nodes that
-	 * are repeated at least 0 times. */
-	RE_AST_FLAG_NULLABLE = 0x08,
+	RE_AST_FLAG_FIRST_STATE   = 1 << 0,
+	RE_AST_FLAG_LAST_STATE    = 1 << 1,
+	RE_AST_FLAG_UNSATISFIABLE = 1 << 2,
+	RE_AST_FLAG_NULLABLE      = 1 << 3,
 
 	RE_AST_FLAG_NONE = 0x00
 };
 
 #define NO_GROUP_ID ((unsigned)-1)
 
+/*
+ * Flags for character class nodes:
+ *
+ * - AST_CLASS_FLAG_INVERTED
+ *   The class should be negated, e.g. [^aeiou]
+ *
+ * - AST_CLASS_FLAG_MINUS
+ *   Includes the `-` character, which isn't part of a range
+ */
 enum ast_class_flags {
-	AST_CLASS_FLAG_NONE = 0x00,
-	/* the class should be negated, e.g. [^aeiou] */
-	AST_CLASS_FLAG_INVERTED = 0x01,
-	/* includes the `-` character, which isn't part of a range */
-	AST_CLASS_FLAG_MINUS = 0x02
+	AST_CLASS_FLAG_INVERTED = 1 << 0,
+	AST_CLASS_FLAG_MINUS    = 1 << 1,
+
+	AST_CLASS_FLAG_NONE = 0x00
 };
 
 enum ast_class_type {
@@ -105,6 +121,7 @@ struct ast_range_endpoint {
 		struct {
 			unsigned char c;
 		} literal;
+
 		struct {
 			class_constructor *ctor;
 		} class;
@@ -118,21 +135,26 @@ struct ast_class {
 			struct ast_class *l;
 			struct ast_class *r;
 		} concat;
+
 		struct {
 			unsigned char c;
 		} literal;
+
 		struct {
 			struct ast_range_endpoint from;
 			struct ast_pos start;
 			struct ast_range_endpoint to;
 			struct ast_pos end;
 		} range;
+
 		struct {
 			class_constructor *ctor;
 		} named;
+
 		struct {
 			enum ast_class_flags f;
 		} flags;
+
 		struct {
 			struct ast_class *ast;
 			struct ast_class *mask;
@@ -160,39 +182,48 @@ struct ast_expr {
 			struct ast_expr *l;
 			struct ast_expr *r;
 		} concat;
+
 		struct {
 			size_t count;
 			struct ast_expr *n[1];
 		} concat_n;
+
 		struct {
 			struct ast_expr *l;
 			struct ast_expr *r;
 		} alt;
+
 		struct {
 			size_t count;
 			struct ast_expr *n[1];
 		} alt_n;
+
 		struct {
 			/*const*/ char c;
 		} literal;
+
 		struct ast_expr_repeated {
 			struct ast_expr *e;
 			unsigned low;
 			unsigned high;
 		} repeated;
+
 		struct {
 			struct ast_class *class;
 			struct ast_pos start;
 			struct ast_pos end;
 		} class;
+
 		struct {
 			struct ast_expr *e;
 			unsigned id;
 		} group;
+
 		struct {
 			enum re_flags pos;
 			enum re_flags neg;
 		} flags;
+
 		struct {
 			enum ast_anchor_type type;
 		} anchor;
@@ -241,7 +272,7 @@ ast_expr_with_count(struct ast_expr *e, struct ast_count count);
 
 struct ast_expr *
 ast_expr_class(struct ast_class *class,
-    const struct ast_pos *start, const struct ast_pos *end);
+	const struct ast_pos *start, const struct ast_pos *end);
 
 struct ast_expr *
 ast_expr_group(struct ast_expr *e);
@@ -254,22 +285,22 @@ ast_expr_anchor(enum ast_anchor_type type);
 
 struct ast_count
 ast_count(unsigned low, const struct ast_pos *start,
-    unsigned high, const struct ast_pos *end);
+	unsigned high, const struct ast_pos *end);
 
 struct ast_class *
 ast_class_concat(struct ast_class *l,
-    struct ast_class *r);
+	struct ast_class *r);
 
 struct ast_class *
 ast_class_literal(unsigned char c);
 
 struct ast_class *
 ast_class_range(const struct ast_range_endpoint *from, struct ast_pos start,
-    const struct ast_range_endpoint *to, struct ast_pos end);
+	const struct ast_range_endpoint *to, struct ast_pos end);
 
 void
 ast_class_endpoint_span(const struct ast_range_endpoint *r,
-    unsigned char *from, unsigned char *to);
+	unsigned char *from, unsigned char *to);
 
 struct ast_class *
 ast_class_flags(enum ast_class_flags flags);
@@ -279,7 +310,7 @@ ast_class_named(class_constructor *ctor);
 
 struct ast_class *
 ast_class_subtract(struct ast_class *ast,
-    struct ast_class *mask);
+	struct ast_class *mask);
 
 enum re_analysis_res {
 	RE_ANALYSIS_OK,
@@ -294,7 +325,8 @@ enum re_analysis_res {
 	 * that the regex is satisfiable, just flag it when it isn't.
 	 */
 	RE_ANALYSIS_UNSATISFIABLE,
-	RE_ANALYSIS_ERROR_NULL = -1,
+
+	RE_ANALYSIS_ERROR_NULL   = -1,
 	RE_ANALYSIS_ERROR_MEMORY = -2
 };
 
@@ -310,20 +342,20 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 int
 ast_compile_class(const struct ast_class *class,
-    struct fsm *fsm, enum re_flags flags,
-    struct re_err *err,
-    struct fsm_state *x, struct fsm_state *y);
+	struct fsm *fsm, enum re_flags flags,
+	struct re_err *err,
+	struct fsm_state *x, struct fsm_state *y);
 
 int
 ast_compile_expr(struct ast_expr *n,
-    struct fsm *fsm, enum re_flags flags,
-    struct re_err *err,
-    struct fsm_state *x, struct fsm_state *y);
+	struct fsm *fsm, enum re_flags flags,
+	struct re_err *err,
+	struct fsm_state *x, struct fsm_state *y);
 
 struct fsm *
 ast_compile(const struct ast *ast,
-    enum re_flags flags,
-    const struct fsm_options *opt,
-    struct re_err *err);
+	enum re_flags flags,
+	const struct fsm_options *opt,
+	struct re_err *err);
 
 #endif

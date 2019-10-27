@@ -4,7 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-/* Regular expressions, as evaluated by PCRE, which supports the
+/*
+ * Regular expressions, as evaluated by PCRE, which supports the
  * patterns listed at:
  *     http://pcre.org/current/doc/html/pcre2pattern.html
  *
@@ -12,7 +13,7 @@
  * For unsupported extensions, our intension is to explicitly
  * return an 'unsupported' error, rather than treating the
  * unrecognized syntax incorrectly.
- * */
+ */
 
 %types%
 
@@ -57,7 +58,7 @@
 	FLAG_INSENSITIVE: () -> (:re_flags);
 
 	ESC:     () -> (:char, :pos, :pos);
-	!NOESC:   () -> (:char, :pos, :pos);
+	!NOESC:  () -> (:char, :pos, :pos);
 	CONTROL: () -> (:char, :pos, :pos);
 	OCT:     () -> (:char, :pos, :pos);
 	HEX:     () -> (:char, :pos, :pos);
@@ -128,11 +129,11 @@
 		literal: () -> (node :ast_expr) = {
 			{
 				(c, !, !) = ESC;
-				||
+			||
 				(c, !, !) = OCT;
-				||
+			||
 				(c, !, !) = HEX;
-				||
+			||
 				(c, !, !) = CHAR;
 			};
 			node = <ast-expr-literal>(c);
@@ -150,13 +151,13 @@
 			class-literal: () -> (node :ast_class) = {
 				{
 					(c, !, !) = ESC;
-					||
+				||
 					(c, !, !) = OCT;
-					||
+				||
 					(c, !, !) = HEX;
-					||
+				||
 					(c, !, !) = CHAR;
-					||
+				||
 					(c, !, !) = CONTROL;
 					<err-unsupported>();
 				};
@@ -166,7 +167,6 @@
 			class-named: () -> (k :ast_class_id, start :pos, end :pos) = {
 				(k, start, end) = NAMED_CLASS;
 			};
-
 
 			class-range: () -> (node :ast_class, start :pos, end :pos) [
 				range-endpoint-literal: () -> (r :range_endpoint, start :pos, end :pos) = {
@@ -244,12 +244,12 @@
 			head = class-head();
 			body = list-of-class-terms();
 
-                        {
+			{
 				(!, !, end) = CLOSEGROUP;
 				<mark-group>(start, end);
 			##
 				<err-expected-closegroup>;
-                                end = start; /* appease sid */
+				end = start; /* appease sid */
 			};
 
 			hb = <ast-class-concat>(head, body);
@@ -257,12 +257,12 @@
 		};
 
 		type: () -> (node :ast_expr) = {
-				(id, start, end) = NAMED_CLASS;
-				named = <ast-class-named-class>(id);
-				node = <ast-expr-class>(named, start, end);
+			(id, start, end) = NAMED_CLASS;
+			named = <ast-class-named-class>(id);
+			node = <ast-expr-class>(named, start, end);
 		};
 			
-                flags: () -> (node :ast_expr) [
+		flags: () -> (node :ast_expr) [
 			flag_set: (i :re_flags) -> (o :re_flags) = {
 				c = FLAG_INSENSITIVE;
 				o = <re-flag-union>(i, c);
@@ -297,31 +297,33 @@
 				<err-expected-closeflags>;
 				node = <ast-expr-empty>();
 			};
-                };
+		};
 
 		atom: () -> (node :ast_expr) = {
-			/* Note that START and END can appear embedded
+			/*
+			 * Note that START and END can appear embedded
 			 * within a list of atoms. Whether that makes
 			 * the regex inherently unmatchable depends on
 			 * whether the surrounding context is nullable
 			 * or not, so that's detected after parsing has
-			 * finished. */
+			 * finished.
+			 */
 			{
 				OPENCAPTURE;
 				g = expr();
 				e = <ast-expr-group>(g);
-                                {
+				{
 					CLOSE;
-                                ##
-                        		<err-expected-alts>;
+				##
+					<err-expected-alts>;
 				};
 			||
 				OPENSUB;
 				e = expr();
-                                {
+				{
 					CLOSE;
-                                ##
-                        		<err-expected-alts>;
+				##
+					<err-expected-alts>;
 				};
 			||
 				e = class();
@@ -381,8 +383,7 @@
 				<err-expected-count>;
 				node = e;
 			};
-
-                };
+		};
 
 		list-of-atoms: () -> (node :ast_expr) = {
 			a = atom();
@@ -413,7 +414,7 @@
 			r = list-of-alts();
 			node = <ast-expr-alt>(a, r);
 		##
-		        node = <ast-expr-empty>();
+			node = <ast-expr-empty>();
 		};
 	] = {
 		/* don't wrap a single alt in an alt chain */

@@ -80,6 +80,7 @@ static void
 cleanup_pool(struct trie_graph *g)
 {
 	struct trie_pool *p;
+
 	while (g->pool != NULL) {
 		p = g->pool;
 		g->pool = p->next;
@@ -92,10 +93,12 @@ cleanup_pool(struct trie_graph *g)
 void
 trie_free(struct trie_graph *g)
 {
-	if (g != NULL) {
-		cleanup_pool(g);
-		free(g);
+	if (g == NULL) {
+		return;
 	}
+
+	cleanup_pool(g);
+	free(g);
 }
 
 struct trie_graph *
@@ -133,7 +136,7 @@ trie_add_word(struct trie_graph *g, const char *w, size_t n)
 
 	assert(st != NULL);
 
-	for (i=0; i < n; i++) {
+	for (i = 0; i < n; i++) {
 		struct trie_state *nx;
 		int idx = (unsigned char)w[i];
 		nx = st->children[idx];
@@ -253,7 +256,8 @@ find_next_state(struct trie_state *s, int sym)
 	if (nx == NULL) {
 		assert(fail->fail == fail);
 
-		/* failure state is the root, which
+		/*
+		 * failure state is the root, which
 		 * has implicit edges back to itself
 		 */
 		return fail;
@@ -283,7 +287,7 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm, struct fsm_state *sing
 
 	ts->st = st;
 
-	for (sym=0; sym < 256; sym++) {
+	for (sym = 0; sym < 256; sym++) {
 		struct trie_state *nx;
 
 		nx = find_next_state(ts,sym);
@@ -323,7 +327,8 @@ static void
 dump_state(struct trie_state *st, FILE *f, int indent, char* buf)
 {
 	int i;
-	for (i=0; i < 256; i++) {
+
+	for (i = 0; i < 256; i++) {
 		int sp;
 
 		if (st->children[i] != NULL) {

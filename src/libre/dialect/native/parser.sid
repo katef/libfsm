@@ -69,20 +69,20 @@
 	<ast-expr-alt>: (:ast_expr, :ast_expr) -> (:ast_expr);
 	<ast-expr-any>: () -> (:ast_expr);
 
-        <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
-        !<ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
+	<ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
+	!<ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
 	<ast-expr-class>: (:ast_class, :pos, :pos) -> (:ast_expr);
-        <ast-expr-group>: (:ast_expr) -> (:ast_expr);
+	<ast-expr-group>: (:ast_expr) -> (:ast_expr);
 	!<ast-expr-re-flags>: (:re_flags, :re_flags) -> (:ast_expr);
 	<ast-expr-anchor-start>: () -> (:ast_expr);
 	<ast-expr-anchor-end>: () -> (:ast_expr);
 
-        <atom-kleene>: () -> (:ast_count);
-        <atom-plus>: () -> (:ast_count);
-        <atom-one>: () -> (:ast_count);
-        <atom-opt>: () -> (:ast_count);
+	<atom-kleene>: () -> (:ast_count);
+	<atom-plus>: () -> (:ast_count);
+	<atom-one>: () -> (:ast_count);
+	<atom-opt>: () -> (:ast_count);
 
-        <expr-count>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
+	<expr-count>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
 	<ast-class-literal>: (:char) -> (:ast_class);
 	<ast-class-range-distinct>: (:range_endpoint, :pos, :range_endpoint, :pos) -> ();
@@ -124,11 +124,11 @@
 		literal: () -> (node :ast_expr) = {
 			{
 				(c, !, !) = ESC;
-				||
+			||
 				(c, !, !) = OCT;
-				||
+			||
 				(c, !, !) = HEX;
-				||
+			||
 				(c, !, !) = CHAR;
 			};
 			node = <ast-expr-literal>(c);
@@ -146,11 +146,11 @@
 			class-literal: () -> (node :ast_class) = {
 				{
 					(c, !, !) = ESC;
-					||
+				||
 					(c, !, !) = OCT;
-					||
+				||
 					(c, !, !) = HEX;
-					||
+				||
 					(c, !, !) = CHAR;
 				};
 				node = <ast-class-literal>(c);
@@ -206,7 +206,7 @@
 			##
 				<err-expected-term>();
 				/* workaround sid warning */
-                                node = <ast-class-flag-none>();
+				node = <ast-class-flag-none>();
 			};
 			    
 			list-of-class-terms: () -> (node :ast_class) = {
@@ -223,12 +223,12 @@
 			head = class-head();
 			body = list-of-class-terms();
 
-                        {
+			{
 				(!, !, end) = CLOSEGROUP;
 				<mark-group>(start, end);
 			##
 				<err-expected-closegroup>;
-                                end = start; /* appease sid */
+				end = start; /* appease sid */
 			};
 
 			hb = <ast-class-concat>(head, body);
@@ -240,11 +240,11 @@
 				OPENSUB;
 				g = expr();
 				e = <ast-expr-group>(g);
-                                {
+				{
 					CLOSESUB;
-                                ##
-                        		<err-expected-alts>;
-                                };
+				##
+					<err-expected-alts>;
+				};
 			||
 				e = class();
 			||
@@ -298,7 +298,6 @@
 		};
 
 		list-of-atoms: () -> (node :ast_expr) = {
-
 		/* TODO: start/end anchors */
 			a = atom();
 			r = <ast-expr-empty>;

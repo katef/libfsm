@@ -68,13 +68,13 @@
 
 %productions%
 
-        <atom-kleene>: () -> (:ast_count);
-        <atom-plus>: () -> (:ast_count);
-        <atom-one>: () -> (:ast_count);
-        <atom-opt>: () -> (:ast_count);
+	<atom-kleene>: () -> (:ast_count);
+	<atom-plus>: () -> (:ast_count);
+	<atom-one>: () -> (:ast_count);
+	<atom-opt>: () -> (:ast_count);
 
-/* FIXME: rename to atom-count */
-        <expr-count>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
+	/* FIXME: rename to atom-count */
+	<expr-count>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
 	<ast-expr-empty>: () -> (:ast_expr);
 	<ast-expr-literal>: (:char) -> (:ast_expr);
@@ -85,14 +85,14 @@
 	!<ast-expr-anchor-start>: () -> (:ast_expr);
 	!<ast-expr-anchor-end>: () -> (:ast_expr);
 
-        <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
-        <ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
+	<ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
+	<ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
 	<ast-expr-class>: (:ast_class, :pos, :pos) -> (:ast_expr);
-        <ast-expr-group>: (:ast_expr) -> (:ast_expr);
+	<ast-expr-group>: (:ast_expr) -> (:ast_expr);
 
 	<ast-class-literal>: (:char) -> (:ast_class);
 	!<ast-class-range-distinct>: (:range_endpoint, :pos, :range_endpoint, :pos) -> ();
-        <ast-class-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:ast_class);
+	<ast-class-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:ast_class);
 	<ast-class-concat>: (:ast_class, :ast_class) -> (:ast_class);
 	<ast-class-subtract>: (:ast_class, :ast_class) -> (:ast_class);
 	<ast-class-named-class>: (:ast_class_id) -> (:ast_class);
@@ -125,7 +125,7 @@
 	!<mark-count>: (:pos, :pos) -> ();
 
 	expr: () -> (node :ast_expr) [
-                literal: () -> (node :ast_expr) = {
+		literal: () -> (node :ast_expr) = {
   			(c, !, !) = CHAR;
 			node = <ast-expr-literal>(c);
   		};
@@ -155,9 +155,10 @@
 			f = <atom-one>();
 		};
 
-	        /* [abc] -> when it reaches the end, make an empty class, and
-		 *     each character literal / named class / etc. modifies it.
-		 *     
+		/*
+		 * [abc] -> when it reaches the end, make an empty class, and
+		 * each character literal / named class / etc. modifies it.
+		 *
 		 * in the case of the SQL dialect's wonky [abc^def], it should
 		 * create two groups, and then remove anything from the former
 		 * that is in the latter.
@@ -169,7 +170,7 @@
 		 * [[:NAME:]] named character classes
 		 *
 		 * _ is the ANY character class
-		 * */
+		 */
 		class: () -> (node :ast_expr) [
 			class-head: () -> (f :ast_class) = {
 				(!) = INVERT;
@@ -186,7 +187,7 @@
 			};
 
 			class-tail: () -> (f :ast_class) = {
-			/* This requires LL(2). */
+				/* This requires LL(2). */
 
 			/* 	(!, !, !) = RANGE;
 			 * 	f = <ast-class-flag-minus>();
@@ -195,17 +196,17 @@
 			};
 
 			named-class: () -> (id :ast_class_id) = {
-                        	(id, !, !) = NAMED_CLASS;
+				(id, !, !) = NAMED_CLASS;
 			};
 
 			term: () -> (node :ast_class) = {
 				(ca, start, !) = CHAR;
-                                a = <ast-range-endpoint-literal>(ca);
+				a = <ast-range-endpoint-literal>(ca);
 
 				(!, !, !) = RANGE;
 
 				(cz, !, end) = CHAR;
-                                z = <ast-range-endpoint-literal>(cz);
+				z = <ast-range-endpoint-literal>(cz);
 
 				node = <ast-class-range>(a, start, z, end);
 			||
@@ -214,11 +215,11 @@
 			||
 				id = named-class();
 				node = <ast-class-named-class>(id);
-                        ##
-                        	<err-expected-term>();
-                                node = <ast-class-flag-none>();
+			##
+				<err-expected-term>();
+				node = <ast-class-flag-none>();
 			};
-			    
+
 			list-of-class-terms: () -> (node :ast_class) = {
 				l = term();
 				{
@@ -228,7 +229,7 @@
 					node = l;
 				};
 			};
-			    
+
 			class-ast: () -> (node :ast_expr) = {
 				(start, !) = OPENGROUP;
 
@@ -255,7 +256,7 @@
 				(!, !, end) = CLOSEGROUP;
 
 				/* Marking this unsupported for now */
-                                <err-unsupported>();
+				<err-unsupported>();
 
 				mhb = <ast-class-concat>(maskhead, maskbody);
 				mhbt = <ast-class-concat>(mhb, masktail);

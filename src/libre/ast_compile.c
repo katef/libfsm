@@ -18,8 +18,8 @@
 static struct fsm *
 new_blank(const struct fsm_options *opt)
 {
-	struct fsm *new;
 	struct fsm_state *start;
+	struct fsm *new;
 
 	new = fsm_new(opt);
 	if (new == NULL) {
@@ -33,9 +33,9 @@ new_blank(const struct fsm_options *opt)
 
 	fsm_setstart(new, start);
 
-return new;
+	return new;
 
-	error:
+error:
 
 	fsm_free(new);
 
@@ -48,19 +48,23 @@ ast_compile(const struct ast *ast,
 	const struct fsm_options *opt,
 	struct re_err *err)
 {
-	struct fsm *fsm;
 	struct fsm_state *x, *y;
+	struct fsm *fsm;
 
 	assert(ast != NULL);
 
 	fsm = new_blank(opt);
-	if (fsm == NULL) { return NULL; }
+	if (fsm == NULL) {
+		return NULL;
+	}
 
 	x = fsm_getstart(fsm);
 	assert(x != NULL);
 
 	y = fsm_addstate(fsm);
-	if (y == NULL) { goto error; }
+	if (y == NULL) {
+		goto error;
+	}
 
 	fsm_setend(fsm, y, 1);
 
@@ -68,7 +72,9 @@ ast_compile(const struct ast *ast,
 		goto error;
 	}
 
-	if (-1 == fsm_trim(fsm)) { goto error; }
+	if (-1 == fsm_trim(fsm)) {
+		goto error;
+	}
 
 	/*
 	 * All flags operators commute with respect to composition.
@@ -77,13 +83,17 @@ ast_compile(const struct ast *ast,
 	 */
 
 	if (flags & RE_REVERSE) {
-		if (!fsm_reverse(fsm)) { goto error; }
+		if (!fsm_reverse(fsm)) {
+			goto error;
+		}
 	}
 
 	return fsm;
 
 error:
+
 	fsm_free(fsm);
+
 	return NULL;
 }
 
