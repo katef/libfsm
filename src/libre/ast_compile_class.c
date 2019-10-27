@@ -439,7 +439,7 @@ comp_iter(struct cc *cc, const struct ast_class *n)
 }
 
 int
-ast_class_compile(const struct ast_class *class,
+ast_compile_class(const struct ast_class *class,
     struct fsm *fsm, enum re_flags flags,
     struct re_err *err,
     struct fsm_state *x, struct fsm_state *y)

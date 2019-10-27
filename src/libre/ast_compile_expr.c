@@ -80,19 +80,15 @@ static int
 can_skip_concat_state_and_epsilon(const struct ast_expr *l,
     const struct ast_expr *r);
 
-static struct fsm *
-new_blank(const struct fsm_options *opt);
-
 static enum link_types
 decide_linking(struct comp_env *env,
     struct fsm_state *x, struct fsm_state *y,
     struct ast_expr *n, enum link_side side);
 
-static int
-ast_expr_compile(struct ast_expr *n,
-	enum re_flags flags,
+int
+ast_compile_expr(struct ast_expr *n,
+	struct fsm *fsm, enum re_flags flags,
 	struct re_err *err,
-	struct fsm *fsm,
 	struct fsm_state *x, struct fsm_state *y)
 {
 	struct comp_env env;
@@ -116,41 +112,6 @@ ast_expr_compile(struct ast_expr *n,
 	if (-1 == fsm_trim(env.fsm)) { return 0; }
 
 	return 1;
-}
-
-struct fsm *
-ast_compile(const struct ast *ast,
-    enum re_flags flags,
-    const struct fsm_options *opt,
-	struct re_err *err)
-{
-	struct fsm *fsm;
-	struct fsm_state *x, *y;
-
-	assert(ast != NULL);
-
-	fsm = new_blank(opt);
-	if (fsm == NULL) { return NULL; }
-
-	x = fsm_getstart(fsm);
-	assert(x != NULL);
-	
-	y = fsm_addstate(fsm);
-	if (y == NULL) { goto error; }
-	
-	fsm_setend(fsm, y, 1);
-
-	if (!ast_expr_compile(ast->expr, flags, err, fsm, x, y)) {
-		goto error;
-	}
-
-	if (-1 == fsm_trim(fsm)) { goto error; }
-
-	return fsm;
-
-error:
-	fsm_free(fsm);
-	return NULL;
 }
 
 static void
@@ -355,7 +316,7 @@ comp_iter(struct comp_env *env,
 			env->err->end.byte   = n->u.class.end.byte;
 		}
 
-		if (!ast_class_compile(n->u.class.class,
+		if (!ast_compile_class(n->u.class.class,
 			env->fsm, env->flags, env->err, x, y)) {
 			return 0;
 		}
@@ -505,33 +466,6 @@ can_skip_concat_state_and_epsilon(const struct ast_expr *l,
 	}
 
 	return 0;
-}
-
-static struct fsm *
-new_blank(const struct fsm_options *opt)
-{
-	struct fsm *new;
-	struct fsm_state *start;
-	
-	new = fsm_new(opt);
-	if (new == NULL) {
-		return NULL;
-	}
-	
-	start = fsm_addstate(new);
-	if (start == NULL) {
-		goto error;
-	}
-	
-	fsm_setstart(new, start);
-	
-	return new;
-	
-error:
-	
-	fsm_free(new);
-	
-	return NULL;
 }
 
 static int

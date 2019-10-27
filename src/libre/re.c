@@ -12,9 +12,6 @@
 #include <re/re.h>
 
 #include <fsm/fsm.h>
-#include <fsm/bool.h>
-
-#include "../libfsm/internal.h" /* XXX */
 
 #include "ac.h"
 #include "class.h"
@@ -155,41 +152,27 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	 * This will compile to an FSM that matches nothing, so
 	 * that unioning it with other regexes will still work. */
 	if (unsatisfiable) {
-		struct ast_expr *unsat = ast->expr;
+		ast_expr_free(ast->expr);
 		ast->expr = ast_expr_tombstone();
-		ast_expr_free(unsat);
 	}
 
 	new = ast_compile(ast, flags, opt, err);
+
 	ast_free(ast);
-	ast = NULL;
 
 	if (new == NULL) {
-		if (err != NULL && err->e == RE_ESUCCESS) {
-			/* If we got here, we had a parse error
-			 * without error information set. */
-			assert(0);
-		}
-		return NULL;
-	}
-	
-	/*
-	 * All flags operators commute with respect to composition.
-	 * That is, the order of application here does not matter;
-	 * here I'm trying to keep these ordered for efficiency.
-	 */
-
-	if (flags & RE_REVERSE) {
-		if (!fsm_reverse(new)) { goto error; }
+		/* XXX: this can happen e.g. on malloc failure */
+		assert(err == NULL || err->e != RE_ESUCCESS);
+		goto error;
 	}
 
 	return new;
 
 error:
 
-	if (new != NULL) { fsm_free(new); }
-	if (ast != NULL) { ast_free(ast); }
-	if (err != NULL) { err->e = RE_EERRNO; }
+	if (err != NULL) {
+		err->e = RE_EERRNO;
+	}
 
 	return NULL;
 }
