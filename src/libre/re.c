@@ -159,7 +159,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		ast_expr_free(unsat);
 	}
 
-	new = re_comp_ast(ast, flags, opt, err);
+	new = ast_compile(ast, flags, opt, err);
 	ast_free(ast);
 	ast = NULL;
 

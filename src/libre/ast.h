@@ -287,12 +287,6 @@ struct ast_class *
 ast_class_subtract(struct ast_class *ast,
     struct ast_class *mask);
 
-int
-ast_class_compile(struct ast_class *class,
-    struct fsm *fsm, enum re_flags flags,
-    struct re_err *err, const struct fsm_options *opt,
-    struct fsm_state *x, struct fsm_state *y);
-
 enum re_analysis_res {
 	RE_ANALYSIS_OK,
 
@@ -307,5 +301,17 @@ enum re_analysis_res {
 
 enum re_analysis_res
 ast_analysis(struct ast *ast);
+
+int
+ast_class_compile(struct ast_class *class,
+    struct fsm *fsm, enum re_flags flags,
+    struct re_err *err, const struct fsm_options *opt,
+    struct fsm_state *x, struct fsm_state *y);
+
+struct fsm *
+ast_compile(struct ast *ast,
+	enum re_flags flags,
+	const struct fsm_options *opt,
+	struct re_err *err);
 
 #endif
