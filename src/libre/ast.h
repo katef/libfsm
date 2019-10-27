@@ -311,7 +311,7 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 int
 ast_class_compile(const struct ast_class *class,
     struct fsm *fsm, enum re_flags flags,
-    struct re_err *err, const struct fsm_options *opt,
+    struct re_err *err,
     struct fsm_state *x, struct fsm_state *y);
 
 struct fsm *

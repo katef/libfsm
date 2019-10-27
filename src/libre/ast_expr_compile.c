@@ -23,7 +23,6 @@
 struct comp_env {
 	struct fsm *fsm;
 	enum re_flags flags;
-	const struct fsm_options *opt;
 	struct re_err *err;
 
 	/* These are saved so that dialects without implicit
@@ -89,43 +88,68 @@ decide_linking(struct comp_env *env,
     struct fsm_state *x, struct fsm_state *y,
     struct ast_expr *n, enum link_side side);
 
+static int
+ast_expr_compile(struct ast_expr *n,
+	enum re_flags flags,
+	struct re_err *err,
+	struct fsm *fsm,
+	struct fsm_state *x, struct fsm_state *y)
+{
+	struct comp_env env;
+
+	memset(&env, 0x00, sizeof(env));
+
+	assert(n != NULL);
+	assert(fsm != NULL);
+	assert(x != NULL);
+	assert(y != NULL);
+
+	env.fsm = fsm;
+	env.flags = flags;
+	env.err = err;
+
+	env.start = x;
+	env.end = y;
+
+	if (!comp_iter(&env, x, y, n)) { return 0; }
+
+	if (-1 == fsm_trim(env.fsm)) { return 0; }
+
+	return 1;
+}
+
 struct fsm *
 ast_compile(const struct ast *ast,
     enum re_flags flags,
     const struct fsm_options *opt,
 	struct re_err *err)
 {
+	struct fsm *fsm;
 	struct fsm_state *x, *y;
-	struct comp_env env;
-	memset(&env, 0x00, sizeof(env));
-	assert(ast);
 
-	env.fsm = new_blank(opt);
-	if (env.fsm == NULL) { return NULL; }
+	assert(ast != NULL);
 
-	env.opt = opt;
-	env.flags = flags;
-	env.err = err;
-	
-	x = fsm_getstart(env.fsm);
+	fsm = new_blank(opt);
+	if (fsm == NULL) { return NULL; }
+
+	x = fsm_getstart(fsm);
 	assert(x != NULL);
 	
-	y = fsm_addstate(env.fsm);
+	y = fsm_addstate(fsm);
 	if (y == NULL) { goto error; }
 	
-	fsm_setend(env.fsm, y, 1);
+	fsm_setend(fsm, y, 1);
 
-	env.start = x;
-	env.end = y;
+	if (!ast_expr_compile(ast->expr, flags, err, fsm, x, y)) {
+		goto error;
+	}
 
-	if (!comp_iter(&env, x, y, ast->expr)) { goto error; }
+	if (-1 == fsm_trim(fsm)) { goto error; }
 
-	if (-1 == fsm_trim(env.fsm)) { goto error; }
-
-	return env.fsm;
+	return fsm;
 
 error:
-	fsm_free(env.fsm);
+	fsm_free(fsm);
 	return NULL;
 }
 
@@ -332,7 +356,7 @@ comp_iter(struct comp_env *env,
 		}
 
 		if (!ast_class_compile(n->u.class.class,
-			env->fsm, env->flags, env->err, env->opt, x, y)) {
+			env->fsm, env->flags, env->err, x, y)) {
 			return 0;
 		}
 		break;

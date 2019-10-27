@@ -33,7 +33,6 @@ struct cc {
 
 	enum ast_class_flags flags;
 
-	const struct fsm_options *opt;
 	struct re_err *err;
 
 	/*
@@ -328,7 +327,7 @@ cc_add_named_class(struct cc *cc, class_constructor *ctor)
 	struct fsm *q;
 	int r;
 	struct re_err *err = cc->err;
-	struct fsm *constructed = ctor(cc->opt);
+	struct fsm *constructed = ctor(fsm_getoptions(cc->set));
 
 	if (constructed == NULL) {
 		if (err != NULL) { err->e = RE_EERRNO; }
@@ -396,7 +395,7 @@ cc_add_named_class(struct cc *cc, class_constructor *ctor)
 static int
 cc_invert(struct cc *cc)
 {
-	struct fsm *inverted = negate(cc->set, cc->opt);
+	struct fsm *inverted = negate(cc->set, fsm_getoptions(cc->set));
 	if (inverted == NULL) { return 0; }
 
 	cc->set = inverted;
@@ -442,20 +441,22 @@ comp_iter(struct cc *cc, const struct ast_class *n)
 int
 ast_class_compile(const struct ast_class *class,
     struct fsm *fsm, enum re_flags flags,
-    struct re_err *err, const struct fsm_options *opt,
+    struct re_err *err,
     struct fsm_state *x, struct fsm_state *y)
 {
+	const struct fsm_options *opt;
 	struct cc cc;
 
 	memset(&cc, 0x00, sizeof(cc));
 	
+	opt = fsm_getoptions(fsm);
+
 	cc.set = new_blank(opt);
 	if (cc.set == NULL) { goto cleanup; }
 
 	cc.dup = new_blank(opt);
 	if (cc.dup == NULL) { goto cleanup; }
 
-	cc.opt = opt;
 	cc.err = err;
 	cc.re_flags = flags;
 
