@@ -95,8 +95,8 @@ enum ast_class_type {
 
 enum ast_range_endpoint_type {
 	AST_RANGE_ENDPOINT_LITERAL,
-	AST_RANGE_ENDPOINT_CHAR_TYPE,
-	AST_RANGE_ENDPOINT_CHAR_CLASS
+	AST_RANGE_ENDPOINT_TYPE,
+	AST_RANGE_ENDPOINT_CLASS
 };
 
 struct ast_range_endpoint {

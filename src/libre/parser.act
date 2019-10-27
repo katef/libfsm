@@ -50,7 +50,7 @@
 	#define LX_INIT    CAT(LX_PREFIX, _init)
 
 	#define DIALECT_PARSE  CAT(parse_re_, DIALECT)
-	#define DIALECT_CHAR_CLASS  CAT(re_class_, DIALECT)
+	#define DIALECT_CLASS  CAT(re_class_, DIALECT)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
 	#define DIALECT_ENTRY CAT(p_re__, DIALECT)
@@ -426,8 +426,8 @@
 		@n = (unsigned int) u;
 	@};
 
-	NAMED_CHAR_CLASS: () -> (id :ast_class_id, start :pos, end :pos) = @{
-		@id = DIALECT_CHAR_CLASS(lex_state->buf.a);
+	NAMED_CLASS: () -> (id :ast_class_id, start :pos, end :pos) = @{
+		@id = DIALECT_CLASS(lex_state->buf.a);
 		if (@id == NULL) {
 			/* syntax error -- unrecognized class */
 			@!;
@@ -621,12 +621,12 @@
 		@c = ast_count(@l, &ast_start, @h, &ast_end);
 	@};
 
-	<char-class-ast-literal>: (c :char) -> (node :ast_class) = @{
+	<ast-class-literal>: (c :char) -> (node :ast_class) = @{
 		@node = ast_class_literal(@c);
 		if (@node == NULL) { @!; }
 	@};
 
-	<char-class-ast-range-distinct>: (from :range_endpoint, start :pos,
+	<ast-class-range-distinct>: (from :range_endpoint, start :pos,
 	    		to :range_endpoint, end :pos) -> () = @{
 		struct ast_pos ast_start, ast_end;
 		AST_POS_OF_LX_POS(ast_start, @start);
@@ -644,7 +644,7 @@
 		}
 	@};
 
-	<char-class-ast-range>: (from :range_endpoint, start :pos,
+	<ast-class-range>: (from :range_endpoint, start :pos,
 	    		to :range_endpoint, end :pos) -> (node :ast_class) = @{
 		struct ast_pos ast_start, ast_end;
 		unsigned char lower, upper;
@@ -675,22 +675,22 @@
 		if (@node == NULL) { @!; }
 	@};
 
-	<char-class-ast-concat>: (l :ast_class, r :ast_class) -> (node :ast_class) = @{
+	<ast-class-concat>: (l :ast_class, r :ast_class) -> (node :ast_class) = @{
 		@node = ast_class_concat(@l, @r);
 		if (@node == NULL) { @!; }
 	@};
 
-	<char-class-ast-subtract>: (l :ast_class, r :ast_class) -> (node :ast_class) = @{
+	<ast-class-subtract>: (l :ast_class, r :ast_class) -> (node :ast_class) = @{
 		@node = ast_class_subtract(@l, @r);
 		if (@node == NULL) { @!; }
 	@};
 
-	<char-class-ast-named-class>: (id :ast_class_id) -> (node :ast_class) = @{
+	<ast-class-named-class>: (id :ast_class_id) -> (node :ast_class) = @{
 		@node = ast_class_named(@id);
 		if (@node == NULL) { @!; }
 	@};
 
-	<ast-expr-char-class>: (cca :ast_class, start :pos, end :pos) -> (node :ast_expr) = @{
+	<ast-expr-class>: (cca :ast_class, start :pos, end :pos) -> (node :ast_expr) = @{
 		struct ast_pos ast_start, ast_end;
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
@@ -700,22 +700,22 @@
 		if (@node == NULL) { @!; }
 	@};
 
-	<char-class-ast-flag-none>: () -> (node :ast_class) = @{
+	<ast-class-flag-none>: () -> (node :ast_class) = @{
 		@node = ast_class_flags(AST_CLASS_FLAG_NONE);
 		if (@node == NULL) { @!; }
 	@};
 
-	<char-class-ast-flag-invert>: () -> (node :ast_class) = @{
+	<ast-class-flag-invert>: () -> (node :ast_class) = @{
 		@node = ast_class_flags(AST_CLASS_FLAG_INVERTED);
 		if (@node == NULL) { @!; }
 	@};
 
-	<char-class-ast-flag-minus>: () -> (node :ast_class) = @{
+	<ast-class-flag-minus>: () -> (node :ast_class) = @{
 		@node = ast_class_flags(AST_CLASS_FLAG_MINUS);
 		if (@node == NULL) { @!; }
 	@};
 
-	<char-class-ast-flag-invert-minus>: () -> (node :ast_class) = @{
+	<ast-class-flag-invert-minus>: () -> (node :ast_class) = @{
 		@node = ast_class_flags(AST_CLASS_FLAG_INVERTED | AST_CLASS_FLAG_MINUS);
 		if (@node == NULL) { @!; }
 	@};
@@ -727,9 +727,9 @@
 		@r = range;
 	@};
 
-	<ast-range-endpoint-char-class>: (id :ast_class_id) -> (r :range_endpoint) = @{
+	<ast-range-endpoint-class>: (id :ast_class_id) -> (r :range_endpoint) = @{
 		struct ast_range_endpoint range;
-		range.type = AST_RANGE_ENDPOINT_CHAR_CLASS;
+		range.type = AST_RANGE_ENDPOINT_CLASS;
 		range.u.class.ctor = @id;
 		@r = range;
 	@};

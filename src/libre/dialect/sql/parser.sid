@@ -48,7 +48,7 @@
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
-	NAMED_CHAR_CLASS: () -> (:ast_class_id, :pos, :pos);
+	NAMED_CLASS: () -> (:ast_class_id, :pos, :pos);
 
 	!OPENFLAGS;
 	!CLOSEFLAGS;
@@ -87,23 +87,23 @@
 
         <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
         <ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
-	<ast-expr-char-class>: (:ast_class, :pos, :pos) -> (:ast_expr);
+	<ast-expr-class>: (:ast_class, :pos, :pos) -> (:ast_expr);
         <ast-expr-group>: (:ast_expr) -> (:ast_expr);
 
-	<char-class-ast-literal>: (:char) -> (:ast_class);
-	!<char-class-ast-range-distinct>: (:range_endpoint, :pos, :range_endpoint, :pos) -> ();
-        <char-class-ast-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:ast_class);
-	<char-class-ast-concat>: (:ast_class, :ast_class) -> (:ast_class);
-	<char-class-ast-subtract>: (:ast_class, :ast_class) -> (:ast_class);
-	<char-class-ast-named-class>: (:ast_class_id) -> (:ast_class);
+	<ast-class-literal>: (:char) -> (:ast_class);
+	!<ast-class-range-distinct>: (:range_endpoint, :pos, :range_endpoint, :pos) -> ();
+        <ast-class-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:ast_class);
+	<ast-class-concat>: (:ast_class, :ast_class) -> (:ast_class);
+	<ast-class-subtract>: (:ast_class, :ast_class) -> (:ast_class);
+	<ast-class-named-class>: (:ast_class_id) -> (:ast_class);
 
-	<char-class-ast-flag-none>: () -> (:ast_class);
-	<char-class-ast-flag-invert>: () -> (:ast_class);
-	<char-class-ast-flag-minus>: () -> (:ast_class);
-	<char-class-ast-flag-invert-minus>: () -> (:ast_class);
+	<ast-class-flag-none>: () -> (:ast_class);
+	<ast-class-flag-invert>: () -> (:ast_class);
+	<ast-class-flag-minus>: () -> (:ast_class);
+	<ast-class-flag-invert-minus>: () -> (:ast_class);
 
 	<ast-range-endpoint-literal>: (:char) -> (:range_endpoint);
-	!<ast-range-endpoint-char-class>: (:ast_class_id) -> (:range_endpoint);
+	!<ast-range-endpoint-class>: (:ast_class_id) -> (:range_endpoint);
 
 	!<re-flag-none>: () -> (:re_flags);
 	!<re-flag-union>: (:re_flags, :re_flags) -> (:re_flags);
@@ -170,32 +170,32 @@
 		 *
 		 * _ is the ANY character class
 		 * */
-		char-class: () -> (node :ast_expr) [
-			char-class-head: () -> (f :ast_class) = {
+		class: () -> (node :ast_expr) [
+			class-head: () -> (f :ast_class) = {
 				(!) = INVERT;
-				f = <char-class-ast-flag-invert>();
+				f = <ast-class-flag-invert>();
 			||
 				(!, !, !) = RANGE;
-				f = <char-class-ast-flag-minus>();
+				f = <ast-class-flag-minus>();
 			||
 				(!) = INVERT;
 				(!, !, !) = RANGE;
-				f = <char-class-ast-flag-invert-minus>();
+				f = <ast-class-flag-invert-minus>();
 			||
-				f = <char-class-ast-flag-none>();
+				f = <ast-class-flag-none>();
 			};
 
-			char-class-tail: () -> (f :ast_class) = {
+			class-tail: () -> (f :ast_class) = {
 			/* This requires LL(2). */
 
 			/* 	(!, !, !) = RANGE;
-			 * 	f = <char-class-ast-flag-minus>();
+			 * 	f = <ast-class-flag-minus>();
 			 * || */
-				f = <char-class-ast-flag-none>();
+				f = <ast-class-flag-none>();
 			};
 
 			named-class: () -> (id :ast_class_id) = {
-                        	(id, !, !) = NAMED_CHAR_CLASS;
+                        	(id, !, !) = NAMED_CLASS;
 			};
 
 			term: () -> (node :ast_class) = {
@@ -207,63 +207,63 @@
 				(cz, !, end) = CHAR;
                                 z = <ast-range-endpoint-literal>(cz);
 
-				node = <char-class-ast-range>(a, start, z, end);
+				node = <ast-class-range>(a, start, z, end);
 			||
 				(c, !, !) = CHAR;
-				node = <char-class-ast-literal>(c);
+				node = <ast-class-literal>(c);
 			||
 				id = named-class();
-				node = <char-class-ast-named-class>(id);
+				node = <ast-class-named-class>(id);
                         ##
                         	<err-expected-term>();
-                                node = <char-class-ast-flag-none>();
+                                node = <ast-class-flag-none>();
 			};
 			    
-			list-of-char-class-terms: () -> (node :ast_class) = {
+			list-of-class-terms: () -> (node :ast_class) = {
 				l = term();
 				{
-					r = list-of-char-class-terms();
-					node = <char-class-ast-concat>(l, r);
+					r = list-of-class-terms();
+					node = <ast-class-concat>(l, r);
 				||
 					node = l;
 				};
 			};
 			    
-			char-class-ast: () -> (node :ast_expr) = {
+			class-ast: () -> (node :ast_expr) = {
 				(start, !) = OPENGROUP;
 
-				head = char-class-head();
-				body = list-of-char-class-terms();
-				tail = char-class-tail();
+				head = class-head();
+				body = list-of-class-terms();
+				tail = class-tail();
 
-				hb = <char-class-ast-concat>(head, body);
-				hbt = <char-class-ast-concat>(hb, tail);
+				hb = <ast-class-concat>(head, body);
+				hbt = <ast-class-concat>(hb, tail);
 				(!, !, end) = CLOSEGROUP;
-				node = <ast-expr-char-class>(hbt, start, end);
+				node = <ast-expr-class>(hbt, start, end);
 			||
 				(start, !) = OPENGROUP;
-				head = char-class-head();
-				body = list-of-char-class-terms();
-				tail = char-class-tail();
+				head = class-head();
+				body = list-of-class-terms();
+				tail = class-tail();
 				(!) = INVERT;
-				maskhead = char-class-head();
-				maskbody = list-of-char-class-terms();
-				masktail = char-class-tail();
+				maskhead = class-head();
+				maskbody = list-of-class-terms();
+				masktail = class-tail();
 
-				hb = <char-class-ast-concat>(head, body);
-				hbt = <char-class-ast-concat>(hb, tail);
+				hb = <ast-class-concat>(head, body);
+				hbt = <ast-class-concat>(hb, tail);
 				(!, !, end) = CLOSEGROUP;
 
 				/* Marking this unsupported for now */
                                 <err-unsupported>();
 
-				mhb = <char-class-ast-concat>(maskhead, maskbody);
-				mhbt = <char-class-ast-concat>(mhb, masktail);
-				masked = <char-class-ast-subtract>(hbt, mhbt);
-				node = <ast-expr-char-class>(masked, start, end);
+				mhb = <ast-class-concat>(maskhead, maskbody);
+				mhbt = <ast-class-concat>(mhb, masktail);
+				masked = <ast-class-subtract>(hbt, mhbt);
+				node = <ast-expr-class>(masked, start, end);
 			};
 		] = {
-			node = char-class-ast();
+			node = class-ast();
 		};
 
 		/* TODO: is there a better name than 'atom' for
@@ -276,7 +276,7 @@
 			s = atom-suffix();
 			node = <ast-expr-atom>(e, s);
 		||
-			e = char-class();
+			e = class();
 			s = atom-suffix();
 			node = <ast-expr-atom>(e, s);
 		||

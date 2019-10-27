@@ -63,21 +63,21 @@
 	'\'  /[0-7]+/       -> $oct;
 	'\x' /[0-9a-f]{2}/i -> $hex;
 
-	'[:alnum:]'  -> $named__char__class;
-	'[:alpha:]'  -> $named__char__class;
-	'[:ascii:]'  -> $named__char__class;
-	'[:cntrl:]'  -> $named__char__class;
-	'[:digit:]'  -> $named__char__class;
-	'[:graph:]'  -> $named__char__class;
-	'[:hspace:]' -> $named__char__class;
-	'[:lower:]'  -> $named__char__class;
-	'[:print:]'  -> $named__char__class;
-	'[:punct:]'  -> $named__char__class;
-	'[:space:]'  -> $named__char__class;
-	'[:upper:]'  -> $named__char__class;
-	'[:vspace:]' -> $named__char__class;
-	'[:word:]'   -> $named__char__class;
-	'[:xdigit:]' -> $named__char__class;
+	'[:alnum:]'  -> $named__class;
+	'[:alpha:]'  -> $named__class;
+	'[:ascii:]'  -> $named__class;
+	'[:cntrl:]'  -> $named__class;
+	'[:digit:]'  -> $named__class;
+	'[:graph:]'  -> $named__class;
+	'[:hspace:]' -> $named__class;
+	'[:lower:]'  -> $named__class;
+	'[:print:]'  -> $named__class;
+	'[:punct:]'  -> $named__class;
+	'[:space:]'  -> $named__class;
+	'[:upper:]'  -> $named__class;
+	'[:vspace:]' -> $named__class;
+	'[:word:]'   -> $named__class;
+	'[:xdigit:]' -> $named__class;
 
 	# XXX: /./ - the above
 	/[^\^\-\\]/ -> $char;

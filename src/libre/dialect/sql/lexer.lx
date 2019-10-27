@@ -20,13 +20,13 @@
 	'^' -> $invert;
 	'-' -> $range;
 
-	'[:ALNUM:]'      -> $named__char__class;
-	'[:ALPHA:]'      -> $named__char__class;
-	'[:DIGIT:]'      -> $named__char__class;
-	'[:LOWER:]'      -> $named__char__class;
-	'[:SPACE:]'      -> $named__char__class;
-	'[:UPPER:]'      -> $named__char__class;
-	'[:WHITESPACE:]' -> $named__char__class;
+	'[:ALNUM:]'      -> $named__class;
+	'[:ALPHA:]'      -> $named__class;
+	'[:DIGIT:]'      -> $named__class;
+	'[:LOWER:]'      -> $named__class;
+	'[:SPACE:]'      -> $named__class;
+	'[:UPPER:]'      -> $named__class;
+	'[:WHITESPACE:]' -> $named__class;
 
 	# XXX: /./ - the above
 	/[^\^\-]/ -> $char;
