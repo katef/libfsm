@@ -20,6 +20,23 @@
 
 #define LOG_LINKAGE 0
 
+enum link_side { LINK_START, LINK_END };
+
+/* How should this state be linked for the relevant state?
+ * Note: These are not mutually exclusive! */
+enum link_types {
+	LINK_NONE = 0x00,
+	/* Use the passed in start/end states (x and y) */
+	LINK_TOP_DOWN = 0x01,
+	/* Link to the global start/end state (env->start or env->end),
+	 * because this node has a ^ or $ anchor */
+	LINK_GLOBAL = 0x02,
+	/* Link to the unanchored self loop adjacent to the start/end
+	 * state (env->start_any_loop or env->end_any_loop), because
+	 * this node is in a FIRST or LAST position, but unanchored. */
+	LINK_GLOBAL_SELF_LOOP = 0x04
+};
+
 struct comp_env {
 	struct fsm *fsm;
 	enum re_flags flags;
@@ -39,79 +56,235 @@ struct comp_env {
 	struct fsm_state *end_any_loop;
 };
 
-enum link_side { LINK_START, LINK_END };
-
-/* How should this state be linked for the relevant state?
- * Note: These are not mutually exclusive! */
-enum link_types {
-	LINK_NONE = 0x00,
-	/* Use the passed in start/end states (x and y) */
-	LINK_TOP_DOWN = 0x01,
-	/* Link to the global start/end state (env->start or env->end),
-	 * because this node has a ^ or $ anchor */
-	LINK_GLOBAL = 0x02,
-	/* Link to the unanchored self loop adjacent to the start/end
-	 * state (env->start_any_loop or env->end_any_loop), because
-	 * this node is in a FIRST or LAST position, but unanchored. */
-	LINK_GLOBAL_SELF_LOOP = 0x04
-};
-
-static int
-addedge_literal(struct comp_env *env,
-    struct fsm_state *from, struct fsm_state *to, char c);
-
-static int
-comp_iter_repeated(struct comp_env *env,
-    struct fsm_state *x, struct fsm_state *y,
-    struct ast_expr_repeated *n);
-
-/* Return the start/end any loop, creating if necessary. */
-static struct fsm_state *
-intern_start_any_loop(struct comp_env *env);
-static struct fsm_state *
-intern_end_any_loop(struct comp_env *env);
-
 static int
 comp_iter(struct comp_env *env,
     struct fsm_state *x, struct fsm_state *y,
     struct ast_expr *n);
 
 static int
+addedge_literal(struct comp_env *env,
+	struct fsm_state *from, struct fsm_state *to, char c)
+{
+	struct fsm *fsm = env->fsm;
+	assert(fsm != NULL);
+	assert(from != NULL);
+	assert(to != NULL);
+	
+	if (env->flags & RE_ICASE) {
+		if (!fsm_addedge_literal(fsm, from, to, tolower((unsigned char) c))) {
+			return 0;
+		}
+		
+		if (!fsm_addedge_literal(fsm, from, to, toupper((unsigned char) c))) {
+			return 0;
+		}
+	} else {
+		if (!fsm_addedge_literal(fsm, from, to, c)) {
+			return 0;
+		}
+	}
+	
+	return 1;
+}
+
+static struct fsm_state *
+intern_start_any_loop(struct comp_env *env)
+{
+	assert(env != NULL);
+	if (env->start_any_loop == NULL) {
+		struct fsm_state *loop;
+		assert(~env->flags & RE_ANCHORED);
+		assert(env->start != NULL);
+		
+		loop = fsm_addstate(env->fsm);
+		if (loop == NULL) { return NULL; }
+
+		if (!fsm_addedge_any(env->fsm, loop, loop)) { return NULL; }
+		if (!fsm_addedge_epsilon(env->fsm, env->start, loop)) { return NULL; }
+
+		env->start_any_loop = loop;
+	}
+	return env->start_any_loop;
+}
+
+static struct fsm_state *
+intern_end_any_loop(struct comp_env *env)
+{
+	assert(env != NULL);
+	if (env->end_any_loop == NULL) {
+		struct fsm_state *loop;
+		assert(~env->flags & RE_ANCHORED);
+		assert(env->end != NULL);
+		
+		loop = fsm_addstate(env->fsm);
+		if (loop == NULL) { return NULL; }
+
+		if (!fsm_addedge_any(env->fsm, loop, loop)) { return NULL; }
+		if (!fsm_addedge_epsilon(env->fsm, loop, env->end)) { return NULL; }
+
+		env->end_any_loop = loop;
+	}
+	return env->end_any_loop;
+}
+
+static int
+can_have_backward_epsilon_edge(const struct ast_expr *e)
+{
+	/* These nodes cannot have a backward epsilon edge */
+	switch (e->type) {
+	case AST_EXPR_LITERAL:
+	case AST_EXPR_FLAGS:
+	case AST_EXPR_CLASS:
+	case AST_EXPR_ALT_N:
+	case AST_EXPR_ANCHOR:
+		return 0;
+	default:
+		break;
+	}
+
+	if (e->type == AST_EXPR_REPEATED) {
+		/* 0 and 1 don't have backward epsilon edges */
+		if (e->u.repeated.high <= 1) { return 0; }
+
+		/* The general case for counted repetition already
+		 * allocates one-way guard states around it */
+		if (e->u.repeated.high != AST_COUNT_UNBOUNDED) { return 0; }
+	} else if (e->type == AST_EXPR_GROUP) {
+		return can_have_backward_epsilon_edge(e->u.group.e);
+	}
+
+	return 1;
+}
+
+static int
 can_skip_concat_state_and_epsilon(const struct ast_expr *l,
-    const struct ast_expr *r);
+    const struct ast_expr *r)
+{
+	/* CONCAT only needs the extra state and epsilon edge when there
+	 * is a backward epsilon edge for repetition -- without it, a
+	 * regex such as /a*b*c/ could match "ababc" as well as "aabbc",
+	 * because the backward epsilon for repeating the 'b' would lead
+	 * to a state which has another backward epsilon for repeating
+	 * the 'a'. The extra state functions as a one-way guard,
+	 * keeping the match from looping further back in the FSM than
+	 * intended. */
+	assert(l != NULL);
+
+	if (!can_have_backward_epsilon_edge(l)) { return 1; }
+
+	if (r != NULL && r->type == AST_EXPR_REPEATED) {
+		if (!can_have_backward_epsilon_edge(r)) { return 1; }
+	}
+
+	return 0;
+}
 
 static enum link_types
 decide_linking(struct comp_env *env,
     struct fsm_state *x, struct fsm_state *y,
-    struct ast_expr *n, enum link_side side);
-
-int
-ast_compile_expr(struct ast_expr *n,
-	struct fsm *fsm, enum re_flags flags,
-	struct re_err *err,
-	struct fsm_state *x, struct fsm_state *y)
+    struct ast_expr *n, enum link_side side)
 {
-	struct comp_env env;
-
-	memset(&env, 0x00, sizeof(env));
-
+	enum link_types res = LINK_NONE;
 	assert(n != NULL);
-	assert(fsm != NULL);
-	assert(x != NULL);
-	assert(y != NULL);
+	assert(env != NULL);
 
-	env.fsm = fsm;
-	env.flags = flags;
-	env.err = err;
+	if ((env->flags & RE_ANCHORED)) { return LINK_TOP_DOWN; }	
 
-	env.start = x;
-	env.end = y;
+	switch (n->type) {
+	case AST_EXPR_EMPTY:
+	case AST_EXPR_GROUP:
+		return LINK_TOP_DOWN;
 
-	if (!comp_iter(&env, x, y, n)) { return 0; }
+	case AST_EXPR_ANCHOR:
+	        if (n->u.anchor.type == RE_AST_ANCHOR_START
+		    && side == LINK_START) { return LINK_GLOBAL; }
+	        if (n->u.anchor.type == RE_AST_ANCHOR_END
+		    && side == LINK_END) { return LINK_GLOBAL; }
+		return LINK_TOP_DOWN;
 
-	if (-1 == fsm_trim(env.fsm)) { return 0; }
+	case AST_EXPR_LITERAL:
+	case AST_EXPR_ANY:
+	case AST_EXPR_CLASS:
 
-	return 1;
+	case AST_EXPR_CONCAT_N:
+	case AST_EXPR_ALT_N:
+	case AST_EXPR_REPEATED:
+	case AST_EXPR_FLAGS:
+	case AST_EXPR_TOMBSTONE:
+		break;
+
+	default:
+		assert(!"unreached");
+	}
+
+	switch (side) {
+	case LINK_START:
+	{
+		const int start = (n->type == AST_EXPR_ANCHOR
+		    && n->u.anchor.type == RE_AST_ANCHOR_START);
+		const int first = (n->flags & RE_AST_FLAG_FIRST_STATE) != 0;
+		const int nullable = (n->flags & RE_AST_FLAG_NULLABLE) != 0;
+		(void)nullable;
+
+		if (!start && first) {
+			if (x == env->start) {
+				/* Avoid a cycle back to env->start that may
+				 * lead to incorrect matches, e.g. /a?^b*/
+				return LINK_GLOBAL_SELF_LOOP;
+			} else {
+				/* Link in the starting self-loop, but also the
+				 * previous state (if any), because it can
+				 * indicate matching a nullable state. */
+				return LINK_GLOBAL_SELF_LOOP | LINK_TOP_DOWN;
+			}
+		}
+
+		if (start && !first) {
+			return LINK_GLOBAL;
+		}
+
+		return LINK_TOP_DOWN;
+	}
+
+	case LINK_END:
+	{
+		const int end = (n->type == AST_EXPR_ANCHOR
+		    && n->u.anchor.type == RE_AST_ANCHOR_END);
+		const int last = (n->flags & RE_AST_FLAG_LAST_STATE) != 0;
+		const int nullable = (n->flags & RE_AST_FLAG_NULLABLE) != 0;
+		(void)nullable;
+
+		if (end && last) {
+			if (y == env->end) {
+				return LINK_GLOBAL;
+			} else {
+				return LINK_GLOBAL
+				    | LINK_TOP_DOWN
+				    ;
+			}
+		}
+
+		if (!end && last) {
+			if (y == env->end) {
+				return LINK_GLOBAL_SELF_LOOP;
+			} else {
+				return LINK_GLOBAL_SELF_LOOP | LINK_TOP_DOWN;
+			}
+		}
+
+		if (end && !last) {
+			return LINK_GLOBAL;
+		}
+
+		return LINK_TOP_DOWN;
+	}
+
+	default:
+		assert(0);
+	}
+
+	assert(res != LINK_NONE);
+	return res;
 }
 
 static void
@@ -143,6 +316,65 @@ print_linkage(enum link_types t) {
 	if (!comp_iter(env, FROM, TO, NODE)) { return 0; }             \
 
 static int
+comp_iter_repeated(struct comp_env *env,
+    struct fsm_state *x, struct fsm_state *y,
+    struct ast_expr_repeated *n)
+{
+	struct fsm_state *na, *nz;
+	unsigned i, low, high;
+	struct fsm_state *a = NULL;
+	struct fsm_state *b = NULL;
+	
+	low = n->low;
+	high = n->high;
+	assert(low <= high);
+
+	if (low == 0 && high == 0) {		                /* {0,0} */
+		EPSILON(x, y);
+	} else if (low == 0 && high == 1) {		        /* '?' */
+		RECURSE(x, y, n->e);
+		EPSILON(x, y);
+	} else if (low == 1 && high == 1) {		        /* {1,1} */
+		RECURSE(x, y, n->e);
+	} else if (low == 0 && high == AST_COUNT_UNBOUNDED) {   /* '*' */
+		EPSILON(x, y);
+		RECURSE(x, y, n->e);
+		EPSILON(y, x);
+	} else if (low == 1 && high == AST_COUNT_UNBOUNDED) {   /* '+' */
+		RECURSE(x, y, n->e);
+		EPSILON(y, x);
+	} else {
+		/* Make new beginning/end states for the repeated section,
+		 * build its NFA, and link to its head. */
+		NEWSTATE(na);
+		NEWSTATE(nz);
+		RECURSE(na, nz, n->e);
+		EPSILON(x, na); /* link head to repeated NFA head */
+		b = nz;		/* set the initial tail */
+		
+		if (low == 0) { EPSILON(na, nz); } /* can be skipped */
+		
+		for (i = 1; i < high; i++) {
+			a = fsm_state_duplicatesubgraphx(env->fsm, na, &b);
+			if (a == NULL) { return 0; }
+			
+			/* TODO: could elide this epsilon if fsm_state_duplicatesubgraphx()
+			 * took an extra parameter giving it a m->new for the start state */
+			EPSILON(nz, a);
+			
+			/* To the optional part of the repeated count */
+			if (i >= low) { EPSILON(nz, b); }
+			
+			na = a;	/* advance head for next duplication */
+			nz = b;	/* advance tail for concenation */
+		}
+		
+		EPSILON(nz, y);	     /* tail to last repeated NFA tail */
+	}
+	return 1;
+}
+
+static int
 comp_iter(struct comp_env *env,
     struct fsm_state *x, struct fsm_state *y,
     struct ast_expr *n)
@@ -153,15 +385,15 @@ comp_iter(struct comp_env *env,
 
 	link_start = decide_linking(env, x, y, n, LINK_START);
 	link_end = decide_linking(env, x, y, n, LINK_END);
-	#if LOG_LINKAGE
+#if LOG_LINKAGE
 	fprintf(stderr, "%s: decide_linking %p: start ", __func__, (void *)n);
 	print_linkage(link_start);
 	fprintf(stderr, ", end ");
 	print_linkage(link_end);
 	fprintf(stderr, "\n");
-	#else
+#else
 	(void)print_linkage;
-	#endif
+#endif
 
 	if ((link_start & LINK_TOP_DOWN) == LINK_NONE) {
 		/* The top-down link is rejected, so replace x with
@@ -351,293 +583,37 @@ comp_iter(struct comp_env *env,
 	return 1;
 }
 
-static int
-comp_iter_repeated(struct comp_env *env,
-    struct fsm_state *x, struct fsm_state *y,
-    struct ast_expr_repeated *n)
-{
-	struct fsm_state *na, *nz;
-	unsigned i, low, high;
-	struct fsm_state *a = NULL;
-	struct fsm_state *b = NULL;
-	
-	low = n->low;
-	high = n->high;
-	assert(low <= high);
-
-	if (low == 0 && high == 0) {		                /* {0,0} */
-		EPSILON(x, y);
-	} else if (low == 0 && high == 1) {		        /* '?' */
-		RECURSE(x, y, n->e);
-		EPSILON(x, y);
-	} else if (low == 1 && high == 1) {		        /* {1,1} */
-		RECURSE(x, y, n->e);
-	} else if (low == 0 && high == AST_COUNT_UNBOUNDED) {   /* '*' */
-		EPSILON(x, y);
-		RECURSE(x, y, n->e);
-		EPSILON(y, x);
-	} else if (low == 1 && high == AST_COUNT_UNBOUNDED) {   /* '+' */
-		RECURSE(x, y, n->e);
-		EPSILON(y, x);
-	} else {
-		/* Make new beginning/end states for the repeated section,
-		 * build its NFA, and link to its head. */
-		NEWSTATE(na);
-		NEWSTATE(nz);
-		RECURSE(na, nz, n->e);
-		EPSILON(x, na); /* link head to repeated NFA head */
-		b = nz;		/* set the initial tail */
-		
-		if (low == 0) { EPSILON(na, nz); } /* can be skipped */
-		
-		for (i = 1; i < high; i++) {
-			a = fsm_state_duplicatesubgraphx(env->fsm, na, &b);
-			if (a == NULL) { return 0; }
-			
-			/* TODO: could elide this epsilon if fsm_state_duplicatesubgraphx()
-			 * took an extra parameter giving it a m->new for the start state */
-			EPSILON(nz, a);
-			
-			/* To the optional part of the repeated count */
-			if (i >= low) { EPSILON(nz, b); }
-			
-			na = a;	/* advance head for next duplication */
-			nz = b;	/* advance tail for concenation */
-		}
-		
-		EPSILON(nz, y);	     /* tail to last repeated NFA tail */
-	}
-	return 1;
-}
-
 #undef EPSILON
 #undef ANY
 #undef NEWSTATE
 #undef LITERAL
 #undef RECURSE
 
-static int
-can_have_backward_epsilon_edge(const struct ast_expr *e)
+int
+ast_compile_expr(struct ast_expr *n,
+	struct fsm *fsm, enum re_flags flags,
+	struct re_err *err,
+	struct fsm_state *x, struct fsm_state *y)
 {
-	/* These nodes cannot have a backward epsilon edge */
-	switch (e->type) {
-	case AST_EXPR_LITERAL:
-	case AST_EXPR_FLAGS:
-	case AST_EXPR_CLASS:
-	case AST_EXPR_ALT_N:
-	case AST_EXPR_ANCHOR:
-		return 0;
-	default:
-		break;
-	}
+	struct comp_env env;
 
-	if (e->type == AST_EXPR_REPEATED) {
-		/* 0 and 1 don't have backward epsilon edges */
-		if (e->u.repeated.high <= 1) { return 0; }
+	memset(&env, 0x00, sizeof(env));
 
-		/* The general case for counted repetition already
-		 * allocates one-way guard states around it */
-		if (e->u.repeated.high != AST_COUNT_UNBOUNDED) { return 0; }
-	} else if (e->type == AST_EXPR_GROUP) {
-		return can_have_backward_epsilon_edge(e->u.group.e);
-	}
-
-	return 1;
-}
-
-static int
-can_skip_concat_state_and_epsilon(const struct ast_expr *l,
-    const struct ast_expr *r)
-{
-	/* CONCAT only needs the extra state and epsilon edge when there
-	 * is a backward epsilon edge for repetition -- without it, a
-	 * regex such as /a*b*c/ could match "ababc" as well as "aabbc",
-	 * because the backward epsilon for repeating the 'b' would lead
-	 * to a state which has another backward epsilon for repeating
-	 * the 'a'. The extra state functions as a one-way guard,
-	 * keeping the match from looping further back in the FSM than
-	 * intended. */
-	assert(l != NULL);
-
-	if (!can_have_backward_epsilon_edge(l)) { return 1; }
-
-	if (r != NULL && r->type == AST_EXPR_REPEATED) {
-		if (!can_have_backward_epsilon_edge(r)) { return 1; }
-	}
-
-	return 0;
-}
-
-static int
-addedge_literal(struct comp_env *env,
-	struct fsm_state *from, struct fsm_state *to, char c)
-{
-	struct fsm *fsm = env->fsm;
-	assert(fsm != NULL);
-	assert(from != NULL);
-	assert(to != NULL);
-	
-	if (env->flags & RE_ICASE) {
-		if (!fsm_addedge_literal(fsm, from, to, tolower((unsigned char) c))) {
-			return 0;
-		}
-		
-		if (!fsm_addedge_literal(fsm, from, to, toupper((unsigned char) c))) {
-			return 0;
-		}
-	} else {
-		if (!fsm_addedge_literal(fsm, from, to, c)) {
-			return 0;
-		}
-	}
-	
-	return 1;
-}
-
-static struct fsm_state *
-intern_start_any_loop(struct comp_env *env)
-{
-	assert(env != NULL);
-	if (env->start_any_loop == NULL) {
-		struct fsm_state *loop;
-		assert(~env->flags & RE_ANCHORED);
-		assert(env->start != NULL);
-		
-		loop = fsm_addstate(env->fsm);
-		if (loop == NULL) { return NULL; }
-
-		if (!fsm_addedge_any(env->fsm, loop, loop)) { return NULL; }
-		if (!fsm_addedge_epsilon(env->fsm, env->start, loop)) { return NULL; }
-
-		env->start_any_loop = loop;
-	}
-	return env->start_any_loop;
-}
-
-static struct fsm_state *
-intern_end_any_loop(struct comp_env *env)
-{
-	assert(env != NULL);
-	if (env->end_any_loop == NULL) {
-		struct fsm_state *loop;
-		assert(~env->flags & RE_ANCHORED);
-		assert(env->end != NULL);
-		
-		loop = fsm_addstate(env->fsm);
-		if (loop == NULL) { return NULL; }
-
-		if (!fsm_addedge_any(env->fsm, loop, loop)) { return NULL; }
-		if (!fsm_addedge_epsilon(env->fsm, loop, env->end)) { return NULL; }
-
-		env->end_any_loop = loop;
-	}
-	return env->end_any_loop;
-}
-
-static enum link_types
-decide_linking(struct comp_env *env,
-    struct fsm_state *x, struct fsm_state *y,
-    struct ast_expr *n, enum link_side side)
-{
-	enum link_types res = LINK_NONE;
 	assert(n != NULL);
-	assert(env != NULL);
+	assert(fsm != NULL);
+	assert(x != NULL);
+	assert(y != NULL);
 
-	if ((env->flags & RE_ANCHORED)) { return LINK_TOP_DOWN; }	
+	env.fsm = fsm;
+	env.flags = flags;
+	env.err = err;
 
-	switch (n->type) {
-	case AST_EXPR_EMPTY:
-	case AST_EXPR_GROUP:
-		return LINK_TOP_DOWN;
+	env.start = x;
+	env.end = y;
 
-	case AST_EXPR_ANCHOR:
-	        if (n->u.anchor.type == RE_AST_ANCHOR_START
-		    && side == LINK_START) { return LINK_GLOBAL; }
-	        if (n->u.anchor.type == RE_AST_ANCHOR_END
-		    && side == LINK_END) { return LINK_GLOBAL; }
-		return LINK_TOP_DOWN;
+	if (!comp_iter(&env, x, y, n)) { return 0; }
 
-	case AST_EXPR_LITERAL:
-	case AST_EXPR_ANY:
-	case AST_EXPR_CLASS:
+	if (-1 == fsm_trim(env.fsm)) { return 0; }
 
-	case AST_EXPR_CONCAT_N:
-	case AST_EXPR_ALT_N:
-	case AST_EXPR_REPEATED:
-	case AST_EXPR_FLAGS:
-	case AST_EXPR_TOMBSTONE:
-		break;
-
-	default:
-		assert(!"unreached");
-	}
-
-	switch (side) {
-	case LINK_START:
-	{
-		const int start = (n->type == AST_EXPR_ANCHOR
-		    && n->u.anchor.type == RE_AST_ANCHOR_START);
-		const int first = (n->flags & RE_AST_FLAG_FIRST_STATE) != 0;
-		const int nullable = (n->flags & RE_AST_FLAG_NULLABLE) != 0;
-		(void)nullable;
-
-		if (!start && first) {
-			if (x == env->start) {
-				/* Avoid a cycle back to env->start that may
-				 * lead to incorrect matches, e.g. /a?^b*/
-				return LINK_GLOBAL_SELF_LOOP;
-			} else {
-				/* Link in the starting self-loop, but also the
-				 * previous state (if any), because it can
-				 * indicate matching a nullable state. */
-				return LINK_GLOBAL_SELF_LOOP | LINK_TOP_DOWN;
-			}
-		}
-
-		if (start && !first) {
-			return LINK_GLOBAL;
-		}
-
-		return LINK_TOP_DOWN;
-	}
-
-	case LINK_END:
-	{
-		const int end = (n->type == AST_EXPR_ANCHOR
-		    && n->u.anchor.type == RE_AST_ANCHOR_END);
-		const int last = (n->flags & RE_AST_FLAG_LAST_STATE) != 0;
-		const int nullable = (n->flags & RE_AST_FLAG_NULLABLE) != 0;
-		(void)nullable;
-
-		if (end && last) {
-			if (y == env->end) {
-				return LINK_GLOBAL;
-			} else {
-				return LINK_GLOBAL
-				    | LINK_TOP_DOWN
-				    ;
-			}
-		}
-
-		if (!end && last) {
-			if (y == env->end) {
-				return LINK_GLOBAL_SELF_LOOP;
-			} else {
-				return LINK_GLOBAL_SELF_LOOP | LINK_TOP_DOWN;
-			}
-		}
-
-		if (end && !last) {
-			return LINK_GLOBAL;
-		}
-
-		return LINK_TOP_DOWN;
-	}
-
-	default:
-		assert(0);
-	}
-
-	assert(res != LINK_NONE);
-	return res;
+	return 1;
 }

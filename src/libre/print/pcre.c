@@ -18,13 +18,6 @@
 #include "../ast.h"
 #include "../print.h"
 
-static void
-re_flags_print(FILE *f, enum re_flags fl);
-
-static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	struct ast_class *n);
-
 static int
 atomic(struct ast_expr *n)
 {
@@ -46,6 +39,33 @@ atomic(struct ast_expr *n)
 
 	default:
 		assert(!"unreached");
+	}
+}
+
+static void
+re_flags_print(FILE *f, enum re_flags fl)
+{
+	const char *sep = "";
+	if (fl & RE_ICASE) { fprintf(f, "%si", sep); sep = " "; }
+	if (fl & RE_TEXT) { fprintf(f, "%sg", sep); sep = " "; }
+	if (fl & RE_MULTI) { fprintf(f, "%sm", sep); sep = " "; }
+	if (fl & RE_REVERSE) { fprintf(f, "%sr", sep); sep = " "; }
+	if (fl & RE_SINGLE) { fprintf(f, "%ss", sep); sep = " "; }
+	if (fl & RE_ZONE) { fprintf(f, "%sz", sep); sep = " "; }
+}
+
+static void
+print_range_endpoint(FILE *f, const struct fsm_options *opt,
+	const struct ast_range_endpoint *r)
+{
+	switch (r->type) {
+	case AST_RANGE_ENDPOINT_LITERAL:
+		pcre_escputc(f, opt, r->u.literal.c);
+		break;
+
+	default:
+		assert(!"unreached");
+		break;
 	}
 }
 
@@ -118,6 +138,53 @@ print_class_name(FILE *f, const char *abstract_name)
 		}
 	}
 	fputs("}", f);
+}
+
+static void
+cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(n != NULL);
+
+	switch (n->type) {
+	case AST_CLASS_CONCAT:
+		cc_pp_iter(f, opt, n->u.concat.l);
+		cc_pp_iter(f, opt, n->u.concat.r);
+		break;
+
+	case AST_CLASS_LITERAL:
+		pcre_escputc(f, opt, n->u.literal.c);
+		break;
+
+	case AST_CLASS_RANGE:
+		print_range_endpoint(f, opt, &n->u.range.from);
+		fprintf(f, "-");
+		print_range_endpoint(f, opt, &n->u.range.to);
+		break;
+
+	case AST_CLASS_NAMED:
+		print_class_name(f, class_name(n->u.named.ctor));
+		break;
+
+	case AST_CLASS_FLAGS:
+		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
+			fprintf(f, "^");
+		}
+		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
+			fprintf(f, "-");
+		}
+		break;
+
+	case AST_CLASS_SUBTRACT:
+		fprintf(f, "\tn%p [ label = <{CLASS-SUBTRACT|{ast|mask}}> ];\n", (void *) n);
+		cc_pp_iter(f, opt, n->u.subtract.ast);
+		cc_pp_iter(f, opt, n->u.subtract.mask);
+		break;
+
+	default:
+		assert(!"unreached");
+	}
 }
 
 static void
@@ -266,79 +333,5 @@ ast_print_pcre(FILE *f, const struct fsm_options *opt,
 	pp_iter(f, opt, ast->expr);
 
 	fprintf(f, "\n");
-}
-
-static void
-re_flags_print(FILE *f, enum re_flags fl)
-{
-	const char *sep = "";
-	if (fl & RE_ICASE) { fprintf(f, "%si", sep); sep = " "; }
-	if (fl & RE_TEXT) { fprintf(f, "%sg", sep); sep = " "; }
-	if (fl & RE_MULTI) { fprintf(f, "%sm", sep); sep = " "; }
-	if (fl & RE_REVERSE) { fprintf(f, "%sr", sep); sep = " "; }
-	if (fl & RE_SINGLE) { fprintf(f, "%ss", sep); sep = " "; }
-	if (fl & RE_ZONE) { fprintf(f, "%sz", sep); sep = " "; }
-}
-
-static void
-print_range_endpoint(FILE *f, const struct fsm_options *opt,
-	const struct ast_range_endpoint *r)
-{
-	switch (r->type) {
-	case AST_RANGE_ENDPOINT_LITERAL:
-		pcre_escputc(f, opt, r->u.literal.c);
-		break;
-
-	default:
-		assert(!"unreached");
-		break;
-	}
-}
-
-static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
-{
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(n != NULL);
-
-	switch (n->type) {
-	case AST_CLASS_CONCAT:
-		cc_pp_iter(f, opt, n->u.concat.l);
-		cc_pp_iter(f, opt, n->u.concat.r);
-		break;
-
-	case AST_CLASS_LITERAL:
-		pcre_escputc(f, opt, n->u.literal.c);
-		break;
-
-	case AST_CLASS_RANGE:
-		print_range_endpoint(f, opt, &n->u.range.from);
-		fprintf(f, "-");
-		print_range_endpoint(f, opt, &n->u.range.to);
-		break;
-
-	case AST_CLASS_NAMED:
-		print_class_name(f, class_name(n->u.named.ctor));
-		break;
-
-	case AST_CLASS_FLAGS:
-		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
-			fprintf(f, "^");
-		}
-		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
-			fprintf(f, "-");
-		}
-		break;
-
-	case AST_CLASS_SUBTRACT:
-		fprintf(f, "\tn%p [ label = <{CLASS-SUBTRACT|{ast|mask}}> ];\n", (void *) n);
-		cc_pp_iter(f, opt, n->u.subtract.ast);
-		cc_pp_iter(f, opt, n->u.subtract.mask);
-		break;
-
-	default:
-		assert(!"unreached");
-	}
 }
 

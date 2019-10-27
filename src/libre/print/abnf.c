@@ -19,10 +19,6 @@
 #include "../print.h"
 
 static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	struct ast_class *n);
-
-static void
 pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n);
 
 static int
@@ -125,6 +121,67 @@ print_grouped(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		fprintf(f, "(");
 		pp_iter(f, opt, n);
 		fprintf(f, ")");
+	}
+}
+
+static void
+cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(n != NULL);
+
+	switch (n->type) {
+	case AST_CLASS_CONCAT:
+if (n->u.concat.l != NULL && n->u.concat.l->type == AST_CLASS_FLAGS) {
+	/* XXX */
+	cc_pp_iter(f, opt, n->u.concat.r);
+} else {
+		cc_pp_iter(f, opt, n->u.concat.l);
+		fprintf(f, " / ");
+		cc_pp_iter(f, opt, n->u.concat.r);
+}
+		break;
+
+	case AST_CLASS_LITERAL:
+		abnf_escputc(f, opt, n->u.literal.c);
+		break;
+
+	case AST_CLASS_RANGE: {
+		if (n->u.range.from.type != AST_RANGE_ENDPOINT_LITERAL || n->u.range.to.type != AST_RANGE_ENDPOINT_LITERAL) {
+			assert(!"unimplemented");
+			abort();
+		}
+
+		fprintf(f, "%%x%02X-%02X",
+			(unsigned char) n->u.range.from.u.literal.c,
+			(unsigned char) n->u.range.to.u.literal.c);
+		}
+		break;
+
+	case AST_CLASS_NAMED:
+		print_class_name(f, class_name(n->u.named.ctor));
+		break;
+
+	case AST_CLASS_FLAGS:
+		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
+			fprintf(f, "<SOL>");
+		}
+		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
+			fprintf(f, "<->"); /* XXX */
+		}
+		break;
+
+	case AST_CLASS_SUBTRACT:
+		assert(!"unimplemented");
+		abort();
+
+		cc_pp_iter(f, opt, n->u.subtract.ast);
+		cc_pp_iter(f, opt, n->u.subtract.mask);
+		break;
+
+	default:
+		assert(!"unreached");
 	}
 }
 
@@ -258,66 +315,5 @@ ast_print_abnf(FILE *f, const struct fsm_options *opt,
 
 	fprintf(f, "\n");
 	fprintf(f, "\n");
-}
-
-static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
-{
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(n != NULL);
-
-	switch (n->type) {
-	case AST_CLASS_CONCAT:
-if (n->u.concat.l != NULL && n->u.concat.l->type == AST_CLASS_FLAGS) {
-	/* XXX */
-	cc_pp_iter(f, opt, n->u.concat.r);
-} else {
-		cc_pp_iter(f, opt, n->u.concat.l);
-		fprintf(f, " / ");
-		cc_pp_iter(f, opt, n->u.concat.r);
-}
-		break;
-
-	case AST_CLASS_LITERAL:
-		abnf_escputc(f, opt, n->u.literal.c);
-		break;
-
-	case AST_CLASS_RANGE: {
-		if (n->u.range.from.type != AST_RANGE_ENDPOINT_LITERAL || n->u.range.to.type != AST_RANGE_ENDPOINT_LITERAL) {
-			assert(!"unimplemented");
-			abort();
-		}
-
-		fprintf(f, "%%x%02X-%02X",
-			(unsigned char) n->u.range.from.u.literal.c,
-			(unsigned char) n->u.range.to.u.literal.c);
-		}
-		break;
-
-	case AST_CLASS_NAMED:
-		print_class_name(f, class_name(n->u.named.ctor));
-		break;
-
-	case AST_CLASS_FLAGS:
-		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
-			fprintf(f, "<SOL>");
-		}
-		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
-			fprintf(f, "<->"); /* XXX */
-		}
-		break;
-
-	case AST_CLASS_SUBTRACT:
-		assert(!"unimplemented");
-		abort();
-
-		cc_pp_iter(f, opt, n->u.subtract.ast);
-		cc_pp_iter(f, opt, n->u.subtract.mask);
-		break;
-
-	default:
-		assert(!"unreached");
-	}
 }
 

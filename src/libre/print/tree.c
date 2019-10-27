@@ -14,25 +14,21 @@
 #include "../ast.h"
 #include "../print.h"
 
-static void
-re_flags_print(FILE *f, enum re_flags fl);
-
-static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	struct ast_class *n, size_t indent);
-
-static void
-print_char_or_esc(FILE *f, unsigned char c);
-
-static void
-print_range_endpoint(FILE *f, const struct ast_range_endpoint *r);
-
-
 #define INDENT(F, IND)							\
 	do {								\
 		size_t i;						\
 		for (i = 0; i < IND; i++) { fprintf(F, " "); }		\
 	} while(0) 							\
+
+static void
+print_char_or_esc(FILE *f, unsigned char c)
+{
+	if (isprint(c)) {
+		fprintf(f, "%c", c);
+	} else {
+		fprintf(f, "\\x%02x", c);
+	}
+}
 
 static void
 fprintf_count(FILE *f, unsigned count)
@@ -60,6 +56,87 @@ fprintf_flags(FILE *f, enum ast_flags flags)
 
 	#undef PR_FLAG
 		fprintf(f, ")");
+}
+
+static void
+re_flags_print(FILE *f, enum re_flags fl)
+{
+	const char *sep = "";
+	if (fl & RE_ICASE) { fprintf(f, "%sicase", sep); sep = " "; }
+	if (fl & RE_TEXT) { fprintf(f, "%stext ", sep); sep = " "; }
+	if (fl & RE_MULTI) { fprintf(f, "%smulti ", sep); sep = " "; }
+	if (fl & RE_REVERSE) { fprintf(f, "%sreverse ", sep); sep = " "; }
+	if (fl & RE_SINGLE) { fprintf(f, "%ssingle ", sep); sep = " "; }
+	if (fl & RE_ZONE) { fprintf(f, "%szone ", sep); sep = " "; }
+}
+
+static void
+print_range_endpoint(FILE *f, const struct ast_range_endpoint *r)
+{
+	switch (r->type) {
+	case AST_RANGE_ENDPOINT_LITERAL:
+		fprintf(f, "'");
+		print_char_or_esc(f, r->u.literal.c);
+		fprintf(f, "'");
+		break;
+	default:
+		assert(!"unreached");
+		break;
+	}
+}
+
+static void
+cc_pp_iter(FILE *f, const struct fsm_options *opt,
+	struct ast_class *n, size_t indent)
+{
+	size_t i;
+
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(n != NULL);
+
+	for (i = 0; i < indent; i++) { fprintf(f, " "); }
+
+	switch (n->type) {
+	case AST_CLASS_CONCAT:
+		fprintf(f, "CLASS-CONCAT %p: \n", (void *)n);
+		cc_pp_iter(f, opt, n->u.concat.l, indent + 4);
+		cc_pp_iter(f, opt, n->u.concat.r, indent + 4);
+		break;
+	case AST_CLASS_LITERAL:
+		fprintf(f, "CLASS-LITERAL %p: '", (void *)n);
+		print_char_or_esc(f, n->u.literal.c);
+		fprintf(f, "'\n");
+		break;
+	case AST_CLASS_RANGE:
+		fprintf(f, "CLASS-RANGE %p: ", (void *)n);
+		print_range_endpoint(f, &n->u.range.from);
+		fprintf(f, "-");
+		print_range_endpoint(f, &n->u.range.to);
+		fprintf(f, "\n");
+		break;
+	case AST_CLASS_NAMED:
+		fprintf(f, "CLASS-NAMED %p: %s\n",
+		    (void *)n, class_name(n->u.named.ctor));
+		break;
+	case AST_CLASS_FLAGS:
+		fprintf(f, "CLASS-FLAGS %p: [", (void *)n);
+		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) { 
+			fprintf(f, "^");
+		}
+		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
+			fprintf(f, "-");
+		}
+		fprintf(f, "]\n");
+		break;
+	case AST_CLASS_SUBTRACT:
+		fprintf(f, "CLASS-SUBTRACT %p:\n", (void *)n);
+		cc_pp_iter(f, opt, n->u.subtract.ast, indent + 4);
+		cc_pp_iter(f, opt, n->u.subtract.mask, indent + 4);
+		break;
+	default:
+		assert(!"unreached");
+	}
 }
 
 static void
@@ -186,93 +263,3 @@ ast_print_tree(FILE *f, const struct fsm_options *opt,
 	pp_iter(f, opt, 0, ast->expr);
 }
 
-static void
-re_flags_print(FILE *f, enum re_flags fl)
-{
-	const char *sep = "";
-	if (fl & RE_ICASE) { fprintf(f, "%sicase", sep); sep = " "; }
-	if (fl & RE_TEXT) { fprintf(f, "%stext ", sep); sep = " "; }
-	if (fl & RE_MULTI) { fprintf(f, "%smulti ", sep); sep = " "; }
-	if (fl & RE_REVERSE) { fprintf(f, "%sreverse ", sep); sep = " "; }
-	if (fl & RE_SINGLE) { fprintf(f, "%ssingle ", sep); sep = " "; }
-	if (fl & RE_ZONE) { fprintf(f, "%szone ", sep); sep = " "; }
-}
-
-static void
-print_range_endpoint(FILE *f, const struct ast_range_endpoint *r)
-{
-	switch (r->type) {
-	case AST_RANGE_ENDPOINT_LITERAL:
-		fprintf(f, "'");
-		print_char_or_esc(f, r->u.literal.c);
-		fprintf(f, "'");
-		break;
-	default:
-		assert(!"unreached");
-		break;
-	}
-}
-
-static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	struct ast_class *n, size_t indent)
-{
-	size_t i;
-
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(n != NULL);
-
-	for (i = 0; i < indent; i++) { fprintf(f, " "); }
-
-	switch (n->type) {
-	case AST_CLASS_CONCAT:
-		fprintf(f, "CLASS-CONCAT %p: \n", (void *)n);
-		cc_pp_iter(f, opt, n->u.concat.l, indent + 4);
-		cc_pp_iter(f, opt, n->u.concat.r, indent + 4);
-		break;
-	case AST_CLASS_LITERAL:
-		fprintf(f, "CLASS-LITERAL %p: '", (void *)n);
-		print_char_or_esc(f, n->u.literal.c);
-		fprintf(f, "'\n");
-		break;
-	case AST_CLASS_RANGE:
-		fprintf(f, "CLASS-RANGE %p: ", (void *)n);
-		print_range_endpoint(f, &n->u.range.from);
-		fprintf(f, "-");
-		print_range_endpoint(f, &n->u.range.to);
-		fprintf(f, "\n");
-		break;
-	case AST_CLASS_NAMED:
-		fprintf(f, "CLASS-NAMED %p: %s\n",
-		    (void *)n, class_name(n->u.named.ctor));
-		break;
-	case AST_CLASS_FLAGS:
-		fprintf(f, "CLASS-FLAGS %p: [", (void *)n);
-		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) { 
-			fprintf(f, "^");
-		}
-		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
-			fprintf(f, "-");
-		}
-		fprintf(f, "]\n");
-		break;
-	case AST_CLASS_SUBTRACT:
-		fprintf(f, "CLASS-SUBTRACT %p:\n", (void *)n);
-		cc_pp_iter(f, opt, n->u.subtract.ast, indent + 4);
-		cc_pp_iter(f, opt, n->u.subtract.mask, indent + 4);
-		break;
-	default:
-		assert(!"unreached");
-	}
-}
-
-static void
-print_char_or_esc(FILE *f, unsigned char c)
-{
-	if (isprint(c)) {
-		fprintf(f, "%c", c);
-	} else {
-		fprintf(f, "\\x%02x", c);
-	}
-}

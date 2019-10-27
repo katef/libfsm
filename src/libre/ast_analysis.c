@@ -28,199 +28,25 @@ struct anchoring_env {
 static int
 flatten(struct ast_expr **n);
 
-static enum re_analysis_res
-analysis_iter(struct analysis_env *env, struct ast_expr *n);
-
-static enum re_analysis_res
-analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n);
-
 static int
 is_nullable(const struct ast_expr *n) { return n->flags & RE_AST_FLAG_NULLABLE; }
 
-static void
-set_flags(struct ast_expr *n, enum ast_flags f);
-
 static int
-always_consumes_input(const struct ast_expr *n, int thud);
-
-static void
-assign_firsts(struct ast_expr *n);
-static void
-assign_lasts(struct ast_expr *n);
-
-enum re_analysis_res
-ast_analysis(struct ast *ast)
+is_start_anchor(const struct ast_expr *n)
 {
-	enum re_analysis_res res;
-
-	if (ast == NULL) { return RE_ANALYSIS_ERROR_NULL; }
-
-	assert(ast->expr != NULL);
-
-	if (!flatten(&ast->expr)) {
-		return RE_ANALYSIS_ERROR_MEMORY;
-	}
-
-	/* First pass -- track nullability, clean up some artifacts from
-	 * parsing, assign group IDs. */
-        {
-		struct analysis_env env;
-		memset(&env, 0x00, sizeof(env));
-		res = analysis_iter(&env, ast->expr);
-	}
-	if (res != RE_ANALYSIS_OK) {
-		return res;
-	}
-
-	/* Next passes, mark all nodes in a
-	 * first and/or last position. */
-        {
-		assign_firsts(ast->expr);
-		assign_lasts(ast->expr);
-	}
-
-	/* Next pass: set anchoring, now that nullability info from
-	 * the first pass is in place and some other things have been
-	 * cleaned up, and note whether the regex has any unsatisfiable
-	 * start anchors.*/
-        {
-		struct anchoring_env env;
-		memset(&env, 0x00, sizeof(env));
-		res = analysis_iter_anchoring(&env, ast->expr);
-		if (res != RE_ANALYSIS_OK) { return res; }
-	}
-
-	return res;
-}
-
-static unsigned
-count_chain(const struct ast_expr *n, enum ast_expr_type type)
-{
-	unsigned res = 0;
-	for (;;) {
-		assert(n != NULL);
-		if (n->type == AST_EXPR_EMPTY) {
-			return res;
-		} else {
-			assert(n->type == type);
-			res++;
-			switch (type) {
-			case AST_EXPR_CONCAT:
-				n = n->u.concat.r;
-				break;
-			case AST_EXPR_ALT:
-				n = n->u.alt.r;
-				break;
-			default:
-				assert(!"unreached");
-				break;
-			}
-		}
-	}
-}
-
-static struct ast_expr *
-collect_chain(size_t count, struct ast_expr *doomed)
-{
-	size_t i;
-	if (doomed->type == AST_EXPR_CONCAT) {
-		if (count == 1) {
-			struct ast_expr *res = doomed->u.concat.l;
-			if (!flatten(&doomed->u.concat.l)) { return 0; }
-			res = doomed->u.concat.l;
-
-			assert(doomed->u.concat.r->type == AST_EXPR_EMPTY);
-			doomed->u.concat.l = ast_expr_tombstone();
-			ast_expr_free(doomed);
-			assert(res->type != AST_EXPR_CONCAT);
-			return res;
-		} else {
-			struct ast_expr *dst = ast_expr_concat_n(count);
-			if (dst == NULL) { return NULL; }
-			
-			for (i = 0; i < count; i++) {
-				struct ast_expr *ndoomed = doomed->u.concat.r;
-				if (!flatten(&doomed->u.concat.l)) { return 0; }
-				dst->u.concat_n.n[i] = doomed->u.concat.l;
-				doomed->u.concat.l = ast_expr_tombstone();
-				doomed->u.concat.r = ast_expr_tombstone();
-				ast_expr_free(doomed);
-				doomed = ndoomed;
-				if (i == count - 1) {
-					assert(doomed->type == AST_EXPR_EMPTY);
-				}
-			}
-			return dst;
-		}
-	} else if (doomed->type == AST_EXPR_ALT) {
-		if (count == 1) {
-			/* If we get here, it's a parser bug. Right? */
-			assert(!"unreached");
-		} else {
-			struct ast_expr *dst = ast_expr_alt_n(count);
-			if (dst == NULL) { return NULL; }
-
-			for (i = 0; i < count; i++) {
-				struct ast_expr *ndoomed = doomed->u.alt.r;
-				if (!flatten(&doomed->u.alt.l)) { return 0; }
-				dst->u.alt_n.n[i] = doomed->u.alt.l;
-				doomed->u.alt.l = ast_expr_tombstone();
-				doomed->u.alt.r = ast_expr_tombstone();
-				ast_expr_free(doomed);
-				doomed = ndoomed;
-				if (i == count - 1) {
-					assert(doomed->type == AST_EXPR_EMPTY);
-				}
-			}
-			return dst;
-		}
-	} else {
-		assert(!"unreached");
-		return NULL;
-	}
-}
-
-/* TODO: do this directly in the parser. */
-static struct ast_expr *
-flatten_iter(struct ast_expr *n)
-{
-	switch (n->type) {
-	default:
-		return n;
-
-	case AST_EXPR_CONCAT:
-	{
-		const unsigned count = count_chain(n, AST_EXPR_CONCAT);
-		return collect_chain(count, n);
-	}
-
-	case AST_EXPR_ALT:
-	{
-		const unsigned count = count_chain(n, AST_EXPR_ALT);
-		return collect_chain(count, n);
-	}
-
-	case AST_EXPR_GROUP:
-		if (!flatten(&n->u.group.e)) { return NULL; }
-		return n;
-
-	case AST_EXPR_REPEATED:
-		if (!flatten(&n->u.repeated.e)) { return NULL; }
-		return n;
-	}
+	return n->type == AST_EXPR_ANCHOR && n->u.anchor.type == RE_AST_ANCHOR_START;
 }
 
 static int
-flatten(struct ast_expr **n)
+is_end_anchor(const struct ast_expr *n)
 {
-	struct ast_expr *res;
-	res = flatten_iter(*n);
-	if (res == NULL) {
-		return 0;
-	} else {
-		*n = res;
-		return 1;
-	}
+	return n->type == AST_EXPR_ANCHOR && n->u.anchor.type == RE_AST_ANCHOR_END;
+}
+
+static void
+set_flags(struct ast_expr *n, enum ast_flags f)
+{
+	n->flags |= f;
 }
 
 static enum re_analysis_res
@@ -364,18 +190,6 @@ always_consumes_input(const struct ast_expr *n, int thud)
 	default:
 		return 0;
 	}
-}
-
-static int
-is_start_anchor(const struct ast_expr *n)
-{
-	return n->type == AST_EXPR_ANCHOR && n->u.anchor.type == RE_AST_ANCHOR_START;
-}
-
-static int
-is_end_anchor(const struct ast_expr *n)
-{
-	return n->type == AST_EXPR_ANCHOR && n->u.anchor.type == RE_AST_ANCHOR_END;
 }
 
 static enum re_analysis_res
@@ -638,8 +452,177 @@ assign_lasts(struct ast_expr *n) {
 	    }
 }
 
-static void
-set_flags(struct ast_expr *n, enum ast_flags f)
+static unsigned
+count_chain(const struct ast_expr *n, enum ast_expr_type type)
 {
-	n->flags |= f;
+	unsigned res = 0;
+	for (;;) {
+		assert(n != NULL);
+		if (n->type == AST_EXPR_EMPTY) {
+			return res;
+		} else {
+			assert(n->type == type);
+			res++;
+			switch (type) {
+			case AST_EXPR_CONCAT:
+				n = n->u.concat.r;
+				break;
+			case AST_EXPR_ALT:
+				n = n->u.alt.r;
+				break;
+			default:
+				assert(!"unreached");
+				break;
+			}
+		}
+	}
+}
+
+static struct ast_expr *
+collect_chain(size_t count, struct ast_expr *doomed)
+{
+	size_t i;
+	if (doomed->type == AST_EXPR_CONCAT) {
+		if (count == 1) {
+			struct ast_expr *res = doomed->u.concat.l;
+			if (!flatten(&doomed->u.concat.l)) { return 0; }
+			res = doomed->u.concat.l;
+
+			assert(doomed->u.concat.r->type == AST_EXPR_EMPTY);
+			doomed->u.concat.l = ast_expr_tombstone();
+			ast_expr_free(doomed);
+			assert(res->type != AST_EXPR_CONCAT);
+			return res;
+		} else {
+			struct ast_expr *dst = ast_expr_concat_n(count);
+			if (dst == NULL) { return NULL; }
+			
+			for (i = 0; i < count; i++) {
+				struct ast_expr *ndoomed = doomed->u.concat.r;
+				if (!flatten(&doomed->u.concat.l)) { return 0; }
+				dst->u.concat_n.n[i] = doomed->u.concat.l;
+				doomed->u.concat.l = ast_expr_tombstone();
+				doomed->u.concat.r = ast_expr_tombstone();
+				ast_expr_free(doomed);
+				doomed = ndoomed;
+				if (i == count - 1) {
+					assert(doomed->type == AST_EXPR_EMPTY);
+				}
+			}
+			return dst;
+		}
+	} else if (doomed->type == AST_EXPR_ALT) {
+		if (count == 1) {
+			/* If we get here, it's a parser bug. Right? */
+			assert(!"unreached");
+		} else {
+			struct ast_expr *dst = ast_expr_alt_n(count);
+			if (dst == NULL) { return NULL; }
+
+			for (i = 0; i < count; i++) {
+				struct ast_expr *ndoomed = doomed->u.alt.r;
+				if (!flatten(&doomed->u.alt.l)) { return 0; }
+				dst->u.alt_n.n[i] = doomed->u.alt.l;
+				doomed->u.alt.l = ast_expr_tombstone();
+				doomed->u.alt.r = ast_expr_tombstone();
+				ast_expr_free(doomed);
+				doomed = ndoomed;
+				if (i == count - 1) {
+					assert(doomed->type == AST_EXPR_EMPTY);
+				}
+			}
+			return dst;
+		}
+	} else {
+		assert(!"unreached");
+		return NULL;
+	}
+}
+
+/* TODO: do this directly in the parser. */
+static struct ast_expr *
+flatten_iter(struct ast_expr *n)
+{
+	switch (n->type) {
+	default:
+		return n;
+
+	case AST_EXPR_CONCAT:
+	{
+		const unsigned count = count_chain(n, AST_EXPR_CONCAT);
+		return collect_chain(count, n);
+	}
+
+	case AST_EXPR_ALT:
+	{
+		const unsigned count = count_chain(n, AST_EXPR_ALT);
+		return collect_chain(count, n);
+	}
+
+	case AST_EXPR_GROUP:
+		if (!flatten(&n->u.group.e)) { return NULL; }
+		return n;
+
+	case AST_EXPR_REPEATED:
+		if (!flatten(&n->u.repeated.e)) { return NULL; }
+		return n;
+	}
+}
+
+static int
+flatten(struct ast_expr **n)
+{
+	struct ast_expr *res;
+	res = flatten_iter(*n);
+	if (res == NULL) {
+		return 0;
+	} else {
+		*n = res;
+		return 1;
+	}
+}
+
+enum re_analysis_res
+ast_analysis(struct ast *ast)
+{
+	enum re_analysis_res res;
+
+	if (ast == NULL) { return RE_ANALYSIS_ERROR_NULL; }
+
+	assert(ast->expr != NULL);
+
+	if (!flatten(&ast->expr)) {
+		return RE_ANALYSIS_ERROR_MEMORY;
+	}
+
+	/* First pass -- track nullability, clean up some artifacts from
+	 * parsing, assign group IDs. */
+        {
+		struct analysis_env env;
+		memset(&env, 0x00, sizeof(env));
+		res = analysis_iter(&env, ast->expr);
+	}
+	if (res != RE_ANALYSIS_OK) {
+		return res;
+	}
+
+	/* Next passes, mark all nodes in a
+	 * first and/or last position. */
+        {
+		assign_firsts(ast->expr);
+		assign_lasts(ast->expr);
+	}
+
+	/* Next pass: set anchoring, now that nullability info from
+	 * the first pass is in place and some other things have been
+	 * cleaned up, and note whether the regex has any unsatisfiable
+	 * start anchors.*/
+        {
+		struct anchoring_env env;
+		memset(&env, 0x00, sizeof(env));
+		res = analysis_iter_anchoring(&env, ast->expr);
+		if (res != RE_ANALYSIS_OK) { return res; }
+	}
+
+	return res;
 }

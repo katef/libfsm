@@ -17,19 +17,101 @@
 #include "../print.h"
 
 static void
-re_flags_print(FILE *f, enum re_flags fl);
-
-static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	const void *parent, struct ast_class *n);
-
-static void
 fprintf_count(FILE *f, unsigned count)
 {
 	if (count == AST_COUNT_UNBOUNDED) {
 		fprintf(f, "&#x221e;");
 	} else {
 		fprintf(f, "%u", count);
+	}
+}
+
+static void
+re_flags_print(FILE *f, enum re_flags fl)
+{
+	if (fl & RE_ICASE  ) { fprintf(f, "i"); }
+	if (fl & RE_TEXT   ) { fprintf(f, "g"); }
+	if (fl & RE_MULTI  ) { fprintf(f, "m"); }
+	if (fl & RE_REVERSE) { fprintf(f, "r"); }
+	if (fl & RE_SINGLE ) { fprintf(f, "s"); }
+	if (fl & RE_ZONE   ) { fprintf(f, "z"); }
+}
+
+static void
+print_range_endpoint(FILE *f, const struct fsm_options *opt,
+	const struct ast_range_endpoint *r)
+{
+	switch (r->type) {
+	case AST_RANGE_ENDPOINT_LITERAL:
+		dot_escputc_html(f, opt, r->u.literal.c);
+		break;
+
+	default:
+		assert(!"unreached");
+		break;
+	}
+}
+
+static void
+cc_pp_iter(FILE *f, const struct fsm_options *opt,
+	const void *parent, struct ast_class *n)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(n != NULL);
+
+	if (parent != NULL) {
+		fprintf(f, "\tn%p -> n%p;\n", parent, (void *) n);
+	}
+
+	fprintf(f, "\tn%p [ style = \"filled\", fillcolor = \"#eeeeee\" ];\n", (void *) n);
+
+	switch (n->type) {
+	case AST_CLASS_CONCAT:
+		fprintf(f, "\tn%p [ label = <CLASS-CONCAT> ];\n", (void *) n);
+		cc_pp_iter(f, opt, n, n->u.concat.l);
+		cc_pp_iter(f, opt, n, n->u.concat.r);
+		break;
+
+	case AST_CLASS_LITERAL:
+		fprintf(f, "\tn%p [ label = <CLASS-LITERAL|", (void *) n);
+		dot_escputc_html(f, opt, n->u.literal.c);
+		fprintf(f, "> ];\n");
+		break;
+
+	case AST_CLASS_RANGE:
+		fprintf(f, "\tn%p [ label = <CLASS-RANGE|", (void *) n);
+		print_range_endpoint(f, opt, &n->u.range.from);
+		fprintf(f, " &ndash; ");
+		print_range_endpoint(f, opt, &n->u.range.to);
+		fprintf(f, "> ];\n");
+		break;
+
+	case AST_CLASS_NAMED:
+		/* abstract class names are internal strings, assumed to not need escaping */
+		fprintf(f, "\tn%p [ label = <CLASS-NAMED|%s> ];\n",
+			(void *) n, class_name(n->u.named.ctor));
+		break;
+
+	case AST_CLASS_FLAGS:
+		fprintf(f, "\tn%p [ label = <CLASS-FLAGS|", (void *) n);
+		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
+			fprintf(f, "^");
+		}
+		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
+			fprintf(f, "-");
+		}
+		fprintf(f, "> ];\n");
+		break;
+
+	case AST_CLASS_SUBTRACT:
+		fprintf(f, "\tn%p [ label = <{CLASS-SUBTRACT|{ast|mask}}> ];\n", (void *) n);
+		cc_pp_iter(f, opt, n, n->u.subtract.ast);
+		cc_pp_iter(f, opt, n, n->u.subtract.mask);
+		break;
+
+	default:
+		assert(!"unreached");
 	}
 }
 
@@ -154,94 +236,5 @@ ast_print_dot(FILE *f, const struct fsm_options *opt,
 	pp_iter(f, opt, NULL, ast->expr);
 
 	fprintf(f, "}\n");
-}
-
-static void
-re_flags_print(FILE *f, enum re_flags fl)
-{
-	if (fl & RE_ICASE  ) { fprintf(f, "i"); }
-	if (fl & RE_TEXT   ) { fprintf(f, "g"); }
-	if (fl & RE_MULTI  ) { fprintf(f, "m"); }
-	if (fl & RE_REVERSE) { fprintf(f, "r"); }
-	if (fl & RE_SINGLE ) { fprintf(f, "s"); }
-	if (fl & RE_ZONE   ) { fprintf(f, "z"); }
-}
-
-static void
-print_range_endpoint(FILE *f, const struct fsm_options *opt,
-	const struct ast_range_endpoint *r)
-{
-	switch (r->type) {
-	case AST_RANGE_ENDPOINT_LITERAL:
-		dot_escputc_html(f, opt, r->u.literal.c);
-		break;
-
-	default:
-		assert(!"unreached");
-		break;
-	}
-}
-
-static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	const void *parent, struct ast_class *n)
-{
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(n != NULL);
-
-	if (parent != NULL) {
-		fprintf(f, "\tn%p -> n%p;\n", parent, (void *) n);
-	}
-
-	fprintf(f, "\tn%p [ style = \"filled\", fillcolor = \"#eeeeee\" ];\n", (void *) n);
-
-	switch (n->type) {
-	case AST_CLASS_CONCAT:
-		fprintf(f, "\tn%p [ label = <CLASS-CONCAT> ];\n", (void *) n);
-		cc_pp_iter(f, opt, n, n->u.concat.l);
-		cc_pp_iter(f, opt, n, n->u.concat.r);
-		break;
-
-	case AST_CLASS_LITERAL:
-		fprintf(f, "\tn%p [ label = <CLASS-LITERAL|", (void *) n);
-		dot_escputc_html(f, opt, n->u.literal.c);
-		fprintf(f, "> ];\n");
-		break;
-
-	case AST_CLASS_RANGE:
-		fprintf(f, "\tn%p [ label = <CLASS-RANGE|", (void *) n);
-		print_range_endpoint(f, opt, &n->u.range.from);
-		fprintf(f, " &ndash; ");
-		print_range_endpoint(f, opt, &n->u.range.to);
-		fprintf(f, "> ];\n");
-		break;
-
-	case AST_CLASS_NAMED:
-		/* abstract class names are internal strings, assumed to not need escaping */
-		fprintf(f, "\tn%p [ label = <CLASS-NAMED|%s> ];\n",
-			(void *) n, class_name(n->u.named.ctor));
-		break;
-
-	case AST_CLASS_FLAGS:
-		fprintf(f, "\tn%p [ label = <CLASS-FLAGS|", (void *) n);
-		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
-			fprintf(f, "^");
-		}
-		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
-			fprintf(f, "-");
-		}
-		fprintf(f, "> ];\n");
-		break;
-
-	case AST_CLASS_SUBTRACT:
-		fprintf(f, "\tn%p [ label = <{CLASS-SUBTRACT|{ast|mask}}> ];\n", (void *) n);
-		cc_pp_iter(f, opt, n, n->u.subtract.ast);
-		cc_pp_iter(f, opt, n, n->u.subtract.mask);
-		break;
-
-	default:
-		assert(!"unreached");
-	}
 }
 
