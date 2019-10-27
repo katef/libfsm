@@ -409,7 +409,7 @@ cc_invert(struct cc *cc)
 }
 
 static int
-comp_iter(struct cc *cc, struct ast_class *n)
+comp_iter(struct cc *cc, const struct ast_class *n)
 {
 	assert(cc != NULL);
 	assert(n != NULL);
@@ -440,7 +440,7 @@ comp_iter(struct cc *cc, struct ast_class *n)
 }
 
 int
-ast_class_compile(struct ast_class *class,
+ast_class_compile(const struct ast_class *class,
     struct fsm *fsm, enum re_flags flags,
     struct re_err *err, const struct fsm_options *opt,
     struct fsm_state *x, struct fsm_state *y)
