@@ -31,7 +31,7 @@ flatten(struct ast_expr **n);
 static int
 is_nullable(const struct ast_expr *n)
 {
-	return n->flags & RE_AST_FLAG_NULLABLE;
+	return n->flags & AST_EXPR_FLAG_NULLABLE;
 }
 
 static int
@@ -47,9 +47,9 @@ is_end_anchor(const struct ast_expr *n)
 }
 
 static void
-set_flags(struct ast_expr *n, enum ast_flags f)
+set_flags(struct ast_expr *n, enum ast_expr_flags flags)
 {
-	n->flags |= f;
+	n->flags |= flags;
 }
 
 static enum re_analysis_res
@@ -67,7 +67,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 
 		for (i = 0; i < n->u.concat_n.count; i++) {
 			if (is_nullable(n)) {
-				set_flags(n->u.concat_n.n[i], RE_AST_FLAG_NULLABLE);
+				set_flags(n->u.concat_n.n[i], AST_EXPR_FLAG_NULLABLE);
 			}
 			analysis_iter(env, n->u.concat_n.n[i]);
 		}
@@ -82,13 +82,13 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 			analysis_iter(env, n->u.alt_n.n[i]);
 			/* spread nullability upward */
 			if (is_nullable(n->u.alt_n.n[i])) {
-				set_flags(n, RE_AST_FLAG_NULLABLE);
+				set_flags(n, AST_EXPR_FLAG_NULLABLE);
 			}
 		}
 
 		if (is_nullable(n)) { /* spread nullability downward */
 			for (i = 0; i < n->u.alt_n.count; i++) {
-				set_flags(n->u.alt_n.n[i], RE_AST_FLAG_NULLABLE);
+				set_flags(n->u.alt_n.n[i], AST_EXPR_FLAG_NULLABLE);
 			}
 		}
 		break;
@@ -99,17 +99,17 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		assert(e != NULL);
 
 		if (n->u.repeated.low == 0) {
-			set_flags(n, RE_AST_FLAG_NULLABLE);
+			set_flags(n, AST_EXPR_FLAG_NULLABLE);
 		}
 
 		if (is_nullable(n)) {
-			set_flags(e, RE_AST_FLAG_NULLABLE);
+			set_flags(e, AST_EXPR_FLAG_NULLABLE);
 		}
 
 		analysis_iter(env, e);
 
 		if (is_nullable(e)) {
-			set_flags(n, RE_AST_FLAG_NULLABLE);
+			set_flags(n, AST_EXPR_FLAG_NULLABLE);
 		}
 		break;
 	}
@@ -118,7 +118,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		struct ast_expr *e = n->u.group.e;
 
 		if (is_nullable(n)) {
-			set_flags(e, RE_AST_FLAG_NULLABLE);
+			set_flags(e, AST_EXPR_FLAG_NULLABLE);
 		}
 
 		/* assign group ID */
@@ -128,13 +128,13 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		analysis_iter(env, e);
 
 		if (is_nullable(e)) {
-			set_flags(n, RE_AST_FLAG_NULLABLE);
+			set_flags(n, AST_EXPR_FLAG_NULLABLE);
 		}
 		break;
 	}
 
 	case AST_EXPR_FLAGS:
-		set_flags(n, RE_AST_FLAG_NULLABLE); 
+		set_flags(n, AST_EXPR_FLAG_NULLABLE); 
 		break;
 
 	case AST_EXPR_CLASS:
@@ -242,8 +242,8 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				 * up the results for linking.
 				 */
 
-				set_flags(n, RE_AST_FLAG_UNSATISFIABLE);
-				assert(0 == (n->flags & RE_AST_FLAG_FIRST_STATE));
+				set_flags(n, AST_EXPR_FLAG_UNSATISFIABLE);
+				assert(0 == (n->flags & AST_EXPR_FLAG_FIRST));
 				return RE_ANALYSIS_UNSATISFIABLE;
 			}
 
@@ -258,8 +258,8 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				 * ones with arbitrary nesting).
 				 */
 
-				assert(0 == (n->flags & RE_AST_FLAG_LAST_STATE));
-				set_flags(n, RE_AST_FLAG_UNSATISFIABLE);
+				assert(0 == (n->flags & AST_EXPR_FLAG_LAST));
+				set_flags(n, AST_EXPR_FLAG_UNSATISFIABLE);
 				return RE_ANALYSIS_UNSATISFIABLE;
 			}
 
@@ -363,7 +363,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 		/* An ALT group is only unstaisfiable if they ALL are. */
 		if (!any_sat) {
-			set_flags(n, RE_AST_FLAG_UNSATISFIABLE);
+			set_flags(n, AST_EXPR_FLAG_UNSATISFIABLE);
 			return RE_ANALYSIS_UNSATISFIABLE;
 		}
 		break;
@@ -400,20 +400,20 @@ assign_firsts(struct ast_expr *n)
 
 	case AST_EXPR_ANCHOR:
 		if (n->u.anchor.type == RE_AST_ANCHOR_START) {
-			set_flags(n, RE_AST_FLAG_FIRST_STATE);
+			set_flags(n, AST_EXPR_FLAG_FIRST);
 		}
 		break;
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
 	case AST_EXPR_CLASS:
-		set_flags(n, RE_AST_FLAG_FIRST_STATE);
+		set_flags(n, AST_EXPR_FLAG_FIRST);
 		break;
 
 	case AST_EXPR_CONCAT_N: {
 		size_t i;
 
-		set_flags(n, RE_AST_FLAG_FIRST_STATE);
+		set_flags(n, AST_EXPR_FLAG_FIRST);
 		for (i = 0; i < n->u.concat_n.count; i++) {
 			struct ast_expr *child = n->u.concat_n.n[i];
 			assign_firsts(child);
@@ -428,7 +428,7 @@ assign_firsts(struct ast_expr *n)
 	case AST_EXPR_ALT_N: {
 		size_t i;
 
-		set_flags(n, RE_AST_FLAG_FIRST_STATE);
+		set_flags(n, AST_EXPR_FLAG_FIRST);
 		for (i = 0; i < n->u.alt_n.count; i++) {
 			assign_firsts(n->u.alt_n.n[i]);
 		}
@@ -436,12 +436,12 @@ assign_firsts(struct ast_expr *n)
 	}
 
 	case AST_EXPR_REPEATED:
-		set_flags(n, RE_AST_FLAG_FIRST_STATE);
+		set_flags(n, AST_EXPR_FLAG_FIRST);
 		assign_firsts(n->u.repeated.e);
 		break;
 
 	case AST_EXPR_GROUP:
-		set_flags(n, RE_AST_FLAG_FIRST_STATE);
+		set_flags(n, AST_EXPR_FLAG_FIRST);
 		assign_firsts(n->u.group.e);
 		break;
 
@@ -459,19 +459,19 @@ assign_lasts(struct ast_expr *n)
 		break;
 
 	case AST_EXPR_ANCHOR:
-		set_flags(n, RE_AST_FLAG_LAST_STATE);
+		set_flags(n, AST_EXPR_FLAG_LAST);
 		break;
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
 	case AST_EXPR_CLASS:
-		set_flags(n, RE_AST_FLAG_LAST_STATE);
+		set_flags(n, AST_EXPR_FLAG_LAST);
 		break;
 
 	case AST_EXPR_CONCAT_N: {
 		size_t i;
 
-		set_flags(n, RE_AST_FLAG_LAST_STATE);
+		set_flags(n, AST_EXPR_FLAG_LAST);
 
 		/* iterate in reverse, break on rollover */
 		for (i = n->u.concat_n.count - 1; i < n->u.concat_n.count; i--) {
@@ -487,7 +487,7 @@ assign_lasts(struct ast_expr *n)
 	case AST_EXPR_ALT_N: {
 		size_t i;
 
-		set_flags(n, RE_AST_FLAG_LAST_STATE);
+		set_flags(n, AST_EXPR_FLAG_LAST);
 		for (i = 0; i < n->u.alt_n.count; i++) {
 			assign_lasts(n->u.alt_n.n[i]);
 		}
@@ -495,12 +495,12 @@ assign_lasts(struct ast_expr *n)
 	}
 
 	case AST_EXPR_REPEATED:
-		set_flags(n, RE_AST_FLAG_LAST_STATE);
+		set_flags(n, AST_EXPR_FLAG_LAST);
 		assign_lasts(n->u.repeated.e);
 		break;
 
 	case AST_EXPR_GROUP:
-		set_flags(n, RE_AST_FLAG_LAST_STATE);
+		set_flags(n, AST_EXPR_FLAG_LAST);
 		assign_lasts(n->u.group.e);
 		break;
 

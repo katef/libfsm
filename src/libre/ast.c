@@ -152,7 +152,7 @@ ast_expr_empty(void)
 	}
 
 	res->type = AST_EXPR_EMPTY;
-	res->flags = RE_AST_FLAG_NULLABLE;
+	res->flags = AST_EXPR_FLAG_NULLABLE;
 
 	return res;
 }

@@ -55,30 +55,30 @@ enum ast_anchor_type {
 /*
  * Flags used during AST analysis for expression nodes:
  *
- * - RE_AST_FLAG_FIRST_STATE
+ * - AST_EXPR_FLAG_FIRST
  *   The node can appear at the beginning of input,
  *   possibly preceded by other nullable nodes.
  *
- * - RE_AST_FLAG_LAST_STATE
+ * - AST_EXPR_FLAG_LAST
  *   This node can appear at the end of input, possibly
  *   followed by nullable nodes.
  *
- * - RE_AST_FLAG_UNSATISFIABLE
+ * - AST_EXPR_FLAG_UNSATISFIABLE
  *   The node caused the regex to become unsatisfiable.
  *
- * - RE_AST_FLAG_NULLABLE
+ * - AST_EXPR_FLAG_NULLABLE
  *   The node is not always evaluated, such as nodes that
  *   are repeated at least 0 times.
  *
  * Not all are valid for all node types.
  */
-enum ast_flags {
-	RE_AST_FLAG_FIRST_STATE   = 1 << 0,
-	RE_AST_FLAG_LAST_STATE    = 1 << 1,
-	RE_AST_FLAG_UNSATISFIABLE = 1 << 2,
-	RE_AST_FLAG_NULLABLE      = 1 << 3,
+enum ast_expr_flags {
+	AST_EXPR_FLAG_FIRST         = 1 << 0,
+	AST_EXPR_FLAG_LAST          = 1 << 1,
+	AST_EXPR_FLAG_UNSATISFIABLE = 1 << 2,
+	AST_EXPR_FLAG_NULLABLE      = 1 << 3,
 
-	RE_AST_FLAG_NONE = 0x00
+	AST_EXPR_FLAG_NONE = 0x00
 };
 
 #define NO_GROUP_ID ((unsigned)-1)
@@ -175,7 +175,7 @@ struct ast_class {
  */
 struct ast_expr {
 	enum ast_expr_type type;
-	enum ast_flags flags;
+	enum ast_expr_flags flags;
 
 	union {
 		struct {

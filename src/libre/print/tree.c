@@ -41,17 +41,17 @@ fprintf_count(FILE *f, unsigned count)
 }
 
 static void
-fprintf_flags(FILE *f, enum ast_flags flags)
+fprintf_flags(FILE *f, enum ast_expr_flags flags)
 {
 	fprintf(f, "(f: ");
 
-#define PR_FLAG(X, S)                         \
-    if (0 != (flags & (RE_AST_FLAG_ ## X))) { \
-        fprintf(f, "%s", S);                  \
+#define PR_FLAG(X, S)                           \
+    if (0 != (flags & (AST_EXPR_FLAG_ ## X))) { \
+        fprintf(f, "%s", S);                    \
     }
     
-	PR_FLAG(FIRST_STATE,   "F");
-	PR_FLAG(LAST_STATE,    "L");
+	PR_FLAG(FIRST,         "F");
+	PR_FLAG(LAST,          "L");
 	PR_FLAG(UNSATISFIABLE, "X");
 	PR_FLAG(NULLABLE,      "0");
 
