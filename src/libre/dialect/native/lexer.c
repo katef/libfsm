@@ -624,7 +624,7 @@ z1(struct lx_native_lx *lx)
 			break;
 
 		case S49: /* e.g. "[:word:]" */
-			lx_native_ungetc(lx, c); return TOK_NAMED__CHAR__CLASS;
+			lx_native_ungetc(lx, c); return TOK_NAMED__CLASS;
 
 		case S50: /* e.g. "[:pun" */
 			switch ((unsigned char) c) {
@@ -736,7 +736,7 @@ z1(struct lx_native_lx *lx)
 	case S3: return TOK_CHAR;
 	case S5: return TOK_CLOSEGROUP;
 	case S6: return TOK_INVERT;
-	case S49: return TOK_NAMED__CHAR__CLASS;
+	case S49: return TOK_NAMED__CLASS;
 	case S52: return TOK_ESC;
 	case S53: return TOK_OCT;
 	case S56: return TOK_HEX;
@@ -996,7 +996,7 @@ lx_native_name(enum lx_native_token t)
 	case TOK_CLOSECOUNT: return "CLOSECOUNT";
 	case TOK_OPENCOUNT: return "OPENCOUNT";
 	case TOK_CHAR: return "CHAR";
-	case TOK_NAMED__CHAR__CLASS: return "NAMED__CHAR__CLASS";
+	case TOK_NAMED__CLASS: return "NAMED__CLASS";
 	case TOK_RANGE: return "RANGE";
 	case TOK_INVERT: return "INVERT";
 	case TOK_CLOSEGROUP: return "CLOSEGROUP";
@@ -1036,7 +1036,7 @@ lx_native_example(enum lx_native_token (*z)(struct lx_native_lx *), enum lx_nati
 	if (z == z1) {
 		switch (t) {
 		case TOK_CHAR: return "a";
-		case TOK_NAMED__CHAR__CLASS: return "[:word:]";
+		case TOK_NAMED__CLASS: return "[:word:]";
 		case TOK_RANGE: return "-";
 		case TOK_INVERT: return "^";
 		case TOK_CLOSEGROUP: return "]";

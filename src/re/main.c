@@ -23,8 +23,9 @@
 #include <re/re.h>
 
 #include "libfsm/internal.h" /* XXX */
-#include "libre/re_comp.h" /* XXX */
 #include "libre/print.h" /* XXX */
+#include "libre/class.h" /* XXX */
+#include "libre/ast.h" /* XXX */
 
 /*
  * TODO: accepting a delimiter would be useful: /abc/. perhaps provide that as
@@ -86,14 +87,14 @@ io(const char *name)
 
 static void
 print_name(const char *name,
-	fsm_print **print_fsm, re_ast_print **print_ast)
+	fsm_print **print_fsm, ast_print **print_ast)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		fsm_print    *print_fsm;
-		re_ast_print *print_ast;
+		fsm_print *print_fsm;
+		ast_print *print_ast;
 	} a[] = {
 		{ "api",    fsm_print_api,    NULL  },
 		{ "c",      fsm_print_c,      NULL  },
@@ -103,10 +104,10 @@ print_name(const char *name,
 		{ "irjson", fsm_print_irjson, NULL  },
 		{ "json",   fsm_print_json,   NULL  },
 
-		{ "tree",   NULL, re_ast_print_tree },
-		{ "abnf",   NULL, re_ast_print_abnf },
-		{ "ast",    NULL, re_ast_print_dot  },
-		{ "pcre",   NULL, re_ast_print_pcre }
+		{ "tree",   NULL, ast_print_tree },
+		{ "abnf",   NULL, ast_print_abnf },
+		{ "ast",    NULL, ast_print_dot  },
+		{ "pcre",   NULL, ast_print_pcre }
 	};
 
 	assert(name != NULL);
@@ -433,7 +434,7 @@ main(int argc, char *argv[])
 	struct fsm *(*join)(struct fsm *, struct fsm *);
 	int (*query)(const struct fsm *, const struct fsm *);
 	fsm_print *print_fsm;
-	re_ast_print *print_ast;
+	ast_print *print_ast;
 	enum re_dialect dialect;
 	struct fsm *fsm;
 	enum re_flags flags;
@@ -547,7 +548,7 @@ main(int argc, char *argv[])
 
 	/* XXX: repetitive */
 	if (print_ast != NULL) {
-		struct ast_re *ast;
+		struct ast *ast;
 		struct re_err err;
 
 		if (argc != 1) {
@@ -560,7 +561,7 @@ main(int argc, char *argv[])
 
 			f = xopen(argv[0]);
 
-			ast = re_parse(dialect, fsm_fgetc, f, &opt, flags, &err);
+			ast = re_parse(dialect, fsm_fgetc, f, &opt, flags, &err, NULL);
 
 			fclose(f);
 		} else {
@@ -568,7 +569,7 @@ main(int argc, char *argv[])
 
 			s = argv[0];
 
-			ast = re_parse(dialect, fsm_sgetc, &s, &opt, flags, &err);
+			ast = re_parse(dialect, fsm_sgetc, &s, &opt, flags, &err, NULL);
 		}
 
 		if (ast == NULL) {

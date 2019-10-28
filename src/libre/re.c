@@ -12,19 +12,15 @@
 #include <re/re.h>
 
 #include <fsm/fsm.h>
-#include <fsm/bool.h>
-
-#include "../libfsm/internal.h" /* XXX */
-
-#include "class.h"
-#include "print.h"
-#include "re_ast.h"
-#include "re_comp.h"
-#include "re_analysis.h"
-
-#include "dialect/comp.h"
 
 #include "ac.h"
+#include "class.h"
+#include "print.h"
+#include "ast.h"
+#include "ast_analysis.h"
+#include "ast_compile.h"
+
+#include "dialect/comp.h"
 
 struct dialect {
 	enum re_dialect dialect;
@@ -92,14 +88,14 @@ re_flags(const char *s, enum re_flags *f)
 	return 0;
 }
 
-struct ast_re *
+struct ast *
 re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct fsm_options *opt,
-	enum re_flags flags, struct re_err *err)
+	enum re_flags flags, struct re_err *err, int *unsatisfiable)
 {
 	const struct dialect *m;
-	struct ast_re *ast = NULL;
-	enum re_analysis_res res;
+	struct ast *ast = NULL;
+	enum ast_analysis_res res;
 	
 	assert(getc != NULL);
 
@@ -117,15 +113,17 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	}
 
 	/* Do a complete pass over the AST, filling in other details. */
-	res = re_ast_analysis(ast);
+	res = ast_analysis(ast);
 
 	if (res < 0) {
-		re_ast_free(ast);
+		ast_free(ast);
 		if (err != NULL) { err->e = RE_EERRNO; }
 		return NULL;
 	}
 
-	ast->unsatisfiable = (res == RE_ANALYSIS_UNSATISFIABLE);
+	if (unsatisfiable != NULL) {
+		*unsatisfiable = (res == AST_ANALYSIS_UNSATISFIABLE);
+	}
 
 	return ast;
 }
@@ -135,12 +133,12 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err)
 {
-	struct ast_re *ast;
+	struct ast *ast;
 	struct fsm *new;
 	const struct dialect *m;
+	int unsatisfiable;
 
 	m = re_dialect(dialect);
-
 	if (m == NULL) {
 		if (err != NULL) { err->e = RE_EBADDIALECT; }
 		return NULL;
@@ -148,49 +146,37 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	flags |= m->flags;
 
-	ast = re_parse(dialect, getc, opaque, opt, flags, err);
+	ast = re_parse(dialect, getc, opaque, opt, flags, err, &unsatisfiable);
 	if (ast == NULL) { return NULL; }
 
-	/* If the RE is inherently unsatisfiable, then free the
+	/*
+	 * If the RE is inherently unsatisfiable, then free the
 	 * AST and replace it with an empty tombstone node.
 	 * This will compile to an FSM that matches nothing, so
-	 * that unioning it with other regexes will still work. */
-	if (ast->unsatisfiable) {
-		struct ast_expr *unsat = ast->expr;
-		ast->expr = re_ast_expr_tombstone();
-		re_ast_expr_free(unsat);
+	 * that unioning it with other regexes will still work.
+	 */
+	if (unsatisfiable) {
+		ast_expr_free(ast->expr);
+		ast->expr = ast_expr_tombstone;
 	}
 
-	new = re_comp_ast(ast, flags, opt, err);
-	re_ast_free(ast);
-	ast = NULL;
+	new = ast_compile(ast, flags, opt, err);
+
+	ast_free(ast);
 
 	if (new == NULL) {
-		if (err != NULL && err->e == RE_ESUCCESS) {
-			/* If we got here, we had a parse error
-			 * without error information set. */
-			assert(0);
-		}
-		return NULL;
-	}
-	
-	/*
-	 * All flags operators commute with respect to composition.
-	 * That is, the order of application here does not matter;
-	 * here I'm trying to keep these ordered for efficiency.
-	 */
-
-	if (flags & RE_REVERSE) {
-		if (!fsm_reverse(new)) { goto error; }
+		/* XXX: this can happen e.g. on malloc failure */
+		assert(err == NULL || err->e != RE_ESUCCESS);
+		goto error;
 	}
 
 	return new;
 
 error:
 
-	if (new != NULL) { fsm_free(new); }
-	if (ast != NULL) { re_ast_free(ast); }
-	if (err != NULL) { err->e = RE_EERRNO; }
+	if (err != NULL) {
+		err->e = RE_EERRNO;
+	}
 
 	return NULL;
 }

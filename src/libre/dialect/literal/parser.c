@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 149 "src/libre/parser.act"
+#line 144 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -20,12 +20,11 @@
 	#include <errno.h>
 	#include <ctype.h>
 
+	#include <re/re.h>
+
 	#include "libre/class.h"
 	#include "libre/class_lookup.h"
-	#include "libre/re_char_class.h"
-	#include "libre/re_ast.h"
-
-	#include <re/re.h>
+	#include "libre/ast.h"
 
 	#ifndef DIALECT
 	#error DIALECT required
@@ -42,7 +41,7 @@
 	#define LX_INIT    CAT(LX_PREFIX, _init)
 
 	#define DIALECT_PARSE  CAT(parse_re_, DIALECT)
-	#define DIALECT_CHAR_CLASS  CAT(re_char_class_, DIALECT)
+	#define DIALECT_CLASS  CAT(re_class_, DIALECT)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
 	#define DIALECT_ENTRY CAT(p_re__, DIALECT)
@@ -68,20 +67,18 @@
 	#define TOK_CLASS__ndigit  TOK_CLASS_NDIGIT
 
 	/* This is a hack to work around the AST files not being able to include lexer.h. */
-	#define AST_POS_OF_LX_POS(AST_POS, LX_POS)			\
-		do {							\
-			AST_POS.line = LX_POS.line;			\
-			AST_POS.col = LX_POS.col;			\
-			AST_POS.byte = LX_POS.byte;			\
-		} while (0)
-
+	#define AST_POS_OF_LX_POS(AST_POS, LX_POS) \
+	    do {                                   \
+	        AST_POS.line = LX_POS.line;        \
+	        AST_POS.col = LX_POS.col;          \
+	        AST_POS.byte = LX_POS.byte;        \
+	    } while (0)
 
 	#include "parser.h"
 	#include "lexer.h"
 
 	#include "../comp.h"
 	#include "../../class.h"
-	#include "../../re_char_class.h"
 
 	struct flags {
 		enum re_flags flags;
@@ -94,14 +91,12 @@
 
 	typedef struct lx_pos t_pos;
 	typedef enum re_flags t_re__flags;
-	typedef char_class_constructor * t_ast__char__class__id;
+	typedef class_constructor * t_ast__class__id;
 	typedef struct ast_count t_ast__count;
+	typedef struct ast_endpoint t_endpoint;
 
-	typedef struct re_char_class_ast * t_char__class__ast;
-	typedef struct ast_char_class * t_char__class;
-	typedef enum re_char_class_flags t_char__class__flags;
-
-	typedef struct ast_range_endpoint t_range__endpoint;
+	typedef struct ast_class * t_ast__class;
+	typedef enum ast_class_flags t_class__flags;
 
 	struct act_state {
 		enum LX_TOKEN lex_tok;
@@ -216,7 +211,7 @@
 		return s;
 	}
 
-#line 220 "src/libre/dialect/literal/parser.c"
+#line 215 "src/libre/dialect/literal/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -248,24 +243,24 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 		/* BEGINNING OF INLINE: list-of-nodes::literal */
 		{
 			{
+				t_pos ZI93;
 				t_pos ZI94;
-				t_pos ZI95;
 
 				switch (CURRENT_TERMINAL) {
 				case (TOK_CHAR):
 					/* BEGINNING OF EXTRACT: CHAR */
 					{
-#line 406 "src/libre/parser.act"
+#line 401 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI94 = lex_state->lx.start;
-		ZI95   = lex_state->lx.end;
+		ZI93 = lex_state->lx.start;
+		ZI94   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 269 "src/libre/dialect/literal/parser.c"
+#line 264 "src/libre/dialect/literal/parser.c"
 					}
 					/* END OF EXTRACT: CHAR */
 					break;
@@ -276,17 +271,19 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 			}
 		}
 		/* END OF INLINE: list-of-nodes::literal */
-		/* BEGINNING OF ACTION: ast-expr-literal */
+		/* BEGINNING OF ACTION: ast-make-expr-literal */
 		{
-#line 566 "src/libre/parser.act"
+#line 646 "src/libre/parser.act"
 
-		(ZIl) = re_ast_expr_literal((ZIc));
-		if ((ZIl) == NULL) { goto ZL1; }
-	
-#line 287 "src/libre/dialect/literal/parser.c"
+		(ZIl) = ast_make_expr_literal((ZIc));
+		if ((ZIl) == NULL) {
+			goto ZL1;
 		}
-		/* END OF ACTION: ast-expr-literal */
-		/* BEGINNING OF INLINE: 97 */
+	
+#line 284 "src/libre/dialect/literal/parser.c"
+		}
+		/* END OF ACTION: ast-make-expr-literal */
+		/* BEGINNING OF INLINE: 96 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -298,47 +295,53 @@ p_list_Hof_Hnodes(flags flags, lex_state lex_state, act_state act_state, err err
 						RESTORE_LEXER;
 						goto ZL1;
 					}
-					/* BEGINNING OF ACTION: ast-expr-concat */
+					/* BEGINNING OF ACTION: ast-make-expr-concat */
 					{
-#line 556 "src/libre/parser.act"
+#line 632 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_concat((ZIl), (ZIr));
-		if ((ZInode) == NULL) { goto ZL1; }
+		(ZInode) = ast_make_expr_concat((ZIl), (ZIr));
+		if ((ZInode) == NULL) {
+			goto ZL1;
+		}
 	
-#line 309 "src/libre/dialect/literal/parser.c"
+#line 308 "src/libre/dialect/literal/parser.c"
 					}
-					/* END OF ACTION: ast-expr-concat */
+					/* END OF ACTION: ast-make-expr-concat */
 				}
 				break;
 			default:
 				{
 					t_ast__expr ZIr;
 
-					/* BEGINNING OF ACTION: ast-expr-empty */
+					/* BEGINNING OF ACTION: ast-make-expr-empty */
 					{
-#line 551 "src/libre/parser.act"
+#line 625 "src/libre/parser.act"
 
-		(ZIr) = re_ast_expr_empty();
-		if ((ZIr) == NULL) { goto ZL1; }
+		(ZIr) = ast_make_expr_empty();
+		if ((ZIr) == NULL) {
+			goto ZL1;
+		}
 	
-#line 325 "src/libre/dialect/literal/parser.c"
+#line 326 "src/libre/dialect/literal/parser.c"
 					}
-					/* END OF ACTION: ast-expr-empty */
-					/* BEGINNING OF ACTION: ast-expr-concat */
+					/* END OF ACTION: ast-make-expr-empty */
+					/* BEGINNING OF ACTION: ast-make-expr-concat */
 					{
-#line 556 "src/libre/parser.act"
+#line 632 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_concat((ZIl), (ZIr));
-		if ((ZInode) == NULL) { goto ZL1; }
+		(ZInode) = ast_make_expr_concat((ZIl), (ZIr));
+		if ((ZInode) == NULL) {
+			goto ZL1;
+		}
 	
-#line 335 "src/libre/dialect/literal/parser.c"
+#line 338 "src/libre/dialect/literal/parser.c"
 					}
-					/* END OF ACTION: ast-expr-concat */
+					/* END OF ACTION: ast-make-expr-concat */
 				}
 				break;
 			}
 		}
-		/* END OF INLINE: 97 */
+		/* END OF INLINE: 96 */
 	}
 	goto ZL0;
 ZL1:;
@@ -357,7 +360,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 		return;
 	}
 	{
-		/* BEGINNING OF INLINE: 100 */
+		/* BEGINNING OF INLINE: 99 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -371,22 +374,24 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				break;
 			default:
 				{
-					/* BEGINNING OF ACTION: ast-expr-empty */
+					/* BEGINNING OF ACTION: ast-make-expr-empty */
 					{
-#line 551 "src/libre/parser.act"
+#line 625 "src/libre/parser.act"
 
-		(ZInode) = re_ast_expr_empty();
-		if ((ZInode) == NULL) { goto ZL1; }
+		(ZInode) = ast_make_expr_empty();
+		if ((ZInode) == NULL) {
+			goto ZL1;
+		}
 	
-#line 382 "src/libre/dialect/literal/parser.c"
+#line 387 "src/libre/dialect/literal/parser.c"
 					}
-					/* END OF ACTION: ast-expr-empty */
+					/* END OF ACTION: ast-make-expr-empty */
 				}
 				break;
 			}
 		}
-		/* END OF INLINE: 100 */
-		/* BEGINNING OF INLINE: 101 */
+		/* END OF INLINE: 99 */
+		/* BEGINNING OF INLINE: 100 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -402,20 +407,20 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 523 "src/libre/parser.act"
+#line 519 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
 		}
 		goto ZL1;
 	
-#line 413 "src/libre/dialect/literal/parser.c"
+#line 418 "src/libre/dialect/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
 		ZL3:;
 		}
-		/* END OF INLINE: 101 */
+		/* END OF INLINE: 100 */
 	}
 	goto ZL0;
 ZL1:;
@@ -427,7 +432,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 906 "src/libre/parser.act"
+#line 960 "src/libre/parser.act"
 
 
 	static int
@@ -445,13 +450,13 @@ ZL0:;
 		return lex_state->f(lex_state->opaque);
 	}
 
-	struct ast_re *
+	struct ast *
 	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
 		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
 		struct re_err *err)
 	{
-		struct ast_re *ast;
+		struct ast *ast;
 		struct flags top, *fl = &top;
 
 		struct act_state  act_state_s;
@@ -466,7 +471,7 @@ ZL0:;
 
 		assert(f != NULL);
 
-		ast = re_ast_new();
+		ast = ast_new();
 
 		if (err == NULL) {
 			err = &dummy;
@@ -515,7 +520,7 @@ ZL0:;
 		if (ast->expr == NULL) {
 			/* We shouldn't get here, it means there's error
 			 * checking missing elsewhere. */
-			if (err->e == RE_ESUCCESS) { assert(0); }
+			if (err->e == RE_ESUCCESS) { assert(!"unreached"); }
 			goto error;
 		}
 
@@ -566,11 +571,11 @@ ZL0:;
 			break;
 		}
 
-		re_ast_free(ast);
+		ast_free(ast);
 
 		return NULL;
 	}
 
-#line 575 "src/libre/dialect/literal/parser.c"
+#line 580 "src/libre/dialect/literal/parser.c"
 
 /* END OF FILE */

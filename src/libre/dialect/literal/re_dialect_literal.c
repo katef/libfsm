@@ -9,8 +9,8 @@
 #include "../../class.h"
 #include "../../class_lookup.h"
 
-char_class_constructor *
-re_char_class_literal(const char *name)
+class_constructor *
+re_class_literal(const char *name)
 {
 	(void) name;
 

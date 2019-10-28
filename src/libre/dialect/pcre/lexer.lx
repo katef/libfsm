@@ -45,26 +45,26 @@
 # character type escapes
 # Note, this needs a double underscore because sid expects any '_'
 # in a C identifier converts to "__".
-'\d' -> $named__char__class;
-'\D' -> $named__char__class;
-'\h' -> $named__char__class;
-'\H' -> $named__char__class;
-'\s' -> $named__char__class;
-'\S' -> $named__char__class;
-'\v' -> $named__char__class;
-'\V' -> $named__char__class;
-'\w' -> $named__char__class;
-'\W' -> $named__char__class;
+'\d' -> $named__class;
+'\D' -> $named__class;
+'\h' -> $named__class;
+'\H' -> $named__class;
+'\s' -> $named__class;
+'\S' -> $named__class;
+'\v' -> $named__class;
+'\V' -> $named__class;
+'\w' -> $named__class;
+'\W' -> $named__class;
 # This break the uppercase/lowercase symmetry; conceptually, it's the
 # negation of `.`, which matches everything except `\n`.
-'\N' -> $named__char__class;
+'\N' -> $named__class;
 
 '\'   /[0-7]{1,3}/     -> $oct;
 '\o{' /[0-7]+/i '}'    -> $oct;
 '\x'  /[0-9a-f]{1,2}/i -> $hex;
 '\x{' /[0-9a-f]+/i '}' -> $hex;
 
-'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__char__class) -> $noesc;
+'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class) -> $noesc;
 '\' -> $invalid;
 
 '(?' -> $openflags .. ')' -> $closeflags {
@@ -104,41 +104,41 @@
 	'\+' -> $esc;
 	'\{' -> $esc;
 
-	'\d' -> $named__char__class;
-	'\D' -> $named__char__class;
-	'\h' -> $named__char__class;
-	'\H' -> $named__char__class;
-	'\s' -> $named__char__class;
-	'\S' -> $named__char__class;
-	'\v' -> $named__char__class;
-	'\V' -> $named__char__class;
-	'\w' -> $named__char__class;
-	'\W' -> $named__char__class;
-	'\N' -> $named__char__class;
+	'\d' -> $named__class;
+	'\D' -> $named__class;
+	'\h' -> $named__class;
+	'\H' -> $named__class;
+	'\s' -> $named__class;
+	'\S' -> $named__class;
+	'\v' -> $named__class;
+	'\V' -> $named__class;
+	'\w' -> $named__class;
+	'\W' -> $named__class;
+	'\N' -> $named__class;
 
 	'\'   /[0-7]{1,3}/     -> $oct;
 	'\o{' /[0-7]+/i '}'    -> $oct;
 	'\x'  /[0-9a-f]{1,2}/i -> $hex;
 	'\x{' /[0-9a-f]+/i '}' -> $hex;
 
-	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__char__class) -> $noesc;
+	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class) -> $noesc;
 	'\' -> $invalid;
 
 	# FIXME: negated character classes, e.g. [:^alpha:]
-	'[:alnum:]'  -> $named__char__class;
-	'[:alpha:]'  -> $named__char__class;
-	'[:ascii:]'  -> $named__char__class;
-	'[:blank:]'  -> $named__char__class;
-	'[:cntrl:]'  -> $named__char__class;
-	'[:digit:]'  -> $named__char__class;
-	'[:graph:]'  -> $named__char__class;
-	'[:lower:]'  -> $named__char__class;
-	'[:print:]'  -> $named__char__class;
-	'[:punct:]'  -> $named__char__class;
-	'[:space:]'  -> $named__char__class;
-	'[:upper:]'  -> $named__char__class;
-	'[:word:]'   -> $named__char__class;
-	'[:xdigit:]' -> $named__char__class;
+	'[:alnum:]'  -> $named__class;
+	'[:alpha:]'  -> $named__class;
+	'[:ascii:]'  -> $named__class;
+	'[:blank:]'  -> $named__class;
+	'[:cntrl:]'  -> $named__class;
+	'[:digit:]'  -> $named__class;
+	'[:graph:]'  -> $named__class;
+	'[:lower:]'  -> $named__class;
+	'[:print:]'  -> $named__class;
+	'[:punct:]'  -> $named__class;
+	'[:space:]'  -> $named__class;
+	'[:upper:]'  -> $named__class;
+	'[:word:]'   -> $named__class;
+	'[:xdigit:]' -> $named__class;
 
 	# XXX: /./ - the above
 	/[^\^\-\\]/ -> $char;

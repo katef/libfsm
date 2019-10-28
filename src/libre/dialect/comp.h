@@ -9,11 +9,11 @@
 
 #include <re/re.h>
 
-#include "../re_ast.h"
+#include "../ast.h"
 
 /* TODO: make overlap a flag */
 
-typedef struct ast_re *
+typedef struct ast *
 re_dialect_parse_fun(re_getchar_fun *getchar, void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, int overlap,

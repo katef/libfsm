@@ -4,32 +4,29 @@
  * See LICENCE for the full copyright terms.
  */
 
+#include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <ctype.h>
+
+#include <re/re.h>
 
 #include <print/esc.h>
 
 #include "../class.h"
-#include "../re_ast.h"
-#include "../re_char_class.h"
+#include "../class_lookup.h"
+#include "../ast.h"
 #include "../print.h"
-
-static void
-re_flags_print(FILE *f, enum re_flags fl);
-
-static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	struct re_char_class_ast *n);
 
 static int
 atomic(struct ast_expr *n)
 {
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
 	case AST_EXPR_REPEATED:
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 	case AST_EXPR_GROUP:
 		return 1;
 
@@ -41,7 +38,34 @@ atomic(struct ast_expr *n)
 		return 0; /* XXX */
 
 	default:
-		assert(0);
+		assert(!"unreached");
+	}
+}
+
+static void
+re_flags_print(FILE *f, enum re_flags fl)
+{
+	const char *sep = "";
+
+	if (fl & RE_ICASE  ) { fprintf(f, "%si", sep); sep = " "; }
+	if (fl & RE_TEXT   ) { fprintf(f, "%sg", sep); sep = " "; }
+	if (fl & RE_MULTI  ) { fprintf(f, "%sm", sep); sep = " "; }
+	if (fl & RE_REVERSE) { fprintf(f, "%sr", sep); sep = " "; }
+	if (fl & RE_SINGLE ) { fprintf(f, "%ss", sep); sep = " "; }
+	if (fl & RE_ZONE   ) { fprintf(f, "%sz", sep); sep = " "; }
+}
+
+static void
+print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint *e)
+{
+	switch (e->type) {
+	case AST_ENDPOINT_LITERAL:
+		pcre_escputc(f, opt, e->u.literal.c);
+		break;
+
+	default:
+		assert(!"unreached");
+		break;
 	}
 }
 
@@ -117,6 +141,53 @@ print_class_name(FILE *f, const char *abstract_name)
 }
 
 static void
+cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(n != NULL);
+
+	switch (n->type) {
+	case AST_CLASS_CONCAT:
+		cc_pp_iter(f, opt, n->u.concat.l);
+		cc_pp_iter(f, opt, n->u.concat.r);
+		break;
+
+	case AST_CLASS_LITERAL:
+		pcre_escputc(f, opt, n->u.literal.c);
+		break;
+
+	case AST_CLASS_RANGE:
+		print_endpoint(f, opt, &n->u.range.from);
+		fprintf(f, "-");
+		print_endpoint(f, opt, &n->u.range.to);
+		break;
+
+	case AST_CLASS_NAMED:
+		print_class_name(f, class_name(n->u.named.ctor));
+		break;
+
+	case AST_CLASS_FLAGS:
+		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
+			fprintf(f, "^");
+		}
+		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
+			fprintf(f, "-");
+		}
+		break;
+
+	case AST_CLASS_SUBTRACT:
+		fprintf(f, "\tn%p [ label = <{CLASS-SUBTRACT|{ast|mask}}> ];\n", (void *) n);
+		cc_pp_iter(f, opt, n->u.subtract.ast);
+		cc_pp_iter(f, opt, n->u.subtract.mask);
+		break;
+
+	default:
+		assert(!"unreached");
+	}
+}
+
+static void
 pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 {
 	assert(f != NULL);
@@ -124,7 +195,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 	if (n == NULL) { return; }
 
-	switch (n->t) {
+	switch (n->type) {
 	case AST_EXPR_EMPTY:
 		break;
 
@@ -220,9 +291,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_CHAR_CLASS:
+	case AST_EXPR_CLASS:
 		fprintf(f, "[");
-		cc_pp_iter(f, opt, n->u.char_class.cca);
+		cc_pp_iter(f, opt, n->u.class.class);
 		fprintf(f, "]");
 		break;
 
@@ -233,9 +304,8 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 
 	case AST_EXPR_ANCHOR:
-		assert(n->u.anchor.t == RE_AST_ANCHOR_START
-		    || n->u.anchor.t == RE_AST_ANCHOR_END);
-		fprintf(f, "%s", n->u.anchor.t == RE_AST_ANCHOR_START ? "^" : "$");
+		assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
+		fprintf(f, "%s", n->u.anchor.type == AST_ANCHOR_START ? "^" : "$");
 		break;
 
 	case AST_EXPR_FLAGS:
@@ -247,13 +317,13 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 
 	default:
-		assert(0);
+		assert(!"unreached");
 	}
 }
 
 void
-re_ast_print_pcre(FILE *f, const struct fsm_options *opt,
-	const struct ast_re *ast)
+ast_print_pcre(FILE *f, const struct fsm_options *opt,
+	const struct ast *ast)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
@@ -262,80 +332,5 @@ re_ast_print_pcre(FILE *f, const struct fsm_options *opt,
 	pp_iter(f, opt, ast->expr);
 
 	fprintf(f, "\n");
-}
-
-static void
-re_flags_print(FILE *f, enum re_flags fl)
-{
-	const char *sep = "";
-	if (fl & RE_ICASE) { fprintf(f, "%si", sep); sep = " "; }
-	if (fl & RE_TEXT) { fprintf(f, "%sg", sep); sep = " "; }
-	if (fl & RE_MULTI) { fprintf(f, "%sm", sep); sep = " "; }
-	if (fl & RE_REVERSE) { fprintf(f, "%sr", sep); sep = " "; }
-	if (fl & RE_SINGLE) { fprintf(f, "%ss", sep); sep = " "; }
-	if (fl & RE_ZONE) { fprintf(f, "%sz", sep); sep = " "; }
-}
-
-static void
-print_range_endpoint(FILE *f, const struct fsm_options *opt,
-	const struct ast_range_endpoint *r)
-{
-	switch (r->t) {
-	case AST_RANGE_ENDPOINT_LITERAL:
-		pcre_escputc(f, opt, r->u.literal.c);
-		break;
-
-	default:
-		assert(0);
-		break;
-	}
-}
-
-static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt, struct re_char_class_ast *n)
-{
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(n != NULL);
-
-	switch (n->t) {
-	case RE_CHAR_CLASS_AST_CONCAT:
-		cc_pp_iter(f, opt, n->u.concat.l);
-		cc_pp_iter(f, opt, n->u.concat.r);
-		break;
-
-	case RE_CHAR_CLASS_AST_LITERAL:
-		pcre_escputc(f, opt, n->u.literal.c);
-		break;
-
-	case RE_CHAR_CLASS_AST_RANGE:
-		print_range_endpoint(f, opt, &n->u.range.from);
-		fprintf(f, "-");
-		print_range_endpoint(f, opt, &n->u.range.to);
-		break;
-
-	case RE_CHAR_CLASS_AST_NAMED:
-		print_class_name(f, class_name(n->u.named.ctor));
-		break;
-
-	case RE_CHAR_CLASS_AST_FLAGS:
-		if (n->u.flags.f & RE_CHAR_CLASS_FLAG_INVERTED) {
-			fprintf(f, "^");
-		}
-		if (n->u.flags.f & RE_CHAR_CLASS_FLAG_MINUS) {
-			fprintf(f, "-");
-		}
-		break;
-
-	case RE_CHAR_CLASS_AST_SUBTRACT:
-		fprintf(f, "\tn%p [ label = <{CLASS-SUBTRACT|{ast|mask}}> ];\n", (void *) n);
-		cc_pp_iter(f, opt, n->u.subtract.ast);
-		cc_pp_iter(f, opt, n->u.subtract.mask);
-		break;
-
-	default:
-		fprintf(stderr, "(MATCH FAIL)\n");
-		assert(0);
-	}
 }
 

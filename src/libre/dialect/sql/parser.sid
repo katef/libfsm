@@ -22,9 +22,9 @@
 	!err;
 	ast_expr;
 	ast_count;
-	ast_char_class_id;
-	char_class_ast;
-	range_endpoint;
+	ast_class_id;
+	ast_class;
+	endpoint;
 
 %terminals%
 
@@ -48,7 +48,7 @@
 	INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
-	NAMED_CHAR_CLASS: () -> (:ast_char_class_id, :pos, :pos);
+	NAMED_CLASS: () -> (:ast_class_id, :pos, :pos);
 
 	!OPENFLAGS;
 	!CLOSEFLAGS;
@@ -68,45 +68,42 @@
 
 %productions%
 
-        <atom-kleene>: () -> (:ast_count);
-        <atom-plus>: () -> (:ast_count);
-        <atom-one>: () -> (:ast_count);
-        <atom-opt>: () -> (:ast_count);
-
-/* FIXME: rename to atom-count */
-        <expr-count>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
-
-	<ast-expr-empty>: () -> (:ast_expr);
-	<ast-expr-literal>: (:char) -> (:ast_expr);
-	<ast-expr-concat>: (:ast_expr, :ast_expr) -> (:ast_expr);
-	<ast-expr-alt>: (:ast_expr, :ast_expr) -> (:ast_expr);
-	!<ast-expr-any>: () -> (:ast_expr);
-	!<ast-expr-re-flags>: (:re_flags, :re_flags) -> (:ast_expr);
-	!<ast-expr-anchor-start>: () -> (:ast_expr);
-	!<ast-expr-anchor-end>: () -> (:ast_expr);
-
-        <ast-expr-atom>: (:ast_expr, :ast_count) -> (:ast_expr);
-        <ast-expr-atom-any>: (:ast_count) -> (:ast_expr);
-	<ast-expr-char-class>: (:char_class_ast, :pos, :pos) -> (:ast_expr);
-        <ast-expr-group>: (:ast_expr) -> (:ast_expr);
-
-	<char-class-ast-literal>: (:char) -> (:char_class_ast);
-	!<char-class-ast-range-distinct>: (:range_endpoint, :pos, :range_endpoint, :pos) -> ();
-        <char-class-ast-range>: (:range_endpoint, :pos, :range_endpoint, :pos) -> (:char_class_ast);
-	<char-class-ast-concat>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
-	<char-class-ast-subtract>: (:char_class_ast, :char_class_ast) -> (:char_class_ast);
-	<char-class-ast-named-class>: (:ast_char_class_id) -> (:char_class_ast);
-
-	<char-class-ast-flag-none>: () -> (:char_class_ast);
-	<char-class-ast-flag-invert>: () -> (:char_class_ast);
-	<char-class-ast-flag-minus>: () -> (:char_class_ast);
-	<char-class-ast-flag-invert-minus>: () -> (:char_class_ast);
-
-	<ast-range-endpoint-literal>: (:char) -> (:range_endpoint);
-	!<ast-range-endpoint-char-class>: (:ast_char_class_id) -> (:range_endpoint);
-
-	!<re-flag-none>: () -> (:re_flags);
+	!<re-flag-none>:  ()                     -> (:re_flags);
 	!<re-flag-union>: (:re_flags, :re_flags) -> (:re_flags);
+
+	<atom-kleene>: () -> (:ast_count);
+	<atom-plus>:   () -> (:ast_count);
+	<atom-one>:    () -> (:ast_count);
+	<atom-opt>:    () -> (:ast_count);
+	<atom-count>:  (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
+
+	<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
+	!<ast-range-endpoint-class>:  (:ast_class_id) -> (:endpoint);
+	!<ast-range-distinct>: (:endpoint, :pos, :endpoint, :pos) -> ();
+
+	<ast-make-expr-empty>:         ()                       -> (:ast_expr);
+	<ast-make-expr-literal>:       (:char)                  -> (:ast_expr);
+	<ast-make-expr-concat>:        (:ast_expr, :ast_expr)   -> (:ast_expr);
+	<ast-make-expr-alt>:           (:ast_expr, :ast_expr)   -> (:ast_expr);
+	!<ast-make-expr-any>:          ()                       -> (:ast_expr);
+	<ast-make-expr-atom>:          (:ast_expr, :ast_count)  -> (:ast_expr);
+	<ast-make-expr-atom-any>:      (:ast_count)             -> (:ast_expr);
+	<ast-make-expr-class>:         (:ast_class, :pos, :pos) -> (:ast_expr);
+	<ast-make-expr-group>:         (:ast_expr)              -> (:ast_expr);
+	!<ast-make-expr-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
+	!<ast-make-expr-anchor-start>: ()                       -> (:ast_expr);
+	!<ast-make-expr-anchor-end>:   ()                       -> (:ast_expr);
+
+	<ast-make-class-concat>:       (:ast_class, :ast_class) -> (:ast_class);
+	<ast-make-class-literal>:      (:char)                  -> (:ast_class);
+	<ast-make-class-range>:        (:endpoint, :pos, :endpoint, :pos) -> (:ast_class);
+	<ast-make-class-named>:        (:ast_class_id)          -> (:ast_class);
+	<ast-make-class-subtract>:     (:ast_class, :ast_class) -> (:ast_class);
+
+	<ast-make-class-flag-none>:    () -> (:ast_class);
+	<ast-make-class-flag-invert>:  () -> (:ast_class);
+	<ast-make-class-flag-minus>:   () -> (:ast_class);
+	<ast-make-class-flag-invert-minus>: () -> (:ast_class);
 
 	<err-expected-term>;
 	!<err-expected-count>;
@@ -125,9 +122,9 @@
 	!<mark-count>: (:pos, :pos) -> ();
 
 	expr: () -> (node :ast_expr) [
-                literal: () -> (node :ast_expr) = {
+		literal: () -> (node :ast_expr) = {
   			(c, !, !) = CHAR;
-			node = <ast-expr-literal>(c);
+			node = <ast-make-expr-literal>(c);
   		};
 
 		atom-suffix: () -> (f :ast_count) = {
@@ -143,21 +140,22 @@
 			(pos_of, pos_ot) = OPENCOUNT;
 			m = COUNT;
 			(pos_cf, pos_ct) = CLOSECOUNT;
-			f = <expr-count>(m, pos_of, m, pos_ct);
+			f = <atom-count>(m, pos_of, m, pos_ct);
 		||
 			(pos_of, pos_ot) = OPENCOUNT;
 			m = COUNT;
 			SEP;
 			n = COUNT;
 			(pos_cf, pos_ct) = CLOSECOUNT;
-			f = <expr-count>(m, pos_of, n, pos_ct);
+			f = <atom-count>(m, pos_of, n, pos_ct);
 		||
 			f = <atom-one>();
 		};
 
-	        /* [abc] -> when it reaches the end, make an empty class, and
-		 *     each character literal / named class / etc. modifies it.
-		 *     
+		/*
+		 * [abc] -> when it reaches the end, make an empty class, and
+		 * each character literal / named class / etc. modifies it.
+		 *
 		 * in the case of the SQL dialect's wonky [abc^def], it should
 		 * create two groups, and then remove anything from the former
 		 * that is in the latter.
@@ -169,101 +167,101 @@
 		 * [[:NAME:]] named character classes
 		 *
 		 * _ is the ANY character class
-		 * */
-		char-class: () -> (node :ast_expr) [
-			char-class-head: () -> (f :char_class_ast) = {
+		 */
+		class: () -> (node :ast_expr) [
+			class-head: () -> (f :ast_class) = {
 				(!) = INVERT;
-				f = <char-class-ast-flag-invert>();
+				f = <ast-make-class-flag-invert>();
 			||
 				(!, !, !) = RANGE;
-				f = <char-class-ast-flag-minus>();
+				f = <ast-make-class-flag-minus>();
 			||
 				(!) = INVERT;
 				(!, !, !) = RANGE;
-				f = <char-class-ast-flag-invert-minus>();
+				f = <ast-make-class-flag-invert-minus>();
 			||
-				f = <char-class-ast-flag-none>();
+				f = <ast-make-class-flag-none>();
 			};
 
-			char-class-tail: () -> (f :char_class_ast) = {
-			/* This requires LL(2). */
+			class-tail: () -> (f :ast_class) = {
+				/* This requires LL(2). */
 
 			/* 	(!, !, !) = RANGE;
-			 * 	f = <char-class-ast-flag-minus>();
+			 * 	f = <ast-make-class-flag-minus>();
 			 * || */
-				f = <char-class-ast-flag-none>();
+				f = <ast-make-class-flag-none>();
 			};
 
-			named-class: () -> (id :ast_char_class_id) = {
-                        	(id, !, !) = NAMED_CHAR_CLASS;
+			named-class: () -> (id :ast_class_id) = {
+				(id, !, !) = NAMED_CLASS;
 			};
 
-			term: () -> (node :char_class_ast) = {
+			term: () -> (node :ast_class) = {
 				(ca, start, !) = CHAR;
-                                a = <ast-range-endpoint-literal>(ca);
+				a = <ast-range-endpoint-literal>(ca);
 
 				(!, !, !) = RANGE;
 
 				(cz, !, end) = CHAR;
-                                z = <ast-range-endpoint-literal>(cz);
+				z = <ast-range-endpoint-literal>(cz);
 
-				node = <char-class-ast-range>(a, start, z, end);
+				node = <ast-make-class-range>(a, start, z, end);
 			||
 				(c, !, !) = CHAR;
-				node = <char-class-ast-literal>(c);
+				node = <ast-make-class-literal>(c);
 			||
 				id = named-class();
-				node = <char-class-ast-named-class>(id);
-                        ##
-                        	<err-expected-term>();
-                                node = <char-class-ast-flag-none>();
+				node = <ast-make-class-named>(id);
+			##
+				<err-expected-term>();
+				node = <ast-make-class-flag-none>();
 			};
-			    
-			list-of-char-class-terms: () -> (node :char_class_ast) = {
+
+			list-of-class-terms: () -> (node :ast_class) = {
 				l = term();
 				{
-					r = list-of-char-class-terms();
-					node = <char-class-ast-concat>(l, r);
+					r = list-of-class-terms();
+					node = <ast-make-class-concat>(l, r);
 				||
 					node = l;
 				};
 			};
-			    
-			char-class-ast: () -> (node :ast_expr) = {
+
+			class-ast: () -> (node :ast_expr) = {
 				(start, !) = OPENGROUP;
 
-				head = char-class-head();
-				body = list-of-char-class-terms();
-				tail = char-class-tail();
+				head = class-head();
+				body = list-of-class-terms();
+				tail = class-tail();
 
-				hb = <char-class-ast-concat>(head, body);
-				hbt = <char-class-ast-concat>(hb, tail);
+				hb = <ast-make-class-concat>(head, body);
+				hbt = <ast-make-class-concat>(hb, tail);
 				(!, !, end) = CLOSEGROUP;
-				node = <ast-expr-char-class>(hbt, start, end);
+				node = <ast-make-expr-class>(hbt, start, end);
 			||
 				(start, !) = OPENGROUP;
-				head = char-class-head();
-				body = list-of-char-class-terms();
-				tail = char-class-tail();
+				head = class-head();
+				body = list-of-class-terms();
+				tail = class-tail();
 				(!) = INVERT;
-				maskhead = char-class-head();
-				maskbody = list-of-char-class-terms();
-				masktail = char-class-tail();
+				maskhead = class-head();
+				maskbody = list-of-class-terms();
+				masktail = class-tail();
 
-				hb = <char-class-ast-concat>(head, body);
-				hbt = <char-class-ast-concat>(hb, tail);
+				hb = <ast-make-class-concat>(head, body);
+				hbt = <ast-make-class-concat>(hb, tail);
 				(!, !, end) = CLOSEGROUP;
 
 				/* Marking this unsupported for now */
-                                <err-unsupported>();
+				<err-unsupported>();
 
-				mhb = <char-class-ast-concat>(maskhead, maskbody);
-				mhbt = <char-class-ast-concat>(mhb, masktail);
-				masked = <char-class-ast-subtract>(hbt, mhbt);
-				node = <ast-expr-char-class>(masked, start, end);
+				mhb = <ast-make-class-concat>(maskhead, maskbody);
+				mhbt = <ast-make-class-concat>(mhb, masktail);
+				masked = <ast-make-class-subtract>(hbt, mhbt);
+				node = <ast-make-expr-class>(masked, start, end);
 			};
 		] = {
-			node = char-class-ast();
+			node = class-ast();
 		};
 
 		/* TODO: is there a better name than 'atom' for
@@ -271,38 +269,38 @@
 		atom: () -> (node :ast_expr) = {
 			OPENSUB;
 			g = expr();
-			e = <ast-expr-group>(g);
+			e = <ast-make-expr-group>(g);
 			CLOSESUB;
 			s = atom-suffix();
-			node = <ast-expr-atom>(e, s);
+			node = <ast-make-expr-atom>(e, s);
 		||
-			e = char-class();
+			e = class();
 			s = atom-suffix();
-			node = <ast-expr-atom>(e, s);
+			node = <ast-make-expr-atom>(e, s);
 		||
 			e = literal();
 			s = atom-suffix();
-			node = <ast-expr-atom>(e, s);
+			node = <ast-make-expr-atom>(e, s);
 		||
 			ANY;
 			s = atom-suffix();
-			node = <ast-expr-atom-any>(s);
+			node = <ast-make-expr-atom-any>(s);
 		||
 			MANY;
 			s = atom-suffix();
 			f = <atom-kleene>();
-			e = <ast-expr-atom-any>(f);
-			node = <ast-expr-atom>(e, s);
+			e = <ast-make-expr-atom-any>(f);
+			node = <ast-make-expr-atom>(e, s);
 		};
 
 		list-of-atoms: () -> (node :ast_expr) = {
 			a = atom();
-			r = <ast-expr-empty>;
-			node = <ast-expr-concat>(a,r);
+			r = <ast-make-expr-empty>;
+			node = <ast-make-expr-concat>(a,r);
 		||
 			a = atom();
 			r = list-of-atoms();
-			node = <ast-expr-concat>(a,r);
+			node = <ast-make-expr-concat>(a,r);
 		};
 
 		alt: () -> (node :ast_expr) = {
@@ -311,16 +309,16 @@
 
 		list-of-alts: () -> (node :ast_expr) = {
 			a = alt();
-			r = <ast-expr-empty>;
-			node = <ast-expr-alt>(a,r);
+			r = <ast-make-expr-empty>;
+			node = <ast-make-expr-alt>(a,r);
 		||
 			a = alt();
 			ALT;
 			r = list-of-alts();
-			node = <ast-expr-alt>(a, r);
+			node = <ast-make-expr-alt>(a, r);
 		##
 			<err-expected-alts>;
-			node = <ast-expr-empty>();
+			node = <ast-make-expr-empty>();
 		};
 	] = {
 		/* don't wrap a single alt in an alt chain */
@@ -331,14 +329,14 @@
 		a = alt();
 		ALT;
 		r = list-of-alts();
-		node = <ast-expr-alt>(a, r);
+		node = <ast-make-expr-alt>(a, r);
 	};
 
 	re_sql: () -> (node :ast_expr) = {
 		{
 			node = expr();
 		||
-			node = <ast-expr-empty>();
+			node = <ast-make-expr-empty>();
 		};
 
 		{

@@ -29,12 +29,11 @@
 	#include <errno.h>
 	#include <ctype.h>
 
+	#include <re/re.h>
+
 	#include "libre/class.h"
 	#include "libre/class_lookup.h"
-	#include "libre/re_char_class.h"
-	#include "libre/re_ast.h"
-
-	#include <re/re.h>
+	#include "libre/ast.h"
 
 	#ifndef DIALECT
 	#error DIALECT required
@@ -51,7 +50,7 @@
 	#define LX_INIT    CAT(LX_PREFIX, _init)
 
 	#define DIALECT_PARSE  CAT(parse_re_, DIALECT)
-	#define DIALECT_CHAR_CLASS  CAT(re_char_class_, DIALECT)
+	#define DIALECT_CLASS  CAT(re_class_, DIALECT)
 
 	/* XXX: get rid of this; use same %entry% for all grammars */
 	#define DIALECT_ENTRY CAT(p_re__, DIALECT)
@@ -77,20 +76,18 @@
 	#define TOK_CLASS__ndigit  TOK_CLASS_NDIGIT
 
 	/* This is a hack to work around the AST files not being able to include lexer.h. */
-	#define AST_POS_OF_LX_POS(AST_POS, LX_POS)			\
-		do {							\
-			AST_POS.line = LX_POS.line;			\
-			AST_POS.col = LX_POS.col;			\
-			AST_POS.byte = LX_POS.byte;			\
-		} while (0)
-
+	#define AST_POS_OF_LX_POS(AST_POS, LX_POS) \
+	    do {                                   \
+	        AST_POS.line = LX_POS.line;        \
+	        AST_POS.col = LX_POS.col;          \
+	        AST_POS.byte = LX_POS.byte;        \
+	    } while (0)
 
 	#include "parser.h"
 	#include "lexer.h"
 
 	#include "../comp.h"
 	#include "../../class.h"
-	#include "../../re_char_class.h"
 
 	struct flags {
 		enum re_flags flags;
@@ -103,14 +100,12 @@
 
 	typedef struct lx_pos t_pos;
 	typedef enum re_flags t_re__flags;
-	typedef char_class_constructor * t_ast__char__class__id;
+	typedef class_constructor * t_ast__class__id;
 	typedef struct ast_count t_ast__count;
+	typedef struct ast_endpoint t_endpoint;
 
-	typedef struct re_char_class_ast * t_char__class__ast;
-	typedef struct ast_char_class * t_char__class;
-	typedef enum re_char_class_flags t_char__class__flags;
-
-	typedef struct ast_range_endpoint t_range__endpoint;
+	typedef struct ast_class * t_ast__class;
+	typedef enum ast_class_flags t_class__flags;
 
 	struct act_state {
 		enum LX_TOKEN lex_tok;
@@ -429,8 +424,8 @@
 		@n = (unsigned int) u;
 	@};
 
-	NAMED_CHAR_CLASS: () -> (id :ast_char_class_id, start :pos, end :pos) = @{
-		@id = DIALECT_CHAR_CLASS(lex_state->buf.a);
+	NAMED_CLASS: () -> (id :ast_class_id, start :pos, end :pos) = @{
+		@id = DIALECT_CLASS(lex_state->buf.a);
 		if (@id == NULL) {
 			/* syntax error -- unrecognized class */
 			@!;
@@ -453,6 +448,7 @@
 	 * In some cases (e.g. counting) actions are centralised here for
 	 * the sake of DRY, at the expense of slight overkill.
 	 */
+
 	<err-expected-term> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXTERM;
@@ -546,97 +542,71 @@
 	@};
 
 
-	/* AST construction */
-	<ast-expr-empty>: () -> (node :ast_expr) = @{
-		@node = re_ast_expr_empty();
-		if (@node == NULL) { @!; }
+	/*
+	 * AST construction
+	 */
+
+	<re-flag-none>: () -> (f :re_flags) = @{
+		@f = RE_FLAGS_NONE;
 	@};
 
-	<ast-expr-concat>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
-		@node = re_ast_expr_concat(@l, @r);
-		if (@node == NULL) { @!; }
+	<re-flag-union>: (in :re_flags, flag :re_flags) -> (out :re_flags) = @{
+		@out = @in | @flag;
 	@};
 
-	<ast-expr-alt>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
-		@node = re_ast_expr_alt(@l, @r);
-		if (@node == NULL) { @!; }
+	<atom-kleene>: () -> (c :ast_count) = @{
+		@c = ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
 	@};
 
-	<ast-expr-literal>: (c :char) -> (node :ast_expr) = @{
-		@node = re_ast_expr_literal(@c);
-		if (@node == NULL) { @!; }
+	<atom-plus>: () -> (c :ast_count) = @{
+		@c = ast_make_count(1, NULL, AST_COUNT_UNBOUNDED, NULL);
 	@};
 
-	<ast-expr-any>: () -> (node :ast_expr) = @{
-		@node = re_ast_expr_any();
-		if (@node == NULL) { @!; }
+	<atom-one>: () -> (c :ast_count) = @{
+		@c = ast_make_count(1, NULL, 1, NULL);
 	@};
 
-	<ast-expr-atom-any>: (c :ast_count) -> (node :ast_expr) = @{
-		struct ast_expr *e = re_ast_expr_any();
-		if (e == NULL) { @!; }
-		@node = re_ast_expr_with_count(e, @c);
-		if (@node == NULL) { @!; }
+	<atom-opt>: () -> (c :ast_count) = @{
+		@c = ast_make_count(0, NULL, 1, NULL);
 	@};
 
-        <ast-expr-group>: (e :ast_expr) -> (node :ast_expr) = @{
-		@node = re_ast_expr_group(@e);
-		if (@node == NULL) { @!; }
-	@};
-
-	<ast-expr-atom>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
-		@node = re_ast_expr_with_count(@e, @c);
-		if (@node == NULL) {
-			err->e = RE_EXEOF;
-			@!;
-		}
-	@};
-
-        <atom-kleene>: () -> (c :ast_count) = @{
-		@c = ast_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
-	@};
-
-        <atom-plus>: () -> (c :ast_count) = @{
-		@c = ast_count(1, NULL, AST_COUNT_UNBOUNDED, NULL);
-	@};
-
-        <atom-one>: () -> (c :ast_count) = @{
-		@c = ast_count(1, NULL, 1, NULL);
-	@};
-
-        <atom-opt>: () -> (c :ast_count) = @{
-		@c = ast_count(0, NULL, 1, NULL);
-	@};
-
-        <expr-count>: (l :unsigned, start :pos, h :unsigned, end :pos) -> (c :ast_count) = @{
+	<atom-count>: (l :unsigned, start :pos, h :unsigned, end :pos) -> (c :ast_count) = @{
 		struct ast_pos ast_start, ast_end;
+
 		if (@h < @l) {
 			err->e = RE_ENEGCOUNT;
 			err->m = @l;
 			err->n = @h;
+
 			mark(&act_state->countstart, &@start);
 			mark(&act_state->countend,   &@end);
+
 			@!;
 		}
+
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 
-		@c = ast_count(@l, &ast_start, @h, &ast_end);
+		@c = ast_make_count(@l, &ast_start, @h, &ast_end);
 	@};
 
-	<char-class-ast-literal>: (c :char) -> (node :char_class_ast) = @{
-		@node = re_char_class_ast_literal(@c);
-		if (@node == NULL) { @!; }
+	<ast-range-endpoint-literal>: (c :char) -> (e :endpoint) = @{
+		@e.type = AST_ENDPOINT_LITERAL;
+		@e.u.literal.c = @c;
 	@};
 
-	<char-class-ast-range-distinct>: (from :range_endpoint, start :pos,
-	    		to :range_endpoint, end :pos) -> () = @{
+	<ast-range-endpoint-class>: (id :ast_class_id) -> (e :endpoint) = @{
+		@e.type = AST_ENDPOINT_CLASS;
+		@e.u.class.ctor = @id;
+	@};
+
+	<ast-range-distinct>: (from :endpoint, start :pos, to :endpoint, end :pos) -> () = @{
 		struct ast_pos ast_start, ast_end;
+
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 
-		if (@from.t != AST_RANGE_ENDPOINT_LITERAL ||
-		    @to.t != AST_RANGE_ENDPOINT_LITERAL) {
+		if (@from.type != AST_ENDPOINT_LITERAL || @to.type != AST_ENDPOINT_LITERAL) {
 			err->e = RE_EXUNSUPPORTD;
 			@!;
 		}
@@ -647,15 +617,137 @@
 		}
 	@};
 
-	<char-class-ast-range>: (from :range_endpoint, start :pos,
-	    		to :range_endpoint, end :pos) -> (node :char_class_ast) = @{
+	/*
+	 * Expressions
+	 */
+
+	<ast-make-expr-empty>: () -> (node :ast_expr) = @{
+		@node = ast_make_expr_empty();
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-concat>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
+		@node = ast_make_expr_concat(@l, @r);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-alt>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
+		@node = ast_make_expr_alt(@l, @r);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-literal>: (c :char) -> (node :ast_expr) = @{
+		@node = ast_make_expr_literal(@c);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-any>: () -> (node :ast_expr) = @{
+		@node = ast_make_expr_any();
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-atom>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
+		@node = ast_make_expr_with_count(@e, @c);
+		if (@node == NULL) {
+			err->e = RE_EXEOF;
+			@!;
+		}
+	@};
+
+	<ast-make-expr-atom-any>: (c :ast_count) -> (node :ast_expr) = @{
+		struct ast_expr *e;
+
+		e = ast_make_expr_any();
+		if (e == NULL) {
+			@!;
+		}
+
+		@node = ast_make_expr_with_count(e, @c);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-class>: (cca :ast_class, start :pos, end :pos) -> (node :ast_expr) = @{
 		struct ast_pos ast_start, ast_end;
-		unsigned char lower, upper;
+
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 
-		if (@from.t != AST_RANGE_ENDPOINT_LITERAL ||
-		    @to.t != AST_RANGE_ENDPOINT_LITERAL) {
+		mark(&act_state->groupstart, &@start);
+		mark(&act_state->groupend,   &@end);
+
+		@node = ast_make_expr_class(@cca, &ast_start, &ast_end);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-group>: (e :ast_expr) -> (node :ast_expr) = @{
+		@node = ast_make_expr_group(@e);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-re-flags>: (pos :re_flags, neg :re_flags) -> (node :ast_expr) = @{
+		@node = ast_make_expr_re_flags(@pos, @neg);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-anchor-start>: () -> (node :ast_expr) = @{
+		@node = ast_make_expr_anchor(AST_ANCHOR_START);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-anchor-end>: () -> (node :ast_expr) = @{
+		@node = ast_make_expr_anchor(AST_ANCHOR_END);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	/*
+	 * Character classes
+	 */
+
+	<ast-make-class-concat>: (l :ast_class, r :ast_class) -> (node :ast_class) = @{
+		@node = ast_make_class_concat(@l, @r);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-class-literal>: (c :char) -> (node :ast_class) = @{
+		@node = ast_make_class_literal(@c);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-class-range>: (from :endpoint, start :pos, to :endpoint, end :pos) -> (node :ast_class) = @{
+		struct ast_pos ast_start, ast_end;
+		unsigned char lower, upper;
+
+		AST_POS_OF_LX_POS(ast_start, @start);
+		AST_POS_OF_LX_POS(ast_end, @end);
+
+		if (@from.type != AST_ENDPOINT_LITERAL ||
+			@to.type != AST_ENDPOINT_LITERAL) {
 			err->e = RE_EXUNSUPPORTD;
 			@!;
 		}
@@ -669,95 +761,57 @@
 			assert(sizeof err->set >= 1 + sizeof a + 1 + sizeof b + 1 + 1);
 			
 			sprintf(err->set, "%s-%s",
-			    escchar(a, sizeof a, lower), escchar(b, sizeof b, upper));
+				escchar(a, sizeof a, lower), escchar(b, sizeof b, upper));
 			err->e = RE_ENEGRANGE;
 			@!;
 		}
 
-		@node = re_char_class_ast_range(&@from, ast_start, &@to, ast_end);
-		if (@node == NULL) { @!; }
+		@node = ast_make_class_range(&@from, ast_start, &@to, ast_end);
+		if (@node == NULL) {
+			@!;
+		}
 	@};
 
-	<char-class-ast-concat>: (l :char_class_ast, r :char_class_ast) -> (node :char_class_ast) = @{
-		@node = re_char_class_ast_concat(@l, @r);
-		if (@node == NULL) { @!; }
+	<ast-make-class-named>: (id :ast_class_id) -> (node :ast_class) = @{
+		@node = ast_make_class_named(@id);
+		if (@node == NULL) {
+			@!;
+		}
 	@};
 
-	<char-class-ast-subtract>: (l :char_class_ast, r :char_class_ast) -> (node :char_class_ast) = @{
-		@node = re_char_class_ast_subtract(@l, @r);
-		if (@node == NULL) { @!; }
+	<ast-make-class-subtract>: (l :ast_class, r :ast_class) -> (node :ast_class) = @{
+		@node = ast_make_class_subtract(@l, @r);
+		if (@node == NULL) {
+			@!;
+		}
 	@};
 
-	<char-class-ast-named-class>: (id :ast_char_class_id) -> (node :char_class_ast) = @{
-		@node = re_char_class_ast_named_class(@id);
-		if (@node == NULL) { @!; }
+	<ast-make-class-flag-none>: () -> (node :ast_class) = @{
+		@node = ast_make_class_flags(AST_CLASS_FLAG_NONE);
+		if (@node == NULL) {
+			@!;
+		}
 	@};
 
-	<ast-expr-char-class>: (cca :char_class_ast, start :pos, end :pos) -> (node :ast_expr) = @{
-		struct ast_pos ast_start, ast_end;
-		AST_POS_OF_LX_POS(ast_start, @start);
-		AST_POS_OF_LX_POS(ast_end, @end);
-		mark(&act_state->groupstart, &@start);
-		mark(&act_state->groupend,   &@end);
-		@node = re_ast_expr_char_class(@cca, &ast_start, &ast_end);
-		if (@node == NULL) { @!; }
+	<ast-make-class-flag-invert>: () -> (node :ast_class) = @{
+		@node = ast_make_class_flags(AST_CLASS_FLAG_INVERTED);
+		if (@node == NULL) {
+			@!;
+		}
 	@};
 
-	<char-class-ast-flag-none>: () -> (node :char_class_ast) = @{
-		@node = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_NONE);
-		if (@node == NULL) { @!; }
+	<ast-make-class-flag-minus>: () -> (node :ast_class) = @{
+		@node = ast_make_class_flags(AST_CLASS_FLAG_MINUS);
+		if (@node == NULL) {
+			@!;
+		}
 	@};
 
-	<char-class-ast-flag-invert>: () -> (node :char_class_ast) = @{
-		@node = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_INVERTED);
-		if (@node == NULL) { @!; }
-	@};
-
-	<char-class-ast-flag-minus>: () -> (node :char_class_ast) = @{
-		@node = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_MINUS);
-		if (@node == NULL) { @!; }
-	@};
-
-	<char-class-ast-flag-invert-minus>: () -> (node :char_class_ast) = @{
-		@node = re_char_class_ast_flags(RE_CHAR_CLASS_FLAG_INVERTED | RE_CHAR_CLASS_FLAG_MINUS);
-		if (@node == NULL) { @!; }
-	@};
-
-	<ast-range-endpoint-literal>: (c :char) -> (r :range_endpoint) = @{
-		struct ast_range_endpoint range;
-		range.t = AST_RANGE_ENDPOINT_LITERAL;
-		range.u.literal.c = @c;
-		@r = range;
-	@};
-
-	<ast-range-endpoint-char-class>: (id :ast_char_class_id) -> (r :range_endpoint) = @{
-		struct ast_range_endpoint range;
-		range.t = AST_RANGE_ENDPOINT_CHAR_CLASS;
-		range.u.char_class.ctor = @id;
-		@r = range;
-	@};
-
-	<re-flag-none>: () -> (f :re_flags) = @{
-	        @f = RE_FLAGS_NONE;
-	@};
-
-	<re-flag-union>: (in :re_flags, flag :re_flags) -> (out :re_flags) = @{
-		@out = @in | @flag;
-	@};
-
-	<ast-expr-re-flags>: (pos :re_flags, neg :re_flags) -> (node :ast_expr) = @{
-		@node = re_ast_expr_re_flags(@pos, @neg);
-		if (@node == NULL) { @!; }
-	@};
-
-	<ast-expr-anchor-start>: () -> (node :ast_expr) = @{
-		@node = re_ast_expr_anchor(RE_AST_ANCHOR_START);
-		if (@node == NULL) { @!; }
-	@};
-
-	<ast-expr-anchor-end>: () -> (node :ast_expr) = @{
-		@node = re_ast_expr_anchor(RE_AST_ANCHOR_END);
-		if (@node == NULL) { @!; }
+	<ast-make-class-flag-invert-minus>: () -> (node :ast_class) = @{
+		@node = ast_make_class_flags(AST_CLASS_FLAG_INVERTED | AST_CLASS_FLAG_MINUS);
+		if (@node == NULL) {
+			@!;
+		}
 	@};
 
 %trailer% @{
@@ -777,13 +831,13 @@
 		return lex_state->f(lex_state->opaque);
 	}
 
-	struct ast_re *
+	struct ast *
 	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
 		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
 		struct re_err *err)
 	{
-		struct ast_re *ast;
+		struct ast *ast;
 		struct flags top, *fl = &top;
 
 		struct act_state  act_state_s;
@@ -798,7 +852,7 @@
 
 		assert(f != NULL);
 
-		ast = re_ast_new();
+		ast = ast_new();
 
 		if (err == NULL) {
 			err = &dummy;
@@ -847,7 +901,7 @@
 		if (ast->expr == NULL) {
 			/* We shouldn't get here, it means there's error
 			 * checking missing elsewhere. */
-			if (err->e == RE_ESUCCESS) { assert(0); }
+			if (err->e == RE_ESUCCESS) { assert(!"unreached"); }
 			goto error;
 		}
 
@@ -898,7 +952,7 @@
 			break;
 		}
 
-		re_ast_free(ast);
+		ast_free(ast);
 
 		return NULL;
 	}

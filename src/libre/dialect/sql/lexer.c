@@ -433,7 +433,7 @@ z1(struct lx_sql_lx *lx)
 			break;
 
 		case S26: /* e.g. "[:ALNUM:]" */
-			lx_sql_ungetc(lx, c); return TOK_NAMED__CHAR__CLASS;
+			lx_sql_ungetc(lx, c); return TOK_NAMED__CLASS;
 
 		case S27: /* e.g. "[:WH" */
 			switch ((unsigned char) c) {
@@ -511,7 +511,7 @@ z1(struct lx_sql_lx *lx)
 	case S3: return TOK_CHAR;
 	case S4: return TOK_CLOSEGROUP;
 	case S5: return TOK_INVERT;
-	case S26: return TOK_NAMED__CHAR__CLASS;
+	case S26: return TOK_NAMED__CLASS;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }
@@ -630,7 +630,7 @@ lx_sql_name(enum lx_sql_token t)
 	case TOK_CLOSECOUNT: return "CLOSECOUNT";
 	case TOK_OPENCOUNT: return "OPENCOUNT";
 	case TOK_CHAR: return "CHAR";
-	case TOK_NAMED__CHAR__CLASS: return "NAMED__CHAR__CLASS";
+	case TOK_NAMED__CLASS: return "NAMED__CLASS";
 	case TOK_RANGE: return "RANGE";
 	case TOK_INVERT: return "INVERT";
 	case TOK_CLOSEGROUP: return "CLOSEGROUP";
@@ -666,7 +666,7 @@ lx_sql_example(enum lx_sql_token (*z)(struct lx_sql_lx *), enum lx_sql_token t)
 	if (z == z1) {
 		switch (t) {
 		case TOK_CHAR: return "a";
-		case TOK_NAMED__CHAR__CLASS: return "[:ALNUM:]";
+		case TOK_NAMED__CLASS: return "[:ALNUM:]";
 		case TOK_RANGE: return "-";
 		case TOK_INVERT: return "^";
 		case TOK_CLOSEGROUP: return "]";
