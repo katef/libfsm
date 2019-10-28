@@ -234,83 +234,90 @@ struct ast {
 	struct ast_expr *expr;
 };
 
+struct ast_expr *ast_expr_tombstone;
+
 struct ast *
 ast_new(void);
 
 void
 ast_free(struct ast *ast);
 
+struct ast_count
+ast_make_count(unsigned low, const struct ast_pos *start,
+	unsigned high, const struct ast_pos *end);
+
+/*
+ * Expressions
+ */
+
 void
 ast_expr_free(struct ast_expr *n);
 
 struct ast_expr *
-ast_expr_empty(void);
+ast_make_expr_empty(void);
 
 struct ast_expr *
-ast_expr_tombstone(void);
+ast_make_expr_concat(struct ast_expr *l, struct ast_expr *r);
 
 struct ast_expr *
-ast_expr_concat(struct ast_expr *l, struct ast_expr *r);
+ast_make_expr_concat_n(size_t count);
 
 struct ast_expr *
-ast_expr_concat_n(size_t count);
+ast_make_expr_alt(struct ast_expr *l, struct ast_expr *r);
 
 struct ast_expr *
-ast_expr_alt(struct ast_expr *l, struct ast_expr *r);
+ast_make_expr_alt_n(size_t count);
 
 struct ast_expr *
-ast_expr_alt_n(size_t count);
+ast_make_expr_literal(char c);
 
 struct ast_expr *
-ast_expr_literal(char c);
+ast_make_expr_any(void);
 
 struct ast_expr *
-ast_expr_any(void);
+ast_make_expr_with_count(struct ast_expr *e, struct ast_count count);
 
 struct ast_expr *
-ast_expr_with_count(struct ast_expr *e, struct ast_count count);
-
-struct ast_expr *
-ast_expr_class(struct ast_class *class,
+ast_make_expr_class(struct ast_class *class,
 	const struct ast_pos *start, const struct ast_pos *end);
 
 struct ast_expr *
-ast_expr_group(struct ast_expr *e);
+ast_make_expr_group(struct ast_expr *e);
 
 struct ast_expr *
-ast_expr_re_flags(enum re_flags pos, enum re_flags neg);
+ast_make_expr_re_flags(enum re_flags pos, enum re_flags neg);
 
 struct ast_expr *
-ast_expr_anchor(enum ast_anchor_type type);
+ast_make_expr_anchor(enum ast_anchor_type type);
 
-struct ast_count
-ast_count(unsigned low, const struct ast_pos *start,
-	unsigned high, const struct ast_pos *end);
+/*
+ * Character classes
+ */
 
 struct ast_class *
-ast_class_concat(struct ast_class *l,
+ast_make_class_concat(struct ast_class *l,
 	struct ast_class *r);
 
 struct ast_class *
-ast_class_literal(unsigned char c);
+ast_make_class_literal(unsigned char c);
 
 struct ast_class *
-ast_class_range(const struct ast_range_endpoint *from, struct ast_pos start,
+ast_make_class_range(const struct ast_range_endpoint *from, struct ast_pos start,
 	const struct ast_range_endpoint *to, struct ast_pos end);
 
-void
-ast_class_endpoint_span(const struct ast_range_endpoint *r,
-	unsigned char *from, unsigned char *to);
+struct ast_class *
+ast_make_class_named(class_constructor *ctor);
 
 struct ast_class *
-ast_class_flags(enum ast_class_flags flags);
+ast_make_class_flags(enum ast_class_flags flags);
 
 struct ast_class *
-ast_class_named(class_constructor *ctor);
-
-struct ast_class *
-ast_class_subtract(struct ast_class *ast,
+ast_make_class_subtract(struct ast_class *ast,
 	struct ast_class *mask);
+
+/*
+ * Analysis
+ */
 
 enum ast_analysis_res {
 	AST_ANALYSIS_OK,
@@ -339,6 +346,10 @@ struct ast *
 re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err, int *unsatisfiable);
+
+/*
+ * Compilation to FSM
+ */
 
 int
 ast_compile_class(const struct ast_class *class,

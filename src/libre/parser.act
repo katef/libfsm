@@ -102,11 +102,10 @@
 	typedef enum re_flags t_re__flags;
 	typedef class_constructor * t_ast__class__id;
 	typedef struct ast_count t_ast__count;
+	typedef struct ast_range_endpoint t_range__endpoint;
 
 	typedef struct ast_class * t_ast__class;
 	typedef enum ast_class_flags t_class__flags;
-
-	typedef struct ast_range_endpoint t_range__endpoint;
 
 	struct act_state {
 		enum LX_TOKEN lex_tok;
@@ -449,6 +448,7 @@
 	 * In some cases (e.g. counting) actions are centralised here for
 	 * the sake of DRY, at the expense of slight overkill.
 	 */
+
 	<err-expected-term> = @{
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXTERM;
@@ -542,110 +542,76 @@
 	@};
 
 
-	/* AST construction */
-	<ast-expr-empty>: () -> (node :ast_expr) = @{
-		@node = ast_expr_empty();
-		if (@node == NULL) {
-			@!;
-		}
+	/*
+	 * AST construction
+	 */
+
+	<re-flag-none>: () -> (f :re_flags) = @{
+		@f = RE_FLAGS_NONE;
 	@};
 
-	<ast-expr-concat>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
-		@node = ast_expr_concat(@l, @r);
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-expr-alt>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
-		@node = ast_expr_alt(@l, @r);
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-expr-literal>: (c :char) -> (node :ast_expr) = @{
-		@node = ast_expr_literal(@c);
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-expr-any>: () -> (node :ast_expr) = @{
-		@node = ast_expr_any();
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-expr-atom-any>: (c :ast_count) -> (node :ast_expr) = @{
-		struct ast_expr *e = ast_expr_any();
-		if (e == NULL) {
-			@!;
-		}
-		@node = ast_expr_with_count(e, @c);
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-expr-group>: (e :ast_expr) -> (node :ast_expr) = @{
-		@node = ast_expr_group(@e);
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-expr-atom>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
-		@node = ast_expr_with_count(@e, @c);
-		if (@node == NULL) {
-			err->e = RE_EXEOF;
-			@!;
-		}
+	<re-flag-union>: (in :re_flags, flag :re_flags) -> (out :re_flags) = @{
+		@out = @in | @flag;
 	@};
 
 	<atom-kleene>: () -> (c :ast_count) = @{
-		@c = ast_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
+		@c = ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
 	@};
 
 	<atom-plus>: () -> (c :ast_count) = @{
-		@c = ast_count(1, NULL, AST_COUNT_UNBOUNDED, NULL);
+		@c = ast_make_count(1, NULL, AST_COUNT_UNBOUNDED, NULL);
 	@};
 
 	<atom-one>: () -> (c :ast_count) = @{
-		@c = ast_count(1, NULL, 1, NULL);
+		@c = ast_make_count(1, NULL, 1, NULL);
 	@};
 
 	<atom-opt>: () -> (c :ast_count) = @{
-		@c = ast_count(0, NULL, 1, NULL);
+		@c = ast_make_count(0, NULL, 1, NULL);
 	@};
 
-	<expr-count>: (l :unsigned, start :pos, h :unsigned, end :pos) -> (c :ast_count) = @{
+	<atom-count>: (l :unsigned, start :pos, h :unsigned, end :pos) -> (c :ast_count) = @{
 		struct ast_pos ast_start, ast_end;
+
 		if (@h < @l) {
 			err->e = RE_ENEGCOUNT;
 			err->m = @l;
 			err->n = @h;
+
 			mark(&act_state->countstart, &@start);
 			mark(&act_state->countend,   &@end);
+
 			@!;
 		}
+
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 
-		@c = ast_count(@l, &ast_start, @h, &ast_end);
+		@c = ast_make_count(@l, &ast_start, @h, &ast_end);
 	@};
 
-	<ast-class-literal>: (c :char) -> (node :ast_class) = @{
-		@node = ast_class_literal(@c);
-		if (@node == NULL) {
-			@!;
-		}
+	<ast-range-endpoint-literal>: (c :char) -> (r :range_endpoint) = @{
+		struct ast_range_endpoint range;
+
+		range.type = AST_RANGE_ENDPOINT_LITERAL;
+		range.u.literal.c = @c;
+
+		@r = range;
 	@};
 
-	<ast-class-range-distinct>: (from :range_endpoint, start :pos,
+	<ast-range-endpoint-class>: (id :ast_class_id) -> (r :range_endpoint) = @{
+		struct ast_range_endpoint range;
+
+		range.type = AST_RANGE_ENDPOINT_CLASS;
+		range.u.class.ctor = @id;
+
+		@r = range;
+	@};
+
+	<ast-range-distinct>: (from :range_endpoint, start :pos,
 		to :range_endpoint, end :pos) -> () = @{
 		struct ast_pos ast_start, ast_end;
+
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 
@@ -661,10 +627,133 @@
 		}
 	@};
 
-	<ast-class-range>: (from :range_endpoint, start :pos,
+	/*
+	 * Expressions
+	 */
+
+	<ast-make-expr-empty>: () -> (node :ast_expr) = @{
+		@node = ast_make_expr_empty();
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-concat>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
+		@node = ast_make_expr_concat(@l, @r);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-alt>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
+		@node = ast_make_expr_alt(@l, @r);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-literal>: (c :char) -> (node :ast_expr) = @{
+		@node = ast_make_expr_literal(@c);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-any>: () -> (node :ast_expr) = @{
+		@node = ast_make_expr_any();
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-atom>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
+		@node = ast_make_expr_with_count(@e, @c);
+		if (@node == NULL) {
+			err->e = RE_EXEOF;
+			@!;
+		}
+	@};
+
+	<ast-make-expr-atom-any>: (c :ast_count) -> (node :ast_expr) = @{
+		struct ast_expr *e;
+
+		e = ast_make_expr_any();
+		if (e == NULL) {
+			@!;
+		}
+
+		@node = ast_make_expr_with_count(e, @c);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-class>: (cca :ast_class, start :pos, end :pos) -> (node :ast_expr) = @{
+		struct ast_pos ast_start, ast_end;
+
+		AST_POS_OF_LX_POS(ast_start, @start);
+		AST_POS_OF_LX_POS(ast_end, @end);
+
+		mark(&act_state->groupstart, &@start);
+		mark(&act_state->groupend,   &@end);
+
+		@node = ast_make_expr_class(@cca, &ast_start, &ast_end);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-group>: (e :ast_expr) -> (node :ast_expr) = @{
+		@node = ast_make_expr_group(@e);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-re-flags>: (pos :re_flags, neg :re_flags) -> (node :ast_expr) = @{
+		@node = ast_make_expr_re_flags(@pos, @neg);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-anchor-start>: () -> (node :ast_expr) = @{
+		@node = ast_make_expr_anchor(AST_ANCHOR_START);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-expr-anchor-end>: () -> (node :ast_expr) = @{
+		@node = ast_make_expr_anchor(AST_ANCHOR_END);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	/*
+	 * Character classes
+	 */
+
+	<ast-make-class-concat>: (l :ast_class, r :ast_class) -> (node :ast_class) = @{
+		@node = ast_make_class_concat(@l, @r);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-class-literal>: (c :char) -> (node :ast_class) = @{
+		@node = ast_make_class_literal(@c);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-make-class-range>: (from :range_endpoint, start :pos,
 		to :range_endpoint, end :pos) -> (node :ast_class) = @{
 		struct ast_pos ast_start, ast_end;
 		unsigned char lower, upper;
+
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 
@@ -688,111 +777,49 @@
 			@!;
 		}
 
-		@node = ast_class_range(&@from, ast_start, &@to, ast_end);
+		@node = ast_make_class_range(&@from, ast_start, &@to, ast_end);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-class-concat>: (l :ast_class, r :ast_class) -> (node :ast_class) = @{
-		@node = ast_class_concat(@l, @r);
+	<ast-make-class-named>: (id :ast_class_id) -> (node :ast_class) = @{
+		@node = ast_make_class_named(@id);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-class-subtract>: (l :ast_class, r :ast_class) -> (node :ast_class) = @{
-		@node = ast_class_subtract(@l, @r);
+	<ast-make-class-subtract>: (l :ast_class, r :ast_class) -> (node :ast_class) = @{
+		@node = ast_make_class_subtract(@l, @r);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-class-named-class>: (id :ast_class_id) -> (node :ast_class) = @{
-		@node = ast_class_named(@id);
+	<ast-make-class-flag-none>: () -> (node :ast_class) = @{
+		@node = ast_make_class_flags(AST_CLASS_FLAG_NONE);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-expr-class>: (cca :ast_class, start :pos, end :pos) -> (node :ast_expr) = @{
-		struct ast_pos ast_start, ast_end;
-		AST_POS_OF_LX_POS(ast_start, @start);
-		AST_POS_OF_LX_POS(ast_end, @end);
-		mark(&act_state->groupstart, &@start);
-		mark(&act_state->groupend,   &@end);
-		@node = ast_expr_class(@cca, &ast_start, &ast_end);
+	<ast-make-class-flag-invert>: () -> (node :ast_class) = @{
+		@node = ast_make_class_flags(AST_CLASS_FLAG_INVERTED);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-class-flag-none>: () -> (node :ast_class) = @{
-		@node = ast_class_flags(AST_CLASS_FLAG_NONE);
+	<ast-make-class-flag-minus>: () -> (node :ast_class) = @{
+		@node = ast_make_class_flags(AST_CLASS_FLAG_MINUS);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-class-flag-invert>: () -> (node :ast_class) = @{
-		@node = ast_class_flags(AST_CLASS_FLAG_INVERTED);
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-class-flag-minus>: () -> (node :ast_class) = @{
-		@node = ast_class_flags(AST_CLASS_FLAG_MINUS);
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-class-flag-invert-minus>: () -> (node :ast_class) = @{
-		@node = ast_class_flags(AST_CLASS_FLAG_INVERTED | AST_CLASS_FLAG_MINUS);
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-range-endpoint-literal>: (c :char) -> (r :range_endpoint) = @{
-		struct ast_range_endpoint range;
-		range.type = AST_RANGE_ENDPOINT_LITERAL;
-		range.u.literal.c = @c;
-		@r = range;
-	@};
-
-	<ast-range-endpoint-class>: (id :ast_class_id) -> (r :range_endpoint) = @{
-		struct ast_range_endpoint range;
-		range.type = AST_RANGE_ENDPOINT_CLASS;
-		range.u.class.ctor = @id;
-		@r = range;
-	@};
-
-	<re-flag-none>: () -> (f :re_flags) = @{
-		@f = RE_FLAGS_NONE;
-	@};
-
-	<re-flag-union>: (in :re_flags, flag :re_flags) -> (out :re_flags) = @{
-		@out = @in | @flag;
-	@};
-
-	<ast-expr-re-flags>: (pos :re_flags, neg :re_flags) -> (node :ast_expr) = @{
-		@node = ast_expr_re_flags(@pos, @neg);
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-expr-anchor-start>: () -> (node :ast_expr) = @{
-		@node = ast_expr_anchor(AST_ANCHOR_START);
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-expr-anchor-end>: () -> (node :ast_expr) = @{
-		@node = ast_expr_anchor(AST_ANCHOR_END);
+	<ast-make-class-flag-invert-minus>: () -> (node :ast_class) = @{
+		@node = ast_make_class_flags(AST_CLASS_FLAG_INVERTED | AST_CLASS_FLAG_MINUS);
 		if (@node == NULL) {
 			@!;
 		}

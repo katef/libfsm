@@ -14,8 +14,13 @@
 #include "class.h"
 #include "ast.h"
 
-/* This is a placeholder for a node that has already been freed. */
+/*
+ * This is a placeholder for a node that has already been freed.
+ * Note: this is a single-instance node, which other functions
+ * should not modify.
+ */
 static struct ast_expr the_tombstone;
+struct ast_expr *ast_expr_tombstone = &the_tombstone;
 
 struct ast *
 ast_new(void)
@@ -27,6 +32,7 @@ ast_new(void)
 		return NULL;
 	}
 
+	/* XXX: not thread-safe */
 	the_tombstone.type = AST_EXPR_TOMBSTONE;
 
 	return res;
@@ -135,6 +141,31 @@ ast_free(struct ast *ast)
 	free(ast);
 }
 
+struct ast_count
+ast_make_count(unsigned low, const struct ast_pos *start,
+    unsigned high, const struct ast_pos *end)
+{
+	struct ast_count res;
+
+	memset(&res, 0x00, sizeof res);
+
+	res.low  = low;
+	res.high = high;
+
+	if (start != NULL) {
+		res.start = *start;
+	}
+	if (end != NULL) {
+		res.end = *end;
+	}
+
+	return res;
+}
+
+/*
+ * Expressions
+ */
+
 void
 ast_expr_free(struct ast_expr *n)
 {
@@ -142,7 +173,7 @@ ast_expr_free(struct ast_expr *n)
 }
 
 struct ast_expr *
-ast_expr_empty(void)
+ast_make_expr_empty(void)
 {
 	struct ast_expr *res;
 
@@ -157,16 +188,8 @@ ast_expr_empty(void)
 	return res;
 }
 
-/* Note: this returns a single-instance node, which
- * other functions should not modify. */
 struct ast_expr *
-ast_expr_tombstone(void)
-{
-	return &the_tombstone;
-}
-
-struct ast_expr *
-ast_expr_concat(struct ast_expr *l, struct ast_expr *r)
+ast_make_expr_concat(struct ast_expr *l, struct ast_expr *r)
 {
 	struct ast_expr *res;
 
@@ -186,7 +209,7 @@ ast_expr_concat(struct ast_expr *l, struct ast_expr *r)
 }
 
 struct ast_expr *
-ast_expr_concat_n(size_t count)
+ast_make_expr_concat_n(size_t count)
 {
 	struct ast_expr *res;
 	size_t size = sizeof *res + (count - 1) * sizeof (struct ast_expr *);
@@ -205,7 +228,7 @@ ast_expr_concat_n(size_t count)
 }
 
 struct ast_expr *
-ast_expr_alt(struct ast_expr *l, struct ast_expr *r)
+ast_make_expr_alt(struct ast_expr *l, struct ast_expr *r)
 {
 	struct ast_expr *res;
 
@@ -225,7 +248,7 @@ ast_expr_alt(struct ast_expr *l, struct ast_expr *r)
 }
 
 struct ast_expr *
-ast_expr_alt_n(size_t count)
+ast_make_expr_alt_n(size_t count)
 {
 	struct ast_expr *res;
 	size_t size = sizeof *res + (count - 1) * sizeof (struct ast_expr *);
@@ -244,7 +267,7 @@ ast_expr_alt_n(size_t count)
 }
 
 struct ast_expr *
-ast_expr_literal(char c)
+ast_make_expr_literal(char c)
 {
 	struct ast_expr *res;
 
@@ -260,7 +283,7 @@ ast_expr_literal(char c)
 }
 
 struct ast_expr *
-ast_expr_any(void)
+ast_make_expr_any(void)
 {
 	struct ast_expr *res;
 
@@ -275,7 +298,7 @@ ast_expr_any(void)
 }
 
 struct ast_expr *
-ast_expr_with_count(struct ast_expr *e, struct ast_count count)
+ast_make_expr_with_count(struct ast_expr *e, struct ast_count count)
 {
 	struct ast_expr *res = NULL;
 
@@ -304,7 +327,7 @@ ast_expr_with_count(struct ast_expr *e, struct ast_count count)
 }
 
 struct ast_expr *
-ast_expr_class(struct ast_class *class,
+ast_make_expr_class(struct ast_class *class,
     const struct ast_pos *start, const struct ast_pos *end)
 {
 	struct ast_expr *res;
@@ -324,7 +347,7 @@ ast_expr_class(struct ast_class *class,
 }
 
 struct ast_expr *
-ast_expr_group(struct ast_expr *e)
+ast_make_expr_group(struct ast_expr *e)
 {
 	struct ast_expr *res;
 
@@ -341,7 +364,7 @@ ast_expr_group(struct ast_expr *e)
 }
 
 struct ast_expr *
-ast_expr_re_flags(enum re_flags pos, enum re_flags neg)
+ast_make_expr_re_flags(enum re_flags pos, enum re_flags neg)
 {
 	struct ast_expr *res;
 
@@ -358,7 +381,7 @@ ast_expr_re_flags(enum re_flags pos, enum re_flags neg)
 }
 
 struct ast_expr *
-ast_expr_anchor(enum ast_anchor_type type)
+ast_make_expr_anchor(enum ast_anchor_type type)
 {
 	struct ast_expr *res;
 
@@ -373,29 +396,12 @@ ast_expr_anchor(enum ast_anchor_type type)
 	return res;
 }
 
-struct ast_count
-ast_count(unsigned low, const struct ast_pos *start,
-    unsigned high, const struct ast_pos *end)
-{
-	struct ast_count res;
-
-	memset(&res, 0x00, sizeof res);
-
-	res.low  = low;
-	res.high = high;
-
-	if (start != NULL) {
-		res.start = *start;
-	}
-	if (end != NULL) {
-		res.end = *end;
-	}
-
-	return res;
-}
+/*
+ * Character classes
+ */
 
 struct ast_class *
-ast_class_concat(struct ast_class *l, struct ast_class *r)
+ast_make_class_concat(struct ast_class *l, struct ast_class *r)
 {
 	struct ast_class *res;
 
@@ -412,7 +418,7 @@ ast_class_concat(struct ast_class *l, struct ast_class *r)
 }
 
 struct ast_class *
-ast_class_literal(unsigned char c)
+ast_make_class_literal(unsigned char c)
 {
 	struct ast_class *res;
 
@@ -428,7 +434,7 @@ ast_class_literal(unsigned char c)
 }
 
 struct ast_class *
-ast_class_range(const struct ast_range_endpoint *from, struct ast_pos start,
+ast_make_class_range(const struct ast_range_endpoint *from, struct ast_pos start,
     const struct ast_range_endpoint *to, struct ast_pos end)
 {
 	struct ast_class *res;
@@ -451,23 +457,7 @@ ast_class_range(const struct ast_range_endpoint *from, struct ast_pos start,
 }
 
 struct ast_class *
-ast_class_flags(enum ast_class_flags flags)
-{
-	struct ast_class *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_CLASS_FLAGS;
-	res->u.flags.f = flags;
-
-	return res;
-}
-
-struct ast_class *
-ast_class_named(class_constructor *ctor)
+ast_make_class_named(class_constructor *ctor)
 {
 	struct ast_class *res;
 
@@ -483,7 +473,23 @@ ast_class_named(class_constructor *ctor)
 }
 
 struct ast_class *
-ast_class_subtract(struct ast_class *ast,
+ast_make_class_flags(enum ast_class_flags flags)
+{
+	struct ast_class *res;
+
+	res = calloc(1, sizeof *res);
+	if (res == NULL) {
+		return NULL;
+	}
+
+	res->type = AST_CLASS_FLAGS;
+	res->u.flags.f = flags;
+
+	return res;
+}
+
+struct ast_class *
+ast_make_class_subtract(struct ast_class *ast,
     struct ast_class *mask)
 {
 	struct ast_class *res;

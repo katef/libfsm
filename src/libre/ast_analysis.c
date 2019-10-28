@@ -348,7 +348,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			if (res == AST_ANALYSIS_UNSATISFIABLE) {
 				/* prune unsatisfiable branch */
 				struct ast_expr *doomed = n->u.alt_n.n[i];
-				n->u.alt_n.n[i] = ast_expr_tombstone();
+				n->u.alt_n.n[i] = ast_expr_tombstone;
 				ast_expr_free(doomed);
 				continue;
 			} else if (res == AST_ANALYSIS_OK) {
@@ -559,14 +559,14 @@ collect_chain(size_t count, struct ast_expr *doomed)
 			res = doomed->u.concat.l;
 
 			assert(doomed->u.concat.r->type == AST_EXPR_EMPTY);
-			doomed->u.concat.l = ast_expr_tombstone();
+			doomed->u.concat.l = ast_expr_tombstone;
 			ast_expr_free(doomed);
 			assert(res->type != AST_EXPR_CONCAT);
 
 			return res;
 		}
 
-		dst = ast_expr_concat_n(count);
+		dst = ast_make_expr_concat_n(count);
 		if (dst == NULL) {
 			return NULL;
 		}
@@ -580,8 +580,8 @@ collect_chain(size_t count, struct ast_expr *doomed)
 			}
 
 			dst->u.concat_n.n[i] = doomed->u.concat.l;
-			doomed->u.concat.l = ast_expr_tombstone();
-			doomed->u.concat.r = ast_expr_tombstone();
+			doomed->u.concat.l = ast_expr_tombstone;
+			doomed->u.concat.r = ast_expr_tombstone;
 			ast_expr_free(doomed);
 			doomed = ndoomed;
 
@@ -600,7 +600,7 @@ collect_chain(size_t count, struct ast_expr *doomed)
 			assert(!"unreached");
 		}
 
-		dst = ast_expr_alt_n(count);
+		dst = ast_make_expr_alt_n(count);
 		if (dst == NULL) {
 			return NULL;
 		}
@@ -614,8 +614,8 @@ collect_chain(size_t count, struct ast_expr *doomed)
 			}
 
 			dst->u.alt_n.n[i] = doomed->u.alt.l;
-			doomed->u.alt.l = ast_expr_tombstone();
-			doomed->u.alt.r = ast_expr_tombstone();
+			doomed->u.alt.l = ast_expr_tombstone;
+			doomed->u.alt.r = ast_expr_tombstone;
 			ast_expr_free(doomed);
 			doomed = ndoomed;
 

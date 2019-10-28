@@ -155,7 +155,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	 */
 	if (unsatisfiable) {
 		ast_expr_free(ast->expr);
-		ast->expr = ast_expr_tombstone();
+		ast->expr = ast_expr_tombstone;
 	}
 
 	new = ast_compile(ast, flags, opt, err);
