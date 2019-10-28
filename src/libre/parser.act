@@ -102,7 +102,7 @@
 	typedef enum re_flags t_re__flags;
 	typedef class_constructor * t_ast__class__id;
 	typedef struct ast_count t_ast__count;
-	typedef struct ast_range_endpoint t_range__endpoint;
+	typedef struct ast_endpoint t_endpoint;
 
 	typedef struct ast_class * t_ast__class;
 	typedef enum ast_class_flags t_class__flags;
@@ -590,33 +590,23 @@
 		@c = ast_make_count(@l, &ast_start, @h, &ast_end);
 	@};
 
-	<ast-range-endpoint-literal>: (c :char) -> (r :range_endpoint) = @{
-		struct ast_range_endpoint range;
-
-		range.type = AST_RANGE_ENDPOINT_LITERAL;
-		range.u.literal.c = @c;
-
-		@r = range;
+	<ast-range-endpoint-literal>: (c :char) -> (e :endpoint) = @{
+		@e.type = AST_ENDPOINT_LITERAL;
+		@e.u.literal.c = @c;
 	@};
 
-	<ast-range-endpoint-class>: (id :ast_class_id) -> (r :range_endpoint) = @{
-		struct ast_range_endpoint range;
-
-		range.type = AST_RANGE_ENDPOINT_CLASS;
-		range.u.class.ctor = @id;
-
-		@r = range;
+	<ast-range-endpoint-class>: (id :ast_class_id) -> (e :endpoint) = @{
+		@e.type = AST_ENDPOINT_CLASS;
+		@e.u.class.ctor = @id;
 	@};
 
-	<ast-range-distinct>: (from :range_endpoint, start :pos,
-		to :range_endpoint, end :pos) -> () = @{
+	<ast-range-distinct>: (from :endpoint, start :pos, to :endpoint, end :pos) -> () = @{
 		struct ast_pos ast_start, ast_end;
 
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 
-		if (@from.type != AST_RANGE_ENDPOINT_LITERAL ||
-			@to.type != AST_RANGE_ENDPOINT_LITERAL) {
+		if (@from.type != AST_ENDPOINT_LITERAL || @to.type != AST_ENDPOINT_LITERAL) {
 			err->e = RE_EXUNSUPPORTD;
 			@!;
 		}
@@ -749,16 +739,15 @@
 		}
 	@};
 
-	<ast-make-class-range>: (from :range_endpoint, start :pos,
-		to :range_endpoint, end :pos) -> (node :ast_class) = @{
+	<ast-make-class-range>: (from :endpoint, start :pos, to :endpoint, end :pos) -> (node :ast_class) = @{
 		struct ast_pos ast_start, ast_end;
 		unsigned char lower, upper;
 
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 
-		if (@from.type != AST_RANGE_ENDPOINT_LITERAL ||
-			@to.type != AST_RANGE_ENDPOINT_LITERAL) {
+		if (@from.type != AST_ENDPOINT_LITERAL ||
+			@to.type != AST_ENDPOINT_LITERAL) {
 			err->e = RE_EXUNSUPPORTD;
 			@!;
 		}

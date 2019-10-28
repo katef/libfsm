@@ -148,8 +148,8 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 		break;
 
 	case AST_CLASS_RANGE: {
-		if (n->u.range.from.type != AST_RANGE_ENDPOINT_LITERAL
-		 || n->u.range.to.type != AST_RANGE_ENDPOINT_LITERAL)
+		if (n->u.range.from.type != AST_ENDPOINT_LITERAL
+		 || n->u.range.to.type != AST_ENDPOINT_LITERAL)
 		{
 			assert(!"unimplemented");
 			abort();

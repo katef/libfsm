@@ -109,14 +109,14 @@ enum ast_class_type {
 	AST_CLASS_SUBTRACT
 };
 
-enum ast_range_endpoint_type {
-	AST_RANGE_ENDPOINT_LITERAL,
-	AST_RANGE_ENDPOINT_TYPE,
-	AST_RANGE_ENDPOINT_CLASS
+enum ast_endpoint_type {
+	AST_ENDPOINT_LITERAL,
+/*	AST_ENDPOINT_TYPE, XXX: not implemented */
+	AST_ENDPOINT_CLASS
 };
 
-struct ast_range_endpoint {
-	enum ast_range_endpoint_type type;
+struct ast_endpoint {
+	enum ast_endpoint_type type;
 	union {
 		struct {
 			unsigned char c;
@@ -141,9 +141,9 @@ struct ast_class {
 		} literal;
 
 		struct {
-			struct ast_range_endpoint from;
+			struct ast_endpoint from;
 			struct ast_pos start;
-			struct ast_range_endpoint to;
+			struct ast_endpoint to;
 			struct ast_pos end;
 		} range;
 
@@ -302,8 +302,8 @@ struct ast_class *
 ast_make_class_literal(unsigned char c);
 
 struct ast_class *
-ast_make_class_range(const struct ast_range_endpoint *from, struct ast_pos start,
-	const struct ast_range_endpoint *to, struct ast_pos end);
+ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
+	const struct ast_endpoint *to, struct ast_pos end);
 
 struct ast_class *
 ast_make_class_named(class_constructor *ctor);

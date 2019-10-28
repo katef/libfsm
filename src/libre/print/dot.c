@@ -38,12 +38,11 @@ re_flags_print(FILE *f, enum re_flags fl)
 }
 
 static void
-print_range_endpoint(FILE *f, const struct fsm_options *opt,
-	const struct ast_range_endpoint *r)
+print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint *e)
 {
-	switch (r->type) {
-	case AST_RANGE_ENDPOINT_LITERAL:
-		dot_escputc_html(f, opt, r->u.literal.c);
+	switch (e->type) {
+	case AST_ENDPOINT_LITERAL:
+		dot_escputc_html(f, opt, e->u.literal.c);
 		break;
 
 	default:
@@ -81,9 +80,9 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 
 	case AST_CLASS_RANGE:
 		fprintf(f, "\tn%p [ label = <CLASS-RANGE|", (void *) n);
-		print_range_endpoint(f, opt, &n->u.range.from);
+		print_endpoint(f, opt, &n->u.range.from);
 		fprintf(f, " &ndash; ");
-		print_range_endpoint(f, opt, &n->u.range.to);
+		print_endpoint(f, opt, &n->u.range.to);
 		fprintf(f, "> ];\n");
 		break;
 

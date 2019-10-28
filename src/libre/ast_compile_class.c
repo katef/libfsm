@@ -292,15 +292,13 @@ cc_add_char(struct cc *cc, unsigned char c)
 
 static int
 cc_add_range(struct cc *cc, 
-	const struct ast_range_endpoint *from,
-	const struct ast_range_endpoint *to)
+	const struct ast_endpoint *from,
+	const struct ast_endpoint *to)
 {
 	unsigned char lower, upper;
 	unsigned int i;
 
-	if (from->type != AST_RANGE_ENDPOINT_LITERAL ||
-		to->type != AST_RANGE_ENDPOINT_LITERAL)
-	{
+	if (from->type != AST_ENDPOINT_LITERAL || to->type != AST_ENDPOINT_LITERAL) {
 		/* not yet supported */
 		return 0;
 	}

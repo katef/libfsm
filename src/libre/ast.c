@@ -434,8 +434,8 @@ ast_make_class_literal(unsigned char c)
 }
 
 struct ast_class *
-ast_make_class_range(const struct ast_range_endpoint *from, struct ast_pos start,
-    const struct ast_range_endpoint *to, struct ast_pos end)
+ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
+    const struct ast_endpoint *to, struct ast_pos end)
 {
 	struct ast_class *res;
 

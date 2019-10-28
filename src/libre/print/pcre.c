@@ -56,12 +56,11 @@ re_flags_print(FILE *f, enum re_flags fl)
 }
 
 static void
-print_range_endpoint(FILE *f, const struct fsm_options *opt,
-	const struct ast_range_endpoint *r)
+print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint *e)
 {
-	switch (r->type) {
-	case AST_RANGE_ENDPOINT_LITERAL:
-		pcre_escputc(f, opt, r->u.literal.c);
+	switch (e->type) {
+	case AST_ENDPOINT_LITERAL:
+		pcre_escputc(f, opt, e->u.literal.c);
 		break;
 
 	default:
@@ -159,9 +158,9 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 		break;
 
 	case AST_CLASS_RANGE:
-		print_range_endpoint(f, opt, &n->u.range.from);
+		print_endpoint(f, opt, &n->u.range.from);
 		fprintf(f, "-");
-		print_range_endpoint(f, opt, &n->u.range.to);
+		print_endpoint(f, opt, &n->u.range.to);
 		break;
 
 	case AST_CLASS_NAMED:

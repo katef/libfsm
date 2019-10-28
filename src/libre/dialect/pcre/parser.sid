@@ -27,7 +27,7 @@
 	ast_class_id;
 	ast_count;
 	ast_class;
-	range_endpoint;
+	endpoint;
 
 %terminals%
 
@@ -79,9 +79,9 @@
 	<atom-opt>:    () -> (:ast_count);
 	<atom-count>:  (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
-	<ast-range-endpoint-literal>: (:char)         -> (:range_endpoint);
-	<ast-range-endpoint-class>:   (:ast_class_id) -> (:range_endpoint);
-	!<ast-range-distinct>: (:range_endpoint, :pos, :range_endpoint, :pos) -> ();
+	<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
+	<ast-range-endpoint-class>:   (:ast_class_id) -> (:endpoint);
+	!<ast-range-distinct>: (:endpoint, :pos, :endpoint, :pos) -> ();
 
 	<ast-make-expr-empty>:        ()                       -> (:ast_expr);
 	<ast-make-expr-literal>:      (:char)                  -> (:ast_expr);
@@ -98,7 +98,7 @@
 
 	<ast-make-class-concat>:      (:ast_class, :ast_class) -> (:ast_class);
 	<ast-make-class-literal>:     (:char)                  -> (:ast_class);
-	<ast-make-class-range>:       (:range_endpoint, :pos, :range_endpoint, :pos) -> (:ast_class);
+	<ast-make-class-range>:       (:endpoint, :pos, :endpoint, :pos) -> (:ast_class);
 	!<ast-make-class-subtract>:   (:ast_class, :ast_class) -> (:ast_class);
 	<ast-make-class-named>:       (:ast_class_id)          -> (:ast_class);
 
@@ -167,7 +167,7 @@
 			};
 
 			class-range: () -> (node :ast_class, start :pos, end :pos) [
-				range-endpoint-literal: () -> (r :range_endpoint, start :pos, end :pos) = {
+				range-endpoint-literal: () -> (r :endpoint, start :pos, end :pos) = {
 					{
 						(c, start, end) = ESC;
 					||
@@ -183,7 +183,7 @@
 					r = <ast-range-endpoint-literal>(c);
 				};
 
-				range-endpoint-class: () -> (r :range_endpoint, start :pos, end :pos) = {
+				range-endpoint-class: () -> (r :endpoint, start :pos, end :pos) = {
 					(id, start, end) = class-named();
 					r = <ast-range-endpoint-class>(id);
 				};

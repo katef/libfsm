@@ -64,6 +64,7 @@ static void
 re_flags_print(FILE *f, enum re_flags fl)
 {
 	const char *sep = "";
+
 	if (fl & RE_ICASE  ) { fprintf(f, "%sicase",    sep); sep = " "; }
 	if (fl & RE_TEXT   ) { fprintf(f, "%stext ",    sep); sep = " "; }
 	if (fl & RE_MULTI  ) { fprintf(f, "%smulti ",   sep); sep = " "; }
@@ -73,12 +74,12 @@ re_flags_print(FILE *f, enum re_flags fl)
 }
 
 static void
-print_range_endpoint(FILE *f, const struct ast_range_endpoint *r)
+print_endpoint(FILE *f, const struct ast_endpoint *e)
 {
-	switch (r->type) {
-	case AST_RANGE_ENDPOINT_LITERAL:
+	switch (e->type) {
+	case AST_ENDPOINT_LITERAL:
 		fprintf(f, "'");
-		print_char_or_esc(f, r->u.literal.c);
+		print_char_or_esc(f, e->u.literal.c);
 		fprintf(f, "'");
 		break;
 
@@ -112,9 +113,9 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 
 	case AST_CLASS_RANGE:
 		fprintf(f, "CLASS-RANGE %p: ", (void *) n);
-		print_range_endpoint(f, &n->u.range.from);
+		print_endpoint(f, &n->u.range.from);
 		fprintf(f, "-");
-		print_range_endpoint(f, &n->u.range.to);
+		print_endpoint(f, &n->u.range.to);
 		fprintf(f, "\n");
 		break;
 
