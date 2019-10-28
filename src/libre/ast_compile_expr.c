@@ -17,6 +17,7 @@
 
 #include "class.h"
 #include "ast.h"
+#include "ast_compile.h"
 
 #define LOG_LINKAGE 0
 

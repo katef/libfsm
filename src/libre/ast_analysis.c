@@ -13,6 +13,7 @@
 #include "class.h"
 #include "print.h"
 #include "ast.h"
+#include "ast_analysis.h"
 
 #define LOG_CONCAT_FLAGS 0
 

@@ -7,10 +7,6 @@
 #ifndef RE_AST_H
 #define RE_AST_H
 
-struct fsm_state;
-struct fsm_options;
-struct ast_class;
-
 /*
  * This is a duplicate of struct lx_pos, but since we're linking to
  * code with several distinct lexers, there isn't a clear lexer.h
@@ -315,58 +311,12 @@ struct ast_class *
 ast_make_class_subtract(struct ast_class *ast,
 	struct ast_class *mask);
 
-/*
- * Analysis
- */
-
-enum ast_analysis_res {
-	AST_ANALYSIS_OK,
-
-	/*
-	 * This is returned if analysis finds a combination of
-	 * requirements that are inherently unsatisfiable.
-	 *
-	 * For example, multiple start/end anchors that aren't
-	 * in nullable groups or different alts.
-	 * While this naming leads to a double-negative, we can't prove
-	 * that the regex is satisfiable, just flag it when it isn't.
-	 */
-	AST_ANALYSIS_UNSATISFIABLE,
-
-	AST_ANALYSIS_ERROR_NULL   = -1,
-	AST_ANALYSIS_ERROR_MEMORY = -2
-};
-
-enum ast_analysis_res
-ast_analysis(struct ast *ast);
-
 /* XXX: exposed for sake of re(1) printing an ast;
  * it's not part of the <re/re.h> API proper */
+struct fsm_options;
 struct ast *
 re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err, int *unsatisfiable);
-
-/*
- * Compilation to FSM
- */
-
-int
-ast_compile_class(const struct ast_class *class,
-	struct fsm *fsm, enum re_flags flags,
-	struct re_err *err,
-	struct fsm_state *x, struct fsm_state *y);
-
-int
-ast_compile_expr(struct ast_expr *n,
-	struct fsm *fsm, enum re_flags flags,
-	struct re_err *err,
-	struct fsm_state *x, struct fsm_state *y);
-
-struct fsm *
-ast_compile(const struct ast *ast,
-	enum re_flags flags,
-	const struct fsm_options *opt,
-	struct re_err *err);
 
 #endif

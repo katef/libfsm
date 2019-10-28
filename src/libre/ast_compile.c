@@ -14,6 +14,7 @@
 
 #include "class.h"
 #include "ast.h"
+#include "ast_compile.h"
 
 static struct fsm *
 new_blank(const struct fsm_options *opt)

@@ -17,6 +17,8 @@
 #include "class.h"
 #include "print.h"
 #include "ast.h"
+#include "ast_analysis.h"
+#include "ast_compile.h"
 
 #include "dialect/comp.h"
 
