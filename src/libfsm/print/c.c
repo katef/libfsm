@@ -369,7 +369,7 @@ fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt
 		break;
 
 	case FSM_IO_PAIR:
-		fprintf(f, "\tfor (p = b; *p != e; p++) {\n");
+		fprintf(f, "\tfor (p = b; p != e; p++) {\n");
 		break;
 	}
 
