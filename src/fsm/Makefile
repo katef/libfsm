@@ -3,6 +3,8 @@
 SRC += src/fsm/lexer.c
 SRC += src/fsm/parser.c
 SRC += src/fsm/main.c
+SRC += src/fsm/wordgen.c
+SRC += src/fsm/xoroshiro256starstar.c
 
 .for src in ${SRC:Msrc/fsm/parser.c} ${SRC:Msrc/fsm/main.c}
 CFLAGS.${src} += -I src # XXX: for internal.h
@@ -12,6 +14,21 @@ DFLAGS.${src} += -I src # XXX: for internal.h
 .for src in ${SRC:Msrc/fsm/lexer.c}
 CFLAGS.${src} += -D LX_HEADER='"lexer.h"'
 DFLAGS.${src} += -D LX_HEADER='"lexer.h"'
+.endfor
+
+.for src in ${SRC:Msrc/fsm/main.c}
+CFLAGS.${src} += -std=c99 # XXX: for internal.h
+DFLAGS.${src} += -std=c99 # XXX: for internal.h
+.endfor
+
+.for src in ${SRC:Msrc/fsm/wordgen.c}
+CFLAGS.${src} += -std=c99 # XXX: for internal.h
+DFLAGS.${src} += -std=c99 # XXX: for internal.h
+.endfor
+
+.for src in ${SRC:Msrc/fsm/xoroshiro256starstar.c}
+CFLAGS.${src} += -std=c99 # XXX: for internal.h
+DFLAGS.${src} += -std=c99 # XXX: for internal.h
 .endfor
 
 LEXER  += src/fsm/lexer.lx
