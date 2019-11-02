@@ -54,6 +54,18 @@ CFLAGS.${src} += ${CFLAGS.libtheft}
 DFLAGS.${src} += ${CFLAGS.libtheft}
 .endfor
 
+.for src in ${SRC:Mtheft/*_adt_set.c}
+INCDIR.${src:Mtheft/*.c} += src/adt
+.endfor
+
+# not all concrete set interfaces use all static functions from set.inc
+.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.for src in ${SRC:Mtheft/*_adt_set.c}
+CFLAGS.${src:Mtheft/*.c} += -Wno-unused-function
+.endfor
+.endif
+
+
 LFLAGS.theft += ${LIBS.libtheft}
 
 ${BUILD}/theft/theft: ${BUILD}

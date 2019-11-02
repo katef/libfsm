@@ -11,6 +11,10 @@
 #include <adt/edgeset.h>
 #include <adt/xalloc.h>
 
+typedef uintptr_t item_t;
+
+#include "set.inc"
+
 struct model {
 	struct set_hook_env *env;
 	size_t bit_count;
@@ -33,6 +37,11 @@ cmp_item(const void *pa, const void *pb)
 	assert(pa != NULL);
 	assert(pb != NULL);
 
+	/*
+	 * This is intentional abuse of the set API; here we compare
+	 * pointers by value, because for the purposes of our tests
+	 * they do not point to any items.
+	 */
 	return a < b ? -1 : a > b ? 1 : 0;
 }
 
@@ -178,11 +187,8 @@ get_pos(uintptr_t item, size_t *offset, uint64_t *bit)
 static bool
 op_add(struct model *m, struct set_op *op, struct set *set)
 {
-	struct set *old_s;
 	size_t offset;
 	uint64_t bit;
-
-	old_s = set;
 
 	assert(op->u.add.item != 0);
 
@@ -202,11 +208,8 @@ op_add(struct model *m, struct set_op *op, struct set *set)
 static bool
 op_remove(struct model *m, struct set_op *op, struct set *set)
 {
-	struct set *old_s;
 	size_t offset;
 	uint64_t bit;
-
-	old_s = set;
 
 	assert(op->u.remove.item != 0);
 
