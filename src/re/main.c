@@ -274,21 +274,20 @@ addmatch(struct match **head, int i, const char *s)
 }
 
 static void
-carryopaque(const struct fsm_state **set, size_t n,
-	struct fsm *fsm, struct fsm_state *state)
+carryopaque(struct fsm *src_fsm, const struct fsm_state **src_set, size_t n,
+	struct fsm *dst_fsm, struct fsm_state *dst_state)
 {
 	struct match *matches;
 	struct match *m;
 	size_t i;
 
-	assert(set != NULL); /* TODO: right? */
-	assert(n > 0); /* TODO: right? */
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	if (!fsm_isend(fsm, state)) {
-		return;
-	}
+	assert(src_fsm != NULL);
+	assert(src_set != NULL);
+	assert(n > 0);
+	assert(dst_state != NULL);
+	assert(dst_fsm != NULL);
+	assert(fsm_isend(dst_fsm, dst_state));
+	assert(fsm_getopaque(dst_fsm, dst_state) == NULL);
 
 	/*
 	 * Here we mark newly-created DFA states with the same regexp string
@@ -302,13 +301,17 @@ carryopaque(const struct fsm_state **set, size_t n,
 	matches = NULL;
 
 	for (i = 0; i < n; i++) {
-		if (!fsm_isend(fsm, set[i])) {
+		/*
+		 * The opaque data is attached to end states only, so we skip
+		 * non-end states here.
+		 */
+		if (!fsm_isend(src_fsm, src_set[i])) {
 			continue;
 		}
 
-		assert(fsm_getopaque(fsm, set[i]) != NULL);
+		assert(fsm_getopaque(src_fsm, src_set[i]) != NULL);
 
-		for (m = fsm_getopaque(fsm, set[i]); m != NULL; m = m->next) {
+		for (m = fsm_getopaque(src_fsm, src_set[i]); m != NULL; m = m->next) {
 			if (!addmatch(&matches, m->i, m->s)) {
 				perror("addmatch");
 				goto error;
@@ -316,7 +319,7 @@ carryopaque(const struct fsm_state **set, size_t n,
 		}
 	}
 
-	fsm_setopaque(fsm, state, matches);
+	fsm_setopaque(dst_fsm, dst_state, matches);
 
 	return;
 
@@ -324,7 +327,7 @@ error:
 
 	/* XXX: free matches */
 
-	fsm_setopaque(fsm, state, NULL);
+	fsm_setopaque(dst_fsm, dst_state, NULL);
 
 	return;
 }

@@ -15,6 +15,7 @@
 
 #include <fsm/alloc.h>
 #include <fsm/fsm.h>
+#include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
 
@@ -119,14 +120,67 @@ fsm_move(struct fsm *dst, struct fsm *src)
 }
 
 void
-fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
-	struct fsm *new, struct fsm_state *state)
+fsm_carryopaque_array(struct fsm *src_fsm, const struct fsm_state **src_set, size_t n,
+	struct fsm *dst_fsm, struct fsm_state *dst_state)
 {
 	ctassert(sizeof (void *) == sizeof (struct fsm_state *));
 
-	assert(fsm != NULL);
+	assert(src_fsm != NULL);
+	assert(src_set != NULL);
+	assert(n > 0);
+	assert(dst_fsm != NULL);
+	assert(fsm_isend(dst_fsm, dst_state));
+	assert(src_fsm->opt == dst_fsm->opt);
 
-	if (fsm->opt == NULL || fsm->opt->carryopaque == NULL) {
+	/* 
+	 * Some states in src_set may be not end states (for example
+	 * from an epsilon closure over a mix of end and non-end states).
+	 * However at least one element is known to be an end state,
+	 * so we assert on that here.
+	 *
+	 * I would filter out the non-end states if there were a convenient
+	 * way to do that without allocating for it. As it is, the caller
+	 * must unfortunately be exposed to a mix.
+	 */
+#ifndef NDEBUG
+	{
+		int has_end;
+		size_t i;
+
+		has_end = 0;
+
+		for (i = 0; i < n; i++) {
+			if (fsm_isend(src_fsm, src_set[i])) {
+				has_end = 1;
+				break;
+			}
+		}
+
+		assert(has_end);
+	}
+#endif
+
+	if (src_fsm->opt == NULL || src_fsm->opt->carryopaque == NULL) {
+		return;
+	}
+
+	src_fsm->opt->carryopaque(src_fsm, src_set, n,
+		dst_fsm, dst_state);
+}
+
+void
+fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
+	struct fsm *dst_fsm, struct fsm_state *dst_state)
+{
+	assert(src_fsm != NULL);
+	assert(dst_fsm != NULL);
+	assert(fsm_isend(dst_fsm, dst_state));
+	assert(src_fsm->opt == dst_fsm->opt);
+
+	ctassert(sizeof (void *) == sizeof (struct fsm_state *));
+
+	/* TODO: right? */
+	if (state_set_empty(src_set)) {
 		return;
 	}
 
@@ -140,8 +194,8 @@ fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
 	 * and the cast here.
 	 */
 
-	fsm->opt->carryopaque((void *) state_set_array(set), state_set_count(set),
-		new, state);
+	fsm_carryopaque_array(src_fsm, (void *) state_set_array(src_set), state_set_count(src_set),
+		dst_fsm, dst_state);
 }
 
 unsigned int

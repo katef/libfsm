@@ -421,24 +421,38 @@ important(unsigned n)
 }
 
 static void
-carryopaque(const struct fsm_state **set, size_t n,
-	struct fsm *fsm, struct fsm_state *st)
+carryopaque(struct fsm *src_fsm, const struct fsm_state **src_set, size_t n,
+	struct fsm *dst_fsm, struct fsm_state *dst_state)
 {
 	void *o = NULL;
 	size_t i;
 
+	assert(src_fsm != NULL);
+	assert(src_set != NULL);
+	assert(n > 0);
+	assert(dst_state != NULL);
+	assert(dst_fsm != NULL);
+	assert(fsm_isend(dst_fsm, dst_state));
+	assert(fsm_getopaque(dst_fsm, dst_state) == NULL);
+
 	for (i = 0; i < n; i++) {
-		if (!fsm_isend(fsm, set[i])) {
+		/*
+		 * The opaque data is attached to end states only, so we skip
+		 * non-end states here.
+		 */
+		if (!fsm_isend(src_fsm, src_set[i])) {
 			continue;
 		}
+
+		assert(fsm_getopaque(src_fsm, src_set[i]) != NULL);
 
 		if (o == NULL) {
-			o = fsm_getopaque(fsm, set[i]);
-			fsm_setopaque(fsm, st, o);
+			o = fsm_getopaque(src_fsm, src_set[i]);
+			fsm_setopaque(dst_fsm, dst_state, o);
 			continue;
 		}
 
-		assert(o == fsm_getopaque(fsm, set[i]));
+		assert(o == fsm_getopaque(src_fsm, src_set[i]));
 	}
 }
 

@@ -164,18 +164,106 @@ walk2mask(int has_a, int has_b)
 {
 	if (has_a) {
 		return has_b ? FSM_WALK2_BOTH  : FSM_WALK2_ONLYA;
+	} else {
+		return has_b ? FSM_WALK2_ONLYB : FSM_WALK2_NEITHER;
+	}
+}
+
+static struct fsm_state *
+walk2_comb_state(struct fsm *dst_fsm, int is_end,
+	const struct fsm_state *a, const struct fsm_state *b) 
+{
+	struct fsm_state *comb;
+	const struct fsm_state *states[2] = { 0 };
+	size_t count;
+	struct fsm tmp;
+	struct fsm_state tmp0, tmp1;
+
+    assert(dst_fsm != NULL); 
+ 
+	comb = fsm_addstate(dst_fsm);
+	if (comb == NULL) {
+		return NULL;
 	}
 
-	return has_b ? FSM_WALK2_ONLYB : FSM_WALK2_NEITHER;
-}
+	if (!is_end) {
+		return comb;
+	}
+
+	fsm_setend(dst_fsm, comb, 1);
+
+	if (dst_fsm->opt == NULL || dst_fsm->opt->carryopaque == NULL) {
+		return comb;
+	}
+
+	count = 0;
+
+	if (a != NULL) {
+		states[count++] = a;
+	}
+
+	if (b != NULL) {
+		states[count++] = b;
+	}
+
+	if (count == 0) {
+		return comb;
+	}
+
+	/*
+	 * Using an array here is slightly cheesed, but it avoids
+	 * constructing a set just to pass these two states to
+	 * the .carryopaque callback.
+	 *
+	 * Unrelated to that, the .carryopaque callback needs a
+	 * src_fsm to pass for calls on those states. But because
+	 * our two states may come from different FSMs, there's no
+	 * single correct src_fsm to pass. So we workaround that
+	 * by constructing a temporary FSM just to hold them.
+	 *
+	 * This is done entirely in automatic storage, because
+	 * it's only needed briefly and is limited to two states.
+	 */
+
+	/* TODO: tmp.states = states; */
+
+	/* handmade linked list */
+	switch (count) {
+	case 2:
+		tmp0 = *states[0];
+		tmp1 = *states[1];
+		tmp0.next = &tmp1;
+		tmp1.next = NULL;
+		tmp.tail = &tmp1.next;
+		break;
+
+	case 1:
+		tmp0 = *states[0];
+		tmp0.next = NULL;
+		tmp.tail = &tmp0.next;
+		break;
+
+	default:
+		assert(!"unreached");
+	}
+
+	tmp.sl = &tmp0;
+	/* TODO: tmp.statealloc = count; */
+	/* TODO: tmp.statecount = count; */
+	tmp.endcount = a->end + b->end;
+	tmp.start = NULL;
+	tmp.opt = dst_fsm->opt;
+
+	fsm_carryopaque_array(&tmp, states, count, dst_fsm, comb);
+
+	return comb;
+} 
 
 static struct fsm_walk2_tuple *
 fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 	struct fsm_state *a, struct fsm_state *b)
 {
 	struct fsm_walk2_tuple lkup, *p;
-	struct fsm_state *comb;
-	const struct fsm_options *opt;
 	int is_end;
 
 	lkup.a = a;
@@ -193,47 +281,20 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		return NULL;
 	}
 
-	comb = fsm_addstate(data->new);
-	if (comb == NULL) {
-		return NULL;
-	}
-
-	assert(comb->tmp.visited == NULL);
+	is_end = data->endmask & walk2mask(a && a->end, b && b->end);
 
 	p->a = a;
 	p->b = b;
-	p->comb = comb;
-	if (!tuple_set_add(data->states, p)) {
+
+	p->comb = walk2_comb_state(data->new, is_end, a, b);
+	if (p->comb == NULL) {
 		return NULL;
 	}
 
-	is_end = data->endmask & walk2mask(a && a->end, b && b->end);
+	assert(p->comb->tmp.visited == NULL);
 
-	if (is_end) {
-		fsm_setend(data->new, comb, 1);
-
-		opt = data->new->opt;
-		if (opt != NULL && opt->carryopaque != NULL) {
-			const struct fsm_state *states[2] = { 0 };
-			size_t nst = 0;
-
-			if (a) {
-				states[nst++] = a;
-			}
-
-			if (b) {
-				states[nst++] = b;
-			}
-
-			if (nst > 0) {
-				/*
-				 * This is slightly cheesed, but it avoids
-				 * constructing a set just to pass these two
-				 * states to the carryopaque function
-				 */
-				opt->carryopaque(states, nst, data->new, comb);
-			}
-		}
+	if (!tuple_set_add(data->states, p)) {
+		return NULL;
 	}
 
 	return p;

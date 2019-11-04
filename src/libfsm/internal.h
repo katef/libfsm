@@ -82,6 +82,10 @@ int
 fsm_addedge_bulk(struct fsm *fsm, struct fsm_state *from, struct fsm_state **to, size_t n, char c);
 
 void
+fsm_carryopaque_array(struct fsm *src_fsm, const struct fsm_state **src_set, size_t n,
+    struct fsm *dst_fsm, struct fsm_state *dst_state);
+
+void
 fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
 	struct fsm *new, struct fsm_state *state);
 
