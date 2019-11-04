@@ -120,14 +120,17 @@ fsm_move(struct fsm *dst, struct fsm *src)
 }
 
 void
-fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
+fsm_carryopaque_array(struct fsm *src_fsm, const struct fsm_state **src_set, size_t n,
 	struct fsm *dst_fsm, struct fsm_state *dst_state)
 {
 	ctassert(sizeof (void *) == sizeof (struct fsm_state *));
 
 	assert(src_fsm != NULL);
+	assert(src_set != NULL);
+	assert(n > 0);
 	assert(dst_fsm != NULL);
 	assert(fsm_isend(dst_fsm, dst_state));
+	assert(src_fsm->opt == dst_fsm->opt);
 
 	/* 
 	 * Some states in src_set may be not end states (for example
@@ -141,27 +144,40 @@ fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
 	 */
 #ifndef NDEBUG
 	{
-		struct state_iter it;
-		struct fsm_state *s;
-		unsigned endcount;
+		int has_end;
+		size_t i;
 
-		endcount = 0;
+		has_end = 0;
 
-		for (s = state_set_first((void *) src_set, &it); s != NULL; s = state_set_next(&it)) {
-			if (fsm_isend(src_fsm, s)) {
-				endcount++;
+		for (i = 0; i < n; i++) {
+			if (fsm_isend(src_fsm, src_set[i])) {
+				has_end = 1;
+				break;
 			}
 		}
 
-		assert(endcount >= 1);
+		assert(has_end);
 	}
 #endif
-
-	assert(src_fsm->opt == dst_fsm->opt);
 
 	if (src_fsm->opt == NULL || src_fsm->opt->carryopaque == NULL) {
 		return;
 	}
+
+	src_fsm->opt->carryopaque(src_fsm, src_set, n,
+		dst_fsm, dst_state);
+}
+
+void
+fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
+	struct fsm *dst_fsm, struct fsm_state *dst_state)
+{
+	assert(src_fsm != NULL);
+	assert(dst_fsm != NULL);
+	assert(fsm_isend(dst_fsm, dst_state));
+	assert(src_fsm->opt == dst_fsm->opt);
+
+	ctassert(sizeof (void *) == sizeof (struct fsm_state *));
 
 	/* TODO: right? */
 	if (state_set_empty(src_set)) {
@@ -178,7 +194,7 @@ fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
 	 * and the cast here.
 	 */
 
-	src_fsm->opt->carryopaque(src_fsm, (void *) state_set_array(src_set), state_set_count(src_set),
+	fsm_carryopaque_array(src_fsm, (void *) state_set_array(src_set), state_set_count(src_set),
 		dst_fsm, dst_state);
 }
 

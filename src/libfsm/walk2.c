@@ -254,9 +254,7 @@ walk2_comb_state(struct fsm *dst_fsm, int is_end,
 	tmp.start = NULL;
 	tmp.opt = dst_fsm->opt;
 
-	/* TODO: call centralised fsm_carryopaque() instead, fake up a set */
-
-	tmp.opt->carryopaque(&tmp, states, count, dst_fsm, comb);
+	fsm_carryopaque_array(&tmp, states, count, dst_fsm, comb);
 
 	return comb;
 } 
