@@ -253,18 +253,21 @@ rescan:
 }
 
 static void
-carryend(struct state_set *set, struct fsm *fsm, struct fsm_state *state)
+carryend(const struct fsm *src_fsm, struct state_set *src_set,
+	struct fsm *dst_fsm, struct fsm_state *dst_state)
 {
 	struct state_iter it;
 	struct fsm_state *s;
 
-	assert(set != NULL); /* TODO: right? */
-	assert(fsm != NULL);
-	assert(state != NULL);
+	/* src_set is >= 1 because a closure includes the source state */
+	assert(src_fsm != NULL);
+	assert(src_set != NULL && state_set_count(src_set) >= 1);
+	assert(dst_fsm != NULL);
+	assert(dst_state != NULL);
 
-	for (s = state_set_first(set, &it); s != NULL; s = state_set_next(&it)) {
-		if (fsm_isend(fsm, s)) {
-			fsm_setend(fsm, state, 1);
+	for (s = state_set_first(src_set, &it); s != NULL; s = state_set_next(&it)) {
+		if (fsm_isend(src_fsm, s)) {
+			fsm_setend(dst_fsm, dst_state, 1);
 		}
 	}
 }
@@ -650,13 +653,19 @@ nfa_transform(struct fsm *nfa,
 		 * The current DFA state is an end state if any of its associated NFA
 		 * states are end states.
 		 */
-		carryend(curr->closure, dfa, curr->dfastate);
+		carryend(nfa, curr->closure, dfa, curr->dfastate);
+		if (!fsm_isend(dfa, curr->dfastate)) {
+			continue;
+		}
 
 		/*
 		 * Carry through opaque values, if present. This isn't anything to do
 		 * with the DFA conversion; it's meaningful only to the caller.
+		 *
+		 * The closure may contain non-end states, but at least one state is
+		 * known to have been an end state.
 		 */
-		fsm_carryopaque(dfa, curr->closure, dfa, curr->dfastate);
+		fsm_carryopaque(nfa, curr->closure, dfa, curr->dfastate);
 	}
 
 	clear_mappings(dfa, mappings);

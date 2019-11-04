@@ -15,6 +15,7 @@
 
 #include <fsm/alloc.h>
 #include <fsm/fsm.h>
+#include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
 
@@ -119,14 +120,51 @@ fsm_move(struct fsm *dst, struct fsm *src)
 }
 
 void
-fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
-	struct fsm *new, struct fsm_state *state)
+fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
+	struct fsm *dst_fsm, struct fsm_state *dst_state)
 {
 	ctassert(sizeof (void *) == sizeof (struct fsm_state *));
 
-	assert(fsm != NULL);
+	assert(src_fsm != NULL);
+	assert(dst_fsm != NULL);
+	assert(fsm_isend(dst_fsm, dst_state));
 
-	if (fsm->opt == NULL || fsm->opt->carryopaque == NULL) {
+	/* 
+	 * Some states in src_set may be not end states (for example
+	 * from an epsilon closure over a mix of end and non-end states).
+	 * However at least one element is known to be an end state,
+	 * so we assert on that here.
+	 *
+	 * I would filter out the non-end states if there were a convenient
+	 * way to do that without allocating for it. As it is, the caller
+	 * must unfortunately be exposed to a mix.
+	 */
+#ifndef NDEBUG
+	{
+		struct state_iter it;
+		struct fsm_state *s;
+		unsigned endcount;
+
+		endcount = 0;
+
+		for (s = state_set_first((void *) src_set, &it); s != NULL; s = state_set_next(&it)) {
+			if (fsm_isend(src_fsm, s)) {
+				endcount++;
+			}
+		}
+
+		assert(endcount >= 1);
+	}
+#endif
+
+	assert(src_fsm->opt == dst_fsm->opt);
+
+	if (src_fsm->opt == NULL || src_fsm->opt->carryopaque == NULL) {
+		return;
+	}
+
+	/* TODO: right? */
+	if (state_set_empty(src_set)) {
 		return;
 	}
 
@@ -140,8 +178,8 @@ fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
 	 * and the cast here.
 	 */
 
-	fsm->opt->carryopaque((void *) state_set_array(set), state_set_count(set),
-		new, state);
+	src_fsm->opt->carryopaque(src_fsm, (void *) state_set_array(src_set), state_set_count(src_set),
+		dst_fsm, dst_state);
 }
 
 unsigned int

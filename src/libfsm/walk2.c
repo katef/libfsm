@@ -164,9 +164,9 @@ walk2mask(int has_a, int has_b)
 {
 	if (has_a) {
 		return has_b ? FSM_WALK2_BOTH  : FSM_WALK2_ONLYA;
+	} else {
+		return has_b ? FSM_WALK2_ONLYB : FSM_WALK2_NEITHER;
 	}
-
-	return has_b ? FSM_WALK2_ONLYB : FSM_WALK2_NEITHER;
 }
 
 static struct fsm_walk2_tuple *
@@ -193,6 +193,9 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		return NULL;
 	}
 
+	is_end = data->endmask & walk2mask(a && a->end, b && b->end);
+
+	/* TODO: factor out as a combine-a-state function */
 	comb = fsm_addstate(data->new);
 	if (comb == NULL) {
 		return NULL;
@@ -206,8 +209,6 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 	if (!tuple_set_add(data->states, p)) {
 		return NULL;
 	}
-
-	is_end = data->endmask & walk2mask(a && a->end, b && b->end);
 
 	if (is_end) {
 		fsm_setend(data->new, comb, 1);
@@ -226,12 +227,54 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 			}
 
 			if (nst > 0) {
+				struct fsm tmp;
+				struct fsm_state tmp0, tmp1;
+
 				/*
-				 * This is slightly cheesed, but it avoids
-				 * constructing a set just to pass these two
-				 * states to the carryopaque function
+				 * Using an array here is slightly cheesed, but it avoids
+				 * constructing a set just to pass these two states to
+				 * the .carryopaque callback.
+				 *
+				 * Unrelated to that, the .carryopaque callback needs a
+				 * src_fsm to pass for calls on those states. But because
+				 * our two states may come from different FSMs, there's no
+				 * single correct src_fsm to pass. So we workaround that
+				 * by constructing a temporary FSM just to hold them.
+				 *
+				 * This is done entirely in automatic storage, because
+				 * it's only needed briefly and is limited to two states.
 				 */
-				opt->carryopaque(states, nst, data->new, comb);
+
+				/* TODO: tmp.states = states; */
+
+				/* handmade linked list */
+				switch (nst) {
+				case 2:
+					tmp0 = *states[0];
+					tmp1 = *states[1];
+					tmp0.next = &tmp1;
+					tmp1.next = NULL;
+					tmp.tail = &tmp1.next;
+					break;
+
+				case 1:
+					tmp0 = *states[0];
+					tmp0.next = NULL;
+					tmp.tail = &tmp0.next;
+					break;
+
+				default:
+					assert(!"unreached");
+				}
+
+				tmp.sl = &tmp0;
+				/* TODO: tmp.statealloc = nst; */
+				/* TODO: tmp.statecount = nst; */
+				tmp.endcount = a->end + b->end;
+				tmp.start = NULL;
+				tmp.opt = data->new->opt;
+
+				opt->carryopaque(&tmp, states, nst, data->new, comb);
 			}
 		}
 	}

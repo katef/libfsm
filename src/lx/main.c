@@ -251,23 +251,20 @@ lang_exclude(const char *name)
 }
 
 static void
-carryopaque(const struct fsm_state **set, size_t n,
-	struct fsm *fsm, struct fsm_state *state)
+carryopaque(struct fsm *src_fsm, const struct fsm_state **src_set, size_t n,
+	struct fsm *dst_fsm, struct fsm_state *dst_state)
 {
 	struct mapping_set *conflict;
 	struct ast_mapping *m;
 	size_t i;
 
-	assert(set != NULL); /* TODO: right? */
-	assert(n > 0); /* TODO: right? */
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	if (!fsm_isend(fsm, state)) {
-		return;
-	}
-
-	assert(fsm_getopaque(fsm, state) == NULL);
+	assert(src_fsm != NULL);
+	assert(src_set != NULL);
+	assert(n > 0);
+	assert(dst_fsm != NULL);
+	assert(dst_state != NULL);
+	assert(fsm_isend(dst_fsm, dst_state));
+	assert(fsm_getopaque(dst_fsm, dst_state) == NULL);
 
 	/*
 	 * Here we mark newly-created DFA states with the same AST mapping
@@ -283,8 +280,8 @@ carryopaque(const struct fsm_state **set, size_t n,
 	m = NULL;
 
 	for (i = 0; i < n; i++) {
-		if (fsm_isend(fsm, set[i])) {
-			m = fsm_getopaque(fsm, set[i]);
+		if (fsm_isend(src_fsm, src_set[i])) {
+			m = fsm_getopaque(src_fsm, src_set[i]);
 			break;
 		}
 	}
@@ -296,13 +293,17 @@ carryopaque(const struct fsm_state **set, size_t n,
 	for (i = 0; i < n; i++) {
 		struct ast_mapping *p;
 
-		if (!fsm_isend(fsm, set[i])) {
+		/*
+		 * The opaque data is attached to end states only, so we skip
+		 * non-end states here.
+		 */
+		if (!fsm_isend(src_fsm, src_set[i])) {
 			continue;
 		}
 
-		assert(fsm_getopaque(fsm, set[i]) != NULL);
+		assert(fsm_getopaque(src_fsm, src_set[i]) != NULL);
 
-		p = fsm_getopaque(fsm, set[i]);
+		p = fsm_getopaque(src_fsm, src_set[i]);
 
 		if (m->to == p->to && m->token == p->token) {
 			continue;
@@ -338,7 +339,7 @@ carryopaque(const struct fsm_state **set, size_t n,
 	if (conflict == NULL) {
 		assert(m->conflict == NULL);
 
-		fsm_setopaque(fsm, state, m);
+		fsm_setopaque(dst_fsm, dst_state, m);
 	} else {
 		struct ast_mapping *new;
 
@@ -354,7 +355,7 @@ carryopaque(const struct fsm_state **set, size_t n,
 		new->next     = NULL;
 		new->conflict = conflict; /* private to this DFA state */
 
-		fsm_setopaque(fsm, state, new);
+		fsm_setopaque(dst_fsm, dst_state, new);
 	}
 
 	return;
@@ -363,7 +364,7 @@ error:
 
 	/* XXX: free conflict set */
 
-	fsm_setopaque(fsm, state, NULL);
+	fsm_setopaque(dst_fsm, dst_state, NULL);
 
 	return;
 }
