@@ -6,11 +6,12 @@
 
 #include <assert.h>
 #include <string.h>
-#include <errno.h>
 #include <ctype.h>
 
+#include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
+#include <fsm/options.h>
 
 #include <re/re.h>
 
@@ -141,43 +142,52 @@ addedge_literal(struct fsm *fsm, enum re_flags flags,
 	return 1;
 }
 
+/* TODO: centralise */
 static struct fsm *
-negate(struct fsm *class, const struct fsm_options *opt)
+fsm_invert(struct fsm *fsm)
 {
 	struct fsm *any;
-	
-	any = class_any_fsm(opt);
-	
-	if (any == NULL || class == NULL) {
-		if (any) fsm_free(any);
-		if (class) fsm_free(class);
-	};
-	
-	class = fsm_subtract(any, class);
-	
-	return class;
+
+	assert(fsm != NULL);
+
+	any = class_any_fsm(fsm_getoptions(fsm));
+	if (any == NULL) {
+		fsm_free(fsm);
+		return NULL;
+	}
+
+	return fsm_subtract(any, fsm);
 }
 
 static int
-link_class_into_fsm(struct cc *cc, struct fsm *fsm,
-	struct fsm_state *x, struct fsm_state *y)
+cc_add_named(struct cc *cc, class_constructor *ctor)
 {
-	struct re_err *err = cc->err;
+	struct fsm *q;
 
 	assert(cc != NULL);
+	assert(ctor != NULL);
 
-	if (!fsm_minimise(cc->set)) {
-		if (err != NULL) { err->e = RE_EERRNO; }
-		return 0;
+	q = ctor(fsm_getoptions(cc->set));
+	if (q == NULL) {
+		goto error;
 	}
-	
-	if (!fsm_unionxy(fsm, cc->set, x, y)) {
-		if (err != NULL) { err->e = RE_EERRNO; }
-		return 0;
+
+	cc->set = fsm_union(cc->set, q);
+	if (cc->set == NULL) {
+		fsm_free(q);
+		goto error;
+	}
+
+	return 1;
+
+error:
+
+	if (cc->err != NULL) {
+		cc->err->e = RE_EERRNO;
 	}
 
 	cc->set = NULL;
-		
+
 	return 1;
 }
 
@@ -191,6 +201,11 @@ cc_add_char(struct cc *cc, unsigned char c)
 	start = fsm_getstart(cc->set);
 	assert(start != NULL);
 	
+	/*
+	 * TODO: for now we make an end state, but eventually we can link to
+	 * an existing end state (because we'll pass in the xy endpoints).
+	 * So all we'd add here is a single transition.
+	 */
 	end = fsm_addstate(cc->set);
 	if (end == NULL) {
 		return 0;
@@ -201,7 +216,7 @@ cc_add_char(struct cc *cc, unsigned char c)
 	if (!addedge_literal(cc->set, cc->re_flags, start, end, c)) {
 		return 0;
 	}
-	
+
 	return 1;
 }
 
@@ -260,21 +275,6 @@ error:
 }
 
 static int
-cc_invert(struct cc *cc)
-{
-	struct fsm *inverted;
-
-	inverted = negate(cc->set, fsm_getoptions(cc->set));
-	if (inverted == NULL) {
-		return 0;
-	}
-
-	cc->set = inverted;
-
-	return 1;
-}
-
-static int
 comp_iter(struct cc *cc, const struct ast_class *n)
 {
 	assert(cc != NULL);
@@ -305,7 +305,7 @@ comp_iter(struct cc *cc, const struct ast_class *n)
 		break;
 
 	case AST_CLASS_NAMED:
-		if (!cc_add_named_class(cc, n->u.named.ctor)) {
+		if (!cc_add_named(cc, n->u.named.ctor)) {
 			return 0;
 		}
 		break;
@@ -330,14 +330,16 @@ ast_compile_class(const struct ast_class *class,
 	struct re_err *err,
 	struct fsm_state *x, struct fsm_state *y)
 {
-	const struct fsm_options *opt;
 	struct cc cc;
+
+	assert(class != NULL);
+	assert(fsm != NULL);
+	assert(x != NULL);
+	assert(y != NULL);
 
 	memset(&cc, 0x00, sizeof(cc));
 	
-	opt = fsm_getoptions(fsm);
-
-	cc.set = new_blank(opt);
+	cc.set = new_blank(fsm_getoptions(fsm));
 	if (cc.set == NULL) {
 		goto error;
 	}
@@ -350,18 +352,46 @@ ast_compile_class(const struct ast_class *class,
 	}
 
 	if (cc.flags & AST_CLASS_FLAG_INVERTED) {
-		if (!cc_invert(&cc)) {
-			goto error;
+		cc.set = fsm_invert(cc.set);
+		if (cc.set == NULL) {
+			return 0;
 		}
 	}
 
-	if (!link_class_into_fsm(&cc, fsm, x, y)) {
-		goto error;
+	/*
+	 * Not sure if it's best to minimise this here, or leave it to the entire
+	 * FSM once constructed (since the whole thing will be minimised anyway).
+	 * Presumably best here, because it's small. But sometimes a caller asks
+	 * for NFA output, and this part is no longer an NFA.
+	 *
+	 * Pre-computed classes are minimised already. Literal edges aren't
+	 * minimisable except for duplicates, at least until we support Unicode
+	 * literals. We do need a single end state, but passing in the fsm with
+	 * an xy pair will undercut that.
+	 */
+#if 0
+	if (!fsm_minimise(cc.set)) {
+		if (err != NULL) {
+			err->e = RE_EERRNO;
+		}
+		return 0;
+	}
+#endif
+
+	if (!fsm_unionxy(fsm, cc.set, x, y)) {
+		if (err != NULL) {
+			err->e = RE_EERRNO;
+		}
+		return 0;
 	}
 
 	return 1;
 
 error:
+
+	if (err != NULL) {
+		assert(err->e != RE_ESUCCESS);
+	}
 
 	if (cc.set != NULL) {
 		fsm_free(cc.set);
