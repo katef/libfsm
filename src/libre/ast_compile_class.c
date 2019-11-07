@@ -35,12 +35,11 @@ struct cc {
 	struct re_err *err;
 
 	/*
-	 * These are set to NULL once they've been incorporated into the
-	 * overall regex FSM, so they no longer need to be freed by the
+	 * This is set to NULL once it's been incorporated into the
+	 * overall regex FSM, so it can no longer need to be freed by the
 	 * char class functions.
 	 */
 	struct fsm *set;
-	struct fsm *dup;
 };
 
 static struct fsm *
@@ -66,25 +65,6 @@ new_blank(const struct fsm_options *opt)
 error:
 	
 	fsm_free(new);
-	
-	return NULL;
-}
-
-/* XXX: to go when dups show all spellings for group overlap */
-static const struct fsm_state *
-fsm_any(const struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
-{
-	const struct fsm_state *s;
-	
-	assert(fsm != NULL);
-	assert(predicate != NULL);
-	
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (predicate(fsm, s)) {
-			return s;
-		}
-	}
 	
 	return NULL;
 }
@@ -182,55 +162,10 @@ static int
 link_class_into_fsm(struct cc *cc, struct fsm *fsm,
 	struct fsm_state *x, struct fsm_state *y)
 {
-	int is_empty;
 	struct re_err *err = cc->err;
 
 	assert(cc != NULL);
 
-	is_empty = fsm_empty(cc->dup);
-	if (is_empty == -1) {
-		if (err != NULL) { err->e = RE_EERRNO; }
-		return 0;
-	}
-	
-	if (!is_empty) {
-		const struct fsm_state *end;
-		int n;
-
-		if (err == NULL) {
-			return 0;
-		}
-
-		/* TODO: would like to show the original spelling verbatim, too */
-		
-		/* fsm_example requires no epsilons;
-		 * TODO: would fsm_glushkovise() here, when we have it */
-		if (!fsm_determinise(cc->dup)) {
-			err->e = RE_EERRNO;
-			return 0;
-		}
-
-		/* XXX: this is just one example; really I want to show the entire set */
-		end = fsm_any(cc->dup, fsm_isend);
-		assert(end != NULL);
-		assert(end != fsm_getstart(cc->dup)); /* due to the structure */
-		
-		n = fsm_example(cc->dup, end, err->dup, sizeof err->dup);
-		if (n == -1) {
-			err->e = RE_EERRNO;
-			return 0;
-		}
-		
-		/* due to the structure */
-		assert(n > 0);
-		
-		/* XXX: to return when we can show minimal coverage again */
-		strcpy(err->set, err->dup);
-		
-		err->e  = RE_EOVERLAP;
-		return 0;
-	}
-	
 	if (!fsm_minimise(cc->set)) {
 		if (err != NULL) { err->e = RE_EERRNO; }
 		return 0;
@@ -241,8 +176,6 @@ link_class_into_fsm(struct cc *cc, struct fsm *fsm,
 		return 0;
 	}
 
-	fsm_free(cc->dup);
-	cc->dup = NULL;
 	cc->set = NULL;
 		
 	return 1;
@@ -251,40 +184,21 @@ link_class_into_fsm(struct cc *cc, struct fsm *fsm,
 int
 cc_add_char(struct cc *cc, unsigned char c)
 {
-	const struct fsm_state *p;
 	struct fsm_state *start, *end;
-	struct fsm *fsm;
-	char a[2];
-	char *s = a;
 	
 	assert(cc != NULL);
 	
-	a[0] = c;
-	a[1] = '\0';
-	
-	errno = 0;
-	p = fsm_exec(cc->set, fsm_sgetc, &s);
-	if (p == NULL && errno != 0) {
-		return 0;
-	}
-	
-	if (p == NULL) {
-		fsm = cc->set;
-	} else {
-		fsm = cc->dup;
-	}
-	
-	start = fsm_getstart(fsm);
+	start = fsm_getstart(cc->set);
 	assert(start != NULL);
 	
-	end = fsm_addstate(fsm);
+	end = fsm_addstate(cc->set);
 	if (end == NULL) {
 		return 0;
 	}
 	
-	fsm_setend(fsm, end, 1);
+	fsm_setend(cc->set, end, 1);
 	
-	if (!addedge_literal(fsm, cc->re_flags, start, end, c)) {
+	if (!addedge_literal(cc->set, cc->re_flags, start, end, c)) {
 		return 0;
 	}
 	
@@ -323,62 +237,17 @@ static int
 cc_add_named_class(struct cc *cc, class_constructor *ctor)
 {
 	struct fsm *constructed;
-	struct fsm *q;
-	int r;
 
 	constructed = ctor(fsm_getoptions(cc->set));
 	if (constructed == NULL) {
 		goto error;
 	}
 
-	/* TODO: maybe it is worth using carryopaque, after the entire group is constructed */
-	{
-		struct fsm *a, *b;
-		
-		a = fsm_clone(cc->set);
-		if (a == NULL) {
-			goto error;
-		}
-		
-		b = fsm_clone(constructed);
-		if (b == NULL) {
-			fsm_free(a);
-			goto error;
-		}
-		
-		q = fsm_intersect(a, b);
-		if (q == NULL) {
-			fsm_free(a);
-			fsm_free(b);
-			goto error;
-		}
-		
-		r = fsm_empty(q);
-		
-		if (r == -1) {
-			goto error;
-		}
+	cc->set = fsm_union(cc->set, constructed);
+	if (cc->set == NULL) {
+		goto error;
 	}
-	
-	if (!r) {
-		cc->dup = fsm_union(cc->dup, q);
-		if (cc->dup == NULL) {
-			goto error;
-		}
-	} else {
-		fsm_free(q);
-		
-		cc->set = fsm_union(cc->set, constructed);
-		if (cc->set == NULL) {
-			goto error;
-		}
-		
-		/* we need a DFA here for sake of fsm_exec() identifying duplicates */
-		if (!fsm_determinise(cc->set)) {
-			goto error;
-		}
-	}
-	
+
 	return 1;
 
 error:
@@ -401,11 +270,6 @@ cc_invert(struct cc *cc)
 	}
 
 	cc->set = inverted;
-
-	/*
-	 * Note we don't invert the dup set here; duplicates are always
-	 * kept in the positive.
-	 */
 
 	return 1;
 }
@@ -478,11 +342,6 @@ ast_compile_class(const struct ast_class *class,
 		goto error;
 	}
 
-	cc.dup = new_blank(opt);
-	if (cc.dup == NULL) {
-		goto error;
-	}
-
 	cc.err = err;
 	cc.re_flags = flags;
 
@@ -506,9 +365,6 @@ error:
 
 	if (cc.set != NULL) {
 		fsm_free(cc.set);
-	}
-	if (cc.dup != NULL) {
-		fsm_free(cc.dup);
 	}
 
 	return 0;

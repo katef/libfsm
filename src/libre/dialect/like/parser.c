@@ -504,7 +504,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 978 "src/libre/parser.act"
+#line 977 "src/libre/parser.act"
 
 
 	static int
@@ -615,7 +615,6 @@ ZL0:;
 		 */
 
 		switch (err->e) {
-		case RE_EOVERLAP:  err->start = act_state->groupstart; err->end = act_state->groupend; break;
 		case RE_ENEGRANGE: err->start = act_state->rangestart; err->end = act_state->rangeend; break;
 		case RE_ENEGCOUNT: err->start = act_state->countstart; err->end = act_state->countend; break;
 
@@ -648,6 +647,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 652 "src/libre/dialect/like/parser.c"
+#line 651 "src/libre/dialect/like/parser.c"
 
 /* END OF FILE */

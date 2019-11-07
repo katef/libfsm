@@ -20,7 +20,6 @@ re_strerror(enum re_errno e)
 	case RE_EBADDIALECT:  return "Bad dialect";
 	case RE_EBADGROUP:    return "Bad group";
 
-	case RE_EOVERLAP:     return "Redundancy in group";
 	case RE_ENEGRANGE:    return "Negative group range";
 	case RE_ENEGCOUNT:    return "Negative count range";
 	case RE_EDISTINCT:    return "Identical endpoints in group range";

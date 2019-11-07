@@ -942,7 +942,6 @@
 		 */
 
 		switch (err->e) {
-		case RE_EOVERLAP:  err->start = act_state->groupstart; err->end = act_state->groupend; break;
 		case RE_ENEGRANGE: err->start = act_state->rangestart; err->end = act_state->rangeend; break;
 		case RE_ENEGCOUNT: err->start = act_state->countstart; err->end = act_state->countend; break;
 
