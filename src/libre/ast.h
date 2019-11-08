@@ -179,9 +179,11 @@ struct ast_expr {
 			struct ast_expr *r;
 		} concat;
 
+		/* ordered sequence */
 		struct {
-			size_t count;
-			struct ast_expr *n[1];
+			size_t count; /* used */
+			size_t alloc; /* allocated */
+			struct ast_expr **n;
 		} concat_n;
 
 		struct {
@@ -189,6 +191,7 @@ struct ast_expr {
 			struct ast_expr *r;
 		} alt;
 
+		/* unordered set */
 		struct {
 			size_t count;
 			struct ast_expr *n[1];
@@ -256,7 +259,10 @@ struct ast_expr *
 ast_make_expr_concat(struct ast_expr *l, struct ast_expr *r);
 
 struct ast_expr *
-ast_make_expr_concat_n(size_t count);
+ast_make_expr_concat_count(size_t count);
+
+struct ast_expr *
+ast_make_expr_concat_n(void);
 
 struct ast_expr *
 ast_make_expr_alt(struct ast_expr *l, struct ast_expr *r);
@@ -285,6 +291,9 @@ ast_make_expr_re_flags(enum re_flags pos, enum re_flags neg);
 
 struct ast_expr *
 ast_make_expr_anchor(enum ast_anchor_type type);
+
+int
+ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
 
 /*
  * Character classes

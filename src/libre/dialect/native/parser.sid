@@ -78,7 +78,7 @@
 
 	<ast-make-expr-empty>:        ()                       -> (:ast_expr);
 	<ast-make-expr-literal>:      (:char)                  -> (:ast_expr);
-	<ast-make-expr-concat>:       (:ast_expr, :ast_expr)   -> (:ast_expr);
+	<ast-make-expr-concat>:       ()                       -> (:ast_expr);
 	<ast-make-expr-alt>:          (:ast_expr, :ast_expr)   -> (:ast_expr);
 	<ast-make-expr-any>:          ()                       -> (:ast_expr);
 	<ast-make-expr-atom>:         (:ast_expr, :ast_count)  -> (:ast_expr);
@@ -88,6 +88,8 @@
 	!<ast-make-expr-re-flags>:    (:re_flags, :re_flags)   -> (:ast_expr);
 	<ast-make-expr-anchor-start>: ()                       -> (:ast_expr);
 	<ast-make-expr-anchor-end>:   ()                       -> (:ast_expr);
+
+	<ast-add-expr-concat>: (:ast_expr, :ast_expr) -> ();
 
 	<ast-make-class-concat>:      (:ast_class, :ast_class) -> (:ast_class);
 	<ast-make-class-literal>:     (:char)                  -> (:ast_class);
@@ -295,26 +297,29 @@
 			};
 		};
 
-		list-of-atoms: () -> (node :ast_expr) = {
-		/* TODO: start/end anchors */
+		list-of-atoms: (cat :ast_expr) -> () = {
+			/* TODO: start/end anchors */
 			a = atom();
-			r = <ast-make-expr-empty>;
-			node = <ast-make-expr-concat>(a,r);
-		||
-			a = atom();
-			r = list-of-atoms();
-			node = <ast-make-expr-concat>(a,r);
+
+			<ast-add-expr-concat>(cat, a);
+
+			{
+				list-of-atoms(cat);
+			||
+				$;
+			};
 		};
 
 		alt: () -> (node :ast_expr) = {
-			node = list-of-atoms();
+			node = <ast-make-expr-concat>;
+			list-of-atoms(node);
 		};
 
 		list-of-alts: () -> (node :ast_expr) = {
 			a = alt();
 			r = <ast-make-expr-empty>;
 			node = <ast-make-expr-alt>(a,r);
-	  	||
+		||
 			a = alt();
 			ALT;
 			r = list-of-alts();

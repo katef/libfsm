@@ -567,11 +567,11 @@ collect_chain(size_t count, struct ast_expr *doomed)
 			return res;
 		}
 
-		dst = ast_make_expr_concat_n(count);
+		dst = ast_make_expr_concat_count(count);
 		if (dst == NULL) {
 			return NULL;
 		}
-		
+
 		for (i = 0; i < count; i++) {
 			struct ast_expr *ndoomed;
 

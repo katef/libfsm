@@ -628,8 +628,8 @@
 		}
 	@};
 
-	<ast-make-expr-concat>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
-		@node = ast_make_expr_concat(@l, @r);
+	<ast-make-expr-concat>: () -> (node :ast_expr) = @{
+		@node = ast_make_expr_concat_n();
 		if (@node == NULL) {
 			@!;
 		}
@@ -717,6 +717,12 @@
 	<ast-make-expr-anchor-end>: () -> (node :ast_expr) = @{
 		@node = ast_make_expr_anchor(AST_ANCHOR_END);
 		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-add-expr-concat>: (cat :ast_expr, node :ast_expr) -> () = @{
+		if (!ast_add_expr_concat(@cat, @node)) {
 			@!;
 		}
 	@};

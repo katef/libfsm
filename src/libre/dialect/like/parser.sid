@@ -73,7 +73,7 @@
 
 	<ast-make-expr-empty>:         ()                       -> (:ast_expr);
 	<ast-make-expr-literal>:       (:char)                  -> (:ast_expr);
-	<ast-make-expr-concat>:        (:ast_expr, :ast_expr)   -> (:ast_expr);
+	<ast-make-expr-concat>:        ()                       -> (:ast_expr);
 	!<ast-make-expr-alt>:          (:ast_expr, :ast_expr)   -> (:ast_expr);
 	<ast-make-expr-any>:           ()                       -> (:ast_expr);
 	<ast-make-expr-atom>:          (:ast_expr, :ast_count)  -> (:ast_expr);
@@ -83,6 +83,8 @@
 	!<ast-make-expr-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
 	!<ast-make-expr-anchor-start>: ()                       -> (:ast_expr);
 	!<ast-make-expr-anchor-end>:   ()                       -> (:ast_expr);
+
+	<ast-add-expr-concat>: (:ast_expr, :ast_expr) -> ();
 
 	!<ast-make-class-concat>:      (:ast_class, :ast_class) -> (:ast_class);
 	!<ast-make-class-literal>:     (:char)                  -> (:ast_class);
@@ -111,7 +113,7 @@
 	!<mark-range>: (:pos, :pos) -> ();
 	!<mark-count>: (:pos, :pos) -> ();
 
-	list-of-nodes: () -> (node :ast_expr) [
+	list-of-nodes: (cat :ast_expr) -> () [
 		literal: () -> (c :char) = {
 			(c, !, !) = CHAR;
 		};
@@ -137,18 +139,19 @@
 			l = <ast-make-expr-atom>(e, c);
 		};
 
+		<ast-add-expr-concat>(cat, l);
+
 		{
-			r = list-of-nodes();
-			node = <ast-make-expr-concat>(l, r);
+			list-of-nodes(cat);
 		||
-			r = <ast-make-expr-empty>;
-			node = <ast-make-expr-concat>(l, r);
+			$;
 		};
 	};
 
 	re_like: () -> (node :ast_expr) = {
 		{
-			node = list-of-nodes();
+			node = <ast-make-expr-concat>;
+			list-of-nodes(node);
 		||
 			node = <ast-make-expr-empty>();
 		};

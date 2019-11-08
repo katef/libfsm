@@ -94,6 +94,8 @@ free_iter(struct ast_expr *n)
 		for (i = 0; i < n->u.concat_n.count; i++) {
 			free_iter(n->u.concat_n.n[i]);
 		}
+
+		free(n->u.concat_n.n);
 		break;
 	}
 
@@ -209,22 +211,75 @@ ast_make_expr_concat(struct ast_expr *l, struct ast_expr *r)
 }
 
 struct ast_expr *
-ast_make_expr_concat_n(size_t count)
+ast_make_expr_concat_count(size_t count)
 {
 	struct ast_expr *res;
-	size_t size = sizeof *res + (count - 1) * sizeof (struct ast_expr *);
 
-	res = calloc(1, size);
+	assert(count > 0);
+
+	res = calloc(1, sizeof *res);
 	if (res == NULL) {
 		return NULL;
 	}
 
 	res->type = AST_EXPR_CONCAT_N;
+	res->u.concat_n.alloc = count;
 	res->u.concat_n.count = count;
 
-	/* cells are initialized by caller */
+	res->u.concat_n.n = malloc(count * sizeof *res->u.concat_n.n);
+	if (res->u.concat_n.n == NULL) {
+		free(res);
+		return NULL;
+	}
 
 	return res;
+}
+
+struct ast_expr *
+ast_make_expr_concat_n(void)
+{
+	struct ast_expr *res;
+
+	res = calloc(1, sizeof *res);
+	if (res == NULL) {
+		return NULL;
+	}
+
+	res->type = AST_EXPR_CONCAT_N;
+	res->u.concat_n.alloc = 8; /* arbitrary initial value */
+	res->u.concat_n.count = 0;
+
+	res->u.concat_n.n = malloc(res->u.concat_n.alloc * sizeof *res->u.concat_n.n);
+	if (res->u.concat_n.n == NULL) {
+		free(res);
+		return NULL;
+	}
+
+	return res;
+}
+
+int
+ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node)
+{
+	assert(cat != NULL);
+	assert(cat->type == AST_EXPR_CONCAT_N);
+
+	if (cat->u.concat_n.count == cat->u.concat_n.alloc) {
+		void *tmp;
+
+		tmp = realloc(cat->u.concat_n.n, cat->u.concat_n.alloc * 2 * sizeof *cat->u.concat_n.n);
+		if (tmp == NULL) {
+			return 0;
+		}
+
+		cat->u.concat_n.alloc *= 2;
+		cat->u.concat_n.n = tmp;
+	}
+
+	cat->u.concat_n.n[cat->u.concat_n.count] = node;
+	cat->u.concat_n.count++;
+
+	return 1;
 }
 
 struct ast_expr *
