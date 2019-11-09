@@ -97,6 +97,7 @@ enum ast_class_flags {
 
 enum ast_class_type {
 	AST_CLASS_CONCAT,
+	AST_CLASS_CONCAT_N,
 	AST_CLASS_LITERAL,
 	AST_CLASS_RANGE,
 	AST_CLASS_NAMED,
@@ -131,6 +132,13 @@ struct ast_class {
 			struct ast_class *l;
 			struct ast_class *r;
 		} concat;
+
+		/* unordered set */
+		struct {
+			size_t count; /* used */
+			size_t alloc; /* allocated */
+			struct ast_class **n;
+		} concat_n;
 
 		struct {
 			unsigned char c;
@@ -307,8 +315,10 @@ ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
  */
 
 struct ast_class *
-ast_make_class_concat(struct ast_class *l,
-	struct ast_class *r);
+ast_make_class_concat(struct ast_class *l, struct ast_class *r);
+
+struct ast_class *
+ast_make_class_concat_n(void);
 
 struct ast_class *
 ast_make_class_literal(unsigned char c);
@@ -322,6 +332,9 @@ ast_make_class_named(class_constructor *ctor);
 
 struct ast_class *
 ast_make_class_flags(enum ast_class_flags flags);
+
+int
+ast_add_class_concat(struct ast_class *cat, struct ast_class *node);
 
 struct ast_class *
 ast_make_class_subtract(struct ast_class *ast,

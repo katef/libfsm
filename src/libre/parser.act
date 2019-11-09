@@ -737,8 +737,8 @@
 	 * Character classes
 	 */
 
-	<ast-make-class-concat>: (l :ast_class, r :ast_class) -> (node :ast_class) = @{
-		@node = ast_make_class_concat(@l, @r);
+	<ast-make-class-concat>: () -> (node :ast_class) = @{
+		@node = ast_make_class_concat_n();
 		if (@node == NULL) {
 			@!;
 		}
@@ -822,6 +822,12 @@
 	<ast-make-class-flag-invert-minus>: () -> (node :ast_class) = @{
 		@node = ast_make_class_flags(AST_CLASS_FLAG_INVERTED | AST_CLASS_FLAG_MINUS);
 		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-add-class-concat>: (cat :ast_class, node :ast_class) -> () = @{
+		if (!ast_add_class_concat(@cat, @node)) {
 			@!;
 		}
 	@};

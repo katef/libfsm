@@ -105,6 +105,16 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 		cc_pp_iter(f, opt, n->u.concat.r, indent + 4);
 		break;
 
+	case AST_CLASS_CONCAT_N: {
+		size_t i, count = n->u.concat_n.count;
+
+		fprintf(f, "CLASS-CONCAT (%u):\n", (unsigned) count);
+		for (i = 0; i < n->u.concat_n.count; i++) {
+			cc_pp_iter(f, opt, n->u.concat_n.n[i], indent + 4);
+		}
+		break;
+	}
+
 	case AST_CLASS_LITERAL:
 		fprintf(f, "CLASS-LITERAL %p: '", (void *) n);
 		print_char_or_esc(f, n->u.literal.c);

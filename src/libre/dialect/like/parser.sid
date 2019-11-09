@@ -87,7 +87,7 @@
 	<ast-add-expr-concat>: (:ast_expr, :ast_expr) -> ();
 	!<ast-add-expr-alt>:   (:ast_expr, :ast_expr) -> ();
 
-	!<ast-make-class-concat>:      (:ast_class, :ast_class) -> (:ast_class);
+	!<ast-make-class-concat>:      ()                       -> (:ast_class);
 	!<ast-make-class-literal>:     (:char)                  -> (:ast_class);
 	!<ast-make-class-range>:       (:endpoint, :pos, :endpoint, :pos) -> (:ast_class);
 	!<ast-make-class-named>:       (:ast_class_id) -> (:ast_class);
@@ -97,6 +97,8 @@
 	!<ast-make-class-flag-invert>:       () -> (:ast_class);
 	!<ast-make-class-flag-minus>:        () -> (:ast_class);
 	!<ast-make-class-flag-invert-minus>: () -> (:ast_class);
+
+	!<ast-add-class-concat>: (:ast_class, :ast_class) -> ();
 
 	!<err-expected-term>;
 	!<err-expected-count>;
