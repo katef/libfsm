@@ -30,10 +30,6 @@ atomic(struct ast_expr *n)
 	case AST_EXPR_GROUP:
 		return 1;
 
-	case AST_EXPR_CONCAT:
-	case AST_EXPR_ALT:
-		return 0;
-
 	case AST_EXPR_FLAGS:
 		return 0; /* XXX */
 
@@ -148,11 +144,6 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 	assert(n != NULL);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT:
-		cc_pp_iter(f, opt, n->u.concat.l);
-		cc_pp_iter(f, opt, n->u.concat.r);
-		break;
-
 	case AST_CLASS_CONCAT_N: {
 		size_t i;
 
@@ -208,11 +199,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 		break;
 
-	case AST_EXPR_CONCAT:
-		pp_iter(f, opt, n->u.concat.l);
-		pp_iter(f, opt, n->u.concat.r);
-		break;
-
 	case AST_EXPR_CONCAT_N:
 	{
 		size_t i;
@@ -221,12 +207,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		}
 		break;
 	}
-
-	case AST_EXPR_ALT:
-		pp_iter(f, opt, n->u.alt.l);
-		fprintf(f, "|");
-		pp_iter(f, opt, n->u.alt.r);
-		break;
 
 	case AST_EXPR_ALT_N:
 	{

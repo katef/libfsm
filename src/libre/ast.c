@@ -55,11 +55,6 @@ class_free_iter(struct ast_class *n)
 		break;
 	}
 
-	case AST_CLASS_CONCAT:
-		class_free_iter(n->u.concat.l);
-		class_free_iter(n->u.concat.r);
-		break;
-
 	case AST_CLASS_SUBTRACT:
 		class_free_iter(n->u.subtract.ast);
 		class_free_iter(n->u.subtract.mask);
@@ -94,11 +89,6 @@ free_iter(struct ast_expr *n)
 		/* these nodes have no subnodes or dynamic allocation */
 		break;
 
-	case AST_EXPR_CONCAT:
-		free_iter(n->u.concat.l);
-		free_iter(n->u.concat.r);
-		break;
-
 	case AST_EXPR_CONCAT_N: {
 		size_t i;
 
@@ -109,11 +99,6 @@ free_iter(struct ast_expr *n)
 		free(n->u.concat_n.n);
 		break;
 	}
-
-	case AST_EXPR_ALT:
-		free_iter(n->u.alt.l);
-		free_iter(n->u.alt.r);
-		break;
 
 	case AST_EXPR_ALT_N: {
 		size_t i;
@@ -202,51 +187,6 @@ ast_make_expr_empty(void)
 }
 
 struct ast_expr *
-ast_make_expr_concat(struct ast_expr *l, struct ast_expr *r)
-{
-	struct ast_expr *res;
-
-	assert(l != NULL);
-	assert(r != NULL);
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_EXPR_CONCAT;
-	res->u.concat.l = l;
-	res->u.concat.r = r;
-
-	return res;
-}
-
-struct ast_expr *
-ast_make_expr_concat_count(size_t count)
-{
-	struct ast_expr *res;
-
-	assert(count > 0);
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_EXPR_CONCAT_N;
-	res->u.concat_n.alloc = count;
-	res->u.concat_n.count = count;
-
-	res->u.concat_n.n = malloc(count * sizeof *res->u.concat_n.n);
-	if (res->u.concat_n.n == NULL) {
-		free(res);
-		return NULL;
-	}
-
-	return res;
-}
-
-struct ast_expr *
 ast_make_expr_concat_n(void)
 {
 	struct ast_expr *res;
@@ -291,45 +231,6 @@ ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node)
 	cat->u.concat_n.count++;
 
 	return 1;
-}
-
-struct ast_expr *
-ast_make_expr_alt(struct ast_expr *l, struct ast_expr *r)
-{
-	struct ast_expr *res;
-
-	assert(l != NULL);
-	assert(r != NULL);
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return res;
-	}
-
-	res->type = AST_EXPR_ALT;
-	res->u.alt.l = l;
-	res->u.alt.r = r;
-
-	return res;
-}
-
-struct ast_expr *
-ast_make_expr_alt_count(size_t count)
-{
-	struct ast_expr *res;
-	size_t size = sizeof *res + (count - 1) * sizeof (struct ast_expr *);
-
-	res = calloc(1, size);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_EXPR_ALT_N;
-	res->u.alt_n.count = count;
-
-	/* cells are initialized by caller */
-
-	return res;
 }
 
 struct ast_expr *
@@ -512,23 +413,6 @@ ast_make_expr_anchor(enum ast_anchor_type type)
 /*
  * Character classes
  */
-
-struct ast_class *
-ast_make_class_concat(struct ast_class *l, struct ast_class *r)
-{
-	struct ast_class *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_CLASS_CONCAT;
-	res->u.concat.l = l;
-	res->u.concat.r = r;
-
-	return res;
-}
 
 struct ast_class *
 ast_make_class_concat_n(void)

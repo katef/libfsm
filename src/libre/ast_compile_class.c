@@ -417,15 +417,6 @@ comp_iter(struct cc *cc, const struct ast_class *n)
 	assert(n != NULL);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT:
-		if (!comp_iter(cc, n->u.concat.l)) {
-			return 0;
-		}
-		if (!comp_iter(cc, n->u.concat.r)) {
-			return 0;
-		}
-		break;
-
 	case AST_CLASS_CONCAT_N: {
 		size_t i;
 

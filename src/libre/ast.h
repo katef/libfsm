@@ -21,9 +21,7 @@ struct ast_pos {
 
 enum ast_expr_type {
 	AST_EXPR_EMPTY,
-	AST_EXPR_CONCAT,
 	AST_EXPR_CONCAT_N,
-	AST_EXPR_ALT,
 	AST_EXPR_ALT_N,
 	AST_EXPR_LITERAL,
 	AST_EXPR_ANY,
@@ -96,7 +94,6 @@ enum ast_class_flags {
 };
 
 enum ast_class_type {
-	AST_CLASS_CONCAT,
 	AST_CLASS_CONCAT_N,
 	AST_CLASS_LITERAL,
 	AST_CLASS_RANGE,
@@ -128,11 +125,6 @@ struct ast_endpoint {
 struct ast_class {
 	enum ast_class_type type;
 	union {
-		struct {
-			struct ast_class *l;
-			struct ast_class *r;
-		} concat;
-
 		/* unordered set */
 		struct {
 			size_t count; /* used */
@@ -182,22 +174,12 @@ struct ast_expr {
 	enum ast_expr_flags flags;
 
 	union {
-		struct {
-			struct ast_expr *l;
-			struct ast_expr *r;
-		} concat;
-
 		/* ordered sequence */
 		struct {
 			size_t count; /* used */
 			size_t alloc; /* allocated */
 			struct ast_expr **n;
 		} concat_n;
-
-		struct {
-			struct ast_expr *l;
-			struct ast_expr *r;
-		} alt;
 
 		/* unordered set */
 		struct {
@@ -265,19 +247,7 @@ struct ast_expr *
 ast_make_expr_empty(void);
 
 struct ast_expr *
-ast_make_expr_concat(struct ast_expr *l, struct ast_expr *r);
-
-struct ast_expr *
-ast_make_expr_concat_count(size_t count);
-
-struct ast_expr *
 ast_make_expr_concat_n(void);
-
-struct ast_expr *
-ast_make_expr_alt(struct ast_expr *l, struct ast_expr *r);
-
-struct ast_expr *
-ast_make_expr_alt_count(size_t count);
 
 struct ast_expr *
 ast_make_expr_alt_n(void);
@@ -313,9 +283,6 @@ ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
 /*
  * Character classes
  */
-
-struct ast_class *
-ast_make_class_concat(struct ast_class *l, struct ast_class *r);
 
 struct ast_class *
 ast_make_class_concat_n(void);

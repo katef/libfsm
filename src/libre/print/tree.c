@@ -99,12 +99,6 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 	INDENT(f, indent);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT:
-		fprintf(f, "CLASS-CONCAT %p: \n", (void *) n);
-		cc_pp_iter(f, opt, n->u.concat.l, indent + 4);
-		cc_pp_iter(f, opt, n->u.concat.r, indent + 4);
-		break;
-
 	case AST_CLASS_CONCAT_N: {
 		size_t i, count = n->u.concat_n.count;
 
@@ -178,33 +172,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 		fprintf(f, "EMPTY \n");
-		break;
-
-	/*
-	 * CONCAT and ALT should be removed once CONCAT_N and ALT_N are
-	 * built directly in the parser.
-	 */
-	case AST_EXPR_CONCAT:
-		fprintf(f, "CONCAT %p: {\n", (void *) n);
-		pp_iter(f, opt, indent + 1 * IND, n->u.concat.l);
-		INDENT(f, indent);
-
-		fprintf(f, ", (%p)\n", (void *) n);
-
-		pp_iter(f, opt, indent + 1 * IND, n->u.concat.r);
-		INDENT(f, indent);
-		fprintf(f, "} (%p)\n", (void *) n);
-		break;
-
-	case AST_EXPR_ALT:
-		fprintf(f, "ALT %p: {\n", (void *) n);
-		pp_iter(f, opt, indent + 1 * IND, n->u.alt.l);
-		INDENT(f, indent);
-
-		fprintf(f, ", (%p)\n", (void *) n);
-		pp_iter(f, opt, indent + 1 * IND, n->u.alt.r);
-		INDENT(f, indent);
-		fprintf(f, "} (%p)\n", (void *) n);
 		break;
 
 	case AST_EXPR_CONCAT_N: {

@@ -66,12 +66,6 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\tn%p [ style = \"filled\", fillcolor = \"#eeeeee\" ];\n", (void *) n);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT:
-		fprintf(f, "\tn%p [ label = <CLASS-CONCAT> ];\n", (void *) n);
-		cc_pp_iter(f, opt, n, n->u.concat.l);
-		cc_pp_iter(f, opt, n, n->u.concat.r);
-		break;
-
 	case AST_CLASS_CONCAT_N: {
 		size_t i;
 
@@ -143,12 +137,6 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "\tn%p [ label = <EMPTY> ];\n", (void *) n);
 		break;
 
-	case AST_EXPR_CONCAT:
-		fprintf(f, "\tn%p [ label = <CONCAT> ];\n", (void *) n);
-		pp_iter(f, opt, n, n->u.concat.l);
-		pp_iter(f, opt, n, n->u.concat.r);
-		break;
-
 	case AST_EXPR_CONCAT_N:
 	{
 		size_t i;
@@ -159,12 +147,6 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		}
 		break;
 	}
-
-	case AST_EXPR_ALT:
-		fprintf(f, "\tn%p [ label = <ALT> ];\n", (void *) n);
-		pp_iter(f, opt, n, n->u.alt.l);
-		pp_iter(f, opt, n, n->u.alt.r);
-		break;
 
 	case AST_EXPR_ALT_N:
 	{
