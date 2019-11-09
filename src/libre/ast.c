@@ -44,14 +44,14 @@ class_free_iter(struct ast_class *n)
 	assert(n != NULL);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT_N: {
+	case AST_CLASS_CONCAT: {
 		size_t i;
 
-		for (i = 0; i < n->u.concat_n.count; i++) {
-			class_free_iter(n->u.concat_n.n[i]);
+		for (i = 0; i < n->u.concat.count; i++) {
+			class_free_iter(n->u.concat.n[i]);
 		}
 
-		free(n->u.concat_n.n);
+		free(n->u.concat.n);
 		break;
 	}
 
@@ -89,22 +89,22 @@ free_iter(struct ast_expr *n)
 		/* these nodes have no subnodes or dynamic allocation */
 		break;
 
-	case AST_EXPR_CONCAT_N: {
+	case AST_EXPR_CONCAT: {
 		size_t i;
 
-		for (i = 0; i < n->u.concat_n.count; i++) {
-			free_iter(n->u.concat_n.n[i]);
+		for (i = 0; i < n->u.concat.count; i++) {
+			free_iter(n->u.concat.n[i]);
 		}
 
-		free(n->u.concat_n.n);
+		free(n->u.concat.n);
 		break;
 	}
 
-	case AST_EXPR_ALT_N: {
+	case AST_EXPR_ALT: {
 		size_t i;
 
-		for (i = 0; i < n->u.alt_n.count; i++) {
-			free_iter(n->u.alt_n.n[i]);
+		for (i = 0; i < n->u.alt.count; i++) {
+			free_iter(n->u.alt.n[i]);
 		}
 		break;
 	}
@@ -187,7 +187,7 @@ ast_make_expr_empty(void)
 }
 
 struct ast_expr *
-ast_make_expr_concat_n(void)
+ast_make_expr_concat(void)
 {
 	struct ast_expr *res;
 
@@ -196,12 +196,12 @@ ast_make_expr_concat_n(void)
 		return NULL;
 	}
 
-	res->type = AST_EXPR_CONCAT_N;
-	res->u.concat_n.alloc = 8; /* arbitrary initial value */
-	res->u.concat_n.count = 0;
+	res->type = AST_EXPR_CONCAT;
+	res->u.concat.alloc = 8; /* arbitrary initial value */
+	res->u.concat.count = 0;
 
-	res->u.concat_n.n = malloc(res->u.concat_n.alloc * sizeof *res->u.concat_n.n);
-	if (res->u.concat_n.n == NULL) {
+	res->u.concat.n = malloc(res->u.concat.alloc * sizeof *res->u.concat.n);
+	if (res->u.concat.n == NULL) {
 		free(res);
 		return NULL;
 	}
@@ -213,28 +213,28 @@ int
 ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node)
 {
 	assert(cat != NULL);
-	assert(cat->type == AST_EXPR_CONCAT_N);
+	assert(cat->type == AST_EXPR_CONCAT);
 
-	if (cat->u.concat_n.count == cat->u.concat_n.alloc) {
+	if (cat->u.concat.count == cat->u.concat.alloc) {
 		void *tmp;
 
-		tmp = realloc(cat->u.concat_n.n, cat->u.concat_n.alloc * 2 * sizeof *cat->u.concat_n.n);
+		tmp = realloc(cat->u.concat.n, cat->u.concat.alloc * 2 * sizeof *cat->u.concat.n);
 		if (tmp == NULL) {
 			return 0;
 		}
 
-		cat->u.concat_n.alloc *= 2;
-		cat->u.concat_n.n = tmp;
+		cat->u.concat.alloc *= 2;
+		cat->u.concat.n = tmp;
 	}
 
-	cat->u.concat_n.n[cat->u.concat_n.count] = node;
-	cat->u.concat_n.count++;
+	cat->u.concat.n[cat->u.concat.count] = node;
+	cat->u.concat.count++;
 
 	return 1;
 }
 
 struct ast_expr *
-ast_make_expr_alt_n(void)
+ast_make_expr_alt(void)
 {
 	struct ast_expr *res;
 
@@ -243,12 +243,12 @@ ast_make_expr_alt_n(void)
 		return NULL;
 	}
 
-	res->type = AST_EXPR_ALT_N;
-	res->u.alt_n.alloc = 8; /* arbitrary initial value */
-	res->u.alt_n.count = 0;
+	res->type = AST_EXPR_ALT;
+	res->u.alt.alloc = 8; /* arbitrary initial value */
+	res->u.alt.count = 0;
 
-	res->u.alt_n.n = malloc(res->u.alt_n.alloc * sizeof *res->u.alt_n.n);
-	if (res->u.alt_n.n == NULL) {
+	res->u.alt.n = malloc(res->u.alt.alloc * sizeof *res->u.alt.n);
+	if (res->u.alt.n == NULL) {
 		free(res);
 		return NULL;
 	}
@@ -260,22 +260,22 @@ int
 ast_add_expr_alt(struct ast_expr *cat, struct ast_expr *node)
 {
 	assert(cat != NULL);
-	assert(cat->type == AST_EXPR_ALT_N);
+	assert(cat->type == AST_EXPR_ALT);
 
-	if (cat->u.alt_n.count == cat->u.alt_n.alloc) {
+	if (cat->u.alt.count == cat->u.alt.alloc) {
 		void *tmp;
 
-		tmp = realloc(cat->u.alt_n.n, cat->u.alt_n.alloc * 2 * sizeof *cat->u.alt_n.n);
+		tmp = realloc(cat->u.alt.n, cat->u.alt.alloc * 2 * sizeof *cat->u.alt.n);
 		if (tmp == NULL) {
 			return 0;
 		}
 
-		cat->u.alt_n.alloc *= 2;
-		cat->u.alt_n.n = tmp;
+		cat->u.alt.alloc *= 2;
+		cat->u.alt.n = tmp;
 	}
 
-	cat->u.alt_n.n[cat->u.alt_n.count] = node;
-	cat->u.alt_n.count++;
+	cat->u.alt.n[cat->u.alt.count] = node;
+	cat->u.alt.count++;
 
 	return 1;
 }
@@ -415,7 +415,7 @@ ast_make_expr_anchor(enum ast_anchor_type type)
  */
 
 struct ast_class *
-ast_make_class_concat_n(void)
+ast_make_class_concat(void)
 {
 	struct ast_class *res;
 
@@ -424,12 +424,12 @@ ast_make_class_concat_n(void)
 		return NULL;
 	}
 
-	res->type = AST_CLASS_CONCAT_N;
-	res->u.concat_n.alloc = 8; /* arbitrary initial value */
-	res->u.concat_n.count = 0;
+	res->type = AST_CLASS_CONCAT;
+	res->u.concat.alloc = 8; /* arbitrary initial value */
+	res->u.concat.count = 0;
 
-	res->u.concat_n.n = malloc(res->u.concat_n.alloc * sizeof *res->u.concat_n.n);
-	if (res->u.concat_n.n == NULL) {
+	res->u.concat.n = malloc(res->u.concat.alloc * sizeof *res->u.concat.n);
+	if (res->u.concat.n == NULL) {
 		free(res);
 		return NULL;
 	}
@@ -441,22 +441,22 @@ int
 ast_add_class_concat(struct ast_class *cat, struct ast_class *node)
 {
 	assert(cat != NULL);
-	assert(cat->type == AST_CLASS_CONCAT_N);
+	assert(cat->type == AST_CLASS_CONCAT);
 
-	if (cat->u.concat_n.count == cat->u.concat_n.alloc) {
+	if (cat->u.concat.count == cat->u.concat.alloc) {
 		void *tmp;
 
-		tmp = realloc(cat->u.concat_n.n, cat->u.concat_n.alloc * 2 * sizeof *cat->u.concat_n.n);
+		tmp = realloc(cat->u.concat.n, cat->u.concat.alloc * 2 * sizeof *cat->u.concat.n);
 		if (tmp == NULL) {
 			return 0;
 		}
 
-		cat->u.concat_n.alloc *= 2;
-		cat->u.concat_n.n = tmp;
+		cat->u.concat.alloc *= 2;
+		cat->u.concat.n = tmp;
 	}
 
-	cat->u.concat_n.n[cat->u.concat_n.count] = node;
-	cat->u.concat_n.count++;
+	cat->u.concat.n[cat->u.concat.count] = node;
+	cat->u.concat.count++;
 
 	return 1;
 }

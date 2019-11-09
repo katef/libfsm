@@ -21,8 +21,8 @@ struct ast_pos {
 
 enum ast_expr_type {
 	AST_EXPR_EMPTY,
-	AST_EXPR_CONCAT_N,
-	AST_EXPR_ALT_N,
+	AST_EXPR_CONCAT,
+	AST_EXPR_ALT,
 	AST_EXPR_LITERAL,
 	AST_EXPR_ANY,
 	AST_EXPR_REPEATED,
@@ -94,7 +94,7 @@ enum ast_class_flags {
 };
 
 enum ast_class_type {
-	AST_CLASS_CONCAT_N,
+	AST_CLASS_CONCAT,
 	AST_CLASS_LITERAL,
 	AST_CLASS_RANGE,
 	AST_CLASS_NAMED,
@@ -130,7 +130,7 @@ struct ast_class {
 			size_t count; /* used */
 			size_t alloc; /* allocated */
 			struct ast_class **n;
-		} concat_n;
+		} concat;
 
 		struct {
 			unsigned char c;
@@ -179,14 +179,14 @@ struct ast_expr {
 			size_t count; /* used */
 			size_t alloc; /* allocated */
 			struct ast_expr **n;
-		} concat_n;
+		} concat;
 
 		/* unordered set */
 		struct {
 			size_t count; /* used */
 			size_t alloc; /* allocated */
 			struct ast_expr **n;
-		} alt_n;
+		} alt;
 
 		struct {
 			/*const*/ char c;
@@ -247,10 +247,10 @@ struct ast_expr *
 ast_make_expr_empty(void);
 
 struct ast_expr *
-ast_make_expr_concat_n(void);
+ast_make_expr_concat(void);
 
 struct ast_expr *
-ast_make_expr_alt_n(void);
+ast_make_expr_alt(void);
 
 int
 ast_add_expr_alt(struct ast_expr *cat, struct ast_expr *node);
@@ -285,7 +285,7 @@ ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
  */
 
 struct ast_class *
-ast_make_class_concat_n(void);
+ast_make_class_concat(void);
 
 struct ast_class *
 ast_make_class_literal(unsigned char c);

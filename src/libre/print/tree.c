@@ -99,12 +99,12 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 	INDENT(f, indent);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT_N: {
-		size_t i, count = n->u.concat_n.count;
+	case AST_CLASS_CONCAT: {
+		size_t i, count = n->u.concat.count;
 
 		fprintf(f, "CLASS-CONCAT (%u):\n", (unsigned) count);
-		for (i = 0; i < n->u.concat_n.count; i++) {
-			cc_pp_iter(f, opt, n->u.concat_n.n[i], indent + 4);
+		for (i = 0; i < n->u.concat.count; i++) {
+			cc_pp_iter(f, opt, n->u.concat.n[i], indent + 4);
 		}
 		break;
 	}
@@ -174,21 +174,21 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		fprintf(f, "EMPTY \n");
 		break;
 
-	case AST_EXPR_CONCAT_N: {
-		size_t i, count = n->u.concat_n.count;
+	case AST_EXPR_CONCAT: {
+		size_t i, count = n->u.concat.count;
 		fprintf(f, "CONCAT (%u):\n", (unsigned)count);
 
 		for (i = 0; i < count; i++) {
-			pp_iter(f, opt, indent + 1 * IND, n->u.concat_n.n[i]);
+			pp_iter(f, opt, indent + 1 * IND, n->u.concat.n[i]);
 		}
 		break;
 	}
 
-	case AST_EXPR_ALT_N: {
-		size_t i, count = n->u.alt_n.count;
+	case AST_EXPR_ALT: {
+		size_t i, count = n->u.alt.count;
 		fprintf(f, "ALT (%u):\n", (unsigned)count);
 		for (i = 0; i < count; i++) {
-			pp_iter(f, opt, indent + 1 * IND, n->u.alt_n.n[i]);
+			pp_iter(f, opt, indent + 1 * IND, n->u.alt.n[i]);
 		}
 		break;
 	}

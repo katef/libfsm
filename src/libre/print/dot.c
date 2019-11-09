@@ -66,13 +66,13 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\tn%p [ style = \"filled\", fillcolor = \"#eeeeee\" ];\n", (void *) n);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT_N: {
+	case AST_CLASS_CONCAT: {
 		size_t i;
 
 		fprintf(f, "\tn%p [ label = <CLASS-CONCAT|%lu> ];\n",
-			(void *) n, (unsigned long)  n->u.concat_n.count);
-		for (i = 0; i < n->u.concat_n.count; i++) {
-			cc_pp_iter(f, opt, n, n->u.concat_n.n[i]);
+			(void *) n, (unsigned long)  n->u.concat.count);
+		for (i = 0; i < n->u.concat.count; i++) {
+			cc_pp_iter(f, opt, n, n->u.concat.n[i]);
 		}
 		break;
 	}
@@ -137,24 +137,24 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "\tn%p [ label = <EMPTY> ];\n", (void *) n);
 		break;
 
-	case AST_EXPR_CONCAT_N:
+	case AST_EXPR_CONCAT:
 	{
 		size_t i;
 		fprintf(f, "\tn%p [ label = <CONCAT|%lu> ];\n",
-		    (void *) n, n->u.concat_n.count);
-		for (i = 0; i < n->u.concat_n.count; i++) {
-			pp_iter(f, opt, n, n->u.concat_n.n[i]);
+		    (void *) n, n->u.concat.count);
+		for (i = 0; i < n->u.concat.count; i++) {
+			pp_iter(f, opt, n, n->u.concat.n[i]);
 		}
 		break;
 	}
 
-	case AST_EXPR_ALT_N:
+	case AST_EXPR_ALT:
 	{
 		size_t i;
 		fprintf(f, "\tn%p [ label = <ALT|%lu> ];\n",
-		    (void *) n, n->u.alt_n.count);
-		for (i = 0; i < n->u.alt_n.count; i++) {
-			pp_iter(f, opt, n, n->u.alt_n.n[i]);
+		    (void *) n, n->u.alt.count);
+		for (i = 0; i < n->u.alt.count; i++) {
+			pp_iter(f, opt, n, n->u.alt.n[i]);
 		}
 		break;
 	}

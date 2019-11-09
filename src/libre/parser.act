@@ -629,14 +629,14 @@
 	@};
 
 	<ast-make-expr-concat>: () -> (node :ast_expr) = @{
-		@node = ast_make_expr_concat_n();
+		@node = ast_make_expr_concat();
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
 	<ast-make-expr-alt>: () -> (node :ast_expr) = @{
-		@node = ast_make_expr_alt_n();
+		@node = ast_make_expr_alt();
 		if (@node == NULL) {
 			@!;
 		}
@@ -738,7 +738,7 @@
 	 */
 
 	<ast-make-class-concat>: () -> (node :ast_class) = @{
-		@node = ast_make_class_concat_n();
+		@node = ast_make_class_concat();
 		if (@node == NULL) {
 			@!;
 		}

@@ -417,11 +417,11 @@ comp_iter(struct cc *cc, const struct ast_class *n)
 	assert(n != NULL);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT_N: {
+	case AST_CLASS_CONCAT: {
 		size_t i;
 
-		for (i = 0; i < n->u.concat_n.count; i++) {
-			if (!comp_iter(cc, n->u.concat_n.n[i])) {
+		for (i = 0; i < n->u.concat.count; i++) {
+			if (!comp_iter(cc, n->u.concat.n[i])) {
 				return 0;
 			}
 		}

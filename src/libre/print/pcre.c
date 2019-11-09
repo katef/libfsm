@@ -144,11 +144,11 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 	assert(n != NULL);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT_N: {
+	case AST_CLASS_CONCAT: {
 		size_t i;
 
-		for (i = 0; i < n->u.concat_n.count; i++) {
-			cc_pp_iter(f, opt, n->u.concat_n.n[i]);
+		for (i = 0; i < n->u.concat.count; i++) {
+			cc_pp_iter(f, opt, n->u.concat.n[i]);
 		}
 		break;
 	}
@@ -199,21 +199,21 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 		break;
 
-	case AST_EXPR_CONCAT_N:
+	case AST_EXPR_CONCAT:
 	{
 		size_t i;
-		for (i = 0; i < n->u.concat_n.count; i++) {
-			pp_iter(f, opt, n->u.concat_n.n[i]);
+		for (i = 0; i < n->u.concat.count; i++) {
+			pp_iter(f, opt, n->u.concat.n[i]);
 		}
 		break;
 	}
 
-	case AST_EXPR_ALT_N:
+	case AST_EXPR_ALT:
 	{
 		size_t i;
-		for (i = 0; i < n->u.alt_n.count; i++) {
-			pp_iter(f, opt, n->u.alt_n.n[i]);
-			if (i + 1 < n->u.alt_n.count) {
+		for (i = 0; i < n->u.alt.count; i++) {
+			pp_iter(f, opt, n->u.alt.n[i]);
+			if (i + 1 < n->u.alt.count) {
 				fprintf(f, "|");
 			}
 		}
