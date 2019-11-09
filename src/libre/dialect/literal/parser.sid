@@ -74,7 +74,7 @@
 	<ast-make-expr-empty>:         ()                       -> (:ast_expr);
 	<ast-make-expr-literal>:       (:char)                  -> (:ast_expr);
 	<ast-make-expr-concat>:        ()                       -> (:ast_expr);
-	!<ast-make-expr-alt>:          (:ast_expr, :ast_expr)   -> (:ast_expr);
+	!<ast-make-expr-alt>:          ()                       -> (:ast_expr);
 	!<ast-make-expr-any>:          ()                       -> (:ast_expr);
 	!<ast-make-expr-atom>:         (:ast_expr, :ast_count)  -> (:ast_expr);
 	!<ast-make-expr-atom-any>:     (:ast_count)             -> (:ast_expr);
@@ -85,6 +85,7 @@
 	!<ast-make-expr-anchor-end>:   ()                       -> (:ast_expr);
 
 	<ast-add-expr-concat>: (:ast_expr, :ast_expr) -> ();
+	!<ast-add-expr-alt>:   (:ast_expr, :ast_expr) -> ();
 
 	!<ast-make-class-concat>:      (:ast_class, :ast_class) -> (:ast_class);
 	!<ast-make-class-literal>:     (:char)                  -> (:ast_class);

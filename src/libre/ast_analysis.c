@@ -601,7 +601,7 @@ collect_chain(size_t count, struct ast_expr *doomed)
 			assert(!"unreached");
 		}
 
-		dst = ast_make_expr_alt_n(count);
+		dst = ast_make_expr_alt_count(count);
 		if (dst == NULL) {
 			return NULL;
 		}

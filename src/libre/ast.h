@@ -193,8 +193,9 @@ struct ast_expr {
 
 		/* unordered set */
 		struct {
-			size_t count;
-			struct ast_expr *n[1];
+			size_t count; /* used */
+			size_t alloc; /* allocated */
+			struct ast_expr **n;
 		} alt_n;
 
 		struct {
@@ -268,7 +269,13 @@ struct ast_expr *
 ast_make_expr_alt(struct ast_expr *l, struct ast_expr *r);
 
 struct ast_expr *
-ast_make_expr_alt_n(size_t count);
+ast_make_expr_alt_count(size_t count);
+
+struct ast_expr *
+ast_make_expr_alt_n(void);
+
+int
+ast_add_expr_alt(struct ast_expr *cat, struct ast_expr *node);
 
 struct ast_expr *
 ast_make_expr_literal(char c);

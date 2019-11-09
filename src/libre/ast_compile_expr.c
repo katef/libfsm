@@ -621,7 +621,7 @@ comp_iter(struct comp_env *env,
 
 		const size_t count = n->u.alt_n.count;
 
-		assert(count > 1);
+		assert(count >= 1);
 
 		for (i = 0; i < count; i++) {
 			/*

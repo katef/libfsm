@@ -303,7 +303,7 @@ ast_make_expr_alt(struct ast_expr *l, struct ast_expr *r)
 }
 
 struct ast_expr *
-ast_make_expr_alt_n(size_t count)
+ast_make_expr_alt_count(size_t count)
 {
 	struct ast_expr *res;
 	size_t size = sizeof *res + (count - 1) * sizeof (struct ast_expr *);
@@ -319,6 +319,53 @@ ast_make_expr_alt_n(size_t count)
 	/* cells are initialized by caller */
 
 	return res;
+}
+
+struct ast_expr *
+ast_make_expr_alt_n(void)
+{
+	struct ast_expr *res;
+
+	res = calloc(1, sizeof *res);
+	if (res == NULL) {
+		return NULL;
+	}
+
+	res->type = AST_EXPR_ALT_N;
+	res->u.alt_n.alloc = 8; /* arbitrary initial value */
+	res->u.alt_n.count = 0;
+
+	res->u.alt_n.n = malloc(res->u.alt_n.alloc * sizeof *res->u.alt_n.n);
+	if (res->u.alt_n.n == NULL) {
+		free(res);
+		return NULL;
+	}
+
+	return res;
+}
+
+int
+ast_add_expr_alt(struct ast_expr *cat, struct ast_expr *node)
+{
+	assert(cat != NULL);
+	assert(cat->type == AST_EXPR_ALT_N);
+
+	if (cat->u.alt_n.count == cat->u.alt_n.alloc) {
+		void *tmp;
+
+		tmp = realloc(cat->u.alt_n.n, cat->u.alt_n.alloc * 2 * sizeof *cat->u.alt_n.n);
+		if (tmp == NULL) {
+			return 0;
+		}
+
+		cat->u.alt_n.alloc *= 2;
+		cat->u.alt_n.n = tmp;
+	}
+
+	cat->u.alt_n.n[cat->u.alt_n.count] = node;
+	cat->u.alt_n.count++;
+
+	return 1;
 }
 
 struct ast_expr *

@@ -86,7 +86,7 @@
 	<ast-make-expr-empty>:        ()                       -> (:ast_expr);
 	<ast-make-expr-literal>:      (:char)                  -> (:ast_expr);
 	<ast-make-expr-concat>:       ()                       -> (:ast_expr);
-	<ast-make-expr-alt>:          (:ast_expr, :ast_expr)   -> (:ast_expr);
+	<ast-make-expr-alt>:          ()                       -> (:ast_expr);
 	<ast-make-expr-any>:          ()                       -> (:ast_expr);
 	<ast-make-expr-atom>:         (:ast_expr, :ast_count)  -> (:ast_expr);
 	!<ast-make-expr-atom-any>:    (:ast_count)             -> (:ast_expr);
@@ -97,6 +97,7 @@
 	<ast-make-expr-anchor-end>:   ()                       -> (:ast_expr);
 
 	<ast-add-expr-concat>: (:ast_expr, :ast_expr) -> ();
+	<ast-add-expr-alt>:    (:ast_expr, :ast_expr) -> ();
 
 	<ast-make-class-concat>:      (:ast_class, :ast_class) -> (:ast_class);
 	<ast-make-class-literal>:     (:char)                  -> (:ast_class);
@@ -400,35 +401,30 @@
 		alt: () -> (node :ast_expr) = {
 			node = <ast-make-expr-concat>;
 			list-of-atoms(node);
+		||
+			/* explcitly allow an empty alt */
+			node = <ast-make-expr-empty>;
 		};
 
-		list-of-alts: () -> (node :ast_expr) = {
+		list-of-alts: (alts :ast_expr) -> () = {
 			a = alt();
-			r = <ast-make-expr-empty>;
-			node = <ast-make-expr-alt>(a,r);
-		||
-			/* Explicitly allow e.g. (xyz|) */
-			a = <ast-make-expr-empty>;
-			r = <ast-make-expr-empty>;
-			node = <ast-make-expr-alt>(a,r);
-	  	||
-			a = alt();
-			ALT;
-			r = list-of-alts();
-			node = <ast-make-expr-alt>(a, r);
+
+			<ast-add-expr-alt>(alts, a);
+
+			{
+				ALT;
+
+				list-of-alts(alts);
+			||
+				$;
+			};
 		##
-			node = <ast-make-expr-empty>();
+			<err-expected-alts>;
 		};
+
 	] = {
-		/* don't wrap a single alt in an alt chain */
-		node = alt();
-	||
-		/* keep alts into a linked list -- every right node
-		 * is either another alt or empty. */
-		a = alt();
-		ALT;
-		r = list-of-alts();
-		node = <ast-make-expr-alt>(a, r);
+		node = <ast-make-expr-alt>;
+		list-of-alts(node);
 	##
 		<err-expected-alts>;
 		node = <ast-make-expr-empty>();
