@@ -108,7 +108,6 @@
 
 	<ast-make-class-flags>:       ()               -> (:class_flags);
 	<ast-add-class-flag-invert>:  (:class_flags &) -> ();
-	!<ast-add-class-flag-minus>:  (:class_flags &) -> ();
 	!<sub-flags>:                 (:class_flags, :class_flags) -> (:class_flags);
 
 	<ast-add-class-concat>: (:ast_class, :ast_class) -> ();

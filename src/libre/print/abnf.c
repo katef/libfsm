@@ -265,9 +265,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		if (n->u.class.flags & AST_CLASS_FLAG_INVERTED) {
 			fprintf(f, "<SOL>");
 		}
-		if (n->u.class.flags & AST_CLASS_FLAG_MINUS) {
-			fprintf(f, "<->"); /* XXX */
-		}
 		cc_pp_iter(f, opt, n->u.class.class);
 		fprintf(f, ")");
 		break;

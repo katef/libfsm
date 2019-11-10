@@ -82,13 +82,9 @@ enum ast_expr_flags {
  *
  * - AST_CLASS_FLAG_INVERTED
  *   The class should be negated, e.g. [^aeiou]
- *
- * - AST_CLASS_FLAG_MINUS
- *   Includes the `-` character, which isn't part of a range
  */
 enum ast_class_flags {
 	AST_CLASS_FLAG_INVERTED = 1 << 0,
-	AST_CLASS_FLAG_MINUS    = 1 << 1,
 
 	AST_CLASS_FLAG_NONE = 0x00
 };

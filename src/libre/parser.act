@@ -806,10 +806,6 @@
 		@=flags |= AST_CLASS_FLAG_INVERTED;
 	@};
 
-	<ast-add-class-flag-minus>: (flags :class_flags &) -> () = @{
-		@=flags |= AST_CLASS_FLAG_MINUS;
-	@};
-
 	<sub-flags>: (a :class_flags, b :class_flags) -> (q :class_flags) = @{
 		/*
 		 * XXX: this is irrelevant; subtraction isn't implemented yet,

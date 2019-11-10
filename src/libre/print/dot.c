@@ -172,9 +172,6 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		if (n->u.class.flags & AST_CLASS_FLAG_INVERTED) {
 			fprintf(f, "^");
 		}
-		if (n->u.class.flags & AST_CLASS_FLAG_MINUS) {
-			fprintf(f, "-");
-		}
 		fprintf(f, "> ];\n");
 		cc_pp_iter(f, opt, n, n->u.class.class);
 		break;

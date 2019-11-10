@@ -106,7 +106,6 @@
 
 	<ast-make-class-flags>:        ()               -> (:class_flags);
 	<ast-add-class-flag-invert>:   (:class_flags &) -> ();
-	<ast-add-class-flag-minus>:    (:class_flags &) -> ();
 	<sub-flags>:                   (:class_flags, :class_flags) -> (:class_flags);
 
 	<ast-add-class-concat>: (:ast_class, :ast_class) -> ();
@@ -184,13 +183,16 @@
 				! = INVERT;
 				<ast-add-class-flag-invert>(&flags);
 			||
-				(!, !, !) = RANGE;
-				<ast-add-class-flag-minus>(&flags);
+				(c, !, !) = RANGE;
+				node = <ast-make-class-literal>(c);
+				<ast-add-class-concat>(class, node);
 			||
 				! = INVERT;
-				(!, !, !) = RANGE;
 				<ast-add-class-flag-invert>(&flags);
-				<ast-add-class-flag-minus>(&flags);
+
+				(c, !, !) = RANGE;
+				node = <ast-make-class-literal>(c);
+				<ast-add-class-concat>(class, node);
 			||
 				$;
 			};
@@ -198,8 +200,9 @@
 			class-tail: (class :ast_class, flags :class_flags &) -> () = {
 				/* XXX: This requires LL(2). */
 
-			/* 	(!, !, !) = RANGE;
-			 *	<ast-add-class-flag-minus>(&flags);
+			/* 	(c, !, !) = RANGE;
+			 *	node = <ast-make-class-literal>(c);
+			 *  <ast-add-class-concat>(class, node);
 			 * || */
 				$;
 			};
