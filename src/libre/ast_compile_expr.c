@@ -429,26 +429,48 @@ comp_iter_repeated(struct comp_env *env,
 			EPSILON(na, nz);
 		}
 		
-		for (i = 1; i < high; i++) {
-			a = fsm_state_duplicatesubgraphx(env->fsm, na, &b);
-			if (a == NULL) {
-				return 0;
+		if (high != AST_COUNT_UNBOUNDED) {
+			for (i = 1; i < high; i++) {
+				a = fsm_state_duplicatesubgraphx(env->fsm, na, &b);
+				if (a == NULL) {
+					return 0;
+				}
+				
+				/*
+				 * TODO: could elide this epsilon if fsm_state_duplicatesubgraphx()
+				 * took an extra parameter giving it a m->new for the start state
+				 */
+				EPSILON(nz, a);
+				
+				/* To the optional part of the repeated count */
+				if (i >= low) {
+					EPSILON(nz, b);
+				}
+				
+				na = a;	/* advance head for next duplication */
+				nz = b;	/* advance tail for concenation */
 			}
-			
-			/*
-			 * TODO: could elide this epsilon if fsm_state_duplicatesubgraphx()
-			 * took an extra parameter giving it a m->new for the start state
-			 */
-			EPSILON(nz, a);
-			
-			/* To the optional part of the repeated count */
-			if (i >= low) {
-				EPSILON(nz, b);
+		} else {
+			for (i = 1; i < low; i++) {
+				a = fsm_state_duplicatesubgraphx(env->fsm, na, &b);
+				if (a == NULL) {
+					return 0;
+				}
+				
+				/*
+				 * TODO: could elide this epsilon if fsm_state_duplicatesubgraphx()
+				 * took an extra parameter giving it a m->new for the start state
+				 */
+				EPSILON(nz, a);
+				
+				na = a;	/* advance head for next duplication */
+				nz = b;	/* advance tail for concenation */
 			}
-			
-			na = a;	/* advance head for next duplication */
-			nz = b;	/* advance tail for concenation */
+
+			/* back link to allow for infinite repetition */
+			EPSILON(nz,na);
 		}
+
 		
 		/* tail to last repeated NFA tail */
 		EPSILON(nz, y);
