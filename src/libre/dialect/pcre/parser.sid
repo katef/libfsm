@@ -78,6 +78,8 @@
 	<atom-opt>:    () -> (:ast_count);
 	<atom-count>:  (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
+	<unbounded-count>:	() -> (:unsigned);
+
 	<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
 	<ast-range-endpoint-class>:   (:ast_class_id) -> (:endpoint);
 	!<ast-range-distinct>: (:endpoint, :pos, :endpoint, :pos) -> ();
@@ -368,6 +370,15 @@
 				<mark-count>(start, end);
 				c = <atom-count>(m, start, n, end);
 				node = <ast-make-atom>(e, c);
+			||
+				(start, !) = OPENCOUNT;
+				m = COUNT;
+				SEP;
+				(end, !) = CLOSECOUNT;
+				<mark-count>(start, end);
+				n = <unbounded-count>;
+				c = <atom-count>(m, start, n, end);
+				node = <ast-make-expr-atom>(e, c);
 			||
 				OPT;
 				c = <atom-opt>();
