@@ -238,7 +238,7 @@ ZL2_list_Hof_Hnodes:;
 	{
 		t_ast__expr ZIl;
 
-		/* BEGINNING OF INLINE: 102 */
+		/* BEGINNING OF INLINE: 103 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY):
@@ -258,7 +258,7 @@ ZL2_list_Hof_Hnodes:;
 					/* END OF INLINE: list-of-nodes::any */
 					/* BEGINNING OF ACTION: ast-make-expr-any */
 					{
-#line 653 "src/libre/parser.act"
+#line 657 "src/libre/parser.act"
 
 		(ZIl) = ast_make_expr_any();
 		if ((ZIl) == NULL) {
@@ -277,8 +277,8 @@ ZL2_list_Hof_Hnodes:;
 					/* BEGINNING OF INLINE: list-of-nodes::literal */
 					{
 						{
-							t_pos ZI96;
 							t_pos ZI97;
+							t_pos ZI98;
 
 							switch (CURRENT_TERMINAL) {
 							case (TOK_CHAR):
@@ -289,8 +289,8 @@ ZL2_list_Hof_Hnodes:;
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI96 = lex_state->lx.start;
-		ZI97   = lex_state->lx.end;
+		ZI97 = lex_state->lx.start;
+		ZI98   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
@@ -307,7 +307,7 @@ ZL2_list_Hof_Hnodes:;
 					/* END OF INLINE: list-of-nodes::literal */
 					/* BEGINNING OF ACTION: ast-make-expr-literal */
 					{
-#line 646 "src/libre/parser.act"
+#line 650 "src/libre/parser.act"
 
 		(ZIl) = ast_make_expr_literal((ZIc));
 		if ((ZIl) == NULL) {
@@ -339,7 +339,7 @@ ZL2_list_Hof_Hnodes:;
 					/* END OF INLINE: list-of-nodes::many */
 					/* BEGINNING OF ACTION: ast-make-expr-any */
 					{
-#line 653 "src/libre/parser.act"
+#line 657 "src/libre/parser.act"
 
 		(ZIe) = ast_make_expr_any();
 		if ((ZIe) == NULL) {
@@ -360,7 +360,7 @@ ZL2_list_Hof_Hnodes:;
 					/* END OF ACTION: atom-kleene */
 					/* BEGINNING OF ACTION: ast-make-expr-atom */
 					{
-#line 660 "src/libre/parser.act"
+#line 664 "src/libre/parser.act"
 
 		(ZIl) = ast_make_expr_with_count((ZIe), (ZIc));
 		if ((ZIl) == NULL) {
@@ -377,10 +377,10 @@ ZL2_list_Hof_Hnodes:;
 				goto ZL1;
 			}
 		}
-		/* END OF INLINE: 102 */
+		/* END OF INLINE: 103 */
 		/* BEGINNING OF ACTION: ast-add-expr-concat */
 		{
-#line 725 "src/libre/parser.act"
+#line 729 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIl))) {
 			goto ZL1;
@@ -389,7 +389,7 @@ ZL2_list_Hof_Hnodes:;
 #line 390 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: ast-add-expr-concat */
-		/* BEGINNING OF INLINE: 105 */
+		/* BEGINNING OF INLINE: 106 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
@@ -398,12 +398,12 @@ ZL2_list_Hof_Hnodes:;
 					goto ZL2_list_Hof_Hnodes;
 					/* END OF INLINE: list-of-nodes */
 				}
-				/*UNREACHED*/
+				/* UNREACHED */
 			default:
 				break;
 			}
 		}
-		/* END OF INLINE: 105 */
+		/* END OF INLINE: 106 */
 	}
 	return;
 ZL1:;
@@ -420,14 +420,14 @@ p_re__glob(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 		return;
 	}
 	{
-		/* BEGINNING OF INLINE: 108 */
+		/* BEGINNING OF INLINE: 109 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
 				{
 					/* BEGINNING OF ACTION: ast-make-expr-concat */
 					{
-#line 632 "src/libre/parser.act"
+#line 636 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_concat();
 		if ((ZInode) == NULL) {
@@ -448,7 +448,7 @@ p_re__glob(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 				{
 					/* BEGINNING OF ACTION: ast-make-expr-empty */
 					{
-#line 625 "src/libre/parser.act"
+#line 629 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_empty();
 		if ((ZInode) == NULL) {
@@ -462,8 +462,8 @@ p_re__glob(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 				break;
 			}
 		}
-		/* END OF INLINE: 108 */
-		/* BEGINNING OF INLINE: 109 */
+		/* END OF INLINE: 109 */
+		/* BEGINNING OF INLINE: 110 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -492,7 +492,7 @@ p_re__glob(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 			}
 		ZL3:;
 		}
-		/* END OF INLINE: 109 */
+		/* END OF INLINE: 110 */
 	}
 	goto ZL0;
 ZL1:;
@@ -504,7 +504,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 978 "src/libre/parser.act"
+#line 982 "src/libre/parser.act"
 
 
 	static int

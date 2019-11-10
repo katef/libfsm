@@ -67,6 +67,8 @@
 	!<atom-opt>:    () -> (:ast_count);
 	!<atom-count>:  (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
+	!<unbounded-count>:	() -> (:unsigned);
+
 	!<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
 	!<ast-range-endpoint-class>:   (:ast_class_id) -> (:endpoint);
 	!<ast-range-distinct>: (:endpoint, :pos, :endpoint, :pos) -> ();
