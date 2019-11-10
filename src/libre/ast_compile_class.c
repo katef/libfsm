@@ -32,7 +32,6 @@
  */
 struct cc {
 	enum re_flags re_flags;
-	enum ast_class_flags flags;
 	struct re_err *err;
 
 	/*
@@ -310,10 +309,6 @@ comp_iter(struct cc *cc, const struct ast_class *n)
 		}
 		break;
 
-	case AST_CLASS_FLAGS:
-		cc->flags |= n->u.flags.f;
-		break;
-
 	case AST_CLASS_SUBTRACT:
 		assert(!"unimplemented");
 
@@ -325,8 +320,8 @@ comp_iter(struct cc *cc, const struct ast_class *n)
 }
 
 int
-ast_compile_class(const struct ast_class *class,
-	struct fsm *fsm, enum re_flags flags,
+ast_compile_class(const struct ast_class *class, enum ast_class_flags class_flags,
+	struct fsm *fsm, enum re_flags re_flags,
 	struct re_err *err,
 	struct fsm_state *x, struct fsm_state *y)
 {
@@ -345,13 +340,13 @@ ast_compile_class(const struct ast_class *class,
 	}
 
 	cc.err = err;
-	cc.re_flags = flags;
+	cc.re_flags = re_flags;
 
 	if (!comp_iter(&cc, class)) {
 		goto error;
 	}
 
-	if (cc.flags & AST_CLASS_FLAG_INVERTED) {
+	if (class_flags & AST_CLASS_FLAG_INVERTED) {
 		cc.set = fsm_invert(cc.set);
 		if (cc.set == NULL) {
 			return 0;

@@ -63,7 +63,6 @@ class_free_iter(struct ast_class *n)
 	case AST_CLASS_LITERAL:
 	case AST_CLASS_RANGE:
 	case AST_CLASS_NAMED:
-	case AST_CLASS_FLAGS:
 		break;
 
 	default:
@@ -340,7 +339,7 @@ ast_make_expr_with_count(struct ast_expr *e, struct ast_count count)
 }
 
 struct ast_expr *
-ast_make_expr_class(struct ast_class *class,
+ast_make_expr_class(struct ast_class *class, enum ast_class_flags flags,
     const struct ast_pos *start, const struct ast_pos *end)
 {
 	struct ast_expr *res;
@@ -352,6 +351,7 @@ ast_make_expr_class(struct ast_class *class,
 
 	res->type = AST_EXPR_CLASS;
 	res->u.class.class = class;
+	res->u.class.flags = flags;
 
 	memcpy(&res->u.class.start, start, sizeof *start);
 	memcpy(&res->u.class.end, end, sizeof *end);
@@ -511,22 +511,6 @@ ast_make_class_named(class_constructor *ctor)
 
 	res->type = AST_CLASS_NAMED;
 	res->u.named.ctor = ctor;
-
-	return res;
-}
-
-struct ast_class *
-ast_make_class_flags(enum ast_class_flags flags)
-{
-	struct ast_class *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_CLASS_FLAGS;
-	res->u.flags.f = flags;
 
 	return res;
 }

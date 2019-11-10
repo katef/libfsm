@@ -18,6 +18,7 @@
 	pos;
 	char;
 	unsigned;
+	class_flags;
 	!re_flags;
 	!err;
 	ast_expr;
@@ -88,7 +89,7 @@
 	!<ast-make-expr-any>:          ()                       -> (:ast_expr);
 	<ast-make-expr-atom>:          (:ast_expr, :ast_count)  -> (:ast_expr);
 	<ast-make-expr-atom-any>:      (:ast_count)             -> (:ast_expr);
-	<ast-make-expr-class>:         (:ast_class, :pos, :pos) -> (:ast_expr);
+	<ast-make-expr-class>:         (:ast_class, :class_flags, :pos, :pos) -> (:ast_expr);
 	<ast-make-expr-group>:         (:ast_expr)              -> (:ast_expr);
 	!<ast-make-expr-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
 	!<ast-make-expr-anchor-start>: ()                       -> (:ast_expr);
@@ -103,10 +104,10 @@
 	<ast-make-class-named>:        (:ast_class_id)          -> (:ast_class);
 	<ast-make-class-subtract>:     (:ast_class, :ast_class) -> (:ast_class);
 
-	<ast-make-class-flag-none>:    () -> (:ast_class);
-	<ast-make-class-flag-invert>:  () -> (:ast_class);
-	<ast-make-class-flag-minus>:   () -> (:ast_class);
-	<ast-make-class-flag-invert-minus>: () -> (:ast_class);
+	<ast-make-class-flags>:        ()               -> (:class_flags);
+	<ast-add-class-flag-invert>:   (:class_flags &) -> ();
+	<ast-add-class-flag-minus>:    (:class_flags &) -> ();
+	<sub-flags>:                   (:class_flags, :class_flags) -> (:class_flags);
 
 	<ast-add-class-concat>: (:ast_class, :ast_class) -> ();
 
@@ -179,37 +180,31 @@
 		 */
 		character-class: () -> (node :ast_expr) [
 
-			class-head: (class :ast_class) -> () = {
+			class-head: (class :ast_class, flags :class_flags &) -> () = {
 				! = INVERT;
-				f = <ast-make-class-flag-invert>();
-				<ast-add-class-concat>(class, f);
+				<ast-add-class-flag-invert>(&flags);
 			||
 				(!, !, !) = RANGE;
-				f = <ast-make-class-flag-minus>();
-				<ast-add-class-concat>(class, f);
+				<ast-add-class-flag-minus>(&flags);
 			||
 				! = INVERT;
 				(!, !, !) = RANGE;
-				f = <ast-make-class-flag-invert-minus>();
-				<ast-add-class-concat>(class, f);
+				<ast-add-class-flag-invert>(&flags);
+				<ast-add-class-flag-minus>(&flags);
 			||
-				/* XXX: why add a node at all? */
-				f = <ast-make-class-flag-none>();
-				<ast-add-class-concat>(class, f);
+				$;
 			};
 
-			class-tail: (class :ast_class) -> () = {
+			class-tail: (class :ast_class, flags :class_flags &) -> () = {
 				/* XXX: This requires LL(2). */
 
 			/* 	(!, !, !) = RANGE;
-			 * 	f = <ast-make-class-flag-minus>();
+			 *	<ast-add-class-flag-minus>(&flags);
 			 * || */
-				/* XXX: why add a node at all? */
-				f = <ast-make-class-flag-none>();
-				<ast-add-class-concat>(class, f);
+				$;
 			};
 
-			named-class: () -> (node :ast_class) = {
+			class-named: () -> (node :ast_class) = {
 				(id, !, !) = NAMED_CLASS;
 				node = <ast-make-class-named>(id);
 			};
@@ -229,7 +224,7 @@
 				(c, !, !) = CHAR;
 				node = <ast-make-class-literal>(c);
 			||
-				node = named-class();
+				node = class-named();
 			};
 
 			list-of-class-terms: (class :ast_class) -> () = {
@@ -251,10 +246,11 @@
 			(start, !) = OPENGROUP;
 
 			class = <ast-make-class-concat>;
+			flags = <ast-make-class-flags>;
 
-			class-head(class);
+			class-head(class, &flags);
 			list-of-class-terms(class);
-			class-tail(class);
+			class-tail(class, &flags);
 
 			{
 				(!, !, end) = CLOSEGROUP;
@@ -264,23 +260,25 @@
 				end = start; /* appease sid */
 			};
 
-			node = <ast-make-expr-class>(class, start, end);
+			node = <ast-make-expr-class>(class, flags, start, end);
 		||
 			(start, !) = OPENGROUP;
 
 			class = <ast-make-class-concat>;
+			flags = <ast-make-class-flags>;
 
-			class-head(class);
+			class-head(class, &flags);
 			list-of-class-terms(class);
-			class-tail(class);
+			class-tail(class, &flags);
 
 			! = INVERT;
 
 			mask = <ast-make-class-concat>;
+			mask_flags = <ast-make-class-flags>;
 
-			class-head(mask);
+			class-head(mask, &mask_flags);
 			list-of-class-terms(mask);
-			class-tail(mask);
+			class-tail(mask, &mask_flags);
 
 			{
 				(!, !, end) = CLOSEGROUP;
@@ -294,7 +292,8 @@
 			<err-unsupported>;
 
 			sub = <ast-make-class-subtract>(class, mask);
-			node = <ast-make-expr-class>(sub, start, end);
+			sub_flags = <sub-flags>(flags, mask_flags);
+			node = <ast-make-expr-class>(sub, sub_flags, start, end);
 		};
 
 		/* TODO: is there a better name than 'atom' for

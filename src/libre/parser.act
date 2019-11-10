@@ -678,7 +678,7 @@
 		}
 	@};
 
-	<ast-make-expr-class>: (cca :ast_class, start :pos, end :pos) -> (node :ast_expr) = @{
+	<ast-make-expr-class>: (cca :ast_class, flags :class_flags, start :pos, end :pos) -> (node :ast_expr) = @{
 		struct ast_pos ast_start, ast_end;
 
 		AST_POS_OF_LX_POS(ast_start, @start);
@@ -687,7 +687,7 @@
 		mark(&act_state->groupstart, &@start);
 		mark(&act_state->groupend,   &@end);
 
-		@node = ast_make_expr_class(@cca, &ast_start, &ast_end);
+		@node = ast_make_expr_class(@cca, @flags, &ast_start, &ast_end);
 		if (@node == NULL) {
 			@!;
 		}
@@ -798,32 +798,24 @@
 		}
 	@};
 
-	<ast-make-class-flag-none>: () -> (node :ast_class) = @{
-		@node = ast_make_class_flags(AST_CLASS_FLAG_NONE);
-		if (@node == NULL) {
-			@!;
-		}
+	<ast-make-class-flags>: () -> (flags :class_flags) = @{
+		@flags = 0x0;
 	@};
 
-	<ast-make-class-flag-invert>: () -> (node :ast_class) = @{
-		@node = ast_make_class_flags(AST_CLASS_FLAG_INVERTED);
-		if (@node == NULL) {
-			@!;
-		}
+	<ast-add-class-flag-invert>: (flags :class_flags &) -> () = @{
+		@=flags |= AST_CLASS_FLAG_INVERTED;
 	@};
 
-	<ast-make-class-flag-minus>: () -> (node :ast_class) = @{
-		@node = ast_make_class_flags(AST_CLASS_FLAG_MINUS);
-		if (@node == NULL) {
-			@!;
-		}
+	<ast-add-class-flag-minus>: (flags :class_flags &) -> () = @{
+		@=flags |= AST_CLASS_FLAG_MINUS;
 	@};
 
-	<ast-make-class-flag-invert-minus>: () -> (node :ast_class) = @{
-		@node = ast_make_class_flags(AST_CLASS_FLAG_INVERTED | AST_CLASS_FLAG_MINUS);
-		if (@node == NULL) {
-			@!;
-		}
+	<sub-flags>: (a :class_flags, b :class_flags) -> (q :class_flags) = @{
+		/*
+		 * XXX: this is irrelevant; subtraction isn't implemented yet,
+		 * and when it is, I expect it'll be on expr nodes rather than classes
+		 */
+		@q = @a | @b;
 	@};
 
 	<ast-add-class-concat>: (cat :ast_class, node :ast_class) -> () = @{

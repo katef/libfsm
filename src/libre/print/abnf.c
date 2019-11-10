@@ -165,15 +165,6 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 		print_class_name(f, class_name(n->u.named.ctor));
 		break;
 
-	case AST_CLASS_FLAGS:
-		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
-			fprintf(f, "<SOL>");
-		}
-		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
-			fprintf(f, "<->"); /* XXX */
-		}
-		break;
-
 	case AST_CLASS_SUBTRACT:
 		assert(!"unimplemented");
 		abort();
@@ -271,6 +262,12 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 	case AST_EXPR_CLASS:
 		fprintf(f, "(");
+		if (n->u.class.flags & AST_CLASS_FLAG_INVERTED) {
+			fprintf(f, "<SOL>");
+		}
+		if (n->u.class.flags & AST_CLASS_FLAG_MINUS) {
+			fprintf(f, "<->"); /* XXX */
+		}
 		cc_pp_iter(f, opt, n->u.class.class);
 		fprintf(f, ")");
 		break;

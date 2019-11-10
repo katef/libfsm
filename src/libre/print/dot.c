@@ -97,17 +97,6 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 			(void *) n, class_name(n->u.named.ctor));
 		break;
 
-	case AST_CLASS_FLAGS:
-		fprintf(f, "\tn%p [ label = <CLASS-FLAGS|", (void *) n);
-		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
-			fprintf(f, "^");
-		}
-		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
-			fprintf(f, "-");
-		}
-		fprintf(f, "> ];\n");
-		break;
-
 	case AST_CLASS_SUBTRACT:
 		fprintf(f, "\tn%p [ label = <{CLASS-SUBTRACT|{ast|mask}}> ];\n", (void *) n);
 		cc_pp_iter(f, opt, n, n->u.subtract.ast);
@@ -179,7 +168,14 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case AST_EXPR_CLASS:
-		fprintf(f, "\tn%p [ label = <CLASS> ];\n", (void *) n);
+		fprintf(f, "\tn%p [ label = <CLASS|", (void *) n);
+		if (n->u.class.flags & AST_CLASS_FLAG_INVERTED) {
+			fprintf(f, "^");
+		}
+		if (n->u.class.flags & AST_CLASS_FLAG_MINUS) {
+			fprintf(f, "-");
+		}
+		fprintf(f, "> ];\n");
 		cc_pp_iter(f, opt, n, n->u.class.class);
 		break;
 

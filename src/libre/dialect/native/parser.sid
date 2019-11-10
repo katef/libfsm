@@ -14,6 +14,7 @@
 	pos;
 	char;
 	unsigned;
+	class_flags;
 	!re_flags;
 	!err;
 	ast_expr;
@@ -83,7 +84,7 @@
 	<ast-make-expr-any>:          ()                       -> (:ast_expr);
 	<ast-make-expr-atom>:         (:ast_expr, :ast_count)  -> (:ast_expr);
 	!<ast-make-expr-atom-any>:    (:ast_count)             -> (:ast_expr);
-	<ast-make-expr-class>:        (:ast_class, :pos, :pos) -> (:ast_expr);
+	<ast-make-expr-class>:        (:ast_class, :class_flags, :pos, :pos) -> (:ast_expr);
 	<ast-make-expr-group>:        (:ast_expr)              -> (:ast_expr);
 	!<ast-make-expr-re-flags>:    (:re_flags, :re_flags)   -> (:ast_expr);
 	<ast-make-expr-anchor-start>: ()                       -> (:ast_expr);
@@ -98,10 +99,10 @@
 	<ast-make-class-named>:       (:ast_class_id)          -> (:ast_class);
 	!<ast-make-class-subtract>:   (:ast_class, :ast_class) -> (:ast_class);
 
-	<ast-make-class-flag-none>:   () -> (:ast_class);
-	<ast-make-class-flag-invert>: () -> (:ast_class);
-	!<ast-make-class-flag-minus>: () -> (:ast_class);
-	!<ast-make-class-flag-invert-minus>: () -> (:ast_class);
+	<ast-make-class-flags>:       ()               -> (:class_flags);
+	<ast-add-class-flag-invert>:  (:class_flags &) -> ();
+	!<ast-add-class-flag-minus>:  (:class_flags &) -> ();
+	!<sub-flags>:                 (:class_flags, :class_flags) -> (:class_flags);
 
 	<ast-add-class-concat>: (:ast_class, :ast_class) -> ();
 
@@ -141,14 +142,11 @@
 		character-class: () -> (node :ast_expr) [
 
 			/* TODO: []] [-]] etc.? though they can be escaped. */
-			class-head: (class :ast_class) -> () = {
-				(!) = INVERT;
-				f = <ast-make-class-flag-invert>;
-				<ast-add-class-concat>(class, f);
+			class-head: (class :ast_class, flags :class_flags &) -> () = {
+				! = INVERT;
+				<ast-add-class-flag-invert>(&flags);
 			||
-				/* XXX: why add a node at all? */
-				f = <ast-make-class-flag-none>();
-				<ast-add-class-concat>(class, f);
+				$;
 			};
 
 			class-literal: () -> (node :ast_class) = {
@@ -233,8 +231,9 @@
 			(start, !) = OPENGROUP;
 
 			class = <ast-make-class-concat>;
+			flags = <ast-make-class-flags>;
 
-			class-head(class);
+			class-head(class, &flags);
 			list-of-class-terms(class);
 
 			{
@@ -245,7 +244,7 @@
 				end = start; /* appease sid */
 			};
 
-			node = <ast-make-expr-class>(class, start, end);
+			node = <ast-make-expr-class>(class, flags, start, end);
 		};
 
 		atom: () -> (node :ast_expr) = {

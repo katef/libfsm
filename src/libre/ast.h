@@ -99,7 +99,6 @@ enum ast_class_type {
 	AST_CLASS_RANGE,
 	AST_CLASS_NAMED,
 /*	AST_CLASS_TYPE, XXX: not implemented */
-	AST_CLASS_FLAGS,
 	AST_CLASS_SUBTRACT
 };
 
@@ -146,10 +145,6 @@ struct ast_class {
 		struct {
 			class_constructor *ctor;
 		} named;
-
-		struct {
-			enum ast_class_flags f;
-		} flags;
 
 		struct {
 			struct ast_class *ast;
@@ -200,6 +195,7 @@ struct ast_expr {
 
 		struct {
 			struct ast_class *class;
+			enum ast_class_flags flags;
 			struct ast_pos start;
 			struct ast_pos end;
 		} class;
@@ -265,7 +261,7 @@ struct ast_expr *
 ast_make_expr_with_count(struct ast_expr *e, struct ast_count count);
 
 struct ast_expr *
-ast_make_expr_class(struct ast_class *class,
+ast_make_expr_class(struct ast_class *class, enum ast_class_flags flags,
 	const struct ast_pos *start, const struct ast_pos *end);
 
 struct ast_expr *
@@ -296,9 +292,6 @@ ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
 
 struct ast_class *
 ast_make_class_named(class_constructor *ctor);
-
-struct ast_class *
-ast_make_class_flags(enum ast_class_flags flags);
 
 int
 ast_add_class_concat(struct ast_class *cat, struct ast_class *node);

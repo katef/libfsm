@@ -9,6 +9,7 @@
 	pos;
 	char;
 	!unsigned;
+	!class_flags;
 	!re_flags;
 	!err;
 	ast_expr;
@@ -78,7 +79,7 @@
 	<ast-make-expr-any>:           ()                       -> (:ast_expr);
 	<ast-make-expr-atom>:          (:ast_expr, :ast_count)  -> (:ast_expr);
 	!<ast-make-expr-atom-any>:     (:ast_count)             -> (:ast_expr);
-	!<ast-make-expr-class>:        (:ast_class, :pos, :pos) -> (:ast_expr);
+	!<ast-make-expr-class>:        (:ast_class, :class_flags, :pos, :pos) -> (:ast_expr);
 	!<ast-make-expr-group>:        (:ast_expr)              -> (:ast_expr);
 	!<ast-make-expr-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
 	!<ast-make-expr-anchor-start>: ()                       -> (:ast_expr);
@@ -93,10 +94,10 @@
 	!<ast-make-class-named>:       (:ast_class_id) -> (:ast_class);
 	!<ast-make-class-subtract>:    (:ast_class, :ast_class) -> (:ast_class);
 
-	!<ast-make-class-flag-none>:         () -> (:ast_class);
-	!<ast-make-class-flag-invert>:       () -> (:ast_class);
-	!<ast-make-class-flag-minus>:        () -> (:ast_class);
-	!<ast-make-class-flag-invert-minus>: () -> (:ast_class);
+	!<ast-make-class-flags>:       ()               -> (:class_flags);
+	!<ast-add-class-flag-invert>:  (:class_flags &) -> ();
+	!<ast-add-class-flag-minus>:   (:class_flags &) -> ();
+	!<sub-flags>:                  (:class_flags, :class_flags) -> (:class_flags);
 
 	!<ast-add-class-concat>: (:ast_class, :ast_class) -> ();
 
