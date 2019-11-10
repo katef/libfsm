@@ -530,6 +530,37 @@ flatten(struct ast_expr *n)
 			}
 		}
 
+		/* remove empty children; these have no semantic effect */
+		for (i = 0; i < n->u.concat.count; ) {
+			if (n->u.concat.n[i]->type == AST_EXPR_EMPTY) {
+				ast_expr_free(n->u.concat.n[i]);
+
+				if (i + 1 < n->u.concat.count) {
+					memmove(&n->u.concat.n[i], &n->u.concat.n[i + 1],
+						(n->u.concat.count - i - 1) * sizeof n->u.concat.n[i]);
+				}
+
+				n->u.concat.count--;
+				continue;
+			}
+
+			i++;
+		}
+
+		if (n->u.concat.count == 0) {
+			free(n->u.concat.n);
+			n->type = AST_EXPR_EMPTY;
+			return 1;
+		}
+
+		if (n->u.concat.count == 1) {
+			void *p = n->u.concat.n, *q = n->u.concat.n[0];
+			*n = *n->u.concat.n[0];
+			free(p);
+			free(q);
+			return 1;
+		}
+
 		return 1;
 	}
 
@@ -540,6 +571,37 @@ flatten(struct ast_expr *n)
 			if (!flatten(n->u.alt.n[i])) {
 				return 0;
 			}
+		}
+
+		/* remove empty children; these have no semantic effect */
+		for (i = 0; i < n->u.alt.count; ) {
+			if (n->u.alt.n[i]->type == AST_EXPR_EMPTY) {
+				ast_expr_free(n->u.alt.n[i]);
+
+				if (i + 1 < n->u.alt.count) {
+					memmove(&n->u.alt.n[i], &n->u.alt.n[i + 1],
+						(n->u.alt.count - i - 1) * sizeof n->u.alt.n[i]);
+				}
+
+				n->u.alt.count--;
+				continue;
+			}
+
+			i++;
+		}
+
+		if (n->u.alt.count == 0) {
+			free(n->u.alt.n);
+			n->type = AST_EXPR_EMPTY;
+			return 1;
+		}
+
+		if (n->u.alt.count == 1) {
+			void *p = n->u.alt.n, *q = n->u.alt.n[0];
+			*n = *n->u.alt.n[0];
+			free(p);
+			free(q);
+			return 1;
 		}
 
 		return 1;
