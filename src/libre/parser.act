@@ -628,15 +628,15 @@
 		}
 	@};
 
-	<ast-make-expr-concat>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
-		@node = ast_make_expr_concat(@l, @r);
+	<ast-make-expr-concat>: () -> (node :ast_expr) = @{
+		@node = ast_make_expr_concat();
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-make-expr-alt>: (l :ast_expr, r :ast_expr) -> (node :ast_expr) = @{
-		@node = ast_make_expr_alt(@l, @r);
+	<ast-make-expr-alt>: () -> (node :ast_expr) = @{
+		@node = ast_make_expr_alt();
 		if (@node == NULL) {
 			@!;
 		}
@@ -721,12 +721,24 @@
 		}
 	@};
 
+	<ast-add-expr-concat>: (cat :ast_expr, node :ast_expr) -> () = @{
+		if (!ast_add_expr_concat(@cat, @node)) {
+			@!;
+		}
+	@};
+
+	<ast-add-expr-alt>: (alt :ast_expr, node :ast_expr) -> () = @{
+		if (!ast_add_expr_alt(@alt, @node)) {
+			@!;
+		}
+	@};
+
 	/*
 	 * Character classes
 	 */
 
-	<ast-make-class-concat>: (l :ast_class, r :ast_class) -> (node :ast_class) = @{
-		@node = ast_make_class_concat(@l, @r);
+	<ast-make-class-concat>: () -> (node :ast_class) = @{
+		@node = ast_make_class_concat();
 		if (@node == NULL) {
 			@!;
 		}
@@ -810,6 +822,12 @@
 	<ast-make-class-flag-invert-minus>: () -> (node :ast_class) = @{
 		@node = ast_make_class_flags(AST_CLASS_FLAG_INVERTED | AST_CLASS_FLAG_MINUS);
 		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-add-class-concat>: (cat :ast_class, node :ast_class) -> () = @{
+		if (!ast_add_class_concat(@cat, @node)) {
 			@!;
 		}
 	@};

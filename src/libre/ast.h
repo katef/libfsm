@@ -22,9 +22,7 @@ struct ast_pos {
 enum ast_expr_type {
 	AST_EXPR_EMPTY,
 	AST_EXPR_CONCAT,
-	AST_EXPR_CONCAT_N,
 	AST_EXPR_ALT,
-	AST_EXPR_ALT_N,
 	AST_EXPR_LITERAL,
 	AST_EXPR_ANY,
 	AST_EXPR_REPEATED,
@@ -127,9 +125,11 @@ struct ast_endpoint {
 struct ast_class {
 	enum ast_class_type type;
 	union {
+		/* unordered set */
 		struct {
-			struct ast_class *l;
-			struct ast_class *r;
+			size_t count; /* used */
+			size_t alloc; /* allocated */
+			struct ast_class **n;
 		} concat;
 
 		struct {
@@ -174,25 +174,19 @@ struct ast_expr {
 	enum ast_expr_flags flags;
 
 	union {
+		/* ordered sequence */
 		struct {
-			struct ast_expr *l;
-			struct ast_expr *r;
+			size_t count; /* used */
+			size_t alloc; /* allocated */
+			struct ast_expr **n;
 		} concat;
 
+		/* unordered set */
 		struct {
-			size_t count;
-			struct ast_expr *n[1];
-		} concat_n;
-
-		struct {
-			struct ast_expr *l;
-			struct ast_expr *r;
+			size_t count; /* used */
+			size_t alloc; /* allocated */
+			struct ast_expr **n;
 		} alt;
-
-		struct {
-			size_t count;
-			struct ast_expr *n[1];
-		} alt_n;
 
 		struct {
 			/*const*/ char c;
@@ -253,16 +247,13 @@ struct ast_expr *
 ast_make_expr_empty(void);
 
 struct ast_expr *
-ast_make_expr_concat(struct ast_expr *l, struct ast_expr *r);
+ast_make_expr_concat(void);
 
 struct ast_expr *
-ast_make_expr_concat_n(size_t count);
+ast_make_expr_alt(void);
 
-struct ast_expr *
-ast_make_expr_alt(struct ast_expr *l, struct ast_expr *r);
-
-struct ast_expr *
-ast_make_expr_alt_n(size_t count);
+int
+ast_add_expr_alt(struct ast_expr *cat, struct ast_expr *node);
 
 struct ast_expr *
 ast_make_expr_literal(char c);
@@ -286,13 +277,15 @@ ast_make_expr_re_flags(enum re_flags pos, enum re_flags neg);
 struct ast_expr *
 ast_make_expr_anchor(enum ast_anchor_type type);
 
+int
+ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
+
 /*
  * Character classes
  */
 
 struct ast_class *
-ast_make_class_concat(struct ast_class *l,
-	struct ast_class *r);
+ast_make_class_concat(void);
 
 struct ast_class *
 ast_make_class_literal(unsigned char c);
@@ -306,6 +299,9 @@ ast_make_class_named(class_constructor *ctor);
 
 struct ast_class *
 ast_make_class_flags(enum ast_class_flags flags);
+
+int
+ast_add_class_concat(struct ast_class *cat, struct ast_class *node);
 
 struct ast_class *
 ast_make_class_subtract(struct ast_class *ast,

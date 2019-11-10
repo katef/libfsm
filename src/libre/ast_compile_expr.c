@@ -173,7 +173,7 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_CLASS:
-	case AST_EXPR_ALT_N:
+	case AST_EXPR_ALT:
 	case AST_EXPR_ANCHOR:
 		/* These nodes cannot have a backward epsilon edge */
 		return 0;
@@ -267,8 +267,8 @@ decide_linking(struct comp_env *env,
 	case AST_EXPR_ANY:
 	case AST_EXPR_CLASS:
 
-	case AST_EXPR_CONCAT_N:
-	case AST_EXPR_ALT_N:
+	case AST_EXPR_CONCAT:
+	case AST_EXPR_ALT:
 	case AST_EXPR_REPEATED:
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_TOMBSTONE:
@@ -550,14 +550,14 @@ comp_iter(struct comp_env *env,
 		EPSILON(x, y);
 		break;
 
-	case AST_EXPR_CONCAT_N:
+	case AST_EXPR_CONCAT:
 	{
 		struct fsm_state *z, *right;
 		struct fsm_state *curr_x;
 		enum re_flags saved;
 		size_t i;
 
-		const size_t count  = n->u.concat_n.count;
+		const size_t count  = n->u.concat.count;
 
 		curr_x = x;
 		saved  = env->flags;
@@ -567,10 +567,10 @@ comp_iter(struct comp_env *env,
 		NEWSTATE(z);
 
 		for (i = 0; i < count; i++) {
-			struct ast_expr *curr = n->u.concat_n.n[i];
+			struct ast_expr *curr = n->u.concat.n[i];
 			struct ast_expr *next = i == count - 1
 				? NULL
-				: n->u.concat_n.n[i + 1];
+				: n->u.concat.n[i + 1];
 
 			if (curr->type == AST_EXPR_FLAGS) {
 				/*
@@ -615,13 +615,13 @@ comp_iter(struct comp_env *env,
 		break;
 	}
 
-	case AST_EXPR_ALT_N:
+	case AST_EXPR_ALT:
 	{
 		size_t i;
 
-		const size_t count = n->u.alt_n.count;
+		const size_t count = n->u.alt.count;
 
-		assert(count > 1);
+		assert(count >= 1);
 
 		for (i = 0; i < count; i++) {
 			/*
@@ -629,7 +629,7 @@ comp_iter(struct comp_env *env,
 			 * epsilons when necessary, so there isn't much
 			 * more to do here.
 			 */
-			RECURSE(x, y, n->u.alt_n.n[i]);
+			RECURSE(x, y, n->u.alt.n[i]);
 		}		
 		break;
 	}

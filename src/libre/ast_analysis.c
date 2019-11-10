@@ -27,11 +27,12 @@ struct anchoring_env {
 };
 
 static int
-flatten(struct ast_expr **n);
-
-static int
 is_nullable(const struct ast_expr *n)
 {
+	if (n->type == AST_EXPR_EMPTY) {
+		return 1;
+	}
+
 	return n->flags & AST_EXPR_FLAG_NULLABLE;
 }
 
@@ -58,38 +59,41 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 {
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
+		set_flags(n, AST_EXPR_FLAG_NULLABLE);
+		break;
+
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
 		/* no special handling */
 		break;
 
-	case AST_EXPR_CONCAT_N: {
+	case AST_EXPR_CONCAT: {
 		size_t i;
 
-		for (i = 0; i < n->u.concat_n.count; i++) {
+		for (i = 0; i < n->u.concat.count; i++) {
 			if (is_nullable(n)) {
-				set_flags(n->u.concat_n.n[i], AST_EXPR_FLAG_NULLABLE);
+				set_flags(n->u.concat.n[i], AST_EXPR_FLAG_NULLABLE);
 			}
-			analysis_iter(env, n->u.concat_n.n[i]);
+			analysis_iter(env, n->u.concat.n[i]);
 		}
 
 		break;
 	}
 
-	case AST_EXPR_ALT_N: {
+	case AST_EXPR_ALT: {
 		size_t i;
 
-		for (i = 0; i < n->u.alt_n.count; i++) {
-			analysis_iter(env, n->u.alt_n.n[i]);
+		for (i = 0; i < n->u.alt.count; i++) {
+			analysis_iter(env, n->u.alt.n[i]);
 			/* spread nullability upward */
-			if (is_nullable(n->u.alt_n.n[i])) {
+			if (is_nullable(n->u.alt.n[i])) {
 				set_flags(n, AST_EXPR_FLAG_NULLABLE);
 			}
 		}
 
 		if (is_nullable(n)) { /* spread nullability downward */
-			for (i = 0; i < n->u.alt_n.count; i++) {
-				set_flags(n->u.alt_n.n[i], AST_EXPR_FLAG_NULLABLE);
+			for (i = 0; i < n->u.alt.count; i++) {
+				set_flags(n->u.alt.n[i], AST_EXPR_FLAG_NULLABLE);
 			}
 		}
 		break;
@@ -166,11 +170,11 @@ always_consumes_input(const struct ast_expr *n, int thud)
 	case AST_EXPR_CLASS:
 		return 1;
 
-	case AST_EXPR_CONCAT_N: {
+	case AST_EXPR_CONCAT: {
 		size_t i;
 
-		for (i = 0; i < n->u.concat_n.count; i++) {
-			if (always_consumes_input(n->u.concat_n.n[i], thud)) {
+		for (i = 0; i < n->u.concat.count; i++) {
+			if (always_consumes_input(n->u.concat.n[i], thud)) {
 				return 1;
 			}
 		}
@@ -178,11 +182,11 @@ always_consumes_input(const struct ast_expr *n, int thud)
 		return 0;
 	}
 
-	case AST_EXPR_ALT_N: {
+	case AST_EXPR_ALT: {
 		size_t i;
 
-		for (i = 0; i < n->u.alt_n.count; i++) {
-			if (!always_consumes_input(n->u.alt_n.n[i], thud)) {
+		for (i = 0; i < n->u.alt.count; i++) {
+			if (!always_consumes_input(n->u.alt.n[i], thud)) {
 				return 0;
 			}
 		}
@@ -283,16 +287,16 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		}
 		break;
 
-	case AST_EXPR_CONCAT_N: {
+	case AST_EXPR_CONCAT: {
 		size_t i, j;
 		char bak_consuming_after;
 
 		bak_consuming_after = 0;
 
-		for (i = 0; i < n->u.concat_n.count; i++) {
+		for (i = 0; i < n->u.concat.count; i++) {
 			struct ast_expr *child;
 
-			child = n->u.concat_n.n[i];
+			child = n->u.concat.n[i];
 
 #if LOG_CONCAT_FLAGS
 			fprintf(stderr, "%s: %p: %lu: %p -- past_any %d\n",
@@ -314,8 +318,8 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			 * by something that always consumes input, check.
 			 */
 			if (!env->followed_by_consuming) {
-				for (j = i + 1; j < n->u.concat_n.count; j++) {
-					if (always_consumes_input(n->u.concat_n.n[j], 0)) {
+				for (j = i + 1; j < n->u.concat.count; j++) {
+					if (always_consumes_input(n->u.concat.n[j], 0)) {
 						env->followed_by_consuming = 1;
 						break;
 					}
@@ -334,22 +338,22 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_ALT_N: {
+	case AST_EXPR_ALT: {
 		int any_sat;
 		size_t i;
 
 		any_sat = 0;
 
-		for (i = 0; i < n->u.alt_n.count; i++) {
+		for (i = 0; i < n->u.alt.count; i++) {
 			struct anchoring_env bak;
 
 			memcpy(&bak, env, sizeof(*env));
 
-			res = analysis_iter_anchoring(env, n->u.alt_n.n[i]);
+			res = analysis_iter_anchoring(env, n->u.alt.n[i]);
 			if (res == AST_ANALYSIS_UNSATISFIABLE) {
 				/* prune unsatisfiable branch */
-				struct ast_expr *doomed = n->u.alt_n.n[i];
-				n->u.alt_n.n[i] = ast_expr_tombstone;
+				struct ast_expr *doomed = n->u.alt.n[i];
+				n->u.alt.n[i] = ast_expr_tombstone;
 				ast_expr_free(doomed);
 				continue;
 			} else if (res == AST_ANALYSIS_OK) {
@@ -411,12 +415,12 @@ assign_firsts(struct ast_expr *n)
 		set_flags(n, AST_EXPR_FLAG_FIRST);
 		break;
 
-	case AST_EXPR_CONCAT_N: {
+	case AST_EXPR_CONCAT: {
 		size_t i;
 
 		set_flags(n, AST_EXPR_FLAG_FIRST);
-		for (i = 0; i < n->u.concat_n.count; i++) {
-			struct ast_expr *child = n->u.concat_n.n[i];
+		for (i = 0; i < n->u.concat.count; i++) {
+			struct ast_expr *child = n->u.concat.n[i];
 			assign_firsts(child);
 
 			if (always_consumes_input(child, 1) || is_start_anchor(child)) {
@@ -426,12 +430,12 @@ assign_firsts(struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_ALT_N: {
+	case AST_EXPR_ALT: {
 		size_t i;
 
 		set_flags(n, AST_EXPR_FLAG_FIRST);
-		for (i = 0; i < n->u.alt_n.count; i++) {
-			assign_firsts(n->u.alt_n.n[i]);
+		for (i = 0; i < n->u.alt.count; i++) {
+			assign_firsts(n->u.alt.n[i]);
 		}
 		break;
 	}
@@ -469,14 +473,14 @@ assign_lasts(struct ast_expr *n)
 		set_flags(n, AST_EXPR_FLAG_LAST);
 		break;
 
-	case AST_EXPR_CONCAT_N: {
+	case AST_EXPR_CONCAT: {
 		size_t i;
 
 		set_flags(n, AST_EXPR_FLAG_LAST);
 
 		/* iterate in reverse, break on rollover */
-		for (i = n->u.concat_n.count - 1; i < n->u.concat_n.count; i--) {
-			struct ast_expr *child = n->u.concat_n.n[i];
+		for (i = n->u.concat.count - 1; i < n->u.concat.count; i--) {
+			struct ast_expr *child = n->u.concat.n[i];
 			assign_lasts(child);
 			if (always_consumes_input(child, 1) || is_end_anchor(child)) {
 				break;
@@ -485,12 +489,12 @@ assign_lasts(struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_ALT_N: {
+	case AST_EXPR_ALT: {
 		size_t i;
 
 		set_flags(n, AST_EXPR_FLAG_LAST);
-		for (i = 0; i < n->u.alt_n.count; i++) {
-			assign_lasts(n->u.alt_n.n[i]);
+		for (i = 0; i < n->u.alt.count; i++) {
+			assign_lasts(n->u.alt.n[i]);
 		}
 		break;
 	}
@@ -510,176 +514,108 @@ assign_lasts(struct ast_expr *n)
 	}
 }
 
-static unsigned
-count_chain(const struct ast_expr *n, enum ast_expr_type type)
+static int
+flatten(struct ast_expr *n)
 {
-	unsigned res;
+	/* flags haven't been set yet */
+	assert(n->flags == 0x0);
 
-	res = 0;
-
-	for (;;) {
-		assert(n != NULL);
-
-		if (n->type == AST_EXPR_EMPTY) {
-			return res;
-		}
-
-		assert(n->type == type);
-		res++;
-
-		switch (type) {
-		case AST_EXPR_CONCAT:
-			n = n->u.concat.r;
-			break;
-
-		case AST_EXPR_ALT:
-			n = n->u.alt.r;
-			break;
-
-		default:
-			assert(!"unreached");
-			break;
-		}
-	}
-}
-
-static struct ast_expr *
-collect_chain(size_t count, struct ast_expr *doomed)
-{
-	size_t i;
-
-	switch (doomed->type) {
-	case AST_EXPR_CONCAT: {
-		struct ast_expr *dst;
-
-		if (count == 1) {
-			struct ast_expr *res = doomed->u.concat.l;
-			if (!flatten(&doomed->u.concat.l)) {
-				return 0;
-			}
-			res = doomed->u.concat.l;
-
-			assert(doomed->u.concat.r->type == AST_EXPR_EMPTY);
-			doomed->u.concat.l = ast_expr_tombstone;
-			ast_expr_free(doomed);
-			assert(res->type != AST_EXPR_CONCAT);
-
-			return res;
-		}
-
-		dst = ast_make_expr_concat_n(count);
-		if (dst == NULL) {
-			return NULL;
-		}
-		
-		for (i = 0; i < count; i++) {
-			struct ast_expr *ndoomed;
-
-			ndoomed = doomed->u.concat.r;
-			if (!flatten(&doomed->u.concat.l)) {
-				return 0;
-			}
-
-			dst->u.concat_n.n[i] = doomed->u.concat.l;
-			doomed->u.concat.l = ast_expr_tombstone;
-			doomed->u.concat.r = ast_expr_tombstone;
-			ast_expr_free(doomed);
-			doomed = ndoomed;
-
-			if (i == count - 1) {
-				assert(doomed->type == AST_EXPR_EMPTY);
-			}
-		}
-		return dst;
-	}
-
-	case AST_EXPR_ALT: {
-		struct ast_expr *dst;
-
-		if (count == 1) {
-			/* If we get here, it's a parser bug. Right? */
-			assert(!"unreached");
-		}
-
-		dst = ast_make_expr_alt_n(count);
-		if (dst == NULL) {
-			return NULL;
-		}
-
-		for (i = 0; i < count; i++) {
-			struct ast_expr *ndoomed;
-
-			ndoomed = doomed->u.alt.r;
-			if (!flatten(&doomed->u.alt.l)) {
-				return 0;
-			}
-
-			dst->u.alt_n.n[i] = doomed->u.alt.l;
-			doomed->u.alt.l = ast_expr_tombstone;
-			doomed->u.alt.r = ast_expr_tombstone;
-			ast_expr_free(doomed);
-			doomed = ndoomed;
-
-			if (i == count - 1) {
-				assert(doomed->type == AST_EXPR_EMPTY);
-			}
-		}
-		return dst;
-	}
-
-	default:
-		assert(!"unreached");
-		return NULL;
-	}
-}
-
-/* TODO: do this directly in the parser. */
-static struct ast_expr *
-flatten_iter(struct ast_expr *n)
-{
 	switch (n->type) {
-	default:
-		return n;
-
 	case AST_EXPR_CONCAT: {
-		const unsigned count = count_chain(n, AST_EXPR_CONCAT);
-		return collect_chain(count, n);
+		size_t i;
+
+		for (i = 0; i < n->u.concat.count; i++) {
+			if (!flatten(n->u.concat.n[i])) {
+				return 0;
+			}
+		}
+
+		/* remove empty children; these have no semantic effect */
+		for (i = 0; i < n->u.concat.count; ) {
+			if (n->u.concat.n[i]->type == AST_EXPR_EMPTY) {
+				ast_expr_free(n->u.concat.n[i]);
+
+				if (i + 1 < n->u.concat.count) {
+					memmove(&n->u.concat.n[i], &n->u.concat.n[i + 1],
+						(n->u.concat.count - i - 1) * sizeof n->u.concat.n[i]);
+				}
+
+				n->u.concat.count--;
+				continue;
+			}
+
+			i++;
+		}
+
+		if (n->u.concat.count == 0) {
+			free(n->u.concat.n);
+			n->type = AST_EXPR_EMPTY;
+			return 1;
+		}
+
+		if (n->u.concat.count == 1) {
+			void *p = n->u.concat.n, *q = n->u.concat.n[0];
+			*n = *n->u.concat.n[0];
+			free(p);
+			free(q);
+			return 1;
+		}
+
+		return 1;
 	}
 
 	case AST_EXPR_ALT: {
-		const unsigned count = count_chain(n, AST_EXPR_ALT);
-		return collect_chain(count, n);
+		size_t i;
+
+		for (i = 0; i < n->u.alt.count; i++) {
+			if (!flatten(n->u.alt.n[i])) {
+				return 0;
+			}
+		}
+
+		/* remove empty children; these have no semantic effect */
+		for (i = 0; i < n->u.alt.count; ) {
+			if (n->u.alt.n[i]->type == AST_EXPR_EMPTY) {
+				ast_expr_free(n->u.alt.n[i]);
+
+				if (i + 1 < n->u.alt.count) {
+					memmove(&n->u.alt.n[i], &n->u.alt.n[i + 1],
+						(n->u.alt.count - i - 1) * sizeof n->u.alt.n[i]);
+				}
+
+				n->u.alt.count--;
+				continue;
+			}
+
+			i++;
+		}
+
+		if (n->u.alt.count == 0) {
+			free(n->u.alt.n);
+			n->type = AST_EXPR_EMPTY;
+			return 1;
+		}
+
+		if (n->u.alt.count == 1) {
+			void *p = n->u.alt.n, *q = n->u.alt.n[0];
+			*n = *n->u.alt.n[0];
+			free(p);
+			free(q);
+			return 1;
+		}
+
+		return 1;
 	}
 
 	case AST_EXPR_GROUP:
-		if (!flatten(&n->u.group.e)) {
-			return NULL;
-		}
-
-		return n;
+		return flatten(n->u.group.e);
 
 	case AST_EXPR_REPEATED:
-		if (!flatten(&n->u.repeated.e)) {
-			return NULL;
-		}
+		return flatten(n->u.repeated.e);
 
-		return n;
+	default:
+		return 1;
 	}
-}
-
-static int
-flatten(struct ast_expr **n)
-{
-	struct ast_expr *res;
-
-	res = flatten_iter(*n);
-	if (res == NULL) {
-		return 0;
-	}
-
-	*n = res;
-
-	return 1;
 }
 
 enum ast_analysis_res
@@ -693,7 +629,7 @@ ast_analysis(struct ast *ast)
 
 	assert(ast->expr != NULL);
 
-	if (!flatten(&ast->expr)) {
+	if (!flatten(ast->expr)) {
 		return AST_ANALYSIS_ERROR_MEMORY;
 	}
 

@@ -33,8 +33,6 @@ atomic(struct ast_expr *n)
 		return 1;
 
 	case AST_EXPR_REPEATED:
-	case AST_EXPR_CONCAT:
-	case AST_EXPR_ALT:
 		return 0;
 
 	case AST_EXPR_FLAGS:
@@ -132,16 +130,18 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 	assert(n != NULL);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT:
-		if (n->u.concat.l != NULL && n->u.concat.l->type == AST_CLASS_FLAGS) {
-			/* XXX */
-			cc_pp_iter(f, opt, n->u.concat.r);
-		} else {
-			cc_pp_iter(f, opt, n->u.concat.l);
-			fprintf(f, " / ");
-			cc_pp_iter(f, opt, n->u.concat.r);
+	case AST_CLASS_CONCAT: {
+		size_t i;
+
+		for (i = 0; i < n->u.concat.count; i++) {
+			cc_pp_iter(f, opt, n->u.concat.n[i]);
+
+			if (i + 1 < n->u.concat.count) {
+				fprintf(f, " / ");
+			}
 		}
 		break;
+	}
 
 	case AST_CLASS_LITERAL:
 		abnf_escputc(f, opt, n->u.literal.c);
@@ -201,34 +201,24 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 		break;
 
-	case AST_EXPR_CONCAT:
-		pp_iter(f, opt, n->u.concat.l);
-		fprintf(f, " ");
-		pp_iter(f, opt, n->u.concat.r);
-		break;
-
-	case AST_EXPR_CONCAT_N: {
+	case AST_EXPR_CONCAT: {
 		size_t i;
 
-		for (i = 0; i < n->u.concat_n.count; i++) {
-			pp_iter(f, opt, n->u.concat_n.n[i]);
-			if (i < n->u.concat_n.count - 1) { fprintf(f, " "); }
+		for (i = 0; i < n->u.concat.count; i++) {
+			pp_iter(f, opt, n->u.concat.n[i]);
+			if (i + 1 < n->u.concat.count) {
+				fprintf(f, " ");
+			}
 		}
 		break;
 	}
 
-	case AST_EXPR_ALT:
-		pp_iter(f, opt, n->u.alt.l);
-		fprintf(f, " / "); /* XXX: indent */
-		pp_iter(f, opt, n->u.alt.r);
-		break;
-
-	case AST_EXPR_ALT_N: {
+	case AST_EXPR_ALT: {
 		size_t i;
 
-		for (i = 0; i < n->u.alt_n.count; i++) {
-			pp_iter(f, opt, n->u.alt_n.n[i]);
-			if (i < n->u.alt_n.count - 1) {
+		for (i = 0; i < n->u.alt.count; i++) {
+			pp_iter(f, opt, n->u.alt.n[i]);
+			if (i + 1 < n->u.alt.count) {
 				fprintf(f, " / "); /* XXX: indent */
 			}
 		}
