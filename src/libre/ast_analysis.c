@@ -27,11 +27,12 @@ struct anchoring_env {
 };
 
 static int
-flatten(struct ast_expr **n);
-
-static int
 is_nullable(const struct ast_expr *n)
 {
+	if (n->type == AST_EXPR_EMPTY) {
+		return 1;
+	}
+
 	return n->flags & AST_EXPR_FLAG_NULLABLE;
 }
 
@@ -58,6 +59,9 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 {
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
+		set_flags(n, AST_EXPR_FLAG_NULLABLE);
+		break;
+
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
 		/* no special handling */
@@ -510,42 +514,46 @@ assign_lasts(struct ast_expr *n)
 	}
 }
 
-static struct ast_expr *
-flatten_iter(struct ast_expr *n)
+static int
+flatten(struct ast_expr *n)
 {
+	/* flags haven't been set yet */
+	assert(n->flags == 0x0);
+
 	switch (n->type) {
-	case AST_EXPR_GROUP:
-		if (!flatten(&n->u.group.e)) {
-			return NULL;
+	case AST_EXPR_CONCAT: {
+		size_t i;
+
+		for (i = 0; i < n->u.concat.count; i++) {
+			if (!flatten(n->u.concat.n[i])) {
+				return 0;
+			}
 		}
 
-		return n;
+		return 1;
+	}
+
+	case AST_EXPR_ALT: {
+		size_t i;
+
+		for (i = 0; i < n->u.alt.count; i++) {
+			if (!flatten(n->u.alt.n[i])) {
+				return 0;
+			}
+		}
+
+		return 1;
+	}
+
+	case AST_EXPR_GROUP:
+		return flatten(n->u.group.e);
 
 	case AST_EXPR_REPEATED:
-		if (!flatten(&n->u.repeated.e)) {
-			return NULL;
-		}
-
-		return n;
+		return flatten(n->u.repeated.e);
 
 	default:
-		return n;
+		return 1;
 	}
-}
-
-static int
-flatten(struct ast_expr **n)
-{
-	struct ast_expr *res;
-
-	res = flatten_iter(*n);
-	if (res == NULL) {
-		return 0;
-	}
-
-	*n = res;
-
-	return 1;
 }
 
 enum ast_analysis_res
@@ -559,7 +567,7 @@ ast_analysis(struct ast *ast)
 
 	assert(ast->expr != NULL);
 
-	if (!flatten(&ast->expr)) {
+	if (!flatten(ast->expr)) {
 		return AST_ANALYSIS_ERROR_MEMORY;
 	}
 
