@@ -144,15 +144,6 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 	assert(n != NULL);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT: {
-		size_t i;
-
-		for (i = 0; i < n->u.concat.count; i++) {
-			cc_pp_iter(f, opt, n->u.concat.n[i]);
-		}
-		break;
-	}
-
 	case AST_CLASS_LITERAL:
 		pcre_escputc(f, opt, n->u.literal.c);
 		break;
@@ -265,14 +256,21 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_CLASS:
+	case AST_EXPR_CLASS: {
+		size_t i;
+
 		fprintf(f, "[");
 		if (n->u.class.flags & AST_CLASS_FLAG_INVERTED) {
 			fprintf(f, "^");
 		}
-		cc_pp_iter(f, opt, n->u.class.class);
+
+		for (i = 0; i < n->u.class.count; i++) {
+			cc_pp_iter(f, opt, n->u.class.n[i]);
+		}
+
 		fprintf(f, "]");
 		break;
+	}
 
 	case AST_EXPR_GROUP:
 		fprintf(f, "(");

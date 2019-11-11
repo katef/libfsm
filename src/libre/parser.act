@@ -105,7 +105,6 @@
 	typedef struct ast_endpoint t_endpoint;
 
 	typedef struct ast_class * t_ast__class;
-	typedef enum ast_class_flags t_class__flags;
 
 	struct act_state {
 		enum LX_TOKEN lex_tok;
@@ -541,6 +540,19 @@
 		mark(&act_state->countend,   &@end);
 	@};
 
+	<mark-expr-class>: (class :ast_expr, start :pos, end :pos) -> () = @{
+		struct ast_pos ast_start, ast_end;
+
+		AST_POS_OF_LX_POS(ast_start, @start);
+		AST_POS_OF_LX_POS(ast_end, @end);
+
+		mark(&act_state->groupstart, &@start);
+		mark(&act_state->groupend,   &@end);
+
+		@class->u.class.start = ast_start;
+		@class->u.class.end   = ast_end;
+	@};
+
 
 	/*
 	 * AST construction
@@ -678,16 +690,8 @@
 		}
 	@};
 
-	<ast-make-expr-class>: (cca :ast_class, flags :class_flags, start :pos, end :pos) -> (node :ast_expr) = @{
-		struct ast_pos ast_start, ast_end;
-
-		AST_POS_OF_LX_POS(ast_start, @start);
-		AST_POS_OF_LX_POS(ast_end, @end);
-
-		mark(&act_state->groupstart, &@start);
-		mark(&act_state->groupend,   &@end);
-
-		@node = ast_make_expr_class(@cca, @flags, &ast_start, &ast_end);
+	<ast-make-expr-class>: () -> (node :ast_expr) = @{
+		@node = ast_make_expr_class();
 		if (@node == NULL) {
 			@!;
 		}
@@ -744,13 +748,6 @@
 	 * Character classes
 	 */
 
-	<ast-make-class-concat>: () -> (node :ast_class) = @{
-		@node = ast_make_class_concat();
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
 	<ast-make-class-literal>: (c :char) -> (node :ast_class) = @{
 		@node = ast_make_class_literal(@c);
 		if (@node == NULL) {
@@ -798,16 +795,15 @@
 		}
 	@};
 
-	<ast-make-class-flags>: () -> (flags :class_flags) = @{
-		@flags = 0x0;
+	<ast-add-class-flag-invert>: (class :ast_expr) -> () = @{
+		assert(@class != NULL);
+		assert(@class->type == AST_EXPR_CLASS);
+
+		@class->flags |= AST_CLASS_FLAG_INVERTED;
 	@};
 
-	<ast-add-class-flag-invert>: (flags :class_flags &) -> () = @{
-		@=flags |= AST_CLASS_FLAG_INVERTED;
-	@};
-
-	<ast-add-class-concat>: (cat :ast_class, node :ast_class) -> () = @{
-		if (!ast_add_class_concat(@cat, @node)) {
+	<ast-add-class-concat>: (class :ast_expr, node :ast_class) -> () = @{
+		if (!ast_add_class_concat(@class, @node)) {
 			@!;
 		}
 	@};

@@ -20,7 +20,6 @@
 	pos;
 	char;
 	unsigned;
-	class_flags;
 	!pred;
 	re_flags;
 	!err;
@@ -91,7 +90,7 @@
 	<ast-make-expr-any>:          ()                       -> (:ast_expr);
 	<ast-make-expr-atom>:         (:ast_expr, :ast_count)  -> (:ast_expr);
 	!<ast-make-expr-atom-any>:    (:ast_count)             -> (:ast_expr);
-	<ast-make-expr-class>:        (:ast_class, :class_flags, :pos, :pos) -> (:ast_expr);
+	<ast-make-expr-class>:        ()                       -> (:ast_expr);
 	<ast-make-expr-group>:        (:ast_expr)              -> (:ast_expr);
 	<ast-make-expr-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
 	<ast-make-expr-anchor-start>: ()                       -> (:ast_expr);
@@ -101,15 +100,13 @@
 	<ast-add-expr-concat>: (:ast_expr, :ast_expr) -> ();
 	<ast-add-expr-alt>:    (:ast_expr, :ast_expr) -> ();
 
-	<ast-make-class-concat>:      ()                       -> (:ast_class);
 	<ast-make-class-literal>:     (:char)                  -> (:ast_class);
 	<ast-make-class-range>:       (:endpoint, :pos, :endpoint, :pos) -> (:ast_class);
 	<ast-make-class-named>:       (:ast_class_id)          -> (:ast_class);
 
-	<ast-make-class-flags>:       ()               -> (:class_flags);
-	<ast-add-class-flag-invert>:  (:class_flags &) -> ();
+	<ast-add-class-flag-invert>: (:ast_expr) -> ();
 
-	<ast-add-class-concat>: (:ast_class, :ast_class) -> ();
+	<ast-add-class-concat>: (:ast_expr, :ast_class) -> ();
 
 	<err-expected-term>;
 	<err-expected-count>;
@@ -126,6 +123,7 @@
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();
 	<mark-count>: (:pos, :pos) -> ();
+	<mark-expr-class>: (:ast_expr, :pos, :pos) -> ();
 
 	expr: () -> (node :ast_expr) [
 		literal: () -> (node :ast_expr) = {
@@ -143,9 +141,9 @@
 		    
 		character-class: () -> (node :ast_expr) [
 
-			class-head: (class :ast_class, flags :class_flags &) -> () = {
+			class-head: (class :ast_expr) -> () = {
 				! = INVERT;
-				<ast-add-class-flag-invert>(&flags);
+				<ast-add-class-flag-invert>(class);
 			||
 				$;
 			};
@@ -168,8 +166,8 @@
 				node = <ast-make-class-literal>(c);
 	  		};
 
-			class-named: () -> (node :ast_class) = {
-				(id, !, !) = NAMED_CLASS;
+			::class-named: () -> (node :ast_class, start :pos, end :pos) = {
+				(id, start, end) = NAMED_CLASS;
 				node = <ast-make-class-named>(id);
 			};
 
@@ -228,10 +226,10 @@
 			||
 				node = class-range();
 			||
-				node = class-named();
+				(node, !, !) = class-named();
 			};
 
-			list-of-class-terms: (class :ast_class) -> () = {
+			list-of-class-terms: (class :ast_expr) -> () = {
 				{
 					node = class-term();
 					<ast-add-class-concat>(class, node);
@@ -249,11 +247,10 @@
 		] = {
 			(start, !) = OPENGROUP;
 
-			class = <ast-make-class-concat>;
-			flags = <ast-make-class-flags>;
+			node = <ast-make-expr-class>;
 
-			class-head(class, &flags);
-			list-of-class-terms(class);
+			class-head(node);
+			list-of-class-terms(node);
 
 			{
 				(!, !, end) = CLOSEGROUP;
@@ -263,21 +260,21 @@
 				end = start; /* appease sid */
 			};
 
-			node = <ast-make-expr-class>(class, flags, start, end);
+			<mark-expr-class>(node, start, end);
 		};
 
 		type: () -> (node :ast_expr) = {
-			(id, start, end) = NAMED_CLASS;
-			class = <ast-make-class-named>(id);
+			(class, start, end) = class-named();
 
 			/*
 			 * These classes are in an expression context, and so class flags
 			 * are always empty (because those can only ever be set inside
 			 * the [...] syntax).
 			 */
-			flags = <ast-make-class-flags>;
+			node = <ast-make-expr-class>;
+			<ast-add-class-concat>(node, class);
 
-			node = <ast-make-expr-class>(class, flags, start, end);
+			<mark-expr-class>(node, start, end);
 		};
 
 		flags: () -> (node :ast_expr) [

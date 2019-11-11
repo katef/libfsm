@@ -99,16 +99,6 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 	INDENT(f, indent);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT: {
-		size_t i, count = n->u.concat.count;
-
-		fprintf(f, "CLASS-CONCAT (%u):\n", (unsigned) count);
-		for (i = 0; i < n->u.concat.count; i++) {
-			cc_pp_iter(f, opt, n->u.concat.n[i], indent + 4);
-		}
-		break;
-	}
-
 	case AST_CLASS_LITERAL:
 		fprintf(f, "CLASS-LITERAL %p: '", (void *) n);
 		print_char_or_esc(f, n->u.literal.c);
@@ -193,16 +183,21 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		pp_iter(f, opt, indent + 1 * IND, n->u.repeated.e);
 		break;
 
-	case AST_EXPR_CLASS:
-		fprintf(f, "CLASS %p: [", (void *) n);
+	case AST_EXPR_CLASS: {
+		size_t i, count = n->u.class.count;
+
+		fprintf(f, "CLASS %p (%u): [", (void *) n, (unsigned) count);
 		if (n->u.class.flags & AST_CLASS_FLAG_INVERTED) { 
 			fprintf(f, "^");
 		}
 		fprintf(f, "]\n");
 
-		cc_pp_iter(f, opt, n->u.class.class, indent + IND);
-		fprintf(f, "\n");
+		for (i = 0; i < n->u.class.count; i++) {
+			cc_pp_iter(f, opt, n->u.class.n[i], indent + IND);
+		}
+
 		break;
+	}
 
 	case AST_EXPR_GROUP:
 		fprintf(f, "GROUP %p: %u\n", (void *) n, n->u.group.id);

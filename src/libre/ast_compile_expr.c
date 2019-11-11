@@ -729,7 +729,7 @@ comp_iter(struct comp_env *env,
 			env->err->end.byte   = n->u.class.end.byte;
 		}
 
-		if (!ast_compile_class(n->u.class.class, n->u.class.flags,
+		if (!ast_compile_class(n->u.class.n, n->u.class.count, n->u.class.flags,
 			env->fsm, env->re_flags, env->err, x, y)) {
 			return 0;
 		}

@@ -66,17 +66,6 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\tn%p [ style = \"filled\", fillcolor = \"#eeeeee\" ];\n", (void *) n);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT: {
-		size_t i;
-
-		fprintf(f, "\tn%p [ label = <CLASS-CONCAT|%lu> ];\n",
-			(void *) n, (unsigned long)  n->u.concat.count);
-		for (i = 0; i < n->u.concat.count; i++) {
-			cc_pp_iter(f, opt, n, n->u.concat.n[i]);
-		}
-		break;
-	}
-
 	case AST_CLASS_LITERAL:
 		fprintf(f, "\tn%p [ label = <CLASS-LITERAL|", (void *) n);
 		dot_escputc_html(f, opt, n->u.literal.c);
@@ -161,14 +150,20 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		pp_iter(f, opt, n, n->u.repeated.e);
 		break;
 
-	case AST_EXPR_CLASS:
+	case AST_EXPR_CLASS: {
+		size_t i;
+
 		fprintf(f, "\tn%p [ label = <CLASS|", (void *) n);
 		if (n->u.class.flags & AST_CLASS_FLAG_INVERTED) {
 			fprintf(f, "^");
 		}
-		fprintf(f, "> ];\n");
-		cc_pp_iter(f, opt, n, n->u.class.class);
+		fprintf(f, "|%lu> ];\n", (unsigned long) n->u.class.count);
+
+		for (i = 0; i < n->u.class.count; i++) {
+			cc_pp_iter(f, opt, n, n->u.class.n[i]);
+		}
 		break;
+	}
 
 	case AST_EXPR_GROUP:
 		fprintf(f, "\tn%p [ label = <GROUP|#%u> ];\n", (void *) n,

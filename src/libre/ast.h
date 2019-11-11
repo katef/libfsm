@@ -120,13 +120,6 @@ struct ast_endpoint {
 struct ast_class {
 	enum ast_class_type type;
 	union {
-		/* unordered set */
-		struct {
-			size_t count; /* used */
-			size_t alloc; /* allocated */
-			struct ast_class **n;
-		} concat;
-
 		struct {
 			unsigned char c;
 		} literal;
@@ -184,8 +177,12 @@ struct ast_expr {
 			unsigned high;
 		} repeated;
 
+		/* unordered set */
 		struct {
-			struct ast_class *class;
+			size_t count; /* used */
+			size_t alloc; /* allocated */
+			struct ast_class **n;
+
 			enum ast_class_flags flags;
 			struct ast_pos start;
 			struct ast_pos end;
@@ -257,8 +254,7 @@ struct ast_expr *
 ast_make_expr_with_count(struct ast_expr *e, struct ast_count count);
 
 struct ast_expr *
-ast_make_expr_class(struct ast_class *class, enum ast_class_flags flags,
-	const struct ast_pos *start, const struct ast_pos *end);
+ast_make_expr_class(void);
 
 struct ast_expr *
 ast_make_expr_group(struct ast_expr *e);
@@ -280,9 +276,6 @@ ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
  */
 
 struct ast_class *
-ast_make_class_concat(void);
-
-struct ast_class *
 ast_make_class_literal(unsigned char c);
 
 struct ast_class *
@@ -293,7 +286,7 @@ struct ast_class *
 ast_make_class_named(class_constructor *ctor);
 
 int
-ast_add_class_concat(struct ast_class *cat, struct ast_class *node);
+ast_add_class_concat(struct ast_expr *class, struct ast_class *node);
 
 /* XXX: exposed for sake of re(1) printing an ast;
  * it's not part of the <re/re.h> API proper */

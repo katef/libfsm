@@ -15,12 +15,10 @@ struct ast_expr;
 struct ast_class;
 struct fsm;
 struct re_err;
-struct ast_expr;
-struct ast_class;
 
 int
-ast_compile_class(const struct ast_class *class, enum ast_class_flags class_flags,
-	struct fsm *fsm, enum re_flags flags,
+ast_compile_class(struct ast_class **n, size_t count, enum ast_class_flags class_flags,
+	struct fsm *fsm, enum re_flags re_flags,
 	struct re_err *err,
 	struct fsm_state *x, struct fsm_state *y);
 

@@ -44,17 +44,6 @@ class_free_iter(struct ast_class *n)
 	assert(n != NULL);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT: {
-		size_t i;
-
-		for (i = 0; i < n->u.concat.count; i++) {
-			class_free_iter(n->u.concat.n[i]);
-		}
-
-		free(n->u.concat.n);
-		break;
-	}
-
 	case AST_CLASS_LITERAL:
 	case AST_CLASS_RANGE:
 	case AST_CLASS_NAMED:
@@ -112,9 +101,16 @@ free_iter(struct ast_expr *n)
 		free_iter(n->u.repeated.e);
 		break;
 
-	case AST_EXPR_CLASS:
-		class_free_iter(n->u.class.class);
+	case AST_EXPR_CLASS: {
+		size_t i;
+
+		for (i = 0; i < n->u.class.count; i++) {
+			class_free_iter(n->u.class.n[i]);
+		}
+
+		free(n->u.class.n);
 		break;
+	}
 
 	case AST_EXPR_GROUP:
 		free_iter(n->u.group.e);
@@ -339,8 +335,7 @@ ast_make_expr_with_count(struct ast_expr *e, struct ast_count count)
 }
 
 struct ast_expr *
-ast_make_expr_class(struct ast_class *class, enum ast_class_flags flags,
-    const struct ast_pos *start, const struct ast_pos *end)
+ast_make_expr_class(void)
 {
 	struct ast_expr *res;
 
@@ -350,11 +345,16 @@ ast_make_expr_class(struct ast_class *class, enum ast_class_flags flags,
 	}
 
 	res->type = AST_EXPR_CLASS;
-	res->u.class.class = class;
-	res->u.class.flags = flags;
+	res->u.class.alloc = 8; /* arbitrary initial value */
+	res->u.class.count = 0;
 
-	memcpy(&res->u.class.start, start, sizeof *start);
-	memcpy(&res->u.class.end, end, sizeof *end);
+	res->u.class.n = malloc(res->u.class.alloc * sizeof *res->u.class.n);
+	if (res->u.class.n == NULL) {
+		free(res);
+		return NULL;
+	}
+
+	res->u.class.flags = 0x0;
 
 	return res;
 }
@@ -430,49 +430,26 @@ ast_make_expr_subtract(struct ast_expr *a, struct ast_expr *b)
  * Character classes
  */
 
-struct ast_class *
-ast_make_class_concat(void)
-{
-	struct ast_class *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_CLASS_CONCAT;
-	res->u.concat.alloc = 8; /* arbitrary initial value */
-	res->u.concat.count = 0;
-
-	res->u.concat.n = malloc(res->u.concat.alloc * sizeof *res->u.concat.n);
-	if (res->u.concat.n == NULL) {
-		free(res);
-		return NULL;
-	}
-
-	return res;
-}
-
 int
-ast_add_class_concat(struct ast_class *cat, struct ast_class *node)
+ast_add_class_concat(struct ast_expr *class, struct ast_class *node)
 {
-	assert(cat != NULL);
-	assert(cat->type == AST_CLASS_CONCAT);
+	assert(class != NULL);
+	assert(class->type == AST_EXPR_CLASS);
 
-	if (cat->u.concat.count == cat->u.concat.alloc) {
+	if (class->u.class.count == class->u.class.alloc) {
 		void *tmp;
 
-		tmp = realloc(cat->u.concat.n, cat->u.concat.alloc * 2 * sizeof *cat->u.concat.n);
+		tmp = realloc(class->u.class.n, class->u.class.alloc * 2 * sizeof *class->u.class.n);
 		if (tmp == NULL) {
 			return 0;
 		}
 
-		cat->u.concat.alloc *= 2;
-		cat->u.concat.n = tmp;
+		class->u.class.alloc *= 2;
+		class->u.class.n = tmp;
 	}
 
-	cat->u.concat.n[cat->u.concat.count] = node;
-	cat->u.concat.count++;
+	class->u.class.n[class->u.class.count] = node;
+	class->u.class.count++;
 
 	return 1;
 }

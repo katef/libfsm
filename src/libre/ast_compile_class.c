@@ -254,17 +254,6 @@ comp_iter(struct cc *cc, const struct ast_class *n)
 	assert(n != NULL);
 
 	switch (n->type) {
-	case AST_CLASS_CONCAT: {
-		size_t i;
-
-		for (i = 0; i < n->u.concat.count; i++) {
-			if (!comp_iter(cc, n->u.concat.n[i])) {
-				return 0;
-			}
-		}
-		break;
-	}
-
 	case AST_CLASS_LITERAL:
 		if (!cc_add_char(cc, n->u.literal.c)) {
 			return 0;
@@ -291,14 +280,16 @@ comp_iter(struct cc *cc, const struct ast_class *n)
 }
 
 int
-ast_compile_class(const struct ast_class *class, enum ast_class_flags class_flags,
+ast_compile_class(struct ast_class **n, size_t count, enum ast_class_flags class_flags,
 	struct fsm *fsm, enum re_flags re_flags,
 	struct re_err *err,
 	struct fsm_state *x, struct fsm_state *y)
 {
 	struct cc cc;
+	size_t i;
 
-	assert(class != NULL);
+	assert(n != NULL);
+	assert(count > 0); /* due to AST simplification */
 	assert(fsm != NULL);
 	assert(x != NULL);
 	assert(y != NULL);
@@ -313,10 +304,13 @@ ast_compile_class(const struct ast_class *class, enum ast_class_flags class_flag
 	cc.err = err;
 	cc.re_flags = re_flags;
 
-	if (!comp_iter(&cc, class)) {
-		goto error;
+	for (i = 0; i < count; i++) {
+		if (!comp_iter(&cc, n[i])) {
+			goto error;
+		}
 	}
 
+	/* TODO: do this as a unary invert expr node, and get rid of class flags */
 	if (class_flags & AST_CLASS_FLAG_INVERTED) {
 		cc.set = fsm_invert(cc.set);
 		if (cc.set == NULL) {
