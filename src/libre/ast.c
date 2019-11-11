@@ -55,11 +55,6 @@ class_free_iter(struct ast_class *n)
 		break;
 	}
 
-	case AST_CLASS_SUBTRACT:
-		class_free_iter(n->u.subtract.ast);
-		class_free_iter(n->u.subtract.mask);
-		break;
-
 	case AST_CLASS_LITERAL:
 	case AST_CLASS_RANGE:
 	case AST_CLASS_NAMED:
@@ -86,6 +81,11 @@ free_iter(struct ast_expr *n)
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_ANCHOR:
 		/* these nodes have no subnodes or dynamic allocation */
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		free_iter(n->u.subtract.a);
+		free_iter(n->u.subtract.b);
 		break;
 
 	case AST_EXPR_CONCAT: {
@@ -409,6 +409,23 @@ ast_make_expr_anchor(enum ast_anchor_type type)
 	return res;
 }
 
+struct ast_expr *
+ast_make_expr_subtract(struct ast_expr *a, struct ast_expr *b)
+{
+	struct ast_expr *res;
+
+	res = calloc(1, sizeof *res);
+	if (res == NULL) {
+		return NULL;
+	}
+
+	res->type = AST_EXPR_SUBTRACT;
+	res->u.subtract.a = a;
+	res->u.subtract.b = b;
+
+	return res;
+}
+
 /*
  * Character classes
  */
@@ -511,24 +528,6 @@ ast_make_class_named(class_constructor *ctor)
 
 	res->type = AST_CLASS_NAMED;
 	res->u.named.ctor = ctor;
-
-	return res;
-}
-
-struct ast_class *
-ast_make_class_subtract(struct ast_class *ast,
-    struct ast_class *mask)
-{
-	struct ast_class *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_CLASS_SUBTRACT;
-	res->u.subtract.ast = ast;
-	res->u.subtract.mask = mask;
 
 	return res;
 }

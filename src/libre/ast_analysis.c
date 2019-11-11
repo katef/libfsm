@@ -150,6 +150,10 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		/* anchor flags will be handled on the second pass */
 		break;
 
+	case AST_EXPR_SUBTRACT:
+		/* XXX: not sure */
+		break;
+
 	default:
 		assert(!"unreached");
 	}
@@ -388,6 +392,18 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		}
 		break;
 
+	case AST_EXPR_SUBTRACT:
+		res = analysis_iter_anchoring(env, n->u.subtract.a);
+		if (res != AST_ANALYSIS_OK) {
+			return res;
+		}
+
+		res = analysis_iter_anchoring(env, n->u.subtract.b);
+		if (res != AST_ANALYSIS_OK) {
+			return res;
+		}
+		break;
+
 	default:
 		assert(!"unreached");
 	}
@@ -450,6 +466,10 @@ assign_firsts(struct ast_expr *n)
 		assign_firsts(n->u.group.e);
 		break;
 
+	case AST_EXPR_SUBTRACT:
+		/* XXX: not sure */
+		break;
+
 	default:
 		assert(!"unreached");
 	}
@@ -507,6 +527,10 @@ assign_lasts(struct ast_expr *n)
 	case AST_EXPR_GROUP:
 		set_flags(n, AST_EXPR_FLAG_LAST);
 		assign_lasts(n->u.group.e);
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		/* XXX: not sure */
 		break;
 
 	default:

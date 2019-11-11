@@ -5,12 +5,12 @@
  */
 
 /*
- * ISO/IEC 9075-2:1999 (E) ©ISO/IEC
+ * ISO/IEC 9075-2:2003 (E) ©ISO/IEC
  * 8.6 <similar predicate>
  *
  * https://firebirdsql.org/refdocs/langrefupd25-similar-to.html
  *
- * TODO: SQL99 permits an arbitrary optional escape character
+ * TODO: SQL99/2003 permit an arbitrary optional escape character
  */
 
 %types%
@@ -94,6 +94,7 @@
 	!<ast-make-expr-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
 	!<ast-make-expr-anchor-start>: ()                       -> (:ast_expr);
 	!<ast-make-expr-anchor-end>:   ()                       -> (:ast_expr);
+	<ast-make-expr-subtract>:      (:ast_expr, :ast_expr)   -> (:ast_expr);
 
 	<ast-add-expr-concat>: (:ast_expr, :ast_expr) -> ();
 	<ast-add-expr-alt>:    (:ast_expr, :ast_expr) -> ();
@@ -102,11 +103,9 @@
 	<ast-make-class-literal>:      (:char)                  -> (:ast_class);
 	<ast-make-class-range>:        (:endpoint, :pos, :endpoint, :pos) -> (:ast_class);
 	<ast-make-class-named>:        (:ast_class_id)          -> (:ast_class);
-	<ast-make-class-subtract>:     (:ast_class, :ast_class) -> (:ast_class);
 
 	<ast-make-class-flags>:        ()               -> (:class_flags);
 	<ast-add-class-flag-invert>:   (:class_flags &) -> ();
-	<sub-flags>:                   (:class_flags, :class_flags) -> (:class_flags);
 
 	<ast-add-class-concat>: (:ast_class, :ast_class) -> ();
 
@@ -120,7 +119,7 @@
 	!<err-expected-closeflags>;
 	!<err-expected-groupbody>;
 	<err-expected-eof>;
-	<err-unsupported>;
+	!<err-unsupported>;
 
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();
@@ -246,7 +245,7 @@
 			};
 
 		] = {
-			(start, !) = OPENGROUP;
+			(open_start, open_end) = OPENGROUP;
 
 			class = <ast-make-class-concat>;
 			flags = <ast-make-class-flags>;
@@ -256,47 +255,57 @@
 			class-tail(class, &flags);
 
 			{
-				(!, !, end) = CLOSEGROUP;
-				<mark-group>(start, end);
+				(!, close_start, close_end) = CLOSEGROUP;
+				<mark-group>(open_start, open_end);
+
+				node = <ast-make-expr-class>(class, flags, open_start, close_end);
+			||
+				/*
+				 * SQL 2003 §8.6.7 I:
+				 *
+				 *  L( <left bracket> <character enumeration include>
+				 *       <circumflex> <character enumeration exclude> <right bracket> )
+				 *
+				 *  is the set of all strings of length 1 (one) taken from the set
+				 *  of characters in the <character enumeration include>s, except for
+				 *  those strings of length 1 (one) taken from the set of characters
+				 *  in the <character enumeration exclude>.
+				 *
+				 * We implement this by constructing a binary expression subtracting
+				 * two classes expressed in the positive.
+				 */
+
+				! = INVERT;
+
+				mask = <ast-make-class-concat>;
+				mask_flags = <ast-make-class-flags>;
+
+				/* TODO: does the grammar allow [abc^^xyz] to invert the mask here? */
+
+				class-head(mask, &mask_flags);
+				list-of-class-terms(mask);
+				class-tail(mask, &mask_flags);
+
+				{
+					(!, close_start, close_end) = CLOSEGROUP;
+					<mark-group>(close_start, close_end);
+				##
+					<err-expected-closegroup>;
+
+					/* appease sid */
+					close_start = open_end;
+					close_end   = open_end;
+				};
+
+				a = <ast-make-expr-class>(class, flags, open_start, open_end);
+				b = <ast-make-expr-class>(mask, mask_flags, close_start, close_end);
+
+				/* TODO: store start, end */
+				node = <ast-make-expr-subtract>(a, b);
 			##
 				<err-expected-closegroup>;
-				end = start; /* appease sid */
+				node = <ast-make-expr-empty>;
 			};
-
-			node = <ast-make-expr-class>(class, flags, start, end);
-		||
-			(start, !) = OPENGROUP;
-
-			class = <ast-make-class-concat>;
-			flags = <ast-make-class-flags>;
-
-			class-head(class, &flags);
-			list-of-class-terms(class);
-			class-tail(class, &flags);
-
-			! = INVERT;
-
-			mask = <ast-make-class-concat>;
-			mask_flags = <ast-make-class-flags>;
-
-			class-head(mask, &mask_flags);
-			list-of-class-terms(mask);
-			class-tail(mask, &mask_flags);
-
-			{
-				(!, !, end) = CLOSEGROUP;
-				<mark-group>(start, end);
-			##
-				<err-expected-closegroup>;
-				end = start; /* appease sid */
-			};
-
-			/* Marking this unsupported for now */
-			<err-unsupported>;
-
-			sub = <ast-make-class-subtract>(class, mask);
-			sub_flags = <sub-flags>(flags, mask_flags);
-			node = <ast-make-expr-class>(sub, sub_flags, start, end);
 		};
 
 		/* TODO: is there a better name than 'atom' for

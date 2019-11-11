@@ -97,12 +97,6 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 			(void *) n, class_name(n->u.named.ctor));
 		break;
 
-	case AST_CLASS_SUBTRACT:
-		fprintf(f, "\tn%p [ label = <{CLASS-SUBTRACT|{ast|mask}}> ];\n", (void *) n);
-		cc_pp_iter(f, opt, n, n->u.subtract.ast);
-		cc_pp_iter(f, opt, n, n->u.subtract.mask);
-		break;
-
 	default:
 		assert(!"unreached");
 	}
@@ -187,6 +181,12 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "\tn%p [ label = <ANCHOR|%c> ];\n",
 		    (void *) n,
 		    n->u.anchor.type == AST_ANCHOR_START ? '^' : '$');
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		fprintf(f, "\tn%p [ label = <{SUBTRACT|{a|b}}> ];\n", (void *) n);
+		pp_iter(f, opt, n, n->u.subtract.a);
+		pp_iter(f, opt, n, n->u.subtract.b);
 		break;
 
 	case AST_EXPR_FLAGS:

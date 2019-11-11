@@ -30,6 +30,7 @@ enum ast_expr_type {
 	AST_EXPR_GROUP,
 	AST_EXPR_FLAGS,
 	AST_EXPR_ANCHOR,
+	AST_EXPR_SUBTRACT,
 	AST_EXPR_TOMBSTONE
 };
 
@@ -93,9 +94,8 @@ enum ast_class_type {
 	AST_CLASS_CONCAT,
 	AST_CLASS_LITERAL,
 	AST_CLASS_RANGE,
-	AST_CLASS_NAMED,
-/*	AST_CLASS_TYPE, XXX: not implemented */
-	AST_CLASS_SUBTRACT
+	AST_CLASS_NAMED
+/*	AST_CLASS_TYPE XXX: not implemented */
 };
 
 enum ast_endpoint_type {
@@ -141,11 +141,6 @@ struct ast_class {
 		struct {
 			class_constructor *ctor;
 		} named;
-
-		struct {
-			struct ast_class *ast;
-			struct ast_class *mask;
-		} subtract;
 	} u;
 };
 
@@ -209,6 +204,11 @@ struct ast_expr {
 		struct {
 			enum ast_anchor_type type;
 		} anchor;
+
+		struct ast_expr_subtract {
+			struct ast_expr *a;
+			struct ast_expr *b;
+		} subtract;
 	} u;	
 };
 
@@ -269,6 +269,9 @@ ast_make_expr_re_flags(enum re_flags pos, enum re_flags neg);
 struct ast_expr *
 ast_make_expr_anchor(enum ast_anchor_type type);
 
+struct ast_expr *
+ast_make_expr_subtract(struct ast_expr *a, struct ast_expr *b);
+
 int
 ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
 
@@ -291,10 +294,6 @@ ast_make_class_named(class_constructor *ctor);
 
 int
 ast_add_class_concat(struct ast_class *cat, struct ast_class *node);
-
-struct ast_class *
-ast_make_class_subtract(struct ast_class *ast,
-	struct ast_class *mask);
 
 /* XXX: exposed for sake of re(1) printing an ast;
  * it's not part of the <re/re.h> API proper */

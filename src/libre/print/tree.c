@@ -128,12 +128,6 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt,
 		    (void *) n, class_name(n->u.named.ctor));
 		break;
 
-	case AST_CLASS_SUBTRACT:
-		fprintf(f, "CLASS-SUBTRACT %p:\n", (void *) n);
-		cc_pp_iter(f, opt, n->u.subtract.ast, indent + 4);
-		cc_pp_iter(f, opt, n->u.subtract.mask, indent + 4);
-		break;
-
 	default:
 		assert(!"unreached");
 	}
@@ -226,6 +220,12 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 	case AST_EXPR_ANCHOR:
 		assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
 		fprintf(f, "ANCHOR %s\n", n->u.anchor.type == AST_ANCHOR_START ? "^" : "$");
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		fprintf(f, "SUBTRACT %p:\n", (void *) n);
+		pp_iter(f, opt, indent + 4, n->u.subtract.a);
+		pp_iter(f, opt, indent + 4, n->u.subtract.b);
 		break;
 
 	case AST_EXPR_TOMBSTONE:

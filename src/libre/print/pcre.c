@@ -167,12 +167,6 @@ cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
 		print_class_name(f, class_name(n->u.named.ctor));
 		break;
 
-	case AST_CLASS_SUBTRACT:
-		fprintf(f, "\tn%p [ label = <{CLASS-SUBTRACT|{ast|mask}}> ];\n", (void *) n);
-		cc_pp_iter(f, opt, n->u.subtract.ast);
-		cc_pp_iter(f, opt, n->u.subtract.mask);
-		break;
-
 	default:
 		assert(!"unreached");
 	}
@@ -289,6 +283,13 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 	case AST_EXPR_ANCHOR:
 		assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
 		fprintf(f, "%s", n->u.anchor.type == AST_ANCHOR_START ? "^" : "$");
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		assert(!"unimplemented");
+		pp_iter(f, opt, n->u.subtract.a);
+		fprintf(f, "-");
+		pp_iter(f, opt, n->u.subtract.b);
 		break;
 
 	case AST_EXPR_FLAGS:

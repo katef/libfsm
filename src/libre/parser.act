@@ -721,6 +721,13 @@
 		}
 	@};
 
+	<ast-make-expr-subtract>: (a :ast_expr, b :ast_expr) -> (node :ast_expr) = @{
+		@node = ast_make_expr_subtract(@a, @b);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
 	<ast-add-expr-concat>: (cat :ast_expr, node :ast_expr) -> () = @{
 		if (!ast_add_expr_concat(@cat, @node)) {
 			@!;
@@ -791,27 +798,12 @@
 		}
 	@};
 
-	<ast-make-class-subtract>: (l :ast_class, r :ast_class) -> (node :ast_class) = @{
-		@node = ast_make_class_subtract(@l, @r);
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
 	<ast-make-class-flags>: () -> (flags :class_flags) = @{
 		@flags = 0x0;
 	@};
 
 	<ast-add-class-flag-invert>: (flags :class_flags &) -> () = @{
 		@=flags |= AST_CLASS_FLAG_INVERTED;
-	@};
-
-	<sub-flags>: (a :class_flags, b :class_flags) -> (q :class_flags) = @{
-		/*
-		 * XXX: this is irrelevant; subtraction isn't implemented yet,
-		 * and when it is, I expect it'll be on expr nodes rather than classes
-		 */
-		@q = @a | @b;
 	@};
 
 	<ast-add-class-concat>: (cat :ast_class, node :ast_class) -> () = @{

@@ -248,32 +248,6 @@ cc_add_range(struct cc *cc,
 }
 
 static int
-cc_add_named_class(struct cc *cc, class_constructor *ctor)
-{
-	struct fsm *constructed;
-
-	constructed = ctor(fsm_getoptions(cc->set));
-	if (constructed == NULL) {
-		goto error;
-	}
-
-	cc->set = fsm_union(cc->set, constructed);
-	if (cc->set == NULL) {
-		goto error;
-	}
-
-	return 1;
-
-error:
-
-	if (cc->err != NULL) {
-		cc->err->e = RE_EERRNO;
-	}
-
-	return 0;
-}
-
-static int
 comp_iter(struct cc *cc, const struct ast_class *n)
 {
 	assert(cc != NULL);
@@ -308,9 +282,6 @@ comp_iter(struct cc *cc, const struct ast_class *n)
 			return 0;
 		}
 		break;
-
-	case AST_CLASS_SUBTRACT:
-		assert(!"unimplemented");
 
 	default:
 		assert(!"unreached");
