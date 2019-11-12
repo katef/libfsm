@@ -88,7 +88,8 @@
 	!<ast-make-expr-re-flags>:    (:re_flags, :re_flags)   -> (:ast_expr);
 	<ast-make-expr-anchor-start>: ()                       -> (:ast_expr);
 	<ast-make-expr-anchor-end>:   ()                       -> (:ast_expr);
-	!<ast-make-expr-subtract>:     (:ast_expr, :ast_expr)   -> (:ast_expr); 
+	!<ast-make-expr-subtract>:    (:ast_expr, :ast_expr)   -> (:ast_expr); 
+	<ast-make-expr-invert>:       (:ast_expr)              -> (:ast_expr); 
 
 	<ast-add-expr-concat>: (:ast_expr, :ast_expr) -> ();
 	<ast-add-expr-alt>:    (:ast_expr, :ast_expr) -> ();
@@ -96,8 +97,6 @@
 	<ast-make-class-literal>:     (:char)                  -> (:ast_class);
 	<ast-make-class-range>:       (:endpoint, :pos, :endpoint, :pos) -> (:ast_class);
 	<ast-make-class-named>:       (:ast_class_id)          -> (:ast_class);
-
-	<ast-add-class-flag-invert>: (:ast_expr) -> ();
 
 	<ast-add-class-concat>: (:ast_expr, :ast_class) -> ();
 
@@ -138,9 +137,9 @@
 		character-class: () -> (node :ast_expr) [
 
 			/* TODO: []] [-]] etc.? though they can be escaped. */
-			class-head: (class :ast_expr) -> () = {
+			class-head: (class :ast_expr &) -> () = {
 				! = INVERT;
-				<ast-add-class-flag-invert>(class);
+				&class = <ast-make-expr-invert>(class);
 			||
 				$;
 			};
@@ -227,9 +226,10 @@
 			(start, !) = OPENGROUP;
 
 			node = <ast-make-expr-class>;
+			tmp = node;
 
-			class-head(node);
-			list-of-class-terms(node);
+			class-head(&node);
+			list-of-class-terms(tmp);
 
 			{
 				(!, !, end) = CLOSEGROUP;
@@ -239,7 +239,7 @@
 				end = start; /* appease sid */
 			};
 
-			<mark-expr-class>(node, start, end);
+			<mark-expr-class>(tmp, start, end);
 		};
 
 		atom: () -> (node :ast_expr) = {

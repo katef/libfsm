@@ -186,11 +186,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 	case AST_EXPR_CLASS: {
 		size_t i, count = n->u.class.count;
 
-		fprintf(f, "CLASS %p (%u): [", (void *) n, (unsigned) count);
-		if (n->u.class.flags & AST_CLASS_FLAG_INVERTED) { 
-			fprintf(f, "^");
-		}
-		fprintf(f, "]\n");
+		fprintf(f, "CLASS %p (%u):\n", (void *) n, (unsigned) count);
 
 		for (i = 0; i < n->u.class.count; i++) {
 			cc_pp_iter(f, opt, n->u.class.n[i], indent + IND);
@@ -221,6 +217,11 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		fprintf(f, "SUBTRACT %p:\n", (void *) n);
 		pp_iter(f, opt, indent + 4, n->u.subtract.a);
 		pp_iter(f, opt, indent + 4, n->u.subtract.b);
+		break;
+
+	case AST_EXPR_INVERT:
+		fprintf(f, "INVERT %p:\n", (void *) n);
+		pp_iter(f, opt, indent + 4, n->u.invert.e);
 		break;
 
 	case AST_EXPR_TOMBSTONE:

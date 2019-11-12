@@ -153,11 +153,8 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 	case AST_EXPR_CLASS: {
 		size_t i;
 
-		fprintf(f, "\tn%p [ label = <CLASS|", (void *) n);
-		if (n->u.class.flags & AST_CLASS_FLAG_INVERTED) {
-			fprintf(f, "^");
-		}
-		fprintf(f, "|%lu> ];\n", (unsigned long) n->u.class.count);
+		fprintf(f, "\tn%p [ label = <CLASS|%lu> ];\n",
+			(void *) n, (unsigned long) n->u.class.count);
 
 		for (i = 0; i < n->u.class.count; i++) {
 			cc_pp_iter(f, opt, n, n->u.class.n[i]);
@@ -182,6 +179,11 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "\tn%p [ label = <{SUBTRACT|{a|b}}> ];\n", (void *) n);
 		pp_iter(f, opt, n, n->u.subtract.a);
 		pp_iter(f, opt, n, n->u.subtract.b);
+		break;
+
+	case AST_EXPR_INVERT:
+		fprintf(f, "\tn%p [ label = <INVERT> ];\n", (void *) n);
+		pp_iter(f, opt, n, n->u.invert.e);
 		break;
 
 	case AST_EXPR_FLAGS:

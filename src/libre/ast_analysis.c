@@ -154,6 +154,10 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		/* XXX: not sure */
 		break;
 
+	case AST_EXPR_INVERT:
+		/* XXX: not sure */
+		break;
+
 	default:
 		assert(!"unreached");
 	}
@@ -404,6 +408,13 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		}
 		break;
 
+	case AST_EXPR_INVERT:
+		res = analysis_iter_anchoring(env, n->u.invert.e);
+		if (res != AST_ANALYSIS_OK) {
+			return res;
+		}
+		break;
+
 	default:
 		assert(!"unreached");
 	}
@@ -470,6 +481,10 @@ assign_firsts(struct ast_expr *n)
 		/* XXX: not sure */
 		break;
 
+	case AST_EXPR_INVERT:
+		/* XXX: not sure */
+		break;
+
 	default:
 		assert(!"unreached");
 	}
@@ -530,6 +545,10 @@ assign_lasts(struct ast_expr *n)
 		break;
 
 	case AST_EXPR_SUBTRACT:
+		/* XXX: not sure */
+		break;
+
+	case AST_EXPR_INVERT:
 		/* XXX: not sure */
 		break;
 

@@ -141,23 +141,6 @@ addedge_literal(struct fsm *fsm, enum re_flags flags,
 	return 1;
 }
 
-/* TODO: centralise */
-static struct fsm *
-fsm_invert(struct fsm *fsm)
-{
-	struct fsm *any;
-
-	assert(fsm != NULL);
-
-	any = class_any_fsm(fsm_getoptions(fsm));
-	if (any == NULL) {
-		fsm_free(fsm);
-		return NULL;
-	}
-
-	return fsm_subtract(any, fsm);
-}
-
 static int
 cc_add_named(struct cc *cc, class_constructor *ctor)
 {
@@ -280,7 +263,7 @@ comp_iter(struct cc *cc, const struct ast_class *n)
 }
 
 int
-ast_compile_class(struct ast_class **n, size_t count, enum ast_class_flags class_flags,
+ast_compile_class(struct ast_class **n, size_t count,
 	struct fsm *fsm, enum re_flags re_flags,
 	struct re_err *err,
 	struct fsm_state *x, struct fsm_state *y)
@@ -307,14 +290,6 @@ ast_compile_class(struct ast_class **n, size_t count, enum ast_class_flags class
 	for (i = 0; i < count; i++) {
 		if (!comp_iter(&cc, n[i])) {
 			goto error;
-		}
-	}
-
-	/* TODO: do this as a unary invert expr node, and get rid of class flags */
-	if (class_flags & AST_CLASS_FLAG_INVERTED) {
-		cc.set = fsm_invert(cc.set);
-		if (cc.set == NULL) {
-			return 0;
 		}
 	}
 

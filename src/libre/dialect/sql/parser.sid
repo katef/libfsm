@@ -94,6 +94,7 @@
 	!<ast-make-expr-anchor-start>: ()                       -> (:ast_expr);
 	!<ast-make-expr-anchor-end>:   ()                       -> (:ast_expr);
 	<ast-make-expr-subtract>:      (:ast_expr, :ast_expr)   -> (:ast_expr);
+	<ast-make-expr-invert>:        (:ast_expr)              -> (:ast_expr); 
 
 	<ast-add-expr-concat>: (:ast_expr, :ast_expr) -> ();
 	<ast-add-expr-alt>:    (:ast_expr, :ast_expr) -> ();
@@ -101,8 +102,6 @@
 	<ast-make-class-literal>:      (:char)                  -> (:ast_class);
 	<ast-make-class-range>:        (:endpoint, :pos, :endpoint, :pos) -> (:ast_class);
 	<ast-make-class-named>:        (:ast_class_id)          -> (:ast_class);
-
-	<ast-add-class-flag-invert>: (:ast_expr) -> ();
 
 	<ast-add-class-concat>: (:ast_expr, :ast_class) -> ();
 
@@ -176,20 +175,21 @@
 		 */
 		character-class: () -> (node :ast_expr) [
 
-			class-head: (class :ast_expr) -> () = {
+			class-head: (class :ast_expr &) -> () = {
 				! = INVERT;
-				<ast-add-class-flag-invert>(class);
+				&class = <ast-make-expr-invert>(class);
 			||
 				(c, !, !) = RANGE;
 				node = <ast-make-class-literal>(c);
 				<ast-add-class-concat>(class, node);
 			||
 				! = INVERT;
-				<ast-add-class-flag-invert>(class);
 
 				(c, !, !) = RANGE;
 				node = <ast-make-class-literal>(c);
 				<ast-add-class-concat>(class, node);
+
+				&class = <ast-make-expr-invert>(class);
 			||
 				$;
 			};
@@ -254,16 +254,17 @@
 			(open_start, open_end) = OPENGROUP;
 
 			class = <ast-make-expr-class>;
+			tmp = class;
 
-			class-head(class);
-			list-of-class-terms(class);
-			class-tail(class);
+			class-head(&class);
+			list-of-class-terms(tmp);
+			class-tail(tmp);
 
 			{
 				(!, close_start, close_end) = CLOSEGROUP;
 				<mark-group>(open_start, open_end);
 
-				<mark-expr-class>(class, open_start, close_end);
+				<mark-expr-class>(tmp, open_start, close_end);
 
 				node = class;
 			||
@@ -285,12 +286,13 @@
 				! = INVERT;
 
 				mask = <ast-make-expr-class>;
+				mask_tmp = mask;
 
 				/* TODO: does the grammar allow [abc^^xyz] to invert the mask here? */
 
-				class-head(mask);
-				list-of-class-terms(mask);
-				class-tail(mask);
+				class-head(&mask);
+				list-of-class-terms(mask_tmp);
+				class-tail(mask_tmp);
 
 				{
 					(!, close_start, close_end) = CLOSEGROUP;
@@ -304,8 +306,8 @@
 				};
 
 				/* TODO: would prefer to demark class and masl separately */
-				<mark-expr-class>(class, open_start, close_end);
-				<mark-expr-class>(mask, open_start, close_end);
+				<mark-expr-class>(tmp, open_start, close_end);
+				<mark-expr-class>(mask_tmp, open_start, close_end);
 
 				/* TODO: store start, end for the subtract expr */
 				node = <ast-make-expr-subtract>(class, mask);

@@ -260,9 +260,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		size_t i;
 
 		fprintf(f, "[");
-		if (n->u.class.flags & AST_CLASS_FLAG_INVERTED) {
-			fprintf(f, "^");
-		}
 
 		for (i = 0; i < n->u.class.count; i++) {
 			cc_pp_iter(f, opt, n->u.class.n[i]);
@@ -288,6 +285,12 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		pp_iter(f, opt, n->u.subtract.a);
 		fprintf(f, "-");
 		pp_iter(f, opt, n->u.subtract.b);
+		break;
+
+	case AST_EXPR_INVERT:
+		assert(!"unimplemented");
+		fprintf(f, "^");
+		pp_iter(f, opt, n->u.invert.e);
 		break;
 
 	case AST_EXPR_FLAGS:

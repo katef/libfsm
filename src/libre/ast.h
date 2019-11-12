@@ -31,6 +31,7 @@ enum ast_expr_type {
 	AST_EXPR_FLAGS,
 	AST_EXPR_ANCHOR,
 	AST_EXPR_SUBTRACT,
+	AST_EXPR_INVERT,
 	AST_EXPR_TOMBSTONE
 };
 
@@ -77,18 +78,6 @@ enum ast_expr_flags {
 };
 
 #define NO_GROUP_ID ((unsigned)-1)
-
-/*
- * Flags for character class nodes:
- *
- * - AST_CLASS_FLAG_INVERTED
- *   The class should be negated, e.g. [^aeiou]
- */
-enum ast_class_flags {
-	AST_CLASS_FLAG_INVERTED = 1 << 0,
-
-	AST_CLASS_FLAG_NONE = 0x00
-};
 
 enum ast_class_type {
 	AST_CLASS_CONCAT,
@@ -183,7 +172,6 @@ struct ast_expr {
 			size_t alloc; /* allocated */
 			struct ast_class **n;
 
-			enum ast_class_flags flags;
 			struct ast_pos start;
 			struct ast_pos end;
 		} class;
@@ -206,6 +194,10 @@ struct ast_expr {
 			struct ast_expr *a;
 			struct ast_expr *b;
 		} subtract;
+
+		struct ast_expr_invert {
+			struct ast_expr *e;
+		} invert;
 	} u;	
 };
 
@@ -267,6 +259,9 @@ ast_make_expr_anchor(enum ast_anchor_type type);
 
 struct ast_expr *
 ast_make_expr_subtract(struct ast_expr *a, struct ast_expr *b);
+
+struct ast_expr *
+ast_make_expr_invert(struct ast_expr *e);
 
 int
 ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);

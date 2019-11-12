@@ -732,6 +732,13 @@
 		}
 	@};
 
+	<ast-make-expr-invert>: (e :ast_expr) -> (node :ast_expr) = @{
+		@node = ast_make_expr_invert(@e);
+		if (@node == NULL) {
+			@!;
+		}
+	@};
+
 	<ast-add-expr-concat>: (cat :ast_expr, node :ast_expr) -> () = @{
 		if (!ast_add_expr_concat(@cat, @node)) {
 			@!;
@@ -793,13 +800,6 @@
 		if (@node == NULL) {
 			@!;
 		}
-	@};
-
-	<ast-add-class-flag-invert>: (class :ast_expr) -> () = @{
-		assert(@class != NULL);
-		assert(@class->type == AST_EXPR_CLASS);
-
-		@class->flags |= AST_CLASS_FLAG_INVERTED;
 	@};
 
 	<ast-add-class-concat>: (class :ast_expr, node :ast_class) -> () = @{
