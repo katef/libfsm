@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <stdio.h>
 #include <ctype.h>
 
@@ -61,15 +62,36 @@ indexof(const struct fsm *fsm, const struct fsm_state *state)
 }
 
 void
-fsm_print_api(FILE *f, const struct fsm *fsm)
+fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 {
-	struct fsm_state *s, *start;
+	struct fsm *fsm;
+	struct fsm_state *s, *start, *end;
 	struct bm *a; /* indexed by "to" state number */
 	unsigned n;
 
 	assert(f != NULL);
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
+	assert(fsm_orig != NULL);
+	assert(fsm_orig->opt != NULL);
+
+	if (!fsm_has(fsm_orig, fsm_isend)) {
+		errno = EINVAL;
+		return;
+	}
+
+	fsm = fsm_clone(fsm_orig);
+	if (fsm == NULL) {
+		return;
+	}
+
+	start = fsm_getstart(fsm);
+	if (start == NULL) {
+		goto error;
+	}
+
+	end = fsm_collate(fsm, fsm_isend);
+	if (end == NULL) {
+		goto error;
+	}
 
 /* TODO: leaf callback for opaques */
 
@@ -83,45 +105,55 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 		fprintf(f, "#include LF_HEADER\n");
 		fprintf(f, "\n");
 
+		fprintf(f, "#include <assert.h>\n");
 		fprintf(f, "#include <stddef.h>\n");
 		fprintf(f, "\n");
 
 		fprintf(f, "#include <fsm/fsm.h>\n");
 		fprintf(f, "\n");
 
-		fprintf(f, "struct fsm *\n");
-		fprintf(f, "%sfsm(const struct fsm_options *opt)\n",
+		fprintf(f, "int\n");
+		fprintf(f, "%sfsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)\n",
 			fsm->opt->prefix != NULL ? fsm->opt->prefix : "");
 
 		fprintf(f, "{\n");
 	}
 
-	fprintf(f, "\tstruct fsm *fsm;\n");
+	n = fsm_count(fsm, fsm_isany);
+	fprintf(f, "\tstruct fsm_state *s[%u];\n", n);
 	fprintf(f, "\tsize_t i;\n");
 	fprintf(f, "\n");
 
-	n = fsm_count(fsm, fsm_isany);
-	fprintf(f, "\tstruct fsm_state *s[%u] = { 0 };\n", n);
-	fprintf(f, "\n");
-
-	fprintf(f, "\tfsm = fsm_new(opt);\n");
-	fprintf(f, "\tif (fsm == NULL) {\n");
-	fprintf(f, "\t\treturn NULL;\n");
-	fprintf(f, "\t}\n");
+	fprintf(f, "\tassert(x != NULL);\n");
+	fprintf(f, "\tassert(y != NULL);\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "\tfor (i = 0; i < %u; i++) {\n", n);
+
+	fprintf(f, "\t\tif (i == %u) {\n", indexof(fsm, start));
+	fprintf(f, "\t\t\ts[%u] = x;\n", indexof(fsm, start));
+	fprintf(f, "\t\t\tcontinue;\n");
+	fprintf(f, "\t\t}\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "\t\tif (i == %u) {\n", indexof(fsm, end));
+	fprintf(f, "\t\t\ts[%u] = y;\n", indexof(fsm, end));
+	fprintf(f, "\t\t\tcontinue;\n");
+	fprintf(f, "\t\t}\n");
+	fprintf(f, "\n");
+
 	fprintf(f, "\t\ts[i] = fsm_addstate(fsm);\n");
 	fprintf(f, "\t\tif (s[i] == NULL) {\n");
-	fprintf(f, "\t\t\tgoto error;\n");
+	fprintf(f, "\t\t\treturn 0;\n");
 	fprintf(f, "\t\t}\n");
+
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 
 	a = f_malloc(fsm->opt->alloc, n * sizeof *a);
 	if (a == NULL) {
 		/* XXX */
-		return;
+		goto error;
 	}
 
 	for (s = fsm->sl; s != NULL; s = s->next) {
@@ -143,7 +175,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 
 			to = indexof(fsm, st);
 
-			fprintf(f, "\tif (!fsm_addedge_epsilon(fsm, s[%u], s[%u])) { goto error; }\n",
+			fprintf(f, "\tif (!fsm_addedge_epsilon(fsm, s[%u], s[%u])) { return 0; }\n",
 				from, to);
 		}
 
@@ -177,12 +209,12 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 				if (lo == 0x00 && hi == UCHAR_MAX + 1) {
 					fprintf(f, "\tif (!fsm_addedge_any(fsm, s[%u], s[%u]))",
 						from, to);
-					fprintf(f, " { goto error; }\n");
+					fprintf(f, " { return 0; }\n");
 				} else if (lo == hi - 1) {
 					fprintf(f, "\tif (!fsm_addedge_literal(fsm, s[%u], s[%u], ",
 						from, to);
 					c_escputcharlit(f, fsm->opt, lo);
-					fprintf(f, ")) { goto error; }\n");
+					fprintf(f, ")) { return 0; }\n");
 				} else {
 					fprintf(f, "\tfor (i = 0x%02x; i <= 0x%02x; i++) {",
 						(unsigned int) lo, (unsigned int) hi - 1);
@@ -192,7 +224,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 					fprintf(f, "\n");
 					fprintf(f, "\t\tif (!fsm_addedge_literal(fsm, s[%u], s[%u], i))",
 						from, to);
-					fprintf(f, " { goto error; }\n");
+					fprintf(f, " { return 0; }\n");
 					fprintf(f, "\t}\n");
 				}
 			}
@@ -203,32 +235,22 @@ fsm_print_api(FILE *f, const struct fsm *fsm)
 
 	fprintf(f, "\n");
 
-	start = fsm_getstart(fsm);
-	if (start == NULL) {
-		return;
-	}
-
-	fprintf(f, "\tfsm_setstart(fsm, s[%u]);\n", indexof(fsm, start));
-
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (fsm_isend(fsm, s)) {
-			fprintf(f, "\tfsm_setend(fsm, s[%u], 1);\n", indexof(fsm, s));
-		}
-	}
-
 	if (!fsm->opt->fragment) {
 		fprintf(f, "\n");
-		fprintf(f, "\treturn fsm;\n");
-
-		fprintf(f, "\n");
-		fprintf(f, "error:\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tfsm_free(fsm);\n");
-		fprintf(f, "\n");
-		fprintf(f, "\treturn NULL;\n");
+		fprintf(f, "\treturn 1;\n");
 
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
+
+	fsm_free(fsm);
+
+	return;
+
+error:
+
+	fsm_free(fsm);
+
+	return;
 }
 

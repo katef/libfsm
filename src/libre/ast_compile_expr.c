@@ -126,6 +126,48 @@ fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state 
 	return 1;
 }
 
+static struct fsm*
+fsm_class(const struct fsm_options *opt, class_constructor *ctor)
+{
+	struct fsm_state *start, *end;
+	struct fsm *fsm;
+
+	assert(ctor != NULL);
+
+	fsm = fsm_new(opt);
+	if (fsm == NULL) {
+		goto error;
+	}
+
+	start = fsm_addstate(fsm);
+	if (start == NULL) {
+		goto error;
+	}
+
+	end = fsm_addstate(fsm);
+	if (end == NULL) {
+		goto error;
+	}
+
+	fsm_setstart(fsm, start);
+	fsm_setend(fsm, end, 1);
+
+	if (!ctor(fsm, start, end)) {
+		goto error;
+	}
+
+	fsm_setstart(fsm, start);
+	fsm_setend(fsm, end, 1);
+
+	return fsm;
+
+error:
+
+	fsm_free(fsm);
+
+	return NULL;
+}
+
 /* TODO: centralise */
 static struct fsm *
 fsm_invert(struct fsm *fsm)
@@ -134,11 +176,12 @@ fsm_invert(struct fsm *fsm)
 
 	assert(fsm != NULL);
 
-	any = class_any_fsm(fsm_getoptions(fsm));
+	any = fsm_class(fsm_getoptions(fsm), class_any_fsm);
 	if (any == NULL) {
-		fsm_free(fsm);
 		return NULL;
 	}
+
+	/* TODO: could be worthwhile to minimise or trim here, after subtraction */
 
 	return fsm_subtract(any, fsm);
 }

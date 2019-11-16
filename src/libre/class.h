@@ -4,9 +4,9 @@
 #define RE_CLASS_H
 
 struct fsm;
-struct fsm_options;
+struct fsm_state;
 
-typedef struct fsm *(class_constructor)(const struct fsm_options *opt);
+typedef int (class_constructor)(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y);
 
 const char *
 class_name(class_constructor *ctor);
