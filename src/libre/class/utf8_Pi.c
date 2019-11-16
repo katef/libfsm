@@ -2,57 +2,56 @@
 
 #include LF_HEADER
 
+#include <assert.h>
 #include <stddef.h>
 
 #include <fsm/fsm.h>
 
-struct fsm *
-utf8_Pi_fsm(const struct fsm_options *opt)
+int
+utf8_Pi_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 {
-	struct fsm *fsm;
+	struct fsm_state *s[6];
 	size_t i;
 
-	struct fsm_state *s[6] = { 0 };
-
-	fsm = fsm_new(opt);
-	if (fsm == NULL) {
-		return NULL;
-	}
+	assert(x != NULL);
+	assert(y != NULL);
 
 	for (i = 0; i < 6; i++) {
+		if (i == 0) {
+			s[0] = x;
+			continue;
+		}
+
+		if (i == 3) {
+			s[3] = y;
+			continue;
+		}
+
 		s[i] = fsm_addstate(fsm);
 		if (s[i] == NULL) {
-			goto error;
+			return 0;
 		}
 	}
 
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 0xc2)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[2], 0xe2)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[1], s[3], 0xab)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[2], s[4], 0x80)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[2], s[5], 0xb8)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[4], s[3], 0x98)) { goto error; }
+	if (!fsm_addedge_literal(fsm, s[0], s[1], 0xc2)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[0], s[2], 0xe2)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[1], s[3], 0xab)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[2], s[4], 0x80)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[2], s[5], 0xb8)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[4], s[3], 0x98)) { return 0; }
 	for (i = 0x9b; i <= 0x9c; i++) {
-		if (!fsm_addedge_literal(fsm, s[4], s[3], i)) { goto error; }
+		if (!fsm_addedge_literal(fsm, s[4], s[3], i)) { return 0; }
 	}
-	if (!fsm_addedge_literal(fsm, s[4], s[3], 0x9f)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[4], s[3], 0xb9)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[5], s[3], 0x82)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[5], s[3], 0x84)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[5], s[3], 0x89)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[5], s[3], 0x8c)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[5], s[3], 0x9c)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[5], s[3], 0xa0)) { goto error; }
+	if (!fsm_addedge_literal(fsm, s[4], s[3], 0x9f)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[4], s[3], 0xb9)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[5], s[3], 0x82)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[5], s[3], 0x84)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[5], s[3], 0x89)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[5], s[3], 0x8c)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[5], s[3], 0x9c)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[5], s[3], 0xa0)) { return 0; }
 
-	fsm_setstart(fsm, s[0]);
-	fsm_setend(fsm, s[3], 1);
 
-	return fsm;
-
-error:
-
-	fsm_free(fsm);
-
-	return NULL;
+	return 1;
 }
 

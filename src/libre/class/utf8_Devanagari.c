@@ -2,60 +2,59 @@
 
 #include LF_HEADER
 
+#include <assert.h>
 #include <stddef.h>
 
 #include <fsm/fsm.h>
 
-struct fsm *
-utf8_Devanagari_fsm(const struct fsm_options *opt)
+int
+utf8_Devanagari_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 {
-	struct fsm *fsm;
+	struct fsm_state *s[7];
 	size_t i;
 
-	struct fsm_state *s[7] = { 0 };
-
-	fsm = fsm_new(opt);
-	if (fsm == NULL) {
-		return NULL;
-	}
+	assert(x != NULL);
+	assert(y != NULL);
 
 	for (i = 0; i < 7; i++) {
+		if (i == 0) {
+			s[0] = x;
+			continue;
+		}
+
+		if (i == 5) {
+			s[5] = y;
+			continue;
+		}
+
 		s[i] = fsm_addstate(fsm);
 		if (s[i] == NULL) {
-			goto error;
+			return 0;
 		}
 	}
 
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 0xe0)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[0], s[2], 0xea)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[1], s[5], 0xa4)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[1], s[6], 0xa5)) { goto error; }
-	if (!fsm_addedge_literal(fsm, s[2], s[3], 0xa3)) { goto error; }
-	for (i = 0xa0; i <= 0xbd; i++) {
-		if (!fsm_addedge_literal(fsm, s[3], s[4], i)) { goto error; }
-	}
+	if (!fsm_addedge_literal(fsm, s[0], s[1], 0xe0)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[0], s[2], 0xea)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[1], s[3], 0xa4)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[1], s[4], 0xa5)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[2], s[6], 0xa3)) { return 0; }
 	for (i = 0x80; i <= 0xbf; i++) {
-		if (!fsm_addedge_literal(fsm, s[5], s[4], i)) { goto error; }
+		if (!fsm_addedge_literal(fsm, s[3], s[5], i)) { return 0; }
 	}
 	for (i = 0x80; i <= 0x90; i++) {
-		if (!fsm_addedge_literal(fsm, s[6], s[4], i)) { goto error; }
+		if (!fsm_addedge_literal(fsm, s[4], s[5], i)) { return 0; }
 	}
 	for (i = 0x93; i <= 0xa3; i++) {
-		if (!fsm_addedge_literal(fsm, s[6], s[4], i)) { goto error; }
+		if (!fsm_addedge_literal(fsm, s[4], s[5], i)) { return 0; }
 	}
 	for (i = 0xa6; i <= 0xbf; i++) {
-		if (!fsm_addedge_literal(fsm, s[6], s[4], i)) { goto error; }
+		if (!fsm_addedge_literal(fsm, s[4], s[5], i)) { return 0; }
+	}
+	for (i = 0xa0; i <= 0xbd; i++) {
+		if (!fsm_addedge_literal(fsm, s[6], s[5], i)) { return 0; }
 	}
 
-	fsm_setstart(fsm, s[0]);
-	fsm_setend(fsm, s[4], 1);
 
-	return fsm;
-
-error:
-
-	fsm_free(fsm);
-
-	return NULL;
+	return 1;
 }
 

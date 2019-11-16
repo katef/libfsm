@@ -2,44 +2,51 @@
 
 #include LF_HEADER
 
+#include <assert.h>
 #include <stddef.h>
 
 #include <fsm/fsm.h>
 
-struct fsm *
-class_space_fsm(const struct fsm_options *opt)
+int
+class_space_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 {
-	struct fsm *fsm;
+	struct fsm_state *s[2];
 	size_t i;
 
-	struct fsm_state *s[2] = { 0 };
-
-	fsm = fsm_new(opt);
-	if (fsm == NULL) {
-		return NULL;
-	}
+	assert(x != NULL);
+	assert(y != NULL);
 
 	for (i = 0; i < 2; i++) {
+		if (i == 0) {
+			s[0] = x;
+			continue;
+		}
+
+		if (i == 1) {
+			s[1] = y;
+			continue;
+		}
+
 		s[i] = fsm_addstate(fsm);
 		if (s[i] == NULL) {
-			goto error;
+			return 0;
 		}
 	}
 
-	for (i = 0x09; i <= 0x0d; i++) {
-		if (!fsm_addedge_literal(fsm, s[0], s[1], i)) { goto error; }
+	for (i = 0x00; i <= 0x08; i++) {
+		if (!fsm_addedge_literal(fsm, s[0], s[0], i)) { return 0; }
 	}
-	if (!fsm_addedge_literal(fsm, s[0], s[1], ' ')) { goto error; }
+	for (i = 0x0a; i <= 0x1f; i++) {
+		if (!fsm_addedge_literal(fsm, s[0], s[0], i)) { return 0; }
+	}
+	for (i = 0x21; i <= 0xff; i++) {
+		if (!fsm_addedge_literal(fsm, s[0], s[0], i)) { return 0; }
+	}
+	if (!fsm_addedge_literal(fsm, s[0], s[1], '\t')) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[0], s[1], ' ')) { return 0; }
+	if (!fsm_addedge_any(fsm, s[1], s[1])) { return 0; }
 
-	fsm_setstart(fsm, s[0]);
-	fsm_setend(fsm, s[1], 1);
 
-	return fsm;
-
-error:
-
-	fsm_free(fsm);
-
-	return NULL;
+	return 1;
 }
 
