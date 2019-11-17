@@ -21,20 +21,6 @@
 
 #include "libfsm/internal.h" /* XXX */
 
-/*
- * Sort of an IR; this is our intermediate state when converting from a
- * character class's AST to link into an existing FSM. First we construct
- * stand-alone FSM for just the class, and these are held here.
- *
- * This struct is private to this file only, not even exposed as a
- * partial declaration. I'm reading "cc" as "compiled class", rather
- * than "character class".
- */
-struct cc {
-	enum re_flags re_flags;
-	struct re_err *err;
-};
-
 /* FIXME: duplication */
 static int
 addedge_literal(struct fsm *fsm, enum re_flags flags,
@@ -62,79 +48,11 @@ addedge_literal(struct fsm *fsm, enum re_flags flags,
 }
 
 static int
-cc_add_named(struct cc *cc, struct fsm *fsm,
-	class_constructor *ctor,
-	struct fsm_state *x, struct fsm_state *y)
-{
-	assert(cc != NULL);
-	assert(fsm != NULL);
-	assert(ctor != NULL);
-	assert(x != NULL);
-	assert(y != NULL);
-
-	if (!ctor(fsm, x, y)) {
-		return 0;
-	}
-
-	return 1;
-}
-
-int
-cc_add_char(struct cc *cc, struct fsm *fsm,
-	unsigned char c,
-	struct fsm_state *x, struct fsm_state *y)
-{
-	assert(cc != NULL);
-	assert(fsm != NULL);
-	assert(x != NULL);
-	assert(y != NULL);
-
-	if (!addedge_literal(fsm, cc->re_flags, x, y, c)) {
-		return 0;
-	}
-
-	return 1;
-}
-
-static int
-cc_add_range(struct cc *cc, struct fsm *fsm,
-	const struct ast_endpoint *from,
-	const struct ast_endpoint *to,
-	struct fsm_state *x, struct fsm_state *y)
-{
-	unsigned char lower, upper;
-	unsigned int i;
-
-	assert(fsm != NULL);
-	assert(x != NULL);
-	assert(y != NULL);
-
-	if (from->type != AST_ENDPOINT_LITERAL || to->type != AST_ENDPOINT_LITERAL) {
-		/* not yet supported */
-		return 0;
-	}
-
-	lower = from->u.literal.c;
-	upper = to->u.literal.c;
-
-	assert(cc != NULL);
-	assert(lower <= upper);
-
-	for (i = lower; i <= upper; i++) {
-		if (!cc_add_char(cc, fsm, i, x, y)) {
-			return 0;
-		}
-	}
-
-	return 1;
-}
-
-static int
-comp_iter(struct cc *cc, struct fsm *fsm,
+comp_iter(struct fsm *fsm, enum re_flags re_flags,
+	struct re_err *err,
 	const struct ast_class *n,
 	struct fsm_state *x, struct fsm_state *y)
 {
-	assert(cc != NULL);
 	assert(fsm != NULL);
 	assert(n != NULL);
 	assert(x != NULL);
@@ -142,19 +60,32 @@ comp_iter(struct cc *cc, struct fsm *fsm,
 
 	switch (n->type) {
 	case AST_CLASS_LITERAL:
-		if (!cc_add_char(cc, fsm, n->u.literal.c, x, y)) {
+		if (!addedge_literal(fsm, re_flags, x, y, n->u.literal.c)) {
 			return 0;
 		}
 		break;
 
-	case AST_CLASS_RANGE:
-		if (!cc_add_range(cc, fsm, &n->u.range.from, &n->u.range.to, x, y)) {
+	case AST_CLASS_RANGE: {
+		unsigned int i;
+
+		if (n->u.range.from.type != AST_ENDPOINT_LITERAL || n->u.range.to.type != AST_ENDPOINT_LITERAL) {
+			/* not yet supported */
 			return 0;
 		}
+
+		assert(n->u.range.from.u.literal.c <= n->u.range.to.u.literal.c);
+
+		for (i = n->u.range.from.u.literal.c; i <= n->u.range.to.u.literal.c; i++) {
+			if (!addedge_literal(fsm, re_flags, x, y, i)) {
+				return 0;
+			}
+		}
+
 		break;
+	}
 
 	case AST_CLASS_NAMED:
-		if (!cc_add_named(cc, fsm, n->u.named.ctor, x, y)) {
+		if (!n->u.named.ctor(fsm, x, y)) {
 			return 0;
 		}
 		break;
@@ -172,7 +103,6 @@ ast_compile_class(struct ast_class **n, size_t count,
 	struct re_err *err,
 	struct fsm_state *x, struct fsm_state *y)
 {
-	struct cc cc;
 	size_t i;
 
 	assert(n != NULL);
@@ -181,13 +111,8 @@ ast_compile_class(struct ast_class **n, size_t count,
 	assert(x != NULL);
 	assert(y != NULL);
 
-	memset(&cc, 0x00, sizeof(cc));
-	
-	cc.err = err;
-	cc.re_flags = re_flags;
-
 	for (i = 0; i < count; i++) {
-		if (!comp_iter(&cc, fsm, n[i], x, y)) {
+		if (!comp_iter(fsm, re_flags, err, n[i], x, y)) {
 			goto error;
 		}
 	}
