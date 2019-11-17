@@ -38,68 +38,6 @@ ast_new(void)
 	return res;
 }
 
-static void
-free_iter(struct ast_expr *n)
-{
-	if (n == NULL) {
-		return;
-	}
-	
-	switch (n->type) {
-	case AST_EXPR_EMPTY:
-	case AST_EXPR_LITERAL:
-	case AST_EXPR_ANY:
-	case AST_EXPR_FLAGS:
-	case AST_EXPR_ANCHOR:
-	case AST_EXPR_RANGE:
-	case AST_EXPR_NAMED:
-		/* these nodes have no subnodes or dynamic allocation */
-		break;
-
-	case AST_EXPR_SUBTRACT:
-		free_iter(n->u.subtract.a);
-		free_iter(n->u.subtract.b);
-		break;
-
-	case AST_EXPR_CONCAT: {
-		size_t i;
-
-		for (i = 0; i < n->u.concat.count; i++) {
-			free_iter(n->u.concat.n[i]);
-		}
-
-		free(n->u.concat.n);
-		break;
-	}
-
-	case AST_EXPR_ALT: {
-		size_t i;
-
-		for (i = 0; i < n->u.alt.count; i++) {
-			free_iter(n->u.alt.n[i]);
-		}
-		break;
-	}
-
-	case AST_EXPR_REPEATED:
-		free_iter(n->u.repeated.e);
-		break;
-
-	case AST_EXPR_GROUP:
-		free_iter(n->u.group.e);
-		break;
-
-	case AST_EXPR_TOMBSTONE:
-		/* do not free */
-		return;
-
-	default:
-		assert(!"unreached");
-	}
-
-	free(n);
-}
-
 void
 ast_free(struct ast *ast)
 {
@@ -135,7 +73,63 @@ ast_make_count(unsigned low, const struct ast_pos *start,
 void
 ast_expr_free(struct ast_expr *n)
 {
-	free_iter(n);
+	if (n == NULL) {
+		return;
+	}
+	
+	switch (n->type) {
+	case AST_EXPR_EMPTY:
+	case AST_EXPR_LITERAL:
+	case AST_EXPR_ANY:
+	case AST_EXPR_FLAGS:
+	case AST_EXPR_ANCHOR:
+	case AST_EXPR_RANGE:
+	case AST_EXPR_NAMED:
+		/* these nodes have no subnodes or dynamic allocation */
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		ast_expr_free(n->u.subtract.a);
+		ast_expr_free(n->u.subtract.b);
+		break;
+
+	case AST_EXPR_CONCAT: {
+		size_t i;
+
+		for (i = 0; i < n->u.concat.count; i++) {
+			ast_expr_free(n->u.concat.n[i]);
+		}
+
+		free(n->u.concat.n);
+		break;
+	}
+
+	case AST_EXPR_ALT: {
+		size_t i;
+
+		for (i = 0; i < n->u.alt.count; i++) {
+			ast_expr_free(n->u.alt.n[i]);
+		}
+		break;
+	}
+
+	case AST_EXPR_REPEATED:
+		ast_expr_free(n->u.repeated.e);
+		break;
+
+	case AST_EXPR_GROUP:
+		ast_expr_free(n->u.group.e);
+		break;
+
+	case AST_EXPR_TOMBSTONE:
+		/* do not free */
+		return;
+
+	default:
+		assert(!"unreached");
+	}
+
+	free(n);
 }
 
 struct ast_expr *
