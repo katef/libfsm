@@ -252,7 +252,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		pp_iter(f, opt, n->u.invert.e);
 		break;
 
-	case AST_CLASS_RANGE:
+	case AST_EXPR_RANGE:
 		fprintf(f, "[");
 		print_endpoint(f, opt, &n->u.range.from);
 		fprintf(f, "-");
@@ -260,7 +260,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		fprintf(f, "]");
 		break;
 
-	case AST_CLASS_NAMED:
+	case AST_EXPR_NAMED:
 		fprintf(f, "[");
 		print_class_name(f, class_name(n->u.named.ctor));
 		fprintf(f, "]");

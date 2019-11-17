@@ -29,8 +29,8 @@ atomic(struct ast_expr *n)
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
 	case AST_EXPR_GROUP:
-	case AST_CLASS_RANGE:
-	case AST_CLASS_NAMED:
+	case AST_EXPR_RANGE:
+	case AST_EXPR_NAMED:
 		return 1;
 
 	case AST_EXPR_REPEATED:
@@ -230,7 +230,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		pp_iter(f, opt, n->u.invert.e);
 		break;
 
-	case AST_CLASS_RANGE: {
+	case AST_EXPR_RANGE: {
 		if (n->u.range.from.type != AST_ENDPOINT_LITERAL
 		 || n->u.range.to.type != AST_ENDPOINT_LITERAL)
 		{
@@ -244,7 +244,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		}
 		break;
 
-	case AST_CLASS_NAMED:
+	case AST_EXPR_NAMED:
 		print_class_name(f, class_name(n->u.named.ctor));
 		break;
 

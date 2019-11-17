@@ -51,8 +51,8 @@ free_iter(struct ast_expr *n)
 	case AST_EXPR_ANY:
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_ANCHOR:
-	case AST_CLASS_RANGE:
-	case AST_CLASS_NAMED:
+	case AST_EXPR_RANGE:
+	case AST_EXPR_NAMED:
 		/* these nodes have no subnodes or dynamic allocation */
 		break;
 
@@ -394,12 +394,8 @@ ast_make_expr_invert(struct ast_expr *e)
 	return res;
 }
 
-/*
- * Character classes
- */
-
 struct ast_expr *
-ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
+ast_make_expr_range(const struct ast_endpoint *from, struct ast_pos start,
     const struct ast_endpoint *to, struct ast_pos end)
 {
 	struct ast_expr *res;
@@ -412,7 +408,7 @@ ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
 	assert(from != NULL);
 	assert(to != NULL);
 
-	res->type = AST_CLASS_RANGE;
+	res->type = AST_EXPR_RANGE;
 	res->u.range.from = *from;
 	res->u.range.start = start;
 	res->u.range.to = *to;
@@ -422,7 +418,7 @@ ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
 }
 
 struct ast_expr *
-ast_make_class_named(class_constructor *ctor)
+ast_make_expr_named(class_constructor *ctor)
 {
 	struct ast_expr *res;
 
@@ -431,7 +427,7 @@ ast_make_class_named(class_constructor *ctor)
 		return NULL;
 	}
 
-	res->type = AST_CLASS_NAMED;
+	res->type = AST_EXPR_NAMED;
 	res->u.named.ctor = ctor;
 
 	return res;

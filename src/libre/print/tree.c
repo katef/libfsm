@@ -41,12 +41,12 @@ fprintf_count(FILE *f, unsigned count)
 }
 
 static void
-fprintf_flags(FILE *f, enum ast_expr_flags flags)
+fprintf_flags(FILE *f, enum ast_flags flags)
 {
 	fprintf(f, "(f: ");
 
 #define PR_FLAG(X, S)                           \
-    if (0 != (flags & (AST_EXPR_FLAG_ ## X))) { \
+    if (0 != (flags & (AST_FLAG_ ## X))) { \
         fprintf(f, "%s", S);                    \
     }
     
@@ -177,7 +177,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		pp_iter(f, opt, indent + 4, n->u.invert.e);
 		break;
 
-	case AST_CLASS_RANGE:
+	case AST_EXPR_RANGE:
 		fprintf(f, "RANGE %p: ", (void *) n);
 		print_endpoint(f, &n->u.range.from);
 		fprintf(f, "-");
@@ -185,7 +185,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		fprintf(f, "\n");
 		break;
 
-	case AST_CLASS_NAMED:
+	case AST_EXPR_NAMED:
 		fprintf(f, "NAMED %p: %s\n",
 		    (void *) n, class_name(n->u.named.ctor));
 		break;

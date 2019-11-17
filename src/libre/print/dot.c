@@ -134,7 +134,7 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		pp_iter(f, opt, n, n->u.invert.e);
 		break;
 
-	case AST_CLASS_RANGE:
+	case AST_EXPR_RANGE:
 		fprintf(f, "\tn%p [ label = <RANGE|", (void *) n);
 		print_endpoint(f, opt, &n->u.range.from);
 		fprintf(f, " &ndash; ");
@@ -142,7 +142,7 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "> ];\n");
 		break;
 
-	case AST_CLASS_NAMED:
+	case AST_EXPR_NAMED:
 		/* abstract class names are internal strings, assumed to not need escaping */
 		fprintf(f, "\tn%p [ label = <NAMED|%s> ];\n",
 			(void *) n, class_name(n->u.named.ctor));

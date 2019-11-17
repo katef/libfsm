@@ -70,25 +70,24 @@
 	!<ast-range-endpoint-class>:   (:ast_class_id) -> (:endpoint);
 	!<ast-range-distinct>: (:endpoint, :pos, :endpoint, :pos) -> ();
 
-	<ast-make-expr-empty>:         ()                       -> (:ast_expr);
-	<ast-make-expr-literal>:       (:char)                  -> (:ast_expr);
-	<ast-make-expr-concat>:        ()                       -> (:ast_expr);
-	!<ast-make-expr-alt>:          ()                       -> (:ast_expr);
-	<ast-make-expr-any>:           ()                       -> (:ast_expr);
-	<ast-make-expr-atom>:          (:ast_expr, :ast_count)  -> (:ast_expr);
-	!<ast-make-expr-atom-any>:     (:ast_count)             -> (:ast_expr);
-	!<ast-make-expr-group>:        (:ast_expr)              -> (:ast_expr);
-	!<ast-make-expr-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
-	!<ast-make-expr-anchor-start>: ()                       -> (:ast_expr);
-	!<ast-make-expr-anchor-end>:   ()                       -> (:ast_expr);
-	!<ast-make-expr-subtract>:     (:ast_expr, :ast_expr)   -> (:ast_expr); 
-	!<ast-make-expr-invert>:       (:ast_expr)              -> (:ast_expr); 
+	<ast-make-empty>:         ()                       -> (:ast_expr);
+	<ast-make-literal>:       (:char)                  -> (:ast_expr);
+	<ast-make-concat>:        ()                       -> (:ast_expr);
+	!<ast-make-alt>:          ()                       -> (:ast_expr);
+	<ast-make-any>:           ()                       -> (:ast_expr);
+	<ast-make-atom>:          (:ast_expr, :ast_count)  -> (:ast_expr);
+	!<ast-make-atom-any>:     (:ast_count)             -> (:ast_expr);
+	!<ast-make-group>:        (:ast_expr)              -> (:ast_expr);
+	!<ast-make-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
+	!<ast-make-anchor-start>: ()                       -> (:ast_expr);
+	!<ast-make-anchor-end>:   ()                       -> (:ast_expr);
+	!<ast-make-subtract>:     (:ast_expr, :ast_expr)   -> (:ast_expr); 
+	!<ast-make-invert>:       (:ast_expr)              -> (:ast_expr); 
+	!<ast-make-range>:        (:endpoint, :pos, :endpoint, :pos) -> (:ast_expr);
+	!<ast-make-named>:        (:ast_class_id)          -> (:ast_expr);
 
-	<ast-add-expr-concat>: (:ast_expr, :ast_expr) -> ();
-	!<ast-add-expr-alt>:   (:ast_expr, :ast_expr) -> ();
-
-	!<ast-make-class-range>:       (:endpoint, :pos, :endpoint, :pos) -> (:ast_expr);
-	!<ast-make-class-named>:       (:ast_class_id)          -> (:ast_expr);
+	<ast-add-concat>: (:ast_expr, :ast_expr) -> ();
+	!<ast-add-alt>:   (:ast_expr, :ast_expr) -> ();
 
 	!<err-expected-term>;
 	!<err-expected-count>;
@@ -122,18 +121,18 @@
 	] = {
 		{
 			c = literal();
-			l = <ast-make-expr-literal>(c);
+			l = <ast-make-literal>(c);
 		||
 			any();
-			l = <ast-make-expr-any>();
+			l = <ast-make-any>();
 		||
 			many();
-			e = <ast-make-expr-any>();
+			e = <ast-make-any>();
 			c = <atom-kleene>();
-			l = <ast-make-expr-atom>(e, c);
+			l = <ast-make-atom>(e, c);
 		};
 
-		<ast-add-expr-concat>(cat, l);
+		<ast-add-concat>(cat, l);
 
 		{
 			list-of-nodes(cat);
@@ -144,10 +143,10 @@
 
 	re_glob: () -> (node :ast_expr) = {
 		{
-			node = <ast-make-expr-concat>;
+			node = <ast-make-concat>;
 			list-of-nodes(node);
 		||
-			node = <ast-make-expr-empty>();
+			node = <ast-make-empty>();
 		};
 
 		{

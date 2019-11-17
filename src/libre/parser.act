@@ -608,8 +608,8 @@
 	@};
 
 	<ast-range-endpoint-class>: (id :ast_class_id) -> (e :endpoint) = @{
-		@e.type = AST_ENDPOINT_CLASS;
-		@e.u.class.ctor = @id;
+		@e.type = AST_ENDPOINT_NAMED;
+		@e.u.named.ctor = @id;
 	@};
 
 	<ast-range-distinct>: (from :endpoint, start :pos, to :endpoint, end :pos) -> () = @{
@@ -633,42 +633,42 @@
 	 * Expressions
 	 */
 
-	<ast-make-expr-empty>: () -> (node :ast_expr) = @{
+	<ast-make-empty>: () -> (node :ast_expr) = @{
 		@node = ast_make_expr_empty();
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-make-expr-concat>: () -> (node :ast_expr) = @{
+	<ast-make-concat>: () -> (node :ast_expr) = @{
 		@node = ast_make_expr_concat();
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-make-expr-alt>: () -> (node :ast_expr) = @{
+	<ast-make-alt>: () -> (node :ast_expr) = @{
 		@node = ast_make_expr_alt();
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-make-expr-literal>: (c :char) -> (node :ast_expr) = @{
+	<ast-make-literal>: (c :char) -> (node :ast_expr) = @{
 		@node = ast_make_expr_literal(@c);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-make-expr-any>: () -> (node :ast_expr) = @{
+	<ast-make-any>: () -> (node :ast_expr) = @{
 		@node = ast_make_expr_any();
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-make-expr-atom>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
+	<ast-make-atom>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
 		@node = ast_make_expr_with_count(@e, @c);
 		if (@node == NULL) {
 			err->e = RE_EXEOF;
@@ -676,7 +676,7 @@
 		}
 	@};
 
-	<ast-make-expr-atom-any>: (c :ast_count) -> (node :ast_expr) = @{
+	<ast-make-atom-any>: (c :ast_count) -> (node :ast_expr) = @{
 		struct ast_expr *e;
 
 		e = ast_make_expr_any();
@@ -690,65 +690,49 @@
 		}
 	@};
 
-	<ast-make-expr-group>: (e :ast_expr) -> (node :ast_expr) = @{
+	<ast-make-group>: (e :ast_expr) -> (node :ast_expr) = @{
 		@node = ast_make_expr_group(@e);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-make-expr-re-flags>: (pos :re_flags, neg :re_flags) -> (node :ast_expr) = @{
+	<ast-make-re-flags>: (pos :re_flags, neg :re_flags) -> (node :ast_expr) = @{
 		@node = ast_make_expr_re_flags(@pos, @neg);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-make-expr-anchor-start>: () -> (node :ast_expr) = @{
+	<ast-make-anchor-start>: () -> (node :ast_expr) = @{
 		@node = ast_make_expr_anchor(AST_ANCHOR_START);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-make-expr-anchor-end>: () -> (node :ast_expr) = @{
+	<ast-make-anchor-end>: () -> (node :ast_expr) = @{
 		@node = ast_make_expr_anchor(AST_ANCHOR_END);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-make-expr-subtract>: (a :ast_expr, b :ast_expr) -> (node :ast_expr) = @{
+	<ast-make-subtract>: (a :ast_expr, b :ast_expr) -> (node :ast_expr) = @{
 		@node = ast_make_expr_subtract(@a, @b);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-make-expr-invert>: (e :ast_expr) -> (node :ast_expr) = @{
+	<ast-make-invert>: (e :ast_expr) -> (node :ast_expr) = @{
 		@node = ast_make_expr_invert(@e);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-add-expr-concat>: (cat :ast_expr, node :ast_expr) -> () = @{
-		if (!ast_add_expr_concat(@cat, @node)) {
-			@!;
-		}
-	@};
-
-	<ast-add-expr-alt>: (alt :ast_expr, node :ast_expr) -> () = @{
-		if (!ast_add_expr_alt(@alt, @node)) {
-			@!;
-		}
-	@};
-
-	/*
-	 * Character classes
-	 */
-
-	<ast-make-class-range>: (from :endpoint, start :pos, to :endpoint, end :pos) -> (node :ast_expr) = @{
+	<ast-make-range>: (from :endpoint, start :pos, to :endpoint, end :pos) -> (node :ast_expr) = @{
 		struct ast_pos ast_start, ast_end;
 		unsigned char lower, upper;
 
@@ -775,15 +759,27 @@
 			@!;
 		}
 
-		@node = ast_make_class_range(&@from, ast_start, &@to, ast_end);
+		@node = ast_make_expr_range(&@from, ast_start, &@to, ast_end);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-make-class-named>: (id :ast_class_id) -> (node :ast_expr) = @{
-		@node = ast_make_class_named(@id);
+	<ast-make-named>: (id :ast_class_id) -> (node :ast_expr) = @{
+		@node = ast_make_expr_named(@id);
 		if (@node == NULL) {
+			@!;
+		}
+	@};
+
+	<ast-add-concat>: (cat :ast_expr, node :ast_expr) -> () = @{
+		if (!ast_add_expr_concat(@cat, @node)) {
+			@!;
+		}
+	@};
+
+	<ast-add-alt>: (alt :ast_expr, node :ast_expr) -> () = @{
+		if (!ast_add_expr_alt(@alt, @node)) {
 			@!;
 		}
 	@};

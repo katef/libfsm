@@ -295,8 +295,8 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_ALT:
 	case AST_EXPR_ANCHOR:
-	case AST_CLASS_RANGE:
-	case AST_CLASS_NAMED:
+	case AST_EXPR_RANGE:
+	case AST_EXPR_NAMED:
 		/* These nodes cannot have a backward epsilon edge */
 		return 0;
 
@@ -402,8 +402,8 @@ decide_linking(struct comp_env *env,
 	case AST_EXPR_ALT:
 	case AST_EXPR_REPEATED:
 	case AST_EXPR_FLAGS:
-	case AST_CLASS_RANGE:
-	case AST_CLASS_NAMED:
+	case AST_EXPR_RANGE:
+	case AST_EXPR_NAMED:
 	case AST_EXPR_TOMBSTONE:
 		break;
 
@@ -414,8 +414,8 @@ decide_linking(struct comp_env *env,
 	switch (side) {
 	case LINK_START: {
 		const int start    = (n->type == AST_EXPR_ANCHOR && n->u.anchor.type == AST_ANCHOR_START);
-		const int first    = (n->flags & AST_EXPR_FLAG_FIRST) != 0;
-		const int nullable = (n->flags & AST_EXPR_FLAG_NULLABLE) != 0;
+		const int first    = (n->flags & AST_FLAG_FIRST) != 0;
+		const int nullable = (n->flags & AST_FLAG_NULLABLE) != 0;
 
 		(void) nullable;
 
@@ -441,8 +441,8 @@ decide_linking(struct comp_env *env,
 
 	case LINK_END: {
 		const int end      = (n->type == AST_EXPR_ANCHOR && n->u.anchor.type == AST_ANCHOR_END);
-		const int last     = (n->flags & AST_EXPR_FLAG_LAST) != 0;
-		const int nullable = (n->flags & AST_EXPR_FLAG_NULLABLE) != 0;
+		const int last     = (n->flags & AST_FLAG_LAST) != 0;
+		const int nullable = (n->flags & AST_FLAG_NULLABLE) != 0;
 
 		(void) nullable;
 
@@ -889,7 +889,7 @@ comp_iter(struct comp_env *env,
 		break;
 	}
 
-	case AST_CLASS_RANGE: {
+	case AST_EXPR_RANGE: {
 		unsigned int i;
 
 		if (n->u.range.from.type != AST_ENDPOINT_LITERAL || n->u.range.to.type != AST_ENDPOINT_LITERAL) {
@@ -906,7 +906,7 @@ comp_iter(struct comp_env *env,
 		break;
 	}
 
-	case AST_CLASS_NAMED:
+	case AST_EXPR_NAMED:
 		if (!n->u.named.ctor(env->fsm, x, y)) {
 			return 0;
 		}

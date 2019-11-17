@@ -31,9 +31,9 @@ enum ast_expr_type {
 	AST_EXPR_ANCHOR,
 	AST_EXPR_SUBTRACT,
 	AST_EXPR_INVERT,
-	AST_CLASS_RANGE,
-	AST_CLASS_NAMED,
-/*	AST_CLASS_TYPE, XXX: not implemented */
+	AST_EXPR_RANGE,
+	AST_EXPR_NAMED,
+/*	AST_EXPR_TYPE, XXX: not implemented */
 	AST_EXPR_TOMBSTONE
 };
 
@@ -53,30 +53,30 @@ enum ast_anchor_type {
 /*
  * Flags used during AST analysis for expression nodes:
  *
- * - AST_EXPR_FLAG_FIRST
+ * - AST_FLAG_FIRST
  *   The node can appear at the beginning of input,
  *   possibly preceded by other nullable nodes.
  *
- * - AST_EXPR_FLAG_LAST
+ * - AST_FLAG_LAST
  *   This node can appear at the end of input, possibly
  *   followed by nullable nodes.
  *
- * - AST_EXPR_FLAG_UNSATISFIABLE
+ * - AST_FLAG_UNSATISFIABLE
  *   The node caused the regex to become unsatisfiable.
  *
- * - AST_EXPR_FLAG_NULLABLE
+ * - AST_FLAG_NULLABLE
  *   The node is not always evaluated, such as nodes that
  *   are repeated at least 0 times.
  *
  * Not all are valid for all node types.
  */
-enum ast_expr_flags {
-	AST_EXPR_FLAG_FIRST         = 1 << 0,
-	AST_EXPR_FLAG_LAST          = 1 << 1,
-	AST_EXPR_FLAG_UNSATISFIABLE = 1 << 2,
-	AST_EXPR_FLAG_NULLABLE      = 1 << 3,
+enum ast_flags {
+	AST_FLAG_FIRST         = 1 << 0,
+	AST_FLAG_LAST          = 1 << 1,
+	AST_FLAG_UNSATISFIABLE = 1 << 2,
+	AST_FLAG_NULLABLE      = 1 << 3,
 
-	AST_EXPR_FLAG_NONE = 0x00
+	AST_FLAG_NONE = 0x00
 };
 
 #define NO_GROUP_ID ((unsigned)-1)
@@ -84,7 +84,7 @@ enum ast_expr_flags {
 enum ast_endpoint_type {
 	AST_ENDPOINT_LITERAL,
 /*	AST_ENDPOINT_TYPE, XXX: not implemented */
-	AST_ENDPOINT_CLASS
+	AST_ENDPOINT_NAMED
 };
 
 struct ast_endpoint {
@@ -96,7 +96,7 @@ struct ast_endpoint {
 
 		struct {
 			class_constructor *ctor;
-		} class;
+		} named;
 	} u;
 };
 
@@ -113,7 +113,7 @@ struct ast_endpoint {
  */
 struct ast_expr {
 	enum ast_expr_type type;
-	enum ast_expr_flags flags;
+	enum ast_flags flags;
 
 	union {
 		/* ordered sequence */
@@ -239,11 +239,11 @@ int
 ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
 
 struct ast_expr *
-ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
+ast_make_expr_range(const struct ast_endpoint *from, struct ast_pos start,
 	const struct ast_endpoint *to, struct ast_pos end);
 
 struct ast_expr *
-ast_make_class_named(class_constructor *ctor);
+ast_make_expr_named(class_constructor *ctor);
 
 /* XXX: exposed for sake of re(1) printing an ast;
  * it's not part of the <re/re.h> API proper */
