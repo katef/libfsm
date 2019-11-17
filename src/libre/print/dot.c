@@ -52,46 +52,6 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 }
 
 static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	const void *parent, struct ast_class *n)
-{
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(n != NULL);
-
-	if (parent != NULL) {
-		fprintf(f, "\tn%p -> n%p;\n", parent, (void *) n);
-	}
-
-	fprintf(f, "\tn%p [ style = \"filled\", fillcolor = \"#eeeeee\" ];\n", (void *) n);
-
-	switch (n->type) {
-	case AST_CLASS_LITERAL:
-		fprintf(f, "\tn%p [ label = <CLASS-LITERAL|", (void *) n);
-		dot_escputc_html(f, opt, n->u.literal.c);
-		fprintf(f, "> ];\n");
-		break;
-
-	case AST_CLASS_RANGE:
-		fprintf(f, "\tn%p [ label = <CLASS-RANGE|", (void *) n);
-		print_endpoint(f, opt, &n->u.range.from);
-		fprintf(f, " &ndash; ");
-		print_endpoint(f, opt, &n->u.range.to);
-		fprintf(f, "> ];\n");
-		break;
-
-	case AST_CLASS_NAMED:
-		/* abstract class names are internal strings, assumed to not need escaping */
-		fprintf(f, "\tn%p [ label = <CLASS-NAMED|%s> ];\n",
-			(void *) n, class_name(n->u.named.ctor));
-		break;
-
-	default:
-		assert(!"unreached");
-	}
-}
-
-static void
 pp_iter(FILE *f, const struct fsm_options *opt,
 	const void *parent, struct ast_expr *n)
 {
@@ -150,18 +110,6 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		pp_iter(f, opt, n, n->u.repeated.e);
 		break;
 
-	case AST_EXPR_CLASS: {
-		size_t i;
-
-		fprintf(f, "\tn%p [ label = <CLASS|%lu> ];\n",
-			(void *) n, (unsigned long) n->u.class.count);
-
-		for (i = 0; i < n->u.class.count; i++) {
-			cc_pp_iter(f, opt, n, n->u.class.n[i]);
-		}
-		break;
-	}
-
 	case AST_EXPR_GROUP:
 		fprintf(f, "\tn%p [ label = <GROUP|#%u> ];\n", (void *) n,
 			n->u.group.id);
@@ -184,6 +132,20 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 	case AST_EXPR_INVERT:
 		fprintf(f, "\tn%p [ label = <INVERT> ];\n", (void *) n);
 		pp_iter(f, opt, n, n->u.invert.e);
+		break;
+
+	case AST_CLASS_RANGE:
+		fprintf(f, "\tn%p [ label = <RANGE|", (void *) n);
+		print_endpoint(f, opt, &n->u.range.from);
+		fprintf(f, " &ndash; ");
+		print_endpoint(f, opt, &n->u.range.to);
+		fprintf(f, "> ];\n");
+		break;
+
+	case AST_CLASS_NAMED:
+		/* abstract class names are internal strings, assumed to not need escaping */
+		fprintf(f, "\tn%p [ label = <NAMED|%s> ];\n",
+			(void *) n, class_name(n->u.named.ctor));
 		break;
 
 	case AST_EXPR_FLAGS:

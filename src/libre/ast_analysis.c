@@ -64,6 +64,8 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
+	case AST_CLASS_RANGE:
+	case AST_CLASS_NAMED:
 		/* no special handling */
 		break;
 
@@ -142,10 +144,6 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		set_flags(n, AST_EXPR_FLAG_NULLABLE); 
 		break;
 
-	case AST_EXPR_CLASS:
-		/* character classes cannot be empty, so they're not nullable */
-		break;
-
 	case AST_EXPR_ANCHOR:
 		/* anchor flags will be handled on the second pass */
 		break;
@@ -175,7 +173,8 @@ always_consumes_input(const struct ast_expr *n, int thud)
 	switch (n->type) {
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CLASS:
+	case AST_CLASS_RANGE:
+	case AST_CLASS_NAMED:
 		return 1;
 
 	case AST_EXPR_CONCAT: {
@@ -289,7 +288,8 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CLASS:
+	case AST_CLASS_RANGE:
+	case AST_CLASS_NAMED:
 		if (!is_nullable(n)) {
 			env->past_any_consuming = 1;
 		}
@@ -438,7 +438,8 @@ assign_firsts(struct ast_expr *n)
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CLASS:
+	case AST_CLASS_RANGE:
+	case AST_CLASS_NAMED:
 		set_flags(n, AST_EXPR_FLAG_FIRST);
 		break;
 
@@ -504,7 +505,8 @@ assign_lasts(struct ast_expr *n)
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CLASS:
+	case AST_CLASS_RANGE:
+	case AST_CLASS_NAMED:
 		set_flags(n, AST_EXPR_FLAG_LAST);
 		break;
 

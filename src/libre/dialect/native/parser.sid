@@ -19,7 +19,6 @@
 	ast_expr;
 	ast_class_id;
 	ast_count;
-	ast_class;
 	endpoint;
 
 %terminals%
@@ -83,7 +82,6 @@
 	<ast-make-expr-any>:          ()                       -> (:ast_expr);
 	<ast-make-expr-atom>:         (:ast_expr, :ast_count)  -> (:ast_expr);
 	!<ast-make-expr-atom-any>:    (:ast_count)             -> (:ast_expr);
-	<ast-make-expr-class>:        ()                       -> (:ast_expr);
 	<ast-make-expr-group>:        (:ast_expr)              -> (:ast_expr);
 	!<ast-make-expr-re-flags>:    (:re_flags, :re_flags)   -> (:ast_expr);
 	<ast-make-expr-anchor-start>: ()                       -> (:ast_expr);
@@ -94,11 +92,8 @@
 	<ast-add-expr-concat>: (:ast_expr, :ast_expr) -> ();
 	<ast-add-expr-alt>:    (:ast_expr, :ast_expr) -> ();
 
-	<ast-make-class-literal>:     (:char)                  -> (:ast_class);
-	<ast-make-class-range>:       (:endpoint, :pos, :endpoint, :pos) -> (:ast_class);
-	<ast-make-class-named>:       (:ast_class_id)          -> (:ast_class);
-
-	<ast-add-class-concat>: (:ast_expr, :ast_class) -> ();
+	<ast-make-class-range>:       (:endpoint, :pos, :endpoint, :pos) -> (:ast_expr);
+	<ast-make-class-named>:       (:ast_class_id)          -> (:ast_expr);
 
 	<err-expected-term>;
 	<err-expected-count>;
@@ -117,7 +112,7 @@
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();
 	<mark-count>: (:pos, :pos) -> ();
-	<mark-expr-class>: (:ast_expr, :pos, :pos) -> ();
+	<mark-expr>: (:ast_expr, :pos, :pos) -> ();
 
 	expr: () -> (node :ast_expr) [
 
@@ -144,7 +139,7 @@
 				$;
 			};
 
-			class-literal: () -> (node :ast_class) = {
+			class-literal: () -> (node :ast_expr) = {
 				{
 					(c, !, !) = ESC;
 				||
@@ -154,10 +149,10 @@
 				||
 					(c, !, !) = CHAR;
 				};
-				node = <ast-make-class-literal>(c);
+				node = <ast-make-expr-literal>(c);
 	  		};
 
-			class-range: () -> (node :ast_class) = {
+			class-range: () -> (node :ast_expr) = {
 				{
 					(ca, start, !) = ESC;
 				||
@@ -194,12 +189,12 @@
 				node = <ast-make-class-range>(a, start, z, end);
 			};
 
-			class-named: () -> (node :ast_class) = {
+			class-named: () -> (node :ast_expr) = {
 				(id, !, !) = NAMED_CLASS;
 				node = <ast-make-class-named>(id);
 			};
 
-			class-term: () -> (node :ast_class) = {
+			class-term: () -> (node :ast_expr) = {
 				node = class-literal();
 			||
 				node = class-range();
@@ -210,7 +205,7 @@
 			list-of-class-terms: (class :ast_expr) -> () = {
 				{
 					node = class-term;
-					<ast-add-class-concat>(class, node);
+					<ast-add-expr-alt>(class, node);
 				##
 					<err-expected-term>;
 				};
@@ -225,7 +220,7 @@
 		] = {
 			(start, !) = OPENGROUP;
 
-			node = <ast-make-expr-class>;
+			node = <ast-make-expr-alt>;
 			tmp = node;
 
 			class-head(&node);
@@ -239,7 +234,7 @@
 				end = start; /* appease sid */
 			};
 
-			<mark-expr-class>(tmp, start, end);
+			<mark-expr>(tmp, start, end);
 		};
 
 		atom: () -> (node :ast_expr) = {

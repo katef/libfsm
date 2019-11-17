@@ -28,8 +28,9 @@ atomic(struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CLASS:
 	case AST_EXPR_GROUP:
+	case AST_CLASS_RANGE:
+	case AST_CLASS_NAMED:
 		return 1;
 
 	case AST_EXPR_REPEATED:
@@ -123,41 +124,6 @@ print_grouped(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 }
 
 static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
-{
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(n != NULL);
-
-	switch (n->type) {
-	case AST_CLASS_LITERAL:
-		abnf_escputc(f, opt, n->u.literal.c);
-		break;
-
-	case AST_CLASS_RANGE: {
-		if (n->u.range.from.type != AST_ENDPOINT_LITERAL
-		 || n->u.range.to.type != AST_ENDPOINT_LITERAL)
-		{
-			assert(!"unimplemented");
-			abort();
-		}
-
-		fprintf(f, "%%x%02X-%02X",
-			(unsigned char) n->u.range.from.u.literal.c,
-			(unsigned char) n->u.range.to.u.literal.c);
-		}
-		break;
-
-	case AST_CLASS_NAMED:
-		print_class_name(f, class_name(n->u.named.ctor));
-		break;
-
-	default:
-		assert(!"unreached");
-	}
-}
-
-static void
 pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 {
 	assert(f != NULL);
@@ -239,23 +205,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_CLASS: {
-		size_t i;
-
-		fprintf(f, "(");
-
-		for (i = 0; i < n->u.class.count; i++) {
-			cc_pp_iter(f, opt, n->u.class.n[i]);
-
-			if (i + 1 < n->u.class.count) {
-				fprintf(f, " / ");
-			}
-		}
-
-		fprintf(f, ")");
-		break;
-	}
-
 	case AST_EXPR_GROUP:
 		fprintf(f, "(");
 		pp_iter(f, opt, n->u.group.e);
@@ -279,6 +228,24 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		assert(!"unimplemented");
 		fprintf(f, " - ");
 		pp_iter(f, opt, n->u.invert.e);
+		break;
+
+	case AST_CLASS_RANGE: {
+		if (n->u.range.from.type != AST_ENDPOINT_LITERAL
+		 || n->u.range.to.type != AST_ENDPOINT_LITERAL)
+		{
+			assert(!"unimplemented");
+			abort();
+		}
+
+		fprintf(f, "%%x%02X-%02X",
+			(unsigned char) n->u.range.from.u.literal.c,
+			(unsigned char) n->u.range.to.u.literal.c);
+		}
+		break;
+
+	case AST_CLASS_NAMED:
+		print_class_name(f, class_name(n->u.named.ctor));
 		break;
 
 	case AST_EXPR_FLAGS:

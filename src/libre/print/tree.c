@@ -89,41 +89,6 @@ print_endpoint(FILE *f, const struct ast_endpoint *e)
 }
 
 static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	struct ast_class *n, size_t indent)
-{
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(n != NULL);
-
-	INDENT(f, indent);
-
-	switch (n->type) {
-	case AST_CLASS_LITERAL:
-		fprintf(f, "CLASS-LITERAL %p: '", (void *) n);
-		print_char_or_esc(f, n->u.literal.c);
-		fprintf(f, "'\n");
-		break;
-
-	case AST_CLASS_RANGE:
-		fprintf(f, "CLASS-RANGE %p: ", (void *) n);
-		print_endpoint(f, &n->u.range.from);
-		fprintf(f, "-");
-		print_endpoint(f, &n->u.range.to);
-		fprintf(f, "\n");
-		break;
-
-	case AST_CLASS_NAMED:
-		fprintf(f, "CLASS-NAMED %p: %s\n",
-		    (void *) n, class_name(n->u.named.ctor));
-		break;
-
-	default:
-		assert(!"unreached");
-	}
-}
-
-static void
 pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *n)
 {
 	assert(f != NULL);
@@ -183,18 +148,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		pp_iter(f, opt, indent + 1 * IND, n->u.repeated.e);
 		break;
 
-	case AST_EXPR_CLASS: {
-		size_t i, count = n->u.class.count;
-
-		fprintf(f, "CLASS %p (%u):\n", (void *) n, (unsigned) count);
-
-		for (i = 0; i < n->u.class.count; i++) {
-			cc_pp_iter(f, opt, n->u.class.n[i], indent + IND);
-		}
-
-		break;
-	}
-
 	case AST_EXPR_GROUP:
 		fprintf(f, "GROUP %p: %u\n", (void *) n, n->u.group.id);
 		pp_iter(f, opt, indent + 1 * IND, n->u.group.e);
@@ -224,6 +177,18 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		pp_iter(f, opt, indent + 4, n->u.invert.e);
 		break;
 
+	case AST_CLASS_RANGE:
+		fprintf(f, "RANGE %p: ", (void *) n);
+		print_endpoint(f, &n->u.range.from);
+		fprintf(f, "-");
+		print_endpoint(f, &n->u.range.to);
+		fprintf(f, "\n");
+		break;
+
+	case AST_CLASS_NAMED:
+		fprintf(f, "NAMED %p: %s\n",
+		    (void *) n, class_name(n->u.named.ctor));
+		break;
 	case AST_EXPR_TOMBSTONE:
 		fprintf(f, "<tombstone>\n");
 		break;

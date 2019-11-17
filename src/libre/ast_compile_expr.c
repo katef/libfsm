@@ -293,9 +293,10 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 	switch (e->type) {
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_FLAGS:
-	case AST_EXPR_CLASS:
 	case AST_EXPR_ALT:
 	case AST_EXPR_ANCHOR:
+	case AST_CLASS_RANGE:
+	case AST_CLASS_NAMED:
 		/* These nodes cannot have a backward epsilon edge */
 		return 0;
 
@@ -396,12 +397,13 @@ decide_linking(struct comp_env *env,
 	case AST_EXPR_INVERT:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CLASS:
 
 	case AST_EXPR_CONCAT:
 	case AST_EXPR_ALT:
 	case AST_EXPR_REPEATED:
 	case AST_EXPR_FLAGS:
+	case AST_CLASS_RANGE:
+	case AST_CLASS_NAMED:
 	case AST_EXPR_TOMBSTONE:
 		break;
 
@@ -783,24 +785,6 @@ comp_iter(struct comp_env *env,
 		}
 		break;
 
-	case AST_EXPR_CLASS:
-		/*
-		 * XXX: this doesn't belong here; it's set as a fall-through.
-		 * Instead we should be populating .start/.end for each node
-		 * in the char class tree.
-		 */
-		if (env->err != NULL) {
-			env->err->start.byte = n->u.class.start.byte;
-			env->err->end.byte   = n->u.class.end.byte;
-		}
-
-		if (!ast_compile_class(n->u.class.n, n->u.class.count,
-			env->fsm, env->re_flags, env->err, x, y))
-		{
-			return 0;
-		}
-		break;
-
 	case AST_EXPR_GROUP:
 		RECURSE(x, y, n->u.group.e);
 		break;
@@ -904,6 +888,29 @@ comp_iter(struct comp_env *env,
 
 		break;
 	}
+
+	case AST_CLASS_RANGE: {
+		unsigned int i;
+
+		if (n->u.range.from.type != AST_ENDPOINT_LITERAL || n->u.range.to.type != AST_ENDPOINT_LITERAL) {
+			/* not yet supported */
+			return 0;
+		}
+
+		assert(n->u.range.from.u.literal.c <= n->u.range.to.u.literal.c);
+
+		for (i = n->u.range.from.u.literal.c; i <= n->u.range.to.u.literal.c; i++) {
+			LITERAL(x, y, i);
+		}
+
+		break;
+	}
+
+	case AST_CLASS_NAMED:
+		if (!n->u.named.ctor(env->fsm, x, y)) {
+			return 0;
+		}
+		break;
 
 	default:
 		assert(!"unreached");

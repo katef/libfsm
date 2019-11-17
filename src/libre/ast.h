@@ -26,12 +26,14 @@ enum ast_expr_type {
 	AST_EXPR_LITERAL,
 	AST_EXPR_ANY,
 	AST_EXPR_REPEATED,
-	AST_EXPR_CLASS,
 	AST_EXPR_GROUP,
 	AST_EXPR_FLAGS,
 	AST_EXPR_ANCHOR,
 	AST_EXPR_SUBTRACT,
 	AST_EXPR_INVERT,
+	AST_CLASS_RANGE,
+	AST_CLASS_NAMED,
+/*	AST_CLASS_TYPE, XXX: not implemented */
 	AST_EXPR_TOMBSTONE
 };
 
@@ -79,14 +81,6 @@ enum ast_expr_flags {
 
 #define NO_GROUP_ID ((unsigned)-1)
 
-enum ast_class_type {
-	AST_CLASS_CONCAT,
-	AST_CLASS_LITERAL,
-	AST_CLASS_RANGE,
-	AST_CLASS_NAMED
-/*	AST_CLASS_TYPE XXX: not implemented */
-};
-
 enum ast_endpoint_type {
 	AST_ENDPOINT_LITERAL,
 /*	AST_ENDPOINT_TYPE, XXX: not implemented */
@@ -103,26 +97,6 @@ struct ast_endpoint {
 		struct {
 			class_constructor *ctor;
 		} class;
-	} u;
-};
-
-struct ast_class {
-	enum ast_class_type type;
-	union {
-		struct {
-			unsigned char c;
-		} literal;
-
-		struct {
-			struct ast_endpoint from;
-			struct ast_pos start;
-			struct ast_endpoint to;
-			struct ast_pos end;
-		} range;
-
-		struct {
-			class_constructor *ctor;
-		} named;
 	} u;
 };
 
@@ -166,16 +140,6 @@ struct ast_expr {
 			unsigned high;
 		} repeated;
 
-		/* unordered set */
-		struct {
-			size_t count; /* used */
-			size_t alloc; /* allocated */
-			struct ast_class **n;
-
-			struct ast_pos start;
-			struct ast_pos end;
-		} class;
-
 		struct {
 			struct ast_expr *e;
 			unsigned id;
@@ -198,7 +162,18 @@ struct ast_expr {
 		struct ast_expr_invert {
 			struct ast_expr *e;
 		} invert;
-	} u;	
+
+		struct {
+			struct ast_endpoint from;
+			struct ast_pos start;
+			struct ast_endpoint to;
+			struct ast_pos end;
+		} range;
+
+		struct {
+			class_constructor *ctor;
+		} named;
+	} u;
 };
 
 struct ast {
@@ -246,9 +221,6 @@ struct ast_expr *
 ast_make_expr_with_count(struct ast_expr *e, struct ast_count count);
 
 struct ast_expr *
-ast_make_expr_class(void);
-
-struct ast_expr *
 ast_make_expr_group(struct ast_expr *e);
 
 struct ast_expr *
@@ -266,22 +238,12 @@ ast_make_expr_invert(struct ast_expr *e);
 int
 ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
 
-/*
- * Character classes
- */
-
-struct ast_class *
-ast_make_class_literal(unsigned char c);
-
-struct ast_class *
+struct ast_expr *
 ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
 	const struct ast_endpoint *to, struct ast_pos end);
 
-struct ast_class *
+struct ast_expr *
 ast_make_class_named(class_constructor *ctor);
-
-int
-ast_add_class_concat(struct ast_expr *class, struct ast_class *node);
 
 /* XXX: exposed for sake of re(1) printing an ast;
  * it's not part of the <re/re.h> API proper */

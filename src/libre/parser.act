@@ -104,8 +104,6 @@
 	typedef struct ast_count t_ast__count;
 	typedef struct ast_endpoint t_endpoint;
 
-	typedef struct ast_class * t_ast__class;
-
 	struct act_state {
 		enum LX_TOKEN lex_tok;
 		enum LX_TOKEN lex_tok_save;
@@ -540,7 +538,7 @@
 		mark(&act_state->countend,   &@end);
 	@};
 
-	<mark-expr-class>: (class :ast_expr, start :pos, end :pos) -> () = @{
+	<mark-expr>: (node :ast_expr, start :pos, end :pos) -> () = @{
 		struct ast_pos ast_start, ast_end;
 
 		AST_POS_OF_LX_POS(ast_start, @start);
@@ -549,8 +547,10 @@
 		mark(&act_state->groupstart, &@start);
 		mark(&act_state->groupend,   &@end);
 
-		@class->u.class.start = ast_start;
-		@class->u.class.end   = ast_end;
+/* TODO: reinstate this, applies to an expr node in general
+		@node->u.class.start = ast_start;
+		@node->u.class.end   = ast_end;
+*/
 	@};
 
 
@@ -690,13 +690,6 @@
 		}
 	@};
 
-	<ast-make-expr-class>: () -> (node :ast_expr) = @{
-		@node = ast_make_expr_class();
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
 	<ast-make-expr-group>: (e :ast_expr) -> (node :ast_expr) = @{
 		@node = ast_make_expr_group(@e);
 		if (@node == NULL) {
@@ -755,14 +748,7 @@
 	 * Character classes
 	 */
 
-	<ast-make-class-literal>: (c :char) -> (node :ast_class) = @{
-		@node = ast_make_class_literal(@c);
-		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-make-class-range>: (from :endpoint, start :pos, to :endpoint, end :pos) -> (node :ast_class) = @{
+	<ast-make-class-range>: (from :endpoint, start :pos, to :endpoint, end :pos) -> (node :ast_expr) = @{
 		struct ast_pos ast_start, ast_end;
 		unsigned char lower, upper;
 
@@ -795,15 +781,9 @@
 		}
 	@};
 
-	<ast-make-class-named>: (id :ast_class_id) -> (node :ast_class) = @{
+	<ast-make-class-named>: (id :ast_class_id) -> (node :ast_expr) = @{
 		@node = ast_make_class_named(@id);
 		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-add-class-concat>: (class :ast_expr, node :ast_class) -> () = @{
-		if (!ast_add_class_concat(@class, @node)) {
 			@!;
 		}
 	@};

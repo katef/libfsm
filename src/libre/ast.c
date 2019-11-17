@@ -39,24 +39,6 @@ ast_new(void)
 }
 
 static void
-class_free_iter(struct ast_class *n)
-{
-	assert(n != NULL);
-
-	switch (n->type) {
-	case AST_CLASS_LITERAL:
-	case AST_CLASS_RANGE:
-	case AST_CLASS_NAMED:
-		break;
-
-	default:
-		assert(!"unreached");
-	}
-
-	free(n);	
-}
-
-static void
 free_iter(struct ast_expr *n)
 {
 	if (n == NULL) {
@@ -69,6 +51,8 @@ free_iter(struct ast_expr *n)
 	case AST_EXPR_ANY:
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_ANCHOR:
+	case AST_CLASS_RANGE:
+	case AST_CLASS_NAMED:
 		/* these nodes have no subnodes or dynamic allocation */
 		break;
 
@@ -104,17 +88,6 @@ free_iter(struct ast_expr *n)
 	case AST_EXPR_REPEATED:
 		free_iter(n->u.repeated.e);
 		break;
-
-	case AST_EXPR_CLASS: {
-		size_t i;
-
-		for (i = 0; i < n->u.class.count; i++) {
-			class_free_iter(n->u.class.n[i]);
-		}
-
-		free(n->u.class.n);
-		break;
-	}
 
 	case AST_EXPR_GROUP:
 		free_iter(n->u.group.e);
@@ -339,29 +312,6 @@ ast_make_expr_with_count(struct ast_expr *e, struct ast_count count)
 }
 
 struct ast_expr *
-ast_make_expr_class(void)
-{
-	struct ast_expr *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return res;
-	}
-
-	res->type = AST_EXPR_CLASS;
-	res->u.class.alloc = 8; /* arbitrary initial value */
-	res->u.class.count = 0;
-
-	res->u.class.n = malloc(res->u.class.alloc * sizeof *res->u.class.n);
-	if (res->u.class.n == NULL) {
-		free(res);
-		return NULL;
-	}
-
-	return res;
-}
-
-struct ast_expr *
 ast_make_expr_group(struct ast_expr *e)
 {
 	struct ast_expr *res;
@@ -448,51 +398,11 @@ ast_make_expr_invert(struct ast_expr *e)
  * Character classes
  */
 
-int
-ast_add_class_concat(struct ast_expr *class, struct ast_class *node)
-{
-	assert(class != NULL);
-	assert(class->type == AST_EXPR_CLASS);
-
-	if (class->u.class.count == class->u.class.alloc) {
-		void *tmp;
-
-		tmp = realloc(class->u.class.n, class->u.class.alloc * 2 * sizeof *class->u.class.n);
-		if (tmp == NULL) {
-			return 0;
-		}
-
-		class->u.class.alloc *= 2;
-		class->u.class.n = tmp;
-	}
-
-	class->u.class.n[class->u.class.count] = node;
-	class->u.class.count++;
-
-	return 1;
-}
-
-struct ast_class *
-ast_make_class_literal(unsigned char c)
-{
-	struct ast_class *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_CLASS_LITERAL;
-	res->u.literal.c = c;
-
-	return res;
-}
-
-struct ast_class *
+struct ast_expr *
 ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
     const struct ast_endpoint *to, struct ast_pos end)
 {
-	struct ast_class *res;
+	struct ast_expr *res;
 
 	res = calloc(1, sizeof *res);
 	if (res == NULL) {
@@ -511,10 +421,10 @@ ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
 	return res;
 }
 
-struct ast_class *
+struct ast_expr *
 ast_make_class_named(class_constructor *ctor)
 {
-	struct ast_class *res;
+	struct ast_expr *res;
 
 	res = calloc(1, sizeof *res);
 	if (res == NULL) {

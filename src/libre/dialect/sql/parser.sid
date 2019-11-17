@@ -23,7 +23,6 @@
 	ast_expr;
 	ast_count;
 	ast_class_id;
-	ast_class;
 	endpoint;
 
 %terminals%
@@ -88,7 +87,6 @@
 	!<ast-make-expr-any>:          ()                       -> (:ast_expr);
 	<ast-make-expr-atom>:          (:ast_expr, :ast_count)  -> (:ast_expr);
 	<ast-make-expr-atom-any>:      (:ast_count)             -> (:ast_expr);
-	<ast-make-expr-class>:         ()                       -> (:ast_expr);
 	<ast-make-expr-group>:         (:ast_expr)              -> (:ast_expr);
 	!<ast-make-expr-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
 	!<ast-make-expr-anchor-start>: ()                       -> (:ast_expr);
@@ -99,11 +97,8 @@
 	<ast-add-expr-concat>: (:ast_expr, :ast_expr) -> ();
 	<ast-add-expr-alt>:    (:ast_expr, :ast_expr) -> ();
 
-	<ast-make-class-literal>:      (:char)                  -> (:ast_class);
-	<ast-make-class-range>:        (:endpoint, :pos, :endpoint, :pos) -> (:ast_class);
-	<ast-make-class-named>:        (:ast_class_id)          -> (:ast_class);
-
-	<ast-add-class-concat>: (:ast_expr, :ast_class) -> ();
+	<ast-make-class-range>:        (:endpoint, :pos, :endpoint, :pos) -> (:ast_expr);
+	<ast-make-class-named>:        (:ast_class_id)          -> (:ast_expr);
 
 	<err-expected-term>;
 	!<err-expected-count>;
@@ -120,7 +115,7 @@
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();
 	<mark-count>: (:pos, :pos) -> ();
-	<mark-expr-class>: (:ast_expr, :pos, :pos) -> ();
+	<mark-expr>: (:ast_expr, :pos, :pos) -> ();
 
 	expr: () -> (node :ast_expr) [
 		literal: () -> (node :ast_expr) = {
@@ -180,14 +175,14 @@
 				&class = <ast-make-expr-invert>(class);
 			||
 				(c, !, !) = RANGE;
-				node = <ast-make-class-literal>(c);
-				<ast-add-class-concat>(class, node);
+				node = <ast-make-expr-literal>(c);
+				<ast-add-expr-alt>(class, node);
 			||
 				! = INVERT;
 
 				(c, !, !) = RANGE;
-				node = <ast-make-class-literal>(c);
-				<ast-add-class-concat>(class, node);
+				node = <ast-make-expr-literal>(c);
+				<ast-add-expr-alt>(class, node);
 
 				&class = <ast-make-expr-invert>(class);
 			||
@@ -198,23 +193,23 @@
 				/* XXX: This requires LL(2). */
 
 			/* 	(c, !, !) = RANGE;
-			 *	node = <ast-make-class-literal>(c);
-			 *  <ast-add-class-concat>(class, node);
+			 *	node = <ast-make-expr-literal>(c);
+			 *  <ast-add-expr-alt>(class, node);
 			 * || */
 				$;
 			};
 
-			class-literal: () -> (node :ast_class) = {
+			class-literal: () -> (node :ast_expr) = {
 				(c, !, !) = CHAR;
-				node = <ast-make-class-literal>(c);
+				node = <ast-make-expr-literal>(c);
 			};
 
-			class-named: () -> (node :ast_class) = {
+			class-named: () -> (node :ast_expr) = {
 				(id, !, !) = NAMED_CLASS;
 				node = <ast-make-class-named>(id);
 			};
 
-			class-range: () -> (node :ast_class) = {
+			class-range: () -> (node :ast_expr) = {
 				(ca, start, !) = CHAR;
 				a = <ast-range-endpoint-literal>(ca);
 
@@ -227,7 +222,7 @@
 				node = <ast-make-class-range>(a, start, z, end);
 			};
 
-			class-term: () -> (node :ast_class) = {
+			class-term: () -> (node :ast_expr) = {
 				node = class-range();
 			||
 				node = class-literal();
@@ -238,7 +233,7 @@
 			list-of-class-terms: (class :ast_expr) -> () = {
 				{
 					node = class-term();
-					<ast-add-class-concat>(class, node);
+					<ast-add-expr-alt>(class, node);
 				##
 					<err-expected-term>;
 				};
@@ -253,7 +248,7 @@
 		] = {
 			(open_start, open_end) = OPENGROUP;
 
-			class = <ast-make-expr-class>;
+			class = <ast-make-expr-alt>;
 			tmp = class;
 
 			class-head(&class);
@@ -264,7 +259,7 @@
 				(!, close_start, close_end) = CLOSEGROUP;
 				<mark-group>(open_start, open_end);
 
-				<mark-expr-class>(tmp, open_start, close_end);
+				<mark-expr>(tmp, open_start, close_end);
 
 				node = class;
 			||
@@ -285,7 +280,7 @@
 
 				! = INVERT;
 
-				mask = <ast-make-expr-class>;
+				mask = <ast-make-expr-alt>;
 				mask_tmp = mask;
 
 				/* TODO: does the grammar allow [abc^^xyz] to invert the mask here? */
@@ -305,9 +300,9 @@
 					close_end   = open_end;
 				};
 
-				/* TODO: would prefer to demark class and masl separately */
-				<mark-expr-class>(tmp, open_start, close_end);
-				<mark-expr-class>(mask_tmp, open_start, close_end);
+				/* TODO: would prefer to demark class and mask separately */
+				<mark-expr>(tmp, open_start, close_end);
+				<mark-expr>(mask_tmp, open_start, close_end);
 
 				/* TODO: store start, end for the subtract expr */
 				node = <ast-make-expr-subtract>(class, mask);
