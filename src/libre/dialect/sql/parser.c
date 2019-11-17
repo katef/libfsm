@@ -298,7 +298,7 @@ p_expr_C_Ccharacter_Hclass_C_Cclass_Hhead(flags flags, lex_state lex_state, act_
 			/* END OF ACTION: ast-make-literal */
 			/* BEGINNING OF ACTION: ast-add-alt */
 			{
-#line 782 "src/libre/parser.act"
+#line 813 "src/libre/parser.act"
 
 		if (!ast_add_expr_alt((*ZIclass), (ZInode))) {
 			goto ZL1;
@@ -399,7 +399,7 @@ ZL2_expr_C_Ccharacter_Hclass_C_Clist_Hof_Hclass_Hterms:;
 				}
 				/* BEGINNING OF ACTION: ast-add-alt */
 				{
-#line 782 "src/libre/parser.act"
+#line 813 "src/libre/parser.act"
 
 		if (!ast_add_expr_alt((ZIclass), (ZInode))) {
 			goto ZL4;
@@ -1197,7 +1197,7 @@ p_187(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__exp
 			/* END OF ACTION: ast-make-literal */
 			/* BEGINNING OF ACTION: ast-add-alt */
 			{
-#line 782 "src/libre/parser.act"
+#line 813 "src/libre/parser.act"
 
 		if (!ast_add_expr_alt((*ZIclass), (ZInode))) {
 			goto ZL1;
@@ -1208,14 +1208,45 @@ p_187(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__exp
 			/* END OF ACTION: ast-add-alt */
 			/* BEGINNING OF ACTION: ast-make-invert */
 			{
-#line 729 "src/libre/parser.act"
+#line 757 "src/libre/parser.act"
 
-		(*ZIclass) = ast_make_expr_invert((*ZIclass));
+		struct ast_expr *any;
+
+		/*
+		 * Here we're using an AST_EXPR_SUBTRACT node to implement inversion.
+		 *
+		 * Inversion is not quite equivalent to fsm_complement, because the
+		 * complement of a class FSM (which is structured always left-to-right
+		 * with no repetition) will effectively create .* anchors at the start
+		 * and end (because the class didn't contain those).
+		 *
+		 * If those were added to a class beforehand, then fsm_complement()
+		 * would suffice here (which would be attractive because it's much
+		 * cheaper than constructing two FSM and subtracting them). However
+		 * that would entail the assumption of having no transitions back to
+		 * the start and end nodes, or introducing guard epsilons.
+		 *
+		 * I'd like to avoid those guards. And, unfortunately we'd still need
+		 * to construct an intermediate FSM for fsm_complement() in any case.
+		 * (And less typical, but we do still need AST_EXPR_SUBTRACT for sake
+		 * of the SQL 2003 dialect anyway).
+		 *
+		 * So that idea doesn't satisfy my goal of avoiding intermediate FSM,
+		 * and so I'm going with the simpler thing here until we come across
+		 * a better idea.
+		 */
+
+		any = ast_make_expr_named(class_any_fsm);
+		if (any == NULL) {
+			goto ZL1;
+		}
+
+		(*ZIclass) = ast_make_expr_subtract(any, (*ZIclass));
 		if ((*ZIclass) == NULL) {
 			goto ZL1;
 		}
 	
-#line 1219 "src/libre/dialect/sql/parser.c"
+#line 1250 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-make-invert */
 		}
@@ -1224,14 +1255,45 @@ p_187(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__exp
 		{
 			/* BEGINNING OF ACTION: ast-make-invert */
 			{
-#line 729 "src/libre/parser.act"
+#line 757 "src/libre/parser.act"
 
-		(*ZIclass) = ast_make_expr_invert((*ZIclass));
+		struct ast_expr *any;
+
+		/*
+		 * Here we're using an AST_EXPR_SUBTRACT node to implement inversion.
+		 *
+		 * Inversion is not quite equivalent to fsm_complement, because the
+		 * complement of a class FSM (which is structured always left-to-right
+		 * with no repetition) will effectively create .* anchors at the start
+		 * and end (because the class didn't contain those).
+		 *
+		 * If those were added to a class beforehand, then fsm_complement()
+		 * would suffice here (which would be attractive because it's much
+		 * cheaper than constructing two FSM and subtracting them). However
+		 * that would entail the assumption of having no transitions back to
+		 * the start and end nodes, or introducing guard epsilons.
+		 *
+		 * I'd like to avoid those guards. And, unfortunately we'd still need
+		 * to construct an intermediate FSM for fsm_complement() in any case.
+		 * (And less typical, but we do still need AST_EXPR_SUBTRACT for sake
+		 * of the SQL 2003 dialect anyway).
+		 *
+		 * So that idea doesn't satisfy my goal of avoiding intermediate FSM,
+		 * and so I'm going with the simpler thing here until we come across
+		 * a better idea.
+		 */
+
+		any = ast_make_expr_named(class_any_fsm);
+		if (any == NULL) {
+			goto ZL1;
+		}
+
+		(*ZIclass) = ast_make_expr_subtract(any, (*ZIclass));
 		if ((*ZIclass) == NULL) {
 			goto ZL1;
 		}
 	
-#line 1235 "src/libre/dialect/sql/parser.c"
+#line 1297 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-make-invert */
 		}
@@ -1262,7 +1324,7 @@ p_191(flags flags, lex_state lex_state, act_state act_state, err err, t_char *ZI
 			goto ZL1;
 		}
 	
-#line 1266 "src/libre/dialect/sql/parser.c"
+#line 1328 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-make-literal */
 		}
@@ -1285,7 +1347,7 @@ p_191(flags flags, lex_state lex_state, act_state act_state, err err, t_char *ZI
 		(ZIa).type = AST_ENDPOINT_LITERAL;
 		(ZIa).u.literal.c = (*ZI188);
 	
-#line 1289 "src/libre/dialect/sql/parser.c"
+#line 1351 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-range-endpoint-literal */
 			/* BEGINNING OF EXTRACT: RANGE */
@@ -1296,7 +1358,7 @@ p_191(flags flags, lex_state lex_state, act_state act_state, err err, t_char *ZI
 		ZI129 = lex_state->lx.start;
 		ZI130   = lex_state->lx.end;
 	
-#line 1300 "src/libre/dialect/sql/parser.c"
+#line 1362 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF EXTRACT: RANGE */
 			ADVANCE_LEXER;
@@ -1314,7 +1376,7 @@ p_191(flags flags, lex_state lex_state, act_state act_state, err err, t_char *ZI
 
 		ZIcz = lex_state->buf.a[0];
 	
-#line 1318 "src/libre/dialect/sql/parser.c"
+#line 1380 "src/libre/dialect/sql/parser.c"
 				}
 				/* END OF EXTRACT: CHAR */
 				break;
@@ -1329,7 +1391,7 @@ p_191(flags flags, lex_state lex_state, act_state act_state, err err, t_char *ZI
 		(ZIz).type = AST_ENDPOINT_LITERAL;
 		(ZIz).u.literal.c = (ZIcz);
 	
-#line 1333 "src/libre/dialect/sql/parser.c"
+#line 1395 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-range-endpoint-literal */
 			/* BEGINNING OF ACTION: mark-range */
@@ -1339,12 +1401,12 @@ p_191(flags flags, lex_state lex_state, act_state act_state, err err, t_char *ZI
 		mark(&act_state->rangestart, &(*ZI189));
 		mark(&act_state->rangeend,   &(ZIend));
 	
-#line 1343 "src/libre/dialect/sql/parser.c"
+#line 1405 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: mark-range */
 			/* BEGINNING OF ACTION: ast-make-range */
 			{
-#line 739 "src/libre/parser.act"
+#line 770 "src/libre/parser.act"
 
 		struct ast_pos ast_start, ast_end;
 		unsigned char lower, upper;
@@ -1377,7 +1439,7 @@ p_191(flags flags, lex_state lex_state, act_state act_state, err err, t_char *ZI
 			goto ZL1;
 		}
 	
-#line 1381 "src/libre/dialect/sql/parser.c"
+#line 1443 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-make-range */
 		}
@@ -1411,7 +1473,7 @@ p_expr(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__ex
 			goto ZL1;
 		}
 	
-#line 1415 "src/libre/dialect/sql/parser.c"
+#line 1477 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: ast-make-alt */
 		p_expr_C_Clist_Hof_Halts (flags, lex_state, act_state, err, ZInode);
@@ -1432,7 +1494,7 @@ ZL1:;
 		}
 		goto ZL2;
 	
-#line 1436 "src/libre/dialect/sql/parser.c"
+#line 1498 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: err-expected-alts */
 		/* BEGINNING OF ACTION: ast-make-empty */
@@ -1444,7 +1506,7 @@ ZL1:;
 			goto ZL2;
 		}
 	
-#line 1448 "src/libre/dialect/sql/parser.c"
+#line 1510 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: ast-make-empty */
 	}
@@ -1473,13 +1535,13 @@ ZL2_expr_C_Clist_Hof_Hatoms:;
 		}
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 776 "src/libre/parser.act"
+#line 807 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIa))) {
 			goto ZL1;
 		}
 	
-#line 1483 "src/libre/dialect/sql/parser.c"
+#line 1545 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: ast-add-concat */
 		/* BEGINNING OF INLINE: 166 */
@@ -1522,13 +1584,13 @@ ZL2_expr_C_Clist_Hof_Halts:;
 		}
 		/* BEGINNING OF ACTION: ast-add-alt */
 		{
-#line 782 "src/libre/parser.act"
+#line 813 "src/libre/parser.act"
 
 		if (!ast_add_expr_alt((ZIalts), (ZIa))) {
 			goto ZL1;
 		}
 	
-#line 1532 "src/libre/dialect/sql/parser.c"
+#line 1594 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: ast-add-alt */
 		/* BEGINNING OF INLINE: 172 */
@@ -1560,7 +1622,7 @@ ZL1:;
 		}
 		goto ZL4;
 	
-#line 1564 "src/libre/dialect/sql/parser.c"
+#line 1626 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: err-expected-alts */
 	}
@@ -1603,7 +1665,7 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			goto ZL1;
 		}
 	
-#line 1607 "src/libre/dialect/sql/parser.c"
+#line 1669 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-make-atom-any */
 		}
@@ -1626,7 +1688,7 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 
 		(ZIf) = ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
 	
-#line 1630 "src/libre/dialect/sql/parser.c"
+#line 1692 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: atom-kleene */
 			/* BEGINNING OF ACTION: ast-make-atom-any */
@@ -1645,7 +1707,7 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			goto ZL1;
 		}
 	
-#line 1649 "src/libre/dialect/sql/parser.c"
+#line 1711 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-make-atom-any */
 			/* BEGINNING OF ACTION: ast-make-atom */
@@ -1658,7 +1720,7 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			goto ZL1;
 		}
 	
-#line 1662 "src/libre/dialect/sql/parser.c"
+#line 1724 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-make-atom */
 		}
@@ -1684,7 +1746,7 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			goto ZL1;
 		}
 	
-#line 1688 "src/libre/dialect/sql/parser.c"
+#line 1750 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-make-group */
 			switch (CURRENT_TERMINAL) {
@@ -1709,7 +1771,7 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			goto ZL1;
 		}
 	
-#line 1713 "src/libre/dialect/sql/parser.c"
+#line 1775 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-make-atom */
 		}
@@ -1735,7 +1797,7 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			goto ZL1;
 		}
 	
-#line 1739 "src/libre/dialect/sql/parser.c"
+#line 1801 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-make-atom */
 		}
@@ -1761,7 +1823,7 @@ p_expr_C_Catom(flags flags, lex_state lex_state, act_state act_state, err err, t
 			goto ZL1;
 		}
 	
-#line 1765 "src/libre/dialect/sql/parser.c"
+#line 1827 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-make-atom */
 		}
@@ -1807,7 +1869,7 @@ p_expr_C_Ccharacter_Hclass_C_Cclass_Hnamed(flags flags, lex_state lex_state, act
 		ZI120 = lex_state->lx.start;
 		ZI121   = lex_state->lx.end;
 	
-#line 1811 "src/libre/dialect/sql/parser.c"
+#line 1873 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF EXTRACT: NAMED_CLASS */
 			break;
@@ -1817,14 +1879,14 @@ p_expr_C_Ccharacter_Hclass_C_Cclass_Hnamed(flags flags, lex_state lex_state, act
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: ast-make-named */
 		{
-#line 769 "src/libre/parser.act"
+#line 800 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_named((ZIid));
 		if ((ZInode) == NULL) {
 			goto ZL1;
 		}
 	
-#line 1828 "src/libre/dialect/sql/parser.c"
+#line 1890 "src/libre/dialect/sql/parser.c"
 		}
 		/* END OF ACTION: ast-make-named */
 	}
@@ -1854,7 +1916,7 @@ p_expr_C_Calt(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			goto ZL1;
 		}
 	
-#line 1858 "src/libre/dialect/sql/parser.c"
+#line 1920 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-make-concat */
 			p_expr_C_Clist_Hof_Hatoms (flags, lex_state, act_state, err, ZInode);
@@ -1875,7 +1937,7 @@ p_expr_C_Calt(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			goto ZL1;
 		}
 	
-#line 1879 "src/libre/dialect/sql/parser.c"
+#line 1941 "src/libre/dialect/sql/parser.c"
 			}
 			/* END OF ACTION: ast-make-empty */
 		}
@@ -1893,7 +1955,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 929 "src/libre/parser.act"
+#line 960 "src/libre/parser.act"
 
 
 	static int
@@ -2036,6 +2098,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 2040 "src/libre/dialect/sql/parser.c"
+#line 2102 "src/libre/dialect/sql/parser.c"
 
 /* END OF FILE */

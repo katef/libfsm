@@ -281,7 +281,7 @@ ZL2_list_Hof_Hnodes:;
 		/* END OF ACTION: ast-make-literal */
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 776 "src/libre/parser.act"
+#line 807 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIl))) {
 			goto ZL1;
@@ -405,7 +405,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 929 "src/libre/parser.act"
+#line 960 "src/libre/parser.act"
 
 
 	static int
