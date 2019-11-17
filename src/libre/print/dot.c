@@ -129,11 +129,6 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		pp_iter(f, opt, n, n->u.subtract.b);
 		break;
 
-	case AST_EXPR_INVERT:
-		fprintf(f, "\tn%p [ label = <INVERT> ];\n", (void *) n);
-		pp_iter(f, opt, n, n->u.invert.e);
-		break;
-
 	case AST_EXPR_RANGE:
 		fprintf(f, "\tn%p [ label = <RANGE|", (void *) n);
 		print_endpoint(f, opt, &n->u.range.from);

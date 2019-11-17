@@ -30,7 +30,6 @@ enum ast_expr_type {
 	AST_EXPR_FLAGS,
 	AST_EXPR_ANCHOR,
 	AST_EXPR_SUBTRACT,
-	AST_EXPR_INVERT,
 	AST_EXPR_RANGE,
 	AST_EXPR_NAMED,
 /*	AST_EXPR_TYPE, XXX: not implemented */
@@ -160,10 +159,6 @@ struct ast_expr {
 		} subtract;
 
 		struct {
-			struct ast_expr *e;
-		} invert;
-
-		struct {
 			struct ast_endpoint from;
 			struct ast_pos start;
 			struct ast_endpoint to;
@@ -231,9 +226,6 @@ ast_make_expr_anchor(enum ast_anchor_type type);
 
 struct ast_expr *
 ast_make_expr_subtract(struct ast_expr *a, struct ast_expr *b);
-
-struct ast_expr *
-ast_make_expr_invert(struct ast_expr *e);
 
 int
 ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);

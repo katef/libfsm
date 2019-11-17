@@ -61,10 +61,6 @@ free_iter(struct ast_expr *n)
 		free_iter(n->u.subtract.b);
 		break;
 
-	case AST_EXPR_INVERT:
-		free_iter(n->u.invert.e);
-		break;
-
 	case AST_EXPR_CONCAT: {
 		size_t i;
 
@@ -374,22 +370,6 @@ ast_make_expr_subtract(struct ast_expr *a, struct ast_expr *b)
 	res->type = AST_EXPR_SUBTRACT;
 	res->u.subtract.a = a;
 	res->u.subtract.b = b;
-
-	return res;
-}
-
-struct ast_expr *
-ast_make_expr_invert(struct ast_expr *e)
-{
-	struct ast_expr *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_EXPR_INVERT;
-	res->u.invert.e = e;
 
 	return res;
 }

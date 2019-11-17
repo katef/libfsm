@@ -224,12 +224,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		pp_iter(f, opt, n->u.subtract.b);
 		break;
 
-	case AST_EXPR_INVERT:
-		assert(!"unimplemented");
-		fprintf(f, " - ");
-		pp_iter(f, opt, n->u.invert.e);
-		break;
-
 	case AST_EXPR_RANGE: {
 		if (n->u.range.from.type != AST_ENDPOINT_LITERAL
 		 || n->u.range.to.type != AST_ENDPOINT_LITERAL)

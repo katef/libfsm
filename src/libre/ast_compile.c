@@ -169,24 +169,6 @@ error:
 	return NULL;
 }
 
-/* TODO: centralise */
-static struct fsm *
-fsm_invert(struct fsm *fsm)
-{
-	struct fsm *any;
-
-	assert(fsm != NULL);
-
-	any = fsm_class(fsm_getoptions(fsm), class_any_fsm);
-	if (any == NULL) {
-		return NULL;
-	}
-
-	/* TODO: could be worthwhile to minimise or trim here, after subtraction */
-
-	return fsm_subtract(any, fsm);
-}
-
 static struct fsm *
 expr_compile(struct ast_expr *e, enum re_flags flags,
 	const struct fsm_options *opt, struct re_err *err)
@@ -305,10 +287,6 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 		/* XXX: not sure */
 		return 1;
 
-	case AST_EXPR_INVERT:
-		/* XXX: not sure */
-		return 1;
-
 	case AST_EXPR_REPEATED:
 		/* 0 and 1 don't have backward epsilon edges */
 		if (e->u.repeated.high <= 1) {
@@ -395,7 +373,6 @@ decide_linking(struct comp_env *env,
 		return LINK_TOP_DOWN;
 
 	case AST_EXPR_SUBTRACT:
-	case AST_EXPR_INVERT:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
 
@@ -849,38 +826,6 @@ comp_iter(struct comp_env *env,
 		 * while q is self-contained, which might work out better than doing it
 		 * in the larger FSM after merge. I'm not sure if it works out better
 		 * overall or not.
-		 */
-
-		if (!fsm_unionxy(env->fsm, q, x, y)) {
-			return 0;
-		}
-
-		break;
-	}
-
-	case AST_EXPR_INVERT: {
-		struct fsm *e;
-		struct fsm *q;
-		enum re_flags re_flags;
-
-		re_flags = env->re_flags;
-
-		/* wouldn't want to reverse twice! */
-		re_flags &= ~RE_REVERSE;
-
-		e = expr_compile(n->u.invert.e, re_flags,
-			fsm_getoptions(env->fsm), env->err);
-		if (e == NULL) {
-			return 0;
-		}
-
-		q = fsm_invert(e);
-		if (q == NULL) {
-			return 0;
-		}
-
-		/*
-		 * TODO: see rationale for subtraction
 		 */
 
 		if (!fsm_unionxy(env->fsm, q, x, y)) {
