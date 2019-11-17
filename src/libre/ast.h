@@ -154,12 +154,12 @@ struct ast_expr {
 			enum ast_anchor_type type;
 		} anchor;
 
-		struct ast_expr_subtract {
+		struct {
 			struct ast_expr *a;
 			struct ast_expr *b;
 		} subtract;
 
-		struct ast_expr_invert {
+		struct {
 			struct ast_expr *e;
 		} invert;
 
