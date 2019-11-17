@@ -5,7 +5,6 @@ SRC += src/libre/strerror.c
 SRC += src/libre/perror.c
 SRC += src/libre/ast.c
 SRC += src/libre/ast_analysis.c
-SRC += src/libre/ast_compile_expr.c
 SRC += src/libre/ast_compile.c
 SRC += src/libre/ac.c
 SRC += src/libre/re_strings.c
@@ -13,7 +12,7 @@ SRC += src/libre/re_strings.c
 # generated
 SRC += src/libre/class_name.c
 
-.for src in ${SRC:Msrc/libre/ast_compile_expr.c}
+.for src in ${SRC:Msrc/libre/ast_compile.c}
 CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor
