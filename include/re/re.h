@@ -63,10 +63,9 @@ enum re_errno {
 	RE_EBADDIALECT  =  2 | RE_MISC,
 	RE_EBADGROUP    =  3 | RE_MISC,
 
-	RE_EOVERLAP     =  0 | RE_MARK | RE_GROUP,
-	RE_ENEGRANGE    =  1 | RE_MARK | RE_GROUP,
-	RE_ENEGCOUNT    =  2 | RE_MARK | RE_GROUP,
-	RE_EDISTINCT    =  3 | RE_MARK | RE_GROUP,
+	RE_ENEGRANGE    =  0 | RE_MARK | RE_GROUP,
+	RE_ENEGCOUNT    =  1 | RE_MARK | RE_GROUP,
+	RE_EDISTINCT    =  2 | RE_MARK | RE_GROUP,
 
 	RE_EHEXRANGE    =  0 | RE_MARK | RE_ESC,
 	RE_EOCTRANGE    =  1 | RE_MARK | RE_ESC,
@@ -98,6 +97,8 @@ struct re_err {
 	struct re_pos start;
 	struct re_pos end;
 
+	/* XXX: these should be a union */
+
 	/* populated for RE_ECOUNTRANGE; ignored otherwise */
 	unsigned m;
 	unsigned n;
@@ -107,7 +108,6 @@ struct re_err {
 
 	/* populated for RE_GROUP; ignored otherwise */
 	char set[128];
-	char dup[128];
 };
 
 /*

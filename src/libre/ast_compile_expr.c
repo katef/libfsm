@@ -12,12 +12,16 @@
 #include <ctype.h>
 
 #include <fsm/fsm.h>
+#include <fsm/bool.h>
+#include <fsm/pred.h>
 
 #include <re/re.h>
 
 #include "class.h"
 #include "ast.h"
 #include "ast_compile.h"
+
+#include "libfsm/internal.h" /* XXX */
 
 #define LOG_LINKAGE 0
 
@@ -52,7 +56,7 @@ enum link_types {
 
 struct comp_env {
 	struct fsm *fsm;
-	enum re_flags flags;
+	enum re_flags re_flags;
 	struct re_err *err;
 
 	/*
@@ -76,6 +80,123 @@ comp_iter(struct comp_env *env,
 	struct fsm_state *x, struct fsm_state *y,
 	struct ast_expr *n);
 
+/* TODO: centralise as fsm_unionxy() perhaps */
+static int
+fsm_unionxy(struct fsm *a, struct fsm *b, struct fsm_state *x, struct fsm_state *y)
+{
+	struct fsm_state *sa, *sb;
+	struct fsm_state *end;
+	struct fsm *q;
+
+	assert(a != NULL);
+	assert(b != NULL);
+	assert(x != NULL);
+	assert(y != NULL);
+
+	sa = fsm_getstart(a);
+	sb = fsm_getstart(b);
+
+	end = fsm_collate(b, fsm_isend);
+	if (end == NULL) {
+		return 0;
+	}
+
+	/* TODO: centralise as fsm_clearends() or somesuch */
+	{
+		struct fsm_state *s;
+
+		for (s = b->sl; s != NULL; s = s->next) {
+			fsm_setend(b, s, 0);
+		}
+	}
+
+	q = fsm_merge(a, b);
+	assert(q != NULL);
+
+	fsm_setstart(q, sa);
+
+	if (!fsm_addedge_epsilon(q, x, sb)) {
+		return 0;
+	}
+
+	if (!fsm_addedge_epsilon(q, end, y)) {
+		return 0;
+	}
+
+	return 1;
+}
+
+static struct fsm*
+fsm_class(const struct fsm_options *opt, class_constructor *ctor)
+{
+	struct fsm_state *start, *end;
+	struct fsm *fsm;
+
+	assert(ctor != NULL);
+
+	fsm = fsm_new(opt);
+	if (fsm == NULL) {
+		goto error;
+	}
+
+	start = fsm_addstate(fsm);
+	if (start == NULL) {
+		goto error;
+	}
+
+	end = fsm_addstate(fsm);
+	if (end == NULL) {
+		goto error;
+	}
+
+	fsm_setstart(fsm, start);
+	fsm_setend(fsm, end, 1);
+
+	if (!ctor(fsm, start, end)) {
+		goto error;
+	}
+
+	fsm_setstart(fsm, start);
+	fsm_setend(fsm, end, 1);
+
+	return fsm;
+
+error:
+
+	fsm_free(fsm);
+
+	return NULL;
+}
+
+/* TODO: centralise */
+static struct fsm *
+fsm_invert(struct fsm *fsm)
+{
+	struct fsm *any;
+
+	assert(fsm != NULL);
+
+	any = fsm_class(fsm_getoptions(fsm), class_any_fsm);
+	if (any == NULL) {
+		return NULL;
+	}
+
+	/* TODO: could be worthwhile to minimise or trim here, after subtraction */
+
+	return fsm_subtract(any, fsm);
+}
+
+static struct fsm *
+expr_compile(struct ast_expr *e, enum re_flags flags,
+	const struct fsm_options *opt, struct re_err *err)
+{
+	struct ast ast;
+
+	ast.expr = e;
+
+	return ast_compile(&ast, flags, opt, err);
+}
+
 static int
 addedge_literal(struct comp_env *env,
 	struct fsm_state *from, struct fsm_state *to, char c)
@@ -85,7 +206,7 @@ addedge_literal(struct comp_env *env,
 	assert(from != NULL);
 	assert(to != NULL);
 	
-	if (env->flags & RE_ICASE) {
+	if (env->re_flags & RE_ICASE) {
 		if (!fsm_addedge_literal(fsm, from, to, tolower((unsigned char) c))) {
 			return 0;
 		}
@@ -113,7 +234,7 @@ intern_start_any_loop(struct comp_env *env)
 		return env->start_any_loop;
 	}
 
-	assert(~env->flags & RE_ANCHORED);
+	assert(~env->re_flags & RE_ANCHORED);
 	assert(env->start != NULL);
 		
 	loop = fsm_addstate(env->fsm);
@@ -145,7 +266,7 @@ intern_end_any_loop(struct comp_env *env)
 		return env->end_any_loop;
 	}
 
-	assert(~env->flags & RE_ANCHORED);
+	assert(~env->re_flags & RE_ANCHORED);
 	assert(env->end != NULL);
 		
 	loop = fsm_addstate(env->fsm);
@@ -172,11 +293,20 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 	switch (e->type) {
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_FLAGS:
-	case AST_EXPR_CLASS:
 	case AST_EXPR_ALT:
 	case AST_EXPR_ANCHOR:
+	case AST_EXPR_RANGE:
+	case AST_EXPR_NAMED:
 		/* These nodes cannot have a backward epsilon edge */
 		return 0;
+
+	case AST_EXPR_SUBTRACT:
+		/* XXX: not sure */
+		return 1;
+
+	case AST_EXPR_INVERT:
+		/* XXX: not sure */
+		return 1;
 
 	case AST_EXPR_REPEATED:
 		/* 0 and 1 don't have backward epsilon edges */
@@ -244,7 +374,7 @@ decide_linking(struct comp_env *env,
 	assert(n != NULL);
 	assert(env != NULL);
 
-	if ((env->flags & RE_ANCHORED)) {
+	if ((env->re_flags & RE_ANCHORED)) {
 		return LINK_TOP_DOWN;
 	}
 
@@ -263,14 +393,17 @@ decide_linking(struct comp_env *env,
 
 		return LINK_TOP_DOWN;
 
+	case AST_EXPR_SUBTRACT:
+	case AST_EXPR_INVERT:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CLASS:
 
 	case AST_EXPR_CONCAT:
 	case AST_EXPR_ALT:
 	case AST_EXPR_REPEATED:
 	case AST_EXPR_FLAGS:
+	case AST_EXPR_RANGE:
+	case AST_EXPR_NAMED:
 	case AST_EXPR_TOMBSTONE:
 		break;
 
@@ -281,8 +414,8 @@ decide_linking(struct comp_env *env,
 	switch (side) {
 	case LINK_START: {
 		const int start    = (n->type == AST_EXPR_ANCHOR && n->u.anchor.type == AST_ANCHOR_START);
-		const int first    = (n->flags & AST_EXPR_FLAG_FIRST) != 0;
-		const int nullable = (n->flags & AST_EXPR_FLAG_NULLABLE) != 0;
+		const int first    = (n->flags & AST_FLAG_FIRST) != 0;
+		const int nullable = (n->flags & AST_FLAG_NULLABLE) != 0;
 
 		(void) nullable;
 
@@ -308,8 +441,8 @@ decide_linking(struct comp_env *env,
 
 	case LINK_END: {
 		const int end      = (n->type == AST_EXPR_ANCHOR && n->u.anchor.type == AST_ANCHOR_END);
-		const int last     = (n->flags & AST_EXPR_FLAG_LAST) != 0;
-		const int nullable = (n->flags & AST_EXPR_FLAG_NULLABLE) != 0;
+		const int last     = (n->flags & AST_FLAG_LAST) != 0;
+		const int nullable = (n->flags & AST_FLAG_NULLABLE) != 0;
 
 		(void) nullable;
 
@@ -560,7 +693,7 @@ comp_iter(struct comp_env *env,
 		const size_t count  = n->u.concat.count;
 
 		curr_x = x;
-		saved  = env->flags;
+		saved  = env->re_flags;
 
 		assert(count >= 1);
 
@@ -578,14 +711,14 @@ comp_iter(struct comp_env *env,
 				 * restore when done evaluating the concat
 				 * node's right subtree.
 				 */
-				saved = env->flags;
+				saved = env->re_flags;
 				
 				/*
 				 * Note: in cases like `(?i-i)`, the negative is
 				 * required to take precedence.
 				 */
-				env->flags |=  curr->u.flags.pos;
-				env->flags &= ~curr->u.flags.neg;
+				env->re_flags |=  curr->u.flags.pos;
+				env->re_flags &= ~curr->u.flags.neg;
 			}
 
 			/*
@@ -610,7 +743,7 @@ comp_iter(struct comp_env *env,
 			}
 		}
 
-		env->flags = saved;
+		env->re_flags = saved;
 
 		break;
 	}
@@ -652,23 +785,6 @@ comp_iter(struct comp_env *env,
 		}
 		break;
 
-	case AST_EXPR_CLASS:
-		/*
-		 * XXX: this doesn't belong here; it's set as a fall-through.
-		 * Instead we should be populating .start/.end for each node
-		 * in the char class tree.
-		 */
-		if (env->err != NULL) {
-			env->err->start.byte = n->u.class.start.byte;
-			env->err->end.byte   = n->u.class.end.byte;
-		}
-
-		if (!ast_compile_class(n->u.class.class,
-			env->fsm, env->flags, env->err, x, y)) {
-			return 0;
-		}
-		break;
-
 	case AST_EXPR_GROUP:
 		RECURSE(x, y, n->u.group.e);
 		break;
@@ -699,6 +815,103 @@ comp_iter(struct comp_env *env,
 		}
 		break;
 
+	case AST_EXPR_SUBTRACT: {
+		struct fsm *a, *b;
+		struct fsm *q;
+		enum re_flags re_flags;
+
+		re_flags = env->re_flags;
+
+		/* wouldn't want to reverse twice! */
+		re_flags &= ~RE_REVERSE;
+
+		a = expr_compile(n->u.subtract.a, re_flags,
+			fsm_getoptions(env->fsm), env->err);
+		if (a == NULL) {
+			return 0;
+		}
+
+		b = expr_compile(n->u.subtract.b, re_flags,
+			fsm_getoptions(env->fsm), env->err);
+		if (b == NULL) {
+			fsm_free(a);
+			return 0;
+		}
+
+		q = fsm_subtract(a, b);
+		if (q == NULL) {
+			return 0;
+		}
+
+		/*
+		 * Subtraction produces quite a mess. We could trim or minimise here
+		 * while q is self-contained, which might work out better than doing it
+		 * in the larger FSM after merge. I'm not sure if it works out better
+		 * overall or not.
+		 */
+
+		if (!fsm_unionxy(env->fsm, q, x, y)) {
+			return 0;
+		}
+
+		break;
+	}
+
+	case AST_EXPR_INVERT: {
+		struct fsm *e;
+		struct fsm *q;
+		enum re_flags re_flags;
+
+		re_flags = env->re_flags;
+
+		/* wouldn't want to reverse twice! */
+		re_flags &= ~RE_REVERSE;
+
+		e = expr_compile(n->u.invert.e, re_flags,
+			fsm_getoptions(env->fsm), env->err);
+		if (e == NULL) {
+			return 0;
+		}
+
+		q = fsm_invert(e);
+		if (q == NULL) {
+			return 0;
+		}
+
+		/*
+		 * TODO: see rationale for subtraction
+		 */
+
+		if (!fsm_unionxy(env->fsm, q, x, y)) {
+			return 0;
+		}
+
+		break;
+	}
+
+	case AST_EXPR_RANGE: {
+		unsigned int i;
+
+		if (n->u.range.from.type != AST_ENDPOINT_LITERAL || n->u.range.to.type != AST_ENDPOINT_LITERAL) {
+			/* not yet supported */
+			return 0;
+		}
+
+		assert(n->u.range.from.u.literal.c <= n->u.range.to.u.literal.c);
+
+		for (i = n->u.range.from.u.literal.c; i <= n->u.range.to.u.literal.c; i++) {
+			LITERAL(x, y, i);
+		}
+
+		break;
+	}
+
+	case AST_EXPR_NAMED:
+		if (!n->u.named.ctor(env->fsm, x, y)) {
+			return 0;
+		}
+		break;
+
 	default:
 		assert(!"unreached");
 	}
@@ -714,7 +927,7 @@ comp_iter(struct comp_env *env,
 
 int
 ast_compile_expr(struct ast_expr *n,
-	struct fsm *fsm, enum re_flags flags,
+	struct fsm *fsm, enum re_flags re_flags,
 	struct re_err *err,
 	struct fsm_state *x, struct fsm_state *y)
 {
@@ -728,7 +941,7 @@ ast_compile_expr(struct ast_expr *n,
 	memset(&env, 0x00, sizeof(env));
 
 	env.fsm = fsm;
-	env.flags = flags;
+	env.re_flags = re_flags;
 	env.err = err;
 
 	env.start = x;

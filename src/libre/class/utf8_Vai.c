@@ -2,51 +2,50 @@
 
 #include LF_HEADER
 
+#include <assert.h>
 #include <stddef.h>
 
 #include <fsm/fsm.h>
 
-struct fsm *
-utf8_Vai_fsm(const struct fsm_options *opt)
+int
+utf8_Vai_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 {
-	struct fsm *fsm;
+	struct fsm_state *s[5];
 	size_t i;
 
-	struct fsm_state *s[5] = { 0 };
-
-	fsm = fsm_new(opt);
-	if (fsm == NULL) {
-		return NULL;
-	}
+	assert(x != NULL);
+	assert(y != NULL);
 
 	for (i = 0; i < 5; i++) {
+		if (i == 0) {
+			s[0] = x;
+			continue;
+		}
+
+		if (i == 4) {
+			s[4] = y;
+			continue;
+		}
+
 		s[i] = fsm_addstate(fsm);
 		if (s[i] == NULL) {
-			goto error;
+			return 0;
 		}
 	}
 
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 0xea)) { goto error; }
+	if (!fsm_addedge_literal(fsm, s[0], s[1], 0xea)) { return 0; }
 	for (i = 0x94; i <= 0x97; i++) {
-		if (!fsm_addedge_literal(fsm, s[1], s[2], i)) { goto error; }
+		if (!fsm_addedge_literal(fsm, s[1], s[2], i)) { return 0; }
 	}
-	if (!fsm_addedge_literal(fsm, s[1], s[3], 0x98)) { goto error; }
+	if (!fsm_addedge_literal(fsm, s[1], s[3], 0x98)) { return 0; }
 	for (i = 0x80; i <= 0xbf; i++) {
-		if (!fsm_addedge_literal(fsm, s[2], s[4], i)) { goto error; }
+		if (!fsm_addedge_literal(fsm, s[2], s[4], i)) { return 0; }
 	}
 	for (i = 0x80; i <= 0xab; i++) {
-		if (!fsm_addedge_literal(fsm, s[3], s[4], i)) { goto error; }
+		if (!fsm_addedge_literal(fsm, s[3], s[4], i)) { return 0; }
 	}
 
-	fsm_setstart(fsm, s[0]);
-	fsm_setend(fsm, s[4], 1);
 
-	return fsm;
-
-error:
-
-	fsm_free(fsm);
-
-	return NULL;
+	return 1;
 }
 

@@ -26,10 +26,13 @@ enum ast_expr_type {
 	AST_EXPR_LITERAL,
 	AST_EXPR_ANY,
 	AST_EXPR_REPEATED,
-	AST_EXPR_CLASS,
 	AST_EXPR_GROUP,
 	AST_EXPR_FLAGS,
 	AST_EXPR_ANCHOR,
+	AST_EXPR_SUBTRACT,
+	AST_EXPR_RANGE,
+	AST_EXPR_NAMED,
+/*	AST_EXPR_TYPE, XXX: not implemented */
 	AST_EXPR_TOMBSTONE
 };
 
@@ -49,64 +52,38 @@ enum ast_anchor_type {
 /*
  * Flags used during AST analysis for expression nodes:
  *
- * - AST_EXPR_FLAG_FIRST
+ * - AST_FLAG_FIRST
  *   The node can appear at the beginning of input,
  *   possibly preceded by other nullable nodes.
  *
- * - AST_EXPR_FLAG_LAST
+ * - AST_FLAG_LAST
  *   This node can appear at the end of input, possibly
  *   followed by nullable nodes.
  *
- * - AST_EXPR_FLAG_UNSATISFIABLE
+ * - AST_FLAG_UNSATISFIABLE
  *   The node caused the regex to become unsatisfiable.
  *
- * - AST_EXPR_FLAG_NULLABLE
+ * - AST_FLAG_NULLABLE
  *   The node is not always evaluated, such as nodes that
  *   are repeated at least 0 times.
  *
  * Not all are valid for all node types.
  */
-enum ast_expr_flags {
-	AST_EXPR_FLAG_FIRST         = 1 << 0,
-	AST_EXPR_FLAG_LAST          = 1 << 1,
-	AST_EXPR_FLAG_UNSATISFIABLE = 1 << 2,
-	AST_EXPR_FLAG_NULLABLE      = 1 << 3,
+enum ast_flags {
+	AST_FLAG_FIRST         = 1 << 0,
+	AST_FLAG_LAST          = 1 << 1,
+	AST_FLAG_UNSATISFIABLE = 1 << 2,
+	AST_FLAG_NULLABLE      = 1 << 3,
 
-	AST_EXPR_FLAG_NONE = 0x00
+	AST_FLAG_NONE = 0x00
 };
 
 #define NO_GROUP_ID ((unsigned)-1)
 
-/*
- * Flags for character class nodes:
- *
- * - AST_CLASS_FLAG_INVERTED
- *   The class should be negated, e.g. [^aeiou]
- *
- * - AST_CLASS_FLAG_MINUS
- *   Includes the `-` character, which isn't part of a range
- */
-enum ast_class_flags {
-	AST_CLASS_FLAG_INVERTED = 1 << 0,
-	AST_CLASS_FLAG_MINUS    = 1 << 1,
-
-	AST_CLASS_FLAG_NONE = 0x00
-};
-
-enum ast_class_type {
-	AST_CLASS_CONCAT,
-	AST_CLASS_LITERAL,
-	AST_CLASS_RANGE,
-	AST_CLASS_NAMED,
-/*	AST_CLASS_TYPE, XXX: not implemented */
-	AST_CLASS_FLAGS,
-	AST_CLASS_SUBTRACT
-};
-
 enum ast_endpoint_type {
 	AST_ENDPOINT_LITERAL,
 /*	AST_ENDPOINT_TYPE, XXX: not implemented */
-	AST_ENDPOINT_CLASS
+	AST_ENDPOINT_NAMED
 };
 
 struct ast_endpoint {
@@ -118,43 +95,7 @@ struct ast_endpoint {
 
 		struct {
 			class_constructor *ctor;
-		} class;
-	} u;
-};
-
-struct ast_class {
-	enum ast_class_type type;
-	union {
-		/* unordered set */
-		struct {
-			size_t count; /* used */
-			size_t alloc; /* allocated */
-			struct ast_class **n;
-		} concat;
-
-		struct {
-			unsigned char c;
-		} literal;
-
-		struct {
-			struct ast_endpoint from;
-			struct ast_pos start;
-			struct ast_endpoint to;
-			struct ast_pos end;
-		} range;
-
-		struct {
-			class_constructor *ctor;
 		} named;
-
-		struct {
-			enum ast_class_flags f;
-		} flags;
-
-		struct {
-			struct ast_class *ast;
-			struct ast_class *mask;
-		} subtract;
 	} u;
 };
 
@@ -171,7 +112,7 @@ struct ast_class {
  */
 struct ast_expr {
 	enum ast_expr_type type;
-	enum ast_expr_flags flags;
+	enum ast_flags flags;
 
 	union {
 		/* ordered sequence */
@@ -199,12 +140,6 @@ struct ast_expr {
 		} repeated;
 
 		struct {
-			struct ast_class *class;
-			struct ast_pos start;
-			struct ast_pos end;
-		} class;
-
-		struct {
 			struct ast_expr *e;
 			unsigned id;
 		} group;
@@ -217,7 +152,23 @@ struct ast_expr {
 		struct {
 			enum ast_anchor_type type;
 		} anchor;
-	} u;	
+
+		struct {
+			struct ast_expr *a;
+			struct ast_expr *b;
+		} subtract;
+
+		struct {
+			struct ast_endpoint from;
+			struct ast_pos start;
+			struct ast_endpoint to;
+			struct ast_pos end;
+		} range;
+
+		struct {
+			class_constructor *ctor;
+		} named;
+	} u;
 };
 
 struct ast {
@@ -265,10 +216,6 @@ struct ast_expr *
 ast_make_expr_with_count(struct ast_expr *e, struct ast_count count);
 
 struct ast_expr *
-ast_make_expr_class(struct ast_class *class,
-	const struct ast_pos *start, const struct ast_pos *end);
-
-struct ast_expr *
 ast_make_expr_group(struct ast_expr *e);
 
 struct ast_expr *
@@ -277,35 +224,18 @@ ast_make_expr_re_flags(enum re_flags pos, enum re_flags neg);
 struct ast_expr *
 ast_make_expr_anchor(enum ast_anchor_type type);
 
+struct ast_expr *
+ast_make_expr_subtract(struct ast_expr *a, struct ast_expr *b);
+
 int
 ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
 
-/*
- * Character classes
- */
-
-struct ast_class *
-ast_make_class_concat(void);
-
-struct ast_class *
-ast_make_class_literal(unsigned char c);
-
-struct ast_class *
-ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
+struct ast_expr *
+ast_make_expr_range(const struct ast_endpoint *from, struct ast_pos start,
 	const struct ast_endpoint *to, struct ast_pos end);
 
-struct ast_class *
-ast_make_class_named(class_constructor *ctor);
-
-struct ast_class *
-ast_make_class_flags(enum ast_class_flags flags);
-
-int
-ast_add_class_concat(struct ast_class *cat, struct ast_class *node);
-
-struct ast_class *
-ast_make_class_subtract(struct ast_class *ast,
-	struct ast_class *mask);
+struct ast_expr *
+ast_make_expr_named(class_constructor *ctor);
 
 /* XXX: exposed for sake of re(1) printing an ast;
  * it's not part of the <re/re.h> API proper */

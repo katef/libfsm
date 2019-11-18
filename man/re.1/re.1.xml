@@ -309,10 +309,6 @@ group (for dialects which have them) (rather than a "whole" regexp)
 						Erroring for ambiguities applies after multiple regexps are joined,
 						either by union or by concaternation (&s.opt;).</para>
 
-					<para>&u.opt; has no effect on the permissability of overlap in groups;
-						permissability of overlap depends on the regexp dialect.
-						See see &re_dialect.5re; for which dialects permit overlap in groups.</para>
-
 					<para>&u.opt; is implied by &n.opt;.</para>
 				</listitem>
 			</varlistentry>

@@ -52,74 +52,6 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 }
 
 static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt,
-	const void *parent, struct ast_class *n)
-{
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(n != NULL);
-
-	if (parent != NULL) {
-		fprintf(f, "\tn%p -> n%p;\n", parent, (void *) n);
-	}
-
-	fprintf(f, "\tn%p [ style = \"filled\", fillcolor = \"#eeeeee\" ];\n", (void *) n);
-
-	switch (n->type) {
-	case AST_CLASS_CONCAT: {
-		size_t i;
-
-		fprintf(f, "\tn%p [ label = <CLASS-CONCAT|%lu> ];\n",
-			(void *) n, (unsigned long)  n->u.concat.count);
-		for (i = 0; i < n->u.concat.count; i++) {
-			cc_pp_iter(f, opt, n, n->u.concat.n[i]);
-		}
-		break;
-	}
-
-	case AST_CLASS_LITERAL:
-		fprintf(f, "\tn%p [ label = <CLASS-LITERAL|", (void *) n);
-		dot_escputc_html(f, opt, n->u.literal.c);
-		fprintf(f, "> ];\n");
-		break;
-
-	case AST_CLASS_RANGE:
-		fprintf(f, "\tn%p [ label = <CLASS-RANGE|", (void *) n);
-		print_endpoint(f, opt, &n->u.range.from);
-		fprintf(f, " &ndash; ");
-		print_endpoint(f, opt, &n->u.range.to);
-		fprintf(f, "> ];\n");
-		break;
-
-	case AST_CLASS_NAMED:
-		/* abstract class names are internal strings, assumed to not need escaping */
-		fprintf(f, "\tn%p [ label = <CLASS-NAMED|%s> ];\n",
-			(void *) n, class_name(n->u.named.ctor));
-		break;
-
-	case AST_CLASS_FLAGS:
-		fprintf(f, "\tn%p [ label = <CLASS-FLAGS|", (void *) n);
-		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
-			fprintf(f, "^");
-		}
-		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
-			fprintf(f, "-");
-		}
-		fprintf(f, "> ];\n");
-		break;
-
-	case AST_CLASS_SUBTRACT:
-		fprintf(f, "\tn%p [ label = <{CLASS-SUBTRACT|{ast|mask}}> ];\n", (void *) n);
-		cc_pp_iter(f, opt, n, n->u.subtract.ast);
-		cc_pp_iter(f, opt, n, n->u.subtract.mask);
-		break;
-
-	default:
-		assert(!"unreached");
-	}
-}
-
-static void
 pp_iter(FILE *f, const struct fsm_options *opt,
 	const void *parent, struct ast_expr *n)
 {
@@ -178,11 +110,6 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		pp_iter(f, opt, n, n->u.repeated.e);
 		break;
 
-	case AST_EXPR_CLASS:
-		fprintf(f, "\tn%p [ label = <CLASS> ];\n", (void *) n);
-		cc_pp_iter(f, opt, n, n->u.class.class);
-		break;
-
 	case AST_EXPR_GROUP:
 		fprintf(f, "\tn%p [ label = <GROUP|#%u> ];\n", (void *) n,
 			n->u.group.id);
@@ -194,6 +121,26 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "\tn%p [ label = <ANCHOR|%c> ];\n",
 		    (void *) n,
 		    n->u.anchor.type == AST_ANCHOR_START ? '^' : '$');
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		fprintf(f, "\tn%p [ label = <{SUBTRACT|{a|b}}> ];\n", (void *) n);
+		pp_iter(f, opt, n, n->u.subtract.a);
+		pp_iter(f, opt, n, n->u.subtract.b);
+		break;
+
+	case AST_EXPR_RANGE:
+		fprintf(f, "\tn%p [ label = <RANGE|", (void *) n);
+		print_endpoint(f, opt, &n->u.range.from);
+		fprintf(f, " &ndash; ");
+		print_endpoint(f, opt, &n->u.range.to);
+		fprintf(f, "> ];\n");
+		break;
+
+	case AST_EXPR_NAMED:
+		/* abstract class names are internal strings, assumed to not need escaping */
+		fprintf(f, "\tn%p [ label = <NAMED|%s> ];\n",
+			(void *) n, class_name(n->u.named.ctor));
 		break;
 
 	case AST_EXPR_FLAGS:

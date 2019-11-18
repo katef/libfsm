@@ -81,7 +81,7 @@ src/libre/class/utf8_all.c:
 	echo -n '|\xF0[\x90-\xBF][\x80-\xBF]{2}'     >> ${BUILD}/${.TARGET:R}.re # planes 1-3
 	echo -n '|[\xF1-\xF3][\x80-\xBF]{3}'         >> ${BUILD}/${.TARGET:R}.re # planes 4-15
 	echo -n '|\xF4[\x80-\x8F][\x80-\xBF]{2}'     >> ${BUILD}/${.TARGET:R}.re
-	${RE} -pl api -e utf8_all_ -y ${BUILD}/src/libre/class/utf8_all.re \
+	${RE} -bpl api -e utf8_all_ -y ${BUILD}/src/libre/class/utf8_all.re \
 	> ${.TARGET}
 
 SRC += src/libre/class/utf8_all.c
@@ -116,7 +116,7 @@ CLASS_notnl     = [^\n]
 	notdigit nothspace notspace notvspace notword notnl
 
 src/libre/class/${class}.c:
-	${RE} -pl api -e class_${class}_ '${CLASS_${class}}' > ${.TARGET}
+	${RE} -bpl api -e class_${class}_ '${CLASS_${class}}' > ${.TARGET}
 
 SRC += src/libre/class/${class}.c
 

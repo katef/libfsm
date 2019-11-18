@@ -38,100 +38,6 @@ ast_new(void)
 	return res;
 }
 
-static void
-class_free_iter(struct ast_class *n)
-{
-	assert(n != NULL);
-
-	switch (n->type) {
-	case AST_CLASS_CONCAT: {
-		size_t i;
-
-		for (i = 0; i < n->u.concat.count; i++) {
-			class_free_iter(n->u.concat.n[i]);
-		}
-
-		free(n->u.concat.n);
-		break;
-	}
-
-	case AST_CLASS_SUBTRACT:
-		class_free_iter(n->u.subtract.ast);
-		class_free_iter(n->u.subtract.mask);
-		break;
-
-	case AST_CLASS_LITERAL:
-	case AST_CLASS_RANGE:
-	case AST_CLASS_NAMED:
-	case AST_CLASS_FLAGS:
-		break;
-
-	default:
-		assert(!"unreached");
-	}
-
-	free(n);	
-}
-
-static void
-free_iter(struct ast_expr *n)
-{
-	if (n == NULL) {
-		return;
-	}
-	
-	switch (n->type) {
-	case AST_EXPR_EMPTY:
-	case AST_EXPR_LITERAL:
-	case AST_EXPR_ANY:
-	case AST_EXPR_FLAGS:
-	case AST_EXPR_ANCHOR:
-		/* these nodes have no subnodes or dynamic allocation */
-		break;
-
-	case AST_EXPR_CONCAT: {
-		size_t i;
-
-		for (i = 0; i < n->u.concat.count; i++) {
-			free_iter(n->u.concat.n[i]);
-		}
-
-		free(n->u.concat.n);
-		break;
-	}
-
-	case AST_EXPR_ALT: {
-		size_t i;
-
-		for (i = 0; i < n->u.alt.count; i++) {
-			free_iter(n->u.alt.n[i]);
-		}
-		break;
-	}
-
-	case AST_EXPR_REPEATED:
-		free_iter(n->u.repeated.e);
-		break;
-
-	case AST_EXPR_CLASS:
-		class_free_iter(n->u.class.class);
-		break;
-
-	case AST_EXPR_GROUP:
-		free_iter(n->u.group.e);
-		break;
-
-	case AST_EXPR_TOMBSTONE:
-		/* do not free */
-		return;
-
-	default:
-		assert(!"unreached");
-	}
-
-	free(n);
-}
-
 void
 ast_free(struct ast *ast)
 {
@@ -167,7 +73,63 @@ ast_make_count(unsigned low, const struct ast_pos *start,
 void
 ast_expr_free(struct ast_expr *n)
 {
-	free_iter(n);
+	if (n == NULL) {
+		return;
+	}
+	
+	switch (n->type) {
+	case AST_EXPR_EMPTY:
+	case AST_EXPR_LITERAL:
+	case AST_EXPR_ANY:
+	case AST_EXPR_FLAGS:
+	case AST_EXPR_ANCHOR:
+	case AST_EXPR_RANGE:
+	case AST_EXPR_NAMED:
+		/* these nodes have no subnodes or dynamic allocation */
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		ast_expr_free(n->u.subtract.a);
+		ast_expr_free(n->u.subtract.b);
+		break;
+
+	case AST_EXPR_CONCAT: {
+		size_t i;
+
+		for (i = 0; i < n->u.concat.count; i++) {
+			ast_expr_free(n->u.concat.n[i]);
+		}
+
+		free(n->u.concat.n);
+		break;
+	}
+
+	case AST_EXPR_ALT: {
+		size_t i;
+
+		for (i = 0; i < n->u.alt.count; i++) {
+			ast_expr_free(n->u.alt.n[i]);
+		}
+		break;
+	}
+
+	case AST_EXPR_REPEATED:
+		ast_expr_free(n->u.repeated.e);
+		break;
+
+	case AST_EXPR_GROUP:
+		ast_expr_free(n->u.group.e);
+		break;
+
+	case AST_EXPR_TOMBSTONE:
+		/* do not free */
+		return;
+
+	default:
+		assert(!"unreached");
+	}
+
+	free(n);
 }
 
 struct ast_expr *
@@ -340,26 +302,6 @@ ast_make_expr_with_count(struct ast_expr *e, struct ast_count count)
 }
 
 struct ast_expr *
-ast_make_expr_class(struct ast_class *class,
-    const struct ast_pos *start, const struct ast_pos *end)
-{
-	struct ast_expr *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return res;
-	}
-
-	res->type = AST_EXPR_CLASS;
-	res->u.class.class = class;
-
-	memcpy(&res->u.class.start, start, sizeof *start);
-	memcpy(&res->u.class.end, end, sizeof *end);
-
-	return res;
-}
-
-struct ast_expr *
 ast_make_expr_group(struct ast_expr *e)
 {
 	struct ast_expr *res;
@@ -409,78 +351,28 @@ ast_make_expr_anchor(enum ast_anchor_type type)
 	return res;
 }
 
-/*
- * Character classes
- */
-
-struct ast_class *
-ast_make_class_concat(void)
+struct ast_expr *
+ast_make_expr_subtract(struct ast_expr *a, struct ast_expr *b)
 {
-	struct ast_class *res;
+	struct ast_expr *res;
 
 	res = calloc(1, sizeof *res);
 	if (res == NULL) {
 		return NULL;
 	}
 
-	res->type = AST_CLASS_CONCAT;
-	res->u.concat.alloc = 8; /* arbitrary initial value */
-	res->u.concat.count = 0;
-
-	res->u.concat.n = malloc(res->u.concat.alloc * sizeof *res->u.concat.n);
-	if (res->u.concat.n == NULL) {
-		free(res);
-		return NULL;
-	}
+	res->type = AST_EXPR_SUBTRACT;
+	res->u.subtract.a = a;
+	res->u.subtract.b = b;
 
 	return res;
 }
 
-int
-ast_add_class_concat(struct ast_class *cat, struct ast_class *node)
-{
-	assert(cat != NULL);
-	assert(cat->type == AST_CLASS_CONCAT);
-
-	if (cat->u.concat.count == cat->u.concat.alloc) {
-		void *tmp;
-
-		tmp = realloc(cat->u.concat.n, cat->u.concat.alloc * 2 * sizeof *cat->u.concat.n);
-		if (tmp == NULL) {
-			return 0;
-		}
-
-		cat->u.concat.alloc *= 2;
-		cat->u.concat.n = tmp;
-	}
-
-	cat->u.concat.n[cat->u.concat.count] = node;
-	cat->u.concat.count++;
-
-	return 1;
-}
-
-struct ast_class *
-ast_make_class_literal(unsigned char c)
-{
-	struct ast_class *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_CLASS_LITERAL;
-	res->u.literal.c = c;
-
-	return res;
-}
-
-struct ast_class *
-ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
+struct ast_expr *
+ast_make_expr_range(const struct ast_endpoint *from, struct ast_pos start,
     const struct ast_endpoint *to, struct ast_pos end)
 {
-	struct ast_class *res;
+	struct ast_expr *res;
 
 	res = calloc(1, sizeof *res);
 	if (res == NULL) {
@@ -490,7 +382,7 @@ ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
 	assert(from != NULL);
 	assert(to != NULL);
 
-	res->type = AST_CLASS_RANGE;
+	res->type = AST_EXPR_RANGE;
 	res->u.range.from = *from;
 	res->u.range.start = start;
 	res->u.range.to = *to;
@@ -499,52 +391,18 @@ ast_make_class_range(const struct ast_endpoint *from, struct ast_pos start,
 	return res;
 }
 
-struct ast_class *
-ast_make_class_named(class_constructor *ctor)
+struct ast_expr *
+ast_make_expr_named(class_constructor *ctor)
 {
-	struct ast_class *res;
+	struct ast_expr *res;
 
 	res = calloc(1, sizeof *res);
 	if (res == NULL) {
 		return NULL;
 	}
 
-	res->type = AST_CLASS_NAMED;
+	res->type = AST_EXPR_NAMED;
 	res->u.named.ctor = ctor;
-
-	return res;
-}
-
-struct ast_class *
-ast_make_class_flags(enum ast_class_flags flags)
-{
-	struct ast_class *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_CLASS_FLAGS;
-	res->u.flags.f = flags;
-
-	return res;
-}
-
-struct ast_class *
-ast_make_class_subtract(struct ast_class *ast,
-    struct ast_class *mask)
-{
-	struct ast_class *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_CLASS_SUBTRACT;
-	res->u.subtract.ast = ast;
-	res->u.subtract.mask = mask;
 
 	return res;
 }

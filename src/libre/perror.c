@@ -93,16 +93,6 @@ re_perror(enum re_dialect dialect, const struct re_err *err,
 
 	/* TODO: escape */
 	switch (err->e) {
-	case RE_EOVERLAP:
-		if (0 == strcmp(err->set, err->dup)) {
-			fprintf(stderr, ": overlap of [%s]",
-				err->dup);
-		} else {
-			fprintf(stderr, ": overlap of [%s]; minimal coverage is [%s]",
-				err->dup, err->set);
-		}
-		break;
-
 	case RE_ENEGRANGE:
 		fprintf(stderr, " [%s]", err->set);
 		break;

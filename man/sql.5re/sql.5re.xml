@@ -27,7 +27,7 @@
 
 	<refsection>
 <para>
-- SQL99's regexps
+- SQL 2003's regexps
 
 - implicitly anchored
 

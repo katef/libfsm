@@ -28,8 +28,9 @@ atomic(struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_CLASS:
 	case AST_EXPR_GROUP:
+	case AST_EXPR_RANGE:
+	case AST_EXPR_NAMED:
 		return 1;
 
 	case AST_EXPR_REPEATED:
@@ -123,71 +124,6 @@ print_grouped(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 }
 
 static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
-{
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(n != NULL);
-
-	switch (n->type) {
-	case AST_CLASS_CONCAT: {
-		size_t i;
-
-		for (i = 0; i < n->u.concat.count; i++) {
-			cc_pp_iter(f, opt, n->u.concat.n[i]);
-
-			if (i + 1 < n->u.concat.count) {
-				fprintf(f, " / ");
-			}
-		}
-		break;
-	}
-
-	case AST_CLASS_LITERAL:
-		abnf_escputc(f, opt, n->u.literal.c);
-		break;
-
-	case AST_CLASS_RANGE: {
-		if (n->u.range.from.type != AST_ENDPOINT_LITERAL
-		 || n->u.range.to.type != AST_ENDPOINT_LITERAL)
-		{
-			assert(!"unimplemented");
-			abort();
-		}
-
-		fprintf(f, "%%x%02X-%02X",
-			(unsigned char) n->u.range.from.u.literal.c,
-			(unsigned char) n->u.range.to.u.literal.c);
-		}
-		break;
-
-	case AST_CLASS_NAMED:
-		print_class_name(f, class_name(n->u.named.ctor));
-		break;
-
-	case AST_CLASS_FLAGS:
-		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
-			fprintf(f, "<SOL>");
-		}
-		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
-			fprintf(f, "<->"); /* XXX */
-		}
-		break;
-
-	case AST_CLASS_SUBTRACT:
-		assert(!"unimplemented");
-		abort();
-
-		cc_pp_iter(f, opt, n->u.subtract.ast);
-		cc_pp_iter(f, opt, n->u.subtract.mask);
-		break;
-
-	default:
-		assert(!"unreached");
-	}
-}
-
-static void
 pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 {
 	assert(f != NULL);
@@ -269,12 +205,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_CLASS:
-		fprintf(f, "(");
-		cc_pp_iter(f, opt, n->u.class.class);
-		fprintf(f, ")");
-		break;
-
 	case AST_EXPR_GROUP:
 		fprintf(f, "(");
 		pp_iter(f, opt, n->u.group.e);
@@ -285,6 +215,31 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		assert(n->u.anchor.type == AST_ANCHOR_START
 		    || n->u.anchor.type == AST_ANCHOR_END);
 		fprintf(f, "%s", n->u.anchor.type == AST_ANCHOR_START ? "<^>" : "<$>");
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		assert(!"unimplemented");
+		pp_iter(f, opt, n->u.subtract.a);
+		fprintf(f, " - ");
+		pp_iter(f, opt, n->u.subtract.b);
+		break;
+
+	case AST_EXPR_RANGE: {
+		if (n->u.range.from.type != AST_ENDPOINT_LITERAL
+		 || n->u.range.to.type != AST_ENDPOINT_LITERAL)
+		{
+			assert(!"unimplemented");
+			abort();
+		}
+
+		fprintf(f, "%%x%02X-%02X",
+			(unsigned char) n->u.range.from.u.literal.c,
+			(unsigned char) n->u.range.to.u.literal.c);
+		}
+		break;
+
+	case AST_EXPR_NAMED:
+		print_class_name(f, class_name(n->u.named.ctor));
 		break;
 
 	case AST_EXPR_FLAGS:

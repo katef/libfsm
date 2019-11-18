@@ -266,7 +266,6 @@
 where a and z are character literals or numeric escapes sequences
 ^ to invert
 trailing -, but not leading -?
-overlapping not permitted
 </para>
 	</refsection>
 

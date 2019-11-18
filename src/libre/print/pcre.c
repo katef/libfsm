@@ -26,7 +26,6 @@ atomic(struct ast_expr *n)
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
 	case AST_EXPR_REPEATED:
-	case AST_EXPR_CLASS:
 	case AST_EXPR_GROUP:
 		return 1;
 
@@ -137,57 +136,6 @@ print_class_name(FILE *f, const char *abstract_name)
 }
 
 static void
-cc_pp_iter(FILE *f, const struct fsm_options *opt, struct ast_class *n)
-{
-	assert(f != NULL);
-	assert(opt != NULL);
-	assert(n != NULL);
-
-	switch (n->type) {
-	case AST_CLASS_CONCAT: {
-		size_t i;
-
-		for (i = 0; i < n->u.concat.count; i++) {
-			cc_pp_iter(f, opt, n->u.concat.n[i]);
-		}
-		break;
-	}
-
-	case AST_CLASS_LITERAL:
-		pcre_escputc(f, opt, n->u.literal.c);
-		break;
-
-	case AST_CLASS_RANGE:
-		print_endpoint(f, opt, &n->u.range.from);
-		fprintf(f, "-");
-		print_endpoint(f, opt, &n->u.range.to);
-		break;
-
-	case AST_CLASS_NAMED:
-		print_class_name(f, class_name(n->u.named.ctor));
-		break;
-
-	case AST_CLASS_FLAGS:
-		if (n->u.flags.f & AST_CLASS_FLAG_INVERTED) {
-			fprintf(f, "^");
-		}
-		if (n->u.flags.f & AST_CLASS_FLAG_MINUS) {
-			fprintf(f, "-");
-		}
-		break;
-
-	case AST_CLASS_SUBTRACT:
-		fprintf(f, "\tn%p [ label = <{CLASS-SUBTRACT|{ast|mask}}> ];\n", (void *) n);
-		cc_pp_iter(f, opt, n->u.subtract.ast);
-		cc_pp_iter(f, opt, n->u.subtract.mask);
-		break;
-
-	default:
-		assert(!"unreached");
-	}
-}
-
-static void
 pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 {
 	assert(f != NULL);
@@ -280,12 +228,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_CLASS:
-		fprintf(f, "[");
-		cc_pp_iter(f, opt, n->u.class.class);
-		fprintf(f, "]");
-		break;
-
 	case AST_EXPR_GROUP:
 		fprintf(f, "(");
 		pp_iter(f, opt, n->u.group.e);
@@ -295,6 +237,27 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 	case AST_EXPR_ANCHOR:
 		assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
 		fprintf(f, "%s", n->u.anchor.type == AST_ANCHOR_START ? "^" : "$");
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		assert(!"unimplemented");
+		pp_iter(f, opt, n->u.subtract.a);
+		fprintf(f, "-");
+		pp_iter(f, opt, n->u.subtract.b);
+		break;
+
+	case AST_EXPR_RANGE:
+		fprintf(f, "[");
+		print_endpoint(f, opt, &n->u.range.from);
+		fprintf(f, "-");
+		print_endpoint(f, opt, &n->u.range.to);
+		fprintf(f, "]");
+		break;
+
+	case AST_EXPR_NAMED:
+		fprintf(f, "[");
+		print_class_name(f, class_name(n->u.named.ctor));
+		fprintf(f, "]");
 		break;
 
 	case AST_EXPR_FLAGS:
