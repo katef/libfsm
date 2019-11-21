@@ -22,8 +22,8 @@ utf8_Coptic_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 			continue;
 		}
 
-		if (i == 5) {
-			s[5] = y;
+		if (i == 3) {
+			s[3] = y;
 			continue;
 		}
 
@@ -36,18 +36,18 @@ utf8_Coptic_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 	if (!fsm_addedge_literal(fsm, s[0], s[1], 0xcf)) { return 0; }
 	if (!fsm_addedge_literal(fsm, s[0], s[2], 0xe2)) { return 0; }
 	for (i = 0xa2; i <= 0xaf; i++) {
-		if (!fsm_addedge_literal(fsm, s[1], s[5], i)) { return 0; }
+		if (!fsm_addedge_literal(fsm, s[1], s[3], i)) { return 0; }
 	}
-	if (!fsm_addedge_literal(fsm, s[2], s[3], 0xb2)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[2], s[4], 0xb3)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[2], s[4], 0xb2)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[2], s[5], 0xb3)) { return 0; }
 	for (i = 0x80; i <= 0xbf; i++) {
-		if (!fsm_addedge_literal(fsm, s[3], s[5], i)) { return 0; }
+		if (!fsm_addedge_literal(fsm, s[4], s[3], i)) { return 0; }
 	}
 	for (i = 0x80; i <= 0xb3; i++) {
-		if (!fsm_addedge_literal(fsm, s[4], s[5], i)) { return 0; }
+		if (!fsm_addedge_literal(fsm, s[5], s[3], i)) { return 0; }
 	}
 	for (i = 0xb9; i <= 0xbf; i++) {
-		if (!fsm_addedge_literal(fsm, s[4], s[5], i)) { return 0; }
+		if (!fsm_addedge_literal(fsm, s[5], s[3], i)) { return 0; }
 	}
 
 

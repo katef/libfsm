@@ -39,16 +39,16 @@ utf8_Zs_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 	if (!fsm_addedge_literal(fsm, s[0], s[4], 0xe2)) { return 0; }
 	if (!fsm_addedge_literal(fsm, s[0], s[5], 0xe3)) { return 0; }
 	if (!fsm_addedge_literal(fsm, s[2], s[1], 0xa0)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[3], s[6], 0x9a)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[4], s[7], 0x80)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[4], s[8], 0x81)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[5], s[6], 0x80)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[6], s[1], 0x80)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[3], s[8], 0x9a)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[4], s[6], 0x80)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[4], s[7], 0x81)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[5], s[8], 0x80)) { return 0; }
 	for (i = 0x80; i <= 0x8a; i++) {
-		if (!fsm_addedge_literal(fsm, s[7], s[1], i)) { return 0; }
+		if (!fsm_addedge_literal(fsm, s[6], s[1], i)) { return 0; }
 	}
-	if (!fsm_addedge_literal(fsm, s[7], s[1], 0xaf)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[8], s[1], 0x9f)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[6], s[1], 0xaf)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[7], s[1], 0x9f)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[8], s[1], 0x80)) { return 0; }
 
 
 	return 1;

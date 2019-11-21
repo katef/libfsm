@@ -37,22 +37,22 @@ utf8_Tangut_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 	if (!fsm_addedge_literal(fsm, s[1], s[2], 0x96)) { return 0; }
 	if (!fsm_addedge_literal(fsm, s[1], s[3], 0x97)) { return 0; }
 	if (!fsm_addedge_literal(fsm, s[1], s[4], 0x98)) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[2], s[6], 0xbf)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[2], s[5], 0xbf)) { return 0; }
 	for (i = 0x80; i <= 0xbf; i++) {
-		if (!fsm_addedge_literal(fsm, s[3], s[5], i)) { return 0; }
+		if (!fsm_addedge_literal(fsm, s[3], s[6], i)) { return 0; }
 	}
 	for (i = 0x80; i <= 0x9e; i++) {
-		if (!fsm_addedge_literal(fsm, s[4], s[5], i)) { return 0; }
+		if (!fsm_addedge_literal(fsm, s[4], s[6], i)) { return 0; }
 	}
 	for (i = 0xa0; i <= 0xaa; i++) {
-		if (!fsm_addedge_literal(fsm, s[4], s[5], i)) { return 0; }
+		if (!fsm_addedge_literal(fsm, s[4], s[6], i)) { return 0; }
 	}
 	if (!fsm_addedge_literal(fsm, s[4], s[7], 0x9f)) { return 0; }
 	if (!fsm_addedge_literal(fsm, s[4], s[8], 0xab)) { return 0; }
+	if (!fsm_addedge_literal(fsm, s[5], s[9], 0xa0)) { return 0; }
 	for (i = 0x80; i <= 0xbf; i++) {
-		if (!fsm_addedge_literal(fsm, s[5], s[9], i)) { return 0; }
+		if (!fsm_addedge_literal(fsm, s[6], s[9], i)) { return 0; }
 	}
-	if (!fsm_addedge_literal(fsm, s[6], s[9], 0xa0)) { return 0; }
 	for (i = 0x80; i <= 0xac; i++) {
 		if (!fsm_addedge_literal(fsm, s[7], s[9], i)) { return 0; }
 	}
