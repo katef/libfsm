@@ -102,13 +102,13 @@ print_class_name(FILE *f, const char *abstract_name)
 		name = pcre_class_name(abstract_name);
 		if (name != NULL) {
 			/* the name here is an internal string, and assumed to not need escaping */
-			fputs(name, f);
+			fprintf(f, "[%s]", name);
 			return;
 		}
 
 		for (i = 0; i < sizeof a / sizeof *a; i++) {
-			if (0 == strcmp(a[i].name, name)) {
-				fputs(a[i].name, f);
+			if (0 == strcmp(a[i].name, abstract_name)) {
+				fprintf(f, "%s", a[i].syntax);
 				return;
 			}
 		}
@@ -255,9 +255,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 
 	case AST_EXPR_NAMED:
-		fprintf(f, "[");
 		print_class_name(f, class_name(n->u.named.ctor));
-		fprintf(f, "]");
 		break;
 
 	case AST_EXPR_FLAGS:
