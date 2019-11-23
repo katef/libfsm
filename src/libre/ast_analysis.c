@@ -599,22 +599,10 @@ flatten(struct ast_expr *n)
 			}
 		}
 
-		/* remove empty children; these have no semantic effect */
-		for (i = 0; i < n->u.alt.count; ) {
-			if (n->u.alt.n[i]->type == AST_EXPR_EMPTY) {
-				ast_expr_free(n->u.alt.n[i]);
-
-				if (i + 1 < n->u.alt.count) {
-					memmove(&n->u.alt.n[i], &n->u.alt.n[i + 1],
-						(n->u.alt.count - i - 1) * sizeof n->u.alt.n[i]);
-				}
-
-				n->u.alt.count--;
-				continue;
-			}
-
-			i++;
-		}
+		/*
+		 * Empty children do have a semantic effect; for dialects with anchors,
+		 * they affect the anchoring. So we cannot remove those in general here.
+		 */
 
 		if (n->u.alt.count == 0) {
 			free(n->u.alt.n);
