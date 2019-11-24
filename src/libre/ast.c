@@ -22,6 +22,28 @@
 static struct ast_expr the_tombstone;
 struct ast_expr *ast_expr_tombstone = &the_tombstone;
 
+int
+ast_endpoint_equal(const struct ast_endpoint *a, const struct ast_endpoint *b)
+{
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (a->type != b->type) {
+		return 0;
+	}
+
+	switch (a->type) {
+	case AST_ENDPOINT_LITERAL:
+		return a->u.literal.c == b->u.literal.c;
+
+	case AST_ENDPOINT_NAMED:
+		return a->u.named.ctor == b->u.named.ctor;
+
+	default:
+		assert(!"unreached");
+	}
+}
+
 struct ast *
 ast_new(void)
 {
@@ -130,6 +152,156 @@ ast_expr_free(struct ast_expr *n)
 	}
 
 	free(n);
+}
+
+int
+ast_expr_equal(const struct ast_expr *a, const struct ast_expr *b)
+{
+	if (a == NULL && b == NULL) {
+		return 1;
+	}
+
+	if (a == NULL || b == NULL) {
+		return 0;
+	}
+
+	if (a->type != b->type) {
+		return 0;
+	}
+	
+	switch (a->type) {
+	case AST_EXPR_EMPTY:
+		return 1;
+
+	case AST_EXPR_CONCAT: {
+		size_t i;
+
+		if (a->u.concat.count != b->u.concat.count) {
+			return 0;
+		}
+
+		for (i = 0; i < a->u.concat.count; i++) {
+			if (!ast_expr_equal(a->u.concat.n[i], b->u.concat.n[i])) {
+				return 0;
+			}
+		}
+
+		return 1;
+	}
+
+	case AST_EXPR_ALT: {
+		size_t i;
+
+		if (a->u.alt.count != b->u.alt.count) {
+			return 0;
+		}
+
+		for (i = 0; i < a->u.alt.count; i++) {
+			if (!ast_expr_equal(a->u.alt.n[i], b->u.alt.n[i])) {
+				return 0;
+			}
+		}
+
+		return 1;
+	}
+
+	case AST_EXPR_LITERAL:
+		return a->u.literal.c == b->u.literal.c;
+
+	case AST_EXPR_REPEATED:
+		if (a->u.repeated.low != b->u.repeated.low) {
+			return 0;
+		}
+
+		if (a->u.repeated.high != b->u.repeated.high) {
+			return 0;
+		}
+
+		if (!ast_expr_equal(a->u.repeated.e, b->u.repeated.e)) {
+			return 0;
+		}
+
+		return 1;
+
+	case AST_EXPR_GROUP:
+		if (a->u.group.id != b->u.group.id) {
+			return 0;
+		}
+
+		if (!ast_expr_equal(a->u.group.e, b->u.group.e)) {
+			return 0;
+		}
+
+		return 1;
+
+	case AST_EXPR_FLAGS:
+		if (a->u.flags.pos != b->u.flags.pos) {
+			return 0;
+		}
+
+		if (a->u.flags.neg != b->u.flags.neg) {
+			return 0;
+		}
+
+		return 1;
+
+	case AST_EXPR_ANCHOR:
+		if (a->u.anchor.type != b->u.anchor.type) {
+			return 0;
+		}
+
+		return 1;
+
+	case AST_EXPR_SUBTRACT:
+		if (!ast_expr_equal(a->u.subtract.a, b->u.subtract.b)) {
+			return 0;
+		}
+
+		return 1;
+
+	case AST_EXPR_RANGE:
+		if (!ast_endpoint_equal(&a->u.range.from, &b->u.range.from)) {
+			return 0;
+		}
+
+		if (!ast_endpoint_equal(&a->u.range.to, &b->u.range.to)) {
+			return 0;
+		}
+
+		/* we intentionally ignore .start and .end pos values for finding equality;
+		 * these are considered just annotation metatdata for error reporting */
+
+		return 1;
+
+	case AST_EXPR_NAMED:
+		if (a->u.named.ctor != b->u.named.ctor) {
+			return 0;
+		}
+
+		return 1;
+
+	case AST_EXPR_TOMBSTONE:
+		return 1;
+
+	default:
+		assert(!"unreached");
+	}
+}
+
+int
+ast_contains_expr(const struct ast_expr *node, struct ast_expr * const *a, size_t n)
+{
+	size_t i;
+
+	assert(a != NULL);
+
+	for (i = 0; i < n; i++) {
+		if (ast_expr_equal(node, a[i])) {
+			return 1;
+		}
+	}
+
+	return 0;
 }
 
 struct ast_expr *
