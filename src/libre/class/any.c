@@ -33,11 +33,9 @@ class_any_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 		}
 	}
 
-	for (i = 0x00; i <= 0x30; i++) {
+	for (i = 0x00; i <= 0xff; i++) {
 		if (!fsm_addedge_literal(fsm, s[0], s[1], i)) { return 0; }
 	}
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'F')) { return 0; }
-	if (!fsm_addedge_literal(fsm, s[0], s[1], 'x')) { return 0; }
 
 
 	return 1;
