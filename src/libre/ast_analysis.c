@@ -692,6 +692,25 @@ flatten(struct ast_expr *n)
 			i++;
 		}
 
+		/* de-duplicate children */
+		if (n->u.alt.count > 1) {
+			for (i = 0; i < n->u.alt.count; ) {
+				if (ast_contains_expr(n->u.alt.n[i], n->u.alt.n + i + 1, n->u.alt.count - i - 1)) {
+					ast_expr_free(n->u.concat.n[i]);
+
+					if (i + 1 < n->u.concat.count) {
+						memmove(&n->u.concat.n[i], &n->u.concat.n[i + 1],
+							(n->u.concat.count - i - 1) * sizeof *n->u.concat.n);
+					}
+
+					n->u.concat.count--;
+					continue;
+				}
+
+				i++;
+			}
+		}
+
 		if (n->u.alt.count == 0) {
 			free(n->u.alt.n);
 			n->type = AST_EXPR_EMPTY;

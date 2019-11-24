@@ -187,12 +187,21 @@ struct ast_count
 ast_make_count(unsigned low, const struct ast_pos *start,
 	unsigned high, const struct ast_pos *end);
 
+int
+ast_endpoint_equal(const struct ast_endpoint *a, const struct ast_endpoint *b);
+
 /*
  * Expressions
  */
 
 void
 ast_expr_free(struct ast_expr *n);
+
+int
+ast_expr_equal(const struct ast_expr *a, const struct ast_expr *b);
+
+int
+ast_contains_expr(const struct ast_expr *node, struct ast_expr * const *a, size_t n);
 
 struct ast_expr *
 ast_make_expr_empty(void);
