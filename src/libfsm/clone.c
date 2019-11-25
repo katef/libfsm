@@ -95,8 +95,6 @@ fsm_clone(const struct fsm *fsm)
 		}
 	}
 
-	fsm_clear_tmp(new);
-
 	return new;
 }
 

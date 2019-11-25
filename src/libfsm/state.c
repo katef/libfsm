@@ -31,6 +31,7 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 	}
 
 	new->end = 0;
+	new->visited = 0;
 	new->opaque = NULL;
 
 	/*
@@ -41,8 +42,6 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 	 */
 	new->epsilons = NULL;
 	new->edges    = NULL;
-
-	fsm_state_clear_tmp(new);
 
 	if (fsm->statecount == (fsm_state_t) -1) {
 		errno = ENOMEM;
@@ -73,12 +72,6 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 	fsm->statecount++;
 
 	return 1;
-}
-
-void
-fsm_state_clear_tmp(struct fsm_state *state)
-{
-	memset(&state->tmp, 0x00, sizeof(state->tmp));
 }
 
 void

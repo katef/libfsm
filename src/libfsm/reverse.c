@@ -226,8 +226,6 @@ fsm_reverse(struct fsm *fsm)
 
 	state_set_free(endset);
 
-	fsm_clear_tmp(fsm);
-
 	fsm_move(fsm, new);
 
 	return 1;

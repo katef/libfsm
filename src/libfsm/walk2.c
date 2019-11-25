@@ -316,7 +316,7 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		return NULL;
 	}
 
-	assert(!data->new->states[p->comb]->tmp.visited);
+	assert(!data->new->states[p->comb]->visited);
 
 	if (!tuple_set_add(data->states, p)) {
 		return NULL;
@@ -356,12 +356,12 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	assert(qc < data->new->statecount);
 
 	/* fast exit if we've already visited the combined state */
-	if (data->new->states[qc]->tmp.visited) {
+	if (data->new->states[qc]->visited) {
 		return 1;
 	}
 
 	/* mark combined state as visited */
-	data->new->states[qc]->tmp.visited = 1;
+	data->new->states[qc]->visited = 1;
 
 	/*
 	 * fsm_walk2_edges walks the edges of two graphs, generating combined
@@ -456,7 +456,7 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 				 * depth-first traversal of the graph, but only traverse
 				 * if the state has not yet been visited
 				 */
-				if (!data->new->states[dst->comb]->tmp.visited) {
+				if (!data->new->states[dst->comb]->visited) {
 					if (!fsm_walk2_edges(data, a, b, dst)) {
 						return 0;
 					}
@@ -515,7 +515,7 @@ only_b:
 				 * depth-first traversal of the graph, but only traverse
 				 * if the state has not yet been visited
 				 */
-				if (!data->new->states[dst->comb]->tmp.visited) {
+				if (!data->new->states[dst->comb]->visited) {
 					if (!fsm_walk2_edges(data, a, b, dst)) {
 						return 0;
 					}
@@ -553,7 +553,7 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 		 * if both A and B lack start states,
 		 * the result will be empty
 		 */
-		goto done;
+		goto empty;
 	}
 
 	if (!have_b) {
@@ -566,7 +566,7 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 		 * !have_b and combined states cannot be ONLYA,
 		 * so the result will be empty
 		 */
-		goto done;
+		goto empty;
 	}
 
 	if (!have_a) {
@@ -579,7 +579,7 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 		 * !have_a and combined states cannot be ONLYB, so the
 		 * result will be empty
 		 */
-		goto done;
+		goto empty;
 	}
 
 	data.edgemask = edgemask;
@@ -603,23 +603,23 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 	assert(tup0->a == sa);
 	assert(tup0->b == sb);
 	assert(tup0->comb < data.new->statecount);
-	assert(!data.new->states[tup0->comb]->tmp.visited); /* comb not yet been traversed */
+	assert(!data.new->states[tup0->comb]->visited); /* comb not yet been traversed */
 
 	fsm_setstart(data.new, tup0->comb);
 	if (!fsm_walk2_edges(&data, a, b, tup0)) {
 		goto error;
 	}
 
-done:
-
 	new = data.new;
 	data.new = NULL; /* avoid freeing new FSM */
-
-	fsm_clear_tmp(new);
 
 	fsm_walk2_data_free(a, &data);
 
 	return new;
+
+empty:
+
+	return fsm_new(a->opt);
 
 error:
 

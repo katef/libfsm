@@ -37,7 +37,7 @@ mark_states(struct fsm *fsm)
 	if (!queue_push(q, start)) {
 		goto cleanup;
 	}
-	fsm->states[start]->reachable = 1;
+	fsm->states[start]->visited = 1;
 
 	for (;;) {
 		const struct fsm_edge *e;
@@ -53,7 +53,7 @@ mark_states(struct fsm *fsm)
 			fsm_state_t es;
 
 			for (state_set_reset(fsm->states[s]->epsilons, &state_iter); state_set_next(&state_iter, &es); ) {
-				if (fsm->states[es]->reachable) {
+				if (fsm->states[es]->visited) {
 					continue;
 				}
 
@@ -61,7 +61,7 @@ mark_states(struct fsm *fsm)
 					goto cleanup;
 				}
 
-				fsm->states[es]->reachable = 1;
+				fsm->states[es]->visited = 1;
 			}
 		}
 
@@ -73,7 +73,7 @@ mark_states(struct fsm *fsm)
 			fsm_state_t es;
 
 			for (state_set_reset(e->sl, &state_iter); state_set_next(&state_iter, &es); ) {
-				if (fsm->states[es]->reachable) {
+				if (fsm->states[es]->visited) {
 					continue;
 				}
 
@@ -81,7 +81,7 @@ mark_states(struct fsm *fsm)
 					goto cleanup;
 				}
 
-				fsm->states[es]->reachable = 1;
+				fsm->states[es]->visited = 1;
 			}
 		}
 	}
@@ -123,7 +123,7 @@ sweep_states(struct fsm *fsm)
 	 */
 	i = 0;
 	while (i < fsm->statecount) {
-		if (fsm->states[i]->reachable) {
+		if (fsm->states[i]->visited) {
 			i++;
 			continue;
 		}
@@ -149,7 +149,7 @@ fsm_trim(struct fsm *fsm)
 	assert(fsm != NULL);
 
 	for (i = 0; i < fsm->statecount; i++) {
-		fsm->states[i]->reachable = 0;
+		fsm->states[i]->visited = 0;
 	}
 
 	if (!mark_states(fsm)) {
