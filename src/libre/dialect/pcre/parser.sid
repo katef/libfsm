@@ -43,6 +43,8 @@
 
 	OPENSUB; OPENCAPTURE; CLOSE;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
+	OPENGROUPCB: () -> (:pos, :pos);
+	OPENGROUPINVCB: () -> (:pos, :pos);
 	OPENCOUNT: () -> (:pos, :pos); CLOSECOUNT: () -> (:pos, :pos);
 
 	INVERT: () -> (:char);
@@ -86,6 +88,7 @@
 
 	<ast-make-empty>:        ()                       -> (:ast_expr);
 	<ast-make-literal>:      (:char)                  -> (:ast_expr);
+	<ast-make-literal-cbrak>:()                       -> (:ast_expr);
 	<ast-make-concat>:       ()                       -> (:ast_expr);
 	<ast-make-alt>:          ()                       -> (:ast_expr);
 	<ast-make-any>:          ()                       -> (:ast_expr);
@@ -240,12 +243,32 @@
 			};
 
 		] = {
-			(start, !) = OPENGROUP;
+			{
+				(start, !) = OPENGROUP;
 
-			node = <ast-make-alt>;
-			tmp = node;
+				node = <ast-make-alt>;
+				tmp = node;
 
-			class-head(&node);
+				class-head(&node);
+			||
+				(start, !) = OPENGROUPCB;
+
+				node = <ast-make-alt>;
+				tmp  = node;
+				
+				node1 = <ast-make-literal-cbrak>();
+				<ast-add-alt>(tmp, node1);
+			||
+				(start, !) = OPENGROUPINVCB;
+
+				node = <ast-make-alt>;
+				tmp  = node;
+
+				&node = <ast-make-invert>(node);
+				node1 = <ast-make-literal-cbrak>();
+				<ast-add-alt>(tmp, node1);
+			};
+
 			list-of-class-terms(tmp);
 
 			{
