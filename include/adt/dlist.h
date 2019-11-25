@@ -11,20 +11,20 @@ struct fsm_alloc;
 struct fsm_state;
 
 struct dlist {
-	struct fsm_state *state;
+	fsm_state_t state;
 	unsigned int done:1;
 	struct dlist *next;
 };
 
 struct dlist *
 dlist_push(const struct fsm_alloc *a,
-	struct dlist **list, struct fsm_state *state);
+	struct dlist **list, fsm_state_t state);
 
 struct dlist *
 dlist_nextnotdone(struct dlist *list);
 
 int
-dlist_contains(const struct dlist *list, const struct fsm_state *state);
+dlist_contains(const struct dlist *list, fsm_state_t state);
 
 void
 dlist_free(const struct fsm_alloc *a, struct dlist *list);

@@ -274,8 +274,8 @@ addmatch(struct match **head, int i, const char *s)
 }
 
 static void
-carryopaque(struct fsm *src_fsm, const struct fsm_state **src_set, size_t n,
-	struct fsm *dst_fsm, struct fsm_state *dst_state)
+carryopaque(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
+	struct fsm *dst_fsm, fsm_state_t dst_state)
 {
 	struct match *matches;
 	struct match *m;
@@ -284,7 +284,6 @@ carryopaque(struct fsm *src_fsm, const struct fsm_state **src_set, size_t n,
 	assert(src_fsm != NULL);
 	assert(src_set != NULL);
 	assert(n > 0);
-	assert(dst_state != NULL);
 	assert(dst_fsm != NULL);
 	assert(fsm_isend(dst_fsm, dst_state));
 	assert(fsm_getopaque(dst_fsm, dst_state) == NULL);
@@ -333,14 +332,13 @@ error:
 }
 
 static void
-printexample(FILE *f, const struct fsm *fsm, const struct fsm_state *state)
+printexample(FILE *f, const struct fsm *fsm, fsm_state_t state)
 {
 	char buf[256]; /* TODO */
 	int n;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
-	assert(state != NULL);
 
 	n = fsm_example(fsm, state, buf, sizeof buf);
 	if (-1 == n) {
@@ -652,7 +650,7 @@ main(int argc, char *argv[])
 			}
 
 			{
-				struct fsm_state *s;
+				size_t s;
 
 				/*
 				 * Attach this mapping to each end state for this regexp.
@@ -660,7 +658,7 @@ main(int argc, char *argv[])
 				 * in the same regexp, and keep an argc-sized array of pointers to free().
 				 * XXX: then use fsm_setendopaque() here.
 				 */
-				for (s = new->sl; s != NULL; s = s->next) {
+				for (s = 0; s < new->statecount; s++) {
 					if (fsm_isend(new, s)) {
 						struct match *matches;
 
@@ -725,8 +723,8 @@ main(int argc, char *argv[])
 	}
 
 	if (!ambig) {
-		const struct fsm_state *s;
 		struct fsm *dfa;
+		size_t s;
 
 		dfa = fsm_clone(fsm);
 		if (dfa == NULL) {
@@ -745,7 +743,7 @@ main(int argc, char *argv[])
 			opt.carryopaque = NULL;
 		}
 
-		for (s = dfa->sl; s != NULL; s = s->next) {
+		for (s = 0; s < dfa->statecount; s++) {
 			const struct match *matches;
 
 			if (!fsm_isend(dfa, s)) {
@@ -807,9 +805,9 @@ main(int argc, char *argv[])
 	}
 
 	if (example) {
-		struct fsm_state *s;
+		fsm_state_t s;
 
-		for (s = fsm->sl; s != NULL; s = s->next) {
+		for (s = 0; s < fsm->statecount; s++) {
 			if (!fsm_isend(fsm, s)) {
 				continue;
 			}
@@ -871,14 +869,15 @@ main(int argc, char *argv[])
 			 * a pattern to the end state), like lx(1) does */
 
 			for (i = 0; i < argc; i++) {
-				const struct fsm_state *state;
+				fsm_state_t state;
+				int e;
 
 				if (xfiles) {
 					FILE *f;
 
 					f = xopen(argv[0]);
 
-					state = fsm_exec(fsm, fsm_fgetc, f);
+					e = fsm_exec(fsm, fsm_fgetc, f, &state);
 
 					fclose(f);
 				} else {
@@ -886,10 +885,10 @@ main(int argc, char *argv[])
 
 					s = argv[i];
 
-					state = fsm_exec(fsm, fsm_sgetc, &s);
+					e = fsm_exec(fsm, fsm_sgetc, &s, &state);
 				}
 
-				if (state == NULL) {
+				if (e != 1) {
 					r |= 1;
 					continue;
 				}

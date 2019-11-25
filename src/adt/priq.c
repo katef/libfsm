@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <fsm/fsm.h>
+
 #include <adt/alloc.h>
 #include <adt/priq.h>
 
@@ -84,13 +86,12 @@ priq_update(struct priq **priq, struct priq *s, unsigned int cost)
 
 struct priq *
 priq_push(const struct fsm_alloc *a, struct priq **priq,
-	struct fsm_state *state, unsigned int cost)
+	fsm_state_t state, unsigned int cost)
 {
 	struct priq *new;
 	struct priq **p;
 
 	assert(priq != NULL);
-	assert(state != NULL);
 
 	/*
 	 * This is more expensive than it could be; I'm
@@ -120,11 +121,9 @@ priq_push(const struct fsm_alloc *a, struct priq **priq,
 }
 
 struct priq *
-priq_find(struct priq *priq, const struct fsm_state *state)
+priq_find(struct priq *priq, fsm_state_t state)
 {
 	struct priq *p;
-
-	assert(state != NULL);
 
 	for (p = priq; p != NULL; p = p->next) {
 		if (p->state == state) {

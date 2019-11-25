@@ -1,13 +1,10 @@
 #ifndef ADT_STATEARRAY_H
 #define ADT_STATEARRAY_H
 
-#include <stddef.h>
-
-struct fsm_state;
 struct state_set;
 
 struct state_array {
-	struct fsm_state **states;
+	fsm_state_t *states;
 	size_t len;
 	size_t cap;
 };
@@ -16,7 +13,7 @@ void
 state_array_clear(struct state_array *arr);
 
 struct state_array *
-state_array_add(struct state_array *arr, struct fsm_state *st);
+state_array_add(struct state_array *arr, fsm_state_t state);
 
 struct state_array *
 state_array_copy(struct state_array *dst, const struct state_array *src);

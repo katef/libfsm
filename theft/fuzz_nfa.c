@@ -156,7 +156,8 @@ prop_nfa_operations_should_not_impact_matching(struct theft *t,
 
 	/* First pass -- note what, if anything, matches */
 	for (size_t i = 0; i < literals->count; i++) {
-		struct fsm_state *st;
+		fsm_state_t st;
+		int e;
 
 		if (verbosity > 0) {
 			fprintf(stderr, "%zd / %zd...\n", i, literals->count);
@@ -166,9 +167,9 @@ prop_nfa_operations_should_not_impact_matching(struct theft *t,
 			continue;
 		}
 
-		st = wrap_fsm_exec(nfa, &literals->pairs[i]);
+		e = wrap_fsm_exec(nfa, &literals->pairs[i], &st);
 
-		match[i] = (st != NULL);
+		match[i] = (e == 1);
 	}
 
 	if (!apply_ops(env, nfa_spec, nfa)) {
@@ -189,12 +190,13 @@ prop_nfa_operations_should_not_impact_matching(struct theft *t,
 
 	/* Second pass -- note if anything's match status changed */
 	for (size_t i = 0; i < literals->count; i++) {
-		struct fsm_state *st;
+		fsm_state_t	st;
 		bool nmatch;
+		int e;
 
-		st = wrap_fsm_exec(nfa, &literals->pairs[i]);
+		e = wrap_fsm_exec(nfa, &literals->pairs[i], &st);
 
-		nmatch = (st != NULL);
+		nmatch = (e == 1);
 		if (match[i] != nmatch) {
 			if (verbosity > 0) {
 				fprintf(stdout, "FAIL string %zd: match was %d, now %d\n",
@@ -335,7 +337,7 @@ const struct fsm_options test_nfa_fsm_options = {
 static struct fsm *
 nfa_of_spec(struct nfa_spec *spec, bool shuffle)
 {
-	struct fsm_state *states[spec->state_count];
+	fsm_state_t states[spec->state_count];
 	struct fsm *nfa;
 
 	nfa = fsm_new(&test_nfa_fsm_options);
@@ -345,8 +347,7 @@ nfa_of_spec(struct nfa_spec *spec, bool shuffle)
 
 	/* First pass, create states */
 	for (size_t i = 0; i < spec->state_count; i++) {
-		states[i] = fsm_addstate(nfa);
-		if (states[i] == NULL) {
+		if (!fsm_addstate(nfa, &states[i])) {
 			return NULL;
 		}
 
@@ -371,7 +372,7 @@ nfa_of_spec(struct nfa_spec *spec, bool shuffle)
 
 		for (size_t ei = 0; ei < s->edge_count; ei++) {
 			struct nfa_edge *e = &s->edges[pv ? pv[ei] : ei];
-			struct fsm_state *to = states[e->to % spec->state_count];
+			fsm_state_t to = states[e->to % spec->state_count];
 			switch (e->t) {
 			case NFA_EDGE_EPSILON:
 				if (!fsm_addedge_epsilon(nfa,

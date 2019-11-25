@@ -28,8 +28,8 @@
 	#include "lexer.h"
 	#include "parser.h"
 
-	typedef char *             string;
-	typedef struct fsm_state * state;
+	typedef char *      string;
+	typedef fsm_state_t state;
 
 	struct act_state {
 		int lex_tok;
@@ -44,7 +44,7 @@
 
 	struct act_statelist {
 		char *id;
-		struct fsm_state *state;
+		fsm_state_t state;
 		struct act_statelist *next;
 	};
 
@@ -270,7 +270,7 @@ ZL2_edges:;
 			}
 			/* END OF INLINE: edges */
 		}
-		/* UNREACHED */
+		/*UNREACHED*/
 	case (ERROR_TERMINAL):
 		return;
 	default:
@@ -363,7 +363,6 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 
 		for (p = act_state->sl; p != NULL; p = p->next) {
 			assert(p->id != NULL);
-			assert(p->state != NULL);
 
 			if (0 == strcmp(p->id, (ZIa))) {
 				(ZIx) = p->state;
@@ -386,8 +385,7 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 				exit(EXIT_FAILURE);
 			}
 
-			(ZIx) = fsm_addstate(fsm);
-			if ((ZIx) == NULL) {
+			if (!fsm_addstate(fsm, &(ZIx))) {
 				perror("fsm_addstate");
 				exit(EXIT_FAILURE);
 			}
@@ -398,7 +396,7 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 			act_state->sl = new;
 		}
 	
-#line 402 "src/fsm/parser.c"
+#line 400 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: add-state */
 		/* BEGINNING OF ACTION: add-state */
@@ -411,7 +409,6 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 
 		for (p = act_state->sl; p != NULL; p = p->next) {
 			assert(p->id != NULL);
-			assert(p->state != NULL);
 
 			if (0 == strcmp(p->id, (ZIb))) {
 				(ZIy) = p->state;
@@ -434,8 +431,7 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 				exit(EXIT_FAILURE);
 			}
 
-			(ZIy) = fsm_addstate(fsm);
-			if ((ZIy) == NULL) {
+			if (!fsm_addstate(fsm, &(ZIy))) {
 				perror("fsm_addstate");
 				exit(EXIT_FAILURE);
 			}
@@ -446,25 +442,25 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 			act_state->sl = new;
 		}
 	
-#line 450 "src/fsm/parser.c"
+#line 446 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: add-state */
 		/* BEGINNING OF ACTION: free */
 		{
-#line 251 "src/fsm/parser.act"
+#line 245 "src/fsm/parser.act"
 
 		free((ZIa));
 	
-#line 459 "src/fsm/parser.c"
+#line 455 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: free */
 		/* BEGINNING OF ACTION: free */
 		{
-#line 251 "src/fsm/parser.act"
+#line 245 "src/fsm/parser.act"
 
 		free((ZIb));
 	
-#line 468 "src/fsm/parser.c"
+#line 464 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: free */
 		/* BEGINNING OF INLINE: 44 */
@@ -475,14 +471,14 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 					ADVANCE_LEXER;
 					/* BEGINNING OF ACTION: add-edge-any */
 					{
-#line 276 "src/fsm/parser.act"
+#line 270 "src/fsm/parser.act"
 
 		if (!fsm_addedge_any(fsm, (ZIx), (ZIy))) {
 			perror("fsm_addedge_any");
 			exit(EXIT_FAILURE);
 		}
 	
-#line 486 "src/fsm/parser.c"
+#line 482 "src/fsm/parser.c"
 					}
 					/* END OF ACTION: add-edge-any */
 				}
@@ -498,14 +494,14 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 					}
 					/* BEGINNING OF ACTION: add-edge-literal */
 					{
-#line 269 "src/fsm/parser.act"
+#line 263 "src/fsm/parser.act"
 
 		if (!fsm_addedge_literal(fsm, (ZIx), (ZIy), (ZIc))) {
 			perror("fsm_addedge_literal");
 			exit(EXIT_FAILURE);
 		}
 	
-#line 509 "src/fsm/parser.c"
+#line 505 "src/fsm/parser.c"
 					}
 					/* END OF ACTION: add-edge-literal */
 				}
@@ -514,14 +510,14 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 				{
 					/* BEGINNING OF ACTION: add-edge-epsilon */
 					{
-#line 283 "src/fsm/parser.act"
+#line 277 "src/fsm/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			perror("fsm_addedge_epsilon");
 			exit(EXIT_FAILURE);
 		}
 	
-#line 525 "src/fsm/parser.c"
+#line 521 "src/fsm/parser.c"
 					}
 					/* END OF ACTION: add-edge-epsilon */
 				}
@@ -532,11 +528,11 @@ p_edges_C_Cedge(fsm fsm, lex_state lex_state, act_state act_state)
 			{
 				/* BEGINNING OF ACTION: err-expected-trans */
 				{
-#line 296 "src/fsm/parser.act"
+#line 290 "src/fsm/parser.act"
 
 		err_expected(lex_state, "transition");
 	
-#line 540 "src/fsm/parser.c"
+#line 536 "src/fsm/parser.c"
 				}
 				/* END OF ACTION: err-expected-trans */
 			}
@@ -580,11 +576,11 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 				{
 					/* BEGINNING OF ACTION: err-expected-start */
 					{
-#line 304 "src/fsm/parser.act"
+#line 298 "src/fsm/parser.act"
 
 		err_expected(lex_state, "'start:'");
 	
-#line 588 "src/fsm/parser.c"
+#line 584 "src/fsm/parser.c"
 					}
 					/* END OF ACTION: err-expected-start */
 				}
@@ -606,7 +602,7 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 610 "src/fsm/parser.c"
+#line 606 "src/fsm/parser.c"
 						}
 						/* END OF EXTRACT: IDENT */
 						break;
@@ -632,7 +628,6 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 
 		for (p = act_state->sl; p != NULL; p = p->next) {
 			assert(p->id != NULL);
-			assert(p->state != NULL);
 
 			if (0 == strcmp(p->id, (ZIn))) {
 				(ZIs) = p->state;
@@ -655,8 +650,7 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 				exit(EXIT_FAILURE);
 			}
 
-			(ZIs) = fsm_addstate(fsm);
-			if ((ZIs) == NULL) {
+			if (!fsm_addstate(fsm, &(ZIs))) {
 				perror("fsm_addstate");
 				exit(EXIT_FAILURE);
 			}
@@ -667,27 +661,25 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 			act_state->sl = new;
 		}
 	
-#line 671 "src/fsm/parser.c"
+#line 665 "src/fsm/parser.c"
 			}
 			/* END OF ACTION: add-state */
 			/* BEGINNING OF ACTION: mark-start */
 			{
-#line 239 "src/fsm/parser.act"
-
-		assert((ZIs) != NULL);
+#line 237 "src/fsm/parser.act"
 
 		fsm_setstart(fsm, (ZIs));
 	
-#line 682 "src/fsm/parser.c"
+#line 674 "src/fsm/parser.c"
 			}
 			/* END OF ACTION: mark-start */
 			/* BEGINNING OF ACTION: free */
 			{
-#line 251 "src/fsm/parser.act"
+#line 245 "src/fsm/parser.act"
 
 		free((ZIn));
 	
-#line 691 "src/fsm/parser.c"
+#line 683 "src/fsm/parser.c"
 			}
 			/* END OF ACTION: free */
 		}
@@ -725,11 +717,11 @@ p_xend(fsm fsm, lex_state lex_state, act_state act_state)
 				{
 					/* BEGINNING OF ACTION: err-expected-end */
 					{
-#line 308 "src/fsm/parser.act"
+#line 302 "src/fsm/parser.act"
 
 		err_expected(lex_state, "'end:'");
 	
-#line 733 "src/fsm/parser.c"
+#line 725 "src/fsm/parser.c"
 					}
 					/* END OF ACTION: err-expected-end */
 				}
@@ -775,11 +767,11 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-expected-sep */
 		{
-#line 292 "src/fsm/parser.act"
+#line 286 "src/fsm/parser.act"
 
 		err_expected(lex_state, "';'");
 	
-#line 783 "src/fsm/parser.c"
+#line 775 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: err-expected-sep */
 	}
@@ -807,7 +799,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: free-statelist */
 		{
-#line 266 "src/fsm/parser.act"
+#line 260 "src/fsm/parser.act"
 
 		struct act_statelist *p;
 		struct act_statelist *next;
@@ -821,7 +813,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 			free(p);
 		}
 	
-#line 825 "src/fsm/parser.c"
+#line 817 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: free-statelist */
 	}
@@ -830,12 +822,12 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-syntax */
 		{
-#line 313 "src/fsm/parser.act"
+#line 307 "src/fsm/parser.act"
 
 		err(lex_state, "Syntax error");
 		exit(EXIT_FAILURE);
 	
-#line 839 "src/fsm/parser.c"
+#line 831 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: err-syntax */
 	}
@@ -871,11 +863,11 @@ ZL2_xend_C_Cend_Hids:;
 						{
 							/* BEGINNING OF ACTION: err-expected-comma */
 							{
-#line 300 "src/fsm/parser.act"
+#line 294 "src/fsm/parser.act"
 
 		err_expected(lex_state, "','");
 	
-#line 879 "src/fsm/parser.c"
+#line 871 "src/fsm/parser.c"
 							}
 							/* END OF ACTION: err-expected-comma */
 						}
@@ -886,7 +878,7 @@ ZL2_xend_C_Cend_Hids:;
 					goto ZL2_xend_C_Cend_Hids;
 					/* END OF INLINE: xend::end-ids */
 				}
-				/* UNREACHED */
+				/*UNREACHED*/
 			case (ERROR_TERMINAL):
 				RESTORE_LEXER;
 				goto ZL1;
@@ -927,7 +919,7 @@ p_xend_C_Cend_Hid(fsm fsm, lex_state lex_state, act_state act_state)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 931 "src/fsm/parser.c"
+#line 923 "src/fsm/parser.c"
 					}
 					/* END OF EXTRACT: IDENT */
 					break;
@@ -948,7 +940,6 @@ p_xend_C_Cend_Hid(fsm fsm, lex_state lex_state, act_state act_state)
 
 		for (p = act_state->sl; p != NULL; p = p->next) {
 			assert(p->id != NULL);
-			assert(p->state != NULL);
 
 			if (0 == strcmp(p->id, (ZIn))) {
 				(ZIs) = p->state;
@@ -971,8 +962,7 @@ p_xend_C_Cend_Hid(fsm fsm, lex_state lex_state, act_state act_state)
 				exit(EXIT_FAILURE);
 			}
 
-			(ZIs) = fsm_addstate(fsm);
-			if ((ZIs) == NULL) {
+			if (!fsm_addstate(fsm, &(ZIs))) {
 				perror("fsm_addstate");
 				exit(EXIT_FAILURE);
 			}
@@ -983,27 +973,25 @@ p_xend_C_Cend_Hid(fsm fsm, lex_state lex_state, act_state act_state)
 			act_state->sl = new;
 		}
 	
-#line 987 "src/fsm/parser.c"
+#line 977 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: add-state */
 		/* BEGINNING OF ACTION: mark-end */
 		{
-#line 245 "src/fsm/parser.act"
-
-		assert((ZIs) != NULL);
+#line 241 "src/fsm/parser.act"
 
 		fsm_setend(fsm, (ZIs), 1);
 	
-#line 998 "src/fsm/parser.c"
+#line 986 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: mark-end */
 		/* BEGINNING OF ACTION: free */
 		{
-#line 251 "src/fsm/parser.act"
+#line 245 "src/fsm/parser.act"
 
 		free((ZIn));
 	
-#line 1007 "src/fsm/parser.c"
+#line 995 "src/fsm/parser.c"
 		}
 		/* END OF ACTION: free */
 	}
@@ -1015,7 +1003,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 365 "src/fsm/parser.act"
+#line 359 "src/fsm/parser.act"
 
 
 	struct fsm *fsm_parse(FILE *f, const struct fsm_options *opt) {
@@ -1066,6 +1054,6 @@ ZL1:;
 		return new;
 	}
 
-#line 1070 "src/fsm/parser.c"
+#line 1058 "src/fsm/parser.c"
 
 /* END OF FILE */

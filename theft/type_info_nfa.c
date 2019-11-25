@@ -150,13 +150,12 @@ print_nfa_spec(FILE *f, const void *instance, void *type_env)
 
 #ifdef AS_C
 	fprintf(f, "struct fsm *nfa = fsm_new(&fsm_options);\n");
-	fprintf(f, "struct fsm_state *states[%zd] = { NULL };\n",
+	fprintf(f, "fsm_state_t states[%zd] = { 0 };\n",
 		spec->state_count);
 
 	fprintf(f, "\n// first pass: states\n");
 	for (size_t i = 0; i < spec->state_count; i++) {
-		fprintf(f, "states[%zd] = fsm_addstate(nfa); ", i);
-		fprintf(f, "assert(states[%zd]); ", i);
+		fprintf(f, "(void) fsm_addstate(nfa, &states[%zd]); ", i);
 		if (spec->states[i]->is_end) {
 			fprintf(f, "fsm_setend(nfa, states[%zd], 1);\n", i);
 		} else {

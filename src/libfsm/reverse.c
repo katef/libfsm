@@ -7,14 +7,14 @@
 #include <assert.h>
 #include <stddef.h>
 
-#include <adt/set.h>
-#include <adt/stateset.h>
-#include <adt/edgeset.h>
-
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 #include <fsm/options.h>
+
+#include <adt/set.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 
 #include "internal.h"
 
@@ -22,8 +22,8 @@ int
 fsm_reverse(struct fsm *fsm)
 {
 	struct fsm *new;
-	struct fsm_state *end;
 	struct state_set *endset;
+	fsm_state_t end;
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
@@ -34,8 +34,7 @@ fsm_reverse(struct fsm *fsm)
 	}
 
 	if (fsm->endcount == 0) {
-		new->start = fsm_addstate(new);
-		if (new->start == NULL) {
+		if (!fsm_addstate(new, &new->start)) {
 			fsm_free(new);
 			return 0;
 		}
@@ -49,7 +48,7 @@ fsm_reverse(struct fsm *fsm)
 	 * The new end state is the previous start state. Because there is (at most)
 	 * one start state, the new FSM will have at most one end state.
 	 */
-	end = NULL;
+	(void) end;
 
 	/*
 	 * The set of the previous end states.
@@ -67,34 +66,37 @@ fsm_reverse(struct fsm *fsm)
 	 */
 	/* TODO: possibly centralise as a state-copying function */
 	{
-		struct fsm_state *s;
+		fsm_state_t start;
+		int hasstart;
+		size_t i;
 
-		for (s = fsm->sl; s != NULL; s = s->next) {
-			struct fsm_state *p;
+		hasstart = fsm_getstart(fsm, &start);
 
-			p = fsm_addstate(new);
-			if (p == NULL) {
+		for (i = 0; i < fsm->statecount; i++) {
+			fsm_state_t p;
+
+			if (!fsm_addstate(new, &p)) {
 				fsm_free(new);
 				return 0;
 			}
 
-			s->tmp.equiv = p;
+			fsm->states[i]->tmp.equiv = p;
 
-			if (s == fsm->start) {
+			if (hasstart && i == start) {
 				end = p;
 				fsm_setend(new, end, 1);
 			}
 
-			if (fsm_isend(fsm, s)) {
-				if (!state_set_add(endset, s)) {
+			if (fsm_isend(fsm, i)) {
+				if (!state_set_add(endset, i)) {
 					state_set_free(endset);
 					fsm_free(new);
 					return 0;
 				}
 
 				if (fsm->endcount == 1) {
-					assert(new->start == NULL);
-					new->start = p;
+					assert(!new->hasstart);
+					fsm_setstart(new, p);
 				}
 			}
 		}
@@ -104,38 +106,38 @@ fsm_reverse(struct fsm *fsm)
 
 	/* Create reversed edges */
 	{
-		struct fsm_state *s;
+		fsm_state_t i;
 
-		for (s = fsm->sl; s != NULL; s = s->next) {
-			struct fsm_state *to;
-			struct fsm_state *se;
+		for (i = 0; i < fsm->statecount; i++) {
 			struct edge_iter it;
 			struct fsm_edge *e;
+			fsm_state_t to;
+			fsm_state_t se;
 
-			to = s->tmp.equiv;
+			to = fsm->states[i]->tmp.equiv;
 
-			assert(to != NULL);
+			assert(to < new->statecount);
 
 			{
 				struct state_iter jt;
 
-				for (se = state_set_first(s->epsilons, &jt); se != NULL; se = state_set_next(&jt)) {
-					assert(se->tmp.equiv != NULL);
+				for (state_set_reset(fsm->states[i]->epsilons, &jt); state_set_next(&jt, &se); ) {
+					assert(fsm->states[se]->tmp.equiv < fsm->statecount);
 
-					if (!fsm_addedge_epsilon(new, se->tmp.equiv, to)) {
+					if (!fsm_addedge_epsilon(new, fsm->states[se]->tmp.equiv, to)) {
 						state_set_free(endset);
 						fsm_free(new);
 						return 0;
 					}
 				}
 			}
-			for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct state_iter jt;
 
-				for (se = state_set_first(e->sl, &jt); se != NULL; se = state_set_next(&jt)) {
-					assert(se->tmp.equiv != NULL);
+				for (state_set_reset(e->sl, &jt); state_set_next(&jt, &se); ) {
+					assert(fsm->states[se]->tmp.equiv < fsm->statecount);
 
-					if (!fsm_addedge_literal(new, se->tmp.equiv, to, e->symbol)) {
+					if (!fsm_addedge_literal(new, fsm->states[se]->tmp.equiv, to, e->symbol)) {
 						state_set_free(endset);
 						fsm_free(new);
 						return 0;
@@ -149,7 +151,7 @@ fsm_reverse(struct fsm *fsm)
 
 	if (fsm->endcount == 1) {
 		/* already handled above */
-		assert(new->start != NULL);
+		assert(new->start < fsm->statecount);
 	}
 
 	/*
@@ -158,8 +160,9 @@ fsm_reverse(struct fsm *fsm)
 	 * together by epsilon transitions.
 	 */
 	if (fsm->endcount > 1) {
-		struct fsm_state *s;
 		struct state_iter it;
+		int have_start;
+		fsm_state_t s, start;
 
 		/*
 		 * The typical case here is to create a new start state, and to
@@ -182,38 +185,36 @@ fsm_reverse(struct fsm *fsm)
 		 */
 
 		if (0 || !fsm->opt->tidy) {
-			s = NULL;
+			have_start = 0;
 		} else {
-			for (s = state_set_first(endset, &it); s != NULL; s = state_set_next(&it)) {
+			for (state_set_reset(endset, &it); state_set_next(&it, &s); ) {
 				if (!fsm_hasincoming(fsm, s)) {
+					have_start = 1;
+					start = fsm->states[s]->tmp.equiv;
 					break;
 				}
 			}
+			have_start = 0;
 		}
 
-		if (s != NULL) {
-			new->start = s->tmp.equiv;
-			assert(new->start != NULL);
+		if (have_start) {
+			fsm_setstart(new, start);
 		} else {
-			new->start = fsm_addstate(new);
-			if (new->start == NULL) {
+			if (!fsm_addstate(new, &start)) {
 				state_set_free(endset);
 				fsm_free(new);
 				return 0;
 			}
+
+			fsm_setstart(new, start);
 		}
 
-		for (s = state_set_first(endset, &it); s != NULL; s = state_set_next(&it)) {
-			struct fsm_state *state;
-
-			state = s->tmp.equiv;
-			assert(state != NULL);
-
-			if (state == new->start) {
+		for (state_set_reset(endset, &it); state_set_next(&it, &s); ) {
+			if (fsm->states[s]->tmp.equiv == start) {
 				continue;
 			}
 
-			if (!fsm_addedge_epsilon(new, new->start, state)) {
+			if (!fsm_addedge_epsilon(new, start, fsm->states[s]->tmp.equiv)) {
 				state_set_free(endset);
 				fsm_free(new);
 				return 0;
@@ -222,7 +223,7 @@ fsm_reverse(struct fsm *fsm)
 	}
 
 	state_set_free(endset);
-	
+
 	fsm_clear_tmp(fsm);
 
 	fsm_move(fsm, new);

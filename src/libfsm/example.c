@@ -9,42 +9,40 @@
 #include <stddef.h>
 #include <errno.h>
 
-#include <adt/path.h>
-
 #include <fsm/fsm.h>
 #include <fsm/cost.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 
+#include <adt/path.h>
+
 #include "internal.h"
 
 int
-fsm_example(const struct fsm *fsm, const struct fsm_state *goal,
+fsm_example(const struct fsm *fsm, fsm_state_t goal,
 	char *buf, size_t bufsz)
 {
-	const struct fsm_state *start;
 	const struct path *p;
 	struct path *path;
+	fsm_state_t start;
 	size_t n;
 
 	assert(fsm != NULL);
 	assert(!fsm_has(fsm, fsm_hasepsilons));
 	assert(buf != NULL || bufsz == 0);
-	assert(goal != NULL);
-	/* TODO: assert goal is in fsm */
+	assert(goal < fsm->statecount);
 
 	if (bufsz > INT_MAX) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	start = fsm_getstart(fsm);
-	if (start == NULL) {
+	if (!fsm_getstart(fsm, &start)) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	path = fsm_shortest(fsm, fsm_getstart(fsm), goal, fsm_cost_legible);
+	path = fsm_shortest(fsm, start, goal, fsm_cost_legible);
 	if (path == NULL) {
 		return -1;
 	}

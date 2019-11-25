@@ -8,44 +8,41 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include <adt/alloc.h>
-#include <adt/set.h>
-#include <adt/stateset.h>
-#include <adt/edgeset.h>
-
 #include <fsm/alloc.h>
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
 
-#include "internal.h"
+#include <adt/alloc.h>
+#include <adt/set.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
 
-#define ctassert(pred) \
-	switch (0) { case 0: case (pred):; }
+#include "internal.h"
 
 void
 free_contents(struct fsm *fsm)
 {
-	struct fsm_state *next;
-	struct fsm_state *s;
+	size_t i;
 
 	assert(fsm != NULL);
 
-	for (s = fsm->sl; s != NULL; s = next) {
+	for (i = 0; i < fsm->statecount; i++) {
 		struct edge_iter it;
 		struct fsm_edge *e;
-		next = s->next;
 
-		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			state_set_free(e->sl);
 			f_free(fsm->opt->alloc, e);
 		}
 
-		state_set_free(s->epsilons);
-		edge_set_free(s->edges);
-		f_free(fsm->opt->alloc, s);
+		state_set_free(fsm->states[i]->epsilons);
+		edge_set_free(fsm->states[i]->edges);
+		f_free(fsm->opt->alloc, fsm->states[i]);
 	}
+
+	f_free(fsm->opt->alloc, fsm->states);
 }
 
 struct fsm *
@@ -65,11 +62,17 @@ fsm_new(const struct fsm_options *opt)
 		return NULL;
 	}
 
-	new->sl    = NULL;
-	new->tail  = &new->sl;
-	new->start = NULL;
+	new->statealloc = 128; /* guess */
+	new->statecount = 0;
+	new->endcount   = 0;
 
-	new->endcount = 0;
+	new->states = f_malloc(f.opt->alloc, new->statealloc * sizeof *new->states);
+	if (new->states == NULL) {
+		f_free(f.opt->alloc, new);
+		return NULL;
+	}
+
+	fsm_clearstart(new);
 
 	new->opt = opt;
 
@@ -111,24 +114,24 @@ fsm_move(struct fsm *dst, struct fsm *src)
 
 	free_contents(dst);
 
-	dst->sl       = src->sl;
-	dst->tail     = src->tail;
-	dst->start    = src->start;
-	dst->endcount = src->endcount;
+	dst->states     = src->states;
+	dst->start      = src->start;
+	dst->statecount = src->statecount;
+	dst->statealloc = src->statealloc;
+	dst->endcount   = src->endcount;
 
 	f_free(src->opt->alloc, src);
 }
 
 void
-fsm_carryopaque_array(struct fsm *src_fsm, const struct fsm_state **src_set, size_t n,
-	struct fsm *dst_fsm, struct fsm_state *dst_state)
+fsm_carryopaque_array(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
+	struct fsm *dst_fsm, fsm_state_t dst_state)
 {
-	ctassert(sizeof (void *) == sizeof (struct fsm_state *));
-
 	assert(src_fsm != NULL);
 	assert(src_set != NULL);
 	assert(n > 0);
 	assert(dst_fsm != NULL);
+	assert(dst_state < dst_fsm->statecount);
 	assert(fsm_isend(dst_fsm, dst_state));
 	assert(src_fsm->opt == dst_fsm->opt);
 
@@ -170,14 +173,13 @@ fsm_carryopaque_array(struct fsm *src_fsm, const struct fsm_state **src_set, siz
 
 void
 fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
-	struct fsm *dst_fsm, struct fsm_state *dst_state)
+	struct fsm *dst_fsm, fsm_state_t dst_state)
 {
 	assert(src_fsm != NULL);
 	assert(dst_fsm != NULL);
+	assert(dst_state < dst_fsm->statecount);
 	assert(fsm_isend(dst_fsm, dst_state));
 	assert(src_fsm->opt == dst_fsm->opt);
-
-	ctassert(sizeof (void *) == sizeof (struct fsm_state *));
 
 	/* TODO: right? */
 	if (state_set_empty(src_set)) {
@@ -185,51 +187,38 @@ fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
 	}
 
 	/*
-	 * Our sets are a void ** treated as an array of elements of type void *.
-	 * Here we're presenting these as if they're an array of elements
-	 * of type struct fsm_state *.
-	 *
-	 * This is not portable because the representations of those types
-	 * need not be compatible in general, hence the compile-time assert
-	 * and the cast here.
+	 * Our state set is implemented as an array of fsm_state_t.
+	 * Here we're presenting the underlying array directly,
+	 * because the user-facing API doesn't expose the state set ADT.
 	 */
 
-	fsm_carryopaque_array(src_fsm, (void *) state_set_array(src_set), state_set_count(src_set),
+	fsm_carryopaque_array(src_fsm, state_set_array(src_set), state_set_count(src_set),
 		dst_fsm, dst_state);
 }
 
 unsigned int
 fsm_countstates(const struct fsm *fsm)
 {
-	unsigned int n = 0;
-	const struct fsm_state *s;
-	/*
-	 * XXX - this walks the list and counts and should be replaced
-	 * with something better when possible
-	 */
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		assert(n+1>n); /* handle overflow with more grace? */
-		n++;
-	}
+	assert(fsm != NULL);
 
-	return n;
+	return fsm->statecount;
 }
 
 unsigned int
 fsm_countedges(const struct fsm *fsm)
 {
 	unsigned int n = 0;
-	const struct fsm_state *src;
+	size_t i;
 
 	/*
 	 * XXX - this counts all src,lbl,dst tuples individually and
 	 * should be replaced with something better when possible
 	 */
-	for (src = fsm->sl; src != NULL; src = src->next) {
+	for (i = 0; i < fsm->statecount; i++) {
 		struct edge_iter ei;
 		const struct fsm_edge *e;
 
-		for (e = edge_set_first(src->edges, &ei); e != NULL; e=edge_set_next(&ei)) {
+		for (e = edge_set_first(fsm->states[i]->edges, &ei); e != NULL; e=edge_set_next(&ei)) {
 			assert(n + state_set_count(e->sl) > n); /* handle overflow with more grace? */
 			n += state_set_count(e->sl);
 		}
@@ -241,11 +230,12 @@ fsm_countedges(const struct fsm *fsm)
 void
 fsm_clear_tmp(struct fsm *fsm)
 {
-	struct fsm_state *s;
+	size_t i;
 
 	assert(fsm != NULL);
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		fsm_state_clear_tmp(s);
+	for (i = 0; i < fsm->statecount; i++) {
+		fsm_state_clear_tmp(fsm->states[i]);
 	}
 }
+

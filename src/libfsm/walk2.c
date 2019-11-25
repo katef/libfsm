@@ -10,44 +10,60 @@
 #include <limits.h>
 #include <errno.h>
 
-#include <adt/alloc.h>
-#include <adt/set.h>
-#include <adt/stateset.h>
-#include <adt/edgeset.h>
-#include <adt/tupleset.h>
-
 #include <fsm/fsm.h>
 #include <fsm/options.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 
+#include <adt/alloc.h>
+#include <adt/set.h>
+#include <adt/stateset.h>
+#include <adt/edgeset.h>
+#include <adt/tupleset.h>
+
 #include "internal.h"
 #include "walk2.h"
 
 /*
  * 3-tuple (a, b, comb) for walking the two DFAs.
- * a & b are the states of the original FSMs.
+ * a & b are the states of the original FSMs, at least one of which
+ * must be present.
  * comb is the state of the combined FSM.
  */
 struct fsm_walk2_tuple {
-	struct fsm_state *a;
-	struct fsm_state *b;
-	struct fsm_state *comb;
+	fsm_state_t a;
+	fsm_state_t b;
+	fsm_state_t comb;
+	unsigned int have_a:1;
+	unsigned int have_b:1;
 };
 
 /* comparison of fsm_walk2_tuples for the (ordered) set */
 static int
 cmp_walk2_tuple(const void *a, const void *b)
 {
-	const struct fsm_walk2_tuple * const *pa = a, * const *pb = b;
+	const struct fsm_walk2_tuple *pa = * (const struct fsm_walk2_tuple * const *) a;
+	const struct fsm_walk2_tuple *pb = * (const struct fsm_walk2_tuple * const *) b;
 	ptrdiff_t delta;
 
-	/* XXX: do we need to specially handle NULLs? */
+	assert(pa->have_a || pa->have_b);
+	assert(pb->have_a || pb->have_b);
 
-	delta = ((*pa)->a > (*pb)->a) - ((*pa)->a < (*pb)->a);
-	if (delta == 0) {
-		delta = ((*pa)->b > (*pb)->b) - ((*pa)->b < (*pb)->b);
+	if (pa->have_a == pb->have_a) {
+		delta = pa->have_a ? (pa->a > pb->a) - (pa->a < pb->a) : 0;
+	} else {
+		delta = pa->have_a ? 1 : -1;
+	}
+
+	if (delta != 0) {
+		return delta;
+	}
+
+	if (pa->have_b == pb->have_b) {
+		delta = pa->have_b ? (pa->b > pb->b) - (pa->b < pb->b) : 0;
+	} else {
+		delta = pa->have_b ? 1 : -1;
 	}
 
 	return delta;
@@ -124,8 +140,6 @@ fsm_walk2_data_free(const struct fsm *fsm, struct fsm_walk2_data *data)
 static struct fsm_walk2_tuple *
 alloc_walk2_tuple(struct fsm_walk2_data *data)
 {
-	static const struct fsm_walk2_tuple zero;
-
 	struct fsm_walk2_tuple *item;
 	struct fsm_walk2_tuple_pool *pool;
 
@@ -138,9 +152,8 @@ alloc_walk2_tuple(struct fsm_walk2_data *data)
 	}
 
 	item = &data->head->items[data->top++];
-	*item = zero;
 
-	return item;
+	goto done;
 
 new_pool:
 
@@ -154,7 +167,11 @@ new_pool:
 	data->top  = 1;
 
 	item = &pool->items[0];
-	*item = zero;
+
+done:
+
+	item->have_a = 0;
+	item->have_b = 0;
 
 	return item;
 }
@@ -169,45 +186,54 @@ walk2mask(int has_a, int has_b)
 	}
 }
 
-static struct fsm_state *
+static int
 walk2_comb_state(struct fsm *dst_fsm, int is_end,
-	const struct fsm_state *a, const struct fsm_state *b) 
+	const struct fsm *fsm_a, fsm_state_t a,
+	const struct fsm *fsm_b, fsm_state_t b,
+	fsm_state_t *comb) 
 {
-	struct fsm_state *comb;
-	const struct fsm_state *states[2] = { 0 };
+	struct fsm_state *states[2];
+	fsm_state_t state_ids[2];
 	size_t count;
+	unsigned endcount;
 	struct fsm tmp;
-	struct fsm_state tmp0, tmp1;
 
     assert(dst_fsm != NULL); 
+    assert(comb != NULL); 
  
-	comb = fsm_addstate(dst_fsm);
-	if (comb == NULL) {
-		return NULL;
+	if (!fsm_addstate(dst_fsm, comb)) {
+		return 0;
 	}
 
 	if (!is_end) {
-		return comb;
+		return 1;
 	}
 
-	fsm_setend(dst_fsm, comb, 1);
+	fsm_setend(dst_fsm, *comb, 1);
 
 	if (dst_fsm->opt == NULL || dst_fsm->opt->carryopaque == NULL) {
-		return comb;
+		return 1;
 	}
 
 	count = 0;
+	endcount = 0;
 
-	if (a != NULL) {
-		states[count++] = a;
+	if (fsm_a != NULL) {
+		state_ids[count] = a;
+		states[count] = fsm_a->states[a];
+		count++;
+		endcount += fsm_isend(fsm_a, a);
 	}
 
-	if (b != NULL) {
-		states[count++] = b;
+	if (fsm_b != NULL) {
+		state_ids[count] = b;
+		states[count] = fsm_a->states[b];
+		count++;
+		endcount += fsm_isend(fsm_b, b);
 	}
 
 	if (count == 0) {
-		return comb;
+		return 1;
 	}
 
 	/*
@@ -225,55 +251,46 @@ walk2_comb_state(struct fsm *dst_fsm, int is_end,
 	 * it's only needed briefly and is limited to two states.
 	 */
 
-	/* TODO: tmp.states = states; */
-
-	/* handmade linked list */
-	switch (count) {
-	case 2:
-		tmp0 = *states[0];
-		tmp1 = *states[1];
-		tmp0.next = &tmp1;
-		tmp1.next = NULL;
-		tmp.tail = &tmp1.next;
-		break;
-
-	case 1:
-		tmp0 = *states[0];
-		tmp0.next = NULL;
-		tmp.tail = &tmp0.next;
-		break;
-
-	default:
-		assert(!"unreached");
-	}
-
-	tmp.sl = &tmp0;
-	/* TODO: tmp.statealloc = count; */
-	/* TODO: tmp.statecount = count; */
-	tmp.endcount = a->end + b->end;
-	tmp.start = NULL;
+	tmp.states = (struct fsm_state **) states;
+	tmp.statealloc = count;
+	tmp.statecount = count;
+	tmp.endcount = endcount;
+	tmp.hasstart = 0;
 	tmp.opt = dst_fsm->opt;
 
-	fsm_carryopaque_array(&tmp, states, count, dst_fsm, comb);
+	fsm_carryopaque_array(&tmp, state_ids, count, dst_fsm, *comb);
 
-	return comb;
+	return 1;
 } 
 
 static struct fsm_walk2_tuple *
 fsm_walk2_tuple_new(struct fsm_walk2_data *data,
-	struct fsm_state *a, struct fsm_state *b)
+	const struct fsm *fsm_a, fsm_state_t a,
+	const struct fsm *fsm_b, fsm_state_t b)
 {
-	struct fsm_walk2_tuple lkup, *p;
+	struct fsm_walk2_tuple *p;
 	int is_end;
 
-	lkup.a = a;
-	lkup.b = b;
-
 	assert(data->states);
+	assert(fsm_a != NULL || fsm_b != NULL);
 
-	p = tuple_set_contains(data->states, &lkup);
-	if (p != NULL) {
-		return p;
+	{
+		struct fsm_walk2_tuple lkup, *q;
+
+		lkup.have_a = fsm_a != NULL;
+		lkup.have_b = fsm_b != NULL;
+
+		if (fsm_a != NULL) {
+			lkup.a = a;
+		}
+		if (fsm_b != NULL) {
+			lkup.b = b;
+		}
+
+		q = tuple_set_contains(data->states, &lkup);
+		if (q != NULL) {
+			return q;
+		}
 	}
 
 	p = alloc_walk2_tuple(data);
@@ -281,17 +298,25 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		return NULL;
 	}
 
-	is_end = data->endmask & walk2mask(a && a->end, b && b->end);
+	is_end = data->endmask & walk2mask(
+		fsm_a != NULL && fsm_isend(fsm_a, a),
+		fsm_b != NULL && fsm_isend(fsm_b, b));
 
-	p->a = a;
-	p->b = b;
+	p->have_a = fsm_a != NULL;
+	p->have_b = fsm_b != NULL;
 
-	p->comb = walk2_comb_state(data->new, is_end, a, b);
-	if (p->comb == NULL) {
+	if (fsm_a != NULL) {
+		p->a = a;
+	}
+	if (fsm_b != NULL) {
+		p->b = b;
+	}
+
+	if (!walk2_comb_state(data->new, is_end, fsm_a, a, fsm_b, b, &p->comb)) {
 		return NULL;
 	}
 
-	assert(p->comb->tmp.visited == NULL);
+	assert(!data->new->states[p->comb]->tmp.visited);
 
 	if (!tuple_set_add(data->states, p)) {
 		return NULL;
@@ -304,7 +329,8 @@ static int
 fsm_walk2_edges(struct fsm_walk2_data *data,
 	const struct fsm *a, const struct fsm *b, struct fsm_walk2_tuple *start)
 {
-	struct fsm_state *qa, *qb, *qc;
+	fsm_state_t qa, qb, qc;
+	int have_qa, have_qb;
 	struct edge_iter ei, ej;
 	const struct fsm_edge *ea, *eb;
 
@@ -315,22 +341,27 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	assert(data->states != NULL);
 
 	assert(start != NULL);
+	assert(start->have_a || start->have_b);
 
 	/* This performs the actual walk by a depth-first search. */
+	have_qa = start->have_a;
+	have_qb = start->have_b;
 	qa = start->a;
 	qb = start->b;
 	qc = start->comb;
 
-	assert(qa != NULL || qb != NULL);
-	assert(qc != NULL);
+	assert(have_qa || have_qb);
+	assert(!have_qa || qa < a->statecount);
+	assert(!have_qb || qb < b->statecount);
+	assert(qc < data->new->statecount);
 
 	/* fast exit if we've already visited the combined state */
-	if (qc->tmp.visited != NULL) {
+	if (data->new->states[qc]->tmp.visited) {
 		return 1;
 	}
 
 	/* mark combined state as visited */
-	qc->tmp.visited = qc;
+	data->new->states[qc]->tmp.visited = 1;
 
 	/*
 	 * fsm_walk2_edges walks the edges of two graphs, generating combined
@@ -341,10 +372,10 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	 * satisfies the operators. There are two decision points:
 	 *
 	 *   1) whether to follow an edge to combined state (qa', qb'),
-	 *      where either qa' or qb' may be NULL
+	 *      where either qa' or qb' may be absent
 	 *
 	 *   2) whether a combined state (qa, qb) is an end state of the
-	 *      two graphs, where either qa or qb may be NULL, and
+	 *      two graphs, where either qa or qb may be absent, and
 	 *      either may be an end state.
 	 *
 	 * For each decision, there are four possible states and two
@@ -358,13 +389,13 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	 * cases.  In the second loop we handle the ONLYB cases.
 	 */
 
-	/* If qb == NULL, we can follow edges if ONLYA is allowed. */
-	if (!qb && !(data->edgemask & FSM_WALK2_ONLYA)) {
+	/* If qb is absent, we can follow edges if ONLYA is allowed. */
+	if (!have_qb && !(data->edgemask & FSM_WALK2_ONLYA)) {
 		return 1;
 	}
 
-	/* If qa == NULL, jump ahead to the ONLYB loop */
-	if (!qa) {
+	/* If qa is absent, jump ahead to the ONLYB loop */
+	if (!have_qa) {
 		goto only_b;
 	}
 
@@ -377,37 +408,45 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	}
 
 	/* take care of only A and both A&B edges */
-	for (ea = edge_set_first(qa->edges, &ei); ea != NULL; ea = edge_set_next(&ei)) {
+	for (ea = edge_set_first(a->states[qa]->edges, &ei); ea != NULL; ea = edge_set_next(&ei)) {
 		struct state_iter dia, dib;
-		const struct fsm_state *da, *db;
+		fsm_state_t da;
 
-		eb = qb ? fsm_hasedge_literal(qb, ea->symbol) : NULL;
+		eb = have_qb ? fsm_hasedge_literal(b, qb, ea->symbol) : NULL;
 
 		/*
 		 * If eb == NULL we can only follow this edge if ONLYA
 		 * edges are allowed
 		 */
-		if (!eb && !(data->edgemask & FSM_WALK2_ONLYA)) {
+		if (eb == NULL && !(data->edgemask & FSM_WALK2_ONLYA)) {
 			continue;
 		}
 
-		for (da = state_set_first(ea->sl, &dia); da != NULL; da = state_set_next(&dia)) {
-			db = eb ? state_set_first(eb->sl, &dib) : NULL;
+		for (state_set_reset(ea->sl, &dia); state_set_next(&dia, &da); ) {
+			fsm_state_t db = 0;
+			int have_db;
+
+			if (eb != NULL) {
+				state_set_reset(eb->sl, &dib);
+				have_db = state_set_next(&dib, &db);
+			} else {
+				have_db = 0;
+			}
 
 			/*
 			 * for loop with break to handle the situation where there is no
 			 * corresponding edge in the B graph. This will proceed through
-			 * the loop once, even when db == NULL.
+			 * the loop once, even when !have_db.
 			 */
 			for (;;) {
 				struct fsm_walk2_tuple *dst;
 
-				/* FIXME: deal with annoying const-ness here */
-				dst = fsm_walk2_tuple_new(data,
-					(struct fsm_state *) da, (struct fsm_state *) db);
+				dst = fsm_walk2_tuple_new(data, a, da, have_db ? b : NULL, db);
+				if (dst == NULL) {
+					return 0;
+				}
 
-				assert(dst != NULL);
-				assert(dst->comb != NULL);
+				assert(dst->comb < data->new->statecount);
 
 				if (!fsm_addedge_literal(data->new, qc, dst->comb, ea->symbol)) {
 					return 0;
@@ -417,19 +456,19 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 				 * depth-first traversal of the graph, but only traverse
 				 * if the state has not yet been visited
 				 */
-				if (dst->comb->tmp.visited == NULL) {
-					if (!fsm_walk2_edges(data, a,b, dst)) {
+				if (!data->new->states[dst->comb]->tmp.visited) {
+					if (!fsm_walk2_edges(data, a, b, dst)) {
 						return 0;
 					}
 				}
 
-				/* if db != NULL, fetch the next edge in B */
-				if (db != NULL) {
-					db = state_set_next(&dib);
+				/* if db is present, fetch the next edge in B */
+				if (have_db) {
+					have_db = state_set_next(&dib, &db);
 				}
 
-				/* if db == NULL, stop iterating over edges in B */
-				if (db == NULL) {
+				/* if db is absent, stop iterating over edges in B */
+				if (!have_db) {
 					break;
 				}
 			}
@@ -439,19 +478,17 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 only_b:
 
 	/* fast exit if ONLYB cases aren't allowed */
-	if (!qb || !(data->edgemask & FSM_WALK2_ONLYB)) {
+	if (!have_qb || !(data->edgemask & FSM_WALK2_ONLYB)) {
 		return 1;
 	}
 
 	/* take care of only B edges */
-	for (eb = edge_set_first(qb->edges, &ej); eb != NULL; eb=edge_set_next(&ej)) {
+	for (eb = edge_set_first(b->states[qb]->edges, &ej); eb != NULL; eb = edge_set_next(&ej)) {
 		struct state_iter dib;
-		const struct fsm_state *db;
-
-		ea = qa ? fsm_hasedge_literal(qa, eb->symbol) : NULL;
+		fsm_state_t db;
 
 		/* if A has the edge, it's not an only B edge */
-		if (ea != NULL) {
+		if (have_qa && fsm_hasedge_literal(a, qa, eb->symbol)) {
 			continue;
 		}
 
@@ -459,15 +496,16 @@ only_b:
 		 * ONLYB loop is simpler because we only deal with
 		 * states in the B graph (the A state is always NULL)
 		 */
-		for (db = state_set_first(eb->sl, &dib); db != NULL; db=state_set_next(&dib)) {
+		for (state_set_reset(eb->sl, &dib); state_set_next(&dib, &db); ) {
 			for (;;) {
 				struct fsm_walk2_tuple *dst;
 
-				/* FIXME: deal with annoying const-ness here */
-				dst = fsm_walk2_tuple_new(data, NULL, (struct fsm_state *) db);
+				dst = fsm_walk2_tuple_new(data, NULL, 0, b, db);
+				if (dst == NULL) {
+					return 0;
+				}
 
-				assert(dst != NULL);
-				assert(dst->comb != NULL);
+				assert(dst->comb < data->new->statecount);
 
 				if (!fsm_addedge_literal(data->new, qc, dst->comb, eb->symbol)) {
 					return 0;
@@ -477,8 +515,8 @@ only_b:
 				 * depth-first traversal of the graph, but only traverse
 				 * if the state has not yet been visited
 				 */
-				if (dst->comb->tmp.visited == NULL) {
-					if (!fsm_walk2_edges(data, a,b, dst)) {
+				if (!data->new->states[dst->comb]->tmp.visited) {
+					if (!fsm_walk2_edges(data, a, b, dst)) {
 						return 0;
 					}
 				}
@@ -496,9 +534,10 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 	static const struct fsm_walk2_data zero;
 	struct fsm_walk2_data data = zero;
 
-	struct fsm_state *sa, *sb;
+	fsm_state_t sa, sb;
 	struct fsm_walk2_tuple *tup0;
 	struct fsm *new;
+	int have_a, have_b;
 
 	assert(a != NULL);
 	assert(b != NULL);
@@ -506,38 +545,38 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 	assert(fsm_all(a, fsm_isdfa));
 	assert(fsm_all(b, fsm_isdfa));
 
-	sa = fsm_getstart(a);
-	sb = fsm_getstart(b);
+	have_a = fsm_getstart(a, &sa);
+	have_b = fsm_getstart(b, &sb);
 
-	if (!sa && !sb) {
+	if (!have_a && !have_b) {
 		/*
-		 * if both A and B lack a start states,
+		 * if both A and B lack start states,
 		 * the result will be empty
 		 */
 		goto done;
 	}
 
-	if (sb == NULL) {
+	if (!have_b) {
 		if (endmask & FSM_WALK2_ONLYA) {
 			/* must be a copy of A */
 			return fsm_clone(a);
 		}
 
 		/*
-		 * !sb and combined states cannot be ONLYA,
+		 * !have_b and combined states cannot be ONLYA,
 		 * so the result will be empty
 		 */
 		goto done;
 	}
 
-	if (sa == NULL) {
+	if (!have_a) {
 		if (endmask & FSM_WALK2_ONLYB) {
 			/* must be a copy of B */
 			return fsm_clone(b);
 		}
 
 		/*
-		 * !sa and combined states cannot be ONLYB, so the
+		 * !have_a and combined states cannot be ONLYB, so the
 		 * result will be empty
 		 */
 		goto done;
@@ -556,18 +595,18 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 		goto error;
 	}
 
-	tup0 = fsm_walk2_tuple_new(&data, sa,sb);
+	tup0 = fsm_walk2_tuple_new(&data, a, sa, b, sb);
 	if (tup0 == NULL) {
 		goto error;
 	}
 
 	assert(tup0->a == sa);
 	assert(tup0->b == sb);
-	assert(tup0->comb != NULL);
-	assert(tup0->comb->tmp.visited == NULL); /* comb not yet been traversed */
+	assert(tup0->comb < data.new->statecount);
+	assert(!data.new->states[tup0->comb]->tmp.visited); /* comb not yet been traversed */
 
 	fsm_setstart(data.new, tup0->comb);
-	if (!fsm_walk2_edges(&data, a,b, tup0)) {
+	if (!fsm_walk2_edges(&data, a, b, tup0)) {
 		goto error;
 	}
 

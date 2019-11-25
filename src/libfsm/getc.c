@@ -9,9 +9,9 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include <adt/set.h>
-
 #include <fsm/fsm.h>
+
+#include <adt/set.h>
 
 int
 fsm_sgetc(void *opaque)

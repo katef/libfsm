@@ -22,9 +22,9 @@
 
 #include <theft.h>
 
+#include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/cost.h>
-#include <fsm/fsm.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
 #include <fsm/pred.h>
@@ -79,8 +79,8 @@ size_t delta_msec(const struct timeval *pre, const struct timeval *post);
 
 size_t *gen_permutation_vector(size_t length, uint32_t seed);
 
-struct fsm_state *
-wrap_fsm_exec(struct fsm *fsm, const struct string_pair *pair);
+int
+wrap_fsm_exec(struct fsm *fsm, const struct string_pair *pair, fsm_state_t *state);
 
 struct fsm *
 wrap_re_comp(enum re_dialect dialect, const struct string_pair *pair,

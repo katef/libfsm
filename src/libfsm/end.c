@@ -7,22 +7,22 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include <adt/set.h>
-
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+
+#include <adt/set.h>
 
 #include "internal.h"
 
 void
-fsm_setend(struct fsm *fsm, struct fsm_state *state, int end)
+fsm_setend(struct fsm *fsm, fsm_state_t state, int end)
 {
 	(void) fsm;
 
 	assert(fsm != NULL);
-	assert(state != NULL);
+	assert(state < fsm->statecount);
 
-	if (state->end == !!end) {
+	if (fsm->states[state]->end == !!end) {
 		return;
 	}
 
@@ -30,13 +30,13 @@ fsm_setend(struct fsm *fsm, struct fsm_state *state, int end)
 	case 0:
 		assert(fsm->endcount > 0);
 		fsm->endcount--;
-		state->end = 0;
+		fsm->states[state]->end = 0;
 		break;
 
 	case 1:
 		assert(fsm->endcount < FSM_ENDCOUNT_MAX);
 		fsm->endcount++;
-		state->end = 1;
+		fsm->states[state]->end = 1;
 		break;
 	}
 }
@@ -44,40 +44,40 @@ fsm_setend(struct fsm *fsm, struct fsm_state *state, int end)
 void
 fsm_setendopaque(struct fsm *fsm, void *opaque)
 {
-	struct fsm_state *s;
+	fsm_state_t i;
 
 	assert(fsm != NULL);
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (fsm_isend(fsm, s)) {
-			fsm_setopaque(fsm, s, opaque);
+	for (i = 0; i < fsm->statecount; i++) {
+		if (fsm_isend(fsm, i)) {
+			fsm_setopaque(fsm, i, opaque);
 		}
 	}
 }
 
 void
-fsm_setopaque(struct fsm *fsm, struct fsm_state *state, void *opaque)
+fsm_setopaque(struct fsm *fsm, fsm_state_t state, void *opaque)
 {
 	(void) fsm;
 
 	assert(fsm != NULL);
-	assert(state != NULL);
+	assert(state < fsm->statecount);
 
-	assert(state->end);
+	assert(fsm->states[state]->end);
 
-	state->opaque = opaque;
+	fsm->states[state]->opaque = opaque;
 }
 
 void *
-fsm_getopaque(const struct fsm *fsm, const struct fsm_state *state)
+fsm_getopaque(const struct fsm *fsm, fsm_state_t state)
 {
 	(void) fsm;
 
 	assert(fsm != NULL);
-	assert(state != NULL);
+	assert(state < fsm->statecount);
 
-	assert(state->end);
+	assert(fsm->states[state]->end);
 
-	return state->opaque;
+	return fsm->states[state]->opaque;
 }
 

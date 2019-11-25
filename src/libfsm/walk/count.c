@@ -14,9 +14,9 @@
 
 unsigned
 fsm_count(const struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+	int (*predicate)(const struct fsm *, fsm_state_t))
 {
-	const struct fsm_state *s;
+	fsm_state_t i;
 	unsigned n;
 
 	assert(fsm != NULL);
@@ -24,8 +24,8 @@ fsm_count(const struct fsm *fsm,
 
 	n = 0;
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		n += !!predicate(fsm, s);
+	for (i = 0; i < fsm->statecount; i++) {
+		n += !!predicate(fsm, i);
 	}
 
 	return n;

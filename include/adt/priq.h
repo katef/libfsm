@@ -15,7 +15,7 @@ struct priq {
 	unsigned cost;
 
 	/* XXX: specific to shortest.c */
-	struct fsm_state *state;
+	fsm_state_t state;
 	struct priq *prev; /* previous node in shortest path */
 	char c;
 };
@@ -31,14 +31,14 @@ priq_pop(struct priq **priq);
  */
 struct priq *
 priq_push(const struct fsm_alloc *a, struct priq **priq,
-	struct fsm_state *state, unsigned int cost);
+	fsm_state_t state, unsigned int cost);
 
 void
 priq_update(struct priq **priq, struct priq *s, unsigned int cost);
 
 /* XXX: set operation */
 struct priq *
-priq_find(struct priq *priq, const struct fsm_state *state);
+priq_find(struct priq *priq, fsm_state_t state);
 
 /* XXX: set operation */
 void

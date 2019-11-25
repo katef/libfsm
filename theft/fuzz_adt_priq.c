@@ -39,12 +39,12 @@ model_verify(struct model *m)
  * priq doesn't ever dereference them, just compare
  * them by address.
  */
-static struct fsm_state *
+static fsm_state_t
 fake_state_of_id(uintptr_t id)
 {
 	assert(id > 0);
 
-	return (struct fsm_state *) id;
+	return (fsm_state_t) id;
 }
 
 static enum theft_trial_res
@@ -204,7 +204,7 @@ op_pop(struct model *m, struct priq_op *op, struct priq **p)
 static bool
 op_push(struct model *m, struct priq_op *op, struct priq **p)
 {
-	struct fsm_state *fake_state;
+	fsm_state_t fake_state;
 	struct priq *old_p, *new_node;
 	struct priq *entry;
 	unsigned int lowest;

@@ -6,6 +6,9 @@
 
 #include <assert.h>
 #include <stdlib.h>
+
+#include <fsm/fsm.h>
+
 #include <adt/queue.h>
 
 static int
@@ -29,18 +32,18 @@ reject_0_capacity(void)
 static int
 push_all_pop_all(size_t limit)
 {
-	size_t i;
+	fsm_state_t i;
 	struct queue *q = queue_new(NULL, limit);
 	if (q == NULL) { return 0; }
 
 	for (i = 0; i < limit; i++) {
-		if (!queue_push(q, (void *)i)) { return 0; }
+		if (!queue_push(q, i)) { return 0; }
 	}
 	
 	for (i = 0; i < limit; i++) {
-		void *p;
+		fsm_state_t p;
 		if (!queue_pop(q, &p)) { return 0; }
-		if ((size_t)p != i) { return 0; }
+		if (p != i) { return 0; }
 	}
 	
 	queue_free(q);
@@ -50,15 +53,15 @@ push_all_pop_all(size_t limit)
 static int
 push_pop_interleave(size_t limit)
 {
-	size_t i;
+	fsm_state_t i;
 	struct queue *q = queue_new(NULL, 1);
 	if (q == NULL) { return 0; }
 
 	for (i = 0; i < limit; i++) {
-		void *p;
-		if (!queue_push(q, (void *)i)) { return 0; }
+		fsm_state_t p;
+		if (!queue_push(q, i)) { return 0; }
 		if (!queue_pop(q, &p)) { return 0; }
-		if ((size_t)p != i) { return 0; }
+		if (p != i) { return 0; }
 	}
 	
 	queue_free(q);
@@ -68,13 +71,13 @@ push_pop_interleave(size_t limit)
 static int
 detect_empty(size_t limit)
 {
-	size_t i;
+	fsm_state_t i;
 	struct queue *q = queue_new(NULL, 1);
 	if (q == NULL) { return 0; }
 
 	for (i = 0; i < limit; i++) {
-		void *p;
-		if (!queue_push(q, (void *)i)) { return 0; }
+		fsm_state_t p;
+		if (!queue_push(q, i)) { return 0; }
 		if (!queue_pop(q, &p)) { return 0; }
 
 		/* queue should be empty */
@@ -88,47 +91,18 @@ detect_empty(size_t limit)
 static int
 detect_full(size_t limit)
 {
-	size_t i;
+	fsm_state_t i;
 	struct queue *q = queue_new(NULL, 1);
 	if (q == NULL) { return 0; }
 
 	for (i = 0; i < limit; i++) {
-		void *p;
-		if (!queue_push(q, (void *)i)) { return 0; }
+		fsm_state_t p;
+		if (!queue_push(q, i)) { return 0; }
 
 		/* try pushing again, queue should be at capacity */
-		if (queue_push(q, (void *)i)) { return 0; }
+		if (queue_push(q, i)) { return 0; }
 
 		if (!queue_pop(q, &p)) { return 0; }
-	}
-	
-	queue_free(q);
-	return 1;
-}
-
-static int
-support_NULLs(void)
-{
-	size_t i;
-	struct queue *q = queue_new(NULL, 100);
-	if (q == NULL) { return 0; }
-
-	for (i = 0; i < 100; i++) {
-		if (i & 0x01) {
-			if (!queue_push(q, (void *)q)) { return 0; }
-		} else {
-			if (!queue_push(q, NULL)) { return 0; }
-		}
-	}
-
-	for (i = 0; i < 100; i++) {
-		void *p;
-		if (!queue_pop(q, &p)) { return 0; }
-		if (i & 0x01) {
-			if (p != q) { return 0; }
-		} else {
-			if (p != NULL) { return 0; }
-		}
 	}
 	
 	queue_free(q);
@@ -139,7 +113,6 @@ int main(void) {
 	size_t i;
 	assert(create_and_free());
 	assert(reject_0_capacity());
-	assert(support_NULLs());
 
 	for (i = 1; i < 100; i++) {
 		assert(push_all_pop_all(i));

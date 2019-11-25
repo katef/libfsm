@@ -2,19 +2,15 @@
 
 #include LF_HEADER
 
-#include <assert.h>
 #include <stddef.h>
 
 #include <fsm/fsm.h>
 
 int
-utf8_Linear_A_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
+utf8_Linear_A_fsm(struct fsm *fsm, fsm_state_t x, fsm_state_t y)
 {
-	struct fsm_state *s[7];
+	fsm_state_t s[7];
 	size_t i;
-
-	assert(x != NULL);
-	assert(y != NULL);
 
 	for (i = 0; i < 7; i++) {
 		if (i == 0) {
@@ -27,8 +23,7 @@ utf8_Linear_A_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 			continue;
 		}
 
-		s[i] = fsm_addstate(fsm);
-		if (s[i] == NULL) {
+		if (!fsm_addstate(fsm, &s[i])) {
 			return 0;
 		}
 	}
@@ -52,7 +47,6 @@ utf8_Linear_A_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 	for (i = 0xa0; i <= 0xa7; i++) {
 		if (!fsm_addedge_literal(fsm, s[5], s[6], i)) { return 0; }
 	}
-
 
 	return 1;
 }

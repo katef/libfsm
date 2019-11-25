@@ -6,6 +6,12 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <errno.h>
+
+#include <fsm/fsm.h>
+#include <fsm/cost.h>
+#include <fsm/pred.h>
+#include <fsm/walk.h>
 
 #include <adt/set.h>
 #include <adt/priq.h>
@@ -13,17 +19,12 @@
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
-#include <fsm/fsm.h>
-#include <fsm/cost.h>
-#include <fsm/pred.h>
-#include <fsm/walk.h>
-
 #include "internal.h"
 
 struct path *
 fsm_shortest(const struct fsm *fsm,
-	const struct fsm_state *start, const struct fsm_state *goal,
-	unsigned (*cost)(const struct fsm_state *from, const struct fsm_state *to, char c))
+	fsm_state_t start, fsm_state_t goal,
+	unsigned (*cost)(fsm_state_t from, fsm_state_t to, char c))
 {
 	struct priq *todo, *done;
 	struct priq *u;
@@ -31,8 +32,8 @@ fsm_shortest(const struct fsm *fsm,
 	struct path *path;
 
 	assert(fsm != NULL);
-	assert(start != NULL);
-	assert(goal != NULL);
+	assert(start < fsm->statecount);
+	assert(goal < fsm->statecount);
 	assert(cost != NULL);
 
 	/*
@@ -60,10 +61,16 @@ fsm_shortest(const struct fsm *fsm,
 	path = NULL;
 
 	{
-		struct fsm_state *s;
+		fsm_state_t qs, i;
 
-		for (s = fsm->sl; s != NULL; s = s->next) {
-			u = priq_push(fsm->opt->alloc, &todo, s, s == fsm_getstart(fsm) ? 0 : FSM_COST_INFINITY);
+		if (!fsm_getstart(fsm, &qs)) {
+			errno = EINVAL;
+			goto error;
+		}
+
+		for (i = 0; i < fsm->statecount; i++) {
+			u = priq_push(fsm->opt->alloc, &todo, i,
+				i == qs ? 0 : FSM_COST_INFINITY);
 			if (u == NULL) {
 				goto error;
 			}
@@ -72,16 +79,16 @@ fsm_shortest(const struct fsm *fsm,
 			 * It's non-sensical to describe the start state as being reached
 			 * by a symbol; this field is not used.
 			 */
-			if (s == fsm_getstart(fsm)) {
+			if (i == qs) {
 				u->c = '\0';
 			}
 		}
 	}
 
 	while (u = priq_pop(&todo), u != NULL) {
-		const struct fsm_state *s;
-		struct fsm_edge *e;
 		struct edge_iter it;
+		struct fsm_edge *e;
+		fsm_state_t s;
 
 		priq_move(&done, u);
 
@@ -90,14 +97,14 @@ fsm_shortest(const struct fsm *fsm,
 		}
 
 		if (u->state == goal) {
-			assert(u->prev != NULL || goal == fsm->start);
+			assert(u->prev != NULL || goal == start);
 			goto done;
 		}
 
-		for (e = edge_set_first(u->state->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (e = edge_set_first(fsm->states[u->state]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			struct state_iter jt;
 
-			for (s = state_set_first(e->sl, &jt); s != NULL; s = state_set_next(&jt)) {
+			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &s); ) {
 				struct priq *v;
 				unsigned c;
 

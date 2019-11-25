@@ -87,7 +87,8 @@ re_strings_build(struct re_strings *g,
 	const struct fsm_options *opt, enum re_strings_flags flags)
 {
 	struct fsm *fsm;
-	struct fsm_state *end;
+	fsm_state_t end;
+	int have_end;
 
 	fsm = NULL;
 
@@ -102,22 +103,24 @@ re_strings_build(struct re_strings *g,
 		goto error;
 	}
 
-	end = NULL;
+	have_end = 0;
 
 	if ((flags & RE_STRINGS_AC_AUTOMATON) == 0 && (flags & RE_STRINGS_ANCHOR_RIGHT) == 0) {
-		end = fsm_addstate(fsm);
-		if (end == NULL) {
+		if (!fsm_addstate(fsm, &end)) {
 			goto error;
 		}
 
+		have_end = 1;
 		fsm_setend(fsm, end, 1);
 
 		if (!fsm_addedge_any(fsm, end, end)) {
 			goto error;
 		}
+	} else {
+		end = (unsigned) -1; /* appease clang */
 	}
 
-	if (!trie_to_fsm(fsm, (struct trie_graph *) g, end)) {
+	if (!trie_to_fsm(fsm, (struct trie_graph *) g, have_end, end)) {
 		goto error;
 	}
 

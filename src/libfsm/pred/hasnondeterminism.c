@@ -9,6 +9,9 @@
 #include <stddef.h>
 #include <limits.h>
 
+#include <fsm/fsm.h>
+#include <fsm/pred.h>
+
 #include <print/esc.h>
 
 #include <adt/bitmap.h>
@@ -16,19 +19,18 @@
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
-#include <fsm/pred.h>
-
 #include "../internal.h"
 
 static int
-state_hasnondeterminism(const struct fsm_state *state, struct bm *bm)
+state_hasnondeterminism(const struct fsm *fsm, fsm_state_t state, struct bm *bm)
 {
 	const struct fsm_edge *e;
 	struct edge_iter jt;
 
-	assert(state != NULL);
+	assert(fsm != NULL);
+	assert(state < fsm->statecount);
 
-	for (e = edge_set_first(state->edges, &jt); e != NULL; e = edge_set_next(&jt)) {
+	for (e = edge_set_first(fsm->states[state]->edges, &jt); e != NULL; e = edge_set_next(&jt)) {
 		size_t n;
 
 		n = state_set_count(e->sl);
@@ -50,22 +52,18 @@ state_hasnondeterminism(const struct fsm_state *state, struct bm *bm)
 }
 
 int
-fsm_hasnondeterminism(const struct fsm *fsm, const struct fsm_state *state)
+fsm_hasnondeterminism(const struct fsm *fsm, fsm_state_t state)
 {
-	const struct fsm_state *s;
 	struct state_set *ec;
 	struct state_iter it;
 	struct bm bm;
+	fsm_state_t s;
 
 	assert(fsm != NULL);
-	assert(state != NULL);
-
-	(void) fsm;
-
-	assert(state != NULL);
+	assert(state < fsm->statecount);
 
 	if (!fsm_hasepsilons(fsm, state)) {
-		return state_hasnondeterminism(state, NULL);
+		return state_hasnondeterminism(fsm, state, NULL);
 	}
 
 	ec = state_set_create(fsm->opt->alloc);
@@ -73,15 +71,15 @@ fsm_hasnondeterminism(const struct fsm *fsm, const struct fsm_state *state)
 		return -1;
 	}
 
-	if (!epsilon_closure(state, ec)) {
+	if (!epsilon_closure(fsm, state, ec)) {
 		state_set_free(ec);
 		return -1;
 	}
 
 	bm_clear(&bm);
 
-	for (s = state_set_first(ec, &it); s != NULL; s = state_set_next(&it)) {
-		if (state_hasnondeterminism(s, &bm)) {
+	for (state_set_reset(ec, &it); state_set_next(&it, &s); ) {
+		if (state_hasnondeterminism(fsm, s, &bm)) {
 			state_set_free(ec);
 			return 1;
 		}

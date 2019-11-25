@@ -11,6 +11,7 @@
 
 #include <adt/set.h>
 
+#include <fsm/fsm.h>
 #include <fsm/cost.h>
 
 #include "../internal.h"
@@ -23,7 +24,7 @@ isother(int c)
 }
 
 unsigned
-fsm_cost_legible(const struct fsm_state *from, const struct fsm_state *to, char c)
+fsm_cost_legible(fsm_state_t from, fsm_state_t to, char c)
 {
 	size_t i;
 

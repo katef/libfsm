@@ -7,24 +7,24 @@
 #include <assert.h>
 #include <stddef.h>
 
+#include <fsm/fsm.h>
+
 #include <adt/set.h>
 #include <adt/dlist.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
-#include <fsm/fsm.h>
-
 #include "../internal.h"
 
 static int
-fsm_reachable(const struct fsm *fsm, const struct fsm_state *state,
+fsm_reachable(const struct fsm *fsm, fsm_state_t state,
 	int any,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+	int (*predicate)(const struct fsm *, fsm_state_t))
 {
 	struct dlist *list;
 	struct dlist *p;
 
-	assert(state != NULL);
+	assert(state < fsm->statecount);
 	assert(predicate != NULL);
 
 	/*
@@ -34,13 +34,13 @@ fsm_reachable(const struct fsm *fsm, const struct fsm_state *state,
 
 	list = NULL;
 
-	if (!dlist_push(fsm->opt->alloc, &list, (struct fsm_state *) state)) {
+	if (!dlist_push(fsm->opt->alloc, &list, state)) {
 		return -1;
 	}
 
 	while (p = dlist_nextnotdone(list), p != NULL) {
-		struct fsm_edge *e;
 		struct edge_iter it;
+		struct fsm_edge *e;
 
 		if (any) {
 			if (predicate(fsm, p->state)) {
@@ -54,11 +54,11 @@ fsm_reachable(const struct fsm *fsm, const struct fsm_state *state,
 			}
 		}
 
-		for (e = edge_set_first(p->state->edges, &it); e != NULL; e = edge_set_next(&it)) {
-			struct fsm_state *st;
+		for (e = edge_set_first(fsm->states[p->state]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			struct state_iter jt;
+			fsm_state_t st;
 
-			for (st = state_set_first(e->sl, &jt); st != NULL; st = state_set_next(&jt)) {
+			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
 				/* not a list operation... */
 				if (dlist_contains(list, st)) {
 					continue;
@@ -83,15 +83,15 @@ fsm_reachable(const struct fsm *fsm, const struct fsm_state *state,
 }
 
 int
-fsm_reachableall(const struct fsm *fsm, const struct fsm_state *state,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+fsm_reachableall(const struct fsm *fsm, fsm_state_t state,
+	int (*predicate)(const struct fsm *, fsm_state_t))
 {
 	return fsm_reachable(fsm, state, 0, predicate);
 }
 
 int
-fsm_reachableany(const struct fsm *fsm, const struct fsm_state *state,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+fsm_reachableany(const struct fsm *fsm, fsm_state_t state,
+	int (*predicate)(const struct fsm *, fsm_state_t))
 {
 	return fsm_reachable(fsm, state, 1, predicate);
 }

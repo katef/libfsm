@@ -1,12 +1,13 @@
-#include <adt/statearray.h>
-
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
+#include <fsm/fsm.h>
+
 #include <adt/set.h>
 #include <adt/stateset.h>
+#include <adt/statearray.h>
 
 void
 state_array_clear(struct state_array *arr)
@@ -15,10 +16,10 @@ state_array_clear(struct state_array *arr)
 }
 
 struct state_array *
-state_array_add(struct state_array *arr, struct fsm_state *st)
+state_array_add(struct state_array *arr, fsm_state_t state)
 {
 	if (arr->len >= arr->cap) {
-		struct fsm_state **new;
+		fsm_state_t *new;
 		size_t new_cap;
 
 		if (arr->cap < 16) {
@@ -41,7 +42,7 @@ state_array_add(struct state_array *arr, struct fsm_state *st)
 	assert(arr->len < arr->cap);
 	assert(arr->states != NULL);
 
-	arr->states[arr->len] = st;
+	arr->states[arr->len] = state;
 	arr->len++;
 	return arr;
 }
@@ -69,20 +70,20 @@ state_array_copy(struct state_array *dst, const struct state_array *src)
 struct state_array *
 state_array_copy_set(struct state_array *dst, const struct state_set *src)
 {
-	const struct fsm_state **states;
+	const fsm_state_t *states;
 	size_t n;
 
 	n = state_set_count(src);
 
 	if (dst->cap < n) {
-		struct fsm_state **arr;
+		fsm_state_t *tmp;
 
-		arr = realloc(dst->states, n * sizeof arr[0]);
-		if (arr == NULL) {
+		tmp = realloc(dst->states, n * sizeof tmp[0]);
+		if (tmp == NULL) {
 			return NULL;
 		}
 
-		dst->states = arr;
+		dst->states = tmp;
 		dst->cap = n;
 	}
 

@@ -9,6 +9,7 @@
 
 #include <adt/set.h>
 
+#include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
@@ -19,26 +20,6 @@
 #include "lx/print.h"
 
 static unsigned int anonymous_states = 1;
-
-/* TODO: centralise with libfsm */
-static unsigned int
-indexof(const struct fsm *fsm, const struct fsm_state *state)
-{
-	struct fsm_state *s;
-	unsigned int i;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
-		if (s == state) {
-			return i;
-		}
-	}
-
-	assert(!"unreached");
-	return 0;
-}
 
 /* TODO: centralise */
 static unsigned int
@@ -100,7 +81,7 @@ endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 /* TODO: would need the fsm for indexing here */
 #if 0
 	if (!anonymous_states) {
-		fprintf(f, "%u<br/>", indexof(fsm, s));
+		fprintf(f, "%u<br/>", s);
 	}
 #endif
 
@@ -129,7 +110,7 @@ endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 
 static void
 singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
-	const struct ast_zone *z, const struct fsm_state *s)
+	const struct ast_zone *z, fsm_state_t s)
 {
 	struct ast_mapping *m;
 
@@ -137,13 +118,12 @@ singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 	assert(f != NULL);
 	assert(ast != NULL);
 	assert(z != NULL);
-	assert(s != NULL);
 
 	if (!fsm_isend(fsm, s)) {
 		return;
 	}
 
-	m = s->opaque;
+	m = fsm_getopaque(fsm, s);
 	assert(m != NULL);
 
 	if (m->conflict != NULL) {
@@ -151,16 +131,24 @@ singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 
 		for (p = m->conflict; p != NULL; p = p->next) {
 			if (p->m->to != NULL) {
+				fsm_state_t start;
+
+				(void) fsm_getstart(p->m->to->fsm, &start);
+
 				fprintf(f, "\tz%uS%u -> z%uS%u [ color = red, style = dashed ];\n",
-					zindexof(ast, z), indexof(fsm, s),
-					zindexof(ast, p->m->to), indexof(p->m->to->fsm, p->m->to->fsm->start));
+					zindexof(ast, z), s,
+					zindexof(ast, p->m->to), start);
 			}
 		}
 	} else {
 		if (m->to != NULL) {
+			fsm_state_t start;
+
+			(void) fsm_getstart(m->to->fsm, &start);
+
 			fprintf(f, "\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
-				zindexof(ast, z), indexof(fsm, s),
-				zindexof(ast, m->to), indexof(m->to->fsm, m->to->fsm->start));
+				zindexof(ast, z), s,
+				zindexof(ast, m->to), start);
 		}
 	}
 }
@@ -168,13 +156,14 @@ singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 static void
 print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
-	struct fsm_state *s;
+	fsm_state_t start, i;
 
 	assert(f != NULL);
 	assert(ast != NULL);
 	assert(z != NULL);
 	assert(z->fsm != NULL);
-	assert(z->fsm->start != NULL);
+
+	(void) fsm_getstart(z->fsm, &start);
 
 /* XXX: only if not showing transitions between zones:
 	fprintf(f, "\tz%u_start [ shape = plaintext ];\n",
@@ -182,7 +171,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\tz%u_start -> z%uS%u;\n",
 		zindexof(ast, z),
 		zindexof(ast, z),
-		indexof(z->fsm, z->fsm->start));
+		start);
 	fprintf(f, "\n");
 */
 
@@ -213,14 +202,14 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		z->fsm->opt = tmp;
 	}
 
-	for (s = z->fsm->sl; s != NULL; s = s->next) {
-		singlestate(f, z->fsm, ast, z, s);
+	for (i = 0; i < z->fsm->statecount; i++) {
+		singlestate(f, z->fsm, ast, z, i);
 	}
 
 	/* a start state should not accept */
-	if (fsm_isend(z->fsm, z->fsm->start)) {
+	if (fsm_isend(z->fsm, start)) {
 		fprintf(f, "\t\tz%uS%u [ color = red ];\n",
-			zindexof(ast, z), indexof(z->fsm, z->fsm->start));
+			zindexof(ast, z), start);
 	}
 }
 
@@ -229,8 +218,11 @@ lx_print_dot(FILE *f, const struct ast *ast)
 {
 	const struct ast_zone *z;
 	unsigned int zn;
+	fsm_state_t start;
 
 	assert(f != NULL);
+
+	(void) fsm_getstart(ast->global->fsm, &start);
 
 	fprintf(f, "digraph %sG {\n", prefix.api);
 	fprintf(f, "\trankdir = LR;\n");
@@ -242,7 +234,7 @@ lx_print_dot(FILE *f, const struct ast *ast)
 	}
 
 	if (ast->zl->next != NULL) {
-		const struct fsm_state *s;
+		fsm_state_t i;
 
 		for (z = ast->zl; z != NULL; z = z->next) {
 			fprintf(f, "\t\n");
@@ -256,9 +248,9 @@ lx_print_dot(FILE *f, const struct ast *ast)
 				fprintf(f, "\t\tlabel = <z%u>;\n", zindexof(ast, z));
 			}
 
-			for (s = z->fsm->sl; s != NULL; s = s->next) {
+			for (i = 0; i < z->fsm->statecount; i++) {
 				fprintf(f, "\t\tz%uS%u;\n",
-					zindexof(ast, z), indexof(z->fsm, s));
+					zindexof(ast, z), (unsigned) i);
 			}
 
 			if (z == ast->global) {
@@ -266,7 +258,7 @@ lx_print_dot(FILE *f, const struct ast *ast)
 				fprintf(f, "\t\tstart [ shape = plaintext ];\n");
 				fprintf(f, "\t\tstart -> z%uS%u;\n",
 					zindexof(ast, ast->global),
-					indexof(ast->global->fsm, ast->global->fsm->start));
+					start);
 				fprintf(f, "\t\t{ rank = min; start; }\n");
 			}
 
@@ -277,7 +269,7 @@ lx_print_dot(FILE *f, const struct ast *ast)
 		fprintf(f, "\tstart [ shape = plaintext ];\n");
 		fprintf(f, "\tstart -> z%uS%u;\n",
 			zindexof(ast, ast->global),
-			indexof(ast->global->fsm, ast->global->fsm->start));
+			start);
 		fprintf(f, "\t{ rank = min; start; }\n");
 	}
 

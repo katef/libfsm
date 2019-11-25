@@ -24,35 +24,15 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
-static unsigned
-indexof(const struct fsm *fsm, const struct fsm_state *state)
-{
-	struct fsm_state *s;
-	unsigned int i;
-
-	assert(fsm != NULL);
-	assert(state != NULL);
-
-	for (s = fsm->sl, i = 0; s != NULL; s = s->next, i++) {
-		if (s == state) {
-			return i;
-		}
-	}
-
-	assert(!"unreached");
-	return 0;
-}
-
 /* Return true if the edges after o contains state */
 /* TODO: centralise */
 static int
-contains(struct edge_set *edges, int o, struct fsm_state *state)
+contains(struct edge_set *edges, int o, fsm_state_t state)
 {
 	struct fsm_edge *e, search;
 	struct edge_iter it;
 
 	assert(edges != NULL);
-	assert(state != NULL);
 
 	search.symbol = o;
 	for (e = edge_set_firstafter(edges, &it, &search); e != NULL; e = edge_set_next(&it)) {
@@ -65,7 +45,7 @@ contains(struct edge_set *edges, int o, struct fsm_state *state)
 }
 
 static void
-singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
+singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 {
 	struct fsm_edge *e;
 	struct edge_iter it;
@@ -73,31 +53,29 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
-	assert(s != NULL);
+	assert(s < fsm->statecount);
 
 	if (!fsm->opt->anonymous_states) {
 		fprintf(f, "\t%sS%-2u [ label = <",
 			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-			indexof(fsm, s));
+			s);
 
-		fprintf(f, "%u", indexof(fsm, s));
+		fprintf(f, "%u", s);
 
 		fprintf(f, "> ];\n");
 	}
 
 	if (!fsm->opt->consolidate_edges) {
 		{
-			struct fsm_state *st;
 			struct state_iter jt;
+			fsm_state_t st;
 
-			for (st = state_set_first(s->epsilons, &jt); st != NULL; st = state_set_next(&jt)) {
-				assert(st != NULL);
-
+			for (state_set_reset(fsm->states[s]->epsilons, &jt); state_set_next(&jt, &st); ) {
 				fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
 					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-					indexof(fsm, s),
+					s,
 					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-					indexof(fsm, st));
+					st);
 
 				fputs("&#x3B5;", f);
 
@@ -105,18 +83,16 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 			}
 		}
 
-		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
-			struct fsm_state *st;
+		for (e = edge_set_first(fsm->states[s]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			struct state_iter jt;
+			fsm_state_t st;
 
-			for (st = state_set_first(e->sl, &jt); st != NULL; st = state_set_next(&jt)) {
-				assert(st != NULL);
-
+			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
 				fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
 					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-					indexof(fsm, s),
+					s,
 					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-					indexof(fsm, st));
+					st);
 
 				dot_escputc_html(f, fsm->opt, e->symbol);
 
@@ -137,26 +113,24 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 	 * looping through each edge.
 	 */
 	/* TODO: handle special edges upto FSM_EDGE_MAX separately */
-	for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
-		struct fsm_state *st;
+	for (e = edge_set_first(fsm->states[s]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		struct state_iter jt;
+		fsm_state_t st;
 
-		for (st = state_set_first(e->sl, &jt); st != NULL; st = state_set_next(&jt)) {
+		for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
 			struct fsm_edge *ne;
 			struct edge_iter kt;
 			struct bm bm;
 
-			assert(st != NULL);
-
 			/* unique states only */
-			if (contains(s->edges, e->symbol, st)) {
+			if (contains(fsm->states[s]->edges, e->symbol, st)) {
 				continue;
 			}
 
 			bm_clear(&bm);
 
 			/* find all edges which go from this state to the same target state */
-			for (ne = edge_set_first(s->edges, &kt); ne != NULL; ne = edge_set_next(&kt)) {
+			for (ne = edge_set_first(fsm->states[s]->edges, &kt); ne != NULL; ne = edge_set_next(&kt)) {
 				if (state_set_contains(ne->sl, st)) {
 					bm_set(&bm, ne->symbol);
 				}
@@ -164,9 +138,9 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 
 			fprintf(f, "\t%sS%-2u -> %sS%-2u [ ",
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				indexof(fsm, s),
+				s,
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				indexof(fsm, st));
+				st);
 
 			if (bm_count(&bm) > 4) {
 				fprintf(f, "weight = 3, ");
@@ -184,15 +158,15 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 	 * Special edges are not consolidated above
 	 */
 	{
-		struct fsm_state *st;
 		struct state_iter jt;
+		fsm_state_t st;
 
-		for (st = state_set_first(s->epsilons, &jt); st != NULL; st = state_set_next(&jt)) {
+		for (state_set_reset(fsm->states[s]->epsilons, &jt); state_set_next(&jt, &st); ) {
 			fprintf(f, "\t%sS%-2u -> %sS%-2u [ weight = 1, label = <",
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				indexof(fsm, s),
+				s,
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				indexof(fsm, st));
+				st);
 
 			fputs("&#x3B5;", f);
 
@@ -204,21 +178,20 @@ singlestate(FILE *f, const struct fsm *fsm, struct fsm_state *s)
 static void
 print_dotfrag(FILE *f, const struct fsm *fsm)
 {
-	struct fsm_state *s;
+	fsm_state_t i;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		if (fsm_isend(fsm, s)) {
+	for (i = 0; i < fsm->statecount; i++) {
+		if (fsm_isend(fsm, i)) {
 			fprintf(f, "\t%sS%-2u [ shape = doublecircle",
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				indexof(fsm, s));
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "", i);
 
 			if (fsm->opt->endleaf != NULL) {
 				fprintf(f, ", ");
-				fsm->opt->endleaf(f, s->opaque, fsm->opt->endleaf_opaque);
+				fsm->opt->endleaf(f, fsm->states[i], fsm->opt->endleaf_opaque);
 			}
 
 			fprintf(f, " ];\n");
@@ -226,14 +199,14 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 
 		/* TODO: show example here, unless !opt->comments */
 
-		singlestate(f, fsm, s);
+		singlestate(f, fsm, i);
 	}
 }
 
 void
 fsm_print_dot(FILE *f, const struct fsm *fsm)
 {
-	struct fsm_state *start;
+	fsm_state_t start;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
@@ -259,12 +232,13 @@ fsm_print_dot(FILE *f, const struct fsm *fsm)
 
 	fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
 
-	start = fsm_getstart(fsm);
-	fprintf(f, "\tstart -> %sS%u;\n",
-		fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-		 start != NULL ? indexof(fsm, start) : 0U);
+	if (fsm_getstart(fsm, &start)) {
+		fprintf(f, "\tstart -> %sS%u;\n",
+			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+			start);
 
-	fprintf(f, "\n");
+		fprintf(f, "\n");
+	}
 
 	print_dotfrag(f, fsm);
 

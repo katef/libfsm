@@ -78,7 +78,7 @@ enum op {
 };
 
 static int
-query_countstates(const struct fsm *fsm, const struct fsm_state *state)
+query_countstates(const struct fsm *fsm, fsm_state_t state)
 {
 	(void) fsm;
 	(void) state;
@@ -169,8 +169,8 @@ print_name(const char *name)
 static int
 (*query_name(const char *name,
 	int (**walk)(const struct fsm *,
-		int (*)(const struct fsm *, const struct fsm_state *))))
-(const struct fsm *, const struct fsm_state *)
+		int (*)(const struct fsm *, fsm_state_t))))
+(const struct fsm *, fsm_state_t)
 {
 	size_t i;
 
@@ -183,8 +183,8 @@ static int
 	struct {
 		const char *name;
 		int (*walk)(const struct fsm *,
-			int (*)(const struct fsm *, const struct fsm_state *));
-		int (*pred)(const struct fsm *, const struct fsm_state *);
+			int (*)(const struct fsm *, fsm_state_t));
+		int (*pred)(const struct fsm *, fsm_state_t);
 	} a[] = {
 		{ "isdfa",             fsm_all, fsm_isdfa             },
 		{ "dfa",               fsm_all, fsm_isdfa             },
@@ -308,9 +308,9 @@ main(int argc, char *argv[])
 	int xfiles;
 	int r;
 
-	int (*query)(const struct fsm *, const struct fsm_state *);
+	int (*query)(const struct fsm *, fsm_state_t);
 	int (*walk )(const struct fsm *,
-		 int (*)(const struct fsm *, const struct fsm_state *));
+		 int (*)(const struct fsm *, fsm_state_t));
 
 	opt.comments = 1;
 	opt.io       = FSM_IO_GETC;
@@ -513,14 +513,15 @@ main(int argc, char *argv[])
 		 * a pattern to the end state), like lx(1) does */
 
 		for (i = 0; i < argc; i++) {
-			const struct fsm_state *state;
+			fsm_state_t state;
+			int e;
 
 			if (xfiles) {
 				FILE *f;
 
 				f = xopen(argv[0]);
 
-				state = fsm_exec(fsm, fsm_fgetc, f);
+				e = fsm_exec(fsm, fsm_fgetc, f, &state);
 
 				fclose(f);
 			} else {
@@ -528,10 +529,10 @@ main(int argc, char *argv[])
 
 				s = argv[i];
 
-				state = fsm_exec(fsm, fsm_sgetc, &s);
+				e = fsm_exec(fsm, fsm_sgetc, &s, &state);
 			}
 
-			if (state == NULL) {
+			if (e != 1) {
 				r |= 1;
 				continue;
 			}

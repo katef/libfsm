@@ -57,37 +57,40 @@ struct fsm_state {
 	 * expected to be NULL at start and set back to NULL after. */
 	union {
 		/* temporary relation between one FSM and another */
-		struct fsm_state *equiv;
+		fsm_state_t equiv;
 		/* tracks which states have been visited in walk2 */
-		struct fsm_state *visited;
+		unsigned int visited:1;
 	} tmp;
-
-	struct fsm_state *next;
 };
 
 struct fsm {
-	struct fsm_state *sl;
-	struct fsm_state **tail; /* tail of .sl */
-	struct fsm_state *start;
+	struct fsm_state **states; /* array */
 
-	unsigned long endcount;
+	size_t statealloc; /* number of elements allocated */
+	size_t statecount; /* number of elements populated */
+	size_t endcount;
+
+	fsm_state_t start;
+	unsigned int hasstart:1;
 
 	const struct fsm_options *opt;
 };
 
 struct fsm_edge *
-fsm_hasedge_literal(const struct fsm_state *s, char c);
+fsm_hasedge_literal(const struct fsm *fsm, fsm_state_t state, char c);
 
 int
-fsm_addedge_bulk(struct fsm *fsm, struct fsm_state *from, struct fsm_state **to, size_t n, char c);
+fsm_addedge_bulk(struct fsm *fsm,
+	fsm_state_t from, fsm_state_t *a, size_t n,
+	char c);
 
 void
-fsm_carryopaque_array(struct fsm *src_fsm, const struct fsm_state **src_set, size_t n,
-    struct fsm *dst_fsm, struct fsm_state *dst_state);
+fsm_carryopaque_array(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
+    struct fsm *dst_fsm, fsm_state_t dst_state);
 
 void
 fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
-	struct fsm *new, struct fsm_state *state);
+	struct fsm *new, fsm_state_t state);
 
 void
 fsm_clear_tmp(struct fsm *fsm);
@@ -95,8 +98,12 @@ fsm_clear_tmp(struct fsm *fsm);
 void
 fsm_state_clear_tmp(struct fsm_state *state);
 
+struct fsm *
+fsm_mergeab(struct fsm *a, struct fsm *b,
+    fsm_state_t *base_b);
+
 struct state_set *
-epsilon_closure(const struct fsm_state *state, struct state_set *closure);
+epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set *closure);
 
 /*
  * Internal free function that invokes free(3) by default, or a user-provided

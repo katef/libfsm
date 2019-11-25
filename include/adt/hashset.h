@@ -17,9 +17,6 @@ struct hashset_iter {
  */
 
 unsigned long
-hashptr(const void *p);
-
-unsigned long
 hashrec(const void *p, size_t n);
 
 #endif

@@ -7,6 +7,8 @@
 #include <string.h>
 #include <assert.h>
 
+#include <fsm/fsm.h>
+
 #include <adt/alloc.h>
 #include <adt/queue.h>
 
@@ -17,7 +19,7 @@ struct queue {
 	size_t rd;
 	size_t wr;
 	size_t capacity;
-	void *q[1 /* capacity */];
+	fsm_state_t q[1 /* capacity */];
 };
 
 struct queue *
@@ -38,7 +40,7 @@ queue_new(const struct fsm_alloc *a, size_t max_capacity)
 }
 
 int
-queue_push(struct queue *q, void *p)
+queue_push(struct queue *q, fsm_state_t state)
 {
 	assert(q->rd <= q->wr);
 	assert(q->wr <= q->capacity);
@@ -57,22 +59,22 @@ queue_push(struct queue *q, void *p)
 		}
 	}
 
-	q->q[q->wr] = p;
+	q->q[q->wr] = state;
 	q->wr++;
 	return 1;
 }
 
 int
-queue_pop(struct queue *q, void **p)
+queue_pop(struct queue *q, fsm_state_t *state)
 {
 	assert(q != NULL);
-	assert(p != NULL);
+	assert(state != NULL);
 	assert(q->rd <= q->wr);
 	assert(q->wr <= q->capacity);
 
 	if (q->rd == q->wr) { return 0; }
 
-	*p = q->q[q->rd];
+	*state = q->q[q->rd];
 	q->rd++;
 
 	if (q->rd == q->wr) {

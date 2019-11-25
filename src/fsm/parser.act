@@ -41,8 +41,8 @@
 	#include "lexer.h"
 	#include "parser.h"
 
-	typedef char *             string;
-	typedef struct fsm_state * state;
+	typedef char *      string;
+	typedef fsm_state_t state;
 
 	struct act_state {
 		int lex_tok;
@@ -57,7 +57,7 @@
 
 	struct act_statelist {
 		char *id;
-		struct fsm_state *state;
+		fsm_state_t state;
 		struct act_statelist *next;
 	};
 
@@ -199,7 +199,6 @@
 
 		for (p = act_state->sl; p != NULL; p = p->next) {
 			assert(p->id != NULL);
-			assert(p->state != NULL);
 
 			if (0 == strcmp(p->id, @n)) {
 				@s = p->state;
@@ -222,8 +221,7 @@
 				exit(EXIT_FAILURE);
 			}
 
-			@s = fsm_addstate(fsm);
-			if (@s == NULL) {
+			if (!fsm_addstate(fsm, &@s)) {
 				perror("fsm_addstate");
 				exit(EXIT_FAILURE);
 			}
@@ -236,14 +234,10 @@
 	@};
 
 	<mark-start>: (s :state) -> () = @{
-		assert(@s != NULL);
-
 		fsm_setstart(fsm, @s);
 	@};
 
 	<mark-end>: (s :state) -> () = @{
-		assert(@s != NULL);
-
 		fsm_setend(fsm, @s, 1);
 	@};
 

@@ -21,9 +21,10 @@ enum { POOL_BLOCK_SIZE = 256 };
 struct trie_state {
 	struct trie_state *children[256];
 	struct trie_state *fail;
-	struct fsm_state *st;
+	fsm_state_t st;
 	unsigned int index;
 	unsigned int output:1;
+	unsigned int have_st:1;
 };
 
 struct trie_pool {
@@ -66,12 +67,12 @@ newstate(struct trie_graph *g)
 
 	memset(st->children,0,sizeof st->children);
 
-	st->fail   = NULL;
-	st->st     = NULL;
+	st->fail    = NULL;
+	st->have_st = 0;
 
-	st->index  = ++g->nstates;
+	st->index   = ++g->nstates;
 
-	st->output = 0;
+	st->output  = 0;
 
 	return st;
 }
@@ -127,8 +128,8 @@ trie_create(void)
 struct trie_graph *
 trie_add_word(struct trie_graph *g, const char *w, size_t n)
 {
-	size_t i;
 	struct trie_state *st;
+	size_t i;
 
 	assert(g != NULL);
 
@@ -266,41 +267,47 @@ find_next_state(struct trie_state *s, int sym)
 	return nx;
 }
 
-static struct fsm_state *
-trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm, struct fsm_state *single_end)
+static int
+trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
+	int have_end, fsm_state_t single_end,
+	fsm_state_t *q)
 {
-	struct fsm_state *st;
+	fsm_state_t st;
 	int sym;
 
-	if (ts->output && single_end) {
-		return single_end;
+	assert(fsm != NULL);
+	assert(q != NULL);
+
+	if (ts->output && have_end) {
+		*q = single_end;
+		return 1;
 	}
 
-	if (ts->st != NULL) {
-		return ts->st;
+	if (ts->have_st) {
+		*q = ts->st;
+		return 1;
 	}
 
-	st = fsm_addstate(fsm);
-	if (st == NULL) {
-		return NULL;
+	if (!fsm_addstate(fsm, &st)) {
+		return 0;
 	}
 
 	ts->st = st;
+	ts->have_st = 1;
 
 	for (sym = 0; sym < 256; sym++) {
 		struct trie_state *nx;
 
 		nx = find_next_state(ts,sym);
 		if (nx != NULL) {
-			struct fsm_state *dst;
+			fsm_state_t dst;
 
-			dst = trie_to_fsm_state(nx, fsm, single_end);
-			if (dst == NULL) {
-				return NULL;
+			if (!trie_to_fsm_state(nx, fsm, have_end, single_end, &dst)) {
+				return 0;
 			}
 
 			if (!fsm_addedge_literal(fsm, st, dst, sym)) {
-				return NULL;
+				return 0;
 			}
 		}
 	}
@@ -309,16 +316,20 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm, struct fsm_state *sing
 		fsm_setend(fsm, st, 1);
 	}
 
-	return st;
+	*q = st;
+	return 1;
 }
 
 struct fsm *
-trie_to_fsm(struct fsm *fsm, struct trie_graph *g, struct fsm_state *end)
+trie_to_fsm(struct fsm *fsm, struct trie_graph *g, int have_end, fsm_state_t end)
 {
-	struct fsm_state *start;
+	fsm_state_t start;
 
-	start = trie_to_fsm_state(g->root, fsm, end);
-	fsm_setstart(fsm,start);
+	if (!trie_to_fsm_state(g->root, fsm, have_end, end, &start)) {
+		return NULL;
+	}
+
+	fsm_setstart(fsm, start);
 
 	return fsm;
 }

@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include <fsm/fsm.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
 

@@ -2,19 +2,15 @@
 
 #include LF_HEADER
 
-#include <assert.h>
 #include <stddef.h>
 
 #include <fsm/fsm.h>
 
 int
-utf8_Buginese_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
+utf8_Buginese_fsm(struct fsm *fsm, fsm_state_t x, fsm_state_t y)
 {
-	struct fsm_state *s[4];
+	fsm_state_t s[4];
 	size_t i;
-
-	assert(x != NULL);
-	assert(y != NULL);
 
 	for (i = 0; i < 4; i++) {
 		if (i == 0) {
@@ -27,8 +23,7 @@ utf8_Buginese_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 			continue;
 		}
 
-		s[i] = fsm_addstate(fsm);
-		if (s[i] == NULL) {
+		if (!fsm_addstate(fsm, &s[i])) {
 			return 0;
 		}
 	}
@@ -41,7 +36,6 @@ utf8_Buginese_fsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)
 	for (i = 0x9e; i <= 0x9f; i++) {
 		if (!fsm_addedge_literal(fsm, s[2], s[3], i)) { return 0; }
 	}
-
 
 	return 1;
 }

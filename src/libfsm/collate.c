@@ -13,50 +13,50 @@
 
 #include "internal.h"
 
-struct fsm_state *
-fsm_collate(struct fsm *fsm,
-	int (*predicate)(const struct fsm *, const struct fsm_state *))
+int
+fsm_collate(struct fsm *fsm, fsm_state_t *state,
+	int (*predicate)(const struct fsm *, fsm_state_t))
 {
-	struct fsm_state *new;
-	struct fsm_state *s;
-
 	assert(fsm != NULL);
+	assert(state != NULL);
 	assert(predicate != NULL);
 
 	switch (fsm_count(fsm, predicate)) {
+		fsm_state_t new, i;
+
 	case 0:
-		errno = 0; /* XXX: bad form */
-		return NULL;
+		errno = EINVAL; /* bad form */
+		return 0;
 
 	case 1:
-		for (s = fsm->sl; !predicate(fsm, s); s = s->next) {
-			assert(s->next != NULL);
-		}
+		for (i = 0; !predicate(fsm, i); i++)
+			;
 
-		return s;
+		*state = i;
+		return 1;
 
 	default:
-		new = fsm_addstate(fsm);
-		if (new == NULL) {
-			return NULL;
+		if (!fsm_addstate(fsm, &new)) {
+			return 0;
 		}
 
-		for (s = fsm->sl; s != NULL; s = s->next) {
-			if (s == new) {
+		for (i = 0; i < fsm->statecount; i++) {
+			if (i == new) {
 				continue;
 			}
 
-			if (!predicate(fsm, s)) {
+			if (!predicate(fsm, i)) {
 				continue;
 			}
 
-			if (!fsm_addedge_epsilon(fsm, s, new)) {
+			if (!fsm_addedge_epsilon(fsm, i, new)) {
 				/* TODO: free new */
-				return NULL;
+				return 0;
 			}
 		}
 
-		return new;
+		*state = new;
+		return 1;
 	}
 }
 

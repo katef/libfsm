@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <limits.h>
 
+#include <fsm/fsm.h>
 #include <fsm/options.h>
 
 #include <print/esc.h>

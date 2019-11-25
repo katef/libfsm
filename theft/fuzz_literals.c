@@ -15,8 +15,8 @@ add_literal(struct fsm *fsm, const uint8_t *string, size_t size, intptr_t id);
 static bool
 check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, intptr_t id);
 static void
-carryopaque_cb(const struct fsm_state **set, size_t count,
-	struct fsm *fsm, struct fsm_state *state);
+carryopaque_cb(const fsm_state_t *set, size_t count,
+	struct fsm *fsm, fsm_state_t state);
 
 static const struct fsm_options opt = {
 	.anonymous_states  = 1,
@@ -66,7 +66,7 @@ prop_union_literals(struct theft *t, void *arg1)
 {
 	struct fsm_literal_scen *scen = arg1;
 	struct fsm *fsm;
-	struct fsm_state *s;
+	fsm_state_t s;
 
 	(void) t;
 
@@ -76,8 +76,7 @@ prop_union_literals(struct theft *t, void *arg1)
 		return THEFT_TRIAL_ERROR;
 	}
 
-	s = fsm_addstate(fsm);
-	if (s == NULL) {
+	if (!fsm_addstate(fsm, &s)) {
 		fprintf(stderr, "ERROR @ %d: fsm_addstate NULL\n", __LINE__);
 		return THEFT_TRIAL_ERROR;
 	}
@@ -153,9 +152,10 @@ add_literal(struct fsm *fsm, const uint8_t *string, size_t size, intptr_t id)
 static bool
 check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, intptr_t id)
 {
-	struct fsm_state *st;
 	intptr_t count;
 	intptr_t opaque;
+	fsm_state_t st;
+	int e;
 
 	count = (intptr_t) scen->count;
 
@@ -164,9 +164,9 @@ check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, intptr_t id)
 	assert(id < count);
 	assert(scen->pairs[id].size > 0);
 
-	st = wrap_fsm_exec(fsm, &scen->pairs[id]);
+	e = wrap_fsm_exec(fsm, &scen->pairs[id], &st);
 
-	if (st == NULL) {
+	if (e != 1) {
 		if (scen->verbosity > 0) {
 			printf("FAIL: fsm_exec failure\n");
 		}
@@ -189,8 +189,8 @@ check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, intptr_t id)
 }
 
 static void
-carryopaque_cb(const struct fsm_state **set, size_t count,
-	struct fsm *fsm, struct fsm_state *state)
+carryopaque_cb(const fsm_state_t *set, size_t count,
+	struct fsm *fsm, fsm_state_t state)
 {
 	const intptr_t NONE = -1;
 	intptr_t first_id;

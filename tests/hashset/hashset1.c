@@ -30,6 +30,17 @@ hash_int(const void *a)
 	return hashrec(a, sizeof * (const int *) a);
 }
 
+int
+hashset_contains(const struct hashset *set, const void *item)
+{
+	unsigned long h = hash_int(item);
+	size_t b = 0;
+
+	assert(set != NULL);
+
+	return finditem(set, h, item, &b);
+}
+
 int main(void) {
 	struct hashset *s = hashset_create(NULL, hash_int, cmp_int);
 	/* ensure that a has enough elements that the table has to be

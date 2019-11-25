@@ -47,14 +47,15 @@ test_re_parser_literal(uint8_t verbosity,
 
 	/* Valid RE: check if expected strings are matched */
 	for (i = 0; i < count; i++) {
-		struct fsm_state *st;
+		fsm_state_t st;
+		int e;
 
-		st = wrap_fsm_exec(fsm, &pairs[i]);
+		e = wrap_fsm_exec(fsm, &pairs[i], &st);
 
 		if (verbosity > 0) {
 			fsm_print_dot(stderr, fsm);
 		}
-		if (st == NULL) {
+		if (e != 1) {
 			LOG_FAIL(verbosity, "EXEC FAIL\n");
 			goto fail;
 		} else if (!fsm_isend(fsm, st)) {

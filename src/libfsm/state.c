@@ -7,18 +7,19 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+
+#include <fsm/fsm.h>
 
 #include <adt/alloc.h>
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
-#include <fsm/fsm.h>
-
 #include "internal.h"
 
-struct fsm_state *
-fsm_addstate(struct fsm *fsm)
+int
+fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 {
 	struct fsm_state *new;
 
@@ -26,7 +27,7 @@ fsm_addstate(struct fsm *fsm)
 
 	new = f_malloc(fsm->opt->alloc, sizeof *new);
 	if (new == NULL) {
-		return NULL;
+		return 0;
 	}
 
 	new->end = 0;
@@ -43,11 +44,35 @@ fsm_addstate(struct fsm *fsm)
 
 	fsm_state_clear_tmp(new);
 
-	*fsm->tail = new;
-	new->next = NULL;
-	fsm->tail  = &new->next;
+	if (fsm->statecount == (fsm_state_t) -1) {
+		errno = ENOMEM;
+		return 0;
+	}
 
-	return new;
+	/* TODO: something better than one contigious realloc */
+	if (fsm->statecount == fsm->statealloc) {
+		const size_t factor = 2; /* a guess */
+		const size_t n = fsm->statealloc * factor;
+		void *tmp;
+
+		tmp = f_realloc(fsm->opt->alloc, fsm->states, n * sizeof *fsm->states);
+		if (tmp == NULL) {
+			f_free(fsm->opt->alloc, new);
+			return 0;
+		}
+
+		fsm->statealloc = n;
+		fsm->states = tmp;
+	}
+
+	if (state != NULL) {
+		*state = fsm->statecount;
+	}
+
+	fsm->states[fsm->statecount] = new;
+	fsm->statecount++;
+
+	return 1;
 }
 
 void
@@ -57,57 +82,58 @@ fsm_state_clear_tmp(struct fsm_state *state)
 }
 
 void
-fsm_removestate(struct fsm *fsm, struct fsm_state *state)
+fsm_removestate(struct fsm *fsm, fsm_state_t state)
 {
-	struct fsm_state *s;
 	struct fsm_edge *e;
 	struct edge_iter it;
+	fsm_state_t start, i;
 
 	assert(fsm != NULL);
-	assert(state != NULL);
+	assert(state < fsm->statecount);
 
 	/* for endcount accounting */
 	fsm_setend(fsm, state, 0);
 
-	for (s = fsm->sl; s != NULL; s = s->next) {
-		state_set_remove(s->epsilons, state);
-		for (e = edge_set_first(s->edges, &it); e != NULL; e = edge_set_next(&it)) {
+	for (i = 0; i < fsm->statecount; i++) {
+		state_set_remove(fsm->states[i]->epsilons, state);
+		for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 			state_set_remove(e->sl, state);
 		}
 	}
 
-	for (e = edge_set_first(state->edges, &it); e != NULL; e = edge_set_next(&it)) {
+	for (e = edge_set_first(fsm->states[state]->edges, &it); e != NULL; e = edge_set_next(&it)) {
 		state_set_free(e->sl);
 		f_free(fsm->opt->alloc, e);
 	}
-	state_set_free(state->epsilons);
-	edge_set_free(state->edges);
+	state_set_free(fsm->states[state]->epsilons);
+	edge_set_free(fsm->states[state]->edges);
 
-	if (fsm->start == state) {
-		fsm->start = NULL;
+	if (fsm_getstart(fsm, &start) && start == state) {
+		fsm_clearstart(fsm);
 	}
 
-	{
-		struct fsm_state **p;
-		struct fsm_state **tail;
+	f_free(fsm->opt->alloc, fsm->states[state]);
 
-		tail = &fsm->sl;
+	assert(fsm->statecount >= 1);
 
-		for (p = &fsm->sl; *p != NULL; p = &(*p)->next) {
-			if (*p == state) {
-				struct fsm_state *next;
+	/*
+	 * In order to avoid a hole, we move the last state over the removed index.
+	 * This need a pass over all transitions to renumber any which point to
+	 * that (now rehoused) state.
+	 * TODO: this is terribly expensive. I would rather a mechanism for keeping
+	 * a hole, perhaps done by ranges over a globally-shared state array.
+	 */
+	if (state < fsm->statecount - 1) {
+		fsm->states[state] = fsm->states[fsm->statecount - 1];
 
-				if (fsm->tail == &(*p)->next) {
-					fsm->tail = tail;
-				}
-
-				next = (*p)->next;
-				f_free(fsm->opt->alloc, *p);
-				*p = next;
-				break;
+		for (i = 0; i < fsm->statecount - 1; i++) {
+			state_set_replace(fsm->states[i]->epsilons, fsm->statecount - 1, state);
+			for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+				state_set_replace(e->sl, fsm->statecount - 1, state);
 			}
-
-			tail = &(*p)->next;
 		}
 	}
+
+	fsm->statecount--;
 }
+

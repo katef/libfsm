@@ -129,6 +129,10 @@ src/libre/class.h:
 	printf "#ifndef RE_CLASS_H\n" >> ${.TARGET}
 	printf "#define RE_CLASS_H\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
+	printf "#include <stddef.h>\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
+	printf "#include <fsm/fsm.h>\n" >> ${.TARGET}
+	printf "\n" >> ${.TARGET}
 	printf "struct fsm;\n" >> ${.TARGET}
 	printf "struct fsm_options;\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
