@@ -56,8 +56,6 @@ struct fsm_state {
 	/* these are only valid within one particular transformation.
 	 * expected to be NULL at start and set back to NULL after. */
 	union {
-		/* temporary relation between one FSM and another */
-		fsm_state_t equiv;
 		/* tracks which states have been visited in walk2 */
 		unsigned int visited:1;
 	} tmp;
