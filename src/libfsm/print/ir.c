@@ -87,7 +87,7 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 
 	n = 0;
 
-	for (e = edge_set_first(fsm->states[state]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
 		fsm_state_t s;
 
 		if (state_set_empty(e->sl)) {
@@ -109,7 +109,7 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 				struct edge_iter jt;
 				fsm_state_t ns;
 
-				ne = edge_set_firstafter(fsm->states[state]->edges, &jt, e);
+				ne = edge_set_firstafter(fsm->states[state].edges, &jt, e);
 				if (ne == NULL || ne->symbol != e->symbol + 1) {
 					break;
 				}
@@ -357,7 +357,7 @@ make_state(const struct fsm *fsm, fsm_state_t state,
 
 	/* no edges */
 	{
-		if (edge_set_empty(fsm->states[state]->edges)) {
+		if (edge_set_empty(fsm->states[state].edges)) {
 			cs->strategy = IR_NONE;
 			return 0;
 		}

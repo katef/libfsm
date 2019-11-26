@@ -47,7 +47,7 @@ fsm_clone(const struct fsm *fsm)
 				return NULL;
 			}
 
-			fsm->states[i]->tmp.equiv = q;
+			assert(q == i);
 		}
 	}
 
@@ -58,27 +58,27 @@ fsm_clone(const struct fsm *fsm)
 			struct fsm_edge *e;
 			struct edge_iter it;
 
-			fsm_setend(new, fsm->states[i]->tmp.equiv, fsm_isend(fsm, i));
-			new->states[fsm->states[i]->tmp.equiv]->opaque = fsm->states[i]->opaque;
+			fsm_setend(new, i, fsm_isend(fsm, i));
+			new->states[i].opaque = fsm->states[i].opaque;
 
 			{
 				struct state_iter jt;
 				fsm_state_t to;
 
-				for (state_set_reset(fsm->states[i]->epsilons, &jt); state_set_next(&jt, &to); ) {
-					if (!fsm_addedge_epsilon(new, fsm->states[i]->tmp.equiv, fsm->states[to]->tmp.equiv)) {
+				for (state_set_reset(fsm->states[i].epsilons, &jt); state_set_next(&jt, &to); ) {
+					if (!fsm_addedge_epsilon(new, i, to)) {
 						fsm_free(new);
 						return NULL;
 					}
 				}
 			}
 
-			for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct state_iter jt;
 				fsm_state_t to;
 
 				for (state_set_reset(e->sl, &jt); state_set_next(&jt, &to); ) {
-					if (!fsm_addedge_literal(new, fsm->states[i]->tmp.equiv, fsm->states[to]->tmp.equiv, e->symbol)) {
+					if (!fsm_addedge_literal(new, i, to, e->symbol)) {
 						fsm_free(new);
 						return NULL;
 					}
@@ -91,11 +91,9 @@ fsm_clone(const struct fsm *fsm)
 		fsm_state_t start;
 
 		if (fsm_getstart(fsm, &start)) {
-			fsm_setstart(new, fsm->states[start]->tmp.equiv);
+			fsm_setstart(new, start);
 		}
 	}
-
-	fsm_clear_tmp(new);
 
 	return new;
 }

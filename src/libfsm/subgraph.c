@@ -143,7 +143,7 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, fsm_state_t state,
 		}
 
 		{
-			for (state_set_reset(fsm->states[m->old]->epsilons, &jt); state_set_next(&jt, &s); ) {
+			for (state_set_reset(fsm->states[m->old].epsilons, &jt); state_set_next(&jt, &s); ) {
 				struct mapping *to;
 
 				to = mapping_ensure(fsm, &mappings, s);
@@ -157,7 +157,7 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, fsm_state_t state,
 				}
 			}
 		}
-		for (e = edge_set_first(fsm->states[m->old]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (e = edge_set_first(fsm->states[m->old].edges, &it); e != NULL; e = edge_set_next(&it)) {
 			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &s); ) {
 				struct mapping *to;
 

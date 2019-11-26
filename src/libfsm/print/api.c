@@ -139,12 +139,12 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 			bm_clear(&a[i]);
 		}
 
-		for (state_set_reset(fsm->states[from]->epsilons, &jt); state_set_next(&jt, &to); ) {
+		for (state_set_reset(fsm->states[from].epsilons, &jt); state_set_next(&jt, &to); ) {
 			fprintf(f, "\tif (!fsm_addedge_epsilon(fsm, s[%u], s[%u])) { return 0; }\n",
 				from, to);
 		}
 
-		for (e = edge_set_first(fsm->states[from]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (e = edge_set_first(fsm->states[from].edges, &it); e != NULL; e = edge_set_next(&it)) {
 			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &to); ) {
 				bm_set(&a[to], e->symbol);
 			}

@@ -80,7 +80,7 @@ fsm_reverse(struct fsm *fsm)
 				return 0;
 			}
 
-			fsm->states[i]->tmp.equiv = p;
+			assert(p == i);
 
 			if (hasstart && i == start) {
 				end = p;
@@ -114,30 +114,32 @@ fsm_reverse(struct fsm *fsm)
 			fsm_state_t to;
 			fsm_state_t se;
 
-			to = fsm->states[i]->tmp.equiv;
+			to = i;
 
 			assert(to < new->statecount);
 
 			{
 				struct state_iter jt;
 
-				for (state_set_reset(fsm->states[i]->epsilons, &jt); state_set_next(&jt, &se); ) {
-					assert(fsm->states[se]->tmp.equiv < fsm->statecount);
+				for (state_set_reset(fsm->states[i].epsilons, &jt); state_set_next(&jt, &se); ) {
+					assert(se < fsm->statecount);
+					assert(se < new->statecount);
 
-					if (!fsm_addedge_epsilon(new, fsm->states[se]->tmp.equiv, to)) {
+					if (!fsm_addedge_epsilon(new, se, to)) {
 						state_set_free(endset);
 						fsm_free(new);
 						return 0;
 					}
 				}
 			}
-			for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct state_iter jt;
 
 				for (state_set_reset(e->sl, &jt); state_set_next(&jt, &se); ) {
-					assert(fsm->states[se]->tmp.equiv < fsm->statecount);
+					assert(se < fsm->statecount);
+					assert(se < new->statecount);
 
-					if (!fsm_addedge_literal(new, fsm->states[se]->tmp.equiv, to, e->symbol)) {
+					if (!fsm_addedge_literal(new, se, to, e->symbol)) {
 						state_set_free(endset);
 						fsm_free(new);
 						return 0;
@@ -190,7 +192,7 @@ fsm_reverse(struct fsm *fsm)
 			for (state_set_reset(endset, &it); state_set_next(&it, &s); ) {
 				if (!fsm_hasincoming(fsm, s)) {
 					have_start = 1;
-					start = fsm->states[s]->tmp.equiv;
+					start = s;
 					break;
 				}
 			}
@@ -210,11 +212,11 @@ fsm_reverse(struct fsm *fsm)
 		}
 
 		for (state_set_reset(endset, &it); state_set_next(&it, &s); ) {
-			if (fsm->states[s]->tmp.equiv == start) {
+			if (s == start) {
 				continue;
 			}
 
-			if (!fsm_addedge_epsilon(new, start, fsm->states[s]->tmp.equiv)) {
+			if (!fsm_addedge_epsilon(new, start, s)) {
 				state_set_free(endset);
 				fsm_free(new);
 				return 0;
@@ -223,8 +225,6 @@ fsm_reverse(struct fsm *fsm)
 	}
 
 	state_set_free(endset);
-
-	fsm_clear_tmp(fsm);
 
 	fsm_move(fsm, new);
 

@@ -54,7 +54,7 @@ fsm_reachable(const struct fsm *fsm, fsm_state_t state,
 			}
 		}
 
-		for (e = edge_set_first(fsm->states[p->state]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (e = edge_set_first(fsm->states[p->state].edges, &it); e != NULL; e = edge_set_next(&it)) {
 			struct state_iter jt;
 			fsm_state_t st;
 

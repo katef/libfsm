@@ -70,7 +70,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 			struct state_iter jt;
 			fsm_state_t st;
 
-			for (state_set_reset(fsm->states[s]->epsilons, &jt); state_set_next(&jt, &st); ) {
+			for (state_set_reset(fsm->states[s].epsilons, &jt); state_set_next(&jt, &st); ) {
 				fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
 					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 					s,
@@ -83,7 +83,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 			}
 		}
 
-		for (e = edge_set_first(fsm->states[s]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
 			struct state_iter jt;
 			fsm_state_t st;
 
@@ -113,7 +113,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	 * looping through each edge.
 	 */
 	/* TODO: handle special edges upto FSM_EDGE_MAX separately */
-	for (e = edge_set_first(fsm->states[s]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+	for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
 		struct state_iter jt;
 		fsm_state_t st;
 
@@ -123,14 +123,14 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 			struct bm bm;
 
 			/* unique states only */
-			if (contains(fsm->states[s]->edges, e->symbol, st)) {
+			if (contains(fsm->states[s].edges, e->symbol, st)) {
 				continue;
 			}
 
 			bm_clear(&bm);
 
 			/* find all edges which go from this state to the same target state */
-			for (ne = edge_set_first(fsm->states[s]->edges, &kt); ne != NULL; ne = edge_set_next(&kt)) {
+			for (ne = edge_set_first(fsm->states[s].edges, &kt); ne != NULL; ne = edge_set_next(&kt)) {
 				if (state_set_contains(ne->sl, st)) {
 					bm_set(&bm, ne->symbol);
 				}
@@ -161,7 +161,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 		struct state_iter jt;
 		fsm_state_t st;
 
-		for (state_set_reset(fsm->states[s]->epsilons, &jt); state_set_next(&jt, &st); ) {
+		for (state_set_reset(fsm->states[s].epsilons, &jt); state_set_next(&jt, &st); ) {
 			fprintf(f, "\t%sS%-2u -> %sS%-2u [ weight = 1, label = <",
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				s,
@@ -191,7 +191,7 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 
 			if (fsm->opt->endleaf != NULL) {
 				fprintf(f, ", ");
-				fsm->opt->endleaf(f, fsm->states[i], fsm->opt->endleaf_opaque);
+				fsm->opt->endleaf(f, &fsm->states[i], fsm->opt->endleaf_opaque);
 			}
 
 			fprintf(f, " ];\n");

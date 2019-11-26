@@ -46,25 +46,18 @@ struct fsm_edge {
 
 struct fsm_state {
 	unsigned int end:1;
-	unsigned int reachable:1;
+
+	/* meaningful within one particular transformation only */
+	unsigned int visited:1;
 
 	struct edge_set *edges;
 	struct state_set *epsilons;
 
 	void *opaque;
-
-	/* these are only valid within one particular transformation.
-	 * expected to be NULL at start and set back to NULL after. */
-	union {
-		/* temporary relation between one FSM and another */
-		fsm_state_t equiv;
-		/* tracks which states have been visited in walk2 */
-		unsigned int visited:1;
-	} tmp;
 };
 
 struct fsm {
-	struct fsm_state **states; /* array */
+	struct fsm_state *states; /* array */
 
 	size_t statealloc; /* number of elements allocated */
 	size_t statecount; /* number of elements populated */
@@ -91,12 +84,6 @@ fsm_carryopaque_array(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
 void
 fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
 	struct fsm *new, fsm_state_t state);
-
-void
-fsm_clear_tmp(struct fsm *fsm);
-
-void
-fsm_state_clear_tmp(struct fsm_state *state);
 
 struct fsm *
 fsm_mergeab(struct fsm *a, struct fsm *b,

@@ -21,28 +21,7 @@
 int
 fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 {
-	struct fsm_state *new;
-
 	assert(fsm != NULL);
-
-	new = f_malloc(fsm->opt->alloc, sizeof *new);
-	if (new == NULL) {
-		return 0;
-	}
-
-	new->end = 0;
-	new->opaque = NULL;
-
-	/*
-	 * Sets for epsilon and labelled transitions are kept NULL
-	 * until populated; this suits the most nodes in the bodies of
-	 * typical FSM that do not have epsilons, and (less often)
-	 * nodes that have no edges.
-	 */
-	new->epsilons = NULL;
-	new->edges    = NULL;
-
-	fsm_state_clear_tmp(new);
 
 	if (fsm->statecount == (fsm_state_t) -1) {
 		errno = ENOMEM;
@@ -57,7 +36,6 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 
 		tmp = f_realloc(fsm->opt->alloc, fsm->states, n * sizeof *fsm->states);
 		if (tmp == NULL) {
-			f_free(fsm->opt->alloc, new);
 			return 0;
 		}
 
@@ -69,16 +47,28 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 		*state = fsm->statecount;
 	}
 
-	fsm->states[fsm->statecount] = new;
+	{
+		struct fsm_state *new;
+
+		new = &fsm->states[fsm->statecount];
+
+		new->end = 0;
+		new->visited = 0;
+		new->opaque = NULL;
+
+		/*
+		 * Sets for epsilon and labelled transitions are kept NULL
+		 * until populated; this suits the most nodes in the bodies of
+		 * typical FSM that do not have epsilons, and (less often)
+		 * nodes that have no edges.
+		 */
+		new->epsilons = NULL;
+		new->edges    = NULL;
+	}
+
 	fsm->statecount++;
 
 	return 1;
-}
-
-void
-fsm_state_clear_tmp(struct fsm_state *state)
-{
-	memset(&state->tmp, 0x00, sizeof(state->tmp));
 }
 
 void
@@ -95,24 +85,22 @@ fsm_removestate(struct fsm *fsm, fsm_state_t state)
 	fsm_setend(fsm, state, 0);
 
 	for (i = 0; i < fsm->statecount; i++) {
-		state_set_remove(fsm->states[i]->epsilons, state);
-		for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		state_set_remove(fsm->states[i].epsilons, state);
+		for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
 			state_set_remove(e->sl, state);
 		}
 	}
 
-	for (e = edge_set_first(fsm->states[state]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
 		state_set_free(e->sl);
 		f_free(fsm->opt->alloc, e);
 	}
-	state_set_free(fsm->states[state]->epsilons);
-	edge_set_free(fsm->states[state]->edges);
+	state_set_free(fsm->states[state].epsilons);
+	edge_set_free(fsm->states[state].edges);
 
 	if (fsm_getstart(fsm, &start) && start == state) {
 		fsm_clearstart(fsm);
 	}
-
-	f_free(fsm->opt->alloc, fsm->states[state]);
 
 	assert(fsm->statecount >= 1);
 
@@ -127,8 +115,8 @@ fsm_removestate(struct fsm *fsm, fsm_state_t state)
 		fsm->states[state] = fsm->states[fsm->statecount - 1];
 
 		for (i = 0; i < fsm->statecount - 1; i++) {
-			state_set_replace(fsm->states[i]->epsilons, fsm->statecount - 1, state);
-			for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			state_set_replace(fsm->states[i].epsilons, fsm->statecount - 1, state);
+			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
 				state_set_replace(e->sl, fsm->statecount - 1, state);
 			}
 		}

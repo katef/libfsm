@@ -32,14 +32,13 @@ free_contents(struct fsm *fsm)
 		struct edge_iter it;
 		struct fsm_edge *e;
 
-		for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
 			state_set_free(e->sl);
 			f_free(fsm->opt->alloc, e);
 		}
 
-		state_set_free(fsm->states[i]->epsilons);
-		edge_set_free(fsm->states[i]->edges);
-		f_free(fsm->opt->alloc, fsm->states[i]);
+		state_set_free(fsm->states[i].epsilons);
+		edge_set_free(fsm->states[i].edges);
 	}
 
 	f_free(fsm->opt->alloc, fsm->states);
@@ -218,24 +217,12 @@ fsm_countedges(const struct fsm *fsm)
 		struct edge_iter ei;
 		const struct fsm_edge *e;
 
-		for (e = edge_set_first(fsm->states[i]->edges, &ei); e != NULL; e=edge_set_next(&ei)) {
+		for (e = edge_set_first(fsm->states[i].edges, &ei); e != NULL; e=edge_set_next(&ei)) {
 			assert(n + state_set_count(e->sl) > n); /* handle overflow with more grace? */
 			n += state_set_count(e->sl);
 		}
 	}
 
 	return n;
-}
-
-void
-fsm_clear_tmp(struct fsm *fsm)
-{
-	size_t i;
-
-	assert(fsm != NULL);
-
-	for (i = 0; i < fsm->statecount; i++) {
-		fsm_state_clear_tmp(fsm->states[i]);
-	}
 }
 

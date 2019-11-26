@@ -57,9 +57,9 @@ merge(struct fsm *dst, struct fsm *src,
 			const struct fsm_edge *e;
 			struct edge_iter ei;
 
-			state_set_rebase(src->states[i]->epsilons, *base_src);
+			state_set_rebase(src->states[i].epsilons, *base_src);
 
-			for (e = edge_set_first(src->states[i]->edges, &ei); e != NULL; e = edge_set_next(&ei)) {
+			for (e = edge_set_first(src->states[i].edges, &ei); e != NULL; e = edge_set_next(&ei)) {
 				state_set_rebase(e->sl, *base_src);
 			}
 		}
