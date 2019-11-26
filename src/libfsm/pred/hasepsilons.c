@@ -22,6 +22,6 @@ fsm_hasepsilons(const struct fsm *fsm, fsm_state_t state)
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
 
-	return !state_set_empty(fsm->states[state]->epsilons);
+	return !state_set_empty(fsm->states[state].epsilons);
 }
 

@@ -330,7 +330,7 @@ glushkov_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 		struct fsm_edge *e;
 		struct edge_iter jt;
 
-		for (e = edge_set_first(fsm->states[s]->edges, &jt); e != NULL; e = edge_set_next(&jt)) {
+		for (e = edge_set_first(fsm->states[s].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
 			struct state_iter kt;
 			fsm_state_t st;
 
@@ -450,7 +450,7 @@ dfa_buildtransitions(const struct fsm *fsm, struct fsm *dfa,
 		struct fsm_edge *e;
 		struct edge_iter jt;
 
-		for (e = edge_set_first(fsm->states[s]->edges, &jt); e != NULL; e = edge_set_next(&jt)) {
+		for (e = edge_set_first(fsm->states[s].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
 			sym = e->symbol;
 
 			assert(sym >= 0);

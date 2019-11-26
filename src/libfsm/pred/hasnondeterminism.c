@@ -30,7 +30,7 @@ state_hasnondeterminism(const struct fsm *fsm, fsm_state_t state, struct bm *bm)
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
 
-	for (e = edge_set_first(fsm->states[state]->edges, &jt); e != NULL; e = edge_set_next(&jt)) {
+	for (e = edge_set_first(fsm->states[state].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
 		size_t n;
 
 		n = state_set_count(e->sl);

@@ -30,10 +30,10 @@ fsm_iscomplete(const struct fsm *fsm, fsm_state_t state)
 	n = 0;
 
 	/* epsilon transitions have no effect on completeness */
-	(void) fsm->states[state]->epsilons;
+	(void) fsm->states[state].epsilons;
 
 	/* TODO: assert state is in fsm->sl */
-	for (e = edge_set_first(fsm->states[state]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
 		if (state_set_empty(e->sl)) {
 			continue;
 		}

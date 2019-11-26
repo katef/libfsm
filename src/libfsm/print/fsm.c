@@ -51,7 +51,7 @@ findany(const struct fsm *fsm, fsm_state_t state, fsm_state_t *a)
 
 	bm_clear(&bm);
 
-	e = edge_set_first(fsm->states[state]->edges, &it);
+	e = edge_set_first(fsm->states[state].edges, &it);
 	if (e == NULL) {
 		return 0;
 	}
@@ -67,7 +67,7 @@ findany(const struct fsm *fsm, fsm_state_t state, fsm_state_t *a)
 		return 0;
 	}
 
-	for (e = edge_set_first(fsm->states[state]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
 		if (state_set_count(e->sl) != 1) {
 			return 0;
 		}
@@ -107,7 +107,7 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 			struct state_iter jt;
 			fsm_state_t st;
 
-			for (state_set_reset(fsm->states[s]->epsilons, &jt); state_set_next(&jt, &st); ) {
+			for (state_set_reset(fsm->states[s].epsilons, &jt); state_set_next(&jt, &st); ) {
 				fprintf(f, "%-2u -> %2u;\n", s, st);
 			}
 		}
@@ -121,7 +121,7 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 			}
 		}
 
-		for (e = edge_set_first(fsm->states[s]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
 			struct state_iter jt;
 			fsm_state_t st;
 

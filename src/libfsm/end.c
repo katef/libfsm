@@ -22,7 +22,7 @@ fsm_setend(struct fsm *fsm, fsm_state_t state, int end)
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
 
-	if (fsm->states[state]->end == !!end) {
+	if (fsm->states[state].end == !!end) {
 		return;
 	}
 
@@ -30,13 +30,13 @@ fsm_setend(struct fsm *fsm, fsm_state_t state, int end)
 	case 0:
 		assert(fsm->endcount > 0);
 		fsm->endcount--;
-		fsm->states[state]->end = 0;
+		fsm->states[state].end = 0;
 		break;
 
 	case 1:
 		assert(fsm->endcount < FSM_ENDCOUNT_MAX);
 		fsm->endcount++;
-		fsm->states[state]->end = 1;
+		fsm->states[state].end = 1;
 		break;
 	}
 }
@@ -63,9 +63,9 @@ fsm_setopaque(struct fsm *fsm, fsm_state_t state, void *opaque)
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
 
-	assert(fsm->states[state]->end);
+	assert(fsm->states[state].end);
 
-	fsm->states[state]->opaque = opaque;
+	fsm->states[state].opaque = opaque;
 }
 
 void *
@@ -76,8 +76,8 @@ fsm_getopaque(const struct fsm *fsm, fsm_state_t state)
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
 
-	assert(fsm->states[state]->end);
+	assert(fsm->states[state].end);
 
-	return fsm->states[state]->opaque;
+	return fsm->states[state].opaque;
 }
 

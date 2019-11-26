@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 #include <limits.h>
 #include <errno.h>
 
@@ -192,7 +193,7 @@ walk2_comb_state(struct fsm *dst_fsm, int is_end,
 	const struct fsm *fsm_b, fsm_state_t b,
 	fsm_state_t *comb) 
 {
-	struct fsm_state *states[2];
+	struct fsm_state states[2];
 	fsm_state_t state_ids[2];
 	size_t count;
 	unsigned endcount;
@@ -220,14 +221,14 @@ walk2_comb_state(struct fsm *dst_fsm, int is_end,
 
 	if (fsm_a != NULL) {
 		state_ids[count] = a;
-		states[count] = fsm_a->states[a];
+		memcpy(&states[count], &fsm_a->states[a], sizeof *states);
 		count++;
 		endcount += fsm_isend(fsm_a, a);
 	}
 
 	if (fsm_b != NULL) {
 		state_ids[count] = b;
-		states[count] = fsm_a->states[b];
+		memcpy(&states[count], &fsm_a->states[b], sizeof *states);
 		count++;
 		endcount += fsm_isend(fsm_b, b);
 	}
@@ -251,7 +252,7 @@ walk2_comb_state(struct fsm *dst_fsm, int is_end,
 	 * it's only needed briefly and is limited to two states.
 	 */
 
-	tmp.states = (struct fsm_state **) states;
+	tmp.states = states;
 	tmp.statealloc = count;
 	tmp.statecount = count;
 	tmp.endcount = endcount;
@@ -316,7 +317,7 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		return NULL;
 	}
 
-	assert(!data->new->states[p->comb]->visited);
+	assert(!data->new->states[p->comb].visited);
 
 	if (!tuple_set_add(data->states, p)) {
 		return NULL;
@@ -356,12 +357,12 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	assert(qc < data->new->statecount);
 
 	/* fast exit if we've already visited the combined state */
-	if (data->new->states[qc]->visited) {
+	if (data->new->states[qc].visited) {
 		return 1;
 	}
 
 	/* mark combined state as visited */
-	data->new->states[qc]->visited = 1;
+	data->new->states[qc].visited = 1;
 
 	/*
 	 * fsm_walk2_edges walks the edges of two graphs, generating combined
@@ -408,7 +409,7 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	}
 
 	/* take care of only A and both A&B edges */
-	for (ea = edge_set_first(a->states[qa]->edges, &ei); ea != NULL; ea = edge_set_next(&ei)) {
+	for (ea = edge_set_first(a->states[qa].edges, &ei); ea != NULL; ea = edge_set_next(&ei)) {
 		struct state_iter dia, dib;
 		fsm_state_t da;
 
@@ -456,7 +457,7 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 				 * depth-first traversal of the graph, but only traverse
 				 * if the state has not yet been visited
 				 */
-				if (!data->new->states[dst->comb]->visited) {
+				if (!data->new->states[dst->comb].visited) {
 					if (!fsm_walk2_edges(data, a, b, dst)) {
 						return 0;
 					}
@@ -483,7 +484,7 @@ only_b:
 	}
 
 	/* take care of only B edges */
-	for (eb = edge_set_first(b->states[qb]->edges, &ej); eb != NULL; eb = edge_set_next(&ej)) {
+	for (eb = edge_set_first(b->states[qb].edges, &ej); eb != NULL; eb = edge_set_next(&ej)) {
 		struct state_iter dib;
 		fsm_state_t db;
 
@@ -515,7 +516,7 @@ only_b:
 				 * depth-first traversal of the graph, but only traverse
 				 * if the state has not yet been visited
 				 */
-				if (!data->new->states[dst->comb]->visited) {
+				if (!data->new->states[dst->comb].visited) {
 					if (!fsm_walk2_edges(data, a, b, dst)) {
 						return 0;
 					}
@@ -603,7 +604,7 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 	assert(tup0->a == sa);
 	assert(tup0->b == sb);
 	assert(tup0->comb < data.new->statecount);
-	assert(!data.new->states[tup0->comb]->visited); /* comb not yet been traversed */
+	assert(!data.new->states[tup0->comb].visited); /* comb not yet been traversed */
 
 	fsm_setstart(data.new, tup0->comb);
 	if (!fsm_walk2_edges(&data, a, b, tup0)) {

@@ -121,7 +121,7 @@ fsm_reverse(struct fsm *fsm)
 			{
 				struct state_iter jt;
 
-				for (state_set_reset(fsm->states[i]->epsilons, &jt); state_set_next(&jt, &se); ) {
+				for (state_set_reset(fsm->states[i].epsilons, &jt); state_set_next(&jt, &se); ) {
 					assert(se < fsm->statecount);
 					assert(se < new->statecount);
 
@@ -132,7 +132,7 @@ fsm_reverse(struct fsm *fsm)
 					}
 				}
 			}
-			for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct state_iter jt;
 
 				for (state_set_reset(e->sl, &jt); state_set_next(&jt, &se); ) {

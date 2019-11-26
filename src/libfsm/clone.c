@@ -59,13 +59,13 @@ fsm_clone(const struct fsm *fsm)
 			struct edge_iter it;
 
 			fsm_setend(new, i, fsm_isend(fsm, i));
-			new->states[i]->opaque = fsm->states[i]->opaque;
+			new->states[i].opaque = fsm->states[i].opaque;
 
 			{
 				struct state_iter jt;
 				fsm_state_t to;
 
-				for (state_set_reset(fsm->states[i]->epsilons, &jt); state_set_next(&jt, &to); ) {
+				for (state_set_reset(fsm->states[i].epsilons, &jt); state_set_next(&jt, &to); ) {
 					if (!fsm_addedge_epsilon(new, i, to)) {
 						fsm_free(new);
 						return NULL;
@@ -73,7 +73,7 @@ fsm_clone(const struct fsm *fsm)
 				}
 			}
 
-			for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct state_iter jt;
 				fsm_state_t to;
 

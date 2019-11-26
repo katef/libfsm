@@ -50,7 +50,7 @@ epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set *clos
 	}
 
 	/* Follow each epsilon transition */
-	for (state_set_reset(fsm->states[state]->epsilons, &it); state_set_next(&it, &s); ) {
+	for (state_set_reset(fsm->states[state].epsilons, &it); state_set_next(&it, &s); ) {
 		if (epsilon_closure(fsm, s, closure) == NULL) {
 			return NULL;
 		}

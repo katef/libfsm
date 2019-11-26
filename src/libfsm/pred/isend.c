@@ -18,6 +18,6 @@ fsm_isend(const struct fsm *fsm, fsm_state_t state)
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
 
-	return !!fsm->states[state]->end;
+	return !!fsm->states[state].end;
 }
 

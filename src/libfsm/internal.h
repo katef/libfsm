@@ -57,7 +57,7 @@ struct fsm_state {
 };
 
 struct fsm {
-	struct fsm_state **states; /* array */
+	struct fsm_state *states; /* array */
 
 	size_t statealloc; /* number of elements allocated */
 	size_t statecount; /* number of elements populated */

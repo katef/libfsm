@@ -49,7 +49,7 @@ fsm_walk_edges(const struct fsm *fsm, void *opaque,
 		const struct fsm_edge *e;
 		struct edge_iter ei;
 
-		for (e = edge_set_first(fsm->states[i]->edges, &ei); e != NULL; e = edge_set_next(&ei)) {
+		for (e = edge_set_first(fsm->states[i].edges, &ei); e != NULL; e = edge_set_next(&ei)) {
 			struct state_iter di;
 			fsm_state_t dst;
 
@@ -64,7 +64,7 @@ fsm_walk_edges(const struct fsm *fsm, void *opaque,
 			struct state_iter di;
 			fsm_state_t dst;
 
-			for (state_set_reset(fsm->states[i]->epsilons, &di); state_set_next(&di, &dst); ) {
+			for (state_set_reset(fsm->states[i].epsilons, &di); state_set_next(&di, &dst); ) {
 				if (!callback_epsilon(fsm, i, dst, opaque)) {
 					return 0;
 				}

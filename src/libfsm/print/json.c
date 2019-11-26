@@ -31,7 +31,7 @@ hasmore(const struct fsm *fsm, fsm_state_t s, int i)
 
 	i++;
 	search.symbol = i;
-	for (e = edge_set_firstafter(fsm->states[s]->edges, &it, &search); e != NULL; e = edge_set_next(&it)) {
+	for (e = edge_set_firstafter(fsm->states[s].edges, &it, &search); e != NULL; e = edge_set_next(&it)) {
 		if (!state_set_empty(e->sl)) {
 			return 1;
 		}
@@ -68,7 +68,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 				struct state_iter jt;
 				fsm_state_t st;
 
-				for (state_set_reset(fsm->states[i]->epsilons, &jt); state_set_next(&jt, &st); ) {
+				for (state_set_reset(fsm->states[i].epsilons, &jt); state_set_next(&jt, &st); ) {
 					fprintf(f, "\t\t\t\t{ ");
 
 					fprintf(f, "\"char\": ");
@@ -78,11 +78,11 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 					fprintf(f, "\"to\": %u", st);
 
 					/* XXX: should count .sl inside an edge */
-					fprintf(f, "}%s\n", !edge_set_empty(fsm->states[i]->edges) ? "," : "");
+					fprintf(f, "}%s\n", !edge_set_empty(fsm->states[i].edges) ? "," : "");
 				}
 			}
 
-			for (e = edge_set_first(fsm->states[i]->edges, &it); e != NULL; e = edge_set_next(&it)) {
+			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
 				struct state_iter jt;
 				fsm_state_t st;
 
