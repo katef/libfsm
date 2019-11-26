@@ -24,7 +24,6 @@
  */
 
 #define SET_INITIAL 8
-#define BULK_ADD_THRESH 1
 
 struct state_set {
 	const struct fsm_alloc *alloc;
@@ -183,15 +182,7 @@ state_set_add_bulk(struct state_set *set, fsm_state_t *a, size_t n)
 	assert(set != NULL);
 	assert(a != NULL);
 
-	if (n <= BULK_ADD_THRESH) {
-		size_t i;
-
-		for (i = 0; i < n; i++) {
-			if (!state_set_add(set, a[i])) {
-				return 0;
-			}
-		}
-		
+	if (n == 0) {
 		return 1;
 	}
 
