@@ -57,7 +57,7 @@ fsm_reverse(struct fsm *fsm)
 	 * This isn't anything to do with the reversing; it's meaningful
 	 * only to the caller.
 	 */
-	endset = state_set_create(fsm->opt->alloc);
+	endset = NULL;
 
 	/*
 	 * Create states corresponding to the original FSM's states.
@@ -88,7 +88,7 @@ fsm_reverse(struct fsm *fsm)
 			}
 
 			if (fsm_isend(fsm, i)) {
-				if (!state_set_add(&endset, i)) {
+				if (!state_set_add(&endset, fsm->opt->alloc, i)) {
 					state_set_free(endset);
 					fsm_free(new);
 					return 0;

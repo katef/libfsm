@@ -89,7 +89,7 @@ state_set_search(const struct state_set *set, fsm_state_t state)
 	return mid;
 }
 
-struct state_set *
+static struct state_set *
 state_set_create(const struct fsm_alloc *a)
 {
 	struct state_set *set;
@@ -125,13 +125,20 @@ state_set_free(struct state_set *set)
 }
 
 int
-state_set_add(struct state_set **setp, fsm_state_t state)
+state_set_add(struct state_set **setp, const struct fsm_alloc *alloc,
+	fsm_state_t state)
 {
 	struct state_set *set;
 	size_t i;
 
 	assert(setp != NULL);
-	assert(*setp != NULL);
+
+	if (*setp == NULL) {
+		*setp = state_set_create(alloc);
+		if (*setp == NULL) {
+			return 0;
+		}
+	}
 
 	set = *setp;
 
@@ -179,17 +186,24 @@ state_set_add(struct state_set **setp, fsm_state_t state)
 }
 
 int
-state_set_add_bulk(struct state_set **setp, fsm_state_t *a, size_t n)
+state_set_add_bulk(struct state_set **setp, const struct fsm_alloc *alloc,
+	fsm_state_t *a, size_t n)
 {
 	struct state_set *set;
 	size_t newlen;
 
 	assert(setp != NULL);
-	assert(*setp != NULL);
 	assert(a != NULL);
 
 	if (n == 0) {
 		return 1;
+	}
+
+	if (*setp == NULL) {
+		*setp = state_set_create(alloc);
+		if (*setp == NULL) {
+			return 0;
+		}
 	}
 
 	set = *setp;
@@ -234,9 +248,12 @@ state_set_add_bulk(struct state_set **setp, fsm_state_t *a, size_t n)
 }
 
 void
-state_set_remove(struct state_set *set, fsm_state_t state)
+state_set_remove(struct state_set **setp, fsm_state_t state)
 {
+	struct state_set *set;
 	size_t i;
+
+	set = *setp;
 
 	if (state_set_empty(set)) {
 		return;
@@ -352,9 +369,14 @@ state_set_array(const struct state_set *set)
 }
 
 void
-state_set_rebase(struct state_set *set, fsm_state_t base)
+state_set_rebase(struct state_set **setp, fsm_state_t base)
 {
+	struct state_set *set;
 	size_t i;
+
+	assert(setp != NULL);
+
+	set = *setp;
 
 	if (set == NULL) {
 		return;
@@ -366,9 +388,14 @@ state_set_rebase(struct state_set *set, fsm_state_t base)
 }
 
 void
-state_set_replace(struct state_set *set, fsm_state_t old, fsm_state_t new)
+state_set_replace(struct state_set **setp, fsm_state_t old, fsm_state_t new)
 {
+	struct state_set *set;
 	size_t i;
+
+	assert(setp != NULL);
+
+	set = *setp;
 
 	if (set == NULL) {
 		return;

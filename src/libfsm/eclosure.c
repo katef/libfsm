@@ -39,14 +39,13 @@ epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set **clo
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
 	assert(closure != NULL);
-	assert(*closure != NULL);
 
 	/* Find if the given state is already in the closure */
 	if (state_set_contains(*closure, state)) {
 		return *closure;
 	}
 
-	if (!state_set_add(closure, state)) {
+	if (!state_set_add(closure, fsm->opt->alloc, state)) {
 		return NULL;
 	}
 

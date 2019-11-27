@@ -41,14 +41,7 @@ fsm_addedge_epsilon(struct fsm *fsm,
 	assert(from < fsm->statecount);
 	assert(to < fsm->statecount);
 
-	if (fsm->states[from].epsilons == NULL) {
-		fsm->states[from].epsilons = state_set_create(fsm->opt->alloc);
-		if (fsm->states[from].epsilons == NULL) {
-			return 0;
-		}
-	}
-
-	if (!state_set_add(&fsm->states[from].epsilons, to)) {
+	if (!state_set_add(&fsm->states[from].epsilons, fsm->opt->alloc, to)) {
 		return 0;
 	}
 
@@ -101,17 +94,14 @@ fsm_addedge_literal(struct fsm *fsm,
 		}
 
 		e->symbol = c;
-		e->sl = state_set_create(fsm->opt->alloc);
-		if (e->sl == NULL) {
-			return 0;
-		}
+		e->sl = NULL;
 
 		if (!edge_set_add(fsm->states[from].edges, e)) {
 			return 0;
 		}
 	}
 
-	if (!state_set_add(&e->sl, to)) {
+	if (!state_set_add(&e->sl, fsm->opt->alloc, to)) {
 		return 0;
 	}
 
@@ -148,17 +138,14 @@ fsm_addedge_bulk(struct fsm *fsm,
 		}
 
 		e->symbol = c;
-		e->sl = state_set_create(fsm->opt->alloc);
-		if (e->sl == NULL) {
-			return 0;
-		}
+		e->sl = NULL;
 
 		if (!edge_set_add(fsm->states[from].edges, e)) {
 			return 0;
 		}
 	}
 
-	if (!state_set_add_bulk(&e->sl, a, n)) {
+	if (!state_set_add_bulk(&e->sl, fsm->opt->alloc, a, n)) {
 		return 0;
 	}
 

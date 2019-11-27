@@ -16,20 +16,19 @@ struct state_iter {
 	const struct state_set *set;
 };
 
-struct state_set *
-state_set_create(const struct fsm_alloc *a);
-
 void
 state_set_free(struct state_set *set);
 
 int
-state_set_add(struct state_set **set, fsm_state_t state);
+state_set_add(struct state_set **set, const struct fsm_alloc *alloc,
+	fsm_state_t state);
 
 int
-state_set_add_bulk(struct state_set **set, fsm_state_t *a, size_t n);
+state_set_add_bulk(struct state_set **set, const struct fsm_alloc *alloc,
+	fsm_state_t *a, size_t n);
 
 void
-state_set_remove(struct state_set *set, fsm_state_t state);
+state_set_remove(struct state_set **set, fsm_state_t state);
 
 int
 state_set_empty(const struct state_set *s);
@@ -59,10 +58,10 @@ const fsm_state_t *
 state_set_array(const struct state_set *set);
 
 void
-state_set_rebase(struct state_set *set, fsm_state_t base);
+state_set_rebase(struct state_set **set, fsm_state_t base);
 
 void
-state_set_replace(struct state_set *set, fsm_state_t old, fsm_state_t new);
+state_set_replace(struct state_set **set, fsm_state_t old, fsm_state_t new);
 
 unsigned long
 state_set_hash(const struct state_set *set);
