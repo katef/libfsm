@@ -49,9 +49,6 @@ int
 state_set_next(struct state_iter *it, fsm_state_t *state);
 
 int
-state_set_hasnext(struct state_iter *it);
-
-int
 state_set_cmp(const struct state_set *a, const struct state_set *b);
 
 const fsm_state_t *

@@ -348,14 +348,6 @@ state_set_next(struct state_iter *it, fsm_state_t *state)
 	return 1;
 }
 
-int
-state_set_hasnext(struct state_iter *it)
-{
-	assert(it != NULL);
-
-	return it->set && it->i + 1 < it->set->i;
-}
-
 const fsm_state_t *
 state_set_array(const struct state_set *set)
 {
