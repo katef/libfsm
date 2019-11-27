@@ -149,7 +149,7 @@ state_set_add(struct state_set **setp, const struct fsm_alloc *alloc,
 	 */
 	if (!state_set_empty(set)) {
 		i = state_set_search(set, state);
-		if (state_set_cmpval(state, set->a[i]) == 0) {
+		if (set->a[i] == state) {
 			return 1;
 		}
 	}
@@ -260,7 +260,7 @@ state_set_remove(struct state_set **setp, fsm_state_t state)
 	}
 
 	i = state_set_search(set, state);
-	if (state_set_cmpval(state, set->a[i]) == 0) {
+	if (set->a[i] == state) {
 		if (i < set->i) {
 			memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
 		}
@@ -301,7 +301,7 @@ state_set_contains(const struct state_set *set, fsm_state_t state)
 	}
 
 	i = state_set_search(set, state);
-	if (state_set_cmpval(state, set->a[i]) == 0) {
+	if (set->a[i] == state) {
 		return 1;
 	}
 
