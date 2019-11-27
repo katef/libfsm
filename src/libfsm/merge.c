@@ -31,16 +31,17 @@ merge(struct fsm *dst, struct fsm *src,
 	if (dst->statealloc < src->statecount + dst->statecount) {
 		void *tmp;
 
+		size_t newalloc = src->statecount + dst->statecount;
+
 		/* TODO: round up to next power of two here?
 		 * or let realloc do that internally */
-		tmp = f_realloc(dst->opt->alloc, dst->states,
-			(src->statecount + dst->statecount) * sizeof *dst->states);
+		tmp = f_realloc(dst->opt->alloc, dst->states, newalloc * sizeof *dst->states);
 		if (tmp == NULL) {
 			return NULL;
 		}
 
 		dst->states = tmp;
-		dst->statealloc += src->statecount;
+		dst->statealloc = newalloc;
 	}
 
 	/*
