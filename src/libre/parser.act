@@ -248,6 +248,11 @@
 		@end   = lex_state->lx.end;
 	@};
 
+	OPENGROUPINV: () -> (start :pos, end :pos) = @{
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+	@};
+
 	OPENGROUPCB: () -> (start :pos, end :pos) = @{
 		@start = lex_state->lx.start;
 		@end   = lex_state->lx.end;
@@ -676,11 +681,8 @@
 		}
 	@};
 
-	<ast-make-literal-cbrak>: () -> (node :ast_expr) = @{
-		@node = ast_make_expr_literal(']');
-		if (@node == NULL) {
-			@!;
-		}
+	<make-literal-cbrak>: () -> (c :char) = @{
+		@c = ']';
 	@};
 
 	<ast-make-any>: () -> (node :ast_expr) = @{

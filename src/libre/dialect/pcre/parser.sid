@@ -43,6 +43,7 @@
 
 	OPENSUB; OPENCAPTURE; CLOSE;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
+	OPENGROUPINV: () -> (:pos, :pos);
 	OPENGROUPCB: () -> (:pos, :pos);
 	OPENGROUPINVCB: () -> (:pos, :pos);
 	OPENCOUNT: () -> (:pos, :pos); CLOSECOUNT: () -> (:pos, :pos);
@@ -80,6 +81,8 @@
 	<atom-opt>:    () -> (:ast_count);
 	<atom-count>:  (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
+	<make-literal-cbrak>:   ()                        -> (:char);
+
 	<unbounded-count>:	() -> (:unsigned);
 
 	<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
@@ -88,7 +91,6 @@
 
 	<ast-make-empty>:        ()                       -> (:ast_expr);
 	<ast-make-literal>:      (:char)                  -> (:ast_expr);
-	<ast-make-literal-cbrak>:()                       -> (:ast_expr);
 	<ast-make-concat>:       ()                       -> (:ast_expr);
 	<ast-make-alt>:          ()                       -> (:ast_expr);
 	<ast-make-any>:          ()                       -> (:ast_expr);
@@ -169,8 +171,7 @@
 				node = <ast-make-named>(id);
 			};
 
-			class-range: () -> (node :ast_expr) [
-
+			range-endpoint: () -> (r :endpoint, start :pos, end :pos) [
 				range-endpoint-literal: () -> (r :endpoint, start :pos, end :pos) = {
 					{
 						(c, start, end) = ESC;
@@ -191,13 +192,26 @@
 					(id, start, end) = NAMED_CLASS;
 					r = <ast-range-endpoint-class>(id);
 				};
-
 			] = {
 				{
-					(lower, start, !) = range-endpoint-literal();
+					(r, start, end) = range-endpoint-literal();
 				||
-					(lower, start, !) = range-endpoint-class();
+					(r, start, end) = range-endpoint-class();
 				};
+			};
+
+			range-endpoint-end: () -> (r :endpoint, end :pos) = {
+				{
+					(r, !, end) = range-endpoint();
+				||
+					/* allow literal '-' as end of range */
+					(c, !, end) = RANGE;
+					r = <ast-range-endpoint-literal>(c);
+				};
+			};
+
+			class-range: () -> (node :ast_expr) = {
+				(lower,start,!) = range-endpoint();
 
 				{
 					(!, !, !) = RANGE;
@@ -205,15 +219,7 @@
 					<err-expected-range>;
 				};
 
-				{
-					(upper, !, end) = range-endpoint-literal();
-				||
-					(upper, !, end) = range-endpoint-class();
-				||
-					/* allow literal '-' as end of range */
-					(c, !, end) = RANGE;
-					upper = <ast-range-endpoint-literal>(c);
-				};
+				(upper,end) = range-endpoint-end();
 
 				<mark-range>(start, end);
 				node = <ast-make-range>(lower, start, upper, end);
@@ -250,14 +256,88 @@
 				tmp = node;
 
 				class-head(&node);
+
+				{
+					(c, rstart, !) = RANGE;
+
+					{
+						lower = <ast-range-endpoint-literal>(c);
+						(!, !, !) = RANGE;
+						(upper,end) = range-endpoint-end();
+						node1 = <ast-make-range>(lower, rstart, upper, end);
+					||
+						node1 = <ast-make-literal>(c);
+					};
+
+					<ast-add-alt>(tmp,node1);
+
+					{
+						list-of-class-terms(tmp);
+					||
+						$;
+					};
+				||
+					list-of-class-terms(tmp);
+				};
+			||
+				(start, !) = OPENGROUPINV;
+
+				node = <ast-make-alt>;
+				tmp  = node;
+
+				&node = <ast-make-invert>(node);
+
+				{
+					(c, rstart, !) = RANGE;
+
+					{
+						lower = <ast-range-endpoint-literal>(c);
+						(!, !, !) = RANGE;
+						(upper,end) = range-endpoint-end();
+						node1 = <ast-make-range>(lower, rstart, upper, end);
+					||
+						node1 = <ast-make-literal>(c);
+					};
+
+					<ast-add-alt>(tmp,node1);
+
+					{
+						list-of-class-terms(tmp);
+					||
+						$;
+					};
+
+				||
+					list-of-class-terms(tmp);
+				};
+
 			||
 				(start, !) = OPENGROUPCB;
 
 				node = <ast-make-alt>;
 				tmp  = node;
-				
-				node1 = <ast-make-literal-cbrak>();
+
+				cbrak = <make-literal-cbrak>();
+				{
+					r = <ast-range-endpoint-literal>(cbrak);
+					(!, !, !) = RANGE;
+					(upper,end) = range-endpoint-end();
+					/* FIXME: start is off by one */
+					lower = <ast-range-endpoint-literal>(cbrak);
+					node1 = <ast-make-range>(lower, start, upper, end);
+				||
+					node1 = <ast-make-literal>(cbrak);
+				};
+
 				<ast-add-alt>(tmp, node1);
+
+				/* ']' literal or range is already one class
+ 				 * term, so another isn't necessary */
+				{
+					list-of-class-terms(tmp);
+				||
+					$;
+				};
 			||
 				(start, !) = OPENGROUPINVCB;
 
@@ -265,11 +345,29 @@
 				tmp  = node;
 
 				&node = <ast-make-invert>(node);
-				node1 = <ast-make-literal-cbrak>();
-				<ast-add-alt>(tmp, node1);
-			};
 
-			list-of-class-terms(tmp);
+				cbrak = <make-literal-cbrak>();
+				{
+					r = <ast-range-endpoint-literal>(cbrak);
+					(!, !, !) = RANGE;
+					(upper,end) = range-endpoint-end();
+					/* FIXME: start is off by one */
+					lower = <ast-range-endpoint-literal>(cbrak);
+					node1 = <ast-make-range>(lower, start, upper, end);
+				||
+					node1 = <ast-make-literal>(cbrak);
+				};
+
+				<ast-add-alt>(tmp, node1);
+
+				/* ']' literal or range is already one class
+ 				 * term, so another isn't necessary */
+				{
+					list-of-class-terms(tmp);
+				||
+					$;
+				};
+			};
 
 			{
 				(!, !, end) = CLOSEGROUP;

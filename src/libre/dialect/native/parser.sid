@@ -38,6 +38,7 @@
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
 	OPENCOUNT: () -> (:pos, :pos); CLOSECOUNT: () -> (:pos, :pos);
 
+	!OPENGROUPINV: () -> (:pos, :pos);
 	!OPENGROUPCB: () -> (:pos, :pos);
 	!OPENGROUPINVCB: () -> (:pos, :pos);
 
@@ -74,6 +75,8 @@
 	<atom-opt>:    () -> (:ast_count);
 	<atom-count>:  (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
+	!<make-literal-cbrak>:    ()                       -> (:char);
+
 	!<unbounded-count>:	() -> (:unsigned);
 
 	<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
@@ -82,7 +85,6 @@
 
 	<ast-make-empty>:        ()                       -> (:ast_expr);
 	<ast-make-literal>:      (:char)                  -> (:ast_expr);
-	!<ast-make-literal-cbrak>:()                       -> (:ast_expr);
 	<ast-make-concat>:       ()                       -> (:ast_expr);
 	<ast-make-alt>:          ()                       -> (:ast_expr);
 	<ast-make-any>:          ()                       -> (:ast_expr);

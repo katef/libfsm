@@ -28,7 +28,7 @@
 extern void p_re__sql(flags, lex_state, act_state, err, t_ast__expr *);
 /* BEGINNING OF TRAILER */
 
-#line 984 "src/libre/parser.act"
+#line 986 "src/libre/parser.act"
 
 
 #line 35 "src/libre/dialect/sql/parser.h"
