@@ -125,11 +125,15 @@ state_set_free(struct state_set *set)
 }
 
 int
-state_set_add(struct state_set *set, fsm_state_t state)
+state_set_add(struct state_set **setp, fsm_state_t state)
 {
+	struct state_set *set;
 	size_t i;
 
-	assert(set != NULL);
+	assert(setp != NULL);
+	assert(*setp != NULL);
+
+	set = *setp;
 
 	i = 0;
 
@@ -139,7 +143,7 @@ state_set_add(struct state_set *set, fsm_state_t state)
 	if (!state_set_empty(set)) {
 		i = state_set_search(set, state);
 		if (state_set_cmpval(state, set->a[i]) == 0) {
-			return state;
+			return 1;
 		}
 	}
 
@@ -175,16 +179,20 @@ state_set_add(struct state_set *set, fsm_state_t state)
 }
 
 int
-state_set_add_bulk(struct state_set *set, fsm_state_t *a, size_t n)
+state_set_add_bulk(struct state_set **setp, fsm_state_t *a, size_t n)
 {
+	struct state_set *set;
 	size_t newlen;
 
-	assert(set != NULL);
+	assert(setp != NULL);
+	assert(*setp != NULL);
 	assert(a != NULL);
 
 	if (n == 0) {
 		return 1;
 	}
+
+	set = *setp;
 
 	newlen = set->i + n; 
 	if (newlen > set->n) {

@@ -48,7 +48,7 @@ fsm_addedge_epsilon(struct fsm *fsm,
 		}
 	}
 
-	if (!state_set_add(fsm->states[from].epsilons, to)) {
+	if (!state_set_add(&fsm->states[from].epsilons, to)) {
 		return 0;
 	}
 
@@ -111,7 +111,7 @@ fsm_addedge_literal(struct fsm *fsm,
 		}
 	}
 
-	if (!state_set_add(e->sl, to)) {
+	if (!state_set_add(&e->sl, to)) {
 		return 0;
 	}
 
@@ -158,7 +158,7 @@ fsm_addedge_bulk(struct fsm *fsm,
 		}
 	}
 
-	if (!state_set_add_bulk(e->sl, a, n)) {
+	if (!state_set_add_bulk(&e->sl, a, n)) {
 		return 0;
 	}
 

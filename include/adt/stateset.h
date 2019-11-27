@@ -23,10 +23,10 @@ void
 state_set_free(struct state_set *set);
 
 int
-state_set_add(struct state_set *set, fsm_state_t state);
+state_set_add(struct state_set **set, fsm_state_t state);
 
 int
-state_set_add_bulk(struct state_set *set, fsm_state_t *a, size_t n);
+state_set_add_bulk(struct state_set **set, fsm_state_t *a, size_t n);
 
 void
 state_set_remove(struct state_set *set, fsm_state_t state);

@@ -164,7 +164,7 @@ state_closure(struct mapping_hashset *mappings, struct fsm *dfa,
 		return 0;
 	}
 
-	if (epsilon_closure(nfa, nfastate, ec) == NULL) {
+	if (epsilon_closure(nfa, nfastate, &ec) == NULL) {
 		state_set_free(ec);
 		return 0;
 	}
@@ -211,7 +211,7 @@ set_closure(struct mapping_hashset *mappings, struct fsm *dfa,
 	}
 
 	for (i = 0; i < set->len; i++) {
-		if (epsilon_closure(nfa, set->states[i], ec) == NULL) {
+		if (epsilon_closure(nfa, set->states[i], &ec) == NULL) {
 			state_set_free(ec);
 			return 0;
 		}

@@ -88,7 +88,7 @@ fsm_reverse(struct fsm *fsm)
 			}
 
 			if (fsm_isend(fsm, i)) {
-				if (!state_set_add(endset, i)) {
+				if (!state_set_add(&endset, i)) {
 					state_set_free(endset);
 					fsm_free(new);
 					return 0;

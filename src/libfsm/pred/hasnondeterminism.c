@@ -71,7 +71,7 @@ fsm_hasnondeterminism(const struct fsm *fsm, fsm_state_t state)
 		return -1;
 	}
 
-	if (!epsilon_closure(fsm, state, ec)) {
+	if (!epsilon_closure(fsm, state, &ec)) {
 		state_set_free(ec);
 		return -1;
 	}
