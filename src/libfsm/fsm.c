@@ -174,6 +174,10 @@ void
 fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
 	struct fsm *dst_fsm, fsm_state_t dst_state)
 {
+	fsm_state_t src_state;
+	const fsm_state_t *p;
+	size_t n;
+
 	assert(src_fsm != NULL);
 	assert(dst_fsm != NULL);
 	assert(dst_state < dst_fsm->statecount);
@@ -185,14 +189,24 @@ fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
 		return;
 	}
 
-	/*
-	 * Our state set is implemented as an array of fsm_state_t.
-	 * Here we're presenting the underlying array directly,
-	 * because the user-facing API doesn't expose the state set ADT.
-	 */
+	n = state_set_count(src_set);
 
-	fsm_carryopaque_array(src_fsm, state_set_array(src_set), state_set_count(src_set),
-		dst_fsm, dst_state);
+	if (n == 1) {
+		/*
+		 * Workaround for singleton sets having a special encoding.
+		 */
+		src_state = state_set_only(src_set);
+		p = &src_state;
+	} else {
+		/*
+		 * Our state set is implemented as an array of fsm_state_t.
+		 * Here we're presenting the underlying array directly,
+		 * because the user-facing API doesn't expose the state set ADT.
+		 */
+		p = state_set_array(src_set);
+	}
+
+	fsm_carryopaque_array(src_fsm, p, n, dst_fsm, dst_state);
 }
 
 unsigned int
