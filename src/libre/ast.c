@@ -285,6 +285,7 @@ ast_expr_equal(const struct ast_expr *a, const struct ast_expr *b)
 
 	default:
 		assert(!"unreached");
+		abort();
 	}
 }
 

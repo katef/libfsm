@@ -85,6 +85,8 @@ print_errorrows(FILE *f, const struct fsm_options *opt,
 	assert(error != NULL);
 	assert(error->ranges != NULL);
 
+	(void)ir; /* unused */
+
 	for (k = 0; k < error->n; k++) {
 		fprintf(f, "\t\t  <TR>");
 
@@ -122,6 +124,8 @@ print_grouprows(FILE *f, const struct fsm_options *opt,
 	assert(opt != NULL);
 	assert(ir != NULL);
 	assert(groups != NULL);
+
+	(void)ir; /* unused */
 
 	for (j = 0; j < n; j++) {
 		assert(groups[j].ranges != NULL);
@@ -165,6 +169,8 @@ print_grouplinks(FILE *f, const struct ir *ir, unsigned self,
 	assert(f != NULL);
 	assert(ir != NULL);
 	assert(groups != NULL);
+
+	(void)ir; /* unused */
 
 	for (j = 0; j < n; j++) {
 		if (groups[j].to == self) {

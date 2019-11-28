@@ -75,6 +75,8 @@ print_ranges(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	size_t k;
 	size_t c;
 
+	(void)ir; /* unused */
+
 	assert(f != NULL);
 	assert(ir != NULL);
 	assert(opt != NULL);

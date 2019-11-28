@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 #include <re/re.h>
 
@@ -34,6 +35,7 @@ atomic(struct ast_expr *n)
 
 	default:
 		assert(!"unreached");
+		abort();
 	}
 }
 
