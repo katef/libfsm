@@ -9,7 +9,9 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <adt/alloc.h>
+#include <fsm/fsm.h>
+
+#include <adt/hashset.h>
 
 /* XXX: cheesing around uint8_t here */
 extern int
@@ -23,12 +25,12 @@ static const unsigned char hashk[] = {
 };
 
 unsigned long
-hashrec(const void *p, size_t n)
+hashstates(const fsm_state_t *p, size_t n)
 {
 	unsigned long h = 0;
 	unsigned char ha[sizeof h];
 
-	siphash(p, n, hashk, &ha[0], sizeof ha);
+	siphash((const void *) p, n * sizeof *p, hashk, &ha[0], sizeof ha);
 	memcpy(&h, &ha[0], sizeof h);
 
 	return h;

@@ -12,12 +12,8 @@ struct hashset_iter {
 	const struct hashset *hashset;
 };
 
-/*
- * Type-independent utility functions
- */
-
 unsigned long
-hashrec(const void *p, size_t n);
+hashstates(const fsm_state_t *states, size_t n);
 
 #endif
 

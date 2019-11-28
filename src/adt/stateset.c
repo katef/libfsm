@@ -387,6 +387,6 @@ state_set_hash(const struct state_set *set)
 {
 	assert(set != NULL);
 
-	return hashrec(set->a, set->i * sizeof *set->a);
+	return hashstates(set->a, set->i);
 }
 

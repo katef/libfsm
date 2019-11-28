@@ -65,7 +65,7 @@ hash_single_state(fsm_state_t state)
 	 * by the entire powerset construction algorithm, and at
 	 * this point we only need a shallow comparison.
 	 */
-	return hashrec(&state, sizeof state);
+	return hashstates(&state, 1);
 }
 
 static int

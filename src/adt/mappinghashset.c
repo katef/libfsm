@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <stddef.h>
 
+#include <fsm/fsm.h>
+
 #include <adt/hashset.h>
 #include <adt/mappinghashset.h>
 

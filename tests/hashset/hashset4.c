@@ -7,17 +7,19 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <fsm/fsm.h>
+
 #include <adt/hashset.h>
 
-typedef int item_t;
+typedef fsm_state_t item_t;
 
 #include "hashset.inc"
 
 static int
-cmp_int(const void *a, const void *b)
+cmp_states(const void *a, const void *b)
 {
-	const int *pa = * (const int * const *) a;
-	const int *pb = * (const int * const *) b;
+	const fsm_state_t *pa = * (const fsm_state_t * const *) a;
+	const fsm_state_t *pb = * (const fsm_state_t * const *) b;
 
 	if (*pa > *pb)      return +1;
 	else if (*pa < *pb) return -1;
@@ -25,15 +27,15 @@ cmp_int(const void *a, const void *b)
 }
 
 static unsigned long
-hash_int(const void *a)
+hash_state(const void *a)
 {
-	return hashrec(a, sizeof * (const int *) a);
+	return hashstates(a, 1);
 }
 
 int
 hashset_contains(const struct hashset *set, const void *item)
 {
-	unsigned long h = hash_int(item);
+	unsigned long h = hash_state(item);
 	size_t b = 0;
 
 	assert(set != NULL);
@@ -41,9 +43,9 @@ hashset_contains(const struct hashset *set, const void *item)
 	return finditem(set, h, item, &b);
 }
 
-int *next_int(int reset) {
-	static int n = 0;
-	int *p;
+fsm_state_t *next_state(int reset) {
+	static fsm_state_t n = 0;
+	fsm_state_t *p;
 
 	if (reset) {
 		n = 0;
@@ -57,16 +59,16 @@ int *next_int(int reset) {
 }
 
 int main(void) {
-	struct hashset *s = hashset_create(NULL, hash_int, cmp_int);
+	struct hashset *s = hashset_create(NULL, hash_state, cmp_states);
 	size_t i;
 	for (i = 0; i < 5000; i++) {
-		assert(hashset_add(s, next_int(0)));
+		assert(hashset_add(s, next_state(0)));
 	}
 	assert(hashset_count(s) == 5000);
 
-	next_int(1);
+	next_state(1);
 	for (i = 0; i < 5000; i++) {
-		assert(hashset_add(s, next_int(0)));
+		assert(hashset_add(s, next_state(0)));
 	}
 	assert(hashset_count(s) == 5000);
 

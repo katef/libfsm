@@ -7,17 +7,19 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <fsm/fsm.h>
+
 #include <adt/hashset.h>
 
-typedef int item_t;
+typedef fsm_state_t item_t;
 
 #include "hashset.inc"
 
 static int
-cmp_int(const void *a, const void *b)
+cmp_states(const void *a, const void *b)
 {
-	const int *pa = * (const int * const *) a;
-	const int *pb = * (const int * const *) b;
+	const fsm_state_t *pa = * (const fsm_state_t * const *) a;
+	const fsm_state_t *pb = * (const fsm_state_t * const *) b;
 
 	if (*pa > *pb)      return +1;
 	else if (*pa < *pb) return -1;
@@ -25,15 +27,15 @@ cmp_int(const void *a, const void *b)
 }
 
 static unsigned long
-hash_int(const void *a)
+hash_state(const void *a)
 {
-	return hashrec(a, sizeof * (const int *) a);
+	return hashstates(a, 1);
 }
 
 int
 hashset_contains(const struct hashset *set, const void *item)
 {
-	unsigned long h = hash_int(item);
+	unsigned long h = hash_state(item);
 	size_t b = 0;
 
 	assert(set != NULL);
@@ -42,11 +44,11 @@ hashset_contains(const struct hashset *set, const void *item)
 }
 
 int main(void) {
-	struct hashset *s = hashset_create(NULL, hash_int, cmp_int);
+	struct hashset *s = hashset_create(NULL, hash_state, cmp_states);
 	/* ensure that a has enough elements that the table has to be
 	 * rehashed a few times
 	 */
-	int a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+	fsm_state_t a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 
 	/* add 'em in */
 	assert(hashset_add(s, &a[0]));

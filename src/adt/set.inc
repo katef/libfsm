@@ -10,7 +10,6 @@
 #include <stdio.h>
 
 #include <adt/alloc.h>
-#include <adt/hashset.h>
 
 #define SET_INITIAL 8
 
