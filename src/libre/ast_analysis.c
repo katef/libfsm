@@ -459,7 +459,16 @@ assign_firsts(struct ast_expr *n)
 
 	case AST_EXPR_REPEATED:
 		set_flags(n, AST_FLAG_FIRST);
-		assign_firsts(n->u.repeated.e);
+		/* Don't recurse.
+		 *
+		 * XXX - Not sure that this is the correct way to handle this.
+		 *
+		 * Recursing causes errors in the NFA when the REPEATED node is
+		 * linked to the global self-loop (ie: it's either the first or
+		 * last node for an unanchored RE.  Specifically, when the
+		 * subexpression is compiled, the links to the global self-loop
+		 * are created, which the REPEATED node then copies.
+		 */
 		break;
 
 	case AST_EXPR_GROUP:
@@ -523,7 +532,16 @@ assign_lasts(struct ast_expr *n)
 
 	case AST_EXPR_REPEATED:
 		set_flags(n, AST_FLAG_LAST);
-		assign_lasts(n->u.repeated.e);
+		/* Don't recurse.
+		 *
+		 * XXX - Not sure that this is the correct way to handle this.
+		 *
+		 * Recursing causes errors in the NFA when the REPEATED node is
+		 * linked to the global self-loop (ie: it's either the first or
+		 * last node for an unanchored RE.  Specifically, when the
+		 * subexpression is compiled, the links to the global self-loop
+		 * are created, which the REPEATED node then copies.
+		 */
 		break;
 
 	case AST_EXPR_GROUP:
