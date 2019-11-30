@@ -497,6 +497,11 @@ comp_iter_repeated(struct comp_env *env,
 		 * build its NFA, and link to its head.
 		 */
 
+		struct fsm_subgraph_capture subgraph;
+		fsm_state_t tail;
+
+		fsm_subgraph_capture_start(env->fsm, &subgraph);
+
 		NEWSTATE(na);
 		NEWSTATE(nz);
 		RECURSE(na, nz, n->e);
@@ -508,27 +513,35 @@ comp_iter_repeated(struct comp_env *env,
 		if (low == 0) {
 			EPSILON(na, nz);
 		}
-		
+
+		fsm_subgraph_capture_stop(env->fsm, &subgraph);
+		tail = nz;
+
 		for (i = 1; i < high; i++) {
-			if (!fsm_state_duplicatesubgraphx(env->fsm, na, &b, &a)) {
+			/* copies the original subgraph; need to set b to the
+			 * original tail
+			 */
+			b = tail;
+
+			if (!fsm_subgraph_capture_duplicate(env->fsm, &subgraph, &b, &a)) {
 				return 0;
 			}
-			
+
 			/*
 			 * TODO: could elide this epsilon if fsm_state_duplicatesubgraphx()
 			 * took an extra parameter giving it a m->new for the start state
 			 */
 			EPSILON(nz, a);
-			
+
 			/* To the optional part of the repeated count */
 			if (i >= low) {
 				EPSILON(nz, b);
 			}
-			
+
 			na = a;	/* advance head for next duplication */
 			nz = b;	/* advance tail for concenation */
 		}
-		
+
 		/* tail to last repeated NFA tail */
 		EPSILON(nz, y);
 	}
