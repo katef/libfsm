@@ -226,6 +226,38 @@ fsm_state_duplicatesubgraphx(struct fsm *fsm, fsm_state_t state,
 	fsm_state_t *x,
 	fsm_state_t *q);
 
+/* Captures nodes added between fsm_subgraph_capture_start() and
+ * fsm_subgraph_capture_end()
+ *
+ * Can be used by fsm_subgraph_capture_duplicate() to make copies of the
+ * subgraph.
+ *
+ * The subgraph capture is only valid as long as no nodes are deleted after
+ * fsm_subgraph_capture_start() is called.
+ */
+struct fsm_subgraph_capture {
+	fsm_state_t start;
+	fsm_state_t end;
+};
+
+void
+fsm_subgraph_capture_start(struct fsm *fsm, struct fsm_subgraph_capture *capture);
+
+void
+fsm_subgraph_capture_stop(struct fsm *fsm, struct fsm_subgraph_capture *capture);
+
+/* As with fsm_state_duplicatesubgraphx(), if x is non-NULL, *x must be a state
+ * in the captured subgraph.  *x is overwritten with its equivalent state in
+ * the duplicated subgraph.
+ *
+ * *q is the start of the subgraph.
+ */
+int
+fsm_subgraph_capture_duplicate(struct fsm *fsm,
+	const struct fsm_subgraph_capture *capture,
+	fsm_state_t *x,
+	fsm_state_t *q);
+
 /*
  * Merge two states. A new state is output to q.
  *
