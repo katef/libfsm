@@ -41,6 +41,7 @@ atomic(struct ast_expr *n)
 
 	default:
 		assert(!"unreached");
+		abort();
 	}
 }
 

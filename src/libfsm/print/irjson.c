@@ -65,6 +65,8 @@ print_ranges(FILE *f, const struct fsm_options *opt,
 	assert(ir != NULL);
 	assert(ranges != NULL);
 
+	(void)ir; /* unused */
+
 	for (k = 0; k < n; k++) {
 		fprintf(f, "\t\t\t\t\t\t{ ");
 

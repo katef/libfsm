@@ -348,6 +348,8 @@ make_state(const struct fsm *fsm, fsm_state_t state,
 		unsigned int freq; /* 0 meaning no mode */
 	} mode;
 
+	(void)ir; /* unused */
+
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 	assert(state < fsm->statecount);

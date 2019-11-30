@@ -36,6 +36,8 @@ fsm_shortest(const struct fsm *fsm,
 	assert(goal < fsm->statecount);
 	assert(cost != NULL);
 
+	(void)start; /* unused */
+
 	/*
 	 * We find a least-cost ("shortest") path by Dijkstra's algorithm.
 	 *

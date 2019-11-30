@@ -12,6 +12,8 @@ utf8_Cs_fsm(struct fsm *fsm, fsm_state_t x, fsm_state_t y)
 	fsm_state_t s[1];
 	size_t i;
 
+	(void)y; /* unused */
+
 	for (i = 0; i < 1; i++) {
 		if (i == 0) {
 			s[0] = x;
