@@ -1417,8 +1417,8 @@ printop(const unsigned char *ops, uint32_t pc, const char *sp, const char *buf, 
 	dest = b & 0x03;
 	end  = b & 0x01;
 
-	fprintf(f, "[%4lu sp=%zd n=%zu ch=%3d '%c' end=%d] ",
-		(unsigned long)pc, sp-buf, n, ch, isprint(ch) ? ch : ' ', end);
+	fprintf(f, "[%4lu sp=%zd n=%zu ch=%3u '%c' end=%d] ",
+		(unsigned long)pc, sp-buf, n, (unsigned char)ch, isprint(ch) ? ch : ' ', end);
 
 	switch (op) {
 	case VM_OP_FETCH:
@@ -1505,7 +1505,7 @@ static enum dfavm_state
 vm_match(const struct fsm_dfavm *vm, struct vm_state *st, const char *buf, size_t n)
 {
 	const char *sp, *last;
-	char ch;
+	int ch;
 
 	if (st->state != VM_MATCHING) {
 		return st->state;
@@ -1534,7 +1534,7 @@ vm_match(const struct fsm_dfavm *vm, struct vm_state *st, const char *buf, size_
 				return VM_MATCHING;
 			}
 
-			ch = *sp++;
+			ch = (unsigned char) *sp++;
 			st->pc++;
 		} else {
 			int cmp, end, dest, dest_nbytes;
