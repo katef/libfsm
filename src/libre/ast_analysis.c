@@ -174,6 +174,10 @@ always_consumes_input(const struct ast_expr *n, int thud)
 	case AST_EXPR_RANGE:
 		return 1;
 
+	case AST_EXPR_SUBTRACT:
+		/* FIXME: need to perform the subtraction to know */
+		return 1;
+
 	case AST_EXPR_CONCAT: {
 		size_t i;
 
@@ -421,9 +425,7 @@ assign_firsts(struct ast_expr *n)
 		break;
 
 	case AST_EXPR_ANCHOR:
-		if (n->u.anchor.type == AST_ANCHOR_START) {
-			set_flags(n, AST_FLAG_FIRST);
-		}
+		set_flags(n, AST_FLAG_FIRST);
 		break;
 
 	case AST_EXPR_LITERAL:

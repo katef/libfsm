@@ -383,7 +383,7 @@ decide_linking(struct comp_env *env,
 			return LINK_GLOBAL;
 		}
 
-		return LINK_TOP_DOWN;
+		break;
 
 	case AST_EXPR_SUBTRACT:
 	case AST_EXPR_LITERAL:
