@@ -368,12 +368,5 @@ fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque,
 int fsm_sgetc(void *opaque); /* expects opaque to be char ** */
 int fsm_fgetc(void *opaque); /* expects opaque to be FILE *  */
 
-struct fsm_dfavm;
-
-struct fsm_dfavm *
-fsm_vm_compile(const struct fsm *fsm);
-
-void fsm_vm_free(struct fsm_dfavm *);
-
 #endif
 

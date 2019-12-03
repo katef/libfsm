@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include <fsm/fsm.h>
+#include <fsm/vm.h>
 #include "internal.h"
 #include "print/ir.h"
 
@@ -37,10 +38,12 @@
 // 
 //   CCC
 //   000  always
-//   001  less than or equal to
-//   010  greater than or equal to
-//   011  equal to
-//   100  not equal to
+//   001  less than
+//   010  less than or equal to
+//   011  greater than or equal to
+//   100  greater than
+//   101  equal to
+//   110  not equal to
 //
 //   Comparisons other than 'always' have one comparison argument.  'Always'
 //   comparisons have no comparison arguments.
@@ -83,6 +86,11 @@
 //
 //   DD=11 is reserved for future use
 //
+
+#define MASK_OP   0x18
+#define MASK_CMP  0xE0
+#define MASK_END  0x01
+#define MASK_DEST 0x03
 
 enum dfavm_instr_bits {
 	// Stop the VM, mark match or failure
@@ -149,12 +157,6 @@ struct dfavm_op {
 	int in_trace;
 };
 
-enum dfavm_state {
-	VM_FAIL     = -1,
-	VM_MATCHING =  0,
-	VM_SUCCESS  =  1,
-};
-
 struct dfavm_op_pool {
 	struct dfavm_op_pool *next;
 
@@ -177,15 +179,23 @@ struct dfavm_assembler {
 };
 
 struct fsm_dfavm {
-	unsigned char *sp;
-	unsigned char *end;
-
 	unsigned char *ops;
 	uint32_t len;
-
-	uint32_t pc;
-	enum dfavm_state state;
 };
+
+static const char *
+cmp_name(int cmp) {
+	switch (cmp) {
+	case VM_CMP_ALWAYS: return "";   break;
+	case VM_CMP_LT:     return "LT"; break;
+	case VM_CMP_LE:     return "LE"; break;
+	case VM_CMP_EQ:     return "EQ"; break;
+	case VM_CMP_GE:     return "GE"; break;
+	case VM_CMP_GT:     return "GT"; break;
+	case VM_CMP_NE:     return "NE"; break;
+	default:            return "??"; break;
+	}
+}
 
 static void
 print_op(FILE *f, struct dfavm_op *op)
@@ -193,16 +203,7 @@ print_op(FILE *f, struct dfavm_op *op)
 	const char *cmp;
 	int nargs = 0;
 
-	switch (op->cmp) {
-	case VM_CMP_ALWAYS: cmp = "";   break;
-	case VM_CMP_LT:     cmp = "LT"; break;
-	case VM_CMP_LE:     cmp = "LE"; break;
-	case VM_CMP_EQ:     cmp = "EQ"; break;
-	case VM_CMP_GE:     cmp = "GE"; break;
-	case VM_CMP_GT:     cmp = "GT"; break;
-	case VM_CMP_NE:     cmp = "NE"; break;
-	default:            cmp = "??"; break;
-	}
+	cmp = cmp_name(op->cmp);
 
 	fprintf(f, "[%4lu] %1lu\t", (unsigned long)op->offset, (unsigned long)op->num_encoded_bytes);
 
@@ -405,7 +406,22 @@ opasm_new_branch(struct dfavm_assembler *a, enum dfavm_cmp_bits cmp, unsigned ch
 void
 dfavm_opasm_finalize(struct dfavm_assembler *a)
 {
-	(void)a;
+	static const struct dfavm_assembler zero;
+
+	struct dfavm_op_pool *pool_curr, *pool_next;
+
+	if (a == NULL) {
+		return;
+	}
+
+	free(a->ops);
+
+	for (pool_curr = a->pool; pool_curr != NULL; pool_curr = pool_next) {
+		pool_next = pool_curr->next;
+		free(pool_curr);
+	}
+
+	*a = zero;
 }
 
 struct dfa_table {
@@ -1178,14 +1194,13 @@ encode_opasm(struct dfavm_assembler *a)
 		unsigned char cmp_bits, instr_bits, rest_bits;
 		int nb = 1;
 
-		switch (op->cmp) {
-		case VM_CMP_ALWAYS: cmp_bits = 0x0; break;
-		case VM_CMP_LE:     cmp_bits = 0x1; break;
-		case VM_CMP_GE:     cmp_bits = 0x2; break;
-		case VM_CMP_EQ:     cmp_bits = 0x3; break;
-		case VM_CMP_NE:     cmp_bits = 0x4; break;
-		default:
-			    goto error;
+		cmp_bits   = 0;
+		instr_bits = 0;
+		rest_bits  = 0;
+
+		cmp_bits = op->cmp;
+		if (cmp_bits > 7 || cmp_bits < 0) {
+			goto error;
 		}
 
 		if (op->cmp != VM_CMP_ALWAYS) {
@@ -1201,7 +1216,7 @@ encode_opasm(struct dfavm_assembler *a)
 
 		case VM_OP_FETCH:
 			instr_bits = 0x1;
-			rest_bits  = (op->u.stop.end_bits == VM_END_SUCC) ? 0x1 : 0x0;
+			rest_bits  = (op->u.fetch.end_bits == VM_END_SUCC) ? 0x1 : 0x0;
 			break;
 
 		case VM_OP_BRANCH:
@@ -1262,6 +1277,10 @@ encode_opasm(struct dfavm_assembler *a)
 		default:
 			goto error;
 		}
+
+		bytes[0] = (cmp_bits << 5) | (instr_bits << 3) | (rest_bits);
+		fprintf(stderr, "enc[%4zu] instr=0x%02x cmp=0x%02x rest=0x%02x b=0x%02x\n",
+			off, instr_bits, cmp_bits, rest_bits, bytes[0]);
 
 		memcpy(&enc[off], bytes, nb);
 		off += nb;
@@ -1371,22 +1390,276 @@ fsm_vm_compile(const struct fsm *fsm)
 
 }
 
-void fsm_vm_free(struct fsm_dfavm *vm)
+void
+fsm_vm_free(struct fsm_dfavm *vm)
 {
 	(void)vm;
 }
 
-/* -- Notes --
+enum dfavm_state {
+	VM_FAIL     = -1,
+	VM_MATCHING =  0,
+	VM_SUCCESS  =  1,
+};
 
-   1. Need to reorder states like basic blocks.
-   2. Start state should be the first state.
+struct vm_state {
+	uint32_t pc;
+	enum dfavm_state state;
+	int fetch_state;
+};
 
- */
+static uint32_t
+printop(const unsigned char *ops, uint32_t pc, const char *sp, const char *buf, size_t n, char ch, FILE *f) {
+	int op, cmp, end, dest;
+	unsigned char b = ops[pc];
+	op = (b >> 3) & 0x03;
+	cmp = (b>>5)  & 0x07;
+	dest = b & 0x03;
+	end  = b & 0x01;
+
+	fprintf(f, "[%4lu sp=%zd n=%zu ch=%3d '%c' end=%d] ",
+		(unsigned long)pc, sp-buf, n, ch, isprint(ch) ? ch : ' ', end);
+
+	switch (op) {
+	case VM_OP_FETCH:
+		fprintf(f, "FETCH%s\n", (end == VM_END_FAIL) ? "F" : "S");
+		break;
+
+	case VM_OP_STOP:
+		fprintf(f, "STOP%s%s", (end == VM_END_FAIL) ? "F" : "S", cmp_name(cmp));
+		if (cmp != VM_CMP_ALWAYS) {
+			int arg = ops[++pc];
+			if (isprint(arg)) {
+				fprintf(f, " '%c'", arg);
+			} else {
+				fprintf(f, " %d", arg);
+			}
+		}
+		fprintf(f, "\n");
+		break;
+
+	case VM_OP_BRANCH:
+		fprintf(f, "BR%s%s", (dest == 0 ? "S" : (dest == 1 ? "N" : "F")), cmp_name(cmp));
+		if (cmp != VM_CMP_ALWAYS) {
+			int arg = ops[++pc];
+			if (isprint(arg)) {
+				fprintf(f, " '%c',", arg);
+			} else {
+				fprintf(f, " %d,", arg);
+			}
+		}
 
 
+		{
+			int32_t rel;
+			unsigned char bytes[4] = { 0, 0, 0, 0 };
 
+			if (dest == 0) {
+				union {
+					uint8_t u;
+					int8_t  i;
+				} packed;
 
+				packed.u = ops[pc+1];
+				bytes[0] = packed.u;
+				rel = packed.i;
+				pc += 1;
+			} else if (dest == 1) {
+				union {
+					uint16_t u;
+					int16_t  i;
+				} packed;
 
+				packed.u = (ops[pc+1] | (ops[pc+2] << 8));
+				bytes[0] = ops[pc+1];
+				bytes[1] = ops[pc+2];
+				rel = packed.i;
+				pc += 2;
+			} else {
+				union {
+					uint32_t u;
+					int32_t  i;
+				} packed;
+				packed.u = ops[pc+1] | (ops[pc+2] << 8) | (ops[pc+3] << 16) | (ops[pc+4] << 24);
+				bytes[0] = ops[pc+1];
+				bytes[1] = ops[pc+2];
+				bytes[2] = ops[pc+3];
+				bytes[3] = ops[pc+4];
+				rel = packed.i;
+				pc += 4;
+			}
 
+			fprintf(f, " %ld 0x%02x 0x%02x 0x%02x 0x%02x\n",
+				(long)rel, bytes[0], bytes[1], bytes[2], bytes[3]);
+		}
+		break;
 
+	default:
+		fprintf(f, "UNK\n");
+	}
 
+	return pc;
+}
+
+static enum dfavm_state
+vm_match(const struct fsm_dfavm *vm, struct vm_state *st, const char *buf, size_t n)
+{
+	const char *sp, *last;
+	char ch;
+
+	if (st->state != VM_MATCHING) {
+		return st->state;
+	}
+
+	ch   = 0;
+	sp   = buf;
+	last = buf + n;
+
+	for (;;) {
+		int op;
+		unsigned char b;
+
+		/* decode instruction */
+		b = vm->ops[st->pc];
+		op = (b>>3)&0x03;
+
+		printop(vm->ops, st->pc, sp, buf, n, ch, stderr);
+
+		if (op == VM_OP_FETCH) {
+			int end;
+
+			end = b & 0x01;
+			if (sp >= last) {
+				st->fetch_state = end;
+				return VM_MATCHING;
+			}
+
+			ch = *sp++;
+			st->pc++;
+		} else {
+			int cmp, end, dest, dest_nbytes;
+			int result;
+			uint32_t off;
+
+			/* either STOP or BRANCH */
+			off = st->pc+1;
+			cmp  = b >> 5;
+
+			result = 0;
+			if (cmp == VM_CMP_ALWAYS) {
+				result = 1;
+			} else {
+				int arg;
+
+				arg = vm->ops[off++];
+
+				switch (cmp) {
+				case VM_CMP_LT: result = ch <  arg; break;
+				case VM_CMP_LE: result = ch <= arg; break;
+				case VM_CMP_GE: result = ch >= arg; break;
+				case VM_CMP_GT: result = ch >  arg; break;
+				case VM_CMP_EQ: result = ch == arg; break;
+				case VM_CMP_NE: result = ch != arg; break;
+				}
+			}
+
+			dest = b & 0x3;
+			dest_nbytes = 1 << dest;
+
+			if (result) {
+				int32_t rel;
+
+				if (op == VM_OP_STOP) {
+					end = b & 0x01;
+					st->state = (end == VM_END_FAIL) ? VM_FAIL : VM_SUCCESS;
+					return st->state;
+				}
+
+				if (dest == 0) {
+					rel = (int8_t)(vm->ops[off++]);
+				} else if (dest == 1) {
+					union {
+						uint16_t u;
+						int16_t  i;
+					} packed;
+
+					packed.u = (vm->ops[off+0] | (vm->ops[off+1] << 8));
+					rel = packed.i;
+					off += 2;
+				} else {
+					union {
+						uint32_t u;
+						int32_t  i;
+					} packed;
+					packed.u = vm->ops[off+0] | (vm->ops[off+1] << 8) | (vm->ops[off+2] << 16) | (vm->ops[off+3] << 24);
+					rel = packed.i;
+				}
+
+				st->pc += rel;
+			} else if (op == VM_OP_BRANCH) {
+				st->pc = off + dest_nbytes;
+			} else {
+				st->pc = off;
+			}
+		}
+	}
+
+	return VM_FAIL;
+}
+
+static enum dfavm_state 
+vm_end(const struct fsm_dfavm *vm, struct vm_state *st)
+{
+	(void)vm;
+
+	fprintf(stderr, "END: st->state = %d, st->fetch_state = %d\n",
+		st->state, st->fetch_state);
+	if (st->state != VM_MATCHING) {
+		return st->state;
+	}
+
+	return (st->fetch_state == VM_END_SUCC) ? VM_SUCCESS : VM_FAIL;
+}
+
+static const struct vm_state state_init;
+
+int
+fsm_vm_match_file(const struct fsm_dfavm *vm, FILE *f)
+{
+	struct vm_state st = state_init;
+	enum dfavm_state result;
+	char buf[4096];
+
+	result = VM_FAIL;
+	for (;;) {
+		size_t nb;
+
+		nb = fread(buf, 1, sizeof buf, f);
+		if (nb == 0) {
+			break;
+		}
+
+		result = vm_match(vm, &st, buf, nb);
+		if (result != VM_MATCHING) {
+			return result == VM_SUCCESS;
+		}
+	}
+
+	if (ferror(f)) {
+		return 0;
+	}
+
+	return vm_end(vm, &st) == VM_SUCCESS;
+}
+
+int
+fsm_vm_match_buffer(const struct fsm_dfavm *vm, const char *buf, size_t n)
+{
+	struct vm_state st = state_init;
+	enum dfavm_state result;
+
+	vm_match(vm, &st, buf, n);
+	result = vm_end(vm, &st);
+
+	return result == VM_SUCCESS;
+}
