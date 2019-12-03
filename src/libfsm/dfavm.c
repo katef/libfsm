@@ -134,6 +134,8 @@ struct dfavm_op {
 	uint32_t count;
 	uint32_t offset;
 
+	uint32_t num_incoming; // number of branches to this instruction
+
 	enum dfavm_cmp_bits cmp;
 	enum dfavm_instr_bits instr;
 
@@ -258,7 +260,8 @@ print_op(FILE *f, struct dfavm_op *op)
 		nargs++;
 	}
 
-	fprintf(f, "\t; %6lu bytes", (unsigned long)op->num_encoded_bytes);
+	fprintf(f, "\t; %6lu bytes [%u incoming]",
+		(unsigned long)op->num_encoded_bytes, op->num_incoming);
 	switch (op->instr) {
 	case VM_OP_FETCH:
 		fprintf(f, "  [state %u]", op->u.fetch.state);
@@ -900,6 +903,7 @@ fixup_dests(struct dfavm_assembler *a)
 			}
 
 			op->u.br.dest_arg = a->ops[op->u.br.dest_state];
+			op->u.br.dest_arg->num_incoming++;
 		}
 	}
 }
@@ -936,6 +940,11 @@ eliminate_unnecessary_branches(struct dfavm_assembler *a)
 				continue;
 			}
 
+			if ((*opp)->num_incoming > 0) {
+				opp = &(*opp)->next;
+				continue;
+			}
+
 			dest = (*opp)->u.br.dest_arg;
 			next = (*opp)->next;
 
@@ -947,12 +956,14 @@ eliminate_unnecessary_branches(struct dfavm_assembler *a)
 				// condition doesn't matter since both cond and !cond
 				// will end up at the same place
 				*opp = next;
+				next->num_incoming--;
 				count++;
 				continue;
 			}
 
 			if (next != NULL && dest == next->next &&
 					(next->instr == VM_OP_BRANCH || next->instr == VM_OP_STOP) &&
+					(next->num_incoming == 0) &&
 					(*opp)->cmp != VM_CMP_ALWAYS && next->cmp == VM_CMP_ALWAYS) {
 				/* rewrite last two instructions to eliminate a
 				 * branch
