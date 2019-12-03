@@ -480,17 +480,32 @@ comp_iter_repeated(struct comp_env *env,
 	if (low == 0 && high == 0) {                           /* {0,0} */
 		EPSILON(x, y);
 	} else if (low == 0 && high == 1) {                    /* '?' */
-		RECURSE(x, y, n->e);
-		EPSILON(x, y);
+		NEWSTATE(na);
+		NEWSTATE(nz);
+		EPSILON(x,na);
+		EPSILON(nz,y);
+
+		RECURSE(na, nz, n->e);
+		EPSILON(na, nz);
 	} else if (low == 1 && high == 1) {                    /* {1,1} */
 		RECURSE(x, y, n->e);
 	} else if (low == 0 && high == AST_COUNT_UNBOUNDED) {  /* '*' */
-		EPSILON(x, y);
-		RECURSE(x, y, n->e);
-		EPSILON(y, x);
+		NEWSTATE(na);
+		NEWSTATE(nz);
+		EPSILON(x,na);
+		EPSILON(nz,y);
+
+		EPSILON(na, nz);
+		RECURSE(na, nz, n->e);
+		EPSILON(nz, na);
 	} else if (low == 1 && high == AST_COUNT_UNBOUNDED) {  /* '+' */
-		RECURSE(x, y, n->e);
-		EPSILON(y, x);
+		NEWSTATE(na);
+		NEWSTATE(nz);
+		EPSILON(x,na);
+		EPSILON(nz,y);
+
+		RECURSE(na, nz, n->e);
+		EPSILON(nz, na);
 	} else {
 		/*
 		 * Make new beginning/end states for the repeated section,
@@ -737,7 +752,7 @@ comp_iter(struct comp_env *env,
 			 * more to do here.
 			 */
 			RECURSE(x, y, n->u.alt.n[i]);
-		}		
+		}
 		break;
 	}
 
