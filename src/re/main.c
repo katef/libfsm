@@ -30,6 +30,7 @@
 #include "libre/class.h" /* XXX */
 #include "libre/ast.h" /* XXX */
 
+#define DEBUG_ESCAPES 0
 /*
  * TODO: accepting a delimiter would be useful: /abc/. perhaps provide that as
  * a convenience function, especially wrt. escaping for lexing. Also convenient
@@ -444,6 +445,154 @@ endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 	return 0;
 }
 
+enum parse_escape_result {
+	PARSE_OK = 0,
+	PARSE_INVALID_ESCAPE,
+	PARSE_INCOMPLETE_ESCAPE
+};
+
+static int
+parse_escapes(char *s, char **errpos, int *lenp)
+{
+	int i,j,st;
+	unsigned char ccode;
+	int hexcurly, ndig;
+
+	enum { ST_BARE, ST_ESC, ST_OCT, ST_HEX, ST_HEX_DIGIT };
+
+	ccode = 0;
+	hexcurly = 0;
+
+	st = ST_BARE;
+	for (i=0, j=0; s[i] != '\0'; i++) {
+#if DEBUG_ESCAPES
+		fprintf(stderr, "%3d | st=%d hexcurly=%d ndig=%d ccode=0x%02x | %2d %c\n",
+			i, st, hexcurly, ndig, (unsigned int)ccode, s[i], 
+			isprint(s[i]) ? s[i] : ' ');
+#endif /* DEBUG_ESCAPES */
+
+		if (s[i] == '\0') {
+			break;
+		}
+
+		switch (st) {
+		case ST_BARE:
+bare:
+			if (s[i] == '\\') {
+				st = ST_ESC;
+			} else {
+				s[j++] = s[i];
+			}
+			break;
+
+		case ST_ESC:
+			switch (s[i]) {
+			case 'a':  s[j++] = '\a'; st = ST_BARE; break;
+			case 'b':  s[j++] = '\b'; st = ST_BARE; break;
+			case 'e':  s[j++] = '\033'; st = ST_BARE; break;
+			case 'f':  s[j++] = '\f'; st = ST_BARE; break;
+			case 'n':  s[j++] = '\n'; st = ST_BARE; break;
+			case 'r':  s[j++] = '\r'; st = ST_BARE; break;
+			case 't':  s[j++] = '\t'; st = ST_BARE; break;
+			case 'v':  s[j++] = '\v'; st = ST_BARE; break;
+			case '\\': s[j++] = '\\'; st = ST_BARE; break;
+
+			case '0': ccode = 0; ndig = 0; st = ST_OCT; goto octdig;
+			case 'x': ccode = 0; ndig = 0; hexcurly = 0; st = ST_HEX; break;
+
+			default:
+				if (errpos) {
+					*errpos = &s[i];
+					return PARSE_INVALID_ESCAPE;
+				}
+				break;
+			}
+			break;
+
+		case ST_OCT:
+octdig:
+			if (ndig < 3 && s[i] >= '0' && s[i] <= '7') {
+				ccode = (ccode * 8) + (s[i] - '0');
+				ndig++;
+			} else {
+				s[j++] = ccode;
+				st = ST_BARE;
+				goto bare;
+			}
+
+			break;
+
+		case ST_HEX:
+			st = ST_HEX_DIGIT;
+			if (s[i] != '{') {
+				hexcurly = 0;
+				goto hexdigit;
+			}
+
+			hexcurly = 1;
+			break;
+
+		case ST_HEX_DIGIT:
+hexdigit:
+			{
+				unsigned char uc = toupper(s[i]);
+				if (ndig < 2 && isxdigit(uc)) {
+					if (uc >= '0' && uc <= '9') {
+						ccode = (ccode * 16) + (uc - '0');
+					} else {
+						ccode = (ccode * 16) + (uc - 'A' + 10);
+					}
+
+					ndig++;
+				} else {
+					s[j++] = ccode;
+					st = ST_BARE;
+
+					if (!hexcurly) {
+						goto bare;
+					} else if (uc != '}') {
+						if (errpos) {
+							*errpos = &s[i];
+						}
+						return PARSE_INCOMPLETE_ESCAPE;
+					}
+				}
+			}
+			break;
+		}
+	}
+
+	switch (st) {
+	case ST_BARE:
+		break;
+
+	case ST_ESC:
+		if (errpos) {
+			*errpos = &s[i];
+		}
+		return PARSE_INVALID_ESCAPE;
+
+	case ST_HEX:
+	case ST_OCT:
+	case ST_HEX_DIGIT:
+		if (hexcurly && st == ST_HEX_DIGIT) {
+			if (errpos) {
+				*errpos = &s[i];
+			}
+			return PARSE_INCOMPLETE_ESCAPE;
+		}
+
+		s[j++] = ccode;
+		break;
+	}
+
+	s[j] = '\0';
+
+	*lenp = j;
+
+	return PARSE_OK;
+}
+
 /* test file format:
  *
  * 1. lines starting with '#' are skipped
@@ -461,7 +610,8 @@ endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 static int
 process_test_file(const char *fname, enum re_dialect dialect)
 {
-	char buf[8192];
+	char buf[4096];
+	char cpy[sizeof buf];
 	char *s;
 	FILE *f;
 	int num_re_errors, num_errors;
@@ -565,7 +715,9 @@ process_test_file(const char *fname, enum re_dialect dialect)
 			fsm_free(fsm);
 		} else if (vm != NULL) {
 			int matching;
+			char *orig;
 			char *test;
+			char *err;
 			int tlen;
 			int ret;
 
@@ -582,18 +734,28 @@ process_test_file(const char *fname, enum re_dialect dialect)
 			num_test_cases++;
 
 			matching = (s[0] == '+');
-			test = &s[1];
+			orig = &s[1];
+			test = strcpy(cpy, orig);
 			tlen = len-1;
+
+			err = NULL;
+			ret = parse_escapes(test, &err, &tlen);
+			if (ret != PARSE_OK) {
+				fprintf(stderr, "line %d: invalid/incomplete escape sequence at column %zd\n",
+					linenum, err - test);
+				num_errors++;
+				continue;
+			}
 
 			ret = fsm_vm_match_buffer(vm, test, tlen);
 			if (!!ret == !!matching) {
 				printf("line %d: regexp /%s/ %s \"%s\"\n",
-					linenum, regexp, matching ? "matched" : "did not match", test);
+					linenum, regexp, matching ? "matched" : "did not match", orig);
 			} else {
 				printf("line %d: regexp /%s/ expected to %s \"%s\", but %s\n",
 					linenum, regexp,
 					matching ? "match" : "not match",
-					test,
+					orig,
 					ret ? "did" : "did not");
 				num_errors++;
 			}
