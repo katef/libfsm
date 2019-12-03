@@ -662,6 +662,10 @@ process_test_file(const char *fname, enum re_dialect dialect)
 			continue;
 		}
 
+		if (s[0] == '#') {
+			continue;
+		}
+
 		if (regexp == NULL) {
 			static const struct re_err err_zero;
 
@@ -741,10 +745,6 @@ process_test_file(const char *fname, enum re_dialect dialect)
 			char *err;
 			int tlen;
 			int ret;
-
-			if (s[0] == '#') {
-				continue;
-			}
 
 			if (s[0] != '-' && s[0] != '+') {
 				fprintf(stderr, "line %d: unrecognized record type '%c': %s\n", linenum, s[0], s);
