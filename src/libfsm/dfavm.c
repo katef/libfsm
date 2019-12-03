@@ -18,8 +18,9 @@
 #include "internal.h"
 #include "print/ir.h"
 
-#define DEBUG_ENCODING 0
+#define DEBUG_ENCODING     0
 #define DEBUG_VM_EXECUTION 0
+#define DEBUG_VM_OPCODES   0
 
 // Instructions are 1-6 bytes each.  First byte is the opcode.  Second is the
 // (optional) argument.  Additional bytes encode the branch destination.
@@ -1364,7 +1365,9 @@ dfavm_compile(struct ir *ir)
 
 	assign_rel_dests(&a);
 
+#if DEBUG_VM_OPCODES
 	dump_states(stdout, &a);
+#endif /* DEBUG_VM_OPCODES */
 
 	vm = encode_opasm(&a);
 	if (vm == NULL) {
@@ -1385,6 +1388,8 @@ fsm_vm_compile(const struct fsm *fsm)
 {
 	struct ir *ir;
 	struct fsm_dfavm *vm;
+
+	(void)dump_states;  /* make clang happy */
 
 	ir = make_ir(fsm);
 	if (ir == NULL) {
@@ -1539,6 +1544,7 @@ vm_match(const struct fsm_dfavm *vm, struct vm_state *st, const char *buf, size_
 		b = vm->ops[st->pc];
 		op = (b>>3)&0x03;
 
+		(void)running_print_op;  /* make clang happy */
 #if DEBUG_VM_EXECUTION
 		running_print_op(vm->ops, st->pc, sp, buf, n, ch, stderr);
 #endif /* DEBUG_VM_EXECUTION */
