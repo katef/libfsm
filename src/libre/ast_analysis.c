@@ -478,6 +478,7 @@ assign_firsts(struct ast_expr *n)
 		break;
 
 	case AST_EXPR_SUBTRACT:
+		set_flags(n, AST_FLAG_FIRST);
 		/* XXX: not sure */
 		break;
 
@@ -551,6 +552,7 @@ assign_lasts(struct ast_expr *n)
 		break;
 
 	case AST_EXPR_SUBTRACT:
+		set_flags(n, AST_FLAG_LAST);
 		/* XXX: not sure */
 		break;
 
