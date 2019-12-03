@@ -18,6 +18,9 @@
 #include "internal.h"
 #include "print/ir.h"
 
+#define DEBUG_ENCODING 0
+#define DEBUG_VM_EXECUTION 0
+
 // Instructions are 1-6 bytes each.  First byte is the opcode.  Second is the
 // (optional) argument.  Additional bytes encode the branch destination.
 //
@@ -1279,8 +1282,10 @@ encode_opasm(struct dfavm_assembler *a)
 		}
 
 		bytes[0] = (cmp_bits << 5) | (instr_bits << 3) | (rest_bits);
+#if DEBUG_ENCODING
 		fprintf(stderr, "enc[%4zu] instr=0x%02x cmp=0x%02x rest=0x%02x b=0x%02x\n",
 			off, instr_bits, cmp_bits, rest_bits, bytes[0]);
+#endif /* DEBUG_ENCODING */
 
 		memcpy(&enc[off], bytes, nb);
 		off += nb;
@@ -1409,7 +1414,7 @@ struct vm_state {
 };
 
 static uint32_t
-printop(const unsigned char *ops, uint32_t pc, const char *sp, const char *buf, size_t n, char ch, FILE *f) {
+running_print_op(const unsigned char *ops, uint32_t pc, const char *sp, const char *buf, size_t n, char ch, FILE *f) {
 	int op, cmp, end, dest;
 	unsigned char b = ops[pc];
 	op = (b >> 3) & 0x03;
@@ -1523,7 +1528,9 @@ vm_match(const struct fsm_dfavm *vm, struct vm_state *st, const char *buf, size_
 		b = vm->ops[st->pc];
 		op = (b>>3)&0x03;
 
-		printop(vm->ops, st->pc, sp, buf, n, ch, stderr);
+#if DEBUG_VM_EXECUTION
+		running_print_op(vm->ops, st->pc, sp, buf, n, ch, stderr);
+#endif /* DEBUG_VM_EXECUTION */
 
 		if (op == VM_OP_FETCH) {
 			int end;
@@ -1612,8 +1619,11 @@ vm_end(const struct fsm_dfavm *vm, struct vm_state *st)
 {
 	(void)vm;
 
+#if DEBUG_VM_EXECUTION
 	fprintf(stderr, "END: st->state = %d, st->fetch_state = %d\n",
 		st->state, st->fetch_state);
+#endif /* DEBUG_VM_EXECUTION */
+
 	if (st->state != VM_MATCHING) {
 		return st->state;
 	}
