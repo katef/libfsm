@@ -30,7 +30,11 @@
 #include "libre/class.h" /* XXX */
 #include "libre/ast.h" /* XXX */
 
-#define DEBUG_ESCAPES 0
+
+#define DEBUG_ESCAPES     0
+#define DEBUG_VM_FSM      0
+#define DEBUG_TEST_REGEXP 0
+
 /*
  * TODO: accepting a delimiter would be useful: /abc/. perhaps provide that as
  * a convenience function, especially wrt. escaping for lexing. Also convenient
@@ -704,6 +708,20 @@ process_test_file(const char *fname, enum re_dialect dialect)
 				continue;
 			}
 
+#if DEBUG_VM_FSM
+			fprintf(stderr, "FSM:\n");
+			fsm_print_fsm(stderr, fsm);
+			fprintf(stderr, "---\n");
+			{
+				FILE *f = fopen("dump.fsm", "w");
+				fsm_print_fsm(f, fsm);
+				fclose(f);
+			}
+#endif /* DEBUG_VM_FSM */
+
+#if DEBUG_TEST_REGEXP
+			fprintf(stderr, "REGEXP matching for /%s/\n", regexp);
+#endif /* DEBUG_TEST_REGEXP */
 			vm = fsm_vm_compile(fsm);
 			if (vm == NULL) {
 				fprintf(stderr, "line %d: error compiling /%s/: %s\n", linenum, regexp, strerror(errno));
@@ -752,10 +770,10 @@ process_test_file(const char *fname, enum re_dialect dialect)
 
 			ret = fsm_vm_match_buffer(vm, test, tlen);
 			if (!!ret == !!matching) {
-				printf("line %d: regexp /%s/ %s \"%s\"\n",
+				printf("[OK    ] line %d: regexp /%s/ %s \"%s\"\n",
 					linenum, regexp, matching ? "matched" : "did not match", orig);
 			} else {
-				printf("line %d: regexp /%s/ expected to %s \"%s\", but %s\n",
+				printf("[NOT OK] line %d: regexp /%s/ expected to %s \"%s\", but %s\n",
 					linenum, regexp,
 					matching ? "match" : "not match",
 					orig,
