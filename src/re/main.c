@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <assert.h>
+#include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h> /* XXX: for ast.h */
@@ -20,6 +21,7 @@
 #include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
+#include <fsm/vm.h>
 
 #include <re/re.h>
 
@@ -210,6 +212,18 @@ static int
 	}
 
 	exit(EXIT_FAILURE);
+}
+
+static void *
+xmalloc(size_t n)
+{
+	void *p = malloc(n);
+	if (p == NULL) {
+		perror("xmalloc");
+		exit(EXIT_FAILURE);
+	}
+
+	return p;
 }
 
 static FILE *
@@ -430,6 +444,183 @@ endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 	return 0;
 }
 
+/* test file format:
+ *
+ * 1. lines starting with '#' are skipped
+ * 2. (TODO) lines starting with 'R' set the dialect
+ * 3. records are separated by empty lines
+ * 4. the first line of each record is the regular expression to be
+ *    tested 
+ * 5. after the regular expression, valid lines start with '#', '+', or '-'
+ *     a. '+' indicates that the rest of the line should be matched with the
+ *        current regular expression
+ *     b. '-' indicates the the rest of the line should *not* be matched with
+ *        the current regular expression
+ *     c. '#' lines are comments
+ */
+static int
+process_test_file(const char *fname, enum re_dialect dialect)
+{
+	char buf[8192];
+	char *s;
+	FILE *f;
+	int num_re_errors, num_errors;
+	int num_regexps, num_test_cases;
+	int linenum;
+
+	char *regexp;
+	struct fsm_dfavm *vm;
+
+	regexp = NULL;
+	vm     = NULL;
+
+	/* XXX - fix this */
+	opt.comments = 0;
+
+	f = xopen(fname);
+
+	num_regexps    = 0;
+	num_re_errors  = 0;
+	num_test_cases = 0;
+	num_errors     = 0;
+
+	linenum        = 0;
+
+	while (s = fgets(buf, sizeof buf, f), s != NULL) {
+		int len;
+
+		linenum++;
+		len = strlen(s);
+		if (len > 0 & s[len-1] == '\n') {
+			s[--len] = '\0';
+		}
+
+		if (len == 0) {
+			free(regexp);
+			regexp = NULL;
+
+			fsm_vm_free(vm);
+			vm = NULL;
+
+			continue;
+		}
+
+		if (regexp == NULL) {
+			static const struct re_err err_zero;
+
+			struct fsm *fsm;
+			struct re_err err;
+			enum re_flags flags;
+			char *re_str;
+
+			assert(vm == NULL);
+			assert(s  != NULL);
+
+			regexp = xmalloc(len+1);
+			memcpy(regexp, s, len+1);
+
+			assert(strlen(regexp) == (size_t)len);
+			assert(strcmp(regexp,s) == 0);
+
+			flags = 0;
+			err   = err_zero;
+
+			num_regexps++;
+
+			re_str = regexp;
+			fsm = re_comp(dialect, fsm_sgetc, &re_str, &opt, flags, &err);
+			if (fsm == NULL) {
+				fprintf(stderr, "line %d: error with regexp /%s/: %s\n",
+					linenum, regexp, re_strerror(err.e));
+
+				/* don't exit; instead we leave vm==NULL so we
+				 * skip to next regexp ... */
+
+				num_re_errors++;
+				continue;
+			}
+
+			/* XXX - minimize or determinize? */
+			if (!fsm_determinise(fsm)) {
+				fprintf(stderr, "line %d: error determinising /%s/: %s\n", linenum, regexp, strerror(errno));
+
+				/* don't exit; instead we leave vm==NULL so we
+				 * skip to next regexp ... */
+
+				num_re_errors++;
+				continue;
+			}
+
+			vm = fsm_vm_compile(fsm);
+			if (vm == NULL) {
+				fprintf(stderr, "line %d: error compiling /%s/: %s\n", linenum, regexp, strerror(errno));
+
+				/* don't exit; instead we leave vm==NULL so we
+				 * skip to next regexp ... */
+
+				num_re_errors++;
+				continue;
+			}
+
+			fsm_free(fsm);
+		} else if (vm != NULL) {
+			int matching;
+			char *test;
+			int tlen;
+			int ret;
+
+			if (s[0] == '#') {
+				continue;
+			}
+
+			if (s[0] != '-' && s[0] != '+') {
+				fprintf(stderr, "line %d: unrecognized record type '%c': %s\n", linenum, s[0], s);
+				num_errors++;
+				continue;
+			}
+
+			num_test_cases++;
+
+			matching = (s[0] == '+');
+			test = &s[1];
+			tlen = len-1;
+
+			ret = fsm_vm_match_buffer(vm, test, tlen);
+			if (!!ret == !!matching) {
+				printf("line %d: regexp /%s/ %s \"%s\"\n",
+					linenum, regexp, matching ? "matched" : "did not match", test);
+			} else {
+				printf("line %d: regexp /%s/ expected to %s \"%s\", but %s\n",
+					linenum, regexp,
+					matching ? "match" : "not match",
+					test,
+					ret ? "did" : "did not");
+				num_errors++;
+			}
+		}
+	}
+
+	free(regexp);
+
+	if (vm) {
+		fsm_vm_free(vm);
+		vm = NULL;
+	}
+
+	fclose(f);
+
+	if (ferror(f)) {
+		fprintf(stderr, "line %d: error reading %s: %s\n", linenum, fname, strerror(errno));
+		if (regexp != NULL) {
+			num_errors++;
+		}
+	}
+
+	printf("%s: %d regexps, %d test cases\n", fname, num_regexps, num_test_cases);
+	printf("%s: %d re errors, %d errors\n", fname, num_re_errors, num_errors);
+	return (num_errors > 0);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -440,12 +631,14 @@ main(int argc, char *argv[])
 	enum re_dialect dialect;
 	struct fsm *fsm;
 	enum re_flags flags;
-	int xfiles, yfiles;
+	int xfiles, yfiles, tfiles;
 	int example;
 	int keep_nfa;
 	int patterns;
 	int ambig;
 	int makevm;
+
+	struct fsm_dfavm *vm;
 
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;
@@ -457,6 +650,7 @@ main(int argc, char *argv[])
 	flags     = 0U;
 	xfiles    = 0;
 	yfiles    = 0;
+	tfiles    = 0;
 	example   = 0;
 	keep_nfa  = 0;
 	patterns  = 0;
@@ -467,11 +661,12 @@ main(int argc, char *argv[])
 	query     = NULL;
 	join      = fsm_union;
 	dialect   = RE_NATIVE;
+	vm        = NULL;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:" "upMmnxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:" "upMmntxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
@@ -495,6 +690,7 @@ main(int argc, char *argv[])
 			case 'q': query     = comparison(optarg);   break;
 			case 'r': dialect   = dialect_name(optarg); break;
 
+			case 't': tfiles   = 1; break;
 			case 'u': ambig    = 1; break;
 			case 'x': xfiles   = 1; break;
 			case 'y': yfiles   = 1; break;
@@ -523,6 +719,18 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	if (tfiles) {
+		if (!!print_fsm || !!print_ast || example || !!query || keep_nfa) {
+			fprintf(stderr, "-t is not compatible with -m, -n, -p, or -q\n");
+			return EXIT_FAILURE;
+		}
+
+		if (xfiles || yfiles) {
+			fprintf(stderr, "-t is not compatible with -x or -y\n");
+			return EXIT_FAILURE;
+		}
+	}
+
 	if (!!print_fsm + !!print_ast + example + !!query > 1) {
 		fprintf(stderr, "-m, -p and -q are mutually exclusive\n");
 		return EXIT_FAILURE;
@@ -533,8 +741,8 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (keep_nfa && makevm) {
-		fprintf(stderr, "-n and -M cannot be used together\n");
+	if (makevm && (keep_nfa || example || query)) {
+		fprintf(stderr, "-M cannot be used with -m, -q, or -n\n");
 		return EXIT_FAILURE;
 	}
 
@@ -600,6 +808,31 @@ main(int argc, char *argv[])
 	}
 
 	flags |= RE_MULTI;
+
+	if (tfiles) {
+		int r, i;
+
+		r = 0;
+
+		if (argc == 0) {
+			fprintf(stderr, "-t requires at least one test file\n");
+			return EXIT_FAILURE;
+		}
+
+		for (i = 0; i < argc; i++) {
+			int succ;
+
+			succ = process_test_file(argv[i], dialect);
+
+			if (!succ) {
+				r |= 1;
+				continue;
+			}
+		}
+
+		return r;
+	}
+
 
 	fsm = fsm_new(&opt);
 	if (fsm == NULL) {
@@ -813,10 +1046,7 @@ main(int argc, char *argv[])
 		opt.carryopaque = NULL;
 
 		if (makevm) {
-			struct fsm_dfavm *vm;
-
 			vm = fsm_vm_compile(fsm);
-			fsm_vm_free(vm);
 		}
 	}
 
@@ -867,6 +1097,10 @@ main(int argc, char *argv[])
 		print_fsm(stdout, fsm);
 
 /* XXX: free fsm */
+		
+		if (vm != NULL) {
+			fsm_vm_free(vm);
+		}
 
 		return 0;
 	}
@@ -891,9 +1125,13 @@ main(int argc, char *argv[])
 				if (xfiles) {
 					FILE *f;
 
-					f = xopen(argv[0]);
+					f = xopen(argv[i]);
 
-					e = fsm_exec(fsm, fsm_fgetc, f, &state);
+					if (vm != NULL) {
+						e = fsm_vm_match_file(vm, f);
+					} else {
+						e = fsm_exec(fsm, fsm_fgetc, f, &state);
+					}
 
 					fclose(f);
 				} else {
@@ -901,7 +1139,11 @@ main(int argc, char *argv[])
 
 					s = argv[i];
 
-					e = fsm_exec(fsm, fsm_sgetc, &s, &state);
+					if (vm != NULL) {
+						e = fsm_vm_match_buffer(vm, s, strlen(s));
+					} else {
+						e = fsm_exec(fsm, fsm_sgetc, &s, &state);
+					}
 				}
 
 				if (e != 1) {
@@ -925,6 +1167,10 @@ main(int argc, char *argv[])
 		/* XXX: free opaques */
 
 		fsm_free(fsm);
+
+		if (vm != NULL) {
+			fsm_vm_free(vm);
+		}
 
 		return r;
 	}
