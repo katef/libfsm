@@ -615,7 +615,7 @@ hexdigit:
  *     c. '#' lines are comments
  */
 static int
-process_test_file(const char *fname, enum re_dialect dialect)
+process_test_file(const char *fname, enum re_dialect dialect, int max_errors)
 {
 	char buf[4096];
 	char cpy[sizeof buf];
@@ -779,6 +779,11 @@ process_test_file(const char *fname, enum re_dialect dialect)
 					orig,
 					ret ? "did" : "did not");
 				num_errors++;
+
+				if (max_errors > 0 && num_errors >= max_errors) {
+					fprintf(stderr, "too many errors\n");
+					goto finish;
+				}
 			}
 		}
 	}
@@ -799,8 +804,14 @@ process_test_file(const char *fname, enum re_dialect dialect)
 		}
 	}
 
+finish:
 	printf("%s: %d regexps, %d test cases\n", fname, num_regexps, num_test_cases);
 	printf("%s: %d re errors, %d errors\n", fname, num_re_errors, num_errors);
+
+	if (max_errors > 0 && num_errors >= max_errors) {
+		exit(EXIT_FAILURE);
+	}
+
 	return (num_errors > 0);
 }
 
@@ -820,6 +831,7 @@ main(int argc, char *argv[])
 	int patterns;
 	int ambig;
 	int makevm;
+	int max_test_errors;
 
 	struct fsm_dfavm *vm;
 
@@ -846,10 +858,12 @@ main(int argc, char *argv[])
 	dialect   = RE_NATIVE;
 	vm        = NULL;
 
+	max_test_errors = 0;
+
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:" "upMmntxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:E:k:" "bi" "sq:r:l:" "upMmntxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
@@ -874,6 +888,11 @@ main(int argc, char *argv[])
 			case 'r': dialect   = dialect_name(optarg); break;
 
 			case 't': tfiles   = 1; break;
+			case 'E':
+				max_test_errors = strtoul(optarg, NULL, 10);
+				/* XXX: error handling */
+				break;
+
 			case 'u': ambig    = 1; break;
 			case 'x': xfiles   = 1; break;
 			case 'y': yfiles   = 1; break;
@@ -1005,7 +1024,7 @@ main(int argc, char *argv[])
 		for (i = 0; i < argc; i++) {
 			int succ;
 
-			succ = process_test_file(argv[i], dialect);
+			succ = process_test_file(argv[i], dialect, max_test_errors);
 
 			if (!succ) {
 				r |= 1;
