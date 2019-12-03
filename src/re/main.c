@@ -495,9 +495,12 @@ bare:
 			case 'r':  s[j++] = '\r'; st = ST_BARE; break;
 			case 't':  s[j++] = '\t'; st = ST_BARE; break;
 			case 'v':  s[j++] = '\v'; st = ST_BARE; break;
+			case '"':  s[j++] = '\"'; st = ST_BARE; break;
 			case '\\': s[j++] = '\\'; st = ST_BARE; break;
 
-			case '0': ccode = 0; ndig = 0; st = ST_OCT; goto octdig;
+			case '0': case '1': case '2': case '3':
+			case '4': case '5': case '6': case '7':
+				   ccode = 0; ndig = 0; st = ST_OCT; goto octdig;
 			case 'x': ccode = 0; ndig = 0; hexcurly = 0; st = ST_HEX; break;
 
 			default:
