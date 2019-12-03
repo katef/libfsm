@@ -314,6 +314,7 @@ xopen(const char *s)
 	return f;
 }
 
+#if 0
 static unsigned int word_maxlen = 16;
 static unsigned int num_words = 8;
 static uint64_t seed = 0xdfa7231bc;
@@ -336,6 +337,7 @@ gen_words(FILE *f, const struct fsm *fsm)
 
 	fsm_generate_words_to_file(fsm, &params, &prng, num_words, f);
 }
+#endif /* 0 */
 
 
 int
@@ -394,9 +396,11 @@ main(int argc, char *argv[])
 			case 't': op = op_name(optarg);               break;
 			case 'G': op = op_name("glushkovise");        break;
 			case 'W':
-				print = gen_words;
-				num_words = strtoul(optarg, NULL, 10);
+				/* print = gen_words; */
+				/* num_words = strtoul(optarg, NULL, 10); */
 				/* XXX: error handling */
+				fprintf(stderr, "not yet implemented.\n");
+				exit(EXIT_FAILURE);
 				break;
 
 			case 'h':

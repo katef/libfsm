@@ -3,8 +3,8 @@
 SRC += src/fsm/lexer.c
 SRC += src/fsm/parser.c
 SRC += src/fsm/main.c
-SRC += src/fsm/wordgen.c
-SRC += src/fsm/xoroshiro256starstar.c
+# SRC += src/fsm/wordgen.c
+# SRC += src/fsm/xoroshiro256starstar.c
 
 .for src in ${SRC:Msrc/fsm/parser.c} ${SRC:Msrc/fsm/main.c}
 CFLAGS.${src} += -I src # XXX: for internal.h
