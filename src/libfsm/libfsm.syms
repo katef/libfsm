@@ -52,8 +52,6 @@ fsm_addedge_literal
 
 fsm_findmode
 fsm_collate
-fsm_state_duplicatesubgraph
-fsm_state_duplicatesubgraphx
 fsm_subgraph_capture_start
 fsm_subgraph_capture_stop
 fsm_subgraph_capture_duplicate

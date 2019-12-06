@@ -202,30 +202,6 @@ fsm_countstates(const struct fsm *fsm);
 unsigned int
 fsm_countedges(const struct fsm *fsm);
 
-/*
- * Duplicate a state and all its targets. This traverses the edges leading out
- * from the state, to the states to which those point, and so on. It does not
- * include edges going *to* the given state, or its descendants.
- *
- * For duplicate_subgraphbetween(), if non-NULL, the state x in the origional
- * subgraph is overwritten with its equivalent state in the duplicated subgraph.
- * This provides a mechanism to keep track of a state of interest (for example
- * the endpoint of a segment).
- *
- * Returns 1 on success, or 0 on error; see errno.
- * The duplicated state is output via q.
- *
- * TODO: fsm_state_duplicatesubgraphx() is a horrible inteface, but I'm not
- * sure how else to go about that.
- */
-int
-fsm_state_duplicatesubgraph(struct fsm *fsm, fsm_state_t state,
-	fsm_state_t *q);
-int
-fsm_state_duplicatesubgraphx(struct fsm *fsm, fsm_state_t state,
-	fsm_state_t *x,
-	fsm_state_t *q);
-
 /* Captures nodes added between fsm_subgraph_capture_start() and
  * fsm_subgraph_capture_end()
  *
@@ -246,11 +222,15 @@ fsm_subgraph_capture_start(struct fsm *fsm, struct fsm_subgraph_capture *capture
 void
 fsm_subgraph_capture_stop(struct fsm *fsm, struct fsm_subgraph_capture *capture);
 
-/* As with fsm_state_duplicatesubgraphx(), if x is non-NULL, *x must be a state
- * in the captured subgraph.  *x is overwritten with its equivalent state in
- * the duplicated subgraph.
+/*
+ * Duplicate a captured sub-graph.
  *
- * *q is the start of the subgraph.
+ * If non-NULL, the state x in the origional subgraph is overwritten with its
+ * equivalent state in the duplicated subgraph.
+ * This provides a mechanism to keep track of a state of interest (for example
+ * the endpoint of a segment).
+ *
+ * The start of the subgraph is output to *q.
  */
 int
 fsm_subgraph_capture_duplicate(struct fsm *fsm,

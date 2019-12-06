@@ -527,10 +527,6 @@ comp_iter_repeated(struct comp_env *env,
 				return 0;
 			}
 
-			/*
-			 * TODO: could elide this epsilon if fsm_state_duplicatesubgraphx()
-			 * took an extra parameter giving it a m->new for the start state
-			 */
 			EPSILON(nz, a);
 
 			/* To the optional part of the repeated count */
