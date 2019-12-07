@@ -14,6 +14,7 @@
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
+#include <fsm/capture.h>
 
 #include <re/re.h>
 
@@ -497,10 +498,10 @@ comp_iter_repeated(struct comp_env *env,
 		 * build its NFA, and link to its head.
 		 */
 
-		struct fsm_subgraph_capture subgraph;
+		struct fsm_capture capture;
 		fsm_state_t tail;
 
-		fsm_subgraph_capture_start(env->fsm, &subgraph);
+		fsm_capture_start(env->fsm, &capture);
 
 		NEWSTATE(na);
 		NEWSTATE(nz);
@@ -514,7 +515,7 @@ comp_iter_repeated(struct comp_env *env,
 			EPSILON(na, nz);
 		}
 
-		fsm_subgraph_capture_stop(env->fsm, &subgraph);
+		fsm_capture_stop(env->fsm, &capture);
 		tail = nz;
 
 		for (i = 1; i < high; i++) {
@@ -523,7 +524,7 @@ comp_iter_repeated(struct comp_env *env,
 			 */
 			b = tail;
 
-			if (!fsm_subgraph_capture_duplicate(env->fsm, &subgraph, &b, &a)) {
+			if (!fsm_capture_duplicate(env->fsm, &capture, &b, &a)) {
 				return 0;
 			}
 

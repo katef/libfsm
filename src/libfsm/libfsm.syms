@@ -52,10 +52,11 @@ fsm_addedge_literal
 
 fsm_findmode
 fsm_collate
-fsm_subgraph_capture_start
-fsm_subgraph_capture_stop
-fsm_subgraph_capture_duplicate
 fsm_mergestates
+
+fsm_capture_start
+fsm_capture_stop
+fsm_capture_duplicate
 
 fsm_setstart
 fsm_getstart

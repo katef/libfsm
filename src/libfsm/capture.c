@@ -10,6 +10,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+#include <fsm/capture.h>
 
 #include <adt/alloc.h>
 #include <adt/set.h>
@@ -20,7 +21,7 @@
 #include "internal.h"
 
 void
-fsm_subgraph_capture_start(struct fsm *fsm, struct fsm_subgraph_capture *capture)
+fsm_capture_start(struct fsm *fsm, struct fsm_capture *capture)
 {
 	assert(fsm != NULL);
 	assert(capture != NULL);
@@ -29,7 +30,7 @@ fsm_subgraph_capture_start(struct fsm *fsm, struct fsm_subgraph_capture *capture
 }
 
 void
-fsm_subgraph_capture_stop(struct fsm *fsm, struct fsm_subgraph_capture *capture)
+fsm_capture_stop(struct fsm *fsm, struct fsm_capture *capture)
 {
 	assert(fsm != NULL);
 	assert(capture != NULL);
@@ -38,8 +39,8 @@ fsm_subgraph_capture_stop(struct fsm *fsm, struct fsm_subgraph_capture *capture)
 }
 
 int
-fsm_subgraph_capture_duplicate(struct fsm *fsm,
-	const struct fsm_subgraph_capture *capture,
+fsm_capture_duplicate(struct fsm *fsm,
+	const struct fsm_capture *capture,
 	fsm_state_t *x,
 	fsm_state_t *q)
 {
