@@ -25,7 +25,7 @@ state_set_add(struct state_set **set, const struct fsm_alloc *alloc,
 
 int
 state_set_add_bulk(struct state_set **set, const struct fsm_alloc *alloc,
-	fsm_state_t *a, size_t n);
+	const fsm_state_t *a, size_t n);
 
 void
 state_set_remove(struct state_set **set, fsm_state_t state);

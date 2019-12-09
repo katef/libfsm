@@ -259,7 +259,7 @@ state_set_add(struct state_set **setp, const struct fsm_alloc *alloc,
 
 int
 state_set_add_bulk(struct state_set **setp, const struct fsm_alloc *alloc,
-	fsm_state_t *a, size_t n)
+	const fsm_state_t *a, size_t n)
 {
 	struct state_set *set;
 	size_t newlen;
@@ -320,6 +320,7 @@ state_set_add_bulk(struct state_set **setp, const struct fsm_alloc *alloc,
 	}
 
 	memcpy(&set->a[set->i], &a[0], n * sizeof a[0]);
+
 	qsort(&set->a[0], set->i+n, sizeof set->a[0], state_set_cmpptr);
 
 	/* remove any duplicates */
