@@ -44,6 +44,7 @@ SUBDIR += src
 SUBDIR += tests/complement
 SUBDIR += tests/intersect
 SUBDIR += tests/ir
+SUBDIR += tests/eclosure
 SUBDIR += tests/subtract
 SUBDIR += tests/determinise
 SUBDIR += tests/glush

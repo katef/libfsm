@@ -4,7 +4,7 @@ SRC += src/fsm/lexer.c
 SRC += src/fsm/parser.c
 SRC += src/fsm/main.c
 
-.for src in ${SRC:Msrc/fsm/parser.c}
+.for src in ${SRC:Msrc/fsm/parser.c} ${SRC:Msrc/fsm/main.c}
 CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor
