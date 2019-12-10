@@ -66,12 +66,9 @@ fsm_hasnondeterminism(const struct fsm *fsm, fsm_state_t state)
 		return state_hasnondeterminism(fsm, state, NULL);
 	}
 
-	ec = state_set_create(fsm->opt->alloc);
-	if (ec == NULL) {
-		return -1;
-	}
+	ec = NULL;
 
-	if (!epsilon_closure(fsm, state, ec)) {
+	if (!epsilon_closure(fsm, state, &ec)) {
 		state_set_free(ec);
 		return -1;
 	}

@@ -31,7 +31,7 @@
  * Returns closure on success, NULL on error.
  */
 struct state_set *
-epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set *closure)
+epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set **closure)
 {
 	struct state_iter it;
 	fsm_state_t s;
@@ -41,11 +41,11 @@ epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set *clos
 	assert(closure != NULL);
 
 	/* Find if the given state is already in the closure */
-	if (state_set_contains(closure, state)) {
-		return closure;
+	if (state_set_contains(*closure, state)) {
+		return *closure;
 	}
 
-	if (!state_set_add(closure, state)) {
+	if (!state_set_add(closure, fsm->opt->alloc, state)) {
 		return NULL;
 	}
 
@@ -56,6 +56,6 @@ epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set *clos
 		}
 	}
 
-	return closure;
+	return *closure;
 }
 

@@ -90,7 +90,7 @@ fsm_mergeab(struct fsm *a, struct fsm *b,
     fsm_state_t *base_b);
 
 struct state_set *
-epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set *closure);
+epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set **closure);
 
 /*
  * Internal free function that invokes free(3) by default, or a user-provided

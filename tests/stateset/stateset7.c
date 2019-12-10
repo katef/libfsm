@@ -36,11 +36,11 @@ int main(void) {
 		all_items[i] = &all_values[i];
 	}
 
-	s = state_set_create(NULL);
+	s = NULL;
 
-	assert(state_set_add(s, *items1[0]));
-	assert(state_set_add(s, *items1[1]));
-	assert(state_set_add(s, *items1[2]));
+	assert(state_set_add(&s, NULL, *items1[0]));
+	assert(state_set_add(&s, NULL, *items1[1]));
+	assert(state_set_add(&s, NULL, *items1[2]));
 
 	assert(state_set_count(s) == 3);
 
@@ -48,28 +48,28 @@ int main(void) {
 	assert(state_set_contains(s, *items1[1]));
 	assert(state_set_contains(s, *items1[2]));
 
-	assert(state_set_add_bulk(s, items2[0], 3));
+	assert(state_set_add_bulk(&s, NULL, items2[0], 3));
 	assert(state_set_count(s) == 4);
 
 	assert(state_set_contains(s, *items2[0]));
 	assert(state_set_contains(s, *items2[1]));
 	assert(state_set_contains(s, *items2[2]));
 
-	assert(state_set_add_bulk(s, items3[0], 3));
+	assert(state_set_add_bulk(&s, NULL, items3[0], 3));
 	assert(state_set_count(s) == 7);
 
 	assert(state_set_contains(s, *items3[0]));
 	assert(state_set_contains(s, *items3[1]));
 	assert(state_set_contains(s, *items3[2]));
 
-	assert(state_set_add_bulk(s, items4[0], 3));
+	assert(state_set_add_bulk(&s, NULL, items4[0], 3));
 	assert(state_set_count(s) == 9);
 
 	assert(state_set_contains(s, *items4[0]));
 	assert(state_set_contains(s, *items4[1]));
 	assert(state_set_contains(s, *items4[2]));
 
-	assert(state_set_add_bulk(s, items5[0], 5));
+	assert(state_set_add_bulk(&s, NULL, items5[0], 5));
 	assert(state_set_count(s) == 14);
 
 	assert(state_set_contains(s, *items5[0]));

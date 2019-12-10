@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #include <fsm/fsm.h>
 
@@ -17,14 +18,28 @@
 /*
  * TODO: now fsm_state_t is a numeric index, this could be a dynamically
  * allocated bitmap, instead of a set.inc's array of items.
- *
- * XXX: I'm breaking abstraction here, because item_t is not a 
- * pointer type, and I've included the hashset implementation here directly 
- * rather than using the generic set.inc
  */
 
 #define SET_INITIAL 8
-#define BULK_ADD_THRESH 1
+
+/*
+ * Most state sets only contain a single item (think of a DFA from a typical
+ * regexp with long chains of letters). In an attempt at optimisation, we avoid
+ * allocating for a set until it contains more than a single item. Instead of
+ * allocating storage for struct state_set, the single item is instead stored
+ * directly in the struct state_set * pointer value returned.
+ *
+ * To distinguish these "singleton" pointers from regular struct pointers,
+ * bit 0 is set. This uses the assumption that struct pointers are word aligned
+ * for this particular target machine, and so this code is not portable.
+ *
+ * The other assumption here is that NULL is all-bits-zero, distinguishing it
+ * from a singleton value where the fsm_state_t item is 0.
+ */
+#define SINGLETON_MAX           ((~ (uintptr_t) 0U) >> 1)
+#define SINGLETON_ENCODE(state) ((void *) ((((uintptr_t) (state)) << 1) | 0x1))
+#define SINGLETON_DECODE(ptr)   ((fsm_state_t) (((uintptr_t) (ptr)) >> 1))
+#define IS_SINGLETON(ptr)       (((uintptr_t) (ptr)) & 0x1)
 
 struct state_set {
 	const struct fsm_alloc *alloc;
@@ -48,14 +63,54 @@ state_set_cmpptr(const void *a, const void *b)
 int
 state_set_cmp(const struct state_set *a, const struct state_set *b)
 {
-	assert(a != NULL);
-	assert(a->a != NULL);
-	assert(b != NULL);
-	assert(b->a != NULL);
+	size_t count_a, count_b;
 
-	if (a->i != b->i) {
-		return a->i - b->i;
+	assert(a != NULL);
+	assert(b != NULL);
+
+	count_a = state_set_count(a);
+	count_b = state_set_count(b);
+
+	if (count_a != count_b) {
+		return count_a - count_b;
 	}
+
+	if (IS_SINGLETON(a) && IS_SINGLETON(b)) {
+		fsm_state_t sa, sb;
+
+		sa = SINGLETON_DECODE(a);
+		sb = SINGLETON_DECODE(b);
+
+		return (sa > sb) - (sa < sb);
+	}
+
+	if (IS_SINGLETON(a)) {
+		fsm_state_t sa, sb;
+
+		assert(b->a != NULL);
+		assert(count_b == 1);
+
+		sa = SINGLETON_DECODE(a);
+		sb = state_set_only(b);
+
+		return (sa > sb) - (sa < sb);
+	}
+
+	if (IS_SINGLETON(b)) {
+		fsm_state_t sa, sb;
+
+		assert(a->a != NULL);
+		assert(count_a == 1);
+
+		sa = state_set_only(a);
+		sb = SINGLETON_DECODE(b);
+
+		return (sa > sb) - (sa < sb);
+	}
+
+	assert(a->a != NULL);
+	assert(b->a != NULL);
+	assert(a->i == b->i);
 
 	return memcmp(a->a, b->a, a->i * sizeof *a->a);
 }
@@ -70,6 +125,8 @@ state_set_search(const struct state_set *set, fsm_state_t state)
 	size_t mid;
 
 	assert(set != NULL);
+	assert(!IS_SINGLETON(set));
+	assert(set->a != NULL);
 
 	start = mid = 0;
 	end = set->i;
@@ -90,7 +147,7 @@ state_set_search(const struct state_set *set, fsm_state_t state)
 	return mid;
 }
 
-struct state_set *
+static struct state_set *
 state_set_create(const struct fsm_alloc *a)
 {
 	struct state_set *set;
@@ -119,6 +176,10 @@ state_set_free(struct state_set *set)
 		return;
 	}
 
+	if (IS_SINGLETON(set)) {
+		return;
+	}
+
 	assert(set->a != NULL);
 
 	free(set->a);
@@ -126,11 +187,32 @@ state_set_free(struct state_set *set)
 }
 
 int
-state_set_add(struct state_set *set, fsm_state_t state)
+state_set_add(struct state_set **setp, const struct fsm_alloc *alloc,
+	fsm_state_t state)
 {
+	struct state_set *set;
 	size_t i;
 
-	assert(set != NULL);
+	assert(setp != NULL);
+	assert(state <= SINGLETON_MAX);
+
+	if (*setp == NULL) {
+		*setp = SINGLETON_ENCODE(state);
+		return 1;
+	}
+
+	if (IS_SINGLETON(*setp)) {
+		fsm_state_t a[2];
+
+		a[0] = SINGLETON_DECODE(*setp);
+		a[1] = state;
+
+		*setp = NULL;
+
+		return state_set_add_bulk(setp, alloc, a, sizeof a / sizeof *a);
+	}
+
+	set = *setp;
 
 	i = 0;
 
@@ -139,8 +221,8 @@ state_set_add(struct state_set *set, fsm_state_t state)
 	 */
 	if (!state_set_empty(set)) {
 		i = state_set_search(set, state);
-		if (state_set_cmpval(state, set->a[i]) == 0) {
-			return state;
+		if (set->a[i] == state) {
+			return 1;
 		}
 	}
 
@@ -176,24 +258,50 @@ state_set_add(struct state_set *set, fsm_state_t state)
 }
 
 int
-state_set_add_bulk(struct state_set *set, fsm_state_t *a, size_t n)
+state_set_add_bulk(struct state_set **setp, const struct fsm_alloc *alloc,
+	fsm_state_t *a, size_t n)
 {
+	struct state_set *set;
 	size_t newlen;
 
-	assert(set != NULL);
+	assert(setp != NULL);
 	assert(a != NULL);
 
-	if (n <= BULK_ADD_THRESH) {
-		size_t i;
-
-		for (i = 0; i < n; i++) {
-			if (!state_set_add(set, a[i])) {
-				return 0;
-			}
-		}
-		
+	if (n == 0) {
 		return 1;
 	}
+
+	if (n == 1) {
+		return state_set_add(setp, alloc, a[0]);
+	}
+
+	if (IS_SINGLETON(*setp)) {
+		fsm_state_t prev;
+
+		prev = SINGLETON_DECODE(*setp);
+
+		*setp = state_set_create(alloc);
+		if (*setp == NULL) {
+			return 0;
+		}
+
+		assert(!IS_SINGLETON(*setp));
+
+		if (!state_set_add(setp, alloc, prev)) {
+			return 0;
+		}
+
+		/* fallthrough */
+	}
+
+	if (*setp == NULL) {
+		*setp = state_set_create(alloc);
+		if (*setp == NULL) {
+			return 0;
+		}
+	}
+
+	set = *setp;
 
 	newlen = set->i + n; 
 	if (newlen > set->n) {
@@ -235,16 +343,26 @@ state_set_add_bulk(struct state_set *set, fsm_state_t *a, size_t n)
 }
 
 void
-state_set_remove(struct state_set *set, fsm_state_t state)
+state_set_remove(struct state_set **setp, fsm_state_t state)
 {
+	struct state_set *set;
 	size_t i;
+
+	if (IS_SINGLETON(*setp)) {
+		if (SINGLETON_DECODE(*setp) == state) {
+			*setp = NULL;
+		}
+		return;
+	}
+
+	set = *setp;
 
 	if (state_set_empty(set)) {
 		return;
 	}
 
 	i = state_set_search(set, state);
-	if (state_set_cmpval(state, set->a[i]) == 0) {
+	if (set->a[i] == state) {
 		if (i < set->i) {
 			memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
 		}
@@ -262,6 +380,10 @@ state_set_empty(const struct state_set *set)
 		return 1;
 	}
 
+	if (IS_SINGLETON(set)) {
+		return 0;
+	}
+
 	return set->i == 0;
 }
 
@@ -269,6 +391,11 @@ fsm_state_t
 state_set_only(const struct state_set *set)
 {
 	assert(set != NULL);
+
+	if (IS_SINGLETON(set)) {
+		return SINGLETON_DECODE(set);
+	}
+
 	assert(set->n >= 1);
 	assert(set->i == 1);
 
@@ -284,8 +411,12 @@ state_set_contains(const struct state_set *set, fsm_state_t state)
 		return 0;
 	}
 
+	if (IS_SINGLETON(set)) {
+		return SINGLETON_DECODE(set) == state;
+	}
+
 	i = state_set_search(set, state);
-	if (state_set_cmpval(state, set->a[i]) == 0) {
+	if (set->a[i] == state) {
 		return 1;
 	}
 
@@ -297,6 +428,10 @@ state_set_count(const struct state_set *set)
 {
 	if (set == NULL) {
 		return 0;
+	}
+
+	if (IS_SINGLETON(set)) {
+		return 1;
 	}
 
 	assert(set->a != NULL);
@@ -321,6 +456,18 @@ state_set_next(struct state_iter *it, fsm_state_t *state)
 		return 0;
 	}
 
+	if (IS_SINGLETON(it->set)) {
+		if (it->i >= 1) {
+			return 0;
+		}
+
+		*state = SINGLETON_DECODE(it->set);
+
+		it->i++;
+
+		return 1;
+	}
+
 	if (it->i >= it->set->i) {
 		return 0;
 	}
@@ -332,18 +479,11 @@ state_set_next(struct state_iter *it, fsm_state_t *state)
 	return 1;
 }
 
-int
-state_set_hasnext(struct state_iter *it)
-{
-	assert(it != NULL);
-
-	return it->set && it->i + 1 < it->set->i;
-}
-
 const fsm_state_t *
 state_set_array(const struct state_set *set)
 {
 	assert(set != NULL);
+	assert(!IS_SINGLETON(set));
 
 	if (set == NULL) {
 		return NULL;
@@ -353,13 +493,29 @@ state_set_array(const struct state_set *set)
 }
 
 void
-state_set_rebase(struct state_set *set, fsm_state_t base)
+state_set_rebase(struct state_set **setp, fsm_state_t base)
 {
+	struct state_set *set;
 	size_t i;
 
-	if (set == NULL) {
+	assert(setp != NULL);
+
+	if (*setp == NULL) {
 		return;
 	}
+
+	if (IS_SINGLETON(*setp)) {
+		fsm_state_t state;
+
+		state = SINGLETON_DECODE(*setp);
+		state += base;
+
+		assert(state <= SINGLETON_MAX);
+		*setp = SINGLETON_ENCODE(state);
+		return;
+	}
+
+	set = *setp;
 
 	for (i = 0; i < set->i; i++) {
 		set->a[i] += base;
@@ -367,9 +523,24 @@ state_set_rebase(struct state_set *set, fsm_state_t base)
 }
 
 void
-state_set_replace(struct state_set *set, fsm_state_t old, fsm_state_t new)
+state_set_replace(struct state_set **setp, fsm_state_t old, fsm_state_t new)
 {
+	struct state_set *set;
 	size_t i;
+
+	assert(setp != NULL);
+	assert(new <= SINGLETON_MAX);
+
+	if (IS_SINGLETON(*setp)) {
+		if (SINGLETON_DECODE(*setp) != old) {
+			return;
+		}
+
+		*setp = SINGLETON_ENCODE(new);
+		return;
+	}
+
+	set = *setp;
 
 	if (set == NULL) {
 		return;
@@ -386,6 +557,12 @@ unsigned long
 state_set_hash(const struct state_set *set)
 {
 	assert(set != NULL);
+
+	if (IS_SINGLETON(set)) {
+		fsm_state_t state;
+		state = SINGLETON_DECODE(set);
+		return hashrec(&state, sizeof state);
+	}
 
 	return hashrec(set->a, set->i * sizeof *set->a);
 }

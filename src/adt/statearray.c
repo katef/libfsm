@@ -70,7 +70,6 @@ state_array_copy(struct state_array *dst, const struct state_array *src)
 struct state_array *
 state_array_copy_set(struct state_array *dst, const struct state_set *src)
 {
-	const fsm_state_t *states;
 	size_t n;
 
 	n = state_set_count(src);
@@ -89,7 +88,11 @@ state_array_copy_set(struct state_array *dst, const struct state_set *src)
 
 	assert(dst->cap >= n);
 
-	if (n > 0) {
+	if (n == 1) {
+		dst->states[0] = state_set_only(src);
+	} else if (n > 0) {
+		const fsm_state_t *states;
+
 		states = state_set_array(src);
 		memcpy(dst->states, states, n * sizeof states[0]);
 	}
