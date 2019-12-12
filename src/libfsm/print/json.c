@@ -20,26 +20,6 @@
 
 #include "libfsm/internal.h"
 
-/* XXX: horrible */
-static int
-hasmore(const struct fsm *fsm, fsm_state_t s, int i)
-{
-	struct fsm_edge *e, search;
-	struct edge_iter it;
-
-	assert(s < fsm->statecount);
-
-	i++;
-	search.symbol = i;
-	for (e = edge_set_firstafter(fsm->states[s].edges, &it, &search); e != NULL; e = edge_set_next(&it)) {
-		if (!state_set_empty(e->sl)) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
 void
 fsm_print_json(FILE *f, const struct fsm *fsm)
 {
@@ -56,6 +36,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 		for (i = 0; i < fsm->statecount; i++) {
 			struct fsm_edge *e;
 			struct edge_iter it;
+			int first = 1;
 
 			fprintf(f, "\t\t{\n");
 
@@ -69,6 +50,10 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 				fsm_state_t st;
 
 				for (state_set_reset(fsm->states[i].epsilons, &jt); state_set_next(&jt, &st); ) {
+					if (!first) {
+						fprintf(f, ",\n");
+					}
+
 					fprintf(f, "\t\t\t\t{ ");
 
 					fprintf(f, "\"char\": ");
@@ -78,7 +63,9 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 					fprintf(f, "\"to\": %u", st);
 
 					/* XXX: should count .sl inside an edge */
-					fprintf(f, "}%s\n", !edge_set_empty(fsm->states[i].edges) ? "," : "");
+					fprintf(f, " }");
+
+					first = 0;
 				}
 			}
 
@@ -87,6 +74,10 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 				fsm_state_t st;
 
 				for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
+					if (!first) {
+						fprintf(f, ",\n");
+					}
+
 					fprintf(f, "\t\t\t\t{ ");
 
 					fprintf(f, "\"char\": ");
@@ -98,8 +89,14 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 
 					fprintf(f, "\"to\": %u", st);
 
-					fprintf(f, "}%s\n", edge_set_hasnext(&it) && hasmore(fsm, i, e->symbol) ? "," : "");
+					fprintf(f, " }");
+
+					first = 0;
 				}
+			}
+
+			if (!first) {
+				fprintf(f, "\n");
 			}
 
 			fprintf(f, "\t\t\t]\n");
