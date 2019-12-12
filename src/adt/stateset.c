@@ -343,6 +343,31 @@ state_set_add_bulk(struct state_set **setp, const struct fsm_alloc *alloc,
 	return 1;
 }
 
+int
+state_set_copy(struct state_set **dst, const struct fsm_alloc *alloc,
+	const struct state_set *src)
+{
+	assert(dst != NULL);
+
+	if (src == NULL) {
+		return 1;
+	}
+
+	if (IS_SINGLETON(src)) {
+		if (!state_set_add(dst, alloc, SINGLETON_DECODE(src))) {
+			return 0;
+		}
+
+		return 1;
+	}
+
+	if (!state_set_add_bulk(dst, alloc, src->a, src->i)) {
+		return 0;
+	}
+
+	return 1;
+}
+
 void
 state_set_remove(struct state_set **setp, fsm_state_t state)
 {

@@ -70,25 +70,8 @@ start:
 		 * TODO: use partially-constructed (i.e. not readable) sets, and finalize later
 		 */
 		if (p != s && closures[p] != NULL) {
-			/* TODO: make a state_set_merge() */
-			if (state_set_count(closures[p]) == 1) {
-				fsm_state_t state;
-
-				state = state_set_only(closures[p]);
-
-				if (!state_set_add(&closures[s], fsm->opt->alloc, state)) {
-					goto error;
-				}
-			} else {
-				const fsm_state_t *a;
-				size_t n;
-
-				a = state_set_array(closures[p]);
-				n = state_set_count(closures[p]);
-
-				if (!state_set_add_bulk(&closures[s], fsm->opt->alloc, a, n)) {
-					goto error;
-				}
+			if (!state_set_copy(&closures[s], fsm->opt->alloc, closures[p])) {
+				goto error;
 			}
 		}
 
@@ -225,7 +208,8 @@ epsilon_closure_free(struct state_set **closures, size_t n)
  */
 /* TODO: remove and switch callers to epsilon_closure_bulk instead */
 struct state_set *
-epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set **closure)
+epsilon_closure(const struct fsm *fsm, fsm_state_t state,
+	struct state_set **closure)
 {
 	struct state_iter it;
 	fsm_state_t s;

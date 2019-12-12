@@ -27,6 +27,10 @@ int
 state_set_add_bulk(struct state_set **set, const struct fsm_alloc *alloc,
 	const fsm_state_t *a, size_t n);
 
+int
+state_set_copy(struct state_set **dst, const struct fsm_alloc *alloc,
+	const struct state_set *src);
+
 void
 state_set_remove(struct state_set **set, fsm_state_t state);
 
