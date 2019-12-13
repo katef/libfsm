@@ -821,6 +821,11 @@ comp_iter(struct comp_env *env,
 		 * overall or not.
 		 */
 
+		if (fsm_empty(q)) {
+			EPSILON(x, y);
+			break;
+		}
+
 		if (!fsm_unionxy(env->fsm, q, x, y)) {
 			return 0;
 		}
