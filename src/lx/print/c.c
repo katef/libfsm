@@ -581,9 +581,9 @@ print_stateenum(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\t\t");
 
 	for (i = 0; i < fsm->statecount; i++) {
-		fprintf(f, "S%u, ", i + 1);
+		fprintf(f, "S%u, ", i);
 
-		if (i % 10 == 0) {
+		if (i + 1 < fsm->statecount && (i + 1) % 10 == 0) {
 			fprintf(f, "\n");
 			fprintf(f, "\t\t");
 		}
