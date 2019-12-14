@@ -141,10 +141,10 @@
 	'[:xdigit:]' -> $named__class;
 
 	# XXX: /./ - the above
-	/[^\^\-\\]/ -> $char;
+	/[^\^\-\\\x00]/ -> $char;
 
 	'\Q' .. '\E' {
-		/./ -> $char;
+		/./ - "\x00" -> $char;
 	}
 }
 
@@ -154,11 +154,11 @@
 }
 
 '\Q' .. '\E' {
-	/./ -> $char;
+	/./ - "\x00" -> $char;
 }
 
 /./ - ($opensub | $opencapture | $close | $start | $end
 	| $opt | $star | $plus | $any | $alt
 	| $esc | $oct | $hex | $invalid
-	| $opengroup | $opencount) -> $char;
+	| $opengroup | $opencount | "\x00") -> $char;
 
