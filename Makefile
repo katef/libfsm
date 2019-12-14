@@ -1,4 +1,5 @@
 .MAKEFLAGS: -r -m share/mk
+.MAKE.JOB.PREFIX=
 
 # targets
 all::  mkdir .WAIT dep .WAIT lib prog
