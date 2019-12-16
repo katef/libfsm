@@ -24,6 +24,7 @@ enum ast_expr_type {
 	AST_EXPR_CONCAT,
 	AST_EXPR_ALT,
 	AST_EXPR_LITERAL,
+	AST_EXPR_CODEPOINT,
 	AST_EXPR_ANY,
 	AST_EXPR_REPEATED,
 	AST_EXPR_GROUP,
@@ -82,6 +83,7 @@ enum ast_flags {
 
 enum ast_endpoint_type {
 	AST_ENDPOINT_LITERAL,
+	AST_ENDPOINT_CODEPOINT,
 /*	AST_ENDPOINT_TYPE, XXX: not implemented */
 	AST_ENDPOINT_NAMED
 };
@@ -92,6 +94,10 @@ struct ast_endpoint {
 		struct {
 			unsigned char c;
 		} literal;
+
+		struct {
+			uint32_t u;
+		} codepoint;
 
 		struct {
 			class_constructor *ctor;
@@ -130,8 +136,12 @@ struct ast_expr {
 		} alt;
 
 		struct {
-			/*const*/ char c;
+			char c;
 		} literal;
+
+		struct {
+			uint32_t u;
+		} codepoint;
 
 		struct ast_expr_repeated {
 			struct ast_expr *e;
@@ -217,6 +227,9 @@ ast_add_expr_alt(struct ast_expr *cat, struct ast_expr *node);
 
 struct ast_expr *
 ast_make_expr_literal(char c);
+
+struct ast_expr *
+ast_make_expr_codepoint(uint32_t u);
 
 struct ast_expr *
 ast_make_expr_any(void);

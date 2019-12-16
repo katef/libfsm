@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h> /* XXX: for ast.h */
 #include <stdio.h>
 #include <ctype.h>
 

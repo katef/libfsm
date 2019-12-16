@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -58,6 +59,10 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 	switch (e->type) {
 	case AST_ENDPOINT_LITERAL:
 		pcre_escputc(f, opt, e->u.literal.c);
+		break;
+
+	case AST_ENDPOINT_CODEPOINT:
+		fprintf(f, "\\x{%lX}", (unsigned long) e->u.codepoint.u);
 		break;
 
 	default:
@@ -172,6 +177,10 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 	case AST_EXPR_LITERAL:
 		pcre_escputc(f, opt, n->u.literal.c);
+		break;
+
+	case AST_EXPR_CODEPOINT:
+		fprintf(f, "\\x{%lX}", (unsigned long) n->u.codepoint.u);
 		break;
 
 	case AST_EXPR_ANY:

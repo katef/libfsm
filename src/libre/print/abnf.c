@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -27,6 +28,7 @@ atomic(struct ast_expr *n)
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_ANY:
 	case AST_EXPR_GROUP:
 	case AST_EXPR_RANGE:
@@ -164,6 +166,11 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 	case AST_EXPR_LITERAL:
 		abnf_escputc(f, opt, n->u.literal.c);
+		break;
+
+	case AST_EXPR_CODEPOINT:
+		assert(!"unimplemented");
+		fprintf(f, "%%x\"%lX\"", (unsigned long) n->u.codepoint.u);
 		break;
 
 	case AST_EXPR_ANY:

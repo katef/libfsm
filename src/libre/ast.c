@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #include <re/re.h>
@@ -102,6 +103,7 @@ ast_expr_free(struct ast_expr *n)
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_ANY:
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_ANCHOR:
@@ -207,6 +209,9 @@ ast_expr_equal(const struct ast_expr *a, const struct ast_expr *b)
 
 	case AST_EXPR_LITERAL:
 		return a->u.literal.c == b->u.literal.c;
+
+	case AST_EXPR_CODEPOINT:
+		return a->u.codepoint.u == b->u.codepoint.u;
 
 	case AST_EXPR_REPEATED:
 		if (a->u.repeated.low != b->u.repeated.low) {
@@ -426,6 +431,22 @@ ast_make_expr_literal(char c)
 
 	res->type = AST_EXPR_LITERAL;
 	res->u.literal.c = c;
+
+	return res;
+}
+
+struct ast_expr *
+ast_make_expr_codepoint(uint32_t u)
+{
+	struct ast_expr *res;
+
+	res = calloc(1, sizeof *res);
+	if (res == NULL) {
+		return NULL;
+	}
+
+	res->type = AST_EXPR_CODEPOINT;
+	res->u.codepoint.u = u;
 
 	return res;
 }

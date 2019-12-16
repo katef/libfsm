@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #include <re/re.h>
@@ -63,6 +64,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		break;
 
 	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_ANY:
 	case AST_EXPR_RANGE:
 	case AST_EXPR_NAMED:
@@ -168,6 +170,7 @@ always_consumes_input(const struct ast_expr *n, int thud)
 
 	switch (n->type) {
 	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_ANY:
 	case AST_EXPR_RANGE:
 	case AST_EXPR_NAMED:
@@ -283,6 +286,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 	 */
 
 	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_ANY:
 	case AST_EXPR_RANGE:
 	case AST_EXPR_NAMED:
@@ -426,6 +430,7 @@ assign_firsts(struct ast_expr *n)
 		break;
 
 	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_ANY:
 	case AST_EXPR_RANGE:
 	case AST_EXPR_NAMED:
@@ -498,6 +503,7 @@ assign_lasts(struct ast_expr *n)
 		break;
 
 	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_ANY:
 	case AST_EXPR_RANGE:
 	case AST_EXPR_NAMED:

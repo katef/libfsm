@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <ctype.h>
 
 #include <re/re.h>
@@ -44,6 +45,10 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 	case AST_ENDPOINT_LITERAL:
 		dot_escputc_html(f, opt, e->u.literal.c);
 		break;
+
+	case AST_ENDPOINT_CODEPOINT:
+		fprintf(f, "U+%lX", (unsigned long) e->u.codepoint.u);
+		break; 
 
 	default:
 		assert(!"unreached");
@@ -96,6 +101,11 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		dot_escputc_html(f, opt, n->u.literal.c);
 		fprintf(f, "> ];\n");
 		break;
+
+	case AST_EXPR_CODEPOINT:
+		fprintf(f, "\tn%p [ label = <CODEPOINT|U+%lX> ];\n", (void *) n,
+			(unsigned long) n->u.codepoint.u);
+		break; 
 
 	case AST_EXPR_ANY:
 		fprintf(f, "\tn%p [ label = <ANY> ];\n", (void *) n);
