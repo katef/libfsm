@@ -14,7 +14,6 @@ struct range {
 };
 
 struct class {
-	const char *name;
 	const struct range *ranges;
 	size_t count;
 };

@@ -7,9 +7,6 @@
 #ifndef RE_CLASS_LOOKUP_H
 #define RE_CLASS_LOOKUP_H
 
-const char *
-pcre_class_name(const char *name);
-
 typedef const struct class *
 re_dialect_class_lookup(const char *name);
 

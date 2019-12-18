@@ -21,11 +21,6 @@ static const struct {
 	const char *name;
 	const struct class *class;
 } classes[] = {
-	/*
-	 * The short forms are ordered first for sake of pcre_class_name()
-	 * giving these in preference when rendering out to pcre dialect.
-	 */
-
 	{ "\\d", &class_digit     },
 	{ "\\h", &class_hspace    },
 	{ "\\s", &class_space     },
@@ -54,22 +49,6 @@ static const struct {
 	{ "[:word:]",   &class_word   },
 	{ "[:xdigit:]", &class_xdigit },
 };
-
-const char *
-pcre_class_name(const char *name)
-{
-	size_t i;
-
-	assert(name != NULL);
-
-	for (i = 0; i < sizeof classes / sizeof *classes; i++) {
-		if (0 == strcmp(classes[i].class->name, name)) {
-			return classes[i].name;
-		}
-	}
-
-	return NULL;
-}
 
 const struct class *
 re_class_pcre(const char *name)

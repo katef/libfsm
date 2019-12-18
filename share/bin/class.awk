@@ -80,7 +80,6 @@ END {
 	print ""
 
 	printf "const struct class %s = {\n", class
-	printf "\t\"%s\",\n", substr(class, index(class, "_") + 1)
 	printf "\tranges,\n"
 	printf "\tsizeof ranges / sizeof *ranges\n"
 	printf "};\n"

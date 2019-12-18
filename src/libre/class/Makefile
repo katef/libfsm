@@ -131,7 +131,6 @@ src/libre/class.h:
 	printf "};\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "struct class {\n" >> ${.TARGET}
-	printf "\tconst char *name;\n" >> ${.TARGET}
 	printf "\tconst struct range *ranges;\n" >> ${.TARGET}
 	printf "\tsize_t count;\n" >> ${.TARGET}
 	printf "};\n" >> ${.TARGET}
