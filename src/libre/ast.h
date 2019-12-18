@@ -32,7 +32,6 @@ enum ast_expr_type {
 	AST_EXPR_ANCHOR,
 	AST_EXPR_SUBTRACT,
 	AST_EXPR_RANGE,
-	AST_EXPR_NAMED,
 /*	AST_EXPR_TYPE, XXX: not implemented */
 	AST_EXPR_TOMBSTONE
 };

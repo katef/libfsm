@@ -147,12 +147,6 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "> ];\n");
 		break;
 
-	case AST_EXPR_NAMED:
-		/* abstract class names are internal strings, assumed to not need escaping */
-		fprintf(f, "\tn%p [ label = <NAMED|%s> ];\n",
-			(void *) n, n->u.named.class->name);
-		break;
-
 	case AST_EXPR_FLAGS:
 		fprintf(f, "\tn%p [ label = <FLAGS|{+", (void *) n);
 		re_flags_print(f, n->u.flags.pos);

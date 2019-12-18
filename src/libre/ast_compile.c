@@ -293,7 +293,6 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 	case AST_EXPR_ALT:
 	case AST_EXPR_ANCHOR:
 	case AST_EXPR_RANGE:
-	case AST_EXPR_NAMED:
 		/* These nodes cannot have a backward epsilon edge */
 		return 0;
 
@@ -396,7 +395,6 @@ decide_linking(struct comp_env *env,
 	case AST_EXPR_REPEATED:
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_RANGE:
-	case AST_EXPR_NAMED:
 	case AST_EXPR_TOMBSTONE:
 		break;
 
@@ -922,11 +920,6 @@ comp_iter(struct comp_env *env,
 
 		break;
 	}
-
-	case AST_EXPR_NAMED:
-		/* we don't construct AST_EXPR_NAMED any more */
-		assert(!"unreached");
-		break;
 
 	default:
 		assert(!"unreached");

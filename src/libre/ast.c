@@ -109,7 +109,6 @@ ast_expr_free(struct ast_expr *n)
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_ANCHOR:
 	case AST_EXPR_RANGE:
-	case AST_EXPR_NAMED:
 		/* these nodes have no subnodes or dynamic allocation */
 		break;
 
@@ -276,13 +275,6 @@ ast_expr_equal(const struct ast_expr *a, const struct ast_expr *b)
 
 		/* we intentionally ignore .start and .end pos values for finding equality;
 		 * these are considered just annotation metatdata for error reporting */
-
-		return 1;
-
-	case AST_EXPR_NAMED:
-		if (a->u.named.class != b->u.named.class) {
-			return 0;
-		}
 
 		return 1;
 
