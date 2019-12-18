@@ -247,7 +247,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 
 	case AST_EXPR_NAMED:
-		print_class_name(f, class_name(n->u.named.ctor));
+		print_class_name(f, n->u.named.class->name);
 		break;
 
 	case AST_EXPR_FLAGS:

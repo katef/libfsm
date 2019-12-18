@@ -79,8 +79,8 @@ END {
 	print "};"
 	print ""
 
-	printf "const struct class class_%s = {\n", class
-	printf "\t\"%s\",\n", class
+	printf "const struct class %s = {\n", class
+	printf "\t\"%s\",\n", substr(class, index(class, "_") + 1)
 	printf "\tranges,\n"
 	printf "\tsizeof ranges / sizeof *ranges\n"
 	printf "};\n"

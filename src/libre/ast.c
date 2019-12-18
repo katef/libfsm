@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include <re/re.h>
 
@@ -38,7 +39,7 @@ ast_endpoint_equal(const struct ast_endpoint *a, const struct ast_endpoint *b)
 		return a->u.literal.c == b->u.literal.c;
 
 	case AST_ENDPOINT_NAMED:
-		return a->u.named.ctor == b->u.named.ctor;
+		return a->u.named.class == b->u.named.class;
 
 	default:
 		assert(!"unreached");
@@ -279,7 +280,7 @@ ast_expr_equal(const struct ast_expr *a, const struct ast_expr *b)
 		return 1;
 
 	case AST_EXPR_NAMED:
-		if (a->u.named.ctor != b->u.named.ctor) {
+		if (a->u.named.class != b->u.named.class) {
 			return 0;
 		}
 
@@ -586,18 +587,79 @@ ast_make_expr_range(const struct ast_endpoint *from, struct ast_pos start,
 }
 
 struct ast_expr *
-ast_make_expr_named(class_constructor *ctor)
+ast_make_expr_named(const struct class *class)
 {
 	struct ast_expr *res;
+	size_t i;
+
+	assert(class != NULL);
 
 	res = calloc(1, sizeof *res);
 	if (res == NULL) {
 		return NULL;
 	}
 
-	res->type = AST_EXPR_NAMED;
-	res->u.named.ctor = ctor;
+	res->type = AST_EXPR_ALT;
+	res->u.alt.alloc = class->count;
+	res->u.alt.count = class->count;
+
+	res->u.alt.n = malloc(res->u.alt.alloc * sizeof *res->u.alt.n);
+	if (res->u.alt.n == NULL) {
+		free(res);
+		return NULL;
+	}
+
+	for (i = 0; i < class->count; i++) {
+		if (class->ranges[i].a == class->ranges[i].b) {
+			if (class->ranges[i].a <= UCHAR_MAX) {
+				res->u.alt.n[i] = ast_make_expr_literal((unsigned char) class->ranges[i].a);
+			} else {
+				res->u.alt.n[i] = ast_make_expr_codepoint(class->ranges[i].a);
+			}
+			if (res->u.alt.n[i] == NULL) {
+				goto error;
+			}
+		} else {
+			struct ast_endpoint from, to;
+			struct ast_pos pos = { 0, 0, 0 }; /* XXX: pass in pos */
+
+			from.type = AST_ENDPOINT_LITERAL;
+			if (class->ranges[i].a <= UCHAR_MAX) {
+				from.u.literal.c = (unsigned char) class->ranges[i].a;
+			} else {
+				from.u.codepoint.u = class->ranges[i].a;
+			}
+
+			to.type = AST_ENDPOINT_LITERAL;
+			if (class->ranges[i].b <= UCHAR_MAX) {
+				to.u.literal.c = (unsigned char) class->ranges[i].b;
+			} else {
+				to.u.codepoint.u = class->ranges[i].b;
+			}
+
+			res->u.alt.n[i] = ast_make_expr_range(&from, pos, &to, pos);
+			if (res->u.alt.n[i] == NULL) {
+				goto error;
+			}
+		}
+	}
 
 	return res;
+
+error:
+
+	for (i = 0; i < class->count; i++) {
+		if (res->u.alt.n[i] == NULL) {
+			break;
+		}
+
+		ast_expr_free(res->u.alt.n[i]);
+	}
+
+	res->u.alt.count = 0;
+
+	ast_expr_free(res);
+
+	return NULL;
 }
 

@@ -100,7 +100,7 @@ struct ast_endpoint {
 		} codepoint;
 
 		struct {
-			class_constructor *ctor;
+			const struct class *class;
 		} named;
 	} u;
 };
@@ -176,7 +176,7 @@ struct ast_expr {
 		} range;
 
 		struct {
-			class_constructor *ctor;
+			const struct class *class;
 		} named;
 	} u;
 };
@@ -257,7 +257,7 @@ ast_make_expr_range(const struct ast_endpoint *from, struct ast_pos start,
 	const struct ast_endpoint *to, struct ast_pos end);
 
 struct ast_expr *
-ast_make_expr_named(class_constructor *ctor);
+ast_make_expr_named(const struct class *class);
 
 /* XXX: exposed for sake of re(1) printing an ast;
  * it's not part of the <re/re.h> API proper */

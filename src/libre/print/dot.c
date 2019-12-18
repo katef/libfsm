@@ -150,7 +150,7 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 	case AST_EXPR_NAMED:
 		/* abstract class names are internal strings, assumed to not need escaping */
 		fprintf(f, "\tn%p [ label = <NAMED|%s> ];\n",
-			(void *) n, class_name(n->u.named.ctor));
+			(void *) n, n->u.named.class->name);
 		break;
 
 	case AST_EXPR_FLAGS:

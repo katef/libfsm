@@ -191,7 +191,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 
 	case AST_EXPR_NAMED:
 		fprintf(f, "NAMED %p: %s\n",
-		    (void *) n, class_name(n->u.named.ctor));
+		    (void *) n, n->u.named.class->name);
 		break;
 	case AST_EXPR_TOMBSTONE:
 		fprintf(f, "<tombstone>\n");

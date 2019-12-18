@@ -21,18 +21,18 @@
  */
 static const struct {
 	const char *name;
-	class_constructor *ctor;
+	const struct class *class;
 } classes[] = {
-	{ "[:ALNUM:]", class_alnum_fsm },
-	{ "[:ALPHA:]", class_alpha_fsm },
-	{ "[:DIGIT:]", class_digit_fsm },
-	{ "[:LOWER:]", class_lower_fsm },
-	{ "[:SPACE:]", class_spchr_fsm },
-	{ "[:UPPER:]", class_upper_fsm },
-	{ "[:WHITESPACE:]", class_space_fsm }
+	{ "[:ALNUM:]", &class_alnum },
+	{ "[:ALPHA:]", &class_alpha },
+	{ "[:DIGIT:]", &class_digit },
+	{ "[:LOWER:]", &class_lower },
+	{ "[:SPACE:]", &class_spchr },
+	{ "[:UPPER:]", &class_upper },
+	{ "[:WHITESPACE:]", &class_space }
 };
 
-class_constructor *
+const struct class *
 re_class_sql(const char *name)
 {
 	size_t i;
@@ -41,9 +41,7 @@ re_class_sql(const char *name)
 
 	for (i = 0; i < sizeof classes / sizeof *classes; i++) {
 		if (0 == strcmp(classes[i].name, name)) {
-			assert(classes[i].ctor != NULL);
-
-			return classes[i].ctor;
+			return classes[i].class;
 		}
 	}	
 

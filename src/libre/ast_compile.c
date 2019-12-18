@@ -924,9 +924,8 @@ comp_iter(struct comp_env *env,
 	}
 
 	case AST_EXPR_NAMED:
-		if (!n->u.named.ctor(env->fsm, x, y)) {
-			return 0;
-		}
+		/* we don't construct AST_EXPR_NAMED any more */
+		assert(!"unreached");
 		break;
 
 	default:

@@ -13,26 +13,26 @@
 
 static const struct {
 	const char *name;
-	class_constructor *ctor;
+	const struct class *class;
 } classes[] = {
-	{ "[:alnum:]", class_alnum_fsm },
-	{ "[:alpha:]", class_alpha_fsm },
-	{ "[:ascii:]", class_ascii_fsm },
-	{ "[:hspace:]", class_hspace_fsm },
-	{ "[:cntrl:]", class_cntrl_fsm },
-	{ "[:digit:]", class_digit_fsm },
-	{ "[:graph:]", class_graph_fsm },
-	{ "[:lower:]", class_lower_fsm },
-	{ "[:print:]", class_print_fsm },
-	{ "[:punct:]", class_punct_fsm },
-	{ "[:space:]", class_space_fsm },
-	{ "[:upper:]", class_upper_fsm },
-	{ "[:vspace:]", class_vspace_fsm },
-	{ "[:word:]", class_word_fsm },
-	{ "[:xdigit:]", class_xdigit_fsm }
+	{ "[:alnum:]",  &class_alnum  },
+	{ "[:alpha:]",  &class_alpha  },
+	{ "[:ascii:]",  &class_ascii  },
+	{ "[:hspace:]", &class_hspace },
+	{ "[:cntrl:]",  &class_cntrl  },
+	{ "[:digit:]",  &class_digit  },
+	{ "[:graph:]",  &class_graph  },
+	{ "[:lower:]",  &class_lower  },
+	{ "[:print:]",  &class_print  },
+	{ "[:punct:]",  &class_punct  },
+	{ "[:space:]",  &class_space  },
+	{ "[:upper:]",  &class_upper  },
+	{ "[:vspace:]", &class_vspace },
+	{ "[:word:]",   &class_word   },
+	{ "[:xdigit:]", &class_xdigit }
 };
 
-class_constructor *
+const struct class *
 re_class_native(const char *name)
 {
 	size_t i;
@@ -41,9 +41,7 @@ re_class_native(const char *name)
 
 	for (i = 0; i < sizeof classes / sizeof *classes; i++) {
 		if (0 == strcmp(classes[i].name, name)) {
-			assert(classes[i].ctor != NULL);
-
-			return classes[i].ctor;
+			return classes[i].class;
 		}
 	}	
 
