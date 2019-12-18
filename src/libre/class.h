@@ -8,8 +8,9 @@
 #include <fsm/fsm.h>
 
 struct fsm;
+struct fsm_options;
 
-typedef int (class_constructor)(struct fsm *fsm, fsm_state_t x, fsm_state_t y);
+typedef struct fsm *(class_constructor)(const struct fsm_options *opt);
 
 const char *
 class_name(class_constructor *ctor);
@@ -192,7 +193,6 @@ class_constructor utf8_Zp_fsm;
 class_constructor utf8_Zs_fsm;
 class_constructor utf8_private_fsm;
 class_constructor utf8_assigned_fsm;
-class_constructor utf8_all_fsm;
 
 class_constructor class_alnum_fsm;
 class_constructor class_alpha_fsm;

@@ -212,7 +212,6 @@ static struct {
 	{ utf8_Zs_fsm, "Zs" },
 	{ utf8_private_fsm, "private" },
 	{ utf8_assigned_fsm, "assigned" },
-	{ utf8_all_fsm, "all" },
 
 	{ NULL, NULL }
 };
