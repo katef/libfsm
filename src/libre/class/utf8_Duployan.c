@@ -11,7 +11,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Duployan = {
-	"Duployan",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

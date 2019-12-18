@@ -7,7 +7,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Pau_Cin_Hau = {
-	"Pau_Cin_Hau",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

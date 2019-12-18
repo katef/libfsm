@@ -8,7 +8,6 @@ static const struct range ranges[] = {
 };
 
 const struct class class_notnl = {
-	"notnl",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

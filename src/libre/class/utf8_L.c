@@ -600,7 +600,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_L = {
-	"L",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

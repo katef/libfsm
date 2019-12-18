@@ -166,7 +166,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Mc = {
-	"Mc",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

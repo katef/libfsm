@@ -22,7 +22,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Tamil = {
-	"Tamil",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

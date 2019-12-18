@@ -10,7 +10,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Devanagari = {
-	"Devanagari",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

@@ -11,7 +11,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Pahawh_Hmong = {
-	"Pahawh_Hmong",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

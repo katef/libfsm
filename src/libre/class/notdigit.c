@@ -8,7 +8,6 @@ static const struct range ranges[] = {
 };
 
 const struct class class_notdigit = {
-	"notdigit",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

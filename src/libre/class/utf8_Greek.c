@@ -42,7 +42,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Greek = {
-	"Greek",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

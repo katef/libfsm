@@ -33,7 +33,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Inherited = {
-	"Inherited",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

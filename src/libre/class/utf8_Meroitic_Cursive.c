@@ -9,7 +9,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Meroitic_Cursive = {
-	"Meroitic_Cursive",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

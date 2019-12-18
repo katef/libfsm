@@ -7,7 +7,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Anatolian_Hieroglyphs = {
-	"Anatolian_Hieroglyphs",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

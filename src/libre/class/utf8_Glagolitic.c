@@ -13,7 +13,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Glagolitic = {
-	"Glagolitic",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

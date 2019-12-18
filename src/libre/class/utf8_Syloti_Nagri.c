@@ -7,7 +7,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Syloti_Nagri = {
-	"Syloti_Nagri",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

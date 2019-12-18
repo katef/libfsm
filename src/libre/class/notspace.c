@@ -9,7 +9,6 @@ static const struct range ranges[] = {
 };
 
 const struct class class_notspace = {
-	"notspace",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

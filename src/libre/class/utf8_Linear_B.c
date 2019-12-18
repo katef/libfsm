@@ -13,7 +13,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Linear_B = {
-	"Linear_B",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

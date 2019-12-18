@@ -7,7 +7,6 @@ static const struct range ranges[] = {
 };
 
 const struct class class_digit = {
-	"digit",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

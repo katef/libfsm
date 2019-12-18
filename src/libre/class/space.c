@@ -8,7 +8,6 @@ static const struct range ranges[] = {
 };
 
 const struct class class_space = {
-	"space",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

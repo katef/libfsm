@@ -9,7 +9,6 @@ static const struct range ranges[] = {
 };
 
 const struct class class_alnum = {
-	"alnum",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

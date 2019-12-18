@@ -20,7 +20,6 @@ static const struct range ranges[] = {
 };
 
 const struct class utf8_Oriya = {
-	"Oriya",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

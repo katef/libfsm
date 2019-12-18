@@ -10,7 +10,6 @@ static const struct range ranges[] = {
 };
 
 const struct class class_notword = {
-	"notword",
 	ranges,
 	sizeof ranges / sizeof *ranges
 };
