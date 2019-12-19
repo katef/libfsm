@@ -439,6 +439,13 @@
 								<td rowspan="1">Count of the number of states in the &fsm;.
 									Printed to &stdout.lit;; exit status is always true.</td>
 							</tr>
+							<tr>
+								<td><code>epsilonclosure</code></td>
+								<td rowspan="1" role="na">&ndash;</td>
+								<td rowspan="1">Compute the <newterm>epsilon closure</newterm>
+									of each state in the &fsm;.
+									Printed to &stdout.lit;; exit status is always true.</td>
+							</tr>
 						</tbody>
 					</table>
 				</listitem>

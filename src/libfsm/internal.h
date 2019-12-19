@@ -89,8 +89,22 @@ struct fsm *
 fsm_mergeab(struct fsm *a, struct fsm *b,
     fsm_state_t *base_b);
 
+/*
+ * TODO: if this were a public API, we could present raggeg array of { a, n } structs
+ * for states, with wrapper to populate malloced array of user-facing structs.
+ */
+struct state_set **
+epsilon_closure_bulk(struct fsm *fsm);
+
+void
+epsilon_closure_free(struct state_set **closures, size_t n);
+
 struct state_set *
 epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set **closure);
+
+int
+symbol_closure_bulk(const struct fsm *fsm, const struct state_set *set,
+	struct state_set *closure[]);
 
 /*
  * Internal free function that invokes free(3) by default, or a user-provided

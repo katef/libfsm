@@ -22,6 +22,10 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
+#include <adt/stateset.h> /* XXX */
+
+#include "libfsm/internal.h" /* XXX */
+
 #include "parser.h"
 
 #if defined(__APPLE__) && defined(__MACH__) && defined(MACOS_HAS_NO_CLOCK_GETITME)
@@ -79,6 +83,16 @@ enum op {
 
 static int
 query_countstates(const struct fsm *fsm, fsm_state_t state)
+{
+	(void) fsm;
+	(void) state;
+
+	/* never called */
+	abort();
+}
+
+static int
+query_epsilonclosure(const struct fsm *fsm, fsm_state_t state)
 {
 	(void) fsm;
 	(void) state;
@@ -189,6 +203,7 @@ static int
 		{ "isdfa",             fsm_all, fsm_isdfa             },
 		{ "dfa",               fsm_all, fsm_isdfa             },
 		{ "count",             NULL,    query_countstates     },
+		{ "epsilonclosure",    NULL,    query_epsilonclosure  },
 		{ "iscomplete",        fsm_all, fsm_iscomplete        },
 		{ "hasend",            fsm_has, fsm_isend             },
 		{ "end",               fsm_has, fsm_isend             },
@@ -496,6 +511,36 @@ main(int argc, char *argv[])
 		if (query == query_countstates) {
 			assert(walk == NULL);
 			printf("%u\n", fsm_countstates(fsm));
+			return 0;
+		} else if (query == query_epsilonclosure) {
+			struct state_set **closures;
+			fsm_state_t i, j;
+			size_t n;
+			struct state_iter it;
+
+			closures = epsilon_closure_bulk(fsm);
+			if (closures == NULL) {
+				return -1;
+			}
+
+			n = fsm_countstates(fsm);
+
+			for (i = 0; i < n; i++) {
+				int first = 1;
+				if (!opt.anonymous_states) {
+					printf("%u: ", (unsigned) i);
+				}
+				for (state_set_reset(closures[i], &it); state_set_next(&it, &j); ) {
+					printf("%s%u",
+						first ? "" : " ",
+						(unsigned) j);
+					first = 0;
+				}
+				printf("\n");
+			}
+
+			epsilon_closure_free(closures, fsm->statecount);
+
 			return 0;
 		} else {
 			assert(walk != NULL);

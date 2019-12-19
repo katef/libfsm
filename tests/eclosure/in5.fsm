@@ -1,0 +1,16 @@
+#
+# Copyright 2019 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+0 -> 1;
+0 -> 1 'x';
+1 -> 2;
+1 -> 2 'y';
+2 -> 3;
+2 -> 3 'z';
+
+start: 0;
+end: 3;
+

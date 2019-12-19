@@ -13,6 +13,17 @@ ${res}:
 
 .endfor
 
+.for res in ${TXTTEST_RESULT}
+
+test:: ${res}
+
+${res}:
+	diff -q ${.ALLSRC:M*.txt}; \
+	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
+	> $@
+
+.endfor
+
 .for res in ${FSMTEST_ERROR}
 
 test:: ${res}
