@@ -212,6 +212,17 @@ rewrite(struct ast_expr *n)
 	case AST_EXPR_REPEATED:
 		return rewrite(n->u.repeated.e);
 
+	case AST_EXPR_SUBTRACT:
+		if (!rewrite(n->u.subtract.a)) {
+			return 0;
+		}
+
+		if (!rewrite(n->u.subtract.b)) {
+			return 0;
+		}
+
+		return 1;
+
 	default:
 		return 1;
 	}
