@@ -222,7 +222,7 @@ struct ast_expr *
 ast_make_expr_alt(void);
 
 int
-ast_add_expr_alt(struct ast_expr *cat, struct ast_expr *node);
+ast_add_expr_alt(struct ast_expr *alt, struct ast_expr *node);
 
 struct ast_expr *
 ast_make_expr_literal(char c);
