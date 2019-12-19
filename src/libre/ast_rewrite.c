@@ -139,8 +139,8 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 
 		if (n->u.concat.count == 0) {
 			free(n->u.concat.n);
-			n->type = AST_EXPR_EMPTY;
-			return 1;
+
+			goto empty;
 		}
 
 		if (n->u.concat.count == 1) {
@@ -234,8 +234,8 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 
 		if (n->u.alt.count == 0) {
 			free(n->u.alt.n);
-			n->type = AST_EXPR_EMPTY;
-			return 1;
+
+			goto empty;
 		}
 
 		if (n->u.alt.count == 1) {
@@ -262,9 +262,20 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			return 0;
 		}
 
+		/* If the lhs operand is empty, the result is always empty */
+		if (n->u.subtract.a->type == AST_EXPR_EMPTY) {
+			ast_expr_free(n->u.subtract.a);
+			ast_expr_free(n->u.subtract.b);
+
+			goto empty;
+		}
+
 		if (!rewrite(n->u.subtract.b, flags)) {
 			return 0;
 		}
+
+		/* TODO: If the rhs operand is 00-ff, the result is always empty
+		 * (unless RE_UNICODE is set) */
 
 		/* TODO: optimisation for computing subtractions for simple cases here;
 		 * this should be possible by walking AST nodes directly (and sorting
@@ -313,7 +324,7 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		if (empty) {
 			ast_expr_free(n->u.subtract.a);
 			ast_expr_free(n->u.subtract.b);
-			n->type = AST_EXPR_EMPTY;
+			goto empty;
 		}
 
 		return 1;
@@ -322,6 +333,12 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 	default:
 		return 1;
 	}
+
+empty:
+
+	n->type = AST_EXPR_EMPTY;
+
+	return 1;
 }
 
 int
