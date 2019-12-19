@@ -37,6 +37,11 @@ CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor
 
+.for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}
+CFLAGS.${src} += -std=c99 # XXX: for ast.h
+DFLAGS.${src} += -std=c99 # XXX: for ast.h
+.endfor
+
 .for parser in ${PARSER:Msrc/libre/dialect/${dialect}/parser.sid}
 ACT.${parser} = src/libre/parser.act
 .endfor

@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <ctype.h>
@@ -83,6 +84,44 @@ comp_iter(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
 	struct ast_expr *n);
 
+static int
+utf8(uint32_t cp, char c[])
+{
+	if (cp <= 0x7f) {
+		c[0] =  cp;
+		return 1;
+	}
+
+	if (cp <= 0x7ff) {
+		c[0] = (cp >>  6) + 192;
+		c[1] = (cp  & 63) + 128;
+		return 2;
+	}
+
+	if (0xd800 <= cp && cp <= 0xdfff) {
+		/* invalid */
+		goto error;
+	}
+
+	if (cp <= 0xffff) {
+		c[0] =  (cp >> 12) + 224;
+		c[1] = ((cp >>  6) &  63) + 128;
+		c[2] =  (cp  & 63) + 128;
+		return 3;
+	}
+
+	if (cp <= 0x10ffff) {
+		c[0] =  (cp >> 18) + 240;
+		c[1] = ((cp >> 12) &  63) + 128;
+		c[2] = ((cp >>  6) &  63) + 128;
+		c[3] =  (cp  & 63) + 128;
+		return 4;
+	}
+
+error:
+
+	return 0;
+}
 
 /* TODO: centralise as fsm_unionxy() perhaps */
 static int
@@ -249,11 +288,11 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 {
 	switch (e->type) {
 	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_ALT:
 	case AST_EXPR_ANCHOR:
 	case AST_EXPR_RANGE:
-	case AST_EXPR_NAMED:
 		/* These nodes cannot have a backward epsilon edge */
 		return 0;
 
@@ -348,6 +387,7 @@ decide_linking(struct comp_env *env,
 
 	case AST_EXPR_SUBTRACT:
 	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_ANY:
 
 	case AST_EXPR_CONCAT:
@@ -355,7 +395,6 @@ decide_linking(struct comp_env *env,
 	case AST_EXPR_REPEATED:
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_RANGE:
-	case AST_EXPR_NAMED:
 	case AST_EXPR_TOMBSTONE:
 		break;
 
@@ -742,6 +781,38 @@ comp_iter(struct comp_env *env,
 		LITERAL(x, y, n->u.literal.c);
 		break;
 
+	case AST_EXPR_CODEPOINT: {
+		fsm_state_t a, b;
+		char c[4];
+		int r, i;
+
+		r = utf8(n->u.codepoint.u, c);
+		if (!r) {
+			if (env->err != NULL) {
+				env->err->e = RE_EBADCP;
+				env->err->cp = n->u.codepoint.u;
+			}
+
+			return 0;
+		}
+
+		a = x;
+
+		for (i = 0; i < r; i++) {
+			if (i + 1 < r) {
+				NEWSTATE(b);
+			} else {
+				b = y;
+			}
+
+			LITERAL(a, b, c[i]);
+
+			a = b;
+		}
+
+		break;
+	}
+
 	case AST_EXPR_ANY:
 		ANY(x, y);
 		break;
@@ -849,12 +920,6 @@ comp_iter(struct comp_env *env,
 
 		break;
 	}
-
-	case AST_EXPR_NAMED:
-		if (!n->u.named.ctor(env->fsm, x, y)) {
-			return 0;
-		}
-		break;
 
 	default:
 		assert(!"unreached");

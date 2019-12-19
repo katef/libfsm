@@ -1,7 +1,8 @@
 .include "../../../share/mk/top.mk"
 
 UCD ?= share/ucd
-UTF8DFA ?= examples/utf8dfa/utf8dfa
+CODEPOINTS ?= share/bin/codepoints.awk
+CLASS ?= share/bin/class.awk
 
 UNI_SCRIPT != cat ${UCD}/Scripts.txt \
 	| sed 's/\#.*//' | cut -d';' -f2 | sort | uniq
@@ -14,7 +15,7 @@ src/libre/class/utf8_${script}.c:
 	| tr -d ' ' \
 	| grep -v '^$$' \
 	| awk -F';' -v script='^${script}' '$$2 ~ script { print $$1 }' \
-	| ${UTF8DFA} -e utf8_${script}_ \
+	| ${CLASS} -v class=utf8_${script} \
 	> ${.TARGET}
 
 SRC += src/libre/class/utf8_${script}.c
@@ -34,7 +35,7 @@ UNI_CAT_UNIQ != echo ${UNI_CAT:C/(.)./\1/} | tr ' ' '\n' | sort | uniq
 src/libre/class/utf8_${group}.c:
 	cat ${UCD}/UnicodeData.txt \
 	| awk -F';' -v group='^${group}' '$$3 ~ group { print $$1 }' \
-	| ${UTF8DFA} -e utf8_${group}_ \
+	| ${CLASS} -v class=utf8_${group} \
 	> ${.TARGET}
 
 SRC += src/libre/class/utf8_${group}.c
@@ -46,7 +47,7 @@ SRC += src/libre/class/utf8_${group}.c
 src/libre/class/utf8_${cat}.c:
 	cat ${UCD}/UnicodeData.txt \
 	| awk -F';' -v cat='${cat}' '$$3 == cat { print $$1 }' \
-	| ${UTF8DFA} -e utf8_${cat}_ \
+	| ${CLASS} -v class=utf8_${cat} \
 	> ${.TARGET}
 
 SRC += src/libre/class/utf8_${cat}.c
@@ -55,7 +56,7 @@ SRC += src/libre/class/utf8_${cat}.c
 
 src/libre/class/utf8_private.c:
 	printf "F0000..FFFFD\n100000..10FFFD\n" \
-	| ${UTF8DFA} -e utf8_private_ \
+	| ${CLASS} -v class=utf8_private \
 	> ${.TARGET}
 
 SRC += src/libre/class/utf8_private.c
@@ -65,58 +66,48 @@ src/libre/class/utf8_assigned.c:
 	cat ${UCD}/UnicodeData.txt \
 	| grep -v -E '^(F0000|FFFFD|100000|10FFFD)$$' \
 	| cut -d';' -f1 \
-	| ${UTF8DFA} -e utf8_assigned_ \
+	| ${CLASS} -v class=utf8_assigned \
 	> ${.TARGET}
 
 SRC += src/libre/class/utf8_assigned.c
 
-# borrowed from https://www.w3.org/International/questions/qa-forms-utf-8
-src/libre/class/utf8_all.c:
-	echo -n > ${BUILD}/${.TARGET:R}.re
-	echo -n '[\x09\x0A\x0D\x20-\x7E]'            >> ${BUILD}/${.TARGET:R}.re # ASCII
-	echo -n '|[\xC2-\xDF][\x80-\xBF]'            >> ${BUILD}/${.TARGET:R}.re # non-overlong 2-byte
-	echo -n '|\xE0[\xA0-\xBF][\x80-\xBF]'        >> ${BUILD}/${.TARGET:R}.re # excluding overlongs
-	echo -n '|[\xE1-\xEC\xEE\xEF][\x80-\xBF]{2}' >> ${BUILD}/${.TARGET:R}.re # straight 3-byte
-	echo -n '|\xED[\x80-\x9F][\x80-\xBF]'        >> ${BUILD}/${.TARGET:R}.re # excluding surrogates
-	echo -n '|\xF0[\x90-\xBF][\x80-\xBF]{2}'     >> ${BUILD}/${.TARGET:R}.re # planes 1-3
-	echo -n '|[\xF1-\xF3][\x80-\xBF]{3}'         >> ${BUILD}/${.TARGET:R}.re # planes 4-15
-	echo -n '|\xF4[\x80-\x8F][\x80-\xBF]{2}'     >> ${BUILD}/${.TARGET:R}.re
-	${RE} -bpl api -e utf8_all_ -y ${BUILD}/src/libre/class/utf8_all.re \
-	> ${.TARGET}
+CLASS_alnum  = ${CLASS_digit} ${CLASS_alpha}
+CLASS_alpha  = ${CLASS_upper} ${CLASS_lower}
+CLASS_any    = 00-FF
+CLASS_ascii  = 00-7F
+CLASS_cntrl  = 00-1F 7F
+CLASS_digit  = 0-9
+CLASS_graph  = 21-7E
+CLASS_hspace = 09 20 # aka blank
+CLASS_lower  = a-z
+CLASS_print  = 20-7E
+CLASS_punct  = '! " \# $$ % & 27 ( ) * + , 2D . / : ; < = > ? @ [ \ ] ^ _ ` { | } ~'
+CLASS_space  = 09 0A 0B 0C 0D 20 # ${CLASS_hspace} ${CLASS_vspace}
+CLASS_spchr  = 20
+CLASS_upper  = A-Z
+CLASS_vspace = 0A 0B 0C 0D
+CLASS_word   = ${CLASS_alnum} _
+CLASS_xdigit = A-F a-f 0-9
 
-SRC += src/libre/class/utf8_all.c
-
-CLASS_alnum  = [[:alpha:][:digit:]]
-CLASS_alpha  = [[:upper:][:lower:]]
-CLASS_any    = .
-CLASS_ascii  = [\x00-\x7F]
-CLASS_cntrl  = [\x00-\x1F\x7F]
-CLASS_digit  = [0-9]
-CLASS_graph  = [\x21-\x7E]
-CLASS_hspace = [ \t] # aka blank
-CLASS_lower  = [a-z]
-CLASS_print  = [\x20-\x7E]
-CLASS_punct  = [!"\#$$%&'\''()*+,\-./:;<=>?@\\\^_`{|}~]|\[|]
-CLASS_space  = [[:hspace:][:vspace:]]
-CLASS_spchr  = [ ]
-CLASS_upper  = [A-Z]
-CLASS_vspace = [\x0A\x0B\x0C\x0D]
-CLASS_word   = [[:alnum:]_]
-CLASS_xdigit = [A-Fa-f0-9]
-
-CLASS_notdigit  = [^[:digit:]]
-CLASS_nothspace = [^[:hspace:]]
-CLASS_notspace  = [^[:space:]]
-CLASS_notvspace = [^[:vspace:]]
-CLASS_notword   = [^[:word:]]
-CLASS_notnl     = [^\n]
+# would prefer to express these in terms of the above
+# (or to not need them at all)
+CLASS_notdigit  = 00-2F 3A-FF             # [^[:digit:]]
+CLASS_nothspace = 00-08 10-19 21-FF       # [^[:hspace:]]
+CLASS_notspace  = 00-08 0E-19 21-FF       # [^[:space:]]
+CLASS_notvspace = 00-09 0E-FF             # [^[:vspace:]]
+CLASS_notword   = 00-2F 3A-40 5B-5E 60-FF # [^[:word:]]
+CLASS_notnl     = 00-09 10-FF             # [^\n]
 
 .for class in alnum alpha any ascii cntrl digit graph hspace lower \
 	print punct space spchr upper vspace word xdigit \
 	notdigit nothspace notspace notvspace notword notnl
 
 src/libre/class/${class}.c:
-	${RE} -bpl api -e class_${class}_ '${CLASS_${class}}' > ${.TARGET}
+	echo ${CLASS_${class}} \
+	| tr ' ' '\n' \
+	| ${CODEPOINTS} \
+	| ${CLASS} -v class=class_${class} \
+	> ${.TARGET}
 
 SRC += src/libre/class/${class}.c
 
@@ -130,23 +121,26 @@ src/libre/class.h:
 	printf "#define RE_CLASS_H\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "#include <stddef.h>\n" >> ${.TARGET}
+	printf "#include <stdint.h>\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "#include <fsm/fsm.h>\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
-	printf "struct fsm;\n" >> ${.TARGET}
-	printf "struct fsm_options;\n" >> ${.TARGET}
+	printf "struct range {\n" >> ${.TARGET}
+	printf "\tuint32_t a;\n" >> ${.TARGET}
+	printf "\tuint32_t b;\n" >> ${.TARGET}
+	printf "};\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
-	printf "typedef struct fsm *(class_constructor)(const struct fsm_options *opt);\n" >> ${.TARGET}
-	printf "\n" >> ${.TARGET}
-	printf "const char *\n" >> ${.TARGET}
-	printf "class_name(class_constructor *ctor);\n" >> ${.TARGET}
+	printf "struct class {\n" >> ${.TARGET}
+	printf "\tconst struct range *ranges;\n" >> ${.TARGET}
+	printf "\tsize_t count;\n" >> ${.TARGET}
+	printf "};\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	for class in ${SRC:Msrc/libre/class/*.c:T:R:Mutf8_*}; do \
-		printf "class_constructor %s_fsm;\n" $${class}; \
+		printf "extern const struct class %s;\n" $${class}; \
 	done >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	for class in ${SRC:Msrc/libre/class/*.c:T:R:Nutf8_*}; do \
-		printf "class_constructor %s_fsm;\n" class_$${class}; \
+		printf "extern const struct class %s;\n" class_$${class}; \
 	done >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "#endif\n" >> ${.TARGET}
@@ -182,35 +176,34 @@ src/libre/class_name.c:
 	printf "/* generated */\n" > ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "#include <assert.h>\n" >> ${.TARGET}
-	printf "#include <string.h>\n" >> ${.TARGET}
 	printf "#include <stddef.h>\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "#include \"class.h\"\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "static struct {\n" >> ${.TARGET}
-	printf "\tclass_constructor *ctor;\n" >> ${.TARGET}
+	printf "\tconst struct class *class;\n" >> ${.TARGET}
 	printf "\tconst char *name;\n" >> ${.TARGET}
 	printf "} classes[] = {\n" >> ${.TARGET}
 	for class in ${SRC:Msrc/libre/class/*.c:T:R:Nutf8_*}; do \
-		printf "\t{ class_%s_fsm, \"%s\" },\n" $${class} $${class}; \
+		printf "\t{ &class_%s, \"%s\" },\n" $${class} $${class}; \
 	done >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	for class in ${SRC:Msrc/libre/class/*.c:T:R:Mutf8_*}; do \
-		printf "\t{ %s_fsm, \"%s\" },\n" $${class} "`echo $${class#utf8_} | sed 's/_/ /g'`"; \
+		printf "\t{ &%s, \"%s\" },\n" $${class} "`echo $${class#utf8_} | sed 's/_/ /g'`"; \
 	done >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "\t{ NULL, NULL }\n" >> ${.TARGET} # XXX: workaround to avoid a trailing comma
 	printf "};\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "const char *\n" >> ${.TARGET}
-	printf "class_name(class_constructor *ctor)\n" >> ${.TARGET}
+	printf "class_name(const struct class *class)\n" >> ${.TARGET}
 	printf "{\n" >> ${.TARGET}
 	printf "\tsize_t i;\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
-	printf "\tassert(ctor != NULL);\n" >> ${.TARGET}
+	printf "\tassert(class != NULL);\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "\tfor (i = 0; i < sizeof classes / sizeof *classes; i++) {\n" >> ${.TARGET}
-	printf "\t\tif (ctor == classes[i].ctor) {\n" >> ${.TARGET}
+	printf "\t\tif (class == classes[i].class) {\n" >> ${.TARGET}
 	printf "\t\t\treturn classes[i].name;\n" >> ${.TARGET}
 	printf "\t\t}\n" >> ${.TARGET}
 	printf "\t}\n" >> ${.TARGET}

@@ -44,6 +44,7 @@ re_strerror(enum re_errno e)
 	case RE_EXESC:        return "Syntax error: expected character escape";
 	case RE_EXCLOSEFLAGS: return "Syntax error: flags are not closed";
 	case RE_EXUNSUPPORTD: return "Syntax error: unsupported operator";
+	case RE_EBADCP:       return "Syntax error: invalid codepoint";
 	}
 
 	assert(!"unreached");

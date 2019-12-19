@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <ctype.h>
 
 #include <re/re.h>
@@ -83,6 +84,10 @@ print_endpoint(FILE *f, const struct ast_endpoint *e)
 		fprintf(f, "'");
 		break;
 
+	case AST_ENDPOINT_CODEPOINT:
+		fprintf(f, "U+%lX\n", (unsigned long) e->u.codepoint.u);
+		break;
+
 	default:
 		assert(!"unreached");
 	}
@@ -135,6 +140,10 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		fprintf(f, "LITERAL '%c'\n", n->u.literal.c);
 		break;
 
+	case AST_EXPR_CODEPOINT:
+		fprintf(f, "CODEPOINT U+%lX\n", (unsigned long) n->u.codepoint.u);
+		break;
+
 	case AST_EXPR_ANY:
 		fprintf(f, "ANY:\n");
 		break;
@@ -180,10 +189,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		fprintf(f, "\n");
 		break;
 
-	case AST_EXPR_NAMED:
-		fprintf(f, "NAMED %p: %s\n",
-		    (void *) n, class_name(n->u.named.ctor));
-		break;
 	case AST_EXPR_TOMBSTONE:
 		fprintf(f, "<tombstone>\n");
 		break;

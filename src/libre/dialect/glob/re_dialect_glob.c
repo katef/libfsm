@@ -9,7 +9,7 @@
 #include "../../class.h"
 #include "../../class_lookup.h"
 
-class_constructor *
+const struct class *
 re_class_glob(const char *name)
 {
 	(void) name;

@@ -1,3 +1,4 @@
 lexer.? linguist-generated=true
 parser.? linguist-generated=true
 src/libre/class/*.c linguist-generated=true
+src/libre/class_name.c

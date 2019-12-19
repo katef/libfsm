@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -27,10 +28,10 @@ atomic(struct ast_expr *n)
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_ANY:
 	case AST_EXPR_GROUP:
 	case AST_EXPR_RANGE:
-	case AST_EXPR_NAMED:
 		return 1;
 
 	case AST_EXPR_REPEATED:
@@ -42,69 +43,6 @@ atomic(struct ast_expr *n)
 	default:
 		assert(!"unreached");
 		abort();
-	}
-}
-
-static void
-print_class_name(FILE *f, const char *abstract_name)
-{
-	const char *p;
-
-	/*
-	 * We have three kinds of names to emit here:
-	 *
-	 * - ABNF provides a set of pre-defined _Core Rules_ (RFC 5234 B.1); we
-	 *   provide a mapping to emit these names in preference, for our classes
-	 *   which are equivalent. These class names are all lower case.
-	 *
-	 * - Our internal names may have spaces. These are used for UTF-8 names,
-	 *   which always appear in title case. For ABNF output these are printed
-	 *   as rules, and rule names must have no spaces (at least according to
-	 *   kgt's implementation).
-	 *
-	 * - Aside from handling spaces, abstract class names are internal strings,
-	 *   assumed to not need escaping.
-	 */
-
-	static const struct {
-		const char *name;
-		const char *rule;
-	} core_rules[] = {
-		{ "alpha",  "ALPHA"  }, /* %x41-5A / %x61-7A ; A-Z / a-z */
-		{ "ascii",  "CHAR"   }, /* %x01-7F */
-		{ "cntrl",  "CTL"    }, /* %x00-1F / %x7F */
-		{ "digit",  "DIGIT"  }, /* %x30-39 ; 0-9 */
-		{ "xdigit", "HEXDIG" }, /* DIGIT / "A" / "B" / "C" / "D" / "E" / "F" */
-		{ "any",    "OCTET"  }, /* %x00-FF */
-		{ "spchr",  "SP"     }, /* %x20 */
-		{ "graph",  "VCHAR"  }, /* %x21-7E ; visible (printing) characters */
-		{ "hspace", "WSP"    }  /* SP / HTAB */
-
-		/*
-		 * No equivalent for: BIT, CR, DQUOTE, HTAB, LF
-		 * Non-class core rules: CRLF, LWSP
-		 */
-	};
-
-	assert(abstract_name != NULL);
-
-	if (islower((unsigned char) abstract_name[0])) {
-		size_t i;
-
-		for (i = 0; i < sizeof core_rules / sizeof *core_rules; i++) {
-			if (0 == strcmp(core_rules[i].name, abstract_name)) {
-				fputs(core_rules[i].rule, f);
-				return;
-			}
-		}
-	}
-
-	for (p = abstract_name; *p != '\0'; p++) {
-		if (*p == ' ') {
-			continue;
-		}
-
-		fputc(*p, f);
 	}
 }
 
@@ -164,6 +102,11 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 	case AST_EXPR_LITERAL:
 		abnf_escputc(f, opt, n->u.literal.c);
+		break;
+
+	case AST_EXPR_CODEPOINT:
+		assert(!"unimplemented");
+		fprintf(f, "%%x\"%lX\"", (unsigned long) n->u.codepoint.u);
 		break;
 
 	case AST_EXPR_ANY:
@@ -237,10 +180,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 			(unsigned char) n->u.range.from.u.literal.c,
 			(unsigned char) n->u.range.to.u.literal.c);
 		}
-		break;
-
-	case AST_EXPR_NAMED:
-		print_class_name(f, class_name(n->u.named.ctor));
 		break;
 
 	case AST_EXPR_FLAGS:

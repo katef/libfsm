@@ -86,6 +86,7 @@ re_perror(enum re_dialect dialect, const struct re_err *err,
 	case RE_EXESC:       fprintf(stderr, " \\0..\\x%X inclusive",           UCHAR_MAX); break;
 	case RE_EXCOUNT:     fprintf(stderr, " 1..%u inclusive",                UINT_MAX);  break;
 	case RE_ENEGCOUNT:   fprintf(stderr, " {%u,%u}",                   err->m, err->n); break;
+	case RE_EBADCP:      fprintf(stderr, ": U+%06lX",                         err->cp); break;
 
 	default:
 		;

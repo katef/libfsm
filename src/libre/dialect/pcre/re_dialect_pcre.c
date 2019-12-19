@@ -19,62 +19,38 @@
 
 static const struct {
 	const char *name;
-	class_constructor *ctor;
+	const struct class *class;
 } classes[] = {
-	/*
-	 * The short forms are ordered first for sake of pcre_class_name()
-	 * giving these in preference when rendering out to pcre dialect.
-	 */
+	{ "\\d", &class_digit     },
+	{ "\\h", &class_hspace    },
+	{ "\\s", &class_space     },
+	{ "\\v", &class_vspace    },
+	{ "\\w", &class_word      },
 
-	{ "\\d", class_digit_fsm     },
-	{ "\\h", class_hspace_fsm    },
-	{ "\\s", class_space_fsm     },
-	{ "\\v", class_vspace_fsm    },
-	{ "\\w", class_word_fsm      },
+	{ "\\D", &class_notdigit  }, /* [^\d] */
+	{ "\\H", &class_nothspace }, /* [^\h] */
+	{ "\\S", &class_notspace  }, /* [^\s] */
+	{ "\\V", &class_notvspace }, /* [^\v] */
+	{ "\\W", &class_notword   }, /* [^\w] */
+	{ "\\N", &class_notnl     }, /* [^\n] */
 
-	{ "\\D", class_notdigit_fsm  }, /* [^\d] */
-	{ "\\H", class_nothspace_fsm }, /* [^\h] */
-	{ "\\S", class_notspace_fsm  }, /* [^\s] */
-	{ "\\V", class_notvspace_fsm }, /* [^\v] */
-	{ "\\W", class_notword_fsm   }, /* [^\w] */
-	{ "\\N", class_notnl_fsm     }, /* [^\n] */
-
-	{ "[:alnum:]", class_alnum_fsm },
-	{ "[:alpha:]", class_alpha_fsm },
-	{ "[:ascii:]", class_ascii_fsm },
-	{ "[:blank:]", class_hspace_fsm },
-	{ "[:cntrl:]", class_cntrl_fsm },
-	{ "[:digit:]", class_digit_fsm },
-	{ "[:graph:]", class_graph_fsm },
-	{ "[:lower:]", class_lower_fsm },
-	{ "[:print:]", class_print_fsm },
-	{ "[:punct:]", class_punct_fsm },
-	{ "[:space:]", class_space_fsm },
-	{ "[:upper:]", class_upper_fsm },
-	{ "[:word:]", class_word_fsm },
-	{ "[:xdigit:]", class_xdigit_fsm },
+	{ "[:alnum:]",  &class_alnum  },
+	{ "[:alpha:]",  &class_alpha  },
+	{ "[:ascii:]",  &class_ascii  },
+	{ "[:blank:]",  &class_hspace },
+	{ "[:cntrl:]",  &class_cntrl  },
+	{ "[:digit:]",  &class_digit  },
+	{ "[:graph:]",  &class_graph  },
+	{ "[:lower:]",  &class_lower  },
+	{ "[:print:]",  &class_print  },
+	{ "[:punct:]",  &class_punct  },
+	{ "[:space:]",  &class_space  },
+	{ "[:upper:]",  &class_upper  },
+	{ "[:word:]",   &class_word   },
+	{ "[:xdigit:]", &class_xdigit },
 };
 
-const char *
-pcre_class_name(const char *name)
-{
-	size_t i;
-
-	assert(name != NULL);
-
-	/*
-	 * This is expensive, but for our purposes it doesn't matter yet.
-	 */
-	for (i = 0; i < sizeof classes / sizeof *classes; i++) {
-		if (0 == strcmp(class_name(classes[i].ctor), name)) {
-			return classes[i].name;
-		}
-	}
-
-	return NULL;
-}
-
-class_constructor *
+const struct class *
 re_class_pcre(const char *name)
 {
 	size_t i;
@@ -83,9 +59,7 @@ re_class_pcre(const char *name)
 
 	for (i = 0; i < sizeof classes / sizeof *classes; i++) {
 		if (0 == strcmp(classes[i].name, name)) {
-			assert(classes[i].ctor != NULL);
-
-			return classes[i].ctor;
+			return classes[i].class;
 		}
 	}	
 

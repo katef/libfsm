@@ -85,7 +85,8 @@ enum re_errno {
 	RE_EXESC        = 11 | RE_MARK,
 	RE_EFLAG        = 12 | RE_MARK,
 	RE_EXCLOSEFLAGS = 13 | RE_MARK,
-	RE_EXUNSUPPORTD = 14 | RE_MARK
+	RE_EXUNSUPPORTD = 14 | RE_MARK,
+	RE_EBADCP       = 15 | RE_MARK
 };
 
 struct re_pos {
@@ -108,6 +109,9 @@ struct re_err {
 
 	/* populated for RE_GROUP; ignored otherwise */
 	char set[128];
+
+	/* populated for RE_EBADCP; ignored otherwise */
+	unsigned long cp;
 };
 
 /*

@@ -24,6 +24,7 @@
 	#include <assert.h>
 	#include <limits.h>
 	#include <string.h>
+	#include <stdint.h>
 	#include <stdlib.h>
 	#include <stdio.h>
 	#include <errno.h>
@@ -100,7 +101,7 @@
 
 	typedef struct lx_pos t_pos;
 	typedef enum re_flags t_re__flags;
-	typedef class_constructor * t_ast__class__id;
+	typedef const struct class * t_ast__class__id;
 	typedef struct ast_count t_ast__count;
 	typedef struct ast_endpoint t_endpoint;
 
@@ -609,7 +610,7 @@
 
 	<ast-range-endpoint-class>: (id :ast_class_id) -> (e :endpoint) = @{
 		@e.type = AST_ENDPOINT_NAMED;
-		@e.u.named.ctor = @id;
+		@e.u.named.class = @id;
 	@};
 
 	<ast-range-distinct>: (from :endpoint, start :pos, to :endpoint, end :pos) -> () = @{
@@ -752,7 +753,7 @@
 		 * a better idea.
 		 */
 
-		any = ast_make_expr_named(class_any_fsm);
+		any = ast_make_expr_named(&class_any);
 		if (any == NULL) {
 			@!;
 		}

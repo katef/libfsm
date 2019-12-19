@@ -24,6 +24,7 @@ enum ast_expr_type {
 	AST_EXPR_CONCAT,
 	AST_EXPR_ALT,
 	AST_EXPR_LITERAL,
+	AST_EXPR_CODEPOINT,
 	AST_EXPR_ANY,
 	AST_EXPR_REPEATED,
 	AST_EXPR_GROUP,
@@ -31,7 +32,6 @@ enum ast_expr_type {
 	AST_EXPR_ANCHOR,
 	AST_EXPR_SUBTRACT,
 	AST_EXPR_RANGE,
-	AST_EXPR_NAMED,
 /*	AST_EXPR_TYPE, XXX: not implemented */
 	AST_EXPR_TOMBSTONE
 };
@@ -82,6 +82,7 @@ enum ast_flags {
 
 enum ast_endpoint_type {
 	AST_ENDPOINT_LITERAL,
+	AST_ENDPOINT_CODEPOINT,
 /*	AST_ENDPOINT_TYPE, XXX: not implemented */
 	AST_ENDPOINT_NAMED
 };
@@ -94,7 +95,11 @@ struct ast_endpoint {
 		} literal;
 
 		struct {
-			class_constructor *ctor;
+			uint32_t u;
+		} codepoint;
+
+		struct {
+			const struct class *class;
 		} named;
 	} u;
 };
@@ -130,8 +135,12 @@ struct ast_expr {
 		} alt;
 
 		struct {
-			/*const*/ char c;
+			char c;
 		} literal;
+
+		struct {
+			uint32_t u;
+		} codepoint;
 
 		struct ast_expr_repeated {
 			struct ast_expr *e;
@@ -166,7 +175,7 @@ struct ast_expr {
 		} range;
 
 		struct {
-			class_constructor *ctor;
+			const struct class *class;
 		} named;
 	} u;
 };
@@ -213,10 +222,13 @@ struct ast_expr *
 ast_make_expr_alt(void);
 
 int
-ast_add_expr_alt(struct ast_expr *cat, struct ast_expr *node);
+ast_add_expr_alt(struct ast_expr *alt, struct ast_expr *node);
 
 struct ast_expr *
 ast_make_expr_literal(char c);
+
+struct ast_expr *
+ast_make_expr_codepoint(uint32_t u);
 
 struct ast_expr *
 ast_make_expr_any(void);
@@ -244,7 +256,7 @@ ast_make_expr_range(const struct ast_endpoint *from, struct ast_pos start,
 	const struct ast_endpoint *to, struct ast_pos end);
 
 struct ast_expr *
-ast_make_expr_named(class_constructor *ctor);
+ast_make_expr_named(const struct class *class);
 
 /* XXX: exposed for sake of re(1) printing an ast;
  * it's not part of the <re/re.h> API proper */
