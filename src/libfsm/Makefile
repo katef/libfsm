@@ -13,6 +13,7 @@ SRC += src/libfsm/fsm.c
 SRC += src/libfsm/mode.c
 SRC += src/libfsm/start.c
 SRC += src/libfsm/state.c
+SRC += src/libfsm/sclosure.c
 SRC += src/libfsm/trim.c
 SRC += src/libfsm/example.c
 SRC += src/libfsm/getc.c
@@ -37,6 +38,11 @@ SRC += src/libfsm/union.c
 SRC += src/libfsm/intersect.c
 SRC += src/libfsm/subtract.c
 SRC += src/libfsm/walk2.c
+
+.for src in ${SRC:Msrc/libfsm/sclosure.c}
+CFLAGS.${src} += -std=c99
+DFLAGS.${src} += -std=c99
+.endfor
 
 LIB         += libfsm
 SYMS.libfsm += src/libfsm/libfsm.syms

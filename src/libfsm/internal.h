@@ -102,6 +102,10 @@ epsilon_closure_free(struct state_set **closures, size_t n);
 struct state_set *
 epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set **closure);
 
+int
+symbol_closure_bulk(const struct fsm *fsm, const struct state_set *set,
+	struct state_set *closure[]);
+
 /*
  * Internal free function that invokes free(3) by default, or a user-provided
  * free function to free memory and perform any custom memory tracking or handling
