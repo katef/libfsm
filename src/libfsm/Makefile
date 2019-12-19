@@ -3,7 +3,7 @@
 SRC += src/libfsm/collate.c
 SRC += src/libfsm/complete.c
 SRC += src/libfsm/clone.c
-SRC += src/libfsm/eclosure.c
+SRC += src/libfsm/closure.c
 SRC += src/libfsm/edge.c
 SRC += src/libfsm/empty.c
 SRC += src/libfsm/end.c
@@ -13,7 +13,6 @@ SRC += src/libfsm/fsm.c
 SRC += src/libfsm/mode.c
 SRC += src/libfsm/start.c
 SRC += src/libfsm/state.c
-SRC += src/libfsm/sclosure.c
 SRC += src/libfsm/trim.c
 SRC += src/libfsm/example.c
 SRC += src/libfsm/getc.c
@@ -39,7 +38,7 @@ SRC += src/libfsm/intersect.c
 SRC += src/libfsm/subtract.c
 SRC += src/libfsm/walk2.c
 
-.for src in ${SRC:Msrc/libfsm/sclosure.c}
+.for src in ${SRC:Msrc/libfsm/closure.c}
 CFLAGS.${src} += -std=c99
 DFLAGS.${src} += -std=c99
 .endfor
