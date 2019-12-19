@@ -37,6 +37,6 @@ enum ast_analysis_res
 ast_analysis(struct ast *ast);
 
 int
-ast_rewrite(struct ast *ast);
+ast_rewrite(struct ast *ast, enum re_flags flags);
 
 #endif
