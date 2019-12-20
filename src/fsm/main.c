@@ -539,7 +539,7 @@ main(int argc, char *argv[])
 				printf("\n");
 			}
 
-			epsilon_closure_free(closures, fsm->statecount);
+			closure_free(closures, fsm->statecount);
 
 			return 0;
 		} else {

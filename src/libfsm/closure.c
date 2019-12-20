@@ -187,16 +187,6 @@ error:
 	return NULL;
 }
 
-void
-epsilon_closure_free(struct state_set **closures, size_t n)
-{
-	fsm_state_t s;
-
-	for (s = 0; s < n; s++) {
-		state_set_free(closures[s]);
-	}
-}
-
 /*
  * Return a set of each state in the epsilon closure of the given state.
  * These are all the states reachable through epsilon transitions (that is,
@@ -266,5 +256,15 @@ symbol_closure_bulk(const struct fsm *fsm, const struct state_set *set,
 	}
 
 	return 1;
+}
+
+void
+closure_free(struct state_set **closures, size_t n)
+{
+	fsm_state_t s;
+
+	for (s = 0; s < n; s++) {
+		state_set_free(closures[s]);
+	}
 }
 

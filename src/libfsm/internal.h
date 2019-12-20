@@ -96,15 +96,15 @@ fsm_mergeab(struct fsm *a, struct fsm *b,
 struct state_set **
 epsilon_closure_bulk(struct fsm *fsm);
 
-void
-epsilon_closure_free(struct state_set **closures, size_t n);
-
 struct state_set *
 epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set **closure);
 
 int
 symbol_closure_bulk(const struct fsm *fsm, const struct state_set *set,
 	struct state_set *closure[]);
+
+void
+closure_free(struct state_set **closures, size_t n);
 
 /*
  * Internal free function that invokes free(3) by default, or a user-provided
