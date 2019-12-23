@@ -98,22 +98,24 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		for (i = 0; i < n->u.concat.count; ) {
 			if (n->u.concat.n[i]->type == AST_EXPR_CONCAT) {
 				struct ast_expr *dead = n->u.concat.n[i];
+				size_t req_count;
 
 				/* because of depth-first simplification */
 				assert(dead->u.concat.count >= 1);
 
-				if (n->u.concat.alloc < n->u.concat.count + dead->u.concat.count - 1) {
+				req_count = n->u.concat.count + dead->u.concat.count - 1;
+
+				if (n->u.concat.alloc < req_count) {
 					void *tmp;
 
-					tmp = realloc(n->u.concat.n,
-						(n->u.concat.count + dead->u.concat.count - 1) * sizeof *n->u.concat.n);
+					tmp = realloc(n->u.concat.n, req_count * sizeof *n->u.concat.n);
 					if (tmp == NULL) {
 						return 0;
 					}
 
 					n->u.concat.n = tmp;
 
-					n->u.concat.alloc = (n->u.concat.count + dead->u.concat.count - 1) * sizeof *n->u.concat.n;
+					n->u.concat.alloc = req_count;
 				}
 
 				/* move along our existing tail to make space */
