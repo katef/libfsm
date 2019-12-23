@@ -747,6 +747,7 @@ fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache)
 	f_free(fsm->opt->alloc, dcache);
 }
 
+#if 0
 int
 fsm_determinise(struct fsm *fsm)
 {
@@ -761,6 +762,7 @@ fsm_determinise(struct fsm *fsm)
 
 	return r;
 }
+#endif
 
 int
 fsm_glushkovise(struct fsm *fsm)
