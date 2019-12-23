@@ -378,7 +378,7 @@
 				<mark-count>(start, end);
 				n = <unbounded-count>;
 				c = <atom-count>(m, start, n, end);
-				node = <ast-make-expr-atom>(e, c);
+				node = <ast-make-atom>(e, c);
 			||
 				OPT;
 				c = <atom-opt>();
