@@ -18,7 +18,7 @@
 
 #include "internal.h"
 
-static int
+int
 fsm_state_cmpedges(const void *a, const void *b)
 {
 	const struct fsm_edge * const *ea = a, * const *eb = b;
