@@ -175,7 +175,12 @@ always_consumes_input(const struct ast_expr *n, int thud)
 		return 1;
 
 	case AST_EXPR_SUBTRACT:
-		/* FIXME: need to perform the subtraction to know */
+		/*
+		 * AST_EXPR_SUBTRACT nodes which produce an empty result have been
+		 * replaced by AST_EXPR_EMPTY during AST rewriting. The only
+		 * subtract nodes which remain here produce non-empty results,
+		 * and so do always consume input.
+		 */
 		return 1;
 
 	case AST_EXPR_CONCAT: {
