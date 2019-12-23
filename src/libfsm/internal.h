@@ -100,8 +100,9 @@ struct state_set *
 epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set **closure);
 
 int
-symbol_closure_bulk(const struct fsm *fsm, const struct state_set *set,
-	struct state_set *closure[]);
+symbol_closure_bulk(const struct fsm *fsm, fsm_state_t s,
+	struct state_set * const eclosures[],
+	struct state_set *sclosures[]);
 
 void
 closure_free(struct state_set **closures, size_t n);

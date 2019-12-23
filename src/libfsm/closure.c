@@ -230,26 +230,38 @@ epsilon_closure(const struct fsm *fsm, fsm_state_t state,
 }
 
 int
-symbol_closure_bulk(const struct fsm *fsm, const struct state_set *set,
-	struct state_set *closure[static FSM_SIGMA_COUNT])
+symbol_closure_bulk(const struct fsm *fsm, fsm_state_t s,
+	struct state_set * const eclosures[static FSM_SIGMA_COUNT],
+	struct state_set *sclosures[static FSM_SIGMA_COUNT])
 {
-	struct state_iter it;
-	fsm_state_t s;
-	int i;
+	struct edge_iter jt;
+	struct fsm_edge *e;
 
 	assert(fsm != NULL);
-	assert(closure != NULL);
+	assert(eclosures != NULL);
+	assert(sclosures != NULL);
 
-	for (i = 0; i <= FSM_SIGMA_MAX; i++) {
-		closure[i] = NULL;
-	}
+	/*
+	 * TODO: it's common for many symbols to have transitions to the same state
+	 * (the worst case being an "any" transition). It'd be nice to find a way
+	 * to avoid repeating that work by de-duplicating on the destination.
+	 */
 
-	for (state_set_reset((void *) set, &it); state_set_next(&it, &s); ) {
-		struct fsm_edge *e;
-		struct edge_iter jt;
+	for (e = edge_set_first(fsm->states[s].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
+		struct state_iter kt;
+		fsm_state_t es;
 
-		for (e = edge_set_first(fsm->states[s].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
-			if (!state_set_copy(&closure[e->symbol], fsm->opt->alloc, e->sl)) {
+		if (e->sl == NULL) {
+			continue;
+		}
+
+		/*
+		 * The epsilon closure of a state will always include itself,
+		 * so there's no need to explicitly copy e->sl here.
+		 */
+
+		for (state_set_reset(e->sl, &kt); state_set_next(&kt, &es); ) {
+			if (!state_set_copy(&sclosures[e->symbol], fsm->opt->alloc, eclosures[es])) {
 				return 0;
 			}
 		}
