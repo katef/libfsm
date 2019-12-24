@@ -764,6 +764,7 @@ fsm_determinise(struct fsm *fsm)
 }
 #endif
 
+#if 0
 int
 fsm_glushkovise(struct fsm *fsm)
 {
@@ -778,4 +779,5 @@ fsm_glushkovise(struct fsm *fsm)
 
 	return r;
 }
+#endif
 
