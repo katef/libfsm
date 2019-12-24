@@ -72,8 +72,6 @@ fsm_trim
 fsm_reverse
 fsm_determinise
 fsm_glushkovise
-fsm_determinise_cache
-fsm_determinise_freecache
 fsm_complete
 fsm_minimise
 fsm_concat
