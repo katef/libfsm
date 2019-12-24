@@ -43,6 +43,9 @@
 
 	OPENSUB; OPENCAPTURE; CLOSE;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
+	OPENGROUPINV: () -> (:pos, :pos);
+	OPENGROUPCB: () -> (:pos, :pos);
+	OPENGROUPINVCB: () -> (:pos, :pos);
 	OPENCOUNT: () -> (:pos, :pos); CLOSECOUNT: () -> (:pos, :pos);
 
 	INVERT: () -> (:char);
@@ -77,6 +80,10 @@
 	<atom-one>:    () -> (:ast_count);
 	<atom-opt>:    () -> (:ast_count);
 	<atom-count>:  (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
+
+	<make-literal-cbrak>:   ()                        -> (:char);
+
+	<unbounded-count>:	() -> (:unsigned);
 
 	<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
 	<ast-range-endpoint-class>:   (:ast_class_id) -> (:endpoint);
@@ -164,8 +171,7 @@
 				node = <ast-make-named>(id);
 			};
 
-			class-range: () -> (node :ast_expr) [
-
+			range-endpoint: () -> (r :endpoint, start :pos, end :pos) [
 				range-endpoint-literal: () -> (r :endpoint, start :pos, end :pos) = {
 					{
 						(c, start, end) = ESC;
@@ -186,13 +192,26 @@
 					(id, start, end) = NAMED_CLASS;
 					r = <ast-range-endpoint-class>(id);
 				};
-
 			] = {
 				{
-					(lower, start, !) = range-endpoint-literal();
+					(r, start, end) = range-endpoint-literal();
 				||
-					(lower, start, !) = range-endpoint-class();
+					(r, start, end) = range-endpoint-class();
 				};
+			};
+
+			range-endpoint-end: () -> (r :endpoint, end :pos) = {
+				{
+					(r, !, end) = range-endpoint();
+				||
+					/* allow literal '-' as end of range */
+					(c, !, end) = RANGE;
+					r = <ast-range-endpoint-literal>(c);
+				};
+			};
+
+			class-range: () -> (node :ast_expr) = {
+				(lower,start,!) = range-endpoint();
 
 				{
 					(!, !, !) = RANGE;
@@ -200,15 +219,7 @@
 					<err-expected-range>;
 				};
 
-				{
-					(upper, !, end) = range-endpoint-literal();
-				||
-					(upper, !, end) = range-endpoint-class();
-				||
-					/* allow literal '-' as end of range */
-					(c, !, end) = RANGE;
-					upper = <ast-range-endpoint-literal>(c);
-				};
+				(upper,end) = range-endpoint-end();
 
 				<mark-range>(start, end);
 				node = <ast-make-range>(lower, start, upper, end);
@@ -238,13 +249,125 @@
 			};
 
 		] = {
-			(start, !) = OPENGROUP;
+			{
+				(start, !) = OPENGROUP;
 
-			node = <ast-make-alt>;
-			tmp = node;
+				node = <ast-make-alt>;
+				tmp = node;
 
-			class-head(&node);
-			list-of-class-terms(tmp);
+				class-head(&node);
+
+				{
+					(c, rstart, !) = RANGE;
+
+					{
+						lower = <ast-range-endpoint-literal>(c);
+						(!, !, !) = RANGE;
+						(upper,end) = range-endpoint-end();
+						node1 = <ast-make-range>(lower, rstart, upper, end);
+					||
+						node1 = <ast-make-literal>(c);
+					};
+
+					<ast-add-alt>(tmp,node1);
+
+					{
+						list-of-class-terms(tmp);
+					||
+						$;
+					};
+				||
+					list-of-class-terms(tmp);
+				};
+			||
+				(start, !) = OPENGROUPINV;
+
+				node = <ast-make-alt>;
+				tmp  = node;
+
+				&node = <ast-make-invert>(node);
+
+				{
+					(c, rstart, !) = RANGE;
+
+					{
+						lower = <ast-range-endpoint-literal>(c);
+						(!, !, !) = RANGE;
+						(upper,end) = range-endpoint-end();
+						node1 = <ast-make-range>(lower, rstart, upper, end);
+					||
+						node1 = <ast-make-literal>(c);
+					};
+
+					<ast-add-alt>(tmp,node1);
+
+					{
+						list-of-class-terms(tmp);
+					||
+						$;
+					};
+
+				||
+					list-of-class-terms(tmp);
+				};
+
+			||
+				(start, !) = OPENGROUPCB;
+
+				node = <ast-make-alt>;
+				tmp  = node;
+
+				cbrak = <make-literal-cbrak>();
+				{
+					r = <ast-range-endpoint-literal>(cbrak);
+					(!, !, !) = RANGE;
+					(upper,end) = range-endpoint-end();
+					/* FIXME: start is off by one */
+					lower = <ast-range-endpoint-literal>(cbrak);
+					node1 = <ast-make-range>(lower, start, upper, end);
+				||
+					node1 = <ast-make-literal>(cbrak);
+				};
+
+				<ast-add-alt>(tmp, node1);
+
+				/* ']' literal or range is already one class
+ 				 * term, so another isn't necessary */
+				{
+					list-of-class-terms(tmp);
+				||
+					$;
+				};
+			||
+				(start, !) = OPENGROUPINVCB;
+
+				node = <ast-make-alt>;
+				tmp  = node;
+
+				&node = <ast-make-invert>(node);
+
+				cbrak = <make-literal-cbrak>();
+				{
+					r = <ast-range-endpoint-literal>(cbrak);
+					(!, !, !) = RANGE;
+					(upper,end) = range-endpoint-end();
+					/* FIXME: start is off by one */
+					lower = <ast-range-endpoint-literal>(cbrak);
+					node1 = <ast-make-range>(lower, start, upper, end);
+				||
+					node1 = <ast-make-literal>(cbrak);
+				};
+
+				<ast-add-alt>(tmp, node1);
+
+				/* ']' literal or range is already one class
+ 				 * term, so another isn't necessary */
+				{
+					list-of-class-terms(tmp);
+				||
+					$;
+				};
+			};
 
 			{
 				(!, !, end) = CLOSEGROUP;
@@ -303,6 +426,58 @@
 			};
 		};
 
+		atom-qualifier: (e :ast_expr) -> (node :ast_expr) = {
+			(start, !) = OPENCOUNT;
+			m = COUNT;
+			(!, end) = CLOSECOUNT;
+			<mark-count>(start, end);
+			c = <atom-count>(m, start, m, end);
+			node = <ast-make-atom>(e, c);
+		||
+			(start, !) = OPENCOUNT;
+			m = COUNT;
+			SEP;
+			n = COUNT;
+			(end, !) = CLOSECOUNT;
+			<mark-count>(start, end);
+			c = <atom-count>(m, start, n, end);
+			node = <ast-make-atom>(e, c);
+		||
+			(start, !) = OPENCOUNT;
+			m = COUNT;
+			SEP;
+			(end, !) = CLOSECOUNT;
+			<mark-count>(start, end);
+			n = <unbounded-count>;
+			c = <atom-count>(m, start, n, end);
+			node = <ast-make-atom>(e, c);
+		||
+			OPT;
+			c = <atom-opt>();
+			node = <ast-make-atom>(e, c);
+		||
+			STAR;
+			c = <atom-kleene>();
+			node = <ast-make-atom>(e, c);
+		||
+			PLUS;
+			c = <atom-plus>();
+			node = <ast-make-atom>(e, c);
+		##
+			<err-expected-count>;
+			node = e;
+		};
+
+		atom-qualifier-list: (e :ast_expr) -> (node :ast_expr) = {
+			node = atom-qualifier(e);
+
+			{
+				&node = atom-qualifier-list(node);
+			||
+				$;
+			};
+		};
+
 		atom: () -> (node :ast_expr) = {
 			/*
 			 * Note that START and END can appear embedded
@@ -353,40 +528,13 @@
 			};
 
 			{
-				(start, !) = OPENCOUNT;
-				m = COUNT;
-				(!, end) = CLOSECOUNT;
-				<mark-count>(start, end);
-				c = <atom-count>(m, start, m, end);
-				node = <ast-make-atom>(e, c);
+				node = atom-qualifier-list(e);
 			||
-				(start, !) = OPENCOUNT;
-				m = COUNT;
-				SEP;
-				n = COUNT;
-				(end, !) = CLOSECOUNT;
-				<mark-count>(start, end);
-				c = <atom-count>(m, start, n, end);
-				node = <ast-make-atom>(e, c);
-			||
-				OPT;
-				c = <atom-opt>();
-				node = <ast-make-atom>(e, c);
-			||
-				STAR;
-				c = <atom-kleene>();
-				node = <ast-make-atom>(e, c);
-			||
-				PLUS;
-				c = <atom-plus>();
-				node = <ast-make-atom>(e, c);
-			||
+				
 				c = <atom-one>();
 				node = <ast-make-atom>(e, c);
-			##
-				<err-expected-count>;
-				node = e;
 			};
+
 		};
 
 		list-of-atoms: (cat :ast_expr) -> () = {

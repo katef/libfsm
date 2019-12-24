@@ -1,0 +1,15 @@
+#
+# Copyright 2008-2017 Shannon Stewman
+#
+# See LICENCE for the full copyright terms.
+#
+
+0  ->  1 "a";
+1  ->  2 "b";
+2  ->  3 "a";
+3  ->  4 "a";
+4  ->  5 "a";
+5  ->  5 "a";
+
+start: 0;
+end:   5;

@@ -39,6 +39,11 @@
 
 	OPENSUB;   CLOSESUB;
 	OPENGROUP:  () -> (:pos, :pos); CLOSEGROUP:  () -> (:char, :pos, :pos);
+
+	!OPENGROUPINV: () -> (:pos, :pos);
+	!OPENGROUPCB: () -> (:pos, :pos);
+	!OPENGROUPINVCB: () -> (:pos, :pos);
+
 	OPENCOUNT: () -> (:pos, :pos);
 	COUNT: () -> (:unsigned);
 	SEP;
@@ -75,6 +80,10 @@
 	<atom-one>:    () -> (:ast_count);
 	<atom-opt>:    () -> (:ast_count);
 	<atom-count>:  (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
+
+	!<make-literal-cbrak>:    ()                       -> (:char);
+
+	!<unbounded-count>:	() -> (:unsigned);
 
 	<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
 	!<ast-range-endpoint-class>:  (:ast_class_id) -> (:endpoint);

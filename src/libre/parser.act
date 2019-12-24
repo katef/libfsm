@@ -248,6 +248,21 @@
 		@end   = lex_state->lx.end;
 	@};
 
+	OPENGROUPINV: () -> (start :pos, end :pos) = @{
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+	@};
+
+	OPENGROUPCB: () -> (start :pos, end :pos) = @{
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+	@};
+
+	OPENGROUPINVCB: () -> (start :pos, end :pos) = @{
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+	@};
+
 	CLOSEGROUP: () -> (c :char, start :pos, end :pos) = @{
 		@c = ']';
 		@start = lex_state->lx.start;
@@ -583,6 +598,10 @@
 		@c = ast_make_count(0, NULL, 1, NULL);
 	@};
 
+	<unbounded-count>: () -> (n :unsigned) = @{
+		@n = AST_COUNT_UNBOUNDED;
+	@};
+
 	<atom-count>: (l :unsigned, start :pos, h :unsigned, end :pos) -> (c :ast_count) = @{
 		struct ast_pos ast_start, ast_end;
 
@@ -660,6 +679,10 @@
 		if (@node == NULL) {
 			@!;
 		}
+	@};
+
+	<make-literal-cbrak>: () -> (c :char) = @{
+		@c = ']';
 	@};
 
 	<ast-make-any>: () -> (node :ast_expr) = @{

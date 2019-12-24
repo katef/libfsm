@@ -568,29 +568,49 @@ comp_iter_repeated(struct comp_env *env,
 		if (low == 0) {
 			EPSILON(na, nz);
 		}
-
 		fsm_capture_stop(env->fsm, &capture);
 		tail = nz;
 
-		for (i = 1; i < high; i++) {
-			/* copies the original subgraph; need to set b to the
-			 * original tail
-			 */
-			b = tail;
+		if (high != AST_COUNT_UNBOUNDED) {
+			for (i = 1; i < high; i++) {
+				/* copies the original subgraph; need to set b to the
+				 * original tail
+				 */
+				b = tail;
 
-			if (!fsm_capture_duplicate(env->fsm, &capture, &b, &a)) {
-				return 0;
+				if (!fsm_capture_duplicate(env->fsm, &capture, &b, &a)) {
+					return 0;
+				}
+
+				EPSILON(nz, a);
+
+				/* To the optional part of the repeated count */
+				if (i >= low) {
+					EPSILON(nz, b);
+				}
+
+				na = a;	/* advance head for next duplication */
+				nz = b;	/* advance tail for concenation */
+			}
+		} else {
+			for (i = 1; i < low; i++) {
+				/* copies the original subgraph; need to set b to the
+				 * original tail
+				 */
+				b = tail;
+
+				if (!fsm_capture_duplicate(env->fsm, &capture, &b, &a)) {
+					return 0;
+				}
+
+				EPSILON(nz, a);
+
+				na = a;	/* advance head for next duplication */
+				nz = b;	/* advance tail for concenation */
 			}
 
-			EPSILON(nz, a);
-
-			/* To the optional part of the repeated count */
-			if (i >= low) {
-				EPSILON(nz, b);
-			}
-
-			na = a;	/* advance head for next duplication */
-			nz = b;	/* advance tail for concenation */
+			/* back link to allow for infinite repetition */
+			EPSILON(nz,na);
 		}
 
 		/* tail to last repeated NFA tail */
