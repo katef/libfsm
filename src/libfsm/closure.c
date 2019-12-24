@@ -126,7 +126,7 @@ error:
 }
 
 struct state_set **
-epsilon_closure_bulk(struct fsm *fsm)
+epsilon_closure(struct fsm *fsm)
 {
 	struct state_set **closures;
 	fsm_state_t s;
@@ -188,7 +188,7 @@ error:
 }
 
 int
-symbol_closure_bulk(const struct fsm *fsm, fsm_state_t s,
+symbol_closure(const struct fsm *fsm, fsm_state_t s,
 	struct state_set * const eclosures[static FSM_SIGMA_COUNT],
 	struct state_set *sclosures[static FSM_SIGMA_COUNT])
 {

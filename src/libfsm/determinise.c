@@ -227,7 +227,7 @@ fsm_determinise(struct fsm *nfa)
 
 	assert(nfa != NULL);
 
-	eclosures = epsilon_closure_bulk(nfa);
+	eclosures = epsilon_closure(nfa);
 	if (eclosures == NULL) {
 		return 0;
 	}
@@ -296,7 +296,7 @@ fsm_determinise(struct fsm *nfa)
 			fsm_state_t s;
 
 			for (state_set_reset(curr->closure, &it); state_set_next(&it, &s); ) {
-				if (!symbol_closure_bulk(nfa, s, eclosures, sclosures)) {
+				if (!symbol_closure(nfa, s, eclosures, sclosures)) {
 					/* TODO: free mappings, eclosures, sclosures, stack */
 					goto error;
 				}

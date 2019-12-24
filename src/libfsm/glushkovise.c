@@ -44,7 +44,7 @@ fsm_glushkovise(struct fsm *nfa)
 
 	assert(nfa != NULL);
 
-	eclosures = epsilon_closure_bulk(nfa);
+	eclosures = epsilon_closure(nfa);
 	if (eclosures == NULL) {
 		return 0;
 	}
@@ -67,7 +67,7 @@ fsm_glushkovise(struct fsm *nfa)
 				continue;
 			}
 
-			if (!symbol_closure_bulk(nfa, es, eclosures, sclosures)) {
+			if (!symbol_closure(nfa, es, eclosures, sclosures)) {
 				/* TODO: free stuff */
 				goto error;
 			}

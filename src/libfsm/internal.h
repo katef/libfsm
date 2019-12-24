@@ -97,10 +97,10 @@ fsm_mergeab(struct fsm *a, struct fsm *b,
  * for states, with wrapper to populate malloced array of user-facing structs.
  */
 struct state_set **
-epsilon_closure_bulk(struct fsm *fsm);
+epsilon_closure(struct fsm *fsm);
 
 int
-symbol_closure_bulk(const struct fsm *fsm, fsm_state_t s,
+symbol_closure(const struct fsm *fsm, fsm_state_t s,
 	struct state_set * const eclosures[],
 	struct state_set *sclosures[]);
 
