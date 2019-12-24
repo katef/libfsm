@@ -100,6 +100,10 @@ struct state_set **
 epsilon_closure(struct fsm *fsm);
 
 int
+symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
+	struct state_set *sclosures[]);
+
+int
 symbol_closure(const struct fsm *fsm, fsm_state_t s,
 	struct state_set * const eclosures[],
 	struct state_set *sclosures[]);

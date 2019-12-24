@@ -188,6 +188,39 @@ error:
 }
 
 int
+symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
+	struct state_set *sclosures[static FSM_SIGMA_COUNT])
+{
+	struct edge_iter jt;
+	struct fsm_edge *e;
+
+	assert(fsm != NULL);
+	assert(sclosures != NULL);
+
+	if (fsm->states[s].edges == NULL) {
+		return 1;
+	}
+
+	/*
+	 * TODO: it's common for many symbols to have transitions to the same state
+	 * (the worst case being an "any" transition). It'd be nice to find a way
+	 * to avoid repeating that work by de-duplicating on the destination.
+	 */
+
+	for (e = edge_set_first(fsm->states[s].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
+		if (e->sl == NULL) {
+			continue;
+		}
+
+		if (!state_set_copy(&sclosures[e->symbol], fsm->opt->alloc, e->sl)) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+int
 symbol_closure(const struct fsm *fsm, fsm_state_t s,
 	struct state_set * const eclosures[static FSM_SIGMA_COUNT],
 	struct state_set *sclosures[static FSM_SIGMA_COUNT])
@@ -198,6 +231,10 @@ symbol_closure(const struct fsm *fsm, fsm_state_t s,
 	assert(fsm != NULL);
 	assert(eclosures != NULL);
 	assert(sclosures != NULL);
+
+	if (fsm->states[s].edges == NULL) {
+		return 1;
+	}
 
 	/*
 	 * TODO: it's common for many symbols to have transitions to the same state

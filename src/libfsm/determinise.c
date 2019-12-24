@@ -10,6 +10,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+#include <fsm/walk.h>
 
 #include <adt/alloc.h>
 #include <adt/set.h>
@@ -219,7 +220,6 @@ stack_pop(struct mappingstack **stack, const struct fsm_alloc *alloc)
 int
 fsm_determinise(struct fsm *nfa)
 {
-	struct state_set **eclosures;
 	struct mappingstack *stack;
 	struct mapping_hashset *mappings;
 	struct mapping *curr;
@@ -227,16 +227,17 @@ fsm_determinise(struct fsm *nfa)
 
 	assert(nfa != NULL);
 
-	eclosures = epsilon_closure(nfa);
-	if (eclosures == NULL) {
-		return 0;
+	/* TODO: explain that this NFA->DFA implementation is for glushkov NFA only */
+	if (fsm_has(nfa, fsm_hasepsilons)) {
+		if (!fsm_glushkovise(nfa)) {
+			return 0;
+		}
 	}
 
 	dfacount = 0;
 
 	mappings = mapping_hashset_create(nfa->opt->alloc, hash_mapping, cmp_mapping);
 	if (mappings == NULL) {
-		closure_free(eclosures, nfa->statecount);
 		return 0;
 	}
 
@@ -260,19 +261,19 @@ fsm_determinise(struct fsm *nfa)
 
 		if (!fsm_getstart(nfa, &start)) {
 			errno = EINVAL;
-			/* TODO: free mappings, eclosures */
+			/* TODO: free mappings */
 			return 0;
 		}
 
 		set = NULL;
 
-		if (!state_set_copy(&set, nfa->opt->alloc, eclosures[start])) {
+		if (!state_set_add(&set, nfa->opt->alloc, start)) {
 			goto error;
 		}
 
 		curr = mapping_add(mappings, nfa->opt->alloc, dfacount++, set);
 		if (curr == NULL) {
-			/* TODO: free mappings, eclosures, set */
+			/* TODO: free mappings, set */
 			goto error;
 		}
 	}
@@ -296,8 +297,9 @@ fsm_determinise(struct fsm *nfa)
 			fsm_state_t s;
 
 			for (state_set_reset(curr->closure, &it); state_set_next(&it, &s); ) {
-				if (!symbol_closure(nfa, s, eclosures, sclosures)) {
-					/* TODO: free mappings, eclosures, sclosures, stack */
+				/* TODO: could inline this, and destructively hijack state sets from the source NFA */
+				if (!symbol_closure_without_epsilons(nfa, s, sclosures)) {
+					/* TODO: free mappings, sclosures, stack */
 					goto error;
 				}
 			}
@@ -323,20 +325,20 @@ fsm_determinise(struct fsm *nfa)
 			} else {
 				m = mapping_add(mappings, nfa->opt->alloc, dfacount++, sclosures[i]);
 				if (m == NULL) {
-					/* TODO: free mappings, eclosures, sclosures, stack */
+					/* TODO: free mappings, sclosures, stack */
 					goto error;
 				}
 
 				/* ownership belongs to the mapping now, so don't free sclosures[i] */
 
 				if (!stack_push(&stack, nfa->opt->alloc, m)) {
-					/* TODO: free mappings, eclosures, sclosures, stack */
+					/* TODO: free mappings, sclosures, stack */
 					goto error;
 				}
 			}
 
 			if (!mapping_addedges(curr, m, nfa->opt->alloc, i)) {
-				/* TODO: free mappings, eclosures, sclosures, stack */
+				/* TODO: free mappings, sclosures, stack */
 				goto error;
 			}
 		}
@@ -344,8 +346,6 @@ fsm_determinise(struct fsm *nfa)
 		/* all elements in sclosures[] have been freed or moved to their
 		 * respective mapping, so there's nothing to free here */
 	} while (curr = stack_pop(&stack, nfa->opt->alloc), curr != NULL);
-
-	closure_free(eclosures, nfa->statecount);
 
 	{
 		struct mapping_hashset_iter it;
