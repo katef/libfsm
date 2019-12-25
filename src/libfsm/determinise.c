@@ -209,7 +209,11 @@ fsm_determinise(struct fsm *nfa)
 
 	assert(nfa != NULL);
 
-	/* TODO: explain that this NFA->DFA implementation is for glushkov NFA only */
+	/*
+	 * This NFA->DFA implementation is for Glushkov NFA only; it keeps things
+	 * a little simpler by avoiding epsilon closures here, and also a little
+	 * faster where we can start with a Glushkov NFA in the first place.
+	 */
 	if (fsm_has(nfa, fsm_hasepsilons)) {
 		if (!fsm_glushkovise(nfa)) {
 			return 0;
@@ -272,8 +276,11 @@ fsm_determinise(struct fsm *nfa)
 
 		assert(curr != NULL);
 
-		/* TODO: explain the closure of a set is equivalent to the union
-		 * of closures of each item. So here we iteratively build up sclosures[] in-situ. */
+		/*
+		 * The closure of a set is equivalent to the union of closures of
+		 * each item. Here we iteratively build up sclosures[] in-situ
+		 * to avoid needing to create a state set to store the union.
+		 */
 		{
 			struct state_iter it;
 			fsm_state_t s;
@@ -294,8 +301,11 @@ fsm_determinise(struct fsm *nfa)
 				continue;
 			}
 
-			/* TODO: explain that { sclosures[i] } is our new dfa state */
-			/* TODO: explain we only really use the mappings as a de-duplication mechanism */
+			/*
+			 * The set of NFA states sclosures[i] represents a single DFA state.
+			 * We use the mappings as a de-duplication mechanism, keyed by this
+			 * set of NFA states.
+			 */
 
 			/* Use an existing mapping if present, otherwise add a new one */
 			m = mapping_find(mappings, sclosures[i]);
