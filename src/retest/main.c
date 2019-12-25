@@ -52,43 +52,7 @@ static struct fsm_options opt;
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re    [-r <dialect>] [-nbiusyz] [-x] <re> ... [ <text> | -- <text> ... ]\n");
-	fprintf(stderr, "       re -p [-r <dialect>] [-nbiusyz] [-l <language>] [-acwX] [-k <io>] [-e <prefix>] <re> ...\n");
-	fprintf(stderr, "       re -m [-r <dialect>] [-nbiusyz] <re> ...\n");
-	fprintf(stderr, "       re -h\n");
-}
-
-static enum fsm_io
-io(const char *name)
-{
-	size_t i;
-
-	struct {
-		const char *name;
-		enum fsm_io io;
-	} a[] = {
-		{ "getc", FSM_IO_GETC },
-		{ "str",  FSM_IO_STR  },
-		{ "pair", FSM_IO_PAIR }
-	};
-
-	assert(name != NULL);
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (0 == strcmp(a[i].name, name)) {
-			return a[i].io;
-		}
-	}
-
-	fprintf(stderr, "unrecognised IO API; valid IO APIs are: ");
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		fprintf(stderr, "%s%s",
-			a[i].name,
-			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
-	}
-
-	exit(EXIT_FAILURE);
+	fprintf(stderr, "usage: retest [-p] [-r <dialect>] [-e <prefix>] [-E <maxerrs>] testfile [testfile...]\n");
 }
 
 static enum re_dialect
@@ -135,40 +99,6 @@ dialect_name(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static int
-(*comparison(const char *name))
-(const struct fsm *, const struct fsm *)
-{
-	size_t i;
-
-	struct {
-		const char *name;
-		int (*comparison)(const struct fsm *, const struct fsm *);
-	} a[] = {
-		{ "equal",    fsm_equal },
-		{ "isequal",  fsm_equal },
-		{ "areequal", fsm_equal }
-	};
-
-	assert(name != NULL);
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (0 == strcmp(a[i].name, name)) {
-			return a[i].comparison;
-		}
-	}
-
-	fprintf(stderr, "unrecognised comparison; valid comparisons are: ");
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		fprintf(stderr, "%s%s",
-			a[i].name,
-			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
-	}
-
-	exit(EXIT_FAILURE);
-}
-
 static void *
 xmalloc(size_t n)
 {
@@ -199,204 +129,6 @@ xopen(const char *s)
 	}
 
 	return f;
-}
-
-static struct match *
-addmatch(struct match **head, int i, const char *s)
-{
-	struct match *new;
-
-	assert(head != NULL);
-	assert(s != NULL);
-
-	if ((1U << i) > INT_MAX) {
-		fprintf(stderr, "Too many patterns for int bitmap\n");
-		exit(EXIT_FAILURE);
-	}
-
-	/* TODO: explain we find duplicate; return success */
-	/*
-	 * This is a purposefully shallow comparison (rather than calling strcmp)
-	 * so that 're xyz xyz' will find the ambiguity.
-	 */
-	{
-		struct match *p;
-
-		for (p = *head; p != NULL; p = p->next) {
-			if (p->s == s) {
-				return p;
-			}
-		}
-	}
-
-	new = malloc(sizeof *new);
-	if (new == NULL) {
-		return NULL;
-	}
-
-	new->i = i;
-	new->s = s;
-
-	new->next = *head;
-	*head     = new;
-
-	return new;
-}
-
-static void
-carryopaque(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
-	struct fsm *dst_fsm, fsm_state_t dst_state)
-{
-	struct match *matches;
-	struct match *m;
-	size_t i;
-
-	assert(src_fsm != NULL);
-	assert(src_set != NULL);
-	assert(n > 0);
-	assert(dst_fsm != NULL);
-	assert(fsm_isend(dst_fsm, dst_state));
-	assert(fsm_getopaque(dst_fsm, dst_state) == NULL);
-
-	/*
-	 * Here we mark newly-created DFA states with the same regexp string
-	 * as from their corresponding source NFA states.
-	 *
-	 * Because all the accepting states are reachable together, they
-	 * should all share the same regexp, unless re(1) was invoked with
-	 * a regexp which is a subset of (or equal to) another.
-	 */
-
-	matches = NULL;
-
-	for (i = 0; i < n; i++) {
-		/*
-		 * The opaque data is attached to end states only, so we skip
-		 * non-end states here.
-		 */
-		if (!fsm_isend(src_fsm, src_set[i])) {
-			continue;
-		}
-
-		assert(fsm_getopaque(src_fsm, src_set[i]) != NULL);
-
-		for (m = fsm_getopaque(src_fsm, src_set[i]); m != NULL; m = m->next) {
-			if (!addmatch(&matches, m->i, m->s)) {
-				perror("addmatch");
-				goto error;
-			}
-		}
-	}
-
-	fsm_setopaque(dst_fsm, dst_state, matches);
-
-	return;
-
-error:
-
-	/* XXX: free matches */
-
-	fsm_setopaque(dst_fsm, dst_state, NULL);
-
-	return;
-}
-
-static void
-printexample(FILE *f, const struct fsm *fsm, fsm_state_t state)
-{
-	char buf[256]; /* TODO */
-	int n;
-
-	assert(f != NULL);
-	assert(fsm != NULL);
-
-	n = fsm_example(fsm, state, buf, sizeof buf);
-	if (-1 == n) {
-		perror("fsm_example");
-		exit(EXIT_FAILURE);
-	}
-
-	/* TODO: escape hex etc */
-	fprintf(f, "%s%s", buf,
-		n >= (int) sizeof buf - 1 ? "..." : "");
-}
-
-static int
-endleaf_c(FILE *f, const void *state_opaque, const void *endleaf_opaque)
-{
-	const struct match *m;
-	int n;
-
-	assert(state_opaque != NULL);
-	assert(endleaf_opaque == NULL);
-
-	(void) f;
-	(void) endleaf_opaque;
-
-	n = 0;
-
-	for (m = state_opaque; m != NULL; m = m->next) {
-		n |= 1 << m->i;
-	}
-
-	fprintf(f, "return %#x;", (unsigned) n);
-
-	fprintf(f, " /* ");
-
-	for (m = state_opaque; m != NULL; m = m->next) {
-		fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
-
-		if (m->next != NULL) {
-			fprintf(f, ", ");
-		}
-	}
-
-	fprintf(f, " */");
-
-	return 0;
-}
-
-static int
-endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
-{
-	const struct match *m;
-
-	assert(f != NULL);
-	assert(state_opaque != NULL);
-	assert(endleaf_opaque == NULL);
-
-	(void) endleaf_opaque;
-
-	fprintf(f, "label = <");
-
-	for (m = state_opaque; m != NULL; m = m->next) {
-		fprintf(f, "#%u", m->i);
-
-		if (m->next != NULL) {
-			fprintf(f, ",");
-		}
-	}
-
-	fprintf(f, ">");
-
-	/* TODO: only if comments */
-	/* TODO: centralise to libfsm/print/dot.c */
-
-#if 0
-	fprintf(f, " # ");
-
-	for (m = state_opaque; m != NULL; m = m->next) {
-		fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
-
-		if (m->next != NULL) {
-			fprintf(f, ", ");
-		}
-	}
-
-	fprintf(f, "\n");
-#endif
-
-	return 0;
 }
 
 enum parse_escape_result {
@@ -550,6 +282,172 @@ hexdigit:
 	return PARSE_OK;
 }
 
+enum error_type {
+	ERROR_NONE = 0          ,
+	ERROR_BAD_RECORD_TYPE   ,
+	ERROR_ESCAPE_SEQUENCE   ,
+	ERROR_PARSING_REGEXP    ,
+	ERROR_DETERMINISING     ,
+	ERROR_COMPILING_BYTECODE,
+	ERROR_SHOULD_MATCH      ,
+	ERROR_SHOULD_NOT_MATCH
+};
+
+struct single_error_record {
+	char *filename;
+	char *regexp;
+	char *failed_match;
+	unsigned int line;
+	enum error_type type;
+};
+
+struct error_record {
+	size_t len;
+	size_t cap;
+
+	struct single_error_record *errors;
+};
+
+#define ERROR_RECORD_INITIAL_SIZE 64
+
+static int
+error_record_init(struct error_record *erec)
+{
+	erec->errors = calloc(ERROR_RECORD_INITIAL_SIZE, sizeof erec->errors[0]);
+	if (erec->errors == NULL) {
+		return -1;
+	}
+
+	erec->len = 0;
+	erec->cap = ERROR_RECORD_INITIAL_SIZE;
+
+	return 0;
+}
+
+static char *
+dup_str(const char *s, int *err)
+{
+	size_t len;
+	char *cpy;
+
+	if (err != NULL && *err != 0) {
+		return NULL;
+	}
+
+	len = strlen(s);
+	cpy = malloc(len+1);
+	if (cpy == NULL) {
+		if (err != NULL) {
+			*err = -1;
+		}
+		return NULL;
+	}
+
+	memcpy(cpy, s, len+1);
+	return cpy;
+}
+
+static int
+error_record_add(struct error_record *erec, enum error_type type, const char *fn, const char *re, const char *failed_match, unsigned int line)
+{
+	size_t ind;
+	int err;
+
+	assert(erec != NULL);
+
+	/* check if we need to expand the list */
+	ind = erec->len;
+	if (ind >= erec->cap) {
+		size_t newcap, newsz;
+		struct single_error_record *newrecs;
+
+		newcap = erec->cap * 2; /* XXX - smarter about this? */
+		newsz = newcap * sizeof erec->errors[0];
+
+		newrecs = realloc(erec->errors, newsz);
+		if (newrecs == NULL) {
+			return -1;
+		}
+
+		erec->errors = newrecs;
+		erec->cap = newcap;
+	}
+
+	/* add record */
+	err = 0;
+	erec->errors[ind].filename     = dup_str(fn,&err);
+	erec->errors[ind].regexp       = re != NULL           ? dup_str(re,&err)           : NULL;
+	erec->errors[ind].failed_match = failed_match != NULL ? dup_str(failed_match,&err) : NULL;
+	erec->errors[ind].line         = line;
+	erec->errors[ind].type         = type;
+
+	erec->len++;
+
+	return err;
+}
+
+static void
+single_error_record_print(FILE *f, const struct single_error_record *err)
+{
+	fprintf(f, "(%s:%u) ", err->filename, err->line);
+	switch (err->type) {
+	case ERROR_NONE:               fprintf(f, "no error?\n");  break;
+	case ERROR_BAD_RECORD_TYPE:    fprintf(f, "bad record\n"); break;
+	case ERROR_ESCAPE_SEQUENCE:    fprintf(f, "bad escape sequence\n"); break;
+	case ERROR_PARSING_REGEXP:     fprintf(f, "error parsing regexp /%s/\n", err->regexp); break;
+	case ERROR_DETERMINISING:
+		fprintf(f, "error determinising regexp /%s/\n", err->regexp);
+		break;
+	case ERROR_COMPILING_BYTECODE:
+		fprintf(f, "error compiling regexp /%s/\n", err->regexp);
+		break;
+	case ERROR_SHOULD_MATCH:
+		fprintf(f, "regexp /%s/ should match \"%s\" but doesn't\n",
+			err->regexp, err->failed_match);
+		break;
+	case ERROR_SHOULD_NOT_MATCH:
+		fprintf(f, "regexp /%s/ should not match \"%s\" but does\n",
+			err->regexp, err->failed_match);
+		break;
+
+	default:
+		fprintf(f, "unknown error\n");
+		break;
+	}
+}
+
+static void
+error_record_print(FILE *f, const struct error_record *erec)
+{
+	size_t i,n;
+	n = erec->len;
+	for (i=0; i < n; i++) {
+		fprintf(f, "[%4zu/%4zu] ", i+1,n);
+		single_error_record_print(f, &erec->errors[i]);
+	}
+}
+
+static void
+error_record_finalize(struct error_record *erec)
+{
+	size_t i,n;
+
+	if (erec == NULL) {
+		return;
+	}
+
+	n = erec->len;
+	for (i=0; i < n; i++) {
+		free(erec->errors[i].filename);
+		free(erec->errors[i].regexp);
+		free(erec->errors[i].failed_match);
+	}
+
+	free(erec->errors);
+	erec->errors = NULL;
+	erec->len = erec->cap = 0;
+}
+
 /* test file format:
  *
  * 1. lines starting with '#' are skipped
@@ -565,7 +463,7 @@ hexdigit:
  *     c. '#' lines are comments
  */
 static int
-process_test_file(const char *fname, enum re_dialect dialect, int max_errors)
+process_test_file(const char *fname, enum re_dialect dialect, int max_errors, struct error_record *erec)
 {
 	char buf[4096];
 	char cpy[sizeof buf];
@@ -644,6 +542,10 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors)
 				fprintf(stderr, "line %d: error with regexp /%s/: %s\n",
 					linenum, regexp, re_strerror(err.e));
 
+				/* ignore errors */
+				error_record_add(erec,
+					ERROR_PARSING_REGEXP, fname, regexp, NULL, linenum);
+
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
 
@@ -654,6 +556,10 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors)
 			/* XXX - minimize or determinize? */
 			if (!fsm_determinise(fsm)) {
 				fprintf(stderr, "line %d: error determinising /%s/: %s\n", linenum, regexp, strerror(errno));
+
+				/* ignore errors */
+				error_record_add(erec,
+					ERROR_DETERMINISING, fname, regexp, NULL, linenum);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
@@ -680,6 +586,10 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors)
 			if (vm == NULL) {
 				fprintf(stderr, "line %d: error compiling /%s/: %s\n", linenum, regexp, strerror(errno));
 
+				/* ignore errors */
+				error_record_add(erec,
+					ERROR_COMPILING_BYTECODE, fname, regexp, NULL, linenum);
+
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
 
@@ -698,6 +608,10 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors)
 
 			if (s[0] != '-' && s[0] != '+') {
 				fprintf(stderr, "line %d: unrecognized record type '%c': %s\n", linenum, s[0], s);
+				/* ignore errors */
+				error_record_add(erec,
+					ERROR_BAD_RECORD_TYPE, fname, regexp, NULL, linenum);
+
 				num_errors++;
 				continue;
 			}
@@ -714,6 +628,11 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors)
 			if (ret != PARSE_OK) {
 				fprintf(stderr, "line %d: invalid/incomplete escape sequence at column %zd\n",
 					linenum, err - test);
+
+				/* ignore errors */
+				error_record_add(erec,
+					ERROR_ESCAPE_SEQUENCE, fname, regexp, NULL, linenum);
+
 				num_errors++;
 				continue;
 			}
@@ -729,6 +648,14 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors)
 					orig,
 					ret ? "did" : "did not");
 				num_errors++;
+
+				/* ignore errors */
+				error_record_add(erec,
+						(matching)
+							? ERROR_SHOULD_MATCH
+							: ERROR_SHOULD_NOT_MATCH,
+						fname, regexp, orig, linenum);
+
 
 				if (max_errors > 0 && num_errors >= max_errors) {
 					fprintf(stderr, "too many errors\n");
@@ -769,9 +696,10 @@ int
 main(int argc, char *argv[])
 {
 	enum re_dialect dialect;
-	struct fsm *fsm;
-
 	int max_test_errors;
+	int print_errors;
+
+	print_errors = 0;
 
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;
@@ -780,14 +708,14 @@ main(int argc, char *argv[])
 	opt.comments          = 1;
 	opt.io                = FSM_IO_GETC;
 
-	dialect   = RE_NATIVE;
+	dialect   = RE_PCRE;
 
 	max_test_errors = 0;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "e:E:" "r:" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "p" "e:E:" "r:" ), c != -1) {
 			switch (c) {
 			case 'e': opt.prefix            = optarg;     break;
 
@@ -796,6 +724,10 @@ main(int argc, char *argv[])
 			case 'E':
 				max_test_errors = strtoul(optarg, NULL, 10);
 				/* XXX: error handling */
+				break;
+
+			case 'p':
+				print_errors = 1;
 				break;
 
 			case 'h':
@@ -820,6 +752,8 @@ main(int argc, char *argv[])
 
 	{
 		int r, i;
+		struct error_record erec;
+
 
 		r = 0;
 
@@ -828,16 +762,30 @@ main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 
+		if (error_record_init(&erec) != 0) {
+			fprintf(stderr, "error initializing error state: %s\n", strerror(errno));
+			return EXIT_FAILURE;
+		}
+
 		for (i = 0; i < argc; i++) {
 			int succ;
 
-			succ = process_test_file(argv[i], dialect, max_test_errors);
+			succ = process_test_file(argv[i], dialect, max_test_errors, &erec);
 
 			if (!succ) {
 				r |= 1;
 				continue;
 			}
 		}
+
+		if (erec.len > 0) {
+			error_record_print(stderr, &erec);
+			fprintf(stderr, "%zu errors\n", erec.len);
+		} else {
+			fprintf(stderr, "no errors\n");
+		}
+
+		error_record_finalize(&erec);
 
 		return r;
 	}
