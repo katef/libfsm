@@ -287,26 +287,12 @@ fsm_reverse(struct fsm *fsm)
 			}
 
 			/*
-			 * If any of the endset states in the new fsm are accepting,
+			 * If any of the endset states in the *new* fsm are accepting,
 			 * then the new start state must also accept.
 			 */
-			if (!fsm_isend(new, start)) {
-				int start_accepts;
-
-				start_accepts = 0;
-
-				/* TODO: provide predicate on a set of states */
-				for (state_set_reset(endset, &it); state_set_next(&it, &s); ) {
-					if (fsm_isend(new, s)) {
-						start_accepts = 1;
-						break;
-					}
-				}
-
-				if (start_accepts) {
-					fsm_setend(new, start, 1);
-					fsm_carryopaque_array(new, &s, 1, new, start);
-				}
+			if (!fsm_isend(new, start) && state_set_has(new, endset, fsm_isend)) {
+				fsm_setend(new, start, 1);
+				fsm_carryopaque(new, endset, new, start);
 			}
 		}
 	}

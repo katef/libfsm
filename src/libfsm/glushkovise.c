@@ -18,24 +18,6 @@
 
 #include "internal.h"
 
-/* TODO: centralise as a predicate over a state set */
-static int
-hasend(const struct fsm *fsm, const struct state_set *set)
-{
-	struct state_iter it;
-	fsm_state_t s;
-
-	assert(fsm != NULL);
-
-	for (state_set_reset((void *) set, &it); state_set_next(&it, &s); ) {
-		if (fsm_isend(fsm, s)) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
 int
 fsm_glushkovise(struct fsm *nfa)
 {
@@ -139,7 +121,7 @@ fsm_glushkovise(struct fsm *nfa)
 		 * the set of opaque values may differ.
 		 */
 		if (!fsm_isend(nfa, s)) {
-			if (!hasend(nfa, eclosures[s])) {
+			if (!state_set_has(nfa,  eclosures[s], fsm_isend)) {
 				continue;
 			}
 

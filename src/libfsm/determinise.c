@@ -21,24 +21,6 @@
 
 #include "internal.h"
 
-/* TODO: centralise as a predicate over a state set */
-static int
-hasend(const struct fsm *fsm, const struct state_set *set)
-{
-	struct state_iter it;
-	fsm_state_t s;
-
-	assert(fsm != NULL);
-
-	for (state_set_reset((void *) set, &it); state_set_next(&it, &s); ) {
-		if (fsm_isend(fsm, s)) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
 /*
  * This maps a DFA state onto its associated NFA symbol closure, such that an
  * existing DFA state may be found given any particular set of NFA states
@@ -389,7 +371,7 @@ fsm_determinise(struct fsm *nfa)
 			 * states are end states.
 			 */
 
-			if (!hasend(nfa, m->closure)) {
+			if (!state_set_has(nfa, m->closure, fsm_isend)) {
 				continue;
 			}
 
