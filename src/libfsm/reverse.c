@@ -24,6 +24,7 @@ fsm_reverse(struct fsm *fsm)
 	struct fsm *new;
 	struct state_set *endset;
 	fsm_state_t end;
+	int hasepsilons;
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
@@ -108,6 +109,8 @@ fsm_reverse(struct fsm *fsm)
 	{
 		fsm_state_t i;
 
+		hasepsilons = 0;
+
 		for (i = 0; i < fsm->statecount; i++) {
 			struct edge_iter it;
 			struct fsm_edge *e;
@@ -120,6 +123,11 @@ fsm_reverse(struct fsm *fsm)
 
 			{
 				struct state_iter jt;
+
+				/* TODO: eventually to be a predicate bit cached for the whole fsm */
+				if (fsm->states[i].epsilons != NULL) {
+					hasepsilons = 1;
+				}
 
 				for (state_set_reset(fsm->states[i].epsilons, &jt); state_set_next(&jt, &se); ) {
 					assert(se < fsm->statecount);
@@ -159,7 +167,7 @@ fsm_reverse(struct fsm *fsm)
 	/*
 	 * Mark the new start state. If there's only one state, we can indicate it
 	 * directly. Otherwise we will be starting from a group of states, linked
-	 * together by epsilon transitions.
+	 * together by epsilon transitions (or an epsilon closure).
 	 */
 	if (fsm->endcount > 1) {
 		struct state_iter it;
@@ -203,23 +211,102 @@ fsm_reverse(struct fsm *fsm)
 			fsm_setstart(new, start);
 		} else {
 			if (!fsm_addstate(new, &start)) {
-				state_set_free(endset);
-				fsm_free(new);
-				return 0;
+				goto error;
 			}
 
 			fsm_setstart(new, start);
 		}
 
-		for (state_set_reset(endset, &it); state_set_next(&it, &s); ) {
-			if (s == start) {
-				continue;
+		/*
+		 * Here we avoid introducing epsilon transitions to an FSM where
+		 * there potentially were none before. That is, a Glushkov NFA
+		 * will not be converted to a Thompson NFA.
+		 *
+		 * Conceptually this is equivalent to hooking the start state
+		 * up with epsilons, then taking the epsilon closure of that
+		 * state, and all outgoing transitions from that closure are
+		 * copied over to the start state.
+		 *
+		 * If the FSM had epsilons in the first place, then there's no
+		 * need to avoid introducing them here.
+		 */
+		if (hasepsilons) {
+			for (state_set_reset(endset, &it); state_set_next(&it, &s); ) {
+				if (s == start) {
+					continue;
+				}
+
+				if (!fsm_addedge_epsilon(new, start, s)) {
+					goto error;
+				}
+			}
+		} else {
+			if (new->states[start].edges == NULL) {
+				new->states[start].edges = edge_set_create(fsm->opt->alloc, fsm_state_cmpedges);
+				if (new->states[start].edges == NULL) {
+					goto error;
+				}
 			}
 
-			if (!fsm_addedge_epsilon(new, start, s)) {
-				state_set_free(endset);
-				fsm_free(new);
-				return 0;
+			for (state_set_reset(endset, &it); state_set_next(&it, &s); ) {
+				struct edge_iter jt;
+				struct fsm_edge *e;
+
+				if (s == start) {
+					continue;
+				}
+
+				for (e = edge_set_first(new->states[s].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
+					struct fsm_edge *en;
+
+					/* TODO: centralise with edge.c */
+
+					en = edge_set_contains(new->states[start].edges, e);
+					if (en == NULL) {
+						en = f_malloc(new->opt->alloc, sizeof *en);
+						if (en == NULL) {
+							goto error;
+						}
+
+						en->symbol = e->symbol;
+						en->sl = NULL;
+
+						if (!edge_set_add(new->states[start].edges, en)) {
+							goto error;
+						}
+					}
+
+					if (!state_set_copy(&en->sl, new->opt->alloc, e->sl)) {
+						goto error;
+					}
+				}
+
+				if (!state_set_copy(&new->states[start].epsilons, new->opt->alloc, new->states[s].epsilons)) {
+					goto error;
+				}
+			}
+
+			/*
+			 * If any of the endset states in the new fsm are accepting,
+			 * then the new start state must also accept.
+			 */
+			if (!fsm_isend(new, start)) {
+				int start_accepts;
+
+				start_accepts = 0;
+
+				/* TODO: provide predicate on a set of states */
+				for (state_set_reset(endset, &it); state_set_next(&it, &s); ) {
+					if (fsm_isend(new, s)) {
+						start_accepts = 1;
+						break;
+					}
+				}
+
+				if (start_accepts) {
+					fsm_setend(new, start, 1);
+					fsm_carryopaque_array(new, &s, 1, new, start);
+				}
 			}
 		}
 	}
@@ -229,5 +316,12 @@ fsm_reverse(struct fsm *fsm)
 	fsm_move(fsm, new);
 
 	return 1;
+
+error:
+
+	state_set_free(endset);
+	fsm_free(new);
+
+	return 0;
 }
 
