@@ -219,18 +219,6 @@ static int
 	exit(EXIT_FAILURE);
 }
 
-static void *
-xmalloc(size_t n)
-{
-	void *p = malloc(n);
-	if (p == NULL) {
-		perror("xmalloc");
-		exit(EXIT_FAILURE);
-	}
-
-	return p;
-}
-
 static FILE *
 xopen(const char *s)
 {
@@ -449,372 +437,6 @@ endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 	return 0;
 }
 
-enum parse_escape_result {
-	PARSE_OK = 0,
-	PARSE_INVALID_ESCAPE,
-	PARSE_INCOMPLETE_ESCAPE
-};
-
-static int
-parse_escapes(char *s, char **errpos, int *lenp)
-{
-	int i,j,st;
-	unsigned char ccode;
-	int hexcurly, ndig;
-
-	enum { ST_BARE, ST_ESC, ST_OCT, ST_HEX, ST_HEX_DIGIT };
-
-	ccode = 0;
-	hexcurly = 0;
-
-	st = ST_BARE;
-	for (i=0, j=0; s[i] != '\0'; i++) {
-#if DEBUG_ESCAPES
-		fprintf(stderr, "%3d | st=%d hexcurly=%d ndig=%d ccode=0x%02x | %2d %c\n",
-			i, st, hexcurly, ndig, (unsigned int)ccode, s[i], 
-			isprint(s[i]) ? s[i] : ' ');
-#endif /* DEBUG_ESCAPES */
-
-		if (s[i] == '\0') {
-			break;
-		}
-
-		switch (st) {
-		case ST_BARE:
-bare:
-			if (s[i] == '\\') {
-				st = ST_ESC;
-			} else {
-				s[j++] = s[i];
-			}
-			break;
-
-		case ST_ESC:
-			switch (s[i]) {
-			case 'a':  s[j++] = '\a'; st = ST_BARE; break;
-			case 'b':  s[j++] = '\b'; st = ST_BARE; break;
-			case 'e':  s[j++] = '\033'; st = ST_BARE; break;
-			case 'f':  s[j++] = '\f'; st = ST_BARE; break;
-			case 'n':  s[j++] = '\n'; st = ST_BARE; break;
-			case 'r':  s[j++] = '\r'; st = ST_BARE; break;
-			case 't':  s[j++] = '\t'; st = ST_BARE; break;
-			case 'v':  s[j++] = '\v'; st = ST_BARE; break;
-			case '"':  s[j++] = '\"'; st = ST_BARE; break;
-			case '\\': s[j++] = '\\'; st = ST_BARE; break;
-
-			case '0': case '1': case '2': case '3':
-			case '4': case '5': case '6': case '7':
-				   ccode = 0; ndig = 0; st = ST_OCT; goto octdig;
-			case 'x': ccode = 0; ndig = 0; hexcurly = 0; st = ST_HEX; break;
-
-			default:
-				if (errpos) {
-					*errpos = &s[i];
-					return PARSE_INVALID_ESCAPE;
-				}
-				break;
-			}
-			break;
-
-		case ST_OCT:
-octdig:
-			if (ndig < 3 && s[i] >= '0' && s[i] <= '7') {
-				ccode = (ccode * 8) + (s[i] - '0');
-				ndig++;
-			} else {
-				s[j++] = ccode;
-				st = ST_BARE;
-				goto bare;
-			}
-
-			break;
-
-		case ST_HEX:
-			st = ST_HEX_DIGIT;
-			if (s[i] != '{') {
-				hexcurly = 0;
-				goto hexdigit;
-			}
-
-			hexcurly = 1;
-			break;
-
-		case ST_HEX_DIGIT:
-hexdigit:
-			{
-				unsigned char uc = toupper(s[i]);
-				if (ndig < 2 && isxdigit(uc)) {
-					if (uc >= '0' && uc <= '9') {
-						ccode = (ccode * 16) + (uc - '0');
-					} else {
-						ccode = (ccode * 16) + (uc - 'A' + 10);
-					}
-
-					ndig++;
-				} else {
-					s[j++] = ccode;
-					st = ST_BARE;
-
-					if (!hexcurly) {
-						goto bare;
-					} else if (uc != '}') {
-						if (errpos) {
-							*errpos = &s[i];
-						}
-						return PARSE_INCOMPLETE_ESCAPE;
-					}
-				}
-			}
-			break;
-		}
-	}
-
-	switch (st) {
-	case ST_BARE:
-		break;
-
-	case ST_ESC:
-		if (errpos) {
-			*errpos = &s[i];
-		}
-		return PARSE_INVALID_ESCAPE;
-
-	case ST_HEX:
-	case ST_OCT:
-	case ST_HEX_DIGIT:
-		if (hexcurly && st == ST_HEX_DIGIT) {
-			if (errpos) {
-				*errpos = &s[i];
-			}
-			return PARSE_INCOMPLETE_ESCAPE;
-		}
-
-		s[j++] = ccode;
-		break;
-	}
-
-	s[j] = '\0';
-
-	*lenp = j;
-
-	return PARSE_OK;
-}
-
-/* test file format:
- *
- * 1. lines starting with '#' are skipped
- * 2. (TODO) lines starting with 'R' set the dialect
- * 3. records are separated by empty lines
- * 4. the first line of each record is the regular expression to be
- *    tested 
- * 5. after the regular expression, valid lines start with '#', '+', or '-'
- *     a. '+' indicates that the rest of the line should be matched with the
- *        current regular expression
- *     b. '-' indicates the the rest of the line should *not* be matched with
- *        the current regular expression
- *     c. '#' lines are comments
- */
-static int
-process_test_file(const char *fname, enum re_dialect dialect, int max_errors)
-{
-	char buf[4096];
-	char cpy[sizeof buf];
-	char *s;
-	FILE *f;
-	int num_re_errors, num_errors;
-	int num_regexps, num_test_cases;
-	int linenum;
-
-	char *regexp;
-	struct fsm_dfavm *vm;
-
-	regexp = NULL;
-	vm     = NULL;
-
-	/* XXX - fix this */
-	opt.comments = 0;
-
-	f = xopen(fname);
-
-	num_regexps    = 0;
-	num_re_errors  = 0;
-	num_test_cases = 0;
-	num_errors     = 0;
-
-	linenum        = 0;
-
-	while (s = fgets(buf, sizeof buf, f), s != NULL) {
-		int len;
-
-		linenum++;
-		len = strlen(s);
-		if (len > 0 & s[len-1] == '\n') {
-			s[--len] = '\0';
-		}
-
-		if (len == 0) {
-			free(regexp);
-			regexp = NULL;
-
-			fsm_vm_free(vm);
-			vm = NULL;
-
-			continue;
-		}
-
-		if (s[0] == '#') {
-			continue;
-		}
-
-		if (regexp == NULL) {
-			static const struct re_err err_zero;
-
-			struct fsm *fsm;
-			struct re_err err;
-			enum re_flags flags;
-			char *re_str;
-
-			assert(vm == NULL);
-			assert(s  != NULL);
-
-			regexp = xmalloc(len+1);
-			memcpy(regexp, s, len+1);
-
-			assert(strlen(regexp) == (size_t)len);
-			assert(strcmp(regexp,s) == 0);
-
-			flags = 0;
-			err   = err_zero;
-
-			num_regexps++;
-
-			re_str = regexp;
-			fsm = re_comp(dialect, fsm_sgetc, &re_str, &opt, flags, &err);
-			if (fsm == NULL) {
-				fprintf(stderr, "line %d: error with regexp /%s/: %s\n",
-					linenum, regexp, re_strerror(err.e));
-
-				/* don't exit; instead we leave vm==NULL so we
-				 * skip to next regexp ... */
-
-				num_re_errors++;
-				continue;
-			}
-
-			/* XXX - minimize or determinize? */
-			if (!fsm_determinise(fsm)) {
-				fprintf(stderr, "line %d: error determinising /%s/: %s\n", linenum, regexp, strerror(errno));
-
-				/* don't exit; instead we leave vm==NULL so we
-				 * skip to next regexp ... */
-
-				num_re_errors++;
-				continue;
-			}
-
-#if DEBUG_VM_FSM
-			fprintf(stderr, "FSM:\n");
-			fsm_print_fsm(stderr, fsm);
-			fprintf(stderr, "---\n");
-			{
-				FILE *f = fopen("dump.fsm", "w");
-				fsm_print_fsm(f, fsm);
-				fclose(f);
-			}
-#endif /* DEBUG_VM_FSM */
-
-#if DEBUG_TEST_REGEXP
-			fprintf(stderr, "REGEXP matching for /%s/\n", regexp);
-#endif /* DEBUG_TEST_REGEXP */
-			vm = fsm_vm_compile(fsm);
-			if (vm == NULL) {
-				fprintf(stderr, "line %d: error compiling /%s/: %s\n", linenum, regexp, strerror(errno));
-
-				/* don't exit; instead we leave vm==NULL so we
-				 * skip to next regexp ... */
-
-				num_re_errors++;
-				continue;
-			}
-
-			fsm_free(fsm);
-		} else if (vm != NULL) {
-			int matching;
-			char *orig;
-			char *test;
-			char *err;
-			int tlen;
-			int ret;
-
-			if (s[0] != '-' && s[0] != '+') {
-				fprintf(stderr, "line %d: unrecognized record type '%c': %s\n", linenum, s[0], s);
-				num_errors++;
-				continue;
-			}
-
-			num_test_cases++;
-
-			matching = (s[0] == '+');
-			orig = &s[1];
-			test = strcpy(cpy, orig);
-			tlen = len-1;
-
-			err = NULL;
-			ret = parse_escapes(test, &err, &tlen);
-			if (ret != PARSE_OK) {
-				fprintf(stderr, "line %d: invalid/incomplete escape sequence at column %zd\n",
-					linenum, err - test);
-				num_errors++;
-				continue;
-			}
-
-			ret = fsm_vm_match_buffer(vm, test, tlen);
-			if (!!ret == !!matching) {
-				printf("[OK    ] line %d: regexp /%s/ %s \"%s\"\n",
-					linenum, regexp, matching ? "matched" : "did not match", orig);
-			} else {
-				printf("[NOT OK] line %d: regexp /%s/ expected to %s \"%s\", but %s\n",
-					linenum, regexp,
-					matching ? "match" : "not match",
-					orig,
-					ret ? "did" : "did not");
-				num_errors++;
-
-				if (max_errors > 0 && num_errors >= max_errors) {
-					fprintf(stderr, "too many errors\n");
-					goto finish;
-				}
-			}
-		}
-	}
-
-	free(regexp);
-
-	if (vm) {
-		fsm_vm_free(vm);
-		vm = NULL;
-	}
-
-	fclose(f);
-
-	if (ferror(f)) {
-		fprintf(stderr, "line %d: error reading %s: %s\n", linenum, fname, strerror(errno));
-		if (regexp != NULL) {
-			num_errors++;
-		}
-	}
-
-finish:
-	printf("%s: %d regexps, %d test cases\n", fname, num_regexps, num_test_cases);
-	printf("%s: %d re errors, %d errors\n", fname, num_re_errors, num_errors);
-
-	if (max_errors > 0 && num_errors >= max_errors) {
-		exit(EXIT_FAILURE);
-	}
-
-	return (num_errors > 0);
-}
-
 int
 main(int argc, char *argv[])
 {
@@ -825,13 +447,12 @@ main(int argc, char *argv[])
 	enum re_dialect dialect;
 	struct fsm *fsm;
 	enum re_flags flags;
-	int xfiles, yfiles, tfiles;
+	int xfiles, yfiles;
 	int example;
 	int keep_nfa;
 	int patterns;
 	int ambig;
 	int makevm;
-	int max_test_errors;
 
 	struct fsm_dfavm *vm;
 
@@ -845,7 +466,6 @@ main(int argc, char *argv[])
 	flags     = 0U;
 	xfiles    = 0;
 	yfiles    = 0;
-	tfiles    = 0;
 	example   = 0;
 	keep_nfa  = 0;
 	patterns  = 0;
@@ -858,12 +478,10 @@ main(int argc, char *argv[])
 	dialect   = RE_NATIVE;
 	vm        = NULL;
 
-	max_test_errors = 0;
-
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:E:k:" "bi" "sq:r:l:" "upMmntxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:" "upMmnxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
@@ -886,12 +504,6 @@ main(int argc, char *argv[])
 			case 'p': print_fsm = fsm_print_fsm;        break;
 			case 'q': query     = comparison(optarg);   break;
 			case 'r': dialect   = dialect_name(optarg); break;
-
-			case 't': tfiles   = 1; break;
-			case 'E':
-				max_test_errors = strtoul(optarg, NULL, 10);
-				/* XXX: error handling */
-				break;
 
 			case 'u': ambig    = 1; break;
 			case 'x': xfiles   = 1; break;
@@ -919,18 +531,6 @@ main(int argc, char *argv[])
 	if (argc < 1) {
 		usage();
 		return EXIT_FAILURE;
-	}
-
-	if (tfiles) {
-		if (!!print_fsm || !!print_ast || example || !!query || keep_nfa) {
-			fprintf(stderr, "-t is not compatible with -m, -n, -p, or -q\n");
-			return EXIT_FAILURE;
-		}
-
-		if (xfiles || yfiles) {
-			fprintf(stderr, "-t is not compatible with -x or -y\n");
-			return EXIT_FAILURE;
-		}
 	}
 
 	if (!!print_fsm + !!print_ast + example + !!query > 1) {
@@ -1010,31 +610,6 @@ main(int argc, char *argv[])
 	}
 
 	flags |= RE_MULTI;
-
-	if (tfiles) {
-		int r, i;
-
-		r = 0;
-
-		if (argc == 0) {
-			fprintf(stderr, "-t requires at least one test file\n");
-			return EXIT_FAILURE;
-		}
-
-		for (i = 0; i < argc; i++) {
-			int succ;
-
-			succ = process_test_file(argv[i], dialect, max_test_errors);
-
-			if (!succ) {
-				r |= 1;
-				continue;
-			}
-		}
-
-		return r;
-	}
-
 
 	fsm = fsm_new(&opt);
 	if (fsm == NULL) {
