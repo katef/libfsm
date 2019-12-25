@@ -88,7 +88,7 @@ fsm_addedge_literal(struct fsm *fsm,
 	new.symbol = c;
 	e = edge_set_contains(fsm->states[from].edges, &new);
 	if (e == NULL) {
-		e = malloc(sizeof *e);
+		e = f_malloc(fsm->opt->alloc, sizeof *e);
 		if (e == NULL) {
 			return 0;
 		}
@@ -132,7 +132,7 @@ fsm_addedge_bulk(struct fsm *fsm,
 	new.symbol = c;
 	e = edge_set_contains(fsm->states[from].edges, &new);
 	if (e == NULL) {
-		e = malloc(sizeof *e);
+		e = f_malloc(fsm->opt->alloc, sizeof *e);
 		if (e == NULL) {
 			return 0;
 		}
