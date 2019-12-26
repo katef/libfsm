@@ -47,14 +47,6 @@ mapping_hashset_find(const struct mapping_hashset *hashset, const struct mapping
 	return hashset_find((const struct hashset *) hashset, item);
 }
 
-void
-mapping_hashset_clear(struct mapping_hashset *hashset)
-{
-	assert(hashset != NULL);
-
-	hashset_clear((struct hashset *) hashset);
-}
-
 struct mapping *
 mapping_hashset_first(const struct mapping_hashset *hashset, struct mapping_hashset_iter *it)
 {
