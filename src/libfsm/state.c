@@ -93,7 +93,6 @@ fsm_removestate(struct fsm *fsm, fsm_state_t state)
 
 	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
 		state_set_free(e->sl);
-		f_free(fsm->opt->alloc, e);
 	}
 	state_set_free(fsm->states[state].epsilons);
 	edge_set_free(fsm->states[state].edges);

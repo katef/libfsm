@@ -20,7 +20,7 @@
 
 struct edge_set {
 	const struct fsm_alloc *alloc;
-	struct fsm_edge **a;
+	struct fsm_edge *a;
 	size_t i;
 	size_t n;
 };
@@ -52,7 +52,7 @@ edge_set_search(const struct edge_set *set, unsigned char symbol)
 	while (start < end) {
 		int r;
 		mid = start + (end - start) / 2;
-		r = cmp(symbol, set->a[mid]->symbol);
+		r = cmp(symbol, set->a[mid].symbol);
 		if (r < 0) {
 			end = mid;
 		} else if (r > 0) {
@@ -104,7 +104,7 @@ struct fsm_edge *
 edge_set_add(struct edge_set *set, unsigned char symbol)
 {
 	size_t i;
-	struct fsm_edge *item;
+	struct fsm_edge *e;
 
 	assert(set != NULL);
 
@@ -115,23 +115,15 @@ edge_set_add(struct edge_set *set, unsigned char symbol)
 	 */
 	if (!edge_set_empty(set)) {
 		i = edge_set_search(set, symbol);
-		if (cmp(symbol, set->a[i]->symbol) == 0) {
-			return set->a[i];
+		if (cmp(symbol, set->a[i].symbol) == 0) {
+			return &set->a[i];
 		}
 	}
-
-	item = f_malloc(set->alloc, sizeof *item);
-	if (item == NULL) {
-		return 0;
-	}
-
-	item->symbol = symbol;
-	item->sl = NULL;
 
 	if (set->i) {
 		/* We're at capacity. Get more */
 		if (set->i == set->n) {
-			struct fsm_edge **new;
+			struct fsm_edge *new;
 
 			new = f_realloc(set->alloc, set->a, (sizeof *set->a) * (set->n * 2));
 			if (new == NULL) {
@@ -142,21 +134,25 @@ edge_set_add(struct edge_set *set, unsigned char symbol)
 			set->n *= 2;
 		}
 
-		if (cmp(item->symbol, set->a[i]->symbol) > 0) {
+		if (cmp(symbol, set->a[i].symbol) > 0) {
 			i++;
 		}
 
 		memmove(&set->a[i + 1], &set->a[i], (set->i - i) * (sizeof *set->a));
-		set->a[i] = item;
+		set->a[i].symbol = symbol;
+		set->a[i].sl     = NULL;
+		e = &set->a[i];
 		set->i++;
 	} else {
-		set->a[0] = item;
-		set->i = 1;
+		set->a[0].symbol = symbol;
+		set->a[0].sl     = NULL;
+		e = &set->a[0];
+		set->i++;
 	}
 
 	assert(edge_set_contains(set, symbol));
 
-	return item;
+	return e;
 }
 
 struct fsm_edge *
@@ -171,8 +167,8 @@ edge_set_contains(const struct edge_set *set, unsigned char symbol)
 	assert(set != NULL);
 
 	i = edge_set_search(set, symbol);
-	if (cmp(symbol, set->a[i]->symbol) == 0) {
-		return set->a[i];
+	if (cmp(symbol, set->a[i].symbol) == 0) {
+		return &set->a[i];
 	}
 
 	return NULL;
@@ -236,7 +232,7 @@ edge_set_remove(struct edge_set *set, unsigned char symbol)
 	}
 
 	i = edge_set_search(set, symbol);
-	if (cmp(symbol, set->a[i]->symbol) == 0) {
+	if (cmp(symbol, set->a[i].symbol) == 0) {
 		if (i < set->i) {
 			memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
 		}
@@ -267,7 +263,7 @@ edge_set_first(struct edge_set *set, struct edge_iter *it)
 	it->i = 0;
 	it->set = set;
 
-	return it->set->a[it->i];
+	return &it->set->a[it->i];
 }
 
 struct fsm_edge *
@@ -286,7 +282,7 @@ edge_set_firstafter(const struct edge_set *set, struct edge_iter *it, unsigned c
 	}
 
 	i = edge_set_search(set, symbol);
-	r = cmp(symbol, set->a[i]->symbol);
+	r = cmp(symbol, set->a[i].symbol);
 	assert(i <= set->i - 1);
 
 	if (r >= 0 && i == set->i - 1) {
@@ -300,7 +296,7 @@ edge_set_firstafter(const struct edge_set *set, struct edge_iter *it, unsigned c
 	}
 
 	it->set = set;
-	return it->set->a[it->i];
+	return &it->set->a[it->i];
 }
 
 struct fsm_edge *
@@ -313,7 +309,7 @@ edge_set_next(struct edge_iter *it)
 		return NULL;
 	}
 
-	return it->set->a[it->i];
+	return &it->set->a[it->i];
 }
 
 int
@@ -340,8 +336,7 @@ edge_set_only(const struct edge_set *set)
 	assert(set != NULL);
 	assert(set->n >= 1);
 	assert(set->i == 1);
-	assert(set->a[0] != NULL);
 
-	return set->a[0];
+	return &set->a[0];
 }
 
