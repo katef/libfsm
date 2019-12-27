@@ -19,21 +19,6 @@
 #include "internal.h"
 
 int
-fsm_state_cmpedges(const void *a, const void *b)
-{
-	const struct fsm_edge * const *ea = a, * const *eb = b;
-
-	assert(a != NULL);
-	assert(b != NULL);
-
-	/*
-	 * N.B. various edge iterations rely on the ordering of edges to be in
-	 * ascending order.
-	 */
-	return ((*ea)->symbol > (*eb)->symbol) - ((*ea)->symbol < (*eb)->symbol);
-}
-
-int
 fsm_addedge_epsilon(struct fsm *fsm,
 	fsm_state_t from, fsm_state_t to)
 {
@@ -79,7 +64,7 @@ fsm_addedge_literal(struct fsm *fsm,
 	assert(to < fsm->statecount);
 
 	if (fsm->states[from].edges == NULL) {
-		fsm->states[from].edges = edge_set_create(fsm->opt->alloc, fsm_state_cmpedges);
+		fsm->states[from].edges = edge_set_create(fsm->opt->alloc);
 		if (fsm->states[from].edges == NULL) {
 			return 0;
 		}
@@ -123,7 +108,7 @@ fsm_addedge_bulk(struct fsm *fsm,
 	}
 
 	if (fsm->states[from].edges == NULL) {
-		fsm->states[from].edges = edge_set_create(fsm->opt->alloc, fsm_state_cmpedges);
+		fsm->states[from].edges = edge_set_create(fsm->opt->alloc);
 		if (fsm->states[from].edges == NULL) {
 			return 0;
 		}

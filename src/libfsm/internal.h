@@ -69,9 +69,6 @@ struct fsm {
 	const struct fsm_options *opt;
 };
 
-int
-fsm_state_cmpedges(const void *a, const void *b);
-
 struct fsm_edge *
 fsm_hasedge_literal(const struct fsm *fsm, fsm_state_t state, char c);
 

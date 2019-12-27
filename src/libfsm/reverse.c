@@ -159,7 +159,7 @@ fsm_reverse(struct fsm *fsm)
 					assert(se < fsm->statecount);
 
 					if (edges[se] == NULL) {
-						edges[se] = edge_set_create(fsm->opt->alloc, fsm_state_cmpedges);
+						edges[se] = edge_set_create(fsm->opt->alloc);
 						if (edges[se] == NULL) {
 							goto error1;
 						}
@@ -227,7 +227,7 @@ fsm_reverse(struct fsm *fsm)
 		fsm_state_t s;
 
 		if (edges[start] == NULL) {
-			edges[start] = edge_set_create(fsm->opt->alloc, fsm_state_cmpedges);
+			edges[start] = edge_set_create(fsm->opt->alloc);
 			if (edges[start] == NULL) {
 				goto error;
 			}

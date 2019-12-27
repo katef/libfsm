@@ -61,7 +61,7 @@ fsm_glushkovise(struct fsm *nfa)
 		/* TODO: bail out early if there are no edges to create? */
 
 		if (nfa->states[s].edges == NULL) {
-			nfa->states[s].edges = edge_set_create(nfa->opt->alloc, fsm_state_cmpedges);
+			nfa->states[s].edges = edge_set_create(nfa->opt->alloc);
 			if (nfa->states[s].edges == NULL) {
 				/* TODO: free stuff */
 				goto error;

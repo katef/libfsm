@@ -130,7 +130,7 @@ mapping_addedges(struct mapping *from, struct mapping *to,
 	 */
 
 	if (from->edges == NULL) {
-		from->edges = edge_set_create(alloc, fsm_state_cmpedges);
+		from->edges = edge_set_create(alloc);
 		if (from->edges == NULL) {
 			goto error;
 		}

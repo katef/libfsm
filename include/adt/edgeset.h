@@ -18,8 +18,7 @@ struct edge_iter {
 };
 
 struct edge_set *
-edge_set_create(const struct fsm_alloc *a,
-	int (*cmp)(const void *a, const void *b));
+edge_set_create(const struct fsm_alloc *a);
 
 void
 edge_set_free(struct edge_set *set);
