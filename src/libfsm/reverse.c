@@ -171,51 +171,13 @@ fsm_reverse(struct fsm *fsm)
 	 */
 	if (fsm->endcount > 1) {
 		struct state_iter it;
-		int have_start;
 		fsm_state_t s, start;
 
-		/*
-		 * The typical case here is to create a new start state, and to
-		 * link it to end states by epsilon transitions.
-		 *
-		 * An optimisation: if we found an end state with no incoming
-		 * edges, that state is nominated as a new start state. This is
-		 * equivalent to adding a new start state, and linking out from
-		 * that, except it does not need to introduce a new state.
-		 * Otherwise, we need to create a new start state as per usual.
-		 *
-		 * In either case, the start is linked to the other new start
-		 * states by epsilons.
-		 *
-		 * It is important to use a start state with no incoming edges as
-		 * this prevents accidentally transitioning to another route.
-		 *
-		 * This optimisation can be expensive to run, so it's optionally
-		 * disabled by the opt->tidy flag.
-		 */
-
-		if (0 || !fsm->opt->tidy) {
-			have_start = 0;
-		} else {
-			for (state_set_reset(endset, &it); state_set_next(&it, &s); ) {
-				if (!fsm_hasincoming(fsm, s)) {
-					have_start = 1;
-					start = s;
-					break;
-				}
-			}
-			have_start = 0;
+		if (!fsm_addstate(new, &start)) {
+			goto error;
 		}
 
-		if (have_start) {
-			fsm_setstart(new, start);
-		} else {
-			if (!fsm_addstate(new, &start)) {
-				goto error;
-			}
-
-			fsm_setstart(new, start);
-		}
+		fsm_setstart(new, start);
 
 		/*
 		 * Here we avoid introducing epsilon transitions to an FSM where

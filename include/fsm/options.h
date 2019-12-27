@@ -19,12 +19,6 @@ enum fsm_io {
 };
 
 struct fsm_options {
-	/* boolean: true indicates to go to extra lengths in order to produce
-	 * neater-looking FSMs for certian operations. This usually means finding
-	 * a state which can be re-used, at the cost of runtime.
-	 * Keep this false if you want performant operations for large FSM. */
-	unsigned int tidy:1;
-
 	/* boolean: true indicates to omit names for states in output */
 	unsigned int anonymous_states:1;
 

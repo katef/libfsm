@@ -54,7 +54,6 @@ main(int argc, char *argv[])
 		goto usage;
 	}
 
-	opt.tidy = 0;
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
 	opt.case_ranges = 1;

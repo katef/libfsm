@@ -23,7 +23,6 @@ fsm_union(struct fsm *a, struct fsm *b)
 	fsm_state_t sa, sb;
 	fsm_state_t sq;
 	fsm_state_t base_a, base_b;
-	int ia, ib;
 
 	assert(a != NULL);
 	assert(b != NULL);
@@ -52,42 +51,10 @@ fsm_union(struct fsm *a, struct fsm *b)
 	 * transitions to both a->start and b->start.
 	 *
 	 * TODO: diagram
-	 *
-	 * This is always semantically correct, however in some situations,
-	 * adding the extra state is unneccessary. As an optimisation, we nominate
-	 * a->start or b->start to serve as the new start state where possible.
-	 * If both a->start and b->start are suitable, then their edges
-	 * are merged into one state, and the other removed.
-	 *
-	 * a->start and b->start are considered suitable to serve as the start
-	 * state if they have no incoming edges.
-	 *
-	 * This optimisation can be expensive to run, so it's optionally disabled
-	 * by the opt->tidy flag.
 	 */
 
-	if (!q->opt->tidy) {
-		if (!fsm_addstate(q, &sq)) {
-			goto error;
-		}
-	} else {
-		ia = fsm_hasincoming(q, sa);
-		ib = fsm_hasincoming(q, sb);
-
-		if (!ia && !ib) {
-			if (!fsm_mergestates(q, sa, sb, &sq)) {
-				goto error;
-			}
-			sa = sb = sq;
-		} else if (!ia) {
-			sq = sa;
-		} else if (!ib) {
-			sq = sb;
-		} else {
-			if (!fsm_addstate(q, &sq)) {
-				goto error;
-			}
-		}
+	if (!fsm_addstate(q, &sq)) {
+		goto error;
 	}
 
 	fsm_setstart(q, sq);

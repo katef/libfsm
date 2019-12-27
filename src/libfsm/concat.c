@@ -69,30 +69,10 @@ fsm_concat(struct fsm *a, struct fsm *b)
 	 * In this implementation, if multiple end states are present, they are
 	 * first collated together by epsilon transitions to a single end state.
 	 * Then that single state is linked to the next FSM.
-	 *
-	 * This is always semantically correct, however in some situations,
-	 * adding the epsilon transiion is unneccessary. As an optimisation,
-	 * we identify situations where it would be equivalent to merge the
-	 * two states instead.
-	 *
-	 * This optimisation can be expensive to run, so it's optionally disabled
-	 * by the opt->tidy flag.
 	 */
 
-	if (!q->opt->tidy) {
-		if (!fsm_addedge_epsilon(q, ea, sb)) {
-			goto error;
-		}
-	} else {
-		if (!fsm_hasoutgoing(q, ea) || !fsm_hasincoming(q, sb)) {
-			if (!fsm_mergestates(q, ea, sb, NULL)) {
-				goto error;
-			}
-		} else {
-			if (!fsm_addedge_epsilon(q, ea, sb)) {
-				goto error;
-			}
-		}
+	if (!fsm_addedge_epsilon(q, ea, sb)) {
+		goto error;
 	}
 
 	fsm_setstart(q, sq);
