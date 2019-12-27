@@ -1,1 +1,1 @@
-tests/pcre/in5.re:4: Syntax error: expected group term
+tests/pcre/in5.re:4: Syntax error: expected alternative list
