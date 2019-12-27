@@ -422,7 +422,7 @@ error_record_print(FILE *f, const struct error_record *erec)
 	size_t i,n;
 	n = erec->len;
 	for (i=0; i < n; i++) {
-		fprintf(f, "[%4zu/%4zu] ", i+1,n);
+		fprintf(f, "[%4u/%4u] ", (unsigned) i + 1, (unsigned) n);
 		single_error_record_print(f, &erec->errors[i]);
 	}
 }
@@ -496,7 +496,7 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors, st
 
 		linenum++;
 		len = strlen(s);
-		if (len > 0 & s[len-1] == '\n') {
+		if (len > 0 && s[len-1] == '\n') {
 			s[--len] = '\0';
 		}
 
@@ -626,8 +626,8 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors, st
 			err = NULL;
 			ret = parse_escapes(test, &err, &tlen);
 			if (ret != PARSE_OK) {
-				fprintf(stderr, "line %d: invalid/incomplete escape sequence at column %zd\n",
-					linenum, err - test);
+				fprintf(stderr, "line %d: invalid/incomplete escape sequence at column %d\n",
+					linenum, (int) (err - test));
 
 				/* ignore errors */
 				error_record_add(erec,
@@ -697,9 +697,6 @@ main(int argc, char *argv[])
 {
 	enum re_dialect dialect;
 	int max_test_errors;
-	int print_errors;
-
-	print_errors = 0;
 
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;
@@ -715,7 +712,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "p" "e:E:" "r:" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "e:E:" "r:" ), c != -1) {
 			switch (c) {
 			case 'e': opt.prefix            = optarg;     break;
 
@@ -724,10 +721,6 @@ main(int argc, char *argv[])
 			case 'E':
 				max_test_errors = strtoul(optarg, NULL, 10);
 				/* XXX: error handling */
-				break;
-
-			case 'p':
-				print_errors = 1;
 				break;
 
 			case 'h':
@@ -780,7 +773,7 @@ main(int argc, char *argv[])
 
 		if (erec.len > 0) {
 			error_record_print(stderr, &erec);
-			fprintf(stderr, "%zu errors\n", erec.len);
+			fprintf(stderr, "%u errors\n", (unsigned) erec.len);
 		} else {
 			fprintf(stderr, "no errors\n");
 		}
