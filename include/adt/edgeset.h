@@ -13,7 +13,8 @@ struct fsm_edge;
 struct edge_set;
 
 struct edge_iter {
-	struct set_iter iter;
+	size_t i;
+	const struct edge_set *set;
 };
 
 struct edge_set *
