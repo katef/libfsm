@@ -26,19 +26,11 @@ struct edge_set {
 	int (*cmp)(const void *, const void *);
 };
 
-static int
-set_empty(const struct edge_set *set)
-{
-	assert(set != NULL);
-
-	return set->i == 0;
-}
-
 /*
  * Return where an item would be, if it were inserted
  */
 static size_t
-set_search(const struct edge_set *set, const struct fsm_edge *item)
+edge_set_search(const struct edge_set *set, const struct fsm_edge *item)
 {
 	size_t start, end;
 	size_t mid;
@@ -66,29 +58,8 @@ set_search(const struct edge_set *set, const struct fsm_edge *item)
 	return mid;
 }
 
-static struct fsm_edge *
-set_contains(const struct edge_set *set, const struct fsm_edge *item)
-{
-	size_t i;
-
-	assert(set != NULL);
-	assert(set->cmp != NULL);
-	assert(item != NULL);
-
-	if (set_empty(set)) {
-		return NULL;
-	}
-
-	i = set_search(set, item);
-	if (set->cmp(&item, &set->a[i]) == 0) {
-		return set->a[i];
-	}
-
-	return NULL;
-}
-
-static struct edge_set *
-set_create(const struct fsm_alloc *a,
+struct edge_set *
+edge_set_create(const struct fsm_alloc *a,
 	int (*cmp)(const void *a, const void *b))
 {
 	struct edge_set *set;
@@ -113,8 +84,21 @@ set_create(const struct fsm_alloc *a,
 	return set;
 }
 
-static struct fsm_edge *
-set_add(struct edge_set *set, struct fsm_edge *item)
+void
+edge_set_free(struct edge_set *set)
+{
+	if (set == NULL) {
+		return;
+	}
+
+	assert(set->a != NULL);
+
+	free(set->a);
+	free(set);
+}
+
+struct fsm_edge *
+edge_set_add(struct edge_set *set, struct fsm_edge *item)
 {
 	size_t i;
 
@@ -127,8 +111,8 @@ set_add(struct edge_set *set, struct fsm_edge *item)
 	/*
 	 * If the item already exists in the set, return success.
 	 */
-	if (!set_empty(set)) {
-		i = set_search(set, item);
+	if (!edge_set_empty(set)) {
+		i = edge_set_search(set, item);
 		if (set->cmp(&item, &set->a[i]) == 0) {
 			return item;
 		}
@@ -160,174 +144,30 @@ set_add(struct edge_set *set, struct fsm_edge *item)
 		set->i = 1;
 	}
 
-	assert(set_contains(set, item));
+	assert(edge_set_contains(set, item));
 
 	return item;
 }
 
-static void
-set_remove(struct edge_set *set, const struct fsm_edge *item)
+struct fsm_edge *
+edge_set_contains(const struct edge_set *set, const struct fsm_edge *item)
 {
 	size_t i;
+
+	if (edge_set_empty(set)) {
+		return NULL;
+	}
 
 	assert(set != NULL);
 	assert(set->cmp != NULL);
 	assert(item != NULL);
 
-	if (set_empty(set)) {
-		return;
-	}
-
-	i = set_search(set, item);
+	i = edge_set_search(set, item);
 	if (set->cmp(&item, &set->a[i]) == 0) {
-		if (i < set->i) {
-			memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
-		}
-
-		set->i--;
+		return set->a[i];
 	}
 
-	assert(!set_contains(set, item));
-}
-
-static void
-set_free(struct edge_set *set)
-{
-	assert(set != NULL);
-	assert(set->a != NULL);
-
-	free(set->a);
-	free(set);
-}
-
-static size_t
-set_count(const struct edge_set *set)
-{
-	assert(set != NULL);
-	assert(set->a != NULL);
-
-	return set->i;
-}
-
-static struct fsm_edge *
-set_first(const struct edge_set *set, struct edge_iter *it)
-{
-	assert(set != NULL);
-	assert(set->a != NULL);
-	assert(it != NULL);
-
-	if (set_empty(set)) {
-		it->set = NULL;
-		return NULL;
-	}
-
-	it->i = 0;
-	it->set = set;
-
-	return it->set->a[it->i];
-}
-
-static struct fsm_edge *
-set_firstafter(const struct edge_set *set, struct edge_iter *it, const struct fsm_edge *item)
-{
-	size_t i;
-	int r;
-
-	assert(set != NULL);
-	assert(set->cmp != NULL);
-	assert(set->a != NULL);
-	assert(it != NULL);
-
-	if (set_empty(set)) {
-		it->set = NULL;
-		return NULL;
-	}
-
-	i = set_search(set, item);
-	r = set->cmp(&item, &set->a[i]);
-	assert(i <= set->i - 1);
-
-	if (r >= 0 && i == set->i - 1) {
-		it->set = NULL;
-		return NULL;
-	}
-
-	it->i = i;
-	if (r >= 0) {
-		it->i++;
-	}
-
-	it->set = set;
-	return it->set->a[it->i];
-}
-
-static struct fsm_edge *
-set_next(struct edge_iter *it)
-{
-	assert(it != NULL);
-
-	it->i++;
-	if (it->i >= it->set->i) {
-		return NULL;
-	}
-
-	return it->set->a[it->i];
-}
-
-static struct fsm_edge *
-set_only(const struct edge_set *set)
-{
-	assert(set != NULL);
-	assert(set->n >= 1);
-	assert(set->i == 1);
-	assert(set->a[0] != NULL);
-
-	return set->a[0];
-}
-
-static int
-set_hasnext(const struct edge_iter *it)
-{
-	assert(it != NULL);
-
-	return it->set && it->i + 1 < it->set->i;
-}
-
-struct edge_set *
-edge_set_create(const struct fsm_alloc *a,
-	int (*cmp)(const void *a, const void *b))
-{
-	assert(cmp != NULL);
-
-	return set_create(a, cmp);
-}
-
-void
-edge_set_free(struct edge_set *set)
-{
-	if (set == NULL) {
-		return;
-	}
-
-	set_free(set);
-}
-
-struct fsm_edge *
-edge_set_add(struct edge_set *set, struct fsm_edge *e)
-{
-	assert(set != NULL);
-	assert(e != NULL);
-
-	return set_add(set, e);
-}
-
-struct fsm_edge *
-edge_set_contains(const struct edge_set *set, const struct fsm_edge *e)
-{
-	assert(set != NULL);
-	assert(e != NULL);
-
-	return set_contains(set, e);
+	return NULL;
 }
 
 size_t
@@ -337,7 +177,10 @@ edge_set_count(const struct edge_set *set)
 		return 0;
 	}
 
-	return set_count(set);
+	assert(set != NULL);
+	assert(set->a != NULL);
+
+	return set->i;
 }
 
 int
@@ -377,15 +220,32 @@ edge_set_copy(struct edge_set *dst, const struct fsm_alloc *alloc,
 }
 
 void
-edge_set_remove(struct edge_set *set, const struct fsm_edge *e)
+edge_set_remove(struct edge_set *set, const struct fsm_edge *item)
 {
-	assert(e != NULL);
+	size_t i;
+
+	assert(set != NULL);
+	assert(set->cmp != NULL);
+	assert(item != NULL);
 
 	if (set == NULL) {
 		return;
 	}
 
-	set_remove(set, e);
+	if (edge_set_empty(set)) {
+		return;
+	}
+
+	i = edge_set_search(set, item);
+	if (set->cmp(&item, &set->a[i]) == 0) {
+		if (i < set->i) {
+			memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
+		}
+
+		set->i--;
+	}
+
+	assert(!edge_set_contains(set, item));
 }
 
 struct fsm_edge *
@@ -397,17 +257,53 @@ edge_set_first(struct edge_set *set, struct edge_iter *it)
 		return NULL;
 	}
 
-	return set_first(set, it);
+	assert(set != NULL);
+	assert(set->a != NULL);
+
+	if (edge_set_empty(set)) {
+		it->set = NULL;
+		return NULL;
+	}
+
+	it->i = 0;
+	it->set = set;
+
+	return it->set->a[it->i];
 }
 
 struct fsm_edge *
-edge_set_firstafter(const struct edge_set *set, struct edge_iter *it, const struct fsm_edge *e)
+edge_set_firstafter(const struct edge_set *set, struct edge_iter *it, const struct fsm_edge *item)
 {
-	assert(set != NULL);
-	assert(it != NULL);
-	assert(e != NULL);
+	size_t i;
+	int r;
 
-	return set_firstafter(set, it, e);
+	assert(set != NULL);
+	assert(set->cmp != NULL);
+	assert(set->a != NULL);
+	assert(it != NULL);
+	assert(item != NULL);
+
+	if (edge_set_empty(set)) {
+		it->set = NULL;
+		return NULL;
+	}
+
+	i = edge_set_search(set, item);
+	r = set->cmp(&item, &set->a[i]);
+	assert(i <= set->i - 1);
+
+	if (r >= 0 && i == set->i - 1) {
+		it->set = NULL;
+		return NULL;
+	}
+
+	it->i = i;
+	if (r >= 0) {
+		it->i++;
+	}
+
+	it->set = set;
+	return it->set->a[it->i];
 }
 
 struct fsm_edge *
@@ -415,7 +311,12 @@ edge_set_next(struct edge_iter *it)
 {
 	assert(it != NULL);
 
-	return set_next(it);
+	it->i++;
+	if (it->i >= it->set->i) {
+		return NULL;
+	}
+
+	return it->set->a[it->i];
 }
 
 int
@@ -423,7 +324,7 @@ edge_set_hasnext(struct edge_iter *it)
 {
 	assert(it != NULL);
 
-	return set_hasnext(it);
+	return it->set && it->i + 1 < it->set->i;
 }
 
 int
@@ -433,14 +334,17 @@ edge_set_empty(const struct edge_set *set)
 		return 1;
 	}
 
-	return set_empty(set);
+	return set->i == 0;
 }
 
 struct fsm_edge *
 edge_set_only(const struct edge_set *set)
 {
 	assert(set != NULL);
+	assert(set->n >= 1);
+	assert(set->i == 1);
+	assert(set->a[0] != NULL);
 
-	return set_only(set);
+	return set->a[0];
 }
 
