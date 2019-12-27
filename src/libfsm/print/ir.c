@@ -109,7 +109,7 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 				struct edge_iter jt;
 				fsm_state_t ns;
 
-				ne = edge_set_firstafter(fsm->states[state].edges, &jt, e);
+				ne = edge_set_firstafter(fsm->states[state].edges, &jt, e->symbol);
 				if (ne == NULL || ne->symbol != e->symbol + 1) {
 					break;
 				}

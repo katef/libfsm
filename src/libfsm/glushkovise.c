@@ -89,22 +89,17 @@ fsm_glushkovise(struct fsm *nfa)
 				continue;
 			}
 
-			new = f_malloc(nfa->opt->alloc, sizeof *new);
+			new = edge_set_add(nfa->states[s].edges, i);
 			if (new == NULL) {
 				/* TODO: free stuff */
 				goto error;
 			}
 
-			new->symbol = i;
+			assert(new->sl == NULL);
 			new->sl = sclosures[i];
 
 			/* ownership belongs to the newly-created edge now */
 			sclosures[i] = NULL;
-
-			if (!edge_set_add(nfa->states[s].edges, new)) {
-				/* TODO: free stuff */
-				goto error;
-			}
 		}
 
 		/* all elements in sclosures[] have been freed or moved to their

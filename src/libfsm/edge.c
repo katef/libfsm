@@ -57,7 +57,7 @@ fsm_addedge_literal(struct fsm *fsm,
 	fsm_state_t from, fsm_state_t to,
 	char c)
 {
-	struct fsm_edge *e, new;
+	struct fsm_edge *e;
 
 	assert(fsm != NULL);
 	assert(from < fsm->statecount);
@@ -70,18 +70,10 @@ fsm_addedge_literal(struct fsm *fsm,
 		}
 	}
 
-	new.symbol = c;
-	e = edge_set_contains(fsm->states[from].edges, &new);
+	e = edge_set_contains(fsm->states[from].edges, c);
 	if (e == NULL) {
-		e = f_malloc(fsm->opt->alloc, sizeof *e);
+		e = edge_set_add(fsm->states[from].edges, c);
 		if (e == NULL) {
-			return 0;
-		}
-
-		e->symbol = c;
-		e->sl = NULL;
-
-		if (!edge_set_add(fsm->states[from].edges, e)) {
 			return 0;
 		}
 	}
@@ -98,7 +90,7 @@ fsm_addedge_bulk(struct fsm *fsm,
 	fsm_state_t from, fsm_state_t *a, size_t n,
 	char c)
 {
-	struct fsm_edge *e, new;
+	struct fsm_edge *e;
 
 	assert(fsm != NULL);
 	assert(a != NULL);
@@ -114,18 +106,10 @@ fsm_addedge_bulk(struct fsm *fsm,
 		}
 	}
 
-	new.symbol = c;
-	e = edge_set_contains(fsm->states[from].edges, &new);
+	e = edge_set_contains(fsm->states[from].edges, c);
 	if (e == NULL) {
-		e = f_malloc(fsm->opt->alloc, sizeof *e);
+		e = edge_set_add(fsm->states[from].edges, c);
 		if (e == NULL) {
-			return 0;
-		}
-
-		e->symbol = c;
-		e->sl = NULL;
-
-		if (!edge_set_add(fsm->states[from].edges, e)) {
 			return 0;
 		}
 	}
@@ -140,7 +124,7 @@ fsm_addedge_bulk(struct fsm *fsm,
 struct fsm_edge *
 fsm_hasedge_literal(const struct fsm *fsm, fsm_state_t state, char c)
 {
-	struct fsm_edge *e, search;
+	struct fsm_edge *e;
 
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
@@ -149,8 +133,7 @@ fsm_hasedge_literal(const struct fsm *fsm, fsm_state_t state, char c)
 		return NULL;
 	}
 
-	search.symbol = (unsigned char) c;
-	e = edge_set_contains(fsm->states[state].edges, &search);
+	e = edge_set_contains(fsm->states[state].edges, c);
 	if (e == NULL || state_set_empty(e->sl)) {
 		return NULL;
 	}

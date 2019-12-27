@@ -112,18 +112,6 @@ mapping_addedges(struct mapping *from, struct mapping *to,
 {
 	struct fsm_edge *e;
 
-	e = f_malloc(alloc, sizeof *e);
-	if (e == NULL) {
-		return 0;
-	}
-
-	e->sl     = NULL;
-	e->symbol = c;
-
-	if (!state_set_add(&e->sl, alloc, to->dfastate)) {
-		goto error;
-	}
-
 	/*
 	 * Note there is no looking up of an edge by symbol;
 	 * TODO: this should suit the adjacency list for bulk-adding edges i hope
@@ -136,16 +124,18 @@ mapping_addedges(struct mapping *from, struct mapping *to,
 		}
 	}
 
-	if (!edge_set_add(from->edges, e)) {
+	e = edge_set_add(from->edges, c);
+	if (e == NULL) {
+		goto error;
+	}
+
+	if (!state_set_add(&e->sl, alloc, to->dfastate)) {
 		goto error;
 	}
 
 	return 1;
 
 error:
-
-	state_set_free(e->sl);
-	f_free(alloc, e);
 
 	return 0;
 }

@@ -29,13 +29,12 @@
 static int
 contains(struct edge_set *edges, int o, fsm_state_t state)
 {
-	struct fsm_edge *e, search;
+	struct fsm_edge *e;
 	struct edge_iter it;
 
 	assert(edges != NULL);
 
-	search.symbol = o;
-	for (e = edge_set_firstafter(edges, &it, &search); e != NULL; e = edge_set_next(&it)) {
+	for (e = edge_set_firstafter(edges, &it, o); e != NULL; e = edge_set_next(&it)) {
 		if (state_set_contains(e->sl, state)) {
 			return 1;
 		}

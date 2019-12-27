@@ -24,10 +24,10 @@ void
 edge_set_free(struct edge_set *set);
 
 struct fsm_edge *
-edge_set_add(struct edge_set *set, struct fsm_edge *e);
+edge_set_add(struct edge_set *set, unsigned char symbol);
 
 struct fsm_edge *
-edge_set_contains(const struct edge_set *set, const struct fsm_edge *e);
+edge_set_contains(const struct edge_set *set, unsigned char symbol);
 
 size_t
 edge_set_count(const struct edge_set *set);
@@ -37,13 +37,13 @@ edge_set_copy(struct edge_set *dst, const struct fsm_alloc *alloc,
 	const struct edge_set *src);
 
 void
-edge_set_remove(struct edge_set *set, const struct fsm_edge *e);
+edge_set_remove(struct edge_set *set, unsigned char symbol);
 
 struct fsm_edge *
 edge_set_first(struct edge_set *set, struct edge_iter *it);
 
 struct fsm_edge *
-edge_set_firstafter(const struct edge_set *set, struct edge_iter *it, const struct fsm_edge *e);
+edge_set_firstafter(const struct edge_set *set, struct edge_iter *it, unsigned char symbol);
 
 struct fsm_edge *
 edge_set_next(struct edge_iter *it);
