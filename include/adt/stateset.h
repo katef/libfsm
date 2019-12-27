@@ -16,6 +16,10 @@ struct state_iter {
 	const struct state_set *set;
 };
 
+int
+state_set_has(const struct fsm *fsm, const struct state_set *set,
+	int (*predicate)(const struct fsm *, fsm_state_t));
+
 void
 state_set_free(struct state_set *set);
 

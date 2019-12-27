@@ -48,6 +48,25 @@ struct state_set {
 	size_t n;
 };
 
+int
+state_set_has(const struct fsm *fsm, const struct state_set *set,
+	int (*predicate)(const struct fsm *, fsm_state_t))
+{
+	struct state_iter it;
+	fsm_state_t s;
+
+	assert(fsm != NULL);
+	assert(predicate != NULL);
+
+	for (state_set_reset((void *) set, &it); state_set_next(&it, &s); ) {
+		if (predicate(fsm, s)) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 static int
 state_set_cmpval(fsm_state_t a, fsm_state_t b)
 {

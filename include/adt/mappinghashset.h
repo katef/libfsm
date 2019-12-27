@@ -29,9 +29,6 @@ mapping_hashset_add(struct mapping_hashset *hashset, struct mapping *item);
 struct mapping *
 mapping_hashset_find(const struct mapping_hashset *hashset, const struct mapping *item);
 
-void
-mapping_hashset_clear(struct mapping_hashset *hashset);
-
 struct mapping *
 mapping_hashset_first(const struct mapping_hashset *hashset, struct mapping_hashset_iter *it);
 

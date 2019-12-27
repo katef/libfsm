@@ -699,12 +699,10 @@ main(int argc, char **argv)
 	{
 		opt.carryopaque = carryopaque;
 
-		struct fsm_determinise_cache *cache = NULL;
-		if (fsm_determinise_cache(fsm, &cache) == 0) {
-			perror("fsm_determinise_cache");
+		if (!fsm_determinise(fsm) == 0) {
+			perror("fsm_determinise");
 			exit(-1);
 		}
-		fsm_determinise_freecache(fsm, cache);
 
 		opt.carryopaque = NULL;
 	}

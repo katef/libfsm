@@ -69,6 +69,9 @@ struct fsm {
 	const struct fsm_options *opt;
 };
 
+int
+fsm_state_cmpedges(const void *a, const void *b);
+
 struct fsm_edge *
 fsm_hasedge_literal(const struct fsm *fsm, fsm_state_t state, char c);
 
@@ -90,18 +93,20 @@ fsm_mergeab(struct fsm *a, struct fsm *b,
     fsm_state_t *base_b);
 
 /*
- * TODO: if this were a public API, we could present raggeg array of { a, n } structs
+ * TODO: if this were a public API, we could present ragged array of { a, n } structs
  * for states, with wrapper to populate malloced array of user-facing structs.
  */
 struct state_set **
-epsilon_closure_bulk(struct fsm *fsm);
-
-struct state_set *
-epsilon_closure(const struct fsm *fsm, fsm_state_t state, struct state_set **closure);
+epsilon_closure(struct fsm *fsm);
 
 int
-symbol_closure_bulk(const struct fsm *fsm, const struct state_set *set,
-	struct state_set *closure[]);
+symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
+	struct state_set *sclosures[]);
+
+int
+symbol_closure(const struct fsm *fsm, fsm_state_t s,
+	struct state_set * const eclosures[],
+	struct state_set *sclosures[]);
 
 void
 closure_free(struct state_set **closures, size_t n);

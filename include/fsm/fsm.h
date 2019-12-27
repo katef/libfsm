@@ -16,7 +16,6 @@
  */
 
 struct fsm;
-struct fsm_determinise_cache;
 struct fsm_options;
 struct path; /* XXX */
 
@@ -264,18 +263,6 @@ fsm_glushkovise(struct fsm *fsm);
  */
 int
 fsm_determinise(struct fsm *fsm);
-
-/*
- * Like fsm_determinise_opaque, but allows the caller to store a pointer to
- * resources used by this API, reducing memory allocation and copy pressure.
- *
- * Free the cached data by calling fsm_determinise_freecache().
- */
-int
-fsm_determinise_cache(struct fsm *fsm,
-	struct fsm_determinise_cache **dcache);
-void
-fsm_determinise_freecache(struct fsm *fsm, struct fsm_determinise_cache *dcache);
 
 /*
  * Make a DFA complete, as per fsm_iscomplete.

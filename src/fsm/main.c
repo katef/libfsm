@@ -553,7 +553,7 @@ main(int argc, char *argv[])
 			size_t n;
 			struct state_iter it;
 
-			closures = epsilon_closure_bulk(fsm);
+			closures = epsilon_closure(fsm);
 			if (closures == NULL) {
 				return -1;
 			}
