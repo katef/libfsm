@@ -27,6 +27,7 @@
 #include "libfsm/internal.h" /* XXX */
 
 #include "parser.h"
+#include "wordgen.h"
 
 #if defined(__APPLE__) && defined(__MACH__) && defined(MACOS_HAS_NO_CLOCK_GETITME)
 #include <mach/clock.h>
@@ -108,6 +109,7 @@ usage(void)
 	printf("       fsm {-p} [-l <language>] [-acwX] [-k <io>] [-e <prefix>]\n");
 	printf("       fsm {-dmr | -t <transformation>} [-i <iterations>] [<file.fsm> | <file-a> <file-b>]\n");
 	printf("       fsm {-q <query>} [<file>]\n");
+	printf("       fsm {-W <maxlen>} <file.fsm>\n");
 	printf("       fsm -h\n");
 }
 
@@ -312,6 +314,32 @@ xopen(const char *s)
 	return f;
 }
 
+#if 0
+static unsigned int word_maxlen = 16;
+static unsigned int num_words = 8;
+static uint64_t seed = 0xdfa7231bc;
+
+static void
+gen_words(FILE *f, const struct fsm *fsm)
+{
+	struct dfa_wordgen_params params = {
+		.minlen = 1,
+		.maxlen = word_maxlen,
+
+		.prob_stop  = 0.3f,
+		.eps_weight = 0.0f,
+	};
+
+	struct prng_state prng;
+
+	memset(&prng, 0, sizeof prng);
+	prng_seed(&prng, seed);
+
+	fsm_generate_words_to_file(fsm, &params, &prng, num_words, f);
+}
+#endif /* 0 */
+
+
 int
 main(int argc, char *argv[])
 {
@@ -343,7 +371,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:i:" "xpq:l:dGmrt:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:k:i:" "xpq:l:dGmrt:W:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
@@ -367,6 +395,13 @@ main(int argc, char *argv[])
 			case 'r': op = op_name("reverse");            break;
 			case 't': op = op_name(optarg);               break;
 			case 'G': op = op_name("glushkovise");        break;
+			case 'W':
+				/* print = gen_words; */
+				/* num_words = strtoul(optarg, NULL, 10); */
+				/* XXX: error handling */
+				fprintf(stderr, "not yet implemented.\n");
+				exit(EXIT_FAILURE);
+				break;
 
 			case 'h':
 				usage();
