@@ -1214,7 +1214,7 @@ encode_opasm(struct dfavm_assembler *a)
 		rest_bits  = 0;
 
 		cmp_bits = op->cmp;
-		if (cmp_bits > 7 || cmp_bits < 0) {
+		if (cmp_bits > 7) {
 			goto error;
 		}
 
