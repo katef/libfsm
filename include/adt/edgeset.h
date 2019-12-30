@@ -32,6 +32,10 @@ edge_set_contains(const struct edge_set *set, const struct fsm_edge *e);
 size_t
 edge_set_count(const struct edge_set *set);
 
+int
+edge_set_copy(struct edge_set *dst, const struct fsm_alloc *alloc,
+	const struct edge_set *src);
+
 void
 edge_set_remove(struct edge_set *set, const struct fsm_edge *e);
 
