@@ -108,12 +108,12 @@ edge_set_add(struct edge_set *set, unsigned char symbol)
 
 	assert(set != NULL);
 
-	i = 0;
-
 	/*
 	 * If the item already exists in the set, return success.
 	 */
-	if (!edge_set_empty(set)) {
+	if (edge_set_empty(set)) {
+		i = 0;
+	} else {
 		i = edge_set_search(set, symbol);
 		if (cmp(symbol, set->a[i].symbol) == 0) {
 			return &set->a[i];
@@ -200,12 +200,9 @@ edge_set_copy(struct edge_set *dst, const struct fsm_alloc *alloc,
 	for (e = edge_set_first((void *) src, &jt); e != NULL; e = edge_set_next(&jt)) {
 		struct fsm_edge *en;
 
-		en = edge_set_contains(dst, e->symbol);
+		en = edge_set_add(dst, e->symbol);
 		if (en == NULL) {
-			en = edge_set_add(dst, e->symbol);
-			if (en == NULL) {
-				return 0;
-			}
+			return 0;
 		}
 
 		if (!state_set_copy(&en->sl, alloc, e->sl)) {

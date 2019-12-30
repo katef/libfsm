@@ -165,12 +165,9 @@ fsm_reverse(struct fsm *fsm)
 						}
 					}
 
-					en = edge_set_contains(edges[se], e->symbol);
+					en = edge_set_add(edges[se], e->symbol);
 					if (en == NULL) {
-						en = edge_set_add(edges[se], e->symbol);
-						if (en == NULL) {
-							return 0;
-						}
+						return 0;
 					}
 
 					if (!state_set_add(&en->sl, fsm->opt->alloc, i)) {

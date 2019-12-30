@@ -70,12 +70,9 @@ fsm_addedge_literal(struct fsm *fsm,
 		}
 	}
 
-	e = edge_set_contains(fsm->states[from].edges, c);
+	e = edge_set_add(fsm->states[from].edges, c);
 	if (e == NULL) {
-		e = edge_set_add(fsm->states[from].edges, c);
-		if (e == NULL) {
-			return 0;
-		}
+		return 0;
 	}
 
 	if (!state_set_add(&e->sl, fsm->opt->alloc, to)) {
@@ -106,12 +103,9 @@ fsm_addedge_bulk(struct fsm *fsm,
 		}
 	}
 
-	e = edge_set_contains(fsm->states[from].edges, c);
+	e = edge_set_add(fsm->states[from].edges, c);
 	if (e == NULL) {
-		e = edge_set_add(fsm->states[from].edges, c);
-		if (e == NULL) {
-			return 0;
-		}
+		return 0;
 	}
 
 	if (!state_set_add_bulk(&e->sl, fsm->opt->alloc, a, n)) {
