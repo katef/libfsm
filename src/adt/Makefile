@@ -18,7 +18,7 @@ SRC += src/adt/hashset.c
 SRC += src/adt/mappinghashset.c
 SRC += src/adt/statehashset.c
 
-.for src in ${SRC:Msrc/adt/bitmap.c}
+.for src in ${SRC:Msrc/adt/bitmap.c} ${SRC:Msrc/adt/edgeset.c}
 CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor

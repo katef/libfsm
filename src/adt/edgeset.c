@@ -7,7 +7,10 @@
 #include <assert.h>
 #include <stddef.h>
 
+#include "libfsm/internal.h" /* XXX: for allocating struct fsm_edge */
+
 #include <adt/set.h>
+#include <adt/stateset.h>
 #include <adt/edgeset.h>
 
 typedef struct fsm_edge item_t;
@@ -59,6 +62,42 @@ edge_set_count(const struct edge_set *set)
 	}
 
 	return set_count((const struct set *) set);
+}
+
+int
+edge_set_copy(struct edge_set *dst, const struct fsm_alloc *alloc,
+	const struct edge_set *src)
+{
+	struct edge_iter jt;
+	struct fsm_edge *e;
+
+	assert(dst != NULL);
+	assert(src != NULL);
+
+	for (e = edge_set_first((void *) src, &jt); e != NULL; e = edge_set_next(&jt)) {
+		struct fsm_edge *en;
+
+		en = edge_set_contains(dst, e);
+		if (en == NULL) {
+			en = f_malloc(alloc, sizeof *en);
+			if (en == NULL) {
+				return 0;
+			}
+
+			en->symbol = e->symbol;
+			en->sl = NULL;
+
+			if (!edge_set_add(dst, en)) {
+				return 0;
+			}
+		}
+
+		if (!state_set_copy(&en->sl, alloc, e->sl)) {
+			return 0;
+		}   
+	}
+
+	return 1;
 }
 
 void
