@@ -24,30 +24,12 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
-/* Return true if the edges after o contains state */
-/* TODO: centralise */
-static int
-contains(struct edge_set *edges, int o, fsm_state_t state)
-{
-	struct fsm_edge *e;
-	struct edge_iter it;
-
-	assert(edges != NULL);
-
-	for (e = edge_set_firstafter(edges, &it, o); e != NULL; e = edge_set_next(&it)) {
-		if (state_set_contains(e->sl, state)) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
 static void
 singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 {
 	struct fsm_edge *e;
 	struct edge_iter it;
+	struct state_set *unique;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
@@ -102,6 +84,20 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 		return;
 	}
 
+	unique = NULL;
+
+	for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
+		struct state_iter jt;
+		fsm_state_t st;
+
+		for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
+			if (!state_set_add(&unique, fsm->opt->alloc, st)) {
+				/* TODO: error */
+				return;
+			}
+		}
+	}
+
 	/*
 	 * The consolidate_edges option is an aesthetic optimisation.
 	 * For a state which has multiple edges all transitioning to the same state,
@@ -111,7 +107,6 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	 * To implement this, we loop through all unique states, rather than
 	 * looping through each edge.
 	 */
-	/* TODO: handle special edges upto FSM_EDGE_MAX separately */
 	for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
 		struct state_iter jt;
 		fsm_state_t st;
@@ -122,9 +117,11 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 			struct bm bm;
 
 			/* unique states only */
-			if (contains(fsm->states[s].edges, e->symbol, st)) {
+			if (!state_set_contains(unique, st)) {
 				continue;
 			}
+
+			state_set_remove(&unique, st);
 
 			bm_clear(&bm);
 

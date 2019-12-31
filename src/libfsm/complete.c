@@ -59,6 +59,7 @@ fsm_complete(struct fsm *fsm,
 			continue;
 		}
 
+/* TODO: instead construct a bitmap of missing symbols */
 		for (c = 0; c <= UCHAR_MAX; c++) {
 			if (fsm_hasedge_literal(fsm, i, c)) {
 				continue;

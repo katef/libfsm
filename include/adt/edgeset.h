@@ -43,9 +43,6 @@ struct fsm_edge *
 edge_set_first(struct edge_set *set, struct edge_iter *it);
 
 struct fsm_edge *
-edge_set_firstafter(const struct edge_set *set, struct edge_iter *it, unsigned char symbol);
-
-struct fsm_edge *
 edge_set_next(struct edge_iter *it);
 
 int

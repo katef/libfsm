@@ -71,7 +71,7 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 	struct fsm_edge *e;
 	struct edge_iter it;
 	size_t i, j, k;
-	size_t n;
+	size_t grp_ind, n;
 
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
@@ -85,7 +85,8 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 	 * in the second pass below.
 	 */
 
-	n = 0;
+	n = 0;          /* number of allocated ranges */
+	grp_ind = 0;    /* index of current working range */
 
 	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
 		fsm_state_t s;
@@ -99,37 +100,15 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 			continue;
 		}
 
-		ranges[n].start = e->symbol;
-		ranges[n].end   = e->symbol;
-		ranges[n].to    = s;
+		if (n > 0 && e->symbol == ranges[grp_ind].end + 1 && s == ranges[grp_ind].to) {
+			ranges[grp_ind].end = e->symbol;
+		} else {
+			grp_ind = n++;
 
-		if (e->symbol <= UCHAR_MAX - 1) {
-			do {
-				const struct fsm_edge *ne;
-				struct edge_iter jt;
-				fsm_state_t ns;
-
-				ne = edge_set_firstafter(fsm->states[state].edges, &jt, e->symbol);
-				if (ne == NULL || ne->symbol != e->symbol + 1) {
-					break;
-				}
-
-				if (state_set_empty(ne->sl)) {
-					break;
-				}
-
-				ns = state_set_only(ne->sl);
-				if ((have_mode && ns == mode) || ns != s) {
-					break;
-				}
-
-				ranges[n].end = ne->symbol;
-
-				e = edge_set_next(&it);
-			} while (e != NULL);
+			ranges[grp_ind].start = e->symbol;
+			ranges[grp_ind].end   = e->symbol;
+			ranges[grp_ind].to    = s;
 		}
-
-		n++;
 	}
 
 	assert(n > 0);

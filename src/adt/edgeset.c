@@ -264,39 +264,6 @@ edge_set_first(struct edge_set *set, struct edge_iter *it)
 }
 
 struct fsm_edge *
-edge_set_firstafter(const struct edge_set *set, struct edge_iter *it, unsigned char symbol)
-{
-	size_t i;
-	int r;
-
-	assert(set != NULL);
-	assert(set->a != NULL);
-	assert(it != NULL);
-
-	if (edge_set_empty(set)) {
-		it->set = NULL;
-		return NULL;
-	}
-
-	i = edge_set_search(set, symbol);
-	r = cmp(symbol, set->a[i].symbol);
-	assert(i <= set->i - 1);
-
-	if (r >= 0 && i == set->i - 1) {
-		it->set = NULL;
-		return NULL;
-	}
-
-	it->i = i;
-	if (r >= 0) {
-		it->i++;
-	}
-
-	it->set = set;
-	return &it->set->a[it->i];
-}
-
-struct fsm_edge *
 edge_set_next(struct edge_iter *it)
 {
 	assert(it != NULL);
