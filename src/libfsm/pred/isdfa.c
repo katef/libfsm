@@ -5,12 +5,17 @@
  */
 
 #include <assert.h>
+#include <limits.h>
 #include <stddef.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 
+#include <print/esc.h>
+
+#include <adt/bitmap.h>
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
@@ -20,9 +25,8 @@
 int
 fsm_isdfa(const struct fsm *fsm, fsm_state_t state)
 {
-	struct fsm_edge *e;
-	struct edge_iter it;
 	fsm_state_t start;
+	struct bm bm;
 
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
@@ -41,17 +45,10 @@ fsm_isdfa(const struct fsm *fsm, fsm_state_t state)
 		return 0;
 	}
 
-	/*
-	 * DFA may not have duplicate edges.
-	 */
-	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		if (state_set_empty(e->sl)) {
-			continue;
-		}
+	bm_clear(&bm);
 
-		if (state_set_count(e->sl) > 1) {
-			return 0;
-		}
+	if (state_hasnondeterminism(fsm, state, &bm)) {
+		return 0;
 	}
 
 	return 1;

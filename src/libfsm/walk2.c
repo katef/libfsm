@@ -332,8 +332,8 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 {
 	fsm_state_t qa, qb, qc;
 	int have_qa, have_qb;
-	struct edge_iter ei, ej;
 	const struct fsm_edge *ea, *eb;
+	int i;
 
 	assert(a != NULL);
 	assert(b != NULL);
@@ -409,9 +409,21 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	}
 
 	/* take care of only A and both A&B edges */
-	for (ea = edge_set_first(a->states[qa].edges, &ei); ea != NULL; ea = edge_set_next(&ei)) {
+	for (i = 0; i <= FSM_SIGMA_MAX; i++) {
 		struct state_iter dia, dib;
 		fsm_state_t da;
+
+		ea = edge_set_contains(a->states[qa].edges, i);
+		if (ea == NULL) {
+			continue;
+		}
+
+		/* just in case our DFA has unpopulated edges */
+		if (ea->sl == NULL) {
+			continue;
+		}
+
+		assert(state_set_count(ea->sl) == 1); /* qa is a DFA */
 
 		eb = have_qb ? fsm_hasedge_literal(b, qb, ea->symbol) : NULL;
 
@@ -484,9 +496,21 @@ only_b:
 	}
 
 	/* take care of only B edges */
-	for (eb = edge_set_first(b->states[qb].edges, &ej); eb != NULL; eb = edge_set_next(&ej)) {
+	for (i = 0; i <= FSM_SIGMA_MAX; i++) {
 		struct state_iter dib;
 		fsm_state_t db;
+
+		eb = edge_set_contains(b->states[qb].edges, i);
+		if (eb == NULL) {
+			continue;
+		}
+
+		/* just in case our DFA has unpopulated edges */
+		if (eb->sl == NULL) {
+			continue;
+		}
+
+		assert(state_set_count(eb->sl) == 1); /* qb is a DFA */
 
 		/* if A has the edge, it's not an only B edge */
 		if (have_qa && fsm_hasedge_literal(a, qa, eb->symbol)) {

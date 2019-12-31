@@ -5,13 +5,17 @@
  */
 
 #include <assert.h>
-#include <stddef.h>
 #include <limits.h>
+#include <stddef.h>
+#include <stdio.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 
+#include <print/esc.h>
+
 #include <adt/set.h>
+#include <adt/bitmap.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
@@ -22,15 +26,15 @@ fsm_iscomplete(const struct fsm *fsm, fsm_state_t state)
 {
 	struct fsm_edge *e;
 	struct edge_iter it;
-	unsigned n;
+	struct bm bm;
 
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
 
-	n = 0;
-
 	/* epsilon transitions have no effect on completeness */
 	(void) fsm->states[state].epsilons;
+
+	bm_clear(&bm);
 
 	/* TODO: assert state is in fsm->sl */
 	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
@@ -38,9 +42,9 @@ fsm_iscomplete(const struct fsm *fsm, fsm_state_t state)
 			continue;
 		}
 
-		n++;
+		bm_set(&bm, e->symbol);
 	}
 
-	return n == FSM_SIGMA_COUNT;
+	return bm_count(&bm) == FSM_SIGMA_COUNT;
 }
 

@@ -13,6 +13,7 @@
 #include <fsm/fsm.h>
 #include <fsm/options.h>
 
+struct bm;
 struct edge_set;
 struct state_set;
 struct state_array;
@@ -88,6 +89,9 @@ fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
 struct fsm *
 fsm_mergeab(struct fsm *a, struct fsm *b,
     fsm_state_t *base_b);
+
+int
+state_hasnondeterminism(const struct fsm *fsm, fsm_state_t state, struct bm *bm);
 
 /*
  * TODO: if this were a public API, we could present ragged array of { a, n } structs
