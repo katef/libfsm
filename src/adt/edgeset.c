@@ -61,7 +61,8 @@ edge_set_free(struct edge_set *set)
 }
 
 struct fsm_edge *
-edge_set_add(struct edge_set *set, unsigned char symbol)
+edge_set_add(struct edge_set *set, unsigned char symbol,
+	fsm_state_t state)
 {
 	struct fsm_edge *e;
 
@@ -79,9 +80,11 @@ edge_set_add(struct edge_set *set, unsigned char symbol)
 		set->n *= 2;
 	}
 
-	set->a[set->i].symbol = symbol;
-	set->a[set->i].sl     = NULL;
 	e = &set->a[set->i];
+
+	e->symbol = symbol;
+	e->state  = state;
+
 	set->i++;
 
 	assert(edge_set_contains(set, symbol));
@@ -123,8 +126,7 @@ edge_set_count(const struct edge_set *set)
 }
 
 int
-edge_set_copy(struct edge_set *dst, const struct fsm_alloc *alloc,
-	const struct edge_set *src)
+edge_set_copy(struct edge_set *dst, const struct edge_set *src)
 {
 	struct edge_iter jt;
 	struct fsm_edge *e;
@@ -133,16 +135,9 @@ edge_set_copy(struct edge_set *dst, const struct fsm_alloc *alloc,
 	assert(src != NULL);
 
 	for (e = edge_set_first((void *) src, &jt); e != NULL; e = edge_set_next(&jt)) {
-		struct fsm_edge *en;
-
-		en = edge_set_add(dst, e->symbol);
-		if (en == NULL) {
+		if (!edge_set_add(dst, e->symbol, e->state)) {
 			return 0;
 		}
-
-		if (!state_set_copy(&en->sl, alloc, e->sl)) {
-			return 0;
-		}   
 	}
 
 	return 1;
@@ -171,6 +166,29 @@ edge_set_remove(struct edge_set *set, unsigned char symbol)
 	}
 
 	assert(!edge_set_contains(set, symbol));
+}
+
+void
+edge_set_remove_state(struct edge_set *set, fsm_state_t state)
+{
+	size_t i;
+
+	assert(set != NULL);
+
+	if (set == NULL) {
+		return;
+	}
+
+	if (edge_set_empty(set)) {
+		return;
+	}
+
+	for (i = 0; i < set->i; i++) {
+		if (set->a[i].state == state) {
+			memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
+			set->i--;
+		}
+	}
 }
 
 struct fsm_edge *
@@ -210,14 +228,6 @@ edge_set_next(struct edge_iter *it)
 }
 
 int
-edge_set_hasnext(struct edge_iter *it)
-{
-	assert(it != NULL);
-
-	return it->set && it->i + 1 < it->set->i;
-}
-
-int
 edge_set_empty(const struct edge_set *set)
 {
 	if (set == NULL) {
@@ -225,15 +235,5 @@ edge_set_empty(const struct edge_set *set)
 	}
 
 	return set->i == 0;
-}
-
-struct fsm_edge *
-edge_set_only(const struct edge_set *set)
-{
-	assert(set != NULL);
-	assert(set->n >= 1);
-	assert(set->i == 1);
-
-	return &set->a[0];
 }
 

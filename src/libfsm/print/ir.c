@@ -89,25 +89,18 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 	grp_ind = 0;    /* index of current working range */
 
 	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		fsm_state_t s;
-
-		if (state_set_empty(e->sl)) {
+		if (have_mode && e->state == mode) {
 			continue;
 		}
 
-		s = state_set_only(e->sl);
-		if (have_mode && s == mode) {
-			continue;
-		}
-
-		if (n > 0 && e->symbol == ranges[grp_ind].end + 1 && s == ranges[grp_ind].to) {
+		if (n > 0 && e->symbol == ranges[grp_ind].end + 1 && e->state == ranges[grp_ind].to) {
 			ranges[grp_ind].end = e->symbol;
 		} else {
 			grp_ind = n++;
 
 			ranges[grp_ind].start = e->symbol;
 			ranges[grp_ind].end   = e->symbol;
-			ranges[grp_ind].to    = s;
+			ranges[grp_ind].to    = e->state;
 		}
 	}
 

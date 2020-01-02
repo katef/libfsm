@@ -134,10 +134,10 @@ fsm_reverse(struct fsm *fsm)
 		for (i = 0; i < fsm->statecount; i++) {
 			struct edge_iter it;
 			struct fsm_edge *e;
-			fsm_state_t se;
 
 			{
 				struct state_iter jt;
+				fsm_state_t se;
 
 				/* TODO: eventually to be a predicate bit cached for the whole fsm */
 				if (fsm->states[i].epsilons != NULL) {
@@ -151,28 +151,20 @@ fsm_reverse(struct fsm *fsm)
 				}
 			}
 			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-				struct state_iter jt;
+				struct fsm_edge *en;
 
-				for (state_set_reset(e->sl, &jt); state_set_next(&jt, &se); ) {
-					struct fsm_edge *en;
+				assert(e->state < fsm->statecount);
 
-					assert(se < fsm->statecount);
-
-					if (edges[se] == NULL) {
-						edges[se] = edge_set_create(fsm->opt->alloc);
-						if (edges[se] == NULL) {
-							goto error1;
-						}
+				if (edges[e->state] == NULL) {
+					edges[e->state] = edge_set_create(fsm->opt->alloc);
+					if (edges[e->state] == NULL) {
+						goto error1;
 					}
+				}
 
-					en = edge_set_add(edges[se], e->symbol);
-					if (en == NULL) {
-						return 0;
-					}
-
-					if (!state_set_add(&en->sl, fsm->opt->alloc, i)) {
-						return 0;
-					}
+				en = edge_set_add(edges[e->state], e->symbol, i);
+				if (en == NULL) {
+					return 0;
 				}
 			}
 		}
@@ -231,7 +223,7 @@ fsm_reverse(struct fsm *fsm)
 				continue;
 			}
 
-			if (!edge_set_copy(edges[start], fsm->opt->alloc, edges[s])) {
+			if (!edge_set_copy(edges[start], edges[s])) {
 				goto error;
 			}
 		}

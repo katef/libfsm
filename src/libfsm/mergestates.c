@@ -39,13 +39,8 @@ fsm_mergestates(struct fsm *fsm, fsm_state_t a, fsm_state_t b,
 		}
 	}
 	for (e = edge_set_first(fsm->states[b].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		struct state_iter jt;
-		fsm_state_t s;
-
-		for (state_set_reset(e->sl, &jt); state_set_next(&jt, &s); ) {
-			if (!fsm_addedge_literal(fsm, a, s, e->symbol)) {
-				return 0;
-			}
+		if (!fsm_addedge_literal(fsm, a, e->state, e->symbol)) {
+			return 0;
 		}
 	}
 
@@ -60,13 +55,17 @@ fsm_mergestates(struct fsm *fsm, fsm_state_t a, fsm_state_t b,
 		}
 
 		for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-			state_set_remove(&e->sl, b);
-
-			if (state_set_contains(e->sl, b)) {
-				if (!fsm_addedge_literal(fsm, i, a, e->symbol)) {
-					return 0;
-				}
+			if (e->state != b) {
+				continue;
 			}
+
+			if (!fsm_addedge_literal(fsm, i, a, e->symbol)) {
+				return 0;
+			}
+		}
+
+		if (fsm->states[i].edges != NULL) {
+			edge_set_remove_state(fsm->states[i].edges, b);
 		}
 	}
 

@@ -19,9 +19,6 @@
 int
 fsm_hasoutgoing(const struct fsm *fsm, fsm_state_t state)
 {
-	struct fsm_edge *e;
-	struct edge_iter it;
-
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
 
@@ -29,10 +26,8 @@ fsm_hasoutgoing(const struct fsm *fsm, fsm_state_t state)
 		return 1;
 	}
 
-	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		if (!state_set_empty(e->sl)) {
-			return 1;
-		}
+	if (!edge_set_empty(fsm->states[state].edges)) {
+		return 1;
 	}
 
 	return 0;

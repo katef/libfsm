@@ -107,21 +107,18 @@ fsm_capture_duplicate(struct fsm *fsm,
 		}
 
 		for (e = edge_set_first(fsm->states[old_src].edges, &it); e != NULL; e = edge_set_next(&it)) {
-			struct state_iter jt;
-			fsm_state_t old_dst;
+			fsm_state_t old_dst, new_dst;
 
-			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &old_dst); ) {
-				fsm_state_t new_dst;
+			old_dst = e->state;
 
-				if (old_dst < old_start || old_dst >= old_end) {
-					continue;
-				}
+			if (old_dst < old_start || old_dst >= old_end) {
+				continue;
+			}
 
-				new_dst = new_start + (old_dst - old_start);
+			new_dst = new_start + (old_dst - old_start);
 
-				if (!fsm_addedge_literal(fsm, ind, new_dst, e->symbol)) {
-					return 0;
-				}
+			if (!fsm_addedge_literal(fsm, ind, new_dst, e->symbol)) {
+				return 0;
 			}
 		}
 	}

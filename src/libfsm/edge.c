@@ -70,12 +70,8 @@ fsm_addedge_literal(struct fsm *fsm,
 		}
 	}
 
-	e = edge_set_add(fsm->states[from].edges, c);
+	e = edge_set_add(fsm->states[from].edges, c, to);
 	if (e == NULL) {
-		return 0;
-	}
-
-	if (!state_set_add(&e->sl, fsm->opt->alloc, to)) {
 		return 0;
 	}
 
@@ -87,7 +83,7 @@ fsm_addedge_bulk(struct fsm *fsm,
 	fsm_state_t from, fsm_state_t *a, size_t n,
 	char c)
 {
-	struct fsm_edge *e;
+	size_t i;
 
 	assert(fsm != NULL);
 	assert(a != NULL);
@@ -103,13 +99,11 @@ fsm_addedge_bulk(struct fsm *fsm,
 		}
 	}
 
-	e = edge_set_add(fsm->states[from].edges, c);
-	if (e == NULL) {
-		return 0;
-	}
-
-	if (!state_set_add_bulk(&e->sl, fsm->opt->alloc, a, n)) {
-		return 0;
+	/* TODO: would hope to have a bulk-add interface for edges */
+	for (i = 0; i < n; i++) {
+		if (!edge_set_add(fsm->states[from].edges, c, a[i])) {
+			return 0;
+		}
 	}
 
 	return 1;
@@ -128,7 +122,7 @@ fsm_hasedge_literal(const struct fsm *fsm, fsm_state_t state, char c)
 	}
 
 	e = edge_set_contains(fsm->states[state].edges, c);
-	if (e == NULL || state_set_empty(e->sl)) {
+	if (e == NULL) {
 		return NULL;
 	}
 

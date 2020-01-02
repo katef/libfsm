@@ -86,14 +86,11 @@ fsm_removestate(struct fsm *fsm, fsm_state_t state)
 
 	for (i = 0; i < fsm->statecount; i++) {
 		state_set_remove(&fsm->states[i].epsilons, state);
-		for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-			state_set_remove(&e->sl, state);
+		if (fsm->states[i].edges != NULL) {
+			edge_set_remove_state(fsm->states[i].edges, state);
 		}
 	}
 
-	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		state_set_free(e->sl);
-	}
 	state_set_free(fsm->states[state].epsilons);
 	edge_set_free(fsm->states[state].edges);
 
@@ -116,7 +113,9 @@ fsm_removestate(struct fsm *fsm, fsm_state_t state)
 		for (i = 0; i < fsm->statecount - 1; i++) {
 			state_set_replace(&fsm->states[i].epsilons, fsm->statecount - 1, state);
 			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-				state_set_replace(&e->sl, fsm->statecount - 1, state);
+				if (e->state == fsm->statecount - 1) {
+					e->state = state;
+				}
 			}
 		}
 	}

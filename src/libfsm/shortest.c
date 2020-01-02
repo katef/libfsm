@@ -90,7 +90,6 @@ fsm_shortest(const struct fsm *fsm,
 	while (u = priq_pop(&todo), u != NULL) {
 		struct edge_iter it;
 		struct fsm_edge *e;
-		fsm_state_t s;
 
 		priq_move(&done, u);
 
@@ -104,32 +103,28 @@ fsm_shortest(const struct fsm *fsm,
 		}
 
 		for (e = edge_set_first(fsm->states[u->state].edges, &it); e != NULL; e = edge_set_next(&it)) {
-			struct state_iter jt;
+			struct priq *v;
+			unsigned c;
 
-			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &s); ) {
-				struct priq *v;
-				unsigned c;
+			v = priq_find(todo, e->state);
 
-				v = priq_find(todo, s);
+			/* visited already */
+			if (v == NULL) {
+				assert(priq_find(done, e->state));
+				continue;
+			}
 
-				/* visited already */
-				if (v == NULL) {
-					assert(priq_find(done, s));
-					continue;
-				}
+			assert(v->state == e->state);
 
-				assert(v->state == s);
+			c = cost(u->state, v->state, e->symbol);
 
-				c = cost(u->state, v->state, e->symbol);
+			/* relax */
+			if (v->cost > u->cost + c) {
+				v->cost = u->cost + c;
+				v->prev = u;
+				v->c    = e->symbol;
 
-				/* relax */
-				if (v->cost > u->cost + c) {
-					v->cost = u->cost + c;
-					v->prev = u;
-					v->c    = e->symbol;
-
-					priq_update(&todo, v, v->cost);
-				}
+				priq_update(&todo, v, v->cost);
 			}
 		}
 	}

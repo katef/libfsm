@@ -76,10 +76,6 @@ state_hasnondeterminism(const struct fsm *fsm, fsm_state_t state, struct bm *bm)
 	assert(bm != NULL);
 
 	for (e = edge_set_first(fsm->states[state].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
-		if (state_set_empty(e->sl)) {
-			continue;
-		}
-
 		/*
 		 * Instances of struct fsm_edge aren't unique, and are not ordered.
 		 * The bitmap here is to identify duplicate symbols between structs.
@@ -87,11 +83,6 @@ state_hasnondeterminism(const struct fsm *fsm, fsm_state_t state, struct bm *bm)
 		 * The same bitmap is shared between all states in an epsilon closure.
 		 */
 		if (bm_get(bm, e->symbol)) {
-			return 1;
-		}
-
-		/* Duplicate symbols within the same struct fsm_edge */
-		if (state_set_count(e->sl) > 1) {
 			return 1;
 		}
 

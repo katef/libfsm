@@ -36,11 +36,8 @@ fsm_iscomplete(const struct fsm *fsm, fsm_state_t state)
 
 	bm_clear(&bm);
 
-	/* TODO: assert state is in fsm->sl */
 	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		if (state_set_empty(e->sl)) {
-			continue;
-		}
+		assert(e->state < fsm->statecount);
 
 		bm_set(&bm, e->symbol);
 	}

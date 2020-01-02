@@ -74,14 +74,9 @@ fsm_clone(const struct fsm *fsm)
 			}
 
 			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-				struct state_iter jt;
-				fsm_state_t to;
-
-				for (state_set_reset(e->sl, &jt); state_set_next(&jt, &to); ) {
-					if (!fsm_addedge_literal(new, i, to, e->symbol)) {
-						fsm_free(new);
-						return NULL;
-					}
+				if (!fsm_addedge_literal(new, i, e->state, e->symbol)) {
+					fsm_free(new);
+					return NULL;
 				}
 			}
 		}

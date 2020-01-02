@@ -120,24 +120,16 @@ mapping_addedges(struct mapping *from, struct mapping *to,
 	if (from->edges == NULL) {
 		from->edges = edge_set_create(alloc);
 		if (from->edges == NULL) {
-			goto error;
+			return 0;
 		}
 	}
 
-	e = edge_set_add(from->edges, c);
+	e = edge_set_add(from->edges, c, to->dfastate);
 	if (e == NULL) {
-		goto error;
-	}
-
-	if (!state_set_add(&e->sl, alloc, to->dfastate)) {
-		goto error;
+		return 0;
 	}
 
 	return 1;
-
-error:
-
-	return 0;
 }
 
 /* TODO: this stack is just a placeholder for something more suitable */

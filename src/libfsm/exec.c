@@ -32,7 +32,7 @@ nextstate(const struct fsm *fsm, fsm_state_t state, int c,
 		return 0;
 	}
 
-	*next = state_set_only(e->sl);
+	*next = e->state;
 	return 1;
 }
 

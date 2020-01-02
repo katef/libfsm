@@ -65,20 +65,15 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 		}
 
 		for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
-			struct state_iter jt;
-			fsm_state_t st;
+			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+				s,
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+				e->state);
 
-			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
-				fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
-					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-					s,
-					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-					st);
+			dot_escputc_html(f, fsm->opt, e->symbol);
 
-				dot_escputc_html(f, fsm->opt, e->symbol);
-
-				fprintf(f, "> ];\n");
-			}
+			fprintf(f, "> ];\n");
 		}
 
 		return;
@@ -87,14 +82,9 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	unique = NULL;
 
 	for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		struct state_iter jt;
-		fsm_state_t st;
-
-		for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
-			if (!state_set_add(&unique, fsm->opt->alloc, st)) {
-				/* TODO: error */
-				return;
-			}
+		if (!state_set_add(&unique, fsm->opt->alloc, e->state)) {
+			/* TODO: error */
+			return;
 		}
 	}
 
@@ -108,46 +98,41 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	 * looping through each edge.
 	 */
 	for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		struct state_iter jt;
-		fsm_state_t st;
+		struct fsm_edge *ne;
+		struct edge_iter kt;
+		struct bm bm;
 
-		for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
-			struct fsm_edge *ne;
-			struct edge_iter kt;
-			struct bm bm;
-
-			/* unique states only */
-			if (!state_set_contains(unique, st)) {
-				continue;
-			}
-
-			state_set_remove(&unique, st);
-
-			bm_clear(&bm);
-
-			/* find all edges which go from this state to the same target state */
-			for (ne = edge_set_first(fsm->states[s].edges, &kt); ne != NULL; ne = edge_set_next(&kt)) {
-				if (state_set_contains(ne->sl, st)) {
-					bm_set(&bm, ne->symbol);
-				}
-			}
-
-			fprintf(f, "\t%sS%-2u -> %sS%-2u [ ",
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				s,
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				st);
-
-			if (bm_count(&bm) > 4) {
-				fprintf(f, "weight = 3, ");
-			}
-
-			fprintf(f, "label = <");
-
-			(void) bm_print(f, fsm->opt, &bm, 0, dot_escputc_html);
-
-			fprintf(f, "> ];\n");
+		/* unique states only */
+		if (!state_set_contains(unique, e->state)) {
+			continue;
 		}
+
+		state_set_remove(&unique, e->state);
+
+		bm_clear(&bm);
+
+		/* find all edges which go from this state to the same target state */
+		for (ne = edge_set_first(fsm->states[s].edges, &kt); ne != NULL; ne = edge_set_next(&kt)) {
+			if (ne->state == e->state) {
+				bm_set(&bm, ne->symbol);
+			}
+		}
+
+		fprintf(f, "\t%sS%-2u -> %sS%-2u [ ",
+			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+			s,
+			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+			e->state);
+
+		if (bm_count(&bm) > 4) {
+			fprintf(f, "weight = 3, ");
+		}
+
+		fprintf(f, "label = <");
+
+		(void) bm_print(f, fsm->opt, &bm, 0, dot_escputc_html);
+
+		fprintf(f, "> ];\n");
 	}
 
 	/*

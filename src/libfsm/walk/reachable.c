@@ -55,18 +55,13 @@ fsm_reachable(const struct fsm *fsm, fsm_state_t state,
 		}
 
 		for (e = edge_set_first(fsm->states[p->state].edges, &it); e != NULL; e = edge_set_next(&it)) {
-			struct state_iter jt;
-			fsm_state_t st;
+			/* not a list operation... */
+			if (dlist_contains(list, e->state)) {
+				continue;
+			}
 
-			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
-				/* not a list operation... */
-				if (dlist_contains(list, st)) {
-					continue;
-				}
-
-				if (!dlist_push(fsm->opt->alloc, &list, st)) {
-					return -1;
-				}
+			if (!dlist_push(fsm->opt->alloc, &list, e->state)) {
+				return -1;
 			}
 		}
 

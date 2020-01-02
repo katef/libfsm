@@ -33,7 +33,7 @@ fsm_hasincoming(const struct fsm *fsm, fsm_state_t state)
 		}
 
 		for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-			if (e->sl != NULL && state_set_contains(e->sl, state)) {
+			if (e->state == state) {
 				return 1;
 			}
 		}

@@ -145,9 +145,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 		}
 
 		for (e = edge_set_first(fsm->states[from].edges, &it); e != NULL; e = edge_set_next(&it)) {
-			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &to); ) {
-				bm_set(&a[to], e->symbol);
-			}
+			bm_set(&a[e->state], e->symbol);
 		}
 
 		for (i = 0; i < fsm->statecount; i++) {

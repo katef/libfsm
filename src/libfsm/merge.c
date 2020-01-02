@@ -48,6 +48,7 @@ merge(struct fsm *dst, struct fsm *src,
 	 * XXX: base_a and base_b would become redundant if we change to the
 	 * shared global array idea.
 	 */
+	/* TODO: maybe make an edge_set_rebase() */
 	{
 		fsm_state_t i;
 
@@ -61,7 +62,7 @@ merge(struct fsm *dst, struct fsm *src,
 			state_set_rebase(&src->states[i].epsilons, *base_src);
 
 			for (e = edge_set_first(src->states[i].edges, &ei); e != NULL; e = edge_set_next(&ei)) {
-				state_set_rebase(&e->sl, *base_src);
+				e->state += *base_src;
 			}
 		}
 	}

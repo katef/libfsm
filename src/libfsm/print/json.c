@@ -70,29 +70,24 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 			}
 
 			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-				struct state_iter jt;
-				fsm_state_t st;
-
-				for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
-					if (!first) {
-						fprintf(f, ",\n");
-					}
-
-					fprintf(f, "\t\t\t\t{ ");
-
-					fprintf(f, "\"char\": ");
-					fputs(" \"", f);
-					json_escputc(f, fsm->opt, e->symbol);
-					putc('\"', f);
-
-					fprintf(f, ", ");
-
-					fprintf(f, "\"to\": %u", st);
-
-					fprintf(f, " }");
-
-					first = 0;
+				if (!first) {
+					fprintf(f, ",\n");
 				}
+
+				fprintf(f, "\t\t\t\t{ ");
+
+				fprintf(f, "\"char\": ");
+				fputs(" \"", f);
+				json_escputc(f, fsm->opt, e->symbol);
+				putc('\"', f);
+
+				fprintf(f, ", ");
+
+				fprintf(f, "\"to\": %u", e->state);
+
+				fprintf(f, " }");
+
+				first = 0;
 			}
 
 			if (!first) {

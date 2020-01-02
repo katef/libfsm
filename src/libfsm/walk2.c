@@ -410,22 +410,14 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 
 	/* take care of only A and both A&B edges */
 	for (i = 0; i <= FSM_SIGMA_MAX; i++) {
-		struct state_iter dia, dib;
-		fsm_state_t da;
+		struct fsm_walk2_tuple *dst;
 
 		ea = edge_set_contains(a->states[qa].edges, i);
 		if (ea == NULL) {
 			continue;
 		}
 
-		/* just in case our DFA has unpopulated edges */
-		if (ea->sl == NULL) {
-			continue;
-		}
-
-		assert(state_set_count(ea->sl) == 1); /* qa is a DFA */
-
-		eb = have_qb ? fsm_hasedge_literal(b, qb, ea->symbol) : NULL;
+		eb = have_qb ? fsm_hasedge_literal(b, qb, i) : NULL;
 
 		/*
 		 * If eb == NULL we can only follow this edge if ONLYA
@@ -435,55 +427,28 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 			continue;
 		}
 
-		for (state_set_reset(ea->sl, &dia); state_set_next(&dia, &da); ) {
-			fsm_state_t db = 0;
-			int have_db;
+		if (eb != NULL) {
+			dst = fsm_walk2_tuple_new(data, a, ea->state, b, eb->state);
+		} else {
+			dst = fsm_walk2_tuple_new(data, a, ea->state, NULL, 0);
+		}
+		if (dst == NULL) {
+			return 0;
+		}
 
-			if (eb != NULL) {
-				state_set_reset(eb->sl, &dib);
-				have_db = state_set_next(&dib, &db);
-			} else {
-				have_db = 0;
-			}
+		assert(dst->comb < data->new->statecount);
 
-			/*
-			 * for loop with break to handle the situation where there is no
-			 * corresponding edge in the B graph. This will proceed through
-			 * the loop once, even when !have_db.
-			 */
-			for (;;) {
-				struct fsm_walk2_tuple *dst;
+		if (!fsm_addedge_literal(data->new, qc, dst->comb, i)) {
+			return 0;
+		}
 
-				dst = fsm_walk2_tuple_new(data, a, da, have_db ? b : NULL, db);
-				if (dst == NULL) {
-					return 0;
-				}
-
-				assert(dst->comb < data->new->statecount);
-
-				if (!fsm_addedge_literal(data->new, qc, dst->comb, ea->symbol)) {
-					return 0;
-				}
-
-				/*
-				 * depth-first traversal of the graph, but only traverse
-				 * if the state has not yet been visited
-				 */
-				if (!data->new->states[dst->comb].visited) {
-					if (!fsm_walk2_edges(data, a, b, dst)) {
-						return 0;
-					}
-				}
-
-				/* if db is present, fetch the next edge in B */
-				if (have_db) {
-					have_db = state_set_next(&dib, &db);
-				}
-
-				/* if db is absent, stop iterating over edges in B */
-				if (!have_db) {
-					break;
-				}
+		/*
+		 * depth-first traversal of the graph, but only traverse
+		 * if the state has not yet been visited
+		 */
+		if (!data->new->states[dst->comb].visited) {
+			if (!fsm_walk2_edges(data, a, b, dst)) {
+				return 0;
 			}
 		}
 	}
@@ -497,54 +462,36 @@ only_b:
 
 	/* take care of only B edges */
 	for (i = 0; i <= FSM_SIGMA_MAX; i++) {
-		struct state_iter dib;
-		fsm_state_t db;
+		struct fsm_walk2_tuple *dst;
 
 		eb = edge_set_contains(b->states[qb].edges, i);
 		if (eb == NULL) {
 			continue;
 		}
 
-		/* just in case our DFA has unpopulated edges */
-		if (eb->sl == NULL) {
+		/* if A has the edge, it's not an only B edge */
+		if (have_qa && fsm_hasedge_literal(a, qa, i)) {
 			continue;
 		}
 
-		assert(state_set_count(eb->sl) == 1); /* qb is a DFA */
+		dst = fsm_walk2_tuple_new(data, NULL, 0, b, eb->state);
+		if (dst == NULL) {
+			return 0;
+		}
 
-		/* if A has the edge, it's not an only B edge */
-		if (have_qa && fsm_hasedge_literal(a, qa, eb->symbol)) {
-			continue;
+		assert(dst->comb < data->new->statecount);
+
+		if (!fsm_addedge_literal(data->new, qc, dst->comb, i)) {
+			return 0;
 		}
 
 		/*
-		 * ONLYB loop is simpler because we only deal with
-		 * states in the B graph (the A state is always NULL)
+		 * depth-first traversal of the graph, but only traverse
+		 * if the state has not yet been visited
 		 */
-		for (state_set_reset(eb->sl, &dib); state_set_next(&dib, &db); ) {
-			for (;;) {
-				struct fsm_walk2_tuple *dst;
-
-				dst = fsm_walk2_tuple_new(data, NULL, 0, b, db);
-				if (dst == NULL) {
-					return 0;
-				}
-
-				assert(dst->comb < data->new->statecount);
-
-				if (!fsm_addedge_literal(data->new, qc, dst->comb, eb->symbol)) {
-					return 0;
-				}
-
-				/*
-				 * depth-first traversal of the graph, but only traverse
-				 * if the state has not yet been visited
-				 */
-				if (!data->new->states[dst->comb].visited) {
-					if (!fsm_walk2_edges(data, a, b, dst)) {
-						return 0;
-					}
-				}
+		if (!data->new->states[dst->comb].visited) {
+			if (!fsm_walk2_edges(data, a, b, dst)) {
+				return 0;
 			}
 		}
 	}

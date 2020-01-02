@@ -41,7 +41,7 @@ struct state_array;
 #define FSM_ENDCOUNT_MAX ULONG_MAX
 
 struct fsm_edge {
-	struct state_set *sl;
+	fsm_state_t state; /* destination */
 	unsigned char symbol;
 };
 

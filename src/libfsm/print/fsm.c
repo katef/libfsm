@@ -29,8 +29,7 @@ findany(const struct fsm *fsm, fsm_state_t state, fsm_state_t *a)
 {
 	struct fsm_edge *e;
 	struct edge_iter it;
-	struct state_iter jt;
-	fsm_state_t f, s;
+	fsm_state_t f;
 	struct bm bm;
 
 	assert(fsm != NULL);
@@ -46,7 +45,7 @@ findany(const struct fsm *fsm, fsm_state_t state, fsm_state_t *a)
 	 *
 	 * where a given state also has an unrelated edge transitioning elsewhere.
 	 * The current implementation conservatively bails out on that situation
-	 * (because state_set_only() is false), and will emit each edge separately.
+	 * (because f != e->state), and will emit each edge separately.
 	 */
 
 	bm_clear(&bm);
@@ -62,18 +61,15 @@ findany(const struct fsm *fsm, fsm_state_t state, fsm_state_t *a)
 		return 0;
 	}
 
-	state_set_reset(e->sl, &jt);
-	if (!state_set_next(&jt, &f)) {
-		return 0;
-	}
+	f = e->state;
 
 	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		if (state_set_count(e->sl) != 1) {
+		if (f != e->state) {
 			return 0;
 		}
 
-		s = state_set_only(e->sl);
-		if (f != s) {
+		/* we reject duplicate edges, even though they're to the same state */
+		if (bm_get(&bm, e->symbol)) {
 			return 0;
 		}
 
@@ -122,46 +118,41 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 		}
 
 		for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
-			struct state_iter jt;
-			fsm_state_t st;
+			fprintf(f, "%-2u -> %2u", s, e->state);
 
-			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
-				fprintf(f, "%-2u -> %2u", s, st);
+			fputs(" \"", f);
+			fsm_escputc(f, fsm->opt, e->symbol);
+			putc('\"', f);
 
-				fputs(" \"", f);
-				fsm_escputc(f, fsm->opt, e->symbol);
-				putc('\"', f);
+			fprintf(f, ";");
 
-				fprintf(f, ";");
+			if (fsm->opt->comments) {
+				fsm_state_t start;
 
-				if (fsm->opt->comments) {
-					fsm_state_t start;
+				if (fsm_getstart(fsm, &start)) {
+					if (e->state == start) {
+						fprintf(f, " # start");
+					} else if (!fsm_has(fsm, fsm_hasepsilons)) {
+						char buf[50];
+						int n;
 
-					if (fsm_getstart(fsm, &start)) {
-						if (st == start) {
-							fprintf(f, " # start");
-						} else if (!fsm_has(fsm, fsm_hasepsilons)) {
-							char buf[50];
-							int n;
+						n = fsm_example(fsm, e->state, buf, sizeof buf);
+						if (-1 == n) {
+							perror("fsm_example");
+							return;
+						}
 
-							n = fsm_example(fsm, st, buf, sizeof buf);
-							if (-1 == n) {
-								perror("fsm_example");
-								return;
-							}
-
-							if (n > 0) {
-								fprintf(f, " # e.g. \"");
-								escputs(f, fsm->opt, fsm_escputc, buf);
-								fprintf(f, "%s\"",
-									n >= (int) sizeof buf - 1 ? "..." : "");
-							}
+						if (n > 0) {
+							fprintf(f, " # e.g. \"");
+							escputs(f, fsm->opt, fsm_escputc, buf);
+							fprintf(f, "%s\"",
+								n >= (int) sizeof buf - 1 ? "..." : "");
 						}
 					}
 				}
-
-				fprintf(f, "\n");
 			}
+
+			fprintf(f, "\n");
 		}
 	}
 
