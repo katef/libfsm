@@ -7,6 +7,7 @@
 #ifndef ADT_EDGESET_H
 #define ADT_EDGESET_H
 
+struct bm;
 struct set;
 struct fsm_alloc;
 struct fsm_edge;
@@ -27,8 +28,15 @@ struct fsm_edge *
 edge_set_add(struct edge_set *set, unsigned char symbol,
 	fsm_state_t state);
 
-struct fsm_edge *
+int
 edge_set_contains(const struct edge_set *set, unsigned char symbol);
+
+int
+edge_set_hasnondeterminism(const struct edge_set *set, struct bm *bm);
+
+int
+edge_set_transition(const struct edge_set *set, unsigned char symbol,
+	fsm_state_t *state);
 
 size_t
 edge_set_count(const struct edge_set *set);

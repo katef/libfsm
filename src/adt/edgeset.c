@@ -8,10 +8,14 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "libfsm/internal.h" /* XXX: for allocating struct fsm_edge, and the edges array */
 
+#include <print/esc.h>
+
 #include <adt/alloc.h>
+#include <adt/bitmap.h>
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
@@ -92,24 +96,89 @@ edge_set_add(struct edge_set *set, unsigned char symbol,
 	return e;
 }
 
-struct fsm_edge *
+int
 edge_set_contains(const struct edge_set *set, unsigned char symbol)
 {
 	size_t i;
 
 	if (edge_set_empty(set)) {
-		return NULL;
+		return 0;
 	}
 
 	assert(set != NULL);
 
 	for (i = 0; i < set->i; i++) {
 		if (set->a[i].symbol == symbol) {
-			return &set->a[i];
+			return 1;
 		}
 	}
 
-	return NULL;
+	return 0;
+}
+
+int
+edge_set_hasnondeterminism(const struct edge_set *set, struct bm *bm)
+{
+	size_t i;
+
+	assert(bm != NULL);
+
+	if (edge_set_empty(set)) {
+		return 0;
+	}
+
+	for (i = 0; i < set->i; i++) {
+		/* 
+		 * Instances of struct fsm_edge aren't unique, and are not ordered.
+		 * The bitmap here is to identify duplicate symbols between structs.
+		 * 
+		 * The same bitmap is shared between all states in an epsilon closure.
+		 */
+		if (bm_get(bm, set->a[i].symbol)) {
+			return 1;
+		}
+
+		bm_set(bm, set->a[i].symbol);
+	}
+
+	return 0;
+}
+
+int
+edge_set_transition(const struct edge_set *set, unsigned char symbol,
+	fsm_state_t *state)
+{
+	size_t i;
+#ifndef NDEBUG
+	struct bm bm;
+#endif
+
+	assert(state != NULL);
+
+	/*
+	 * This function is meaningful for DFA only; we require a DFA
+	 * by contract in order to identify a single destination state
+	 * for a given symbol.
+	 */
+#ifndef NDEBUG
+	bm_clear(&bm);
+	assert(!edge_set_hasnondeterminism(set, &bm));
+#endif
+
+	if (edge_set_empty(set)) {
+		return 0;
+	}
+
+	assert(set != NULL);
+
+	for (i = 0; i < set->i; i++) {
+		if (set->a[i].symbol == symbol) {
+			*state = set->a[i].state;
+			return 1;
+		}
+	}
+
+	return 0;
 }
 
 size_t

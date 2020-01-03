@@ -332,7 +332,6 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 {
 	fsm_state_t qa, qb, qc;
 	int have_qa, have_qb;
-	const struct fsm_edge *ea, *eb;
 	int i;
 
 	assert(a != NULL);
@@ -411,26 +410,27 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 	/* take care of only A and both A&B edges */
 	for (i = 0; i <= FSM_SIGMA_MAX; i++) {
 		struct fsm_walk2_tuple *dst;
+		fsm_state_t eas, ebs;
+		int have_ebs;
 
-		ea = edge_set_contains(a->states[qa].edges, i);
-		if (ea == NULL) {
+		if (!edge_set_transition(a->states[qa].edges, i, &eas)) {
 			continue;
 		}
 
-		eb = have_qb ? edge_set_contains(b->states[qb].edges, i) : NULL;
+		have_ebs = edge_set_transition(b->states[qb].edges, i, &ebs);
 
 		/*
-		 * If eb == NULL we can only follow this edge if ONLYA
+		 * If !have_ebs we can only follow this edge if ONLYA
 		 * edges are allowed
 		 */
-		if (eb == NULL && !(data->edgemask & FSM_WALK2_ONLYA)) {
+		if (!have_ebs && !(data->edgemask & FSM_WALK2_ONLYA)) {
 			continue;
 		}
 
-		if (eb != NULL) {
-			dst = fsm_walk2_tuple_new(data, a, ea->state, b, eb->state);
+		if (have_ebs) {
+			dst = fsm_walk2_tuple_new(data, a, eas, b, ebs);
 		} else {
-			dst = fsm_walk2_tuple_new(data, a, ea->state, NULL, 0);
+			dst = fsm_walk2_tuple_new(data, a, eas, NULL, 0);
 		}
 		if (dst == NULL) {
 			return 0;
@@ -463,18 +463,18 @@ only_b:
 	/* take care of only B edges */
 	for (i = 0; i <= FSM_SIGMA_MAX; i++) {
 		struct fsm_walk2_tuple *dst;
+		fsm_state_t ebs;
 
-		eb = edge_set_contains(b->states[qb].edges, i);
-		if (eb == NULL) {
+		if (!edge_set_transition(b->states[qb].edges, i, &ebs)) {
 			continue;
 		}
 
 		/* if A has the edge, it's not an only B edge */
-		if (have_qa && edge_set_contains(a->states[qa].edges].edges, i)) {
+		if (have_qa && edge_set_contains(a->states[qa].edges, i)) {
 			continue;
 		}
 
-		dst = fsm_walk2_tuple_new(data, NULL, 0, b, eb->state);
+		dst = fsm_walk2_tuple_new(data, NULL, 0, b, ebs);
 		if (dst == NULL) {
 			return 0;
 		}

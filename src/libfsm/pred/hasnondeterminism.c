@@ -68,28 +68,11 @@ state_epsilon_closure(const struct fsm *fsm, fsm_state_t state,
 int
 state_hasnondeterminism(const struct fsm *fsm, fsm_state_t state, struct bm *bm)
 {
-	const struct fsm_edge *e;
-	struct edge_iter jt;
-
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
 	assert(bm != NULL);
 
-	for (e = edge_set_first(fsm->states[state].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
-		/*
-		 * Instances of struct fsm_edge aren't unique, and are not ordered.
-		 * The bitmap here is to identify duplicate symbols between structs.
-		 *
-		 * The same bitmap is shared between all states in an epsilon closure.
-		 */
-		if (bm_get(bm, e->symbol)) {
-			return 1;
-		}
-
-		bm_set(bm, e->symbol);
-	}
-
-	return 0;
+	return edge_set_hasnondeterminism(fsm->states[state].edges, bm);
 }
 
 int
