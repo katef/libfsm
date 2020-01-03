@@ -109,23 +109,3 @@ fsm_addedge_bulk(struct fsm *fsm,
 	return 1;
 }
 
-struct fsm_edge *
-fsm_hasedge_literal(const struct fsm *fsm, fsm_state_t state, char c)
-{
-	struct fsm_edge *e;
-
-	assert(fsm != NULL);
-	assert(state < fsm->statecount);
-
-	if (fsm->states[state].edges == NULL) {
-		return NULL;
-	}
-
-	e = edge_set_contains(fsm->states[state].edges, c);
-	if (e == NULL) {
-		return NULL;
-	}
-
-	return e;
-}
-

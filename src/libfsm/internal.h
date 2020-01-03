@@ -70,9 +70,6 @@ struct fsm {
 	const struct fsm_options *opt;
 };
 
-struct fsm_edge *
-fsm_hasedge_literal(const struct fsm *fsm, fsm_state_t state, char c);
-
 int
 fsm_addedge_bulk(struct fsm *fsm,
 	fsm_state_t from, fsm_state_t *a, size_t n,

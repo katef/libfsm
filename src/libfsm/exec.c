@@ -15,6 +15,7 @@
 
 #include <adt/set.h>
 #include <adt/stateset.h>
+#include <adt/edgeset.h>
 
 #include "internal.h"
 
@@ -27,7 +28,7 @@ nextstate(const struct fsm *fsm, fsm_state_t state, int c,
 	assert(state < fsm->statecount);
 	assert(next != NULL);
 
-	e = fsm_hasedge_literal(fsm, state, c);
+	e = edge_set_contains(fsm->states[state].edges, c);
 	if (e == NULL) {
 		return 0;
 	}

@@ -417,7 +417,7 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 			continue;
 		}
 
-		eb = have_qb ? fsm_hasedge_literal(b, qb, i) : NULL;
+		eb = have_qb ? edge_set_contains(b->states[qb].edges, i) : NULL;
 
 		/*
 		 * If eb == NULL we can only follow this edge if ONLYA
@@ -470,7 +470,7 @@ only_b:
 		}
 
 		/* if A has the edge, it's not an only B edge */
-		if (have_qa && fsm_hasedge_literal(a, qa, i)) {
+		if (have_qa && edge_set_contains(a->states[qa].edges].edges, i)) {
 			continue;
 		}
 
