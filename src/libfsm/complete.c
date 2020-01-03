@@ -5,14 +5,19 @@
  */
 
 #include <assert.h>
-#include <stddef.h>
 #include <limits.h>
+#include <stddef.h>
+#include <stdio.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 
+#include <print/esc.h>
+
 #include <adt/set.h>
+#include <adt/bitmap.h>
+#include <adt/edgeset.h>
 
 #include "internal.h"
 
@@ -20,7 +25,7 @@ int
 fsm_complete(struct fsm *fsm,
 	int (*predicate)(const struct fsm *, fsm_state_t))
 {
-	fsm_state_t new, i;
+	fsm_state_t new, s;
 
 	assert(fsm != NULL);
 	assert(predicate != NULL);
@@ -52,20 +57,25 @@ fsm_complete(struct fsm *fsm,
 		return 0;
 	}
 
-	for (i = 0; i < fsm->statecount; i++) {
-		unsigned c;
+	for (s = 0; s < fsm->statecount; s++) {
+		const struct fsm_edge *e;
+		struct edge_iter jt;
+		struct bm bm;
+		int i;
 
-		if (!predicate(fsm, i)) {
+		if (!predicate(fsm, s)) {
 			continue;
 		}
 
-/* TODO: instead construct a bitmap of missing symbols */
-		for (c = 0; c <= UCHAR_MAX; c++) {
-			if (fsm_hasedge_literal(fsm, i, c)) {
-				continue;
-			}
+		bm_clear(&bm);
 
-			if (!fsm_addedge_literal(fsm, i, new, c)) {
+		for (e = edge_set_first(fsm->states[s].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
+			bm_set(&bm, e->symbol);
+		}
+
+		i = -1;
+		while (i = bm_next(&bm, i, 0), i <= UCHAR_MAX) {
+			if (!fsm_addedge_literal(fsm, s, new, i)) {
 				/* TODO: free stuff */
 				return 0;
 			}
