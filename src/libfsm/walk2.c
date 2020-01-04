@@ -413,11 +413,13 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 		fsm_state_t eas, ebs;
 		int have_ebs;
 
+		assert(!have_qa || qa < a->statecount);
 		if (!edge_set_transition(a->states[qa].edges, i, &eas)) {
 			continue;
 		}
 
-		have_ebs = edge_set_transition(b->states[qb].edges, i, &ebs);
+		assert(!have_qb || qb < b->statecount);
+		have_ebs = have_qb ? edge_set_transition(b->states[qb].edges, i, &ebs) : 0;
 
 		/*
 		 * If !have_ebs we can only follow this edge if ONLYA
