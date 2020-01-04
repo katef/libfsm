@@ -73,7 +73,8 @@ fsm_reverse(struct fsm *fsm)
 			}
 
 			if (!state_set_add(&endset, fsm->opt->alloc, i)) {
-				goto error;
+				state_set_free(endset);
+				return 0;
 			}
 		}
 
@@ -90,7 +91,8 @@ fsm_reverse(struct fsm *fsm)
 			start = state_set_only(endset);
 		} else {
 			if (!fsm_addstate(fsm, &start)) {
-				goto error;
+				state_set_free(endset);
+				return 0;
 			}
 		}
 
@@ -99,13 +101,15 @@ fsm_reverse(struct fsm *fsm)
 
 	edges = f_malloc(fsm->opt->alloc, sizeof *edges * fsm->statecount);
 	if (edges == NULL) {
-		goto error;
+		state_set_free(endset);
+		return 0;
 	}
 
 	epsilons = f_malloc(fsm->opt->alloc, sizeof *epsilons * fsm->statecount);
 	if (edges == NULL) {
+		state_set_free(endset);
 		f_free(fsm->opt->alloc, edges);
-		goto error;
+		return 0;
 	}
 
 	/*
