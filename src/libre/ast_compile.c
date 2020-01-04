@@ -730,7 +730,7 @@ comp_iter(struct comp_env *env,
 
 	case AST_EXPR_CONCAT:
 	{
-		fsm_state_t z, right;
+		fsm_state_t z;
 		fsm_state_t curr_x;
 		enum re_flags saved;
 		size_t i;
@@ -742,13 +742,17 @@ comp_iter(struct comp_env *env,
 
 		assert(count >= 1);
 
-		NEWSTATE(z);
-
 		for (i = 0; i < count; i++) {
 			struct ast_expr *curr = n->u.concat.n[i];
 			struct ast_expr *next = i == count - 1
 				? NULL
 				: n->u.concat.n[i + 1];
+
+			if (i + 1 < count) {
+				NEWSTATE(z);
+			} else {
+				z = y;
+			}
 
 			if (curr->type == AST_EXPR_FLAGS) {
 				/*
@@ -777,15 +781,9 @@ comp_iter(struct comp_env *env,
 				curr_x = diode;
 			}
 
-			right = (i < count - 1 ? z : y);
-			RECURSE(curr_x, right, curr);
+			RECURSE(curr_x, z, curr);
 
-			if (i < count - 1) {
-				fsm_state_t zn;
-				curr_x = z;
-				NEWSTATE(zn);
-				z = zn;
-			}
+			curr_x = z;
 		}
 
 		env->re_flags = saved;
@@ -1013,9 +1011,11 @@ ast_compile(const struct ast *ast,
 		}
 	}
 
+/* XXX:
 	if (-1 == fsm_trim(fsm)) {
 		goto error;
 	}
+*/
 
 	/*
 	 * All flags operators commute with respect to composition.
