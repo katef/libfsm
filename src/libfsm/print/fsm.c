@@ -27,7 +27,7 @@
 static int
 findany(const struct fsm *fsm, fsm_state_t state, fsm_state_t *a)
 {
-	struct fsm_edge *e;
+	struct fsm_edge e;
 	struct edge_iter it;
 	fsm_state_t f;
 	struct bm bm;
@@ -45,35 +45,35 @@ findany(const struct fsm *fsm, fsm_state_t state, fsm_state_t *a)
 	 *
 	 * where a given state also has an unrelated edge transitioning elsewhere.
 	 * The current implementation conservatively bails out on that situation
-	 * (because f != e->state), and will emit each edge separately.
+	 * (because f != e.state), and will emit each edge separately.
 	 */
 
 	bm_clear(&bm);
 
-	e = edge_set_first(fsm->states[state].edges, &it);
-	if (e == NULL) {
+	edge_set_reset(fsm->states[state].edges, &it);
+	if (!edge_set_next(&it, &e)) {
 		return 0;
 	}
 
 	/* if the first edge is not the first character,
 	 * then we can't possibly have an "any" transition */
-	if (e->symbol != '\0') {
+	if (e.symbol != '\0') {
 		return 0;
 	}
 
-	f = e->state;
+	f = e.state;
 
-	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		if (f != e->state) {
+	for (edge_set_reset(fsm->states[state].edges, &it); edge_set_next(&it, &e); ) {
+		if (f != e.state) {
 			return 0;
 		}
 
 		/* we reject duplicate edges, even though they're to the same state */
-		if (bm_get(&bm, e->symbol)) {
+		if (bm_get(&bm, e.symbol)) {
 			return 0;
 		}
 
-		bm_set(&bm, e->symbol);
+		bm_set(&bm, e.symbol);
 	}
 
 	if (bm_count(&bm) != FSM_SIGMA_COUNT) {
@@ -96,7 +96,7 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 	assert(fsm != NULL);
 
 	for (s = 0; s < fsm->statecount; s++) {
-		struct fsm_edge *e;
+		struct fsm_edge e;
 		struct edge_iter it;
 
 		{
@@ -117,11 +117,14 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 			}
 		}
 
-		for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
-			fprintf(f, "%-2u -> %2u", s, e->state);
+		assert(s < fsm->statecount);
+		for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
+			assert(e.state < fsm->statecount);
+
+			fprintf(f, "%-2u -> %2u", s, e.state);
 
 			fputs(" \"", f);
-			fsm_escputc(f, fsm->opt, e->symbol);
+			fsm_escputc(f, fsm->opt, e.symbol);
 			putc('\"', f);
 
 			fprintf(f, ";");
@@ -130,13 +133,13 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 				fsm_state_t start;
 
 				if (fsm_getstart(fsm, &start)) {
-					if (e->state == start) {
+					if (e.state == start) {
 						fprintf(f, " # start");
 					} else if (!fsm_has(fsm, fsm_hasepsilons)) {
 						char buf[50];
 						int n;
 
-						n = fsm_example(fsm, e->state, buf, sizeof buf);
+						n = fsm_example(fsm, e.state, buf, sizeof buf);
 						if (-1 == n) {
 							perror("fsm_example");
 							return;

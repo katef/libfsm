@@ -46,11 +46,11 @@ fsm_walk_edges(const struct fsm *fsm, void *opaque,
 	assert(callback_epsilon != NULL);
 
 	for (i = 0; i < fsm->statecount; i++) {
-		const struct fsm_edge *e;
+		struct fsm_edge e;
 		struct edge_iter ei;
 
-		for (e = edge_set_first(fsm->states[i].edges, &ei); e != NULL; e = edge_set_next(&ei)) {
-			if (!callback_literal(fsm, i, e->state, e->symbol, opaque)) {
+		for (edge_set_reset(fsm->states[i].edges, &ei); edge_set_next(&ei, &e); ) {
+			if (!callback_literal(fsm, i, e.state, e.symbol, opaque)) {
 				return 0;
 			}
 		}

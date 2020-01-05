@@ -27,7 +27,7 @@
 static void
 singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 {
-	struct fsm_edge *e;
+	struct fsm_edge e;
 	struct edge_iter it;
 	struct state_set *unique;
 
@@ -64,14 +64,14 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 			}
 		}
 
-		for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
 			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				s,
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				e->state);
+				e.state);
 
-			dot_escputc_html(f, fsm->opt, e->symbol);
+			dot_escputc_html(f, fsm->opt, e.symbol);
 
 			fprintf(f, "> ];\n");
 		}
@@ -81,8 +81,8 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 
 	unique = NULL;
 
-	for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		if (!state_set_add(&unique, fsm->opt->alloc, e->state)) {
+	for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
+		if (!state_set_add(&unique, fsm->opt->alloc, e.state)) {
 			/* TODO: error */
 			return;
 		}
@@ -97,24 +97,24 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	 * To implement this, we loop through all unique states, rather than
 	 * looping through each edge.
 	 */
-	for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		struct fsm_edge *ne;
+	for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
+		struct fsm_edge ne;
 		struct edge_iter kt;
 		struct bm bm;
 
 		/* unique states only */
-		if (!state_set_contains(unique, e->state)) {
+		if (!state_set_contains(unique, e.state)) {
 			continue;
 		}
 
-		state_set_remove(&unique, e->state);
+		state_set_remove(&unique, e.state);
 
 		bm_clear(&bm);
 
 		/* find all edges which go from this state to the same target state */
-		for (ne = edge_set_first(fsm->states[s].edges, &kt); ne != NULL; ne = edge_set_next(&kt)) {
-			if (ne->state == e->state) {
-				bm_set(&bm, ne->symbol);
+		for (edge_set_reset(fsm->states[s].edges, &kt); edge_set_next(&kt, &ne); ) {
+			if (ne.state == e.state) {
+				bm_set(&bm, ne.symbol);
 			}
 		}
 
@@ -122,7 +122,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 			s,
 			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-			e->state);
+			e.state);
 
 		if (bm_count(&bm) > 4) {
 			fprintf(f, "weight = 3, ");

@@ -85,7 +85,7 @@ fsm_capture_duplicate(struct fsm *fsm,
 	for (ind = new_start; ind < new_end; ind++) {
 		const fsm_state_t old_src = old_start + (ind - new_start);
 		struct edge_iter it;
-		struct fsm_edge *e;
+		struct fsm_edge e;
 
 		{
 			struct state_iter jt;
@@ -106,10 +106,10 @@ fsm_capture_duplicate(struct fsm *fsm,
 			}
 		}
 
-		for (e = edge_set_first(fsm->states[old_src].edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (edge_set_reset(fsm->states[old_src].edges, &it); edge_set_next(&it, &e); ) {
 			fsm_state_t old_dst, new_dst;
 
-			old_dst = e->state;
+			old_dst = e.state;
 
 			if (old_dst < old_start || old_dst >= old_end) {
 				continue;
@@ -117,7 +117,7 @@ fsm_capture_duplicate(struct fsm *fsm,
 
 			new_dst = new_start + (old_dst - old_start);
 
-			if (!fsm_addedge_literal(fsm, ind, new_dst, e->symbol)) {
+			if (!fsm_addedge_literal(fsm, ind, new_dst, e.symbol)) {
 				return 0;
 			}
 		}

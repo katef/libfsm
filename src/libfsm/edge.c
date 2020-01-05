@@ -57,21 +57,11 @@ fsm_addedge_literal(struct fsm *fsm,
 	fsm_state_t from, fsm_state_t to,
 	char c)
 {
-	struct fsm_edge *e;
-
 	assert(fsm != NULL);
 	assert(from < fsm->statecount);
 	assert(to < fsm->statecount);
 
-	if (fsm->states[from].edges == NULL) {
-		fsm->states[from].edges = edge_set_create(fsm->opt->alloc);
-		if (fsm->states[from].edges == NULL) {
-			return 0;
-		}
-	}
-
-	e = edge_set_add(fsm->states[from].edges, c, to);
-	if (e == NULL) {
+	if (!edge_set_add(&fsm->states[from].edges, fsm->opt->alloc, c, to)) {
 		return 0;
 	}
 
@@ -92,16 +82,9 @@ fsm_addedge_bulk(struct fsm *fsm,
 		return 1;
 	}
 
-	if (fsm->states[from].edges == NULL) {
-		fsm->states[from].edges = edge_set_create(fsm->opt->alloc);
-		if (fsm->states[from].edges == NULL) {
-			return 0;
-		}
-	}
-
 	/* TODO: would hope to have a bulk-add interface for edges */
 	for (i = 0; i < n; i++) {
-		if (!edge_set_add(fsm->states[from].edges, c, a[i])) {
+		if (!edge_set_add(&fsm->states[from].edges, fsm->opt->alloc, c, a[i])) {
 			return 0;
 		}
 	}

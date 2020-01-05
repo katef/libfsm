@@ -55,7 +55,7 @@ fsm_clone(const struct fsm *fsm)
 		size_t i;
 
 		for (i = 0; i < fsm->statecount; i++) {
-			struct fsm_edge *e;
+			struct fsm_edge e;
 			struct edge_iter it;
 
 			fsm_setend(new, i, fsm_isend(fsm, i));
@@ -73,8 +73,8 @@ fsm_clone(const struct fsm *fsm)
 				}
 			}
 
-			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-				if (!fsm_addedge_literal(new, i, e->state, e->symbol)) {
+			for (edge_set_reset(fsm->states[i].edges, &it); edge_set_next(&it, &e); ) {
+				if (!fsm_addedge_literal(new, i, e.state, e.symbol)) {
 					fsm_free(new);
 					return NULL;
 				}

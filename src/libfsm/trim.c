@@ -40,7 +40,7 @@ mark_states(struct fsm *fsm)
 	fsm->states[start].visited = 1;
 
 	for (;;) {
-		const struct fsm_edge *e;
+		struct fsm_edge e;
 		struct edge_iter edge_iter;
 		fsm_state_t s;
 
@@ -65,19 +65,16 @@ mark_states(struct fsm *fsm)
 			}
 		}
 
-		for (e = edge_set_first(fsm->states[s].edges, &edge_iter);
-		     e != NULL;
-		     e = edge_set_next(&edge_iter))
-		{
-			if (fsm->states[e->state].visited) {
+		for (edge_set_reset(fsm->states[s].edges, &edge_iter); edge_set_next(&edge_iter, &e); ) {
+			if (fsm->states[e.state].visited) {
 				continue;
 			}
 
-			if (!queue_push(q, e->state)) {
+			if (!queue_push(q, e.state)) {
 				goto cleanup;
 			}
 
-			fsm->states[e->state].visited = 1;
+			fsm->states[e.state].visited = 1;
 		}
 	}
 

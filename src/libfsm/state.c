@@ -74,8 +74,6 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 void
 fsm_removestate(struct fsm *fsm, fsm_state_t state)
 {
-	struct fsm_edge *e;
-	struct edge_iter it;
 	fsm_state_t start, i;
 
 	assert(fsm != NULL);
@@ -87,7 +85,7 @@ fsm_removestate(struct fsm *fsm, fsm_state_t state)
 	for (i = 0; i < fsm->statecount; i++) {
 		state_set_remove(&fsm->states[i].epsilons, state);
 		if (fsm->states[i].edges != NULL) {
-			edge_set_remove_state(fsm->states[i].edges, state);
+			edge_set_remove_state(&fsm->states[i].edges, state);
 		}
 	}
 
@@ -112,11 +110,7 @@ fsm_removestate(struct fsm *fsm, fsm_state_t state)
 
 		for (i = 0; i < fsm->statecount - 1; i++) {
 			state_set_replace(&fsm->states[i].epsilons, fsm->statecount - 1, state);
-			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-				if (e->state == fsm->statecount - 1) {
-					e->state = state;
-				}
-			}
+			edge_set_replace_state(&fsm->states[i].edges, fsm->statecount - 1, state);
 		}
 	}
 

@@ -40,7 +40,7 @@ fsm_reachable(const struct fsm *fsm, fsm_state_t state,
 
 	while (p = dlist_nextnotdone(list), p != NULL) {
 		struct edge_iter it;
-		struct fsm_edge *e;
+		struct fsm_edge e;
 
 		if (any) {
 			if (predicate(fsm, p->state)) {
@@ -54,13 +54,13 @@ fsm_reachable(const struct fsm *fsm, fsm_state_t state,
 			}
 		}
 
-		for (e = edge_set_first(fsm->states[p->state].edges, &it); e != NULL; e = edge_set_next(&it)) {
+		for (edge_set_reset(fsm->states[p->state].edges, &it); edge_set_next(&it, &e); ) {
 			/* not a list operation... */
-			if (dlist_contains(list, e->state)) {
+			if (dlist_contains(list, e.state)) {
 				continue;
 			}
 
-			if (!dlist_push(fsm->opt->alloc, &list, e->state)) {
+			if (!dlist_push(fsm->opt->alloc, &list, e.state)) {
 				return -1;
 			}
 		}

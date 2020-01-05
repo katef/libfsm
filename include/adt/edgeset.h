@@ -18,15 +18,12 @@ struct edge_iter {
 	const struct edge_set *set;
 };
 
-struct edge_set *
-edge_set_create(const struct fsm_alloc *a);
-
 void
 edge_set_free(struct edge_set *set);
 
-struct fsm_edge *
-edge_set_add(struct edge_set *set, unsigned char symbol,
-	fsm_state_t state);
+int
+edge_set_add(struct edge_set **set, const struct fsm_alloc *alloc,
+	unsigned char symbol, fsm_state_t state);
 
 int
 edge_set_contains(const struct edge_set *set, unsigned char symbol);
@@ -42,19 +39,26 @@ size_t
 edge_set_count(const struct edge_set *set);
 
 int
-edge_set_copy(struct edge_set *dst, const struct edge_set *src);
+edge_set_copy(struct edge_set **dst, const struct fsm_alloc *alloc,
+	const struct edge_set *src);
 
 void
-edge_set_remove(struct edge_set *set, unsigned char symbol);
+edge_set_remove(struct edge_set **set, unsigned char symbol);
 
 void
-edge_set_remove_state(struct edge_set *set, fsm_state_t state);
+edge_set_remove_state(struct edge_set **set, fsm_state_t state);
 
-struct fsm_edge *
-edge_set_first(struct edge_set *set, struct edge_iter *it);
+void
+edge_set_reset(struct edge_set *set, struct edge_iter *it);
 
-struct fsm_edge *
-edge_set_next(struct edge_iter *it);
+int
+edge_set_next(struct edge_iter *it, struct fsm_edge *e);
+
+void
+edge_set_rebase(struct edge_set **setp, fsm_state_t base);
+
+void
+edge_set_replace_state(struct edge_set **setp, fsm_state_t old, fsm_state_t new);
 
 int
 edge_set_empty(const struct edge_set *s);

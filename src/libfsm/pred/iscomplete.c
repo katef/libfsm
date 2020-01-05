@@ -24,7 +24,7 @@
 int
 fsm_iscomplete(const struct fsm *fsm, fsm_state_t state)
 {
-	struct fsm_edge *e;
+	struct fsm_edge e;
 	struct edge_iter it;
 	struct bm bm;
 
@@ -36,10 +36,10 @@ fsm_iscomplete(const struct fsm *fsm, fsm_state_t state)
 
 	bm_clear(&bm);
 
-	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		assert(e->state < fsm->statecount);
+	for (edge_set_reset(fsm->states[state].edges, &it); edge_set_next(&it, &e); ) {
+		assert(e.state < fsm->statecount);
 
-		bm_set(&bm, e->symbol);
+		bm_set(&bm, e.symbol);
 	}
 
 	return bm_count(&bm) == FSM_SIGMA_COUNT;

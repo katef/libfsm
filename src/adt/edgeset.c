@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -29,7 +30,7 @@ struct edge_set {
 	size_t n;
 };
 
-struct edge_set *
+static struct edge_set *
 edge_set_create(const struct fsm_alloc *a)
 {
 	struct edge_set *set;
@@ -41,6 +42,7 @@ edge_set_create(const struct fsm_alloc *a)
 
 	set->a = f_malloc(a, SET_INITIAL * sizeof *set->a);
 	if (set->a == NULL) {
+		f_free(a, set);
 		return NULL;
 	}
 
@@ -64,36 +66,45 @@ edge_set_free(struct edge_set *set)
 	free(set);
 }
 
-struct fsm_edge *
-edge_set_add(struct edge_set *set, unsigned char symbol,
-	fsm_state_t state)
+int
+edge_set_add(struct edge_set **setp, const struct fsm_alloc *alloc,
+	unsigned char symbol, fsm_state_t state)
 {
-	struct fsm_edge *e;
+	struct edge_set *set;
 
-	assert(set != NULL);
+	assert(setp != NULL);
+
+	if (*setp == NULL) {
+		*setp = edge_set_create(alloc);
+		if (*setp == NULL) {
+			return 0;
+		}
+
+		/* fallthrough */
+	}
+
+	set = *setp;
 
 	if (set->i == set->n) {
 		struct fsm_edge *new;
 
 		new = f_realloc(set->alloc, set->a, (sizeof *set->a) * (set->n * 2));
 		if (new == NULL) {
-			return NULL;
+			return 0;
 		}
 
 		set->a = new;
 		set->n *= 2;
 	}
 
-	e = &set->a[set->i];
-
-	e->symbol = symbol;
-	e->state  = state;
+	set->a[set->i].symbol = symbol;
+	set->a[set->i].state  = state;
 
 	set->i++;
 
 	assert(edge_set_contains(set, symbol));
 
-	return e;
+	return 1;
 }
 
 int
@@ -127,13 +138,14 @@ edge_set_hasnondeterminism(const struct edge_set *set, struct bm *bm)
 		return 0;
 	}
 
+	/* 
+	 * Instances of struct fsm_edge aren't unique, and are not ordered.
+	 * The bitmap here is to identify duplicate symbols between structs.
+	 * 
+	 * The same bitmap is shared between all states in an epsilon closure.
+	 */
+
 	for (i = 0; i < set->i; i++) {
-		/* 
-		 * Instances of struct fsm_edge aren't unique, and are not ordered.
-		 * The bitmap here is to identify duplicate symbols between structs.
-		 * 
-		 * The same bitmap is shared between all states in an epsilon closure.
-		 */
 		if (bm_get(bm, set->a[i].symbol)) {
 			return 1;
 		}
@@ -188,23 +200,23 @@ edge_set_count(const struct edge_set *set)
 		return 0;
 	}
 
-	assert(set != NULL);
 	assert(set->a != NULL);
 
 	return set->i;
 }
 
 int
-edge_set_copy(struct edge_set *dst, const struct edge_set *src)
+edge_set_copy(struct edge_set **dst, const struct fsm_alloc *alloc,
+	const struct edge_set *src)
 {
 	struct edge_iter jt;
-	struct fsm_edge *e;
+	struct fsm_edge e;
 
 	assert(dst != NULL);
 	assert(src != NULL);
 
-	for (e = edge_set_first((void *) src, &jt); e != NULL; e = edge_set_next(&jt)) {
-		if (!edge_set_add(dst, e->symbol, e->state)) {
+	for (edge_set_reset((void *) src, &jt); edge_set_next(&jt, &e); ) {
+		if (!edge_set_add(dst, alloc, e.symbol, e.state)) {
 			return 0;
 		}
 	}
@@ -213,15 +225,14 @@ edge_set_copy(struct edge_set *dst, const struct edge_set *src)
 }
 
 void
-edge_set_remove(struct edge_set *set, unsigned char symbol)
+edge_set_remove(struct edge_set **setp, unsigned char symbol)
 {
+	struct edge_set *set;
 	size_t i;
 
-	assert(set != NULL);
+	assert(setp != NULL);
 
-	if (set == NULL) {
-		return;
-	}
+	set = *setp;
 
 	if (edge_set_empty(set)) {
 		return;
@@ -238,15 +249,14 @@ edge_set_remove(struct edge_set *set, unsigned char symbol)
 }
 
 void
-edge_set_remove_state(struct edge_set *set, fsm_state_t state)
+edge_set_remove_state(struct edge_set **setp, fsm_state_t state)
 {
+	struct edge_set *set;
 	size_t i;
 
-	assert(set != NULL);
+	assert(setp != NULL);
 
-	if (set == NULL) {
-		return;
-	}
+	set = *setp;
 
 	if (edge_set_empty(set)) {
 		return;
@@ -260,40 +270,72 @@ edge_set_remove_state(struct edge_set *set, fsm_state_t state)
 	}
 }
 
-struct fsm_edge *
-edge_set_first(struct edge_set *set, struct edge_iter *it)
+void
+edge_set_reset(struct edge_set *set, struct edge_iter *it)
 {
-	assert(it != NULL);
-
-	if (set == NULL) {
-		return NULL;
-	}
-
-	assert(set != NULL);
-	assert(set->a != NULL);
-
-	if (edge_set_empty(set)) {
-		it->set = NULL;
-		return NULL;
-	}
-
 	it->i = 0;
 	it->set = set;
-
-	return &it->set->a[it->i];
 }
 
-struct fsm_edge *
-edge_set_next(struct edge_iter *it)
+int
+edge_set_next(struct edge_iter *it, struct fsm_edge *e)
 {
 	assert(it != NULL);
+	assert(e != NULL);
 
-	it->i++;
-	if (it->i >= it->set->i) {
-		return NULL;
+	if (it->set == NULL) {
+		return 0;
 	}
 
-	return &it->set->a[it->i];
+	if (it->i >= it->set->i) {
+		return 0;
+	}
+
+	*e = it->set->a[it->i];
+
+	it->i++;
+
+	return 1;
+}
+
+void
+edge_set_rebase(struct edge_set **setp, fsm_state_t base)
+{
+	struct edge_set *set;
+	size_t i;
+
+	assert(setp != NULL);
+
+	set = *setp;
+
+	if (edge_set_empty(set)) {
+		return;
+	}
+
+	for (i = 0; i < set->i; i++) {
+		set->a[i].state += base;
+	}
+}
+
+void
+edge_set_replace_state(struct edge_set **setp, fsm_state_t old, fsm_state_t new)
+{
+	struct edge_set *set;
+	size_t i;
+
+	assert(setp != NULL);
+
+	set = *setp;
+
+	if (edge_set_empty(set)) {
+		return;
+	}
+
+	for (i = 0; i < set->i; i++) {
+		if (set->a[i].state == old) {
+			set->a[i].state = new;
+		}
+	}
 }
 
 int

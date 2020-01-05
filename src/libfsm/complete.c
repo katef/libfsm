@@ -58,7 +58,7 @@ fsm_complete(struct fsm *fsm,
 	}
 
 	for (s = 0; s < fsm->statecount; s++) {
-		const struct fsm_edge *e;
+		struct fsm_edge e;
 		struct edge_iter jt;
 		struct bm bm;
 		int i;
@@ -69,8 +69,8 @@ fsm_complete(struct fsm *fsm,
 
 		bm_clear(&bm);
 
-		for (e = edge_set_first(fsm->states[s].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
-			bm_set(&bm, e->symbol);
+		for (edge_set_reset(fsm->states[s].edges, &jt); edge_set_next(&jt, &e); ) {
+			bm_set(&bm, e.symbol);
 		}
 
 		i = -1;

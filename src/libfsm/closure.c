@@ -192,7 +192,7 @@ symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
 	struct state_set *sclosures[static FSM_SIGMA_COUNT])
 {
 	struct edge_iter jt;
-	struct fsm_edge *e;
+	struct fsm_edge e;
 
 	assert(fsm != NULL);
 	assert(sclosures != NULL);
@@ -207,8 +207,8 @@ symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
 	 * to avoid repeating that work by de-duplicating on the destination.
 	 */
 
-	for (e = edge_set_first(fsm->states[s].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
-		if (!state_set_add(&sclosures[e->symbol], fsm->opt->alloc, e->state)) {
+	for (edge_set_reset(fsm->states[s].edges, &jt); edge_set_next(&jt, &e); ) {
+		if (!state_set_add(&sclosures[e.symbol], fsm->opt->alloc, e.state)) {
 			return 0;
 		}
 	}
@@ -222,7 +222,7 @@ symbol_closure(const struct fsm *fsm, fsm_state_t s,
 	struct state_set *sclosures[static FSM_SIGMA_COUNT])
 {
 	struct edge_iter jt;
-	struct fsm_edge *e;
+	struct fsm_edge e;
 
 	assert(fsm != NULL);
 	assert(eclosures != NULL);
@@ -241,8 +241,8 @@ symbol_closure(const struct fsm *fsm, fsm_state_t s,
 	 * so there's no need to explicitly copy the state itself here.
 	 */
 
-	for (e = edge_set_first(fsm->states[s].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
-		if (!state_set_copy(&sclosures[e->symbol], fsm->opt->alloc, eclosures[e->state])) {
+	for (edge_set_reset(fsm->states[s].edges, &jt); edge_set_next(&jt, &e); ) {
+		if (!state_set_copy(&sclosures[e.symbol], fsm->opt->alloc, eclosures[e.state])) {
 			return 0;
 		}
 	}

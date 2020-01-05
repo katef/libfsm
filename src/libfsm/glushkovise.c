@@ -59,7 +59,6 @@ fsm_glushkovise(struct fsm *nfa)
 		/* TODO: bail out early if there are no edges to create? */
 
 		for (i = 0; i <= FSM_SIGMA_MAX; i++) {
-			struct fsm_edge *new;
 			struct state_iter it;
 			fsm_state_t es;
 
@@ -68,16 +67,7 @@ fsm_glushkovise(struct fsm *nfa)
 			}
 
 			for (state_set_reset(sclosures[i], &it); state_set_next(&it, &es); ) {
-				if (nfa->states[s].edges == NULL) {
-					nfa->states[s].edges = edge_set_create(nfa->opt->alloc);
-					if (nfa->states[s].edges == NULL) {
-						/* TODO: free stuff */
-						goto error;
-					}
-				}
-
-				new = edge_set_add(nfa->states[s].edges, i, es);
-				if (new == NULL) {
+				if (!edge_set_add(&nfa->states[s].edges, nfa->opt->alloc, i, es)) {
 					/* TODO: free stuff */
 					goto error;
 				}

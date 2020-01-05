@@ -133,7 +133,7 @@ fsm_reverse(struct fsm *fsm)
 
 		for (i = 0; i < fsm->statecount; i++) {
 			struct edge_iter it;
-			struct fsm_edge *e;
+			struct fsm_edge e;
 
 			{
 				struct state_iter jt;
@@ -150,20 +150,10 @@ fsm_reverse(struct fsm *fsm)
 					}
 				}
 			}
-			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-				struct fsm_edge *en;
+			for (edge_set_reset(fsm->states[i].edges, &it); edge_set_next(&it, &e); ) {
+				assert(e.state < fsm->statecount);
 
-				assert(e->state < fsm->statecount);
-
-				if (edges[e->state] == NULL) {
-					edges[e->state] = edge_set_create(fsm->opt->alloc);
-					if (edges[e->state] == NULL) {
-						goto error1;
-					}
-				}
-
-				en = edge_set_add(edges[e->state], e->symbol, i);
-				if (en == NULL) {
+				if (!edge_set_add(&edges[e.state], fsm->opt->alloc, e.symbol, i)) {
 					return 0;
 				}
 			}
@@ -207,13 +197,6 @@ fsm_reverse(struct fsm *fsm)
 		struct state_iter it;
 		fsm_state_t s;
 
-		if (edges[start] == NULL) {
-			edges[start] = edge_set_create(fsm->opt->alloc);
-			if (edges[start] == NULL) {
-				goto error;
-			}
-		}
-
 		for (state_set_reset(endset, &it); state_set_next(&it, &s); ) {
 			if (s == start) {
 				continue;
@@ -223,7 +206,7 @@ fsm_reverse(struct fsm *fsm)
 				continue;
 			}
 
-			if (!edge_set_copy(edges[start], edges[s])) {
+			if (!edge_set_copy(&edges[start], fsm->opt->alloc, edges[s])) {
 				goto error;
 			}
 		}
