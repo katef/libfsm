@@ -23,6 +23,22 @@
 
 #define SET_INITIAL 8
 
+/*
+ * Many edge sets only contain a single item, as is the case for state sets.
+ * Likewise we avoid allocating for an edge set until it contains more than
+ * a single item. As with state sets, the single tem is stored within the
+ * directly in the edge set pointer value. I would draw the layout here,
+ * but I'm not feeling very artistic today.
+ */
+#define SINGLETON_MAX_STATE             ((~ (uintptr_t) 0U) >> (CHAR_BIT + 1))
+#define SINGLETON_ENCODE(symbol, state) ((void *) ( \
+                                        	(((uintptr_t) (state)) << (CHAR_BIT + 1)) | \
+                                        	(((uintptr_t) (symbol)) << 1) | \
+                                        	0x1))
+#define SINGLETON_DECODE_SYMBOL(ptr)    ((unsigned char) ((((uintptr_t) (ptr)) >> 1) & 0xFFU))
+#define SINGLETON_DECODE_STATE(ptr)     ((fsm_state_t)   (((uintptr_t) (ptr)) >> (CHAR_BIT + 1)))
+#define IS_SINGLETON(ptr)               (((uintptr_t) (ptr)) & 0x1)
+
 struct edge_set {
 	const struct fsm_alloc *alloc;
 	struct fsm_edge *a;
@@ -60,6 +76,10 @@ edge_set_free(struct edge_set *set)
 		return;
 	}
 
+	if (IS_SINGLETON(set)) {
+		return;
+	}
+
 	assert(set->a != NULL);
 
 	free(set->a);
@@ -73,14 +93,41 @@ edge_set_add(struct edge_set **setp, const struct fsm_alloc *alloc,
 	struct edge_set *set;
 
 	assert(setp != NULL);
+/* XXX:
+	assert(state <= SINGLETON_MAX_STATE);
+*/
 
-	if (*setp == NULL) {
+	if (IS_SINGLETON(*setp)) {
+		unsigned char prev_symbol;
+		fsm_state_t prev_state;
+
+		prev_symbol = SINGLETON_DECODE_SYMBOL(*setp);
+		prev_state  = SINGLETON_DECODE_STATE(*setp);
+
 		*setp = edge_set_create(alloc);
 		if (*setp == NULL) {
 			return 0;
 		}
 
-		/* fallthrough */
+		assert(!IS_SINGLETON(*setp));
+
+		if (!edge_set_add(setp, alloc, prev_symbol, prev_state)) {
+			return 0;
+		}
+
+		if (!edge_set_add(setp, alloc, symbol, state)) {
+			return 0;
+		}
+
+		return 1;
+	}
+
+	/* XXX: only if it fits */
+	if (*setp == NULL) {
+		*setp = SINGLETON_ENCODE(symbol, state);
+		assert(SINGLETON_DECODE_SYMBOL(*setp) == symbol);
+		assert(SINGLETON_DECODE_STATE(*setp) == state);
+		return 1;
 	}
 
 	set = *setp;
@@ -116,6 +163,10 @@ edge_set_contains(const struct edge_set *set, unsigned char symbol)
 		return 0;
 	}
 
+	if (IS_SINGLETON(set)) {
+		return SINGLETON_DECODE_SYMBOL(set) == symbol;
+	}
+
 	assert(set != NULL);
 
 	for (i = 0; i < set->i; i++) {
@@ -144,6 +195,15 @@ edge_set_hasnondeterminism(const struct edge_set *set, struct bm *bm)
 	 * 
 	 * The same bitmap is shared between all states in an epsilon closure.
 	 */
+
+	if (IS_SINGLETON(set)) {
+		if (bm_get(bm, SINGLETON_DECODE_SYMBOL(set))) {
+			return 1;
+		}
+
+		bm_set(bm, SINGLETON_DECODE_SYMBOL(set));
+		return 0;
+	}
 
 	for (i = 0; i < set->i; i++) {
 		if (bm_get(bm, set->a[i].symbol)) {
@@ -181,6 +241,15 @@ edge_set_transition(const struct edge_set *set, unsigned char symbol,
 		return 0;
 	}
 
+	if (IS_SINGLETON(set)) {
+		if (SINGLETON_DECODE_SYMBOL(set) == symbol) {
+			*state = SINGLETON_DECODE_STATE(set);
+			return 1;
+		}
+
+		return 0;
+	}
+
 	assert(set != NULL);
 
 	for (i = 0; i < set->i; i++) {
@@ -200,6 +269,10 @@ edge_set_count(const struct edge_set *set)
 		return 0;
 	}
 
+	if (IS_SINGLETON(set)) {
+		return 1;
+	}
+
 	assert(set->a != NULL);
 
 	return set->i;
@@ -214,6 +287,14 @@ edge_set_copy(struct edge_set **dst, const struct fsm_alloc *alloc,
 
 	assert(dst != NULL);
 	assert(src != NULL);
+
+	if (IS_SINGLETON(src)) {
+		if (!edge_set_add(dst, alloc, SINGLETON_DECODE_SYMBOL(src), SINGLETON_DECODE_STATE(src))) {
+			return 0;
+		}
+
+		return 1;
+	}
 
 	for (edge_set_reset((void *) src, &jt); edge_set_next(&jt, &e); ) {
 		if (!edge_set_add(dst, alloc, e.symbol, e.state)) {
@@ -231,6 +312,13 @@ edge_set_remove(struct edge_set **setp, unsigned char symbol)
 	size_t i;
 
 	assert(setp != NULL);
+
+	if (IS_SINGLETON(*setp)) {
+		if (SINGLETON_DECODE_SYMBOL(*setp) == symbol) {
+			*setp = NULL;
+		}
+		return;
+	}
 
 	set = *setp;
 
@@ -255,6 +343,13 @@ edge_set_remove_state(struct edge_set **setp, fsm_state_t state)
 	size_t i;
 
 	assert(setp != NULL);
+
+	if (IS_SINGLETON(*setp)) {
+		if (SINGLETON_DECODE_STATE(*setp) == state) {
+			*setp = NULL;
+		}
+		return;
+	}
 
 	set = *setp;
 
@@ -287,6 +382,19 @@ edge_set_next(struct edge_iter *it, struct fsm_edge *e)
 		return 0;
 	}
 
+	if (IS_SINGLETON(it->set)) {
+		if (it->i >= 1) {
+			return 0;
+		}
+
+		e->symbol = SINGLETON_DECODE_SYMBOL(it->set);
+		e->state  = SINGLETON_DECODE_STATE(it->set);
+
+		it->i++;
+
+		return 1;
+	}
+
 	if (it->i >= it->set->i) {
 		return 0;
 	}
@@ -305,6 +413,20 @@ edge_set_rebase(struct edge_set **setp, fsm_state_t base)
 	size_t i;
 
 	assert(setp != NULL);
+
+	if (IS_SINGLETON(*setp)) {
+		fsm_state_t state;
+		unsigned char symbol;
+
+		state  = SINGLETON_DECODE_STATE(*setp) + base;
+		symbol = SINGLETON_DECODE_SYMBOL(*setp);
+
+		*setp = SINGLETON_ENCODE(symbol, state);
+		assert(SINGLETON_DECODE_SYMBOL(*setp) == symbol);
+		assert(SINGLETON_DECODE_STATE(*setp) == state);
+
+		return;
+	}
 
 	set = *setp;
 
@@ -325,6 +447,19 @@ edge_set_replace_state(struct edge_set **setp, fsm_state_t old, fsm_state_t new)
 
 	assert(setp != NULL);
 
+	if (IS_SINGLETON(*setp)) {
+		if (SINGLETON_DECODE_STATE(*setp) == old) {
+			unsigned char symbol;
+
+			symbol = SINGLETON_DECODE_SYMBOL(*setp);
+
+			*setp = SINGLETON_ENCODE(symbol, new);
+			assert(SINGLETON_DECODE_SYMBOL(*setp) == symbol);
+			assert(SINGLETON_DECODE_STATE(*setp) == new);
+		}
+		return;
+	}
+
 	set = *setp;
 
 	if (edge_set_empty(set)) {
@@ -343,6 +478,10 @@ edge_set_empty(const struct edge_set *set)
 {
 	if (set == NULL) {
 		return 1;
+	}
+
+	if (IS_SINGLETON(set)) {
+		return 0;
 	}
 
 	return set->i == 0;
