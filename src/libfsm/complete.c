@@ -73,6 +73,7 @@ fsm_complete(struct fsm *fsm,
 			bm_set(&bm, e.symbol);
 		}
 
+		/* TODO: bulk add symbols as the inverse of this bitmap */
 		i = -1;
 		while (i = bm_next(&bm, i, 0), i <= UCHAR_MAX) {
 			if (!fsm_addedge_literal(fsm, s, new, i)) {

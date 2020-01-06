@@ -105,23 +105,6 @@ mapping_add(struct mapping_hashset *mappings, const struct fsm_alloc *alloc,
 	return m;
 }
 
-static int
-mapping_addedges(struct mapping *from, struct mapping *to,
-	const struct fsm_alloc *alloc,
-	unsigned char c)
-{
-	/*
-	 * Note there is no looking up of an edge by symbol;
-	 * TODO: this should suit the adjacency list for bulk-adding edges i hope
-	 */
-
-	if (!edge_set_add(&from->edges, alloc, c, to->dfastate)) {
-		return 0;
-	}
-
-	return 1;
-}
-
 /* TODO: this stack is just a placeholder for something more suitable */
 struct mappingstack {
 	struct mapping *item;
@@ -301,7 +284,7 @@ fsm_determinise(struct fsm *nfa)
 				}
 			}
 
-			if (!mapping_addedges(curr, m, nfa->opt->alloc, i)) {
+			if (!edge_set_add(&curr->edges, nfa->opt->alloc, i, m->dfastate)) {
 				/* TODO: free mappings, sclosures, stack */
 				goto error;
 			}
@@ -321,17 +304,9 @@ fsm_determinise(struct fsm *nfa)
 			goto error;
 		}
 
-		/* TODO: provide bulk creation for states */
-		{
-			fsm_state_t dummy;
-			size_t j;
-
-			for (j = 0; j < dfacount; j++) {
-				if (!fsm_addstate(dfa, &dummy)) {
-					/* TODO: free stuff */
-					goto error;
-				}
-			}
+		if (!fsm_addstate_bulk(dfa, dfacount)) {
+			/* TODO: free stuff */
+			goto error;
 		}
 
 		assert(dfa->statecount == dfacount);

@@ -730,7 +730,7 @@ comp_iter(struct comp_env *env,
 
 	case AST_EXPR_CONCAT:
 	{
-		fsm_state_t z;
+		fsm_state_t base, z;
 		fsm_state_t curr_x;
 		enum re_flags saved;
 		size_t i;
@@ -742,6 +742,12 @@ comp_iter(struct comp_env *env,
 
 		assert(count >= 1);
 
+		base = env->fsm->statecount;
+
+		if (!fsm_addstate_bulk(env->fsm, count - 1)) {
+			return 0;
+		}
+
 		for (i = 0; i < count; i++) {
 			struct ast_expr *curr = n->u.concat.n[i];
 			struct ast_expr *next = i == count - 1
@@ -749,7 +755,7 @@ comp_iter(struct comp_env *env,
 				: n->u.concat.n[i + 1];
 
 			if (i + 1 < count) {
-				NEWSTATE(z);
+				z = base + i;
 			} else {
 				z = y;
 			}

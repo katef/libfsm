@@ -59,18 +59,13 @@ fsm_glushkovise(struct fsm *nfa)
 		/* TODO: bail out early if there are no edges to create? */
 
 		for (i = 0; i <= FSM_SIGMA_MAX; i++) {
-			struct state_iter it;
-			fsm_state_t es;
-
 			if (sclosures[i] == NULL) {
 				continue;
 			}
 
-			for (state_set_reset(sclosures[i], &it); state_set_next(&it, &es); ) {
-				if (!edge_set_add(&nfa->states[s].edges, nfa->opt->alloc, i, es)) {
-					/* TODO: free stuff */
-					goto error;
-				}
+			if (!edge_set_add_state_set(&nfa->states[s].edges, nfa->opt->alloc, i, sclosures[i])) {
+				/* TODO: free stuff */
+				goto error;
 			}
 
 			/* XXX: we took a copy, but i would prefer to bulk transplant ownership instead */

@@ -70,11 +70,6 @@ struct fsm {
 	const struct fsm_options *opt;
 };
 
-int
-fsm_addedge_bulk(struct fsm *fsm,
-	fsm_state_t from, fsm_state_t *a, size_t n,
-	char c);
-
 void
 fsm_carryopaque_array(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
     struct fsm *dst_fsm, fsm_state_t dst_state);

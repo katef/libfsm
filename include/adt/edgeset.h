@@ -12,6 +12,7 @@ struct set;
 struct fsm_alloc;
 struct fsm_edge;
 struct edge_set;
+struct state_set;
 
 struct edge_iter {
 	size_t i;
@@ -24,6 +25,10 @@ edge_set_free(struct edge_set *set);
 int
 edge_set_add(struct edge_set **set, const struct fsm_alloc *alloc,
 	unsigned char symbol, fsm_state_t state);
+
+int
+edge_set_add_state_set(struct edge_set **setp, const struct fsm_alloc *alloc,
+	unsigned char symbol, const struct state_set *state_set);
 
 int
 edge_set_contains(const struct edge_set *set, unsigned char symbol);

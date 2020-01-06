@@ -111,6 +111,7 @@ edge_set_add(struct edge_set **setp, const struct fsm_alloc *alloc,
 
 		assert(!IS_SINGLETON(*setp));
 
+		/* TODO: bulk add */
 		if (!edge_set_add(setp, alloc, prev_symbol, prev_state)) {
 			return 0;
 		}
@@ -150,6 +151,25 @@ edge_set_add(struct edge_set **setp, const struct fsm_alloc *alloc,
 	set->i++;
 
 	assert(edge_set_contains(set, symbol));
+
+	return 1;
+}
+
+int
+edge_set_add_state_set(struct edge_set **setp, const struct fsm_alloc *alloc,
+	unsigned char symbol, const struct state_set *state_set)
+{
+	struct state_iter it;
+	fsm_state_t s;
+
+	assert(setp != NULL);
+
+	/* TODO: bulk add */
+	for (state_set_reset((void *) state_set, &it); state_set_next(&it, &s); ) {
+		if (!edge_set_add(setp, alloc, symbol, s)) {
+			return 0;
+		}
+	}
 
 	return 1;
 }
@@ -286,7 +306,10 @@ edge_set_copy(struct edge_set **dst, const struct fsm_alloc *alloc,
 	struct fsm_edge e;
 
 	assert(dst != NULL);
-	assert(src != NULL);
+
+	if (edge_set_empty(src)) {
+		return 1;
+	}
 
 	if (IS_SINGLETON(src)) {
 		if (!edge_set_add(dst, alloc, SINGLETON_DECODE_SYMBOL(src), SINGLETON_DECODE_STATE(src))) {
@@ -297,6 +320,7 @@ edge_set_copy(struct edge_set **dst, const struct fsm_alloc *alloc,
 	}
 
 	for (edge_set_reset((void *) src, &jt); edge_set_next(&jt, &e); ) {
+		/* TODO: bulk add */
 		if (!edge_set_add(dst, alloc, e.symbol, e.state)) {
 			return 0;
 		}

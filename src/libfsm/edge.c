@@ -5,7 +5,6 @@
  */
 
 #include <assert.h>
-#include <string.h>
 #include <stdlib.h>
 #include <limits.h>
 
@@ -14,7 +13,6 @@
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
-#include <adt/xalloc.h>
 
 #include "internal.h"
 
@@ -43,6 +41,7 @@ fsm_addedge_any(struct fsm *fsm,
 	assert(from < fsm->statecount);
 	assert(to < fsm->statecount);
 
+	/* TODO: bulk add by symbol, presumably as a bitmap */
 	for (i = 0; i <= UCHAR_MAX; i++) {
 		if (!fsm_addedge_literal(fsm, from, to, (unsigned char) i)) {
 			return 0;
@@ -63,30 +62,6 @@ fsm_addedge_literal(struct fsm *fsm,
 
 	if (!edge_set_add(&fsm->states[from].edges, fsm->opt->alloc, c, to)) {
 		return 0;
-	}
-
-	return 1;
-}
-
-int
-fsm_addedge_bulk(struct fsm *fsm,
-	fsm_state_t from, fsm_state_t *a, size_t n,
-	char c)
-{
-	size_t i;
-
-	assert(fsm != NULL);
-	assert(a != NULL);
-
-	if (n == 0) {
-		return 1;
-	}
-
-	/* TODO: would hope to have a bulk-add interface for edges */
-	for (i = 0; i < n; i++) {
-		if (!edge_set_add(&fsm->states[from].edges, fsm->opt->alloc, c, a[i])) {
-			return 0;
-		}
 	}
 
 	return 1;

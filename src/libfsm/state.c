@@ -52,21 +52,56 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 
 		new = &fsm->states[fsm->statecount];
 
-		new->end = 0;
-		new->visited = 0;
-		new->opaque = NULL;
-
-		/*
-		 * Sets for epsilon and labelled transitions are kept NULL
-		 * until populated; this suits the most nodes in the bodies of
-		 * typical FSM that do not have epsilons, and (less often)
-		 * nodes that have no edges.
-		 */
+		new->end      = 0;
+		new->visited  = 0;
+		new->opaque   = NULL;
 		new->epsilons = NULL;
 		new->edges    = NULL;
 	}
 
 	fsm->statecount++;
+
+	return 1;
+}
+
+int
+fsm_addstate_bulk(struct fsm *fsm, size_t n)
+{
+	size_t i;
+
+	assert(fsm != NULL);
+
+	if (fsm->statecount + n <= fsm->statealloc) {
+		for (i = 0; i < n; i++) {
+			struct fsm_state *new;
+
+			new = &fsm->states[fsm->statecount + i];
+
+			new->end      = 0;
+			new->visited  = 0;
+			new->opaque   = NULL;
+			new->epsilons = NULL;
+			new->edges    = NULL;
+		}
+
+		fsm->statecount += n;
+
+		return 1;
+	}
+
+/*
+TODO: bulk add
+if there's space already, just increment statecount
+otherwise realloc to += twice as much more
+*/
+
+	for (i = 0; i < n; i++) {
+		fsm_state_t dummy;
+
+		if (!fsm_addstate(fsm, &dummy)) {
+			return 0;
+		}
+	}
 
 	return 1;
 }

@@ -61,20 +61,31 @@ fsm_capture_duplicate(struct fsm *fsm,
 	}
 
 	/* allocate new states */
-	new_start = new_end = 0;
-	for (ind = old_start; ind < old_end; ind++) {
-		fsm_state_t st;
-		if (!fsm_addstate(fsm, &st)) {
+	{
+		fsm_state_t base;
+
+		base = fsm->statecount;
+
+		if (!fsm_addstate_bulk(fsm, old_end - old_start)) {
 			return 0;
 		}
 
-		fsm_setend(fsm, st, fsm_isend(fsm, ind));
+		new_start = new_end = 0;
+		for (ind = old_start; ind < old_end; ind++) {
+			fsm_state_t st;
 
-		if (ind == old_start) {
-			new_start = st;
+			st = ind - old_start + base;
+
+			if (fsm_isend(fsm, ind)) {
+				fsm_setend(fsm, st, 1);
+			}
+
+			if (ind == old_start) {
+				new_start = st;
+			}
+
+			new_end = st+1;
 		}
-
-		new_end = st+1;
 	}
 
 	if (new_start == new_end) {
