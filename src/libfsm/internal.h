@@ -13,6 +13,7 @@
 #include <fsm/fsm.h>
 #include <fsm/options.h>
 
+struct bm;
 struct edge_set;
 struct state_set;
 struct state_array;
@@ -40,7 +41,7 @@ struct state_array;
 #define FSM_ENDCOUNT_MAX ULONG_MAX
 
 struct fsm_edge {
-	struct state_set *sl;
+	fsm_state_t state; /* destination */
 	unsigned char symbol;
 };
 
@@ -69,17 +70,6 @@ struct fsm {
 	const struct fsm_options *opt;
 };
 
-int
-fsm_state_cmpedges(const void *a, const void *b);
-
-struct fsm_edge *
-fsm_hasedge_literal(const struct fsm *fsm, fsm_state_t state, char c);
-
-int
-fsm_addedge_bulk(struct fsm *fsm,
-	fsm_state_t from, fsm_state_t *a, size_t n,
-	char c);
-
 void
 fsm_carryopaque_array(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
     struct fsm *dst_fsm, fsm_state_t dst_state);
@@ -91,6 +81,9 @@ fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
 struct fsm *
 fsm_mergeab(struct fsm *a, struct fsm *b,
     fsm_state_t *base_b);
+
+int
+state_hasnondeterminism(const struct fsm *fsm, fsm_state_t state, struct bm *bm);
 
 /*
  * TODO: if this were a public API, we could present ragged array of { a, n } structs

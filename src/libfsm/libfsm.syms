@@ -44,6 +44,7 @@ fsm_getoptions
 fsm_move
 fsm_merge
 fsm_addstate
+fsm_addstate_bulk
 fsm_removestate
 
 fsm_addedge_any

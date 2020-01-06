@@ -18,9 +18,8 @@
 fsm_state_t
 fsm_findmode(const struct fsm *fsm, fsm_state_t state, unsigned int *freq)
 {
-	struct fsm_edge *e;
 	struct edge_iter it;
-	fsm_state_t s;
+	struct fsm_edge e;
 
 	struct {
 		fsm_state_t state;
@@ -32,31 +31,25 @@ fsm_findmode(const struct fsm *fsm, fsm_state_t state, unsigned int *freq)
 	assert(fsm != NULL);
 	assert(state < fsm->statecount);
 
-	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		struct state_iter jt;
+	for (edge_set_reset(fsm->states[state].edges, &it); edge_set_next(&it, &e); ) {
+		struct edge_iter kt = it;
+		struct fsm_edge c;
+		unsigned int curr;
 
-		for (state_set_reset(e->sl, &jt); state_set_next(&jt, &s); ) {
-			struct edge_iter kt = it;
-			struct fsm_edge *c;
-			unsigned int curr;
+		curr = 1; /* including ourself */
 
-			curr = 1; /* including ourself */
-
-			/*
-			 * Count the remaining edes which have the same target.
-			 * This works because the edges are still sorted by
-			 * symbol, so we don't have to walk the whole thing.
-			 */
-			for (c = edge_set_next(&kt); c != NULL; c = edge_set_next(&kt)) {
-				if (state_set_contains(c->sl, s)) {
-					curr++;
-				}
+		/*
+		 * Count the remaining edes which have the same destination.
+		 */
+		while (edge_set_next(&kt, &c)) {
+			if (c.state == e.state) {
+				curr++;
 			}
+		}
 
-			if (curr > mode.freq) {
-				mode.freq  = curr;
-				mode.state = s;
-			}
+		if (curr > mode.freq) {
+			mode.freq  = curr;
+			mode.state = e.state;
 		}
 	}
 

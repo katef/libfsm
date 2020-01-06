@@ -133,11 +133,11 @@ fsm_reverse(struct fsm *fsm)
 
 		for (i = 0; i < fsm->statecount; i++) {
 			struct edge_iter it;
-			struct fsm_edge *e;
-			fsm_state_t se;
+			struct fsm_edge e;
 
 			{
 				struct state_iter jt;
+				fsm_state_t se;
 
 				/* TODO: eventually to be a predicate bit cached for the whole fsm */
 				if (fsm->states[i].epsilons != NULL) {
@@ -150,40 +150,11 @@ fsm_reverse(struct fsm *fsm)
 					}
 				}
 			}
-			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-				struct state_iter jt;
+			for (edge_set_reset(fsm->states[i].edges, &it); edge_set_next(&it, &e); ) {
+				assert(e.state < fsm->statecount);
 
-				for (state_set_reset(e->sl, &jt); state_set_next(&jt, &se); ) {
-					struct fsm_edge *en;
-
-					assert(se < fsm->statecount);
-
-					if (edges[se] == NULL) {
-						edges[se] = edge_set_create(fsm->opt->alloc, fsm_state_cmpedges);
-						if (edges[se] == NULL) {
-							goto error1;
-						}
-					}
-
-					en = edge_set_contains(edges[se], e);
-					if (en == NULL) {
-						en = f_malloc(fsm->opt->alloc, sizeof *en);
-						if (en == NULL) {
-							goto error1;
-						}
-
-						en->symbol = e->symbol;
-						en->sl = NULL;
-					}
-
-					en = edge_set_add(edges[se], en);
-					if (en == NULL) {
-						return 0;
-					}
-
-					if (!state_set_add(&en->sl, fsm->opt->alloc, i)) {
-						return 0;
-					}
+				if (!edge_set_add(&edges[e.state], fsm->opt->alloc, e.symbol, i)) {
+					return 0;
 				}
 			}
 		}
@@ -226,13 +197,6 @@ fsm_reverse(struct fsm *fsm)
 		struct state_iter it;
 		fsm_state_t s;
 
-		if (edges[start] == NULL) {
-			edges[start] = edge_set_create(fsm->opt->alloc, fsm_state_cmpedges);
-			if (edges[start] == NULL) {
-				goto error;
-			}
-		}
-
 		for (state_set_reset(endset, &it); state_set_next(&it, &s); ) {
 			if (s == start) {
 				continue;
@@ -242,7 +206,7 @@ fsm_reverse(struct fsm *fsm)
 				continue;
 			}
 
-			if (!edge_set_copy(edges[start], fsm->opt->alloc, edges[s])) {
+			if (!edge_set_copy(&edges[start], fsm->opt->alloc, edges[s])) {
 				goto error;
 			}
 		}

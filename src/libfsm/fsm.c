@@ -29,14 +29,6 @@ free_contents(struct fsm *fsm)
 	assert(fsm != NULL);
 
 	for (i = 0; i < fsm->statecount; i++) {
-		struct edge_iter it;
-		struct fsm_edge *e;
-
-		for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-			state_set_free(e->sl);
-			f_free(fsm->opt->alloc, e);
-		}
-
 		state_set_free(fsm->states[i].epsilons);
 		edge_set_free(fsm->states[i].edges);
 	}
@@ -223,18 +215,8 @@ fsm_countedges(const struct fsm *fsm)
 	unsigned int n = 0;
 	size_t i;
 
-	/*
-	 * XXX - this counts all src,lbl,dst tuples individually and
-	 * should be replaced with something better when possible
-	 */
 	for (i = 0; i < fsm->statecount; i++) {
-		struct edge_iter ei;
-		const struct fsm_edge *e;
-
-		for (e = edge_set_first(fsm->states[i].edges, &ei); e != NULL; e=edge_set_next(&ei)) {
-			assert(n + state_set_count(e->sl) > n); /* handle overflow with more grace? */
-			n += state_set_count(e->sl);
-		}
+		n += edge_set_count(fsm->states[i].edges);
 	}
 
 	return n;

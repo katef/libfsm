@@ -91,6 +91,12 @@ fsm_merge(struct fsm *a, struct fsm *b,
 int
 fsm_addstate(struct fsm *fsm, fsm_state_t *state);
 
+/*
+ * Add multiple states.
+ */
+int
+fsm_addstate_bulk(struct fsm *fsm, size_t n);
+
  /*
  * Remove a state. Any edges transitioning to this state are also removed.
  */

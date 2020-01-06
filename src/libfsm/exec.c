@@ -15,24 +15,21 @@
 
 #include <adt/set.h>
 #include <adt/stateset.h>
+#include <adt/edgeset.h>
 
 #include "internal.h"
 
 static int
-nextstate(const struct fsm *fsm, fsm_state_t state, int c,
+transition(const struct fsm *fsm, fsm_state_t state, int c,
 	fsm_state_t *next)
 {
-	struct fsm_edge *e;
-
 	assert(state < fsm->statecount);
 	assert(next != NULL);
 
-	e = fsm_hasedge_literal(fsm, state, c);
-	if (e == NULL) {
+	if (!edge_set_transition(fsm->states[state].edges, c, next)) {
 		return 0;
 	}
 
-	*next = state_set_only(e->sl);
 	return 1;
 }
 
@@ -63,7 +60,7 @@ fsm_exec(const struct fsm *fsm,
 	}
 
 	while (c = fsm_getc(opaque), c != EOF) {
-		if (!nextstate(fsm, state, c, &state)) {
+		if (!transition(fsm, state, c, &state)) {
 			return 0;
 		}
 	}

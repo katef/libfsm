@@ -35,8 +35,6 @@ fsm_glushkovise(struct fsm *nfa)
 		struct state_set *sclosures[FSM_SIGMA_COUNT] = { NULL };
 		struct state_iter kt;
 		fsm_state_t es;
-		struct fsm_edge *e;
-		struct edge_iter jt;
 		int i;
 
 		if (nfa->states[s].epsilons == NULL) {
@@ -60,51 +58,18 @@ fsm_glushkovise(struct fsm *nfa)
 
 		/* TODO: bail out early if there are no edges to create? */
 
-		if (nfa->states[s].edges == NULL) {
-			nfa->states[s].edges = edge_set_create(nfa->opt->alloc, fsm_state_cmpedges);
-			if (nfa->states[s].edges == NULL) {
-				/* TODO: free stuff */
-				goto error;
-			}
-		}
-
-		for (e = edge_set_first(nfa->states[s].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
-			if (sclosures[e->symbol] == NULL) {
-				continue;
-			}
-
-			if (!state_set_copy(&e->sl, nfa->opt->alloc, sclosures[e->symbol])) {
-				/* TODO: free stuff */
-				goto error;
-			}
-
-			state_set_free(sclosures[e->symbol]);
-			sclosures[e->symbol] = NULL;
-		}
-
 		for (i = 0; i <= FSM_SIGMA_MAX; i++) {
-			struct fsm_edge *new;
-
 			if (sclosures[i] == NULL) {
 				continue;
 			}
 
-			new = f_malloc(nfa->opt->alloc, sizeof *new);
-			if (new == NULL) {
+			if (!edge_set_add_state_set(&nfa->states[s].edges, nfa->opt->alloc, i, sclosures[i])) {
 				/* TODO: free stuff */
 				goto error;
 			}
 
-			new->symbol = i;
-			new->sl = sclosures[i];
-
-			/* ownership belongs to the newly-created edge now */
-			sclosures[i] = NULL;
-
-			if (!edge_set_add(nfa->states[s].edges, new)) {
-				/* TODO: free stuff */
-				goto error;
-			}
+			/* XXX: we took a copy, but i would prefer to bulk transplant ownership instead */
+			state_set_free(sclosures[i]);
 		}
 
 		/* all elements in sclosures[] have been freed or moved to their

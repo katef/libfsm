@@ -34,7 +34,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 		fprintf(f, "\t\"states\": [\n");
 
 		for (i = 0; i < fsm->statecount; i++) {
-			struct fsm_edge *e;
+			struct fsm_edge e;
 			struct edge_iter it;
 			int first = 1;
 
@@ -69,30 +69,25 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 				}
 			}
 
-			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-				struct state_iter jt;
-				fsm_state_t st;
-
-				for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
-					if (!first) {
-						fprintf(f, ",\n");
-					}
-
-					fprintf(f, "\t\t\t\t{ ");
-
-					fprintf(f, "\"char\": ");
-					fputs(" \"", f);
-					json_escputc(f, fsm->opt, e->symbol);
-					putc('\"', f);
-
-					fprintf(f, ", ");
-
-					fprintf(f, "\"to\": %u", st);
-
-					fprintf(f, " }");
-
-					first = 0;
+			for (edge_set_reset(fsm->states[i].edges, &it); edge_set_next(&it, &e); ) {
+				if (!first) {
+					fprintf(f, ",\n");
 				}
+
+				fprintf(f, "\t\t\t\t{ ");
+
+				fprintf(f, "\"char\": ");
+				fputs(" \"", f);
+				json_escputc(f, fsm->opt, e.symbol);
+				putc('\"', f);
+
+				fprintf(f, ", ");
+
+				fprintf(f, "\"to\": %u", e.state);
+
+				fprintf(f, " }");
+
+				first = 0;
 			}
 
 			if (!first) {

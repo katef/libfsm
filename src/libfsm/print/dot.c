@@ -24,31 +24,12 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
-/* Return true if the edges after o contains state */
-/* TODO: centralise */
-static int
-contains(struct edge_set *edges, int o, fsm_state_t state)
-{
-	struct fsm_edge *e, search;
-	struct edge_iter it;
-
-	assert(edges != NULL);
-
-	search.symbol = o;
-	for (e = edge_set_firstafter(edges, &it, &search); e != NULL; e = edge_set_next(&it)) {
-		if (state_set_contains(e->sl, state)) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
 static void
 singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 {
-	struct fsm_edge *e;
+	struct fsm_edge e;
 	struct edge_iter it;
+	struct state_set *unique;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
@@ -83,24 +64,28 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 			}
 		}
 
-		for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
-			struct state_iter jt;
-			fsm_state_t st;
+		for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
+			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+				s,
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+				e.state);
 
-			for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
-				fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
-					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-					s,
-					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-					st);
+			dot_escputc_html(f, fsm->opt, e.symbol);
 
-				dot_escputc_html(f, fsm->opt, e->symbol);
-
-				fprintf(f, "> ];\n");
-			}
+			fprintf(f, "> ];\n");
 		}
 
 		return;
+	}
+
+	unique = NULL;
+
+	for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
+		if (!state_set_add(&unique, fsm->opt->alloc, e.state)) {
+			/* TODO: error */
+			return;
+		}
 	}
 
 	/*
@@ -112,46 +97,42 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	 * To implement this, we loop through all unique states, rather than
 	 * looping through each edge.
 	 */
-	/* TODO: handle special edges upto FSM_EDGE_MAX separately */
-	for (e = edge_set_first(fsm->states[s].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		struct state_iter jt;
-		fsm_state_t st;
+	for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
+		struct fsm_edge ne;
+		struct edge_iter kt;
+		struct bm bm;
 
-		for (state_set_reset(e->sl, &jt); state_set_next(&jt, &st); ) {
-			struct fsm_edge *ne;
-			struct edge_iter kt;
-			struct bm bm;
-
-			/* unique states only */
-			if (contains(fsm->states[s].edges, e->symbol, st)) {
-				continue;
-			}
-
-			bm_clear(&bm);
-
-			/* find all edges which go from this state to the same target state */
-			for (ne = edge_set_first(fsm->states[s].edges, &kt); ne != NULL; ne = edge_set_next(&kt)) {
-				if (state_set_contains(ne->sl, st)) {
-					bm_set(&bm, ne->symbol);
-				}
-			}
-
-			fprintf(f, "\t%sS%-2u -> %sS%-2u [ ",
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				s,
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				st);
-
-			if (bm_count(&bm) > 4) {
-				fprintf(f, "weight = 3, ");
-			}
-
-			fprintf(f, "label = <");
-
-			(void) bm_print(f, fsm->opt, &bm, 0, dot_escputc_html);
-
-			fprintf(f, "> ];\n");
+		/* unique states only */
+		if (!state_set_contains(unique, e.state)) {
+			continue;
 		}
+
+		state_set_remove(&unique, e.state);
+
+		bm_clear(&bm);
+
+		/* find all edges which go from this state to the same target state */
+		for (edge_set_reset(fsm->states[s].edges, &kt); edge_set_next(&kt, &ne); ) {
+			if (ne.state == e.state) {
+				bm_set(&bm, ne.symbol);
+			}
+		}
+
+		fprintf(f, "\t%sS%-2u -> %sS%-2u [ ",
+			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+			s,
+			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+			e.state);
+
+		if (bm_count(&bm) > 4) {
+			fprintf(f, "weight = 3, ");
+		}
+
+		fprintf(f, "label = <");
+
+		(void) bm_print(f, fsm->opt, &bm, 0, dot_escputc_html);
+
+		fprintf(f, "> ];\n");
 	}
 
 	/*

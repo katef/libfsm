@@ -52,16 +52,9 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 
 		new = &fsm->states[fsm->statecount];
 
-		new->end = 0;
-		new->visited = 0;
-		new->opaque = NULL;
-
-		/*
-		 * Sets for epsilon and labelled transitions are kept NULL
-		 * until populated; this suits the most nodes in the bodies of
-		 * typical FSM that do not have epsilons, and (less often)
-		 * nodes that have no edges.
-		 */
+		new->end      = 0;
+		new->visited  = 0;
+		new->opaque   = NULL;
 		new->epsilons = NULL;
 		new->edges    = NULL;
 	}
@@ -71,11 +64,51 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 	return 1;
 }
 
+int
+fsm_addstate_bulk(struct fsm *fsm, size_t n)
+{
+	size_t i;
+
+	assert(fsm != NULL);
+
+	if (fsm->statecount + n <= fsm->statealloc) {
+		for (i = 0; i < n; i++) {
+			struct fsm_state *new;
+
+			new = &fsm->states[fsm->statecount + i];
+
+			new->end      = 0;
+			new->visited  = 0;
+			new->opaque   = NULL;
+			new->epsilons = NULL;
+			new->edges    = NULL;
+		}
+
+		fsm->statecount += n;
+
+		return 1;
+	}
+
+/*
+TODO: bulk add
+if there's space already, just increment statecount
+otherwise realloc to += twice as much more
+*/
+
+	for (i = 0; i < n; i++) {
+		fsm_state_t dummy;
+
+		if (!fsm_addstate(fsm, &dummy)) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 void
 fsm_removestate(struct fsm *fsm, fsm_state_t state)
 {
-	struct fsm_edge *e;
-	struct edge_iter it;
 	fsm_state_t start, i;
 
 	assert(fsm != NULL);
@@ -86,15 +119,11 @@ fsm_removestate(struct fsm *fsm, fsm_state_t state)
 
 	for (i = 0; i < fsm->statecount; i++) {
 		state_set_remove(&fsm->states[i].epsilons, state);
-		for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-			state_set_remove(&e->sl, state);
+		if (fsm->states[i].edges != NULL) {
+			edge_set_remove_state(&fsm->states[i].edges, state);
 		}
 	}
 
-	for (e = edge_set_first(fsm->states[state].edges, &it); e != NULL; e = edge_set_next(&it)) {
-		state_set_free(e->sl);
-		f_free(fsm->opt->alloc, e);
-	}
 	state_set_free(fsm->states[state].epsilons);
 	edge_set_free(fsm->states[state].edges);
 
@@ -116,9 +145,7 @@ fsm_removestate(struct fsm *fsm, fsm_state_t state)
 
 		for (i = 0; i < fsm->statecount - 1; i++) {
 			state_set_replace(&fsm->states[i].epsilons, fsm->statecount - 1, state);
-			for (e = edge_set_first(fsm->states[i].edges, &it); e != NULL; e = edge_set_next(&it)) {
-				state_set_replace(&e->sl, fsm->statecount - 1, state);
-			}
+			edge_set_replace_state(&fsm->states[i].edges, fsm->statecount - 1, state);
 		}
 	}
 

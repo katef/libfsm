@@ -192,7 +192,7 @@ symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
 	struct state_set *sclosures[static FSM_SIGMA_COUNT])
 {
 	struct edge_iter jt;
-	struct fsm_edge *e;
+	struct fsm_edge e;
 
 	assert(fsm != NULL);
 	assert(sclosures != NULL);
@@ -207,12 +207,8 @@ symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
 	 * to avoid repeating that work by de-duplicating on the destination.
 	 */
 
-	for (e = edge_set_first(fsm->states[s].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
-		if (e->sl == NULL) {
-			continue;
-		}
-
-		if (!state_set_copy(&sclosures[e->symbol], fsm->opt->alloc, e->sl)) {
+	for (edge_set_reset(fsm->states[s].edges, &jt); edge_set_next(&jt, &e); ) {
+		if (!state_set_add(&sclosures[e.symbol], fsm->opt->alloc, e.state)) {
 			return 0;
 		}
 	}
@@ -226,7 +222,7 @@ symbol_closure(const struct fsm *fsm, fsm_state_t s,
 	struct state_set *sclosures[static FSM_SIGMA_COUNT])
 {
 	struct edge_iter jt;
-	struct fsm_edge *e;
+	struct fsm_edge e;
 
 	assert(fsm != NULL);
 	assert(eclosures != NULL);
@@ -240,25 +236,14 @@ symbol_closure(const struct fsm *fsm, fsm_state_t s,
 	 * TODO: it's common for many symbols to have transitions to the same state
 	 * (the worst case being an "any" transition). It'd be nice to find a way
 	 * to avoid repeating that work by de-duplicating on the destination.
+	 *
+	 * The epsilon closure of a state will always include itself,
+	 * so there's no need to explicitly copy the state itself here.
 	 */
 
-	for (e = edge_set_first(fsm->states[s].edges, &jt); e != NULL; e = edge_set_next(&jt)) {
-		struct state_iter kt;
-		fsm_state_t es;
-
-		if (e->sl == NULL) {
-			continue;
-		}
-
-		/*
-		 * The epsilon closure of a state will always include itself,
-		 * so there's no need to explicitly copy e->sl here.
-		 */
-
-		for (state_set_reset(e->sl, &kt); state_set_next(&kt, &es); ) {
-			if (!state_set_copy(&sclosures[e->symbol], fsm->opt->alloc, eclosures[es])) {
-				return 0;
-			}
+	for (edge_set_reset(fsm->states[s].edges, &jt); edge_set_next(&jt, &e); ) {
+		if (!state_set_copy(&sclosures[e.symbol], fsm->opt->alloc, eclosures[e.state])) {
+			return 0;
 		}
 	}
 

@@ -288,6 +288,7 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 		return 1;
 	}
 
+	/* TODO: bulk add states in advance */
 	if (!fsm_addstate(fsm, &st)) {
 		return 0;
 	}
@@ -373,5 +374,4 @@ trie_dump(struct trie_graph *g, FILE *f)
 
 	dump_state(g->root,f,0, buf);
 }
-
 
