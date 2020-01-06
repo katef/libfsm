@@ -70,7 +70,10 @@ state_set_has(const struct fsm *fsm, const struct state_set *set,
 static int
 state_set_cmpval(fsm_state_t a, fsm_state_t b)
 {
-	return (a > b) - (a < b);
+	if (a > b) { return +1; }
+	if (a < b) { return -1; }
+
+	return 0;
 }
 
 static int
