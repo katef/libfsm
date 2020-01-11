@@ -189,6 +189,98 @@ struct fsm_dfavm {
 	uint32_t len;
 };
 
+#define DFAVM_VERSION_MAJOR 0x00
+#define DFAVM_VERSION_MINOR 0x01
+#define DFAVM_MAGIC "DFAVM$"
+
+enum dfavm_io_result {
+	DFAVM_IO_OK = 0,
+	DFAVM_IO_ERROR_WRITING,
+	DFAVM_IO_ERROR_READING,
+	DFAVM_IO_OUT_OF_MEMORY,
+	DFAVM_IO_BAD_HEADER,
+	DFAVM_IO_UNSUPPORTED_VERSION,
+	DFAVM_IO_SHORT_READ,
+};
+
+enum dfavm_io_result
+fsm_dfavm_save(FILE *f, const struct fsm_dfavm *vm)
+{
+	/* write eight byte header */
+	unsigned char header[8];
+	unsigned char ilen[4];
+
+	memcpy(&header[0], DFAVM_MAGIC, 6);
+	header[6] = DFAVM_VERSION_MAJOR;
+	header[7] = DFAVM_VERSION_MINOR;
+
+	if (fwrite(&header, sizeof header, 1, f) != 1) {
+		return -1;
+	}
+
+	/* write out instructions */
+	ilen[0] = (vm->len >>  0) & 0xff;
+	ilen[1] = (vm->len >>  8) & 0xff;
+	ilen[2] = (vm->len >> 16) & 0xff;
+	ilen[3] = (vm->len >> 24) & 0xff;
+
+	if (fwrite(&ilen[0],sizeof ilen, 1, f) != 1) {
+		return -1;
+	}
+
+	if (fwrite(vm->ops, 1, vm->len, f) != vm->len) {
+		return -1;
+	}
+
+	return 0;
+}
+
+enum dfavm_io_result
+fsm_dfavm_load(FILE *f, struct fsm_dfavm *vm)
+{
+	unsigned char header[8], ilen[4];
+	uint32_t len;
+	unsigned char *instr;
+	size_t nread;
+
+	/* read and check header */
+	if (fread(&header[0], sizeof header, 1, f) != 1) {
+		return DFAVM_IO_ERROR_READING;
+	}
+
+	if (memcmp(&header[0], DFAVM_MAGIC, 6) != 0) {
+		return DFAVM_IO_BAD_HEADER;
+	}
+
+	if (header[6] != DFAVM_VERSION_MAJOR || header[7] > DFAVM_VERSION_MINOR) {
+		return DFAVM_IO_UNSUPPORTED_VERSION;
+	}
+
+	/* read number of instructions */
+	if (fread(&ilen[0], sizeof ilen, 1, f) != 1) {
+		return DFAVM_IO_ERROR_READING;
+	}
+
+	len = ((uint32_t)ilen[0] << 0) | ((uint32_t)ilen[1] << 8) |
+		((uint32_t)ilen[1] << 16) | ((uint32_t)ilen[1] << 24);
+
+	instr = malloc(len);
+	if (instr == NULL) {
+		return DFAVM_IO_OUT_OF_MEMORY;
+	}
+
+	nread = fread(instr, 1, len, f);
+	if (nread != len) {
+		free(instr);
+		return (nread > 0) ? DFAVM_IO_SHORT_READ : DFAVM_IO_ERROR_READING;
+	}
+
+	vm->ops = instr;
+	vm->len = len;
+
+	return DFAVM_IO_OK;
+}
+
 static const char *
 cmp_name(int cmp) {
 	switch (cmp) {
