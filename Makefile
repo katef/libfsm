@@ -77,9 +77,6 @@ SUBDIR += pc
 
 INCDIR += include
 
-test::
-	grep FAIL ${BUILD}/tests/*/res*; [ $$? -ne 0 ]
-
 .include <subdir.mk>
 .include <pc.mk>
 .include <sid.mk>
@@ -94,4 +91,7 @@ test::
 .include <mkdir.mk>
 .include <install.mk>
 .include <clean.mk>
+
+test::
+	grep FAIL ${BUILD}/tests/*/res*; [ $$? -ne 0 ]
 
