@@ -324,6 +324,11 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			 */
 			assert(child->type != AST_EXPR_TOMBSTONE);
 
+			/*
+			 * Also removed during AST rewriting.
+			 */
+			assert(child->type != AST_EXPR_EMPTY);
+
 #if LOG_CONCAT_FLAGS
 			fprintf(stderr, "%s: %p: %lu: %p -- past_any %d\n",
 			    __func__, (void *)n, i, (void *)child,
