@@ -32,6 +32,7 @@ atomic(struct ast_expr *n)
 	case AST_EXPR_ANY:
 	case AST_EXPR_GROUP:
 	case AST_EXPR_RANGE:
+	case AST_EXPR_TOMBSTONE:
 		return 1;
 
 	case AST_EXPR_REPEATED:
@@ -184,6 +185,10 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 	case AST_EXPR_FLAGS:
 		abort();
+
+	case AST_EXPR_TOMBSTONE:
+		fprintf(f, "<RIP>");
+		break;
 
 	default:
 		assert(!"unreached");

@@ -4,14 +4,11 @@
 # See LICENCE for the full copyright terms.
 #
 
-# /^[^\x00-\xff]^b$/ should produce an empty node for the character class,
-# meaning the second ^ anchor is visible to the start of text. Without the
-# handling for the empty set, the second ^ anchor would be seen as unsatisfiable.
-#
-# This is similar to /^a?^b$/ finding the first term is nullable.
+# /^[^\x00-\xff]^b$/ should produce a tombstone node for the character class,
+# meaning the second ^ anchor is not visible to the start of text. Thus the
+# expression as a whole is unsatisfiable.
 
 0 -> 1 'b';
 
 start: 0;
-end:   1;
 

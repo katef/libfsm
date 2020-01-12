@@ -155,6 +155,10 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "}> ];\n");
 		break;
 
+	case AST_EXPR_TOMBSTONE:
+		fprintf(f, "\tn%p [ label = <RIP> ];\n", (void *) n);
+		break;
+
 	default:
 		assert(!"unreached");
 	}

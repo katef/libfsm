@@ -326,7 +326,7 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		if (empty) {
 			ast_expr_free(n->u.subtract.a);
 			ast_expr_free(n->u.subtract.b);
-			goto empty;
+			goto tombstone;
 		}
 
 		return 1;
@@ -339,6 +339,12 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 empty:
 
 	n->type = AST_EXPR_EMPTY;
+
+	return 1;
+
+tombstone:
+
+	n->type = AST_EXPR_TOMBSTONE;
 
 	return 1;
 }

@@ -153,6 +153,10 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		/* XXX: not sure */
 		break;
 
+	case AST_EXPR_TOMBSTONE:
+		set_flags(n, AST_FLAG_UNSATISFIABLE);
+		return AST_ANALYSIS_UNSATISFIABLE;
+
 	default:
 		assert(!"unreached");
 	}
@@ -239,6 +243,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_FLAGS:
+	case AST_EXPR_TOMBSTONE:
 		break;
 
 	case AST_EXPR_ANCHOR:
@@ -311,6 +316,15 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			struct ast_expr *child;
 
 			child = n->u.concat.n[i];
+
+			/*
+			 * If we encounter a tombstone here, the entire concat is
+			 * unsatisfiable because all children must be matched.
+			 */
+			if (child->type == AST_EXPR_TOMBSTONE) {
+				set_flags(n, AST_FLAG_UNSATISFIABLE);
+				return AST_ANALYSIS_UNSATISFIABLE;
+			}
 
 #if LOG_CONCAT_FLAGS
 			fprintf(stderr, "%s: %p: %lu: %p -- past_any %d\n",
@@ -427,6 +441,7 @@ assign_firsts(struct ast_expr *n)
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_FLAGS:
+	case AST_EXPR_TOMBSTONE:
 		break;
 
 	case AST_EXPR_ANCHOR:
@@ -500,6 +515,7 @@ assign_lasts(struct ast_expr *n)
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_FLAGS:
+	case AST_EXPR_TOMBSTONE:
 		break;
 
 	case AST_EXPR_ANCHOR:
