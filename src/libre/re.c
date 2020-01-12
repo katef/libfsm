@@ -113,6 +113,10 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		return NULL;
 	}
 
+	if (!ast_rewrite(ast, flags)) {
+		return NULL;
+	}
+
 	/* Do a complete pass over the AST, filling in other details. */
 	res = ast_analysis(ast);
 
