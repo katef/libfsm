@@ -318,13 +318,11 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			child = n->u.concat.n[i];
 
 			/*
-			 * If we encounter a tombstone here, the entire concat is
-			 * unsatisfiable because all children must be matched.
+			 * If we were to encounter a tombstone here, the entire concat
+			 * would be unsatisfiable because all children must be matched.
+			 * However the AST rewriting resolved these already.
 			 */
-			if (child->type == AST_EXPR_TOMBSTONE) {
-				set_flags(n, AST_FLAG_UNSATISFIABLE);
-				return AST_ANALYSIS_UNSATISFIABLE;
-			}
+			assert(child->type != AST_EXPR_TOMBSTONE);
 
 #if LOG_CONCAT_FLAGS
 			fprintf(stderr, "%s: %p: %lu: %p -- past_any %d\n",

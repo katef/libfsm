@@ -77,6 +77,17 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			}
 		}
 
+		/* a tombstone here means the entire concatenation is a tombstone */
+		for (i = 0; i < n->u.concat.count; i++) {
+			if (n->u.concat.n[i]->type == AST_EXPR_TOMBSTONE) {
+				for (i = 0; i < n->u.concat.count; i++) {
+					ast_expr_free(n->u.concat.n[i]);
+				}
+
+				goto tombstone;
+			}
+		}
+
 		/* remove empty children; these have no semantic effect */
 		for (i = 0; i < n->u.concat.count; ) {
 			if (n->u.concat.n[i]->type == AST_EXPR_EMPTY) {
