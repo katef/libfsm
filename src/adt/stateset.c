@@ -5,8 +5,8 @@
  */
 
 #include <assert.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 #include <stdint.h>
 
 #include <fsm/fsm.h>
@@ -204,8 +204,8 @@ state_set_free(struct state_set *set)
 
 	assert(set->a != NULL);
 
-	free(set->a);
-	free(set);
+	f_free(set->alloc, set->a);
+	f_free(set->alloc, set);
 }
 
 int

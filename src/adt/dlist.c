@@ -5,7 +5,7 @@
  */
 
 #include <assert.h>
-#include <stdlib.h>
+#include <stddef.h>
 
 #include <fsm/fsm.h>
 

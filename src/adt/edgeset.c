@@ -6,7 +6,6 @@
 
 #include <assert.h>
 #include <stddef.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -82,8 +81,8 @@ edge_set_free(struct edge_set *set)
 
 	assert(set->a != NULL);
 
-	free(set->a);
-	free(set);
+	f_free(set->alloc, set->a);
+	f_free(set->alloc, set);
 }
 
 int

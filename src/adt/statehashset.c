@@ -6,7 +6,6 @@
 
 #include <assert.h>
 #include <stddef.h>
-#include <stdlib.h>
 
 #include <fsm/fsm.h>
 
@@ -139,8 +138,7 @@ hashset_finalize(struct state_hashset *hashset)
 {
 	static const struct state_hashset zero;
 
-	/* XXX: should be f_free() */
-	free(hashset->buckets);
+	f_free(hashset->alloc, hashset->buckets);
 	*hashset = zero;
 }
 
@@ -152,7 +150,7 @@ state_hashset_free(struct state_hashset *set)
 	}
 
 	hashset_finalize(set);
-	free(set);
+	f_free(set->alloc, set);
 }
 
 static int
