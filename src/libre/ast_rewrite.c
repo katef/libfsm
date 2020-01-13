@@ -68,6 +68,9 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 	assert(n->flags == 0x0);
 
 	switch (n->type) {
+	case AST_EXPR_EMPTY:
+		return 1;
+
 	case AST_EXPR_CONCAT: {
 		size_t i;
 
@@ -262,11 +265,20 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		return 1;
 	}
 
-	case AST_EXPR_GROUP:
-		return rewrite(n->u.group.e, flags);
+	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
+	case AST_EXPR_ANY:
+		return 1;
 
 	case AST_EXPR_REPEATED:
 		return rewrite(n->u.repeated.e, flags);
+
+	case AST_EXPR_GROUP:
+		return rewrite(n->u.group.e, flags);
+
+	case AST_EXPR_FLAGS:
+	case AST_EXPR_ANCHOR:
+		return 1;
 
 	case AST_EXPR_SUBTRACT: {
 		int empty;
@@ -343,8 +355,12 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		return 1;
 	}
 
-	default:
+	case AST_EXPR_RANGE:
+	case AST_EXPR_TOMBSTONE:
 		return 1;
+
+	default:
+		assert(!"unreached");
 	}
 
 empty:
