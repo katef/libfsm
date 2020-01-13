@@ -190,7 +190,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		break;
 
 	case AST_EXPR_TOMBSTONE:
-		fprintf(f, "<tombstone>\n");
+		fprintf(f, "RIP\n");
 		break;
 
 	default:

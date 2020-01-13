@@ -38,6 +38,12 @@ is_nullable(const struct ast_expr *n)
 }
 
 static int
+is_unsatisfiable(const struct ast_expr *n)
+{
+	return n->flags & AST_FLAG_UNSATISFIABLE;
+}
+
+static int
 is_start_anchor(const struct ast_expr *n)
 {
 	return n->type == AST_EXPR_ANCHOR && n->u.anchor.type == AST_ANCHOR_START;
@@ -153,6 +159,10 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		/* XXX: not sure */
 		break;
 
+	case AST_EXPR_TOMBSTONE:
+		set_flags(n, AST_FLAG_UNSATISFIABLE);
+		return AST_ANALYSIS_UNSATISFIABLE;
+
 	default:
 		assert(!"unreached");
 	}
@@ -239,6 +249,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_FLAGS:
+	case AST_EXPR_TOMBSTONE:
 		break;
 
 	case AST_EXPR_ANCHOR:
@@ -311,6 +322,18 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			struct ast_expr *child;
 
 			child = n->u.concat.n[i];
+
+			/*
+			 * If we were to encounter a tombstone here, the entire concat
+			 * would be unsatisfiable because all children must be matched.
+			 * However the AST rewriting resolved these already.
+			 */
+			assert(child->type != AST_EXPR_TOMBSTONE);
+
+			/*
+			 * Also removed during AST rewriting.
+			 */
+			assert(child->type != AST_EXPR_EMPTY);
 
 #if LOG_CONCAT_FLAGS
 			fprintf(stderr, "%s: %p: %lu: %p -- past_any %d\n",
@@ -390,9 +413,35 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 	case AST_EXPR_REPEATED:
 		res = analysis_iter_anchoring(env, n->u.repeated.e);
+
+		/*
+		 * This logic corresponds to the equivalent case for tombstone nodes
+		 * during the (earlier) AST rewrite pass, except here we deal with
+		 * unsatisfiable nodes rather than just tombstones.
+		 *
+		 * I don't like modifying the node tree here; this seems like it's
+		 * being done at the wrong time. Unfortunately we need to handle the
+		 * unsatisfiable nodes produced by anchors (such as /a($b)?/)
+		 * and so we depend on the anchor analysis for this.
+		 */
+		/* TODO: maybe do the analysis before rewriting? */
+
+		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeated.low == 0) {
+			ast_expr_free(n->u.repeated.e);
+
+			n->type = AST_EXPR_EMPTY;
+			set_flags(n, AST_FLAG_NULLABLE);
+			break;
+		}
+
+		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeated.low > 0) {
+			return AST_ANALYSIS_UNSATISFIABLE;
+		}
+
 		if (res != AST_ANALYSIS_OK) {
 			return res;
 		}
+
 		break;
 
 	case AST_EXPR_GROUP:
@@ -427,6 +476,7 @@ assign_firsts(struct ast_expr *n)
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_FLAGS:
+	case AST_EXPR_TOMBSTONE:
 		break;
 
 	case AST_EXPR_ANCHOR:
@@ -500,6 +550,7 @@ assign_lasts(struct ast_expr *n)
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_FLAGS:
+	case AST_EXPR_TOMBSTONE:
 		break;
 
 	case AST_EXPR_ANCHOR:
