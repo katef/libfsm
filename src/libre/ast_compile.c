@@ -492,6 +492,7 @@ print_linkage(enum link_types t)
     if (!fsm_addstate(env->fsm, &(NAME))) { return 0; }
 
 #define EPSILON(FROM, TO)           \
+    assert((FROM) != (TO));         \
     if (!fsm_addedge_epsilon(env->fsm, (FROM), (TO))) { return 0; }
         
 #define ANY(FROM, TO)               \
@@ -679,7 +680,6 @@ comp_iter(struct comp_env *env,
 			}
 
 			assert(env->have_start_any_loop);
-			EPSILON(env->start_any_loop, x);
 		}
 	}
 
@@ -718,7 +718,6 @@ comp_iter(struct comp_env *env,
 			}
 
 			assert(env->have_end_any_loop);
-			EPSILON(y, env->end_any_loop);
 		}
 	}
 
