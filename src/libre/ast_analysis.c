@@ -38,12 +38,6 @@ is_nullable(const struct ast_expr *n)
 }
 
 static int
-is_unsatisfiable(const struct ast_expr *n)
-{
-	return n->flags & AST_FLAG_UNSATISFIABLE;
-}
-
-static int
 is_start_anchor(const struct ast_expr *n)
 {
 	return n->type == AST_EXPR_ANCHOR && n->u.anchor.type == AST_ANCHOR_START;
