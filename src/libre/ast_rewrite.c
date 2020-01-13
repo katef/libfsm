@@ -275,6 +275,12 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			return 0;
 		}
 
+		if (n->u.repeated.e->type == AST_EXPR_EMPTY) {
+			ast_expr_free(n->u.repeated.e);
+
+			goto empty;
+		}
+
 		/*
 		 * A nullable repetition of a tombstone can only match by the nullable
 		 * option, which is equivalent to an empty node. A non-nullable
