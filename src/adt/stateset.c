@@ -266,7 +266,10 @@ state_set_add(struct state_set **setp, const struct fsm_alloc *alloc,
 			i++;
 		}
 
-		memmove(&set->a[i + 1], &set->a[i], (set->i - i) * (sizeof *set->a));
+		if (i <= set->i) {
+			memmove(&set->a[i + 1], &set->a[i], (set->i - i) * (sizeof *set->a));
+		}
+
 		set->a[i] = state;
 		set->i++;
 	} else {

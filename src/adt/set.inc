@@ -197,7 +197,10 @@ set_add(struct set *set, item_t *item)
 			i++;
 		}
 
-		memmove(&set->a[i + 1], &set->a[i], (set->i - i) * (sizeof *set->a));
+		if (i <= set->i) {
+			memmove(&set->a[i + 1], &set->a[i], (set->i - i) * (sizeof *set->a));
+		}
+
 		set->a[i] = item;
 		set->i++;
 	} else {
