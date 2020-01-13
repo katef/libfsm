@@ -38,6 +38,12 @@ is_nullable(const struct ast_expr *n)
 }
 
 static int
+is_unsatisfiable(const struct ast_expr *n)
+{
+	return n->flags & AST_FLAG_UNSATISFIABLE;
+}
+
+static int
 is_start_anchor(const struct ast_expr *n)
 {
 	return n->type == AST_EXPR_ANCHOR && n->u.anchor.type == AST_ANCHOR_START;
@@ -407,9 +413,35 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 	case AST_EXPR_REPEATED:
 		res = analysis_iter_anchoring(env, n->u.repeated.e);
+
+		/*
+		 * This logic corresponds to the equivalent case for tombstone nodes
+		 * during the (earlier) AST rewrite pass, except here we deal with
+		 * unsatisfiable nodes rather than just tombstones.
+		 *
+		 * I don't like modifying the node tree here; this seems like it's
+		 * being done at the wrong time. Unfortunately we need to handle the
+		 * unsatisfiable nodes produced by anchors (such as /a($b)?/)
+		 * and so we depend on the anchor analysis for this.
+		 */
+		/* TODO: maybe do the analysis before rewriting? */
+
+		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeated.low == 0) {
+			ast_expr_free(n->u.repeated.e);
+
+			n->type = AST_EXPR_EMPTY;
+			set_flags(n, AST_FLAG_NULLABLE);
+			break;
+		}
+
+		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeated.low > 0) {
+			return AST_ANALYSIS_UNSATISFIABLE;
+		}
+
 		if (res != AST_ANALYSIS_OK) {
 			return res;
 		}
+
 		break;
 
 	case AST_EXPR_GROUP:

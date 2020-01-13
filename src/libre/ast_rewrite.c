@@ -271,10 +271,49 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		return 1;
 
 	case AST_EXPR_REPEATED:
-		return rewrite(n->u.repeated.e, flags);
+		if (!rewrite(n->u.repeated.e, flags)) {
+			return 0;
+		}
+
+		/*
+		 * A nullable repetition of a tombstone can only match by the nullable
+		 * option, which is equivalent to an empty node. A non-nullable
+		 * repetition of a tombstone can never match, because that would require
+		 * the tombstone to be traversed, so that is equivalent to a tombstone
+		 * itself.
+		 *
+		 * This logic is repeated in a more generally-applicable way during the
+		 * AST anchor analysis, to cater for unsatisfiable nodes we don't know
+		 * during this rewriting pass yet. I'm keeping the more specific case
+		 * here just because it helps with simplifying the tree first.
+		 */
+
+		if (n->u.repeated.low == 0 && n->u.repeated.e->type == AST_EXPR_TOMBSTONE) {
+			ast_expr_free(n->u.repeated.e);
+
+			goto empty;
+		}
+
+		if (n->u.repeated.low > 0 && n->u.repeated.e->type == AST_EXPR_TOMBSTONE) {
+			ast_expr_free(n->u.repeated.e);
+
+			goto tombstone;
+		}
+
+		return 1;
 
 	case AST_EXPR_GROUP:
-		return rewrite(n->u.group.e, flags);
+		if (!rewrite(n->u.group.e, flags)) {
+			return 0;
+		}
+
+		if (n->u.group.e->type == AST_EXPR_TOMBSTONE) {
+			ast_expr_free(n->u.group.e);
+
+			goto tombstone;
+		}
+
+		return 1;
 
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_ANCHOR:
