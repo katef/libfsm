@@ -93,9 +93,8 @@
 	<ast-make-literal>:       (:char)                  -> (:ast_expr);
 	<ast-make-concat>:        ()                       -> (:ast_expr);
 	<ast-make-alt>:           ()                       -> (:ast_expr);
-	!<ast-make-any>:          ()                       -> (:ast_expr);
-	<ast-make-atom>:          (:ast_expr, :ast_count)  -> (:ast_expr);
-	<ast-make-atom-any>:      (:ast_count)             -> (:ast_expr);
+	<ast-make-any>:           ()                       -> (:ast_expr);
+	<ast-make-piece>:         (:ast_expr, :ast_count)  -> (:ast_expr);
 	<ast-make-group>:         (:ast_expr)              -> (:ast_expr);
 	!<ast-make-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
 	!<ast-make-anchor-start>: ()                       -> (:ast_expr);
@@ -109,8 +108,8 @@
 	<ast-add-alt>:    (:ast_expr, :ast_expr) -> ();
 
 	<err-expected-term>;
-	!<err-expected-count>;
-	!<err-expected-atoms>;
+	<err-expected-count>;
+	<err-expected-atom>;
 	<err-expected-alts>;
 	!<err-expected-range>;
 	<err-expected-closegroup>;
@@ -126,37 +125,6 @@
 	<mark-expr>: (:ast_expr, :pos, :pos) -> ();
 
 	expr: () -> (node :ast_expr) [
-		literal: () -> (node :ast_expr) = {
-  			(c, !, !) = CHAR;
-			node = <ast-make-literal>(c);
-  		};
-
-		atom-suffix: () -> (f :ast_count) = {
-			STAR;
-			f = <atom-kleene>();
-		||
-			PLUS;
-			f = <atom-plus>();
-		||
-			OPT;
-			f = <atom-opt>();
-		||
-			(pos_of, pos_ot) = OPENCOUNT;
-			m = COUNT;
-			(pos_cf, pos_ct) = CLOSECOUNT;
-			<mark-count>(pos_of, pos_ct);
-			f = <atom-count>(m, pos_of, m, pos_ct);
-		||
-			(pos_of, pos_ot) = OPENCOUNT;
-			m = COUNT;
-			SEP;
-			n = COUNT;
-			(pos_cf, pos_ct) = CLOSECOUNT;
-			<mark-count>(pos_of, pos_ct);
-			f = <atom-count>(m, pos_of, n, pos_ct);
-		||
-			f = <atom-one>();
-		};
 
 		/*
 		 * [abc] -> when it reaches the end, make an empty class, and
@@ -320,42 +288,74 @@
 			};
 		};
 
-		/* TODO: is there a better name than 'atom' for
-		 * this construct? it isn't atomic... */
-		atom: () -> (node :ast_expr) = {
-			OPENSUB;
-			g = expr();
-			e = <ast-make-group>(g);
-			CLOSESUB;
-			s = atom-suffix();
-			node = <ast-make-atom>(e, s);
-		||
-			e = character-class();
-			s = atom-suffix();
-			node = <ast-make-atom>(e, s);
-		||
-			e = literal();
-			s = atom-suffix();
-			node = <ast-make-atom>(e, s);
-		||
-			ANY;
-			s = atom-suffix();
-			node = <ast-make-atom-any>(s);
-		||
-			MANY;
-			s = atom-suffix();
-			f = <atom-kleene>();
-			e = <ast-make-atom-any>(f);
-			node = <ast-make-atom>(e, s);
+		piece: () -> (node :ast_expr) [
+
+			atom: () -> (e :ast_expr) = {
+				ANY;
+				e = <ast-make-any>();
+			||
+				MANY;
+				g = <ast-make-any>();
+				c = <atom-kleene>();
+				e = <ast-make-piece>(g, c);
+			||
+				(a, !, !) = CHAR;
+				e = <ast-make-literal>(a);
+			||
+				e = character-class();
+			||
+				OPENSUB;
+				g = expr();
+				e = <ast-make-group>(g);
+				CLOSESUB;
+			##
+				<err-expected-atom>;
+				e = <ast-make-any>();
+			};
+
+			count: () -> (c :ast_count) = {
+				STAR;
+				c = <atom-kleene>();
+			||
+				PLUS;
+				c = <atom-plus>();
+			||
+				OPT;
+				c = <atom-opt>();
+			||
+				(start, !) = OPENCOUNT;
+				m = COUNT;
+				(!, end) = CLOSECOUNT;
+				<mark-count>(start, end);
+				c = <atom-count>(m, start, m, end);
+			||
+				(start, !) = OPENCOUNT;
+				m = COUNT;
+				SEP;
+				n = COUNT;
+				(!, end) = CLOSECOUNT;
+				<mark-count>(start, end);
+				c = <atom-count>(m, start, n, end);
+			||
+				c = <atom-one>();
+			##
+				<err-expected-count>;
+				c = <atom-one>;
+			};
+
+		] = {
+			e = atom();
+			c = count();
+
+			node = <ast-make-piece>(e, c);
 		};
 
-		list-of-atoms: (cat :ast_expr) -> () = {
-			a = atom();
-
+		list-of-pieces: (cat :ast_expr) -> () = {
+			a = piece();
 			<ast-add-concat>(cat, a);
 
 			{
-				list-of-atoms(cat);
+				list-of-pieces(cat);
 			||
 				$;
 			};
@@ -363,7 +363,7 @@
 
 		alt: () -> (node :ast_expr) = {
 			node = <ast-make-concat>;
-			list-of-atoms(node);
+			list-of-pieces(node);
 		||
 			/* explcitly allow an empty alt */
 			node = <ast-make-empty>;

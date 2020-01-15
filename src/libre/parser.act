@@ -476,9 +476,9 @@
 		@!;
 	@};
 
-	<err-expected-atoms> = @{
+	<err-expected-atom> = @{
 		if (err->e == RE_ESUCCESS) {
-			err->e = RE_EXATOMS;
+			err->e = RE_EXATOM;
 		}
 		@!;
 	@};
@@ -692,24 +692,10 @@
 		}
 	@};
 
-	<ast-make-atom>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
+	<ast-make-piece>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
 		@node = ast_make_expr_with_count(@e, @c);
 		if (@node == NULL) {
 			err->e = RE_EXEOF;
-			@!;
-		}
-	@};
-
-	<ast-make-atom-any>: (c :ast_count) -> (node :ast_expr) = @{
-		struct ast_expr *e;
-
-		e = ast_make_expr_any();
-		if (e == NULL) {
-			@!;
-		}
-
-		@node = ast_make_expr_with_count(e, @c);
-		if (@node == NULL) {
 			@!;
 		}
 	@};

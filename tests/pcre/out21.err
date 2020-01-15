@@ -1,1 +1,1 @@
-tests/pcre/in21.re:3-7: Negative count range {3,2}
+tests/pcre/in21.re:3-8: Negative count range {3,2}

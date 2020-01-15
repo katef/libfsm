@@ -1,1 +1,1 @@
-tests/pcre/in23.re:6: Syntax error: expected alternative list
+tests/pcre/in23.re:6: Syntax error: expected atom

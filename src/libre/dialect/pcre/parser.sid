@@ -94,8 +94,7 @@
 	<ast-make-concat>:       ()                       -> (:ast_expr);
 	<ast-make-alt>:          ()                       -> (:ast_expr);
 	<ast-make-any>:          ()                       -> (:ast_expr);
-	<ast-make-atom>:         (:ast_expr, :ast_count)  -> (:ast_expr);
-	!<ast-make-atom-any>:    (:ast_count)             -> (:ast_expr);
+	<ast-make-piece>:        (:ast_expr, :ast_count)  -> (:ast_expr);
 	<ast-make-group>:        (:ast_expr)              -> (:ast_expr);
 	<ast-make-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
 	<ast-make-anchor-start>: ()                       -> (:ast_expr);
@@ -110,7 +109,7 @@
 
 	<err-expected-term>;
 	<err-expected-count>;
-	!<err-expected-atoms>;
+	<err-expected-atom>;
 	<err-expected-alts>;
 	<err-expected-range>;
 	<err-expected-closegroup>;
@@ -426,93 +425,16 @@
 			};
 		};
 
-		atom-qualifier: (e :ast_expr) -> (node :ast_expr) = {
-			(start, !) = OPENCOUNT;
-			m = COUNT;
-			(!, end) = CLOSECOUNT;
-			<mark-count>(start, end);
-			c = <atom-count>(m, start, m, end);
-			node = <ast-make-atom>(e, c);
-		||
-			(start, !) = OPENCOUNT;
-			m = COUNT;
-			SEP;
-			n = COUNT;
-			(end, !) = CLOSECOUNT;
-			<mark-count>(start, end);
-			c = <atom-count>(m, start, n, end);
-			node = <ast-make-atom>(e, c);
-		||
-			(start, !) = OPENCOUNT;
-			m = COUNT;
-			SEP;
-			(end, !) = CLOSECOUNT;
-			<mark-count>(start, end);
-			n = <unbounded-count>;
-			c = <atom-count>(m, start, n, end);
-			node = <ast-make-atom>(e, c);
-		||
-			OPT;
-			c = <atom-opt>();
-			node = <ast-make-atom>(e, c);
-		||
-			STAR;
-			c = <atom-kleene>();
-			node = <ast-make-atom>(e, c);
-		||
-			PLUS;
-			c = <atom-plus>();
-			node = <ast-make-atom>(e, c);
-		##
-			<err-expected-count>;
-			node = e;
-		};
+		piece: () -> (node :ast_expr) [
 
-		atom-qualifier-list: (e :ast_expr) -> (node :ast_expr) = {
-			node = atom-qualifier(e);
-
-			{
-				&node = atom-qualifier-list(node);
-			||
-				$;
-			};
-		};
-
-		atom: () -> (node :ast_expr) = {
 			/*
-			 * Note that START and END can appear embedded
-			 * within a list of atoms. Whether that makes
-			 * the regex inherently unmatchable depends on
-			 * whether the surrounding context is nullable
-			 * or not, so that's detected after parsing has
-			 * finished.
+			 * Note that START and END can appear embedded within a list
+			 * of atoms. Whether that makes the regex inherently unmatchable
+			 * depends on whether the surrounding context is nullable or not,
+			 * so that's detected after parsing has finished.
 			 */
-			{
-				OPENCAPTURE;
-				g = expr();
-				e = <ast-make-group>(g);
-				{
-					CLOSE;
-				##
-					<err-expected-alts>;
-				};
-			||
-				OPENSUB;
-				e = expr();
-				{
-					CLOSE;
-				##
-					<err-expected-alts>;
-				};
-			||
-				e = character-class();
-			||
-				e = type();
-			||
-				e = literal();
-			||
-				e = flags();
-			||
+
+			atom: () -> (e :ast_expr) = {
 				START;
 				e = <ast-make-anchor-start>();
 			||
@@ -522,28 +444,95 @@
 				ANY;
 				e = <ast-make-any>();
 			||
+				e = literal();
+			||
+				e = character-class();
+			||
+				e = type();
+			||
+				e = flags();
+			||
 				(!, !, !) = CONTROL;
 				<err-unsupported>();
 				e = <ast-make-empty>(); /* appease sid */
-			};
-
-			{
-				node = atom-qualifier-list(e);
 			||
-				
-				c = <atom-one>();
-				node = <ast-make-atom>(e, c);
+				OPENSUB;
+				e = expr();
+				CLOSE;
+			||
+				OPENCAPTURE;
+				g = expr();
+				e = <ast-make-group>(g);
+				CLOSE;
+			##
+				<err-expected-atom>;
+				e = <ast-make-any>();
 			};
 
+			count: () -> (c :ast_count) = {
+				STAR;
+				c = <atom-kleene>();
+			||
+				PLUS;
+				c = <atom-plus>();
+			||
+				OPT;
+				c = <atom-opt>();
+			||
+				(start, !) = OPENCOUNT;
+				m = COUNT;
+				(!, end) = CLOSECOUNT;
+				<mark-count>(start, end);
+				c = <atom-count>(m, start, m, end);
+			||
+				(start, !) = OPENCOUNT;
+				m = COUNT;
+				SEP;
+				n = COUNT;
+				(!, end) = CLOSECOUNT;
+				<mark-count>(start, end);
+				c = <atom-count>(m, start, n, end);
+			||
+				(start, !) = OPENCOUNT;
+				m = COUNT;
+				SEP;
+				(!, end) = CLOSECOUNT;
+				<mark-count>(start, end);
+				n = <unbounded-count>;
+				c = <atom-count>(m, start, n, end);
+			##
+				<err-expected-count>;
+				c = <atom-one>;
+			};
+
+			list-of-counts: (e :ast_expr) -> (node :ast_expr) = {
+				c = count();
+				node = <ast-make-piece>(e, c);
+
+				{
+					&node = list-of-counts(node);
+				||
+					$;
+				};
+			};
+
+		] = {
+			e = atom();
+			{
+				node = list-of-counts(e);
+			||
+				/* TODO: can this move into the count production? */
+				c = <atom-one>();
+				node = <ast-make-piece>(e, c);
+			};
 		};
 
-		list-of-atoms: (cat :ast_expr) -> () = {
-			a = atom();
-
+		list-of-pieces: (cat :ast_expr) -> () = {
+			a = piece();
 			<ast-add-concat>(cat, a);
 
 			{
-				list-of-atoms(cat);
+				list-of-pieces(cat);
 			||
 				$;
 			};
@@ -551,7 +540,7 @@
 
 		alt: () -> (node :ast_expr) = {
 			node = <ast-make-concat>;
-			list-of-atoms(node);
+			list-of-pieces(node);
 		||
 			/* explcitly allow an empty alt */
 			node = <ast-make-empty>;
