@@ -64,15 +64,14 @@
 	!<re-flag-none>:  ()                     -> (:re_flags);
 	!<re-flag-union>: (:re_flags, :re_flags) -> (:re_flags);
 
-	!<atom-kleene>: () -> (:ast_count);
-	!<atom-plus>:   () -> (:ast_count);
-	!<atom-one>:    () -> (:ast_count);
-	!<atom-opt>:    () -> (:ast_count);
-	!<atom-count>:  (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
+	!<count-unbounded>:    () -> (:unsigned);
+	!<count-zero-or-more>: () -> (:ast_count);
+	!<count-one-or-more>:  () -> (:ast_count);
+	!<count-zero-or-one>:  () -> (:ast_count);
+	!<count-one>:          () -> (:ast_count);
+	!<count-range>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
 	!<make-literal-cbrak>:    ()                       -> (:char);
-
-	!<unbounded-count>:	() -> (:unsigned);
 
 	!<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
 	!<ast-range-endpoint-class>:   (:ast_class_id) -> (:endpoint);
