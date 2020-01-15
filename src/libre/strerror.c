@@ -35,7 +35,6 @@ re_strerror(enum re_errno e)
 	case RE_EXGROUP:      return "Syntax error: expected group";
 	case RE_EXATOM:       return "Syntax error: expected atom";
 	case RE_EXCOUNT:      return "Syntax error: expected count";
-	case RE_EXATOMS:      return "Syntax error: expected atoms list";
 	case RE_EXALTS:       return "Syntax error: expected alternative list";
 	case RE_EXRANGE:      return "Syntax error: expected range separator";
 	case RE_EXCLOSEGROUP: return "Syntax error: group is not closed";

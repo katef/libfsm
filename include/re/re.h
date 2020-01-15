@@ -76,17 +76,16 @@ enum re_errno {
 	RE_EXGROUP      =  2 | RE_MARK,
 	RE_EXATOM       =  3 | RE_MARK,
 	RE_EXCOUNT      =  4 | RE_MARK,
-	RE_EXATOMS      =  5 | RE_MARK,
-	RE_EXALTS       =  6 | RE_MARK,
-	RE_EXRANGE      =  7 | RE_MARK,
-	RE_EXCLOSEGROUP =  8 | RE_MARK,
-	RE_EXGROUPBODY  =  9 | RE_MARK,
-	RE_EXEOF        = 10 | RE_MARK,
-	RE_EXESC        = 11 | RE_MARK,
-	RE_EFLAG        = 12 | RE_MARK,
-	RE_EXCLOSEFLAGS = 13 | RE_MARK,
-	RE_EXUNSUPPORTD = 14 | RE_MARK,
-	RE_EBADCP       = 15 | RE_MARK
+	RE_EXALTS       =  5 | RE_MARK,
+	RE_EXRANGE      =  6 | RE_MARK,
+	RE_EXCLOSEGROUP =  7 | RE_MARK,
+	RE_EXGROUPBODY  =  8 | RE_MARK,
+	RE_EXEOF        =  9 | RE_MARK,
+	RE_EXESC        = 10 | RE_MARK,
+	RE_EFLAG        = 11 | RE_MARK,
+	RE_EXCLOSEFLAGS = 12 | RE_MARK,
+	RE_EXUNSUPPORTD = 13 | RE_MARK,
+	RE_EBADCP       = 14 | RE_MARK
 };
 
 struct re_pos {
