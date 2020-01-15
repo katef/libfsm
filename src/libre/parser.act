@@ -693,7 +693,13 @@
 	@};
 
 	<ast-make-piece>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
-		@node = ast_make_expr_with_count(@e, @c);
+		if (@c.low == 0 && @c.high == 0) {
+			@node = ast_make_expr_empty();
+		} else if (@c.low == 1 && @c.high == 1) {
+			@node = @e;
+		} else {
+			@node = ast_make_expr_with_count(@e, @c);
+		}
 		if (@node == NULL) {
 			err->e = RE_EXEOF;
 			@!;
