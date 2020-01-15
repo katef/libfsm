@@ -466,10 +466,6 @@ ast_make_expr_with_count(struct ast_expr *e, struct ast_count count)
 
 	assert(count.low <= count.high);
 
-	if (count.low == 1 && count.high == 1) {
-		return e; /* skip the useless REPEATED node */
-	}
-
 	/* Applying a count to a start/end anchor is a syntax error. */
 	if (e->type == AST_EXPR_ANCHOR) {
 		return NULL;

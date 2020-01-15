@@ -476,9 +476,9 @@
 		@!;
 	@};
 
-	<err-expected-atoms> = @{
+	<err-expected-atom> = @{
 		if (err->e == RE_ESUCCESS) {
-			err->e = RE_EXATOMS;
+			err->e = RE_EXATOM;
 		}
 		@!;
 	@};
@@ -582,27 +582,27 @@
 		@out = @in | @flag;
 	@};
 
-	<atom-kleene>: () -> (c :ast_count) = @{
-		@c = ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
-	@};
-
-	<atom-plus>: () -> (c :ast_count) = @{
-		@c = ast_make_count(1, NULL, AST_COUNT_UNBOUNDED, NULL);
-	@};
-
-	<atom-one>: () -> (c :ast_count) = @{
-		@c = ast_make_count(1, NULL, 1, NULL);
-	@};
-
-	<atom-opt>: () -> (c :ast_count) = @{
-		@c = ast_make_count(0, NULL, 1, NULL);
-	@};
-
-	<unbounded-count>: () -> (n :unsigned) = @{
+	<count-unbounded>: () -> (n :unsigned) = @{
 		@n = AST_COUNT_UNBOUNDED;
 	@};
 
-	<atom-count>: (l :unsigned, start :pos, h :unsigned, end :pos) -> (c :ast_count) = @{
+	<count-zero-or-more>: () -> (c :ast_count) = @{
+		@c = ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
+	@};
+
+	<count-one-or-more>: () -> (c :ast_count) = @{
+		@c = ast_make_count(1, NULL, AST_COUNT_UNBOUNDED, NULL);
+	@};
+
+	<count-zero-or-one>: () -> (c :ast_count) = @{
+		@c = ast_make_count(0, NULL, 1, NULL);
+	@};
+
+	<count-one>: () -> (c :ast_count) = @{
+		@c = ast_make_count(1, NULL, 1, NULL);
+	@};
+
+	<count-range>: (l :unsigned, start :pos, h :unsigned, end :pos) -> (c :ast_count) = @{
 		struct ast_pos ast_start, ast_end;
 
 		if (@h < @l) {
@@ -692,24 +692,16 @@
 		}
 	@};
 
-	<ast-make-atom>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
-		@node = ast_make_expr_with_count(@e, @c);
+	<ast-make-piece>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
+		if (@c.low == 0 && @c.high == 0) {
+			@node = ast_make_expr_empty();
+		} else if (@c.low == 1 && @c.high == 1) {
+			@node = @e;
+		} else {
+			@node = ast_make_expr_with_count(@e, @c);
+		}
 		if (@node == NULL) {
 			err->e = RE_EXEOF;
-			@!;
-		}
-	@};
-
-	<ast-make-atom-any>: (c :ast_count) -> (node :ast_expr) = @{
-		struct ast_expr *e;
-
-		e = ast_make_expr_any();
-		if (e == NULL) {
-			@!;
-		}
-
-		@node = ast_make_expr_with_count(e, @c);
-		if (@node == NULL) {
 			@!;
 		}
 	@};
