@@ -160,7 +160,7 @@
 					(c, !, !) = CONTROL;
 					/* TODO: just construct the AST here;
 					 * complain about unsupported things at a later stage */
-					<err-unsupported>();
+					<err-unsupported>;
 				};
 				node = <ast-make-literal>(c);
 	  		};
@@ -182,7 +182,7 @@
 						(c, start, end) = CHAR;
 					||
 						(c, start, end) = CONTROL;
-						<err-unsupported>();
+						<err-unsupported>;
 					};
 					r = <ast-range-endpoint-literal>(c);
 				};
@@ -193,15 +193,15 @@
 				};
 			] = {
 				{
-					(r, start, end) = range-endpoint-literal();
+					(r, start, end) = range-endpoint-literal;
 				||
-					(r, start, end) = range-endpoint-class();
+					(r, start, end) = range-endpoint-class;
 				};
 			};
 
 			range-endpoint-end: () -> (r :endpoint, end :pos) = {
 				{
-					(r, !, end) = range-endpoint();
+					(r, !, end) = range-endpoint;
 				||
 					/* allow literal '-' as end of range */
 					(c, !, end) = RANGE;
@@ -210,7 +210,7 @@
 			};
 
 			class-range: () -> (node :ast_expr) = {
-				(lower,start,!) = range-endpoint();
+				(lower, start, !) = range-endpoint;
 
 				{
 					(!, !, !) = RANGE;
@@ -218,23 +218,23 @@
 					<err-expected-range>;
 				};
 
-				(upper,end) = range-endpoint-end();
+				(upper, end) = range-endpoint-end;
 
 				<mark-range>(start, end);
 				node = <ast-make-range>(lower, start, upper, end);
 			};
 
 			class-term: () -> (node :ast_expr) = {
-				node = class-literal();
+				node = class-literal;
 			||
-				node = class-range();
+				node = class-range;
 			||
-				(node, !, !) = class-named();
+				(node, !, !) = class-named;
 			};
 
 			list-of-class-terms: (class :ast_expr) -> () = {
 				{
-					node = class-term();
+					node = class-term;
 					<ast-add-alt>(class, node);
 				##
 					<err-expected-term>;
@@ -262,7 +262,7 @@
 					{
 						lower = <ast-range-endpoint-literal>(c);
 						(!, !, !) = RANGE;
-						(upper,end) = range-endpoint-end();
+						(upper,end) = range-endpoint-end;
 						node1 = <ast-make-range>(lower, rstart, upper, end);
 					||
 						node1 = <ast-make-literal>(c);
@@ -292,7 +292,7 @@
 					{
 						lower = <ast-range-endpoint-literal>(c);
 						(!, !, !) = RANGE;
-						(upper,end) = range-endpoint-end();
+						(upper, end) = range-endpoint-end;
 						node1 = <ast-make-range>(lower, rstart, upper, end);
 					||
 						node1 = <ast-make-literal>(c);
@@ -316,11 +316,11 @@
 				node = <ast-make-alt>;
 				tmp  = node;
 
-				cbrak = <make-literal-cbrak>();
+				cbrak = <make-literal-cbrak>;
 				{
 					r = <ast-range-endpoint-literal>(cbrak);
 					(!, !, !) = RANGE;
-					(upper,end) = range-endpoint-end();
+					(upper, end) = range-endpoint-end;
 					/* FIXME: start is off by one */
 					lower = <ast-range-endpoint-literal>(cbrak);
 					node1 = <ast-make-range>(lower, start, upper, end);
@@ -345,11 +345,11 @@
 
 				&node = <ast-make-invert>(node);
 
-				cbrak = <make-literal-cbrak>();
+				cbrak = <make-literal-cbrak>;
 				{
 					r = <ast-range-endpoint-literal>(cbrak);
 					(!, !, !) = RANGE;
-					(upper,end) = range-endpoint-end();
+					(upper, end) = range-endpoint-end;
 					/* FIXME: start is off by one */
 					lower = <ast-range-endpoint-literal>(cbrak);
 					node1 = <ast-make-range>(lower, start, upper, end);
@@ -380,7 +380,7 @@
 		};
 
 		type: () -> (node :ast_expr) = {
-			(class, start, end) = class-named();
+			(class, start, end) = class-named;
 
 			node = <ast-make-alt>;
 			<ast-add-alt>(node, class);
@@ -400,8 +400,8 @@
 		] = {
 			OPENFLAGS;
 
-			empty_pos = <re-flag-none>();
-			empty_neg = <re-flag-none>();
+			empty_pos = <re-flag-none>;
+			empty_neg = <re-flag-none>;
 
 			{
 				pos = flag_set(empty_pos);
@@ -421,7 +421,7 @@
 				node = <ast-make-re-flags>(pos, neg);
 			##
 				<err-expected-closeflags>;
-				node = <ast-make-empty>();
+				node = <ast-make-empty>;
 			};
 		};
 
@@ -436,48 +436,48 @@
 
 			atom: () -> (e :ast_expr) = {
 				START;
-				e = <ast-make-anchor-start>();
+				e = <ast-make-anchor-start>;
 			||
 				END;
-				e = <ast-make-anchor-end>();
+				e = <ast-make-anchor-end>;
 			||
 				ANY;
-				e = <ast-make-any>();
+				e = <ast-make-any>;
 			||
-				e = literal();
+				e = literal;
 			||
-				e = character-class();
+				e = character-class;
 			||
-				e = type();
+				e = type;
 			||
-				e = flags();
+				e = flags;
 			||
 				(!, !, !) = CONTROL;
-				<err-unsupported>();
-				e = <ast-make-empty>(); /* appease sid */
+				<err-unsupported>;
+				e = <ast-make-empty>; /* appease sid */
 			||
 				OPENSUB;
-				e = expr();
+				e = expr;
 				CLOSE;
 			||
 				OPENCAPTURE;
-				g = expr();
+				g = expr;
 				e = <ast-make-group>(g);
 				CLOSE;
 			##
 				<err-expected-atom>;
-				e = <ast-make-any>();
+				e = <ast-make-any>;
 			};
 
 			count: () -> (c :ast_count) = {
 				STAR;
-				c = <atom-kleene>();
+				c = <atom-kleene>;
 			||
 				PLUS;
-				c = <atom-plus>();
+				c = <atom-plus>;
 			||
 				OPT;
-				c = <atom-opt>();
+				c = <atom-opt>;
 			||
 				(start, !) = OPENCOUNT;
 				m = COUNT;
@@ -506,7 +506,7 @@
 			};
 
 			list-of-counts: (e :ast_expr) -> (node :ast_expr) = {
-				c = count();
+				c = count;
 				node = <ast-make-piece>(e, c);
 
 				{
@@ -517,18 +517,18 @@
 			};
 
 		] = {
-			e = atom();
+			e = atom;
 			{
 				node = list-of-counts(e);
 			||
 				/* TODO: can this move into the count production? */
-				c = <atom-one>();
+				c = <atom-one>;
 				node = <ast-make-piece>(e, c);
 			};
 		};
 
 		list-of-pieces: (cat :ast_expr) -> () = {
-			a = piece();
+			a = piece;
 			<ast-add-concat>(cat, a);
 
 			{
@@ -547,7 +547,7 @@
 		};
 
 		list-of-alts: (alts :ast_expr) -> () = {
-			a = alt();
+			a = alt;
 
 			<ast-add-alt>(alts, a);
 
@@ -567,12 +567,12 @@
 		list-of-alts(node);
 	##
 		<err-expected-alts>;
-		node = <ast-make-empty>();
+		node = <ast-make-empty>;
 	};
 
 	re_pcre: () -> (node :ast_expr) = {
 		{
-			node = expr();
+			node = expr;
 		};
 
 		{

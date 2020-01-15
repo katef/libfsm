@@ -120,11 +120,11 @@
 			node = <ast-make-literal>(c);
 		##
 			<err-expected-atom>;
-			node = <ast-make-any>();
+			node = <ast-make-any>;
 		};
 
 	] = {
-		a = atom();
+		a = atom;
 		<ast-add-concat>(cat, a);
 
 		{
@@ -139,7 +139,7 @@
 			node = <ast-make-concat>;
 			list-of-atoms(node);
 		||
-			node = <ast-make-empty>();
+			node = <ast-make-empty>;
 		};
 	
 		{

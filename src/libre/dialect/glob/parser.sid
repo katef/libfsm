@@ -120,19 +120,19 @@
 			e = <ast-make-literal>(c);
 		||
 			ANY;
-			e = <ast-make-any>();
+			e = <ast-make-any>;
 		||
 			MANY;
-			g = <ast-make-any>();
-			c = <atom-kleene>();
+			g = <ast-make-any>;
+			c = <atom-kleene>;
 			e = <ast-make-piece>(g, c);
 		##
 			<err-expected-atom>;
-			e = <ast-make-any>();
+			e = <ast-make-any>;
 		};
 
 	] = {
-		a = atom();
+		a = atom;
 		<ast-add-concat>(cat, a);
 
 		{
@@ -147,7 +147,7 @@
 			node = <ast-make-concat>;
 			list-of-atoms(node);
 		||
-			node = <ast-make-empty>();
+			node = <ast-make-empty>;
 		};
 
 		{
