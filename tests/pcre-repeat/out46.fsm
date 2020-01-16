@@ -1,0 +1,24 @@
+#
+# Copyright 2020 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+0 -> 0 'a';
+0 -> 1;
+
+1 -> 1 'a';
+1 -> 2;
+
+2 -> 2 'a';
+2 -> 3;
+
+3 -> 3 'a';
+3 -> 4;
+
+4 -> 4 'a';
+4 -> 5;
+
+start: 0;
+end: 5;
+
