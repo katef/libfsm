@@ -52,12 +52,20 @@ print_edge_symbol(FILE *f, int *notfirst, const struct fsm_options *opt,
 	}
 
 	/* "symbol" as opposed to "label" because this is a literal value */
-	fprintf(f, "    { \"src\": %u, \"dst\": %u, \"symbol\": \"",
+	fprintf(f, "    { \"src\": %u, \"dst\": %u, \"symbol\": ",
 		src, dst);
 
-	json_escputc(f, opt, symbol);
+	if (opt->always_hex) {
+		/* json doesn't have hex numeric literals, but this idea here is
+		 * to output a numeric value rather than a string, so %u will do. */
+		fprintf(f, "%u", symbol);
+	} else {
+		fprintf(f, "\"");
+		json_escputc(f, opt, symbol);
+		fprintf(f, "\"");
+	}
 
-	fprintf(f, "\" }");
+	fprintf(f, " }");
 
 	*notfirst = 1;
 }
