@@ -22,35 +22,140 @@
 #define DEBUG_VM_EXECUTION 0
 #define DEBUG_VM_OPCODES   0
 
-// Instructions are 1-6 bytes each.  First byte is the opcode.  Second is the
-// (optional) argument.  Additional bytes encode the branch destination.
+// VM state:
 //
-// There are four instructions:
-// BRANCH, MATCH, and STOP.  The opcodes for each are:
+//   Conceptually, the VM has is composed of:
+//   - string buffer: holds 8-bit bytes to match
+//   - program buffer: holds the VM bytecode
+//   - address buffer: holds various tables and data
+//   - three additional registers:
 //
-//          76543210
-// BR       CCC10xDD
-// STOP     CCC00xxE
-// FETCH    00001xxE
+//     SP - string pointer  - 32-bit unsigned offset into string buffer
+//     SB - string byte     -  8-bit unsigned register, usually holds
+//                                   string buffer byte at SP
+//     PC - program counter - 32-bit unsigned offset into program buffer
 //
-// bits marked x are reserved for future use, and should be 0
+// Note: currently the address buffer is not used and should be empty
+
+// VM intermediate representation
 //
-// Possible future instruction:
-// IBRANCH  CC11DDDD
+//   each opcode represents a change to the VM state.  Each opcode should
+//   loosely translate into a single VM instruction, and should map fairly
+//   directly to machine code instructions.
 //
-// Comparison bits:
-// 
-//   CCC
-//   000  always
-//   001  less than
-//   010  less than or equal to
-//   011  greater than or equal to
-//   100  greater than
-//   101  equal to
-//   110  not equal to
+// Current IR opcodes:
 //
-//   Comparisons other than 'always' have one comparison argument.  'Always'
-//   comparisons have no comparison arguments.
+//   FETCH succ:BOOL
+//     fetches the next byte in the string buffer.  SP is advanced, SB is updated.
+//
+//     If the string buffer is empty, FETCH will attempt to fill it.  If the
+//     buffer cannot be filled with any bytes, matching will end.
+//
+//     If the 'succ' parameter is true, an empty buffer is treated as a successful
+//     match.  Otherwise it's treated as a failed match.
+//
+//     When FETCH completes the PC is advanced to the next instruction.
+//
+//   STOP cond:COND arg:BYTE succ:BOOL
+//
+//     Stops matching if cond(SB,arg) is true.
+//
+//     If the 'succ' parameter is true, the match is successful, otherwise the
+//     match fails.
+//
+//     When STOP completes, the PC is advanced to the next instruction.  If STOP
+//     'cond' is true, STOP never completes.
+//
+//   BRANCH cond:COND arg:BYTE dest:ADDR
+//
+//     If cond(SB,arg) is true, sets the PC to the instruction at 'dest'.
+//     Otherwise advances the PC to the next instruction.
+//
+// Potential future opcodes:
+//
+//   FINDB arg:BYTE succ:BOOL
+//
+//     Searches the buffer for the first a byte equal to 'arg'.
+//
+//     If a byte is found, advances SP to its position, sets SB to that byte, and
+//     advanced PC to the next instruction.
+//
+//     Until a byte is found equal to 'arg', FINDB will attempt to refill the
+//     buffer and continue the search.
+//
+//     If the buffer cannot be filled:
+//       if 'succ' is true, the match is considered successful
+//       otherwise, the match is considered a failure
+//
+//   FINDS str:ADDR succ:BOOL
+//
+//     Like FINDB, but searches the buffer for the string 'str' instead of a byte.
+//     String is length-encoded.
+//
+//   MATCHS str:ADDR
+//
+//     Matches the bytes given by 'str' with the current bytes in the buffer.
+//     SB is set to the number of bytes that match.
+//
+//     Note that 'str' is limited to 255 bytes.
+//
+//     This instruction must be followed by BRANCH instructions to decode where
+//     the match failed.
+//
+//  TBRANCH table:ADDR
+//
+//     This is a "table branch" instruction.  The table should have 256
+//     addresses (0-255).  This instruction sets PC to the address at table[SB]
+
+// VM bytecodes:
+//
+//   In addition to the string buffer, the program buffer, SP, SB, and PC,
+//   the VM also has an address buffer and a table buffer.
+//
+//   There are four instructions:
+//   BRANCH, IBRANCH, FETCH, and STOP.
+//
+//   BRANCH and IBRANCH are both ways to implement the BRANCH opcode.  The
+//   difference between them is how the address is determined.
+//
+//     BRANCH  address is a 16-bit signed relative offset
+//     IBRANCH address is a 32-bit unsigned value stored in the address buffer.
+//             The argument is the address buffer entry.
+//
+// Instructions are encoded into 4 bytes.  The first byte holds the instruction
+// type, the condition (if applicable) and the success argument (if applicable).
+// The remaining three bytes depend on the instruction:
+//
+// BRANCH : 8-bit arg, 16-bit signed relative dest
+// STOP   : 8-bit arg, rest unused
+// FETCH  : no args, rest unused
+//
+// unused bits should be zeroed to keep bytecode forward-compatible.
+//
+//
+// Op codes:
+//
+//            bits
+// BRANCH     0000CCC0
+// IBRANCH    0001CCC0
+// STOP       0010CCCR  R  = 0 fail / R = 1 succeed
+// FETCH      0011000R  R  = 0 fail / R = 1 succeed
+//
+//
+//            bits
+// BRANCH     FR000CCC
+// IBRANCH    FR001CCC
+// STOP       FR01XCCC  X  = 0 fail / X = 1 succeed
+//
+//   NB: in the future, 'always' comparisons may use their argument byte
+//       for other purposes.
+//
+// Argument 
+//   ARG is an 8-bit unsigned byte
+//
+// BRANCH - compare and branch
+//   
+//   If the comparison between ARG and CB is true Sets the PC based on the relative
 //
 // FETCH - fetch instructions
 //
