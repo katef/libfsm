@@ -235,6 +235,30 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 		fprintf(f, " ],\n");
 	}
 
+	if (fsm->opt->endleaf != NULL) {
+		int notfirst;
+
+		notfirst = 0;
+
+		fprintf(f, "  \"endleaf\": [ ");
+		for (i = 0; i < fsm->statecount; i++) {
+			if (fsm_isend(fsm, i)) {
+				if (notfirst) {
+					fprintf(f, ", ");
+				}
+
+				fprintf(f, "{ %u, ", i);
+
+				fsm->opt->endleaf(f, &fsm->states[i], fsm->opt->endleaf_opaque);
+
+				fprintf(f, " }");
+
+				notfirst = 1;
+			}
+		}
+		fprintf(f, " ],\n");
+	}
+
 	{
 		int notfirst;
 
