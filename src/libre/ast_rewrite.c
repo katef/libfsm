@@ -282,6 +282,73 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		}
 
 		/*
+		 * Should never be constructed, but just in case.
+		 */
+		if (n->u.repeated.low == 0 && n->u.repeated.high == 0) {
+			ast_expr_free(n->u.repeated.e);
+
+			goto empty;
+		}
+
+		/*
+		 * Should never be constructed, but just in case.
+		 */
+		if (n->u.repeated.low == 1 && n->u.repeated.high == 1) {
+			struct ast_expr *dead = n->u.repeated.e;
+
+			*n = *n->u.repeated.e;
+
+			dead->type = AST_EXPR_EMPTY;
+			ast_expr_free(dead);
+
+			return 1;
+		}
+
+		/*
+		 * Fold together nested repetitions of the form a{h,i}{j,k} where
+		 * the result is expressable as a single repetition node a{v,w}.
+		 */
+		if (n->u.repeated.e->type == AST_EXPR_REPEATED) {
+			const struct ast_expr *inner, *outer;
+			struct ast_expr *dead;
+			unsigned h, i, j, k;
+			unsigned v, w;
+
+			inner = n->u.repeated.e;
+			outer = n;
+
+			h = inner->u.repeated.low;
+			i = inner->u.repeated.high;
+			j = outer->u.repeated.low;
+			k = outer->u.repeated.high;
+
+			/*
+			 * a{h,i}{j,k} is equivalent to a{h*j,i*k} if it's possible to combine,
+			 * and it's possible iff the range of the result is not more than
+			 * the sum of the ranges of the two inputs.
+			 */
+			if (h != AST_COUNT_UNBOUNDED && i != AST_COUNT_UNBOUNDED
+			 && j != AST_COUNT_UNBOUNDED && k != AST_COUNT_UNBOUNDED) {
+				/* TODO: deal with overflow */
+				v = h * j;
+				w = i * k;
+
+				if (w - v <= i - h + k - j) {
+					dead = n->u.repeated.e;
+
+					n->u.repeated.low  = v;
+					n->u.repeated.high = w;
+					n->u.repeated.e    = n->u.repeated.e->u.repeated.e;
+
+					dead->type = AST_EXPR_EMPTY;
+					ast_expr_free(dead);
+				}
+			}
+
+			return 1;
+		}
+
+		/*
 		 * A nullable repetition of a tombstone can only match by the nullable
 		 * option, which is equivalent to an empty node. A non-nullable
 		 * repetition of a tombstone can never match, because that would require
