@@ -437,6 +437,35 @@ endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 	return 0;
 }
 
+static int
+endleaf_json(FILE *f, const void *state_opaque, const void *endleaf_opaque)
+{
+	const struct match *m;
+
+	assert(f != NULL);
+	assert(state_opaque != NULL);
+	assert(endleaf_opaque == NULL);
+
+	(void) endleaf_opaque;
+
+	fprintf(f, "[ ");
+
+	for (m = state_opaque; m != NULL; m = m->next) {
+		fprintf(f, "%u", m->i);
+
+		if (m->next != NULL) {
+			fprintf(f, ", ");
+		}
+	}
+
+	fprintf(f, " ]");
+
+	/* TODO: only if comments */
+	/* TODO: centralise to libfsm/print/json.c */
+
+	return 0;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -869,6 +898,8 @@ main(int argc, char *argv[])
 			opt.endleaf = endleaf_c;
 		} else if (print_fsm == fsm_print_dot) {
 			opt.endleaf = patterns ? endleaf_dot : NULL;
+		} else if (print_fsm == fsm_print_json) {
+			opt.endleaf = patterns ? endleaf_json : NULL;
 		}
 
 		print_fsm(stdout, fsm);
