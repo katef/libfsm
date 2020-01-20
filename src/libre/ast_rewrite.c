@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Katherine Flavel
+ * Copyright 2019-2020 Katherine Flavel
  *
  * See LICENCE for the full copyright terms.
  */
@@ -17,6 +17,10 @@
 #include "ast.h"
 #include "ast_analysis.h"
 #include "ast_compile.h"
+
+#if !defined(__GNUC__) && !defined(__clang__)
+#error __builtin_umul_overflow required
+#endif
 
 static struct fsm *
 compile_subexpr(struct ast_expr *e, enum re_flags flags)
@@ -325,9 +329,15 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			j = outer->u.repeated.low;
 			k = outer->u.repeated.high;
 
-			/* TODO: deal with overflow */
-			v = h * j;
-			w = i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED ? AST_COUNT_UNBOUNDED : i * k;
+			/* Bail out (i.e. with no rewriting) on overflow */
+			if (__builtin_umul_overflow(h, j, &v)) {
+				return 1;
+			}
+			if (i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED) {
+				w = AST_COUNT_UNBOUNDED;
+			} else if (__builtin_umul_overflow(i, k, &w)) {
+				return 1;
+			}
 
 			if (h == 0 || h == 1) {
 				dead = n->u.repeated.e;
