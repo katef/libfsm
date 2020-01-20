@@ -327,7 +327,7 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 
 			if (h == 0 || h == 1) {
 				/* TODO: deal with overflow */
-				v = j == AST_COUNT_UNBOUNDED ? AST_COUNT_UNBOUNDED : h * j;
+				v = h * j;
 				w = i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED ? AST_COUNT_UNBOUNDED : i * k;
 
 				dead = n->u.repeated.e;
@@ -378,6 +378,23 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 
 					return 1;
 				}
+			}
+
+			if (h > 1 && i == AST_COUNT_UNBOUNDED && j > 0) {
+				/* TODO: deal with overflow */
+				v = h * j;
+				w = AST_COUNT_UNBOUNDED;
+
+				dead = n->u.repeated.e;
+
+				n->u.repeated.low  = v;
+				n->u.repeated.high = w;
+				n->u.repeated.e    = n->u.repeated.e->u.repeated.e;
+
+				dead->type = AST_EXPR_EMPTY;
+				ast_expr_free(dead);
+
+				return 1;
 			}
 
 			return 1;
