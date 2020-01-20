@@ -325,11 +325,11 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			j = outer->u.repeated.low;
 			k = outer->u.repeated.high;
 
-			if (h == 0 || h == 1) {
-				/* TODO: deal with overflow */
-				v = h * j;
-				w = i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED ? AST_COUNT_UNBOUNDED : i * k;
+			/* TODO: deal with overflow */
+			v = h * j;
+			w = i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED ? AST_COUNT_UNBOUNDED : i * k;
 
+			if (h == 0 || h == 1) {
 				dead = n->u.repeated.e;
 
 				n->u.repeated.low  = v;
@@ -348,10 +348,6 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			 * the sum of the ranges of the two inputs.
 			 */
 			if (i != AST_COUNT_UNBOUNDED && k != AST_COUNT_UNBOUNDED) {
-				/* TODO: deal with overflow */
-				v = h * j;
-				w = i * k;
-
 				/* I don't know why this is true */
 				assert(w - v > i - h + k - j);
 			}
@@ -361,30 +357,20 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			 * a{h,i}{j,}
 			 * a{h,}{j,k}
 			 */
-			if (i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED) {
-				/* TODO: deal with overflow */
-				v = h * j;
-				w = i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED ? AST_COUNT_UNBOUNDED : i * k;
+			if ((i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED) && h <= 1 && j <= 1) {
+				dead = n->u.repeated.e;
 
-				if (h <= 1 && j <= 1) {
-					dead = n->u.repeated.e;
+				n->u.repeated.low  = v;
+				n->u.repeated.high = w;
+				n->u.repeated.e    = n->u.repeated.e->u.repeated.e;
 
-					n->u.repeated.low  = v;
-					n->u.repeated.high = w;
-					n->u.repeated.e    = n->u.repeated.e->u.repeated.e;
+				dead->type = AST_EXPR_EMPTY;
+				ast_expr_free(dead);
 
-					dead->type = AST_EXPR_EMPTY;
-					ast_expr_free(dead);
-
-					return 1;
-				}
+				return 1;
 			}
 
 			if (h > 1 && i == AST_COUNT_UNBOUNDED && j > 0) {
-				/* TODO: deal with overflow */
-				v = h * j;
-				w = AST_COUNT_UNBOUNDED;
-
 				dead = n->u.repeated.e;
 
 				n->u.repeated.low  = v;
