@@ -318,9 +318,6 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			unsigned h, i, j, k;
 			unsigned v, w;
 
-			assert(h != AST_COUNT_UNBOUNDED);
-			assert(j != AST_COUNT_UNBOUNDED);
-
 			inner = n->u.repeated.e;
 			outer = n;
 
@@ -328,6 +325,9 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			i = inner->u.repeated.high;
 			j = outer->u.repeated.low;
 			k = outer->u.repeated.high;
+
+			assert(h != AST_COUNT_UNBOUNDED);
+			assert(j != AST_COUNT_UNBOUNDED);
 
 			/* Bail out (i.e. with no rewriting) on overflow */
 			if (__builtin_umul_overflow(h, j, &v)) {
