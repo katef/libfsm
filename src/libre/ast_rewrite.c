@@ -314,6 +314,9 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			unsigned h, i, j, k;
 			unsigned v, w;
 
+			assert(h != AST_COUNT_UNBOUNDED);
+			assert(j != AST_COUNT_UNBOUNDED);
+
 			inner = n->u.repeated.e;
 			outer = n;
 
@@ -322,27 +325,35 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			j = outer->u.repeated.low;
 			k = outer->u.repeated.high;
 
+			if (h == 0 || h == 1) {
+				/* TODO: deal with overflow */
+				v = j == AST_COUNT_UNBOUNDED ? AST_COUNT_UNBOUNDED : h * j;
+				w = i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED ? AST_COUNT_UNBOUNDED : i * k;
+
+				dead = n->u.repeated.e;
+
+				n->u.repeated.low  = v;
+				n->u.repeated.high = w;
+				n->u.repeated.e    = n->u.repeated.e->u.repeated.e;
+
+				dead->type = AST_EXPR_EMPTY;
+				ast_expr_free(dead);
+
+				return 1;
+			}
+
 			/*
 			 * a{h,i}{j,k} is equivalent to a{h*j,i*k} if it's possible to combine,
 			 * and it's possible iff the range of the result is not more than
 			 * the sum of the ranges of the two inputs.
 			 */
-			if (h != AST_COUNT_UNBOUNDED && i != AST_COUNT_UNBOUNDED
-			 && j != AST_COUNT_UNBOUNDED && k != AST_COUNT_UNBOUNDED) {
+			if (i != AST_COUNT_UNBOUNDED && k != AST_COUNT_UNBOUNDED) {
 				/* TODO: deal with overflow */
 				v = h * j;
 				w = i * k;
 
-				if (w - v <= i - h + k - j) {
-					dead = n->u.repeated.e;
-
-					n->u.repeated.low  = v;
-					n->u.repeated.high = w;
-					n->u.repeated.e    = n->u.repeated.e->u.repeated.e;
-
-					dead->type = AST_EXPR_EMPTY;
-					ast_expr_free(dead);
-				}
+				/* I don't know why this is true */
+				assert(w - v > i - h + k - j);
 			}
 
 			/*
@@ -350,8 +361,6 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			 * a{h,i}{j,}
 			 * a{h,}{j,k}
 			 */
-			assert(h != AST_COUNT_UNBOUNDED);
-			assert(j != AST_COUNT_UNBOUNDED);
 			if (i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED) {
 				/* TODO: deal with overflow */
 				v = h * j;
@@ -366,6 +375,8 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 
 					dead->type = AST_EXPR_EMPTY;
 					ast_expr_free(dead);
+
+					return 1;
 				}
 			}
 
