@@ -345,6 +345,30 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 				}
 			}
 
+			/*
+			 * a{h,}{j,}
+			 * a{h,i}{j,}
+			 * a{h,}{j,k}
+			 */
+			assert(h != AST_COUNT_UNBOUNDED);
+			assert(j != AST_COUNT_UNBOUNDED);
+			if (i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED) {
+				/* TODO: deal with overflow */
+				v = h * j;
+				w = i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED ? AST_COUNT_UNBOUNDED : i * k;
+
+				if (h <= 1 && j <= 1) {
+					dead = n->u.repeated.e;
+
+					n->u.repeated.low  = v;
+					n->u.repeated.high = w;
+					n->u.repeated.e    = n->u.repeated.e->u.repeated.e;
+
+					dead->type = AST_EXPR_EMPTY;
+					ast_expr_free(dead);
+				}
+			}
+
 			return 1;
 		}
 
