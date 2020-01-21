@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Katherine Flavel
+ * Copyright 2019-2020 Katherine Flavel
  *
  * See LICENCE for the full copyright terms.
  */
@@ -17,6 +17,10 @@
 #include "ast.h"
 #include "ast_analysis.h"
 #include "ast_compile.h"
+
+#if !defined(__GNUC__) && !defined(__clang__)
+#error __builtin_umul_overflow required
+#endif
 
 static struct fsm *
 compile_subexpr(struct ast_expr *e, enum re_flags flags)
@@ -279,6 +283,117 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			ast_expr_free(n->u.repeated.e);
 
 			goto empty;
+		}
+
+		/*
+		 * Should never be constructed, but just in case.
+		 */
+		if (n->u.repeated.low == 0 && n->u.repeated.high == 0) {
+			ast_expr_free(n->u.repeated.e);
+
+			goto empty;
+		}
+
+		/*
+		 * Should never be constructed, but just in case.
+		 */
+		if (n->u.repeated.low == 1 && n->u.repeated.high == 1) {
+			struct ast_expr *dead = n->u.repeated.e;
+
+			*n = *n->u.repeated.e;
+
+			dead->type = AST_EXPR_EMPTY;
+			ast_expr_free(dead);
+
+			return 1;
+		}
+
+		/*
+		 * Fold together nested repetitions of the form a{h,i}{j,k} where
+		 * the result is expressable as a single repetition node a{v,w}.
+		 */
+		if (n->u.repeated.e->type == AST_EXPR_REPEATED) {
+			const struct ast_expr *inner, *outer;
+			struct ast_expr *dead;
+			unsigned h, i, j, k;
+			unsigned v, w;
+
+			inner = n->u.repeated.e;
+			outer = n;
+
+			h = inner->u.repeated.low;
+			i = inner->u.repeated.high;
+			j = outer->u.repeated.low;
+			k = outer->u.repeated.high;
+
+			assert(h != AST_COUNT_UNBOUNDED);
+			assert(j != AST_COUNT_UNBOUNDED);
+
+			/* Bail out (i.e. with no rewriting) on overflow */
+			if (__builtin_umul_overflow(h, j, &v)) {
+				return 1;
+			}
+			if (i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED) {
+				w = AST_COUNT_UNBOUNDED;
+			} else if (__builtin_umul_overflow(i, k, &w)) {
+				return 1;
+			}
+
+			if (h == 0 || h == 1) {
+				dead = n->u.repeated.e;
+
+				n->u.repeated.low  = v;
+				n->u.repeated.high = w;
+				n->u.repeated.e    = n->u.repeated.e->u.repeated.e;
+
+				dead->type = AST_EXPR_EMPTY;
+				ast_expr_free(dead);
+
+				return 1;
+			}
+
+			/*
+			 * a{h,i}{j,k} is equivalent to a{h*j,i*k} if it's possible to combine,
+			 * and it's possible iff the range of the result is not more than
+			 * the sum of the ranges of the two inputs.
+			 */
+			if (i != AST_COUNT_UNBOUNDED && k != AST_COUNT_UNBOUNDED) {
+				/* I don't know why this is true */
+				assert(w - v > i - h + k - j);
+			}
+
+			/*
+			 * a{h,}{j,}
+			 * a{h,i}{j,}
+			 * a{h,}{j,k}
+			 */
+			if ((i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED) && h <= 1 && j <= 1) {
+				dead = n->u.repeated.e;
+
+				n->u.repeated.low  = v;
+				n->u.repeated.high = w;
+				n->u.repeated.e    = n->u.repeated.e->u.repeated.e;
+
+				dead->type = AST_EXPR_EMPTY;
+				ast_expr_free(dead);
+
+				return 1;
+			}
+
+			if (h > 1 && i == AST_COUNT_UNBOUNDED && j > 0) {
+				dead = n->u.repeated.e;
+
+				n->u.repeated.low  = v;
+				n->u.repeated.high = w;
+				n->u.repeated.e    = n->u.repeated.e->u.repeated.e;
+
+				dead->type = AST_EXPR_EMPTY;
+				ast_expr_free(dead);
+
+				return 1;
+			}
+
+			return 1;
 		}
 
 		/*
