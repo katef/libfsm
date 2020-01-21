@@ -70,15 +70,15 @@ ast_free(struct ast *ast)
 }
 
 struct ast_count
-ast_make_count(unsigned low, const struct ast_pos *start,
-    unsigned high, const struct ast_pos *end)
+ast_make_count(unsigned min, const struct ast_pos *start,
+    unsigned max, const struct ast_pos *end)
 {
 	struct ast_count res;
 
 	memset(&res, 0x00, sizeof res);
 
-	res.low  = low;
-	res.high = high;
+	res.min = min;
+	res.max = max;
 
 	if (start != NULL) {
 		res.start = *start;
@@ -214,11 +214,11 @@ ast_expr_equal(const struct ast_expr *a, const struct ast_expr *b)
 		return a->u.codepoint.u == b->u.codepoint.u;
 
 	case AST_EXPR_REPEAT:
-		if (a->u.repeat.low != b->u.repeat.low) {
+		if (a->u.repeat.min != b->u.repeat.min) {
 			return 0;
 		}
 
-		if (a->u.repeat.high != b->u.repeat.high) {
+		if (a->u.repeat.max != b->u.repeat.max) {
 			return 0;
 		}
 
@@ -464,7 +464,7 @@ ast_make_expr_repeat(struct ast_expr *e, struct ast_count count)
 {
 	struct ast_expr *res = NULL;
 
-	assert(count.low <= count.high);
+	assert(count.min <= count.max);
 
 	/* Applying a count to a start/end anchor is a syntax error. */
 	if (e->type == AST_EXPR_ANCHOR) {
@@ -478,8 +478,8 @@ ast_make_expr_repeat(struct ast_expr *e, struct ast_count count)
 
 	res->type = AST_EXPR_REPEAT;
 	res->u.repeat.e = e;
-	res->u.repeat.low  = count.low;
-	res->u.repeat.high = count.high;
+	res->u.repeat.min = count.min;
+	res->u.repeat.max = count.max;
 
 	return res;
 }

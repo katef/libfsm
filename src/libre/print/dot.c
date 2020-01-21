@@ -113,9 +113,9 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 
 	case AST_EXPR_REPEAT:
 		fprintf(f, "\tn%p [ label = <REPEAT|&#x7b;", (void *) n);
-		fprintf_count(f, n->u.repeat.low);
+		fprintf_count(f, n->u.repeat.min);
 		fprintf(f, ", ");
-		fprintf_count(f, n->u.repeat.high);
+		fprintf_count(f, n->u.repeat.max);
 		fprintf(f, "&#x7d;> ];\n");
 		pp_iter(f, opt, n, n->u.repeat.e);
 		break;

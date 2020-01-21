@@ -142,10 +142,10 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 			fprintf(f, ")");
 		}
 
-		assert(n->u.repeat.high == AST_COUNT_UNBOUNDED || n->u.repeat.high >= n->u.repeat.low);
+		assert(n->u.repeat.max == AST_COUNT_UNBOUNDED || n->u.repeat.max >= n->u.repeat.min);
 
 		for (i = 0; i < sizeof a / sizeof *a; i++) {
-			if (a[i].m == n->u.repeat.low && a[i].n == n->u.repeat.high) {
+			if (a[i].m == n->u.repeat.min && a[i].n == n->u.repeat.max) {
 				assert(a[i].op != NULL);
 				fprintf(f, "%s", a[i].op);
 				break;
@@ -154,14 +154,14 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 		if (i == sizeof a / sizeof *a) {
 			fprintf(f, "{");
-			fprintf(f, "%u", n->u.repeat.low);
-			if (n->u.repeat.high == n->u.repeat.low) {
+			fprintf(f, "%u", n->u.repeat.min);
+			if (n->u.repeat.max == n->u.repeat.min) {
 				/* nothing */
-			} else if (n->u.repeat.high == AST_COUNT_UNBOUNDED) {
+			} else if (n->u.repeat.max == AST_COUNT_UNBOUNDED) {
 				fprintf(f, ",");
 			} else {
 				fprintf(f, ",");
-				fprintf(f, "%u", n->u.repeat.high);
+				fprintf(f, "%u", n->u.repeat.max);
 			}
 			fprintf(f, "}");
 		}

@@ -150,9 +150,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 
 	case AST_EXPR_REPEAT:
 		fprintf(f, "REPEAT {");
-		fprintf_count(f, n->u.repeat.low);
+		fprintf_count(f, n->u.repeat.min);
 		fprintf(f, ",");
-		fprintf_count(f, n->u.repeat.high);
+		fprintf_count(f, n->u.repeat.max);
 		fprintf(f, "}\n");
 		pp_iter(f, opt, indent + 1 * IND, n->u.repeat.e);
 		break;

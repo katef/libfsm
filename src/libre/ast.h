@@ -38,9 +38,9 @@ enum ast_expr_type {
 
 #define AST_COUNT_UNBOUNDED ((unsigned)-1)
 struct ast_count {
-	unsigned low;
+	unsigned min;
 	struct ast_pos start;
-	unsigned high;
+	unsigned max;
 	struct ast_pos end;
 };
 
@@ -144,8 +144,8 @@ struct ast_expr {
 
 		struct ast_expr_repeat {
 			struct ast_expr *e;
-			unsigned low;
-			unsigned high;
+			unsigned min;
+			unsigned max;
 		} repeat;
 
 		struct {
@@ -193,8 +193,8 @@ void
 ast_free(struct ast *ast);
 
 struct ast_count
-ast_make_count(unsigned low, const struct ast_pos *start,
-	unsigned high, const struct ast_pos *end);
+ast_make_count(unsigned min, const struct ast_pos *start,
+	unsigned max, const struct ast_pos *end);
 
 int
 ast_endpoint_equal(const struct ast_endpoint *a, const struct ast_endpoint *b);

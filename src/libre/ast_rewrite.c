@@ -288,7 +288,7 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		/*
 		 * Should never be constructed, but just in case.
 		 */
-		if (n->u.repeat.low == 0 && n->u.repeat.high == 0) {
+		if (n->u.repeat.min == 0 && n->u.repeat.max == 0) {
 			ast_expr_free(n->u.repeat.e);
 
 			goto empty;
@@ -297,7 +297,7 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		/*
 		 * Should never be constructed, but just in case.
 		 */
-		if (n->u.repeat.low == 1 && n->u.repeat.high == 1) {
+		if (n->u.repeat.min == 1 && n->u.repeat.max == 1) {
 			struct ast_expr *dead = n->u.repeat.e;
 
 			*n = *n->u.repeat.e;
@@ -321,10 +321,10 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			inner = n->u.repeat.e;
 			outer = n;
 
-			h = inner->u.repeat.low;
-			i = inner->u.repeat.high;
-			j = outer->u.repeat.low;
-			k = outer->u.repeat.high;
+			h = inner->u.repeat.min;
+			i = inner->u.repeat.max;
+			j = outer->u.repeat.min;
+			k = outer->u.repeat.max;
 
 			assert(h != AST_COUNT_UNBOUNDED);
 			assert(j != AST_COUNT_UNBOUNDED);
@@ -342,8 +342,8 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			if (h == 0 || h == 1) {
 				dead = n->u.repeat.e;
 
-				n->u.repeat.low  = v;
-				n->u.repeat.high = w;
+				n->u.repeat.min = v;
+				n->u.repeat.max = w;
 				n->u.repeat.e    = n->u.repeat.e->u.repeat.e;
 
 				dead->type = AST_EXPR_EMPTY;
@@ -370,9 +370,9 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			if ((i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED) && h <= 1 && j <= 1) {
 				dead = n->u.repeat.e;
 
-				n->u.repeat.low  = v;
-				n->u.repeat.high = w;
-				n->u.repeat.e    = n->u.repeat.e->u.repeat.e;
+				n->u.repeat.min = v;
+				n->u.repeat.max = w;
+				n->u.repeat.e   = n->u.repeat.e->u.repeat.e;
 
 				dead->type = AST_EXPR_EMPTY;
 				ast_expr_free(dead);
@@ -383,9 +383,9 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			if (h > 1 && i == AST_COUNT_UNBOUNDED && j > 0) {
 				dead = n->u.repeat.e;
 
-				n->u.repeat.low  = v;
-				n->u.repeat.high = w;
-				n->u.repeat.e    = n->u.repeat.e->u.repeat.e;
+				n->u.repeat.min = v;
+				n->u.repeat.max = w;
+				n->u.repeat.e   = n->u.repeat.e->u.repeat.e;
 
 				dead->type = AST_EXPR_EMPTY;
 				ast_expr_free(dead);
@@ -409,13 +409,13 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		 * here just because it helps with simplifying the tree first.
 		 */
 
-		if (n->u.repeat.low == 0 && n->u.repeat.e->type == AST_EXPR_TOMBSTONE) {
+		if (n->u.repeat.min == 0 && n->u.repeat.e->type == AST_EXPR_TOMBSTONE) {
 			ast_expr_free(n->u.repeat.e);
 
 			goto empty;
 		}
 
-		if (n->u.repeat.low > 0 && n->u.repeat.e->type == AST_EXPR_TOMBSTONE) {
+		if (n->u.repeat.min > 0 && n->u.repeat.e->type == AST_EXPR_TOMBSTONE) {
 			ast_expr_free(n->u.repeat.e);
 
 			goto tombstone;

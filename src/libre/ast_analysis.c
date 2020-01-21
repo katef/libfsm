@@ -106,7 +106,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		struct ast_expr *e = n->u.repeat.e;
 		assert(e != NULL);
 
-		if (n->u.repeat.low == 0) {
+		if (n->u.repeat.min == 0) {
 			set_flags(n, AST_FLAG_NULLABLE);
 		}
 
@@ -420,7 +420,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		 */
 		/* TODO: maybe do the analysis before rewriting? */
 
-		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeat.low == 0) {
+		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeat.min == 0) {
 			ast_expr_free(n->u.repeat.e);
 
 			n->type = AST_EXPR_EMPTY;
@@ -428,7 +428,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			break;
 		}
 
-		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeat.low > 0) {
+		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeat.min > 0) {
 			return AST_ANALYSIS_UNSATISFIABLE;
 		}
 

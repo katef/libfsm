@@ -115,34 +115,34 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 
 	case AST_EXPR_REPEAT: {
-		assert(n->u.repeat.low != AST_COUNT_UNBOUNDED);
+		assert(n->u.repeat.min != AST_COUNT_UNBOUNDED);
 
-		if (n->u.repeat.low == 0 && n->u.repeat.high == 1) {
+		if (n->u.repeat.min == 0 && n->u.repeat.max == 1) {
 			fprintf(f, "[ ");
 			pp_iter(f, opt, n->u.repeat.e);
 			fprintf(f, " ]");
 			return;
 		}
 
-		if (n->u.repeat.low == 1 && n->u.repeat.high == 1) {
+		if (n->u.repeat.min == 1 && n->u.repeat.max == 1) {
 			pp_iter(f, opt, n->u.repeat.e);
 			return;
 		}
 
-		if (n->u.repeat.low == n->u.repeat.high) {
-			fprintf(f, "%u", n->u.repeat.high);
+		if (n->u.repeat.min == n->u.repeat.max) {
+			fprintf(f, "%u", n->u.repeat.max);
 			print_grouped(f, opt, n->u.repeat.e);
 			return;
 		}
 
-		if (n->u.repeat.low > 0) {
-			fprintf(f, "%u", n->u.repeat.low);
+		if (n->u.repeat.min > 0) {
+			fprintf(f, "%u", n->u.repeat.min);
 		}
 
 		fprintf(f, "*");
 
-		if (n->u.repeat.high != AST_COUNT_UNBOUNDED) {
-			fprintf(f, "%u", n->u.repeat.high);
+		if (n->u.repeat.max != AST_COUNT_UNBOUNDED) {
+			fprintf(f, "%u", n->u.repeat.max);
 		}
 
 		print_grouped(f, opt, n->u.repeat.e);

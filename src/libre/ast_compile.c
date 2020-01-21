@@ -302,7 +302,7 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 
 	case AST_EXPR_REPEAT:
 		/* 0 and 1 don't have backward epsilon edges */
-		if (e->u.repeat.high <= 1) {
+		if (e->u.repeat.max <= 1) {
 			return 0;
 		}
 
@@ -310,7 +310,7 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 		 * The general case for counted repetition already
 		 * allocates one-way guard states around it
 		 */
-		if (e->u.repeat.high != AST_COUNT_UNBOUNDED) {
+		if (e->u.repeat.max != AST_COUNT_UNBOUNDED) {
 			return 0;
 		}
 
@@ -511,21 +511,21 @@ comp_iter_repeated(struct comp_env *env,
 {
 	fsm_state_t a, b;
 	fsm_state_t na, nz;
-	unsigned i, low, high;
+	unsigned i, min, max;
 
-	low  = n->low;
-	high = n->high;
+	min = n->min;
+	max = n->max;
 
-	assert(low <= high);
+	assert(min <= max);
 
-	if (low == 0 && high == 0) {                           /* {0,0} */
+	if (min == 0 && max == 0) {                          /* {0,0} */
 		EPSILON(x, y);
-	} else if (low == 0 && high == 1) {                    /* '?' */
+	} else if (min == 0 && max == 1) {                   /* '?' */
 		RECURSE(x, y, n->e);
 		EPSILON(x, y);
-	} else if (low == 1 && high == 1) {                    /* {1,1} */
+	} else if (min == 1 && max == 1) {                   /* {1,1} */
 		RECURSE(x, y, n->e);
-	} else if (low == 0 && high == AST_COUNT_UNBOUNDED) {  /* '*' */
+	} else if (min == 0 && max == AST_COUNT_UNBOUNDED) { /* '*' */
 		NEWSTATE(na);
 		NEWSTATE(nz);
 		EPSILON(x,na);
@@ -534,7 +534,7 @@ comp_iter_repeated(struct comp_env *env,
 		EPSILON(na, nz);
 		RECURSE(na, nz, n->e);
 		EPSILON(nz, na);
-	} else if (low == 1 && high == AST_COUNT_UNBOUNDED) {  /* '+' */
+	} else if (min == 1 && max == AST_COUNT_UNBOUNDED) { /* '+' */
 		NEWSTATE(na);
 		NEWSTATE(nz);
 		EPSILON(x,na);
@@ -561,14 +561,14 @@ comp_iter_repeated(struct comp_env *env,
 		b = nz; /* set the initial tail */
 
 		/* can be skipped */
-		if (low == 0) {
+		if (min == 0) {
 			EPSILON(na, nz);
 		}
 		fsm_capture_stop(env->fsm, &capture);
 		tail = nz;
 
-		if (high != AST_COUNT_UNBOUNDED) {
-			for (i = 1; i < high; i++) {
+		if (max != AST_COUNT_UNBOUNDED) {
+			for (i = 1; i < max; i++) {
 				/* copies the original subgraph; need to set b to the
 				 * original tail
 				 */
@@ -581,7 +581,7 @@ comp_iter_repeated(struct comp_env *env,
 				EPSILON(nz, a);
 
 				/* To the optional part of the repeated count */
-				if (i >= low) {
+				if (i >= min) {
 					EPSILON(nz, b);
 				}
 
@@ -589,7 +589,7 @@ comp_iter_repeated(struct comp_env *env,
 				nz = b;	/* advance tail for concenation */
 			}
 		} else {
-			for (i = 1; i < low; i++) {
+			for (i = 1; i < min; i++) {
 				/* copies the original subgraph; need to set b to the
 				 * original tail
 				 */

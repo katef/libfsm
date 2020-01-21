@@ -1010,9 +1010,9 @@ p_expr_C_Cpiece(flags flags, lex_state lex_state, act_state act_state, err err, 
 		{
 #line 696 "src/libre/parser.act"
 
-		if ((ZIc).low == 0 && (ZIc).high == 0) {
+		if ((ZIc).min == 0 && (ZIc).max == 0) {
 			(ZInode) = ast_make_expr_empty();
-		} else if ((ZIc).low == 1 && (ZIc).high == 1) {
+		} else if ((ZIc).min == 1 && (ZIc).max == 1) {
 			(ZInode) = (ZIe);
 		} else {
 			(ZInode) = ast_make_expr_repeat((ZIe), (ZIc));

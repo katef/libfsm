@@ -602,13 +602,13 @@
 		@c = ast_make_count(1, NULL, 1, NULL);
 	@};
 
-	<count-range>: (l :unsigned, start :pos, h :unsigned, end :pos) -> (c :ast_count) = @{
+	<count-range>: (min :unsigned, start :pos, max :unsigned, end :pos) -> (c :ast_count) = @{
 		struct ast_pos ast_start, ast_end;
 
-		if (@h < @l) {
+		if (@max < @min) {
 			err->e = RE_ENEGCOUNT;
-			err->m = @l;
-			err->n = @h;
+			err->m = @min;
+			err->n = @max;
 
 			mark(&act_state->countstart, &@start);
 			mark(&act_state->countend,   &@end);
@@ -619,7 +619,7 @@
 		AST_POS_OF_LX_POS(ast_start, @start);
 		AST_POS_OF_LX_POS(ast_end, @end);
 
-		@c = ast_make_count(@l, &ast_start, @h, &ast_end);
+		@c = ast_make_count(@min, &ast_start, @max, &ast_end);
 	@};
 
 	<ast-range-endpoint-literal>: (c :char) -> (e :endpoint) = @{
@@ -693,9 +693,9 @@
 	@};
 
 	<ast-make-piece>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
-		if (@c.low == 0 && @c.high == 0) {
+		if (@c.min == 0 && @c.max == 0) {
 			@node = ast_make_expr_empty();
-		} else if (@c.low == 1 && @c.high == 1) {
+		} else if (@c.min == 1 && @c.max == 1) {
 			@node = @e;
 		} else {
 			@node = ast_make_expr_repeat(@e, @c);
