@@ -35,7 +35,7 @@ atomic(struct ast_expr *n)
 	case AST_EXPR_TOMBSTONE:
 		return 1;
 
-	case AST_EXPR_REPEATED:
+	case AST_EXPR_REPEAT:
 		return 0;
 
 	case AST_EXPR_FLAGS:
@@ -114,38 +114,38 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		fprintf(f, "OCTET"); /* ABNF core rule for %x00-FF */
 		break;
 
-	case AST_EXPR_REPEATED: {
-		assert(n->u.repeated.low != AST_COUNT_UNBOUNDED);
+	case AST_EXPR_REPEAT: {
+		assert(n->u.repeat.low != AST_COUNT_UNBOUNDED);
 
-		if (n->u.repeated.low == 0 && n->u.repeated.high == 1) {
+		if (n->u.repeat.low == 0 && n->u.repeat.high == 1) {
 			fprintf(f, "[ ");
-			pp_iter(f, opt, n->u.repeated.e);
+			pp_iter(f, opt, n->u.repeat.e);
 			fprintf(f, " ]");
 			return;
 		}
 
-		if (n->u.repeated.low == 1 && n->u.repeated.high == 1) {
-			pp_iter(f, opt, n->u.repeated.e);
+		if (n->u.repeat.low == 1 && n->u.repeat.high == 1) {
+			pp_iter(f, opt, n->u.repeat.e);
 			return;
 		}
 
-		if (n->u.repeated.low == n->u.repeated.high) {
-			fprintf(f, "%u", n->u.repeated.high);
-			print_grouped(f, opt, n->u.repeated.e);
+		if (n->u.repeat.low == n->u.repeat.high) {
+			fprintf(f, "%u", n->u.repeat.high);
+			print_grouped(f, opt, n->u.repeat.e);
 			return;
 		}
 
-		if (n->u.repeated.low > 0) {
-			fprintf(f, "%u", n->u.repeated.low);
+		if (n->u.repeat.low > 0) {
+			fprintf(f, "%u", n->u.repeat.low);
 		}
 
 		fprintf(f, "*");
 
-		if (n->u.repeated.high != AST_COUNT_UNBOUNDED) {
-			fprintf(f, "%u", n->u.repeated.high);
+		if (n->u.repeat.high != AST_COUNT_UNBOUNDED) {
+			fprintf(f, "%u", n->u.repeat.high);
 		}
 
-		print_grouped(f, opt, n->u.repeated.e);
+		print_grouped(f, opt, n->u.repeat.e);
 
 		break;
 	}

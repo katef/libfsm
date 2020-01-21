@@ -370,7 +370,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		} else if ((ZIc).low == 1 && (ZIc).high == 1) {
 			(ZIe) = (ZIg);
 		} else {
-			(ZIe) = ast_make_expr_with_count((ZIg), (ZIc));
+			(ZIe) = ast_make_expr_repeat((ZIg), (ZIc));
 		}
 		if ((ZIe) == NULL) {
 			err->e = RE_EXEOF;

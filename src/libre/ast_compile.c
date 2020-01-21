@@ -300,9 +300,9 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 		/* XXX: not sure */
 		return 1;
 
-	case AST_EXPR_REPEATED:
+	case AST_EXPR_REPEAT:
 		/* 0 and 1 don't have backward epsilon edges */
-		if (e->u.repeated.high <= 1) {
+		if (e->u.repeat.high <= 1) {
 			return 0;
 		}
 
@@ -310,7 +310,7 @@ can_have_backward_epsilon_edge(const struct ast_expr *e)
 		 * The general case for counted repetition already
 		 * allocates one-way guard states around it
 		 */
-		if (e->u.repeated.high != AST_COUNT_UNBOUNDED) {
+		if (e->u.repeat.high != AST_COUNT_UNBOUNDED) {
 			return 0;
 		}
 
@@ -347,7 +347,7 @@ can_skip_concat_state_and_epsilon(const struct ast_expr *l,
 		return 1;
 	}
 
-	if (r != NULL && r->type == AST_EXPR_REPEATED) {
+	if (r != NULL && r->type == AST_EXPR_REPEAT) {
 		if (!can_have_backward_epsilon_edge(r)) {
 			return 1;
 		}
@@ -392,7 +392,7 @@ decide_linking(struct comp_env *env,
 
 	case AST_EXPR_CONCAT:
 	case AST_EXPR_ALT:
-	case AST_EXPR_REPEATED:
+	case AST_EXPR_REPEAT:
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_RANGE:
 	case AST_EXPR_TOMBSTONE:
@@ -507,7 +507,7 @@ print_linkage(enum link_types t)
 static int
 comp_iter_repeated(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
-	struct ast_expr_repeated *n)
+	struct ast_expr_repeat *n)
 {
 	fsm_state_t a, b;
 	fsm_state_t na, nz;
@@ -850,12 +850,12 @@ comp_iter(struct comp_env *env,
 		ANY(x, y);
 		break;
 
-	case AST_EXPR_REPEATED:
+	case AST_EXPR_REPEAT:
 		/*
-		 * REPEATED breaks out into its own function, because
+		 * REPEAT breaks out into its own function, because
 		 * there are several special cases
 		 */
-		if (!comp_iter_repeated(env, x, y, &n->u.repeated)) {
+		if (!comp_iter_repeated(env, x, y, &n->u.repeat)) {
 			return 0;
 		}
 		break;

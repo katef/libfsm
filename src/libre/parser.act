@@ -698,7 +698,7 @@
 		} else if (@c.low == 1 && @c.high == 1) {
 			@node = @e;
 		} else {
-			@node = ast_make_expr_with_count(@e, @c);
+			@node = ast_make_expr_repeat(@e, @c);
 		}
 		if (@node == NULL) {
 			err->e = RE_EXEOF;

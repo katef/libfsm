@@ -102,11 +102,11 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_REPEATED: {
-		struct ast_expr *e = n->u.repeated.e;
+	case AST_EXPR_REPEAT: {
+		struct ast_expr *e = n->u.repeat.e;
 		assert(e != NULL);
 
-		if (n->u.repeated.low == 0) {
+		if (n->u.repeat.low == 0) {
 			set_flags(n, AST_FLAG_NULLABLE);
 		}
 
@@ -211,9 +211,9 @@ always_consumes_input(const struct ast_expr *n, int thud)
 		return 1;
 	}
 
-	case AST_EXPR_REPEATED:
+	case AST_EXPR_REPEAT:
 		/* not nullable, so check the repeated node */
-		return always_consumes_input(n->u.repeated.e, thud);
+		return always_consumes_input(n->u.repeat.e, thud);
 
 	case AST_EXPR_ANCHOR:
 		return 0;
@@ -405,8 +405,8 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_REPEATED:
-		res = analysis_iter_anchoring(env, n->u.repeated.e);
+	case AST_EXPR_REPEAT:
+		res = analysis_iter_anchoring(env, n->u.repeat.e);
 
 		/*
 		 * This logic corresponds to the equivalent case for tombstone nodes
@@ -420,15 +420,15 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		 */
 		/* TODO: maybe do the analysis before rewriting? */
 
-		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeated.low == 0) {
-			ast_expr_free(n->u.repeated.e);
+		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeat.low == 0) {
+			ast_expr_free(n->u.repeat.e);
 
 			n->type = AST_EXPR_EMPTY;
 			set_flags(n, AST_FLAG_NULLABLE);
 			break;
 		}
 
-		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeated.low > 0) {
+		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeat.low > 0) {
 			return AST_ANALYSIS_UNSATISFIABLE;
 		}
 
@@ -509,17 +509,17 @@ assign_firsts(struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_REPEATED:
+	case AST_EXPR_REPEAT:
 		set_flags(n, AST_FLAG_FIRST);
 		/* Don't recurse.
 		 *
 		 * XXX - Not sure that this is the correct way to handle this.
 		 *
-		 * Recursing causes errors in the NFA when the REPEATED node is
+		 * Recursing causes errors in the NFA when the REPEAT node is
 		 * linked to the global self-loop (ie: it's either the first or
 		 * last node for an unanchored RE.  Specifically, when the
 		 * subexpression is compiled, the links to the global self-loop
-		 * are created, which the REPEATED node then copies.
+		 * are created, which the REPEAT node then copies.
 		 */
 		break;
 
@@ -584,17 +584,17 @@ assign_lasts(struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_REPEATED:
+	case AST_EXPR_REPEAT:
 		set_flags(n, AST_FLAG_LAST);
 		/* Don't recurse.
 		 *
 		 * XXX - Not sure that this is the correct way to handle this.
 		 *
-		 * Recursing causes errors in the NFA when the REPEATED node is
+		 * Recursing causes errors in the NFA when the REPEAT node is
 		 * linked to the global self-loop (ie: it's either the first or
 		 * last node for an unanchored RE.  Specifically, when the
 		 * subexpression is compiled, the links to the global self-loop
-		 * are created, which the REPEATED node then copies.
+		 * are created, which the REPEAT node then copies.
 		 */
 		break;
 

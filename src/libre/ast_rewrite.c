@@ -274,13 +274,13 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 	case AST_EXPR_ANY:
 		return 1;
 
-	case AST_EXPR_REPEATED:
-		if (!rewrite(n->u.repeated.e, flags)) {
+	case AST_EXPR_REPEAT:
+		if (!rewrite(n->u.repeat.e, flags)) {
 			return 0;
 		}
 
-		if (n->u.repeated.e->type == AST_EXPR_EMPTY) {
-			ast_expr_free(n->u.repeated.e);
+		if (n->u.repeat.e->type == AST_EXPR_EMPTY) {
+			ast_expr_free(n->u.repeat.e);
 
 			goto empty;
 		}
@@ -288,8 +288,8 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		/*
 		 * Should never be constructed, but just in case.
 		 */
-		if (n->u.repeated.low == 0 && n->u.repeated.high == 0) {
-			ast_expr_free(n->u.repeated.e);
+		if (n->u.repeat.low == 0 && n->u.repeat.high == 0) {
+			ast_expr_free(n->u.repeat.e);
 
 			goto empty;
 		}
@@ -297,10 +297,10 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		/*
 		 * Should never be constructed, but just in case.
 		 */
-		if (n->u.repeated.low == 1 && n->u.repeated.high == 1) {
-			struct ast_expr *dead = n->u.repeated.e;
+		if (n->u.repeat.low == 1 && n->u.repeat.high == 1) {
+			struct ast_expr *dead = n->u.repeat.e;
 
-			*n = *n->u.repeated.e;
+			*n = *n->u.repeat.e;
 
 			dead->type = AST_EXPR_EMPTY;
 			ast_expr_free(dead);
@@ -312,19 +312,19 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		 * Fold together nested repetitions of the form a{h,i}{j,k} where
 		 * the result is expressable as a single repetition node a{v,w}.
 		 */
-		if (n->u.repeated.e->type == AST_EXPR_REPEATED) {
+		if (n->u.repeat.e->type == AST_EXPR_REPEAT) {
 			const struct ast_expr *inner, *outer;
 			struct ast_expr *dead;
 			unsigned h, i, j, k;
 			unsigned v, w;
 
-			inner = n->u.repeated.e;
+			inner = n->u.repeat.e;
 			outer = n;
 
-			h = inner->u.repeated.low;
-			i = inner->u.repeated.high;
-			j = outer->u.repeated.low;
-			k = outer->u.repeated.high;
+			h = inner->u.repeat.low;
+			i = inner->u.repeat.high;
+			j = outer->u.repeat.low;
+			k = outer->u.repeat.high;
 
 			assert(h != AST_COUNT_UNBOUNDED);
 			assert(j != AST_COUNT_UNBOUNDED);
@@ -340,11 +340,11 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			}
 
 			if (h == 0 || h == 1) {
-				dead = n->u.repeated.e;
+				dead = n->u.repeat.e;
 
-				n->u.repeated.low  = v;
-				n->u.repeated.high = w;
-				n->u.repeated.e    = n->u.repeated.e->u.repeated.e;
+				n->u.repeat.low  = v;
+				n->u.repeat.high = w;
+				n->u.repeat.e    = n->u.repeat.e->u.repeat.e;
 
 				dead->type = AST_EXPR_EMPTY;
 				ast_expr_free(dead);
@@ -368,11 +368,11 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			 * a{h,}{j,k}
 			 */
 			if ((i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED) && h <= 1 && j <= 1) {
-				dead = n->u.repeated.e;
+				dead = n->u.repeat.e;
 
-				n->u.repeated.low  = v;
-				n->u.repeated.high = w;
-				n->u.repeated.e    = n->u.repeated.e->u.repeated.e;
+				n->u.repeat.low  = v;
+				n->u.repeat.high = w;
+				n->u.repeat.e    = n->u.repeat.e->u.repeat.e;
 
 				dead->type = AST_EXPR_EMPTY;
 				ast_expr_free(dead);
@@ -381,11 +381,11 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 			}
 
 			if (h > 1 && i == AST_COUNT_UNBOUNDED && j > 0) {
-				dead = n->u.repeated.e;
+				dead = n->u.repeat.e;
 
-				n->u.repeated.low  = v;
-				n->u.repeated.high = w;
-				n->u.repeated.e    = n->u.repeated.e->u.repeated.e;
+				n->u.repeat.low  = v;
+				n->u.repeat.high = w;
+				n->u.repeat.e    = n->u.repeat.e->u.repeat.e;
 
 				dead->type = AST_EXPR_EMPTY;
 				ast_expr_free(dead);
@@ -409,14 +409,14 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 		 * here just because it helps with simplifying the tree first.
 		 */
 
-		if (n->u.repeated.low == 0 && n->u.repeated.e->type == AST_EXPR_TOMBSTONE) {
-			ast_expr_free(n->u.repeated.e);
+		if (n->u.repeat.low == 0 && n->u.repeat.e->type == AST_EXPR_TOMBSTONE) {
+			ast_expr_free(n->u.repeat.e);
 
 			goto empty;
 		}
 
-		if (n->u.repeated.low > 0 && n->u.repeated.e->type == AST_EXPR_TOMBSTONE) {
-			ast_expr_free(n->u.repeated.e);
+		if (n->u.repeat.low > 0 && n->u.repeat.e->type == AST_EXPR_TOMBSTONE) {
+			ast_expr_free(n->u.repeat.e);
 
 			goto tombstone;
 		}

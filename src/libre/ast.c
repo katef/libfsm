@@ -137,8 +137,8 @@ ast_expr_free(struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_REPEATED:
-		ast_expr_free(n->u.repeated.e);
+	case AST_EXPR_REPEAT:
+		ast_expr_free(n->u.repeat.e);
 		break;
 
 	case AST_EXPR_GROUP:
@@ -213,16 +213,16 @@ ast_expr_equal(const struct ast_expr *a, const struct ast_expr *b)
 	case AST_EXPR_CODEPOINT:
 		return a->u.codepoint.u == b->u.codepoint.u;
 
-	case AST_EXPR_REPEATED:
-		if (a->u.repeated.low != b->u.repeated.low) {
+	case AST_EXPR_REPEAT:
+		if (a->u.repeat.low != b->u.repeat.low) {
 			return 0;
 		}
 
-		if (a->u.repeated.high != b->u.repeated.high) {
+		if (a->u.repeat.high != b->u.repeat.high) {
 			return 0;
 		}
 
-		if (!ast_expr_equal(a->u.repeated.e, b->u.repeated.e)) {
+		if (!ast_expr_equal(a->u.repeat.e, b->u.repeat.e)) {
 			return 0;
 		}
 
@@ -460,7 +460,7 @@ ast_make_expr_any(void)
 }
 
 struct ast_expr *
-ast_make_expr_with_count(struct ast_expr *e, struct ast_count count)
+ast_make_expr_repeat(struct ast_expr *e, struct ast_count count)
 {
 	struct ast_expr *res = NULL;
 
@@ -476,10 +476,10 @@ ast_make_expr_with_count(struct ast_expr *e, struct ast_count count)
 		return NULL;
 	}
 
-	res->type = AST_EXPR_REPEATED;
-	res->u.repeated.e = e;
-	res->u.repeated.low = count.low;
-	res->u.repeated.high = count.high;
+	res->type = AST_EXPR_REPEAT;
+	res->u.repeat.e = e;
+	res->u.repeat.low  = count.low;
+	res->u.repeat.high = count.high;
 
 	return res;
 }

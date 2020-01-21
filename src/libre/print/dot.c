@@ -111,13 +111,13 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "\tn%p [ label = <ANY> ];\n", (void *) n);
 		break;
 
-	case AST_EXPR_REPEATED:
-		fprintf(f, "\tn%p [ label = <REPEATED|&#x7b;", (void *) n);
-		fprintf_count(f, n->u.repeated.low);
+	case AST_EXPR_REPEAT:
+		fprintf(f, "\tn%p [ label = <REPEAT|&#x7b;", (void *) n);
+		fprintf_count(f, n->u.repeat.low);
 		fprintf(f, ", ");
-		fprintf_count(f, n->u.repeated.high);
+		fprintf_count(f, n->u.repeat.high);
 		fprintf(f, "&#x7d;> ];\n");
-		pp_iter(f, opt, n, n->u.repeated.e);
+		pp_iter(f, opt, n, n->u.repeat.e);
 		break;
 
 	case AST_EXPR_GROUP:

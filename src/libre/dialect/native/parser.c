@@ -1015,7 +1015,7 @@ p_expr_C_Cpiece(flags flags, lex_state lex_state, act_state act_state, err err, 
 		} else if ((ZIc).low == 1 && (ZIc).high == 1) {
 			(ZInode) = (ZIe);
 		} else {
-			(ZInode) = ast_make_expr_with_count((ZIe), (ZIc));
+			(ZInode) = ast_make_expr_repeat((ZIe), (ZIc));
 		}
 		if ((ZInode) == NULL) {
 			err->e = RE_EXEOF;

@@ -27,7 +27,7 @@ atomic(struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_ANY:
-	case AST_EXPR_REPEATED:
+	case AST_EXPR_REPEAT:
 	case AST_EXPR_GROUP:
 	case AST_EXPR_TOMBSTONE:
 		return 1;
@@ -117,7 +117,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		fprintf(f, ".");
 		break;
 
-	case AST_EXPR_REPEATED: {
+	case AST_EXPR_REPEAT: {
 		size_t i;
 
 		static const struct {
@@ -134,18 +134,18 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 #undef _
 		};
 
-		if (atomic(n->u.repeated.e)) {
-			pp_iter(f, opt, n->u.repeated.e);
+		if (atomic(n->u.repeat.e)) {
+			pp_iter(f, opt, n->u.repeat.e);
 		} else {
 			fprintf(f, "(?:");
-			pp_iter(f, opt, n->u.repeated.e);
+			pp_iter(f, opt, n->u.repeat.e);
 			fprintf(f, ")");
 		}
 
-		assert(n->u.repeated.high == AST_COUNT_UNBOUNDED || n->u.repeated.high >= n->u.repeated.low);
+		assert(n->u.repeat.high == AST_COUNT_UNBOUNDED || n->u.repeat.high >= n->u.repeat.low);
 
 		for (i = 0; i < sizeof a / sizeof *a; i++) {
-			if (a[i].m == n->u.repeated.low && a[i].n == n->u.repeated.high) {
+			if (a[i].m == n->u.repeat.low && a[i].n == n->u.repeat.high) {
 				assert(a[i].op != NULL);
 				fprintf(f, "%s", a[i].op);
 				break;
@@ -154,14 +154,14 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 		if (i == sizeof a / sizeof *a) {
 			fprintf(f, "{");
-			fprintf(f, "%u", n->u.repeated.low);
-			if (n->u.repeated.high == n->u.repeated.low) {
+			fprintf(f, "%u", n->u.repeat.low);
+			if (n->u.repeat.high == n->u.repeat.low) {
 				/* nothing */
-			} else if (n->u.repeated.high == AST_COUNT_UNBOUNDED) {
+			} else if (n->u.repeat.high == AST_COUNT_UNBOUNDED) {
 				fprintf(f, ",");
 			} else {
 				fprintf(f, ",");
-				fprintf(f, "%u", n->u.repeated.high);
+				fprintf(f, "%u", n->u.repeat.high);
 			}
 			fprintf(f, "}");
 		}
