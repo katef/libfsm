@@ -20,7 +20,7 @@ Since regexps describe a *regular* grammar, no recursion is necessary
 and there is only ever one production:
 
     ; re -pl abnf '^ab+c?.?$'
-    e = <^> %s"a" %s"b" *( %s"b" ) [ %s"c" ] [ <TODO> ] <$> <$>
+    e = <^> %s"a" 1*%s"b" [ %s"c" ] [ OCTET ] <$>
 
 Here's the same ABNF represented as a railroad diagram
 by [kgt](https://github.com/katef/kgt):

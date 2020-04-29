@@ -3,7 +3,7 @@
   xmlns='http://www.w3.org/2000/svg'
   xmlns:xlink='http://www.w3.org/1999/xlink'
 
-  width='570' height='230'>
+  width='590' height='230'>
 
   <style>
     rect, line, path { stroke-width: 1.5px; stroke: black; fill: transparent; }
@@ -18,7 +18,7 @@
   <g transform='translate(40 50)'>
     <text x='-30' y='-10'>e:</text>
     <path d='M5.5 34 v12 m 4 0 v-12' class='station'/>
-    <path d='M500.5 34 v12 m 4 0 v-12' class='station'/>
+    <path d='M520.5 34 v12 m 4 0 v-12' class='station'/>
     <text x='45' y='45' text-anchor='middle' class='prose'>^</text>
     <rect x='80' y='30' height='20' width='20' rx='8' ry='8' class='literal'/>
     <text x='90' y='45' text-anchor='middle' class='literal'>a</text>
@@ -28,14 +28,15 @@
     <path d='M262 10 l-4 3 v-6 z' class='arrow'/>
     <rect x='250' y='30' height='20' width='20' rx='8' ry='8' class='literal'/>
     <text x='260' y='45' text-anchor='middle' class='literal'>c</text>
-    <path d='M377 10 l-4 3 v-6 z' class='arrow'/>
-    <text x='375' y='45' text-anchor='middle' class='prose'>TODO</text>
-    <text x='465' y='45' text-anchor='middle' class='prose'>$</text>
+    <path d='M387 10 l-4 3 v-6 z' class='arrow'/>
+    <rect x='350' y='30' height='20' width='70' rx='0' ry='0' class='rule'/>
+    <text x='385' y='45' text-anchor='middle' class='rule'>OCTET</text>
+    <text x='485' y='45' text-anchor='middle' class='prose'>$</text>
     <path d='M330 20 v10'/>
-    <path d='M420 30 q0 10 10 10'/>
-    <path d='M400 40 h50'/>
+    <path d='M440 30 q0 10 10 10'/>
+    <path d='M420 40 h50'/>
     <path d='M320 40 q10 0 10 -10'/>
-    <path d='M330 20 q0 -10 10 -10 h70 q10 0 10 10 v10'/>
+    <path d='M330 20 q0 -10 10 -10 h90 q10 0 10 10 v10'/>
     <path d='M230 20 v10'/>
     <path d='M290 30 q0 10 10 10'/>
     <path d='M270 40 h80'/>
@@ -47,7 +48,7 @@
     <path d='M130 50 q0 -10 10 -10'/>
     <path d='M100 40 h50'/>
     <path d='M60 40 h20'/>
-    <path d='M480 40 h20'/>
+    <path d='M500 40 h20'/>
     <path d='M10 40 h20'/>
   </g>
 
