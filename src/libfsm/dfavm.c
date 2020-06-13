@@ -196,11 +196,6 @@
 //   DD=11 is reserved for future use
 //
 
-#define MASK_OP   0x18
-#define MASK_CMP  0xE0
-#define MASK_END  0x01
-#define MASK_DEST 0x03
-
 enum dfavm_instr_bits {
 	// Stop the VM, mark match or failure
 	VM_OP_STOP   = 0,
