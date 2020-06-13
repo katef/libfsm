@@ -7,7 +7,7 @@
 #ifndef FSM_DFAVM_H
 #define FSM_DFAVM_H
 
-enum dfavm_instr_bits {
+enum dfavm_op_instr {
 	// Stop the VM, mark match or failure
 	VM_OP_STOP   = 0,
 
@@ -19,7 +19,7 @@ enum dfavm_instr_bits {
 	VM_OP_BRANCH = 2,
 };
 
-enum dfavm_cmp_bits {
+enum dfavm_op_cmp {
 	VM_CMP_ALWAYS = 0,
 	VM_CMP_LT     = 1,
 	VM_CMP_LE     = 2,
@@ -29,12 +29,12 @@ enum dfavm_cmp_bits {
 	VM_CMP_NE     = 6,
 };
 
-enum dfavm_end_bits {
+enum dfavm_op_end {
 	VM_END_FAIL = 0,
 	VM_END_SUCC = 1,
 };
 
-enum dfavm_dest_bits {
+enum dfavm_op_dest {
 	VM_DEST_NONE  = 0,
 	VM_DEST_SHORT = 1,  // 11-bit dest
 	VM_DEST_NEAR  = 2,  // 18-bit dest
@@ -48,22 +48,22 @@ struct dfavm_op {
 
 	uint32_t num_incoming; // number of branches to this instruction
 
-	enum dfavm_cmp_bits cmp;
-	enum dfavm_instr_bits instr;
+	enum dfavm_op_cmp cmp;
+	enum dfavm_op_instr instr;
 
 	union {
 		struct {
 			unsigned state;
-			enum dfavm_end_bits end_bits;
+			enum dfavm_op_end end_bits;
 		} fetch;
 
 		struct {
-			enum dfavm_end_bits end_bits;
+			enum dfavm_op_end end_bits;
 		} stop;
 
 		struct {
 			struct dfavm_op *dest_arg;
-			enum dfavm_dest_bits dest;
+			enum dfavm_op_dest dest;
 			uint32_t dest_state;
 			int32_t  rel_dest;
 		} br;

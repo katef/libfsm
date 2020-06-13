@@ -436,7 +436,7 @@ opasm_free_list(struct dfavm_assembler *a, struct dfavm_op *op)
 }
 
 static struct dfavm_op *
-opasm_new(struct dfavm_assembler *a, enum dfavm_instr_bits instr, enum dfavm_cmp_bits cmp, unsigned char arg)
+opasm_new(struct dfavm_assembler *a, enum dfavm_op_instr instr, enum dfavm_op_cmp cmp, unsigned char arg)
 {
 	static const struct dfavm_op zero;
 
@@ -464,7 +464,7 @@ opasm_new(struct dfavm_assembler *a, enum dfavm_instr_bits instr, enum dfavm_cmp
 }
 
 static struct dfavm_op *
-opasm_new_fetch(struct dfavm_assembler *a, unsigned state, enum dfavm_end_bits end)
+opasm_new_fetch(struct dfavm_assembler *a, unsigned state, enum dfavm_op_end end)
 {
 	struct dfavm_op *op;
 
@@ -478,7 +478,7 @@ opasm_new_fetch(struct dfavm_assembler *a, unsigned state, enum dfavm_end_bits e
 }
 
 static struct dfavm_op *
-opasm_new_stop(struct dfavm_assembler *a, enum dfavm_cmp_bits cmp, unsigned char arg, enum dfavm_end_bits end)
+opasm_new_stop(struct dfavm_assembler *a, enum dfavm_op_cmp cmp, unsigned char arg, enum dfavm_op_end end)
 {
 	struct dfavm_op *op;
 
@@ -491,7 +491,7 @@ opasm_new_stop(struct dfavm_assembler *a, enum dfavm_cmp_bits cmp, unsigned char
 }
 
 static struct dfavm_op *
-opasm_new_branch(struct dfavm_assembler *a, enum dfavm_cmp_bits cmp, unsigned char arg, uint32_t dest_state)
+opasm_new_branch(struct dfavm_assembler *a, enum dfavm_op_cmp cmp, unsigned char arg, uint32_t dest_state)
 {
 	struct dfavm_op *op;
 
@@ -674,7 +674,7 @@ xlate_table_ranges(struct dfavm_assembler *a, struct dfa_table *table, struct df
 
 			/* emit instr */
 			int arg = i-1;
-			enum dfavm_cmp_bits cmp = (i > lo+1) ? VM_CMP_LE : VM_CMP_EQ;
+			enum dfavm_op_cmp cmp = (i > lo+1) ? VM_CMP_LE : VM_CMP_EQ;
 
 			op = (dst < 0)
 				? opasm_new_stop(a, cmp, arg, VM_END_FAIL)
