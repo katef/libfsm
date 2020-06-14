@@ -140,6 +140,18 @@ enum dfavm_io_result {
 	DFAVM_IO_SHORT_READ,
 };
 
+enum dfavm_state {
+	VM_FAIL     = -1,
+	VM_MATCHING =  0,
+	VM_SUCCESS  =  1,
+};
+
+struct vm_state {
+	uint32_t pc;
+	enum dfavm_state state;
+	int fetch_state;
+};
+
 struct fsm_dfavm {
 	unsigned char *ops;
 	uint32_t len;

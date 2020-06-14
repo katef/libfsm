@@ -1752,18 +1752,6 @@ fsm_vm_free(struct fsm_dfavm *vm)
 	(void)vm;
 }
 
-enum dfavm_state {
-	VM_FAIL     = -1,
-	VM_MATCHING =  0,
-	VM_SUCCESS  =  1,
-};
-
-struct vm_state {
-	uint32_t pc;
-	enum dfavm_state state;
-	int fetch_state;
-};
-
 static uint32_t
 running_print_op(const unsigned char *ops, uint32_t pc, const char *sp, const char *buf, size_t n, char ch, FILE *f) {
 	int op, cmp, end, dest;
