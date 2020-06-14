@@ -26,10 +26,11 @@
 
 // VM state:
 //
-//   Conceptually, the VM has is composed of:
+//   Conceptually, the VM is composed of:
 //   - string buffer: holds 8-bit bytes to match
 //   - program buffer: holds the VM bytecode
 //   - address buffer: holds various tables and data
+//   - string buffer: holds string constant data
 //   - three additional registers:
 //
 //     SP - string pointer  - 32-bit unsigned offset into string buffer
@@ -37,7 +38,7 @@
 //                                   string buffer byte at SP
 //     PC - program counter - 32-bit unsigned offset into program buffer
 //
-// Note: currently the address buffer is not used and should be empty
+// Note: currently the address buffer and string buffer are currently not used
 
 // VM intermediate representation
 //
