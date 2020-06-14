@@ -300,7 +300,7 @@ cmp_name(int cmp) {
 }
 
 static void
-print_op(FILE *f, struct dfavm_op *op)
+print_op_ir(FILE *f, struct dfavm_op_ir *op)
 {
 	const char *cmp;
 	int nargs = 0;
@@ -375,14 +375,100 @@ print_op(FILE *f, struct dfavm_op *op)
 	fprintf(f, "\n");
 }
 
+static void
+print_vm_op(FILE *f, struct dfavm_vm_op *op)
+{
+	const char *cmp;
+	int nargs = 0;
+
+	cmp = cmp_name(op->cmp);
+
+	fprintf(f, "[%4lu] %1lu\t", (unsigned long)op->offset, (unsigned long)op->num_encoded_bytes);
+
+	switch (op->instr) {
+	case VM_OP_FETCH:
+		fprintf(f, "FETCH%c%s",
+			(op->u.fetch.end_bits == VM_END_FAIL) ? 'F' : 'S',
+			cmp);
+		break;
+
+	case VM_OP_STOP:
+		fprintf(f, "STOP%c%s",
+			(op->u.stop.end_bits == VM_END_FAIL) ? 'F' : 'S',
+			cmp);
+		break;
+
+	case VM_OP_BRANCH:
+		{
+			char dst;
+			switch (op->u.br.dest) {
+			case VM_DEST_NONE:  dst = 'Z'; break;
+			case VM_DEST_SHORT: dst = 'S'; break;
+			case VM_DEST_NEAR:  dst = 'N'; break;
+			case VM_DEST_FAR:   dst = 'F'; break;
+			default:            dst = '!'; break;
+			}
+
+			fprintf(f, "BR%c%s", dst, cmp);
+		}
+		break;
+
+	default:
+		fprintf(f, "UNK_%d_%s", (int)op->instr, cmp);
+	}
+
+	if (op->cmp != VM_CMP_ALWAYS) {
+		if (isprint(op->cmp_arg)) {
+			fprintf(f, " '%c'", op->cmp_arg);
+		} else {
+			fprintf(f, " 0x%02x",(unsigned)op->cmp_arg);
+		}
+
+		nargs++;
+	}
+
+	if (op->instr == VM_OP_BRANCH) {
+		fprintf(f, "%s%ld [dst_ind=%lu]", ((nargs>0) ? ", " : " "),
+			(long)op->u.br.rel_dest, (unsigned long)op->u.br.dest_index);
+		nargs++;
+	}
+
+	fprintf(f, "\t; %6lu bytes",
+		(unsigned long)op->num_encoded_bytes);
+	switch (op->instr) {
+	case VM_OP_FETCH:
+		fprintf(f, "  [state %u]", op->u.fetch.state);
+		break;
+
+	case VM_OP_BRANCH:
+		// fprintf(f, "  [dest=%p]", (void *)op->u.br.dest_arg);
+		break;
+
+	default:
+		break;
+	}
+
+	fprintf(f, "\n");
+}
+
+static void
+print_vm_instr(FILE *f, const struct dfavm_assembler *a)
+{
+	size_t i;
+	for (i=0; i < a->ninstr; i++) {
+		fprintf(f, "%6zu | ", i);
+		print_vm_op(f, &a->instr[i]);
+	}
+}
+
 #define ARRAYLEN(a) (sizeof (a) / sizeof ((a)[0]))
 
-static struct dfavm_op_pool *
-new_op_pool(struct dfavm_op_pool *pcurr)
+static struct dfavm_op_ir_pool *
+new_op_pool(struct dfavm_op_ir_pool *pcurr)
 {
-	static const struct dfavm_op_pool zero;
+	static const struct dfavm_op_ir_pool zero;
 
-	struct dfavm_op_pool *p;
+	struct dfavm_op_ir_pool *p;
 
 	p = malloc(sizeof *p);
 	if (p != NULL) {
@@ -393,10 +479,10 @@ new_op_pool(struct dfavm_op_pool *pcurr)
 	return p;
 }
 
-static struct dfavm_op *
-pool_newop(struct dfavm_op_pool **poolp)
+static struct dfavm_op_ir *
+pool_newop(struct dfavm_op_ir_pool **poolp)
 {
-	struct dfavm_op_pool *p;
+	struct dfavm_op_ir_pool *p;
 
 	assert(poolp != NULL);
 
@@ -415,9 +501,9 @@ pool_newop(struct dfavm_op_pool **poolp)
 }
 
 static void
-opasm_free(struct dfavm_assembler *a, struct dfavm_op *op)
+opasm_free(struct dfavm_assembler *a, struct dfavm_op_ir *op)
 {
-	static const struct dfavm_op zero;
+	static const struct dfavm_op_ir zero;
 
 	*op = zero;
 	op->next = a->freelist;
@@ -425,9 +511,9 @@ opasm_free(struct dfavm_assembler *a, struct dfavm_op *op)
 }
 
 static void
-opasm_free_list(struct dfavm_assembler *a, struct dfavm_op *op)
+opasm_free_list(struct dfavm_assembler *a, struct dfavm_op_ir *op)
 {
-	struct dfavm_op *next;
+	struct dfavm_op_ir *next;
 	while (op != NULL) {
 		next = op->next;
 		opasm_free(a,op);
@@ -435,12 +521,12 @@ opasm_free_list(struct dfavm_assembler *a, struct dfavm_op *op)
 	}
 }
 
-static struct dfavm_op *
+static struct dfavm_op_ir *
 opasm_new(struct dfavm_assembler *a, enum dfavm_op_instr instr, enum dfavm_op_cmp cmp, unsigned char arg)
 {
-	static const struct dfavm_op zero;
+	static const struct dfavm_op_ir zero;
 
-	struct dfavm_op *op;
+	struct dfavm_op_ir *op;
 
 	if (a->freelist != NULL) {
 		op = a->freelist;
@@ -452,7 +538,8 @@ opasm_new(struct dfavm_assembler *a, enum dfavm_op_instr instr, enum dfavm_op_cm
 	if (op != NULL) {
 		*op = zero;
 
-		op->count = a->count++;
+		op->asm_index = a->count++;
+		op->index = 0;
 
 		op->cmp   = cmp;
 		op->instr = instr;
@@ -463,10 +550,10 @@ opasm_new(struct dfavm_assembler *a, enum dfavm_op_instr instr, enum dfavm_op_cm
 	return op;
 }
 
-static struct dfavm_op *
+static struct dfavm_op_ir *
 opasm_new_fetch(struct dfavm_assembler *a, unsigned state, enum dfavm_op_end end)
 {
-	struct dfavm_op *op;
+	struct dfavm_op_ir *op;
 
 	op = opasm_new(a, VM_OP_FETCH, VM_CMP_ALWAYS, 0);
 	if (op != NULL) {
@@ -477,10 +564,10 @@ opasm_new_fetch(struct dfavm_assembler *a, unsigned state, enum dfavm_op_end end
 	return op;
 }
 
-static struct dfavm_op *
+static struct dfavm_op_ir *
 opasm_new_stop(struct dfavm_assembler *a, enum dfavm_op_cmp cmp, unsigned char arg, enum dfavm_op_end end)
 {
-	struct dfavm_op *op;
+	struct dfavm_op_ir *op;
 
 	op = opasm_new(a, VM_OP_STOP, cmp, arg);
 	if (op != NULL) {
@@ -490,10 +577,10 @@ opasm_new_stop(struct dfavm_assembler *a, enum dfavm_op_cmp cmp, unsigned char a
 	return op;
 }
 
-static struct dfavm_op *
+static struct dfavm_op_ir *
 opasm_new_branch(struct dfavm_assembler *a, enum dfavm_op_cmp cmp, unsigned char arg, uint32_t dest_state)
 {
-	struct dfavm_op *op;
+	struct dfavm_op_ir *op;
 
 	assert(dest_state < a->nstates);
 
@@ -511,7 +598,7 @@ dfavm_opasm_finalize(struct dfavm_assembler *a)
 {
 	static const struct dfavm_assembler zero;
 
-	struct dfavm_op_pool *pool_curr, *pool_next;
+	struct dfavm_op_ir_pool *pool_curr, *pool_next;
 
 	if (a == NULL) {
 		return;
@@ -523,6 +610,8 @@ dfavm_opasm_finalize(struct dfavm_assembler *a)
 		pool_next = pool_curr->next;
 		free(pool_curr);
 	}
+
+	free(a->instr);
 
 	*a = zero;
 }
@@ -657,7 +746,7 @@ analyze_table(struct dfa_table *table)
 }
 
 static int
-xlate_table_ranges(struct dfavm_assembler *a, struct dfa_table *table, struct dfavm_op **opp)
+xlate_table_ranges(struct dfavm_assembler *a, struct dfa_table *table, struct dfavm_op_ir **opp)
 {
 	int i,lo;
 	int count = 0;
@@ -665,7 +754,7 @@ xlate_table_ranges(struct dfavm_assembler *a, struct dfa_table *table, struct df
 	lo = 0;
 	for (i=1; i < FSM_SIGMA_COUNT; i++) {
 		int64_t dst;
-		struct dfavm_op *op;
+		struct dfavm_op_ir *op;
 
 		assert(lo < FSM_SIGMA_COUNT);
 
@@ -708,7 +797,7 @@ xlate_table_ranges(struct dfavm_assembler *a, struct dfa_table *table, struct df
 }
 
 static int
-xlate_table_cases(struct dfavm_assembler *a, struct dfa_table *table, struct dfavm_op **opp)
+xlate_table_cases(struct dfavm_assembler *a, struct dfa_table *table, struct dfavm_op_ir **opp)
 {
 	int i, count = 0;
 	int64_t mdst = table->mode.to;
@@ -745,10 +834,10 @@ xlate_table_cases(struct dfavm_assembler *a, struct dfa_table *table, struct dfa
 }
 
 static int
-initial_translate_table(struct dfavm_assembler *a, struct dfa_table *table, struct dfavm_op **opp)
+initial_translate_table(struct dfavm_assembler *a, struct dfa_table *table, struct dfavm_op_ir **opp)
 {
 	int count, best_count;
-	struct dfavm_op *op, *best_op;
+	struct dfavm_op_ir *op, *best_op;
 
 	assert(a     != NULL);
 	assert(table != NULL);
@@ -849,7 +938,7 @@ dfa_table_init(struct dfa_table *table, long default_dest)
 }
 
 static int
-initial_translate_partial(struct dfavm_assembler *a, struct ir_state *st, struct dfavm_op **opp)
+initial_translate_partial(struct dfavm_assembler *a, struct ir_state *st, struct dfavm_op_ir **opp)
 {
 	struct dfa_table table;
 	size_t i, ngrps;
@@ -867,7 +956,7 @@ initial_translate_partial(struct dfavm_assembler *a, struct ir_state *st, struct
 }
 
 static int
-initial_translate_dominant(struct dfavm_assembler *a, struct ir_state *st, struct dfavm_op **opp)
+initial_translate_dominant(struct dfavm_assembler *a, struct ir_state *st, struct dfavm_op_ir **opp)
 {
 	struct dfa_table table;
 	size_t i, ngrps;
@@ -885,7 +974,7 @@ initial_translate_dominant(struct dfavm_assembler *a, struct ir_state *st, struc
 }
 
 static int
-initial_translate_error(struct dfavm_assembler *a, struct ir_state *st, struct dfavm_op **opp)
+initial_translate_error(struct dfavm_assembler *a, struct ir_state *st, struct dfavm_op_ir **opp)
 {
 	struct dfa_table table;
 	size_t i, ngrps;
@@ -904,11 +993,11 @@ initial_translate_error(struct dfavm_assembler *a, struct ir_state *st, struct d
 	return initial_translate_table(a, &table, opp);
 }
 
-static struct dfavm_op *
+static struct dfavm_op_ir *
 initial_translate_state(struct dfavm_assembler *a, struct ir *ir, size_t ind)
 {
 	struct ir_state *st;
-	struct dfavm_op **opp;
+	struct dfavm_op_ir **opp;
 
 	st = &ir->states[ind];
 	opp = &a->ops[ind];
@@ -992,7 +1081,7 @@ fixup_dests(struct dfavm_assembler *a)
 
 	n = a->nstates;
 	for (i=0; i < n; i++) {
-		struct dfavm_op *op;
+		struct dfavm_op_ir *op;
 
 		for (op = a->ops[i]; op != NULL; op = op->next) {
 			if (op->instr != VM_OP_BRANCH) {
@@ -1005,7 +1094,7 @@ fixup_dests(struct dfavm_assembler *a)
 	}
 }
 
-struct dfavm_op **find_opchain_end(struct dfavm_op **opp)
+struct dfavm_op_ir **find_opchain_end(struct dfavm_op_ir **opp)
 {
 	assert(opp != NULL);
 
@@ -1022,7 +1111,7 @@ eliminate_unnecessary_branches(struct dfavm_assembler *a)
 	int count;
 
 	do {
-		struct dfavm_op **opp;
+		struct dfavm_op_ir **opp;
 
 		count = 0;
 
@@ -1030,7 +1119,7 @@ eliminate_unnecessary_branches(struct dfavm_assembler *a)
 		 * next instruction can be elided
 		 */
 		for (opp = &a->linked; *opp != NULL;) {
-			struct dfavm_op *next, *dest;
+			struct dfavm_op_ir *next, *dest;
 
 			if ((*opp)->instr != VM_OP_BRANCH) {
 				opp = &(*opp)->next;
@@ -1065,7 +1154,7 @@ eliminate_unnecessary_branches(struct dfavm_assembler *a)
 				/* rewrite last two instructions to eliminate a
 				 * branch
 				 */
-				struct dfavm_op rewrite1 = *next, rewrite2 = **opp;  // swapped
+				struct dfavm_op_ir rewrite1 = *next, rewrite2 = **opp;  // swapped
 				int ok = 1;
 
 				// invert the condition of current branch
@@ -1107,8 +1196,8 @@ static void
 order_basic_blocks(struct dfavm_assembler *a)
 {
 	size_t i,n;
-	struct dfavm_op **opp;
-	struct dfavm_op *st;
+	struct dfavm_op_ir **opp;
+	struct dfavm_op_ir *st;
 
 	/* replace this with something that actually
 	 * orders basic blocks ...
@@ -1126,8 +1215,8 @@ order_basic_blocks(struct dfavm_assembler *a)
 
 	st = a->ops[a->start];
 	while (st != NULL) {
-		struct dfavm_op *branches[FSM_SIGMA_COUNT];  /* at most FSM_SIGMA_COUNT branches per state */
-		struct dfavm_op *instr;
+		struct dfavm_op_ir *branches[FSM_SIGMA_COUNT];  /* at most FSM_SIGMA_COUNT branches per state */
+		struct dfavm_op_ir *instr;
 		size_t j,count;
 
 		/* add state to trace */
@@ -1152,7 +1241,7 @@ order_basic_blocks(struct dfavm_assembler *a)
 
 		st = NULL;
 		for (j=count; j > 0; j--) {
-			struct dfavm_op *dest = branches[j-1]->u.br.dest_arg;
+			struct dfavm_op_ir *dest = branches[j-1]->u.br.dest_arg;
 			if (!dest->in_trace) {
 				st = dest;
 				break;
@@ -1181,7 +1270,7 @@ static const long max_dest_2b = INT16_MAX;
 // static const long max_dest_4b = INT32_MAX;
 
 static int
-op_encoding_size(struct dfavm_op *op, int max_enc)
+op_encoding_size(struct dfavm_vm_op *op, int max_enc)
 {
 	int nbytes = 1;
 
@@ -1212,18 +1301,109 @@ op_encoding_size(struct dfavm_op *op, int max_enc)
 }
 
 static void
-assign_rel_dests(struct dfavm_assembler *a)
+build_vm_op(const struct dfavm_op_ir *ir, struct dfavm_vm_op *op)
 {
-	uint32_t off;
-	struct dfavm_op *op;
+	static const struct dfavm_vm_op zero;
+
+	*op = zero;
+	op->ir = ir;
+	op->instr   = ir->instr;
+	op->cmp     = ir->cmp;
+	op->cmp_arg = ir->cmp_arg;
+
+	switch (op->instr) {
+	case VM_OP_STOP:
+		op->u.stop.end_bits = ir->u.stop.end_bits;
+		break;
+
+	case VM_OP_FETCH:
+		op->u.fetch.state    = ir->u.fetch.state;
+		op->u.fetch.end_bits = ir->u.fetch.end_bits;
+		break;
+
+	case VM_OP_BRANCH:
+		assert(ir->u.br.dest_arg != NULL);
+
+		op->u.br.dest_index = ir->u.br.dest_arg->index;
+
+		/* zero initialize the other fields */
+		op->u.br.dest = VM_DEST_NONE;
+		op->u.br.rel_dest = 0;
+
+		break;
+	}
+}
+
+static struct dfavm_vm_op *
+build_vm_op_array(const struct dfavm_op_ir *ops, size_t *np)
+{
+	const struct dfavm_op_ir *op;
+
+	struct dfavm_vm_op *ilist;
+	size_t i,ninstr;
+
+	assert(np != NULL);
+
+	/* count number of instructions */
+	for (op = ops, ninstr=0; op != NULL; op = op->next) {
+		ninstr++;
+	}
+
+	errno = 0;
+
+	if (ninstr == 0) {
+		*np = 0;
+		return NULL;
+	}
+
+	ilist = calloc(ninstr, sizeof *ilist);
+	if (ilist == NULL) {
+		return NULL;
+	}
+
+	for (op = ops, i=0; op != NULL; op = op->next, i++) {
+		assert(i < ninstr);
+
+		build_vm_op(op, &ilist[i]);
+	}
+
+	*np = ninstr;
+	return ilist;
+}
+
+static uint32_t
+assign_opcode_indexes(struct dfavm_assembler *a)
+{
+	uint32_t index;
+	struct dfavm_op_ir *op;
 
 	assert(a != NULL);
 	assert(a->linked != NULL);
 
+	index = 0;
+	for (op=a->linked; op != NULL; op = op->next) {
+		op->index = index++;
+	}
+
+	return index;
+}
+
+static void
+assign_rel_dests(struct dfavm_assembler *a)
+{
+	uint32_t off;
+	size_t i;
+
+	assert(a != NULL);
+	assert(a->instr != NULL);
+
 	/* start with maximum branch encoding */
 	off = 0;
-	for (op = a->linked; op != NULL; op = op->next) {
+	for (i=0; i < a->ninstr; i++) {
+		struct dfavm_vm_op *op;
 		int nenc;
+
+		op = &a->instr[i];
 
 		nenc = op_encoding_size(op, 1);
 
@@ -1239,23 +1419,27 @@ assign_rel_dests(struct dfavm_assembler *a)
 	/* iterate until we converge */
 	for (;;) {
 		int nchanged = 0;
+		size_t i;
 
-		for (op = a->linked; op != NULL; op = op->next) {
+		for (i=0; i < a->ninstr; i++) {
+			struct dfavm_vm_op *op;
+
+			op = &a->instr[i];
+
 			if (op->instr == VM_OP_BRANCH) {
-				struct dfavm_op *dest;
+				struct dfavm_vm_op *dest;
 				int64_t diff;
 				int nenc;
 
-				dest = op->u.br.dest_arg;
-
-				assert(dest != NULL);
+				assert(op->u.br.dest_index < a->ninstr);
+				dest = &a->instr[op->u.br.dest_index];
 
 				diff = (int64_t)dest->offset - (int64_t)op->offset;
 
 				assert(diff >= INT32_MIN && diff <= INT32_MAX);
 
 				op->u.br.rel_dest = diff;
-				
+
 				nenc = op_encoding_size(op, 0);
 				if (nenc != op->num_encoded_bytes) {
 					op->num_encoded_bytes = nenc;
@@ -1270,7 +1454,10 @@ assign_rel_dests(struct dfavm_assembler *a)
 
 		/* adjust offsets */
 		off = 0;
-		for (op = a->linked; op != NULL; op = op->next) {
+		for (i=0; i < a->ninstr; i++) {
+			struct dfavm_vm_op *op;
+
+			op = &a->instr[i];
 			op->offset = off;
 			off += op->num_encoded_bytes;
 		}
@@ -1286,8 +1473,8 @@ encode_opasm(struct dfavm_assembler *a)
 
 	struct fsm_dfavm *vm;
 	size_t total_bytes;
+	size_t i;
 	size_t off;
-	struct dfavm_op *op;
 	unsigned char *enc;
 
 	vm = malloc(sizeof *vm);
@@ -1300,9 +1487,10 @@ encode_opasm(struct dfavm_assembler *a)
 	vm->ops = enc;
 	vm->len = total_bytes;
 
-	for (off = 0, op = a->linked; op != NULL; op = op->next) {
+	for (off = 0, i = 0; i < a->ninstr; i++) {
 		unsigned char bytes[6];
 		unsigned char cmp_bits, instr_bits, rest_bits;
+		const struct dfavm_vm_op *op = &a->instr[i];
 		int nb = 1;
 
 		cmp_bits   = 0;
@@ -1413,7 +1601,7 @@ error:
 static void
 dump_states(FILE *f, struct dfavm_assembler *a)
 {
-	struct dfavm_op *op;
+	struct dfavm_op_ir *op;
 	size_t count;
 
 	count = 0;
@@ -1424,14 +1612,20 @@ dump_states(FILE *f, struct dfavm_assembler *a)
 		}
 
 		fprintf(f, "%6zu |    ", count++);
-		print_op(f, op);
+		print_op_ir(f, op);
 	}
 
 	fprintf(f, "%6lu total bytes\n", (unsigned long)a->nbytes);
 }
 
+static void
+print_all_states(struct dfavm_assembler *a)
+{
+	dump_states(stderr, a);
+}
+
 static struct fsm_dfavm *
-dfavm_compile(struct ir *ir)
+dfavm_compile(struct ir *ir, struct fsm_vm_compile_opts opts)
 {
 	static const struct dfavm_assembler zero;
 
@@ -1456,8 +1650,40 @@ dfavm_compile(struct ir *ir)
 
 	fixup_dests(&a);
 
-	order_basic_blocks(&a);
-	eliminate_unnecessary_branches(&a);
+	if (opts.flags & FSM_VM_COMPILE_PRINT_IR_PREOPT) {
+		FILE *f = (opts.out != NULL) ? opts.out : stdout;
+
+		fprintf(f, "---[ before optimization ]---\n");
+		dump_states(f, &a);
+		fprintf(f, "\n");
+	}
+
+	/* basic optimizations */
+	if (opts.flags & FSM_VM_COMPILE_OPTIM1) {
+		order_basic_blocks(&a);
+
+		/* medium optimizations */
+		if (opts.flags & FSM_VM_COMPILE_OPTIM2) {
+			eliminate_unnecessary_branches(&a);
+		}
+	}
+
+	/* optimization is finished.  now assign opcode indexes */
+	assign_opcode_indexes(&a);
+
+	if (opts.flags & FSM_VM_COMPILE_PRINT_IR) {
+		FILE *f = (opts.out != NULL) ? opts.out : stdout;
+
+		fprintf(f, "---[ final IR ]---\n");
+		dump_states(f, &a);
+		fprintf(f, "\n");
+	}
+
+	/* build vm instructions */
+	a.instr = build_vm_op_array(a.linked, &a.ninstr);
+	if (a.instr == NULL) {
+		goto error;
+	}
 
 	assign_rel_dests(&a);
 
@@ -1465,9 +1691,18 @@ dfavm_compile(struct ir *ir)
 	dump_states(stdout, &a);
 #endif /* DEBUG_VM_OPCODES */
 
+	/*
+	fprintf(stderr,"\n---[ vm instructions ]---\n");
+	print_vm_instr(stderr, &a);
+	fprintf(stderr,"\n");
+	*/
+
 	vm = encode_opasm(&a);
 	if (vm == NULL) {
 		goto error;
+	}
+
+	if (opts.flags & FSM_VM_COMPILE_PRINT_ENC) {
 	}
 
 	dfavm_opasm_finalize(&a);
@@ -1480,19 +1715,21 @@ error:
 }
 
 struct fsm_dfavm *
-fsm_vm_compile(const struct fsm *fsm)
+fsm_vm_compile_with_options(const struct fsm *fsm, struct fsm_vm_compile_opts opts)
 {
 	struct ir *ir;
 	struct fsm_dfavm *vm;
 
 	(void)dump_states;  /* make clang happy */
+	(void)print_all_states;
+	(void)print_vm_instr;
 
 	ir = make_ir(fsm);
 	if (ir == NULL) {
 		return NULL;
 	}
 
-	vm = dfavm_compile(ir);
+	vm = dfavm_compile(ir, opts);
 
 	if (vm == NULL) {
 		int errsv = errno;
@@ -1504,7 +1741,15 @@ fsm_vm_compile(const struct fsm *fsm)
 
 	free_ir(fsm,ir);
 	return vm;
+}
 
+struct fsm_dfavm *
+fsm_vm_compile(const struct fsm *fsm)
+{
+	// static const struct fsm_vm_compile_opts defaults = { FSM_VM_COMPILE_DEFAULT_FLAGS | FSM_VM_COMPILE_PRINT_IR_PREOPT | FSM_VM_COMPILE_PRINT_IR, NULL };
+	static const struct fsm_vm_compile_opts defaults = { FSM_VM_COMPILE_DEFAULT_FLAGS, NULL };
+
+	return fsm_vm_compile_with_options(fsm, defaults);
 }
 
 void

@@ -41,9 +41,23 @@ enum dfavm_op_dest {
 	VM_DEST_FAR   = 3,  // 32-bit dest
 };
 
-struct dfavm_op {
-	struct dfavm_op *next;
-	uint32_t count;
+struct dfavm_op_ir {
+	struct dfavm_op_ir *next;
+
+	/* Holds an integer identifier that's unique for all opcodes in a
+	 * dfavm_assembler
+	 */
+	uint32_t asm_index;
+
+	/* Unique index of the final opcodes, assigned after any IR
+	 * optimization.
+	 *
+	 * This can be used as a temporary by any optimization operation,
+	 * but the value cannot be assumed to be set to a valid value when
+	 * entering the operation.
+	 */
+	uint32_t index;
+
 	uint32_t offset;
 
 	uint32_t num_incoming; // number of branches to this instruction
@@ -62,31 +76,63 @@ struct dfavm_op {
 		} stop;
 
 		struct {
-			struct dfavm_op *dest_arg;
+			struct dfavm_op_ir *dest_arg;
 			enum dfavm_op_dest dest;
 			uint32_t dest_state;
 			int32_t  rel_dest;
 		} br;
 	} u;
 
-	unsigned char cmp_arg;
-	unsigned char num_encoded_bytes;
+	int num_encoded_bytes;
 	int in_trace;
+	unsigned char cmp_arg;
 };
 
-struct dfavm_op_pool {
-	struct dfavm_op_pool *next;
+struct dfavm_op_ir_pool {
+	struct dfavm_op_ir_pool *next;
 
 	unsigned int top;
-	struct dfavm_op ops[1024];
+	struct dfavm_op_ir ops[1024];
+};
+
+struct dfavm_vm_op {
+	const struct dfavm_op_ir *ir;
+	uint32_t offset;
+
+	enum dfavm_op_cmp cmp;
+	enum dfavm_op_instr instr;
+
+	union {
+		struct {
+			unsigned state;
+			enum dfavm_op_end end_bits;
+		} fetch;
+
+		struct {
+			enum dfavm_op_end end_bits;
+		} stop;
+
+		struct {
+			uint32_t dest_index;
+
+			enum dfavm_op_dest dest;
+			int32_t  rel_dest;
+		} br;
+	} u;
+
+	unsigned char cmp_arg;
+	unsigned char num_encoded_bytes;
 };
 
 struct dfavm_assembler {
-	struct dfavm_op_pool *pool;
-	struct dfavm_op *freelist;
+	struct dfavm_op_ir_pool *pool;
+	struct dfavm_op_ir *freelist;
 
-	struct dfavm_op **ops;
-	struct dfavm_op *linked;
+	struct dfavm_op_ir **ops;
+	struct dfavm_op_ir *linked;
+
+	struct dfavm_vm_op *instr;
+	size_t ninstr;
 
 	size_t nstates;
 	size_t start;
