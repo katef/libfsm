@@ -58,9 +58,9 @@ struct dfavm_op_ir {
 	 */
 	uint32_t index;
 
-	uint32_t offset;
-
 	uint32_t num_incoming; // number of branches to this instruction
+	int in_trace;
+	int cmp_arg;
 
 	enum dfavm_op_cmp cmp;
 	enum dfavm_op_instr instr;
@@ -77,15 +77,9 @@ struct dfavm_op_ir {
 
 		struct {
 			struct dfavm_op_ir *dest_arg;
-			enum dfavm_op_dest dest;
 			uint32_t dest_state;
-			int32_t  rel_dest;
 		} br;
 	} u;
-
-	int num_encoded_bytes;
-	int in_trace;
-	unsigned char cmp_arg;
 };
 
 struct dfavm_op_ir_pool {

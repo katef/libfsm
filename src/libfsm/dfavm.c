@@ -307,7 +307,7 @@ print_op_ir(FILE *f, struct dfavm_op_ir *op)
 
 	cmp = cmp_name(op->cmp);
 
-	fprintf(f, "[%4lu] %1lu\t", (unsigned long)op->offset, (unsigned long)op->num_encoded_bytes);
+	// fprintf(f, "[%4lu] %1lu\t", (unsigned long)op->offset, (unsigned long)op->num_encoded_bytes);
 
 	switch (op->instr) {
 	case VM_OP_FETCH:
@@ -324,16 +324,7 @@ print_op_ir(FILE *f, struct dfavm_op_ir *op)
 
 	case VM_OP_BRANCH:
 		{
-			char dst;
-			switch (op->u.br.dest) {
-			case VM_DEST_NONE:  dst = 'Z'; break;
-			case VM_DEST_SHORT: dst = 'S'; break;
-			case VM_DEST_NEAR:  dst = 'N'; break;
-			case VM_DEST_FAR:   dst = 'F'; break;
-			default:            dst = '!'; break;
-			}
-
-			fprintf(f, "BR%c%s", dst, cmp);
+			fprintf(f, "BR%s", cmp);
 		}
 		break;
 
@@ -352,13 +343,12 @@ print_op_ir(FILE *f, struct dfavm_op_ir *op)
 	}
 
 	if (op->instr == VM_OP_BRANCH) {
-		fprintf(f, "%s%ld [st=%lu]", ((nargs>0) ? ", " : " "),
-			(long)op->u.br.rel_dest, (unsigned long)op->u.br.dest_state);
+		fprintf(f, "%s [st=%lu]", ((nargs>0) ? ", " : " "),
+			(unsigned long)op->u.br.dest_state);
 		nargs++;
 	}
 
-	fprintf(f, "\t; %6lu bytes [%u incoming]",
-		(unsigned long)op->num_encoded_bytes, op->num_incoming);
+	fprintf(f, "\t; [%u incoming]", op->num_incoming);
 	switch (op->instr) {
 	case VM_OP_FETCH:
 		fprintf(f, "  [state %u]", op->u.fetch.state);
@@ -586,7 +576,7 @@ opasm_new_branch(struct dfavm_assembler *a, enum dfavm_op_cmp cmp, unsigned char
 
 	op = opasm_new(a, VM_OP_BRANCH, cmp, arg);
 	if (op != NULL) {
-		op->u.br.dest  = VM_DEST_FAR;  // start with all branches as 'far'
+		// op->u.br.dest  = VM_DEST_FAR;  // start with all branches as 'far'
 		op->u.br.dest_state = dest_state;
 	}
 
