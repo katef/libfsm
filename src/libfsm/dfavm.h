@@ -140,4 +140,9 @@ enum dfavm_io_result {
 	DFAVM_IO_SHORT_READ,
 };
 
+struct fsm_dfavm {
+	unsigned char *ops;
+	uint32_t len;
+};
+
 #endif /* FSM_DFAVM_H */

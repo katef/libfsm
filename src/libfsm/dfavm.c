@@ -198,10 +198,6 @@
 //   DD=11 is reserved for future use
 //
 
-struct fsm_dfavm {
-	unsigned char *ops;
-	uint32_t len;
-};
 
 #define DFAVM_VERSION_MAJOR 0x00
 #define DFAVM_VERSION_MINOR 0x01
