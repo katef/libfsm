@@ -451,6 +451,13 @@ print_vm_instr(FILE *f, const struct dfavm_assembler *a)
 	}
 }
 
+struct dfavm_op_ir_pool {
+	struct dfavm_op_ir_pool *next;
+
+	unsigned int top;
+	struct dfavm_op_ir ops[1024];
+};
+
 #define ARRAYLEN(a) (sizeof (a) / sizeof ((a)[0]))
 
 static struct dfavm_op_ir_pool *

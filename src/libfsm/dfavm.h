@@ -82,13 +82,6 @@ struct dfavm_op_ir {
 	} u;
 };
 
-struct dfavm_op_ir_pool {
-	struct dfavm_op_ir_pool *next;
-
-	unsigned int top;
-	struct dfavm_op_ir ops[1024];
-};
-
 struct dfavm_vm_op {
 	const struct dfavm_op_ir *ir;
 	uint32_t offset;
@@ -117,6 +110,8 @@ struct dfavm_vm_op {
 	unsigned char cmp_arg;
 	unsigned char num_encoded_bytes;
 };
+
+struct dfavm_op_ir_pool;
 
 struct dfavm_assembler {
 	struct dfavm_op_ir_pool *pool;
