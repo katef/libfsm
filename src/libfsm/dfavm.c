@@ -199,21 +199,22 @@
 //   DD=11 is reserved for future use
 //
 
+#define DFAVM_VARENC_MAJOR 0x00
+#define DFAVM_VARENC_MINOR 0x01
 
-#define DFAVM_VERSION_MAJOR 0x00
-#define DFAVM_VERSION_MINOR 0x01
+
 #define DFAVM_MAGIC "DFAVM$"
 
-enum dfavm_io_result
-fsm_dfavm_save(FILE *f, const struct fsm_dfavm *vm)
+static enum dfavm_io_result
+dfavm_v1_save(FILE *f, const struct dfavm_v1 *vm)
 {
 	/* write eight byte header */
 	unsigned char header[8];
 	unsigned char ilen[4];
 
 	memcpy(&header[0], DFAVM_MAGIC, 6);
-	header[6] = DFAVM_VERSION_MAJOR;
-	header[7] = DFAVM_VERSION_MINOR;
+	header[6] = DFAVM_VARENC_MAJOR;
+	header[7] = DFAVM_VARENC_MINOR;
 
 	if (fwrite(&header, sizeof header, 1, f) != 1) {
 		return -1;
@@ -236,26 +237,13 @@ fsm_dfavm_save(FILE *f, const struct fsm_dfavm *vm)
 	return 0;
 }
 
-enum dfavm_io_result
-fsm_dfavm_load(FILE *f, struct fsm_dfavm *vm)
+static enum dfavm_io_result
+dfavm_load_v1(FILE *f, struct dfavm_v1 *vm)
 {
-	unsigned char header[8], ilen[4];
+	unsigned char ilen[4];
 	uint32_t len;
 	unsigned char *instr;
 	size_t nread;
-
-	/* read and check header */
-	if (fread(&header[0], sizeof header, 1, f) != 1) {
-		return DFAVM_IO_ERROR_READING;
-	}
-
-	if (memcmp(&header[0], DFAVM_MAGIC, 6) != 0) {
-		return DFAVM_IO_BAD_HEADER;
-	}
-
-	if (header[6] != DFAVM_VERSION_MAJOR || header[7] > DFAVM_VERSION_MINOR) {
-		return DFAVM_IO_UNSUPPORTED_VERSION;
-	}
 
 	/* read number of instructions */
 	if (fread(&ilen[0], sizeof ilen, 1, f) != 1) {
@@ -280,6 +268,40 @@ fsm_dfavm_load(FILE *f, struct fsm_dfavm *vm)
 	vm->len = len;
 
 	return DFAVM_IO_OK;
+}
+
+enum dfavm_io_result
+fsm_dfavm_save(FILE *f, const struct fsm_dfavm *vm)
+{
+	if (vm->version_major == DFAVM_VARENC_MAJOR && vm->version_minor == DFAVM_VARENC_MINOR) {
+		return dfavm_v1_save(f, &vm->u.v1);
+	}
+	else {
+		return DFAVM_IO_UNSUPPORTED_VERSION;
+	}
+}
+
+enum dfavm_io_result
+fsm_dfavm_load(FILE *f, struct fsm_dfavm *vm)
+{
+	unsigned char header[8];
+	/* read and check header */
+	if (fread(&header[0], sizeof header, 1, f) != 1) {
+		return DFAVM_IO_ERROR_READING;
+	}
+
+	if (memcmp(&header[0], DFAVM_MAGIC, 6) != 0) {
+		return DFAVM_IO_BAD_HEADER;
+	}
+
+	if (header[6] == DFAVM_VARENC_MAJOR && header[7] == DFAVM_VARENC_MINOR) {
+		vm->version_major = header[6];
+		vm->version_minor = header[7];
+
+		return dfavm_load_v1(f, &vm->u.v1);
+	}
+
+	return DFAVM_IO_UNSUPPORTED_VERSION;
 }
 
 static const char *
@@ -1461,18 +1483,24 @@ assign_rel_dests(struct dfavm_assembler *a)
 }
 
 static struct fsm_dfavm *
-encode_opasm(struct dfavm_assembler *a)
+encode_opasm_v1(const struct dfavm_assembler *a)
 {
 	static const struct fsm_dfavm zero;
 
-	struct fsm_dfavm *vm;
+	struct fsm_dfavm *ret;
+	struct dfavm_v1 *vm;
 	size_t total_bytes;
 	size_t i;
 	size_t off;
 	unsigned char *enc;
 
-	vm = malloc(sizeof *vm);
-	*vm = zero;
+	ret = malloc(sizeof *ret);
+	*ret = zero;
+
+	ret->version_major = DFAVM_VARENC_MAJOR;
+	ret->version_minor = DFAVM_VARENC_MINOR;
+
+	vm = &ret->u.v1;
 
 	total_bytes = a->nbytes;
 
@@ -1585,7 +1613,7 @@ encode_opasm(struct dfavm_assembler *a)
 
 	assert(off == total_bytes);
 
-	return vm;
+	return ret;
 
 error:
 	/* XXX - cleanup */
@@ -1691,7 +1719,7 @@ dfavm_compile(struct ir *ir, struct fsm_vm_compile_opts opts)
 	fprintf(stderr,"\n");
 	*/
 
-	vm = encode_opasm(&a);
+	vm = encode_opasm_v1(&a);
 	if (vm == NULL) {
 		goto error;
 	}
@@ -1846,7 +1874,7 @@ running_print_op(const unsigned char *ops, uint32_t pc, const char *sp, const ch
 }
 
 static enum dfavm_state
-vm_match(const struct fsm_dfavm *vm, struct vm_state *st, const char *buf, size_t n)
+vm_match_v1(const struct dfavm_v1 *vm, struct vm_state *st, const char *buf, size_t n)
 {
 	const char *sp, *last;
 	int ch;
@@ -1949,6 +1977,16 @@ vm_match(const struct fsm_dfavm *vm, struct vm_state *st, const char *buf, size_
 				st->pc = off;
 			}
 		}
+	}
+
+	return VM_FAIL;
+}
+
+static enum dfavm_state
+vm_match(const struct fsm_dfavm *vm, struct vm_state *st, const char *buf, size_t n)
+{
+	if ((vm->version_major == DFAVM_VARENC_MAJOR) && (vm->version_minor == DFAVM_VARENC_MINOR)) {
+		return vm_match_v1(&vm->u.v1, st, buf, n);
 	}
 
 	return VM_FAIL;
