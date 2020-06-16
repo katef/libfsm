@@ -74,6 +74,7 @@
  */
 
 static struct fsm_options opt;
+static struct fsm_vm_compile_opts vm_opts = { 0, FSM_VM_COMPILE_VM_V1, NULL };
 
 struct str {
 	char *data;
@@ -561,7 +562,7 @@ perf_case_run(struct perf_case *c, double *delta)
 	}
 #endif /* DEBUG_VM_FSM */
 
-	vm = fsm_vm_compile(fsm);
+	vm = fsm_vm_compile_with_options(fsm, vm_opts);
 	if (vm == NULL) {
 		fsm_free(fsm);
 		return ERROR_COMPILING_BYTECODE;
@@ -678,8 +679,33 @@ perf_case_report(struct perf_case *c, enum error_type err, double runtime_secs)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: reperf driverfile\n");
-	fprintf(stderr, "       reperf -\n");
+	fprintf(stderr, "usage: reperf [-O <olevel>] [-L <what>] [-x <encoding>] [-p] <driverfile | ->\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "        <driverfile> specifies the path to the driver file, or '-' to read it from stdin\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "        -p\n");
+	fprintf(stderr, "             pause before running performance tests\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "        -O <olevel>\n");
+	fprintf(stderr, "             sets VM optimization level:\n");
+	fprintf(stderr, "                 0 = disable optimizations\n");
+	fprintf(stderr, "                 1 = basic optimizations\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "        -L <what>\n");
+	fprintf(stderr, "             logs intermediate representations:\n");
+	fprintf(stderr, "                 ir_pre    logs IR before optimization\n");
+	fprintf(stderr, "                 ir        logs IR after optimization\n");
+	fprintf(stderr, "                 enc       logs VM encoding instructions\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "        -x <encoding>\n");
+	fprintf(stderr, "             sets encoding type:\n");
+	fprintf(stderr, "                 v1        version 0.1 variable length encoding\n");
+	fprintf(stderr, "                 v2        version 0.2 fixed length encoding\n");
 }
 
 static FILE *
@@ -714,6 +740,8 @@ main(int argc, char *argv[])
 	int i;
 	int pause;
 
+	int optlevel = 1;
+
 	(void)str_init;
 
 	/* note these defaults are the opposite than for fsm(1) */
@@ -728,9 +756,37 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "p" "e:" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:x:" "p" ), c != -1) {
 			switch (c) {
-			case 'e': opt.prefix = optarg;     break;
+			case 'O':
+				optlevel = strtoul(optarg, NULL, 10);
+				break;
+
+			case 'L':
+				if (strcmp(optarg, "ir_pre") == 0) {
+					vm_opts.flags |= FSM_VM_COMPILE_PRINT_IR;
+				} else if (strcmp(optarg, "ir") == 0) {
+					vm_opts.flags |= FSM_VM_COMPILE_PRINT_IR_PREOPT;
+				} else if (strcmp(optarg, "enc") == 0) {
+					vm_opts.flags |= FSM_VM_COMPILE_PRINT_ENC;
+				} else {
+					fprintf(stderr, "unknown argument to -L: %s\n", optarg);
+					usage();
+					exit(1);
+				}
+				break;
+
+			case 'x':
+				if (strcmp(optarg, "v1") == 0) {
+					vm_opts.output = FSM_VM_COMPILE_VM_V1;
+				} else if (strcmp(optarg, "v2") == 0) {
+					vm_opts.output = FSM_VM_COMPILE_VM_V2;
+				} else {
+					fprintf(stderr, "unknown argument to -x: %s\n", optarg);
+					usage();
+					exit(1);
+				}
+				break;
 
 			case 'p': pause = 1; break;
 
@@ -752,6 +808,10 @@ main(int argc, char *argv[])
 	if (argc < 1) {
 		usage();
 		return EXIT_FAILURE;
+	}
+
+	if (optlevel > 0) {
+		vm_opts.flags |= FSM_VM_COMPILE_OPTIM;
 	}
 
 	if (pause) {
