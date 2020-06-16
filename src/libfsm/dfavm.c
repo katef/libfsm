@@ -1680,14 +1680,11 @@ dfavm_compile(struct ir *ir, struct fsm_vm_compile_opts opts)
 		fprintf(f, "\n");
 	}
 
-	/* basic optimizations */
-	if (opts.flags & FSM_VM_COMPILE_OPTIM1) {
-		order_basic_blocks(&a);
+	order_basic_blocks(&a);
 
-		/* medium optimizations */
-		if (opts.flags & FSM_VM_COMPILE_OPTIM2) {
-			eliminate_unnecessary_branches(&a);
-		}
+	/* basic optimizations */
+	if (opts.flags & FSM_VM_COMPILE_OPTIM) {
+		eliminate_unnecessary_branches(&a);
 	}
 
 	/* optimization is finished.  now assign opcode indexes */
@@ -1712,12 +1709,6 @@ dfavm_compile(struct ir *ir, struct fsm_vm_compile_opts opts)
 #if DEBUG_VM_OPCODES
 	dump_states(stdout, &a);
 #endif /* DEBUG_VM_OPCODES */
-
-	/*
-	fprintf(stderr,"\n---[ vm instructions ]---\n");
-	print_vm_instr(stderr, &a);
-	fprintf(stderr,"\n");
-	*/
 
 	vm = encode_opasm_v1(&a);
 	if (vm == NULL) {
@@ -1985,7 +1976,7 @@ vm_match_v1(const struct dfavm_v1 *vm, struct vm_state *st, const char *buf, siz
 static enum dfavm_state
 vm_match(const struct fsm_dfavm *vm, struct vm_state *st, const char *buf, size_t n)
 {
-	if ((vm->version_major == DFAVM_VARENC_MAJOR) && (vm->version_minor == DFAVM_VARENC_MINOR)) {
+	if (vm->version_major == DFAVM_VARENC_MAJOR && vm->version_minor == DFAVM_VARENC_MINOR) {
 		return vm_match_v1(&vm->u.v1, st, buf, n);
 	}
 

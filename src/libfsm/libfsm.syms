@@ -101,6 +101,7 @@ closure_free # XXX: workaround for fsm
 fsm_mergeab
 
 fsm_vm_compile
+fsm_vm_compile_with_options
 fsm_vm_free
 fsm_vm_match_buffer
 fsm_vm_match_file
