@@ -1784,7 +1784,7 @@ dump_states(FILE *f, struct dfavm_assembler *a)
 			fprintf(f, "%6s |    ; state %u %p %s\n", "", state, (void *)op, (state == a->start) ? "(start)" : "");
 		}
 
-		fprintf(f, "%6zu |    ", count++);
+		fprintf(f, "%6zu | %p | %6lu |  ", count++, (void*)op, (unsigned long)op->index);
 		print_op_ir(f, op);
 	}
 
