@@ -1702,7 +1702,7 @@ encode_opasm_v2(const struct dfavm_assembler *a)
 				uint32_t dest_state = op->u.br.dest_index;
 				int64_t state_diff = (int64_t)dest_state - (int64_t)i;
 
-				if (state_diff >= INT16_MIN || state_diff <= INT16_MAX) {
+				if (state_diff >= INT16_MIN && state_diff <= INT16_MAX) {
 					instr_bits = VM_V2_OP_BRANCH;
 					dest_arg = (int16_t)state_diff;
 				}
@@ -1722,7 +1722,7 @@ encode_opasm_v2(const struct dfavm_assembler *a)
 							new_acap = acap + acap/2;
 						}
 
-						new_abuf = realloc(abuf, acap * sizeof abuf[0]);
+						new_abuf = realloc(abuf, new_acap * sizeof abuf[0]);
 						if (new_abuf == NULL) {
 							goto error;
 						}
