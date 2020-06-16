@@ -717,7 +717,7 @@ main(int argc, char *argv[])
 	enum re_dialect dialect;
 	int max_test_errors;
 
-	int optlevel = 2;
+	int optlevel = 1;
 
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;
@@ -738,6 +738,7 @@ main(int argc, char *argv[])
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
 				break;
+
 			case 'L':
 				if (strcmp(optarg, "ir_pre") == 0) {
 					vm_opts.flags |= FSM_VM_COMPILE_PRINT_IR;
@@ -788,13 +789,13 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (optlevel > 0) {
-		vm_opts.flags |= FSM_VM_COMPILE_OPTIM;
-	}
-
 	if (argc < 1) {
 		usage();
 		return EXIT_FAILURE;
+	}
+
+	if (optlevel > 0) {
+		vm_opts.flags |= FSM_VM_COMPILE_OPTIM;
 	}
 
 	{
