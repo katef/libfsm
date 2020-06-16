@@ -48,11 +48,30 @@ struct match {
 };
 
 static struct fsm_options opt;
+static struct fsm_vm_compile_opts vm_opts = { 0, FSM_VM_COMPILE_VM_V1, NULL };
 
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: retest [-p] [-r <dialect>] [-e <prefix>] [-E <maxerrs>] testfile [testfile...]\n");
+	fprintf(stderr, "usage: retest [-O <olevel>] [-L <what>] [-x <encoding>] [-r <dialect>] [-e <prefix>] [-E <maxerrs>] testfile [testfile...]\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "        -O <olevel>\n");
+	fprintf(stderr, "             sets VM optimization level:\n");
+	fprintf(stderr, "                 0 = disable optimizations\n");
+	fprintf(stderr, "                 1 = basic optimizations\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "        -L <what>\n");
+	fprintf(stderr, "             logs intermediate representations:\n");
+	fprintf(stderr, "                 ir_pre    logs IR before optimization\n");
+	fprintf(stderr, "                 ir        logs IR after optimization\n");
+	fprintf(stderr, "                 enc       logs VM encoding instructions\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "        -x <encoding>\n");
+	fprintf(stderr, "             sets encoding type:\n");
+	fprintf(stderr, "                 v1        version 0.1 variable length encoding\n");
+	fprintf(stderr, "                 v2        version 0.2 fixed length encoding\n");
 }
 
 static enum re_dialect
@@ -582,7 +601,7 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors, st
 #if DEBUG_TEST_REGEXP
 			fprintf(stderr, "REGEXP matching for /%s/\n", regexp);
 #endif /* DEBUG_TEST_REGEXP */
-			vm = fsm_vm_compile(fsm);
+			vm = fsm_vm_compile_with_options(fsm, vm_opts);
 			if (vm == NULL) {
 				fprintf(stderr, "line %d: error compiling /%s/: %s\n", linenum, regexp, strerror(errno));
 
@@ -698,6 +717,8 @@ main(int argc, char *argv[])
 	enum re_dialect dialect;
 	int max_test_errors;
 
+	int optlevel = 2;
+
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
@@ -712,11 +733,40 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "e:E:" "r:" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:x:" "e:E:" "r:" ), c != -1) {
 			switch (c) {
-			case 'e': opt.prefix            = optarg;     break;
+			case 'O':
+				optlevel = strtoul(optarg, NULL, 10);
+				break;
+			case 'L':
+				if (strcmp(optarg, "ir_pre") == 0) {
+					vm_opts.flags |= FSM_VM_COMPILE_PRINT_IR;
+				} else if (strcmp(optarg, "ir") == 0) {
+					vm_opts.flags |= FSM_VM_COMPILE_PRINT_IR_PREOPT;
+				} else if (strcmp(optarg, "enc") == 0) {
+					vm_opts.flags |= FSM_VM_COMPILE_PRINT_ENC;
+				} else {
+					fprintf(stderr, "unknown argument to -L: %s\n", optarg);
+					usage();
+					exit(1);
+				}
+				break;
 
-			case 'r': dialect   = dialect_name(optarg); break;
+			case 'x':
+				if (strcmp(optarg, "v1") == 0) {
+					vm_opts.output = FSM_VM_COMPILE_VM_V1;
+				} else if (strcmp(optarg, "v2") == 0) {
+					vm_opts.output = FSM_VM_COMPILE_VM_V2;
+				} else {
+					fprintf(stderr, "unknown argument to -x: %s\n", optarg);
+					usage();
+					exit(1);
+				}
+				break;
+
+			case 'e': opt.prefix = optarg;     break;
+
+			case 'r': dialect = dialect_name(optarg); break;
 
 			case 'E':
 				max_test_errors = strtoul(optarg, NULL, 10);
@@ -736,6 +786,10 @@ main(int argc, char *argv[])
 
 		argc -= optind;
 		argv += optind;
+	}
+
+	if (optlevel > 0) {
+		vm_opts.flags |= FSM_VM_COMPILE_OPTIM;
 	}
 
 	if (argc < 1) {

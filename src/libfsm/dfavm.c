@@ -30,7 +30,6 @@
 //   - string buffer: holds 8-bit bytes to match
 //   - program buffer: holds the VM bytecode
 //   - address buffer: holds various tables and data
-//   - string buffer: holds string constant data
 //   - three additional registers:
 //
 //     SP - string pointer  - 32-bit unsigned offset into string buffer
@@ -110,19 +109,41 @@
 //     This is a "table branch" instruction.  The table should have 256
 //     addresses (0-255).  This instruction sets PC to the address at table[SB]
 
+//
+// Fixed encoding VM state:
+//
+//   The VM address buffer holds addresses for indirect branches.
+//
 // VM bytecodes:
 //
-//   In addition to the string buffer, the program buffer, SP, SB, and PC,
-//   the VM also has an address buffer and a table buffer.
-//
 //   There are four instructions:
-//   BRANCH, IBRANCH, FETCH, and STOP.
+//     BRANCH, IBRANCH, FETCH, and STOP.
+//
+//   Each instruction is 32-bits, encoded as follows:
+//
+//                1098 765 4   32109876  5432 1098 7654 3210
+//                3322 222 2   22221111  1111 1100 0000 0000
+//
+//     STOP       0000 CCC R   AAAAAAAA  0000 0000 0000 0000
+//     FETCH      0001 000 R   00000000  0000 0000 0000 0000
+//     BRANCH     0010 CCC 0   AAAAAAAA  DDDD DDDD DDDD DDDD
+//     IBRANCH    0011 CCC 0   AAAAAAAA  IIII IIII IIII IIII
+//
+//                IIII CCC R
+//
+//     R  = 0 fail / R = 1 succeed
+//
+//     C = comparison bit
+//     A = argument bit
+//     D = relative destination bit
+//     I = index bit
 //
 //   BRANCH and IBRANCH are both ways to implement the BRANCH opcode.  The
 //   difference between them is how the address is determined.
 //
-//     BRANCH  address is a 16-bit signed relative offset
-//     IBRANCH address is a 32-bit unsigned value stored in the address buffer.
+//     BRANCH  address field is a 16-bit signed relative offset
+//     IBRANCH address field is a 16-bit index into the address table,
+//             which holds a 32-bit unsigned value stored in the address buffer.
 //             The argument is the address buffer entry.
 //
 // Instructions are encoded into 4 bytes.  The first byte holds the instruction
@@ -202,6 +223,8 @@
 #define DFAVM_VARENC_MAJOR 0x00
 #define DFAVM_VARENC_MINOR 0x01
 
+#define DFAVM_FIXEDENC_MAJOR 0x00
+#define DFAVM_FIXEDENC_MINOR 0x02
 
 #define DFAVM_MAGIC "DFAVM$"
 
@@ -1620,6 +1643,134 @@ error:
 	return NULL;
 }
 
+static struct fsm_dfavm *
+encode_opasm_v2(const struct dfavm_assembler *a)
+{
+	static const struct fsm_dfavm zero;
+
+	struct fsm_dfavm *ret;
+	struct dfavm_v2 *vm;
+	size_t total_instr;
+	size_t i;
+	uint32_t *enc;
+	uint32_t *abuf;
+	uint32_t alen,acap;
+
+	ret = malloc(sizeof *ret);
+	*ret = zero;
+
+	ret->version_major = DFAVM_FIXEDENC_MAJOR;
+	ret->version_minor = DFAVM_FIXEDENC_MINOR;
+
+	vm = &ret->u.v2;
+
+	total_instr = a->ninstr;
+	enc = malloc(total_instr * sizeof *enc);
+
+	vm->ops = enc;
+	vm->len = total_instr;
+
+	abuf = NULL;
+	alen = 0;
+	acap = 0;
+
+	for (i = 0; i < a->ninstr; i++) {
+		unsigned char cmp_bits, instr_bits, result_bit, cmp_arg;
+		const struct dfavm_vm_op *op = &a->instr[i];
+		uint32_t instr;
+		uint16_t dest_arg;
+
+		switch (op->instr) {
+		case VM_OP_STOP:
+			instr_bits = VM_V2_OP_STOP;
+			cmp_bits   = op->cmp;
+			cmp_arg    = op->cmp_arg;
+			result_bit = (op->u.stop.end_bits == VM_END_SUCC) ? 0x1 : 0x0;
+			dest_arg   = 0;
+			break;
+
+		case VM_OP_FETCH:
+			instr_bits = VM_V2_OP_FETCH;
+			cmp_bits   = 0;
+			cmp_arg    = 0;
+			result_bit = (op->u.fetch.end_bits == VM_END_SUCC) ? 0x1 : 0x0;
+			dest_arg   = 0;
+			break;
+
+		case VM_OP_BRANCH:
+			{
+				uint32_t dest_state = op->u.br.dest_index;
+				int64_t state_diff = (int64_t)dest_state - (int64_t)i;
+
+				if (state_diff >= INT16_MIN || state_diff <= INT16_MAX) {
+					instr_bits = VM_V2_OP_BRANCH;
+					dest_arg = (int16_t)state_diff;
+				}
+				else {
+					/* allocate address in address table */
+					instr_bits = VM_V2_OP_IBRANCH;
+
+					if (alen >= acap) {
+						size_t new_acap;
+						uint32_t *new_abuf;
+
+						if (acap < 16) {
+							new_acap = 16;
+						} else if (acap < 1024) {
+							new_acap = acap * 2;
+						} else {
+							new_acap = acap + acap/2;
+						}
+
+						new_abuf = realloc(abuf, acap * sizeof abuf[0]);
+						if (new_abuf == NULL) {
+							goto error;
+						}
+
+						abuf = new_abuf;
+						acap = new_acap;
+
+						vm->abuf = new_abuf;
+					}
+
+					assert(alen < acap);
+					assert(abuf != NULL);
+
+					abuf[alen] = dest_state;
+					dest_arg = alen++;
+					vm->alen = alen;
+				}
+
+				cmp_bits   = op->cmp;
+				cmp_arg    = op->cmp_arg;
+				result_bit = 0;
+			}
+			break;
+		}
+
+		if (cmp_bits > 7) {
+			goto error;
+		}
+
+		instr = (((uint32_t)instr_bits) << 28) | (((uint32_t)cmp_bits)<<25) | (((uint32_t)result_bit)<<24) |
+			(((uint32_t)cmp_arg)<<16) | dest_arg;
+
+#if DEBUG_ENCODING
+		fprintf(stderr, "enc[%4zu] instr=0x%02x cmp=0x%02x result=0x%02x cmp_arg=0x%02x dest_arg=0x%04x (%d | %u) instr=0x%08lx\n",
+			off, instr_bits, cmp_bits, result_bit, (unsigned)cmp_arg, (unsigned)dest_arg, (int16_t)dest_arg, (unsigned)dest_arg,
+			(unsigned long)instr);
+#endif /* DEBUG_ENCODING */
+
+		enc[i] = instr;
+	}
+
+	return ret;
+
+error:
+	/* XXX - cleanup */
+	return NULL;
+}
+
 static void
 dump_states(FILE *f, struct dfavm_assembler *a)
 {
@@ -1673,7 +1824,7 @@ dfavm_compile(struct ir *ir, struct fsm_vm_compile_opts opts)
 	fixup_dests(&a);
 
 	if (opts.flags & FSM_VM_COMPILE_PRINT_IR_PREOPT) {
-		FILE *f = (opts.out != NULL) ? opts.out : stdout;
+		FILE *f = (opts.log != NULL) ? opts.log : stdout;
 
 		fprintf(f, "---[ before optimization ]---\n");
 		dump_states(f, &a);
@@ -1691,7 +1842,7 @@ dfavm_compile(struct ir *ir, struct fsm_vm_compile_opts opts)
 	assign_opcode_indexes(&a);
 
 	if (opts.flags & FSM_VM_COMPILE_PRINT_IR) {
-		FILE *f = (opts.out != NULL) ? opts.out : stdout;
+		FILE *f = (opts.log != NULL) ? opts.log : stdout;
 
 		fprintf(f, "---[ final IR ]---\n");
 		dump_states(f, &a);
@@ -1710,12 +1861,30 @@ dfavm_compile(struct ir *ir, struct fsm_vm_compile_opts opts)
 	dump_states(stdout, &a);
 #endif /* DEBUG_VM_OPCODES */
 
-	vm = encode_opasm_v1(&a);
-	if (vm == NULL) {
-		goto error;
+	if (opts.flags & FSM_VM_COMPILE_PRINT_ENC) {
+		FILE *f = (opts.log != NULL) ? opts.log : stdout;
+
+		fprintf(f,"---[ vm instructions ]---\n");
+		print_vm_instr(f, &a);
+		fprintf(f, "\n");
 	}
 
-	if (opts.flags & FSM_VM_COMPILE_PRINT_ENC) {
+	/* XXX: better error handling */
+	vm = NULL;
+	errno = EINVAL;
+
+	switch (opts.output) {
+	case FSM_VM_COMPILE_VM_V1:
+		vm = encode_opasm_v1(&a);
+		break;
+
+	case FSM_VM_COMPILE_VM_V2:
+		vm = encode_opasm_v2(&a);
+		break;
+	}
+
+	if (vm == NULL) {
+		goto error;
 	}
 
 	dfavm_opasm_finalize(&a);
@@ -1760,7 +1929,7 @@ struct fsm_dfavm *
 fsm_vm_compile(const struct fsm *fsm)
 {
 	// static const struct fsm_vm_compile_opts defaults = { FSM_VM_COMPILE_DEFAULT_FLAGS | FSM_VM_COMPILE_PRINT_IR_PREOPT | FSM_VM_COMPILE_PRINT_IR, NULL };
-	static const struct fsm_vm_compile_opts defaults = { FSM_VM_COMPILE_DEFAULT_FLAGS, NULL };
+	static const struct fsm_vm_compile_opts defaults = { FSM_VM_COMPILE_DEFAULT_FLAGS, FSM_VM_COMPILE_VM_V1, NULL };
 
 	return fsm_vm_compile_with_options(fsm, defaults);
 }
@@ -1772,7 +1941,7 @@ fsm_vm_free(struct fsm_dfavm *vm)
 }
 
 static uint32_t
-running_print_op(const unsigned char *ops, uint32_t pc, const char *sp, const char *buf, size_t n, char ch, FILE *f) {
+running_print_op_v1(const unsigned char *ops, uint32_t pc, const char *sp, const char *buf, size_t n, char ch, FILE *f) {
 	int op, cmp, end, dest;
 	unsigned char b = ops[pc];
 	op = (b >> 3) & 0x03;
@@ -1886,9 +2055,9 @@ vm_match_v1(const struct dfavm_v1 *vm, struct vm_state *st, const char *buf, siz
 		b = vm->ops[st->pc];
 		op = (b>>3)&0x03;
 
-		(void)running_print_op;  /* make clang happy */
+		(void)running_print_op_v1;  /* make clang happy */
 #if DEBUG_VM_EXECUTION
-		running_print_op(vm->ops, st->pc, sp, buf, n, ch, stderr);
+		running_print_op_v1(vm->ops, st->pc, sp, buf, n, ch, stderr);
 #endif /* DEBUG_VM_EXECUTION */
 
 		if (op == VM_OP_FETCH) {
@@ -1973,11 +2142,181 @@ vm_match_v1(const struct dfavm_v1 *vm, struct vm_state *st, const char *buf, siz
 	return VM_FAIL;
 }
 
+#define V2DEC(instr,op,cmp,end,cmp_arg,dest_arg) do {  \
+	uint32_t tmp ## __LINE__ = (instr);            \
+	(op)       = (tmp ## __LINE__) >> 28;          \
+	(cmp)      = ((tmp ## __LINE__) >> 25) & 0x7;  \
+	(end)      = ((tmp ## __LINE__) >> 24) & 0x1;  \
+	(cmp_arg)  = ((tmp ## __LINE__) >> 16) & 0xff; \
+	(dest_arg) = (tmp ## __LINE__) & 0xffff;       \
+} while(0)
+
+static void
+running_print_op_v2(const struct dfavm_v2 *vm, uint32_t pc, const char *sp, const char *buf, size_t n, char ch, FILE *f)
+{
+	int op, cmp, end, arg, dest;
+
+	V2DEC(vm->ops[pc], op,cmp,end, arg, dest);
+
+	fprintf(f, "[%4lu sp=%zd n=%zu ch=%3u '%c' end=%d] ",
+		(unsigned long)pc, sp-buf, n, (unsigned char)ch, isprint(ch) ? ch : ' ', end);
+
+	switch (op) {
+	case VM_V2_OP_FETCH:
+		fprintf(f, "FETCH%s\n", (end == VM_END_FAIL) ? "F" : "S");
+		break;
+
+	case VM_V2_OP_STOP:
+		fprintf(f, "STOP%s%s", (end == VM_END_FAIL) ? "F" : "S", cmp_name(cmp));
+		if (cmp != VM_CMP_ALWAYS) {
+			if (isprint(arg)) {
+				fprintf(f, " '%c'", arg);
+			} else {
+				fprintf(f, " %d", arg);
+			}
+		}
+		fprintf(f, "\n");
+		break;
+
+	case VM_V2_OP_BRANCH:
+		fprintf(f, "BR%s", cmp_name(cmp));
+		if (cmp != VM_CMP_ALWAYS) {
+			if (isprint(arg)) {
+				fprintf(f, " '%c',", arg);
+			} else {
+				fprintf(f, " %d,", arg);
+			}
+		}
+
+		{
+			union {
+				uint16_t u;
+				int16_t  rel;
+			} packed;
+
+			packed.u = dest;
+
+			fprintf(f, " %d %u\n", (int)packed.rel, dest);
+		}
+		break;
+
+	case VM_V2_OP_IBRANCH:
+		fprintf(f, "IBR%s", cmp_name(cmp));
+		if (cmp != VM_CMP_ALWAYS) {
+			if (isprint(arg)) {
+				fprintf(f, " '%c',", arg);
+			} else {
+				fprintf(f, " %d,", arg);
+			}
+		}
+
+		{
+			assert(dest >= 0 && (uint32_t)dest < vm->alen);
+			uint32_t dest_addr = vm->abuf[dest];
+			fprintf(f, " dest=%lu index=%d\n", (unsigned long)dest_addr, dest);
+		}
+		break;
+
+	default:
+		fprintf(f, "UNK[op=%d cmp=%d end=%d arg=%d dest=%d]\n", op,cmp,end,arg, dest);
+		break;
+	}
+}
+
+static enum dfavm_state
+vm_match_v2(const struct dfavm_v2 *vm, struct vm_state *st, const char *buf, size_t n)
+{
+	const char *sp, *last;
+	int ch;
+
+	if (st->state != VM_MATCHING) {
+		return st->state;
+	}
+
+	ch   = 0;
+	sp   = buf;
+	last = buf + n;
+
+	for (;;) {
+		int op, cmp, end, arg, dest;
+
+		assert(st->pc < vm->len);
+
+		/* decode instruction */
+		V2DEC(vm->ops[st->pc], op,cmp,end, arg, dest);
+
+		(void)running_print_op_v2;  /* make clang happy */
+#if DEBUG_VM_EXECUTION
+		running_print_op_v2(vm, st->pc, sp, buf, n, ch, stderr);
+#endif /* DEBUG_VM_EXECUTION */
+
+		if (op == VM_V2_OP_FETCH) {
+			if (sp >= last) {
+				st->fetch_state = end;
+				return VM_MATCHING;
+			}
+
+			ch = (unsigned char) *sp++;
+			st->pc++;
+		} else {
+			int result;
+
+			/* either STOP or BRANCH */
+			result = 1;
+			if (cmp != VM_CMP_ALWAYS) {
+				switch (cmp) {
+				case VM_CMP_LT: result = ch <  arg; break;
+				case VM_CMP_LE: result = ch <= arg; break;
+				case VM_CMP_GE: result = ch >= arg; break;
+				case VM_CMP_GT: result = ch >  arg; break;
+				case VM_CMP_EQ: result = ch == arg; break;
+				case VM_CMP_NE: result = ch != arg; break;
+				}
+			}
+
+			if (result) {
+				switch (op) {
+				case VM_V2_OP_STOP:
+					st->state = (end == VM_END_FAIL) ? VM_FAIL : VM_SUCCESS;
+					return st->state;
+
+				case VM_V2_OP_BRANCH:
+					{
+						union {
+							uint16_t u;
+							int16_t  rel;
+						} packed;
+
+						packed.u = dest;
+						st->pc += packed.rel;
+					}
+					break;
+
+				case VM_V2_OP_IBRANCH:
+					assert((uint32_t)dest < vm->alen);
+					st->pc = vm->abuf[dest];
+					break;
+
+				default:
+					// should not reach!
+					abort();
+				}
+			} else {
+				st->pc++;
+			}
+		}
+	}
+
+	return VM_FAIL;
+}
+
 static enum dfavm_state
 vm_match(const struct fsm_dfavm *vm, struct vm_state *st, const char *buf, size_t n)
 {
 	if (vm->version_major == DFAVM_VARENC_MAJOR && vm->version_minor == DFAVM_VARENC_MINOR) {
 		return vm_match_v1(&vm->u.v1, st, buf, n);
+	} else if (vm->version_major == DFAVM_FIXEDENC_MAJOR && vm->version_minor == DFAVM_FIXEDENC_MINOR) {
+		return vm_match_v2(&vm->u.v2, st, buf, n);
 	}
 
 	return VM_FAIL;

@@ -18,9 +18,16 @@ enum fsm_vm_compile_flags {
 
 #define FSM_VM_COMPILE_DEFAULT_FLAGS FSM_VM_COMPILE_OPTIM
 
+enum fsm_vm_compile_output {
+	FSM_VM_COMPILE_VM_V1 = 0,
+	FSM_VM_COMPILE_VM_V2 = 1
+};
+
 struct fsm_vm_compile_opts {
 	unsigned int flags;
-	FILE *out;
+	enum fsm_vm_compile_output output;
+
+	FILE *log;
 };
 
 struct fsm_dfavm *

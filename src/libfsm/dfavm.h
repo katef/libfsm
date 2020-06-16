@@ -145,6 +145,27 @@ struct dfavm_v1 {
 	uint32_t len;
 };
 
+enum dfavm_vm_op_v2 {
+	// Stop the VM, mark match or failure
+	VM_V2_OP_STOP    = 0,
+
+	// Start of each state: fetch next character.  Indicates
+	// match / fail if EOS.
+	VM_V2_OP_FETCH   = 1,
+
+	// Branch to another state
+	VM_V2_OP_BRANCH  = 2,
+	VM_V2_OP_IBRANCH = 3,
+};
+
+struct dfavm_v2 {
+	uint32_t *abuf;
+	uint64_t alen;
+
+	uint32_t *ops;
+	uint32_t len;
+};
+
 enum dfavm_state {
 	VM_FAIL     = -1,
 	VM_MATCHING =  0,
@@ -163,6 +184,7 @@ struct fsm_dfavm {
 
 	union {
 		struct dfavm_v1 v1;
+		struct dfavm_v2 v2;
 	} u;
 };
 
