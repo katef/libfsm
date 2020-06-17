@@ -6,7 +6,7 @@
 
 #if __linux__
 /* apparently you need this for Linux, and it breaks macOS */
-#  define _POSIX_C_SOURCE 2
+#  define _POSIX_C_SOURCE 199309L
 #endif
 
 #include <unistd.h>
