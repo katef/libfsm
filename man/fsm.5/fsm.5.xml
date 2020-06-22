@@ -57,6 +57,8 @@ Edges are one of the following kinds of transition:
 
 Examples:
 
+0; 1; 2; 3; # declarations to force numbering in order
+
 0 -> 1;       # illegal (0 is reserved)
 1 -> 2;       # epsilon
 2 -> 3 "";    # illegal (empty label)

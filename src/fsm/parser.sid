@@ -68,41 +68,64 @@
 		n = IDENT;
 	};
 
-	edges [
+	edge = {
+		a = id;
+		TO;
+		b = id;
 
-		edge = {
-			a = id;
-			TO;
-			b = id;
+		x = <add-state>(a);
+		y = <add-state>(b);
 
-			x = <add-state>(a);
-			y = <add-state>(b);
+		<free>(a);
+		<free>(b);
 
-			<free>(a);
-			<free>(b);
-
-			{
-				c = label;
-				<add-edge-literal>(x, y, c);
-			||
-				ANY;
-				<add-edge-any>(x, y);
-			||
-				<add-edge-epsilon>(x, y);
-			##
-				<err-expected-trans>;
-			};
-
-			{
-				SEP;
-			##
-				<err-expected-sep>;
-			};
+		{
+			c = label;
+			<add-edge-literal>(x, y, c);
+		||
+			ANY;
+			<add-edge-any>(x, y);
+		||
+			<add-edge-epsilon>(x, y);
+		##
+			<err-expected-trans>;
 		};
 
-	] = {
-		edges;
-		edge;
+		{
+			SEP;
+		##
+			<err-expected-sep>;
+		};
+	};
+
+	/*
+	 * Declaration for a single state, just as a way to force ordering
+	 * when states are created. This is a workaround for the .fsm syntax
+	 * being so terrible, and that state labels aren't numeric, but the
+	 * .fsm format is expected to maintain the same numbering when parsing
+	 * its own output.
+	 */
+	decl = {
+		a = id;
+
+		! = <add-state>(a);
+
+		<free>(a);
+
+		{
+			SEP;
+		##
+			<err-expected-sep>;
+		};
+	};
+
+	items = {
+		items;
+		{
+			edge;
+		||
+			decl;
+		};
 	||
 		$;
 	};
@@ -176,7 +199,7 @@
 	};
 
 	fsm = {
-		edges;
+		items;
 		xstart;
 		xend;
 

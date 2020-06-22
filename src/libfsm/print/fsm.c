@@ -95,6 +95,20 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 	assert(f != NULL);
 	assert(fsm != NULL);
 
+	if (!fsm->opt->anonymous_states) {
+		/*
+		 * States are output in order here so as to force ordering when
+		 * parsing the .fsm format and creating new states. This ensures
+		 * that the new states (numbered in order) match the numbering here.
+		 */
+		for (s = 0; s < fsm->statecount; s++) {
+			fprintf(f, "%u;%s", s,
+				s + 1 < fsm->statecount ? " " : "\n");
+		}
+
+		fprintf(f, "\n");
+	}
+
 	for (s = 0; s < fsm->statecount; s++) {
 		struct fsm_edge e;
 		struct edge_iter it;
