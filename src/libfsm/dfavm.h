@@ -7,6 +7,18 @@
 #ifndef FSM_DFAVM_H
 #define FSM_DFAVM_H
 
+#define DEBUG_ENCODING     0
+#define DEBUG_VM_EXECUTION 0
+#define DEBUG_VM_OPCODES   0
+
+#define DFAVM_VARENC_MAJOR 0x00
+#define DFAVM_VARENC_MINOR 0x01
+
+#define DFAVM_FIXEDENC_MAJOR 0x00
+#define DFAVM_FIXEDENC_MINOR 0x02
+
+#define DFAVM_MAGIC "DFAVM$"
+
 enum dfavm_op_instr {
 	// Stop the VM, mark match or failure
 	VM_OP_STOP   = 0,
@@ -187,5 +199,28 @@ struct fsm_dfavm {
 		struct dfavm_v2 v2;
 	} u;
 };
+
+const char * 
+cmp_name(int cmp);
+
+/* v1 */
+enum dfavm_io_result
+dfavm_v1_save(FILE *f, const struct dfavm_v1 *vm);
+enum dfavm_io_result
+dfavm_load_v1(FILE *f, struct dfavm_v1 *vm);
+struct fsm_dfavm *encode_opasm_v1(const struct dfavm_assembler *a);
+uint32_t
+running_print_op_v1(const unsigned char *ops, uint32_t pc,
+	const char *sp, const char *buf, size_t n, char ch, FILE *f);
+enum dfavm_state
+vm_match_v1(const struct dfavm_v1 *vm, struct vm_state *st, const char *buf, size_t n);
+
+/* v2 */
+struct fsm_dfavm *
+encode_opasm_v2(const struct dfavm_assembler *a);
+void
+running_print_op_v2(const struct dfavm_v2 *vm, uint32_t pc, const char *sp, const char *buf, size_t n, char ch, FILE *f);
+enum dfavm_state
+vm_match_v2(const struct dfavm_v2 *vm, struct vm_state *st, const char *buf, size_t n);
 
 #endif /* FSM_DFAVM_H */

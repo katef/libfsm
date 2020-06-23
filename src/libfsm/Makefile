@@ -16,6 +16,9 @@ SRC += src/libfsm/state.c
 SRC += src/libfsm/trim.c
 SRC += src/libfsm/example.c
 SRC += src/libfsm/getc.c
+SRC += src/libfsm/dfavm.c
+SRC += src/libfsm/dfavm_v1.c
+SRC += src/libfsm/dfavm_v2.c
 
 # graph things
 SRC += src/libfsm/mergestates.c
@@ -38,7 +41,6 @@ SRC += src/libfsm/union.c
 SRC += src/libfsm/intersect.c
 SRC += src/libfsm/subtract.c
 SRC += src/libfsm/walk2.c
-SRC += src/libfsm/dfavm.c
 
 .for src in ${SRC:Msrc/libfsm/closure.c}
 CFLAGS.${src} += -std=c99
@@ -48,7 +50,7 @@ DFLAGS.${src} += -std=c99
 LIB         += libfsm
 SYMS.libfsm += src/libfsm/libfsm.syms
 
-.for src in ${SRC:Msrc/libfsm/dfavm.c}
+.for src in ${SRC:Msrc/libfsm/dfavm*.c}
 CFLAGS.${src} += -std=c99 # XXX: for internal.h
 DFLAGS.${src} += -std=c99 # XXX: for internal.h
 .endfor
