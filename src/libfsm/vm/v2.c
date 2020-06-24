@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#include "dfavm.h"
+#include "vm.h"
 
 struct fsm_dfavm *
 encode_opasm_v2(const struct dfavm_assembler *a)

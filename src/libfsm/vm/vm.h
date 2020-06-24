@@ -1,11 +1,11 @@
 /*
- * Copyright 2008-2017 Shannon F. Stewman
+ * Copyright 2019 Shannon F. Stewman
  *
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef FSM_DFAVM_H
-#define FSM_DFAVM_H
+#ifndef FSM_INTERNAL_VM_H
+#define FSM_INTERNAL_VM_H
 
 #define DEBUG_ENCODING     0
 #define DEBUG_VM_EXECUTION 0
@@ -234,4 +234,5 @@ running_print_op_v2(const struct dfavm_v2 *vm, uint32_t pc, const char *sp, cons
 enum dfavm_state
 vm_match_v2(const struct dfavm_v2 *vm, struct vm_state *st, const char *buf, size_t n);
 
-#endif /* FSM_DFAVM_H */
+#endif
+

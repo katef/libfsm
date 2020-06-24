@@ -15,8 +15,8 @@
 #include <fsm/vm.h>
 
 #include "internal.h"
-#include "dfavm.h"
 
+#include "vm/vm.h"
 #include "print/ir.h"
 
 // VM state:

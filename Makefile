@@ -32,6 +32,7 @@ SUBDIR += src/libfsm/cost
 SUBDIR += src/libfsm/pred
 SUBDIR += src/libfsm/print
 SUBDIR += src/libfsm/walk
+SUBDIR += src/libfsm/vm
 SUBDIR += src/libfsm
 SUBDIR += src/libre/class
 SUBDIR += src/libre/dialect

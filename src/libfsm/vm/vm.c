@@ -15,8 +15,9 @@
 #include <fsm/fsm.h>
 #include <fsm/vm.h>
 
-#include "internal.h"
-#include "dfavm.h"
+#include "libfsm/internal.h"
+
+#include "vm.h"
 
 #include "print/ir.h"
 

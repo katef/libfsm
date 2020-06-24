@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#include "dfavm.h"
+#include "vm.h"
 
 enum dfavm_io_result
 dfavm_v1_save(FILE *f, const struct dfavm_v1 *vm)

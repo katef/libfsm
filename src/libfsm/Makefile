@@ -16,11 +16,7 @@ SRC += src/libfsm/state.c
 SRC += src/libfsm/trim.c
 SRC += src/libfsm/example.c
 SRC += src/libfsm/getc.c
-SRC += src/libfsm/dfavm.c
-SRC += src/libfsm/dfavm_ir.c
-SRC += src/libfsm/dfavm_vm.c
-SRC += src/libfsm/dfavm_v1.c
-SRC += src/libfsm/dfavm_v2.c
+SRC += src/libfsm/vm.c
 
 # graph things
 SRC += src/libfsm/mergestates.c
@@ -44,18 +40,13 @@ SRC += src/libfsm/intersect.c
 SRC += src/libfsm/subtract.c
 SRC += src/libfsm/walk2.c
 
-.for src in ${SRC:Msrc/libfsm/closure.c}
+.for src in ${SRC:Msrc/libfsm/closure.c} ${SRC:Msrc/libfsm/vm.c}
 CFLAGS.${src} += -std=c99
 DFLAGS.${src} += -std=c99
 .endfor
 
 LIB         += libfsm
 SYMS.libfsm += src/libfsm/libfsm.syms
-
-.for src in ${SRC:Msrc/libfsm/dfavm*.c}
-CFLAGS.${src} += -std=c99 # XXX: for internal.h
-DFLAGS.${src} += -std=c99 # XXX: for internal.h
-.endfor
 
 .for src in ${SRC:Msrc/libfsm/*.c}
 ${BUILD}/lib/libfsm.o:    ${BUILD}/${src:R}.o
@@ -64,7 +55,7 @@ ${BUILD}/lib/libfsm.opic: ${BUILD}/${src:R}.opic
 
 # XXX: kmkf ought to provide a way to abstract platform-dependent
 # library names here
-.for part in ${PART:Madt} ${PART:Mprint}
+.for part in ${PART:Madt} ${PART:Mprint} ${PART:Mvm}
 ${BUILD}/lib/libfsm.a:     ${BUILD}/lib/${part}.o
 ${BUILD}/lib/libfsm.so:    ${BUILD}/lib/${part}.opic
 ${BUILD}/lib/libfsm.dylib: ${BUILD}/lib/${part}.opic
