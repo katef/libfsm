@@ -1455,75 +1455,74 @@ print_all_states(struct dfavm_assembler *a)
 	dump_states(stderr, a);
 }
 
-static struct fsm_dfavm *
-dfavm_compile(const struct ir *ir, struct fsm_vm_compile_opts opts)
+static int
+dfavm_compile_ir(struct dfavm_assembler *a, const struct ir *ir, struct fsm_vm_compile_opts opts)
 {
-	static const struct dfavm_assembler zero;
+	a->nstates = ir->n;
+	a->start = ir->start;
 
-	struct fsm_dfavm *vm;
-	struct dfavm_assembler a;
-	size_t nstates;
-
-	nstates = ir->n;
-	a = zero;
-
-	a.nstates = nstates;
-	a.start = ir->start;
-
-	a.ops = calloc(nstates, sizeof a.ops[0]);
-	if (a.ops == NULL) {
-		goto error;
+	a->ops = calloc(ir->n, sizeof a->ops[0]);
+	if (a->ops == NULL) {
+		return 0;
 	}
 
-	if (initial_translate(ir, &a) < 0) {
-		goto error;
+	if (initial_translate(ir, a) < 0) {
+		return 0;
 	}
 
-	fixup_dests(&a);
+	fixup_dests(a);
 
 	if (opts.flags & FSM_VM_COMPILE_PRINT_IR_PREOPT) {
 		FILE *f = (opts.log != NULL) ? opts.log : stdout;
 
 		fprintf(f, "---[ before optimization ]---\n");
-		dump_states(f, &a);
+		dump_states(f, a);
 		fprintf(f, "\n");
 	}
 
-	order_basic_blocks(&a);
+	order_basic_blocks(a);
 
 	/* basic optimizations */
 	if (opts.flags & FSM_VM_COMPILE_OPTIM) {
-		eliminate_unnecessary_branches(&a);
+		eliminate_unnecessary_branches(a);
 	}
 
 	/* optimization is finished.  now assign opcode indexes */
-	assign_opcode_indexes(&a);
+	assign_opcode_indexes(a);
 
 	if (opts.flags & FSM_VM_COMPILE_PRINT_IR) {
 		FILE *f = (opts.log != NULL) ? opts.log : stdout;
 
 		fprintf(f, "---[ final IR ]---\n");
-		dump_states(f, &a);
+		dump_states(f, a);
 		fprintf(f, "\n");
 	}
 
+	return 1;
+}
+
+static struct fsm_dfavm *
+dfavm_compile_vm(struct dfavm_assembler *a, struct fsm_vm_compile_opts opts)
+{
+	struct fsm_dfavm *vm;
+
 	/* build vm instructions */
-	a.instr = build_vm_op_array(a.linked, &a.ninstr);
-	if (a.instr == NULL) {
+	a->instr = build_vm_op_array(a->linked, &a->ninstr);
+	if (a->instr == NULL) {
 		goto error;
 	}
 
-	assign_rel_dests(&a);
+	assign_rel_dests(a);
 
 #if DEBUG_VM_OPCODES
-	dump_states(stdout, &a);
+	dump_states(stdout, a);
 #endif /* DEBUG_VM_OPCODES */
 
 	if (opts.flags & FSM_VM_COMPILE_PRINT_ENC) {
 		FILE *f = (opts.log != NULL) ? opts.log : stdout;
 
 		fprintf(f,"---[ vm instructions ]---\n");
-		print_vm_instr(f, &a);
+		print_vm_instr(f, a);
 		fprintf(f, "\n");
 	}
 
@@ -1533,11 +1532,11 @@ dfavm_compile(const struct ir *ir, struct fsm_vm_compile_opts opts)
 
 	switch (opts.output) {
 	case FSM_VM_COMPILE_VM_V1:
-		vm = encode_opasm_v1(&a);
+		vm = encode_opasm_v1(a);
 		break;
 
 	case FSM_VM_COMPILE_VM_V2:
-		vm = encode_opasm_v2(&a);
+		vm = encode_opasm_v2(a);
 		break;
 	}
 
@@ -1545,18 +1544,20 @@ dfavm_compile(const struct ir *ir, struct fsm_vm_compile_opts opts)
 		goto error;
 	}
 
-	dfavm_opasm_finalize(&a);
+	dfavm_opasm_finalize(a);
 
 	return vm;
 
 error:
-	dfavm_opasm_finalize(&a);
+	dfavm_opasm_finalize(a);
 	return NULL;
 }
 
 struct fsm_dfavm *
 fsm_vm_compile_with_options(const struct fsm *fsm, struct fsm_vm_compile_opts opts)
 {
+	static const struct dfavm_assembler zero;
+	struct dfavm_assembler a;
 	struct ir *ir;
 	struct fsm_dfavm *vm;
 
@@ -1569,9 +1570,9 @@ fsm_vm_compile_with_options(const struct fsm *fsm, struct fsm_vm_compile_opts op
 		return NULL;
 	}
 
-	vm = dfavm_compile(ir, opts);
+	a = zero;
 
-	if (vm == NULL) {
+	if (!dfavm_compile_ir(&a, ir, opts)) {
 		int errsv = errno;
 		free_ir(fsm,ir);
 		errno = errsv;
@@ -1580,6 +1581,15 @@ fsm_vm_compile_with_options(const struct fsm *fsm, struct fsm_vm_compile_opts op
 	}
 
 	free_ir(fsm,ir);
+
+	vm = dfavm_compile_vm(&a, opts);
+	if (vm == NULL) {
+		int errsv = errno;
+		errno = errsv;
+
+		return NULL;
+	}
+
 	return vm;
 }
 
