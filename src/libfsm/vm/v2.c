@@ -13,7 +13,7 @@
 #include "vm.h"
 
 struct fsm_dfavm *
-encode_opasm_v2(const struct dfavm_assembler *a)
+encode_opasm_v2(const struct dfavm_assembler_vm *a)
 {
 	static const struct fsm_dfavm zero;
 

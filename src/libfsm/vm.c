@@ -86,8 +86,8 @@ cmp_name(int cmp)
 struct fsm_dfavm *
 fsm_vm_compile_with_options(const struct fsm *fsm, struct fsm_vm_compile_opts opts)
 {
-	static const struct dfavm_assembler zero;
-	struct dfavm_assembler a;
+	static const struct dfavm_assembler_ir zero;
+	struct dfavm_assembler_ir a;
 	struct ir *ir;
 	struct fsm_dfavm *vm;
 
@@ -99,20 +99,14 @@ fsm_vm_compile_with_options(const struct fsm *fsm, struct fsm_vm_compile_opts op
 	a = zero;
 
 	if (!dfavm_compile_ir(&a, ir, opts)) {
-		int errsv = errno;
-		free_ir(fsm,ir);
-		errno = errsv;
-
+		free_ir(fsm, ir);
 		return NULL;
 	}
 
-	free_ir(fsm,ir);
+	free_ir(fsm, ir);
 
 	vm = dfavm_compile_vm(&a, opts);
 	if (vm == NULL) {
-		int errsv = errno;
-		errno = errsv;
-
 		return NULL;
 	}
 

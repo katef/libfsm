@@ -79,7 +79,7 @@ dfavm_load_v1(FILE *f, struct dfavm_v1 *vm)
 }
 
 struct fsm_dfavm *
-encode_opasm_v1(const struct dfavm_assembler *a)
+encode_opasm_v1(const struct dfavm_assembler_vm *a)
 {
 	static const struct fsm_dfavm zero;
 

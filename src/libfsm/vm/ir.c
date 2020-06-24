@@ -229,7 +229,7 @@ print_op_ir(FILE *f, struct dfavm_op_ir *op)
 }
 
 static void
-opasm_free(struct dfavm_assembler *a, struct dfavm_op_ir *op)
+opasm_free(struct dfavm_assembler_ir *a, struct dfavm_op_ir *op)
 {
 	static const struct dfavm_op_ir zero;
 
@@ -239,7 +239,7 @@ opasm_free(struct dfavm_assembler *a, struct dfavm_op_ir *op)
 }
 
 static void
-opasm_free_list(struct dfavm_assembler *a, struct dfavm_op_ir *op)
+opasm_free_list(struct dfavm_assembler_ir *a, struct dfavm_op_ir *op)
 {
 	struct dfavm_op_ir *next;
 	while (op != NULL) {
@@ -250,7 +250,7 @@ opasm_free_list(struct dfavm_assembler *a, struct dfavm_op_ir *op)
 }
 
 static struct dfavm_op_ir *
-opasm_new(struct dfavm_assembler *a, enum dfavm_op_instr instr, enum dfavm_op_cmp cmp, unsigned char arg)
+opasm_new(struct dfavm_assembler_ir *a, enum dfavm_op_instr instr, enum dfavm_op_cmp cmp, unsigned char arg)
 {
 	static const struct dfavm_op_ir zero;
 
@@ -279,7 +279,7 @@ opasm_new(struct dfavm_assembler *a, enum dfavm_op_instr instr, enum dfavm_op_cm
 }
 
 static struct dfavm_op_ir *
-opasm_new_fetch(struct dfavm_assembler *a, unsigned state, enum dfavm_op_end end)
+opasm_new_fetch(struct dfavm_assembler_ir *a, unsigned state, enum dfavm_op_end end)
 {
 	struct dfavm_op_ir *op;
 
@@ -293,7 +293,7 @@ opasm_new_fetch(struct dfavm_assembler *a, unsigned state, enum dfavm_op_end end
 }
 
 static struct dfavm_op_ir *
-opasm_new_stop(struct dfavm_assembler *a, enum dfavm_op_cmp cmp, unsigned char arg, enum dfavm_op_end end)
+opasm_new_stop(struct dfavm_assembler_ir *a, enum dfavm_op_cmp cmp, unsigned char arg, enum dfavm_op_end end)
 {
 	struct dfavm_op_ir *op;
 
@@ -306,7 +306,7 @@ opasm_new_stop(struct dfavm_assembler *a, enum dfavm_op_cmp cmp, unsigned char a
 }
 
 static struct dfavm_op_ir *
-opasm_new_branch(struct dfavm_assembler *a, enum dfavm_op_cmp cmp, unsigned char arg, uint32_t dest_state)
+opasm_new_branch(struct dfavm_assembler_ir *a, enum dfavm_op_cmp cmp, unsigned char arg, uint32_t dest_state)
 {
 	struct dfavm_op_ir *op;
 
@@ -322,7 +322,7 @@ opasm_new_branch(struct dfavm_assembler *a, enum dfavm_op_cmp cmp, unsigned char
 }
 
 void
-dfavm_opasm_finalize_op(struct dfavm_assembler *a)
+dfavm_opasm_finalize_op(struct dfavm_assembler_ir *a)
 {
 	struct dfavm_op_ir_pool *pool_curr, *pool_next;
 
@@ -443,7 +443,7 @@ analyze_table(struct dfa_table *table)
 }
 
 static int
-xlate_table_ranges(struct dfavm_assembler *a, struct dfa_table *table, struct dfavm_op_ir **opp)
+xlate_table_ranges(struct dfavm_assembler_ir *a, struct dfa_table *table, struct dfavm_op_ir **opp)
 {
 	int i,lo;
 	int count = 0;
@@ -494,7 +494,7 @@ xlate_table_ranges(struct dfavm_assembler *a, struct dfa_table *table, struct df
 }
 
 static int
-xlate_table_cases(struct dfavm_assembler *a, struct dfa_table *table, struct dfavm_op_ir **opp)
+xlate_table_cases(struct dfavm_assembler_ir *a, struct dfa_table *table, struct dfavm_op_ir **opp)
 {
 	int i, count = 0;
 	int64_t mdst = table->mode.to;
@@ -531,7 +531,7 @@ xlate_table_cases(struct dfavm_assembler *a, struct dfa_table *table, struct dfa
 }
 
 static int
-initial_translate_table(struct dfavm_assembler *a, struct dfa_table *table, struct dfavm_op_ir **opp)
+initial_translate_table(struct dfavm_assembler_ir *a, struct dfa_table *table, struct dfavm_op_ir **opp)
 {
 	int count, best_count;
 	struct dfavm_op_ir *op, *best_op;
@@ -635,7 +635,7 @@ dfa_table_init(struct dfa_table *table, long default_dest)
 }
 
 static int
-initial_translate_partial(struct dfavm_assembler *a, struct ir_state *st, struct dfavm_op_ir **opp)
+initial_translate_partial(struct dfavm_assembler_ir *a, struct ir_state *st, struct dfavm_op_ir **opp)
 {
 	struct dfa_table table;
 	size_t i, ngrps;
@@ -653,7 +653,7 @@ initial_translate_partial(struct dfavm_assembler *a, struct ir_state *st, struct
 }
 
 static int
-initial_translate_dominant(struct dfavm_assembler *a, struct ir_state *st, struct dfavm_op_ir **opp)
+initial_translate_dominant(struct dfavm_assembler_ir *a, struct ir_state *st, struct dfavm_op_ir **opp)
 {
 	struct dfa_table table;
 	size_t i, ngrps;
@@ -671,7 +671,7 @@ initial_translate_dominant(struct dfavm_assembler *a, struct ir_state *st, struc
 }
 
 static int
-initial_translate_error(struct dfavm_assembler *a, struct ir_state *st, struct dfavm_op_ir **opp)
+initial_translate_error(struct dfavm_assembler_ir *a, struct ir_state *st, struct dfavm_op_ir **opp)
 {
 	struct dfa_table table;
 	size_t i, ngrps;
@@ -691,7 +691,7 @@ initial_translate_error(struct dfavm_assembler *a, struct ir_state *st, struct d
 }
 
 static struct dfavm_op_ir *
-initial_translate_state(struct dfavm_assembler *a, const struct ir *ir, size_t ind)
+initial_translate_state(struct dfavm_assembler_ir *a, const struct ir *ir, size_t ind)
 {
 	struct ir_state *st;
 	struct dfavm_op_ir **opp;
@@ -758,7 +758,7 @@ initial_translate_state(struct dfavm_assembler *a, const struct ir *ir, size_t i
 }
 
 static int
-initial_translate(const struct ir *ir, struct dfavm_assembler *a)
+initial_translate(const struct ir *ir, struct dfavm_assembler_ir *a)
 {
 	size_t i,n;
 
@@ -772,7 +772,7 @@ initial_translate(const struct ir *ir, struct dfavm_assembler *a)
 }
 
 static void
-fixup_dests(struct dfavm_assembler *a)
+fixup_dests(struct dfavm_assembler_ir *a)
 {
 	size_t i,n;
 
@@ -803,7 +803,7 @@ struct dfavm_op_ir **find_opchain_end(struct dfavm_op_ir **opp)
 }
 
 static void
-eliminate_unnecessary_branches(struct dfavm_assembler *a)
+eliminate_unnecessary_branches(struct dfavm_assembler_ir *a)
 {
 	int count;
 
@@ -890,7 +890,7 @@ eliminate_unnecessary_branches(struct dfavm_assembler *a)
 }
 
 static void
-order_basic_blocks(struct dfavm_assembler *a)
+order_basic_blocks(struct dfavm_assembler_ir *a)
 {
 	size_t i,n;
 	struct dfavm_op_ir **opp;
@@ -958,7 +958,7 @@ order_basic_blocks(struct dfavm_assembler *a)
 }
 
 static uint32_t
-assign_opcode_indexes(struct dfavm_assembler *a)
+assign_opcode_indexes(struct dfavm_assembler_ir *a)
 {
 	uint32_t index;
 	struct dfavm_op_ir *op;
@@ -975,7 +975,7 @@ assign_opcode_indexes(struct dfavm_assembler *a)
 }
 
 static void
-dump_states(FILE *f, struct dfavm_assembler *a)
+dump_states(FILE *f, struct dfavm_assembler_ir *a)
 {
 	struct dfavm_op_ir *op;
 	size_t count;
@@ -990,18 +990,16 @@ dump_states(FILE *f, struct dfavm_assembler *a)
 		fprintf(f, "%6zu | %p | %6lu |  ", count++, (void*)op, (unsigned long)op->index);
 		print_op_ir(f, op);
 	}
-
-	fprintf(f, "%6lu total bytes\n", (unsigned long)a->nbytes);
 }
 
 static void
-print_all_states(struct dfavm_assembler *a)
+print_all_states(struct dfavm_assembler_ir *a)
 {
 	dump_states(stderr, a);
 }
 
 int
-dfavm_compile_ir(struct dfavm_assembler *a, const struct ir *ir, struct fsm_vm_compile_opts opts)
+dfavm_compile_ir(struct dfavm_assembler_ir *a, const struct ir *ir, struct fsm_vm_compile_opts opts)
 {
 	a->nstates = ir->n;
 	a->start = ir->start;

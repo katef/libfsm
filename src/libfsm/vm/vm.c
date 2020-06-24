@@ -209,7 +209,7 @@ print_vm_op(FILE *f, struct dfavm_vm_op *op)
 }
 
 static void
-print_vm_instr(FILE *f, const struct dfavm_assembler *a)
+print_vm_instr(FILE *f, const struct dfavm_assembler_vm *a)
 {
 	size_t i;
 	for (i=0; i < a->ninstr; i++) {
@@ -330,7 +330,7 @@ build_vm_op_array(const struct dfavm_op_ir *ops, size_t *np)
 }
 
 static void
-assign_rel_dests(struct dfavm_assembler *a)
+assign_rel_dests(struct dfavm_assembler_vm *a)
 {
 	uint32_t off;
 	size_t i;
@@ -408,29 +408,34 @@ assign_rel_dests(struct dfavm_assembler *a)
 }
 
 struct fsm_dfavm *
-dfavm_compile_vm(struct dfavm_assembler *a, struct fsm_vm_compile_opts opts)
+dfavm_compile_vm(const struct dfavm_assembler_ir *a, struct fsm_vm_compile_opts opts)
 {
+	static const struct dfavm_assembler_vm zero;
+	struct dfavm_assembler_vm b;
 	struct fsm_dfavm *vm;
+
+	b = zero;
 
 	(void)print_vm_instr; /* make clang happy */
 
 	/* build vm instructions */
-	a->instr = build_vm_op_array(a->linked, &a->ninstr);
-	if (a->instr == NULL) {
+	b.instr = build_vm_op_array(a->linked, &b.ninstr);
+	if (b.instr == NULL) {
 		goto error;
 	}
 
-	assign_rel_dests(a);
+	assign_rel_dests(&b);
 
 #if DEBUG_VM_OPCODES
 	dump_states(stdout, a);
+	fprintf(f, "%6lu total bytes\n", (unsigned long)b.nbytes);
 #endif /* DEBUG_VM_OPCODES */
 
 	if (opts.flags & FSM_VM_COMPILE_PRINT_ENC) {
 		FILE *f = (opts.log != NULL) ? opts.log : stdout;
 
 		fprintf(f,"---[ vm instructions ]---\n");
-		print_vm_instr(f, a);
+		print_vm_instr(f, &b);
 		fprintf(f, "\n");
 	}
 
@@ -440,11 +445,11 @@ dfavm_compile_vm(struct dfavm_assembler *a, struct fsm_vm_compile_opts opts)
 
 	switch (opts.output) {
 	case FSM_VM_COMPILE_VM_V1:
-		vm = encode_opasm_v1(a);
+		vm = encode_opasm_v1(&b);
 		break;
 
 	case FSM_VM_COMPILE_VM_V2:
-		vm = encode_opasm_v2(a);
+		vm = encode_opasm_v2(&b);
 		break;
 	}
 
@@ -452,13 +457,13 @@ dfavm_compile_vm(struct dfavm_assembler *a, struct fsm_vm_compile_opts opts)
 		goto error;
 	}
 
-	free(a->instr);
+	free(b.instr);
 
 	return vm;
 
 error:
 
-	free(a->instr);
+	free(b.instr);
 
 	return NULL;
 }
