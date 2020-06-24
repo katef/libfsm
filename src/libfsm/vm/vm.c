@@ -19,8 +19,6 @@
 
 #include "vm.h"
 
-#include "print/ir.h"
-
 //
 // Fixed encoding VM state:
 //
@@ -131,6 +129,13 @@
 //
 //   DD=11 is reserved for future use
 //
+
+struct dfavm_assembler_vm {
+	struct dfavm_vm_op *instr;
+	size_t ninstr;
+
+	uint32_t nbytes;
+};
 
 static void
 print_vm_op(FILE *f, struct dfavm_vm_op *op)
@@ -445,11 +450,11 @@ dfavm_compile_vm(const struct dfavm_assembler_ir *a, struct fsm_vm_compile_opts 
 
 	switch (opts.output) {
 	case FSM_VM_COMPILE_VM_V1:
-		vm = encode_opasm_v1(&b);
+		vm = encode_opasm_v1(b.instr, b.ninstr, b.nbytes);
 		break;
 
 	case FSM_VM_COMPILE_VM_V2:
-		vm = encode_opasm_v2(&b);
+		vm = encode_opasm_v2(b.instr, b.ninstr);
 		break;
 	}
 

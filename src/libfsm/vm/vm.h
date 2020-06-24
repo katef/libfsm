@@ -21,6 +21,7 @@
 
 struct ir;
 struct fsm_vm_compile_opts;
+struct dfavm_op_ir_pool;
 
 enum dfavm_op_instr {
 	// Stop the VM, mark match or failure
@@ -126,8 +127,6 @@ struct dfavm_vm_op {
 	unsigned char num_encoded_bytes;
 };
 
-struct dfavm_op_ir_pool;
-
 struct dfavm_assembler_ir {
 	struct dfavm_op_ir_pool *pool;
 	struct dfavm_op_ir *freelist;
@@ -138,13 +137,6 @@ struct dfavm_assembler_ir {
 	size_t nstates;
 	size_t start;
 	uint32_t count;
-};
-
-struct dfavm_assembler_vm {
-	struct dfavm_vm_op *instr;
-	size_t ninstr;
-
-	uint32_t nbytes;
 };
 
 enum dfavm_io_result {
@@ -160,19 +152,6 @@ enum dfavm_io_result {
 struct dfavm_v1 {
 	unsigned char *ops;
 	uint32_t len;
-};
-
-enum dfavm_vm_op_v2 {
-	// Stop the VM, mark match or failure
-	VM_V2_OP_STOP    = 0,
-
-	// Start of each state: fetch next character.  Indicates
-	// match / fail if EOS.
-	VM_V2_OP_FETCH   = 1,
-
-	// Branch to another state
-	VM_V2_OP_BRANCH  = 2,
-	VM_V2_OP_IBRANCH = 3,
 };
 
 struct dfavm_v2 {
@@ -222,7 +201,8 @@ enum dfavm_io_result
 dfavm_v1_save(FILE *f, const struct dfavm_v1 *vm);
 enum dfavm_io_result
 dfavm_load_v1(FILE *f, struct dfavm_v1 *vm);
-struct fsm_dfavm *encode_opasm_v1(const struct dfavm_assembler_vm *a);
+struct fsm_dfavm *
+encode_opasm_v1(const struct dfavm_vm_op *instr, size_t ninstr, size_t total_bytes);
 uint32_t
 running_print_op_v1(const unsigned char *ops, uint32_t pc,
 	const char *sp, const char *buf, size_t n, char ch, FILE *f);
@@ -231,7 +211,7 @@ vm_match_v1(const struct dfavm_v1 *vm, struct vm_state *st, const char *buf, siz
 
 /* v2 */
 struct fsm_dfavm *
-encode_opasm_v2(const struct dfavm_assembler_vm *a);
+encode_opasm_v2(const struct dfavm_vm_op *instr, size_t ninstr);
 void
 running_print_op_v2(const struct dfavm_v2 *vm, uint32_t pc, const char *sp, const char *buf, size_t n, char ch, FILE *f);
 enum dfavm_state

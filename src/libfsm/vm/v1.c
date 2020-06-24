@@ -79,13 +79,12 @@ dfavm_load_v1(FILE *f, struct dfavm_v1 *vm)
 }
 
 struct fsm_dfavm *
-encode_opasm_v1(const struct dfavm_assembler_vm *a)
+encode_opasm_v1(const struct dfavm_vm_op *instr, size_t ninstr, size_t total_bytes)
 {
 	static const struct fsm_dfavm zero;
 
 	struct fsm_dfavm *ret;
 	struct dfavm_v1 *vm;
-	size_t total_bytes;
 	size_t i;
 	size_t off;
 	unsigned char *enc;
@@ -98,17 +97,15 @@ encode_opasm_v1(const struct dfavm_assembler_vm *a)
 
 	vm = &ret->u.v1;
 
-	total_bytes = a->nbytes;
-
 	enc = malloc(total_bytes);
 
 	vm->ops = enc;
 	vm->len = total_bytes;
 
-	for (off = 0, i = 0; i < a->ninstr; i++) {
+	for (off = 0, i = 0; i < ninstr; i++) {
 		unsigned char bytes[6];
 		unsigned char cmp_bits, instr_bits, rest_bits;
-		const struct dfavm_vm_op *op = &a->instr[i];
+		const struct dfavm_vm_op *op = &instr[i];
 		int nb = 1;
 
 		cmp_bits   = 0;

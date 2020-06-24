@@ -12,14 +12,26 @@
 
 #include "vm.h"
 
+enum dfavm_vm_op_v2 {
+	// Stop the VM, mark match or failure
+	VM_V2_OP_STOP    = 0,
+
+	// Start of each state: fetch next character.  Indicates
+	// match / fail if EOS.
+	VM_V2_OP_FETCH   = 1,
+
+	// Branch to another state
+	VM_V2_OP_BRANCH  = 2,
+	VM_V2_OP_IBRANCH = 3,
+};
+
 struct fsm_dfavm *
-encode_opasm_v2(const struct dfavm_assembler_vm *a)
+encode_opasm_v2(const struct dfavm_vm_op *instr, size_t ninstr)
 {
 	static const struct fsm_dfavm zero;
 
 	struct fsm_dfavm *ret;
 	struct dfavm_v2 *vm;
-	size_t total_instr;
 	size_t i;
 	uint32_t *enc;
 	uint32_t *abuf;
@@ -33,19 +45,18 @@ encode_opasm_v2(const struct dfavm_assembler_vm *a)
 
 	vm = &ret->u.v2;
 
-	total_instr = a->ninstr;
-	enc = malloc(total_instr * sizeof *enc);
+	enc = malloc(ninstr * sizeof *enc);
 
 	vm->ops = enc;
-	vm->len = total_instr;
+	vm->len = ninstr;
 
 	abuf = NULL;
 	alen = 0;
 	acap = 0;
 
-	for (i = 0; i < a->ninstr; i++) {
+	for (i = 0; i < ninstr; i++) {
 		unsigned char cmp_bits, instr_bits, result_bit, cmp_arg;
-		const struct dfavm_vm_op *op = &a->instr[i];
+		const struct dfavm_vm_op *op = &instr[i];
 		uint32_t instr;
 		uint16_t dest_arg;
 
