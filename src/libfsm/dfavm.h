@@ -19,6 +19,8 @@
 
 #define DFAVM_MAGIC "DFAVM$"
 
+struct ir;
+
 enum dfavm_op_instr {
 	// Stop the VM, mark match or failure
 	VM_OP_STOP   = 0,
@@ -202,6 +204,15 @@ struct fsm_dfavm {
 
 const char * 
 cmp_name(int cmp);
+
+int
+dfavm_compile_ir(struct dfavm_assembler *a, const struct ir *ir, struct fsm_vm_compile_opts opts);
+
+struct fsm_dfavm *
+dfavm_compile_vm(struct dfavm_assembler *a, struct fsm_vm_compile_opts opts);
+
+void
+dfavm_opasm_finalize_op(struct dfavm_assembler *a);
 
 /* v1 */
 enum dfavm_io_result

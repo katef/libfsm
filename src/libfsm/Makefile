@@ -17,6 +17,8 @@ SRC += src/libfsm/trim.c
 SRC += src/libfsm/example.c
 SRC += src/libfsm/getc.c
 SRC += src/libfsm/dfavm.c
+SRC += src/libfsm/dfavm_ir.c
+SRC += src/libfsm/dfavm_vm.c
 SRC += src/libfsm/dfavm_v1.c
 SRC += src/libfsm/dfavm_v2.c
 
