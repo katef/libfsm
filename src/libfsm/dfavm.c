@@ -957,7 +957,7 @@ initial_translate_error(struct dfavm_assembler *a, struct ir_state *st, struct d
 }
 
 static struct dfavm_op_ir *
-initial_translate_state(struct dfavm_assembler *a, struct ir *ir, size_t ind)
+initial_translate_state(struct dfavm_assembler *a, const struct ir *ir, size_t ind)
 {
 	struct ir_state *st;
 	struct dfavm_op_ir **opp;
@@ -1024,7 +1024,7 @@ initial_translate_state(struct dfavm_assembler *a, struct ir *ir, size_t ind)
 }
 
 static int
-initial_translate(struct ir *ir, struct dfavm_assembler *a)
+initial_translate(const struct ir *ir, struct dfavm_assembler *a)
 {
 	size_t i,n;
 
@@ -1456,7 +1456,7 @@ print_all_states(struct dfavm_assembler *a)
 }
 
 static struct fsm_dfavm *
-dfavm_compile(struct ir *ir, struct fsm_vm_compile_opts opts)
+dfavm_compile(const struct ir *ir, struct fsm_vm_compile_opts opts)
 {
 	static const struct dfavm_assembler zero;
 
