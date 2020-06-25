@@ -1,11 +1,27 @@
 /*
- * Copyright 2008-2017 Shannon F. Stewman
+ * Copyright 2019 Shannon F. Stewman
  *
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef FSM_DFAVM_H
-#define FSM_DFAVM_H
+#ifndef FSM_INTERNAL_VM_H
+#define FSM_INTERNAL_VM_H
+
+#define DEBUG_ENCODING     0
+#define DEBUG_VM_EXECUTION 0
+#define DEBUG_VM_OPCODES   0
+
+#define DFAVM_VARENC_MAJOR 0x00
+#define DFAVM_VARENC_MINOR 0x01
+
+#define DFAVM_FIXEDENC_MAJOR 0x00
+#define DFAVM_FIXEDENC_MINOR 0x02
+
+#define DFAVM_MAGIC "DFAVM$"
+
+struct ir;
+struct fsm_vm_compile_opts;
+struct dfavm_op_ir_pool;
 
 enum dfavm_op_instr {
 	// Stop the VM, mark match or failure
@@ -111,22 +127,15 @@ struct dfavm_vm_op {
 	unsigned char num_encoded_bytes;
 };
 
-struct dfavm_op_ir_pool;
-
-struct dfavm_assembler {
+struct dfavm_assembler_ir {
 	struct dfavm_op_ir_pool *pool;
 	struct dfavm_op_ir *freelist;
 
 	struct dfavm_op_ir **ops;
 	struct dfavm_op_ir *linked;
 
-	struct dfavm_vm_op *instr;
-	size_t ninstr;
-
 	size_t nstates;
 	size_t start;
-
-	uint32_t nbytes;
 	uint32_t count;
 };
 
@@ -143,19 +152,6 @@ enum dfavm_io_result {
 struct dfavm_v1 {
 	unsigned char *ops;
 	uint32_t len;
-};
-
-enum dfavm_vm_op_v2 {
-	// Stop the VM, mark match or failure
-	VM_V2_OP_STOP    = 0,
-
-	// Start of each state: fetch next character.  Indicates
-	// match / fail if EOS.
-	VM_V2_OP_FETCH   = 1,
-
-	// Branch to another state
-	VM_V2_OP_BRANCH  = 2,
-	VM_V2_OP_IBRANCH = 3,
 };
 
 struct dfavm_v2 {
@@ -188,4 +184,38 @@ struct fsm_dfavm {
 	} u;
 };
 
-#endif /* FSM_DFAVM_H */
+const char * 
+cmp_name(int cmp);
+
+int
+dfavm_compile_ir(struct dfavm_assembler_ir *a, const struct ir *ir, struct fsm_vm_compile_opts opts);
+
+struct fsm_dfavm *
+dfavm_compile_vm(const struct dfavm_assembler_ir *a, struct fsm_vm_compile_opts opts);
+
+void
+dfavm_opasm_finalize_op(struct dfavm_assembler_ir *a);
+
+/* v1 */
+enum dfavm_io_result
+dfavm_v1_save(FILE *f, const struct dfavm_v1 *vm);
+enum dfavm_io_result
+dfavm_load_v1(FILE *f, struct dfavm_v1 *vm);
+struct fsm_dfavm *
+encode_opasm_v1(const struct dfavm_vm_op *instr, size_t ninstr, size_t total_bytes);
+uint32_t
+running_print_op_v1(const unsigned char *ops, uint32_t pc,
+	const char *sp, const char *buf, size_t n, char ch, FILE *f);
+enum dfavm_state
+vm_match_v1(const struct dfavm_v1 *vm, struct vm_state *st, const char *buf, size_t n);
+
+/* v2 */
+struct fsm_dfavm *
+encode_opasm_v2(const struct dfavm_vm_op *instr, size_t ninstr);
+void
+running_print_op_v2(const struct dfavm_v2 *vm, uint32_t pc, const char *sp, const char *buf, size_t n, char ch, FILE *f);
+enum dfavm_state
+vm_match_v2(const struct dfavm_v2 *vm, struct vm_state *st, const char *buf, size_t n);
+
+#endif
+
