@@ -22,6 +22,7 @@ struct fsm;
  *  fsm_print_ir     - Codegen IR as Dot
  *  fsm_print_irjson - Codegen IR as JSON
  *  fsm_print_json   - JavaScript Object Notation
+ *  fsm_print_vmc    - ISO C90 code, VM style
  *
  * The output options may be NULL, indicating to use defaults.
  *
@@ -38,6 +39,7 @@ fsm_print fsm_print_fsm;
 fsm_print fsm_print_ir;
 fsm_print fsm_print_irjson;
 fsm_print fsm_print_json;
+fsm_print fsm_print_vmc;
 
 #endif
 

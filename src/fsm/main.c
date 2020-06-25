@@ -160,7 +160,8 @@ print_name(const char *name)
 		{ "dot",  fsm_print_dot  },
 		{ "fsm",  fsm_print_fsm  },
 		{ "ir",   fsm_print_ir   },
-		{ "json", fsm_print_json }
+		{ "json", fsm_print_json },
+		{ "vmc",  fsm_print_vmc  }
 	};
 
 	assert(name != NULL);
