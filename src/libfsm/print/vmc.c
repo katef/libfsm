@@ -62,9 +62,15 @@ cmp_operator(int cmp)
 }
 
 static void
-print_label(FILE *f, const struct dfavm_op_ir *op)
+print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 {
 	fprintf(f, "l%lu:", (unsigned long) op->index);
+
+	if (op->ir_state->example != NULL) {
+		fprintf(f, " /* e.g. \"");
+		escputs(f, opt, c_escputc_str, op->ir_state->example);
+		fprintf(f, "\" */");
+	}
 }
 
 static void
@@ -80,9 +86,19 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 }
 
 static void
-print_stop(FILE *f, const struct dfavm_op_ir *op)
+print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
+	enum dfavm_op_end end_bits, const struct ir *ir)
 {
-	fprintf(f, "goto %s;", op->u.stop.end_bits == VM_END_FAIL ? "fail" : "match");
+	if (end_bits == VM_END_FAIL) {
+		fprintf(f, "return -1;");
+		return;
+	}
+
+	if (opt->endleaf != NULL) {
+		opt->endleaf(f, op->ir_state->opaque, opt->endleaf_opaque);
+	} else {
+		fprintf(f, "return %lu;", (unsigned long) (op->ir_state - ir->states));
+	}
 }
 
 static void
@@ -160,7 +176,7 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 	for (op = a.linked; op != NULL; op = op->next) {
 		if (op->num_incoming > 0) {
-			print_label(f, op);
+			print_label(f, op, opt);
 			fprintf(f, "\n");
 		}
 
@@ -169,12 +185,12 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op, opt);
-			print_stop(f, op);
+			print_end(f, op, opt, op->u.stop.end_bits, ir);
 			break;
 
 		case VM_OP_FETCH:
 			print_fetch(f, opt);
-			print_stop(f, op);
+			print_end(f, op, opt, op->u.fetch.end_bits, ir);
 			break;
 
 		case VM_OP_BRANCH:
@@ -206,14 +222,6 @@ fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt
 
 	(void) fsm_print_cfrag(f, ir, opt, cp,
 		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
-
-	fprintf(f, "\n");
-
-	fprintf(f, "match:\n");
-	fprintf(f, "\treturn 0x1;\n"); /* TODO: eventually switch on state here */
-
-	fprintf(f, "fail:\n");
-	fprintf(f, "\treturn -1;\n");
 }
 
 void

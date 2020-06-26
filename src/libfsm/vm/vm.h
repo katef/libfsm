@@ -20,6 +20,7 @@
 #define DFAVM_MAGIC "DFAVM$"
 
 struct ir;
+struct ir_state;
 struct fsm_vm_compile_opts;
 struct dfavm_op_ir_pool;
 
@@ -73,6 +74,8 @@ struct dfavm_op_ir {
 	 * entering the operation.
 	 */
 	uint32_t index;
+
+	const struct ir_state *ir_state; // for void *opaque
 
 	uint32_t num_incoming; // number of branches to this instruction
 	int in_trace;

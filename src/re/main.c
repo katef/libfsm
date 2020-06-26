@@ -895,7 +895,7 @@ main(int argc, char *argv[])
 		/* TODO: print examples in comments for end states;
 		 * patterns in comments for the whole FSM */
 
-		if (print_fsm == fsm_print_c) {
+		if (print_fsm == fsm_print_c || print_fsm == fsm_print_vmc) {
 			opt.endleaf = endleaf_c;
 		} else if (print_fsm == fsm_print_dot) {
 			opt.endleaf = patterns ? endleaf_dot : NULL;
