@@ -174,60 +174,84 @@ print_op_ir(FILE *f, struct dfavm_op_ir *op)
 
 	// fprintf(f, "[%4lu] %1lu\t", (unsigned long)op->offset, (unsigned long)op->num_encoded_bytes);
 
+	char opstr_buf[128];
+	size_t nop = sizeof opstr_buf;
+	char *opstr = &opstr_buf[0];
+	size_t n;
+
 	switch (op->instr) {
 	case VM_OP_FETCH:
-		fprintf(f, "FETCH%c%s",
+		n = snprintf(opstr, nop, "FETCH%c%s",
 			(op->u.fetch.end_bits == VM_END_FAIL) ? 'F' : 'S',
 			cmp);
 		break;
 
 	case VM_OP_STOP:
-		fprintf(f, "STOP%c%s",
+		n = snprintf(opstr, nop, "STOP%c%s",
 			(op->u.stop.end_bits == VM_END_FAIL) ? 'F' : 'S',
 			cmp);
 		break;
 
 	case VM_OP_BRANCH:
 		{
-			fprintf(f, "BR%s", cmp);
+			n = snprintf(opstr, nop, "BR%s", cmp);
 		}
 		break;
 
 	default:
-		fprintf(f, "UNK_%d_%s", (int)op->instr, cmp);
+		n = snprintf(opstr, nop, "UNK_%d_%s", (int)op->instr, cmp);
 	}
+
+	opstr += n;
+	nop   -= n;
 
 	if (op->cmp != VM_CMP_ALWAYS) {
 		if (isprint(op->cmp_arg)) {
-			fprintf(f, " '%c'", op->cmp_arg);
+			n = snprintf(opstr, nop, " '%c'", op->cmp_arg);
 		} else {
-			fprintf(f, " 0x%02x",(unsigned)op->cmp_arg);
+			n = snprintf(opstr, nop, " 0x%02x",(unsigned)op->cmp_arg);
 		}
+
+		opstr += n;
+		nop -= n;
 
 		nargs++;
 	}
 
 	if (op->instr == VM_OP_BRANCH) {
-		fprintf(f, "%s [st=%lu]", ((nargs>0) ? ", " : " "),
+		n = snprintf(opstr, nop, "%s [st=%lu]", ((nargs>0) ? "," : " "),
 			(unsigned long)op->u.br.dest_state);
+
+		opstr += n;
+		nop   -= n;
+
 		nargs++;
 	}
 
-	fprintf(f, "\t; [%u incoming]", op->num_incoming);
+	char comment[128];
+	opstr = &comment[0];
+	nop = sizeof comment;
+
+	n = snprintf(opstr, nop, "; incoming: %u", op->num_incoming);
+	opstr += n;
+	nop   -= n;
+
 	switch (op->instr) {
 	case VM_OP_FETCH:
-		fprintf(f, "  [state %u]", op->u.fetch.state);
+		n = snprintf(opstr, nop, ", state: %u", op->u.fetch.state);
 		break;
 
 	case VM_OP_BRANCH:
-		fprintf(f, "  [dest=%p]", (void *)op->u.br.dest_arg);
+		n = snprintf(opstr, nop, ", dest: %u (%p)",
+			op->u.br.dest_arg->index, (void *)op->u.br.dest_arg);
 		break;
 
 	default:
+		n = 0;
 		break;
 	}
 
-	fprintf(f, "\n");
+	fprintf(f, "%-40s %s\n", opstr_buf, comment);
 }
 
 static void
@@ -994,10 +1018,12 @@ dump_states(FILE *f, struct dfavm_assembler_ir *a)
 	for (op = a->linked; op != NULL; op = op->next) {
 		if (op->instr == VM_OP_FETCH) {
 			unsigned state = op->u.fetch.state;
-			fprintf(f, "%6s |    ; state %u %p %s\n", "", state, (void *)op, (state == a->start) ? "(start)" : "");
+			fprintf(f, "\n%p ;;; state %u (index: %lu, asm_index: %lu) %s\n",
+				(void *)op, state, (unsigned long)op->index, (unsigned long)op->asm_index,
+				(state == a->start) ? "(start)" : "");
 		}
 
-		fprintf(f, "%6zu | %p | %6lu |  ", count++, (void*)op, (unsigned long)op->index);
+		fprintf(f, "%p | %6zu | %6lu |  ", (void *)op, (unsigned long)op->index, (unsigned long)op->asm_index);
 		print_op_ir(f, op);
 	}
 }
