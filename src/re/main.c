@@ -111,6 +111,7 @@ print_name(const char *name,
 		{ "ir",     fsm_print_ir,     NULL  },
 		{ "irjson", fsm_print_irjson, NULL  },
 		{ "json",   fsm_print_json,   NULL  },
+		{ "vmc",    fsm_print_vmc,    NULL  },
 
 		{ "tree",   NULL, ast_print_tree },
 		{ "abnf",   NULL, ast_print_abnf },
@@ -894,7 +895,7 @@ main(int argc, char *argv[])
 		/* TODO: print examples in comments for end states;
 		 * patterns in comments for the whole FSM */
 
-		if (print_fsm == fsm_print_c) {
+		if (print_fsm == fsm_print_c || print_fsm == fsm_print_vmc) {
 			opt.endleaf = endleaf_c;
 		} else if (print_fsm == fsm_print_dot) {
 			opt.endleaf = patterns ? endleaf_dot : NULL;

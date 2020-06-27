@@ -9,6 +9,15 @@ CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor
 
+.for src in ${SRC:Msrc/retest/reperf.c}
+CFLAGS.${src} += -std=c99
+DFLAGS.${src} += -std=c99
+.endfor
+
+.if ${SYSTEM} == Linux
+LFLAGS.reperf += -ldl
+.endif
+
 PROG += retest
 PROG += reperf
 PROG += cvtpcre
