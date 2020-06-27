@@ -6,15 +6,17 @@
 
 #if __linux__
 /* apparently you need this for Linux, and it breaks macOS */
-#  define _POSIX_C_SOURCE 199309L
+#  define _POSIX_C_SOURCE 200809L
 #endif
 
 #include <unistd.h>
+#include <dlfcn.h>
 
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <time.h>
@@ -101,6 +103,12 @@ enum match_type {
 	MATCH_FILE   = 1
 };
 
+enum implementation {
+	IMPL_C,
+	IMPL_VMC,
+	IMPL_INTERPRET
+};
+
 struct perf_case {
 	struct str test_name;
 	struct str regexp;
@@ -111,6 +119,7 @@ struct perf_case {
 	int expected_matches;
 	enum re_dialect dialect;
 	enum match_type mt;
+	enum implementation impl;
 };
 
 static struct str
@@ -267,7 +276,7 @@ perf_case_reset(struct perf_case *c)
 }
 
 static void
-perf_case_init(struct perf_case *c)
+perf_case_init(struct perf_case *c, enum implementation impl)
 {
 	c->test_name = str_empty();
 	c->regexp    = str_empty();
@@ -276,6 +285,7 @@ perf_case_init(struct perf_case *c)
 	c->count     = 1;
 	c->dialect   = RE_NATIVE;
 	c->mt        = MATCH_STRING;
+	c->impl      = impl;
 
 	c->expected_matches = 1;
 }
@@ -287,7 +297,7 @@ static void
 perf_case_report(struct perf_case *c, enum error_type err, double runtime_secs);
 
 static int
-parse_perf_case(FILE *f)
+parse_perf_case(FILE *f, enum implementation impl)
 {
 	size_t line;
 	char buf[4096];
@@ -301,7 +311,7 @@ parse_perf_case(FILE *f)
 	scont = NULL;
 	line = 0;
 	lastcmd = 0;
-	perf_case_init(&c);
+	perf_case_init(&c, impl);
 
 	while (s = fgets(buf, sizeof buf, f), s != NULL) {
 		char last;
@@ -446,25 +456,6 @@ parse_perf_case(FILE *f)
 	return 0;
 }
 
-static enum error_type
-run_match(struct fsm_dfavm *vm, struct str contents, int niter, int num_matches)
-{
-	int iter;
-
-	for (iter=0; iter < niter; iter++) {
-		int ret;
-
-		ret = fsm_vm_match_buffer(vm, contents.data, contents.len);
-
-		/* XXX - at some point, match more than once! */
-		if (!!ret != !!num_matches) {
-			return (num_matches) ? ERROR_SHOULD_MATCH : ERROR_SHOULD_NOT_MATCH;
-		}
-	}
-
-	return ERROR_NONE;
-}
-
 static int
 read_file(const char *path, struct str *contents)
 {
@@ -517,11 +508,15 @@ read_file(const char *path, struct str *contents)
 static enum error_type
 perf_case_run(struct perf_case *c, double *delta)
 {
-	struct fsm_dfavm *vm;
 	struct fsm *fsm;
 	struct str contents;
 	struct timespec t0, t1;
 	enum error_type ret;
+	int iter;
+
+	struct fsm_dfavm *vm;
+	void *h;
+	int (*fsm_main)(const char *, const char *);
 
 	fsm = NULL;
 	vm  = NULL;
@@ -563,10 +558,82 @@ perf_case_run(struct perf_case *c, double *delta)
 	}
 #endif /* DEBUG_VM_FSM */
 
-	vm = fsm_vm_compile_with_options(fsm, vm_opts);
-	if (vm == NULL) {
-		fsm_free(fsm);
-		return ERROR_COMPILING_BYTECODE;
+	switch (c->impl) {
+	case IMPL_C:
+	case IMPL_VMC: {
+		char tmp_c[]  = "/tmp/reperf-XXXXXX";
+		char tmp_so[] = "/tmp/reperf-XXXXXX";
+		char cmd[sizeof tmp_c + sizeof tmp_so + 256];
+		const char *cc, *cflags;
+		int fd_c, fd_so;
+		FILE *f;
+
+		/*
+		 * The IO API would depend on c->mt == MATCH_STRING ? FSM_IO_PAIR : FSM_IO_GETC;
+		 * except we read in the entire file below anyway, so we just
+		 * use FSM_IO_PAIR for both. The type of fsm_main depends on the IO API.
+		 */
+		opt.io = FSM_IO_PAIR;
+
+		fd_c  = mkstemp(tmp_c);
+		fd_so = mkstemp(tmp_so);
+
+		f = fdopen(fd_c, "w");
+		if (f == NULL) {
+			perror(tmp_c);
+			return ERROR_FILE_IO;
+		}
+
+		(c->impl == IMPL_C ? fsm_print_c : fsm_print_vmc)(f, fsm);
+
+		if (EOF == fflush(f)) {
+			perror(tmp_c);
+			return ERROR_FILE_IO;
+		}
+
+		cc     = getenv("CC");
+		cflags = getenv("CFLAGS");
+
+		(void) snprintf(cmd, sizeof cmd, "%s %s -xc -shared -fPIC %s -o %s",
+			cc ? cc : "gcc", cflags ? cflags : "-std=c89 -pedantic -Wall -O3",
+			tmp_c, tmp_so);
+		if (0 != system(cmd)) {
+			perror(cmd);
+			return ERROR_FILE_IO;
+		}
+
+		if (EOF == fclose(f)) {
+			perror(tmp_c);
+			return ERROR_FILE_IO;
+		}
+
+		if (-1 == unlinkat(-1, tmp_c, 0)) {
+			perror(tmp_c);
+			return ERROR_FILE_IO;
+		}
+
+		h = dlopen(tmp_so, RTLD_NOW);
+		if (h == NULL) {
+			fprintf(stderr, "%s: %s", tmp_so, dlerror());
+			return ERROR_FILE_IO;
+		}
+
+		if (-1 == unlinkat(-1, tmp_so, 0)) {
+			perror(tmp_so);
+			return ERROR_FILE_IO;
+		}
+
+		fsm_main = (int (*)(const char *, const char *)) (uintptr_t) dlsym(h, "fsm_main");
+		break;
+	}
+
+	case IMPL_INTERPRET:
+		vm = fsm_vm_compile_with_options(fsm, vm_opts);
+		if (vm == NULL) {
+			fsm_free(fsm);
+			return ERROR_COMPILING_BYTECODE;
+		}
+		break;
 	}
 
 	fsm_free(fsm);
@@ -590,8 +657,28 @@ perf_case_run(struct perf_case *c, double *delta)
 		return ERROR_CLOCK_ERROR;
 	}
 
-	ret = run_match(vm, contents, c->count, c->expected_matches);
-	fsm_vm_free(vm);
+	ret = ERROR_NONE;
+
+	for (iter=0; iter < c->count; iter++) {
+		int r;
+
+		switch (c->impl) {
+		case IMPL_C:
+		case IMPL_VMC:
+			r = fsm_main(contents.data, contents.data + contents.len);
+			break;
+
+		case IMPL_INTERPRET:
+			r = fsm_vm_match_buffer(vm, contents.data, contents.len);
+			break;
+		}
+
+		/* XXX - at some point, match more than once! */
+		if (!!r != !!c->expected_matches) {
+			ret = (c->expected_matches) ? ERROR_SHOULD_MATCH : ERROR_SHOULD_NOT_MATCH;
+			break;
+		}
+	}
 
 	if (c->mt == MATCH_FILE) {
 		str_free(&contents);
@@ -604,6 +691,16 @@ perf_case_run(struct perf_case *c, double *delta)
 	if (clock_gettime(CLOCK_MONOTONIC, &t1) != 0) {
 		fsm_vm_free(vm);
 		return ERROR_CLOCK_ERROR;
+	}
+
+	switch (c->impl) {
+	case IMPL_C:
+	case IMPL_VMC:
+		dlclose(h);
+		break;
+
+	case IMPL_INTERPRET:
+		fsm_vm_free(vm);
 	}
 
 	/* report time difference */
@@ -703,6 +800,13 @@ usage(void)
 	fprintf(stderr, "                 enc       logs VM encoding instructions\n");
 
 	fprintf(stderr, "\n");
+	fprintf(stderr, "        -l <implementation>\n");
+	fprintf(stderr, "             sets implementation type:\n");
+	fprintf(stderr, "                 vm        interpret vm instructions (default)\n");
+	fprintf(stderr, "                 c         compile as per fsm_print_c()\n");
+	fprintf(stderr, "                 vmc       compile as per fsm_print_vmc()\n");
+
+	fprintf(stderr, "\n");
 	fprintf(stderr, "        -x <encoding>\n");
 	fprintf(stderr, "             sets encoding type:\n");
 	fprintf(stderr, "                 v1        version 0.1 variable length encoding\n");
@@ -740,6 +844,7 @@ main(int argc, char *argv[])
 {
 	int i;
 	int pause;
+	enum implementation impl;
 
 	int optlevel = 1;
 
@@ -753,11 +858,12 @@ main(int argc, char *argv[])
 	opt.io                = FSM_IO_GETC;
 
 	pause                 = 0;
+	impl                  = IMPL_INTERPRET;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "O:L:x:" "p" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:l:x:" "p" ), c != -1) {
 			switch (c) {
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
@@ -772,6 +878,20 @@ main(int argc, char *argv[])
 					vm_opts.flags |= FSM_VM_COMPILE_PRINT_ENC;
 				} else {
 					fprintf(stderr, "unknown argument to -L: %s\n", optarg);
+					usage();
+					exit(1);
+				}
+				break;
+
+			case 'l':
+				if (strcmp(optarg, "vm") == 0) {
+					impl = IMPL_INTERPRET;
+				} else if (strcmp(optarg, "c")) {
+					impl = IMPL_C;
+				} else if (strcmp(optarg, "vmc")) {
+					impl = IMPL_C;
+				} else {
+					fprintf(stderr, "unknown argument to -l: %s\n", optarg);
 					usage();
 					exit(1);
 				}
@@ -824,7 +944,7 @@ main(int argc, char *argv[])
 
 	for (i=0; i < argc; i++) {
 		FILE *f = xopen(argv[i]);
-		parse_perf_case(f);
+		parse_perf_case(f, impl);
 		fclose(f);
 	}
 
