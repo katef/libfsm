@@ -36,6 +36,7 @@ fsm_print_irjson
 fsm_print_json
 fsm_print_vmc
 fsm_print_sh
+fsm_print_erl
 
 # <fsm/fsm.h>
 fsm_clone
