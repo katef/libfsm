@@ -50,6 +50,12 @@ print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt
 {
 	fprintf(f, "l%lu)", (unsigned long) op->index);
 
+	/*
+	 * The example strings here are just for human-readable comments;
+	 * double quoted strings in sh do not support numeric escapes for
+	 * arbitrary characters, and nobody can read $'...' style strings.
+	 * So I'm just using C-style strings here because it's simple enough.
+	 */
 	if (op->ir_state->example != NULL) {
 		fprintf(f, " # e.g. \"");
 		escputs(f, opt, c_escputc_str, op->ir_state->example);
