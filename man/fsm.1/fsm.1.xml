@@ -48,6 +48,7 @@
 	<!ENTITY fsm.lit  "<literal>fsm</literal>">
 	<!ENTITY ir.lit   "<literal>ir</literal>">
 	<!ENTITY json.lit "<literal>json</literal>">
+	<!ENTITY sh.lit   "<literal>sh</literal>">
 ]>
 
 <refentry>

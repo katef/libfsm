@@ -17,3 +17,7 @@ ${BUILD}/bin/re: ${BUILD}/lib/${lib:R}.a
 ${BUILD}/bin/re: ${BUILD}/${src:R}.o
 .endfor
 
+# smoke test for sh codegen
+test:: ${BUILD}/bin/re
+	echo -n abcd | bash -c "`./build/bin/re -pl sh -k str -br glob 'a?c*d'`"
+	
