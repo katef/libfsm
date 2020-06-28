@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include <print/esc.h>
 
@@ -28,7 +29,25 @@
 #include "ir.h"
 
 static const char *
-cmp_operator(int cmp)
+str_operator(int cmp)
+{
+	switch (cmp) {
+	case VM_CMP_LT: return "<";
+	case VM_CMP_LE: return "<"; /* special case, <= doesn't exist */
+	case VM_CMP_EQ: return "=";
+	case VM_CMP_GE: return ">"; /* special case, >= doesn't exist */
+	case VM_CMP_GT: return ">";
+	case VM_CMP_NE: return "!=";
+
+	case VM_CMP_ALWAYS:
+	default:
+		assert("unreached");
+		return NULL;
+	}
+}
+
+static const char *
+ord_operator(int cmp)
 {
 	switch (cmp) {
 	case VM_CMP_LT: return "-lt";
@@ -66,15 +85,37 @@ print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt
 static void
 print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 {
+	char c;
+
 	(void) opt;
 
 	if (op->cmp == VM_CMP_ALWAYS) {
 		return;
 	}
 
-	fprintf(f, "[ $(ord \"$c\") %s ", cmp_operator(op->cmp));
-	fprintf(f, "%3hhu", (unsigned char) op->cmp_arg);
-	fprintf(f, " ] && ");
+	fprintf(f, "[[ ");
+
+	c = op->cmp_arg;
+
+	if (c == '\0') {
+		fprintf(f, "$c %s ''", str_operator(op->cmp));
+		if (op->cmp == VM_CMP_LE || op->cmp == VM_CMP_GE) {
+			fprintf(f, " || $c %s ''", str_operator(VM_CMP_EQ));
+		}
+	} else if (c == '\'') {
+		fprintf(f, "$c %s \'", str_operator(op->cmp));
+		if (op->cmp == VM_CMP_LE || op->cmp == VM_CMP_GE) {
+			fprintf(f, " || $c %s \\'", str_operator(VM_CMP_EQ));
+		}
+	} else if (isgraph((unsigned char) c) || c == ' ') {
+		fprintf(f, "$c %s '%c'", str_operator(op->cmp), c);
+		if (op->cmp == VM_CMP_LE || op->cmp == VM_CMP_GE) {
+			fprintf(f, " || $c %s '%c'", str_operator(VM_CMP_EQ), c);
+		}
+	} else {
+		fprintf(f, "$(ord \"$c\") %s %3hhu", ord_operator(op->cmp), (unsigned char) c);
+	}
+	fprintf(f, " ]] && ");
 }
 
 static void
@@ -104,7 +145,7 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 {
 	(void) opt;
 
-	fprintf(f, "read -n 1 c || ");
+	fprintf(f, "read -rn 1 c || ");
 }
 
 static int
@@ -149,6 +190,8 @@ fsm_print_shfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 	fprintf(f, "\n");
 
 	fprintf(f, "l=start\n");
+	fprintf(f, "LANG=C\n");
+	fprintf(f, "IFS=\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "while true; do\n");
