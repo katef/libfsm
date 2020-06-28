@@ -73,7 +73,7 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 	}
 
 	fprintf(f, "[ $(ord \"$c\") %s ", cmp_operator(op->cmp));
-	fprintf(f, "%hhu", (unsigned char) op->cmp_arg);
+	fprintf(f, "%3hhu", (unsigned char) op->cmp_arg);
 	fprintf(f, " ] && ");
 }
 
