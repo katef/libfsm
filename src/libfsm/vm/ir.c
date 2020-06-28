@@ -837,6 +837,9 @@ struct dfavm_op_ir **find_opchain_end(struct dfavm_op_ir **opp)
 }
 
 static void
+dump_states(FILE *f, struct dfavm_assembler_ir *a);
+
+static void
 eliminate_unnecessary_branches(struct dfavm_assembler_ir *a)
 {
 	int count;
@@ -878,6 +881,20 @@ eliminate_unnecessary_branches(struct dfavm_assembler_ir *a)
 				continue;
 			}
 
+			// Rewrites:
+			//   curr: BRANCH to next->next on condition C
+			//   next: BRANCH ALWAYS to dest D
+			// to:
+			//   curr: BRANCH to dest D on condition not(C)
+			//   next: <deleted>
+			// 
+			// Rewrites:
+			//   curr: BRANCH to next->next on condition C
+			//   next: STOP(S/F) ALWAYS
+			// to:
+			//   curr: STOP(S/F) on condition not(C)
+			//   next: <deleted>
+			//
 			if (next != NULL && dest == next->next &&
 					(next->instr == VM_OP_BRANCH || next->instr == VM_OP_STOP) &&
 					(next->num_incoming == 0) &&
@@ -885,17 +902,17 @@ eliminate_unnecessary_branches(struct dfavm_assembler_ir *a)
 				/* rewrite last two instructions to eliminate a
 				 * branch
 				 */
-				struct dfavm_op_ir rewrite1 = *next, rewrite2 = **opp;  // swapped
+				struct dfavm_op_ir rewrite = *next;  // swapped
 				int ok = 1;
 
 				// invert the condition of current branch
-				switch (rewrite2.cmp) {
-				case VM_CMP_LT: rewrite1.cmp = VM_CMP_GE; break;
-				case VM_CMP_LE: rewrite1.cmp = VM_CMP_GT; break;
-				case VM_CMP_EQ: rewrite1.cmp = VM_CMP_NE; break;
-				case VM_CMP_GE: rewrite1.cmp = VM_CMP_LT; break;
-				case VM_CMP_GT: rewrite1.cmp = VM_CMP_LE; break;
-				case VM_CMP_NE: rewrite1.cmp = VM_CMP_EQ; break;
+				switch ((*opp)->cmp) {
+				case VM_CMP_LT: rewrite.cmp = VM_CMP_GE; break;
+				case VM_CMP_LE: rewrite.cmp = VM_CMP_GT; break;
+				case VM_CMP_EQ: rewrite.cmp = VM_CMP_NE; break;
+				case VM_CMP_GE: rewrite.cmp = VM_CMP_LT; break;
+				case VM_CMP_GT: rewrite.cmp = VM_CMP_LE; break;
+				case VM_CMP_NE: rewrite.cmp = VM_CMP_EQ; break;
 
 				case VM_CMP_ALWAYS:
 				default:
@@ -905,13 +922,13 @@ eliminate_unnecessary_branches(struct dfavm_assembler_ir *a)
 				}
 
 				if (ok) {
-					rewrite1.cmp_arg = rewrite2.cmp_arg;
+					rewrite.cmp_arg = (*opp)->cmp_arg;
 
-					rewrite2.cmp = VM_CMP_ALWAYS;
-					rewrite2.cmp_arg = 0;
+					**opp = rewrite;
 
-					**opp = rewrite1;
-					*next = rewrite2;
+					assert(dest->num_incoming > 0);
+					dest->num_incoming--;
+
 					count++;
 					continue;
 				}
