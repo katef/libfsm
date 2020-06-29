@@ -174,60 +174,84 @@ print_op_ir(FILE *f, struct dfavm_op_ir *op)
 
 	// fprintf(f, "[%4lu] %1lu\t", (unsigned long)op->offset, (unsigned long)op->num_encoded_bytes);
 
+	char opstr_buf[128];
+	size_t nop = sizeof opstr_buf;
+	char *opstr = &opstr_buf[0];
+	size_t n;
+
 	switch (op->instr) {
 	case VM_OP_FETCH:
-		fprintf(f, "FETCH%c%s",
+		n = snprintf(opstr, nop, "FETCH%c%s",
 			(op->u.fetch.end_bits == VM_END_FAIL) ? 'F' : 'S',
 			cmp);
 		break;
 
 	case VM_OP_STOP:
-		fprintf(f, "STOP%c%s",
+		n = snprintf(opstr, nop, "STOP%c%s",
 			(op->u.stop.end_bits == VM_END_FAIL) ? 'F' : 'S',
 			cmp);
 		break;
 
 	case VM_OP_BRANCH:
 		{
-			fprintf(f, "BR%s", cmp);
+			n = snprintf(opstr, nop, "BR%s", cmp);
 		}
 		break;
 
 	default:
-		fprintf(f, "UNK_%d_%s", (int)op->instr, cmp);
+		n = snprintf(opstr, nop, "UNK_%d_%s", (int)op->instr, cmp);
 	}
+
+	opstr += n;
+	nop   -= n;
 
 	if (op->cmp != VM_CMP_ALWAYS) {
 		if (isprint(op->cmp_arg)) {
-			fprintf(f, " '%c'", op->cmp_arg);
+			n = snprintf(opstr, nop, " '%c'", op->cmp_arg);
 		} else {
-			fprintf(f, " 0x%02x",(unsigned)op->cmp_arg);
+			n = snprintf(opstr, nop, " 0x%02x",(unsigned)op->cmp_arg);
 		}
+
+		opstr += n;
+		nop -= n;
 
 		nargs++;
 	}
 
 	if (op->instr == VM_OP_BRANCH) {
-		fprintf(f, "%s [st=%lu]", ((nargs>0) ? ", " : " "),
+		n = snprintf(opstr, nop, "%s [st=%lu]", ((nargs>0) ? "," : " "),
 			(unsigned long)op->u.br.dest_state);
+
+		opstr += n;
+		nop   -= n;
+
 		nargs++;
 	}
 
-	fprintf(f, "\t; [%u incoming]", op->num_incoming);
+	char comment[128];
+	opstr = &comment[0];
+	nop = sizeof comment;
+
+	n = snprintf(opstr, nop, "; incoming: %u", op->num_incoming);
+	opstr += n;
+	nop   -= n;
+
 	switch (op->instr) {
 	case VM_OP_FETCH:
-		fprintf(f, "  [state %u]", op->u.fetch.state);
+		n = snprintf(opstr, nop, ", state: %u", op->u.fetch.state);
 		break;
 
 	case VM_OP_BRANCH:
-		fprintf(f, "  [dest=%p]", (void *)op->u.br.dest_arg);
+		n = snprintf(opstr, nop, ", dest: %u (%p)",
+			op->u.br.dest_arg->index, (void *)op->u.br.dest_arg);
 		break;
 
 	default:
+		n = 0;
 		break;
 	}
 
-	fprintf(f, "\n");
+	fprintf(f, "%-40s %s\n", opstr_buf, comment);
 }
 
 static void
@@ -813,6 +837,9 @@ struct dfavm_op_ir **find_opchain_end(struct dfavm_op_ir **opp)
 }
 
 static void
+dump_states(FILE *f, struct dfavm_assembler_ir *a);
+
+static void
 eliminate_unnecessary_branches(struct dfavm_assembler_ir *a)
 {
 	int count;
@@ -854,6 +881,20 @@ eliminate_unnecessary_branches(struct dfavm_assembler_ir *a)
 				continue;
 			}
 
+			// Rewrites:
+			//   curr: BRANCH to next->next on condition C
+			//   next: BRANCH ALWAYS to dest D
+			// to:
+			//   curr: BRANCH to dest D on condition not(C)
+			//   next: <deleted>
+			// 
+			// Rewrites:
+			//   curr: BRANCH to next->next on condition C
+			//   next: STOP(S/F) ALWAYS
+			// to:
+			//   curr: STOP(S/F) on condition not(C)
+			//   next: <deleted>
+			//
 			if (next != NULL && dest == next->next &&
 					(next->instr == VM_OP_BRANCH || next->instr == VM_OP_STOP) &&
 					(next->num_incoming == 0) &&
@@ -861,17 +902,17 @@ eliminate_unnecessary_branches(struct dfavm_assembler_ir *a)
 				/* rewrite last two instructions to eliminate a
 				 * branch
 				 */
-				struct dfavm_op_ir rewrite1 = *next, rewrite2 = **opp;  // swapped
+				struct dfavm_op_ir rewrite = *next;  // swapped
 				int ok = 1;
 
 				// invert the condition of current branch
-				switch (rewrite2.cmp) {
-				case VM_CMP_LT: rewrite1.cmp = VM_CMP_GE; break;
-				case VM_CMP_LE: rewrite1.cmp = VM_CMP_GT; break;
-				case VM_CMP_EQ: rewrite1.cmp = VM_CMP_NE; break;
-				case VM_CMP_GE: rewrite1.cmp = VM_CMP_LT; break;
-				case VM_CMP_GT: rewrite1.cmp = VM_CMP_LE; break;
-				case VM_CMP_NE: rewrite1.cmp = VM_CMP_EQ; break;
+				switch ((*opp)->cmp) {
+				case VM_CMP_LT: rewrite.cmp = VM_CMP_GE; break;
+				case VM_CMP_LE: rewrite.cmp = VM_CMP_GT; break;
+				case VM_CMP_EQ: rewrite.cmp = VM_CMP_NE; break;
+				case VM_CMP_GE: rewrite.cmp = VM_CMP_LT; break;
+				case VM_CMP_GT: rewrite.cmp = VM_CMP_LE; break;
+				case VM_CMP_NE: rewrite.cmp = VM_CMP_EQ; break;
 
 				case VM_CMP_ALWAYS:
 				default:
@@ -881,13 +922,13 @@ eliminate_unnecessary_branches(struct dfavm_assembler_ir *a)
 				}
 
 				if (ok) {
-					rewrite1.cmp_arg = rewrite2.cmp_arg;
+					rewrite.cmp_arg = (*opp)->cmp_arg;
 
-					rewrite2.cmp = VM_CMP_ALWAYS;
-					rewrite2.cmp_arg = 0;
+					**opp = rewrite;
 
-					**opp = rewrite1;
-					*next = rewrite2;
+					assert(dest->num_incoming > 0);
+					dest->num_incoming--;
+
 					count++;
 					continue;
 				}
@@ -994,10 +1035,12 @@ dump_states(FILE *f, struct dfavm_assembler_ir *a)
 	for (op = a->linked; op != NULL; op = op->next) {
 		if (op->instr == VM_OP_FETCH) {
 			unsigned state = op->u.fetch.state;
-			fprintf(f, "%6s |    ; state %u %p %s\n", "", state, (void *)op, (state == a->start) ? "(start)" : "");
+			fprintf(f, "\n%p ;;; state %u (index: %lu, asm_index: %lu) %s\n",
+				(void *)op, state, (unsigned long)op->index, (unsigned long)op->asm_index,
+				(state == a->start) ? "(start)" : "");
 		}
 
-		fprintf(f, "%6zu | %p | %6lu |  ", count++, (void*)op, (unsigned long)op->index);
+		fprintf(f, "%p | %6zu | %6lu |  ", (void *)op, (unsigned long)op->index, (unsigned long)op->asm_index);
 		print_op_ir(f, op);
 	}
 }
