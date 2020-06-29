@@ -494,6 +494,12 @@ zone_minimise(void *arg)
 			assert(m->fsm != NULL);
 
 			if (!keep_nfa) {
+				if (!fsm_determinise(m->fsm)) {
+					pthread_mutex_lock(&zmtx);
+					zerror = errno;
+					pthread_mutex_unlock(&zmtx);
+					return "fsm_minimise";
+				}
 				if (!fsm_minimise(m->fsm)) {
 					pthread_mutex_lock(&zmtx);
 					zerror = errno;

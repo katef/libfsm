@@ -693,6 +693,10 @@ main(int argc, char *argv[])
 			}
 
 			if (!keep_nfa) {
+				if (!fsm_determinise(new)) {
+					perror("fsm_determinise");
+					return EXIT_FAILURE;
+				}
 				if (!fsm_minimise(new)) {
 					perror("fsm_minimise");
 					return EXIT_FAILURE;
@@ -836,17 +840,16 @@ main(int argc, char *argv[])
 		opt.carryopaque = carryopaque;
 
 		/*
-		 * Minimise only when we don't need to keep the end state information
-		 * separated per regexp. Otherwise, convert to a DFA.
-		 */
+		 * Convert to a DFA, then minimise unless we need to keep the end
+		 * state information separated per regexp. */
+		if (!fsm_determinise(fsm)) {
+			perror("fsm_determinise");
+			return EXIT_FAILURE;
+		}
+
 		if (!patterns && !example && print_fsm != fsm_print_c) {
 			if (!fsm_minimise(fsm)) {
 				perror("fsm_minimise");
-				return EXIT_FAILURE;
-			}
-		} else {
-			if (!fsm_determinise(fsm)) {
-				perror("fsm_determinise");
 				return EXIT_FAILURE;
 			}
 		}
