@@ -795,8 +795,7 @@ usage(void)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -L <what>\n");
 	fprintf(stderr, "             logs intermediate representations:\n");
-	fprintf(stderr, "                 ir_pre    logs IR before optimization\n");
-	fprintf(stderr, "                 ir        logs IR after optimization\n");
+	fprintf(stderr, "                 ir        logs IR (after optimization)\n");
 	fprintf(stderr, "                 enc       logs VM encoding instructions\n");
 
 	fprintf(stderr, "\n");
@@ -870,10 +869,8 @@ main(int argc, char *argv[])
 				break;
 
 			case 'L':
-				if (strcmp(optarg, "ir_pre") == 0) {
+				if (strcmp(optarg, "ir") == 0) {
 					vm_opts.flags |= FSM_VM_COMPILE_PRINT_IR;
-				} else if (strcmp(optarg, "ir") == 0) {
-					vm_opts.flags |= FSM_VM_COMPILE_PRINT_IR_PREOPT;
 				} else if (strcmp(optarg, "enc") == 0) {
 					vm_opts.flags |= FSM_VM_COMPILE_PRINT_ENC;
 				} else {
