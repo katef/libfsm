@@ -125,6 +125,7 @@ f_malloc(const struct fsm_alloc *a, size_t sz);
  */
 void *
 f_calloc(const struct fsm_alloc *a, size_t n, size_t sz);
+
 /*
  * Internal realloc function that invokes realloc(3) by default, or a user-provided
  * realloc function to re-allocate memory to the specified size and perform

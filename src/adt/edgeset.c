@@ -390,7 +390,9 @@ edge_set_remove_state(struct edge_set **setp, fsm_state_t state)
 		if (set->a[i].state == state) {
 			if (i < set->i) {
 				memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
+
 			}
+
 			set->i--;
 		} else {
 			i++;
