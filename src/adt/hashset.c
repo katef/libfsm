@@ -25,10 +25,8 @@ unsigned long
 hashrec(const void *p, size_t n)
 {
 	unsigned long h = 0;
-	unsigned char ha[sizeof h];
 
-	siphash(p, n, hashk, &ha[0], sizeof ha);
-	memcpy(&h, &ha[0], sizeof h);
+	siphash(p, n, hashk, (void *) &h, sizeof h);
 
 	return h;
 }
