@@ -23,6 +23,9 @@ fsm_minimise(struct fsm *fsm)
 
 	assert(fsm != NULL);
 
+	/* This should only be called with a DFA. */
+	assert(fsm_all(fsm, fsm_isdfa));
+
 	/*
 	 * Brzozowski's algorithm.
 	 */
