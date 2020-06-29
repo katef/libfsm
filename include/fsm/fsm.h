@@ -278,7 +278,7 @@ fsm_complete(struct fsm *fsm,
 	int (*predicate)(const struct fsm *, fsm_state_t));
 
 /*
- * Minimize an FSM to its canonical form.
+ * Minimize a DFA to its canonical form.
  *
  * Returns false on error; see errno.
  */
