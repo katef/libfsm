@@ -141,28 +141,32 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 					}
 				}
 
-				if (op->cmp != VM_CMP_ALWAYS) {
-					switch (dialect) {
-					case AMD64_ATT:
-						fprintf(f, "\tcmpl    $0x%02x,%%%s\n", (unsigned)op->cmp_arg, chr_reg);
-						break;
-					case AMD64_NASM:
-						fprintf(f, "\tCMP %s,%02xh\n", chr_reg, (unsigned)op->cmp_arg);
-						break;
+				if (op->cmp == VM_CMP_ALWAYS && op->next == NULL) {
+					fprintf(f, "\t%c elided jmp to .finish\n", comment);
+				} else {
+					if (op->cmp != VM_CMP_ALWAYS) {
+						switch (dialect) {
+						case AMD64_ATT:
+							fprintf(f, "\tcmpl    $0x%02x,%%%s\n", (unsigned)op->cmp_arg, chr_reg);
+							break;
+						case AMD64_NASM:
+							fprintf(f, "\tCMP   %s,%02xh\n", chr_reg, (unsigned)op->cmp_arg);
+							break;
+						}
 					}
-				}
 
-				switch (op->cmp) {
-					case VM_CMP_ALWAYS: jmp_op = (dialect == AMD64_ATT) ? "jmp" : "JMP"; break;
-					case VM_CMP_LT:     jmp_op = (dialect == AMD64_ATT) ? "jb"  : "JB";  break;
-					case VM_CMP_LE:     jmp_op = (dialect == AMD64_ATT) ? "jbe" : "JBE"; break;
-					case VM_CMP_GE:     jmp_op = (dialect == AMD64_ATT) ? "jae" : "JAE"; break;
-					case VM_CMP_GT:     jmp_op = (dialect == AMD64_ATT) ? "ja"  : "JA";  break;
-					case VM_CMP_EQ:     jmp_op = (dialect == AMD64_ATT) ? "je"  : "JE";  break;
-					case VM_CMP_NE:     jmp_op = (dialect == AMD64_ATT) ? "jne" : "JNE"; break;
-				}
+					switch (op->cmp) {
+						case VM_CMP_ALWAYS: jmp_op = (dialect == AMD64_ATT) ? "jmp" : "JMP"; break;
+						case VM_CMP_LT:     jmp_op = (dialect == AMD64_ATT) ? "jb"  : "JB";  break;
+						case VM_CMP_LE:     jmp_op = (dialect == AMD64_ATT) ? "jbe" : "JBE"; break;
+						case VM_CMP_GE:     jmp_op = (dialect == AMD64_ATT) ? "jae" : "JAE"; break;
+						case VM_CMP_GT:     jmp_op = (dialect == AMD64_ATT) ? "ja"  : "JA";  break;
+						case VM_CMP_EQ:     jmp_op = (dialect == AMD64_ATT) ? "je"  : "JE";  break;
+						case VM_CMP_NE:     jmp_op = (dialect == AMD64_ATT) ? "jne" : "JNE"; break;
+					}
 
-				fprintf(f, "\t%-3s .finish\n", jmp_op);
+					fprintf(f, "\t%-3s .finish\n", jmp_op);
+				}
 			}
 			break;
 
