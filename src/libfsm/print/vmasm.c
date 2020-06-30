@@ -53,7 +53,10 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 
 	const char *ret_reg = "eax";
 
-	struct dfavm_op_ir *op;
+	const struct ir_state *curr_st = NULL;
+	const struct dfavm_op_ir *op;
+
+	char comment;
 
 	assert(f != NULL);
 	assert(funcname != NULL);
@@ -61,6 +64,13 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 	assert(a != NULL);
 
 	assert(ir->n > 0);
+
+	switch (dialect) {
+	case AMD64_ATT:  comment = '#'; break;
+	case AMD64_NASM: comment = ';'; break;
+	default:
+		assert(!"should not be reachable");
+	}
 
 	/* print preamble */
 	switch (dialect) {
@@ -95,6 +105,16 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 	}
 
 	for (op = a->linked; op != NULL; op = op->next) {
+		if (curr_st != op->ir_state) {
+			if (op->num_incoming > 0) {
+				fprintf(f, ".state_%u:\n", op->u.fetch.state);
+			} else {
+				fprintf(f, "%c state %u\n", comment, op->u.fetch.state);
+			}
+
+			curr_st = op->ir_state;
+		}
+
 		switch (op->instr) {
 		case VM_OP_STOP:
 			{
@@ -148,10 +168,6 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 
 		case VM_OP_FETCH:
 			{
-				if (op->num_incoming > 0) {
-					fprintf(f, ".state_%u:\n", op->u.fetch.state);
-				}
-
 				if (op->u.fetch.end_bits == VM_END_SUCC) {
 					unsigned end_st = op->ir_state - ir->states;
 
