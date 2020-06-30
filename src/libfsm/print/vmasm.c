@@ -100,7 +100,7 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 
 	case AMD64_NASM:
 		/* stn_reg += stp_reg <-- stn_reg should hold the end pointer */
-		fprintf(f, "\tADD %s, %s\n\n", stn_reg, stp_reg);
+		fprintf(f, "\tADD   %s, %s\n\n", stn_reg, stp_reg);
 		break;
 	}
 
@@ -127,7 +127,7 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 						fprintf(f, "\tmovl    $0x%02x, %%%s\n", end_st, ret_reg);
 						break;
 					case AMD64_NASM:
-						fprintf(f, "\tMOV %s, %02xh\n", ret_reg, end_st);
+						fprintf(f, "\tMOV   %s, %02xh\n", ret_reg, end_st);
 						break;
 					}
 				} else {
@@ -136,7 +136,7 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 						fprintf(f, "\tmovl    $-1, %%%s\n", ret_reg);
 						break;
 					case AMD64_NASM:
-						fprintf(f, "\tMOV %s, -1\n", ret_reg);
+						fprintf(f, "\tMOV   %s, -1\n", ret_reg);
 						break;
 					}
 				}
@@ -156,13 +156,13 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 					}
 
 					switch (op->cmp) {
-						case VM_CMP_ALWAYS: jmp_op = (dialect == AMD64_ATT) ? "jmp" : "JMP"; break;
-						case VM_CMP_LT:     jmp_op = (dialect == AMD64_ATT) ? "jb"  : "JB";  break;
-						case VM_CMP_LE:     jmp_op = (dialect == AMD64_ATT) ? "jbe" : "JBE"; break;
-						case VM_CMP_GE:     jmp_op = (dialect == AMD64_ATT) ? "jae" : "JAE"; break;
-						case VM_CMP_GT:     jmp_op = (dialect == AMD64_ATT) ? "ja"  : "JA";  break;
-						case VM_CMP_EQ:     jmp_op = (dialect == AMD64_ATT) ? "je"  : "JE";  break;
-						case VM_CMP_NE:     jmp_op = (dialect == AMD64_ATT) ? "jne" : "JNE"; break;
+					case VM_CMP_ALWAYS: jmp_op = (dialect == AMD64_ATT) ? "jmp    " : "JMP  "; break;
+					case VM_CMP_LT:     jmp_op = (dialect == AMD64_ATT) ? "jb     " : "JB   "; break;
+					case VM_CMP_LE:     jmp_op = (dialect == AMD64_ATT) ? "jbe    " : "JBE  "; break;
+					case VM_CMP_GE:     jmp_op = (dialect == AMD64_ATT) ? "jae    " : "JAE  "; break;
+					case VM_CMP_GT:     jmp_op = (dialect == AMD64_ATT) ? "ja     " : "JA   "; break;
+					case VM_CMP_EQ:     jmp_op = (dialect == AMD64_ATT) ? "je     " : "JE   "; break;
+					case VM_CMP_NE:     jmp_op = (dialect == AMD64_ATT) ? "jne    " : "JNE  "; break;
 					}
 
 					fprintf(f, "\t%-3s .finish\n", jmp_op);
@@ -181,7 +181,7 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 						break;
 
 					case AMD64_NASM:
-						fprintf(f, "\tMOV %s, %02xh\n", ret_reg, end_st);
+						fprintf(f, "\tMOV   %s, %02xh\n", ret_reg, end_st);
 						break;
 					}
 				} else {
@@ -192,7 +192,7 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 						break;
 
 					case AMD64_NASM:
-						fprintf(f, "\tMOV %s, -1\n", ret_reg);
+						fprintf(f, "\tMOV   %s, -1\n", ret_reg);
 						break;
 					}
 				}
@@ -200,17 +200,17 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 
 				switch (dialect) {
 				case AMD64_ATT:
-					fprintf(f, "\tcmpq   %%%s,%%%s\n", stp_reg, stn_reg);
-					fprintf(f, "\tje     .finish\n");
-					fprintf(f, "\tmovzbl (%%%s), %%%s\n", stp_reg, chr_reg);
-					fprintf(f, "\taddq   $1, %%%s\n", stp_reg);
+					fprintf(f, "\tcmpq    %%%s,%%%s\n", stp_reg, stn_reg);
+					fprintf(f, "\tje      .finish\n");
+					fprintf(f, "\tmovzbl  (%%%s), %%%s\n", stp_reg, chr_reg);
+					fprintf(f, "\taddq    $1, %%%s\n", stp_reg);
 					break;
 
 				case AMD64_NASM:
-					fprintf(f, "\tCMP %s,%s\n", stp_reg, stn_reg);
-					fprintf(f, "\tJE  .finish\n");
+					fprintf(f, "\tCMP   %s, %s\n", stp_reg, stn_reg);
+					fprintf(f, "\tJE    .finish\n");
 					fprintf(f, "\tMOVZX %s, BYTE [%s]\n", chr_reg, stp_reg);
-					fprintf(f, "\tADD %s, 1\n", stp_reg);
+					fprintf(f, "\tADD   %s, 1\n", stp_reg);
 					break;
 				}
 			}
@@ -224,11 +224,11 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 				if (op->cmp != VM_CMP_ALWAYS) {
 					switch (dialect) {
 					case AMD64_ATT:
-						fprintf(f, "\tcmpl   $0x%02x, %%%s\n", (unsigned)op->cmp_arg, chr_reg);
+						fprintf(f, "\tcmpl    $0x%02x, %%%s\n", (unsigned)op->cmp_arg, chr_reg);
 						break;
 
 					case AMD64_NASM:
-						fprintf(f, "\tCMP %s, %02xh\n", chr_reg, (unsigned)op->cmp_arg);
+						fprintf(f, "\tCMP   %s, %02xh\n", chr_reg, (unsigned)op->cmp_arg);
 						break;
 					}
 				}
@@ -236,13 +236,13 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 				snprintf(jlbl, sizeof jlbl, ".state_%u", op->u.br.dest_state);
 
 				switch (op->cmp) {
-					case VM_CMP_ALWAYS: jmp_op = (dialect == AMD64_ATT) ? "jmp" : "JMP"; break;
-					case VM_CMP_LT:     jmp_op = (dialect == AMD64_ATT) ? "jb"  : "JB";  break;
-					case VM_CMP_LE:     jmp_op = (dialect == AMD64_ATT) ? "jbe" : "JBE"; break;
-					case VM_CMP_GE:     jmp_op = (dialect == AMD64_ATT) ? "jae" : "JAE"; break;
-					case VM_CMP_GT:     jmp_op = (dialect == AMD64_ATT) ? "ja"  : "JA";  break;
-					case VM_CMP_EQ:     jmp_op = (dialect == AMD64_ATT) ? "je"  : "JE";  break;
-					case VM_CMP_NE:     jmp_op = (dialect == AMD64_ATT) ? "jne" : "JNE"; break;
+				case VM_CMP_ALWAYS: jmp_op = (dialect == AMD64_ATT) ? "jmp    " : "JMP  "; break;
+				case VM_CMP_LT:     jmp_op = (dialect == AMD64_ATT) ? "jb     " : "JB   "; break;
+				case VM_CMP_LE:     jmp_op = (dialect == AMD64_ATT) ? "jbe    " : "JBE  "; break;
+				case VM_CMP_GE:     jmp_op = (dialect == AMD64_ATT) ? "jae    " : "JAE  "; break;
+				case VM_CMP_GT:     jmp_op = (dialect == AMD64_ATT) ? "ja     " : "JA   "; break;
+				case VM_CMP_EQ:     jmp_op = (dialect == AMD64_ATT) ? "je     " : "JE   "; break;
+				case VM_CMP_NE:     jmp_op = (dialect == AMD64_ATT) ? "jne    " : "JNE  "; break;
 				}
 
 				fprintf(f, "\t%-3s %s\n", jmp_op, jlbl);
