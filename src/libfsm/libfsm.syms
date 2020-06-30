@@ -36,6 +36,8 @@ fsm_print_irjson
 fsm_print_json
 fsm_print_vmc
 fsm_print_vmasm
+fsm_print_vmasm_amd64_att
+fsm_print_vmasm_amd64_nasm
 fsm_print_sh
 fsm_print_go
 

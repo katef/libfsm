@@ -112,7 +112,11 @@ print_name(const char *name,
 		{ "irjson", fsm_print_irjson, NULL  },
 		{ "json",   fsm_print_json,   NULL  },
 		{ "vmc",    fsm_print_vmc,    NULL  },
-		{ "asm",    fsm_print_vmasm,    NULL  },
+
+		{ "amd64",      fsm_print_vmasm,            NULL },
+		{ "amd64_att",  fsm_print_vmasm_amd64_att,  NULL },
+		{ "amd64_nasm", fsm_print_vmasm_amd64_nasm, NULL },
+
 		{ "sh",     fsm_print_sh,     NULL  },
 		{ "go",     fsm_print_go,     NULL  },
 
