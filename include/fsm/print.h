@@ -42,6 +42,7 @@ fsm_print fsm_print_ir;
 fsm_print fsm_print_irjson;
 fsm_print fsm_print_json;
 fsm_print fsm_print_vmc;
+fsm_print fsm_print_vmasm;
 fsm_print fsm_print_sh;
 fsm_print fsm_print_go;
 
