@@ -30,6 +30,7 @@
 enum asm_dialect {
 	AMD64_ATT,
 	AMD64_NASM,
+	AMD64_GO,
 };
 
 /* What I want:
@@ -44,7 +45,7 @@ enum asm_dialect {
  *
  */
 static int
-print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct dfavm_assembler_ir *a, enum asm_dialect dialect)
+print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct fsm_options *opt, const struct dfavm_assembler_ir *a, enum asm_dialect dialect)
 {
 	// const char *sst_reg = NULL;      // state struct: not currently used
 	const char *stp_reg = "rdi";  // string pointer
@@ -53,21 +54,31 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 
 	const char *ret_reg = "eax";
 
+	const char *label_dot = ".";
+
 	const struct ir_state *curr_st = NULL;
 	const struct dfavm_op_ir *op;
 
-	char comment;
+	char *comment;
 
 	assert(f != NULL);
 	assert(funcname != NULL);
 	assert(ir != NULL);
+	assert(opt != NULL);
 	assert(a != NULL);
 
 	assert(ir->n > 0);
 
 	switch (dialect) {
-	case AMD64_ATT:  comment = '#'; break;
-	case AMD64_NASM: comment = ';'; break;
+	case AMD64_ATT:  comment = "#"; break;
+	case AMD64_NASM: comment = ";"; break;
+	case AMD64_GO:  comment = "//";
+			stp_reg = "DI";
+			stn_reg = "SI";
+			chr_reg = "DX";
+			ret_reg = "AX";
+			label_dot = "";
+			break;
 	default:
 		assert(!"should not be reachable");
 	}
@@ -85,6 +96,30 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 		fprintf(f, "global _%s\n", funcname);
 		fprintf(f, "_%s:\n", funcname);
 		break;
+
+	case AMD64_GO:
+		/* need to determine if we're doing []byte or str */
+		fprintf(f, "#include \"textflag.h\"\n");
+		fprintf(f, "\n");
+		switch (opt->io) {
+		case FSM_IO_STR:
+			fprintf(f, "// func Match(data string) int\n");
+			fprintf(f, "TEXT    ·Match(SB), NOSPLIT, $0-24\n");
+			break;
+		case FSM_IO_PAIR:
+			fprintf(f, "// func Match(data []byte) int\n");
+			fprintf(f, "TEXT    ·Match(SB), NOSPLIT, $0-32\n");
+			break;
+
+		default:
+			assert(! "unreached");
+
+		}
+
+		/* Go calling convention has everything on the stack */
+		fprintf(f, "\tMOVQ data_base+0(FP), DI\n");
+		fprintf(f, "\tMOVQ data_len+8(FP), SI\n");
+
 	}
 
 	/* XXX: add trampoline into previous state
@@ -102,15 +137,19 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 		/* stn_reg += stp_reg <-- stn_reg should hold the end pointer */
 		fprintf(f, "\tADD   %s, %s\n\n", stn_reg, stp_reg);
 		break;
+
+	case AMD64_GO:
+		/* stn_reg += stp_reg <-- stn_reg should hold the end pointer */
+		fprintf(f, "\tADDQ   %s, %s\n\n", stp_reg, stn_reg);
 	}
 
 	for (op = a->linked; op != NULL; op = op->next) {
 		if (curr_st != op->ir_state) {
 			unsigned state = op->ir_state - ir->states;
 			if (op->num_incoming > 0) {
-				fprintf(f, ".state_%u:\n", state);
+				fprintf(f, "%sstate_%u:\n", label_dot, state);
 			} else {
-				fprintf(f, "%c state %u\n", comment, state);
+				fprintf(f, "%s state %u\n", comment, state);
 			}
 
 			curr_st = op->ir_state;
@@ -130,6 +169,10 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 					case AMD64_NASM:
 						fprintf(f, "\tMOV   %s, %02xh\n", ret_reg, end_st);
 						break;
+					case AMD64_GO:
+						fprintf(f, "\tMOVQ   $%02x, %s\n", end_st, ret_reg);
+						break;
+
 					}
 				} else {
 					switch (dialect) {
@@ -139,11 +182,14 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 					case AMD64_NASM:
 						fprintf(f, "\tMOV   %s, -1\n", ret_reg);
 						break;
+					case AMD64_GO:
+						fprintf(f, "\tMOVQ    $-1, %s\n", ret_reg);
+						break;
 					}
 				}
 
 				if (op->cmp == VM_CMP_ALWAYS && op->next == NULL) {
-					fprintf(f, "\t%c elided jmp to .finish\n", comment);
+					fprintf(f, "\t%s elided jmp to %sfinish\n", comment, label_dot);
 				} else {
 					if (op->cmp != VM_CMP_ALWAYS) {
 						switch (dialect) {
@@ -152,6 +198,9 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 							break;
 						case AMD64_NASM:
 							fprintf(f, "\tCMP   %s,%02xh\n", chr_reg, (unsigned)op->cmp_arg);
+							break;
+						case AMD64_GO:
+							fprintf(f, "\tCMPL   %s, $0x%02x\n", chr_reg, (unsigned)op->cmp_arg);
 							break;
 						}
 					}
@@ -166,7 +215,7 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 					case VM_CMP_NE:     jmp_op = (dialect == AMD64_ATT) ? "jne    " : "JNE  "; break;
 					}
 
-					fprintf(f, "\t%-3s .finish\n", jmp_op);
+					fprintf(f, "\t%-3s %sfinish\n", jmp_op, label_dot);
 				}
 			}
 			break;
@@ -184,6 +233,11 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 					case AMD64_NASM:
 						fprintf(f, "\tMOV   %s, %02xh\n", ret_reg, end_st);
 						break;
+
+					case AMD64_GO:
+						fprintf(f, "\tMOVL   $0x%02x, %s\n", end_st, ret_reg);
+						break;
+
 					}
 				} else {
 
@@ -194,6 +248,10 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 
 					case AMD64_NASM:
 						fprintf(f, "\tMOV   %s, -1\n", ret_reg);
+						break;
+
+					case AMD64_GO:
+						fprintf(f, "\tMOVQ  $-1, %s\n", ret_reg);
 						break;
 					}
 				}
@@ -213,6 +271,14 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 					fprintf(f, "\tMOVZX %s, BYTE [%s]\n", chr_reg, stp_reg);
 					fprintf(f, "\tADD   %s, 1\n", stp_reg);
 					break;
+
+				case AMD64_GO:
+					fprintf(f, "\tCMPQ    %s,%s\n", stp_reg, stn_reg);
+					fprintf(f, "\tJE      finish\n");
+					fprintf(f, "\tMOVBLZX (%s), %s\n", stp_reg, chr_reg);
+					fprintf(f, "\tADDQ    $1, %s\n", stp_reg);
+					break;
+
 				}
 			}
 			break;
@@ -232,10 +298,14 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 					case AMD64_NASM:
 						fprintf(f, "\tCMP   %s, %02xh\n", chr_reg, (unsigned)op->cmp_arg);
 						break;
+
+					case AMD64_GO:
+						fprintf(f, "\tCMPL    %s, $0x%02x\n", chr_reg, (unsigned)op->cmp_arg);
+						break;
 					}
 				}
 
-				snprintf(jlbl, sizeof jlbl, ".state_%u", dest_state);
+				snprintf(jlbl, sizeof jlbl, "%sstate_%u", label_dot, dest_state);
 
 				switch (op->cmp) {
 				case VM_CMP_ALWAYS: jmp_op = (dialect == AMD64_ATT) ? "jmp    " : "JMP  "; break;
@@ -259,13 +329,29 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 		fprintf(f, "\n");
 	}
 
-	fprintf(f, ".finish:\n");
+	fprintf(f, "%sfinish:\n", label_dot);
+
+
 	switch (dialect) {
 	case AMD64_ATT:
 		fprintf(f, "\tret\n");
 		break;
 
 	case AMD64_NASM:
+		fprintf(f, "\tRET\n");
+		break;
+
+	case AMD64_GO:
+		switch (opt->io) {
+		case FSM_IO_STR:
+			fprintf(f, "\tMOVQ    %s, ret+16(FP)\n", ret_reg);
+			break;
+		case FSM_IO_PAIR:
+			fprintf(f, "\tMOVQ    %s, ret+24(FP)\n", ret_reg);
+			break;
+		default: assert(! "unreached");
+		}
+
 		fprintf(f, "\tRET\n");
 		break;
 	}
@@ -312,9 +398,13 @@ print_vmasm_encoding(FILE *f, const struct fsm *fsm, enum asm_dialect dialect)
 		prefix = "fsm_";
 	}
 
-	snprintf(funcname, sizeof funcname, "%smatch", prefix);
+	if (dialect == AMD64_GO) {
+		snprintf(funcname, sizeof funcname, "Match");
+	} else {
+		snprintf(funcname, sizeof funcname, "%smatch", prefix);
+	}
 
-	print_asm_amd64(f, funcname, ir, &a, dialect);
+	print_asm_amd64(f, funcname, ir, fsm->opt, &a, dialect);
 
 	dfavm_opasm_finalize_op(&a);
 	free_ir(fsm, ir);
@@ -340,3 +430,8 @@ fsm_print_vmasm_amd64_nasm(FILE *f, const struct fsm *fsm)
 	print_vmasm_encoding(f, fsm, AMD64_NASM);
 }
 
+void
+fsm_print_vmasm_amd64_go(FILE *f, const struct fsm *fsm)
+{
+	print_vmasm_encoding(f, fsm, AMD64_GO);
+}
