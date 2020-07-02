@@ -106,10 +106,11 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 
 	for (op = a->linked; op != NULL; op = op->next) {
 		if (curr_st != op->ir_state) {
+			unsigned state = op->ir_state - ir->states;
 			if (op->num_incoming > 0) {
-				fprintf(f, ".state_%u:\n", op->u.fetch.state);
+				fprintf(f, ".state_%u:\n", state);
 			} else {
-				fprintf(f, "%c state %u\n", comment, op->u.fetch.state);
+				fprintf(f, "%c state %u\n", comment, state);
 			}
 
 			curr_st = op->ir_state;
@@ -220,6 +221,7 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 			{
 				const char *jmp_op;
 				char jlbl[64];
+				unsigned dest_state = op->u.br.dest_arg->ir_state - ir->states;
 
 				if (op->cmp != VM_CMP_ALWAYS) {
 					switch (dialect) {
@@ -233,7 +235,7 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 					}
 				}
 
-				snprintf(jlbl, sizeof jlbl, ".state_%u", op->u.br.dest_state);
+				snprintf(jlbl, sizeof jlbl, ".state_%u", dest_state);
 
 				switch (op->cmp) {
 				case VM_CMP_ALWAYS: jmp_op = (dialect == AMD64_ATT) ? "jmp    " : "JMP  "; break;
