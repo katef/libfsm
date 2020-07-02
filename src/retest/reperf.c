@@ -106,6 +106,7 @@ enum match_type {
 enum implementation {
 	IMPL_C,
 	IMPL_VMC,
+	IMPL_VMASM,
 	IMPL_INTERPRET
 };
 
@@ -508,6 +509,8 @@ read_file(const char *path, struct str *contents)
 static enum error_type
 perf_case_run(struct perf_case *c, double *delta)
 {
+	static fsm_print *asm_print = fsm_print_vmasm_amd64_att;
+
 	struct fsm *fsm;
 	struct str contents;
 	struct timespec t0, t1;
@@ -517,9 +520,11 @@ perf_case_run(struct perf_case *c, double *delta)
 	struct fsm_dfavm *vm;
 	void *h;
 	int (*fsm_main)(const char *, const char *);
+	int (*fsm_match)(const unsigned char *, size_t);
 
 	fsm = NULL;
 	vm  = NULL;
+	h   = NULL;
 	contents = str_empty();
 
 	/* XXX - fix this */
@@ -560,12 +565,14 @@ perf_case_run(struct perf_case *c, double *delta)
 
 	switch (c->impl) {
 	case IMPL_C:
+	case IMPL_VMASM:
 	case IMPL_VMC: {
 		char tmp_c[]  = "/tmp/reperf-XXXXXX";
+		char tmp_o[]  = "/tmp/reperf-XXXXXX.o";
 		char tmp_so[] = "/tmp/reperf-XXXXXX";
-		char cmd[sizeof tmp_c + sizeof tmp_so + 256];
-		const char *cc, *cflags;
-		int fd_c, fd_so;
+		char cmd[sizeof tmp_c + sizeof tmp_o + sizeof tmp_so + 256];
+		const char *cc, *cflags, *as, *asflags;
+		int fd_c, fd_so, fd_o;
 		FILE *f;
 
 		/*
@@ -577,6 +584,7 @@ perf_case_run(struct perf_case *c, double *delta)
 
 		fd_c  = mkstemp(tmp_c);
 		fd_so = mkstemp(tmp_so);
+		fd_o  = -1;
 
 		f = fdopen(fd_c, "w");
 		if (f == NULL) {
@@ -584,7 +592,19 @@ perf_case_run(struct perf_case *c, double *delta)
 			return ERROR_FILE_IO;
 		}
 
-		(c->impl == IMPL_C ? fsm_print_c : fsm_print_vmc)(f, fsm);
+		switch (c->impl) {
+		case IMPL_C:     fsm_print_c(f, fsm);   break;
+		case IMPL_VMC:   fsm_print_vmc(f, fsm); break;
+		case IMPL_VMASM:
+			 {
+			 	asm_print(f,fsm);
+			 }
+			 break;
+
+		case IMPL_INTERPRET:
+			assert(!"should not reach!");
+			break;
+		}
 
 		if (EOF == fflush(f)) {
 			perror(tmp_c);
@@ -594,9 +614,46 @@ perf_case_run(struct perf_case *c, double *delta)
 		cc     = getenv("CC");
 		cflags = getenv("CFLAGS");
 
-		(void) snprintf(cmd, sizeof cmd, "%s %s -xc -shared -fPIC %s -o %s",
-			cc ? cc : "gcc", cflags ? cflags : "-std=c89 -pedantic -Wall -O3",
-			tmp_c, tmp_so);
+		switch (c->impl) {
+		case IMPL_C:
+		case IMPL_VMC:
+
+			(void) snprintf(cmd, sizeof cmd, "%s %s -xc -shared -fPIC %s -o %s",
+				cc ? cc : "gcc", cflags ? cflags : "-std=c89 -pedantic -Wall -O3",
+				tmp_c, tmp_so);
+
+			if (0 != system(cmd)) {
+				perror(cmd);
+				return ERROR_FILE_IO;
+			}
+
+			break;
+
+		case IMPL_VMASM:
+			as      = getenv("AS");
+			asflags = getenv("ASFLAGS");
+
+			fd_o = mkstemps(tmp_o, 2);
+
+			(void) snprintf(cmd, sizeof cmd, "%s %s -o %s %s",
+				as ? as : "as", asflags ? asflags : "", tmp_c, tmp_o);
+
+			if (0 != system(cmd)) {
+				perror(cmd);
+				return ERROR_FILE_IO;
+			}
+
+			(void) snprintf(cmd, sizeof cmd, "%s %s -shared %s -o %s",
+				cc ? cc : "gcc", cflags ? cflags : "",
+				tmp_o, tmp_so);
+
+			break;
+
+		case IMPL_INTERPRET:
+			assert(!"should not reach!");
+			break;
+		}
+
 		if (0 != system(cmd)) {
 			perror(cmd);
 			return ERROR_FILE_IO;
@@ -612,6 +669,13 @@ perf_case_run(struct perf_case *c, double *delta)
 			return ERROR_FILE_IO;
 		}
 
+		if (fd_o != -1) {
+			if (-1 == unlinkat(-1, tmp_o, 0)) {
+				perror(tmp_so);
+				return ERROR_FILE_IO;
+			}
+		}
+
 		h = dlopen(tmp_so, RTLD_NOW);
 		if (h == NULL) {
 			fprintf(stderr, "%s: %s", tmp_so, dlerror());
@@ -623,8 +687,22 @@ perf_case_run(struct perf_case *c, double *delta)
 			return ERROR_FILE_IO;
 		}
 
-		fsm_main = (int (*)(const char *, const char *)) (uintptr_t) dlsym(h, "fsm_main");
-		break;
+		fsm_main = NULL;
+		fsm_match = NULL;
+
+		switch (c->impl) {
+		case IMPL_C:
+		case IMPL_VMC:
+			fsm_main = (int (*)(const char *, const char *)) (uintptr_t) dlsym(h, "fsm_main");
+			break;
+
+		case IMPL_VMASM:
+			fsm_match = (int (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "fsm_match");
+			break;
+
+		case IMPL_INTERPRET:
+			break;
+		}
 	}
 
 	case IMPL_INTERPRET:
@@ -665,10 +743,17 @@ perf_case_run(struct perf_case *c, double *delta)
 		switch (c->impl) {
 		case IMPL_C:
 		case IMPL_VMC:
+			assert(fsm_main != NULL);
 			r = fsm_main(contents.data, contents.data + contents.len);
 			break;
 
+		case IMPL_VMASM:
+			assert(fsm_match != NULL);
+			r = fsm_match((const unsigned char *)contents.data, contents.len);
+			break;
+
 		case IMPL_INTERPRET:
+			assert(vm != NULL);
 			r = fsm_vm_match_buffer(vm, contents.data, contents.len);
 			break;
 		}
@@ -696,6 +781,8 @@ perf_case_run(struct perf_case *c, double *delta)
 	switch (c->impl) {
 	case IMPL_C:
 	case IMPL_VMC:
+	case IMPL_VMASM:
+		assert(h != NULL);
 		dlclose(h);
 		break;
 
@@ -802,6 +889,7 @@ usage(void)
 	fprintf(stderr, "        -l <implementation>\n");
 	fprintf(stderr, "             sets implementation type:\n");
 	fprintf(stderr, "                 vm        interpret vm instructions (default)\n");
+	fprintf(stderr, "                 asm       generate assembly and assemble\n");
 	fprintf(stderr, "                 c         compile as per fsm_print_c()\n");
 	fprintf(stderr, "                 vmc       compile as per fsm_print_vmc()\n");
 
@@ -885,8 +973,10 @@ main(int argc, char *argv[])
 					impl = IMPL_INTERPRET;
 				} else if (strcmp(optarg, "c")) {
 					impl = IMPL_C;
+				} else if (strcmp(optarg, "asm")) {
+					impl = IMPL_VMASM;
 				} else if (strcmp(optarg, "vmc")) {
-					impl = IMPL_C;
+					impl = IMPL_VMC;
 				} else {
 					fprintf(stderr, "unknown argument to -l: %s\n", optarg);
 					usage();
