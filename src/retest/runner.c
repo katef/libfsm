@@ -227,11 +227,11 @@ fsm_runner_run(const struct fsm_runner *r, const char *s, size_t n)
 	case IMPL_C:
 	case IMPL_VMC:
 		assert(r->u.impl_c.func != NULL);
-		return r->u.impl_c.func(s, s+n);
+		return r->u.impl_c.func(s, s+n) >= 0;
 
 	case IMPL_VMASM:
 		assert(r->u.impl_asm.func != NULL);
-		return r->u.impl_asm.func((const unsigned char *)s, n);
+		return r->u.impl_asm.func((const unsigned char *)s, n) >= 0;
 
 	case IMPL_INTERPRET:
 		assert(r->u.impl_vm.vm != NULL);
