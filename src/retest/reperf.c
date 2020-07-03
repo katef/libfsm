@@ -778,11 +778,11 @@ main(int argc, char *argv[])
 			case 'l':
 				if (strcmp(optarg, "vm") == 0) {
 					impl = IMPL_INTERPRET;
-				} else if (strcmp(optarg, "c")) {
+				} else if (strcmp(optarg, "c") == 0) {
 					impl = IMPL_C;
-				} else if (strcmp(optarg, "asm")) {
+				} else if (strcmp(optarg, "asm") == 0) {
 					impl = IMPL_VMASM;
-				} else if (strcmp(optarg, "vmc")) {
+				} else if (strcmp(optarg, "vmc") == 0) {
 					impl = IMPL_VMC;
 				} else {
 					fprintf(stderr, "unknown argument to -l: %s\n", optarg);
