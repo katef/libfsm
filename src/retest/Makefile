@@ -17,13 +17,14 @@ DFLAGS.${src} += -std=c99
 
 .if ${SYSTEM} == Linux
 LFLAGS.reperf += -ldl
+LFLAGS.retest += -ldl
 .endif
 
 PROG += retest
 PROG += reperf
 PROG += cvtpcre
 
-.for prg in ${PROG}
+.for prg in ${PROG:Mretest} ${PROG:Mreperf}
 ${BUILD}/bin/${prg}: ${BUILD}/src/retest/runner.o
 .endfor
 
