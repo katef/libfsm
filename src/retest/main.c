@@ -10,6 +10,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -29,6 +30,7 @@
 #include "libre/class.h" /* XXX */
 #include "libre/ast.h" /* XXX */
 
+#include "runner.h"
 
 #define DEBUG_ESCAPES     0
 #define DEBUG_VM_FSM      0
@@ -65,6 +67,14 @@ usage(void)
 	fprintf(stderr, "             logs intermediate representations:\n");
 	fprintf(stderr, "                 ir        logs IR (after optimizations)\n");
 	fprintf(stderr, "                 enc       logs VM encoding instructions\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "        -l <implementation>\n");
+	fprintf(stderr, "             sets implementation type:\n");
+	fprintf(stderr, "                 vm        interpret vm instructions (default)\n");
+	fprintf(stderr, "                 asm       generate assembly and assemble\n");
+	fprintf(stderr, "                 c         compile as per fsm_print_c()\n");
+	fprintf(stderr, "                 vmc       compile as per fsm_print_vmc()\n");
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -x <encoding>\n");
@@ -300,17 +310,6 @@ hexdigit:
 	return PARSE_OK;
 }
 
-enum error_type {
-	ERROR_NONE = 0          ,
-	ERROR_BAD_RECORD_TYPE   ,
-	ERROR_ESCAPE_SEQUENCE   ,
-	ERROR_PARSING_REGEXP    ,
-	ERROR_DETERMINISING     ,
-	ERROR_COMPILING_BYTECODE,
-	ERROR_SHOULD_MATCH      ,
-	ERROR_SHOULD_NOT_MATCH
-};
-
 struct single_error_record {
 	char *filename;
 	char *regexp;
@@ -481,8 +480,10 @@ error_record_finalize(struct error_record *erec)
  *     c. '#' lines are comments
  */
 static int
-process_test_file(const char *fname, enum re_dialect dialect, int max_errors, struct error_record *erec)
+process_test_file(const char *fname, enum re_dialect dialect, enum implementation impl, int max_errors, struct error_record *erec)
 {
+	static const struct fsm_runner init_runner;
+
 	char buf[4096];
 	char cpy[sizeof buf];
 	char *s;
@@ -492,10 +493,12 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors, st
 	int linenum;
 
 	char *regexp;
-	struct fsm_dfavm *vm;
+
+	enum error_type ret;
+	bool impl_ready = false;
+	struct fsm_runner runner = init_runner;
 
 	regexp = NULL;
-	vm     = NULL;
 
 	/* XXX - fix this */
 	opt.comments = 0;
@@ -522,8 +525,11 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors, st
 			free(regexp);
 			regexp = NULL;
 
-			fsm_vm_free(vm);
-			vm = NULL;
+			if (impl_ready) {
+				fsm_runner_finalize(&runner);
+				runner     = init_runner;
+				impl_ready = false;
+			}
 
 			continue;
 		}
@@ -540,8 +546,8 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors, st
 			enum re_flags flags;
 			char *re_str;
 
-			assert(vm == NULL);
-			assert(s  != NULL);
+			assert(impl_ready == false);
+			assert(s          != NULL);
 
 			regexp = xmalloc(len+1);
 			memcpy(regexp, s, len+1);
@@ -600,13 +606,13 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors, st
 #if DEBUG_TEST_REGEXP
 			fprintf(stderr, "REGEXP matching for /%s/\n", regexp);
 #endif /* DEBUG_TEST_REGEXP */
-			vm = fsm_vm_compile_with_options(fsm, vm_opts);
-			if (vm == NULL) {
+
+			ret = fsm_runner_initialize(fsm, &runner, impl, vm_opts);
+			if (ret != ERROR_NONE) {
 				fprintf(stderr, "line %d: error compiling /%s/: %s\n", linenum, regexp, strerror(errno));
 
 				/* ignore errors */
-				error_record_add(erec,
-					ERROR_COMPILING_BYTECODE, fname, regexp, NULL, linenum);
+				error_record_add(erec, ret, fname, regexp, NULL, linenum);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
@@ -615,8 +621,10 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors, st
 				continue;
 			}
 
+			impl_ready = true;
+
 			fsm_free(fsm);
-		} else if (vm != NULL) {
+		} else if (impl_ready) {
 			int matching;
 			char *orig;
 			char *test;
@@ -655,7 +663,7 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors, st
 				continue;
 			}
 
-			ret = fsm_vm_match_buffer(vm, test, tlen);
+			ret = fsm_runner_run(&runner, test, tlen);
 			if (!!ret == !!matching) {
 				printf("[OK    ] line %d: regexp /%s/ %s \"%s\"\n",
 					linenum, regexp, matching ? "matched" : "did not match", orig);
@@ -685,9 +693,9 @@ process_test_file(const char *fname, enum re_dialect dialect, int max_errors, st
 
 	free(regexp);
 
-	if (vm) {
-		fsm_vm_free(vm);
-		vm = NULL;
+	if (impl_ready) {
+		fsm_runner_finalize(&runner);
+		impl_ready = false;
 	}
 
 	fclose(f);
@@ -714,6 +722,7 @@ int
 main(int argc, char *argv[])
 {
 	enum re_dialect dialect;
+	enum implementation impl;
 	int max_test_errors;
 
 	int optlevel = 1;
@@ -723,16 +732,17 @@ main(int argc, char *argv[])
 	opt.consolidate_edges = 1;
 
 	opt.comments          = 1;
-	opt.io                = FSM_IO_GETC;
+	opt.io                = FSM_IO_PAIR;
 
 	dialect   = RE_PCRE;
+	impl      = IMPL_INTERPRET;
 
 	max_test_errors = 0;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "O:L:x:" "e:E:" "r:" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:l:x:" "e:E:" "r:" ), c != -1) {
 			switch (c) {
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
@@ -745,6 +755,22 @@ main(int argc, char *argv[])
 					vm_opts.flags |= FSM_VM_COMPILE_PRINT_ENC;
 				} else {
 					fprintf(stderr, "unknown argument to -L: %s\n", optarg);
+					usage();
+					exit(1);
+				}
+				break;
+
+			case 'l':
+				if (strcmp(optarg, "vm") == 0) {
+					impl = IMPL_INTERPRET;
+				} else if (strcmp(optarg, "c") == 0) {
+					impl = IMPL_C;
+				} else if (strcmp(optarg, "asm") == 0) {
+					impl = IMPL_VMASM;
+				} else if (strcmp(optarg, "vmc") == 0) {
+					impl = IMPL_VMC;
+				} else {
+					fprintf(stderr, "unknown argument to -l: %s\n", optarg);
 					usage();
 					exit(1);
 				}
@@ -815,7 +841,7 @@ main(int argc, char *argv[])
 		for (i = 0; i < argc; i++) {
 			int succ;
 
-			succ = process_test_file(argv[i], dialect, max_test_errors, &erec);
+			succ = process_test_file(argv[i], dialect, impl, max_test_errors, &erec);
 
 			if (!succ) {
 				r |= 1;
