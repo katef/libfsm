@@ -112,15 +112,15 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 {
 	switch (opt->io) {
 	case FSM_IO_GETC:
-		fprintf(f, "if (c = fsm_getc(opaque), c == EOF) ");
+		fprintf(f, "if (c = (unsigned char)fsm_getc(opaque), c == EOF) ");
 		break;
 
 	case FSM_IO_STR:
-		fprintf(f, "if (c = *p++, c == '\\0') ");
+		fprintf(f, "if (c = (unsigned char)*p++, c == '\\0') ");
 		break;
 
 	case FSM_IO_PAIR:
-		fprintf(f, "if (c = *p++, p == e) ");
+		fprintf(f, "if (end = (p == e), c = end ? 0 : (unsigned char)*p++, end) ");
 		break;
 	}
 }
@@ -278,7 +278,7 @@ fsm_print_vmc(FILE *f, const struct fsm *fsm)
 		fprintf(f, "(const char *b, const char *e)\n");
 		fprintf(f, "{\n");
 		fprintf(f, "\tconst char *p;\n");
-		fprintf(f, "\tint c;\n");
+		fprintf(f, "\tint c, end;\n");
 		fprintf(f, "\n");
 		fprintf(f, "\tp = b;\n");
 		fprintf(f, "\n");
