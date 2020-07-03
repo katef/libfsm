@@ -41,11 +41,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	switch (impl) {
 	case IMPL_C:     fsm_print_c(f, fsm);   break;
 	case IMPL_VMC:   fsm_print_vmc(f, fsm); break;
-	case IMPL_VMASM:
-			 {
-				 asm_print(f,fsm);
-			 }
-			 break;
+	case IMPL_VMASM: asm_print(f,fsm);      break;
 
 	case IMPL_INTERPRET:
 			 assert(!"should not reach!");
