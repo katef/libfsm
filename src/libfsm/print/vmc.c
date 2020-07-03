@@ -112,15 +112,19 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 {
 	switch (opt->io) {
 	case FSM_IO_GETC:
-		fprintf(f, "if (c = fsm_getc(opaque), c == EOF) ");
+		fprintf(f, "if (c = (unsigned char)fsm_getc(opaque), c == EOF) ");
 		break;
 
 	case FSM_IO_STR:
-		fprintf(f, "if (c = *p++, c == '\\0') ");
+		fprintf(f, "if (c = (unsigned char)*p++, c == '\\0') ");
 		break;
 
 	case FSM_IO_PAIR:
-		fprintf(f, "if (c = *p++, p == e) ");
+		/* This is split into two parts.  The first part checks if we're
+		 * at the end of the buffer.  The second part, in
+		 * fsm_print_cfrag, fetches the byte
+		 */
+		fprintf(f, "if (p == e) ");
 		break;
 	}
 }
@@ -191,6 +195,10 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		case VM_OP_FETCH:
 			print_fetch(f, opt);
 			print_end(f, op, opt, op->u.fetch.end_bits, ir);
+			if (opt->io == FSM_IO_PAIR) {
+				/* second part of FSM_IO_PAIR fetch */
+				fprintf(f, "c = (unsigned char) *p++;\n");
+			}
 			break;
 
 		case VM_OP_BRANCH:

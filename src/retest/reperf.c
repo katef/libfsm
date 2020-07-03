@@ -10,7 +10,6 @@
 #endif
 
 #include <unistd.h>
-#include <dlfcn.h>
 
 #include <assert.h>
 #include <errno.h>
@@ -37,6 +36,7 @@
 #include "libre/class.h" /* XXX */
 #include "libre/ast.h" /* XXX */
 
+#include "runner.h"
 
 #define DEBUG_ESCAPES     0
 #define DEBUG_VM_FSM      0
@@ -85,28 +85,9 @@ struct str {
 	size_t cap;
 };
 
-enum error_type {
-	ERROR_NONE = 0          ,
-	/* ERROR_BAD_RECORD_TYPE   , */
-	/* ERROR_ESCAPE_SEQUENCE   , */
-	ERROR_PARSING_REGEXP    ,
-	ERROR_DETERMINISING     ,
-	ERROR_COMPILING_BYTECODE,
-	ERROR_SHOULD_MATCH      ,
-	ERROR_SHOULD_NOT_MATCH  ,
-	ERROR_FILE_IO           ,
-	ERROR_CLOCK_ERROR
-};
-
 enum match_type {
 	MATCH_STRING = 0,
 	MATCH_FILE   = 1
-};
-
-enum implementation {
-	IMPL_C,
-	IMPL_VMC,
-	IMPL_INTERPRET
 };
 
 struct perf_case {
@@ -509,17 +490,12 @@ static enum error_type
 perf_case_run(struct perf_case *c, double *delta)
 {
 	struct fsm *fsm;
+	struct fsm_runner runner;
 	struct str contents;
 	struct timespec t0, t1;
 	enum error_type ret;
 	int iter;
 
-	struct fsm_dfavm *vm;
-	void *h;
-	int (*fsm_main)(const char *, const char *);
-
-	fsm = NULL;
-	vm  = NULL;
 	contents = str_empty();
 
 	/* XXX - fix this */
@@ -547,6 +523,12 @@ perf_case_run(struct perf_case *c, double *delta)
 		return ERROR_DETERMINISING;
 	}
 
+	ret = fsm_runner_initialize(fsm, &runner, c->impl, vm_opts);
+	if (ret != ERROR_NONE) {
+		fsm_free(fsm);
+		return ret;
+	}
+
 #if DEBUG_VM_FSM
 	fprintf(stderr, "FSM:\n");
 	fsm_print_fsm(stderr, fsm);
@@ -558,84 +540,6 @@ perf_case_run(struct perf_case *c, double *delta)
 	}
 #endif /* DEBUG_VM_FSM */
 
-	switch (c->impl) {
-	case IMPL_C:
-	case IMPL_VMC: {
-		char tmp_c[]  = "/tmp/reperf-XXXXXX";
-		char tmp_so[] = "/tmp/reperf-XXXXXX";
-		char cmd[sizeof tmp_c + sizeof tmp_so + 256];
-		const char *cc, *cflags;
-		int fd_c, fd_so;
-		FILE *f;
-
-		/*
-		 * The IO API would depend on c->mt == MATCH_STRING ? FSM_IO_PAIR : FSM_IO_GETC;
-		 * except we read in the entire file below anyway, so we just
-		 * use FSM_IO_PAIR for both. The type of fsm_main depends on the IO API.
-		 */
-		opt.io = FSM_IO_PAIR;
-
-		fd_c  = mkstemp(tmp_c);
-		fd_so = mkstemp(tmp_so);
-
-		f = fdopen(fd_c, "w");
-		if (f == NULL) {
-			perror(tmp_c);
-			return ERROR_FILE_IO;
-		}
-
-		(c->impl == IMPL_C ? fsm_print_c : fsm_print_vmc)(f, fsm);
-
-		if (EOF == fflush(f)) {
-			perror(tmp_c);
-			return ERROR_FILE_IO;
-		}
-
-		cc     = getenv("CC");
-		cflags = getenv("CFLAGS");
-
-		(void) snprintf(cmd, sizeof cmd, "%s %s -xc -shared -fPIC %s -o %s",
-			cc ? cc : "gcc", cflags ? cflags : "-std=c89 -pedantic -Wall -O3",
-			tmp_c, tmp_so);
-		if (0 != system(cmd)) {
-			perror(cmd);
-			return ERROR_FILE_IO;
-		}
-
-		if (EOF == fclose(f)) {
-			perror(tmp_c);
-			return ERROR_FILE_IO;
-		}
-
-		if (-1 == unlinkat(-1, tmp_c, 0)) {
-			perror(tmp_c);
-			return ERROR_FILE_IO;
-		}
-
-		h = dlopen(tmp_so, RTLD_NOW);
-		if (h == NULL) {
-			fprintf(stderr, "%s: %s", tmp_so, dlerror());
-			return ERROR_FILE_IO;
-		}
-
-		if (-1 == unlinkat(-1, tmp_so, 0)) {
-			perror(tmp_so);
-			return ERROR_FILE_IO;
-		}
-
-		fsm_main = (int (*)(const char *, const char *)) (uintptr_t) dlsym(h, "fsm_main");
-		break;
-	}
-
-	case IMPL_INTERPRET:
-		vm = fsm_vm_compile_with_options(fsm, vm_opts);
-		if (vm == NULL) {
-			fsm_free(fsm);
-			return ERROR_COMPILING_BYTECODE;
-		}
-		break;
-	}
-
 	fsm_free(fsm);
 
 	switch (c->mt) {
@@ -646,14 +550,14 @@ perf_case_run(struct perf_case *c, double *delta)
 	case MATCH_FILE:
 		contents = str_empty();
 		if (read_file(c->match.data, &contents) != 0) {
-			fsm_vm_free(vm);
+			fsm_runner_finalize(&runner);
 			str_free(&contents);
 			return ERROR_FILE_IO;
 		}
 	}
 
 	if (clock_gettime(CLOCK_MONOTONIC, &t0) != 0) {
-		fsm_vm_free(vm);
+		fsm_runner_finalize(&runner);
 		return ERROR_CLOCK_ERROR;
 	}
 
@@ -662,16 +566,7 @@ perf_case_run(struct perf_case *c, double *delta)
 	for (iter=0; iter < c->count; iter++) {
 		int r;
 
-		switch (c->impl) {
-		case IMPL_C:
-		case IMPL_VMC:
-			r = fsm_main(contents.data, contents.data + contents.len);
-			break;
-
-		case IMPL_INTERPRET:
-			r = fsm_vm_match_buffer(vm, contents.data, contents.len);
-			break;
-		}
+		r = fsm_runner_run(&runner, contents.data, contents.len);
 
 		/* XXX - at some point, match more than once! */
 		if (!!r != !!c->expected_matches) {
@@ -685,23 +580,16 @@ perf_case_run(struct perf_case *c, double *delta)
 	}
 
 	if (ret != ERROR_NONE) {
+		fsm_runner_finalize(&runner);
 		return ret;
 	}
 
 	if (clock_gettime(CLOCK_MONOTONIC, &t1) != 0) {
-		fsm_vm_free(vm);
+		fsm_runner_finalize(&runner);
 		return ERROR_CLOCK_ERROR;
 	}
 
-	switch (c->impl) {
-	case IMPL_C:
-	case IMPL_VMC:
-		dlclose(h);
-		break;
-
-	case IMPL_INTERPRET:
-		fsm_vm_free(vm);
-	}
+	fsm_runner_finalize(&runner);
 
 	/* report time difference */
 	{
@@ -802,6 +690,7 @@ usage(void)
 	fprintf(stderr, "        -l <implementation>\n");
 	fprintf(stderr, "             sets implementation type:\n");
 	fprintf(stderr, "                 vm        interpret vm instructions (default)\n");
+	fprintf(stderr, "                 asm       generate assembly and assemble\n");
 	fprintf(stderr, "                 c         compile as per fsm_print_c()\n");
 	fprintf(stderr, "                 vmc       compile as per fsm_print_vmc()\n");
 
@@ -854,7 +743,13 @@ main(int argc, char *argv[])
 	opt.consolidate_edges = 1;
 
 	opt.comments          = 1;
-	opt.io                = FSM_IO_GETC;
+
+	/*
+	 * The IO API would depend on c->mt == MATCH_STRING ? FSM_IO_PAIR : FSM_IO_GETC;
+	 * except we read in the entire file below anyway, so we just
+	 * use FSM_IO_PAIR for both. The type of fsm_main depends on the IO API.
+	 */
+	opt.io = FSM_IO_PAIR;
 
 	pause                 = 0;
 	impl                  = IMPL_INTERPRET;
@@ -883,10 +778,12 @@ main(int argc, char *argv[])
 			case 'l':
 				if (strcmp(optarg, "vm") == 0) {
 					impl = IMPL_INTERPRET;
-				} else if (strcmp(optarg, "c")) {
+				} else if (strcmp(optarg, "c") == 0) {
 					impl = IMPL_C;
-				} else if (strcmp(optarg, "vmc")) {
-					impl = IMPL_C;
+				} else if (strcmp(optarg, "asm") == 0) {
+					impl = IMPL_VMASM;
+				} else if (strcmp(optarg, "vmc") == 0) {
+					impl = IMPL_VMC;
 				} else {
 					fprintf(stderr, "unknown argument to -l: %s\n", optarg);
 					usage();

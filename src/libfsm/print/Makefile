@@ -9,10 +9,11 @@ SRC += src/libfsm/print/irdot.c
 SRC += src/libfsm/print/irjson.c
 SRC += src/libfsm/print/json.c
 SRC += src/libfsm/print/vmc.c
+SRC += src/libfsm/print/vmasm.c
 SRC += src/libfsm/print/sh.c
 SRC += src/libfsm/print/go.c
 
-.for src in ${SRC:Msrc/libfsm/print/vmc.c} ${SRC:Msrc/libfsm/print/sh.c} ${SRC:Msrc/libfsm/print/go.c}
+.for src in ${SRC:Msrc/libfsm/print/vmc.c} ${SRC:Msrc/libfsm/print/sh.c} ${SRC:Msrc/libfsm/print/go.c} ${SRC:Msrc/libfsm/print/vmasm.c}
 CFLAGS.${src} += -std=c99 # XXX: for ir.h
 DFLAGS.${src} += -std=c99 # XXX: for ir.h
 .endfor
