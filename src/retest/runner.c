@@ -1,4 +1,4 @@
-#include "runner.h"
+#define _POSIX_C_SOURCE 200809L
 
 #include <stdint.h>
 #include <stdio.h>
@@ -12,6 +12,8 @@
 #include <fsm/fsm.h>
 #include <fsm/options.h>
 #include <fsm/print.h>
+
+#include "runner.h"
 
 static enum error_type
 runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation impl)
