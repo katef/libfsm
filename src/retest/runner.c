@@ -115,6 +115,11 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	}
 
 	if (fd_o != -1) {
+		if (-1 == close(fd_o)) {
+			perror(tmp_o);
+			return ERROR_FILE_IO;
+		}
+
 		if (-1 == unlinkat(-1, tmp_o, 0)) {
 			perror(tmp_so);
 			return ERROR_FILE_IO;
@@ -124,6 +129,11 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	h = dlopen(tmp_so, RTLD_NOW);
 	if (h == NULL) {
 		fprintf(stderr, "%s: %s", tmp_so, dlerror());
+		return ERROR_FILE_IO;
+	}
+
+	if (-1 == close(fd_so)) {
+		perror(tmp_so);
 		return ERROR_FILE_IO;
 	}
 
