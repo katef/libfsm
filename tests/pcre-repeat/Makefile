@@ -1,6 +1,9 @@
 .include "../../share/mk/top.mk"
 
-TEST.tests/pcre-repeat != ls -1 tests/pcre-repeat/out*.fsm tests/pcre-repeat/out*.err
+# no *.err files right now... so this errors if your shell is zsh
+# TEST.tests/pcre-repeat != ls -1 tests/pcre-repeat/out*.fsm tests/pcre-repeat/out*.err
+
+TEST.tests/pcre-repeat != ls -1 tests/pcre-repeat/out*.fsm
 TEST_SRCDIR.tests/pcre-repeat = tests/pcre-repeat
 TEST_OUTDIR.tests/pcre-repeat = ${BUILD}/tests/pcre-repeat
 
