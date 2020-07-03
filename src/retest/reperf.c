@@ -517,6 +517,12 @@ perf_case_run(struct perf_case *c, double *delta)
 		}
 	}
 
+	/* XXX - minimize or determinize? */
+	if (!fsm_determinise(fsm)) {
+		fsm_free(fsm);
+		return ERROR_DETERMINISING;
+	}
+
 	ret = fsm_runner_initialize(fsm, &runner, c->impl, vm_opts);
 	if (ret != ERROR_NONE) {
 		fsm_free(fsm);

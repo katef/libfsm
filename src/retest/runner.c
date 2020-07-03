@@ -168,11 +168,6 @@ fsm_runner_initialize(struct fsm *fsm, struct fsm_runner *r, enum implementation
 	assert(fsm != NULL);
 	assert(r   != NULL);
 
-	/* XXX - minimize or determinize? */
-	if (!fsm_determinise(fsm)) {
-		return ERROR_DETERMINISING;
-	}
-
 	*r = zero;
 
 	switch (impl) {
