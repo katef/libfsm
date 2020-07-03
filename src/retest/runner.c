@@ -81,7 +81,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		fd_o = mkstemp(tmp_o);
 
 		(void) snprintf(cmd, sizeof cmd, "%s %s -o %s %s",
-				as ? as : "as", asflags ? asflags : "", tmp_c, tmp_o);
+				as ? as : "as", asflags ? asflags : "", tmp_o, tmp_c);
 
 		if (0 != system(cmd)) {
 			perror(cmd);
