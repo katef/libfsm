@@ -22,22 +22,22 @@ static const struct {
 	const struct class *class;
 } classes[] = {
 	{ "\\d", &class_digit     },
-	{ "\\h", &class_hspace    },
+	{ "\\h", &class_hspace_pcre },
 	{ "\\s", &class_space     },
-	{ "\\v", &class_vspace    },
+	{ "\\v", &class_vspace_pcre },
 	{ "\\w", &class_word      },
 
 	{ "\\D", &class_notdigit  }, /* [^\d] */
-	{ "\\H", &class_nothspace }, /* [^\h] */
+	{ "\\H", &class_nothspace_pcre }, /* [^\h] */
 	{ "\\S", &class_notspace  }, /* [^\s] */
-	{ "\\V", &class_notvspace }, /* [^\v] */
+	{ "\\V", &class_notvspace_pcre }, /* [^\v] */
 	{ "\\W", &class_notword   }, /* [^\w] */
 	{ "\\N", &class_notnl     }, /* [^\n] */
 
 	{ "[:alnum:]",  &class_alnum  },
 	{ "[:alpha:]",  &class_alpha  },
 	{ "[:ascii:]",  &class_ascii  },
-	{ "[:blank:]",  &class_hspace },
+	{ "[:blank:]",  &class_hspace },  /* space or tab only, not the same as \h */
 	{ "[:cntrl:]",  &class_cntrl  },
 	{ "[:digit:]",  &class_digit  },
 	{ "[:graph:]",  &class_graph  },

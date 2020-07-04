@@ -3,12 +3,12 @@
 #include "class.h"
 
 static const struct range ranges[] = {
-	{ 0x0000UL, 0x0008UL },
-	{ 0x000EUL, 0x001FUL },
-	{ 0x0021UL, 0x00FFUL }
+	{ 0x0009UL, 0x0009UL },
+	{ 0x0020UL, 0x0020UL },
+	{ 0x00A0UL, 0x00A0UL }
 };
 
-const struct class class_notspace = {
+const struct class class_hspace_pcre = {
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

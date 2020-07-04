@@ -60,7 +60,7 @@
 	FLAG_INSENSITIVE: () -> (:re_flags);
 
 	ESC:     () -> (:char, :pos, :pos);
-	!NOESC:  () -> (:char, :pos, :pos);
+	NOESC:  () -> (:char, :pos, :pos);
 	CONTROL: () -> (:char, :pos, :pos);
 	OCT:     () -> (:char, :pos, :pos);
 	HEX:     () -> (:char, :pos, :pos);
@@ -128,6 +128,8 @@
 			{
 				(c, !, !) = ESC;
 			||
+				(c, !, !) = NOESC;
+			||
 				(c, !, !) = OCT;
 			||
 				(c, !, !) = HEX;
@@ -149,6 +151,8 @@
 			class-literal: () -> (node :ast_expr) = {
 				{
 					(c, !, !) = ESC;
+				||
+					(c, !, !) = NOESC;
 				||
 					(c, !, !) = OCT;
 				||
