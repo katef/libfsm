@@ -24,13 +24,13 @@ static const struct {
 	{ "\\d", &class_digit     },
 	{ "\\h", &class_hspace_pcre },
 	{ "\\s", &class_space     },
-	{ "\\v", &class_vspace    },
+	{ "\\v", &class_vspace_pcre },
 	{ "\\w", &class_word      },
 
 	{ "\\D", &class_notdigit  }, /* [^\d] */
 	{ "\\H", &class_nothspace_pcre }, /* [^\h] */
 	{ "\\S", &class_notspace  }, /* [^\s] */
-	{ "\\V", &class_notvspace }, /* [^\v] */
+	{ "\\V", &class_notvspace_pcre }, /* [^\v] */
 	{ "\\W", &class_notword   }, /* [^\w] */
 	{ "\\N", &class_notnl     }, /* [^\n] */
 

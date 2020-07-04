@@ -90,6 +90,7 @@ CLASS_space  = 09 0A 0B 0C 0D 20 # ${CLASS_hspace} ${CLASS_vspace}
 CLASS_spchr  = 20
 CLASS_upper  = A-Z
 CLASS_vspace = 0A 0B 0C 0D
+CLASS_vspace_pcre = 0A 0B 0C 0D 85
 CLASS_word   = ${CLASS_alnum} _
 CLASS_xdigit = A-F a-f 0-9
 
@@ -100,12 +101,13 @@ CLASS_nothspace = 00-08 10-19 21-FF       # [^[:hspace:]]
 CLASS_nothspace_pcre = 00-08 10-19 21-9F A1-FF       # [^[:hspace_pcre:]]
 CLASS_notspace  = 00-08 0E-19 21-FF       # [^[:space:]]
 CLASS_notvspace = 00-09 0E-FF             # [^[:vspace:]]
+CLASS_notvspace_pcre = 00-09 0E-84 86-FF             # [^[:vspace:]]
 CLASS_notword   = 00-2F 3A-40 5B-5E 60-FF # [^[:word:]]
 CLASS_notnl     = 00-09 10-FF             # [^\n]
 
 .for class in alnum alpha any ascii cntrl digit graph hspace hspace_pcre lower \
-	print punct space spchr upper vspace word xdigit \
-	notdigit nothspace nothspace_pcre notspace notvspace notword notnl
+	print punct space spchr upper vspace vspace_pcre word xdigit \
+	notdigit nothspace nothspace_pcre notspace notvspace notvspace_pcre notword notnl
 
 src/libre/class/${class}.c:
 	echo ${CLASS_${class}} \

@@ -213,6 +213,7 @@ extern const struct class class_space;
 extern const struct class class_spchr;
 extern const struct class class_upper;
 extern const struct class class_vspace;
+extern const struct class class_vspace_pcre;
 extern const struct class class_word;
 extern const struct class class_xdigit;
 extern const struct class class_notdigit;
@@ -220,6 +221,7 @@ extern const struct class class_nothspace;
 extern const struct class class_nothspace_pcre;
 extern const struct class class_notspace;
 extern const struct class class_notvspace;
+extern const struct class class_notvspace_pcre;
 extern const struct class class_notword;
 extern const struct class class_notnl;
 

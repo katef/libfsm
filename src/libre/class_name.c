@@ -25,6 +25,7 @@ static struct {
 	{ &class_spchr, "spchr" },
 	{ &class_upper, "upper" },
 	{ &class_vspace, "vspace" },
+	{ &class_vspace_pcre, "vspace_pcre" },
 	{ &class_word, "word" },
 	{ &class_xdigit, "xdigit" },
 	{ &class_notdigit, "notdigit" },
@@ -32,6 +33,7 @@ static struct {
 	{ &class_nothspace_pcre, "nothspace_pcre" },
 	{ &class_notspace, "notspace" },
 	{ &class_notvspace, "notvspace" },
+	{ &class_notvspace_pcre, "notvspace_pcre" },
 	{ &class_notword, "notword" },
 	{ &class_notnl, "notnl" },
 
