@@ -20,7 +20,9 @@ jobs:
         submodules: recursive
 
     - name: dependencies
-      run: sudo apt-get install pmake bmake pcregrep
+      run: |
+        sudo apt-get update
+        sudo apt-get install pmake bmake pcregrep
 
     - name: make
       run: ${{ matrix.make }} -r -j 2 PKGCONF=pkg-config CC=${{ matrix.cc }}
