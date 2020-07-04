@@ -103,7 +103,7 @@ CLASS_notspace  = 00-08 0E-19 21-FF       # [^[:space:]]
 CLASS_notvspace = 00-09 0E-FF             # [^[:vspace:]]
 CLASS_notvspace_pcre = 00-09 0E-84 86-FF             # [^[:vspace:]]
 CLASS_notword   = 00-2F 3A-40 5B-5E 60-FF # [^[:word:]]
-CLASS_notnl     = 00-09 10-FF             # [^\n]
+CLASS_notnl     = 00-09 0B-FF             # [^\n]
 
 .for class in alnum alpha any ascii cntrl digit graph hspace hspace_pcre lower \
 	print punct space spchr upper vspace vspace_pcre word xdigit \
