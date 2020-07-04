@@ -166,6 +166,7 @@ print_name(const char *name)
 		{ "amd64",  fsm_print_vmasm                },
 		{ "amd64_att",  fsm_print_vmasm_amd64_att  },
 		{ "amd64_nasm", fsm_print_vmasm_amd64_nasm },
+		{ "amd64_go", fsm_print_vmasm_amd64_go },
 
 		{ "sh",   fsm_print_sh   },
 		{ "go",   fsm_print_go   }
