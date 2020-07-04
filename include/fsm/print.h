@@ -23,6 +23,7 @@ struct fsm;
  *  fsm_print_irjson - Codegen IR as JSON
  *  fsm_print_json   - JavaScript Object Notation
  *  fsm_print_vmc    - ISO C90 code, VM style
+ *  fsm_print_vmdot  - Graphviz Dot format, showing VM opcodes
  *  fsm_print_sh     - Shell script (bash dialect)
  *  fsm_print_go     - Go code
  *
@@ -42,6 +43,7 @@ fsm_print fsm_print_ir;
 fsm_print fsm_print_irjson;
 fsm_print fsm_print_json;
 fsm_print fsm_print_vmc;
+fsm_print fsm_print_vmdot;
 fsm_print fsm_print_vmasm;
 fsm_print fsm_print_vmasm_amd64_att;  /* output amd64 assembler in AT&T format */
 fsm_print fsm_print_vmasm_amd64_nasm; /* output amd64 assembler in NASM format */

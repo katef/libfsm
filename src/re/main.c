@@ -104,22 +104,22 @@ print_name(const char *name,
 		fsm_print *print_fsm;
 		ast_print *print_ast;
 	} a[] = {
-		{ "api",    fsm_print_api,    NULL  },
-		{ "c",      fsm_print_c,      NULL  },
-		{ "dot",    fsm_print_dot,    NULL  },
-		{ "fsm",    fsm_print_fsm,    NULL  },
-		{ "ir",     fsm_print_ir,     NULL  },
-		{ "irjson", fsm_print_irjson, NULL  },
-		{ "json",   fsm_print_json,   NULL  },
-		{ "vmc",    fsm_print_vmc,    NULL  },
+		{ "api",    fsm_print_api,    NULL },
+		{ "c",      fsm_print_c,      NULL },
+		{ "dot",    fsm_print_dot,    NULL },
+		{ "fsm",    fsm_print_fsm,    NULL },
+		{ "ir",     fsm_print_ir,     NULL },
+		{ "irjson", fsm_print_irjson, NULL },
+		{ "json",   fsm_print_json,   NULL },
+		{ "vmc",    fsm_print_vmc,    NULL },
+		{ "vmdot",  fsm_print_vmdot,  NULL },
+		{ "sh",     fsm_print_sh,     NULL },
+		{ "go",     fsm_print_go,     NULL },
 
 		{ "amd64",      fsm_print_vmasm,            NULL },
 		{ "amd64_att",  fsm_print_vmasm_amd64_att,  NULL },
 		{ "amd64_nasm", fsm_print_vmasm_amd64_nasm, NULL },
-		{ "amd64_go", fsm_print_vmasm_amd64_go, NULL },
-
-		{ "sh",     fsm_print_sh,     NULL  },
-		{ "go",     fsm_print_go,     NULL  },
+		{ "amd64_go",   fsm_print_vmasm_amd64_go,   NULL },
 
 		{ "tree",   NULL, ast_print_tree },
 		{ "abnf",   NULL, ast_print_abnf },
@@ -908,7 +908,7 @@ main(int argc, char *argv[])
 
 		if (print_fsm == fsm_print_c || print_fsm == fsm_print_vmc) {
 			opt.endleaf = endleaf_c;
-		} else if (print_fsm == fsm_print_dot) {
+		} else if (print_fsm == fsm_print_dot || print_fsm == fsm_print_vmdot) {
 			opt.endleaf = patterns ? endleaf_dot : NULL;
 		} else if (print_fsm == fsm_print_json) {
 			opt.endleaf = patterns ? endleaf_json : NULL;

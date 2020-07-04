@@ -155,21 +155,21 @@ print_name(const char *name)
 		const char *name;
 		fsm_print *f;
 	} a[] = {
-		{ "api",  fsm_print_api  },
-		{ "c",    fsm_print_c    },
-		{ "dot",  fsm_print_dot  },
-		{ "fsm",  fsm_print_fsm  },
-		{ "ir",   fsm_print_ir   },
-		{ "json", fsm_print_json },
-		{ "vmc",  fsm_print_vmc  },
+		{ "api",   fsm_print_api   },
+		{ "c",     fsm_print_c     },
+		{ "dot",   fsm_print_dot   },
+		{ "fsm",   fsm_print_fsm   },
+		{ "ir",    fsm_print_ir    },
+		{ "json",  fsm_print_json  },
+		{ "vmc",   fsm_print_vmc   },
+		{ "vmdot", fsm_print_vmdot },
+		{ "sh",    fsm_print_sh    },
+		{ "go",    fsm_print_go    },
 
-		{ "amd64",  fsm_print_vmasm                },
+		{ "amd64",      fsm_print_vmasm            },
 		{ "amd64_att",  fsm_print_vmasm_amd64_att  },
 		{ "amd64_nasm", fsm_print_vmasm_amd64_nasm },
-		{ "amd64_go", fsm_print_vmasm_amd64_go },
-
-		{ "sh",   fsm_print_sh   },
-		{ "go",   fsm_print_go   }
+		{ "amd64_go",   fsm_print_vmasm_amd64_go   }
 	};
 
 	assert(name != NULL);
