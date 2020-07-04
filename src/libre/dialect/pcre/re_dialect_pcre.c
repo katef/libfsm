@@ -37,7 +37,7 @@ static const struct {
 	{ "[:alnum:]",  &class_alnum  },
 	{ "[:alpha:]",  &class_alpha  },
 	{ "[:ascii:]",  &class_ascii  },
-	{ "[:blank:]",  &class_hspace },
+	{ "[:blank:]",  &class_hspace },  /* space or tab only, not the same as \h */
 	{ "[:cntrl:]",  &class_cntrl  },
 	{ "[:digit:]",  &class_digit  },
 	{ "[:graph:]",  &class_graph  },
