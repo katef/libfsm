@@ -1,20 +1,23 @@
 .include "../../../share/mk/top.mk"
 
+AWK ?= awk
+SED ?= sed
+
 UCD ?= share/ucd
-CODEPOINTS ?= share/bin/codepoints.awk
-CLASS ?= share/bin/class.awk
+CODEPOINTS ?= ${AWK} -f share/bin/codepoints.awk
+CLASS ?= ${AWK} -f share/bin/class.awk
 
 UNI_SCRIPT != cat ${UCD}/Scripts.txt \
-	| sed 's/\#.*//' | cut -d';' -f2 | sort | uniq
+	| ${SED} 's/\#.*//' | cut -d';' -f2 | sort | uniq
 
 .for script in ${UNI_SCRIPT}
 
 src/libre/class/utf8_${script}.c:
 	cat ${UCD}/Scripts.txt \
-	| sed 's/\#.*//' \
+	| ${SED} 's/\#.*//' \
 	| tr -d ' ' \
 	| grep -v '^$$' \
-	| awk -F';' -v script='^${script}' '$$2 ~ script { print $$1 }' \
+	| ${AWK} -F';' -v script='^${script}' '$$2 ~ script { print $$1 }' \
 	| ${CLASS} -v class=utf8_${script} \
 	> ${.TARGET}
 
@@ -34,7 +37,7 @@ UNI_CAT_UNIQ != echo ${UNI_CAT:C/(.)./\1/} | tr ' ' '\n' | sort | uniq
 # This could be faster if we kept the minimized DFA for each category
 src/libre/class/utf8_${group}.c:
 	cat ${UCD}/UnicodeData.txt \
-	| awk -F';' -v group='^${group}' '$$3 ~ group { print $$1 }' \
+	| ${AWK} -F';' -v group='^${group}' '$$3 ~ group { print $$1 }' \
 	| ${CLASS} -v class=utf8_${group} \
 	> ${.TARGET}
 
@@ -46,7 +49,7 @@ SRC += src/libre/class/utf8_${group}.c
 
 src/libre/class/utf8_${cat}.c:
 	cat ${UCD}/UnicodeData.txt \
-	| awk -F';' -v cat='${cat}' '$$3 == cat { print $$1 }' \
+	| ${AWK} -F';' -v cat='${cat}' '$$3 == cat { print $$1 }' \
 	| ${CLASS} -v class=utf8_${cat} \
 	> ${.TARGET}
 
@@ -79,6 +82,7 @@ CLASS_cntrl  = 00-1F 7F
 CLASS_digit  = 0-9
 CLASS_graph  = 21-7E
 CLASS_hspace = 09 20 # aka blank
+CLASS_hspace_pcre = 09 20 A0 # aka blank
 CLASS_lower  = a-z
 CLASS_print  = 20-7E
 CLASS_punct  = '! " \# $$ % & 27 ( ) * + , 2D . / : ; < = > ? @ [ \ ] ^ _ ` { | } ~'
@@ -93,14 +97,15 @@ CLASS_xdigit = A-F a-f 0-9
 # (or to not need them at all)
 CLASS_notdigit  = 00-2F 3A-FF             # [^[:digit:]]
 CLASS_nothspace = 00-08 10-19 21-FF       # [^[:hspace:]]
+CLASS_nothspace_pcre = 00-08 10-19 21-9F A1-FF       # [^[:hspace_pcre:]]
 CLASS_notspace  = 00-08 0E-19 21-FF       # [^[:space:]]
 CLASS_notvspace = 00-09 0E-FF             # [^[:vspace:]]
 CLASS_notword   = 00-2F 3A-40 5B-5E 60-FF # [^[:word:]]
 CLASS_notnl     = 00-09 10-FF             # [^\n]
 
-.for class in alnum alpha any ascii cntrl digit graph hspace lower \
+.for class in alnum alpha any ascii cntrl digit graph hspace hspace_pcre lower \
 	print punct space spchr upper vspace word xdigit \
-	notdigit nothspace notspace notvspace notword notnl
+	notdigit nothspace nothspace_pcre notspace notvspace notword notnl
 
 src/libre/class/${class}.c:
 	echo ${CLASS_${class}} \

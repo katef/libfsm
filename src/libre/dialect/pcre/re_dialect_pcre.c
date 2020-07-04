@@ -22,13 +22,13 @@ static const struct {
 	const struct class *class;
 } classes[] = {
 	{ "\\d", &class_digit     },
-	{ "\\h", &class_hspace    },
+	{ "\\h", &class_hspace_pcre },
 	{ "\\s", &class_space     },
 	{ "\\v", &class_vspace    },
 	{ "\\w", &class_word      },
 
 	{ "\\D", &class_notdigit  }, /* [^\d] */
-	{ "\\H", &class_nothspace }, /* [^\h] */
+	{ "\\H", &class_nothspace_pcre }, /* [^\h] */
 	{ "\\S", &class_notspace  }, /* [^\s] */
 	{ "\\V", &class_notvspace }, /* [^\v] */
 	{ "\\W", &class_notword   }, /* [^\w] */
