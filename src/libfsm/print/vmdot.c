@@ -128,7 +128,11 @@ fsm_print_nodes(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			fprintf(f, "\t\t<table border='0' cellborder='1' cellpadding='6' cellspacing='0'>\n");
 
 			fprintf(f, "\t\t<tr>\n");
-			fprintf(f, "\t\t\t<td><b>L%u</b></td>\n", block++);
+			if (op == a->linked) {
+				fprintf(f, "\t\t\t<td><b>L-</b></td>\n");
+			} else {
+				fprintf(f, "\t\t\t<td><b>L%u</b></td>\n", block++);
+			}
 			fprintf(f, "\t\t\t<td><b>State</b></td>\n");
 			fprintf(f, "\t\t\t<td><b>Cond</b></td>\n");
 			fprintf(f, "\t\t\t<td align='left'><b>Op</b></td>\n");
