@@ -98,7 +98,7 @@ CLASS_xdigit = A-F a-f 0-9
 # (or to not need them at all)
 CLASS_notdigit  = 00-2F 3A-FF             # [^[:digit:]]
 CLASS_nothspace = 00-08 10-19 21-FF       # [^[:hspace:]]
-CLASS_nothspace_pcre = 00-08 10-19 21-9F A1-FF       # [^[:hspace_pcre:]]
+CLASS_nothspace_pcre = 00-08 0A-1F 21-9F A1-FF       # [^[:hspace_pcre:]]
 CLASS_notspace  = 00-08 0E-19 21-FF       # [^[:space:]]
 CLASS_notvspace = 00-09 0E-FF             # [^[:vspace:]]
 CLASS_notvspace_pcre = 00-09 0E-84 86-FF             # [^[:vspace:]]
