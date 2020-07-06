@@ -139,9 +139,10 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	enum re_flags flags, struct re_err *err)
 {
 	struct ast *ast;
-	struct fsm *new;
+	struct fsm *fsm;
 	const struct dialect *m;
 	int unsatisfiable;
+	fsm_state_t start;
 
 	m = re_dialect(dialect);
 	if (m == NULL) {
@@ -165,17 +166,28 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		ast->expr = ast_expr_tombstone;
 	}
 
-	new = ast_compile(ast, flags, opt, err);
+	fsm = fsm_new(opt);
+	if (fsm == NULL) {
+		ast_free(ast);
+		goto error;
+	}
+
+	if (!ast_compile(ast, fsm, &start, flags, err)) {
+		ast_free(ast);
+		goto error;
+	}
+
+	fsm_setstart(fsm, start);
 
 	ast_free(ast);
 
-	if (new == NULL) {
+	if (fsm == NULL) {
 		/* XXX: this can happen e.g. on malloc failure */
 		assert(err == NULL || err->e != RE_ESUCCESS);
 		goto error;
 	}
 
-	return new;
+	return fsm;
 
 error:
 

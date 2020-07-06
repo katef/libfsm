@@ -186,11 +186,24 @@ static struct fsm *
 expr_compile(struct ast_expr *e, enum re_flags flags,
 	const struct fsm_options *opt, struct re_err *err)
 {
+	struct fsm *fsm;
 	struct ast ast;
+	fsm_state_t start;
 
 	ast.expr = e;
 
-	return ast_compile(&ast, flags, opt, err);
+	fsm = fsm_new(opt);
+	if (fsm == NULL) {
+		return NULL;
+	}
+
+	if (!ast_compile(&ast, fsm, &start, flags, err)) {
+		return NULL;
+	}
+
+	fsm_setstart(fsm, start);
+
+	return fsm;
 }
 
 static int
@@ -968,31 +981,26 @@ comp_iter(struct comp_env *env,
 #undef LITERAL
 #undef RECURSE
 
-struct fsm *
+int
 ast_compile(const struct ast *ast,
+	struct fsm *fsm, fsm_state_t *start,
 	enum re_flags re_flags,
-	const struct fsm_options *opt,
 	struct re_err *err)
 {
 	fsm_state_t x, y;
-	struct fsm *fsm;
 
 	assert(ast != NULL);
-
-	fsm = fsm_new(opt);
-	if (fsm == NULL) {
-		return NULL;
-	}
+	assert(start != NULL);
 
 	if (!fsm_addstate(fsm, &x)) {
-		goto error;
+		return 0;
 	}
 
 	if (!fsm_addstate(fsm, &y)) {
-		goto error;
+		return 0;
 	}
 
-	fsm_setstart(fsm, x);
+	*start = x;
 	fsm_setend(fsm, y, 1);
 
 	{
@@ -1008,13 +1016,13 @@ ast_compile(const struct ast *ast,
 		env.end = y;
 
 		if (!comp_iter(&env, x, y, ast->expr)) {
-			goto error;
+			return 0;
 		}
 	}
 
 /* XXX:
 	if (-1 == fsm_trim(fsm)) {
-		goto error;
+		return 0;
 	}
 */
 
@@ -1026,16 +1034,10 @@ ast_compile(const struct ast *ast,
 
 	if (re_flags & RE_REVERSE) {
 		if (!fsm_reverse(fsm)) {
-			goto error;
+			return 0;
 		}
 	}
 
-	return fsm;
-
-error:
-
-	fsm_free(fsm);
-
-	return NULL;
+	return 1;
 }
 

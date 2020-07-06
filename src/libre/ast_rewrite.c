@@ -80,6 +80,7 @@ compile_subexpr(struct ast_expr *e, enum re_flags flags)
 {
 	struct fsm *fsm;
 	struct ast ast;
+	fsm_state_t start;
 
 	/*
 	 * We're compiling these expressions in isolation just for sake of
@@ -104,10 +105,17 @@ compile_subexpr(struct ast_expr *e, enum re_flags flags)
 		return 0;
 	}
 
-	fsm = ast_compile(&ast, flags | RE_ANCHORED, NULL, NULL);
+	fsm = fsm_new(NULL);
 	if (fsm == NULL) {
 		return 0;
 	}
+
+	if (!ast_compile(&ast, fsm, &start, flags | RE_ANCHORED, NULL)) {
+		fsm_free(fsm);
+		return 0;
+	}
+
+	fsm_setstart(fsm, start);
 
 	e->flags = 0x0;
 

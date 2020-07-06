@@ -14,10 +14,10 @@
 struct fsm;
 struct re_err;
 
-struct fsm *
+int
 ast_compile(const struct ast *ast,
+	struct fsm *fsm, fsm_state_t *start,
 	enum re_flags re_flags,
-	const struct fsm_options *opt,
 	struct re_err *err);
 
 #endif
