@@ -322,15 +322,13 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 }
 
 struct fsm *
-trie_to_fsm(struct fsm *fsm, struct trie_graph *g, int have_end, fsm_state_t end)
+trie_to_fsm(struct fsm *fsm, fsm_state_t *start, struct trie_graph *g, int have_end, fsm_state_t end)
 {
-	fsm_state_t start;
+	assert(start != NULL);
 
-	if (!trie_to_fsm_state(g->root, fsm, have_end, end, &start)) {
+	if (!trie_to_fsm_state(g->root, fsm, have_end, end, start)) {
 		return NULL;
 	}
-
-	fsm_setstart(fsm, start);
 
 	return fsm;
 }

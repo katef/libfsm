@@ -87,7 +87,7 @@ re_strings_build(struct re_strings *g,
 	const struct fsm_options *opt, enum re_strings_flags flags)
 {
 	struct fsm *fsm;
-	fsm_state_t end;
+	fsm_state_t start, end;
 	int have_end;
 
 	fsm = NULL;
@@ -120,9 +120,11 @@ re_strings_build(struct re_strings *g,
 		end = (unsigned) -1; /* appease clang */
 	}
 
-	if (!trie_to_fsm(fsm, (struct trie_graph *) g, have_end, end)) {
+	if (!trie_to_fsm(fsm, &start, (struct trie_graph *) g, have_end, end)) {
 		goto error;
 	}
+
+	fsm_setstart(fsm, start);
 
 	return fsm;
 

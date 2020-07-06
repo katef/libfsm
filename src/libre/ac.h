@@ -26,7 +26,7 @@ int
 trie_add_failure_edges(struct trie_graph *g);
 
 struct fsm *
-trie_to_fsm(struct fsm *fsm, struct trie_graph *g,
+trie_to_fsm(struct fsm *fsm, fsm_state_t *start, struct trie_graph *g,
 	int have_end, fsm_state_t end);
 
 void
