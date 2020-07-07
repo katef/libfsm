@@ -161,6 +161,7 @@ int main(int argc, char *argv[]) {
 
 	if (ahocorasick) {
 		struct timespec pre, post;
+		fsm_state_t start;
 
 		if (-1 == clock_gettime(CLOCK_MONOTONIC, &pre)) {
 			perror("clock_gettime");
@@ -173,13 +174,15 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		if (!re_strings_build(fsm, g,
+		if (!re_strings_build(fsm, &start, g,
 			unanchored ? 0 : (RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT)))
 		{
 			perror("re_strings_builder_build");
 			fsm_free(fsm);
 			exit(EXIT_FAILURE);
 		}
+
+		fsm_setstart(fsm, start);
 
 		if (-1 == clock_gettime(CLOCK_MONOTONIC, &post)) {
 			perror("clock_gettime");

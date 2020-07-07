@@ -24,6 +24,7 @@ re_strings(const struct fsm_options *opt, const char *a[], size_t n,
 {
 	struct re_strings *g;
 	struct fsm *fsm;
+	fsm_state_t start;
 	size_t i;
 
 	fsm = fsm_new(opt);
@@ -43,11 +44,13 @@ re_strings(const struct fsm_options *opt, const char *a[], size_t n,
 		}
 	}
 
-	if (!re_strings_build(fsm, g, flags)) {
+	if (!re_strings_build(fsm, &start, g, flags)) {
 		goto error;
 	}
 
 	re_strings_free(g);
+
+	fsm_setstart(fsm, start);
 
 	return fsm;
 
@@ -91,13 +94,14 @@ re_strings_add_str(struct re_strings *g, const char *s)
 }
 
 int
-re_strings_build(struct fsm *fsm, struct re_strings *g,
-	enum re_strings_flags flags)
+re_strings_build(struct fsm *fsm, fsm_state_t *start,
+	struct re_strings *g, enum re_strings_flags flags)
 {
-	fsm_state_t start, end;
+	fsm_state_t end;
 	int have_end;
 
 	assert(fsm != NULL);
+	assert(start != NULL);
 
 	if ((flags & RE_STRINGS_ANCHOR_LEFT) == 0) {
 		if (trie_add_failure_edges((struct trie_graph *) g) < 0) {
@@ -122,11 +126,9 @@ re_strings_build(struct fsm *fsm, struct re_strings *g,
 		end = (unsigned) -1; /* appease clang */
 	}
 
-	if (!trie_to_fsm(fsm, &start, (struct trie_graph *) g, have_end, end)) {
+	if (!trie_to_fsm(fsm, start, (struct trie_graph *) g, have_end, end)) {
 		goto error;
 	}
-
-	fsm_setstart(fsm, start);
 
 	return 1;
 
