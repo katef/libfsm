@@ -10,9 +10,9 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include <re/re.h>
-
 #include <fsm/fsm.h>
+
+#include <re/re.h>
 
 #include "ac.h"
 #include "class.h"
@@ -133,27 +133,34 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	return ast;
 }
 
-struct fsm *
-re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
+int
+re_comp(struct fsm *fsm, fsm_state_t *start, enum re_dialect dialect,
+	re_getchar_fun *f, void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err)
 {
 	struct ast *ast;
-	struct fsm *fsm;
 	const struct dialect *m;
 	int unsatisfiable;
-	fsm_state_t start;
+
+	assert(fsm != NULL);
+	assert(f != NULL);
+	assert(start != NULL);
 
 	m = re_dialect(dialect);
 	if (m == NULL) {
-		if (err != NULL) { err->e = RE_EBADDIALECT; }
-		return NULL;
+		if (err != NULL) {
+			err->e = RE_EBADDIALECT;
+		}
+		return 0;
 	}
 
 	flags |= m->flags;
 
-	ast = re_parse(dialect, getc, opaque, opt, flags, err, &unsatisfiable);
-	if (ast == NULL) { return NULL; }
+	ast = re_parse(dialect, f, opaque, opt, flags, err, &unsatisfiable);
+	if (ast == NULL) {
+		return 0;
+	}
 
 	/*
 	 * If the RE is inherently unsatisfiable, then free the
@@ -166,26 +173,50 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		ast->expr = ast_expr_tombstone;
 	}
 
-	fsm = fsm_new(opt);
-	if (fsm == NULL) {
-		ast_free(ast);
+	if (!ast_compile(ast, fsm, start, flags, err)) {
 		goto error;
 	}
-
-	if (!ast_compile(ast, fsm, &start, flags, err)) {
-		ast_free(ast);
-		goto error;
-	}
-
-	fsm_setstart(fsm, start);
 
 	ast_free(ast);
+
+	return 1;
+
+error:
+
+	ast_free(ast);
+
+	if (err != NULL) {
+		err->e = RE_EERRNO;
+	}
+
+	return 0;
+}
+
+struct fsm *
+re_comp_new(enum re_dialect dialect,
+	re_getchar_fun *f, void *opaque,
+	const struct fsm_options *opt,
+	enum re_flags flags, struct re_err *err)
+{
+	struct fsm *fsm;
+	fsm_state_t start;
+
+	fsm = fsm_new(opt);
+	if (fsm == NULL) {
+		goto error;
+	}
 
 	if (fsm == NULL) {
 		/* XXX: this can happen e.g. on malloc failure */
 		assert(err == NULL || err->e != RE_ESUCCESS);
 		goto error;
 	}
+
+	if (!re_comp(fsm, &start, dialect, f, opaque, opt, flags, err)) {
+		goto error;
+	}
+
+	fsm_setstart(fsm, start);
 
 	return fsm;
 
@@ -197,3 +228,4 @@ error:
 
 	return NULL;
 }
+

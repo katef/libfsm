@@ -82,25 +82,19 @@ re_strings_add_str(struct re_strings *g, const char *s)
 	return re_strings_add_raw(g, s, strlen(s));
 }
 
-struct fsm *
-re_strings_build(struct re_strings *g,
-	const struct fsm_options *opt, enum re_strings_flags flags)
+int
+re_strings_build(struct fsm *fsm, struct re_strings *g,
+	enum re_strings_flags flags)
 {
-	struct fsm *fsm;
 	fsm_state_t start, end;
 	int have_end;
 
-	fsm = NULL;
+	assert(fsm != NULL);
 
 	if ((flags & RE_STRINGS_ANCHOR_LEFT) == 0) {
 		if (trie_add_failure_edges((struct trie_graph *) g) < 0) {
 			goto error;
 		}
-	}
-
-	fsm = fsm_new(opt);
-	if (fsm == NULL) {
-		goto error;
 	}
 
 	have_end = 0;
@@ -125,6 +119,28 @@ re_strings_build(struct re_strings *g,
 	}
 
 	fsm_setstart(fsm, start);
+
+	return 1;
+
+error:
+
+	return 0;
+}
+
+struct fsm *
+re_strings_build_new(struct re_strings *g,
+	const struct fsm_options *opt, enum re_strings_flags flags)
+{
+	struct fsm *fsm;
+
+	fsm = fsm_new(opt);
+	if (fsm == NULL) {
+		goto error;
+	}
+
+	if (!re_strings_build(fsm, g, flags)) {
+		goto error;
+	}
 
 	return fsm;
 

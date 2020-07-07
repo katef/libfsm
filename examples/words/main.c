@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 			fsm_state_t rs;
 			struct fsm *r;
 
-			r = re_comp(native ? RE_NATIVE : RE_LITERAL, fsm_sgetc, &p, &opt, 0, &e);
+			r = re_comp_new(native ? RE_NATIVE : RE_LITERAL, fsm_sgetc, &p, &opt, 0, &e);
 			if (r == NULL) {
 				re_perror(native ? RE_NATIVE : RE_LITERAL, &e, NULL, s);
 				return 1;
@@ -167,10 +167,17 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 
-		fsm = re_strings_build(g,
-			&opt, unanchored ? 0 : (RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT));
+		fsm = fsm_new(&opt);
 		if (fsm == NULL) {
+			perror("fsm_new");
+			exit(EXIT_FAILURE);
+		}
+
+		if (!re_strings_build(fsm, g,
+			unanchored ? 0 : (RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT)))
+		{
 			perror("re_strings_builder_build");
+			fsm_free(fsm);
 			exit(EXIT_FAILURE);
 		}
 

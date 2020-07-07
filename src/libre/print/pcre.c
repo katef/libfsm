@@ -11,6 +11,8 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#include <fsm/fsm.h>
+
 #include <re/re.h>
 
 #include <print/esc.h>

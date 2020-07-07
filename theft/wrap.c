@@ -6,6 +6,10 @@
 
 #include "theft_libfsm.h"
 
+#include <fsm/fsm.h>
+
+#include <re/re.h>
+
 #include <adt/xalloc.h>
 
 struct scanner {
@@ -74,7 +78,7 @@ wrap_re_comp(enum re_dialect dialect, const struct string_pair *pair,
 	assert(opt != NULL);
 	assert(err != NULL);
 
-	fsm = re_comp(dialect, scanner_next, &s, opt, RE_MULTI, err);
+	fsm = re_comp_new(dialect, scanner_next, &s, opt, RE_MULTI, err);
 
 	assert(s.str == pair->string);
 	assert(s.magic == &s.magic);

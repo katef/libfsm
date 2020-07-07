@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include <fsm/fsm.h>
+
 #include <re/re.h>
 
 const char *

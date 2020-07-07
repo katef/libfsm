@@ -379,7 +379,7 @@
 		assert(@a != NULL);
 		assert(@a->p != NULL);
 
-		@r = re_comp(RE_LITERAL, act_agetc, @a, act_state->opt, 0, &err);
+		@r = re_comp_new(RE_LITERAL, act_agetc, @a, act_state->opt, 0, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
@@ -394,7 +394,7 @@
 		assert(@a != NULL);
 		assert(@a->p != NULL);
 
-		@r = re_comp(RE_NATIVE, act_agetc, @a, act_state->opt, @f, &err);
+		@r = re_comp_new(RE_NATIVE, act_agetc, @a, act_state->opt, @f, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */

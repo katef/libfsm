@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <limits.h>
 
+#include <fsm/fsm.h>
+
 #include <re/re.h>
 
 #include "class.h"

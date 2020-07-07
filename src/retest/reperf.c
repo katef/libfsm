@@ -612,7 +612,7 @@ perf_case_run(struct perf_case *c, enum halt halt,
 		xclock_gettime(&c0);
 
 		for (iter=0; iter < c->count; iter++) {
-			fsm = re_comp(c->dialect, fsm_sgetc, &re, &opt, flags, &comp_err);
+			fsm = re_comp_new(c->dialect, fsm_sgetc, &re, &opt, flags, &comp_err);
 			if (fsm == NULL) {
 				return ERROR_PARSING_REGEXP;
 			}
