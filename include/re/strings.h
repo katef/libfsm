@@ -31,6 +31,10 @@ enum re_strings_flags {
 	RE_STRINGS_AC_AUTOMATON = 1 << 2
 };
 
+/*
+ * A convenience to iterate over an array of strings, and call
+ * re_strings_add_str() for each.
+ */
 struct fsm *
 re_strings(const struct fsm_options *opt, const char *a[], size_t n,
 	enum re_strings_flags flags);
