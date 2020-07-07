@@ -192,6 +192,7 @@ ast_endpoint_cmp(const struct ast_endpoint *a, const struct ast_endpoint *b)
 
 	default:
 		assert(!"unreached");
+		abort();
 	}
 }
 
