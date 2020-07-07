@@ -102,7 +102,9 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	m = re_dialect(dialect);
 	if (m == NULL) {
-		if (err != NULL) { err->e = RE_EBADDIALECT; }
+		if (err != NULL) {
+			err->e = RE_EBADDIALECT;
+		}
 		return NULL;
 	}
 
@@ -122,7 +124,9 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	if (res < 0) {
 		ast_free(ast);
-		if (err != NULL) { err->e = RE_EERRNO; }
+		if (err != NULL) {
+			err->e = RE_EERRNO;
+		}
 		return NULL;
 	}
 
