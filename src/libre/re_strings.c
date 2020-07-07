@@ -26,8 +26,14 @@ re_strings(const struct fsm_options *opt, const char *a[], size_t n,
 	struct fsm *fsm;
 	size_t i;
 
+	fsm = fsm_new(opt);
+	if (fsm == NULL) {
+		return NULL;
+	}
+
 	g = re_strings_new();
 	if (g == NULL) {
+		fsm_free(fsm);
 		return NULL;
 	}
 
@@ -37,8 +43,7 @@ re_strings(const struct fsm_options *opt, const char *a[], size_t n,
 		}
 	}
 
-	fsm = re_strings_build(g, opt, flags);
-	if (fsm == NULL) {
+	if (!re_strings_build(fsm, g, flags)) {
 		goto error;
 	}
 
@@ -46,6 +51,7 @@ re_strings(const struct fsm_options *opt, const char *a[], size_t n,
 
 error:
 
+	fsm_free(fsm);
 	re_strings_free(g);
 
 	return NULL;
@@ -125,31 +131,5 @@ re_strings_build(struct fsm *fsm, struct re_strings *g,
 error:
 
 	return 0;
-}
-
-struct fsm *
-re_strings_build_new(struct re_strings *g,
-	const struct fsm_options *opt, enum re_strings_flags flags)
-{
-	struct fsm *fsm;
-
-	fsm = fsm_new(opt);
-	if (fsm == NULL) {
-		goto error;
-	}
-
-	if (!re_strings_build(fsm, g, flags)) {
-		goto error;
-	}
-
-	return fsm;
-
-error:
-
-	if (fsm != NULL) {
-		fsm_free(fsm);
-	}
-
-	return NULL;
 }
 

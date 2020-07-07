@@ -55,9 +55,5 @@ int
 re_strings_build(struct fsm *fsm, struct re_strings *g,
 	enum re_strings_flags flags);
 
-struct fsm *
-re_strings_build_new(struct re_strings *g,
-	const struct fsm_options *opt, enum re_strings_flags flags);
-
 #endif
 
