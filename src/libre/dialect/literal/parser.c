@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 142 "src/libre/parser.act"
+#line 144 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -20,6 +20,8 @@
 	#include <stdio.h>
 	#include <errno.h>
 	#include <ctype.h>
+
+	#include <fsm/fsm.h>
 
 	#include <re/re.h>
 
@@ -209,7 +211,7 @@
 		return s;
 	}
 
-#line 213 "src/libre/dialect/literal/parser.c"
+#line 215 "src/libre/dialect/literal/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -244,13 +246,13 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 823 "src/libre/parser.act"
+#line 825 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIa))) {
 			goto ZL1;
 		}
 	
-#line 254 "src/libre/dialect/literal/parser.c"
+#line 256 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: ast-add-concat */
 		/* BEGINNING OF INLINE: 97 */
@@ -291,14 +293,14 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				{
 					/* BEGINNING OF ACTION: ast-make-concat */
 					{
-#line 664 "src/libre/parser.act"
+#line 666 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_concat();
 		if ((ZInode) == NULL) {
 			goto ZL1;
 		}
 	
-#line 302 "src/libre/dialect/literal/parser.c"
+#line 304 "src/libre/dialect/literal/parser.c"
 					}
 					/* END OF ACTION: ast-make-concat */
 					p_list_Hof_Hatoms (flags, lex_state, act_state, err, ZInode);
@@ -312,14 +314,14 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				{
 					/* BEGINNING OF ACTION: ast-make-empty */
 					{
-#line 657 "src/libre/parser.act"
+#line 659 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_empty();
 		if ((ZInode) == NULL) {
 			goto ZL1;
 		}
 	
-#line 323 "src/libre/dialect/literal/parser.c"
+#line 325 "src/libre/dialect/literal/parser.c"
 					}
 					/* END OF ACTION: ast-make-empty */
 				}
@@ -343,14 +345,14 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 532 "src/libre/parser.act"
+#line 534 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
 		}
 		goto ZL1;
 	
-#line 354 "src/libre/dialect/literal/parser.c"
+#line 356 "src/libre/dialect/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -383,7 +385,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 414 "src/libre/parser.act"
+#line 416 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
@@ -393,7 +395,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 397 "src/libre/dialect/literal/parser.c"
+#line 399 "src/libre/dialect/literal/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -403,14 +405,14 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: ast-make-literal */
 		{
-#line 678 "src/libre/parser.act"
+#line 680 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_literal((ZIc));
 		if ((ZInode) == NULL) {
 			goto ZL1;
 		}
 	
-#line 414 "src/libre/dialect/literal/parser.c"
+#line 416 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: ast-make-literal */
 	}
@@ -419,26 +421,26 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-expected-atom */
 		{
-#line 483 "src/libre/parser.act"
+#line 485 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXATOM;
 		}
 		goto ZL2;
 	
-#line 430 "src/libre/dialect/literal/parser.c"
+#line 432 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: err-expected-atom */
 		/* BEGINNING OF ACTION: ast-make-any */
 		{
-#line 689 "src/libre/parser.act"
+#line 691 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_any();
 		if ((ZInode) == NULL) {
 			goto ZL2;
 		}
 	
-#line 442 "src/libre/dialect/literal/parser.c"
+#line 444 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: ast-make-any */
 	}
@@ -452,7 +454,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 976 "src/libre/parser.act"
+#line 978 "src/libre/parser.act"
 
 
 	static int
@@ -595,6 +597,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 599 "src/libre/dialect/literal/parser.c"
+#line 601 "src/libre/dialect/literal/parser.c"
 
 /* END OF FILE */
