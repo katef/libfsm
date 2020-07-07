@@ -47,6 +47,8 @@ re_strings(const struct fsm_options *opt, const char *a[], size_t n,
 		goto error;
 	}
 
+	re_strings_free(g);
+
 	return fsm;
 
 error:
