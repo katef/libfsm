@@ -125,31 +125,25 @@ error:
 }
 
 /* TODO: centralise as fsm_unionxy() perhaps */
-static int
-fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t x, fsm_state_t y)
+static struct fsm *
+fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t *sa, fsm_state_t *sb,
+	fsm_state_t x, fsm_state_t y)
 {
-	fsm_state_t sa, sb;
-	fsm_state_t end;
 	struct fsm *q;
+	fsm_state_t end;
 	fsm_state_t base_b;
 
 	assert(a != NULL);
 	assert(b != NULL);
+	assert(sa != NULL);
+	assert(sb != NULL);
 
 	/* x,y both belong to a */
 	assert(x < a->statecount);
 	assert(y < a->statecount);
 
-	if (!fsm_getstart(a, &sa)) {
-		return 0;
-	}
-
-	if (!fsm_getstart(b, &sb)) {
-		return 0;
-	}
-
 	if (!fsm_collate(b, &end, fsm_isend)) {
-		return 0;
+		return NULL;
 	}
 
 	/* TODO: centralise as fsm_clearends() or somesuch */
@@ -163,23 +157,21 @@ fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t x, fsm_state_t y)
 
 	q = fsm_mergeab(a, b, &base_b);
 	if (q == NULL) {
-		return 0;
+		return NULL;
 	}
 
-	sb  += base_b;
+	*sb += base_b;
 	end += base_b;
 
-	fsm_setstart(q, sa);
-
-	if (!fsm_addedge_epsilon(q, x, sb)) {
-		return 0;
+	if (!fsm_addedge_epsilon(q, x, *sb)) {
+		return NULL;
 	}
 
 	if (!fsm_addedge_epsilon(q, end, y)) {
-		return 0;
+		return NULL;
 	}
 
-	return 1;
+	return q;
 }
 
 static struct fsm *
@@ -944,8 +936,20 @@ comp_iter(struct comp_env *env,
 			break;
 		}
 
-		if (!fsm_unionxy(env->fsm, q, x, y)) {
-			return 0;
+		{
+			fsm_state_t sb;
+			struct fsm *z;
+
+			if (!fsm_getstart(q, &sb)) {
+				return 0;
+			}
+
+			z = fsm_unionxy(env->fsm, q, &env->start, &sb, x, y);
+			if (z == NULL) {
+				return 0;
+			}
+
+			(void) z;
 		}
 
 		break;
@@ -1000,7 +1004,6 @@ ast_compile(const struct ast *ast,
 		return 0;
 	}
 
-	*start = x;
 	fsm_setend(fsm, y, 1);
 
 	{
@@ -1018,6 +1021,9 @@ ast_compile(const struct ast *ast,
 		if (!comp_iter(&env, x, y, ast->expr)) {
 			return 0;
 		}
+
+		/* env.start may have been modified by fsm_unionxy() during iteration */
+		*start = env.start;
 	}
 
 /* XXX:
