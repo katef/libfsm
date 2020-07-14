@@ -15,6 +15,7 @@ escputc c_escputc_char;
 escputc c_escputc_str;
 escputc abnf_escputc;
 escputc dot_escputc_html;
+escputc dot_escputc_html_record;
 escputc fsm_escputc;
 escputc json_escputc;
 escputc pcre_escputc;

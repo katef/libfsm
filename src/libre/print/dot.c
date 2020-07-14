@@ -43,7 +43,7 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 {
 	switch (e->type) {
 	case AST_ENDPOINT_LITERAL:
-		dot_escputc_html(f, opt, e->u.literal.c);
+		dot_escputc_html_record(f, opt, e->u.literal.c);
 		break;
 
 	case AST_ENDPOINT_CODEPOINT:
@@ -98,7 +98,7 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 
 	case AST_EXPR_LITERAL:
 		fprintf(f, "\tn%p [ label = <LITERAL|", (void *) n);
-		dot_escputc_html(f, opt, n->u.literal.c);
+		dot_escputc_html_record(f, opt, n->u.literal.c);
 		fprintf(f, "> ];\n");
 		break;
 
