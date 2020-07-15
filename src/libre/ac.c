@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
@@ -14,7 +15,10 @@
 
 #include <fsm/fsm.h>
 
+#include <re/re.h>
+
 #include "ac.h"
+#include "ast.h"
 
 enum { POOL_BLOCK_SIZE = 256 };
 
@@ -162,8 +166,53 @@ trie_add_word(struct trie_graph *g, const char *w, size_t n)
 	return g;
 }
 
+/* internal convenience to avoid constructing a string */
+struct trie_graph *
+trie_add_concat(struct trie_graph *g, const struct ast_expr **a, size_t n)
+{
+	struct trie_state *st;
+	size_t i;
+
+	assert(g != NULL);
+	assert(a != NULL);
+	assert(n > 0);
+
+	st = g->root;
+
+	assert(st != NULL);
+
+	for (i = 0; i < n; i++) {
+		struct trie_state *nx;
+		int idx;
+
+		assert(a[i]->type == AST_EXPR_LITERAL);
+
+		idx = (unsigned char)a[i]->u.literal.c;
+		nx = st->children[idx];
+
+		if (nx == NULL) {
+			nx = newstate(g);
+			if (nx == NULL) {
+				return NULL;
+			}
+
+			st->children[idx] = nx;
+		}
+
+		st = nx;
+	}
+
+	st->output = 1;
+	if (g->depth < n) {
+		g->depth = n;
+	}
+
+	return g;
+}
+
 int
-trie_add_failure_edges(struct trie_graph *g) {
+trie_add_failure_edges(struct trie_graph *g)
+{
 	struct trie_state **q;
 	size_t top,bot;
 	int sym;

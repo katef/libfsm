@@ -11,6 +11,7 @@ struct fsm;
 struct fsm_state;
 struct fsm_options;
 
+struct ast_expr;
 struct trie_graph;
 
 struct trie_graph *
@@ -21,6 +22,9 @@ trie_free(struct trie_graph *g);
 
 struct trie_graph *
 trie_add_word(struct trie_graph *g, const char *w, size_t n);
+
+struct trie_graph *
+trie_add_concat(struct trie_graph *g, const struct ast_expr **a, size_t n);
 
 int
 trie_add_failure_edges(struct trie_graph *g);

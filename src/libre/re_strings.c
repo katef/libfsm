@@ -93,6 +93,16 @@ re_strings_add_str(struct re_strings *g, const char *s)
 	return re_strings_add_raw(g, s, strlen(s));
 }
 
+/* internal convenience to avoid constructing a string */
+int
+re_strings_add_concat(struct re_strings *g, const struct ast_expr **a, size_t n)
+{
+	assert(a != NULL);
+	assert(n > 0);
+
+	return trie_add_concat((struct trie_graph *) g, a, n) != NULL;
+}
+
 int
 re_strings_build(struct fsm *fsm, fsm_state_t *start,
 	struct re_strings *g, enum re_strings_flags flags)
