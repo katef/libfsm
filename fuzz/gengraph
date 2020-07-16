@@ -100,9 +100,12 @@ BEGIN {
 
     printf("\n")
     printf("start: %d;\n", start)
-    printf("end:")
-    for (n in ends) {
-        printf("%s%d", n > 0 ? "," : " ", ends[n])
+
+    if (length(ends) > 0) {
+	    printf("end:")
+	    for (n in ends) {
+		    printf("%s%d", n > 0 ? "," : " ", ends[n])
+	    }
+	    printf(";\n")
     }
-    printf(";\n")
 }
