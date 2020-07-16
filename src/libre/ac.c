@@ -362,7 +362,7 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 		}
 	}
 
-	if (ts->output) {
+	if (ts->output && !have_end) {
 		fsm_setend(fsm, st, 1);
 	}
 
