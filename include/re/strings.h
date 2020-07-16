@@ -52,6 +52,11 @@ int
 re_strings_add_str(struct re_strings *g, const char *s);
 
 int
+re_strings_build_into(struct fsm *fsm, fsm_state_t *start,
+	int have_end, fsm_state_t end,
+	struct re_strings *g, enum re_strings_flags flags);
+
+int
 re_strings_build(struct fsm *fsm, fsm_state_t *start,
 	struct re_strings *g, enum re_strings_flags flags);
 

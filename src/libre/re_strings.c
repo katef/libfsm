@@ -104,6 +104,34 @@ re_strings_add_concat(struct re_strings *g, const struct ast_expr **a, size_t n)
 }
 
 int
+re_strings_build_into(struct fsm *fsm, fsm_state_t *start,
+	int have_end, fsm_state_t end,
+	struct re_strings *g, enum re_strings_flags flags)
+{
+	assert(fsm != NULL);
+	assert(start != NULL);
+
+	if ((flags & RE_STRINGS_ANCHOR_LEFT) == 0) {
+		if (trie_add_failure_edges((struct trie_graph *) g) < 0) {
+			return 0;
+		}
+	}
+
+	if (have_end && (flags & RE_STRINGS_ANCHOR_RIGHT) == 0) {
+		if (!fsm_addedge_any(fsm, end, end)) {
+			return 0;
+		}
+	}
+
+	if (!trie_to_fsm(fsm, start, (struct trie_graph *) g, have_end, end)) {
+		return 0;
+	}
+
+	return 1;
+}
+
+
+int
 re_strings_build(struct fsm *fsm, fsm_state_t *start,
 	struct re_strings *g, enum re_strings_flags flags)
 {
@@ -113,37 +141,20 @@ re_strings_build(struct fsm *fsm, fsm_state_t *start,
 	assert(fsm != NULL);
 	assert(start != NULL);
 
-	if ((flags & RE_STRINGS_ANCHOR_LEFT) == 0) {
-		if (trie_add_failure_edges((struct trie_graph *) g) < 0) {
-			goto error;
-		}
-	}
-
 	have_end = 0;
 
 	if ((flags & RE_STRINGS_AC_AUTOMATON) == 0 && (flags & RE_STRINGS_ANCHOR_RIGHT) == 0) {
 		if (!fsm_addstate(fsm, &end)) {
-			goto error;
+			return 0;
 		}
 
 		have_end = 1;
-		fsm_setend(fsm, end, 1);
 
-		if (!fsm_addedge_any(fsm, end, end)) {
-			goto error;
-		}
+		fsm_setend(fsm, end, 1);
 	} else {
 		end = (unsigned) -1; /* appease clang */
 	}
 
-	if (!trie_to_fsm(fsm, start, (struct trie_graph *) g, have_end, end)) {
-		goto error;
-	}
-
-	return 1;
-
-error:
-
-	return 0;
+	return re_strings_build_into(fsm, start, have_end, end, g, flags);
 }
 
