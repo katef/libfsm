@@ -100,9 +100,15 @@ BEGIN {
 
     printf("\n")
     printf("start: %d;\n", start)
-    printf("end:")
+
     for (n in ends) {
-        printf("%s%d", n > 0 ? "," : " ", ends[n])
+	    if (!printed_end) {	# first time only
+		    printf("end:")
+		    printed_end = 1
+	    }
+	    printf("%s%d", n > 0 ? "," : " ", ends[n])
     }
-    printf(";\n")
+    if (printed_end) {
+	    printf(";\n")
+    }
 }
