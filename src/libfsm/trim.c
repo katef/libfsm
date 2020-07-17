@@ -9,88 +9,168 @@
 #include <errno.h>
 
 #include <fsm/fsm.h>
+#include <fsm/pred.h>
 
-#include <adt/queue.h>
 #include <adt/set.h>
 #include <adt/edgeset.h>
 #include <adt/stateset.h>
 
 #include "internal.h"
 
+enum mark_flags {
+	MARK_UNVISITED = 0x00,
+	MARK_ENQUEUED = 0x01,
+	MARK_PROCESSING = 0x02,
+	MARK_REACHES_END = 0x04,
+	MARK_DONE = 0x08
+};
+
 static int
-mark_states(struct fsm *fsm)
+mark_states(struct fsm *fsm,
+	unsigned char *marks)
 {
+	/* Mark all states that are reachable from the start state and
+	 * that are either ends or have edge(s) which lead to an edge
+	 * state (directly or transitively).
+	 *
+	 * This uses a heap-allocated stack, because a recursive call
+	 * could overrun the call stack for sufficiently large and
+	 * deeply nested automata, and each recursive call only needs
+	 * the state ID and the flags in marks[]. This slightly
+	 * complicates what would otherwise be a pretty simple recursive
+	 * algorithm with memoization. */
 	const unsigned state_count = fsm_countstates(fsm);
+
+	/* Basic stack: Empty when i == 0, top at i - 1. */
+	fsm_state_t *stack = NULL;
+	size_t stack_i = 0;
+	size_t stack_ceil;
+
 	fsm_state_t start;
-	struct queue *q;
-	int res = 0;
-
-	q = queue_new(fsm->opt->alloc, state_count);
-	if (q == NULL) {
-		return 1;
-	}
-
 	if (!fsm_getstart(fsm, &start)) {
 		return 1;
 	}
 
-	if (!queue_push(q, start)) {
-		goto cleanup;
+	stack_ceil = state_count + 1;
+	if (stack_ceil == 0) {
+		stack_ceil = 1;
 	}
-	fsm->states[start].visited = 1;
+	stack = f_malloc(fsm->opt->alloc,
+	    stack_ceil * sizeof(stack[0]));
+	if (stack == NULL) {
+		return 0;
+	}
 
-	for (;;) {
+	stack[stack_i] = start;
+	stack_i++;
+	marks[start] |= MARK_ENQUEUED;
+
+	while (stack_i > 0) {
+		fsm_state_t s = stack[stack_i - 1];
 		struct fsm_edge e;
 		struct edge_iter edge_iter;
-		fsm_state_t s;
+		struct state_iter state_iter;
+		fsm_state_t epsilon_s;
 
-		/* pop off queue; break if empty */
-		if (!queue_pop(q, &s)) { break; }
+		if (!(marks[s] & MARK_PROCESSING)) {
+			/* First pass: Note that processing has started,
+			 * stack other reachable states, note if this is
+			 * an end state. */
+			marks[s] |= MARK_PROCESSING;
 
-		/* enqueue all directly reachable and unmarked, and mark them */
-		{
-			struct state_iter state_iter;
-			fsm_state_t es;
+			if (fsm_isend(fsm, s)) {
+				marks[s] |= MARK_REACHES_END;
+			}
 
-			for (state_set_reset(fsm->states[s].epsilons, &state_iter); state_set_next(&state_iter, &es); ) {
-				if (fsm->states[es].visited) {
+			for (state_set_reset(fsm->states[s].epsilons, &state_iter); state_set_next(&state_iter, &epsilon_s); ) {
+				if (marks[epsilon_s] & MARK_PROCESSING) {
+					continue; /* already being processed */
+				}
+
+				if (stack_i == stack_ceil) {
+					size_t nceil = 2*stack_ceil;
+					fsm_state_t *nstack = f_realloc(fsm->opt->alloc,
+					    stack, nceil * sizeof(stack[0]));
+					assert(!"unreachable");
+					if (stack == NULL) {
+						f_free(fsm->opt->alloc, stack);
+						return 0;
+					}
+					stack_ceil = nceil;
+					stack = nstack;
+				}
+
+				if (!marks[epsilon_s] & MARK_ENQUEUED) {
+					stack[stack_i] = epsilon_s;
+					stack_i++;
+					marks[epsilon_s] |= MARK_ENQUEUED;
+				}
+			}
+
+			for (edge_set_reset(fsm->states[s].edges, &edge_iter); edge_set_next(&edge_iter, &e); ) {
+				if (marks[e.state] & MARK_PROCESSING) {
 					continue;
 				}
 
-				if (!queue_push(q, es)) {
-					goto cleanup;
+				if (stack_i == stack_ceil) {
+					size_t nceil = 2*stack_ceil;
+					fsm_state_t *nstack = f_realloc(fsm->opt->alloc,
+					    stack, nceil * sizeof(stack[0]));
+					assert(!"unreachable");
+					if (stack == NULL) {
+						f_free(fsm->opt->alloc, stack);
+						return 0;
+					}
+					stack_ceil = nceil;
+					stack = nstack;
 				}
 
-				fsm->states[es].visited = 1;
+				if (!marks[e.state] & MARK_ENQUEUED) {
+					stack[stack_i] = e.state;
+					stack_i++;
+					marks[e.state] |= MARK_ENQUEUED;
+				}
 			}
-		}
-
-		for (edge_set_reset(fsm->states[s].edges, &edge_iter); edge_set_next(&edge_iter, &e); ) {
-			if (fsm->states[e.state].visited) {
-				continue;
+		} else if (!(marks[s] & MARK_DONE)) {
+			/* Second pass: Mark the state as reaching an
+			 * end if any of its reachable nodes do, mark
+			 * processing as done. Terminate iteration once
+			 * the END flag is set. */
+			for (state_set_reset(fsm->states[s].epsilons, &state_iter);
+			     state_set_next(&state_iter, &epsilon_s); ) {
+				if (marks[s] & MARK_REACHES_END) {
+					break;
+				}
+				if (marks[epsilon_s] & MARK_REACHES_END) {
+					marks[s] |= MARK_REACHES_END;
+				}
 			}
 
-			if (!queue_push(q, e.state)) {
-				goto cleanup;
+			for (edge_set_reset(fsm->states[s].edges, &edge_iter);
+			     edge_set_next(&edge_iter, &e); ) {
+				if (marks[s] & MARK_REACHES_END) {
+					break;
+				}
+				if (marks[e.state] & MARK_REACHES_END) {
+					marks[s] |= MARK_REACHES_END;
+				}
 			}
 
-			fsm->states[e.state].visited = 1;
+			marks[s] |= MARK_DONE;
+			stack_i--;
+		} else {
+			assert(!"unreachable");
 		}
 	}
 
-	res = 1;
+	f_free(fsm->opt->alloc, stack);
 
-cleanup:
-
-	if (q != NULL) {
-		free(q);
-	}
-
-	return res;
+	return 1;
 }
 
 long
-sweep_states(struct fsm *fsm)
+sweep_states(struct fsm *fsm,
+	unsigned char *marks)
 {
 	long swept;
 	fsm_state_t i;
@@ -115,7 +195,7 @@ sweep_states(struct fsm *fsm)
 	 */
 	i = 0;
 	while (i < fsm->statecount) {
-		if (fsm->states[i].visited) {
+		if (marks[i] & MARK_REACHES_END) {
 			i++;
 			continue;
 		}
@@ -136,16 +216,19 @@ int
 fsm_trim(struct fsm *fsm)
 {
 	long ret;
-	fsm_state_t i;
-
+	unsigned char *marks = NULL;
 	assert(fsm != NULL);
 
-	for (i = 0; i < fsm->statecount; i++) {
-		fsm->states[i].visited = 0;
+	/* Strictly speaking, this only needs 4 bits per state,
+	 * but using a full byte makes the addressing easier. */
+	marks = f_calloc(fsm->opt->alloc,
+	    fsm->statecount, sizeof(marks[0]));
+	if (marks == NULL) {
+		goto cleanup;
 	}
 
-	if (!mark_states(fsm)) {
-		return -1;
+	if (!mark_states(fsm, marks)) {
+		goto cleanup;
 	}
 
 	/*
@@ -163,11 +246,19 @@ fsm_trim(struct fsm *fsm)
 	 * sweep_states returns a negative value on error, otherwise it returns
 	 * the number of states swept.
 	 */
-	ret = sweep_states(fsm);
+	ret = sweep_states(fsm, marks);
+
+	f_free(fsm->opt->alloc, marks);
+
 	if (ret < 0) {
 		return ret;
 	}
-	
-	return 1;
-}
 
+	return 1;
+
+cleanup:
+	if (marks != NULL) {
+		f_free(fsm->opt->alloc, marks);
+	}
+	return -1;
+}
