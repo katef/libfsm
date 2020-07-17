@@ -1,0 +1,16 @@
+# dead end: states 0 and 1 are equivalent, but state 2 can never lead to
+# an accepting state, so it should be pruned.
+
+0 -> 0 "a";
+0 -> 0 "b";
+0 -> 1 "c";
+
+1 -> 1 "a";
+1 -> 1 "b";
+1 -> 0 "c";
+1 -> 2 "z";
+
+2 -> 2 "z";
+
+start: 0;
+end: 0, 1;
