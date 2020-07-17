@@ -193,10 +193,11 @@ sweep_states(struct fsm *fsm,
 	 *
 	 * XXX: For now we call fsm_removestate() for simplicity of implementation.
 	 */
-	i = 0;
-	while (i < fsm->statecount) {
+	i = fsm->statecount - 1;
+	for (;;) {
 		if (marks[i] & MARK_REACHES_END) {
-			i++;
+			if (i == 0) { break; }
+			i--;
 			continue;
 		}
 
@@ -207,6 +208,8 @@ sweep_states(struct fsm *fsm,
 		 */
 		fsm_removestate(fsm, i);
 		swept++;
+		if (i == 0) { break; }
+		i--;
 	}
 
 	return swept;
