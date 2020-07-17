@@ -349,12 +349,15 @@ edge_set_remove(struct edge_set **setp, unsigned char symbol)
 		return;
 	}
 
-	for (i = 0; i < set->i; i++) {
+	i = 0;
+	while (i < set->i) {
 		if (set->a[i].symbol == symbol) {
 			if (i < set->i) {
 				memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
 			}
 			set->i--;
+		} else {
+			i++;
 		}
 	}
 
@@ -382,12 +385,15 @@ edge_set_remove_state(struct edge_set **setp, fsm_state_t state)
 		return;
 	}
 
-	for (i = 0; i < set->i; i++) {
+	i = 0;
+	while (i < set->i) {
 		if (set->a[i].state == state) {
 			if (i < set->i) {
 				memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
 			}
 			set->i--;
+		} else {
+			i++;
 		}
 	}
 }
