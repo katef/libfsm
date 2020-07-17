@@ -8,7 +8,7 @@ Getting started:
 
  * See the [tutorial introduction](doc/tutorial/re.md) for a quick overview
    of the re(1) command line interface.
- * [Compilaton phases](doc/tutorial/phases.md) for typical applications
+ * [Compilation phases](doc/tutorial/phases.md) for typical applications
    which compile regular expressions to code.
 
 Lexing is the process of categorising a stream of items by their spellings.
