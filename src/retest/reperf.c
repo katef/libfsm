@@ -278,10 +278,10 @@ static enum error_type
 perf_case_run(struct perf_case *c, double *, double *);
 
 static void
-perf_case_report(struct perf_case *c, enum error_type err, double, double);
+perf_case_report(struct perf_case *c, enum error_type err, int quiet, double, double);
 
 static int
-parse_perf_case(FILE *f, enum implementation impl)
+parse_perf_case(FILE *f, enum implementation impl, int quiet)
 {
 	size_t line;
 	char buf[4096];
@@ -427,7 +427,7 @@ parse_perf_case(FILE *f, enum implementation impl)
 		case 'X':
 			comp_delta = run_delta = 0.0;
 			err = perf_case_run(&c, &comp_delta, &run_delta);
-			perf_case_report(&c, err, comp_delta, run_delta);
+			perf_case_report(&c, err, quiet, comp_delta, run_delta);
 			perf_case_reset(&c);
 			break;
 
@@ -629,13 +629,14 @@ perf_case_run(struct perf_case *c, double *comp_delta, double *run_delta)
 }
 
 static void
-perf_case_report(struct perf_case *c, enum error_type err,
+perf_case_report(struct perf_case *c, enum error_type err, int quiet,
 	double comp_delta_secs, double run_delta_secs)
 {
-	printf("---[ %s ]---\n"
-		"line %zu\n"
-		"regexp /%s/\n",
-		c->test_name.data, c->line, c->regexp.data);
+	printf("---[ %s ]---\n", c->test_name.data);
+	printf("line %zu\n", c->line);
+	if (!quiet) {
+		printf("regexp /%s/\n", c->regexp.data);
+	}
 
 	switch (c->mt) {
 	case MATCH_NONE:
@@ -713,6 +714,10 @@ usage(void)
 	fprintf(stderr, "        <driverfile> specifies the path to the driver file, or '-' to read it from stdin\n");
 
 	fprintf(stderr, "\n");
+	fprintf(stderr, "        -q\n");
+	fprintf(stderr, "             quiet: elide the regexp from output (useful for long regexps)\n");
+
+	fprintf(stderr, "\n");
 	fprintf(stderr, "        -p\n");
 	fprintf(stderr, "             pause before running performance tests\n");
 
@@ -773,7 +778,7 @@ int
 main(int argc, char *argv[])
 {
 	int i;
-	int pause;
+	int pause, quiet;
 	enum implementation impl;
 
 	int optlevel = 1;
@@ -794,12 +799,13 @@ main(int argc, char *argv[])
 	opt.io = FSM_IO_PAIR;
 
 	pause                 = 0;
+	quiet                 = 0;
 	impl                  = IMPL_INTERPRET;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "O:L:l:x:" "p" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:l:x:" "pq" ), c != -1) {
 			switch (c) {
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
@@ -846,6 +852,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'p': pause = 1; break;
+			case 'q': quiet = 1; break;
 
 			case 'h':
 				usage();
@@ -880,7 +887,7 @@ main(int argc, char *argv[])
 
 	for (i=0; i < argc; i++) {
 		FILE *f = xopen(argv[i]);
-		parse_perf_case(f, impl);
+		parse_perf_case(f, impl, quiet);
 		fclose(f);
 	}
 
