@@ -19,12 +19,25 @@
 #include <fsm/capture.h>
 
 #include <re/re.h>
+#include <re/strings.h>
 
 #include "class.h"
 #include "ast.h"
 #include "ast_compile.h"
 
 #include "libfsm/internal.h" /* XXX */
+
+/*
+ * Aho-Corasick requires constructing a trie, and that has its own overhead.
+ * It's only worth doing this is the cost overall is lower.
+ *
+ * The parameters here bail out if the number of alts or the length of any
+ * particular string within an alt are below a threshold, especially because
+ * [xyz] is so common. The exact values only represent cost approximately.
+ * These are chosen just by trying it and seeing roughly how it goes.
+ */
+#define AC_COUNT_THRESHOLD  1
+#define AC_LENGTH_THRESHOLD 1
 
 #define LOG_LINKAGE 0
 
@@ -172,6 +185,108 @@ fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t *sa, fsm_state_t *sb,
 	}
 
 	return q;
+}
+
+static int
+is_dotstar(const struct ast_expr *n)
+{
+	assert(n != NULL);
+
+	if (n->type != AST_EXPR_REPEAT) {
+		return 0;
+	}
+
+	if (n->u.repeat.min != 0 || n->u.repeat.max != AST_COUNT_UNBOUNDED) {
+		return 0;
+	}
+
+	if (n->u.repeat.e->type != AST_EXPR_ANY) {
+		return 0;
+	}
+
+	return 1;
+}
+
+static int
+is_ac_candidate(const struct ast_expr *n, enum re_strings_flags *flags,
+	size_t *o_out, size_t *l_out)
+{
+	size_t o, count;
+	size_t i;
+
+	assert(n != NULL);
+	assert(flags != NULL);
+
+	o = 0;
+	count = n->u.concat.count;
+
+	/*
+	 * We're looking at a single literal in an alt: /...|x|.../
+	 * We could use AC here and treat this as a string anchored at both ends,
+	 * but the interface here deals with offsets into the array of children
+	 * for a concat node only. It's probably also overkill to involve AC for
+	 * alts of single literals. So here we defer to the usual NFA construction.
+	 */
+	if (n->type == AST_EXPR_LITERAL) {
+		return 0;
+	}
+
+	/*
+	 * We're looking at some other kind of node in an alt: /...|x+|.../
+	 * where we wouldn't be able to use AC anyway.
+	 */
+	if (n->type != AST_EXPR_CONCAT) {
+		return 0;
+	}
+
+	/*
+	 * This should never happen; a single-node concat is optimised away.
+	 */
+	if (n->u.alt.count == 1) {
+		return is_ac_candidate(n->u.alt.n[0], flags, o_out, l_out);
+	}
+
+	/*
+	 * The general form here is an n-ary concat like [.*] a b c [.*]
+	 * where .* is optional at either end. We're detecting the presence
+	 * of those, moving the offset and length to skip them, and setting
+	 * the appropriate RE_STRINGS_ANCHOR_LEFT/_RIGHT flags.
+	 *
+	 * "Anchor" here (as far as our implementation of Aho-Corasick cares) means
+	 * the absence of .* at either end; this is not the same as the ^$ anchors
+	 * in regexp syntax (because we're in the middle of an AST here).
+	 */
+	*flags = RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT;
+
+	if (count >= 1 && is_dotstar(n->u.concat.n[o])) {
+		o++;
+		count--;
+		*flags &= ~RE_STRINGS_ANCHOR_LEFT;
+	}
+
+	if (count >= 1 && is_dotstar(n->u.concat.n[count + o - 1])) {
+		count--;
+		*flags &= ~RE_STRINGS_ANCHOR_RIGHT;
+	}
+
+	if (count == 0) {
+		return 0;
+	}
+
+	/*
+	 * We also validate that the middle part contains a run of literals only,
+	 * else we're not suitable for AC anyway.
+	 */
+	for (i = o; i < count; i++) {
+		if (n->u.concat.n[i]->type != AST_EXPR_LITERAL) {
+			return 0;
+		}
+	}
+
+	*o_out = o;
+	*l_out = count;
+
+	return 1;
 }
 
 static struct fsm *
@@ -799,6 +914,7 @@ comp_iter(struct comp_env *env,
 
 	case AST_EXPR_ALT:
 	{
+		struct re_strings *a[] = { NULL, NULL, NULL, NULL };
 		size_t i;
 
 		const size_t count = n->u.alt.count;
@@ -806,13 +922,60 @@ comp_iter(struct comp_env *env,
 		assert(count >= 1);
 
 		for (i = 0; i < count; i++) {
-			/*
-			 * CONCAT handles adding extra states and
-			 * epsilons when necessary, so there isn't much
-			 * more to do here.
-			 */
-			RECURSE(x, y, n->u.alt.n[i]);
+			enum re_strings_flags flags;
+			size_t o, l;
+
+			if (count < AC_COUNT_THRESHOLD) {
+				RECURSE(x, y, n->u.alt.n[i]);
+				continue;
+			}
+
+			if (n->u.alt.n[i]->type != AST_EXPR_CONCAT ||
+			    n->u.alt.n[i]->u.concat.count < AC_LENGTH_THRESHOLD)
+			{
+				RECURSE(x, y, n->u.alt.n[i]);
+				continue;
+			}
+
+			if (!is_ac_candidate(n->u.alt.n[i], &flags, &o, &l)) {
+				RECURSE(x, y, n->u.alt.n[i]);
+				continue;
+			}
+
+			if (a[flags] == NULL) {
+				a[flags] = re_strings_new();
+				if (a[flags] == NULL) {
+					return 0;
+				}
+			}
+
+			/* XXX: i'm screwing up the const handling here, i'm sure */
+			if (!re_strings_add_concat(a[flags],
+				(const struct ast_expr **) n->u.alt.n[i]->u.concat.n + o, l))
+			{
+				return 0;
+			}
 		}
+
+		for (i = 0; i < sizeof a / sizeof *a; i++) {
+			fsm_state_t start;
+
+			if (a[i] == NULL) {
+				continue;
+			}
+
+			if (!re_strings_build_into(env->fsm, &start, 1, y, a[i], i)) {
+				return 0;
+			}
+			/* XXX: would love to avoid the epsilon here, for non-dotstar ac,
+			 * maybe we could pass in x directly? */
+			EPSILON(x, start);
+		}
+
+		for (i = 0; i < sizeof a / sizeof *a; i++) {
+			re_strings_free(a[i]);
+		}
+
 		break;
 	}
 
