@@ -74,6 +74,8 @@
  * 				<test_name>
  *
  * Lines ending with \ are continued to the next line.
+ * Both F and S directives may be omitted to measure compilation time only,
+ * in which case X should still be given.
  */
 
 static struct fsm_options opt;
@@ -86,8 +88,9 @@ struct str {
 };
 
 enum match_type {
-	MATCH_STRING = 0,
-	MATCH_FILE   = 1
+	MATCH_NONE,
+	MATCH_STRING,
+	MATCH_FILE
 };
 
 struct perf_case {
@@ -252,7 +255,7 @@ perf_case_reset(struct perf_case *c)
 
 	c->count     = 1;
 	c->dialect   = RE_NATIVE;
-	c->mt        = MATCH_STRING;
+	c->mt        = MATCH_NONE;
 	c->expected_matches = 1;
 }
 
@@ -265,7 +268,7 @@ perf_case_init(struct perf_case *c, enum implementation impl)
 
 	c->count     = 1;
 	c->dialect   = RE_NATIVE;
-	c->mt        = MATCH_STRING;
+	c->mt        = MATCH_NONE;
 	c->impl      = impl;
 
 	c->expected_matches = 1;
@@ -564,6 +567,9 @@ perf_case_run(struct perf_case *c, double *comp_delta, double *run_delta)
 	fsm_free(fsm);
 
 	switch (c->mt) {
+	case MATCH_NONE:
+		break;
+
 	case MATCH_STRING:
 		contents = c->match;
 		break;
@@ -631,18 +637,30 @@ perf_case_report(struct perf_case *c, enum error_type err,
 		"regexp /%s/\n",
 		c->test_name.data, c->line, c->regexp.data);
 
-	if (c->mt == MATCH_STRING) {
+	switch (c->mt) {
+	case MATCH_NONE:
+		break;
+
+	case MATCH_STRING:
 		printf("matching STRING:\n%s\n", c->match.data);
-	} else {
+		break;
+
+	case MATCH_FILE:
 		printf("matching FILE %s\n", c->match.data);
+		break;
+
+	default:
+		assert(!"unreached");
 	}
 
 	switch (err) {
 	case ERROR_NONE:
 		printf("compile %d iterations took %.4f seconds, %.4g seconds/iteration\n",
 			c->count, comp_delta_secs, comp_delta_secs / c->count);
-		printf("execute %d iterations took %.4f seconds, %.4g seconds/iteration\n",
-			c->count, run_delta_secs, run_delta_secs / c->count);
+		if (c->mt != MATCH_NONE) {
+			printf("execute %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+				c->count, run_delta_secs, run_delta_secs / c->count);
+		}
 		break;
 
 	/*
