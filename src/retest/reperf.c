@@ -38,6 +38,9 @@
 
 #include "runner.h"
 
+/* maybe enough for a big regex */
+#define BUF_LEN (4096 * 1024)
+
 #define DEBUG_ESCAPES     0
 #define DEBUG_VM_FSM      0
 #define DEBUG_TEST_REGEXP 0
@@ -284,7 +287,7 @@ static int
 parse_perf_case(FILE *f, enum implementation impl, int quiet)
 {
 	size_t line;
-	char buf[4096];
+	char *buf;
 	char *s;
 	char lastcmd;
 	struct perf_case c;
@@ -297,13 +300,20 @@ parse_perf_case(FILE *f, enum implementation impl, int quiet)
 	lastcmd = 0;
 	perf_case_init(&c, impl);
 
-	while (s = fgets(buf, sizeof buf, f), s != NULL) {
+	buf = xmalloc(BUF_LEN);
+
+	while (s = fgets(buf, BUF_LEN, f), s != NULL) {
 		char last;
 		char *b;
 		size_t len;
 
 		line++;
 		len = strlen(s);
+
+		if (len == BUF_LEN - 1) {
+			fprintf(stderr, "line %zu: overflow\n", line);
+			exit(EXIT_FAILURE);
+		}
 
 		if (scont) {
 			struct str *sc = scont;
@@ -436,6 +446,8 @@ parse_perf_case(FILE *f, enum implementation impl, int quiet)
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	free(buf);
 
 	return 0;
 }
