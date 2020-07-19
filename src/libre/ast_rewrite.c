@@ -248,7 +248,7 @@ rewrite_alt(struct ast_expr *n, enum re_flags flags)
 
 	/* de-duplicate children */
 	if (n->u.alt.count > 1) {
-		for (i = 0; i < n->u.alt.count; ) {
+		for (i = 0; i < n->u.alt.count - 1; ) {
 			if (ast_contains_expr(n->u.alt.n[i], n->u.alt.n + i + 1, n->u.alt.count - i - 1)) {
 				ast_expr_free(n->u.concat.n[i]);
 
