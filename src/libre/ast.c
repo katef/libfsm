@@ -213,6 +213,9 @@ ast_expr_equal(const struct ast_expr *a, const struct ast_expr *b)
 	case AST_EXPR_CODEPOINT:
 		return a->u.codepoint.u == b->u.codepoint.u;
 
+	case AST_EXPR_ANY:
+		return 1;
+
 	case AST_EXPR_REPEAT:
 		if (a->u.repeat.min != b->u.repeat.min) {
 			return 0;
