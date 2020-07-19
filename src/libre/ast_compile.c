@@ -34,10 +34,14 @@
  * The parameters here bail out if the number of alts or the length of any
  * particular string within an alt are below a threshold, especially because
  * [xyz] is so common. The exact values only represent cost approximately.
- * These are chosen just by trying it and seeing roughly how it goes.
+ *
+ * In practice I found it difficult to pick values for these, because for
+ * the lower end of the scale it's hard to see a meaningful difference,
+ * and for the upper end of the scale the time is dominated by
+ * determinisation anyway.
  */
-#define AC_COUNT_THRESHOLD  1
-#define AC_LENGTH_THRESHOLD 1
+#define AC_COUNT_THRESHOLD  5
+#define AC_LENGTH_THRESHOLD 5
 
 #define LOG_LINKAGE 0
 
