@@ -29,7 +29,7 @@
 
 /*
  * Aho-Corasick requires constructing a trie, and that has its own overhead.
- * It's only worth doing this is the cost overall is lower.
+ * It's only worth doing this if the cost overall is lower.
  *
  * The parameters here bail out if the number of alts or the length of any
  * particular string within an alt are below a threshold, especially because
