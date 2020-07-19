@@ -540,6 +540,12 @@ perf_case_run(struct perf_case *c, double *comp_delta, double *run_delta)
 			}
 		}
 
+		/* XXX - minimize or determinize? */
+		if (!fsm_determinise(fsm)) {
+			fsm_free(fsm);
+			return ERROR_DETERMINISING;
+		}
+
 		if (clock_gettime(CLOCK_MONOTONIC, &c1) != 0) {
 			fsm_runner_finalize(&runner);
 			return ERROR_CLOCK_ERROR;
@@ -551,12 +557,6 @@ perf_case_run(struct perf_case *c, double *comp_delta, double *run_delta)
 			double dns  = c1.tv_nsec - c0.tv_nsec;
 			*comp_delta = dsec + dns * 1e-9;
 		}
-	}
-
-	/* XXX - minimize or determinize? */
-	if (!fsm_determinise(fsm)) {
-		fsm_free(fsm);
-		return ERROR_DETERMINISING;
 	}
 
 	ret = fsm_runner_initialize(fsm, &runner, c->impl, vm_opts);
