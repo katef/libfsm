@@ -399,6 +399,55 @@ edge_set_remove_state(struct edge_set **setp, fsm_state_t state)
 }
 
 void
+edge_set_compact(struct edge_set **setp,
+    fsm_state_remap_fun *remap, void *opaque)
+{
+	struct edge_set *set;
+	size_t i, removed;
+
+	assert(setp != NULL);
+
+	if (IS_SINGLETON(*setp)) {
+		const unsigned char symbol = SINGLETON_DECODE_SYMBOL(*setp);
+		const fsm_state_t s = SINGLETON_DECODE_STATE(*setp);
+		const fsm_state_t new_id = remap(s, opaque);
+		if (new_id == FSM_STATE_REMAP_NO_STATE) {
+			*setp = NULL;
+		} else {
+			assert(new_id <= s);
+			*setp = SINGLETON_ENCODE(symbol, new_id);
+		}
+		return;
+	}
+
+	set = *setp;
+
+	if (edge_set_empty(set)) {
+		return;
+	}
+
+	i = 0;
+	removed = 0;
+	while (i < set->i) {
+		const fsm_state_t to = set->a[i].state;
+		const fsm_state_t new_to = remap(to, opaque);
+
+		if (new_to == FSM_STATE_REMAP_NO_STATE) {
+			if (i < set->i) {
+				/* TODO: avoid redundant memmoves, compact
+				 * with src/dest offsets. */
+				memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
+			}
+			set->i--;
+			removed++;
+		} else {	/* keep */
+			set->a[i].state = new_to;
+			i++;
+		}
+	}
+}
+
+void
 edge_set_reset(struct edge_set *set, struct edge_iter *it)
 {
 	it->i = 0;

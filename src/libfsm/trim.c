@@ -168,51 +168,26 @@ mark_states(struct fsm *fsm,
 	return 1;
 }
 
+static int
+marks_filter_cb(fsm_state_t id, void *opaque)
+{
+	const unsigned char *marks = opaque;
+	return marks[id] & MARK_REACHES_END;
+}
+
 long
 sweep_states(struct fsm *fsm,
 	unsigned char *marks)
 {
-	long swept;
-	fsm_state_t i;
-
-	swept = 0;
+	size_t swept;
 
 	assert(fsm != NULL);
 
-	/*
-	 * This could be made faster by not using fsm_removestate (which does the
-	 * work of also removing transitions from other states to the state being
-	 * removed). We could get away with removing just our candidate state
-	 * without removing transitions to it, because any state being removed here
-	 * should (by definition) not be the start, or have any other reachable
-	 * edges referring to it.
-	 *
-	 * There may temporarily be other states in the graph with other edges
-	 * to it, because the states aren't topologically sorted, but
-	 * they'll be collected soon as well.
-	 *
-	 * XXX: For now we call fsm_removestate() for simplicity of implementation.
-	 */
-	i = fsm->statecount - 1;
-	for (;;) {
-		if (marks[i] & MARK_REACHES_END) {
-			if (i == 0) { break; }
-			i--;
-			continue;
-		}
-
-		/*
-		 * This state cannot contain transitions pointing to earlier
-		 * states, because they have already been removed. So we know
-		 * the current index may not decrease.
-		 */
-		fsm_removestate(fsm, i);
-		swept++;
-		if (i == 0) { break; }
-		i--;
+	if (!fsm_compact_states(fsm, marks_filter_cb, marks, &swept)) {
+		return -1;
 	}
 
-	return swept;
+	return (long)swept;
 }
 
 int
