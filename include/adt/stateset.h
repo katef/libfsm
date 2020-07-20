@@ -36,6 +36,10 @@ state_set_copy(struct state_set **dst, const struct fsm_alloc *alloc,
 	const struct state_set *src);
 
 void
+state_set_compact(struct state_set **set,
+    fsm_state_remap_fun *remap, void *opaque);
+
+void
 state_set_remove(struct state_set **set, fsm_state_t state);
 
 int

@@ -103,6 +103,31 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n);
 void
 fsm_removestate(struct fsm *fsm, fsm_state_t state);
 
+/* Use the state passed in via opaque to determine whether the state[id]
+ * will have a new ID <= the current ID or be removed (in which case,
+ * the callback should return FSM_STATE_REMAP_NO_STATE).
+ *
+ * Whether this can be used to combine states or just compact them
+ * depends on the caller. */
+#define FSM_STATE_REMAP_NO_STATE ((fsm_state_t)-1)
+typedef fsm_state_t
+fsm_state_remap_fun(fsm_state_t id, void *opaque);
+
+/* Use the state passed in via opaque to determine whether
+ * to keep state[id]. */
+typedef int
+fsm_state_filter_fun(fsm_state_t id, void *opaque);
+
+/* Rewrite the FSM by eliminating states that should be
+ * removed (according to the remap callback) and then
+ * compacting the rest.
+ *
+ * This cannot be used to combine multiple states. */
+int
+fsm_compact_states(struct fsm *fsm,
+    fsm_state_filter_fun *filter, void *opaque,
+    size_t *removed);
+
 /*
  * Add an edge from a given state to a given state, labelled with the given
  * label. If an edge to that state of the same label already exists, the

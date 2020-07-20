@@ -328,7 +328,7 @@ state_set_add_bulk(struct state_set **setp, const struct fsm_alloc *alloc,
 
 	set = *setp;
 
-	newlen = set->i + n; 
+	newlen = set->i + n;
 	if (newlen > set->n) {
 		/* need to expand */
 		fsm_state_t *new;
@@ -339,7 +339,7 @@ state_set_add_bulk(struct state_set **setp, const struct fsm_alloc *alloc,
 		if (new == NULL) {
 			return 0;
 		}
-		
+
 		set->a = new;
 		set->n = newcap;
 	}
@@ -361,7 +361,7 @@ state_set_add_bulk(struct state_set **setp, const struct fsm_alloc *alloc,
 				set->a[curr++] = set->a[i];
 			}
 		}
-		
+
 		set->i = curr;
 	}
 
@@ -391,6 +391,54 @@ state_set_copy(struct state_set **dst, const struct fsm_alloc *alloc,
 	}
 
 	return 1;
+}
+
+void
+state_set_compact(struct state_set **setp,
+    fsm_state_remap_fun *remap, void *opaque)
+{
+	struct state_set *set;
+	size_t i, removed, dst;
+
+	if (IS_SINGLETON(*setp)) {
+		const fsm_state_t s = SINGLETON_DECODE(*setp);
+		const fsm_state_t new_id = remap(s, opaque);
+		if (new_id == FSM_STATE_REMAP_NO_STATE) {
+			*setp = NULL;
+		} else {
+			assert(new_id <= s);
+			*setp = SINGLETON_ENCODE(new_id);
+		}
+		return;
+	}
+
+	set = *setp;
+
+	if (state_set_empty(set)) {
+		return;
+	}
+
+	i = 0;
+	removed = 0;
+	dst = 0;
+
+	for (i = 0; i < set->i; i++) {
+		const fsm_state_t s = set->a[i];
+		const fsm_state_t new_id = remap(s + removed, opaque);
+
+		if (new_id == FSM_STATE_REMAP_NO_STATE) { /* drop */
+			removed++;
+		} else {	/* keep */
+			if (dst < i) {
+				memcpy(&set->a[dst],
+				    &set->a[i],
+				    sizeof(set->a[0]));
+			}
+			dst++;
+		}
+	}
+	set->i -= removed;
+	assert(set->i == dst);
 }
 
 void
@@ -617,4 +665,3 @@ state_set_hash(const struct state_set *set)
 
 	return hashrec(set->a, set->i * sizeof *set->a);
 }
-

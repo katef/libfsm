@@ -1,0 +1,7 @@
+# 0 and 4 states removed
+
+0  ->  1 "b"; # e.g. "b"
+1  ->  2 "c"; # e.g. "bc"
+
+start: 0;
+end:   2;

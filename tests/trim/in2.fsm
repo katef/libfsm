@@ -1,0 +1,9 @@
+# 0 is unreachable from start, 4 is a dead end
+0 -> 1 'a';
+1 -> 2 'b';
+2 -> 3 'c';
+3 -> 4 'd';
+4 -> 4 'e';
+
+start: 1;
+end: 3;
