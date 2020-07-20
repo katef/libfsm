@@ -170,7 +170,7 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 						fprintf(f, "\tMOV   %s, %02xh\n", ret_reg, end_st);
 						break;
 					case AMD64_GO:
-						fprintf(f, "\tMOVQ   $%02x, %s\n", end_st, ret_reg);
+						fprintf(f, "\tMOVQ   $0x%02x, %s\n", end_st, ret_reg);
 						break;
 
 					}
@@ -251,7 +251,7 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 						break;
 
 					case AMD64_GO:
-						fprintf(f, "\tMOVQ  $-1, %s\n", ret_reg);
+						fprintf(f, "\tMOVQ    $-1, %s\n", ret_reg);
 						break;
 					}
 				}
