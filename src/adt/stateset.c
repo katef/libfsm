@@ -398,7 +398,7 @@ state_set_compact(struct state_set **setp,
     fsm_state_remap_fun *remap, void *opaque)
 {
 	struct state_set *set;
-	size_t i, removed;
+	size_t i, removed, dst;
 
 	if (IS_SINGLETON(*setp)) {
 		const fsm_state_t s = SINGLETON_DECODE(*setp);
@@ -420,25 +420,25 @@ state_set_compact(struct state_set **setp,
 
 	i = 0;
 	removed = 0;
-	while (i < set->i) {
+	dst = 0;
+
+	for (i = 0; i < set->i; i++) {
 		const fsm_state_t s = set->a[i];
 		const fsm_state_t new_id = remap(s + removed, opaque);
 
-		if (new_id == FSM_STATE_REMAP_NO_STATE) {
-			if (i < set->i) {
-				/* TODO: avoid redudant memmoves */
-				memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
-			}
-			set->i--;
+		if (new_id == FSM_STATE_REMAP_NO_STATE) { /* drop */
 			removed++;
-			assert(!state_set_contains(set, s));
 		} else {	/* keep */
-			/* loop invariants */
-			assert(new_id <= s);
-			assert(new_id == i);
-			i++;
+			if (dst < i) {
+				memcpy(&set->a[dst],
+				    &set->a[i],
+				    sizeof(set->a[0]));
+			}
+			dst++;
 		}
 	}
+	set->i -= removed;
+	assert(set->i == dst);
 }
 
 void

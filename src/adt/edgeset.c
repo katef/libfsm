@@ -403,7 +403,7 @@ edge_set_compact(struct edge_set **setp,
     fsm_state_remap_fun *remap, void *opaque)
 {
 	struct edge_set *set;
-	size_t i, removed;
+	size_t i, removed, dst;
 
 	assert(setp != NULL);
 
@@ -428,23 +428,26 @@ edge_set_compact(struct edge_set **setp,
 
 	i = 0;
 	removed = 0;
-	while (i < set->i) {
+	dst = 0;
+	for (i = 0; i < set->i; i++) {
 		const fsm_state_t to = set->a[i].state;
 		const fsm_state_t new_to = remap(to, opaque);
 
-		if (new_to == FSM_STATE_REMAP_NO_STATE) {
-			if (i < set->i) {
-				/* TODO: avoid redundant memmoves, compact
-				 * with src/dest offsets. */
-				memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
-			}
-			set->i--;
+		if (new_to == FSM_STATE_REMAP_NO_STATE) { /* drop */
 			removed++;
 		} else {	/* keep */
-			set->a[i].state = new_to;
-			i++;
+			if (dst < i) {
+				memcpy(&set->a[dst],
+				    &set->a[i],
+				    sizeof(set->a[i]));
+			}
+			set->a[dst].state = new_to;
+			dst++;
 		}
 	}
+
+	set->i -= removed;
+	assert(set->i == dst);
 }
 
 void
