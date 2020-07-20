@@ -109,6 +109,12 @@ struct perf_case {
 	enum implementation impl;
 };
 
+struct timing {
+	double comp_delta;
+	double det_delta;
+	double run_delta;
+};
+
 static struct str
 str_empty(void)
 {
@@ -131,6 +137,15 @@ str_clear(struct str *s)
 	if (s->cap > 0) {
 		s->data[0] = '\0';
 	}
+}
+
+static void
+report_delta(double *delta,
+	const struct timespec *t0, const struct timespec *t1)
+{
+	double dsec = difftime(t1->tv_sec, t0->tv_sec);
+	double dns  = t1->tv_nsec - t0->tv_nsec;
+	*delta = dsec + dns * 1e-9;
 }
 
 static void
@@ -279,11 +294,11 @@ perf_case_init(struct perf_case *c, enum implementation impl)
 
 static enum error_type
 perf_case_run(struct perf_case *c,
-	double *, double *, double *);
+	struct timing *t);
 
 static void
 perf_case_report(struct perf_case *c, enum error_type err, int quiet,
-	double, double, double);
+	const struct timing *t);
 
 static int
 parse_perf_case(FILE *f, enum implementation impl, int quiet)
@@ -295,7 +310,7 @@ parse_perf_case(FILE *f, enum implementation impl, int quiet)
 	struct perf_case c;
 	struct str *scont;
 	enum error_type err;
-	double comp_delta, det_delta, run_delta;
+	struct timing t;
 
 	scont = NULL;
 	line = 0;
@@ -437,9 +452,9 @@ parse_perf_case(FILE *f, enum implementation impl, int quiet)
 			break;
 
 		case 'X':
-			comp_delta = det_delta = run_delta = 0.0;
-			err = perf_case_run(&c, &comp_delta, &det_delta, &run_delta);
-			perf_case_report(&c, err, quiet, comp_delta, det_delta, run_delta);
+			t.comp_delta = t.det_delta = t.run_delta = 0.0;
+			err = perf_case_run(&c, &t);
+			perf_case_report(&c, err, quiet, &t);
 			perf_case_reset(&c);
 			break;
 
@@ -505,7 +520,7 @@ read_file(const char *path, struct str *contents)
 
 static enum error_type
 perf_case_run(struct perf_case *c,
-	double *comp_delta, double *det_delta, double *run_delta)
+	struct timing *t)
 {
 	struct fsm *fsm;
 	struct fsm_runner runner;
@@ -549,12 +564,7 @@ perf_case_run(struct perf_case *c,
 			return ERROR_CLOCK_ERROR;
 		}
 
-		/* report time difference */
-		{
-			double dsec = difftime(c1.tv_sec, c0.tv_sec);
-			double dns  = c1.tv_nsec - c0.tv_nsec;
-			*comp_delta = dsec + dns * 1e-9;
-		}
+		report_delta(&t->comp_delta, &c0, &c1);
 	}
 
 	{
@@ -576,9 +586,7 @@ perf_case_run(struct perf_case *c,
 
 		/* report time difference */
 		if (c->count == 1) {
-			double dsec = difftime(d1.tv_sec, d0.tv_sec);
-			double dns  = d1.tv_nsec - d0.tv_nsec;
-			*det_delta = dsec + dns * 1e-9;
+			report_delta(&t->det_delta, &d0, &d1);
 		}
 	}
 
@@ -653,19 +661,14 @@ perf_case_run(struct perf_case *c,
 
 	fsm_runner_finalize(&runner);
 
-	/* report time difference */
-	{
-		double dsec = difftime(t1.tv_sec, t0.tv_sec);
-		double dns  = t1.tv_nsec - t0.tv_nsec;
-		*run_delta = dsec + dns * 1e-9;
-	}
+	report_delta(&t->run_delta, &t0, &t1);
 
 	return ERROR_NONE;
 }
 
 static void
 perf_case_report(struct perf_case *c, enum error_type err, int quiet,
-	double comp_delta_secs, double det_delta_secs, double run_delta_secs)
+	const struct timing *t)
 {
 	printf("---[ %s ]---\n", c->test_name.data);
 	printf("line %zu\n", c->line);
@@ -692,14 +695,14 @@ perf_case_report(struct perf_case *c, enum error_type err, int quiet,
 	switch (err) {
 	case ERROR_NONE:
 		printf("compile %d iterations took %.4f seconds, %.4g seconds/iteration\n",
-			c->count, comp_delta_secs, comp_delta_secs / c->count);
+			c->count, t->comp_delta, t->comp_delta / c->count);
 		if (c->count == 1) {
 			printf("determinise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
-				c->count, det_delta_secs, det_delta_secs / c->count);
+				c->count, t->det_delta, t->det_delta / c->count);
 		}
 		if (c->mt != MATCH_NONE) {
 			printf("execute %d iterations took %.4f seconds, %.4g seconds/iteration\n",
-				c->count, run_delta_secs, run_delta_secs / c->count);
+				c->count, t->run_delta, t->run_delta / c->count);
 		}
 		break;
 
