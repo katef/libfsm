@@ -210,17 +210,10 @@ fsm_trim(struct fsm *fsm)
 	}
 
 	/*
-	 * Remove all states which have no reachable end state henceforth.
-	 * These are a trailing suffix which will never accept.
+	 * Remove all states which are unreachable from the start state
+	 * or have no path to an end state. These are a trailing suffix
+	 * which will never accept.
 	 *
-	 * It doesn't matter which order in which these are removed;
-	 * removing a state in the middle will disconnect the remainer of
-	 * the suffix. The nodes in that newly disjoint subgraph
-	 * will still be found to have no reachable end state, and so are
-	 * also removed.
-	 */
-
-	/*
 	 * sweep_states returns a negative value on error, otherwise it returns
 	 * the number of states swept.
 	 */
