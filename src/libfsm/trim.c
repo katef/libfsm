@@ -100,7 +100,7 @@ mark_states(struct fsm *fsm,
 					stack = nstack;
 				}
 
-				if (!marks[epsilon_s] & MARK_ENQUEUED) {
+				if (!(marks[epsilon_s] & MARK_ENQUEUED)) {
 					stack[stack_i] = epsilon_s;
 					stack_i++;
 					marks[epsilon_s] |= MARK_ENQUEUED;
@@ -125,7 +125,7 @@ mark_states(struct fsm *fsm,
 					stack = nstack;
 				}
 
-				if (!marks[e.state] & MARK_ENQUEUED) {
+				if (!(marks[e.state] & MARK_ENQUEUED)) {
 					stack[stack_i] = e.state;
 					stack_i++;
 					marks[e.state] |= MARK_ENQUEUED;
