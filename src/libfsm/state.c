@@ -189,7 +189,7 @@ fsm_compact_states(struct fsm *fsm,
 
 	/* Clear start state, if doomed. */
 	if (fsm_getstart(fsm, &old_start)) {
-		if (mapping[i] == FSM_STATE_REMAP_NO_STATE) {
+		if (mapping[old_start] == FSM_STATE_REMAP_NO_STATE) {
 			fsm_clearstart(fsm);
 			old_start = FSM_STATE_REMAP_NO_STATE;
 		}
