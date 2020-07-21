@@ -196,15 +196,15 @@ struct ast_count
 ast_make_count(unsigned min, const struct ast_pos *start,
 	unsigned max, const struct ast_pos *end);
 
-int
-ast_endpoint_equal(const struct ast_endpoint *a, const struct ast_endpoint *b);
-
 /*
  * Expressions
  */
 
 void
 ast_expr_free(struct ast_expr *n);
+
+int
+ast_expr_cmp(const struct ast_expr *a, const struct ast_expr *b);
 
 int
 ast_expr_equal(const struct ast_expr *a, const struct ast_expr *b);
