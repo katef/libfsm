@@ -34,6 +34,14 @@ cmp(const void *_a, const void *_b)
 	return ast_expr_cmp(a, b);
 }
 
+static void
+dtor(void *p)
+{
+	struct ast_expr *n = * (struct ast_expr **) p;
+
+	ast_expr_free(n);
+}
+
 /*
  * Remove duplicates from a pre-sorted array, according to a user-supplied
  * comparator.  Usually the array should have been sorted with qsort() using
@@ -41,18 +49,38 @@ cmp(const void *_a, const void *_b)
  */
 static size_t
 qunique(void *array, size_t elements, size_t width,
-	int (*cmp) (const void *, const void *))
+	int (*cmp)(const void *, const void *),
+	void (*dtor)(void *))
 {
-	char *bytes = (char *) array;
+	char *bytes = array;
+	const char *sentinel;
 	size_t i, j;
 
 	if (elements <= 1) {
 		return elements;
 	}
 
+	/*
+	 * Borrow the first element as a sentinel value, so we don't free
+	 * twice when visiting elements which have already been moved down.
+	 * You can see this e.g. for "abccxy" where 'x' is copied down,
+	 * and the original location for 'x' is replaced with the sentinel.
+	 *
+	 * Any unique value would do; we can't use NULL because we don't
+	 * know what types the array contains.
+	 */
+	sentinel = bytes;
+
 	for (i = 1, j = 0; i < elements; ++i) {
 		if (cmp(bytes + i * width, bytes + j * width) != 0 && ++j != i) {
+			assert(i != j);
+
+			if (memcmp(bytes + j * width, sentinel, width) != 0) {
+				dtor(bytes + j * width);
+			}
 			memcpy(bytes + j * width, bytes + i * width, width);
+
+			memcpy(bytes + i * width, sentinel, width);
 		}
 	}
 
@@ -284,7 +312,7 @@ rewrite_alt(struct ast_expr *n, enum re_flags flags)
 	/* de-duplicate children */
 	if (n->u.alt.count > 1) {
 		qsort(n->u.alt.n, n->u.alt.count, sizeof *n->u.alt.n, cmp);
-		n->u.alt.count = qunique(n->u.alt.n, n->u.alt.count, sizeof *n->u.alt.n, cmp);
+		n->u.alt.count = qunique(n->u.alt.n, n->u.alt.count, sizeof *n->u.alt.n, cmp, dtor);
 	}
 
 	if (n->u.alt.count == 0) {
