@@ -24,6 +24,7 @@
 
 	<!ENTITY a.opt "<option>-a</option>">
 	<!ENTITY w.opt "<option>-w</option>">
+	<!ENTITY C.opt "<option>-C</option>">
 	<!ENTITY c.opt "<option>-c</option>">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
 	<!ENTITY k.opt "<option>-k</option>&nbsp;&io.arg;">
@@ -82,6 +83,7 @@
 
 			<arg choice="opt">&l.opt;</arg>
 			<arg choice="opt">&a.opt;</arg>
+			<arg choice="opt">&C.opt;</arg>
 			<arg choice="opt">&c.opt;</arg>
 			<arg choice="opt">&w.opt;</arg>
 			<arg choice="opt">&X.opt;</arg>
@@ -161,6 +163,16 @@
 						per the <code>anonymous_states</code> option for &fsm_print.3;.
 						The default is to number states,
 					which is the opposite to the equivalent &a.opt; option for &re.1;.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&C.opt;</term>
+
+				<listitem>
+					<para>Disable comments in generated code,
+						per the <code>comments</code> option for &fsm_print.3;.
+						The default is to output comments.</para>
 				</listitem>
 			</varlistentry>
 
