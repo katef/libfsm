@@ -25,6 +25,55 @@
 static int
 rewrite(struct ast_expr *n, enum re_flags flags);
 
+static int
+cmp(const void *_a, const void *_b)
+{
+	const struct ast_expr *a = * (const struct ast_expr * const *) _a;
+	const struct ast_expr *b = * (const struct ast_expr * const *) _b;
+
+	return ast_expr_cmp(a, b);
+}
+
+static void
+dtor(void *p)
+{
+	struct ast_expr *n = * (struct ast_expr **) p;
+
+	ast_expr_free(n);
+}
+
+/*
+ * Remove duplicates from a pre-sorted array, according to a user-supplied
+ * comparator.  Usually the array should have been sorted with qsort() using
+ * the same arguments.  Return the new size.
+ */
+static size_t
+qunique(void *array, size_t elements, size_t width,
+	int (*cmp)(const void *, const void *),
+	void (*dtor)(void *))
+{
+	char *bytes = array;
+	size_t i, j;
+
+	if (elements <= 1) {
+		return elements;
+	}
+
+	for (i = 1, j = 0; i < elements; ++i) {
+		if (cmp(bytes + i * width, bytes + j * width) != 0) {
+			if (++j != i) {
+				assert(i != j);
+
+				memcpy(bytes + j * width, bytes + i * width, width);
+			}
+		} else {
+			dtor(bytes + i * width);
+		}
+	}
+
+	return j + 1;
+}
+
 static struct fsm *
 compile_subexpr(struct ast_expr *e, enum re_flags flags)
 {
@@ -246,23 +295,11 @@ rewrite_alt(struct ast_expr *n, enum re_flags flags)
 		i++;
 	}
 
+
 	/* de-duplicate children */
 	if (n->u.alt.count > 1) {
-		for (i = 0; i < n->u.alt.count; ) {
-			if (ast_contains_expr(n->u.alt.n[i], n->u.alt.n + i + 1, n->u.alt.count - i - 1)) {
-				ast_expr_free(n->u.concat.n[i]);
-
-				if (i + 1 < n->u.concat.count) {
-					memmove(&n->u.concat.n[i], &n->u.concat.n[i + 1],
-						(n->u.concat.count - i - 1) * sizeof *n->u.concat.n);
-				}
-
-				n->u.concat.count--;
-				continue;
-			}
-
-			i++;
-		}
+		qsort(n->u.alt.n, n->u.alt.count, sizeof *n->u.alt.n, cmp);
+		n->u.alt.count = qunique(n->u.alt.n, n->u.alt.count, sizeof *n->u.alt.n, cmp, dtor);
 	}
 
 	if (n->u.alt.count == 0) {

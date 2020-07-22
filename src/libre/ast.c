@@ -24,28 +24,6 @@
 static struct ast_expr the_tombstone;
 struct ast_expr *ast_expr_tombstone = &the_tombstone;
 
-int
-ast_endpoint_equal(const struct ast_endpoint *a, const struct ast_endpoint *b)
-{
-	assert(a != NULL);
-	assert(b != NULL);
-
-	if (a->type != b->type) {
-		return 0;
-	}
-
-	switch (a->type) {
-	case AST_ENDPOINT_LITERAL:
-		return a->u.literal.c == b->u.literal.c;
-
-	case AST_ENDPOINT_NAMED:
-		return a->u.named.class == b->u.named.class;
-
-	default:
-		assert(!"unreached");
-	}
-}
-
 struct ast *
 ast_new(void)
 {
@@ -156,135 +134,210 @@ ast_expr_free(struct ast_expr *n)
 	free(n);
 }
 
-int
-ast_expr_equal(const struct ast_expr *a, const struct ast_expr *b)
+static int
+ast_class_cmp(const struct class *a, const struct class *b)
 {
-	if (a == NULL && b == NULL) {
-		return 1;
+	size_t i;
+
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (a->count < b->count) { return -1; }
+	if (a->count > b->count) { return +1; }
+
+	for (i = 0; i < a->count; i++) {
+		const struct range *ra, *rb;
+
+		ra = &a->ranges[i];
+		rb = &b->ranges[i];
+
+		if (ra->a < rb->a) { return -1; }
+		if (ra->a > rb->a) { return +1; }
+
+		if (ra->b < rb->b) { return -1; }
+		if (ra->b > rb->b) { return +1; }
 	}
 
-	if (a == NULL || b == NULL) {
+	return 0;
+}
+
+static int
+ast_endpoint_cmp(const struct ast_endpoint *a, const struct ast_endpoint *b)
+{
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (a->type < b->type) { return -1; }
+	if (a->type > b->type) { return +1; }
+
+	switch (a->type) {
+	case AST_ENDPOINT_LITERAL:
+		if (a->u.literal.c < b->u.literal.c) { return -1; }
+		if (a->u.literal.c > b->u.literal.c) { return +1; }
+
+		return 0;
+
+	case AST_ENDPOINT_NAMED: {
+		int r;
+
+		r = ast_class_cmp(a->u.named.class, b->u.named.class);
+		if (r != 0) {
+			return r;
+		}
+
 		return 0;
 	}
 
-	if (a->type != b->type) {
-		return 0;
+	default:
+		assert(!"unreached");
 	}
-	
+}
+
+int
+ast_expr_cmp(const struct ast_expr *a, const struct ast_expr *b)
+{
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (a->type < b->type) { return -1; }
+	if (a->type > b->type) { return +1; }
+
+	if (a->flags < b->flags) { return -1; }
+	if (a->flags > b->flags) { return +1; }
+
 	switch (a->type) {
 	case AST_EXPR_EMPTY:
-		return 1;
+		return 0;
 
 	case AST_EXPR_CONCAT: {
 		size_t i;
 
-		if (a->u.concat.count != b->u.concat.count) {
-			return 0;
-		}
+		if (a->u.concat.count < b->u.concat.count) { return -1; }
+		if (a->u.concat.count > b->u.concat.count) { return +1; }
 
 		for (i = 0; i < a->u.concat.count; i++) {
-			if (!ast_expr_equal(a->u.concat.n[i], b->u.concat.n[i])) {
-				return 0;
+			int r;
+
+			r = ast_expr_cmp(a->u.concat.n[i], b->u.concat.n[i]);
+			if (r != 0) {
+				return r;
 			}
 		}
 
-		return 1;
+		return 0;
 	}
 
 	case AST_EXPR_ALT: {
 		size_t i;
 
-		if (a->u.alt.count != b->u.alt.count) {
-			return 0;
-		}
+		if (a->u.alt.count < b->u.alt.count) { return -1; }
+		if (a->u.alt.count > b->u.alt.count) { return +1; }
 
 		for (i = 0; i < a->u.alt.count; i++) {
-			if (!ast_expr_equal(a->u.alt.n[i], b->u.alt.n[i])) {
-				return 0;
+			int r;
+
+			r = ast_expr_cmp(a->u.alt.n[i], b->u.alt.n[i]);
+			if (r != 0) {
+				return r;
 			}
 		}
 
-		return 1;
+		return 0;
 	}
 
 	case AST_EXPR_LITERAL:
-		return a->u.literal.c == b->u.literal.c;
+		if ((unsigned char) a->u.literal.c < (unsigned char) b->u.literal.c) { return -1; }
+		if ((unsigned char) a->u.literal.c > (unsigned char) b->u.literal.c) { return +1; }
+
+		return 0;
 
 	case AST_EXPR_CODEPOINT:
-		return a->u.codepoint.u == b->u.codepoint.u;
+		if (a->u.codepoint.u < b->u.codepoint.u) { return -1; }
+		if (a->u.codepoint.u > b->u.codepoint.u) { return +1; }
+
+		return 0;
+
+	case AST_EXPR_ANY:
+		return 0;
 
 	case AST_EXPR_REPEAT:
-		if (a->u.repeat.min != b->u.repeat.min) {
-			return 0;
-		}
+		if (a->u.repeat.min < b->u.repeat.min) { return -1; }
+		if (a->u.repeat.min > b->u.repeat.min) { return +1; }
 
-		if (a->u.repeat.max != b->u.repeat.max) {
-			return 0;
-		}
+		if (a->u.repeat.max < b->u.repeat.max) { return -1; }
+		if (a->u.repeat.max > b->u.repeat.max) { return +1; }
 
-		if (!ast_expr_equal(a->u.repeat.e, b->u.repeat.e)) {
-			return 0;
-		}
-
-		return 1;
+		return ast_expr_cmp(a->u.repeat.e, b->u.repeat.e);
 
 	case AST_EXPR_GROUP:
-		if (a->u.group.id != b->u.group.id) {
-			return 0;
-		}
+		if (a->u.group.id < b->u.group.id) { return -1; }
+		if (a->u.group.id > b->u.group.id) { return +1; }
 
-		if (!ast_expr_equal(a->u.group.e, b->u.group.e)) {
-			return 0;
-		}
-
-		return 1;
+		return ast_expr_cmp(a->u.group.e, b->u.group.e);
 
 	case AST_EXPR_FLAGS:
-		if (a->u.flags.pos != b->u.flags.pos) {
-			return 0;
-		}
+		if (a->u.flags.pos < b->u.flags.pos) { return -1; }
+		if (a->u.flags.pos > b->u.flags.pos) { return +1; }
 
-		if (a->u.flags.neg != b->u.flags.neg) {
-			return 0;
-		}
+		if (a->u.flags.neg < b->u.flags.neg) { return -1; }
+		if (a->u.flags.neg > b->u.flags.neg) { return +1; }
 
-		return 1;
+		return 0;
 
 	case AST_EXPR_ANCHOR:
-		if (a->u.anchor.type != b->u.anchor.type) {
-			return 0;
+		if (a->u.anchor.type < b->u.anchor.type) { return -1; }
+		if (a->u.anchor.type < b->u.anchor.type) { return +1; }
+
+		return 0;
+
+	case AST_EXPR_SUBTRACT: {
+		int r;
+
+		r = ast_expr_cmp(a->u.subtract.a, b->u.subtract.a);
+		if (r != 0) {
+			return r;
 		}
 
-		return 1;
-
-	case AST_EXPR_SUBTRACT:
-		if (!ast_expr_equal(a->u.subtract.a, b->u.subtract.b)) {
-			return 0;
+		r = ast_expr_cmp(a->u.subtract.b, b->u.subtract.b);
+		if (r != 0) {
+			return r;
 		}
 
-		return 1;
+		return 0;
+	}
 
-	case AST_EXPR_RANGE:
-		if (!ast_endpoint_equal(&a->u.range.from, &b->u.range.from)) {
-			return 0;
+	case AST_EXPR_RANGE: {
+		int r;
+
+		r = ast_endpoint_cmp(&a->u.range.from, &b->u.range.from);
+		if (r != 0) {
+			return r;
 		}
 
-		if (!ast_endpoint_equal(&a->u.range.to, &b->u.range.to)) {
-			return 0;
+		r = ast_endpoint_cmp(&a->u.range.to, &b->u.range.to);
+		if (r != 0) {
+			return r;
 		}
 
 		/* we intentionally ignore .start and .end pos values for finding equality;
 		 * these are considered just annotation metatdata for error reporting */
 
-		return 1;
+		return 0;
+	}
 
 	case AST_EXPR_TOMBSTONE:
-		return 1;
+		return 0;
 
 	default:
 		assert(!"unreached");
 		abort();
 	}
+}
+
+int
+ast_expr_equal(const struct ast_expr *a, const struct ast_expr *b)
+{
+	return ast_expr_cmp(a, b) == 0;
 }
 
 int
