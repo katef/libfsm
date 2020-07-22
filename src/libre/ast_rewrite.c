@@ -53,34 +53,21 @@ qunique(void *array, size_t elements, size_t width,
 	void (*dtor)(void *))
 {
 	char *bytes = array;
-	const char *sentinel;
 	size_t i, j;
 
 	if (elements <= 1) {
 		return elements;
 	}
 
-	/*
-	 * Borrow the first element as a sentinel value, so we don't free
-	 * twice when visiting elements which have already been moved down.
-	 * You can see this e.g. for "abccxy" where 'x' is copied down,
-	 * and the original location for 'x' is replaced with the sentinel.
-	 *
-	 * Any unique value would do; we can't use NULL because we don't
-	 * know what types the array contains.
-	 */
-	sentinel = bytes;
-
 	for (i = 1, j = 0; i < elements; ++i) {
-		if (cmp(bytes + i * width, bytes + j * width) != 0 && ++j != i) {
-			assert(i != j);
+		if (cmp(bytes + i * width, bytes + j * width) != 0) {
+			if (++j != i) {
+				assert(i != j);
 
-			if (memcmp(bytes + j * width, sentinel, width) != 0) {
-				dtor(bytes + j * width);
+				memcpy(bytes + j * width, bytes + i * width, width);
 			}
-			memcpy(bytes + j * width, bytes + i * width, width);
-
-			memcpy(bytes + i * width, sentinel, width);
+		} else {
+			dtor(bytes + i * width);
 		}
 	}
 
