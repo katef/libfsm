@@ -111,6 +111,7 @@ struct perf_case {
 
 struct timing {
 	double comp_delta;
+	double glush_delta;
 	double det_delta;
 	double run_delta;
 };
@@ -452,7 +453,7 @@ parse_perf_case(FILE *f, enum implementation impl, int quiet)
 			break;
 
 		case 'X':
-			t.comp_delta = t.det_delta = t.run_delta = 0.0;
+			t.comp_delta = t.glush_delta = t.det_delta = t.run_delta = 0.0;
 			err = perf_case_run(&c, &t);
 			perf_case_report(&c, err, quiet, &t);
 			perf_case_reset(&c);
@@ -526,6 +527,7 @@ perf_case_run(struct perf_case *c,
 	struct fsm_runner runner;
 	struct str contents;
 	struct timespec c0, c1;
+	struct timespec g0, g1;
 	struct timespec d0, d1;
 	struct timespec t0, t1;
 	enum error_type ret;
@@ -568,6 +570,27 @@ perf_case_run(struct perf_case *c,
 	}
 
 	{
+		if (clock_gettime(CLOCK_MONOTONIC, &g0) != 0) {
+			fsm_runner_finalize(&runner);
+			return ERROR_CLOCK_ERROR;
+		}
+
+		if (!fsm_glushkovise(fsm)) {
+			fsm_free(fsm);
+			return ERROR_GLUSHKOVISING;
+		}
+
+		if (clock_gettime(CLOCK_MONOTONIC, &g1) != 0) {
+			fsm_runner_finalize(&runner);
+			return ERROR_CLOCK_ERROR;
+		}
+
+		if (c->count == 1) {
+			report_delta(&t->glush_delta, &g0, &g1);
+		}
+	}
+
+	{
 		if (clock_gettime(CLOCK_MONOTONIC, &d0) != 0) {
 			fsm_runner_finalize(&runner);
 			return ERROR_CLOCK_ERROR;
@@ -584,7 +607,6 @@ perf_case_run(struct perf_case *c,
 			return ERROR_CLOCK_ERROR;
 		}
 
-		/* report time difference */
 		if (c->count == 1) {
 			report_delta(&t->det_delta, &d0, &d1);
 		}
@@ -701,6 +723,8 @@ perf_case_report(struct perf_case *c, enum error_type err, int quiet,
 		printf("compile %d iterations took %.4f seconds, %.4g seconds/iteration\n",
 			c->count, t->comp_delta, t->comp_delta / c->count);
 		if (c->count == 1) {
+			printf("glushkovise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+				c->count, t->glush_delta, t->glush_delta / c->count);
 			printf("determinise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
 				c->count, t->det_delta, t->det_delta / c->count);
 		}
@@ -717,6 +741,10 @@ perf_case_report(struct perf_case *c, enum error_type err, int quiet,
 
 	case ERROR_PARSING_REGEXP:
 		printf("ERROR: parsing regexp\n");
+		break;
+
+	case ERROR_GLUSHKOVISING:
+		printf("ERROR: glushkovising regexp\n");
 		break;
 
 	case ERROR_DETERMINISING:
