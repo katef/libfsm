@@ -298,11 +298,21 @@ perf_case_run(struct perf_case *c,
 	struct timing *t);
 
 static void
-perf_case_report(struct perf_case *c, enum error_type err, int quiet,
+perf_case_report_txt(struct perf_case *c, enum error_type err, int quiet,
 	const struct timing *t);
 
+static void
+perf_case_report_head(int quiet);
+
+static void
+perf_case_report_tsv(struct perf_case *c, enum error_type err, int quiet,
+	const struct timing *t);
+
+static void
+perf_case_report_error(enum error_type err);
+
 static int
-parse_perf_case(FILE *f, enum implementation impl, int quiet)
+parse_perf_case(FILE *f, enum implementation impl, int quiet, int tsv)
 {
 	size_t line;
 	char *buf;
@@ -455,7 +465,12 @@ parse_perf_case(FILE *f, enum implementation impl, int quiet)
 		case 'X':
 			t.comp_delta = t.glush_delta = t.det_delta = t.run_delta = 0.0;
 			err = perf_case_run(&c, &t);
-			perf_case_report(&c, err, quiet, &t);
+			if (tsv) {
+				perf_case_report_tsv(&c, err, quiet, &t);
+			} else {
+				perf_case_report_txt(&c, err, quiet, &t);
+				perf_case_report_error(err);
+			}
 			perf_case_reset(&c);
 			break;
 
@@ -693,7 +708,7 @@ perf_case_run(struct perf_case *c,
 }
 
 static void
-perf_case_report(struct perf_case *c, enum error_type err, int quiet,
+perf_case_report_txt(struct perf_case *c, enum error_type err, int quiet,
 	const struct timing *t)
 {
 	printf("---[ %s ]---\n", c->test_name.data);
@@ -718,8 +733,7 @@ perf_case_report(struct perf_case *c, enum error_type err, int quiet,
 		assert(!"unreached");
 	}
 
-	switch (err) {
-	case ERROR_NONE:
+	if (err != ERROR_NONE) {
 		printf("compile %d iterations took %.4f seconds, %.4g seconds/iteration\n",
 			c->count, t->comp_delta, t->comp_delta / c->count);
 		if (c->count == 1) {
@@ -732,6 +746,56 @@ perf_case_report(struct perf_case *c, enum error_type err, int quiet,
 			printf("execute %d iterations took %.4f seconds, %.4g seconds/iteration\n",
 				c->count, t->run_delta, t->run_delta / c->count);
 		}
+	}
+}
+
+static void
+perf_case_report_head(int quiet)
+{
+	printf("line");
+	if (!quiet) {
+		printf("\tname");
+		printf("\tregex");
+	}
+	printf("\tcompile");
+	printf("\tglushkovise");
+	printf("\tdeterminise");
+	printf("\texecute");
+	printf("\terror\n");
+}
+
+static void
+perf_case_report_tsv(struct perf_case *c, enum error_type err, int quiet,
+	const struct timing *t)
+{
+	printf("%zu", c->line);
+	if (!quiet) {
+		printf("\t\"%s\"", c->test_name.data);
+		printf("\t\"%s\"", c->regexp.data);
+	}
+
+	printf("\t%.4g", t->comp_delta / c->count);
+	if (c->count != 1) {
+		printf("\t0");
+		printf("\t0");
+	} else {
+		printf("\t%.4g", t->glush_delta / c->count);
+		printf("\t%.4g", t->det_delta / c->count);
+	}
+	if (c->mt == MATCH_NONE) {
+		printf("\t0");
+	} else {
+		printf("\t%.4g", t->run_delta / c->count);
+	}
+
+	printf("\t%d\n", err);
+}
+
+static void
+perf_case_report_error(enum error_type err)
+{
+	switch (err) {
+	case ERROR_NONE:
 		break;
 
 	/*
@@ -796,6 +860,10 @@ usage(void)
 	fprintf(stderr, "             pause before running performance tests\n");
 
 	fprintf(stderr, "\n");
+	fprintf(stderr, "        -t\n");
+	fprintf(stderr, "             output in TSV format. The default is human-readable text\n");
+
+	fprintf(stderr, "\n");
 	fprintf(stderr, "        -O <olevel>\n");
 	fprintf(stderr, "             sets VM optimization level:\n");
 	fprintf(stderr, "                 0 = disable optimizations\n");
@@ -852,7 +920,7 @@ int
 main(int argc, char *argv[])
 {
 	int i;
-	int pause, quiet;
+	int pause, quiet, tsv;
 	enum implementation impl;
 
 	int optlevel = 1;
@@ -874,12 +942,13 @@ main(int argc, char *argv[])
 
 	pause                 = 0;
 	quiet                 = 0;
+	tsv                   = 0;
 	impl                  = IMPL_INTERPRET;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "O:L:l:x:" "pq" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:l:x:" "pqt" ), c != -1) {
 			switch (c) {
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
@@ -927,6 +996,7 @@ main(int argc, char *argv[])
 
 			case 'p': pause = 1; break;
 			case 'q': quiet = 1; break;
+			case 't': tsv   = 1; break;
 
 			case 'h':
 				usage();
@@ -959,9 +1029,13 @@ main(int argc, char *argv[])
 		fgets(buf, sizeof buf, stdin);
 	}
 
+	if (tsv) {
+		perf_case_report_head(quiet);
+	}
+
 	for (i=0; i < argc; i++) {
 		FILE *f = xopen(argv[i]);
-		parse_perf_case(f, impl, quiet);
+		parse_perf_case(f, impl, quiet, tsv);
 		fclose(f);
 	}
 
