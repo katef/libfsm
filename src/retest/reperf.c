@@ -113,6 +113,7 @@ struct timing {
 	double comp_delta;
 	double glush_delta;
 	double det_delta;
+	double min_delta;
 	double run_delta;
 };
 
@@ -463,7 +464,7 @@ parse_perf_case(FILE *f, enum implementation impl, int quiet, int tsv)
 			break;
 
 		case 'X':
-			t.comp_delta = t.glush_delta = t.det_delta = t.run_delta = 0.0;
+			t.comp_delta = t.glush_delta = t.det_delta = t.min_delta = t.run_delta = 0.0;
 			err = perf_case_run(&c, &t);
 			if (tsv) {
 				perf_case_report_tsv(&c, err, quiet, &t);
@@ -544,6 +545,7 @@ perf_case_run(struct perf_case *c,
 	struct timespec c0, c1;
 	struct timespec g0, g1;
 	struct timespec d0, d1;
+	struct timespec m0, m1;
 	struct timespec t0, t1;
 	enum error_type ret;
 	int iter;
@@ -611,7 +613,6 @@ perf_case_run(struct perf_case *c,
 			return ERROR_CLOCK_ERROR;
 		}
 
-		/* XXX - minimize or determinize? */
 		if (!fsm_determinise(fsm)) {
 			fsm_free(fsm);
 			return ERROR_DETERMINISING;
@@ -624,6 +625,27 @@ perf_case_run(struct perf_case *c,
 
 		if (c->count == 1) {
 			report_delta(&t->det_delta, &d0, &d1);
+		}
+	}
+
+	{
+		if (clock_gettime(CLOCK_MONOTONIC, &m0) != 0) {
+			fsm_runner_finalize(&runner);
+			return ERROR_CLOCK_ERROR;
+		}
+
+		if (!fsm_minimise(fsm)) {
+			fsm_free(fsm);
+			return ERROR_MINIMISING;
+		}
+
+		if (clock_gettime(CLOCK_MONOTONIC, &m1) != 0) {
+			fsm_runner_finalize(&runner);
+			return ERROR_CLOCK_ERROR;
+		}
+
+		if (c->count == 1) {
+			report_delta(&t->min_delta, &m0, &m1);
 		}
 	}
 
@@ -741,6 +763,8 @@ perf_case_report_txt(struct perf_case *c, enum error_type err, int quiet,
 				c->count, t->glush_delta, t->glush_delta / c->count);
 			printf("determinise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
 				c->count, t->det_delta, t->det_delta / c->count);
+			printf("minimise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+				c->count, t->min_delta, t->min_delta / c->count);
 		}
 		if (c->mt != MATCH_NONE) {
 			printf("execute %d iterations took %.4f seconds, %.4g seconds/iteration\n",
@@ -760,6 +784,7 @@ perf_case_report_head(int quiet)
 	printf("\tcompile");
 	printf("\tglushkovise");
 	printf("\tdeterminise");
+	printf("\tminimise");
 	printf("\texecute");
 	printf("\terror\n");
 }
@@ -778,9 +803,11 @@ perf_case_report_tsv(struct perf_case *c, enum error_type err, int quiet,
 	if (c->count != 1) {
 		printf("\t0");
 		printf("\t0");
+		printf("\t0");
 	} else {
 		printf("\t%.4g", t->glush_delta / c->count);
 		printf("\t%.4g", t->det_delta / c->count);
+		printf("\t%.4g", t->min_delta / c->count);
 	}
 	if (c->mt == MATCH_NONE) {
 		printf("\t0");
