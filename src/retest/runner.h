@@ -20,7 +20,6 @@ enum error_type {
 	ERROR_SHOULD_MATCH      ,
 	ERROR_SHOULD_NOT_MATCH  ,
 	ERROR_FILE_IO           ,
-	ERROR_CLOCK_ERROR       ,
 	ERROR_INVALID_PARAMETER ,
 };
 

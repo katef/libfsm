@@ -535,6 +535,42 @@ read_file(const char *path, struct str *contents)
 	return 0;
 }
 
+static void
+xclock_gettime(clockid_t clockid, struct timespec *tp)
+{
+	assert(tp != NULL);
+
+	if (clock_gettime(CLOCK_MONOTONIC, tp) != 0) {
+		perror("clock_gettime");
+		exit(EXIT_FAILURE);
+	}
+}
+
+static int
+phase(double *delta, int count, struct fsm *fsm, int (*f)(struct fsm *))
+{
+	struct timespec t0, t1;
+
+	assert(delta != NULL);
+	assert(fsm != NULL);
+	assert(f != NULL);
+
+	xclock_gettime(CLOCK_MONOTONIC, &t0);
+
+	if (!f(fsm)) {
+		fsm_free(fsm);
+		return 0;
+	}
+
+	xclock_gettime(CLOCK_MONOTONIC, &t1);
+
+	if (count == 1) {
+		report_delta(delta, &t0, &t1);
+	}
+
+	return 1;
+}
+
 static enum error_type
 perf_case_run(struct perf_case *c,
 	struct timing *t)
@@ -542,11 +578,6 @@ perf_case_run(struct perf_case *c,
 	struct fsm *fsm;
 	struct fsm_runner runner;
 	struct str contents;
-	struct timespec c0, c1;
-	struct timespec g0, g1;
-	struct timespec d0, d1;
-	struct timespec m0, m1;
-	struct timespec t0, t1;
 	enum error_type ret;
 	int iter;
 
@@ -557,6 +588,7 @@ perf_case_run(struct perf_case *c,
 
 	{
 		static const struct re_err err_zero;
+		struct timespec c0, c1;
 
 		struct re_err comp_err;
 		enum re_flags flags;
@@ -566,10 +598,7 @@ perf_case_run(struct perf_case *c,
 		flags = 0;
 		re = c->regexp.data;
 
-		if (clock_gettime(CLOCK_MONOTONIC, &c0) != 0) {
-			fsm_runner_finalize(&runner);
-			return ERROR_CLOCK_ERROR;
-		}
+		xclock_gettime(CLOCK_MONOTONIC, &c0);
 
 		for (iter=0; iter < c->count; iter++) {
 			fsm = re_comp(c->dialect, fsm_sgetc, &re, &opt, flags, &comp_err);
@@ -578,76 +607,14 @@ perf_case_run(struct perf_case *c,
 			}
 		}
 
-		if (clock_gettime(CLOCK_MONOTONIC, &c1) != 0) {
-			fsm_runner_finalize(&runner);
-			return ERROR_CLOCK_ERROR;
-		}
+		xclock_gettime(CLOCK_MONOTONIC, &c1);
 
 		report_delta(&t->comp_delta, &c0, &c1);
 	}
 
-	{
-		if (clock_gettime(CLOCK_MONOTONIC, &g0) != 0) {
-			fsm_runner_finalize(&runner);
-			return ERROR_CLOCK_ERROR;
-		}
-
-		if (!fsm_glushkovise(fsm)) {
-			fsm_free(fsm);
-			return ERROR_GLUSHKOVISING;
-		}
-
-		if (clock_gettime(CLOCK_MONOTONIC, &g1) != 0) {
-			fsm_runner_finalize(&runner);
-			return ERROR_CLOCK_ERROR;
-		}
-
-		if (c->count == 1) {
-			report_delta(&t->glush_delta, &g0, &g1);
-		}
-	}
-
-	{
-		if (clock_gettime(CLOCK_MONOTONIC, &d0) != 0) {
-			fsm_runner_finalize(&runner);
-			return ERROR_CLOCK_ERROR;
-		}
-
-		if (!fsm_determinise(fsm)) {
-			fsm_free(fsm);
-			return ERROR_DETERMINISING;
-		}
-
-		if (clock_gettime(CLOCK_MONOTONIC, &d1) != 0) {
-			fsm_runner_finalize(&runner);
-			return ERROR_CLOCK_ERROR;
-		}
-
-		if (c->count == 1) {
-			report_delta(&t->det_delta, &d0, &d1);
-		}
-	}
-
-	{
-		if (clock_gettime(CLOCK_MONOTONIC, &m0) != 0) {
-			fsm_runner_finalize(&runner);
-			return ERROR_CLOCK_ERROR;
-		}
-
-		if (!fsm_minimise(fsm)) {
-			fsm_free(fsm);
-			return ERROR_MINIMISING;
-		}
-
-		if (clock_gettime(CLOCK_MONOTONIC, &m1) != 0) {
-			fsm_runner_finalize(&runner);
-			return ERROR_CLOCK_ERROR;
-		}
-
-		if (c->count == 1) {
-			report_delta(&t->min_delta, &m0, &m1);
-		}
-	}
+	if (!phase(&t->glush_delta, c->count, fsm, fsm_glushkovise)) return ERROR_GLUSHKOVISING;
+	if (!phase(&t->det_delta,   c->count, fsm, fsm_determinise)) return ERROR_DETERMINISING;
+	if (!phase(&t->min_delta,   c->count, fsm, fsm_minimise))    return ERROR_MINIMISING;
 
 	ret = fsm_runner_initialize(fsm, &runner, c->impl, vm_opts);
 	if (ret != ERROR_NONE) {
@@ -685,14 +652,13 @@ perf_case_run(struct perf_case *c,
 		}
 	}
 
-	if (clock_gettime(CLOCK_MONOTONIC, &t0) != 0) {
-		fsm_runner_finalize(&runner);
-		return ERROR_CLOCK_ERROR;
-	}
-
-	ret = ERROR_NONE;
-
 	if (c->mt != MATCH_NONE) {
+		struct timespec t0, t1;
+
+		xclock_gettime(CLOCK_MONOTONIC, &t0);
+
+		ret = ERROR_NONE;
+
 		for (iter=0; iter < c->count; iter++) {
 			int r;
 
@@ -706,25 +672,22 @@ perf_case_run(struct perf_case *c,
 				break;
 			}
 		}
-	}
 
-	if (c->mt == MATCH_FILE) {
-		str_free(&contents);
-	}
+		if (c->mt == MATCH_FILE) {
+			str_free(&contents);
+		}
 
-	if (ret != ERROR_NONE) {
-		fsm_runner_finalize(&runner);
-		return ret;
-	}
+		if (ret != ERROR_NONE) {
+			fsm_runner_finalize(&runner);
+			return ret;
+		}
 
-	if (clock_gettime(CLOCK_MONOTONIC, &t1) != 0) {
-		fsm_runner_finalize(&runner);
-		return ERROR_CLOCK_ERROR;
+		xclock_gettime(CLOCK_MONOTONIC, &t1);
+
+		report_delta(&t->run_delta, &t0, &t1);
 	}
 
 	fsm_runner_finalize(&runner);
-
-	report_delta(&t->run_delta, &t0, &t1);
 
 	return ERROR_NONE;
 }
@@ -856,10 +819,6 @@ perf_case_report_error(enum error_type err)
 
 	case ERROR_FILE_IO:
 		printf("ERROR: reading file: %s\n", strerror(errno));
-		break;
-
-	case ERROR_CLOCK_ERROR:
-		printf("ERROR: cannot retrieve clock value: %s\n", strerror(errno));
 		break;
 
 	default:
