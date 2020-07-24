@@ -200,18 +200,21 @@ fsm_runner_finalize(struct fsm_runner *r)
 	switch (r->impl) {
 	case IMPL_C:
 	case IMPL_VMC:
-		assert(r->u.impl_c.h != NULL);
-		dlclose(r->u.impl_c.h);
+		if (r->u.impl_c.h != NULL) {
+			dlclose(r->u.impl_c.h);
+		}
 		break;
 
 	case IMPL_VMASM:
-		assert(r->u.impl_asm.h != NULL);
-		dlclose(r->u.impl_c.h);
+		if (r->u.impl_asm.h != NULL) {
+			dlclose(r->u.impl_c.h);
+		}
 		break;
 
 	case IMPL_INTERPRET:
-		assert(r->u.impl_vm.vm != NULL);
-		fsm_vm_free(r->u.impl_vm.vm);
+		if (r->u.impl_vm.vm != NULL) {
+			fsm_vm_free(r->u.impl_vm.vm);
+		}
 		break;
 
 	default:
