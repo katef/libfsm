@@ -84,16 +84,24 @@
 static struct fsm_options opt;
 static struct fsm_vm_compile_opts vm_opts = { 0, FSM_VM_COMPILE_VM_V1, NULL };
 
-struct str {
-	char *data;
-	size_t len;
-	size_t cap;
-};
-
 enum match_type {
 	MATCH_NONE,
 	MATCH_STRING,
 	MATCH_FILE
+};
+
+enum halt {
+	HALT_AFTER_COMPILE,
+	HALT_AFTER_GLUSHKOVISE,
+	HALT_AFTER_DETERMINISE,
+	HALT_AFTER_MINIMISE,
+	HALT_AFTER_EXECUTION
+};
+
+struct str {
+	char *data;
+	size_t len;
+	size_t cap;
 };
 
 struct perf_case {
@@ -295,25 +303,27 @@ perf_case_init(struct perf_case *c, enum implementation impl)
 }
 
 static enum error_type
-perf_case_run(struct perf_case *c,
+perf_case_run(struct perf_case *c, enum halt halt,
 	struct timing *t);
 
 static void
-perf_case_report_txt(struct perf_case *c, enum error_type err, int quiet,
+perf_case_report_txt(struct perf_case *c, enum halt halt,
+	enum error_type err, int quiet,
 	const struct timing *t);
 
 static void
-perf_case_report_head(int quiet);
+perf_case_report_head(int quiet, enum halt halt);
 
 static void
-perf_case_report_tsv(struct perf_case *c, enum error_type err, int quiet,
+perf_case_report_tsv(struct perf_case *c, enum halt halt,
+	enum error_type err, int quiet,
 	const struct timing *t);
 
 static void
 perf_case_report_error(enum error_type err);
 
 static int
-parse_perf_case(FILE *f, enum implementation impl, int quiet, int tsv)
+parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, int tsv)
 {
 	size_t line;
 	char *buf;
@@ -465,11 +475,12 @@ parse_perf_case(FILE *f, enum implementation impl, int quiet, int tsv)
 
 		case 'X':
 			t.comp_delta = t.glush_delta = t.det_delta = t.min_delta = t.run_delta = 0.0;
-			err = perf_case_run(&c, &t);
+			err = perf_case_run(&c, halt, &t);
 			if (tsv) {
-				perf_case_report_tsv(&c, err, quiet, &t);
+				perf_case_report_tsv(&c, halt, err, quiet, &t);
 			} else {
-				perf_case_report_txt(&c, err, quiet, &t);
+printf("halt=%d\n", halt);
+				perf_case_report_txt(&c, halt, err, quiet, &t);
 				perf_case_report_error(err);
 			}
 			perf_case_reset(&c);
@@ -572,7 +583,7 @@ phase(double *delta, int count, struct fsm *fsm, int (*f)(struct fsm *))
 }
 
 static enum error_type
-perf_case_run(struct perf_case *c,
+perf_case_run(struct perf_case *c, enum halt halt,
 	struct timing *t)
 {
 	struct fsm *fsm;
@@ -612,9 +623,28 @@ perf_case_run(struct perf_case *c,
 		report_delta(&t->comp_delta, &c0, &c1);
 	}
 
+	if (halt == HALT_AFTER_COMPILE) {
+		fsm_free(fsm);
+		goto done;
+	}
+
 	if (!phase(&t->glush_delta, c->count, fsm, fsm_glushkovise)) return ERROR_GLUSHKOVISING;
+	if (halt == HALT_AFTER_GLUSHKOVISE) {
+		fsm_free(fsm);
+		goto done;
+	}
+
 	if (!phase(&t->det_delta,   c->count, fsm, fsm_determinise)) return ERROR_DETERMINISING;
+	if (halt == HALT_AFTER_DETERMINISE) {
+		fsm_free(fsm);
+		goto done;
+	}
+
 	if (!phase(&t->min_delta,   c->count, fsm, fsm_minimise))    return ERROR_MINIMISING;
+	if (halt == HALT_AFTER_MINIMISE) {
+		fsm_free(fsm);
+		goto done;
+	}
 
 	ret = fsm_runner_initialize(fsm, &runner, c->impl, vm_opts);
 	if (ret != ERROR_NONE) {
@@ -687,13 +717,16 @@ perf_case_run(struct perf_case *c,
 		report_delta(&t->run_delta, &t0, &t1);
 	}
 
+done:
+
 	fsm_runner_finalize(&runner);
 
 	return ERROR_NONE;
 }
 
 static void
-perf_case_report_txt(struct perf_case *c, enum error_type err, int quiet,
+perf_case_report_txt(struct perf_case *c, enum halt halt,
+	enum error_type err, int quiet,
 	const struct timing *t)
 {
 	printf("---[ %s ]---\n", c->test_name.data);
@@ -719,25 +752,42 @@ perf_case_report_txt(struct perf_case *c, enum error_type err, int quiet,
 	}
 
 	if (err != ERROR_NONE) {
-		printf("compile %d iterations took %.4f seconds, %.4g seconds/iteration\n",
-			c->count, t->comp_delta, t->comp_delta / c->count);
-		if (c->count == 1) {
-			printf("glushkovise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
-				c->count, t->glush_delta, t->glush_delta / c->count);
-			printf("determinise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
-				c->count, t->det_delta, t->det_delta / c->count);
-			printf("minimise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
-				c->count, t->min_delta, t->min_delta / c->count);
+		return;
+	}
+
+	printf("compile %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+		c->count, t->comp_delta, t->comp_delta / c->count);
+	if (halt == HALT_AFTER_COMPILE) {
+		return;
+	}
+	if (c->count == 1) {
+		printf("glushkovise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+			c->count, t->glush_delta, t->glush_delta / c->count);
+		if (halt == HALT_AFTER_GLUSHKOVISE) {
+			return;
 		}
-		if (c->mt != MATCH_NONE) {
-			printf("execute %d iterations took %.4f seconds, %.4g seconds/iteration\n",
-				c->count, t->run_delta, t->run_delta / c->count);
+		printf("determinise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+			c->count, t->det_delta, t->det_delta / c->count);
+		if (halt == HALT_AFTER_DETERMINISE) {
+			return;
+		}
+		printf("minimise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+			c->count, t->min_delta, t->min_delta / c->count);
+		if (halt <= HALT_AFTER_MINIMISE) {
+			return;
+		}
+	}
+	if (c->mt != MATCH_NONE) {
+		printf("execute %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+			c->count, t->run_delta, t->run_delta / c->count);
+		if (halt == HALT_AFTER_EXECUTION) {
+			return;
 		}
 	}
 }
 
 static void
-perf_case_report_head(int quiet)
+perf_case_report_head(int quiet, enum halt halt)
 {
 	printf("line");
 	if (!quiet) {
@@ -745,15 +795,34 @@ perf_case_report_head(int quiet)
 		printf("\tregex");
 	}
 	printf("\tcompile");
+	if (halt == HALT_AFTER_COMPILE) {
+		goto done;
+	}
 	printf("\tglushkovise");
+	if (halt == HALT_AFTER_GLUSHKOVISE) {
+		goto done;
+	}
 	printf("\tdeterminise");
+	if (halt == HALT_AFTER_MINIMISE) {
+		goto done;
+	}
 	printf("\tminimise");
+	if (halt == HALT_AFTER_MINIMISE) {
+		goto done;
+	}
 	printf("\texecute");
+	if (halt == HALT_AFTER_EXECUTION) {
+		goto done;
+	}
+
+done:
+
 	printf("\terror\n");
 }
 
 static void
-perf_case_report_tsv(struct perf_case *c, enum error_type err, int quiet,
+perf_case_report_tsv(struct perf_case *c, enum halt halt,
+	enum error_type err, int quiet,
 	const struct timing *t)
 {
 	printf("%zu", c->line);
@@ -763,20 +832,46 @@ perf_case_report_tsv(struct perf_case *c, enum error_type err, int quiet,
 	}
 
 	printf("\t%.4g", t->comp_delta / c->count);
+	if (halt == HALT_AFTER_COMPILE) {
+		goto done;
+	}
 	if (c->count != 1) {
 		printf("\t0");
+		if (halt == HALT_AFTER_GLUSHKOVISE) {
+			goto done;
+		}
 		printf("\t0");
+		if (halt == HALT_AFTER_DETERMINISE) {
+			goto done;
+		}
 		printf("\t0");
+		if (halt == HALT_AFTER_MINIMISE) {
+			goto done;
+		}
 	} else {
 		printf("\t%.4g", t->glush_delta / c->count);
+		if (halt == HALT_AFTER_GLUSHKOVISE) {
+			goto done;
+		}
 		printf("\t%.4g", t->det_delta / c->count);
+		if (halt == HALT_AFTER_DETERMINISE) {
+			goto done;
+		}
 		printf("\t%.4g", t->min_delta / c->count);
+		if (halt == HALT_AFTER_MINIMISE) {
+			goto done;
+		}
 	}
-	if (c->mt == MATCH_NONE) {
-		printf("\t0");
-	} else {
+	if (c->mt != MATCH_NONE) {
 		printf("\t%.4g", t->run_delta / c->count);
+		if (halt == HALT_AFTER_EXECUTION) {
+			goto done;
+		}
+	} else {
+		printf("\t0");
 	}
+
+done:
 
 	printf("\t%d\n", err);
 }
@@ -850,6 +945,12 @@ usage(void)
 	fprintf(stderr, "             output in TSV format. The default is human-readable text\n");
 
 	fprintf(stderr, "\n");
+	fprintf(stderr, "        -H <halt>\n");
+	fprintf(stderr, "             halt after compile, glushkovise, determinise, minimise or execute\n");
+	fprintf(stderr, "                 0 = disable optimizations\n");
+	fprintf(stderr, "                 1 = basic optimizations\n");
+
+	fprintf(stderr, "\n");
 	fprintf(stderr, "        -O <olevel>\n");
 	fprintf(stderr, "             sets VM optimization level:\n");
 	fprintf(stderr, "                 0 = disable optimizations\n");
@@ -908,6 +1009,7 @@ main(int argc, char *argv[])
 	int i;
 	int pause, quiet, tsv;
 	enum implementation impl;
+	enum halt halt;
 
 	int optlevel = 1;
 
@@ -930,11 +1032,12 @@ main(int argc, char *argv[])
 	quiet                 = 0;
 	tsv                   = 0;
 	impl                  = IMPL_INTERPRET;
+	halt                  = HALT_AFTER_EXECUTION;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "O:L:l:x:" "pqt" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:l:x:" "pqtH:" ), c != -1) {
 			switch (c) {
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
@@ -963,6 +1066,22 @@ main(int argc, char *argv[])
 					impl = IMPL_VMC;
 				} else {
 					fprintf(stderr, "unknown argument to -l: %s\n", optarg);
+					usage();
+					exit(1);
+				}
+				break;
+
+			case 'H':
+				if (optarg[0] == 'c') {
+					halt = HALT_AFTER_COMPILE;
+				} else if (optarg[0] == 'g') {
+					halt = HALT_AFTER_GLUSHKOVISE;
+				} else if (optarg[0] == 'd') {
+					halt = HALT_AFTER_DETERMINISE;
+				} else if (optarg[0] == 'm') {
+					halt = HALT_AFTER_MINIMISE;
+				} else {
+					fprintf(stderr, "unknown argument to -H: %s\n", optarg);
 					usage();
 					exit(1);
 				}
@@ -1016,12 +1135,12 @@ main(int argc, char *argv[])
 	}
 
 	if (tsv) {
-		perf_case_report_head(quiet);
+		perf_case_report_head(quiet, halt);
 	}
 
 	for (i=0; i < argc; i++) {
 		FILE *f = xopen(argv[i]);
-		parse_perf_case(f, impl, quiet, tsv);
+		parse_perf_case(f, impl, halt, quiet, tsv);
 		fclose(f);
 	}
 
