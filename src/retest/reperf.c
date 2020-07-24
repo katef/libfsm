@@ -803,7 +803,7 @@ perf_case_report_head(int quiet, enum halt halt)
 		goto done;
 	}
 	printf("\tdeterminise");
-	if (halt == HALT_AFTER_MINIMISE) {
+	if (halt == HALT_AFTER_DETERMINISE) {
 		goto done;
 	}
 	printf("\tminimise");
