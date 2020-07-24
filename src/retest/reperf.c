@@ -547,7 +547,7 @@ read_file(const char *path, struct str *contents)
 }
 
 static void
-xclock_gettime(clockid_t clockid, struct timespec *tp)
+xclock_gettime(struct timespec *tp)
 {
 	assert(tp != NULL);
 
@@ -566,14 +566,14 @@ phase(double *delta, int count, struct fsm *fsm, int (*f)(struct fsm *))
 	assert(fsm != NULL);
 	assert(f != NULL);
 
-	xclock_gettime(CLOCK_MONOTONIC, &t0);
+	xclock_gettime(&t0);
 
 	if (!f(fsm)) {
 		fsm_free(fsm);
 		return 0;
 	}
 
-	xclock_gettime(CLOCK_MONOTONIC, &t1);
+	xclock_gettime(&t1);
 
 	if (count == 1) {
 		report_delta(delta, &t0, &t1);
@@ -609,7 +609,7 @@ perf_case_run(struct perf_case *c, enum halt halt,
 		flags = 0;
 		re = c->regexp.data;
 
-		xclock_gettime(CLOCK_MONOTONIC, &c0);
+		xclock_gettime(&c0);
 
 		for (iter=0; iter < c->count; iter++) {
 			fsm = re_comp(c->dialect, fsm_sgetc, &re, &opt, flags, &comp_err);
@@ -618,7 +618,7 @@ perf_case_run(struct perf_case *c, enum halt halt,
 			}
 		}
 
-		xclock_gettime(CLOCK_MONOTONIC, &c1);
+		xclock_gettime(&c1);
 
 		report_delta(&t->comp_delta, &c0, &c1);
 	}
@@ -685,7 +685,7 @@ perf_case_run(struct perf_case *c, enum halt halt,
 	if (c->mt != MATCH_NONE) {
 		struct timespec t0, t1;
 
-		xclock_gettime(CLOCK_MONOTONIC, &t0);
+		xclock_gettime(&t0);
 
 		ret = ERROR_NONE;
 
@@ -712,7 +712,7 @@ perf_case_run(struct perf_case *c, enum halt halt,
 			return ret;
 		}
 
-		xclock_gettime(CLOCK_MONOTONIC, &t1);
+		xclock_gettime(&t1);
 
 		report_delta(&t->run_delta, &t0, &t1);
 	}
