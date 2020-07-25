@@ -92,6 +92,12 @@ INCDIR += include
 .include <part.mk>
 .include <prog.mk>
 .include <mkdir.mk>
+
+# these are internal tools for development; we don't install them to $PREFIX
+STAGE_BUILD := ${STAGE_BUILD:Nbin/retest}
+STAGE_BUILD := ${STAGE_BUILD:Nbin/reperf}
+STAGE_BUILD := ${STAGE_BUILD:Nbin/cvtpcre}
+
 .include <install.mk>
 .include <clean.mk>
 

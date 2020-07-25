@@ -38,6 +38,9 @@
 
 #include "runner.h"
 
+/* maybe enough for a big regex */
+#define BUF_LEN (4096 * 1024)
+
 #define DEBUG_ESCAPES     0
 #define DEBUG_VM_FSM      0
 #define DEBUG_TEST_REGEXP 0
@@ -74,20 +77,31 @@
  * 				<test_name>
  *
  * Lines ending with \ are continued to the next line.
+ * Both F and S directives may be omitted to measure compilation time only,
+ * in which case X should still be given.
  */
 
 static struct fsm_options opt;
 static struct fsm_vm_compile_opts vm_opts = { 0, FSM_VM_COMPILE_VM_V1, NULL };
 
+enum match_type {
+	MATCH_NONE,
+	MATCH_STRING,
+	MATCH_FILE
+};
+
+enum halt {
+	HALT_AFTER_COMPILE,
+	HALT_AFTER_GLUSHKOVISE,
+	HALT_AFTER_DETERMINISE,
+	HALT_AFTER_MINIMISE,
+	HALT_AFTER_EXECUTION
+};
+
 struct str {
 	char *data;
 	size_t len;
 	size_t cap;
-};
-
-enum match_type {
-	MATCH_STRING = 0,
-	MATCH_FILE   = 1
 };
 
 struct perf_case {
@@ -101,6 +115,14 @@ struct perf_case {
 	enum re_dialect dialect;
 	enum match_type mt;
 	enum implementation impl;
+};
+
+struct timing {
+	double comp_delta;
+	double glush_delta;
+	double det_delta;
+	double min_delta;
+	double run_delta;
 };
 
 static struct str
@@ -125,6 +147,15 @@ str_clear(struct str *s)
 	if (s->cap > 0) {
 		s->data[0] = '\0';
 	}
+}
+
+static void
+report_delta(double *delta,
+	const struct timespec *t0, const struct timespec *t1)
+{
+	double dsec = difftime(t1->tv_sec, t0->tv_sec);
+	double dns  = t1->tv_nsec - t0->tv_nsec;
+	*delta = dsec + dns * 1e-9;
 }
 
 static void
@@ -252,7 +283,7 @@ perf_case_reset(struct perf_case *c)
 
 	c->count     = 1;
 	c->dialect   = RE_NATIVE;
-	c->mt        = MATCH_STRING;
+	c->mt        = MATCH_NONE;
 	c->expected_matches = 1;
 }
 
@@ -265,42 +296,63 @@ perf_case_init(struct perf_case *c, enum implementation impl)
 
 	c->count     = 1;
 	c->dialect   = RE_NATIVE;
-	c->mt        = MATCH_STRING;
+	c->mt        = MATCH_NONE;
 	c->impl      = impl;
 
 	c->expected_matches = 1;
 }
 
 static enum error_type
-perf_case_run(struct perf_case *c, double *delta);
+perf_case_run(struct perf_case *c, enum halt halt,
+	struct timing *t);
 
 static void
-perf_case_report(struct perf_case *c, enum error_type err, double runtime_secs);
+perf_case_report_txt(struct perf_case *c, enum halt halt,
+	enum error_type err, int quiet,
+	const struct timing *t);
+
+static void
+perf_case_report_head(int quiet, enum halt halt);
+
+static void
+perf_case_report_tsv(struct perf_case *c, enum halt halt,
+	enum error_type err, int quiet,
+	const struct timing *t);
+
+static void
+perf_case_report_error(enum error_type err);
 
 static int
-parse_perf_case(FILE *f, enum implementation impl)
+parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, int tsv)
 {
 	size_t line;
-	char buf[4096];
+	char *buf;
 	char *s;
 	char lastcmd;
 	struct perf_case c;
 	struct str *scont;
 	enum error_type err;
-	double delta;
+	struct timing t;
 
 	scont = NULL;
 	line = 0;
 	lastcmd = 0;
 	perf_case_init(&c, impl);
 
-	while (s = fgets(buf, sizeof buf, f), s != NULL) {
+	buf = xmalloc(BUF_LEN);
+
+	while (s = fgets(buf, BUF_LEN, f), s != NULL) {
 		char last;
 		char *b;
 		size_t len;
 
 		line++;
 		len = strlen(s);
+
+		if (len == BUF_LEN - 1) {
+			fprintf(stderr, "line %zu: overflow\n", line);
+			exit(EXIT_FAILURE);
+		}
 
 		if (scont) {
 			struct str *sc = scont;
@@ -422,9 +474,15 @@ parse_perf_case(FILE *f, enum implementation impl)
 			break;
 
 		case 'X':
-			delta = 0.0;
-			err = perf_case_run(&c, &delta);
-			perf_case_report(&c, err, delta);
+			t.comp_delta = t.glush_delta = t.det_delta = t.min_delta = t.run_delta = 0.0;
+			err = perf_case_run(&c, halt, &t);
+			if (tsv) {
+				perf_case_report_tsv(&c, halt, err, quiet, &t);
+			} else {
+printf("halt=%d\n", halt);
+				perf_case_report_txt(&c, halt, err, quiet, &t);
+				perf_case_report_error(err);
+			}
 			perf_case_reset(&c);
 			break;
 
@@ -433,6 +491,8 @@ parse_perf_case(FILE *f, enum implementation impl)
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	free(buf);
 
 	return 0;
 }
@@ -486,13 +546,49 @@ read_file(const char *path, struct str *contents)
 	return 0;
 }
 
+static void
+xclock_gettime(struct timespec *tp)
+{
+	assert(tp != NULL);
+
+	if (clock_gettime(CLOCK_MONOTONIC, tp) != 0) {
+		perror("clock_gettime");
+		exit(EXIT_FAILURE);
+	}
+}
+
+static int
+phase(double *delta, int count, struct fsm *fsm, int (*f)(struct fsm *))
+{
+	struct timespec t0, t1;
+
+	assert(delta != NULL);
+	assert(fsm != NULL);
+	assert(f != NULL);
+
+	xclock_gettime(&t0);
+
+	if (!f(fsm)) {
+		fsm_free(fsm);
+		return 0;
+	}
+
+	xclock_gettime(&t1);
+
+	if (count == 1) {
+		report_delta(delta, &t0, &t1);
+	}
+
+	return 1;
+}
+
 static enum error_type
-perf_case_run(struct perf_case *c, double *delta)
+perf_case_run(struct perf_case *c, enum halt halt,
+	struct timing *t)
 {
 	struct fsm *fsm;
 	struct fsm_runner runner;
 	struct str contents;
-	struct timespec t0, t1;
 	enum error_type ret;
 	int iter;
 
@@ -503,6 +599,7 @@ perf_case_run(struct perf_case *c, double *delta)
 
 	{
 		static const struct re_err err_zero;
+		struct timespec c0, c1;
 
 		struct re_err comp_err;
 		enum re_flags flags;
@@ -511,16 +608,42 @@ perf_case_run(struct perf_case *c, double *delta)
 		comp_err = err_zero;
 		flags = 0;
 		re = c->regexp.data;
-		fsm = re_comp(c->dialect, fsm_sgetc, &re, &opt, flags, &comp_err);
-		if (fsm == NULL) {
-			return ERROR_PARSING_REGEXP;
+
+		xclock_gettime(&c0);
+
+		for (iter=0; iter < c->count; iter++) {
+			fsm = re_comp(c->dialect, fsm_sgetc, &re, &opt, flags, &comp_err);
+			if (fsm == NULL) {
+				return ERROR_PARSING_REGEXP;
+			}
 		}
+
+		xclock_gettime(&c1);
+
+		report_delta(&t->comp_delta, &c0, &c1);
 	}
 
-	/* XXX - minimize or determinize? */
-	if (!fsm_determinise(fsm)) {
+	if (halt == HALT_AFTER_COMPILE) {
 		fsm_free(fsm);
-		return ERROR_DETERMINISING;
+		goto done;
+	}
+
+	if (!phase(&t->glush_delta, c->count, fsm, fsm_glushkovise)) return ERROR_GLUSHKOVISING;
+	if (halt == HALT_AFTER_GLUSHKOVISE) {
+		fsm_free(fsm);
+		goto done;
+	}
+
+	if (!phase(&t->det_delta,   c->count, fsm, fsm_determinise)) return ERROR_DETERMINISING;
+	if (halt == HALT_AFTER_DETERMINISE) {
+		fsm_free(fsm);
+		goto done;
+	}
+
+	if (!phase(&t->min_delta,   c->count, fsm, fsm_minimise))    return ERROR_MINIMISING;
+	if (halt == HALT_AFTER_MINIMISE) {
+		fsm_free(fsm);
+		goto done;
 	}
 
 	ret = fsm_runner_initialize(fsm, &runner, c->impl, vm_opts);
@@ -543,6 +666,9 @@ perf_case_run(struct perf_case *c, double *delta)
 	fsm_free(fsm);
 
 	switch (c->mt) {
+	case MATCH_NONE:
+		break;
+
 	case MATCH_STRING:
 		contents = c->match;
 		break;
@@ -556,69 +682,205 @@ perf_case_run(struct perf_case *c, double *delta)
 		}
 	}
 
-	if (clock_gettime(CLOCK_MONOTONIC, &t0) != 0) {
-		fsm_runner_finalize(&runner);
-		return ERROR_CLOCK_ERROR;
-	}
+	if (c->mt != MATCH_NONE) {
+		struct timespec t0, t1;
 
-	ret = ERROR_NONE;
+		xclock_gettime(&t0);
 
-	for (iter=0; iter < c->count; iter++) {
-		int r;
+		ret = ERROR_NONE;
 
-		r = fsm_runner_run(&runner, contents.data, contents.len);
+		for (iter=0; iter < c->count; iter++) {
+			int r;
 
-		/* XXX - at some point, match more than once! */
-		if (!!r != !!c->expected_matches) {
-			ret = (c->expected_matches) ? ERROR_SHOULD_MATCH : ERROR_SHOULD_NOT_MATCH;
-			break;
+			assert(contents.data != NULL);
+
+			r = fsm_runner_run(&runner, contents.data, contents.len);
+
+			/* XXX - at some point, match more than once! */
+			if (!!r != !!c->expected_matches) {
+				ret = (c->expected_matches) ? ERROR_SHOULD_MATCH : ERROR_SHOULD_NOT_MATCH;
+				break;
+			}
 		}
+
+		if (c->mt == MATCH_FILE) {
+			str_free(&contents);
+		}
+
+		if (ret != ERROR_NONE) {
+			fsm_runner_finalize(&runner);
+			return ret;
+		}
+
+		xclock_gettime(&t1);
+
+		report_delta(&t->run_delta, &t0, &t1);
 	}
 
-	if (c->mt == MATCH_FILE) {
-		str_free(&contents);
-	}
-
-	if (ret != ERROR_NONE) {
-		fsm_runner_finalize(&runner);
-		return ret;
-	}
-
-	if (clock_gettime(CLOCK_MONOTONIC, &t1) != 0) {
-		fsm_runner_finalize(&runner);
-		return ERROR_CLOCK_ERROR;
-	}
+done:
 
 	fsm_runner_finalize(&runner);
-
-	/* report time difference */
-	{
-		double dsec = difftime(t1.tv_sec, t0.tv_sec);
-		double dns  = t1.tv_nsec - t0.tv_nsec;
-		*delta = dsec + dns * 1e-9;
-	}
 
 	return ERROR_NONE;
 }
 
 static void
-perf_case_report(struct perf_case *c, enum error_type err, double runtime_secs)
+perf_case_report_txt(struct perf_case *c, enum halt halt,
+	enum error_type err, int quiet,
+	const struct timing *t)
 {
-	printf("---[ %s ]---\n"
-		"line %zu\n"
-		"regexp /%s/\n",
-		c->test_name.data, c->line, c->regexp.data);
-
-	if (c->mt == MATCH_STRING) {
-		printf("matching STRING:\n%s\n", c->match.data);
-	} else {
-		printf("matching FILE %s\n", c->match.data);
+	printf("---[ %s ]---\n", c->test_name.data);
+	printf("line %zu\n", c->line);
+	if (!quiet) {
+		printf("regexp /%s/\n", c->regexp.data);
 	}
 
+	switch (c->mt) {
+	case MATCH_NONE:
+		break;
+
+	case MATCH_STRING:
+		printf("matching STRING:\n%s\n", c->match.data);
+		break;
+
+	case MATCH_FILE:
+		printf("matching FILE %s\n", c->match.data);
+		break;
+
+	default:
+		assert(!"unreached");
+	}
+
+	if (err != ERROR_NONE) {
+		return;
+	}
+
+	printf("compile %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+		c->count, t->comp_delta, t->comp_delta / c->count);
+	if (halt == HALT_AFTER_COMPILE) {
+		return;
+	}
+	if (c->count == 1) {
+		printf("glushkovise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+			c->count, t->glush_delta, t->glush_delta / c->count);
+		if (halt == HALT_AFTER_GLUSHKOVISE) {
+			return;
+		}
+		printf("determinise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+			c->count, t->det_delta, t->det_delta / c->count);
+		if (halt == HALT_AFTER_DETERMINISE) {
+			return;
+		}
+		printf("minimise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+			c->count, t->min_delta, t->min_delta / c->count);
+		if (halt <= HALT_AFTER_MINIMISE) {
+			return;
+		}
+	}
+	if (c->mt != MATCH_NONE) {
+		printf("execute %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+			c->count, t->run_delta, t->run_delta / c->count);
+		if (halt == HALT_AFTER_EXECUTION) {
+			return;
+		}
+	}
+}
+
+static void
+perf_case_report_head(int quiet, enum halt halt)
+{
+	printf("line");
+	if (!quiet) {
+		printf("\tname");
+		printf("\tregex");
+	}
+	printf("\tcompile");
+	if (halt == HALT_AFTER_COMPILE) {
+		goto done;
+	}
+	printf("\tglushkovise");
+	if (halt == HALT_AFTER_GLUSHKOVISE) {
+		goto done;
+	}
+	printf("\tdeterminise");
+	if (halt == HALT_AFTER_DETERMINISE) {
+		goto done;
+	}
+	printf("\tminimise");
+	if (halt == HALT_AFTER_MINIMISE) {
+		goto done;
+	}
+	printf("\texecute");
+	if (halt == HALT_AFTER_EXECUTION) {
+		goto done;
+	}
+
+done:
+
+	printf("\terror\n");
+}
+
+static void
+perf_case_report_tsv(struct perf_case *c, enum halt halt,
+	enum error_type err, int quiet,
+	const struct timing *t)
+{
+	printf("%zu", c->line);
+	if (!quiet) {
+		printf("\t\"%s\"", c->test_name.data);
+		printf("\t\"%s\"", c->regexp.data);
+	}
+
+	printf("\t%.4g", t->comp_delta / c->count);
+	if (halt == HALT_AFTER_COMPILE) {
+		goto done;
+	}
+	if (c->count != 1) {
+		printf("\t0");
+		if (halt == HALT_AFTER_GLUSHKOVISE) {
+			goto done;
+		}
+		printf("\t0");
+		if (halt == HALT_AFTER_DETERMINISE) {
+			goto done;
+		}
+		printf("\t0");
+		if (halt == HALT_AFTER_MINIMISE) {
+			goto done;
+		}
+	} else {
+		printf("\t%.4g", t->glush_delta / c->count);
+		if (halt == HALT_AFTER_GLUSHKOVISE) {
+			goto done;
+		}
+		printf("\t%.4g", t->det_delta / c->count);
+		if (halt == HALT_AFTER_DETERMINISE) {
+			goto done;
+		}
+		printf("\t%.4g", t->min_delta / c->count);
+		if (halt == HALT_AFTER_MINIMISE) {
+			goto done;
+		}
+	}
+	if (c->mt != MATCH_NONE) {
+		printf("\t%.4g", t->run_delta / c->count);
+		if (halt == HALT_AFTER_EXECUTION) {
+			goto done;
+		}
+	} else {
+		printf("\t0");
+	}
+
+done:
+
+	printf("\t%d\n", err);
+}
+
+static void
+perf_case_report_error(enum error_type err)
+{
 	switch (err) {
 	case ERROR_NONE:
-		printf("%d iterations took %.4f seconds, %.4g seconds/iteration\n",
-			c->count, runtime_secs, runtime_secs/c->count);
 		break;
 
 	/*
@@ -628,6 +890,10 @@ perf_case_report(struct perf_case *c, enum error_type err, double runtime_secs)
 
 	case ERROR_PARSING_REGEXP:
 		printf("ERROR: parsing regexp\n");
+		break;
+
+	case ERROR_GLUSHKOVISING:
+		printf("ERROR: glushkovising regexp\n");
 		break;
 
 	case ERROR_DETERMINISING:
@@ -650,10 +916,6 @@ perf_case_report(struct perf_case *c, enum error_type err, double runtime_secs)
 		printf("ERROR: reading file: %s\n", strerror(errno));
 		break;
 
-	case ERROR_CLOCK_ERROR:
-		printf("ERROR: cannot retrieve clock value: %s\n", strerror(errno));
-		break;
-
 	default:
 		printf("ERROR: unknown error %d\n", (int)err);
 		break;
@@ -671,8 +933,22 @@ usage(void)
 	fprintf(stderr, "        <driverfile> specifies the path to the driver file, or '-' to read it from stdin\n");
 
 	fprintf(stderr, "\n");
+	fprintf(stderr, "        -q\n");
+	fprintf(stderr, "             quiet: elide the regexp from output (useful for long regexps)\n");
+
+	fprintf(stderr, "\n");
 	fprintf(stderr, "        -p\n");
 	fprintf(stderr, "             pause before running performance tests\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "        -t\n");
+	fprintf(stderr, "             output in TSV format. The default is human-readable text\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "        -H <halt>\n");
+	fprintf(stderr, "             halt after compile, glushkovise, determinise, minimise or execute\n");
+	fprintf(stderr, "                 0 = disable optimizations\n");
+	fprintf(stderr, "                 1 = basic optimizations\n");
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -O <olevel>\n");
@@ -731,8 +1007,9 @@ int
 main(int argc, char *argv[])
 {
 	int i;
-	int pause;
+	int pause, quiet, tsv;
 	enum implementation impl;
+	enum halt halt;
 
 	int optlevel = 1;
 
@@ -752,12 +1029,15 @@ main(int argc, char *argv[])
 	opt.io = FSM_IO_PAIR;
 
 	pause                 = 0;
+	quiet                 = 0;
+	tsv                   = 0;
 	impl                  = IMPL_INTERPRET;
+	halt                  = HALT_AFTER_EXECUTION;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "O:L:l:x:" "p" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:l:x:" "pqtH:" ), c != -1) {
 			switch (c) {
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
@@ -791,6 +1071,22 @@ main(int argc, char *argv[])
 				}
 				break;
 
+			case 'H':
+				if (optarg[0] == 'c') {
+					halt = HALT_AFTER_COMPILE;
+				} else if (optarg[0] == 'g') {
+					halt = HALT_AFTER_GLUSHKOVISE;
+				} else if (optarg[0] == 'd') {
+					halt = HALT_AFTER_DETERMINISE;
+				} else if (optarg[0] == 'm') {
+					halt = HALT_AFTER_MINIMISE;
+				} else {
+					fprintf(stderr, "unknown argument to -H: %s\n", optarg);
+					usage();
+					exit(1);
+				}
+				break;
+
 			case 'x':
 				if (strcmp(optarg, "v1") == 0) {
 					vm_opts.output = FSM_VM_COMPILE_VM_V1;
@@ -804,6 +1100,8 @@ main(int argc, char *argv[])
 				break;
 
 			case 'p': pause = 1; break;
+			case 'q': quiet = 1; break;
+			case 't': tsv   = 1; break;
 
 			case 'h':
 				usage();
@@ -836,9 +1134,13 @@ main(int argc, char *argv[])
 		fgets(buf, sizeof buf, stdin);
 	}
 
+	if (tsv) {
+		perf_case_report_head(quiet, halt);
+	}
+
 	for (i=0; i < argc; i++) {
 		FILE *f = xopen(argv[i]);
-		parse_perf_case(f, impl);
+		parse_perf_case(f, impl, halt, quiet, tsv);
 		fclose(f);
 	}
 
