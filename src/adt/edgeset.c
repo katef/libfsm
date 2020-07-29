@@ -39,7 +39,6 @@
 #define IS_SINGLETON(ptr)               (((uintptr_t) (ptr)) & 0x1)
 
 struct edge_set {
-	const struct fsm_alloc *alloc;
 	struct fsm_edge *a;
 	size_t i;
 	size_t n;
@@ -61,7 +60,6 @@ edge_set_create(const struct fsm_alloc *a)
 		return NULL;
 	}
 
-	set->alloc = a;
 	set->i = 0;
 	set->n = SET_INITIAL;
 
@@ -69,7 +67,7 @@ edge_set_create(const struct fsm_alloc *a)
 }
 
 void
-edge_set_free(struct edge_set *set)
+edge_set_free(const struct fsm_alloc *alloc, struct edge_set *set)
 {
 	if (set == NULL) {
 		return;
@@ -81,8 +79,8 @@ edge_set_free(struct edge_set *set)
 
 	assert(set->a != NULL);
 
-	f_free(set->alloc, set->a);
-	f_free(set->alloc, set);
+	f_free(alloc, set->a);
+	f_free(alloc, set);
 }
 
 int
@@ -135,7 +133,7 @@ edge_set_add(struct edge_set **setp, const struct fsm_alloc *alloc,
 	if (set->i == set->n) {
 		struct fsm_edge *new;
 
-		new = f_realloc(set->alloc, set->a, (sizeof *set->a) * (set->n * 2));
+		new = f_realloc(alloc, set->a, (sizeof *set->a) * (set->n * 2));
 		if (new == NULL) {
 			return 0;
 		}

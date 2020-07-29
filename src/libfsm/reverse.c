@@ -250,7 +250,7 @@ fsm_reverse(struct fsm *fsm)
 
 		for (i = 0; i < fsm->statecount; i++) {
 			state_set_free(fsm->states[i].epsilons);
-			edge_set_free(fsm->states[i].edges);
+			edge_set_free(fsm->opt->alloc, fsm->states[i].edges);
 
 			fsm->states[i].epsilons = epsilons[i];
 			fsm->states[i].edges = edges[i];
@@ -271,7 +271,7 @@ error1:
 
 		for (i = 0; i < fsm->statecount; i++) {
 			state_set_free(fsm->states[i].epsilons);
-			edge_set_free(fsm->states[i].edges);
+			edge_set_free(fsm->opt->alloc, fsm->states[i].edges);
 
 			fsm->states[i].epsilons = epsilons[i];
 			fsm->states[i].edges = edges[i];

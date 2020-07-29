@@ -20,7 +20,7 @@ struct edge_iter {
 };
 
 void
-edge_set_free(struct edge_set *set);
+edge_set_free(const struct fsm_alloc *a, struct edge_set *set);
 
 int
 edge_set_add(struct edge_set **set, const struct fsm_alloc *alloc,
