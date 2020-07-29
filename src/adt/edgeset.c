@@ -172,27 +172,41 @@ edge_set_add_state_set(struct edge_set **setp, const struct fsm_alloc *alloc,
 }
 
 int
-edge_set_contains(const struct edge_set *set, unsigned char symbol)
+edge_set_find(const struct edge_set *set, unsigned char symbol,
+	struct fsm_edge *e)
 {
 	size_t i;
+	assert(e != NULL);
 
 	if (edge_set_empty(set)) {
 		return 0;
 	}
 
-	if (IS_SINGLETON(set)) {
-		return SINGLETON_DECODE_SYMBOL(set) == symbol;
-	}
-
 	assert(set != NULL);
+
+	if (IS_SINGLETON(set)) {
+		if (SINGLETON_DECODE_SYMBOL(set) == symbol) {
+			e->symbol = symbol;
+			e->state = SINGLETON_DECODE_STATE(set);
+			return 1;
+		}
+	}
 
 	for (i = 0; i < set->i; i++) {
 		if (set->a[i].symbol == symbol) {
+			memcpy(e, &set->a[i], sizeof(*e));
 			return 1;
 		}
 	}
 
 	return 0;
+}
+
+int
+edge_set_contains(const struct edge_set *set, unsigned char symbol)
+{
+	struct fsm_edge unused;
+	return edge_set_find(set, symbol, &unused);
 }
 
 int

@@ -31,6 +31,10 @@ edge_set_add_state_set(struct edge_set **setp, const struct fsm_alloc *alloc,
 	unsigned char symbol, const struct state_set *state_set);
 
 int
+edge_set_find(const struct edge_set *set, unsigned char symbol,
+	struct fsm_edge *e);
+
+int
 edge_set_contains(const struct edge_set *set, unsigned char symbol);
 
 int
