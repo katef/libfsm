@@ -25,7 +25,7 @@
 /*
  * Many edge sets only contain a single item, as is the case for state sets.
  * Likewise we avoid allocating for an edge set until it contains more than
- * a single item. As with state sets, the single tem is stored within the
+ * a single item. As with state sets, the single item is stored within the
  * directly in the edge set pointer value. I would draw the layout here,
  * but I'm not feeling very artistic today.
  */
