@@ -49,7 +49,16 @@ struct edge_set {
 	struct fsm_edge *b;	/* buckets */
 	size_t count;
 	size_t ceil;
+};
 
+#define EOI_DONE ((size_t)-1)
+#define EOI_SINGLETON_SET ((size_t)-2)
+
+struct edge_ordered_iter {
+	const struct edge_set *set;
+	size_t pos;
+	unsigned char symbol;
+	uint64_t symbols_used[4];
 };
 
 static struct edge_set *
@@ -645,4 +654,169 @@ edge_set_empty(const struct edge_set *set)
 	}
 
 	return set->count == 0;
+}
+
+struct edge_ordered_iter *
+edge_set_ordered_iter_new(const struct fsm_alloc *alloc,
+    const struct edge_set *set)
+{
+	/* Create an ordered iterator for the hash table by figuring
+	 * out which symbols are present (0x00 <= x <= 0xff, tracked
+	 * in a bit set) and either yielding the next bucket for the
+	 * current symbol or advancing to the next symbol present. */
+
+	size_t i, found, mask;
+	struct edge_ordered_iter *res = f_malloc(alloc, sizeof(*res));
+	if (res == NULL) {
+		return NULL;
+	}
+	memset(res, 0x00, sizeof(*res));
+
+	/* Check for special case unboxed sets first. */
+	if (IS_SINGLETON(set)) {
+		res->set = set;
+		res->pos = EOI_SINGLETON_SET;
+		return res;
+	} else if (edge_set_empty(set)) {
+		res->pos = EOI_DONE;
+		return res;
+	}
+
+	found = 0;
+	for (i = 0; i < set->ceil; i++) {
+		const fsm_state_t bs = set->b[i].state;
+		unsigned char symbol;
+		if (bs == BUCKET_UNUSED || bs == BUCKET_TOMBSTONE) {
+			continue;
+		}
+
+		symbol = set->b[i].symbol;
+		res->symbols_used[symbol/64] |= ((uint64_t)1 << (symbol & 63));
+		found++;
+	}
+	assert(found == set->count);
+	mask = set->ceil - 1;
+
+	/* Start out pointing to the first bucket with a symbol of '\0',
+	 * or the first unused bucket if not present (which is likely). */
+	{
+		const unsigned h = PHI32 * res->symbol;
+		for (i = 0; i < set->ceil; i++) {
+			const size_t b_i = (h + i) & mask;
+			const fsm_state_t bs = set->b[b_i].state;
+			if (bs == BUCKET_TOMBSTONE) {
+				continue; /* search past deleted */
+			} else if (bs == BUCKET_UNUSED) {
+				res->pos = i; /* will advance to next symbol */
+				break;
+			} else if (set->b[b_i].symbol == res->symbol) {
+				res->pos = i; /* pointing at first bucket */
+				break;
+			} else {
+				continue; /* find first entry with symbol */
+			}
+		}
+	}
+
+	res->set = set;
+	return res;
+}
+
+void
+edge_set_ordered_iter_free(const struct fsm_alloc *alloc,
+    struct edge_ordered_iter *eoi)
+{
+	if (eoi != NULL) {
+		f_free(alloc, eoi);
+	}
+}
+
+static int
+advance_symbol(struct edge_ordered_iter *eoi)
+{
+	unsigned i = eoi->symbol + 1;
+	while (i < 0x100) {
+		if (eoi->symbols_used[i/64] & ((uint64_t)1 << (i & 63))) {
+			eoi->symbol = i;
+			return 1;
+		}
+		i++;
+	}
+
+	eoi->pos = EOI_DONE;
+	return 0;
+}
+
+int
+edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
+{
+	fsm_state_t bs;
+	unsigned char symbol;
+	const struct edge_set *set = eoi->set;
+	size_t mask;
+
+	if (eoi->pos == EOI_DONE) {
+		return 0;	/* done */
+	} else if (eoi->pos == EOI_SINGLETON_SET) {
+		e->state = SINGLETON_DECODE_STATE(eoi->set);
+		e->symbol = SINGLETON_DECODE_SYMBOL(eoi->set);
+		eoi->pos = EOI_DONE;
+		return 1;
+	}
+
+	mask = set->ceil - 1;
+
+	for (;;) {
+		eoi->pos &= mask;
+		bs = set->b[eoi->pos].state;
+		symbol = set->b[eoi->pos].symbol;
+
+		if (bs == BUCKET_UNUSED) {
+			size_t i;
+			unsigned h;
+			/* after current symbol's entries -- check next */
+			if (!advance_symbol(eoi)) {
+				return 0; /* done */
+			}
+
+			h = PHI32 * eoi->symbol;
+			for (i = 0; i < set->ceil; i++) {
+				const size_t b_i = (h + i) & mask;
+				bs = set->b[b_i].state;
+				if (bs == BUCKET_TOMBSTONE) {
+					continue; /* search past deleted */
+				} else if (bs == BUCKET_UNUSED) {
+					/* should never get here -- searching for
+					 * a symbol that isn't present, but we
+					 * already know what's present */
+					assert(!"internal error");
+				} else if (set->b[b_i].symbol != eoi->symbol) {
+					continue; /* skip collision */
+				} else {
+					assert(set->b[b_i].symbol == eoi->symbol);
+
+					/* yield next match and then advance */
+					eoi->pos = b_i;
+					memcpy(e, &set->b[eoi->pos], sizeof(*e));
+					eoi->pos++;
+					return 1;
+				}
+			}
+			/* should always find a match or an unused bucket */
+			assert(!"internal error");
+			return 0;
+		} else if (bs == BUCKET_TOMBSTONE) {
+			eoi->pos++; /* skip over */
+			continue;
+		} else if (symbol != eoi->symbol) {
+			eoi->pos++;
+			continue; /* skip collision */
+		} else {
+			/* if pointing at next bucket, yield it */
+			assert(symbol == eoi->symbol);
+			memcpy(e, &set->b[eoi->pos], sizeof(*e));
+			eoi->pos++;
+			return 1;
+		}
+	}
 }

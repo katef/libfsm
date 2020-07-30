@@ -19,6 +19,12 @@ struct edge_iter {
 	const struct edge_set *set;
 };
 
+/* Opaque struct type for edge iterator,
+ * which does extra processing upfront to iterate over
+ * edges in lexicographically ascending order; the
+ * edge_iter iterator is unordered. */
+struct edge_iter_ordered;
+
 void
 edge_set_free(const struct fsm_alloc *a, struct edge_set *set);
 
@@ -75,6 +81,22 @@ edge_set_replace_state(struct edge_set **setp, fsm_state_t old, fsm_state_t new)
 
 int
 edge_set_empty(const struct edge_set *s);
+
+
+/* Allocate a new ordered edge_set iterator. */
+struct edge_ordered_iter *
+edge_set_ordered_iter_new(const struct fsm_alloc *alloc,
+    const struct edge_set *s);
+
+/* Free an ordered edge_set iterator. */
+void
+edge_set_ordered_iter_free(const struct fsm_alloc *alloc,
+    struct edge_ordered_iter *eoi);
+
+/* Get the next edge from an ordered iterator and return 1,
+ * or return 0 when no more are available. */
+int
+edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e);
 
 #endif
 
