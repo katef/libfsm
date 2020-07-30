@@ -111,7 +111,7 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 
 	for (s = 0; s < fsm->statecount; s++) {
 		struct fsm_edge e;
-		struct edge_iter it;
+		struct edge_ordered_iter eoi;
 
 		{
 			struct state_iter jt;
@@ -132,7 +132,9 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 		}
 
 		assert(s < fsm->statecount);
-		for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
+
+		for (edge_set_ordered_iter_reset(fsm->states[s].edges, &eoi);
+		     edge_set_ordered_iter_next(&eoi, &e); ) {
 			assert(e.state < fsm->statecount);
 
 			fprintf(f, "%-2u -> %2u", s, e.state);
