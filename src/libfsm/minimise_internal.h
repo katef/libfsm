@@ -50,46 +50,6 @@ static int
 moore_try_partition(struct moore_env *env, unsigned char label,
     fsm_state_t ec_src, fsm_state_t ec_dst);
 
-
-struct exmoore_env {
-	const struct fsm *fsm;
-	fsm_state_t dead_state;
-	fsm_state_t *state_ecs;
-	fsm_state_t *jump;
-	fsm_state_t *ecs;
-	const unsigned char *labels;
-	size_t label_count;
-};
-
-struct exmoore_label_iterator {
-	unsigned i;
-	unsigned limit;
-	unsigned char use_special;
-	unsigned char labels[256];
-};
-
-static int
-min_exmoore(const struct fsm *fsm,
-    const unsigned char *labels, size_t label_count,
-    fsm_state_t *mapping, size_t *minimized_state_count);
-
-static void
-exmoore_dump_ec(FILE *f, fsm_state_t start, const fsm_state_t *jump);
-
-static int
-exmoore_try_partition(struct exmoore_env *env, unsigned char label,
-    fsm_state_t ec_src, fsm_state_t ec_dst,
-    size_t partition_counts[2]);
-
-static void
-exmoore_heuristic_scan(FILE *f, const struct exmoore_env *env,
-    const unsigned char *labels, size_t label_count);
-
-static void
-exmoore_init_label_iterator(const struct exmoore_env *env,
-	fsm_state_t ec_i, int special_handling,
-	struct exmoore_label_iterator *li);
-
 #if DO_HOPCROFT
 struct hopcroft_env {
 	const struct fsm *fsm;

@@ -23,10 +23,11 @@
 
 #include "internal.h"
 
-#define MIN_ALT 1
+#define MIN_REAL 1
+#define MIN_ALT 0
 #define DUMP_MAPPINGS 0
-#define DUMP_STEPS 1
-#define DUMP_TIME 1
+#define DUMP_STEPS 0
+#define DUMP_TIME 0
 
 #define NAIVE_DUMP_TABLE 0
 #define NAIVE_LOG_PARTITION 0
@@ -35,9 +36,9 @@
 #define MOORE_DUMP_ECS 0
 #define MOORE_LOG_PARTITION 0
 
-#define EXMOORE_DUMP_INIT 0
-#define EXMOORE_DUMP_ECS 0
-#define EXMOORE_LOG_PARTITION 0
+#define EXMOORE_DUMP_INIT 1
+#define EXMOORE_DUMP_ECS 1
+#define EXMOORE_LOG_PARTITION 1
 
 #define DO_HOPCROFT 0
 #define HOPCROFT_DUMP_INIT 0
@@ -61,9 +62,196 @@ static int
 min_brz(struct fsm *fsm, size_t *minimized_state_count);
 #endif
 
+
+
+
+#if MIN_REAL
+#define NO_ID ((fsm_state_t)-1)
+
+struct exmoore_env {
+	const struct fsm *fsm;
+	fsm_state_t dead_state;
+	fsm_state_t *state_ecs;
+	fsm_state_t *jump;
+	fsm_state_t *ecs;
+	const unsigned char *labels;
+	size_t label_count;
+};
+
+struct exmoore_label_iterator {
+	unsigned i;
+	unsigned limit;
+	unsigned char use_special;
+	unsigned char labels[256];
+};
+
+static int
+min_exmoore(const struct fsm *fsm,
+    const unsigned char *labels, size_t label_count,
+    fsm_state_t *mapping, size_t *minimized_state_count);
+
+static void
+exmoore_dump_ec(FILE *f, fsm_state_t start, const fsm_state_t *jump);
+
+static int
+exmoore_try_partition(struct exmoore_env *env, unsigned char label,
+    fsm_state_t ec_src, fsm_state_t ec_dst,
+    size_t partition_counts[2]);
+
+static void
+exmoore_heuristic_scan(FILE *f, const struct exmoore_env *env,
+    const unsigned char *labels, size_t label_count);
+
+static void
+exmoore_init_label_iterator(const struct exmoore_env *env,
+	fsm_state_t ec_i, int special_handling,
+	struct exmoore_label_iterator *li);
+#endif
+
+
+
+
+
+
+
+
+
+
+#if MIN_REAL || MIN_ALT
+/* Build a bit set of labels used, then write the set
+ * into a sorted array. */
+static void
+collect_labels(const struct fsm *fsm,
+    unsigned char *labels, size_t *label_count)
+{
+	size_t count = 0;
+	uint64_t label_set[4] = { 0, 0, 0, 0 };
+	int i;
+
+	fsm_state_t id;
+	for (id = 0; id < fsm->statecount; id++) {
+		struct fsm_edge e;
+		struct edge_iter ei;
+		unsigned char label;
+		for (edge_set_reset(fsm->states[id].edges, &ei);
+		     edge_set_next(&ei, &e); ) {
+			if (e.state >= fsm->statecount) {
+				fprintf(stderr, "### ERROR: e.state %u >= fsm->statecount %lu\n",
+				    e.state, fsm->statecount);
+				continue;
+			}
+			assert(e.state < fsm->statecount);
+			label = e.symbol;
+
+			if (label_set[label/64] & (1UL << (label & 63))) {
+				/* already set, ignore */
+			} else {
+				label_set[label/64] |= (1UL << (label & 63));
+				count++;
+			}
+		}
+	}
+
+	*label_count = 0;
+	for (i = 0; i < 256; i++) {
+		if (label_set[i/64] & (1UL << (i & 63))) {
+			labels[*label_count] = i;
+			(*label_count)++;
+		}
+	}
+
+	assert(*label_count == count);
+}
+#endif
+
 int
 fsm_minimise(struct fsm *fsm)
 {
+#if MIN_REAL
+	/* build label mapping */
+	unsigned char labels[256];
+	size_t label_count, minimised_states;
+	struct fsm *dst = NULL;
+	fsm_state_t *mapping = NULL;
+	int r = 0;
+
+#if DUMP_TIME
+	struct timeval tv_pre, tv_post;
+
+#define TIME(T) if (0 != gettimeofday(&T, NULL)) { assert(0); }
+#define DUMP_TIME_DELTA(NAME)				\
+	fprintf(stderr, "%-8s %.3f msec\n", NAME,	\
+	    1000.0 * (tv_post.tv_sec - tv_pre.tv_sec)	\
+	    + (tv_post.tv_usec - tv_pre.tv_usec)/1000.0);
+#else
+#define TIME(T)
+#define DUMP_TIME_DELTA(NAME)
+#endif
+
+	assert(fsm != NULL);
+
+	/* This should only be called with a DFA. */
+	assert(fsm_all(fsm, fsm_isdfa));
+
+	if (!fsm_trim(fsm)) {
+		return 0;
+	}
+
+	if (fsm->statecount == 0) {
+		return 1;	/* empty -- no-op */
+	}
+
+	TIME(tv_pre);
+	collect_labels(fsm, labels, &label_count);
+	TIME(tv_post);
+	DUMP_TIME_DELTA("collect_labels");
+
+	if (label_count == 0) {
+		return 1;	/* empty -- no-op */
+	}
+
+	mapping = f_malloc(fsm->opt->alloc,
+	    fsm->statecount * sizeof(mapping[0]));
+	if (mapping == NULL) {
+		goto cleanup;
+	}
+
+	/* exmoore */
+	TIME(tv_pre);
+	r = min_exmoore(fsm, labels, label_count, mapping, &minimised_states);
+	TIME(tv_post);
+	DUMP_TIME_DELTA("exmoore");
+
+	if (!r) {
+		goto cleanup;
+	}
+
+	/* consolidate */
+	TIME(tv_pre);
+	dst = fsm_consolidate(fsm, mapping, fsm->statecount);
+	TIME(tv_post);
+	DUMP_TIME_DELTA("consolidate");
+
+	(void)min_brz;
+
+	if (dst == NULL) {
+		r = 0;
+		goto cleanup;
+	}
+
+	(void)minimised_states;
+
+	fsm_move(fsm, dst);
+
+cleanup:
+	if (mapping != NULL) {
+		f_free(fsm->opt->alloc, mapping);
+	}
+
+	return r;
+
+
+#else
 #if MIN_ALT
 	int r = 0;
 	size_t states_before, states_naive,
@@ -190,6 +378,7 @@ cleanup:
 
 	return min_brz(fsm, NULL);
 #endif
+#endif
 }
 
 /* Brzozowski's algorithm. Destructively modifies the input. */
@@ -225,51 +414,6 @@ min_brz(struct fsm *fsm, size_t *minimized_state_count)
 
 
 #if MIN_ALT
-
-/* Build a bit set of labels used, then write the set
- * into a sorted array. */
-static void
-collect_labels(const struct fsm *fsm,
-    unsigned char *labels, size_t *label_count)
-{
-	size_t count = 0;
-	uint64_t label_set[4] = { 0, 0, 0, 0 };
-	int i;
-
-	fsm_state_t id;
-	for (id = 0; id < fsm->statecount; id++) {
-		struct fsm_edge e;
-		struct edge_iter ei;
-		unsigned char label;
-		for (edge_set_reset(fsm->states[id].edges, &ei);
-		     edge_set_next(&ei, &e); ) {
-			if (e.state >= fsm->statecount) {
-				fprintf(stderr, "### ERROR: e.state %u >= fsm->statecount %lu\n",
-				    e.state, fsm->statecount);
-				continue;
-			}
-			assert(e.state < fsm->statecount);
-			label = e.symbol;
-
-			if (label_set[label/64] & (1UL << (label & 63))) {
-				/* already set, ignore */
-			} else {
-				label_set[label/64] |= (1UL << (label & 63));
-				count++;
-			}
-		}
-	}
-
-	*label_count = 0;
-	for (i = 0; i < 256; i++) {
-		if (label_set[i/64] & (1UL << (i & 63))) {
-			labels[*label_count] = i;
-			(*label_count)++;
-		}
-	}
-
-	assert(*label_count == count);
-}
 
 /* Naive O(N^2) minimization algorithm, as documented in ... */
 static int
@@ -767,13 +911,13 @@ moore_try_partition(struct moore_env *env, unsigned char label,
 
 	return other_count > 0;
 }
+#endif
 
 
 
 
 
-
-
+#if MIN_ALT || MIN_REAL
 /* We only know the count for how many states are in an
  * EC after an attempted partition. When the ECs have
  * less than EXMOORE_EC_SMALL_THRESHOLD states, then
@@ -1283,6 +1427,7 @@ exmoore_heuristic_scan(FILE *f, const struct exmoore_env *env,
 	(void)label_count;
 #endif
 }
+#endif
 
 
 
@@ -1290,8 +1435,7 @@ exmoore_heuristic_scan(FILE *f, const struct exmoore_env *env,
 
 
 
-
-
+#if MIN_ALT
 #if HOPCROFT_DUMP_INIT
 static void
 dump_edges(const struct fsm *fsm)
