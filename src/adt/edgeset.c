@@ -6,7 +6,6 @@
 
 #include <assert.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -45,20 +44,13 @@
  * (sqrt(5) - 1)/2 -> 0.618, so 0.618 * 0xffffffff. See Knuth 6.4. */
 #define PHI32 0x9e3779b9
 
+#define EOI_DONE ((size_t)-1)
+#define EOI_SINGLETON_SET ((size_t)-2)
+
 struct edge_set {
 	struct fsm_edge *b;	/* buckets */
 	size_t count;
 	size_t ceil;
-};
-
-#define EOI_DONE ((size_t)-1)
-#define EOI_SINGLETON_SET ((size_t)-2)
-
-struct edge_ordered_iter {
-	const struct edge_set *set;
-	size_t pos;
-	unsigned char symbol;
-	uint64_t symbols_used[4];
 };
 
 static struct edge_set *
@@ -656,9 +648,9 @@ edge_set_empty(const struct edge_set *set)
 	return set->count == 0;
 }
 
-struct edge_ordered_iter *
-edge_set_ordered_iter_new(const struct fsm_alloc *alloc,
-    const struct edge_set *set)
+void
+edge_set_ordered_iter_reset(const struct edge_set *set,
+    struct edge_ordered_iter *eoi)
 {
 	/* Create an ordered iterator for the hash table by figuring
 	 * out which symbols are present (0x00 <= x <= 0xff, tracked
@@ -666,20 +658,16 @@ edge_set_ordered_iter_new(const struct fsm_alloc *alloc,
 	 * current symbol or advancing to the next symbol present. */
 
 	size_t i, found, mask;
-	struct edge_ordered_iter *res = f_malloc(alloc, sizeof(*res));
-	if (res == NULL) {
-		return NULL;
-	}
-	memset(res, 0x00, sizeof(*res));
+	memset(eoi, 0x00, sizeof(*eoi));
 
 	/* Check for special case unboxed sets first. */
 	if (IS_SINGLETON(set)) {
-		res->set = set;
-		res->pos = EOI_SINGLETON_SET;
-		return res;
+		eoi->set = set;
+		eoi->pos = EOI_SINGLETON_SET;
+		return;
 	} else if (edge_set_empty(set)) {
-		res->pos = EOI_DONE;
-		return res;
+		eoi->pos = EOI_DONE;
+		return;
 	}
 
 	found = 0;
@@ -691,7 +679,7 @@ edge_set_ordered_iter_new(const struct fsm_alloc *alloc,
 		}
 
 		symbol = set->b[i].symbol;
-		res->symbols_used[symbol/64] |= ((uint64_t)1 << (symbol & 63));
+		eoi->symbols_used[symbol/64] |= ((uint64_t)1 << (symbol & 63));
 		found++;
 	}
 	assert(found == set->count);
@@ -700,17 +688,17 @@ edge_set_ordered_iter_new(const struct fsm_alloc *alloc,
 	/* Start out pointing to the first bucket with a symbol of '\0',
 	 * or the first unused bucket if not present (which is likely). */
 	{
-		const unsigned h = PHI32 * res->symbol;
+		const unsigned h = PHI32 * eoi->symbol;
 		for (i = 0; i < set->ceil; i++) {
 			const size_t b_i = (h + i) & mask;
 			const fsm_state_t bs = set->b[b_i].state;
 			if (bs == BUCKET_TOMBSTONE) {
 				continue; /* search past deleted */
 			} else if (bs == BUCKET_UNUSED) {
-				res->pos = i; /* will advance to next symbol */
+				eoi->pos = i; /* will advance to next symbol */
 				break;
-			} else if (set->b[b_i].symbol == res->symbol) {
-				res->pos = i; /* pointing at first bucket */
+			} else if (set->b[b_i].symbol == eoi->symbol) {
+				eoi->pos = i; /* pointing at first bucket */
 				break;
 			} else {
 				continue; /* find first entry with symbol */
@@ -718,17 +706,7 @@ edge_set_ordered_iter_new(const struct fsm_alloc *alloc,
 		}
 	}
 
-	res->set = set;
-	return res;
-}
-
-void
-edge_set_ordered_iter_free(const struct fsm_alloc *alloc,
-    struct edge_ordered_iter *eoi)
-{
-	if (eoi != NULL) {
-		f_free(alloc, eoi);
-	}
+	eoi->set = set;
 }
 
 static int

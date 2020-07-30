@@ -7,6 +7,8 @@
 #ifndef ADT_EDGESET_H
 #define ADT_EDGESET_H
 
+#include <stdint.h>
+
 struct bm;
 struct set;
 struct fsm_alloc;
@@ -17,6 +19,13 @@ struct state_set;
 struct edge_iter {
 	size_t i;
 	const struct edge_set *set;
+};
+
+struct edge_ordered_iter {
+	const struct edge_set *set;
+	size_t pos;
+	unsigned char symbol;
+	uint64_t symbols_used[4];
 };
 
 /* Opaque struct type for edge iterator,
@@ -83,14 +92,9 @@ int
 edge_set_empty(const struct edge_set *s);
 
 
-/* Allocate a new ordered edge_set iterator. */
-struct edge_ordered_iter *
-edge_set_ordered_iter_new(const struct fsm_alloc *alloc,
-    const struct edge_set *s);
-
-/* Free an ordered edge_set iterator. */
+/* Initialize a new ordered edge_set iterator. */
 void
-edge_set_ordered_iter_free(const struct fsm_alloc *alloc,
+edge_set_ordered_iter_reset(const struct edge_set *set,
     struct edge_ordered_iter *eoi);
 
 /* Get the next edge from an ordered iterator and return 1,
