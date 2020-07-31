@@ -253,13 +253,19 @@ fsm_mergestates(struct fsm *fsm, fsm_state_t a, fsm_state_t b,
 /*
  * Trim away "dead" states. More formally, this recursively removes
  * unreachable states (i.e. those in a subgraph which is disjoint from
- * the state state's connected component), and non-end states which
- * do not have a path to an end state.
+ * the state state's connected component), and optionally non-end
+ * states which do not have a path to an end state.
  *
  * Returns how many states were removed, or -1 on error.
  */
-int
-fsm_trim(struct fsm *fsm);
+enum fsm_trim_mode {
+	/* Remove states unreachable from the start state. */
+	FSM_TRIM_START_REACHABLE,
+	/* Also remove states without a path to an end state. */
+	FSM_TRIM_START_AND_END_REACHABLE
+};
+long
+fsm_trim(struct fsm *fsm, enum fsm_trim_mode mode);
 
 /*
  * Produce a short legible string that matches up to a goal state.
