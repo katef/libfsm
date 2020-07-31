@@ -38,55 +38,56 @@ re_fprint(FILE *f, enum re_dialect dialect, const char *s)
 }
 
 void
-re_perror(enum re_dialect dialect, const struct re_err *err,
+re_ferror(FILE *f, enum re_dialect dialect, const struct re_err *err,
 	const char *file, const char *s)
 {
+	assert(f != NULL);
 	assert(err != NULL);
 
 	if (file != NULL) {
-		fprintf(stderr, "%s", file);
+		fprintf(f, "%s", file);
 	}
 
 	if (s != NULL) {
 		if (file != NULL) {
-			fprintf(stderr, ": ");
+			fprintf(f, ": ");
 		}
 
-		re_fprint(stderr, dialect, s);
+		re_fprint(f, dialect, s);
 	}
 
 	if (err->e & RE_MARK) {
 		assert(err->end.byte >= err->start.byte);
 
 		if (file != NULL || s != NULL) {
-			fprintf(stderr, ":");
+			fprintf(f, ":");
 		}
 
 		if (err->end.byte == err->start.byte) {
-			fprintf(stderr, "%u",    err->start.byte + 1);
+			fprintf(f, "%u",    err->start.byte + 1);
 		} else {
-			fprintf(stderr, "%u-%u", err->start.byte + 1, err->end.byte + 1);
+			fprintf(f, "%u-%u", err->start.byte + 1, err->end.byte + 1);
 		}
 	}
 
 	switch (err->e) {
-	case RE_EHEXRANGE:   fprintf(stderr, ": Hex escape %s out of range",   err->esc); break;
-	case RE_EOCTRANGE:   fprintf(stderr, ": Octal escape %s out of range", err->esc); break;
-	case RE_ECOUNTRANGE: fprintf(stderr, ": Count %s out of range",        err->esc); break;
+	case RE_EHEXRANGE:   fprintf(f, ": Hex escape %s out of range",   err->esc); break;
+	case RE_EOCTRANGE:   fprintf(f, ": Octal escape %s out of range", err->esc); break;
+	case RE_ECOUNTRANGE: fprintf(f, ": Count %s out of range",        err->esc); break;
 
 	default:
-		fprintf(stderr, ": %s", re_strerror(err->e));
+		fprintf(f, ": %s", re_strerror(err->e));
 		break;
 	}
 
 	switch (err->e) {
-	case RE_EHEXRANGE:   fprintf(stderr, ": expected \\0..\\x%X inclusive", UCHAR_MAX); break;
-	case RE_EOCTRANGE:   fprintf(stderr, ": expected \\0..\\%o inclusive",  UCHAR_MAX); break;
-	case RE_ECOUNTRANGE: fprintf(stderr, ": expected 1..%u inclusive",      UINT_MAX);  break;
-	case RE_EXESC:       fprintf(stderr, " \\0..\\x%X inclusive",           UCHAR_MAX); break;
-	case RE_EXCOUNT:     fprintf(stderr, " 1..%u inclusive",                UINT_MAX);  break;
-	case RE_ENEGCOUNT:   fprintf(stderr, " {%u,%u}",                   err->m, err->n); break;
-	case RE_EBADCP:      fprintf(stderr, ": U+%06lX",                         err->cp); break;
+	case RE_EHEXRANGE:   fprintf(f, ": expected \\0..\\x%X inclusive", UCHAR_MAX); break;
+	case RE_EOCTRANGE:   fprintf(f, ": expected \\0..\\%o inclusive",  UCHAR_MAX); break;
+	case RE_ECOUNTRANGE: fprintf(f, ": expected 1..%u inclusive",      UINT_MAX);  break;
+	case RE_EXESC:       fprintf(f, " \\0..\\x%X inclusive",           UCHAR_MAX); break;
+	case RE_EXCOUNT:     fprintf(f, " 1..%u inclusive",                UINT_MAX);  break;
+	case RE_ENEGCOUNT:   fprintf(f, " {%u,%u}",                   err->m, err->n); break;
+	case RE_EBADCP:      fprintf(f, ": U+%06lX",                         err->cp); break;
 
 	default:
 		;
@@ -95,13 +96,20 @@ re_perror(enum re_dialect dialect, const struct re_err *err,
 	/* TODO: escape */
 	switch (err->e) {
 	case RE_ENEGRANGE:
-		fprintf(stderr, " [%s]", err->set);
+		fprintf(f, " [%s]", err->set);
 		break;
 
 	default:
 		;
 	}
 
-	fprintf(stderr, "\n");
+	fprintf(f, "\n");
+}
+
+void
+re_perror(enum re_dialect dialect, const struct re_err *err,
+	const char *file, const char *s)
+{
+	re_ferror(stderr, dialect, err, file, s);
 }
 

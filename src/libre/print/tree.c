@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <ctype.h>
 
 #include <re/re.h>

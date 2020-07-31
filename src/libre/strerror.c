@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <re/re.h>

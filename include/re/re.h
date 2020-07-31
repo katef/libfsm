@@ -158,12 +158,15 @@ const char *
 re_strerror(enum re_errno e);
 
 /*
- * Format an error to stderr.
+ * Format an error to a file.
+ * re_perror() is equivalent to re_ferror(stderr, ...)
  */
+void
+re_ferror(FILE *f, enum re_dialect dialect, const struct re_err *err,
+	const char *file, const char *s);
 void
 re_perror(enum re_dialect dialect, const struct re_err *err,
 	const char *file, const char *s);
-
 
 /* TODO: a convenience interface in the spirit of strtol() which parses between delimiters (and escapes accordingly) */
 
