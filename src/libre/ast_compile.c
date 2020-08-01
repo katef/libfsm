@@ -100,7 +100,7 @@ struct comp_env {
 static int
 comp_iter(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
-	struct ast_expr *n);
+	const struct ast_expr *n);
 
 static int
 utf8(uint32_t cp, char c[])
@@ -484,7 +484,7 @@ can_skip_concat_state_and_epsilon(const struct ast_expr *l,
 static enum link_types
 decide_linking(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
-	struct ast_expr *n, enum link_side side)
+	const struct ast_expr *n, enum link_side side)
 {
 	enum link_types res = LINK_NONE;
 
@@ -632,7 +632,7 @@ print_linkage(enum link_types t)
 static int
 comp_iter_repeated(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
-	struct ast_expr_repeat *n)
+	const struct ast_expr_repeat *n)
 {
 	fsm_state_t a, b;
 	fsm_state_t na, nz;
@@ -744,7 +744,7 @@ comp_iter_repeated(struct comp_env *env,
 static int
 comp_iter(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
-	struct ast_expr *n)
+	const struct ast_expr *n)
 {
 	enum link_types link_start, link_end;
 
@@ -868,8 +868,8 @@ comp_iter(struct comp_env *env,
 		}
 
 		for (i = 0; i < count; i++) {
-			struct ast_expr *curr = n->u.concat.n[i];
-			struct ast_expr *next = i == count - 1
+			const struct ast_expr *curr = n->u.concat.n[i];
+			const struct ast_expr *next = i == count - 1
 				? NULL
 				: n->u.concat.n[i + 1];
 
