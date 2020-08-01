@@ -490,7 +490,9 @@ main(int argc, char *argv[])
 		case OP_REVERSE:     r = fsm_reverse(q);      break;
 		case OP_DETERMINISE: r = fsm_determinise(q);  break;
 		case OP_GLUSHKOVISE: r = fsm_glushkovise(q);  break;
-		case OP_TRIM:        r = fsm_trim(q);         break;
+		case OP_TRIM:        r = fsm_trim(q,
+			FSM_TRIM_START_AND_END_REACHABLE);
+			break;
 
 		case OP_CONCAT:      q = fsm_concat(a, b);    break;
 		case OP_UNION:       q = fsm_union(a, b);     break;

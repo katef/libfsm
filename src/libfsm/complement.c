@@ -39,7 +39,7 @@ fsm_complement(struct fsm *fsm)
 		fsm_setend(fsm, i, !fsm_isend(fsm, i));
 	}
 
-	if (!fsm_trim(fsm)) {
+	if (fsm_trim(fsm, FSM_TRIM_START_REACHABLE) < 0) {
 		return 0;
 	}
 
