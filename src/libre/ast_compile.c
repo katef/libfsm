@@ -98,7 +98,7 @@ struct comp_env {
 };
 
 static int
-comp_iter(struct comp_env *env,
+ast_compile_expr(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
 	const struct ast_expr *n);
 
@@ -627,10 +627,10 @@ print_linkage(enum link_types t)
     if (!addedge_literal(env, (FROM), (TO), (C))) { return 0; }
 
 #define RECURSE(FROM, TO, NODE)     \
-    if (!comp_iter(env, (FROM), (TO), (NODE))) { return 0; }
+    if (!ast_compile_expr(env, (FROM), (TO), (NODE))) { return 0; }
 
 static int
-comp_iter_repeated(struct comp_env *env,
+ast_compile_repeat(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
 	const struct ast_expr_repeat *n)
 {
@@ -742,7 +742,75 @@ comp_iter_repeated(struct comp_env *env,
 }
 
 static int
-comp_iter(struct comp_env *env,
+ast_compile_altlist(struct comp_env *env,
+	fsm_state_t x, fsm_state_t y,
+	const struct ast_expr **n, size_t count)
+{
+	struct re_strings *a[] = { NULL, NULL, NULL, NULL };
+	size_t i;
+
+	assert(count >= 1);
+
+	for (i = 0; i < count; i++) {
+		enum re_strings_flags flags;
+		size_t o, l;
+
+		if (count < AC_COUNT_THRESHOLD) {
+			RECURSE(x, y, n[i]);
+			continue;
+		}
+
+		if (n[i]->type != AST_EXPR_CONCAT ||
+			n[i]->u.concat.count < AC_LENGTH_THRESHOLD)
+		{
+			RECURSE(x, y, n[i]);
+			continue;
+		}
+
+		if (!is_ac_candidate(n[i], &flags, &o, &l)) {
+			RECURSE(x, y, n[i]);
+			continue;
+		}
+
+		if (a[flags] == NULL) {
+			a[flags] = re_strings_new();
+			if (a[flags] == NULL) {
+				return 0;
+			}
+		}
+
+		/* XXX: i'm screwing up the const handling here, i'm sure */
+		if (!re_strings_add_concat(a[flags],
+			(const struct ast_expr **) n[i]->u.concat.n + o, l))
+		{
+			return 0;
+		}
+	}
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fsm_state_t start;
+
+		if (a[i] == NULL) {
+			continue;
+		}
+
+		if (!re_strings_build_into(env->fsm, &start, 1, y, a[i], i)) {
+			return 0;
+		}
+		/* XXX: would love to avoid the epsilon here, for non-dotstar ac,
+		 * maybe we could pass in x directly? */
+		EPSILON(x, start);
+	}
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		re_strings_free(a[i]);
+	}
+
+	return 1;
+}
+
+static int
+ast_compile_expr(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
 	const struct ast_expr *n)
 {
@@ -847,8 +915,7 @@ comp_iter(struct comp_env *env,
 		EPSILON(x, y);
 		break;
 
-	case AST_EXPR_CONCAT:
-	{
+	case AST_EXPR_CONCAT: {
 		fsm_state_t base, z;
 		fsm_state_t curr_x;
 		enum re_flags saved;
@@ -917,71 +984,10 @@ comp_iter(struct comp_env *env,
 	}
 
 	case AST_EXPR_ALT:
-	{
-		struct re_strings *a[] = { NULL, NULL, NULL, NULL };
-		size_t i;
-
-		const size_t count = n->u.alt.count;
-
-		assert(count >= 1);
-
-		for (i = 0; i < count; i++) {
-			enum re_strings_flags flags;
-			size_t o, l;
-
-			if (count < AC_COUNT_THRESHOLD) {
-				RECURSE(x, y, n->u.alt.n[i]);
-				continue;
-			}
-
-			if (n->u.alt.n[i]->type != AST_EXPR_CONCAT ||
-			    n->u.alt.n[i]->u.concat.count < AC_LENGTH_THRESHOLD)
-			{
-				RECURSE(x, y, n->u.alt.n[i]);
-				continue;
-			}
-
-			if (!is_ac_candidate(n->u.alt.n[i], &flags, &o, &l)) {
-				RECURSE(x, y, n->u.alt.n[i]);
-				continue;
-			}
-
-			if (a[flags] == NULL) {
-				a[flags] = re_strings_new();
-				if (a[flags] == NULL) {
-					return 0;
-				}
-			}
-
-			/* XXX: i'm screwing up the const handling here, i'm sure */
-			if (!re_strings_add_concat(a[flags],
-				(const struct ast_expr **) n->u.alt.n[i]->u.concat.n + o, l))
-			{
-				return 0;
-			}
+		if (!ast_compile_altlist(env, x, y, n->u.alt.n, n->u.alt.count)) {
+			return 0;
 		}
-
-		for (i = 0; i < sizeof a / sizeof *a; i++) {
-			fsm_state_t start;
-
-			if (a[i] == NULL) {
-				continue;
-			}
-
-			if (!re_strings_build_into(env->fsm, &start, 1, y, a[i], i)) {
-				return 0;
-			}
-			/* XXX: would love to avoid the epsilon here, for non-dotstar ac,
-			 * maybe we could pass in x directly? */
-			EPSILON(x, start);
-		}
-
-		for (i = 0; i < sizeof a / sizeof *a; i++) {
-			re_strings_free(a[i]);
-		}
-
 		break;
-	}
 
 	case AST_EXPR_LITERAL:
 		LITERAL(x, y, n->u.literal.c);
@@ -1024,11 +1030,7 @@ comp_iter(struct comp_env *env,
 		break;
 
 	case AST_EXPR_REPEAT:
-		/*
-		 * REPEAT breaks out into its own function, because
-		 * there are several special cases
-		 */
-		if (!comp_iter_repeated(env, x, y, &n->u.repeat)) {
+		if (!ast_compile_repeat(env, x, y, &n->u.repeat)) {
 			return 0;
 		}
 		break;
@@ -1185,7 +1187,7 @@ ast_compile(const struct ast *ast,
 		env.start = x;
 		env.end = y;
 
-		if (!comp_iter(&env, x, y, ast->expr)) {
+		if (!ast_compile_expr(&env, x, y, ast->expr)) {
 			return 0;
 		}
 
