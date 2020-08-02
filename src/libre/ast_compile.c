@@ -743,7 +743,7 @@ ast_compile_repeat(struct comp_env *env,
 
 static int
 ast_compile_altlist(struct comp_env *env,
-	fsm_state_t x, fsm_state_t y,
+	fsm_state_t x, int have_end, fsm_state_t y,
 	const struct ast_expr **n, size_t count)
 {
 	struct re_strings *a[] = { NULL, NULL, NULL, NULL };
@@ -794,7 +794,7 @@ ast_compile_altlist(struct comp_env *env,
 			continue;
 		}
 
-		if (!re_strings_build_into(env->fsm, &start, 1, y, a[i], i)) {
+		if (!re_strings_build_into(env->fsm, &start, have_end, y, a[i], i)) {
 			return 0;
 		}
 		/* XXX: would love to avoid the epsilon here, for non-dotstar ac,
@@ -984,7 +984,7 @@ ast_compile_expr(struct comp_env *env,
 	}
 
 	case AST_EXPR_ALT:
-		if (!ast_compile_altlist(env, x, y, n->u.alt.n, n->u.alt.count)) {
+		if (!ast_compile_altlist(env, x, 1, y, (const struct ast_expr **) n->u.alt.n, n->u.alt.count)) {
 			return 0;
 		}
 		break;
@@ -1148,6 +1148,41 @@ ast_compile_expr(struct comp_env *env,
 	return 1;
 }
 
+int
+ast_compile_root(struct comp_env *env,
+	fsm_state_t x, fsm_state_t y,
+	const struct ast_expr *n)
+{
+	assert(env != NULL);
+	assert(n != NULL);
+
+	/*
+	 * The root node is handled specially when it's suitable for Aho-Corasick,
+	 * because then we can construct a trie with accepting states in-situ along
+	 * the branches, instead of hooking them up with epsilons to the y state.
+	 * This reduces pressure on resolving those epsilons later on.
+	 *
+	 * To do this, we pass have_end=0 so that re_strings_build_into() does not
+	 * use the shared end state we would normally use during the recursive
+	 * Thompson NFA construction.
+	 *
+	 * For things which aren't suitable for Aho-Corasick, recursion will
+	 * continue per usual, constructed alongside the trie (if present at all).
+	 */
+
+	if (env->re_flags & RE_ANCHORED && n->type == AST_EXPR_ALT) {
+		return ast_compile_altlist(env, x, 0, y,
+			(const struct ast_expr **) n->u.alt.n, n->u.alt.count);
+	}
+
+	/* XXX: this leaves a stray end state for y when we only have a trie, would prefer to avoid that */
+	/* TODO: deal with ~RE_ANCHORED */
+	/* TODO: special cases for ^...$ alts, too */
+	/* TODO: also if we're inside nodes for groups, just tail recursion for those */
+
+	return ast_compile_expr(env, x, y, n);
+}
+
 #undef EPSILON
 #undef ANY
 #undef NEWSTATE
@@ -1187,7 +1222,7 @@ ast_compile(const struct ast *ast,
 		env.start = x;
 		env.end = y;
 
-		if (!ast_compile_expr(&env, x, y, ast->expr)) {
+		if (!ast_compile_root(&env, x, y, ast->expr)) {
 			return 0;
 		}
 
