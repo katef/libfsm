@@ -1170,6 +1170,14 @@ ast_compile_root(struct comp_env *env,
 	 * continue per usual, constructed alongside the trie (if present at all).
 	 */
 
+	/*
+	 * Groups have no relevance on the structure being suitable for A-C,
+	 * so we recurr into those.
+	 */
+	if (n->type == AST_EXPR_GROUP) {
+		return ast_compile_root(env, x, y, n->u.group.e);
+	}
+
 	if (env->re_flags & RE_ANCHORED && n->type == AST_EXPR_ALT) {
 		return ast_compile_altlist(env, x, 0, y,
 			(const struct ast_expr **) n->u.alt.n, n->u.alt.count);
@@ -1178,7 +1186,6 @@ ast_compile_root(struct comp_env *env,
 	/* XXX: this leaves a stray end state for y when we only have a trie, would prefer to avoid that */
 	/* TODO: deal with ~RE_ANCHORED */
 	/* TODO: special cases for ^...$ alts, too */
-	/* TODO: also if we're inside nodes for groups, just tail recursion for those */
 
 	return ast_compile_expr(env, x, y, n);
 }
