@@ -69,7 +69,7 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 	struct range ranges[FSM_SIGMA_COUNT]; /* worst case, one per symbol */
 	struct ir_group *groups;
 	struct fsm_edge e;
-	struct edge_iter it;
+	struct edge_ordered_iter eoi;
 	size_t i, j, k;
 	size_t grp_ind, n;
 
@@ -77,18 +77,16 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 	assert(state < fsm->statecount);
 	assert(u != NULL);
 
-	/*
-	 * The first pass here populates ranges[] by collating consecutive symbols
-	 * which transition to the same FSM state. These ranges are constructed by
-	 * iterating over symbols, and so are populated in symbol order.
-	 * So several ranges may transition to the same state; these are grouped
-	 * in the second pass below.
-	 */
+	/* The first pass gathers ranges, and opportunistically combines
+	 * adjacent ranges with consecutive symbols which transition to
+	 * the same FSM state. Since the edges are stored unordered (in
+	 * a hash table), a follow-up pass sorts and then combines any
+	 * newly adjacent ranges to the same state. */
 
 	n = 0;          /* number of allocated ranges */
 	grp_ind = 0;    /* index of current working range */
 
-	for (edge_set_reset(fsm->states[state].edges, &it); edge_set_next(&it, &e); ) {
+	for (edge_set_ordered_iter_reset(fsm->states[state].edges, &eoi); edge_set_ordered_iter_next(&eoi, &e); ) {
 		if (have_mode && e.state == mode) {
 			continue;
 		}
@@ -106,12 +104,28 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 
 	assert(n > 0);
 
+	/* Sort and combine consecutive states. */
+	qsort(ranges, n, sizeof *ranges, range_cmp);
+	{
+		size_t src, dst = 0;
+		for (src = 1; src < n; src++) {
+			if (ranges[src].to == ranges[dst].to
+			    && ranges[src].start == ranges[dst].end + 1) {
+				ranges[dst].end = ranges[src].end;
+			} else {
+				assert(dst < src);
+				dst++;
+				memcpy(&ranges[dst], &ranges[src],
+				    sizeof(ranges[dst]));
+			}
+		}
+		n = dst + 1;
+	}
+
 	/*
-	 * Now ranges have been identified, the second pass below groups them
+	 * Now ranges have been identified, the next pass below groups them
 	 * together by their common destination states.
 	 */
-
-	qsort(ranges, n, sizeof *ranges, range_cmp);
 
 	groups = f_malloc(fsm->opt->alloc, sizeof *groups * n); /* worst case */
 	if (groups == NULL) {

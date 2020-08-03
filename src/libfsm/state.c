@@ -125,7 +125,7 @@ fsm_removestate(struct fsm *fsm, fsm_state_t state)
 	}
 
 	state_set_free(fsm->states[state].epsilons);
-	edge_set_free(fsm->states[state].edges);
+	edge_set_free(fsm->opt->alloc, fsm->states[state].edges);
 
 	if (fsm_getstart(fsm, &start) && start == state) {
 		fsm_clearstart(fsm);

@@ -29,13 +29,11 @@ fsm_cost_legible(fsm_state_t from, fsm_state_t to, char c)
 	size_t i;
 
 	/*
-	 * Costs here approximate legibility; in particular needing an escape
-	 * sequence is seen as worth avoiding where possible.
- 	 *
-	 * Note that although not explicitly encoded here, for the same cost
-	 * (and assuming a suitable character set), lower character values
-	 * have precedence over higher (e.g. 'a' is preferable to 'z')
-	 * because of the traversal order for edges when searching the graph.
+	 * Costs here approximate legibility; in particular needing an
+	 * escape sequence is seen as worth avoiding where possible. Add
+	 * a base cost for the character class, and then the character
+	 * value itself as a tiebreaker, so lower character values have
+	 * precedence over higher (e.g. 'a' is preferable to 'z').
 	 */
 
 	struct {
@@ -60,7 +58,8 @@ fsm_cost_legible(fsm_state_t from, fsm_state_t to, char c)
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (a[i].is(c)) {
-			return a[i].cost;
+			const unsigned char_class_cost = 1000 * a[i].cost;
+			return char_class_cost + (unsigned)c;
 		}
 	}
 

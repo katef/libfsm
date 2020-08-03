@@ -30,7 +30,7 @@ free_contents(struct fsm *fsm)
 
 	for (i = 0; i < fsm->statecount; i++) {
 		state_set_free(fsm->states[i].epsilons);
-		edge_set_free(fsm->states[i].edges);
+		edge_set_free(fsm->opt->alloc, fsm->states[i].edges);
 	}
 
 	f_free(fsm->opt->alloc, fsm->states);
