@@ -29,6 +29,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 {
 	struct fsm_edge e;
 	struct edge_iter it;
+	struct edge_ordered_iter eoi;
 	struct state_set *unique;
 
 	assert(f != NULL);
@@ -64,7 +65,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 			}
 		}
 
-		for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
+		for (edge_set_ordered_iter_reset(fsm->states[s].edges, &eoi); edge_set_ordered_iter_next(&eoi, &e); ) {
 			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				s,
@@ -97,7 +98,9 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	 * To implement this, we loop through all unique states, rather than
 	 * looping through each edge.
 	 */
-	for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
+	for (edge_set_ordered_iter_reset(fsm->states[s].edges, &eoi); edge_set_ordered_iter_next(&eoi, &e); ) {
+
+
 		struct fsm_edge ne;
 		struct edge_iter kt;
 		struct bm bm;

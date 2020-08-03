@@ -69,7 +69,7 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 	struct range ranges[FSM_SIGMA_COUNT]; /* worst case, one per symbol */
 	struct ir_group *groups;
 	struct fsm_edge e;
-	struct edge_iter it;
+	struct edge_ordered_iter eoi;
 	size_t i, j, k;
 	size_t grp_ind, n;
 
@@ -86,7 +86,7 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 	n = 0;          /* number of allocated ranges */
 	grp_ind = 0;    /* index of current working range */
 
-	for (edge_set_reset(fsm->states[state].edges, &it); edge_set_next(&it, &e); ) {
+	for (edge_set_ordered_iter_reset(fsm->states[state].edges, &eoi); edge_set_ordered_iter_next(&eoi, &e); ) {
 		if (have_mode && e.state == mode) {
 			continue;
 		}

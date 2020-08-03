@@ -131,7 +131,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 
 	for (from = 0; from < fsm->statecount; from++) {
 		struct fsm_edge e;
-		struct edge_iter it;
+		struct edge_ordered_iter eoi;
 		struct state_iter jt;
 		fsm_state_t i, to;
 
@@ -144,7 +144,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 				from, to);
 		}
 
-		for (edge_set_reset(fsm->states[from].edges, &it); edge_set_next(&it, &e); ) {
+		for (edge_set_ordered_iter_reset(fsm->states[from].edges, &eoi); edge_set_ordered_iter_next(&eoi, &e); ) {
 			bm_set(&a[e.state], e.symbol);
 		}
 
