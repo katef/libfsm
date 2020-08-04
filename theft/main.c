@@ -63,8 +63,8 @@ usage(const char *exec_name)
 		"  -v:		   increase verbosity\n"
 		"  -l:		   list tests by name\n"
 		"  -f:		   halt after first failure\n"
-		"  -n <STRING>:  only run tests STRING in the name\n"
-		"  -s <SEED>:	  fuzz from the given seed\n",
+		"  -n <STRING>:    only run tests with STRING in the name\n"
+		"  -s <SEED>:	   fuzz from the given seed\n",
 		exec_name);
 	exit(1);
 }
