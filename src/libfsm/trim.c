@@ -133,10 +133,13 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 					goto cleanup;
 				}
 				fsm->states[next].visited = 1;
+			}
 
-				if (edges == NULL) {
-					continue;
-				}
+			/* have to add all edges whether we've already visited
+			 * them or not to ensure that all possible backward
+			 * paths are present in the edge list.
+			 */
+			if (edges != NULL) {
 				if (!save_edge(fsm->opt->alloc,
 					&edge_count, &edge_ceil, &edges,
 					s_id, next)) {
@@ -153,10 +156,13 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 					goto cleanup;
 				}
 				fsm->states[next].visited = 1;
+			}
 
-				if (edges == NULL) {
-					continue;
-				}
+			/* have to add all edges whether we've already visited
+			 * them or not to ensure that all possible backward
+			 * paths are present in the edge list.
+			 */
+			if (edges != NULL) {
 				if (!save_edge(fsm->opt->alloc,
 					&edge_count, &edge_ceil, &edges,
 					s_id, next)) {
