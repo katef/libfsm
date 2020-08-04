@@ -343,6 +343,17 @@ fsm_trim(struct fsm *fsm, enum fsm_trim_mode mode)
 		goto cleanup;
 	}
 
+	{
+		/* - XXX -
+		 * this is a hack to make sure that we leave at least the start state.
+		 * otherwise a bunch of tests break...
+		 */
+		fsm_state_t start;
+		if (fsm_getstart(fsm, &start)) {
+			fsm->states[start].visited = 1;
+		}
+	}
+
 	/*
 	 * Remove all states which are unreachable from the start state
 	 * or have no path to an end state. These are a trailing suffix
