@@ -60,6 +60,7 @@ SUBDIR += tests/minimise
 SUBDIR += tests/native
 SUBDIR += tests/pcre
 SUBDIR += tests/pcre-classes
+SUBDIR += tests/pcre-ac
 SUBDIR += tests/pcre-anchor
 SUBDIR += tests/pcre-repeat
 SUBDIR += tests/pred
