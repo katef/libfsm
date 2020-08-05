@@ -18,7 +18,7 @@ RE     ?= re
 BUILD  ?= build
 PREFIX ?= /usr/local
 
-.if !empty(.TARGETS:Mfuzz)
+.if make(fuzz)
 PKG += libtheft
 .endif
 
@@ -73,7 +73,7 @@ SUBDIR += tests/hashset
 SUBDIR += tests/queue
 SUBDIR += tests/aho_corasick
 SUBDIR += tests
-.if !empty(.TARGETS:Mfuzz)
+.if make(fuzz)
 SUBDIR += theft
 .endif
 SUBDIR += pc
@@ -101,6 +101,8 @@ STAGE_BUILD := ${STAGE_BUILD:Nbin/cvtpcre}
 .include <install.mk>
 .include <clean.mk>
 
-test::
+.if make(test)
+.END::
 	grep FAIL ${BUILD}/tests/*/res*; [ $$? -ne 0 ]
+.endif
 
