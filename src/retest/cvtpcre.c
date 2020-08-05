@@ -179,7 +179,7 @@ int main(int argc, char **argv)
 				comp_err = err_zero;
 				flags = 0;
 
-				fsm = re_comp(RE_PCRE, fsm_sgetc, &s, &opt, flags, &comp_err);
+				fsm = re_comp_new(RE_PCRE, fsm_sgetc, &s, &opt, flags, &comp_err);
 				re_ok = (fsm != NULL);
 				if (re_ok) {
 					fsm_free(fsm);

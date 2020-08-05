@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <limits.h>
 
+#include <fsm/fsm.h>
+
 #include <re/re.h>
 
 #include "class.h"
@@ -190,6 +192,7 @@ ast_endpoint_cmp(const struct ast_endpoint *a, const struct ast_endpoint *b)
 
 	default:
 		assert(!"unreached");
+		abort();
 	}
 }
 

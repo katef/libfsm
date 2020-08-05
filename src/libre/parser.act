@@ -30,6 +30,8 @@
 	#include <errno.h>
 	#include <ctype.h>
 
+	#include <fsm/fsm.h>
+
 	#include <re/re.h>
 
 	#include "libre/class.h"

@@ -18,7 +18,7 @@ CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor
 
-.for src in ${SRC:Msrc/libre/ast.c} ${SRC:Msrc/libre/ast_analysis.c} ${SRC:Msrc/libre/ast_compile.c} ${SRC:Msrc/libre/re.c}
+.for src in ${SRC:Msrc/libre/ast.c} ${SRC:Msrc/libre/ast_analysis.c} ${SRC:Msrc/libre/ast_compile.c} ${SRC:Msrc/libre/re.c} ${SRC:Msrc/libre/ac.c}
 CFLAGS.${src} += -std=c99 # XXX: for ast.h
 DFLAGS.${src} += -std=c99 # XXX: for ast.h
 .endfor

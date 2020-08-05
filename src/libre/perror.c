@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <fsm/fsm.h>
+
 #include <re/re.h>
 
 static int

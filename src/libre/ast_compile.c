@@ -19,12 +19,29 @@
 #include <fsm/capture.h>
 
 #include <re/re.h>
+#include <re/strings.h>
 
 #include "class.h"
 #include "ast.h"
 #include "ast_compile.h"
 
 #include "libfsm/internal.h" /* XXX */
+
+/*
+ * Aho-Corasick requires constructing a trie, and that has its own overhead.
+ * It's only worth doing this if the cost overall is lower.
+ *
+ * The parameters here bail out if the number of alts or the length of any
+ * particular string within an alt are below a threshold, especially because
+ * [xyz] is so common. The exact values only represent cost approximately.
+ *
+ * In practice I found it difficult to pick values for these, because for
+ * the lower end of the scale it's hard to see a meaningful difference,
+ * and for the upper end of the scale the time is dominated by
+ * determinisation anyway.
+ */
+#define AC_COUNT_THRESHOLD  5
+#define AC_LENGTH_THRESHOLD 5
 
 #define LOG_LINKAGE 0
 
@@ -81,9 +98,9 @@ struct comp_env {
 };
 
 static int
-comp_iter(struct comp_env *env,
+ast_compile_expr(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
-	struct ast_expr *n);
+	const struct ast_expr *n);
 
 static int
 utf8(uint32_t cp, char c[])
@@ -125,31 +142,25 @@ error:
 }
 
 /* TODO: centralise as fsm_unionxy() perhaps */
-static int
-fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t x, fsm_state_t y)
+static struct fsm *
+fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t *sa, fsm_state_t *sb,
+	fsm_state_t x, fsm_state_t y)
 {
-	fsm_state_t sa, sb;
-	fsm_state_t end;
 	struct fsm *q;
+	fsm_state_t end;
 	fsm_state_t base_b;
 
 	assert(a != NULL);
 	assert(b != NULL);
+	assert(sa != NULL);
+	assert(sb != NULL);
 
 	/* x,y both belong to a */
 	assert(x < a->statecount);
 	assert(y < a->statecount);
 
-	if (!fsm_getstart(a, &sa)) {
-		return 0;
-	}
-
-	if (!fsm_getstart(b, &sb)) {
-		return 0;
-	}
-
 	if (!fsm_collate(b, &end, fsm_isend)) {
-		return 0;
+		return NULL;
 	}
 
 	/* TODO: centralise as fsm_clearends() or somesuch */
@@ -163,21 +174,121 @@ fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t x, fsm_state_t y)
 
 	q = fsm_mergeab(a, b, &base_b);
 	if (q == NULL) {
-		return 0;
+		return NULL;
 	}
 
-	sb  += base_b;
+	*sb += base_b;
 	end += base_b;
 
-	fsm_setstart(q, sa);
-
-	if (!fsm_addedge_epsilon(q, x, sb)) {
-		return 0;
+	if (!fsm_addedge_epsilon(q, x, *sb)) {
+		return NULL;
 	}
 
 	if (!fsm_addedge_epsilon(q, end, y)) {
+		return NULL;
+	}
+
+	return q;
+}
+
+static int
+is_dotstar(const struct ast_expr *n)
+{
+	assert(n != NULL);
+
+	if (n->type != AST_EXPR_REPEAT) {
 		return 0;
 	}
+
+	if (n->u.repeat.min != 0 || n->u.repeat.max != AST_COUNT_UNBOUNDED) {
+		return 0;
+	}
+
+	if (n->u.repeat.e->type != AST_EXPR_ANY) {
+		return 0;
+	}
+
+	return 1;
+}
+
+static int
+is_ac_candidate(const struct ast_expr *n, enum re_strings_flags *flags,
+	size_t *o_out, size_t *l_out)
+{
+	size_t o, count;
+	size_t i;
+
+	assert(n != NULL);
+	assert(flags != NULL);
+
+	o = 0;
+	count = n->u.concat.count;
+
+	/*
+	 * We're looking at a single literal in an alt: /...|x|.../
+	 * We could use AC here and treat this as a string anchored at both ends,
+	 * but the interface here deals with offsets into the array of children
+	 * for a concat node only. It's probably also overkill to involve AC for
+	 * alts of single literals. So here we defer to the usual NFA construction.
+	 */
+	if (n->type == AST_EXPR_LITERAL) {
+		return 0;
+	}
+
+	/*
+	 * We're looking at some other kind of node in an alt: /...|x+|.../
+	 * where we wouldn't be able to use AC anyway.
+	 */
+	if (n->type != AST_EXPR_CONCAT) {
+		return 0;
+	}
+
+	/*
+	 * This should never happen; a single-node concat is optimised away.
+	 */
+	if (n->u.alt.count == 1) {
+		return is_ac_candidate(n->u.alt.n[0], flags, o_out, l_out);
+	}
+
+	/*
+	 * The general form here is an n-ary concat like [.*] a b c [.*]
+	 * where .* is optional at either end. We're detecting the presence
+	 * of those, moving the offset and length to skip them, and setting
+	 * the appropriate RE_STRINGS_ANCHOR_LEFT/_RIGHT flags.
+	 *
+	 * "Anchor" here (as far as our implementation of Aho-Corasick cares) means
+	 * the absence of .* at either end; this is not the same as the ^$ anchors
+	 * in regexp syntax (because we're in the middle of an AST here).
+	 */
+	*flags = RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT;
+
+	if (count >= 1 && is_dotstar(n->u.concat.n[o])) {
+		o++;
+		count--;
+		*flags &= ~RE_STRINGS_ANCHOR_LEFT;
+	}
+
+	if (count >= 1 && is_dotstar(n->u.concat.n[count + o - 1])) {
+		count--;
+		*flags &= ~RE_STRINGS_ANCHOR_RIGHT;
+	}
+
+	if (count == 0) {
+		return 0;
+	}
+
+	/*
+	 * We also validate that the middle part contains a run of literals only,
+	 * else we're not suitable for AC anyway.
+	 */
+	for (i = o; i < count; i++) {
+		if (n->u.concat.n[i]->type != AST_EXPR_LITERAL) {
+			return 0;
+		}
+	}
+
+	*o_out = o;
+	*l_out = count;
 
 	return 1;
 }
@@ -186,11 +297,24 @@ static struct fsm *
 expr_compile(struct ast_expr *e, enum re_flags flags,
 	const struct fsm_options *opt, struct re_err *err)
 {
+	struct fsm *fsm;
 	struct ast ast;
+	fsm_state_t start;
 
 	ast.expr = e;
 
-	return ast_compile(&ast, flags, opt, err);
+	fsm = fsm_new(opt);
+	if (fsm == NULL) {
+		return NULL;
+	}
+
+	if (!ast_compile(&ast, fsm, &start, flags, err)) {
+		return NULL;
+	}
+
+	fsm_setstart(fsm, start);
+
+	return fsm;
 }
 
 static int
@@ -360,7 +484,7 @@ can_skip_concat_state_and_epsilon(const struct ast_expr *l,
 static enum link_types
 decide_linking(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
-	struct ast_expr *n, enum link_side side)
+	const struct ast_expr *n, enum link_side side)
 {
 	enum link_types res = LINK_NONE;
 
@@ -503,12 +627,12 @@ print_linkage(enum link_types t)
     if (!addedge_literal(env, (FROM), (TO), (C))) { return 0; }
 
 #define RECURSE(FROM, TO, NODE)     \
-    if (!comp_iter(env, (FROM), (TO), (NODE))) { return 0; }
+    if (!ast_compile_expr(env, (FROM), (TO), (NODE))) { return 0; }
 
 static int
-comp_iter_repeated(struct comp_env *env,
+ast_compile_repeat(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
-	struct ast_expr_repeat *n)
+	const struct ast_expr_repeat *n)
 {
 	fsm_state_t a, b;
 	fsm_state_t na, nz;
@@ -618,9 +742,77 @@ comp_iter_repeated(struct comp_env *env,
 }
 
 static int
-comp_iter(struct comp_env *env,
+ast_compile_altlist(struct comp_env *env,
+	fsm_state_t x, int have_end, fsm_state_t y,
+	const struct ast_expr **n, size_t count)
+{
+	struct re_strings *a[] = { NULL, NULL, NULL, NULL };
+	size_t i;
+
+	assert(count >= 1);
+
+	for (i = 0; i < count; i++) {
+		enum re_strings_flags flags;
+		size_t o, l;
+
+		if (count < AC_COUNT_THRESHOLD) {
+			RECURSE(x, y, n[i]);
+			continue;
+		}
+
+		if (n[i]->type != AST_EXPR_CONCAT ||
+			n[i]->u.concat.count < AC_LENGTH_THRESHOLD)
+		{
+			RECURSE(x, y, n[i]);
+			continue;
+		}
+
+		if (!is_ac_candidate(n[i], &flags, &o, &l)) {
+			RECURSE(x, y, n[i]);
+			continue;
+		}
+
+		if (a[flags] == NULL) {
+			a[flags] = re_strings_new();
+			if (a[flags] == NULL) {
+				return 0;
+			}
+		}
+
+		/* XXX: i'm screwing up the const handling here, i'm sure */
+		if (!re_strings_add_concat(a[flags],
+			(const struct ast_expr **) n[i]->u.concat.n + o, l))
+		{
+			return 0;
+		}
+	}
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fsm_state_t start;
+
+		if (a[i] == NULL) {
+			continue;
+		}
+
+		if (!re_strings_build_into(env->fsm, &start, have_end, y, a[i], i)) {
+			return 0;
+		}
+		/* XXX: would love to avoid the epsilon here, for non-dotstar ac,
+		 * maybe we could pass in x directly? */
+		EPSILON(x, start);
+	}
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		re_strings_free(a[i]);
+	}
+
+	return 1;
+}
+
+static int
+ast_compile_expr(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
-	struct ast_expr *n)
+	const struct ast_expr *n)
 {
 	enum link_types link_start, link_end;
 
@@ -723,8 +915,7 @@ comp_iter(struct comp_env *env,
 		EPSILON(x, y);
 		break;
 
-	case AST_EXPR_CONCAT:
-	{
+	case AST_EXPR_CONCAT: {
 		fsm_state_t base, z;
 		fsm_state_t curr_x;
 		enum re_flags saved;
@@ -744,8 +935,8 @@ comp_iter(struct comp_env *env,
 		}
 
 		for (i = 0; i < count; i++) {
-			struct ast_expr *curr = n->u.concat.n[i];
-			struct ast_expr *next = i == count - 1
+			const struct ast_expr *curr = n->u.concat.n[i];
+			const struct ast_expr *next = i == count - 1
 				? NULL
 				: n->u.concat.n[i + 1];
 
@@ -793,23 +984,10 @@ comp_iter(struct comp_env *env,
 	}
 
 	case AST_EXPR_ALT:
-	{
-		size_t i;
-
-		const size_t count = n->u.alt.count;
-
-		assert(count >= 1);
-
-		for (i = 0; i < count; i++) {
-			/*
-			 * CONCAT handles adding extra states and
-			 * epsilons when necessary, so there isn't much
-			 * more to do here.
-			 */
-			RECURSE(x, y, n->u.alt.n[i]);
+		if (!ast_compile_altlist(env, x, 1, y, (const struct ast_expr **) n->u.alt.n, n->u.alt.count)) {
+			return 0;
 		}
 		break;
-	}
 
 	case AST_EXPR_LITERAL:
 		LITERAL(x, y, n->u.literal.c);
@@ -852,11 +1030,7 @@ comp_iter(struct comp_env *env,
 		break;
 
 	case AST_EXPR_REPEAT:
-		/*
-		 * REPEAT breaks out into its own function, because
-		 * there are several special cases
-		 */
-		if (!comp_iter_repeated(env, x, y, &n->u.repeat)) {
+		if (!ast_compile_repeat(env, x, y, &n->u.repeat)) {
 			return 0;
 		}
 		break;
@@ -931,8 +1105,20 @@ comp_iter(struct comp_env *env,
 			break;
 		}
 
-		if (!fsm_unionxy(env->fsm, q, x, y)) {
-			return 0;
+		{
+			fsm_state_t sb;
+			struct fsm *z;
+
+			if (!fsm_getstart(q, &sb)) {
+				return 0;
+			}
+
+			z = fsm_unionxy(env->fsm, q, &env->start, &sb, x, y);
+			if (z == NULL) {
+				return 0;
+			}
+
+			(void) z;
 		}
 
 		break;
@@ -962,37 +1148,73 @@ comp_iter(struct comp_env *env,
 	return 1;
 }
 
+int
+ast_compile_root(struct comp_env *env,
+	fsm_state_t x, fsm_state_t y,
+	const struct ast_expr *n)
+{
+	assert(env != NULL);
+	assert(n != NULL);
+
+	/*
+	 * The root node is handled specially when it's suitable for Aho-Corasick,
+	 * because then we can construct a trie with accepting states in-situ along
+	 * the branches, instead of hooking them up with epsilons to the y state.
+	 * This reduces pressure on resolving those epsilons later on.
+	 *
+	 * To do this, we pass have_end=0 so that re_strings_build_into() does not
+	 * use the shared end state we would normally use during the recursive
+	 * Thompson NFA construction.
+	 *
+	 * For things which aren't suitable for Aho-Corasick, recursion will
+	 * continue per usual, constructed alongside the trie (if present at all).
+	 */
+
+	/*
+	 * Groups have no relevance on the structure being suitable for A-C,
+	 * so we recurr into those.
+	 */
+	if (n->type == AST_EXPR_GROUP) {
+		return ast_compile_root(env, x, y, n->u.group.e);
+	}
+
+	if (env->re_flags & RE_ANCHORED && n->type == AST_EXPR_ALT) {
+		return ast_compile_altlist(env, x, 0, y,
+			(const struct ast_expr **) n->u.alt.n, n->u.alt.count);
+	}
+
+	/* XXX: this leaves a stray end state for y when we only have a trie, would prefer to avoid that */
+	/* TODO: deal with ~RE_ANCHORED */
+	/* TODO: special cases for ^...$ alts, too */
+
+	return ast_compile_expr(env, x, y, n);
+}
+
 #undef EPSILON
 #undef ANY
 #undef NEWSTATE
 #undef LITERAL
 #undef RECURSE
 
-struct fsm *
+int
 ast_compile(const struct ast *ast,
+	struct fsm *fsm, fsm_state_t *start,
 	enum re_flags re_flags,
-	const struct fsm_options *opt,
 	struct re_err *err)
 {
 	fsm_state_t x, y;
-	struct fsm *fsm;
 
 	assert(ast != NULL);
-
-	fsm = fsm_new(opt);
-	if (fsm == NULL) {
-		return NULL;
-	}
+	assert(start != NULL);
 
 	if (!fsm_addstate(fsm, &x)) {
-		goto error;
+		return 0;
 	}
 
 	if (!fsm_addstate(fsm, &y)) {
-		goto error;
+		return 0;
 	}
 
-	fsm_setstart(fsm, x);
 	fsm_setend(fsm, y, 1);
 
 	{
@@ -1007,14 +1229,17 @@ ast_compile(const struct ast *ast,
 		env.start = x;
 		env.end = y;
 
-		if (!comp_iter(&env, x, y, ast->expr)) {
-			goto error;
+		if (!ast_compile_root(&env, x, y, ast->expr)) {
+			return 0;
 		}
+
+		/* env.start may have been modified by fsm_unionxy() during iteration */
+		*start = env.start;
 	}
 
 /* XXX:
 	if (-1 == fsm_trim(fsm)) {
-		goto error;
+		return 0;
 	}
 */
 
@@ -1026,16 +1251,10 @@ ast_compile(const struct ast *ast,
 
 	if (re_flags & RE_REVERSE) {
 		if (!fsm_reverse(fsm)) {
-			goto error;
+			return 0;
 		}
 	}
 
-	return fsm;
-
-error:
-
-	fsm_free(fsm);
-
-	return NULL;
+	return 1;
 }
 

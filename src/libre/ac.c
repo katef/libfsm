@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
@@ -14,7 +15,10 @@
 
 #include <fsm/fsm.h>
 
+#include <re/re.h>
+
 #include "ac.h"
+#include "ast.h"
 
 enum { POOL_BLOCK_SIZE = 256 };
 
@@ -162,8 +166,53 @@ trie_add_word(struct trie_graph *g, const char *w, size_t n)
 	return g;
 }
 
+/* internal convenience to avoid constructing a string */
+struct trie_graph *
+trie_add_concat(struct trie_graph *g, const struct ast_expr **a, size_t n)
+{
+	struct trie_state *st;
+	size_t i;
+
+	assert(g != NULL);
+	assert(a != NULL);
+	assert(n > 0);
+
+	st = g->root;
+
+	assert(st != NULL);
+
+	for (i = 0; i < n; i++) {
+		struct trie_state *nx;
+		int idx;
+
+		assert(a[i]->type == AST_EXPR_LITERAL);
+
+		idx = (unsigned char)a[i]->u.literal.c;
+		nx = st->children[idx];
+
+		if (nx == NULL) {
+			nx = newstate(g);
+			if (nx == NULL) {
+				return NULL;
+			}
+
+			st->children[idx] = nx;
+		}
+
+		st = nx;
+	}
+
+	st->output = 1;
+	if (g->depth < n) {
+		g->depth = n;
+	}
+
+	return g;
+}
+
 int
-trie_add_failure_edges(struct trie_graph *g) {
+trie_add_failure_edges(struct trie_graph *g)
+{
 	struct trie_state **q;
 	size_t top,bot;
 	int sym;
@@ -268,6 +317,22 @@ find_next_state(struct trie_state *s, int sym)
 }
 
 static int
+has_child(const struct trie_state *ts)
+{
+	int sym;
+
+	assert(ts != NULL);
+
+	for (sym = 0; sym < 256; sym++) {
+		if (ts->children[sym] != NULL) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static int
 trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 	int have_end, fsm_state_t single_end,
 	fsm_state_t *q)
@@ -278,7 +343,7 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 	assert(fsm != NULL);
 	assert(q != NULL);
 
-	if (ts->output && have_end) {
+	if (ts->output && have_end && !has_child(ts)) {
 		*q = single_end;
 		return 1;
 	}
@@ -314,7 +379,19 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 	}
 
 	if (ts->output) {
-		fsm_setend(fsm, st, 1);
+		if (!have_end) {
+			fsm_setend(fsm, st, 1);
+		} else {
+			/*
+			 * What would usually be an end state in the middle of the trie
+			 * needs an epsilon to hook it up to the single exit state.
+			 *
+			 * We can't set this as an end state, because the single_end
+			 * itself might not actually accept - for example in the middle of
+			 * recursive NFA construction when walking the regexp AST.
+			 */
+			fsm_addedge_epsilon(fsm, st, single_end);
+		}
 	}
 
 	*q = st;
@@ -322,15 +399,13 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 }
 
 struct fsm *
-trie_to_fsm(struct fsm *fsm, struct trie_graph *g, int have_end, fsm_state_t end)
+trie_to_fsm(struct fsm *fsm, fsm_state_t *start, struct trie_graph *g, int have_end, fsm_state_t end)
 {
-	fsm_state_t start;
+	assert(start != NULL);
 
-	if (!trie_to_fsm_state(g->root, fsm, have_end, end, &start)) {
+	if (!trie_to_fsm_state(g->root, fsm, have_end, end, start)) {
 		return NULL;
 	}
-
-	fsm_setstart(fsm, start);
 
 	return fsm;
 }

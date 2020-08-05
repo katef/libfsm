@@ -1947,7 +1947,7 @@ p_200(lex_state lex_state, act_state act_state, fsm *ZOr)
 		assert((ZIa) != NULL);
 		assert((ZIa)->p != NULL);
 
-		(ZIr) = re_comp(RE_NATIVE, act_agetc, (ZIa), act_state->opt, (ZIf), &err);
+		(ZIr) = re_comp_new(RE_NATIVE, act_agetc, (ZIa), act_state->opt, (ZIf), &err);
 		if ((ZIr) == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
@@ -2013,7 +2013,7 @@ p_200(lex_state lex_state, act_state act_state, fsm *ZOr)
 		assert((ZIa) != NULL);
 		assert((ZIa)->p != NULL);
 
-		(ZIr) = re_comp(RE_LITERAL, act_agetc, (ZIa), act_state->opt, 0, &err);
+		(ZIr) = re_comp_new(RE_LITERAL, act_agetc, (ZIa), act_state->opt, 0, &err);
 		if ((ZIr) == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */

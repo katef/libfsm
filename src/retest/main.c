@@ -561,7 +561,7 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 			num_regexps++;
 
 			re_str = regexp;
-			fsm = re_comp(dialect, fsm_sgetc, &re_str, &opt, flags, &err);
+			fsm = re_comp_new(dialect, fsm_sgetc, &re_str, &opt, flags, &err);
 			if (fsm == NULL) {
 				fprintf(stderr, "line %d: error with regexp /%s/: %s\n",
 					linenum, regexp, re_strerror(err.e));

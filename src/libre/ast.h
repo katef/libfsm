@@ -266,4 +266,8 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err, int *unsatisfiable);
 
+struct re_strings;
+int
+re_strings_add_concat(struct re_strings *g, const struct ast_expr **a, size_t n);
+
 #endif

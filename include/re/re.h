@@ -127,9 +127,11 @@ re_getchar_fun(void *opaque);
 
 /*
  * Compile a regexp of the given dialect.
+ * States are populated into the given fsm. The start state is written out
+ * through the *start argument.
  *
- * Returns NULL on error. If non-NULL, the *err struct is populated with the
- * type and 0-indexed byte offset of the error.
+ * Returns 1 on success, or 0 on error. If non-NULL, the *err struct is
+ * populated with the type and 0-indexed byte offset of the error.
  *
  * libfsm provides getc callbacks suitable for use with re_comp; see <fsm/fsm.h>.
  * For example:
@@ -144,8 +146,19 @@ re_getchar_fun(void *opaque);
  * There's nothing special about libfsm's implementation of these; they could
  * equally well be user defined.
  */
+int
+re_comp(struct fsm *fsm, fsm_state_t *start, enum re_dialect dialect,
+	re_getchar_fun *f, void *opaque,
+	const struct fsm_options *opt,
+	enum re_flags flags, struct re_err *err);
+
+/*
+ * A convenience to construct a new fsm.
+ * Returns NULL on error.
+ * See re_comp() for details.
+ */
 struct fsm *
-re_comp(enum re_dialect dialect,
+re_comp_new(enum re_dialect dialect,
 	re_getchar_fun *f, void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err);
