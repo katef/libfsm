@@ -101,6 +101,8 @@ STAGE_BUILD := ${STAGE_BUILD:Nbin/cvtpcre}
 .include <install.mk>
 .include <clean.mk>
 
-test:: .EXEC
+.if make(test)
+.END::
 	grep FAIL ${BUILD}/tests/*/res*; [ $$? -ne 0 ]
+.endif
 
