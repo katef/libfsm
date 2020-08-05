@@ -107,10 +107,6 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 			(unsigned long) n->u.codepoint.u);
 		break; 
 
-	case AST_EXPR_ANY:
-		fprintf(f, "\tn%p [ label = <ANY> ];\n", (void *) n);
-		break;
-
 	case AST_EXPR_REPEAT:
 		fprintf(f, "\tn%p [ label = <REPEAT|&#x7b;", (void *) n);
 		fprintf_count(f, n->u.repeat.min);

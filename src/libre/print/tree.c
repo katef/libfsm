@@ -145,10 +145,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		fprintf(f, "CODEPOINT U+%lX\n", (unsigned long) n->u.codepoint.u);
 		break;
 
-	case AST_EXPR_ANY:
-		fprintf(f, "ANY:\n");
-		break;
-
 	case AST_EXPR_REPEAT:
 		fprintf(f, "REPEAT {");
 		fprintf_count(f, n->u.repeat.min);

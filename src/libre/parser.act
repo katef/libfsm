@@ -686,7 +686,8 @@
 	@};
 
 	<ast-make-any>: () -> (node :ast_expr) = @{
-		@node = ast_make_expr_any();
+		/* TODO: or the unicode equivalent */
+		@node = ast_make_expr_named(&class_any);
 		if (@node == NULL) {
 			@!;
 		}

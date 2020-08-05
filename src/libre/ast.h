@@ -25,7 +25,6 @@ enum ast_expr_type {
 	AST_EXPR_ALT,
 	AST_EXPR_LITERAL,
 	AST_EXPR_CODEPOINT,
-	AST_EXPR_ANY,
 	AST_EXPR_REPEAT,
 	AST_EXPR_GROUP,
 	AST_EXPR_FLAGS,
@@ -229,9 +228,6 @@ ast_make_expr_literal(char c);
 
 struct ast_expr *
 ast_make_expr_codepoint(uint32_t u);
-
-struct ast_expr *
-ast_make_expr_any(void);
 
 struct ast_expr *
 ast_make_expr_repeat(struct ast_expr *e, struct ast_count count);

@@ -244,7 +244,7 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 823 "src/libre/parser.act"
+#line 824 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIa))) {
 			goto ZL1;
@@ -431,14 +431,15 @@ ZL1:;
 		/* END OF ACTION: err-expected-atom */
 		/* BEGINNING OF ACTION: ast-make-any */
 		{
-#line 689 "src/libre/parser.act"
+#line 690 "src/libre/parser.act"
 
-		(ZInode) = ast_make_expr_any();
+		/* TODO: or the unicode equivalent */
+		(ZInode) = ast_make_expr_named(&class_any);
 		if ((ZInode) == NULL) {
 			goto ZL2;
 		}
 	
-#line 442 "src/libre/dialect/literal/parser.c"
+#line 443 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: ast-make-any */
 	}
@@ -452,7 +453,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 976 "src/libre/parser.act"
+#line 977 "src/libre/parser.act"
 
 
 	static int
@@ -595,6 +596,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 599 "src/libre/dialect/literal/parser.c"
+#line 600 "src/libre/dialect/literal/parser.c"
 
 /* END OF FILE */

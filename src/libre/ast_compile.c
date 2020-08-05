@@ -389,7 +389,6 @@ decide_linking(struct comp_env *env,
 	case AST_EXPR_SUBTRACT:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
-	case AST_EXPR_ANY:
 
 	case AST_EXPR_CONCAT:
 	case AST_EXPR_ALT:
@@ -847,10 +846,6 @@ comp_iter(struct comp_env *env,
 		break;
 	}
 
-	case AST_EXPR_ANY:
-		ANY(x, y);
-		break;
-
 	case AST_EXPR_REPEAT:
 		/*
 		 * REPEAT breaks out into its own function, because
@@ -947,6 +942,13 @@ comp_iter(struct comp_env *env,
 		}
 
 		assert(n->u.range.from.u.literal.c <= n->u.range.to.u.literal.c);
+
+		if (n->u.range.from.u.literal.c == 0x00 &&
+			n->u.range.to.u.literal.c == 0xff)
+		{
+			ANY(x, y);
+			break;
+		}
 
 		for (i = n->u.range.from.u.literal.c; i <= n->u.range.to.u.literal.c; i++) {
 			LITERAL(x, y, i);
