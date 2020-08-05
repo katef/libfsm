@@ -392,7 +392,7 @@ edge_set_copy(struct edge_set **dst, const struct fsm_alloc *alloc,
 		return 1;
 	}
 
-	for (edge_set_reset((void *) src, &jt); edge_set_next(&jt, &e); ) {
+	for (edge_set_reset(src, &jt); edge_set_next(&jt, &e); ) {
 		/* TODO: bulk add */
 		if (!edge_set_add(dst, alloc, e.symbol, e.state)) {
 			return 0;
@@ -477,7 +477,7 @@ edge_set_remove_state(struct edge_set **setp, fsm_state_t state)
 
 void
 edge_set_compact(struct edge_set **setp,
-    fsm_state_remap_fun *remap, void *opaque)
+    fsm_state_remap_fun *remap, const void *opaque)
 {
 	struct edge_set *set;
 	size_t i;
@@ -524,7 +524,7 @@ edge_set_compact(struct edge_set **setp,
 }
 
 void
-edge_set_reset(struct edge_set *set, struct edge_iter *it)
+edge_set_reset(const struct edge_set *set, struct edge_iter *it)
 {
 	it->i = 0;
 	it->set = set;

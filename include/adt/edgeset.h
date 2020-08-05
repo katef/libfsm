@@ -79,10 +79,10 @@ edge_set_remove_state(struct edge_set **set, fsm_state_t state);
 
 void
 edge_set_compact(struct edge_set **set,
-    fsm_state_remap_fun *remap, void *opaque);
+    fsm_state_remap_fun *remap, const void *opaque);
 
 void
-edge_set_reset(struct edge_set *set, struct edge_iter *it);
+edge_set_reset(const struct edge_set *set, struct edge_iter *it);
 
 int
 edge_set_next(struct edge_iter *it, struct fsm_edge *e);

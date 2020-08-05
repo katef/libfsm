@@ -153,7 +153,7 @@ fsm_removestate(struct fsm *fsm, fsm_state_t state)
 }
 
 static fsm_state_t
-mapping_cb(fsm_state_t id, void *opaque)
+mapping_cb(fsm_state_t id, const void *opaque)
 {
 	const fsm_state_t *mapping = opaque;
 	return mapping[id];
