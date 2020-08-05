@@ -42,7 +42,6 @@ PROPNAME.theft += union_literals
 CFLAGS.${src} += -D_POSIX_C_SOURCE=200809L
 CFLAGS.${src} += -std=c99
 .if ${CC:T:Mgcc} || ${CC:T:Mclang}
-CFLAGS.${src} += -Wdeclaration-after-statement
 .endif
 .endfor
 
