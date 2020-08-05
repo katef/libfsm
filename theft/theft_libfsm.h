@@ -72,6 +72,7 @@ void register_test_adt_priq(void);
 void register_test_adt_set(void);
 void register_test_nfa(void);
 void register_test_adt_edge_set(void);
+void register_test_trim(void);
 
 int test_get_verbosity(void);
 
@@ -127,3 +128,6 @@ wrap_re_comp(enum re_dialect dialect, const struct string_pair *pair,
 	} while(0)
 
 #endif
+
+#define BITSET_CHECK(SET, BIT) (SET[BIT/64] & ((uint64_t)1 << (BIT & 63)))
+#define BITSET_SET(SET, BIT) (SET[BIT/64] |= ((uint64_t)1 << (BIT & 63)))

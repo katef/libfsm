@@ -13,8 +13,10 @@ SRC += theft/fuzz_nfa.c
 SRC += theft/fuzz_re_parser.c
 SRC += theft/fuzz_re_parser_literal.c
 SRC += theft/fuzz_re_parser_pcre.c
+SRC += theft/fuzz_trim.c
 
 SRC += theft/type_info_adt_edge_set.c
+SRC += theft/type_info_dfa.c
 SRC += theft/type_info_fsm_literal.c
 SRC += theft/type_info_nfa.c
 SRC += theft/type_info_re.c
