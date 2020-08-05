@@ -24,6 +24,7 @@ struct edge_iter {
 struct edge_ordered_iter {
 	const struct edge_set *set;
 	size_t pos;
+	size_t steps;
 	unsigned char symbol;
 	uint64_t symbols_used[4];
 };
