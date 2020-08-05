@@ -53,6 +53,12 @@ struct edge_set {
 	size_t ceil;
 };
 
+struct edge_set *
+edge_set_new(void)
+{
+	return NULL;
+}
+
 static struct edge_set *
 edge_set_create(const struct fsm_alloc *a)
 {

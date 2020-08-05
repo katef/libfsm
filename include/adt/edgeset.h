@@ -34,6 +34,11 @@ struct edge_ordered_iter {
  * edge_iter iterator is unordered. */
 struct edge_iter_ordered;
 
+/* Create an empty edge set.
+ * This currently returns a NULL pointer. */
+struct edge_set *
+edge_set_new(void);
+
 void
 edge_set_free(const struct fsm_alloc *a, struct edge_set *set);
 

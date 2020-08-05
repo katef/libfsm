@@ -22,7 +22,9 @@
 
 enum test_type {
 	TEST0,
-	TEST1
+	TEST1,
+	TEST2,
+	TEST3
 };
 
 struct test_link {
@@ -37,6 +39,17 @@ struct test_link {
 			test_fun1 *fun;
 			uintptr_t arg;
 		} test1;
+		struct {
+			test_fun2 *fun;
+			uintptr_t arg0;
+			uintptr_t arg1;
+		} test2;
+		struct {
+			test_fun3 *fun;
+			uintptr_t arg0;
+			uintptr_t arg1;
+			uintptr_t arg2;
+		} test3;
 	} u;
 };
 
@@ -134,6 +147,50 @@ reg_test1(const char *name, test_fun1 *test, uintptr_t arg)
 	state.tests = link;
 }
 
+void
+reg_test2(const char *name, test_fun2 *test,
+    uintptr_t arg0, uintptr_t arg1)
+{
+	struct test_link *link;
+
+	link = xmalloc(sizeof *link);
+
+	*link = (struct test_link) {
+		.next = state.tests,
+		.name = name,
+		.type = TEST2,
+		.u.test2 = {
+			.fun = test,
+			.arg0 = arg0,
+			.arg1 = arg1,
+		},
+	};
+
+	state.tests = link;
+}
+
+void reg_test3(const char *name, test_fun3 *test,
+    uintptr_t arg0, uintptr_t arg1, uintptr_t arg2)
+{
+	struct test_link *link;
+
+	link = xmalloc(sizeof *link);
+
+	*link = (struct test_link) {
+		.next = state.tests,
+		.name = name,
+		.type = TEST3,
+		.u.test3 = {
+			.fun = test,
+			.arg0 = arg0,
+			.arg1 = arg1,
+			.arg2 = arg2,
+		},
+	};
+
+	state.tests = link;
+}
+
 int
 test_get_verbosity(void)
 {
@@ -178,6 +235,7 @@ main(int argc, char **argv)
 		 }
 	}
 
+	register_test_adt_edge_set();
 	register_test_literals();
 	register_test_re();
 	register_test_adt_priq();
@@ -216,8 +274,17 @@ main(int argc, char **argv)
 
 		pass = false;
 		switch (link->type) {
-		case TEST0: pass = link->u.test0.fun(seed);                    break;
-		case TEST1: pass = link->u.test1.fun(seed, link->u.test1.arg); break;
+		case TEST0: pass = link->u.test0.fun(seed);
+			break;
+		case TEST1: pass = link->u.test1.fun(seed,
+		    link->u.test1.arg);
+			break;
+		case TEST2: pass = link->u.test2.fun(seed,
+		    link->u.test2.arg0, link->u.test2.arg1);
+			break;
+		case TEST3: pass = link->u.test3.fun(seed,
+		    link->u.test3.arg0, link->u.test3.arg1, link->u.test3.arg2);
+			break;
 
 		default:
 			assert(false);
