@@ -198,6 +198,8 @@ carryopaque_cb(struct fsm *src_fsm, const fsm_state_t *set, size_t count,
 	intptr_t other;
 	size_t i;
 
+	(void)src_fsm;
+
 	if (!fsm_isend(dst_fsm, state)) {
 		return;
 	}
