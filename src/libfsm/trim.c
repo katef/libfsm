@@ -152,15 +152,15 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 					goto cleanup;
 				}
 				fsm->states[next].visited = 1;
+			}
 
-				if (edges == NULL) {
-					continue;
-				}
-				if (!save_edge(fsm->opt->alloc,
-					&edge_count, &edge_ceil, &edges,
-					s_id, next)) {
-					goto cleanup;
-				}
+			if (edges == NULL) {
+				continue;
+			}
+			if (!save_edge(fsm->opt->alloc,
+				&edge_count, &edge_ceil, &edges,
+				s_id, next)) {
+				goto cleanup;
 			}
 		}
 
@@ -177,15 +177,15 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 					goto cleanup;
 				}
 				fsm->states[next].visited = 1;
+			}
 
-				if (edges == NULL) {
-					continue;
-				}
-				if (!save_edge(fsm->opt->alloc,
-					&edge_count, &edge_ceil, &edges,
-					s_id, next)) {
-					goto cleanup;
-				}
+			if (edges == NULL) {
+				continue;
+			}
+			if (!save_edge(fsm->opt->alloc,
+				&edge_count, &edge_ceil, &edges,
+				s_id, next)) {
+				goto cleanup;
 			}
 		}
 	}
