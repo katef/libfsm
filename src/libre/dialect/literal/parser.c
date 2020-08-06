@@ -244,7 +244,7 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 824 "src/libre/parser.act"
+#line 821 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIa))) {
 			goto ZL1;
@@ -291,7 +291,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				{
 					/* BEGINNING OF ACTION: ast-make-concat */
 					{
-#line 664 "src/libre/parser.act"
+#line 669 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_concat();
 		if ((ZInode) == NULL) {
@@ -312,7 +312,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				{
 					/* BEGINNING OF ACTION: ast-make-empty */
 					{
-#line 657 "src/libre/parser.act"
+#line 662 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_empty();
 		if ((ZInode) == NULL) {
@@ -403,7 +403,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: ast-make-literal */
 		{
-#line 678 "src/libre/parser.act"
+#line 683 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_literal((ZIc));
 		if ((ZInode) == NULL) {
@@ -429,19 +429,18 @@ ZL1:;
 #line 430 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: err-expected-atom */
-		/* BEGINNING OF ACTION: ast-make-any */
+		/* BEGINNING OF ACTION: ast-make-empty */
 		{
-#line 690 "src/libre/parser.act"
+#line 662 "src/libre/parser.act"
 
-		/* TODO: or the unicode equivalent */
-		(ZInode) = ast_make_expr_named(&class_any);
+		(ZInode) = ast_make_expr_empty();
 		if ((ZInode) == NULL) {
 			goto ZL2;
 		}
 	
-#line 443 "src/libre/dialect/literal/parser.c"
+#line 442 "src/libre/dialect/literal/parser.c"
 		}
-		/* END OF ACTION: ast-make-any */
+		/* END OF ACTION: ast-make-empty */
 	}
 	goto ZL0;
 ZL2:;
@@ -453,7 +452,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 977 "src/libre/parser.act"
+#line 974 "src/libre/parser.act"
 
 
 	static int
@@ -596,6 +595,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 600 "src/libre/dialect/literal/parser.c"
+#line 599 "src/libre/dialect/literal/parser.c"
 
 /* END OF FILE */

@@ -13,7 +13,7 @@
 	!err;
 	ast_expr;
 	ast_count;
-	!ast_class_id;
+	ast_class_id;
 	!endpoint;
 
 %terminals%
@@ -81,7 +81,6 @@
 	<ast-make-literal>:       (:char)                  -> (:ast_expr);
 	<ast-make-concat>:        ()                       -> (:ast_expr);
 	!<ast-make-alt>:          ()                       -> (:ast_expr);
-	<ast-make-any>:           ()                       -> (:ast_expr);
 	<ast-make-piece>:         (:ast_expr, :ast_count)  -> (:ast_expr);
 	!<ast-make-group>:        (:ast_expr)              -> (:ast_expr);
 	!<ast-make-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
@@ -90,7 +89,7 @@
 	!<ast-make-subtract>:     (:ast_expr, :ast_expr)   -> (:ast_expr); 
 	!<ast-make-invert>:       (:ast_expr)              -> (:ast_expr); 
 	!<ast-make-range>:        (:endpoint, :pos, :endpoint, :pos) -> (:ast_expr);
-	!<ast-make-named>:        (:ast_class_id)          -> (:ast_expr);
+	<ast-make-named>:         (:ast_class_id)          -> (:ast_expr);
 
 	<ast-add-concat>: (:ast_expr, :ast_expr) -> ();
 	!<ast-add-alt>:   (:ast_expr, :ast_expr) -> ();
@@ -112,6 +111,8 @@
 	!<mark-count>: (:pos, :pos) -> ();
 	!<mark-expr>: (:ast_expr, :pos, :pos) -> ();
 
+	<class-any>: () -> (:ast_class_id);
+
 	list-of-atoms: (cat :ast_expr) -> () [
 
 		atom: () -> (e :ast_expr) = {
@@ -119,15 +120,17 @@
 			e = <ast-make-literal>(c);
 		||
 			ANY;
-			e = <ast-make-any>;
+			a = <class-any>;
+			e = <ast-make-named>(a);
 		||
 			MANY;
-			g = <ast-make-any>;
+			a = <class-any>;
+			g = <ast-make-named>(a);
 			c = <count-zero-or-more>;
 			e = <ast-make-piece>(g, c);
 		##
 			<err-expected-atom>;
-			e = <ast-make-any>;
+			e = <ast-make-empty>;
 		};
 
 	] = {

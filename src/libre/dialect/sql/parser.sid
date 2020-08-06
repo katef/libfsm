@@ -92,7 +92,6 @@
 	<ast-make-literal>:       (:char)                  -> (:ast_expr);
 	<ast-make-concat>:        ()                       -> (:ast_expr);
 	<ast-make-alt>:           ()                       -> (:ast_expr);
-	<ast-make-any>:           ()                       -> (:ast_expr);
 	<ast-make-piece>:         (:ast_expr, :ast_count)  -> (:ast_expr);
 	<ast-make-group>:         (:ast_expr)              -> (:ast_expr);
 	!<ast-make-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
@@ -122,6 +121,8 @@
 	<mark-range>: (:pos, :pos) -> ();
 	<mark-count>: (:pos, :pos) -> ();
 	<mark-expr>: (:ast_expr, :pos, :pos) -> ();
+
+	<class-any>: () -> (:ast_class_id);
 
 	expr: () -> (node :ast_expr) [
 
@@ -291,10 +292,12 @@
 
 			atom: () -> (e :ast_expr) = {
 				ANY;
-				e = <ast-make-any>;
+				a = <class-any>;
+				e = <ast-make-named>(a);
 			||
 				MANY;
-				g = <ast-make-any>;
+				a = <class-any>;
+				g = <ast-make-named>(a);
 				c = <count-zero-or-more>;
 				e = <ast-make-piece>(g, c);
 			||
@@ -309,7 +312,7 @@
 				CLOSESUB;
 			##
 				<err-expected-atom>;
-				e = <ast-make-any>;
+				e = <ast-make-empty>;
 			};
 
 			count: () -> (c :ast_count) = {
