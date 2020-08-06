@@ -38,4 +38,7 @@ struct dfa_spec {
 
 extern const struct theft_type_info type_info_dfa;
 
+struct fsm *
+dfa_spec_build_fsm(const struct dfa_spec *spec);
+
 #endif

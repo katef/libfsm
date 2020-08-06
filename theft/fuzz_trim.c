@@ -78,47 +78,17 @@ check_trimming_matches_reachability(const struct dfa_spec *spec)
 	 * trimming should match the expected count given what
 	 * states are on a path between the start state and
 	 * any end state -- no more, no less. */
-	struct fsm *fsm = fsm_new(NULL);
-	if (fsm == NULL) {
-		fprintf(stderr, "-- ERROR: fsm_new\n");
-		return THEFT_TRIAL_ERROR;
-	}
 
-	if (!fsm_addstate_bulk(fsm, spec->state_count)) {
-		fprintf(stderr, "-- ERROR: fsm_addstate_bulk\n");
+	struct fsm *fsm = dfa_spec_build_fsm(spec);
+	if (fsm == NULL) {
 		return THEFT_TRIAL_ERROR;
 	}
 
 	size_t expected_pre_states = 0;
-
-	if (spec->start < spec->state_count) {
-		fsm_setstart(fsm, spec->start);
-	}
-
 	for (size_t s_i = 0; s_i < spec->state_count; s_i++) {
-		const fsm_state_t state_id = (fsm_state_t)s_i;
 		const struct dfa_spec_state *s = &spec->states[s_i];
 		if (!s->used) { continue; }
 		expected_pre_states++;
-
-		if (s->end) {
-			fsm_setend(fsm, state_id, 1);
-		}
-
-		for (size_t e_i = 0; e_i < s->edge_count; e_i++) {
-			const fsm_state_t to = s->edges[e_i].state;
-			const unsigned char symbol = s->edges[e_i].symbol;
-			if (!fsm_addedge_literal(fsm,
-				state_id, to, symbol)) {
-				fprintf(stderr, "-- ERROR: fsm_addedge_literal\n");
-				return THEFT_TRIAL_ERROR;
-			}
-		}
-	}
-
-	if (!fsm_all(fsm, fsm_isdfa)) {
-		fprintf(stderr, "-- FAIL: all is_dfa\n");
-		return THEFT_TRIAL_FAIL;
 	}
 
 	const size_t pre_states = fsm_countstates(fsm);

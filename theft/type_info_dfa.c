@@ -155,3 +155,53 @@ const struct theft_type_info type_info_dfa = {
 		.enable = true,
 	}
 };
+
+struct fsm *
+dfa_spec_build_fsm(const struct dfa_spec *spec)
+{
+	struct fsm *fsm = fsm_new(NULL);
+	if (fsm == NULL) {
+		fprintf(stderr, "-- ERROR: fsm_new\n");
+		goto cleanup;
+	}
+
+	if (!fsm_addstate_bulk(fsm, spec->state_count)) {
+		fprintf(stderr, "-- ERROR: fsm_addstate_bulk\n");
+		goto cleanup;
+	}
+
+	if (spec->start < spec->state_count) {
+		fsm_setstart(fsm, spec->start);
+	}
+
+	for (size_t s_i = 0; s_i < spec->state_count; s_i++) {
+		const fsm_state_t state_id = (fsm_state_t)s_i;
+		const struct dfa_spec_state *s = &spec->states[s_i];
+		if (!s->used) { continue; }
+
+		if (s->end) {
+			fsm_setend(fsm, state_id, 1);
+		}
+
+		for (size_t e_i = 0; e_i < s->edge_count; e_i++) {
+			const fsm_state_t to = s->edges[e_i].state;
+			const unsigned char symbol = s->edges[e_i].symbol;
+			if (!fsm_addedge_literal(fsm,
+				state_id, to, symbol)) {
+				fprintf(stderr, "-- ERROR: fsm_addedge_literal\n");
+				goto cleanup;
+			}
+		}
+	}
+
+	if (!fsm_all(fsm, fsm_isdfa)) {
+		fprintf(stderr, "-- ERROR: all is_dfa\n");
+		goto cleanup;
+	}
+
+	return fsm;
+
+cleanup:
+	if (fsm != NULL) { fsm_free(fsm); }
+	return NULL;
+}
