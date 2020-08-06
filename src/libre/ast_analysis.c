@@ -66,7 +66,6 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
-	case AST_EXPR_ANY:
 	case AST_EXPR_RANGE:
 		/* no special handling */
 		break;
@@ -175,7 +174,6 @@ always_consumes_input(const struct ast_expr *n, int thud)
 	switch (n->type) {
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
-	case AST_EXPR_ANY:
 	case AST_EXPR_RANGE:
 		return 1;
 
@@ -300,7 +298,6 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
-	case AST_EXPR_ANY:
 	case AST_EXPR_RANGE:
 		if (!is_nullable(n)) {
 			env->past_any_consuming = 1;
@@ -480,7 +477,6 @@ assign_firsts(struct ast_expr *n)
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
-	case AST_EXPR_ANY:
 	case AST_EXPR_RANGE:
 		set_flags(n, AST_FLAG_FIRST);
 		break;
@@ -554,7 +550,6 @@ assign_lasts(struct ast_expr *n)
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
-	case AST_EXPR_ANY:
 	case AST_EXPR_RANGE:
 		set_flags(n, AST_FLAG_LAST);
 		break;

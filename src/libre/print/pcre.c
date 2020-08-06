@@ -26,11 +26,14 @@ atomic(struct ast_expr *n)
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
-	case AST_EXPR_ANY:
 	case AST_EXPR_REPEAT:
 	case AST_EXPR_GROUP:
 	case AST_EXPR_TOMBSTONE:
 		return 1;
+
+	case AST_EXPR_RANGE:
+		return (n->u.range.from.u.literal.c == 0x00 &&
+			n->u.range.to.u.literal.c == 0xff);
 
 	case AST_EXPR_FLAGS:
 		return 0; /* XXX */
@@ -113,10 +116,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		fprintf(f, "\\x{%lX}", (unsigned long) n->u.codepoint.u);
 		break;
 
-	case AST_EXPR_ANY:
-		fprintf(f, ".");
-		break;
-
 	case AST_EXPR_REPEAT: {
 		size_t i;
 
@@ -188,6 +187,13 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 
 	case AST_EXPR_RANGE:
+		if (n->u.range.from.u.literal.c == 0x00 &&
+			n->u.range.to.u.literal.c == 0xff)
+		{
+			fprintf(f, ".");
+			break;
+		}
+
 		fprintf(f, "[");
 		print_endpoint(f, opt, &n->u.range.from);
 		fprintf(f, "-");

@@ -244,7 +244,7 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 823 "src/libre/parser.act"
+#line 821 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIa))) {
 			goto ZL1;
@@ -283,26 +283,38 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 	switch (CURRENT_TERMINAL) {
 	case (TOK_ANY):
 		{
-			ADVANCE_LEXER;
-			/* BEGINNING OF ACTION: ast-make-any */
-			{
-#line 689 "src/libre/parser.act"
+			t_ast__class__id ZIa;
 
-		(ZIe) = ast_make_expr_any();
+			ADVANCE_LEXER;
+			/* BEGINNING OF ACTION: class-any */
+			{
+#line 574 "src/libre/parser.act"
+
+		/* TODO: or the unicode equivalent */
+		(ZIa) = &class_any;
+	
+#line 297 "src/libre/dialect/like/parser.c"
+			}
+			/* END OF ACTION: class-any */
+			/* BEGINNING OF ACTION: ast-make-named */
+			{
+#line 814 "src/libre/parser.act"
+
+		(ZIe) = ast_make_expr_named((ZIa));
 		if ((ZIe) == NULL) {
 			goto ZL1;
 		}
 	
-#line 297 "src/libre/dialect/like/parser.c"
+#line 309 "src/libre/dialect/like/parser.c"
 			}
-			/* END OF ACTION: ast-make-any */
+			/* END OF ACTION: ast-make-named */
 		}
 		break;
 	case (TOK_CHAR):
 		{
 			t_char ZIc;
-			t_pos ZI95;
 			t_pos ZI96;
+			t_pos ZI97;
 
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
@@ -311,59 +323,70 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI95 = lex_state->lx.start;
-		ZI96   = lex_state->lx.end;
+		ZI96 = lex_state->lx.start;
+		ZI97   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 320 "src/libre/dialect/like/parser.c"
+#line 332 "src/libre/dialect/like/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			ADVANCE_LEXER;
 			/* BEGINNING OF ACTION: ast-make-literal */
 			{
-#line 678 "src/libre/parser.act"
+#line 683 "src/libre/parser.act"
 
 		(ZIe) = ast_make_expr_literal((ZIc));
 		if ((ZIe) == NULL) {
 			goto ZL1;
 		}
 	
-#line 333 "src/libre/dialect/like/parser.c"
+#line 345 "src/libre/dialect/like/parser.c"
 			}
 			/* END OF ACTION: ast-make-literal */
 		}
 		break;
 	case (TOK_MANY):
 		{
+			t_ast__class__id ZIa;
 			t_ast__expr ZIg;
 			t_ast__count ZIc;
 
 			ADVANCE_LEXER;
-			/* BEGINNING OF ACTION: ast-make-any */
+			/* BEGINNING OF ACTION: class-any */
 			{
-#line 689 "src/libre/parser.act"
+#line 574 "src/libre/parser.act"
 
-		(ZIg) = ast_make_expr_any();
+		/* TODO: or the unicode equivalent */
+		(ZIa) = &class_any;
+	
+#line 364 "src/libre/dialect/like/parser.c"
+			}
+			/* END OF ACTION: class-any */
+			/* BEGINNING OF ACTION: ast-make-named */
+			{
+#line 814 "src/libre/parser.act"
+
+		(ZIg) = ast_make_expr_named((ZIa));
 		if ((ZIg) == NULL) {
 			goto ZL1;
 		}
 	
-#line 353 "src/libre/dialect/like/parser.c"
+#line 376 "src/libre/dialect/like/parser.c"
 			}
-			/* END OF ACTION: ast-make-any */
+			/* END OF ACTION: ast-make-named */
 			/* BEGINNING OF ACTION: count-zero-or-more */
 			{
-#line 590 "src/libre/parser.act"
+#line 595 "src/libre/parser.act"
 
 		(ZIc) = ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
 	
-#line 362 "src/libre/dialect/like/parser.c"
+#line 385 "src/libre/dialect/like/parser.c"
 			}
 			/* END OF ACTION: count-zero-or-more */
 			/* BEGINNING OF ACTION: ast-make-piece */
 			{
-#line 696 "src/libre/parser.act"
+#line 694 "src/libre/parser.act"
 
 		if ((ZIc).min == 0 && (ZIc).max == 0) {
 			(ZIe) = ast_make_expr_empty();
@@ -377,7 +400,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 			goto ZL1;
 		}
 	
-#line 381 "src/libre/dialect/like/parser.c"
+#line 404 "src/libre/dialect/like/parser.c"
 			}
 			/* END OF ACTION: ast-make-piece */
 		}
@@ -399,21 +422,21 @@ ZL1:;
 		}
 		goto ZL2;
 	
-#line 403 "src/libre/dialect/like/parser.c"
+#line 426 "src/libre/dialect/like/parser.c"
 		}
 		/* END OF ACTION: err-expected-atom */
-		/* BEGINNING OF ACTION: ast-make-any */
+		/* BEGINNING OF ACTION: ast-make-empty */
 		{
-#line 689 "src/libre/parser.act"
+#line 662 "src/libre/parser.act"
 
-		(ZIe) = ast_make_expr_any();
+		(ZIe) = ast_make_expr_empty();
 		if ((ZIe) == NULL) {
 			goto ZL2;
 		}
 	
-#line 415 "src/libre/dialect/like/parser.c"
+#line 438 "src/libre/dialect/like/parser.c"
 		}
-		/* END OF ACTION: ast-make-any */
+		/* END OF ACTION: ast-make-empty */
 	}
 	goto ZL0;
 ZL2:;
@@ -439,14 +462,14 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 				{
 					/* BEGINNING OF ACTION: ast-make-concat */
 					{
-#line 664 "src/libre/parser.act"
+#line 669 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_concat();
 		if ((ZInode) == NULL) {
 			goto ZL1;
 		}
 	
-#line 450 "src/libre/dialect/like/parser.c"
+#line 473 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-make-concat */
 					p_list_Hof_Hatoms (flags, lex_state, act_state, err, ZInode);
@@ -460,14 +483,14 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 				{
 					/* BEGINNING OF ACTION: ast-make-empty */
 					{
-#line 657 "src/libre/parser.act"
+#line 662 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_empty();
 		if ((ZInode) == NULL) {
 			goto ZL1;
 		}
 	
-#line 471 "src/libre/dialect/like/parser.c"
+#line 494 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-make-empty */
 				}
@@ -498,7 +521,7 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 		}
 		goto ZL1;
 	
-#line 502 "src/libre/dialect/like/parser.c"
+#line 525 "src/libre/dialect/like/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -516,7 +539,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 976 "src/libre/parser.act"
+#line 974 "src/libre/parser.act"
 
 
 	static int
@@ -659,6 +682,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 663 "src/libre/dialect/like/parser.c"
+#line 686 "src/libre/dialect/like/parser.c"
 
 /* END OF FILE */

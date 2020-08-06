@@ -569,6 +569,11 @@
 */
 	@};
 
+	<class-any>: () -> (c :ast_class_id) = @{
+		/* TODO: or the unicode equivalent */
+		@c = &class_any;
+	@};
+
 
 	/*
 	 * AST construction
@@ -683,13 +688,6 @@
 
 	<make-literal-cbrak>: () -> (c :char) = @{
 		@c = ']';
-	@};
-
-	<ast-make-any>: () -> (node :ast_expr) = @{
-		@node = ast_make_expr_any();
-		if (@node == NULL) {
-			@!;
-		}
 	@};
 
 	<ast-make-piece>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{

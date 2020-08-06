@@ -83,7 +83,6 @@ ast_expr_free(struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
-	case AST_EXPR_ANY:
 	case AST_EXPR_FLAGS:
 	case AST_EXPR_ANCHOR:
 	case AST_EXPR_RANGE:
@@ -255,9 +254,6 @@ ast_expr_cmp(const struct ast_expr *a, const struct ast_expr *b)
 		if (a->u.codepoint.u < b->u.codepoint.u) { return -1; }
 		if (a->u.codepoint.u > b->u.codepoint.u) { return +1; }
 
-		return 0;
-
-	case AST_EXPR_ANY:
 		return 0;
 
 	case AST_EXPR_REPEAT:
@@ -493,21 +489,6 @@ ast_make_expr_codepoint(uint32_t u)
 
 	res->type = AST_EXPR_CODEPOINT;
 	res->u.codepoint.u = u;
-
-	return res;
-}
-
-struct ast_expr *
-ast_make_expr_any(void)
-{
-	struct ast_expr *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_EXPR_ANY;
 
 	return res;
 }

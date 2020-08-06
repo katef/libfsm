@@ -609,7 +609,6 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
-	case AST_EXPR_ANY:
 		return 1;
 
 	case AST_EXPR_REPEAT:

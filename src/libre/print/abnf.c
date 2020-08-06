@@ -29,11 +29,13 @@ atomic(struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
-	case AST_EXPR_ANY:
 	case AST_EXPR_GROUP:
-	case AST_EXPR_RANGE:
 	case AST_EXPR_TOMBSTONE:
 		return 1;
+
+	case AST_EXPR_RANGE:
+		return (n->u.range.from.u.literal.c == 0x00 &&
+			n->u.range.to.u.literal.c == 0xff);
 
 	case AST_EXPR_REPEAT:
 		return 0;
@@ -110,10 +112,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		fprintf(f, "%%x\"%lX\"", (unsigned long) n->u.codepoint.u);
 		break;
 
-	case AST_EXPR_ANY:
-		fprintf(f, "OCTET"); /* ABNF core rule for %x00-FF */
-		break;
-
 	case AST_EXPR_REPEAT: {
 		assert(n->u.repeat.min != AST_COUNT_UNBOUNDED);
 
@@ -175,6 +173,13 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		{
 			assert(!"unimplemented");
 			abort();
+		}
+
+		if (n->u.range.from.u.literal.c == 0x00 &&
+			n->u.range.to.u.literal.c == 0xff)
+		{
+			fprintf(f, "OCTET"); /* ABNF core rule for %x00-FF */
+			break;
 		}
 
 		fprintf(f, "%%x%02X-%02X",
