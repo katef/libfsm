@@ -18,7 +18,7 @@ RE     ?= re
 BUILD  ?= build
 PREFIX ?= /usr/local
 
-.if make(fuzz)
+.if make(fuzz) || make(${BUILD}/theft/theft)
 PKG += libtheft
 .endif
 
@@ -73,7 +73,7 @@ SUBDIR += tests/hashset
 SUBDIR += tests/queue
 SUBDIR += tests/aho_corasick
 SUBDIR += tests
-.if make(fuzz)
+.if make(fuzz) || make(${BUILD}/theft/theft)
 SUBDIR += theft
 .endif
 SUBDIR += pc
