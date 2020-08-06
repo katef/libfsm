@@ -73,6 +73,7 @@ void register_test_adt_set(void);
 void register_test_nfa(void);
 void register_test_adt_edge_set(void);
 void register_test_trim(void);
+void register_test_minimise(void);
 
 int test_get_verbosity(void);
 

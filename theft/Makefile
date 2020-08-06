@@ -9,6 +9,7 @@ SRC += theft/fuzz_adt_edge_set.c
 SRC += theft/fuzz_adt_priq.c
 SRC += theft/fuzz_adt_set.c
 SRC += theft/fuzz_literals.c
+SRC += theft/fuzz_minimise.c
 SRC += theft/fuzz_nfa.c
 SRC += theft/fuzz_re_parser.c
 SRC += theft/fuzz_re_parser_literal.c
