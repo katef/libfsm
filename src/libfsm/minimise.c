@@ -1183,7 +1183,7 @@ min_exmoore(const struct fsm *fsm,
 	if (minimized_state_count != NULL) {
 		*minimized_state_count = ec_count - ec_offset;
 #if DUMP_MAPPINGS
-		for (i = 0; i < *minimized_state_count; i++) {
+		for (i = 0; i < fsm->statecount; i++) {
 			fprintf(stderr, "# exmoore_mapping[%lu]: %u\n",
 			    i, mapping[i]);
 		}

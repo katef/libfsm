@@ -2,6 +2,8 @@
 
 #include <adt/queue.h>
 
+#define LOG_LIVENESS 0
+
 static enum theft_alloc_res
 dfa_alloc(struct theft *t, void *unused_env, void **output)
 {
@@ -213,6 +215,11 @@ enqueue_reachable(const struct dfa_spec *spec, struct queue *q,
     uint64_t *seen, fsm_state_t state)
 {
 	if (BITSET_CHECK(seen, state)) { return true; }
+
+	if (LOG_LIVENESS) {
+		fprintf(stderr, "enqueue_reachable: start --...--> %d\n", state);
+	}
+
 	if (!queue_push(q, state)) { return false; }
 	BITSET_SET(seen, state);
 
@@ -236,9 +243,9 @@ dfa_spec_check_liveness(const struct dfa_spec *spec,
 {
 	bool res = false;
 
-	bool allocated_live = false;
 	struct queue *q = NULL;
 
+	uint64_t *reached = NULL;
 	const size_t live_bytes = (spec->state_count/64 + 1)
 	    * sizeof(live[0]);
 
@@ -249,14 +256,11 @@ dfa_spec_check_liveness(const struct dfa_spec *spec,
 		return true;
 	}
 
-	if (live == NULL) {
-		live = malloc(live_bytes);
-		if (live == NULL) {
-			goto cleanup;
-		}
-		allocated_live = true;
+	reached = malloc(live_bytes);
+	if (reached == NULL) {
+		goto cleanup;
 	}
-	memset(live, 0x00, live_bytes);
+	memset(reached, 0x00, live_bytes);
 
 	q = queue_new(NULL, spec->state_count);
 	if (q == NULL) {
@@ -265,11 +269,12 @@ dfa_spec_check_liveness(const struct dfa_spec *spec,
 
 	size_t count = 0;
 
-	/* enqueue all states reachable from the start */
-	if (!enqueue_reachable(spec, q, live, spec->start)) {
+	/* enqueue all states reachable from the start,
+	 * using reached to avoid redundant enqueueing */
+	if (!enqueue_reachable(spec, q, reached, spec->start)) {
 		goto cleanup;
 	}
-	memset(live, 0x00, live_bytes);
+	memset(reached, 0x00, live_bytes);
 
 	/* A state reaches an end if it's an end, or one of its
 	 * edges transitively reaches an end. Calculate via fixpoint. */
@@ -281,19 +286,27 @@ dfa_spec_check_liveness(const struct dfa_spec *spec,
 			if (!s->used) { continue; }
 
 			if (s->end) {
-				if (!BITSET_CHECK(live, s_i)) {
+				if (!BITSET_CHECK(reached, s_i)) {
 					changed = true;
-					BITSET_SET(live, s_i);
+					if (LOG_LIVENESS) {
+						fprintf(stderr,
+						    "dfa_spec_check_liveness: end: %ld\n", s_i);
+					}
+					BITSET_SET(reached, s_i);
 				}
 				continue;
 			}
 
 			for (size_t i = 0; i < s->edge_count; i++) {
 				const fsm_state_t to = s->edges[i].state;
-				if (BITSET_CHECK(live, to)) {
-					if (!BITSET_CHECK(live, s_i)) {
+				if (BITSET_CHECK(reached, to)) {
+					if (!BITSET_CHECK(reached, s_i)) {
 						changed = true;
-						BITSET_SET(live, s_i);
+						BITSET_SET(reached, s_i);
+						if (LOG_LIVENESS) {
+							fprintf(stderr,
+							    "dfa_spec_check_liveness: %ld --...--> end\n", s_i);
+						}
 					}
 				}
 			}
@@ -304,9 +317,21 @@ dfa_spec_check_liveness(const struct dfa_spec *spec,
 	 * end state. */
 	fsm_state_t s;
 	while (queue_pop(q, &s)) {
-		if (BITSET_CHECK(live, s)) {
+		if (BITSET_CHECK(reached, s)) {
+			if (LOG_LIVENESS) {
+				fprintf(stderr,
+				    "dfa_spec_check_liveness: live: %d\n", s);
+			}
+			if (live != NULL) {
+				BITSET_SET(live, s);
+			}
 			count++;
 		}
+	}
+
+	if (LOG_LIVENESS) {
+		fprintf(stderr, "dfa_spec_check_liveness: live_count: %zu\n",
+			count);
 	}
 
 	if (live_count != NULL) {
@@ -317,9 +342,7 @@ dfa_spec_check_liveness(const struct dfa_spec *spec,
 
 cleanup:
 	if (q != NULL) { queue_free(q); }
-	if (allocated_live && live != NULL) {
-		free(live);
-	}
+	if (reached != NULL) { free(reached); }
 
 	return res;
 }
