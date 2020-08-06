@@ -21,6 +21,8 @@
 #define DEF_EDGES_CEIL 8
 #define DEF_ENDS_CEIL 8
 
+#define LOG_TRIM 0
+
 struct edge {
 	fsm_state_t from;
 	fsm_state_t to;
@@ -82,6 +84,10 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 		goto cleanup;
 	}
 
+	if (LOG_TRIM > 0) {
+		fprintf(stderr, "mark_states: mode %d\n", mode);
+	}
+
 	if (mode == FSM_TRIM_START_AND_END_REACHABLE) {
 		edges = f_malloc(fsm->opt->alloc,
 		    edge_ceil * sizeof(edges[0]));
@@ -111,6 +117,10 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 		struct edge_iter edge_iter;
 		struct state_iter state_iter;
 
+		if (LOG_TRIM > 0) {
+			fprintf(stderr, "mark_states: popped %d\n", s_id);
+		}
+
 		assert(s_id < state_count);
 		assert(fsm->states[s_id].visited);
 
@@ -121,6 +131,10 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 					goto cleanup;
 				}
 			}
+			if (LOG_TRIM > 0) {
+				fprintf(stderr, "mark_states: ends[%ld] = %d\n",
+				    end_count, s_id);
+			}
 			ends[end_count] = s_id;
 			end_count++;
 		}
@@ -128,6 +142,11 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 		for (state_set_reset(fsm->states[s_id].epsilons, &state_iter);
 		     state_set_next(&state_iter, &next); ) {
 			assert(next < state_count);
+			if (LOG_TRIM > 0) {
+				fprintf(stderr, "mark_states: epsilon to %d, visited? %d\n",
+				    next, fsm->states[next].visited);
+			}
+
 			if (!fsm->states[next].visited) {
 				if (!queue_push(q, next)) {
 					goto cleanup;
@@ -148,6 +167,11 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 		for (edge_set_reset(fsm->states[s_id].edges, &edge_iter);
 		     edge_set_next(&edge_iter, &e); ) {
 			next = e.state;
+			if (LOG_TRIM > 0) {
+				fprintf(stderr, "mark_states: edge: 0x%x to %d, visited? %d\n",
+				    e.symbol, next, fsm->states[next].visited);
+			}
+
 			if (!fsm->states[next].visited) {
 				if (!queue_push(q, next)) {
 					goto cleanup;
@@ -164,6 +188,10 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 				}
 			}
 		}
+	}
+
+	if (LOG_TRIM > 0) {
+		fprintf(stderr, "mark_states: done tracking from start\n");
 	}
 
 	/* Only tracking reachability from start, so we're done. */
@@ -191,6 +219,12 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 		for (e_i = 0; e_i < end_count; e_i++) {
 			const fsm_state_t end_id = ends[e_i];
 			assert(end_id < state_count);
+
+			if (LOG_TRIM > 0) {
+				fprintf(stderr, "mark_states: seeding with end %d, marking visited\n",
+				    end_id);
+			}
+
 			if (!queue_push(q, end_id)) {
 				goto cleanup;
 			}
@@ -234,10 +268,22 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 			if (i > 0 && offsets[i] == 0) {
 				offsets[i] = offsets[i - 1];
 			}
+
+			if (LOG_TRIM > 1) {
+				fprintf(stderr, "mark_states: offsets[%ld]: %ld\n",
+				    i, offsets[i]);
+			}
 		}
 		assert(offsets[max_to] == edge_count);
 	}
 
+	if (LOG_TRIM > 1) {
+		size_t i;
+		for (i = 0; i < edge_count; i++) {
+		fprintf(stderr, "mark_states: edges[%ld]: %d -> %d\n",
+		    i, edges[i].from, edges[i].to);
+		}
+	}
 
 	/* Walk breadth-first from ends and mark reachable states. */
 	while (queue_pop(q, &s_id)) {
@@ -246,9 +292,21 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 
 		base = (s_id == 0 ? 0 : offsets[s_id - 1]);
 		limit = offsets[s_id];
+
+		if (LOG_TRIM > 0) {
+			fprintf(stderr, "mark_states: popped %d, offsets [%ld, %ld]\n",
+			    s_id, base, limit);
+		}
+
 		for (e_i = base; e_i < limit; e_i++) {
 			const fsm_state_t from = edges[e_i].from;
 			assert(from < state_count);
+
+			if (LOG_TRIM > 0) {
+				fprintf(stderr, "mark_states: edges[%ld]: %d, visited? %d\n",
+				    e_i, from, fsm->states[from].visited);
+			}
+
 			if (!fsm->states[from].visited) {
 				fsm->states[from].visited = 1;
 				if (!queue_push(q, from)) {
@@ -257,7 +315,6 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 			}
 		}
 	}
-
 
 	/* All start- and end-reachable states are now marked. */
 	res = 1;
@@ -302,6 +359,11 @@ save_edge(const struct fsm_alloc *alloc,
 		*edges = nedges;
 	}
 
+	if (LOG_TRIM > 0) {
+		fprintf(stderr, "save_edge: %d -> %d\n",
+		    from, to);
+	}
+
 	e = &(*edges)[*count];
 	e->from = from;
 	e->to = to;
@@ -323,6 +385,14 @@ sweep_states(struct fsm *fsm)
 	size_t swept;
 
 	assert(fsm != NULL);
+
+	if (LOG_TRIM > 1) {
+		size_t i;
+		for (i = 0; i < fsm->statecount; i++) {
+			fprintf(stderr, "sweep_states: state[%ld]: visited? %d\n",
+			    i, fsm->states[i].visited);
+		}
+	}
 
 	if (!fsm_compact_states(fsm, marks_filter_cb, fsm, &swept)) {
 		return -1;
@@ -352,6 +422,9 @@ fsm_trim(struct fsm *fsm, enum fsm_trim_mode mode)
 	 * the number of states swept.
 	 */
 	ret = sweep_states(fsm);
+	if (LOG_TRIM > 0) {
+		fprintf(stderr, "sweep_states: returned %ld\n", ret);
+	}
 
 	/* Clear the marks on remaining states, since .visited is
 	 * only meaningful within a single operation. */
