@@ -1,5 +1,7 @@
 #include "type_info_dfa.h"
 
+#include <adt/queue.h>
+
 static enum theft_alloc_res
 dfa_alloc(struct theft *t, void *unused_env, void **output)
 {
@@ -204,4 +206,120 @@ dfa_spec_build_fsm(const struct dfa_spec *spec)
 cleanup:
 	if (fsm != NULL) { fsm_free(fsm); }
 	return NULL;
+}
+
+static bool
+enqueue_reachable(const struct dfa_spec *spec, struct queue *q,
+    uint64_t *seen, fsm_state_t state)
+{
+	if (BITSET_CHECK(seen, state)) { return true; }
+	if (!queue_push(q, state)) { return false; }
+	BITSET_SET(seen, state);
+
+	const struct dfa_spec_state *s = &spec->states[state];
+	assert(s->used);
+
+	for (size_t i = 0; i < s->edge_count; i++) {
+		const fsm_state_t to = s->edges[i].state;
+		if (BITSET_CHECK(seen, to)) { continue; }
+		if (!enqueue_reachable(spec, q, seen, to)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool
+dfa_spec_check_liveness(const struct dfa_spec *spec,
+    uint64_t *live, size_t *live_count)
+{
+	bool res = false;
+
+	bool allocated_live = false;
+	struct queue *q = NULL;
+
+	const size_t live_bytes = (spec->state_count/64 + 1)
+	    * sizeof(live[0]);
+
+	if (spec->state_count == 0) {
+		if (live_count != NULL) {
+			*live_count = 0;
+		}
+		return true;
+	}
+
+	if (live == NULL) {
+		live = malloc(live_bytes);
+		if (live == NULL) {
+			goto cleanup;
+		}
+		allocated_live = true;
+	}
+	memset(live, 0x00, live_bytes);
+
+	q = queue_new(NULL, spec->state_count);
+	if (q == NULL) {
+		goto cleanup;
+	}
+
+	size_t count = 0;
+
+	/* enqueue all states reachable from the start */
+	if (!enqueue_reachable(spec, q, live, spec->start)) {
+		goto cleanup;
+	}
+	memset(live, 0x00, live_bytes);
+
+	/* A state reaches an end if it's an end, or one of its
+	 * edges transitively reaches an end. Calculate via fixpoint. */
+	bool changed;
+	do {
+		changed = false;
+		for (size_t s_i = 0; s_i < spec->state_count; s_i++) {
+			const struct dfa_spec_state *s = &spec->states[s_i];
+			if (!s->used) { continue; }
+
+			if (s->end) {
+				if (!BITSET_CHECK(live, s_i)) {
+					changed = true;
+					BITSET_SET(live, s_i);
+				}
+				continue;
+			}
+
+			for (size_t i = 0; i < s->edge_count; i++) {
+				const fsm_state_t to = s->edges[i].state;
+				if (BITSET_CHECK(live, to)) {
+					if (!BITSET_CHECK(live, s_i)) {
+						changed = true;
+						BITSET_SET(live, s_i);
+					}
+				}
+			}
+		}
+	} while (changed);
+
+	/* A state is live if it's is on a path between the start and an
+	 * end state. */
+	fsm_state_t s;
+	while (queue_pop(q, &s)) {
+		if (BITSET_CHECK(live, s)) {
+			count++;
+		}
+	}
+
+	if (live_count != NULL) {
+		*live_count = count;
+	}
+
+	res = true;
+
+cleanup:
+	if (q != NULL) { queue_free(q); }
+	if (allocated_live && live != NULL) {
+		free(live);
+	}
+
+	return res;
 }

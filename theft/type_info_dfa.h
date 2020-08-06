@@ -41,4 +41,19 @@ extern const struct theft_type_info type_info_dfa;
 struct fsm *
 dfa_spec_build_fsm(const struct dfa_spec *spec);
 
+/* Check which states are live, i.e., reachable from
+ * the start state and have a path to at least one end
+ * state. This corresponds to trimming -- fsm_trim
+ * removes states that are not live.
+ *
+ * This uses a simple approach and is intended for
+ * testing, rather than performance.
+ *
+ * Returns true on success, or false on alloc failure.
+ * If live is non-NULL, set bit flags for reachable states.
+ * If live_count is non-NULL, write into it. */
+bool
+dfa_spec_check_liveness(const struct dfa_spec *spec,
+    uint64_t *live, size_t *live_count);
+
 #endif

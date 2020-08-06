@@ -12,8 +12,8 @@ check_minimise_matches_naive_fixpoint_algorithm(const struct dfa_spec *spec);
 static enum theft_trial_res
 prop_minimise_matches_naive_fixpoint_algorithm(struct theft *t, void *arg1);
 
-static size_t
-naive_minimised_count(const struct dfa_spec *spec);
+static bool
+naive_minimised_count(const struct dfa_spec *spec, size_t *count);
 
 static bool
 test_dfa_minimise(theft_seed seed,
