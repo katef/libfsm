@@ -53,6 +53,12 @@ struct edge_set {
 	size_t ceil;
 };
 
+struct edge_set *
+edge_set_new(void)
+{
+	return NULL;
+}
+
 static struct edge_set *
 edge_set_create(const struct fsm_alloc *a)
 {
@@ -201,19 +207,47 @@ edge_set_add(struct edge_set **setp, const struct fsm_alloc *alloc,
 	{
 		const size_t mask = set->ceil - 1;
 		const unsigned h = PHI32 * symbol;
+
+		int has_tombstone_candidate = 0;
+		size_t tc_pos;
+
 		size_t i;
 		for (i = 0; i < set->ceil; i++) {
 			const size_t b_i = (h + i) & mask;
 			const fsm_state_t bs = set->b[b_i].state;
-			if (bs != BUCKET_UNUSED && bs != BUCKET_TOMBSTONE) {
+
+			/* Continue past a tombstone, but note where
+			 * it was -- as long as the value being added
+			 * isn't already present later, we can add it there.
+			 * This fills the first tombstone, if there are more
+			 * than one, because search will find it sooner. */
+			if (bs == BUCKET_TOMBSTONE) {
+				if (!has_tombstone_candidate) {
+					has_tombstone_candidate = 1;
+					tc_pos = b_i;
+				}
+				continue;
+			} else if (bs == BUCKET_UNUSED) {
+				const size_t pos = (has_tombstone_candidate
+				    ? tc_pos : b_i);
+				set->b[pos].state = state;
+				set->b[pos].symbol = symbol;
+				set->count++;
+
+				assert(edge_set_contains(set, symbol));
+				return 1;
+			} else if (bs == state && set->b[b_i].symbol == symbol) {
+				return 1; /* already present */
+			} else {
+				/* ignore other edges */
 				continue;
 			}
-			set->b[b_i].state = state;
-			set->b[b_i].symbol = symbol;
+		}
+
+		if (has_tombstone_candidate) {
+			set->b[tc_pos].state = state;
+			set->b[tc_pos].symbol = symbol;
 			set->count++;
-
-			assert(edge_set_contains(set, symbol));
-
 			return 1;
 		}
 
@@ -386,7 +420,7 @@ edge_set_copy(struct edge_set **dst, const struct fsm_alloc *alloc,
 		return 1;
 	}
 
-	for (edge_set_reset((void *) src, &jt); edge_set_next(&jt, &e); ) {
+	for (edge_set_reset(src, &jt); edge_set_next(&jt, &e); ) {
 		/* TODO: bulk add */
 		if (!edge_set_add(dst, alloc, e.symbol, e.state)) {
 			return 0;
@@ -423,14 +457,14 @@ edge_set_remove(struct edge_set **setp, unsigned char symbol)
 			const fsm_state_t bs = set->b[b_i].state;
 			if (bs == BUCKET_UNUSED) {
 				break; /* not found */
-			} else if (set->b[b_i].symbol == symbol) {
+			} else if (set->b[b_i].symbol == symbol
+			    && set->b[b_i].state != BUCKET_TOMBSTONE) {
 				/* Set to a distinct marker for a deleted
 				 * entry; there may be entries past this
 				 * due to collisions that still need to
 				 * be checked. */
 				set->b[b_i].state = BUCKET_TOMBSTONE;
 				set->count--;
-				break;
 			}
 		}
 	}
@@ -460,18 +494,18 @@ edge_set_remove_state(struct edge_set **setp, fsm_state_t state)
 		return;
 	}
 
+	/* Remove all edges with that state */
 	for (i = 0; i < set->ceil; i++) {
 		if (set->b[i].state == state) {
 			set->b[i].state = BUCKET_TOMBSTONE;
 			set->count--;
-			break;
 		}
 	}
 }
 
 void
 edge_set_compact(struct edge_set **setp,
-    fsm_state_remap_fun *remap, void *opaque)
+    fsm_state_remap_fun *remap, const void *opaque)
 {
 	struct edge_set *set;
 	size_t i;
@@ -482,6 +516,7 @@ edge_set_compact(struct edge_set **setp,
 		const unsigned char symbol = SINGLETON_DECODE_SYMBOL(*setp);
 		const fsm_state_t s = SINGLETON_DECODE_STATE(*setp);
 		const fsm_state_t new_id = remap(s, opaque);
+
 		if (new_id == FSM_STATE_REMAP_NO_STATE) {
 			*setp = NULL;
 		} else {
@@ -518,7 +553,7 @@ edge_set_compact(struct edge_set **setp,
 }
 
 void
-edge_set_reset(struct edge_set *set, struct edge_iter *it)
+edge_set_reset(const struct edge_set *set, struct edge_iter *it)
 {
 	it->i = 0;
 	it->set = set;
@@ -632,6 +667,31 @@ edge_set_replace_state(struct edge_set **setp, fsm_state_t old, fsm_state_t new)
 			set->b[i].state = new;
 		}
 	}
+
+	/* If there is now more than one edge <label, new> for
+	 * any label, then the later ones need to be removed and
+	 * the count adjusted. */
+	{
+		uint64_t seen[4];
+		memset(seen, 0x00, sizeof(seen));
+		for (i = 0; i < set->ceil; i++) {
+			const fsm_state_t bs = set->b[i].state;
+			unsigned char symbol;
+			uint64_t bit;
+			if (bs != new) {
+				continue;
+			}
+			symbol = set->b[i].symbol;
+			bit = (uint64_t)1 << (symbol & 63);
+			if (seen[symbol/64] & bit) {
+				/* remove duplicate, update count */
+				set->b[i].state = BUCKET_TOMBSTONE;
+				set->count--;
+			} else {
+				seen[symbol/64] |= bit;
+			}
+		}
+	}
 }
 
 int
@@ -722,6 +782,8 @@ advance_symbol(struct edge_ordered_iter *eoi)
 	}
 
 	eoi->pos = EOI_DONE;
+	eoi->steps = 0;
+
 	return 0;
 }
 
@@ -748,8 +810,9 @@ edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
 		eoi->pos &= mask;
 		bs = set->b[eoi->pos].state;
 		symbol = set->b[eoi->pos].symbol;
+		eoi->steps++;
 
-		if (bs == BUCKET_UNUSED) {
+		if (bs == BUCKET_UNUSED || eoi->steps == set->ceil) {
 			size_t i;
 			unsigned h;
 			/* after current symbol's entries -- check next */
@@ -761,6 +824,7 @@ edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
 			for (i = 0; i < set->ceil; i++) {
 				const size_t b_i = (h + i) & mask;
 				bs = set->b[b_i].state;
+
 				if (bs == BUCKET_TOMBSTONE) {
 					continue; /* search past deleted */
 				} else if (bs == BUCKET_UNUSED) {
@@ -775,6 +839,7 @@ edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
 
 					/* yield next match and then advance */
 					eoi->pos = b_i;
+					eoi->steps = 0;
 					memcpy(e, &set->b[eoi->pos], sizeof(*e));
 					eoi->pos++;
 					return 1;

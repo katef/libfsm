@@ -110,12 +110,6 @@ delta_msec(const struct timeval *pre, const struct timeval *post)
 size_t *
 gen_permutation_vector(size_t length, uint32_t seed)
 {
-	static const unsigned long primes[] = {
-		11, 101, 1009, 10007,
-		100003, 1000003, 10000019, 100000007, 1000000007,
-		1538461, 1865471, 17471, 2147483647 /* 2**32 - 1 */
-	};
-
 	size_t *res;
 	uint32_t mod;
 	uint32_t ceil;
@@ -143,7 +137,7 @@ gen_permutation_vector(size_t length, uint32_t seed)
 
 	state = seed & ((1LLU << 29) - 1);
 	a = (4 * state) + 1;
-	c = primes[(state * 16451) % sizeof primes / sizeof *primes];
+	c = 2147483647;		/* (2 ** 31) - 1 */
 
 	offset = 0;
 	mask = mod - 1;

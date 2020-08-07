@@ -15,8 +15,8 @@ add_literal(struct fsm *fsm, const uint8_t *string, size_t size, intptr_t id);
 static bool
 check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, intptr_t id);
 static void
-carryopaque_cb(const fsm_state_t *set, size_t count,
-	struct fsm *fsm, fsm_state_t state);
+carryopaque_cb(struct fsm *src_fsm, const fsm_state_t *set, size_t count,
+	struct fsm *dst_fsm, fsm_state_t state);
 
 static const struct fsm_options opt = {
 	.anonymous_states  = 1,
@@ -189,8 +189,8 @@ check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, intptr_t id)
 }
 
 static void
-carryopaque_cb(const fsm_state_t *set, size_t count,
-	struct fsm *fsm, fsm_state_t state)
+carryopaque_cb(struct fsm *src_fsm, const fsm_state_t *set, size_t count,
+	struct fsm *dst_fsm, fsm_state_t state)
 {
 	const intptr_t NONE = -1;
 	intptr_t first_id;
@@ -198,20 +198,22 @@ carryopaque_cb(const fsm_state_t *set, size_t count,
 	intptr_t other;
 	size_t i;
 
-	if (!fsm_isend(fsm, state)) {
+	(void)src_fsm;
+
+	if (!fsm_isend(dst_fsm, state)) {
 		return;
 	}
 
-	assert(fsm_getopaque(fsm, state) == NULL);
+	assert(fsm_getopaque(dst_fsm, state) == NULL);
 
 	/* Get the first id */
 	first_id = NONE;
 
 	for (first_i = 0; first_i < count; first_i++) {
 		/* Get first udata */
-		if (fsm_isend(fsm, set[first_i])) {
-			first_id = (intptr_t) fsm_getopaque(fsm, set[first_i]);
-			fsm_setopaque(fsm, state, (void *) first_id);
+		if (fsm_isend(dst_fsm, set[first_i])) {
+			first_id = (intptr_t) fsm_getopaque(dst_fsm, set[first_i]);
+			fsm_setopaque(dst_fsm, state, (void *) first_id);
 			break;
 		}
 	}
@@ -222,18 +224,18 @@ carryopaque_cb(const fsm_state_t *set, size_t count,
 			continue;
 		}
 
-		if (!fsm_isend(fsm, set[i])) {
+		if (!fsm_isend(dst_fsm, set[i])) {
 			continue;
 		}
 
-		assert(fsm_getopaque(fsm, set[i]) != NULL);
-		other = (intptr_t) fsm_getopaque(fsm, set[i]);
+		assert(fsm_getopaque(dst_fsm, set[i]) != NULL);
+		other = (intptr_t) fsm_getopaque(dst_fsm, set[i]);
 	}
 
 	if (first_id != NONE && other == NONE) {
-		fsm_setopaque(fsm, state, (void *) first_id);
+		fsm_setopaque(dst_fsm, state, (void *) first_id);
 	} else if (first_id == NONE && other != NONE) {
-		fsm_setopaque(fsm, state, (void *) other);
+		fsm_setopaque(dst_fsm, state, (void *) other);
 	} else if (first_id != other) {
 		printf("CONFLICT\n");
 	}

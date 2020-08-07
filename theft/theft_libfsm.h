@@ -52,9 +52,18 @@ void hexdump(FILE *f, const uint8_t *buf, size_t size);
 
 typedef bool test_fun(theft_seed);
 typedef bool test_fun1(theft_seed, uintptr_t arg);
+typedef bool test_fun2(theft_seed,
+    uintptr_t arg0, uintptr_t arg1);
+typedef bool test_fun3(theft_seed,
+    uintptr_t arg0, uintptr_t arg1, uintptr_t arg2);
 
 void reg_test(const char *name, test_fun *test);
-void reg_test1(const char *name, test_fun1 *test, uintptr_t arg);
+void reg_test1(const char *name, test_fun1 *test,
+    uintptr_t arg);
+void reg_test2(const char *name, test_fun2 *test,
+    uintptr_t arg0, uintptr_t arg1);
+void reg_test3(const char *name, test_fun3 *test,
+    uintptr_t arg0, uintptr_t arg1, uintptr_t arg2);
 
 /* Register tests within a module. */
 void register_test_literals(void);
@@ -62,6 +71,8 @@ void register_test_re(void);
 void register_test_adt_priq(void);
 void register_test_adt_set(void);
 void register_test_nfa(void);
+void register_test_adt_edge_set(void);
+void register_test_trim(void);
 
 int test_get_verbosity(void);
 
@@ -117,3 +128,6 @@ wrap_re_comp(enum re_dialect dialect, const struct string_pair *pair,
 	} while(0)
 
 #endif
+
+#define BITSET_CHECK(SET, BIT) (SET[BIT/64] & ((uint64_t)1 << (BIT & 63)))
+#define BITSET_SET(SET, BIT) (SET[BIT/64] |= ((uint64_t)1 << (BIT & 63)))

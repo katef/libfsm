@@ -111,7 +111,7 @@ fsm_removestate(struct fsm *fsm, fsm_state_t state);
  * depends on the caller. */
 #define FSM_STATE_REMAP_NO_STATE ((fsm_state_t)-1)
 typedef fsm_state_t
-fsm_state_remap_fun(fsm_state_t id, void *opaque);
+fsm_state_remap_fun(fsm_state_t id, const void *opaque);
 
 /* Use the state passed in via opaque to determine whether
  * to keep state[id]. */
