@@ -29,7 +29,7 @@ struct mapping_closure {
 };
 
 static fsm_state_t
-mapping_cb(fsm_state_t id, void *opaque)
+mapping_cb(fsm_state_t id, const void *opaque)
 {
 	const struct mapping_closure *closure = opaque;
 	assert(id < closure->count);

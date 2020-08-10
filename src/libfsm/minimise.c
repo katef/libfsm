@@ -193,7 +193,7 @@ fsm_minimise(struct fsm *fsm)
 	/* This should only be called with a DFA. */
 	assert(fsm_all(fsm, fsm_isdfa));
 
-	if (!fsm_trim(fsm)) {
+	if (fsm_trim(fsm, FSM_TRIM_START_AND_END_REACHABLE) < 0) {
 		return 0;
 	}
 
@@ -280,7 +280,7 @@ cleanup:
 	/* This should only be called with a DFA. */
 	assert(fsm_all(fsm, fsm_isdfa));
 
-	if (!fsm_trim(fsm)) {
+	if (fsm_trim(fsm, FSM_TRIM_START_AND_END_REACHABLE) < 0) {
 		return 0;
 	}
 
@@ -1134,6 +1134,7 @@ min_exmoore(const struct fsm *fsm,
 						exmoore_update_ec(&env, ec_src);
 						exmoore_update_ec(&env, nsrc);
 
+						assert(done_ec_offset > 0);
 						done_ec_offset--;
 
 						/* The src EC just got swapped with another,
@@ -1146,7 +1147,6 @@ min_exmoore(const struct fsm *fsm,
 					changed = 1;
 					ec_count++;
 
-					assert(done_ec_offset >= 0);
 					assert(done_ec_offset <= ec_count);
 				}
 
