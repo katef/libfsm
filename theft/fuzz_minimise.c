@@ -85,7 +85,6 @@ check_minimise_matches_naive_fixpoint_algorithm(const struct dfa_spec *spec)
 	 * according to a naive fixpoint-based minimisation algorithm. */
 
 	if (spec->state_count == 0) {
-		fprintf(stderr, "-- skip, empty\n");
 		return THEFT_TRIAL_SKIP;
 	}
 
@@ -115,7 +114,6 @@ check_minimise_matches_naive_fixpoint_algorithm(const struct dfa_spec *spec)
 	const size_t states_post_minimise = fsm_countstates(fsm);
 
 	if (states_post_minimise == 0) {
-		fprintf(stderr, "-- skip, empty (after trim)\n");
 		res = THEFT_TRIAL_SKIP;
 		goto cleanup;
 	}
@@ -314,13 +312,13 @@ naive_minimised_count_inner(const struct dfa_spec *spec, size_t *count)
 {
 	bool res = false;
 
-	/* Naive, fixpoint-based algorithm for calculating equivalent
-	 * states from pages 68-69 ("A minimization algorithm") of
+	/* Fixpoint-based algorithm for calculating equivalent states
+	 * in a DFA, from pages 68-69 ("A minimization algorithm") of
 	 * _Introduction to Automata Theory, Languages, and Computation_
-	 * by Hopcroft & Ullman. */
-
-	/* Allocate an NxN bit table, used to track which states have
-	 * not yet been proven indistinguishable.
+	 * by Hopcroft & Ullman.
+	 *
+	 * Allocate an NxN bit table, used to track which states have
+	 * been proven distinguishable.
 	 *
 	 * For two states A and B, only use the half of the table where
 	 * A <= B, to avoid redundantly comparing B with A. In other
@@ -329,7 +327,25 @@ naive_minimised_count_inner(const struct dfa_spec *spec, size_t *count)
 	 * An extra state is added to internally represent a complete
 	 * graph -- for any state that does not have a particular label
 	 * used elsewhere, treat it as if it has that label leading to
-	 * an extra dead state. */
+	 * an extra dead state, which is non-accepting and only has
+	 * edges leading to itself.
+	 *
+	 * To start, mark all pairs of states in the table where one
+	 * state is an end state and the other is not. This indicates
+	 * that they are distinguishable by their result. Then, using
+	 * the Myhill-Nerode theorem, mark all pairs of states where
+	 * following the same label leads each to a pair of states that
+	 * have already been marked (and are thus transitively
+	 * distinguishable). Repeat until no furhter progress can be
+	 * made. Any pairs of states still unmarked can be combined into
+	 * a single state, because no possible input leads them to
+	 * observably distinguishable results.
+	 *
+	 * This method scales poorly as the number of states increases
+	 * (since it's comparing everything against everything else over
+	 * and over, for every label present), but it's straightforward
+	 * to implement and to check its results by hand, so it works
+	 * well as a test oracle. */
 	uint64_t *table = NULL;
 	const fsm_state_t dead_state = spec->state_count;
 	const size_t table_states = (spec->state_count + 1 /* dead state */);
@@ -743,20 +759,6 @@ dfa_min_reg_m0(theft_seed seed)
 	RUN_SPEC(states, 0);
 }
 
-
-/* -- fail: state count after fsm_minimise: exp 2, got 3
- *
- *  -- Counter-Example: test_dfa_minimise
- *     Trial 7, Seed 0x6bcf5d9a4f4c19f8
- *     Argument 0:
- * === DFA#0x5594531d45a0:
- *  -- state[0], 2 edges, start:
- *     -- 0: 0x1 -> 1
- *     -- 1: 0x0 -> 0
- *  -- state[1], 1 edge, end:
- *     -- 0: 0x0 -> 0 */
-
-
 void
 register_test_minimise(void)
 {
@@ -770,7 +772,19 @@ register_test_minimise(void)
 
 	reg_test("dfa_minimise_regression_m0", dfa_min_reg_m0);
 
-
-	reg_test3("dfa_minimise", test_dfa_minimise,
+	/* state, symbol, end */
+	reg_test3("dfa_minimise_0_0_0", test_dfa_minimise,
 	    0, 0, 0);
+	reg_test3("dfa_minimise_8_2_2", test_dfa_minimise,
+	    8, 2, 2);
+	reg_test3("dfa_minimise_8_2_4", test_dfa_minimise,
+	    8, 2, 4);
+	reg_test3("dfa_minimise_8_3_2", test_dfa_minimise,
+	    8, 3, 2);
+	reg_test3("dfa_minimise_8_3_4", test_dfa_minimise,
+	    8, 3, 4);
+	reg_test3("dfa_minimise_9_5_2", test_dfa_minimise,
+	    9, 5, 2);
+	reg_test3("dfa_minimise_9_5_4", test_dfa_minimise,
+	    9, 5, 4);
 }

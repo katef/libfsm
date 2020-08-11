@@ -17,6 +17,10 @@ dfa_alloc(struct theft *t, void *unused_env, void **output)
 	const uint8_t end_bits = (env->end_bits
 	    ? env->end_bits : DEF_END_BITS);
 
+	assert(state_ceil_bits > 0);
+	assert(symbol_ceil_bits <= 8);
+	assert(end_bits > 0);
+
 	if (end_bits >= 64) {
 		return THEFT_ALLOC_ERROR;
 	}
