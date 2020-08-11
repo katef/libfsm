@@ -23,6 +23,8 @@
 
 #include "internal.h"
 
+#define LOG_MAPPING 0
+
 struct mapping_closure {
 	size_t count;
 	const fsm_state_t *mapping;
@@ -44,6 +46,7 @@ fsm_consolidate(struct fsm *src,
 	fsm_state_t src_i;
 	uint64_t *seen = NULL;
 	struct mapping_closure closure;
+	size_t max_used = 0;
 
 	assert(src != NULL);
 	assert(src->opt != NULL);
@@ -53,10 +56,20 @@ fsm_consolidate(struct fsm *src,
 		goto cleanup;
 	}
 
-	if (!fsm_addstate_bulk(dst, mapping_count)) {
+	for (src_i = 0; src_i < mapping_count; src_i++) {
+#if LOG_MAPPING
+		fprintf(stderr, "consolidate_mapping[%u]: %u\n",
+		    src_i, mapping[src_i]);
+#endif
+		if (mapping[src_i] >= max_used) {
+			max_used = mapping[src_i];
+		}
+	}
+
+	if (!fsm_addstate_bulk(dst, max_used + 1)) {
 		goto cleanup;
 	}
-	assert(dst->statecount == mapping_count);
+	assert(dst->statecount == max_used + 1);
 
 	seen = f_calloc(src->opt->alloc,
 	    mapping_count/64 + 1, sizeof(seen[0]));
@@ -74,11 +87,6 @@ fsm_consolidate(struct fsm *src,
 
 	closure.count = mapping_count;
 	closure.mapping = mapping;
-
-	for (src_i = 0; src_i < mapping_count; src_i++) {
-		fprintf(stderr, "mapping[%u]: %u\n",
-		    src_i, mapping[src_i]);
-	}
 
 	for (src_i = 0; src_i < mapping_count; src_i++) {
 		const fsm_state_t dst_i = mapping[src_i];
