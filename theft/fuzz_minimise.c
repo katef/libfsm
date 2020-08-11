@@ -7,6 +7,7 @@
 #include "type_info_dfa.h"
 
 #define LOG_NAIVE_MIN 0
+#define LOG_SPEC 0
 
 static enum theft_trial_res
 check_minimise_matches_naive_fixpoint_algorithm(const struct dfa_spec *spec);
@@ -173,6 +174,9 @@ static fsm_state_t
 naive_delta(const struct dfa_spec *spec,
     fsm_state_t from, unsigned char label)
 {
+	if (from == spec->state_count) {
+		goto dead_state;
+	}
 	assert(from < spec->state_count);
 
 	const struct dfa_spec_state *s = &spec->states[from];
@@ -184,6 +188,7 @@ naive_delta(const struct dfa_spec *spec,
 		}
 	}
 
+dead_state:
 	return spec->state_count;	/* dead state */
 }
 
@@ -282,8 +287,27 @@ naive_minimised_count(const struct dfa_spec *spec, size_t *count)
 
 	free(nspec->states);
 	free(nspec);
+
 	return res;
 }
+
+#if LOG_SPEC
+static void
+dump_spec(const struct dfa_spec *spec)
+{
+	fprintf(stderr, "-- dump_spec\n");
+	for (size_t s_i = 0; s_i < spec->state_count; s_i++) {
+		const struct dfa_spec_state *s = &spec->states[s_i];
+		assert(s->used);
+		fprintf(stderr, "  -- s_i %zu\n", s_i);
+
+		for (size_t e_i = 0; e_i < s->edge_count; e_i++) {
+			fprintf(stderr, "    -- e_i %zu, [label 0x%x, to %d]\n",
+			    e_i, s->edges[e_i].symbol, s->edges[e_i].state);
+		}
+	}
+}
+#endif
 
 static bool
 naive_minimised_count_inner(const struct dfa_spec *spec, size_t *count)
@@ -314,6 +338,10 @@ naive_minimised_count_inner(const struct dfa_spec *spec, size_t *count)
 	size_t label_count;
 	unsigned char *labels = NULL;
 	fsm_state_t *mapping = NULL;
+
+#if LOG_SPEC
+	dump_spec(spec);
+#endif
 
 	table = calloc(row_words * table_states, sizeof(table[0]));
 	if (table == NULL) { goto cleanup; }
@@ -393,7 +421,7 @@ naive_minimised_count_inner(const struct dfa_spec *spec, size_t *count)
 			fprintf(stderr, "====\n");
 		}
 
-		for (size_t i = 0; i < spec->state_count; i++) {
+		for (size_t i = 0; i < table_states; i++) {
 			for (size_t j = 0; j < i; j++) {
 				if (LOG_NAIVE_MIN > 0) {
 					fprintf(stderr, "naive: fix [%ld,%ld]: %d\n",
@@ -686,6 +714,36 @@ dfa_min_reg5(theft_seed seed)
 	RUN_SPEC(states, 0);
 }
 
+static bool
+dfa_min_reg_m0(theft_seed seed)
+{
+	(void)seed;
+	struct dfa_spec_state states[] = {
+		[0] = { .used = true,
+			.edge_count = 1, .edges = {
+				{ .symbol = 0x1, .state = 1 },
+			},
+		},
+		[1] = { .used = true,
+			.edge_count = 1, .edges = {
+				{ .symbol = 0x0, .state = 2 },
+			},
+		},
+		[2] = { .used = true,
+			.edge_count = 1, .edges = {
+				{ .symbol = 0x0, .state = 3 },
+			},
+		},
+		[3] = { .used = true, .end = true,
+			.edge_count = 1, .edges = {
+				{ .symbol = 0x0, .state = 0 },
+			},
+		},
+	};
+	RUN_SPEC(states, 0);
+}
+
+
 /* -- fail: state count after fsm_minimise: exp 2, got 3
  *
  *  -- Counter-Example: test_dfa_minimise
@@ -709,6 +767,9 @@ register_test_minimise(void)
 	reg_test("dfa_minimise_regression3", dfa_min_reg3);
 	reg_test("dfa_minimise_regression4", dfa_min_reg4);
 	reg_test("dfa_minimise_regression5", dfa_min_reg5);
+
+	reg_test("dfa_minimise_regression_m0", dfa_min_reg_m0);
+
 
 	reg_test3("dfa_minimise", test_dfa_minimise,
 	    0, 0, 0);
