@@ -730,6 +730,28 @@ dfa_min_reg5(theft_seed seed)
 	RUN_SPEC(states, 0);
 }
 
+/* The minimal example of a DFA where our implementation of Brzozowski's
+ * minimisation _added_ states. Found by the property tests. */
+static bool
+dfa_min_reg_brz(theft_seed seed)
+{
+	(void)seed;
+	struct dfa_spec_state states[] = {
+		[0] = { .used = true,
+			.edge_count = 2, .edges = {
+				{ .symbol = 0x0, .state = 0 },
+				{ .symbol = 0x1, .state = 1 },
+			},
+		},
+		[1] = { .used = true, .end = true,
+			.edge_count = 1, .edges = {
+				{ .symbol = 0x0, .state = 0 },
+			},
+		},
+	};
+	RUN_SPEC(states, 0);
+}
+
 static bool
 dfa_min_reg_m0(theft_seed seed)
 {
@@ -769,6 +791,8 @@ register_test_minimise(void)
 	reg_test("dfa_minimise_regression3", dfa_min_reg3);
 	reg_test("dfa_minimise_regression4", dfa_min_reg4);
 	reg_test("dfa_minimise_regression5", dfa_min_reg5);
+
+	reg_test("dfa_minimise_regression_brz", dfa_min_reg_brz);
 
 	reg_test("dfa_minimise_regression_m0", dfa_min_reg_m0);
 
