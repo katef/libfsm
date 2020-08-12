@@ -163,6 +163,7 @@ print_name(const char *name)
 		{ "json",  fsm_print_json  },
 		{ "vmc",   fsm_print_vmc   },
 		{ "vmdot", fsm_print_vmdot },
+		{ "rust",  fsm_print_rust  },
 		{ "sh",    fsm_print_sh    },
 		{ "go",    fsm_print_go    },
 

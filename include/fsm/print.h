@@ -24,6 +24,7 @@ struct fsm;
  *  fsm_print_json   - JavaScript Object Notation
  *  fsm_print_vmc    - ISO C90 code, VM style
  *  fsm_print_vmdot  - Graphviz Dot format, showing VM opcodes
+ *  fsm_print_rust   - Rust code
  *  fsm_print_sh     - Shell script (bash dialect)
  *  fsm_print_go     - Go code
  *
@@ -50,6 +51,7 @@ fsm_print fsm_print_vmasm_amd64_nasm; /* output amd64 assembler in NASM format *
 fsm_print fsm_print_vmasm_amd64_go;   /* output amd64 assembler in Go format */
 fsm_print fsm_print_sh;
 fsm_print fsm_print_go;
+fsm_print fsm_print_rust;
 
 #endif
 
