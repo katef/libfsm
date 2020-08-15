@@ -186,7 +186,7 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	fprintf(f, "    }\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "    let mut l = Label::Ls;\n");
+	fprintf(f, "    let mut l = Ls;\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "    loop {\n");
