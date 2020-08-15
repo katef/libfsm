@@ -256,20 +256,27 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 				c = "c";
 			}
 
-			fprintf(f, "let %s = match ", c);
-			print_fetch(f, opt);
-			fprintf(f, " {\n");
+			/* a more compact form, as an aesthetic optimisation */
+			if (op->u.fetch.end_bits == VM_END_FAIL) {
+				fprintf(f, "let %s = ", c);
+				print_fetch(f, opt);
+				fprintf(f, "?;");
+			} else {
+				fprintf(f, "let %s = match ", c);
+				print_fetch(f, opt);
+				fprintf(f, " {\n");
 
-			fprintf(f, "                    ");
-			fprintf(f, "None => ");
-			print_end(f, op, opt, op->u.fetch.end_bits, ir);
-			fprintf(f, ",\n");
-			fprintf(f, "                    ");
+				fprintf(f, "                    ");
+				fprintf(f, "None => ");
+				print_end(f, op, opt, op->u.fetch.end_bits, ir);
+				fprintf(f, ",\n");
+				fprintf(f, "                    ");
 
-			fprintf(f, "Some(%s) => %s", c, c);
-			fprintf(f, ",\n");
-			fprintf(f, "                ");
-			fprintf(f, "};");
+				fprintf(f, "Some(%s) => %s", c, c);
+				fprintf(f, ",\n");
+				fprintf(f, "                ");
+				fprintf(f, "};");
+			}
 
 			break;
 		}
