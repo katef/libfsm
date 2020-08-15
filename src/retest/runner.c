@@ -20,23 +20,23 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 {
 	static fsm_print *asm_print = fsm_print_vmasm_amd64_att;
 
-	char tmp_c[]  = "/tmp/fsmcompile_c-XXXXXX";
-	char tmp_o[]  = "/tmp/fsmcompile_o-XXXXXX";
-	char tmp_so[] = "/tmp/fsmcompile_so-XXXXXX";
+	char tmp_src[] = "/tmp/fsmcompile_src-XXXXXX";
+	char tmp_o[]   = "/tmp/fsmcompile_o-XXXXXX";
+	char tmp_so[]  = "/tmp/fsmcompile_so-XXXXXX";
 
-	char cmd[sizeof tmp_c + sizeof tmp_o + sizeof tmp_so + 256];
+	char cmd[sizeof tmp_src + sizeof tmp_o + sizeof tmp_so + 256];
 	const char *cc, *cflags, *as, *asflags;
-	int fd_c, fd_so, fd_o;
+	int fd_src, fd_so, fd_o;
 	FILE *f = NULL;
 	void *h = NULL;
 
-	fd_c  = mkstemp(tmp_c);
-	fd_so = mkstemp(tmp_so);
-	fd_o  = -1;
+	fd_src = mkstemp(tmp_src);
+	fd_so  = mkstemp(tmp_so);
+	fd_o   = -1;
 
-	f = fdopen(fd_c, "w");
+	f = fdopen(fd_src, "w");
 	if (f == NULL) {
-		perror(tmp_c);
+		perror(tmp_src);
 		return ERROR_FILE_IO;
 	}
 
@@ -51,7 +51,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	}
 
 	if (EOF == fflush(f)) {
-		perror(tmp_c);
+		perror(tmp_src);
 		return ERROR_FILE_IO;
 	}
 
@@ -63,7 +63,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	case IMPL_VMC:
 		(void) snprintf(cmd, sizeof cmd, "%s %s -xc -shared -fPIC %s -o %s",
 				cc ? cc : "gcc", cflags ? cflags : "-std=c89 -pedantic -Wall -O3",
-				tmp_c, tmp_so);
+				tmp_src, tmp_so);
 
 		if (0 != system(cmd)) {
 			perror(cmd);
@@ -79,7 +79,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		fd_o = mkstemp(tmp_o);
 
 		(void) snprintf(cmd, sizeof cmd, "%s %s -o %s %s",
-				as ? as : "as", asflags ? asflags : "", tmp_o, tmp_c);
+				as ? as : "as", asflags ? asflags : "", tmp_o, tmp_src);
 
 		if (0 != system(cmd)) {
 			perror(cmd);
@@ -103,12 +103,12 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	}
 
 	if (EOF == fclose(f)) {
-		perror(tmp_c);
+		perror(tmp_src);
 		return ERROR_FILE_IO;
 	}
 
-	if (-1 == unlinkat(-1, tmp_c, 0)) {
-		perror(tmp_c);
+	if (-1 == unlinkat(-1, tmp_src, 0)) {
+		perror(tmp_src);
 		return ERROR_FILE_IO;
 	}
 
