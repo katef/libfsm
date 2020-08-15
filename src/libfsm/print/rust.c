@@ -105,7 +105,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 static void
 print_jump(FILE *f, const struct dfavm_op_ir *op)
 {
-	fprintf(f, "state = ");
+	fprintf(f, "l = ");
 	print_label(f, op);
 	fprintf(f, "; continue;");
 }
@@ -174,7 +174,7 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		}
 	}
 
-	fprintf(f, "    pub enum StateMachine {\n       ");
+	fprintf(f, "    pub enum Label {\n       ");
 	for (op = a.linked; op != NULL; op = op->next) {
 		if (op == a.linked || op->num_incoming > 0) {
 			fprintf(f, " ");
@@ -186,11 +186,11 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	fprintf(f, "    }\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "    let mut state = StateMachine::Ls;\n");
+	fprintf(f, "    let mut l = Label::Ls;\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "    loop {\n");
-	fprintf(f, "        match state {\n");
+	fprintf(f, "        match l {\n");
 
 	fallthrough = true;
 
@@ -332,7 +332,7 @@ fsm_print_rust_complete(FILE *f, const struct ir *ir,
 
 	case FSM_IO_STR:
 		fprintf(f, "(input: &str) -> Option<usize> {\n");
-		fprintf(f, "    use StateMachine::*;\n");
+		fprintf(f, "    use Label::*;\n");
 		fprintf(f, "    let mut bytes = input.bytes();\n");
 		fprintf(f, "\n");
 		break;
