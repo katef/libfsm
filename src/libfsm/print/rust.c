@@ -323,7 +323,7 @@ fsm_print_rust_complete(FILE *f, const struct ir *ir,
 
 	fprintf(f, "\n");
 
-	fprintf(f, "pub fn\n%smain", prefix);
+	fprintf(f, "pub fn %smain", prefix);
 
 	switch (opt->io) {
 	case FSM_IO_GETC:
