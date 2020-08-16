@@ -479,7 +479,6 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 			if (tsv) {
 				perf_case_report_tsv(&c, halt, err, quiet, &t);
 			} else {
-printf("halt=%d\n", halt);
 				perf_case_report_txt(&c, halt, err, quiet, &t);
 				perf_case_report_error(err);
 			}
@@ -947,8 +946,6 @@ usage(void)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -H <halt>\n");
 	fprintf(stderr, "             halt after compile, glushkovise, determinise, minimise or execute\n");
-	fprintf(stderr, "                 0 = disable optimizations\n");
-	fprintf(stderr, "                 1 = basic optimizations\n");
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -O <olevel>\n");
