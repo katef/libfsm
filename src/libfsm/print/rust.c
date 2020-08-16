@@ -117,10 +117,8 @@ print_branch(FILE *f, const struct dfavm_op_ir *op)
 }
 
 static void
-print_fetch(FILE *f, const struct fsm_options *opt)
+print_fetch(FILE *f)
 {
-	assert(opt->io == FSM_IO_STR);
-
 	fprintf(f, "bytes.next()");
 }
 
@@ -244,7 +242,7 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			break;
 
 		case VM_OP_FETCH: {
-			const char *c;
+			const char *c, *ref;
 
 			/*
 			 * If the following instruction is an unconditional return,
@@ -256,14 +254,24 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 				c = "c";
 			}
 
+			switch (opt->io) {
+			case FSM_IO_GETC: ref = "";  break;
+			case FSM_IO_STR:  ref = "";  break;
+			case FSM_IO_PAIR: ref = "&"; break;
+
+			default:
+				assert(!"unreached");
+				break;
+			}
+
 			/* a more compact form, as an aesthetic optimisation */
 			if (op->u.fetch.end_bits == VM_END_FAIL) {
-				fprintf(f, "let %s = ", c);
-				print_fetch(f, opt);
+				fprintf(f, "let %s%s = ", ref, c);
+				print_fetch(f);
 				fprintf(f, "?;");
 			} else {
-				fprintf(f, "let %s = match ", c);
-				print_fetch(f, opt);
+				fprintf(f, "let %s%s = match ", ref, c);
+				print_fetch(f);
 				fprintf(f, " {\n");
 
 				fprintf(f, "                    ");
@@ -334,10 +342,13 @@ fsm_print_rust_complete(FILE *f, const struct ir *ir,
 
 	switch (opt->io) {
 	case FSM_IO_GETC:
-		fprintf(stderr, "unsupported IO API\n");
+		/* e.g. dbg!(fsm_main("abc".as_bytes().iter().copied())); */
+		fprintf(f, "(mut bytes: impl Iterator<Item = u8>) -> Option<usize> {\n");
+		fprintf(f, "    use Label::*;\n");
 		break;
 
 	case FSM_IO_STR:
+		/* e.g. dbg!(fsm_main("xabces")); */
 		fprintf(f, "(input: &str) -> Option<usize> {\n");
 		fprintf(f, "    use Label::*;\n");
 		fprintf(f, "    let mut bytes = input.bytes();\n");
@@ -345,6 +356,14 @@ fsm_print_rust_complete(FILE *f, const struct ir *ir,
 		break;
 
 	case FSM_IO_PAIR:
+		/* e.g. dbg!(fsm_main("xabces".as_bytes())); */
+		fprintf(f, "(input: &[u8]) -> Option<usize> {\n");
+		fprintf(f, "    use Label::*;\n");
+		fprintf(f, "    let mut bytes = input.iter();\n");
+		fprintf(f, "\n");
+		break;
+
+	default:
 		fprintf(stderr, "unsupported IO API\n");
 		break;
 	}
@@ -382,11 +401,7 @@ fsm_print_rust(FILE *f, const struct fsm *fsm)
 	if (fsm->opt->cp != NULL) {
 		cp = fsm->opt->cp;
 	} else {
-		switch (fsm->opt->io) {
-		case FSM_IO_GETC: cp = "c"; break; /* XXX */
-		case FSM_IO_STR:  cp = "c"; break;
-		case FSM_IO_PAIR: cp = "c"; break; /* XXX */
-		}
+		cp = "c"; /* XXX */
 	}
 
 	fsm_print_rust_complete(f, ir, fsm->opt, prefix, cp);
