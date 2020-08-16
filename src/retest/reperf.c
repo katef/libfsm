@@ -602,15 +602,17 @@ perf_case_run(struct perf_case *c, enum halt halt,
 
 		struct re_err comp_err;
 		enum re_flags flags;
-		const char *re;
 
 		comp_err = err_zero;
 		flags = 0;
-		re = c->regexp.data;
 
 		xclock_gettime(&c0);
 
 		for (iter=0; iter < c->count; iter++) {
+			const char *re;
+
+			re = c->regexp.data;
+
 			fsm = re_comp(c->dialect, fsm_sgetc, &re, &opt, flags, &comp_err);
 			if (fsm == NULL) {
 				return ERROR_PARSING_REGEXP;
