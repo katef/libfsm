@@ -41,13 +41,28 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	}
 
 	switch (impl) {
-	case IMPL_C:     fsm_print_c(f, fsm);   break;
-	case IMPL_VMC:   fsm_print_vmc(f, fsm); break;
-	case IMPL_VMASM: asm_print(f,fsm);      break;
+	case IMPL_C:     fsm_print_c(f, fsm);    break;
+	case IMPL_RUST:  fsm_print_rust(f, fsm); break;
+	case IMPL_VMC:   fsm_print_vmc(f, fsm);  break;
+	case IMPL_VMASM: asm_print(f,fsm);       break;
 
 	case IMPL_INTERPRET:
 			 assert(!"should not reach!");
 			 break;
+	}
+
+	if (impl == IMPL_RUST) {
+		fprintf(f, "\n");
+
+		fprintf(f, "use std::os::raw::c_uchar;\n");
+		fprintf(f, "use std::slice;\n");
+		fprintf(f, "\n");
+
+		fprintf(f, "#[no_mangle]\n");
+		fprintf(f, "pub extern \"C\" fn reperf_trampoline(ptr: *const c_uchar, len: usize) -> usize {\n");
+		fprintf(f, "    let a: &[u8] = unsafe { slice::from_raw_parts(ptr, len as usize) };\n");
+		fprintf(f, "    fsm_main(a).unwrap_or(0)\n");
+		fprintf(f, "}\n");
 	}
 
 	if (EOF == fflush(f)) {
@@ -63,6 +78,18 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	case IMPL_VMC:
 		(void) snprintf(cmd, sizeof cmd, "%s %s -xc -shared -fPIC %s -o %s",
 				cc ? cc : "gcc", cflags ? cflags : "-std=c89 -pedantic -Wall -O3",
+				tmp_src, tmp_so);
+
+		if (0 != system(cmd)) {
+			perror(cmd);
+			return ERROR_FILE_IO;
+		}
+
+		break;
+
+	case IMPL_RUST:
+		(void) snprintf(cmd, sizeof cmd, "%s %s --crate-type dylib %s -o %s",
+				"rustc", "--edition 2018",
 				tmp_src, tmp_so);
 
 		if (0 != system(cmd)) {
@@ -142,11 +169,17 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 
 	r->impl = impl;
 
+	/* XXX: depends on IO API */
 	switch (impl) {
 	case IMPL_C:
 	case IMPL_VMC:
 		r->u.impl_c.h = h;
 		r->u.impl_c.func = (int (*)(const char *, const char *)) (uintptr_t) dlsym(h, "fsm_main");
+		break;
+
+	case IMPL_RUST:
+		r->u.impl_rust.h = h;
+		r->u.impl_rust.func = (size_t (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "reperf_trampoline");
 		break;
 
 	case IMPL_VMASM:
@@ -174,6 +207,7 @@ fsm_runner_initialize(struct fsm *fsm, struct fsm_runner *r, enum implementation
 
 	switch (impl) {
 	case IMPL_C:
+	case IMPL_RUST:
 	case IMPL_VMASM:
 	case IMPL_VMC:
 		return runner_init_compiled(fsm, r, impl);
@@ -205,6 +239,12 @@ fsm_runner_finalize(struct fsm_runner *r)
 		}
 		break;
 
+	case IMPL_RUST:
+		if (r->u.impl_rust.h != NULL) {
+			dlclose(r->u.impl_rust.h);
+		}
+		break;
+
 	case IMPL_VMASM:
 		if (r->u.impl_asm.h != NULL) {
 			dlclose(r->u.impl_c.h);
@@ -233,6 +273,10 @@ fsm_runner_run(const struct fsm_runner *r, const char *s, size_t n)
 	case IMPL_VMC:
 		assert(r->u.impl_c.func != NULL);
 		return r->u.impl_c.func(s, s+n) >= 0;
+
+	case IMPL_RUST:
+		assert(r->u.impl_rust.func != NULL);
+		return r->u.impl_rust.func((const unsigned char *)s, n) >= 0;
 
 	case IMPL_VMASM:
 		assert(r->u.impl_asm.func != NULL);

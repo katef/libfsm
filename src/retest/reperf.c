@@ -969,6 +969,7 @@ usage(void)
 	fprintf(stderr, "                 asm       generate assembly and assemble\n");
 	fprintf(stderr, "                 c         compile as per fsm_print_c()\n");
 	fprintf(stderr, "                 vmc       compile as per fsm_print_vmc()\n");
+	fprintf(stderr, "                 rust      compile as per fsm_print_rust()\n");
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -x <encoding>\n");
@@ -1025,6 +1026,8 @@ main(int argc, char *argv[])
 	 * The IO API would depend on c->mt == MATCH_STRING ? FSM_IO_PAIR : FSM_IO_GETC;
 	 * except we read in the entire file below anyway, so we just
 	 * use FSM_IO_PAIR for both. The type of fsm_main depends on the IO API.
+	 *
+	 * The IO API also affects the trampoline code for FFI.
 	 */
 	opt.io = FSM_IO_PAIR;
 
@@ -1060,6 +1063,8 @@ main(int argc, char *argv[])
 					impl = IMPL_INTERPRET;
 				} else if (strcmp(optarg, "c") == 0) {
 					impl = IMPL_C;
+				} else if (strcmp(optarg, "rust") == 0) {
+					impl = IMPL_RUST;
 				} else if (strcmp(optarg, "asm") == 0) {
 					impl = IMPL_VMASM;
 				} else if (strcmp(optarg, "vmc") == 0) {
