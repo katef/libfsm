@@ -113,6 +113,7 @@ print_name(const char *name,
 		{ "json",   fsm_print_json,   NULL },
 		{ "vmc",    fsm_print_vmc,    NULL },
 		{ "vmdot",  fsm_print_vmdot,  NULL },
+		{ "rust",   fsm_print_rust,   NULL },
 		{ "sh",     fsm_print_sh,     NULL },
 		{ "go",     fsm_print_go,     NULL },
 

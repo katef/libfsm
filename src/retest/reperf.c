@@ -479,7 +479,6 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 			if (tsv) {
 				perf_case_report_tsv(&c, halt, err, quiet, &t);
 			} else {
-printf("halt=%d\n", halt);
 				perf_case_report_txt(&c, halt, err, quiet, &t);
 				perf_case_report_error(err);
 			}
@@ -603,15 +602,17 @@ perf_case_run(struct perf_case *c, enum halt halt,
 
 		struct re_err comp_err;
 		enum re_flags flags;
-		const char *re;
 
 		comp_err = err_zero;
 		flags = 0;
-		re = c->regexp.data;
 
 		xclock_gettime(&c0);
 
 		for (iter=0; iter < c->count; iter++) {
+			const char *re;
+
+			re = c->regexp.data;
+
 			fsm = re_comp(c->dialect, fsm_sgetc, &re, &opt, flags, &comp_err);
 			if (fsm == NULL) {
 				return ERROR_PARSING_REGEXP;
@@ -947,8 +948,6 @@ usage(void)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -H <halt>\n");
 	fprintf(stderr, "             halt after compile, glushkovise, determinise, minimise or execute\n");
-	fprintf(stderr, "                 0 = disable optimizations\n");
-	fprintf(stderr, "                 1 = basic optimizations\n");
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -O <olevel>\n");
@@ -969,6 +968,7 @@ usage(void)
 	fprintf(stderr, "                 asm       generate assembly and assemble\n");
 	fprintf(stderr, "                 c         compile as per fsm_print_c()\n");
 	fprintf(stderr, "                 vmc       compile as per fsm_print_vmc()\n");
+	fprintf(stderr, "                 rust      compile as per fsm_print_rust()\n");
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -x <encoding>\n");
@@ -1025,6 +1025,8 @@ main(int argc, char *argv[])
 	 * The IO API would depend on c->mt == MATCH_STRING ? FSM_IO_PAIR : FSM_IO_GETC;
 	 * except we read in the entire file below anyway, so we just
 	 * use FSM_IO_PAIR for both. The type of fsm_main depends on the IO API.
+	 *
+	 * The IO API also affects the trampoline code for FFI.
 	 */
 	opt.io = FSM_IO_PAIR;
 
@@ -1060,6 +1062,8 @@ main(int argc, char *argv[])
 					impl = IMPL_INTERPRET;
 				} else if (strcmp(optarg, "c") == 0) {
 					impl = IMPL_C;
+				} else if (strcmp(optarg, "rust") == 0) {
+					impl = IMPL_RUST;
 				} else if (strcmp(optarg, "asm") == 0) {
 					impl = IMPL_VMASM;
 				} else if (strcmp(optarg, "vmc") == 0) {

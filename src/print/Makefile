@@ -6,8 +6,10 @@ SRC += src/print/abnf.c
 SRC += src/print/fsm.c
 SRC += src/print/json.c
 SRC += src/print/pcre.c
-SRC += src/print/puts.c
+SRC += src/print/rust.c
 SRC += src/print/tok.c
+
+SRC += src/print/puts.c
 
 .for src in ${SRC:Msrc/print/*.c}
 CFLAGS.${src} += -I src # XXX: for internal.h

@@ -60,6 +60,13 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 	const struct dfavm_op_ir *op;
 
 	char *comment;
+	const char *prefix;
+
+#if defined(__MACH__)
+	prefix = "_";
+#else
+	prefix = "";
+#endif
 
 	assert(f != NULL);
 	assert(funcname != NULL);
@@ -86,15 +93,15 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 	/* print preamble */
 	switch (dialect) {
 	case AMD64_ATT:
-		fprintf(f, ".globl _%s\n", funcname);
+		fprintf(f, ".globl %s%s\n", prefix, funcname);
 		fprintf(f, ".text\n");
-		fprintf(f, "_%s:\n", funcname);
+		fprintf(f, "%s%s:\n", prefix, funcname);
 		break;
 
 	case AMD64_NASM:
 		fprintf(f, "section .text\n");
-		fprintf(f, "global _%s\n", funcname);
-		fprintf(f, "_%s:\n", funcname);
+		fprintf(f, "global %s%s\n", prefix, funcname);
+		fprintf(f, "%s%s:\n", prefix, funcname);
 		break;
 
 	case AMD64_GO:
