@@ -7,6 +7,8 @@
  * integrity checks inside some inner loops. */
 #define EXPENSIVE_INTEGRITY_CHECKS 0
 
+#define DEF_INITIAL_COUNT_CEIL 8
+
 struct min_env {
 	const struct fsm *fsm;
 
