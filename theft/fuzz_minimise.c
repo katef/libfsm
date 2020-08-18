@@ -101,11 +101,6 @@ check_minimise_matches_naive_fixpoint_algorithm(const struct dfa_spec *spec)
 		goto cleanup;
 	}
 
-	if (fsm_trim(fsm, FSM_TRIM_START_AND_END_REACHABLE) < 0) {
-		fprintf(stderr, "-- fail: fsm_trim\n");
-		goto cleanup;
-	}
-
 	if (!fsm_minimise(fsm)) {
 		fprintf(stderr, "-- fail: fsm_minimise\n");
 		goto cleanup;
