@@ -41,7 +41,7 @@ fsm_minimise(struct fsm *fsm)
 	int r = 0;
 	struct fsm *dst = NULL;
 
-	unsigned char labels[256];
+	unsigned char labels[FSM_SIGMA_COUNT];
 	size_t label_count, orig_states, minimised_states;
 	fsm_state_t *mapping = NULL;
 
