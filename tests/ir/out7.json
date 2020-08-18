@@ -1,29 +1,6 @@
 {
-	"start": 0,
+	"start": 1,
 	"states": [
-		{
-			"end": false,
-			"strategy": "same",
-			"to": 1
-		},
-		{
-			"end": false,
-			"strategy": "error",
-			"example": "a",
-			"mode": 2,
-			"error": [
-						{ "start": "a", "end": "l" },
-						{ "start": "n", "end": "y" }
-			],
-			"groups": [
-				{
-					"to": 3,
-					"ranges": [
-						{ "start": "z", "end": "z" }
-					]
-				}
-			]
-		},
 		{
 			"end": true,
 			"strategy": "none",
@@ -31,29 +8,52 @@
 		},
 		{
 			"end": false,
-			"strategy": "partial",
-			"example": "az",
+			"strategy": "same",
+			"to": 3
+		},
+		{
+			"end": false,
+			"strategy": "same",
+			"example": "aza",
+			"to": 0
+		},
+		{
+			"end": false,
+			"strategy": "error",
+			"example": "a",
+			"mode": 0,
+			"error": [
+						{ "start": "a", "end": "l" },
+						{ "start": "n", "end": "y" }
+			],
 			"groups": [
-				{
-					"to": 3,
-					"ranges": [
-						{ "start": "z", "end": "z" }
-					]
-				},
 				{
 					"to": 4,
 					"ranges": [
-						{ "start": "0", "end": "9" },
-						{ "start": "a", "end": "f" }
+						{ "start": "z", "end": "z" }
 					]
 				}
 			]
 		},
 		{
 			"end": false,
-			"strategy": "same",
-			"example": "aza",
-			"to": 2
+			"strategy": "partial",
+			"example": "az",
+			"groups": [
+				{
+					"to": 2,
+					"ranges": [
+						{ "start": "0", "end": "9" },
+						{ "start": "a", "end": "f" }
+					]
+				},
+				{
+					"to": 4,
+					"ranges": [
+						{ "start": "z", "end": "z" }
+					]
+				}
+			]
 		}
 	]
 }

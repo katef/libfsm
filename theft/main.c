@@ -242,6 +242,7 @@ main(int argc, char **argv)
 	register_test_adt_set();
 	register_test_nfa();
 	register_test_trim();
+	register_test_minimise();
 
 	for (link = state.tests; link; link = link->next) {
 		bool hit, pass;

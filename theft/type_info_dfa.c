@@ -1,5 +1,9 @@
 #include "type_info_dfa.h"
 
+#include <adt/queue.h>
+
+#define LOG_LIVENESS 0
+
 static enum theft_alloc_res
 dfa_alloc(struct theft *t, void *unused_env, void **output)
 {
@@ -12,6 +16,10 @@ dfa_alloc(struct theft *t, void *unused_env, void **output)
 	    ? env->symbol_ceil_bits : DEF_SYMBOL_CEIL_BITS);
 	const uint8_t end_bits = (env->end_bits
 	    ? env->end_bits : DEF_END_BITS);
+
+	assert(state_ceil_bits > 0);
+	assert(symbol_ceil_bits <= 8);
+	assert(end_bits > 0);
 
 	if (end_bits >= 64) {
 		return THEFT_ALLOC_ERROR;
@@ -155,3 +163,190 @@ const struct theft_type_info type_info_dfa = {
 		.enable = true,
 	}
 };
+
+struct fsm *
+dfa_spec_build_fsm(const struct dfa_spec *spec)
+{
+	struct fsm *fsm = fsm_new(NULL);
+	if (fsm == NULL) {
+		fprintf(stderr, "-- ERROR: fsm_new\n");
+		goto cleanup;
+	}
+
+	if (!fsm_addstate_bulk(fsm, spec->state_count)) {
+		fprintf(stderr, "-- ERROR: fsm_addstate_bulk\n");
+		goto cleanup;
+	}
+
+	if (spec->start < spec->state_count) {
+		fsm_setstart(fsm, spec->start);
+	}
+
+	for (size_t s_i = 0; s_i < spec->state_count; s_i++) {
+		const fsm_state_t state_id = (fsm_state_t)s_i;
+		const struct dfa_spec_state *s = &spec->states[s_i];
+		if (!s->used) { continue; }
+
+		if (s->end) {
+			fsm_setend(fsm, state_id, 1);
+		}
+
+		for (size_t e_i = 0; e_i < s->edge_count; e_i++) {
+			const fsm_state_t to = s->edges[e_i].state;
+			const unsigned char symbol = s->edges[e_i].symbol;
+			if (!fsm_addedge_literal(fsm,
+				state_id, to, symbol)) {
+				fprintf(stderr, "-- ERROR: fsm_addedge_literal\n");
+				goto cleanup;
+			}
+		}
+	}
+
+	if (!fsm_all(fsm, fsm_isdfa)) {
+		fprintf(stderr, "-- ERROR: all is_dfa\n");
+		goto cleanup;
+	}
+
+	return fsm;
+
+cleanup:
+	if (fsm != NULL) { fsm_free(fsm); }
+	return NULL;
+}
+
+static bool
+enqueue_reachable(const struct dfa_spec *spec, struct queue *q,
+    uint64_t *seen, fsm_state_t state)
+{
+	if (BITSET_CHECK(seen, state)) { return true; }
+
+	if (LOG_LIVENESS) {
+		fprintf(stderr, "enqueue_reachable: start --...--> %d\n", state);
+	}
+
+	if (!queue_push(q, state)) { return false; }
+	BITSET_SET(seen, state);
+
+	const struct dfa_spec_state *s = &spec->states[state];
+	assert(s->used);
+
+	for (size_t i = 0; i < s->edge_count; i++) {
+		const fsm_state_t to = s->edges[i].state;
+		if (BITSET_CHECK(seen, to)) { continue; }
+		if (!enqueue_reachable(spec, q, seen, to)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool
+dfa_spec_check_liveness(const struct dfa_spec *spec,
+    uint64_t *live, size_t *live_count)
+{
+	bool res = false;
+
+	struct queue *q = NULL;
+
+	uint64_t *reached = NULL;
+	const size_t live_bytes = (spec->state_count/64 + 1)
+	    * sizeof(live[0]);
+
+	if (spec->state_count == 0) {
+		if (live_count != NULL) {
+			*live_count = 0;
+		}
+		return true;
+	}
+
+	reached = malloc(live_bytes);
+	if (reached == NULL) {
+		goto cleanup;
+	}
+	memset(reached, 0x00, live_bytes);
+
+	q = queue_new(NULL, spec->state_count);
+	if (q == NULL) {
+		goto cleanup;
+	}
+
+	size_t count = 0;
+
+	/* enqueue all states reachable from the start,
+	 * using reached to avoid redundant enqueueing */
+	if (!enqueue_reachable(spec, q, reached, spec->start)) {
+		goto cleanup;
+	}
+	memset(reached, 0x00, live_bytes);
+
+	/* A state reaches an end if it's an end, or one of its
+	 * edges transitively reaches an end. Calculate via fixpoint. */
+	bool changed;
+	do {
+		changed = false;
+		for (size_t s_i = 0; s_i < spec->state_count; s_i++) {
+			const struct dfa_spec_state *s = &spec->states[s_i];
+			if (!s->used) { continue; }
+
+			if (s->end) {
+				if (!BITSET_CHECK(reached, s_i)) {
+					changed = true;
+					if (LOG_LIVENESS) {
+						fprintf(stderr,
+						    "dfa_spec_check_liveness: end: %ld\n", s_i);
+					}
+					BITSET_SET(reached, s_i);
+				}
+				continue;
+			}
+
+			for (size_t i = 0; i < s->edge_count; i++) {
+				const fsm_state_t to = s->edges[i].state;
+				if (BITSET_CHECK(reached, to)) {
+					if (!BITSET_CHECK(reached, s_i)) {
+						changed = true;
+						BITSET_SET(reached, s_i);
+						if (LOG_LIVENESS) {
+							fprintf(stderr,
+							    "dfa_spec_check_liveness: %ld --...--> end\n", s_i);
+						}
+					}
+				}
+			}
+		}
+	} while (changed);
+
+	/* A state is live if it's is on a path between the start and an
+	 * end state. */
+	fsm_state_t s;
+	while (queue_pop(q, &s)) {
+		if (BITSET_CHECK(reached, s)) {
+			if (LOG_LIVENESS) {
+				fprintf(stderr,
+				    "dfa_spec_check_liveness: live: %d\n", s);
+			}
+			if (live != NULL) {
+				BITSET_SET(live, s);
+			}
+			count++;
+		}
+	}
+
+	if (LOG_LIVENESS) {
+		fprintf(stderr, "dfa_spec_check_liveness: live_count: %zu\n",
+			count);
+	}
+
+	if (live_count != NULL) {
+		*live_count = count;
+	}
+
+	res = true;
+
+cleanup:
+	if (q != NULL) { queue_free(q); }
+	if (reached != NULL) { free(reached); }
+
+	return res;
+}

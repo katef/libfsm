@@ -520,7 +520,6 @@ edge_set_compact(struct edge_set **setp,
 		if (new_id == FSM_STATE_REMAP_NO_STATE) {
 			*setp = NULL;
 		} else {
-			assert(new_id <= s);
 			*setp = SINGLETON_ENCODE(symbol, new_id);
 		}
 		return;
