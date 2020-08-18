@@ -44,21 +44,30 @@
 	typedef char *      string;
 	typedef fsm_state_t state;
 
+	struct act_statelist {
+		char *id;
+		fsm_state_t state;
+		struct act_statelist *next;
+	};
+
+	/* hash table with chaining */
+	#define DEF_BUCKETS 64	    /* must be a power of 2 */
+	#define MAX_CHAIN_LENGTH 16 /* grow hash table if longer than this */
+	struct act_stateset {
+		size_t longest_chain_length;
+		size_t bucket_count;
+		struct act_statelist **buckets;
+	};
+
 	struct act_state {
 		int lex_tok;
 		int lex_tok_save;
-		struct act_statelist *sl;
+		struct act_stateset states;
 	};
 
 	struct lex_state {
 		struct lx lx;
 		struct lx_dynbuf buf;
-	};
-
-	struct act_statelist {
-		char *id;
-		fsm_state_t state;
-		struct act_statelist *next;
 	};
 
 	#define CURRENT_TERMINAL (act_state->lex_tok)
@@ -88,6 +97,54 @@
 	{
 		err(lex_state, "Syntax error: expected %s", token);
 		exit(EXIT_FAILURE);
+	}
+
+	/* FNV1a 32-bit hash function, in the public domain. For details,
+	 * see: http://www.isthe.com/chongo/tech/comp/fnv/index.html . */
+	#define FNV1a_32_OFFSET_BASIS 	2166136261UL
+	#define FNV1a_32_PRIME		16777619UL
+
+	static unsigned
+	hash_of_id(const char *id)
+	{
+		unsigned h = FNV1a_32_OFFSET_BASIS;
+		while (*id) {
+			h ^= *id;
+			h *= FNV1a_32_PRIME;
+			id++;
+		}
+		return h;
+	}
+
+	static void
+	grow_state_hash_table(struct act_stateset *htab)
+	{
+		const size_t ncount = 2 * htab->bucket_count;
+		struct act_statelist **nbuckets = xcalloc(ncount, sizeof(*nbuckets));
+		size_t max_chain_length = 0;
+		size_t old_i;
+		unsigned mask = ncount - 1;
+
+		for (old_i = 0; old_i < htab->bucket_count; old_i++) {
+			struct act_statelist *p, *next;
+			size_t chain_length = 0;
+			for (p = htab->buckets[old_i]; p != NULL; p = next) {
+				const unsigned hash = hash_of_id(p->id);
+				next = p->next;
+				p->next = nbuckets[hash & mask];
+				nbuckets[hash & mask] = p;
+				chain_length++;
+			}
+
+			if (chain_length > max_chain_length) {
+				max_chain_length = chain_length;
+			}
+		}
+
+		free(htab->buckets);
+		htab->buckets = nbuckets;
+		htab->bucket_count = ncount;
+		htab->longest_chain_length = max_chain_length;
 	}
 
 @}, @{
@@ -194,16 +251,31 @@
 
 	<add-state>: (n :string) -> (s :state) = @{
 		struct act_statelist *p;
+		const unsigned hash = hash_of_id(@n);
+		const unsigned mask = act_state->states.bucket_count - 1;
+		size_t chain_length = 0;
+		unsigned bucket_id = hash & mask;
 
 		assert(@n != NULL);
 
-		for (p = act_state->sl; p != NULL; p = p->next) {
+		if (act_state->states.longest_chain_length > MAX_CHAIN_LENGTH) {
+			grow_state_hash_table(&act_state->states);
+			bucket_id = hash & (act_state->states.bucket_count - 1);
+		}
+
+		for (p = act_state->states.buckets[bucket_id]; p != NULL; p = p->next) {
 			assert(p->id != NULL);
+
+			chain_length++;
 
 			if (0 == strcmp(p->id, @n)) {
 				@s = p->state;
 				break;
 			}
+		}
+
+		if (chain_length > act_state->states.longest_chain_length) {
+			act_state->states.longest_chain_length = chain_length;
 		}
 
 		if (p == NULL) {
@@ -228,8 +300,8 @@
 
 			new->state = @s;
 
-			new->next = act_state->sl;
-			act_state->sl = new;
+			new->next = act_state->states.buckets[bucket_id];
+			act_state->states.buckets[bucket_id] = new;
 		}
 	@};
 
@@ -248,14 +320,15 @@
 	<free-statelist> = @{
 		struct act_statelist *p;
 		struct act_statelist *next;
+		unsigned b_i;	/* bucket */
 
-		for (p = act_state->sl; p != NULL; p = next) {
-			next = p->next;
-
-			assert(p->id != NULL);
-
-			free(p->id);
-			free(p);
+		for (b_i = 0; b_i < act_state->states.bucket_count; b_i++) {
+			for (p = act_state->states.buckets[b_i]; p != NULL; p = next) {
+				next = p->next;
+				assert(p->id != NULL);
+				free(p->id);
+				free(p);
+			}
 		}
 	@};
 
@@ -336,7 +409,10 @@
 		lx->clear      = lx_dynclear;
 		lx->free       = lx_dynfree;
 
-		act_state_s.sl = NULL;
+		act_state_s.states.buckets = xcalloc(DEF_BUCKETS, sizeof(act_state_s.states.buckets));
+		assert(act_state_s.states.buckets != NULL);
+		act_state_s.states.bucket_count = DEF_BUCKETS;
+		act_state_s.states.longest_chain_length = 0;
 
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
