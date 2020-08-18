@@ -108,13 +108,15 @@ collect_labels(const struct fsm *fsm,
 static int
 build_minimised_mapping(const struct fsm *fsm,
     const unsigned char *dfa_labels, size_t dfa_label_count,
+    const unsigned *shortest_end_distance,
     fsm_state_t *mapping, size_t *minimized_state_count);
 
 static void
 dump_ecs(FILE *f, const struct min_env *env);
 
-static void
-populate_initial_ecs(struct min_env *env, const struct fsm *fsm);
+static int
+populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
+	const unsigned *shortest_end_distance);
 
 #if EXPENSIVE_INTEGRITY_CHECKS
 static void

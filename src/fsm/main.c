@@ -492,7 +492,7 @@ main(int argc, char *argv[])
 		case OP_DETERMINISE: r = fsm_determinise(q);  break;
 		case OP_GLUSHKOVISE: r = fsm_glushkovise(q);  break;
 		case OP_TRIM:        r = fsm_trim(q,
-			FSM_TRIM_START_AND_END_REACHABLE);
+		    FSM_TRIM_START_AND_END_REACHABLE, NULL);
 			break;
 
 		case OP_CONCAT:      q = fsm_concat(a, b);    break;

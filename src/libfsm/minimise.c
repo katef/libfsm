@@ -44,6 +44,7 @@ fsm_minimise(struct fsm *fsm)
 	unsigned char labels[FSM_SIGMA_COUNT];
 	size_t label_count, orig_states, minimised_states;
 	fsm_state_t *mapping = NULL;
+	unsigned *shortest_end_distance = NULL;
 
 #if LOG_TIME
 	struct timeval tv_pre, tv_post;
@@ -65,7 +66,8 @@ fsm_minimise(struct fsm *fsm)
 	/* The algorithm used below won't remove states without a path
 	 * to an end state, because it cannot prove they're
 	 * unnecessary, so they must be trimmed away first. */
-	if (fsm_trim(fsm, FSM_TRIM_START_AND_END_REACHABLE) < 0) {
+	if (fsm_trim(fsm, FSM_TRIM_START_AND_END_REACHABLE,
+		&shortest_end_distance) < 0) {
 		return 0;
 	}
 
@@ -92,6 +94,7 @@ fsm_minimise(struct fsm *fsm)
 
 	TIME(tv_pre);
 	r = build_minimised_mapping(fsm, labels, label_count,
+	    shortest_end_distance,
 	    mapping, &minimised_states);
 	TIME(tv_post);
 	LOG_TIME_DELTA("minimise");
@@ -121,6 +124,9 @@ fsm_minimise(struct fsm *fsm)
 cleanup:
 	if (mapping != NULL) {
 		f_free(fsm->opt->alloc, mapping);
+	}
+	if (shortest_end_distance != NULL) {
+		f_free(fsm->opt->alloc, shortest_end_distance);
 	}
 
 	return r;
@@ -190,6 +196,7 @@ collect_labels(const struct fsm *fsm,
 static int
 build_minimised_mapping(const struct fsm *fsm,
     const unsigned char *dfa_labels, size_t dfa_label_count,
+    const unsigned *shortest_end_distance,
     fsm_state_t *mapping, size_t *minimized_state_count)
 {
 	struct min_env env;
@@ -226,7 +233,9 @@ build_minimised_mapping(const struct fsm *fsm,
 	env.ec_count = 2;
 	env.done_ec_offset = env.ec_count;
 
-	populate_initial_ecs(&env, fsm);
+	if (!populate_initial_ecs(&env, fsm, shortest_end_distance)) {
+		goto cleanup;
+	}
 
 #if LOG_INIT
 	for (i = 0; i < env.ec_count; i++) {
@@ -368,10 +377,13 @@ dump_ecs(FILE *f, const struct min_env *env)
 #endif
 }
 
-static void
-populate_initial_ecs(struct min_env *env, const struct fsm *fsm)
+static int
+populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
+	const unsigned *shortest_end_distance)
 {
+	int res = 0;
 	size_t i;
+
 	for (i = 0; i < fsm->statecount; i++) {
 		const fsm_state_t ec = fsm_isend(fsm, i)
 		    ? INIT_EC_FINAL : INIT_EC_NOT_FINAL;
@@ -387,6 +399,8 @@ populate_initial_ecs(struct min_env *env, const struct fsm *fsm)
 
 	/* The dead state is not a member of any EC. */
 	env->state_ecs[env->dead_state] = NO_ID;
+	res = 1;
+	return res;
 }
 
 #if EXPENSIVE_INTEGRITY_CHECKS
