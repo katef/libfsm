@@ -476,8 +476,9 @@ update_ec_links(struct min_env *env, fsm_state_t ec_dst)
 	fsm_state_t cur = env->ecs[ec_dst];
 
 	assert(cur != NO_ID);
+	cur = MASK_EC_HEAD(cur);
+
 	while (cur != NO_ID) {
-		cur = MASK_EC_HEAD(cur);
 		env->state_ecs[cur] = ec_dst;
 		cur = env->jump[cur];
 		count++;
