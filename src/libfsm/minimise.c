@@ -133,7 +133,7 @@ collect_labels(const struct fsm *fsm,
     unsigned char *labels, size_t *label_count)
 {
 	size_t count = 0;
-	uint64_t label_set[4] = { 0, 0, 0, 0 };
+	uint64_t label_set[FSM_SIGMA_COUNT/64] = { 0, 0, 0, 0 };
 	int i;
 
 	fsm_state_t id;
@@ -504,7 +504,7 @@ init_label_iterator(const struct min_env *env,
 	if (should_gather_EC_labels) {
 		fsm_state_t cur;
 		size_t i;
-		uint32_t label_set[256/32];
+		uint32_t label_set[FSM_SIGMA_COUNT/32];
 		memset(label_set, 0x00, sizeof(label_set));
 
 		cur = env->ecs[ec_i];
@@ -528,6 +528,8 @@ init_label_iterator(const struct min_env *env,
 		li->limit = 0;
 		i = 0;
 		while (i < 256) {
+			/* Check the bitset, skip forward 32 entries at a time
+			 * if they're all zero. */
 			if ((i & 31) == 0 && label_set[i/32] == 0) {
 				i += 32;
 			} else {
