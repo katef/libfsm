@@ -1,6 +1,32 @@
 {
-	"start": 1,
+	"start": 3,
 	"states": [
+		{
+			"end": false,
+			"strategy": "same",
+			"example": "aza",
+			"to": 2
+		},
+		{
+			"end": false,
+			"strategy": "partial",
+			"example": "az",
+			"groups": [
+				{
+					"to": 0,
+					"ranges": [
+						{ "start": "0", "end": "9" },
+						{ "start": "a", "end": "f" }
+					]
+				},
+				{
+					"to": 1,
+					"ranges": [
+						{ "start": "z", "end": "z" }
+					]
+				}
+			]
+		},
 		{
 			"end": true,
 			"strategy": "none",
@@ -9,46 +35,20 @@
 		{
 			"end": false,
 			"strategy": "same",
-			"to": 3
-		},
-		{
-			"end": false,
-			"strategy": "same",
-			"example": "aza",
-			"to": 0
+			"to": 4
 		},
 		{
 			"end": false,
 			"strategy": "error",
 			"example": "a",
-			"mode": 0,
+			"mode": 2,
 			"error": [
 						{ "start": "a", "end": "l" },
 						{ "start": "n", "end": "y" }
 			],
 			"groups": [
 				{
-					"to": 4,
-					"ranges": [
-						{ "start": "z", "end": "z" }
-					]
-				}
-			]
-		},
-		{
-			"end": false,
-			"strategy": "partial",
-			"example": "az",
-			"groups": [
-				{
-					"to": 2,
-					"ranges": [
-						{ "start": "0", "end": "9" },
-						{ "start": "a", "end": "f" }
-					]
-				},
-				{
-					"to": 4,
+					"to": 1,
 					"ranges": [
 						{ "start": "z", "end": "z" }
 					]
