@@ -708,8 +708,8 @@ edge_set_empty(const struct edge_set *set)
 }
 
 void
-edge_set_ordered_iter_reset(const struct edge_set *set,
-    struct edge_ordered_iter *eoi)
+edge_set_ordered_iter_reset_to(const struct edge_set *set,
+    struct edge_ordered_iter *eoi, unsigned char symbol)
 {
 	/* Create an ordered iterator for the hash table by figuring
 	 * out which symbols are present (0x00 <= x <= 0xff, tracked
@@ -718,6 +718,8 @@ edge_set_ordered_iter_reset(const struct edge_set *set,
 
 	size_t i, found, mask;
 	memset(eoi, 0x00, sizeof(*eoi));
+
+	eoi->symbol = symbol;
 
 	/* Check for special case unboxed sets first. */
 	if (IS_SINGLETON(set)) {
@@ -744,8 +746,8 @@ edge_set_ordered_iter_reset(const struct edge_set *set,
 	assert(found == set->count);
 	mask = set->ceil - 1;
 
-	/* Start out pointing to the first bucket with a symbol of '\0',
-	 * or the first unused bucket if not present (which is likely). */
+	/* Start out pointing to the first bucket with a matching symbol,
+	 * or the first unused bucket if not present. */
 	{
 		const unsigned h = PHI32 * eoi->symbol;
 		for (i = 0; i < set->ceil; i++) {
@@ -754,10 +756,10 @@ edge_set_ordered_iter_reset(const struct edge_set *set,
 			if (bs == BUCKET_TOMBSTONE) {
 				continue; /* search past deleted */
 			} else if (bs == BUCKET_UNUSED) {
-				eoi->pos = i; /* will advance to next symbol */
+				eoi->pos = b_i; /* will advance to next symbol */
 				break;
 			} else if (set->b[b_i].symbol == eoi->symbol) {
-				eoi->pos = i; /* pointing at first bucket */
+				eoi->pos = b_i; /* pointing at first bucket */
 				break;
 			} else {
 				continue; /* find first entry with symbol */
@@ -784,6 +786,13 @@ advance_symbol(struct edge_ordered_iter *eoi)
 	eoi->steps = 0;
 
 	return 0;
+}
+
+void
+edge_set_ordered_iter_reset(const struct edge_set *set,
+    struct edge_ordered_iter *eoi)
+{
+	edge_set_ordered_iter_reset_to(set, eoi, 0);
 }
 
 int

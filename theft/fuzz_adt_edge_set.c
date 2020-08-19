@@ -400,7 +400,7 @@ prop_model_check_postcondition(const struct edge_set *es,
 	}
 
 	struct fsm_edge e;
-	struct edge_iter ei;
+	struct edge_ordered_iter eoi;
 
 	/* every edge in m should be in es */
 	for (size_t i = 0; i < m->count; i++) {
@@ -410,9 +410,10 @@ prop_model_check_postcondition(const struct edge_set *es,
 		 * symbol (to different states), so if `edge_set_find`
 		 * gets a different state, it isn't necessarily a
 		 * mismatch. `edge_set_find` should be used with DFAs.
-		 * In this case we need to iterate. */
-		for (edge_set_reset(es, &ei);
-		     edge_set_next(&ei, &e); ) {
+		 * In this case we need to iterate, but we can still
+		 * reset the ordered iterator to a particular symbol. */
+		for (edge_set_ordered_iter_reset_to(es, &eoi, m->edges[i].symbol);
+		     edge_set_ordered_iter_next(&eoi, &e); ) {
 			if (e.symbol == m->edges[i].symbol
 			    && e.state == m->edges[i].state) {
 				found = true;
@@ -434,6 +435,7 @@ prop_model_check_postcondition(const struct edge_set *es,
 	}
 
 	/* unordered iteration has same count */
+	struct edge_iter ei;
 	size_t count = 0;
 	for (edge_set_reset(es, &ei);
 	     edge_set_next(&ei, &e); ) {
@@ -447,7 +449,6 @@ prop_model_check_postcondition(const struct edge_set *es,
 
 	/* ordered iteration has same count */
 	count = 0;
-	struct edge_ordered_iter eoi;
 	for (edge_set_ordered_iter_reset(es, &eoi);
 	     edge_set_ordered_iter_next(&eoi, &e); ) {
 		count++;
@@ -688,6 +689,41 @@ regression4(theft_seed unused)
 	return res == THEFT_TRIAL_PASS;
 }
 
+static bool
+regression5(theft_seed unused)
+{
+	(void)unused;
+
+	/* While adding edge_set_ordered_iter_reset_to, theft
+	 * found that the eoi->pos setting for the first bucket
+	 * with matching symbol was wrong. It may have been
+	 * asymptomatic until now, but this specific case causes
+	 * the (0x2 -> 0) edge to get lost. */
+	struct edge_set_op op_list[] = {
+		{
+			.t = ESO_ADD,
+			.u.add = {
+				.symbol = 0x02,
+				.state = 0,
+			},
+		},
+		{
+			.t = ESO_ADD,
+			.u.add = {
+				.symbol = 0x00,
+				.state = 0,
+			},
+		},
+	};
+	struct edge_set_ops ops = {
+		.count = sizeof(op_list)/sizeof(op_list[0]),
+		.ops = op_list,
+	};
+
+	enum theft_trial_res res = ops_model_check(&ops);
+	return res == THEFT_TRIAL_PASS;
+}
+
 void
 register_test_adt_edge_set(void)
 {
@@ -699,4 +735,5 @@ register_test_adt_edge_set(void)
 	reg_test("adt_edge_set_regression2", regression2);
 	reg_test("adt_edge_set_regression3", regression3);
 	reg_test("adt_edge_set_regression4", regression4);
+	reg_test("adt_edge_set_regression5", regression5);
 }
