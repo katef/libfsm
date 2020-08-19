@@ -756,10 +756,10 @@ edge_set_ordered_iter_reset_to(const struct edge_set *set,
 			if (bs == BUCKET_TOMBSTONE) {
 				continue; /* search past deleted */
 			} else if (bs == BUCKET_UNUSED) {
-				eoi->pos = i; /* will advance to next symbol */
+				eoi->pos = b_i; /* will advance to next symbol */
 				break;
 			} else if (set->b[b_i].symbol == eoi->symbol) {
-				eoi->pos = i; /* pointing at first bucket */
+				eoi->pos = b_i; /* pointing at first bucket */
 				break;
 			} else {
 				continue; /* find first entry with symbol */
