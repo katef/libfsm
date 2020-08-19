@@ -56,8 +56,8 @@ test_dfa_minimise(theft_seed seed,
 		.seed = seed,
 		.trials = 10000,
 		.fork = {
-			/* .enable = true, */
-			.timeout = 1000,
+			.enable = true,
+			.timeout = 10000,
 		},
 	};
 
@@ -98,11 +98,6 @@ check_minimise_matches_naive_fixpoint_algorithm(const struct dfa_spec *spec)
 	if (!naive_minimised_count(spec, &states_needed_naive)) {
 		fprintf(stderr, "-- ERROR: naive_minimised_count\n");
 		res = THEFT_TRIAL_ERROR;
-		goto cleanup;
-	}
-
-	if (fsm_trim(fsm, FSM_TRIM_START_AND_END_REACHABLE) < 0) {
-		fprintf(stderr, "-- fail: fsm_trim\n");
 		goto cleanup;
 	}
 
@@ -781,6 +776,97 @@ dfa_min_reg_m0(theft_seed seed)
 	RUN_SPEC(states, 0);
 }
 
+static bool
+dfa_min_reg_end_distance_compaction(theft_seed seed)
+{
+	(void)seed;
+	struct dfa_spec_state states[] = {
+		[0] = { .used = true,
+			.edge_count = 2, .edges = {
+				{ .symbol = 0x0, .state = 1 },
+				{ .symbol = 0x1, .state = 2 },
+			},
+		},
+		[1] = { .used = true, .edge_count = 0, },
+		[2] = { .used = true, .end = true,
+			.edge_count = 2, .edges = {
+				{ .symbol = 0x0, .state = 3 },
+				{ .symbol = 0x1, .state = 4 },
+			},
+		},
+		[3] = { .used = true, .edge_count = 0, },
+		[4] = { .used = true,
+			.edge_count = 1, .edges = {
+				{ .symbol = 0x0, .state = 5 },
+			},
+		},
+		[5] = { .used = true,
+			.edge_count = 1, .edges = {
+				{ .symbol = 0x0, .state = 2 },
+			},
+		},
+	};
+	RUN_SPEC(states, 0);
+}
+
+static bool
+dfa_min_reg_realloc_counts(theft_seed seed)
+{
+	(void)seed;
+	struct dfa_spec_state states[] = {
+		[0] = { .used = true,
+			.edge_count = 2, .edges = {
+				{ .symbol = 0x0, .state = 4 },
+				{ .symbol = 0x1, .state = 1 },
+			},
+		},
+		[1] = { .used = true,
+			.edge_count = 1, .edges = {
+				{ .symbol = 0x0, .state = 0 },
+			},
+		},
+		[2] = { .used = true, },
+		[3] = { .used = true, },
+		[4] = { .used = true,
+			.edge_count = 1, .edges = {
+				{ .symbol = 0x0, .state = 7 },
+			},
+		},
+		[5] = { .used = true, },
+		[6] = { .used = true, },
+		[7] = { .used = true, .end = true, },
+	};
+	RUN_SPEC(states, 0);
+}
+
+static bool
+dfa_min_ring(theft_seed seed)
+{
+#define LIMIT 2000
+	static struct dfa_spec_state ring_states[LIMIT];
+	size_t i;
+	(void)seed;
+	for (i = 0; i < LIMIT; i++) {
+		struct dfa_spec_state *s = &ring_states[i];
+		s->used = 1;
+		s->edge_count = 1;
+		s->edges[0].symbol = 0x0;
+		s->edges[0].state = i + 1;
+	}
+
+	/* wrap around to start */
+	ring_states[LIMIT - 1].edges[0].state = 0;
+
+	/* last state is edge state */
+	ring_states[LIMIT - 1].end = 1;
+
+	/* so is halfway */
+	ring_states[LIMIT/2 - 1].end = 1;
+
+	RUN_SPEC(ring_states, 0);
+#undef LIMIT
+}
+
 void
 register_test_minimise(void)
 {
@@ -795,6 +881,13 @@ register_test_minimise(void)
 	reg_test("dfa_minimise_regression_brz", dfa_min_reg_brz);
 
 	reg_test("dfa_minimise_regression_m0", dfa_min_reg_m0);
+	reg_test("dfa_minimise_regression_end_distance_compaction",
+	    dfa_min_reg_end_distance_compaction);
+	reg_test("dfa_minimise_regression_realloc_counts",
+	    dfa_min_reg_realloc_counts);
+
+	reg_test("dfa_minimise_ring", dfa_min_ring);
+
 
 	/* state, symbol, end */
 	reg_test3("dfa_minimise_0_0_0", test_dfa_minimise,

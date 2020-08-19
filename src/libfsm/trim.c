@@ -21,12 +21,18 @@
 #define DEF_EDGES_CEIL 8
 #define DEF_ENDS_CEIL 8
 
+#define NO_END_DISTANCE ((unsigned)-1)
+
 #define LOG_TRIM 0
 
 struct edge {
 	fsm_state_t from;
 	fsm_state_t to;
 };
+
+static void
+compact_shortest_end_distance(const struct fsm *fsm,
+    unsigned *sed);
 
 static int
 grow_ends(const struct fsm_alloc *alloc, size_t *ceil, fsm_state_t **ends);
@@ -50,7 +56,8 @@ cmp_edges_by_to(const void *pa, const void *pb)
 }
 
 static int
-mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
+mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
+    unsigned *sed)
 {
 	/* Use a queue to walk breath-first over all states reachable
 	 * from the start state. Note all end states. Collect all the
@@ -229,6 +236,11 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 				goto cleanup;
 			}
 			fsm->states[end_id].visited = 1;
+
+			/* end states have an end distance of 0 */
+			if (sed != NULL) {
+				sed[end_id] = 0;
+			}
 		}
 
 		/* The ends are no longer needed. */
@@ -300,11 +312,22 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode)
 
 		for (e_i = base; e_i < limit; e_i++) {
 			const fsm_state_t from = edges[e_i].from;
+			const unsigned end_distance = (sed == NULL
+			    ? 0 : sed[s_id]);
 			assert(from < state_count);
 
 			if (LOG_TRIM > 0) {
 				fprintf(stderr, "mark_states: edges[%ld]: %d, visited? %d\n",
 				    e_i, from, fsm->states[from].visited);
+			}
+
+			/* Update the end distance -- one more step
+			 * removed from the nearest end state. */
+			if (sed != NULL) {
+				if (sed[from] == NO_END_DISTANCE
+				    || end_distance < sed[from]) {
+					sed[from] = end_distance + 1;
+				}
 			}
 
 			if (!fsm->states[from].visited) {
@@ -402,15 +425,35 @@ sweep_states(struct fsm *fsm)
 }
 
 long
-fsm_trim(struct fsm *fsm, enum fsm_trim_mode mode)
+fsm_trim(struct fsm *fsm, enum fsm_trim_mode mode,
+	unsigned **shortest_end_distance)
 {
 	long ret;
 	unsigned char *marks = NULL;
+	unsigned *sed = NULL;
+
 	fsm_state_t i;
 	assert(fsm != NULL);
 
-	if (!mark_states(fsm, mode)) {
+	if (shortest_end_distance != NULL
+		&& mode == FSM_TRIM_START_AND_END_REACHABLE) {
+		size_t s_i;
+		sed = f_malloc(fsm->opt->alloc,
+		    fsm->statecount * sizeof(sed[0]));
+		if (sed == NULL) {
+			goto cleanup;
+		}
+		for (s_i = 0; s_i < fsm->statecount; s_i++) {
+			sed[s_i] = NO_END_DISTANCE;
+		}
+	}
+
+	if (!mark_states(fsm, mode, sed)) {
 		goto cleanup;
+	}
+
+	if (sed != NULL) {
+		compact_shortest_end_distance(fsm, sed);
 	}
 
 	/*
@@ -433,7 +476,15 @@ fsm_trim(struct fsm *fsm, enum fsm_trim_mode mode)
 	}
 
 	if (ret < 0) {
+		if (sed != NULL) {
+			f_free(fsm->opt->alloc, sed);
+		}
 		return ret;
+	}
+
+	if (sed != NULL) {
+		assert(shortest_end_distance != NULL);
+		*shortest_end_distance = sed;
 	}
 
 	return ret;
@@ -442,5 +493,34 @@ cleanup:
 	if (marks != NULL) {
 		f_free(fsm->opt->alloc, marks);
 	}
+	if (sed != NULL) {
+		f_free(fsm->opt->alloc, sed);
+	}
 	return -1;
+}
+
+/* Since fsm is about to be compacted (several states will
+ * be trimmed away), compact the corresponding end depths
+ * so that sed[i] will correspond to fsm->states[i] after
+ * trimming completes. */
+static void
+compact_shortest_end_distance(const struct fsm *fsm,
+    unsigned *sed)
+{
+	size_t dst = 0, src;
+
+	for (src = 0; src < fsm->statecount; src++) {
+		if (fsm->states[src].visited) {
+			if (dst < src) {
+				sed[dst] = sed[src];
+			}
+			dst++;
+		} else {
+			assert(sed[src] == NO_END_DISTANCE);
+		}
+	}
+
+	/* Anything after sed[dst] is now garbage. If dst is
+	 * significantly less than fsm->statecount, we could
+	 * realloc to shrink it here. */
 }

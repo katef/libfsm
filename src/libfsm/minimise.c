@@ -44,6 +44,7 @@ fsm_minimise(struct fsm *fsm)
 	unsigned char labels[FSM_SIGMA_COUNT];
 	size_t label_count, orig_states, minimised_states;
 	fsm_state_t *mapping = NULL;
+	unsigned *shortest_end_distance = NULL;
 
 #if LOG_TIME
 	struct timeval tv_pre, tv_post;
@@ -65,7 +66,8 @@ fsm_minimise(struct fsm *fsm)
 	/* The algorithm used below won't remove states without a path
 	 * to an end state, because it cannot prove they're
 	 * unnecessary, so they must be trimmed away first. */
-	if (fsm_trim(fsm, FSM_TRIM_START_AND_END_REACHABLE) < 0) {
+	if (fsm_trim(fsm, FSM_TRIM_START_AND_END_REACHABLE,
+		&shortest_end_distance) < 0) {
 		return 0;
 	}
 
@@ -92,6 +94,7 @@ fsm_minimise(struct fsm *fsm)
 
 	TIME(tv_pre);
 	r = build_minimised_mapping(fsm, labels, label_count,
+	    shortest_end_distance,
 	    mapping, &minimised_states);
 	TIME(tv_post);
 	LOG_TIME_DELTA("minimise");
@@ -121,6 +124,9 @@ fsm_minimise(struct fsm *fsm)
 cleanup:
 	if (mapping != NULL) {
 		f_free(fsm->opt->alloc, mapping);
+	}
+	if (shortest_end_distance != NULL) {
+		f_free(fsm->opt->alloc, shortest_end_distance);
 	}
 
 	return r;
@@ -186,10 +192,16 @@ collect_labels(const struct fsm *fsm,
  * else is distinguishable via transitive final/non-final reachability.
  * Each EC represents a state in the minimised DFA mapping, and multiple
  * states in a single EC can be safely combined without affecting
- * observable behavior. */
+ * observable behavior.
+ *
+ * When PARTITION_BY_END_STATE_DISTANCE is non-zero, instead of
+ * starting with two ECs, do a pass grouping the states into ECs
+ * according to their distance to the closest end state. See the
+ * comments around it for further details. */
 static int
 build_minimised_mapping(const struct fsm *fsm,
     const unsigned char *dfa_labels, size_t dfa_label_count,
+    const unsigned *shortest_end_distance,
     fsm_state_t *mapping, size_t *minimized_state_count)
 {
 	struct min_env env;
@@ -226,7 +238,9 @@ build_minimised_mapping(const struct fsm *fsm,
 	env.ec_count = 2;
 	env.done_ec_offset = env.ec_count;
 
-	populate_initial_ecs(&env, fsm);
+	if (!populate_initial_ecs(&env, fsm, shortest_end_distance)) {
+		goto cleanup;
+	}
 
 #if LOG_INIT
 	for (i = 0; i < env.ec_count; i++) {
@@ -368,10 +382,255 @@ dump_ecs(FILE *f, const struct min_env *env)
 #endif
 }
 
-static void
-populate_initial_ecs(struct min_env *env, const struct fsm *fsm)
+#define PARTITION_BY_END_STATE_DISTANCE 1
+#if PARTITION_BY_END_STATE_DISTANCE
+/* Use counting sort to construct a permutation vector -- this is an
+ * array of offsets into in[N] such that in[pv[0..N]] would give the
+ * values of in[] in ascending order (but don't actually rearrange in,
+ * just get the offsets). This is O(n). */
+static unsigned *
+build_permutation_vector(const struct fsm_alloc *alloc,
+    size_t length, size_t max_value, unsigned *in)
 {
+	unsigned *out = NULL;
+	unsigned *counts = NULL;
 	size_t i;
+
+	out = f_malloc(alloc, length * sizeof(*out));
+	if (out == NULL) {
+		goto cleanup;
+	}
+	counts = f_calloc(alloc, max_value + 1, sizeof(*out));
+	if (counts == NULL) {
+		goto cleanup;
+	}
+
+	/* Count each distinct value */
+	for (i = 0; i < length; i++) {
+		counts[in[i]]++;
+	}
+
+	/* Convert to cumulative counts, so counts[v] stores the upper
+	 * bound for where sorting would place each distinct value. */
+	for (i = 1; i <= max_value; i++) {
+		counts[i] += counts[i - 1];
+	}
+
+	/* Sweep backwards through the input array, placing each value
+	 * according to the cumulative count. Decrement the count so
+	 * progressively earlier instances of the same value will
+	 * receive earlier offsets in out[]. */
+	for (i = 0; i < length; i++) {
+	        const unsigned pos = length - i - 1;
+		const unsigned value = in[pos];
+		const unsigned count = --counts[value];
+		out[count] = pos;
+	}
+
+	f_free(alloc, counts);
+	return out;
+
+cleanup:
+	if (out != NULL) {
+		f_free(alloc, out);
+	}
+	if (counts != NULL) {
+		f_free(alloc, counts);
+	}
+	return NULL;
+}
+#endif
+
+static int
+populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
+	const unsigned *shortest_end_distance)
+{
+	int res = 0;
+	size_t i;
+
+#if PARTITION_BY_END_STATE_DISTANCE
+	/* Populate the initial ECs, partitioned by their shortest
+	 * distance to an end state. Where Moore or Hopcroft's algorithm
+	 * would typically start with two ECs, one for final states and
+	 * one for non-final states, these states can be further
+	 * partitioned into groups with equal shortest distances to an
+	 * end state (0 for the end states themselves). This eliminates
+	 * the worst case in `build_minimised_mapping`, where a very
+	 * deeply nested path to an end state requires several passes:
+	 * for example, an EC with 1000 states where only the last
+	 * reaches the end state and is distinguishable, then 999, then
+	 * 998, ... Using an initial partitioning based on the
+	 * shortest_end_distance puts the states with each distance into
+	 * their own ECs, replacing quadratic repetition. This initial
+	 * pass can be done in linear time.
+	 *
+	 * This end-distance-based partitioning is described in
+	 * _Efficient Deterministic Finite Automata Minimization Based
+	 * on Backward Depth Information_ by Desheng Liu et. al. While
+	 * I'm not convinced their approach works as presented -- and
+	 * the pseudocode, diagrams, and test data tables in the paper
+	 * contain numerous errors -- their proposition that any two
+	 * states with different backwards depths to accept states must
+	 * be distinguishable appears to be valid. We use this
+	 * partitioning as a first pass, and then Moore's algorithm does
+	 * the rest. */
+
+	size_t count_ceil;
+	unsigned *counts = NULL;
+	unsigned *pv = NULL, *ranking = NULL;
+	unsigned count_max = 0, sed_max = 0, sed_limit;
+
+	assert(fsm != NULL);
+	assert(shortest_end_distance != NULL);
+
+	counts = f_calloc(fsm->opt->alloc,
+	    DEF_INITIAL_COUNT_CEIL, sizeof(counts[0]));
+	if (counts == NULL) {
+		goto cleanup;
+	}
+	count_ceil = DEF_INITIAL_COUNT_CEIL;
+
+	/* Count unique shortest_end_distances, growing the
+	 * counts array as necessary, and track the max SED
+	 * present. */
+	for (i = 0; i < fsm->statecount; i++) {
+		unsigned sed = shortest_end_distance[i];
+
+#if LOG_INIT
+		fprintf(stderr, "initial_ecs: %lu/%lu: sed %u\n",
+		    i, fsm->statecount, sed);
+#endif
+
+		assert(sed != (unsigned)-1);
+		if (sed >= count_ceil) {
+			size_t ni;
+			size_t nceil = 2 * count_ceil;
+			unsigned *ncounts;
+			while (sed >= nceil) {
+				nceil *= 2;
+			}
+			ncounts = f_realloc(fsm->opt->alloc,
+			    counts, nceil * sizeof(counts[0]));
+			if (ncounts == NULL) {
+				goto cleanup;
+			}
+
+			/* zero the newly allocated region */
+			for (ni = count_ceil; ni < nceil; ni++) {
+				ncounts[ni] = 0;
+			}
+			counts = ncounts;
+			count_ceil = nceil;
+		}
+
+		counts[sed]++;
+		if (sed > sed_max) {
+			sed_max = sed;
+		}
+		if (counts[sed] > count_max) {
+			count_max = counts[sed];
+		}
+	}
+
+	/* The upper limit includes the max value. */
+	sed_limit = sed_max + 1;
+
+	/* Build a permutation vector of the counts, such
+	 * that counts[pv[i..N]] would return the values
+	 * in counts[] in ascending order. */
+	pv = build_permutation_vector(fsm->opt->alloc,
+	    sed_limit, count_max, counts);
+	if (pv == NULL) {
+		goto cleanup;
+	}
+
+	/* Build a permutation vector of the permutation vector,
+	 * converting it into the rankings for counts[]. This is an
+	 * old APL idiom[1], composing the grade-up operator (which
+	 * builds an ascending permutation vector) with itself.
+	 *
+	 * Using k syntax & ngn's k [2] :
+	 *
+	 *   d:10?4		  / bind d to: draw 10 values 0 <= x < 4
+	 *   d			  / print d's contents
+	 * 3 3 0 1 3 1 1 3 2 2
+	 *   <d			  / build permutation vector of d
+	 * 2 3 5 6 8 9 0 1 4 7
+	 *   d[<d]		  / d sliced by pv of d -> sorted d
+	 * 0 1 1 1 2 2 3 3 3 3
+	 *   d			  / print d's contents, again
+	 * 3 3 0 1 3 1 1 3 2 2
+	 *   <<d		  / pv of (pv of d): ranking vector of d
+	 * 6 7 0 1 8 2 3 9 4 5
+	 *			  / see how (0) -> 0, (1 2 3) -> 1,
+	 *			  / (4 5) -> 2, (6 7 8 9) -> 3?
+	 *   9-<<d		  / subtract from the length to count
+	 * 3 2 9 8 1 7 6 0 5 4	  / from the end, for descending ranks.
+	 *			  / now (0 1 2 3) -> 3, (4 5) -> 2, ...
+	 *   dr:{(-1+#x)-<<x}	  / bind function: descending rank
+	 *   dr d		  / put it all together
+	 * 3 2 9 8 1 7 6 0 5 4
+	 *			  / one more example, to show the pattern
+	 *   d:5 5 5 2 2 2 2 1 1 1
+	 *   dr d
+	 * 2 1 0 6 5 4 3 9 8 7	  / (2 1 0) -> 5, (6 5 4 3) -> 2, (9 8 7) -> 1
+	 *
+	 * [1]: http://www.sudleyplace.com/APL/Anatomy%20of%20An%20Idiom.pdf
+	 * [2]: https://bitbucket.org/ngn/k/src
+	 */
+	ranking = build_permutation_vector(fsm->opt->alloc,
+	    sed_limit, sed_limit, pv);
+	if (ranking == NULL) {
+		goto cleanup;
+	}
+
+	/* Reverse the ranking offsets -- count from the end, rather
+	 * than the start, so ECs with higher counts appear first. */
+	for (i = 0; i < sed_limit; i++) {
+		ranking[i] = sed_max - ranking[i];
+		env->ecs[i] = NO_ID;
+	}
+
+	/* Assign the states to the ECs, ordered by descending ranking.
+	 * We want the largest ECs first, as they will need the most
+	 * processing. All ECs with less than 2 states are already done,
+	 * so they should be together at the end. */
+	for (i = 0; i < fsm->statecount; i++) {
+		const unsigned sed = shortest_end_distance[i];
+		fsm_state_t ec;
+		assert(sed < sed_limit);
+
+		/* assign EC and link state at head of list */
+		ec = ranking[sed];
+		env->state_ecs[i] = ec;
+		env->jump[i] = env->ecs[ec];
+		env->ecs[ec] = i;
+	}
+
+	/* Set done_ec_offset to the first EC with <2 states, if any. */
+	env->ec_count = sed_limit;
+	env->done_ec_offset = env->ec_count;
+	for (i = 0; i < sed_limit; i++) {
+		const unsigned count = counts[shortest_end_distance[env->ecs[i]]];
+		if (count < 2) {
+			env->done_ec_offset = i;
+			break;
+		}
+	}
+
+	/* The dead state is not a member of any EC. */
+	env->state_ecs[env->dead_state] = NO_ID;
+	res = 1;
+
+cleanup:
+	f_free(fsm->opt->alloc, counts);
+	f_free(fsm->opt->alloc, pv);
+	f_free(fsm->opt->alloc, ranking);
+	return res;
+
+#else
+	(void)shortest_end_distance;
+
 	for (i = 0; i < fsm->statecount; i++) {
 		const fsm_state_t ec = fsm_isend(fsm, i)
 		    ? INIT_EC_FINAL : INIT_EC_NOT_FINAL;
@@ -387,6 +646,9 @@ populate_initial_ecs(struct min_env *env, const struct fsm *fsm)
 
 	/* The dead state is not a member of any EC. */
 	env->state_ecs[env->dead_state] = NO_ID;
+	res = 1;
+	return res;
+#endif
 }
 
 #if EXPENSIVE_INTEGRITY_CHECKS

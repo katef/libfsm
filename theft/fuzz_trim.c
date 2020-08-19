@@ -98,7 +98,7 @@ check_trimming_matches_reachability(const struct dfa_spec *spec)
 		return THEFT_TRIAL_ERROR;
 	}
 
-	long trim_res = fsm_trim(fsm, FSM_TRIM_START_AND_END_REACHABLE);
+	long trim_res = fsm_trim(fsm, FSM_TRIM_START_AND_END_REACHABLE, NULL);
 	if (trim_res < 0) {
 		fprintf(stderr, "-- FAIL: trim_res %ld\n", trim_res);
 		return THEFT_TRIAL_FAIL;
