@@ -98,7 +98,16 @@ int
 edge_set_empty(const struct edge_set *s);
 
 
-/* Initialize a new ordered edge_set iterator. */
+/* Initialize an ordered edge_set iterator, positioning it at the first
+ * edge with a particular symbol. edge_set_ordered_iter_next will get
+ * successive edges with that symbol, then lexicographically following
+ * symbols (if any). */
+void
+edge_set_ordered_iter_reset_to(const struct edge_set *set,
+    struct edge_ordered_iter *eoi, unsigned char symbol);
+
+/* Reset an ordered iterator, equivalent to
+ * edge_set_ordered_iter_reset_to(set, eoi, '\0'). */
 void
 edge_set_ordered_iter_reset(const struct edge_set *set,
     struct edge_ordered_iter *eoi);
