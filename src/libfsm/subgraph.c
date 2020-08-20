@@ -10,7 +10,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
-#include <fsm/capture.h>
+#include <fsm/subgraph.h>
 
 #include <adt/alloc.h>
 #include <adt/set.h>
@@ -21,26 +21,26 @@
 #include "internal.h"
 
 void
-fsm_capture_start(struct fsm *fsm, struct fsm_capture *capture)
+fsm_subgraph_start(struct fsm *fsm, struct fsm_subgraph *subgraph)
 {
 	assert(fsm != NULL);
-	assert(capture != NULL);
+	assert(subgraph != NULL);
 
-	capture->start = fsm_countstates(fsm);
+	subgraph->start = fsm_countstates(fsm);
 }
 
 void
-fsm_capture_stop(struct fsm *fsm, struct fsm_capture *capture)
+fsm_subgraph_stop(struct fsm *fsm, struct fsm_subgraph *subgraph)
 {
 	assert(fsm != NULL);
-	assert(capture != NULL);
+	assert(subgraph != NULL);
 
-	capture->end = fsm_countstates(fsm);
+	subgraph->end = fsm_countstates(fsm);
 }
 
 int
-fsm_capture_duplicate(struct fsm *fsm,
-	const struct fsm_capture *capture,
+fsm_subgraph_duplicate(struct fsm *fsm,
+	const struct fsm_subgraph *subgraph,
 	fsm_state_t *x,
 	fsm_state_t *q)
 {
@@ -48,13 +48,13 @@ fsm_capture_duplicate(struct fsm *fsm,
 	fsm_state_t new_start, new_end;
 	fsm_state_t ind;
 
-	assert(fsm     != NULL);
-	assert(capture != NULL);
-	assert(q       != NULL);
-	assert(x == NULL || (*x >= capture->start && *x < capture->end));
+	assert(fsm      != NULL);
+	assert(subgraph != NULL);
+	assert(q        != NULL);
+	assert(x == NULL || (*x >= subgraph->start && *x < subgraph->end));
 
-	old_start = capture->start;
-	old_end   = capture->end;
+	old_start = subgraph->start;
+	old_end   = subgraph->end;
 
 	if (old_start >= old_end) {
 		return 0;
