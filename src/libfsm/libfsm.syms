@@ -67,9 +67,9 @@ fsm_findmode
 fsm_collate
 fsm_mergestates
 
-fsm_capture_start
-fsm_capture_stop
-fsm_capture_duplicate
+fsm_subgraph_start
+fsm_subgraph_stop
+fsm_subgraph_duplicate
 
 fsm_setstart
 fsm_getstart

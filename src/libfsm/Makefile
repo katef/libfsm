@@ -21,7 +21,7 @@ SRC += src/libfsm/vm.c
 
 # graph things
 SRC += src/libfsm/mergestates.c
-SRC += src/libfsm/capture.c
+SRC += src/libfsm/subgraph.c
 
 # search
 SRC += src/libfsm/shortest.c
