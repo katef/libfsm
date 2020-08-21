@@ -90,7 +90,11 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits, const struct ir *ir)
 {
 	if (end_bits == VM_END_FAIL) {
-		fprintf(f, "return -1;");
+		if (opt->leaf != NULL) {
+			opt->leaf(f, op->ir_state->end_ids, opt->leaf_opaque);
+		} else {
+			fprintf(f, "return -1;");
+		}
 		return;
 	}
 
@@ -108,7 +112,7 @@ print_branch(FILE *f, const struct dfavm_op_ir *op)
 }
 
 static void
-print_fetch(FILE *f, const struct fsm_options *opt)
+print_fetch(FILE *f, const struct fsm_options *opt, const char *getc)
 {
 	switch (opt->io) {
 	case FSM_IO_GETC:
@@ -116,7 +120,8 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 		 * Per its API, fsm_getc() is expected to return a positive character
 		 * value (as if cast via unsigned char), or EOF. Just like fgetc() does.
 		 */
-		fprintf(f, "if (c = fsm_getc(opaque), c == EOF) ");
+		fprintf(f, "if (c = %s, c == EOF) ",
+			getc == NULL ? "fsm_getc(opaque)" : getc);
 		break;
 
 	case FSM_IO_STR:
@@ -126,17 +131,16 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 	case FSM_IO_PAIR:
 		/* This is split into two parts.  The first part checks if we're
 		 * at the end of the buffer.  The second part, in
-		 * fsm_print_cfrag, fetches the byte
+		 * fsm_print_vmcfrag, fetches the byte
 		 */
 		fprintf(f, "if (p == e) ");
 		break;
 	}
 }
 
-/* TODO: eventually to be non-static */
-static int
-fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
-	const char *cp,
+int
+fsm_print_vmcfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+	const char *cp, const char *getc,
 	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
@@ -198,7 +202,7 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			break;
 
 		case VM_OP_FETCH:
-			print_fetch(f, opt);
+			print_fetch(f, opt, getc);
 			print_end(f, op, opt, op->u.fetch.end_bits, ir);
 			if (opt->io == FSM_IO_PAIR) {
 				/* second part of FSM_IO_PAIR fetch */
@@ -235,7 +239,7 @@ fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt
 	assert(ir != NULL);
 	assert(opt != NULL);
 
-	(void) fsm_print_cfrag(f, ir, opt, cp,
+	(void) fsm_print_vmcfrag(f, ir, opt, cp, NULL,
 		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
 }
 
