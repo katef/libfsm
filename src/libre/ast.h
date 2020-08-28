@@ -183,7 +183,7 @@ struct ast {
 	struct ast_expr *expr;
 };
 
-struct ast_expr *ast_expr_tombstone;
+extern struct ast_expr *ast_expr_tombstone;
 
 struct ast *
 ast_new(void);
