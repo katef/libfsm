@@ -152,10 +152,10 @@ collect_labels(const struct fsm *fsm,
 			assert(e.state < fsm->statecount);
 			label = e.symbol;
 
-			if (label_set[label/64] & (1UL << (label & 63))) {
+			if (label_set[label/64] & (UINT64_C(1) << (label & 63))) {
 				/* already set, ignore */
 			} else {
-				label_set[label/64] |= (1UL << (label & 63));
+				label_set[label/64] |= (UINT64_C(1) << (label & 63));
 				count++;
 			}
 		}
@@ -163,7 +163,7 @@ collect_labels(const struct fsm *fsm,
 
 	*label_count = 0;
 	for (i = 0; i < 256; i++) {
-		if (label_set[i/64] & (1UL << (i & 63))) {
+		if (label_set[i/64] & (UINT64_C(1) << (i & 63))) {
 			labels[*label_count] = i;
 			(*label_count)++;
 		}
