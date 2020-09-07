@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include <adt/alloc.h>
 
@@ -24,7 +25,7 @@ static const unsigned char hashk[] = {
 unsigned long
 hashrec(const void *p, size_t n)
 {
-	unsigned long h = 0;
+	uint64_t h = 0;
 
 	siphash(p, n, hashk, (void *) &h, sizeof h);
 

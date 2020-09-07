@@ -41,7 +41,7 @@ SRC += src/libfsm/intersect.c
 SRC += src/libfsm/subtract.c
 SRC += src/libfsm/walk2.c
 
-.for src in ${SRC:Msrc/libfsm/closure.c} ${SRC:Msrc/libfsm/vm.c}
+.for src in ${SRC:Msrc/libfsm/closure.c} ${SRC:Msrc/libfsm/minimise.c} ${SRC:Msrc/libfsm/vm.c}
 CFLAGS.${src} += -std=c99
 DFLAGS.${src} += -std=c99
 .endfor
