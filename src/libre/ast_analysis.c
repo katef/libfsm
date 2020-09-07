@@ -141,10 +141,6 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_FLAGS:
-		set_flags(n, AST_FLAG_NULLABLE); 
-		break;
-
 	case AST_EXPR_ANCHOR:
 		/* anchor flags will be handled on the second pass */
 		break;
@@ -241,7 +237,6 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
-	case AST_EXPR_FLAGS:
 	case AST_EXPR_TOMBSTONE:
 		break;
 
@@ -467,7 +462,6 @@ assign_firsts(struct ast_expr *n)
 {
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
-	case AST_EXPR_FLAGS:
 	case AST_EXPR_TOMBSTONE:
 		break;
 
@@ -540,7 +534,6 @@ assign_lasts(struct ast_expr *n)
 {
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
-	case AST_EXPR_FLAGS:
 	case AST_EXPR_TOMBSTONE:
 		break;
 

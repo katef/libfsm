@@ -13,7 +13,7 @@ struct ast;
 struct fsm_options;
 
 typedef void (ast_print)(FILE *f, const struct fsm_options *opt,
-	const struct ast *ast);
+	enum re_flags re_flags, const struct ast *ast);
 
 ast_print ast_print_dot;
 ast_print ast_print_abnf;

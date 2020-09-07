@@ -627,7 +627,6 @@ rewrite(struct ast_expr *n, enum re_flags flags)
 
 		return 1;
 
-	case AST_EXPR_FLAGS:
 	case AST_EXPR_ANCHOR:
 		return 1;
 

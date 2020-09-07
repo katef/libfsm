@@ -94,7 +94,9 @@
 	<ast-make-alt>:          ()                       -> (:ast_expr);
 	<ast-make-piece>:        (:ast_expr, :ast_count)  -> (:ast_expr);
 	<ast-make-group>:        (:ast_expr)              -> (:ast_expr);
-	<ast-make-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
+	<ast-get-re-flags>:      ()                       -> (:re_flags);
+	<ast-set-re-flags>:      (:re_flags)              -> ();
+	<ast-mask-re-flags>:     (:re_flags, :re_flags)   -> ();
 	<ast-make-anchor-start>: ()                       -> (:ast_expr);
 	<ast-make-anchor-end>:   ()                       -> (:ast_expr);
 	!<ast-make-subtract>:    (:ast_expr, :ast_expr)   -> (:ast_expr); 
@@ -422,11 +424,11 @@
 
 			{
 				CLOSEFLAGS;
-				node = <ast-make-re-flags>(pos, neg);
+				<ast-mask-re-flags>(pos, neg);
 			##
 				<err-expected-closeflags>;
-				node = <ast-make-empty>;
 			};
+			node = <ast-make-empty>;
 		};
 
 		piece: () -> (node :ast_expr) [
@@ -462,11 +464,15 @@
 				e = <ast-make-empty>; /* appease sid */
 			||
 				OPENSUB;
+				flags = <ast-get-re-flags>();
 				e = expr;
+				<ast-set-re-flags>(flags);
 				CLOSE;
 			||
 				OPENCAPTURE;
+				flags = <ast-get-re-flags>();
 				g = expr;
+				<ast-set-re-flags>(flags);
 				e = <ast-make-group>(g);
 				CLOSE;
 			##
