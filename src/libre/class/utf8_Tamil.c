@@ -18,7 +18,9 @@ static const struct range ranges[] = {
 	{ 0x0BCAUL, 0x0BCDUL },
 	{ 0x0BD0UL, 0x0BD0UL },
 	{ 0x0BD7UL, 0x0BD7UL },
-	{ 0x0BE6UL, 0x0BFAUL }
+	{ 0x0BE6UL, 0x0BFAUL },
+	{ 0x11FC0UL, 0x11FF1UL },
+	{ 0x11FFFUL, 0x11FFFUL }
 };
 
 const struct class utf8_Tamil = {

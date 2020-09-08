@@ -4,8 +4,8 @@
 
 static const struct range ranges[] = {
 	{ 0x02EAUL, 0x02EBUL },
-	{ 0x3105UL, 0x312EUL },
-	{ 0x31A0UL, 0x31BAUL }
+	{ 0x3105UL, 0x312FUL },
+	{ 0x31A0UL, 0x31BFUL }
 };
 
 const struct class utf8_Bopomofo = {
