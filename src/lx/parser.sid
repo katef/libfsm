@@ -274,7 +274,7 @@
 			};
 		};
 
-		bind-thing: (a :ast, z :zone, exit :fsm) -> () = {
+		bind-thing: (a :ast, z :zone) -> () = {
 			n = IDENT;
 
 			{
@@ -283,8 +283,11 @@
 				<err-expected-bind>;
 			};
 
+			/*
+			 * We don't subtract the exit pattern here because we
+			 * have no way to know how this binding will be used.
+			 */
 			r = expr(z);
-			q = <subtract-exit>(r, exit);
 
 			{
 				SEMI;
@@ -292,7 +295,7 @@
 				<err-expected-semi>;
 			};
 
-			<add-binding>(a, z, n, q);
+			<add-binding>(a, z, n, r);
 		};
 
 		oneway-thing: (a :ast, parent :zone, exit :fsm) -> () = {
@@ -418,7 +421,7 @@
 			to = <no-zone>;
 			<add-mapping>(a, z, to, r, t);
 		||
-			bind-thing(a, z, exit);
+			bind-thing(a, z);
 		||
 			zone-thing(a, z, exit);
 		||
