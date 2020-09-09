@@ -110,6 +110,8 @@ ast_expr_free(struct ast_expr *n)
 		for (i = 0; i < n->u.alt.count; i++) {
 			ast_expr_free(n->u.alt.n[i]);
 		}
+
+		free(n->u.alt.n);
 		break;
 	}
 
