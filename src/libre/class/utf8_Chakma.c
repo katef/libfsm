@@ -4,7 +4,7 @@
 
 static const struct range ranges[] = {
 	{ 0x11100UL, 0x11134UL },
-	{ 0x11136UL, 0x11143UL }
+	{ 0x11136UL, 0x11147UL }
 };
 
 const struct class utf8_Chakma = {

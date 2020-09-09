@@ -3,8 +3,7 @@
 #include "class.h"
 
 static const struct range ranges[] = {
-	{ 0x0C00UL, 0x0C03UL },
-	{ 0x0C05UL, 0x0C0CUL },
+	{ 0x0C00UL, 0x0C0CUL },
 	{ 0x0C0EUL, 0x0C10UL },
 	{ 0x0C12UL, 0x0C28UL },
 	{ 0x0C2AUL, 0x0C39UL },
@@ -15,7 +14,7 @@ static const struct range ranges[] = {
 	{ 0x0C58UL, 0x0C5AUL },
 	{ 0x0C60UL, 0x0C63UL },
 	{ 0x0C66UL, 0x0C6FUL },
-	{ 0x0C78UL, 0x0C7FUL }
+	{ 0x0C77UL, 0x0C7FUL }
 };
 
 const struct class utf8_Telugu = {

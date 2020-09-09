@@ -18,7 +18,7 @@ static const struct range ranges[] = {
 	{ 0x0A51UL, 0x0A51UL },
 	{ 0x0A59UL, 0x0A5CUL },
 	{ 0x0A5EUL, 0x0A5EUL },
-	{ 0x0A66UL, 0x0A75UL }
+	{ 0x0A66UL, 0x0A76UL }
 };
 
 const struct class utf8_Gurmukhi = {

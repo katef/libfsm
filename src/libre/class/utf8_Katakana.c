@@ -10,7 +10,8 @@ static const struct range ranges[] = {
 	{ 0x3300UL, 0x3357UL },
 	{ 0xFF66UL, 0xFF6FUL },
 	{ 0xFF71UL, 0xFF9DUL },
-	{ 0x1B000UL, 0x1B000UL }
+	{ 0x1B000UL, 0x1B000UL },
+	{ 0x1B164UL, 0x1B167UL }
 };
 
 const struct class utf8_Katakana = {
