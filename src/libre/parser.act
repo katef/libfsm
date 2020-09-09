@@ -90,11 +90,6 @@
 	#include "../comp.h"
 	#include "../../class.h"
 
-	struct flags {
-		enum re_flags flags;
-		struct flags *parent;
-	};
-
 	typedef char     t_char;
 	typedef unsigned t_unsigned;
 	typedef unsigned t_pred; /* TODO */
@@ -225,7 +220,7 @@
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
 
-	typedef struct flags *flags;
+	typedef enum re_flags * flags;
 	typedef struct re_err * err;
 
 	typedef struct ast_expr * t_ast__expr;
@@ -659,28 +654,28 @@
 	 */
 
 	<ast-make-empty>: () -> (node :ast_expr) = @{
-		@node = ast_make_expr_empty();
+		@node = ast_make_expr_empty(*flags);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
 	<ast-make-concat>: () -> (node :ast_expr) = @{
-		@node = ast_make_expr_concat();
+		@node = ast_make_expr_concat(*flags);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
 	<ast-make-alt>: () -> (node :ast_expr) = @{
-		@node = ast_make_expr_alt();
+		@node = ast_make_expr_alt(*flags);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
 	<ast-make-literal>: (c :char) -> (node :ast_expr) = @{
-		@node = ast_make_expr_literal(@c);
+		@node = ast_make_expr_literal(*flags, @c);
 		if (@node == NULL) {
 			@!;
 		}
@@ -692,11 +687,11 @@
 
 	<ast-make-piece>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
 		if (@c.min == 0 && @c.max == 0) {
-			@node = ast_make_expr_empty();
+			@node = ast_make_expr_empty(*flags);
 		} else if (@c.min == 1 && @c.max == 1) {
 			@node = @e;
 		} else {
-			@node = ast_make_expr_repeat(@e, @c);
+			@node = ast_make_expr_repeat(*flags, @e, @c);
 		}
 		if (@node == NULL) {
 			err->e = RE_EXEOF;
@@ -705,35 +700,45 @@
 	@};
 
 	<ast-make-group>: (e :ast_expr) -> (node :ast_expr) = @{
-		@node = ast_make_expr_group(@e);
+		@node = ast_make_expr_group(*flags, @e);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
-	<ast-make-re-flags>: (pos :re_flags, neg :re_flags) -> (node :ast_expr) = @{
-		@node = ast_make_expr_re_flags(@pos, @neg);
-		if (@node == NULL) {
-			@!;
-		}
+	<ast-get-re-flags>: () -> (flags :re_flags) = @{
+		@flags = *flags;
+	@};
+
+	<ast-set-re-flags>: (flags :re_flags) -> () = @{
+		*flags = @flags;
+	@};
+
+	<ast-mask-re-flags>: (pos :re_flags, neg :re_flags) -> () = @{
+		/*
+		 * Note: in cases like `(?i-i)`, the negative is
+		 * required to take precedence.
+		 */
+		*flags |= @pos;
+		*flags &= ~@neg;
 	@};
 
 	<ast-make-anchor-start>: () -> (node :ast_expr) = @{
-		@node = ast_make_expr_anchor(AST_ANCHOR_START);
+		@node = ast_make_expr_anchor(*flags, AST_ANCHOR_START);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
 	<ast-make-anchor-end>: () -> (node :ast_expr) = @{
-		@node = ast_make_expr_anchor(AST_ANCHOR_END);
+		@node = ast_make_expr_anchor(*flags, AST_ANCHOR_END);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
 	<ast-make-subtract>: (a :ast_expr, b :ast_expr) -> (node :ast_expr) = @{
-		@node = ast_make_expr_subtract(@a, @b);
+		@node = ast_make_expr_subtract(*flags, @a, @b);
 		if (@node == NULL) {
 			@!;
 		}
@@ -766,12 +771,12 @@
 		 * a better idea.
 		 */
 
-		any = ast_make_expr_named(&class_any);
+		any = ast_make_expr_named(*flags, &class_any);
 		if (any == NULL) {
 			@!;
 		}
 
-		@node = ast_make_expr_subtract(any, @e);
+		@node = ast_make_expr_subtract(*flags, any, @e);
 		if (@node == NULL) {
 			@!;
 		}
@@ -804,14 +809,14 @@
 			@!;
 		}
 
-		@node = ast_make_expr_range(&@from, ast_start, &@to, ast_end);
+		@node = ast_make_expr_range(*flags, &@from, ast_start, &@to, ast_end);
 		if (@node == NULL) {
 			@!;
 		}
 	@};
 
 	<ast-make-named>: (id :ast_class_id) -> (node :ast_expr) = @{
-		@node = ast_make_expr_named(@id);
+		@node = ast_make_expr_named(*flags, @id);
 		if (@node == NULL) {
 			@!;
 		}
@@ -853,7 +858,6 @@
 		struct re_err *err)
 	{
 		struct ast *ast;
-		struct flags top, *fl = &top;
 
 		struct act_state  act_state_s;
 		struct act_state *act_state;
@@ -862,8 +866,6 @@
 		struct re_err dummy;
 
 		struct LX_STATE *lx;
-
-		top.flags = flags;
 
 		assert(f != NULL);
 
@@ -904,7 +906,7 @@
 		err->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
-		DIALECT_ENTRY(fl, lex_state, act_state, err, &ast->expr);
+		DIALECT_ENTRY(&flags, lex_state, act_state, err, &ast->expr);
 
 		lx->free(lx->buf_opaque);
 

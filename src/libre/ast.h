@@ -27,7 +27,6 @@ enum ast_expr_type {
 	AST_EXPR_CODEPOINT,
 	AST_EXPR_REPEAT,
 	AST_EXPR_GROUP,
-	AST_EXPR_FLAGS,
 	AST_EXPR_ANCHOR,
 	AST_EXPR_SUBTRACT,
 	AST_EXPR_RANGE,
@@ -117,6 +116,7 @@ struct ast_endpoint {
 struct ast_expr {
 	enum ast_expr_type type;
 	enum ast_flags flags;
+	enum re_flags re_flags;
 
 	union {
 		/* ordered sequence */
@@ -151,11 +151,6 @@ struct ast_expr {
 			struct ast_expr *e;
 			unsigned id;
 		} group;
-
-		struct {
-			enum re_flags pos;
-			enum re_flags neg;
-		} flags;
 
 		struct {
 			enum ast_anchor_type type;
@@ -212,47 +207,45 @@ int
 ast_contains_expr(const struct ast_expr *node, struct ast_expr * const *a, size_t n);
 
 struct ast_expr *
-ast_make_expr_empty(void);
+ast_make_expr_empty(enum re_flags re_flags);
 
 struct ast_expr *
-ast_make_expr_concat(void);
+ast_make_expr_concat(enum re_flags re_flags);
 
 struct ast_expr *
-ast_make_expr_alt(void);
+ast_make_expr_alt(enum re_flags re_flags);
 
 int
 ast_add_expr_alt(struct ast_expr *alt, struct ast_expr *node);
 
 struct ast_expr *
-ast_make_expr_literal(char c);
+ast_make_expr_literal(enum re_flags re_flags, char c);
 
 struct ast_expr *
-ast_make_expr_codepoint(uint32_t u);
+ast_make_expr_codepoint(enum re_flags re_flags, uint32_t u);
 
 struct ast_expr *
-ast_make_expr_repeat(struct ast_expr *e, struct ast_count count);
+ast_make_expr_repeat(enum re_flags re_flags, struct ast_expr *e, struct ast_count count);
 
 struct ast_expr *
-ast_make_expr_group(struct ast_expr *e);
+ast_make_expr_group(enum re_flags re_flags, struct ast_expr *e);
 
 struct ast_expr *
-ast_make_expr_re_flags(enum re_flags pos, enum re_flags neg);
+ast_make_expr_anchor(enum re_flags re_flags, enum ast_anchor_type type);
 
 struct ast_expr *
-ast_make_expr_anchor(enum ast_anchor_type type);
-
-struct ast_expr *
-ast_make_expr_subtract(struct ast_expr *a, struct ast_expr *b);
+ast_make_expr_subtract(enum re_flags re_flags, struct ast_expr *a, struct ast_expr *b);
 
 int
 ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
 
 struct ast_expr *
-ast_make_expr_range(const struct ast_endpoint *from, struct ast_pos start,
+ast_make_expr_range(enum re_flags re_flags,
+	const struct ast_endpoint *from, struct ast_pos start,
 	const struct ast_endpoint *to, struct ast_pos end);
 
 struct ast_expr *
-ast_make_expr_named(const struct class *class);
+ast_make_expr_named(enum re_flags re_flags, const struct class *class);
 
 /* XXX: exposed for sake of re(1) printing an ast;
  * it's not part of the <re/re.h> API proper */

@@ -643,7 +643,7 @@ main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 
-		print_ast(stdout, &opt, ast);
+		print_ast(stdout, &opt, flags, ast);
 
 		return 0;
 	}

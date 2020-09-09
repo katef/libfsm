@@ -30,12 +30,14 @@ fprintf_count(FILE *f, unsigned count)
 static void
 re_flags_print(FILE *f, enum re_flags fl)
 {
-	if (fl & RE_ICASE  ) { fprintf(f, "i"); }
-	if (fl & RE_TEXT   ) { fprintf(f, "g"); }
-	if (fl & RE_MULTI  ) { fprintf(f, "m"); }
-	if (fl & RE_REVERSE) { fprintf(f, "r"); }
-	if (fl & RE_SINGLE ) { fprintf(f, "s"); }
-	if (fl & RE_ZONE   ) { fprintf(f, "z"); }
+	const char *sep = "";
+
+	if (fl & RE_ICASE  ) { fprintf(f, "%sicase",    sep); sep = " "; }
+	if (fl & RE_TEXT   ) { fprintf(f, "%stext ",    sep); sep = " "; }
+	if (fl & RE_MULTI  ) { fprintf(f, "%smulti ",   sep); sep = " "; }
+	if (fl & RE_REVERSE) { fprintf(f, "%sreverse ", sep); sep = " "; }
+	if (fl & RE_SINGLE ) { fprintf(f, "%ssingle ",  sep); sep = " "; }
+	if (fl & RE_ZONE   ) { fprintf(f, "%szone ",    sep); sep = " "; }
 }
 
 static void
@@ -58,8 +60,10 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 
 static void
 pp_iter(FILE *f, const struct fsm_options *opt,
-	const void *parent, struct ast_expr *n)
+	const void *parent, enum re_flags re_flags, struct ast_expr *n)
 {
+	const char *typestr;
+
 	assert(f != NULL);
 	assert(opt != NULL);
 
@@ -71,16 +75,131 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
-		fprintf(f, "\tn%p [ label = <EMPTY> ];\n", (void *) n);
+		typestr = "EMPTY";
+		break;
+
+	case AST_EXPR_CONCAT:
+		typestr = "CONCAT";
+		break;
+
+	case AST_EXPR_ALT:
+		typestr = "ALT";
+		break;
+
+	case AST_EXPR_LITERAL:
+		typestr = "LITERAL";
+		break;
+
+	case AST_EXPR_CODEPOINT:
+		typestr = "CODEPOINT";
+		break;
+
+	case AST_EXPR_REPEAT:
+		typestr = "REPEAT";
+		break;
+
+	case AST_EXPR_GROUP:
+		typestr = "GROUP";
+		break;
+
+	case AST_EXPR_ANCHOR:
+		typestr = "ANCHOR";
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		typestr = "SUBTRACT";
+		break;
+
+	case AST_EXPR_RANGE:
+		typestr = "RANGE";
+		break;
+
+	case AST_EXPR_TOMBSTONE:
+		typestr = "RIP";
+		break;
+
+	default:
+		assert(!"unreached");
+	}
+
+	fprintf(f, "\tn%p [ label = <{%s", (void *) n, typestr);
+
+	if (n->re_flags != re_flags) {
+		fprintf(f, "|flags:");
+		if (n->re_flags & ~re_flags) {
+			fprintf(f, " pos(");
+			re_flags_print(f, n->re_flags & ~re_flags);
+			fprintf(f, ")");
+		}
+		if (re_flags & ~n->re_flags) {
+			fprintf(f, " neg(");
+			re_flags_print(f, re_flags & ~n->re_flags);
+			fprintf(f, ")");
+		}
+		re_flags = n->re_flags;
+	}
+
+	switch (n->type) {
+	default:
+		break;
+
+	case AST_EXPR_CONCAT:
+		fprintf(f, "}|{%lu", n->u.concat.count);
+		break;
+
+	case AST_EXPR_ALT:
+		fprintf(f, "}|{%lu", n->u.alt.count);
+		break;
+
+	case AST_EXPR_LITERAL:
+		fprintf(f, "}|{");
+		dot_escputc_html_record(f, opt, n->u.literal.c);
+		break;
+
+	case AST_EXPR_CODEPOINT:
+		fprintf(f, "}|{U+%lX", (unsigned long) n->u.codepoint.u);
+		break;
+
+	case AST_EXPR_REPEAT:
+		fprintf(f, "}|{&#x7b;");
+		fprintf_count(f, n->u.repeat.min);
+		fprintf(f, ", ");
+		fprintf_count(f, n->u.repeat.max);
+		fprintf(f, "&#x7d;");
+		break;
+
+	case AST_EXPR_GROUP:
+		fprintf(f, "}|{#%u", n->u.group.id);
+		break;
+
+	case AST_EXPR_ANCHOR:
+		assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
+		fprintf(f, "}|{%c", n->u.anchor.type == AST_ANCHOR_START ? '^' : '$');
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		fprintf(f, "}|{a|b");
+		break;
+
+	case AST_EXPR_RANGE:
+		fprintf(f, "}|{");
+		print_endpoint(f, opt, &n->u.range.from);
+		fprintf(f, " &ndash; ");
+		print_endpoint(f, opt, &n->u.range.to);
+		break;
+	}
+
+	fprintf(f, "}> ];\n");
+
+	switch (n->type) {
+	default:
 		break;
 
 	case AST_EXPR_CONCAT:
 	{
 		size_t i;
-		fprintf(f, "\tn%p [ label = <CONCAT|%lu> ];\n",
-		    (void *) n, n->u.concat.count);
 		for (i = 0; i < n->u.concat.count; i++) {
-			pp_iter(f, opt, n, n->u.concat.n[i]);
+			pp_iter(f, opt, n, re_flags, n->u.concat.n[i]);
 		}
 		break;
 	}
@@ -88,81 +207,30 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 	case AST_EXPR_ALT:
 	{
 		size_t i;
-		fprintf(f, "\tn%p [ label = <ALT|%lu> ];\n",
-		    (void *) n, n->u.alt.count);
 		for (i = 0; i < n->u.alt.count; i++) {
-			pp_iter(f, opt, n, n->u.alt.n[i]);
+			pp_iter(f, opt, n, re_flags, n->u.alt.n[i]);
 		}
 		break;
 	}
 
-	case AST_EXPR_LITERAL:
-		fprintf(f, "\tn%p [ label = <LITERAL|", (void *) n);
-		dot_escputc_html_record(f, opt, n->u.literal.c);
-		fprintf(f, "> ];\n");
-		break;
-
-	case AST_EXPR_CODEPOINT:
-		fprintf(f, "\tn%p [ label = <CODEPOINT|U+%lX> ];\n", (void *) n,
-			(unsigned long) n->u.codepoint.u);
-		break; 
-
 	case AST_EXPR_REPEAT:
-		fprintf(f, "\tn%p [ label = <REPEAT|&#x7b;", (void *) n);
-		fprintf_count(f, n->u.repeat.min);
-		fprintf(f, ", ");
-		fprintf_count(f, n->u.repeat.max);
-		fprintf(f, "&#x7d;> ];\n");
-		pp_iter(f, opt, n, n->u.repeat.e);
+		pp_iter(f, opt, n, re_flags, n->u.repeat.e);
 		break;
 
 	case AST_EXPR_GROUP:
-		fprintf(f, "\tn%p [ label = <GROUP|#%u> ];\n", (void *) n,
-			n->u.group.id);
-		pp_iter(f, opt, n, n->u.group.e);
-		break;
-
-	case AST_EXPR_ANCHOR:
-		assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
-		fprintf(f, "\tn%p [ label = <ANCHOR|%c> ];\n",
-		    (void *) n,
-		    n->u.anchor.type == AST_ANCHOR_START ? '^' : '$');
+		pp_iter(f, opt, n, re_flags, n->u.group.e);
 		break;
 
 	case AST_EXPR_SUBTRACT:
-		fprintf(f, "\tn%p [ label = <{SUBTRACT|{a|b}}> ];\n", (void *) n);
-		pp_iter(f, opt, n, n->u.subtract.a);
-		pp_iter(f, opt, n, n->u.subtract.b);
+		pp_iter(f, opt, n, re_flags, n->u.subtract.a);
+		pp_iter(f, opt, n, re_flags, n->u.subtract.b);
 		break;
-
-	case AST_EXPR_RANGE:
-		fprintf(f, "\tn%p [ label = <RANGE|", (void *) n);
-		print_endpoint(f, opt, &n->u.range.from);
-		fprintf(f, " &ndash; ");
-		print_endpoint(f, opt, &n->u.range.to);
-		fprintf(f, "> ];\n");
-		break;
-
-	case AST_EXPR_FLAGS:
-		fprintf(f, "\tn%p [ label = <FLAGS|{+", (void *) n);
-		re_flags_print(f, n->u.flags.pos);
-		fprintf(f, "}|{-");
-		re_flags_print(f, n->u.flags.neg);
-		fprintf(f, "}> ];\n");
-		break;
-
-	case AST_EXPR_TOMBSTONE:
-		fprintf(f, "\tn%p [ label = <RIP> ];\n", (void *) n);
-		break;
-
-	default:
-		assert(!"unreached");
 	}
 }
 
 void
 ast_print_dot(FILE *f, const struct fsm_options *opt,
-	const struct ast *ast)
+	enum re_flags re_flags, const struct ast *ast)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
@@ -175,7 +243,7 @@ ast_print_dot(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\tsplines = false;\n");
 	fprintf(f, "\n");
 
-	pp_iter(f, opt, NULL, ast->expr);
+	pp_iter(f, opt, NULL, re_flags, ast->expr);
 
 	fprintf(f, "}\n");
 }

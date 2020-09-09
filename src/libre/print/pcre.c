@@ -35,9 +35,6 @@ atomic(struct ast_expr *n)
 		return (n->u.range.from.u.literal.c == 0x00 &&
 			n->u.range.to.u.literal.c == 0xff);
 
-	case AST_EXPR_FLAGS:
-		return 0; /* XXX */
-
 	default:
 		assert(!"unreached");
 		abort();
@@ -47,14 +44,12 @@ atomic(struct ast_expr *n)
 static void
 re_flags_print(FILE *f, enum re_flags fl)
 {
-	const char *sep = "";
-
-	if (fl & RE_ICASE  ) { fprintf(f, "%si", sep); sep = " "; }
-	if (fl & RE_TEXT   ) { fprintf(f, "%sg", sep); sep = " "; }
-	if (fl & RE_MULTI  ) { fprintf(f, "%sm", sep); sep = " "; }
-	if (fl & RE_REVERSE) { fprintf(f, "%sr", sep); sep = " "; }
-	if (fl & RE_SINGLE ) { fprintf(f, "%ss", sep); sep = " "; }
-	if (fl & RE_ZONE   ) { fprintf(f, "%sz", sep); sep = " "; }
+	if (fl & RE_ICASE  ) { fprintf(f, "i"); }
+	if (fl & RE_TEXT   ) { fprintf(f, "g"); }
+	if (fl & RE_MULTI  ) { fprintf(f, "m"); }
+	if (fl & RE_REVERSE) { fprintf(f, "r"); }
+	if (fl & RE_SINGLE ) { fprintf(f, "s"); }
+	if (fl & RE_ZONE   ) { fprintf(f, "z"); }
 }
 
 static void
@@ -76,12 +71,23 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 }
 
 static void
-pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
+pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct ast_expr *n)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 
 	if (n == NULL) { return; }
+
+	if (n->re_flags != *re_flags) {
+		fprintf(f, "(?");
+		re_flags_print(f, n->re_flags & ~*re_flags);
+		if (*re_flags & ~n->re_flags) {
+			fprintf(f, "-");
+			re_flags_print(f, *re_flags & ~n->re_flags);
+		}
+		fprintf(f, ")");
+		*re_flags = n->re_flags;
+	}
 
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
@@ -91,7 +97,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 	{
 		size_t i;
 		for (i = 0; i < n->u.concat.count; i++) {
-			pp_iter(f, opt, n->u.concat.n[i]);
+			pp_iter(f, opt, re_flags, n->u.concat.n[i]);
 		}
 		break;
 	}
@@ -100,7 +106,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 	{
 		size_t i;
 		for (i = 0; i < n->u.alt.count; i++) {
-			pp_iter(f, opt, n->u.alt.n[i]);
+			pp_iter(f, opt, re_flags, n->u.alt.n[i]);
 			if (i + 1 < n->u.alt.count) {
 				fprintf(f, "|");
 			}
@@ -134,10 +140,11 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		};
 
 		if (atomic(n->u.repeat.e)) {
-			pp_iter(f, opt, n->u.repeat.e);
+			pp_iter(f, opt, re_flags, n->u.repeat.e);
 		} else {
+			enum re_flags local_flags = *re_flags;
 			fprintf(f, "(?:");
-			pp_iter(f, opt, n->u.repeat.e);
+			pp_iter(f, opt, &local_flags, n->u.repeat.e);
 			fprintf(f, ")");
 		}
 
@@ -168,11 +175,13 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_GROUP:
+	case AST_EXPR_GROUP: {
+		enum re_flags local_flags = *re_flags;
 		fprintf(f, "(");
-		pp_iter(f, opt, n->u.group.e);
+		pp_iter(f, opt, &local_flags, n->u.group.e);
 		fprintf(f, ")");
 		break;
+	}
 
 	case AST_EXPR_ANCHOR:
 		assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
@@ -181,9 +190,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 	case AST_EXPR_SUBTRACT:
 		assert(!"unimplemented");
-		pp_iter(f, opt, n->u.subtract.a);
+		pp_iter(f, opt, re_flags, n->u.subtract.a);
 		fprintf(f, "-");
-		pp_iter(f, opt, n->u.subtract.b);
+		pp_iter(f, opt, re_flags, n->u.subtract.b);
 		break;
 
 	case AST_EXPR_RANGE:
@@ -201,14 +210,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		fprintf(f, "]");
 		break;
 
-	case AST_EXPR_FLAGS:
-		fprintf(f, "\tn%p [ label = <{FLAGS|{+", (void *) n);
-		re_flags_print(f, n->u.flags.pos);
-		fprintf(f, "|-");
-		re_flags_print(f, n->u.flags.neg);
-		fprintf(f, "> ];\n");
-		break;
-
 	case AST_EXPR_TOMBSTONE:
 		fprintf(f, "[^\\x00-\\xff]");
 		break;
@@ -220,13 +221,13 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 void
 ast_print_pcre(FILE *f, const struct fsm_options *opt,
-	const struct ast *ast)
+	enum re_flags re_flags, const struct ast *ast)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(ast != NULL);
 
-	pp_iter(f, opt, ast->expr);
+	pp_iter(f, opt, &re_flags, ast->expr);
 
 	fprintf(f, "\n");
 }

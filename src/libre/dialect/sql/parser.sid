@@ -94,7 +94,9 @@
 	<ast-make-alt>:           ()                       -> (:ast_expr);
 	<ast-make-piece>:         (:ast_expr, :ast_count)  -> (:ast_expr);
 	<ast-make-group>:         (:ast_expr)              -> (:ast_expr);
-	!<ast-make-re-flags>:     (:re_flags, :re_flags)   -> (:ast_expr);
+	!<ast-get-re-flags>:      ()                       -> (:re_flags);
+	!<ast-set-re-flags>:      (:re_flags)              -> ();
+	!<ast-mask-re-flags>:     (:re_flags, :re_flags)   -> ();
 	!<ast-make-anchor-start>: ()                       -> (:ast_expr);
 	!<ast-make-anchor-end>:   ()                       -> (:ast_expr);
 	<ast-make-subtract>:      (:ast_expr, :ast_expr)   -> (:ast_expr);

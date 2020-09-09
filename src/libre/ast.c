@@ -83,7 +83,6 @@ ast_expr_free(struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
-	case AST_EXPR_FLAGS:
 	case AST_EXPR_ANCHOR:
 	case AST_EXPR_RANGE:
 		/* these nodes have no subnodes or dynamic allocation */
@@ -204,6 +203,9 @@ ast_expr_cmp(const struct ast_expr *a, const struct ast_expr *b)
 	if (a->flags < b->flags) { return -1; }
 	if (a->flags > b->flags) { return +1; }
 
+	if (a->re_flags < b->re_flags) { return -1; }
+	if (a->re_flags > b->re_flags) { return +1; }
+
 	switch (a->type) {
 	case AST_EXPR_EMPTY:
 		return 0;
@@ -270,15 +272,6 @@ ast_expr_cmp(const struct ast_expr *a, const struct ast_expr *b)
 		if (a->u.group.id > b->u.group.id) { return +1; }
 
 		return ast_expr_cmp(a->u.group.e, b->u.group.e);
-
-	case AST_EXPR_FLAGS:
-		if (a->u.flags.pos < b->u.flags.pos) { return -1; }
-		if (a->u.flags.pos > b->u.flags.pos) { return +1; }
-
-		if (a->u.flags.neg < b->u.flags.neg) { return -1; }
-		if (a->u.flags.neg > b->u.flags.neg) { return +1; }
-
-		return 0;
 
 	case AST_EXPR_ANCHOR:
 		if (a->u.anchor.type < b->u.anchor.type) { return -1; }
@@ -353,7 +346,7 @@ ast_contains_expr(const struct ast_expr *node, struct ast_expr * const *a, size_
 }
 
 struct ast_expr *
-ast_make_expr_empty(void)
+ast_make_expr_empty(enum re_flags re_flags)
 {
 	struct ast_expr *res;
 
@@ -363,12 +356,13 @@ ast_make_expr_empty(void)
 	}
 
 	res->type = AST_EXPR_EMPTY;
+	res->re_flags = re_flags;
 
 	return res;
 }
 
 struct ast_expr *
-ast_make_expr_concat(void)
+ast_make_expr_concat(enum re_flags re_flags)
 {
 	struct ast_expr *res;
 
@@ -378,6 +372,7 @@ ast_make_expr_concat(void)
 	}
 
 	res->type = AST_EXPR_CONCAT;
+	res->re_flags = re_flags;
 	res->u.concat.alloc = 8; /* arbitrary initial value */
 	res->u.concat.count = 0;
 
@@ -415,7 +410,7 @@ ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node)
 }
 
 struct ast_expr *
-ast_make_expr_alt(void)
+ast_make_expr_alt(enum re_flags re_flags)
 {
 	struct ast_expr *res;
 
@@ -425,6 +420,7 @@ ast_make_expr_alt(void)
 	}
 
 	res->type = AST_EXPR_ALT;
+	res->re_flags = re_flags;
 	res->u.alt.alloc = 8; /* arbitrary initial value */
 	res->u.alt.count = 0;
 
@@ -462,7 +458,7 @@ ast_add_expr_alt(struct ast_expr *cat, struct ast_expr *node)
 }
 
 struct ast_expr *
-ast_make_expr_literal(char c)
+ast_make_expr_literal(enum re_flags re_flags, char c)
 {
 	struct ast_expr *res;
 
@@ -472,13 +468,14 @@ ast_make_expr_literal(char c)
 	}
 
 	res->type = AST_EXPR_LITERAL;
+	res->re_flags = re_flags;
 	res->u.literal.c = c;
 
 	return res;
 }
 
 struct ast_expr *
-ast_make_expr_codepoint(uint32_t u)
+ast_make_expr_codepoint(enum re_flags re_flags, uint32_t u)
 {
 	struct ast_expr *res;
 
@@ -488,13 +485,14 @@ ast_make_expr_codepoint(uint32_t u)
 	}
 
 	res->type = AST_EXPR_CODEPOINT;
+	res->re_flags = re_flags;
 	res->u.codepoint.u = u;
 
 	return res;
 }
 
 struct ast_expr *
-ast_make_expr_repeat(struct ast_expr *e, struct ast_count count)
+ast_make_expr_repeat(enum re_flags re_flags, struct ast_expr *e, struct ast_count count)
 {
 	struct ast_expr *res = NULL;
 
@@ -511,6 +509,7 @@ ast_make_expr_repeat(struct ast_expr *e, struct ast_count count)
 	}
 
 	res->type = AST_EXPR_REPEAT;
+	res->re_flags = re_flags;
 	res->u.repeat.e = e;
 	res->u.repeat.min = count.min;
 	res->u.repeat.max = count.max;
@@ -519,7 +518,7 @@ ast_make_expr_repeat(struct ast_expr *e, struct ast_count count)
 }
 
 struct ast_expr *
-ast_make_expr_group(struct ast_expr *e)
+ast_make_expr_group(enum re_flags re_flags, struct ast_expr *e)
 {
 	struct ast_expr *res;
 
@@ -529,6 +528,7 @@ ast_make_expr_group(struct ast_expr *e)
 	}
 
 	res->type = AST_EXPR_GROUP;
+	res->re_flags = re_flags;
 	res->u.group.e = e;
 	res->u.group.id = NO_GROUP_ID; /* not yet assigned */
 
@@ -536,24 +536,7 @@ ast_make_expr_group(struct ast_expr *e)
 }
 
 struct ast_expr *
-ast_make_expr_re_flags(enum re_flags pos, enum re_flags neg)
-{
-	struct ast_expr *res;
-
-	res = calloc(1, sizeof *res);
-	if (res == NULL) {
-		return NULL;
-	}
-
-	res->type = AST_EXPR_FLAGS;
-	res->u.flags.pos = pos;
-	res->u.flags.neg = neg;
-
-	return res;
-}
-
-struct ast_expr *
-ast_make_expr_anchor(enum ast_anchor_type type)
+ast_make_expr_anchor(enum re_flags re_flags, enum ast_anchor_type type)
 {
 	struct ast_expr *res;
 
@@ -563,13 +546,14 @@ ast_make_expr_anchor(enum ast_anchor_type type)
 	}
 
 	res->type = AST_EXPR_ANCHOR;
+	res->re_flags = re_flags;
 	res->u.anchor.type = type;
 
 	return res;
 }
 
 struct ast_expr *
-ast_make_expr_subtract(struct ast_expr *a, struct ast_expr *b)
+ast_make_expr_subtract(enum re_flags re_flags, struct ast_expr *a, struct ast_expr *b)
 {
 	struct ast_expr *res;
 
@@ -579,6 +563,7 @@ ast_make_expr_subtract(struct ast_expr *a, struct ast_expr *b)
 	}
 
 	res->type = AST_EXPR_SUBTRACT;
+	res->re_flags = re_flags;
 	res->u.subtract.a = a;
 	res->u.subtract.b = b;
 
@@ -586,7 +571,8 @@ ast_make_expr_subtract(struct ast_expr *a, struct ast_expr *b)
 }
 
 struct ast_expr *
-ast_make_expr_range(const struct ast_endpoint *from, struct ast_pos start,
+ast_make_expr_range(enum re_flags re_flags,
+    const struct ast_endpoint *from, struct ast_pos start,
     const struct ast_endpoint *to, struct ast_pos end)
 {
 	struct ast_expr *res;
@@ -600,6 +586,7 @@ ast_make_expr_range(const struct ast_endpoint *from, struct ast_pos start,
 	assert(to != NULL);
 
 	res->type = AST_EXPR_RANGE;
+	res->re_flags = re_flags;
 	res->u.range.from = *from;
 	res->u.range.start = start;
 	res->u.range.to = *to;
@@ -609,7 +596,7 @@ ast_make_expr_range(const struct ast_endpoint *from, struct ast_pos start,
 }
 
 struct ast_expr *
-ast_make_expr_named(const struct class *class)
+ast_make_expr_named(enum re_flags re_flags, const struct class *class)
 {
 	struct ast_expr *res;
 	size_t i;
@@ -622,6 +609,7 @@ ast_make_expr_named(const struct class *class)
 	}
 
 	res->type = AST_EXPR_ALT;
+	res->re_flags = re_flags;
 	res->u.alt.alloc = class->count;
 	res->u.alt.count = class->count;
 
@@ -634,9 +622,9 @@ ast_make_expr_named(const struct class *class)
 	for (i = 0; i < class->count; i++) {
 		if (class->ranges[i].a == class->ranges[i].b) {
 			if (class->ranges[i].a <= UCHAR_MAX) {
-				res->u.alt.n[i] = ast_make_expr_literal((unsigned char) class->ranges[i].a);
+				res->u.alt.n[i] = ast_make_expr_literal(re_flags, (unsigned char) class->ranges[i].a);
 			} else {
-				res->u.alt.n[i] = ast_make_expr_codepoint(class->ranges[i].a);
+				res->u.alt.n[i] = ast_make_expr_codepoint(re_flags, class->ranges[i].a);
 			}
 			if (res->u.alt.n[i] == NULL) {
 				goto error;
@@ -659,7 +647,7 @@ ast_make_expr_named(const struct class *class)
 				to.u.codepoint.u = class->ranges[i].b;
 			}
 
-			res->u.alt.n[i] = ast_make_expr_range(&from, pos, &to, pos);
+			res->u.alt.n[i] = ast_make_expr_range(re_flags, &from, pos, &to, pos);
 			if (res->u.alt.n[i] == NULL) {
 				goto error;
 			}

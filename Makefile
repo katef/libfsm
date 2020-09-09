@@ -61,6 +61,7 @@ SUBDIR += tests/native
 SUBDIR += tests/pcre
 SUBDIR += tests/pcre-classes
 SUBDIR += tests/pcre-anchor
+SUBDIR += tests/pcre-flags
 SUBDIR += tests/pcre-repeat
 SUBDIR += tests/pred
 SUBDIR += tests/reverse

@@ -95,7 +95,7 @@ print_endpoint(FILE *f, const struct ast_endpoint *e)
 }
 
 static void
-pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *n)
+pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, enum re_flags re_flags, struct ast_expr *n)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
@@ -111,6 +111,17 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		fprintf(f, " ");
 		fprintf_flags(f, n->flags);
 	}		
+	if (n->re_flags & ~re_flags) {
+		fprintf(f, " pos:(");
+		re_flags_print(f, n->re_flags & ~re_flags);
+		fprintf(f, ")");
+	}
+	if (re_flags & ~n->re_flags) {
+		fprintf(f, " neg:(");
+		re_flags_print(f, re_flags & ~n->re_flags);
+		fprintf(f, ")");
+	}
+	re_flags = n->re_flags;
 	fprintf(f, " -- ");
 
 	switch (n->type) {
@@ -123,7 +134,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		fprintf(f, "CONCAT (%u):\n", (unsigned)count);
 
 		for (i = 0; i < count; i++) {
-			pp_iter(f, opt, indent + 1 * IND, n->u.concat.n[i]);
+			pp_iter(f, opt, indent + 1 * IND, re_flags, n->u.concat.n[i]);
 		}
 		break;
 	}
@@ -132,7 +143,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		size_t i, count = n->u.alt.count;
 		fprintf(f, "ALT (%u):\n", (unsigned)count);
 		for (i = 0; i < count; i++) {
-			pp_iter(f, opt, indent + 1 * IND, n->u.alt.n[i]);
+			pp_iter(f, opt, indent + 1 * IND, re_flags, n->u.alt.n[i]);
 		}
 		break;
 	}
@@ -151,20 +162,12 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 		fprintf(f, ",");
 		fprintf_count(f, n->u.repeat.max);
 		fprintf(f, "}\n");
-		pp_iter(f, opt, indent + 1 * IND, n->u.repeat.e);
+		pp_iter(f, opt, indent + 1 * IND, re_flags, n->u.repeat.e);
 		break;
 
 	case AST_EXPR_GROUP:
 		fprintf(f, "GROUP %p: %u\n", (void *) n, n->u.group.id);
-		pp_iter(f, opt, indent + 1 * IND, n->u.group.e);
-		break;
-
-	case AST_EXPR_FLAGS:
-		fprintf(f, "FLAGS pos:(");
-		re_flags_print(f, n->u.flags.pos);
-		fprintf(f, "), neg:(");
-		re_flags_print(f, n->u.flags.neg);
-		fprintf(f, ")\n");
+		pp_iter(f, opt, indent + 1 * IND, re_flags, n->u.group.e);
 		break;
 
 	case AST_EXPR_ANCHOR:
@@ -174,8 +177,8 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 
 	case AST_EXPR_SUBTRACT:
 		fprintf(f, "SUBTRACT %p:\n", (void *) n);
-		pp_iter(f, opt, indent + 4, n->u.subtract.a);
-		pp_iter(f, opt, indent + 4, n->u.subtract.b);
+		pp_iter(f, opt, indent + 1 * IND, re_flags, n->u.subtract.a);
+		pp_iter(f, opt, indent + 1 * IND, re_flags, n->u.subtract.b);
 		break;
 
 	case AST_EXPR_RANGE:
@@ -197,12 +200,12 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, struct ast_expr *
 
 void
 ast_print_tree(FILE *f, const struct fsm_options *opt,
-	const struct ast *ast)
+	enum re_flags re_flags, const struct ast *ast)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(ast != NULL);
 
-	pp_iter(f, opt, 0, ast->expr);
+	pp_iter(f, opt, 0, re_flags, ast->expr);
 }
 

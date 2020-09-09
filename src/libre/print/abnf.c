@@ -40,9 +40,6 @@ atomic(struct ast_expr *n)
 	case AST_EXPR_REPEAT:
 		return 0;
 
-	case AST_EXPR_FLAGS:
-		return 0; /* XXX */
-
 	default:
 		assert(!"unreached");
 		abort();
@@ -188,9 +185,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		}
 		break;
 
-	case AST_EXPR_FLAGS:
-		abort();
-
 	case AST_EXPR_TOMBSTONE:
 		fprintf(f, "<RIP>");
 		break;
@@ -202,7 +196,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 void
 ast_print_abnf(FILE *f, const struct fsm_options *opt,
-	const struct ast *ast)
+	enum re_flags re_flags, const struct ast *ast)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
