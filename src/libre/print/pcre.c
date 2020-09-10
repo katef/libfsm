@@ -21,19 +21,34 @@
 #include "../print.h"
 
 static int
-atomic(struct ast_expr *n)
+prec(struct ast_expr *n)
 {
 	switch (n->type) {
-	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
-	case AST_EXPR_REPEAT:
+	case AST_EXPR_CODEPOINT:
+	case AST_EXPR_RANGE:
+	case AST_EXPR_SUBTRACT:
 	case AST_EXPR_GROUP:
 	case AST_EXPR_TOMBSTONE:
+		return 0;
+
+	case AST_EXPR_REPEAT:
 		return 1;
 
-	case AST_EXPR_RANGE:
-		return (n->u.range.from.u.literal.c == 0x00 &&
-			n->u.range.to.u.literal.c == 0xff);
+	case AST_EXPR_ANCHOR:
+	case AST_EXPR_EMPTY:
+		/* anchor and empty are special: although they take no
+		 * operands, it is not possible to get these as the
+		 * operand of a repeat expression without parentheses:
+		 * "*" or "^*" are syntax errors, but "(?:)*" and
+		 * "(?:^)*" are valid */
+		return 2;
+
+	case AST_EXPR_CONCAT:
+		return 3;
+
+	case AST_EXPR_ALT:
+		return 4;
 
 	default:
 		assert(!"unreached");
@@ -97,7 +112,14 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 	{
 		size_t i;
 		for (i = 0; i < n->u.concat.count; i++) {
-			pp_iter(f, opt, re_flags, n->u.concat.n[i]);
+			if (prec(n->u.concat.n[i]) <= prec(n)) {
+				pp_iter(f, opt, re_flags, n->u.concat.n[i]);
+			} else {
+				enum re_flags localflags = *re_flags;
+				fprintf(f, "(?:");
+				pp_iter(f, opt, &localflags, n->u.concat.n[i]);
+				fprintf(f, ")");
+			}
 		}
 		break;
 	}
@@ -106,7 +128,14 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 	{
 		size_t i;
 		for (i = 0; i < n->u.alt.count; i++) {
-			pp_iter(f, opt, re_flags, n->u.alt.n[i]);
+			if (prec(n->u.alt.n[i]) <= prec(n)) {
+				pp_iter(f, opt, re_flags, n->u.alt.n[i]);
+			} else {
+				enum re_flags localflags = *re_flags;
+				fprintf(f, "(?:");
+				pp_iter(f, opt, re_flags, n->u.alt.n[i]);
+				fprintf(f, ")");
+			}
 			if (i + 1 < n->u.alt.count) {
 				fprintf(f, "|");
 			}
@@ -139,7 +168,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 #undef _
 		};
 
-		if (atomic(n->u.repeat.e)) {
+		if (prec(n->u.repeat.e) <= prec(n)) {
 			pp_iter(f, opt, re_flags, n->u.repeat.e);
 		} else {
 			enum re_flags local_flags = *re_flags;
