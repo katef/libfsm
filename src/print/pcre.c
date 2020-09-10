@@ -38,6 +38,8 @@ pcre_escputc(FILE *f, const struct fsm_options *opt, char c)
 	case '*': return fputs("\\*", f);
 	case '?': return fputs("\\?", f);
 	case '.': return fputs("\\.", f);
+	case '{': return fputs("\\{", f);
+	case '}': return fputs("\\}", f);
 
 	case '\f': return fputs("\\f", f);
 	case '\n': return fputs("\\n", f);
