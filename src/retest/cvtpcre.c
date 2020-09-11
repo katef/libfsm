@@ -126,6 +126,8 @@ enum state {
 	ST_NOTMATCHES = 2
 };
 
+static const struct fsm_options zero_options;
+
 int main(int argc, char **argv)
 {
 	struct str l;
@@ -140,6 +142,7 @@ int main(int argc, char **argv)
 	l = init_str;
 	state = ST_DEFAULT;
 
+	opt = zero_options;
 	opt.comments = 0;
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
@@ -164,37 +167,42 @@ int main(int argc, char **argv)
 		switch (state) {
 		case ST_DEFAULT:
 			if (n > 1 && s[0] == '/' && s[n-1] == '/') {
-				static const struct re_err err_zero;
 				char *regexp;
-
-				struct fsm *fsm;
-				enum re_flags flags;
-				struct re_err comp_err;
 
 				s[n-1] = '\0';
 				s++;
 
 				regexp = xstrdup(s);
+				if (regexp == NULL) {
+					fprintf(stderr, "line %5zu: could not allocate %zu bytes for regexp /%s/: %s\n",
+						linenum, strlen(s), s, strerror(errno));
+				} else {
+					static const struct re_err err_zero;
 
-				comp_err = err_zero;
-				flags = 0;
+					enum re_flags flags;
+					struct re_err comp_err;
+					struct fsm *fsm;
 
-				fsm = re_comp(RE_PCRE, fsm_sgetc, &s, &opt, flags, &comp_err);
-				re_ok = (fsm != NULL);
-				if (re_ok) {
-					fsm_free(fsm);
-					nparsed++;
-					if (count > 0) {
-						printf("\n");
+					comp_err = err_zero;
+					flags = 0;
+
+					fsm = re_comp(RE_PCRE, fsm_sgetc, &s, &opt, flags, &comp_err);
+					re_ok = (fsm != NULL);
+					if (re_ok) {
+						fsm_free(fsm);
+						nparsed++;
+						if (count > 0) {
+							fprintf(out,"\n");
+						}
+
+						printf("%s\n", regexp);
+					} else {
+						fprintf(stderr, "line %5zu: could not parse regexp /%s/: %s\n",
+								linenum, s, re_strerror(comp_err.e));
 					}
 
-					printf("%s\n", regexp);
-				} else {
-					fprintf(stderr, "line %5zu: could not parse regexp /%s/: %s\n",
-						linenum, s, re_strerror(comp_err.e));
+					free(regexp);
 				}
-
-				free(regexp);
 
 				state = ST_MATCHES;
 				count++;
