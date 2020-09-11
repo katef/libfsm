@@ -1,4 +1,6 @@
 #include <ctype.h>
+#include <errno.h>
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -126,6 +128,13 @@ enum state {
 	ST_NOTMATCHES = 2
 };
 
+static void
+usage(const char *progname)
+{
+	fprintf(stderr, "%s -h\n", progname);
+	fprintf(stderr, "%s [infile] [outfile]\n", progname);
+}
+
 static const struct fsm_options zero_options;
 
 int main(int argc, char **argv)
@@ -135,6 +144,8 @@ int main(int argc, char **argv)
 	size_t count, nparsed, linenum;
 	int re_ok = 0;
 	struct fsm_options opt;
+
+	FILE *in, *out;
 
 	(void)argc;
 	(void)argv;
@@ -152,7 +163,57 @@ int main(int argc, char **argv)
 	nparsed = 0;
 	linenum = 0;
 
-	while (readline(stdin, &l) != NULL) {
+	in  = stdin;
+	out = stdout;
+
+	{
+		const char *progname = argv[0];
+
+		int o;
+		while (o = getopt(argc,argv, "h"), o != -1) {
+			switch (o) {
+			case 'h':
+				usage(progname);
+				exit(0);
+				break;
+
+			default:
+				fprintf(stderr, "%s: unknown option '%c'\n", progname, optopt);
+				usage(progname);
+				exit(1);
+				break;
+			}
+		}
+
+		argc -= optind;
+		argv += optind;
+
+		if (argc > 2) {
+			fprintf(stderr, "%s: too many arguments\n", progname);
+			usage(progname);
+			exit(1);
+		}
+
+		if (argc > 0) {
+			in = fopen(argv[0], "r");
+			if (in == NULL) {
+				fprintf(stderr, "%s: error opening '%s' for input: %s\n",
+					progname, argv[0], strerror(errno));
+				exit(1);
+			}
+		}
+
+		if (argc > 1) {
+			out = fopen(argv[1], "w");
+			if (out == NULL) {
+				fprintf(stderr, "%s: error opening '%s' for output: %s\n",
+					progname, argv[1], strerror(errno));
+				exit(1);
+			}
+		}
+	}
+
+	while (readline(in, &l) != NULL) {
 		char *s = l.s;
 		size_t n = l.len;
 		int reset = 0;
@@ -195,7 +256,7 @@ int main(int argc, char **argv)
 							fprintf(out,"\n");
 						}
 
-						printf("%s\n", regexp);
+						fprintf(out,"%s\n", regexp);
 					} else {
 						fprintf(stderr, "line %5zu: could not parse regexp /%s/: %s\n",
 								linenum, s, re_strerror(comp_err.e));
@@ -219,7 +280,7 @@ int main(int argc, char **argv)
 				reset = 1;
 			} else {
 				if (re_ok) {
-					printf("+%s\n", decode_escapes(lstrip(s)));
+					fprintf(out, "+%s\n", decode_escapes(lstrip(s)));
 				}
 			}
 			break;
@@ -232,7 +293,7 @@ int main(int argc, char **argv)
 				reset = 1;
 			} else {
 				if (re_ok) {
-					printf("-%s\n", decode_escapes(lstrip(s)));
+					fprintf(out, "-%s\n", decode_escapes(lstrip(s)));
 				}
 			}
 			break;
@@ -248,8 +309,13 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (ferror(stdin)) {
-		perror("reading from stdin");
+	if (ferror(in)) {
+		perror("reading input");
+		exit(EXIT_FAILURE);
+	}
+
+	if (ferror(out)) {
+		perror("writing output");
 		exit(EXIT_FAILURE);
 	}
 
