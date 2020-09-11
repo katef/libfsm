@@ -24,10 +24,52 @@
 static struct ast_expr the_tombstone;
 struct ast_expr *ast_expr_tombstone = &the_tombstone;
 
+/* FIXME: this isn't safe for multiple threads! */
+static struct ast_expr_pool *global_pool = NULL;
+
+struct ast_expr *
+ast_expr_pool_new(struct ast_expr_pool **poolp) 
+{
+	struct ast_expr_pool *p;
+
+	assert(poolp != NULL);
+
+	p = *poolp;
+	if (p == NULL || p->count >= AST_EXPR_POOL_SIZE) {
+		p = calloc(1, sizeof *p);
+		if (p == NULL) {
+			return NULL;
+		}
+
+		p->next = *poolp;
+		*poolp = p;
+	}
+
+	assert(p != NULL && p->count < AST_EXPR_POOL_SIZE);
+
+	return &p->pool[p->count++];
+}
+
+struct ast_expr *
+ast_expr_new(void)
+{
+	return ast_expr_pool_new(&global_pool);
+}
+
+struct ast_expr_pool *
+ast_expr_pool_save(void)
+{
+	struct ast_expr_pool *p = global_pool;
+	global_pool = NULL;
+	return p;
+}
+
 struct ast *
 ast_new(void)
 {
 	struct ast *res;
+
+	assert(global_pool == NULL);
 
 	res = calloc(1, sizeof *res);
 	if (res == NULL) {
@@ -41,9 +83,30 @@ ast_new(void)
 }
 
 void
+ast_pool_free(struct ast_expr_pool *pool)
+{
+	struct ast_expr_pool *curr;
+	for (curr=pool; curr != NULL; curr=curr->next) {
+		unsigned i;
+
+		for (i=0; i < curr->count; i++) {
+			ast_expr_free(&curr->pool[i]);
+		}
+	}
+
+	while (pool != NULL) {
+		curr = pool;
+		pool = pool->next;
+
+		free(curr);
+	}
+}
+
+void
 ast_free(struct ast *ast)
 {
 	ast_expr_free(ast->expr);
+	ast_pool_free(ast->pool);
 	free(ast);
 }
 
@@ -75,6 +138,8 @@ ast_make_count(unsigned min, const struct ast_pos *start,
 void
 ast_expr_free(struct ast_expr *n)
 {
+	static const struct ast_expr zero;
+
 	if (n == NULL) {
 		return;
 	}
@@ -131,7 +196,7 @@ ast_expr_free(struct ast_expr *n)
 		assert(!"unreached");
 	}
 
-	free(n);
+	*n = zero;
 }
 
 static int
@@ -352,7 +417,7 @@ ast_make_expr_empty(enum re_flags re_flags)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_new();
 	if (res == NULL) {
 		return NULL;
 	}
@@ -368,7 +433,7 @@ ast_make_expr_concat(enum re_flags re_flags)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_new();
 	if (res == NULL) {
 		return NULL;
 	}
@@ -380,7 +445,6 @@ ast_make_expr_concat(enum re_flags re_flags)
 
 	res->u.concat.n = malloc(res->u.concat.alloc * sizeof *res->u.concat.n);
 	if (res->u.concat.n == NULL) {
-		free(res);
 		return NULL;
 	}
 
@@ -416,7 +480,7 @@ ast_make_expr_alt(enum re_flags re_flags)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_new();
 	if (res == NULL) {
 		return NULL;
 	}
@@ -428,7 +492,6 @@ ast_make_expr_alt(enum re_flags re_flags)
 
 	res->u.alt.n = malloc(res->u.alt.alloc * sizeof *res->u.alt.n);
 	if (res->u.alt.n == NULL) {
-		free(res);
 		return NULL;
 	}
 
@@ -464,7 +527,7 @@ ast_make_expr_literal(enum re_flags re_flags, char c)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_new();
 	if (res == NULL) {
 		return NULL;
 	}
@@ -481,7 +544,7 @@ ast_make_expr_codepoint(enum re_flags re_flags, uint32_t u)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_new();
 	if (res == NULL) {
 		return NULL;
 	}
@@ -505,7 +568,7 @@ ast_make_expr_repeat(enum re_flags re_flags, struct ast_expr *e, struct ast_coun
 		return NULL;
 	}
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_new();
 	if (res == NULL) {
 		return NULL;
 	}
@@ -524,7 +587,7 @@ ast_make_expr_group(enum re_flags re_flags, struct ast_expr *e)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_new();
 	if (res == NULL) {
 		return NULL;
 	}
@@ -542,7 +605,7 @@ ast_make_expr_anchor(enum re_flags re_flags, enum ast_anchor_type type)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_new();
 	if (res == NULL) {
 		return NULL;
 	}
@@ -559,7 +622,7 @@ ast_make_expr_subtract(enum re_flags re_flags, struct ast_expr *a, struct ast_ex
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_new();
 	if (res == NULL) {
 		return NULL;
 	}
@@ -579,7 +642,7 @@ ast_make_expr_range(enum re_flags re_flags,
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_new();
 	if (res == NULL) {
 		return NULL;
 	}
@@ -605,7 +668,7 @@ ast_make_expr_named(enum re_flags re_flags, const struct class *class)
 
 	assert(class != NULL);
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_new();
 	if (res == NULL) {
 		return NULL;
 	}
@@ -617,7 +680,6 @@ ast_make_expr_named(enum re_flags re_flags, const struct class *class)
 
 	res->u.alt.n = malloc(res->u.alt.alloc * sizeof *res->u.alt.n);
 	if (res->u.alt.n == NULL) {
-		free(res);
 		return NULL;
 	}
 

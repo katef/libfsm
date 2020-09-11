@@ -174,7 +174,30 @@ struct ast_expr {
 	} u;
 };
 
+enum { AST_EXPR_POOL_SIZE = 64 };
+
+struct ast_expr_pool {
+	struct ast_expr_pool *next;
+	unsigned count;
+	struct ast_expr pool[AST_EXPR_POOL_SIZE];
+};
+
+struct ast_expr *
+ast_expr_pool_new(struct ast_expr_pool **poolp);
+
+void
+ast_pool_free(struct ast_expr_pool *pool);
+
+/* Returns current global expression pool, setting
+ * global to NULL.
+ *
+ * This is a hack.
+ */
+struct ast_expr_pool *
+ast_expr_pool_save(void);
+
 struct ast {
+	struct ast_expr_pool *pool;
 	struct ast_expr *expr;
 };
 
