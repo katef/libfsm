@@ -1,15 +1,15 @@
 /*
  * Automatically generated from the files:
- *	src/fsm/parser.sid
+ *	src/libfsm/parser.sid
  * and
- *	src/fsm/parser.act
+ *	src/libfsm/parser.act
  * by:
  *	sid
  */
 
 /* BEGINNING OF HEADER */
 
-#line 150 "src/fsm/parser.act"
+#line 150 "src/libfsm/parser.act"
 
 
 	typedef struct lex_state * lex_state;
@@ -19,15 +19,15 @@
 	struct fsm *
 	fsm_parse(FILE *f, const struct fsm_options *opt);
 
-#line 23 "src/fsm/parser.h"
+#line 23 "src/libfsm/parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
 extern void p_fsm(fsm, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 435 "src/fsm/parser.act"
+#line 435 "src/libfsm/parser.act"
 
-#line 32 "src/fsm/parser.h"
+#line 32 "src/libfsm/parser.h"
 
 /* END OF FILE */

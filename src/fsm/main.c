@@ -21,12 +21,12 @@
 #include <fsm/walk.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
+#include <fsm/parser.h>
 
 #include <adt/stateset.h> /* XXX */
 
 #include "libfsm/internal.h" /* XXX */
 
-#include "parser.h"
 #include "wordgen.h"
 
 #if defined(__APPLE__) && defined(__MACH__) && defined(MACOS_HAS_NO_CLOCK_GETITME)

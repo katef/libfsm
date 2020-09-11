@@ -26,6 +26,9 @@ fsm_hasoutgoing
 fsm_hasepsilons
 fsm_hasnondeterminism
 
+# <fsm/parser.h>
+fsm_parse
+
 # <fsm/print.h>
 fsm_print_api
 fsm_print_c
