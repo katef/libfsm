@@ -41,6 +41,29 @@ SRC += src/libfsm/intersect.c
 SRC += src/libfsm/subtract.c
 SRC += src/libfsm/walk2.c
 
+# parser
+SRC += src/libfsm/lexer.c
+SRC += src/libfsm/parser.c
+
+.for src in ${SRC:Msrc/libfsm/lexer.c}
+CFLAGS.${src} += -D LX_HEADER='"lexer.h"'
+DFLAGS.${src} += -D LX_HEADER='"lexer.h"'
+.endfor
+
+LEXER  += src/libfsm/lexer.lx
+PARSER += src/libfsm/parser.sid
+
+LX_CFLAGS.src/libfsm/lexer.lx += -b dyn -g fgetc
+
+# SID persistent variables are unused in some productions
+.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+CFLAGS.src/libfsm/parser.c += -Wno-unused-parameter
+.endif
+
+.for src in ${SRC:Msrc/libfsm/parser.c}
+${src}: src/libfsm/lexer.h
+.endfor
+
 .for src in ${SRC:Msrc/libfsm/closure.c} ${SRC:Msrc/libfsm/minimise.c} ${SRC:Msrc/libfsm/vm.c}
 CFLAGS.${src} += -std=c99
 DFLAGS.${src} += -std=c99
