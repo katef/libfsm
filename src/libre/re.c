@@ -96,6 +96,7 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 {
 	const struct dialect *m;
 	struct ast *ast = NULL;
+	struct ast_expr_pool *pool = NULL;
 	enum ast_analysis_res res;
 	
 	assert(getc != NULL);
@@ -109,13 +110,18 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	flags |= m->flags;
 
 	ast = m->parse(getc, opaque, opt, flags, m->overlap, err);
+	pool = ast_expr_pool_save();
 	if (ast == NULL) {
+		ast_pool_free(pool);
 		return NULL;
 	}
 
 	if (!ast_rewrite(ast, flags)) {
+		ast_pool_free(pool);
 		return NULL;
 	}
+
+	ast->pool = pool;
 
 	/* Do a complete pass over the AST, filling in other details. */
 	res = ast_analysis(ast);
