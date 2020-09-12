@@ -116,6 +116,8 @@ start:
 		fsm->states[p].visited = 0;
 	}
 
+	queue_free(q);
+
 	return 1;
 
 error:
