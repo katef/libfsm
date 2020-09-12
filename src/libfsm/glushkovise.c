@@ -111,6 +111,7 @@ fsm_glushkovise(struct fsm *nfa)
 error:
 
 	/* TODO: free stuff */
+	closure_free(eclosures, nfa->statecount);
 
 	return 0;
 }
