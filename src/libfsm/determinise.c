@@ -356,11 +356,14 @@ fsm_determinise(struct fsm *nfa)
 		}
 	}
 
+	mapping_hashset_free(mappings);
+
 	return 1;
 
 error:
 
 	/* TODO: free stuff */
+	mapping_hashset_free(mappings);
 
 	return 0;
 }
