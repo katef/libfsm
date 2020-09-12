@@ -258,5 +258,7 @@ closure_free(struct state_set **closures, size_t n)
 	for (s = 0; s < n; s++) {
 		state_set_free(closures[s]);
 	}
+
+	free(closures);
 }
 
