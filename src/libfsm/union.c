@@ -32,8 +32,8 @@ fsm_union(struct fsm *a, struct fsm *b)
 		return NULL;
 	}
 
-	if (a->statecount == 0) { return b; }
-	if (b->statecount == 0) { return a; }
+	if (a->statecount == 0) { fsm_free(a); return b; }
+	if (b->statecount == 0) { fsm_free(b); return a; }
 
 	if (!fsm_getstart(a, &sa) || !fsm_getstart(b, &sb)) {
 		errno = EINVAL;
