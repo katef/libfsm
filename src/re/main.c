@@ -478,6 +478,16 @@ endleaf_json(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 	return 0;
 }
 
+static struct fsm *fsm_to_cleanup = NULL;
+
+static void
+do_fsm_cleanup(void)
+{
+	if (fsm_to_cleanup != NULL) {
+		fsm_free(fsm_to_cleanup);
+	}
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -497,6 +507,8 @@ main(int argc, char *argv[])
 	int makevm;
 
 	struct fsm_dfavm *vm;
+
+	atexit(do_fsm_cleanup);
 
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;
@@ -680,6 +692,8 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	fsm_to_cleanup = fsm;
+
 	{
 		int i;
 
@@ -785,6 +799,8 @@ main(int argc, char *argv[])
 				perror("fsm_union/concat");
 				return EXIT_FAILURE;
 			}
+
+			fsm_to_cleanup = fsm;
 
 			if (query != NULL) {
 				int r;
@@ -1020,6 +1036,7 @@ main(int argc, char *argv[])
 		/* XXX: free opaques */
 
 		fsm_free(fsm);
+		fsm_to_cleanup = NULL;
 
 		if (vm != NULL) {
 			fsm_vm_free(vm);
