@@ -349,6 +349,15 @@ gen_words(FILE *f, const struct fsm *fsm)
 }
 #endif /* 0 */
 
+static struct fsm *fsm_to_cleanup = NULL;
+
+static void
+do_fsm_cleanup(void)
+{
+	if (fsm_to_cleanup != NULL) {
+		fsm_free(fsm_to_cleanup);
+	}
+}
 
 int
 main(int argc, char *argv[])
@@ -364,6 +373,8 @@ main(int argc, char *argv[])
 	int (*query)(const struct fsm *, fsm_state_t);
 	int (*walk )(const struct fsm *,
 		 int (*)(const struct fsm *, fsm_state_t));
+
+	atexit(do_fsm_cleanup);
 
 	opt.comments = 1;
 	opt.io       = FSM_IO_GETC;
@@ -523,6 +534,8 @@ main(int argc, char *argv[])
 			q = NULL;
 		}
 
+		fsm_to_cleanup = q;
+
 		if (-1 == clock_gettime(CLOCK_MONOTONIC, &post)) {
 			perror("clock_gettime");
 			exit(EXIT_FAILURE);
@@ -645,6 +658,7 @@ main(int argc, char *argv[])
 	}
 
 	fsm_free(fsm);
+	fsm_to_cleanup = NULL;
 
 	return r;
 }
