@@ -72,7 +72,8 @@ fsm_minimise(struct fsm *fsm)
 	}
 
 	if (fsm->statecount == 0) {
-		return 1;	/* empty -- no-op */
+		r = 1;
+		goto cleanup;
 	}
 
 	TIME(tv_pre);
@@ -81,7 +82,8 @@ fsm_minimise(struct fsm *fsm)
 	LOG_TIME_DELTA("collect_labels");
 
 	if (label_count == 0) {
-		return 1;	/* no edges -- no-op */
+		r = 1;
+		goto cleanup;
 	}
 
 	mapping = f_malloc(fsm->opt->alloc,
