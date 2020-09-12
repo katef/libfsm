@@ -211,6 +211,9 @@ fsm_compact_states(struct fsm *fsm,
 	for (i = 0, dst = 0, removed_count = 0; i < orig_statecount; i++) {
 		assert(dst <= i);
 		if (mapping[i] == FSM_STATE_REMAP_NO_STATE) { /* dead */
+			state_set_free(fsm->states[i].epsilons);
+			edge_set_free(fsm->opt->alloc, fsm->states[i].edges);
+
 			fsm->statecount--;
 			removed_count++;
 		} else {				      /* keep */
