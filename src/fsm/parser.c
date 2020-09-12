@@ -1256,11 +1256,12 @@ ZL1:;
 		ADVANCE_LEXER; /* XXX: what if the first token is unrecognised? */
 		p_fsm(new, lex_state, act_state);
 
+		free(act_state_s.states.buckets);
 		lx->free(lx->buf_opaque);
 
 		return new;
 	}
 
-#line 1265 "src/fsm/parser.c"
+#line 1266 "src/fsm/parser.c"
 
 /* END OF FILE */

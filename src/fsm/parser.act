@@ -427,6 +427,7 @@
 		ADVANCE_LEXER; /* XXX: what if the first token is unrecognised? */
 		p_fsm(new, lex_state, act_state);
 
+		free(act_state_s.states.buckets);
 		lx->free(lx->buf_opaque);
 
 		return new;
