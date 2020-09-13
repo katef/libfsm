@@ -15,9 +15,13 @@ PCREGREP ?= pcregrep
 
 .for n in ${TEST.tests/pcre-pcregrep:T:R:C/^out//}
 
+# the perl below does two things:
+# 1) expands \xHH in the input to the byte with hex value HH.  This is a
+#    bit of a hack.
+# 2) removes any trailing \n at the end of the input
 ${TEST_OUTDIR.tests/pcre-pcregrep}/in${n}.txt: ${TEST_SRCDIR.tests/pcre}/in${n}.re
 	${RE} -mr pcre -y ${.ALLSRC:M*.re} \
-	| perl -0pe 's/\n\Z//' \
+	| perl -0pe 's/\\x([0-9a-zA-z]{2})/chr(hex($$1))/ge;' -e 's/\n\Z//' \
 	> $@
 
 ${TEST_OUTDIR.tests/pcre-pcregrep}/res${n}: ${TEST_OUTDIR.tests/pcre-pcregrep}/in${n}.txt
