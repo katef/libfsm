@@ -887,7 +887,7 @@ z3(struct lx_pcre_lx *lx)
 			}
 			break;
 
-		case S49: /* e.g. "[:prin" */
+		case S49: /* e.g. "[:digi" */
 			switch ((unsigned char) c) {
 			case 't': state = S38; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
@@ -1660,7 +1660,7 @@ z5(struct lx_pcre_lx *lx)
 			}
 			break;
 
-		case S49: /* e.g. "[:prin" */
+		case S49: /* e.g. "[:digi" */
 			switch ((unsigned char) c) {
 			case 't': state = S38; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
@@ -2433,7 +2433,7 @@ z7(struct lx_pcre_lx *lx)
 			}
 			break;
 
-		case S49: /* e.g. "[:prin" */
+		case S49: /* e.g. "[:digi" */
 			switch ((unsigned char) c) {
 			case 't': state = S38; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
@@ -3208,7 +3208,7 @@ z9(struct lx_pcre_lx *lx)
 			}
 			break;
 
-		case S49: /* e.g. "[:prin" */
+		case S49: /* e.g. "[:digi" */
 			switch ((unsigned char) c) {
 			case 't': state = S38; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
@@ -3702,7 +3702,7 @@ z11(struct lx_pcre_lx *lx)
 			case 'e':
 			case 'f': state = S22; break;
 			case '{': state = S23; break;
-			default:  lx_pcre_ungetc(lx, c); return TOK_NOESC;
+			default:  lx_pcre_ungetc(lx, c); return TOK_HEX;
 			}
 			break;
 
@@ -3909,7 +3909,7 @@ z11(struct lx_pcre_lx *lx)
 	case S18: return TOK_EOF;
 	case S19: return TOK_NOESC;
 	case S20: return TOK_NOESC;
-	case S21: return TOK_NOESC;
+	case S21: return TOK_HEX;
 	case S22: return TOK_HEX;
 	case S25: return TOK_HEX;
 	case S28: return TOK_OCT;
