@@ -43,7 +43,7 @@ int main(void) {
 
 	assert(s != NULL);
 
-	plist = calloc(5000, sizeof *plist);
+	plist = calloc(COUNT, sizeof *plist);
 	assert(plist != NULL);
 
 	for (i = 0; i < COUNT; i++) {
