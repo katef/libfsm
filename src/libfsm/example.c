@@ -5,8 +5,10 @@
  */
 
 #include <assert.h>
+#include <ctype.h>
 #include <limits.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <fsm/fsm.h>
@@ -57,12 +59,30 @@ fsm_example(const struct fsm *fsm, fsm_state_t goal,
 	assert(path->c == '\0');
 
 	for (p = path->next; p != NULL; p = p->next) {
-		if (bufsz > 1) {
-			*buf++ = p->c;
-			bufsz--;
+		if (isprint((unsigned char)p->c)) {
+			if (bufsz > 1) {
+				*buf++ = p->c;
+				bufsz--;
+			}
+
+			n++;
+		} else {
+			/* "\xHH", 4 chars */
+			if (bufsz > 4) {
+				char hx[5];
+				unsigned v = (unsigned char)p->c;
+				snprintf(&hx[0],sizeof hx, "\\x%02x", v);
+				*buf++ = hx[0];
+				*buf++ = hx[1];
+				*buf++ = hx[2];
+				*buf++ = hx[3];
+
+				bufsz -= 4;
+			}
+
+			n += 4;
 		}
 
-		n++;
 	}
 
 done:
