@@ -38,17 +38,26 @@ int *next_int(void) {
 	return p;
 }
 
+enum { COUNT = 5000U };
+
 int main(void) {
 	struct hashset *s = hashset_create(NULL, hash_int, cmp_int);
 	struct hashset_iter iter;
 	size_t i;
 	int *p;
-	for (i = 0; i < 5000; i++) {
-		assert(hashset_add(s, next_int()));
+
+	assert(s != NULL);
+
+	for (i = 0; i < COUNT; i++) {
+		int *itm = next_int();
+		assert(itm != NULL);
+
+		assert(hashset_add(s, itm));
 	}
-	for (i = 0, p = hashset_first(s, &iter); i < 5000; i++, hashset_next(&iter)) {
+
+	for (i = 0, p = hashset_first(s, &iter); i < COUNT; i++, hashset_next(&iter)) {
 		assert(p);
-		if (i < 4999) {
+		if (i < COUNT-1) {
 			assert(hashset_hasnext(&iter));
 		} else {
 			assert(!hashset_hasnext(&iter));
