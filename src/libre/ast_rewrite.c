@@ -228,6 +228,12 @@ empty:
 
 tombstone:
 
+	for (i = 0; i < n->u.concat.count; i++) {
+		ast_expr_free(n->u.concat.n[i]);
+	}
+
+	free(n->u.concat.n);
+
 	n->type = AST_EXPR_TOMBSTONE;
 
 	return 1;
