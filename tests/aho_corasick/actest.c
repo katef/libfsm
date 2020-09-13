@@ -8,6 +8,7 @@
 
 #include <unistd.h>
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -83,6 +84,21 @@ void wordlist_add(struct word_list *words, const char *w0) {
 	words->list[words->len++] = w;
 }
 
+void wordlist_finalize(struct word_list *words)
+{
+	static const struct word_list zero;
+	size_t i;
+
+	assert(words != NULL);
+
+	for (i=0; i < words->len; i++) {
+		free(words->list[i]);
+	}
+
+	free(words->list);
+	*words = zero;
+}
+
 int main(int argc, char *argv[]) {
 	struct fsm *fsm;
 	char s[BUFSIZ];
@@ -149,14 +165,19 @@ int main(int argc, char *argv[]) {
 	}
 
 	fsm = re_strings(&opt, (const char **)words.list, words.len, flags);
+	wordlist_finalize(&words);
+
 	if (fsm == NULL) {
 		perror("converting trie to fsm");
+
 		exit(EXIT_FAILURE);
 	}
 
 	if (print != NULL) {
 		print(stdout, fsm);
 	}
+
+	fsm_free(fsm);
 
 	return 0;
 
