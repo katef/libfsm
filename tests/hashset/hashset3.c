@@ -48,6 +48,9 @@ int main(void) {
 	int a[3] = {1, 2, 3};
 	int seen[3] = {0, 0, 0};
 	int i;
+
+	assert(s != NULL);
+
 	assert(hashset_add(s, &a[0]));
 	assert(hashset_add(s, &a[1]));
 	assert(hashset_add(s, &a[2]));

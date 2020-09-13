@@ -27,11 +27,17 @@ cmp_int(const void *a, const void *b)
 int main(void) {
 	struct set *s = set_create(NULL, cmp_int);
 	int a = 1;
+
+	assert(s != NULL);
+
 	assert(set_add(s, &a));
 	assert(set_add(s, &a));
 	assert(set_add(s, &a));
+
 	set_remove(s, &a);
 	assert(!set_contains(s, &a));
+
 	set_free(s);
+
 	return 0;
 }
