@@ -67,6 +67,8 @@
 	CHAR:    () -> (:char, :pos, :pos);
 	COUNT:   () -> (:unsigned);
 
+	UNSUPPORTED: () -> (:char, :pos, :pos);
+
 	EOF;
 	!ERROR;
 
@@ -138,6 +140,11 @@
 				(c, !, !) = HEX;
 			||
 				(c, !, !) = CHAR;
+			||
+				(c, !, !) = CONTROL;
+			||
+				(c, !, !) = UNSUPPORTED;
+				<err-unsupported>;
 			};
 			node = <ast-make-literal>(c);
 		};
@@ -168,6 +175,7 @@
 					 * complain about unsupported things at a later stage */
 					<err-unsupported>;
 				};
+
 				node = <ast-make-literal>(c);
 	  		};
 
@@ -458,10 +466,6 @@
 				e = type;
 			||
 				e = flags;
-			||
-				(!, !, !) = CONTROL;
-				<err-unsupported>;
-				e = <ast-make-empty>; /* appease sid */
 			||
 				OPENSUB;
 				flags = <ast-get-re-flags>();

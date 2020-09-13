@@ -308,6 +308,17 @@
 		@end   = lex_state->lx.end;
 	@};
 
+	UNSUPPORTED: () -> (c :char, start :pos, end :pos) = @{
+		assert(lex_state->buf.a[0] == '\\');
+		assert(lex_state->buf.a[1] != '\0');
+		assert(lex_state->buf.a[2] == '\0');
+
+		@c = lex_state->buf.a[1];
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+	@};
+
 	CONTROL: () -> (c :char, start :pos, end :pos) = @{
 		assert(lex_state->buf.a[0] == '\\');
 		assert(lex_state->buf.a[1] == 'c');
@@ -315,10 +326,28 @@
 		assert(lex_state->buf.a[3] == '\0');
 
 		@c = lex_state->buf.a[2];
-		if ((unsigned char) @c > 127) {
-			@!;
+		/* from http://www.pcre.org/current/doc/html/pcre2pattern.html#SEC5
+		 * 
+		 *  The precise effect of \cx on ASCII characters is as follows: if x is a lower case letter, it is converted to
+		 *  upper case. Then bit 6 of the character (hex 40) is inverted. Thus \cA to \cZ become hex 01 to hex 1A (A is
+		 *  41, Z is 5A), but \c{ becomes hex 3B ({ is 7B), and \c; becomes hex 7B (; is 3B). If the code unit following
+		 *  \c has a value less than 32 or greater than 126, a compile-time error occurs. 
+		 */
+
+		{
+			unsigned char cc = (unsigned char)@c;
+			if (cc > 126 || cc < 32) {
+				@!;
+			}
+			
+			if (islower(cc)) {
+				cc = toupper(cc);
+			}
+
+			cc ^= 0x40;
+
+			@c = cc;
 		}
-		@c = (((toupper((unsigned char)@c)) - 64) % 128 + 128) % 128;
 
 		@start = lex_state->lx.start;
 		@end   = lex_state->lx.end;

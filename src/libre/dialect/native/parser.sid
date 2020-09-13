@@ -61,6 +61,8 @@
 	CHAR:     () -> (:char, :pos, :pos);
 	COUNT:    () -> (:unsigned);
 
+	!UNSUPPORTED:     () -> (:char, :pos, :pos);
+
 	EOF;
 	!ERROR;
 

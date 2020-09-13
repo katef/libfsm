@@ -67,6 +67,8 @@
 	!HEX:     () -> (:char, :pos, :pos);
 	CHAR:     () -> (:char, :pos, :pos);
 
+	!UNSUPPORTED:     () -> (:char, :pos, :pos);
+
 	EOF;
 	!ERROR;
 

@@ -59,12 +59,32 @@
 # negation of `.`, which matches everything except `\n`.
 '\N' -> $named__class;
 
-'\'   /[0-7]{1,3}/     -> $oct;
+'\'   /[0-7]{2,3}/     -> $oct;
+'\0'                   -> $oct;
+
+# PCRE treats \1 ... \7 as back references outside of a character class
+#
+# It's actually more complicated than that.  \<digits> is treated as a
+# backref as long as there are _already_ that many capture groups in the
+# expression.  Given that back references are unsupported, this seems
+# like a overkill for a seldom-used feature.  However, it's nice to
+# indicate that the usual backrefs aren't supported.
+'\'   /[1-7]/          -> $unsupported;
+
+# the new and proper way for back references
+'\g' -> $unsupported;
+
+# Yet another way to indicate back references
+'\k' -> $unsupported;
+
+# Resets current captured text.  Not _yet_ supported.
+'\K' -> $unsupported;
+
 '\o{' /[0-7]+/i '}'    -> $oct;
 '\x'  /[0-9a-f]{0,2}/i -> $hex;
 '\x{' /[0-9a-f]+/i '}' -> $hex;
 
-'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class) -> $noesc;
+'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class | $unsupported) -> $noesc;
 '\' -> $invalid;
 
 '(?' -> $openflags .. ')' -> $closeflags {
