@@ -52,6 +52,7 @@ int main(void) {
 
 	assert(!hashset_contains(s, &a));
 
+	hashset_free(s);
 	return 0;
 }
 

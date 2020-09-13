@@ -59,16 +59,31 @@ int *next_int(int reset) {
 int main(void) {
 	struct hashset *s = hashset_create(NULL, hash_int, cmp_int);
 	size_t i;
+	int **plist;
+
+	plist = malloc(10000 * sizeof *plist);
+	assert(plist != NULL);
+
 	for (i = 0; i < 5000; i++) {
-		assert(hashset_add(s, next_int(0)));
+		int *itm = next_int(0);
+		plist[i] = itm;
+		assert(hashset_add(s, itm));
 	}
 	assert(hashset_count(s) == 5000);
 
 	next_int(1);
 	for (i = 0; i < 5000; i++) {
-		assert(hashset_add(s, next_int(0)));
+		int *itm = next_int(0);
+		plist[5000+i] = itm;
+		assert(hashset_add(s, itm));
 	}
 	assert(hashset_count(s) == 5000);
 
+	for (i=0; i < 10000; i++) {
+		free(plist[i]);
+	}
+	free(plist);
+
+	hashset_free(s);
 	return 0;
 }

@@ -30,5 +30,6 @@ int main(void) {
 	assert(set_add(s, &a[0]));
 	assert(set_add(s, &a[1]));
 	assert(set_add(s, &a[2]));
+	set_free(s);
 	return 0;
 }

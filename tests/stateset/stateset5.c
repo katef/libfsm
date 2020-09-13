@@ -28,5 +28,6 @@ int main(void) {
 		state_set_remove(&s, a[i]);
 	}
 	assert(state_set_count(s) == 4997);
+	state_set_free(s);
 	return 0;
 }

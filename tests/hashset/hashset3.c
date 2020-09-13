@@ -61,5 +61,6 @@ int main(void) {
 		assert(seen[i]);
 	}
 
+	hashset_free(s);
 	return 0;
 }

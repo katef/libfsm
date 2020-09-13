@@ -36,5 +36,6 @@ int main(void) {
 	assert(hashset_add(s, &a[0]));
 	assert(hashset_add(s, &a[1]));
 	assert(hashset_add(s, &a[2]));
+	hashset_free(s);
 	return 0;
 }

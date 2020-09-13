@@ -35,9 +35,23 @@ int *next_int(void) {
 int main(void) {
 	struct set *s = set_create(NULL, cmp_int);
 	size_t i;
+	int **plist;
+
+	plist = malloc(5000 * sizeof *plist);
+	assert(plist != NULL);
+
 	for (i = 0; i < 5000; i++) {
-		assert(set_add(s, next_int()));
+		int *itm = next_int();
+		plist[i] = itm;
+		assert(set_add(s, itm));
 	}
 	assert(set_count(s) == 5000);
+
+	for (i=0; i < 5000; i++) {
+		free(plist[i]);
+	}
+	free(plist);
+
+	set_free(s);
 	return 0;
 }

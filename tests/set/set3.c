@@ -41,5 +41,6 @@ int main(void) {
 	for (i = 0; i < 3; i++) {
 		assert(seen[i]);
 	}
+	set_free(s);
 	return 0;
 }
