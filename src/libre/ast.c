@@ -443,7 +443,7 @@ ast_make_expr_concat(enum re_flags re_flags)
 	res->u.concat.alloc = 8; /* arbitrary initial value */
 	res->u.concat.count = 0;
 
-	res->u.concat.n = malloc(res->u.concat.alloc * sizeof *res->u.concat.n);
+	res->u.concat.n = calloc(res->u.concat.alloc, sizeof *res->u.concat.n);
 	if (res->u.concat.n == NULL) {
 		return NULL;
 	}
@@ -490,7 +490,7 @@ ast_make_expr_alt(enum re_flags re_flags)
 	res->u.alt.alloc = 8; /* arbitrary initial value */
 	res->u.alt.count = 0;
 
-	res->u.alt.n = malloc(res->u.alt.alloc * sizeof *res->u.alt.n);
+	res->u.alt.n = calloc(res->u.alt.alloc, sizeof *res->u.alt.n);
 	if (res->u.alt.n == NULL) {
 		return NULL;
 	}
