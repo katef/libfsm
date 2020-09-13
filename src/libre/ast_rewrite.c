@@ -205,6 +205,7 @@ rewrite_concat(struct ast_expr *n, enum re_flags flags)
 
 	if (n->u.concat.count == 0) {
 		free(n->u.concat.n);
+		n->u.concat.n = NULL;
 
 		goto empty;
 	}
@@ -233,6 +234,7 @@ tombstone:
 	}
 
 	free(n->u.concat.n);
+	n->u.concat.n = NULL;
 
 	n->type = AST_EXPR_TOMBSTONE;
 
@@ -314,6 +316,7 @@ rewrite_alt(struct ast_expr *n, enum re_flags flags)
 
 	if (n->u.alt.count == 0) {
 		free(n->u.alt.n);
+		n->u.alt.n = NULL;
 
 		goto empty;
 	}
