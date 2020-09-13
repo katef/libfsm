@@ -370,7 +370,7 @@
 		int brace = 0;
 
 		assert(0 == strncmp(lex_state->buf.a, "\\x", 2));
-		assert(strlen(lex_state->buf.a) >= 3);
+		assert(strlen(lex_state->buf.a) >= 2);  /* pcre allows \x without a suffix */
 
 		@start = lex_state->lx.start;
 		@end   = lex_state->lx.end;
@@ -384,7 +384,12 @@
 			brace = 1;
 		}
 
-		u = strtoul(s, &e, 16);
+		if (*s == '\0') {
+			u = 0;
+			e = s;
+		} else {
+			u = strtoul(s, &e, 16);
+		}
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
 			err->e = RE_EHEXRANGE;
