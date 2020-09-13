@@ -21,60 +21,71 @@ fsm_reachable(const struct fsm *fsm, fsm_state_t state,
 	int any,
 	int (*predicate)(const struct fsm *, fsm_state_t))
 {
-	struct dlist *list;
-	struct dlist *p;
+	int r, stopcond;
+
+	fsm_state_t *q;
+	size_t i, qtop;
 
 	assert(state < fsm->statecount);
 	assert(predicate != NULL);
+
+	for (i=0; i < fsm->statecount; i++) {
+		fsm->states[i].visited = 0;
+	}
+
+	q = f_malloc(fsm->opt->alloc, fsm->statecount * sizeof *q);
+	if (q == NULL) {
+		return -1;
+	}
 
 	/*
 	 * Iterative depth-first search.
 	 */
 	/* TODO: write in terms of fsm_walk or some common iteration callback */
 
-	list = NULL;
+	q[0] = state;
+	qtop = 1;
+	fsm->states[state].visited = 1;
 
-	if (!dlist_push(fsm->opt->alloc, &list, state)) {
-		return -1;
-	}
+	stopcond = (any) ? 1 : 0;
 
-	while (p = dlist_nextnotdone(list), p != NULL) {
+	while (qtop > 0) {
 		struct edge_iter it;
 		struct fsm_edge e;
+		fsm_state_t state;
+		int pred_result;
 
-		if (any) {
-			if (predicate(fsm, p->state)) {
-				dlist_free(fsm->opt->alloc, p);
-				return 1;
-			}
-		} else {
-			if (!predicate(fsm, p->state)) {
-				dlist_free(fsm->opt->alloc, p);
-				return 0;
-			}
+		assert(qtop > 0);
+
+		state = q[--qtop];
+
+		pred_result = !!predicate(fsm, state);
+		if (pred_result == stopcond) {
+			r = stopcond;
+			goto cleanup;
 		}
 
-		for (edge_set_reset(fsm->states[p->state].edges, &it); edge_set_next(&it, &e); ) {
-			/* not a list operation... */
-			if (dlist_contains(list, e.state)) {
-				continue;
-			}
+		for (edge_set_reset(fsm->states[state].edges, &it); edge_set_next(&it, &e); ) {
+			if (fsm->states[e.state].visited == 0) {
+				assert(qtop < fsm->statecount);
 
-			if (!dlist_push(fsm->opt->alloc, &list, e.state)) {
-				return -1;
+				q[qtop++] = e.state;
+				fsm->states[e.state].visited = 1;
 			}
 		}
-
-		p->done = 1;
 	}
 
-	dlist_free(fsm->opt->alloc, list);
+	r = !stopcond;
+	goto cleanup;
 
-	if (any) {
-		return 0;
-	} else {
-		return 1;
+cleanup:
+	for (i=0; i < fsm->statecount; i++) {
+		fsm->states[i].visited = 0;
 	}
+
+	f_free(fsm->opt->alloc, q);
+
+	return r;
 }
 
 int
