@@ -168,6 +168,8 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	 */
 	if (unsatisfiable) {
 		ast_expr_free(ast->expr);
+		/* ast_free below frees the pool */
+
 		ast->expr = ast_expr_tombstone;
 	}
 
