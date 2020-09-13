@@ -32,5 +32,6 @@ int main(void) {
 	assert(set_add(s, &a));
 	set_remove(s, &a);
 	assert(!set_contains(s, &a));
+	set_free(s);
 	return 0;
 }

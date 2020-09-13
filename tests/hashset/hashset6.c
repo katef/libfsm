@@ -54,5 +54,11 @@ int main(void) {
 			assert(!hashset_hasnext(&iter));
 		}
 	}
+
+	for (p = hashset_first(s, &iter); p != NULL; p = hashset_next(&iter)) {
+		free(p);
+	}
+
+	hashset_free(s);
 	return 0;
 }

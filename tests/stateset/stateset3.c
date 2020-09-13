@@ -28,5 +28,6 @@ int main(void) {
 	for (i = 0; i < 3; i++) {
 		assert(seen[i]);
 	}
+	state_set_free(s);
 	return 0;
 }

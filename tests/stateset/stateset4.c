@@ -23,5 +23,6 @@ int main(void) {
 		assert(state_set_add(&s, NULL, next_state()));
 	}
 	assert(state_set_count(s) == 5000);
+	state_set_free(s);
 	return 0;
 }
