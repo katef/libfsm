@@ -790,7 +790,7 @@ ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const 
 	res->u.alt.alloc = class->count;
 	res->u.alt.count = class->count;
 
-	res->u.alt.n = malloc(res->u.alt.alloc * sizeof *res->u.alt.n);
+	res->u.alt.n = calloc(res->u.alt.alloc, sizeof *res->u.alt.n);
 	if (res->u.alt.n == NULL) {
 		return NULL;
 	}
