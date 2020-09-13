@@ -41,6 +41,7 @@ hashset_contains(const struct hashset *set, const void *item)
 	return finditem(set, h, item, &b);
 }
 
+enum { VALUE=0, RESET=1 };
 int *next_int(int reset) {
 	static int n = 0;
 	int *p;
@@ -56,30 +57,45 @@ int *next_int(int reset) {
 	return p;
 }
 
+enum { COUNT = 5000U };
+
 int main(void) {
 	struct hashset *s = hashset_create(NULL, hash_int, cmp_int);
 	size_t i;
 	int **plist;
 
-	plist = malloc(10000 * sizeof *plist);
+	assert(s != NULL);
+
+	/* need 2*COUNT because we allocate items twice in two
+	 * separate loops
+	 */
+	plist = calloc(2*COUNT, sizeof *plist);
 	assert(plist != NULL);
 
-	for (i = 0; i < 5000; i++) {
-		int *itm = next_int(0);
+	for (i = 0; i < COUNT; i++) {
+		int *itm = next_int(VALUE);
+		assert(itm != NULL);
+
 		plist[i] = itm;
 		assert(hashset_add(s, itm));
 	}
-	assert(hashset_count(s) == 5000);
+	assert(hashset_count(s) == COUNT);
 
-	next_int(1);
-	for (i = 0; i < 5000; i++) {
-		int *itm = next_int(0);
-		plist[5000+i] = itm;
+	/* reset counter and add items again.  size of hash set should
+	 * stay the same since these are duplicates.
+	 */
+	next_int(RESET);
+
+	for (i = 0; i < COUNT; i++) {
+		int *itm = next_int(VALUE);
+		assert(itm != NULL);
+
+		plist[COUNT+i] = itm;
 		assert(hashset_add(s, itm));
 	}
-	assert(hashset_count(s) == 5000);
+	assert(hashset_count(s) == COUNT);
 
-	for (i=0; i < 10000; i++) {
+	for (i=0; i < 2*COUNT; i++) {
 		free(plist[i]);
 	}
 	free(plist);
