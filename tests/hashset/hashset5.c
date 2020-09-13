@@ -49,29 +49,37 @@ int *next_int(void) {
 	return p;
 }
 
+enum { COUNT = 5000U };
+
 int main(void) {
 	struct hashset *s = hashset_create(NULL, hash_int, cmp_int);
-	int a[3] = {1200,2400,3600};
 	size_t i;
 	int **plist;
 
-	plist = malloc(5000 * sizeof *plist);
+	int a[3] = {1200,2400,3600};
+	const unsigned num_a = sizeof a / sizeof *a;
+
+	assert(s != NULL);
+
+	plist = calloc(COUNT, sizeof *plist);
 	assert(plist != NULL);
 
-	for (i = 0; i < 5000; i++) {
+	for (i = 0; i < COUNT; i++) {
 		int *itm = next_int();
+		assert(itm != NULL);
+
 		plist[i] = itm;
 		assert(hashset_add(s, itm));
 	}
 
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < num_a; i++) {
 		assert(hashset_contains(s, &a[i]));
 		hashset_remove(s, &a[i]);
 	}
 
-	assert(hashset_count(s) == 4997);
+	assert(hashset_count(s) == COUNT-num_a);
 
-	for (i=0; i < 5000; i++) {
+	for (i=0; i < COUNT; i++) {
 		free(plist[i]);
 	}
 	free(plist);
