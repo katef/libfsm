@@ -116,6 +116,7 @@
 	!<err-expected-closeflags>;
 	<err-expected-eof>;
 	!<err-unsupported>;
+	!<err-invalid-comment>;
 
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();

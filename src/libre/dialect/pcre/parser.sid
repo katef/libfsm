@@ -69,6 +69,9 @@
 
 	UNSUPPORTED: () -> (:char, :pos, :pos);
 
+	OPENCOMMENT; CLOSECOMMENT; INVALID_COMMENT;
+	COMMENT;
+
 	EOF;
 	!ERROR;
 
@@ -120,6 +123,7 @@
 	<err-expected-closeflags>;
 	<err-expected-eof>;
 	<err-unsupported>;
+	<err-invalid-comment>;
 
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();
@@ -542,9 +546,24 @@
 			};
 		};
 
+		comment: () -> () = {
+			OPENCOMMENT;
+			COMMENT;
+			{
+				CLOSECOMMENT;
+			||
+				INVALID_COMMENT;
+				<err-invalid-comment>;
+			};
+		};
+
 		list-of-pieces: (cat :ast_expr) -> () = {
-			a = piece;
-			<ast-add-concat>(cat, a);
+			{
+				a = piece;
+				<ast-add-concat>(cat, a);
+			||
+				comment;
+			};
 
 			{
 				list-of-pieces(cat);

@@ -87,6 +87,11 @@
 '\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class | $unsupported) -> $noesc;
 '\' -> $invalid;
 
+'(?#' -> $opencomment .. ')' -> $closecomment {
+	'(' -> $invalid__comment;
+	/[^()]+/ -> $comment;
+}
+
 '(?' -> $openflags .. ')' -> $closeflags {
 	'-' -> $negate;
 	'i' -> $flag__insensitive;
