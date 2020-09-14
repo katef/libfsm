@@ -236,7 +236,7 @@ int main(int argc, char **argv)
 				regexp = xstrdup(s);
 				if (regexp == NULL) {
 					fprintf(stderr, "line %5zu: could not allocate %zu bytes for regexp /%s/: %s\n",
-						linenum, strlen(s), s, strerror(errno));
+						linenum, strlen(s), regexp, strerror(errno));
 				} else {
 					static const struct re_err err_zero;
 
@@ -259,7 +259,7 @@ int main(int argc, char **argv)
 						fprintf(out,"%s\n", regexp);
 					} else {
 						fprintf(stderr, "line %5zu: could not parse regexp /%s/: %s\n",
-								linenum, s, re_strerror(comp_err.e));
+								linenum, regexp, re_strerror(comp_err.e));
 					}
 
 					free(regexp);
