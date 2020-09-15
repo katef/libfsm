@@ -30,6 +30,17 @@
 # >    also matches before a newline at the end of the subject
 '\Z' -> $unsupported;
 
+# this could be implemented
+# > matches at the first matching position in the subject
+# also:
+# > The \G assertion is true only when the current matching position is
+# > at the start point of the matching process, as specified by the
+# > startoffset argument of pcre2_match(). It differs from \A when the
+# > value of startoffset is non-zero. By calling pcre2_match() multiple
+# > times with appropriate arguments, you can mimic Perl's /g option, and
+# > it is in this kind of implementation where \G can be useful. 
+'\G' -> $unsupported;
+
 # operators
 '?'  -> $opt;
 '*'  -> $star;
@@ -97,6 +108,11 @@
 
 # Resets current captured text.  Not _yet_ supported.
 '\K' -> $unsupported;
+
+# \b and \B indicate word/not-word boundaries, and are not (yet?)
+# supported
+'\b' -> $unsupported;
+'\B' -> $unsupported;
 
 '\o{' /[0-7]+/i '}'    -> $oct;
 '\x'  /[0-9a-f]{0,2}/i -> $hex;
