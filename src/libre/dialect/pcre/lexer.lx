@@ -12,6 +12,24 @@
 '^'  -> $start;
 '$'  -> $end;
 
+# Similar predicates.  Without the concept of "multiline mode," these
+# should be the same as ^ and $.
+#
+# TODO: evaluate how they are different and also if a "multiline mode"
+# matching call makes sense for libfsm.
+#
+# > The \A, \Z, and \z assertions differ from the traditional circumflex
+# > and dollar (described in the next section) in that they only ever
+# > match at the very start and end of the subject string, whatever
+# > options are set. Thus, they are independent of multiline mode. 
+'\A' -> $start;
+'\z' -> $end;
+
+# not yet implemented:
+# > matches at the end of the subject
+# >    also matches before a newline at the end of the subject
+'\Z' -> $unsupported;
+
 # operators
 '?'  -> $opt;
 '*'  -> $star;
@@ -84,7 +102,7 @@
 '\x'  /[0-9a-f]{0,2}/i -> $hex;
 '\x{' /[0-9a-f]+/i '}' -> $hex;
 
-'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class | $unsupported) -> $noesc;
+'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\A' | '\z' | $named__class | $unsupported) -> $noesc;
 '\' -> $invalid;
 
 '(?#' -> $opencomment .. ')' -> $closecomment {
