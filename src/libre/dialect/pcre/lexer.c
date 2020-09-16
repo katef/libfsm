@@ -3658,6 +3658,8 @@ z12(struct lx_pcre_lx *lx)
 
 		case S10: /* e.g. "\\" */
 			switch ((unsigned char) c) {
+			case 'z': state = S2; break;
+			case 'A': state = S11; break;
 			case '$':
 			case '(':
 			case ')':
@@ -3683,6 +3685,13 @@ z12(struct lx_pcre_lx *lx)
 			case '5':
 			case '6':
 			case '7': state = S17; break;
+			case 'B':
+			case 'G':
+			case 'K':
+			case 'Z':
+			case 'b':
+			case 'g':
+			case 'k': state = S18; break;
 			case 'D':
 			case 'H':
 			case 'N':
@@ -3693,10 +3702,7 @@ z12(struct lx_pcre_lx *lx)
 			case 'h':
 			case 's':
 			case 'v':
-			case 'w': state = S18; break;
-			case 'K':
-			case 'g':
-			case 'k': state = S19; break;
+			case 'w': state = S19; break;
 			case 'Q': state = S20; break;
 			case 'c': state = S21; break;
 			case 'o': state = S22; break;
@@ -3714,7 +3720,7 @@ z12(struct lx_pcre_lx *lx)
 		case S13: /* e.g. "|" */
 			lx_pcre_ungetc(lx, c); return TOK_ALT;
 
-		case S14: /* e.g. "\\b" */
+		case S14: /* e.g. "\\e" */
 			lx_pcre_ungetc(lx, c); return TOK_NOESC;
 
 		case S15: /* e.g. "\\a" */
@@ -3748,11 +3754,11 @@ z12(struct lx_pcre_lx *lx)
 			}
 			break;
 
-		case S18: /* e.g. "\\d" */
-			lx_pcre_ungetc(lx, c); return TOK_NAMED__CLASS;
-
-		case S19: /* e.g. "\\g" */
+		case S18: /* e.g. "\\b" */
 			lx_pcre_ungetc(lx, c); return TOK_UNSUPPORTED;
+
+		case S19: /* e.g. "\\d" */
+			lx_pcre_ungetc(lx, c); return TOK_NAMED__CLASS;
 
 		case S20: /* e.g. "\\Q" */
 			lx_pcre_ungetc(lx, c); return lx->z = z0, lx->z(lx);
@@ -4000,8 +4006,8 @@ z12(struct lx_pcre_lx *lx)
 	case S15: return TOK_ESC;
 	case S16: return TOK_OCT;
 	case S17: return TOK_UNSUPPORTED;
-	case S18: return TOK_NAMED__CLASS;
-	case S19: return TOK_UNSUPPORTED;
+	case S18: return TOK_UNSUPPORTED;
+	case S19: return TOK_NAMED__CLASS;
 	case S20: return TOK_EOF;
 	case S21: return TOK_NOESC;
 	case S22: return TOK_NOESC;
@@ -4049,7 +4055,6 @@ lx_pcre_name(enum lx_pcre_token t)
 	case TOK_INVALID: return "INVALID";
 	case TOK_NOESC: return "NOESC";
 	case TOK_HEX: return "HEX";
-	case TOK_UNSUPPORTED: return "UNSUPPORTED";
 	case TOK_OCT: return "OCT";
 	case TOK_NAMED__CLASS: return "NAMED__CLASS";
 	case TOK_CONTROL: return "CONTROL";
@@ -4059,6 +4064,7 @@ lx_pcre_name(enum lx_pcre_token t)
 	case TOK_PLUS: return "PLUS";
 	case TOK_STAR: return "STAR";
 	case TOK_OPT: return "OPT";
+	case TOK_UNSUPPORTED: return "UNSUPPORTED";
 	case TOK_END: return "END";
 	case TOK_START: return "START";
 	case TOK_CLOSE: return "CLOSE";
@@ -4102,7 +4108,6 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_INVALID: return "";
 		case TOK_NOESC: return "";
 		case TOK_HEX: return "";
-		case TOK_UNSUPPORTED: return "";
 		case TOK_OCT: return "";
 		case TOK_NAMED__CLASS: return "";
 		case TOK_CONTROL: return "";
@@ -4112,6 +4117,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_PLUS: return "";
 		case TOK_STAR: return "";
 		case TOK_OPT: return "";
+		case TOK_UNSUPPORTED: return "";
 		case TOK_END: return "";
 		case TOK_START: return "";
 		case TOK_CLOSE: return "";
@@ -4146,7 +4152,6 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_INVALID: return "";
 		case TOK_NOESC: return "";
 		case TOK_HEX: return "";
-		case TOK_UNSUPPORTED: return "";
 		case TOK_OCT: return "";
 		case TOK_NAMED__CLASS: return "";
 		case TOK_CONTROL: return "";
@@ -4156,6 +4161,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_PLUS: return "";
 		case TOK_STAR: return "";
 		case TOK_OPT: return "";
+		case TOK_UNSUPPORTED: return "";
 		case TOK_END: return "";
 		case TOK_START: return "";
 		case TOK_CLOSE: return "";
@@ -4190,7 +4196,6 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_INVALID: return "";
 		case TOK_NOESC: return "";
 		case TOK_HEX: return "";
-		case TOK_UNSUPPORTED: return "";
 		case TOK_OCT: return "";
 		case TOK_NAMED__CLASS: return "";
 		case TOK_CONTROL: return "";
@@ -4200,6 +4205,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_PLUS: return "";
 		case TOK_STAR: return "";
 		case TOK_OPT: return "";
+		case TOK_UNSUPPORTED: return "";
 		case TOK_END: return "";
 		case TOK_START: return "";
 		case TOK_CLOSE: return "";
@@ -4234,7 +4240,6 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_INVALID: return "";
 		case TOK_NOESC: return "";
 		case TOK_HEX: return "";
-		case TOK_UNSUPPORTED: return "";
 		case TOK_OCT: return "";
 		case TOK_NAMED__CLASS: return "";
 		case TOK_CONTROL: return "";
@@ -4244,6 +4249,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_PLUS: return "";
 		case TOK_STAR: return "";
 		case TOK_OPT: return "";
+		case TOK_UNSUPPORTED: return "";
 		case TOK_END: return "";
 		case TOK_START: return "";
 		case TOK_CLOSE: return "";
@@ -4278,7 +4284,6 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_INVALID: return "";
 		case TOK_NOESC: return "";
 		case TOK_HEX: return "";
-		case TOK_UNSUPPORTED: return "";
 		case TOK_OCT: return "";
 		case TOK_NAMED__CLASS: return "";
 		case TOK_CONTROL: return "";
@@ -4288,6 +4293,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_PLUS: return "";
 		case TOK_STAR: return "";
 		case TOK_OPT: return "";
+		case TOK_UNSUPPORTED: return "";
 		case TOK_END: return "";
 		case TOK_START: return "";
 		case TOK_CLOSE: return "";
@@ -4322,7 +4328,6 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_INVALID: return "";
 		case TOK_NOESC: return "";
 		case TOK_HEX: return "";
-		case TOK_UNSUPPORTED: return "";
 		case TOK_OCT: return "";
 		case TOK_NAMED__CLASS: return "";
 		case TOK_CONTROL: return "";
@@ -4332,6 +4337,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_PLUS: return "";
 		case TOK_STAR: return "";
 		case TOK_OPT: return "";
+		case TOK_UNSUPPORTED: return "";
 		case TOK_END: return "";
 		case TOK_START: return "";
 		case TOK_CLOSE: return "";
@@ -4366,7 +4372,6 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_INVALID: return "";
 		case TOK_NOESC: return "";
 		case TOK_HEX: return "";
-		case TOK_UNSUPPORTED: return "";
 		case TOK_OCT: return "";
 		case TOK_NAMED__CLASS: return "";
 		case TOK_CONTROL: return "";
@@ -4376,6 +4381,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_PLUS: return "";
 		case TOK_STAR: return "";
 		case TOK_OPT: return "";
+		case TOK_UNSUPPORTED: return "";
 		case TOK_END: return "";
 		case TOK_START: return "";
 		case TOK_CLOSE: return "";
@@ -4410,7 +4416,6 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_INVALID: return "";
 		case TOK_NOESC: return "";
 		case TOK_HEX: return "";
-		case TOK_UNSUPPORTED: return "";
 		case TOK_OCT: return "";
 		case TOK_NAMED__CLASS: return "";
 		case TOK_CONTROL: return "";
@@ -4420,6 +4425,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_PLUS: return "";
 		case TOK_STAR: return "";
 		case TOK_OPT: return "";
+		case TOK_UNSUPPORTED: return "";
 		case TOK_END: return "";
 		case TOK_START: return "";
 		case TOK_CLOSE: return "";
@@ -4454,7 +4460,6 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_INVALID: return "";
 		case TOK_NOESC: return "";
 		case TOK_HEX: return "";
-		case TOK_UNSUPPORTED: return "";
 		case TOK_OCT: return "";
 		case TOK_NAMED__CLASS: return "";
 		case TOK_CONTROL: return "";
@@ -4464,6 +4469,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_PLUS: return "";
 		case TOK_STAR: return "";
 		case TOK_OPT: return "";
+		case TOK_UNSUPPORTED: return "";
 		case TOK_END: return "";
 		case TOK_START: return "";
 		case TOK_CLOSE: return "";
@@ -4498,7 +4504,6 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_INVALID: return "";
 		case TOK_NOESC: return "";
 		case TOK_HEX: return "";
-		case TOK_UNSUPPORTED: return "";
 		case TOK_OCT: return "";
 		case TOK_NAMED__CLASS: return "";
 		case TOK_CONTROL: return "";
@@ -4508,6 +4513,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_PLUS: return "";
 		case TOK_STAR: return "";
 		case TOK_OPT: return "";
+		case TOK_UNSUPPORTED: return "";
 		case TOK_END: return "";
 		case TOK_START: return "";
 		case TOK_CLOSE: return "";
@@ -4542,7 +4548,6 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_INVALID: return "";
 		case TOK_NOESC: return "";
 		case TOK_HEX: return "";
-		case TOK_UNSUPPORTED: return "";
 		case TOK_OCT: return "";
 		case TOK_NAMED__CLASS: return "";
 		case TOK_CONTROL: return "";
@@ -4552,6 +4557,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_PLUS: return "";
 		case TOK_STAR: return "";
 		case TOK_OPT: return "";
+		case TOK_UNSUPPORTED: return "";
 		case TOK_END: return "";
 		case TOK_START: return "";
 		case TOK_CLOSE: return "";
@@ -4586,7 +4592,6 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_INVALID: return "";
 		case TOK_NOESC: return "";
 		case TOK_HEX: return "";
-		case TOK_UNSUPPORTED: return "";
 		case TOK_OCT: return "";
 		case TOK_NAMED__CLASS: return "";
 		case TOK_CONTROL: return "";
@@ -4596,6 +4601,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_PLUS: return "";
 		case TOK_STAR: return "";
 		case TOK_OPT: return "";
+		case TOK_UNSUPPORTED: return "";
 		case TOK_END: return "";
 		case TOK_START: return "";
 		case TOK_CLOSE: return "";
@@ -4630,7 +4636,6 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_INVALID: return "";
 		case TOK_NOESC: return "";
 		case TOK_HEX: return "";
-		case TOK_UNSUPPORTED: return "";
 		case TOK_OCT: return "";
 		case TOK_NAMED__CLASS: return "";
 		case TOK_CONTROL: return "";
@@ -4640,6 +4645,7 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_PLUS: return "";
 		case TOK_STAR: return "";
 		case TOK_OPT: return "";
+		case TOK_UNSUPPORTED: return "";
 		case TOK_END: return "";
 		case TOK_START: return "";
 		case TOK_CLOSE: return "";

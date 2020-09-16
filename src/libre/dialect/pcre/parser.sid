@@ -529,7 +529,19 @@
 				node = <ast-make-piece>(e, c);
 
 				{
-					&node = list-of-counts(node);
+					/* repeat quantifier followed by ? indicates non-greedy matching,
+					 * which is currently unsupported
+					 * This includes: *?, {m,n}?, +?, and ??
+					 */
+					OPT;
+					<err-unsupported>;
+				||
+					/* repeat quantifier followed by + indicates "atomic" matching,
+					 * which is currently unsupported.
+					 * This includes: *+, {m,n}+, ++, and ?+
+					 */
+					PLUS;
+					<err-unsupported>;
 				||
 					$;
 				};
