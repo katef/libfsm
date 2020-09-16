@@ -18,12 +18,17 @@
 #include "internal.h"
 
 struct fsm *
-fsm_concat(struct fsm *a, struct fsm *b)
+fsm_concat(struct fsm *a, struct fsm *b,
+	struct fsm_combine_info *combine_info)
 {
 	struct fsm *q;
 	fsm_state_t ea, sb;
 	fsm_state_t sq;
-	struct fsm_combine_info combine_info;
+	struct fsm_combine_info combine_info_internal;
+
+	if (combine_info == NULL) {
+		combine_info = &combine_info_internal;
+	}
 
 	assert(a != NULL);
 	assert(b != NULL);
@@ -52,12 +57,12 @@ fsm_concat(struct fsm *a, struct fsm *b)
 
 	fsm_setend(a, ea, 1);
 
-	q = fsm_merge(a, b, &combine_info);
+	q = fsm_merge(a, b, combine_info);
 	assert(q != NULL);
 
-	sq += combine_info.base_a;
-	ea += combine_info.base_a;
-	sb += combine_info.base_b;
+	sq += combine_info->base_a;
+	ea += combine_info->base_a;
+	sb += combine_info->base_b;
 
 	fsm_setend(q, ea, 0);
 

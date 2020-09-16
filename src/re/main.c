@@ -546,7 +546,8 @@ do_fsm_cleanup(void)
 int
 main(int argc, char *argv[])
 {
-	struct fsm *(*join)(struct fsm *, struct fsm *);
+	struct fsm *(*join)(struct fsm *, struct fsm *,
+	    struct fsm_combine_info *);
 	int (*query)(const struct fsm *, const struct fsm *);
 	fsm_print *print_fsm;
 	ast_print *print_ast;
@@ -853,7 +854,7 @@ main(int argc, char *argv[])
 				}
 			}
 
-			fsm = join(fsm, new);
+			fsm = join(fsm, new, NULL);
 			if (fsm == NULL) {
 				perror("fsm_union/concat");
 				return EXIT_FAILURE;

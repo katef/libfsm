@@ -338,7 +338,8 @@ fsm_minimise(struct fsm *fsm);
  * Concatenate b after a. This is not commutative.
  */
 struct fsm *
-fsm_concat(struct fsm *a, struct fsm *b);
+fsm_concat(struct fsm *a, struct fsm *b,
+	struct fsm_combine_info *combine_info);
 
 /*
  * Return 1 if the fsm does not match anything;

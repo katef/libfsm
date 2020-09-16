@@ -701,7 +701,7 @@
 		assert(@a != NULL);
 		assert(@b != NULL);
 
-		@q = fsm_concat(@a, @b);
+		@q = fsm_concat(@a, @b, NULL);
 		if (@q == NULL) {
 			perror("fsm_concat");
 			@!;
@@ -740,7 +740,7 @@
 		assert(@a != NULL);
 		assert(@b != NULL);
 
-		@q = fsm_union(@a, @b);
+		@q = fsm_union(@a, @b, NULL);
 		if (@q == NULL) {
 			perror("fsm_union");
 			@!;
