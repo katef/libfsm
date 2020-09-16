@@ -41,6 +41,9 @@
 # > it is in this kind of implementation where \G can be useful. 
 '\G' -> $unsupported;
 
+# A lone '\E' without a preceding \Q is ignored
+'\E';
+
 # operators
 '?'  -> $opt;
 '*'  -> $star;
@@ -118,7 +121,7 @@
 '\x'  /[0-9a-f]{0,2}/i -> $hex;
 '\x{' /[0-9a-f]+/i '}' -> $hex;
 
-'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\A' | '\z' | $named__class | $unsupported) -> $noesc;
+'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\A' | '\z' | '\E' | $named__class | $unsupported) -> $noesc;
 '\' -> $invalid;
 
 '(?#' -> $opencomment .. ')' -> $closecomment {
@@ -180,7 +183,9 @@
 	'\x'  /[0-9a-f]{1,2}/i -> $hex;
 	'\x{' /[0-9a-f]+/i '}' -> $hex;
 
-	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class) -> $noesc;
+	'\E';
+
+	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\E' | $named__class) -> $noesc;
 	'\' -> $invalid;
 
 	# FIXME: negated character classes, e.g. [:^alpha:]
@@ -201,6 +206,8 @@
 
 	# XXX: /./ - the above
 	/[^\^\-\\\x00]/ -> $char;
+
+	# lone \E without a preceding \Q is ignored
 
 	'\Q' .. '\E' {
 		/./ - "\x00" -> $char;
@@ -255,7 +262,9 @@
 	'\x'  /[0-9a-f]{1,2}/i -> $hex;
 	'\x{' /[0-9a-f]+/i '}' -> $hex;
 
-	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class) -> $noesc;
+	'\E';
+
+	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\E' | $named__class) -> $noesc;
 	'\' -> $invalid;
 
 	# FIXME: negated character classes, e.g. [:^alpha:]
@@ -330,7 +339,9 @@
 	'\x'  /[0-9a-f]{1,2}/i -> $hex;
 	'\x{' /[0-9a-f]+/i '}' -> $hex;
 
-	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class) -> $noesc;
+	'\E';
+
+	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\E' | $named__class) -> $noesc;
 	'\' -> $invalid;
 
 	# FIXME: negated character classes, e.g. [:^alpha:]
@@ -405,7 +416,9 @@
 	'\x'  /[0-9a-f]{1,2}/i -> $hex;
 	'\x{' /[0-9a-f]+/i '}' -> $hex;
 
-	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class) -> $noesc;
+	'\E';
+
+	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\E' | $named__class) -> $noesc;
 	'\' -> $invalid;
 
 	# FIXME: negated character classes, e.g. [:^alpha:]
