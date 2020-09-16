@@ -293,8 +293,8 @@ p_pattern(lex_state lex_state, act_state act_state, zone ZIz, fsm *ZOr)
 
 		for (m = (ZIz)->ml; m != NULL; m = m->next) {
 			struct fsm *fsm;
-			fsm_state_t base_r, base_fsm;
 			fsm_state_t ms;
+			struct fsm_combine_info combine_info;
 
 			if (m->token == NULL) {
 				continue;
@@ -319,14 +319,14 @@ p_pattern(lex_state lex_state, act_state act_state, zone ZIz, fsm *ZOr)
 			 */
 			fsm_setendopaque(fsm, NULL);
 
-			(ZIr) = fsm_merge((ZIr), fsm, &base_r, &base_fsm);
+			(ZIr) = fsm_merge((ZIr), fsm, &combine_info);
 			if ((ZIr) == NULL) {
 				perror("fsm_union");
 				goto ZL1;
 			}
 
-			ms    += base_fsm;
-			start += base_r;
+			ms    += combine_info.base_b;
+			start += combine_info.base_a;
 
 			if (!fsm_addedge_epsilon((ZIr), start, ms)) {
 				perror("fsm_addedge_epsilon");
@@ -741,8 +741,8 @@ p_list_Hof_Hthings_C_Cthing(lex_state lex_state, act_state act_state, ast ZIa, z
 
 		for (m = (ZIz)->ml; m != NULL; m = m->next) {
 			struct fsm *fsm;
-			fsm_state_t base_r, base_fsm;
 			fsm_state_t ms;
+			struct fsm_combine_info combine_info;
 
 			if (m->token == NULL) {
 				continue;
@@ -767,14 +767,14 @@ p_list_Hof_Hthings_C_Cthing(lex_state lex_state, act_state act_state, ast ZIa, z
 			 */
 			fsm_setendopaque(fsm, NULL);
 
-			(ZI254) = fsm_merge((ZI254), fsm, &base_r, &base_fsm);
+			(ZI254) = fsm_merge((ZI254), fsm, &combine_info);
 			if ((ZI254) == NULL) {
 				perror("fsm_union");
 				goto ZL1;
 			}
 
-			ms    += base_fsm;
-			start += base_r;
+			ms    += combine_info.base_b;
+			start += combine_info.base_a;
 
 			if (!fsm_addedge_epsilon((ZI254), start, ms)) {
 				perror("fsm_addedge_epsilon");

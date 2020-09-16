@@ -18,6 +18,14 @@
 
 struct fsm;
 
+/* When combining two FSMs, it can sometimes be useful to know the
+ * offsets to their original start states.
+ * If passed in, this struct will be updated with those details. */
+struct fsm_combine_info {
+	fsm_state_t base_a;
+	fsm_state_t base_b;
+};
+
 int
 fsm_complement(struct fsm *fsm);
 

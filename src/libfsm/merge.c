@@ -107,12 +107,14 @@ fsm_mergeab(struct fsm *a, struct fsm *b,
 
 struct fsm *
 fsm_merge(struct fsm *a, struct fsm *b,
-	fsm_state_t *base_a, fsm_state_t *base_b)
+	struct fsm_combine_info *combine_info)
 {
+	int a_dst;
+	struct fsm *res;
+
 	assert(a != NULL);
 	assert(b != NULL);
-	assert(base_a != NULL);
-	assert(base_b != NULL);
+	assert(combine_info != NULL);
 
 	if (a->opt != b->opt) {
 		errno = EINVAL;
@@ -126,17 +128,27 @@ fsm_merge(struct fsm *a, struct fsm *b,
 	 */
 
 	if (a->statealloc > b->statealloc) {
-		return merge(a, b, base_a, base_b);
+		a_dst = 1;
 	} else if (a->statealloc < b->statealloc) {
-		return merge(b, a, base_b, base_a);
-	}
-
-	if (a->statecount > b->statecount) {
-		return merge(a, b, base_a, base_b);
+		a_dst = 0;
+	} else if (a->statecount > b->statecount) {
+		a_dst = 1;
 	} else if (a->statecount < b->statecount) {
-		return merge(b, a, base_b, base_a);
+		a_dst = 0;
+	} else {
+		a_dst = 1;
 	}
 
-	return merge(a, b, base_a, base_b);
+	if (a_dst) {
+		res = merge(a, b,
+		    &combine_info->base_a,
+		    &combine_info->base_b);
+	} else {
+		res = merge(b, a,
+		    &combine_info->base_b,
+		    &combine_info->base_a);
+	}
+
+	return res;
 }
 

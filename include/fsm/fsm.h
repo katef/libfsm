@@ -18,6 +18,7 @@
 struct fsm;
 struct fsm_options;
 struct path; /* XXX */
+struct fsm_combine_info;
 
 /*
  * States in libfsm are referred to by a 0-based numeric index.
@@ -75,12 +76,20 @@ fsm_move(struct fsm *dst, struct fsm *src);
 /*
  * Merge states from a and b. This is a memory-management operation only;
  * the storage for the two sets of states is combined, but no edges are added.
+ * a and b can appear in the merged FSM in either order.
  *
  * The resulting FSM has two disjoint sets, and no start state.
+ *
+ * If non-NULL, the combine_info struct will be updated to note the new
+ * base offsets for the pair of FSMs.
  */
+struct fsm_merge_update_info {
+	fsm_state_t base_a;
+	fsm_state_t base_b;
+};
 struct fsm *
 fsm_merge(struct fsm *a, struct fsm *b,
-	fsm_state_t *base_a, fsm_state_t *base_b);
+	struct fsm_combine_info *combine_info);
 
 /*
  * Add a state.

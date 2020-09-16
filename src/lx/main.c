@@ -489,7 +489,7 @@ zone_minimise(void *arg)
 
 		for (m = z->ml; m != NULL; m = m->next) {
 			fsm_state_t ms;
-			fsm_state_t base_z, base_m;
+			struct fsm_combine_info combine_info;
 
 			assert(m->fsm != NULL);
 
@@ -513,7 +513,7 @@ zone_minimise(void *arg)
 
 			(void) fsm_getstart(m->fsm, &ms);
 
-			z->fsm = fsm_merge(z->fsm, m->fsm, &base_z, &base_m);
+			z->fsm = fsm_merge(z->fsm, m->fsm, &combine_info);
 			if (z->fsm == NULL) {
 				pthread_mutex_lock(&zmtx);
 				zerror = errno;
@@ -525,8 +525,8 @@ zone_minimise(void *arg)
 			m->fsm = NULL;
 #endif
 
-			ms    += base_m;
-			start += base_z;
+			ms    += combine_info.base_b;
+			start += combine_info.base_a;
 
 			if (!fsm_addedge_epsilon(z->fsm, start, ms)) {
 				pthread_mutex_lock(&zmtx);

@@ -22,7 +22,7 @@ fsm_union(struct fsm *a, struct fsm *b)
 	struct fsm *q;
 	fsm_state_t sa, sb;
 	fsm_state_t sq;
-	fsm_state_t base_a, base_b;
+	struct fsm_combine_info combine_info;
 
 	assert(a != NULL);
 	assert(b != NULL);
@@ -40,11 +40,11 @@ fsm_union(struct fsm *a, struct fsm *b)
 		return NULL;
 	}
 
-	q = fsm_merge(a, b, &base_a, &base_b);
+	q = fsm_merge(a, b, &combine_info);
 	assert(q != NULL);
 
-	sa += base_a;
-	sb += base_b;
+	sa += combine_info.base_a;
+	sb += combine_info.base_b;
 
 	/*
 	 * The canonical approach is to create a new start state, with epsilon

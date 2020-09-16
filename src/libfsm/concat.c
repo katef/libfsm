@@ -10,6 +10,7 @@
 #include <errno.h>
 
 #include <fsm/fsm.h>
+#include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 #include <fsm/options.h>
@@ -22,7 +23,7 @@ fsm_concat(struct fsm *a, struct fsm *b)
 	struct fsm *q;
 	fsm_state_t ea, sb;
 	fsm_state_t sq;
-	fsm_state_t base_a, base_b;
+	struct fsm_combine_info combine_info;
 
 	assert(a != NULL);
 	assert(b != NULL);
@@ -51,12 +52,12 @@ fsm_concat(struct fsm *a, struct fsm *b)
 
 	fsm_setend(a, ea, 1);
 
-	q = fsm_merge(a, b, &base_a, &base_b);
+	q = fsm_merge(a, b, &combine_info);
 	assert(q != NULL);
 
-	sq += base_a;
-	ea += base_a;
-	sb += base_b;
+	sq += combine_info.base_a;
+	ea += combine_info.base_a;
+	sb += combine_info.base_b;
 
 	fsm_setend(q, ea, 0);
 
