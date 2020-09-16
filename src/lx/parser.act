@@ -329,8 +329,8 @@
 
 		for (m = @z->ml; m != NULL; m = m->next) {
 			struct fsm *fsm;
-			fsm_state_t base_r, base_fsm;
 			fsm_state_t ms;
+			struct fsm_combine_info combine_info;
 
 			if (m->token == NULL) {
 				continue;
@@ -355,14 +355,14 @@
 			 */
 			fsm_setendopaque(fsm, NULL);
 
-			@r = fsm_merge(@r, fsm, &base_r, &base_fsm);
+			@r = fsm_merge(@r, fsm, &combine_info);
 			if (@r == NULL) {
 				perror("fsm_union");
 				@!;
 			}
 
-			ms    += base_fsm;
-			start += base_r;
+			ms    += combine_info.base_b;
+			start += combine_info.base_a;
 
 			if (!fsm_addedge_epsilon(@r, start, ms)) {
 				perror("fsm_addedge_epsilon");
