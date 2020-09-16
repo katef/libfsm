@@ -507,8 +507,8 @@ main(int argc, char *argv[])
 		    FSM_TRIM_START_AND_END_REACHABLE, NULL);
 			break;
 
-		case OP_CONCAT:      q = fsm_concat(a, b);    break;
-		case OP_UNION:       q = fsm_union(a, b);     break;
+		case OP_CONCAT:      q = fsm_concat(a, b, NULL); break;
+		case OP_UNION:       q = fsm_union(a, b, NULL); break;
 		case OP_INTERSECT:   q = fsm_intersect(a, b); break;
 		case OP_SUBTRACT:    q = fsm_subtract(a, b);  break;
 

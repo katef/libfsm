@@ -402,7 +402,7 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 		return -1;
 	}
 
-	q = fsm_union(x, y);
+	q = fsm_union(x, y, NULL);
 	if (q == NULL) {
 		fsm_free(x);
 		fsm_free(y);

@@ -17,12 +17,17 @@
 #include "internal.h"
 
 struct fsm *
-fsm_union(struct fsm *a, struct fsm *b)
+fsm_union(struct fsm *a, struct fsm *b,
+	struct fsm_combine_info *combine_info)
 {
 	struct fsm *q;
 	fsm_state_t sa, sb;
 	fsm_state_t sq;
-	struct fsm_combine_info combine_info;
+	struct fsm_combine_info combine_info_internal;
+
+	if (combine_info == NULL) {
+		combine_info = &combine_info_internal;
+	}
 
 	assert(a != NULL);
 	assert(b != NULL);
@@ -40,11 +45,11 @@ fsm_union(struct fsm *a, struct fsm *b)
 		return NULL;
 	}
 
-	q = fsm_merge(a, b, &combine_info);
+	q = fsm_merge(a, b, combine_info);
 	assert(q != NULL);
 
-	sa += combine_info.base_a;
-	sb += combine_info.base_b;
+	sa += combine_info->base_a;
+	sb += combine_info->base_b;
 
 	/*
 	 * The canonical approach is to create a new start state, with epsilon

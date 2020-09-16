@@ -130,7 +130,7 @@ ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 
 	/* TODO: re_addcolour(fsm, m) */
 
-	m->fsm = fsm_union(m->fsm, fsm);
+	m->fsm = fsm_union(m->fsm, fsm, NULL);
 	if (m->fsm == NULL) {
 		return NULL;
 	}

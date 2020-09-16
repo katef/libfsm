@@ -30,7 +30,8 @@ int
 fsm_complement(struct fsm *fsm);
 
 struct fsm *
-fsm_union(struct fsm *a, struct fsm *b);
+fsm_union(struct fsm *a, struct fsm *b,
+	struct fsm_combine_info *combine_info);
 
 struct fsm *
 fsm_intersect(struct fsm *a, struct fsm *b);
