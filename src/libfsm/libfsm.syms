@@ -118,3 +118,10 @@ fsm_vm_free
 fsm_vm_match_buffer
 fsm_vm_match_file
 
+# <fsm/capture.h>
+fsm_countcaptures
+fsm_capture_has_capture_actions
+fsm_capture_set_path
+fsm_capture_rebase_capture_id
+fsm_capture_alloc
+fsm_capture_dump
