@@ -36,7 +36,7 @@ transition(const struct fsm *fsm, fsm_state_t state, int c,
 int
 fsm_exec(const struct fsm *fsm,
 	int (*fsm_getc)(void *opaque), void *opaque,
-	fsm_state_t *end)
+	fsm_state_t *end, struct fsm_capture *captures)
 {
 	fsm_state_t state;
 	int c;
@@ -44,6 +44,8 @@ fsm_exec(const struct fsm *fsm,
 	assert(fsm != NULL);
 	assert(fsm_getc != NULL);
 	assert(end != NULL);
+
+	(void)captures;
 
 	/* TODO: check prerequisites; that it has literal edges, DFA, etc */
 
