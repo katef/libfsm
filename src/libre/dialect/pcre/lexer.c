@@ -460,6 +460,8 @@ z3(struct lx_pcre_lx *lx)
 			case '\\':
 			case '^':
 			case 'a':
+			case 'b':
+			case 'e':
 			case 'f':
 			case 'n':
 			case 'r':
@@ -500,7 +502,7 @@ z3(struct lx_pcre_lx *lx)
 		case S6: /* e.g. "^" */
 			lx_pcre_ungetc(lx, c); return TOK_INVERT;
 
-		case S7: /* e.g. "\\b" */
+		case S7: /* e.g. "\\g" */
 			lx_pcre_ungetc(lx, c); return TOK_NOESC;
 
 		case S8: /* e.g. "\\a" */
@@ -1239,6 +1241,8 @@ z5(struct lx_pcre_lx *lx)
 			case '\\':
 			case '^':
 			case 'a':
+			case 'b':
+			case 'e':
 			case 'f':
 			case 'n':
 			case 'r':
@@ -1279,7 +1283,7 @@ z5(struct lx_pcre_lx *lx)
 		case S6: /* e.g. "^" */
 			lx_pcre_ungetc(lx, c); return TOK_INVERT;
 
-		case S7: /* e.g. "\\b" */
+		case S7: /* e.g. "\\g" */
 			lx_pcre_ungetc(lx, c); return TOK_NOESC;
 
 		case S8: /* e.g. "\\a" */
@@ -2018,6 +2022,8 @@ z7(struct lx_pcre_lx *lx)
 			case '\\':
 			case '^':
 			case 'a':
+			case 'b':
+			case 'e':
 			case 'f':
 			case 'n':
 			case 'r':
@@ -2058,7 +2064,7 @@ z7(struct lx_pcre_lx *lx)
 		case S6: /* e.g. "^" */
 			lx_pcre_ungetc(lx, c); return TOK_INVERT;
 
-		case S7: /* e.g. "\\b" */
+		case S7: /* e.g. "\\g" */
 			lx_pcre_ungetc(lx, c); return TOK_NOESC;
 
 		case S8: /* e.g. "\\a" */
@@ -2799,6 +2805,8 @@ z9(struct lx_pcre_lx *lx)
 			case '\\':
 			case '^':
 			case 'a':
+			case 'b':
+			case 'e':
 			case 'f':
 			case 'n':
 			case 'r':
@@ -2839,7 +2847,7 @@ z9(struct lx_pcre_lx *lx)
 		case S6: /* e.g. "^" */
 			lx_pcre_ungetc(lx, c); return TOK_INVERT;
 
-		case S7: /* e.g. "\\b" */
+		case S7: /* e.g. "\\g" */
 			lx_pcre_ungetc(lx, c); return TOK_NOESC;
 
 		case S8: /* e.g. "\\a" */
@@ -3695,6 +3703,7 @@ z12(struct lx_pcre_lx *lx)
 			case '\\':
 			case '^':
 			case 'a':
+			case 'e':
 			case 'f':
 			case 'n':
 			case 'r':
@@ -3745,7 +3754,7 @@ z12(struct lx_pcre_lx *lx)
 		case S13: /* e.g. "|" */
 			lx_pcre_ungetc(lx, c); return TOK_ALT;
 
-		case S14: /* e.g. "\\e" */
+		case S14: /* e.g. "\\i" */
 			lx_pcre_ungetc(lx, c); return TOK_NOESC;
 
 		case S15: /* e.g. "\\a" */

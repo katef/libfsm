@@ -72,6 +72,7 @@
 
 # perl/unix-ish escapes
 '\a' -> $esc;
+'\e' -> $esc;
 '\c' /./ -> $control;
 
 # character type escapes
@@ -150,8 +151,12 @@
 	'\r' -> $esc;
 	'\t' -> $esc;
 
+	# within a character class, \b is backspace
+	'\b' -> $esc;
+
 	# perl/unix-ish escapes
 	'\a' -> $esc;
+	'\e' -> $esc;
 	'\c' /./ -> $control;
 
 	# other metacharacters that can be escaped within square brackets
@@ -229,8 +234,12 @@
 	'\r' -> $esc;
 	'\t' -> $esc;
 
+	# within a character class, \b is backspace
+	'\b' -> $esc;
+
 	# perl/unix-ish escapes
 	'\a' -> $esc;
+	'\e' -> $esc;
 	'\c' /./ -> $control;
 
 	# other metacharacters that can be escaped within square brackets
@@ -306,8 +315,12 @@
 	'\r' -> $esc;
 	'\t' -> $esc;
 
+	# within a character class, \b is backspace
+	'\b' -> $esc;
+
 	# perl/unix-ish escapes
 	'\a' -> $esc;
+	'\e' -> $esc;
 	'\c' /./ -> $control;
 
 	# other metacharacters that can be escaped within square brackets
@@ -383,8 +396,12 @@
 	'\r' -> $esc;
 	'\t' -> $esc;
 
+	# within a character class, \b is backspace
+	'\b' -> $esc;
+
 	# perl/unix-ish escapes
 	'\a' -> $esc;
+	'\e' -> $esc;
 	'\c' /./ -> $control;
 
 	# other metacharacters that can be escaped within square brackets
