@@ -18,6 +18,7 @@
 struct fsm;
 struct fsm_options;
 struct path; /* XXX */
+struct fsm_capture;
 struct fsm_combine_info;
 
 /*
@@ -391,7 +392,7 @@ fsm_shortest(const struct fsm *fsm,
  */
 int
 fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque,
-	fsm_state_t *end);
+	fsm_state_t *end, struct fsm_capture *captures);
 
 /*
  * Callbacks which may be passed to fsm_exec(). These are conveniences for

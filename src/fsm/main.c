@@ -634,7 +634,7 @@ main(int argc, char *argv[])
 
 				f = xopen(argv[0]);
 
-				e = fsm_exec(fsm, fsm_fgetc, f, &state);
+				e = fsm_exec(fsm, fsm_fgetc, f, &state, NULL);
 
 				fclose(f);
 			} else {
@@ -642,7 +642,7 @@ main(int argc, char *argv[])
 
 				s = argv[i];
 
-				e = fsm_exec(fsm, fsm_sgetc, &s, &state);
+				e = fsm_exec(fsm, fsm_sgetc, &s, &state, NULL);
 			}
 
 			if (e != 1) {
