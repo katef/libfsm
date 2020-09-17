@@ -1,0 +1,114 @@
+/*
+ * Copyright 2020 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+#include <fsm/fsm.h>
+#include <fsm/bool.h>
+#include <fsm/capture.h>
+#include <fsm/print.h>
+
+#include "captest.h"
+
+/* union /(abcd)/ and /(abed)/ */
+
+static struct fsm *
+build(unsigned *cb_a, unsigned *cb_b);
+
+static void
+check(const struct fsm *fsm, const char *input,
+    unsigned end_id, unsigned exp_capture_id,
+    size_t exp_start, size_t exp_end);
+
+int main(void) {
+	unsigned cb_abcd, cb_abed;
+	struct fsm *fsm = build(&cb_abcd, &cb_abed);
+
+	check(fsm, "abcd", 0, cb_abcd, 0, 4);
+	check(fsm, "abed", 1, cb_abed, 0, 4);
+
+	fsm_free(fsm);
+	return EXIT_SUCCESS;
+}
+
+static struct fsm *
+build(unsigned *cb_a, unsigned *cb_b)
+{
+	struct fsm *abcd = captest_fsm_of_string("abcd", 0);
+	struct fsm *abed = captest_fsm_of_string("abed", 1);
+	struct fsm *res;
+	struct fsm_combine_info ci;
+
+	assert(abcd);
+	assert(abed);
+
+	if (!fsm_capture_set_path(abcd, 0, 0, 4)) {
+		assert(!"path 0");
+	}
+	if (!fsm_capture_set_path(abed, 0, 0, 4)) {
+		assert(!"path 1");
+	}
+
+	res = fsm_union(abcd, abed, &ci);
+	assert(res);
+	*cb_a = ci.capture_base_a;
+	*cb_b = ci.capture_base_b;
+
+	if (!fsm_determinise(res)) {
+		assert(!"determinise");
+	}
+
+	if (!fsm_minimise(res)) {
+		assert(!"minimise");
+	}
+
+	return res;
+}
+
+static void
+check(const struct fsm *fsm, const char *input,
+    unsigned end_id, unsigned exp_capture_id,
+    size_t exp_start, size_t exp_end)
+{
+	struct captest_input ci;
+	fsm_state_t end;
+	int exec_res;
+	struct fsm_capture got_captures[MAX_TEST_CAPTURES];
+
+	ci.string = input;
+	ci.pos = 0;
+
+	exec_res = fsm_exec(fsm, captest_getc, &ci, &end, got_captures);
+	if (exec_res != 1) {
+		fprintf(stderr, "exec_res: %d\n", exec_res);
+		exit(EXIT_FAILURE);
+	}
+
+	{
+		struct captest_end_opaque *eo = fsm_getopaque(fsm, end);
+		assert(eo != NULL);
+		assert(eo->tag == CAPTEST_END_OPAQUE_TAG);
+		if (!(eo->ends & (1U << end_id))) {
+			assert(!"end mismatch");
+		}
+	}
+
+	if (got_captures[exp_capture_id].pos[0] != exp_start) {
+		fprintf(stderr, "capture[%u].pos[0]: exp %lu, got %lu\n",
+		    exp_capture_id, exp_start,
+		    got_captures[exp_capture_id].pos[0]);
+		exit(EXIT_FAILURE);
+	}
+	if (got_captures[exp_capture_id].pos[1] != exp_end) {
+		fprintf(stderr, "capture[%u].pos[1]: exp %lu, got %lu\n",
+		    exp_capture_id, exp_end,
+		    got_captures[exp_capture_id].pos[1]);
+		exit(EXIT_FAILURE);
+	}
+}

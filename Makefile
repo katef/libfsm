@@ -44,6 +44,7 @@ SUBDIR += src/retest
 SUBDIR += src/lx/print
 SUBDIR += src/lx
 SUBDIR += src
+SUBDIR += tests/capture
 SUBDIR += tests/complement
 SUBDIR += tests/intersect
 SUBDIR += tests/ir
