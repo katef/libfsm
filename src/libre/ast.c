@@ -134,6 +134,123 @@ ast_expr_free(struct ast_expr *n)
 	free(n);
 }
 
+int
+ast_expr_clone(struct ast_expr **n)
+{
+	struct ast_expr *old;
+	struct ast_expr *new;
+
+	assert(n != NULL);
+
+	old = *n;
+
+	if (old == NULL || old->type == AST_EXPR_TOMBSTONE) {
+		return 1;
+	}
+
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+		*n = NULL;
+		return 0;
+	}
+
+	*new = *old;
+
+	switch (new->type) {
+	case AST_EXPR_EMPTY:
+	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
+	case AST_EXPR_ANCHOR:
+	case AST_EXPR_RANGE:
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		if (!ast_expr_clone(&new->u.subtract.a)) {
+			free(new);
+			new = NULL;
+			break;
+		}
+		if (!ast_expr_clone(&new->u.subtract.b)) {
+			ast_expr_free(new);
+			new = NULL;
+			break;
+		}
+		break;
+
+	case AST_EXPR_CONCAT: {
+		size_t i;
+
+		new->u.concat.n = malloc(new->u.concat.alloc * sizeof *new->u.concat.n);
+		if (new->u.concat.n == NULL) {
+			free(new);
+			new = NULL;
+			break;
+		}
+
+		for (i = 0; i < old->u.concat.count; i++) {
+			new->u.concat.n[i] = NULL;
+		}
+
+		for (i = 0; i < old->u.concat.count; i++) {
+			new->u.concat.n[i] = old->u.concat.n[i];
+			if (!ast_expr_clone(&new->u.concat.n[i])) {
+				ast_expr_free(new);
+				new = NULL;
+				break;
+			}
+		}
+		break;
+	}
+
+	case AST_EXPR_ALT: {
+		size_t i;
+
+		new->u.alt.n = malloc(new->u.alt.alloc * sizeof *new->u.alt.n);
+		if (new->u.alt.n == NULL) {
+			free(new);
+			new = NULL;
+			break;
+		}
+
+		for (i = 0; i < old->u.alt.count; i++) {
+			new->u.alt.n[i] = NULL;
+		}
+
+		for (i = 0; i < old->u.alt.count; i++) {
+			new->u.alt.n[i] = old->u.alt.n[i];
+			if (!ast_expr_clone(&new->u.alt.n[i])) {
+				ast_expr_free(new);
+				new = NULL;
+				break;
+			}
+		}
+		break;
+	}
+
+	case AST_EXPR_REPEAT:
+		if (!ast_expr_clone(&new->u.repeat.e)) {
+			free(new);
+			new = NULL;
+			break;
+		}
+		break;
+
+	case AST_EXPR_GROUP:
+		if (!ast_expr_clone(&new->u.group.e)) {
+			free(new);
+			new = NULL;
+			break;
+		}
+		break;
+
+	default:
+		assert(!"unreached");
+	}
+
+	*n = new;
+	return new != NULL;
+}
+
 static int
 ast_class_cmp(const struct class *a, const struct class *b)
 {
