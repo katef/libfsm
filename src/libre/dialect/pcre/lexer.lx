@@ -8,6 +8,11 @@
 '('  -> $opencapture;
 ')'  -> $close;
 
+# partial support for named capture groups...  the syntax is recognized,
+# but because capture groups are not yet supported, we don't (yet) link
+# the name to the capture group
+'(?<' /[_A-Za-z][_A-Za-z0-9]*/ '>' -> $opencapture;
+
 # predicates
 '^'  -> $start;
 '$'  -> $end;
