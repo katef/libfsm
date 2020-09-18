@@ -21,6 +21,7 @@
 #include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
+#include <fsm/parser.h>
 #include <fsm/vm.h>
 
 #include <re/re.h>
@@ -29,6 +30,7 @@
 #include "libre/print.h" /* XXX */
 #include "libre/class.h" /* XXX */
 #include "libre/ast.h" /* XXX */
+#include "libre/ast_new_from_fsm.h" /* XXX */
 
 
 #define DEBUG_ESCAPES     0
@@ -53,10 +55,10 @@ static struct fsm_options opt;
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: re    [-r <dialect>] [-nbiusyz] [-x] <re> ... [ <text> | -- <text> ... ]\n");
-	fprintf(stderr, "       re    [-r <dialect>] [-nbiusyz] {-q <query>} <re> ...\n");
-	fprintf(stderr, "       re -p [-r <dialect>] [-nbiusyz] [-l <language>] [-acwX] [-k <io>] [-e <prefix>] <re> ...\n");
-	fprintf(stderr, "       re -m [-r <dialect>] [-nbiusyz] <re> ...\n");
+	fprintf(stderr, "usage: re    [-r <dialect>] [-nbiusfyz] [-x] <re> ... [ <text> | -- <text> ... ]\n");
+	fprintf(stderr, "       re    [-r <dialect>] [-nbiusfyz] {-q <query>} <re> ...\n");
+	fprintf(stderr, "       re -p [-r <dialect>] [-nbiusfyz] [-l <language>] [-acwX] [-k <io>] [-e <prefix>] <re> ...\n");
+	fprintf(stderr, "       re -m [-r <dialect>] [-nbiusfyz] <re> ...\n");
 	fprintf(stderr, "       re -h\n");
 }
 
@@ -487,6 +489,7 @@ main(int argc, char *argv[])
 	struct fsm *fsm;
 	enum re_flags flags;
 	int xfiles, yfiles;
+	int fsmfiles;
 	int example;
 	int keep_nfa;
 	int patterns;
@@ -503,6 +506,7 @@ main(int argc, char *argv[])
 	opt.io                = FSM_IO_GETC;
 
 	flags     = 0U;
+	fsmfiles  = 0;
 	xfiles    = 0;
 	yfiles    = 0;
 	example   = 0;
@@ -520,7 +524,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:" "upMmnxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:" "upMmnfxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
@@ -545,6 +549,7 @@ main(int argc, char *argv[])
 			case 'r': dialect   = dialect_name(optarg); break;
 
 			case 'u': ambig    = 1; break;
+			case 'f': fsmfiles = 1; break;
 			case 'x': xfiles   = 1; break;
 			case 'y': yfiles   = 1; break;
 			case 'm': example  = 1; break;
@@ -615,12 +620,31 @@ main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 
-		if (yfiles) {
+		if (fsmfiles || yfiles) {
 			FILE *f;
 
 			f = xopen(argv[0]);
 
-			ast = re_parse(dialect, fsm_fgetc, f, &opt, flags, &err, NULL);
+			if (!fsmfiles) {
+				ast = re_parse(dialect, fsm_fgetc, f, &opt, flags, &err, NULL);
+			} else {
+				struct fsm *fsm;
+
+				fsm = fsm_parse(f, &opt);
+				if (fsm == NULL) {
+					perror("fsm_parse");
+					return EXIT_FAILURE;
+				}
+
+				ast = ast_new_from_fsm(fsm);
+				if (ast == NULL) {
+					perror("ast_new_from_fsm");
+					fsm_free(fsm);
+					return EXIT_FAILURE;
+				}
+
+				fsm_free(fsm);
+			}
 
 			fclose(f);
 		} else {
@@ -672,12 +696,20 @@ main(int argc, char *argv[])
 				break;
 			}
 
-			if (yfiles) {
+			if (fsmfiles || yfiles) {
 				FILE *f;
 
 				f = xopen(argv[i]);
 
-				new = re_comp(dialect, fsm_fgetc, f, &opt, flags, &err);
+				if (!fsmfiles) {
+					new = re_comp(dialect, fsm_fgetc, f, &opt, flags, &err);
+				} else {
+					new = fsm_parse(f, &opt);
+					if (new == NULL) {
+						perror("fsm_parse");
+						return EXIT_FAILURE;
+					}
+				}
 
 				fclose(f);
 			} else {

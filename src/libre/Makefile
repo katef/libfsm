@@ -6,6 +6,7 @@ SRC += src/libre/perror.c
 SRC += src/libre/ast.c
 SRC += src/libre/ast_analysis.c
 SRC += src/libre/ast_compile.c
+SRC += src/libre/ast_new_from_fsm.c
 SRC += src/libre/ast_rewrite.c
 SRC += src/libre/ac.c
 SRC += src/libre/re_strings.c
