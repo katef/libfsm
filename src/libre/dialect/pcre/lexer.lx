@@ -115,6 +115,24 @@
 # Yet another way to indicate back references
 '\k' -> $unsupported;
 
+# lookahead and lookbehind are unsupported
+'(?='  -> $unsupported;
+'(?!'  -> $unsupported;
+'(?<=' -> $unsupported;
+'(?<!' -> $unsupported;
+
+# PCRE2, taking from Perl 5.28
+'(*positive_lookahead:'  -> $unsupported;
+'(*negative_lookahead:'  -> $unsupported;
+'(*positive_lookbehind:' -> $unsupported;
+'(*negative_lookbehind:' -> $unsupported;
+
+# three-letter synonynms
+'(*pla:' -> $unsupported;
+'(*nla:' -> $unsupported;
+'(*plb:' -> $unsupported;
+'(*nlb:' -> $unsupported;
+
 # Resets current captured text.  Not _yet_ supported.
 '\K' -> $unsupported;
 
@@ -139,7 +157,23 @@
 	'-' -> $negate;
 	'i' -> $flag__insensitive;
 	/[a-z]/ - $flag__insensitive -> $flag__unknown;
+
+	# this is a little too broad... but should screen out
+	# recursive matching and subroutines, which are
+	# unsupported.
+	#
+	# TODO: Find a way to handle this in a more restricted
+	#       manner.  Ideally we select a more limited language:
+	#       '(?' /(+|-)?[0-9]+/ ')'
+	'+'      -> $unsupported;
+	/[0-9]+/ -> $unsupported;
+	'R'      -> $unsupported;
 }
+
+
+# recursion with named parentheses
+'(?&' -> $unsupported;
+'(P>' -> $unsupported;
 
 '[' -> $opengroup .. ']' -> $closegroup {
 	'^' -> $invert;

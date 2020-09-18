@@ -311,11 +311,13 @@
 	@};
 
 	UNSUPPORTED: () -> (c :char, start :pos, end :pos) = @{
-		assert(lex_state->buf.a[0] == '\\');
-		assert(lex_state->buf.a[1] != '\0');
-		assert(lex_state->buf.a[2] == '\0');
-
-		@c = lex_state->buf.a[1];
+		/* handle \1-\9 back references */
+		if (lex_state->buf.a[0] == '\\' && lex_state->buf.a[1] != '\0' && lex_state->buf.a[2] == '\0') {
+			@c = lex_state->buf.a[1];
+		}
+		else {
+			@c = lex_state->buf.a[0];
+		}
 
 		@start = lex_state->lx.start;
 		@end   = lex_state->lx.end;
