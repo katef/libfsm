@@ -4,6 +4,7 @@ re_strerror
 re_perror
 
 # XXX: for re(1)
+ast_new_from_fsm
 ast_print_dot
 ast_print_abnf
 ast_print_pcre
