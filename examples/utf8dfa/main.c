@@ -119,7 +119,7 @@ int
 main(int argc, char *argv[])
 {
 	struct fsm *fsm;
-	struct fsm_state *start;
+	fsm_state_t start;
 	fsm_print *print;
 
 	opt.anonymous_states  = 1;
@@ -170,8 +170,7 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	start = fsm_addstate(fsm);
-	if (start == NULL) {
+	if (!fsm_addstate(fsm, &start)) {
 		perror("fsm_addstate");
 		exit(1);
 	}
