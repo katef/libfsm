@@ -49,7 +49,7 @@ usage(void)
 static int
 match(const struct fsm *fsm, const char *s)
 {
-	const struct fsm_state *state;
+	fsm_state_t state;
 
 	assert(fsm != NULL);
 	assert(fsm_all(fsm, fsm_isdfa));
@@ -68,7 +68,7 @@ static struct fsm *
 compile(const char *glob)
 {
 	struct fsm *fsm;
-	struct fsm_state *state;
+	fsm_state_t state;
 	const char *p;
 
 	assert(glob != NULL);
@@ -79,8 +79,7 @@ compile(const char *glob)
 		exit(2);
 	}
 
-	state = fsm_addstate(fsm);
-	if (!state) {
+	if (!fsm_addstate(fsm, &state)) {
 		perror("fsm_addstate");
 		exit(2);
 	}
@@ -104,11 +103,10 @@ compile(const char *glob)
 	 *     *: 0 -> 1 ?; 1 -> 0;
 	 */
 	for (p = glob; *p; p++) {
-		struct fsm_state *new;
+		fsm_state_t new;
 
 		/* TODO: we could omit this */
-		new = fsm_addstate(fsm);
-		if (!new) {
+		if (!fsm_addstate(fsm, &new)) {
 			perror("fsm_addstate");
 			exit(2);
 		}
@@ -188,6 +186,10 @@ main(int argc, char *argv[])
 
 	fsm = compile(argv[0]);
 	assert(fsm != NULL);
+
+	if (!fsm_determinise(fsm)) {
+		exit(EXIT_FAILURE);
+	}
 
 	if (!fsm_minimise(fsm)) {
 		exit(EXIT_FAILURE);
