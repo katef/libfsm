@@ -272,7 +272,7 @@ rewrite_alt(struct ast_expr *n, enum re_flags flags)
 
 				n->u.alt.n = tmp;
 
-				n->u.alt.alloc = (n->u.alt.count + dead->u.alt.count - 1) * sizeof *n->u.alt.n;
+				n->u.alt.alloc = n->u.alt.count + dead->u.alt.count - 1;
 			}
 
 			/* move along our existing tail to make space */
