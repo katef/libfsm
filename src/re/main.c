@@ -735,6 +735,8 @@ main(int argc, char *argv[])
 
 		print_ast(stdout, &opt, flags, ast);
 
+		ast_free(ast);
+
 		return 0;
 	}
 
