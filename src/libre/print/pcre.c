@@ -67,6 +67,10 @@ re_flags_print(FILE *f, enum re_flags fl)
 	if (fl & RE_ZONE   ) { fprintf(f, "z"); }
 }
 
+enum {
+	RE_FLAGS_PRINTABLE = RE_ICASE | RE_TEXT | RE_MULTI | RE_REVERSE | RE_SINGLE | RE_ZONE
+};
+
 static void
 print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint *e)
 {
@@ -93,10 +97,10 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 
 	if (n == NULL) { return; }
 
-	if (n->re_flags != *re_flags) {
+	if ((n->re_flags ^ *re_flags) & RE_FLAGS_PRINTABLE) {
 		fprintf(f, "(?");
 		re_flags_print(f, n->re_flags & ~*re_flags);
-		if (*re_flags & ~n->re_flags) {
+		if (*re_flags & ~n->re_flags & RE_FLAGS_PRINTABLE) {
 			fprintf(f, "-");
 			re_flags_print(f, *re_flags & ~n->re_flags);
 		}
@@ -133,7 +137,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 			} else {
 				enum re_flags localflags = *re_flags;
 				fprintf(f, "(?:");
-				pp_iter(f, opt, re_flags, n->u.alt.n[i]);
+				pp_iter(f, opt, &localflags, n->u.alt.n[i]);
 				fprintf(f, ")");
 			}
 			if (i + 1 < n->u.alt.count) {
