@@ -24,9 +24,6 @@
 static struct ast_expr the_tombstone;
 struct ast_expr *ast_expr_tombstone = &the_tombstone;
 
-/* FIXME: this isn't safe for multiple threads! */
-static struct ast_expr_pool *global_pool = NULL;
-
 struct ast_expr *
 ast_expr_pool_new(struct ast_expr_pool **poolp) 
 {
@@ -50,31 +47,18 @@ ast_expr_pool_new(struct ast_expr_pool **poolp)
 	return &p->pool[p->count++];
 }
 
-struct ast_expr *
-ast_expr_new(void)
-{
-	return ast_expr_pool_new(&global_pool);
-}
-
-struct ast_expr_pool *
-ast_expr_pool_save(void)
-{
-	struct ast_expr_pool *p = global_pool;
-	global_pool = NULL;
-	return p;
-}
-
 struct ast *
 ast_new(void)
 {
+	static struct ast zero;
 	struct ast *res;
 
-	assert(global_pool == NULL);
-
-	res = calloc(1, sizeof *res);
+	res = malloc(sizeof *res);
 	if (res == NULL) {
 		return NULL;
 	}
+
+	*res = zero;
 
 	/* XXX: not thread-safe */
 	the_tombstone.type = AST_EXPR_TOMBSTONE;
@@ -530,11 +514,11 @@ ast_contains_expr(const struct ast_expr *node, struct ast_expr * const *a, size_
 }
 
 struct ast_expr *
-ast_make_expr_empty(enum re_flags re_flags)
+ast_make_expr_empty(struct ast_expr_pool **poolp, enum re_flags re_flags)
 {
 	struct ast_expr *res;
 
-	res = ast_expr_new();
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -546,11 +530,11 @@ ast_make_expr_empty(enum re_flags re_flags)
 }
 
 struct ast_expr *
-ast_make_expr_concat(enum re_flags re_flags)
+ast_make_expr_concat(struct ast_expr_pool **poolp, enum re_flags re_flags)
 {
 	struct ast_expr *res;
 
-	res = ast_expr_new();
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -593,11 +577,11 @@ ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node)
 }
 
 struct ast_expr *
-ast_make_expr_alt(enum re_flags re_flags)
+ast_make_expr_alt(struct ast_expr_pool **poolp, enum re_flags re_flags)
 {
 	struct ast_expr *res;
 
-	res = ast_expr_new();
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -640,11 +624,11 @@ ast_add_expr_alt(struct ast_expr *cat, struct ast_expr *node)
 }
 
 struct ast_expr *
-ast_make_expr_literal(enum re_flags re_flags, char c)
+ast_make_expr_literal(struct ast_expr_pool **poolp, enum re_flags re_flags, char c)
 {
 	struct ast_expr *res;
 
-	res = ast_expr_new();
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -657,11 +641,11 @@ ast_make_expr_literal(enum re_flags re_flags, char c)
 }
 
 struct ast_expr *
-ast_make_expr_codepoint(enum re_flags re_flags, uint32_t u)
+ast_make_expr_codepoint(struct ast_expr_pool **poolp, enum re_flags re_flags, uint32_t u)
 {
 	struct ast_expr *res;
 
-	res = ast_expr_new();
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -674,7 +658,7 @@ ast_make_expr_codepoint(enum re_flags re_flags, uint32_t u)
 }
 
 struct ast_expr *
-ast_make_expr_repeat(enum re_flags re_flags, struct ast_expr *e, struct ast_count count)
+ast_make_expr_repeat(struct ast_expr_pool **poolp, enum re_flags re_flags, struct ast_expr *e, struct ast_count count)
 {
 	struct ast_expr *res = NULL;
 
@@ -685,7 +669,7 @@ ast_make_expr_repeat(enum re_flags re_flags, struct ast_expr *e, struct ast_coun
 		return NULL;
 	}
 
-	res = ast_expr_new();
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -700,11 +684,11 @@ ast_make_expr_repeat(enum re_flags re_flags, struct ast_expr *e, struct ast_coun
 }
 
 struct ast_expr *
-ast_make_expr_group(enum re_flags re_flags, struct ast_expr *e)
+ast_make_expr_group(struct ast_expr_pool **poolp, enum re_flags re_flags, struct ast_expr *e)
 {
 	struct ast_expr *res;
 
-	res = ast_expr_new();
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -718,11 +702,11 @@ ast_make_expr_group(enum re_flags re_flags, struct ast_expr *e)
 }
 
 struct ast_expr *
-ast_make_expr_anchor(enum re_flags re_flags, enum ast_anchor_type type)
+ast_make_expr_anchor(struct ast_expr_pool **poolp, enum re_flags re_flags, enum ast_anchor_type type)
 {
 	struct ast_expr *res;
 
-	res = ast_expr_new();
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -735,11 +719,11 @@ ast_make_expr_anchor(enum re_flags re_flags, enum ast_anchor_type type)
 }
 
 struct ast_expr *
-ast_make_expr_subtract(enum re_flags re_flags, struct ast_expr *a, struct ast_expr *b)
+ast_make_expr_subtract(struct ast_expr_pool **poolp, enum re_flags re_flags, struct ast_expr *a, struct ast_expr *b)
 {
 	struct ast_expr *res;
 
-	res = ast_expr_new();
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -753,13 +737,13 @@ ast_make_expr_subtract(enum re_flags re_flags, struct ast_expr *a, struct ast_ex
 }
 
 struct ast_expr *
-ast_make_expr_range(enum re_flags re_flags,
+ast_make_expr_range(struct ast_expr_pool **poolp, enum re_flags re_flags,
     const struct ast_endpoint *from, struct ast_pos start,
     const struct ast_endpoint *to, struct ast_pos end)
 {
 	struct ast_expr *res;
 
-	res = ast_expr_new();
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -778,14 +762,14 @@ ast_make_expr_range(enum re_flags re_flags,
 }
 
 struct ast_expr *
-ast_make_expr_named(enum re_flags re_flags, const struct class *class)
+ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const struct class *class)
 {
 	struct ast_expr *res;
 	size_t i;
 
 	assert(class != NULL);
 
-	res = ast_expr_new();
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -803,9 +787,9 @@ ast_make_expr_named(enum re_flags re_flags, const struct class *class)
 	for (i = 0; i < class->count; i++) {
 		if (class->ranges[i].a == class->ranges[i].b) {
 			if (class->ranges[i].a <= UCHAR_MAX) {
-				res->u.alt.n[i] = ast_make_expr_literal(re_flags, (unsigned char) class->ranges[i].a);
+				res->u.alt.n[i] = ast_make_expr_literal(poolp, re_flags, (unsigned char) class->ranges[i].a);
 			} else {
-				res->u.alt.n[i] = ast_make_expr_codepoint(re_flags, class->ranges[i].a);
+				res->u.alt.n[i] = ast_make_expr_codepoint(poolp, re_flags, class->ranges[i].a);
 			}
 			if (res->u.alt.n[i] == NULL) {
 				goto error;
@@ -828,7 +812,7 @@ ast_make_expr_named(enum re_flags re_flags, const struct class *class)
 				to.u.codepoint.u = class->ranges[i].b;
 			}
 
-			res->u.alt.n[i] = ast_make_expr_range(re_flags, &from, pos, &to, pos);
+			res->u.alt.n[i] = ast_make_expr_range(poolp, re_flags, &from, pos, &to, pos);
 			if (res->u.alt.n[i] == NULL) {
 				goto error;
 			}
