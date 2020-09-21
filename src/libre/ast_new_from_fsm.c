@@ -190,7 +190,7 @@ build_edge_literal(const struct fsm *fsm, fsm_state_t from, fsm_state_t to, char
 		return 0;
 
 	if (!build_edge_expr(fsm, from, to, expr, udata)) {
-		/* ast_expr_free(expr); */
+		ast_expr_free(expr);
 		return 0;
 	}
 
@@ -213,7 +213,7 @@ build_edge_epsilon(const struct fsm *fsm, fsm_state_t from, fsm_state_t to, void
 		return 0;
 
 	if (!build_edge_expr(fsm, from, to, expr, udata)) {
-		/* ast_expr_free(expr); */
+		ast_expr_free(expr);
 		return 0;
 	}
 
