@@ -184,7 +184,7 @@ ast_expr_free(struct ast_expr *n)
 }
 
 int
-ast_expr_clone(struct ast_expr **n)
+ast_expr_clone(struct ast_expr_pool **poolp, struct ast_expr **n)
 {
 	struct ast_expr *old;
 	struct ast_expr *new;
@@ -197,7 +197,7 @@ ast_expr_clone(struct ast_expr **n)
 		return 1;
 	}
 
-	new = malloc(sizeof *new);
+	new = ast_expr_pool_new(poolp);
 	if (new == NULL) {
 		*n = NULL;
 		return 0;
@@ -214,12 +214,11 @@ ast_expr_clone(struct ast_expr **n)
 		break;
 
 	case AST_EXPR_SUBTRACT:
-		if (!ast_expr_clone(&new->u.subtract.a)) {
-			free(new);
+		if (!ast_expr_clone(poolp, &new->u.subtract.a)) {
 			new = NULL;
 			break;
 		}
-		if (!ast_expr_clone(&new->u.subtract.b)) {
+		if (!ast_expr_clone(poolp, &new->u.subtract.b)) {
 			ast_expr_free(new);
 			new = NULL;
 			break;
@@ -231,7 +230,6 @@ ast_expr_clone(struct ast_expr **n)
 
 		new->u.concat.n = malloc(new->u.concat.alloc * sizeof *new->u.concat.n);
 		if (new->u.concat.n == NULL) {
-			free(new);
 			new = NULL;
 			break;
 		}
@@ -242,7 +240,7 @@ ast_expr_clone(struct ast_expr **n)
 
 		for (i = 0; i < old->u.concat.count; i++) {
 			new->u.concat.n[i] = old->u.concat.n[i];
-			if (!ast_expr_clone(&new->u.concat.n[i])) {
+			if (!ast_expr_clone(poolp, &new->u.concat.n[i])) {
 				ast_expr_free(new);
 				new = NULL;
 				break;
@@ -256,7 +254,6 @@ ast_expr_clone(struct ast_expr **n)
 
 		new->u.alt.n = malloc(new->u.alt.alloc * sizeof *new->u.alt.n);
 		if (new->u.alt.n == NULL) {
-			free(new);
 			new = NULL;
 			break;
 		}
@@ -267,7 +264,7 @@ ast_expr_clone(struct ast_expr **n)
 
 		for (i = 0; i < old->u.alt.count; i++) {
 			new->u.alt.n[i] = old->u.alt.n[i];
-			if (!ast_expr_clone(&new->u.alt.n[i])) {
+			if (!ast_expr_clone(poolp, &new->u.alt.n[i])) {
 				ast_expr_free(new);
 				new = NULL;
 				break;
@@ -277,16 +274,14 @@ ast_expr_clone(struct ast_expr **n)
 	}
 
 	case AST_EXPR_REPEAT:
-		if (!ast_expr_clone(&new->u.repeat.e)) {
-			free(new);
+		if (!ast_expr_clone(poolp, &new->u.repeat.e)) {
 			new = NULL;
 			break;
 		}
 		break;
 
 	case AST_EXPR_GROUP:
-		if (!ast_expr_clone(&new->u.group.e)) {
-			free(new);
+		if (!ast_expr_clone(poolp, &new->u.group.e)) {
 			new = NULL;
 			break;
 		}

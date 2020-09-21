@@ -306,7 +306,7 @@ remove_state(struct ast_expr_pool **poolp, struct rese *state)
 			}
 
 			tmp = p->expr;
-			if (!ast_expr_clone(&tmp)) {
+			if (!ast_expr_clone(poolp, &tmp)) {
 				ast_expr_free(cat);
 				return 0;
 			}
@@ -320,7 +320,7 @@ remove_state(struct ast_expr_pool **poolp, struct rese *state)
 			if (state->expr) {
 				struct ast_expr *rep;
 				tmp = state->expr;
-				if (!ast_expr_clone(&tmp)) {
+				if (!ast_expr_clone(poolp, &tmp)) {
 					ast_expr_free(cat);
 					return 0;
 				}
@@ -339,7 +339,7 @@ remove_state(struct ast_expr_pool **poolp, struct rese *state)
 			}
 
 			tmp = s->expr;
-			if (!ast_expr_clone(&tmp)) {
+			if (!ast_expr_clone(poolp, &tmp)) {
 				ast_expr_free(cat);
 				return 0;
 			}

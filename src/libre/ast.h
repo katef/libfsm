@@ -221,7 +221,7 @@ void
 ast_expr_free(struct ast_expr *n);
 
 int
-ast_expr_clone(struct ast_expr **n);
+ast_expr_clone(struct ast_expr_pool **poolp, struct ast_expr **n);
 
 int
 ast_expr_cmp(const struct ast_expr *a, const struct ast_expr *b);
