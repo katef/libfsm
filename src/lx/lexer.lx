@@ -59,3 +59,4 @@
 /[a-z_][a-z0-9_]*/i -> $ident;
 '$' $ident -> $token;
 
+',' -> $comma;

@@ -1,1 +1,1 @@
-tests/pcre/in5.re:4: Syntax error: expected atom
+tests/pcre/in5.re:4: Syntax error: group is not closed

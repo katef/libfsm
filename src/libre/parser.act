@@ -266,6 +266,12 @@
 		@end   = lex_state->lx.end;
 	@};
 
+	CLOSEGROUPRANGE: () -> (c :char, start :pos, end :pos) = @{
+		@c = '-';
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+	@};
+
 	OPENCOUNT: () -> (start :pos, end :pos) = @{
 		@start = lex_state->lx.start;
 		@end   = lex_state->lx.end;
