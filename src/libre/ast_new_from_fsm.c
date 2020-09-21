@@ -414,7 +414,7 @@ ast_expr_new_from_fsm(struct ast_expr_pool **poolp, const struct fsm *fsm)
 		if (!fsm_isend(fsm, i))
 			continue;
 
-		if (!build_edge_epsilon(fsm, i, numstates, restates)) {
+		if (!build_edge_epsilon(fsm, i, numstates, &opaque)) {
 			free_restates(restates, numstates + 1);
 			return NULL;
 		}
