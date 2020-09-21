@@ -41,11 +41,12 @@
 	START;
 	END;
 
-	OPENSUB; OPENCAPTURE; CLOSE;
+	OPEN; CLOSE;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
 	OPENGROUPINV: () -> (:pos, :pos);
 	OPENGROUPCB: () -> (:pos, :pos);
 	OPENGROUPINVCB: () -> (:pos, :pos);
+	CLOSEGROUPRANGE: () -> (:char, :pos, :pos);
 	OPENCOUNT: () -> (:pos, :pos); CLOSECOUNT: () -> (:pos, :pos);
 
 	INVERT: () -> (:char);
@@ -53,8 +54,7 @@
 
 	NAMED_CLASS: () -> (:ast_class_id, :pos, :pos);
 
-	OPENFLAGS;
-	CLOSEFLAGS;
+	FLAGS; SUB;
 	NEGATE;
 	FLAG_UNKNOWN;
 	FLAG_INSENSITIVE: () -> (:re_flags);
@@ -111,7 +111,7 @@
 	<ast-add-concat>: (:ast_expr, :ast_expr) -> ();
 	<ast-add-alt>:    (:ast_expr, :ast_expr) -> ();
 
-	<err-expected-term>;
+	!<err-expected-term>;
 	<err-expected-count>;
 	<err-expected-atom>;
 	<err-expected-alts>;
@@ -250,18 +250,11 @@
 			};
 
 			list-of-class-terms: (class :ast_expr) -> () = {
-				{
-					node = class-term;
-					<ast-add-alt>(class, node);
-				##
-					<err-expected-term>;
-				};
-
-				{
-					list-of-class-terms(class);
-				||
-					$;
-				};
+				node = class-term;
+				<ast-add-alt>(class, node);
+				list-of-class-terms(class);
+			||
+				$;
 			};
 
 		] = {
@@ -286,15 +279,11 @@
 					};
 
 					<ast-add-alt>(tmp,node1);
-
-					{
-						list-of-class-terms(tmp);
-					||
-						$;
-					};
 				||
-					list-of-class-terms(tmp);
+					$;
 				};
+
+				list-of-class-terms(tmp);
 			||
 				(start, !) = OPENGROUPINV;
 
@@ -316,16 +305,11 @@
 					};
 
 					<ast-add-alt>(tmp,node1);
-
-					{
-						list-of-class-terms(tmp);
-					||
-						$;
-					};
-
 				||
-					list-of-class-terms(tmp);
+					$;
 				};
+
+				list-of-class-terms(tmp);
 
 			||
 				(start, !) = OPENGROUPCB;
@@ -347,13 +331,7 @@
 
 				<ast-add-alt>(tmp, node1);
 
-				/* ']' literal or range is already one class
- 				 * term, so another isn't necessary */
-				{
-					list-of-class-terms(tmp);
-				||
-					$;
-				};
+				list-of-class-terms(tmp);
 			||
 				(start, !) = OPENGROUPINVCB;
 
@@ -376,17 +354,16 @@
 
 				<ast-add-alt>(tmp, node1);
 
-				/* ']' literal or range is already one class
- 				 * term, so another isn't necessary */
-				{
-					list-of-class-terms(tmp);
-				||
-					$;
-				};
+				list-of-class-terms(tmp);
 			};
 
 			{
 				(!, !, end) = CLOSEGROUP;
+				<mark-group>(start, end);
+			||
+				(crange, !, end) = CLOSEGROUPRANGE;
+				range = <ast-make-literal>(crange);
+				<ast-add-alt>(tmp, range);
 				<mark-group>(start, end);
 			##
 				<err-expected-closegroup>;
@@ -415,7 +392,7 @@
 				<err-unknown-flag>;
 			};
 		] = {
-			OPENFLAGS;
+			FLAGS;
 
 			empty_pos = <re-flag-none>;
 			empty_neg = <re-flag-none>;
@@ -434,12 +411,21 @@
 			};
 
 			{
-				CLOSEFLAGS;
+				CLOSE;
 				<ast-mask-re-flags>(pos, neg);
+				node = <ast-make-empty>;
+			||
+				SUB;
+				flags = <ast-get-re-flags>();
+				<ast-mask-re-flags>(pos, neg);
+				e = expr;
+				<ast-set-re-flags>(flags);
+				CLOSE;
+				node = e;
 			##
 				<err-expected-closeflags>;
+				node = <ast-make-empty>; /* appease sid */
 			};
-			node = <ast-make-empty>;
 		};
 
 		piece: () -> (node :ast_expr) [
@@ -470,13 +456,7 @@
 			||
 				e = flags;
 			||
-				OPENSUB;
-				flags = <ast-get-re-flags>();
-				e = expr;
-				<ast-set-re-flags>(flags);
-				CLOSE;
-			||
-				OPENCAPTURE;
+				OPEN;
 				flags = <ast-get-re-flags>();
 				g = expr;
 				<ast-set-re-flags>(flags);

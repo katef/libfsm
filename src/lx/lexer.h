@@ -4,6 +4,7 @@
 #define LX_H
 
 enum lx_token {
+	TOK_COMMA,
 	TOK_TOKEN,
 	TOK_IDENT,
 	TOK_AND,

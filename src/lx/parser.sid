@@ -48,6 +48,8 @@
 	PIPE;
 	AND;
 
+	COMMA;
+
 	EOF;
 	!ERROR;
 	!UNKNOWN;
@@ -333,10 +335,72 @@
 			};
 		};
 
-		zone-thing: (a :ast, parent :zone, exit :fsm) -> () = {
-			(r1, t1) = token-mapping(parent);
+		zone-thing: (a :ast, parent :zone, exit :fsm) -> () [
 
-			q1 = <subtract-exit>(r1, exit);
+			zone-from-mapping: (a :ast, parent :zone, exit :fsm) -> (child :zone) = {
+				(r, t) = token-mapping(parent);
+
+				q = <subtract-exit>(r, exit);
+
+				child = <make-zone>(a, parent);
+
+				<add-mapping>(a, parent, child, q, t);
+			};
+
+			list-of-zone-from-mappings: (a :ast, parent :zone, exit :fsm) -> (child :zone) [
+
+				list-of-zone-from-mappings-x: (a :ast, parent :zone, child :zone, exit :fsm) -> () = {
+					$;
+				||
+					COMMA;
+
+					(r, t) = token-mapping(parent);
+
+					q = <subtract-exit>(r, exit);
+
+					<add-mapping>(a, parent, child, q, t);
+
+					list-of-zone-from-mappings-x(a, parent, child, exit);
+				};
+
+			] = {
+				child = zone-from-mapping(a, parent, exit);
+
+				list-of-zone-from-mappings-x(a, parent, child, exit);
+			};
+
+			zone-to-mapping: (a :ast, parent :zone, child :zone) -> (exit :fsm) = {
+				(r, t) = token-mapping(parent);
+
+				<add-mapping>(a, child, parent, r, t);
+
+				exit = <clone>(r);
+			};
+
+			list-of-zone-to-mappings: (a :ast, parent :zone, child :zone) -> (exit :fsm) [
+
+				list-of-zone-to-mappings-x: (a :ast, parent :zone, child :zone, exit :fsm &) -> () = {
+					$;
+				||
+					COMMA;
+
+					old-exit = exit;
+
+					new-exit = zone-to-mapping(a, parent, child);
+
+					&exit = <op-alt>(old-exit, new-exit);
+
+					list-of-zone-to-mappings-x(a, parent, child, &exit);
+				};
+
+			] = {
+				exit = zone-to-mapping(a, parent, child);
+
+				list-of-zone-to-mappings-x(a, parent, child, &exit);
+			};
+
+		] = {
+			child = list-of-zone-from-mappings(a, parent, exit);
 
 			{
 				TO;
@@ -344,12 +408,7 @@
 				<err-expected-to>;
 			};
 
-			(r2, t2) = token-mapping(parent);
-
-			child = <make-zone>(a, parent);
-
-			<add-mapping>(a, parent, child, q1, t1);
-			<add-mapping>(a, child, parent, r2, t2);
+			child-exit = list-of-zone-to-mappings(a, parent, child);
 
 			{
 				{
@@ -381,9 +440,8 @@
 				 * subtraction is trimmed of dead states.
 				 */
 
-				u = <clone>(r2);
 				w = <regex-any>;
-				v = <subtract-exit>(w, u);
+				v = <subtract-exit>(w, child-exit);
 
 				<add-mapping>(a, child, x, v, y);
 			||
@@ -393,7 +451,7 @@
 					<err-expected-open>;
 				};
 
-				list-of-things(a, child, r2);
+				list-of-things(a, child, child-exit);
 
 				{
 					CLOSE;
