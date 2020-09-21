@@ -177,9 +177,18 @@ struct ast_expr {
 enum { AST_EXPR_POOL_SIZE = 64 };
 
 struct ast_expr_pool {
+	struct {
+		struct ast_expr expr;
+
+#if defined(ASAN)
+		struct {
+			void *ptr[8]; /* force 8-byte alignment on amd64 */
+		} redzone;
+#endif
+	} pool[AST_EXPR_POOL_SIZE];
+
 	struct ast_expr_pool *next;
 	unsigned count;
-	struct ast_expr pool[AST_EXPR_POOL_SIZE];
 };
 
 struct ast_expr *

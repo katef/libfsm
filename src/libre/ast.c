@@ -16,6 +16,10 @@
 #include "class.h"
 #include "ast.h"
 
+#if defined(ASAN)
+#  include <sanitizer/asan_interface.h>
+#endif
+
 /*
  * This is a placeholder for a node that has already been freed.
  * Note: this is a single-instance node, which other functions
@@ -27,16 +31,22 @@ struct ast_expr *ast_expr_tombstone = &the_tombstone;
 struct ast_expr *
 ast_expr_pool_new(struct ast_expr_pool **poolp) 
 {
+	static const struct ast_expr zero;
 	struct ast_expr_pool *p;
+	size_t i;
 
 	assert(poolp != NULL);
 
 	p = *poolp;
 	if (p == NULL || p->count >= AST_EXPR_POOL_SIZE) {
-		p = calloc(1, sizeof *p);
+		p = malloc(sizeof *p);
 		if (p == NULL) {
 			return NULL;
 		}
+
+#if defined(ASAN)
+		ASAN_POISON_MEMORY_REGION(&p->pool, sizeof p->pool);
+#endif
 
 		p->next = *poolp;
 		*poolp = p;
@@ -44,7 +54,12 @@ ast_expr_pool_new(struct ast_expr_pool **poolp)
 
 	assert(p != NULL && p->count < AST_EXPR_POOL_SIZE);
 
-	return &p->pool[p->count++];
+	i = p->count++;
+#if defined(ASAN)
+	ASAN_UNPOISON_MEMORY_REGION(&p->pool[i].expr, sizeof(p->pool[i].expr));
+#endif
+	p->pool[i].expr = zero;
+	return &p->pool[i].expr;
 }
 
 struct ast *
@@ -74,7 +89,7 @@ ast_pool_free(struct ast_expr_pool *pool)
 		unsigned i;
 
 		for (i=0; i < curr->count; i++) {
-			ast_expr_free(&curr->pool[i]);
+			ast_expr_free(&curr->pool[i].expr);
 		}
 	}
 
