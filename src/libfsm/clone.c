@@ -15,6 +15,10 @@
 #include <adt/edgeset.h>
 
 #include "internal.h"
+#include "capture.h"
+
+static int
+copy_capture_actions(struct fsm *dst, const struct fsm *src);
 
 struct fsm *
 fsm_clone(const struct fsm *fsm)
@@ -60,6 +64,45 @@ fsm_clone(const struct fsm *fsm)
 		}
 	}
 
+	{
+		if (!copy_capture_actions(new, fsm)) {
+			fsm_free(new);
+			return NULL;
+		}
+	}
+
 	return new;
+}
+
+struct copy_capture_actions_env {
+	struct fsm *dst;
+	int ok;
+};
+
+static int
+copy_capture_actions_cb(fsm_state_t state,
+    enum capture_action_type type, unsigned capture_id, fsm_state_t to,
+    void *opaque)
+{
+	struct copy_capture_actions_env *env = opaque;
+	assert(env->dst);
+
+	if (!fsm_capture_add_action(env->dst,
+		state, type, capture_id, to)) {
+		env->ok = 0;
+	}
+
+	return env->ok;
+}
+
+static int
+copy_capture_actions(struct fsm *dst, const struct fsm *src)
+{
+	struct copy_capture_actions_env env = { NULL, 1 };
+	env.dst = dst;
+
+	fsm_capture_action_iter(src,
+	    copy_capture_actions_cb, &env);
+	return env.ok;
 }
 

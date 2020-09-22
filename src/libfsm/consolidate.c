@@ -11,6 +11,7 @@
 #include <stdint.h>
 
 #include <fsm/fsm.h>
+#include <fsm/capture.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 
@@ -22,13 +23,27 @@
 #include <adt/mappinghashset.h>
 
 #include "internal.h"
+#include "capture.h"
 
 #define LOG_MAPPING 0
+#define LOG_CONSOLIDATE_CAPTURES 0
 
 struct mapping_closure {
 	size_t count;
 	const fsm_state_t *mapping;
 };
+
+struct consolidate_copy_capture_actions_env {
+	char tag;
+	struct fsm *dst;
+	size_t mapping_count;
+	const fsm_state_t *mapping;
+	int ok;
+};
+
+static int
+consolidate_copy_capture_actions(struct fsm *dst, struct fsm *src,
+    const fsm_state_t *mapping, size_t mapping_count);
 
 static fsm_state_t
 mapping_cb(fsm_state_t id, const void *opaque)
@@ -148,6 +163,10 @@ fsm_consolidate(struct fsm *src,
 		}
 	}
 
+	if (!consolidate_copy_capture_actions(dst, src, mapping, mapping_count)) {
+		goto cleanup;
+	}
+
 	{
 		fsm_state_t src_start, dst_start;
 		if (fsm_getstart(src, &src_start)) {
@@ -165,4 +184,62 @@ cleanup:
 
 	if (seen != NULL) { f_free(src->opt->alloc, seen); }
 	return NULL;
+}
+
+static int
+consolidate_copy_capture_actions_cb(fsm_state_t state,
+    enum capture_action_type type, unsigned capture_id, fsm_state_t to,
+    void *opaque)
+{
+	struct consolidate_copy_capture_actions_env *env = opaque;
+	fsm_state_t s, t;
+
+	assert(env->tag == 'C');
+
+#if LOG_CONSOLIDATE_CAPTURES
+	fprintf(stderr, "consolidate_copy_capture_actions_cb: state %u, type %s, ID %u, TO %d\n",
+	    state,
+	    fsm_capture_action_type_name[type],
+	    capture_id, to);
+#endif
+
+	assert(state < env->mapping_count);
+	assert(to == CAPTURE_NO_STATE || to < env->mapping_count);
+	s = env->mapping[state];
+	t = to == CAPTURE_NO_STATE
+	    ? CAPTURE_NO_STATE : env->mapping[to];
+
+	if (!fsm_capture_add_action(env->dst,
+		s, type, capture_id, t)) {
+		env->ok = 0;
+		return 0;
+	}
+
+	return 1;
+}
+
+static int
+consolidate_copy_capture_actions(struct fsm *dst, struct fsm *src,
+    const fsm_state_t *mapping, size_t mapping_count)
+{
+	size_t i;
+
+	struct consolidate_copy_capture_actions_env env;
+	env.tag = 'C';
+	env.dst = dst;
+	env.mapping_count = mapping_count;
+	env.mapping = mapping;
+	env.ok = 1;
+
+#if LOG_MAPPING
+	for (i = 0; i < mapping_count; i++) {
+		fprintf(stderr, "mapping[%u]: %u\n", i, mapping[i]);
+	}
+#else
+	(void)i;
+#endif
+
+	fsm_capture_action_iter(src,
+	    consolidate_copy_capture_actions_cb, &env);
+	return env.ok;
 }

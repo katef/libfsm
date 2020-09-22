@@ -9,6 +9,7 @@
 #include <errno.h>
 
 #include <fsm/fsm.h>
+#include <fsm/capture.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
 
@@ -20,6 +21,10 @@
 #include <adt/mappinghashset.h>
 
 #include "internal.h"
+#include "capture.h"
+
+#define DUMP_MAPPING 0
+#define LOG_DETERMINISE_CAPTURES 0
 
 /*
  * This maps a DFA state onto its associated NFA symbol closure, such that an
@@ -36,6 +41,32 @@ struct mapping {
 	/* Newly-created DFA edges */
 	struct edge_set *edges;
 };
+
+struct reverse_mapping {
+	unsigned count;
+	unsigned ceil;
+	fsm_state_t *list;
+};
+
+struct det_copy_capture_actions_env {
+	char tag;
+	struct fsm *dst;
+	struct reverse_mapping *reverse_mappings;
+	int ok;
+};
+
+static int
+remap_capture_actions(struct mapping_hashset *mappings,
+    struct fsm *dst_dfa, struct fsm *src_nfa);
+
+static int
+add_reverse_mapping(const struct fsm_alloc *alloc,
+    struct reverse_mapping *reverse_mappings,
+    fsm_state_t dfa_state, fsm_state_t nfa_state);
+
+static int
+det_copy_capture_actions(struct reverse_mapping *reverse_mappings,
+    struct fsm *dst, struct fsm *src);
 
 static int
 cmp_mapping(const void *a, const void *b)
@@ -175,6 +206,12 @@ fsm_determinise(struct fsm *nfa)
 		}
 	}
 
+#if LOG_DETERMINISE_CAPTURES
+	fprintf(stderr, "# post_glushkovise\n");
+	fsm_print_fsm(stderr, nfa);
+	fsm_capture_dump(stderr, "#### post_glushkovise", nfa);
+#endif
+
 	dfacount = 0;
 
 	mappings = mapping_hashset_create(nfa->opt->alloc, hash_mapping, cmp_mapping);
@@ -211,6 +248,8 @@ fsm_determinise(struct fsm *nfa)
 			goto error;
 		}
 
+		/* fprintf(stderr, "#### Adding mapping for start state %u -> 0\n", start); */
+
 		curr = mapping_add(mappings, nfa->opt->alloc, dfacount++, set);
 		if (curr == NULL) {
 			/* TODO: free mappings, set */
@@ -245,6 +284,7 @@ fsm_determinise(struct fsm *nfa)
 					/* TODO: free mappings, sclosures, stack */
 					goto error;
 				}
+				/* fprintf(stderr, "*** cur %u, s %u\n", curr->dfastate, s); */
 			}
 		}
 
@@ -253,6 +293,18 @@ fsm_determinise(struct fsm *nfa)
 
 			if (sclosures[i] == NULL) {
 				continue;
+			}
+
+			/* fprintf(stderr, "fsm_determinise: cur (dfa %u) label '%c': %p:", */
+			/*     curr->dfastate, (char)i, (void *)sclosures[i]); */
+			{
+				struct state_iter it;
+				fsm_state_t s;
+
+				for (state_set_reset(sclosures[i], &it); state_set_next(&it, &s); ) {
+					/* fprintf(stderr, " %u", s); */
+				}
+				/* fprintf(stderr, "\n"); */
 			}
 
 			/*
@@ -303,6 +355,25 @@ fsm_determinise(struct fsm *nfa)
 			goto error;
 		}
 
+#if DUMP_MAPPING
+		{
+			fprintf(stderr, "#### fsm_determinise: mapping\n");
+
+			/* build reverse mappings table: for every NFA state X, if X is part
+			 * of the new DFA state Y, then add Y to a list for X */
+			for (m = mapping_hashset_first(mappings, &it); m != NULL; m = mapping_hashset_next(&it)) {
+				struct state_iter si;
+				fsm_state_t state;
+				fprintf(stderr, "%u:", m->dfastate);
+
+				for (state_set_reset(m->closure, &si); state_set_next(&si, &state); ) {
+					fprintf(stderr, " %u", state);
+				}
+				fprintf(stderr, "\n");
+			}
+			fprintf(stderr, "#### fsm_determinise: end of mapping\n");
+		}
+#endif
 		if (!fsm_addstate_bulk(dfa, dfacount)) {
 			/* TODO: free stuff */
 			goto error;
@@ -343,6 +414,10 @@ fsm_determinise(struct fsm *nfa)
 			fsm_carryopaque(nfa, m->closure, dfa, m->dfastate);
 		}
 
+		if (!remap_capture_actions(mappings, dfa, nfa)) {
+			goto error;
+		}
+
 		fsm_move(nfa, dfa);
 	}
 
@@ -368,3 +443,156 @@ error:
 	return 0;
 }
 
+static int
+remap_capture_actions(struct mapping_hashset *mappings,
+    struct fsm *dst_dfa, struct fsm *src_nfa)
+{
+	struct mapping_hashset_iter it;
+	struct state_iter si;
+	struct mapping *m;
+	struct reverse_mapping *reverse_mappings;
+	fsm_state_t state;
+	const size_t capture_count = fsm_countcaptures(src_nfa);
+	size_t i,j;
+	int res = 0;
+
+	(void)j;
+
+	/* This is not 1 to 1 -- if state X is now represented by multiple
+	 * states Y in the DFA, and state X has action(s) when transitioning
+	 * to state Z, this needs to be added on every Y, for every state
+	 * representing Z in the DFA.
+	 *
+	 * We could probably filter this somehow, at the very least by
+	 * checking reachability from every X, but the actual path
+	 * handling later will also check reachability. */
+	reverse_mappings = f_calloc(dst_dfa->opt->alloc, src_nfa->statecount, sizeof(reverse_mappings[0]));
+	if (reverse_mappings == NULL) {
+		return 0;
+	}
+
+	if (capture_count == 0) {
+		/* fprintf(stderr, "zero captures, could bail early\n"); */
+		/* return 1; */
+	}
+
+	/* build reverse mappings table: for every NFA state X, if X is part
+	 * of the new DFA state Y, then add Y to a list for X */
+	for (m = mapping_hashset_first(mappings, &it); m != NULL; m = mapping_hashset_next(&it)) {
+		assert(m->dfastate < dst_dfa->statecount);
+
+		for (state_set_reset(m->closure, &si); state_set_next(&si, &state); ) {
+			if (!add_reverse_mapping(dst_dfa->opt->alloc,
+				reverse_mappings,
+				m->dfastate, state)) {
+				goto cleanup;
+			}
+		}
+	}
+
+#if LOG_DETERMINISE_CAPTURES
+	fprintf(stderr, "#### reverse mapping for %zu states\n", src_nfa->statecount);
+	for (i = 0; i < src_nfa->statecount; i++) {
+		struct reverse_mapping *rm = &reverse_mappings[i];
+		fprintf(stderr, "%lu:", i);
+		for (j = 0; j < rm->count; j++) {
+			fprintf(stderr, " %u", rm->list[j]);
+		}
+		fprintf(stderr, "\n");
+	}
+#endif
+
+	if (!det_copy_capture_actions(reverse_mappings, dst_dfa, src_nfa)) {
+		goto cleanup;
+	}
+
+	res = 1;
+cleanup:
+	for (i = 0; i < src_nfa->statecount; i++) {
+		if (reverse_mappings[i].list != NULL) {
+			f_free(dst_dfa->opt->alloc, reverse_mappings[i].list);
+		}
+	}
+	f_free(dst_dfa->opt->alloc, reverse_mappings);
+
+	return res;
+}
+
+/* Add DFA_state to the list for NFA_state. */
+static int
+add_reverse_mapping(const struct fsm_alloc *alloc,
+    struct reverse_mapping *reverse_mappings,
+    fsm_state_t dfa_state, fsm_state_t nfa_state)
+{
+	struct reverse_mapping *rm = &reverse_mappings[nfa_state];
+	if (rm->count == rm->ceil) {
+		const unsigned nceil = (rm->ceil ? 2*rm->ceil : 2);
+		fsm_state_t *nlist = f_realloc(alloc,
+		    rm->list, nceil * sizeof(rm->list));
+		if (nlist == NULL) {
+			return 0;
+		}
+		rm->list = nlist;
+		rm->ceil = nceil;
+	}
+
+	rm->list[rm->count] = dfa_state;
+	rm->count++;
+	return 1;
+}
+
+static int
+det_copy_capture_actions_cb(fsm_state_t state,
+    enum capture_action_type type, unsigned capture_id, fsm_state_t to,
+    void *opaque)
+{
+	struct reverse_mapping *rm_s;
+	size_t s_i, t_i;
+	struct det_copy_capture_actions_env *env = opaque;
+	assert(env->tag == 'D');
+
+#if LOG_DETERMINISE_CAPTURES
+	fprintf(stderr, "det_copy_capture_actions_cb: state %u, type %s, ID %u, TO %d\n",
+	    state, fsm_capture_action_type_name[type],
+	    capture_id, to);
+#endif
+
+	rm_s = &env->reverse_mappings[state];
+
+	for (s_i = 0; s_i < rm_s->count; s_i++) {
+		const fsm_state_t s = rm_s->list[s_i];
+
+		if (to == CAPTURE_NO_STATE) {
+			if (!fsm_capture_add_action(env->dst,
+				s, type, capture_id, CAPTURE_NO_STATE)) {
+				env->ok = 0;
+				return 0;
+			}
+		} else {
+			struct reverse_mapping *rm_t = &env->reverse_mappings[to];
+			for (t_i = 0; t_i < rm_t->count; t_i++) {
+				const fsm_state_t t = rm_t->list[t_i];
+
+				if (!fsm_capture_add_action(env->dst,
+					s, type, capture_id, t)) {
+					env->ok = 0;
+					return 0;
+				}
+			}
+		}
+	}
+
+	return 1;
+}
+
+static int
+det_copy_capture_actions(struct reverse_mapping *reverse_mappings,
+    struct fsm *dst, struct fsm *src)
+{
+	struct det_copy_capture_actions_env env = { 'D', NULL, NULL, 1 };
+	env.dst = dst;
+	env.reverse_mappings = reverse_mappings;
+
+	fsm_capture_action_iter(src, det_copy_capture_actions_cb, &env);
+	return env.ok;
+}

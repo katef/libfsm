@@ -27,6 +27,9 @@
 static struct fsm *
 build_and_combine(unsigned *cb_a, unsigned *cb_b);
 
+static void
+det_and_min(const char *tag, struct fsm *fsm);
+
 static struct fsm *
 build_ab_c(void);
 
@@ -96,6 +99,9 @@ build_and_combine(unsigned *cb_a, unsigned *cb_b)
 	fsm_capture_dump(stderr, "ab*c", f_ab_c);
 #endif
 
+	det_and_min("abc", f_abc);
+	det_and_min("ab*c", f_ab_c);
+
 	/* union them */
 	f_all = fsm_union(f_abc, f_ab_c, &ci);
 	assert(f_all != NULL);
@@ -121,18 +127,28 @@ build_and_combine(unsigned *cb_a, unsigned *cb_b)
 	fprintf(stderr, "====================\n");
 #endif
 
-	if (!fsm_minimise(f_all)) {
+	return f_all;
+}
+
+static void
+det_and_min(const char *tag, struct fsm *fsm)
+{
+	if (!fsm_determinise(fsm)) {
+		fprintf(stderr, "Failed to determise '%s'\n", tag);
+		exit(EXIT_FAILURE);
+	}
+
+	if (!fsm_minimise(fsm)) {
+		fprintf(stderr, "Failed to minimise '%s'\n", tag);
 		exit(EXIT_FAILURE);
 	}
 
 #if LOG_INTERMEDIATE_FSMS
-	fprintf(stderr, "==================== post-min \n");
-	fsm_print_fsm(stderr, f_all);
-	fsm_capture_dump(stderr, "capture_actions", f_all);
-	fprintf(stderr, "====================\n");
+	fprintf(stderr, "==== after det_and_min: '%s'\n", tag);
+	fsm_print_fsm(stderr, fsm);
+	fsm_capture_dump(stderr, tag, fsm);
 #endif
 
-	return f_all;
 }
 
 static struct fsm *

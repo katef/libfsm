@@ -10,6 +10,7 @@
 #include <errno.h>
 
 #include <fsm/fsm.h>
+#include <fsm/capture.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/options.h>

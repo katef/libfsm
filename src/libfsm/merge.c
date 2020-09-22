@@ -12,16 +12,28 @@
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
+#include <fsm/capture.h>
 
 #include <adt/set.h>
 #include <adt/edgeset.h>
 #include <adt/stateset.h>
 
+#include "capture.h"
 #include "internal.h"
+
+struct copy_capture_env {
+	char tag;
+	struct fsm *dst;
+	int ok;
+};
+
+static int
+copy_capture_actions(struct fsm *dst, struct fsm *src);
 
 static struct fsm *
 merge(struct fsm *dst, struct fsm *src,
-	fsm_state_t *base_dst, fsm_state_t *base_src)
+	fsm_state_t *base_dst, fsm_state_t *base_src,
+	unsigned *capture_base_dst, unsigned *capture_base_src)
 {
 	assert(dst != NULL);
 	assert(src != NULL);
@@ -53,17 +65,29 @@ merge(struct fsm *dst, struct fsm *src,
 
 		*base_dst = 0;
 		*base_src = dst->statecount;
+		*capture_base_dst = 0;
+		*capture_base_src = fsm_countcaptures(dst);
 
 		for (i = 0; i < src->statecount; i++) {
 			state_set_rebase(&src->states[i].epsilons, *base_src);
 			edge_set_rebase(&src->states[i].edges, *base_src);
 		}
+
+		/* FIXME: instead of rebasing these here, they could
+		 * also be updated in copy_capture_actions below. */
+		fsm_capture_rebase_capture_id(src, *capture_base_src);
+		fsm_capture_rebase_capture_action_states(src, *base_src);
 	}
 
 	memcpy(dst->states + dst->statecount, src->states,
 		src->statecount * sizeof *src->states);
 	dst->statecount += src->statecount;
 	dst->endcount   += src->endcount;
+
+	if (!copy_capture_actions(dst, src)) {
+		/* non-recoverable -- destructive operation */
+		return NULL;
+	}
 
 	f_free(src->opt->alloc, src->states);
 	src->states = NULL;
@@ -78,11 +102,42 @@ merge(struct fsm *dst, struct fsm *src,
 	return dst;
 }
 
+static int
+copy_capture_cb(fsm_state_t state,
+    enum capture_action_type type, unsigned capture_id, fsm_state_t to,
+    void *opaque)
+{
+	struct copy_capture_env *env = opaque;
+	assert(env->tag == 'C');
+
+	if (!fsm_capture_add_action(env->dst, state, type,
+		capture_id, to)) {
+		env->ok = 0;
+		return 0;
+	}
+
+	return 1;
+}
+
+static int
+copy_capture_actions(struct fsm *dst, struct fsm *src)
+{
+	struct copy_capture_env env;
+	env.tag = 'C';
+	env.dst = dst;
+	env.ok = 1;
+
+	fsm_capture_action_iter(src, copy_capture_cb, &env);
+
+	return env.ok;
+}
+
 struct fsm *
 fsm_mergeab(struct fsm *a, struct fsm *b,
 	fsm_state_t *base_b)
 {
 	fsm_state_t dummy; /* always 0 */
+	unsigned capture_base_a, capture_base_b; /* unused */
 	struct fsm *q;
 
 	assert(a != NULL);
@@ -98,7 +153,8 @@ fsm_mergeab(struct fsm *a, struct fsm *b,
 	 * We merge b into a.
 	 */
 
-	q = merge(a, b, &dummy, base_b);
+	q = merge(a, b, &dummy, base_b,
+	    &capture_base_a, &capture_base_b);
 
 	assert(dummy == 0);
 
@@ -142,13 +198,16 @@ fsm_merge(struct fsm *a, struct fsm *b,
 	if (a_dst) {
 		res = merge(a, b,
 		    &combine_info->base_a,
-		    &combine_info->base_b);
+		    &combine_info->base_b,
+		    &combine_info->capture_base_a,
+		    &combine_info->capture_base_b);
 	} else {
 		res = merge(b, a,
 		    &combine_info->base_b,
-		    &combine_info->base_a);
+		    &combine_info->base_a,
+		    &combine_info->capture_base_b,
+		    &combine_info->capture_base_a);
 	}
 
 	return res;
 }
-
