@@ -32,11 +32,16 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 	if (fsm->statecount == fsm->statealloc) {
 		const size_t factor = 2; /* a guess */
 		const size_t n = fsm->statealloc * factor;
-		void *tmp;
+		struct fsm_state *tmp;
+		size_t i;
 
 		tmp = f_realloc(fsm->opt->alloc, fsm->states, n * sizeof *fsm->states);
 		if (tmp == NULL) {
 			return 0;
+		}
+
+		for (i = fsm->statealloc; i < n; i++) {
+			tmp[i].has_capture_actions = 0;
 		}
 
 		fsm->statealloc = n;

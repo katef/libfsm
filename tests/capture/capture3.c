@@ -31,6 +31,9 @@ static void
 check(const struct fsm *fsm, const char *string,
     unsigned end_id, unsigned capture_base);
 
+static void
+det_and_min(const char *tag, struct fsm *fsm);
+
 int main(void) {
 	struct fsm *f_ab = captest_fsm_of_string("ab", 0);
 	struct fsm *f_cde = captest_fsm_of_string("cde", 1);
@@ -90,6 +93,11 @@ int main(void) {
 	fsm_capture_dump(stderr, "#### f_fghi", f_fghi);
 #endif
 
+	/* determinise and minimise each before unioning */
+	det_and_min("ab", f_ab);
+	det_and_min("cde", f_cde);
+	det_and_min("fghi", f_fghi);
+
 	/* union them */
 	f_all = fsm_union(f_ab, f_cde, &ci);
 	assert(f_all != NULL);
@@ -108,8 +116,8 @@ int main(void) {
 	cb_fghi = ci.capture_base_b;
 
 #if LOG_INTERMEDIATE_FSMS
-	fprintf(stderr, "=== unioned f_all with f_fghi... (CB all: %u, fghi: %u)\n",
-	    ci.capture_base_a, cb_fghi);
+	fprintf(stderr, "=== unioned f_all with f_fghi... (CB all: %u, fghi: %u), %u captures\n",
+	    ci.capture_base_a, cb_fghi, fsm_countcaptures(f_all));
 	fsm_print_fsm(stderr, f_all);
 	fsm_capture_dump(stderr, "#### f_all #2", f_all);
 #endif
@@ -119,13 +127,19 @@ int main(void) {
 		exit(EXIT_FAILURE);
 	}
 
+#if LOG_INTERMEDIATE_FSMS
+	fprintf(stderr, "==== after determinise\n");
+	fsm_print_fsm(stderr, f_all);
+	fsm_capture_dump(stderr, "#### f_all", f_all);
+#endif
+
 	if (!fsm_minimise(f_all)) {
 		fprintf(stderr, "NOPE %d\n", __LINE__);
 		exit(EXIT_FAILURE);
 	}
 
 #if LOG_INTERMEDIATE_FSMS
-	fprintf(stderr, "==== after building\n");
+	fprintf(stderr, "==== after minimise\n");
 	fsm_print_fsm(stderr, f_all);
 	fsm_capture_dump(stderr, "#### f_all", f_all);
 #endif
@@ -143,6 +157,27 @@ int main(void) {
 	fsm_free(f_all);
 
 	return 0;
+}
+
+static void
+det_and_min(const char *tag, struct fsm *fsm)
+{
+	if (!fsm_determinise(fsm)) {
+		fprintf(stderr, "Failed to determise '%s'\n", tag);
+		exit(EXIT_FAILURE);
+	}
+
+	if (!fsm_minimise(fsm)) {
+		fprintf(stderr, "Failed to minimise '%s'\n", tag);
+		exit(EXIT_FAILURE);
+	}
+
+#if LOG_INTERMEDIATE_FSMS
+	fprintf(stderr, "==== after det_and_min: '%s'\n", tag);
+	fsm_print_fsm(stderr, fsm);
+	fsm_capture_dump(stderr, tag, fsm);
+#endif
+
 }
 
 static void
@@ -182,8 +217,8 @@ check(const struct fsm *fsm, const char *string,
 	assert(eo->ends & (1U << end_id));
 
 	/* check captures */
-	fprintf(stderr, "captures for '%s': [%ld, %ld], [%ld, %ld]\n",
-	    string,
+	fprintf(stderr, "captures for '%s' (cb %u): [%ld, %ld], [%ld, %ld]\n",
+	    string, capture_base,
 	    captures[0 + cb].pos[0], captures[0 + cb].pos[1],
 	    captures[1 + cb].pos[0], captures[1 + cb].pos[1]);
 	assert(captures[0 + cb].pos[0] == 0);

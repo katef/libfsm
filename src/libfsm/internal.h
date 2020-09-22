@@ -40,6 +40,8 @@ struct state_array;
 
 #define FSM_ENDCOUNT_MAX ULONG_MAX
 
+#define FSM_CAPTURE_MAX INT_MAX
+
 struct fsm_edge {
 	fsm_state_t state; /* destination */
 	unsigned char symbol;
@@ -47,6 +49,10 @@ struct fsm_edge {
 
 struct fsm_state {
 	unsigned int end:1;
+
+	/* If 0, then this state has no need for checking
+	 * the fsm->capture_info struct. */
+	unsigned int has_capture_actions:1;
 
 	/* meaningful within one particular transformation only */
 	unsigned int visited:1;
@@ -67,6 +73,7 @@ struct fsm {
 	fsm_state_t start;
 	unsigned int hasstart:1;
 
+	struct fsm_capture_info *capture_info;
 	const struct fsm_options *opt;
 };
 

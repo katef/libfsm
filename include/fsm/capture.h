@@ -50,6 +50,10 @@ fsm_capture_set_path(struct fsm *fsm, unsigned capture_id,
 void
 fsm_capture_rebase_capture_id(struct fsm *fsm, unsigned base);
 
+/* Same, but for capture action states. */
+void
+fsm_capture_rebase_capture_action_states(struct fsm *fsm, fsm_state_t base);
+
 /* Allocate a capture buffer with enough space for
  * the current FSM's captures. */
 struct fsm_capture *

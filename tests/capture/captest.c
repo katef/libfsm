@@ -137,8 +137,8 @@ captest_fsm_of_string(const char *string, unsigned end_id)
 	}
 	fsm_setend(fsm, length, 1);
 	fsm_setopaque(fsm, length, eo);
-	fprintf(stderr, "fsm_of_string: set opaque to %p for \"%s\"\n",
-	    (void *)eo, string);
+	/* fprintf(stderr, "fsm_of_string: set opaque to %p for \"%s\"\n", */
+	/*     (void *)eo, string); */
 
 	return fsm;
 
@@ -158,10 +158,13 @@ static void captest_carryopaque(struct fsm *src_fsm,
 	struct captest_end_opaque *eo_dst = NULL;
 	struct captest_end_opaque *eo_old_dst = NULL;
 	size_t i;
+	const int log_level = 0;
 
-	fprintf(stderr, "captest_carryopaque: src_fsm %p, src_set %p, n %lu, dst_fsm %p, dst_state %u\n",
-	    (void *)src_fsm, (void *)src_set, n,
-	    (void *)dst_fsm, dst_state);
+	if (log_level > 0) {
+		fprintf(stderr, "captest_carryopaque: src_fsm %p, src_set %p, n %lu, dst_fsm %p, dst_state %u\n",
+		    (void *)src_fsm, (void *)src_set, n,
+		    (void *)dst_fsm, dst_state);
+	}
 
 	eo_old_dst = fsm_getopaque(dst_fsm, dst_state);
 
@@ -169,8 +172,10 @@ static void captest_carryopaque(struct fsm *src_fsm,
 	/* FIXME: no way to handle an alloc error in carryopaque? */
 	assert(eo_dst != NULL);
 	eo_dst->tag = CAPTEST_END_OPAQUE_TAG;
-	fprintf(stderr, "captest_carryopaque: new opaque %p (eo_dst)\n",
-	    (void *)eo_dst);
+	if (log_level > 0) {
+		fprintf(stderr, "captest_carryopaque: new opaque %p (eo_dst)\n",
+		    (void *)eo_dst);
+	}
 
 	if (eo_old_dst != NULL) {
 		assert(eo_old_dst->tag == CAPTEST_END_OPAQUE_TAG);
@@ -188,8 +193,10 @@ static void captest_carryopaque(struct fsm *src_fsm,
 		if (eo_src == NULL) {
 			continue;
 		}
-		fprintf(stderr, "carryopaque: dst %p <- src[%lu] %p\n",
-		    (void *)eo_dst, i, (void *)eo_src);
+		if (log_level > 0) {
+			fprintf(stderr, "carryopaque: dst %p <- src[%lu] %p\n",
+			    (void *)eo_dst, i, (void *)eo_src);
+		}
 		assert(eo_src->tag == CAPTEST_END_OPAQUE_TAG);
 		eo_dst->ends |= eo_src->ends;
 

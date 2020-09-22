@@ -20,6 +20,7 @@
 #include <adt/edgeset.h>
 
 #include "internal.h"
+#include "capture.h"
 
 void
 free_contents(struct fsm *fsm)
@@ -56,6 +57,7 @@ fsm_new(const struct fsm_options *opt)
 	new->statealloc = 128; /* guess */
 	new->statecount = 0;
 	new->endcount   = 0;
+	new->capture_info = NULL;
 
 	new->states = f_malloc(f.opt->alloc, new->statealloc * sizeof *new->states);
 	if (new->states == NULL) {
@@ -66,6 +68,12 @@ fsm_new(const struct fsm_options *opt)
 	fsm_clearstart(new);
 
 	new->opt = opt;
+
+	if (!fsm_capture_init(new)) {
+		f_free(f.opt->alloc, new->states);
+		f_free(f.opt->alloc, new);
+		return NULL;
+	}
 
 	return new;
 }
@@ -110,6 +118,8 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	dst->statecount = src->statecount;
 	dst->statealloc = src->statealloc;
 	dst->endcount   = src->endcount;
+
+	dst->capture_info = src->capture_info;
 
 	f_free(src->opt->alloc, src);
 }
