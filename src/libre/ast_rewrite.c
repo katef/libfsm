@@ -117,6 +117,7 @@ compile_subexpr(struct ast_expr *e, enum re_flags flags)
 static int
 rewrite_concat(struct ast_expr *n, enum re_flags flags)
 {
+	static const struct ast_expr zero;
 	size_t i;
 
 	assert(n != NULL);
@@ -209,10 +210,11 @@ rewrite_concat(struct ast_expr *n, enum re_flags flags)
 	}
 
 	if (n->u.concat.count == 1) {
-		void *p = n->u.concat.n, *q = n->u.concat.n[0];
-		*n = *n->u.concat.n[0];
+		void *p = n->u.concat.n;
+		struct ast_expr *q = n->u.concat.n[0];
+		*n = *q;
+		*q = zero;
 		free(p);
-		free(q);
 		return 1;
 	}
 
@@ -226,6 +228,12 @@ empty:
 
 tombstone:
 
+	for (i = 0; i < n->u.concat.count; i++) {
+		ast_expr_free(n->u.concat.n[i]);
+	}
+
+	free(n->u.concat.n);
+
 	n->type = AST_EXPR_TOMBSTONE;
 
 	return 1;
@@ -234,6 +242,7 @@ tombstone:
 static int
 rewrite_alt(struct ast_expr *n, enum re_flags flags)
 {
+	static const struct ast_expr zero;
 	size_t i;
 
 	assert(n != NULL);
@@ -310,10 +319,11 @@ rewrite_alt(struct ast_expr *n, enum re_flags flags)
 	}
 
 	if (n->u.alt.count == 1) {
-		void *p = n->u.alt.n, *q = n->u.alt.n[0];
-		*n = *n->u.alt.n[0];
+		void *p = n->u.alt.n;
+		struct ast_expr *q = n->u.alt.n[0];
+		*n = *q;
+		*q = zero;
 		free(p);
-		free(q);
 		return 1;
 	}
 

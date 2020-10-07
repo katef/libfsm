@@ -26,6 +26,7 @@ static void test(fsm_state_t n) {
 	}
 	assert(i == n);
 	assert(p == (n == 0 ? 999 : n - 1));
+	state_set_free(s);
 }
 
 int main(void) {

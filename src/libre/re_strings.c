@@ -38,9 +38,7 @@ re_strings(const struct fsm_options *opt, const char *a[], size_t n,
 	}
 
 	fsm = re_strings_build(g, opt, flags);
-	if (fsm == NULL) {
-		goto error;
-	}
+	re_strings_free(g);
 
 	return fsm;
 

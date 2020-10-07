@@ -16,6 +16,10 @@
 #include "class.h"
 #include "ast.h"
 
+#if defined(ASAN)
+#  include <sanitizer/asan_interface.h>
+#endif
+
 /*
  * This is a placeholder for a node that has already been freed.
  * Note: this is a single-instance node, which other functions
@@ -24,15 +28,52 @@
 static struct ast_expr the_tombstone;
 struct ast_expr *ast_expr_tombstone = &the_tombstone;
 
+struct ast_expr *
+ast_expr_pool_new(struct ast_expr_pool **poolp) 
+{
+	static const struct ast_expr zero;
+	struct ast_expr_pool *p;
+	size_t i;
+
+	assert(poolp != NULL);
+
+	p = *poolp;
+	if (p == NULL || p->count >= AST_EXPR_POOL_SIZE) {
+		p = malloc(sizeof *p);
+		if (p == NULL) {
+			return NULL;
+		}
+
+#if defined(ASAN)
+		ASAN_POISON_MEMORY_REGION(&p->pool, sizeof p->pool);
+#endif
+
+		p->next = *poolp;
+		*poolp = p;
+	}
+
+	assert(p != NULL && p->count < AST_EXPR_POOL_SIZE);
+
+	i = p->count++;
+#if defined(ASAN)
+	ASAN_UNPOISON_MEMORY_REGION(&p->pool[i].expr, sizeof(p->pool[i].expr));
+#endif
+	p->pool[i].expr = zero;
+	return &p->pool[i].expr;
+}
+
 struct ast *
 ast_new(void)
 {
+	static struct ast zero;
 	struct ast *res;
 
-	res = calloc(1, sizeof *res);
+	res = malloc(sizeof *res);
 	if (res == NULL) {
 		return NULL;
 	}
+
+	*res = zero;
 
 	/* XXX: not thread-safe */
 	the_tombstone.type = AST_EXPR_TOMBSTONE;
@@ -41,9 +82,30 @@ ast_new(void)
 }
 
 void
+ast_pool_free(struct ast_expr_pool *pool)
+{
+	struct ast_expr_pool *curr;
+	for (curr=pool; curr != NULL; curr=curr->next) {
+		unsigned i;
+
+		for (i=0; i < curr->count; i++) {
+			ast_expr_free(&curr->pool[i].expr);
+		}
+	}
+
+	while (pool != NULL) {
+		curr = pool;
+		pool = pool->next;
+
+		free(curr);
+	}
+}
+
+void
 ast_free(struct ast *ast)
 {
 	ast_expr_free(ast->expr);
+	ast_pool_free(ast->pool);
 	free(ast);
 }
 
@@ -75,6 +137,8 @@ ast_make_count(unsigned min, const struct ast_pos *start,
 void
 ast_expr_free(struct ast_expr *n)
 {
+	static const struct ast_expr zero;
+
 	if (n == NULL) {
 		return;
 	}
@@ -131,11 +195,11 @@ ast_expr_free(struct ast_expr *n)
 		assert(!"unreached");
 	}
 
-	free(n);
+	*n = zero;
 }
 
 int
-ast_expr_clone(struct ast_expr **n)
+ast_expr_clone(struct ast_expr_pool **poolp, struct ast_expr **n)
 {
 	struct ast_expr *old;
 	struct ast_expr *new;
@@ -148,7 +212,7 @@ ast_expr_clone(struct ast_expr **n)
 		return 1;
 	}
 
-	new = malloc(sizeof *new);
+	new = ast_expr_pool_new(poolp);
 	if (new == NULL) {
 		*n = NULL;
 		return 0;
@@ -165,12 +229,11 @@ ast_expr_clone(struct ast_expr **n)
 		break;
 
 	case AST_EXPR_SUBTRACT:
-		if (!ast_expr_clone(&new->u.subtract.a)) {
-			free(new);
+		if (!ast_expr_clone(poolp, &new->u.subtract.a)) {
 			new = NULL;
 			break;
 		}
-		if (!ast_expr_clone(&new->u.subtract.b)) {
+		if (!ast_expr_clone(poolp, &new->u.subtract.b)) {
 			ast_expr_free(new);
 			new = NULL;
 			break;
@@ -182,7 +245,6 @@ ast_expr_clone(struct ast_expr **n)
 
 		new->u.concat.n = malloc(new->u.concat.alloc * sizeof *new->u.concat.n);
 		if (new->u.concat.n == NULL) {
-			free(new);
 			new = NULL;
 			break;
 		}
@@ -193,7 +255,7 @@ ast_expr_clone(struct ast_expr **n)
 
 		for (i = 0; i < old->u.concat.count; i++) {
 			new->u.concat.n[i] = old->u.concat.n[i];
-			if (!ast_expr_clone(&new->u.concat.n[i])) {
+			if (!ast_expr_clone(poolp, &new->u.concat.n[i])) {
 				ast_expr_free(new);
 				new = NULL;
 				break;
@@ -207,7 +269,6 @@ ast_expr_clone(struct ast_expr **n)
 
 		new->u.alt.n = malloc(new->u.alt.alloc * sizeof *new->u.alt.n);
 		if (new->u.alt.n == NULL) {
-			free(new);
 			new = NULL;
 			break;
 		}
@@ -218,7 +279,7 @@ ast_expr_clone(struct ast_expr **n)
 
 		for (i = 0; i < old->u.alt.count; i++) {
 			new->u.alt.n[i] = old->u.alt.n[i];
-			if (!ast_expr_clone(&new->u.alt.n[i])) {
+			if (!ast_expr_clone(poolp, &new->u.alt.n[i])) {
 				ast_expr_free(new);
 				new = NULL;
 				break;
@@ -228,16 +289,14 @@ ast_expr_clone(struct ast_expr **n)
 	}
 
 	case AST_EXPR_REPEAT:
-		if (!ast_expr_clone(&new->u.repeat.e)) {
-			free(new);
+		if (!ast_expr_clone(poolp, &new->u.repeat.e)) {
 			new = NULL;
 			break;
 		}
 		break;
 
 	case AST_EXPR_GROUP:
-		if (!ast_expr_clone(&new->u.group.e)) {
-			free(new);
+		if (!ast_expr_clone(poolp, &new->u.group.e)) {
 			new = NULL;
 			break;
 		}
@@ -465,11 +524,11 @@ ast_contains_expr(const struct ast_expr *node, struct ast_expr * const *a, size_
 }
 
 struct ast_expr *
-ast_make_expr_empty(enum re_flags re_flags)
+ast_make_expr_empty(struct ast_expr_pool **poolp, enum re_flags re_flags)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -481,11 +540,11 @@ ast_make_expr_empty(enum re_flags re_flags)
 }
 
 struct ast_expr *
-ast_make_expr_concat(enum re_flags re_flags)
+ast_make_expr_concat(struct ast_expr_pool **poolp, enum re_flags re_flags)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -497,7 +556,6 @@ ast_make_expr_concat(enum re_flags re_flags)
 
 	res->u.concat.n = malloc(res->u.concat.alloc * sizeof *res->u.concat.n);
 	if (res->u.concat.n == NULL) {
-		free(res);
 		return NULL;
 	}
 
@@ -529,11 +587,11 @@ ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node)
 }
 
 struct ast_expr *
-ast_make_expr_alt(enum re_flags re_flags)
+ast_make_expr_alt(struct ast_expr_pool **poolp, enum re_flags re_flags)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -545,7 +603,6 @@ ast_make_expr_alt(enum re_flags re_flags)
 
 	res->u.alt.n = malloc(res->u.alt.alloc * sizeof *res->u.alt.n);
 	if (res->u.alt.n == NULL) {
-		free(res);
 		return NULL;
 	}
 
@@ -577,11 +634,11 @@ ast_add_expr_alt(struct ast_expr *cat, struct ast_expr *node)
 }
 
 struct ast_expr *
-ast_make_expr_literal(enum re_flags re_flags, char c)
+ast_make_expr_literal(struct ast_expr_pool **poolp, enum re_flags re_flags, char c)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -594,11 +651,11 @@ ast_make_expr_literal(enum re_flags re_flags, char c)
 }
 
 struct ast_expr *
-ast_make_expr_codepoint(enum re_flags re_flags, uint32_t u)
+ast_make_expr_codepoint(struct ast_expr_pool **poolp, enum re_flags re_flags, uint32_t u)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -611,7 +668,7 @@ ast_make_expr_codepoint(enum re_flags re_flags, uint32_t u)
 }
 
 struct ast_expr *
-ast_make_expr_repeat(enum re_flags re_flags, struct ast_expr *e, struct ast_count count)
+ast_make_expr_repeat(struct ast_expr_pool **poolp, enum re_flags re_flags, struct ast_expr *e, struct ast_count count)
 {
 	struct ast_expr *res = NULL;
 
@@ -622,7 +679,7 @@ ast_make_expr_repeat(enum re_flags re_flags, struct ast_expr *e, struct ast_coun
 		return NULL;
 	}
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -637,11 +694,11 @@ ast_make_expr_repeat(enum re_flags re_flags, struct ast_expr *e, struct ast_coun
 }
 
 struct ast_expr *
-ast_make_expr_group(enum re_flags re_flags, struct ast_expr *e)
+ast_make_expr_group(struct ast_expr_pool **poolp, enum re_flags re_flags, struct ast_expr *e)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -655,11 +712,11 @@ ast_make_expr_group(enum re_flags re_flags, struct ast_expr *e)
 }
 
 struct ast_expr *
-ast_make_expr_anchor(enum re_flags re_flags, enum ast_anchor_type type)
+ast_make_expr_anchor(struct ast_expr_pool **poolp, enum re_flags re_flags, enum ast_anchor_type type)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -672,11 +729,11 @@ ast_make_expr_anchor(enum re_flags re_flags, enum ast_anchor_type type)
 }
 
 struct ast_expr *
-ast_make_expr_subtract(enum re_flags re_flags, struct ast_expr *a, struct ast_expr *b)
+ast_make_expr_subtract(struct ast_expr_pool **poolp, enum re_flags re_flags, struct ast_expr *a, struct ast_expr *b)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -690,13 +747,13 @@ ast_make_expr_subtract(enum re_flags re_flags, struct ast_expr *a, struct ast_ex
 }
 
 struct ast_expr *
-ast_make_expr_range(enum re_flags re_flags,
+ast_make_expr_range(struct ast_expr_pool **poolp, enum re_flags re_flags,
     const struct ast_endpoint *from, struct ast_pos start,
     const struct ast_endpoint *to, struct ast_pos end)
 {
 	struct ast_expr *res;
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -715,14 +772,14 @@ ast_make_expr_range(enum re_flags re_flags,
 }
 
 struct ast_expr *
-ast_make_expr_named(enum re_flags re_flags, const struct class *class)
+ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const struct class *class)
 {
 	struct ast_expr *res;
 	size_t i;
 
 	assert(class != NULL);
 
-	res = calloc(1, sizeof *res);
+	res = ast_expr_pool_new(poolp);
 	if (res == NULL) {
 		return NULL;
 	}
@@ -734,16 +791,15 @@ ast_make_expr_named(enum re_flags re_flags, const struct class *class)
 
 	res->u.alt.n = malloc(res->u.alt.alloc * sizeof *res->u.alt.n);
 	if (res->u.alt.n == NULL) {
-		free(res);
 		return NULL;
 	}
 
 	for (i = 0; i < class->count; i++) {
 		if (class->ranges[i].a == class->ranges[i].b) {
 			if (class->ranges[i].a <= UCHAR_MAX) {
-				res->u.alt.n[i] = ast_make_expr_literal(re_flags, (unsigned char) class->ranges[i].a);
+				res->u.alt.n[i] = ast_make_expr_literal(poolp, re_flags, (unsigned char) class->ranges[i].a);
 			} else {
-				res->u.alt.n[i] = ast_make_expr_codepoint(re_flags, class->ranges[i].a);
+				res->u.alt.n[i] = ast_make_expr_codepoint(poolp, re_flags, class->ranges[i].a);
 			}
 			if (res->u.alt.n[i] == NULL) {
 				goto error;
@@ -766,7 +822,7 @@ ast_make_expr_named(enum re_flags re_flags, const struct class *class)
 				to.u.codepoint.u = class->ranges[i].b;
 			}
 
-			res->u.alt.n[i] = ast_make_expr_range(re_flags, &from, pos, &to, pos);
+			res->u.alt.n[i] = ast_make_expr_range(poolp, re_flags, &from, pos, &to, pos);
 			if (res->u.alt.n[i] == NULL) {
 				goto error;
 			}

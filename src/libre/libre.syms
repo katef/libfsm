@@ -9,6 +9,7 @@ ast_print_dot
 ast_print_abnf
 ast_print_pcre
 ast_print_tree
+ast_free
 re_parse
 re_strings
 re_strings_new

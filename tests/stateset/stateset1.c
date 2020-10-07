@@ -34,5 +34,6 @@ int main(void) {
 	assert(state_set_contains(s, a[1]));
 	assert(state_set_contains(s, a[2]));
 
+	state_set_free(s);
 	return 0;
 }

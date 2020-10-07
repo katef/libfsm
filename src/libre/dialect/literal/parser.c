@@ -92,6 +92,8 @@
 	typedef struct ast_endpoint t_endpoint;
 
 	struct act_state {
+		struct ast_expr_pool **poolp;
+
 		enum LX_TOKEN lex_tok;
 		enum LX_TOKEN lex_tok_save;
 		int overlap; /* permit overlap in groups */
@@ -204,7 +206,7 @@
 		return s;
 	}
 
-#line 208 "src/libre/dialect/literal/parser.c"
+#line 210 "src/libre/dialect/literal/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -239,13 +241,13 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 825 "src/libre/parser.act"
+#line 827 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIa))) {
 			goto ZL1;
 		}
 	
-#line 249 "src/libre/dialect/literal/parser.c"
+#line 251 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: ast-add-concat */
 		/* BEGINNING OF INLINE: 99 */
@@ -286,14 +288,14 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				{
 					/* BEGINNING OF ACTION: ast-make-concat */
 					{
-#line 663 "src/libre/parser.act"
+#line 665 "src/libre/parser.act"
 
-		(ZInode) = ast_make_expr_concat(*flags);
+		(ZInode) = ast_make_expr_concat(act_state->poolp, *flags);
 		if ((ZInode) == NULL) {
 			goto ZL1;
 		}
 	
-#line 297 "src/libre/dialect/literal/parser.c"
+#line 299 "src/libre/dialect/literal/parser.c"
 					}
 					/* END OF ACTION: ast-make-concat */
 					p_list_Hof_Hatoms (flags, lex_state, act_state, err, ZInode);
@@ -307,14 +309,14 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				{
 					/* BEGINNING OF ACTION: ast-make-empty */
 					{
-#line 656 "src/libre/parser.act"
+#line 658 "src/libre/parser.act"
 
-		(ZInode) = ast_make_expr_empty(*flags);
+		(ZInode) = ast_make_expr_empty(act_state->poolp, *flags);
 		if ((ZInode) == NULL) {
 			goto ZL1;
 		}
 	
-#line 318 "src/libre/dialect/literal/parser.c"
+#line 320 "src/libre/dialect/literal/parser.c"
 					}
 					/* END OF ACTION: ast-make-empty */
 				}
@@ -338,14 +340,14 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 523 "src/libre/parser.act"
+#line 525 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
 		}
 		goto ZL1;
 	
-#line 349 "src/libre/dialect/literal/parser.c"
+#line 351 "src/libre/dialect/literal/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -378,7 +380,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 405 "src/libre/parser.act"
+#line 407 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
@@ -388,7 +390,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 392 "src/libre/dialect/literal/parser.c"
+#line 394 "src/libre/dialect/literal/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			break;
@@ -398,14 +400,14 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: ast-make-literal */
 		{
-#line 677 "src/libre/parser.act"
+#line 679 "src/libre/parser.act"
 
-		(ZInode) = ast_make_expr_literal(*flags, (ZIc));
+		(ZInode) = ast_make_expr_literal(act_state->poolp, *flags, (ZIc));
 		if ((ZInode) == NULL) {
 			goto ZL1;
 		}
 	
-#line 409 "src/libre/dialect/literal/parser.c"
+#line 411 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: ast-make-literal */
 	}
@@ -414,26 +416,26 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-expected-atom */
 		{
-#line 474 "src/libre/parser.act"
+#line 476 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXATOM;
 		}
 		goto ZL2;
 	
-#line 425 "src/libre/dialect/literal/parser.c"
+#line 427 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: err-expected-atom */
 		/* BEGINNING OF ACTION: ast-make-empty */
 		{
-#line 656 "src/libre/parser.act"
+#line 658 "src/libre/parser.act"
 
-		(ZInode) = ast_make_expr_empty(*flags);
+		(ZInode) = ast_make_expr_empty(act_state->poolp, *flags);
 		if ((ZInode) == NULL) {
 			goto ZL2;
 		}
 	
-#line 437 "src/libre/dialect/literal/parser.c"
+#line 439 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: ast-make-empty */
 	}
@@ -447,7 +449,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 837 "src/libre/parser.act"
+#line 839 "src/libre/parser.act"
 
 
 	static int
@@ -468,6 +470,7 @@ ZL0:;
 	struct ast *
 	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
 		const struct fsm_options *opt,
+		struct ast_expr_pool **poolp,
 		enum re_flags flags, int overlap,
 		struct re_err *err)
 	{
@@ -516,6 +519,7 @@ ZL0:;
 		act_state = &act_state_s;
 
 		act_state->overlap = overlap;
+		act_state->poolp   = poolp;
 
 		err->e = RE_ESUCCESS;
 
@@ -587,6 +591,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 591 "src/libre/dialect/literal/parser.c"
+#line 595 "src/libre/dialect/literal/parser.c"
 
 /* END OF FILE */

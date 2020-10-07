@@ -251,6 +251,13 @@ xopen(const char *s)
 	return f;
 }
 
+struct matches_list {
+	struct matches_list *next;
+	struct match *head;
+};
+
+static struct matches_list *all_matches = NULL;
+
 static struct match *
 addmatch(struct match **head, int i, const char *s)
 {
@@ -291,6 +298,50 @@ addmatch(struct match **head, int i, const char *s)
 	*head     = new;
 
 	return new;
+}
+
+static void
+add_matches_list(struct match *head)
+{
+	struct matches_list *new;
+
+	if (head == NULL) {
+		return;
+	}
+
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+		perror("allocating matches list");
+		abort();
+	}
+
+	new->next = all_matches;
+	new->head = head;
+	all_matches = new;
+}
+
+static void
+free_all_matches(void)
+{
+	struct matches_list *clst;
+	struct matches_list *nlst;
+
+	for (clst = all_matches; clst != NULL; clst = nlst) {
+		struct match *curr;
+		struct match *next;
+
+		nlst = clst->next;
+
+		for (curr = clst->head; curr != NULL; curr = next) {
+			next = curr->next;
+
+			free(curr);
+		}
+
+		free(clst);
+	}
+
+	all_matches = NULL;
 }
 
 static void
@@ -338,6 +389,7 @@ carryopaque(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
 		}
 	}
 
+	add_matches_list(matches);
 	fsm_setopaque(dst_fsm, dst_state, matches);
 
 	return;
@@ -478,6 +530,18 @@ endleaf_json(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 	return 0;
 }
 
+static struct fsm *fsm_to_cleanup = NULL;
+
+static void
+do_fsm_cleanup(void)
+{
+	if (fsm_to_cleanup != NULL) {
+		fsm_free(fsm_to_cleanup);
+	}
+
+	free_all_matches();
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -497,6 +561,8 @@ main(int argc, char *argv[])
 	int makevm;
 
 	struct fsm_dfavm *vm;
+
+	atexit(do_fsm_cleanup);
 
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;
@@ -669,6 +735,8 @@ main(int argc, char *argv[])
 
 		print_ast(stdout, &opt, flags, ast);
 
+		ast_free(ast);
+
 		return 0;
 	}
 
@@ -679,6 +747,8 @@ main(int argc, char *argv[])
 		perror("fsm_new");
 		return EXIT_FAILURE;
 	}
+
+	fsm_to_cleanup = fsm;
 
 	{
 		int i;
@@ -763,6 +833,8 @@ main(int argc, char *argv[])
 							return EXIT_FAILURE;
 						}
 
+						add_matches_list(matches);
+
 						assert(fsm_getopaque(new, s) == NULL);
 						fsm_setopaque(new, s, matches);
 					}
@@ -785,6 +857,8 @@ main(int argc, char *argv[])
 				perror("fsm_union/concat");
 				return EXIT_FAILURE;
 			}
+
+			fsm_to_cleanup = fsm;
 
 			if (query != NULL) {
 				int r;
@@ -1020,6 +1094,7 @@ main(int argc, char *argv[])
 		/* XXX: free opaques */
 
 		fsm_free(fsm);
+		fsm_to_cleanup = NULL;
 
 		if (vm != NULL) {
 			fsm_vm_free(vm);

@@ -36,9 +36,16 @@ int main(void) {
 	struct set *s = set_create(NULL, cmp_int);
 	struct set_iter iter;
 	size_t i;
+	int **plist;
+
+	plist = malloc(5000 * sizeof *plist);
+	assert(plist != NULL);
+
 	int *p;
 	for (i = 0; i < 5000; i++) {
-		assert(set_add(s, next_int()));
+		int *itm = next_int();
+		plist[i] = itm;
+		assert(set_add(s, itm));
 	}
 	for (i = 0, p = set_first(s, &iter); i < 5000; i++, set_next(&iter)) {
 		assert(p);
@@ -48,5 +55,12 @@ int main(void) {
 			assert(!set_hasnext(&iter));
 		}
 	}
+
+	for (i=0; i < 5000; i++) {
+		free(plist[i]);
+	}
+	free(plist);
+
+	set_free(s);
 	return 0;
 }

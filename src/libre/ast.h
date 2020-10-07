@@ -174,7 +174,39 @@ struct ast_expr {
 	} u;
 };
 
+enum { AST_EXPR_POOL_SIZE = 64 };
+
+struct ast_expr_pool {
+	struct {
+		struct ast_expr expr;
+
+#if defined(ASAN)
+		struct {
+			void *ptr[8]; /* force 8-byte alignment on amd64 */
+		} redzone;
+#endif
+	} pool[AST_EXPR_POOL_SIZE];
+
+	struct ast_expr_pool *next;
+	unsigned count;
+};
+
+struct ast_expr *
+ast_expr_pool_new(struct ast_expr_pool **poolp);
+
+void
+ast_pool_free(struct ast_expr_pool *pool);
+
+/* Returns current global expression pool, setting
+ * global to NULL.
+ *
+ * This is a hack.
+ */
+struct ast_expr_pool *
+ast_expr_pool_save(void);
+
 struct ast {
+	struct ast_expr_pool *pool;
 	struct ast_expr *expr;
 };
 
@@ -198,7 +230,7 @@ void
 ast_expr_free(struct ast_expr *n);
 
 int
-ast_expr_clone(struct ast_expr **n);
+ast_expr_clone(struct ast_expr_pool **poolp, struct ast_expr **n);
 
 int
 ast_expr_cmp(const struct ast_expr *a, const struct ast_expr *b);
@@ -210,45 +242,45 @@ int
 ast_contains_expr(const struct ast_expr *node, struct ast_expr * const *a, size_t n);
 
 struct ast_expr *
-ast_make_expr_empty(enum re_flags re_flags);
+ast_make_expr_empty(struct ast_expr_pool **poolp, enum re_flags re_flags);
 
 struct ast_expr *
-ast_make_expr_concat(enum re_flags re_flags);
+ast_make_expr_concat(struct ast_expr_pool **poolp, enum re_flags re_flags);
 
 struct ast_expr *
-ast_make_expr_alt(enum re_flags re_flags);
+ast_make_expr_alt(struct ast_expr_pool **poolp, enum re_flags re_flags);
 
 int
 ast_add_expr_alt(struct ast_expr *alt, struct ast_expr *node);
 
 struct ast_expr *
-ast_make_expr_literal(enum re_flags re_flags, char c);
+ast_make_expr_literal(struct ast_expr_pool **poolp, enum re_flags re_flags, char c);
 
 struct ast_expr *
-ast_make_expr_codepoint(enum re_flags re_flags, uint32_t u);
+ast_make_expr_codepoint(struct ast_expr_pool **poolp, enum re_flags re_flags, uint32_t u);
 
 struct ast_expr *
-ast_make_expr_repeat(enum re_flags re_flags, struct ast_expr *e, struct ast_count count);
+ast_make_expr_repeat(struct ast_expr_pool **poolp, enum re_flags re_flags, struct ast_expr *e, struct ast_count count);
 
 struct ast_expr *
-ast_make_expr_group(enum re_flags re_flags, struct ast_expr *e);
+ast_make_expr_group(struct ast_expr_pool **poolp, enum re_flags re_flags, struct ast_expr *e);
 
 struct ast_expr *
-ast_make_expr_anchor(enum re_flags re_flags, enum ast_anchor_type type);
+ast_make_expr_anchor(struct ast_expr_pool **poolp, enum re_flags re_flags, enum ast_anchor_type type);
 
 struct ast_expr *
-ast_make_expr_subtract(enum re_flags re_flags, struct ast_expr *a, struct ast_expr *b);
+ast_make_expr_subtract(struct ast_expr_pool **poolp, enum re_flags re_flags, struct ast_expr *a, struct ast_expr *b);
 
 int
 ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
 
 struct ast_expr *
-ast_make_expr_range(enum re_flags re_flags,
+ast_make_expr_range(struct ast_expr_pool **poolp, enum re_flags re_flags,
 	const struct ast_endpoint *from, struct ast_pos start,
 	const struct ast_endpoint *to, struct ast_pos end);
 
 struct ast_expr *
-ast_make_expr_named(enum re_flags re_flags, const struct class *class);
+ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const struct class *class);
 
 /* XXX: exposed for sake of re(1) printing an ast;
  * it's not part of the <re/re.h> API proper */

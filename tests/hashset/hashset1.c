@@ -90,5 +90,6 @@ int main(void) {
 	assert(hashset_contains(s, &a[14]));
 	assert(hashset_contains(s, &a[15]));
 
+	hashset_free(s);
 	return 0;
 }

@@ -13,8 +13,13 @@
 #include "ast.h"
 #include "ast_analysis.h"
 
+struct restates_opaque {
+	struct ast_expr_pool **poolp;
+	struct rese *states;
+};
+
 static int
-change_to_alt(struct ast_expr **n)
+change_to_alt(struct ast_expr_pool **poolp, struct ast_expr **n)
 {
 	struct ast_expr *alt;
 
@@ -24,7 +29,7 @@ change_to_alt(struct ast_expr **n)
 	if ((*n)->type == AST_EXPR_ALT)
 		return 1;
 
-	alt = ast_make_expr_alt(0);
+	alt = ast_make_expr_alt(poolp, 0);
 	if (!alt)
 		return 0;
 
@@ -141,15 +146,15 @@ build_reedge(struct rese *from, struct rese *to)
 }
 
 static int
-build_edge_expr(const struct fsm *fsm, fsm_state_t from, fsm_state_t to, struct ast_expr *expr, void *opaque)
+build_edge_expr(const struct fsm *fsm, fsm_state_t from, fsm_state_t to, struct ast_expr *expr, struct restates_opaque *udata)
 {
 	struct rese *restates, *reedge;
 
 	assert(fsm);
 	assert(expr);
-	assert(opaque);
+	assert(udata != NULL);
 
-	restates = opaque;
+	restates = udata->states;
 
 	reedge = build_reedge(&restates[from], &restates[to]);
 	if (!reedge)
@@ -160,7 +165,7 @@ build_edge_expr(const struct fsm *fsm, fsm_state_t from, fsm_state_t to, struct 
 		return 1;
 	}
 
-	if (!change_to_alt(&reedge->expr))
+	if (!change_to_alt(udata->poolp, &reedge->expr))
 		return 0;
 
 	if (!ast_add_expr_alt(reedge->expr, expr))
@@ -173,15 +178,18 @@ static int
 build_edge_literal(const struct fsm *fsm, fsm_state_t from, fsm_state_t to, char c, void *opaque)
 {
 	struct ast_expr *expr;
+	struct restates_opaque *udata;
 
 	assert(fsm);
 	assert(opaque);
 
-	expr = ast_make_expr_literal(0, c);
+	udata = opaque;
+
+	expr = ast_make_expr_literal(udata->poolp, 0, c);
 	if (!expr)
 		return 0;
 
-	if (!build_edge_expr(fsm, from, to, expr, opaque)) {
+	if (!build_edge_expr(fsm, from, to, expr, udata)) {
 		ast_expr_free(expr);
 		return 0;
 	}
@@ -193,15 +201,18 @@ static int
 build_edge_epsilon(const struct fsm *fsm, fsm_state_t from, fsm_state_t to, void *opaque)
 {
 	struct ast_expr *expr;
+	struct restates_opaque *udata;
 
 	assert(fsm);
 	assert(opaque);
 
-	expr = ast_make_expr_empty(0);
+	udata = opaque;
+
+	expr = ast_make_expr_empty(udata->poolp, 0);
 	if (!expr)
 		return 0;
 
-	if (!build_edge_expr(fsm, from, to, expr, opaque)) {
+	if (!build_edge_expr(fsm, from, to, expr, udata)) {
 		ast_expr_free(expr);
 		return 0;
 	}
@@ -251,7 +262,7 @@ free_restates(struct rese *states, unsigned int numstates)
 }
 
 static int
-remove_state(struct rese *state)
+remove_state(struct ast_expr_pool **poolp, struct rese *state)
 {
 	struct rese *p /*pred*/, *ps /*predsucc*/, *s /*succ*/;
 
@@ -289,13 +300,13 @@ remove_state(struct rese *state)
 			assert(p->expr);
 			assert(s->expr);
 
-			cat = ast_make_expr_concat(0);
+			cat = ast_make_expr_concat(poolp, 0);
 			if (!cat) {
 				return 0;
 			}
 
 			tmp = p->expr;
-			if (!ast_expr_clone(&tmp)) {
+			if (!ast_expr_clone(poolp, &tmp)) {
 				ast_expr_free(cat);
 				return 0;
 			}
@@ -309,11 +320,11 @@ remove_state(struct rese *state)
 			if (state->expr) {
 				struct ast_expr *rep;
 				tmp = state->expr;
-				if (!ast_expr_clone(&tmp)) {
+				if (!ast_expr_clone(poolp, &tmp)) {
 					ast_expr_free(cat);
 					return 0;
 				}
-				rep = ast_make_expr_repeat(0, tmp,
+				rep = ast_make_expr_repeat(poolp, 0, tmp,
 					ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL));
 				if (!rep) {
 					ast_expr_free(tmp);
@@ -328,7 +339,7 @@ remove_state(struct rese *state)
 			}
 
 			tmp = s->expr;
-			if (!ast_expr_clone(&tmp)) {
+			if (!ast_expr_clone(poolp, &tmp)) {
 				ast_expr_free(cat);
 				return 0;
 			}
@@ -341,7 +352,7 @@ remove_state(struct rese *state)
 			if (!e->expr) {
 				e->expr = cat;
 			} else {
-				if (!change_to_alt(&e->expr)) {
+				if (!change_to_alt(poolp, &e->expr)) {
 					ast_expr_free(cat);
 					return 0;
 				}
@@ -359,7 +370,7 @@ remove_state(struct rese *state)
 }
 
 static struct ast_expr *
-ast_expr_new_from_fsm(const struct fsm *fsm)
+ast_expr_new_from_fsm(struct ast_expr_pool **poolp, const struct fsm *fsm)
 {
 	struct ast_expr *expr;
 
@@ -367,6 +378,7 @@ ast_expr_new_from_fsm(const struct fsm *fsm)
 	fsm_state_t start;
 	struct rese *restates;
 	struct rese *restart, *reend;
+	struct restates_opaque opaque;
 
 	unsigned int i;
 
@@ -384,11 +396,14 @@ ast_expr_new_from_fsm(const struct fsm *fsm)
 	if (!restates)
 		return NULL;
 
+	opaque.states = restates;
+	opaque.poolp = poolp;
+
 	restart = &restates[start];
 	reend = &restates[numstates];
 
 	/* Copy FSM edges as RE edges */
-	if (!fsm_walk_edges(fsm, restates, build_edge_literal, build_edge_epsilon)) {
+	if (!fsm_walk_edges(fsm, &opaque, build_edge_literal, build_edge_epsilon)) {
 		free_restates(restates, numstates + 1);
 		return NULL;
 	}
@@ -399,7 +414,7 @@ ast_expr_new_from_fsm(const struct fsm *fsm)
 		if (!fsm_isend(fsm, i))
 			continue;
 
-		if (!build_edge_epsilon(fsm, i, numstates, restates)) {
+		if (!build_edge_epsilon(fsm, i, numstates, &opaque)) {
 			free_restates(restates, numstates + 1);
 			return NULL;
 		}
@@ -410,7 +425,7 @@ ast_expr_new_from_fsm(const struct fsm *fsm)
 		if (i == start)
 			continue;
 
-		if (!remove_state(&restates[i])) {
+		if (!remove_state(poolp, &restates[i])) {
 			free_restates(restates, numstates + 1);
 			return NULL;
 		}
@@ -431,14 +446,14 @@ ast_expr_new_from_fsm(const struct fsm *fsm)
 	if (restart->expr) {
 		struct ast_expr *cat, *rep;
 
-		cat = ast_make_expr_concat(0);
+		cat = ast_make_expr_concat(poolp, 0);
 		if (!cat) {
 			free_restates(restates, numstates + 1);
 			return NULL;
 		}
 
 		rep = ast_make_expr_repeat(
-			0, restart->expr, ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL));
+			poolp, 0, restart->expr, ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL));
 		if (!rep) {
 			ast_expr_free(cat);
 			free_restates(restates, numstates + 1);
@@ -474,10 +489,11 @@ ast_new_from_fsm(const struct fsm *fsm)
 {
 	struct ast *ast;
 	struct ast_expr *expr;
+	struct ast_expr_pool *pool = NULL;
 
 	assert(fsm);
 
-	expr = ast_expr_new_from_fsm(fsm);
+	expr = ast_expr_new_from_fsm(&pool, fsm);
 	if (!expr)
 		return NULL;
 
@@ -488,6 +504,7 @@ ast_new_from_fsm(const struct fsm *fsm)
 	}
 
 	ast->expr = expr;
+	ast->pool = pool;
 
 	if (!ast_rewrite(ast, 0)) {
 		ast_free(ast);

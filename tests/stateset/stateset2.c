@@ -19,5 +19,6 @@ int main(void) {
 	assert(state_set_add(&s, NULL, a));
 	state_set_remove(&s, a);
 	assert(!state_set_contains(s, a));
+	state_set_free(s);
 	return 0;
 }

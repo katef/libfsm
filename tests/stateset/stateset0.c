@@ -17,5 +17,6 @@ int main(void) {
 	assert(state_set_add(&s, NULL, a[0]));
 	assert(state_set_add(&s, NULL, a[1]));
 	assert(state_set_add(&s, NULL, a[2]));
+	state_set_free(s);
 	return 0;
 }
