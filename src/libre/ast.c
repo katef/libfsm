@@ -48,6 +48,7 @@ ast_expr_pool_new(struct ast_expr_pool **poolp)
 		ASAN_POISON_MEMORY_REGION(&p->pool, sizeof p->pool);
 #endif
 
+		p->count = 0;
 		p->next = *poolp;
 		*poolp = p;
 	}
