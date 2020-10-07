@@ -32,22 +32,26 @@ int *next_int(void) {
 	return p;
 }
 
+enum { COUNT = 5000U };
+
 int main(void) {
 	struct set *s = set_create(NULL, cmp_int);
 	size_t i;
 	int **plist;
 
-	plist = malloc(5000 * sizeof *plist);
+	assert(s != NULL);
+
+	plist = calloc(COUNT, sizeof *plist);
 	assert(plist != NULL);
 
-	for (i = 0; i < 5000; i++) {
+	for (i = 0; i < COUNT; i++) {
 		int *itm = next_int();
 		plist[i] = itm;
 		assert(set_add(s, itm));
 	}
-	assert(set_count(s) == 5000);
+	assert(set_count(s) == COUNT);
 
-	for (i=0; i < 5000; i++) {
+	for (i=0; i < COUNT; i++) {
 		free(plist[i]);
 	}
 	free(plist);

@@ -537,6 +537,7 @@ do_fsm_cleanup(void)
 {
 	if (fsm_to_cleanup != NULL) {
 		fsm_free(fsm_to_cleanup);
+		fsm_to_cleanup = NULL;
 	}
 
 	free_all_matches();

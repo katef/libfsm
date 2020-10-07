@@ -33,9 +33,13 @@ hash_int(const void *a)
 int main(void) {
 	struct hashset *s = hashset_create(NULL, hash_int, cmp_int);
 	int a[3] = {1, 2, 3};
+
+	assert(s != NULL);
+
 	assert(hashset_add(s, &a[0]));
 	assert(hashset_add(s, &a[1]));
 	assert(hashset_add(s, &a[2]));
+
 	hashset_free(s);
 	return 0;
 }
