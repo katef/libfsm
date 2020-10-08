@@ -121,17 +121,28 @@
 '(?<=' -> $unsupported;
 '(?<!' -> $unsupported;
 
-# PCRE2, taking from Perl 5.28
-'(*positive_lookahead:'  -> $unsupported;
-'(*negative_lookahead:'  -> $unsupported;
-'(*positive_lookbehind:' -> $unsupported;
-'(*negative_lookbehind:' -> $unsupported;
+# varous backtracking control things that aren't supported
+'(*' .. ')' {
+	# PCRE2, taking from Perl 5.28
+	'positive_lookahead:'  -> $unsupported;
+	'negative_lookahead:'  -> $unsupported;
+	'positive_lookbehind:' -> $unsupported;
+	'negative_lookbehind:' -> $unsupported;
 
-# three-letter synonynms
-'(*pla:' -> $unsupported;
-'(*nla:' -> $unsupported;
-'(*plb:' -> $unsupported;
-'(*nlb:' -> $unsupported;
+	# three-letter synonynms
+	'pla:' -> $unsupported;
+	'nla:' -> $unsupported;
+	'plb:' -> $unsupported;
+	'nlb:' -> $unsupported;
+
+	# backtracking control
+	'NO_START_OPT' -> $unsupported;
+	/(ACCEPT|SKIP|FAIL|F|MARK|COMMIT|PRUNE|THEN)(:[^)]+)?/ -> $unsupported;
+	/:[^)]+/ -> $unsupported;
+
+	# atomic assertions are also unsupported
+	'atomic:' -> $unsupported;
+}
 
 # Resets current captured text.  Not _yet_ supported.
 '\K' -> $unsupported;
