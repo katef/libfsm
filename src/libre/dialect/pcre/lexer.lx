@@ -159,9 +159,11 @@
 '\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\A' | '\z' | '\E' | $named__class | $unsupported) -> $noesc;
 '\' -> $invalid;
 
-'(?#' -> $opencomment .. ')' -> $closecomment {
+# Comments are just ignored... no token emitted
+'(?#' .. ')' {
+	# emit a token if the comment has nested parens (which are not permitted)
 	'(' -> $invalid__comment;
-	/[^()]+/ -> $comment;
+	/[^()]+/;
 }
 
 '(?' -> $openflags .. ')' -> $closeflags {

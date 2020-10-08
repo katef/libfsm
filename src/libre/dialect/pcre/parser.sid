@@ -69,8 +69,7 @@
 
 	UNSUPPORTED: () -> (:char, :pos, :pos);
 
-	OPENCOMMENT; CLOSECOMMENT; INVALID_COMMENT;
-	COMMENT;
+	INVALID_COMMENT;
 
 	EOF;
 	!ERROR;
@@ -559,14 +558,8 @@
 		};
 
 		comment: () -> () = {
-			OPENCOMMENT;
-			COMMENT;
-			{
-				CLOSECOMMENT;
-			||
-				INVALID_COMMENT;
-				<err-invalid-comment>;
-			};
+			INVALID_COMMENT;
+			<err-invalid-comment>;
 		};
 
 		list-of-pieces: (cat :ast_expr) -> () = {
