@@ -85,7 +85,8 @@ enum re_errno {
 	RE_EFLAG        = 11 | RE_MARK,
 	RE_EXCLOSEFLAGS = 12 | RE_MARK,
 	RE_EXUNSUPPORTD = 13 | RE_MARK,
-	RE_EBADCP       = 14 | RE_MARK
+	RE_EBADCP       = 14 | RE_MARK,
+	RE_BADCOMMENT   = 15 | RE_MARK
 };
 
 struct re_pos {

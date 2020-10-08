@@ -8,9 +8,46 @@
 '('  -> $opencapture;
 ')'  -> $close;
 
+# partial support for named capture groups...  the syntax is recognized,
+# but because capture groups are not yet supported, we don't (yet) link
+# the name to the capture group
+'(?<' /[_A-Za-z][_A-Za-z0-9]*/ '>' -> $opencapture;
+
 # predicates
 '^'  -> $start;
 '$'  -> $end;
+
+# Similar predicates.  Without the concept of "multiline mode," these
+# should be the same as ^ and $.
+#
+# TODO: evaluate how they are different and also if a "multiline mode"
+# matching call makes sense for libfsm.
+#
+# > The \A, \Z, and \z assertions differ from the traditional circumflex
+# > and dollar (described in the next section) in that they only ever
+# > match at the very start and end of the subject string, whatever
+# > options are set. Thus, they are independent of multiline mode. 
+'\A' -> $start;
+'\z' -> $end;
+
+# not yet implemented:
+# > matches at the end of the subject
+# >    also matches before a newline at the end of the subject
+'\Z' -> $unsupported;
+
+# this could be implemented
+# > matches at the first matching position in the subject
+# also:
+# > The \G assertion is true only when the current matching position is
+# > at the start point of the matching process, as specified by the
+# > startoffset argument of pcre2_match(). It differs from \A when the
+# > value of startoffset is non-zero. By calling pcre2_match() multiple
+# > times with appropriate arguments, you can mimic Perl's /g option, and
+# > it is in this kind of implementation where \G can be useful. 
+'\G' -> $unsupported;
+
+# A lone '\E' without a preceding \Q is ignored
+'\E';
 
 # operators
 '?'  -> $opt;
@@ -40,6 +77,7 @@
 
 # perl/unix-ish escapes
 '\a' -> $esc;
+'\e' -> $esc;
 '\c' /./ -> $control;
 
 # character type escapes
@@ -59,19 +97,96 @@
 # negation of `.`, which matches everything except `\n`.
 '\N' -> $named__class;
 
-'\'   /[0-7]{1,3}/     -> $oct;
+'\'   /[0-7]{2,3}/     -> $oct;
+'\0'                   -> $oct;
+
+# PCRE treats \1 ... \7 as back references outside of a character class
+#
+# It's actually more complicated than that.  \<digits> is treated as a
+# backref as long as there are _already_ that many capture groups in the
+# expression.  Given that back references are unsupported, this seems
+# like a overkill for a seldom-used feature.  However, it's nice to
+# indicate that the usual backrefs aren't supported.
+'\'   /[1-7]/          -> $unsupported;
+
+# the new and proper way for back references
+'\g' -> $unsupported;
+
+# Yet another way to indicate back references
+'\k' -> $unsupported;
+
+# lookahead and lookbehind are unsupported
+'(?='  -> $unsupported;
+'(?!'  -> $unsupported;
+'(?<=' -> $unsupported;
+'(?<!' -> $unsupported;
+
+# varous backtracking control things that aren't supported
+'(*' .. ')' {
+	# PCRE2, taking from Perl 5.28
+	'positive_lookahead:'  -> $unsupported;
+	'negative_lookahead:'  -> $unsupported;
+	'positive_lookbehind:' -> $unsupported;
+	'negative_lookbehind:' -> $unsupported;
+
+	# three-letter synonynms
+	'pla:' -> $unsupported;
+	'nla:' -> $unsupported;
+	'plb:' -> $unsupported;
+	'nlb:' -> $unsupported;
+
+	# backtracking control
+	'NO_START_OPT' -> $unsupported;
+	/(ACCEPT|SKIP|FAIL|F|MARK|COMMIT|PRUNE|THEN)(:[^)]+)?/ -> $unsupported;
+	/:[^)]+/ -> $unsupported;
+
+	# atomic assertions are also unsupported
+	'atomic:' -> $unsupported;
+}
+
+# Resets current captured text.  Not _yet_ supported.
+'\K' -> $unsupported;
+
+# \b and \B indicate word/not-word boundaries, and are not (yet?)
+# supported
+'\b' -> $unsupported;
+'\B' -> $unsupported;
+
 '\o{' /[0-7]+/i '}'    -> $oct;
-'\x'  /[0-9a-f]{1,2}/i -> $hex;
+'\x'  /[0-9a-f]{0,2}/i -> $hex;
 '\x{' /[0-9a-f]+/i '}' -> $hex;
 
-'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class) -> $noesc;
+'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\A' | '\z' | '\E' | $named__class | $unsupported) -> $noesc;
 '\' -> $invalid;
+
+# Comments are just ignored... no token emitted
+'(?#' .. ')' {
+	# emit a token if the comment has nested parens (which are not permitted)
+	'(' -> $invalid__comment;
+	/[^()]+/;
+}
 
 '(?' -> $openflags .. ')' -> $closeflags {
 	'-' -> $negate;
 	'i' -> $flag__insensitive;
 	/[a-z]/ - $flag__insensitive -> $flag__unknown;
+
+	# this is a little too broad... but should screen out
+	# recursive matching and subroutines, which are
+	# unsupported.
+	#
+	# TODO: Find a way to handle this in a more restricted
+	#       manner.  Ideally we select a more limited language:
+	#       '(?' /(+|-)?[0-9]+/ ')'
+	'+'      -> $unsupported;
+	/[0-9]+/ -> $unsupported;
+	'R'      -> $unsupported;
 }
+
+
+# recursion with named parentheses
+'(?&' -> $unsupported;
+'(P>' -> $unsupported;
 
 '[' -> $opengroup .. ']' -> $closegroup {
 	'^' -> $invert;
@@ -88,8 +203,12 @@
 	'\r' -> $esc;
 	'\t' -> $esc;
 
+	# within a character class, \b is backspace
+	'\b' -> $esc;
+
 	# perl/unix-ish escapes
 	'\a' -> $esc;
+	'\e' -> $esc;
 	'\c' /./ -> $control;
 
 	# other metacharacters that can be escaped within square brackets
@@ -121,7 +240,9 @@
 	'\x'  /[0-9a-f]{1,2}/i -> $hex;
 	'\x{' /[0-9a-f]+/i '}' -> $hex;
 
-	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class) -> $noesc;
+	'\E';
+
+	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\E' | $named__class) -> $noesc;
 	'\' -> $invalid;
 
 	# FIXME: negated character classes, e.g. [:^alpha:]
@@ -143,6 +264,8 @@
 	# XXX: /./ - the above
 	/[^\^\-\\\x00]/ -> $char;
 
+	# lone \E without a preceding \Q is ignored
+
 	'\Q' .. '\E' {
 		/./ - "\x00" -> $char;
 	}
@@ -163,8 +286,12 @@
 	'\r' -> $esc;
 	'\t' -> $esc;
 
+	# within a character class, \b is backspace
+	'\b' -> $esc;
+
 	# perl/unix-ish escapes
 	'\a' -> $esc;
+	'\e' -> $esc;
 	'\c' /./ -> $control;
 
 	# other metacharacters that can be escaped within square brackets
@@ -196,7 +323,9 @@
 	'\x'  /[0-9a-f]{1,2}/i -> $hex;
 	'\x{' /[0-9a-f]+/i '}' -> $hex;
 
-	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class) -> $noesc;
+	'\E';
+
+	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\E' | $named__class) -> $noesc;
 	'\' -> $invalid;
 
 	# FIXME: negated character classes, e.g. [:^alpha:]
@@ -238,8 +367,12 @@
 	'\r' -> $esc;
 	'\t' -> $esc;
 
+	# within a character class, \b is backspace
+	'\b' -> $esc;
+
 	# perl/unix-ish escapes
 	'\a' -> $esc;
+	'\e' -> $esc;
 	'\c' /./ -> $control;
 
 	# other metacharacters that can be escaped within square brackets
@@ -271,7 +404,9 @@
 	'\x'  /[0-9a-f]{1,2}/i -> $hex;
 	'\x{' /[0-9a-f]+/i '}' -> $hex;
 
-	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class) -> $noesc;
+	'\E';
+
+	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\E' | $named__class) -> $noesc;
 	'\' -> $invalid;
 
 	# FIXME: negated character classes, e.g. [:^alpha:]
@@ -313,8 +448,12 @@
 	'\r' -> $esc;
 	'\t' -> $esc;
 
+	# within a character class, \b is backspace
+	'\b' -> $esc;
+
 	# perl/unix-ish escapes
 	'\a' -> $esc;
+	'\e' -> $esc;
 	'\c' /./ -> $control;
 
 	# other metacharacters that can be escaped within square brackets
@@ -346,7 +485,9 @@
 	'\x'  /[0-9a-f]{1,2}/i -> $hex;
 	'\x{' /[0-9a-f]+/i '}' -> $hex;
 
-	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | $named__class) -> $noesc;
+	'\E';
+
+	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\E' | $named__class) -> $noesc;
 	'\' -> $invalid;
 
 	# FIXME: negated character classes, e.g. [:^alpha:]

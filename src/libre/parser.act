@@ -285,6 +285,8 @@
 
 		switch (@c) {
 		case 'a': @c = '\a'; break;
+		case 'b': @c = '\b'; break;
+		case 'e': @c = '\033'; break;
 		case 'f': @c = '\f'; break;
 		case 'n': @c = '\n'; break;
 		case 'r': @c = '\r'; break;
@@ -308,6 +310,19 @@
 		@end   = lex_state->lx.end;
 	@};
 
+	UNSUPPORTED: () -> (c :char, start :pos, end :pos) = @{
+		/* handle \1-\9 back references */
+		if (lex_state->buf.a[0] == '\\' && lex_state->buf.a[1] != '\0' && lex_state->buf.a[2] == '\0') {
+			@c = lex_state->buf.a[1];
+		}
+		else {
+			@c = lex_state->buf.a[0];
+		}
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+	@};
+
 	CONTROL: () -> (c :char, start :pos, end :pos) = @{
 		assert(lex_state->buf.a[0] == '\\');
 		assert(lex_state->buf.a[1] == 'c');
@@ -315,10 +330,28 @@
 		assert(lex_state->buf.a[3] == '\0');
 
 		@c = lex_state->buf.a[2];
-		if ((unsigned char) @c > 127) {
-			@!;
+		/* from http://www.pcre.org/current/doc/html/pcre2pattern.html#SEC5
+		 * 
+		 *  The precise effect of \cx on ASCII characters is as follows: if x is a lower case letter, it is converted to
+		 *  upper case. Then bit 6 of the character (hex 40) is inverted. Thus \cA to \cZ become hex 01 to hex 1A (A is
+		 *  41, Z is 5A), but \c{ becomes hex 3B ({ is 7B), and \c; becomes hex 7B (; is 3B). If the code unit following
+		 *  \c has a value less than 32 or greater than 126, a compile-time error occurs. 
+		 */
+
+		{
+			unsigned char cc = (unsigned char)@c;
+			if (cc > 126 || cc < 32) {
+				@!;
+			}
+			
+			if (islower(cc)) {
+				cc = toupper(cc);
+			}
+
+			cc ^= 0x40;
+
+			@c = cc;
 		}
-		@c = (((toupper((unsigned char)@c)) - 64) % 128 + 128) % 128;
 
 		@start = lex_state->lx.start;
 		@end   = lex_state->lx.end;
@@ -370,7 +403,7 @@
 		int brace = 0;
 
 		assert(0 == strncmp(lex_state->buf.a, "\\x", 2));
-		assert(strlen(lex_state->buf.a) >= 3);
+		assert(strlen(lex_state->buf.a) >= 2);  /* pcre allows \x without a suffix */
 
 		@start = lex_state->lx.start;
 		@end   = lex_state->lx.end;
@@ -384,7 +417,12 @@
 			brace = 1;
 		}
 
-		u = strtoul(s, &e, 16);
+		if (*s == '\0') {
+			u = 0;
+			e = s;
+		} else {
+			u = strtoul(s, &e, 16);
+		}
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
 			err->e = RE_EHEXRANGE;
@@ -458,6 +496,13 @@
 	 * In some cases (e.g. counting) actions are centralised here for
 	 * the sake of DRY, at the expense of slight overkill.
 	 */
+
+	<err-invalid-comment> = @{
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_BADCOMMENT;
+		}
+		@!;
+	@};
 
 	<err-expected-term> = @{
 		if (err->e == RE_ESUCCESS) {

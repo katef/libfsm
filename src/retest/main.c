@@ -313,6 +313,7 @@ hexdigit:
 struct single_error_record {
 	char *filename;
 	char *regexp;
+	char *flags;
 	char *failed_match;
 	unsigned int line;
 	enum error_type type;
@@ -365,7 +366,7 @@ dup_str(const char *s, int *err)
 }
 
 static int
-error_record_add(struct error_record *erec, enum error_type type, const char *fn, const char *re, const char *failed_match, unsigned int line)
+error_record_add(struct error_record *erec, enum error_type type, const char *fn, const char *re, const char *flags, const char *failed_match, unsigned int line)
 {
 	size_t ind;
 	int err;
@@ -394,6 +395,7 @@ error_record_add(struct error_record *erec, enum error_type type, const char *fn
 	err = 0;
 	erec->errors[ind].filename     = dup_str(fn,&err);
 	erec->errors[ind].regexp       = re != NULL           ? dup_str(re,&err)           : NULL;
+	erec->errors[ind].flags        = flags != NULL        ? dup_str(flags,&err)        : NULL;
 	erec->errors[ind].failed_match = failed_match != NULL ? dup_str(failed_match,&err) : NULL;
 	erec->errors[ind].line         = line;
 	erec->errors[ind].type         = type;
@@ -411,20 +413,20 @@ single_error_record_print(FILE *f, const struct single_error_record *err)
 	case ERROR_NONE:               fprintf(f, "no error?\n");  break;
 	case ERROR_BAD_RECORD_TYPE:    fprintf(f, "bad record\n"); break;
 	case ERROR_ESCAPE_SEQUENCE:    fprintf(f, "bad escape sequence\n"); break;
-	case ERROR_PARSING_REGEXP:     fprintf(f, "error parsing regexp /%s/\n", err->regexp); break;
+	case ERROR_PARSING_REGEXP:     fprintf(f, "error parsing regexp /%s/%s\n", err->regexp, err->flags); break;
 	case ERROR_DETERMINISING:
-		fprintf(f, "error determinising regexp /%s/\n", err->regexp);
+		fprintf(f, "error determinising regexp /%s/%s\n", err->regexp, err->flags);
 		break;
 	case ERROR_COMPILING_BYTECODE:
-		fprintf(f, "error compiling regexp /%s/\n", err->regexp);
+		fprintf(f, "error compiling regexp /%s/%s\n", err->regexp, err->flags);
 		break;
 	case ERROR_SHOULD_MATCH:
-		fprintf(f, "regexp /%s/ should match \"%s\" but doesn't\n",
-			err->regexp, err->failed_match);
+		fprintf(f, "regexp /%s/%s should match \"%s\" but doesn't\n",
+			err->regexp, err->flags, err->failed_match);
 		break;
 	case ERROR_SHOULD_NOT_MATCH:
-		fprintf(f, "regexp /%s/ should not match \"%s\" but does\n",
-			err->regexp, err->failed_match);
+		fprintf(f, "regexp /%s/%s should not match \"%s\" but does\n",
+			err->regexp, err->flags, err->failed_match);
 		break;
 
 	default:
@@ -457,6 +459,7 @@ error_record_finalize(struct error_record *erec)
 	for (i=0; i < n; i++) {
 		free(erec->errors[i].filename);
 		free(erec->errors[i].regexp);
+		free(erec->errors[i].flags);
 		free(erec->errors[i].failed_match);
 	}
 
@@ -465,14 +468,36 @@ error_record_finalize(struct error_record *erec)
 	erec->len = erec->cap = 0;
 }
 
+static char *
+flagstring(enum re_flags flags, char buf[16])
+{
+	char *m;
+	memset(&buf[0],0,16);
+
+	m = &buf[0];
+	if (flags & RE_ICASE)    { *m++ = 'i'; }
+	if (flags & RE_TEXT)     { *m++ = 't'; }
+	if (flags & RE_MULTI)    { *m++ = 'm'; }
+	if (flags & RE_REVERSE)  { *m++ = 'r'; }
+	if (flags & RE_SINGLE)   { *m++ = 'S'; }
+	if (flags & RE_ZONE)     { *m++ = 'Z'; }
+	if (flags & RE_ANCHORED) { *m++ = 'a'; }
+
+	return &buf[0];
+}
+
 /* test file format:
  *
  * 1. lines starting with '#' are skipped
  * 2. (TODO) lines starting with 'R' set the dialect
- * 3. records are separated by empty lines
- * 4. the first line of each record is the regular expression to be
- *    tested 
- * 5. after the regular expression, valid lines start with '#', '+', or '-'
+ * 3. lines starting with 'M' set the flags:
+ * 	i=RE_ICASE, t=RE_TEXT, m = RE_MULTI, r=RE_REVERSE,
+ * 	S=RE_SINGLE, Z=RE_ZONE, a=RE_ANCHORED
+ * 4. records are separated by empty lines.  flags reset at each record
+ *    to no flags.
+ * 5. the first line of each record is the regular expression to be
+ *    tested.  existing flags are used.
+ * 6. after the regular expression, valid lines start with '#', '+', or '-'
  *     a. '+' indicates that the rest of the line should be matched with the
  *        current regular expression
  *     b. '-' indicates the the rest of the line should *not* be matched with
@@ -493,10 +518,12 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 	int linenum;
 
 	char *regexp;
+	char flagdesc[16];
 
 	enum error_type ret;
 	bool impl_ready = false;
 	struct fsm_runner runner = init_runner;
+	enum re_flags flags;
 
 	regexp = NULL;
 
@@ -511,6 +538,9 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 	num_errors     = 0;
 
 	linenum        = 0;
+	flags          = RE_FLAGS_NONE;
+
+	memset(&flagdesc[0],0,sizeof flagdesc);
 
 	while (s = fgets(buf, sizeof buf, f), s != NULL) {
 		int len;
@@ -524,6 +554,7 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 		if (len == 0) {
 			free(regexp);
 			regexp = NULL;
+			flags = RE_FLAGS_NONE;
 
 			if (impl_ready) {
 				fsm_runner_finalize(&runner);
@@ -538,12 +569,35 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 			continue;
 		}
 
+		if (s[0] == 'M' && s[1] == ' ') {
+			char *fstr;
+			for (fstr = &s[2]; *fstr != '\0'; fstr++) {
+				switch (*fstr) {
+				case '\n': case ' ': case '\t':
+					/* ignore */
+					break;
+				case '0': flags = RE_FLAGS_NONE; break;
+
+				case 'i': flags = flags | RE_ICASE;    break;
+				case 't': flags = flags | RE_TEXT;     break;
+				case 'm': flags = flags | RE_MULTI;    break;
+				case 'r': flags = flags | RE_REVERSE;  break;
+				case 'S': flags = flags | RE_SINGLE;   break;
+				case 'Z': flags = flags | RE_ZONE;     break;
+				case 'a': flags = flags | RE_ANCHORED; break;
+				default:
+					fprintf(stderr, "line %d: unknown flag '%c'\n", linenum, (unsigned char)(*fstr));
+				}
+			}
+
+			continue;
+		}
+
 		if (regexp == NULL) {
 			static const struct re_err err_zero;
 
 			struct fsm *fsm;
 			struct re_err err;
-			enum re_flags flags;
 			char *re_str;
 
 			assert(impl_ready == false);
@@ -555,20 +609,21 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 			assert(strlen(regexp) == (size_t)len);
 			assert(strcmp(regexp,s) == 0);
 
-			flags = 0;
 			err   = err_zero;
 
 			num_regexps++;
 
+			flagstring(flags, &flagdesc[0]);
+
 			re_str = regexp;
 			fsm = re_comp(dialect, fsm_sgetc, &re_str, &opt, flags, &err);
 			if (fsm == NULL) {
-				fprintf(stderr, "line %d: error with regexp /%s/: %s\n",
-					linenum, regexp, re_strerror(err.e));
+				fprintf(stderr, "line %d: error with regexp /%s/%s: %s\n",
+					linenum, regexp, flagdesc, re_strerror(err.e));
 
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_PARSING_REGEXP, fname, regexp, NULL, linenum);
+					ERROR_PARSING_REGEXP, fname, regexp, flagdesc, NULL, linenum);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
@@ -579,11 +634,11 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 
 			/* XXX - minimize or determinize? */
 			if (!fsm_determinise(fsm)) {
-				fprintf(stderr, "line %d: error determinising /%s/: %s\n", linenum, regexp, strerror(errno));
+				fprintf(stderr, "line %d: error determinising /%s/%s: %s\n", linenum, regexp, flagdesc, strerror(errno));
 
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_DETERMINISING, fname, regexp, NULL, linenum);
+					ERROR_DETERMINISING, fname, regexp, flagdesc, NULL, linenum);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
@@ -604,15 +659,15 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 #endif /* DEBUG_VM_FSM */
 
 #if DEBUG_TEST_REGEXP
-			fprintf(stderr, "REGEXP matching for /%s/\n", regexp);
+			fprintf(stderr, "REGEXP matching for /%s/%s\n", regexp, flagdesc);
 #endif /* DEBUG_TEST_REGEXP */
 
 			ret = fsm_runner_initialize(fsm, &runner, impl, vm_opts);
 			if (ret != ERROR_NONE) {
-				fprintf(stderr, "line %d: error compiling /%s/: %s\n", linenum, regexp, strerror(errno));
+				fprintf(stderr, "line %d: error compiling /%s/%s: %s\n", linenum, regexp, flagdesc, strerror(errno));
 
 				/* ignore errors */
-				error_record_add(erec, ret, fname, regexp, NULL, linenum);
+				error_record_add(erec, ret, fname, regexp, flagdesc, NULL, linenum);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
@@ -636,7 +691,7 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 				fprintf(stderr, "line %d: unrecognized record type '%c': %s\n", linenum, s[0], s);
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_BAD_RECORD_TYPE, fname, regexp, NULL, linenum);
+					ERROR_BAD_RECORD_TYPE, fname, regexp, flagdesc, NULL, linenum);
 
 				num_errors++;
 				continue;
@@ -657,7 +712,7 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_ESCAPE_SEQUENCE, fname, regexp, NULL, linenum);
+					ERROR_ESCAPE_SEQUENCE, fname, regexp, flagdesc, NULL, linenum);
 
 				num_errors++;
 				continue;
@@ -665,11 +720,11 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 
 			ret = fsm_runner_run(&runner, test, tlen);
 			if (!!ret == !!matching) {
-				printf("[OK    ] line %d: regexp /%s/ %s \"%s\"\n",
-					linenum, regexp, matching ? "matched" : "did not match", orig);
+				printf("[OK    ] line %d: regexp /%s/%s %s \"%s\"\n",
+					linenum, regexp, flagdesc, matching ? "matched" : "did not match", orig);
 			} else {
-				printf("[NOT OK] line %d: regexp /%s/ expected to %s \"%s\", but %s\n",
-					linenum, regexp,
+				printf("[NOT OK] line %d: regexp /%s/%s expected to %s \"%s\", but %s\n",
+					linenum, regexp, flagdesc,
 					matching ? "match" : "not match",
 					orig,
 					ret ? "did" : "did not");
@@ -680,7 +735,7 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 						(matching)
 							? ERROR_SHOULD_MATCH
 							: ERROR_SHOULD_NOT_MATCH,
-						fname, regexp, orig, linenum);
+						fname, regexp, flagdesc, orig, linenum);
 
 
 				if (max_errors > 0 && num_errors >= max_errors) {

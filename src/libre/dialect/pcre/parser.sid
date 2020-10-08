@@ -67,6 +67,10 @@
 	CHAR:    () -> (:char, :pos, :pos);
 	COUNT:   () -> (:unsigned);
 
+	UNSUPPORTED: () -> (:char, :pos, :pos);
+
+	INVALID_COMMENT;
+
 	EOF;
 	!ERROR;
 
@@ -118,6 +122,7 @@
 	<err-expected-closeflags>;
 	<err-expected-eof>;
 	<err-unsupported>;
+	<err-invalid-comment>;
 
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();
@@ -138,6 +143,11 @@
 				(c, !, !) = HEX;
 			||
 				(c, !, !) = CHAR;
+			||
+				(c, !, !) = CONTROL;
+			||
+				(c, !, !) = UNSUPPORTED;
+				<err-unsupported>;
 			};
 			node = <ast-make-literal>(c);
 		};
@@ -168,6 +178,7 @@
 					 * complain about unsupported things at a later stage */
 					<err-unsupported>;
 				};
+
 				node = <ast-make-literal>(c);
 	  		};
 
@@ -459,10 +470,6 @@
 			||
 				e = flags;
 			||
-				(!, !, !) = CONTROL;
-				<err-unsupported>;
-				e = <ast-make-empty>; /* appease sid */
-			||
 				OPENSUB;
 				flags = <ast-get-re-flags>();
 				e = expr;
@@ -521,7 +528,19 @@
 				node = <ast-make-piece>(e, c);
 
 				{
-					&node = list-of-counts(node);
+					/* repeat quantifier followed by ? indicates non-greedy matching,
+					 * which is currently unsupported
+					 * This includes: *?, {m,n}?, +?, and ??
+					 */
+					OPT;
+					<err-unsupported>;
+				||
+					/* repeat quantifier followed by + indicates "atomic" matching,
+					 * which is currently unsupported.
+					 * This includes: *+, {m,n}+, ++, and ?+
+					 */
+					PLUS;
+					<err-unsupported>;
 				||
 					$;
 				};
@@ -538,9 +557,18 @@
 			};
 		};
 
+		comment: () -> () = {
+			INVALID_COMMENT;
+			<err-invalid-comment>;
+		};
+
 		list-of-pieces: (cat :ast_expr) -> () = {
-			a = piece;
-			<ast-add-concat>(cat, a);
+			{
+				a = piece;
+				<ast-add-concat>(cat, a);
+			||
+				comment;
+			};
 
 			{
 				list-of-pieces(cat);
