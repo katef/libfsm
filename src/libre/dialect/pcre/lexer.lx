@@ -187,7 +187,6 @@
 '(P>' -> $unsupported;
 
 '[' -> $opengroup, '[^' -> $opengroupinv, '[]' -> $opengroupcb, '[^]' -> $opengroupinvcb .. ']' -> $closegroup, '-]' -> $closegrouprange {
-	'^' -> $invert;
 	'-' -> $range;
 
 	# extension escapes
@@ -260,7 +259,7 @@
 	'[:xdigit:]' -> $named__class;
 
 	# XXX: /./ - the above
-	/[^\^\-\\\x00]/ -> $char;
+	/[^\-\\\x00]/ -> $char;
 
 	# lone \E without a preceding \Q is ignored
 
