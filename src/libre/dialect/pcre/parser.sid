@@ -49,7 +49,7 @@
 	CLOSEGROUPRANGE: () -> (:char, :pos, :pos);
 	OPENCOUNT: () -> (:pos, :pos); CLOSECOUNT: () -> (:pos, :pos);
 
-	INVERT: () -> (:char);
+	!INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
 	NAMED_CLASS: () -> (:ast_class_id, :pos, :pos);
@@ -154,13 +154,6 @@
 		    
 		character-class: () -> (node :ast_expr) [
 
-			class-head: (class :ast_expr &) -> () = {
-				! = INVERT;
-				&class = <ast-make-invert>(class);
-			||
-				$;
-			};
-
 			class-literal: () -> (node :ast_expr) = {
 				{
 					(c, !, !) = ESC;
@@ -263,8 +256,6 @@
 
 				node = <ast-make-alt>;
 				tmp = node;
-
-				class-head(&node);
 
 				{
 					(c, rstart, !) = RANGE;
