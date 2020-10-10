@@ -45,6 +45,7 @@ re_strerror(enum re_errno e)
 	case RE_EXCLOSEFLAGS: return "Syntax error: flags are not closed";
 	case RE_EXUNSUPPORTD: return "Syntax error: unsupported operator";
 	case RE_EBADCP:       return "Syntax error: invalid codepoint";
+	case RE_EBADCOMMENT:  return "Syntax error: bad comment";
 	}
 
 	assert(!"unreached");

@@ -499,7 +499,7 @@
 
 	<err-invalid-comment> = @{
 		if (err->e == RE_ESUCCESS) {
-			err->e = RE_BADCOMMENT;
+			err->e = RE_EBADCOMMENT;
 		}
 		@!;
 	@};
