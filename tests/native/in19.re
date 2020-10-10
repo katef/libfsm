@@ -1,1 +1,1 @@
-[\xfe-\xfe]
+^[\xfe-\xfe]$

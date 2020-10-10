@@ -36,13 +36,13 @@
 
 	OPENSUB;   CLOSESUB;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
+	OPENGROUPINV: () -> (:pos, :pos);
+	OPENGROUPCB: () -> (:pos, :pos);
+	OPENGROUPINVCB: () -> (:pos, :pos);
+	CLOSEGROUPRANGE: () -> (:char, :pos, :pos);
 	OPENCOUNT: () -> (:pos, :pos); CLOSECOUNT: () -> (:pos, :pos);
 
-	!OPENGROUPINV: () -> (:pos, :pos);
-	!OPENGROUPCB: () -> (:pos, :pos);
-	!OPENGROUPINVCB: () -> (:pos, :pos);
-
-	INVERT: () -> (:char);
+	!INVERT: () -> (:char);
 	RANGE:  () -> (:char, :pos, :pos);
 
 	NAMED_CLASS: () -> (:ast_class_id, :pos, :pos);
@@ -78,11 +78,10 @@
 	<count-one>:          () -> (:ast_count);
 	<count-range>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
-	!<make-literal-cbrak>:    ()                       -> (:char);
+	<make-literal-cbrak>:    ()                       -> (:char);
 
 	<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
-	!<ast-range-endpoint-class>:  (:ast_class_id) -> (:endpoint);
-	<ast-range-distinct>: (:endpoint, :pos, :endpoint, :pos) -> ();
+	<ast-range-endpoint-class>:   (:ast_class_id) -> (:endpoint);
 
 	<ast-make-empty>:        ()                       -> (:ast_expr);
 	<ast-make-literal>:      (:char)                  -> (:ast_expr);
@@ -103,7 +102,7 @@
 	<ast-add-concat>: (:ast_expr, :ast_expr) -> ();
 	<ast-add-alt>:    (:ast_expr, :ast_expr) -> ();
 
-	<err-expected-term>;
+	!<err-expected-term>;
 	<err-expected-count>;
 	<err-expected-atom>;
 	<err-expected-alts>;
@@ -142,14 +141,6 @@
 
 		character-class: () -> (node :ast_expr) [
 
-			/* TODO: []] [-]] etc.? though they can be escaped. */
-			class-head: (class :ast_expr &) -> () = {
-				! = INVERT;
-				&class = <ast-make-invert>(class);
-			||
-				$;
-			};
-
 			class-literal: () -> (node :ast_expr) = {
 				{
 					(c, !, !) = ESC;
@@ -160,20 +151,53 @@
 				||
 					(c, !, !) = CHAR;
 				};
+
 				node = <ast-make-literal>(c);
 	  		};
 
-			class-range: () -> (node :ast_expr) = {
-				{
-					(ca, start, !) = ESC;
-				||
-					(ca, start, !) = OCT;
-				||
-					(ca, start, !) = HEX;
-				||
-					(ca, start, !) = CHAR;
+			::class-named: () -> (node :ast_expr, start :pos, end :pos) = {
+				(id, start, end) = NAMED_CLASS;
+				node = <ast-make-named>(id);
+			};
+
+			range-endpoint: () -> (r :endpoint, start :pos, end :pos) [
+				range-endpoint-literal: () -> (r :endpoint, start :pos, end :pos) = {
+					{
+						(c, start, end) = ESC;
+					||
+						(c, start, end) = OCT;
+					||
+						(c, start, end) = HEX;
+					||
+						(c, start, end) = CHAR;
+					};
+					r = <ast-range-endpoint-literal>(c);
 				};
-				a = <ast-range-endpoint-literal>(ca);
+
+				range-endpoint-class: () -> (r :endpoint, start :pos, end :pos) = {
+					(id, start, end) = NAMED_CLASS;
+					r = <ast-range-endpoint-class>(id);
+				};
+			] = {
+				{
+					(r, start, end) = range-endpoint-literal;
+				||
+					(r, start, end) = range-endpoint-class;
+				};
+			};
+
+			range-endpoint-end: () -> (r :endpoint, end :pos) = {
+				{
+					(r, !, end) = range-endpoint;
+				||
+					/* allow literal '-' as end of range */
+					(c, !, end) = RANGE;
+					r = <ast-range-endpoint-literal>(c);
+				};
+			};
+
+			class-range: () -> (node :ast_expr) = {
+				(lower, start, !) = range-endpoint;
 
 				{
 					(!, !, !) = RANGE;
@@ -181,28 +205,10 @@
 					<err-expected-range>;
 				};
 
-				{
-					(cz, !, end) = ESC;
-				||
-					(cz, !, end) = OCT;
-				||
-					(cz, !, end) = HEX;
-				||
-					(cz, !, end) = CHAR;
-				||
-					(cz, !, end) = RANGE;
-				};
-				z = <ast-range-endpoint-literal>(cz);
+				(upper, end) = range-endpoint-end;
 
 				<mark-range>(start, end);
-				<ast-range-distinct>(a, start, z, end);
-
-				node = <ast-make-range>(a, start, z, end);
-			};
-
-			class-named: () -> (node :ast_expr) = {
-				(id, !, !) = NAMED_CLASS;
-				node = <ast-make-named>(id);
+				node = <ast-make-range>(lower, start, upper, end);
 			};
 
 			class-term: () -> (node :ast_expr) = {
@@ -210,35 +216,122 @@
 			||
 				node = class-range;
 			||
-				node = class-named;
+				(node, !, !) = class-named;
 			};
 
 			list-of-class-terms: (class :ast_expr) -> () = {
-				{
-					node = class-term;
-					<ast-add-alt>(class, node);
-				##
-					<err-expected-term>;
-				};
-
-				{
-					list-of-class-terms(class);
-				||
-					$;
-				};
+				node = class-term;
+				<ast-add-alt>(class, node);
+				list-of-class-terms(class);
+			||
+				$;
 			};
 
 		] = {
-			(start, !) = OPENGROUP;
+			{
+				(start, !) = OPENGROUP;
 
-			node = <ast-make-alt>;
-			tmp = node;
+				node = <ast-make-alt>;
+				tmp = node;
 
-			class-head(&node);
-			list-of-class-terms(tmp);
+				{
+					(c, rstart, !) = RANGE;
+
+					{
+						lower = <ast-range-endpoint-literal>(c);
+						(!, !, !) = RANGE;
+						(upper,end) = range-endpoint-end;
+						node1 = <ast-make-range>(lower, rstart, upper, end);
+					||
+						node1 = <ast-make-literal>(c);
+					};
+
+					<ast-add-alt>(tmp,node1);
+				||
+					$;
+				};
+
+				list-of-class-terms(tmp);
+			||
+				(start, !) = OPENGROUPINV;
+
+				node = <ast-make-alt>;
+				tmp  = node;
+
+				&node = <ast-make-invert>(node);
+
+				{
+					(c, rstart, !) = RANGE;
+
+					{
+						lower = <ast-range-endpoint-literal>(c);
+						(!, !, !) = RANGE;
+						(upper, end) = range-endpoint-end;
+						node1 = <ast-make-range>(lower, rstart, upper, end);
+					||
+						node1 = <ast-make-literal>(c);
+					};
+
+					<ast-add-alt>(tmp,node1);
+				||
+					$;
+				};
+
+				list-of-class-terms(tmp);
+
+			||
+				(start, !) = OPENGROUPCB;
+
+				node = <ast-make-alt>;
+				tmp  = node;
+
+				cbrak = <make-literal-cbrak>;
+				{
+					r = <ast-range-endpoint-literal>(cbrak);
+					(!, !, !) = RANGE;
+					(upper, end) = range-endpoint-end;
+					/* FIXME: start is off by one */
+					lower = <ast-range-endpoint-literal>(cbrak);
+					node1 = <ast-make-range>(lower, start, upper, end);
+				||
+					node1 = <ast-make-literal>(cbrak);
+				};
+
+				<ast-add-alt>(tmp, node1);
+
+				list-of-class-terms(tmp);
+			||
+				(start, !) = OPENGROUPINVCB;
+
+				node = <ast-make-alt>;
+				tmp  = node;
+
+				&node = <ast-make-invert>(node);
+
+				cbrak = <make-literal-cbrak>;
+				{
+					r = <ast-range-endpoint-literal>(cbrak);
+					(!, !, !) = RANGE;
+					(upper, end) = range-endpoint-end;
+					/* FIXME: start is off by one */
+					lower = <ast-range-endpoint-literal>(cbrak);
+					node1 = <ast-make-range>(lower, start, upper, end);
+				||
+					node1 = <ast-make-literal>(cbrak);
+				};
+
+				<ast-add-alt>(tmp, node1);
+
+				list-of-class-terms(tmp);
+			};
 
 			{
 				(!, !, end) = CLOSEGROUP;
+				<mark-group>(start, end);
+			||
+				(crange, !, end) = CLOSEGROUPRANGE;
+				range = <ast-make-literal>(crange);
+				<ast-add-alt>(tmp, range);
 				<mark-group>(start, end);
 			##
 				<err-expected-closegroup>;

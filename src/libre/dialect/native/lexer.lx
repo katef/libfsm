@@ -41,8 +41,7 @@
 '\'  /[0-7]{1,3}/   -> $oct;
 '\x' /[0-9a-f]{2}/i -> $hex;
 
-'[' -> $opengroup .. ']' -> $closegroup {
-	'^' -> $invert;
+'[' -> $opengroup, '[^' -> $opengroupinv, '[]' -> $opengroupcb, '[^]' -> $opengroupinvcb .. ']' -> $closegroup, '-]' -> $closegrouprange {
 	'-' -> $range;
 
 	# extension escapes
@@ -80,7 +79,7 @@
 	'[:xdigit:]' -> $named__class;
 
 	# XXX: /./ - the above
-	/[^\^\-\\]/ -> $char;
+	/[^\-\\]/ -> $char;
 }
 
 '{' -> $opencount .. '}' -> $closecount {
