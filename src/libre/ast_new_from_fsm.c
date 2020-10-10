@@ -494,12 +494,15 @@ ast_new_from_fsm(const struct fsm *fsm)
 	assert(fsm);
 
 	expr = ast_expr_new_from_fsm(&pool, fsm);
-	if (!expr)
+	if (!expr) {
+		ast_pool_free(pool);
 		return NULL;
+	}
 
 	ast = ast_new();
 	if (!ast) {
 		ast_expr_free(expr);
+		ast_pool_free(pool);
 		return NULL;
 	}
 
