@@ -1978,7 +1978,7 @@ p_expr_C_Ccomment(flags flags, lex_state lex_state, act_state act_state, err err
 #line 500 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
-			err->e = RE_BADCOMMENT;
+			err->e = RE_EBADCOMMENT;
 		}
 		goto ZL1;
 	

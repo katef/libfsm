@@ -1,0 +1,1 @@
+^a(?# (bad comment) )b$
