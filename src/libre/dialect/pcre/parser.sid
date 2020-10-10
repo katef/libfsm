@@ -90,7 +90,6 @@
 
 	<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
 	<ast-range-endpoint-class>:   (:ast_class_id) -> (:endpoint);
-	!<ast-range-distinct>: (:endpoint, :pos, :endpoint, :pos) -> ();
 
 	<ast-make-empty>:        ()                       -> (:ast_expr);
 	<ast-make-literal>:      (:char)                  -> (:ast_expr);

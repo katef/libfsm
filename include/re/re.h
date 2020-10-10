@@ -65,7 +65,6 @@ enum re_errno {
 
 	RE_ENEGRANGE    =  0 | RE_MARK | RE_GROUP,
 	RE_ENEGCOUNT    =  1 | RE_MARK | RE_GROUP,
-	RE_EDISTINCT    =  2 | RE_MARK | RE_GROUP,
 
 	RE_EHEXRANGE    =  0 | RE_MARK | RE_ESC,
 	RE_EOCTRANGE    =  1 | RE_MARK | RE_ESC,
