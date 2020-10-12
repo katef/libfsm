@@ -8,6 +8,7 @@ SRC += theft/wrap.c
 SRC += theft/fuzz_adt_edge_set.c
 SRC += theft/fuzz_adt_priq.c
 SRC += theft/fuzz_adt_set.c
+SRC += theft/fuzz_capture_string_set.c
 SRC += theft/fuzz_literals.c
 SRC += theft/fuzz_minimise.c
 SRC += theft/fuzz_nfa.c
@@ -17,6 +18,7 @@ SRC += theft/fuzz_re_parser_pcre.c
 SRC += theft/fuzz_trim.c
 
 SRC += theft/type_info_adt_edge_set.c
+SRC += theft/type_info_capture_string_set.c
 SRC += theft/type_info_dfa.c
 SRC += theft/type_info_fsm_literal.c
 SRC += theft/type_info_nfa.c

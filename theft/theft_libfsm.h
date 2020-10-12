@@ -70,6 +70,7 @@ void register_test_literals(void);
 void register_test_re(void);
 void register_test_adt_priq(void);
 void register_test_adt_set(void);
+void register_test_capture_string_set(void);
 void register_test_nfa(void);
 void register_test_adt_edge_set(void);
 void register_test_trim(void);

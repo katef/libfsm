@@ -354,14 +354,14 @@ grow_capture_action_buckets(const struct fsm_alloc *alloc,
 	for (i = 0; i < ci->bucket_count; i++) {
 		const struct fsm_capture_action_bucket *src_b = &ci->buckets[i];
 		unsigned h;
-		size_t b_i, mask;
+		const size_t mask = ncount - 1;
+		size_t b_i;
 
 		if (src_b->state == CAPTURE_NO_STATE) {
 			continue;
 		}
 
 		h = PHI32 * src_b->state;
-		mask = ci->bucket_count - 1;
 		for (b_i = 0; b_i < ncount; b_i++) {
 			struct fsm_capture_action_bucket *dst_b;
 			dst_b = &nbuckets[(h + b_i) & mask];

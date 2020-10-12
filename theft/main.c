@@ -240,6 +240,7 @@ main(int argc, char **argv)
 	register_test_re();
 	register_test_adt_priq();
 	register_test_adt_set();
+	register_test_capture_string_set();
 	register_test_nfa();
 	register_test_trim();
 	register_test_minimise();

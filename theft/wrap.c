@@ -48,7 +48,7 @@ wrap_fsm_exec(struct fsm *fsm, const struct string_pair *pair, fsm_state_t *stat
 		.offset = 0
 	};
 
-	e = fsm_exec(fsm, scanner_next, &s, state);
+	e = fsm_exec(fsm, scanner_next, &s, state, NULL);
 
 	assert(s.str == pair->string);
 	assert(s.magic == &s.magic);
