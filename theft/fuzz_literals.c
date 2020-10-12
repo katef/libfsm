@@ -139,7 +139,7 @@ add_literal(struct fsm *fsm, const uint8_t *string, size_t size, intptr_t id)
 
 	fsm_setendopaque(new, (void *) id);
 
-	res = fsm_union(fsm, new);
+	res = fsm_union(fsm, new, NULL);
 	if (res == NULL) {
 		return NULL;
 	}
