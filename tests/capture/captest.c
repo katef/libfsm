@@ -3,6 +3,10 @@
 #include <fsm/alloc.h>
 #include <fsm/capture.h>
 
+#if CAPTEST_RUN_SINGLE_LOG
+#include <fsm/print.h>
+#endif
+
 #define FAIL(MSG)					\
 	fprintf(stderr, "FAIL: %s:%d -- %s\n",	\
 	    __FILE__, __LINE__, MSG);		\
@@ -47,6 +51,10 @@ captest_run_single(const struct captest_single_fsm_test_info *info)
 		if (path->start == 0 && path->end == 0 && i > 0) {
 			break;	/* end of list */
 		}
+
+		/* no zero-width captures */
+		assert(path->end > path->start);
+
 		if (!fsm_capture_set_path(fsm, i,
 			path->start, path->end)) {
 			fprintf(stderr,
@@ -70,6 +78,11 @@ captest_run_single(const struct captest_single_fsm_test_info *info)
 		}
 	}
 
+#if CAPTEST_RUN_SINGLE_LOG
+	fsm_print_fsm(stderr, fsm);
+	fsm_capture_dump(stderr, "fsm", fsm);
+#endif
+
 	exec_res = fsm_exec(fsm, captest_getc, &input, &end, got_captures);
 	if (exec_res != 1) { FAIL("exec_res"); }
 	if (end != strlen(info->string)) { FAIL("exec end pos"); }
@@ -84,6 +97,11 @@ captest_run_single(const struct captest_single_fsm_test_info *info)
 	}
 
 	for (i = 0; i < capture_count; i++) {
+#if CAPTEST_RUN_SINGLE_LOG
+		fprintf(stderr, "captest: capture %lu: exp (%ld, %ld), got (%ld, %ld)\n",
+		    i, exp_captures[i].pos[0], exp_captures[i].pos[1],
+		    got_captures[i].pos[0], got_captures[i].pos[1]);
+#endif
 		if (got_captures[i].pos[0] != exp_captures[i].pos[0]) {
 			fprintf(stderr, "capture[%lu].pos[0]: exp %lu, got %lu\n",
 			    i, exp_captures[i].pos[0],

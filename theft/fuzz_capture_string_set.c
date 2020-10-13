@@ -3,7 +3,9 @@
 #include <fsm/capture.h>
 #include <fsm/print.h>
 
-#define LOG_LEVEL 2
+#define LOG_LEVEL 0
+
+#define INIT_CAPTURES ((size_t)-2)
 
 static enum theft_trial_res
 prop_css_invariants(struct theft *t, void *arg1);
@@ -11,7 +13,8 @@ prop_css_invariants(struct theft *t, void *arg1);
 static enum theft_trial_res
 check_capstring_set(struct capture_env *env,
     const struct capture_string_set *css,
-    const char *input, struct fsm_capture *captures);
+    const char *input, bool check_others_for_fps,
+    struct fsm_capture *captures);
 
 static struct fsm *
 build_capstring_dfa(const struct capstring *cs, uint8_t end_id);
@@ -19,12 +22,13 @@ build_capstring_dfa(const struct capstring *cs, uint8_t end_id);
 struct check_env {
 	struct fsm *combined;
 	struct fsm **copies;
-	const size_t *capture_bases;
+	const struct fsm_combined_base_pair *capture_bases;
 	const unsigned *capture_counts;
 	size_t copies_count;
 	uint8_t letter_count;
 	uint8_t string_maxlen;
 	size_t checks;
+	bool check_others_for_fps;
 };
 
 struct css_input {
@@ -52,18 +56,24 @@ compare_captures(const struct check_env *env,
     size_t nth_fsm, const struct fsm_capture *captures);
 
 static bool
+check_captures_for_false_positives(const struct check_env *env,
+    const struct fsm_capture *captures_combined, size_t nth_fsm);
+
+static bool
 test_css_invariants(theft_seed seed)
 {
 	enum theft_run_res res;
 
 	struct capture_env env = {
 		.tag = 'c',
-		.letter_count = 2,
-		.string_maxlen = 7,
+		.letter_count = 3,
+		.string_maxlen = 8,
 	};
 
 
 	seed = theft_seed_of_time();
+	/* seed = 0x2eb4e4ca6df59761ULL; */
+
 	fprintf(stderr, "==== seed %lu\n", seed);
 
 	/* theft_generate(stdout, seed, &type_info_capture_string_set, &env); */
@@ -81,7 +91,7 @@ test_css_invariants(theft_seed seed)
 		.seed = seed,
 		.trials = 100000,
 		.fork = {
-			/* .enable = true, */
+			.enable = true,
 			.timeout = 10000,
 		},
 	};
@@ -107,13 +117,14 @@ prop_css_invariants(struct theft *t, void *arg1)
 
 	struct fsm_capture captures[MAX_TOTAL_CAPTURES];
 	const struct capture_string_set *css = arg1;
-	return check_capstring_set(env, css, NULL, captures);
+	return check_capstring_set(env, css, NULL, false, captures);
 }
 
 static enum theft_trial_res
 check_capstring_set(struct capture_env *env,
     const struct capture_string_set *css,
-    const char *input, struct fsm_capture *captures)
+    const char *input, bool check_others_for_fps,
+    struct fsm_capture *captures)
 {
 	const int verbosity = LOG_LEVEL;
 
@@ -121,20 +132,16 @@ check_capstring_set(struct capture_env *env,
 		return THEFT_TRIAL_SKIP;
 	}
 
-	size_t capture_bases[MAX_CAPTURE_STRINGS] = { 0 };
 	unsigned capture_counts[MAX_CAPTURE_STRINGS] = { 0 };
 	struct fsm *fsm_copies[MAX_CAPTURE_STRINGS] = { NULL };
+
+	struct fsm *fsms[MAX_CAPTURE_STRINGS] = { NULL };
+	struct fsm_combined_base_pair capture_bases[MAX_CAPTURE_STRINGS];
 	struct fsm *combined = NULL;
+	size_t combined_capture_count, total_captures = 0;
 
 	for (size_t cs_i = 0; cs_i < css->count; cs_i++) {
 		const struct capstring *cs = &css->capture_strings[cs_i];
-
-		for (size_t i = 0; i < cs->capture_count; i++) {
-			/* if (cs->captures[i].length == 0) { */
-			/* 	return THEFT_TRIAL_SKIP; */
-			/* } */
-		}
-
 		struct fsm *dfa = build_capstring_dfa(cs, (uint8_t)cs_i);
 
 		if (dfa == NULL) {
@@ -159,6 +166,7 @@ check_capstring_set(struct capture_env *env,
 		if (verbosity > 2) {
 			fprintf(stderr, "==== min(det(cp))\n");
 			fsm_print_fsm(stderr, cp);
+			fsm_capture_dump(stderr, "min(det(cp))", cp);
 			fprintf(stderr, "capture_count: %lu\n", cp_capture_count);
 		}
 
@@ -168,77 +176,38 @@ check_capstring_set(struct capture_env *env,
 			return THEFT_TRIAL_FAIL;
 		}
 
-		if (cs_i == 0) {
-			combined = dfa;
-			/* fsm_capture_dump(stderr, "pre-union", combined); */
-			capture_counts[0] = capture_count;
-		} else {
-			struct fsm_combine_info ci;
-			combined = fsm_union(combined, dfa, &ci);
-			if (combined == NULL) {
-				return THEFT_TRIAL_ERROR;
-			}
-
-			/* FIXME: the way we track capture bases is problematic
-			 * here, because everything before may get shifted --
-			 * if _a is > 0, we need to increment everything up to
-			 * now by that, right? */
-			if (LOG_LEVEL > 2) {
-				fprintf(stderr, "union'd, bases %u and %u, cs_i %lu\n",
-				    ci.capture_base_a,
-				    ci.capture_base_b, cs_i);
-			}
-
-			if (cs_i == 1) {
-				capture_bases[0] = ci.capture_base_a;
-			}
-			capture_bases[cs_i] = ci.capture_base_b;
-			capture_counts[cs_i] = cp_capture_count;
-
-			if (ci.capture_base_a > 0 && cs_i > 1) {
-				size_t i;
-				for (i = 0; i < cs_i; i++) {
-					capture_bases[i] += ci.capture_base_a;
-
-					if (LOG_LEVEL > 2) {
-						fprintf(stderr, " -- *** capture_bases[%lu] now %lu\n", i, capture_bases[i]);
-					}
-				}
-			}
-
-			if (capture_counts[cs_i] < capture_count) {
-				fprintf(stderr, "FAIL: combined has %u captures but dfa has %zu\n",
-				    capture_counts[cs_i], capture_count);
-				return THEFT_TRIAL_FAIL;
-			}
-
-			if (verbosity > 2) {
-				fsm_capture_dump(stderr, "unioned", combined);
-				fsm_print_fsm(stderr, combined);
-			}
-
-		}
-
-		if (verbosity > 2) {
-			fprintf(stderr, "==== combined with %zu:\n", cs_i);
-			fsm_print_fsm(stderr, combined);
-		}
+		fsms[cs_i] = dfa;
+		capture_counts[cs_i] = capture_count;
 	}
 
+	combined = fsm_union_array(css->count, fsms, capture_bases);
+	if (combined == NULL) {
+		fprintf(stderr, "FAIL: combined is NULL\n");
+		return THEFT_TRIAL_FAIL;
+	}
+
+	combined_capture_count = fsm_countcaptures(combined);
+	for (size_t cs_i = 0; cs_i < css->count; cs_i++) {
+		total_captures += capture_counts[cs_i];
+	}
+	if (total_captures != combined_capture_count) {
+		fprintf(stderr, "FAIL: total_captures %zu, combined_cc %zu\n",
+		    total_captures, combined_capture_count);
+		return THEFT_TRIAL_FAIL;
+	}
+
+
 	if (verbosity > 2) {
-		fsm_capture_dump(stderr, "pre-det", combined);
+		fprintf(stderr, "==== combined, pre-det\n");
 		fsm_print_fsm(stderr, combined);
+		fsm_capture_dump(stderr, "combined, pre-det", combined);
 	}
 
 	if (!fsm_determinise(combined)) {
 		return THEFT_TRIAL_ERROR;
 	}
 
-	/* (do not minimise) */
-	/* if (!fsm_minimise(combined)) { */
-	/* 	return THEFT_TRIAL_ERROR; */
-	/* } */
-
+	/* should be a no-op */
 	if (!fsm_complement(combined)) {
 		return THEFT_TRIAL_ERROR;
 	}
@@ -260,6 +229,7 @@ check_capstring_set(struct capture_env *env,
 		.capture_counts = capture_counts,
 		.letter_count = env->letter_count,
 		.string_maxlen = env->string_maxlen,
+		.check_others_for_fps = check_others_for_fps,
 	};
 
 	enum theft_trial_res res;
@@ -268,11 +238,16 @@ check_capstring_set(struct capture_env *env,
 		res = check_fsms_for_inputs(&check_env, captures);
 		/* fprintf(stderr, "-- checked %zu\n", check_env.checks); */
 	} else {
+		if (verbosity > 2) {
+			fprintf(stderr, "===== checking for single input string '%s'\n", input);
+		}
 		res = check_fsms_for_single_input(&check_env, captures, input);
 	}
 
 	for (size_t cs_i = 0; cs_i < css->count; cs_i++) {
-		fsm_free(fsm_copies[cs_i]);
+		if (fsm_copies[cs_i] != NULL) {
+			fsm_free(fsm_copies[cs_i]);
+		}
 	}
 	fsm_free(combined);
 
@@ -289,10 +264,15 @@ check_fsms_for_single_input(struct check_env *env, struct fsm_capture *captures,
 	struct css_input input = { .string = input_str, };
 	fsm_state_t end;
 	assert(env->combined);
+	assert(captures != NULL);
 
 	for (size_t i = 0; i < MAX_TOTAL_CAPTURES; i++) {
-		captures[i].pos[0] = (size_t)-3;
-		captures[i].pos[1] = (size_t)-3;
+		captures[i].pos[0] = INIT_CAPTURES;
+		captures[i].pos[1] = INIT_CAPTURES;
+	}
+
+	if (LOG_LEVEL > 1) {
+		fprintf(stderr, "=== executing env->combined\n");
 	}
 
 	int exec_res = fsm_exec(env->combined, css_getc,
@@ -317,8 +297,8 @@ check_fsms_for_single_input(struct check_env *env, struct fsm_capture *captures,
 		for (size_t i = 0; i < env->copies_count; i++) {
 			struct fsm_capture captures2[MAX_TOTAL_CAPTURES];
 			for (size_t i = 0; i < MAX_TOTAL_CAPTURES; i++) {
-				captures2[i].pos[0] = (size_t)-2;
-				captures2[i].pos[1] = (size_t)-2;
+				captures2[i].pos[0] = INIT_CAPTURES;
+				captures2[i].pos[1] = INIT_CAPTURES;
 			}
 
 			struct css_input input2 = { .string = input_str, };
@@ -338,6 +318,11 @@ check_fsms_for_single_input(struct check_env *env, struct fsm_capture *captures,
 				found = true;
 				if (!compare_captures(env, captures,
 					i, captures2)) {
+					return THEFT_TRIAL_FAIL;
+				}
+			} else if (exec_res2 == 0 && env->check_others_for_fps) {
+				if (!check_captures_for_false_positives(env,
+					captures, i)) {
 					return THEFT_TRIAL_FAIL;
 				}
 			}
@@ -394,74 +379,6 @@ check_iter(struct check_env *env,
 		if (res != THEFT_TRIAL_PASS) {
 			return res;
 		}
-
-#if 0
-		/* check it: if the combined one matches, then
-		 * at least one of the original strings must match,
-		 * and then check the captures. */
-		struct css_input input = { .string = buf, };
-		fsm_state_t end;
-		assert(env->combined);
-
-		for (size_t i = 0; i < MAX_TOTAL_CAPTURES; i++) {
-			captures[i].pos[0] = (size_t)-3;
-			captures[i].pos[1] = (size_t)-3;
-		}
-
-		int exec_res = fsm_exec(env->combined, css_getc,
-		    &input, &end, captures);
-		if (exec_res < 0) {
-			fprintf(stderr, "!!! '%s', res %d\n",
-			    buf, exec_res);
-		}
-
-		assert(exec_res >= 0);
-		if (exec_res == 1) {
-			if (LOG_LEVEL > 0) {
-				const size_t combined_capture_count = fsm_countcaptures(env->combined);
-				for (size_t i = 0; i < combined_capture_count; i++) {
-					fprintf(stderr, "capture[%zu/%zu]: (%ld, %ld)\n",
-					    i, combined_capture_count,
-					    captures[i].pos[0], captures[i].pos[1]);
-				}
-			}
-
-			bool found = false;
-			for (size_t i = 0; i < env->copies_count; i++) {
-				struct fsm_capture captures2[MAX_TOTAL_CAPTURES];
-				for (size_t i = 0; i < MAX_TOTAL_CAPTURES; i++) {
-					captures2[i].pos[0] = (size_t)-2;
-					captures2[i].pos[1] = (size_t)-2;
-				}
-
-				struct css_input input2 = { .string = buf, };
-				fsm_state_t end2;
-				if (env->copies[i] == NULL) {
-					fprintf(stderr, "env->copies[%zu]: null\n", i);
-				}
-
-				if (LOG_LEVEL > 1) {
-					fprintf(stderr, "=== executing env->copies[%lu]\n", i);
-				}
-
-				assert(env->copies[i] != NULL);
-				int exec_res2 = fsm_exec(env->copies[i],
-				    css_getc, &input2, &end2, captures2);
-				if (exec_res2 == 1) {
-					found = true;
-					if (!compare_captures(env, captures,
-						i, captures2)) {
-						return THEFT_TRIAL_FAIL;
-					}
-				}
-			}
-
-			if (!found) {
-				fprintf(stderr, "combined matched but not originals\n");
-				return THEFT_TRIAL_FAIL;
-			}
-		}
-#endif
 	}
 
 	env->checks++;
@@ -490,7 +407,7 @@ compare_captures(const struct check_env *env,
 	}
 
 	const size_t capture_count = env->capture_counts[nth_fsm];
-	const size_t base = env->capture_bases[nth_fsm];
+	const size_t base = env->capture_bases[nth_fsm].capture;
 
 	if (combined_capture_count < capture_count) {
 		fprintf(stderr, "expected %lu captures, got %lu\n",
@@ -505,11 +422,13 @@ compare_captures(const struct check_env *env,
 	for (size_t i = 0; i < MAX_TOTAL_CAPTURES; i++) {
 		fprintf(stderr, "captures[%zu]: (%ld, %ld)\n",
 		    i, captures[i].pos[0], captures[i].pos[1]);
+		if (captures[i].pos[0] == (size_t)INIT_CAPTURES) { break; }
 	}
 
 	for (size_t i = 0; i < MAX_TOTAL_CAPTURES; i++) {
 		fprintf(stderr, "captures_combined[%zu]: (%ld, %ld)\n",
 		    i, captures_combined[i].pos[0], captures_combined[i].pos[1]);
+		if (captures_combined[i].pos[0] == INIT_CAPTURES) { break; }
 	}
 #endif
 
@@ -540,6 +459,14 @@ compare_captures(const struct check_env *env,
 				/* 	return false; */
 				/* } */
 			}
+
+			if (0) {
+				fprintf(stderr, "matched capture %zu: exp (%ld - %ld), got (%ld - %ld)\n",
+				    i,
+				    captures[i].pos[0], captures[i].pos[1],
+				    captures_combined[i + base].pos[0],
+				    captures_combined[i + base].pos[1]);
+			}
 		}
 	}
 
@@ -552,6 +479,35 @@ compare_captures(const struct check_env *env,
 	}
 	return true;
 }
+
+static bool
+check_captures_for_false_positives(const struct check_env *env,
+    const struct fsm_capture *captures_combined, size_t nth_fsm)
+{
+	(void)env;
+	(void)captures_combined;
+	(void)nth_fsm;
+
+	const size_t capture_count = env->capture_counts[nth_fsm];
+	const size_t base = env->capture_bases[nth_fsm].capture;
+
+	for (size_t i = 0; i < capture_count; i++) {
+		const struct fsm_capture *c = &captures_combined[i + base];
+		if (c->pos[0] != FSM_CAPTURE_NO_POS) {
+			fprintf(stderr, "false positive[0], expected %ld got %ld\n",
+			    FSM_CAPTURE_NO_POS, c->pos[0]);
+			return false;
+		}
+		if (c->pos[1] != FSM_CAPTURE_NO_POS) {
+			fprintf(stderr, "false positive[1], expected %ld got %ld\n",
+			    FSM_CAPTURE_NO_POS, c->pos[1]);
+			return false;
+		}
+	}
+
+	return true;
+}
+
 
 static struct fsm_options options;
 
@@ -694,7 +650,7 @@ cleanup:
 }
 
 static bool
-regression0(theft_seed seed)
+regression_fp1(theft_seed seed)
 {
 	(void)seed;
 
@@ -704,213 +660,7 @@ regression0(theft_seed seed)
 		.string_maxlen = 5,
 	};
 
-	const struct capture_string_set css = {
-		.count = 3,
-		.capture_strings = {
-			{
-				.string = "",
-				.capture_count = 0,
-			},
-			{
-				.string = "",
-				.capture_count = 0,
-			},
-			{
-				.string = "aaa",
-				.capture_count = 0,
-			},
-		},
-	};
-
-	return THEFT_TRIAL_PASS ==
-	    check_capstring_set(&env, &css, NULL, NULL);
-}
-
-static bool
-regression1(theft_seed seed)
-{
-	(void)seed;
-
-	struct capture_env env = {
-		.tag = 'c',
-		.letter_count = 3,
-		.string_maxlen = 5,
-	};
-
-	const struct capture_string_set css = {
-		.count = 1,
-		.capture_strings = {
-			{
-				.string = "a",
-				.capture_count = 1,
-				.captures = {
-					{ 0, 0 },
-				},
-			},
-		},
-	};
-
-	return THEFT_TRIAL_PASS ==
-	    check_capstring_set(&env, &css, NULL, NULL);
-}
-
-static bool
-regression2(theft_seed seed)
-{
-	(void)seed;
-
-	struct capture_env env = {
-		.tag = 'c',
-		.letter_count = 3,
-		.string_maxlen = 5,
-	};
-
-	/* enough actions to force hash table growth */
-	const struct capture_string_set css = {
-		.count = 2,
-		.capture_strings = {
-			{
-				.string = "bbbbb",
-				.capture_count = 1,
-				.captures = {
-					{ 0, 0 },
-				},
-			},
-			{
-				.string = "b*bba",
-				.capture_count = 2,
-				.captures = {
-					{ 0, 2 },
-					{ 1, 3 },
-				},
-			},
-		},
-	};
-
-	return THEFT_TRIAL_PASS ==
-	    check_capstring_set(&env, &css, NULL, NULL);
-}
-
-static bool
-regression3(theft_seed seed)
-{
-	(void)seed;
-
-	struct capture_env env = {
-		.tag = 'c',
-		.letter_count = 3,
-		.string_maxlen = 5,
-	};
-
-	const struct capture_string_set css = {
-		.count = 2,
-		.capture_strings = {
-			{
-				.string = "aaaaaaa",
-				.capture_count = 2,
-				.captures = {
-					{ 0, 2 },
-					{ 0, 0 },
-				},
-			},
-			{
-				.string = "d*a*bbd",
-				.capture_count = 2,
-				.captures = {
-					{ 0, 0 },
-					{ 0, 2 },
-				},
-			},
-		},
-	};
-
-	return THEFT_TRIAL_PASS ==
-	    check_capstring_set(&env, &css, NULL, NULL);
-}
-
-static bool
-regression4(theft_seed seed)
-{
-	(void)seed;
-
-	struct capture_env env = {
-		.tag = 'c',
-		.letter_count = 3,
-		.string_maxlen = 5,
-	};
-
-	/* enough actions to force hash table growth */
-	const struct capture_string_set css = {
-		.count = 2,
-		.capture_strings = {
-			{
-				.string = "aa",
-				.capture_count = 0,
-			},
-			{
-				.string = "",
-				.capture_count = 1,
-				.captures = {
-					{ 0, 0 },
-				},
-			},
-		},
-	};
-
-	return THEFT_TRIAL_PASS ==
-	    check_capstring_set(&env, &css, NULL, NULL);
-}
-
-static bool
-regression5(theft_seed seed)
-{
-	(void)seed;
-
-	struct capture_env env = {
-		.tag = 'c',
-		.letter_count = 3,
-		.string_maxlen = 5,
-	};
-
-	/* enough actions to force hash table growth */
-	const struct capture_string_set css = {
-		.count = 3,
-		.capture_strings = {
-			{
-				.string = "",
-				.capture_count = 0,
-			},
-			{
-				.string = "",
-				.capture_count = 1,
-				.captures = {
-					{ 0, 0 },
-				},
-			},
-			{
-				.string = "aaaa",
-				.capture_count = 1,
-				.captures = {
-					{ 0, 2 },
-				},
-			},
-		},
-	};
-
-	return THEFT_TRIAL_PASS ==
-	    check_capstring_set(&env, &css, NULL, NULL);
-}
-
-static bool
-regression_fp(theft_seed seed)
-{
-	(void)seed;
-
-	struct capture_env env = {
-		.tag = 'c',
-		.letter_count = 3,
-		.string_maxlen = 5,
-	};
+	struct fsm_capture captures[MAX_TOTAL_CAPTURES];
 
 	const struct capture_string_set css = {
 		.count = 2,
@@ -935,11 +685,11 @@ regression_fp(theft_seed seed)
 	};
 
 	return THEFT_TRIAL_PASS ==
-	    check_capstring_set(&env, &css, NULL, NULL);
+	    check_capstring_set(&env, &css, NULL, false, captures);
 }
 
 static bool
-regression6(theft_seed seed)
+regression_fp2(theft_seed seed)
 {
 	(void)seed;
 
@@ -949,58 +699,28 @@ regression6(theft_seed seed)
 		.string_maxlen = 5,
 	};
 
-	/* enough actions to force hash table growth */
+	struct fsm_capture captures[MAX_TOTAL_CAPTURES];
+
+	/* Setting this to true will cause it to fail, because
+	 * "aaa" doesn't match the second DFA, but it currently
+	 * still sets its capture group.
+	 *
+	 * Once information mapping end states to capture groups
+	 * is available, fsm_exec can use it to clear any false
+	 * positives. */
+	const bool check_others = false;
+
 	const struct capture_string_set css = {
 		.count = 2,
 		.capture_strings = {
 			{
-				.string = "",
-				.capture_count = 1,
-				.captures = {
-					{ 0, 0 },
-				},
-			},
-			{
-				.string = "a",
-				.capture_count = 1,
-				.captures = {
-					{ 0, 0 },
-				},
-			},
-		},
-	};
-
-	return THEFT_TRIAL_PASS ==
-	    check_capstring_set(&env, &css, NULL, NULL);
-}
-
-static bool
-regression7(theft_seed seed)
-{
-	(void)seed;
-
-	struct capture_env env = {
-		.tag = 'c',
-		.letter_count = 3,
-		.string_maxlen = 5,
-	};
-
-	const struct capture_string_set css = {
-		.count = 3,
-		.capture_strings = {
-			{
-				.string = "bb",
+				.string = "aaa",
 				.capture_count = 0,
 			},
 			{
-				.string = "a",
-				.capture_count = 0,
-			},
-			{
-				.string = "b*a",
-				.capture_count = 2,
+				.string = "aa",
+				.capture_count = 1,
 				.captures = {
-					{ 0, 0 },
 					{ 0, 1 },
 				},
 			},
@@ -1008,72 +728,9 @@ regression7(theft_seed seed)
 	};
 
 	return THEFT_TRIAL_PASS ==
-	    check_capstring_set(&env, &css, NULL, NULL);
+	    check_capstring_set(&env, &css, "aaa",
+		check_others, captures);
 }
-
-static bool
-regression8(theft_seed seed)
-{
-	(void)seed; // 0x5d58a83011ff1d39
-
-	struct capture_env env = {
-		.tag = 'c',
-		.letter_count = 3,
-		.string_maxlen = 5,
-	};
-
-#if 0
-	const struct capture_string_set css = {
-		.count = 2,
-		.capture_strings = {
-			{	/* "()aa" */
-				.string = "aa",
-				.capture_count = 1,
-				.captures = {
-					{ 0, 0 },
-				},
-			},
-			{	/* "()a*(a)a()a" */
-				.string = "a*aaa*",
-				.capture_count = 3,
-				.captures = {
-					{ 0, 0 },
-					{ 3, 0 },
-					{ 1, 1 },
-				},
-			},
-		},
-	};
-#else
-
-	/* echo "bananas" | pcregrep --om-separator="#" -o1 -o2 ".*(an).*(ana).*" */
-	/* echo "aa" | pcregrep --om-separator="#" -o1 -o2 "a*(a)()" */
-	/* -> [(0,1); (-1,-1)] */
-
-	const struct capture_string_set css = {
-		.count = 2,
-		.capture_strings = {
-			{	/* "aa" */
-				.string = "aa",
-				.capture_count = 0,
-			},
-			{	/* "a*(a)()" */
-				.string = "a*a",
-				.capture_count = 2,
-				.captures = {
-					{ 1, 1 },
-					{ 2, 0 },
-				},
-			},
-		},
-	};
-#endif
-	return THEFT_TRIAL_PASS ==
-	    check_capstring_set(&env, &css, NULL, NULL);
-
-}
-
-
 
 static bool
 regression_n_1(theft_seed seed)
@@ -1109,7 +766,186 @@ regression_n_1(theft_seed seed)
 	struct fsm_capture captures[MAX_TOTAL_CAPTURES];
 
 	if (THEFT_TRIAL_PASS !=
-	    check_capstring_set(&env, &css, "ab", captures)) {
+	    check_capstring_set(&env, &css, "ab", false, captures)) {
+		return false;
+	}
+
+	/* FIXME: check captures, need base info */
+	fprintf(stderr, "%ld, %ld, %ld, %ld\n",
+	    captures[0].pos[0], captures[0].pos[1],
+	    captures[1].pos[0], captures[1].pos[1]);
+
+	return true;
+}
+
+static bool
+regression_n_2(theft_seed seed)
+{
+	(void)seed;
+
+	struct capture_env env = {
+		.tag = 'c',
+		.letter_count = 2,
+		.string_maxlen = 5,
+	};
+
+	const struct capture_string_set css = {
+		.count = 4,
+		.capture_strings = {
+			{
+				.string = "a",
+				.capture_count = 0,
+			},
+			{
+				.string = "a*ab*ab",
+				.capture_count = 1,
+				.captures = {
+					{ 0, 4 },
+				},
+			},
+			{
+				.string = "bb",
+				.capture_count = 0,
+			},
+			{
+				.string = "ba",
+				.capture_count = 0,
+			},
+		},
+	};
+
+	struct fsm_capture captures[MAX_TOTAL_CAPTURES];
+
+	if (THEFT_TRIAL_PASS !=
+	    check_capstring_set(&env, &css, NULL, false, captures)) {
+		return false;
+	}
+
+	/* FIXME: check captures, need base info */
+	fprintf(stderr, "%ld, %ld, %ld, %ld\n",
+	    captures[0].pos[0], captures[0].pos[1],
+	    captures[1].pos[0], captures[1].pos[1]);
+	/* assert(captures[0].pos[0] ==  */
+
+	return true;
+}
+
+static bool
+regression_n_3(theft_seed seed)
+{
+	(void)seed;
+
+	struct capture_env env = {
+		.tag = 'c',
+		.letter_count = 2,
+		.string_maxlen = 5,
+	};
+
+	const struct capture_string_set css = {
+		.count = 1,
+		.capture_strings = {
+			{
+				.string = "a*b*abb",
+				.capture_count = 1,
+				.captures = {
+					{ 0, 3 },
+				},
+			},
+		},
+	};
+
+	struct fsm_capture captures[MAX_TOTAL_CAPTURES];
+
+	if (THEFT_TRIAL_PASS !=
+	    check_capstring_set(&env, &css, "aabb", false, captures)) {
+		return false;
+	}
+
+	/* FIXME: check captures, need base info */
+	fprintf(stderr, "%ld, %ld, %ld, %ld\n",
+	    captures[0].pos[0], captures[0].pos[1],
+	    captures[1].pos[0], captures[1].pos[1]);
+	/* assert(captures[0].pos[0] ==  */
+
+	return true;
+
+}
+
+static bool
+regression_n_4(theft_seed seed)
+{
+	(void)seed;
+
+	struct capture_env env = {
+		.tag = 'c',
+		.letter_count = 2,
+		.string_maxlen = 5,
+	};
+
+	/* Seed 0xe43c1e1972671223 */
+	const struct capture_string_set css = {
+		.count = 2,
+		.capture_strings = {
+			{
+				.string = "aa",
+				.capture_count = 0,
+			},
+			{	/* (a*b*a)bb */
+				.string = "a*b*abb",
+				.capture_count = 1,
+				.captures = {
+					{ 0, 3 },
+				},
+			},
+		},
+	};
+
+	struct fsm_capture captures[MAX_TOTAL_CAPTURES];
+
+	if (THEFT_TRIAL_PASS !=
+	    check_capstring_set(&env, &css, "aabb", false, captures)) {
+		return false;
+	}
+
+	/* FIXME: check captures, need base info */
+	fprintf(stderr, "%ld, %ld, %ld, %ld\n",
+	    captures[0].pos[0], captures[0].pos[1],
+	    captures[1].pos[0], captures[1].pos[1]);
+	/* assert(captures[0].pos[0] ==  */
+
+	return true;
+}
+
+static bool
+regression_n_5(theft_seed seed)
+{
+	(void)seed;
+
+	struct capture_env env = {
+		.tag = 'c',
+		.letter_count = 2,
+		.string_maxlen = 5,
+	};
+
+	/* Seed 0x806c3f5579183bc8 */
+	const struct capture_string_set css = {
+		.count = 1,
+		.capture_strings = {
+			{	/* (a*b*a)(a)b */
+				.string = "a*b*aab",
+				.capture_count = 2,
+				.captures = {
+					{ 0, 3 },
+					{ 3, 1 },
+				},
+			},
+		},
+	};
+
+	struct fsm_capture captures[MAX_TOTAL_CAPTURES];
+
+	if (THEFT_TRIAL_PASS !=
+	    check_capstring_set(&env, &css, "aaab", false, captures)) {
 		return false;
 	}
 
@@ -1125,18 +961,14 @@ regression_n_1(theft_seed seed)
 void
 register_test_capture_string_set(void)
 {
-	reg_test("capture_string_set_regression_false_positive", regression_fp);
-	reg_test("capture_string_set_regression0", regression0);
-	reg_test("capture_string_set_regression1", regression1);
-	reg_test("capture_string_set_regression2", regression2);
-	reg_test("capture_string_set_regression3", regression3);
-	reg_test("capture_string_set_regression4", regression4);
-	reg_test("capture_string_set_regression5", regression5);
-	reg_test("capture_string_set_regression6", regression6);
-	reg_test("capture_string_set_regression7", regression7);
-	reg_test("capture_string_set_regression8", regression8);
+	reg_test("capture_string_set_regression_false_positive", regression_fp1);
+	reg_test("capture_string_set_regression_false_positive2", regression_fp2);
 
-	reg_test("capture_string_set_nonempty_regression1", regression_n_1);
+	reg_test("capture_string_set_regression1", regression_n_1);
+	reg_test("capture_string_set_regression2", regression_n_2);
+	reg_test("capture_string_set_regression3", regression_n_3);
+	reg_test("capture_string_set_regression4", regression_n_4);
+	reg_test("capture_string_set_regression5", regression_n_5);
 
 
 	reg_test("capture_string_set_invariants",

@@ -16,13 +16,11 @@
 
 #include "captest.h"
 
-#define LOG_INTERMEDIATE_FSMS 0
-
 /* Combine 3 fully disjoint FSMs:
  *
- * - 0: "(ab)()"
- * - 1: "(cde)()"
- * - 2: "(fghi)()"
+ * - 0: "(a(b))"
+ * - 1: "(cd(e))"
+ * - 2: "(fgh(i))"
  *
  * Shift the captures for 1 and 2 forward and used/combine
  * opaques on them to track which one(s) matched. */
@@ -40,8 +38,9 @@ int main(void) {
 	struct fsm *f_fghi = captest_fsm_of_string("fghi", 2);
 	struct fsm *f_all = NULL;
 	unsigned captures;
-	struct fsm_combine_info ci;
-	unsigned cb_ab, cb_cde, cb_fghi; /* capture base */
+
+	struct fsm_combined_base_pair bases[3];
+	struct fsm *fsms[3];
 
 	assert(f_ab);
 	assert(f_cde);
@@ -55,27 +54,27 @@ int main(void) {
 		exit(EXIT_FAILURE);					\
 	}
 
-	/* (ab)() */
+	/* (a(b)) */
 	if (!fsm_capture_set_path(f_ab, 0, 0, 2)) {
 		exit(EXIT_FAILURE);
 	}
-	if (!fsm_capture_set_path(f_ab, 1, 2, 2)) {
+	if (!fsm_capture_set_path(f_ab, 1, 1, 2)) {
 		exit(EXIT_FAILURE);
 	}
 
-	/* (cde)() */
+	/* (cd(e)) */
 	if (!fsm_capture_set_path(f_cde, 0, 0, 3)) {
 		exit(EXIT_FAILURE);
 	}
-	if (!fsm_capture_set_path(f_cde, 1, 3, 3)) {
+	if (!fsm_capture_set_path(f_cde, 1, 2, 3)) {
 		exit(EXIT_FAILURE);
 	}
 
-	/* (fghi)() */
+	/* (fgh(i)) */
 	if (!fsm_capture_set_path(f_fghi, 0, 0, 4)) {
 		exit(EXIT_FAILURE);
 	}
-	if (!fsm_capture_set_path(f_fghi, 1, 4, 4)) {
+	if (!fsm_capture_set_path(f_fghi, 1, 3, 4)) {
 		exit(EXIT_FAILURE);
 	}
 
@@ -99,25 +98,23 @@ int main(void) {
 	det_and_min("fghi", f_fghi);
 
 	/* union them */
-	f_all = fsm_union(f_ab, f_cde, &ci);
+	fsms[0] = f_ab;
+	fsms[1] = f_cde;
+	fsms[2] = f_fghi;
+
+	f_all = fsm_union_array(3, fsms, bases);
 	assert(f_all != NULL);
-	cb_ab = ci.capture_base_a;
-	cb_cde = ci.capture_base_b;
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "=== unioned f_ab with f_cde... (CB ab: %u, cde: %u)\n",
-	    cb_ab, cb_cde);
+	    bases[0].capture, bases[1].capture);
 	fsm_print_fsm(stderr, f_all);
 	fsm_capture_dump(stderr, "#### f_all", f_all);
 #endif
 
-	f_all = fsm_union(f_all, f_fghi, &ci);
-	assert(f_all != NULL);
-	cb_fghi = ci.capture_base_b;
-
 #if LOG_INTERMEDIATE_FSMS
-	fprintf(stderr, "=== unioned f_all with f_fghi... (CB all: %u, fghi: %u), %u captures\n",
-	    ci.capture_base_a, cb_fghi, fsm_countcaptures(f_all));
+	fprintf(stderr, "=== unioned f_all with f_fghi... (CB fghi: %u), %u captures\n",
+	    bases[2].capture, fsm_countcaptures(f_all));
 	fsm_print_fsm(stderr, f_all);
 	fsm_capture_dump(stderr, "#### f_all #2", f_all);
 #endif
@@ -133,16 +130,18 @@ int main(void) {
 	fsm_capture_dump(stderr, "#### f_all", f_all);
 #endif
 
-	if (!fsm_minimise(f_all)) {
-		fprintf(stderr, "NOPE %d\n", __LINE__);
-		exit(EXIT_FAILURE);
-	}
+	if (0) {		/* don't minimize */
+		if (!fsm_minimise(f_all)) {
+			fprintf(stderr, "NOPE %d\n", __LINE__);
+			exit(EXIT_FAILURE);
+		}
 
 #if LOG_INTERMEDIATE_FSMS
-	fprintf(stderr, "==== after minimise\n");
-	fsm_print_fsm(stderr, f_all);
-	fsm_capture_dump(stderr, "#### f_all", f_all);
+		fprintf(stderr, "==== after minimise\n");
+		fsm_print_fsm(stderr, f_all);
+		fsm_capture_dump(stderr, "#### f_all", f_all);
 #endif
+	}
 
 	captures = fsm_countcaptures(f_all);
 	if (captures != 6) {
@@ -150,9 +149,9 @@ int main(void) {
 		exit(EXIT_FAILURE);
 	}
 
-	check(f_all, "ab", 0, cb_ab);
-	check(f_all, "cde", 1, cb_cde);
-	check(f_all, "fghi", 2, cb_fghi);
+	check(f_all, "ab", 0, bases[0].capture);
+	check(f_all, "cde", 1, bases[1].capture);
+	check(f_all, "fghi", 2, bases[2].capture);
 
 	fsm_free(f_all);
 
@@ -210,19 +209,21 @@ check(const struct fsm *fsm, const char *string,
 
 	/* check opaque end ID */
 	eo = fsm_getopaque(fsm, end);
-	fprintf(stderr, "exec: end %d -> %p\n", end, (void *)eo);
 
 	assert(eo != NULL);
 	assert(eo->tag == CAPTEST_END_OPAQUE_TAG);
 	assert(eo->ends & (1U << end_id));
 
 	/* check captures */
-	fprintf(stderr, "captures for '%s' (cb %u): [%ld, %ld], [%ld, %ld]\n",
-	    string, capture_base,
-	    captures[0 + cb].pos[0], captures[0 + cb].pos[1],
-	    captures[1 + cb].pos[0], captures[1 + cb].pos[1]);
+	if (0) {
+		fprintf(stderr, "captures for '%s' (cb %u): [%ld, %ld], [%ld, %ld]\n",
+		    string, capture_base,
+		    captures[0 + cb].pos[0], captures[0 + cb].pos[1],
+		    captures[1 + cb].pos[0], captures[1 + cb].pos[1]);
+	}
+
 	assert(captures[0 + cb].pos[0] == 0);
 	assert(captures[0 + cb].pos[1] == length);
-	assert(captures[1 + cb].pos[0] == length);
+	assert(captures[1 + cb].pos[0] == length - 1);
 	assert(captures[1 + cb].pos[1] == length);
 }

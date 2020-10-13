@@ -18,6 +18,9 @@
 #define MAX_SINGLE_FSM_TEST_PATHS 8
 #define MAX_TEST_CAPTURES 8
 
+#define CAPTEST_RUN_SINGLE_LOG 0
+#define LOG_INTERMEDIATE_FSMS 0
+
 struct captest_single_fsm_test_info {
 	const char *string;
 	struct captest_single_fsm_test_path {

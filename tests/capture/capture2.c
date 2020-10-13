@@ -14,17 +14,17 @@
 
 #include "captest.h"
 
-/* /()(a(b()c)d)()/ */
+/* (a(b((c))(d))) */
 
 int main(void) {
 	struct captest_single_fsm_test_info test_info = {
 		"abcd",
 		{
-			{ 0, 0 },
 			{ 0, 4 },
-			{ 1, 3 },
-			{ 2, 2 },
-			{ 4, 4 },
+			{ 1, 4 },
+			{ 2, 3 },
+			{ 2, 3 },
+			{ 3, 4 },
 		}
 	};
 	return captest_run_single(&test_info);

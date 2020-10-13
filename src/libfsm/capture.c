@@ -597,9 +597,19 @@ fsm_capture_update_captures(const struct fsm *fsm,
 #endif
 
 	for (b_i = 0; b_i < ci->bucket_count; b_i++) {
-		struct fsm_capture_action_bucket *b = &ci->buckets[(h + b_i) & mask];
+		const size_t b_id = (h + b_i) & mask;
+		struct fsm_capture_action_bucket *b = &ci->buckets[b_id];
 		unsigned capture_id;
+
+#if LOG_CAPTURE > 3
+		fprintf(stderr, "   -- update_captures: bucket %lu, state %d\n", b_id, b->state);
+#endif
+
+
 		if (b->state == CAPTURE_NO_STATE) {
+#if LOG_CAPTURE > 3
+			fprintf(stderr, "  -- no more actions for this state\n");
+#endif
 			break;	/* no more for this state */
 		} else if (b->state != cur_state) {
 			continue; /* skip collision */
@@ -614,7 +624,7 @@ fsm_capture_update_captures(const struct fsm *fsm,
 			fprintf(stderr, "START [%u, %u]\n",
 			    b->action.id, b->action.to);
 #endif
-			if (next_state == b->action.to && captures[capture_id].pos[0] != FSM_CAPTURE_NO_POS) {
+			if (next_state == b->action.to && captures[capture_id].pos[0] == FSM_CAPTURE_NO_POS) {
 				captures[capture_id].pos[0] = offset;
 #if LOG_CAPTURE > 0
 				fprintf(stderr, " -- set capture[%u].[0] to %lu\n", b->action.id, offset);
@@ -628,7 +638,8 @@ fsm_capture_update_captures(const struct fsm *fsm,
 			fprintf(stderr, "EXTEND [%u, %u]\n",
 			    b->action.id, b->action.to);
 #endif
-			if (captures[capture_id].pos[0] != FSM_CAPTURE_NO_POS) {
+			if (captures[capture_id].pos[0] != FSM_CAPTURE_NO_POS
+			    && (0 == (captures[capture_id].pos[1] & COMMITTED_CAPTURE_FLAG))) {
 				if (next_state == b->action.to) {
 					captures[capture_id].pos[1] = offset;
 #if LOG_CAPTURE > 0
@@ -680,19 +691,27 @@ fsm_capture_finalize_captures(const struct fsm *fsm,
 	 * COMMITTED_CAPTURE_FLAG isn't set on pos[1], then the capture
 	 * wasn't finalized; clear it. Otherwise, clear that bit so the
 	 * pos[1] offset is meaningful. */
-	(void)fsm;
 
 	/* FIXME: this should also take the end state(s) associated
 	 * with a capture into account, when that information is available;
 	 * otherwise there will be false positives for zero-width captures
 	 * where the paths have a common prefix. */
+	(void)fsm;
 
 	for (i = 0; i < capture_count; i++) {
+#if LOG_CAPTURE > 1
+		fprintf(stderr, "finalize[%lu]: pos[0]: %ld, pos[1]: %ld\n",
+		    i, captures[i].pos[0], captures[i].pos[1]);
+#endif
+
 		if (captures[i].pos[0] == FSM_CAPTURE_NO_POS
 		    || captures[i].pos[1] == FSM_CAPTURE_NO_POS
 		    || (0 == (captures[i].pos[1] & COMMITTED_CAPTURE_FLAG))) {
 			captures[i].pos[0] = FSM_CAPTURE_NO_POS;
 			captures[i].pos[1] = FSM_CAPTURE_NO_POS;
+#if LOG_CAPTURE > 1
+			fprintf(stderr, "finalize: discard %lu\n", i);
+#endif
 		} else if (captures[i].pos[1] & COMMITTED_CAPTURE_FLAG) {
 			captures[i].pos[1] &=~ COMMITTED_CAPTURE_FLAG;
 		}

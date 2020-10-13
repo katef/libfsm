@@ -16,8 +16,6 @@
 
 #include "captest.h"
 
-#define LOG_INTERMEDIATE_FSMS 0
-
 /* Combine 2 mostly overlapping FSMs:
  * - 0: "(abc)"
  * - 1: "(ab*c)"

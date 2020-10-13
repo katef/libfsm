@@ -44,6 +44,7 @@ build(unsigned *cb_a, unsigned *cb_b)
 	struct fsm *cde = captest_fsm_of_string("cde", 1);
 	struct fsm *abcde;
 	struct fsm_combine_info ci;
+	size_t cc_ab, cc_cde, cc_abcde;
 
 	assert(ab);
 	assert(cde);
@@ -55,11 +56,21 @@ build(unsigned *cb_a, unsigned *cb_b)
 		assert(!"path 1");
 	}
 
+	cc_ab = fsm_countcaptures(ab);
+	assert(cc_ab == 1);
+
+	cc_cde = fsm_countcaptures(cde);
+	assert(cc_cde == 1);
+
 	abcde = fsm_union(ab, cde, &ci);
 	assert(abcde);
 	*cb_a = ci.capture_base_a;
 	*cb_b = ci.capture_base_b;
 
+	cc_abcde = fsm_countcaptures(abcde);
+	assert(cc_abcde == cc_ab + cc_cde);
+
+#if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==== after union: cb_ab %u, cb_cde %u\n",
 	    *cb_a, *cb_b);
 	fsm_print_fsm(stderr, abcde);
@@ -67,24 +78,22 @@ build(unsigned *cb_a, unsigned *cb_b)
 	fsm_capture_dump(stderr, "#### after union", abcde);
 
 	fprintf(stderr, "==== determinise\n");
+#endif
+
 	if (!fsm_determinise(abcde)) {
 		assert(!"determinise");
 	}
 
+#if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==== after determinise\n");
 	fsm_print_fsm(stderr, abcde);
 
+	assert(fsm_countcaptures(abcde) == cc_abcde);
+
 	fsm_capture_dump(stderr, "#### after det", abcde);
+#endif
 
-	if (!fsm_minimise(abcde)) {
-		assert(!"minimise");
-	}
-
-	fprintf(stderr, "==== after minimise\n");
-	fsm_print_fsm(stderr, abcde);
-
-	fsm_capture_dump(stderr, "#### after min", abcde);
-
+	assert(fsm_countcaptures(abcde) == cc_abcde);
 	return abcde;
 }
 
