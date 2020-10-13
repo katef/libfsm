@@ -43,7 +43,6 @@ build(unsigned *cb_a, unsigned *cb_b)
 	struct fsm *abcd = captest_fsm_of_string("abcd", 0);
 	struct fsm *abed = captest_fsm_of_string("abed", 1);
 	struct fsm *res;
-	struct fsm_combine_info ci;
 
 	assert(abcd);
 	assert(abed);
@@ -55,18 +54,22 @@ build(unsigned *cb_a, unsigned *cb_b)
 		assert(!"path 1");
 	}
 
-	res = fsm_union(abcd, abed, &ci);
-	assert(res);
-	*cb_a = ci.capture_base_a;
-	*cb_b = ci.capture_base_b;
+	{
+		struct fsm *fsms[2];
+		struct fsm_combined_base_pair bases[2];
+		fsms[0] = abcd;
+		fsms[1] = abed;
+		res = fsm_union_array(2, fsms, bases);
+		assert(res);
+		*cb_a = bases[0].capture;
+		*cb_b = bases[1].capture;
+	}
 
 	if (!fsm_determinise(res)) {
 		assert(!"determinise");
 	}
 
-	if (!fsm_minimise(res)) {
-		assert(!"minimise");
-	}
+	assert(fsm_countcaptures(res) == 2);
 
 	return res;
 }

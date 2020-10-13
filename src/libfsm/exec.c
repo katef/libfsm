@@ -21,6 +21,8 @@
 #include "internal.h"
 #include "capture.h"
 
+#define LOG_EXEC 0
+
 static int
 transition(const struct fsm *fsm, fsm_state_t state, int c,
 	size_t offset, struct fsm_capture *captures,
@@ -77,10 +79,22 @@ fsm_exec(const struct fsm *fsm,
 		captures[i].pos[1] = FSM_CAPTURE_NO_POS;
 	}
 
+#if LOG_EXEC
+	fprintf(stderr, "fsm_exec: starting at %d\n", state);
+#endif
+
 	while (c = fsm_getc(opaque), c != EOF) {
 		if (!transition(fsm, state, c, offset, captures, &state)) {
+#if LOG_EXEC
+			fprintf(stderr, "fsm_exec: edge not found\n");
+#endif
 			return 0;
 		}
+
+#if LOG_EXEC
+		fprintf(stderr, "fsm_exec: @ %zu, input '%c', new state %u\n",
+		    offset, c, state);
+#endif
 		offset++;
 	}
 
