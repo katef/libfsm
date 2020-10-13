@@ -1,6 +1,7 @@
 # <fsm/bool.h>
 fsm_complement
 fsm_union
+fsm_union_array
 fsm_intersect
 
 # <fsm/cost.h>
