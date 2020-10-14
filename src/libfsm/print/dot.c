@@ -157,6 +157,10 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 			fprintf(f, "> ];\n");
 		}
 	}
+
+	if (unique != NULL) {
+		state_set_free(unique);
+	}
 }
 
 static void
