@@ -135,11 +135,11 @@ re_getchar_fun(void *opaque);
  * For example:
  *
  *     const char *s = "abc";
- *     re_comp(RE_NATIVE, fsm_sgetc, &s, 0, NULL);
+ *     re_comp(RE_NATIVE, fsm_sgetc, &s, NULL, 0, NULL);
  *
  * and:
  *
- *     re_comp(RE_NATIVE, fsm_fgetc, stdin, 0, NULL);
+ *     re_comp(RE_NATIVE, fsm_fgetc, stdin, NULL, 0, NULL);
  *
  * There's nothing special about libfsm's implementation of these; they could
  * equally well be user defined.
