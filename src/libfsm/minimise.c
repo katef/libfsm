@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2017 Katherine Flavel
+ * Copyright 2020 Scott Vokes
  *
  * See LICENCE for the full copyright terms.
  */
