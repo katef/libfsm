@@ -77,7 +77,6 @@ fsm_move(struct fsm *dst, struct fsm *src);
  * the storage for the two sets of states is combined, but no edges are added.
  *
  * The resulting FSM has two disjoint sets, and no start state.
- * Cannot return NULL.
  */
 struct fsm *
 fsm_merge(struct fsm *a, struct fsm *b,
