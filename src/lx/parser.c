@@ -1247,7 +1247,7 @@ ZL2_180:;
 		assert((ZI177) != NULL);
 		assert((ZIb) != NULL);
 
-		(ZIq) = fsm_union((ZI177), (ZIb));
+		(ZIq) = fsm_union((ZI177), (ZIb), NULL);
 		if ((ZIq) == NULL) {
 			perror("fsm_union");
 			goto ZL1;
@@ -1491,7 +1491,7 @@ ZL2_list_Hof_Hthings_C_Czone_Hthing_C_Clist_Hof_Hzone_Hto_Hmappings_C_Clist_Hof_
 		assert((ZIold_Hexit) != NULL);
 		assert((ZInew_Hexit) != NULL);
 
-		(*ZIexit) = fsm_union((ZIold_Hexit), (ZInew_Hexit));
+		(*ZIexit) = fsm_union((ZIold_Hexit), (ZInew_Hexit), NULL);
 		if ((*ZIexit) == NULL) {
 			perror("fsm_union");
 			goto ZL1;
@@ -1906,7 +1906,7 @@ p_208(lex_state lex_state, act_state act_state, zone *ZIz, fsm *ZI206, fsm *ZOq)
 		assert((*ZI206) != NULL);
 		assert((ZIb) != NULL);
 
-		(ZIq) = fsm_concat((*ZI206), (ZIb));
+		(ZIq) = fsm_concat((*ZI206), (ZIb), NULL);
 		if ((ZIq) == NULL) {
 			perror("fsm_concat");
 			goto ZL1;
