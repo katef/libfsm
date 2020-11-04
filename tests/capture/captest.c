@@ -198,9 +198,6 @@ static void captest_carryopaque(struct fsm *src_fsm,
 	if (eo_old_dst != NULL) {
 		assert(eo_old_dst->tag == CAPTEST_END_OPAQUE_TAG);
 		eo_dst->ends |= eo_old_dst->ends;
-
-		/* FIXME: freeing here leads to a use after free */
-		/* f_free(opt->alloc, eo_old_dst); */
 	}
 
 	fsm_setopaque(dst_fsm, dst_state, eo_dst);
@@ -217,9 +214,6 @@ static void captest_carryopaque(struct fsm *src_fsm,
 		}
 		assert(eo_src->tag == CAPTEST_END_OPAQUE_TAG);
 		eo_dst->ends |= eo_src->ends;
-
-		/* FIXME: freeing here leads to a use after free */
-		/* f_free(opt->alloc, eo_src); */
 
 		fsm_setopaque(src_fsm, src_set[i], NULL);
 	}
