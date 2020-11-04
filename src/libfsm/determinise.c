@@ -453,10 +453,12 @@ remap_capture_actions(struct mapping_hashset *mappings,
 	struct reverse_mapping *reverse_mappings;
 	fsm_state_t state;
 	const size_t capture_count = fsm_countcaptures(src_nfa);
-	size_t i,j;
+	size_t i, j;
 	int res = 0;
 
-	(void)j;
+	if (capture_count == 0) {
+		return 1;
+	}
 
 	/* This is not 1 to 1 -- if state X is now represented by multiple
 	 * states Y in the DFA, and state X has action(s) when transitioning
@@ -469,11 +471,6 @@ remap_capture_actions(struct mapping_hashset *mappings,
 	reverse_mappings = f_calloc(dst_dfa->opt->alloc, src_nfa->statecount, sizeof(reverse_mappings[0]));
 	if (reverse_mappings == NULL) {
 		return 0;
-	}
-
-	if (capture_count == 0) {
-		/* fprintf(stderr, "zero captures, could bail early\n"); */
-		/* return 1; */
 	}
 
 	/* build reverse mappings table: for every NFA state X, if X is part
@@ -500,6 +497,8 @@ remap_capture_actions(struct mapping_hashset *mappings,
 		}
 		fprintf(stderr, "\n");
 	}
+#else
+	(void)j;
 #endif
 
 	if (!det_copy_capture_actions(reverse_mappings, dst_dfa, src_nfa)) {
