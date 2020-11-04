@@ -155,8 +155,6 @@ captest_fsm_of_string(const char *string, unsigned end_id)
 	}
 	fsm_setend(fsm, length, 1);
 	fsm_setopaque(fsm, length, eo);
-	/* fprintf(stderr, "fsm_of_string: set opaque to %p for \"%s\"\n", */
-	/*     (void *)eo, string); */
 
 	return fsm;
 
@@ -198,22 +196,31 @@ static void captest_carryopaque(struct fsm *src_fsm,
 	if (eo_old_dst != NULL) {
 		assert(eo_old_dst->tag == CAPTEST_END_OPAQUE_TAG);
 		eo_dst->ends |= eo_old_dst->ends;
+		if (log_level > 0) {
+			fprintf(stderr, "carryopaque: old_dst (%d) ends 0x%x\n",
+			    dst_state, eo_dst->ends);
+		}
 	}
 
 	fsm_setopaque(dst_fsm, dst_state, eo_dst);
 
-	/* union bits set in eo_src->ends into eo_dst->ends and free */
+	/* union bits set in eo_src->ends into eo_dst->ends */
 	for (i = 0; i < n; i++) {
 		eo_src = fsm_getopaque(src_fsm, src_set[i]);
 		if (eo_src == NULL) {
 			continue;
 		}
 		if (log_level > 0) {
-			fprintf(stderr, "carryopaque: dst %p <- src[%lu] %p\n",
-			    (void *)eo_dst, i, (void *)eo_src);
+			fprintf(stderr, "carryopaque: dst %p (%d) <- src[%lu] (%d) %p\n",
+			    (void *)eo_dst, dst_state, i, src_set[i],
+			    (void *)eo_src);
 		}
 		assert(eo_src->tag == CAPTEST_END_OPAQUE_TAG);
 		eo_dst->ends |= eo_src->ends;
+		if (log_level > 0) {
+			fprintf(stderr, "carryopaque: eo_src ends -> 0x%x\n",
+			    eo_dst->ends);
+		}
 
 		fsm_setopaque(src_fsm, src_set[i], NULL);
 	}

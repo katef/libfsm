@@ -22,8 +22,11 @@
  * - 1: "(cd(e))"
  * - 2: "(fgh(i))"
  *
- * Shift the captures for 1 and 2 forward and used/combine
- * opaques on them to track which one(s) matched. */
+ * Shift the captures for 1 and 2 forward and use/combine
+ * opaques on them to track which one(s) matched.
+ *
+ * This tracking of which DFA matched should be more directly
+ * supported by the API later. */
 
 static void
 check(const struct fsm *fsm, const char *string,
@@ -129,19 +132,6 @@ int main(void) {
 	fsm_print_fsm(stderr, f_all);
 	fsm_capture_dump(stderr, "#### f_all", f_all);
 #endif
-
-	if (0) {		/* don't minimize */
-		if (!fsm_minimise(f_all)) {
-			fprintf(stderr, "NOPE %d\n", __LINE__);
-			exit(EXIT_FAILURE);
-		}
-
-#if LOG_INTERMEDIATE_FSMS
-		fprintf(stderr, "==== after minimise\n");
-		fsm_print_fsm(stderr, f_all);
-		fsm_capture_dump(stderr, "#### f_all", f_all);
-#endif
-	}
 
 	captures = fsm_countcaptures(f_all);
 	if (captures != 6) {
