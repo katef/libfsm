@@ -21,6 +21,7 @@
 
 #define DUMP_EPSILON_CLOSURES 0
 #define DEF_PENDING_CAPTURE_ACTIONS_CEIL 2
+#define LOG_GLUSHKOVIZE_CAPTURES 0
 
 struct remap_env {
 	char tag;
@@ -186,8 +187,10 @@ remap_capture_actions(struct fsm *nfa, struct state_set **eclosures)
 			if (si_s == s) {
 				continue; /* ignore identical states */
 			}
-			/* fprintf(stderr, "remap_capture_actions: %u <- %u\n", */
-			/*     s, si_s); */
+#if LOG_GLUSHKOVIZE_CAPTURES
+			fprintf(stderr, "remap_capture_actions: %u <- %u\n",
+			    s, si_s);
+#endif
 			if (!state_set_add(&rmap[si_s], nfa->opt->alloc, s)) {
 				goto cleanup;
 			}
@@ -253,8 +256,11 @@ add_pending_capture_action(struct remap_env *env,
 	}
 
 	a = &env->actions[env->count];
-	/* fprintf(stderr, "add_pending_capture_action: state %d, type %s, capture_id %u, to %d\n", */
-	/*     state, fsm_capture_action_type_name[type], capture_id, to); */
+#if LOG_GLUSHKOVIZE_CAPTURES
+	fprintf(stderr, "add_pending_capture_action: state %d, type %s, capture_id %u, to %d\n",
+	    state, fsm_capture_action_type_name[type], capture_id, to);
+#endif
+
 	a->state = state;
 	a->type = type;
 	a->capture_id = capture_id;
@@ -273,14 +279,18 @@ remap_capture_action_cb(fsm_state_t state,
 	struct remap_env *env = opaque;
 	assert(env->tag == 'R');
 
-	/* fprintf(stderr, "remap_capture_action_cb: state %d, type %s, capture_id %u, to %d\n", */
-	/*     state, fsm_capture_action_type_name[type], capture_id, to); */
+#if LOG_GLUSHKOVIZE_CAPTURES
+	fprintf(stderr, "remap_capture_action_cb: state %d, type %s, capture_id %u, to %d\n",
+	    state, fsm_capture_action_type_name[type], capture_id, to);
+#endif
 
 	for (state_set_reset(env->rmap[state], &si); state_set_next(&si, &si_s); ) {
 		struct state_iter si_to;
 		fsm_state_t si_tos;
 
-		/* fprintf(stderr, " -- rcac: state %d -> %d\n", state, si_s); */
+#if LOG_GLUSHKOVIZE_CAPTURES
+		fprintf(stderr, " -- rcac: state %d -> %d\n", state, si_s);
+#endif
 
 		if (!add_pending_capture_action(env, si_s, type, capture_id, to)) {
 			goto fail;
@@ -291,10 +301,9 @@ remap_capture_action_cb(fsm_state_t state,
 		}
 
 		for (state_set_reset(env->rmap[to], &si_to); state_set_next(&si, &si_tos); ) {
-			/* fprintf(stderr, " -- rcac:     to %d -> %d\n", to, si_tos); */
-			/* if (!add_pending_capture_action(env, si_s, type, capture_id, si_tos)) { */
-			/* 	goto fail; */
-			/* } */
+#if LOG_GLUSHKOVIZE_CAPTURES
+			fprintf(stderr, " -- rcac:     to %d -> %d\n", to, si_tos);
+#endif
 
 			if (!add_pending_capture_action(env, si_tos, type, capture_id, to)) {
 				goto fail;
