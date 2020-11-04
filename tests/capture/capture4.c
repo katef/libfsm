@@ -12,6 +12,7 @@
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/capture.h>
+#include <fsm/pred.h>
 #include <fsm/print.h>
 
 #include "captest.h"
@@ -69,6 +70,22 @@ int main(void) {
 	return 0;
 }
 
+#if LOG_INTERMEDIATE_FSMS
+static void
+dump_opaques(const struct fsm *f)
+{
+	size_t i;
+	const size_t limit = fsm_countstates(f);
+	for (i = 0; i < limit; i++) {
+		struct captest_end_opaque *eo = NULL;
+		if (!fsm_isend(f, i)) { continue; }
+		eo = fsm_getopaque(f, i);
+		fprintf(stderr, "end_opaque: %lu -> %p -> %x\n",
+		    i, (void *)eo, eo == NULL ? 0 : eo->ends);
+	}
+}
+#endif
+
 static struct fsm *
 build_and_combine(unsigned *cb_a, unsigned *cb_b)
 {
@@ -112,6 +129,7 @@ build_and_combine(unsigned *cb_a, unsigned *cb_b)
 	fsm_print_fsm(stderr, f_all);
 	fsm_capture_dump(stderr, "capture_actions", f_all);
 	fprintf(stderr, "====================\n");
+	dump_opaques(f_all);
 #endif
 
 	if (!fsm_determinise(f_all)) {
@@ -123,6 +141,7 @@ build_and_combine(unsigned *cb_a, unsigned *cb_b)
 	fsm_print_fsm(stderr, f_all);
 	fsm_capture_dump(stderr, "capture_actions", f_all);
 	fprintf(stderr, "====================\n");
+	dump_opaques(f_all);
 #endif
 
 	return f_all;
@@ -222,6 +241,16 @@ check(const struct fsm *fsm, const char *string,
 	if (eo->ends != expected_ends) {
 		fprintf(stderr, "Expected ends 0x%x, got 0x%x\n",
 		    expected_ends, eo->ends);
+		/* FIXME: The case where "abc" matches both /ab*c/ AND
+		 * /abc/ is currently not detected propertly, most
+		 * likely due to a bug in either how carryopaque is
+		 * being used in fsm_determinise or in
+		 * captest_carryopaque.
+		 *
+		 * The next pass will be more formally supporting
+		 * end state set management independent of the
+		 * carryopaque mechanism, revisiting this in
+		 * greater detail, so for now this is ignored. */
 		/* exit(EXIT_FAILURE); */
 	}
 
