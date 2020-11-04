@@ -24,6 +24,7 @@
 #include "capture.h"
 
 #define DUMP_MAPPING 0
+#define LOG_DETERMINISE_CLOSURES 0
 #define LOG_DETERMINISE_CAPTURES 0
 
 /*
@@ -248,7 +249,9 @@ fsm_determinise(struct fsm *nfa)
 			goto error;
 		}
 
-		/* fprintf(stderr, "#### Adding mapping for start state %u -> 0\n", start); */
+#if LOG_DETERMINISE_CAPTURES
+		fprintf(stderr, "#### Adding mapping for start state %u -> 0\n", start);
+#endif
 
 		curr = mapping_add(mappings, nfa->opt->alloc, dfacount++, set);
 		if (curr == NULL) {
@@ -284,7 +287,6 @@ fsm_determinise(struct fsm *nfa)
 					/* TODO: free mappings, sclosures, stack */
 					goto error;
 				}
-				/* fprintf(stderr, "*** cur %u, s %u\n", curr->dfastate, s); */
 			}
 		}
 
@@ -295,17 +297,19 @@ fsm_determinise(struct fsm *nfa)
 				continue;
 			}
 
-			/* fprintf(stderr, "fsm_determinise: cur (dfa %u) label '%c': %p:", */
-			/*     curr->dfastate, (char)i, (void *)sclosures[i]); */
+#if LOG_DETERMINISE_CLOSURES
+			fprintf(stderr, "fsm_determinise: cur (dfa %u) label '%c': %p:",
+			    curr->dfastate, (char)i, (void *)sclosures[i]);
 			{
 				struct state_iter it;
 				fsm_state_t s;
 
 				for (state_set_reset(sclosures[i], &it); state_set_next(&it, &s); ) {
-					/* fprintf(stderr, " %u", s); */
+					fprintf(stderr, " %u", s);
 				}
-				/* fprintf(stderr, "\n"); */
+				fprintf(stderr, "\n");
 			}
+#endif
 
 			/*
 			 * The set of NFA states sclosures[i] represents a single DFA state.
