@@ -34,7 +34,7 @@ change_to_alt(struct ast_expr_pool **poolp, struct ast_expr **n)
 		return 0;
 
 	if (!ast_add_expr_alt(alt, *n)) {
-		ast_expr_free(alt);
+		ast_expr_free(*poolp, alt);
 		return 0;
 	}
 
@@ -190,7 +190,7 @@ build_edge_literal(const struct fsm *fsm, fsm_state_t from, fsm_state_t to, char
 		return 0;
 
 	if (!build_edge_expr(fsm, from, to, expr, udata)) {
-		ast_expr_free(expr);
+		ast_expr_free(*udata->poolp, expr);
 		return 0;
 	}
 
@@ -213,7 +213,7 @@ build_edge_epsilon(const struct fsm *fsm, fsm_state_t from, fsm_state_t to, void
 		return 0;
 
 	if (!build_edge_expr(fsm, from, to, expr, udata)) {
-		ast_expr_free(expr);
+		ast_expr_free(*udata->poolp, expr);
 		return 0;
 	}
 
@@ -221,7 +221,7 @@ build_edge_epsilon(const struct fsm *fsm, fsm_state_t from, fsm_state_t to, void
 }
 
 static void
-free_reedge(struct rese *edge)
+free_reedge(struct ast_expr_pool *pool, struct rese *edge)
 {
 	assert(edge);
 	assert(edge->from != edge && edge->to != edge);
@@ -231,32 +231,32 @@ free_reedge(struct rese *edge)
 	edge->predprev->prednext = edge->prednext;
 	edge->prednext->predprev = edge->predprev;
 
-	ast_expr_free(edge->expr);
+	ast_expr_free(pool, edge->expr);
 	free(edge);
 }
 
 static void
-free_restate(struct rese *state)
+free_restate(struct ast_expr_pool *pool, struct rese *state)
 {
 	assert(state);
 	assert(state->from == state && state->to == state);
 
 	while (state->succnext != state)
-		free_reedge(state->succnext);
+		free_reedge(pool, state->succnext);
 	while (state->prednext != state)
-		free_reedge(state->prednext);
+		free_reedge(pool, state->prednext);
 
-	ast_expr_free(state->expr);
+	ast_expr_free(pool, state->expr);
 	state->expr = NULL;
 }
 
 static void
-free_restates(struct rese *states, unsigned int numstates)
+free_restates(struct ast_expr_pool *pool, struct rese *states, unsigned int numstates)
 {
 	unsigned int i;
 
 	for (i = 0; i < numstates; i++)
-		free_restate(&states[i]);
+		free_restate(pool, &states[i]);
 
 	free(states);
 }
@@ -307,13 +307,13 @@ remove_state(struct ast_expr_pool **poolp, struct rese *state)
 
 			tmp = p->expr;
 			if (!ast_expr_clone(poolp, &tmp)) {
-				ast_expr_free(cat);
+				ast_expr_free(*poolp, cat);
 				return 0;
 			}
 
 			if (!ast_add_expr_concat(cat, tmp)) {
-				ast_expr_free(tmp);
-				ast_expr_free(cat);
+				ast_expr_free(*poolp, tmp);
+				ast_expr_free(*poolp, cat);
 				return 0;
 			}
 
@@ -321,31 +321,31 @@ remove_state(struct ast_expr_pool **poolp, struct rese *state)
 				struct ast_expr *rep;
 				tmp = state->expr;
 				if (!ast_expr_clone(poolp, &tmp)) {
-					ast_expr_free(cat);
+					ast_expr_free(*poolp, cat);
 					return 0;
 				}
 				rep = ast_make_expr_repeat(poolp, 0, tmp,
 					ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL));
 				if (!rep) {
-					ast_expr_free(tmp);
-					ast_expr_free(cat);
+					ast_expr_free(*poolp, tmp);
+					ast_expr_free(*poolp, cat);
 					return 0;
 				}
 				if (!ast_add_expr_concat(cat, rep)) {
-					ast_expr_free(rep);
-					ast_expr_free(cat);
+					ast_expr_free(*poolp, rep);
+					ast_expr_free(*poolp, cat);
 					return 0;
 				}
 			}
 
 			tmp = s->expr;
 			if (!ast_expr_clone(poolp, &tmp)) {
-				ast_expr_free(cat);
+				ast_expr_free(*poolp, cat);
 				return 0;
 			}
 			if (!ast_add_expr_concat(cat, tmp)) {
-				ast_expr_free(tmp);
-				ast_expr_free(cat);
+				ast_expr_free(*poolp, tmp);
+				ast_expr_free(*poolp, cat);
 				return 0;
 			}
 
@@ -353,19 +353,19 @@ remove_state(struct ast_expr_pool **poolp, struct rese *state)
 				e->expr = cat;
 			} else {
 				if (!change_to_alt(poolp, &e->expr)) {
-					ast_expr_free(cat);
+					ast_expr_free(*poolp, cat);
 					return 0;
 				}
 
 				if (!ast_add_expr_alt(e->expr, cat)) {
-					ast_expr_free(cat);
+					ast_expr_free(*poolp, cat);
 					return 0;
 				}
 			}
 		}
 	}
 
-	free_restate(state);
+	free_restate(*poolp, state);
 	return 1;
 }
 
@@ -404,7 +404,7 @@ ast_expr_new_from_fsm(struct ast_expr_pool **poolp, const struct fsm *fsm)
 
 	/* Copy FSM edges as RE edges */
 	if (!fsm_walk_edges(fsm, &opaque, build_edge_literal, build_edge_epsilon)) {
-		free_restates(restates, numstates + 1);
+		free_restates(*poolp, restates, numstates + 1);
 		return NULL;
 	}
 
@@ -415,7 +415,7 @@ ast_expr_new_from_fsm(struct ast_expr_pool **poolp, const struct fsm *fsm)
 			continue;
 
 		if (!build_edge_epsilon(fsm, i, numstates, &opaque)) {
-			free_restates(restates, numstates + 1);
+			free_restates(*poolp, restates, numstates + 1);
 			return NULL;
 		}
 	}
@@ -426,7 +426,7 @@ ast_expr_new_from_fsm(struct ast_expr_pool **poolp, const struct fsm *fsm)
 			continue;
 
 		if (!remove_state(poolp, &restates[i])) {
-			free_restates(restates, numstates + 1);
+			free_restates(*poolp, restates, numstates + 1);
 			return NULL;
 		}
 	}
@@ -434,7 +434,7 @@ ast_expr_new_from_fsm(struct ast_expr_pool **poolp, const struct fsm *fsm)
 	/* If we now do not have a transition out of the start state,
 	 * the FSM is unsatisfiable. */
 	if (restart->succnext->to != reend || !restart->succnext->expr) {
-		free_restates(restates, numstates + 1);
+		free_restates(*poolp, restates, numstates + 1);
 		return ast_expr_tombstone;
 	}
 
@@ -448,28 +448,28 @@ ast_expr_new_from_fsm(struct ast_expr_pool **poolp, const struct fsm *fsm)
 
 		cat = ast_make_expr_concat(poolp, 0);
 		if (!cat) {
-			free_restates(restates, numstates + 1);
+			free_restates(*poolp, restates, numstates + 1);
 			return NULL;
 		}
 
 		rep = ast_make_expr_repeat(
 			poolp, 0, restart->expr, ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL));
 		if (!rep) {
-			ast_expr_free(cat);
-			free_restates(restates, numstates + 1);
+			ast_expr_free(*poolp, cat);
+			free_restates(*poolp, restates, numstates + 1);
 			return NULL;
 		}
 
 		if (!ast_add_expr_concat(cat, rep)) {
-			ast_expr_free(rep);
-			ast_expr_free(cat);
-			free_restates(restates, numstates + 1);
+			ast_expr_free(*poolp, rep);
+			ast_expr_free(*poolp, cat);
+			free_restates(*poolp, restates, numstates + 1);
 			return NULL;
 		}
 
 		if (!ast_add_expr_concat(cat, expr)) {
-			ast_expr_free(cat);
-			free_restates(restates, numstates + 1);
+			ast_expr_free(*poolp, cat);
+			free_restates(*poolp, restates, numstates + 1);
 			return NULL;
 		}
 
@@ -479,7 +479,7 @@ ast_expr_new_from_fsm(struct ast_expr_pool **poolp, const struct fsm *fsm)
 	restart->succnext->expr = NULL;
 	restart->expr = NULL;
 
-	free_restates(restates, numstates + 1);
+	free_restates(*poolp, restates, numstates + 1);
 
 	return expr;
 }
@@ -501,7 +501,7 @@ ast_new_from_fsm(const struct fsm *fsm)
 
 	ast = ast_new();
 	if (!ast) {
-		ast_expr_free(expr);
+		ast_expr_free(pool, expr);
 		ast_pool_free(pool);
 		return NULL;
 	}

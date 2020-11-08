@@ -2920,7 +2920,6 @@ ZL0:;
 	struct ast *
 	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
 		const struct fsm_options *opt,
-		struct ast_expr_pool **poolp,
 		enum re_flags flags, int overlap,
 		struct re_err *err)
 	{
@@ -2969,7 +2968,7 @@ ZL0:;
 		act_state = &act_state_s;
 
 		act_state->overlap = overlap;
-		act_state->poolp   = poolp;
+		act_state->poolp   = &ast->pool;
 
 		err->e = RE_ESUCCESS;
 
@@ -3041,6 +3040,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 3045 "src/libre/dialect/native/parser.c"
+#line 3044 "src/libre/dialect/native/parser.c"
 
 /* END OF FILE */

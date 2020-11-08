@@ -20,7 +20,10 @@ struct ast_pos {
 };
 
 enum ast_expr_type {
-	AST_EXPR_EMPTY,
+	/* Reserve one value (0) indicating a freed expression. This value is
+	 * intentionally unnamed: code that switches on n->type should be able
+	 * to leave it out without triggering a compiler diagnostic. */
+	AST_EXPR_EMPTY = 1,
 	AST_EXPR_CONCAT,
 	AST_EXPR_ALT,
 	AST_EXPR_LITERAL,
@@ -119,6 +122,10 @@ struct ast_expr {
 	enum re_flags re_flags;
 
 	union {
+		struct {
+			struct ast_expr *nextnode;
+		} free;
+
 		/* ordered sequence */
 		struct {
 			size_t count; /* used */
@@ -187,8 +194,9 @@ struct ast_expr_pool {
 #endif
 	} pool[AST_EXPR_POOL_SIZE];
 
-	struct ast_expr_pool *next;
-	unsigned count;
+	struct ast_expr *nextnode;
+	struct ast_expr_pool *nextpool;
+	size_t count;
 };
 
 struct ast_expr *
@@ -227,7 +235,7 @@ ast_make_count(unsigned min, const struct ast_pos *start,
  */
 
 void
-ast_expr_free(struct ast_expr *n);
+ast_expr_free(struct ast_expr_pool *pool, struct ast_expr *n);
 
 int
 ast_expr_clone(struct ast_expr_pool **poolp, struct ast_expr **n);
