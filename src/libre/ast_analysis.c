@@ -26,6 +26,7 @@ struct analysis_env {
 struct anchoring_env {
 	char past_any_consuming;
 	char followed_by_consuming;
+	struct ast_expr_pool *pool;
 };
 
 static int
@@ -378,7 +379,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				/* prune unsatisfiable branch */
 				struct ast_expr *doomed = n->u.alt.n[i];
 				n->u.alt.n[i] = ast_expr_tombstone;
-				ast_expr_free(doomed);
+				ast_expr_free(env->pool, doomed);
 				continue;
 			} else if (res == AST_ANALYSIS_OK) {
 				any_sat = 1;
@@ -414,7 +415,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		/* TODO: maybe do the analysis before rewriting? */
 
 		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeat.min == 0) {
-			ast_expr_free(n->u.repeat.e);
+			ast_expr_free(env->pool, n->u.repeat.e);
 
 			n->type = AST_EXPR_EMPTY;
 			set_flags(n, AST_FLAG_NULLABLE);
@@ -645,6 +646,7 @@ ast_analysis(struct ast *ast)
 	{
 		struct anchoring_env env;
 		memset(&env, 0x00, sizeof(env));
+		env.pool = ast->pool;
 		res = analysis_iter_anchoring(&env, ast->expr);
 		if (res != AST_ANALYSIS_OK) { return res; }
 	}
