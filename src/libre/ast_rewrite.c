@@ -410,48 +410,33 @@ rewrite_repeat(struct ast_expr *n, enum re_flags flags)
 			return 1;
 		}
 
-		if (h == 0 || h == 1) {
-			dead = n->u.repeat.e;
-
-			n->u.repeat.min = v;
-			n->u.repeat.max = w;
-			n->u.repeat.e    = n->u.repeat.e->u.repeat.e;
-
-			dead->type = AST_EXPR_EMPTY;
-			ast_expr_free(dead);
-
-			return 1;
-		}
-
 		/*
 		 * a{h,i}{j,k} is equivalent to a{h*j,i*k} if it's possible to combine,
-		 * and it's possible iff the range of the result is not more than
-		 * the sum of the ranges of the two inputs.
+		 * i.e. if for all n in [h*j,i*k], a{n} would be included in a{h,i}{j,k}.
+		 * a{h*j} is trivially included, and for any a{n} that is included where
+		 * n is not a multiple of i, a{n+1} is also included: if n is not a
+		 * multiple of i, then one of the a{h,i} instances matched fewer than i
+		 * times and can accept another a. The only case to consider is where n
+		 * is a multiple of i and the rewritten expression would include a{n+1}.
+		 *
+		 * If j == k, this cannot be a problem. The only case where all instances
+		 * of a{h,i} accept i instances of a is where n==i*j==i*k.
+		 *
+		 * If i == AST_COUNT_UNBOUNDED and j != 0, this cannot be a problem. It
+		 * is impossible for any a{h,i} to accept i instances of a, so the problem
+		 * never arises here either. Note the restriction on j != 0 though:
+		 * a{2,}{0,} cannot be rewritten as a{0,}.
+		 *
+		 * If a{n} is included by m instances of a{i}, where j<=m<k, we know that
+		 * a{n+1} is included by m+1 instances of a{h,i} if and only if
+		 * h*(m+1) <= i*m+1, which simplifies to h*(j+1) <= i*j+1.
+		 *
+		 * Note that this last case includes all cases where h <= 1.
 		 */
-		if (i != AST_COUNT_UNBOUNDED && k != AST_COUNT_UNBOUNDED) {
-			/* I don't know why this is true */
-			assert(w - v > i - h + k - j);
-		}
 
-		/*
-		 * a{h,}{j,}
-		 * a{h,i}{j,}
-		 * a{h,}{j,k}
-		 */
-		if ((i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED) && h <= 1 && j <= 1) {
-			dead = n->u.repeat.e;
-
-			n->u.repeat.min = v;
-			n->u.repeat.max = w;
-			n->u.repeat.e   = n->u.repeat.e->u.repeat.e;
-
-			dead->type = AST_EXPR_EMPTY;
-			ast_expr_free(dead);
-
-			return 1;
-		}
-
-		if (h > 1 && i == AST_COUNT_UNBOUNDED && j > 0) {
+		if (j == k
+		 || (i == AST_COUNT_UNBOUNDED && j > 0)
+		 || h * (j + 1) <= i * j + 1) {
 			dead = n->u.repeat.e;
 
 			n->u.repeat.min = v;
