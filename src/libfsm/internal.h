@@ -78,11 +78,11 @@ struct fsm {
 };
 
 void
-fsm_carryopaque_array(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
+fsm_carryopaque_array(const struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
     struct fsm *dst_fsm, fsm_state_t dst_state);
 
 void
-fsm_carryopaque(struct fsm *fsm, const struct state_set *set,
+fsm_carryopaque(const struct fsm *fsm, const struct state_set *set,
 	struct fsm *new, fsm_state_t state);
 
 struct fsm *

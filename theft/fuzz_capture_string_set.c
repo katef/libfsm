@@ -511,7 +511,7 @@ check_captures_for_false_positives(const struct check_env *env,
 
 static struct fsm_options options;
 
-static void css_carryopaque(struct fsm *src_fsm,
+static void css_carryopaque(const struct fsm *src_fsm,
     const fsm_state_t *src_set, size_t n,
     struct fsm *dst_fsm, fsm_state_t dst_state)
 {

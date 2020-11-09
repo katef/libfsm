@@ -251,7 +251,7 @@ lang_exclude(const char *name)
 }
 
 static void
-carryopaque(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
+carryopaque(const struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
 	struct fsm *dst_fsm, fsm_state_t dst_state)
 {
 	struct mapping_set *conflict;
