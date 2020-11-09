@@ -42,7 +42,7 @@ fsm_intersect(struct fsm *a, struct fsm *b)
 	 * This could also be done in terms of complements and union,
 	 * by DeMorgan's theorem:
 	 *
-	 *     a \n b = ~(~a \u ~b)
+	 *     a ∩ b = ~(~a ∪ ~b)
 	 */
 
 	/*

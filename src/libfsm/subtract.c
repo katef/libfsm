@@ -35,6 +35,12 @@ fsm_subtract(struct fsm *a, struct fsm *b)
 	}
 
 	/*
+	 * Subtraction a \ b is equivalent to: a ∩ ~b where ~b is complement.
+	 * We provide the same result by fsm_walk2() to save on the overhead
+	 * of intersection.
+	 */
+
+	/*
 	 * Notice that the edge constraint for subtraction is different from the
 	 * end state constraint. With subtraction, we want to follow edges
 	 * that are either _ONLYA or _BOTH, but valid end states must be _ONLYA.
