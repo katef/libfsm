@@ -202,6 +202,8 @@ ast_print_abnf(FILE *f, const struct fsm_options *opt,
 	assert(opt != NULL);
 	assert(ast != NULL);
 
+	(void) re_flags;
+
 	fprintf(f, "e = ");
 
 	pp_iter(f, opt, ast->expr);
