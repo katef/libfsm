@@ -31,6 +31,26 @@ fsm_reverse(struct fsm *fsm)
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
+	/*
+	 * Reversing an FSM means to reverse the language the FSM matches.
+	 * The textbook approach to this is to mark the start state as accepting,
+	 * mark the accepting states as a new start state, and flip all the edges:
+	 *
+	 *    ⟶ ○ ⟶ ○ ⟶ ○ ⟶ ◎
+	 *              ↺
+	 *
+	 * reversed:     
+	 *
+	 *      ◎ ← ○ ← ○ ← ○ ←
+	 *              ↻
+	 *
+	 * However this doesn't explain what to do with a set of multiple accepting
+	 * states (since an FSM may only have one start state). In general these
+	 * can be unioned by epsilon transitions from a single newly-introduced
+	 * start state. In this implementation we attempt to avoid introducing
+	 * that new state where possible.
+	 */
+
 	if (fsm->endcount == 0 || !fsm_getstart(fsm, &prevstart)) {
 		struct fsm *new;
 

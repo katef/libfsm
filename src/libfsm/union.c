@@ -56,10 +56,12 @@ fsm_union(struct fsm *a, struct fsm *b,
 	sb += combine_info->base_b;
 
 	/*
-	 * The canonical approach is to create a new start state, with epsilon
-	 * transitions to both a->start and b->start.
+	 * The textbook approach is to create a new start state, with epsilon
+	 * transitions to both a->start and b->start:
 	 *
-	 * TODO: diagram
+	 *     a: ⟶ ○ ┄ ◎               ╭⟶ ○ ┄ ◎
+	 *                     a ∪ b: ⟶ ○
+	 *     b: ⟶ ○ ┄ ◎               ╰⟶ ○ ┄ ◎
 	 */
 
 	if (!fsm_addstate(q, &sq)) {

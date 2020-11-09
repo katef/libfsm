@@ -67,10 +67,12 @@ fsm_concat(struct fsm *a, struct fsm *b,
 	fsm_setend(q, ea, 0);
 
 	/*
-	 * The canonical approach is to create epsilon transition(s) from the end
+	 * The textbook approach is to create epsilon transition(s) from the end
 	 * state of one FSM to the start state of the next FSM.
 	 *
-	 * TODO: diagram
+	 *     a: ⟶ ○ ┄ ◎
+	 *                     a b: ⟶ ○ ┄ ○ ⟶ ○ ┄ ◎
+	 *     b: ⟶ ○ ┄ ◎
 	 *
 	 * In this implementation, if multiple end states are present, they are
 	 * first collated together by epsilon transitions to a single end state.
