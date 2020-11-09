@@ -125,7 +125,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 }
 
 void
-fsm_carryopaque_array(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
+fsm_carryopaque_array(const struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
 	struct fsm *dst_fsm, fsm_state_t dst_state)
 {
 	assert(src_fsm != NULL);
@@ -173,7 +173,7 @@ fsm_carryopaque_array(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
 }
 
 void
-fsm_carryopaque(struct fsm *src_fsm, const struct state_set *src_set,
+fsm_carryopaque(const struct fsm *src_fsm, const struct state_set *src_set,
 	struct fsm *dst_fsm, fsm_state_t dst_state)
 {
 	fsm_state_t src_state;

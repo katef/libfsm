@@ -166,7 +166,7 @@ cleanup:
 
 static struct fsm_options options;
 
-static void captest_carryopaque(struct fsm *src_fsm,
+static void captest_carryopaque(const struct fsm *src_fsm,
     const fsm_state_t *src_set, size_t n,
     struct fsm *dst_fsm, fsm_state_t dst_state)
 {

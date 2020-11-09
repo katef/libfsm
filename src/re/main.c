@@ -345,7 +345,7 @@ free_all_matches(void)
 }
 
 static void
-carryopaque(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
+carryopaque(const struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
 	struct fsm *dst_fsm, fsm_state_t dst_state)
 {
 	struct match *matches;

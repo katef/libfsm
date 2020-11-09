@@ -65,7 +65,7 @@ struct fsm_options {
 	void *endleaf_opaque;
 
 	/* TODO: explain */
-	void (*carryopaque)(struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
+	void (*carryopaque)(const struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
 		struct fsm *dst_fsm, fsm_state_t dst_state);
 
 	/* custom allocation functions */
