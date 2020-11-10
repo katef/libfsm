@@ -59,9 +59,9 @@ fsm_union(struct fsm *a, struct fsm *b,
 	 * The textbook approach is to create a new start state, with epsilon
 	 * transitions to both a->start and b->start:
 	 *
-	 *     a: ⟶ ○ ┄ ◎               ╭⟶ ○ ┄ ◎
+	 *     a: ⟶ ○ ··· ◎             ╭⟶ ○ ··· ◎
 	 *                     a ∪ b: ⟶ ○
-	 *     b: ⟶ ○ ┄ ◎               ╰⟶ ○ ┄ ◎
+	 *     b: ⟶ ○ ··· ◎             ╰⟶ ○ ··· ◎
 	 */
 
 	if (!fsm_addstate(q, &sq)) {
