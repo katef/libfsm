@@ -70,9 +70,9 @@ fsm_concat(struct fsm *a, struct fsm *b,
 	 * The textbook approach is to create epsilon transition(s) from the end
 	 * state of one FSM to the start state of the next FSM.
 	 *
-	 *     a: ⟶ ○ ┄ ◎
-	 *                     a b: ⟶ ○ ┄ ○ ⟶ ○ ┄ ◎
-	 *     b: ⟶ ○ ┄ ◎
+	 *     a: ⟶ ○ ··· ◎
+	 *                       a b: ⟶ ○ ··· ○ ⟶ ○ ··· ◎
+	 *     b: ⟶ ○ ··· ◎                a         b   
 	 *
 	 * In this implementation, if multiple end states are present, they are
 	 * first collated together by epsilon transitions to a single end state.
