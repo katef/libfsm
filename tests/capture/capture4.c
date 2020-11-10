@@ -242,17 +242,7 @@ check(const struct fsm *fsm, const char *string,
 	if (eo->ends != expected_ends) {
 		fprintf(stderr, "Expected ends 0x%x, got 0x%x\n",
 		    expected_ends, eo->ends);
-		/* FIXME: The case where "abc" matches both /ab*c/ AND
-		 * /abc/ is currently not detected propertly, most
-		 * likely due to a bug in either how carryopaque is
-		 * being used in fsm_determinise or in
-		 * captest_carryopaque.
-		 *
-		 * The next pass will be more formally supporting
-		 * end state set management independent of the
-		 * carryopaque mechanism, revisiting this in
-		 * greater detail, so for now this is ignored. */
-		/* exit(EXIT_FAILURE); */
+		exit(EXIT_FAILURE);
 	}
 
 	/* check captures */
