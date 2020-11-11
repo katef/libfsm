@@ -28,6 +28,11 @@ struct fsm_combine_info;
  */
 typedef unsigned int fsm_state_t;
 
+/* FSMs can have an opaque numeric identifier associated with
+ * their end states. These can be used to determine which of the
+ * original FSM(s) matched when executing a combined FSM. */
+typedef unsigned int fsm_end_id_t;
+
 /*
  * Create a new FSM. This is to be freed with fsm_free(). A structure allocated
  * from fsm_new() is expected to be passed as the "fsm" argument to the
@@ -200,6 +205,35 @@ fsm_setopaque(struct fsm *fsm, fsm_state_t state, void *opaque);
  */
 void *
 fsm_getopaque(const struct fsm *fsm, fsm_state_t state);
+
+/* Associate a numeric ID with the end states in an fsm.
+ * This can be used to track which of the original fsms matched
+ * input when multiple fsms are combined.
+ *
+ * These will be preserved through the following operations:
+ * - determinise
+ * - union
+ * - concat
+ * - ...
+ * */
+int
+fsm_setendid(struct fsm *fsm, fsm_end_id_t id);
+
+/* Get the end IDs associated with an end state, if any.
+ * If id_buf has enough cells to store all the end IDs (according
+ * to id_buf_count) then they are written into id_buf[] and
+ * *ids_written is set to the number of IDs.
+ *
+ * Returns 0 if there is not enough space in id_buf for the
+ * end IDs, or 1 if zero or more end IDs were returned. */
+int
+fsm_getendids(const struct fsm *fsm, fsm_state_t end_state,
+    size_t id_buf_count, fsm_end_id_t *id_buf,
+    size_t *ids_written);
+
+/* Get the number of end IDs associated with an end state. */
+size_t
+fsm_getendidcount(const struct fsm *fsm, fsm_state_t end_state);
 
 /*
  * Find the state (if there is just one), or add epsilon edges from all states,
