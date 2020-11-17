@@ -55,6 +55,11 @@ fsm_glushkovise(struct fsm *nfa)
 
 	assert(nfa != NULL);
 
+	if (!nfa->hasstart) {
+		errno = EINVAL;
+		return 0;
+	}
+
 	eclosures = epsilon_closure(nfa);
 	if (eclosures == NULL) {
 		return 0;

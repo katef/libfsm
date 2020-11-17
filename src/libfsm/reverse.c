@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <errno.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -22,7 +23,6 @@ int
 fsm_reverse(struct fsm *fsm)
 {
 	struct state_set *endset;
-	fsm_state_t prevstart;
 	fsm_state_t start, end;
 	int hasepsilons;
 	struct edge_set **edges;
@@ -30,6 +30,11 @@ fsm_reverse(struct fsm *fsm)
 
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
+
+	if (!fsm->hasstart) {
+		errno = EINVAL;
+		return 0;
+	}
 
 	/*
 	 * Reversing an FSM means to reverse the language the FSM matches.
@@ -51,7 +56,7 @@ fsm_reverse(struct fsm *fsm)
 	 * that new state where possible.
 	 */
 
-	if (fsm->endcount == 0 || !fsm_getstart(fsm, &prevstart)) {
+	if (fsm->endcount == 0) {
 		struct fsm *new;
 
 		new = fsm_new(fsm->opt);
@@ -73,7 +78,9 @@ fsm_reverse(struct fsm *fsm)
 	 * The new end state is the previous start state. Because there is (at most)
 	 * one start state, the new FSM will have at most one end state.
 	 */
-	end = prevstart;
+	if (!fsm_getstart(fsm, &end)) {
+		return 0;
+	}
 
 	/*
 	 * The set of the previous end states.

@@ -196,6 +196,11 @@ fsm_determinise(struct fsm *nfa)
 
 	assert(nfa != NULL);
 
+	if (!nfa->hasstart) {
+		errno = EINVAL;
+		return 0;
+	}
+
 	/*
 	 * This NFA->DFA implementation is for Glushkov NFA only; it keeps things
 	 * a little simpler by avoiding epsilon closures here, and also a little

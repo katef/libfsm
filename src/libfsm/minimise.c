@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <errno.h>
 
 #include <stdio.h>
 
@@ -62,6 +63,11 @@ fsm_minimise(struct fsm *fsm)
 	/* This should only be called with a DFA. */
 	assert(fsm != NULL);
 	assert(fsm_all(fsm, fsm_isdfa));
+
+	if (!fsm->hasstart) {
+		errno = EINVAL;
+		return 0;
+	}
 
 	/* The algorithm used below won't remove states without a path
 	 * to an end state, because it cannot prove they're

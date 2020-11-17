@@ -10,6 +10,14 @@
 /*
  * Boolean operators.
  *
+ * These operations are on the language of an FSM, not on the mechanics
+ * of its implementation. That means that these functions expect a
+ * well-formed FSM (i.e. with a start state). EINVAL will be raised when
+ * a start state is not present. This isn't considered an API contract
+ * (i.e. we do not assert), because it's possible to partially-construct
+ * an FSM by the other API functions, e.g. fsm_new().
+ * 
+ *
  * The resulting FSM may be an NFA.
  *
  * Binary operators are commutative. They are also destructive,
