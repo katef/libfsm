@@ -18,6 +18,7 @@
 
 #include "internal.h"
 #include "capture.h"
+#include "endids.h"
 
 #define DUMP_EPSILON_CLOSURES 0
 #define DEF_PENDING_CAPTURE_ACTIONS_CEIL 2
@@ -146,6 +147,10 @@ fsm_glushkovise(struct fsm *nfa)
 		 * known to have been an end state.
 		 */
 		fsm_carryopaque(nfa, eclosures[s], nfa, s);
+
+		if (!fsm_endid_carry(nfa, eclosures[s], nfa, s)) {
+			goto error;
+		}
 	}
 
 	if (!remap_capture_actions(nfa, eclosures)) {

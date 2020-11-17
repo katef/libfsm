@@ -20,6 +20,7 @@
 
 #include "capture.h"
 #include "internal.h"
+#include "endids.h"
 
 struct copy_capture_env {
 	char tag;
@@ -29,6 +30,9 @@ struct copy_capture_env {
 
 static int
 copy_capture_actions(struct fsm *dst, struct fsm *src);
+
+static int
+copy_end_ids(struct fsm *dst, struct fsm *src, fsm_state_t base_src);
 
 static struct fsm *
 merge(struct fsm *dst, struct fsm *src,
@@ -84,7 +88,22 @@ merge(struct fsm *dst, struct fsm *src,
 	dst->statecount += src->statecount;
 	dst->endcount   += src->endcount;
 
+	/* We need to explicitly copy over the capture actions and end
+	 * ID info here because they're stored on the FSMs as a whole,
+	 * rather than individual states; `memcpy`ing the states alone
+	 * won't transfer them.
+	 *
+	 * They're stored separately because they are likely to only
+	 * be on a small portion of the states, and adding two extra
+	 * NULL pointers to `struct fsm_state` increases memory usage
+	 * significantly. */
+
 	if (!copy_capture_actions(dst, src)) {
+		/* non-recoverable -- destructive operation */
+		return NULL;
+	}
+
+	if (!copy_end_ids(dst, src, *base_src)) {
 		/* non-recoverable -- destructive operation */
 		return NULL;
 	}
@@ -129,6 +148,49 @@ copy_capture_actions(struct fsm *dst, struct fsm *src)
 
 	fsm_capture_action_iter(src, copy_capture_cb, &env);
 
+	return env.ok;
+}
+
+struct copy_end_ids_env {
+	char tag;
+	struct fsm *dst;
+	struct fsm *src;
+	fsm_state_t base_src;
+	int ok;
+};
+
+static int
+copy_end_ids_cb(fsm_state_t state,
+    size_t count, const fsm_end_id_t *ids,
+    void *opaque)
+{
+	size_t i;
+	struct copy_end_ids_env *env = opaque;
+	assert(env->tag == 'M');
+
+	for (i = 0; i < count; i++) {
+		if (!fsm_endid_set(env->dst,
+			state + env->base_src,
+			ids[i])) {
+			env->ok = 0;
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+static int
+copy_end_ids(struct fsm *dst, struct fsm *src, fsm_state_t base_src)
+{
+	struct copy_end_ids_env env;
+	env.tag = 'M';		/* for Merge */
+	env.dst = dst;
+	env.src = src;
+	env.base_src = base_src;
+	env.ok = 1;
+
+	fsm_endid_iter(src, copy_end_ids_cb, &env);
 	return env.ok;
 }
 

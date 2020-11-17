@@ -24,9 +24,11 @@
 
 #include "internal.h"
 #include "capture.h"
+#include "endids.h"
 
 #define LOG_MAPPING 0
 #define LOG_CONSOLIDATE_CAPTURES 0
+#define LOG_CONSOLIDATE_ENDIDS 0
 
 struct mapping_closure {
 	size_t count;
@@ -43,6 +45,10 @@ struct consolidate_copy_capture_actions_env {
 
 static int
 consolidate_copy_capture_actions(struct fsm *dst, struct fsm *src,
+    const fsm_state_t *mapping, size_t mapping_count);
+
+static int
+consolidate_end_ids(struct fsm *dst, struct fsm *src,
     const fsm_state_t *mapping, size_t mapping_count);
 
 static fsm_state_t
@@ -167,6 +173,10 @@ fsm_consolidate(struct fsm *src,
 		goto cleanup;
 	}
 
+	if (!consolidate_end_ids(dst, src, mapping, mapping_count)) {
+		goto cleanup;
+	}
+
 	{
 		fsm_state_t src_start, dst_start;
 		if (fsm_getstart(src, &src_start)) {
@@ -233,7 +243,7 @@ consolidate_copy_capture_actions(struct fsm *dst, struct fsm *src,
 
 #if LOG_MAPPING
 	for (i = 0; i < mapping_count; i++) {
-		fprintf(stderr, "mapping[%u]: %u\n", i, mapping[i]);
+		fprintf(stderr, "mapping[%lu]: %u\n", i, mapping[i]);
 	}
 #else
 	(void)i;
@@ -241,5 +251,68 @@ consolidate_copy_capture_actions(struct fsm *dst, struct fsm *src,
 
 	fsm_capture_action_iter(src,
 	    consolidate_copy_capture_actions_cb, &env);
+	return env.ok;
+}
+
+struct consolidate_end_ids_env {
+	char tag;
+	struct fsm *dst;
+	struct fsm *src;
+	const fsm_state_t *mapping;
+	size_t mapping_count;
+	int ok;
+};
+
+static int
+consolidate_end_ids_cb(fsm_state_t state,
+    size_t count, const fsm_end_id_t *ids,
+    void *opaque)
+{
+	size_t i;
+	struct consolidate_end_ids_env *env = opaque;
+	fsm_state_t s;
+	assert(env->tag == 'C');
+
+#if LOG_CONSOLIDATE_ENDIDS > 1
+	fprintf(stderr, "consolidate_end_ids_cb: state %u, count %lu, IDs:",
+	    state, count);
+	for (i = 0; i < count; i++) {
+		fprintf(stderr, " %u", ids[i]);
+	}
+	fprintf(stderr, "\n");
+#endif
+
+	assert(state < env->mapping_count);
+	s = env->mapping[state];
+
+	for (i = 0; i < count; i++) {
+		if (!fsm_endid_set(env->dst, s, ids[i])) {
+			env->ok = 0;
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+static int
+consolidate_end_ids(struct fsm *dst, struct fsm *src,
+    const fsm_state_t *mapping, size_t mapping_count)
+{
+	struct consolidate_end_ids_env env;
+	env.tag = 'C';		/* for Consolidate */
+	env.dst = dst;
+	env.src = src;
+	env.mapping = mapping;
+	env.mapping_count = mapping_count;
+	env.ok = 1;
+
+	fsm_endid_iter(src, consolidate_end_ids_cb, &env);
+
+#if LOG_CONSOLIDATE_ENDIDS
+	fprintf(stderr, "==== fsm_consolidate -- endid_info after:\n");
+	fsm_endid_dump(stderr, dst);
+#endif
+
 	return env.ok;
 }
