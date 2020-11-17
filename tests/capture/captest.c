@@ -161,6 +161,22 @@ captest_run_single(const struct captest_single_fsm_test_info *info)
 		}
 	}
 
+	{
+		fsm_end_id_t id_buf[1] = { ~0 };
+		size_t written;
+		if (1 != fsm_getendidcount(fsm, end)) {
+			FAIL("did not have exactly one end ID");
+		}
+
+		if (!fsm_getendids(fsm, end, 1, id_buf, &written)) {
+			FAIL("failed to get end IDs");
+		}
+
+		if (0 != id_buf[0]) {
+			FAIL("failed to get end ID of 0");
+		}
+	}
+
 	for (i = 0; i < capture_count; i++) {
 #if CAPTEST_RUN_SINGLE_LOG
 		fprintf(stderr, "captest: capture %lu: exp (%ld, %ld), got (%ld, %ld)\n",
@@ -222,6 +238,10 @@ captest_fsm_of_string(const char *string, unsigned end_id)
 	}
 	fsm_setend(fsm, length, 1);
 	fsm_setopaque(fsm, length, eo);
+
+	if (!fsm_setendid(fsm, end_id)) {
+		goto cleanup;
+	}
 
 	return fsm;
 

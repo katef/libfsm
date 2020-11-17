@@ -74,6 +74,7 @@ struct fsm {
 	unsigned int hasstart:1;
 
 	struct fsm_capture_info *capture_info;
+	struct fsm_endid_info *endid_info;
 	const struct fsm_options *opt;
 };
 

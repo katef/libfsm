@@ -195,6 +195,10 @@ build_ab_c(void)
 
 	fsm_setend(fsm, 3, 1);
 	fsm_setopaque(fsm, 3, eo);
+	if (!fsm_setendid(fsm, 1)) {
+		goto fail;
+	}
+
 	return fsm;
 
 fail:
@@ -254,4 +258,23 @@ check(const struct fsm *fsm, const char *string,
 	assert(captures[cb_a].pos[1] == pa_1);
 	assert(captures[cb_b].pos[0] == pb_0);
 	assert(captures[cb_b].pos[1] == pb_1);
+
+	{
+		fsm_end_id_t id_buf[2];
+		size_t written;
+		if (!fsm_getendids(fsm, end, 2, id_buf, &written)) {
+			assert(!"fsm_getendids failed");
+		}
+
+		if (expected_ends == 0x2) {
+			assert(written == 1);
+			assert(id_buf[0] == 1);
+		} else if (expected_ends == 0x3) {
+			assert(written == 2);
+			assert(id_buf[0] == 0);
+			assert(id_buf[1] == 1);
+		} else {
+			assert(!"test not handled");
+		}
+	}
 }

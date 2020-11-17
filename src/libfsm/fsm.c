@@ -21,6 +21,7 @@
 
 #include "internal.h"
 #include "capture.h"
+#include "endids.h"
 
 void
 free_contents(struct fsm *fsm)
@@ -35,6 +36,7 @@ free_contents(struct fsm *fsm)
 	}
 
 	fsm_capture_free(fsm);
+	fsm_endid_free(fsm);
 
 	f_free(fsm->opt->alloc, fsm->states);
 }
@@ -60,6 +62,7 @@ fsm_new(const struct fsm_options *opt)
 	new->statecount = 0;
 	new->endcount   = 0;
 	new->capture_info = NULL;
+	new->endid_info = NULL;
 
 	new->states = f_malloc(f.opt->alloc, new->statealloc * sizeof *new->states);
 	if (new->states == NULL) {
@@ -74,6 +77,11 @@ fsm_new(const struct fsm_options *opt)
 	if (!fsm_capture_init(new)) {
 		f_free(f.opt->alloc, new->states);
 		f_free(f.opt->alloc, new);
+		return NULL;
+	}
+
+	if (!fsm_endid_init(new)) {
+		/* FIXME cleanup */
 		return NULL;
 	}
 
@@ -122,6 +130,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	dst->endcount   = src->endcount;
 
 	dst->capture_info = src->capture_info;
+	dst->endid_info = src->endid_info;
 
 	f_free(src->opt->alloc, src);
 }

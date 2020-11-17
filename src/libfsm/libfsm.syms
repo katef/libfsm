@@ -80,6 +80,10 @@ fsm_setendopaque
 fsm_setopaque
 fsm_getopaque
 
+fsm_getendidcount
+fsm_getendids
+fsm_setendid
+
 fsm_countedges
 fsm_countstates
 

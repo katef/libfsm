@@ -22,6 +22,7 @@
 
 #include "internal.h"
 #include "capture.h"
+#include "endids.h"
 
 #define DUMP_MAPPING 0
 #define LOG_DETERMINISE_CLOSURES 0
@@ -274,7 +275,7 @@ fsm_determinise(struct fsm *nfa)
 
 		/*
 		 * The closure of a set is equivalent to the union of closures of
-		 * each item. Here we iteratively build up sclosures[] in-situ
+		 * each item. Here we iteratively build up closures[] in-situ
 		 * to avoid needing to create a state set to store the union.
 		 */
 		{
@@ -416,6 +417,10 @@ fsm_determinise(struct fsm *nfa)
 			 * known to have been an end state.
 			 */
 			fsm_carryopaque(nfa, m->closure, dfa, m->dfastate);
+
+			if (!fsm_endid_carry(nfa, m->closure, dfa, m->dfastate)) {
+				goto error;
+			}
 		}
 
 		if (!remap_capture_actions(mappings, dfa, nfa)) {
