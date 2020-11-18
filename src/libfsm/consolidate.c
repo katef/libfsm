@@ -264,12 +264,11 @@ struct consolidate_end_ids_env {
 };
 
 static int
-consolidate_end_ids_cb(fsm_state_t state,
-    size_t count, const fsm_end_id_t *ids,
+consolidate_end_ids_cb(fsm_state_t state, const fsm_end_id_t id,
     void *opaque)
 {
-	size_t i;
 	struct consolidate_end_ids_env *env = opaque;
+	enum fsm_endid_set_res sres;
 	fsm_state_t s;
 	assert(env->tag == 'C');
 
@@ -285,11 +284,14 @@ consolidate_end_ids_cb(fsm_state_t state,
 	assert(state < env->mapping_count);
 	s = env->mapping[state];
 
-	for (i = 0; i < count; i++) {
-		if (!fsm_endid_set(env->dst, s, ids[i])) {
-			env->ok = 0;
-			return 0;
-		}
+#if LOG_CONSOLIDATE_ENDIDS > 1
+	fprintf(stderr, "consolidate[%d] <- %d\n", s, id);
+#endif
+
+	sres = fsm_endid_set(env->dst, s, id);
+	if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
+		env->ok = 0;
+		return 0;
 	}
 
 	return 1;
@@ -309,7 +311,7 @@ consolidate_end_ids(struct fsm *dst, struct fsm *src,
 
 	fsm_endid_iter(src, consolidate_end_ids_cb, &env);
 
-#if LOG_CONSOLIDATE_ENDIDS
+#if LOG_CONSOLIDATE_ENDIDS > 1
 	fprintf(stderr, "==== fsm_consolidate -- endid_info after:\n");
 	fsm_endid_dump(stderr, dst);
 #endif

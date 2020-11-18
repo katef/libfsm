@@ -42,6 +42,9 @@ struct state_array;
 
 #define FSM_CAPTURE_MAX INT_MAX
 
+/* 32-bit approximation of golden ratio, used for hashing */
+#define PHI32 0x9e3779b9
+
 struct fsm_edge {
 	fsm_state_t state; /* destination */
 	unsigned char symbol;
@@ -74,7 +77,7 @@ struct fsm {
 	unsigned int hasstart:1;
 
 	struct fsm_capture_info *capture_info;
-	struct fsm_endid_info *endid_info;
+	struct endid_info *endid_info;
 	const struct fsm_options *opt;
 };
 

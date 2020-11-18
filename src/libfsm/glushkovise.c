@@ -23,6 +23,7 @@
 #define DUMP_EPSILON_CLOSURES 0
 #define DEF_PENDING_CAPTURE_ACTIONS_CEIL 2
 #define LOG_GLUSHKOVIZE_CAPTURES 0
+#define DEF_CARRY_ENDIDS_COUNT 2
 
 struct remap_env {
 	char tag;
@@ -47,6 +48,10 @@ static int
 remap_capture_action_cb(fsm_state_t state,
     enum capture_action_type type, unsigned capture_id, fsm_state_t to,
     void *opaque);
+
+static int
+carry_endids(struct fsm *fsm, struct state_set *states,
+    fsm_state_t s);
 
 int
 fsm_glushkovise(struct fsm *nfa)
@@ -148,9 +153,15 @@ fsm_glushkovise(struct fsm *nfa)
 		 */
 		fsm_carryopaque(nfa, eclosures[s], nfa, s);
 
+		if (!carry_endids(nfa, eclosures[s], s)) {
+			goto error;
+		}
+
+#if 0
 		if (!fsm_endid_carry(nfa, eclosures[s], nfa, s)) {
 			goto error;
 		}
+#endif
 	}
 
 	if (!remap_capture_actions(nfa, eclosures)) {
@@ -323,3 +334,95 @@ fail:
 	env->ok = 0;
 	return 0;
 }
+
+struct collect_env {
+	char tag;
+	const struct fsm_alloc *alloc;
+	size_t count;
+	size_t ceil;
+	fsm_end_id_t *ids;
+	int ok;
+};
+
+static int
+collect_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
+{
+	struct collect_env *env = opaque;
+	assert(env->tag == 'G');
+
+	(void)state;
+
+	if (env->count == env->ceil) {
+		const size_t nceil = 2 * env->ceil;
+		fsm_end_id_t *nids;
+		assert(nceil > env->ceil);
+		nids = f_realloc(env->alloc, env->ids,
+		    nceil * sizeof(*env->ids));
+		if (nids == NULL) {
+			env->ok = 0;
+			return 0;
+		}
+		env->ceil = nceil;
+		env->ids = nids;
+	}
+
+	env->ids[env->count] = id;
+	env->count++;
+
+	return 1;
+}
+
+/* fsm_glushkovise can't use fsm_endid_carry directly, because the src
+ * and dst FSMs are the same -- that would lead to adding entries to a
+ * hash table, possibly causing it to resize, while iterating over it.
+ *
+ * Instead, collect entries that need to be added (if not already
+ * present), and then add them in a second pass. */
+static int
+carry_endids(struct fsm *fsm, struct state_set *states,
+    fsm_state_t dst_state)
+{
+	struct state_iter it;
+	fsm_state_t s;
+	size_t i;
+
+	struct collect_env env;
+	env.tag = 'G';		/* for fsm_glushkovize */
+	env.alloc = fsm->opt->alloc;
+	env.count = 0;
+	env.ceil = DEF_CARRY_ENDIDS_COUNT;
+	env.ids = f_malloc(fsm->opt->alloc,
+	    env.ceil * sizeof(*env.ids));
+	if (env.ids == NULL) {
+		return 0;
+	}
+	env.ok = 1;
+
+	/* collect from states */
+	for (state_set_reset(states, &it); state_set_next(&it, &s); ) {
+		if (!fsm_isend(fsm, s)) {
+			continue;
+		}
+
+		fsm_endid_iter_state(fsm, s, collect_cb, &env);
+		if (!env.ok) {
+			goto cleanup;
+		}
+	}
+
+	/* add them */
+	for (i = 0; i < env.count; i++) {
+		enum fsm_endid_set_res sres;
+		sres = fsm_endid_set(fsm, dst_state, env.ids[i]);
+		if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
+			env.ok = 0;
+			goto cleanup;
+		}
+	}
+
+cleanup:
+	f_free(fsm->opt->alloc, env.ids);
+
+	return env.ok;
+}
+

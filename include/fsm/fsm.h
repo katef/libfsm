@@ -223,12 +223,16 @@ fsm_setendid(struct fsm *fsm, fsm_end_id_t id);
  * If id_buf has enough cells to store all the end IDs (according
  * to id_buf_count) then they are written into id_buf[] and
  * *ids_written is set to the number of IDs. The end IDs in the
- * buffer will be in ascending order (FIXME: not currently
- * enforced).
+ * buffer may appear in any order, but should not have duplicates.
  *
  * Returns 0 if there is not enough space in id_buf for the
  * end IDs, or 1 if zero or more end IDs were returned. */
-int
+enum fsm_getendids_res {
+	FSM_GETENDIDS_NOT_FOUND,
+	FSM_GETENDIDS_FOUND,
+	FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE = -1
+};
+enum fsm_getendids_res
 fsm_getendids(const struct fsm *fsm, fsm_state_t end_state,
     size_t id_buf_count, fsm_end_id_t *id_buf,
     size_t *ids_written);
