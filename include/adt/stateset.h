@@ -55,7 +55,7 @@ size_t
 state_set_count(const struct state_set *set);
 
 void
-state_set_reset(struct state_set *set, struct state_iter *it);
+state_set_reset(const struct state_set *set, struct state_iter *it);
 
 int
 state_set_next(struct state_iter *it, fsm_state_t *state);

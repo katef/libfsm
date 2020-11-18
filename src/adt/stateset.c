@@ -539,7 +539,7 @@ state_set_count(const struct state_set *set)
 }
 
 void
-state_set_reset(struct state_set *set, struct state_iter *it)
+state_set_reset(const struct state_set *set, struct state_iter *it)
 {
 	it->i = 0;
 	it->set = set;
