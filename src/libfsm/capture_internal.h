@@ -25,9 +25,6 @@
 
 #define LOG_CAPTURE 0
 
-/* 32-bit approximation of golden ratio, used for hashing */
-#define PHI32 0x9e3779b9
-
 /* Most significant bit of a size_t. */
 #define COMMITTED_CAPTURE_FLAG ((SIZE_MAX) ^ (SIZE_MAX >> 1))
 

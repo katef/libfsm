@@ -56,6 +56,10 @@ compare_captures(const struct check_env *env,
     size_t nth_fsm, const struct fsm_capture *captures);
 
 static bool
+compare_endids(const struct check_env *env, fsm_state_t combined_end,
+    size_t nth_fsm, fsm_state_t nth_end);
+
+static bool
 check_captures_for_false_positives(const struct check_env *env,
     const struct fsm_capture *captures_combined, size_t nth_fsm);
 
@@ -320,6 +324,10 @@ check_fsms_for_single_input(struct check_env *env, struct fsm_capture *captures,
 					i, captures2)) {
 					return THEFT_TRIAL_FAIL;
 				}
+
+				if (!compare_endids(env, end, i, end2)) {
+					return THEFT_TRIAL_FAIL;
+				}
 			} else if (exec_res2 == 0 && env->check_others_for_fps) {
 				if (!check_captures_for_false_positives(env,
 					captures, i)) {
@@ -508,6 +516,51 @@ check_captures_for_false_positives(const struct check_env *env,
 	return true;
 }
 
+/* If the nth FSM matches, then that FSM's ending state's end ID should
+ * be among the end IDs from the combined FSM's ending state. */
+static bool
+compare_endids(const struct check_env *env, fsm_state_t combined_end,
+    size_t nth_fsm, fsm_state_t nth_end)
+{
+	fsm_end_id_t combined_end_buf[MAX_CAPTURE_STRINGS];
+	size_t combined_written;
+	fsm_end_id_t nth_end_buf[4];
+	size_t nth_written;
+	size_t i;
+	enum fsm_getendids_res gres;
+
+	gres = fsm_getendids(env->combined, combined_end,
+	    sizeof(combined_end_buf)/sizeof(combined_end_buf[0]),
+	    combined_end_buf, &combined_written);
+	if (gres != FSM_GETENDIDS_FOUND) {
+		fprintf(stderr, "FAIL: fsm_getendids failed for env->combined\n");
+		return false;
+	}
+
+	gres = fsm_getendids(env->copies[nth_fsm], nth_end,
+	    sizeof(nth_end_buf)/sizeof(nth_end_buf[0]),
+	    nth_end_buf, &nth_written);
+	if (gres != FSM_GETENDIDS_FOUND) {
+		fprintf(stderr, "FAIL: fsm_getendids failed for env->nth[%zu]\n", nth_fsm);
+		return false;
+	}
+
+	if (nth_written != 1) {
+		fprintf(stderr, "FAIL: fsm_getendids returned %zu for nth_written, expected exactly 1\n",
+		    nth_written);
+		return false;
+	}
+
+	for (i = 0; i < combined_written; i++) {
+		if (combined_end_buf[i] == nth_end_buf[0]) {
+			return true; /* found! */
+		}
+	}
+
+	fprintf(stderr, "FAIL: endid %u for nth_fsm %zu not found among env->combined's %zu end IDs\n",
+	    nth_end_buf[0], nth_fsm, combined_written);
+	return false;
+}
 
 static struct fsm_options options;
 
@@ -552,8 +605,6 @@ static void css_carryopaque(const struct fsm *src_fsm,
 
 		/* FIXME: freeing here leads to a use after free */
 		/* f_free(opt->alloc, eo_src); */
-
-		/* fsm_setopaque(src_fsm, src_set[i], NULL); */
 	}
 }
 
@@ -628,6 +679,10 @@ build_capstring_dfa(const struct capstring *cs, uint8_t end_id)
 
 	fsm_setend(fsm, state, 1);
 	fsm_setopaque(fsm, state, eo);
+
+	if (!fsm_setendid(fsm, end_id)) {
+		goto cleanup;
+	}
 
 	if (!fsm_determinise(fsm)) {
 		goto cleanup;
@@ -958,6 +1013,94 @@ regression_n_5(theft_seed seed)
 	return true;
 }
 
+static bool
+regression_n_6(theft_seed seed)
+{
+	(void)seed;
+
+	struct capture_env env = {
+		.tag = 'c',
+		.letter_count = 2,
+		.string_maxlen = 5,
+	};
+
+	/* Seed 0xd54b2c439441e9d6 */
+	const struct capture_string_set css = {
+		.count = 1,
+		.capture_strings = {
+			{
+				.string = "a*b*a*",
+				.capture_count = 0,
+			},
+		},
+	};
+
+	struct fsm_capture captures[MAX_TOTAL_CAPTURES];
+
+	if (THEFT_TRIAL_PASS !=
+	    check_capstring_set(&env, &css, NULL, false, captures)) {
+		return false;
+	}
+
+	/* FIXME: check captures, need base info */
+	fprintf(stderr, "%ld, %ld, %ld, %ld\n",
+	    captures[0].pos[0], captures[0].pos[1],
+	    captures[1].pos[0], captures[1].pos[1]);
+	/* assert(captures[0].pos[0] ==  */
+
+	return true;
+}
+
+static bool
+regression_n_7(theft_seed seed)
+{
+	(void)seed;
+
+	struct capture_env env = {
+		.tag = 'c',
+		.letter_count = 2,
+		.string_maxlen = 5,
+	};
+
+	/* Seed 0xd54b2c439441e9d6 */
+	const struct capture_string_set css = {
+		.count = 4,
+		.capture_strings = {
+			{
+				.string = "",
+				.capture_count = 0,
+			},
+			{
+				.string = "a*",
+				.capture_count = 0,
+			},
+			{
+				.string = "",
+				.capture_count = 0,
+			},
+			{
+				.string = "",
+				.capture_count = 0,
+			},
+		},
+	};
+
+	struct fsm_capture captures[MAX_TOTAL_CAPTURES];
+
+	if (THEFT_TRIAL_PASS !=
+	    check_capstring_set(&env, &css, NULL, false, captures)) {
+		return false;
+	}
+
+	/* FIXME: check captures, need base info */
+	fprintf(stderr, "%ld, %ld, %ld, %ld\n",
+	    captures[0].pos[0], captures[0].pos[1],
+	    captures[1].pos[0], captures[1].pos[1]);
+	/* assert(captures[0].pos[0] ==  */
+
+	return true;
+}
+
 void
 register_test_capture_string_set(void)
 {
@@ -969,6 +1112,8 @@ register_test_capture_string_set(void)
 	reg_test("capture_string_set_regression3", regression_n_3);
 	reg_test("capture_string_set_regression4", regression_n_4);
 	reg_test("capture_string_set_regression5", regression_n_5);
+	reg_test("capture_string_set_regression6", regression_n_6);
+	reg_test("capture_string_set_regression7", regression_n_7);
 
 
 	reg_test("capture_string_set_invariants",
