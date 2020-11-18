@@ -221,8 +221,6 @@ static void captest_carryopaque(const struct fsm *src_fsm,
 			fprintf(stderr, "carryopaque: eo_src ends -> 0x%x\n",
 			    eo_dst->ends);
 		}
-
-		fsm_setopaque(src_fsm, src_set[i], NULL);
 	}
 }
 
