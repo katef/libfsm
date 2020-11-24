@@ -127,6 +127,22 @@ fsm_minimise(struct fsm *fsm)
 		goto cleanup;
 	}
 
+	/*
+	 * It's possible for minimisation to produce an FSM without a start state.
+	 * We avoid producing these for caller convenience, otherwise a caller
+	 * would be responsible for the same test here.
+	 */
+	if (!dst->hasstart) {
+		fsm_state_t start;
+
+		if (!fsm_addstate(dst, &start)) {
+			r = 0;
+			goto cleanup;
+		}
+
+		fsm_setstart(dst, start);
+	}
+
 	fsm_move(fsm, dst);
 
 cleanup:
