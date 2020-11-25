@@ -210,6 +210,7 @@ mark_capture_path(struct capture_set_path_env *env)
 	env->trail_i = 1;
 	env->trail[0].state = env->start;
 	env->trail[0].step = TRAIL_STEP_START;
+	env->trail[0].has_self_edge = 0;
 
 	while (env->trail_i > 0) {
 		const enum trail_step step = env->trail[env->trail_i - 1].step;
@@ -427,6 +428,23 @@ step_trail_start(struct capture_set_path_env *env)
 			    i, state);
 #endif
 
+			/* Special case: if this is marked as having
+			 * a self-edge on the path, then also add an
+			 * extend for that. */
+			if (env->trail[i].has_self_edge) {
+				struct fsm_capture_action self_action;
+				self_action.type = CAPTURE_ACTION_EXTEND;
+				self_action.id = env->capture_id;
+				self_action.to = state;
+
+				if (!add_capture_action(env->fsm,
+					env->fsm->capture_info,
+					state, &self_action)) {
+					return 0;
+				}
+			}
+
+
 			if (i == 0) {
 				action.type = CAPTURE_ACTION_START;
 			} else {
@@ -488,10 +506,16 @@ step_trail_iter_edges(struct capture_set_path_env *env)
 	    tc->state, e.state);
 #endif
 
-	/* FIXME: the seen filtering means it misses self edges,
-	 * should those be special-cased here? */
-
-	if (CHECK_SEEN(env, e.state)) {
+	if (tc->state == e.state) {
+#if LOG_CAPTURE > 0
+		fprintf(stderr, "    -- special case, self-edge\n");
+#endif
+		/* Mark this state as having a self-edge, then continue
+		 * the iterator. An EXTEND action will be added for the
+		 * self-edge later, if necessary. */
+		tc->has_self_edge = 1;
+		return 1;
+	} else if (CHECK_SEEN(env, e.state)) {
 #if LOG_CAPTURE > 0
 		fprintf(stderr, "    -- seen, skipping\n");
 #endif
@@ -516,7 +540,7 @@ step_trail_iter_edges(struct capture_set_path_env *env)
 	next_tc = &env->trail[env->trail_i - 1];
 	next_tc->state = e.state;
 	next_tc->step = TRAIL_STEP_START;
-
+	next_tc->has_self_edge = 0;
 	return 1;
 }
 
@@ -686,6 +710,8 @@ fsm_capture_update_captures(const struct fsm *fsm,
 
 			if (captures[capture_id].pos[0] == FSM_CAPTURE_NO_POS) {
 				captures[capture_id].pos[0] = offset;
+				captures[capture_id].pos[1] = offset | COMMITTED_CAPTURE_FLAG;
+			} else { /* extend */
 				captures[capture_id].pos[1] = offset | COMMITTED_CAPTURE_FLAG;
 			}
 
