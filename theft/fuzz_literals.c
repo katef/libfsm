@@ -189,7 +189,7 @@ check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, intptr_t id)
 }
 
 static void
-carryopaque_cb(struct fsm *src_fsm, const fsm_state_t *set, size_t count,
+carryopaque_cb(const struct fsm *src_fsm, const fsm_state_t *set, size_t count,
 	struct fsm *dst_fsm, fsm_state_t state)
 {
 	const intptr_t NONE = -1;
