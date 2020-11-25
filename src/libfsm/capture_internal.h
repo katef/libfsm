@@ -78,6 +78,7 @@ struct capture_set_path_env {
 	struct trail_cell {
 		fsm_state_t state;
 		enum trail_step step;
+		char has_self_edge;
 		struct edge_iter iter;
 	} *trail;
 
