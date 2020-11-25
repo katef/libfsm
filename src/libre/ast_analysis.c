@@ -162,7 +162,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 }
 
 static int
-always_consumes_input(const struct ast_expr *n, int thud)
+always_consumes_input(const struct ast_expr *n)
 {
 	if (is_nullable(n)) {
 		return 0;
@@ -187,7 +187,7 @@ always_consumes_input(const struct ast_expr *n, int thud)
 		size_t i;
 
 		for (i = 0; i < n->u.concat.count; i++) {
-			if (always_consumes_input(n->u.concat.n[i], thud)) {
+			if (always_consumes_input(n->u.concat.n[i])) {
 				return 1;
 			}
 		}
@@ -199,7 +199,7 @@ always_consumes_input(const struct ast_expr *n, int thud)
 		size_t i;
 
 		for (i = 0; i < n->u.alt.count; i++) {
-			if (!always_consumes_input(n->u.alt.n[i], thud)) {
+			if (!always_consumes_input(n->u.alt.n[i])) {
 				return 0;
 			}
 		}
@@ -209,17 +209,13 @@ always_consumes_input(const struct ast_expr *n, int thud)
 
 	case AST_EXPR_REPEAT:
 		/* not nullable, so check the repeated node */
-		return always_consumes_input(n->u.repeat.e, thud);
+		return always_consumes_input(n->u.repeat.e);
 
 	case AST_EXPR_ANCHOR:
 		return 0;
 
 	case AST_EXPR_GROUP:
-		if (thud) {
-			return 1; /* FIXME */
-		}
-
-		return always_consumes_input(n->u.group.e, thud);
+		return always_consumes_input(n->u.group.e);
 
 	default:
 		return 0;
@@ -344,7 +340,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			 */
 			if (!env->followed_by_consuming) {
 				for (j = i + 1; j < n->u.concat.count; j++) {
-					if (always_consumes_input(n->u.concat.n[j], 0)) {
+					if (always_consumes_input(n->u.concat.n[j])) {
 						env->followed_by_consuming = 1;
 						break;
 					}
@@ -484,7 +480,7 @@ assign_firsts(struct ast_expr *n)
 			struct ast_expr *child = n->u.concat.n[i];
 			assign_firsts(child);
 
-			if (always_consumes_input(child, 1) || is_start_anchor(child)) {
+			if (always_consumes_input(child) || is_start_anchor(child)) {
 				break;
 			}
 		}
@@ -557,7 +553,7 @@ assign_lasts(struct ast_expr *n)
 		for (i = n->u.concat.count - 1; i < n->u.concat.count; i--) {
 			struct ast_expr *child = n->u.concat.n[i];
 			assign_lasts(child);
-			if (always_consumes_input(child, 1) || is_end_anchor(child)) {
+			if (always_consumes_input(child) || is_end_anchor(child)) {
 				break;
 			}
 		}
