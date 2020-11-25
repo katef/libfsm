@@ -505,6 +505,11 @@ step_trail_iter_edges(struct capture_set_path_env *env)
 	}
 
 #if LOG_CAPTURE > 0
+	fprintf(stderr, " -- marking %u as seen\n", e.state);
+#endif
+	MARK_SEEN(env, e.state);
+
+#if LOG_CAPTURE > 0
 	fprintf(stderr, "    -- not seen (%u), exploring\n", e.state);
 #endif
 	env->trail_i++;
