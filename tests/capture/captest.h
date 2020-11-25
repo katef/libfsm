@@ -19,7 +19,10 @@
 #define MAX_TEST_CAPTURES 8
 
 #define CAPTEST_RUN_SINGLE_LOG 0
+
+#ifndef LOG_INTERMEDIATE_FSMS
 #define LOG_INTERMEDIATE_FSMS 0
+#endif
 
 struct captest_single_fsm_test_info {
 	const char *string;
