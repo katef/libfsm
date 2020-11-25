@@ -100,6 +100,9 @@ grow_capture_action_buckets(const struct fsm_alloc *alloc,
     struct fsm_capture_info *ci);
 
 static int
+grow_trail(struct capture_set_path_env *env);
+
+static int
 step_trail_start(struct capture_set_path_env *env);
 static int
 step_trail_iter_edges(struct capture_set_path_env *env);

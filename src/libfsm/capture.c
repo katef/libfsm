@@ -383,6 +383,27 @@ grow_capture_action_buckets(const struct fsm_alloc *alloc,
 }
 
 static int
+grow_trail(struct capture_set_path_env *env)
+{
+	struct trail_cell *ntrail;
+	unsigned nceil;
+	assert(env != NULL);
+
+	nceil = 2 * env->trail_ceil;
+	assert(nceil > env->trail_ceil);
+
+	ntrail = f_realloc(env->fsm->opt->alloc, env->trail,
+	    nceil * sizeof(env->trail[0]));
+	if (ntrail == NULL) {
+		return 0;
+	}
+
+	env->trail = ntrail;
+	env->trail_ceil = nceil;
+	return 1;
+}
+
+static int
 step_trail_start(struct capture_set_path_env *env)
 {
 	struct trail_cell *tc = &env->trail[env->trail_i - 1];
@@ -478,7 +499,9 @@ step_trail_iter_edges(struct capture_set_path_env *env)
 	}
 
 	if (env->trail_i == env->trail_ceil) {
-		assert(!"TODO: grow trail"); /* FIXME exercise this */
+		if (!grow_trail(env)) {
+			return 0;
+		}
 	}
 
 #if LOG_CAPTURE > 0
