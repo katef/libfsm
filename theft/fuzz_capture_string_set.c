@@ -553,7 +553,7 @@ static void css_carryopaque(const struct fsm *src_fsm,
 		/* FIXME: freeing here leads to a use after free */
 		/* f_free(opt->alloc, eo_src); */
 
-		fsm_setopaque(src_fsm, src_set[i], NULL);
+		/* fsm_setopaque(src_fsm, src_set[i], NULL); */
 	}
 }
 
