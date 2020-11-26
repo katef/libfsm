@@ -32,6 +32,7 @@ fsm_parse
 
 # <fsm/print.h>
 fsm_print_api
+fsm_print_awk
 fsm_print_c
 fsm_print_dot
 fsm_print_fsm

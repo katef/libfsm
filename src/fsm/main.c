@@ -156,6 +156,7 @@ print_name(const char *name)
 		fsm_print *f;
 	} a[] = {
 		{ "api",   fsm_print_api   },
+		{ "awk",   fsm_print_awk   },
 		{ "c",     fsm_print_c     },
 		{ "dot",   fsm_print_dot   },
 		{ "fsm",   fsm_print_fsm   },

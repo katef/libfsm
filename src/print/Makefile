@@ -1,5 +1,6 @@
 .include "../../share/mk/top.mk"
 
+SRC += src/print/awk.c
 SRC += src/print/c.c
 SRC += src/print/dot.c
 SRC += src/print/abnf.c

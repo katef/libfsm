@@ -11,6 +11,7 @@ struct fsm_options;
 
 typedef int (escputc)(FILE *f, const struct fsm_options *opt, char c);
 
+escputc awk_escputc;
 escputc c_escputc_char;
 escputc c_escputc_str;
 escputc abnf_escputc;
@@ -21,6 +22,9 @@ escputc json_escputc;
 escputc pcre_escputc;
 escputc rust_escputc_char;
 escputc rust_escputc_str;
+
+void
+awk_escputcharlit(FILE *f, const struct fsm_options *opt, char c);
 
 void
 c_escputcharlit(FILE *f, const struct fsm_options *opt, char c);
