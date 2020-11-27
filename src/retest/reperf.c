@@ -626,6 +626,10 @@ perf_case_run(struct perf_case *c, enum halt halt,
 			if (fsm == NULL) {
 				return ERROR_PARSING_REGEXP;
 			}
+
+			if (iter < c->count-1) {
+				fsm_free(fsm);
+			}
 		}
 
 		xclock_gettime(&c1);
