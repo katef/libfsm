@@ -1135,7 +1135,18 @@ main(int argc, char *argv[])
 		char buf[128];
 		printf("paused\n");
 		fflush(stdout);
-		fgets(buf, sizeof buf, stdin);
+
+		for (;;) {
+			size_t blen;
+			if (fgets(buf, sizeof buf, stdin) == NULL) {
+				break;
+			}
+
+			blen = strlen(buf);
+			if (blen == 0 || buf[blen-1] == '\n') {
+				break;
+			}
+		}
 	}
 
 	if (tsv) {
