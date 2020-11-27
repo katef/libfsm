@@ -34,6 +34,8 @@ free_contents(struct fsm *fsm)
 		edge_set_free(fsm->opt->alloc, fsm->states[i].edges);
 	}
 
+	fsm_capture_free(fsm);
+
 	f_free(fsm->opt->alloc, fsm->states);
 }
 
