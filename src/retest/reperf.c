@@ -355,6 +355,7 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 		char last;
 		char *b;
 		size_t len;
+		int quit;
 
 		line++;
 		len = strlen(s);
@@ -418,6 +419,7 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 			continue;
 		}
 
+		quit = 0;
 		switch (s[0]) {
 		case '#':
 			/* comment, skip */
@@ -530,9 +532,20 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 			perf_case_reset(&c);
 			break;
 
+		case 'Q':
+			if (echo) {
+				fprintf(stderr, "ECHO::: QUIT\n");
+			}
+			quit = 1;
+			break;
+
 		default:
 			fprintf(stderr, "line %zu: unknown command '%c': %s\n", line, s[0], s);
 			exit(EXIT_FAILURE);
+		}
+
+		if (quit) {
+			break;
 		}
 	}
 
