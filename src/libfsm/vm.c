@@ -127,7 +127,7 @@ fsm_vm_compile(const struct fsm *fsm)
 void
 fsm_vm_free(struct fsm_dfavm *vm)
 {
-	(void)vm;
+	dfavm_free_vm(vm);
 }
 
 static enum dfavm_state

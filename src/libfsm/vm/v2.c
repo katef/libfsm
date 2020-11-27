@@ -319,3 +319,15 @@ vm_match_v2(const struct dfavm_v2 *vm, struct vm_state *st, const char *buf, siz
 	return VM_FAIL;
 }
 
+void
+dfavm_v2_finalize(struct dfavm_v2 *vm)
+{
+	free(vm->abuf);
+	vm->abuf = NULL;
+	vm->alen = 0;
+
+	free(vm->ops);
+	vm->ops = NULL;
+	vm->len = 0;
+}
+
