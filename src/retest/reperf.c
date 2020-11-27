@@ -696,12 +696,12 @@ perf_case_run(struct perf_case *c, enum halt halt,
 		}
 	}
 
+	ret = ERROR_NONE;
+
 	if (c->mt != MATCH_NONE) {
 		struct timespec t0, t1;
 
 		xclock_gettime(&t0);
-
-		ret = ERROR_NONE;
 
 		for (iter=0; iter < c->count; iter++) {
 			int r;
@@ -721,21 +721,18 @@ perf_case_run(struct perf_case *c, enum halt halt,
 			str_free(&contents);
 		}
 
-		if (ret != ERROR_NONE) {
-			fsm_runner_finalize(&runner);
-			return ret;
+		if (ret == ERROR_NONE) {
+			xclock_gettime(&t1);
+
+			report_delta(&t->run_delta, &t0, &t1);
 		}
-
-		xclock_gettime(&t1);
-
-		report_delta(&t->run_delta, &t0, &t1);
 	}
 
 done:
 
 	fsm_runner_finalize(&runner);
 
-	return ERROR_NONE;
+	return ret;
 }
 
 static void
