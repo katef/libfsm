@@ -228,7 +228,8 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 static void
 fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 {
-	const char *cp;
+	/* TODO: currently unused, but must be non-NULL */
+	const char *cp = "";
 
 	assert(f != NULL);
 	assert(ir != NULL);
