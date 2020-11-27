@@ -302,6 +302,14 @@ perf_case_init(struct perf_case *c, enum implementation impl)
 	c->expected_matches = 1;
 }
 
+static void
+perf_case_finalize(struct perf_case *c)
+{
+	str_free(&c->test_name);
+	str_free(&c->regexp);
+	str_free(&c->match);
+}
+
 static enum error_type
 perf_case_run(struct perf_case *c, enum halt halt,
 	struct timing *t);
@@ -492,6 +500,7 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 	}
 
 	free(buf);
+	perf_case_finalize(&c);
 
 	return 0;
 }
