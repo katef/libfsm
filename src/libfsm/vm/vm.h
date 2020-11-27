@@ -197,6 +197,9 @@ struct fsm_dfavm *
 dfavm_compile_vm(const struct dfavm_assembler_ir *a, struct fsm_vm_compile_opts opts);
 
 void
+dfavm_free_vm(struct fsm_dfavm *vm);
+
+void
 dfavm_opasm_finalize_op(struct dfavm_assembler_ir *a);
 
 /* v1 */
@@ -219,6 +222,12 @@ void
 running_print_op_v2(const struct dfavm_v2 *vm, uint32_t pc, const char *sp, const char *buf, size_t n, char ch, FILE *f);
 enum dfavm_state
 vm_match_v2(const struct dfavm_v2 *vm, struct vm_state *st, const char *buf, size_t n);
+
+void
+dfavm_v1_finalize(struct dfavm_v1 *vm);
+
+void
+dfavm_v2_finalize(struct dfavm_v2 *vm);
 
 #endif
 
