@@ -84,6 +84,8 @@
 static struct fsm_options opt;
 static struct fsm_vm_compile_opts vm_opts = { 0, FSM_VM_COMPILE_VM_V1, NULL };
 
+static int echo = 0;
+
 enum match_type {
 	MATCH_NONE,
 	MATCH_STRING,
@@ -362,6 +364,13 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 			exit(EXIT_FAILURE);
 		}
 
+		if (echo) {
+			fprintf(stderr, "ECHO>>> [len=%zu] %s", len, s);
+			if (len > 0 && s[len-1] != '\n') {
+				fprintf(stderr, "\n");
+			}
+		}
+
 		if (scont) {
 			struct str *sc = scont;
 			scont = NULL;
@@ -377,6 +386,10 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 			if (s[len-1] == '\\') {
 				s[--len] = '\0';
 				scont = sc;
+			}
+
+			if (echo) {
+				fprintf(stderr, "ECHO::: MATCH_STRING += \"%s\"\n", s);
 			}
 
 			str_append(sc, s);
@@ -415,12 +428,18 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 			rstrip(s, &len);
 			str_set(&c.test_name, lstrip(&s[1]));
 			c.line = line;
+			if (echo) {
+				fprintf(stderr, "ECHO::: TEST_NAME=\"%s\"\n", c.test_name.data);
+			}
 			break;
 
 		case 'D':
 			/* parse dialect */
 			rstrip(s, &len);
 			c.dialect = dialect_name(lstrip(&s[1]));
+			if (echo) {
+				fprintf(stderr, "ECHO::: DIALECT=%d (\"%s\")\n", c.dialect, lstrip(&s[1]));
+			}
 			break;
 
 		case 'M':
@@ -429,6 +448,9 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 				b++;
 			}
 			str_set(&c.regexp, b);
+			if (echo) {
+				fprintf(stderr, "ECHO::: REGEXP=/%s/\n", c.regexp.data);
+			}
 			break;
 
 		case 'S':
@@ -451,12 +473,18 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 			}
 
 			c.mt = MATCH_STRING;
+			if (echo) {
+				fprintf(stderr, "ECHO::: MATCH=STRING MATCH_STRING=\"%s\"\n", c.match.data);
+			}
 			break;
 
 		case 'F':
 			rstrip(s, &len);
 			str_set(&c.match, lstrip(&s[1]));
 			c.mt = MATCH_FILE;
+			if (echo) {
+				fprintf(stderr, "ECHO::: MATCH=FILE MATCH_PATH=\"%s\"\n", c.match.data);
+			}
 			break;
 
 		case 'N':
@@ -478,10 +506,19 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 				} else {
 					c.expected_matches = n;
 				}
+
+				if (echo) {
+					fprintf(stderr, "ECHO::: %s=%ld\n",
+						(s[0] == 'N' ? "COUNT" : "EXPECTED_MATCHES"), n);
+				}
 			}
 			break;
 
 		case 'X':
+			if (echo) {
+				fprintf(stderr, "ECHO::: EXECUTING\n");
+			}
+
 			t.comp_delta = t.glush_delta = t.det_delta = t.min_delta = t.run_delta = 0.0;
 			err = perf_case_run(&c, halt, &t);
 			if (tsv) {
@@ -1047,7 +1084,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "O:L:l:x:" "pqtH:" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:l:x:" "epqtH:" ), c != -1) {
 			switch (c) {
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
@@ -1114,6 +1151,7 @@ main(int argc, char *argv[])
 			case 'p': pause = 1; break;
 			case 'q': quiet = 1; break;
 			case 't': tsv   = 1; break;
+			case 'e': echo  = 1; break;
 
 			case 'h':
 				usage();
