@@ -300,7 +300,6 @@ void
 fsm_print_vmdot(FILE *f, const struct fsm *fsm)
 {
 	struct ir *ir;
-	const char *prefix;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
@@ -312,12 +311,6 @@ fsm_print_vmdot(FILE *f, const struct fsm *fsm)
 	}
 
 	/* henceforth, no function should be passed struct fsm *, only the ir and options */
-
-	if (fsm->opt->prefix != NULL) {
-		prefix = fsm->opt->prefix;
-	} else {
-		prefix = "fsm_";
-	}
 
 	if (fsm->opt->fragment) {
 		fsm_print_vmdotfrag(f, ir, fsm->opt);
