@@ -85,6 +85,7 @@ static struct fsm_options opt;
 static struct fsm_vm_compile_opts vm_opts = { 0, FSM_VM_COMPILE_VM_V1, NULL };
 
 static int echo = 0;
+static int disable_comp_timing = 0;
 
 enum match_type {
 	MATCH_NONE,
@@ -661,13 +662,19 @@ perf_case_run(struct perf_case *c, enum halt halt,
 
 		struct re_err comp_err;
 		enum re_flags flags;
+		int comp_count;
 
 		comp_err = err_zero;
 		flags = 0;
 
+		comp_count = c->count;
+		if (disable_comp_timing) {
+			comp_count = 1;
+		}
+
 		xclock_gettime(&c0);
 
-		for (iter=0; iter < c->count; iter++) {
+		for (iter=0; iter < comp_count; iter++) {
 			const char *re;
 
 			re = c->regexp.data;
@@ -677,14 +684,16 @@ perf_case_run(struct perf_case *c, enum halt halt,
 				return ERROR_PARSING_REGEXP;
 			}
 
-			if (iter < c->count-1) {
+			if (iter < comp_count-1) {
 				fsm_free(fsm);
 			}
 		}
 
-		xclock_gettime(&c1);
+		if (!disable_comp_timing) {
+			xclock_gettime(&c1);
 
-		report_delta(&t->comp_delta, &c0, &c1);
+			report_delta(&t->comp_delta, &c0, &c1);
+		}
 	}
 
 	if (halt == HALT_AFTER_COMPILE) {
@@ -1097,7 +1106,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "O:L:l:x:" "epqtH:" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:l:x:" "CepqtH:" ), c != -1) {
 			switch (c) {
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
@@ -1165,6 +1174,7 @@ main(int argc, char *argv[])
 			case 'q': quiet = 1; break;
 			case 't': tsv   = 1; break;
 			case 'e': echo  = 1; break;
+			case 'C': disable_comp_timing = 1; break;
 
 			case 'h':
 				usage();
