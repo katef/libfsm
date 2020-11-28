@@ -1,0 +1,59 @@
+# simple matches from Boost
+
+- test 1
+M abc
+D pcre
+S abc
+N 1000000
+R 1
+X
+
+- test 2
+M ^([0-9]+)(-| |$)(.*)$
+D pcre
+S 100- this is a line of ftp response which contains a message string
+N 1000000
+R 1
+X
+
+- test 3
+M ([[:digit:]]{4}[- ]){3}[[:digit:]]{3,4}
+D pcre
+S 1234-5678-1234-456
+N 1000000
+R 1
+X
+
+- test 4
+M ^([a-zA-Z0-9_\-\.]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)$
+D pcre
+S john@johnmaddock.co.uk
+N 1000000
+R 1
+X
+
+- test 5
+M ^([a-zA-Z0-9_\-\.]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)$
+D pcre
+S foo12@foo.edu
+N 1000000
+R 1
+X
+Q
+
+- gutten 3
+M [[:alpha:]]+ing
+D pcre
+F mtent/mtent12.txt
+N 10
+R 1
+X
+
+- gutten 6
+M (Tom|Sawyer|Huckleberry|Finn).{0,30}river|river.{0,30}(Tom|Sawyer|Huckleberry|Finn)
+D pcre
+F mtent/mtent12.txt
+N 10
+R 1
+X
+
