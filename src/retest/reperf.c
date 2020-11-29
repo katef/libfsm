@@ -86,6 +86,7 @@ static struct fsm_vm_compile_opts vm_opts = { 0, FSM_VM_COMPILE_VM_V1, NULL };
 
 static int echo = 0;
 static int disable_comp_timing = 0;
+static int num_cycles = -1;
 
 enum match_type {
 	MATCH_NONE,
@@ -523,6 +524,11 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 			}
 
 			t.comp_delta = t.glush_delta = t.det_delta = t.min_delta = t.run_delta = 0.0;
+
+			if (num_cycles > 0) {
+				c.count = num_cycles;
+			}
+
 			err = perf_case_run(&c, halt, &t);
 			if (tsv) {
 				perf_case_report_tsv(&c, halt, err, quiet, &t);
@@ -1106,7 +1112,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "O:L:l:x:" "CepqtH:" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:l:x:" "CepqtH:N:" ), c != -1) {
 			switch (c) {
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
@@ -1179,6 +1185,24 @@ main(int argc, char *argv[])
 			case 'h':
 				usage();
 				return EXIT_SUCCESS;
+
+			case 'N':
+				{
+					char *end = NULL;
+					long num;
+
+					errno = 0;
+					num = strtol(optarg, &end, 10);
+
+					if (errno != 0 || !end || *end != '\0') {
+						fprintf(stderr, "invalid argument to -N: %s\n", optarg);
+						usage();
+						exit(1);
+					}
+
+					num_cycles = num;
+				}
+				break;
 
 			case '?':
 			default:
