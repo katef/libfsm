@@ -39,6 +39,7 @@ fsm_capture_free(struct fsm *fsm)
 	if (ci == NULL) {
 		return;
 	}
+	f_free(fsm->opt->alloc, ci->buckets);
 	f_free(fsm->opt->alloc, ci);
 	fsm->capture_info = NULL;
 }
