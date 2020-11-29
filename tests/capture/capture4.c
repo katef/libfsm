@@ -66,6 +66,7 @@ int main(void) {
 	    cb_ab_c, 0, 4);
 
 	fsm_free(f_all);
+	captest_free_all_end_opaques();
 
 	return 0;
 }
@@ -175,7 +176,7 @@ build_ab_c(void)
 	struct fsm *fsm = captest_fsm_with_options();
 	assert(fsm != NULL);
 
-	eo = calloc(1, sizeof(*eo));
+	eo = captest_new_opaque();
 	if (eo == NULL) { goto fail; }
 
 	eo->tag = CAPTEST_END_OPAQUE_TAG;

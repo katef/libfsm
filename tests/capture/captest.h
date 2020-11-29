@@ -55,4 +55,10 @@ captest_fsm_with_options(void);
 struct fsm *
 captest_fsm_of_string(const char *string, unsigned end_id);
 
+struct captest_end_opaque *
+captest_new_opaque(void);
+
+void
+captest_free_all_end_opaques(void);
+
 #endif

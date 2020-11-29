@@ -34,6 +34,8 @@ int main(void) {
 	check(fsm, "abed", 1, cb_abed, 0, 4);
 
 	fsm_free(fsm);
+	captest_free_all_end_opaques();
+
 	return EXIT_SUCCESS;
 }
 

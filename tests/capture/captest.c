@@ -2,6 +2,7 @@
 
 #include <fsm/alloc.h>
 #include <fsm/capture.h>
+#include <fsm/pred.h>
 
 #if CAPTEST_RUN_SINGLE_LOG
 #include <fsm/print.h>
@@ -11,6 +12,70 @@
 	fprintf(stderr, "FAIL: %s:%d -- %s\n",	\
 	    __FILE__, __LINE__, MSG);		\
 	exit(EXIT_FAILURE)
+
+/* Pool allocator for opaque data to eliminates inadvertent memory leaks.
+ *
+ * XXX - this isn't great, but it's quite hard to keep track of opaque
+ *       data through the various fsm operations.
+ *
+ *       The right solution is probably to have each fsm keep an opaque
+ *       "destructor" that it calls when the states of an FSM are
+ *       destroyed.
+ */
+struct captest_opaque_pool;
+
+enum { CAPTEST_OPAQUE_POOL_SIZE = 128 };
+struct captest_opaque_pool {
+	struct captest_opaque_pool *next;
+	struct captest_end_opaque items[CAPTEST_OPAQUE_POOL_SIZE];
+	unsigned count;
+};
+
+struct captest_opaque_pool *pool = NULL;
+
+struct captest_end_opaque *
+captest_new_opaque(void)
+{
+	struct captest_end_opaque *eo;
+
+	if (pool == NULL || pool->count == CAPTEST_OPAQUE_POOL_SIZE) {
+		struct captest_opaque_pool *new_pool;
+		new_pool = calloc(1, sizeof *new_pool);
+
+		if (new_pool == NULL) {
+			return NULL;
+		}
+
+		new_pool->next = pool;
+		new_pool->count = 0;
+		pool = new_pool;
+	}
+
+	assert(pool != NULL);
+	assert(pool->count < CAPTEST_OPAQUE_POOL_SIZE);
+
+	eo = &pool->items[pool->count];
+	pool->count++;
+
+	return eo;
+}
+
+void
+captest_free_all_end_opaques(void)
+{
+	struct captest_opaque_pool *curr;
+
+	curr = pool;
+	while (curr != NULL) {
+		struct captest_opaque_pool *next;
+		next = curr->next;
+
+		free(curr);
+		curr = next;
+	}
+
+	pool = NULL;
+}
 
 int
 captest_getc(void *opaque)
@@ -117,6 +182,8 @@ captest_run_single(const struct captest_single_fsm_test_info *info)
 	}
 
 	fsm_free(fsm);
+	captest_free_all_end_opaques();
+
 	return 0;
 }
 
@@ -132,7 +199,7 @@ captest_fsm_of_string(const char *string, unsigned end_id)
 		return NULL;
 	}
 
-	eo = calloc(1, sizeof(*eo));
+	eo = captest_new_opaque();
 	if (eo == NULL) {
 		goto cleanup;
 	}
@@ -159,7 +226,6 @@ captest_fsm_of_string(const char *string, unsigned end_id)
 	return fsm;
 
 cleanup:
-	if (eo != NULL) { free(eo); }
 	fsm_free(fsm);
 	return NULL;
 }
@@ -184,7 +250,7 @@ static void captest_carryopaque(const struct fsm *src_fsm,
 
 	eo_old_dst = fsm_getopaque(dst_fsm, dst_state);
 
-	eo_dst = calloc(1, sizeof(*eo_dst));
+	eo_dst = captest_new_opaque();
 	/* FIXME: no way to handle an alloc error in carryopaque? */
 	assert(eo_dst != NULL);
 	eo_dst->tag = CAPTEST_END_OPAQUE_TAG;
@@ -235,3 +301,4 @@ captest_fsm_with_options(void)
 	fsm = fsm_new(&options);
 	return fsm;
 }
+

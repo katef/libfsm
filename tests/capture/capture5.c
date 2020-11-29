@@ -53,6 +53,8 @@ int main(void) {
 	    3, 4);
 
 	fsm_free(f);
+	captest_free_all_end_opaques();
+
 	return 0;
 }
 
