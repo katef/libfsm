@@ -143,7 +143,9 @@ int main(void) {
 	check(f_all, "cde", 1, bases[1].capture);
 	check(f_all, "fghi", 2, bases[2].capture);
 
+
 	fsm_free(f_all);
+	captest_free_all_end_opaques();
 
 	return 0;
 }

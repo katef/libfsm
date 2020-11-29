@@ -34,6 +34,8 @@ int main(void) {
 	    cb_cde, 2, 5);
 
 	fsm_free(abcde);
+	captest_free_all_end_opaques();
+
 	return EXIT_SUCCESS;
 }
 
