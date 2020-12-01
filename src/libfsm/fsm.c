@@ -81,7 +81,9 @@ fsm_new(const struct fsm_options *opt)
 	}
 
 	if (!fsm_endid_init(new)) {
-		/* FIXME cleanup */
+		f_free(f.opt->alloc, new->states);
+		f_free(f.opt->alloc, new);
+		fsm_capture_free(new);
 		return NULL;
 	}
 
