@@ -76,6 +76,8 @@
  * 				<test_name>.<subtest_name>, otherwise
  * 				<test_name>
  *
+ * Q                            stops the script, exits, reporting success.
+ *
  * Lines ending with \ are continued to the next line.
  * Both F and S directives may be omitted to measure compilation time only,
  * in which case X should still be given.
