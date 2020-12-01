@@ -597,7 +597,7 @@ perf_case_run(struct perf_case *c, enum halt halt,
 	struct fsm *fsm;
 	struct fsm_runner runner;
 	struct str contents;
-	enum error_type ret;
+	enum error_type ret = ERROR_NONE;
 	int iter;
 
 	contents = str_empty();
@@ -695,8 +695,6 @@ perf_case_run(struct perf_case *c, enum halt halt,
 			return ERROR_FILE_IO;
 		}
 	}
-
-	ret = ERROR_NONE;
 
 	if (c->mt != MATCH_NONE) {
 		struct timespec t0, t1;
