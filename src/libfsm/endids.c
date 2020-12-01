@@ -516,18 +516,14 @@ fsm_endid_iter(const struct fsm *fsm,
 		}
 		count = b->ids->count;
 
-		/* Note: We need to check b->ids each time here,
-		 * because the callback is allowed to call fsm_endid_set,
-		 * which can cause b->ids->ids[] to relocate. It appends
-		 * to the end, so the position in the array is the same. */
-		for (id_i = 0; id_i < b->ids->count; id_i++) {
-			assert(b->ids->count == count);
+		for (id_i = 0; id_i < count; id_i++) {
 			if (!cb(b->state, b->ids->ids[id_i], opaque)) {
 				break;
 			}
 
 			/* The cb must not grow the hash table. */
 			assert(bucket_count == ei->bucket_count);
+			assert(b->ids->count == count);
 		}
 	}
 }
