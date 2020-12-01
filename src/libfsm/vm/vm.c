@@ -5,6 +5,7 @@
  */
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -482,7 +483,7 @@ dfavm_free_vm(struct fsm_dfavm *vm)
 		dfavm_v2_finalize(&vm->u.v2);
 	} else {
 		/* invalid VM version! */
-		/* XXX - should we do something? */
+		assert(false && "unsupported version passed in");
 	}
 
 	free(vm);
