@@ -1007,6 +1007,14 @@ usage(void)
 	fprintf(stderr, "        <driverfile> specifies the path to the driver file, or '-' to read it from stdin\n");
 
 	fprintf(stderr, "\n");
+	fprintf(stderr, "        -e\n");
+	fprintf(stderr, "             echo: echos driver script commands and how reperf interprets them\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "        -C\n");
+	fprintf(stderr, "             disables profiling regexp compile time\n");
+
+	fprintf(stderr, "\n");
 	fprintf(stderr, "        -q\n");
 	fprintf(stderr, "             quiet: elide the regexp from output (useful for long regexps)\n");
 
@@ -1021,6 +1029,10 @@ usage(void)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -H <halt>\n");
 	fprintf(stderr, "             halt after compile, glushkovise, determinise, minimise or execute\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "        -N <cycles>\n");
+	fprintf(stderr, "             executes all tests <cycles> times, overriding any N commands in the script\n");
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -O <olevel>\n");
