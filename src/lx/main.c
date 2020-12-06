@@ -617,6 +617,8 @@ run_threads(int concurrency, void *(*fn)(void *))
 		}
 	}
 
+	free(tds);
+
 	return 0;
 }
 
