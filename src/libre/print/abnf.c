@@ -85,11 +85,14 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 		return;
 	}
 
-	if (n->re_flags != 0) {
-		/* unsure how we would provide these */
-		assert(!"unimplemented");
-		fprintf(f, "(* flags #%02x *)", (unsigned char) re_flags);
+	if ((n->re_flags & AST_FLAG_UNSATISFIABLE) != 0) {
+		fprintf(f, "<RIP>");
+		return;
 	}
+
+	/* other values of flags are informative only,
+	 * and we don't output them here */
+	(void) n->re_flags;
 
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
@@ -122,6 +125,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 		 * when outputting the list.
 		 */
 
+		empty_count = 0;
 		for (i = 0; i < n->u.alt.count; i++) {
 			if (n->u.alt.n[i]->type == AST_EXPR_EMPTY) {
 				empty_count++;
