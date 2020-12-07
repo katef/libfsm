@@ -110,12 +110,40 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 
 	case AST_EXPR_ALT: {
 		size_t i;
+		unsigned empty_count;
+
+		/*
+		 * ABNF seems to provide no way to express an empty node;
+		 * there's no core rule for it, and the grammar does not allow
+		 * for () or an empty production.
+		 *
+		 * So here we have special handling; if we have empty alts,
+		 * the entire list is wrapped with [...] and we skip the nodes
+		 * when outputting the list.
+		 */
 
 		for (i = 0; i < n->u.alt.count; i++) {
-			pp_atomic(f, opt, re_flags, n->u.alt.n[i], n);
-			if (i + 1 < n->u.alt.count) {
+			if (n->u.alt.n[i]->type == AST_EXPR_EMPTY) {
+				empty_count++;
+			}
+		}
+
+		if (empty_count > 0) {
+			fprintf(f, "[ ");
+		}
+
+		for (i = 0; i < n->u.alt.count; i++) {
+			if (n->u.alt.n[i]->type != AST_EXPR_EMPTY) {
+				pp_atomic(f, opt, re_flags, n->u.alt.n[i], n);
+			}
+
+			if (i + 1 < n->u.alt.count - empty_count) {
 				fprintf(f, " / "); /* XXX: indent */
 			}
+		}
+		
+		if (empty_count > 0) {
+			fprintf(f, " ]");
 		}
 
 		break;
