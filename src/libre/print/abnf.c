@@ -20,25 +20,37 @@
 #include "../print.h"
 
 static void
-pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n);
+pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct ast_expr *n);
 
 static int
-atomic(struct ast_expr *n)
+prec(const struct ast_expr *n)
 {
 	switch (n->type) {
-	case AST_EXPR_EMPTY:
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
+	case AST_EXPR_RANGE:
+	case AST_EXPR_SUBTRACT:
 	case AST_EXPR_GROUP:
 	case AST_EXPR_TOMBSTONE:
 		return 1;
 
-	case AST_EXPR_RANGE:
-		return (n->u.range.from.u.literal.c == 0x00 &&
-			n->u.range.to.u.literal.c == 0xff);
-
 	case AST_EXPR_REPEAT:
-		return 0;
+		return 1;
+
+	case AST_EXPR_ANCHOR:
+	case AST_EXPR_EMPTY:
+		/* anchor and empty are special: although they take no
+		 * operands, it is not possible to get these as the
+		 * operand of a repeat expression without parentheses:
+		 * "*" or "^*" are syntax errors, but "(?:)*" and
+		 * "(?:^)*" are valid */
+		return 2;
+
+	case AST_EXPR_CONCAT:
+		return 3;
+
+	case AST_EXPR_ALT:
+		return 4;
 
 	default:
 		assert(!"unreached");
@@ -47,29 +59,36 @@ atomic(struct ast_expr *n)
 }
 
 static void
-print_grouped(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
+pp_atomic(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
+	struct ast_expr *n, const struct ast_expr *parent)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(n != NULL);
 
-	if (atomic(n)) {
-		pp_iter(f, opt, n);
+	if (prec(n) <= prec(parent)) {
+		pp_iter(f, opt, re_flags, n);
 	} else {
+		enum re_flags local_flags = *re_flags;
 		fprintf(f, "(");
-		pp_iter(f, opt, n);
+		pp_iter(f, opt, &local_flags, n);
 		fprintf(f, ")");
 	}
 }
 
 static void
-pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
+pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct ast_expr *n)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 
 	if (n == NULL) {
 		return;
+	}
+
+	if (n->re_flags != 0) {
+		/* unsure how we would provide these */
+		assert(!"unimplemented");
+		fprintf(f, "(* flags #%02x *)", (unsigned char) re_flags);
 	}
 
 	switch (n->type) {
@@ -80,11 +99,12 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		size_t i;
 
 		for (i = 0; i < n->u.concat.count; i++) {
-			pp_iter(f, opt, n->u.concat.n[i]);
+			pp_atomic(f, opt, re_flags, n->u.concat.n[i], n);
 			if (i + 1 < n->u.concat.count) {
 				fprintf(f, " ");
 			}
 		}
+
 		break;
 	}
 
@@ -92,11 +112,12 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 		size_t i;
 
 		for (i = 0; i < n->u.alt.count; i++) {
-			pp_iter(f, opt, n->u.alt.n[i]);
+			pp_atomic(f, opt, re_flags, n->u.alt.n[i], n);
 			if (i + 1 < n->u.alt.count) {
 				fprintf(f, " / "); /* XXX: indent */
 			}
 		}
+
 		break;
 	}
 
@@ -114,19 +135,19 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 		if (n->u.repeat.min == 0 && n->u.repeat.max == 1) {
 			fprintf(f, "[ ");
-			pp_iter(f, opt, n->u.repeat.e);
+			pp_iter(f, opt, re_flags, n->u.repeat.e);
 			fprintf(f, " ]");
 			return;
 		}
 
 		if (n->u.repeat.min == 1 && n->u.repeat.max == 1) {
-			pp_iter(f, opt, n->u.repeat.e);
+			pp_atomic(f, opt, re_flags, n->u.repeat.e, n);
 			return;
 		}
 
 		if (n->u.repeat.min == n->u.repeat.max) {
 			fprintf(f, "%u", n->u.repeat.max);
-			print_grouped(f, opt, n->u.repeat.e);
+			pp_atomic(f, opt, re_flags, n->u.repeat.e, n);
 			return;
 		}
 
@@ -140,14 +161,14 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 			fprintf(f, "%u", n->u.repeat.max);
 		}
 
-		print_grouped(f, opt, n->u.repeat.e);
+		pp_atomic(f, opt, re_flags, n->u.repeat.e, n);
 
 		break;
 	}
 
 	case AST_EXPR_GROUP:
 		fprintf(f, "(");
-		pp_iter(f, opt, n->u.group.e);
+		pp_iter(f, opt, re_flags, n->u.group.e);
 		fprintf(f, ")");
 		break;
 
@@ -159,9 +180,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, struct ast_expr *n)
 
 	case AST_EXPR_SUBTRACT:
 		assert(!"unimplemented");
-		pp_iter(f, opt, n->u.subtract.a);
+		pp_atomic(f, opt, re_flags, n->u.subtract.a, n);
 		fprintf(f, " - ");
-		pp_iter(f, opt, n->u.subtract.b);
+		pp_atomic(f, opt, re_flags, n->u.subtract.b, n);
 		break;
 
 	case AST_EXPR_RANGE: {
@@ -206,7 +227,7 @@ ast_print_abnf(FILE *f, const struct fsm_options *opt,
 
 	fprintf(f, "e = ");
 
-	pp_iter(f, opt, ast->expr);
+	pp_iter(f, opt, &re_flags, ast->expr);
 
 	fprintf(f, "\n");
 	fprintf(f, "\n");

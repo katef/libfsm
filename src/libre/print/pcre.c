@@ -20,8 +20,11 @@
 #include "../ast.h"
 #include "../print.h"
 
+static void
+pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct ast_expr *n);
+
 static int
-prec(struct ast_expr *n)
+prec(const struct ast_expr *n)
 {
 	switch (n->type) {
 	case AST_EXPR_LITERAL:
@@ -90,12 +93,31 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 }
 
 static void
+pp_atomic(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
+	struct ast_expr *n, const struct ast_expr *parent)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+
+	if (prec(n) <= prec(parent)) {
+		pp_iter(f, opt, re_flags, n);
+	} else {
+		enum re_flags local_flags = *re_flags;
+		fprintf(f, "(?:");
+		pp_iter(f, opt, &local_flags, n);
+		fprintf(f, ")");
+	}
+}
+
+static void
 pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct ast_expr *n)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 
-	if (n == NULL) { return; }
+	if (n == NULL) {
+		return;
+	}
 
 	if ((n->re_flags ^ *re_flags) & RE_FLAGS_PRINTABLE) {
 		fprintf(f, "(?");
@@ -112,38 +134,26 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 	case AST_EXPR_EMPTY:
 		break;
 
-	case AST_EXPR_CONCAT:
-	{
+	case AST_EXPR_CONCAT: {
 		size_t i;
+
 		for (i = 0; i < n->u.concat.count; i++) {
-			if (prec(n->u.concat.n[i]) <= prec(n)) {
-				pp_iter(f, opt, re_flags, n->u.concat.n[i]);
-			} else {
-				enum re_flags localflags = *re_flags;
-				fprintf(f, "(?:");
-				pp_iter(f, opt, &localflags, n->u.concat.n[i]);
-				fprintf(f, ")");
-			}
+			pp_atomic(f, opt, re_flags, n->u.concat.n[i], n);
 		}
+
 		break;
 	}
 
-	case AST_EXPR_ALT:
-	{
+	case AST_EXPR_ALT: {
 		size_t i;
+
 		for (i = 0; i < n->u.alt.count; i++) {
-			if (prec(n->u.alt.n[i]) <= prec(n)) {
-				pp_iter(f, opt, re_flags, n->u.alt.n[i]);
-			} else {
-				enum re_flags localflags = *re_flags;
-				fprintf(f, "(?:");
-				pp_iter(f, opt, &localflags, n->u.alt.n[i]);
-				fprintf(f, ")");
-			}
+			pp_atomic(f, opt, re_flags, n->u.alt.n[i], n);
 			if (i + 1 < n->u.alt.count) {
 				fprintf(f, "|");
 			}
 		}
+
 		break;
 	}
 
@@ -172,14 +182,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 #undef _
 		};
 
-		if (prec(n->u.repeat.e) <= prec(n)) {
-			pp_iter(f, opt, re_flags, n->u.repeat.e);
-		} else {
-			enum re_flags local_flags = *re_flags;
-			fprintf(f, "(?:");
-			pp_iter(f, opt, &local_flags, n->u.repeat.e);
-			fprintf(f, ")");
-		}
+		pp_atomic(f, opt, re_flags, n->u.repeat.e, n);
 
 		assert(n->u.repeat.max == AST_COUNT_UNBOUNDED || n->u.repeat.max >= n->u.repeat.min);
 
