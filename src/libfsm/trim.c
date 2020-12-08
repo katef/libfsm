@@ -435,6 +435,10 @@ fsm_trim(struct fsm *fsm, enum fsm_trim_mode mode,
 	fsm_state_t i;
 	assert(fsm != NULL);
 
+	if (fsm->statecount == 0) {
+		return 1;
+	}
+
 	if (shortest_end_distance != NULL
 		&& mode == FSM_TRIM_START_AND_END_REACHABLE) {
 		size_t s_i;
