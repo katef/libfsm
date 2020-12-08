@@ -28,5 +28,5 @@ jobs:
 
     - name: test
       # I don't want to build SID just for sake of its -l test
-      run: bmake -r -j 2 EFENCE=1 DEBUG=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=./build/bin/lx test
+      run: EF_DISABLE_BANNER=1 bmake -r -j 2 EFENCE=1 DEBUG=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=./build/bin/lx test
 
