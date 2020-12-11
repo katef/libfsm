@@ -460,6 +460,41 @@ endleaf_c(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 }
 
 static int
+endleaf_rust(FILE *f, const void *state_opaque, const void *endleaf_opaque)
+{
+	const struct match *m;
+	int n;
+
+	assert(state_opaque != NULL);
+	assert(endleaf_opaque == NULL);
+
+	(void) f;
+	(void) endleaf_opaque;
+
+	n = 0;
+
+	for (m = state_opaque; m != NULL; m = m->next) {
+		n |= 1 << m->i;
+	}
+
+	fprintf(f, "return Some(%#x)", (unsigned) n);
+
+	fprintf(f, " /* ");
+
+	for (m = state_opaque; m != NULL; m = m->next) {
+		fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
+
+		if (m->next != NULL) {
+			fprintf(f, ", ");
+		}
+	}
+
+	fprintf(f, " */");
+
+	return 0;
+}
+
+static int
 endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 {
 	const struct match *m;
@@ -1018,6 +1053,8 @@ main(int argc, char *argv[])
 
 		if (print_fsm == fsm_print_c || print_fsm == fsm_print_vmc) {
 			opt.endleaf = endleaf_c;
+		} else if (print_fsm == fsm_print_rust) {
+			opt.endleaf = endleaf_rust;
 		} else if (print_fsm == fsm_print_dot || print_fsm == fsm_print_vmdot) {
 			opt.endleaf = patterns ? endleaf_dot : NULL;
 		} else if (print_fsm == fsm_print_json) {
