@@ -138,59 +138,86 @@ mapping_add(struct mapping_hashset *mappings, const struct fsm_alloc *alloc,
 	return m;
 }
 
-/* TODO: this stack is just a placeholder for something more suitable */
 struct mappingstack {
-	struct mapping *item;
-	struct mappingstack *prev;
+	const struct fsm_alloc *alloc;
+	size_t ceil;
+	size_t depth;
+	struct mapping **s;
 };
 
-static int
-stack_push(struct mappingstack **stack, const struct fsm_alloc *alloc,
-	struct mapping *item)
-{
-	struct mappingstack *new;
+#define MAPPINGSTACK_DEF_CEIL 16
 
-	new = f_malloc(alloc, sizeof *new);
-	if (new == NULL) {
-		return 0;
+static struct mappingstack *
+stack_init(const struct fsm_alloc *alloc)
+{
+	struct mapping **s;
+	struct mappingstack *res = f_malloc(alloc, sizeof(*res));
+	if (res == NULL) {
+		return NULL;
 	}
 
-	new->item = item;
-	new->prev = *stack;
+	s = f_malloc(alloc, MAPPINGSTACK_DEF_CEIL * sizeof(s[0]));
+	if (s == NULL) {
+		f_free(alloc, res);
+		return NULL;
+	}
 
-	*stack = new;
+	res->alloc = alloc;
+	res->ceil = MAPPINGSTACK_DEF_CEIL;
+	res->depth = 0;
+	res->s = s;
 
+	return res;
+}
+
+static void
+stack_free(struct mappingstack *stack)
+{
+	if (stack == NULL) {
+		return;
+	}
+	f_free(stack->alloc, stack->s);
+	f_free(stack->alloc, stack);
+}
+
+static int
+stack_push(struct mappingstack *stack, struct mapping *item)
+{
+	if (stack->depth + 1 == stack->ceil) {
+		size_t nceil = 2 * stack->ceil;
+		struct mapping **ns = f_realloc(stack->alloc,
+		    stack->s, nceil * sizeof(stack->s[0]));
+		if (ns == NULL) {
+			return 0;
+		}
+		stack->ceil = nceil;
+		stack->s = ns;
+	}
+
+	stack->s[stack->depth] = item;
+	stack->depth++;
 	return 1;
 }
 
 static struct mapping *
-stack_pop(struct mappingstack **stack, const struct fsm_alloc *alloc)
+stack_pop(struct mappingstack *stack)
 {
-	struct mappingstack *p;
 	struct mapping *m;
 
-	if (*stack == NULL) {
+	assert(stack != NULL);
+	if (stack->depth == 0) {
 		return NULL;
 	}
 
-	p = *stack;
-
-	*stack = p->prev;
-
-	p->prev = NULL;
-
-	m = p->item;
-	f_free(alloc, p);
-
-	assert(m != NULL);
-
+	stack->depth--;
+	m = stack->s[stack->depth];
 	return m;
 }
 
 int
 fsm_determinise(struct fsm *nfa)
 {
-	struct mappingstack *stack;
+	struct mappingstack *stack = NULL;
 	struct mapping_hashset *mappings;
 	struct mapping *curr;
 	size_t dfacount;
@@ -265,7 +292,10 @@ fsm_determinise(struct fsm *nfa)
 	 * Our "todo" list. It needn't be a stack; we treat it as an unordered
 	 * set where we can consume arbitrary items in turn.
 	 */
-	stack = NULL;
+	stack = stack_init(nfa->opt->alloc);
+	if (stack == NULL) {
+		goto error;
+	}
 
 	do {
 		struct state_set *sclosures[FSM_SIGMA_COUNT] = { NULL };
@@ -334,7 +364,7 @@ fsm_determinise(struct fsm *nfa)
 
 				/* ownership belongs to the mapping now, so don't free sclosures[i] */
 
-				if (!stack_push(&stack, nfa->opt->alloc, m)) {
+				if (!stack_push(stack, m)) {
 					/* TODO: free mappings, sclosures, stack */
 					goto error;
 				}
@@ -348,7 +378,7 @@ fsm_determinise(struct fsm *nfa)
 
 		/* all elements in sclosures[] have been freed or moved to their
 		 * respective mapping, so there's nothing to free here */
-	} while (curr = stack_pop(&stack, nfa->opt->alloc), curr != NULL);
+	} while (curr = stack_pop(stack), curr != NULL);
 
 	{
 		struct mapping_hashset_iter it;
@@ -441,6 +471,7 @@ fsm_determinise(struct fsm *nfa)
 	}
 
 	mapping_hashset_free(mappings);
+	stack_free(stack);
 
 	return 1;
 
@@ -448,6 +479,7 @@ error:
 
 	/* TODO: free stuff */
 	mapping_hashset_free(mappings);
+	stack_free(stack);
 
 	return 0;
 }
