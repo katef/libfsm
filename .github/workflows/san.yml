@@ -52,6 +52,8 @@ jobs:
         bmake -r -j 2 ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
 
     - name: test
+      env:
+        EF_DISABLE_BANNER: 1
       # I don't want to build SID just for sake of its -l test
       run: bmake -r -j 2 ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=./build/bin/lx test
 
