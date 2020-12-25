@@ -4,6 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
+#include <stdio.h>
+
 #include "capture_internal.h"
 
 int
@@ -799,9 +801,6 @@ const char *fsm_capture_action_type_name[] = {
 	"COMMIT_ZERO_STEP", "COMMIT"
 };
 
-#ifndef NDEBUG
-#include <stdio.h>
-
 static int
 dump_iter_cb(fsm_state_t state,
     enum capture_action_type type, unsigned capture_id, fsm_state_t to,
@@ -830,4 +829,3 @@ fsm_capture_dump(FILE *f, const char *tag, const struct fsm *fsm)
 	    tag, ci->bucket_count);
 	fsm_capture_action_iter(fsm, dump_iter_cb, f);
 }
-#endif
