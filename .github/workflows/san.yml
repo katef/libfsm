@@ -1,0 +1,57 @@
+# testing different sanitizers
+# the goal here is testing different sanitizers
+# these are also run for non-debug mode to test optimisations
+
+name: Sanitizers
+
+on: [push]
+
+jobs:
+  build:
+    name: "${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
+    runs-on: ${{ matrix.os }}-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        san: [ ASAN, UBSAN, MSAN, EFENCE ]
+        os: [ ubuntu, macos ]
+        cc: [ clang, gcc ]
+        debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
+        exclude:
+          - os: macos
+            cc: gcc # it's clang anyway
+          - os: macos
+            san: EFENCE # not packaged
+          - os: macos
+            san: MSAN # not supported
+    
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: recursive
+
+    - name: dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu'
+      run: |
+        uname -a
+        sudo apt-get install pmake bmake pcregrep electric-fence
+        ${{ matrix.cc }} --version
+
+    - name: dependencies (MacOS)
+      if: matrix.os == 'macos'
+      run: |
+        uname -a
+        brew install bmake pcre
+        ${{ matrix.cc }} --version
+
+    - name: make
+      run: |
+        find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
+        find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
+        bmake -r -j 2 ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
+
+    - name: test
+      # I don't want to build SID just for sake of its -l test
+      run: bmake -r -j 2 ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=./build/bin/lx test
+
