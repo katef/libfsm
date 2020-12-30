@@ -30,8 +30,7 @@ interned_state_set_pool_alloc(const struct fsm_alloc *a);
 void
 interned_state_set_pool_free(struct interned_state_set_pool *pool);
 
-/* Get a handle to the empty state set.
- * Returns NULL on alloc failure. */
+/* Get a handle to the empty state set. Can not fail. */
 struct interned_state_set *
 interned_state_set_empty(struct interned_state_set_pool *pool);
 

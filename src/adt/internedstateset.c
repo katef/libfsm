@@ -64,6 +64,9 @@ struct interned_state_set_pool {
 static int
 grow_cache_buckets(struct interned_state_set_pool *pool);
 
+static int
+grow_kid_cache(const struct fsm_alloc *a, struct interned_state_set *set);
+
 static void
 add_kid_to_iss_cache(struct interned_state_set_pool *pool,
     struct interned_state_set *set, fsm_state_t state,
@@ -354,7 +357,9 @@ add_kid_to_iss_cache(struct interned_state_set_pool *pool,
 
 	assert(set->kids.bucket_count > 0);
 	if (set->kids.buckets_used == set->kids.bucket_count/2) {
-		assert(!"todo: grow"); /* FIXME: exercise this. */
+		if (!grow_kid_cache(pool->a, set)) {
+			return;
+		}
 	}
 
 	mask = set->kids.bucket_count - 1;
@@ -371,6 +376,49 @@ add_kid_to_iss_cache(struct interned_state_set_pool *pool,
 			/* collision, skip */
 		}
 	}
+}
+
+static int
+grow_kid_cache(const struct fsm_alloc *a, struct interned_state_set *set)
+{
+	const size_t nceil = 2 * set->kids.bucket_count;
+	struct kid_bucket *nbuckets;
+	size_t o_i, n_i;
+	const size_t nmask = nceil - 1;
+	assert(nceil > 0);
+
+	nbuckets = f_malloc(a, nceil * sizeof(nbuckets[0]));
+	if (nbuckets == NULL) {
+		return 0;
+	}
+
+	for (n_i = 0; n_i < nceil; n_i++) {
+		nbuckets[n_i].state = BUCKET_STATE_NONE;
+	}
+
+	for (o_i = 0; o_i < set->kids.bucket_count; o_i++) {
+		struct kid_bucket *ob = &set->kids.buckets[o_i];
+		unsigned long h;
+		if (ob->state == BUCKET_STATE_NONE) {
+			continue;
+		}
+
+		h = PHI32 * (ob->state + 1);
+		for (n_i = 0; n_i < nceil; n_i++) {
+			struct kid_bucket *nb = &nbuckets[(h + n_i) & nmask];
+			if (nb->state == BUCKET_STATE_NONE) {
+				nb->state = ob->state;
+				nb->kid = ob->kid;
+				break;
+			}
+		}
+		assert(n_i < nceil); /* found a spot */
+	}
+
+	f_free(a, set->kids.buckets);
+	set->kids.bucket_count = nceil;
+	set->kids.buckets = nbuckets;
+	return 1;
 }
 
 struct state_set *
