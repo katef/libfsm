@@ -43,8 +43,9 @@ jobs:
 
     - name: make
       run: |
-        find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
+        # note: lexer.h first, because parser.? depends on it
         find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
+        find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
         ${{ matrix.make }} -r -j 2 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
 
     - name: test
