@@ -27,6 +27,8 @@ jobs:
       run: |
         uname -a
         sudo apt-get install bmake pcregrep
+        sudo gem install --no-document fpm
+        fpm -v
         ${{ matrix.cc }} --version
 
     - name: make
@@ -44,13 +46,11 @@ jobs:
     - name: install
       run: |
         bmake -r -j 2 PKGCONF=pkg-config CC=${{ matrix.cc }} PREFIX=prefix/usr install
-        mkdir pkg
 
     - name: Package
-      uses: bpicode/github-action-fpm@master
-      with:
-        fpm_args: ''
-        fpm_opts: '-C prefix -p pkg/ -n libfsm -t ${{ matrix.pkg }} -v 0.${{ github.sha }} -m kate@elide.org -s dir'
+      run: |
+        mkdir pkg
+        fpm -C prefix -p pkg/ -n libfsm -t ${{ matrix.pkg }} -v 0.${{ github.sha }} -m kate@elide.org -s dir
 
     - uses: actions/upload-artifact@v2
       with:
