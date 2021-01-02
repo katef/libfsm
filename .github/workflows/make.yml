@@ -1,0 +1,58 @@
+# testing different bmake dialects
+# the goal here is to excercise the build system, not the code
+# we don't care about e.g. different compilers here
+
+name: Makefiles
+
+on: [push]
+
+jobs:
+  build:
+    name: "${{ matrix.make }} ${{ matrix.os }} ${{ matrix.debug }}"
+    runs-on: ${{ matrix.os }}-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu, macos ]
+        cc: [ clang ]
+        make: [ bmake, pmake ]
+        debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
+        exclude:
+          - os: macos
+            make: pmake
+    
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: recursive
+
+    - name: dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu'
+      run: |
+        uname -a
+        sudo apt-get install pmake bmake pcregrep
+        ${{ matrix.cc }} --version
+
+    - name: dependencies (MacOS)
+      if: matrix.os == 'macos'
+      run: |
+        uname -a
+        brew install bmake pcre
+        ${{ matrix.cc }} --version
+
+    - name: make
+      run: |
+        # note: lexer.h first, because parser.? depends on it
+        find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
+        find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
+        ${{ matrix.make }} -r -j 2 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
+
+    - name: test
+      # I don't want to build SID just for sake of its -l test
+      # Same for lx
+      run: bmake -r -j 2 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' LX='true; echo lx' CC=${{ matrix.cc }} test
+
+    - name: install
+      run: ${{ matrix.make }} -r -j 2 ${{ matrix.debug }}=1 PKGCONF=pkg-config PREFIX=/tmp/p-${{ matrix.debug }} install
+
