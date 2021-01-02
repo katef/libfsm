@@ -35,7 +35,7 @@ jobs:
       if: matrix.os == 'ubuntu'
       run: |
         uname -a
-        sudo apt-get install pmake bmake pcregrep electric-fence
+        sudo apt-get install bmake pcregrep electric-fence
         ${{ matrix.cc }} --version
 
     - name: dependencies (MacOS)
