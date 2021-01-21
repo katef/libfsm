@@ -17,7 +17,7 @@ struct edge_set;
 struct state_set;
 
 struct edge_iter {
-	size_t i;
+	size_t i, j;
 	const struct edge_set *set;
 };
 
@@ -68,6 +68,8 @@ edge_set_transition(const struct edge_set *set, unsigned char symbol,
 size_t
 edge_set_count(const struct edge_set *set);
 
+/* Note: this should actually union src into *dst, if *dst already
+ * exists, not replace it. */
 int
 edge_set_copy(struct edge_set **dst, const struct fsm_alloc *alloc,
 	const struct edge_set *src);

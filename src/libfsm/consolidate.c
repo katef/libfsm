@@ -273,8 +273,8 @@ consolidate_end_ids_cb(fsm_state_t state, const fsm_end_id_t id,
 	assert(env->tag == 'C');
 
 #if LOG_CONSOLIDATE_ENDIDS > 1
-	fprintf(stderr, "consolidate_end_ids_cb: state %u, count %lu, IDs:",
-	    state, count);
+	fprintf(stderr, "consolidate_end_ids_cb: state %u, count %lu, ID %d:",
+	    state, id);
 	for (i = 0; i < count; i++) {
 		fprintf(stderr, " %u", ids[i]);
 	}
