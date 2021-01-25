@@ -3,7 +3,7 @@
 	"states": [
 		{
 			"end": true,
-			"strategy": "none",
+			"strategy": "none"
 		}
 	]
 }

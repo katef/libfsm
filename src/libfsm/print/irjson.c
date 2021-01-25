@@ -130,7 +130,11 @@ print_cs(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\t\t{\n");
 
 	fprintf(f, "\t\t\t\"end\": %s,\n", cs->isend ? "true" : "false");
-	fprintf(f, "\t\t\t\"strategy\": \"%s\",\n", strategy_name(cs->strategy));
+	fprintf(f, "\t\t\t\"strategy\": \"%s\"", strategy_name(cs->strategy));
+	if (cs->example != NULL || cs->strategy != IR_NONE) {
+		fprintf(f, ",");
+	}
+	fprintf(f, "\n");
 
 	if (cs->example != NULL) {
 		fprintf(f, "\t\t\t\"example\": \"");
