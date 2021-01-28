@@ -52,6 +52,11 @@ struct match {
 static struct fsm_options opt;
 static struct fsm_vm_compile_opts vm_opts = { 0, FSM_VM_COMPILE_VM_V1, NULL };
 
+enum retest_options {
+	RETEST_OPT_NONE = 0,
+	RETEST_OPT_ESCAPE_REGEXP = 0x0001,
+};
+
 static void
 usage(void)
 {
@@ -495,6 +500,13 @@ flagstring(enum re_flags flags, char buf[16])
  * 2b. lines starting with "~" are treated as regular expressions with
  *     the initial "~" removed.  This is to allow regular expressions
  *     that start with an retest control line sequence like /M /
+ * 2c. lines starting with "O +" turn on retest options, and lines
+ *     starting with "O -" turn off retest options.  "O =" sets flags
+ *     to the options on the rest of the line; if the rest of the line
+ *     is blank, all options are disabled.
+ *         retest options:
+ *         e=RETEST_OPT_ESCAPE_REGEXP (retest parses escapes in the
+ *         regexp line)
  * 3. lines starting with "M " set the flags:
  * 	i=RE_ICASE, t=RE_TEXT, m = RE_MULTI, r=RE_REVERSE,
  * 	S=RE_SINGLE, Z=RE_ZONE, a=RE_ANCHORED
@@ -547,6 +559,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 	linenum        = 0;
 	flags          = RE_FLAGS_NONE;
+	runner_opts    = RETEST_OPT_NONE;
 	dialect        = default_dialect;
 
 	memset(&flagdesc[0],0,sizeof flagdesc);
@@ -584,6 +597,37 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 			}
 			else {
 				dialect = dialect_name(&s[2]);
+			}
+
+			continue;
+		}
+
+		if (s[0] == 'O' && s[1] == ' ') {
+			enum retest_options opt_arg = 0;
+
+			if (s[2] != '+' && s[2] != '-' && s[2] != '=') {
+				fprintf(stderr, "line %d: O requires +, -, or =: %s\n", linenum, s);
+				continue;
+			}
+
+			char *fstr;
+			for (fstr = &s[3]; *fstr != '\0'; fstr++) {
+				switch (*fstr) {
+				case '\n': case ' ': case '\t':
+					/* ignore */
+					break;
+				case 'e': opt_arg = opt_arg | RETEST_OPT_ESCAPE_REGEXP; break;
+				default:
+					fprintf(stderr, "line %d: unknown retest option '%c'\n", linenum, (unsigned char)(*fstr));
+				}
+			}
+
+			if (s[2] == '=') {
+				runner_opts = opt_arg;
+			} else if (s[2] == '+') {
+				runner_opts = runner_opts | opt_arg;
+			} else if (s[2] == '-') {
+				runner_opts = runner_opts & (~opt_arg);
 			}
 
 			continue;
@@ -635,9 +679,27 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 			assert(strlen(regexp) == (size_t)len);
 			assert(strcmp(regexp,s) == 0);
 
-			err   = err_zero;
-
+			err = err_zero;
 			num_regexps++;
+
+			if (runner_opts & RETEST_OPT_ESCAPE_REGEXP) {
+				char *err = NULL;
+				int newlen = len;
+				int ret;
+
+				ret = parse_escapes(regexp, &err, &newlen);
+				if (ret != PARSE_OK) {
+					fprintf(stderr, "line %d: invalid/incomplete escape sequence at column %d\n",
+						linenum, (int) (err - regexp));
+
+					/* ignore errors */
+					error_record_add(erec,
+						ERROR_ESCAPE_SEQUENCE, fname, regexp, flagdesc, NULL, linenum);
+
+					num_re_errors++;
+					continue;
+				}
+			}
 
 			flagstring(flags, &flagdesc[0]);
 
