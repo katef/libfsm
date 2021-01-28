@@ -88,45 +88,61 @@ usage(void)
 	fprintf(stderr, "                 v2        version 0.2 fixed length encoding\n");
 }
 
-static enum re_dialect
-dialect_name(const char *name)
+static const struct {
+	const char *name;
+	enum re_dialect dialect;
+} dialect_lookup_table[] = {
+/* TODO:
+	{ "ere",     RE_ERE     },
+	{ "bre",     RE_BRE     },
+	{ "plan9",   RE_PLAN9   },
+	{ "js",      RE_JS      },
+	{ "python",  RE_PYTHON  },
+	{ "sql99",   RE_SQL99   },
+*/
+	{ "like",    RE_LIKE    },
+	{ "literal", RE_LITERAL },
+	{ "glob",    RE_GLOB    },
+	{ "native",  RE_NATIVE  },
+	{ "pcre",    RE_PCRE    },
+	{ "sql",     RE_SQL     }
+};
+
+static const char *
+dialect_to_name(enum re_dialect dialect)
 {
+	const size_t num_dialects = sizeof dialect_lookup_table / sizeof dialect_lookup_table[0];
 	size_t i;
 
-	struct {
-		const char *name;
-		enum re_dialect dialect;
-	} a[] = {
-/* TODO:
-		{ "ere",     RE_ERE     },
-		{ "bre",     RE_BRE     },
-		{ "plan9",   RE_PLAN9   },
-		{ "js",      RE_JS      },
-		{ "python",  RE_PYTHON  },
-		{ "sql99",   RE_SQL99   },
-*/
-		{ "like",    RE_LIKE    },
-		{ "literal", RE_LITERAL },
-		{ "glob",    RE_GLOB    },
-		{ "native",  RE_NATIVE  },
-		{ "pcre",    RE_PCRE    },
-		{ "sql",     RE_SQL     }
-	};
+	for (i = 0; i < num_dialects; i++) {
+		if (dialect == dialect_lookup_table[i].dialect) {
+			return dialect_lookup_table[i].name;
+		}
+	}
+
+	return "unknown";
+}
+
+static enum re_dialect
+parse_dialect_name(const char *name)
+{
+	const size_t num_dialects = sizeof dialect_lookup_table / sizeof dialect_lookup_table[0];
+	size_t i;
 
 	assert(name != NULL);
 
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (0 == strcmp(a[i].name, name)) {
-			return a[i].dialect;
+	for (i = 0; i < num_dialects; i++) {
+		if (0 == strcmp(dialect_lookup_table[i].name, name)) {
+			return dialect_lookup_table[i].dialect;
 		}
 	}
 
 	fprintf(stderr, "unrecognised regexp dialect \"%s\"; valid dialects are: ", name);
 
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
+	for (i = 0; i < num_dialects; i++) {
 		fprintf(stderr, "%s%s",
-			a[i].name,
-			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+			dialect_lookup_table[i].name,
+			i + 1 < num_dialects ? ", " : "\n");
 	}
 
 	exit(EXIT_FAILURE);
@@ -322,6 +338,7 @@ struct single_error_record {
 	char *failed_match;
 	unsigned int line;
 	enum error_type type;
+	enum re_dialect dialect;
 };
 
 struct error_record {
@@ -371,7 +388,7 @@ dup_str(const char *s, int *err)
 }
 
 static int
-error_record_add(struct error_record *erec, enum error_type type, const char *fn, const char *re, const char *flags, const char *failed_match, unsigned int line)
+error_record_add(struct error_record *erec, enum error_type type, const char *fn, const char *re, const char *flags, const char *failed_match, unsigned int line, enum re_dialect dialect)
 {
 	size_t ind;
 	int err;
@@ -404,6 +421,7 @@ error_record_add(struct error_record *erec, enum error_type type, const char *fn
 	erec->errors[ind].failed_match = failed_match != NULL ? dup_str(failed_match,&err) : NULL;
 	erec->errors[ind].line         = line;
 	erec->errors[ind].type         = type;
+	erec->errors[ind].dialect      = dialect;
 
 	erec->len++;
 
@@ -418,20 +436,20 @@ single_error_record_print(FILE *f, const struct single_error_record *err)
 	case ERROR_NONE:               fprintf(f, "no error?\n");  break;
 	case ERROR_BAD_RECORD_TYPE:    fprintf(f, "bad record\n"); break;
 	case ERROR_ESCAPE_SEQUENCE:    fprintf(f, "bad escape sequence\n"); break;
-	case ERROR_PARSING_REGEXP:     fprintf(f, "error parsing regexp /%s/%s\n", err->regexp, err->flags); break;
+	case ERROR_PARSING_REGEXP:     fprintf(f, "error parsing %s regexp /%s/%s\n", dialect_to_name(err->dialect), err->regexp, err->flags); break;
 	case ERROR_DETERMINISING:
-		fprintf(f, "error determinising regexp /%s/%s\n", err->regexp, err->flags);
+		fprintf(f, "error determinising %s regexp /%s/%s\n", dialect_to_name(err->dialect), err->regexp, err->flags);
 		break;
 	case ERROR_COMPILING_BYTECODE:
-		fprintf(f, "error compiling regexp /%s/%s\n", err->regexp, err->flags);
+		fprintf(f, "error compiling %s regexp /%s/%s\n", dialect_to_name(err->dialect), err->regexp, err->flags);
 		break;
 	case ERROR_SHOULD_MATCH:
-		fprintf(f, "regexp /%s/%s should match \"%s\" but doesn't\n",
-			err->regexp, err->flags, err->failed_match);
+		fprintf(f, "%s regexp /%s/%s should match \"%s\" but doesn't\n",
+			dialect_to_name(err->dialect), err->regexp, err->flags, err->failed_match);
 		break;
 	case ERROR_SHOULD_NOT_MATCH:
-		fprintf(f, "regexp /%s/%s should not match \"%s\" but does\n",
-			err->regexp, err->flags, err->failed_match);
+		fprintf(f, "%s regexp /%s/%s should not match \"%s\" but does\n",
+			dialect_to_name(err->dialect), err->regexp, err->flags, err->failed_match);
 		break;
 
 	default:
@@ -596,7 +614,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 				dialect = default_dialect;
 			}
 			else {
-				dialect = dialect_name(&s[2]);
+				dialect = parse_dialect_name(&s[2]);
 			}
 
 			continue;
@@ -694,7 +712,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 					/* ignore errors */
 					error_record_add(erec,
-						ERROR_ESCAPE_SEQUENCE, fname, regexp, flagdesc, NULL, linenum);
+						ERROR_ESCAPE_SEQUENCE, fname, regexp, flagdesc, NULL, linenum, dialect);
 
 					num_re_errors++;
 					continue;
@@ -711,7 +729,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_PARSING_REGEXP, fname, regexp, flagdesc, NULL, linenum);
+					ERROR_PARSING_REGEXP, fname, regexp, flagdesc, NULL, linenum, dialect);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
@@ -726,7 +744,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_DETERMINISING, fname, regexp, flagdesc, NULL, linenum);
+					ERROR_DETERMINISING, fname, regexp, flagdesc, NULL, linenum, dialect);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
@@ -755,7 +773,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 				fprintf(stderr, "line %d: error compiling /%s/%s: %s\n", linenum, regexp, flagdesc, strerror(errno));
 
 				/* ignore errors */
-				error_record_add(erec, ret, fname, regexp, flagdesc, NULL, linenum);
+				error_record_add(erec, ret, fname, regexp, flagdesc, NULL, linenum, dialect);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
@@ -779,7 +797,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 				fprintf(stderr, "line %d: unrecognized record type '%c': %s\n", linenum, s[0], s);
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_BAD_RECORD_TYPE, fname, regexp, flagdesc, NULL, linenum);
+					ERROR_BAD_RECORD_TYPE, fname, regexp, flagdesc, NULL, linenum, dialect);
 
 				num_errors++;
 				continue;
@@ -800,7 +818,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_ESCAPE_SEQUENCE, fname, regexp, flagdesc, NULL, linenum);
+					ERROR_ESCAPE_SEQUENCE, fname, regexp, flagdesc, NULL, linenum, dialect);
 
 				num_errors++;
 				continue;
@@ -808,11 +826,11 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 			ret = fsm_runner_run(&runner, test, tlen);
 			if (!!ret == !!matching) {
-				printf("[OK    ] line %d: regexp /%s/%s %s \"%s\"\n",
-					linenum, regexp, flagdesc, matching ? "matched" : "did not match", orig);
+				printf("[OK    ] line %d: %s regexp /%s/%s %s \"%s\"\n",
+					linenum, dialect_to_name(dialect), regexp, flagdesc, matching ? "matched" : "did not match", orig);
 			} else {
-				printf("[NOT OK] line %d: regexp /%s/%s expected to %s \"%s\", but %s\n",
-					linenum, regexp, flagdesc,
+				printf("[NOT OK] line %d: %s regexp /%s/%s expected to %s \"%s\", but %s\n",
+					linenum, dialect_to_name(dialect), regexp, flagdesc,
 					matching ? "match" : "not match",
 					orig,
 					ret ? "did" : "did not");
@@ -823,7 +841,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 						(matching)
 							? ERROR_SHOULD_MATCH
 							: ERROR_SHOULD_NOT_MATCH,
-						fname, regexp, flagdesc, orig, linenum);
+						fname, regexp, flagdesc, orig, linenum, dialect);
 
 
 				if (max_errors > 0 && num_errors >= max_errors) {
@@ -933,7 +951,7 @@ main(int argc, char *argv[])
 
 			case 'e': opt.prefix = optarg;     break;
 
-			case 'r': dialect = dialect_name(optarg); break;
+			case 'r': dialect = parse_dialect_name(optarg); break;
 
 			case 'E':
 				max_test_errors = strtoul(optarg, NULL, 10);
