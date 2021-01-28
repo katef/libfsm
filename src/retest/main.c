@@ -252,7 +252,7 @@ octdig:
 		case ST_HEX_DIGIT:
 hexdigit:
 			{
-				unsigned char uc = toupper(s[i]);
+				unsigned char uc = toupper((unsigned char)s[i]);
 				if (ndig < 2 && isxdigit(uc)) {
 					if (uc >= '0' && uc <= '9') {
 						ccode = (ccode * 16) + (uc - '0');
