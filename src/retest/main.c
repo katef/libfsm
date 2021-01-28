@@ -492,6 +492,9 @@ flagstring(enum re_flags flags, char buf[16])
  * 2. lines starting with 'R' set the dialect.  A line with only 'R'
  *    resets the dialect to the default dialect (either PCRE or given
  *    by the -r option).
+ * 2b. lines starting with "~" are treated as regular expressions with
+ *     the initial "~" removed.  This is to allow regular expressions
+ *     that start with an retest control line sequence like /M /
  * 3. lines starting with "M " set the flags:
  * 	i=RE_ICASE, t=RE_TEXT, m = RE_MULTI, r=RE_REVERSE,
  * 	S=RE_SINGLE, Z=RE_ZONE, a=RE_ANCHORED
@@ -608,6 +611,12 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 			}
 
 			continue;
+		}
+
+		/* explicit regexp line */
+		if (s[0] == '~') {
+			s = &s[1];
+			len -= 1;
 		}
 
 		if (regexp == NULL) {
