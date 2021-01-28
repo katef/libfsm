@@ -489,8 +489,10 @@ flagstring(enum re_flags flags, char buf[16])
 /* test file format:
  *
  * 1. lines starting with '#' are skipped
- * 2. (TODO) lines starting with 'R' set the dialect
- * 3. lines starting with 'M' set the flags:
+ * 2. lines starting with 'R' set the dialect.  A line with only 'R'
+ *    resets the dialect to the default dialect (either PCRE or given
+ *    by the -r option).
+ * 3. lines starting with "M " set the flags:
  * 	i=RE_ICASE, t=RE_TEXT, m = RE_MULTI, r=RE_REVERSE,
  * 	S=RE_SINGLE, Z=RE_ZONE, a=RE_ANCHORED
  * 4. records are separated by empty lines.  flags reset at each record
@@ -505,7 +507,7 @@ flagstring(enum re_flags flags, char buf[16])
  *     c. '#' lines are comments
  */
 static int
-process_test_file(const char *fname, enum re_dialect dialect, enum implementation impl, int max_errors, struct error_record *erec)
+process_test_file(const char *fname, enum re_dialect default_dialect, enum implementation impl, int max_errors, struct error_record *erec)
 {
 	static const struct fsm_runner init_runner;
 
@@ -525,6 +527,9 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 	struct fsm_runner runner = init_runner;
 	enum re_flags flags;
 
+	enum re_dialect dialect;
+	enum retest_options runner_opts;
+
 	regexp = NULL;
 
 	/* XXX - fix this */
@@ -539,6 +544,7 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 
 	linenum        = 0;
 	flags          = RE_FLAGS_NONE;
+	dialect        = default_dialect;
 
 	memset(&flagdesc[0],0,sizeof flagdesc);
 
@@ -566,6 +572,17 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 		}
 
 		if (s[0] == '#') {
+			continue;
+		}
+
+		if (s[0] == 'R' && (s[1] == '\0' || s[1] == ' ')) {
+			if (s[1] == '\0') {
+				dialect = default_dialect;
+			}
+			else {
+				dialect = dialect_name(&s[2]);
+			}
+
 			continue;
 		}
 
