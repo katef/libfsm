@@ -989,11 +989,6 @@ main(int argc, char *argv[])
 
 		r = 0;
 
-		if (argc == 0) {
-			fprintf(stderr, "-t requires at least one test file\n");
-			return EXIT_FAILURE;
-		}
-
 		if (error_record_init(&erec) != 0) {
 			fprintf(stderr, "error initializing error state: %s\n", strerror(errno));
 			return EXIT_FAILURE;
