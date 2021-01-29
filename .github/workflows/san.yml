@@ -59,3 +59,43 @@ jobs:
       # I don't want to build SID just for sake of its -l test
       run: bmake -r -j 2 ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=./build/bin/lx test
 
+    - name: fetch pcre test suite
+      env:
+        PCRE_VER: pcre2-10.36
+        BUILD: ./build
+      run: |
+        wget -nv -P ${BUILD}/ https://ftp.pcre.org/pub/pcre/${PCRE_VER}.zip
+        unzip -d ${BUILD}/ ${BUILD}/${PCRE_VER}.zip "${PCRE_VER}/testdata/*"
+        mkdir -p ${BUILD}/test/retest
+        ${BUILD}/bin/cvtpcre < ${BUILD}/${PCRE_VER}/testdata/testinput1 > ${BUILD}/test/retest/testinput1.tst
+
+    - name: run pcre test suite (vm v1)
+      env:
+        BUILD: ./build
+      run: |
+        ${BUILD}/bin/retest -O1 -l vm -x v1 ${BUILD}/test/retest/testinput1.tst
+
+    - name: run pcre test suite (vm v2)
+      env:
+        BUILD: ./build
+      run: |
+        ${BUILD}/bin/retest -O1 -l vm -x v2 ${BUILD}/test/retest/testinput1.tst
+
+    - name: run pcre test suite (asm)
+      env:
+        BUILD: ./build
+      run: |
+        ${BUILD}/bin/retest -O1 -l asm ${BUILD}/test/retest/testinput1.tst
+
+    - name: run pcre test suite (c)
+      env:
+        BUILD: ./build
+      run: |
+        ${BUILD}/bin/retest -O1 -l c ${BUILD}/test/retest/testinput1.tst
+
+    - name: run pcre test suite (vmc)
+      env:
+        BUILD: ./build
+      run: |
+        ${BUILD}/bin/retest -O1 -l vmc ${BUILD}/test/retest/testinput1.tst
+
