@@ -876,7 +876,7 @@ finish:
 		exit(EXIT_FAILURE);
 	}
 
-	return (num_errors > 0);
+	return num_errors;
 }
 
 int
@@ -995,11 +995,11 @@ main(int argc, char *argv[])
 		}
 
 		for (i = 0; i < argc; i++) {
-			int succ;
+			int nerrs;
 
-			succ = process_test_file(argv[i], dialect, impl, max_test_errors, &erec);
+			nerrs = process_test_file(argv[i], dialect, impl, max_test_errors, &erec);
 
-			if (!succ) {
+			if (nerrs > 0) {
 				r |= 1;
 				continue;
 			}
