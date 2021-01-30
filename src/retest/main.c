@@ -22,12 +22,14 @@
 #include <ctype.h>
 
 #include <time.h>
+#include <signal.h>
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
+#include <fsm/alloc.h>
 #include <fsm/vm.h>
 
 #include <re/re.h>
@@ -58,6 +60,86 @@ struct match {
 
 static int tty_output = 0;
 static int do_timing  = 0;
+
+static int do_watchdog   = 0;
+static int watchdog_secs = 5;
+
+/* these are set/queried both inside and outside of signal handlers, so they have to volatile */
+static volatile int watchdog_on = 0;
+static volatile int watchdog_tripped = 0;
+
+/* watchdog timer signal handler */
+static void watchdog_handler(int arg) {
+	(void)arg;
+
+	if (watchdog_on) {
+		watchdog_tripped = 1;
+	}
+}
+
+static struct sigaction watchdog_action_enabled = {
+	.sa_handler = &watchdog_handler,
+	.sa_flags = SA_RESETHAND,
+};
+static struct sigaction watchdog_action_disabled = {
+	.sa_handler = SIG_DFL
+};
+
+/* custom allocators used if the watchdog timer is enabled.  If the
+ * watchdog is tripped, these will cause fsm_determinise() to abort
+ * on the next memory allocation.
+ */
+static void
+watchdog_free(void *opaque, void *p)
+{
+	(void)opaque;
+
+	free(p);
+}
+
+static void *
+watchdog_calloc(void *opaque, size_t n, size_t sz)
+{
+	(void)opaque;
+
+	if (watchdog_tripped) {
+		return NULL;
+	}
+
+	return calloc(n,sz);
+}
+
+static void *
+watchdog_malloc(void *opaque, size_t sz)
+{
+	(void)opaque;
+
+	if (watchdog_tripped) {
+		return NULL;
+	}
+
+	return malloc(sz);
+}
+
+static void *
+watchdog_realloc(void *opaque, void *p, size_t sz)
+{
+	(void)opaque;
+
+	if (watchdog_tripped) {
+		return NULL;
+	}
+
+	return realloc(p,sz);
+}
+
+static struct fsm_alloc watchdog_alloc = {
+	.free = &watchdog_free,
+	.calloc = &watchdog_calloc,
+	.malloc = &watchdog_malloc,
+	.realloc = &watchdog_realloc,
+	.opaque = NULL,
+};
 
 static struct fsm_options opt;
 static struct fsm_vm_compile_opts vm_opts = { 0, FSM_VM_COMPILE_VM_V1, NULL };
@@ -466,6 +548,10 @@ single_error_record_print(FILE *f, const struct single_error_record *err)
 			dialect_name, err->regexp, err->flags, err->failed_match);
 		break;
 
+	case ERROR_WATCHDOG:
+		fprintf(f, "watchdog (%d secs) tripped while determinising %s regexp /%s/%s\n", watchdog_secs, dialect_name, err->regexp, err->flags);
+		break;
+
 	default:
 		fprintf(f, "unknown error\n");
 		break;
@@ -730,6 +816,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 			struct fsm *fsm;
 			struct re_err err;
 			char *re_str;
+			int succ;
 
 			assert(impl_ready == false);
 			assert(s          != NULL);
@@ -795,8 +882,41 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 				continue;
 			}
 
+			watchdog_tripped = 0;
+			if (do_watchdog) {
+				/* WARNING! this will leak memory and may cause other issues.  Do not use in production! */
+				watchdog_on = 1;
+				sigaction(SIGALRM, &watchdog_action_enabled, NULL);
+				alarm(watchdog_secs);
+			}
+
 			/* XXX - minimize or determinize? */
-			if (!fsm_determinise(fsm)) {
+			succ = fsm_determinise(fsm);
+
+			if (do_watchdog) {
+				watchdog_on = 0;
+				sigaction(SIGALRM, &watchdog_action_disabled, NULL);
+				alarm(0);
+			}
+
+			if (!succ && watchdog_tripped) {
+				watchdog_tripped = 0;
+
+				fprintf(stderr, "line %d: watchdog timer tripped on %s regexp /%s/%s\n",
+					linenum, dialect_name, regexp, flagdesc);
+
+				/* ignore errors */
+				error_record_add(erec,
+					ERROR_WATCHDOG, fname, regexp, flagdesc, NULL, linenum, dialect);
+
+				/* don't exit; instead we leave vm==NULL so we
+				 * skip to next regexp ... */
+
+				num_re_errors++;
+				continue;
+			}
+
+			if (!succ) {
 				fprintf(stderr, "line %d: error determinising %s regexp /%s/%s: %s\n", linenum, dialect_name, regexp, flagdesc, strerror(errno));
 
 				/* ignore errors */
@@ -964,7 +1084,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "O:L:l:x:" "e:E:" "r:" "t"), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:l:x:" "e:E:" "r:" "tw:"), c != -1) {
 			switch (c) {
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
@@ -1027,6 +1147,14 @@ main(int argc, char *argv[])
 				do_timing = 1;
 				break;
 
+			case 'w':
+				do_watchdog = 1;
+				watchdog_secs = strtoul(optarg, NULL, 10);
+				if (watchdog_secs < 1) {
+					do_watchdog = 0;
+				}
+				break;
+
 			case '?':
 			default:
 				usage();
@@ -1036,6 +1164,10 @@ main(int argc, char *argv[])
 
 		argc -= optind;
 		argv += optind;
+	}
+
+	if (do_watchdog) {
+		opt.alloc = &watchdog_alloc;
 	}
 
 	if (argc < 1) {

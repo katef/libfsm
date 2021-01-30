@@ -21,6 +21,7 @@ enum error_type {
 	ERROR_SHOULD_NOT_MATCH  ,
 	ERROR_FILE_IO           ,
 	ERROR_INVALID_PARAMETER ,
+	ERROR_WATCHDOG,
 };
 
 enum implementation {
