@@ -926,6 +926,9 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 				error_record_add(erec,
 					ERROR_WATCHDOG, fname, regexp, flagdesc, NULL, linenum, dialect);
 
+				/* try to free */
+				fsm_free(fsm);
+
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
 
@@ -939,6 +942,9 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 				/* ignore errors */
 				error_record_add(erec,
 					ERROR_DETERMINISING, fname, regexp, flagdesc, NULL, linenum, dialect);
+
+				/* try to free */
+				fsm_free(fsm);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
