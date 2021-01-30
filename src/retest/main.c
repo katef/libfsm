@@ -49,6 +49,7 @@ struct match {
 	struct match *next;
 };
 
+static int tty_output = 0;
 static struct fsm_options opt;
 static struct fsm_vm_compile_opts vm_opts = { 0, FSM_VM_COMPILE_VM_V1, NULL };
 
@@ -729,6 +730,12 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 			flagstring(flags, &flagdesc[0]);
 
+			if (tty_output) {
+				printf("[      ] line %d: working on %s regexp /%s/%s ...\r",
+					linenum, dialect_name, regexp, flagdesc);
+				fflush(stdout);
+			}
+
 			re_str = regexp;
 			fsm = re_comp(dialect, fsm_sgetc, &re_str, &opt, flags, &err);
 			if (fsm == NULL) {
@@ -896,6 +903,9 @@ main(int argc, char *argv[])
 	int max_test_errors;
 
 	int optlevel = 1;
+
+	/* is output to a tty or not? */
+	tty_output = isatty(fileno(stdout));
 
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;
