@@ -206,7 +206,9 @@ static const struct {
 	{ "bad_escape_is_literal"  , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL */
 	{ "caseless"               , "i",  MOD_SUPPORTED  , RE_ICASE      }, /* PCRE2_CASELESS */
 	{ "dollar_endonly"         , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_DOLLAR_ENDONLY */
-	{ "dotall"                 , "s",  MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_DOTALL */
+
+	/* dotall is currently the default (and only) libfsm behavior. */
+	{ "dotall"                 , "s",  MOD_SUPPORTED  , RE_FLAGS_NONE }, /* PCRE2_DOTALL */
 	{ "dupnames"               , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_DUPNAMES */
 	{ "endanchored"            , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_ENDANCHORED */
 	{ "escaped_cr_is_lf"       , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTRA_ESCAPED_CR_IS_LF */
@@ -214,6 +216,11 @@ static const struct {
 	{ "extended_more"          , "xx", MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTENDED_MORE */
 	{ "extra_alt_bsux"         , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTRA_ALT_BSUX */
 	{ "firstline"              , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_FIRSTLINE */
+
+	/* global search is currently unimplemented.  libfsm stops after the first match.  This should
+	 * be safe to allow. */
+	{ "global"                 , "g" , MOD_SUPPORTED  , RE_FLAGS_NONE }, /* global search */
+
 	{ "literal"                , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_LITERAL */
 	{ "match_line"             , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTRA_MATCH_LINE */
 	{ "match_invalid_utf"      , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_MATCH_INVALID_UTF */
@@ -223,7 +230,11 @@ static const struct {
 	{ "never_backslash_c"      , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NEVER_BACKSLASH_C */
 	{ "never_ucp"              , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NEVER_UCP */
 	{ "never_utf"              , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NEVER_UTF */
-	{ "no_auto_capture"        , "n",  MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NO_AUTO_CAPTURE */
+
+	/* no_auto_capture will be meaningful when we support capture groups, but is currently
+	 * not meaningful
+	 */
+	{ "no_auto_capture"        , "n",  MOD_SUPPORTED  , RE_FLAGS_NONE }, /* PCRE2_NO_AUTO_CAPTURE */
 	{ "no_auto_possess"        , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NO_AUTO_POSSESS */
 	{ "no_dotstar_anchor"      , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NO_DOTSTAR_ANCHOR */
 	{ "no_start_optimize"      , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NO_START_OPTIMIZE */
