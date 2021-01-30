@@ -39,3 +39,18 @@ O =
 +test\\nthis
 -test\nthis
 
+# test save and restore runner opts
+R glob
+
+# save opts, which will be restored after this test case
+O &
+O =e
+~test\nthis
++test\nthis
+-test\\nthis
+
+# runner opts should be restored (no e)
+~test\nthis
+-test\nthis
++test\\nthis
+

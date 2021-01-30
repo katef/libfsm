@@ -625,6 +625,8 @@ flagstring(enum re_flags flags, char buf[16])
  *         retest options:
  *         e=RETEST_OPT_ESCAPE_REGEXP (retest parses escapes in the
  *         regexp line)
+ * 2d. lines that start with "O &" will save the current runner opts
+ *     and restore them after the next test case.
  * 3. lines starting with "M " set the flags:
  * 	i=RE_ICASE, t=RE_TEXT, m = RE_MULTI, r=RE_REVERSE,
  * 	S=RE_SINGLE, Z=RE_ZONE, a=RE_ANCHORED
@@ -662,6 +664,8 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 	enum re_dialect dialect;
 	enum retest_options runner_opts;
+	enum retest_options saved_opts;
+	int restore_runner_opts;
 	const char *dialect_name;
 
 	static const struct timespec t_zero;
@@ -682,10 +686,13 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 	linenum        = 0;
 	flags          = RE_FLAGS_NONE;
 	runner_opts    = RETEST_OPT_NONE;
+	saved_opts     = runner_opts;
 	dialect        = default_dialect;
 	dialect_name   = dialect_to_name(dialect);
 
 	t_start        = t_zero;
+
+	restore_runner_opts = 0;
 
 	memset(&flagdesc[0],0,sizeof flagdesc);
 
@@ -729,6 +736,10 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 				impl_ready = false;
 			}
 
+			if (restore_runner_opts) {
+				runner_opts = saved_opts;
+			}
+
 			continue;
 		}
 
@@ -751,6 +762,12 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 		if (s[0] == 'O' && s[1] == ' ') {
 			enum retest_options opt_arg = 0;
+
+			if (s[2] == '&') {
+				restore_runner_opts = 1;
+				saved_opts = runner_opts;
+				continue;
+			}
 
 			if (s[2] != '+' && s[2] != '-' && s[2] != '=') {
 				fprintf(stderr, "line %d: O requires +, -, or =: %s\n", linenum, s);
