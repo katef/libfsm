@@ -16,6 +16,8 @@
 
 #include <unistd.h>
 
+#define DEBUG_PARSING 0
+
 struct str {
 	char *s;
 	size_t len;
@@ -262,76 +264,122 @@ parse_modifiers(size_t linenum, const char *s, enum re_flags *mods_p)
 		return 0;
 	}
 
-	tok = buf;
-	pos = tok;
+	pos = tok = buf;
 	first = true;
 
 	result = 0;
 
-	for (;;) {
-		if (*pos == ',' || *pos == '\n' || *pos == '\0') {
-			char c, *end;
-			size_t mi;
+	while (*pos != '\0') {
+		char *end;
+		size_t mi;
 
-			c = *pos;
-			end = pos;
+		/* skip to comma delimiter, EOL or EOS */
+		while (*pos != ',' && *pos != '\n' && *pos != '\0') {
+			pos++;
+		}
 
+		end = pos;
+		if (*pos) {
+			/* if not EOS, then advance pos and set *end to
+			 * NUL
+			 */
+			pos++;
+			*end = '\0';
+		}
+
+		/* strip beginning whitespace */
+		while (tok < end && isspace((unsigned char) *tok)) {
+			tok++;
+		}
+
+		/* now strip end whitespace */
+		if (end > tok) {
+			/* if string is not empty, point to character behind ',' or \n' or EOS */
+			end--;
+		}
+
+		while (end > tok && isspace((unsigned char) *end)) {
 			*end = '\0';
 			end--;
-			while (end > tok && isspace((unsigned char)*end)) {
-				*end = '\0';
-				end--;
+		}
+
+		/* if we still have a string, process it */
+		if (*tok != '\0') {
+#if DEBUG_PARSING 
+			fprintf(stderr, "  >> modifier is %s\n", tok);
+#endif /* DEBUG_PARSING */
+
+			/* TODO: handle -modifier */
+			for (mi=0; mi < modifier_table_size; mi++) {
+				if (modifier_table[mi].longname && strcmp(tok,modifier_table[mi].longname) == 0) {
+					break;
+				}
 			}
 
-			if (*tok != '\0') {
-				/* TODO: handle -modifier */
-				for (mi=0; mi < modifier_table_size; mi++) {
-					if (strcmp(tok,modifier_table[mi].longname) == 0) {
-						break;
-					}
-				}
+			if (mi < modifier_table_size) {
+#if DEBUG_PARSING 
+				fprintf(stderr, "  >> found %zu: %s | %s | %s | 0x%04x\n",
+					mi,
+					modifier_table[mi].longname ? modifier_table[mi].longname : "(none)",
+					modifier_table[mi].shortname ? modifier_table[mi].shortname : "(none)",
+					modifier_table[mi].supported ? "supported" : "not supported",
+					(unsigned)modifier_table[mi].flags);
+#endif /* DEBUG_PARSING */
 
-				if (mi < modifier_table_size) {
-					if (modifier_table[mi].supported == MOD_SUPPORTED) {
-						mods = mods | modifier_table[mi].flags;
-					} else {
-						fprintf(stderr, "line %5zu: unsupported regexp modifier %c\n",
-								linenum, *tok);
-						result = 0;
-						goto finish;
-					}
-				} else if (first) {
-					for (; *tok != '\0'; tok++) {
-						if (*tok == 'i') {
-							mods = mods | RE_ICASE;
-						} else {
-							fprintf(stderr, "line %5zu: unsupported regexp modifier %c\n",
-								linenum, *tok);
-							result = 0;
-							goto finish;
-						}
-					}
+				if (modifier_table[mi].supported == MOD_SUPPORTED) {
+					mods = mods | modifier_table[mi].flags;
 				} else {
-					fprintf(stderr, "line %5zu: unknown regexp modifier %s\n",
+					fprintf(stderr, "line %5zu: unsupported regexp modifier %s\n",
 						linenum, tok);
 					result = 0;
 					goto finish;
-
 				}
-			}
+			} else if (first && strspn(tok, "BIgimnsx") == strlen(tok)) {
+				for (; *tok != '\0'; tok++) {
+					if (*tok == 'i') {
+						mods = mods | RE_ICASE;
+					} else if (strchr("gns", *tok) != NULL) {
+						/* options that are ignored or default:
+						 *
+						 * 'g' is global search, which we ignore
+						 * 'n' is no_auto_capture, which is not relevant until we support capture groups
+						 * 's' is dotall, which is default
+						 *
+						 * XXX: implement global search
+						 * XXX: implement EOL handling so we can specify not-dotall
+						 */
+					} else if (strchr("BImx", *tok) != NULL) {
+						/* options that we don't (yet) support:
+						 *
+						 * 'B' and 'I' are used to dump PCRE2 internal state information,
+						 * and not particularly useful for testing libfsm
+						 *
+						 * 'm' is multiline support
+						 * 'x' is extended regexp syntax
+						 * "xx" is extended-more syntax
+						 */
+						fprintf(stderr, "line %5zu: unsupported regexp modifier %c\n",
+							linenum, *tok);
+						result = 0;
+						goto finish;
+					} else {
+						fprintf(stderr, "line %5zu: unknown regexp modifier %c\n",
+							linenum, *tok);
+						result = 0;
+						goto finish;
+					}
+				}
+			} else {
+				fprintf(stderr, "line %5zu: unknown regexp modifier %s\n",
+					linenum, tok);
+				result = 0;
+				goto finish;
 
-			first = false;
-
-			for (tok = pos+1; isspace((unsigned char)*tok); ) {
-				tok++;
 			}
-
-			if (c == '\0') {
-				break;
-			}
-		} else {
-			pos++;
 		}
+
+		first = false;
+		tok = pos;
 	}
 
 	result = 1;
