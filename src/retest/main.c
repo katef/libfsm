@@ -4,7 +4,12 @@
  * See LICENCE for the full copyright terms.
  */
 
-#define _POSIX_C_SOURCE 2
+#if __linux__
+/* apparently you need this for Linux, and it breaks macOS */
+#  define _POSIX_C_SOURCE 200809L
+#else
+#  define _POSIX_C_SOURCE 2
+#endif
 
 #include <unistd.h>
 
@@ -15,6 +20,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+
+#include <time.h>
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
@@ -50,6 +57,8 @@ struct match {
 };
 
 static int tty_output = 0;
+static int do_timing  = 0;
+
 static struct fsm_options opt;
 static struct fsm_vm_compile_opts vm_opts = { 0, FSM_VM_COMPILE_VM_V1, NULL };
 
@@ -569,6 +578,9 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 	enum retest_options runner_opts;
 	const char *dialect_name;
 
+	static const struct timespec t_zero;
+	struct timespec t_start;
+
 	regexp = NULL;
 
 	/* XXX - fix this */
@@ -587,6 +599,8 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 	dialect        = default_dialect;
 	dialect_name   = dialect_to_name(dialect);
 
+	t_start        = t_zero;
+
 	memset(&flagdesc[0],0,sizeof flagdesc);
 
 	while (s = fgets(buf, sizeof buf, f), s != NULL) {
@@ -599,6 +613,26 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 		}
 
 		if (len == 0) {
+			if (regexp != NULL && do_timing && (t_start.tv_sec != 0 || t_start.tv_nsec != 0)) {
+				struct timespec t_end = t_zero;
+				if (clock_gettime(CLOCK_MONOTONIC, &t_end) == 0) {
+					long diff_ns = t_end.tv_nsec - t_start.tv_nsec;
+					double diff = difftime(t_end.tv_sec, t_start.tv_sec) + 1e-9 * (diff_ns);
+
+					if (diff >= 0.001) {
+						printf("[TIME  ] %s regexp /%s/%s tests took %.4f seconds\n",
+							dialect_name, regexp, flagdesc, diff);
+					} else {
+						printf("[TIME  ] %s regexp /%s/%s tests took %.4e seconds\n",
+							dialect_name, regexp, flagdesc, diff);
+					}
+
+					fflush(stdout);
+				} else {
+					fprintf(stderr, "error getting timing info: %s\n", strerror(errno));
+				}
+			}
+
 			free(regexp);
 			regexp = NULL;
 			flags = RE_FLAGS_NONE;
@@ -699,6 +733,14 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 			assert(impl_ready == false);
 			assert(s          != NULL);
+
+			if (do_timing) {
+				t_start = t_zero;
+				if (clock_gettime(CLOCK_MONOTONIC, &t_start) != 0) {
+					fprintf(stderr, "error getting timing info: %s\n", strerror(errno));
+					t_start = t_zero;
+				}
+			}
 
 			regexp = xmalloc(len+1);
 			memcpy(regexp, s, len+1);
@@ -922,7 +964,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "O:L:l:x:" "e:E:" "r:" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:l:x:" "e:E:" "r:" "t"), c != -1) {
 			switch (c) {
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
@@ -980,6 +1022,10 @@ main(int argc, char *argv[])
 			case 'h':
 				usage();
 				return EXIT_SUCCESS;
+
+			case 't':
+				do_timing = 1;
+				break;
 
 			case '?':
 			default:
