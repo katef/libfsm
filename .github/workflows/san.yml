@@ -78,6 +78,7 @@ jobs:
             < ${BUILD}/${PCRE_VER}/testdata/$i \
             > ${BUILD}/test/retest/$i.tst
         done
+        rm ${BUILD}/test/retest/testinputEBC.tst # EBCDIC
 
     - name: run pcre test suite (vm v1)
       env:
