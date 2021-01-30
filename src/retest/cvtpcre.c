@@ -400,13 +400,27 @@ enum state {
 	ST_NOTMATCHES
 };
 
+static const char *
+state_name(enum state st)
+{
+	switch (st) {
+		case ST_DEFAULT: return "dft";
+		case ST_COMMAND: return "cmd";
+		case ST_PATTERN: return "pat";
+		case ST_MATCHES: return "mat";
+		case ST_NOTMATCHES: return "nom";
+	}
+
+	return "unk";
+}
+
 static const struct fsm_options zero_options;
 
 int main(int argc, char **argv)
 {
 	struct str l;
 	enum state state;
-	size_t count, nparsed, linenum;
+	size_t count, nparsed, linenum, regexp_line;
 	int re_ok = 0;
 	struct fsm_options opt;
 
@@ -417,8 +431,10 @@ int main(int argc, char **argv)
 	char regexp_delim = '/';
 	const char *regexp_delim_list = "/!\"\'`-=_:;,%&@~";
 
+	/* silence unused warnings */
 	(void)argc;
 	(void)argv;
+	(void)state_name;
 
 	l = init_str;
 	state = ST_DEFAULT;
@@ -491,14 +507,23 @@ int main(int argc, char **argv)
 		linenum++;
 
 restart:
+#if DEBUG_PARSING 
+		fprintf(stderr, "line %6zu, state (%d) %s, line: %s%s",
+			linenum, state, state_name(state),
+			l.len > 0 ? l.s : "",
+			l.len > 0 && l.s[l.len-1] == '\n' ? "" : "\n");
+#endif /* DEBUG_PARSING */
+
 		switch (state) {
 		case ST_DEFAULT:
 			if (n > 0) {
 				char *delim = strchr(regexp_delim_list, s[0]);
 				if (delim != NULL) {
 					regexp_delim = *delim;
+					regexp_line = linenum;
 					state = ST_PATTERN;
 					s++;
+					n--;
 					goto restart;
 				}
 				else if (s[0] == '#') {
@@ -514,9 +539,10 @@ restart:
 		case ST_PATTERN:
 			{
 				size_t i;
+				bool end_of_regexp = false;
 				enum re_flags mods = RE_FLAGS_NONE;
 
-				for (i=0; i < l.len; i++) {
+				for (i=0; i < n; i++) {
 					if (regexp_esc) {
 						regexp_esc = false;
 
@@ -529,6 +555,7 @@ restart:
 						regexp_esc = true;
 					}
 					else if (s[i] == regexp_delim) {
+						end_of_regexp = true;
 						s += i+1;
 						break;
 					}
@@ -537,58 +564,83 @@ restart:
 					}
 				}
 
-				if (*s == '\\') {
-					str_append(&regexp, '\\');
-					s++;
-				}
+				if (end_of_regexp) {
+					char *orig_mods;
 
-				/* end of regexp... check for modifiers
-				 */
-				if (parse_modifiers(linenum, s, &mods)) {
-					char *re = regexp.s;
-					static const struct re_err err_zero;
-
-					struct re_err comp_err;
-					struct fsm *fsm;
-
-					comp_err = err_zero;
-
-					fsm = re_comp(RE_PCRE, fsm_sgetc, &re, &opt, mods, &comp_err);
-					re_ok = (fsm != NULL);
-					if (re_ok) {
-						fsm_free(fsm);
-						nparsed++;
-						if (count > 0) {
-							fprintf(out,"\n");
-						}
-
-						fprintf(out,"# input line %zu\n", linenum);
-						if (mods != 0) {
-							char mod_str[17], *m;
-							memset(&mod_str,0,sizeof mod_str);
-							m = &mod_str[0];
-							if (mods & RE_ICASE)    { *m++ = 'i'; }
-							if (mods & RE_TEXT)     { *m++ = 't'; }
-							if (mods & RE_MULTI)    { *m++ = 'm'; }
-							if (mods & RE_REVERSE)  { *m++ = 'r'; }
-							if (mods & RE_SINGLE)   { *m++ = 'S'; }
-							if (mods & RE_ZONE)     { *m++ = 'Z'; }
-							if (mods & RE_ANCHORED) { *m++ = 'a'; }
-
-							fprintf(out, "M %s\n", &mod_str[0]);
-						}
-
-						fprintf(out,"%s\n", regexp.s);
-					} else {
-						fprintf(stderr, "line %5zu: could not parse regexp /%s/: %s\n",
-							linenum, regexp.s, re_strerror(comp_err.e));
+					if (*s == '\\') {
+						str_append(&regexp, '\\');
+						s++;
 					}
+
+					orig_mods = xstrdup(s);
+#if DEBUG_PARSING
+					fprintf(stderr, "<<< regexp: %s :regexp>>>\n", regexp.s);
+#endif /* DEBUG_PARSING */
+					/* end of regexp... check for modifiers
+					*/
+					if (parse_modifiers(linenum, s, &mods)) {
+						char *re = regexp.s;
+						static const struct re_err err_zero;
+
+						struct re_err comp_err;
+						struct fsm *fsm;
+
+						comp_err = err_zero;
+
+						fsm = re_comp(RE_PCRE, fsm_sgetc, &re, &opt, mods, &comp_err);
+						re_ok = (fsm != NULL);
+						if (re_ok) {
+							fsm_free(fsm);
+							nparsed++;
+							if (count > 0) {
+								fprintf(out,"\n");
+							}
+
+							fprintf(out,"# input line %zu\n", linenum);
+							if (mods != 0) {
+								char mod_str[17], *m;
+								memset(&mod_str,0,sizeof mod_str);
+								m = &mod_str[0];
+								if (mods & RE_ICASE)    { *m++ = 'i'; }
+								if (mods & RE_TEXT)     { *m++ = 't'; }
+								if (mods & RE_MULTI)    { *m++ = 'm'; }
+								if (mods & RE_REVERSE)  { *m++ = 'r'; }
+								if (mods & RE_SINGLE)   { *m++ = 'S'; }
+								if (mods & RE_ZONE)     { *m++ = 'Z'; }
+								if (mods & RE_ANCHORED) { *m++ = 'a'; }
+
+								fprintf(out, "M %s\n", &mod_str[0]);
+							}
+
+							fprintf(out,"%s\n", regexp.s);
+						} else {
+							if (regexp_line == linenum) {
+								fprintf(stderr, "line %5zu: could not parse regexp /%s/: %s\n",
+										linenum, regexp.s, re_strerror(comp_err.e));
+							} else {
+								fprintf(stderr, "lines %5zu .. %5zu: could not parse regexp /%s/: %s\n",
+										regexp_line, linenum, regexp.s, re_strerror(comp_err.e));
+							}
+						}
+					} else {
+						if (regexp_line == linenum) {
+							fprintf(stderr, "line %5zu: unsupport or unknown modifiers for /%s/: %s\n",
+									linenum, regexp.s, orig_mods);
+						} else {
+							fprintf(stderr, "lines %5zu .. %5zu: unsupport or unknown modifiers for /%s/: %s\n",
+									regexp_line, linenum, regexp.s, orig_mods);
+						}
+					}
+
+					if (orig_mods) {
+						free(orig_mods);
+					}
+
+					str_clear(&regexp);
+
+					state = ST_MATCHES;
+					count++;
 				}
-
-				str_clear(&regexp);
-
-				state = ST_MATCHES;
-				count++;
 			}
 			break;
 
