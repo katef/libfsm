@@ -623,11 +623,17 @@ restart:
 							}
 						}
 					} else {
+						size_t orig_mods_len = strlen(orig_mods);
+						/* strip off any trailing newlines */
+						while (orig_mods_len > 0 && orig_mods[orig_mods_len-1] == '\n') {
+							orig_mods[--orig_mods_len] = '\0';
+						}
+
 						if (regexp_line == linenum) {
-							fprintf(stderr, "line %5zu: unsupport or unknown modifiers for /%s/: %s\n",
+							fprintf(stderr, "line %5zu: unsupported or unknown modifiers for /%s/: %s\n",
 									linenum, regexp.s, orig_mods);
 						} else {
-							fprintf(stderr, "lines %5zu .. %5zu: unsupport or unknown modifiers for /%s/: %s\n",
+							fprintf(stderr, "lines %5zu .. %5zu: unsupported or unknown modifiers for /%s/: %s\n",
 									regexp_line, linenum, regexp.s, orig_mods);
 						}
 					}
