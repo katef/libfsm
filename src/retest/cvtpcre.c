@@ -184,7 +184,7 @@ static void
 usage(const char *progname)
 {
 	fprintf(stderr, "%s -h\n", progname);
-	fprintf(stderr, "%s [infile] [outfile]\n", progname);
+	fprintf(stderr, "%s {-s <regexp>} [infile] [outfile]\n", progname);
 }
 
 enum mod_supported {
@@ -435,6 +435,8 @@ int main(int argc, char **argv)
 	size_t count, nparsed, linenum, regexp_line;
 	int re_ok = 0;
 	struct fsm_options opt;
+	char **skip;
+	size_t nskip;
 
 	FILE *in, *out;
 
@@ -460,19 +462,26 @@ int main(int argc, char **argv)
 	count   = 0;
 	nparsed = 0;
 	linenum = 0;
+	nskip   = 0;
 
 	in  = stdin;
 	out = stdout;
+
+	skip = xmalloc(argc * sizeof *skip); /* upper bound */
 
 	{
 		const char *progname = argv[0];
 
 		int o;
-		while (o = getopt(argc,argv, "h"), o != -1) {
+		while (o = getopt(argc,argv, "hs:"), o != -1) {
 			switch (o) {
 			case 'h':
 				usage(progname);
 				exit(0);
+				break;
+
+			case 's':
+				skip[nskip++] = optarg;
 				break;
 
 			default:
@@ -593,9 +602,19 @@ restart:
 					if (parse_modifiers(linenum, s, &mods)) {
 						char *re = regexp.s;
 						static const struct re_err err_zero;
+						size_t j;
 
 						struct re_err comp_err;
 						struct fsm *fsm;
+
+						for (j = 0; j < nskip; j++) {
+							if (0 == strcmp(regexp.s, skip[j])) {
+								fprintf(stderr, "line %5zu: skipping regexp /%s/\n",
+									linenum, regexp.s);
+								re_ok = false;
+								goto skip;
+							}
+						}
 
 						comp_err = err_zero;
 
@@ -693,6 +712,8 @@ restart:
 						}
 					}
 
+skip:
+
 					if (orig_mods) {
 						free(orig_mods);
 					}
@@ -777,6 +798,7 @@ restart:
 		}
 	}
 
+	free(skip);
 	free(l.s);
 	free(regexp.s);
 
