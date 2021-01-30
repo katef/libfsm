@@ -612,7 +612,43 @@ restart:
 								fprintf(out, "M %s\n", &mod_str[0]);
 							}
 
-							fprintf(out,"%s\n", regexp.s);
+							// check if there's an embedded CR or NL or NUL
+							if (strcspn(regexp.s, "\n\r") < regexp.len || strlen(regexp.s) < regexp.len) {
+								size_t i;
+
+								fprintf(stderr, "  >>> embedded CR, NL, or NUL!\n");
+
+								/* turn on retest escape handling in the regexp */
+								fprintf(out, "O &\nO +e\n");
+
+								// print regexp prefix
+								fputc('~', out);
+								for (i = 0; i < regexp.len; i++) {
+									switch (regexp.s[i]) {
+									case '\0':
+										fputc('\\', out);
+										fputc('0', out);
+										break;
+
+									case '\n':
+										fputc('\\', out);
+										fputc('n', out);
+										break;
+
+									case '\r':
+										fputc('\\', out);
+										fputc('r', out);
+										break;
+
+									default:
+										fputc(regexp.s[i], out);
+										break;
+									}
+								}
+								fputc('\n', out);
+							} else {
+								fprintf(out,"%s\n", regexp.s);
+							}
 						} else {
 							if (regexp_line == linenum) {
 								fprintf(stderr, "line %5zu: could not parse regexp /%s/: %s\n",
