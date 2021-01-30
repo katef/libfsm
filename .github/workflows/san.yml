@@ -67,35 +67,40 @@ jobs:
         wget -nv -P ${BUILD}/ https://ftp.pcre.org/pub/pcre/${PCRE_VER}.zip
         unzip -d ${BUILD}/ ${BUILD}/${PCRE_VER}.zip "${PCRE_VER}/testdata/*"
         mkdir -p ${BUILD}/test/retest
-        ${BUILD}/bin/cvtpcre < ${BUILD}/${PCRE_VER}/testdata/testinput1 > ${BUILD}/test/retest/testinput1.tst
+        # the regexps skipped here take too long to compile in CI at the moment
+        for i in $(cd ${BUILD}/${PCRE_VER}/testdata; ls -1 testinput*); do
+            ${BUILD}/bin/cvtpcre \
+                -s 'word (?:[a-zA-Z0-9]+ ){0,300}otherword' \
+                -s 'Z*(|d*){216}' \
+                -s 'X?(R||){3335}' \
+                -s '(|]+){2,2452}' \
+                -s 'z{65536}' \
+            < ${BUILD}/${PCRE_VER}/testdata/$i \
+            > ${BUILD}/test/retest/$i.tst
+        done
 
     - name: run pcre test suite (vm v1)
       env:
         BUILD: ./build
-      run: |
-        ${BUILD}/bin/retest -O1 -l vm -x v1 ${BUILD}/test/retest/testinput1.tst
+      run: ${BUILD}/bin/retest -O1 -l vm -x v1 ${BUILD}/test/retest/*.tst
 
     - name: run pcre test suite (vm v2)
       env:
         BUILD: ./build
-      run: |
-        ${BUILD}/bin/retest -O1 -l vm -x v2 ${BUILD}/test/retest/testinput1.tst
+      run: ${BUILD}/bin/retest -O1 -l vm -x v2 ${BUILD}/test/retest/*.tst
 
     - name: run pcre test suite (asm)
       env:
         BUILD: ./build
-      run: |
-        ${BUILD}/bin/retest -O1 -l asm ${BUILD}/test/retest/testinput1.tst
+      run: ${BUILD}/bin/retest -O1 -l asm ${BUILD}/test/retest/*.tst
 
     - name: run pcre test suite (c)
       env:
         BUILD: ./build
-      run: |
-        ${BUILD}/bin/retest -O1 -l c ${BUILD}/test/retest/testinput1.tst
+      run: ${BUILD}/bin/retest -O1 -l c ${BUILD}/test/retest/*.tst
 
     - name: run pcre test suite (vmc)
       env:
         BUILD: ./build
-      run: |
-        ${BUILD}/bin/retest -O1 -l vmc ${BUILD}/test/retest/testinput1.tst
+      run: ${BUILD}/bin/retest -O1 -l vmc ${BUILD}/test/retest/*.tst
 
