@@ -120,8 +120,17 @@ stripws(char *s)
 	return rstrip(lstrip(s));
 }
 
+static int
+data_mods_supported(char *mods)
+{
+	mods = lstrip(mods);
+
+	/* currently we do not support any data modifiers */
+	return *mods == '\0';
+}
+
 static char *
-decode_escapes(char *s)
+decode_escapes(char *s, char **mods)
 {
 	char *b = s, *p = s;
 
@@ -149,6 +158,15 @@ decode_escapes(char *s)
 		case '5': case '6': case '7': case '8': case '9':
 		case '\\':
 			*p++ = '\\'; *p++ = s[0]; break;
+
+		// end of data, modifiers follow
+		case '=':
+			*p = '\0';
+			if (mods != NULL) {
+				*mods = s+1;
+			}
+			return b;
+
 		default:
 			  *p++ = *s; break;
 		}
@@ -532,7 +550,20 @@ restart:
 				reset = 1;
 			} else {
 				if (re_ok) {
-					fprintf(out, "+%s\n", decode_escapes(stripws(s)));
+					char *data;
+					char *mods;
+
+					mods = NULL;
+					data = decode_escapes(stripws(s), &mods);
+
+					if (mods == NULL || data_mods_supported(mods)) {
+						/* XXX - handle any supported modifiers.  although we currently don't
+						 * support any
+						 */
+						fprintf(out, "+%s\n", data);
+					} else {
+						fprintf(stderr, "line %5zu: unsupported data modifiers: %s\n", linenum, mods);
+					}
 				}
 			}
 			break;
@@ -545,7 +576,20 @@ restart:
 				reset = 1;
 			} else {
 				if (re_ok) {
-					fprintf(out, "-%s\n", decode_escapes(stripws(s)));
+					char *data;
+					char *mods;
+
+					mods = NULL;
+					data = decode_escapes(stripws(s), &mods);
+
+					if (mods == NULL || data_mods_supported(mods)) {
+						/* XXX - handle any supported modifiers.  although we currently don't
+						 * support any
+						 */
+						fprintf(out, "-%s\n", data);
+					} else {
+						fprintf(stderr, "line %5zu: unsupported data modifiers: %s\n", linenum, mods);
+					}
 				}
 			}
 			break;
