@@ -16,6 +16,8 @@
 
 #include <unistd.h>
 
+#define DEBUG_PARSING 0
+
 struct str {
 	char *s;
 	size_t len;
@@ -120,8 +122,17 @@ stripws(char *s)
 	return rstrip(lstrip(s));
 }
 
+static int
+data_mods_supported(char *mods)
+{
+	mods = lstrip(mods);
+
+	/* currently we do not support any data modifiers */
+	return *mods == '\0';
+}
+
 static char *
-decode_escapes(char *s)
+decode_escapes(char *s, char **mods)
 {
 	char *b = s, *p = s;
 
@@ -149,6 +160,15 @@ decode_escapes(char *s)
 		case '5': case '6': case '7': case '8': case '9':
 		case '\\':
 			*p++ = '\\'; *p++ = s[0]; break;
+
+		// end of data, modifiers follow
+		case '=':
+			*p = '\0';
+			if (mods != NULL) {
+				*mods = s+1;
+			}
+			return b;
+
 		default:
 			  *p++ = *s; break;
 		}
@@ -188,7 +208,9 @@ static const struct {
 	{ "bad_escape_is_literal"  , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL */
 	{ "caseless"               , "i",  MOD_SUPPORTED  , RE_ICASE      }, /* PCRE2_CASELESS */
 	{ "dollar_endonly"         , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_DOLLAR_ENDONLY */
-	{ "dotall"                 , "s",  MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_DOTALL */
+
+	/* dotall is currently the default (and only) libfsm behavior. */
+	{ "dotall"                 , "s",  MOD_SUPPORTED  , RE_FLAGS_NONE }, /* PCRE2_DOTALL */
 	{ "dupnames"               , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_DUPNAMES */
 	{ "endanchored"            , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_ENDANCHORED */
 	{ "escaped_cr_is_lf"       , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTRA_ESCAPED_CR_IS_LF */
@@ -196,6 +218,11 @@ static const struct {
 	{ "extended_more"          , "xx", MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTENDED_MORE */
 	{ "extra_alt_bsux"         , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTRA_ALT_BSUX */
 	{ "firstline"              , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_FIRSTLINE */
+
+	/* global search is currently unimplemented.  libfsm stops after the first match.  This should
+	 * be safe to allow. */
+	{ "global"                 , "g" , MOD_SUPPORTED  , RE_FLAGS_NONE }, /* global search */
+
 	{ "literal"                , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_LITERAL */
 	{ "match_line"             , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTRA_MATCH_LINE */
 	{ "match_invalid_utf"      , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_MATCH_INVALID_UTF */
@@ -205,7 +232,11 @@ static const struct {
 	{ "never_backslash_c"      , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NEVER_BACKSLASH_C */
 	{ "never_ucp"              , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NEVER_UCP */
 	{ "never_utf"              , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NEVER_UTF */
-	{ "no_auto_capture"        , "n",  MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NO_AUTO_CAPTURE */
+
+	/* no_auto_capture will be meaningful when we support capture groups, but is currently
+	 * not meaningful
+	 */
+	{ "no_auto_capture"        , "n",  MOD_SUPPORTED  , RE_FLAGS_NONE }, /* PCRE2_NO_AUTO_CAPTURE */
 	{ "no_auto_possess"        , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NO_AUTO_POSSESS */
 	{ "no_dotstar_anchor"      , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NO_DOTSTAR_ANCHOR */
 	{ "no_start_optimize"      , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_NO_START_OPTIMIZE */
@@ -233,76 +264,122 @@ parse_modifiers(size_t linenum, const char *s, enum re_flags *mods_p)
 		return 0;
 	}
 
-	tok = buf;
-	pos = tok;
+	pos = tok = buf;
 	first = true;
 
 	result = 0;
 
-	for (;;) {
-		if (*pos == ',' || *pos == '\n' || *pos == '\0') {
-			char c, *end;
-			size_t mi;
+	while (*pos != '\0') {
+		char *end;
+		size_t mi;
 
-			c = *pos;
-			end = pos;
+		/* skip to comma delimiter, EOL or EOS */
+		while (*pos != ',' && *pos != '\n' && *pos != '\0') {
+			pos++;
+		}
 
+		end = pos;
+		if (*pos) {
+			/* if not EOS, then advance pos and set *end to
+			 * NUL
+			 */
+			pos++;
+			*end = '\0';
+		}
+
+		/* strip beginning whitespace */
+		while (tok < end && isspace((unsigned char) *tok)) {
+			tok++;
+		}
+
+		/* now strip end whitespace */
+		if (end > tok) {
+			/* if string is not empty, point to character behind ',' or \n' or EOS */
+			end--;
+		}
+
+		while (end > tok && isspace((unsigned char) *end)) {
 			*end = '\0';
 			end--;
-			while (end > tok && isspace((unsigned char)*end)) {
-				*end = '\0';
-				end--;
+		}
+
+		/* if we still have a string, process it */
+		if (*tok != '\0') {
+#if DEBUG_PARSING 
+			fprintf(stderr, "  >> modifier is %s\n", tok);
+#endif /* DEBUG_PARSING */
+
+			/* TODO: handle -modifier */
+			for (mi=0; mi < modifier_table_size; mi++) {
+				if (modifier_table[mi].longname && strcmp(tok,modifier_table[mi].longname) == 0) {
+					break;
+				}
 			}
 
-			if (*tok != '\0') {
-				/* TODO: handle -modifier */
-				for (mi=0; mi < modifier_table_size; mi++) {
-					if (strcmp(tok,modifier_table[mi].longname) == 0) {
-						break;
-					}
-				}
+			if (mi < modifier_table_size) {
+#if DEBUG_PARSING 
+				fprintf(stderr, "  >> found %zu: %s | %s | %s | 0x%04x\n",
+					mi,
+					modifier_table[mi].longname ? modifier_table[mi].longname : "(none)",
+					modifier_table[mi].shortname ? modifier_table[mi].shortname : "(none)",
+					modifier_table[mi].supported ? "supported" : "not supported",
+					(unsigned)modifier_table[mi].flags);
+#endif /* DEBUG_PARSING */
 
-				if (mi < modifier_table_size) {
-					if (modifier_table[mi].supported == MOD_SUPPORTED) {
-						mods = mods | modifier_table[mi].flags;
-					} else {
-						fprintf(stderr, "line %5zu: unsupported regexp modifier %c\n",
-								linenum, *tok);
-						result = 0;
-						goto finish;
-					}
-				} else if (first) {
-					for (; *tok != '\0'; tok++) {
-						if (*tok == 'i') {
-							mods = mods | RE_ICASE;
-						} else {
-							fprintf(stderr, "line %5zu: unsupported regexp modifier %c\n",
-								linenum, *tok);
-							result = 0;
-							goto finish;
-						}
-					}
+				if (modifier_table[mi].supported == MOD_SUPPORTED) {
+					mods = mods | modifier_table[mi].flags;
 				} else {
-					fprintf(stderr, "line %5zu: unknown regexp modifier %s\n",
+					fprintf(stderr, "line %5zu: unsupported regexp modifier %s\n",
 						linenum, tok);
 					result = 0;
 					goto finish;
-
 				}
-			}
+			} else if (first && strspn(tok, "BIgimnsx") == strlen(tok)) {
+				for (; *tok != '\0'; tok++) {
+					if (*tok == 'i') {
+						mods = mods | RE_ICASE;
+					} else if (strchr("gns", *tok) != NULL) {
+						/* options that are ignored or default:
+						 *
+						 * 'g' is global search, which we ignore
+						 * 'n' is no_auto_capture, which is not relevant until we support capture groups
+						 * 's' is dotall, which is default
+						 *
+						 * XXX: implement global search
+						 * XXX: implement EOL handling so we can specify not-dotall
+						 */
+					} else if (strchr("BImx", *tok) != NULL) {
+						/* options that we don't (yet) support:
+						 *
+						 * 'B' and 'I' are used to dump PCRE2 internal state information,
+						 * and not particularly useful for testing libfsm
+						 *
+						 * 'm' is multiline support
+						 * 'x' is extended regexp syntax
+						 * "xx" is extended-more syntax
+						 */
+						fprintf(stderr, "line %5zu: unsupported regexp modifier %c\n",
+							linenum, *tok);
+						result = 0;
+						goto finish;
+					} else {
+						fprintf(stderr, "line %5zu: unknown regexp modifier %c\n",
+							linenum, *tok);
+						result = 0;
+						goto finish;
+					}
+				}
+			} else {
+				fprintf(stderr, "line %5zu: unknown regexp modifier %s\n",
+					linenum, tok);
+				result = 0;
+				goto finish;
 
-			first = false;
-
-			for (tok = pos+1; isspace((unsigned char)*tok); ) {
-				tok++;
 			}
-
-			if (c == '\0') {
-				break;
-			}
-		} else {
-			pos++;
 		}
+
+		first = false;
+		tok = pos;
 	}
 
 	result = 1;
@@ -323,13 +400,27 @@ enum state {
 	ST_NOTMATCHES
 };
 
+static const char *
+state_name(enum state st)
+{
+	switch (st) {
+		case ST_DEFAULT: return "dft";
+		case ST_COMMAND: return "cmd";
+		case ST_PATTERN: return "pat";
+		case ST_MATCHES: return "mat";
+		case ST_NOTMATCHES: return "nom";
+	}
+
+	return "unk";
+}
+
 static const struct fsm_options zero_options;
 
 int main(int argc, char **argv)
 {
 	struct str l;
 	enum state state;
-	size_t count, nparsed, linenum;
+	size_t count, nparsed, linenum, regexp_line;
 	int re_ok = 0;
 	struct fsm_options opt;
 
@@ -340,8 +431,10 @@ int main(int argc, char **argv)
 	char regexp_delim = '/';
 	const char *regexp_delim_list = "/!\"\'`-=_:;,%&@~";
 
+	/* silence unused warnings */
 	(void)argc;
 	(void)argv;
+	(void)state_name;
 
 	l = init_str;
 	state = ST_DEFAULT;
@@ -414,14 +507,23 @@ int main(int argc, char **argv)
 		linenum++;
 
 restart:
+#if DEBUG_PARSING 
+		fprintf(stderr, "line %6zu, state (%d) %s, line: %s%s",
+			linenum, state, state_name(state),
+			l.len > 0 ? l.s : "",
+			l.len > 0 && l.s[l.len-1] == '\n' ? "" : "\n");
+#endif /* DEBUG_PARSING */
+
 		switch (state) {
 		case ST_DEFAULT:
 			if (n > 0) {
 				char *delim = strchr(regexp_delim_list, s[0]);
 				if (delim != NULL) {
 					regexp_delim = *delim;
+					regexp_line = linenum;
 					state = ST_PATTERN;
 					s++;
+					n--;
 					goto restart;
 				}
 				else if (s[0] == '#') {
@@ -437,9 +539,10 @@ restart:
 		case ST_PATTERN:
 			{
 				size_t i;
+				bool end_of_regexp = false;
 				enum re_flags mods = RE_FLAGS_NONE;
 
-				for (i=0; i < l.len; i++) {
+				for (i=0; i < n; i++) {
 					if (regexp_esc) {
 						regexp_esc = false;
 
@@ -452,6 +555,7 @@ restart:
 						regexp_esc = true;
 					}
 					else if (s[i] == regexp_delim) {
+						end_of_regexp = true;
 						s += i+1;
 						break;
 					}
@@ -460,58 +564,125 @@ restart:
 					}
 				}
 
-				if (*s == '\\') {
-					str_append(&regexp, '\\');
-					s++;
-				}
+				if (end_of_regexp) {
+					char *orig_mods;
 
-				/* end of regexp... check for modifiers
-				 */
-				if (parse_modifiers(linenum, s, &mods)) {
-					char *re = regexp.s;
-					static const struct re_err err_zero;
-
-					struct re_err comp_err;
-					struct fsm *fsm;
-
-					comp_err = err_zero;
-
-					fsm = re_comp(RE_PCRE, fsm_sgetc, &re, &opt, mods, &comp_err);
-					re_ok = (fsm != NULL);
-					if (re_ok) {
-						fsm_free(fsm);
-						nparsed++;
-						if (count > 0) {
-							fprintf(out,"\n");
-						}
-
-						fprintf(out,"# input line %zu\n", linenum);
-						if (mods != 0) {
-							char mod_str[17], *m;
-							memset(&mod_str,0,sizeof mod_str);
-							m = &mod_str[0];
-							if (mods & RE_ICASE)    { *m++ = 'i'; }
-							if (mods & RE_TEXT)     { *m++ = 't'; }
-							if (mods & RE_MULTI)    { *m++ = 'm'; }
-							if (mods & RE_REVERSE)  { *m++ = 'r'; }
-							if (mods & RE_SINGLE)   { *m++ = 'S'; }
-							if (mods & RE_ZONE)     { *m++ = 'Z'; }
-							if (mods & RE_ANCHORED) { *m++ = 'a'; }
-
-							fprintf(out, "M %s\n", &mod_str[0]);
-						}
-
-						fprintf(out,"%s\n", regexp.s);
-					} else {
-						fprintf(stderr, "line %5zu: could not parse regexp /%s/: %s\n",
-							linenum, regexp.s, re_strerror(comp_err.e));
+					if (*s == '\\') {
+						str_append(&regexp, '\\');
+						s++;
 					}
+
+					orig_mods = xstrdup(s);
+#if DEBUG_PARSING
+					fprintf(stderr, "<<< regexp: %s :regexp>>>\n", regexp.s);
+#endif /* DEBUG_PARSING */
+					/* end of regexp... check for modifiers
+					*/
+					if (parse_modifiers(linenum, s, &mods)) {
+						char *re = regexp.s;
+						static const struct re_err err_zero;
+
+						struct re_err comp_err;
+						struct fsm *fsm;
+
+						comp_err = err_zero;
+
+						fsm = re_comp(RE_PCRE, fsm_sgetc, &re, &opt, mods, &comp_err);
+						re_ok = (fsm != NULL);
+						if (re_ok) {
+							fsm_free(fsm);
+							nparsed++;
+							if (count > 0) {
+								fprintf(out,"\n");
+							}
+
+							fprintf(out,"# input line %zu\n", linenum);
+							if (mods != 0) {
+								char mod_str[17], *m;
+								memset(&mod_str,0,sizeof mod_str);
+								m = &mod_str[0];
+								if (mods & RE_ICASE)    { *m++ = 'i'; }
+								if (mods & RE_TEXT)     { *m++ = 't'; }
+								if (mods & RE_MULTI)    { *m++ = 'm'; }
+								if (mods & RE_REVERSE)  { *m++ = 'r'; }
+								if (mods & RE_SINGLE)   { *m++ = 'S'; }
+								if (mods & RE_ZONE)     { *m++ = 'Z'; }
+								if (mods & RE_ANCHORED) { *m++ = 'a'; }
+
+								fprintf(out, "M %s\n", &mod_str[0]);
+							}
+
+							// check if there's an embedded CR or NL or NUL
+							if (strcspn(regexp.s, "\n\r") < regexp.len || strlen(regexp.s) < regexp.len) {
+								size_t i;
+
+								fprintf(stderr, "  >>> embedded CR, NL, or NUL!\n");
+
+								/* turn on retest escape handling in the regexp */
+								fprintf(out, "O &\nO +e\n");
+
+								// print regexp prefix
+								fputc('~', out);
+								for (i = 0; i < regexp.len; i++) {
+									switch (regexp.s[i]) {
+									case '\0':
+										fputc('\\', out);
+										fputc('0', out);
+										break;
+
+									case '\n':
+										fputc('\\', out);
+										fputc('n', out);
+										break;
+
+									case '\r':
+										fputc('\\', out);
+										fputc('r', out);
+										break;
+
+									default:
+										fputc(regexp.s[i], out);
+										break;
+									}
+								}
+								fputc('\n', out);
+							} else {
+								fprintf(out,"%s\n", regexp.s);
+							}
+						} else {
+							if (regexp_line == linenum) {
+								fprintf(stderr, "line %5zu: could not parse regexp /%s/: %s\n",
+										linenum, regexp.s, re_strerror(comp_err.e));
+							} else {
+								fprintf(stderr, "lines %5zu .. %5zu: could not parse regexp /%s/: %s\n",
+										regexp_line, linenum, regexp.s, re_strerror(comp_err.e));
+							}
+						}
+					} else {
+						size_t orig_mods_len = strlen(orig_mods);
+						/* strip off any trailing newlines */
+						while (orig_mods_len > 0 && orig_mods[orig_mods_len-1] == '\n') {
+							orig_mods[--orig_mods_len] = '\0';
+						}
+
+						if (regexp_line == linenum) {
+							fprintf(stderr, "line %5zu: unsupported or unknown modifiers for /%s/: %s\n",
+									linenum, regexp.s, orig_mods);
+						} else {
+							fprintf(stderr, "lines %5zu .. %5zu: unsupported or unknown modifiers for /%s/: %s\n",
+									regexp_line, linenum, regexp.s, orig_mods);
+						}
+					}
+
+					if (orig_mods) {
+						free(orig_mods);
+					}
+
+					str_clear(&regexp);
+
+					state = ST_MATCHES;
+					count++;
 				}
-
-				str_clear(&regexp);
-
-				state = ST_MATCHES;
-				count++;
 			}
 			break;
 
@@ -532,7 +703,20 @@ restart:
 				reset = 1;
 			} else {
 				if (re_ok) {
-					fprintf(out, "+%s\n", decode_escapes(stripws(s)));
+					char *data;
+					char *mods;
+
+					mods = NULL;
+					data = decode_escapes(stripws(s), &mods);
+
+					if (mods == NULL || data_mods_supported(mods)) {
+						/* XXX - handle any supported modifiers.  although we currently don't
+						 * support any
+						 */
+						fprintf(out, "+%s\n", data);
+					} else {
+						fprintf(stderr, "line %5zu: unsupported data modifiers: %s\n", linenum, mods);
+					}
 				}
 			}
 			break;
@@ -545,7 +729,20 @@ restart:
 				reset = 1;
 			} else {
 				if (re_ok) {
-					fprintf(out, "-%s\n", decode_escapes(stripws(s)));
+					char *data;
+					char *mods;
+
+					mods = NULL;
+					data = decode_escapes(stripws(s), &mods);
+
+					if (mods == NULL || data_mods_supported(mods)) {
+						/* XXX - handle any supported modifiers.  although we currently don't
+						 * support any
+						 */
+						fprintf(out, "-%s\n", data);
+					} else {
+						fprintf(stderr, "line %5zu: unsupported data modifiers: %s\n", linenum, mods);
+					}
 				}
 			}
 			break;

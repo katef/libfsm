@@ -992,6 +992,13 @@ perf_case_report_error(enum error_type err)
 		printf("ERROR: reading file: %s\n", strerror(errno));
 		break;
 
+	case ERROR_WATCHDOG:
+		/* this isn't used in reperf at the moment, just including it
+		 * to handle the complete enum
+		 */
+		printf("ERROR: watchdog timer tripped\n");
+		break;
+
 	default:
 		printf("ERROR: unknown error %d\n", (int)err);
 		break;

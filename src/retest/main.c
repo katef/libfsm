@@ -4,7 +4,12 @@
  * See LICENCE for the full copyright terms.
  */
 
-#define _POSIX_C_SOURCE 2
+#if __linux__
+/* apparently you need this for Linux, and it breaks macOS */
+#  define _POSIX_C_SOURCE 200809L
+#else
+#  define _POSIX_C_SOURCE 2
+#endif
 
 #include <unistd.h>
 
@@ -16,11 +21,15 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#include <time.h>
+#include <signal.h>
+
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
+#include <fsm/alloc.h>
 #include <fsm/vm.h>
 
 #include <re/re.h>
@@ -49,8 +58,96 @@ struct match {
 	struct match *next;
 };
 
+static int tty_output = 0;
+static int do_timing  = 0;
+
+static int do_watchdog   = 0;
+static int watchdog_secs = 5;
+
+/* these are set/queried both inside and outside of signal handlers, so they have to volatile */
+static volatile int watchdog_on = 0;
+static volatile int watchdog_tripped = 0;
+
+/* watchdog timer signal handler */
+static void watchdog_handler(int arg) {
+	(void)arg;
+
+	if (watchdog_on) {
+		watchdog_tripped = 1;
+	}
+}
+
+static struct sigaction watchdog_action_enabled = {
+	.sa_handler = &watchdog_handler,
+	.sa_flags = SA_RESETHAND,
+};
+static struct sigaction watchdog_action_disabled = {
+	.sa_handler = SIG_DFL
+};
+
+/* custom allocators used if the watchdog timer is enabled.  If the
+ * watchdog is tripped, these will cause fsm_determinise() to abort
+ * on the next memory allocation.
+ */
+static void
+watchdog_free(void *opaque, void *p)
+{
+	(void)opaque;
+
+	free(p);
+}
+
+static void *
+watchdog_calloc(void *opaque, size_t n, size_t sz)
+{
+	(void)opaque;
+
+	if (watchdog_tripped) {
+		return NULL;
+	}
+
+	return calloc(n,sz);
+}
+
+static void *
+watchdog_malloc(void *opaque, size_t sz)
+{
+	(void)opaque;
+
+	if (watchdog_tripped) {
+		return NULL;
+	}
+
+	return malloc(sz);
+}
+
+static void *
+watchdog_realloc(void *opaque, void *p, size_t sz)
+{
+	(void)opaque;
+
+	if (watchdog_tripped) {
+		return NULL;
+	}
+
+	return realloc(p,sz);
+}
+
+static struct fsm_alloc watchdog_alloc = {
+	.free = &watchdog_free,
+	.calloc = &watchdog_calloc,
+	.malloc = &watchdog_malloc,
+	.realloc = &watchdog_realloc,
+	.opaque = NULL,
+};
+
 static struct fsm_options opt;
 static struct fsm_vm_compile_opts vm_opts = { 0, FSM_VM_COMPILE_VM_V1, NULL };
+
+enum retest_options {
+	RETEST_OPT_NONE = 0,
+	RETEST_OPT_ESCAPE_REGEXP = 0x0001,
+};
 
 static void
 usage(void)
@@ -83,45 +180,61 @@ usage(void)
 	fprintf(stderr, "                 v2        version 0.2 fixed length encoding\n");
 }
 
-static enum re_dialect
-dialect_name(const char *name)
+static const struct {
+	const char *name;
+	enum re_dialect dialect;
+} dialect_lookup_table[] = {
+/* TODO:
+	{ "ere",     RE_ERE     },
+	{ "bre",     RE_BRE     },
+	{ "plan9",   RE_PLAN9   },
+	{ "js",      RE_JS      },
+	{ "python",  RE_PYTHON  },
+	{ "sql99",   RE_SQL99   },
+*/
+	{ "like",    RE_LIKE    },
+	{ "literal", RE_LITERAL },
+	{ "glob",    RE_GLOB    },
+	{ "native",  RE_NATIVE  },
+	{ "pcre",    RE_PCRE    },
+	{ "sql",     RE_SQL     }
+};
+
+static const char *
+dialect_to_name(enum re_dialect dialect)
 {
+	const size_t num_dialects = sizeof dialect_lookup_table / sizeof dialect_lookup_table[0];
 	size_t i;
 
-	struct {
-		const char *name;
-		enum re_dialect dialect;
-	} a[] = {
-/* TODO:
-		{ "ere",     RE_ERE     },
-		{ "bre",     RE_BRE     },
-		{ "plan9",   RE_PLAN9   },
-		{ "js",      RE_JS      },
-		{ "python",  RE_PYTHON  },
-		{ "sql99",   RE_SQL99   },
-*/
-		{ "like",    RE_LIKE    },
-		{ "literal", RE_LITERAL },
-		{ "glob",    RE_GLOB    },
-		{ "native",  RE_NATIVE  },
-		{ "pcre",    RE_PCRE    },
-		{ "sql",     RE_SQL     }
-	};
+	for (i = 0; i < num_dialects; i++) {
+		if (dialect == dialect_lookup_table[i].dialect) {
+			return dialect_lookup_table[i].name;
+		}
+	}
+
+	return "unknown";
+}
+
+static enum re_dialect
+parse_dialect_name(const char *name)
+{
+	const size_t num_dialects = sizeof dialect_lookup_table / sizeof dialect_lookup_table[0];
+	size_t i;
 
 	assert(name != NULL);
 
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (0 == strcmp(a[i].name, name)) {
-			return a[i].dialect;
+	for (i = 0; i < num_dialects; i++) {
+		if (0 == strcmp(dialect_lookup_table[i].name, name)) {
+			return dialect_lookup_table[i].dialect;
 		}
 	}
 
 	fprintf(stderr, "unrecognised regexp dialect \"%s\"; valid dialects are: ", name);
 
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
+	for (i = 0; i < num_dialects; i++) {
 		fprintf(stderr, "%s%s",
-			a[i].name,
-			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+			dialect_lookup_table[i].name,
+			i + 1 < num_dialects ? ", " : "\n");
 	}
 
 	exit(EXIT_FAILURE);
@@ -252,7 +365,7 @@ octdig:
 		case ST_HEX_DIGIT:
 hexdigit:
 			{
-				unsigned char uc = toupper(s[i]);
+				unsigned char uc = toupper((unsigned char)s[i]);
 				if (ndig < 2 && isxdigit(uc)) {
 					if (uc >= '0' && uc <= '9') {
 						ccode = (ccode * 16) + (uc - '0');
@@ -317,6 +430,7 @@ struct single_error_record {
 	char *failed_match;
 	unsigned int line;
 	enum error_type type;
+	enum re_dialect dialect;
 };
 
 struct error_record {
@@ -366,7 +480,7 @@ dup_str(const char *s, int *err)
 }
 
 static int
-error_record_add(struct error_record *erec, enum error_type type, const char *fn, const char *re, const char *flags, const char *failed_match, unsigned int line)
+error_record_add(struct error_record *erec, enum error_type type, const char *fn, const char *re, const char *flags, const char *failed_match, unsigned int line, enum re_dialect dialect)
 {
 	size_t ind;
 	int err;
@@ -399,6 +513,7 @@ error_record_add(struct error_record *erec, enum error_type type, const char *fn
 	erec->errors[ind].failed_match = failed_match != NULL ? dup_str(failed_match,&err) : NULL;
 	erec->errors[ind].line         = line;
 	erec->errors[ind].type         = type;
+	erec->errors[ind].dialect      = dialect;
 
 	erec->len++;
 
@@ -408,25 +523,33 @@ error_record_add(struct error_record *erec, enum error_type type, const char *fn
 static void
 single_error_record_print(FILE *f, const struct single_error_record *err)
 {
+	const char *dialect_name;
+
+	dialect_name = dialect_to_name(err->dialect);
+
 	fprintf(f, "(%s:%u) ", err->filename, err->line);
 	switch (err->type) {
 	case ERROR_NONE:               fprintf(f, "no error?\n");  break;
 	case ERROR_BAD_RECORD_TYPE:    fprintf(f, "bad record\n"); break;
 	case ERROR_ESCAPE_SEQUENCE:    fprintf(f, "bad escape sequence\n"); break;
-	case ERROR_PARSING_REGEXP:     fprintf(f, "error parsing regexp /%s/%s\n", err->regexp, err->flags); break;
+	case ERROR_PARSING_REGEXP:     fprintf(f, "error parsing %s regexp /%s/%s\n", dialect_name, err->regexp, err->flags); break;
 	case ERROR_DETERMINISING:
-		fprintf(f, "error determinising regexp /%s/%s\n", err->regexp, err->flags);
+		fprintf(f, "error determinising %s regexp /%s/%s\n", dialect_name, err->regexp, err->flags);
 		break;
 	case ERROR_COMPILING_BYTECODE:
-		fprintf(f, "error compiling regexp /%s/%s\n", err->regexp, err->flags);
+		fprintf(f, "error compiling %s regexp /%s/%s\n", dialect_name, err->regexp, err->flags);
 		break;
 	case ERROR_SHOULD_MATCH:
-		fprintf(f, "regexp /%s/%s should match \"%s\" but doesn't\n",
-			err->regexp, err->flags, err->failed_match);
+		fprintf(f, "%s regexp /%s/%s should match \"%s\" but doesn't\n",
+			dialect_name, err->regexp, err->flags, err->failed_match);
 		break;
 	case ERROR_SHOULD_NOT_MATCH:
-		fprintf(f, "regexp /%s/%s should not match \"%s\" but does\n",
-			err->regexp, err->flags, err->failed_match);
+		fprintf(f, "%s regexp /%s/%s should not match \"%s\" but does\n",
+			dialect_name, err->regexp, err->flags, err->failed_match);
+		break;
+
+	case ERROR_WATCHDOG:
+		fprintf(f, "watchdog (%d secs) tripped while determinising %s regexp /%s/%s\n", watchdog_secs, dialect_name, err->regexp, err->flags);
 		break;
 
 	default:
@@ -489,8 +612,22 @@ flagstring(enum re_flags flags, char buf[16])
 /* test file format:
  *
  * 1. lines starting with '#' are skipped
- * 2. (TODO) lines starting with 'R' set the dialect
- * 3. lines starting with 'M' set the flags:
+ * 2. lines starting with 'R' set the dialect.  A line with only 'R'
+ *    resets the dialect to the default dialect (either PCRE or given
+ *    by the -r option).
+ * 2b. lines starting with "~" are treated as regular expressions with
+ *     the initial "~" removed.  This is to allow regular expressions
+ *     that start with an retest control line sequence like /M /
+ * 2c. lines starting with "O +" turn on retest options, and lines
+ *     starting with "O -" turn off retest options.  "O =" sets flags
+ *     to the options on the rest of the line; if the rest of the line
+ *     is blank, all options are disabled.
+ *         retest options:
+ *         e=RETEST_OPT_ESCAPE_REGEXP (retest parses escapes in the
+ *         regexp line)
+ * 2d. lines that start with "O &" will save the current runner opts
+ *     and restore them after the next test case.
+ * 3. lines starting with "M " set the flags:
  * 	i=RE_ICASE, t=RE_TEXT, m = RE_MULTI, r=RE_REVERSE,
  * 	S=RE_SINGLE, Z=RE_ZONE, a=RE_ANCHORED
  * 4. records are separated by empty lines.  flags reset at each record
@@ -505,7 +642,7 @@ flagstring(enum re_flags flags, char buf[16])
  *     c. '#' lines are comments
  */
 static int
-process_test_file(const char *fname, enum re_dialect dialect, enum implementation impl, int max_errors, struct error_record *erec)
+process_test_file(const char *fname, enum re_dialect default_dialect, enum implementation impl, int max_errors, struct error_record *erec)
 {
 	static const struct fsm_runner init_runner;
 
@@ -525,6 +662,15 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 	struct fsm_runner runner = init_runner;
 	enum re_flags flags;
 
+	enum re_dialect dialect;
+	enum retest_options runner_opts;
+	enum retest_options saved_opts;
+	int restore_runner_opts;
+	const char *dialect_name;
+
+	static const struct timespec t_zero;
+	struct timespec t_start;
+
 	regexp = NULL;
 
 	/* XXX - fix this */
@@ -539,6 +685,14 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 
 	linenum        = 0;
 	flags          = RE_FLAGS_NONE;
+	runner_opts    = RETEST_OPT_NONE;
+	saved_opts     = runner_opts;
+	dialect        = default_dialect;
+	dialect_name   = dialect_to_name(dialect);
+
+	t_start        = t_zero;
+
+	restore_runner_opts = 0;
 
 	memset(&flagdesc[0],0,sizeof flagdesc);
 
@@ -552,6 +706,26 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 		}
 
 		if (len == 0) {
+			if (regexp != NULL && do_timing && (t_start.tv_sec != 0 || t_start.tv_nsec != 0)) {
+				struct timespec t_end = t_zero;
+				if (clock_gettime(CLOCK_MONOTONIC, &t_end) == 0) {
+					long diff_ns = t_end.tv_nsec - t_start.tv_nsec;
+					double diff = difftime(t_end.tv_sec, t_start.tv_sec) + 1e-9 * (diff_ns);
+
+					if (diff >= 0.001) {
+						printf("[TIME  ] %s regexp /%s/%s tests took %.4f seconds\n",
+							dialect_name, regexp, flagdesc, diff);
+					} else {
+						printf("[TIME  ] %s regexp /%s/%s tests took %.4e seconds\n",
+							dialect_name, regexp, flagdesc, diff);
+					}
+
+					fflush(stdout);
+				} else {
+					fprintf(stderr, "error getting timing info: %s\n", strerror(errno));
+				}
+			}
+
 			free(regexp);
 			regexp = NULL;
 			flags = RE_FLAGS_NONE;
@@ -562,10 +736,64 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 				impl_ready = false;
 			}
 
+			if (restore_runner_opts) {
+				runner_opts = saved_opts;
+			}
+
 			continue;
 		}
 
 		if (s[0] == '#') {
+			continue;
+		}
+
+		if (s[0] == 'R' && (s[1] == '\0' || s[1] == ' ')) {
+			if (s[1] == '\0') {
+				dialect = default_dialect;
+			}
+			else {
+				dialect = parse_dialect_name(&s[2]);
+			}
+
+			dialect_name = dialect_to_name(dialect);
+
+			continue;
+		}
+
+		if (s[0] == 'O' && s[1] == ' ') {
+			enum retest_options opt_arg = 0;
+
+			if (s[2] == '&') {
+				restore_runner_opts = 1;
+				saved_opts = runner_opts;
+				continue;
+			}
+
+			if (s[2] != '+' && s[2] != '-' && s[2] != '=') {
+				fprintf(stderr, "line %d: O requires +, -, or =: %s\n", linenum, s);
+				continue;
+			}
+
+			char *fstr;
+			for (fstr = &s[3]; *fstr != '\0'; fstr++) {
+				switch (*fstr) {
+				case '\n': case ' ': case '\t':
+					/* ignore */
+					break;
+				case 'e': opt_arg = opt_arg | RETEST_OPT_ESCAPE_REGEXP; break;
+				default:
+					fprintf(stderr, "line %d: unknown retest option '%c'\n", linenum, (unsigned char)(*fstr));
+				}
+			}
+
+			if (s[2] == '=') {
+				runner_opts = opt_arg;
+			} else if (s[2] == '+') {
+				runner_opts = runner_opts | opt_arg;
+			} else if (s[2] == '-') {
+				runner_opts = runner_opts & (~opt_arg);
+			}
+
 			continue;
 		}
 
@@ -593,15 +821,30 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 			continue;
 		}
 
+		/* explicit regexp line */
+		if (s[0] == '~') {
+			s = &s[1];
+			len -= 1;
+		}
+
 		if (regexp == NULL) {
 			static const struct re_err err_zero;
 
 			struct fsm *fsm;
 			struct re_err err;
 			char *re_str;
+			int succ;
 
 			assert(impl_ready == false);
 			assert(s          != NULL);
+
+			if (do_timing) {
+				t_start = t_zero;
+				if (clock_gettime(CLOCK_MONOTONIC, &t_start) != 0) {
+					fprintf(stderr, "error getting timing info: %s\n", strerror(errno));
+					t_start = t_zero;
+				}
+			}
 
 			regexp = xmalloc(len+1);
 			memcpy(regexp, s, len+1);
@@ -609,21 +852,45 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 			assert(strlen(regexp) == (size_t)len);
 			assert(strcmp(regexp,s) == 0);
 
-			err   = err_zero;
-
+			err = err_zero;
 			num_regexps++;
 
+			if (runner_opts & RETEST_OPT_ESCAPE_REGEXP) {
+				char *err = NULL;
+				int newlen = len;
+				int ret;
+
+				ret = parse_escapes(regexp, &err, &newlen);
+				if (ret != PARSE_OK) {
+					fprintf(stderr, "line %d: invalid/incomplete escape sequence at column %d\n",
+						linenum, (int) (err - regexp));
+
+					/* ignore errors */
+					error_record_add(erec,
+						ERROR_ESCAPE_SEQUENCE, fname, regexp, flagdesc, NULL, linenum, dialect);
+
+					num_re_errors++;
+					continue;
+				}
+			}
+
 			flagstring(flags, &flagdesc[0]);
+
+			if (tty_output) {
+				printf("[      ] line %d: working on %s regexp /%s/%s ...\r",
+					linenum, dialect_name, regexp, flagdesc);
+				fflush(stdout);
+			}
 
 			re_str = regexp;
 			fsm = re_comp(dialect, fsm_sgetc, &re_str, &opt, flags, &err);
 			if (fsm == NULL) {
-				fprintf(stderr, "line %d: error with regexp /%s/%s: %s\n",
-					linenum, regexp, flagdesc, re_strerror(err.e));
+				fprintf(stderr, "line %d: error with %s regexp /%s/%s: %s\n",
+					linenum, dialect_name, regexp, flagdesc, re_strerror(err.e));
 
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_PARSING_REGEXP, fname, regexp, flagdesc, NULL, linenum);
+					ERROR_PARSING_REGEXP, fname, regexp, flagdesc, NULL, linenum, dialect);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
@@ -632,13 +899,52 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 				continue;
 			}
 
+			watchdog_tripped = 0;
+			if (do_watchdog) {
+				/* WARNING! this will leak memory and may cause other issues.  Do not use in production! */
+				watchdog_on = 1;
+				sigaction(SIGALRM, &watchdog_action_enabled, NULL);
+				alarm(watchdog_secs);
+			}
+
 			/* XXX - minimize or determinize? */
-			if (!fsm_determinise(fsm)) {
-				fprintf(stderr, "line %d: error determinising /%s/%s: %s\n", linenum, regexp, flagdesc, strerror(errno));
+			succ = fsm_determinise(fsm);
+
+			if (do_watchdog) {
+				watchdog_on = 0;
+				sigaction(SIGALRM, &watchdog_action_disabled, NULL);
+				alarm(0);
+			}
+
+			if (!succ && watchdog_tripped) {
+				watchdog_tripped = 0;
+
+				fprintf(stderr, "line %d: watchdog timer tripped on %s regexp /%s/%s\n",
+					linenum, dialect_name, regexp, flagdesc);
 
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_DETERMINISING, fname, regexp, flagdesc, NULL, linenum);
+					ERROR_WATCHDOG, fname, regexp, flagdesc, NULL, linenum, dialect);
+
+				/* try to free */
+				fsm_free(fsm);
+
+				/* don't exit; instead we leave vm==NULL so we
+				 * skip to next regexp ... */
+
+				num_re_errors++;
+				continue;
+			}
+
+			if (!succ) {
+				fprintf(stderr, "line %d: error determinising %s regexp /%s/%s: %s\n", linenum, dialect_name, regexp, flagdesc, strerror(errno));
+
+				/* ignore errors */
+				error_record_add(erec,
+					ERROR_DETERMINISING, fname, regexp, flagdesc, NULL, linenum, dialect);
+
+				/* try to free */
+				fsm_free(fsm);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
@@ -664,10 +970,11 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 
 			ret = fsm_runner_initialize(fsm, &runner, impl, vm_opts);
 			if (ret != ERROR_NONE) {
-				fprintf(stderr, "line %d: error compiling /%s/%s: %s\n", linenum, regexp, flagdesc, strerror(errno));
+				fprintf(stderr, "line %d: error compiling %s regexp /%s/%s: %s\n",
+					linenum, dialect_name, regexp, flagdesc, strerror(errno));
 
 				/* ignore errors */
-				error_record_add(erec, ret, fname, regexp, flagdesc, NULL, linenum);
+				error_record_add(erec, ret, fname, regexp, flagdesc, NULL, linenum, dialect);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
@@ -691,7 +998,7 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 				fprintf(stderr, "line %d: unrecognized record type '%c': %s\n", linenum, s[0], s);
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_BAD_RECORD_TYPE, fname, regexp, flagdesc, NULL, linenum);
+					ERROR_BAD_RECORD_TYPE, fname, regexp, flagdesc, NULL, linenum, dialect);
 
 				num_errors++;
 				continue;
@@ -712,7 +1019,7 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_ESCAPE_SEQUENCE, fname, regexp, flagdesc, NULL, linenum);
+					ERROR_ESCAPE_SEQUENCE, fname, regexp, flagdesc, NULL, linenum, dialect);
 
 				num_errors++;
 				continue;
@@ -720,11 +1027,11 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 
 			ret = fsm_runner_run(&runner, test, tlen);
 			if (!!ret == !!matching) {
-				printf("[OK    ] line %d: regexp /%s/%s %s \"%s\"\n",
-					linenum, regexp, flagdesc, matching ? "matched" : "did not match", orig);
+				printf("[OK    ] line %d: %s regexp /%s/%s %s \"%s\"\n",
+					linenum, dialect_name, regexp, flagdesc, matching ? "matched" : "did not match", orig);
 			} else {
-				printf("[NOT OK] line %d: regexp /%s/%s expected to %s \"%s\", but %s\n",
-					linenum, regexp, flagdesc,
+				printf("[NOT OK] line %d: %s regexp /%s/%s expected to %s \"%s\", but %s\n",
+					linenum, dialect_name, regexp, flagdesc,
 					matching ? "match" : "not match",
 					orig,
 					ret ? "did" : "did not");
@@ -735,7 +1042,7 @@ process_test_file(const char *fname, enum re_dialect dialect, enum implementatio
 						(matching)
 							? ERROR_SHOULD_MATCH
 							: ERROR_SHOULD_NOT_MATCH,
-						fname, regexp, flagdesc, orig, linenum);
+						fname, regexp, flagdesc, orig, linenum, dialect);
 
 
 				if (max_errors > 0 && num_errors >= max_errors) {
@@ -770,7 +1077,7 @@ finish:
 		exit(EXIT_FAILURE);
 	}
 
-	return (num_errors > 0);
+	return num_errors;
 }
 
 int
@@ -781,6 +1088,9 @@ main(int argc, char *argv[])
 	int max_test_errors;
 
 	int optlevel = 1;
+
+	/* is output to a tty or not? */
+	tty_output = isatty(fileno(stdout));
 
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;
@@ -797,7 +1107,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "O:L:l:x:" "e:E:" "r:" ), c != -1) {
+		while (c = getopt(argc, argv, "h" "O:L:l:x:" "e:E:" "r:" "tw:"), c != -1) {
 			switch (c) {
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
@@ -845,7 +1155,7 @@ main(int argc, char *argv[])
 
 			case 'e': opt.prefix = optarg;     break;
 
-			case 'r': dialect = dialect_name(optarg); break;
+			case 'r': dialect = parse_dialect_name(optarg); break;
 
 			case 'E':
 				max_test_errors = strtoul(optarg, NULL, 10);
@@ -856,6 +1166,18 @@ main(int argc, char *argv[])
 				usage();
 				return EXIT_SUCCESS;
 
+			case 't':
+				do_timing = 1;
+				break;
+
+			case 'w':
+				do_watchdog = 1;
+				watchdog_secs = strtoul(optarg, NULL, 10);
+				if (watchdog_secs < 1) {
+					do_watchdog = 0;
+				}
+				break;
+
 			case '?':
 			default:
 				usage();
@@ -865,6 +1187,10 @@ main(int argc, char *argv[])
 
 		argc -= optind;
 		argv += optind;
+	}
+
+	if (do_watchdog) {
+		opt.alloc = &watchdog_alloc;
 	}
 
 	if (argc < 1) {
@@ -883,22 +1209,17 @@ main(int argc, char *argv[])
 
 		r = 0;
 
-		if (argc == 0) {
-			fprintf(stderr, "-t requires at least one test file\n");
-			return EXIT_FAILURE;
-		}
-
 		if (error_record_init(&erec) != 0) {
 			fprintf(stderr, "error initializing error state: %s\n", strerror(errno));
 			return EXIT_FAILURE;
 		}
 
 		for (i = 0; i < argc; i++) {
-			int succ;
+			int nerrs;
 
-			succ = process_test_file(argv[i], dialect, impl, max_test_errors, &erec);
+			nerrs = process_test_file(argv[i], dialect, impl, max_test_errors, &erec);
 
-			if (!succ) {
+			if (nerrs > 0) {
 				r |= 1;
 				continue;
 			}

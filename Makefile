@@ -74,6 +74,7 @@ SUBDIR += tests/sql
 SUBDIR += tests/hashset
 SUBDIR += tests/queue
 SUBDIR += tests/aho_corasick
+SUBDIR += tests/retest
 SUBDIR += tests
 .if make(fuzz) || make(${BUILD}/theft/theft)
 SUBDIR += theft
