@@ -1064,14 +1064,14 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 		impl_ready = false;
 	}
 
-	fclose(f);
-
 	if (ferror(f)) {
 		fprintf(stderr, "line %d: error reading %s: %s\n", linenum, fname, strerror(errno));
 		if (regexp != NULL) {
 			num_errors++;
 		}
 	}
+
+	fclose(f);
 
 finish:
 	printf("%s: %d regexps, %d test cases\n", fname, num_regexps, num_test_cases);
