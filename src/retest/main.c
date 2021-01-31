@@ -272,6 +272,17 @@ xopen(const char *s)
 	return f;
 }
 
+static void
+xclock_gettime(struct timespec *tp)
+{
+	assert(tp != NULL);
+
+	if (clock_gettime(CLOCK_MONOTONIC, tp) != 0) {
+		perror("clock_gettime");
+		exit(EXIT_FAILURE);
+	}
+}
+
 enum parse_escape_result {
 	PARSE_OK = 0,
 	PARSE_INVALID_ESCAPE,
@@ -708,22 +719,20 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 		if (len == 0) {
 			if (regexp != NULL && do_timing && (t_start.tv_sec != 0 || t_start.tv_nsec != 0)) {
 				struct timespec t_end = t_zero;
-				if (clock_gettime(CLOCK_MONOTONIC, &t_end) == 0) {
-					long diff_ns = t_end.tv_nsec - t_start.tv_nsec;
-					double diff = difftime(t_end.tv_sec, t_start.tv_sec) + 1e-9 * (diff_ns);
+				xclock_gettime(&t_end);
 
-					if (diff >= 0.001) {
-						printf("[TIME  ] %s regexp /%s/%s tests took %.4f seconds\n",
-							dialect_name, regexp, flagdesc, diff);
-					} else {
-						printf("[TIME  ] %s regexp /%s/%s tests took %.4e seconds\n",
-							dialect_name, regexp, flagdesc, diff);
-					}
+				long diff_ns = t_end.tv_nsec - t_start.tv_nsec;
+				double diff = difftime(t_end.tv_sec, t_start.tv_sec) + 1e-9 * (diff_ns);
 
-					fflush(stdout);
+				if (diff >= 0.001) {
+					printf("[TIME  ] %s regexp /%s/%s tests took %.4f seconds\n",
+						dialect_name, regexp, flagdesc, diff);
 				} else {
-					fprintf(stderr, "error getting timing info: %s\n", strerror(errno));
+					printf("[TIME  ] %s regexp /%s/%s tests took %.4e seconds\n",
+						dialect_name, regexp, flagdesc, diff);
 				}
+
+				fflush(stdout);
 			}
 
 			free(regexp);
@@ -840,10 +849,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 			if (do_timing) {
 				t_start = t_zero;
-				if (clock_gettime(CLOCK_MONOTONIC, &t_start) != 0) {
-					fprintf(stderr, "error getting timing info: %s\n", strerror(errno));
-					t_start = t_zero;
-				}
+				xclock_gettime(&t_start);
 			}
 
 			regexp = xmalloc(len+1);
