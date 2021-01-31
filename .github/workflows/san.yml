@@ -78,7 +78,32 @@ jobs:
             < ${BUILD}/${PCRE_VER}/testdata/$i \
             > ${BUILD}/test/retest/$i.tst
         done
+        # things which will probably never be relevant for us:
+        rm ${BUILD}/test/retest/testinput2.tst # pcre options
+        rm ${BUILD}/test/retest/testinput3.tst # locale
+        rm ${BUILD}/test/retest/testinput5.tst # pcre options
+        rm ${BUILD}/test/retest/testinput8.tst # pcre bytecode
+        rm ${BUILD}/test/retest/testinput9.tst # character encodings
+        rm ${BUILD}/test/retest/testinput10.tst # character encodings
+        rm ${BUILD}/test/retest/testinput11.tst # character encodings
+        rm ${BUILD}/test/retest/testinput12.tst # character encodings
+        rm ${BUILD}/test/retest/testinput13.tst # character encodings
+        rm ${BUILD}/test/retest/testinput15.tst # backtracking limits
+        rm ${BUILD}/test/retest/testinput16.tst # JIT options
+        rm ${BUILD}/test/retest/testinput17.tst # JIT options
+        rm ${BUILD}/test/retest/testinput20.tst # serialisation
+        rm ${BUILD}/test/retest/testinput21.tst # \C
+        rm ${BUILD}/test/retest/testinput22.tst # \C
+        rm ${BUILD}/test/retest/testinput23.tst # \C
         rm ${BUILD}/test/retest/testinputEBC.tst # EBCDIC
+        # things we should eventually support, but don't yet:
+        rm ${BUILD}/test/retest/testinput4.tst # we don't provide UTF8 yet
+        rm ${BUILD}/test/retest/testinput7.tst # we don't provide UTF8 yet
+        rm ${BUILD}/test/retest/testinput14.tst # we don't provide UTF8 yet
+        rm ${BUILD}/test/retest/testinput18.tst # POSIX dialect
+        rm ${BUILD}/test/retest/testinput19.tst # POSIX dialect
+        rm ${BUILD}/test/retest/testinput24.tst # POSIX dialect
+        rm ${BUILD}/test/retest/testinput25.tst # POSIX dialect
 
     - name: run pcre test suite (vm v1)
       env:
