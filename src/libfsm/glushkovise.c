@@ -53,6 +53,18 @@ static int
 carry_endids(struct fsm *fsm, struct state_set *states,
     fsm_state_t s);
 
+static void
+free_closure_sets(struct state_set *closures[FSM_SIGMA_COUNT])
+{
+	int i;
+
+	for (i = 0; i <= FSM_SIGMA_MAX; i++) {
+		if (closures[i] != NULL) {
+			state_set_free(closures[i]);
+		}
+	}
+}
+
 int
 fsm_glushkovise(struct fsm *nfa)
 {
@@ -99,7 +111,7 @@ fsm_glushkovise(struct fsm *nfa)
 			}
 
 			if (!symbol_closure(nfa, es, eclosures, sclosures)) {
-				/* TODO: free stuff */
+				free_closure_sets(sclosures);
 				goto error;
 			}
 		}
@@ -115,7 +127,7 @@ fsm_glushkovise(struct fsm *nfa)
 			}
 
 			if (!edge_set_add_state_set(&nfa->states[s].edges, nfa->opt->alloc, i, sclosures[i])) {
-				/* TODO: free stuff */
+				free_closure_sets(sclosures);
 				goto error;
 			}
 
@@ -154,6 +166,7 @@ fsm_glushkovise(struct fsm *nfa)
 		fsm_carryopaque(nfa, eclosures[s], nfa, s);
 
 		if (!carry_endids(nfa, eclosures[s], s)) {
+			free_closure_sets(sclosures);
 			goto error;
 		}
 
