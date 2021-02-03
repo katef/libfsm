@@ -820,6 +820,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 				case 's': flags = flags | RE_SINGLE;   break;
 				case 'z': flags = flags | RE_ZONE;     break;
 				case 'a': flags = flags | RE_ANCHORED; break;
+				case 'x': flags = flags | RE_EXTENDED; break;
 				default:
 					fprintf(stderr, "line %d: unknown flag '%c'\n", linenum, (unsigned char)(*fstr));
 				}
