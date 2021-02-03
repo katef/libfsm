@@ -130,7 +130,7 @@ fsm_consolidate(struct fsm *src,
 				goto cleanup;
 			}
 			edge_set_compact(&dst->states[dst_i].edges,
-			    mapping_cb, &closure);
+			    dst->opt->alloc, mapping_cb, &closure);
 
 			if (fsm_isend(src, src_i)) {
 				fsm_setend(dst, dst_i, 1);

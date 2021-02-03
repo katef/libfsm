@@ -514,8 +514,8 @@ edge_set_remove_state(struct edge_set **setp, fsm_state_t state)
 	}
 }
 
-void
-edge_set_compact(struct edge_set **setp,
+int
+edge_set_compact(struct edge_set **setp, const struct fsm_alloc *alloc,
     fsm_state_remap_fun *remap, const void *opaque)
 {
 	struct edge_set *set;
@@ -533,13 +533,13 @@ edge_set_compact(struct edge_set **setp,
 		} else {
 			*setp = SINGLETON_ENCODE(symbol, new_id);
 		}
-		return;
+		return 1;
 	}
 
 	set = *setp;
 
 	if (edge_set_empty(set)) {
-		return;
+		return 1;
 	}
 
 	i = 0;
@@ -560,6 +560,7 @@ edge_set_compact(struct edge_set **setp,
 	}
 
 	/* todo: if set->count < set->ceil/2, shrink buckets */
+	return 1;
 }
 
 void
@@ -643,8 +644,9 @@ edge_set_rebase(struct edge_set **setp, fsm_state_t base)
 	}
 }
 
-void
-edge_set_replace_state(struct edge_set **setp, fsm_state_t old, fsm_state_t new)
+int
+edge_set_replace_state(struct edge_set **setp, const struct fsm_alloc *alloc,
+    fsm_state_t old, fsm_state_t new)
 {
 	struct edge_set *set;
 	size_t i;
@@ -652,6 +654,7 @@ edge_set_replace_state(struct edge_set **setp, fsm_state_t old, fsm_state_t new)
 	assert(setp != NULL);
 	assert(old != BUCKET_UNUSED);
 	assert(old != BUCKET_TOMBSTONE);
+	(void)alloc;
 
 	if (IS_SINGLETON(*setp)) {
 		if (SINGLETON_DECODE_STATE(*setp) == old) {
@@ -663,13 +666,13 @@ edge_set_replace_state(struct edge_set **setp, fsm_state_t old, fsm_state_t new)
 			assert(SINGLETON_DECODE_SYMBOL(*setp) == symbol);
 			assert(SINGLETON_DECODE_STATE(*setp) == new);
 		}
-		return;
+		return 1;
 	}
 
 	set = *setp;
 
 	if (edge_set_empty(set)) {
-		return;
+		return 1;
 	}
 
 	for (i = 0; i < set->ceil; i++) {
@@ -702,6 +705,8 @@ edge_set_replace_state(struct edge_set **setp, fsm_state_t old, fsm_state_t new)
 			}
 		}
 	}
+
+	return 1;
 }
 
 int
@@ -1504,8 +1509,8 @@ collate_info_by_old_to(const void *pa, const void *pb)
 	}
 }
 
-void
-edge_set_compact(struct edge_set **pset,
+int
+edge_set_compact(struct edge_set **pset, const struct fsm_alloc *alloc,
     fsm_state_remap_fun *remap, const void *opaque)
 {
 	struct edge_set *set;
@@ -1523,17 +1528,21 @@ edge_set_compact(struct edge_set **pset,
 #endif
 
 	if (edge_set_empty(set)) {
-		return;
+		return 1;
 	}
 
 	assert(set->count > 0);
 
-	/* FIXME: needs alloc if we do this */
-	info = malloc(set->count * sizeof(info[0]));
-	assert(info != NULL);	/* FIXME: can now fail */
+	info = f_malloc(alloc, set->count * sizeof(info[0]));
+	if (info == NULL) {
+		return 0;
+	}
 
-	ngroups = calloc(set->ceil, sizeof(ngroups[0]));
-	assert(ngroups != NULL); /* FIXME: can now fail */
+	ngroups = f_calloc(alloc, set->ceil, sizeof(ngroups[0]));
+	if (ngroups == NULL) {
+		f_free(alloc, info);
+		return 0;
+	}
 
 	/* first pass, construct mapping */
 	for (i = 0; i < set->count; i++) {
@@ -1614,8 +1623,8 @@ edge_set_compact(struct edge_set **pset,
 		}
 	}
 
-	free(info);
-	free(set->groups);
+	f_free(alloc, info);
+	f_free(alloc, set->groups);
 	set->groups = ngroups;
 	set->count = ncount;
 
@@ -1625,9 +1634,7 @@ edge_set_compact(struct edge_set **pset,
 		    i, set->groups[i].to);
 	}
 #endif
-
-	(void)cmp_groups;
-	return;
+	return 1;
 }
 
 void
@@ -1710,13 +1717,13 @@ edge_set_rebase(struct edge_set **pset, fsm_state_t base)
 	}
 }
 
-void
-edge_set_replace_state(struct edge_set **pset, fsm_state_t old, fsm_state_t new)
+int
+edge_set_replace_state(struct edge_set **pset, const struct fsm_alloc *alloc,
+    fsm_state_t old, fsm_state_t new)
 {
 	size_t i;
 	struct edge_set *set;
 	struct edge_group cp;
-	const struct fsm_alloc *alloc = NULL; /* FIXME */
 
 	assert(pset != NULL);
 	set = *pset;
@@ -1727,7 +1734,7 @@ edge_set_replace_state(struct edge_set **pset, fsm_state_t old, fsm_state_t new)
 #endif
 
 	if (edge_set_empty(set)) {
-		return;
+		return 1;
 	}
 
 	/* Invariants: if a group with .to == old appears in the group,
@@ -1740,7 +1747,7 @@ edge_set_replace_state(struct edge_set **pset, fsm_state_t old, fsm_state_t new)
 			const size_t to_mv = set->count - i;
 			unsigned char label;
 			if (!find_first_group_label(eg, &label)) {
-				return; /* ignore empty group */
+				return 1; /* ignore empty group */
 			}
 
 #if LOG_BITSET
@@ -1758,10 +1765,15 @@ edge_set_replace_state(struct edge_set **pset, fsm_state_t old, fsm_state_t new)
 			fprintf(stderr, " -- edge_set_replace_state: reinserting group with .to=%d and label 0x%x\n", new, (unsigned)label);
 #endif
 
-			/* Reinsert group in appropriate place */
+			/* Realistically, this shouldn't fail, because
+			 * edge_set_add only fails on allocation failure
+			 * when it needs to grow the backing array, but
+			 * we're removing a group and then adding the
+			 * group again so add's bookkeeping puts the
+			 * group in the appropriate place. */
 			if (!edge_set_add(&set, alloc,
 				label, new)) {
-				return; /* FIXME: can fail now */
+				return 0;
 			}
 			dump_edge_set(set);
 
@@ -1776,12 +1788,13 @@ edge_set_replace_state(struct edge_set **pset, fsm_state_t old, fsm_state_t new)
 						eg->symbols[w_i] |= cp.symbols[w_i];
 					}
 					dump_edge_set(set);
-					return;
+					return 1;
 				}
 			}
 			assert(!"internal error: just added, but not found");
 		}
 	}
+	return 1;
 }
 
 int

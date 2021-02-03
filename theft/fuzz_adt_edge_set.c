@@ -284,9 +284,11 @@ prop_model_check_eval(const struct edge_set_op *op,
 			}
 		}
 
-		edge_set_replace_state(es,
-		    op->u.replace_state.old,
-		    op->u.replace_state.new);
+		if (!edge_set_replace_state(es, NULL,
+			op->u.replace_state.old,
+			op->u.replace_state.new)) {
+			assert(!"alloc fail");
+		}
 		break;
 	}
 
@@ -318,7 +320,7 @@ prop_model_check_eval(const struct edge_set_op *op,
 		 * shift IDs down, but not combine multiple edges that
 		 * were previously distinct. The function currently does
 		 * not detect and reject that. */
-		edge_set_compact(es,
+		edge_set_compact(es, NULL,
 		    kept_remap, kept);
 
 		break;
