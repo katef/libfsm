@@ -384,7 +384,7 @@
 				c = FLAG_EXTENDED;
 				o = <re-flag-union>(i, c);
 			||
-				c = FLAG_IGNORE;
+				FLAG_IGNORE;
 				o = i;
 			||
 				FLAG_UNKNOWN;
