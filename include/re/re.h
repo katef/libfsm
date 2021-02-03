@@ -32,7 +32,7 @@ enum re_flags {
 	RE_TEXT    = 1 << 1,
 	RE_MULTI   = 1 << 2,
 	RE_REVERSE = 1 << 3,
-	RE_SINGLE  = 1 << 4,
+	RE_SINGLE  = 1 << 4, /* aka PCRE_DOTALL */
 	RE_ZONE    = 1 << 5,
 	RE_ANCHORED = 1 << 6,
 	RE_FLAGS_NONE = 0

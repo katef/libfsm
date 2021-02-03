@@ -248,6 +248,7 @@
 		}
 
 		@f |= RE_ANCHORED; /* regexps in lx are implicitly anchored */
+		@f |= RE_SINGLE;   /* we can't assume we're lexing text */
 	@};
 
 %actions%
