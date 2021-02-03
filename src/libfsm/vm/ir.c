@@ -510,7 +510,7 @@ xlate_table_ranges(struct dfavm_assembler_ir *a, struct dfa_table *table, struct
 		}
 	}
 
-	if (lo < FSM_SIGMA_COUNT-1) {
+	if (lo < FSM_SIGMA_COUNT) {
 		int64_t dst = table->tbl[lo];
 		*opp = (dst < 0)
 			? opasm_new_stop(a, VM_CMP_ALWAYS, 0, VM_END_FAIL, table->ir_state)
