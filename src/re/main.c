@@ -579,6 +579,29 @@ do_fsm_cleanup(void)
 	free_all_matches();
 }
 
+static void
+parse_flags(const char *arg, enum re_flags *flags)
+{
+	for (; *arg; arg++) {
+		switch (*arg) {
+		case 'i':
+			*flags = *flags | RE_ICASE;
+			break;
+
+		case 'x':
+			*flags = *flags | RE_EXTENDED;
+			break;
+
+		/* others? */
+
+		default:
+			printf("unknown flag '%c'\n", *arg);
+			usage();
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -628,7 +651,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:" "upMmnfxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:F:" "upMmnfxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
@@ -646,6 +669,10 @@ main(int argc, char *argv[])
 
 			case 'l':
 				print_name(optarg, &print_fsm, &print_ast);
+				break;
+
+			case 'F':
+				parse_flags(optarg, &flags);
 				break;
 
 			case 'p': print_fsm = fsm_print_fsm;        break;
