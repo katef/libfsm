@@ -133,6 +133,7 @@ fsm_glushkovise(struct fsm *nfa)
 
 			/* XXX: we took a copy, but i would prefer to bulk transplant ownership instead */
 			state_set_free(sclosures[i]);
+			sclosures[i] = NULL; /* prevent double free if we encounter an error */
 		}
 
 		/* all elements in sclosures[] have been freed or moved to their
