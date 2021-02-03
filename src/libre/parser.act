@@ -139,7 +139,6 @@
 #endif /* PCRE_DIALECT */
 	};
 
-	#define CURRENT_TERMINAL (act_state->lex_tok)
 	#define ERROR_TERMINAL   @$ERROR
 
 	#if PCRE_DIALECT
@@ -148,55 +147,69 @@
 	static void
 	pcre_advance_lexer(struct lex_state *lex_state, struct act_state *act_state)
 	{
-		enum re_flags fl = (lex_state->flags_ptr != NULL) ? lex_state->flags_ptr[0] : 0;
-
-	next_tok:
 		mark(&act_state->synstart, &lex_state->lx.start);
 		mark(&act_state->synend,   &lex_state->lx.end);
 		act_state->lex_tok = LX_NEXT(&lex_state->lx);
+	}
+
+	static enum LX_TOKEN
+	pcre_current_token(struct lex_state *lex_state, struct act_state *act_state)
+	{
+		enum re_flags fl = (lex_state->flags_ptr != NULL) ? lex_state->flags_ptr[0] : 0;
+		enum LX_TOKEN tok;
+
 
 		if ((fl & RE_EXTENDED) == 0) {
-			switch (act_state->lex_tok) {
+			tok = act_state->lex_tok;
+
+			switch (tok) {
 			case TOK_WHITESPACE:
 			case TOK_NEWLINE:
 			case TOK_MAYBE_COMMENT:
-				act_state->lex_tok = TOK_CHAR;
-				break;
+				return TOK_CHAR;
+
 			default:
-				break;
+				return tok;
 			}
-		} else if (lex_state->extended_mode_comment) {
-			switch (act_state->lex_tok) {
+		} 
+
+	restart:
+		tok = act_state->lex_tok;
+		if (lex_state->extended_mode_comment) {
+			switch (tok) {
 			case TOK_EOF:
 			case TOK_ERROR:
 			case TOK_UNKNOWN:
-				/* don't eat errors */
-				return;
+				/* don't eat EOF or errors */
+				return tok;
 
 			case TOK_NEWLINE:
 				lex_state->extended_mode_comment = 0;
 				/* fall through */
 			default:
-				goto next_tok;
+				pcre_advance_lexer(lex_state, act_state);
+				goto restart;
 			}
 		} else {
-			switch (act_state->lex_tok) {
+			switch (tok) {
 			case TOK_MAYBE_COMMENT:
 				lex_state->extended_mode_comment = 1;
-				goto next_tok;
-
+				/*fall through */
 			case TOK_WHITESPACE:
 			case TOK_NEWLINE:
-				goto next_tok;
+				pcre_advance_lexer(lex_state, act_state);
+				goto restart;
 
 			default:
-				break;
+				return tok;
 			}
 		}
 	}
 
-	#define ADVANCE_LEXER    pcre_advance_lexer(lex_state,act_state)
+	#define CURRENT_TERMINAL (pcre_current_token(lex_state, act_state))
+	#define ADVANCE_LEXER    do { pcre_advance_lexer(lex_state,act_state); } while(0)
 	#else /* !PCRE_DIALECT */
+	#define CURRENT_TERMINAL (act_state->lex_tok)
 	#define ADVANCE_LEXER    do { mark(&act_state->synstart, &lex_state->lx.start); \
 	                              mark(&act_state->synend,   &lex_state->lx.end);   \
 	                              act_state->lex_tok = LX_NEXT(&lex_state->lx); \
