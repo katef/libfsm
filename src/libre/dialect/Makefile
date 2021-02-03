@@ -30,6 +30,11 @@ DFLAGS.${src} += -D LX_HEADER='"lexer.h"'
 .for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}
 CFLAGS.${src} += -D DIALECT='${dialect}'
 DFLAGS.${src} += -D DIALECT='${dialect}'
+
+.if ${dialect:T:Mpcre}
+CFLAGS.${src} += -D PCRE_DIALECT=1
+DFLAGS.${src} += -D PCRE_DIALECT=1
+.endif
 .endfor
 
 .for src in ${SRC:Msrc/libre/dialect/${dialect}/parser.c}

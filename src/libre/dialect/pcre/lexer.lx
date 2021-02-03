@@ -292,12 +292,28 @@
 	/[0-9]+/ -> $count;
 }
 
+'#'  -> $maybe_comment;
+
+" "  -> $whitespace;
+"\t" -> $whitespace;
+"\v" -> $whitespace;
+"\f" -> $whitespace;
+"\n" -> $newline;
+"\r" -> $newline;
+
+# TODO: if there is no closing \E, the \Q continues
+# until the end of input.
 '\Q' .. '\E' {
+	# TODO: check if extended mode (x) ignores whitespace between \Q
+	# and \E
 	/./ - "\x00" -> $char;
 }
+
+
 
 /./ - ($open | $close | $start | $end
 	| $opt | $star | $plus | $any | $alt
 	| $esc | $oct | $hex | $invalid
+	| $maybe_comment | $whitespace | $newline
 	| $opengroup | $opencount | "\x00") -> $char;
 

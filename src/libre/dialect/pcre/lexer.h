@@ -4,6 +4,9 @@
 #define LX_H
 
 enum lx_pcre_token {
+	TOK_NEWLINE,
+	TOK_WHITESPACE,
+	TOK_MAYBE_COMMENT,
 	TOK_COUNT,
 	TOK_SEP,
 	TOK_CLOSECOUNT,
