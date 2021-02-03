@@ -16,7 +16,7 @@ RE=${BUILD}/bin/re
 FSM=${BUILD}/bin/fsm
 
 ${TEST_OUTDIR.tests/pcre-classes}/dot-all.fsm:
-	${RE} -r pcre -p '^.$$' | ${FSM} -pm \
+	${RE} -r pcre -p '^[\x00-\xff]$$' | ${FSM} -pm \
 	> $@
 
 # compl<N>.re tests
