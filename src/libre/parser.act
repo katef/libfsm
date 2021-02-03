@@ -619,7 +619,7 @@
 
 	<class-any>: () -> (c :ast_class_id) = @{
 		/* TODO: or the unicode equivalent */
-		@c = &class_any;
+		@c = (*flags & RE_SINGLE) ? &class_any : &class_notnl;
 	@};
 
 

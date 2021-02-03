@@ -1,1 +1,1 @@
-^.[[:digit:]][[:space:]]$
+^[\x00-\xff][[:digit:]][[:space:]]$

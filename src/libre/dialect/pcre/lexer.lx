@@ -168,7 +168,9 @@
 '(?' -> $flags .. ':' -> $sub, ')' -> $close {
 	'-' -> $negate;
 	'i' -> $flag__insensitive;
-	/[a-z]/ - $flag__insensitive -> $flag__unknown;
+	's' -> $flag__single;
+	flags = $flag__insensitive | $flag__single;
+	/[a-z]/ - flags -> $flag__unknown;
 
 	# this is a little too broad... but should screen out
 	# recursive matching and subroutines, which are

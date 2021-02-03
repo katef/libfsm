@@ -611,8 +611,8 @@ flagstring(enum re_flags flags, char buf[16])
 	if (flags & RE_TEXT)     { *m++ = 't'; }
 	if (flags & RE_MULTI)    { *m++ = 'm'; }
 	if (flags & RE_REVERSE)  { *m++ = 'r'; }
-	if (flags & RE_SINGLE)   { *m++ = 'S'; }
-	if (flags & RE_ZONE)     { *m++ = 'Z'; }
+	if (flags & RE_SINGLE)   { *m++ = 's'; }
+	if (flags & RE_ZONE)     { *m++ = 'z'; }
 	if (flags & RE_ANCHORED) { *m++ = 'a'; }
 
 	return &buf[0];
@@ -638,7 +638,7 @@ flagstring(enum re_flags flags, char buf[16])
  *     and restore them after the next test case.
  * 3. lines starting with "M " set the flags:
  * 	i=RE_ICASE, t=RE_TEXT, m = RE_MULTI, r=RE_REVERSE,
- * 	S=RE_SINGLE, Z=RE_ZONE, a=RE_ANCHORED
+ * 	s=RE_SINGLE, z=RE_ZONE, a=RE_ANCHORED
  * 4. records are separated by empty lines.  flags reset at each record
  *    to no flags.
  * 5. the first line of each record is the regular expression to be
@@ -817,8 +817,8 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 				case 't': flags = flags | RE_TEXT;     break;
 				case 'm': flags = flags | RE_MULTI;    break;
 				case 'r': flags = flags | RE_REVERSE;  break;
-				case 'S': flags = flags | RE_SINGLE;   break;
-				case 'Z': flags = flags | RE_ZONE;     break;
+				case 's': flags = flags | RE_SINGLE;   break;
+				case 'z': flags = flags | RE_ZONE;     break;
 				case 'a': flags = flags | RE_ANCHORED; break;
 				default:
 					fprintf(stderr, "line %d: unknown flag '%c'\n", linenum, (unsigned char)(*fstr));
