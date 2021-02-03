@@ -555,6 +555,10 @@
 		@flag = RE_ICASE;
 	@};
 
+	FLAG_EXTENDED: () -> (flag :re_flags) = @{
+		@flag = RE_EXTENDED;
+	@};
+
 %actions%
 
 	/*

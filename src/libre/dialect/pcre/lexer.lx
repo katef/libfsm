@@ -180,7 +180,9 @@
 	'-' -> $negate;
 	'i' -> $flag__insensitive;
 	's' -> $flag__single;
-	flags = $flag__insensitive | $flag__single;
+	'x' -> $flag__extended;
+	'n' -> $flag__ignore; # 'n' is the no auto capture flag, which we can ignore
+	flags = $flag__insensitive | $flag__single | $flag__extended | $flag__ignore;
 	/[a-z]/ - flags -> $flag__unknown;
 
 	# this is a little too broad... but should screen out

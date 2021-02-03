@@ -1102,7 +1102,8 @@ z4(struct lx_pcre_lx *lx)
 	int c;
 
 	enum {
-		S0, S1, S2, S3, S4, S5, S6, S7, S8, NONE
+		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
+		S10, NONE
 	} state;
 
 	assert(lx != NULL);
@@ -1150,7 +1151,6 @@ z4(struct lx_pcre_lx *lx)
 			case 'k':
 			case 'l':
 			case 'm':
-			case 'n':
 			case 'o':
 			case 'p':
 			case 'q':
@@ -1159,11 +1159,12 @@ z4(struct lx_pcre_lx *lx)
 			case 'u':
 			case 'v':
 			case 'w':
-			case 'x':
 			case 'y':
 			case 'z': state = S6; break;
 			case 'i': state = S7; break;
-			case 's': state = S8; break;
+			case 'n': state = S8; break;
+			case 's': state = S9; break;
+			case 'x': state = S10; break;
 			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
@@ -1202,8 +1203,14 @@ z4(struct lx_pcre_lx *lx)
 		case S7: /* e.g. "i" */
 			lx_pcre_ungetc(lx, c); return TOK_FLAG__INSENSITIVE;
 
-		case S8: /* e.g. "s" */
+		case S8: /* e.g. "n" */
+			lx_pcre_ungetc(lx, c); return TOK_FLAG__IGNORE;
+
+		case S9: /* e.g. "s" */
 			lx_pcre_ungetc(lx, c); return TOK_FLAG__SINGLE;
+
+		case S10: /* e.g. "x" */
+			lx_pcre_ungetc(lx, c); return TOK_FLAG__EXTENDED;
 
 		default:
 			; /* unreached */
@@ -1227,7 +1234,9 @@ z4(struct lx_pcre_lx *lx)
 	case S5: return TOK_SUB;
 	case S6: return TOK_FLAG__UNKNOWN;
 	case S7: return TOK_FLAG__INSENSITIVE;
-	case S8: return TOK_FLAG__SINGLE;
+	case S8: return TOK_FLAG__IGNORE;
+	case S9: return TOK_FLAG__SINGLE;
+	case S10: return TOK_FLAG__EXTENDED;
 	default: errno = EINVAL; return TOK_ERROR;
 	}
 }
@@ -2597,6 +2606,8 @@ lx_pcre_name(enum lx_pcre_token t)
 	case TOK_OPENGROUPINV: return "OPENGROUPINV";
 	case TOK_OPENGROUP: return "OPENGROUP";
 	case TOK_FLAG__UNKNOWN: return "FLAG__UNKNOWN";
+	case TOK_FLAG__IGNORE: return "FLAG__IGNORE";
+	case TOK_FLAG__EXTENDED: return "FLAG__EXTENDED";
 	case TOK_FLAG__SINGLE: return "FLAG__SINGLE";
 	case TOK_FLAG__INSENSITIVE: return "FLAG__INSENSITIVE";
 	case TOK_NEGATE: return "NEGATE";
@@ -2652,6 +2663,8 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_OPENGROUPINV: return "";
 		case TOK_OPENGROUP: return "";
 		case TOK_FLAG__UNKNOWN: return "";
+		case TOK_FLAG__IGNORE: return "";
+		case TOK_FLAG__EXTENDED: return "";
 		case TOK_FLAG__SINGLE: return "";
 		case TOK_FLAG__INSENSITIVE: return "";
 		case TOK_NEGATE: return "";
@@ -2698,6 +2711,8 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_OPENGROUPINV: return "";
 		case TOK_OPENGROUP: return "";
 		case TOK_FLAG__UNKNOWN: return "";
+		case TOK_FLAG__IGNORE: return "";
+		case TOK_FLAG__EXTENDED: return "";
 		case TOK_FLAG__SINGLE: return "";
 		case TOK_FLAG__INSENSITIVE: return "";
 		case TOK_NEGATE: return "";
@@ -2744,6 +2759,8 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_OPENGROUPINV: return "";
 		case TOK_OPENGROUP: return "";
 		case TOK_FLAG__UNKNOWN: return "";
+		case TOK_FLAG__IGNORE: return "";
+		case TOK_FLAG__EXTENDED: return "";
 		case TOK_FLAG__SINGLE: return "";
 		case TOK_FLAG__INSENSITIVE: return "";
 		case TOK_NEGATE: return "";
@@ -2790,6 +2807,8 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_OPENGROUPINV: return "";
 		case TOK_OPENGROUP: return "";
 		case TOK_FLAG__UNKNOWN: return "";
+		case TOK_FLAG__IGNORE: return "";
+		case TOK_FLAG__EXTENDED: return "";
 		case TOK_FLAG__SINGLE: return "";
 		case TOK_FLAG__INSENSITIVE: return "";
 		case TOK_NEGATE: return "";
@@ -2836,6 +2855,8 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_OPENGROUPINV: return "";
 		case TOK_OPENGROUP: return "";
 		case TOK_FLAG__UNKNOWN: return "";
+		case TOK_FLAG__IGNORE: return "";
+		case TOK_FLAG__EXTENDED: return "";
 		case TOK_FLAG__SINGLE: return "";
 		case TOK_FLAG__INSENSITIVE: return "";
 		case TOK_NEGATE: return "";
@@ -2882,6 +2903,8 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_OPENGROUPINV: return "";
 		case TOK_OPENGROUP: return "";
 		case TOK_FLAG__UNKNOWN: return "";
+		case TOK_FLAG__IGNORE: return "";
+		case TOK_FLAG__EXTENDED: return "";
 		case TOK_FLAG__SINGLE: return "";
 		case TOK_FLAG__INSENSITIVE: return "";
 		case TOK_NEGATE: return "";
@@ -2928,6 +2951,8 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_OPENGROUPINV: return "";
 		case TOK_OPENGROUP: return "";
 		case TOK_FLAG__UNKNOWN: return "";
+		case TOK_FLAG__IGNORE: return "";
+		case TOK_FLAG__EXTENDED: return "";
 		case TOK_FLAG__SINGLE: return "";
 		case TOK_FLAG__INSENSITIVE: return "";
 		case TOK_NEGATE: return "";
@@ -2974,6 +2999,8 @@ lx_pcre_example(enum lx_pcre_token (*z)(struct lx_pcre_lx *), enum lx_pcre_token
 		case TOK_OPENGROUPINV: return "";
 		case TOK_OPENGROUP: return "";
 		case TOK_FLAG__UNKNOWN: return "";
+		case TOK_FLAG__IGNORE: return "";
+		case TOK_FLAG__EXTENDED: return "";
 		case TOK_FLAG__SINGLE: return "";
 		case TOK_FLAG__INSENSITIVE: return "";
 		case TOK_NEGATE: return "";

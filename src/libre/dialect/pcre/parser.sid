@@ -57,8 +57,10 @@
 
 	FLAGS; SUB;
 	NEGATE;
+	FLAG_IGNORE;
 	FLAG_UNKNOWN;
 	FLAG_INSENSITIVE: () -> (:re_flags);
+	FLAG_EXTENDED: () -> (:re_flags);
 
 	ESC:     () -> (:char, :pos, :pos);
 	NOESC:  () -> (:char, :pos, :pos);
@@ -378,6 +380,12 @@
 			flag_set: (i :re_flags) -> (o :re_flags) = {
 				c = FLAG_INSENSITIVE;
 				o = <re-flag-union>(i, c);
+			||
+				c = FLAG_EXTENDED;
+				o = <re-flag-union>(i, c);
+			||
+				c = FLAG_IGNORE;
+				o = i;
 			||
 				FLAG_UNKNOWN;
 				o = i;
