@@ -208,9 +208,7 @@ static const struct {
 	{ "bad_escape_is_literal"  , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL */
 	{ "caseless"               , "i",  MOD_SUPPORTED  , RE_ICASE      }, /* PCRE2_CASELESS */
 	{ "dollar_endonly"         , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_DOLLAR_ENDONLY */
-
-	/* dotall is currently the default (and only) libfsm behavior. */
-	{ "dotall"                 , "s",  MOD_SUPPORTED  , RE_FLAGS_NONE }, /* PCRE2_DOTALL */
+	{ "dotall"                 , "s",  MOD_SUPPORTED  , RE_SINGLE     }, /* PCRE2_DOTALL */
 	{ "dupnames"               , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_DUPNAMES */
 	{ "endanchored"            , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_ENDANCHORED */
 	{ "escaped_cr_is_lf"       , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTRA_ESCAPED_CR_IS_LF */
@@ -338,6 +336,8 @@ parse_modifiers(size_t linenum, const char *s, enum re_flags *mods_p)
 				for (; *tok != '\0'; tok++) {
 					if (*tok == 'i') {
 						mods = mods | RE_ICASE;
+					} else if (*tok == 's') {
+						mods = mods | RE_SINGLE;
 					} else if (*tok == 'x') {
 						/* support 'x' but not 'xx'
 						 *
@@ -352,7 +352,7 @@ parse_modifiers(size_t linenum, const char *s, enum re_flags *mods_p)
 						}
 
 						mods = mods | RE_EXTENDED;
-					} else if (strchr("gns", *tok) != NULL) {
+					} else if (strchr("gn", *tok) != NULL) {
 						/* options that are ignored or default:
 						 *
 						 * 'g' is global search, which we ignore
@@ -617,8 +617,8 @@ restart:
 								if (mods & RE_TEXT)     { *m++ = 't'; }
 								if (mods & RE_MULTI)    { *m++ = 'm'; }
 								if (mods & RE_REVERSE)  { *m++ = 'r'; }
-								if (mods & RE_SINGLE)   { *m++ = 'S'; }
-								if (mods & RE_ZONE)     { *m++ = 'Z'; }
+								if (mods & RE_SINGLE)   { *m++ = 's'; }
+								if (mods & RE_ZONE)     { *m++ = 'z'; }
 								if (mods & RE_ANCHORED) { *m++ = 'a'; }
 								if (mods & RE_EXTENDED) { *m++ = 'x'; }
 
