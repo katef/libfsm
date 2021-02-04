@@ -27,6 +27,7 @@ enum lx_pcre_token {
 	TOK_NOESC,
 	TOK_HEX,
 	TOK_OCT,
+	TOK_EOL,
 	TOK_NAMED__CLASS,
 	TOK_CONTROL,
 	TOK_ESC,

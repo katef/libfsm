@@ -32,6 +32,7 @@
 
 	ANY;
 	!MANY;
+	EOL;
 	OPT;
 	PLUS;
 	ALT;
@@ -129,6 +130,7 @@
 	<mark-expr>: (:ast_expr, :pos, :pos) -> ();
 
 	<class-any>: () -> (:ast_class_id);
+	<class-eol>:  () -> (:ast_class_id);
 
 	expr: () -> (node :ast_expr) [
 		literal: () -> (node :ast_expr) = {
@@ -436,6 +438,17 @@
 			||
 				ANY;
 				a = <class-any>;
+				e = <ast-make-named>(a);
+			||
+				/*                                                             
+				 * The meaning of \R depends on both the current character set
+				 * (i.e. unicode or not) and on the current line-ending convention
+				 * (which is configurable) within a regexp.
+				 * TODO: We'll need to address that conditionally here. For the moment
+				 * we only construct <class-eol>.
+				 */
+				EOL;
+				a = <class-eol>;
 				e = <ast-make-named>(a);
 			||
 				e = literal;
