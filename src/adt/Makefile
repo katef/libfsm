@@ -22,7 +22,7 @@ CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor
 
-.for src in ${SRC:Msrc/adt/siphash.c}
+.for src in ${SRC:Msrc/adt/siphash.c} ${SRC:Msrc/adt/edgeset.c}
 CFLAGS.${src} += -std=c99 # XXX: for internal.h
 DFLAGS.${src} += -std=c99 # XXX: for internal.h
 .endfor

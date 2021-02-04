@@ -284,9 +284,11 @@ prop_model_check_eval(const struct edge_set_op *op,
 			}
 		}
 
-		edge_set_replace_state(es,
-		    op->u.replace_state.old,
-		    op->u.replace_state.new);
+		if (!edge_set_replace_state(es, NULL,
+			op->u.replace_state.old,
+			op->u.replace_state.new)) {
+			assert(!"alloc fail");
+		}
 		break;
 	}
 
@@ -318,7 +320,7 @@ prop_model_check_eval(const struct edge_set_op *op,
 		 * shift IDs down, but not combine multiple edges that
 		 * were previously distinct. The function currently does
 		 * not detect and reject that. */
-		edge_set_compact(es,
+		edge_set_compact(es, NULL,
 		    kept_remap, kept);
 
 		break;
@@ -724,6 +726,45 @@ regression5(theft_seed unused)
 	return res == THEFT_TRIAL_PASS;
 }
 
+static bool
+regression6(theft_seed unused)
+{
+	(void)unused;
+
+	/* edge_set_replace_state was dropping a label->state pair when
+	 * replacing the destination state led to groups merging. */
+	struct edge_set_op op_list[] = {
+		{
+			.t = ESO_ADD,
+			.u.add = {
+				.symbol = 0x00,
+				.state = 3,
+			},
+		},
+		{
+			.t = ESO_ADD,
+			.u.add = {
+				.symbol = 0x01,
+				.state = 0,
+			},
+		},
+		{
+			.t = ESO_REPLACE_STATE,
+			.u.replace_state = {
+				.old = 0,
+				.new = 3,
+			},
+		},
+	};
+	struct edge_set_ops ops = {
+		.count = sizeof(op_list)/sizeof(op_list[0]),
+		.ops = op_list,
+	};
+
+	enum theft_trial_res res = ops_model_check(&ops);
+	return res == THEFT_TRIAL_PASS;
+}
+
 void
 register_test_adt_edge_set(void)
 {
@@ -736,4 +777,5 @@ register_test_adt_edge_set(void)
 	reg_test("adt_edge_set_regression3", regression3);
 	reg_test("adt_edge_set_regression4", regression4);
 	reg_test("adt_edge_set_regression5", regression5);
+	reg_test("adt_edge_set_regression6", regression6);
 }

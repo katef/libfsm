@@ -17,7 +17,7 @@ struct edge_set;
 struct state_set;
 
 struct edge_iter {
-	size_t i;
+	size_t i, j;
 	const struct edge_set *set;
 };
 
@@ -68,6 +68,8 @@ edge_set_transition(const struct edge_set *set, unsigned char symbol,
 size_t
 edge_set_count(const struct edge_set *set);
 
+/* Note: this should actually union src into *dst, if *dst already
+ * exists, not replace it. */
 int
 edge_set_copy(struct edge_set **dst, const struct fsm_alloc *alloc,
 	const struct edge_set *src);
@@ -78,8 +80,8 @@ edge_set_remove(struct edge_set **set, unsigned char symbol);
 void
 edge_set_remove_state(struct edge_set **set, fsm_state_t state);
 
-void
-edge_set_compact(struct edge_set **set,
+int
+edge_set_compact(struct edge_set **set, const struct fsm_alloc *alloc,
     fsm_state_remap_fun *remap, const void *opaque);
 
 void
@@ -91,8 +93,9 @@ edge_set_next(struct edge_iter *it, struct fsm_edge *e);
 void
 edge_set_rebase(struct edge_set **setp, fsm_state_t base);
 
-void
-edge_set_replace_state(struct edge_set **setp, fsm_state_t old, fsm_state_t new);
+int
+edge_set_replace_state(struct edge_set **setp,
+    const struct fsm_alloc *alloc, fsm_state_t old, fsm_state_t new);
 
 int
 edge_set_empty(const struct edge_set *s);

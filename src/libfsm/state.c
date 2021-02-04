@@ -111,7 +111,7 @@ otherwise realloc to += twice as much more
 	return 1;
 }
 
-void
+int
 fsm_removestate(struct fsm *fsm, fsm_state_t state)
 {
 	fsm_state_t start, i;
@@ -150,11 +150,14 @@ fsm_removestate(struct fsm *fsm, fsm_state_t state)
 
 		for (i = 0; i < fsm->statecount - 1; i++) {
 			state_set_replace(&fsm->states[i].epsilons, fsm->statecount - 1, state);
-			edge_set_replace_state(&fsm->states[i].edges, fsm->statecount - 1, state);
+			if (!edge_set_replace_state(&fsm->states[i].edges, fsm->opt->alloc, fsm->statecount - 1, state)) {
+				return 0;
+			}
 		}
 	}
 
 	fsm->statecount--;
+	return 1;
 }
 
 static fsm_state_t
@@ -208,7 +211,7 @@ fsm_compact_states(struct fsm *fsm,
 		}
 		state_set_compact(&s->epsilons, mapping_cb, mapping);
 		if (fsm->states[i].edges != NULL) {
-			edge_set_compact(&s->edges, mapping_cb, mapping);
+			edge_set_compact(&s->edges, fsm->opt->alloc, mapping_cb, mapping);
 		}
 	}
 

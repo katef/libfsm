@@ -114,7 +114,7 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n);
  /*
  * Remove a state. Any edges transitioning to this state are also removed.
  */
-void
+int
 fsm_removestate(struct fsm *fsm, fsm_state_t state);
 
 /* Use the state passed in via opaque to determine whether the state[id]

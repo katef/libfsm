@@ -58,7 +58,9 @@ fsm_mergestates(struct fsm *fsm, fsm_state_t a, fsm_state_t b,
 		edge_set_remove_state(&fsm->states[i].edges, b);
 	}
 
-	fsm_removestate(fsm, b);
+	if (!fsm_removestate(fsm, b)) {
+		return 0;
+	}
 
 	if (q != NULL) {
 		*q = a;
