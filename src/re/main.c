@@ -588,6 +588,10 @@ parse_flags(const char *arg, enum re_flags *flags)
 			*flags = *flags | RE_ICASE;
 			break;
 
+		case 's':
+			*flags = *flags | RE_SINGLE;
+			break;
+
 		case 'x':
 			*flags = *flags | RE_EXTENDED;
 			break;
