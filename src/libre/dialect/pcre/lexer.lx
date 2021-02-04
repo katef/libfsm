@@ -178,6 +178,7 @@
 
 '(?' -> $flags .. ':' -> $sub, ')' -> $close {
 	'-' -> $negate;
+	'xx' -> $flag__unknown;  # xx (EXTENDED_MORE) is not yet supported
 	'i' -> $flag__insensitive;
 	's' -> $flag__single;
 	'x' -> $flag__extended;
