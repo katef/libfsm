@@ -61,6 +61,7 @@
 	FLAG_UNKNOWN;
 	FLAG_INSENSITIVE: () -> (:re_flags);
 	FLAG_EXTENDED: () -> (:re_flags);
+	FLAG_SINGLE: () -> (:re_flags);
 
 	ESC:     () -> (:char, :pos, :pos);
 	NOESC:  () -> (:char, :pos, :pos);
@@ -379,6 +380,9 @@
 		flags: () -> (node :ast_expr) [
 			flag_set: (i :re_flags) -> (o :re_flags) = {
 				c = FLAG_INSENSITIVE;
+				o = <re-flag-union>(i, c);
+			||
+				c = FLAG_SINGLE;
 				o = <re-flag-union>(i, c);
 			||
 				c = FLAG_EXTENDED;

@@ -572,6 +572,10 @@
 		@flag = RE_EXTENDED;
 	@};
 
+	FLAG_SINGLE: () -> (flag :re_flags) = @{
+		@flag = RE_SINGLE;
+	@};
+
 %actions%
 
 	/*
