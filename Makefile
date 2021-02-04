@@ -70,6 +70,7 @@ SUBDIR += tests/trim
 SUBDIR += tests/union
 SUBDIR += tests/set
 SUBDIR += tests/stateset
+SUBDIR += tests/internedstateset
 SUBDIR += tests/sql
 SUBDIR += tests/hashset
 SUBDIR += tests/queue
