@@ -197,7 +197,7 @@
 
 # recursion with named parentheses
 '(?&' -> $unsupported;
-'(P>' -> $unsupported;
+'(?P>' -> $unsupported;
 
 '[' -> $opengroup, '[^' -> $opengroupinv, '[]' -> $opengroupcb, '[^]' -> $opengroupinvcb .. ']' -> $closegroup, '-]' -> $closegrouprange {
 	'-' -> $range;
