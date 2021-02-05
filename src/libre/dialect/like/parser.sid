@@ -47,7 +47,10 @@
 	!OPENFLAGS;
 	!CLOSEFLAGS;
 	!NEGATE;
+	!FLAG_IGNORE;
 	!FLAG_UNKNOWN;
+	!FLAG_EXTENDED: () -> (:re_flags);
+	!FLAG_SINGLE: () -> (:re_flags);
 	!FLAG_INSENSITIVE: () -> (:re_flags);
 
 	!ESC:     () -> (:char, :pos, :pos);

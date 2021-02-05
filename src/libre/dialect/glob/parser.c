@@ -325,7 +325,7 @@ ZL2_list_Hof_Hatoms:;
 #line 326 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: ast-add-concat */
-		/* BEGINNING OF INLINE: 104 */
+		/* BEGINNING OF INLINE: 107 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
@@ -339,7 +339,7 @@ ZL2_list_Hof_Hatoms:;
 				break;
 			}
 		}
-		/* END OF INLINE: 104 */
+		/* END OF INLINE: 107 */
 	}
 	return;
 ZL1:;
@@ -385,8 +385,8 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 	case (TOK_CHAR):
 		{
 			t_char ZIc;
-			t_pos ZI100;
-			t_pos ZI101;
+			t_pos ZI103;
+			t_pos ZI104;
 
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
@@ -395,8 +395,8 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI100 = lex_state->lx.start;
-		ZI101   = lex_state->lx.end;
+		ZI103 = lex_state->lx.start;
+		ZI104   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
@@ -527,7 +527,7 @@ p_re__glob(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 		return;
 	}
 	{
-		/* BEGINNING OF INLINE: 107 */
+		/* BEGINNING OF INLINE: 110 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
@@ -569,8 +569,8 @@ p_re__glob(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 				break;
 			}
 		}
-		/* END OF INLINE: 107 */
-		/* BEGINNING OF INLINE: 108 */
+		/* END OF INLINE: 110 */
+		/* BEGINNING OF INLINE: 111 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -599,7 +599,7 @@ p_re__glob(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 			}
 		ZL3:;
 		}
-		/* END OF INLINE: 108 */
+		/* END OF INLINE: 111 */
 	}
 	goto ZL0;
 ZL1:;
