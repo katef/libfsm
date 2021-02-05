@@ -304,8 +304,6 @@
 "\n" -> $newline;
 "\r" -> $newline;
 
-# TODO: if there is no closing \E, the \Q continues
-# until the end of input.
 '\Q' .. '\E' {
 	# TODO: check if extended mode (x) ignores whitespace between \Q
 	# and \E
