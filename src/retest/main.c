@@ -497,14 +497,7 @@ dup_str_esc(const char *s, int *err)
 		}
 	}
 
-	cpy = malloc(len+1);
-	if (cpy == NULL) {
-		if (err != NULL) {
-			*err = -1;
-		}
-		return NULL;
-	}
-
+	cpy = xmalloc(len+1);
 	if (numesc == 0) {
 		memcpy(cpy, s, len+1);
 		return cpy;
