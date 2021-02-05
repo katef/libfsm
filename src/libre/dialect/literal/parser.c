@@ -316,7 +316,7 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 949 "src/libre/parser.act"
+#line 979 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIa))) {
 			goto ZL1;
@@ -325,7 +325,7 @@ ZL2_list_Hof_Hatoms:;
 #line 326 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: ast-add-concat */
-		/* BEGINNING OF INLINE: 106 */
+		/* BEGINNING OF INLINE: 109 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -339,7 +339,7 @@ ZL2_list_Hof_Hatoms:;
 				break;
 			}
 		}
-		/* END OF INLINE: 106 */
+		/* END OF INLINE: 109 */
 	}
 	return;
 ZL1:;
@@ -356,14 +356,14 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 		return;
 	}
 	{
-		/* BEGINNING OF INLINE: 108 */
+		/* BEGINNING OF INLINE: 111 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
 				{
 					/* BEGINNING OF ACTION: ast-make-concat */
 					{
-#line 787 "src/libre/parser.act"
+#line 817 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_concat(act_state->poolp, *flags);
 		if ((ZInode) == NULL) {
@@ -384,7 +384,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				{
 					/* BEGINNING OF ACTION: ast-make-empty */
 					{
-#line 780 "src/libre/parser.act"
+#line 810 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_empty(act_state->poolp, *flags);
 		if ((ZInode) == NULL) {
@@ -398,8 +398,8 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				break;
 			}
 		}
-		/* END OF INLINE: 108 */
-		/* BEGINNING OF INLINE: 109 */
+		/* END OF INLINE: 111 */
+		/* BEGINNING OF INLINE: 112 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -415,7 +415,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 659 "src/libre/parser.act"
+#line 689 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
@@ -428,7 +428,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			}
 		ZL3:;
 		}
-		/* END OF INLINE: 109 */
+		/* END OF INLINE: 112 */
 	}
 	goto ZL0;
 ZL1:;
@@ -448,8 +448,8 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 	}
 	{
 		t_char ZIc;
-		t_pos ZI103;
-		t_pos ZI104;
+		t_pos ZI106;
+		t_pos ZI107;
 
 		switch (CURRENT_TERMINAL) {
 		case (TOK_CHAR):
@@ -460,8 +460,8 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI103 = lex_state->lx.start;
-		ZI104   = lex_state->lx.end;
+		ZI106 = lex_state->lx.start;
+		ZI107   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
@@ -475,7 +475,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: ast-make-literal */
 		{
-#line 801 "src/libre/parser.act"
+#line 831 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_literal(act_state->poolp, *flags, (ZIc));
 		if ((ZInode) == NULL) {
@@ -491,7 +491,7 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-expected-atom */
 		{
-#line 610 "src/libre/parser.act"
+#line 640 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXATOM;
@@ -503,7 +503,7 @@ ZL1:;
 		/* END OF ACTION: err-expected-atom */
 		/* BEGINNING OF ACTION: ast-make-empty */
 		{
-#line 780 "src/libre/parser.act"
+#line 810 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_empty(act_state->poolp, *flags);
 		if ((ZInode) == NULL) {
@@ -524,7 +524,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 961 "src/libre/parser.act"
+#line 991 "src/libre/parser.act"
 
 
 	static int
