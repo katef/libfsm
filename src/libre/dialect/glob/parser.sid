@@ -53,6 +53,10 @@
 	!FLAG_SINGLE: () -> (:re_flags);
 	!FLAG_INSENSITIVE: () -> (:re_flags);
 
+	!WHITESPACE: () -> (:char, :pos, :pos);
+	!NEWLINE: () -> (:char, :pos, :pos);
+	!MAYBE_COMMENT: () -> (:char, :pos, :pos);
+
 	!ESC:     () -> (:char, :pos, :pos);
 	!CONTROL: () -> (:char, :pos, :pos);
 	!NOESC:   () -> (:char, :pos, :pos);
