@@ -533,6 +533,36 @@
 		@c = lex_state->buf.a[0];
 	@};
 
+	WHITESPACE: () -> (c :char, start :pos, end :pos) = @{
+		/* the first byte may be '\x00' */
+		assert(lex_state->buf.a[1] == '\0');
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+
+		@c = lex_state->buf.a[0];
+	@};
+
+	NEWLINE: () -> (c :char, start :pos, end :pos) = @{
+		/* the first byte may be '\x00' */
+		assert(lex_state->buf.a[1] == '\0');
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+
+		@c = lex_state->buf.a[0];
+	@};
+
+	MAYBE_COMMENT: () -> (c :char, start :pos, end :pos) = @{
+		/* the first byte may be '\x00' */
+		assert(lex_state->buf.a[1] == '\0');
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+
+		@c = lex_state->buf.a[0];
+	@};
+
 	COUNT: () -> (n :unsigned) = @{
 		unsigned long u;
 		char *e;
