@@ -465,6 +465,76 @@ error_record_init(struct error_record *erec)
 	return 0;
 }
 
+static char
+nibble_char(unsigned hex) {
+	static const char *dig = "0123456789abcdef";
+
+	return dig[hex & 0xf];
+}
+
+static char *
+dup_str_esc(const char *s, int *err)
+{
+	size_t len, numesc;
+	const char *sp;
+	char *cpy, *cp;
+
+	if (err != NULL && *err != 0) {
+		return NULL;
+	}
+
+	len = 0;
+	numesc = 0;
+	for (sp = s; *sp; sp++) {
+		if (*sp != ' ' && isspace((unsigned char)(*sp))) {
+			len += 2;
+			numesc++;
+		} else if (!isprint((unsigned char)*sp)) {
+			len += 4;
+			numesc++;
+		} else {
+			len++;
+		}
+	}
+
+	cpy = xmalloc(len+1);
+	if (numesc == 0) {
+		memcpy(cpy, s, len+1);
+		return cpy;
+	}
+
+	for (sp = s, cp = cpy; *sp; sp++) {
+		switch (*sp) {
+		case '\n': assert(cp+2 <= cpy+len); cp[0] = '\\'; cp[1] = 'n'; cp += 2; break;
+		case '\r': assert(cp+2 <= cpy+len); cp[0] = '\\'; cp[1] = 'r'; cp += 2; break;
+		case '\f': assert(cp+2 <= cpy+len); cp[0] = '\\'; cp[1] = 'f'; cp += 2; break;
+		case '\t': assert(cp+2 <= cpy+len); cp[0] = '\\'; cp[1] = 't'; cp += 2; break;
+		case '\v': assert(cp+2 <= cpy+len); cp[0] = '\\'; cp[1] = 'v'; cp += 2; break;
+
+		default: 
+			{
+				unsigned char uc = (unsigned char)*sp;
+				if (isprint(uc)) {
+					assert(cp+1 <= cpy+len);
+					cp[0] = *sp; cp ++; break;
+				} else {
+					assert(cp+4 <= cpy+len);
+					cp[0] = '\\';
+					cp[1] = 'x';
+					cp[2] = nibble_char(uc>>4);
+					cp[3] = nibble_char(uc & 0xf);
+					cp += 4;
+				}
+			}
+			break;
+		}
+	}
+
+	*cp = '\0';
+
+	return cpy;
+}
+
 static char *
 dup_str(const char *s, int *err)
 {
@@ -517,8 +587,8 @@ error_record_add(struct error_record *erec, enum error_type type, const char *fn
 	/* add record */
 	err = 0;
 	erec->errors[ind].filename     = dup_str(fn,&err);
-	erec->errors[ind].regexp       = re != NULL           ? dup_str(re,&err)           : NULL;
-	erec->errors[ind].flags        = flags != NULL        ? dup_str(flags,&err)        : NULL;
+	erec->errors[ind].regexp       = re != NULL           ? dup_str_esc(re,&err)       : NULL;
+	erec->errors[ind].flags        = flags != NULL        ? dup_str_esc(flags,&err)    : NULL;
 	erec->errors[ind].failed_match = failed_match != NULL ? dup_str(failed_match,&err) : NULL;
 	erec->errors[ind].line         = line;
 	erec->errors[ind].type         = type;
@@ -820,6 +890,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 				case 's': flags = flags | RE_SINGLE;   break;
 				case 'z': flags = flags | RE_ZONE;     break;
 				case 'a': flags = flags | RE_ANCHORED; break;
+				case 'x': flags = flags | RE_EXTENDED; break;
 				default:
 					fprintf(stderr, "line %d: unknown flag '%c'\n", linenum, (unsigned char)(*fstr));
 				}
@@ -881,9 +952,11 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 			flagstring(flags, &flagdesc[0]);
 
 			if (tty_output) {
+				char *re  = dup_str_esc(regexp, NULL);
 				printf("[      ] line %d: working on %s regexp /%s/%s ...\r",
-					linenum, dialect_name, regexp, flagdesc);
+					linenum, dialect_name, re, flagdesc);
 				fflush(stdout);
+				free(re);
 			}
 
 			re_str = regexp;
@@ -1031,14 +1104,23 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 			ret = fsm_runner_run(&runner, test, tlen);
 			if (!!ret == !!matching) {
+				char *re  = dup_str_esc(regexp, NULL);
+				char *mat = dup_str_esc(orig, NULL);
 				printf("[OK    ] line %d: %s regexp /%s/%s %s \"%s\"\n",
-					linenum, dialect_name, regexp, flagdesc, matching ? "matched" : "did not match", orig);
+					linenum, dialect_name, re, flagdesc, matching ? "matched" : "did not match", mat);
+				free(re);
+				free(mat);
 			} else {
+				char *re  = dup_str_esc(regexp, NULL);
+				char *mat = dup_str_esc(orig, NULL);
 				printf("[NOT OK] line %d: %s regexp /%s/%s expected to %s \"%s\", but %s\n",
-					linenum, dialect_name, regexp, flagdesc,
+					linenum, dialect_name, re, flagdesc,
 					matching ? "match" : "not match",
-					orig,
+					mat,
 					ret ? "did" : "did not");
+
+				free(re);
+				free(mat);
 				num_errors++;
 
 				/* ignore errors */

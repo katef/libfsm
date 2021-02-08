@@ -15,6 +15,7 @@ PCREGREP ?= pcregrep
 
 .for n in ${TEST.tests/pcre-pcregrep:T:R:C/^out//}
 
+.if !exists(${TEST_SRCDIR.tests/pcre}/mode${n})
 # the perl below does two things:
 # 1) expands \xHH in the input to the byte with hex value HH.  This is a
 #    bit of a hack.
@@ -31,13 +32,22 @@ ${TEST_OUTDIR.tests/pcre-pcregrep}/res${n}: ${TEST_OUTDIR.tests/pcre-pcregrep}/i
 
 test:: ${TEST_OUTDIR.tests/pcre-pcregrep}/res${n}
 
+.endif
+
 .endfor
 
 .for n in ${TEST.tests/pcre:T:Mout*.fsm:R:C/^out//}
 
+.if exists(${TEST_SRCDIR.tests/pcre}/mode${n})
+TEST_OUTDIR.tests/pcre/mode${n} != cat ${TEST_SRCDIR.tests/pcre}/mode$n
+${TEST_OUTDIR.tests/pcre}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre}/in${n}.re
+	${RE} -F "${TEST_OUTDIR.tests/pcre/mode${n}}" -r pcre -py ${.ALLSRC:M*.re} \
+	> $@
+.else
 ${TEST_OUTDIR.tests/pcre}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre}/in${n}.re
 	${RE} -r pcre -py ${.ALLSRC:M*.re} \
 	> $@
+.endif
 
 ${TEST_OUTDIR.tests/pcre}/nfa${n}.fsm: ${TEST_SRCDIR.tests/pcre}/in${n}.re
 	${RE} -r pcre -n -py ${.ALLSRC:M*.re} \

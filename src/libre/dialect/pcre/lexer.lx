@@ -178,9 +178,12 @@
 
 '(?' -> $flags .. ':' -> $sub, ')' -> $close {
 	'-' -> $negate;
+	'xx' -> $flag__unknown;  # xx (EXTENDED_MORE) is not yet supported
 	'i' -> $flag__insensitive;
 	's' -> $flag__single;
-	flags = $flag__insensitive | $flag__single;
+	'x' -> $flag__extended;
+	'n' -> $flag__ignore; # 'n' is the no auto capture flag, which we can ignore
+	flags = $flag__insensitive | $flag__single | $flag__extended | $flag__ignore;
 	/[a-z]/ - flags -> $flag__unknown;
 
 	# this is a little too broad... but should screen out
@@ -292,12 +295,26 @@
 	/[0-9]+/ -> $count;
 }
 
+'#'  -> $maybe_comment;
+
+" "  -> $whitespace;
+"\t" -> $whitespace;
+"\v" -> $whitespace;
+"\f" -> $whitespace;
+"\n" -> $newline;
+"\r" -> $newline;
+
 '\Q' .. '\E' {
+	# TODO: check if extended mode (x) ignores whitespace between \Q
+	# and \E
 	/./ - "\x00" -> $char;
 }
+
+
 
 /./ - ($open | $close | $start | $end
 	| $opt | $star | $plus | $any | $alt
 	| $esc | $oct | $hex | $invalid
+	| $maybe_comment | $whitespace | $newline
 	| $opengroup | $opencount | "\x00") -> $char;
 

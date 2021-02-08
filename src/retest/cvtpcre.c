@@ -208,13 +208,11 @@ static const struct {
 	{ "bad_escape_is_literal"  , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL */
 	{ "caseless"               , "i",  MOD_SUPPORTED  , RE_ICASE      }, /* PCRE2_CASELESS */
 	{ "dollar_endonly"         , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_DOLLAR_ENDONLY */
-
-	/* dotall is currently the default (and only) libfsm behavior. */
-	{ "dotall"                 , "s",  MOD_SUPPORTED  , RE_FLAGS_NONE }, /* PCRE2_DOTALL */
+	{ "dotall"                 , "s",  MOD_SUPPORTED  , RE_SINGLE     }, /* PCRE2_DOTALL */
 	{ "dupnames"               , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_DUPNAMES */
 	{ "endanchored"            , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_ENDANCHORED */
 	{ "escaped_cr_is_lf"       , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTRA_ESCAPED_CR_IS_LF */
-	{ "extended"               , "x",  MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTENDED */
+	{ "extended"               , "x",  MOD_SUPPORTED  , RE_EXTENDED   }, /* PCRE2_EXTENDED */
 	{ "extended_more"          , "xx", MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTENDED_MORE */
 	{ "extra_alt_bsux"         , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_EXTRA_ALT_BSUX */
 	{ "firstline"              , NULL, MOD_UNSUPPORTED, RE_FLAGS_NONE }, /* PCRE2_FIRSTLINE */
@@ -338,7 +336,23 @@ parse_modifiers(size_t linenum, const char *s, enum re_flags *mods_p)
 				for (; *tok != '\0'; tok++) {
 					if (*tok == 'i') {
 						mods = mods | RE_ICASE;
-					} else if (strchr("gns", *tok) != NULL) {
+					} else if (*tok == 's') {
+						mods = mods | RE_SINGLE;
+					} else if (*tok == 'x') {
+						/* support 'x' but not 'xx'
+						 *
+						 * 'x' is extended regexp syntax
+						 * "xx" is extended-more syntax
+						 */
+						if (tok[1] == 'x' ) {
+							fprintf(stderr, "line %5zu: unsupported regexp modifier xx\n",
+									linenum);
+							result = 0;
+							goto finish;
+						}
+
+						mods = mods | RE_EXTENDED;
+					} else if (strchr("gn", *tok) != NULL) {
 						/* options that are ignored or default:
 						 *
 						 * 'g' is global search, which we ignore
@@ -348,15 +362,13 @@ parse_modifiers(size_t linenum, const char *s, enum re_flags *mods_p)
 						 * XXX: implement global search
 						 * XXX: implement EOL handling so we can specify not-dotall
 						 */
-					} else if (strchr("BImx", *tok) != NULL) {
+					} else if (strchr("BIm", *tok) != NULL) {
 						/* options that we don't (yet) support:
 						 *
 						 * 'B' and 'I' are used to dump PCRE2 internal state information,
 						 * and not particularly useful for testing libfsm
 						 *
 						 * 'm' is multiline support
-						 * 'x' is extended regexp syntax
-						 * "xx" is extended-more syntax
 						 */
 						fprintf(stderr, "line %5zu: unsupported regexp modifier %c\n",
 							linenum, *tok);
@@ -605,14 +617,15 @@ restart:
 								if (mods & RE_TEXT)     { *m++ = 't'; }
 								if (mods & RE_MULTI)    { *m++ = 'm'; }
 								if (mods & RE_REVERSE)  { *m++ = 'r'; }
-								if (mods & RE_SINGLE)   { *m++ = 'S'; }
-								if (mods & RE_ZONE)     { *m++ = 'Z'; }
+								if (mods & RE_SINGLE)   { *m++ = 's'; }
+								if (mods & RE_ZONE)     { *m++ = 'z'; }
 								if (mods & RE_ANCHORED) { *m++ = 'a'; }
+								if (mods & RE_EXTENDED) { *m++ = 'x'; }
 
 								fprintf(out, "M %s\n", &mod_str[0]);
 							}
 
-							// check if there's an embedded CR or NL or NUL
+							// check if there's an embedded backslash CR, NL, or NUL
 							if (strcspn(regexp.s, "\n\r") < regexp.len || strlen(regexp.s) < regexp.len) {
 								size_t i;
 
@@ -625,6 +638,12 @@ restart:
 								fputc('~', out);
 								for (i = 0; i < regexp.len; i++) {
 									switch (regexp.s[i]) {
+									case '\\':
+										/* have to escape all backslashes in the regexp */
+										fputc('\\', out);
+										fputc('\\', out);
+										break;
+
 									case '\0':
 										fputc('\\', out);
 										fputc('0', out);

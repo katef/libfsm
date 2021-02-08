@@ -35,6 +35,7 @@ enum re_flags {
 	RE_SINGLE  = 1 << 4, /* aka PCRE_DOTALL */
 	RE_ZONE    = 1 << 5,
 	RE_ANCHORED = 1 << 6,
+	RE_EXTENDED = 1 << 7,  /* PCRE extended mode */
 	RE_FLAGS_NONE = 0
 };
 

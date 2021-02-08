@@ -133,14 +133,89 @@
 		/* TODO: use lx's generated conveniences for the pattern buffer */
 		char a[512];
 		char *p;
+#if PCRE_DIALECT
+		int extended_mode_comment;
+		enum re_flags *flags_ptr;
+#endif /* PCRE_DIALECT */
 	};
 
-	#define CURRENT_TERMINAL (act_state->lex_tok)
 	#define ERROR_TERMINAL   @$ERROR
+
+	#if PCRE_DIALECT
+	static void mark(struct re_pos *, const struct lx_pos *);
+
+	static void
+	pcre_advance_lexer(struct lex_state *lex_state, struct act_state *act_state)
+	{
+		mark(&act_state->synstart, &lex_state->lx.start);
+		mark(&act_state->synend,   &lex_state->lx.end);
+		act_state->lex_tok = LX_NEXT(&lex_state->lx);
+	}
+
+	static enum LX_TOKEN
+	pcre_current_token(struct lex_state *lex_state, struct act_state *act_state)
+	{
+		enum re_flags fl = (lex_state->flags_ptr != NULL) ? lex_state->flags_ptr[0] : 0;
+		enum LX_TOKEN tok;
+
+
+		if ((fl & RE_EXTENDED) == 0) {
+			tok = act_state->lex_tok;
+
+			switch (tok) {
+			case TOK_WHITESPACE:
+			case TOK_NEWLINE:
+			case TOK_MAYBE_COMMENT:
+				return TOK_CHAR;
+
+			default:
+				return tok;
+			}
+		} 
+
+	restart:
+		tok = act_state->lex_tok;
+		if (lex_state->extended_mode_comment) {
+			switch (tok) {
+			case TOK_EOF:
+			case TOK_ERROR:
+			case TOK_UNKNOWN:
+				/* don't eat EOF or errors */
+				return tok;
+
+			case TOK_NEWLINE:
+				lex_state->extended_mode_comment = 0;
+				/* fall through */
+			default:
+				pcre_advance_lexer(lex_state, act_state);
+				goto restart;
+			}
+		} else {
+			switch (tok) {
+			case TOK_MAYBE_COMMENT:
+				lex_state->extended_mode_comment = 1;
+				/*fall through */
+			case TOK_WHITESPACE:
+			case TOK_NEWLINE:
+				pcre_advance_lexer(lex_state, act_state);
+				goto restart;
+
+			default:
+				return tok;
+			}
+		}
+	}
+
+	#define CURRENT_TERMINAL (pcre_current_token(lex_state, act_state))
+	#define ADVANCE_LEXER    do { pcre_advance_lexer(lex_state,act_state); } while(0)
+	#else /* !PCRE_DIALECT */
+	#define CURRENT_TERMINAL (act_state->lex_tok)
 	#define ADVANCE_LEXER    do { mark(&act_state->synstart, &lex_state->lx.start); \
 	                              mark(&act_state->synend,   &lex_state->lx.end);   \
 	                              act_state->lex_tok = LX_NEXT(&lex_state->lx); \
 		} while (0)
+	#endif /* PCRE_DIALECT */
+
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
 	                              act_state->lex_tok = tok;                     } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
@@ -458,6 +533,36 @@
 		@c = lex_state->buf.a[0];
 	@};
 
+	WHITESPACE: () -> (c :char, start :pos, end :pos) = @{
+		/* the first byte may be '\x00' */
+		assert(lex_state->buf.a[1] == '\0');
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+
+		@c = lex_state->buf.a[0];
+	@};
+
+	NEWLINE: () -> (c :char, start :pos, end :pos) = @{
+		/* the first byte may be '\x00' */
+		assert(lex_state->buf.a[1] == '\0');
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+
+		@c = lex_state->buf.a[0];
+	@};
+
+	MAYBE_COMMENT: () -> (c :char, start :pos, end :pos) = @{
+		/* the first byte may be '\x00' */
+		assert(lex_state->buf.a[1] == '\0');
+
+		@start = lex_state->lx.start;
+		@end   = lex_state->lx.end;
+
+		@c = lex_state->buf.a[0];
+	@};
+
 	COUNT: () -> (n :unsigned) = @{
 		unsigned long u;
 		char *e;
@@ -491,6 +596,14 @@
 
 	FLAG_INSENSITIVE: () -> (flag :re_flags) = @{
 		@flag = RE_ICASE;
+	@};
+
+	FLAG_EXTENDED: () -> (flag :re_flags) = @{
+		@flag = RE_EXTENDED;
+	@};
+
+	FLAG_SINGLE: () -> (flag :re_flags) = @{
+		@flag = RE_SINGLE;
 	@};
 
 %actions%
@@ -931,6 +1044,11 @@
 
 		lex_state->buf.a   = NULL;
 		lex_state->buf.len = 0;
+
+#if PCRE_DIALECT
+		lex_state->extended_mode_comment = 0;
+		lex_state->flags_ptr = &flags;
+#endif /* PCRE_DIALECT */
 
 		/* XXX: unneccessary since we're lexing from a string */
 		/* (except for pushing "[" and "]" around ::group-$dialect) */
