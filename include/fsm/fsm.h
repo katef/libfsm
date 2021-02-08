@@ -89,10 +89,6 @@ fsm_move(struct fsm *dst, struct fsm *src);
  * If non-NULL, the combine_info struct will be updated to note the new
  * base offsets for the pair of FSMs.
  */
-struct fsm_merge_update_info {
-	fsm_state_t base_a;
-	fsm_state_t base_b;
-};
 struct fsm *
 fsm_merge(struct fsm *a, struct fsm *b,
 	struct fsm_combine_info *combine_info);
