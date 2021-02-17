@@ -29,6 +29,39 @@ struct edge_ordered_iter {
 	uint64_t symbols_used[4];
 };
 
+enum edge_group_iter_type {
+	EDGE_GROUP_ITER_ALL,
+	EDGE_GROUP_ITER_UNIQUE
+};
+
+struct edge_group_iter {
+	const struct edge_set *set;
+	unsigned flag;
+	size_t i;
+	uint64_t internal[256/64];
+};
+
+struct edge_group_iter_info {
+	int unique;
+	fsm_state_t to;
+	uint64_t symbols[256/64];
+};
+
+/* Reset an iterator for groups of edges.
+ * If iter_type is set to EDGE_GROUP_ITER_UNIQUE,
+ * edges with labels that only appear once will be
+ * yielded with unique set to 1, all others set to 0.
+ * If iter_type is EDGE_GROUP_ITER_ALL, they will not
+ * be separated, and unique will not be set. */
+void
+edge_set_group_iter_reset(const struct edge_set *s,
+    enum edge_group_iter_type iter_type,
+    struct edge_group_iter *egi);
+
+int
+edge_set_group_iter_next(struct edge_group_iter *egi,
+    struct edge_group_iter_info *eg);
+
 /* Opaque struct type for edge iterator,
  * which does extra processing upfront to iterate over
  * edges in lexicographically ascending order; the

@@ -1880,4 +1880,79 @@ edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
 	return 0;
 }
 
+void
+edge_set_group_iter_reset(const struct edge_set *set,
+    enum edge_group_iter_type iter_type,
+    struct edge_group_iter *egi)
+{
+	memset(egi, 0x00, sizeof(*egi));
+	egi->set = set;
+	egi->flag = iter_type;
+
+	if (iter_type == EDGE_GROUP_ITER_UNIQUE && set != NULL) {
+		struct edge_group *g;
+		size_t g_i, i;
+		uint64_t seen[256/64] = { 0 };
+		for (g_i = 0; g_i < set->count; g_i++) {
+			g = &set->groups[g_i];
+			for (i = 0; i < 256; i++) {
+				if ((i & 63) == 0 && g->symbols[i/64] == 0) {
+					i += 63; /* skip empty word */
+					continue;
+				}
+				if (SYMBOLS_GET(g->symbols, i)) {
+					if (SYMBOLS_GET(seen, i)) {
+						SYMBOLS_SET(egi->internal, i);
+					} else {
+						SYMBOLS_SET(seen, i);
+					}
+				}
+			}
+		}
+	}
+}
+
+int
+edge_set_group_iter_next(struct edge_group_iter *egi,
+    struct edge_group_iter_info *eg)
+{
+	struct edge_group *g;
+	if (egi->set == NULL || egi->i == egi->set->count) {
+		return 0;
+	}
+
+	g = &egi->set->groups[egi->i];
+
+	eg->to = g->to;
+
+	if (egi->flag == EDGE_GROUP_ITER_ALL) {
+		egi->i++;
+		memcpy(eg->symbols, g->symbols, sizeof(g->symbols));
+		return 1;
+	} else if (egi->flag == EDGE_GROUP_ITER_UNIQUE) { /* uniques first */
+		size_t i;
+		for (i = 0; i < 4; i++) {
+			eg->symbols[i] = g->symbols[i] &~ egi->internal[i];
+		}
+		eg->unique = 1;
+
+		/* next time, yield non-uniques */
+		egi->flag = EDGE_GROUP_ITER_UNIQUE + 1;
+		return 1;
+	} else if (egi->flag == EDGE_GROUP_ITER_UNIQUE + 1) {
+		size_t i;
+		for (i = 0; i < 4; i++) {
+			eg->symbols[i] = g->symbols[i] & egi->internal[i];
+		}
+		eg->unique = 0;
+
+		egi->flag = EDGE_GROUP_ITER_UNIQUE;
+		egi->i++;
+		return 1;
+	} else {
+		assert("match fail");
+		return 0;
+	}
+}
+
 #endif

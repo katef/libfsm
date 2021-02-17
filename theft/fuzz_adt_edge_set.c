@@ -13,6 +13,9 @@
 /* Currently needed for struct fsm_edge. */
 #include "../src/libfsm/internal.h"
 
+/* Build checks that depend on grouped edges */
+#define EDGE_BITSET_CHECKS 1
+
 static enum theft_trial_res
 prop_model_check(struct theft *t, void *arg1);
 
@@ -29,6 +32,12 @@ kept_rank(const uint64_t *kept, fsm_state_t i);
 
 static fsm_state_t
 kept_remap(fsm_state_t id, const void *opaque);
+
+#if EDGE_BITSET_CHECKS
+static bool
+check_edge_groups(const struct edge_set_model *m,
+    const struct edge_set *es);
+#endif
 
 /* Test the edge_set by evaluating a randomly generated
  * series of operations, then comparing the result after
@@ -461,8 +470,72 @@ prop_model_check_postcondition(const struct edge_set *es,
 		return false;
 	}
 
+	#if EDGE_BITSET_CHECKS
+	if (!check_edge_groups(m, es)) {
+		return false;
+	}
+	#endif
+
 	return true;
 }
+
+#if EDGE_BITSET_CHECKS
+static bool
+check_edge_groups(const struct edge_set_model *m,
+    const struct edge_set *es)
+{
+	struct edge_group_iter egi;
+	size_t i;
+	struct edge_group_iter_info eg;
+	size_t count = 0;
+	size_t symbols[256] = { 0 };
+
+	for (i = 0; i < m->count; i++) {
+		symbols[m->edges[i].symbol]++;
+	}
+
+	edge_set_group_iter_reset(es, EDGE_GROUP_ITER_ALL,
+	    &egi);
+	while (edge_set_group_iter_next(&egi, &eg)) {
+		for (i = 0; i < 256; i++) {
+			if (eg.symbols[i/64] & ((uint64_t)1 << (i & 63))) {
+				count++;
+			}
+		}
+	}
+
+	if (count != m->count) {
+		fprintf(stderr, "-- fail: grouped iter count mismatch (ALL): exp %zu, got %zu\n",
+		    m->count, count);
+		return false;
+	}
+
+	count = 0;
+	edge_set_group_iter_reset(es, EDGE_GROUP_ITER_UNIQUE,
+	    &egi);
+
+	while (edge_set_group_iter_next(&egi, &eg)) {
+		for (i = 0; i < 256; i++) {
+			if (eg.symbols[i/64] & ((uint64_t)1 << (i & 63))) {
+				if (eg.unique != (symbols[i] == 1)) {
+					fprintf(stderr, "-- fail: symbol 0x%lx appears %zu time(s) but has unique flag %d\n",
+					    i, symbols[i], eg.unique);
+					return false;
+				}
+				count++;
+			}
+		}
+	}
+
+	if (count != m->count) {
+		fprintf(stderr, "-- fail: grouped iter count mismatch (UNIQUE): exp %zu, got %zu\n",
+		    m->count, count);
+		return false;
+	}
+
+	return true;
+}
+#endif
 
 static bool
 regression0(theft_seed unused)
@@ -765,6 +838,30 @@ regression6(theft_seed unused)
 	return res == THEFT_TRIAL_PASS;
 }
 
+static bool
+regression7(theft_seed unused)
+{
+	(void)unused;
+
+	/* check proper edge group handling for NULL set */
+	struct edge_set_op op_list[] = {
+		{
+			.t = ESO_REMOVE,
+			.u.add = {
+				.symbol = 0x00,
+				.state = 0,
+			},
+		},
+	};
+	struct edge_set_ops ops = {
+		.count = sizeof(op_list)/sizeof(op_list[0]),
+		.ops = op_list,
+	};
+
+	enum theft_trial_res res = ops_model_check(&ops);
+	return res == THEFT_TRIAL_PASS;
+}
+
 void
 register_test_adt_edge_set(void)
 {
@@ -778,4 +875,5 @@ register_test_adt_edge_set(void)
 	reg_test("adt_edge_set_regression4", regression4);
 	reg_test("adt_edge_set_regression5", regression5);
 	reg_test("adt_edge_set_regression6", regression6);
+	reg_test("adt_edge_set_regression7", regression7);
 }
