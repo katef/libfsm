@@ -13,70 +13,6 @@
 	    __FILE__, __LINE__, MSG);		\
 	exit(EXIT_FAILURE)
 
-/* Pool allocator for opaque data to eliminates inadvertent memory leaks.
- *
- * XXX - this isn't great, but it's quite hard to keep track of opaque
- *       data through the various fsm operations.
- *
- *       The right solution is probably to have each fsm keep an opaque
- *       "destructor" that it calls when the states of an FSM are
- *       destroyed.
- */
-struct captest_opaque_pool;
-
-enum { CAPTEST_OPAQUE_POOL_SIZE = 128 };
-struct captest_opaque_pool {
-	struct captest_opaque_pool *next;
-	struct captest_end_opaque items[CAPTEST_OPAQUE_POOL_SIZE];
-	unsigned count;
-};
-
-struct captest_opaque_pool *pool = NULL;
-
-struct captest_end_opaque *
-captest_new_opaque(void)
-{
-	struct captest_end_opaque *eo;
-
-	if (pool == NULL || pool->count == CAPTEST_OPAQUE_POOL_SIZE) {
-		struct captest_opaque_pool *new_pool;
-		new_pool = calloc(1, sizeof *new_pool);
-
-		if (new_pool == NULL) {
-			return NULL;
-		}
-
-		new_pool->next = pool;
-		new_pool->count = 0;
-		pool = new_pool;
-	}
-
-	assert(pool != NULL);
-	assert(pool->count < CAPTEST_OPAQUE_POOL_SIZE);
-
-	eo = &pool->items[pool->count];
-	pool->count++;
-
-	return eo;
-}
-
-void
-captest_free_all_end_opaques(void)
-{
-	struct captest_opaque_pool *curr;
-
-	curr = pool;
-	while (curr != NULL) {
-		struct captest_opaque_pool *next;
-		next = curr->next;
-
-		free(curr);
-		curr = next;
-	}
-
-	pool = NULL;
-}
-
 int
 captest_getc(void *opaque)
 {
@@ -153,15 +89,6 @@ captest_run_single(const struct captest_single_fsm_test_info *info)
 	if (end != strlen(info->string)) { FAIL("exec end pos"); }
 
 	{
-		struct captest_end_opaque *eo = fsm_getopaque(fsm, end);
-		assert(eo != NULL);
-		assert(eo->tag == CAPTEST_END_OPAQUE_TAG);
-		if (!(eo->ends & (1U << 0))) {
-			FAIL("end ID not set in opaque");
-		}
-	}
-
-	{
 		fsm_end_id_t id_buf[1] = { ~0 };
 		enum fsm_getendids_res gres;
 		size_t written;
@@ -200,7 +127,6 @@ captest_run_single(const struct captest_single_fsm_test_info *info)
 	}
 
 	fsm_free(fsm);
-	captest_free_all_end_opaques();
 
 	return 0;
 }
@@ -216,17 +142,6 @@ captest_fsm_of_string(const char *string, unsigned end_id)
 	if (fsm == NULL) {
 		return NULL;
 	}
-
-	eo = captest_new_opaque();
-	if (eo == NULL) {
-		goto cleanup;
-	}
-
-	eo->tag = CAPTEST_END_OPAQUE_TAG;
-
-	/* set bit for end state */
-	assert(end_id < 8*sizeof(eo->ends));
-	eo->ends |= (1U << end_id);
 
 	if (!fsm_addstate_bulk(fsm, length + 1)) {
 		goto cleanup;
@@ -254,73 +169,44 @@ cleanup:
 
 static struct fsm_options options;
 
-static void captest_carryopaque(const struct fsm *src_fsm,
-    const fsm_state_t *src_set, size_t n,
-    struct fsm *dst_fsm, fsm_state_t dst_state)
-{
-	struct captest_end_opaque *eo_src = NULL;
-	struct captest_end_opaque *eo_dst = NULL;
-	struct captest_end_opaque *eo_old_dst = NULL;
-	size_t i;
-	const int log_level = 0;
-
-	if (log_level > 0) {
-		fprintf(stderr, "captest_carryopaque: src_fsm %p, src_set %p, n %lu, dst_fsm %p, dst_state %u\n",
-		    (void *)src_fsm, (void *)src_set, n,
-		    (void *)dst_fsm, dst_state);
-	}
-
-	eo_old_dst = fsm_getopaque(dst_fsm, dst_state);
-
-	eo_dst = captest_new_opaque();
-	/* FIXME: no way to handle an alloc error in carryopaque? */
-	assert(eo_dst != NULL);
-	eo_dst->tag = CAPTEST_END_OPAQUE_TAG;
-	if (log_level > 0) {
-		fprintf(stderr, "captest_carryopaque: new opaque %p (eo_dst)\n",
-		    (void *)eo_dst);
-	}
-
-	if (eo_old_dst != NULL) {
-		assert(eo_old_dst->tag == CAPTEST_END_OPAQUE_TAG);
-		eo_dst->ends |= eo_old_dst->ends;
-		if (log_level > 0) {
-			fprintf(stderr, "carryopaque: old_dst (%d) ends 0x%x\n",
-			    dst_state, eo_dst->ends);
-		}
-	}
-
-	fsm_setopaque(dst_fsm, dst_state, eo_dst);
-
-	/* union bits set in eo_src->ends into eo_dst->ends */
-	for (i = 0; i < n; i++) {
-		eo_src = fsm_getopaque(src_fsm, src_set[i]);
-		if (eo_src == NULL) {
-			continue;
-		}
-		if (log_level > 0) {
-			fprintf(stderr, "carryopaque: dst %p (%d) <- src[%lu] (%d) %p\n",
-			    (void *)eo_dst, dst_state, i, src_set[i],
-			    (void *)eo_src);
-		}
-		assert(eo_src->tag == CAPTEST_END_OPAQUE_TAG);
-		eo_dst->ends |= eo_src->ends;
-		if (log_level > 0) {
-			fprintf(stderr, "carryopaque: eo_src ends -> 0x%x\n",
-			    eo_dst->ends);
-		}
-	}
-}
-
 struct fsm *
 captest_fsm_with_options(void)
 {
 	struct fsm *fsm = NULL;
-	if (options.carryopaque == NULL) { /* initialize */
-		options.carryopaque = captest_carryopaque;
-	}
 
+	/* We currently don't need to set anything custom on this. */
 	fsm = fsm_new(&options);
 	return fsm;
 }
 
+int
+captest_check_single_end_id(const struct fsm *fsm, fsm_state_t end_state,
+    unsigned expected_end_id, const char **msg)
+{
+	fsm_end_id_t id_buf[1] = { ~0 };
+	enum fsm_getendids_res gres;
+	size_t written;
+	const char *unused;
+
+	if (msg == NULL) {
+		msg = &unused;
+	}
+
+	if (1 != fsm_getendidcount(fsm, end_state)) {
+		*msg = "did not have exactly one end ID";
+		return 0;
+	}
+
+	gres = fsm_getendids(fsm, end_state, 1, id_buf, &written);
+	if (gres != FSM_GETENDIDS_FOUND) {
+		*msg = "failed to get end IDs";
+		return 0;
+	}
+
+	if (expected_end_id != id_buf[0]) {
+		*msg = "failed to get expected end ID";
+		return 0;
+	}
+
+	return 1;
+}
