@@ -45,7 +45,7 @@
  */
 
 struct match {
-	int i;
+	fsm_end_id_t i;
 	const char *s;
 	struct match *next;
 };
@@ -260,6 +260,47 @@ struct matches_list {
 static struct matches_list *all_matches = NULL;
 
 static struct match *
+find_match_with_id(fsm_end_id_t id)
+{
+	struct matches_list *res = all_matches;
+	while (res != NULL) {
+		struct match *m = res->head;
+		if (m->i == id) {
+			return m;
+		}
+		res = res->next;
+	}
+	return NULL;
+}
+
+static struct match *
+find_first_match_for_end_state(const struct fsm *dfa, fsm_state_t s)
+{
+#define MAX_END_IDS 8		/* FIXME: what is reasonable here? */
+	fsm_end_id_t end_id_buf[MAX_END_IDS];
+	size_t end_ids_written;
+	enum fsm_getendids_res res;
+
+	if (!fsm_isend(dfa, s)) {
+		return NULL;
+	}
+
+	res = fsm_getendids(dfa, s, MAX_END_IDS,
+	    end_id_buf, &end_ids_written);
+	if (res == FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE) {
+		fprintf(stderr, "Error: Multiple end IDs\n");
+		return NULL;
+	} else if (res == FSM_GETENDIDS_NOT_FOUND) {
+		return NULL;
+	} else {
+		assert(res == FSM_GETENDIDS_FOUND);
+		/* continues below */
+	}
+
+	return find_match_with_id(end_id_buf[0]);
+}
+
+static struct match *
 addmatch(struct match **head, int i, const char *s)
 {
 	struct match *new;
@@ -343,65 +384,6 @@ free_all_matches(void)
 	}
 
 	all_matches = NULL;
-}
-
-static void
-carryopaque(const struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
-	struct fsm *dst_fsm, fsm_state_t dst_state)
-{
-	struct match *matches;
-	struct match *m;
-	size_t i;
-
-	assert(src_fsm != NULL);
-	assert(src_set != NULL);
-	assert(n > 0);
-	assert(dst_fsm != NULL);
-	assert(fsm_isend(dst_fsm, dst_state));
-	assert(fsm_getopaque(dst_fsm, dst_state) == NULL);
-
-	/*
-	 * Here we mark newly-created DFA states with the same regexp string
-	 * as from their corresponding source NFA states.
-	 *
-	 * Because all the accepting states are reachable together, they
-	 * should all share the same regexp, unless re(1) was invoked with
-	 * a regexp which is a subset of (or equal to) another.
-	 */
-
-	matches = NULL;
-
-	for (i = 0; i < n; i++) {
-		/*
-		 * The opaque data is attached to end states only, so we skip
-		 * non-end states here.
-		 */
-		if (!fsm_isend(src_fsm, src_set[i])) {
-			continue;
-		}
-
-		assert(fsm_getopaque(src_fsm, src_set[i]) != NULL);
-
-		for (m = fsm_getopaque(src_fsm, src_set[i]); m != NULL; m = m->next) {
-			if (!addmatch(&matches, m->i, m->s)) {
-				perror("addmatch");
-				goto error;
-			}
-		}
-	}
-
-	add_matches_list(matches);
-	fsm_setopaque(dst_fsm, dst_state, matches);
-
-	return;
-
-error:
-
-	/* XXX: free matches */
-
-	fsm_setopaque(dst_fsm, dst_state, NULL);
-
-	return;
 }
 
 static void
@@ -883,7 +865,7 @@ main(int argc, char *argv[])
 			}
 
 			{
-				size_t s;
+				struct match *matches = NULL;
 
 				/*
 				 * Attach this mapping to each end state for this regexp.
@@ -891,23 +873,18 @@ main(int argc, char *argv[])
 				 * in the same regexp, and keep an argc-sized array of pointers to free().
 				 * XXX: then use fsm_setendopaque() here.
 				 */
-				for (s = 0; s < new->statecount; s++) {
-					if (fsm_isend(new, s)) {
-						struct match *matches;
-
-						matches = NULL;
-
-						if (!addmatch(&matches, i, argv[i])) {
-							perror("addmatch");
-							return EXIT_FAILURE;
-						}
-
-						add_matches_list(matches);
-
-						assert(fsm_getopaque(new, s) == NULL);
-						fsm_setopaque(new, s, matches);
-					}
+				if (!fsm_setendid(new, i)) {
+					perror("fsm_setendid");
+					return EXIT_FAILURE;
 				}
+
+				if (!addmatch(&matches, i, argv[i])) {
+					perror("addmatch");
+					return EXIT_FAILURE;
+				}
+
+				add_matches_list(matches);
+
 			}
 
 			/* TODO: implement concatenating patterns for -s in conjunction with -z.
@@ -970,26 +947,20 @@ main(int argc, char *argv[])
 		}
 
 		{
-			opt.carryopaque = carryopaque;
-
 			if (!fsm_determinise(dfa)) {
 				perror("fsm_determinise");
 				return EXIT_FAILURE;
 			}
-
-			opt.carryopaque = NULL;
 		}
 
 		for (s = 0; s < dfa->statecount; s++) {
 			const struct match *matches;
-
-			if (!fsm_isend(dfa, s)) {
+			matches = find_first_match_for_end_state(dfa, s);
+			if (matches == NULL) {
 				continue;
 			}
 
-			matches = fsm_getopaque(dfa, s);
 			assert(matches != NULL);
-
 			if (matches->next != NULL) {
 				const struct match *m;
 
@@ -1020,8 +991,6 @@ main(int argc, char *argv[])
 	}
 
 	if (!keep_nfa) {
-		opt.carryopaque = carryopaque;
-
 		/*
 		 * Convert to a DFA, then minimise unless we need to keep the end
 		 * state information separated per regexp. */
@@ -1036,8 +1005,6 @@ main(int argc, char *argv[])
 				return EXIT_FAILURE;
 			}
 		}
-
-		opt.carryopaque = NULL;
 
 		if (makevm) {
 			vm = fsm_vm_compile(fsm);
@@ -1055,15 +1022,15 @@ main(int argc, char *argv[])
 			/* TODO: would deal with dialect: prefix here, too */
 			if (patterns) {
 				const struct match *m;
+				m = find_first_match_for_end_state(fsm, s);
 
-				assert(fsm_getopaque(fsm, s) != NULL);
-
-				for (m = fsm_getopaque(fsm, s); m != NULL; m = m->next) {
+				while (m != NULL) {
 					/* TODO: print nicely */
 					printf("/%s/", m->s);
 					if (m->next != NULL) {
 						printf(", ");
 					}
+					m = m->next;
 				}
 
 				printf(": ");
@@ -1095,7 +1062,7 @@ main(int argc, char *argv[])
 		print_fsm(stdout, fsm);
 
 /* XXX: free fsm */
-		
+
 		if (vm != NULL) {
 			fsm_vm_free(vm);
 		}
@@ -1151,12 +1118,11 @@ main(int argc, char *argv[])
 
 				if (patterns) {
 					const struct match *m;
-
-					assert(fsm_getopaque(fsm, state) != NULL);
-
-					for (m = fsm_getopaque(fsm, state); m != NULL; m = m->next) {
+					m = find_first_match_for_end_state(fsm, state);
+					while (m != NULL) {
 						/* TODO: print nicely */
 						printf("match: /%s/\n", m->s);
+						m = m->next;
 					}
 				}
 			}
@@ -1174,4 +1140,3 @@ main(int argc, char *argv[])
 		return r;
 	}
 }
-

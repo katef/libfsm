@@ -59,7 +59,6 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 
 		new->end      = 0;
 		new->visited  = 0;
-		new->opaque   = NULL;
 		new->epsilons = NULL;
 		new->edges    = NULL;
 	}
@@ -84,7 +83,6 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 
 			new->end      = 0;
 			new->visited  = 0;
-			new->opaque   = NULL;
 			new->epsilons = NULL;
 			new->edges    = NULL;
 		}

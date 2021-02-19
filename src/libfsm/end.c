@@ -64,8 +64,6 @@ fsm_setopaque(struct fsm *fsm, fsm_state_t state, void *opaque)
 	assert(state < fsm->statecount);
 
 	assert(fsm->states[state].end);
-
-	fsm->states[state].opaque = opaque;
 }
 
 void *
@@ -78,6 +76,6 @@ fsm_getopaque(const struct fsm *fsm, fsm_state_t state)
 
 	assert(fsm->states[state].end);
 
-	return fsm->states[state].opaque;
+	return NULL;
 }
 

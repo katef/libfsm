@@ -251,7 +251,6 @@ fsm_reverse(struct fsm *fsm)
 			}
 
 			fsm_setend(fsm, s, 0);
-			fsm->states[s].opaque = NULL;
 		}
 	}
 

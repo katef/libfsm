@@ -49,7 +49,6 @@ fsm_clone(const struct fsm *fsm)
 		if (fsm_isend(fsm, i)) {
 			fsm_setend(new, i, 1);
 		}
-		new->states[i].opaque = fsm->states[i].opaque;
 
 		if (!state_set_copy(&new->states[i].epsilons, new->opt->alloc, fsm->states[i].epsilons)) {
 			fsm_free(new);

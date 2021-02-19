@@ -115,8 +115,6 @@ fsm_consolidate(struct fsm *src,
 		if (!DST_SEEN(dst_i)) {
 			SET_DST_SEEN(dst_i);
 
-			dst->states[dst_i].opaque = src->states[src_i].opaque;
-
 			if (!state_set_copy(&dst->states[dst_i].epsilons,
 				dst->opt->alloc, src->states[src_i].epsilons)) {
 				goto cleanup;
