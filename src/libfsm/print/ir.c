@@ -477,7 +477,7 @@ make_ir(const struct fsm *fsm)
 			size_t written;
 			const size_t count = fsm_getendidcount(fsm, i);
 			struct fsm_end_ids *ids = f_malloc(fsm->opt->alloc,
-			    sizeof(*ids) + ((count - 1) * sizeof(ids->ids)));
+			    sizeof(*ids) + ((count - 1) * sizeof(ids->ids[0])));
 			if (ids == NULL) {
 				goto error;
 			}

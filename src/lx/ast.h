@@ -10,6 +10,9 @@
 struct fsm;
 struct var;
 
+#include <unistd.h>
+#define LOG() getenv("LOG")
+
 struct ast_mapping {
 	struct fsm *fsm;
 	struct ast_token *token;
@@ -61,6 +64,15 @@ ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 
 struct mapping_set *
 ast_addconflict(struct mapping_set **head, struct ast_mapping *n);
+
+int
+ast_setendmapping(struct fsm *fsm, struct ast_mapping *m);
+
+struct ast_mapping *
+ast_getendmappingbyendid(fsm_end_id_t id);
+
+struct ast_mapping *
+ast_getendmapping(const struct fsm *fsm, fsm_state_t s);
 
 #endif
 

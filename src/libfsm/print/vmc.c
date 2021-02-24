@@ -28,12 +28,12 @@
 #include "ir.h"
 
 static int
-leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
+leaf(FILE *f, const struct fsm_end_ids *ids, const void *leaf_opaque)
 {
 	assert(f != NULL);
 	assert(leaf_opaque == NULL);
 
-	(void) state_opaque;
+	(void) ids;
 	(void) leaf_opaque;
 
 	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
@@ -137,7 +137,7 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 static int
 fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
-	int (*leaf)(FILE *, const void *state_opaque, const void *leaf_opaque),
+	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
 	static const struct dfavm_assembler_ir zero;

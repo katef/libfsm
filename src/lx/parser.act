@@ -355,6 +355,9 @@
 			 * so that it can be used in expressions as for any pattern.
 			 */
 			fsm_setendopaque(fsm, NULL);
+			if (LOG()) {
+				fprintf(stderr, "deref_token: setendopaque: NULL\n");
+			}
 
 			@r = fsm_merge(@r, fsm, &combine_info);
 			if (@r == NULL) {

@@ -54,7 +54,11 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		struct ast_mapping *m;
 
 		if (fsm_isend(z->fsm, i)) {
-			m = fsm_getopaque(z->fsm, i);
+			m = ast_getendmapping(z->fsm, i);
+			if (LOG()) {
+				fprintf(stderr, "print_zone: ast_getendmapping for state %d: %p (zdot)\n",
+				    i, (void *)m);
+			}
 			assert(m != NULL);
 
 			if (m->to == NULL) {

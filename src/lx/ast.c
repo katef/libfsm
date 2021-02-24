@@ -171,3 +171,62 @@ ast_addconflict(struct mapping_set **head, struct ast_mapping *m)
 	return new;
 }
 
+#define MAX_MAPPINGS 64 	/* FIXME */
+static fsm_end_id_t mapping_count = 0;
+static struct ast_mapping *mappings[MAX_MAPPINGS];
+
+int
+ast_setendmapping(struct fsm *fsm, struct ast_mapping *m)
+{
+	const fsm_end_id_t id = mapping_count;
+
+	if (fsm_setendid(fsm, id)) {
+		if (LOG()) {
+			fprintf(stderr, "ast_setendmapping: saving mapping %p at mappings[%d]\n",
+			    (void *)m, id);
+		}
+		mappings[id] = m;
+		mapping_count++;
+		return 1;
+	}
+	return 0;
+}
+
+struct ast_mapping *
+ast_getendmappingbyendid(fsm_end_id_t id)
+{
+	assert(id < mapping_count);
+	return mappings[id];
+}
+
+struct ast_mapping *
+ast_getendmapping(const struct fsm *fsm, fsm_state_t s)
+{
+	#define ID_BUF_COUNT 8
+	fsm_end_id_t id_buf[ID_BUF_COUNT];
+	enum fsm_getendids_res res;
+	size_t written;
+	struct ast_mapping *m;
+
+	res = fsm_getendids(fsm,
+	    s, ID_BUF_COUNT, id_buf, &written);
+	if (res == FSM_GETENDIDS_NOT_FOUND) {
+		return NULL;
+	}
+
+	if (res == FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE) {
+		assert(!"FIXME: capacity");
+	}
+
+	assert(res == FSM_GETENDIDS_FOUND);
+	assert(written < ID_BUF_COUNT);
+	assert(written > 0);
+
+	m = ast_getendmappingbyendid(id_buf[0]);
+
+	if (LOG()) {
+		fprintf(stderr, "ast_getendmapping: got mapping %p mappings[%d]\n",
+		    (void *)m, id_buf[0]);
+	}
+	return m;
+}

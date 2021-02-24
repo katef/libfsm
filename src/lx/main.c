@@ -250,10 +250,12 @@ lang_exclude(const char *name)
 	exit(EXIT_FAILURE);
 }
 
+#if 0
 static void
 carryopaque(const struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
 	struct fsm *dst_fsm, fsm_state_t dst_state)
 {
+
 	struct mapping_set *conflict;
 	struct ast_mapping *m;
 	size_t i;
@@ -367,6 +369,7 @@ error:
 
 	return;
 }
+#endif
 
 static int
 zone_equal(const struct ast_zone *a, const struct ast_zone *b)
@@ -410,14 +413,14 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 	}
 
 	{
-		opt.carryopaque = carryopaque;
+		/* opt.carryopaque = carryopaque; */
 
 		if (!fsm_determinise(q)) {
 			fsm_free(q);
 			return -1;
 		}
 
-		opt.carryopaque = NULL;
+		/* opt.carryopaque = NULL; */
 	}
 
 	{
@@ -429,7 +432,11 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 				continue;
 			}
 
-			m = fsm_getopaque(q, i);
+			m = ast_getendmapping(q, i);
+
+			if (LOG()) {
+				fprintf(stderr, "zone_equal: asserting ast_getendmapping(q, state %d) != NULL: %p\n", i, (void *)m);
+			}
 			assert(m != NULL);
 
 			if (m->conflict != NULL) {
@@ -509,7 +516,15 @@ zone_minimise(void *arg)
 			}
 
 			/* Attach this mapping to each end state for this FSM */
-			fsm_setendopaque(m->fsm, m);
+			/* fsm_setendopaque(m->fsm, m); */
+			if (LOG()) {
+				fprintf(stderr, "zone_minimise: ast_setendmapping(m->fsm, m: %p)\n",
+				    (void *)m);
+			}
+
+			if (!ast_setendmapping(m->fsm, m)) {
+				assert(!"failed");
+			}
 
 			(void) fsm_getstart(m->fsm, &ms);
 
@@ -781,12 +796,12 @@ main(int argc, char *argv[])
 				zn = 0;
 			}
 
-			opt.carryopaque = carryopaque;
+			/* opt.carryopaque = carryopaque; */
 			cur_zone = ast->zl;
 			if (run_threads(concurrency, zone_determinise)) {
 				return EXIT_FAILURE;
 			}
-			opt.carryopaque = NULL;
+			/* opt.carryopaque = NULL; */
 
 			if (print_progress) {
 				fprintf(stderr, "\n");
@@ -848,7 +863,10 @@ main(int argc, char *argv[])
 								continue;
 							}
 
-							m = fsm_getopaque(q->fsm, i);
+							m = ast_getendmapping(q->fsm, i);
+							if (LOG()) {
+								fprintf(stderr, "main: m <- ast_getendmapping(dst_fsm, i]: %d) = %p    // remove duplicate zones?\n", i, (void *)m);
+							}
 							assert(m != NULL);
 
 							if (m->to == *p) {
@@ -939,7 +957,11 @@ main(int argc, char *argv[])
 					continue;
 				}
 
-				m = fsm_getopaque(z->fsm, i);
+				/* FIXME: get mapping for end state i */
+				m = ast_getendmapping(z->fsm, i);
+				if (LOG()) {
+					fprintf(stderr, "main: m <- ast_getendmapping(dst_fsm, i]: %d) = %p    // pick up conflicts\n", i, (void *)m);
+				}
 				assert(m != NULL);
 
 				if (m->conflict != NULL) {
@@ -1018,7 +1040,10 @@ main(int argc, char *argv[])
 					continue;
 				}
 
-				m = fsm_getopaque(z->fsm, i);
+				m = ast_getendmapping(z->fsm, i);
+				if (LOG()) {
+					fprintf(stderr, "main: m <- ast_getendmapping(dst_fsm, i]: %d) = %p     // free conflicts\n", i, (void *)m);
+				}
 				if (m != NULL) {
 					assert(m->fsm == NULL);
 
