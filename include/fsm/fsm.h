@@ -32,6 +32,13 @@ typedef unsigned int fsm_state_t;
  * their end states. These can be used to determine which of the
  * original FSM(s) matched when executing a combined FSM. */
 typedef unsigned int fsm_end_id_t;
+#define FSM_END_ID_NONE ((unsigned int)-1)
+
+/* struct used to return a collection of end IDs. */
+struct fsm_end_ids {
+	unsigned count;
+	fsm_end_id_t ids[1];
+};
 
 /*
  * Create a new FSM. This is to be freed with fsm_free(). A structure allocated

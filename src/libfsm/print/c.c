@@ -157,7 +157,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 	case IR_NONE:
 		fprintf(f, "\t\t\t");
-		leaf(f, cs->opaque, leaf_opaque);
+		leaf(f, cs->end_ids, leaf_opaque);
 		fprintf(f, "\n");
 		return;
 
@@ -184,7 +184,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		print_groups(f, ir, opt, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
 
 		fprintf(f, "\t\t\tdefault:  ");
-		leaf(f, cs->opaque, leaf_opaque);
+		leaf(f, cs->end_ids, leaf_opaque);
 		fprintf(f, "\n");
 
 		fprintf(f, "\t\t\t}\n");
@@ -213,7 +213,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		print_ranges(f, ir, opt, cs->u.error.error.ranges, cs->u.error.error.n);
 		fprintf(f, " ");
-		leaf(f, cs->opaque, leaf_opaque);
+		leaf(f, cs->end_ids, leaf_opaque);
 		fprintf(f, "\n");
 
 		fprintf(f, "\t\t\tdefault: ");
@@ -285,7 +285,7 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 
 		fprintf(f, "\tcase S%u: ", i);
 		if (opt->endleaf != NULL) {
-			opt->endleaf(f, ir->states[i].opaque, opt->endleaf_opaque);
+			opt->endleaf(f, ir->states[i].end_ids, opt->endleaf_opaque);
 		} else {
 			fprintf(f, "return %u;", i);
 		}

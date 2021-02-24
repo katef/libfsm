@@ -471,7 +471,26 @@ make_ir(const struct fsm *fsm)
 		assert(i < ir->n);
 
 		ir->states[i].isend  = fsm_isend(fsm, i);
-		ir->states[i].opaque = fsm_isend(fsm, i) ? fsm_getopaque(fsm, i) : NULL;
+		ir->states[i].end_ids = NULL;
+		if (fsm_isend(fsm, i)) {
+			enum fsm_getendids_res res;
+			size_t written;
+			const size_t count = fsm_getendidcount(fsm, i);
+			struct fsm_end_ids *ids = f_malloc(fsm->opt->alloc,
+			    sizeof(*ids) + ((count - 1) * sizeof(ids->ids)));
+			if (ids == NULL) {
+				goto error;
+			}
+
+			res = fsm_getendids(fsm, i, count,
+			    ids->ids, &written);
+			if (res == FSM_GETENDIDS_FOUND) {
+				ids->count = (unsigned)written;
+				ir->states[i].end_ids = ids;
+			} else {
+				assert(res == FSM_GETENDIDS_NOT_FOUND);
+			}
+		}
 
 		if (make_state(fsm, i, ir, &ir->states[i]) == -1) {
 			goto error;
@@ -564,6 +583,8 @@ free_ir(const struct fsm *fsm, struct ir *ir)
 
 	for (i = 0; i < ir->n; i++) {
 		f_free(fsm->opt->alloc, (void *) ir->states[i].example);
+
+		f_free(fsm->opt->alloc, (void *) ir->states[i].end_ids);
 
 		switch (ir->states[i].strategy) {
 		case IR_TABLE:

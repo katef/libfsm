@@ -174,12 +174,30 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 
 	for (i = 0; i < fsm->statecount; i++) {
 		if (fsm_isend(fsm, i)) {
+			enum fsm_getendids_res res;
+			size_t written;
+			struct fsm_end_ids *ids = NULL;
+			const size_t count = fsm_getendidcount(fsm, i);
+			if (count > 0) {
+				ids = f_malloc(fsm->opt->alloc,
+			    sizeof(*ids) + ((count - 1) * sizeof(ids->ids)));
+				assert(ids != NULL);
+
+				res = fsm_getendids(fsm, i, count,
+				    ids->ids, &written);
+				if (res == FSM_GETENDIDS_FOUND) {
+					ids->count = (unsigned)written;
+				} else {
+					assert(res == FSM_GETENDIDS_NOT_FOUND);
+				}
+			}
+
 			fprintf(f, "\t%sS%-2u [ shape = doublecircle",
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "", i);
 
 			if (fsm->opt->endleaf != NULL) {
 				fprintf(f, ", ");
-				fsm->opt->endleaf(f, &fsm->states[i], fsm->opt->endleaf_opaque);
+				fsm->opt->endleaf(f, ids, fsm->opt->endleaf_opaque);
 			}
 
 			fprintf(f, " ];\n");

@@ -407,12 +407,13 @@ printexample(FILE *f, const struct fsm *fsm, fsm_state_t state)
 }
 
 static int
-endleaf_c(FILE *f, const void *state_opaque, const void *endleaf_opaque)
+endleaf_c(FILE *f, const struct fsm_end_ids *end_ids,
+    const void *endleaf_opaque)
 {
 	const struct match *m;
 	int n;
+	size_t i, end_ids_count;
 
-	assert(state_opaque != NULL);
 	assert(endleaf_opaque == NULL);
 
 	(void) f;
@@ -420,19 +421,25 @@ endleaf_c(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 
 	n = 0;
 
-	for (m = state_opaque; m != NULL; m = m->next) {
-		n |= 1 << m->i;
+	end_ids_count = (end_ids == NULL ? 0 : end_ids->count);
+
+	for (i = 0; i < end_ids_count; i++) {
+		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
+			n |= 1 << m->i;
+		}
 	}
 
 	fprintf(f, "return %#x;", (unsigned) n);
 
 	fprintf(f, " /* ");
 
-	for (m = state_opaque; m != NULL; m = m->next) {
-		fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
+	for (i = 0; i < end_ids_count; i++) {
+		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
+			fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
 
-		if (m->next != NULL) {
-			fprintf(f, ", ");
+			if (m->next != NULL || i < end_ids_count - 1) {
+				fprintf(f, ", ");
+			}
 		}
 	}
 
@@ -442,12 +449,13 @@ endleaf_c(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 }
 
 static int
-endleaf_rust(FILE *f, const void *state_opaque, const void *endleaf_opaque)
+endleaf_rust(FILE *f, const struct fsm_end_ids *end_ids,
+    const void *endleaf_opaque)
 {
 	const struct match *m;
 	int n;
+	size_t i, end_ids_count;
 
-	assert(state_opaque != NULL);
 	assert(endleaf_opaque == NULL);
 
 	(void) f;
@@ -455,19 +463,25 @@ endleaf_rust(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 
 	n = 0;
 
-	for (m = state_opaque; m != NULL; m = m->next) {
-		n |= 1 << m->i;
+	end_ids_count = (end_ids == NULL ? 0 : end_ids->count);
+
+	for (i = 0; i < end_ids_count; i++) {
+		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
+			n |= 1 << m->i;
+		}
 	}
 
 	fprintf(f, "return Some(%#x)", (unsigned) n);
 
 	fprintf(f, " /* ");
 
-	for (m = state_opaque; m != NULL; m = m->next) {
-		fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
+	for (i = 0; i < end_ids_count; i++) {
+		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
+			fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
 
-		if (m->next != NULL) {
-			fprintf(f, ", ");
+			if (m->next != NULL || i < end_ids_count - 1) {
+				fprintf(f, ", ");
+			}
 		}
 	}
 
@@ -477,23 +491,28 @@ endleaf_rust(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 }
 
 static int
-endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
+endleaf_dot(FILE *f, const struct fsm_end_ids *end_ids,
+    const void *endleaf_opaque)
 {
 	const struct match *m;
+	size_t i, end_ids_count;
 
 	assert(f != NULL);
-	assert(state_opaque != NULL);
 	assert(endleaf_opaque == NULL);
 
 	(void) endleaf_opaque;
 
 	fprintf(f, "label = <");
 
-	for (m = state_opaque; m != NULL; m = m->next) {
-		fprintf(f, "#%u", m->i);
+	end_ids_count = (end_ids == NULL ? 0 : end_ids->count);
 
-		if (m->next != NULL) {
-			fprintf(f, ",");
+	for (i = 0; i < end_ids_count; i++) {
+		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
+			fprintf(f, "#%u", m->i);
+
+			if (m->next != NULL || i < end_ids_count - 1) {
+				fprintf(f, ",");
+			}
 		}
 	}
 
@@ -505,11 +524,13 @@ endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 #if 0
 	fprintf(f, " # ");
 
-	for (m = state_opaque; m != NULL; m = m->next) {
-		fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
+	for (i = 0; i < end_ids_count; i++) {
+		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
+			fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
 
-		if (m->next != NULL) {
-			fprintf(f, ", ");
+			if (m->next != NULL || i < end_ids_count - 1) {
+				fprintf(f, ", ");
+			}
 		}
 	}
 
@@ -520,23 +541,28 @@ endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
 }
 
 static int
-endleaf_json(FILE *f, const void *state_opaque, const void *endleaf_opaque)
+endleaf_json(FILE *f, const struct fsm_end_ids *end_ids,
+    const void *endleaf_opaque)
 {
 	const struct match *m;
+	size_t i, end_ids_count;
 
 	assert(f != NULL);
-	assert(state_opaque != NULL);
 	assert(endleaf_opaque == NULL);
 
 	(void) endleaf_opaque;
 
 	fprintf(f, "[ ");
 
-	for (m = state_opaque; m != NULL; m = m->next) {
-		fprintf(f, "%u", m->i);
+	end_ids_count = (end_ids == NULL ? 0 : end_ids->count);
 
-		if (m->next != NULL) {
-			fprintf(f, ", ");
+	for (i = 0; i < end_ids_count; i++) {
+		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
+			fprintf(f, "%u", m->i);
+
+			if (m->next != NULL) {
+				fprintf(f, ", ");
+			}
 		}
 	}
 
