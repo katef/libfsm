@@ -121,6 +121,7 @@ SRC += src/libre/class/${class}.c
 
 .endfor
 
+.if make(gen)
 gen:: src/libre/class.h
 src/libre/class.h:
 	printf "/* generated */\n" > ${.TARGET}
@@ -152,10 +153,13 @@ src/libre/class.h:
 	done >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "#endif\n" >> ${.TARGET}
+.endif
 
+.if make(gen)
 .for src in ${SRC:Msrc/libre/class/*.c}
 gen:: ${src}
 .endfor
+.endif
 
 .for src in ${SRC:Msrc/libre/class/*.c}
 CFLAGS.${src} += -I src/libre # XXX: for class.h
@@ -179,6 +183,7 @@ CFLAGS.${src} += -Wno-overflow
 .endfor
 .endif
 
+.if make(gen)
 gen:: src/libre/class_name.c
 src/libre/class_name.c:
 	printf "/* generated */\n" > ${.TARGET}
@@ -219,4 +224,5 @@ src/libre/class_name.c:
 	printf "\treturn NULL;\n" >> ${.TARGET}
 	printf "}\n" >> ${.TARGET}
 	printf "\n" >> ${.TARGET}
+.endif
 
