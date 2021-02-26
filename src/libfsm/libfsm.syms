@@ -76,9 +76,6 @@ fsm_subgraph_duplicate
 fsm_setstart
 fsm_getstart
 fsm_setend
-fsm_setendopaque
-fsm_setopaque
-fsm_getopaque
 
 fsm_getendidcount
 fsm_getendids
@@ -95,8 +92,6 @@ fsm_complete
 fsm_minimise
 fsm_concat
 fsm_subtract
-
-fsm_carryopaque
 
 fsm_empty
 fsm_equal

@@ -154,7 +154,6 @@ captest_fsm_of_string(const char *string, unsigned end_id)
 		}
 	}
 	fsm_setend(fsm, length, 1);
-	fsm_setopaque(fsm, length, eo);
 
 	if (!fsm_setendid(fsm, end_id)) {
 		goto cleanup;

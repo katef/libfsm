@@ -191,24 +191,6 @@ fsm_findmode(const struct fsm *fsm, fsm_state_t state, unsigned int *freq);
 void
 fsm_setend(struct fsm *fsm, fsm_state_t state, int end);
 
-/*
- * Set data associated with all end states.
- */
-void
-fsm_setendopaque(struct fsm *fsm, void *opaque);
-
-/*
- * Set data associated with an end state.
- */
-void
-fsm_setopaque(struct fsm *fsm, fsm_state_t state, void *opaque);
-
-/*
- * Get data associated with an end state.
- */
-void *
-fsm_getopaque(const struct fsm *fsm, fsm_state_t state);
-
 /* Associate a numeric ID with the end states in an fsm.
  * This can be used to track which of the original fsms matched
  * input when multiple fsms are combined.

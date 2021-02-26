@@ -242,7 +242,6 @@ fsm_reverse(struct fsm *fsm)
 			fsm_setend(fsm, end, 1);
 
 			/* TODO: if we keep a fsm-wide endset, we can use it verbatim here */
-			fsm_carryopaque(fsm, endset, fsm, end);
 		}
 
 		for (state_set_reset(endset, &it); state_set_next(&it, &s); ) {
@@ -261,7 +260,6 @@ fsm_reverse(struct fsm *fsm)
 	if (state_set_count(endset) > 1 && !hasepsilons && state_set_has(fsm, endset, fsm_isend)) {
 		assert(!fsm_isend(fsm, start));
 		fsm_setend(fsm, start, 1);
-		fsm_carryopaque(fsm, endset, fsm, start);
 	}
 
 	{

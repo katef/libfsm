@@ -158,24 +158,16 @@ fsm_glushkovise(struct fsm *nfa)
 		}
 
 		/*
-		 * Carry through opaque values, if present. This isn't anything to do
+		 * Carry through end IDs, if present. This isn't anything to do
 		 * with the NFA conversion; it's meaningful only to the caller.
 		 *
 		 * The closure may contain non-end states, but at least one state is
 		 * known to have been an end state.
 		 */
-		fsm_carryopaque(nfa, eclosures[s], nfa, s);
-
 		if (!carry_endids(nfa, eclosures[s], s)) {
 			free_closure_sets(sclosures);
 			goto error;
 		}
-
-#if 0
-		if (!fsm_endid_carry(nfa, eclosures[s], nfa, s)) {
-			goto error;
-		}
-#endif
 	}
 
 	if (!remap_capture_actions(nfa, eclosures)) {

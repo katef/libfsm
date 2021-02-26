@@ -897,7 +897,6 @@ main(int argc, char *argv[])
 				 * Attach this mapping to each end state for this regexp.
 				 * XXX: we should share the same matches struct for all end states
 				 * in the same regexp, and keep an argc-sized array of pointers to free().
-				 * XXX: then use fsm_setendopaque() here.
 				 */
 				if (!fsm_setendid(new, i)) {
 					perror("fsm_setendid");

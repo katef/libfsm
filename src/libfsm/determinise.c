@@ -231,14 +231,12 @@ fsm_determinise(struct fsm *nfa)
 			fsm_setend(dfa, m->dfastate, 1);
 
 			/*
-			 * Carry through opaque values, if present. This isn't anything to do
+			 * Carry through end IDs, if present. This isn't anything to do
 			 * with the DFA conversion; it's meaningful only to the caller.
 			 *
 			 * The closure may contain non-end states, but at least one state is
 			 * known to have been an end state.
 			 */
-			fsm_carryopaque(nfa, ss, dfa, m->dfastate);
-
 			if (!fsm_endid_carry(nfa, ss, dfa, m->dfastate)) {
 				goto cleanup;
 			}
