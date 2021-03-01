@@ -11,17 +11,13 @@
 static enum theft_trial_res
 prop_union_literals(struct theft *t, void *arg1);
 static struct fsm *
-add_literal(struct fsm *fsm, const uint8_t *string, size_t size, intptr_t id);
+add_literal(struct fsm *fsm, const uint8_t *string, size_t size, fsm_end_id_t id);
 static bool
-check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, intptr_t id);
-static void
-carryopaque_cb(const struct fsm *src_fsm, const fsm_state_t *set, size_t count,
-	struct fsm *dst_fsm, fsm_state_t state);
+check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, fsm_end_id_t id);
 
 static const struct fsm_options opt = {
 	.anonymous_states  = 1,
 	.consolidate_edges = 1,
-	.carryopaque = carryopaque_cb,
 };
 
 static bool
@@ -62,13 +58,10 @@ test_union_literals(theft_seed seed)
 }
 
 static enum theft_trial_res
-prop_union_literals(struct theft *t, void *arg1)
+check_union_literals(struct fsm_literal_scen *scen)
 {
-	struct fsm_literal_scen *scen = arg1;
 	struct fsm *fsm;
 	fsm_state_t s;
-
-	(void) t;
 
 	fsm = fsm_new(&opt);
 	if (fsm == NULL) {
@@ -102,8 +95,8 @@ prop_union_literals(struct theft *t, void *arg1)
 		goto fail;
 	}
 
-	for (size_t lit_i = 0; lit_i < scen->count; lit_i++) {
-		if (!check_literal(fsm, scen, (intptr_t) lit_i)) {
+	for (fsm_end_id_t lit_i = 0; lit_i < scen->count; lit_i++) {
+		if (!check_literal(fsm, scen, lit_i)) {
 			goto fail;
 		}
 	}
@@ -119,8 +112,16 @@ fail:
 	return THEFT_TRIAL_FAIL;
 }
 
+static enum theft_trial_res
+prop_union_literals(struct theft *t, void *arg1)
+{
+	struct fsm_literal_scen *scen = arg1;
+	(void)t;
+	return check_union_literals(scen);
+}
+
 static struct fsm *
-add_literal(struct fsm *fsm, const uint8_t *string, size_t size, intptr_t id)
+add_literal(struct fsm *fsm, const uint8_t *string, size_t size, fsm_end_id_t id)
 {
 	struct fsm *new;
 	struct fsm *res;
@@ -137,30 +138,29 @@ add_literal(struct fsm *fsm, const uint8_t *string, size_t size, intptr_t id)
 		return NULL;
 	}
 
-	fsm_setendopaque(new, (void *) id);
+	if (!fsm_setendid(new, id)) {
+		return NULL;
+	}
 
 	res = fsm_union(fsm, new, NULL);
 	if (res == NULL) {
 		return NULL;
 	}
 
-	return fsm;
+	return res;
 }
 
 /* Check that literal with number LIT_I is still associated with the
- * correct opaque info (its ID). */
+ * correct end ID. */
 static bool
-check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, intptr_t id)
+check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, fsm_end_id_t id)
 {
-	intptr_t count;
-	intptr_t opaque;
+	fsm_end_id_t count;
 	fsm_state_t st;
 	int e;
 
 	count = (intptr_t) scen->count;
 
-	assert(count >= 0);
-	assert(id >= 0);
 	assert(id < count);
 	assert(scen->pairs[id].size > 0);
 
@@ -174,71 +174,24 @@ check_literal(struct fsm *fsm, struct fsm_literal_scen *scen, intptr_t id)
 		return false;
 	}
 
-	opaque = (intptr_t) fsm_getopaque(fsm, st);
-	if (opaque == id) {
-		return true;
-	}
+	{
+		enum fsm_getendids_res eres;
+		fsm_end_id_t got;
+		size_t written;
+		eres = fsm_getendids(fsm, st, 1, &got, &written);
+		if (eres == FSM_GETENDIDS_FOUND
+			&& written == 1
+			&& got == id) {
+			return true;
+		}
 
-	if (scen->verbosity > 0) {
-		printf("FAIL: fsm_getopaque failure, exp % "
-			PRIdPTR ", got %" PRIdPTR" \n",
-			id, opaque);
+		if (scen->verbosity > 0) {
+			printf("FAIL: fsm_getendids failure, exp %u, got %u\n",
+			    id, got);
+		}
 	}
 
 	return false;
-}
-
-static void
-carryopaque_cb(const struct fsm *src_fsm, const fsm_state_t *set, size_t count,
-	struct fsm *dst_fsm, fsm_state_t state)
-{
-	const intptr_t NONE = -1;
-	intptr_t first_id;
-	size_t first_i;
-	intptr_t other;
-	size_t i;
-
-	(void)src_fsm;
-
-	if (!fsm_isend(dst_fsm, state)) {
-		return;
-	}
-
-	assert(fsm_getopaque(dst_fsm, state) == NULL);
-
-	/* Get the first id */
-	first_id = NONE;
-
-	for (first_i = 0; first_i < count; first_i++) {
-		/* Get first udata */
-		if (fsm_isend(dst_fsm, set[first_i])) {
-			first_id = (intptr_t) fsm_getopaque(dst_fsm, set[first_i]);
-			fsm_setopaque(dst_fsm, state, (void *) first_id);
-			break;
-		}
-	}
-
-	other = NONE;
-	for (i = 0; i < count; i++) {
-		if (i == first_i) {
-			continue;
-		}
-
-		if (!fsm_isend(dst_fsm, set[i])) {
-			continue;
-		}
-
-		assert(fsm_getopaque(dst_fsm, set[i]) != NULL);
-		other = (intptr_t) fsm_getopaque(dst_fsm, set[i]);
-	}
-
-	if (first_id != NONE && other == NONE) {
-		fsm_setopaque(dst_fsm, state, (void *) first_id);
-	} else if (first_id == NONE && other != NONE) {
-		fsm_setopaque(dst_fsm, state, (void *) other);
-	} else if (first_id != other) {
-		printf("CONFLICT\n");
-	}
 }
 
 void

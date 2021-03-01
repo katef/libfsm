@@ -570,68 +570,17 @@ compare_endids(const struct check_env *env, fsm_state_t combined_end,
 
 static struct fsm_options options;
 
-static void css_carryopaque(const struct fsm *src_fsm,
-    const fsm_state_t *src_set, size_t n,
-    struct fsm *dst_fsm, fsm_state_t dst_state)
-{
-	struct css_end_opaque *eo_src = NULL;
-	struct css_end_opaque *eo_dst = NULL;
-	struct css_end_opaque *eo_old_dst = NULL;
-	size_t i;
-
-	eo_old_dst = fsm_getopaque(dst_fsm, dst_state);
-
-	eo_dst = calloc(1, sizeof(*eo_dst));
-	assert(eo_dst != NULL);
-	eo_dst->tag = CSS_END_OPAQUE_TAG;
-
-	if (eo_old_dst != NULL) {
-		assert(eo_old_dst->tag == CSS_END_OPAQUE_TAG);
-		eo_dst->ends |= eo_old_dst->ends;
-	}
-
-	fsm_setopaque(dst_fsm, dst_state, eo_dst);
-
-	/* union bits set in eo_src->ends into eo_dst->ends and free */
-	for (i = 0; i < n; i++) {
-		if (!fsm_isend(src_fsm, src_set[i])) {
-			continue;
-		}
-
-		eo_src = fsm_getopaque(src_fsm, src_set[i]);
-		if (eo_src == NULL) {
-			continue;
-		}
-		assert(eo_src->tag == CSS_END_OPAQUE_TAG);
-		eo_dst->ends |= eo_src->ends;
-	}
-}
-
 static struct fsm *
 build_capstring_dfa(const struct capstring *cs, uint8_t end_id)
 {
 	struct fsm *fsm = NULL;
 	size_t i;
-	struct css_end_opaque *eo = NULL;
 	const size_t length = strlen(cs->string);
 	size_t states = 0;
 	fsm_state_t state, prev;
 
-	if (options.carryopaque == NULL) { /* initialize */
-		options.carryopaque = css_carryopaque;
-	}
-
 	fsm = fsm_new(&options);
 	if (fsm == NULL) { goto cleanup; }
-
-	eo = calloc(1, sizeof(*eo));
-	assert(eo != NULL);
-
-	eo->tag = CSS_END_OPAQUE_TAG;
-
-	/* set bit for end state */
-	assert(end_id < 8*sizeof(eo->ends));
-	eo->ends |= (1U << end_id);
 
 	if (!fsm_addstate(fsm, &state)) {
 		goto cleanup;
@@ -677,7 +626,6 @@ build_capstring_dfa(const struct capstring *cs, uint8_t end_id)
 	}
 
 	fsm_setend(fsm, state, 1);
-	fsm_setopaque(fsm, state, eo);
 
 	if (!fsm_setendid(fsm, end_id)) {
 		goto cleanup;
@@ -698,7 +646,6 @@ build_capstring_dfa(const struct capstring *cs, uint8_t end_id)
 	return fsm;
 
 cleanup:
-	free(eo);
 	fsm_free(fsm);
 	return NULL;
 }
