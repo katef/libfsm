@@ -10,9 +10,6 @@
 struct fsm;
 struct var;
 
-#include <unistd.h>
-#define LOG() getenv("LOG")
-
 struct ast_mapping {
 	struct fsm *fsm;
 	struct ast_token *token;

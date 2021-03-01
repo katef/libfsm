@@ -14,6 +14,7 @@
 
 #include "libfsm/internal.h" /* XXX */
 
+#include "lx.h"
 #include "ast.h"
 #include "tokens.h"
 

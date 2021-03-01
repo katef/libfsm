@@ -21,6 +21,7 @@
 #include "libfsm/internal.h" /* XXX */
 #include "libfsm/print/ir.h" /* XXX */
 
+#include "lx/lx.h"
 #include "lx/ast.h"
 #include "lx/print.h"
 
