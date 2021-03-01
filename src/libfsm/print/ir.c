@@ -489,6 +489,7 @@ make_ir(const struct fsm *fsm)
 				ir->states[i].end_ids = ids;
 			} else {
 				assert(res == FSM_GETENDIDS_NOT_FOUND);
+				f_free(fsm->opt->alloc, ids);
 			}
 		}
 
