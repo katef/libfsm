@@ -137,7 +137,6 @@ captest_fsm_of_string(const char *string, unsigned end_id)
 	struct fsm *fsm = captest_fsm_with_options();
 	const size_t length = strlen(string);
 	size_t i;
-	struct captest_end_opaque *eo = NULL;
 
 	if (fsm == NULL) {
 		return NULL;
