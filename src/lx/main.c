@@ -850,7 +850,6 @@ main(int argc, char *argv[])
 					continue;
 				}
 
-				/* FIXME: get mapping for end state i */
 				m = ast_getendmapping(z->fsm, i);
 				if (LOG()) {
 					fprintf(stderr, "main: m <- ast_getendmapping(dst_fsm, i]: %d) = %p    // pick up conflicts\n", i, (void *)m);
