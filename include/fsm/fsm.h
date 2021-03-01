@@ -32,7 +32,6 @@ typedef unsigned int fsm_state_t;
  * their end states. These can be used to determine which of the
  * original FSM(s) matched when executing a combined FSM. */
 typedef unsigned int fsm_end_id_t;
-#define FSM_END_ID_NONE ((unsigned int)-1)
 
 /* struct used to return a collection of end IDs. */
 struct fsm_end_ids {
