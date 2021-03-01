@@ -189,17 +189,11 @@ walk2mask(int has_a, int has_b)
 
 static int
 walk2_comb_state(struct fsm *dst_fsm, int is_end,
-	const struct fsm *fsm_a, fsm_state_t a,
-	const struct fsm *fsm_b, fsm_state_t b,
 	fsm_state_t *comb) 
 {
-	struct fsm_state states[2];
-	fsm_state_t state_ids[2];
-	size_t count;
-	unsigned endcount;
 
-    assert(dst_fsm != NULL); 
-    assert(comb != NULL); 
+	assert(dst_fsm != NULL);
+	assert(comb != NULL);
  
 	if (!fsm_addstate(dst_fsm, comb)) {
 		return 0;
@@ -210,27 +204,6 @@ walk2_comb_state(struct fsm *dst_fsm, int is_end,
 	}
 
 	fsm_setend(dst_fsm, *comb, 1);
-
-	if (dst_fsm->opt == NULL) {
-		return 1;
-	}
-
-	count = 0;
-	endcount = 0;
-
-	if (fsm_a != NULL) {
-		state_ids[count] = a;
-		memcpy(&states[count], &fsm_a->states[a], sizeof *states);
-		count++;
-		endcount += fsm_isend(fsm_a, a);
-	}
-
-	if (fsm_b != NULL) {
-		state_ids[count] = b;
-		memcpy(&states[count], &fsm_a->states[b], sizeof *states);
-		count++;
-		endcount += fsm_isend(fsm_b, b);
-	}
 
 	return 1;
 } 
@@ -284,7 +257,7 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		p->b = b;
 	}
 
-	if (!walk2_comb_state(data->new, is_end, fsm_a, a, fsm_b, b, &p->comb)) {
+	if (!walk2_comb_state(data->new, is_end, &p->comb)) {
 		return NULL;
 	}
 
