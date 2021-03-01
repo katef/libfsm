@@ -26,7 +26,7 @@ ${TEST_OUTDIR.tests/pcre-pcregrep}/in${n}.txt: ${TEST_SRCDIR.tests/pcre}/in${n}.
 	> $@
 
 ${TEST_OUTDIR.tests/pcre-pcregrep}/res${n}: ${TEST_OUTDIR.tests/pcre-pcregrep}/in${n}.txt
-	${PCREGREP} -M -qxf ${TEST_SRCDIR.tests/pcre}/in${n}.re < ${.ALLSRC:M*.txt}; \
+	${PCREGREP} -M --no-jit -qxf ${TEST_SRCDIR.tests/pcre}/in${n}.re < ${.ALLSRC:M*.txt}; \
 	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
 	> $@
 
