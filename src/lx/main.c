@@ -6,6 +6,8 @@
 
 #define _POSIX_C_SOURCE 2
 
+#include "lx.h"
+
 #include <unistd.h>
 
 #include <assert.h>
@@ -50,7 +52,20 @@ int keep_nfa;
 struct ast_zone *cur_zone = NULL;
 unsigned zn = 0;
 int zerror = 0;
-pthread_mutex_t zmtx = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t zmtx = PTHREAD_MUTEX_INITIALIZER;
+
+void
+lx_mutex_lock(void)
+{
+	pthread_mutex_lock(&zmtx);
+}
+
+void
+lx_mutex_unlock(void)
+{
+	pthread_mutex_unlock(&zmtx);
+}
+
 
 static
 void usage(void)

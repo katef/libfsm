@@ -20,6 +20,7 @@
 
 #include "libfsm/internal.h" /* XXX */
 
+#include "lx.h"
 #include "ast.h"
 
 struct ast *
@@ -171,14 +172,38 @@ ast_addconflict(struct mapping_set **head, struct ast_mapping *m)
 	return new;
 }
 
-#define MAX_MAPPINGS 64 	/* FIXME */
+#define DEF_MAPPINGS 4
 static fsm_end_id_t mapping_count = 0;
-static struct ast_mapping *mappings[MAX_MAPPINGS];
+static fsm_end_id_t mapping_ceil = DEF_MAPPINGS;
+static struct ast_mapping **mappings = NULL;
 
 int
 ast_setendmapping(struct fsm *fsm, struct ast_mapping *m)
 {
 	const fsm_end_id_t id = mapping_count;
+	fsm_end_id_t nceil = 0;
+
+	lx_mutex_lock();
+	if (mappings == NULL) {
+		nceil = DEF_MAPPINGS;
+	} else if (mapping_count == mapping_ceil) {
+		nceil = 2 * mapping_ceil;
+		assert(nceil > 0);
+	}
+
+	if (nceil > 0) {
+		struct ast_mapping **nmappings;
+		nmappings = realloc(mappings,
+		    nceil * sizeof(nmappings[0]));
+		if (nmappings == NULL) {
+			lx_mutex_unlock();
+			return 0;
+		}
+		mappings = nmappings;
+		mapping_ceil = nceil;
+	}
+
+	lx_mutex_unlock();
 
 	if (fsm_setendid(fsm, id)) {
 		if (LOG()) {
@@ -195,8 +220,14 @@ ast_setendmapping(struct fsm *fsm, struct ast_mapping *m)
 struct ast_mapping *
 ast_getendmappingbyendid(fsm_end_id_t id)
 {
+	struct ast_mapping *res;
+
+	lx_mutex_lock();
 	assert(id < mapping_count);
-	return mappings[id];
+	res = mappings[id];
+	lx_mutex_unlock();
+
+	return res;
 }
 
 struct ast_mapping *
