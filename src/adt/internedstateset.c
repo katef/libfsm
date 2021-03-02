@@ -116,7 +116,7 @@ interned_state_set_pool_alloc(const struct fsm_alloc *a)
 	{
 		const unsigned long mask = CACHE_BUCKET_DEF_CEIL - 1;
 		struct cache_bucket *b = &res->cache.buckets[empty_i->hash & mask];
-		assert(b->iss = NO_ISS);
+		assert(b->iss == NO_ISS);
 		b->hash = empty_i->hash;
 		b->iss = empty_i;
 	}
