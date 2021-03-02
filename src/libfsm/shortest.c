@@ -116,7 +116,7 @@ fsm_shortest(const struct fsm *fsm,
 
 			assert(v->state == e.state);
 
-			c = cost(u->state, v->state, e.symbol);
+			c = cost(u->state, v->state, (char)e.symbol);
 
 			/* relax */
 			if (v->cost > u->cost + c) {
