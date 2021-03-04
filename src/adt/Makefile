@@ -29,7 +29,7 @@ DFLAGS.${src} += -std=c99 # XXX: for internal.h
 .endfor
 
 # not all concrete set interfaces use all static functions from set.inc
-.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.if ${CC:T:Mgcc*} || ${CC:T:Mclang*}
 .for src in ${SRC:Msrc/adt/stateset.c} ${SRC:Msrc/adt/tupleset.c} ${SRC:Msrc/adt/edgeset.c}
 CFLAGS.${src} += -Wno-unused-function  
 .endfor
@@ -37,14 +37,14 @@ CFLAGS.${src} += -Wno-unused-function
 
 # I want to assert on things which are currently true for this platform,
 # but not true in general.
-.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.if ${CC:T:Mgcc*} || ${CC:T:Mclang*}
 .for src in ${SRC:Msrc/adt/stateset.c} ${SRC:Msrc/adt/tupleset.c} ${SRC:Msrc/adt/edgeset.c}
 CFLAGS.${src} += -Wno-tautological-constant-out-of-range-compare
 .endfor
 .endif
 
 # not all concrete hashset interfaces use all static functions from hashset.inc
-.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.if ${CC:T:Mgcc*} || ${CC:T:Mclang*}
 .for src in ${SRC:Msrc/adt/mappinghashset.c} ${SRC:Msrc/adt/statehashset.c}
 CFLAGS.${src} += -Wno-unused-function  
 .endfor
@@ -53,7 +53,7 @@ CFLAGS.${src} += -Wno-unused-function
 # fsm_state_t is smaller than the space for single-item set pointers,
 # but I want to assert on the range anyway just to surface that assumption
 # should the type ever change.
-.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.if ${CC:T:Mgcc*} || ${CC:T:Mclang*}
 .for src in ${SRC:Msrc/adt/stateset.c}
 CFLAGS.${src} += -Wno-type-limits
 .endfor
