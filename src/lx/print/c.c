@@ -455,7 +455,7 @@ print_buf(FILE *f)
 		fprintf(f, "\n");
 		fprintf(f, "\tassert(t != NULL);\n");
 		fprintf(f, "\n");
-		fprintf(f, "\tif (t->p == t->a + t->len) {\n");
+		fprintf(f, "\tif (t->a == NULL || t->p == t->a + t->len) {\n"); /* (t->a == NULL || ...) is to appease ubsan */
 		fprintf(f, "\t\tsize_t len;\n");
 		fprintf(f, "\t\tptrdiff_t off;\n");
 		fprintf(f, "\t\tchar *tmp;\n");

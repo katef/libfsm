@@ -83,7 +83,7 @@ lx_dynpush(void *buf_opaque, char c)
 
 	assert(t != NULL);
 
-	if (t->p == t->a + t->len) {
+	if (t->a == NULL || t->p == t->a + t->len) {
 		size_t len;
 		ptrdiff_t off;
 		char *tmp;
@@ -521,7 +521,7 @@ z3(struct lx *lx)
 		case S1: /* e.g. "a" */
 			lx_ungetc(lx, c); return lx->z(lx);
 
-		case S2: /* e.g. "\n" */
+		case S2: /* e.g. "" */
 			lx_ungetc(lx, c); return lx->z = z4, lx->z(lx);
 
 		default:
@@ -668,7 +668,7 @@ z4(struct lx *lx)
 			}
 			break;
 
-		case S1: /* e.g. "\t" */
+		case S1: /* e.g. "\\x09" */
 			switch ((unsigned char) c) {
 			case '\t':
 			case '\n':

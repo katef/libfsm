@@ -72,7 +72,7 @@ lx_native_dynpush(void *buf_opaque, char c)
 
 	assert(t != NULL);
 
-	if (t->p == t->a + t->len) {
+	if (t->a == NULL || t->p == t->a + t->len) {
 		size_t len;
 		ptrdiff_t off;
 		char *tmp;

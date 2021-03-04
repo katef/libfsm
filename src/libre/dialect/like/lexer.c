@@ -35,6 +35,7 @@ lx_getc(struct lx_like_lx *lx)
 
 	if (c == '\n') {
 		lx->end.line++;
+		lx->end.saved_col = lx->end.col - 1;
 		lx->end.col = 1;
 	}
 
@@ -58,7 +59,7 @@ lx_like_ungetc(struct lx_like_lx *lx, int c)
 
 	if (c == '\n') {
 		lx->end.line--;
-		lx->end.col = 0; /* XXX: lost information */
+		lx->end.col = lx->end.saved_col;
 	}
 }
 
@@ -69,7 +70,7 @@ lx_like_dynpush(void *buf_opaque, char c)
 
 	assert(t != NULL);
 
-	if (t->p == t->a + t->len) {
+	if (t->a == NULL || t->p == t->a + t->len) {
 		size_t len;
 		ptrdiff_t off;
 		char *tmp;
@@ -225,9 +226,9 @@ lx_like_example(enum lx_like_token (*z)(struct lx_like_lx *), enum lx_like_token
 
 	if (z == z0) {
 		switch (t) {
-		case TOK_CHAR: return "a";
-		case TOK_MANY: return "%";
-		case TOK_ANY: return "_";
+		case TOK_CHAR: return "";
+		case TOK_MANY: return "";
+		case TOK_ANY: return "";
 		default: goto error;
 		}
 	}
