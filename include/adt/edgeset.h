@@ -81,6 +81,10 @@ edge_set_add(struct edge_set **set, const struct fsm_alloc *alloc,
 	unsigned char symbol, fsm_state_t state);
 
 int
+edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
+	uint64_t symbols[256/64], fsm_state_t state);
+
+int
 edge_set_add_state_set(struct edge_set **setp, const struct fsm_alloc *alloc,
 	unsigned char symbol, const struct state_set *state_set);
 
