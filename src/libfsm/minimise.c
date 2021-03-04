@@ -265,7 +265,7 @@ build_minimised_mapping(const struct fsm *fsm,
 				if (next == NO_ID) {
 					continue;    /* 0 elements, skip */
 				}
-				should_gather_EC_labels = next & SMALL_EC_FLAG;
+				should_gather_EC_labels = (next & SMALL_EC_FLAG) != 0;
 				next = MASK_EC_HEAD(next);
 
 				if (env.jump[next] == NO_ID) {

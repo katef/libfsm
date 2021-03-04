@@ -140,7 +140,7 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 			fprintf(f, "%-2u -> %2u", s, e.state);
 
 			fputs(" \"", f);
-			fsm_escputc(f, fsm->opt, e.symbol);
+			fsm_escputc(f, fsm->opt, (char)e.symbol);
 			putc('\"', f);
 
 			fprintf(f, ";");

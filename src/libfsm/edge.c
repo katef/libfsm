@@ -43,7 +43,7 @@ fsm_addedge_any(struct fsm *fsm,
 
 	/* TODO: bulk add by symbol, presumably as a bitmap */
 	for (i = 0; i <= UCHAR_MAX; i++) {
-		if (!fsm_addedge_literal(fsm, from, to, (unsigned char) i)) {
+		if (!fsm_addedge_literal(fsm, from, to, (char)i)) {
 			return 0;
 		}
 	}
@@ -60,7 +60,7 @@ fsm_addedge_literal(struct fsm *fsm,
 	assert(from < fsm->statecount);
 	assert(to < fsm->statecount);
 
-	if (!edge_set_add(&fsm->states[from].edges, fsm->opt->alloc, c, to)) {
+	if (!edge_set_add(&fsm->states[from].edges, fsm->opt->alloc, (unsigned char)c, to)) {
 		return 0;
 	}
 

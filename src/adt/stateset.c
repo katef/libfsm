@@ -216,7 +216,6 @@ state_set_add(struct state_set **setp, const struct fsm_alloc *alloc,
 	size_t i;
 
 	assert(setp != NULL);
-	assert(state <= SINGLETON_MAX);
 
 	if (*setp == NULL) {
 		*setp = SINGLETON_ENCODE(state);
@@ -609,7 +608,6 @@ state_set_rebase(struct state_set **setp, fsm_state_t base)
 		state = SINGLETON_DECODE(*setp);
 		state += base;
 
-		assert(state <= SINGLETON_MAX);
 		*setp = SINGLETON_ENCODE(state);
 		return;
 	}
@@ -628,7 +626,6 @@ state_set_replace(struct state_set **setp, fsm_state_t old, fsm_state_t new)
 	size_t i;
 
 	assert(setp != NULL);
-	assert(new <= SINGLETON_MAX);
 
 	if (IS_SINGLETON(*setp)) {
 		if (SINGLETON_DECODE(*setp) != old) {

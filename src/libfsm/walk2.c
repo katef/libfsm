@@ -440,7 +440,7 @@ fsm_walk2_edges(struct fsm_walk2_data *data,
 
 		assert(dst->comb < data->new->statecount);
 
-		if (!fsm_addedge_literal(data->new, qc, dst->comb, i)) {
+		if (!fsm_addedge_literal(data->new, qc, dst->comb, (char)i)) {
 			return 0;
 		}
 
