@@ -41,6 +41,8 @@ struct edge_group_iter {
 	uint64_t internal[256/64];
 };
 
+/* TODO: symbols: macros for bit flags, first, count, etc. */
+
 struct edge_group_iter_info {
 	int unique;
 	fsm_state_t to;

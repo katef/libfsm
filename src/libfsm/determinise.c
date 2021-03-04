@@ -6,6 +6,8 @@
 
 #include "determinise_internal.h"
 
+#define PROCESS_AS_GROUP 1
+
 int
 fsm_determinise(struct fsm *nfa)
 {
@@ -17,6 +19,9 @@ fsm_determinise(struct fsm *nfa)
 	struct map map = { NULL, 0, 0, NULL };
 	struct mapping *curr = NULL;
 	size_t dfacount = 0;
+
+	size_t egm_count = 0;
+	struct edge_group_mapping egm[MAX_EGM] = { 0 };
 
 	assert(nfa != NULL);
 	map.alloc = nfa->opt->alloc;
@@ -77,7 +82,7 @@ fsm_determinise(struct fsm *nfa)
 			goto cleanup;
 		}
 
-		if (!map_add(&map, dfacount, start_set, &curr)) {
+		if (!map_add(&map, dfacount, start_set, start, &curr)) {
 			goto cleanup;
 		}
 		dfacount++;
@@ -95,7 +100,15 @@ fsm_determinise(struct fsm *nfa)
 	do {
 		struct interned_state_set *sclosures[FSM_SIGMA_COUNT] = { NULL };
 		int i;
+		fsm_state_t current_state;
 		assert(curr != NULL);
+
+		current_state = dfacount - 1; /*curr->oldstate;*/
+
+#if LOG_SYMBOL_CLOSURE
+		fprintf(stderr, "fsm_determinise: processing current state %d...\n",
+		    current_state);
+#endif
 
 		/*
 		 * The closure of a set is equivalent to the union of closures of
@@ -108,7 +121,7 @@ fsm_determinise(struct fsm *nfa)
 			struct state_set *ss = interned_state_set_retain(curr->iss);
 
 			for (state_set_reset(ss, &it); state_set_next(&it, &s); ) {
- 				if (!interned_symbol_closure_without_epsilons(nfa, s, issp, sclosures)) {
+ 				if (!interned_symbol_closure_without_epsilons(nfa, s, issp, sclosures, egm, &egm_count)) {
 					goto cleanup;
 				}
 			}
@@ -130,6 +143,8 @@ fsm_determinise(struct fsm *nfa)
 				fsm_state_t s;
 				struct state_set *ss = interned_state_set_retain(sclosures[i]);
 
+				/* TODO: this does not log associated group mapping */
+
 				for (state_set_reset(ss, &it); state_set_next(&it, &s); ) {
 					fprintf(stderr, " %u", s);
 				}
@@ -150,7 +165,7 @@ fsm_determinise(struct fsm *nfa)
 				assert(m->dfastate < dfacount);
 			} else {
 				/* not found -- add a new one */
-				if (!map_add(&map, dfacount, sclosures[i], &m)) {
+				if (!map_add(&map, dfacount, sclosures[i], current_state, &m)) {
 					goto cleanup;
 				}
 				dfacount++;
@@ -159,8 +174,28 @@ fsm_determinise(struct fsm *nfa)
 				}
 			}
 
-			if (!edge_set_add(&curr->edges, nfa->opt->alloc, i, m->dfastate)) {
-				goto cleanup;
+			{
+				uint64_t labels[4] = {0};
+				assert(m != NULL);
+#if LOG_SYMBOL_CLOSURE
+				fprintf(stderr, "fsm_determinise: checking load_egm...\n");
+#endif
+				if (load_egm(egm, egm_count, current_state, i, labels)) {
+					/* this label i actually refers to a group of labels, add them all */
+#if LOG_SYMBOL_CLOSURE
+					fprintf(stderr, "fsm_determinise: adding bulk...\n");
+#endif
+					if (!edge_set_add_bulk(&curr->edges, nfa->opt->alloc, labels, m->dfastate)) {
+						goto cleanup;
+					}
+				} else {
+#if LOG_SYMBOL_CLOSURE
+					fprintf(stderr, "fsm_determinise: adding single edge...\n");
+#endif
+					if (!edge_set_add(&curr->edges, nfa->opt->alloc, i, m->dfastate)) {
+						goto cleanup;
+					}
+				}
 			}
 		}
 
@@ -216,6 +251,10 @@ fsm_determinise(struct fsm *nfa)
 			assert(dfa->states[m->dfastate].edges == NULL);
 
 			dfa->states[m->dfastate].edges = m->edges;
+			/* FIXME add group edges */
+#if PROCESS_AS_GROUP
+
+#endif
 
 			/*
 			 * The current DFA state is an end state if any of its associated NFA
@@ -339,12 +378,39 @@ det_copy_capture_actions(struct reverse_mapping *reverse_mappings,
 }
 
 static int
+first_edge_label(const struct edge_group_iter_info *g,
+    unsigned char *label)
+{
+	size_t i = 0;
+	while (i < 256) {
+		if ((i & 63) == 0 && g->symbols[i/64] == 0) {
+			i += 64;
+		} else {
+			if (g->symbols[i/64] & ((size_t)1 << (i & 63))) {
+				*label = (unsigned char)i;
+				return 1;
+			}
+			i++;
+		}
+	}
+
+	return 0;
+}
+
+static int
 interned_symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
 	struct interned_state_set_pool *issp,
-	struct interned_state_set *sclosures[static FSM_SIGMA_COUNT])
+	struct interned_state_set *sclosures[static FSM_SIGMA_COUNT],
+	struct edge_group_mapping *egm, size_t *egm_count)
 {
+
+#if PROCESS_AS_GROUP
+	struct edge_group_iter egi;
+	struct edge_group_iter_info g; /* group info */
+#else
 	struct edge_iter jt;
 	struct fsm_edge e;
+#endif
 
 	assert(fsm != NULL);
 	assert(sclosures != NULL);
@@ -353,6 +419,66 @@ interned_symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
 		return 1;
 	}
 
+#if PROCESS_AS_GROUP
+	edge_set_group_iter_reset(fsm->states[s].edges,
+	    EDGE_GROUP_ITER_UNIQUE, &egi);
+	while (edge_set_group_iter_next(&egi, &g)) {
+
+#if LOG_SYMBOL_CLOSURE
+		fprintf(stderr, "iscwe: unique %d, to %d, symbols [0x%lx, 0x%lx, 0x%lx, 0x%lx]\n",
+		    g.unique, g.to,
+		    g.symbols[0], g.symbols[1], g.symbols[2], g.symbols[3]);
+#endif
+
+		if (!g.unique) {
+			size_t symbol;
+			for (symbol = 0; symbol < 256; symbol++) {
+				if (g.symbols[symbol/64] & ((size_t)1 << (symbol & 63))) {
+					struct interned_state_set *iss = sclosures[symbol];
+					struct interned_state_set *updated;
+					if (iss == NULL) {
+						iss = interned_state_set_empty(issp);
+					}
+
+					updated = interned_state_set_add(issp, iss, g.to);
+					if (updated == NULL) {
+						return 0;
+					}
+					sclosures[symbol] = updated;
+				}
+			}
+		} else {	/* unique, process as group */
+			unsigned char first;
+			if (!first_edge_label(&g, &first)) {
+#if LOG_SYMBOL_CLOSURE
+			fprintf(stderr, "iscwe: skipping empty\n");
+#endif
+				continue; /* empty */
+			}
+
+#if LOG_SYMBOL_CLOSURE
+			fprintf(stderr, "iscwe: first %d\n", first);
+#endif
+
+			if (!save_egm(egm, egm_count, s, g.to, first, g.symbols)) {
+				assert(!"fixme");
+			}
+
+			struct interned_state_set *iss = sclosures[first];
+			struct interned_state_set *updated;
+			if (iss == NULL) {
+				iss = interned_state_set_empty(issp);
+			}
+
+			updated = interned_state_set_add(issp, iss, g.to);
+			if (updated == NULL) {
+				return 0;
+			}
+			sclosures[first] = updated;
+		}
+	}
+
+#else
 	/*
 	 * TODO: it's common for many symbols to have transitions to the same state
 	 * (the worst case being an "any" transition). It'd be nice to find a way
@@ -373,7 +499,65 @@ interned_symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
 		sclosures[e.symbol] = updated;
 	}
 
+	(void)save_egm;
+
+#endif
+
 	return 1;
+}
+
+static int
+save_egm(struct edge_group_mapping *egm, size_t *egm_count,
+	fsm_state_t on, fsm_state_t to, unsigned char first,
+	uint64_t *labels)
+{
+	if (*egm_count == MAX_EGM) {
+		return 0;	/* full */
+	}
+	assert(*egm_count < MAX_EGM);
+	struct edge_group_mapping *m = &egm[*egm_count];
+
+	m->on = on;
+	m->to = to;
+	m->first = first;
+	memcpy(m->labels, labels, sizeof(m->labels));
+
+#if LOG_SYMBOL_CLOSURE
+		fprintf(stderr, "save_egm: saving on %d, to %d, first %u -> symbols [0x%lx, 0x%lx, 0x%lx, 0x%lx] at egm[%lu]\n",
+		    on, to, first,
+		    labels[0], labels[1], labels[2], labels[3], *egm_count);
+#endif
+
+	(*egm_count)++;
+	return 1;
+}
+
+static int
+load_egm(const struct edge_group_mapping *egm, size_t egm_count,
+	fsm_state_t on, unsigned char first,
+	uint64_t *labels)
+{
+	size_t i;
+	for (i = 0; i < egm_count; i++) {
+		const struct edge_group_mapping *m = &egm[i];
+
+#if LOG_SYMBOL_CLOSURE
+		fprintf(stderr, "load_egm: checking egm[%lu/%lu] for on %d, first %d: on %d, to %d, first %u -> symbols [0x%lx, 0x%lx, 0x%lx, 0x%lx]\n",
+		    i, egm_count,
+		    on, first,
+		    m->on, m->to, m->first,
+		    m->labels[0], m->labels[1], m->labels[2], m->labels[3]);
+#endif
+
+		if (m->on == on && /*m->to == to &&*/ m->first == first) {
+#if LOG_SYMBOL_CLOSURE
+			fprintf(stderr, "load_egm: HIT\n");
+#endif
+			memcpy(labels, m->labels, sizeof(m->labels));
+			return 1;
+		}
+	}
+	return 0;
 }
 
 static unsigned long
@@ -411,7 +595,7 @@ map_next(struct map_iter *iter)
 static int
 map_add(struct map *map,
 	fsm_state_t dfastate, struct interned_state_set *iss,
-	struct mapping **new_mapping)
+	fsm_state_t oldstate, struct mapping **new_mapping)
 {
 	size_t i;
 	unsigned long h, mask;
@@ -447,6 +631,8 @@ map_add(struct map *map,
 			m->iss = iss;
 			m->dfastate = dfastate;
 			m->edges = NULL;
+			m->oldstate = oldstate;
+
 			*b = m;
 
 			if (new_mapping != NULL) {

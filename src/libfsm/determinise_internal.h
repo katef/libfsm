@@ -24,6 +24,7 @@
 #define DUMP_MAPPING 0
 #define LOG_DETERMINISE_CLOSURES 0
 #define LOG_DETERMINISE_CAPTURES 0
+#define LOG_SYMBOL_CLOSURE 0
 
 #if LOG_DETERMINISE_CAPTURES
 #include <fsm/print.h>
@@ -53,6 +54,7 @@ struct map {
 	struct mapping {
 		struct interned_state_set *iss;
 		size_t dfastate;
+		fsm_state_t oldstate;
 		struct edge_set *edges;
 	} **buckets;
 };
@@ -83,10 +85,33 @@ struct mappingstack {
 	struct mapping **s;
 };
 
+#define MAX_EGM 100		/* FIXME: make dynamic and not global */
+
+/* This should be stored in a dynamic set later,
+ * keyed on <on, to, first>. Locality on 'on' may be beneficial. */
+struct edge_group_mapping {
+	fsm_state_t on;
+	fsm_state_t to;
+
+	/* first label, which stands for all the labels */
+	unsigned char first;
+	uint64_t labels[256/64];
+};
+
+static int
+save_egm(struct edge_group_mapping *egm, size_t *egm_count,
+	fsm_state_t on, fsm_state_t to, unsigned char first,
+	uint64_t *labels);
+
+static int
+load_egm(const struct edge_group_mapping *egm, size_t egm_count,
+	fsm_state_t on, unsigned char first,
+	uint64_t *labels);
+
 static int
 map_add(struct map *map,
 	fsm_state_t dfastate, struct interned_state_set *iss,
-	struct mapping **new_mapping);
+	fsm_state_t oldstate, struct mapping **new_mapping);
 
 static int
 map_find(const struct map *map, struct interned_state_set *iss,
@@ -113,7 +138,8 @@ det_copy_capture_actions(struct reverse_mapping *reverse_mappings,
 static int
 interned_symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
 	struct interned_state_set_pool *issp,
-	struct interned_state_set *sclosures[static FSM_SIGMA_COUNT]);
+	struct interned_state_set *sclosures[static FSM_SIGMA_COUNT],
+	struct edge_group_mapping *egm, size_t *egm_count);
 
 static int
 grow_map(struct map *map);
