@@ -189,18 +189,11 @@ walk2mask(int has_a, int has_b)
 
 static int
 walk2_comb_state(struct fsm *dst_fsm, int is_end,
-	const struct fsm *fsm_a, fsm_state_t a,
-	const struct fsm *fsm_b, fsm_state_t b,
 	fsm_state_t *comb) 
 {
-	struct fsm_state states[2];
-	fsm_state_t state_ids[2];
-	size_t count;
-	unsigned endcount;
-	struct fsm tmp;
 
-    assert(dst_fsm != NULL); 
-    assert(comb != NULL); 
+	assert(dst_fsm != NULL);
+	assert(comb != NULL);
  
 	if (!fsm_addstate(dst_fsm, comb)) {
 		return 0;
@@ -211,55 +204,6 @@ walk2_comb_state(struct fsm *dst_fsm, int is_end,
 	}
 
 	fsm_setend(dst_fsm, *comb, 1);
-
-	if (dst_fsm->opt == NULL || dst_fsm->opt->carryopaque == NULL) {
-		return 1;
-	}
-
-	count = 0;
-	endcount = 0;
-
-	if (fsm_a != NULL) {
-		state_ids[count] = a;
-		memcpy(&states[count], &fsm_a->states[a], sizeof *states);
-		count++;
-		endcount += fsm_isend(fsm_a, a);
-	}
-
-	if (fsm_b != NULL) {
-		state_ids[count] = b;
-		memcpy(&states[count], &fsm_a->states[b], sizeof *states);
-		count++;
-		endcount += fsm_isend(fsm_b, b);
-	}
-
-	if (count == 0) {
-		return 1;
-	}
-
-	/*
-	 * Using an array here is slightly cheesed, but it avoids
-	 * constructing a set just to pass these two states to
-	 * the .carryopaque callback.
-	 *
-	 * Unrelated to that, the .carryopaque callback needs a
-	 * src_fsm to pass for calls on those states. But because
-	 * our two states may come from different FSMs, there's no
-	 * single correct src_fsm to pass. So we workaround that
-	 * by constructing a temporary FSM just to hold them.
-	 *
-	 * This is done entirely in automatic storage, because
-	 * it's only needed briefly and is limited to two states.
-	 */
-
-	tmp.states = states;
-	tmp.statealloc = count;
-	tmp.statecount = count;
-	tmp.endcount = endcount;
-	tmp.hasstart = 0;
-	tmp.opt = dst_fsm->opt;
-
-	fsm_carryopaque_array(&tmp, state_ids, count, dst_fsm, *comb);
 
 	return 1;
 } 
@@ -313,7 +257,7 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		p->b = b;
 	}
 
-	if (!walk2_comb_state(data->new, is_end, fsm_a, a, fsm_b, b, &p->comb)) {
+	if (!walk2_comb_state(data->new, is_end, &p->comb)) {
 		return NULL;
 	}
 

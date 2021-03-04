@@ -34,7 +34,6 @@ int main(void) {
 	check(fsm, "abed", 1, cb_abed, 0, 4);
 
 	fsm_free(fsm);
-	captest_free_all_end_opaques();
 
 	return EXIT_SUCCESS;
 }
@@ -96,11 +95,10 @@ check(const struct fsm *fsm, const char *input,
 	}
 
 	{
-		struct captest_end_opaque *eo = fsm_getopaque(fsm, end);
-		assert(eo != NULL);
-		assert(eo->tag == CAPTEST_END_OPAQUE_TAG);
-		if (!(eo->ends & (1U << end_id))) {
-			assert(!"end mismatch");
+		const char *msg;
+		if (!captest_check_single_end_id(fsm, end, end_id, &msg)) {
+			fprintf(stderr, "%s\n", msg);
+			exit(EXIT_FAILURE);
 		}
 	}
 

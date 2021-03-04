@@ -32,12 +32,6 @@ struct captest_single_fsm_test_info {
 	} paths[MAX_SINGLE_FSM_TEST_PATHS];
 };
 
-struct captest_end_opaque {
-#define CAPTEST_END_OPAQUE_TAG 'E'
-	unsigned char tag;
-	unsigned ends;		/* bit set */
-};
-
 struct captest_input {
 	const char *string;
 	size_t pos;
@@ -55,10 +49,8 @@ captest_fsm_with_options(void);
 struct fsm *
 captest_fsm_of_string(const char *string, unsigned end_id);
 
-struct captest_end_opaque *
-captest_new_opaque(void);
-
-void
-captest_free_all_end_opaques(void);
+int
+captest_check_single_end_id(const struct fsm *fsm, fsm_state_t end_state,
+    unsigned expected_end_id, const char **msg);
 
 #endif

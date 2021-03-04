@@ -128,7 +128,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	}
 
 	if (opt->endleaf != NULL) {
-		opt->endleaf(f, op->ir_state->opaque, opt->endleaf_opaque);
+		opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque);
 	} else {
 		fprintf(f, "matched %lu", (unsigned long) (op->ir_state - ir->states));
 	}

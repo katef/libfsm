@@ -16,6 +16,7 @@
 
 #include "libfsm/internal.h" /* XXX */
 
+#include "lx/lx.h"
 #include "lx/ast.h"
 #include "lx/print.h"
 
@@ -64,16 +65,19 @@ mapping(FILE *f, const struct ast_mapping *m, const struct ast *ast)
 }
 
 static int
-endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
+endleaf_dot(FILE *f, const struct fsm_end_ids *end_ids,
+    const void *endleaf_opaque)
 {
 	const struct ast_mapping *m;
 	const struct ast *ast;
 
 	assert(f != NULL);
-	assert(state_opaque != NULL);
 	assert(endleaf_opaque != NULL);
 
-	m = state_opaque;
+	(void)end_ids;		/* TODO */
+	assert(end_ids->count > 0);
+	m = ast_getendmappingbyendid(end_ids->ids[0]);
+
 	ast = endleaf_opaque;
 
 	fprintf(f, "label = <");
@@ -123,7 +127,11 @@ singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 		return;
 	}
 
-	m = fsm_getopaque(fsm, s);
+	m = ast_getendmapping(fsm, s);
+	if (LOG()) {
+		fprintf(stderr, "singlestate: ast_getendmapping for state %d: %p (dot)\n",
+		    s, (void *)m);
+	}
 	assert(m != NULL);
 
 	if (m->conflict != NULL) {
@@ -192,7 +200,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		opt.consolidate_edges = z->fsm->opt->consolidate_edges;
 		opt.comments          = z->fsm->opt->comments;
 		opt.prefix            = p;
-		opt.endleaf           = endleaf_dot;
+ 		opt.endleaf           = endleaf_dot;
 		opt.endleaf_opaque    = (void *) ast;
 
 		z->fsm->opt = &opt;

@@ -349,13 +349,6 @@
 
 			(void) fsm_getstart(fsm, &ms);
 
-			/*
-			 * We don't want to take these with us, because the output here is a
-			 * general-purpose FSM for which no mapping has yet been made,
-			 * so that it can be used in expressions as for any pattern.
-			 */
-			fsm_setendopaque(fsm, NULL);
-
 			@r = fsm_merge(@r, fsm, &combine_info);
 			if (@r == NULL) {
 				perror("fsm_union");

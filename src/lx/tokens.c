@@ -14,6 +14,7 @@
 
 #include "libfsm/internal.h" /* XXX */
 
+#include "lx.h"
 #include "ast.h"
 #include "tokens.h"
 
@@ -32,7 +33,11 @@ tok_contains(const struct fsm *fsm, const char *s)
 			continue;
 		}
 
-		m = fsm_getopaque(fsm, i);
+		m = ast_getendmapping(fsm, i);
+		if (LOG()) {
+			fprintf(stderr, "tok_contains: ast_getendmapping for state %d: %p\n",
+			    i, (void *)m);
+		}
 		assert(m != NULL);
 
 		if (m->token == NULL) {
@@ -62,7 +67,11 @@ tok_subsetof(const struct fsm *a, const struct fsm *b)
 			continue;
 		}
 
-		m = fsm_getopaque(a, i);
+		m = ast_getendmapping(a, i);
+		if (LOG()) {
+			fprintf(stderr, "tok_subsetof: ast_getendmapping for state %d: %p\n",
+			    i, (void *)m);
+		}
 		assert(m != NULL);
 
 		if (m->token == NULL) {

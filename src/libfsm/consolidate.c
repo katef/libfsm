@@ -115,8 +115,6 @@ fsm_consolidate(struct fsm *src,
 		if (!DST_SEEN(dst_i)) {
 			SET_DST_SEEN(dst_i);
 
-			dst->states[dst_i].opaque = src->states[src_i].opaque;
-
 			if (!state_set_copy(&dst->states[dst_i].epsilons,
 				dst->opt->alloc, src->states[src_i].epsilons)) {
 				goto cleanup;
@@ -135,37 +133,6 @@ fsm_consolidate(struct fsm *src,
 			if (fsm_isend(src, src_i)) {
 				fsm_setend(dst, dst_i, 1);
 			}
-		} else {
-			const int is_end = fsm_isend(dst, dst_i);
-			fsm_state_t prev_i;
-			fsm_state_t prev_src_id = src->statecount; /* NONE */
-			fsm_state_t src_set[2];
-
-			if (!is_end) {
-				continue;
-			}
-			assert(fsm_isend(src, src_i));
-
-			/* Find the previous state that also maps to this
-			 * state, to carry the opaque from it. This could
-			 * become expensive when there are a very high number
-			 * of states, so it may be worth keeping a temporary
-			 * second mapping for just the end states. */
-			for (prev_i = 0; prev_i < mapping_count; prev_i++) {
-				if (mapping[prev_i] == dst_i) {
-					prev_src_id = prev_i;
-					break;
-				}
-			}
-			assert(prev_src_id < src->statecount);
-
-			src_set[0] = prev_src_id;
-			src_set[1] = src_i;
-
-			/* call carryopaque pairwise */
-			fsm_carryopaque_array(src,
-			    src_set, 2,
-			    dst, dst_i);
 		}
 	}
 

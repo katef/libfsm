@@ -66,26 +66,9 @@ int main(void) {
 	    cb_ab_c, 0, 4);
 
 	fsm_free(f_all);
-	captest_free_all_end_opaques();
 
 	return 0;
 }
-
-#if LOG_INTERMEDIATE_FSMS
-static void
-dump_opaques(const struct fsm *f)
-{
-	size_t i;
-	const size_t limit = fsm_countstates(f);
-	for (i = 0; i < limit; i++) {
-		struct captest_end_opaque *eo = NULL;
-		if (!fsm_isend(f, i)) { continue; }
-		eo = fsm_getopaque(f, i);
-		fprintf(stderr, "end_opaque: %lu -> %p -> %x\n",
-		    i, (void *)eo, eo == NULL ? 0 : eo->ends);
-	}
-}
-#endif
 
 static struct fsm *
 build_and_combine(unsigned *cb_a, unsigned *cb_b)
@@ -130,7 +113,6 @@ build_and_combine(unsigned *cb_a, unsigned *cb_b)
 	fsm_print_fsm(stderr, f_all);
 	fsm_capture_dump(stderr, "capture_actions", f_all);
 	fprintf(stderr, "====================\n");
-	dump_opaques(f_all);
 #endif
 
 	if (!fsm_determinise(f_all)) {
@@ -142,7 +124,6 @@ build_and_combine(unsigned *cb_a, unsigned *cb_b)
 	fsm_print_fsm(stderr, f_all);
 	fsm_capture_dump(stderr, "capture_actions", f_all);
 	fprintf(stderr, "====================\n");
-	dump_opaques(f_all);
 #endif
 
 	return f_all;
@@ -172,15 +153,8 @@ det_and_min(const char *tag, struct fsm *fsm)
 static struct fsm *
 build_ab_c(void)
 {
-	struct captest_end_opaque *eo = NULL;
 	struct fsm *fsm = captest_fsm_with_options();
 	assert(fsm != NULL);
-
-	eo = captest_new_opaque();
-	if (eo == NULL) { goto fail; }
-
-	eo->tag = CAPTEST_END_OPAQUE_TAG;
-	eo->ends |= (1U << 1);
 
 	if (!fsm_addstate_bulk(fsm, 4)) { goto fail; }
 
@@ -194,7 +168,6 @@ build_ab_c(void)
 	if (!fsm_addedge_literal(fsm, 2, 3, 'c')) { goto fail; }
 
 	fsm_setend(fsm, 3, 1);
-	fsm_setopaque(fsm, 3, eo);
 	if (!fsm_setendid(fsm, 1)) {
 		goto fail;
 	}
@@ -216,7 +189,6 @@ check(const struct fsm *fsm, const char *string,
 	struct captest_input input;
 	fsm_state_t end;
 	struct fsm_capture captures[MAX_TEST_CAPTURES];
-	struct captest_end_opaque *eo = NULL;
 
 	fprintf(stderr, "#### check '%s', exp: ends 0x%u, c%u: (%ld, %ld), c%u: %ld, %ld)\n",
 	    string, expected_ends,
@@ -234,18 +206,6 @@ check(const struct fsm *fsm, const char *string,
 	exec_res = fsm_exec(fsm, captest_getc, &input, &end, captures);
 	if (exec_res != 1) {
 		fprintf(stderr, "fsm_exec: %d\n", exec_res);
-		exit(EXIT_FAILURE);
-	}
-
-	/* check opaque end ID */
-	eo = fsm_getopaque(fsm, end);
-	fprintf(stderr, "exec: end %d -> %p\n", end, (void *)eo);
-
-	assert(eo != NULL);
-	assert(eo->tag == CAPTEST_END_OPAQUE_TAG);
-	if (eo->ends != expected_ends) {
-		fprintf(stderr, "Expected ends 0x%x, got 0x%x\n",
-		    expected_ends, eo->ends);
 		exit(EXIT_FAILURE);
 	}
 

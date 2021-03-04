@@ -53,7 +53,7 @@ struct ir_state {
 	const char *example;
 	unsigned int isend:1;
 
-	void *opaque;
+	struct fsm_end_ids *end_ids; /* NULL -> 0 */
 
 	enum ir_strategy strategy;
 	union {

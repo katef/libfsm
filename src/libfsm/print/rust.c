@@ -31,12 +31,12 @@
 #define START UINT32_MAX
 
 static int
-leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
+leaf(FILE *f, const struct fsm_end_ids *ids, const void *leaf_opaque)
 {
 	assert(f != NULL);
 	assert(leaf_opaque == NULL);
 
-	(void) state_opaque;
+	(void) ids;
 	(void) leaf_opaque;
 
 	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
@@ -96,7 +96,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	}
 
 	if (opt->endleaf != NULL) {
-		opt->endleaf(f, op->ir_state->opaque, opt->endleaf_opaque);
+		opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque);
 	} else {
 		fprintf(f, "return Some(%lu)", (unsigned long) (op->ir_state - ir->states));
 	}
@@ -126,7 +126,7 @@ print_fetch(FILE *f)
 static int
 fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
-	int (*leaf)(FILE *, const void *state_opaque, const void *leaf_opaque),
+	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
 	static const struct dfavm_assembler_ir zero;

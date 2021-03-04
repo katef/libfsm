@@ -62,8 +62,6 @@ struct fsm_state {
 
 	struct edge_set *edges;
 	struct state_set *epsilons;
-
-	void *opaque;
 };
 
 struct fsm {

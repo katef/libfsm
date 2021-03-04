@@ -145,7 +145,6 @@ int main(void) {
 
 
 	fsm_free(f_all);
-	captest_free_all_end_opaques();
 
 	return 0;
 }
@@ -180,7 +179,6 @@ check(const struct fsm *fsm, const char *string,
 	struct captest_input input;
 	fsm_state_t end;
 	struct fsm_capture captures[MAX_TEST_CAPTURES];
-	struct captest_end_opaque *eo = NULL;
 	const size_t length = strlen(string);
 	const unsigned cb = capture_base; /* alias */
 
@@ -199,12 +197,14 @@ check(const struct fsm *fsm, const char *string,
 		exit(EXIT_FAILURE);
 	}
 
-	/* check opaque end ID */
-	eo = fsm_getopaque(fsm, end);
-
-	assert(eo != NULL);
-	assert(eo->tag == CAPTEST_END_OPAQUE_TAG);
-	assert(eo->ends & (1U << end_id));
+	/* check end ID */
+	{
+		const char *msg;
+		if (!captest_check_single_end_id(fsm, end, end_id, &msg)) {
+			fprintf(stderr, "%s\n", msg);
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	/* check captures */
 	if (0) {
