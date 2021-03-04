@@ -121,11 +121,11 @@ int main(int argc, char *argv[]) {
 				exit(EXIT_FAILURE);
 			}
 		} else {
-			fsm_state_t base_a, base_b;
 			const char *p = s;
 			struct re_err e;
 			fsm_state_t rs;
 			struct fsm *r;
+			struct fsm_combine_info ci;
 
 			r = re_comp(native ? RE_NATIVE : RE_LITERAL, fsm_sgetc, &p, &opt, 0, &e);
 			if (r == NULL) {
@@ -135,14 +135,14 @@ int main(int argc, char *argv[]) {
 
 			(void) fsm_getstart(r, &rs);
 
-			fsm = fsm_merge(fsm, r, &base_a, &base_b);
+			fsm = fsm_merge(fsm, r, &ci);
 			if (fsm == NULL) {
 				perror("fsm_merge");
 				return 1;
 			}
 
-			start += base_a;
-			rs    += base_b;
+			start += ci.base_a;
+			rs    += ci.base_b;
 
 			if (!fsm_addedge_epsilon(fsm, start, rs)) {
 				perror("fsm_addedge_epsilon");
