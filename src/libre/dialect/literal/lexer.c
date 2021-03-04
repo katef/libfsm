@@ -35,6 +35,7 @@ lx_getc(struct lx_literal_lx *lx)
 
 	if (c == '\n') {
 		lx->end.line++;
+		lx->end.saved_col = lx->end.col - 1;
 		lx->end.col = 1;
 	}
 
@@ -58,7 +59,7 @@ lx_literal_ungetc(struct lx_literal_lx *lx, int c)
 
 	if (c == '\n') {
 		lx->end.line--;
-		lx->end.col = 0; /* XXX: lost information */
+		lx->end.col = lx->end.saved_col;
 	}
 }
 
@@ -210,7 +211,7 @@ lx_literal_example(enum lx_literal_token (*z)(struct lx_literal_lx *), enum lx_l
 
 	if (z == z0) {
 		switch (t) {
-		case TOK_CHAR: return "a";
+		case TOK_CHAR: return "";
 		default: goto error;
 		}
 	}

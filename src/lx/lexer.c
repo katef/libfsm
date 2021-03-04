@@ -521,7 +521,7 @@ z3(struct lx *lx)
 		case S1: /* e.g. "a" */
 			lx_ungetc(lx, c); return lx->z(lx);
 
-		case S2: /* e.g. "\n" */
+		case S2: /* e.g. "" */
 			lx_ungetc(lx, c); return lx->z = z4, lx->z(lx);
 
 		default:
@@ -668,7 +668,7 @@ z4(struct lx *lx)
 			}
 			break;
 
-		case S1: /* e.g. "\t" */
+		case S1: /* e.g. "\\x09" */
 			switch ((unsigned char) c) {
 			case '\t':
 			case '\n':
