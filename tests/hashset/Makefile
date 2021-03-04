@@ -9,7 +9,7 @@ INCDIR.${TEST_SRCDIR.tests/hashset}/hashset${n}.c += src/adt
 .endfor
 
 # not all concrete hashset interfaces use all static functions from hashset.inc
-.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.if ${CC:T:Mgcc*} || ${CC:T:Mclang*}
 .for n in ${TEST.tests/hashset:T:R:C/^hashset//}
 CFLAGS.${TEST_SRCDIR.tests/hashset}/hashset${n}.c += -Wno-unused-function
 .endfor

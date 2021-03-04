@@ -58,7 +58,7 @@ PARSER += src/libfsm/parser.sid
 LX_CFLAGS.src/libfsm/lexer.lx += -b dyn -g fgetc
 
 # SID persistent variables are unused in some productions
-.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.if ${CC:T:Mgcc*} || ${CC:T:Mclang*}
 CFLAGS.src/libfsm/parser.c += -Wno-unused-parameter
 .endif
 

@@ -46,7 +46,7 @@ PROPNAME.theft += union_literals
 .for src in ${SRC:Mtheft/*.c}
 CFLAGS.${src} += -D_POSIX_C_SOURCE=200809L
 CFLAGS.${src} += -std=c99
-.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.if ${CC:T:Mgcc*} || ${CC:T:Mclang*}
 .endif
 .endfor
 
@@ -65,7 +65,7 @@ INCDIR.${src:Mtheft/*.c} += src/adt
 .endfor
 
 # not all concrete set interfaces use all static functions from set.inc
-.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.if ${CC:T:Mgcc*} || ${CC:T:Mclang*}
 .for src in ${SRC:Mtheft/*_adt_set.c}
 CFLAGS.${src:Mtheft/*.c} += -Wno-unused-function
 .endfor

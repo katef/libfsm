@@ -9,7 +9,7 @@ INCDIR.${TEST_SRCDIR.tests/set}/set${n}.c += src/adt
 .endfor
 
 # not all concrete set interfaces use all static functions from set.inc
-.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.if ${CC:T:Mgcc*} || ${CC:T:Mclang*}
 .for n in ${TEST.tests/set:T:R:C/^set//}
 CFLAGS.${TEST_SRCDIR.tests/set}/set${n}.c += -Wno-unused-function
 .endfor

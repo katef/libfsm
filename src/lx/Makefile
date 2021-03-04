@@ -18,7 +18,7 @@ DFLAGS.${src} += -D LX_HEADER='"lexer.h"'
 .endfor
 
 
-.if ${CC:T:Mgcc} || ${CC:T:Mclang}
+.if ${CC:T:Mgcc*} || ${CC:T:Mclang*}
 .for src in ${SRC:Msrc/lx/*.c}
 CFLAGS.${src} += -pthread
 DFLAGS.${src} += -pthread
