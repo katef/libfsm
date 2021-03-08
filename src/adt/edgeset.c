@@ -1336,6 +1336,9 @@ edge_set_hasnondeterminism(const struct edge_set *set, struct bm *bm)
 				if (cur & (1ULL << b_i)) {
 					const size_t bit = 64*w_i + b_i;
 					if (bm_get(bm, bit)) {
+#if LOG_BITSET > 1
+						fprintf(stderr, "-- eshnd: hit on bit %lu\n", bit);
+#endif
 						return 1;
 					}
 					bm_set(bm, bit);
@@ -2015,6 +2018,11 @@ edge_set_group_iter_reset(const struct edge_set *set,
 	egi->set = set;
 	egi->flag = iter_type;
 
+#if LOG_BITSET > 1
+	fprintf(stderr, " -- edge_set_group_iter_reset: set %p, type %d\n",
+	    (void *)set, iter_type);
+#endif
+
 	if (iter_type == EDGE_GROUP_ITER_UNIQUE && set != NULL) {
 		struct edge_group *g;
 		size_t g_i, i;
@@ -2047,12 +2055,21 @@ edge_set_group_iter_next(struct edge_group_iter *egi,
 	size_t i;
 advance:
 	if (egi->set == NULL || egi->i == egi->set->count) {
+#if LOG_BITSET > 1
+		fprintf(stderr, " -- edge_set_group_iter_next: set %p, count %lu, done\n",
+		    (void *)egi->set, egi->i);
+#endif
 		return 0;
 	}
 
 	g = &egi->set->groups[egi->i];
 
 	eg->to = g->to;
+
+#if LOG_BITSET > 1
+	fprintf(stderr, " -- edge_set_group_iter_next: flag %d, i %zu, to %d\n",
+	    egi->flag, egi->i, g->to);
+#endif
 
 	if (egi->flag == EDGE_GROUP_ITER_ALL) {
 		egi->i++;
