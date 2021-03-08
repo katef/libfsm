@@ -2043,6 +2043,9 @@ edge_set_group_iter_next(struct edge_group_iter *egi,
     struct edge_group_iter_info *eg)
 {
 	struct edge_group *g;
+	int any = 0;
+	size_t i;
+advance:
 	if (egi->set == NULL || egi->i == egi->set->count) {
 		return 0;
 	}
@@ -2053,27 +2056,50 @@ edge_set_group_iter_next(struct edge_group_iter *egi,
 
 	if (egi->flag == EDGE_GROUP_ITER_ALL) {
 		egi->i++;
-		memcpy(eg->symbols, g->symbols, sizeof(g->symbols));
+		for (i = 0; i < 4; i++) {
+			eg->symbols[i] = g->symbols[i];
+			if (eg->symbols[i] != 0) {
+				any = 1;
+			}
+		}
+		if (!any) {
+			goto advance;
+		}
 		return 1;
 	} else if (egi->flag == EDGE_GROUP_ITER_UNIQUE) { /* uniques first */
-		size_t i;
 		for (i = 0; i < 4; i++) {
 			eg->symbols[i] = g->symbols[i] &~ egi->internal[i];
+			if (eg->symbols[i] != 0) {
+				any = 1;
+			}
 		}
-		eg->unique = 1;
 
 		/* next time, yield non-uniques */
 		egi->flag = EDGE_GROUP_ITER_UNIQUE + 1;
-		return 1;
-	} else if (egi->flag == EDGE_GROUP_ITER_UNIQUE + 1) {
-		size_t i;
+
+		/* if there are any uniques, yield them, otherwise
+		 * continue to the non-unique branch below. */
+		if (any) {
+			eg->unique = 1;
+			return 1;
+		}
+	}
+
+        if (egi->flag == EDGE_GROUP_ITER_UNIQUE + 1) {
 		for (i = 0; i < 4; i++) {
 			eg->symbols[i] = g->symbols[i] & egi->internal[i];
+			if (eg->symbols[i]) {
+				any = 1;
+			}
 		}
 		eg->unique = 0;
 
 		egi->flag = EDGE_GROUP_ITER_UNIQUE;
 		egi->i++;
+		if (!any) {
+			goto advance;
+		}
+
 		return 1;
 	} else {
 		assert("match fail");
