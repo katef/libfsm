@@ -924,9 +924,7 @@ edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
  * Design assumption: It is significantly more likely in practice to
  * have to be more edges with different labels going to the same state
  * than the same symbol going to different states. This does not
- * include epsilon edges, which can be stored in a state_set.
- *
- * A NULL pointer is treated as the empty set, because */
+ * include epsilon edges, which can be stored in a state_set. */
 struct edge_set {
 	size_t ceil;		/* nonzero */
 	size_t count;		/* <= ceil */
