@@ -17,26 +17,6 @@ dump_labels(FILE *f, const uint64_t labels[4])
 	}
 }
 
-#define D(N) static size_t N;
-#include "stats.h"
-#undef D
-
-static void
-reset_stats(void)
-{
-#define D(N) N = 0
-#include "stats.h"
-#undef D
-}
-
-static void
-dump_stats(void)
-{
-#define D(N) fprintf(stderr, "^^^ %s: %zu\n", #N, N)
-#include "stats.h"
-#undef D
-}
-
 int
 fsm_determinise(struct fsm *nfa)
 {
@@ -49,16 +29,10 @@ fsm_determinise(struct fsm *nfa)
 	struct mapping *curr = NULL;
 	size_t dfacount = 0;
 
-	struct edge_group_mapping egm[MAX_EGM] = { 0 };
-
-#if PROCESS_AS_GROUP
 	struct analyze_closures_env ac_env = { 0 };
-#endif
 
 	assert(nfa != NULL);
 	map.alloc = nfa->opt->alloc;
-
-	reset_stats();
 
 	/*
 	 * This NFA->DFA implementation is for Glushkov NFA only; it keeps things
@@ -104,8 +78,8 @@ fsm_determinise(struct fsm *nfa)
 		 */
 
 		if (!fsm_getstart(nfa, &start)) {
-			interned_state_set_pool_free(issp);
-			return 1;
+			res = 1;
+			goto cleanup;
 		}
 
 #if LOG_DETERMINISE_CAPTURES
@@ -131,29 +105,28 @@ fsm_determinise(struct fsm *nfa)
 		goto cleanup;
 	}
 
-#if PROCESS_AS_GROUP
 	ac_env.alloc = nfa->opt->alloc;
 	ac_env.fsm = nfa;
 	ac_env.issp = issp;
-	ac_env.egm = egm;
-#endif
 
 	do {
-		num_stack_steps++;
+		int o_i;
+
 #if LOG_SYMBOL_CLOSURE
 		fprintf(stderr, "\nfsm_determinise: current dfacount %lu...\n",
 		    dfacount);
 #endif
 
-
-#if PROCESS_AS_GROUP
 		assert(curr != NULL);
 
 		if (!analyze_closures_for_iss(&ac_env, curr->iss)) {
 			goto cleanup;
 		}
 
-		int o_i;
+		if (!edge_set_advise_growth(&curr->edges, nfa->opt->alloc, ac_env.output_count)) {
+			goto cleanup;
+		}
+
 		for (o_i = 0; o_i < ac_env.output_count; o_i++) {
 			struct mapping *m;
 			struct ac_output *output = &ac_env.outputs[o_i];
@@ -162,7 +135,7 @@ fsm_determinise(struct fsm *nfa)
 #if LOG_DETERMINISE_CLOSURES
 			fprintf(stderr, "fsm_determinise: cur (dfa %zu) label [", curr->dfastate);
 			dump_labels(stderr, output->labels);
-			fprintf(stderr, " -> iss:%p: ", output->iss);
+			fprintf(stderr, "] -> iss:%p: ", output->iss);
 			{
 				struct state_iter it;
 				fsm_state_t s;
@@ -182,16 +155,14 @@ fsm_determinise(struct fsm *nfa)
 			 * set of NFA states.
 			 */
 
-			/* If this interned_state_set isn't present, then save it as a new mapping. */
-			/* this is the set of states the current closure ----i---> dst set */
-			if (LOG_SYMBOL_CLOSURE) { fprintf(stderr, "MAP_FIND: checking for iss %p\n", (void *)iss); }
+			/* If this interned_state_set isn't present, then save it as a new mapping.
+			 * This is the interned set of states that the current ac_output (set of
+			 * labels) leads to. */
 			if (map_find(&map, iss, &m)) {
 				/* we already have this closure interned, so reuse it */
 				assert(m->dfastate < dfacount);
-				if (LOG_SYMBOL_CLOSURE) { fprintf(stderr, "MAP_FIND: loaded m->dfastate %zu\n", m->dfastate); }
 			} else {
 				/* not found -- add a new one and push it to the stack for processing */
-				if (LOG_SYMBOL_CLOSURE) { fprintf(stderr, "MAP_FIND: not found -> dfacount %zu\n", dfacount); }
 				if (!map_add(&map, dfacount, iss, &m)) {
 					goto cleanup;
 				}
@@ -211,109 +182,6 @@ fsm_determinise(struct fsm *nfa)
 				goto cleanup;
 			}
 		}
-
-#else
-		struct interned_state_set *sclosures[FSM_SIGMA_COUNT] = { NULL };
-		int i;
-		assert(curr != NULL);
-
-		/*
-		 * The closure of a set is equivalent to the union of closures of
-		 * each item. Here we iteratively build up closures[] in-situ
-		 * to avoid needing to create a state set to store the union.
-		 */
-		{
-			struct state_iter it;
-			fsm_state_t s;
-			size_t set_count = 0;
-			struct state_set *ss = interned_state_set_retain(curr->iss);
-
-			/* count how many states are in this closure */
-			for (state_set_reset(ss, &it); state_set_next(&it, &s); ) {
-				set_count++;
-			}
-
-			/* for every state in this closure, get the unique sets of labels;
-			 * we need to check that this set is unique across all the states here. right? FIXME */
-
-			for (state_set_reset(ss, &it); state_set_next(&it, &s); ) {
-#if LOG_SYMBOL_CLOSURE
-				fprintf(stderr, "   -- FIXME: other stuff during iscwe: s %d, curr->dfastate %zu, set_count %zu\n", s, curr->dfastate, set_count);
-#endif
-
-				/* For each edge group, save the set of states reachable via those labels in sclosures[label] */
- 				if (!interned_symbol_closure_without_epsilons(nfa, s, issp, sclosures,
-					curr->dfastate)) {
-					goto cleanup;
-				}
-			}
-			interned_state_set_release(curr->iss);
-		}
-
-		for (i = 0; i <= FSM_SIGMA_MAX; i++) {
-			struct mapping *m;
-			fsm_state_t egm_load_state;
-			fsm_state_t egm_to_state;
-
-			if (sclosures[i] == NULL) {
-				continue;
-			}
-
-			num_closures_processed++;
-
-#if LOG_DETERMINISE_CLOSURES
-			fprintf(stderr, "fsm_determinise: cur (dfa %zu) label '%c': %p:",
-			    curr->dfastate, (char)i, (void *)sclosures[i]);
-			{
-				struct state_iter it;
-				fsm_state_t s;
-				struct state_set *ss = interned_state_set_retain(sclosures[i]);
-
-				/* TODO: this does not log associated group mapping */
-
-				for (state_set_reset(ss, &it); state_set_next(&it, &s); ) {
-					fprintf(stderr, " %u", s);
-				}
-				fprintf(stderr, "\n");
-				interned_state_set_release(sclosures[i]);
-			}
-#endif
-
-			/*
-			 * The set of NFA states sclosures[i] represents a single DFA state.
-			 * We use the mappings as a de-duplication mechanism, keyed by the
-			 * set of NFA states.
-			 */
-
-			/* If this interned_state_set isn't present, then save it as a new mapping. */
-			/* this is the set of states the current closure ----i---> dst set */
-			if (map_find(&map, sclosures[i], &m)) {
-				/* we already have this closure interned */
-				assert(m->dfastate < dfacount);
-				egm_to_state = m->dfastate;
-
-				if (LOG_SYMBOL_CLOSURE) { fprintf(stderr, "MAP_FIND: loaded m->dfastate %d\n", egm_to_state); }
-			} else {
-				/* not found -- add a new one */
-				egm_to_state = dfacount;
-				if (LOG_SYMBOL_CLOSURE) { fprintf(stderr, "MAP_FIND: not found -> dfacount %d\n", egm_to_state); }
-				if (!map_add(&map, dfacount, sclosures[i], &m)) {
-					goto cleanup;
-				}
-				dfacount++;
-				if (!stack_push(stack, m)) {
-					goto cleanup;
-				}
-			}
-
-			{
-				assert(m != NULL);
-				if (!edge_set_add(&curr->edges, nfa->opt->alloc, i, /* to */ m->dfastate)) {
-					goto cleanup;
-				}
-			}
-		}
-#endif
 
 		/* All elements in sclosures[] are interned, so they will be freed later. */
 	} while ((curr = stack_pop(stack)));
@@ -399,28 +267,27 @@ fsm_determinise(struct fsm *nfa)
 		}
 
 		fsm_move(nfa, dfa);
-#if LOG_AC
-		dump_stats();
-#endif
 	}
 
 	res = 1;
-
-#if 0
-	/* expensive invariant check */
-	assert(fsm_all(nfa, fsm_isdfa));
-#endif
 
 cleanup:
 	map_free(&map);
 	stack_free(stack);
 	interned_state_set_pool_free(issp);
 
-#if PROCESS_AS_GROUP
 	if (ac_env.iters != NULL) {
 		f_free(ac_env.alloc, ac_env.iters);
 	}
-#endif
+	if (ac_env.groups != NULL) {
+		f_free(ac_env.alloc, ac_env.groups);
+	}
+	if (ac_env.outputs != NULL) {
+		f_free(ac_env.alloc, ac_env.outputs);
+	}
+	if (ac_env.dst != NULL) {
+		f_free(ac_env.alloc, ac_env.dst);
+	}
 
 	return res;
 }
@@ -502,99 +369,6 @@ det_copy_capture_actions(struct reverse_mapping *reverse_mappings,
 
 	fsm_capture_action_iter(src, det_copy_capture_actions_cb, &env);
 	return env.ok;
-}
-
-static int
-next_edge_label(const uint64_t *symbols,
-    unsigned char *current, unsigned char *label)
-{
-	size_t i;
-	if (current == NULL) {
-		i = 0;
-	} else if (*current == UCHAR_MAX) {
-		return 0;
-	} else {
-		i = *current + 1;
-	}
-
-	while (i < 256) {
-		if ((i & 63) == 0 && symbols[i/64] == 0) {
-			i += 64;
-		} else {
-			if (symbols[i/64] & ((size_t)1 << (i & 63))) {
-				*label = (unsigned char)i;
-				return 1;
-			}
-			i++;
-		}
-	}
-
-	return 0;
-}
-
-static int
-first_edge_label(const struct edge_group_iter_info *g,
-    unsigned char *label)
-{
-	return next_edge_label(g->symbols, NULL, label);
-}
-
-static size_t
-popcount_labels(const uint64_t labels[static 4])
-{
-	size_t i, res = 0;
-	for (i = 0; i < 4; i++) {
-		res += __builtin_popcountll(labels[i]);
-	}
-	return res;
-}
-
-static size_t
-popcount_edge_labels(const struct edge_group_iter_info *g)
-{
-	return popcount_labels(g->symbols);
-}
-
-static int
-interned_symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
-	struct interned_state_set_pool *issp,
-	struct interned_state_set *sclosures[static FSM_SIGMA_COUNT], size_t dfa_state)
-{
-
-	struct edge_iter jt;
-	struct fsm_edge e;
-
-	assert(fsm != NULL);
-	assert(sclosures != NULL);
-
-	if (fsm->states[s].edges == NULL) {
-		return 1;
-	}
-
-	/*
-	 * TODO: it's common for many symbols to have transitions to the same state
-	 * (the worst case being an "any" transition). It'd be nice to find a way
-	 * to avoid repeating that work by de-duplicating on the destination.
-	 */
-
-	for (edge_set_reset(fsm->states[s].edges, &jt); edge_set_next(&jt, &e); ) {
-		struct interned_state_set *iss = sclosures[e.symbol];
-		struct interned_state_set *updated;
-		if (iss == NULL) {
-			iss = interned_state_set_empty(issp);
-		} else {
-
-			if (LOG_SYMBOL_CLOSURE) { fprintf(stderr, "ISS not_empty -- line %d\n", __LINE__); }
-		}
-
-		updated = interned_state_set_add(issp, iss, e.state);
-		if (updated == NULL) {
-			return 0;
-		}
-		sclosures[e.symbol] = updated;
-	}
-
-	return 1;
 }
 
 static unsigned long
@@ -810,6 +584,11 @@ stack_push(struct mappingstack *stack, struct mapping *item)
 {
 	if (stack->depth + 1 == stack->ceil) {
 		size_t nceil = 2 * stack->ceil;
+#if AC_LOG
+		fprintf(stderr, "stack_push: growing stack %zu -> %zu\n",
+		    stack->ceil, nceil);
+#endif
+
 		struct mapping **ns = f_realloc(stack->alloc,
 		    stack->s, nceil * sizeof(ns[0]));
 		if (ns == NULL) {
@@ -931,14 +710,19 @@ dump_egi_info(size_t i, const struct edge_group_iter_info *info) {
 #endif
 
 static int
-labels_overlap(const uint64_t *a, const uint64_t *b)
+group_labels_overlap(const struct ac_group *a, const struct ac_group *b)
 {
 	size_t i;
-	for (i = 0; i < 4; i++) {
-		if (a[i] & b[i]) {
-			return 1;
+
+	if (a->words_used & b->words_used) {
+		for (i = 0; i < 4; i++) {
+			const uint64_t wa = a->labels[i];
+			if (wa && (wa & b->labels[i])) {
+				return 1;
+			}
 		}
 	}
+
 	return 0;
 }
 
@@ -947,7 +731,11 @@ intersect_with(uint64_t *a, const uint64_t *b)
 {
 	size_t i;
 	for (i = 0; i < 4; i++) {
-		a[i] &= b[i];
+		const uint64_t aw = a[i];
+		if (aw == 0) {
+			continue;
+		}
+		a[i] = aw & b[i];
 	}
 }
 
@@ -956,38 +744,57 @@ union_with(uint64_t *a, const uint64_t *b)
 {
 	size_t i;
 	for (i = 0; i < 4; i++) {
-		a[i] |= b[i];
+		const uint64_t bw = b[i];
+		if (bw == 0) {
+			continue;
+		}
+		a[i] |= bw;
 	}
 }
 
 static void
-clear_labels(uint64_t *a, const uint64_t *b)
+clear_group_labels(struct ac_group *g, const uint64_t *b)
 {
 	size_t i;
-	for (i = 0; i < 4; i++) {
-		a[i] &=~ b[i];
-	}
-}
+	uint8_t bit;
+	uint64_t any = 0;
+	uint64_t *a = g->labels;
 
-static int
-all_cleared(const uint64_t *a)
-{
-	size_t i;
-	for (i = 0; i < 4; i++) {
-		if (a[i] != 0) {
-			return 0;
+	for (i = 0, bit = 0x01; i < 4; i++, bit <<= 1) {
+		if (g->words_used & bit) {
+			const uint64_t bw = b[i];
+			a[i] &=~ bw;
+			if (a[i] == 0) {
+				g->words_used &=~ bit;
+			}
 		}
 	}
-	return 1;
 }
 
-/* TODO:
- * - the looping in Collect isn't quite right, and it may actually
- *   be *less* complicated to set up a freelist and collect as long
- *   as the to state is the same, the e_i stuff is gnarly
- * - needs a test input with e.g. abcdef->3, cde->4
- * - needs a test input with a bunch of single-label edges
- * - then let theft gnaw on this */
+#define TRACK_TIMES 0
+
+#if TRACK_TIMES
+#include <sys/time.h>
+#define INIT_TIMERS() struct timeval pre, post
+#define TIME(T) if (gettimeofday(T, NULL) == -1) { assert(!"gettimeofday"); }
+#define DIFF_MSEC(LABEL, PRE, POST, ACCUM)				\
+	do {								\
+		const size_t diff = 1000000*(POST.tv_sec - PRE.tv_sec)	\
+		    + (POST.tv_usec - PRE.tv_usec);			\
+		if (diff > 100) {					\
+			fprintf(stderr, "%s: %zu%s\n", LABEL, diff,	\
+			    diff >= 100 ? " #### OVER 100" : "");	\
+		}							\
+		if (ACCUM != NULL) {					\
+			*ACCUM += diff;					\
+		}							\
+	} while(0)
+#else
+#define INIT_TIMERS()
+#define TIME(T)
+#define DIFF_MSEC(A, B, C, D)
+#endif
+
 static int
 analyze_closures_for_iss(struct analyze_closures_env *env,
     struct interned_state_set *curr_iss)
@@ -997,24 +804,46 @@ analyze_closures_for_iss(struct analyze_closures_env *env,
 	struct state_set *ss = interned_state_set_retain(curr_iss);
 	const size_t set_count = state_set_count(ss);
 
+	INIT_TIMERS();
+
 	assert(env != NULL);
 	assert(set_count > 0);
 
+	TIME(&pre);
 	if (!analyze_closures__init_iterators(env, ss, set_count)) {
 		goto cleanup;
 	}
+	TIME(&post);
+	DIFF_MSEC("init_iterators", pre, post, NULL);
 
 	env->output_count = 0;
 
+	TIME(&pre);
+	if (!analyze_closures__init_groups(env)) {
+		goto cleanup;
+	}
+	TIME(&post);
+	DIFF_MSEC("init_groups", pre, post, NULL);
+
+	TIME(&pre);
+
 	switch (analyze_closures__collect(env)) {
 	case AC_COLLECT_DONE:
+		TIME(&post);
+		DIFF_MSEC("collect", pre, post, NULL);
+
+		TIME(&pre);
 		if (!analyze_closures__analyze(env)) {
 			goto cleanup;
 		}
+		TIME(&post);
+		DIFF_MSEC("analyze", pre, post, NULL);
 		break;
+
 	case AC_COLLECT_EMPTY:
 		/* no analysis to do */
 		break;
+
 	default:
 	case AC_COLLECT_ERROR:
 		goto cleanup;
@@ -1024,8 +853,33 @@ analyze_closures_for_iss(struct analyze_closures_env *env,
 
 cleanup:
 	interned_state_set_release(curr_iss);
+	if (env->pq != NULL) {
+		ipriq_free(env->pq);
+		env->pq = NULL;
+	}
+
 	return res;
 
+}
+
+static enum ipriq_cmp_res
+cmp_iterator_cb(size_t a, size_t b, void *opaque)
+{
+	struct analyze_closures_env *env = opaque;
+	assert(env != NULL);
+
+	assert(a < env->iter_count);
+	assert(b < env->iter_count);
+
+	const fsm_state_t to_a = env->iters[a].info.to;
+	const fsm_state_t to_b = env->iters[b].info.to;
+
+#if LOG_AC
+	fprintf(stderr, "cmp_iterator_ac: a %zu -> to_a %d, b %zu -> to_b %d\n",
+	    a, to_a, b, to_b);
+#endif
+
+	return to_a < to_b ? IPRIQ_CMP_LT : to_a > to_b ? IPRIQ_CMP_GT : IPRIQ_CMP_EQ;
 }
 
 static int
@@ -1035,6 +889,13 @@ analyze_closures__init_iterators(struct analyze_closures_env *env,
 	struct state_iter it;
 	fsm_state_t s;
 	size_t i_i;
+
+	assert(env->pq == NULL);
+	env->pq = ipriq_new(env->alloc,
+	    cmp_iterator_cb, (void *)env);
+	if (env->pq == NULL) {
+		return 0;
+	}
 
 #if LOG_AC
 	fprintf(stderr, "ac_init: ceil %zu, count %zu\n",
@@ -1053,6 +914,7 @@ analyze_closures__init_iterators(struct analyze_closures_env *env,
 	 * sorted by .to, so we can merge them that way. */
 	i_i = 0;
 	state_set_reset(ss, &it);
+
 #if LOG_AC
 	fprintf(stderr, "ac_init: initializing iterators:");
 #endif
@@ -1061,8 +923,8 @@ analyze_closures__init_iterators(struct analyze_closures_env *env,
 		/* The edge set group iterator can partition them into
 		 * unique (within the edge set) and non-unique label
 		 * sets, but what we really care about is labels that
-		 * are unique within the state set, so that doesn't
-		 * actually help us much. */
+		 * are unique within the entire state set, so that
+		 * doesn't actually help us much. */
 #if LOG_AC
 		fprintf(stderr, " %d", s);
 #endif
@@ -1076,160 +938,128 @@ analyze_closures__init_iterators(struct analyze_closures_env *env,
 #endif
 	env->iter_count = set_count;
 
-	return 1;
-}
+	assert(env->pq != NULL);
+	assert(ipriq_empty(env->pq));
 
-static enum ac_collect_res
-analyze_closures__collect(struct analyze_closures_env *env)
-{
-	/* Step all the iterators once, and then keep stepping whichever
-	 * is earliest (by .to state) until they're all done. Collect
-	 * (label set -> state) info along the way.
-	 *
-	 * This could use a freelist or something
-	 * later, rather than running to a fixpoint. */
-	fsm_state_t e_to = AC_NO_STATE;
-	size_t e_i = AC_NO_STATE; /* i with earliest to */
-	size_t i_i;
-
-	/* First pass, step everything once and save their info. */
-	for (i_i = 0; i_i < env->iter_count; i_i++) {
+	for (i_i = 0; i_i < set_count; i_i++) {
 		struct ac_iter *egi = &env->iters[i_i];
-
-#if LOG_AC
-		egi->info.unique = 0; /* deterministically init for logging  */
-#endif
-
 		if (edge_set_group_iter_next(&egi->iter, &egi->info)) {
 #if LOG_AC
 			fprintf(stderr, "ac_collect: iter[%zu]: to: %d\n",
 			    i_i, egi->info.to);
 			dump_egi_info(i_i, &egi->info);
 #endif
-			if (e_to == AC_NO_STATE || egi->info.to < e_to) {
-				e_to = egi->info.to;
-				e_i = i_i;
+			if (!ipriq_add(env->pq, i_i)) {
+				return 0;
 			}
 		} else {
 #if LOG_AC
 			fprintf(stderr, "ac_collect: iter[%zu]: DONE\n", i_i);
 #endif
 			egi->info.to = AC_NO_STATE; /* done */
-			assert(e_i != i_i);
 		}
 	}
 
-#if LOG_AC
-	fprintf(stderr, "ac_collect: post-init e_i %zu, e_to %d\n", e_i, e_to);
-#endif
+	return 1;
+}
 
-	if (e_to == AC_NO_STATE) { /* empty */
+static int
+analyze_closures__init_groups(struct analyze_closures_env *env)
+{
+	if (env->group_ceil == 0) {
+		const size_t nceil = DEF_GROUP_CEIL;
+		struct ac_group *ngs = f_malloc(env->alloc,
+		    nceil * sizeof(env->groups[0]));
+		if (ngs == NULL) {
+			return 0;
+		}
+		env->groups = ngs;
+		env->group_ceil = nceil;
+	}
+
+	assert(env->groups != NULL);
+	env->group_count = 0;
+	memset(&env->groups[0], 0x00, sizeof(env->groups[0]));
+	env->groups[0].to = AC_NO_STATE;
+	return 1;
+}
+
+static enum ac_collect_res
+analyze_closures__collect(struct analyze_closures_env *env)
+{
+	/* All iterators have been stepped once, and any that didn't
+	 * finish immediately were added to the queue. Keep stepping
+	 * whichever is earliest (by .to state) until they're all done.
+	 * Merge (label set -> state) info along the way. */
+	fsm_state_t e_to = AC_NO_STATE;
+	size_t e_i = AC_NO_STATE; /* i with earliest to */
+	size_t i_i;
+
+	if (ipriq_empty(env->pq)) {
+#if LOG_AC
+		fprintf(stderr, "ac_collect: empty\n");
+#endif
 		return AC_COLLECT_EMPTY;
 	}
 
-	/* If we're reusing a pre-allocated group array, reinitialize
-	 * the first group; otherwise it's done after allocation. */
-	if (env->group_ceil > 0) {
-		env->group_count = 0;
-		memset(&env->groups[0], 0x00, sizeof(env->groups[0]));
-		env->groups[0].to = e_to;
-	}
-
-	int progress;
 	size_t steps = 0;
-	do {
-		progress = 0;
+	while (!ipriq_empty(env->pq)) {
+		size_t next_i;
 		steps++;
 
-		if (env->group_count + 1 >= env->group_ceil) { /* grow on demand */
+		if (env->group_count + 1 == env->group_ceil) {
 			if (!analyze_closures__grow_groups(env)) {
 				return AC_COLLECT_ERROR;
 			}
-			if (env->group_count == 0) { /* init first group */
-				env->groups[0].to = e_to;
-			}
 		}
 
-		/* find iterator with earliest .to, to step later */
-		e_to = AC_NO_STATE;
-		for (i_i = 0; i_i < env->iter_count; i_i++) {
-			struct ac_iter *egi = &env->iters[i_i];
-#if LOG_AC
-			fprintf(stderr, "ac_collect: egi[%zu/%zu]: to %d\n", i_i, env->iter_count, egi->info.to);
-#endif
-
-			if (egi->info.to == AC_NO_STATE) {
-				if (e_i == i_i) {
-					e_i = AC_NO_STATE;
-				}
-				continue; /* done */
-			}
-
-			/* pick first/earliest iterator */
-			if (e_to == AC_NO_STATE
-			    || egi->info.to < e_to
-			    || (egi->info.to == e_to
-				&& i_i < e_i)) {
-				e_i = i_i;
-				e_to = egi->info.to;
-				progress = 1;
-			}
+		if (!ipriq_pop(env->pq, &next_i)) {
+			assert(!"unreachable: non-empty, but pop failed");
+			return AC_COLLECT_ERROR;
 		}
 
 #if LOG_AC
-		fprintf(stderr, "ac_collect: earliest e_to: %d at e_i: %zu, group_count %zu\n",
-		    e_to, e_i, env->group_count);
+		fprintf(stderr, "ac_collect: popped %zu\n", next_i);
 #endif
 
-		/* collect from all iterators with current .to */
-		/* FIXME this is currently run multiple times but should be harmless */
-		if (e_i != AC_NO_STATE) {
-			struct ac_group *g = &env->groups[env->group_count];
-			for (i_i = 0; i_i < env->iter_count; i_i++) {
-				struct ac_iter *egi = &env->iters[i_i];
-				if (egi->info.to == g->to) {
-#if LOG_AC
-					fprintf(stderr, "ac_collect: unioning labels from egi->to: %d\n", egi->info.to);
-#endif
-					union_with(g->labels, egi->info.symbols);
-				}
-			}
+		assert(next_i < env->iter_count);
+		struct ac_iter *iter = &env->iters[next_i];
+		assert(iter->info.to != AC_NO_STATE);
+
+		struct ac_group *g = &env->groups[env->group_count];
+
+		if (g->to == AC_NO_STATE) { /* init new group */
+			memset(g, 0x00, sizeof(*g));
+			g->to = iter->info.to;
+			union_with(g->labels, iter->info.symbols);
+		} else if (g->to == iter->info.to) { /* update current group */
+			union_with(g->labels, iter->info.symbols);
+		} else {	/* switch to next group */
+			assert(iter->info.to > g->to);
+			env->group_count++;
+			struct ac_group *ng = &env->groups[env->group_count];
+			memset(ng, 0x00, sizeof(*ng));
+			ng->to = iter->info.to;
+			union_with(ng->labels, iter->info.symbols);
 		}
 
+		if (edge_set_group_iter_next(&iter->iter, &iter->info)) {
 #if LOG_AC
-		fprintf(stderr, "ac_collect: fixpoint: step %zu: e_i %zd, e_to %d\n",
-		    steps, e_i, e_to);
+			fprintf(stderr, "ac_collect: iter %zu -- to %d\n",
+			    next_i, iter->info.to);
 #endif
-		if (e_i != AC_NO_STATE) {
-			struct ac_iter *egi = &env->iters[e_i];
-			if (edge_set_group_iter_next(&egi->iter, &egi->info)) {
-				struct ac_group *g = &env->groups[env->group_count];
-
-#if LOG_AC
-				fprintf(stderr, "ac_collect: collecting for group with g->to: %d, e_i got %d\n",
-				    g->to, egi->info.to);
-#endif
-
-				e_to = egi->info.to;
-				if (e_to != g->to) {
-					assert(e_to > g->to); /* ascending */
-					env->group_count++;
-					assert(env->group_count < env->group_ceil);
-					struct ac_group *ng = &env->groups[env->group_count];
-					memset(ng, 0x00, sizeof(*ng));
-					ng->to = e_to;
-				}
-			} else {
-				egi->info.to = AC_NO_STATE; /* done */
+			if (!ipriq_add(env->pq, next_i)) {
+				return AC_COLLECT_ERROR;
 			}
-			progress = 1;
+		} else {
 #if LOG_AC
-			dump_egi_info(e_i, &egi->info);
+			fprintf(stderr, "ac_collect: iter %zu -- DONE\n", next_i);
 #endif
 		}
-	} while (progress);
+	}
 
-	env->group_count++;	/* always at least one */
+	env->group_count++;	/* commit current group */
+
 	return AC_COLLECT_DONE;
 }
 
@@ -1237,7 +1067,7 @@ static int
 analyze_closures__analyze(struct analyze_closures_env *env)
 {
 #if LOG_AC
-	/* Dump. */
+	/* Dump group table. */
 	{
 		size_t g_i;
 		fprintf(stderr, "# group label/to closure table\n");
@@ -1254,24 +1084,58 @@ analyze_closures__analyze(struct analyze_closures_env *env)
 	}
 #endif
 
-	/* for every group, find labels that are unique to that
-	 * group, then create that edge group and clear those.
-	 * repeat and collect shared groups, always shrinking
-	 * the current group. advance when the base has no labels
-	 * remaining. this should eventually terminate. */
+	/* This partitions the table into an array of non-overlapping
+	 * (label set -> state set) pairs.
+	 *
+	 * For the first group in the table, find labels in that group that
+	 * are shared by later groups, create a set of the states those
+	 * groups lead to, then clear those labels. If the first group is
+	 * empty, advance base_i to the next group, and repeat until all
+	 * the groups in the table have been cleared. Because each pass
+	 * clears lables, this must eventually terminate.
+	 *
+	 * The pass that clears the labels on groups that were just
+	 * added to the result set benefits from the groups being sorted
+	 * by ascending .to fields, but other approaches may be faster.
+	 * I tried sorting the table by ascending count of bits used in
+	 * the label sets, so earlier groups with only a few labels
+	 * would be cleared faster and reduce the overall working set
+	 * sooner, but neither approach seemed to be clearly faster for
+	 * my test data sets. There is also a lot of room here for
+	 * speeding up the group label set unioning, intersecting, and
+	 * clearing. Casual experiments suggested small improvements but
+	 * not drastic improvements, so I'm leaving that performance
+	 * work for later. */
 	size_t base_i, g_i, o_i; /* base_i, group_i, other_i */
-
-	size_t dst_count;
-#define MAX_DST 100 /* fixme: make dynamic */
-	fsm_state_t dst[MAX_DST];
 
 	base_i = 0;
 	env->output_count = 0;
 
+	if (env->dst_ceil == 0) {
+		if (!analyze_closures__grow_dst(env)) {
+			return 0;
+		}
+	}
+
+	/* Initialize words_used for each group. */
+	for (g_i = 0; g_i < env->group_count; g_i++) {
+		size_t w_i;
+		uint8_t bit;
+		struct ac_group *g = &env->groups[g_i];
+		g->words_used = 0;
+		for (w_i = 0, bit = 0x01; w_i < 4; w_i++, bit <<= 1) {
+			if (g->labels[w_i] != 0) {
+				g->words_used |= bit;
+			}
+		}
+	}
+
 	while (base_i < env->group_count) {
-		/* labels assigned in current sweep */
-		uint64_t labels[256/64];
-		dst_count = 0;
+		/* labels assigned in current sweep. The g_labels wrapper
+		 * is used for g_labels.words_used. */
+		struct ac_group g_labels = { 0 };
+		uint64_t *labels = g_labels.labels;
+		size_t dst_count = 0;
 
 #if LOG_AC
 		fprintf(stderr, "base_i %zu/%zu\n",
@@ -1279,55 +1143,87 @@ analyze_closures__analyze(struct analyze_closures_env *env)
 #endif
 
 		const struct ac_group *bg = &env->groups[base_i];
-		memcpy(labels, bg->labels, sizeof(bg->labels));
-		/* at least one bit should be set, otherwise
-		 * we should have incremented base_i */
+		memcpy(&g_labels, bg, sizeof(*bg));
+
+		/* At least one bit should be set; otherwise
+		 * we should have incremented base_i. */
 		assert(labels[0] || labels[1]
 		    || labels[2] || labels[3]);
 
 #if LOG_AC
 		fprintf(stderr, "ac_analyze: dst[%zu] <- %d (base)\n", dst_count, bg->to);
 #endif
-		dst[dst_count] = bg->to;
+
+		if (dst_count + 1 == env->dst_ceil) {
+			if (!analyze_closures__grow_dst(env)) {
+				return 0;
+			}
+		}
+		env->dst[dst_count] = bg->to;
 		dst_count++;
 
 		for (o_i = base_i + 1; o_i < env->group_count; o_i++) {
 			const struct ac_group *og = &env->groups[o_i];
-			if (labels_overlap(labels, og->labels)) {
+			if (og->words_used == 0) {
+				continue; /* skip empty groups */
+			}
+
+			/* TODO: Combining checking for overlap and intersecting
+			 * into one pass would be ugly, but a little faster, and
+			 * this loop has a big impact on performance. */
+			if (group_labels_overlap(&g_labels, og)) {
 				intersect_with(labels, og->labels);
 #if LOG_AC
 				fprintf(stderr, "ac_analyze: dst[%zu] <- %d (other w/ overlapping labels)\n", dst_count, og->to);
 #endif
-				dst[dst_count] = og->to;
+
+				if (dst_count + 1 == env->dst_ceil) {
+					if (!analyze_closures__grow_dst(env)) {
+						return 0;
+					}
+				}
+
+				env->dst[dst_count] = og->to;
 				dst_count++;
-				assert(dst_count < MAX_DST);
 			}
 		}
 
 #if LOG_AC
 		fprintf(stderr, "ac_analyze: dst_count: %zu\n", dst_count);
 #endif
-		if (dst_count == 1) {
-			/* special case: if there's only one dst
-			 * state saved, it must have come from
-			 * the base group, so don't waste time
-			 * scanning over everything else. */
-			struct ac_group *g = &env->groups[base_i];
-			clear_labels(g->labels, labels);
-#if LOG_AC
-			fprintf(stderr, "ac_analyze: cleared base labels, now: ");
-			dump_labels(stderr, g->labels);
-			fprintf(stderr, "\n");
-#endif
-		} else {
-			for (g_i = base_i; g_i < env->group_count; g_i++) {
+
+		assert(labels[0] || labels[1]
+		    || labels[2] || labels[3]);
+
+		/* Since the groups are stored in order we don't need to
+		 * clear the bits from all of them -- both are sorting
+		 * by ascending .to ID, so sweep over both and clear the
+		 * labels on groups with IDs in common. */
+		{
+			size_t d_i = 0;	     /* dst index */
+			size_t g_i = base_i; /* group index */
+			while (d_i < dst_count) {
 				struct ac_group *g = &env->groups[g_i];
-				clear_labels(g->labels, labels);
+				const fsm_state_t g_to = g->to;
+				const fsm_state_t dst = env->dst[d_i];
+
 #if LOG_AC
-				fprintf(stderr, "ac_analyze: cleared g[%zu] labels, now: ", g_i);
-				dump_labels(stderr, g->labels);
-				fprintf(stderr, "\n");
+				fprintf(stderr, "ac_analyze: clearing loop: d_i %zu/%zu, g_i %zu/%zu\n",
+				    d_i, dst_count, g_i, env->group_count);
 #endif
+				/* advance one or both indices, clearing
+				 * labels when appropriate */
+				if (g_to < dst) {
+					g_i++;
+					assert(g_i < env->group_count);
+				} else if (g_to > dst) {
+					d_i++;
+				} else {
+					assert(g_to == dst);
+					clear_group_labels(g, labels);
+					g_i++;
+					d_i++;
+				}
 			}
 		}
 
@@ -1335,24 +1231,25 @@ analyze_closures__analyze(struct analyze_closures_env *env)
 			size_t i;
 			fprintf(stderr, "new_edge_group:");
 			for (i = 0; i < dst_count; i++) {
-				fprintf(stderr, " %d", dst[i]);
+				fprintf(stderr, " %d", env->dst[i]);
 			}
 			fprintf(stderr, " -- ");
 			dump_labels(stderr, labels);
 			fprintf(stderr, "\n");
 		}
 
-		{
+		{		/* build the state set and add to the output */
 			struct interned_state_set *iss = interned_state_set_empty(env->issp);
 			unsigned char first;
 			size_t d_i, label_count;
 			for (d_i = 0; d_i < dst_count; d_i++) {
 				struct interned_state_set *updated;
 #if LOG_AC
-				fprintf(stderr, "ac_analyze: adding state %d to interned_state_set\n", dst[d_i]);
+				fprintf(stderr, "ac_analyze: adding state %d to interned_state_set\n", env->dst[d_i]);
 #endif
+
 				updated = interned_state_set_add(env->issp,
-				    iss, dst[d_i]);
+				    iss, env->dst[d_i]);
 				if (updated == NULL) {
 					return 0;
 				}
@@ -1364,8 +1261,7 @@ analyze_closures__analyze(struct analyze_closures_env *env)
 			}
 		}
 
-		while (base_i < env->group_count &&
-		    all_cleared(env->groups[base_i].labels)) {
+		while (base_i < env->group_count && env->groups[base_i].words_used == 0) {
 #if LOG_AC
 			fprintf(stderr, "ac_analyze: base %zu all clear, advancing\n", base_i);
 #endif
@@ -1376,6 +1272,7 @@ analyze_closures__analyze(struct analyze_closures_env *env)
 #if LOG_AC
 	fprintf(stderr, "ac_analyze: done\n");
 #endif
+
 	return 1;
 }
 
@@ -1431,8 +1328,7 @@ analyze_closures__grow_iters(struct analyze_closures_env *env,
 static int
 analyze_closures__grow_groups(struct analyze_closures_env *env)
 {
-	const size_t nceil = (env->group_ceil == 0
-	    ? DEF_GROUP_CEIL : 2*env->group_ceil);
+	const size_t nceil = 2*env->group_ceil;
 	struct ac_group *ngs = f_realloc(env->alloc,
 	    env->groups, nceil * sizeof(env->groups[0]));
 	if (ngs == NULL) {
@@ -1444,16 +1340,31 @@ analyze_closures__grow_groups(struct analyze_closures_env *env)
 	    env->group_ceil, nceil);
 #endif
 
-	/* FIXME don't do this here */
-	if (env->group_count == 0) {
-		/* Zero the first one; the others will
-		 * be zeroed as env->group_count advances. */
-		memset(&ngs[0], 0x00, sizeof(ngs[0]));
-	}
-
 	env->groups = ngs;
 	env->group_ceil = nceil;
 	return 1;
+}
+
+static int
+analyze_closures__grow_dst(struct analyze_closures_env *env)
+{
+	const size_t nceil = (env->dst_ceil == 0
+	    ? DEF_DST_CEIL : 2*env->dst_ceil);
+	fsm_state_t *ndst = f_realloc(env->alloc,
+	    env->dst, nceil * sizeof(env->dst[0]));
+	if (ndst == NULL) {
+		return 0;
+	}
+
+#if LOG_AC
+	fprintf(stderr, "ac_grow_dst: growing dst %zu -> %zu\n",
+	    env->dst_ceil, nceil);
+#endif
+
+	env->dst = ndst;
+	env->dst_ceil = nceil;
+	return 1;
+
 }
 
 static int

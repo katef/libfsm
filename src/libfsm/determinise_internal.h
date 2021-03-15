@@ -16,6 +16,7 @@
 #include <adt/edgeset.h>
 #include <adt/stateset.h>
 #include <adt/internedstateset.h>
+#include <adt/ipriq.h>
 
 #include "internal.h"
 #include "capture.h"
@@ -28,8 +29,6 @@
 #define LOG_DETERMINISE_CAPTURES 0
 #define LOG_SYMBOL_CLOSURE 0
 #define LOG_AC 0
-
-#define PROCESS_AS_GROUP 1
 
 #if LOG_DETERMINISE_CAPTURES
 #include <fsm/print.h>
@@ -89,28 +88,20 @@ struct mappingstack {
 	struct mapping **s;
 };
 
-#define MAX_EGM 10000		/* FIXME: make dynamic and not global */
-
-/* This should be stored in a dynamic set later, */
-struct edge_group_mapping {
-	struct interned_state_set *iss;
-	/* first label, which stands for all the labels */
-	unsigned char first;
-	uint64_t labels[256/64];
-};
-
 #define AC_NO_STATE ((fsm_state_t)-1)
 #define DEF_ITER_CEIL 4
 #define DEF_GROUP_CEIL 4
 #define DEF_OUTPUT_CEIL 4
+#define DEF_DST_CEIL 4
 
 struct analyze_closures_env {
 	const struct fsm_alloc *alloc;
 	const struct fsm *fsm;
 	struct interned_state_set_pool *issp;
 
-	struct edge_group_mapping *egm;
-	size_t egm_count;
+	/* TODO: iters and outputs are never in use at the same time, so
+	 * they could potentially share the same underlying allocation.
+	 * It may not be worth the extra complexity though. */
 
 	/* Temporary state for iterators */
 	size_t iter_ceil;
@@ -121,12 +112,16 @@ struct analyze_closures_env {
 		struct edge_group_iter_info info;
 	} *iters;
 
+	struct ipriq *pq;
+
 	/* All sets of labels leading to states,
 	 * stored in ascending order. */
 	size_t group_ceil;
 	size_t group_count;
 	struct ac_group {
 		fsm_state_t to;
+		/* words_used & (1U << x) -> labels[x] has bits set */
+		uint8_t words_used;
 		uint64_t labels[256/64];
 	} *groups;
 
@@ -137,6 +132,9 @@ struct analyze_closures_env {
 		uint64_t labels[256/64];
 		struct interned_state_set *iss;
 	} *outputs;
+
+	size_t dst_ceil;
+	fsm_state_t *dst;
 };
 
 static int
@@ -146,6 +144,9 @@ analyze_closures_for_iss(struct analyze_closures_env *env,
 static int
 analyze_closures__init_iterators(struct analyze_closures_env *env,
 	const struct state_set *ss, size_t set_count);
+
+static int
+analyze_closures__init_groups(struct analyze_closures_env *env);
 
 enum ac_collect_res {
 	AC_COLLECT_DONE,
@@ -171,17 +172,10 @@ static int
 analyze_closures__grow_groups(struct analyze_closures_env *env);
 
 static int
+analyze_closures__grow_dst(struct analyze_closures_env *env);
+
+static int
 analyze_closures__grow_outputs(struct analyze_closures_env *env);
-
-static int
-save_egm(struct edge_group_mapping *egm, size_t *egm_count,
-	struct interned_state_set *iss, unsigned char first,
-	uint64_t *labels);
-
-static int
-load_egm(const struct edge_group_mapping *egm, size_t egm_count,
-	struct interned_state_set *iss, unsigned char first,
-	uint64_t *labels);
 
 static int
 map_add(struct map *map,
