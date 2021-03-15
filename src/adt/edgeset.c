@@ -917,7 +917,7 @@ edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
-#define DEF_EDGE_GROUP_CEIL 2
+#define DEF_EDGE_GROUP_CEIL 1
 
 /* Array of <to, symbols> tuples, sorted by to.
  *
