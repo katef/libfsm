@@ -236,6 +236,7 @@ main(int argc, char **argv)
 	}
 
 	register_test_adt_edge_set();
+	register_test_adt_ipriq();
 	register_test_literals();
 	register_test_re();
 	register_test_adt_priq();
