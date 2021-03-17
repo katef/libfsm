@@ -268,6 +268,17 @@ edge_set_add(struct edge_set **setp, const struct fsm_alloc *alloc,
 }
 
 int
+edge_set_advise_growth(struct edge_set **pset, const struct fsm_alloc *alloc,
+    size_t count)
+{
+	/* not implemented */
+	(void)pset;
+	(void)alloc;
+	(void)count;
+	return 1;
+}
+
+int
 edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
 	uint64_t symbols[256/64], fsm_state_t state)
 {
@@ -1113,6 +1124,62 @@ edge_set_add(struct edge_set **pset, const struct fsm_alloc *alloc,
 	SYMBOLS_SET(eg->symbols, symbol);
 	set->count++;
 	dump_edge_set(set);
+
+	return 1;
+}
+
+int
+edge_set_advise_growth(struct edge_set **pset, const struct fsm_alloc *alloc,
+    size_t count)
+{
+	/* TODO: factor out obvious duplication. */
+	struct edge_set *set = *pset;
+	if (set == NULL) {
+		size_t ceil = 1;
+		while (ceil < count) {
+			ceil *= 2;
+		}
+		assert(ceil > 0);
+		set = f_calloc(alloc, 1, sizeof(*set));
+		if (set == NULL) {
+			return 0;
+		}
+
+		set->groups = f_malloc(alloc,
+		    ceil * sizeof(set->groups[0]));
+		if (set->groups == NULL) {
+			f_free(alloc, set);
+			return 0;
+		}
+
+		set->ceil = ceil;
+		set->count = 0;
+
+		*pset = set;
+		return 1;
+	}
+
+	const size_t oceil = set->ceil;
+
+	size_t nceil = 1;
+	while (nceil < oceil + count) {
+		nceil *= 2;
+	}
+	assert(nceil > 0);
+
+#if LOG_BITSET
+	fprintf(stderr, " -- edge_set advise_growth: %lu -> %lu\n",
+	    set->ceil, nceil);
+#endif
+
+	struct edge_group *ng = f_realloc(alloc, set->groups,
+	    nceil * sizeof(set->groups[0]));
+	if (ng == NULL) {
+		return 0;
+	}
+
+	set->ceil = nceil;
+	set->groups = ng;
 
 	return 1;
 }

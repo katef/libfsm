@@ -4,7 +4,7 @@
 #include <limits.h>
 
 #define DEF_CELLS 2
-#define CHECK 1
+#define CHECK 0
 #define LOG 0
 
 #if LOG
