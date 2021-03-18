@@ -19,6 +19,9 @@
 #include <stdio.h>
 #include <string.h>
 
+/* Added to suppress UBSan warning for (expected) unsigned integer overflow. */
+#include "common/libfsm_common.h"
+
 /* default: SipHash-2-4 */
 #define cROUNDS 2
 #define dROUNDS 4
@@ -75,6 +78,7 @@
 #define TRACE
 #endif
 
+SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 int siphash(const uint8_t *in, const size_t inlen, const uint8_t *k,
             uint8_t *out, const size_t outlen) {
 
