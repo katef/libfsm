@@ -549,13 +549,17 @@ assign_lasts(struct ast_expr *n)
 
 		set_flags(n, AST_FLAG_LAST);
 
-		/* iterate in reverse, break on rollover */
-		for (i = n->u.concat.count - 1; i < n->u.concat.count; i--) {
-			struct ast_expr *child = n->u.concat.n[i];
-			assign_lasts(child);
-			if (always_consumes_input(child) || is_end_anchor(child)) {
-				break;
-			}
+		/* iterate in reverse */
+		i = n->u.concat.count;
+		if (i > 0) {
+			do {
+				i--;
+				struct ast_expr *child = n->u.concat.n[i];
+				assign_lasts(child);
+				if (always_consumes_input(child) || is_end_anchor(child)) {
+					break;
+				}
+			} while (i > 0);
 		}
 		break;
 	}
