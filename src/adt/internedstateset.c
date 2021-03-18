@@ -13,6 +13,8 @@
 #include <adt/stateset.h>
 #include <adt/internedstateset.h>
 
+#include "common/libfsm_common.h"
+
 #define ISS_BUCKET_DEF_CEIL 4
 #define CACHE_BUCKET_DEF_CEIL 32
 #define LOG_INTERNEDSTATESET 0
@@ -168,6 +170,13 @@ interned_state_set_empty(struct interned_state_set_pool *pool)
 	return pool->empty;
 }
 
+SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
+static unsigned long
+hash_state(fsm_state_t state)
+{
+	return PHI32 * (state + 1);
+}
+
 struct interned_state_set *
 interned_state_set_add(struct interned_state_set_pool *pool,
     struct interned_state_set *set, fsm_state_t state)
@@ -190,7 +199,7 @@ interned_state_set_add(struct interned_state_set_pool *pool,
 	if (set->kids.bucket_count > 0) {
 		struct iss_kids *kcache = &set->kids;
 		mask = kcache->bucket_count - 1;
-		h = PHI32 * (state + 1);
+		h = hash_state(state);
 		for (i = 0; i < kcache->bucket_count; i++) {
 			struct kid_bucket *kb = &kcache->buckets[(h + i) & mask];
 			if (kb->state == BUCKET_STATE_NONE) {
@@ -333,7 +342,7 @@ add_kid_to_iss_cache(struct interned_state_set_pool *pool,
     struct interned_state_set *kid)
 {
 	size_t i;
-	const unsigned long h = PHI32 * (state + 1);
+	const unsigned long h = hash_state(state);
 	unsigned long mask;
 
 #if LOG_INTERNEDSTATESET
@@ -403,7 +412,7 @@ grow_kid_cache(const struct fsm_alloc *a, struct interned_state_set *set)
 			continue;
 		}
 
-		h = PHI32 * (ob->state + 1);
+		h = hash_state(ob->state);
 		for (n_i = 0; n_i < nceil; n_i++) {
 			struct kid_bucket *nb = &nbuckets[(h + n_i) & nmask];
 			if (nb->state == BUCKET_STATE_NONE) {
