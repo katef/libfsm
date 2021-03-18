@@ -1023,140 +1023,46 @@ dump_edge_set(const struct edge_set *set)
 	}
 }
 
+static struct edge_set *
+init_empty(const struct fsm_alloc *alloc)
+{
+	struct edge_set *set = f_calloc(alloc, 1, sizeof(*set));
+	if (set == NULL) {
+		return NULL;
+	}
+
+	set->groups = f_malloc(alloc,
+	    DEF_EDGE_GROUP_CEIL * sizeof(set->groups[0]));
+	if (set->groups == NULL) {
+		f_free(alloc, set);
+		return NULL;
+	}
+
+	set->ceil = DEF_EDGE_GROUP_CEIL;
+	set->count = 0;
+	return set;
+}
+
 int
 edge_set_add(struct edge_set **pset, const struct fsm_alloc *alloc,
 	unsigned char symbol, fsm_state_t state)
 {
-	struct edge_set *set;
-	struct edge_group *eg;
-	size_t i;
-
-	assert(pset != NULL);
-
-	set = *pset;
-
-	if (set == NULL) {	/* empty */
-		set = f_calloc(alloc, 1, sizeof(*set));
-		if (set == NULL) {
-			return 0;
-		}
-
-		set->groups = f_malloc(alloc,
-		    DEF_EDGE_GROUP_CEIL * sizeof(set->groups[0]));
-		if (set->groups == NULL) {
-			f_free(alloc, set);
-			return 0;
-		}
-
-		set->ceil = DEF_EDGE_GROUP_CEIL;
-		set->count = 0;
-
-		eg = &set->groups[0];
-		eg->to = state;
-		memset(eg->symbols, 0x00, sizeof(eg->symbols));
-		SYMBOLS_SET(eg->symbols, symbol);
-		set->count++;
-
-		*pset = set;
-
-#if LOG_BITSET
-		fprintf(stderr, " -- edge_set_add: symbol 0x%x -> state %d on empty -> %p\n",
-		    symbol, state, (void *)set);
-#endif
-		dump_edge_set(set);
-
-		return 1;
-	}
-
-	assert(set->ceil > 0);
-	assert(set->count <= set->ceil);
-
-#if LOG_BITSET
-	fprintf(stderr, " -- edge_set_add: symbol 0x%x -> state %d on %p\n",
-	    symbol, state, (void *)set);
-#endif
-
-	/* Linear search for a group with the same destination
-	 * state, or the position where that group would go. */
-	for (i = 0; i < set->count; i++) {
-		eg = &set->groups[i];
-
-		if (eg->to == state) {
-			/* This API does not indicate whether that
-			 * symbol -> to edge was already present. */
-			SYMBOLS_SET(eg->symbols, symbol);
-			dump_edge_set(set);
-			return 1;
-		} else if (eg->to > state) {
-			break;	/* will shift down and insert below */
-		} else {
-			continue;
-		}
-	}
-
-	/* insert/append at i */
-	if (set->count == set->ceil) {
-		if (!grow_groups(set, alloc)) {
-			return 0;
-		}
-	}
-
-	eg = &set->groups[i];
-
-	if (i < set->count && eg->to != state) {  /* shift down by one */
-		const size_t to_mv = set->count - i;
-
-#if LOG_BITSET
-		fprintf(stderr, "   --- shifting, count %ld, i %ld, to_mv %ld\n",
-		    set->count, i, to_mv);
-#endif
-
-		if (to_mv > 0) {
-			memmove(&set->groups[i + 1],
-			    &set->groups[i],
-			    to_mv * sizeof(set->groups[i]));
-		}
-		eg = &set->groups[i];
-	}
-
-	eg->to = state;
-	memset(eg->symbols, 0x00, sizeof(eg->symbols));
-	SYMBOLS_SET(eg->symbols, symbol);
-	set->count++;
-	dump_edge_set(set);
-
-	return 1;
+	uint64_t symbols[256/64] = { 0 };
+	SYMBOLS_SET(symbols, symbol);
+	return edge_set_add_bulk(pset, alloc, symbols, state);
 }
 
 int
 edge_set_advise_growth(struct edge_set **pset, const struct fsm_alloc *alloc,
     size_t count)
 {
-	/* TODO: factor out obvious duplication. */
 	struct edge_set *set = *pset;
 	if (set == NULL) {
-		size_t ceil = 1;
-		while (ceil < count) {
-			ceil *= 2;
-		}
-		assert(ceil > 0);
-		set = f_calloc(alloc, 1, sizeof(*set));
+		set = init_empty(alloc);
 		if (set == NULL) {
 			return 0;
 		}
-
-		set->groups = f_malloc(alloc,
-		    ceil * sizeof(set->groups[0]));
-		if (set->groups == NULL) {
-			f_free(alloc, set);
-			return 0;
-		}
-
-		set->ceil = ceil;
-		set->count = 0;
-
 		*pset = set;
-		return 1;
 	}
 
 	const size_t oceil = set->ceil;
@@ -1196,23 +1102,11 @@ edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
 
 	set = *pset;
 
-	/* FIXME: factor out duplication once grouped determinisation works */
-
 	if (set == NULL) {	/* empty */
-		set = f_calloc(alloc, 1, sizeof(*set));
+		set = init_empty(alloc);
 		if (set == NULL) {
 			return 0;
 		}
-
-		set->groups = f_malloc(alloc,
-		    DEF_EDGE_GROUP_CEIL * sizeof(set->groups[0]));
-		if (set->groups == NULL) {
-			f_free(alloc, set);
-			return 0;
-		}
-
-		set->ceil = DEF_EDGE_GROUP_CEIL;
-		set->count = 0;
 
 		eg = &set->groups[0];
 		eg->to = state;
