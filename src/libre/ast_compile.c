@@ -865,7 +865,7 @@ comp_iter(struct comp_env *env,
 		re_flags = n->re_flags;
 
 		/* wouldn't want to reverse twice! */
-		re_flags &= ~RE_REVERSE;
+		re_flags &= ~(unsigned)RE_REVERSE;
 
 		a = expr_compile(n->u.subtract.a, re_flags,
 			fsm_getoptions(env->fsm), env->err);
