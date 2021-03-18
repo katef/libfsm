@@ -118,6 +118,13 @@ fsm_endid_free(struct fsm *fsm)
 	f_free(fsm->opt->alloc, fsm->endid_info);
 }
 
+SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
+static unsigned long
+hash_state(fsm_state_t state)
+{
+	return PHI32 * (state + 1);
+}
+
 static int
 grow_endid_buckets(const struct fsm_alloc *alloc, struct endid_info *info)
 {
@@ -155,7 +162,7 @@ grow_endid_buckets(const struct fsm_alloc *alloc, struct endid_info *info)
 		if (src_b->state == BUCKET_NO_STATE) {
 			continue;
 		}
-		hash = src_b->state * PHI32;
+		hash = hash_state(src_b->state);
 		for (new_i = 0; new_i < new_count; new_i++) {
 			dst_b = &new_buckets[(hash + new_i) & new_mask];
 			if (dst_b->state == BUCKET_NO_STATE) {
@@ -192,7 +199,7 @@ fsm_endid_set(struct fsm *fsm,
 
 rehash:
 
-	hash = state * PHI32;
+	hash = hash_state(state);
 	mask = ei->bucket_count - 1;
 	assert((mask & ei->bucket_count) == 0); /* power of 2 */
 
@@ -321,7 +328,7 @@ fsm_endid_count(const struct fsm *fsm,
 	const struct endid_info *ei = NULL;
 	size_t i;
 
-	unsigned hash = state * PHI32;
+	unsigned hash = hash_state(state);
 	unsigned mask;
 
 	assert(fsm != NULL);
@@ -357,7 +364,7 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 	size_t written = 0;
 	const struct endid_info *ei = NULL;
 
-	unsigned hash = end_state * PHI32;
+	unsigned hash = hash_state(end_state);
 	unsigned mask;
 
 	(void)written;
@@ -550,7 +557,7 @@ fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
 
 	assert(state != BUCKET_NO_STATE);
 
-	hash = state * PHI32;
+	hash = hash_state(state);
 	bucket_count = ei->bucket_count;
 	mask = bucket_count - 1;
 	assert((mask & bucket_count) == 0); /* power of 2 */
