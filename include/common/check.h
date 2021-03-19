@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef LIBFSM_COMMON_H
-#define LIBFSM_COMMON_H
+#ifndef LIBFSM_CHECK_H
+#define LIBFSM_CHECK_H
 
 #if defined(__clang__)
 /* Newer versions of clang's UBSan emit warnings about *all* unsigned

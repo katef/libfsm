@@ -13,7 +13,7 @@
 #include <fsm/fsm.h>
 #include <fsm/options.h>
 
-#include "common/libfsm_common.h"
+#include "common/check.h"
 
 struct bm;
 struct edge_set;
