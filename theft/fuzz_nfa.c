@@ -528,7 +528,7 @@ prop_nfa_minimise_should_not_add_states(struct theft *t,
 	struct nfa_spec *nfa_spec = arg1;
 	struct test_env *env;
 	uint8_t verbosity;
-	struct fsm *nfa;
+	struct fsm *fsm;
 	size_t count_before, count_after;
 
 	env = theft_hook_get_env(t);
@@ -541,26 +541,30 @@ prop_nfa_minimise_should_not_add_states(struct theft *t,
 		return THEFT_TRIAL_SKIP;
 	}
 
-	nfa = nfa_of_spec(nfa_spec, false);
-	if (nfa == NULL) {
+	fsm = nfa_of_spec(nfa_spec, false);
+	if (fsm == NULL) {
 		return THEFT_TRIAL_ERROR;
 	}
 
-	count_before = fsm_count(nfa, fsm_isany);
-	if (!fsm_minimise(nfa)) {
+	if (!fsm_determinise(fsm)) {
+		return THEFT_TRIAL_FAIL;
+	}
+
+	count_before = fsm_count(fsm, fsm_isany);
+	if (!fsm_minimise(fsm)) {
 		if (verbosity > 0) {
 			fprintf(stdout, "%s: fsm_minimise failure\n", __func__);
 		}
 		return THEFT_TRIAL_ERROR;
 	}
-	count_after = fsm_count(nfa, fsm_isany);
+	count_after = fsm_count(fsm, fsm_isany);
 
 	if (verbosity > 0) {
 		fprintf(stdout, "%s: before %zd => after %zd\n",
 			__func__, count_before, count_after);
 	}
 
-	fsm_free(nfa);
+	fsm_free(fsm);
 
 	return count_after <= count_before
 		? THEFT_TRIAL_PASS
