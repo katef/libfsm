@@ -13,7 +13,7 @@
 #include <adt/stateset.h>
 #include <adt/internedstateset.h>
 
-#include "common/libfsm_common.h"
+#include "common/check.h"
 
 #define ISS_BUCKET_DEF_CEIL 4
 #define CACHE_BUCKET_DEF_CEIL 32
