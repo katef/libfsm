@@ -24,28 +24,43 @@ cmp_int(const void *a, const void *b)
 	else                return  0;
 }
 
+int *next_int(void) {
+	static int n = 0;
+	int *p = malloc(sizeof *p);
+	if (p == NULL) abort();
+	*p = n++;
+	return p;
+}
+
+enum { COUNT = 5000U };
+
 int main(void) {
 	struct set *s = set_create(NULL, cmp_int);
-	struct set_iter iter;
-	int *p;
-	int a[3] = {1, 2, 3};
-	int seen[3] = {0, 0, 0};
-	int i;
+	size_t i;
+	int **plist;
+
+	int a[3] = {1200,2400,3600};
+	const unsigned num_a = sizeof a / sizeof *a;
 
 	assert(s != NULL);
 
-	assert(set_add(s, &a[0]));
-	assert(set_add(s, &a[1]));
-	assert(set_add(s, &a[2]));
+	plist = calloc(COUNT, sizeof *plist);
+	assert(plist != NULL);
 
-	for (p = set_first(s, &iter); p != NULL; p = set_next(&iter)) {
-		assert(*p == 1 || *p == 2 || *p == 3);
-		seen[*p - 1] = 1;
+	for (i = 0; i < COUNT; i++) {
+		int *itm = next_int();
+		plist[i] = itm;
+		assert(set_add(s, itm));
 	}
 
-	for (i = 0; i < 3; i++) {
-		assert(seen[i]);
+	for (i = 0; i < num_a; i++) {
+		assert(set_contains(s, &a[i]));
 	}
+
+	for (i=0; i < COUNT; i++) {
+		free(plist[i]);
+	}
+	free(plist);
 
 	set_free(s);
 	return 0;
