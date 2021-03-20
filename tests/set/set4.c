@@ -49,7 +49,6 @@ int main(void) {
 		plist[i] = itm;
 		assert(set_add(s, itm));
 	}
-	assert(set_count(s) == COUNT);
 
 	for (i=0; i < COUNT; i++) {
 		free(plist[i]);
