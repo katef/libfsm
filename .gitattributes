@@ -2,3 +2,9 @@ lexer.? linguist-generated=true
 parser.? linguist-generated=true
 src/libre/class/*.c linguist-generated=true
 src/libre/class_name.c
+man/* linguist-documentation
+doc/* linguist-documentation
+*.inc linguist-language=C
+share/hcd/*.txt linguist-vendored
+*.h linguist-language=C
+*.re linguist-language=Regular-Expression
