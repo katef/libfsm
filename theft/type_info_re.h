@@ -111,10 +111,12 @@ struct flatten_env {
 
 extern const struct theft_type_info type_info_re;
 
-bool type_info_re_literal_build_info(struct theft *t,
+enum theft_alloc_res
+type_info_re_literal_build_info(struct theft *t,
     struct test_re_info *info);
 
-bool type_info_re_pcre_build_info(struct theft *t,
+enum theft_alloc_res
+type_info_re_pcre_build_info(struct theft *t,
     struct test_re_info *info);
 
 void type_info_re_pcre_free(struct pcre_node *node);
