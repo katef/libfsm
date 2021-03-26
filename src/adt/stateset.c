@@ -392,6 +392,11 @@ state_set_copy(struct state_set **dst, const struct fsm_alloc *alloc,
 	return 1;
 }
 
+#define LOG_COMPACT 0
+#if LOG_COMPACT
+#include <stdio.h>
+#endif
+
 void
 state_set_compact(struct state_set **setp,
     fsm_state_remap_fun *remap, void *opaque)
@@ -431,9 +436,18 @@ state_set_compact(struct state_set **setp,
 			set->a[dst] = new_id;
 			dst++;
 		}
+#if LOG_COMPACT
+		fprintf(stderr, "state_set_compact: set->a[%zu]: %d -> %d, removed %zu\n", i, s, new_id, removed);
+#endif
 	}
 	set->i -= removed;
 	assert(set->i == dst);
+
+#if LOG_COMPACT
+	for (i = 0; i < set->i; i++) {
+		fprintf(stderr, "state_set_compact: now set->a[%zu/%zu]: %d\n", i, set->i, set->a[i]);
+	}
+#endif
 }
 
 void
