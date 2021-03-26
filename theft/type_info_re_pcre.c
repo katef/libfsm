@@ -224,6 +224,18 @@ gen_pcre_node(struct theft *t, struct pcre_node **dst)
 		}
 		break;
 
+	case PN_ANCHOR:
+		n->u.anchor.type = theft_random_choice(t, PCRE_ANCHOR_TYPE_COUNT);
+		if (theft_random_bits(t, 3) < 4) {
+			n->u.anchor.type = PCRE_ANCHOR_NONE;
+		}
+		ares = gen_pcre_node(t, &n->u.anchor.inner);
+		if (ares != THEFT_ALLOC_OK) {
+			return ares;
+		}
+		assert(n->u.anchor.inner);
+		break;
+
 	default:
 		assert(false);
 		return THEFT_ALLOC_ERROR;
@@ -419,8 +431,35 @@ flatten(struct flatten_env *env, const struct pcre_node *node)
 		if (!buf_append(env->b, ')', false)) {
 			return false;
 		}
+		break;
+
+	case PN_ANCHOR:
+	{
+		const enum pcre_anchor_type t = node->u.anchor.type;
+		struct pcre_node *inner = node->u.anchor.inner;
+		if (t == PCRE_ANCHOR_START) {
+			if (!buf_append(env->b, '^', false)) { /* before */
+				return false;
+			}
+			if (!flatten(env, inner)) {
+				return false;
+			}
+		} else if (t == PCRE_ANCHOR_END) { /* anchor *after* */
+			if (!flatten(env, inner)) {
+				return false;
+			}
+			if (!buf_append(env->b, '$', false)) { /* after */
+				return false;
+			}
+		} else {
+			assert(t == PCRE_ANCHOR_NONE);
+			if (!flatten(env, inner)) {
+				return false;
+			}
+		}
 
 		break;
+	}
 
 	default:
 		assert(false);
@@ -575,10 +614,19 @@ allowed_set_char(char c)
 	return isprint(c);
 }
 
+enum anchored_match {
+	ANCHORED_MATCH_NONE,
+	ANCHORED_MATCH_START = 0x01,
+	ANCHORED_MATCH_END = 0x02,
+};
+
+#define HAS_ANCHORED_START(m) ((*m) & ANCHORED_MATCH_START)
+#define HAS_ANCHORED_END(m)   ((*m) & ANCHORED_MATCH_END)
+
 static bool
 build_exp_match(struct theft *t,
 	struct buf *buf, const struct pcre_node *node,
-	struct error_counter *bomb)
+	struct error_counter *bomb, enum anchored_match *m)
 {
 #ifdef LOG_VERBOSE
 	fprintf(stdout, "< %s [size %zd], node %d\n", __func__, buf->size, node->t);
@@ -629,7 +677,7 @@ build_exp_match(struct theft *t,
 		break;
 
 	case PN_QUESTION:
-		/* to be or not to be */
+		/* match subtree, or not */
 		if (counter_timed_out(bomb)) {
 			/* Note: this can cause false negatives if used
 			 * next to other repetition operators. */
@@ -637,18 +685,18 @@ build_exp_match(struct theft *t,
 
 			/* apply it twice, no zero times or once */
 			if (!build_exp_match(t, buf,
-				node->u.question.inner, bomb)) {
+				node->u.question.inner, bomb, m)) {
 				return false;
 			}
 			if (!build_exp_match(t, buf,
-				node->u.question.inner, bomb)) {
+				node->u.question.inner, bomb, m)) {
 				return false;
 			}
 		} else {
 			counter_tick(bomb);
 			if (theft_random_bits(t, 1) == 0x01) {
 				if (!build_exp_match(t, buf,
-					node->u.question.inner, bomb)) {
+					node->u.question.inner, bomb, m)) {
 					return false;
 				}
 			}
@@ -657,10 +705,12 @@ build_exp_match(struct theft *t,
 
 	case PN_KLEENE:
 		/* Is an error possible here? (don't tick the counter) */
-		while (theft_random_bits(t, 1)) {
-			if (!build_exp_match(t, buf,
-				node->u.kleene.inner, bomb)) {
-				return false;
+		if (!HAS_ANCHORED_START(m) && !HAS_ANCHORED_END(m)) {
+			while (theft_random_bits(t, 1)) {
+				if (!build_exp_match(t, buf,
+					node->u.kleene.inner, bomb, m)) {
+					return false;
+				}
 			}
 		}
 		break;
@@ -673,10 +723,11 @@ build_exp_match(struct theft *t,
 			counter_tick(bomb);
 			do {
 				if (!build_exp_match(t, buf,
-					node->u.plus.inner, bomb)) {
+					node->u.plus.inner, bomb, m)) {
 					return false;
 				}
-			} while (theft_random_bits(t, 1));
+			} while (!(HAS_ANCHORED_START(m) || HAS_ANCHORED_END(m))
+			    && theft_random_bits(t, 1));
 		}
 		break;
 
@@ -751,7 +802,28 @@ build_exp_match(struct theft *t,
 
 		choice = theft_random_choice(t, node->u.alt.count);
 		if (!build_exp_match(t, buf,
-			node->u.alt.alts[choice], bomb)) {
+			node->u.alt.alts[choice], bomb, m)) {
+			return false;
+		}
+		break;
+	}
+
+	case PN_ANCHOR:
+	{
+		/* Note an anchor, so that the caller doesn't add further stuff that
+		 * would be pruned.
+		 * FIXME: does this need to apply before or after recursing? */
+		const enum pcre_anchor_type at = node->u.anchor.type;
+		if (at == PCRE_ANCHOR_START) {
+			(*m) |= ANCHORED_MATCH_START;
+		} else if (at == PCRE_ANCHOR_END) {
+			(*m) |= ANCHORED_MATCH_END;
+		} else {
+			assert(at == PCRE_ANCHOR_NONE);
+		}
+
+		if (!build_exp_match(t, buf,
+			node->u.anchor.inner, bomb, m)) {
 			return false;
 		}
 		break;
@@ -956,13 +1028,14 @@ gen_expected_match(struct theft *t,
 {
 	uint8_t *res;
 	struct buf *buf;
+	enum anchored_match m = ANCHORED_MATCH_NONE;
 
 	buf = buf_new();
 	if (buf == NULL) {
 		return NULL;
 	}
 
-	if (!build_exp_match(t, buf, node, bomb)) {
+	if (!build_exp_match(t, buf, node, bomb, &m)) {
 		buf_free(buf);
 		return NULL;
 	}
@@ -1014,6 +1087,10 @@ free_pcre_tree(struct pcre_node *node)
 	case PN_DOT:
 	case PN_BRACKET:
 		/* no op */
+		break;
+
+	case PN_ANCHOR:
+		free_pcre_tree(node->u.anchor.inner);
 		break;
 
 	default:

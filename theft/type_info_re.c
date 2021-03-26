@@ -143,6 +143,16 @@ re_print_ast(FILE *f, const struct pcre_node *n, size_t indent, char *indent_buf
 			re_print_ast(f, n->u.alt.alts[i], indent + 4, indent_buf);
 		}
 		break;
+	case PN_ANCHOR:
+	{
+		const enum pcre_anchor_type t = n->u.anchor.type;
+		fprintf(f, "%s- anchor: %s\n", indent_buf,
+		    t == PCRE_ANCHOR_START ? "START"
+		    : t == PCRE_ANCHOR_END ? "END"
+		    : "<none>");
+		re_print_ast(f, n->u.anchor.inner, indent + 4, indent_buf);
+		break;
+	}
 	default:
 		break;
 	}
