@@ -36,6 +36,7 @@ type_info_nfa_alloc(struct theft *t, void *type_env, void **output)
 	(void) type_env;
 
 	res = xmalloc(sizeof *res);
+	memset(res, 0x00, sizeof *res);
 
 	res->tag    = 'N';
 	res->states = xmalloc(state_count * sizeof *states);
