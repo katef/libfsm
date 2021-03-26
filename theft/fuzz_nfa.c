@@ -458,7 +458,7 @@ prop_nfa_edge_order_should_not_matter(struct theft *t,
 	struct nfa_spec *nfa_spec = arg1;
 	enum theft_trial_res res;
 	struct test_env *env;
-	struct fsm *nfa, *fan;
+	struct fsm *nfa, *fan;	/* fan = n-f-a rearranged */
 	int eq;
 
 	env = theft_hook_get_env(t);
