@@ -267,7 +267,7 @@ apply_ops(struct test_env *env, struct nfa_spec *nfa_spec,
 			break;
 
 		case NFA_OP_TRIM:
-			if (!fsm_trim(nfa, FSM_TRIM_START_AND_END_REACHABLE, NULL)) {
+			if (fsm_trim(nfa, FSM_TRIM_START_AND_END_REACHABLE, NULL) < 0) {
 				if (verbosity > 0) {
 					fprintf(stderr, "FAIL: trim\n");
 				}
@@ -276,7 +276,7 @@ apply_ops(struct test_env *env, struct nfa_spec *nfa_spec,
 			break;
 
 		case NFA_OP_DOUBLE_REVERSE:
-			if (!fsm_trim(nfa, FSM_TRIM_START_AND_END_REACHABLE, NULL)) {
+			if (fsm_trim(nfa, FSM_TRIM_START_AND_END_REACHABLE, NULL) < 0) {
 				if (verbosity > 0) {
 					fprintf(stderr, "FAIL: first reverse's trim\n");
 				}
@@ -290,7 +290,7 @@ apply_ops(struct test_env *env, struct nfa_spec *nfa_spec,
 			}
 			PRINT_FSM("REVERSE");
 
-			if (!fsm_trim(nfa, FSM_TRIM_START_AND_END_REACHABLE, NULL)) {
+			if (fsm_trim(nfa, FSM_TRIM_START_AND_END_REACHABLE, NULL) < 0) {
 				if (verbosity > 0) {
 					fprintf(stderr, "FAIL: second reverse's trim\n");
 				}
