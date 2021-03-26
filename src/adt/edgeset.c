@@ -1509,6 +1509,8 @@ collate_info_by_old_to(const void *pa, const void *pb)
 	}
 }
 
+#define LOG_COMPACT 0
+
 int
 edge_set_compact(struct edge_set **pset, const struct fsm_alloc *alloc,
     fsm_state_remap_fun *remap, const void *opaque)
@@ -1522,7 +1524,7 @@ edge_set_compact(struct edge_set **pset, const struct fsm_alloc *alloc,
 	assert(pset != NULL);
 	set = *pset;
 
-#if LOG_BITSET
+#if LOG_BITSET || LOG_COMPACT
 	fprintf(stderr, " -- edge_set_compact: set %p\n",
 	    (void *)set);
 #endif
@@ -1548,8 +1550,8 @@ edge_set_compact(struct edge_set **pset, const struct fsm_alloc *alloc,
 	for (i = 0; i < set->count; i++) {
 		struct edge_group *eg = &set->groups[i];
 		const fsm_state_t new_to = remap(eg->to, opaque);
-#if LOG_BITSET > 1
-		fprintf(stderr, "compact: %ld, to %d -> %d\n",
+#if LOG_BITSET > 1 || LOG_COMPACT
+		fprintf(stderr, "compact: %ld, old_to %d -> new_to %d\n",
 		    i, eg->to, new_to);
 #endif
 		info[i].old_to = eg->to;
@@ -1561,10 +1563,10 @@ edge_set_compact(struct edge_set **pset, const struct fsm_alloc *alloc,
 	qsort(info, set->count, sizeof(info[0]),
 	    collate_info_by_new_to);
 
-#if LOG_BITSET > 1
+#if LOG_BITSET > 1 || LOG_COMPACT
 	fprintf(stderr, "== after sort by new_state\n");
 	for (i = 0; i < set->count; i++) {
-		fprintf(stderr, " -- %lu: %d, %d, %d\n",
+		fprintf(stderr, " -- %lu: old_to: %d, new_to: %d, assignment: %d\n",
 		    i,
 		    info[i].old_to,
 		    info[i].new_to,
@@ -1597,10 +1599,10 @@ edge_set_compact(struct edge_set **pset, const struct fsm_alloc *alloc,
 	qsort(info, set->count, sizeof(info[0]),
 	    collate_info_by_old_to);
 
-#if LOG_BITSET > 1
+#if LOG_BITSET > 1 || LOG_COMPACT
 	fprintf(stderr, "== after sort by old_state\n");
 	for (i = 0; i < set->count; i++) {
-		fprintf(stderr, " -- %lu: %d, %d, %d\n",
+		fprintf(stderr, " -- %lu: old_to: %d, new_to: %d, assignment: %d\n",
 		    i,
 		    info[i].old_to,
 		    info[i].new_to,
@@ -1628,7 +1630,7 @@ edge_set_compact(struct edge_set **pset, const struct fsm_alloc *alloc,
 	set->groups = ngroups;
 	set->count = ncount;
 
-#if LOG_BITSET > 1
+#if LOG_BITSET > 1 || LOG_COMPACT
 	for (i = 0; i < set->count; i++) {
 		fprintf(stderr, "ngroups[%zu]: to %d\n",
 		    i, set->groups[i].to);
