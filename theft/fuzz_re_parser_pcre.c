@@ -311,7 +311,7 @@ check_pos_matches(uint8_t verbosity, struct fsm *fsm,
 			return false;
 		}
 
-		if (verbosity > 1) {
+		if (verbosity > 3) {
 			fsm_print_dot(LOG_OUT, fsm);
 		}
 		if (e != 1) {
