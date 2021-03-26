@@ -423,16 +423,12 @@ state_set_compact(struct state_set **setp,
 
 	for (i = 0; i < set->i; i++) {
 		const fsm_state_t s = set->a[i];
-		const fsm_state_t new_id = remap(s + removed, opaque);
+		const fsm_state_t new_id = remap(s, opaque);
 
 		if (new_id == FSM_STATE_REMAP_NO_STATE) { /* drop */
 			removed++;
 		} else {	/* keep */
-			if (dst < i) {
-				memcpy(&set->a[dst],
-				    &set->a[i],
-				    sizeof(set->a[0]));
-			}
+			set->a[dst] = new_id;
 			dst++;
 		}
 	}
