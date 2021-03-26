@@ -640,10 +640,19 @@ build_exp_match(struct theft *t,
 			counter_used(bomb);
 		} else {
 			counter_tick(bomb);
-			for (;;) {		/* any byte except newline */
+			for (;;) {		/* any printable byte; filter newline or '\0' */
 				uint8_t byte = (uint8_t) theft_random_bits(t, 8);
-				if (byte != '\n') {
-					buf_append(buf, byte, false);
+				if (byte == '\n') {
+					/* ignore */
+				} else if (byte == '\0' || !isprint(byte)) {
+					if (!buf_append(buf, ' ', false)) {
+						return false;
+					}
+					break;
+				} else {
+					if (!buf_append(buf, byte, false)) {
+						return false;
+					}
 					break;
 				}
 			}
