@@ -1029,9 +1029,7 @@ static void
 dump_states(FILE *f, struct dfavm_assembler_ir *a)
 {
 	struct dfavm_op_ir *op;
-	size_t count;
 
-	count = 0;
 	for (op = a->linked; op != NULL; op = op->next) {
 		if (op->instr == VM_OP_FETCH) {
 			unsigned state = op->u.fetch.state;
