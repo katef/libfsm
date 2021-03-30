@@ -165,6 +165,8 @@ mapping_cb(fsm_state_t id, const void *opaque)
 	return mapping[id];
 }
 
+#define LOG_COMPACT 0
+
 int
 fsm_compact_states(struct fsm *fsm,
     fsm_state_filter_fun *filter, void *opaque,
@@ -191,6 +193,9 @@ fsm_compact_states(struct fsm *fsm,
 			/* for endpoint accounting */
 			fsm_setend(fsm, i, 0);
 		}
+#if LOG_COMPACT > 0
+		fprintf(stderr, "fsm_compact_states: mapping[%u] == %d, kept %zu\n", i, mapping[i], kept);
+#endif
 	}
 
 	/* Clear start state, if doomed. */
@@ -198,6 +203,9 @@ fsm_compact_states(struct fsm *fsm,
 		if (mapping[old_start] == FSM_STATE_REMAP_NO_STATE) {
 			fsm_clearstart(fsm);
 			old_start = FSM_STATE_REMAP_NO_STATE;
+#if LOG_COMPACT > 0
+			fprintf(stderr, "fsm_compact_states: clearing old start state %d\n", old_start);
+#endif
 		}
 	}
 
@@ -205,8 +213,14 @@ fsm_compact_states(struct fsm *fsm,
 	for (i = 0; i < orig_statecount; i++) {
 		struct fsm_state *s = &fsm->states[i];
 		if (mapping[i] == FSM_STATE_REMAP_NO_STATE) {
+#if LOG_COMPACT > 0
+			fprintf(stderr, "fsm_compact_states: skipping doomed state %d\n", i);
+#endif
 			continue; /* skip -- doomed */
 		}
+#if LOG_COMPACT > 0
+		fprintf(stderr, "fsm_compact_states: compacting epsilons on state %d\n", i);
+#endif
 		state_set_compact(&s->epsilons, mapping_cb, mapping);
 		if (fsm->states[i].edges != NULL) {
 			edge_set_compact(&s->edges, fsm->opt->alloc, mapping_cb, mapping);
@@ -222,12 +236,19 @@ fsm_compact_states(struct fsm *fsm,
 
 			fsm->statecount--;
 			removed_count++;
+#if LOG_COMPACT > 0
+			fprintf(stderr, "fsm_compact_states: removing dead state %d, statecount now %zu, removed %zu\n",
+			    i, fsm->statecount, removed_count);
+#endif
 		} else {				      /* keep */
 			if (dst != i) {
 				memcpy(&fsm->states[dst],
 				    &fsm->states[i],
 				    sizeof(fsm->states[0]));
 			}
+#if LOG_COMPACT > 0
+			fprintf(stderr, "fsm_compact_states: keeping state %d as %d\n", i, dst);
+#endif
 			dst++;
 		}
 	}
@@ -242,6 +263,9 @@ fsm_compact_states(struct fsm *fsm,
 		const fsm_state_t new_start = mapping[old_start];
 		assert(new_start < fsm->statecount);
 		fsm_setstart(fsm, new_start);
+#if LOG_COMPACT > 0
+			fprintf(stderr, "fsm_compact_states: setting new start state %d\n", new_start);
+#endif
 	}
 
 	if (fsm->statecount < orig_statecount/2) {

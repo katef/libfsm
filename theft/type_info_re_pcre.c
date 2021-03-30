@@ -23,8 +23,8 @@ struct error_counter {
 	uint8_t counter;
 };
 
-static struct pcre_node *
-gen_pcre_node(struct theft *t);
+static enum theft_alloc_res
+gen_pcre_node(struct theft *t, struct pcre_node **dst);
 static uint8_t *gen_expected_match(struct theft *t, const struct pcre_node *node,
 	size_t *size, struct error_counter *bomb);
 static bool build_exp_class_flag(struct theft *t, struct buf *buf,
@@ -37,18 +37,26 @@ static void free_pcre_tree(struct pcre_node *re);
 static bool append_bracket_classes(struct buf *buf,
 	const struct pcre_node *node);
 
-bool
+#define PRINT_MATCH_STRINGS 0
+
+enum theft_alloc_res
 type_info_re_pcre_build_info(struct theft *t,
 	struct test_re_info *info)
 {
 	struct test_env *env = theft_hook_get_env(t);
 
-	info->u.pcre.head = gen_pcre_node(t);
+	enum theft_alloc_res ares = gen_pcre_node(t, &info->u.pcre.head);
+	if (ares != THEFT_ALLOC_OK) {
+		return ares;
+	}
 	if (info->u.pcre.head == NULL) {
-		return false;
+		return THEFT_ALLOC_ERROR;
 	}
 
 	info->string = flatten_re_tree(env, info->u.pcre.head, &info->size);
+	if (info->string == NULL) {
+		return THEFT_ALLOC_ERROR;
+	}
 
 	info->pos_count = 1 + theft_random_bits(t, 3);  // 1 -- 9 strings
 	info->pos_pairs = xcalloc(info->pos_count, sizeof (struct string_pair));
@@ -58,10 +66,15 @@ type_info_re_pcre_build_info(struct theft *t,
 
 		positive = gen_expected_match(t, info->u.pcre.head,
 			&info->pos_pairs[i].size, NULL);
-		if (info->pos_pairs[i].size == 0) {
+
+		if (info->pos_pairs[i].size == 0 || positive == NULL || positive[0] == '\0') {
 			free(positive); /* discard 0-character string */
 			info->pos_pairs[i].string = NULL;
 		} else {
+			if (PRINT_MATCH_STRINGS) {
+				fprintf(stderr, "build_pcre: added positive match '%s'(%zu)\n",
+				    positive, info->pos_pairs[i].size);
+			}
 			info->pos_pairs[i].string = positive;
 			assert(info->pos_pairs[i].string);
 		}
@@ -79,7 +92,15 @@ type_info_re_pcre_build_info(struct theft *t,
 
 		negative = gen_expected_match(t, info->u.pcre.head,
 			&info->neg_pairs[i].size, &bomb);
-		if (bomb.used) {
+
+		if (negative == NULL || negative[0] == '\0') {
+			free(negative);
+			info->neg_pairs[i].string = NULL;
+		} else if (bomb.used) {
+			if (PRINT_MATCH_STRINGS) {
+				fprintf(stderr, "build_pcre: added negative match '%s'(%zu)\n",
+				    negative, info->neg_pairs[i].size);
+			}
 			info->neg_pairs[i].string = negative;
 		} else {
 			free(negative);
@@ -87,13 +108,26 @@ type_info_re_pcre_build_info(struct theft *t,
 		}
 	}
 
+	return THEFT_ALLOC_OK;
+}
+
+static bool
+should_skip_bracket_set(const uint64_t *set256)
+{
+	/* empty character classes are invalid */
+	for (size_t i = 0; i < 4; i++) {
+		if (set256[i] != 0) {
+			return false;
+		}
+	}
 	return true;
 }
 
-static struct pcre_node *
-gen_pcre_node(struct theft *t)
+static enum theft_alloc_res
+gen_pcre_node(struct theft *t, struct pcre_node **dst)
 {
 	struct pcre_node *n;
+	enum theft_alloc_res ares;
 
 	/* 64-bit aligned buffer */
 	uint64_t buf64[256 / sizeof (uint64_t)] = { 0 };
@@ -127,42 +161,88 @@ gen_pcre_node(struct theft *t)
 		break;
 
 	case PN_QUESTION:
-		n->u.question.inner = gen_pcre_node(t);
+		ares = gen_pcre_node(t, &n->u.question.inner);
+		if (ares != THEFT_ALLOC_OK) {
+			return ares;
+		}
 		assert(n->u.question.inner != NULL);
 		break;
 
 	case PN_KLEENE:
-		n->u.kleene.inner = gen_pcre_node(t);
+		ares = gen_pcre_node(t, &n->u.kleene.inner);
+		if (ares != THEFT_ALLOC_OK) {
+			return ares;
+		}
 		assert(n->u.kleene.inner != NULL);
 		break;
 
 	case PN_PLUS:
-		n->u.plus.inner = gen_pcre_node(t);
+		ares = gen_pcre_node(t, &n->u.plus.inner);
+		if (ares != THEFT_ALLOC_OK) {
+			return ares;
+		}
 		assert(n->u.plus.inner != NULL);
 		break;
 
 	case PN_BRACKET:
 		n->u.bracket.negated = theft_random_bits(t, 1);
-		theft_random_bits_bulk(t, UCHAR_MAX, n->u.bracket.set);
+
 		assert((1LLU << BRACKET_CLASS_COUNT) - 1 == BRACKET_CLASS_MASK);
 		n->u.bracket.class_flags = theft_random_bits(t, BRACKET_CLASS_COUNT);
+
+		/* shrink away class_flags, and make them less common in general */
+		if (theft_random_bits(t, 3) <= 6) {
+			n->u.bracket.class_flags = 0;
+		}
+
+		memset(n->u.bracket.set, 0x00, sizeof(n->u.bracket.set));
+
+		if (n->u.bracket.class_flags == 0) {
+			/* just set printable characters for now */
+			n->u.bracket.set[0] =
+			    theft_random_bits(t, 64) & (((1ULL << 32) - 1) << 32);
+			n->u.bracket.set[1] = theft_random_bits(t, 64);
+			n->u.bracket.set[2] = theft_random_bits(t, 64);
+			n->u.bracket.set[3] = theft_random_bits(t, 64);
+		}
+
+		if (should_skip_bracket_set(n->u.bracket.set)) {
+			free(n);
+			return THEFT_ALLOC_SKIP;
+		}
 		break;
 
 	case PN_ALT:
 		n->u.alt.count = 1 + theft_random_bits(t, 2);
 		n->u.alt.alts = xcalloc(n->u.alt.count, sizeof (struct pcre_node *));
 		for (size_t i = 0; i < n->u.alt.count; i++) {
-			n->u.alt.alts[i] = gen_pcre_node(t);
+			ares = gen_pcre_node(t, &n->u.alt.alts[i]);
+			if (ares != THEFT_ALLOC_OK) {
+				return ares;
+			}
 			assert(n->u.alt.alts[i]);
 		}
 		break;
 
+	case PN_ANCHOR:
+		n->u.anchor.type = theft_random_choice(t, PCRE_ANCHOR_TYPE_COUNT);
+		if (theft_random_bits(t, 3) < 4) {
+			n->u.anchor.type = PCRE_ANCHOR_NONE;
+		}
+		ares = gen_pcre_node(t, &n->u.anchor.inner);
+		if (ares != THEFT_ALLOC_OK) {
+			return ares;
+		}
+		assert(n->u.anchor.inner);
+		break;
+
 	default:
 		assert(false);
-		return NULL;
+		return THEFT_ALLOC_ERROR;
 	}
 
-	return n;
+	*dst = n;
+	return THEFT_ALLOC_OK;
 }
 
 /*
@@ -307,8 +387,17 @@ flatten(struct flatten_env *env, const struct pcre_node *node)
 		for (size_t i = 0; i < 256; i++) {
 			if (node->u.bracket.set[i / 64] & (1LLU << (i % 64))) {
 				unsigned char c = (unsigned char) i;
-				if (!buf_append(env->b, c, true)) {
-					return false;
+				if (c == '\\') { /* escape \ character */
+					if (!buf_append(env->b, c, true)) {
+						return false;
+					}
+					if (!buf_append(env->b, c, true)) {
+						return false;
+					}
+				} else {
+					if (!buf_append(env->b, c, true)) {
+						return false;
+					}
 				}
 			}
 		}
@@ -342,8 +431,35 @@ flatten(struct flatten_env *env, const struct pcre_node *node)
 		if (!buf_append(env->b, ')', false)) {
 			return false;
 		}
+		break;
+
+	case PN_ANCHOR:
+	{
+		const enum pcre_anchor_type t = node->u.anchor.type;
+		struct pcre_node *inner = node->u.anchor.inner;
+		if (t == PCRE_ANCHOR_START) {
+			if (!buf_append(env->b, '^', false)) { /* before */
+				return false;
+			}
+			if (!flatten(env, inner)) {
+				return false;
+			}
+		} else if (t == PCRE_ANCHOR_END) { /* anchor *after* */
+			if (!flatten(env, inner)) {
+				return false;
+			}
+			if (!buf_append(env->b, '$', false)) { /* after */
+				return false;
+			}
+		} else {
+			assert(t == PCRE_ANCHOR_NONE);
+			if (!flatten(env, inner)) {
+				return false;
+			}
+		}
 
 		break;
+	}
 
 	default:
 		assert(false);
@@ -465,7 +581,7 @@ flatten_re_tree(struct test_env *test_env, const struct pcre_node *re_tree,
 static bool
 in_set(const uint64_t *set, uint8_t pos)
 {
-	return 0 != (set[pos / 64] & (1LLU << (pos % 64)));
+	return 0 != (set[pos / 64] & (1LLU << (pos & 63)));
 }
 
 static void
@@ -493,9 +609,24 @@ counter_used(struct error_counter *bomb)
 }
 
 static bool
+allowed_set_char(char c)
+{
+	return isprint(c);
+}
+
+enum anchored_match {
+	ANCHORED_MATCH_NONE,
+	ANCHORED_MATCH_START = 0x01,
+	ANCHORED_MATCH_END = 0x02,
+};
+
+#define HAS_ANCHORED_START(m) ((*m) & ANCHORED_MATCH_START)
+#define HAS_ANCHORED_END(m)   ((*m) & ANCHORED_MATCH_END)
+
+static bool
 build_exp_match(struct theft *t,
 	struct buf *buf, const struct pcre_node *node,
-	struct error_counter *bomb)
+	struct error_counter *bomb, enum anchored_match *m)
 {
 #ifdef LOG_VERBOSE
 	fprintf(stdout, "< %s [size %zd], node %d\n", __func__, buf->size, node->t);
@@ -509,10 +640,19 @@ build_exp_match(struct theft *t,
 			counter_used(bomb);
 		} else {
 			counter_tick(bomb);
-			for (;;) {		/* any byte except newline */
+			for (;;) {		/* any printable byte; filter newline or '\0' */
 				uint8_t byte = (uint8_t) theft_random_bits(t, 8);
-				if (byte != '\n') {
-					buf_append(buf, byte, false);
+				if (byte == '\n') {
+					/* ignore */
+				} else if (byte == '\0' || !isprint(byte)) {
+					if (!buf_append(buf, ' ', false)) {
+						return false;
+					}
+					break;
+				} else {
+					if (!buf_append(buf, byte, false)) {
+						return false;
+					}
 					break;
 				}
 			}
@@ -546,7 +686,7 @@ build_exp_match(struct theft *t,
 		break;
 
 	case PN_QUESTION:
-		/* to be or not to be */
+		/* match subtree, or not */
 		if (counter_timed_out(bomb)) {
 			/* Note: this can cause false negatives if used
 			 * next to other repetition operators. */
@@ -554,18 +694,18 @@ build_exp_match(struct theft *t,
 
 			/* apply it twice, no zero times or once */
 			if (!build_exp_match(t, buf,
-				node->u.question.inner, bomb)) {
+				node->u.question.inner, bomb, m)) {
 				return false;
 			}
 			if (!build_exp_match(t, buf,
-				node->u.question.inner, bomb)) {
+				node->u.question.inner, bomb, m)) {
 				return false;
 			}
 		} else {
 			counter_tick(bomb);
 			if (theft_random_bits(t, 1) == 0x01) {
 				if (!build_exp_match(t, buf,
-					node->u.question.inner, bomb)) {
+					node->u.question.inner, bomb, m)) {
 					return false;
 				}
 			}
@@ -574,10 +714,12 @@ build_exp_match(struct theft *t,
 
 	case PN_KLEENE:
 		/* Is an error possible here? (don't tick the counter) */
-		while (theft_random_bits(t, 1)) {
-			if (!build_exp_match(t, buf,
-				node->u.kleene.inner, bomb)) {
-				return false;
+		if (!HAS_ANCHORED_START(m) && !HAS_ANCHORED_END(m)) {
+			while (theft_random_bits(t, 1)) {
+				if (!build_exp_match(t, buf,
+					node->u.kleene.inner, bomb, m)) {
+					return false;
+				}
 			}
 		}
 		break;
@@ -590,10 +732,11 @@ build_exp_match(struct theft *t,
 			counter_tick(bomb);
 			do {
 				if (!build_exp_match(t, buf,
-					node->u.plus.inner, bomb)) {
+					node->u.plus.inner, bomb, m)) {
 					return false;
 				}
-			} while (theft_random_bits(t, 1));
+			} while (!(HAS_ANCHORED_START(m) || HAS_ANCHORED_END(m))
+			    && theft_random_bits(t, 1));
 		}
 		break;
 
@@ -631,9 +774,21 @@ build_exp_match(struct theft *t,
 
 		for (uint16_t i = 0; i < 256; i++) {
 			uint8_t pos;
+			bool add = false;
 
 			pos = (start + i) & 0xFF; /* wrap */
-			if ((neg && !in_set(set, pos)) || (!neg && in_set(set, pos))) {
+
+			if (!allowed_set_char(pos)) {
+				continue;
+			}
+
+			if (neg && !in_set(set, pos)) {
+				add = true;
+			} else if (!neg && in_set(set, pos)) {
+				add = true;
+			}
+
+			if (add) {
 				if (!buf_append(buf, pos, false)) {
 					return false;
 				}
@@ -656,7 +811,28 @@ build_exp_match(struct theft *t,
 
 		choice = theft_random_choice(t, node->u.alt.count);
 		if (!build_exp_match(t, buf,
-			node->u.alt.alts[choice], bomb)) {
+			node->u.alt.alts[choice], bomb, m)) {
+			return false;
+		}
+		break;
+	}
+
+	case PN_ANCHOR:
+	{
+		/* Note an anchor, so that the caller doesn't add further stuff that
+		 * would be pruned.
+		 * FIXME: does this need to apply before or after recursing? */
+		const enum pcre_anchor_type at = node->u.anchor.type;
+		if (at == PCRE_ANCHOR_START) {
+			(*m) |= ANCHORED_MATCH_START;
+		} else if (at == PCRE_ANCHOR_END) {
+			(*m) |= ANCHORED_MATCH_END;
+		} else {
+			assert(at == PCRE_ANCHOR_NONE);
+		}
+
+		if (!build_exp_match(t, buf,
+			node->u.anchor.inner, bomb, m)) {
 			return false;
 		}
 		break;
@@ -688,6 +864,11 @@ build_exp_class_flag(struct theft *t, struct buf *buf,
 	assert(node->u.bracket.class_flags != 0x0000);
 
 	inject_error = counter_timed_out(bomb);
+
+	/* negate */
+	if (node->u.bracket.negated) {
+		inject_error = !inject_error;
+	}
 
 	byte = 0x00;
 
@@ -856,13 +1037,14 @@ gen_expected_match(struct theft *t,
 {
 	uint8_t *res;
 	struct buf *buf;
+	enum anchored_match m = ANCHORED_MATCH_NONE;
 
 	buf = buf_new();
 	if (buf == NULL) {
 		return NULL;
 	}
 
-	if (!build_exp_match(t, buf, node, bomb)) {
+	if (!build_exp_match(t, buf, node, bomb, &m)) {
 		buf_free(buf);
 		return NULL;
 	}
@@ -916,6 +1098,10 @@ free_pcre_tree(struct pcre_node *node)
 		/* no op */
 		break;
 
+	case PN_ANCHOR:
+		free_pcre_tree(node->u.anchor.inner);
+		break;
+
 	default:
 	case PCRE_NODE_TYPE_COUNT:
 		assert(false);
@@ -924,4 +1110,3 @@ free_pcre_tree(struct pcre_node *node)
 
 	free(node);
 }
-

@@ -10,7 +10,7 @@
 
 #include <adt/xalloc.h>
 
-bool
+enum theft_alloc_res
 type_info_re_literal_build_info(struct theft *t,
 	struct test_re_info *info)
 {
@@ -28,7 +28,7 @@ type_info_re_literal_build_info(struct theft *t,
 
 	buf = (uint8_t *) buf64;
 	if (buf == NULL) {
-		return false;
+		return THEFT_ALLOC_ERROR;
 	}
 
 	theft_random_bits_bulk(t, 8 * size, buf64);
@@ -42,6 +42,6 @@ type_info_re_literal_build_info(struct theft *t,
 	info->pos_pairs[0].size   = size;
 	info->pos_pairs[0].string = buf;
 
-	return true;
+	return THEFT_ALLOC_OK;
 }
 

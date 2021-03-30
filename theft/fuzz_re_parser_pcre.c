@@ -112,7 +112,7 @@ test_re_parser_pcre(uint8_t verbosity,
 		//goto fail;
 	}
 
-	if (verbosity > 1) {
+	if (verbosity > 3) {
 		fsm_print_dot(LOG_OUT, fsm);
 	}
 
@@ -209,6 +209,11 @@ prop_re_minimise(struct theft *t, void *arg1)
 
 	state_count_pre = fsm_count(fsm, fsm_isany);
 
+	if (!fsm_determinise(fsm)) {
+		LOG_FAIL(verbosity, "fsm_determinise failure\n");
+		return THEFT_TRIAL_FAIL;
+	}
+
 	if (!fsm_minimise(fsm)) {
 		LOG_FAIL(verbosity, "fsm_minimise failure\n");
 		return THEFT_TRIAL_FAIL;
@@ -284,6 +289,11 @@ check_pos_matches(uint8_t verbosity, struct fsm *fsm,
 			continue;
 		}
 
+		if (verbosity > 1) {
+			fprintf(stdout, "-- Checking %zu/%zd positive pair '%s'(%zu)...\n",
+			    i, pos_count, pos_pairs[i].string, pos_pairs[i].size);
+		}
+
 		TIME(&pre);
 
 		e = wrap_fsm_exec(fsm, &pos_pairs[i], &st);
@@ -301,7 +311,7 @@ check_pos_matches(uint8_t verbosity, struct fsm *fsm,
 			return false;
 		}
 
-		if (verbosity > 1) {
+		if (verbosity > 3) {
 			fsm_print_dot(LOG_OUT, fsm);
 		}
 		if (e != 1) {
@@ -345,7 +355,7 @@ check_neg_matches(uint8_t verbosity, struct fsm *fsm,
 	}
 
 	for (size_t i = 0; i < neg_count; i++) {
-		fsm_state_t st;
+		fsm_state_t st = 0;
 		int r;
 
 		if (neg_pairs[i].string == NULL) {
@@ -353,6 +363,11 @@ check_neg_matches(uint8_t verbosity, struct fsm *fsm,
 				fprintf(stdout, "	%zd: discarded, skipping\n", i);
 			}
 			continue;
+		}
+
+		if (verbosity > 1) {
+			fprintf(stdout, "-- Checking %zu/%zd negative pair '%s'(%zu)...\n",
+			    i, neg_count, neg_pairs[i].string, neg_pairs[i].size);
 		}
 
 		TIME(&pre);

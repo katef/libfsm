@@ -47,6 +47,7 @@ enum pcre_node_type {
 	PN_PLUS,     /* (x)+ */
 	PN_BRACKET,  /* [x] or [^x]*/
 	PN_ALT,      /* (x|y|z) */
+	PN_ANCHOR,   /* ^ or $ */
 	PCRE_NODE_TYPE_COUNT
 };
 
@@ -100,6 +101,15 @@ struct pcre_node {
 			size_t count;
 			struct pcre_node **alts;
 		} alt;
+		struct {
+			enum pcre_anchor_type {
+				PCRE_ANCHOR_NONE, /* shrunk away */
+				PCRE_ANCHOR_START,
+				PCRE_ANCHOR_END,
+				PCRE_ANCHOR_TYPE_COUNT,
+			} type;
+			struct pcre_node *inner;
+		} anchor;
 	} u;
 };
 
@@ -111,10 +121,12 @@ struct flatten_env {
 
 extern const struct theft_type_info type_info_re;
 
-bool type_info_re_literal_build_info(struct theft *t,
+enum theft_alloc_res
+type_info_re_literal_build_info(struct theft *t,
     struct test_re_info *info);
 
-bool type_info_re_pcre_build_info(struct theft *t,
+enum theft_alloc_res
+type_info_re_pcre_build_info(struct theft *t,
     struct test_re_info *info);
 
 void type_info_re_pcre_free(struct pcre_node *node);

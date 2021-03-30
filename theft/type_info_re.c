@@ -16,7 +16,6 @@ re_alloc(struct theft *t, void *penv, void **output)
 {
 	struct test_re_info *res;
 	struct test_env *env;
-	bool ok;
 
 	env = penv;
 
@@ -26,25 +25,25 @@ re_alloc(struct theft *t, void *penv, void **output)
 
 	res->tag = 'r';
 
-	ok = true;
+	enum theft_alloc_res ares;
 	switch (env->dialect) {
 	case RE_LITERAL:
-		ok = type_info_re_literal_build_info(t, res);
+		ares = type_info_re_literal_build_info(t, res);
 		break;
 
 	case RE_PCRE:
-		ok = type_info_re_pcre_build_info(t, res);
+		ares = type_info_re_pcre_build_info(t, res);
 		break;
 
 	default:
 		fprintf(stderr, "NYI\n");
-		ok = false;
+		ares = THEFT_ALLOC_ERROR;
 		break;
 	}
 
-	if (!ok) {
+	if (ares != THEFT_ALLOC_OK) {
 		free(res);
-		return THEFT_ALLOC_ERROR;
+		return ares;
 	}
 
 	res->dialect = env->dialect;
@@ -92,6 +91,73 @@ re_free(void *instance, void *env)
 	free(info);
 }
 
+#define MAX_INDENT 80
+#define PRINT_PCRE_AST 1
+static void
+re_print_ast(FILE *f, const struct pcre_node *n, size_t indent, char *indent_buf)
+{
+	if (indent > MAX_INDENT) {
+		indent = MAX_INDENT;
+	}
+	for (size_t i = 0; i < indent; i++) {
+		indent_buf[i] = ' ';
+	}
+	indent_buf[indent] = '\0';
+
+	assert(n != NULL);
+	switch (n->t) {
+	case PN_DOT:
+		fprintf(f, "%s- dot\n", indent_buf);
+		break;
+	case PN_LITERAL:
+		fprintf(f, "%s- literal: \"%s\"\n", indent_buf, n->u.literal.string);
+		break;
+	case PN_QUESTION:
+		fprintf(f, "%s- question:\n", indent_buf);
+		re_print_ast(f, n->u.question.inner, indent + 4, indent_buf);
+		break;
+	case PN_KLEENE:
+		fprintf(f, "%s- kleene:\n", indent_buf);
+		re_print_ast(f, n->u.kleene.inner, indent + 4, indent_buf);
+		break;
+	case PN_PLUS:
+		fprintf(f, "%s- plus:\n", indent_buf);
+		re_print_ast(f, n->u.plus.inner, indent + 4, indent_buf);
+		break;
+	case PN_BRACKET:
+		fprintf(f, "%s- bracket %s0x%x -- [0x%016lx,%016lx,%016lx,%016lxx] -- ",
+		    indent_buf, n->u.bracket.negated ? "NEG " : "POS ",
+		    n->u.bracket.class_flags,
+		    n->u.bracket.set[0], n->u.bracket.set[1],
+		    n->u.bracket.set[2], n->u.bracket.set[3]);
+		for (unsigned i = 0; i < 256; i++) {
+			if (n->u.bracket.set[i/64] & (1ULL << (i&63))) {
+				fprintf(f, "%c", isprint(i) ? i : '.');
+			}
+		}
+		fprintf(f, "\n");
+		break;
+	case PN_ALT:
+		fprintf(f, "%s- alts: (%zu)\n", indent_buf, n->u.alt.count);
+		for (size_t i = 0; i < n->u.alt.count; i++) {
+			re_print_ast(f, n->u.alt.alts[i], indent + 4, indent_buf);
+		}
+		break;
+	case PN_ANCHOR:
+	{
+		const enum pcre_anchor_type t = n->u.anchor.type;
+		fprintf(f, "%s- anchor: %s\n", indent_buf,
+		    t == PCRE_ANCHOR_START ? "START"
+		    : t == PCRE_ANCHOR_END ? "END"
+		    : "<none>");
+		re_print_ast(f, n->u.anchor.inner, indent + 4, indent_buf);
+		break;
+	}
+	default:
+		break;
+	}
+}
+
 static void
 re_print(FILE *f, const void *instance, void *env)
 {
@@ -107,6 +173,13 @@ re_print(FILE *f, const void *instance, void *env)
 
 	hexdump(f, info->string, info->size);
 	fprintf(f, "\n");
+
+	if (PRINT_PCRE_AST && info->dialect == RE_PCRE) {
+		char indent[MAX_INDENT];
+		fprintf(f, "== AST:\n");
+		re_print_ast(f, info->u.pcre.head, 0, indent);
+		fprintf(f, "\n");
+	}
 
 	if (info->pos_count > 0) {
 		fprintf(f, "## Positive test string(s): %zd\n", info->pos_count);

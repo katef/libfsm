@@ -46,7 +46,7 @@ shrink_pre(const struct theft_hook_shrink_pre_info *info,
 	if ((tv.tv_sec % 10) == 0) {
 		if (env->last_trace_second != (size_t) tv.tv_sec) {
 			env->last_trace_second = tv.tv_sec;
- 			fprintf(stdout, "Shrinking...successful %zd, failed %zd, %zd / %zd elapsed\n",
+ 			fprintf(stderr, "Shrinking...successful %zd, failed %zd, %zd / %zd elapsed\n",
  				info->successful_shrinks, info->failed_shrinks,
  				elapsed, env->shrink_timeout);
 		}
@@ -56,7 +56,7 @@ shrink_pre(const struct theft_hook_shrink_pre_info *info,
 		env->started_second = tv.tv_sec;
 	} else if (env->shrink_timeout != 0 &&
 		tv.tv_sec - env->started_second > env->shrink_timeout) {
-		fprintf(stdout, "%s: Bailing after %zd seconds of shrinking\n",
+		fprintf(stderr, "%s: Bailing after %zd seconds of shrinking\n",
 			__func__, tv.tv_sec - env->started_second);
 		return THEFT_HOOK_SHRINK_PRE_HALT;
 	}
@@ -85,7 +85,7 @@ nfa_operations_should_not_impact_matching(theft_seed seed)
 			&type_info_nfa,
 			&type_info_fsm_literal
 		},
-		.trials = 100000,
+		.trials = 10000,
 		.hooks = {
 			//.trial_pre = trial_pre_fail_once,
 			.trial_post = trial_post_inc_verbosity,
@@ -107,9 +107,9 @@ nfa_operations_should_not_impact_matching(theft_seed seed)
 
 #define PRINT_FSM(BANNER)						\
 	do {								\
-		if (verbosity > 0) {					\
-			fprintf(stdout, "==== %s ====\n", BANNER);	\
-			fsm_print_dot(stdout, nfa);			\
+		if (verbosity > 2) {					\
+			fprintf(stderr, "==== %s ====\n", BANNER);	\
+			fsm_print_fsm(stderr, nfa);			\
 		}							\
 	} while(0)
 
@@ -148,7 +148,7 @@ prop_nfa_operations_should_not_impact_matching(struct theft *t,
 	 * API contract that it's only called on DFAs. */
 	if (!fsm_all(nfa, fsm_isdfa)) {
 		if (!fsm_determinise(nfa)) {
-			fprintf(stdout, "FAIL: determinise before\n");
+			fprintf(stderr, "FAIL: determinise before\n");
 			return THEFT_TRIAL_FAIL;
 		}
 		PRINT_FSM("determinising before initial exec");
@@ -172,8 +172,16 @@ prop_nfa_operations_should_not_impact_matching(struct theft *t,
 		match[i] = (e == 1);
 	}
 
+	if (verbosity > 2) {
+		fprintf(stderr, "=== BEFORE apply_ops\n");
+	}
+
 	if (!apply_ops(env, nfa_spec, nfa)) {
 		return THEFT_TRIAL_FAIL;
+	}
+
+	if (verbosity > 2) {
+		fprintf(stderr, "=== AFTER apply_ops\n");
 	}
 
 	/*
@@ -181,8 +189,11 @@ prop_nfa_operations_should_not_impact_matching(struct theft *t,
 	 * API contract that it's only called on DFAs.
 	 */
 	if (!fsm_all(nfa, fsm_isdfa)) {
+		if (verbosity > 2) {
+			fprintf(stderr, "=== determinizing before calling fsm_exec\n");
+		}
 		if (!fsm_determinise(nfa)) {
-			fprintf(stdout, "FAIL: determinise after\n");
+			fprintf(stderr, "FAIL: determinise after\n");
 			return THEFT_TRIAL_FAIL;
 		}
 		PRINT_FSM("determinising before exec");
@@ -199,7 +210,7 @@ prop_nfa_operations_should_not_impact_matching(struct theft *t,
 		nmatch = (e == 1);
 		if (match[i] != nmatch) {
 			if (verbosity > 0) {
-				fprintf(stdout, "FAIL string %zd: match was %d, now %d\n",
+				fprintf(stderr, "FAIL string %zd: match was %d, now %d\n",
 					i, match[i], nmatch);
 			}
 
@@ -229,12 +240,18 @@ apply_ops(struct test_env *env, struct nfa_spec *nfa_spec,
 		}
 
 		op = nfa_spec->ops[i];
+
+		if (verbosity > 0) {
+			fprintf(stderr, "=== about to execute op %zu/%zu: op %d\n",
+			    i, (size_t)MAX_NFA_OPS, op);
+		}
+
 		switch (op) {
 		case NFA_OP_NOP: continue;
 		case NFA_OP_MINIMISE:
 			if (!fsm_minimise(nfa)) {
 				if (verbosity > 0) {
-					fprintf(stdout, "FAIL: minimise\n");
+					fprintf(stderr, "FAIL: minimise\n");
 				}
 				return false;
 			}
@@ -243,45 +260,45 @@ apply_ops(struct test_env *env, struct nfa_spec *nfa_spec,
 		case NFA_OP_DETERMINISE:
 			if (!fsm_determinise(nfa)) {
 				if (verbosity > 0) {
-					fprintf(stdout, "FAIL: determinise\n");
+					fprintf(stderr, "FAIL: determinise\n");
 				}
 				return false;
 			}
 			break;
 
 		case NFA_OP_TRIM:
-			if (!fsm_trim(nfa, FSM_TRIM_START_AND_END_REACHABLE, NULL)) {
+			if (fsm_trim(nfa, FSM_TRIM_START_AND_END_REACHABLE, NULL) < 0) {
 				if (verbosity > 0) {
-					fprintf(stdout, "FAIL: trim\n");
+					fprintf(stderr, "FAIL: trim\n");
 				}
 				return false;
 			}
 			break;
 
 		case NFA_OP_DOUBLE_REVERSE:
-			if (!fsm_trim(nfa, FSM_TRIM_START_AND_END_REACHABLE, NULL)) {
+			if (fsm_trim(nfa, FSM_TRIM_START_AND_END_REACHABLE, NULL) < 0) {
 				if (verbosity > 0) {
-					fprintf(stdout, "FAIL: first reverse's trim\n");
+					fprintf(stderr, "FAIL: first reverse's trim\n");
 				}
 				return false;
 			}
 			if (!fsm_reverse(nfa)) {
 				if (verbosity > 0) {
-					fprintf(stdout, "FAIL: first reverse\n");
+					fprintf(stderr, "FAIL: first reverse\n");
 				}
 				return false;
 			}
 			PRINT_FSM("REVERSE");
 
-			if (!fsm_trim(nfa, FSM_TRIM_START_AND_END_REACHABLE, NULL)) {
+			if (fsm_trim(nfa, FSM_TRIM_START_AND_END_REACHABLE, NULL) < 0) {
 				if (verbosity > 0) {
-					fprintf(stdout, "FAIL: second reverse's trim\n");
+					fprintf(stderr, "FAIL: second reverse's trim\n");
 				}
 				return false;
 			}
 			if (!fsm_reverse(nfa)) {
 				if (verbosity > 0) {
-					fprintf(stdout, "FAIL: second reverse\n");
+					fprintf(stderr, "FAIL: second reverse\n");
 				}
 				return false;
 			}
@@ -291,7 +308,7 @@ apply_ops(struct test_env *env, struct nfa_spec *nfa_spec,
 			/* TODO: is complement an operation that should cancel out? */
 			if (!fsm_complement(nfa)) {
 				if (verbosity > 0) {
-					fprintf(stdout, "FAIL: first complement\n");
+					fprintf(stderr, "FAIL: first complement\n");
 				}
 				return false;
 			}
@@ -299,7 +316,7 @@ apply_ops(struct test_env *env, struct nfa_spec *nfa_spec,
 
 			if (!fsm_complement(nfa)) {
 				if (verbosity > 0) {
-					fprintf(stdout, "FAIL: second complement\n");
+					fprintf(stderr, "FAIL: second complement\n");
 				}
 				return false;
 			}
@@ -415,7 +432,7 @@ nfa_edge_order_should_not_matter(theft_seed seed)
 		.name = __func__,
 		.prop1 = prop_nfa_edge_order_should_not_matter,
 		.type_info = { &type_info_nfa },
-		.trials = 100000,
+		.trials = 10000,
 		.hooks = {
 			.trial_pre = trial_pre_fail_once,
 			.trial_post = trial_post_inc_verbosity,
@@ -441,7 +458,7 @@ prop_nfa_edge_order_should_not_matter(struct theft *t,
 	struct nfa_spec *nfa_spec = arg1;
 	enum theft_trial_res res;
 	struct test_env *env;
-	struct fsm *nfa, *fan;
+	struct fsm *nfa, *fan;	/* fan = n-f-a rearranged */
 	int eq;
 
 	env = theft_hook_get_env(t);
@@ -464,17 +481,17 @@ prop_nfa_edge_order_should_not_matter(struct theft *t,
 	}
 
 	if (!apply_ops(env, nfa_spec, nfa)) {
-		fprintf(stdout, "FAILURE: apply_ops: fail on first NFA\n");
+		fprintf(stderr, "FAILURE: apply_ops: fail on first NFA\n");
 		return THEFT_TRIAL_FAIL;
 	}
 	if (!apply_ops(env, nfa_spec, fan)) {
-		fprintf(stdout, "FAILURE: apply_ops: fail on second NFA\n");
+		fprintf(stderr, "FAILURE: apply_ops: fail on second NFA\n");
 		return THEFT_TRIAL_FAIL;
 	}
 
 	eq = fsm_equal(nfa, fan);
 	if (env->verbosity > 0) {
-		fprintf(stdout, "fsm_equal: %d\n", eq);
+		fprintf(stderr, "fsm_equal: %d\n", eq);
 	}
 	switch (eq) {
 	default:
@@ -528,7 +545,7 @@ prop_nfa_minimise_should_not_add_states(struct theft *t,
 	struct nfa_spec *nfa_spec = arg1;
 	struct test_env *env;
 	uint8_t verbosity;
-	struct fsm *nfa;
+	struct fsm *fsm;
 	size_t count_before, count_after;
 
 	env = theft_hook_get_env(t);
@@ -541,26 +558,30 @@ prop_nfa_minimise_should_not_add_states(struct theft *t,
 		return THEFT_TRIAL_SKIP;
 	}
 
-	nfa = nfa_of_spec(nfa_spec, false);
-	if (nfa == NULL) {
+	fsm = nfa_of_spec(nfa_spec, false);
+	if (fsm == NULL) {
 		return THEFT_TRIAL_ERROR;
 	}
 
-	count_before = fsm_count(nfa, fsm_isany);
-	if (!fsm_minimise(nfa)) {
+	if (!fsm_determinise(fsm)) {
+		return THEFT_TRIAL_FAIL;
+	}
+
+	count_before = fsm_count(fsm, fsm_isany);
+	if (!fsm_minimise(fsm)) {
 		if (verbosity > 0) {
-			fprintf(stdout, "%s: fsm_minimise failure\n", __func__);
+			fprintf(stderr, "%s: fsm_minimise failure\n", __func__);
 		}
 		return THEFT_TRIAL_ERROR;
 	}
-	count_after = fsm_count(nfa, fsm_isany);
+	count_after = fsm_count(fsm, fsm_isany);
 
 	if (verbosity > 0) {
-		fprintf(stdout, "%s: before %zd => after %zd\n",
+		fprintf(stderr, "%s: before %zd => after %zd\n",
 			__func__, count_before, count_after);
 	}
 
-	fsm_free(nfa);
+	fsm_free(fsm);
 
 	return count_after <= count_before
 		? THEFT_TRIAL_PASS

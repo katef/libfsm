@@ -7,7 +7,6 @@ SRC += theft/wrap.c
 
 SRC += theft/fuzz_adt_edge_set.c
 SRC += theft/fuzz_adt_priq.c
-SRC += theft/fuzz_adt_set.c
 SRC += theft/fuzz_capture_string_set.c
 SRC += theft/fuzz_literals.c
 SRC += theft/fuzz_minimise.c
@@ -26,11 +25,8 @@ SRC += theft/type_info_re.c
 SRC += theft/type_info_re_literal.c
 SRC += theft/type_info_re_pcre.c
 SRC += theft/type_info_adt_priq.c
-SRC += theft/type_info_adt_set.c
 
 #PROPNAME.theft += adt_priq_operations
-#PROPNAME.theft += adt_set_equality
-#PROPNAME.theft += adt_set_operations
 PROPNAME.theft += adt
 
 PROPNAME.theft += nfa_edge_order_should_not_matter

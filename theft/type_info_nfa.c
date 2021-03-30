@@ -22,7 +22,7 @@ type_info_nfa_alloc(struct theft *t, void *type_env, void **output)
 	uint8_t op_count;
 
 	/* These could be configurable once all known issues are resolved */
-	const uint8_t state_bits = 8;
+	const uint8_t state_bits = 5;
 	const uint8_t edge_bits  = 4;
 	const uint8_t end_bits   = 4;
 
@@ -36,6 +36,7 @@ type_info_nfa_alloc(struct theft *t, void *type_env, void **output)
 	(void) type_env;
 
 	res = xmalloc(sizeof *res);
+	memset(res, 0x00, sizeof *res);
 
 	res->tag    = 'N';
 	res->states = xmalloc(state_count * sizeof *states);
