@@ -85,7 +85,7 @@ nfa_operations_should_not_impact_matching(theft_seed seed)
 			&type_info_nfa,
 			&type_info_fsm_literal
 		},
-		.trials = 100000,
+		.trials = 10000,
 		.hooks = {
 			//.trial_pre = trial_pre_fail_once,
 			.trial_post = trial_post_inc_verbosity,
@@ -432,7 +432,7 @@ nfa_edge_order_should_not_matter(theft_seed seed)
 		.name = __func__,
 		.prop1 = prop_nfa_edge_order_should_not_matter,
 		.type_info = { &type_info_nfa },
-		.trials = 100000,
+		.trials = 10000,
 		.hooks = {
 			.trial_pre = trial_pre_fail_once,
 			.trial_post = trial_post_inc_verbosity,
