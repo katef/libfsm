@@ -29,6 +29,41 @@ struct edge_ordered_iter {
 	uint64_t symbols_used[4];
 };
 
+enum edge_group_iter_type {
+	EDGE_GROUP_ITER_ALL,
+	EDGE_GROUP_ITER_UNIQUE
+};
+
+struct edge_group_iter {
+	const struct edge_set *set;
+	unsigned flag;
+	size_t i;
+	uint64_t internal[256/64];
+};
+
+/* TODO: symbols: macros for bit flags, first, count, etc. */
+
+struct edge_group_iter_info {
+	int unique;
+	fsm_state_t to;
+	uint64_t symbols[256/64];
+};
+
+/* Reset an iterator for groups of edges.
+ * If iter_type is set to EDGE_GROUP_ITER_UNIQUE,
+ * edges with labels that only appear once will be
+ * yielded with unique set to 1, all others set to 0.
+ * If iter_type is EDGE_GROUP_ITER_ALL, they will not
+ * be separated, and unique will not be set. */
+void
+edge_set_group_iter_reset(const struct edge_set *s,
+    enum edge_group_iter_type iter_type,
+    struct edge_group_iter *egi);
+
+int
+edge_set_group_iter_next(struct edge_group_iter *egi,
+    struct edge_group_iter_info *eg);
+
 /* Opaque struct type for edge iterator,
  * which does extra processing upfront to iterate over
  * edges in lexicographically ascending order; the
@@ -46,6 +81,17 @@ edge_set_free(const struct fsm_alloc *a, struct edge_set *set);
 int
 edge_set_add(struct edge_set **set, const struct fsm_alloc *alloc,
 	unsigned char symbol, fsm_state_t state);
+
+int
+edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
+	uint64_t symbols[256/64], fsm_state_t state);
+
+/* Notify the data structure that it wis likely to soon need to grow
+ * to fit N more bulk edge groups. This can avoid resizing multiple times
+ * in smaller increments. */
+int
+edge_set_advise_growth(struct edge_set **pset, const struct fsm_alloc *alloc,
+    size_t count);
 
 int
 edge_set_add_state_set(struct edge_set **setp, const struct fsm_alloc *alloc,

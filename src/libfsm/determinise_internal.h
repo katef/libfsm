@@ -16,14 +16,19 @@
 #include <adt/edgeset.h>
 #include <adt/stateset.h>
 #include <adt/internedstateset.h>
+#include <adt/ipriq.h>
 
 #include "internal.h"
 #include "capture.h"
 #include "endids.h"
 
+#include <ctype.h>
+
 #define DUMP_MAPPING 0
 #define LOG_DETERMINISE_CLOSURES 0
 #define LOG_DETERMINISE_CAPTURES 0
+#define LOG_SYMBOL_CLOSURE 0
+#define LOG_AC 0
 
 #if LOG_DETERMINISE_CAPTURES
 #include <fsm/print.h>
@@ -83,10 +88,98 @@ struct mappingstack {
 	struct mapping **s;
 };
 
+#define AC_NO_STATE ((fsm_state_t)-1)
+#define DEF_ITER_CEIL 4
+#define DEF_GROUP_CEIL 4
+#define DEF_OUTPUT_CEIL 4
+#define DEF_DST_CEIL 4
+
+struct analyze_closures_env {
+	const struct fsm_alloc *alloc;
+	const struct fsm *fsm;
+	struct interned_state_set_pool *issp;
+
+	/* TODO: iters and outputs are never in use at the same time, so
+	 * they could potentially share the same underlying allocation.
+	 * It may not be worth the extra complexity though. */
+
+	/* Temporary state for iterators */
+	size_t iter_ceil;
+	size_t iter_count;
+	struct ac_iter {
+		/* if info.to is AC_NO_STATE then it's done */
+		struct edge_group_iter iter;
+		struct edge_group_iter_info info;
+	} *iters;
+
+	struct ipriq *pq;
+
+	/* All sets of labels leading to states,
+	 * stored in ascending order. */
+	size_t group_ceil;
+	size_t group_count;
+	struct ac_group {
+		fsm_state_t to;
+		/* words_used & (1U << x) -> labels[x] has bits set */
+		uint8_t words_used;
+		uint64_t labels[256/64];
+	} *groups;
+
+	/* A collection of (label set -> interned state set) pairs. */
+	size_t output_ceil;
+	size_t output_count;
+	struct ac_output {
+		uint64_t labels[256/64];
+		struct interned_state_set *iss;
+	} *outputs;
+
+	size_t dst_ceil;
+	fsm_state_t *dst;
+};
+
+static int
+analyze_closures_for_iss(struct analyze_closures_env *env,
+	struct interned_state_set *curr_iss);
+
+static int
+analyze_closures__init_iterators(struct analyze_closures_env *env,
+	const struct state_set *ss, size_t set_count);
+
+static int
+analyze_closures__init_groups(struct analyze_closures_env *env);
+
+enum ac_collect_res {
+	AC_COLLECT_DONE,
+	AC_COLLECT_EMPTY,
+	AC_COLLECT_ERROR = -1,
+};
+
+static enum ac_collect_res
+analyze_closures__collect(struct analyze_closures_env *env);
+
+static int
+analyze_closures__analyze(struct analyze_closures_env *env);
+
+static int
+analyze_closures__save_output(struct analyze_closures_env *env,
+    const uint64_t labels[256/4], struct interned_state_set *iss);
+
+static int
+analyze_closures__grow_iters(struct analyze_closures_env *env,
+    size_t set_count);
+
+static int
+analyze_closures__grow_groups(struct analyze_closures_env *env);
+
+static int
+analyze_closures__grow_dst(struct analyze_closures_env *env);
+
+static int
+analyze_closures__grow_outputs(struct analyze_closures_env *env);
+
 static int
 map_add(struct map *map,
-	fsm_state_t dfastate, struct interned_state_set *iss,
-	struct mapping **new_mapping);
+	fsm_state_t dfastate, struct interned_state_set *iss, struct mapping **new_mapping);
 
 static int
 map_find(const struct map *map, struct interned_state_set *iss,
@@ -113,7 +206,7 @@ det_copy_capture_actions(struct reverse_mapping *reverse_mappings,
 static int
 interned_symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
 	struct interned_state_set_pool *issp,
-	struct interned_state_set *sclosures[static FSM_SIGMA_COUNT]);
+	struct interned_state_set *sclosures[static FSM_SIGMA_COUNT], size_t dfa_state);
 
 static int
 grow_map(struct map *map);

@@ -268,6 +268,32 @@ edge_set_add(struct edge_set **setp, const struct fsm_alloc *alloc,
 }
 
 int
+edge_set_advise_growth(struct edge_set **pset, const struct fsm_alloc *alloc,
+    size_t count)
+{
+	/* not implemented */
+	(void)pset;
+	(void)alloc;
+	(void)count;
+	return 1;
+}
+
+int
+edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
+	uint64_t symbols[256/64], fsm_state_t state)
+{
+	size_t i;
+	for (i = 0; i < 256; i++) {
+		if (SYMBOLS_GET(symbols, i)) {
+			if (!edge_set_add(pset, alloc, i, state)) {
+				return 0;
+			}
+		}
+	}
+	return 1;
+}
+
+int
 edge_set_add_state_set(struct edge_set **setp, const struct fsm_alloc *alloc,
 	unsigned char symbol, const struct state_set *state_set)
 {
@@ -902,16 +928,14 @@ edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
-#define DEF_EDGE_GROUP_CEIL 2
+#define DEF_EDGE_GROUP_CEIL 1
 
 /* Array of <to, symbols> tuples, sorted by to.
  *
  * Design assumption: It is significantly more likely in practice to
  * have to be more edges with different labels going to the same state
  * than the same symbol going to different states. This does not
- * include epsilon edges, which can be stored in a state_set.
- *
- * A NULL pointer is treated as the empty set, because */
+ * include epsilon edges, which can be stored in a state_set. */
 struct edge_set {
 	size_t ceil;		/* nonzero */
 	size_t count;		/* <= ceil */
@@ -999,9 +1023,76 @@ dump_edge_set(const struct edge_set *set)
 	}
 }
 
+static struct edge_set *
+init_empty(const struct fsm_alloc *alloc)
+{
+	struct edge_set *set = f_calloc(alloc, 1, sizeof(*set));
+	if (set == NULL) {
+		return NULL;
+	}
+
+	set->groups = f_malloc(alloc,
+	    DEF_EDGE_GROUP_CEIL * sizeof(set->groups[0]));
+	if (set->groups == NULL) {
+		f_free(alloc, set);
+		return NULL;
+	}
+
+	set->ceil = DEF_EDGE_GROUP_CEIL;
+	set->count = 0;
+	return set;
+}
+
 int
 edge_set_add(struct edge_set **pset, const struct fsm_alloc *alloc,
 	unsigned char symbol, fsm_state_t state)
+{
+	uint64_t symbols[256/64] = { 0 };
+	SYMBOLS_SET(symbols, symbol);
+	return edge_set_add_bulk(pset, alloc, symbols, state);
+}
+
+int
+edge_set_advise_growth(struct edge_set **pset, const struct fsm_alloc *alloc,
+    size_t count)
+{
+	struct edge_set *set = *pset;
+	if (set == NULL) {
+		set = init_empty(alloc);
+		if (set == NULL) {
+			return 0;
+		}
+		*pset = set;
+	}
+
+	const size_t oceil = set->ceil;
+
+	size_t nceil = 1;
+	while (nceil < oceil + count) {
+		nceil *= 2;
+	}
+	assert(nceil > 0);
+
+#if LOG_BITSET
+	fprintf(stderr, " -- edge_set advise_growth: %lu -> %lu\n",
+	    set->ceil, nceil);
+#endif
+
+	struct edge_group *ng = f_realloc(alloc, set->groups,
+	    nceil * sizeof(set->groups[0]));
+	if (ng == NULL) {
+		return 0;
+	}
+
+	set->ceil = nceil;
+	set->groups = ng;
+
+	return 1;
+}
+
+int
+edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
+	uint64_t symbols[256/64], fsm_state_t state)
 {
 	struct edge_set *set;
 	struct edge_group *eg;
@@ -1012,32 +1103,22 @@ edge_set_add(struct edge_set **pset, const struct fsm_alloc *alloc,
 	set = *pset;
 
 	if (set == NULL) {	/* empty */
-		set = f_calloc(alloc, 1, sizeof(*set));
+		set = init_empty(alloc);
 		if (set == NULL) {
 			return 0;
 		}
 
-		set->groups = f_malloc(alloc,
-		    DEF_EDGE_GROUP_CEIL * sizeof(set->groups[0]));
-		if (set->groups == NULL) {
-			f_free(alloc, set);
-			return 0;
-		}
-
-		set->ceil = DEF_EDGE_GROUP_CEIL;
-		set->count = 0;
-
 		eg = &set->groups[0];
 		eg->to = state;
-		memset(eg->symbols, 0x00, sizeof(eg->symbols));
-		SYMBOLS_SET(eg->symbols, symbol);
+		memcpy(eg->symbols, symbols, sizeof(eg->symbols));
 		set->count++;
 
 		*pset = set;
 
 #if LOG_BITSET
-		fprintf(stderr, " -- edge_set_add: symbol 0x%x -> state %d on empty -> %p\n",
-		    symbol, state, (void *)set);
+		fprintf(stderr, " -- edge_set_add: symbols [0x%lx, 0x%lx, 0x%lx, 0x%lx] -> state %d on empty -> %p\n",
+		    symbols[0], symbols[1], symbols[2], symbols[3],
+		    state, (void *)set);
 #endif
 		dump_edge_set(set);
 
@@ -1048,8 +1129,9 @@ edge_set_add(struct edge_set **pset, const struct fsm_alloc *alloc,
 	assert(set->count <= set->ceil);
 
 #if LOG_BITSET
-	fprintf(stderr, " -- edge_set_add: symbol 0x%x -> state %d on %p\n",
-	    symbol, state, (void *)set);
+		fprintf(stderr, " -- edge_set_add: symbols [0x%lx, 0x%lx, 0x%lx, 0x%lx] -> state %d on %p\n",
+		    symbols[0], symbols[1], symbols[2], symbols[3],
+		    state, (void *)set);
 #endif
 
 	/* Linear search for a group with the same destination
@@ -1060,7 +1142,10 @@ edge_set_add(struct edge_set **pset, const struct fsm_alloc *alloc,
 		if (eg->to == state) {
 			/* This API does not indicate whether that
 			 * symbol -> to edge was already present. */
-			SYMBOLS_SET(eg->symbols, symbol);
+			size_t i;
+			for (i = 0; i < 256/64; i++) {
+				eg->symbols[i] |= symbols[i];
+			}
 			dump_edge_set(set);
 			return 1;
 		} else if (eg->to > state) {
@@ -1097,7 +1182,7 @@ edge_set_add(struct edge_set **pset, const struct fsm_alloc *alloc,
 
 	eg->to = state;
 	memset(eg->symbols, 0x00, sizeof(eg->symbols));
-	SYMBOLS_SET(eg->symbols, symbol);
+	memcpy(eg->symbols, symbols, sizeof(eg->symbols));
 	set->count++;
 	dump_edge_set(set);
 
@@ -1210,6 +1295,9 @@ edge_set_hasnondeterminism(const struct edge_set *set, struct bm *bm)
 				if (cur & (1ULL << b_i)) {
 					const size_t bit = 64*w_i + b_i;
 					if (bm_get(bm, bit)) {
+#if LOG_BITSET > 1
+						fprintf(stderr, "-- eshnd: hit on bit %lu\n", bit);
+#endif
 						return 1;
 					}
 					bm_set(bm, bit);
@@ -1880,6 +1968,121 @@ edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
 	}
 
 	return 0;
+}
+
+void
+edge_set_group_iter_reset(const struct edge_set *set,
+    enum edge_group_iter_type iter_type,
+    struct edge_group_iter *egi)
+{
+	memset(egi, 0x00, sizeof(*egi));
+	egi->set = set;
+	egi->flag = iter_type;
+
+#if LOG_BITSET > 1
+	fprintf(stderr, " -- edge_set_group_iter_reset: set %p, type %d\n",
+	    (void *)set, iter_type);
+#endif
+
+	if (iter_type == EDGE_GROUP_ITER_UNIQUE && set != NULL) {
+		struct edge_group *g;
+		size_t g_i, i;
+		uint64_t seen[256/64] = { 0 };
+		for (g_i = 0; g_i < set->count; g_i++) {
+			g = &set->groups[g_i];
+			for (i = 0; i < 256; i++) {
+				if ((i & 63) == 0 && g->symbols[i/64] == 0) {
+					i += 63; /* skip empty word */
+					continue;
+				}
+				if (SYMBOLS_GET(g->symbols, i)) {
+					if (SYMBOLS_GET(seen, i)) {
+						SYMBOLS_SET(egi->internal, i);
+					} else {
+						SYMBOLS_SET(seen, i);
+					}
+				}
+			}
+		}
+	}
+}
+
+int
+edge_set_group_iter_next(struct edge_group_iter *egi,
+    struct edge_group_iter_info *eg)
+{
+	struct edge_group *g;
+	int any = 0;
+	size_t i;
+advance:
+	if (egi->set == NULL || egi->i == egi->set->count) {
+#if LOG_BITSET > 1
+		fprintf(stderr, " -- edge_set_group_iter_next: set %p, count %lu, done\n",
+		    (void *)egi->set, egi->i);
+#endif
+		return 0;
+	}
+
+	g = &egi->set->groups[egi->i];
+
+	eg->to = g->to;
+
+#if LOG_BITSET > 1
+	fprintf(stderr, " -- edge_set_group_iter_next: flag %d, i %zu, to %d\n",
+	    egi->flag, egi->i, g->to);
+#endif
+
+	if (egi->flag == EDGE_GROUP_ITER_ALL) {
+		egi->i++;
+		for (i = 0; i < 4; i++) {
+			eg->symbols[i] = g->symbols[i];
+			if (eg->symbols[i] != 0) {
+				any = 1;
+			}
+		}
+		if (!any) {
+			goto advance;
+		}
+		return 1;
+	} else if (egi->flag == EDGE_GROUP_ITER_UNIQUE) { /* uniques first */
+		for (i = 0; i < 4; i++) {
+			eg->symbols[i] = g->symbols[i] &~ egi->internal[i];
+			if (eg->symbols[i] != 0) {
+				any = 1;
+			}
+		}
+
+		/* next time, yield non-uniques */
+		egi->flag = EDGE_GROUP_ITER_UNIQUE + 1;
+
+		/* if there are any uniques, yield them, otherwise
+		 * continue to the non-unique branch below. */
+		if (any) {
+			eg->unique = 1;
+			return 1;
+		}
+	}
+
+        if (egi->flag == EDGE_GROUP_ITER_UNIQUE + 1) {
+		for (i = 0; i < 4; i++) {
+			eg->symbols[i] = g->symbols[i] & egi->internal[i];
+			if (eg->symbols[i]) {
+				any = 1;
+			}
+		}
+		eg->unique = 0;
+
+		egi->flag = EDGE_GROUP_ITER_UNIQUE;
+		egi->i++;
+		if (!any) {
+			goto advance;
+		}
+
+		return 1;
+	} else {
+		assert("match fail");
+		return 0;
+	}
 }
 
 #endif

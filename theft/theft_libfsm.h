@@ -68,6 +68,7 @@ void reg_test3(const char *name, test_fun3 *test,
 /* Register tests within a module. */
 void register_test_literals(void);
 void register_test_re(void);
+void register_test_adt_ipriq(void);
 void register_test_adt_priq(void);
 void register_test_capture_string_set(void);
 void register_test_nfa(void);
