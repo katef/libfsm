@@ -204,11 +204,6 @@ det_copy_capture_actions(struct reverse_mapping *reverse_mappings,
 	struct fsm *dst, struct fsm *src);
 
 static int
-interned_symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
-	struct interned_state_set_pool *issp,
-	struct interned_state_set *sclosures[static FSM_SIGMA_COUNT], size_t dfa_state);
-
-static int
 grow_map(struct map *map);
 
 static int

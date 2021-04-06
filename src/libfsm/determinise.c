@@ -110,7 +110,7 @@ fsm_determinise(struct fsm *nfa)
 	ac_env.issp = issp;
 
 	do {
-		int o_i;
+		size_t o_i;
 
 #if LOG_SYMBOL_CLOSURE
 		fprintf(stderr, "\nfsm_determinise: current dfacount %lu...\n",
@@ -757,7 +757,6 @@ clear_group_labels(struct ac_group *g, const uint64_t *b)
 {
 	size_t i;
 	uint8_t bit;
-	uint64_t any = 0;
 	uint64_t *a = g->labels;
 
 	for (i = 0, bit = 0x01; i < 4; i++, bit <<= 1) {
@@ -991,9 +990,6 @@ analyze_closures__collect(struct analyze_closures_env *env)
 	 * finish immediately were added to the queue. Keep stepping
 	 * whichever is earliest (by .to state) until they're all done.
 	 * Merge (label set -> state) info along the way. */
-	fsm_state_t e_to = AC_NO_STATE;
-	size_t e_i = AC_NO_STATE; /* i with earliest to */
-	size_t i_i;
 
 	if (ipriq_empty(env->pq)) {
 #if LOG_AC
@@ -1240,8 +1236,7 @@ analyze_closures__analyze(struct analyze_closures_env *env)
 
 		{		/* build the state set and add to the output */
 			struct interned_state_set *iss = interned_state_set_empty(env->issp);
-			unsigned char first;
-			size_t d_i, label_count;
+			size_t d_i;
 			for (d_i = 0; d_i < dst_count; d_i++) {
 				struct interned_state_set *updated;
 #if LOG_AC
