@@ -138,7 +138,6 @@
 	<mark-expr>: (:ast_expr, :pos, :pos) -> ();
 
 	<class-any>: () -> (:ast_class_id);
-	!<class-eol>: () -> (:ast_class_id);
 
 	expr: () -> (node :ast_expr) [
 		literal: () -> (node :ast_expr) = {
