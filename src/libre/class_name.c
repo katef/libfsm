@@ -28,6 +28,8 @@ static struct {
 	{ &class_vspace_pcre, "vspace_pcre" },
 	{ &class_word, "word" },
 	{ &class_xdigit, "xdigit" },
+	{ &class_nl, "nl" },
+	{ &class_bsr, "bsr" },
 	{ &class_notdigit, "notdigit" },
 	{ &class_nothspace, "nothspace" },
 	{ &class_nothspace_pcre, "nothspace_pcre" },
