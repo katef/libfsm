@@ -655,25 +655,25 @@ ast_make_expr_alt(struct ast_expr_pool **poolp, enum re_flags re_flags)
 }
 
 int
-ast_add_expr_alt(struct ast_expr *cat, struct ast_expr *node)
+ast_add_expr_alt(struct ast_expr *alt, struct ast_expr *node)
 {
-	assert(cat != NULL);
-	assert(cat->type == AST_EXPR_ALT);
+	assert(alt != NULL);
+	assert(alt->type == AST_EXPR_ALT);
 
-	if (cat->u.alt.count == cat->u.alt.alloc) {
+	if (alt->u.alt.count == alt->u.alt.alloc) {
 		void *tmp;
 
-		tmp = realloc(cat->u.alt.n, cat->u.alt.alloc * 2 * sizeof *cat->u.alt.n);
+		tmp = realloc(alt->u.alt.n, alt->u.alt.alloc * 2 * sizeof *alt->u.alt.n);
 		if (tmp == NULL) {
 			return 0;
 		}
 
-		cat->u.alt.alloc *= 2;
-		cat->u.alt.n = tmp;
+		alt->u.alt.alloc *= 2;
+		alt->u.alt.n = tmp;
 	}
 
-	cat->u.alt.n[cat->u.alt.count] = node;
-	cat->u.alt.count++;
+	alt->u.alt.n[alt->u.alt.count] = node;
+	alt->u.alt.count++;
 
 	return 1;
 }
