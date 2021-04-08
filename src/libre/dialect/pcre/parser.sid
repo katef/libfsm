@@ -114,6 +114,7 @@
 	<ast-make-invert>:       (:ast_expr)              -> (:ast_expr); 
 	<ast-make-range>:        (:endpoint, :pos, :endpoint, :pos) -> (:ast_expr);
 	<ast-make-named>:        (:ast_class_id)          -> (:ast_expr);
+	<ast-make-named-eol>:    ()                       -> (:ast_expr);
 
 	<ast-add-concat>: (:ast_expr, :ast_expr) -> ();
 	<ast-add-alt>:    (:ast_expr, :ast_expr) -> ();
@@ -137,7 +138,7 @@
 	<mark-expr>: (:ast_expr, :pos, :pos) -> ();
 
 	<class-any>: () -> (:ast_class_id);
-	<class-eol>:  () -> (:ast_class_id);
+	!<class-eol>: () -> (:ast_class_id);
 
 	expr: () -> (node :ast_expr) [
 		literal: () -> (node :ast_expr) = {
@@ -461,11 +462,10 @@
 				 * (i.e. unicode or not) and on the current line-ending convention
 				 * (which is configurable) within a regexp.
 				 * TODO: We'll need to address that conditionally here. For the moment
-				 * we only construct <class-eol>.
+				 * we only construct an AST node for the default convention.
 				 */
 				EOL;
-				a = <class-eol>;
-				e = <ast-make-named>(a);
+				e = <ast-make-named-eol>;
 			||
 				e = literal;
 			||

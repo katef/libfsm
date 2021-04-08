@@ -102,6 +102,7 @@
 	!<ast-make-invert>:       (:ast_expr)              -> (:ast_expr); 
 	!<ast-make-range>:        (:endpoint, :pos, :endpoint, :pos) -> (:ast_expr);
 	<ast-make-named>:         (:ast_class_id)          -> (:ast_expr);
+	!<ast-make-named-eol>:    ()                       -> (:ast_expr);
 
 	<ast-add-concat>: (:ast_expr, :ast_expr) -> ();
 	!<ast-add-alt>:   (:ast_expr, :ast_expr) -> ();
