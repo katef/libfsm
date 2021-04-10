@@ -316,7 +316,7 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 1028 "src/libre/parser.act"
+#line 1032 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIa))) {
 			goto ZL1;
@@ -325,7 +325,7 @@ ZL2_list_Hof_Hatoms:;
 #line 326 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: ast-add-concat */
-		/* BEGINNING OF INLINE: 109 */
+		/* BEGINNING OF INLINE: 110 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -339,7 +339,7 @@ ZL2_list_Hof_Hatoms:;
 				break;
 			}
 		}
-		/* END OF INLINE: 109 */
+		/* END OF INLINE: 110 */
 	}
 	return;
 ZL1:;
@@ -356,7 +356,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 		return;
 	}
 	{
-		/* BEGINNING OF INLINE: 111 */
+		/* BEGINNING OF INLINE: 112 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -398,8 +398,8 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				break;
 			}
 		}
-		/* END OF INLINE: 111 */
-		/* BEGINNING OF INLINE: 112 */
+		/* END OF INLINE: 112 */
+		/* BEGINNING OF INLINE: 113 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -428,7 +428,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			}
 		ZL3:;
 		}
-		/* END OF INLINE: 112 */
+		/* END OF INLINE: 113 */
 	}
 	goto ZL0;
 ZL1:;
@@ -448,8 +448,8 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 	}
 	{
 		t_char ZIc;
-		t_pos ZI106;
 		t_pos ZI107;
+		t_pos ZI108;
 
 		switch (CURRENT_TERMINAL) {
 		case (TOK_CHAR):
@@ -460,8 +460,8 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI106 = lex_state->lx.start;
-		ZI107   = lex_state->lx.end;
+		ZI107 = lex_state->lx.start;
+		ZI108   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
@@ -524,7 +524,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 1184 "src/libre/parser.act"
+#line 1188 "src/libre/parser.act"
 
 
 	static int
