@@ -84,6 +84,7 @@
 	!<count-range>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
 	!<make-literal-cbrak>: () -> (:char);
+	!<make-literal-cr>:    () -> (:char);
 	!<make-literal-nl>:    () -> (:char);
 
 	!<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
@@ -104,7 +105,6 @@
 	!<ast-make-invert>:       (:ast_expr)              -> (:ast_expr); 
 	!<ast-make-range>:        (:endpoint, :pos, :endpoint, :pos) -> (:ast_expr);
 	<ast-make-named>:         (:ast_class_id)          -> (:ast_expr);
-	!<ast-make-named-eol>:    ()                       -> (:ast_expr);
 
 	<ast-add-concat>: (:ast_expr, :ast_expr) -> ();
 	!<ast-add-alt>:   (:ast_expr, :ast_expr) -> ();
@@ -127,7 +127,8 @@
 	!<mark-count>: (:pos, :pos) -> ();
 	!<mark-expr>: (:ast_expr, :pos, :pos) -> ();
 
-	<class-any>: () -> (:ast_class_id);
+	<class-any>:  () -> (:ast_class_id);
+	!<class-bsr>: () -> (:ast_class_id);
 
 	list-of-atoms: (cat :ast_expr) -> () [
 

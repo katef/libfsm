@@ -735,6 +735,11 @@
 		@c = (*flags & RE_SINGLE) ? &class_any : &class_notnl;
 	@};
 
+	<class-bsr>: () -> (c :ast_class_id) = @{
+		/* TODO: or the unicode equivalent */
+		@c = &class_bsr;
+	@};
+
 	/*
 	 * AST construction
 	 */
@@ -831,6 +836,10 @@
 
 	<make-literal-cbrak>: () -> (c :char) = @{
 		@c = ']';
+	@};
+
+	<make-literal-cr>: () -> (c :char) = @{
+		@c = '\r';
 	@};
 
 	<make-literal-nl>: () -> (c :char) = @{
@@ -970,60 +979,6 @@
 	<ast-make-named>: (id :ast_class_id) -> (node :ast_expr) = @{
 		@node = ast_make_expr_named(act_state->poolp, *flags, @id);
 		if (@node == NULL) {
-			@!;
-		}
-	@};
-
-	<ast-make-named-eol>: () -> (node :ast_expr) = @{
-		struct ast_expr *bsr, *crlf;
-		struct ast_expr *cr, *lf;
-
-		/* TODO: or the unicode equivalent */
-
-		/*
-		 * class_nl is incorrect for pcre's \R which for ascii contains
-		 * not just a set of codepoints, but also a concatenation of crlf,
-		 * so we can't actually just use a class here.
-		 */
-
-		bsr = ast_make_expr_named(act_state->poolp, *flags, &class_bsr);
-		if (bsr == NULL) {
-			@!;
-		}
-
-		crlf = ast_make_expr_concat(act_state->poolp, *flags);
-		if (crlf == NULL) {
-			@!;
-		}
-
-		cr = ast_make_expr_literal(act_state->poolp, *flags, '\r');
-		if (cr == NULL) {
-			@!;
-		}
-
-		lf = ast_make_expr_literal(act_state->poolp, *flags, '\n');
-		if (lf == NULL) {
-			@!;
-		}
-
-		if (!ast_add_expr_concat(crlf, cr)) {
-			@!;
-		}
-
-		if (!ast_add_expr_concat(crlf, lf)) {
-			@!;
-		}
-
-		@node = ast_make_expr_alt(act_state->poolp, *flags);
-		if (@node == NULL) {
-			@!;
-		}
-
-		if (!ast_add_expr_alt(@node, crlf)) {
-			@!;
-		}
-
-		if (!ast_add_expr_alt(@node, bsr)) {
 			@!;
 		}
 	@};
