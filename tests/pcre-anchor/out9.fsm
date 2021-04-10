@@ -2,8 +2,10 @@
 0 -> 1 'b';
 1 -> 2 'c';
 
+2 -> 3 "\n";
+
 # a^b is unsatisfiable, and effectively gets removed
 
 start: 0;
-end:   2;
+end:   2, 3;
 

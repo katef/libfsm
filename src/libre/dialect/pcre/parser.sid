@@ -94,7 +94,8 @@
 	<count-one>:          () -> (:ast_count);
 	<count-range>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
-	<make-literal-cbrak>:   ()                        -> (:char);
+	<make-literal-cbrak>: () -> (:char);
+	<make-literal-nl>:    () -> (:char);
 
 	<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
 	<ast-range-endpoint-class>:   (:ast_class_id) -> (:endpoint);
@@ -450,7 +451,29 @@
 				e = <ast-make-anchor-start>;
 			||
 				END;
-				e = <ast-make-anchor-end>;
+
+				/*
+				 * From the PCRE spec:
+				 * "The dollar character is an assertion that is true only if the current
+				 * matching point is at the end of the subject string, or immediately before
+				 * a newline at the end of the string (by default). Note, however, that it
+				 * does not actually match the newline."
+				 *
+				 * We emulate this behaviour by constructing an AST subtree equivalent to \n?$
+				 *
+				 * TODO: This applies for single-line mode only. For multiline mode,
+				 * I think this should be a single ast-make-anchor-end, per usual.
+				 * TODO: We'll also need to avoid this inside a capturing group, perhaps by
+				 * dissalowing it here, or perhaps by rewriting 
+				 */
+				nl = <make-literal-nl>;
+				enl = <ast-make-literal>(nl);
+				c = <count-zero-or-one>;
+				optnl = <ast-make-piece>(enl, c);
+				a = <ast-make-anchor-end>;
+				e = <ast-make-concat>;
+				<ast-add-concat>(e, optnl);
+				<ast-add-concat>(e, a);
 			||
 				ANY;
 				a = <class-any>;

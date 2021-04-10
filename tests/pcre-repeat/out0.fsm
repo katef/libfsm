@@ -4,6 +4,8 @@
 # See LICENCE for the full copyright terms.
 #
 
+0 -> 1 "\n";
+
 start: 0;
-end: 0;
+end: 0, 1;
 

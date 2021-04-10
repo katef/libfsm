@@ -833,6 +833,10 @@
 		@c = ']';
 	@};
 
+	<make-literal-nl>: () -> (c :char) = @{
+		@c = '\n';
+	@};
+
 	<ast-make-piece>: (e :ast_expr, c :ast_count) -> (node :ast_expr) = @{
 		if (@c.min == 0 && @c.max == 0) {
 			@node = ast_make_expr_empty(act_state->poolp, *flags);

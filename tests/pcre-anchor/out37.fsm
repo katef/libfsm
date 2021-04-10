@@ -3,8 +3,10 @@
 1 -> 2 'b';
 2 -> 3 'c';
 
+3 -> 4 "\n";
+
 # a$c$ is unsatisfiable, and effectively gets removed
 
 start: 0;
-end:   3;
+end:   3, 4;
 

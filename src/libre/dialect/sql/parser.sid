@@ -93,7 +93,8 @@
 	<count-one>:          () -> (:ast_count);
 	<count-range>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
-	!<make-literal-cbrak>:    ()                       -> (:char);
+	!<make-literal-cbrak>: () -> (:char);
+	!<make-literal-nl>:    () -> (:char);
 
 	<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
 	!<ast-range-endpoint-class>:  (:ast_class_id) -> (:endpoint);
