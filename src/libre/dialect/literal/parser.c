@@ -325,7 +325,7 @@ ZL2_list_Hof_Hatoms:;
 #line 326 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: ast-add-concat */
-		/* BEGINNING OF INLINE: 110 */
+		/* BEGINNING OF INLINE: 111 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -339,7 +339,7 @@ ZL2_list_Hof_Hatoms:;
 				break;
 			}
 		}
-		/* END OF INLINE: 110 */
+		/* END OF INLINE: 111 */
 	}
 	return;
 ZL1:;
@@ -356,7 +356,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 		return;
 	}
 	{
-		/* BEGINNING OF INLINE: 112 */
+		/* BEGINNING OF INLINE: 113 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -398,8 +398,8 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				break;
 			}
 		}
-		/* END OF INLINE: 112 */
-		/* BEGINNING OF INLINE: 113 */
+		/* END OF INLINE: 113 */
+		/* BEGINNING OF INLINE: 114 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -428,7 +428,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			}
 		ZL3:;
 		}
-		/* END OF INLINE: 113 */
+		/* END OF INLINE: 114 */
 	}
 	goto ZL0;
 ZL1:;
@@ -448,8 +448,8 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 	}
 	{
 		t_char ZIc;
-		t_pos ZI107;
 		t_pos ZI108;
+		t_pos ZI109;
 
 		switch (CURRENT_TERMINAL) {
 		case (TOK_CHAR):
@@ -460,8 +460,8 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI107 = lex_state->lx.start;
-		ZI108   = lex_state->lx.end;
+		ZI108 = lex_state->lx.start;
+		ZI109   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	

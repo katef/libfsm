@@ -43,6 +43,7 @@ enum lx_pcre_token {
 	TOK_OPT,
 	TOK_UNSUPPORTED,
 	TOK_END,
+	TOK_END__NL,
 	TOK_START,
 	TOK_OPENCAPTURE,
 	TOK_CLOSE,

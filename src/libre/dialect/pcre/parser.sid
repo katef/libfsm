@@ -41,6 +41,7 @@
 
 	START;
 	END;
+	END_NL;
 
 	OPEN; CLOSE;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
@@ -451,6 +452,9 @@
 				e = <ast-make-anchor-start>;
 			||
 				END;
+				e = <ast-make-anchor-end>;
+			||
+				END_NL;
 
 				/*
 				 * From the PCRE spec:

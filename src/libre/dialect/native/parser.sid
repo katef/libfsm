@@ -34,6 +34,7 @@
 
 	START;
 	END;
+	!END_NL;
 
 	OPENSUB;   CLOSESUB;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
