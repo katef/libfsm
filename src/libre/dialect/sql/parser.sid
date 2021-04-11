@@ -24,6 +24,7 @@
 	ast_count;
 	ast_class_id;
 	endpoint;
+	group_id;
 
 %terminals%
 
@@ -94,6 +95,7 @@
 	<count-one>:          () -> (:ast_count);
 	<count-range>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
+	<make-group-id>:       () -> (:group_id);
 	!<make-literal-cbrak>: () -> (:char);
 	!<make-literal-cr>:    () -> (:char);
 	!<make-literal-nl>:    () -> (:char);
@@ -106,7 +108,7 @@
 	<ast-make-concat>:        ()                       -> (:ast_expr);
 	<ast-make-alt>:           ()                       -> (:ast_expr);
 	<ast-make-piece>:         (:ast_expr, :ast_count)  -> (:ast_expr);
-	<ast-make-group>:         (:ast_expr)              -> (:ast_expr);
+	<ast-make-group>:         (:ast_expr, :group_id)   -> (:ast_expr);
 	!<ast-get-re-flags>:      ()                       -> (:re_flags);
 	!<ast-set-re-flags>:      (:re_flags)              -> ();
 	!<ast-mask-re-flags>:     (:re_flags, :re_flags)   -> ();
@@ -324,8 +326,9 @@
 				e = character-class;
 			||
 				OPENSUB;
+				id = <make-group-id>;
 				g = expr;
-				e = <ast-make-group>(g);
+				e = <ast-make-group>(g, id);
 				CLOSESUB;
 			##
 				<err-expected-atom>;

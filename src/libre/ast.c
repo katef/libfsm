@@ -739,7 +739,7 @@ ast_make_expr_repeat(struct ast_expr_pool **poolp, enum re_flags re_flags, struc
 }
 
 struct ast_expr *
-ast_make_expr_group(struct ast_expr_pool **poolp, enum re_flags re_flags, struct ast_expr *e)
+ast_make_expr_group(struct ast_expr_pool **poolp, enum re_flags re_flags, struct ast_expr *e, unsigned id)
 {
 	struct ast_expr *res;
 
@@ -751,7 +751,7 @@ ast_make_expr_group(struct ast_expr_pool **poolp, enum re_flags re_flags, struct
 	res->type = AST_EXPR_GROUP;
 	res->re_flags = re_flags;
 	res->u.group.e = e;
-	res->u.group.id = NO_GROUP_ID; /* not yet assigned */
+	res->u.group.id = id;
 
 	return res;
 }

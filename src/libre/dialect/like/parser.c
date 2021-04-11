@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 142 "src/libre/parser.act"
+#line 149 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -90,6 +90,7 @@
 	typedef const struct class * t_ast__class__id;
 	typedef struct ast_count t_ast__count;
 	typedef struct ast_endpoint t_endpoint;
+	typedef unsigned t_group__id;
 
 	struct act_state {
 		struct ast_expr_pool **poolp;
@@ -112,6 +113,12 @@
 		struct re_pos groupstart; struct re_pos groupend;
 		struct re_pos rangestart; struct re_pos rangeend;
 		struct re_pos countstart; struct re_pos countend;
+
+		/*
+		 * Numbering for capturing groups. By convention these start from 1,
+		 * and 0 represents the entire matching text.
+		 */
+		unsigned group_id;
 	};
 
 	struct lex_state {
@@ -148,7 +155,6 @@
 	{
 		enum re_flags fl = (lex_state->flags_ptr != NULL) ? lex_state->flags_ptr[0] : 0;
 		enum LX_TOKEN tok;
-
 
 		if ((fl & RE_EXTENDED) == 0) {
 			tok = act_state->lex_tok;
@@ -281,7 +287,7 @@
 		return s;
 	}
 
-#line 285 "src/libre/dialect/like/parser.c"
+#line 291 "src/libre/dialect/like/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -316,16 +322,16 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 987 "src/libre/parser.act"
+#line 997 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIa))) {
 			goto ZL1;
 		}
 	
-#line 326 "src/libre/dialect/like/parser.c"
+#line 332 "src/libre/dialect/like/parser.c"
 		}
 		/* END OF ACTION: ast-add-concat */
-		/* BEGINNING OF INLINE: 113 */
+		/* BEGINNING OF INLINE: 115 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
@@ -339,7 +345,7 @@ ZL2_list_Hof_Hatoms:;
 				break;
 			}
 		}
-		/* END OF INLINE: 113 */
+		/* END OF INLINE: 115 */
 	}
 	return;
 ZL1:;
@@ -360,24 +366,24 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 			ADVANCE_LEXER;
 			/* BEGINNING OF ACTION: class-any */
 			{
-#line 735 "src/libre/parser.act"
+#line 741 "src/libre/parser.act"
 
 		/* TODO: or the unicode equivalent */
 		(ZIa) = (*flags & RE_SINGLE) ? &class_any : &class_notnl;
 	
-#line 369 "src/libre/dialect/like/parser.c"
+#line 375 "src/libre/dialect/like/parser.c"
 			}
 			/* END OF ACTION: class-any */
 			/* BEGINNING OF ACTION: ast-make-named */
 			{
-#line 980 "src/libre/parser.act"
+#line 990 "src/libre/parser.act"
 
 		(ZIe) = ast_make_expr_named(act_state->poolp, *flags, (ZIa));
 		if ((ZIe) == NULL) {
 			goto ZL1;
 		}
 	
-#line 381 "src/libre/dialect/like/parser.c"
+#line 387 "src/libre/dialect/like/parser.c"
 			}
 			/* END OF ACTION: ast-make-named */
 		}
@@ -385,35 +391,35 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 	case (TOK_CHAR):
 		{
 			t_char ZIc;
-			t_pos ZI111;
-			t_pos ZI112;
+			t_pos ZI113;
+			t_pos ZI114;
 
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 530 "src/libre/parser.act"
+#line 536 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI111 = lex_state->lx.start;
-		ZI112   = lex_state->lx.end;
+		ZI113 = lex_state->lx.start;
+		ZI114   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 404 "src/libre/dialect/like/parser.c"
+#line 410 "src/libre/dialect/like/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			ADVANCE_LEXER;
 			/* BEGINNING OF ACTION: ast-make-literal */
 			{
-#line 831 "src/libre/parser.act"
+#line 837 "src/libre/parser.act"
 
 		(ZIe) = ast_make_expr_literal(act_state->poolp, *flags, (ZIc));
 		if ((ZIe) == NULL) {
 			goto ZL1;
 		}
 	
-#line 417 "src/libre/dialect/like/parser.c"
+#line 423 "src/libre/dialect/like/parser.c"
 			}
 			/* END OF ACTION: ast-make-literal */
 		}
@@ -427,38 +433,38 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 			ADVANCE_LEXER;
 			/* BEGINNING OF ACTION: class-any */
 			{
-#line 735 "src/libre/parser.act"
+#line 741 "src/libre/parser.act"
 
 		/* TODO: or the unicode equivalent */
 		(ZIa) = (*flags & RE_SINGLE) ? &class_any : &class_notnl;
 	
-#line 436 "src/libre/dialect/like/parser.c"
+#line 442 "src/libre/dialect/like/parser.c"
 			}
 			/* END OF ACTION: class-any */
 			/* BEGINNING OF ACTION: ast-make-named */
 			{
-#line 980 "src/libre/parser.act"
+#line 990 "src/libre/parser.act"
 
 		(ZIg) = ast_make_expr_named(act_state->poolp, *flags, (ZIa));
 		if ((ZIg) == NULL) {
 			goto ZL1;
 		}
 	
-#line 448 "src/libre/dialect/like/parser.c"
+#line 454 "src/libre/dialect/like/parser.c"
 			}
 			/* END OF ACTION: ast-make-named */
 			/* BEGINNING OF ACTION: count-zero-or-more */
 			{
-#line 760 "src/libre/parser.act"
+#line 766 "src/libre/parser.act"
 
 		(ZIc) = ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
 	
-#line 457 "src/libre/dialect/like/parser.c"
+#line 463 "src/libre/dialect/like/parser.c"
 			}
 			/* END OF ACTION: count-zero-or-more */
 			/* BEGINNING OF ACTION: ast-make-piece */
 			{
-#line 850 "src/libre/parser.act"
+#line 860 "src/libre/parser.act"
 
 		if ((ZIc).min == 0 && (ZIc).max == 0) {
 			(ZIe) = ast_make_expr_empty(act_state->poolp, *flags);
@@ -472,7 +478,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 			goto ZL1;
 		}
 	
-#line 476 "src/libre/dialect/like/parser.c"
+#line 482 "src/libre/dialect/like/parser.c"
 			}
 			/* END OF ACTION: ast-make-piece */
 		}
@@ -487,26 +493,26 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-expected-atom */
 		{
-#line 644 "src/libre/parser.act"
+#line 650 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXATOM;
 		}
 		goto ZL2;
 	
-#line 498 "src/libre/dialect/like/parser.c"
+#line 504 "src/libre/dialect/like/parser.c"
 		}
 		/* END OF ACTION: err-expected-atom */
 		/* BEGINNING OF ACTION: ast-make-empty */
 		{
-#line 810 "src/libre/parser.act"
+#line 816 "src/libre/parser.act"
 
 		(ZIe) = ast_make_expr_empty(act_state->poolp, *flags);
 		if ((ZIe) == NULL) {
 			goto ZL2;
 		}
 	
-#line 510 "src/libre/dialect/like/parser.c"
+#line 516 "src/libre/dialect/like/parser.c"
 		}
 		/* END OF ACTION: ast-make-empty */
 	}
@@ -527,21 +533,21 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 		return;
 	}
 	{
-		/* BEGINNING OF INLINE: 116 */
+		/* BEGINNING OF INLINE: 118 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_ANY): case (TOK_MANY): case (TOK_CHAR):
 				{
 					/* BEGINNING OF ACTION: ast-make-concat */
 					{
-#line 817 "src/libre/parser.act"
+#line 823 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_concat(act_state->poolp, *flags);
 		if ((ZInode) == NULL) {
 			goto ZL1;
 		}
 	
-#line 545 "src/libre/dialect/like/parser.c"
+#line 551 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-make-concat */
 					p_list_Hof_Hatoms (flags, lex_state, act_state, err, ZInode);
@@ -555,22 +561,22 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 				{
 					/* BEGINNING OF ACTION: ast-make-empty */
 					{
-#line 810 "src/libre/parser.act"
+#line 816 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_empty(act_state->poolp, *flags);
 		if ((ZInode) == NULL) {
 			goto ZL1;
 		}
 	
-#line 566 "src/libre/dialect/like/parser.c"
+#line 572 "src/libre/dialect/like/parser.c"
 					}
 					/* END OF ACTION: ast-make-empty */
 				}
 				break;
 			}
 		}
-		/* END OF INLINE: 116 */
-		/* BEGINNING OF INLINE: 117 */
+		/* END OF INLINE: 118 */
+		/* BEGINNING OF INLINE: 119 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -586,20 +592,20 @@ p_re__like(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 693 "src/libre/parser.act"
+#line 699 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
 		}
 		goto ZL1;
 	
-#line 597 "src/libre/dialect/like/parser.c"
+#line 603 "src/libre/dialect/like/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
 		ZL3:;
 		}
-		/* END OF INLINE: 117 */
+		/* END OF INLINE: 119 */
 	}
 	goto ZL0;
 ZL1:;
@@ -611,7 +617,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 1143 "src/libre/parser.act"
+#line 1155 "src/libre/parser.act"
 
 
 	static int
@@ -687,6 +693,8 @@ ZL0:;
 		act_state->overlap = overlap;
 		act_state->poolp   = &ast->pool;
 
+		act_state->group_id = 1;
+
 		err->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
@@ -757,6 +765,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 761 "src/libre/dialect/like/parser.c"
+#line 769 "src/libre/dialect/like/parser.c"
 
 /* END OF FILE */
