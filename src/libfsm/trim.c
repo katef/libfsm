@@ -78,6 +78,8 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 
 	fsm_state_t *ends = NULL;
 	size_t end_count = 0, end_ceil = DEF_ENDS_CEIL;
+	fsm_state_t max_end;
+
 	const size_t state_count = fsm->statecount;
 
 	size_t *offsets = NULL;
@@ -224,6 +226,8 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	/* Sort edges by state they lead to, inverting the index. */
 	qsort(edges, edge_count, sizeof(edges[0]), cmp_edges_by_to);
 
+	max_end = 0;
+
 	/* Reuse the existing queue for a second breadth-first walk.
 	 * This assumes the queue can be reused once empty; if the
 	 * implementation changes, it may need to reset the queue or
@@ -235,6 +239,10 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 		for (e_i = 0; e_i < end_count; e_i++) {
 			const fsm_state_t end_id = ends[e_i];
 			assert(end_id < state_count);
+
+			if (end_id > max_end) {
+				max_end = end_id;
+			}
 
 			if (LOG_TRIM > 0) {
 				fprintf(stderr, "mark_states: seeding with end %d, marking visited\n",
@@ -274,8 +282,10 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	{
 		size_t i;
 		const fsm_state_t max_to = edges[edge_count - 1].to;
+		const size_t offset_count = (max_end > max_to ? max_end : max_to) + 1;
+
 		offsets = f_calloc(fsm->opt->alloc,
-		    (max_to + 1), sizeof(offsets[0]));
+		    offset_count, sizeof(offsets[0]));
 		if (offsets == NULL) {
 			goto cleanup;
 		}

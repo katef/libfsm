@@ -506,6 +506,9 @@ main(int argc, char *argv[])
 		case OP_GLUSHKOVISE: r = fsm_glushkovise(q);  break;
 		case OP_TRIM:        r = fsm_trim(q,
 		    FSM_TRIM_START_AND_END_REACHABLE, NULL);
+			if (r >= 0) { /* returns number of states removed */
+				r = 1;
+			}
 			break;
 
 		case OP_CONCAT:      q = fsm_concat(a, b, NULL); break;
