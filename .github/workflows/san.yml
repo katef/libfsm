@@ -42,6 +42,7 @@ jobs:
       if: matrix.os == 'macos'
       run: |
         uname -a
+        brew update
         brew install bmake pcre
         ${{ matrix.cc }} --version
 
