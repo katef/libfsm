@@ -183,6 +183,9 @@
 					/* TODO: just construct the AST here;
 					 * complain about unsupported things at a later stage */
 					<err-unsupported>;
+				||
+					(c, !, !) = UNSUPPORTED;
+					<err-unsupported>;
 				};
 
 				node = <ast-make-literal>(c);
@@ -205,6 +208,9 @@
 						(c, start, end) = CHAR;
 					||
 						(c, start, end) = CONTROL;
+						<err-unsupported>;
+					||
+						(c, start, end) = UNSUPPORTED;
 						<err-unsupported>;
 					};
 					r = <ast-range-endpoint-literal>(c);

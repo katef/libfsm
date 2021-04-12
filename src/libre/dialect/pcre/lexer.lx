@@ -268,10 +268,25 @@
 	'\w' -> $named__class;
 	'\W' -> $named__class;
 
-	'\'   /[0-7]{1,3}/     -> $oct;
 	'\o{' /[0-7]+/i '}'    -> $oct;
-	'\x'  /[0-9a-f]{1,2}/i -> $hex;
+	'\x'  /[0-9a-f]{0,2}/i -> $hex;
 	'\x{' /[0-9a-f]+/i '}' -> $hex;
+
+	'\0'  /[0-7]{0,2}/     -> $oct;
+
+	# "Inside a character class, or if the decimal number following \ is
+	# greater than 7 and there have not been that many capturing subpatterns,
+	# PCRE handles \8 and \9 as the literal characters "8" and "9", and
+	# otherwise re-reads up to three octal digits following the backslash,
+	# using them to generate a data character. Any subsequent digits stand
+	# for themselves. For example:"
+	#
+	# " \81    is either a back reference, or the two characters "8" and "1""
+	#
+	# For this reason I do not think we can ever lex correctly here, because
+	# we would need to produce either one or two tokens, depending on the
+	# presence of capturing groups.
+	'\'   /[1-9][0-9]*/     -> $unsupported;
 
 	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\E' | '\B' | '\N' | '\R' | '\X' | $named__class) -> $noesc;
 	'\' -> $invalid;
