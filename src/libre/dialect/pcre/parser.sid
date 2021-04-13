@@ -41,6 +41,7 @@
 
 	START;
 	END;
+	END_NL;
 
 	OPEN; CLOSE;
 	OPENGROUP: () -> (:pos, :pos); CLOSEGROUP: () -> (:char, :pos, :pos);
@@ -94,7 +95,9 @@
 	<count-one>:          () -> (:ast_count);
 	<count-range>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
-	<make-literal-cbrak>:   ()                        -> (:char);
+	<make-literal-cbrak>: () -> (:char);
+	<make-literal-cr>:    () -> (:char);
+	<make-literal-nl>:    () -> (:char);
 
 	<ast-range-endpoint-literal>: (:char)         -> (:endpoint);
 	<ast-range-endpoint-class>:   (:ast_class_id) -> (:endpoint);
@@ -114,7 +117,6 @@
 	<ast-make-invert>:       (:ast_expr)              -> (:ast_expr); 
 	<ast-make-range>:        (:endpoint, :pos, :endpoint, :pos) -> (:ast_expr);
 	<ast-make-named>:        (:ast_class_id)          -> (:ast_expr);
-	<ast-make-named-eol>:    ()                       -> (:ast_expr);
 
 	<ast-add-concat>: (:ast_expr, :ast_expr) -> ();
 	<ast-add-alt>:    (:ast_expr, :ast_expr) -> ();
@@ -138,6 +140,7 @@
 	<mark-expr>: (:ast_expr, :pos, :pos) -> ();
 
 	<class-any>: () -> (:ast_class_id);
+	<class-bsr>: () -> (:ast_class_id);
 
 	expr: () -> (node :ast_expr) [
 		literal: () -> (node :ast_expr) = {
@@ -452,6 +455,31 @@
 				END;
 				e = <ast-make-anchor-end>;
 			||
+				END_NL;
+
+				/*
+				 * From the PCRE spec:
+				 * "The dollar character is an assertion that is true only if the current
+				 * matching point is at the end of the subject string, or immediately before
+				 * a newline at the end of the string (by default). Note, however, that it
+				 * does not actually match the newline."
+				 *
+				 * We emulate this behaviour by constructing an AST subtree equivalent to \n?$
+				 *
+				 * TODO: This applies for single-line mode only. For multiline mode,
+				 * I think this should be a single ast-make-anchor-end, per usual.
+				 * TODO: We'll also need to avoid this inside a capturing group, perhaps by
+				 * dissalowing it here, or perhaps by rewriting 
+				 */
+				nl = <make-literal-nl>;
+				enl = <ast-make-literal>(nl);
+				c = <count-zero-or-one>;
+				optnl = <ast-make-piece>(enl, c);
+				a = <ast-make-anchor-end>;
+				e = <ast-make-concat>;
+				<ast-add-concat>(e, optnl);
+				<ast-add-concat>(e, a);
+			||
 				ANY;
 				a = <class-any>;
 				e = <ast-make-named>(a);
@@ -462,9 +490,29 @@
 				 * (which is configurable) within a regexp.
 				 * TODO: We'll need to address that conditionally here. For the moment
 				 * we only construct an AST node for the default convention.
+				 *
+				 * class_nl is incorrect for pcre's \R which for ascii contains
+				 * not just a set of codepoints, but also a concatenation of crlf,
+				 * so we can't actually just use a class here.
 				 */
 				EOL;
-				e = <ast-make-named-eol>;
+
+				/* TODO: or the unicode equivalent */
+
+				class_bsr = <class-bsr>;
+				bsr = <ast-make-named>(class_bsr);
+
+				crlf = <ast-make-concat>;
+				cr = <make-literal-cr>;
+				ecr = <ast-make-literal>(cr);
+				nl = <make-literal-nl>;
+				enl = <ast-make-literal>(nl);
+				<ast-add-concat>(crlf, ecr);
+				<ast-add-concat>(crlf, enl);
+
+				e = <ast-make-alt>;
+				<ast-add-alt>(e, crlf);
+				<ast-add-alt>(e, bsr);
 			||
 				e = literal;
 			||

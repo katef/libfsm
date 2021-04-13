@@ -221,7 +221,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 
 	case AST_EXPR_ANCHOR:
 		assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
-		fprintf(f, "%s", n->u.anchor.type == AST_ANCHOR_START ? "^" : "$");
+		fprintf(f, "%s", n->u.anchor.type == AST_ANCHOR_START ? "^" : "\\z");
 		break;
 
 	case AST_EXPR_SUBTRACT:

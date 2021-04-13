@@ -14,25 +14,21 @@
 
 # predicates
 '^'  -> $start;
-'$'  -> $end;
+'$'  -> $end__nl; # equivalent to \Z in single-line mode
 
 # Similar predicates.  Without the concept of "multiline mode," these
 # should be the same as ^ and $.
-#
-# TODO: evaluate how they are different and also if a "multiline mode"
-# matching call makes sense for libfsm.
 #
 # > The \A, \Z, and \z assertions differ from the traditional circumflex
 # > and dollar (described in the next section) in that they only ever
 # > match at the very start and end of the subject string, whatever
 # > options are set. Thus, they are independent of multiline mode. 
+#
+# > \Z matches before a newline at the end of the string
+# > as well as at the very end, whereas \z matches only at the end.
 '\A' -> $start;
+'\Z' -> $end__nl;
 '\z' -> $end;
-
-# not yet implemented:
-# > matches at the end of the subject
-# >    also matches before a newline at the end of the subject
-'\Z' -> $unsupported;
 
 # unicode extended grapheme cluster
 '\X' -> $unsupported;
@@ -166,7 +162,7 @@
 '\x'  /[0-9a-f]{0,2}/i -> $hex;
 '\x{' /[0-9a-f]+/i '}' -> $hex;
 
-'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\A' | '\z' | '\E' | '\R' | $named__class | $unsupported) -> $noesc;
+'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\A' | '\Z' | '\z' | '\E' | '\R' | $named__class | $unsupported) -> $noesc;
 '\' -> $invalid;
 
 # Comments are just ignored... no token emitted
@@ -310,9 +306,7 @@
 	/./ - "\x00" -> $char;
 }
 
-
-
-/./ - ($open | $close | $start | $end
+/./ - ($open | $close | $start | $end__nl
 	| $opt | $star | $plus | $any | $alt
 	| $esc | $oct | $hex | $invalid
 	| $maybe_comment | $whitespace | $newline
