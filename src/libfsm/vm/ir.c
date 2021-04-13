@@ -1058,6 +1058,10 @@ dfavm_compile_ir(struct dfavm_assembler_ir *a, const struct ir *ir, struct fsm_v
 	(void)dump_states; /* make clang happy */
 	(void)print_all_states;
 
+	if (ir->n == 0) {
+		goto empty;
+	}
+
 	a->ops = calloc(ir->n, sizeof a->ops[0]);
 	if (a->ops == NULL) {
 		return 0;
@@ -1094,6 +1098,24 @@ dfavm_compile_ir(struct dfavm_assembler_ir *a, const struct ir *ir, struct fsm_v
 		dump_states(f, a);
 		fprintf(f, "\n");
 	}
+
+	return 1;
+
+empty:
+
+	a->ops = calloc(1, sizeof a->ops[0]);
+	if (a->ops == NULL) {
+		return 0;
+	}
+
+	a->ops[0] = opasm_new_stop(a, VM_CMP_ALWAYS, 0, VM_END_FAIL, NULL);
+	if (a->ops[0] == NULL) {
+		return -1;
+	}
+
+	a->linked = a->ops[0];
+
+	assign_opcode_indexes(a);
 
 	return 1;
 }

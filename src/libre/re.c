@@ -154,7 +154,9 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	flags |= m->flags;
 
 	ast = re_parse(dialect, getc, opaque, opt, flags, err, &unsatisfiable);
-	if (ast == NULL) { return NULL; }
+	if (ast == NULL) {
+		return NULL;
+	}
 
 	/*
 	 * If the RE is inherently unsatisfiable, then free the

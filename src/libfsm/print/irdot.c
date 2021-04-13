@@ -323,8 +323,10 @@ fsm_print_ir(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\n");
 	fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
 
-	fprintf(f, "\tstart -> cs%u;\n", ir->start);
-	fprintf(f, "\n");
+	if (ir->n > 0) {
+		fprintf(f, "\tstart -> cs%u;\n", ir->start);
+		fprintf(f, "\n");
+	}
 
 	for (i = 0; i < ir->n; i++) {
 		print_cs(f, fsm->opt, ir, &ir->states[i]);

@@ -275,28 +275,34 @@ fsm_print_vmc(FILE *f, const struct fsm *fsm)
 	case FSM_IO_GETC:
 		fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
 		fprintf(f, "{\n");
-		fprintf(f, "\tint c;\n");
-		fprintf(f, "\n");
+		if (ir->n > 0) {
+			fprintf(f, "\tint c;\n");
+			fprintf(f, "\n");
+		}
 		break;
 
 	case FSM_IO_STR:
 		fprintf(f, "(const char *s)\n");
 		fprintf(f, "{\n");
-		fprintf(f, "\tconst char *p;\n");
-		fprintf(f, "\tint c;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tp = s;\n");
-		fprintf(f, "\n");
+		if (ir->n > 0) {
+			fprintf(f, "\tconst char *p;\n");
+			fprintf(f, "\tint c;\n");
+			fprintf(f, "\n");
+			fprintf(f, "\tp = s;\n");
+			fprintf(f, "\n");
+		}
 		break;
 
 	case FSM_IO_PAIR:
 		fprintf(f, "(const char *b, const char *e)\n");
 		fprintf(f, "{\n");
-		fprintf(f, "\tconst char *p;\n");
-		fprintf(f, "\tint c;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\tp = b;\n");
-		fprintf(f, "\n");
+		if (ir->n > 0) {
+			fprintf(f, "\tconst char *p;\n");
+			fprintf(f, "\tint c;\n");
+			fprintf(f, "\n");
+			fprintf(f, "\tp = b;\n");
+			fprintf(f, "\n");
+		}
 		break;
 	}
 

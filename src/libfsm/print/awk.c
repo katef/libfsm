@@ -178,7 +178,7 @@ fsm_print_awkfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			print_label(f, op);
 			fprintf(f, ":");
 
-			if (op->ir_state->example != NULL) {
+			if (op->ir_state != NULL && op->ir_state->example != NULL) {
 				fprintf(f, " /* e.g. \"");
 				escputs(f, opt, c_escputc_str, op->ir_state->example);
 				fprintf(f, "\" */");

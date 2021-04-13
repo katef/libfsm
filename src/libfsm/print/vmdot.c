@@ -160,7 +160,11 @@ fsm_print_nodes(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		fprintf(f, "</td>\n");
 
 		fprintf(f, "\t\t\t<td>");
-		fprintf(f, op->ir_state->isend ? "(S%u)" : "S%u", ir_indexof(ir, op->ir_state));
+		if (op->ir_state != NULL) {
+			fprintf(f, op->ir_state->isend ? "(S%u)" : "S%u", ir_indexof(ir, op->ir_state));
+		} else {
+			fprintf(f, "(none)");
+		}
 		fprintf(f, "</td>\n");
 
 		switch (op->instr) {

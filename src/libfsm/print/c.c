@@ -63,7 +63,7 @@ leaf(FILE *f, const struct fsm_end_ids *ids, const void *leaf_opaque)
 
 	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
 	 * maybe user defined */
-	fprintf(f, "return TOK_UNKNOWN;");
+	fprintf(f, "return -1; /* leaf */");
 
 	return 0;
 }
@@ -421,29 +421,36 @@ fsm_print_c(FILE *f, const struct fsm *fsm)
 	case FSM_IO_GETC:
 		fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
 		fprintf(f, "{\n");
-		fprintf(f, "\tint c;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\n");
+		if (ir->n > 0) {
+			fprintf(f, "\tint c;\n");
+			fprintf(f, "\n");
+		}
 		break;
 
 	case FSM_IO_STR:
 		fprintf(f, "(const char *s)\n");
 		fprintf(f, "{\n");
-		fprintf(f, "\tconst char *p;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\n");
+		if (ir->n > 0) {
+			fprintf(f, "\tconst char *p;\n");
+			fprintf(f, "\n");
+		}
 		break;
 
 	case FSM_IO_PAIR:
 		fprintf(f, "(const char *b, const char *e)\n");
 		fprintf(f, "{\n");
-		fprintf(f, "\tconst char *p;\n");
-		fprintf(f, "\n");
-		fprintf(f, "\n");
+		if (ir->n > 0) {
+			fprintf(f, "\tconst char *p;\n");
+			fprintf(f, "\n");
+		}
 		break;
 	}
 
-	fsm_print_c_complete(f, ir, fsm->opt);
+	if (ir->n == 0) {
+		fprintf(f, "\treturn -1; /* no matches */\n");
+	} else {
+		fsm_print_c_complete(f, ir, fsm->opt);
+	}
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
