@@ -444,8 +444,7 @@ make_ir(const struct fsm *fsm)
 	assert(fsm->opt != NULL);
 
 	if (!fsm_getstart(fsm, &start)) {
-		errno = EINVAL;
-		return NULL;
+		goto empty;
 	}
 
 	if (!fsm_all(fsm, fsm_isdfa)) {
@@ -559,6 +558,19 @@ make_ir(const struct fsm *fsm)
 	 * not necccessarily a minimal DFA. If this is a minimal DFA,
 	 * then none of these should be equivalent.
 	 */
+
+	return ir;
+
+empty:
+
+	ir = f_malloc(fsm->opt->alloc, sizeof *ir);
+	if (ir == NULL) {
+		return NULL;
+	}
+
+	ir->n      = 0;
+	ir->start  = 0;
+	ir->states = NULL;
 
 	return ir;
 

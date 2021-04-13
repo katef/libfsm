@@ -208,7 +208,7 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			print_label(f, op);
 			fprintf(f, " => {");
 
-			if (op->ir_state->example != NULL) {
+			if (op->ir_state != NULL && op->ir_state->example != NULL) {
 				/* C's escaping seems to be a subset of rust's, and these are
 				 * for comments anyway. So I'm borrowing this for C here */
 				fprintf(f, " // e.g. \"");
