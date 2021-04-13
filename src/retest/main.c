@@ -984,8 +984,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 				alarm(watchdog_secs);
 			}
 
-			/* XXX - minimize or determinize? */
-			succ = fsm_determinise(fsm);
+			succ = fsm_determinise(fsm) && fsm_minimise(fsm);
 
 			if (do_watchdog) {
 				watchdog_on = 0;
