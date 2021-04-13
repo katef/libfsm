@@ -99,6 +99,7 @@
 	typedef const struct class * t_ast__class__id;
 	typedef struct ast_count t_ast__count;
 	typedef struct ast_endpoint t_endpoint;
+	typedef unsigned t_group__id;
 
 	struct act_state {
 		struct ast_expr_pool **poolp;
@@ -121,6 +122,12 @@
 		struct re_pos groupstart; struct re_pos groupend;
 		struct re_pos rangestart; struct re_pos rangeend;
 		struct re_pos countstart; struct re_pos countend;
+
+		/*
+		 * Numbering for capturing groups. By convention these start from 1,
+		 * and 0 represents the entire matching text.
+		 */
+		unsigned group_id;
 	};
 
 	struct lex_state {
@@ -157,7 +164,6 @@
 	{
 		enum re_flags fl = (lex_state->flags_ptr != NULL) ? lex_state->flags_ptr[0] : 0;
 		enum LX_TOKEN tok;
-
 
 		if ((fl & RE_EXTENDED) == 0) {
 			tok = act_state->lex_tok;
@@ -834,6 +840,10 @@
 		}
 	@};
 
+	<make-group-id>: () -> (id :group_id) = @{
+		@id = act_state->group_id++;
+	@};
+
 	<make-literal-cbrak>: () -> (c :char) = @{
 		@c = ']';
 	@};
@@ -860,8 +870,8 @@
 		}
 	@};
 
-	<ast-make-group>: (e :ast_expr) -> (node :ast_expr) = @{
-		@node = ast_make_expr_group(act_state->poolp, *flags, @e);
+	<ast-make-group>: (e :ast_expr, id :group_id) -> (node :ast_expr) = @{
+		@node = ast_make_expr_group(act_state->poolp, *flags, @e, @id);
 		if (@node == NULL) {
 			@!;
 		}
@@ -1069,6 +1079,8 @@
 
 		act_state->overlap = overlap;
 		act_state->poolp   = &ast->pool;
+
+		act_state->group_id = 1;
 
 		err->e = RE_ESUCCESS;
 

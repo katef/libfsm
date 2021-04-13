@@ -19,10 +19,6 @@
 
 #define LOG_CONCAT_FLAGS 0
 
-struct analysis_env {
-	unsigned group_id;
-};
-
 struct anchoring_env {
 	char past_any_consuming;
 	char followed_by_consuming;
@@ -58,7 +54,7 @@ set_flags(struct ast_expr *n, enum ast_flags flags)
 }
 
 static enum ast_analysis_res
-analysis_iter(struct analysis_env *env, struct ast_expr *n)
+analysis_iter(struct ast_expr *n)
 {
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
@@ -78,7 +74,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 			if (is_nullable(n)) {
 				set_flags(n->u.concat.n[i], AST_FLAG_NULLABLE);
 			}
-			analysis_iter(env, n->u.concat.n[i]);
+			analysis_iter(n->u.concat.n[i]);
 		}
 
 		break;
@@ -88,7 +84,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 		size_t i;
 
 		for (i = 0; i < n->u.alt.count; i++) {
-			analysis_iter(env, n->u.alt.n[i]);
+			analysis_iter(n->u.alt.n[i]);
 			/* spread nullability upward */
 			if (is_nullable(n->u.alt.n[i])) {
 				set_flags(n, AST_FLAG_NULLABLE);
@@ -115,7 +111,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 			set_flags(e, AST_FLAG_NULLABLE);
 		}
 
-		analysis_iter(env, e);
+		analysis_iter(e);
 
 		if (is_nullable(e)) {
 			set_flags(n, AST_FLAG_NULLABLE);
@@ -130,11 +126,7 @@ analysis_iter(struct analysis_env *env, struct ast_expr *n)
 			set_flags(e, AST_FLAG_NULLABLE);
 		}
 
-		/* assign group ID */
-		env->group_id++;
-		n->u.group.id = env->group_id;
-
-		analysis_iter(env, e);
+		analysis_iter(e);
 
 		if (is_nullable(e)) {
 			set_flags(n, AST_FLAG_NULLABLE);
@@ -616,17 +608,11 @@ ast_analysis(struct ast *ast)
 
 	/*
 	 * First pass -- track nullability, clean up some artifacts from
-	 * parsing, assign group IDs.
+	 * parsing.
 	 */
-	{
-		struct analysis_env env;
-
-		memset(&env, 0x00, sizeof(env));
-
-		res = analysis_iter(&env, ast->expr);
-		if (res != AST_ANALYSIS_OK) {
-			return res;
-		}
+	res = analysis_iter(ast->expr);
+	if (res != AST_ANALYSIS_OK) {
+		return res;
 	}
 
 	/*

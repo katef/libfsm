@@ -99,17 +99,38 @@
 # configurable line ending
 '\R' -> $eol;
 
-'\'   /[0-7]{2,3}/     -> $oct;
-'\0'                   -> $oct;
+'\o{' /[0-7]+/i '}'    -> $oct;
+'\x'  /[0-9a-f]{0,2}/i -> $hex;
+'\x{' /[0-9a-f]+/i '}' -> $hex;
 
-# PCRE treats \1 ... \7 as back references outside of a character class
+# "After \0 up to two further octal digits are read. If there are fewer
+# than two digits, just those that are present are used.
+# Thus the sequence \0\x\015 specifies two binary zeros followed by a
+# CR character (code value 13)."
+'\0'  /[0-7]{0,2}/     -> $oct;
+
+# "Outside a character class, a backslash followed by a digit greater than 0
+# (and possibly further digits) is a back reference to a capturing subpattern
+# earlier (that is, to its left) in the pattern, provided there have been that
+# many previous capturing left parentheses."
 #
-# It's actually more complicated than that.  \<digits> is treated as a
-# backref as long as there are _already_ that many capture groups in the
-# expression.  Given that back references are unsupported, this seems
-# like a overkill for a seldom-used feature.  However, it's nice to
-# indicate that the usual backrefs aren't supported.
-'\'   /[1-7]/          -> $unsupported;
+# "... PCRE reads the digit and any following digits as a decimal number."
+#
+# "However, if the decimal number following the backslash is less than 10,
+# it is always taken as a back reference, and causes an error only if there
+# are not that many capturing left parentheses in the entire pattern.
+# In other words, the parentheses that are referenced need not be to the left
+# of the reference for numbers less than 10. ... It is not possible to have a
+# numerical "forward back reference" to a subpattern whose number is 10 or more
+# using this syntax because a sequence such as \50 is interpreted as a character
+# defined in octal."
+#
+# So I take the pattern below to mean a decimal sequence which may be either
+# a backreference or something else (I presume a base 10 literal). Either way
+# I'm disallowing both of these here for now. I think it is possible that we
+# could lex and parse these eventually though (which I do not think we could
+# do for the same sequence inside a character class).
+'\'   /[1-9][0-9]*/    -> $unsupported;
 
 # the new and proper way for back references
 '\g' -> $unsupported;
@@ -157,10 +178,6 @@
 # supported
 '\b' -> $unsupported;
 '\B' -> $unsupported;
-
-'\o{' /[0-7]+/i '}'    -> $oct;
-'\x'  /[0-9a-f]{0,2}/i -> $hex;
-'\x{' /[0-9a-f]+/i '}' -> $hex;
 
 '\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\A' | '\Z' | '\z' | '\E' | '\R' | $named__class | $unsupported) -> $noesc;
 '\' -> $invalid;
@@ -251,10 +268,25 @@
 	'\w' -> $named__class;
 	'\W' -> $named__class;
 
-	'\'   /[0-7]{1,3}/     -> $oct;
 	'\o{' /[0-7]+/i '}'    -> $oct;
-	'\x'  /[0-9a-f]{1,2}/i -> $hex;
+	'\x'  /[0-9a-f]{0,2}/i -> $hex;
 	'\x{' /[0-9a-f]+/i '}' -> $hex;
+
+	'\0'  /[0-7]{0,2}/     -> $oct;
+
+	# "Inside a character class, or if the decimal number following \ is
+	# greater than 7 and there have not been that many capturing subpatterns,
+	# PCRE handles \8 and \9 as the literal characters "8" and "9", and
+	# otherwise re-reads up to three octal digits following the backslash,
+	# using them to generate a data character. Any subsequent digits stand
+	# for themselves. For example:"
+	#
+	# " \81    is either a back reference, or the two characters "8" and "1""
+	#
+	# For this reason I do not think we can ever lex correctly here, because
+	# we would need to produce either one or two tokens, depending on the
+	# presence of capturing groups.
+	'\'   /[1-9][0-9]*/     -> $unsupported;
 
 	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\E' | '\B' | '\N' | '\R' | '\X' | $named__class) -> $noesc;
 	'\' -> $invalid;
