@@ -258,16 +258,20 @@ fsm_print_go(FILE *f, const struct fsm *fsm)
 	switch (fsm->opt->io) {
 	case FSM_IO_PAIR:
 		fprintf(f, "(data []byte) int {\n");
-		/* start idx at -1 unsigned so after first increment we're correct at index 0 */
-		fprintf(f, "\tvar idx = ^uint(0)\n");
-		fprintf(f, "\n");
+		if (ir->n > 0) {
+			/* start idx at -1 unsigned so after first increment we're correct at index 0 */
+			fprintf(f, "\tvar idx = ^uint(0)\n");
+			fprintf(f, "\n");
+		}
 		break;
 
 	case FSM_IO_STR:
 		fprintf(f, "(data string) int {\n");
-		/* start idx at -1 unsigned so after first increment we're correct at index 0 */
-		fprintf(f, "\tvar idx = ^uint(0)\n");
-		fprintf(f, "\n");
+		if (ir->n > 0) {
+			/* start idx at -1 unsigned so after first increment we're correct at index 0 */
+			fprintf(f, "\tvar idx = ^uint(0)\n");
+			fprintf(f, "\n");
+		}
 		break;
 
 	default:
