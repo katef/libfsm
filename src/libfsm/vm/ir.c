@@ -744,7 +744,7 @@ initial_translate_state(struct dfavm_assembler_ir *a, const struct ir *ir, size_
 
 	switch (st->strategy) {
 	case IR_NONE:
-		*opp = opasm_new_stop(a, VM_CMP_ALWAYS, 0, st->isend ? VM_END_SUCC : VM_END_FAIL, st);
+		*opp = opasm_new_stop(a, VM_CMP_ALWAYS, 0, VM_END_FAIL, st);
 		opp = &(*opp)->next;
 		break;
 
