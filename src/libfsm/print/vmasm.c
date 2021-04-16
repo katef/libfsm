@@ -74,8 +74,6 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 	assert(opt != NULL);
 	assert(a != NULL);
 
-	assert(ir->n > 0);
-
 	switch (dialect) {
 	case AMD64_ATT:  comment = "#"; break;
 	case AMD64_NASM: comment = ";"; break;
