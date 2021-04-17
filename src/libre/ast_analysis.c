@@ -451,6 +451,9 @@ assign_firsts(struct ast_expr *n)
 {
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
+		set_flags(n, AST_FLAG_FIRST);
+		break;
+
 	case AST_EXPR_TOMBSTONE:
 		break;
 
@@ -523,6 +526,9 @@ assign_lasts(struct ast_expr *n)
 {
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
+		set_flags(n, AST_FLAG_LAST);
+		break;
+
 	case AST_EXPR_TOMBSTONE:
 		break;
 
