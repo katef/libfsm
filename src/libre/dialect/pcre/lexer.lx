@@ -288,7 +288,7 @@
 	# presence of capturing groups.
 	'\'   /[1-9][0-9]*/     -> $unsupported;
 
-	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\E' | '\B' | '\N' | '\R' | '\X' | $named__class) -> $noesc;
+	'\' /./ - ($esc | $control | $oct | $hex | '\Q' | '\E' | '\B' | '\N' | '\R' | '\X' | $named__class | '\' /[1-9][0-9]*/ ) -> $noesc;
 	'\' -> $invalid;
 
 	# FIXME: negated character classes, e.g. [:^alpha:]
