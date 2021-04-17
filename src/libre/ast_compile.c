@@ -372,6 +372,11 @@ decide_linking(struct comp_env *env,
 
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
+		if ((n->flags & (AST_FLAG_FIRST|AST_FLAG_LAST)) == 0) {
+			return LINK_TOP_DOWN;
+		}
+		break;
+
 	case AST_EXPR_GROUP:
 		return LINK_TOP_DOWN;
 
