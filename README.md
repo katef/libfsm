@@ -36,6 +36,9 @@ To build and install:
 
     ; pmake -r install
 
+To build on Linux, you may need to install `bmake`, and use it instead
+of `pmake` in the commands mentioned here.
+
 You can override a few things:
 
     ; CC=clang PREFIX=$HOME pmake -r install
@@ -56,3 +59,8 @@ Fuzzing depends on the theft property-based testing library:
 
 Ideas, comments or bugs: kate@elide.org
 
+### Running the test suite
+
+To run the tests:
+
+    ; bmake -r LX=./build/bin/lx test
