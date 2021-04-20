@@ -111,10 +111,6 @@ STAGE_BUILD := ${STAGE_BUILD:Nbin/cvtpcre}
 
 .if !${CC:T:Memcc*}
 
-.for prog in ${PROG}
-${BUILD}/bin/${prog}: ./target/debug/liblibfsm_rs.a
-.endfor
-
 ./target/debug/liblibfsm_rs.a:
 	cargo build
 
@@ -126,12 +122,11 @@ test::
 .include "./target/debug/liblibfsm_rs.d"
 .endif
 
-# for symbols provided by libraries built by cargo instead
-.if ${SYSTEM} == Darwin
 .for part in ${PART}
-LDRFLAGS.${part} += -undefined dynamic_lookup
+${BUILD}/lib/${part}.o: ./target/debug/liblibfsm_rs.a
+# hijacking LDRFLAGS here because the target only expects .o sources
+LDRFLAGS.${part} += ./target/debug/liblibfsm_rs.a
 .endfor
-.endif
 
 .endif
 

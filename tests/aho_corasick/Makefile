@@ -16,10 +16,6 @@ ${TEST_OUTDIR.tests/aho_corasick}/actest: ${TEST_OUTDIR.tests/aho_corasick}/acte
 ${TEST_OUTDIR.tests/aho_corasick}/actest: ${BUILD}/lib/${lib:R}.a
 .endfor
 
-.if !${CC:T:Memcc*}
-${TEST_OUTDIR.tests/aho_corasick}/actest: ./target/debug/liblibfsm_rs.a
-.endif
-
 AC_TEST=${TEST_OUTDIR.tests/aho_corasick}/actest
 
 ${AC_TEST}:
