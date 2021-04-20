@@ -126,5 +126,12 @@ test::
 .include "./target/debug/liblibfsm_rs.d"
 .endif
 
+# for symbols provided by libraries built by cargo instead
+.if ${SYSTEM} == Darwin
+.for part in ${PART}
+LDRFLAGS.${part} += -undefined dynamic_lookup
+.endfor
+.endif
+
 .endif
 
