@@ -1,6 +1,7 @@
 //! Representation of a Finite State Machine.
 
 use libc::c_void;
+use std::slice;
 
 // Keep in sync with include/fsm.h:fsm_state_t
 type StateId = u32;
@@ -19,6 +20,8 @@ type EndIdInfo = *mut c_void;
 
 // Opaque pointer to struct fsm_options
 type Options = *const c_void;
+
+const ENDCOUNT_MAX: usize = usize::MAX;
 
 /// One state in a `Fsm`'s array of states.
 // Keep in sync with interanl.h:struct fsm_state
@@ -79,6 +82,36 @@ impl Fsm {
             None
         }
     }
+
+    fn states_as_mut_slice(&self) -> &mut [State] {
+        unsafe { slice::from_raw_parts_mut(self.states, self.statecount) }
+    }
+
+    pub fn set_end(&mut self, state: StateId, end: bool) {
+        assert!((state as usize) < self.statecount);
+
+        {
+            // Temporary scope so the `s` mutable borrow terminates before
+            // we frob `self.endcount` below.
+
+            let states = self.states_as_mut_slice();
+            let s = &mut states[state as usize];
+
+            if s.end == end {
+                return;
+            } else {
+                s.end = end;
+            }
+        }
+
+        if end {
+            assert!(self.endcount < ENDCOUNT_MAX);
+            self.endcount += 1;
+        } else {
+            assert!(self.endcount > 0);
+            self.endcount -= 1;
+        }
+    }
 }
 
 #[no_mangle]
@@ -111,6 +144,16 @@ pub unsafe fn fsm_getstart(fsm: *const Fsm, out_start: *mut StateId) -> i32 {
 
         None => 0
     }
+}
+
+#[no_mangle]
+pub unsafe fn fsm_setend(fsm: *mut Fsm, state: StateId, end: i32) {
+    assert!(!fsm.is_null());
+    let fsm = &mut *fsm;
+
+    let end = if end != 0 { true } else { false };
+
+    fsm.set_end(state, end)
 }
 
 #[cfg(test)]
@@ -167,5 +210,34 @@ mod tests {
             fsm_clearstart(fsm_ptr);
             assert_eq!(fsm_getstart(fsm_ptr, &mut n), 0);
         }
+    }
+
+    #[test]
+    fn set_end_works() {
+        let mut fsm = dummy_fsm_new();
+
+        fn make_state() -> State {
+            State {
+                end: false,
+                has_capture_actions: false,
+                visited: false,
+                edges: ptr::null_mut(),
+                epsilons: ptr::null_mut(),
+            }
+        }
+
+        let mut states = vec![make_state(), make_state(), make_state()];
+
+        fsm.states = states.as_mut_ptr();
+        fsm.statecount = 3;
+        fsm.statealloc = 3;
+
+        fsm.set_end(1, true); // yay aliased mutability
+        assert_eq!(fsm.endcount, 1);
+        assert!(states[1].end);
+
+        fsm.set_end(1, false);
+        assert_eq!(fsm.endcount, 0);
+        assert!(!states[1].end);
     }
 }

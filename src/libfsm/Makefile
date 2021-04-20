@@ -8,7 +8,6 @@ SRC += src/libfsm/clone.c
 SRC += src/libfsm/closure.c
 SRC += src/libfsm/edge.c
 SRC += src/libfsm/empty.c
-SRC += src/libfsm/end.c
 SRC += src/libfsm/endids.c
 SRC += src/libfsm/equal.c
 SRC += src/libfsm/exec.c
