@@ -110,3 +110,18 @@ STAGE_BUILD := ${STAGE_BUILD:Nbin/cvtpcre}
 	grep FAIL ${BUILD}/tests/*/res*; [ $$? -ne 0 ]
 .endif
 
+.if !${CC:T:Memcc*}
+
+.for prog in ${PROG}
+${BUILD}/bin/${prog}: ./target/debug/liblibfsm_rs.a
+.endfor
+
+# naming for kmkf prog.mk
+./target/debug/liblibfsm_rs.a: ./target/debug/liblibfsm_rs.rlib
+	ln -sf ${.ALLSRC:T} ${.TARGET}
+
+./target/debug/liblibfsm_rs.rlib:
+	cargo build
+
+.endif
+
