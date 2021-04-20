@@ -142,7 +142,7 @@ pub unsafe fn fsm_getstart(fsm: *const Fsm, out_start: *mut StateId) -> i32 {
             1
         }
 
-        None => 0
+        None => 0,
     }
 }
 
@@ -158,8 +158,8 @@ pub unsafe fn fsm_setend(fsm: *mut Fsm, state: StateId, end: i32) {
 
 #[cfg(test)]
 mod tests {
-    use std::ptr;
     use super::*;
+    use std::ptr;
 
     // Just here until we can construct Fsm in Rust
     fn dummy_fsm_new() -> Fsm {
