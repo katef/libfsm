@@ -92,7 +92,6 @@ INCDIR += include
 .include <obj.mk>
 .include <dep.mk>
 .include <ar.mk>
-.include <so.mk>
 .include <part.mk>
 .include <prog.mk>
 .include <mkdir.mk>
