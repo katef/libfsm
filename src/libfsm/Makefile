@@ -14,7 +14,6 @@ SRC += src/libfsm/equal.c
 SRC += src/libfsm/exec.c
 SRC += src/libfsm/fsm.c
 SRC += src/libfsm/mode.c
-SRC += src/libfsm/start.c
 SRC += src/libfsm/state.c
 SRC += src/libfsm/trim.c
 SRC += src/libfsm/example.c
