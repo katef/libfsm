@@ -61,6 +61,8 @@ LDD_VER!=                        \
 LFLAGS.fsm += -lrt
 .endif
 
+LFLAGS.fsm += -lpthread -ldl
+
 .endif
 
 .endif
