@@ -53,6 +53,7 @@ struct fsm_edge {
 	unsigned char symbol;
 };
 
+/* Keep in sync with fsm.rs:State */
 struct fsm_state {
 	bool end;
 
@@ -67,6 +68,7 @@ struct fsm_state {
 	struct state_set *epsilons;
 };
 
+/* Keep in sync with fsm.rs:Fsm */
 struct fsm {
 	struct fsm_state *states; /* array */
 
