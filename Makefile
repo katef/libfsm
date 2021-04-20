@@ -122,11 +122,9 @@ test::
 .include "./target/debug/liblibfsm_rs.d"
 .endif
 
-.for part in ${PART}
-${BUILD}/lib/${part}.o: ./target/debug/liblibfsm_rs.a
+${BUILD}/lib/libfsm.o: ./target/debug/liblibfsm_rs.a
 # hijacking LDRFLAGS here because the target only expects .o sources
-LDRFLAGS.${part} += ./target/debug/liblibfsm_rs.a
-.endfor
+LDRFLAGS.libfsm += ./target/debug/liblibfsm_rs.a
 
 .endif
 
