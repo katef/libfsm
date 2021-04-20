@@ -123,5 +123,10 @@ ${BUILD}/bin/${prog}: ./target/debug/liblibfsm_rs.a
 ./target/debug/liblibfsm_rs.rlib:
 	cargo build
 
+./target/debug/liblibfsm_rs.d: ./target/debug/liblibfsm_rs.rlib
+.if exists(./target/debug/liblibfsm_rs.d)
+.include "./target/debug/liblibfsm_rs.d"
+.endif
+
 .endif
 
