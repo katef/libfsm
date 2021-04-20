@@ -116,17 +116,13 @@ STAGE_BUILD := ${STAGE_BUILD:Nbin/cvtpcre}
 ${BUILD}/bin/${prog}: ./target/debug/liblibfsm_rs.a
 .endfor
 
-# naming for kmkf prog.mk
-./target/debug/liblibfsm_rs.a: ./target/debug/liblibfsm_rs.rlib
-	ln -sf ${.ALLSRC:T} ${.TARGET}
-
-./target/debug/liblibfsm_rs.rlib:
+./target/debug/liblibfsm_rs.a:
 	cargo build
 
 test::
 	cargo test
 
-./target/debug/liblibfsm_rs.d: ./target/debug/liblibfsm_rs.rlib
+./target/debug/liblibfsm_rs.d: ./target/debug/liblibfsm_rs.a
 .if exists(./target/debug/liblibfsm_rs.d)
 .include "./target/debug/liblibfsm_rs.d"
 .endif

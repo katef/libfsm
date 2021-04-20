@@ -5,6 +5,7 @@ authors = ["Kate F <kate@elide.org>"]
 edition = "2018"
 
 [lib]
+crate-type = ["staticlib"]
 path = "src/libfsm/lib.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

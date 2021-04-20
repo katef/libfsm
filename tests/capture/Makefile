@@ -13,7 +13,7 @@ CFLAGS.${TEST_SRCDIR.tests/capture}/capture${n}.c = -UNDEBUG
 ${TEST_OUTDIR.tests/capture}/run${n}: ${TEST_OUTDIR.tests/capture}/capture${n}.o ${TEST_OUTDIR.tests/capture}/captest.o
 	${CC} ${CFLAGS} -o ${TEST_OUTDIR.tests/capture}/run${n} ${TEST_OUTDIR.tests/capture}/capture${n}.o ${TEST_OUTDIR.tests/capture}/captest.o ${BUILD}/lib/libfsm.a
 .else
-${TEST_OUTDIR.tests/capture}/run${n}: ${TEST_OUTDIR.tests/capture}/capture${n}.o ${TEST_OUTDIR.tests/capture}/captest.o ./target/debug/liblibfsm_rs.rlib
+${TEST_OUTDIR.tests/capture}/run${n}: ${TEST_OUTDIR.tests/capture}/capture${n}.o ${TEST_OUTDIR.tests/capture}/captest.o ./target/debug/liblibfsm_rs.a
 	${CC} ${CFLAGS} -o ${TEST_OUTDIR.tests/capture}/run${n} ${TEST_OUTDIR.tests/capture}/capture${n}.o ${TEST_OUTDIR.tests/capture}/captest.o ${BUILD}/lib/libfsm.a ./target/debug/liblibfsm_rs.a
 .endif
 
