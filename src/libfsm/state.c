@@ -18,6 +18,16 @@
 
 #include "internal.h"
 
+static void
+init_state(struct fsm_state *state)
+{
+        state->end                 = 0;
+        state->has_capture_actions = false;
+        state->visited             = 0;
+        state->epsilons            = NULL;
+        state->edges               = NULL;
+}
+
 int
 fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 {
@@ -52,17 +62,7 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 		*state = fsm->statecount;
 	}
 
-	{
-		struct fsm_state *new;
-
-		new = &fsm->states[fsm->statecount];
-
-		new->end                 = 0;
-                new->has_capture_actions = false;
-		new->visited             = 0;
-		new->epsilons            = NULL;
-		new->edges               = NULL;
-	}
+        init_state(&fsm->states[fsm->statecount]);
 
 	fsm->statecount++;
 
@@ -78,15 +78,7 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 
 	if (fsm->statecount + n <= fsm->statealloc) {
 		for (i = 0; i < n; i++) {
-			struct fsm_state *new;
-
-			new = &fsm->states[fsm->statecount + i];
-
-			new->end                 = 0;
-                        new->has_capture_actions = false;
-			new->visited             = 0;
-			new->epsilons            = NULL;
-			new->edges               = NULL;
+                        init_state(&fsm->states[fsm->statecount + i]);
 		}
 
 		fsm->statecount += n;
