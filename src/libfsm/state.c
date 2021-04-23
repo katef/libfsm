@@ -33,11 +33,6 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 {
 	assert(fsm != NULL);
 
-	if (fsm->statecount == (fsm_state_t) -1) {
-		errno = ENOMEM;
-		return 0;
-	}
-
 	/* TODO: something better than one contigious realloc */
 	if (fsm->statecount == fsm->statealloc) {
 		const size_t factor = 2; /* a guess */
