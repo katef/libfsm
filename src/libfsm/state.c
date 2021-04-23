@@ -57,10 +57,11 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 
 		new = &fsm->states[fsm->statecount];
 
-		new->end      = 0;
-		new->visited  = 0;
-		new->epsilons = NULL;
-		new->edges    = NULL;
+		new->end                 = 0;
+                new->has_capture_actions = false;
+		new->visited             = 0;
+		new->epsilons            = NULL;
+		new->edges               = NULL;
 	}
 
 	fsm->statecount++;
