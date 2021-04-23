@@ -82,10 +82,11 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 
 			new = &fsm->states[fsm->statecount + i];
 
-			new->end      = 0;
-			new->visited  = 0;
-			new->epsilons = NULL;
-			new->edges    = NULL;
+			new->end                 = 0;
+                        new->has_capture_actions = false;
+			new->visited             = 0;
+			new->epsilons            = NULL;
+			new->edges               = NULL;
 		}
 
 		fsm->statecount += n;
