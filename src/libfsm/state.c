@@ -50,10 +50,6 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 			return 0;
 		}
 
-		for (i = fsm->statealloc; i < n; i++) {
-			tmp[i].has_capture_actions = 0;
-		}
-
 		fsm->statealloc = n;
 		fsm->states = tmp;
 	}
