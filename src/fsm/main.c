@@ -106,7 +106,7 @@ static void
 usage(void)
 {
 	printf("usage: fsm [-x] {<text> ...}\n");
-	printf("       fsm {-p} [-l <language>] [-aCcwX] [-k <io>] [-e <prefix>]\n");
+	printf("       fsm {-p} [-l <language>] [-aCcgwX] [-k <io>] [-e <prefix>]\n");
 	printf("       fsm {-dmr | -t <transformation>} [-i <iterations>] [<file.fsm> | <file-a> <file-b>]\n");
 	printf("       fsm {-q <query>} [<file>]\n");
 	printf("       fsm {-W <maxlen>} <file.fsm>\n");
@@ -394,11 +394,12 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "aCcwXe:k:i:" "xpq:l:dGmrt:W:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aCcgwXe:k:i:" "xpq:l:dGmrt:W:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
 			case 'C': opt.comments		= 0;          break;
+			case 'g': opt.group_edges       = 1;          break;
 			case 'w': opt.fragment          = 1;          break;
 			case 'X': opt.always_hex        = 1;          break;
 			case 'e': opt.prefix            = optarg;     break;
