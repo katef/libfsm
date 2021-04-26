@@ -47,6 +47,11 @@ struct fsm_options {
 	 */
 	unsigned int always_hex:1;
 
+	/* boolean: true indicates to group edges with a common destination in output,
+	 * when possible, rather than printing them all individually.
+	 */
+	unsigned int group_edges:1;
+
 	/* for generated code, what kind of I/O API to generate */
 	enum fsm_io io;
 
