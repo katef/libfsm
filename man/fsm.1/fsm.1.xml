@@ -352,7 +352,7 @@
 							</tr>
 							<tr>
 								<td><code>glushkovise</code></td>
-								<td rowspan="2">&fsm_glushkovise.3;</td>
+								<td rowspan="2">&fsm_remove_epsilons.3;</td>
 								<td rowspan="2">Eliminate epsilon transitions from the &fsm;, converting a
 									Thompson NFA into a Glushkov NFA.</td>
 							</tr>

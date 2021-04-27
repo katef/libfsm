@@ -72,7 +72,7 @@ enum op {
 	OP_DETERMINISE = ( 4 << 1) | 1,
 	OP_MINIMISE    = ( 5 << 1) | 1,
 	OP_TRIM        = ( 6 << 1) | 1,
-	OP_GLUSHKOVISE = (12 << 1) | 1,
+	OP_RM_EPSILONS = (12 << 1) | 1,
 
 	/* binary */
 	OP_CONCAT      = ( 7 << 1) | 0,
@@ -106,7 +106,7 @@ static void
 usage(void)
 {
 	printf("usage: fsm [-x] {<text> ...}\n");
-	printf("       fsm {-p} [-l <language>] [-aCcgwX] [-k <io>] [-e <prefix>]\n");
+	printf("       fsm {-p} [-l <language>] [-aCcEgwX] [-k <io>] [-e <prefix>]\n");
 	printf("       fsm {-dmr | -t <transformation>} [-i <iterations>] [<file.fsm> | <file-a> <file-b>]\n");
 	printf("       fsm {-q <query>} [<file>]\n");
 	printf("       fsm {-W <maxlen>} <file.fsm>\n");
@@ -268,12 +268,13 @@ op_name(const char *name)
 		{ "determinise", OP_DETERMINISE },
 		{ "dfa",         OP_DETERMINISE },
 		{ "todfa",       OP_DETERMINISE },
-		{ "glush",       OP_GLUSHKOVISE },
-		{ "glushovize",  OP_GLUSHKOVISE },
+		{ "glush",       OP_RM_EPSILONS },
+		{ "glushovize",  OP_RM_EPSILONS },
 		{ "min",         OP_MINIMISE    },
 		{ "minimise",    OP_MINIMISE    },
 		{ "trim",        OP_TRIM        },
-		{ "glushkovise", OP_GLUSHKOVISE },
+		{ "glushkovise", OP_RM_EPSILONS },
+		{ "remove_epsilons", OP_RM_EPSILONS },
 
 		{ "cat",         OP_CONCAT      },
 		{ "concat",      OP_CONCAT      },
@@ -394,7 +395,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "aCcgwXe:k:i:" "xpq:l:dGmrt:W:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aCcgwXEe:k:i:" "xpq:l:dGmrt:W:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
@@ -420,6 +421,7 @@ main(int argc, char *argv[])
 			case 'r': op = op_name("reverse");            break;
 			case 't': op = op_name(optarg);               break;
 			case 'G': op = op_name("glushkovise");        break;
+			case 'E': op = op_name("remove_epsilons");    break;
 			case 'W':
 				/* print = gen_words; */
 				/* num_words = strtoul(optarg, NULL, 10); */
@@ -504,7 +506,7 @@ main(int argc, char *argv[])
 		case OP_COMPLEMENT:  r = fsm_complement(q);   break;
 		case OP_REVERSE:     r = fsm_reverse(q);      break;
 		case OP_DETERMINISE: r = fsm_determinise(q);  break;
-		case OP_GLUSHKOVISE: r = fsm_glushkovise(q);  break;
+		case OP_RM_EPSILONS: r = fsm_remove_epsilons(q);  break;
 		case OP_TRIM:        r = fsm_trim(q,
 		    FSM_TRIM_START_AND_END_REACHABLE, NULL);
 			if (r >= 0) { /* returns number of states removed */

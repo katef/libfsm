@@ -22,7 +22,7 @@
 
 #define DUMP_EPSILON_CLOSURES 0
 #define DEF_PENDING_CAPTURE_ACTIONS_CEIL 2
-#define LOG_GLUSHKOVIZE_CAPTURES 0
+#define LOG_RM_EPSILONS_CAPTURES 0
 #define DEF_CARRY_ENDIDS_COUNT 2
 
 struct remap_env {
@@ -66,7 +66,7 @@ free_closure_sets(struct state_set *closures[FSM_SIGMA_COUNT])
 }
 
 int
-fsm_glushkovise(struct fsm *nfa)
+fsm_remove_epsilons(struct fsm *nfa)
 {
 	struct state_set **eclosures;
 	fsm_state_t s;
@@ -209,7 +209,7 @@ remap_capture_actions(struct fsm *nfa, struct state_set **eclosures)
 			if (si_s == s) {
 				continue; /* ignore identical states */
 			}
-#if LOG_GLUSHKOVIZE_CAPTURES
+#if LOG_RM_EPSILONS_CAPTURES
 			fprintf(stderr, "remap_capture_actions: %u <- %u\n",
 			    s, si_s);
 #endif
@@ -278,7 +278,7 @@ add_pending_capture_action(struct remap_env *env,
 	}
 
 	a = &env->actions[env->count];
-#if LOG_GLUSHKOVIZE_CAPTURES
+#if LOG_RM_EPSILONS_CAPTURES
 	fprintf(stderr, "add_pending_capture_action: state %d, type %s, capture_id %u, to %d\n",
 	    state, fsm_capture_action_type_name[type], capture_id, to);
 #endif
@@ -301,7 +301,7 @@ remap_capture_action_cb(fsm_state_t state,
 	struct remap_env *env = opaque;
 	assert(env->tag == 'R');
 
-#if LOG_GLUSHKOVIZE_CAPTURES
+#if LOG_RM_EPSILONS_CAPTURES
 	fprintf(stderr, "remap_capture_action_cb: state %d, type %s, capture_id %u, to %d\n",
 	    state, fsm_capture_action_type_name[type], capture_id, to);
 #endif
@@ -310,7 +310,7 @@ remap_capture_action_cb(fsm_state_t state,
 		struct state_iter si_to;
 		fsm_state_t si_tos;
 
-#if LOG_GLUSHKOVIZE_CAPTURES
+#if LOG_RM_EPSILONS_CAPTURES
 		fprintf(stderr, " -- rcac: state %d -> %d\n", state, si_s);
 #endif
 
@@ -323,7 +323,7 @@ remap_capture_action_cb(fsm_state_t state,
 		}
 
 		for (state_set_reset(env->rmap[to], &si_to); state_set_next(&si, &si_tos); ) {
-#if LOG_GLUSHKOVIZE_CAPTURES
+#if LOG_RM_EPSILONS_CAPTURES
 			fprintf(stderr, " -- rcac:     to %d -> %d\n", to, si_tos);
 #endif
 
@@ -354,7 +354,7 @@ static int
 collect_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
 {
 	struct collect_env *env = opaque;
-	assert(env->tag == 'G');
+	assert(env->tag == 'E');
 
 	(void)state;
 
@@ -378,7 +378,7 @@ collect_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
 	return 1;
 }
 
-/* fsm_glushkovise can't use fsm_endid_carry directly, because the src
+/* fsm_remove_epsilons can't use fsm_endid_carry directly, because the src
  * and dst FSMs are the same -- that would lead to adding entries to a
  * hash table, possibly causing it to resize, while iterating over it.
  *
@@ -393,7 +393,7 @@ carry_endids(struct fsm *fsm, struct state_set *states,
 	size_t i;
 
 	struct collect_env env;
-	env.tag = 'G';		/* for fsm_glushkovize */
+	env.tag = 'E';		/* for fsm_remove_epsilons */
 	env.alloc = fsm->opt->alloc;
 	env.count = 0;
 	env.ceil = DEF_CARRY_ENDIDS_COUNT;

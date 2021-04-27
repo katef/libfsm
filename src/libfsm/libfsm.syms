@@ -87,7 +87,7 @@ fsm_countstates
 fsm_trim
 fsm_reverse
 fsm_determinise
-fsm_glushkovise
+fsm_remove_epsilons
 fsm_complete
 fsm_minimise
 fsm_concat
