@@ -98,7 +98,7 @@ enum match_type {
 
 enum halt {
 	HALT_AFTER_COMPILE,
-	HALT_AFTER_GLUSHKOVISE,
+	HALT_AFTER_REMOVE_EPSILONS,
 	HALT_AFTER_DETERMINISE,
 	HALT_AFTER_MINIMISE,
 	HALT_AFTER_EXECUTION
@@ -125,7 +125,7 @@ struct perf_case {
 
 struct timing {
 	double comp_delta;
-	double glush_delta;
+	double rm_eps_delta;
 	double det_delta;
 	double min_delta;
 	double run_delta;
@@ -525,7 +525,7 @@ parse_perf_case(FILE *f, enum implementation impl, enum halt halt, int quiet, in
 				fprintf(stderr, "ECHO::: EXECUTING\n");
 			}
 
-			t.comp_delta = t.glush_delta = t.det_delta = t.min_delta = t.run_delta = 0.0;
+			t.comp_delta = t.rm_eps_delta = t.det_delta = t.min_delta = t.run_delta = 0.0;
 
 			if (num_cycles > 0) {
 				c.count = num_cycles;
@@ -709,8 +709,8 @@ perf_case_run(struct perf_case *c, enum halt halt,
 		goto done;
 	}
 
-	if (!phase(&t->glush_delta, c->count, fsm, fsm_glushkovise)) return ERROR_GLUSHKOVISING;
-	if (halt == HALT_AFTER_GLUSHKOVISE) {
+	if (!phase(&t->rm_eps_delta, c->count, fsm, fsm_remove_epsilons)) return ERROR_REMOVING_EPSILONS;
+	if (halt == HALT_AFTER_REMOVE_EPSILONS) {
 		fsm_free(fsm);
 		goto done;
 	}
@@ -837,9 +837,9 @@ perf_case_report_txt(struct perf_case *c, enum halt halt,
 		return;
 	}
 	if (c->count == 1) {
-		printf("glushkovise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
-			c->count, t->glush_delta, t->glush_delta / c->count);
-		if (halt == HALT_AFTER_GLUSHKOVISE) {
+		printf("remove_epsilons %d iterations took %.4f seconds, %.4g seconds/iteration\n",
+			c->count, t->rm_eps_delta, t->rm_eps_delta / c->count);
+		if (halt == HALT_AFTER_REMOVE_EPSILONS) {
 			return;
 		}
 		printf("determinise %d iterations took %.4f seconds, %.4g seconds/iteration\n",
@@ -874,8 +874,8 @@ perf_case_report_head(int quiet, enum halt halt)
 	if (halt == HALT_AFTER_COMPILE) {
 		goto done;
 	}
-	printf("\tglushkovise");
-	if (halt == HALT_AFTER_GLUSHKOVISE) {
+	printf("\tremove_epsilons");
+	if (halt == HALT_AFTER_REMOVE_EPSILONS) {
 		goto done;
 	}
 	printf("\tdeterminise");
@@ -913,7 +913,7 @@ perf_case_report_tsv(struct perf_case *c, enum halt halt,
 	}
 	if (c->count != 1) {
 		printf("\t0");
-		if (halt == HALT_AFTER_GLUSHKOVISE) {
+		if (halt == HALT_AFTER_REMOVE_EPSILONS) {
 			goto done;
 		}
 		printf("\t0");
@@ -925,8 +925,8 @@ perf_case_report_tsv(struct perf_case *c, enum halt halt,
 			goto done;
 		}
 	} else {
-		printf("\t%.4g", t->glush_delta / c->count);
-		if (halt == HALT_AFTER_GLUSHKOVISE) {
+		printf("\t%.4g", t->rm_eps_delta / c->count);
+		if (halt == HALT_AFTER_REMOVE_EPSILONS) {
 			goto done;
 		}
 		printf("\t%.4g", t->det_delta / c->count);
@@ -968,8 +968,8 @@ perf_case_report_error(enum error_type err)
 		printf("ERROR: parsing regexp\n");
 		break;
 
-	case ERROR_GLUSHKOVISING:
-		printf("ERROR: glushkovising regexp\n");
+	case ERROR_REMOVING_EPSILONS:
+		printf("ERROR: removing_epsilons regexp\n");
 		break;
 
 	case ERROR_DETERMINISING:
@@ -1037,7 +1037,7 @@ usage(void)
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -H <halt>\n");
-	fprintf(stderr, "             halt after compile, glushkovise, determinise, minimise or execute\n");
+	fprintf(stderr, "             halt after compile, remove_epsilons, determinise, minimise or execute\n");
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -N <cycles>\n");
@@ -1173,7 +1173,7 @@ main(int argc, char *argv[])
 				if (optarg[0] == 'c') {
 					halt = HALT_AFTER_COMPILE;
 				} else if (optarg[0] == 'g') {
-					halt = HALT_AFTER_GLUSHKOVISE;
+					halt = HALT_AFTER_REMOVE_EPSILONS;
 				} else if (optarg[0] == 'd') {
 					halt = HALT_AFTER_DETERMINISE;
 				} else if (optarg[0] == 'm') {

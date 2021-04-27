@@ -40,15 +40,15 @@ fsm_determinise(struct fsm *nfa)
 	 * faster where we can start with a Glushkov NFA in the first place.
 	 */
 	if (fsm_has(nfa, fsm_hasepsilons)) {
-		if (!fsm_glushkovise(nfa)) {
+		if (!fsm_remove_epsilons(nfa)) {
 			return 0;
 		}
 	}
 
 #if LOG_DETERMINISE_CAPTURES
-	fprintf(stderr, "# post_glushkovise\n");
+	fprintf(stderr, "# post_remove_epsilons\n");
 	fsm_print_fsm(stderr, nfa);
-	fsm_capture_dump(stderr, "#### post_glushkovise", nfa);
+	fsm_capture_dump(stderr, "#### post_remove_epsilons", nfa);
 #endif
 
 	issp = interned_state_set_pool_alloc(nfa->opt->alloc);
