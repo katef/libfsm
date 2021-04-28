@@ -122,7 +122,7 @@ fsm_shortest(const struct fsm *fsm,
 			if (v->cost > u->cost + c) {
 				v->cost = u->cost + c;
 				v->prev = u;
-				v->c    = e.symbol;
+				v->c    = (char)e.symbol;
 
 				priq_update(&todo, v, v->cost);
 			}

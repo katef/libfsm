@@ -76,7 +76,7 @@ fsm_complete(struct fsm *fsm,
 		/* TODO: bulk add symbols as the inverse of this bitmap */
 		i = -1;
 		while (i = bm_next(&bm, i, 0), i <= UCHAR_MAX) {
-			if (!fsm_addedge_literal(fsm, s, new, i)) {
+			if (!fsm_addedge_literal(fsm, s, new, (char)i)) {
 				/* TODO: free stuff */
 				return 0;
 			}

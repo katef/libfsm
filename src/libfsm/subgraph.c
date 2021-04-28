@@ -128,7 +128,7 @@ fsm_subgraph_duplicate(struct fsm *fsm,
 
 			new_dst = new_start + (old_dst - old_start);
 
-			if (!fsm_addedge_literal(fsm, ind, new_dst, e.symbol)) {
+			if (!fsm_addedge_literal(fsm, ind, new_dst, (char)e.symbol)) {
 				return 0;
 			}
 		}

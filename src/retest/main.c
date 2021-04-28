@@ -421,7 +421,7 @@ hexdigit:
 			return PARSE_INCOMPLETE_ESCAPE;
 		}
 
-		s[j++] = ccode;
+		s[j++] = (char)ccode;
 		break;
 	}
 

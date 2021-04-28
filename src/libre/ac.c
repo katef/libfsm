@@ -307,7 +307,7 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 				return 0;
 			}
 
-			if (!fsm_addedge_literal(fsm, st, dst, sym)) {
+			if (!fsm_addedge_literal(fsm, st, dst, (char)sym)) {
 				return 0;
 			}
 		}
