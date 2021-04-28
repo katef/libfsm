@@ -68,7 +68,7 @@ re_flags(const char *s, enum re_flags *f)
 
 	for (p = s; *p != '\0'; p++) {
 		if (*p & RE_ANCHOR) {
-			*f &= ~RE_ANCHOR;
+			*f &= (unsigned)~RE_ANCHOR;
 		}
 
 		switch (*p) {
