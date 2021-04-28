@@ -497,7 +497,7 @@ print_linkage(enum link_types t)
     if (!fsm_addedge_any(env->fsm, (FROM), (TO))) { return 0; }
 
 #define LITERAL(FROM, TO, C)        \
-    if (!addedge_literal(env, n->re_flags, (FROM), (TO), (C))) { return 0; }
+    if (!addedge_literal(env, n->re_flags, (FROM), (TO), ((char)C))) { return 0; }
 
 #define RECURSE(FROM, TO, NODE)     \
     if (!comp_iter(env, (FROM), (TO), (NODE))) { return 0; }

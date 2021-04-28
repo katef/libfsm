@@ -842,7 +842,7 @@ ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const 
 	for (i = 0; i < class->count; i++) {
 		if (class->ranges[i].a == class->ranges[i].b) {
 			if (class->ranges[i].a <= UCHAR_MAX) {
-				res->u.alt.n[i] = ast_make_expr_literal(poolp, re_flags, (unsigned char) class->ranges[i].a);
+				res->u.alt.n[i] = ast_make_expr_literal(poolp, re_flags, (char) class->ranges[i].a);
 			} else {
 				res->u.alt.n[i] = ast_make_expr_codepoint(poolp, re_flags, class->ranges[i].a);
 			}

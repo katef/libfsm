@@ -59,7 +59,7 @@ fsm_cost_legible(fsm_state_t from, fsm_state_t to, char c)
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (a[i].is(c)) {
 			const unsigned char_class_cost = 1000 * a[i].cost;
-			return char_class_cost + (unsigned)c;
+			return char_class_cost + (unsigned char)c;
 		}
 	}
 
