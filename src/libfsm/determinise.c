@@ -371,6 +371,7 @@ det_copy_capture_actions(struct reverse_mapping *reverse_mappings,
 	return env.ok;
 }
 
+SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static unsigned long
 hash_iss(const struct interned_state_set *iss)
 {
