@@ -12,3 +12,8 @@ O &
 ~|
 +xyz
 
+R pcre
+O &
+~
++xyz
+
