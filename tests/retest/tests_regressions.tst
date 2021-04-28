@@ -7,4 +7,8 @@ O +e
 ~^\xff
 +\xff
 
+R pcre
+O &
+~|
++xyz
 
