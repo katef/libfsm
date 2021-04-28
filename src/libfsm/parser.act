@@ -104,6 +104,7 @@
 	#define FNV1a_32_OFFSET_BASIS 	2166136261UL
 	#define FNV1a_32_PRIME		16777619UL
 
+	SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 	static unsigned
 	hash_of_id(const char *id)
 	{
