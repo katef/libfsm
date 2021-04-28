@@ -540,7 +540,7 @@ main(int argc, char *argv[])
 	print = lx_print_c;
 	keep_nfa = 0;
 	print_progress = 0;
-	concurrency = 4;
+	concurrency = 1;
 
 	/* TODO: populate options */
 	opt.anonymous_states  = 1;
