@@ -1,0 +1,15 @@
+# Regression test for #356: an array allocation for bookkeeping during
+# fsm_trim was not counting a start state with no incoming edges when
+# calculating the size necessary, so if it was the very last state it
+# could trigger a buffer overrun.
+
+0; 1; 2; 3; 4;
+
+0  ->  1 "g";
+1  ->  2 "b";
+2  ->  1;
+3  ->  3 "h";
+4  ->  0 "b";
+
+start: 4;
+end: 0;
