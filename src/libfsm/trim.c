@@ -282,7 +282,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	{
 		size_t i;
 		const fsm_state_t max_to = edges[edge_count - 1].to;
-		const size_t offset_count = (max_end > max_to ? max_end : max_to) + 1;
+		const size_t offset_count = fsm_countstates(fsm);
 
 		offsets = f_calloc(fsm->opt->alloc,
 		    offset_count, sizeof(offsets[0]));
