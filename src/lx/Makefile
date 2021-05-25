@@ -24,7 +24,7 @@ CFLAGS.${src} += -pthread
 DFLAGS.${src} += -pthread
 .endfor
 .endif
-LFLAGS.lx += -lpthread
+LFLAGS.lx += -lpthread -ldl
 
 LEXER  += src/lx/lexer.lx
 PARSER += src/lx/parser.sid

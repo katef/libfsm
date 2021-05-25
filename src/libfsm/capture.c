@@ -21,7 +21,7 @@ fsm_capture_init(struct fsm *fsm)
 	}
 	fsm->capture_info = ci;
 
-	for (i = 0; i < fsm->statealloc; i++) {
+	for (i = 0; i < fsm->statecount; i++) {
 		fsm->states[i].has_capture_actions = 0;
 	}
 

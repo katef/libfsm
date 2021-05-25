@@ -19,7 +19,7 @@ ${TEST_OUTDIR.tests/aho_corasick}/actest: ${BUILD}/lib/${lib:R}.a
 AC_TEST=${TEST_OUTDIR.tests/aho_corasick}/actest
 
 ${AC_TEST}:
-	${CC} ${CFLAGS} -o ${.TARGET} ${.ALLSRC}
+	${CC} ${CFLAGS} -o ${.TARGET} ${.ALLSRC} -lpthread -ldl
 
 test:: ${AC_TEST}
 

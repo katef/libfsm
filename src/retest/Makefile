@@ -16,8 +16,9 @@ DFLAGS.${src} += -std=c99
 .endfor
 
 .if ${SYSTEM} == Linux
-LFLAGS.reperf += -ldl
-LFLAGS.retest += -ldl
+LFLAGS.reperf += -lpthread -ldl
+LFLAGS.retest += -lpthread -ldl
+LFLAGS.cvtpcre += -lpthread -ldl
 .endif
 
 PROG += retest

@@ -22,6 +22,7 @@
 #include "internal.h"
 #include "capture.h"
 #include "endids.h"
+#include "libfsm_rs.h"
 
 void
 free_contents(struct fsm *fsm)
@@ -46,6 +47,9 @@ fsm_new(const struct fsm_options *opt)
 {
 	static const struct fsm_options defaults;
 	struct fsm *new, f;
+
+	/* just to prove linking works */
+	fsm_noop();
 
 	if (opt == NULL) {
 		opt = &defaults;
