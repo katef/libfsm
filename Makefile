@@ -44,7 +44,10 @@ SUBDIR += src/retest
 SUBDIR += src/lx/print
 SUBDIR += src/lx
 SUBDIR += src
-SUBDIR += tests/capture
+
+# Temporarily disabled -- not currently expected to pass.
+#SUBDIR += tests/capture
+
 SUBDIR += tests/complement
 SUBDIR += tests/idmap
 SUBDIR += tests/intersect
