@@ -16,6 +16,7 @@
 #include <adt/bitmap.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
+#include <adt/u64bitset.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -197,7 +198,7 @@ fprintf_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 			fprintf(f, "%-2u -> %2u ", s, info.to);
 
 			for (i = 0; i < 256; i++) {
-				if (info.symbols[i/64] & (1UL << (i & 63))) {
+				if (u64bitset_get(info.symbols, i)) {
 					if (lower > i) {
 						lower = i; /* set lower bound for range */
 					}

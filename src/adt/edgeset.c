@@ -28,7 +28,7 @@
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
-
+#include <adt/u64bitset.h>
 
 /* This is a simple linear-probing hash table, keyed by the edge symbol.
  * Since many edge sets only contain a single item, there is a special
@@ -284,7 +284,7 @@ edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
 {
 	size_t i;
 	for (i = 0; i < 256; i++) {
-		if (SYMBOLS_GET(symbols, i)) {
+		if (u64bitset_get(symbols, i)) {
 			if (!edge_set_add(pset, alloc, i, state)) {
 				return 0;
 			}
@@ -716,18 +716,16 @@ edge_set_replace_state(struct edge_set **setp, const struct fsm_alloc *alloc,
 		for (i = 0; i < set->ceil; i++) {
 			const fsm_state_t bs = set->b[i].state;
 			unsigned char symbol;
-			uint64_t bit;
 			if (bs != new) {
 				continue;
 			}
 			symbol = set->b[i].symbol;
-			bit = (uint64_t)1 << (symbol & 63);
-			if (seen[symbol/64] & bit) {
+			if (u64bitset_get(symbol, bit)) {
 				/* remove duplicate, update count */
 				set->b[i].state = BUCKET_TOMBSTONE;
 				set->count--;
 			} else {
-				seen[symbol/64] |= bit;
+				u64bitset_set(symbol, bit);
 			}
 		}
 	}
@@ -782,7 +780,7 @@ edge_set_ordered_iter_reset_to(const struct edge_set *set,
 		}
 
 		symbol = set->b[i].symbol;
-		eoi->symbols_used[symbol/64] |= ((uint64_t)1 << (symbol & 63));
+		u64bitset_set(eoi->symbols_used, symbol);
 		found++;
 	}
 	assert(found == set->count);
@@ -817,7 +815,7 @@ advance_symbol(struct edge_ordered_iter *eoi)
 {
 	unsigned i = eoi->symbol + 1;
 	while (i < 0x100) {
-		if (eoi->symbols_used[i/64] & ((uint64_t)1 << (i & 63))) {
+		if (u64bitset_get(eoi->symbols_used, i)) {
 			eoi->symbol = i;
 			return 1;
 		}
@@ -927,6 +925,7 @@ edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
+#include <adt/u64bitset.h>
 
 #define DEF_EDGE_GROUP_CEIL 1
 
@@ -944,10 +943,6 @@ struct edge_set {
 		uint64_t symbols[256/64];
 	} *groups;		/* sorted by .to */
 };
-
-#define SYMBOLS_SET(S, ID) (S[ID/64] |= (1ULL << (ID & 63)))
-#define SYMBOLS_GET(S, ID) (S[ID/64] & (1ULL << (ID & 63)))
-#define SYMBOLS_CLEAR(S, ID) (S[ID/64] &=~ (1ULL << (ID & 63)))
 
 struct edge_set *
 edge_set_new(void)
@@ -1048,7 +1043,7 @@ edge_set_add(struct edge_set **pset, const struct fsm_alloc *alloc,
 	unsigned char symbol, fsm_state_t state)
 {
 	uint64_t symbols[256/64] = { 0 };
-	SYMBOLS_SET(symbols, symbol);
+	u64bitset_set(symbols, symbol);
 	return edge_set_add_bulk(pset, alloc, symbols, state);
 }
 
@@ -1224,7 +1219,7 @@ edge_set_find(const struct edge_set *set, unsigned char symbol,
 
 	for (i = 0; i < set->count; i++) {
 		eg = &set->groups[i];
-		if (SYMBOLS_GET(eg->symbols, symbol)) {
+		if (u64bitset_get(eg->symbols, symbol)) {
 			e->state = eg->to;
 			e->symbol = symbol;
 			return 1;
@@ -1250,7 +1245,7 @@ edge_set_contains(const struct edge_set *set, unsigned char symbol)
 
 	for (i = 0; i < set->count; i++) {
 		eg = &set->groups[i];
-		if (SYMBOLS_GET(eg->symbols, symbol)) {
+		if (u64bitset_get(eg->symbols, symbol)) {
 			return 1;
 		}
 	}
@@ -1525,7 +1520,7 @@ edge_set_remove(struct edge_set **pset, unsigned char symbol)
 	 * symbols are set anymore. */
 	for (i = 0; i < set->count; i++) {
 		struct edge_group *eg = &set->groups[i];
-		SYMBOLS_CLEAR(eg->symbols, symbol);
+		u64bitset_clear(eg->symbols, symbol);
 	}
 }
 
@@ -1766,7 +1761,7 @@ edge_set_next(struct edge_iter *it, struct fsm_edge *e)
 			if ((it->j & 63) == 0 && 0 == eg->symbols[it->j/64]) {
 				it->j += 64;
 			} else {
-				if (SYMBOLS_GET(eg->symbols, it->j)) {
+				if (u64bitset_get(eg->symbols, it->j)) {
 					e->symbol = it->j;
 					e->state = eg->to;
 					it->j++;
@@ -1951,7 +1946,7 @@ edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
 	for (;;) {
 		while (eoi->pos < set->count) {
 			struct edge_group *eg = &set->groups[eoi->pos++];
-			if (SYMBOLS_GET(eg->symbols, eoi->symbol)) {
+			if (u64bitset_get(eg->symbols, eoi->symbol)) {
 				e->symbol = eoi->symbol;
 				e->state = eg->to;
 				return 1;
@@ -1995,11 +1990,11 @@ edge_set_group_iter_reset(const struct edge_set *set,
 					i += 63; /* skip empty word */
 					continue;
 				}
-				if (SYMBOLS_GET(g->symbols, i)) {
-					if (SYMBOLS_GET(seen, i)) {
-						SYMBOLS_SET(egi->internal, i);
+				if (u64bitset_get(g->symbols, i)) {
+					if (u64bitset_get(seen, i)) {
+						u64bitset_set(egi->internal, i);
 					} else {
-						SYMBOLS_SET(seen, i);
+						u64bitset_set(seen, i);
 					}
 				}
 			}
