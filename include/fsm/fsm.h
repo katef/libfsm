@@ -203,6 +203,10 @@ fsm_setend(struct fsm *fsm, fsm_state_t state, int end);
 int
 fsm_setendid(struct fsm *fsm, fsm_end_id_t id);
 
+/* Associate a numeric ID with a single end state in an FSM. */
+int
+fsm_setendid_state(struct fsm *fsm, fsm_state_t s, fsm_end_id_t id);
+
 /* Get the end IDs associated with an end state, if any.
  * If id_buf has enough cells to store all the end IDs (according
  * to id_buf_count) then they are written into id_buf[] and
@@ -224,6 +228,17 @@ fsm_getendids(const struct fsm *fsm, fsm_state_t end_state,
 /* Get the number of end IDs associated with an end state. */
 size_t
 fsm_getendidcount(const struct fsm *fsm, fsm_state_t end_state);
+
+/* Callback for iterating over end IDs.
+ * Returns whether iteration should continue. */
+typedef int
+fsm_iterendids_cb(const struct fsm *fsm, fsm_state_t end_state,
+    size_t nth, fsm_end_id_t id, void *opaque);
+
+/* Iterate over the end IDs associated with a state, if any. */
+void
+fsm_iterendids(const struct fsm *fsm, fsm_state_t state,
+	fsm_iterendids_cb *cb, void *opaque);
 
 /*
  * Find the state (if there is just one), or add epsilon edges from all states,

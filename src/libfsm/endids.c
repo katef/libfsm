@@ -48,6 +48,14 @@ fsm_setendid(struct fsm *fsm, fsm_end_id_t id)
 	return 1;
 }
 
+int
+fsm_setendid_state(struct fsm *fsm, fsm_state_t s, fsm_end_id_t id)
+{
+	enum fsm_endid_set_res sres;
+	sres = fsm_endid_set(fsm, s, id);
+	return sres != FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+}
+
 enum fsm_getendids_res
 fsm_getendids(const struct fsm *fsm, fsm_state_t end_state,
     size_t id_buf_count, fsm_end_id_t *id_buf,
@@ -426,6 +434,13 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 	return FSM_GETENDIDS_NOT_FOUND;
 }
 
+void
+fsm_iterendids(const struct fsm *fsm, fsm_state_t state,
+	fsm_iterendids_cb *cb, void *opaque)
+{
+	fsm_endid_iter_state(fsm, state, cb, opaque);
+}
+
 struct carry_env {
 	char tag;
 	struct fsm *dst;
@@ -434,13 +449,16 @@ struct carry_env {
 };
 
 static int
-carry_iter_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
+carry_iter_cb(const struct fsm *fsm, fsm_state_t state,
+    size_t nth, const fsm_end_id_t id, void *opaque)
 {
 	enum fsm_endid_set_res sres;
 	struct carry_env *env = opaque;
 	assert(env->tag == 'C');
 
+	(void)fsm;
 	(void)state;
+	(void)nth;
 
 	sres = fsm_endid_set(env->dst, env->dst_state, id);
 	if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
@@ -523,7 +541,7 @@ fsm_endid_iter(const struct fsm *fsm,
 		count = b->ids->count;
 
 		for (id_i = 0; id_i < count; id_i++) {
-			if (!cb(b->state, b->ids->ids[id_i], opaque)) {
+			if (!cb(fsm, b->state, id_i, b->ids->ids[id_i], opaque)) {
 				break;
 			}
 
@@ -586,7 +604,7 @@ fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
 				fprintf(stderr, "fsm_endid_iter_state[%d], ids[%ld] -> %d\n",
 				    b->state, id_i, b->ids->ids[id_i]);
 #endif
-				if (!cb(b->state, b->ids->ids[id_i], opaque)) {
+				if (!cb(fsm, b->state, id_i, b->ids->ids[id_i], opaque)) {
 					return;
 				}
 				id_i++;
@@ -608,10 +626,13 @@ struct dump_env {
 };
 
 static int
-dump_cb(fsm_state_t state, const fsm_end_id_t id, void *opaque)
+dump_cb(const struct fsm *fsm, fsm_state_t state,
+	size_t nth, const fsm_end_id_t id, void *opaque)
 {
 	struct dump_env *env = opaque;
-	fprintf(env->f, "state[%u]: %u\n", state, id);
+	fprintf(env->f, "endids: state[%u]: %u\n", state, id);
+	(void)fsm;
+	(void)nth;
 	return 1;
 }
 
