@@ -128,7 +128,7 @@ error:
 }
 
 struct state_set **
-epsilon_closure(struct fsm *fsm)
+fsm_epsilon_closure(struct fsm *fsm)
 {
 	struct state_set **closures;
 	fsm_state_t s;
@@ -253,7 +253,7 @@ symbol_closure(const struct fsm *fsm, fsm_state_t s,
 }
 
 void
-closure_free(struct state_set **closures, size_t n)
+fsm_closure_free(struct state_set **closures, size_t n)
 {
 	fsm_state_t s;
 
