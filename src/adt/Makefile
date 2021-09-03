@@ -3,6 +3,7 @@
 SRC += src/adt/alloc.c
 SRC += src/adt/bitmap.c
 SRC += src/adt/dlist.c
+SRC += src/adt/idmap.c
 SRC += src/adt/internedstateset.c
 SRC += src/adt/ipriq.c
 SRC += src/adt/priq.c
@@ -24,7 +25,7 @@ CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor
 
-.for src in ${SRC:Msrc/adt/siphash.c} ${SRC:Msrc/adt/edgeset.c} ${SRC:Msrc/adt/ipriq.c}
+.for src in ${SRC:Msrc/adt/siphash.c} ${SRC:Msrc/adt/edgeset.c} ${SRC:Msrc/adt/idmap.c} ${SRC:Msrc/adt/ipriq.c}
 CFLAGS.${src} += -std=c99 # XXX: for internal.h
 DFLAGS.${src} += -std=c99 # XXX: for internal.h
 .endfor
