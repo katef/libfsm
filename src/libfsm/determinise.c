@@ -135,7 +135,7 @@ fsm_determinise(struct fsm *nfa)
 #if LOG_DETERMINISE_CLOSURES
 			fprintf(stderr, "fsm_determinise: cur (dfa %zu) label [", curr->dfastate);
 			dump_labels(stderr, output->labels);
-			fprintf(stderr, "] -> iss:%p: ", output->iss);
+			fprintf(stderr, "] -> iss:%p: ", (void *)output->iss);
 			{
 				struct state_iter it;
 				fsm_state_t s;
