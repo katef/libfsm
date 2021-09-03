@@ -98,7 +98,7 @@ state_hasnondeterminism(const struct fsm *fsm, fsm_state_t state, struct bm *bm)
  * for states, with wrapper to populate malloced array of user-facing structs.
  */
 struct state_set **
-epsilon_closure(struct fsm *fsm);
+fsm_epsilon_closure(struct fsm *fsm);
 
 int
 symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
@@ -110,7 +110,7 @@ symbol_closure(const struct fsm *fsm, fsm_state_t s,
 	struct state_set *sclosures[]);
 
 void
-closure_free(struct state_set **closures, size_t n);
+fsm_closure_free(struct state_set **closures, size_t n);
 
 /*
  * Internal free function that invokes free(3) by default, or a user-provided

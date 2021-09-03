@@ -108,8 +108,8 @@ fsm_print_cfrag # XXX: workaround for lx
 make_ir # XXX: workaround for lx
 free_ir # XXX: workaround for lx
 
-epsilon_closure # XXX: workaround for fsm
-closure_free # XXX: workaround for fsm
+fsm_epsilon_closure # XXX: workaround for fsm
+fsm_closure_free # XXX: workaround for fsm
 
 fsm_mergeab
 
