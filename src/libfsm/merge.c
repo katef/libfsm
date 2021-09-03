@@ -162,11 +162,14 @@ struct copy_end_ids_env {
 };
 
 static int
-copy_end_ids_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
+copy_end_ids_cb(const struct fsm *fsm, fsm_state_t state,
+	size_t nth, const fsm_end_id_t id, void *opaque)
 {
 	enum fsm_endid_set_res sres;
 	struct copy_end_ids_env *env = opaque;
 	assert(env->tag == 'M');
+	(void)fsm;
+	(void)nth;
 
 #if LOG_MERGE_ENDIDS > 1
 	fprintf(stderr, "merge[%d] <- %d\n",
@@ -188,7 +191,6 @@ copy_end_ids(struct fsm *dst, struct fsm *src, fsm_state_t base_src)
 	struct copy_end_ids_env env;
 	env.tag = 'M';		/* for Merge */
 	env.dst = dst;
-	env.src = src;
 	env.base_src = base_src;
 	env.ok = 1;
 

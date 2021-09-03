@@ -232,24 +232,24 @@ struct consolidate_end_ids_env {
 };
 
 static int
-consolidate_end_ids_cb(fsm_state_t state, const fsm_end_id_t id,
-    void *opaque)
+consolidate_end_ids_cb(const struct fsm *fsm, fsm_state_t state,
+    size_t nth, const fsm_end_id_t id, void *opaque)
 {
 	struct consolidate_end_ids_env *env = opaque;
 	enum fsm_endid_set_res sres;
 	fsm_state_t s;
 	assert(env->tag == 'C');
 
+	(void)fsm;
+	(void)nth;
+
 #if LOG_CONSOLIDATE_ENDIDS > 1
-	fprintf(stderr, "consolidate_end_ids_cb: state %u, count %lu, ID %d:",
+	fprintf(stderr, "consolidate_end_ids_cb: state %u, ID: %d\n",
 	    state, id);
-	for (i = 0; i < count; i++) {
-		fprintf(stderr, " %u", ids[i]);
-	}
-	fprintf(stderr, "\n");
+	fprintf(stderr, "  -- mapping_count %zu\n",
+	    env->mapping_count);
 #endif
 
-	assert(state < env->mapping_count);
 	s = env->mapping[state];
 
 #if LOG_CONSOLIDATE_ENDIDS > 1

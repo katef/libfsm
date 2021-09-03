@@ -119,16 +119,18 @@ copy_capture_actions(struct fsm *dst, const struct fsm *src)
 struct copy_end_ids_env {
 	char tag;
 	struct fsm *dst;
-	const struct fsm *src;
 	int ok;
 };
 
 static int
-copy_end_ids_cb(fsm_state_t state, const fsm_end_id_t id, void *opaque)
+copy_end_ids_cb(const struct fsm *fsm, fsm_state_t state,
+	size_t nth, const fsm_end_id_t id, void *opaque)
 {
 	struct copy_end_ids_env *env = opaque;
 	enum fsm_endid_set_res sres;
 	assert(env->tag == 'c');
+	(void)fsm;
+	(void)nth;
 
 #if LOG_CLONE_ENDIDS
 	fprintf(stderr, "clone[%d] <- %d\n", state, id);
@@ -149,7 +151,6 @@ copy_end_ids(struct fsm *dst, const struct fsm *src)
 	struct copy_end_ids_env env;
 	env.tag = 'c';		/* for clone */
 	env.dst = dst;
-	env.src = src;
 	env.ok = 1;
 
 	fsm_endid_iter(src, copy_end_ids_cb, &env);

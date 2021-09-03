@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <fsm/fsm.h>
+#include <adt/stateset.h>
 
 int
 fsm_endid_init(struct fsm *fsm);
@@ -35,7 +36,8 @@ fsm_endid_carry(const struct fsm *src_fsm, const struct state_set *src_set,
 /* Callback when iterating over the endids.
  * Return 0 to halt, or non-zero to continue. */
 typedef int
-fsm_endid_iter_cb(fsm_state_t state, const fsm_end_id_t id, void *opaque);
+fsm_endid_iter_cb(const struct fsm *fsm, fsm_state_t state,
+    size_t nth, const fsm_end_id_t id, void *opaque);
 
 void
 fsm_endid_iter(const struct fsm *fsm,
