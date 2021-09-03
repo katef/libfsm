@@ -13,6 +13,7 @@
 
 #include <adt/alloc.h>
 #include <adt/set.h>
+#include <adt/hash.h>
 #include <adt/edgeset.h>
 #include <adt/stateset.h>
 #include <adt/internedstateset.h>

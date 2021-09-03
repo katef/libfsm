@@ -10,6 +10,7 @@
 #include <fsm/fsm.h>
 
 #include <adt/alloc.h>
+#include <adt/hash.h>
 #include <adt/stateset.h>
 #include <adt/internedstateset.h>
 
@@ -22,9 +23,6 @@
 #if LOG_INTERNEDSTATESET
 #include <stdio.h>
 #endif
-
-/* 32-bit approximation of golden ratio, used for hashing */
-#define PHI32 0x9e3779b9
 
 #define NO_ISS ((struct interned_state_set *)-1)
 #define BUCKET_STATE_NONE ((fsm_state_t)-1)
@@ -170,11 +168,10 @@ interned_state_set_empty(struct interned_state_set_pool *pool)
 	return pool->empty;
 }
 
-SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static unsigned long
 hash_state(fsm_state_t state)
 {
-	return PHI32 * (state + 1);
+	return fsm_hash_id(state);
 }
 
 struct interned_state_set *

@@ -118,11 +118,10 @@ fsm_endid_free(struct fsm *fsm)
 	f_free(fsm->opt->alloc, fsm->endid_info);
 }
 
-SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static unsigned long
 hash_state(fsm_state_t state)
 {
-	return PHI32 * (state + 1);
+	return fsm_hash_id(state);
 }
 
 static int

@@ -25,6 +25,7 @@
 
 #include <adt/alloc.h>
 #include <adt/bitmap.h>
+#include <adt/hash.h>
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
@@ -50,10 +51,6 @@
  * but may be followed by other elements due to previous collisions. */
 #define BUCKET_UNUSED ((fsm_state_t)-1)
 #define BUCKET_TOMBSTONE ((fsm_state_t)-2)
-
-/* 32-bit approximation of the inverse golden ratio / UINT32_MAX:
- * (sqrt(5) - 1)/2 -> 0.618, so 0.618 * 0xffffffff. See Knuth 6.4. */
-#define PHI32 0x9e3779b9
 
 #define EOI_DONE ((size_t)-1)
 #define EOI_SINGLETON_SET ((size_t)-2)
@@ -138,7 +135,7 @@ grow_buckets(const struct fsm_alloc *alloc, struct edge_set *set)
 			continue;
 		}
 
-		h = PHI32 * ob[o_i].symbol;
+		h = fsm_hash_id(ob[o_i].symbol);
 		for (n_i = 0; n_i < nceil; n_i++) {
 			const size_t b_i = (h + n_i) & nmask;
 			if (nb[b_i].state != BUCKET_UNUSED) {
@@ -217,7 +214,7 @@ edge_set_add(struct edge_set **setp, const struct fsm_alloc *alloc,
 
 	{
 		const size_t mask = set->ceil - 1;
-		const unsigned h = PHI32 * symbol;
+		const unsigned h = fsm_hash_id(symbol);
 
 		int has_tombstone_candidate = 0;
 		size_t tc_pos;
@@ -333,7 +330,7 @@ edge_set_find(const struct edge_set *set, unsigned char symbol,
 		return 0;
 	} else {
 		const size_t mask = set->ceil - 1;
-		const unsigned h = PHI32 * symbol;
+		const unsigned h = fsm_hash_id(symbol);
 		size_t i;
 		for (i = 0; i < set->ceil; i++) {
 			const size_t b_i = (h + i) & mask;
@@ -487,7 +484,7 @@ edge_set_remove(struct edge_set **setp, unsigned char symbol)
 		return;
 	} else {
 		const size_t mask = set->ceil - 1;
-		const unsigned h = PHI32 * symbol;
+		const unsigned h = fsm_hash_id(symbol);
 		size_t i;
 		for (i = 0; i < set->ceil; i++) {
 			const size_t b_i = (h + i) & mask;
@@ -789,7 +786,7 @@ edge_set_ordered_iter_reset_to(const struct edge_set *set,
 	/* Start out pointing to the first bucket with a matching symbol,
 	 * or the first unused bucket if not present. */
 	{
-		const unsigned h = PHI32 * eoi->symbol;
+		const unsigned h = fsm_hash_id(eoi->symbol);
 		for (i = 0; i < set->ceil; i++) {
 			const size_t b_i = (h + i) & mask;
 			const fsm_state_t bs = set->b[b_i].state;
@@ -868,7 +865,7 @@ edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
 				return 0; /* done */
 			}
 
-			h = PHI32 * eoi->symbol;
+			h = fsm_hash_id(eoi->symbol);
 			for (i = 0; i < set->ceil; i++) {
 				const size_t b_i = (h + i) & mask;
 				bs = set->b[b_i].state;
