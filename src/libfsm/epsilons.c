@@ -12,6 +12,7 @@
 #include <fsm/pred.h>
 
 #include <adt/alloc.h>
+#include <adt/queue.h>
 #include <adt/set.h>
 #include <adt/edgeset.h>
 #include <adt/stateset.h>
@@ -21,61 +22,64 @@
 #include "endids.h"
 
 #define DUMP_EPSILON_CLOSURES 0
+#define LOG_RM_EPSILONS_CAPTURES 1
+#define LOG_COPYING 0
+#define LOG_RESULT 0
+
 #define DEF_PENDING_CAPTURE_ACTIONS_CEIL 2
-#define LOG_RM_EPSILONS_CAPTURES 0
 #define DEF_CARRY_ENDIDS_COUNT 2
+#define DEF_CARRY_CAPTUREIDS_COUNT 2
 
-struct remap_env {
-	char tag;
+#if LOG_RESULT
+#include <fsm/print.h>
+#endif
+
+#define DEF_END_METADATA_ENDIDS_CEIL 4
+#define DEF_END_METADATA_CAPTUREIDS_CEIL 4
+struct carry_end_metadata_env {
+	struct fsm *fsm;
 	const struct fsm_alloc *alloc;
-	struct state_set **rmap;
-	int ok;
 
-	size_t count;
-	size_t ceil;
-	struct remap_action {
-		fsm_state_t state;
-		enum capture_action_type type;
-		unsigned capture_id;
-		fsm_state_t to;
-	} *actions;
+	struct {
+		size_t ceil;
+		fsm_end_id_t *ids;
+	} end;
 };
 
 static int
-remap_capture_actions(struct fsm *nfa, struct state_set **eclosures);
-
-static int
-remap_capture_action_cb(fsm_state_t state,
-    enum capture_action_type type, unsigned capture_id, fsm_state_t to,
-    void *opaque);
-
-static int
-carry_endids(struct fsm *fsm, struct state_set *states,
-    fsm_state_t s);
-
-static void
-free_closure_sets(struct state_set *closures[FSM_SIGMA_COUNT])
-{
-	int i;
-
-	for (i = 0; i <= FSM_SIGMA_MAX; i++) {
-		if (closures[i] != NULL) {
-			state_set_free(closures[i]);
-		}
-	}
-}
+carry_end_metadata(struct carry_end_metadata_env *env,
+    fsm_state_t end_state, fsm_state_t dst_state);
 
 int
-fsm_remove_epsilons(struct fsm *nfa)
+fsm_remove_epsilons(struct fsm *fsm)
 {
-	struct state_set **eclosures;
-	fsm_state_t s;
+#if LOG_RESULT
+	fprintf(stderr, "==== before\n");
+	fsm_print_fsm(stderr, nfa);
+	fprintf(stderr, "====\n");
+#endif
 
-	assert(nfa != NULL);
+	const size_t state_count = fsm_countstates(fsm);
+	int res = 0;
+	struct state_set **eclosures = NULL;
+	fsm_state_t s_id, start_id;
+	const struct fsm_alloc *alloc = fsm->opt->alloc;
+	struct queue *q = NULL;
 
-	eclosures = epsilon_closure(nfa);
+	struct carry_end_metadata_env em_env = { 0 };
+	em_env.fsm = fsm;
+	em_env.alloc = alloc;
+
+	if (!fsm_getstart(fsm, &start_id)) {
+		goto cleanup;
+	}
+
+	/* TODO: This could successfully exit early if none of the
+	 * states have epsilon edges. */
+
+	eclosures = fsm_epsilon_closure(fsm);
 	if (eclosures == NULL) {
-		return 0;
+		goto cleanup;
 	}
 
 #if DUMP_EPSILON_CLOSURES
@@ -83,10 +87,10 @@ fsm_remove_epsilons(struct fsm *nfa)
 		struct state_iter kt;
 		fsm_state_t es;
 		fprintf(stderr, "# ==== epsilon_closures\n");
-		for (s = 0; s < nfa->statecount; s++) {
-			if (eclosures[s] == NULL) { continue; }
-			fprintf(stderr, " -- %u:", s);
-			for (state_set_reset(eclosures[s], &kt); state_set_next(&kt, &es); ) {
+		for (s_id = 0; s_id < fsm->statecount; s_id++) {
+			if (eclosures[s_id] == NULL) { continue; }
+			fprintf(stderr, " -- %u:", s_id);
+			for (state_set_reset(eclosures[s_id], &kt); state_set_next(&kt, &es); ) {
 				fprintf(stderr, " %u", es);
 			}
 			fprintf(stderr, "\n");
@@ -94,341 +98,171 @@ fsm_remove_epsilons(struct fsm *nfa)
 	}
 #endif
 
-	for (s = 0; s < nfa->statecount; s++) {
-		struct state_set *sclosures[FSM_SIGMA_COUNT] = { NULL };
-		struct state_iter kt;
-		fsm_state_t es;
-		int i;
-
-		if (nfa->states[s].epsilons == NULL) {
-			continue;
-		}
-
-		for (state_set_reset(eclosures[s], &kt); state_set_next(&kt, &es); ) {
-			/* we already have edges from s */
-			if (es == s) {
-				continue;
-			}
-
-			if (!symbol_closure(nfa, es, eclosures, sclosures)) {
-				free_closure_sets(sclosures);
-				goto error;
-			}
-		}
-
-		state_set_free(nfa->states[s].epsilons);
-		nfa->states[s].epsilons = NULL;
-
-		/* TODO: bail out early if there are no edges to create? */
-
-		for (i = 0; i <= FSM_SIGMA_MAX; i++) {
-			if (sclosures[i] == NULL) {
-				continue;
-			}
-
-			if (!edge_set_add_state_set(&nfa->states[s].edges, nfa->opt->alloc, i, sclosures[i])) {
-				free_closure_sets(sclosures);
-				goto error;
-			}
-
-			/* XXX: we took a copy, but i would prefer to bulk transplant ownership instead */
-			state_set_free(sclosures[i]);
-			sclosures[i] = NULL; /* prevent double free if we encounter an error */
-		}
-
-		/* all elements in sclosures[] have been freed or moved to their
-		 * respective newly-created edge, so there's nothing to free here */
-
-		/*
-		 * The current NFA state is an end state if any of its associated
-		 * epsilon-clousre states are end states.
-		 *
-		 * Since we're operating on states in-situ, we only need to find
-		 * out if the current state isn't already marked as an end state.
-		 *
-		 * However in either case we still need to carry opaques, because
-		 * the set of opaque values may differ.
-		 */
-		if (!fsm_isend(nfa, s)) {
-			if (!state_set_has(nfa,  eclosures[s], fsm_isend)) {
-				continue;
-			}
-
-			fsm_setend(nfa, s, 1);
-		}
-
-		/*
-		 * Carry through end IDs, if present. This isn't anything to do
-		 * with the NFA conversion; it's meaningful only to the caller.
-		 *
-		 * The closure may contain non-end states, but at least one state is
-		 * known to have been an end state.
-		 */
-		if (!carry_endids(nfa, eclosures[s], s)) {
-			free_closure_sets(sclosures);
-			goto error;
-		}
-	}
-
-	if (!remap_capture_actions(nfa, eclosures)) {
-		goto error;
-	}
-
-	closure_free(eclosures, nfa->statecount);
-
-	return 1;
-
-error:
-
-	/* TODO: free stuff */
-	closure_free(eclosures, nfa->statecount);
-
-	return 0;
-}
-
-static int
-remap_capture_actions(struct fsm *nfa, struct state_set **eclosures)
-{
-	int res = 0;
-	fsm_state_t s, i;
-	struct state_set **rmap;
-	struct state_iter si;
-	fsm_state_t si_s;
-	struct remap_env env = { 'R', NULL, NULL, 1, 0, 0, NULL };
-	env.alloc = nfa->opt->alloc;
-
-	/* build a reverse mapping */
-	rmap = f_calloc(nfa->opt->alloc, nfa->statecount, sizeof(rmap[0]));
-	if (rmap == NULL) {
+	q = queue_new(fsm->opt->alloc, state_count);
+	if (q == NULL) {
 		goto cleanup;
 	}
 
-	for (s = 0; s < nfa->statecount; s++) {
-		if (eclosures[s] == NULL) { continue; }
-		for (state_set_reset(eclosures[s], &si); state_set_next(&si, &si_s); ) {
-			if (si_s == s) {
-				continue; /* ignore identical states */
+	if (!queue_push(q, start_id)) {
+		goto cleanup;
+	}
+	{
+		struct fsm_state *s = &fsm->states[start_id];
+		s->visited = 1;
+	}
+
+	while (queue_pop(q, &s_id)) {
+		struct state_iter si;
+		fsm_state_t es_id;
+		struct fsm_state *s = &fsm->states[s_id];
+
+		struct edge_group_iter egi;
+		struct edge_group_iter_info info;
+
+		/* Enqueue all states reachable via labeled edges */
+		edge_set_group_iter_reset(s->edges, EDGE_GROUP_ITER_ALL, &egi);
+		while (edge_set_group_iter_next(&egi, &info)) {
+			struct fsm_state *es = &fsm->states[info.to];
+
+			if (!es->visited) {
+				if (!queue_push(q, info.to)) {
+					goto cleanup;
+				}
+				es->visited = 1;
 			}
-#if LOG_RM_EPSILONS_CAPTURES
-			fprintf(stderr, "remap_capture_actions: %u <- %u\n",
-			    s, si_s);
+		}
+
+		/* Process the epsilon closure. */
+		state_set_reset(eclosures[s_id], &si);
+		while (state_set_next(&si, &es_id)) {
+			struct fsm_state *es = &fsm->states[es_id];
+
+			if (!es->visited) {
+				if (!queue_push(q, es_id)) {
+					goto cleanup;
+				}
+				es->visited = 1;
+			}
+
+			/* The current NFA state is an end state if any
+			 * of its associated epsilon-clousure states are
+			 * end states.
+			 *
+			 * Similarly, any end state metadata on states
+			 * in its epsilon-closure is copied to it.
+			 *
+			 * Capture actions are copied in a later pass. */
+			if (fsm_isend(fsm, es_id)) {
+#if LOG_COPYING
+				fprintf(stderr, "remove_epsilons: setting end on %d (due to %d)\n", s_id, es_id);
 #endif
-			if (!state_set_add(&rmap[si_s], nfa->opt->alloc, s)) {
-				goto cleanup;
+				fsm_setend(fsm, s_id, 1);
+
+				/* Carry through end metadata, if present.
+				 * This isn't anything to do with the NFA conversion;
+				 * it's meaningful only to the caller. */
+				if (!carry_end_metadata(&em_env, es_id, s_id)) {
+					goto cleanup;
+				}
+			}
+
+			/* For every state in this state's transitive
+			 * epsilon closure, add all of their sets of
+			 * labeled edges. */
+			edge_set_group_iter_reset(es->edges, EDGE_GROUP_ITER_ALL, &egi);
+			while (edge_set_group_iter_next(&egi, &info)) {
+#if LOG_COPYING
+				fprintf(stderr, "remove_epsilons: bulk-copying edges leading to state %d onto state %d (from state %d)\n",
+				    info.to, s_id, es_id);
+#endif
+				if (!edge_set_add_bulk(&s->edges, alloc,
+					info.symbols, info.to)) {
+					goto cleanup;
+				}
 			}
 		}
 	}
-	env.rmap = rmap;
 
-	/* Iterate over the current set of actions with the reverse
-	 * mapping (containing only states which will be skipped,
-	 * collecting info about every new capture action that will need
-	 * to be added.
-	 *
-	 * It can't be added during the iteration, because that would
-	 * modify the hash table as it's being iterated over. */
-	fsm_capture_action_iter(nfa, remap_capture_action_cb, &env);
+#if LOG_RESULT
+	fprintf(stderr, "=== %s: about to update capture actions\n", __func__);
+	fsm_print_fsm(stderr, fsm);
+#endif
 
-	/* Now that we're done iterating, add those actions. */
-	for (i = 0; i < env.count; i++) {
-		const struct remap_action *a = &env.actions[i];
-		if (!fsm_capture_add_action(nfa, a->state, a->type,
-			a->capture_id, a->to)) {
-			goto cleanup;
-		}
+#if 0	/* Not integrated yet */
+	/* Copy over the capture actions from the epsilon closure. */
+	if (!fsm_capture_update_capture_actions_when_removing_epsilons(fsm,
+		(const struct state_set **)eclosures)) {
+		goto cleanup;
 	}
+#endif
+
+	/* Remove the epsilon-edge state sets from everything.
+	 * This can make states unreachable. */
+	for (s_id = 0; s_id < state_count; s_id++) {
+		struct fsm_state *s = &fsm->states[s_id];
+		state_set_free(s->epsilons);
+		s->epsilons = NULL;
+		s->visited = 0;
+	}
+
+#if LOG_RESULT
+	fsm_print_fsm(stderr, fsm);
+#endif
 
 	res = 1;
-
 cleanup:
-	if (env.actions != NULL) {
-		f_free(nfa->opt->alloc, env.actions);
+	if (em_env.end.ids != NULL) {
+		f_free(alloc, em_env.end.ids);
 	}
 
-	if (rmap != NULL) {
-		for (i = 0; i < nfa->statecount; i++) {
-			state_set_free(rmap[i]);
-		}
-		f_free(nfa->opt->alloc, rmap);
+	if (eclosures != NULL) {
+		fsm_closure_free(eclosures, state_count);
 	}
+	if (q != NULL) {
+		queue_free(q);
+	}
+
 	return res;
-
 }
 
+/* Because we're modifying the FSM in place, we can't iterate and add
+ * new entries -- it could lead to the underlying hash table resizing.
+ * Instead, collect, then add in a second pass. */
 static int
-add_pending_capture_action(struct remap_env *env,
-    fsm_state_t state, enum capture_action_type type,
-    unsigned capture_id, fsm_state_t to)
+carry_end_metadata(struct carry_end_metadata_env *env,
+    fsm_state_t end_state, fsm_state_t dst_state)
 {
-	struct remap_action *a;
-	if (env->count == env->ceil) {
-		struct remap_action *nactions;
-		const size_t nceil = (env->ceil == 0
-		    ? DEF_PENDING_CAPTURE_ACTIONS_CEIL : 2*env->ceil);
-		assert(nceil > 0);
-		nactions = f_realloc(env->alloc,
-		    env->actions,
-		    nceil * sizeof(nactions[0]));
-		if (nactions == NULL) {
-			return 0;
-		}
-
-		env->ceil = nceil;
-		env->actions = nactions;
-	}
-
-	a = &env->actions[env->count];
-#if LOG_RM_EPSILONS_CAPTURES
-	fprintf(stderr, "add_pending_capture_action: state %d, type %s, capture_id %u, to %d\n",
-	    state, fsm_capture_action_type_name[type], capture_id, to);
-#endif
-
-	a->state = state;
-	a->type = type;
-	a->capture_id = capture_id;
-	a->to = to;
-	env->count++;
-	return 1;
-}
-
-static int
-remap_capture_action_cb(fsm_state_t state,
-    enum capture_action_type type, unsigned capture_id, fsm_state_t to,
-    void *opaque)
-{
-	struct state_iter si;
-	fsm_state_t si_s;
-	struct remap_env *env = opaque;
-	assert(env->tag == 'R');
-
-#if LOG_RM_EPSILONS_CAPTURES
-	fprintf(stderr, "remap_capture_action_cb: state %d, type %s, capture_id %u, to %d\n",
-	    state, fsm_capture_action_type_name[type], capture_id, to);
-#endif
-
-	for (state_set_reset(env->rmap[state], &si); state_set_next(&si, &si_s); ) {
-		struct state_iter si_to;
-		fsm_state_t si_tos;
-
-#if LOG_RM_EPSILONS_CAPTURES
-		fprintf(stderr, " -- rcac: state %d -> %d\n", state, si_s);
-#endif
-
-		if (!add_pending_capture_action(env, si_s, type, capture_id, to)) {
-			goto fail;
-		}
-
-		if (to == CAPTURE_NO_STATE) {
-			continue;
-		}
-
-		for (state_set_reset(env->rmap[to], &si_to); state_set_next(&si, &si_tos); ) {
-#if LOG_RM_EPSILONS_CAPTURES
-			fprintf(stderr, " -- rcac:     to %d -> %d\n", to, si_tos);
-#endif
-
-			if (!add_pending_capture_action(env, si_tos, type, capture_id, to)) {
-				goto fail;
-			}
-
-		}
-	}
-
-	return 1;
-
-fail:
-	env->ok = 0;
-	return 0;
-}
-
-struct collect_env {
-	char tag;
-	const struct fsm_alloc *alloc;
-	size_t count;
-	size_t ceil;
-	fsm_end_id_t *ids;
-	int ok;
-};
-
-static int
-collect_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
-{
-	struct collect_env *env = opaque;
-	assert(env->tag == 'E');
-
-	(void)state;
-
-	if (env->count == env->ceil) {
-		const size_t nceil = 2 * env->ceil;
-		fsm_end_id_t *nids;
-		assert(nceil > env->ceil);
-		nids = f_realloc(env->alloc, env->ids,
-		    nceil * sizeof(*env->ids));
-		if (nids == NULL) {
-			env->ok = 0;
-			return 0;
-		}
-		env->ceil = nceil;
-		env->ids = nids;
-	}
-
-	env->ids[env->count] = id;
-	env->count++;
-
-	return 1;
-}
-
-/* fsm_remove_epsilons can't use fsm_endid_carry directly, because the src
- * and dst FSMs are the same -- that would lead to adding entries to a
- * hash table, possibly causing it to resize, while iterating over it.
- *
- * Instead, collect entries that need to be added (if not already
- * present), and then add them in a second pass. */
-static int
-carry_endids(struct fsm *fsm, struct state_set *states,
-    fsm_state_t dst_state)
-{
-	struct state_iter it;
-	fsm_state_t s;
 	size_t i;
-
-	struct collect_env env;
-	env.tag = 'E';		/* for fsm_remove_epsilons */
-	env.alloc = fsm->opt->alloc;
-	env.count = 0;
-	env.ceil = DEF_CARRY_ENDIDS_COUNT;
-	env.ids = f_malloc(fsm->opt->alloc,
-	    env.ceil * sizeof(*env.ids));
-	if (env.ids == NULL) {
-		return 0;
-	}
-	env.ok = 1;
-
-	/* collect from states */
-	for (state_set_reset(states, &it); state_set_next(&it, &s); ) {
-		if (!fsm_isend(fsm, s)) {
-			continue;
+	const size_t id_count = fsm_getendidcount(env->fsm, end_state);
+	if (id_count > 0) { /* copy end IDs */
+		enum fsm_getendids_res id_res;
+		size_t written;
+		if (id_count > env->end.ceil) { /* grow buffer */
+			const size_t nceil = (env->end.ceil == 0)
+			    ? DEF_END_METADATA_ENDIDS_CEIL
+			    : 2*env->end.ceil;
+			assert(nceil > 0);
+			env->end.ids = f_realloc(env->alloc,
+			    env->end.ids, nceil * sizeof(env->end.ids[0]));
+			if (env->end.ids == NULL) {
+				return 0;
+			}
 		}
 
-		fsm_endid_iter_state(fsm, s, collect_cb, &env);
-		if (!env.ok) {
-			goto cleanup;
-		}
-	}
+		id_res = fsm_getendids(env->fsm, end_state,
+		    id_count, env->end.ids, &written);
+		assert(id_res != FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE);
 
-	/* add them */
-	for (i = 0; i < env.count; i++) {
-		enum fsm_endid_set_res sres;
-		sres = fsm_endid_set(fsm, dst_state, env.ids[i]);
-		if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
-			env.ok = 0;
-			goto cleanup;
+		for (i = 0; i < id_count; i++) {
+#if LOG_COPYING
+			fprintf(stderr, "carry_end_metadata: setting end ID %u on %d (due to %d)\n",
+			    env->end.ids[i], dst_state, end_state);
+#endif
+			if (!fsm_setendid_state(env->fsm, dst_state, env->end.ids[i])) {
+				return 0;
+			}
 		}
 	}
 
-cleanup:
-	f_free(fsm->opt->alloc, env.ids);
-
-	return env.ok;
+	return 1;
 }
-
