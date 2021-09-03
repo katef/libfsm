@@ -21,6 +21,7 @@
 #include <adt/stateset.h>
 #include <adt/hashset.h>
 #include <adt/mappinghashset.h>
+#include <adt/u64bitset.h>
 
 #include "internal.h"
 #include "capture.h"
@@ -98,8 +99,8 @@ fsm_consolidate(struct fsm *src,
 		goto cleanup;
 	}
 
-#define DST_SEEN(I) (seen[I/64] & ((uint64_t)1 << (I&63)))
-#define SET_DST_SEEN(I) (seen[I/64] |= ((uint64_t)1 << (I&63)))
+#define DST_SEEN(I) u64bitset_get(seen, I)
+#define SET_DST_SEEN(I) u64bitset_set(seen, I)
 
 	/* map N states to M states, where N >= M.
 	 * if it's the first time state[M] is seen,

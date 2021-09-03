@@ -19,6 +19,7 @@
 
 #include <adt/edgeset.h>
 #include <adt/set.h>
+#include <adt/u64bitset.h>
 
 #include "internal.h"
 
@@ -154,10 +155,10 @@ collect_labels(const struct fsm *fsm,
 			assert(e.state < fsm->statecount);
 			label = e.symbol;
 
-			if (label_set[label/64] & (UINT64_C(1) << (label & 63))) {
+			if (u64bitset_get(label_set, label)) {
 				/* already set, ignore */
 			} else {
-				label_set[label/64] |= (UINT64_C(1) << (label & 63));
+				u64bitset_set(label_set, label);
 				count++;
 			}
 		}
@@ -165,7 +166,7 @@ collect_labels(const struct fsm *fsm,
 
 	*label_count = 0;
 	for (i = 0; i < 256; i++) {
-		if (label_set[i/64] & (UINT64_C(1) << (i & 63))) {
+		if (u64bitset_get(label_set, i)) {
 			labels[*label_count] = i;
 			(*label_count)++;
 		}

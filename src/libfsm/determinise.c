@@ -11,7 +11,7 @@ dump_labels(FILE *f, const uint64_t labels[4])
 {
 	size_t i;
 	for (i = 0; i < 256; i++) {
-		if (labels[i/64] & ((uint64_t)1 << (i&63))) {
+		if (u64bitset_get(labels, i)) {
 			fprintf(f, "%c", (char)(isprint(i) ? i : '.'));
 		}
 	}
