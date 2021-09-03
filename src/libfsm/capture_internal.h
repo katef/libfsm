@@ -9,6 +9,7 @@
 #include <fsm/fsm.h>
 
 #include <adt/edgeset.h>
+#include <adt/hash.h>
 
 #include <string.h>
 #include <assert.h>

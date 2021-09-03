@@ -377,7 +377,7 @@ hash_iss(const struct interned_state_set *iss)
 {
 	/* Just hashing the address directly is fine here -- since they're
 	 * interned, they're identified by pointer equality. */
-	return PHI32 * (uintptr_t)iss;
+	return FSM_PHI_32 * (uintptr_t)iss;
 }
 
 static struct mapping *

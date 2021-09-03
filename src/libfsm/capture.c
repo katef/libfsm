@@ -281,11 +281,10 @@ fsm_capture_add_action(struct fsm *fsm,
 	    state, &action);
 }
 
-SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static unsigned
 hash_state(fsm_state_t state)
 {
-	return PHI32 * (state + 1);
+	return fsm_hash_id(state);
 }
 
 static int
