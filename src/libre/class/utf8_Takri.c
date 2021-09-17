@@ -3,7 +3,7 @@
 #include "class.h"
 
 static const struct range ranges[] = {
-	{ 0x11680UL, 0x116B8UL },
+	{ 0x11680UL, 0x116B9UL },
 	{ 0x116C0UL, 0x116C9UL }
 };
 

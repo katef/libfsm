@@ -3,11 +3,10 @@
 #include "class.h"
 
 static const struct range ranges[] = {
-	{ 0x1700UL, 0x1715UL },
-	{ 0x171FUL, 0x171FUL }
+	{ 0x12F90UL, 0x12FF2UL }
 };
 
-const struct class utf8_Tagalog = {
+const struct class utf8_Cypro_Minoan = {
 	ranges,
 	sizeof ranges / sizeof *ranges
 };

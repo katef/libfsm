@@ -1,4 +1,4 @@
-UCD_FTP ?= http://www.unicode.org/Public/10.0.0/ucd/
+UCD_URL ?= https://www.unicode.org/Public/14.0.0/ucd/
 
 WGET ?= wget
 
@@ -10,6 +10,6 @@ gen:: ${UCD_DATA}
 
 .for data in ${UCD_DATA}
 ${data}:
-	${WGET} ${UCD_FTP}/${data}
+	${WGET} ${UCD_URL}/${data}
 .endfor
 
