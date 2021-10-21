@@ -36,4 +36,11 @@ u64bitset_words(size_t count)
 	return count/64 + ((count & 63) ? 1 : 0);
 }
 
+/* Count '1' bits in s. */
+static __inline__ uint8_t
+u64bitset_popcount(uint64_t s)
+{
+	return __builtin_popcountl(s);
+}
+
 #endif
