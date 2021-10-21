@@ -18,6 +18,7 @@
 #include <fsm/alloc.h>
 
 #include <adt/edgeset.h>
+#include <adt/pv.h>
 #include <adt/set.h>
 #include <adt/u64bitset.h>
 
@@ -386,64 +387,6 @@ dump_ecs(FILE *f, const struct min_env *env)
 }
 
 #define PARTITION_BY_END_STATE_DISTANCE 1
-#if PARTITION_BY_END_STATE_DISTANCE
-/* Use counting sort to construct a permutation vector -- this is an
- * array of offsets into in[N] such that in[pv[0..N]] would give the
- * values of in[] in ascending order (but don't actually rearrange in,
- * just get the offsets). This is O(n). */
-static unsigned *
-build_permutation_vector(const struct fsm_alloc *alloc,
-    size_t length, size_t max_value, unsigned *in)
-{
-	unsigned *out = NULL;
-	unsigned *counts = NULL;
-	size_t i;
-
-	out = f_malloc(alloc, length * sizeof(*out));
-	if (out == NULL) {
-		goto cleanup;
-	}
-	counts = f_calloc(alloc, max_value + 1, sizeof(*out));
-	if (counts == NULL) {
-		goto cleanup;
-	}
-
-	/* Count each distinct value */
-	for (i = 0; i < length; i++) {
-		counts[in[i]]++;
-	}
-
-	/* Convert to cumulative counts, so counts[v] stores the upper
-	 * bound for where sorting would place each distinct value. */
-	for (i = 1; i <= max_value; i++) {
-		counts[i] += counts[i - 1];
-	}
-
-	/* Sweep backwards through the input array, placing each value
-	 * according to the cumulative count. Decrement the count so
-	 * progressively earlier instances of the same value will
-	 * receive earlier offsets in out[]. */
-	for (i = 0; i < length; i++) {
-	        const unsigned pos = length - i - 1;
-		const unsigned value = in[pos];
-		const unsigned count = --counts[value];
-		out[count] = pos;
-	}
-
-	f_free(alloc, counts);
-	return out;
-
-cleanup:
-	if (out != NULL) {
-		f_free(alloc, out);
-	}
-	if (counts != NULL) {
-		f_free(alloc, counts);
-	}
-	return NULL;
-}
-#endif
-
 static int
 populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
 	const unsigned *shortest_end_distance)
@@ -541,7 +484,7 @@ populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
 	/* Build a permutation vector of the counts, such
 	 * that counts[pv[i..N]] would return the values
 	 * in counts[] in ascending order. */
-	pv = build_permutation_vector(fsm->opt->alloc,
+	pv = permutation_vector(fsm->opt->alloc,
 	    sed_limit, count_max, counts);
 	if (pv == NULL) {
 		goto cleanup;
@@ -581,7 +524,7 @@ populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
 	 * [1]: http://www.sudleyplace.com/APL/Anatomy%20of%20An%20Idiom.pdf
 	 * [2]: https://bitbucket.org/ngn/k/src
 	 */
-	ranking = build_permutation_vector(fsm->opt->alloc,
+	ranking = permutation_vector(fsm->opt->alloc,
 	    sed_limit, sed_limit, pv);
 	if (ranking == NULL) {
 		goto cleanup;
