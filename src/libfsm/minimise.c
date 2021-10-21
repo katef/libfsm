@@ -314,7 +314,7 @@ build_minimised_mapping(const struct fsm *fsm,
 					}
 				}
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 				check_done_ec_offset(&env);
 #endif
 			}
@@ -597,7 +597,7 @@ cleanup:
 #endif
 }
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 static void
 check_done_ec_offset(const struct min_env *env)
 {
@@ -778,7 +778,7 @@ try_partition(struct min_env *env, unsigned char label,
 	fsm_state_t cur = MASK_EC_HEAD(env->ecs[ec_src]);
 	fsm_state_t to, to_ec, first_ec, prev;
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 	/* Count states here, to compare against the partitioned
 	 * EC' counts later. */
 	size_t state_count = 0, psrc_count, pdst_count;
@@ -847,7 +847,7 @@ try_partition(struct min_env *env, unsigned char label,
 		}
 	}
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 	/* Count how many states were split into each EC
 	 * and check that the sum matches the original count. */
 	psrc_count = 0;

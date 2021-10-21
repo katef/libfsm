@@ -44,6 +44,10 @@ struct state_array;
 
 #define FSM_CAPTURE_MAX INT_MAX
 
+/* If set to non-zero, do extra intensive integrity checks, often inside
+ * some inner loops, which are far too expensive for production. */
+#define EXPENSIVE_CHECKS 0
+
 #ifndef TRACK_TIMES
 #define TRACK_TIMES 0
 #endif
