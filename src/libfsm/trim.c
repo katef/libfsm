@@ -18,6 +18,8 @@
 
 #include "internal.h"
 
+#include <adt/pv.h>
+
 #define DEF_EDGES_CEIL 8
 #define DEF_ENDS_CEIL 8
 
@@ -42,17 +44,18 @@ save_edge(const struct fsm_alloc *alloc,
     size_t *count, size_t *ceil, struct edge **edges,
     fsm_state_t from, fsm_state_t to);
 
-static int
-cmp_edges_by_to(const void *pa, const void *pb)
+static fsm_state_t
+get_max_to(const struct edge *edges, size_t edge_count)
 {
-	const struct edge *a = (const struct edge *)pa;
-	const struct edge *b = (const struct edge *)pb;
-
-	return a->to < b->to ? -1
-	    : a->to > b->to ? 1
-	    : a->from < b->from ? -1
-	    : a->from > b->from ? 1
-	    : 0;
+	size_t i;
+	fsm_state_t res = edges[0].to;
+	for (i = 1; i < edge_count; i++) {
+		const fsm_state_t to = edges[i].to;
+		if (to > res) {
+			res = to;
+		}
+	}
+	return res;
 }
 
 static int
@@ -81,8 +84,11 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	fsm_state_t max_end;
 
 	const size_t state_count = fsm->statecount;
+	fsm_state_t max_to;
 
+	unsigned *pv = NULL;
 	size_t *offsets = NULL;
+	INIT_TIMERS();
 
 	if (!fsm_getstart(fsm, &start)) {
 		return 1;	/* nothing is reachable */
@@ -125,8 +131,8 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	 * collect edges & end states. */
 	while (queue_pop(q, &s_id)) {
 		fsm_state_t next;
-		struct fsm_edge e;
-		struct edge_iter edge_iter;
+		struct edge_group_iter_info edge_iter_info;
+		struct edge_group_iter edge_iter;
 		struct state_iter state_iter;
 
 		if (LOG_TRIM > 0) {
@@ -179,12 +185,13 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 			}
 		}
 
-		for (edge_set_reset(fsm->states[s_id].edges, &edge_iter);
-		     edge_set_next(&edge_iter, &e); ) {
-			next = e.state;
+		edge_set_group_iter_reset(fsm->states[s_id].edges,
+		    EDGE_GROUP_ITER_ALL, &edge_iter);
+		while (edge_set_group_iter_next(&edge_iter, &edge_iter_info)) {
+			next = edge_iter_info.to;
 			if (LOG_TRIM > 0) {
-				fprintf(stderr, "mark_states: edge: 0x%x to %d, visited? %d\n",
-				    e.symbol, next, fsm->states[next].visited);
+				fprintf(stderr, "mark_states: edge: %d to %d, visited? %d\n",
+				    s_id, next, fsm->states[next].visited);
 			}
 
 			if (!fsm->states[next].visited) {
@@ -224,7 +231,34 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	}
 
 	/* Sort edges by state they lead to, inverting the index. */
-	qsort(edges, edge_count, sizeof(edges[0]), cmp_edges_by_to);
+	max_to = get_max_to(edges, edge_count);
+
+#if LOG_TRIM
+	fprintf(stderr, " -- edge count %zu, got max_to %u\n", edge_count, max_to);
+#endif
+	TIME(&pre);
+	pv = permutation_vector_with_size_and_offset(fsm->opt->alloc,
+	    edge_count, max_to, edges, sizeof(edges[0]), offsetof(struct edge, to));
+	TIME(&post);
+	DIFF_MSEC_ALWAYS("pv_so", pre, post, NULL);
+
+	if (EXPENSIVE_CHECKS) {
+		size_t i;
+		int ok = 1;
+#if LOG_TRIM
+		fprintf(stderr, "\n#i\tedge\tpv\tsorted, max_to %u\n", max_to);
+#endif
+		for (i = 0; i < edge_count; i++) {
+#if LOG_TRIM
+			fprintf(stderr, "%zu\t%u\t%u\t%u\n",
+			    i, edges[i].to, pv[i], edges[pv[i]].to);
+#endif
+			if (i > 0 && edges[pv[i]].to < edges[pv[i - 1]].to) {
+				ok = 0;
+			}
+		}
+		assert(ok);
+	}
 
 	max_end = 0;
 
@@ -281,7 +315,6 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	 * offsets[i - 1], to represent zero entries. */
 	{
 		size_t i;
-		const fsm_state_t max_to = edges[edge_count - 1].to;
 		const size_t offset_count = fsm_countstates(fsm);
 
 		offsets = f_calloc(fsm->opt->alloc,
@@ -291,7 +324,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 		}
 
 		for (i = 0; i < edge_count; i++) {
-			const fsm_state_t to = edges[i].to;
+			const fsm_state_t to = edges[pv[i]].to;
 			offsets[to] = i + 1;
 		}
 
@@ -312,7 +345,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 		size_t i;
 		for (i = 0; i < edge_count; i++) {
 		fprintf(stderr, "mark_states: edges[%ld]: %d -> %d\n",
-		    i, edges[i].from, edges[i].to);
+		    i, edges[pv[i]].from, edges[pv[i]].to);
 		}
 	}
 
@@ -330,7 +363,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 		}
 
 		for (e_i = base; e_i < limit; e_i++) {
-			const fsm_state_t from = edges[e_i].from;
+			const fsm_state_t from = edges[pv[e_i]].from;
 			const unsigned end_distance = (sed == NULL
 			    ? 0 : sed[s_id]);
 			assert(from < state_count);
@@ -369,6 +402,7 @@ cleanup:
 	if (ends != NULL) { f_free(fsm->opt->alloc, ends); }
 	if (offsets != NULL) { f_free(fsm->opt->alloc, offsets); }
 	if (q != NULL) { queue_free(q); }
+	if (pv != NULL) { f_free(fsm->opt->alloc, pv); }
 
 	return res;
 }
@@ -457,6 +491,10 @@ integrity_check(const char *descr, const struct fsm *fsm)
 	struct fsm_edge e;
 
 #ifdef NDEBUG
+	return;
+#endif
+
+#if !EXPENSIVE_CHECKS
 	return;
 #endif
 
