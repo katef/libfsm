@@ -769,30 +769,6 @@ clear_group_labels(struct ac_group *g, const uint64_t *b)
 	}
 }
 
-#define TRACK_TIMES 0
-
-#if TRACK_TIMES
-#include <sys/time.h>
-#define INIT_TIMERS() struct timeval pre, post
-#define TIME(T) if (gettimeofday(T, NULL) == -1) { assert(!"gettimeofday"); }
-#define DIFF_MSEC(LABEL, PRE, POST, ACCUM)				\
-	do {								\
-		const size_t diff = 1000000*(POST.tv_sec - PRE.tv_sec)	\
-		    + (POST.tv_usec - PRE.tv_usec);			\
-		if (diff > 100) {					\
-			fprintf(stderr, "%s: %zu%s\n", LABEL, diff,	\
-			    diff >= 100 ? " #### OVER 100" : "");	\
-		}							\
-		if (ACCUM != NULL) {					\
-			*ACCUM += diff;					\
-		}							\
-	} while(0)
-#else
-#define INIT_TIMERS()
-#define TIME(T)
-#define DIFF_MSEC(A, B, C, D)
-#endif
-
 static int
 analyze_closures_for_iss(struct analyze_closures_env *env,
     interned_state_set_id cur_iss)

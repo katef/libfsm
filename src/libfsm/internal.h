@@ -44,6 +44,46 @@ struct state_array;
 
 #define FSM_CAPTURE_MAX INT_MAX
 
+#ifndef TRACK_TIMES
+#define TRACK_TIMES 0
+#endif
+
+#if TRACK_TIMES
+#include <sys/time.h>
+#define INIT_TIMERS() struct timeval pre, post
+#define TIME(T)								\
+	if (gettimeofday(T, NULL) == -1) { assert(!"gettimeofday"); }
+#define DIFF_MSEC(LABEL, PRE, POST, ACCUM)				\
+	do {								\
+		size_t *accum = ACCUM;					\
+		const size_t diff = (1000000*(POST.tv_sec - PRE.tv_sec)	\
+		    + (POST.tv_usec - PRE.tv_usec))/1000;		\
+		if (diff > 100 || TRACK_TIMES > 1) {			\
+			fprintf(stderr, "%s: %zu msec%s\n", LABEL,	\
+			    diff, diff >= 100 ? " #### OVER 100" : "");	\
+		}							\
+		if (accum != NULL) {					\
+			(*accum) += diff;				\
+		}							\
+	} while(0)
+#define DIFF_MSEC_ALWAYS(LABEL, PRE, POST, ACCUM)			\
+	do {								\
+		size_t *accum = ACCUM;					\
+		const size_t diff = (1000000*(POST.tv_sec - PRE.tv_sec)	\
+		    + (POST.tv_usec - PRE.tv_usec))/1000;		\
+		fprintf(stderr, "%s: %zu msec%s\n", LABEL, diff,	\
+		    diff >= 100 ? " #### OVER 100" : "");		\
+		if (accum != NULL) {					\
+			(*accum) += diff;				\
+		}							\
+	} while(0)
+#else
+#define INIT_TIMERS()
+#define TIME(T)
+#define DIFF_MSEC(A, B, C, D)
+#define DIFF_MSEC_ALWAYS(A, B, C, D)
+#endif
+
 struct fsm_edge {
 	fsm_state_t state; /* destination */
 	unsigned char symbol;
