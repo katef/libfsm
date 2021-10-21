@@ -61,7 +61,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 {
 	/* Use a queue to walk breath-first over all states reachable
 	 * from the start state. Note all end states. Collect all the
-	 * edges, then sort them by the note they lead to, to convert it
+	 * edges, then sort them by the node they lead to, to convert it
 	 * to a reverse edge index. Then, enqueue all the end states,
 	 * and again use the queue to walk the graph breadth-first, but
 	 * this time iterating bottom-up from the end states, and mark
