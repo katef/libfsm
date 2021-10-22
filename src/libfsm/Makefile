@@ -13,6 +13,7 @@ SRC += src/libfsm/endids.c
 SRC += src/libfsm/equal.c
 SRC += src/libfsm/exec.c
 SRC += src/libfsm/fsm.c
+SRC += src/libfsm/gen.c
 SRC += src/libfsm/mode.c
 SRC += src/libfsm/start.c
 SRC += src/libfsm/state.c
@@ -66,7 +67,7 @@ CFLAGS.src/libfsm/parser.c += -Wno-unused-parameter
 ${src}: src/libfsm/lexer.h
 .endfor
 
-.for src in ${SRC:Msrc/libfsm/closure.c} ${SRC:Msrc/libfsm/determinise.c} ${SRC:Msrc/libfsm/minimise.c} ${SRC:Msrc/libfsm/vm.c} ${SRC:Msrc/libfsm/example.c}
+.for src in ${SRC:Msrc/libfsm/closure.c} ${SRC:Msrc/libfsm/determinise.c} ${SRC:Msrc/libfsm/gen.c} ${SRC:Msrc/libfsm/minimise.c} ${SRC:Msrc/libfsm/vm.c} ${SRC:Msrc/libfsm/example.c}
 CFLAGS.${src} += -std=c99
 DFLAGS.${src} += -std=c99
 .endfor
