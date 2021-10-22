@@ -4,86 +4,7 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include <assert.h>
-#include <stddef.h>
-#include <string.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <errno.h>
-#include <ctype.h>
-
-#include <fsm/fsm.h>
-#include <fsm/bool.h>
-#include <fsm/pred.h>
-#include <fsm/subgraph.h>
-
-#include <re/re.h>
-
-#include "class.h"
-#include "ast.h"
-#include "ast_compile.h"
-
-#include "libfsm/internal.h" /* XXX */
-
-#define LOG_LINKAGE 0
-
-enum link_side {
-	LINK_START,
-	LINK_END
-};
-
-/*
- * How should this state be linked for the relevant state?
- * Note: These are not mutually exclusive!
- *
- * - LINK_TOP_DOWN
- *   Use the passed in start/end states (x and y)
- *
- * - LINK_GLOBAL
- *   Link to the global start/end state (env->start or env->end),
- *   because this node has a ^ or $ anchor
- *
- * - LINK_GLOBAL_SELF_LOOP
- *   Link to the unanchored self loop adjacent to the start/end
- *   state (env->start_any_loop or env->end_any_loop), because
- *   this node is in a FIRST or LAST position, but unanchored.
- */
-enum link_types {
-	LINK_TOP_DOWN         = 1 << 0,
-	LINK_GLOBAL           = 1 << 1,
-	LINK_GLOBAL_SELF_LOOP = 1 << 2,
-
-	LINK_NONE = 0x00
-};
-
-struct comp_env {
-	struct fsm *fsm;
-	enum re_flags re_flags;
-	struct re_err *err;
-
-	/*
-	 * These are saved so that dialects without implicit
-	 * anchoring can create states with '.' edges to self
-	 * on demand, and link them to the original start and
-	 * end states.
-	 *
-	 * Also, some states in a first/last context need to link
-	 * directly to the overall start/end states, either in
-	 * place of or along with the adjacent states.
-	 */
-	fsm_state_t start;
-	fsm_state_t end;
-	fsm_state_t start_any_loop;
-	fsm_state_t end_any_loop;
-	int have_start_any_loop;
-	int have_end_any_loop;
-};
-
-static int
-comp_iter(struct comp_env *env,
-	fsm_state_t x, fsm_state_t y,
-	struct ast_expr *n);
+#include "ast_compile_internal.h"
 
 static int
 utf8(uint32_t cp, char c[])
@@ -207,7 +128,7 @@ addedge_literal(struct comp_env *env, enum re_flags re_flags,
 		if (!fsm_addedge_literal(fsm, from, to, tolower((unsigned char) c))) {
 			return 0;
 		}
-		
+
 		if (!fsm_addedge_literal(fsm, from, to, toupper((unsigned char) c))) {
 			return 0;
 		}
@@ -216,14 +137,14 @@ addedge_literal(struct comp_env *env, enum re_flags re_flags,
 			return 0;
 		}
 	}
-	
+
 	return 1;
 }
 
 static int
 intern_start_any_loop(struct comp_env *env)
 {
-	fsm_state_t loop;
+	fsm_state_t loop, inner;
 
 	assert(env != NULL);
 
@@ -232,54 +153,77 @@ intern_start_any_loop(struct comp_env *env)
 	}
 
 	assert(~env->re_flags & RE_ANCHORED);
-	assert(env->start < env->fsm->statecount);
+	assert(env->start_outer < env->fsm->statecount);
 
 	if (!fsm_addstate(env->fsm, &loop)) {
 		return 0;
 	}
 
+	if (!fsm_addstate(env->fsm, &inner)) {
+		return 0;
+	}
+
+#if LOG_LINKAGE
+	fprintf(stderr, "start_any: loop %d, inner: %d\n", loop, inner);
+#endif
+
 	if (!fsm_addedge_any(env->fsm, loop, loop)) {
 		return 0;
 	}
 
-	if (!fsm_addedge_epsilon(env->fsm, env->start, loop)) {
+	if (!fsm_addedge_epsilon(env->fsm, env->start_outer, loop)) {
+		return 0;
+	}
+	if (!fsm_addedge_epsilon(env->fsm, loop, inner)) {
 		return 0;
 	}
 
 	env->start_any_loop = loop;
+	env->start_any_inner = inner;
 	env->have_start_any_loop = 1;
 
 	return 1;
 }
 
 static int
-intern_end_any_loop(struct comp_env *env)
+intern_end_any_loop(struct comp_env *env, struct comp_stack *stack)
 {
-	fsm_state_t loop;
+	fsm_state_t loop, inner;
 
 	assert(env != NULL);
 
-	if (env->have_end_any_loop) {
+	if (stack->have_end_any_loop) {
 		return 1;
 	}
 
 	assert(~env->re_flags & RE_ANCHORED);
-	assert(env->end < env->fsm->statecount);
+	assert(stack->end_outer < env->fsm->statecount);
 
 	if (!fsm_addstate(env->fsm, &loop)) {
 		return 0;
 	}
+	if (!fsm_addstate(env->fsm, &inner)) {
+		return 0;
+	}
+
+#if LOG_LINKAGE
+	fprintf(stderr, "end_any: %d, inner: %d\n", loop, inner);
+#endif
 
 	if (!fsm_addedge_any(env->fsm, loop, loop)) {
 		return 0;
 	}
 
-	if (!fsm_addedge_epsilon(env->fsm, loop, env->end)) {
+	if (!fsm_addedge_epsilon(env->fsm, inner, loop)) {
+		return 0;
+	}
+	if (!fsm_addedge_epsilon(env->fsm, loop, stack->end_outer)) {
 		return 0;
 	}
 
-	env->end_any_loop = loop;
-	env->have_end_any_loop = 1;
+	stack->end_any_loop = loop;
+	stack->end_any_inner = inner;
+	stack->have_end_any_loop = 1;
 
 	return 1;
 }
@@ -357,7 +301,7 @@ can_skip_concat_state_and_epsilon(const struct ast_expr *l,
 }
 
 static enum link_types
-decide_linking(struct comp_env *env,
+decide_linking(struct comp_env *env, struct comp_stack *stack,
 	fsm_state_t x, fsm_state_t y,
 	struct ast_expr *n, enum link_side side)
 {
@@ -414,7 +358,7 @@ decide_linking(struct comp_env *env,
 		(void) nullable;
 
 		if (!start && first) {
-			if (x == env->start) {
+			if (x == env->start_inner) {
 				/* Avoid a cycle back to env->start that may
 				 * lead to incorrect matches, e.g. /a?^b*/
 				return LINK_GLOBAL_SELF_LOOP;
@@ -440,8 +384,11 @@ decide_linking(struct comp_env *env,
 
 		(void) nullable;
 
+		/* FIXME: Clarify why this is asymmetric to the cases for START,
+		 * or confirm that it doesn't need to be. */
+
 		if (end && last) {
-			if (y == env->end) {
+			if (y == stack->end_inner) {
 				return LINK_GLOBAL;
 			} else {
 				return LINK_GLOBAL | LINK_TOP_DOWN;
@@ -449,7 +396,7 @@ decide_linking(struct comp_env *env,
 		}
 
 		if (!end && last) {
-			if (y == env->end) {
+			if (y == stack->end_inner) {
 				return LINK_GLOBAL_SELF_LOOP;
 			} else {
 				return LINK_GLOBAL_SELF_LOOP | LINK_TOP_DOWN;
@@ -497,150 +444,62 @@ print_linkage(enum link_types t)
 #define EPSILON(FROM, TO)           \
     assert((FROM) != (TO));         \
     if (!fsm_addedge_epsilon(env->fsm, (FROM), (TO))) { return 0; }
-        
+
 #define ANY(FROM, TO)               \
     if (!fsm_addedge_any(env->fsm, (FROM), (TO))) { return 0; }
 
 #define LITERAL(FROM, TO, C)        \
     if (!addedge_literal(env, n->re_flags, (FROM), (TO), ((char)C))) { return 0; }
 
-#define RECURSE(FROM, TO, NODE)     \
-    if (!comp_iter(env, (FROM), (TO), (NODE))) { return 0; }
+#define RETURN(STK) comp_stack_pop(STK)
 
-static int
-comp_iter_repeated(struct comp_env *env,
-	fsm_state_t x, fsm_state_t y,
-	struct ast_expr_repeat *n)
+#define RECURSE(ENV, STACK, FROM, TO, NODE)				\
+	if (!comp_stack_push(ENV, STACK, (FROM), (TO), (NODE))) { return 0; }
+
+#define TAILCALL(STACK, FROM, TO, NODE)					\
+	comp_stack_tailcall(STACK, (FROM), (TO), (NODE));
+
+
+#if LOG_LINKAGE || LOG_TRAMPOLINE
+static const char *
+node_type_name(enum ast_expr_type t)
 {
-	fsm_state_t a, b;
-	fsm_state_t na, nz;
-	unsigned i, min, max;
-
-	min = n->min;
-	max = n->max;
-
-	assert(min <= max);
-
-	if (min == 0 && max == 0) {                          /* {0,0} */
-		EPSILON(x, y);
-	} else if (min == 0 && max == 1) {                   /* '?' */
-		RECURSE(x, y, n->e);
-		EPSILON(x, y);
-	} else if (min == 1 && max == 1) {                   /* {1,1} */
-		RECURSE(x, y, n->e);
-	} else if (min == 0 && max == AST_COUNT_UNBOUNDED) { /* '*' */
-		NEWSTATE(na);
-		NEWSTATE(nz);
-		EPSILON(x,na);
-		EPSILON(nz,y);
-
-		EPSILON(na, nz);
-		RECURSE(na, nz, n->e);
-		EPSILON(nz, na);
-	} else if (min == 1 && max == AST_COUNT_UNBOUNDED) { /* '+' */
-		NEWSTATE(na);
-		NEWSTATE(nz);
-		EPSILON(x,na);
-		EPSILON(nz,y);
-
-		RECURSE(na, nz, n->e);
-		EPSILON(nz, na);
-	} else {
-		/*
-		 * Make new beginning/end states for the repeated section,
-		 * build its NFA, and link to its head.
-		 */
-
-		struct fsm_subgraph subgraph;
-		fsm_state_t tail;
-
-		fsm_subgraph_start(env->fsm, &subgraph);
-
-		NEWSTATE(na);
-		NEWSTATE(nz);
-		RECURSE(na, nz, n->e);
-		EPSILON(x, na); /* link head to repeated NFA head */
-
-		b = nz; /* set the initial tail */
-
-		/* can be skipped */
-		if (min == 0) {
-			EPSILON(na, nz);
-		}
-		fsm_subgraph_stop(env->fsm, &subgraph);
-		tail = nz;
-
-		if (max != AST_COUNT_UNBOUNDED) {
-			for (i = 1; i < max; i++) {
-				/* copies the original subgraph; need to set b to the
-				 * original tail
-				 */
-				b = tail;
-
-				if (!fsm_subgraph_duplicate(env->fsm, &subgraph, &b, &a)) {
-					return 0;
-				}
-
-				EPSILON(nz, a);
-
-				/* To the optional part of the repeated count */
-				if (i >= min) {
-					EPSILON(nz, b);
-				}
-
-				na = a;	/* advance head for next duplication */
-				nz = b;	/* advance tail for concenation */
-			}
-		} else {
-			for (i = 1; i < min; i++) {
-				/* copies the original subgraph; need to set b to the
-				 * original tail
-				 */
-				b = tail;
-
-				if (!fsm_subgraph_duplicate(env->fsm, &subgraph, &b, &a)) {
-					return 0;
-				}
-
-				EPSILON(nz, a);
-
-				na = a;	/* advance head for next duplication */
-				nz = b;	/* advance tail for concenation */
-			}
-
-			/* back link to allow for infinite repetition */
-			EPSILON(nz,na);
-		}
-
-		/* tail to last repeated NFA tail */
-		EPSILON(nz, y);
+	switch (t) {
+	default:
+		return "<match fail>";
+	case AST_EXPR_EMPTY: return "EMPTY";
+	case AST_EXPR_CONCAT: return "CONCAT";
+	case AST_EXPR_ALT: return "ALT";
+	case AST_EXPR_LITERAL: return "LITERAL";
+	case AST_EXPR_CODEPOINT: return "CODEPOINT";
+	case AST_EXPR_REPEAT: return "REPEAT";
+	case AST_EXPR_GROUP: return "GROUP";
+	case AST_EXPR_ANCHOR: return "ANCHOR";
+	case AST_EXPR_SUBTRACT: return "SUBTRACT";
+	case AST_EXPR_RANGE: return "RANGE";
+	case AST_EXPR_TOMBSTONE: return "TOMBSTONE";
 	}
-
-	return 1;
 }
+#endif
 
 static int
-comp_iter(struct comp_env *env,
-	fsm_state_t x, fsm_state_t y,
-	struct ast_expr *n)
+set_linking(struct comp_env *env, struct comp_stack *stack, struct ast_expr *n,
+    enum link_types link_start, enum link_types link_end,
+    fsm_state_t *px, fsm_state_t *py)
 {
-	enum link_types link_start, link_end;
-
-	if (n == NULL) {
-		return 1;
-	}
-
-	link_start = decide_linking(env, x, y, n, LINK_START);
-	link_end   = decide_linking(env, x, y, n, LINK_END);
+	fsm_state_t x = *px;
+	fsm_state_t y = *py;
 
 #if LOG_LINKAGE
-	fprintf(stderr, "%s: decide_linking %p: start ", __func__, (void *) n);
+	fprintf(stderr, "%s: decide_linking %p [%s]: start ",
+	    __func__, (void *) n, node_type_name(n->type));
 	print_linkage(link_start);
 	fprintf(stderr, ", end ");
 	print_linkage(link_end);
-	fprintf(stderr, "\n");
+	fprintf(stderr, ", x %d, y %d\n", x, y);
 #else
 	(void) print_linkage;
+	(void)n;
 #endif
 
 	if ((link_start & LINK_TOP_DOWN) == LINK_NONE) {
@@ -651,7 +510,7 @@ comp_iter(struct comp_env *env,
 		 */
 		if (link_start & LINK_GLOBAL) {
 			assert((link_start & LINK_GLOBAL_SELF_LOOP) == LINK_NONE);
-			x = env->start;
+			x = env->start_inner;
 		} else if (link_start & LINK_GLOBAL_SELF_LOOP) {
 			assert((link_start & LINK_GLOBAL) == LINK_NONE);
 
@@ -660,7 +519,7 @@ comp_iter(struct comp_env *env,
 			}
 
 			assert(env->have_start_any_loop);
-			x = env->start_any_loop;
+			x = env->start_any_inner;
 		}
 	} else {
 		/*
@@ -669,15 +528,9 @@ comp_iter(struct comp_env *env,
 		 */
 		if (link_start & LINK_GLOBAL) {
 			assert((link_start & LINK_GLOBAL_SELF_LOOP) == LINK_NONE);
-			EPSILON(env->start, x);
+			EPSILON(env->start_inner, x);
 		} else if (link_start & LINK_GLOBAL_SELF_LOOP) {
 			assert((link_start & LINK_GLOBAL) == LINK_NONE);
-
-			if (!intern_start_any_loop(env)) {
-				return 0;
-			}
-
-			assert(env->have_start_any_loop);
 		}
 	}
 
@@ -689,16 +542,16 @@ comp_iter(struct comp_env *env,
 		 */
 		if (link_end & LINK_GLOBAL) {
 			assert((link_end & LINK_GLOBAL_SELF_LOOP) == LINK_NONE);
-			y = env->end;
+			y = stack->end_inner;
 		} else if (link_end & LINK_GLOBAL_SELF_LOOP) {
 			assert((link_end & LINK_GLOBAL) == LINK_NONE);
 
-			if (!intern_end_any_loop(env)) {
+			if (!intern_end_any_loop(env, stack)) {
 				return 0;
 			}
 
-			assert(env->have_end_any_loop);
-			y = env->end_any_loop;
+			assert(stack->have_end_any_loop);
+			y = stack->end_any_inner;
 		}
 	} else {
 		/*
@@ -707,236 +560,652 @@ comp_iter(struct comp_env *env,
 		 */
 		if (link_end & LINK_GLOBAL) {
 			assert((link_end & LINK_GLOBAL_SELF_LOOP) == LINK_NONE);
-			EPSILON(y, env->end);
+			EPSILON(y, stack->end_inner);
 		} else if (link_end & LINK_GLOBAL_SELF_LOOP) {
 			assert((link_end & LINK_GLOBAL) == LINK_NONE);
+		}
+	}
 
-			if (!intern_end_any_loop(env)) {
+#if LOG_LINKAGE
+	fprintf(stderr, " ---> x: %d, y: %d\n", x, y);
+#endif
+	*px = x;
+	*py = y;
+	return 1;
+}
+
+static void
+comp_stack_pop(struct comp_stack *stack)
+{
+	assert(stack != NULL);
+	assert(stack->depth > 0);
+	stack->depth--;
+}
+
+static int
+comp_stack_push(struct comp_env *env, struct comp_stack *stack,
+	fsm_state_t x, fsm_state_t y, struct ast_expr *n)
+{
+	assert(stack != NULL);
+	assert(n != NULL);
+
+	if (stack->depth == stack->ceil) {
+		const size_t nceil = 2*stack->ceil;
+		struct comp_stack_frame *nframes = f_realloc(env->alloc,
+		    stack->frames, nceil * sizeof(stack->frames[0]));
+#if LOG_LINKAGE || LOG_TRAMPOLINE
+		fprintf(stderr, "comp_stack_push: reallocating comp_stack, %zu -> %zu frames\n",
+		    stack->ceil, nceil);
+#endif
+		if (nframes == NULL) {
+			return 0;
+		}
+		stack->ceil = nceil;
+		stack->frames = nframes;
+	}
+
+	assert(stack->depth < stack->ceil);
+
+	struct comp_stack_frame *sf = &stack->frames[stack->depth];
+	memset(sf, 0x00, sizeof(*sf));
+	sf->n = n;
+	sf->x = x;
+	sf->y = y;
+
+	stack->depth++;
+	return 1;
+}
+
+static void
+comp_stack_tailcall(struct comp_stack *stack,
+	fsm_state_t x, fsm_state_t y, struct ast_expr *n)
+{
+	assert(stack != NULL);
+
+	assert(stack->depth > 0);
+
+	/* Replace current stack frame. */
+	struct comp_stack_frame *sf = &stack->frames[stack->depth - 1];
+	memset(sf, 0x00, sizeof(*sf));
+	sf->n = n;
+	sf->x = x;
+	sf->y = y;
+}
+
+static int
+comp_iter_trampoline(struct comp_env *env,
+	fsm_state_t x, struct ast_expr *n)
+{
+	int res = 1;
+	assert(n != NULL);
+
+	struct comp_stack *stack = NULL;
+	struct comp_stack_frame *frames = NULL;
+
+	stack = f_calloc(env->alloc, 1, sizeof(*stack));
+	if (stack == NULL) {
+		goto alloc_fail;
+	}
+	frames = f_calloc(env->alloc,
+	    DEF_COMP_STACK_CEIL, sizeof(stack[0]));
+	if (frames == NULL) {
+		goto alloc_fail;
+	}
+
+	/* Add inner and outer end states. Like start_outer and start_inner,
+	 * these represent the boundary between match group 0 (inner) and
+	 * states outside it (the unanchored end loop). */
+	if (!fsm_addstate(env->fsm, &stack->end_inner)) {
+		goto alloc_fail;
+	}
+	if (!fsm_addstate(env->fsm, &stack->end_outer)) {
+		goto alloc_fail;
+	}
+	if (!fsm_addedge_epsilon(env->fsm, stack->end_inner, stack->end_outer)) {
+		goto alloc_fail;
+	}
+
+	fsm_setend(env->fsm, stack->end_outer, 1);
+
+#if LOG_LINKAGE
+	fprintf(stderr, "end: outer %d, inner %d\n",
+	    stack->end_outer, stack->end_inner);
+#endif
+
+#if LOG_TRAMPOLINE
+	fprintf(stderr, "%s: x %d, y %d\n", __func__, x, stack->end_inner);
+#endif
+
+	stack->ceil = DEF_COMP_STACK_CEIL;
+	stack->depth = 1;
+	stack->frames = frames;
+
+	{			/* set up the first stack frame */
+		struct comp_stack_frame *sf = &stack->frames[0];
+		sf->n = n;
+		sf->x = x;
+		sf->y = stack->end_inner;
+		sf->step = 0;
+	}
+
+	/* Evaluate call stack.
+	 *
+	 * This is a loop because changes on a branch (not yet integrated) will
+	 * add support for forking execution by scheduling a branched copy of the
+	 * call stack to resume when evaluation of this one completes. */
+	while (stack != NULL) {
+#if LOG_TRAMPOLINE
+		fprintf(stderr, "%s: executing stack %p\n", __func__, (void *)stack);
+#endif
+
+		/* evaluate call stack until termination */
+		while (res && stack->depth > 0) {
+			if (!eval_stack_frame(env, stack)) {
+#if LOG_TRAMPOLINE
+				fprintf(stderr, "%s: res -> 0\n", __func__);
+#endif
+				res = 0;
+				break;
+			}
+		}
+
+		f_free(env->alloc, stack->frames);
+		f_free(env->alloc, stack);
+		stack = NULL;
+	}
+
+	return res;
+
+alloc_fail:
+	/* TODO: set env->err to indicate alloc failure */
+	if (stack != NULL) {
+		f_free(env->alloc, stack);
+	}
+	if (frames != NULL) {
+		f_free(env->alloc, frames);
+	}
+
+	return 0;
+}
+
+static struct comp_stack_frame *
+get_comp_stack_top(struct comp_stack *stack)
+{
+	assert(stack->depth > 0);
+	struct comp_stack_frame *sf = &stack->frames[stack->depth - 1];
+	assert(sf->n != NULL);
+	return sf;
+}
+
+static int
+eval_stack_frame(struct comp_env *env, struct comp_stack *stack)
+{
+	struct comp_stack_frame *sf = get_comp_stack_top(stack);
+
+#if LOG_TRAMPOLINE
+	fprintf(stderr, "%s: depth %zu/%zu, type %s, step %u\n", __func__,
+	    stack->depth, stack->ceil, node_type_name(sf->n->type), sf->step);
+#endif
+
+	/* If this is the first time the trampoline has called this
+	 * state, decide the linking. Some of the states below (such as
+	 * AST_EXPR_CONCAT) can have multiple child nodes, so they will
+	 * increment step and use it to resume where they left off as
+	 * the trampoline returns execution to them. */
+	if (sf->step == 0) {	/* entering state */
+		enum link_types link_start, link_end;
+		link_start = decide_linking(env, stack, sf->x, sf->y, sf->n, LINK_START);
+		link_end   = decide_linking(env, stack, sf->x, sf->y, sf->n, LINK_END);
+		if (!set_linking(env, stack, sf->n, link_start, link_end, &sf->x, &sf->y)) {
+			return 0;
+		}
+	}
+
+#if LOG_TRAMPOLINE > 1
+	fprintf(stderr, "%s: x %d, y %d\n", __func__, sf->x, sf->y);
+#endif
+
+	switch (sf->n->type) {
+	case AST_EXPR_EMPTY:
+		return eval_EMPTY(env, stack);
+	case AST_EXPR_CONCAT:
+		return eval_CONCAT(env, stack);
+	case AST_EXPR_ALT:
+		return eval_ALT(env, stack);
+	case AST_EXPR_LITERAL:
+		return eval_LITERAL(env, stack);
+	case AST_EXPR_CODEPOINT:
+		return eval_CODEPOINT(env, stack);
+	case AST_EXPR_REPEAT:
+		return eval_REPEAT(env, stack);
+	case AST_EXPR_GROUP:
+		return eval_GROUP(env, stack);
+	case AST_EXPR_ANCHOR:
+		return eval_ANCHOR(env, stack);
+	case AST_EXPR_SUBTRACT:
+		return eval_SUBTRACT(env, stack);
+	case AST_EXPR_RANGE:
+		return eval_RANGE(env, stack);
+	case AST_EXPR_TOMBSTONE:
+		return eval_TOMBSTONE(env, stack);
+	default:
+		assert(!"unreached");
+		return 0;
+	}
+}
+
+static int
+eval_EMPTY(struct comp_env *env, struct comp_stack *stack)
+{
+	struct comp_stack_frame *sf = get_comp_stack_top(stack);
+	EPSILON(sf->x, sf->y);
+	RETURN(stack);
+	return 1;
+}
+
+static int
+eval_CONCAT(struct comp_env *env, struct comp_stack *stack)
+{
+	struct comp_stack_frame *sf = get_comp_stack_top(stack);
+	struct ast_expr *n = sf->n;
+	const size_t count = n->u.concat.count;
+	assert(count >= 1);
+
+#if LOG_LINKAGE
+		fprintf(stderr, "comp_iter: eval_CONCAT: x %d, y %d, step %d\n",
+		    sf->x, sf->y, sf->step);
+#endif
+
+	if (sf->step == 0) {
+		sf->u.concat.link = sf->x;
+	}
+
+	while (sf->step < count) {
+		fsm_state_t curr_x = sf->u.concat.link;
+		struct ast_expr *curr = n->u.concat.n[sf->step];
+		struct ast_expr *next = sf->step == count - 1
+		    ? NULL
+		    : n->u.concat.n[sf->step + 1];
+
+		fsm_state_t z;
+		if (sf->step + 1 < count) {
+			if (!fsm_addstate(env->fsm, &z)) {
 				return 0;
 			}
-
-			assert(env->have_end_any_loop);
-		}
-	}
-
-	switch (n->type) {
-	case AST_EXPR_EMPTY:
-		/* skip these, when possible */
-		EPSILON(x, y);
-		break;
-
-	case AST_EXPR_CONCAT:
-	{
-		fsm_state_t base, z;
-		fsm_state_t curr_x;
-		size_t i;
-
-		const size_t count  = n->u.concat.count;
-
-		curr_x = x;
-
-		assert(count >= 1);
-
-		base = env->fsm->statecount;
-
-		if (!fsm_addstate_bulk(env->fsm, count - 1)) {
-			return 0;
-		}
-
-		for (i = 0; i < count; i++) {
-			struct ast_expr *curr = n->u.concat.n[i];
-			struct ast_expr *next = i == count - 1
-				? NULL
-				: n->u.concat.n[i + 1];
-
-			if (i + 1 < count) {
-				z = base + i;
-			} else {
-				z = y;
-			}
-
-			/*
-			 * If nullable, add an extra state & epsilion as a one-way gate
-			 */
-			if (!can_skip_concat_state_and_epsilon(curr, next)) {
-				fsm_state_t diode;
-
-				NEWSTATE(diode);
-				EPSILON(curr_x, diode);
-				curr_x = diode;
-			}
-
-			RECURSE(curr_x, z, curr);
-
-			curr_x = z;
-		}
-
-		break;
-	}
-
-	case AST_EXPR_ALT:
-	{
-		size_t i;
-
-		const size_t count = n->u.alt.count;
-
-		assert(count >= 1);
-
-		for (i = 0; i < count; i++) {
-			/*
-			 * CONCAT handles adding extra states and
-			 * epsilons when necessary, so there isn't much
-			 * more to do here.
-			 */
-			RECURSE(x, y, n->u.alt.n[i]);
-		}
-		break;
-	}
-
-	case AST_EXPR_LITERAL:
-		LITERAL(x, y, n->u.literal.c);
-		break;
-
-	case AST_EXPR_CODEPOINT: {
-		fsm_state_t a, b;
-		char c[4];
-		int r, i;
-
-		r = utf8(n->u.codepoint.u, c);
-		if (!r) {
-			if (env->err != NULL) {
-				env->err->e = RE_EBADCP;
-				env->err->cp = n->u.codepoint.u;
-			}
-
-			return 0;
-		}
-
-		a = x;
-
-		for (i = 0; i < r; i++) {
-			if (i + 1 < r) {
-				NEWSTATE(b);
-			} else {
-				b = y;
-			}
-
-			LITERAL(a, b, c[i]);
-
-			a = b;
-		}
-
-		break;
-	}
-
-	case AST_EXPR_REPEAT:
-		/*
-		 * REPEAT breaks out into its own function, because
-		 * there are several special cases
-		 */
-		if (!comp_iter_repeated(env, x, y, &n->u.repeat)) {
-			return 0;
-		}
-		break;
-
-	case AST_EXPR_GROUP:
-		RECURSE(x, y, n->u.group.e);
-		break;
-
-	case AST_EXPR_TOMBSTONE:
-		/* do not link -- intentionally pruned */
-		break;
-
-	case AST_EXPR_ANCHOR:
-		switch (n->u.anchor.type) {
-		case AST_ANCHOR_START:
-			EPSILON(env->start, y);
-			break;
-
-		case AST_ANCHOR_END:
-			EPSILON(x, env->end);
-			break;
-
-		default:
-			assert(!"unreached");
-		}
-		break;
-
-	case AST_EXPR_SUBTRACT: {
-		struct fsm *a, *b;
-		struct fsm *q;
-		enum re_flags re_flags;
-
-		re_flags = n->re_flags;
-
-		/* wouldn't want to reverse twice! */
-		re_flags &= ~(unsigned)RE_REVERSE;
-
-		a = expr_compile(n->u.subtract.a, re_flags,
-			fsm_getoptions(env->fsm), env->err);
-		if (a == NULL) {
-			return 0;
-		}
-
-		b = expr_compile(n->u.subtract.b, re_flags,
-			fsm_getoptions(env->fsm), env->err);
-		if (b == NULL) {
-			fsm_free(a);
-			return 0;
-		}
-
-		q = fsm_subtract(a, b);
-		if (q == NULL) {
-			return 0;
+		} else {
+			z = sf->y; /* connect to right parent to close off subtree */
 		}
 
 		/*
-		 * Subtraction produces quite a mess. We could trim or minimise here
-		 * while q is self-contained, which might work out better than doing it
-		 * in the larger FSM after merge. I'm not sure if it works out better
-		 * overall or not.
+		 * If nullable, add an extra state & epsilon as a one-way gate
+		 */
+		if (!can_skip_concat_state_and_epsilon(curr, next)) {
+			fsm_state_t diode;
+
+			NEWSTATE(diode);
+			EPSILON(curr_x, diode);
+			curr_x = diode;
+#if LOG_LINKAGE
+			fprintf(stderr, "comp_iter: added diode %d\n", diode);
+#endif
+		}
+
+#if LOG_LINKAGE
+		fprintf(stderr, "comp_iter: recurse CONCAT[%u/%zu]: link %d, z %d\n",
+		    sf->step, count, sf->u.concat.link, z);
+#endif
+		/* Set the right side link, which will become the
+		 * left side link for the next step (if any). */
+		sf->u.concat.link = z;
+		sf->step++;
+		RECURSE(env, stack, curr_x, z, curr);
+		return 1;
+	}
+
+	RETURN(stack);
+	return 1;
+}
+
+static int
+eval_ALT(struct comp_env *env, struct comp_stack *stack)
+{
+	struct comp_stack_frame *sf = get_comp_stack_top(stack);
+	const size_t count = sf->n->u.alt.count;
+	assert(count >= 1);
+
+#if LOG_LINKAGE
+	fprintf(stderr, "eval_ALT: stack %p, step %u\n", (void *)stack, sf->step);
+#endif
+
+	if (sf->step < count) {
+		struct ast_expr *n;
+
+		/*
+		 * CONCAT handles adding extra states and
+		 * epsilons when necessary, so there isn't much
+		 * more to do here.
+		 */
+#if LOG_LINKAGE
+		fprintf(stderr, "eval_ALT: recurse ALT[%u/%zu]: x %d, y %d\n",
+		    sf->step, count, sf->x, sf->y);
+#endif
+
+		n = sf->n->u.alt.n[sf->step];
+		assert(n != NULL);
+		sf->step++;	/* RECURSE can realloc the stack and make sf stale. */
+		RECURSE(env, stack, sf->x, sf->y, n);
+		return 1;
+	}
+
+	RETURN(stack);
+	return 1;
+}
+
+static int
+eval_LITERAL(struct comp_env *env, struct comp_stack *stack)
+{
+	struct comp_stack_frame *sf = get_comp_stack_top(stack);
+	struct ast_expr *n = sf->n;
+	LITERAL(sf->x, sf->y, n->u.literal.c);
+	RETURN(stack);
+	return 1;
+}
+
+static int
+eval_CODEPOINT(struct comp_env *env, struct comp_stack *stack)
+{
+	struct comp_stack_frame *sf = get_comp_stack_top(stack);
+	struct ast_expr *n = sf->n;
+	fsm_state_t a, b;
+	char c[4];
+	int r, i;
+
+	r = utf8(n->u.codepoint.u, c);
+	if (!r) {
+		if (env->err != NULL) {
+			env->err->e = RE_EBADCP;
+			env->err->cp = n->u.codepoint.u;
+		}
+
+		return 0;
+	}
+
+	a = sf->x;
+
+	for (i = 0; i < r; i++) {
+		if (i + 1 < r) {
+			NEWSTATE(b);
+		} else {
+			b = sf->y;
+		}
+
+		LITERAL(a, b, c[i]);
+
+		a = b;
+	}
+
+	RETURN(stack);
+	return 1;
+}
+
+static int
+eval_REPEAT(struct comp_env *env, struct comp_stack *stack)
+{
+	struct comp_stack_frame *sf = get_comp_stack_top(stack);
+	fsm_state_t a, b;
+	unsigned i, min, max;
+
+	assert(sf->n->type == AST_EXPR_REPEAT);
+	struct ast_expr_repeat *n = &sf->n->u.repeat;
+
+	min = n->min;
+	max = n->max;
+
+	assert(min <= max);
+
+	if (min == 0 && max == 0) {                          /* {0,0} */
+		EPSILON(sf->x, sf->y);
+		RETURN(stack);
+		return 1;
+	} else if (min == 0 && max == 1) {                   /* '?' */
+		EPSILON(sf->x, sf->y);
+		TAILCALL(stack, sf->x, sf->y, n->e);
+		return 1;
+	} else if (min == 1 && max == 1) {                   /* {1,1} */
+		TAILCALL(stack, sf->x, sf->y, n->e);
+		return 1;
+	} else if (min == 0 && max == AST_COUNT_UNBOUNDED) { /* '*' */
+		fsm_state_t na, nz;
+		NEWSTATE(na);
+		NEWSTATE(nz);
+		EPSILON(sf->x,na);
+		EPSILON(nz,sf->y);
+
+		EPSILON(na, nz);
+		EPSILON(nz, na);
+		TAILCALL(stack, na, nz, n->e);
+		return 1;
+	} else if (min == 1 && max == AST_COUNT_UNBOUNDED) { /* '+' */
+		fsm_state_t na, nz;
+		NEWSTATE(na);
+		NEWSTATE(nz);
+		EPSILON(sf->x, na);
+		EPSILON(nz, sf->y);
+
+		EPSILON(nz, na);
+		TAILCALL(stack, na, nz, n->e);
+		return 1;
+	} else if (sf->step == 0) {
+		/*
+		 * Make new beginning/end states for the repeated section,
+		 * build its NFA, and link to its head.
 		 */
 
-		if (fsm_empty(q)) {
-			EPSILON(x, y);
-			break;
+		fsm_subgraph_start(env->fsm, &sf->u.repeat.subgraph);
+
+		sf->step++;	/* resume after RECURSE */
+		NEWSTATE(sf->u.repeat.na);
+		NEWSTATE(sf->u.repeat.nz);
+		RECURSE(env, stack, sf->u.repeat.na, sf->u.repeat.nz, n->e);
+		return 1;
+	} else {
+		fsm_state_t tail;
+		assert(sf->step == 1);
+		EPSILON(sf->x, sf->u.repeat.na); /* link head to repeated NFA head */
+
+		b = sf->u.repeat.nz; /* set the initial tail */
+
+		/* can be skipped */
+		if (min == 0) {
+			EPSILON(sf->u.repeat.na, sf->u.repeat.nz);
+		}
+		fsm_subgraph_stop(env->fsm, &sf->u.repeat.subgraph);
+		tail = sf->u.repeat.nz;
+
+		if (max != AST_COUNT_UNBOUNDED) {
+			for (i = 1; i < max; i++) {
+				/* copies the original subgraph; need to set b to the
+				 * original tail
+				 */
+				b = tail;
+
+				if (!fsm_subgraph_duplicate(env->fsm, &sf->u.repeat.subgraph, &b, &a)) {
+					return 0;
+				}
+
+				EPSILON(sf->u.repeat.nz, a);
+
+				/* To the optional part of the repeated count */
+				if (i >= min) {
+					EPSILON(sf->u.repeat.nz, b);
+				}
+
+				sf->u.repeat.na = a;	/* advance head for next duplication */
+				sf->u.repeat.nz = b;	/* advance tail for concenation */
+			}
+		} else {
+			for (i = 1; i < min; i++) {
+				/* copies the original subgraph; need to set b to the
+				 * original tail
+				 */
+				b = tail;
+
+				if (!fsm_subgraph_duplicate(env->fsm, &sf->u.repeat.subgraph, &b, &a)) {
+					return 0;
+				}
+
+				EPSILON(sf->u.repeat.nz, a);
+
+				sf->u.repeat.na = a;	/* advance head for next duplication */
+				sf->u.repeat.nz = b;	/* advance tail for concenation */
+			}
+
+			/* back link to allow for infinite repetition */
+			EPSILON(sf->u.repeat.nz, sf->u.repeat.na);
 		}
 
-		if (!fsm_unionxy(env->fsm, q, x, y)) {
-			return 0;
-		}
-
-		break;
+		/* tail to last repeated NFA tail */
+		EPSILON(sf->u.repeat.nz, sf->y);
+		RETURN(stack);
+		return 1;
 	}
+}
 
-	case AST_EXPR_RANGE: {
-		unsigned int i;
+static int
+eval_GROUP(struct comp_env *env, struct comp_stack *stack)
+{
+	struct comp_stack_frame *sf = get_comp_stack_top(stack);
 
-		if (n->u.range.from.type != AST_ENDPOINT_LITERAL || n->u.range.to.type != AST_ENDPOINT_LITERAL) {
-			/* not yet supported */
-			return 0;
-		}
+	/* TODO: This could currently just TAILCALL in step 0, but
+	 * will soon do additional bookkeeping to reflect which captures
+	 * are active within the subtree. */
 
-		assert(n->u.range.from.u.literal.c <= n->u.range.to.u.literal.c);
-
-		if (n->u.range.from.u.literal.c == 0x00 &&
-			n->u.range.to.u.literal.c == 0xff)
-		{
-			ANY(x, y);
-			break;
-		}
-
-		for (i = n->u.range.from.u.literal.c; i <= n->u.range.to.u.literal.c; i++) {
-			LITERAL(x, y, i);
-		}
-
-		break;
+	if (sf->step == 0) {
+		struct ast_expr *n = sf->n;
+#if LOG_LINKAGE
+		fprintf(stderr, "comp_iter: recurse GROUP: x %d, y %d\n",
+		    sf->x, sf->y);
+#endif
+		sf->step++;
+		RECURSE(env, stack, sf->x, sf->y, n->u.group.e);
+		return 1;
+	} else {
+		assert(sf->step == 1);
+		RETURN(stack);
+		return 1;
 	}
+}
+
+static int
+eval_ANCHOR(struct comp_env *env, struct comp_stack *stack)
+{
+	struct comp_stack_frame *sf = get_comp_stack_top(stack);
+	switch (sf->n->u.anchor.type) {
+	case AST_ANCHOR_START:
+		EPSILON(env->start_inner, sf->y);
+		break;
+
+	case AST_ANCHOR_END:
+		EPSILON(sf->x, stack->end_inner);
+		break;
 
 	default:
 		assert(!"unreached");
+		return 0;
 	}
 
+	RETURN(stack);
+	return 1;
+}
+
+static int
+eval_SUBTRACT(struct comp_env *env, struct comp_stack *stack)
+{
+	struct comp_stack_frame *sf = get_comp_stack_top(stack);
+
+	struct fsm *a, *b;
+	struct fsm *q;
+	enum re_flags re_flags = sf->n->re_flags;
+
+	/* wouldn't want to reverse twice! */
+	re_flags &= ~(unsigned)RE_REVERSE;
+
+	a = expr_compile(sf->n->u.subtract.a, re_flags,
+	    fsm_getoptions(env->fsm), env->err);
+	if (a == NULL) {
+		return 0;
+	}
+
+	b = expr_compile(sf->n->u.subtract.b, re_flags,
+	    fsm_getoptions(env->fsm), env->err);
+	if (b == NULL) {
+		fsm_free(a);
+		return 0;
+	}
+
+	q = fsm_subtract(a, b);
+	if (q == NULL) {
+		return 0;
+	}
+
+	/*
+	 * Subtraction produces quite a mess. We could trim or minimise here
+	 * while q is self-contained, which might work out better than doing it
+	 * in the larger FSM after merge. I'm not sure if it works out better
+	 * overall or not.
+	 */
+
+	if (fsm_empty(q)) {
+		EPSILON(sf->x, sf->y);
+		RETURN(stack);
+		return 1;
+	}
+
+	if (!fsm_unionxy(env->fsm, q, sf->x, sf->y)) {
+		return 0;
+	}
+
+	RETURN(stack);
+	return 1;
+}
+
+static int
+eval_RANGE(struct comp_env *env, struct comp_stack *stack)
+{
+	struct comp_stack_frame *sf = get_comp_stack_top(stack);
+	struct ast_expr *n = sf->n;
+	unsigned int i;
+
+	if (n->u.range.from.type != AST_ENDPOINT_LITERAL || n->u.range.to.type != AST_ENDPOINT_LITERAL) {
+		/* not yet supported */
+		return 0;
+	}
+
+	assert(n->u.range.from.u.literal.c <= n->u.range.to.u.literal.c);
+
+	if (n->u.range.from.u.literal.c == 0x00 &&
+	    n->u.range.to.u.literal.c == 0xff)
+		{
+			ANY(sf->x, sf->y);
+			RETURN(stack);
+			return 1;
+		}
+
+	for (i = n->u.range.from.u.literal.c; i <= n->u.range.to.u.literal.c; i++) {
+		LITERAL(sf->x, sf->y, i);
+	}
+
+	RETURN(stack);
+	return 1;
+}
+
+static int
+eval_TOMBSTONE(struct comp_env *env, struct comp_stack *stack)
+{
+	/* do not link -- intentionally pruned */
+	(void)env;
+	(void)stack;
+	RETURN(stack);
 	return 1;
 }
 
@@ -945,6 +1214,8 @@ comp_iter(struct comp_env *env,
 #undef NEWSTATE
 #undef LITERAL
 #undef RECURSE
+#undef RETURN
+#undef TAILCALL
 
 struct fsm *
 ast_compile(const struct ast *ast,
@@ -952,7 +1223,11 @@ ast_compile(const struct ast *ast,
 	const struct fsm_options *opt,
 	struct re_err *err)
 {
-	fsm_state_t x, y;
+	/* Start states inside and outside of match group 0,
+	 * which represents the entire matched input, but does not
+	 * include the implied /.*?/ loop at the start or end when
+	 * a regex is unanchored. */
+	fsm_state_t start_outer, start_inner;
 	struct fsm *fsm;
 
 	assert(ast != NULL);
@@ -962,30 +1237,43 @@ ast_compile(const struct ast *ast,
 		return NULL;
 	}
 
-	if (!fsm_addstate(fsm, &x)) {
+	/* TODO: move to the call stack, for symmetry? */
+	if (!fsm_addstate(fsm, &start_outer)) {
 		goto error;
 	}
 
-	if (!fsm_addstate(fsm, &y)) {
+	if (!fsm_addstate(fsm, &start_inner)) {
 		goto error;
 	}
 
-	fsm_setstart(fsm, x);
-	fsm_setend(fsm, y, 1);
+	if (!fsm_addedge_epsilon(fsm, start_outer, start_inner)) {
+		goto error;
+	}
+
+	fsm_setstart(fsm, start_outer);
+
+#if LOG_LINKAGE
+	fprintf(stderr, "start: outer %d, inner %d\n",
+	    start_outer, start_inner);
+#endif
 
 	{
 		struct comp_env env;
 
 		memset(&env, 0x00, sizeof(env));
 
+		env.alloc = fsm->opt->alloc;
 		env.fsm = fsm;
 		env.re_flags = re_flags;
 		env.err = err;
 
-		env.start = x;
-		env.end = y;
+		env.start_inner = start_inner;
+		env.start_outer = start_outer;
 
-		if (!comp_iter(&env, x, y, ast->expr)) {
+		if (!comp_iter_trampoline(&env, start_inner, ast->expr)) {
+			if (err != NULL && err->e == 0) {
+				err->e = RE_EBADGROUP;
+			}
 			goto error;
 		}
 	}
@@ -1016,4 +1304,3 @@ error:
 
 	return NULL;
 }
-
