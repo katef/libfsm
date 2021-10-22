@@ -129,7 +129,7 @@ fsm_endid_free(struct fsm *fsm)
 static unsigned long
 hash_state(fsm_state_t state)
 {
-	return fsm_hash_id(state);
+	return (unsigned long)fsm_hash_id(state);
 }
 
 static int
@@ -164,7 +164,7 @@ grow_endid_buckets(const struct fsm_alloc *alloc, struct endid_info *info)
 	for (old_i = 0; old_i < old_count; old_i++) {
 		struct endid_info_bucket *src_b = &old_buckets[old_i];
 		struct endid_info_bucket *dst_b;
-		unsigned hash;
+		unsigned long hash;
 		int copied = 0;
 		if (src_b->state == BUCKET_NO_STATE) {
 			continue;
@@ -196,9 +196,9 @@ fsm_endid_set(struct fsm *fsm,
 {
 	struct endid_info *ei = NULL;
 	int has_grown = 0;
-	unsigned hash;
+	unsigned long hash;
 	size_t i;
-	unsigned mask;
+	unsigned long mask;
 
 	assert(fsm != NULL);
 	ei = fsm->endid_info;
@@ -335,8 +335,8 @@ fsm_endid_count(const struct fsm *fsm,
 	const struct endid_info *ei = NULL;
 	size_t i;
 
-	unsigned hash = hash_state(state);
-	unsigned mask;
+	unsigned long hash = hash_state(state);
+	unsigned long mask;
 
 	assert(fsm != NULL);
 	ei = fsm->endid_info;
@@ -371,8 +371,8 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 	size_t written = 0;
 	const struct endid_info *ei = NULL;
 
-	unsigned hash = hash_state(end_state);
-	unsigned mask;
+	unsigned long hash = hash_state(end_state);
+	unsigned long mask;
 
 	(void)written;
 
@@ -561,8 +561,8 @@ fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
 	size_t bucket_count;
 	struct endid_info *ei = NULL;
 
-	unsigned hash;
-	unsigned mask;
+	unsigned long hash;
+	unsigned long mask;
 
 	assert(fsm != NULL);
 	assert(cb != NULL);
