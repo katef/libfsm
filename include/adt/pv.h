@@ -38,7 +38,10 @@ permutation_vector_with_size_and_offset(const struct fsm_alloc *alloc,
 	assert((offset & (sizeof(unsigned) - 1)) == 0);
 	assert(struct_size >= sizeof(unsigned));
 
-	out = f_malloc(alloc, length * sizeof(*out));
+	out = f_malloc(alloc,
+	    /* appease Electric Fence, which flags zero-byte allocations. */
+	    (length == 0 ? 1 : length) * sizeof(*out));
+
 	if (out == NULL) {
 		goto cleanup;
 	}
