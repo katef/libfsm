@@ -90,7 +90,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	size_t *offsets = NULL;
 	INIT_TIMERS();
 
-	if (!fsm_getstart(fsm, &start)) {
+	if (!fsm_getstart(fsm, &start) || state_count == 0) {
 		return 1;	/* nothing is reachable */
 	}
 
@@ -231,7 +231,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	}
 
 	/* Sort edges by state they lead to, inverting the index. */
-	max_to = get_max_to(edges, edge_count);
+	max_to = edge_count == 0 ? 0 : get_max_to(edges, edge_count);
 
 #if LOG_TRIM
 	fprintf(stderr, " -- edge count %zu, got max_to %u\n", edge_count, max_to);
