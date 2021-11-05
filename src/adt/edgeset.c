@@ -129,7 +129,7 @@ grow_buckets(const struct fsm_alloc *alloc, struct edge_set *set)
 
 	added = 0;
 	for (o_i = 0; o_i < oceil; o_i++) {
-		unsigned h;
+		uint64_t h;
 		const fsm_state_t bs = ob[o_i].state;
 		if (bs == BUCKET_UNUSED || bs == BUCKET_TOMBSTONE) {
 			continue;
@@ -213,8 +213,8 @@ edge_set_add(struct edge_set **setp, const struct fsm_alloc *alloc,
 	}
 
 	{
-		const size_t mask = set->ceil - 1;
-		const unsigned h = fsm_hash_id(symbol);
+		const uint64_t mask = set->ceil - 1;
+		const uint64_t h = fsm_hash_id(symbol);
 
 		int has_tombstone_candidate = 0;
 		size_t tc_pos;
@@ -329,8 +329,8 @@ edge_set_find(const struct edge_set *set, unsigned char symbol,
 		}
 		return 0;
 	} else {
-		const size_t mask = set->ceil - 1;
-		const unsigned h = fsm_hash_id(symbol);
+		const uint64_t mask = set->ceil - 1;
+		const uint64_t h = fsm_hash_id(symbol);
 		size_t i;
 		for (i = 0; i < set->ceil; i++) {
 			const size_t b_i = (h + i) & mask;
@@ -483,8 +483,8 @@ edge_set_remove(struct edge_set **setp, unsigned char symbol)
 	if (edge_set_empty(set)) {
 		return;
 	} else {
-		const size_t mask = set->ceil - 1;
-		const unsigned h = fsm_hash_id(symbol);
+		const uint64_t mask = set->ceil - 1;
+		const uint64_t h = fsm_hash_id(symbol);
 		size_t i;
 		for (i = 0; i < set->ceil; i++) {
 			const size_t b_i = (h + i) & mask;
@@ -753,7 +753,8 @@ edge_set_ordered_iter_reset_to(const struct edge_set *set,
 	 * in a bit set) and either yielding the next bucket for the
 	 * current symbol or advancing to the next symbol present. */
 
-	size_t i, found, mask;
+	size_t i, found;
+	uint64_t mask;
 	memset(eoi, 0x00, sizeof(*eoi));
 
 	eoi->symbol = symbol;
@@ -786,7 +787,7 @@ edge_set_ordered_iter_reset_to(const struct edge_set *set,
 	/* Start out pointing to the first bucket with a matching symbol,
 	 * or the first unused bucket if not present. */
 	{
-		const unsigned h = fsm_hash_id(eoi->symbol);
+		const uint64_t h = fsm_hash_id(eoi->symbol);
 		for (i = 0; i < set->ceil; i++) {
 			const size_t b_i = (h + i) & mask;
 			const fsm_state_t bs = set->b[b_i].state;
@@ -838,7 +839,7 @@ edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
 	fsm_state_t bs;
 	unsigned char symbol;
 	const struct edge_set *set = eoi->set;
-	size_t mask;
+	uint64_t mask;
 
 	if (eoi->pos == EOI_DONE) {
 		return 0;	/* done */
@@ -859,7 +860,7 @@ edge_set_ordered_iter_next(struct edge_ordered_iter *eoi, struct fsm_edge *e)
 
 		if (bs == BUCKET_UNUSED || eoi->steps == set->ceil) {
 			size_t i;
-			unsigned h;
+			uint64_t h;
 			/* after current symbol's entries -- check next */
 			if (!advance_symbol(eoi)) {
 				return 0; /* done */
