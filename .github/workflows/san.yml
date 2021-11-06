@@ -64,7 +64,7 @@ jobs:
         PCRE_VER: pcre2-10.36
         BUILD: ./build
       run: |
-        wget -nv -P ${BUILD}/ https://ftp.pcre.org/pub/pcre/${PCRE_VER}.zip
+        wget -nv -P ${BUILD}/ https://sourceforge.net/projects/pcre/files/pcre2/10.36/${PCRE_VER}.zip
         unzip -d ${BUILD}/ ${BUILD}/${PCRE_VER}.zip "${PCRE_VER}/testdata/*"
         mkdir -p ${BUILD}/test/retest
         # the regexps skipped here take too long to compile in CI at the moment
