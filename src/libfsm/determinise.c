@@ -24,7 +24,6 @@ fsm_determinise(struct fsm *nfa)
 	struct mappingstack *stack = NULL;
 
 	struct interned_state_set_pool *issp = NULL;
-	struct interned_state_set *empty = NULL;
 	struct map map = { NULL, 0, 0, NULL };
 	struct mapping *curr = NULL;
 	size_t dfacount = 0;
@@ -56,12 +55,10 @@ fsm_determinise(struct fsm *nfa)
 		return 0;
 	}
 
-	empty = interned_state_set_empty(issp);
-	assert(empty != NULL);	/* cannot fail */
-
 	{
 		fsm_state_t start;
-		struct interned_state_set *start_set;
+		interned_state_set_id start_set;
+		interned_state_set_id empty = interned_state_set_empty(issp);
 
 		/*
 		 * The starting condition is the epsilon closure of a set of states
@@ -85,8 +82,7 @@ fsm_determinise(struct fsm *nfa)
 #if LOG_DETERMINISE_CAPTURES
 		fprintf(stderr, "#### Adding mapping for start state %u -> 0\n", start);
 #endif
-		start_set = interned_state_set_add(issp, empty, start);
-		if (start_set == NULL) {
+		if (!interned_state_set_add(issp, &empty, start, &start_set)) {
 			goto cleanup;
 		}
 
@@ -130,7 +126,7 @@ fsm_determinise(struct fsm *nfa)
 		for (o_i = 0; o_i < ac_env.output_count; o_i++) {
 			struct mapping *m;
 			struct ac_output *output = &ac_env.outputs[o_i];
-			struct interned_state_set *iss = output->iss;
+			interned_state_set_id iss = output->iss;
 
 #if LOG_DETERMINISE_CLOSURES
 			fprintf(stderr, "fsm_determinise: cur (dfa %zu) label [", curr->dfastate);
@@ -231,6 +227,7 @@ fsm_determinise(struct fsm *nfa)
 
 		for (m = map_first(&map, &it); m != NULL; m = map_next(&it)) {
 			struct state_set *ss;
+			interned_state_set_id iss_id = m->iss;
 			assert(m->dfastate < dfa->statecount);
 			assert(dfa->states[m->dfastate].edges == NULL);
 
@@ -241,9 +238,9 @@ fsm_determinise(struct fsm *nfa)
 			 * states are end states.
 			 */
 
-			ss = interned_state_set_retain(issp, m->iss);
+			ss = interned_state_set_retain(issp, iss_id);
 			if (!state_set_has(nfa, ss, fsm_isend)) {
-				interned_state_set_release(issp, m->iss);
+				interned_state_set_release(issp, &iss_id);
 				continue;
 			}
 
@@ -259,7 +256,7 @@ fsm_determinise(struct fsm *nfa)
 			if (!fsm_endid_carry(nfa, ss, dfa, m->dfastate)) {
 				goto cleanup;
 			}
-			interned_state_set_release(issp, m->iss);
+			interned_state_set_release(issp, &iss_id);
 		}
 
 		if (!remap_capture_actions(&map, issp, dfa, nfa)) {
@@ -373,9 +370,9 @@ det_copy_capture_actions(struct reverse_mapping *reverse_mappings,
 
 SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static unsigned long
-hash_iss(const struct interned_state_set *iss)
+hash_iss(interned_state_set_id iss)
 {
-	/* Just hashing the address directly is fine here -- since they're
+	/* Just hashing the ID directly is fine here -- since they're
 	 * interned, they're identified by pointer equality. */
 	return PHI32 * (uintptr_t)iss;
 }
@@ -406,7 +403,7 @@ map_next(struct map_iter *iter)
 
 static int
 map_add(struct map *map,
-	fsm_state_t dfastate, struct interned_state_set *iss, struct mapping **new_mapping)
+	fsm_state_t dfastate, interned_state_set_id iss, struct mapping **new_mapping)
 {
 	size_t i;
 	unsigned long h, mask;
@@ -499,7 +496,7 @@ grow_map(struct map *map)
 }
 
 static int
-map_find(const struct map *map, struct interned_state_set *iss,
+map_find(const struct map *map, interned_state_set_id iss,
 	struct mapping **mapping)
 {
 	size_t i;
@@ -651,8 +648,9 @@ remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
 	 * of the new DFA state Y, then add Y to a list for X */
 	for (m = map_first(map, &it); m != NULL; m = map_next(&it)) {
 		struct state_set *ss;
+		interned_state_set_id iss_id = m->iss;
 		assert(m->dfastate < dst_dfa->statecount);
-		ss = interned_state_set_retain(issp, m->iss);
+		ss = interned_state_set_retain(issp, iss_id);
 
 		for (state_set_reset(ss, &si); state_set_next(&si, &state); ) {
 			if (!add_reverse_mapping(dst_dfa->opt->alloc,
@@ -661,7 +659,7 @@ remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
 				goto cleanup;
 			}
 		}
-		interned_state_set_release(issp, m->iss);
+		interned_state_set_release(issp, &iss_id);
 	}
 
 #if LOG_DETERMINISE_CAPTURES
@@ -797,11 +795,15 @@ clear_group_labels(struct ac_group *g, const uint64_t *b)
 
 static int
 analyze_closures_for_iss(struct analyze_closures_env *env,
-    struct interned_state_set *curr_iss)
+    interned_state_set_id cur_iss)
 {
 	int res = 0;
 
-	struct state_set *ss = interned_state_set_retain(env->issp, curr_iss);
+	/* Save the ID in a local variable, because release
+	 * below needs to overwrite the reference. */
+	interned_state_set_id iss_id = cur_iss;
+
+	struct state_set *ss = interned_state_set_retain(env->issp, iss_id);
 	const size_t set_count = state_set_count(ss);
 
 	INIT_TIMERS();
@@ -852,7 +854,7 @@ analyze_closures_for_iss(struct analyze_closures_env *env,
 	res = 1;
 
 cleanup:
-	interned_state_set_release(env->issp, curr_iss);
+	interned_state_set_release(env->issp, &iss_id);
 	if (env->pq != NULL) {
 		ipriq_free(env->pq);
 		env->pq = NULL;
@@ -1236,17 +1238,16 @@ analyze_closures__analyze(struct analyze_closures_env *env)
 		}
 
 		{		/* build the state set and add to the output */
-			struct interned_state_set *iss = interned_state_set_empty(env->issp);
+			interned_state_set_id iss = interned_state_set_empty(env->issp);
 			size_t d_i;
 			for (d_i = 0; d_i < dst_count; d_i++) {
-				struct interned_state_set *updated;
+				interned_state_set_id updated;
 #if LOG_AC
 				fprintf(stderr, "ac_analyze: adding state %d to interned_state_set\n", env->dst[d_i]);
 #endif
 
-				updated = interned_state_set_add(env->issp,
-				    iss, env->dst[d_i]);
-				if (updated == NULL) {
+				if (!interned_state_set_add(env->issp,
+					&iss, env->dst[d_i], &updated)) {
 					return 0;
 				}
 				iss = updated;
@@ -1274,7 +1275,7 @@ analyze_closures__analyze(struct analyze_closures_env *env)
 
 static int
 analyze_closures__save_output(struct analyze_closures_env *env,
-    const uint64_t labels[256/4], struct interned_state_set *iss)
+    const uint64_t labels[256/4], interned_state_set_id iss)
 {
 	if (env->output_count + 1 >= env->output_ceil) {
 		if (!analyze_closures__grow_outputs(env)) {
