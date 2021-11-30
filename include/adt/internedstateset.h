@@ -38,7 +38,9 @@ interned_state_set_empty(struct interned_state_set_pool *pool);
  * Returns an opaque set instance, or NULL on alloc failure.
  *
  * If an existing state set is recreated, the existing one will
- * be reused. */
+ * be reused.
+ *
+ * TODO: Update this interface to explicitly consume the reference. */
 struct interned_state_set *
 interned_state_set_add(struct interned_state_set_pool *pool,
     struct interned_state_set *set, fsm_state_t state);
@@ -50,7 +52,8 @@ interned_state_set_add(struct interned_state_set_pool *pool,
  * to the state_set outside the pool, so freeing the pool will no
  * longer free the state_set. */
 struct state_set *
-interned_state_set_retain(struct interned_state_set *set);
+interned_state_set_retain(struct interned_state_set_pool *pool,
+    struct interned_state_set *set);
 
 /* Inform the pool that the reference to the state_set outside
  * the pool is no longer being used. If there are no longer any
@@ -59,6 +62,7 @@ interned_state_set_retain(struct interned_state_set *set);
  * This is mostly useful if debugging code grabs a reference to
  * the state_set to print it or something, then lets go of it. */
 void
-interned_state_set_release(struct interned_state_set *set);
+interned_state_set_release(struct interned_state_set_pool *pool,
+    struct interned_state_set *set);
 
 #endif

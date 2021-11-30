@@ -241,9 +241,9 @@ fsm_determinise(struct fsm *nfa)
 			 * states are end states.
 			 */
 
-			ss = interned_state_set_retain(m->iss);
+			ss = interned_state_set_retain(issp, m->iss);
 			if (!state_set_has(nfa, ss, fsm_isend)) {
-				interned_state_set_release(m->iss);
+				interned_state_set_release(issp, m->iss);
 				continue;
 			}
 
@@ -259,10 +259,10 @@ fsm_determinise(struct fsm *nfa)
 			if (!fsm_endid_carry(nfa, ss, dfa, m->dfastate)) {
 				goto cleanup;
 			}
-			interned_state_set_release(m->iss);
+			interned_state_set_release(issp, m->iss);
 		}
 
-		if (!remap_capture_actions(&map, dfa, nfa)) {
+		if (!remap_capture_actions(&map, issp, dfa, nfa)) {
 			goto cleanup;
 		}
 
@@ -618,7 +618,7 @@ stack_pop(struct mappingstack *stack)
 }
 
 static int
-remap_capture_actions(struct map *map,
+remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
     struct fsm *dst_dfa, struct fsm *src_nfa)
 {
 	struct map_iter it;
@@ -652,7 +652,7 @@ remap_capture_actions(struct map *map,
 	for (m = map_first(map, &it); m != NULL; m = map_next(&it)) {
 		struct state_set *ss;
 		assert(m->dfastate < dst_dfa->statecount);
-		ss = interned_state_set_retain(m->iss);
+		ss = interned_state_set_retain(issp, m->iss);
 
 		for (state_set_reset(ss, &si); state_set_next(&si, &state); ) {
 			if (!add_reverse_mapping(dst_dfa->opt->alloc,
@@ -661,7 +661,7 @@ remap_capture_actions(struct map *map,
 				goto cleanup;
 			}
 		}
-		interned_state_set_release(m->iss);
+		interned_state_set_release(issp, m->iss);
 	}
 
 #if LOG_DETERMINISE_CAPTURES
@@ -801,7 +801,7 @@ analyze_closures_for_iss(struct analyze_closures_env *env,
 {
 	int res = 0;
 
-	struct state_set *ss = interned_state_set_retain(curr_iss);
+	struct state_set *ss = interned_state_set_retain(env->issp, curr_iss);
 	const size_t set_count = state_set_count(ss);
 
 	INIT_TIMERS();
@@ -852,7 +852,7 @@ analyze_closures_for_iss(struct analyze_closures_env *env,
 	res = 1;
 
 cleanup:
-	interned_state_set_release(curr_iss);
+	interned_state_set_release(env->issp, curr_iss);
 	if (env->pq != NULL) {
 		ipriq_free(env->pq);
 		env->pq = NULL;

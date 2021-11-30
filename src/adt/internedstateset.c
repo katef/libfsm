@@ -431,9 +431,11 @@ grow_kid_cache(const struct fsm_alloc *a, struct interned_state_set *set)
 }
 
 struct state_set *
-interned_state_set_retain(struct interned_state_set *set)
+interned_state_set_retain(struct interned_state_set_pool *pool,
+    struct interned_state_set *set)
 {
 	struct state_set *res;
+	(void)pool;
 	assert(set != NULL);
 	assert(set->refcount >= 1); /* pool has a reference */
 	set->refcount++;
@@ -442,8 +444,10 @@ interned_state_set_retain(struct interned_state_set *set)
 }
 
 void
-interned_state_set_release(struct interned_state_set *set)
+interned_state_set_release(struct interned_state_set_pool *pool,
+    struct interned_state_set *set)
 {
+	(void)pool;
 	assert(set != NULL);
 	assert(set->refcount > 1); /* pool still has a reference */
 	set->refcount--;

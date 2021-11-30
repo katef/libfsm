@@ -207,7 +207,7 @@ static int
 grow_map(struct map *map);
 
 static int
-remap_capture_actions(struct map *map,
+remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
 	struct fsm *dst_dfa, struct fsm *src_nfa);
 
 static struct mappingstack *
