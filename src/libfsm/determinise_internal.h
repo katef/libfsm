@@ -34,8 +34,6 @@
 #include <fsm/print.h>
 #endif
 
-#define USE_CONFLUENT_ISS 1
-
 /* Starting number of buckets for the map's
  * hash table. Must be a power of 2. */
 #define DEF_MAP_BUCKET_CEIL 4

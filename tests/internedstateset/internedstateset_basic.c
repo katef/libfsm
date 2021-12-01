@@ -12,8 +12,6 @@
 
 #include <adt/internedstateset.h>
 
-#define USE_CONFLUENT_ISS 1
-
 static void
 reverse(size_t length, fsm_state_t *states)
 {
@@ -127,9 +125,7 @@ int main(void) {
 
 	/* Check that they match. */
 	assert(set_up == set_up2);
-#if USE_CONFLUENT_ISS
 	interned_state_set_release(issp, &set_up2);
-#endif
 
 	/* Create state sets [], [limit-1], [limit-2, limit-1], ... */
 	reverse(limit, states);
@@ -144,10 +140,8 @@ int main(void) {
 
 	/* These should also be equal. */
 	assert(set_down2 == set_down);
-#if USE_CONFLUENT_ISS
 	interned_state_set_release(issp, &set_down);
 	interned_state_set_release(issp, &set_down2);
-#endif
 
 	/* Repeatedly shuffle with different seeds and compare */
 	for (i = 0; i < shuffle_cycles; i++) {
@@ -155,9 +149,7 @@ int main(void) {
 		fisher_yates_shuffle(limit, states, i);
 		shuffled = add_states_from_array(issp, limit, states, verbosity);
 		assert(shuffled == set_up);
-#if USE_CONFLUENT_ISS
 		interned_state_set_release(issp, &shuffled);
-#endif
 	}
 
 	/* This should be able to handle duplicated values, so write [0..n]
@@ -170,11 +162,8 @@ int main(void) {
 
 	assert(doubled == set_up);
 
-
-#if USE_CONFLUENT_ISS
 	interned_state_set_release(issp, &doubled);
 	interned_state_set_release(issp, &set_up);
-#endif
 
 	interned_state_set_pool_free(issp);
 	free(states);
