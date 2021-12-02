@@ -699,6 +699,25 @@ intern_treap_node(struct interned_state_set_pool *pool,
 			if (first_tombstone_pos != NO_FIRST_TOMBSTONE_POS) {
 				assert(pool->cache.used_tombstones > 0);
 				pool->cache.used_tombstones--;
+
+				/* Also clear any consecutive run of tombstones immediately
+				 * before the empty bucket. They aren't doing anything
+				 * besides slowing down hash table operations and
+				 * possibly triggering extra hash table resizing. */
+				uint64_t pos = b;
+				for (;;) {
+					if (pos == 0) {
+						pos = pool->cache.count; /* wrap */
+					}
+					pos--;
+					const iss_node_id pos_id = pool->cache.buckets[pos].id;
+					if (pos_id != TOMBSTONE_ID) {
+						break;
+					}
+					pool->cache.buckets[pos].id = NO_ID;
+					assert(pool->cache.used_tombstones > 0);
+					pool->cache.used_tombstones--;
+				}
 			}
 
 			/* Now that we know we're keeping this node,
