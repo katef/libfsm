@@ -756,7 +756,7 @@ intern_treap_node(struct interned_state_set_pool *pool,
 			return true;
 		}
 
-		struct iss_node *b_iss = get_iss_node(pool, b_id);
+		const struct iss_node *b_iss = get_iss_node(pool, b_id);
 #if LOG_INTERNEDSTATESET > 1
 			fprintf(stderr, "%s: b_id %d => state: %d, l: %d, r: %d\n",
 			    __func__, b_id, b_iss->state, b_iss->l, b_iss->r);
