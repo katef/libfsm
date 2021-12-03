@@ -675,7 +675,7 @@ intern_treap_node(struct interned_state_set_pool *pool,
 				return false;
 			}
 			iss.id = new_id;
-			memcpy(&pool->pool[new_id], &iss, sizeof(iss));
+			pool->pool[new_id] = iss;
 
 			/* Optionally replace a tombstone encountered along the way,
 			 * but only once we've confirmed the node we're looking for
