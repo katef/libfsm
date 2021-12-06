@@ -105,6 +105,10 @@ STAGE_BUILD := ${STAGE_BUILD:Nbin/cvtpcre}
 .include <install.mk>
 .include <clean.mk>
 
+.if ${SYSTEM} == Darwin
+LDSFLAGS += -lSystem -L$(xcode-select -p)/SDKs/MacOSX.sdk/usr/lib
+.endif
+
 .if make(test)
 .END::
 	grep FAIL ${BUILD}/tests/*/res*; [ $$? -ne 0 ]
