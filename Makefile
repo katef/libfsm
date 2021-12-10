@@ -106,7 +106,7 @@ STAGE_BUILD := ${STAGE_BUILD:Nbin/cvtpcre}
 .include <clean.mk>
 
 .if ${SYSTEM} == Darwin
-LDSFLAGS += -lSystem -L$(xcode-select -p)/SDKs/MacOSX.sdk/usr/lib
+LDSFLAGS += -lSystem -L$(xcrun xcode-select --print-path)/SDKs/MacOSX.sdk/usr/lib
 .endif
 
 .if make(test)
