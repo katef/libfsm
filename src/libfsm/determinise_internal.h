@@ -56,7 +56,7 @@ struct map {
 	/* These are allocated on demand, because they're pushed onto the
 	 * stack by address, and *edges is used by address. */
 	struct mapping {
-		struct interned_state_set *iss;
+		interned_state_set_id iss;
 		size_t dfastate;
 		struct edge_set *edges;
 	} **buckets;
@@ -130,7 +130,7 @@ struct analyze_closures_env {
 	size_t output_count;
 	struct ac_output {
 		uint64_t labels[256/64];
-		struct interned_state_set *iss;
+		interned_state_set_id iss;
 	} *outputs;
 
 	size_t dst_ceil;
@@ -139,7 +139,7 @@ struct analyze_closures_env {
 
 static int
 analyze_closures_for_iss(struct analyze_closures_env *env,
-	struct interned_state_set *curr_iss);
+	interned_state_set_id curr_iss);
 
 static int
 analyze_closures__init_iterators(struct analyze_closures_env *env,
@@ -162,7 +162,7 @@ analyze_closures__analyze(struct analyze_closures_env *env);
 
 static int
 analyze_closures__save_output(struct analyze_closures_env *env,
-    const uint64_t labels[256/4], struct interned_state_set *iss);
+    const uint64_t labels[256/4], interned_state_set_id iss);
 
 static int
 analyze_closures__grow_iters(struct analyze_closures_env *env,
@@ -179,10 +179,10 @@ analyze_closures__grow_outputs(struct analyze_closures_env *env);
 
 static int
 map_add(struct map *map,
-	fsm_state_t dfastate, struct interned_state_set *iss, struct mapping **new_mapping);
+	fsm_state_t dfastate, interned_state_set_id iss, struct mapping **new_mapping);
 
 static int
-map_find(const struct map *map, struct interned_state_set *iss,
+map_find(const struct map *map, interned_state_set_id iss,
 	struct mapping **mapping);
 
 static void
@@ -207,7 +207,7 @@ static int
 grow_map(struct map *map);
 
 static int
-remap_capture_actions(struct map *map,
+remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
 	struct fsm *dst_dfa, struct fsm *src_nfa);
 
 static struct mappingstack *
