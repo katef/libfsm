@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         san: [ ASAN, UBSAN, MSAN, EFENCE ]
-        os: [ ubuntu, macos ]
+        os: [ ubuntu ]
         cc: [ clang, gcc ]
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
         exclude:
