@@ -19,8 +19,15 @@
 #include "ast_analysis.h"
 #include "ast_compile.h"
 
-#if !defined(__GNUC__) && !defined(__clang__)
-#error __builtin_umul_overflow required
+#if defined(__GNUC__) || defined(__clang__)
+#define mul_overflow __builtin_umul_overflow
+#else
+static int
+mul_overflow(unsigned x, unsigned y, unsigned *res)
+{
+	*res = x * y;
+	return y != 0 && x != *res / y;
+}
 #endif
 
 static int
@@ -399,12 +406,12 @@ rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags f
 		assert(j != AST_COUNT_UNBOUNDED);
 
 		/* Bail out (i.e. with no rewriting) on overflow */
-		if (__builtin_umul_overflow(h, j, &v)) {
+		if (mul_overflow(h, j, &v)) {
 			return 1;
 		}
 		if (i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED) {
 			w = AST_COUNT_UNBOUNDED;
-		} else if (__builtin_umul_overflow(i, k, &w)) {
+		} else if (mul_overflow(i, k, &w)) {
 			return 1;
 		}
 

@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         san: [ ASAN, UBSAN, MSAN, EFENCE ]
-        os: [ ubuntu, macos ]
+        os: [ ubuntu ]
         cc: [ clang, gcc ]
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
         exclude:
@@ -61,10 +61,10 @@ jobs:
 
     - name: fetch pcre test suite
       env:
-        PCRE_VER: pcre2-10.36
+        PCRE_VER: pcre2-10.39
         BUILD: ./build
       run: |
-        wget -nv -P ${BUILD}/ https://ftp.pcre.org/pub/pcre/${PCRE_VER}.zip
+        wget -nv -P ${BUILD}/ https://github.com/PhilipHazel/pcre2/releases/download/${PCRE_VER}/${PCRE_VER}.zip
         unzip -d ${BUILD}/ ${BUILD}/${PCRE_VER}.zip "${PCRE_VER}/testdata/*"
         mkdir -p ${BUILD}/test/retest
         # the regexps skipped here take too long to compile in CI at the moment
