@@ -4,7 +4,44 @@
  * See LICENCE for the full copyright terms.
  */
 
-#include "endids_internal.h"
+#include <stdlib.h>
+#include <stdint.h>
+
+#include <fsm/alloc.h>
+#include <fsm/capture.h>
+#include <fsm/fsm.h>
+#include <fsm/pred.h>
+
+#include <adt/hash.h>
+#include <adt/stateset.h>
+
+#include <string.h>
+#include <assert.h>
+#include <errno.h>
+
+#include "internal.h"
+#include "endids.h"
+
+#define BUCKET_NO_STATE ((fsm_state_t)-1)
+#define DEF_BUCKET_COUNT 4
+#define DEF_BUCKET_ID_COUNT 16
+
+struct endid_info {
+	/* Add-only hash table, with a state ID and an associated
+	 * non-empty ordered array of unique end IDs. The state is the
+	 * key. Grows when the buckets are more than half full. */
+	unsigned bucket_count;
+	unsigned buckets_used;
+
+	struct endid_info_bucket {
+		fsm_state_t state;
+		struct end_info_ids {
+			unsigned count;
+			unsigned ceil;
+			fsm_end_id_t ids[1];
+		} *ids;
+	} *buckets;
+};
 
 #define LOG_ENDIDS 0
 
@@ -126,7 +163,7 @@ fsm_endid_free(struct fsm *fsm)
 	f_free(fsm->opt->alloc, fsm->endid_info);
 }
 
-static unsigned long
+static uint64_t
 hash_state(fsm_state_t state)
 {
 	return fsm_hash_id(state);
@@ -164,7 +201,7 @@ grow_endid_buckets(const struct fsm_alloc *alloc, struct endid_info *info)
 	for (old_i = 0; old_i < old_count; old_i++) {
 		struct endid_info_bucket *src_b = &old_buckets[old_i];
 		struct endid_info_bucket *dst_b;
-		unsigned hash;
+		uint64_t hash;
 		int copied = 0;
 		if (src_b->state == BUCKET_NO_STATE) {
 			continue;
@@ -196,9 +233,9 @@ fsm_endid_set(struct fsm *fsm,
 {
 	struct endid_info *ei = NULL;
 	int has_grown = 0;
-	unsigned hash;
+	uint64_t hash;
 	size_t i;
-	unsigned mask;
+	uint64_t mask;
 
 	assert(fsm != NULL);
 	ei = fsm->endid_info;
@@ -335,8 +372,8 @@ fsm_endid_count(const struct fsm *fsm,
 	const struct endid_info *ei = NULL;
 	size_t i;
 
-	unsigned hash = hash_state(state);
-	unsigned mask;
+	uint64_t hash = hash_state(state);
+	uint64_t mask;
 
 	assert(fsm != NULL);
 	ei = fsm->endid_info;
@@ -371,8 +408,8 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 	size_t written = 0;
 	const struct endid_info *ei = NULL;
 
-	unsigned hash = hash_state(end_state);
-	unsigned mask;
+	uint64_t hash = hash_state(end_state);
+	uint64_t mask;
 
 	(void)written;
 
@@ -561,8 +598,8 @@ fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
 	size_t bucket_count;
 	struct endid_info *ei = NULL;
 
-	unsigned hash;
-	unsigned mask;
+	uint64_t hash;
+	uint64_t mask;
 
 	assert(fsm != NULL);
 	assert(cb != NULL);

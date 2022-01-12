@@ -56,6 +56,7 @@ SUBDIR += tests/eclosure
 SUBDIR += tests/subtract
 SUBDIR += tests/determinise
 SUBDIR += tests/epsilons
+SUBDIR += tests/gen
 SUBDIR += tests/glob
 SUBDIR += tests/like
 SUBDIR += tests/literal

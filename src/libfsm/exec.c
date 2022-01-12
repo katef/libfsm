@@ -74,9 +74,11 @@ fsm_exec(const struct fsm *fsm,
 		return -1;
 	}
 
-	for (i = 0; i < capture_count; i++) {
-		captures[i].pos[0] = FSM_CAPTURE_NO_POS;
-		captures[i].pos[1] = FSM_CAPTURE_NO_POS;
+	if (captures != NULL) {
+		for (i = 0; i < capture_count; i++) {
+			captures[i].pos[0] = FSM_CAPTURE_NO_POS;
+			captures[i].pos[1] = FSM_CAPTURE_NO_POS;
+		}
 	}
 
 #if LOG_EXEC
