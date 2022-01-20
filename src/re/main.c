@@ -663,9 +663,10 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:F:" "upMmnfxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aCcwXe:k:" "bi" "sq:r:l:F:" "upMmnfxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
+			case 'C': opt.comments		= 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
 			case 'w': opt.fragment          = 1;          break;
 			case 'X': opt.always_hex        = 1;          break;
