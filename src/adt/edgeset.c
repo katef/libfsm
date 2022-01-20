@@ -545,6 +545,7 @@ edge_set_compact(struct edge_set **setp, const struct fsm_alloc *alloc,
 	size_t i;
 
 	assert(setp != NULL);
+	(void)alloc;
 
 	if (IS_SINGLETON(*setp)) {
 		const unsigned char symbol = SINGLETON_DECODE_SYMBOL(*setp);
