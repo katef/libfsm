@@ -101,6 +101,13 @@ int
 edge_set_find(const struct edge_set *set, unsigned char symbol,
 	struct fsm_edge *e);
 
+/* Check whether an edge_set has an edge with a particular label. Return
+ * 0 for not found, otherwise set *to_state, and note any other labels
+ * in labels[] that lead to the same state, then return 1. */
+int
+edge_set_check_edges(const struct edge_set *set, unsigned char label,
+    fsm_state_t *to_state, uint64_t labels[256/64]);
+
 int
 edge_set_contains(const struct edge_set *set, unsigned char symbol);
 
