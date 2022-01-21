@@ -36,6 +36,7 @@ struct min_env {
 	 * where either X is ID or following the linked list in
 	 * env.jump[X] eventually leads to ID. Ordering within the
 	 * list does not matter. */
+	size_t ec_map_count;
 	fsm_state_t *state_ecs;
 	fsm_state_t *ecs;
 	fsm_state_t *jump;
@@ -140,13 +141,12 @@ init_label_iterator(const struct min_env *env,
 	fsm_state_t ec_i, int special_handling,
 	struct min_label_iterator *li);
 
-static fsm_state_t
-find_edge_destination(const struct fsm *fsm,
-    fsm_state_t id, unsigned char label);
-
 static int
 try_partition(struct min_env *env, unsigned char label,
     fsm_state_t ec_src, fsm_state_t ec_dst,
-    size_t partition_counts[2]);
+    size_t partition_counts[2], uint64_t checked_labels[256/64]);
+
+static int
+label_sets_match(const uint64_t a[256/64], const uint64_t b[256/64]);
 
 #endif

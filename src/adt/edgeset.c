@@ -1225,6 +1225,42 @@ edge_set_find(const struct edge_set *set, unsigned char symbol,
 }
 
 int
+edge_set_check_edges(const struct edge_set *set, unsigned char label,
+    fsm_state_t *to_state, uint64_t labels[256/64])
+{
+	size_t i;
+	if (set == NULL) {
+		return 0;
+	}
+
+#if LOG_BITSET
+	fprintf(stderr, " -- edge_set_check_edges: symbol 0x%x on %p\n",
+	    label, (void *)set);
+#endif
+
+	memset(labels, 0x00, (256/64)*sizeof(labels[0]));
+
+	/* Find the state the label leads to, if any. */
+	const size_t offset = label/64;
+	const uint64_t bit = (uint64_t)1 << (label & 63);
+
+	for (i = 0; i < set->count; i++) {
+		const struct edge_group *eg = &set->groups[i];
+		if (eg->symbols[offset] & bit) {
+			*to_state = eg->to;
+
+			/* Note other labels to the same state. */
+			for (size_t w_i = 0; w_i < 4; w_i++) {
+				labels[w_i] |= eg->symbols[w_i];
+			}
+			return 1;
+		}
+	}
+
+	return 0;	/* not found */
+}
+
+int
 edge_set_contains(const struct edge_set *set, unsigned char symbol)
 {
 	const struct edge_group *eg;

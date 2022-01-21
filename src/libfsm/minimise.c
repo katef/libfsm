@@ -209,6 +209,8 @@ build_minimised_mapping(const struct fsm *fsm,
 	/* Alloc for each state, plus the dead state. */
 	size_t alloc_size = (fsm->statecount + 1) * sizeof(env.state_ecs[0]);
 
+	INIT_TIMERS();
+
 	env.fsm = fsm;
 	env.dead_state = fsm->statecount;
 	env.iter = 0;
@@ -223,6 +225,7 @@ build_minimised_mapping(const struct fsm *fsm,
 
 	env.state_ecs = f_malloc(fsm->opt->alloc, alloc_size);
 	if (env.state_ecs == NULL) { goto cleanup; }
+	env.ec_map_count = fsm->statecount + 1;
 
 	env.jump = f_malloc(fsm->opt->alloc, alloc_size);
 	if (env.jump == NULL) { goto cleanup; }
@@ -245,6 +248,7 @@ build_minimised_mapping(const struct fsm *fsm,
 	}
 #endif
 
+	TIME(&pre);
 	do {		/* repeat until no further progress can be made */
 		size_t l_i, ec_i;
 		changed = 0;
@@ -268,6 +272,7 @@ build_minimised_mapping(const struct fsm *fsm,
 				}
 			}
 
+			uint64_t checked_labels[4] = {0};
 			init_label_iterator(&env, ec_i,
 			    should_gather_EC_labels, &li);
 
@@ -284,9 +289,15 @@ build_minimised_mapping(const struct fsm *fsm,
 				    ? li.labels[l_i]
 				    : env.dfa_labels[l_i]);
 
+				/* This label has already been checked as part of
+				 * another edge group, so we can safely skip it. */
+				if (u64bitset_get(checked_labels, label)) {
+					continue;
+				}
+
 				env.steps++;
 				if (try_partition(&env, label,
-					ec_src, ec_dst, pcounts)) {
+					ec_src, ec_dst, pcounts, checked_labels)) {
 					int should_restart_EC;
 #if LOG_PARTITIONS > 0
 					fprintf(stderr, "# partition: ec_i %lu/%u/%u, l_i %lu/%u%s, pcounts [ %lu, %lu ]\n",
@@ -315,6 +326,8 @@ build_minimised_mapping(const struct fsm *fsm,
 
 		env.iter++;
 	} while (changed);
+	TIME(&post);
+	DIFF_MSEC("build_minimised_mapping__mainloop", pre, post, NULL);
 
 	/* When all of the original input states are final, then the
 	 * initial not-final EC will be empty. Skip it in the mapping,
@@ -378,6 +391,33 @@ dump_ecs(FILE *f, const struct min_env *env)
 	(void)env;
 #endif
 }
+
+#if EXPENSIVE_INTEGRITY_CHECKS
+static void
+check_descending_EC_counts(const struct min_env *env)
+{
+	size_t i, count, prev_count;
+	fsm_state_t s = env->ecs[0];
+
+	count = 0;
+	while (s != NO_ID) {
+		count++;
+		s = env->jump[s];
+	}
+	prev_count = count;
+
+	for (i = 1; i < env->ec_count; i++) {
+		s = env->ecs[i];
+		count = 0;
+		while (s != NO_ID) {
+			count++;
+			s = env->jump[s];
+		}
+		assert(count <= prev_count);
+		prev_count = count;
+	}
+}
+#endif
 
 #define PARTITION_BY_END_STATE_DISTANCE 1
 #if PARTITION_BY_END_STATE_DISTANCE
@@ -617,6 +657,11 @@ populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
 
 	/* The dead state is not a member of any EC. */
 	env->state_ecs[env->dead_state] = NO_ID;
+
+#if EXPENSIVE_INTEGRITY_CHECKS
+	check_descending_EC_counts(env);
+#endif
+
 	res = 1;
 
 cleanup:
@@ -807,27 +852,17 @@ init_label_iterator(const struct min_env *env,
 	}
 }
 
-static fsm_state_t
-find_edge_destination(const struct fsm *fsm,
-    fsm_state_t id, unsigned char label)
-{
-	struct fsm_edge e;
-
-	assert(id < fsm->statecount);
-	if (edge_set_find(fsm->states[id].edges, label, &e)) {
-		return e.state;
-	}
-
-	return fsm->statecount;	/* dead state */
-}
-
 static int
 try_partition(struct min_env *env, unsigned char label,
     fsm_state_t ec_src, fsm_state_t ec_dst,
-	size_t partition_counts[2])
+    size_t partition_counts[2], uint64_t checked_labels[256/64])
 {
 	fsm_state_t cur = MASK_EC_HEAD(env->ecs[ec_src]);
-	fsm_state_t to, to_ec, first_ec, prev;
+	fsm_state_t prev, first_dst_state;
+	unsigned to_ec, first_ec;
+
+	const unsigned dead_state_ec = env->state_ecs[env->dead_state];
+	const struct fsm_state *states = env->fsm->states;
 
 #if EXPENSIVE_INTEGRITY_CHECKS
 	/* Count states here, to compare against the partitioned
@@ -846,18 +881,31 @@ try_partition(struct min_env *env, unsigned char label,
 	fprintf(stderr, "# --- try_partition: checking '%c' for %u\n", label, ec_src);
 #endif
 
-	/* There must be at least two states in this EC.
-	 * See where the current label leads on the first state.
-	 * Any states which has an edge to a different EC for
-	 * that label will be split into a new EC.
-	 *
-	 * Note that the ec_src EC is updated in place -- because this
-	 * is successively trying different labels on the same EC, it
-	 * can often do several partitions and make more progress in a
-	 * single pass, avoiding most of the theoretical overhead of the
-	 * fixpoint approach. */
-	to = find_edge_destination(env->fsm, cur, label);
-	first_ec = env->state_ecs[to];
+	uint64_t first_dst_label_set[256/64];
+
+	/* Use the edge_set's label grouping to check a
+	 * set of labels at once, and note which labels
+	 * have already been checked. */
+	if (edge_set_check_edges(states[cur].edges, label,
+		&first_dst_state, first_dst_label_set)) {
+
+		assert(first_dst_state < env->ec_map_count);
+		first_ec = env->state_ecs[first_dst_state];
+
+		/* Note that all of these labels are being checked at once
+		 * in this step, so they can be skipped in the caller's loop. */
+		for (size_t w_i = 0; w_i < 256/64; w_i++) {
+			checked_labels[w_i] |= first_dst_label_set[w_i];
+		}
+	} else {
+		/* not found: set to the EC for the dead state */
+		first_dst_state = env->dead_state;
+		first_ec = dead_state_ec;
+	}
+#if LOG_PARTITIONS > 1
+		fprintf(stderr, "# --- try_partition: label '%c' -> EC %d\n", label, first_ec);
+#endif
+
 	partition_counts[0] = 1;
 	prev = cur;
 	cur = env->jump[cur];
@@ -870,13 +918,27 @@ try_partition(struct min_env *env, unsigned char label,
 	env->ecs[ec_dst] = NO_ID;
 
 	while (cur != NO_ID) {
-		to = find_edge_destination(env->fsm, cur, label);
-		to_ec = env->state_ecs[to];
+		uint64_t cur_label_set[256/64];
+		fsm_state_t cur_dst_state;
+
+		if (edge_set_check_edges(states[cur].edges, label,
+			&cur_dst_state, cur_label_set)) {
+			assert(cur_dst_state < env->ec_map_count);
+			to_ec = env->state_ecs[cur_dst_state];
+		} else {
+			/* not found: set to the EC for the dead state */
+			cur_dst_state = env->dead_state;
+			to_ec = dead_state_ec;
+		}
+
 #if LOG_PARTITIONS > 1
-		fprintf(stderr, "# --- try_partition: next, cur %u, has to %d -> to_ec %d\n", cur, to, to_ec);
+		fprintf(stderr, "# --- try_partition: next, cur %u -> to_ec %d\n", cur, to_ec);
 #endif
 
-		if (to_ec == first_ec) { /* in same EC */
+		/* If they're in the same EC and the label sets match, keep it in the
+		 * EC, otherwise unlink and split it into a new EC. */
+		if (to_ec == first_ec
+		    && label_sets_match(first_dst_label_set, cur_label_set)) {
 			partition_counts[0]++;
 			prev = cur;
 			cur = env->jump[cur];
@@ -925,4 +987,15 @@ try_partition(struct min_env *env, unsigned char label,
 #endif
 
 	return partition_counts[1] > 0;
+}
+
+static int
+label_sets_match(const uint64_t a[256/64], const uint64_t b[256/64])
+{
+	for (size_t i = 0; i < 256/64; i++) {
+		if (a[i] != b[i]) {
+			return 0;
+		}
+	}
+	return 1;
 }
