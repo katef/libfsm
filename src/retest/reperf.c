@@ -4,9 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#if __linux__
-/* apparently you need this for Linux, and it breaks macOS */
-#  define _POSIX_C_SOURCE 200809L
+#if !defined(__APPLE__) && !defined(__MACH__)
+#define _POSIX_C_SOURCE 200809L
 #endif
 
 #include <unistd.h>
