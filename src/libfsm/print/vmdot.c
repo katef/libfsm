@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include <print/esc.h>
 
@@ -93,14 +94,14 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	if (opt->endleaf != NULL) {
 		opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque);
 	} else {
-		fprintf(f, "ret %lu", (unsigned long) (op->ir_state - ir->states));
+		fprintf(f, "ret %td", op->ir_state - ir->states);
 	}
 }
 
 static void
 print_branch(FILE *f, const struct dfavm_op_ir *op)
 {
-	fprintf(f, "branch #%lu", (unsigned long) op->u.br.dest_arg->index);
+	fprintf(f, "branch #%" PRIu32, op->u.br.dest_arg->index);
 }
 
 static void
@@ -124,7 +125,7 @@ fsm_print_nodes(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 			fprintf(f, "\n");
 
-			fprintf(f, "\tS%lu [ label=<\n", (unsigned long) op->index);
+			fprintf(f, "\tS%" PRIu32 " [ label=<\n", op->index);
 			fprintf(f, "\t\t<table border='0' cellborder='1' cellpadding='6' cellspacing='0'>\n");
 
 			fprintf(f, "\t\t<tr>\n");
@@ -155,8 +156,8 @@ fsm_print_nodes(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		fprintf(f, "\t\t<tr>\n");
 
-		fprintf(f, "\t\t\t<td align='right' port='i%lu'>", (unsigned long) op->index);
-		fprintf(f, "#%lu", (unsigned long) op->index);
+		fprintf(f, "\t\t\t<td align='right' port='i%" PRIu32 "'>", op->index);
+		fprintf(f, "#%" PRIu32, op->index);
 		fprintf(f, "</td>\n");
 
 		fprintf(f, "\t\t\t<td>");
@@ -222,9 +223,9 @@ fsm_print_edges(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		if (op->num_incoming > 0 || op == a->linked) {
 			if (op != a->linked && can_fallthrough) {
 				fprintf(f, "\t");
-				fprintf(f, "S%lu:s -> S%lu:n [ style = bold ]; /* fallthrough */",
-					(unsigned long) block,
-					(unsigned long) op->index);
+				fprintf(f, "S%lu:s -> S%" PRIu32 ":n [ style = bold ]; /* fallthrough */",
+					block,
+					op->index);
 				fprintf(f, "\n");
 			}
 
@@ -247,24 +248,24 @@ fsm_print_edges(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		 */
 		if (op->u.br.dest_arg->index > block) {
 			/* branch to a later block */
-			fprintf(f, "S%lu:b%lu:e -> S%lu;",
-				(unsigned long) block,
-				(unsigned long) op->index,
-				(unsigned long) op->u.br.dest_arg->index);
+			fprintf(f, "S%lu:b%" PRIu32 ":e -> S%" PRIu32 ";",
+				block,
+				op->index,
+				op->u.br.dest_arg->index);
 		} else if (op->u.br.dest_arg->index < block) {
 			/* branch to an earlier block */
-			fprintf(f, "S%lu:i%lu:w -> S%lu;",
-				(unsigned long) block,
-				(unsigned long) op->index,
-				(unsigned long) op->u.br.dest_arg->index);
+			fprintf(f, "S%lu:i%" PRIu32 ":w -> S%" PRIu32 ";",
+				block,
+				op->index,
+				op->u.br.dest_arg->index);
 		} else {
 			/* relative branch within the same block, entry on the east */
 			/* XXX: would like to make these edges shorter, but I don't know how */
-			fprintf(f, "S%lu:b%lu:e -> S%lu:b%lu:e [ constraint = false ]; /* relative */",
-				(unsigned long) block,
-				(unsigned long) op->index,
-				(unsigned long) block,
-				(unsigned long) op->u.br.dest_arg->index);
+			fprintf(f, "S%lu:b%" PRIu32 ":e -> S%lu:b%" PRIu32 ":e [ constraint = false ]; /* relative */",
+				block,
+				op->index,
+				block,
+				op->u.br.dest_arg->index);
 		}
 
 		fprintf(f, "\n");

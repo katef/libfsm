@@ -144,7 +144,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 				}
 			}
 			if (LOG_TRIM > 0) {
-				fprintf(stderr, "mark_states: ends[%ld] = %d\n",
+				fprintf(stderr, "mark_states: ends[%zu] = %d\n",
 				    end_count, s_id);
 			}
 			ends[end_count] = s_id;
@@ -301,7 +301,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 			}
 
 			if (LOG_TRIM > 1) {
-				fprintf(stderr, "mark_states: offsets[%ld]: %ld\n",
+				fprintf(stderr, "mark_states: offsets[%zu]: %zu\n",
 				    i, offsets[i]);
 			}
 		}
@@ -311,7 +311,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	if (LOG_TRIM > 1) {
 		size_t i;
 		for (i = 0; i < edge_count; i++) {
-		fprintf(stderr, "mark_states: edges[%ld]: %d -> %d\n",
+		fprintf(stderr, "mark_states: edges[%zu]: %d -> %d\n",
 		    i, edges[i].from, edges[i].to);
 		}
 	}
@@ -325,7 +325,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 		limit = offsets[s_id];
 
 		if (LOG_TRIM > 0) {
-			fprintf(stderr, "mark_states: popped %d, offsets [%ld, %ld]\n",
+			fprintf(stderr, "mark_states: popped %d, offsets [%zu, %zu]\n",
 			    s_id, base, limit);
 		}
 
@@ -336,7 +336,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 			assert(from < state_count);
 
 			if (LOG_TRIM > 0) {
-				fprintf(stderr, "mark_states: edges[%ld]: from: %d, visited? %d\n",
+				fprintf(stderr, "mark_states: edges[%zu]: from: %d, visited? %d\n",
 				    e_i, from, fsm->states[from].visited);
 			}
 
@@ -434,7 +434,7 @@ sweep_states(struct fsm *fsm)
 	if (LOG_TRIM > 1) {
 		size_t i;
 		for (i = 0; i < fsm->statecount; i++) {
-			fprintf(stderr, "sweep_states: state[%ld]: visited? %d\n",
+			fprintf(stderr, "sweep_states: state[%zu]: visited? %d\n",
 			    i, fsm->states[i].visited);
 		}
 	}
@@ -468,7 +468,7 @@ integrity_check(const char *descr, const struct fsm *fsm)
 		for (state_set_reset(fsm->states[s_id].epsilons, &state_iter);
 		     state_set_next(&state_iter, &to); ) {
 			if (to >= count) {
-				fprintf(stderr, "FAILURE (state_set): s_id %lu, to %u, count %lu\n", s_id, to, count);
+				fprintf(stderr, "FAILURE (state_set): s_id %zu, to %u, count %zu\n", s_id, to, count);
 				assert(to < count);
 			}
 		}
@@ -477,7 +477,7 @@ integrity_check(const char *descr, const struct fsm *fsm)
 		     edge_set_next(&edge_iter, &e); ) {
 			const fsm_state_t to = e.state;
 			if (to >= count) {
-				fprintf(stderr, "FAILURE (edge_set): s_id %lu, to %u, count %lu\n", s_id, to, count);
+				fprintf(stderr, "FAILURE (edge_set): s_id %zu, to %u, count %zu\n", s_id, to, count);
 				assert(to < count);
 			}
 		}

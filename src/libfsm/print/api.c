@@ -98,20 +98,20 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 		fprintf(f, "{\n");
 	}
 
-	fprintf(f, "\tfsm_state_t s[%lu];\n", (unsigned long) fsm->statecount);
+	fprintf(f, "\tfsm_state_t s[%zu];\n", fsm->statecount);
 	fprintf(f, "\tsize_t i;\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "\tfor (i = 0; i < %lu; i++) {\n", (unsigned long) fsm->statecount);
+	fprintf(f, "\tfor (i = 0; i < %zu; i++) {\n", fsm->statecount);
 
-	fprintf(f, "\t\tif (i == %lu) {\n", (unsigned long) start);
-	fprintf(f, "\t\t\ts[%lu] = x;\n", (unsigned long) start);
+	fprintf(f, "\t\tif (i == %u) {\n", start);
+	fprintf(f, "\t\t\ts[%u] = x;\n", start);
 	fprintf(f, "\t\t\tcontinue;\n");
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "\t\tif (i == %lu) {\n", (unsigned long) end);
-	fprintf(f, "\t\t\ts[%lu] = y;\n", (unsigned long) end);
+	fprintf(f, "\t\tif (i == %u) {\n", end);
+	fprintf(f, "\t\t\ts[%u] = y;\n", end);
 	fprintf(f, "\t\t\tcontinue;\n");
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\n");

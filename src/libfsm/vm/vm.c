@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include <fsm/fsm.h>
 #include <fsm/vm.h>
@@ -146,7 +147,7 @@ print_vm_op(FILE *f, struct dfavm_vm_op *op)
 
 	cmp = cmp_name(op->cmp);
 
-	fprintf(f, "[%4lu] %1lu\t", (unsigned long)op->offset, (unsigned long)op->num_encoded_bytes);
+	fprintf(f, "[%4" PRIu32 "] %1u\t", op->offset, op->num_encoded_bytes);
 
 	switch (op->instr) {
 	case VM_OP_FETCH:
@@ -191,13 +192,13 @@ print_vm_op(FILE *f, struct dfavm_vm_op *op)
 	}
 
 	if (op->instr == VM_OP_BRANCH) {
-		fprintf(f, "%s%ld [dst_ind=%lu]", ((nargs>0) ? ", " : " "),
-			(long)op->u.br.rel_dest, (unsigned long)op->u.br.dest_index);
+		fprintf(f, "%s%ld [dst_ind=%" PRIu32 "]", ((nargs>0) ? ", " : " "),
+			(long)op->u.br.rel_dest, op->u.br.dest_index);
 		nargs++;
 	}
 
-	fprintf(f, "\t; %6lu bytes",
-		(unsigned long)op->num_encoded_bytes);
+	fprintf(f, "\t; %6u bytes",
+		op->num_encoded_bytes);
 	switch (op->instr) {
 	case VM_OP_FETCH:
 		fprintf(f, "  [state %u]", op->u.fetch.state);
@@ -434,7 +435,7 @@ dfavm_compile_vm(const struct dfavm_assembler_ir *a, struct fsm_vm_compile_opts 
 
 #if DEBUG_VM_OPCODES
 	dump_states(stdout, a);
-	fprintf(f, "%6lu total bytes\n", (unsigned long)b.nbytes);
+	fprintf(f, "%6" PRIu32 " total bytes\n", b.nbytes);
 #endif /* DEBUG_VM_OPCODES */
 
 	if (opts.flags & FSM_VM_COMPILE_PRINT_ENC) {

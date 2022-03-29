@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include <print/esc.h>
 
@@ -70,7 +71,7 @@ print_label(FILE *f, const struct dfavm_op_ir *op)
 	if (op->index == START) {
 		fprintf(f, "\"\"");
 	} else {
-		fprintf(f, "%lu", (unsigned long) op->index);
+		fprintf(f, "%" PRIu32, op->index);
 	}
 }
 
@@ -98,7 +99,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	if (opt->endleaf != NULL) {
 		opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque);
 	} else {
-		fprintf(f, "return %lu", (unsigned long) (op->ir_state - ir->states));
+		fprintf(f, "return %td", op->ir_state - ir->states);
 	}
 }
 
