@@ -10,6 +10,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #include <re/re.h>
 
@@ -83,7 +84,7 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 		break;
 
 	case AST_ENDPOINT_CODEPOINT:
-		fprintf(f, "\\x{%lX}", (unsigned long) e->u.codepoint.u);
+		fprintf(f, "\\x{%" PRIX32 "}", e->u.codepoint.u);
 		break;
 
 	default:
@@ -162,7 +163,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 		break;
 
 	case AST_EXPR_CODEPOINT:
-		fprintf(f, "\\x{%lX}", (unsigned long) n->u.codepoint.u);
+		fprintf(f, "\\x{%" PRIX32 "}", n->u.codepoint.u);
 		break;
 
 	case AST_EXPR_REPEAT: {

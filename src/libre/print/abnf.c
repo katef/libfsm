@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include <re/re.h>
 
@@ -159,7 +160,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 
 	case AST_EXPR_CODEPOINT:
 		assert(!"unimplemented");
-		fprintf(f, "%%x\"%lX\"", (unsigned long) n->u.codepoint.u);
+		fprintf(f, "%%x\"%" PRIX32 "\"", n->u.codepoint.u);
 		break;
 
 	case AST_EXPR_REPEAT: {

@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include "vm.h"
 
@@ -136,9 +137,9 @@ encode_opasm_v2(const struct dfavm_vm_op *instr, size_t ninstr)
 			(((uint32_t)cmp_arg)<<16) | dest_arg;
 
 #if DEBUG_ENCODING
-		fprintf(stderr, "enc[%4zu] instr=0x%02x cmp=0x%02x result=0x%02x cmp_arg=0x%02x dest_arg=0x%04x (%d | %u) instr=0x%08lx\n",
-			off, instr_bits, cmp_bits, result_bit, (unsigned)cmp_arg, (unsigned)dest_arg, (int16_t)dest_arg, (unsigned)dest_arg,
-			(unsigned long)instr);
+		fprintf(stderr, "enc[%4zu] instr=0x%02x cmp=0x%02x result=0x%02x cmp_arg=0x%02x dest_arg=0x%04" PRIx16 " (%" PRId16 " | %" PRId16 ") instr=0x%08" PRIx32 "\n",
+			off, instr_bits, cmp_bits, result_bit, cmp_arg, dest_arg, dest_arg, dest_arg,
+			instr);
 #endif /* DEBUG_ENCODING */
 
 		enc[i] = instr;
@@ -167,8 +168,8 @@ running_print_op_v2(const struct dfavm_v2 *vm, uint32_t pc, const char *sp, cons
 
 	V2DEC(vm->ops[pc], op,cmp,end, arg, dest);
 
-	fprintf(f, "[%4lu sp=%zd n=%zu ch=%3u '%c' end=%d] ",
-		(unsigned long)pc, sp-buf, n, (unsigned char)ch, isprint(ch) ? ch : ' ', end);
+	fprintf(f, "[%4" PRIu32 " sp=%zd n=%zu ch=%3u '%c' end=%d] ",
+		pc, sp-buf, n, (unsigned char)ch, isprint(ch) ? ch : ' ', end);
 
 	switch (op) {
 	case VM_V2_OP_FETCH:
@@ -222,7 +223,7 @@ running_print_op_v2(const struct dfavm_v2 *vm, uint32_t pc, const char *sp, cons
 		{
 			assert(dest >= 0 && (uint32_t)dest < vm->alen);
 			uint32_t dest_addr = vm->abuf[dest];
-			fprintf(f, " dest=%lu index=%d\n", (unsigned long)dest_addr, dest);
+			fprintf(f, " dest=%" PRIu32 " index=%d\n", dest_addr, dest);
 		}
 		break;
 

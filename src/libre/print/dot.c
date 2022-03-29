@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include <re/re.h>
 
@@ -49,7 +50,7 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 		break;
 
 	case AST_ENDPOINT_CODEPOINT:
-		fprintf(f, "U+%lX", (unsigned long) e->u.codepoint.u);
+		fprintf(f, "U+%" PRIX32, e->u.codepoint.u);
 		break; 
 
 	default:
@@ -144,11 +145,11 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case AST_EXPR_CONCAT:
-		fprintf(f, "}|{%lu", n->u.concat.count);
+		fprintf(f, "}|{%zu", n->u.concat.count);
 		break;
 
 	case AST_EXPR_ALT:
-		fprintf(f, "}|{%lu", n->u.alt.count);
+		fprintf(f, "}|{%zu", n->u.alt.count);
 		break;
 
 	case AST_EXPR_LITERAL:
@@ -157,7 +158,7 @@ pp_iter(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case AST_EXPR_CODEPOINT:
-		fprintf(f, "}|{U+%lX", (unsigned long) n->u.codepoint.u);
+		fprintf(f, "}|{U+%" PRIX32, n->u.codepoint.u);
 		break;
 
 	case AST_EXPR_REPEAT:

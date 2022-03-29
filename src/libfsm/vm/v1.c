@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include "vm.h"
 
@@ -222,8 +223,8 @@ running_print_op_v1(const unsigned char *ops, uint32_t pc, const char *sp, const
 	dest = b & 0x03;
 	end  = b & 0x01;
 
-	fprintf(f, "[%4lu sp=%zd n=%zu ch=%3u '%c' end=%d] ",
-		(unsigned long)pc, sp-buf, n, (unsigned char)ch, isprint(ch) ? ch : ' ', end);
+	fprintf(f, "[%4" PRIu32 " sp=%zd n=%zu ch=%3u '%c' end=%d] ",
+		pc, sp-buf, n, (unsigned char)ch, isprint(ch) ? ch : ' ', end);
 
 	switch (op) {
 	case VM_OP_FETCH:

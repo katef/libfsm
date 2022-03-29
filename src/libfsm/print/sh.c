@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include <print/esc.h>
 
@@ -67,7 +68,7 @@ ord_operator(int cmp)
 static void
 print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 {
-	fprintf(f, "l%lu)", (unsigned long) op->index);
+	fprintf(f, "l%" PRIu32 ")", op->index);
 
 	/*
 	 * The example strings here are just for human-readable comments;
@@ -113,7 +114,7 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 			fprintf(f, " || $c %s '%c'", str_operator(VM_CMP_EQ), c);
 		}
 	} else {
-		fprintf(f, "$(ord \"$c\") %s %3hhu", ord_operator(op->cmp), (unsigned char) c);
+		fprintf(f, "$(ord \"$c\") %s %3u", ord_operator(op->cmp), (unsigned char) c);
 	}
 	fprintf(f, " ]] && ");
 }
@@ -130,14 +131,14 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	if (opt->endleaf != NULL) {
 		opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque);
 	} else {
-		fprintf(f, "matched %lu", (unsigned long) (op->ir_state - ir->states));
+		fprintf(f, "matched %td", op->ir_state - ir->states);
 	}
 }
 
 static void
 print_branch(FILE *f, const struct dfavm_op_ir *op)
 {
-	fprintf(f, "{ l=l%lu; continue; }", (unsigned long) op->u.br.dest_arg->index);
+	fprintf(f, "{ l=l%" PRIu32 "; continue; }", op->u.br.dest_arg->index);
 }
 
 static void

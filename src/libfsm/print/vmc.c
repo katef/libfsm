@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include <print/esc.h>
 
@@ -64,7 +65,7 @@ cmp_operator(int cmp)
 static void
 print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 {
-	fprintf(f, "l%lu:", (unsigned long) op->index);
+	fprintf(f, "l%" PRIu32 ":", op->index);
 
 	if (op->ir_state->example != NULL) {
 		fprintf(f, " /* e.g. \"");
@@ -97,14 +98,14 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	if (opt->endleaf != NULL) {
 		opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque);
 	} else {
-		fprintf(f, "return %lu;", (unsigned long) (op->ir_state - ir->states));
+		fprintf(f, "return %td;", op->ir_state - ir->states);
 	}
 }
 
 static void
 print_branch(FILE *f, const struct dfavm_op_ir *op)
 {
-	fprintf(f, "goto l%lu;", (unsigned long) op->u.br.dest_arg->index);
+	fprintf(f, "goto l%" PRIu32 ";", op->u.br.dest_arg->index);
 }
 
 static void

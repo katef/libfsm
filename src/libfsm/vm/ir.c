@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include <fsm/fsm.h>
 #include <fsm/vm.h>
@@ -172,7 +173,7 @@ print_op_ir(FILE *f, struct dfavm_op_ir *op)
 
 	cmp = cmp_name(op->cmp);
 
-	// fprintf(f, "[%4lu] %1lu\t", (unsigned long)op->offset, (unsigned long)op->num_encoded_bytes);
+	// fprintf(f, "[%4" PRIu32 "] %1u\t", op->offset, op->num_encoded_bytes);
 
 	char opstr_buf[128];
 	size_t nop = sizeof opstr_buf;
@@ -219,8 +220,8 @@ print_op_ir(FILE *f, struct dfavm_op_ir *op)
 	}
 
 	if (op->instr == VM_OP_BRANCH) {
-		n = snprintf(opstr, nop, "%s [st=%lu]", ((nargs>0) ? "," : " "),
-			(unsigned long)op->u.br.dest_state);
+		n = snprintf(opstr, nop, "%s [st=%u]", ((nargs>0) ? "," : " "),
+			op->u.br.dest_state);
 
 		opstr += n;
 		nop   -= n;
@@ -1033,12 +1034,12 @@ dump_states(FILE *f, struct dfavm_assembler_ir *a)
 	for (op = a->linked; op != NULL; op = op->next) {
 		if (op->instr == VM_OP_FETCH) {
 			unsigned state = op->u.fetch.state;
-			fprintf(f, "\n%p ;;; state %u (index: %lu, asm_index: %lu) %s\n",
-				(void *)op, state, (unsigned long)op->index, (unsigned long)op->asm_index,
+			fprintf(f, "\n%p ;;; state %u (index: %" PRIu32 ", asm_index: %" PRIu32 ") %s\n",
+				(void *) op, state, op->index, op->asm_index,
 				(state == a->start) ? "(start)" : "");
 		}
 
-		fprintf(f, "%p | %6zu | %6lu |  ", (void *)op, (unsigned long)op->index, (unsigned long)op->asm_index);
+		fprintf(f, "%p | %6" PRIu32 " | %6" PRIu32 " |  ", (void *)op, op->index, op->asm_index);
 		print_op_ir(f, op);
 	}
 }

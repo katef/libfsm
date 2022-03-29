@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 /* If non-zero, use an experimental edge_set implementation
  * that collects edges leading to the same set in a group
@@ -1016,7 +1017,7 @@ dump_edge_set(const struct edge_set *set)
 
 	for (i = 0; i < set->count; i++) {
 		eg = &set->groups[i];
-		fprintf(stderr, " -- %ld: [0x%lx, 0x%lx, 0x%lx, 0x%lx] -> %u\n",
+		fprintf(stderr, " -- %zu: [0x%" PRIx64 ", 0x%" PRIx64 ", 0x%" PRIx64 ", 0x%" PRIx64 "] -> %u\n",
 		    i,
 		    eg->symbols[0], eg->symbols[1],
 		    eg->symbols[2], eg->symbols[3], eg->to);
