@@ -6,7 +6,7 @@ all::  mkdir .WAIT dep .WAIT lib prog
 dep::
 gen::
 test:: all
-fuzz:: all
+theft:: all
 install:: all
 uninstall::
 clean::
@@ -18,7 +18,7 @@ RE     ?= re
 BUILD  ?= build
 PREFIX ?= /usr/local
 
-.if make(fuzz) || make(${BUILD}/theft/theft)
+.if make(theft) || make(${BUILD}/theft/theft)
 PKG += libtheft
 .endif
 
@@ -77,10 +77,10 @@ SUBDIR += tests/queue
 SUBDIR += tests/aho_corasick
 SUBDIR += tests/retest
 SUBDIR += tests
-.if make(fuzz) || make(${BUILD}/theft/theft)
+.if make(theft) || make(${BUILD}/theft/theft)
 SUBDIR += theft
 .endif
-.if make(fuzzer) || make(${BUILD}/fuzzer/fuzzer)
+.if make(fuzz) || make(${BUILD}/fuzzer/fuzzer)
 SUBDIR += fuzz
 .endif
 SUBDIR += pc
