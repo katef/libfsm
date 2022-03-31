@@ -1,0 +1,29 @@
+#!/bin/sh
+
+BUILD=../build
+FUZZER=${BUILD}/fuzz/fuzzer
+SEEDS=${BUILD}/fuzz/fuzzer_seeds
+
+SECONDS=${SECONDS:-60}
+WORKERS=${WORKERS:-4}
+SEEDS=${SEEDS:-seeds}
+
+if [ "${1}" = "-h" ]; then
+    echo "usage: $0"
+    echo " - set these via env: [WORKERS=${WORKERS}] [SECONDS=${SECONDS}] [SEEDS=seed_directory]"
+    exit 0
+fi
+
+if [ ! -e "${FUZZER}" ]; then
+    echo "Fuzzer ${FUZZER} does not exist, build 'fuzzer' first."
+    exit 1
+fi
+
+UBSAN_OPTIONS="ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1"
+
+if [ ! -d "${SEEDS}" ]; then
+   mkdir -p "${SEEDS}"
+fi
+
+echo "\n==== ${FUZZER}"
+${FUZZER} -jobs=${WORKERS} -workers=${WORKERS} -max_total_time=${SECONDS} ${SEEDS}
