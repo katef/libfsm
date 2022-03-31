@@ -12,7 +12,7 @@ CFLAGS.${src} += -std=c99
 .endfor
 
 # This requires FUZZER=1 and CC=clang*.
-fuzzer:: ${BUILD}/fuzz/fuzzer
+fuzz:: ${BUILD}/fuzz/fuzzer
 
 ${BUILD}/fuzz/fuzzer: mkdir
 	${CC} -o $@ ${LFLAGS} ${.ALLSRC:M*.o} ${.ALLSRC:M*.a}

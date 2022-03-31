@@ -72,11 +72,11 @@ CFLAGS.${src:Mtheft/*.c} += -Wno-unused-function
 
 LFLAGS.theft += ${LIBS.libtheft}
 
-${BUILD}/theft/theft: ${BUILD}
+${BUILD}/theft/theft: ${BUILD}/theft
 	${CC} -o $@ ${LFLAGS} ${.ALLSRC:M*.o} ${.ALLSRC:M*.a} ${LFLAGS.theft}
 
 .for name in ${PROPNAME.theft}
-fuzz:: ${BUILD}/theft/theft
+theft:: ${BUILD}/theft/theft
 	${BUILD}/theft/theft -n ${name}
 .endfor
 
