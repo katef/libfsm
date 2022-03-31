@@ -80,6 +80,9 @@ SUBDIR += tests
 .if make(fuzz) || make(${BUILD}/theft/theft)
 SUBDIR += theft
 .endif
+.if make(fuzzer) || make(${BUILD}/fuzzer/fuzzer)
+SUBDIR += fuzz
+.endif
 SUBDIR += pc
 
 INCDIR += include
