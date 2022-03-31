@@ -368,7 +368,6 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				struct ast_expr *doomed = n->u.alt.n[i];
 				n->u.alt.n[i] = ast_expr_tombstone;
 				ast_expr_free(env->pool, doomed);
-				continue;
 			} else if (res == AST_ANALYSIS_OK) {
 				any_sat = 1;
 			} else {
