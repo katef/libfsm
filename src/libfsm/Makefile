@@ -66,11 +66,6 @@ CFLAGS.src/libfsm/parser.c += -Wno-unused-parameter
 ${src}: src/libfsm/lexer.h
 .endfor
 
-.for src in ${SRC:Msrc/libfsm/closure.c} ${SRC:Msrc/libfsm/determinise.c} ${SRC:Msrc/libfsm/minimise.c} ${SRC:Msrc/libfsm/vm.c} ${SRC:Msrc/libfsm/example.c}
-CFLAGS.${src} += -std=c99
-DFLAGS.${src} += -std=c99
-.endfor
-
 LIB         += libfsm
 SYMS.libfsm += src/libfsm/libfsm.syms
 

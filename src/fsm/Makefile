@@ -4,12 +4,12 @@ SRC += src/fsm/main.c
 # SRC += src/fsm/wordgen.c
 # SRC += src/fsm/xoroshiro256starstar.c
 
-.for src in ${SRC:Msrc/fsm/main.c}
-CFLAGS.${src} += -I src -std=c99 # XXX: for internal.h
-DFLAGS.${src} += -I src -std=c99 # XXX: for internal.h
-.endfor
-
 PROG += fsm
+
+.for src in ${SRC:Msrc/fsm/main.c}
+CFLAGS.${src} += -I src # XXX: for internal.h
+DFLAGS.${src} += -I src # XXX: for internal.h
+.endfor
 
 .for lib in ${LIB:Mlibfsm}
 ${BUILD}/bin/fsm: ${BUILD}/lib/${lib:R}.a
