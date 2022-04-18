@@ -5,11 +5,6 @@ SRC += src/libfsm/vm/vm.c
 SRC += src/libfsm/vm/v1.c
 SRC += src/libfsm/vm/v2.c
 
-.for src in ${SRC:Msrc/libfsm/vm/*.c} 
-CFLAGS.${src} += -std=c99
-DFLAGS.${src} += -std=c99
-.endfor 
-
 .for src in ${SRC:Msrc/libfsm/vm/*.c}
 CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h

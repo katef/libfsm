@@ -1,7 +1,7 @@
 LX?= ../../build/bin/lx
 CC?= gcc
 
-CFLAGS+= -ansi -pedantic -Wall -Werror
+CFLAGS+= -std=c99 -pedantic -Wall -Werror
 
 
 all: rpn

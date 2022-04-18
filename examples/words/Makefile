@@ -1,4 +1,4 @@
-CFLAGS = -O2 -g -pedantic -std=c89 -Wall -W
+CFLAGS = -O2 -g -pedantic -std=c99 -Wall -W
 CC = gcc
 
 #CFLAGS = -Yposix2 -Xp
