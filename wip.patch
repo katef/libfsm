@@ -1,0 +1,24 @@
+index 633b1a2..5e735b7 100644
+--- a/share/mk/so.mk
++++ b/share/mk/so.mk
+@@ -16,6 +16,11 @@ UNAME_SYSTEM != ${UNAME} -s
+ SYSTEM ?= ${UNAME_SYSTEM}
+ MACOSX_VERSION_MIN ?= 10.6
+ 
++.if ${SYSTEM} == Darwin
++XCODE_SELECT ?= xcode-select
++XCODE_SELECT_P != xcode-select -p
++.endif
++
+ .if ${SYSTEM} == Darwin
+ LIBEXT ?= dylib
+ .else
+@@ -23,7 +28,7 @@ LIBEXT ?= so
+ .endif
+ 
+ .if ${SYSTEM} == Darwin
+-LDSFLAGS ?= -dylib -flat_namespace -undefined dynamic_lookup
++LDSFLAGS ?= -dylib -flat_namespace -undefined dynamic_lookup -L ${XCODE_SELECT_P}/SDKs/MacOSX.sdk/usr/lib -lSystem
+ .else
+ LDSFLAGS ?= -shared
+ .endif
