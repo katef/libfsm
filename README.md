@@ -11,15 +11,6 @@ Getting started:
  * [Compilation phases](doc/tutorial/phases.md) for typical applications
    which compile regular expressions to code.
 
-Lexing is the process of categorising a stream of items by their spellings.
-The output from this process is a stream of tokens, each of a specific lexeme
-category, which are most commonly input to a parser responsible for asserting
-the order of these tokens is valid.
-
-lx is an attempt to produce a simple, expressive, and unobtrusive lexer
-generator which is good at lexing, does just lexing, is language independent,
-and has no other features.
-
 You get:
 
  * libfsm — library for manipulating FSM (NFA and DFA)
@@ -28,28 +19,52 @@ You get:
  * re(1)  — command line interface for executing regular expressions
  * lx(1)  — lexer generator
 
+lx is an attempt to produce a simple, expressive, and unobtrusive
+lexer generator which is good at lexing, does just lexing,
+is language independent, and has no other features.
+
 Clone with submodules (contains required .mk files):
 
     ; git clone --recursive https://github.com/katef/libfsm.git
 
+### Building
+
 To build and install:
 
-    ; pmake -r install
-
-To build on Linux, you may need to install `bmake`, and use it instead
-of `pmake` in the commands mentioned here.
+    ; bmake -r
+    ; bmake -r install
 
 You can override a few things:
 
-    ; CC=clang PREFIX=$HOME pmake -r install
+    ; CC=clang bmake -r
+    ; PREFIX=$HOME bmake -r install
+
+To run the tests:
+
+    ; bmake -r LX=./build/bin/lx test
+
+You need bmake for building.
+
+ * If you use some kind of BSD (NetBSD, OpenBSD, FreeBSD, ...) this is make(1).
+   They all differ slightly. Any of them should work.
+ * If you use Linux or MacOS and you have a package named bmake, use that.
+ * If you use Linux and you have a package named pmake, use that.
+   It's the same thing.
+   Some package managers have bmake packaged under the name pmake.
+   I don't know why they name it pmake.
+ * Otherwise if you use MacOS and you only have a package named bsdmake, use that.
+   It's Apple's own fork of bmake.
+   It should also work but it's harder for me to test.
+ * If none of these are options for you, you can build bmake from source.
+   You don't need mk.tar.gz, just bmake.tar.gz.
+   https://www.crufty.net/help/sjg/bmake.html
+
+When you see "bmake" in the build instructions above, it means any of these.
 
 Building depends on:
 
- * Any BSD make. This includes OpenBSD, FreeBSD and NetBSD make(1)
-   and sjg's portable bmake (also packaged as pmake).
-
+ * Any BSD make.
  * A C compiler. Any should do, but GCC and clang are best supported.
-
  * ar, ld, and a bunch of other stuff you probably already have.
 
 Fuzzing depends on the theft property-based testing library:
@@ -58,9 +73,3 @@ Fuzzing depends on the theft property-based testing library:
    Tests are currently based on the libtheft 0.4.2 API.
 
 Ideas, comments or bugs: kate@elide.org
-
-### Running the test suite
-
-To run the tests:
-
-    ; bmake -r LX=./build/bin/lx test
