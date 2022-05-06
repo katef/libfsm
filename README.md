@@ -23,11 +23,11 @@ lx is an attempt to produce a simple, expressive, and unobtrusive
 lexer generator which is good at lexing, does just lexing,
 is language independent, and has no other features.
 
+### Building from source
+
 Clone with submodules (contains required .mk files):
 
     ; git clone --recursive https://github.com/katef/libfsm.git
-
-### Building
 
 To build and install:
 
