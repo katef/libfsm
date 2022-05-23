@@ -10,7 +10,7 @@ rather than using a command-line interface.
 
 ## Parsing
 
-All regexp dialects parse to the same AST (see [re_ast.h](../../src/libre/re_ast.h)):
+All regexp dialects parse to the same AST (see [ast.h](../../src/libre/ast.h)):
 
     ; re -pl ast '^ab+c?.?$' | dot
 ![phase-ast.svg](phase-ast.svg)
