@@ -87,7 +87,7 @@ jobs:
   makefiles:
     name: "${{ matrix.make }} ${{ matrix.os }} ${{ matrix.debug }}"
     runs-on: ${{ matrix.os }}-latest
-    needs: [build]
+    needs: [checkout]
 
     strategy:
       fail-fast: false
@@ -107,13 +107,6 @@ jobs:
       with:
         path: .
         key: ${{ github.sha }}
-
-    - name: Fetch build
-      uses: actions/cache@v3
-      id: cache-build
-      with:
-        path: build
-        key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
     - name: Dependencies (Ubuntu)
       if: matrix.os == 'ubuntu'
