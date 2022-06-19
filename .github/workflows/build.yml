@@ -12,7 +12,7 @@ jobs:
         san: [ NO_SANITIZER, ASAN, UBSAN, MSAN, EFENCE ] # NO_SANITIZER=1 is a no-op
         os: [ ubuntu ]
         cc: [ clang, gcc ]
-        make: [ bmake, pmake ]
+        make: [ bmake ] # we test makefiles separately
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
         exclude:
           - os: macos
@@ -25,10 +25,12 @@ jobs:
             make: pmake # not packaged
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
+    - name: Fetch checkout
+      uses: actions/cache@v3
+      id: cache-checkout
       with:
-        submodules: recursive
+        path: .
+        key: ${{ github.sha }}
 
     - name: Dependencies (Ubuntu)
       if: matrix.os == 'ubuntu'
@@ -50,7 +52,7 @@ jobs:
       env:
         cache-name: cache-build
       with:
-        path: .
+        path: build
         key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
     - name: Make

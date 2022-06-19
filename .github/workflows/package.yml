@@ -27,11 +27,18 @@ jobs:
         fpm -v
         ${{ matrix.cc }} --version
 
+    - name: Fetch checkout
+      uses: actions/cache@v3
+      id: cache-checkout
+      with:
+        path: .
+        key: ${{ github.sha }}
+
     - name: Fetch build
       uses: actions/cache@v3
       id: cache-build
       with:
-        path: .
+        path: build
         key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
     - name: Install
