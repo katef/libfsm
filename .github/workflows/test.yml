@@ -1,12 +1,10 @@
+---
 name: Tests
-
-on: [push]
-
+on: [ push, pull_request ]
 jobs:
-  build:
+  test:
     name: "${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
     runs-on: ${{ matrix.os }}-latest
-    needs: [build]
 
     strategy:
       fail-fast: false
@@ -23,7 +21,8 @@ jobs:
             san: EFENCE # not packaged
           - os: macos
             san: MSAN # not supported
-    
+
+    steps:
     - name: Dependencies (Ubuntu)
       if: matrix.os == 'ubuntu'
       run: |
@@ -50,7 +49,7 @@ jobs:
       env:
         EF_DISABLE_BANNER: 1
       # I don't want to build SID just for sake of its -l test
-      run: ${make} -r -j 2 ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=./build/bin/lx test
+      run: ${{ matrix.make }} -r -j 2 ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=./build/bin/lx test
 
     - name: Fetch pcre test suite
       env:

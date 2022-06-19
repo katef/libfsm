@@ -1,14 +1,10 @@
-# packaging for release builds
-
+---
 name: Package
-
-on: [push]
-
+on: [ push, pull_request ]
 jobs:
   fpm:
     name: ${{ matrix.pkg }}
     runs-on: ${{ matrix.os }}-latest
-    needs: [build]
 
     strategy:
       fail-fast: false
@@ -21,6 +17,7 @@ jobs:
         make: [ bmake ]
         debug: [ RELEASE ] # RELEASE=1 is a no-op
 
+    steps:
     - name: Dependencies (Ubuntu)
       if: matrix.os == 'ubuntu'
       run: |
@@ -50,5 +47,5 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: ${{ github.sha }} ${{ matrix.pkg }}
-        path: pkg/* # single file here (because this is a matrix build), name format differs per package type     
+        path: pkg/* # single file here (because this is a matrix build), name format differs per package type
 
