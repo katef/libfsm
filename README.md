@@ -70,12 +70,12 @@ Building depends on:
  * Any BSD make.
  * A C compiler. Any should do, but GCC and clang are best supported.
  * ar, ld, and a bunch of other stuff you probably already have.
+ * xmllint (packaged as libxml2-utils) for `bmake -r test`
 
 Building the documentation depends on:
 
  * xsltproc(1)
-
- * Docbook XSLT (and its XML catalog entries)
+ * Docbook XSLT (and its XML catalog entries, packaged as docbook-xsl and docbook-xml)
 
 Fuzzing depends on the theft property-based testing library:
 
