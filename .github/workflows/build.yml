@@ -8,7 +8,7 @@ jobs:
     runs-on: ${{ matrix.os }}-latest
 
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         san: [ NO_SANITIZER, ASAN, UBSAN, MSAN, EFENCE ] # NO_SANITIZER=1 is a no-op
         os: [ ubuntu ]
@@ -46,13 +46,13 @@ jobs:
         brew install bmake pcre
         ${{ matrix.cc }} --version
 
-    - name: Cache
+    - name: Cache build
       uses: actions/cache@v3
       env:
         cache-name: cache-build
       with:
-        path: build
-        key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}
+        path: .
+        key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
     - name: Make
       run: |
