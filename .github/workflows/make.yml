@@ -1,11 +1,9 @@
+---
 # testing different bmake dialects
 # the goal here is to excercise the build system, not the code
 # we don't care about e.g. different compilers here
-
 name: Makefiles
-
 on: [push]
-
 jobs:
   build:
     name: "${{ matrix.make }} ${{ matrix.os }} ${{ matrix.debug }}"
@@ -20,21 +18,31 @@ jobs:
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
         exclude:
           - os: macos
-            make: pmake
+            make: pmake # not packaged
     
     steps:
-    - uses: actions/checkout@v1
+    - name: Fetch checkout
+      uses: actions/cache@v3
+      id: cache-checkout
       with:
-        submodules: recursive
+        path: .
+        key: ${{ github.sha }}
 
-    - name: dependencies (Ubuntu)
+    - name: Fetch build
+      uses: actions/cache@v3
+      id: cache-build
+      with:
+        path: build
+        key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+
+    - name: Dependencies (Ubuntu)
       if: matrix.os == 'ubuntu'
       run: |
         uname -a
         sudo apt-get install pmake bmake pcregrep
         ${{ matrix.cc }} --version
 
-    - name: dependencies (MacOS)
+    - name: Dependencies (MacOS)
       if: matrix.os == 'macos'
       run: |
         uname -a
@@ -42,18 +50,18 @@ jobs:
         brew install bmake pcre
         ${{ matrix.cc }} --version
 
-    - name: make
+    - name: Make
       run: |
         # note: lexer.h first, because parser.? depends on it
         find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
         find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
         ${{ matrix.make }} -r -j 2 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
 
-    - name: test
+    - name: Test
       # I don't want to build SID just for sake of its -l test
       # Same for lx
-      run: bmake -r -j 2 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' LX='true; echo lx' CC=${{ matrix.cc }} test
+      run: ${{ matrix.make }} -r -j 2 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' LX='true; echo lx' CC=${{ matrix.cc }} test
 
-    - name: install
+    - name: Install
       run: ${{ matrix.make }} -r -j 2 ${{ matrix.debug }}=1 PKGCONF=pkg-config PREFIX=/tmp/p-${{ matrix.debug }} install
 
