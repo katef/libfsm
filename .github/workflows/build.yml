@@ -1,0 +1,63 @@
+name: Build
+
+on: [push]
+
+jobs:
+  build:
+    name: "${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
+    runs-on: ${{ matrix.os }}-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        san: [ NO_SANITIZER, ASAN, UBSAN, MSAN, EFENCE ] # NO_SANITIZER=1 is a no-op
+        os: [ ubuntu ]
+        cc: [ clang, gcc ]
+        make: [ bmake, pmake ]
+        debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
+        exclude:
+          - os: macos
+            cc: gcc # it's clang anyway
+          - os: macos
+            san: EFENCE # not packaged
+          - os: macos
+            san: MSAN # not supported
+          - os: macos
+            make: pmake # not packaged
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu'
+      run: |
+        uname -a
+        sudo apt-get install bmake pcregrep electric-fence
+        ${{ matrix.cc }} --version
+
+    - name: Dependencies (MacOS)
+      if: matrix.os == 'macos'
+      run: |
+        uname -a
+        brew update
+        brew install bmake pcre
+        ${{ matrix.cc }} --version
+
+    - name: Cache
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-build
+      with:
+        path: build
+        key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}
+
+    - name: Make
+      run: |
+        # note: lexer.h first, because parser.? depends on it
+        find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
+        find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
+        ${{ matrix.make }} -r -j 2 ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
+
