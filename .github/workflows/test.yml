@@ -1,8 +1,4 @@
-# testing different sanitizers
-# the goal here is testing different sanitizers
-# these are also run for non-debug mode to test optimisations
-
-name: Sanitizers
+name: Tests
 
 on: [push]
 
@@ -10,6 +6,7 @@ jobs:
   build:
     name: "${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
     runs-on: ${{ matrix.os }}-latest
+    needs: [build]
 
     strategy:
       fail-fast: false
@@ -17,6 +14,7 @@ jobs:
         san: [ ASAN, UBSAN, MSAN, EFENCE ]
         os: [ ubuntu ]
         cc: [ clang, gcc ]
+        make: [ bmake ]
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
         exclude:
           - os: macos
@@ -26,19 +24,14 @@ jobs:
           - os: macos
             san: MSAN # not supported
     
-    steps:
-    - uses: actions/checkout@v1
-      with:
-        submodules: recursive
-
-    - name: dependencies (Ubuntu)
+    - name: Dependencies (Ubuntu)
       if: matrix.os == 'ubuntu'
       run: |
         uname -a
         sudo apt-get install bmake pcregrep electric-fence
         ${{ matrix.cc }} --version
 
-    - name: dependencies (MacOS)
+    - name: Dependencies (MacOS)
       if: matrix.os == 'macos'
       run: |
         uname -a
@@ -46,20 +39,20 @@ jobs:
         brew install bmake pcre
         ${{ matrix.cc }} --version
 
-    - name: make
-      run: |
-        # note: lexer.h first, because parser.? depends on it
-        find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
-        find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
-        bmake -r -j 2 ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
+    - name: Fetch build
+      uses: actions/cache@v3
+      id: cache-build
+      with:
+        path: .
+        key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
-    - name: test
+    - name: Test
       env:
         EF_DISABLE_BANNER: 1
       # I don't want to build SID just for sake of its -l test
-      run: bmake -r -j 2 ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=./build/bin/lx test
+      run: ${make} -r -j 2 ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=./build/bin/lx test
 
-    - name: fetch pcre test suite
+    - name: Fetch pcre test suite
       env:
         PCRE_VER: pcre2-10.39
         BUILD: ./build
@@ -105,27 +98,27 @@ jobs:
         rm ${BUILD}/test/retest/testinput24.tst # POSIX dialect
         rm ${BUILD}/test/retest/testinput25.tst # POSIX dialect
 
-    - name: run pcre test suite (vm v1)
+    - name: Run pcre test suite (vm v1)
       env:
         BUILD: ./build
       run: ${BUILD}/bin/retest -O1 -l vm -x v1 ${BUILD}/test/retest/*.tst
 
-    - name: run pcre test suite (vm v2)
+    - name: Run pcre test suite (vm v2)
       env:
         BUILD: ./build
       run: ${BUILD}/bin/retest -O1 -l vm -x v2 ${BUILD}/test/retest/*.tst
 
-    - name: run pcre test suite (asm)
+    - name: Run pcre test suite (asm)
       env:
         BUILD: ./build
       run: ${BUILD}/bin/retest -O1 -l asm ${BUILD}/test/retest/*.tst
 
-    - name: run pcre test suite (c)
+    - name: Run pcre test suite (c)
       env:
         BUILD: ./build
       run: ${BUILD}/bin/retest -O1 -l c ${BUILD}/test/retest/*.tst
 
-    - name: run pcre test suite (vmc)
+    - name: Run pcre test suite (vmc)
       env:
         BUILD: ./build
       run: ${BUILD}/bin/retest -O1 -l vmc ${BUILD}/test/retest/*.tst

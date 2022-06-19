@@ -8,21 +8,20 @@ jobs:
   fpm:
     name: ${{ matrix.pkg }}
     runs-on: ${{ matrix.os }}-latest
+    needs: [build]
 
     strategy:
       fail-fast: false
       matrix:
         # others: cpan, gem, npm, osxpkg, p5p, pacman, pear, pkgin, pleaserun, puppet, python, snap, solaris, virtualenv ]
         pkg: [ apk, deb, dir, freebsd, rpm, sh, tar, zip ]
+        san: [ NO_SANITIZER ] # NO_SANITIZER=1 is a no-op
         os: [ ubuntu ]
-        cc: [ gcc ]
-    
-    steps:
-    - uses: actions/checkout@v1
-      with:
-        submodules: recursive
+        cc: [ clang ]
+        make: [ bmake ]
+        debug: [ RELEASE ] # RELEASE=1 is a no-op
 
-    - name: dependencies (Ubuntu)
+    - name: Dependencies (Ubuntu)
       if: matrix.os == 'ubuntu'
       run: |
         uname -a
@@ -31,19 +30,14 @@ jobs:
         fpm -v
         ${{ matrix.cc }} --version
 
-    - name: make
-      run: |
-        # note: lexer.h first, because parser.? depends on it
-        find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
-        find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
-        bmake -r -j 2 PKGCONF=pkg-config CC=${{ matrix.cc }}
+    - name: Fetch build
+      uses: actions/cache@v3
+      id: cache-build
+      with:
+        path: .
+        key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
-    - name: test
-      # I don't want to build SID just for sake of its -l test
-      # Same for lx
-      run: bmake -r -j 2 PKGCONF=pkg-config NOSTRIP=1 SID='true; echo sid' LX='true; echo lx' CC=${{ matrix.cc }} test
-
-    - name: install
+    - name: Install
       run: |
         bmake -r -j 2 PKGCONF=pkg-config CC=${{ matrix.cc }} PREFIX=prefix/usr install
 
@@ -52,7 +46,8 @@ jobs:
         mkdir pkg
         fpm -C prefix -p pkg/ -n libfsm -t ${{ matrix.pkg }} -v 0.${{ github.sha }} -m kate@elide.org -s dir
 
-    - uses: actions/upload-artifact@v2
+    - name: Upload
+      uses: actions/upload-artifact@v2
       with:
         name: ${{ github.sha }} ${{ matrix.pkg }}
         path: pkg/* # single file here (because this is a matrix build), name format differs per package type     
