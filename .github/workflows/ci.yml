@@ -365,6 +365,58 @@ jobs:
     - name: Run PCRE suite (${{ matrix.lang }})
       run: ./${{ env.build }}/bin/retest -O1 -l ${{ matrix.lang }} ${{ env.cvtpcre }}/*.tst
 
+  docs:
+    name: Documentation
+    runs-on: ${{ matrix.os }}-latest
+    needs: [ checkout ]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        san: [ NO_SANITIZER ] # NO_SANITIZER=1 is a no-op
+        os: [ ubuntu ]
+        cc: [ clang ]
+        make: [ bmake ]
+        debug: [ RELEASE ] # RELEASE=1 is a no-op
+
+    steps:
+    - name: Cache docs
+      uses: actions/cache@v3
+      id: cache-docs
+      with:
+        path: ${{ env.build }}
+        key: docs-${{ github.sha }}
+
+    - name: Dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu' && steps.cache-docs.outputs.cache-hit != 'true'
+      run: |
+        uname -a
+        sudo apt-get install bmake xsltproc docbook-xml docbook-xsl
+
+    - name: Fetch checkout
+      if: steps.cache-docs.outputs.cache-hit != 'true'
+      uses: actions/cache@v3
+      id: cache-checkout
+      with:
+        path: ${{ env.wc }}
+        key: checkout-${{ github.sha }}
+
+    - name: Get number of CPU cores
+      if: steps.cache-docs.outputs.cache-hit != 'true'
+      uses: SimenB/github-actions-cpu-cores@v1
+      id: cpu-cores
+
+    - name: make doc
+      if: steps.cache-docs.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p ${{ env.build }}/man # XXX
+        bmake -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} doc
+
+    - name: chmod read only
+      if: steps.cache-docs.outputs.cache-hit != 'true'
+      run: |
+        chmod -R ug-w ${{ env.build }}
+
   install:
     name: Install
     runs-on: ${{ matrix.os }}-latest
