@@ -1,7 +1,6 @@
+---
 name: Build
-
-on: [push]
-
+on: [ push, pull_request ]
 jobs:
   build:
     name: "${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
@@ -24,7 +23,7 @@ jobs:
             san: MSAN # not supported
           - os: macos
             make: pmake # not packaged
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v3
