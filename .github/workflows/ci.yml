@@ -141,13 +141,17 @@ jobs:
         path: build
         key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
+    - name: Get number of CPU cores
+      uses: SimenB/github-actions-cpu-cores@v1
+      id: cpu-cores
+
     - name: Make
       if: steps.cache-build.outputs.cache-hit != 'true'
       run: |
         # note: lexer.h first, because parser.? depends on it
         find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
         find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
-        ${{ matrix.make }} -r -j 2 -C wc BUILD=../build ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
+        ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C wc BUILD=../build ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
 
   # testing different bmake dialects
   # the goal here is to excercise the build system, not the code
@@ -191,20 +195,24 @@ jobs:
         brew install bmake pcre
         ${{ matrix.cc }} --version
 
+    - name: Get number of CPU cores
+      uses: SimenB/github-actions-cpu-cores@v1
+      id: cpu-cores
+
     - name: Make
       run: |
         # note: lexer.h first, because parser.? depends on it
         find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
         find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
-        ${{ matrix.make }} -r -j 2 -C wc BUILD=../build ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
+        ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C wc BUILD=../build ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
 
     - name: Test
       # I don't want to build SID just for sake of its -l test
       # Same for lx
-      run: ${{ matrix.make }} -r -j 2 -C wc BUILD=../build ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' LX='true; echo lx' CC=${{ matrix.cc }} test
+      run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C wc BUILD=../build ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' LX='true; echo lx' CC=${{ matrix.cc }} test
 
     - name: Install
-      run: ${{ matrix.make }} -r -j 2 -C wc BUILD=../build ${{ matrix.debug }}=1 PKGCONF=pkg-config PREFIX=../prefix-${{ matrix.debug }} install
+      run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C wc BUILD=../build ${{ matrix.debug }}=1 PKGCONF=pkg-config PREFIX=../prefix-${{ matrix.debug }} install
 
   test_san:
     name: "Test (Sanitizers) ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
@@ -257,11 +265,15 @@ jobs:
         path: build
         key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
+    - name: Get number of CPU cores
+      uses: SimenB/github-actions-cpu-cores@v1
+      id: cpu-cores
+
     - name: Test
       env:
         EF_DISABLE_BANNER: 1
       # I don't want to build SID just for sake of its -l test
-      run: ${{ matrix.make }} -r -j 2 -C wc BUILD=../build ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=../build/bin/lx test
+      run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C wc BUILD=../build ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=../build/bin/lx test
 
   test_pcre:
     name: "Test (PCRE suite) ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
@@ -386,9 +398,13 @@ jobs:
         path: build
         key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
+    - name: Get number of CPU cores
+      uses: SimenB/github-actions-cpu-cores@v1
+      id: cpu-cores
+
     - name: Install
       run: |
-        bmake -r -j 2 -C wc BUILD=../build PKGCONF=pkg-config CC=${{ matrix.cc }} PREFIX=../prefix/usr install
+        bmake -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C wc BUILD=../build PKGCONF=pkg-config CC=${{ matrix.cc }} PREFIX=../prefix/usr install
 
     - name: Package
       run: |
