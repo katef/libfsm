@@ -9,8 +9,7 @@ jobs:
     steps:
     - name: Cache checkout
       uses: actions/cache@v3
-      env:
-        cache-name: cache-checkout
+      id: cache-checkout
       with:
         path: wc
         key: ${{ github.sha }}
@@ -30,8 +29,7 @@ jobs:
     steps:
     - name: Cache PCRE suite
       uses: actions/cache@v3
-      env:
-        cache-name: cache-pcre
+      id: cache-pcre
       with:
         path: build/test/retest
         key: pcre2-10.39
@@ -138,8 +136,7 @@ jobs:
 
     - name: Cache build
       uses: actions/cache@v3
-      env:
-        cache-name: cache-build
+      id: cache-build
       with:
         path: build
         key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
