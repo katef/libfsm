@@ -281,7 +281,7 @@ jobs:
       run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C wc BUILD=../build ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=../build/bin/lx test
 
   test_pcre:
-    name: "Test (PCRE suite) ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
+    name: "Test (PCRE suite) ${{ matrix.lang }} ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
     runs-on: ${{ matrix.os }}-latest
     needs: [ build, pcre_suite ]
 
@@ -293,6 +293,7 @@ jobs:
         cc: [ clang, gcc ]
         make: [ bmake ]
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
+        lang: [ "vm -x v1", "vm -x v2", asm, c, vmc ]
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
@@ -338,30 +339,10 @@ jobs:
         path: build/test/retest
         key: pcre2-10.39
 
-    - name: Run PCRE suite (vm v1)
+    - name: Run PCRE suite (${{ matrix.lang }})
       env:
         BUILD: ./build
-      run: ${BUILD}/bin/retest -O1 -l vm -x v1 ${BUILD}/test/retest/*.tst
-
-    - name: Run PCRE suite (vm v2)
-      env:
-        BUILD: ./build
-      run: ${BUILD}/bin/retest -O1 -l vm -x v2 ${BUILD}/test/retest/*.tst
-
-    - name: Run PCRE suite (asm)
-      env:
-        BUILD: ./build
-      run: ${BUILD}/bin/retest -O1 -l asm ${BUILD}/test/retest/*.tst
-
-    - name: Run PCRE suite (c)
-      env:
-        BUILD: ./build
-      run: ${BUILD}/bin/retest -O1 -l c ${BUILD}/test/retest/*.tst
-
-    - name: Run PCRE suite (vmc)
-      env:
-        BUILD: ./build
-      run: ${BUILD}/bin/retest -O1 -l vmc ${BUILD}/test/retest/*.tst
+      run: ${BUILD}/bin/retest -O1 -l ${{ matrix.lang }} ${BUILD}/test/retest/*.tst
 
   fpm:
     name: Package ${{ matrix.pkg }}
