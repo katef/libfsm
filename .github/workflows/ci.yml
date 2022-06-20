@@ -16,6 +16,7 @@ jobs:
         key: ${{ github.sha }}
 
     - name: Checkout
+      if: steps.cache-checkout.outputs.cache-hit != 'true'
       uses: actions/checkout@v3
       with:
         submodules: recursive
@@ -43,6 +44,7 @@ jobs:
         key: bmake-ubuntu-gcc-DEBUG-ASAN-${{ github.sha }} # arbitary, just for cvtpcre
 
     - name: Fetch PCRE suite
+      if: steps.cache-pcre.outputs.cache-hit != 'true'
       env:
         PCRE_VER: pcre2-10.39
         BUILD: ./build
@@ -143,6 +145,7 @@ jobs:
         key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
     - name: Make
+      if: steps.cache-build.outputs.cache-hit != 'true'
       run: |
         # note: lexer.h first, because parser.? depends on it
         find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
