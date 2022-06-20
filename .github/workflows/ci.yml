@@ -173,19 +173,19 @@ jobs:
             make: pmake # not packaged
     
     steps:
-    - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu'
-      run: |
-        uname -a
-        sudo apt-get install pmake bmake pcregrep
-        ${{ matrix.cc }} --version
-
     - name: Fetch checkout
       uses: actions/cache@v3
       id: cache-checkout
       with:
         path: wc
         key: ${{ github.sha }}
+
+    - name: Dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu'
+      run: |
+        uname -a
+        sudo apt-get install pmake bmake pcregrep
+        ${{ matrix.cc }} --version
 
     - name: Dependencies (MacOS)
       if: matrix.os == 'macos'
@@ -236,6 +236,13 @@ jobs:
             san: MSAN # not supported
 
     steps:
+    - name: Fetch checkout
+      uses: actions/cache@v3
+      id: cache-checkout
+      with:
+        path: wc
+        key: ${{ github.sha }}
+
     - name: Dependencies (Ubuntu)
       if: matrix.os == 'ubuntu'
       run: |
@@ -250,13 +257,6 @@ jobs:
         brew update
         brew install bmake pcre
         ${{ matrix.cc }} --version
-
-    - name: Fetch checkout
-      uses: actions/cache@v3
-      id: cache-checkout
-      with:
-        path: wc
-        key: ${{ github.sha }}
 
     - name: Fetch build
       uses: actions/cache@v3
