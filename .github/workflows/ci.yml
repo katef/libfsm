@@ -12,16 +12,17 @@ jobs:
       env:
         cache-name: cache-checkout
       with:
-        path: .
+        path: wc
         key: ${{ github.sha }}
 
     - name: Checkout
       uses: actions/checkout@v3
       with:
         submodules: recursive
+        path: wc
 
   pcre_suite:
-    name: "Fetch PCRE suite"
+    name: "Import PCRE suite"
     runs-on: ubuntu-latest
     needs: [build] # for cvtpcre
 
@@ -33,6 +34,13 @@ jobs:
       with:
         path: build/test/retest
         key: pcre2-10.39
+
+    - name: Fetch build
+      uses: actions/cache@v3
+      id: cache-build
+      with:
+        path: build
+        key: bmake-ubuntu-gcc-DEBUG-ASAN-${{ github.sha }} # arbitary, just for cvtpcre
 
     - name: Fetch PCRE suite
       env:
@@ -81,7 +89,7 @@ jobs:
         rm ${BUILD}/test/retest/testinput25.tst # POSIX dialect
 
   build:
-    name: "${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
+    name: "Build ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
     runs-on: ${{ matrix.os }}-latest
     needs: [ checkout ]
 
@@ -108,14 +116,14 @@ jobs:
       uses: actions/cache@v3
       id: cache-checkout
       with:
-        path: ..
+        path: wc
         key: ${{ github.sha }}
 
     - name: Dependencies (Ubuntu)
       if: matrix.os == 'ubuntu'
       run: |
         uname -a
-        sudo apt-get install bmake pcregrep electric-fence
+        sudo apt-get install bmake electric-fence
         ${{ matrix.cc }} --version
 
     - name: Dependencies (MacOS)
@@ -139,13 +147,13 @@ jobs:
         # note: lexer.h first, because parser.? depends on it
         find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
         find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
-        ${{ matrix.make }} -r -j 2 ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
+        ${{ matrix.make }} -r -j 2 -C wc BUILD=../build ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
 
   # testing different bmake dialects
   # the goal here is to excercise the build system, not the code
   # we don't care about e.g. different compilers here
   test_makefiles:
-    name: "${{ matrix.make }} ${{ matrix.os }} ${{ matrix.debug }}"
+    name: "Test (Makefiles) ${{ matrix.make }} ${{ matrix.os }} ${{ matrix.debug }}"
     runs-on: ${{ matrix.os }}-latest
     needs: [ checkout ]
 
@@ -172,7 +180,7 @@ jobs:
       uses: actions/cache@v3
       id: cache-checkout
       with:
-        path: ..
+        path: wc
         key: ${{ github.sha }}
 
     - name: Dependencies (MacOS)
@@ -188,20 +196,77 @@ jobs:
         # note: lexer.h first, because parser.? depends on it
         find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
         find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
-        ${{ matrix.make }} -r -j 2 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
+        ${{ matrix.make }} -r -j 2 -C wc BUILD=../build ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
 
     - name: Test
       # I don't want to build SID just for sake of its -l test
       # Same for lx
-      run: ${{ matrix.make }} -r -j 2 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' LX='true; echo lx' CC=${{ matrix.cc }} test
+      run: ${{ matrix.make }} -r -j 2 -C wc BUILD=../build ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' LX='true; echo lx' CC=${{ matrix.cc }} test
 
     - name: Install
-      run: ${{ matrix.make }} -r -j 2 ${{ matrix.debug }}=1 PKGCONF=pkg-config PREFIX=/tmp/p-${{ matrix.debug }} install
+      run: ${{ matrix.make }} -r -j 2 -C wc BUILD=../build ${{ matrix.debug }}=1 PKGCONF=pkg-config PREFIX=../prefix-${{ matrix.debug }} install
 
   test_san:
-    name: "${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
+    name: "Test (Sanitizers) ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
     runs-on: ${{ matrix.os }}-latest
     needs: [ build ]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        san: [ ASAN, UBSAN, MSAN, EFENCE ]
+        os: [ ubuntu ]
+        cc: [ clang, gcc ]
+        make: [ bmake ]
+        debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
+        exclude:
+          - os: macos
+            cc: gcc # it's clang anyway
+          - os: macos
+            san: EFENCE # not packaged
+          - os: macos
+            san: MSAN # not supported
+
+    steps:
+    - name: Dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu'
+      run: |
+        uname -a
+        sudo apt-get install bmake pcregrep electric-fence
+        ${{ matrix.cc }} --version
+
+    - name: Dependencies (MacOS)
+      if: matrix.os == 'macos'
+      run: |
+        uname -a
+        brew update
+        brew install bmake pcre
+        ${{ matrix.cc }} --version
+
+    - name: Fetch checkout
+      uses: actions/cache@v3
+      id: cache-checkout
+      with:
+        path: wc
+        key: ${{ github.sha }}
+
+    - name: Fetch build
+      uses: actions/cache@v3
+      id: cache-build
+      with:
+        path: build
+        key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+
+    - name: Test
+      env:
+        EF_DISABLE_BANNER: 1
+      # I don't want to build SID just for sake of its -l test
+      run: ${{ matrix.make }} -r -j 2 -C wc BUILD=../build ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=../build/bin/lx test
+
+  test_pcre:
+    name: "Test (PCRE suite) ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
+    runs-on: ${{ matrix.os }}-latest
+    needs: [ build, pcre_suite ]
 
     strategy:
       fail-fast: false
@@ -239,64 +304,7 @@ jobs:
       uses: actions/cache@v3
       id: cache-checkout
       with:
-        path: ..
-        key: ${{ github.sha }}
-
-    - name: Fetch build
-      uses: actions/cache@v3
-      id: cache-build
-      with:
-        path: build
-        key: ${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
-
-    - name: Test
-      env:
-        EF_DISABLE_BANNER: 1
-      # I don't want to build SID just for sake of its -l test
-      run: ${{ matrix.make }} -r -j 2 ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=./build/bin/lx test
-
-  test_pcre:
-    name: "${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
-    runs-on: ${{ matrix.os }}-latest
-    needs: [ build, pcre_suite ]
-
-    strategy:
-      fail-fast: false
-      matrix:
-        san: [ ASAN, UBSAN, MSAN, EFENCE ]
-        os: [ ubuntu ]
-        cc: [ clang, gcc ]
-        make: [ bmake ]
-        debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
-        exclude:
-          - os: macos
-            cc: gcc # it's clang anyway
-          - os: macos
-            san: EFENCE # not packaged
-          - os: macos
-            san: MSAN # not supported
-
-    steps:
-    - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu'
-      run: |
-        uname -a
-        sudo apt-get install bmake pcregrep electric-fence
-        ${{ matrix.cc }} --version
-
-    - name: Dependencies (MacOS)
-      if: matrix.os == 'macos'
-      run: |
-        uname -a
-        brew update
-        brew install bmake pcre
-        ${{ matrix.cc }} --version
-
-    - name: Fetch checkout
-      uses: actions/cache@v3
-      id: cache-checkout
-      with:
-        path: ..
+        path: wc
         key: ${{ github.sha }}
 
     - name: Fetch build
@@ -339,7 +347,7 @@ jobs:
       run: ${BUILD}/bin/retest -O1 -l vmc ${BUILD}/test/retest/*.tst
 
   fpm:
-    name: ${{ matrix.pkg }}
+    name: Package ${{ matrix.pkg }}
     runs-on: ${{ matrix.os }}-latest
     needs: [ build ]
 
@@ -359,7 +367,7 @@ jobs:
       if: matrix.os == 'ubuntu'
       run: |
         uname -a
-        sudo apt-get install bmake pcregrep
+        sudo apt-get install bmake
         sudo gem install --no-document fpm
         fpm -v
         ${{ matrix.cc }} --version
@@ -368,7 +376,7 @@ jobs:
       uses: actions/cache@v3
       id: cache-checkout
       with:
-        path: ..
+        path: wc
         key: ${{ github.sha }}
 
     - name: Fetch build
@@ -380,7 +388,7 @@ jobs:
 
     - name: Install
       run: |
-        bmake -r -j 2 PKGCONF=pkg-config CC=${{ matrix.cc }} PREFIX=prefix/usr install
+        bmake -r -j 2 -C wc BUILD=../build PKGCONF=pkg-config CC=${{ matrix.cc }} PREFIX=../prefix/usr install
 
     - name: Package
       run: |
