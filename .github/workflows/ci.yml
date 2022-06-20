@@ -304,26 +304,18 @@ jobs:
 
     steps:
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu'
+      if: matrix.os == 'ubuntu' && matrix.san == 'EFENCE'
       run: |
         uname -a
-        sudo apt-get install bmake electric-fence
+        sudo apt-get install electric-fence
         ${{ matrix.cc }} --version
 
     - name: Dependencies (MacOS)
-      if: matrix.os == 'macos'
+      if: matrix.os == 'macos' && false
       run: |
         uname -a
         brew update
-        brew install bmake pcre
         ${{ matrix.cc }} --version
-
-    - name: Fetch checkout
-      uses: actions/cache@v3
-      id: cache-checkout
-      with:
-        path: wc
-        key: ${{ github.sha }}
 
     - name: Fetch build
       uses: actions/cache@v3
