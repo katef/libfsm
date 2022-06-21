@@ -451,11 +451,12 @@ jobs:
     - name: Package
       run: |
         mkdir pkg
-        fpm -C prefix -p pkg/ -n libfsm -t ${{ matrix.pkg }} -v 0.${{ github.sha }} -m kate@elide.org -s dir
+        fpm -C prefix -p pkg/ -n libfsm -t ${{ matrix.pkg }} -v 0.${{ github.sha }} -a native -m kate@elide.org -s dir
+        printf "package_name=%s\n" $(basename pkg/*) >> $GITHUB_ENV # single file here (because this is a matrix build), name format differs per package type
 
     - name: Upload
       uses: actions/upload-artifact@v2
       with:
-        name: ${{ github.sha }} ${{ matrix.pkg }}
-        path: pkg/* # single file here (because this is a matrix build), name format differs per package type
+        name: ${{ env.package_name }}
+        path: pkg/${{ env.package_name }}
 
