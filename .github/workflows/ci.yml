@@ -21,6 +21,12 @@ jobs:
         submodules: recursive
         path: wc
 
+    - name: chmod read only
+      if: steps.cache-checkout.outputs.cache-hit != 'true'
+      run: |
+        chmod -R ug-w wc
+        chmod -R ug+w wc/.git # post-checkout sets git config
+
   pcre_suite:
     name: "Import PCRE suite"
     runs-on: ubuntu-latest
@@ -41,6 +47,11 @@ jobs:
       run: |
         wget -nv -P pcre-suite/ https://github.com/PCRE2Project/pcre2/releases/download/${PCRE_VER}/${PCRE_VER}.zip
         unzip -d pcre-suite/ pcre-suite/${PCRE_VER}.zip "${PCRE_VER}/testdata/*"
+
+    - name: chmod read only
+      if: steps.cache-pcre.outputs.cache-hit != 'true'
+      run: |
+        chmod -R ug-w pcre-suite
 
     - name: Cache converted PCRE tests
       uses: actions/cache@v3
@@ -101,6 +112,11 @@ jobs:
         rm ${BUILD}/test/retest/testinput19.tst # POSIX dialect
         rm ${BUILD}/test/retest/testinput24.tst # POSIX dialect
         rm ${BUILD}/test/retest/testinput25.tst # POSIX dialect
+
+    - name: chmod read only
+      if: steps.cache-cvtpcre.outputs.cache-hit != 'true'
+      run: |
+        chmod -R ug-w build/test/retest
 
   build:
     name: "Build ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
