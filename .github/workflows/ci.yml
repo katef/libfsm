@@ -463,7 +463,7 @@ jobs:
         fpm --log warn -C ${{ env.prefix }} -p pkg/ -n ${{ env.package_name }} -t ${{ matrix.pkg }} -v ${{ env.package_version }} -a $(uname -m) -m ${{ env.maintainer }} -s dir \
         | ruby -e 'h = eval(STDIN.read); puts h[:level].to_s.sub("fatal", "::error::").sub("warn", "::warning::") + " " + h[:message]'
         # now there's a single file in pkg/ (because this is a matrix build), name format differs per package type
-        [ -f pkg/*.{sh,tar} ] && gzip -9 pkg/*
+        [ -f pkg/*.sh -o -f pkg/*.tar ] && gzip -9 pkg/*
         [ -f pkg/${{ env.package_name }}.* ] && mv pkg/* pkg/$(basename pkg/* | sed 's,^${{ env.package_name }}\.,${{ env.package_name }}-${{ env.package_version }}.,') # fix up naming for xyz.{sh,tar,zip}
         printf "package_file=%s\n" $(basename pkg/*) >> $GITHUB_ENV
 
