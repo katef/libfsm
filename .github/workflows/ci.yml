@@ -425,8 +425,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # others: cpan, gem, npm, osxpkg, p5p, pacman, pear, pkgin, pleaserun, puppet, python, snap, solaris, virtualenv ]
-        pkg: [ apk, deb, dir, freebsd, rpm, sh, tar, zip ]
+        # others: cpan, gem, npm, osxpkg, p5p, pear, pkgin, pleaserun, puppet, python, snap, solaris, virtualenv ]
+        pkg: [ apk, deb, freebsd, rpm, pacman, sh, tar, zip ]
         san: [ NO_SANITIZER ] # NO_SANITIZER=1 is a no-op
         os: [ ubuntu ]
         cc: [ clang ]
@@ -451,8 +451,11 @@ jobs:
     - name: Package
       run: |
         mkdir pkg
-        fpm -C prefix -p pkg/ -n libfsm -t ${{ matrix.pkg }} -v 0.${{ github.sha }} -a native -m kate@elide.org -s dir
-        printf "package_name=%s\n" $(basename pkg/*) >> $GITHUB_ENV # single file here (because this is a matrix build), name format differs per package type
+        fpm -C prefix -p pkg/ -n libfsm -t ${{ matrix.pkg }} -v 0.${{ github.sha }} -a $(uname -m) -m kate@elide.org -s dir
+        # now there's a single file in pkg/ (because this is a matrix build), name format differs per package type
+        [[ -f pkg/libfsm.tar ]] && gzip -9 pkg/libfsm.tar
+        [[ -f pkg/libfsm.* ]] && mv pkg/libfsm.* pkg/$(basename pkg/libfsm.* | sed s,^libfsm\.,libfsm-0.${{ github.sha }}.,) # fix up naming for libfsm.{sh,tar,zip}
+        printf "package_name=%s\n" $(basename pkg/*) >> $GITHUB_ENV
 
     - name: Upload
       uses: actions/upload-artifact@v2
