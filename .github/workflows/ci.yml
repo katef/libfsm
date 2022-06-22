@@ -452,20 +452,21 @@ jobs:
       # TODO: would get a tag or branch name here
       run: |
         printf "package_version=%s\n" 0.$(echo ${{ github.sha }} | cut -c-7) >> $GITHUB_ENV
+        printf "package_name=%s\n" $(echo ${{ github.repository }} | cut -f2 -d/) >> $GITHUB_ENV
 
     - name: Package
       run: |
         mkdir pkg
-        fpm --log warn -C prefix -p pkg/ -n libfsm -t ${{ matrix.pkg }} -v ${{ env.package_version }} -a $(uname -m) -m kate@elide.org -s dir \
+        fpm --log warn -C prefix -p pkg/ -n ${{ env.package_name }} -t ${{ matrix.pkg }} -v ${{ env.package_version }} -a $(uname -m) -m kate@elide.org -s dir \
         | ruby -e 'h = eval(STDIN.read); puts h[:level].to_s.sub("fatal", "::error::").sub("warn", "::warning::") + " " + h[:message]'
         # now there's a single file in pkg/ (because this is a matrix build), name format differs per package type
-        [[ -f pkg/libfsm.tar ]] && gzip -9 pkg/libfsm.tar
-        [[ -f pkg/libfsm.* ]] && mv pkg/libfsm.* pkg/$(basename pkg/libfsm.* | sed 's,^libfsm\.,libfsm-${{ env.package_version }}.,') # fix up naming for libfsm.{sh,tar,zip}
-        printf "package_name=%s\n" $(basename pkg/*) >> $GITHUB_ENV
+        [ -f pkg/*.{sh,tar} ] && gzip -9 pkg/*
+        [ -f pkg/${{ env.package_name }}.* ] && mv pkg/* pkg/$(basename pkg/* | sed 's,^${{ env.package_name }}\.,${{ env.package_name }}-${{ env.package_version }}.,') # fix up naming for xyz.{sh,tar,zip}
+        printf "package_file=%s\n" $(basename pkg/*) >> $GITHUB_ENV
 
     - name: Upload
       uses: actions/upload-artifact@v2
       with:
-        name: ${{ env.package_name }}
-        path: pkg/${{ env.package_name }}
+        name: ${{ env.package_file }}
+        path: pkg/${{ env.package_file }}
 
