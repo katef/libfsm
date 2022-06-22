@@ -456,7 +456,8 @@ jobs:
     - name: Package
       run: |
         mkdir pkg
-        fpm -C prefix -p pkg/ -n libfsm -t ${{ matrix.pkg }} -v ${{ env.package_version }} -a $(uname -m) -m kate@elide.org -s dir
+        fpm --log warn -C prefix -p pkg/ -n libfsm -t ${{ matrix.pkg }} -v ${{ env.package_version }} -a $(uname -m) -m kate@elide.org -s dir \
+        | ruby -e 'h = eval(STDIN.read); puts h[:level].to_s.sub("fatal", "::error::").sub("warn", "::warning::") + " " + h[:message]'
         # now there's a single file in pkg/ (because this is a matrix build), name format differs per package type
         [[ -f pkg/libfsm.tar ]] && gzip -9 pkg/libfsm.tar
         [[ -f pkg/libfsm.* ]] && mv pkg/libfsm.* pkg/$(basename pkg/libfsm.* | sed 's,^libfsm\.,libfsm-${{ env.package_version }}.,') # fix up naming for libfsm.{sh,tar,zip}
