@@ -426,7 +426,7 @@ jobs:
       fail-fast: false
       matrix:
         # others: cpan, gem, npm, osxpkg, p5p, pear, pkgin, pleaserun, puppet, python, snap, solaris, virtualenv ]
-        pkg: [ apk, deb, freebsd, rpm, pacman, sh, tar, zip ]
+        pkg: [ apk, deb, freebsd, rpm, sh, tar, zip ] # XXX: pacman is broken currently
         san: [ NO_SANITIZER ] # NO_SANITIZER=1 is a no-op
         os: [ ubuntu ]
         cc: [ clang ]
