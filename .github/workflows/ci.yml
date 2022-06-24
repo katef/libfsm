@@ -31,6 +31,10 @@ jobs:
         submodules: recursive
         path: ${{ env.wc }}
 
+    - name: Uncouple docs test
+      if: steps.cache-checkout.outputs.cache-hit != 'true'
+      run: sed -ie 's,^test::,doc-test::,' ${{ env.wc }}/share/mk/man.mk
+
     - name: chmod read only
       if: steps.cache-checkout.outputs.cache-hit != 'true'
       run: |
@@ -245,10 +249,10 @@ jobs:
     - name: Test
       # I don't want to build SID just for sake of its -l test
       # Same for lx
-      run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' LX='true; echo lx' CC=${{ matrix.cc }} test
+      run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' LX='true; echo lx' CC=${{ matrix.cc }} NODOC=1 test
 
     - name: Install
-      run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.debug }}=1 PKGCONF=pkg-config PREFIX=../${{ env.prefix }} install
+      run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.debug }}=1 PKGCONF=pkg-config PREFIX=../${{ env.prefix }} NODOC=1 install
 
   test_san:
     name: "Test (Sanitizers) ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
@@ -309,7 +313,7 @@ jobs:
       env:
         EF_DISABLE_BANNER: 1
       # I don't want to build SID just for sake of its -l test
-      run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=../${{ env.build }}/bin/lx test
+      run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} NODOC=1 LX=../${{ env.build }}/bin/lx test
 
   test_pcre:
     name: "Test (PCRE suite) ${{ matrix.lang }} ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
@@ -367,7 +371,7 @@ jobs:
 
   docs:
     name: Documentation
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ubuntu-latest
     needs: [ checkout ]
 
     strategy:
@@ -391,7 +395,7 @@ jobs:
       if: matrix.os == 'ubuntu' && steps.cache-docs.outputs.cache-hit != 'true'
       run: |
         uname -a
-        sudo apt-get install bmake xsltproc docbook-xml docbook-xsl
+        sudo apt-get install bmake libxml2-utils xsltproc docbook-xml docbook-xsl
 
     - name: Fetch checkout
       if: steps.cache-docs.outputs.cache-hit != 'true'
@@ -405,6 +409,10 @@ jobs:
       if: steps.cache-docs.outputs.cache-hit != 'true'
       uses: SimenB/github-actions-cpu-cores@v1
       id: cpu-cores
+
+    - name: Test docs
+      if: steps.cache-docs.outputs.cache-hit != 'true'
+      run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=../${{ env.build }}/bin/lx doc-test
 
     - name: make doc
       if: steps.cache-docs.outputs.cache-hit != 'true'
@@ -478,6 +486,7 @@ jobs:
     - name: Install
       if: steps.cache-prefix.outputs.cache-hit != 'true'
       run: |
+        chmod ug+w ${{ env.build }}/pc # XXX: written to during make install
         bmake -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} PKGCONF=pkg-config CC=${{ matrix.cc }} PREFIX=../${{ env.prefix }}/usr install
 
   fpm:
