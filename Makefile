@@ -31,9 +31,7 @@ PKG += libtheft
 .endif
 
 # layout
-SUBDIR += include/fsm
-SUBDIR += include/re
-SUBDIR += include
+.if !defined(NODOC)
 SUBDIR += man/fsm.1
 SUBDIR += man/re.1
 SUBDIR += man/lx.1
@@ -48,6 +46,10 @@ SUBDIR += man/literal.5re
 SUBDIR += man/native.5re
 SUBDIR += man/re_dialect.5re
 SUBDIR += man/sql.5re
+.endif
+SUBDIR += include/fsm
+SUBDIR += include/re
+SUBDIR += include
 SUBDIR += src/adt
 SUBDIR += src/print
 SUBDIR += src/libfsm/cost
