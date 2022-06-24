@@ -187,7 +187,7 @@ jobs:
         # note: lexer.h first, because parser.? depends on it
         find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
         find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
-        ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }}
+        ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }} NODOC=1
 
   # testing different bmake dialects
   # the goal here is to excercise the build system, not the code
@@ -420,7 +420,7 @@ jobs:
   install:
     name: Install
     runs-on: ${{ matrix.os }}-latest
-    needs: [ build ]
+    needs: [ build, docs ]
 
     strategy:
       fail-fast: false
@@ -461,6 +461,14 @@ jobs:
       with:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+
+    - name: Fetch docs
+      if: steps.cache-prefix.outputs.cache-hit != 'true'
+      uses: actions/cache@v3
+      id: cache-docs
+      with:
+        path: ${{ env.build }}
+        key: docs-${{ github.sha }}
 
     - name: Get number of CPU cores
       if: steps.cache-prefix.outputs.cache-hit != 'true'
