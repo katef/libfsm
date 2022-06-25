@@ -211,7 +211,7 @@ jobs:
         exclude:
           - os: macos
             make: pmake # not packaged
-    
+
     steps:
     - name: Fetch checkout
       uses: actions/cache@v3
@@ -374,14 +374,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ checkout ]
 
-    strategy:
-      fail-fast: false
-      matrix:
-        san: [ NO_SANITIZER ] # NO_SANITIZER=1 is a no-op
-        os: [ ubuntu ]
-        cc: [ clang ]
-        make: [ bmake ]
-        debug: [ RELEASE ] # RELEASE=1 is a no-op
+    env:
+      make: bmake
 
     steps:
     - name: Cache docs
@@ -392,7 +386,7 @@ jobs:
         key: docs-${{ github.sha }}
 
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu' && steps.cache-docs.outputs.cache-hit != 'true'
+      if: steps.cache-docs.outputs.cache-hit != 'true'
       run: |
         uname -a
         sudo apt-get install bmake libxml2-utils xsltproc docbook-xml docbook-xsl
@@ -412,13 +406,13 @@ jobs:
 
     - name: Test docs
       if: steps.cache-docs.outputs.cache-hit != 'true'
-      run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} LX=../${{ env.build }}/bin/lx doc-test
+      run: ${{ env.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} doc-test
 
     - name: make doc
       if: steps.cache-docs.outputs.cache-hit != 'true'
       run: |
         mkdir -p ${{ env.build }}/man # XXX
-        bmake -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} doc
+        ${{ env.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} doc
 
     - name: chmod read only
       if: steps.cache-docs.outputs.cache-hit != 'true'
@@ -427,17 +421,15 @@ jobs:
 
   install:
     name: Install
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ubuntu-latest
     needs: [ build, docs ]
 
-    strategy:
-      fail-fast: false
-      matrix:
-        san: [ NO_SANITIZER ] # NO_SANITIZER=1 is a no-op
-        os: [ ubuntu ]
-        cc: [ clang ]
-        make: [ bmake ]
-        debug: [ RELEASE ] # RELEASE=1 is a no-op
+    env:
+      san: NO_SANITIZER # NO_SANITIZER=1 is a no-op
+      os: ubuntu
+      cc: clang
+      make: bmake
+      debug: RELEASE # RELEASE=1 is a no-op
 
     steps:
     - name: Cache prefix
@@ -445,14 +437,13 @@ jobs:
       id: cache-prefix
       with:
         path: ${{ env.prefix }}
-        key: prefix-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+        key: prefix-${{ env.make }}-${{ env.os }}-${{ env.cc }}-${{ env.debug }}-${{ env.san }}-${{ github.sha }}
 
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu' && steps.cache-prefix.outputs.cache-hit != 'true'
+      if: env.os == 'ubuntu' && steps.cache-prefix.outputs.cache-hit != 'true'
       run: |
         uname -a
         sudo apt-get install bmake
-        ${{ matrix.cc }} --version
 
     - name: Fetch checkout
       if: steps.cache-prefix.outputs.cache-hit != 'true'
@@ -468,7 +459,7 @@ jobs:
       id: cache-build
       with:
         path: ${{ env.build }}
-        key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+        key: build-${{ env.make }}-${{ env.os }}-${{ env.cc }}-${{ env.debug }}-${{ env.san }}-${{ github.sha }}
 
     - name: Fetch docs
       if: steps.cache-prefix.outputs.cache-hit != 'true'
@@ -487,27 +478,29 @@ jobs:
       if: steps.cache-prefix.outputs.cache-hit != 'true'
       run: |
         chmod ug+w ${{ env.build }}/pc # XXX: written to during make install
-        bmake -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} PKGCONF=pkg-config CC=${{ matrix.cc }} PREFIX=../${{ env.prefix }}/usr install
+        bmake -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} PREFIX=../${{ env.prefix }}/usr install
 
   fpm:
     name: Package ${{ matrix.pkg }}
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ubuntu-latest
     needs: [ install ]
+
+    env:
+      san: NO_SANITIZER # NO_SANITIZER=1 is a no-op
+      os: ubuntu
+      cc: clang
+      make: bmake
+      debug: RELEASE # RELEASE=1 is a no-op
 
     strategy:
       fail-fast: false
       matrix:
         # others: cpan, gem, npm, osxpkg, p5p, pear, pkgin, pleaserun, puppet, python, snap, solaris, virtualenv ]
         pkg: [ apk, deb, freebsd, rpm, sh, tar, zip ] # XXX: pacman is broken currently
-        san: [ NO_SANITIZER ] # NO_SANITIZER=1 is a no-op
-        os: [ ubuntu ]
-        cc: [ clang ]
-        make: [ bmake ]
-        debug: [ RELEASE ] # RELEASE=1 is a no-op
 
     steps:
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu'
+      if: env.os == 'ubuntu'
       run: |
         uname -a
         sudo gem install --no-document fpm
@@ -518,7 +511,7 @@ jobs:
       id: cache-prefix
       with:
         path: ${{ env.prefix }}
-        key: prefix-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+        key: prefix-${{ env.make }}-${{ env.os }}-${{ env.cc }}-${{ env.debug }}-${{ env.san }}-${{ github.sha }}
 
     - name: Find version
       # TODO: would get a tag or branch name here
