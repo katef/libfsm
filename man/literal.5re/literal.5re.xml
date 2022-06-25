@@ -33,7 +33,7 @@ list of escapes
 	<refsection>
 		<title>See Also</title>
 
-		<para>&re.1;, &re.3;, &glob.5re;, &like.re;, &native.5re;, &sql.5re;.</para>
+		<para>&re.1;, &re.3;, &glob.5re;, &like.5re;, &native.5re;, &sql.5re;.</para>
 	</refsection>
 
 </refentry>
