@@ -27,6 +27,7 @@
 	<!ENTITY C.opt "<option>-C</option>">
 	<!ENTITY c.opt "<option>-c</option>">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
+	<!ENTITY G.opt "<option>-G</option>">
 	<!ENTITY k.opt "<option>-k</option>&nbsp;&io.arg;">
 	<!ENTITY i.opt "<option>-i</option>&nbsp;&iterations.arg;">
 	<!ENTITY X.opt "<option>-X</option>">

@@ -25,6 +25,7 @@
 	<!ENTITY q.opt "<option>-q</option>&nbsp;&query.arg;">
 
 	<!ENTITY a.opt "<option>-a</option>">
+	<!ENTITY b.opt "<option>-b</option>">
 	<!ENTITY c.opt "<option>-c</option>">
 	<!ENTITY w.opt "<option>-w</option>">
 	<!ENTITY X.opt "<option>-X</option>">
