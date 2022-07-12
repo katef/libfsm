@@ -1,5 +1,12 @@
-.MAKEFLAGS: -r -m share/mk
+.MAKEFLAGS: -r -m $(.CURDIR)/share/mk
 .MAKE.JOB.PREFIX=
+
+.if defined(unix)
+BUILD_IMPOSSIBLE="attempting to use sys.mk"
+.endif
+.if $(.OBJDIR) != $(.CURDIR)
+BUILD_IMPOSSIBLE="attempting to use .OBJDIR other than .CURDIR"
+.endif
 
 # targets
 all::  mkdir .WAIT dep .WAIT lib prog
@@ -23,6 +30,15 @@ PREFIX ?= /usr/local
 .if defined(unix)
 .BEGIN::
 	@echo "We don't use sys.mk; run ${MAKE} with -r" >&2
+	@false
+.endif
+
+.if $(.OBJDIR) != $(.CURDIR)
+.BEGIN::
+	@echo "We cannot handle .OBJDIR other than .CURDIR" >&2
+.if exists(${.OBJDIR})
+	@echo "You may want to delete $(.OBJDIR)" >&2
+.endif
 	@false
 .endif
 
@@ -111,6 +127,9 @@ SUBDIR += pc
 
 INCDIR += include
 
+# if the build is impossible for a bmake-specific reason,
+# then these includes may cause an error before we can print a message
+.if !defined(BUILD_IMPOSSIBLE)
 .include <subdir.mk>
 .include <pc.mk>
 .include <sid.mk>
@@ -124,14 +143,19 @@ INCDIR += include
 .include <prog.mk>
 .include <man.mk>
 .include <mkdir.mk>
+.endif
 
 # these are internal tools for development; we don't install them to $PREFIX
 STAGE_BUILD := ${STAGE_BUILD:Nbin/retest}
 STAGE_BUILD := ${STAGE_BUILD:Nbin/reperf}
 STAGE_BUILD := ${STAGE_BUILD:Nbin/cvtpcre}
 
+# if the build is impossible for a bmake-specific reason,
+# then these includes may cause an error before we can print a message
+.if !defined(BUILD_IMPOSSIBLE)
 .include <install.mk>
 .include <clean.mk>
+.endif
 
 .if make(test)
 .END::
