@@ -4,7 +4,7 @@ name: CI
 on: [ push, pull_request ]
 
 env:
-  pcre2: pcre2-10.39
+  pcre2: pcre2-10.40
   wc: wc
   build: build
   cvtpcre: build/test/retest
