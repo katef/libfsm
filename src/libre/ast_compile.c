@@ -745,6 +745,15 @@ comp_iter(struct comp_env *env,
 
 		for (i = 0; i < count; i++) {
 			struct ast_expr *curr = n->u.concat.n[i];
+
+			/* If a subtree is unsatisfiable but also nullable, ignore it. */
+			const enum ast_flags nullable_and_unsat = AST_FLAG_NULLABLE
+			    | AST_FLAG_UNSATISFIABLE;
+			if (curr->type == AST_EXPR_REPEAT
+			    && (curr->flags & nullable_and_unsat) == nullable_and_unsat) {
+				continue;
+			}
+
 			struct ast_expr *next = i == count - 1
 				? NULL
 				: n->u.concat.n[i + 1];

@@ -311,6 +311,13 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			 */
 			assert(child->type != AST_EXPR_EMPTY);
 
+			/* If a subtree is unsatisfiable and can be
+			 * repeated zero times, just skip it. */
+			if (child->type == AST_EXPR_REPEAT && child->u.repeat.min == 0
+			    && child->flags & AST_FLAG_UNSATISFIABLE) {
+				continue;
+			}
+
 #if LOG_CONCAT_FLAGS
 			fprintf(stderr, "%s: %p: %lu: %p -- past_any %d\n",
 			    __func__, (void *)n, i, (void *)child,
@@ -397,27 +404,23 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		 * This logic corresponds to the equivalent case for tombstone nodes
 		 * during the (earlier) AST rewrite pass, except here we deal with
 		 * unsatisfiable nodes rather than just tombstones.
-		 *
-		 * I don't like modifying the node tree here; this seems like it's
-		 * being done at the wrong time. Unfortunately we need to handle the
-		 * unsatisfiable nodes produced by anchors (such as /a($b)?/)
-		 * and so we depend on the anchor analysis for this.
 		 */
-		/* TODO: maybe do the analysis before rewriting? */
-
-		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeat.min == 0) {
-			ast_expr_free(env->pool, n->u.repeat.e);
-
-			n->type = AST_EXPR_EMPTY;
-			set_flags(n, AST_FLAG_NULLABLE);
-			break;
-		}
-
-		if (res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeat.min > 0) {
-			return AST_ANALYSIS_UNSATISFIABLE;
-		}
-
-		if (res != AST_ANALYSIS_OK) {
+		if (res == AST_ANALYSIS_UNSATISFIABLE) {
+			/* If the subtree is unsatisfiable but has a repetition
+			 * min of 0, then just set the UNSATISFIABLE flag and
+			 * continue -- it shouldn't cause the AST as a whole to
+			 * get rejected, but that subtree will be skipped later.
+			 *
+			 * An example of this case is /^a($b)*c$/: while the
+			 * ($b)* can never match anything, the AST can still
+			 * have a valid result when repeated zero times. */
+			if (n->u.repeat.min == 0) {
+				set_flags(n, AST_FLAG_UNSATISFIABLE);
+				break;
+			} else if (n->u.repeat.min > 0) {
+				return AST_ANALYSIS_UNSATISFIABLE;
+			}
+		} else if (res != AST_ANALYSIS_OK) {
 			return res;
 		}
 
