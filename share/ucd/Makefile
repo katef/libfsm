@@ -1,4 +1,4 @@
-UCD_URL ?= https://www.unicode.org/Public/14.0.0/ucd/
+UCD_URL ?= https://www.unicode.org/Public/15.0.0/ucd/
 
 WGET ?= wget
 

@@ -659,6 +659,7 @@ static const struct range ranges[] = {
 	{ 0x1D7CBUL, 0x1D7CBUL },
 	{ 0x1DF00UL, 0x1DF09UL },
 	{ 0x1DF0BUL, 0x1DF1EUL },
+	{ 0x1DF25UL, 0x1DF2AUL },
 	{ 0x1E922UL, 0x1E943UL }
 };
 
