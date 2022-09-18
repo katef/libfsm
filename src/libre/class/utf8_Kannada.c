@@ -15,7 +15,7 @@ static const struct range ranges[] = {
 	{ 0x0CDDUL, 0x0CDEUL },
 	{ 0x0CE0UL, 0x0CE3UL },
 	{ 0x0CE6UL, 0x0CEFUL },
-	{ 0x0CF1UL, 0x0CF2UL }
+	{ 0x0CF1UL, 0x0CF3UL }
 };
 
 const struct class utf8_Kannada = {
