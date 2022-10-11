@@ -498,7 +498,7 @@ ast_expr_cmp(const struct ast_expr *a, const struct ast_expr *b)
 
 	case AST_EXPR_ANCHOR:
 		if (a->u.anchor.type < b->u.anchor.type) { return -1; }
-		if (a->u.anchor.type < b->u.anchor.type) { return +1; }
+		if (a->u.anchor.type > b->u.anchor.type) { return +1; }
 
 		return 0;
 
