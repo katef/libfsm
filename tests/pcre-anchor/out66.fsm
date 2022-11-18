@@ -1,0 +1,5 @@
+# match anything due to unanchored end
+0  ->  0 ?;
+
+start: 0;
+end:   0;
