@@ -1,0 +1,6 @@
+# only matches the empty string and newline
+
+0 -> 1 "\n";
+
+start: 0;
+end:   0, 1;
