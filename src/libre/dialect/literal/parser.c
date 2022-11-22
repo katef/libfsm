@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 149 "src/libre/parser.act"
+#line 22 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -322,7 +322,7 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 997 "src/libre/parser.act"
+#line 1006 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIa))) {
 			goto ZL1;
@@ -331,7 +331,7 @@ ZL2_list_Hof_Hatoms:;
 #line 332 "src/libre/dialect/literal/parser.c"
 		}
 		/* END OF ACTION: ast-add-concat */
-		/* BEGINNING OF INLINE: 114 */
+		/* BEGINNING OF INLINE: 115 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
@@ -340,12 +340,12 @@ ZL2_list_Hof_Hatoms:;
 					goto ZL2_list_Hof_Hatoms;
 					/* END OF INLINE: list-of-atoms */
 				}
-				/*UNREACHED*/
+				/* UNREACHED */
 			default:
 				break;
 			}
 		}
-		/* END OF INLINE: 114 */
+		/* END OF INLINE: 115 */
 	}
 	return;
 ZL1:;
@@ -362,14 +362,14 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 		return;
 	}
 	{
-		/* BEGINNING OF INLINE: 116 */
+		/* BEGINNING OF INLINE: 117 */
 		{
 			switch (CURRENT_TERMINAL) {
 			case (TOK_CHAR):
 				{
 					/* BEGINNING OF ACTION: ast-make-concat */
 					{
-#line 823 "src/libre/parser.act"
+#line 822 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_concat(act_state->poolp, *flags);
 		if ((ZInode) == NULL) {
@@ -390,7 +390,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				{
 					/* BEGINNING OF ACTION: ast-make-empty */
 					{
-#line 816 "src/libre/parser.act"
+#line 815 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_empty(act_state->poolp, *flags);
 		if ((ZInode) == NULL) {
@@ -404,8 +404,8 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				break;
 			}
 		}
-		/* END OF INLINE: 116 */
-		/* BEGINNING OF INLINE: 117 */
+		/* END OF INLINE: 117 */
+		/* BEGINNING OF INLINE: 118 */
 		{
 			{
 				switch (CURRENT_TERMINAL) {
@@ -421,7 +421,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 699 "src/libre/parser.act"
+#line 695 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
@@ -434,7 +434,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			}
 		ZL3:;
 		}
-		/* END OF INLINE: 117 */
+		/* END OF INLINE: 118 */
 	}
 	goto ZL0;
 ZL1:;
@@ -454,20 +454,20 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 	}
 	{
 		t_char ZIc;
-		t_pos ZI111;
 		t_pos ZI112;
+		t_pos ZI113;
 
 		switch (CURRENT_TERMINAL) {
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 536 "src/libre/parser.act"
+#line 532 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
 
-		ZI111 = lex_state->lx.start;
-		ZI112   = lex_state->lx.end;
+		ZI112 = lex_state->lx.start;
+		ZI113   = lex_state->lx.end;
 
 		ZIc = lex_state->buf.a[0];
 	
@@ -481,7 +481,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: ast-make-literal */
 		{
-#line 837 "src/libre/parser.act"
+#line 836 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_literal(act_state->poolp, *flags, (ZIc));
 		if ((ZInode) == NULL) {
@@ -497,7 +497,7 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-expected-atom */
 		{
-#line 650 "src/libre/parser.act"
+#line 646 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXATOM;
@@ -509,7 +509,7 @@ ZL1:;
 		/* END OF ACTION: err-expected-atom */
 		/* BEGINNING OF ACTION: ast-make-empty */
 		{
-#line 816 "src/libre/parser.act"
+#line 815 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_empty(act_state->poolp, *flags);
 		if ((ZInode) == NULL) {
@@ -530,7 +530,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 1155 "src/libre/parser.act"
+#line 1018 "src/libre/parser.act"
 
 
 	static int
@@ -606,7 +606,7 @@ ZL0:;
 		act_state->overlap = overlap;
 		act_state->poolp   = &ast->pool;
 
-		act_state->group_id = 1;
+		act_state->group_id = 0;
 
 		err->e = RE_ESUCCESS;
 
