@@ -893,3 +893,22 @@ error:
 	return NULL;
 }
 
+const char *
+ast_node_type_name(enum ast_expr_type t)
+{
+	switch (t) {
+	default:
+		return "<match fail>";
+	case AST_EXPR_EMPTY: return "EMPTY";
+	case AST_EXPR_CONCAT: return "CONCAT";
+	case AST_EXPR_ALT: return "ALT";
+	case AST_EXPR_LITERAL: return "LITERAL";
+	case AST_EXPR_CODEPOINT: return "CODEPOINT";
+	case AST_EXPR_REPEAT: return "REPEAT";
+	case AST_EXPR_GROUP: return "GROUP";
+	case AST_EXPR_ANCHOR: return "ANCHOR";
+	case AST_EXPR_SUBTRACT: return "SUBTRACT";
+	case AST_EXPR_RANGE: return "RANGE";
+	case AST_EXPR_TOMBSTONE: return "TOMBSTONE";
+	}
+}

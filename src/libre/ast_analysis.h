@@ -34,7 +34,7 @@ enum ast_analysis_res {
 };
 
 enum ast_analysis_res
-ast_analysis(struct ast *ast);
+ast_analysis(struct ast *ast, enum re_flags flags);
 
 int
 ast_rewrite(struct ast *ast, enum re_flags flags);

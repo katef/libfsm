@@ -36,6 +36,7 @@ enum re_flags {
 	RE_ZONE    = 1 << 5,
 	RE_ANCHORED = 1 << 6,
 	RE_EXTENDED = 1 << 7,  /* PCRE extended mode */
+	RE_END_NL  = 1 << 8, /* end anchor matches '\n' */
 	RE_FLAGS_NONE = 0
 };
 

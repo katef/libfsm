@@ -28,6 +28,10 @@
 
 #define LOG_LINKAGE 0
 
+#if LOG_LINKAGE
+#include "print.h"
+#endif
+
 enum link_side {
 	LINK_START,
 	LINK_END
@@ -35,7 +39,6 @@ enum link_side {
 
 /*
  * How should this state be linked for the relevant state?
- * Note: These are not mutually exclusive!
  *
  * - LINK_TOP_DOWN
  *   Use the passed in start/end states (x and y)
@@ -50,11 +53,9 @@ enum link_side {
  *   this node is in a FIRST or LAST position, but unanchored.
  */
 enum link_types {
-	LINK_TOP_DOWN         = 1 << 0,
-	LINK_GLOBAL           = 1 << 1,
-	LINK_GLOBAL_SELF_LOOP = 1 << 2,
-
-	LINK_NONE = 0x00
+	LINK_TOP_DOWN,
+	LINK_GLOBAL,
+	LINK_GLOBAL_SELF_LOOP,
 };
 
 struct comp_env {
@@ -76,14 +77,16 @@ struct comp_env {
 	fsm_state_t end;
 	fsm_state_t start_any_loop;
 	fsm_state_t end_any_loop;
-	int have_start_any_loop;
-	int have_end_any_loop;
+	fsm_state_t end_nl;
+	int has_start_any_loop;
+	int has_end_any_loop;
+	int has_end_nl;
 };
 
 static int
 comp_iter(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
-	struct ast_expr *n);
+	struct ast_expr *n, const struct ast_expr *parent);
 
 static int
 utf8(uint32_t cp, char c[])
@@ -227,7 +230,7 @@ intern_start_any_loop(struct comp_env *env)
 
 	assert(env != NULL);
 
-	if (env->have_start_any_loop) {
+	if (env->has_start_any_loop) {
 		return 1;
 	}
 
@@ -247,7 +250,7 @@ intern_start_any_loop(struct comp_env *env)
 	}
 
 	env->start_any_loop = loop;
-	env->have_start_any_loop = 1;
+	env->has_start_any_loop = 1;
 
 	return 1;
 }
@@ -259,7 +262,7 @@ intern_end_any_loop(struct comp_env *env)
 
 	assert(env != NULL);
 
-	if (env->have_end_any_loop) {
+	if (env->has_end_any_loop) {
 		return 1;
 	}
 
@@ -279,8 +282,45 @@ intern_end_any_loop(struct comp_env *env)
 	}
 
 	env->end_any_loop = loop;
-	env->have_end_any_loop = 1;
+	env->has_end_any_loop = 1;
 
+	return 1;
+}
+
+static int
+intern_end_nl(struct comp_env *env)
+{
+	/* PCRE's end anchor $ matches a single optional newline.
+	 *
+	 * Intern states for a `\n?` that links to the global end. */
+	assert(env != NULL);
+
+	if (env->has_end_nl) {
+		return 1;
+	}
+
+	assert(~env->re_flags & RE_ANCHORED);
+	assert(env->re_flags & RE_END_NL);
+	assert(env->end < env->fsm->statecount);
+
+	fsm_state_t end_nl;
+	if (!fsm_addstate(env->fsm, &end_nl)) {
+		return 0;
+	}
+
+#if LOG_LINKAGE
+	fprintf(stderr, "%s: end_nl: %d\n", __func__, end_nl);
+#endif
+
+	if (!fsm_addedge_epsilon(env->fsm, end_nl, env->end)) {
+		return 0;
+	}
+	if (!fsm_addedge_literal(env->fsm, end_nl, env->end, (char)'\n')) {
+		return 0;
+	}
+
+	env->end_nl = end_nl;
+	env->has_end_nl = 1;
 	return 1;
 }
 
@@ -358,105 +398,48 @@ can_skip_concat_state_and_epsilon(const struct ast_expr *l,
 
 static enum link_types
 decide_linking(struct comp_env *env,
-	fsm_state_t x, fsm_state_t y,
-	struct ast_expr *n, enum link_side side)
+	struct ast_expr *n, const struct ast_expr *parent, enum link_side side)
 {
-	enum link_types res = LINK_NONE;
-
 	assert(n != NULL);
 	assert(env != NULL);
 
+	/* If the regex is implicitly anchored and the dialect does
+	 * not support anchoring, linking is always top-down. */
 	if ((env->re_flags & RE_ANCHORED)) {
 		return LINK_TOP_DOWN;
 	}
 
-	switch (n->type) {
-	case AST_EXPR_EMPTY:
-		if ((n->flags & (AST_FLAG_FIRST|AST_FLAG_LAST)) == 0) {
-			return LINK_TOP_DOWN;
-		}
-		break;
+	/* parent can be NULL, if we're at the root node, but it must
+	 * never be the same node. */
+	assert(parent != n);
 
-	case AST_EXPR_GROUP:
-		return LINK_TOP_DOWN;
-
-	case AST_EXPR_ANCHOR:
-		if (n->u.anchor.type == AST_ANCHOR_START && side == LINK_START) {
-			return LINK_GLOBAL;
-		}
-		if (n->u.anchor.type == AST_ANCHOR_END && side == LINK_END) {
-			return LINK_GLOBAL;
-		}
-
-		break;
-
-	case AST_EXPR_SUBTRACT:
-	case AST_EXPR_LITERAL:
-	case AST_EXPR_CODEPOINT:
-
-	case AST_EXPR_CONCAT:
-	case AST_EXPR_ALT:
-	case AST_EXPR_REPEAT:
-	case AST_EXPR_RANGE:
-	case AST_EXPR_TOMBSTONE:
-		break;
-
-	default:
-		assert(!"unreached");
-	}
-
+	/* Note: any asymmetry here should be due to special cases
+	 * involving `$` matching exactly one '\n'. */
 	switch (side) {
 	case LINK_START: {
-		const int start    = (n->type == AST_EXPR_ANCHOR && n->u.anchor.type == AST_ANCHOR_START);
 		const int first    = (n->flags & AST_FLAG_FIRST) != 0;
-		const int nullable = (n->flags & AST_FLAG_NULLABLE) != 0;
+		const int anchored = (n->flags & AST_FLAG_ANCHORED_START) != 0;
+		const int anchored_parent = (parent && (parent->flags & AST_FLAG_ANCHORED_START) != 0);
 
-		(void) nullable;
+		if (first && anchored) { return LINK_GLOBAL; }
+		if (first && !anchored) { return LINK_GLOBAL_SELF_LOOP; }
 
-		if (!start && first) {
-			if (x == env->start) {
-				/* Avoid a cycle back to env->start that may
-				 * lead to incorrect matches, e.g. /a?^b*/
-				return LINK_GLOBAL_SELF_LOOP;
-			} else {
-				/* Link in the starting self-loop, but also the
-				 * previous state (if any), because it can
-				 * indicate matching a nullable state. */
-				return LINK_GLOBAL_SELF_LOOP | LINK_TOP_DOWN;
-			}
-		}
-
-		if (start && !first) {
+		if (anchored && !first && !anchored_parent) {
 			return LINK_GLOBAL;
 		}
 
 		return LINK_TOP_DOWN;
+
 	}
 
 	case LINK_END: {
-		const int end      = (n->type == AST_EXPR_ANCHOR && n->u.anchor.type == AST_ANCHOR_END);
 		const int last     = (n->flags & AST_FLAG_LAST) != 0;
-		const int nullable = (n->flags & AST_FLAG_NULLABLE) != 0;
+		const int anchored = (n->flags & AST_FLAG_ANCHORED_END) != 0;
 
-		(void) nullable;
+		if (last && anchored) { return LINK_GLOBAL; }
+		if (last && !anchored) { return LINK_GLOBAL_SELF_LOOP; }
 
-		if (end && last) {
-			if (y == env->end) {
-				return LINK_GLOBAL;
-			} else {
-				return LINK_GLOBAL | LINK_TOP_DOWN;
-			}
-		}
-
-		if (!end && last) {
-			if (y == env->end) {
-				return LINK_GLOBAL_SELF_LOOP;
-			} else {
-				return LINK_GLOBAL_SELF_LOOP | LINK_TOP_DOWN;
-			}
-		}
-
-		if (end && !last) {
+		if (anchored && !last) {
 			return LINK_GLOBAL;
 		}
 
@@ -467,27 +450,25 @@ decide_linking(struct comp_env *env,
 		assert(!"unreached");
 	}
 
-	assert(res != LINK_NONE);
-
-	return res;
+	return LINK_GLOBAL;
 }
 
 static void
 print_linkage(enum link_types t)
 {
-	if (t == LINK_NONE) {
-		fprintf(stderr, "NONE");
-		return;
-	}
-
-	if (t & LINK_TOP_DOWN) {
+	switch (t) {
+	case LINK_TOP_DOWN:
 		fprintf(stderr, "[TOP_DOWN]");
-	}
-	if (t & LINK_GLOBAL) {
+		break;
+	case LINK_GLOBAL:
 		fprintf(stderr, "[GLOBAL]");
-	}
-	if (t & LINK_GLOBAL_SELF_LOOP) {
+		break;
+	case LINK_GLOBAL_SELF_LOOP:
 		fprintf(stderr, "[SELF_LOOP]");
+		break;
+	default:
+		assert(!"match fail");
+		break;
 	}
 }
 
@@ -504,30 +485,32 @@ print_linkage(enum link_types t)
 #define LITERAL(FROM, TO, C)        \
     if (!addedge_literal(env, n->re_flags, (FROM), (TO), ((char)C))) { return 0; }
 
-#define RECURSE(FROM, TO, NODE)     \
-    if (!comp_iter(env, (FROM), (TO), (NODE))) { return 0; }
+#define RECURSE(FROM, TO, NODE, PARENT)		\
+    if (!comp_iter(env, (FROM), (TO), (NODE), (PARENT))) { return 0; }
 
 static int
 comp_iter_repeated(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
-	struct ast_expr_repeat *n)
+	struct ast_expr *n)
 {
 	fsm_state_t a, b;
 	fsm_state_t na, nz;
-	unsigned i, min, max;
+	unsigned i;
 
-	min = n->min;
-	max = n->max;
+	assert(n->type == AST_EXPR_REPEAT);
+	const unsigned min = n->u.repeat.min;
+	const unsigned max = n->u.repeat.max;
+	struct ast_expr *e = n->u.repeat.e;
 
 	assert(min <= max);
 
 	if (min == 0 && max == 0) {                          /* {0,0} */
 		EPSILON(x, y);
 	} else if (min == 0 && max == 1) {                   /* '?' */
-		RECURSE(x, y, n->e);
+		RECURSE(x, y, e, n);
 		EPSILON(x, y);
 	} else if (min == 1 && max == 1) {                   /* {1,1} */
-		RECURSE(x, y, n->e);
+		RECURSE(x, y, e, n);
 	} else if (min == 0 && max == AST_COUNT_UNBOUNDED) { /* '*' */
 		NEWSTATE(na);
 		NEWSTATE(nz);
@@ -535,7 +518,7 @@ comp_iter_repeated(struct comp_env *env,
 		EPSILON(nz,y);
 
 		EPSILON(na, nz);
-		RECURSE(na, nz, n->e);
+		RECURSE(na, nz, e, n);
 		EPSILON(nz, na);
 	} else if (min == 1 && max == AST_COUNT_UNBOUNDED) { /* '+' */
 		NEWSTATE(na);
@@ -543,7 +526,7 @@ comp_iter_repeated(struct comp_env *env,
 		EPSILON(x,na);
 		EPSILON(nz,y);
 
-		RECURSE(na, nz, n->e);
+		RECURSE(na, nz, e, n);
 		EPSILON(nz, na);
 	} else {
 		/*
@@ -558,7 +541,7 @@ comp_iter_repeated(struct comp_env *env,
 
 		NEWSTATE(na);
 		NEWSTATE(nz);
-		RECURSE(na, nz, n->e);
+		RECURSE(na, nz, e, n);
 		EPSILON(x, na); /* link head to repeated NFA head */
 
 		b = nz; /* set the initial tail */
@@ -622,7 +605,7 @@ comp_iter_repeated(struct comp_env *env,
 static int
 comp_iter(struct comp_env *env,
 	fsm_state_t x, fsm_state_t y,
-	struct ast_expr *n)
+	struct ast_expr *n, const struct ast_expr *parent)
 {
 	enum link_types link_start, link_end;
 
@@ -630,94 +613,65 @@ comp_iter(struct comp_env *env,
 		return 1;
 	}
 
-	link_start = decide_linking(env, x, y, n, LINK_START);
-	link_end   = decide_linking(env, x, y, n, LINK_END);
+	link_start = decide_linking(env, n, parent, LINK_START);
+	link_end   = decide_linking(env, n, parent, LINK_END);
 
 #if LOG_LINKAGE
 	fprintf(stderr, "%s: decide_linking %p: start ", __func__, (void *) n);
 	print_linkage(link_start);
 	fprintf(stderr, ", end ");
 	print_linkage(link_end);
-	fprintf(stderr, "\n");
+	fprintf(stderr, ", x %d, y %d\n", x, y);
 #else
 	(void) print_linkage;
 #endif
 
-	if ((link_start & LINK_TOP_DOWN) == LINK_NONE) {
-		/*
-		 * The top-down link is rejected, so replace x with
-		 * either the NFA's global start state or the self-loop
-		 * at the start. These _are_ mutually exclusive.
-		 */
-		if (link_start & LINK_GLOBAL) {
-			assert((link_start & LINK_GLOBAL_SELF_LOOP) == LINK_NONE);
-			x = env->start;
-		} else if (link_start & LINK_GLOBAL_SELF_LOOP) {
-			assert((link_start & LINK_GLOBAL) == LINK_NONE);
-
-			if (!intern_start_any_loop(env)) {
-				return 0;
-			}
-
-			assert(env->have_start_any_loop);
-			x = env->start_any_loop;
+	switch (link_start) {
+	case LINK_TOP_DOWN:
+		break;
+	case LINK_GLOBAL:
+		x = env->start;
+		break;
+	case LINK_GLOBAL_SELF_LOOP:
+		if (!intern_start_any_loop(env)) {
+			return 0;
 		}
-	} else {
-		/*
-		 * The top-down link is still being used, so connect to the
-		 * global start/start-self-loop state with an epsilon.
-		 */
-		if (link_start & LINK_GLOBAL) {
-			assert((link_start & LINK_GLOBAL_SELF_LOOP) == LINK_NONE);
-			EPSILON(env->start, x);
-		} else if (link_start & LINK_GLOBAL_SELF_LOOP) {
-			assert((link_start & LINK_GLOBAL) == LINK_NONE);
+		assert(env->has_start_any_loop);
 
-			if (!intern_start_any_loop(env)) {
-				return 0;
-			}
-
-			assert(env->have_start_any_loop);
-		}
+		x = env->start_any_loop;
+		break;
+	default:
+		assert(!"unreachable");
 	}
 
-	if ((link_end & LINK_TOP_DOWN) == LINK_NONE) {
-		/*
-		 * The top-down link is rejected, so replace x with
-		 * either the NFA's global end state or the self-loop
-		 * at the end. These _are_ mutually exclusive.
-		 */
-		if (link_end & LINK_GLOBAL) {
-			assert((link_end & LINK_GLOBAL_SELF_LOOP) == LINK_NONE);
+	switch (link_end) {
+	case LINK_TOP_DOWN:
+		break;
+	case LINK_GLOBAL:
+		if (env->re_flags & RE_END_NL && (n->flags & AST_FLAG_END_NL)) {
+			if (!intern_end_nl(env)) {
+				return 0;
+			}
+			y = env->end_nl;
+		} else {
 			y = env->end;
-		} else if (link_end & LINK_GLOBAL_SELF_LOOP) {
-			assert((link_end & LINK_GLOBAL) == LINK_NONE);
-
-			if (!intern_end_any_loop(env)) {
-				return 0;
-			}
-
-			assert(env->have_end_any_loop);
-			y = env->end_any_loop;
 		}
-	} else {
-		/*
-		 * The top-down link is still being used, so connect to the
-		 * global end/end-self-loop state with an epsilon.
-		 */
-		if (link_end & LINK_GLOBAL) {
-			assert((link_end & LINK_GLOBAL_SELF_LOOP) == LINK_NONE);
-			EPSILON(y, env->end);
-		} else if (link_end & LINK_GLOBAL_SELF_LOOP) {
-			assert((link_end & LINK_GLOBAL) == LINK_NONE);
-
-			if (!intern_end_any_loop(env)) {
-				return 0;
-			}
-
-			assert(env->have_end_any_loop);
+		break;
+	case LINK_GLOBAL_SELF_LOOP:
+		if (!intern_end_any_loop(env)) {
+			return 0;
 		}
+		assert(env->has_end_any_loop);
+
+		y = env->end_any_loop;
+		break;
+	default:
+		assert(!"unreachable");
 	}
+
+#if LOG_LINKAGE
+	fprintf(stderr, " ---> x: %d, y: %d\n", x, y);
+#endif
 
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
@@ -727,7 +681,7 @@ comp_iter(struct comp_env *env,
 
 	case AST_EXPR_CONCAT:
 	{
-		fsm_state_t base, z;
+		fsm_state_t base;
 		fsm_state_t curr_x;
 		size_t i;
 
@@ -749,8 +703,11 @@ comp_iter(struct comp_env *env,
 			/* If a subtree is unsatisfiable but also nullable, ignore it. */
 			const enum ast_flags nullable_and_unsat = AST_FLAG_NULLABLE
 			    | AST_FLAG_UNSATISFIABLE;
-			if (curr->type == AST_EXPR_REPEAT
-			    && (curr->flags & nullable_and_unsat) == nullable_and_unsat) {
+			if ((curr->flags & nullable_and_unsat) == nullable_and_unsat) {
+				/* if necessary, link the end */
+				if (i == count - 1) {
+					EPSILON(curr_x, y);
+				}
 				continue;
 			}
 
@@ -758,10 +715,16 @@ comp_iter(struct comp_env *env,
 				? NULL
 				: n->u.concat.n[i + 1];
 
+			fsm_state_t z;
 			if (i + 1 < count) {
-				z = base + i;
+				if (!fsm_addstate(env->fsm, &z)) {
+					return 0;
+				}
+#if LOG_LINKAGE
+				fprintf(stderr, "%s: added state z %d\n", __func__, z);
+#endif
 			} else {
-				z = y;
+				z = y; /* connect to right parent to close off subtree */
 			}
 
 			/*
@@ -775,7 +738,7 @@ comp_iter(struct comp_env *env,
 				curr_x = diode;
 			}
 
-			RECURSE(curr_x, z, curr);
+			RECURSE(curr_x, z, curr, n);
 
 			curr_x = z;
 		}
@@ -792,12 +755,17 @@ comp_iter(struct comp_env *env,
 		assert(count >= 1);
 
 		for (i = 0; i < count; i++) {
+			/* skip unsatisfiable ALT subtrees */
+			if (n->u.alt.n[i]->flags & AST_FLAG_UNSATISFIABLE) {
+				continue;
+			}
+
 			/*
 			 * CONCAT handles adding extra states and
 			 * epsilons when necessary, so there isn't much
 			 * more to do here.
 			 */
-			RECURSE(x, y, n->u.alt.n[i]);
+			RECURSE(x, y, n->u.alt.n[i], n);
 		}
 		break;
 	}
@@ -843,13 +811,13 @@ comp_iter(struct comp_env *env,
 		 * REPEAT breaks out into its own function, because
 		 * there are several special cases
 		 */
-		if (!comp_iter_repeated(env, x, y, &n->u.repeat)) {
+		if (!comp_iter_repeated(env, x, y, n)) {
 			return 0;
 		}
 		break;
 
 	case AST_EXPR_GROUP:
-		RECURSE(x, y, n->u.group.e);
+		RECURSE(x, y, n->u.group.e, n);
 		break;
 
 	case AST_EXPR_TOMBSTONE:
@@ -857,18 +825,7 @@ comp_iter(struct comp_env *env,
 		break;
 
 	case AST_EXPR_ANCHOR:
-		switch (n->u.anchor.type) {
-		case AST_ANCHOR_START:
-			EPSILON(env->start, y);
-			break;
-
-		case AST_ANCHOR_END:
-			EPSILON(x, env->end);
-			break;
-
-		default:
-			assert(!"unreached");
-		}
+		EPSILON(x, y);
 		break;
 
 	case AST_EXPR_SUBTRACT: {
@@ -994,7 +951,7 @@ ast_compile(const struct ast *ast,
 		env.start = x;
 		env.end = y;
 
-		if (!comp_iter(&env, x, y, ast->expr)) {
+		if (!comp_iter(&env, x, y, ast->expr, NULL)) {
 			goto error;
 		}
 	}
