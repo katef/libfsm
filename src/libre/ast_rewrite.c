@@ -109,7 +109,7 @@ compile_subexpr(struct ast_expr *e, enum re_flags flags)
 
 	ast.expr = e;
 
-	if (ast_analysis(&ast) != AST_ANALYSIS_OK) {
+	if (ast_analysis(&ast, flags) != AST_ANALYSIS_OK) {
 		return 0;
 	}
 

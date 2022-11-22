@@ -908,6 +908,16 @@
 		}
 	@};
 
+	<ast-make-anchor-end-nl>: () -> (node :ast_expr) = @{
+		@node = ast_make_expr_anchor(act_state->poolp, *flags, AST_ANCHOR_END);
+		if (@node == NULL) {
+			@!;
+		}
+		if (!(*flags & RE_ANCHORED)) {
+			@node->u.anchor.is_end_nl = 1;
+		}
+	@};
+
 	<ast-make-subtract>: (a :ast_expr, b :ast_expr) -> (node :ast_expr) = @{
 		@node = ast_make_expr_subtract(act_state->poolp, *flags, @a, @b);
 		if (@node == NULL) {
@@ -1080,7 +1090,7 @@
 		act_state->overlap = overlap;
 		act_state->poolp   = &ast->pool;
 
-		act_state->group_id = 1;
+		act_state->group_id = 0;
 
 		err->e = RE_ESUCCESS;
 

@@ -40,7 +40,7 @@ re_dialect(enum re_dialect dialect)
 		{ RE_LITERAL, parse_re_literal, 0, RE_SINGLE | RE_ANCHORED },
 		{ RE_GLOB,    parse_re_glob,    0, RE_SINGLE | RE_ANCHORED },
 		{ RE_NATIVE,  parse_re_native,  0, 0                       },
-		{ RE_PCRE,    parse_re_pcre,    0, 0                       },
+		{ RE_PCRE,    parse_re_pcre,    0, RE_END_NL               },
 		{ RE_SQL,     parse_re_sql,     1, RE_SINGLE | RE_ANCHORED }
 	};
 
@@ -120,7 +120,7 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	}
 
 	/* Do a complete pass over the AST, filling in other details. */
-	res = ast_analysis(ast);
+	res = ast_analysis(ast, flags);
 
 	if (res < 0) {
 		ast_free(ast);

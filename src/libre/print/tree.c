@@ -57,6 +57,11 @@ fprintf_flags(FILE *f, enum ast_flags flags)
 	PR_FLAG(LAST,          "L");
 	PR_FLAG(UNSATISFIABLE, "X");
 	PR_FLAG(NULLABLE,      "0");
+	PR_FLAG(ANCHORED_START,"^");
+	PR_FLAG(ANCHORED_END,  "$");
+	PR_FLAG(END_NL,        "N");
+	PR_FLAG(CAN_CONSUME,   "c");
+	PR_FLAG(ALWAYS_CONSUMES, "C");
 
 #undef PR_FLAG
 

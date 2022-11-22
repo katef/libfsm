@@ -68,13 +68,36 @@ enum ast_anchor_type {
  *   The node is not always evaluated, such as nodes that
  *   are repeated at least 0 times.
  *
+ * - AST_FLAG_ALWAYS_CONSUMES
+ *   The subtree always consumes input.
+ *
+ * - AST_FLAG_CAN_CONSUME
+ *   The subtree is able to consume input, though it
+ *   may not in all cases.
+ *
+ * - AST_FLAG_ANCHORED_START
+ *   The subtree is anchored to the global start.
+ *
+ * - AST_FLAG_ANCHORED_END
+ *   The subtree is anchored to the global end.
+ *
+ * - AST_FLAG_END_NL
+ *   The subtree, which must also have AST_FLAG_ANCHORED_END set,
+ *   ends with the PCRE end anchor that implicitly matches a single
+ *   trailing newline.
+ *
  * Not all are valid for all node types.
  */
 enum ast_flags {
-	AST_FLAG_FIRST         = 1 << 0,
-	AST_FLAG_LAST          = 1 << 1,
-	AST_FLAG_UNSATISFIABLE = 1 << 2,
-	AST_FLAG_NULLABLE      = 1 << 3,
+	AST_FLAG_FIRST           = 1 << 0,
+	AST_FLAG_LAST            = 1 << 1,
+	AST_FLAG_UNSATISFIABLE   = 1 << 2,
+	AST_FLAG_NULLABLE        = 1 << 3,
+	AST_FLAG_ALWAYS_CONSUMES = 1 << 4,
+	AST_FLAG_CAN_CONSUME     = 1 << 5,
+	AST_FLAG_ANCHORED_START  = 1 << 6,
+	AST_FLAG_ANCHORED_END    = 1 << 7,
+	AST_FLAG_END_NL          = 1 << 8,
 
 	AST_FLAG_NONE = 0x00
 };
@@ -159,6 +182,7 @@ struct ast_expr {
 
 		struct {
 			enum ast_anchor_type type;
+			int is_end_nl;
 		} anchor;
 
 		struct {
@@ -214,6 +238,8 @@ ast_expr_pool_save(void);
 struct ast {
 	struct ast_expr_pool *pool;
 	struct ast_expr *expr;
+	int has_unanchored_start;
+	int has_unanchored_end;
 };
 
 extern struct ast_expr *ast_expr_tombstone;
@@ -295,5 +321,8 @@ struct ast *
 re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err, int *unsatisfiable);
+
+const char *
+ast_node_type_name(enum ast_expr_type t);
 
 #endif
