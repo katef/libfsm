@@ -898,7 +898,7 @@ ast_node_type_name(enum ast_expr_type t)
 {
 	switch (t) {
 	default:
-		return "<match fail>";
+		return "?";
 	case AST_EXPR_EMPTY: return "EMPTY";
 	case AST_EXPR_CONCAT: return "CONCAT";
 	case AST_EXPR_ALT: return "ALT";
