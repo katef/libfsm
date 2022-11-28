@@ -681,7 +681,6 @@ comp_iter(struct comp_env *env,
 
 	case AST_EXPR_CONCAT:
 	{
-		fsm_state_t base;
 		fsm_state_t curr_x;
 		size_t i;
 
@@ -690,8 +689,6 @@ comp_iter(struct comp_env *env,
 		curr_x = x;
 
 		assert(count >= 1);
-
-		base = env->fsm->statecount;
 
 		if (!fsm_addstate_bulk(env->fsm, count - 1)) {
 			return 0;
