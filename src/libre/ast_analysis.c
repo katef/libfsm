@@ -525,12 +525,15 @@ set_flags_subtree(struct ast_expr *n, enum ast_flags flags)
 
 	case AST_EXPR_REPEAT:
 		set_flags_subtree(n->u.repeat.e, flags);
+		break;
 
 	case AST_EXPR_GROUP:
 		set_flags_subtree(n->u.group.e, flags);
+		break;
 
 	case AST_EXPR_SUBTRACT:
 		set_flags_subtree(n->u.subtract.a, flags);
+		break;
 	}
 }
 
