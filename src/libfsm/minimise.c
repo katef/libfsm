@@ -19,6 +19,7 @@
 
 #include <adt/edgeset.h>
 #include <adt/set.h>
+#include <adt/u64bitset.h>
 
 #include "internal.h"
 
@@ -158,7 +159,7 @@ collect_labels(const struct fsm *fsm,
 
 	*label_count = 0;
 	for (i = 0; i < 256; i++) {
-		if (label_set[i/64] & ((uint64_t)1 << (i & 63))) {
+		if (u64bitset_get(label_set, i)) {
 			labels[*label_count] = i;
 			(*label_count)++;
 		} else if ((i & 63) == 0 && label_set[i/64] == 0) {
@@ -792,7 +793,7 @@ init_label_iterator(const struct min_env *env,
 			if ((i & 63) == 0 && label_set[i/64] == 0) {
 				i += 64;
 			} else {
-				if (label_set[i/64] & ((uint64_t)1 << (i & 63))) {
+				if (u64bitset_get(label_set, i)) {
 					li->labels[li->limit] = i;
 					li->limit++;
 				}

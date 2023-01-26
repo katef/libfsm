@@ -17,6 +17,7 @@
 #include <adt/stateset.h>
 #include <adt/internedstateset.h>
 #include <adt/ipriq.h>
+#include <adt/u64bitset.h>
 
 #include "internal.h"
 #include "capture.h"
