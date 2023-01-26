@@ -51,6 +51,74 @@ struct state_array;
 /* 32-bit approximation of golden ratio, used for hashing */
 #define PHI32 0x9e3779b9
 
+#ifndef TRACK_TIMES
+#define TRACK_TIMES 0
+#endif
+
+#if EXPENSIVE_CHECKS && TRACK_TIMES
+#error benchmarking with EXPENSIVE_CHECKS
+#endif
+
+#if TRACK_TIMES
+#include <sys/time.h>
+#define TIMER_LOG_THRESHOLD 100
+
+#define INIT_TIMERS() struct timeval pre, post
+#define INIT_TIMERS_NAMED(PREFIX) struct timeval PREFIX ## _pre, PREFIX ## _post
+#define TIME(T)								\
+	if (gettimeofday(T, NULL) == -1) { assert(!"gettimeofday"); }
+#define DIFF_MSEC(LABEL, PRE, POST, ACCUM)				\
+	do {								\
+		size_t *accum = ACCUM;					\
+		const size_t diff_usec =				\
+		    (1000000*(POST.tv_sec - PRE.tv_sec)			\
+			+ (POST.tv_usec - PRE.tv_usec));		\
+		const size_t diff_msec = diff_usec/1000;		\
+		if (diff_msec >= TIMER_LOG_THRESHOLD			\
+		    || TRACK_TIMES > 1) {				\
+			fprintf(stderr, "%s: %zu msec%s\n", LABEL,	\
+			    diff_msec,					\
+			    diff_msec >= 100 ? " #### OVER 100" : "");	\
+		}							\
+		if (accum != NULL) {					\
+			(*accum) += diff_usec;				\
+		}							\
+	} while(0)
+#define DIFF_MSEC_ALWAYS(LABEL, PRE, POST, ACCUM)			\
+	do {								\
+		size_t *accum = ACCUM;					\
+		const size_t diff_usec =				\
+		    (1000000*(POST.tv_sec - PRE.tv_sec)			\
+			+ (POST.tv_usec - PRE.tv_usec));		\
+		const size_t diff_msec = diff_usec/1000;		\
+		fprintf(stderr, "%s: %zu msec%s\n", LABEL, diff_msec,	\
+		    diff_msec >= 100 ? " #### OVER 100" : "");		\
+		if (accum != NULL) {					\
+			(*accum) += diff_usec;				\
+		}							\
+	} while(0)
+
+#define DIFF_USEC_ALWAYS(LABEL, PRE, POST, ACCUM)			\
+	do {								\
+		size_t *accum = ACCUM;					\
+		const size_t diff_usec =				\
+		    (1000000*(POST.tv_sec - PRE.tv_sec)			\
+			+ (POST.tv_usec - PRE.tv_usec));		\
+		fprintf(stderr, "%s: %zu usec\n", LABEL, diff_usec);	\
+		if (accum != NULL) {					\
+			(*accum) += diff_usec;				\
+		}							\
+	} while(0)
+
+#else
+#define INIT_TIMERS()
+#define INIT_TIMERS_NAMED(PREFIX)
+#define TIME(T)
+#define DIFF_MSEC(A, B, C, D)
+#define DIFF_MSEC_ALWAYS(A, B, C, D)
+#define DIFF_USEC_ALWAYS(A, B, C, D)
+#endif
+
 struct fsm_edge {
 	fsm_state_t state; /* destination */
 	unsigned char symbol;
