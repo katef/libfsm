@@ -28,8 +28,6 @@
 /* Most significant bit of a size_t. */
 #define COMMITTED_CAPTURE_FLAG ((SIZE_MAX) ^ (SIZE_MAX >> 1))
 
-#define EXPENSIVE_CHECKS 1
-
 struct fsm_capture_info {
 	unsigned max_capture_id;
 
