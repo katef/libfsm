@@ -96,7 +96,9 @@ enum init_ec { INIT_EC_NOT_FINAL, INIT_EC_FINAL };
  * small. In that case, it's probably more efficient to do an extra
  * pass and collect which labels are actually used, then just check
  * for possible partitions on those, rather than trying every label
- * used in the entire DFA. */
+ * used in the entire DFA.
+ *
+ * Setting SMALL_EC_THRESHOLD to 0 disables the optimization. */
 #define SMALL_EC_FLAG (UINT_MAX ^ (UINT_MAX >> 1))
 #define SMALL_EC_THRESHOLD 16	/* a guess -- needs experimentation */
 #define DFA_LABELS_THRESHOLD 4
