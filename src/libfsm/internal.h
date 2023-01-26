@@ -20,6 +20,10 @@ struct edge_set;
 struct state_set;
 struct state_array;
 
+/* If set to non-zero, do extra intensive integrity checks, often inside
+ * some inner loops, which are far too expensive for production. */
+#define EXPENSIVE_CHECKS 0
+
 /*
  * The alphabet (Sigma) for libfsm's FSM is arbitrary octets.
  * These octets may or may not spell out UTF-8 sequences,
