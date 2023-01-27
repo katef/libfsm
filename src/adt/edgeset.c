@@ -364,41 +364,30 @@ edge_set_contains(const struct edge_set *set, unsigned char symbol)
 int
 edge_set_hasnondeterminism(const struct edge_set *set, struct bm *bm)
 {
-	size_t i;
-
+	size_t i, w_i;
 	assert(bm != NULL);
+
+	dump_edge_set(set);
 
 	if (edge_set_empty(set)) {
 		return 0;
 	}
 
-	/*
-	 * Instances of struct fsm_edge aren't unique, and are not ordered.
-	 * The bitmap here is to identify duplicate symbols between structs.
-	 *
-	 * The same bitmap is shared between all states in an epsilon closure.
-	 */
+	for (i = 0; i < set->count; i++) {
+		const struct edge_group *eg = &set->groups[i];
+		for (w_i = 0; w_i < 4; w_i++) {
+			const uint64_t cur = eg->symbols[w_i];
+			if (cur == 0) {
+				continue;
+			}
 
-	if (IS_SINGLETON(set)) {
-		if (bm_get(bm, SINGLETON_DECODE_SYMBOL(set))) {
-			return 1;
+			uint64_t *bmw = bm_nth_word(bm, w_i);
+
+			if (cur & *bmw) {
+				return 1;
+			}
+			*bmw |= cur;
 		}
-
-		bm_set(bm, SINGLETON_DECODE_SYMBOL(set));
-		return 0;
-	}
-
-	for (i = 0; i < set->ceil; i++) {
-		const fsm_state_t bs = set->b[i].state;
-		if (bs == BUCKET_UNUSED || bs == BUCKET_TOMBSTONE) {
-			continue; /* no element */
-		}
-
-		if (bm_get(bm, set->b[i].symbol)) {
-			return 1;
-		}
-
-		bm_set(bm, set->b[i].symbol);
 	}
 
 	return 0;

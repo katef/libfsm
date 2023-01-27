@@ -34,6 +34,16 @@ bm_set(struct bm *bm, size_t i)
 	u64bitset_set(bm->map, i);
 }
 
+uint64_t *
+bm_nth_word(struct bm *bm, size_t n)
+{
+	if (n < sizeof(bm->map)/sizeof(bm->map[0])) {
+		return &bm->map[n];
+	}
+
+	return NULL;
+}
+
 size_t
 bm_next(const struct bm *bm, int i, int value)
 {
