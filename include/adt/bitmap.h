@@ -7,11 +7,14 @@
 #ifndef ADT_BITMAP_H
 #define ADT_BITMAP_H
 
+#include <stdint.h>
+#include "print/esc.h"
+
 struct fsm_state;
 struct fsm_options;
 
 struct bm {
-	unsigned char map[UCHAR_MAX / CHAR_BIT + 1];
+	uint64_t map[(UCHAR_MAX + 1)/sizeof(uint64_t)];
 };
 
 int
