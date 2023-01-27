@@ -58,7 +58,6 @@ fsm_determinise(struct fsm *nfa)
 	{
 		fsm_state_t start;
 		interned_state_set_id start_set;
-		interned_state_set_id empty = interned_state_set_empty(issp);
 
 		/*
 		 * The starting condition is the epsilon closure of a set of states
@@ -82,7 +81,7 @@ fsm_determinise(struct fsm *nfa)
 #if LOG_DETERMINISE_CAPTURES
 		fprintf(stderr, "#### Adding mapping for start state %u -> 0\n", start);
 #endif
-		if (!interned_state_set_add(issp, &empty, start, &start_set)) {
+		if (!interned_state_set_intern_set(issp, 1, &start, &start_set)) {
 			goto cleanup;
 		}
 
@@ -131,18 +130,9 @@ fsm_determinise(struct fsm *nfa)
 #if LOG_DETERMINISE_CLOSURES
 			fprintf(stderr, "fsm_determinise: cur (dfa %zu) label [", curr->dfastate);
 			dump_labels(stderr, output->labels);
-			fprintf(stderr, "] -> iss:%p: ", output->iss);
-			{
-				struct state_iter it;
-				fsm_state_t s;
-				struct state_set *ss = interned_state_set_retain(output->iss);
-
-				for (state_set_reset(ss, &it); state_set_next(&it, &s); ) {
-					fprintf(stderr, " %u", s);
-				}
-				fprintf(stderr, "\n");
-				interned_state_set_release(output->iss);
-			}
+			fprintf(stderr, "] -> iss:%ld: ", output->iss);
+			interned_state_set_dump(stderr, issp, output->iss);
+			fprintf(stderr, "\n");
 #endif
 
 			/*
@@ -201,14 +191,13 @@ fsm_determinise(struct fsm *nfa)
 			for (m = map_first(&map, &it); m != NULL; m = map_next(&it)) {
 				struct state_iter si;
 				fsm_state_t state;
-				struct state_set *ss = interned_state_set_retain(m->iss);
+				struct state_set *ss = interned_state_set_get_state_set(ac_env.issp, iss_id);
 				fprintf(stderr, "%zu:", m->dfastate);
 
 				for (state_set_reset(ss, &si); state_set_next(&si, &state); ) {
 					fprintf(stderr, " %u", state);
 				}
 				fprintf(stderr, "\n");
-				interned_state_set_release(m->iss);
 			}
 			fprintf(stderr, "#### fsm_determinise: end of mapping\n");
 		}
@@ -237,10 +226,8 @@ fsm_determinise(struct fsm *nfa)
 			 * The current DFA state is an end state if any of its associated NFA
 			 * states are end states.
 			 */
-
-			ss = interned_state_set_retain(issp, iss_id);
+			ss = interned_state_set_get_state_set(ac_env.issp, iss_id);
 			if (!state_set_has(nfa, ss, fsm_isend)) {
-				interned_state_set_release(issp, &iss_id);
 				continue;
 			}
 
@@ -256,7 +243,6 @@ fsm_determinise(struct fsm *nfa)
 			if (!fsm_endid_carry(nfa, ss, dfa, m->dfastate)) {
 				goto cleanup;
 			}
-			interned_state_set_release(issp, &iss_id);
 		}
 
 		if (!remap_capture_actions(&map, issp, dfa, nfa)) {
@@ -650,7 +636,7 @@ remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
 		struct state_set *ss;
 		interned_state_set_id iss_id = m->iss;
 		assert(m->dfastate < dst_dfa->statecount);
-		ss = interned_state_set_retain(issp, iss_id);
+		ss = interned_state_set_get_state_set(issp, iss_id);
 
 		for (state_set_reset(ss, &si); state_set_next(&si, &state); ) {
 			if (!add_reverse_mapping(dst_dfa->opt->alloc,
@@ -659,7 +645,6 @@ remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
 				goto cleanup;
 			}
 		}
-		interned_state_set_release(issp, &iss_id);
 	}
 
 #if LOG_DETERMINISE_CAPTURES
@@ -779,7 +764,7 @@ analyze_closures_for_iss(struct analyze_closures_env *env,
 	 * below needs to overwrite the reference. */
 	interned_state_set_id iss_id = cur_iss;
 
-	struct state_set *ss = interned_state_set_retain(env->issp, iss_id);
+	struct state_set *ss = interned_state_set_get_state_set(env->issp, iss_id);
 	const size_t set_count = state_set_count(ss);
 
 	INIT_TIMERS();
@@ -830,7 +815,6 @@ analyze_closures_for_iss(struct analyze_closures_env *env,
 	res = 1;
 
 cleanup:
-	interned_state_set_release(env->issp, &iss_id);
 	if (env->pq != NULL) {
 		ipriq_free(env->pq);
 		env->pq = NULL;
@@ -1214,19 +1198,12 @@ analyze_closures__analyze(struct analyze_closures_env *env)
 		}
 
 		{		/* build the state set and add to the output */
-			interned_state_set_id iss = interned_state_set_empty(env->issp);
-			size_t d_i;
-			for (d_i = 0; d_i < dst_count; d_i++) {
-				interned_state_set_id updated;
-#if LOG_AC
-				fprintf(stderr, "ac_analyze: adding state %d to interned_state_set\n", env->dst[d_i]);
+#if LOG_AC > 1
+			fprintf(stderr, "ac_analyze: building interned_state_set with %zu states:", dst_count);
 #endif
-
-				if (!interned_state_set_add(env->issp,
-					&iss, env->dst[d_i], &updated)) {
-					return 0;
-				}
-				iss = updated;
+			interned_state_set_id iss;
+			if (!interned_state_set_intern_set(env->issp, dst_count, env->dst, &iss)) {
+				return 0;
 			}
 
 			if (!analyze_closures__save_output(env, labels, iss)) {
