@@ -271,6 +271,9 @@ cleanup:
 	if (ac_env.dst != NULL) {
 		f_free(ac_env.alloc, ac_env.dst);
 	}
+	if (ac_env.pq != NULL) {
+		ipriq_free(ac_env.pq);
+	}
 
 	return res;
 }
@@ -815,11 +818,6 @@ analyze_closures_for_iss(struct analyze_closures_env *env,
 	res = 1;
 
 cleanup:
-	if (env->pq != NULL) {
-		ipriq_free(env->pq);
-		env->pq = NULL;
-	}
-
 	return res;
 
 }
@@ -852,11 +850,15 @@ analyze_closures__init_iterators(struct analyze_closures_env *env,
 	fsm_state_t s;
 	size_t i_i;
 
-	assert(env->pq == NULL);
-	env->pq = ipriq_new(env->alloc,
-	    cmp_iterator_cb, (void *)env);
 	if (env->pq == NULL) {
-		return 0;
+		env->pq = ipriq_new(env->alloc,
+		    cmp_iterator_cb, (void *)env);
+		if (env->pq == NULL) {
+			return 0;
+		}
+	} else {
+		/* reuse, to avoid allocating in inner loop */
+		assert(ipriq_empty(env->pq));
 	}
 
 #if LOG_AC
