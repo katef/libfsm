@@ -9,10 +9,12 @@
 #include <stdio.h>
 #include <limits.h>
 #include <ctype.h>
-
-#include <print/esc.h>
+#include <stdint.h>
 
 #include <adt/bitmap.h>
+#include <adt/u64bitset.h>
+
+#include <print/esc.h>
 
 int
 bm_get(const struct bm *bm, size_t i)
@@ -20,7 +22,7 @@ bm_get(const struct bm *bm, size_t i)
 	assert(bm != NULL);
 	assert(i <= UCHAR_MAX);
 
-	return bm->map[i / CHAR_BIT] & (1 << i % CHAR_BIT);
+	return 0 != u64bitset_get(bm->map, i);
 }
 
 void
@@ -29,7 +31,7 @@ bm_set(struct bm *bm, size_t i)
 	assert(bm != NULL);
 	assert(i <= UCHAR_MAX);
 
-	bm->map[i / CHAR_BIT] |=  (1 << i % CHAR_BIT);
+	u64bitset_set(bm->map, i);
 }
 
 size_t
@@ -42,8 +44,7 @@ bm_next(const struct bm *bm, int i, int value)
 
 	/* this could be faster by incrementing per element instead of per bit */
 	for (n = i + 1; n <= UCHAR_MAX; n++) {
-		/* ...and this could be faster by using peter wegner's method */
-		if (!(bm->map[n / CHAR_BIT] & (1 << n % CHAR_BIT)) == !value) {
+		if (!u64bitset_get(bm->map, n) == !value) {
 			return n;
 		}
 	}
@@ -54,7 +55,6 @@ bm_next(const struct bm *bm, int i, int value)
 unsigned int
 bm_count(const struct bm *bm)
 {
-	unsigned char c;
 	unsigned int count;
 	size_t n;
 
@@ -62,12 +62,8 @@ bm_count(const struct bm *bm)
 
 	count = 0;
 
-	/* this could be faster using richard hamming's method */
-	for (n = 0; n < sizeof bm->map; n++) {
-		/* counting bits set for an element, peter wegner's method */
-		for (c = bm->map[n]; c != 0; c &= c - 1) {
-			count++;
-		}
+	for (n = 0; n < sizeof(sizeof(bm->map)/sizeof(bm->map[0])); n++) {
+		count += u64bitset_popcount(bm->map[n]);
 	}
 
 	return count;
@@ -76,11 +72,11 @@ bm_count(const struct bm *bm)
 void
 bm_clear(struct bm *bm)
 {
-	static const struct bm bm_empty;
-
 	assert(bm != NULL);
 
-	*bm = bm_empty;
+	for (size_t n = 0; n < sizeof(bm->map)/sizeof(bm->map[0]); n++) {
+		bm->map[n] = 0;
+	}
 }
 
 void
@@ -90,7 +86,7 @@ bm_invert(struct bm *bm)
 
 	assert(bm != NULL);
 
-	for (n = 0; n < sizeof bm->map; n++) {
+	for (n = 0; n < sizeof(bm->map)/sizeof(bm->map[0]); n++) {
 		bm->map[n] = ~bm->map[n];
 	}
 }
@@ -319,4 +315,3 @@ error:
 
 	return -1;
 }
-
