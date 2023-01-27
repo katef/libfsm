@@ -966,12 +966,6 @@ analyze_closures__collect(struct analyze_closures_env *env)
 		size_t next_i;
 		steps++;
 
-		if (env->group_count + 1 == env->group_ceil) {
-			if (!analyze_closures__grow_groups(env)) {
-				return AC_COLLECT_ERROR;
-			}
-		}
-
 		if (!ipriq_pop(env->pq, &next_i)) {
 			assert(!"unreachable: non-empty, but pop failed");
 			return AC_COLLECT_ERROR;
@@ -985,6 +979,33 @@ analyze_closures__collect(struct analyze_closures_env *env)
 		struct ac_iter *iter = &env->iters[next_i];
 		assert(iter->info.to != AC_NO_STATE);
 
+		/* If we are about to put the current iterator into the
+		 * priority queue only to pop it right back out again,
+		 * note what the next state is on the next iterator in
+		 * the queue and resume the current iterator as long as
+		 * we can. This saves a lot of time spent on pointless
+		 * queue bookkeeping. */
+		size_t next_next_i = 0;
+		fsm_state_t resume_current_limit = AC_NO_STATE;
+		if (ipriq_peek(env->pq, &next_next_i)) {
+			assert(next_next_i < env->iter_count);
+			struct ac_iter *next_iter = &env->iters[next_next_i];
+			assert(next_iter->info.to != AC_NO_STATE);
+			if (next_iter->info.to > iter->info.to) {
+				resume_current_limit = next_iter->info.to;
+			}
+		}
+
+advance_current_iterator:;
+
+		if (env->group_count + 1 == env->group_ceil) {
+			if (!analyze_closures__grow_groups(env)) {
+				return AC_COLLECT_ERROR;
+			}
+		}
+
+		assert(env->group_count < env->group_ceil);
+
 		struct ac_group *g = &env->groups[env->group_count];
 
 		if (g->to == AC_NO_STATE) { /* init new group */
@@ -996,6 +1017,14 @@ analyze_closures__collect(struct analyze_closures_env *env)
 		} else {	/* switch to next group */
 			assert(iter->info.to > g->to);
 			env->group_count++;
+
+			if (env->group_count + 1 == env->group_ceil) {
+				if (!analyze_closures__grow_groups(env)) {
+					return AC_COLLECT_ERROR;
+				}
+			}
+			assert(env->group_count < env->group_ceil);
+
 			struct ac_group *ng = &env->groups[env->group_count];
 			memset(ng, 0x00, sizeof(*ng));
 			ng->to = iter->info.to;
@@ -1007,6 +1036,10 @@ analyze_closures__collect(struct analyze_closures_env *env)
 			fprintf(stderr, "ac_collect: iter %zu -- to %d\n",
 			    next_i, iter->info.to);
 #endif
+			if (resume_current_limit != AC_NO_STATE
+			    && iter->info.to < resume_current_limit) {
+				goto advance_current_iterator;
+			}
 			if (!ipriq_add(env->pq, next_i)) {
 				return AC_COLLECT_ERROR;
 			}
