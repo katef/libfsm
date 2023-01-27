@@ -274,6 +274,9 @@ cleanup:
 	if (ac_env.pq != NULL) {
 		ipriq_free(ac_env.pq);
 	}
+	if (ac_env.cvect.ids != NULL) {
+		f_free(ac_env.alloc, ac_env.cvect.ids);
+	}
 
 	return res;
 }
@@ -1058,6 +1061,23 @@ advance_current_iterator:;
 }
 
 static int
+grow_clearing_vector(struct analyze_closures_env *env)
+{
+	const size_t nceil = (env->cvect.ceil == 0
+	    ? DEF_CVECT_CEIL
+	    : 2*env->cvect.ceil);
+	fsm_state_t *nids = f_realloc(env->alloc,
+	    env->cvect.ids, nceil * sizeof(nids[0]));
+	if (nids == NULL) {
+		return 0;
+	}
+
+	env->cvect.ceil = nceil;
+	env->cvect.ids = nids;
+	return 1;
+}
+
+static int
 analyze_closures__analyze(struct analyze_closures_env *env)
 {
 #if LOG_AC
@@ -1156,6 +1176,12 @@ analyze_closures__analyze(struct analyze_closures_env *env)
 		env->dst[dst_count] = bg->to;
 		dst_count++;
 
+		if (env->cvect.ceil == 0) {
+			if (!grow_clearing_vector(env)) { return 0; }
+		}
+		env->cvect.ids[0] = base_i;
+		env->cvect.used = 1;
+
 		for (o_i = base_i + 1; o_i < env->group_count; o_i++) {
 			const struct ac_group *og = &env->groups[o_i];
 			if (og->words_used == 0) {
@@ -1179,6 +1205,12 @@ analyze_closures__analyze(struct analyze_closures_env *env)
 
 				env->dst[dst_count] = og->to;
 				dst_count++;
+
+				if (env->cvect.used == env->cvect.ceil) {
+					if (!grow_clearing_vector(env)) { return 0; }
+				}
+				env->cvect.ids[env->cvect.used] = o_i;
+				env->cvect.used++;
 			}
 		}
 
@@ -1189,36 +1221,11 @@ analyze_closures__analyze(struct analyze_closures_env *env)
 		assert(labels[0] || labels[1]
 		    || labels[2] || labels[3]);
 
-		/* Since the groups are stored in order we don't need to
-		 * clear the bits from all of them -- both are sorting
-		 * by ascending .to ID, so sweep over both and clear the
-		 * labels on groups with IDs in common. */
-		{
-			size_t d_i = 0;	     /* dst index */
-			size_t g_i = base_i; /* group index */
-			while (d_i < dst_count) {
-				struct ac_group *g = &env->groups[g_i];
-				const fsm_state_t g_to = g->to;
-				const fsm_state_t dst = env->dst[d_i];
-
-#if LOG_AC
-				fprintf(stderr, "ac_analyze: clearing loop: d_i %zu/%zu, g_i %zu/%zu\n",
-				    d_i, dst_count, g_i, env->group_count);
-#endif
-				/* advance one or both indices, clearing
-				 * labels when appropriate */
-				if (g_to < dst) {
-					g_i++;
-					assert(g_i < env->group_count);
-				} else if (g_to > dst) {
-					d_i++;
-				} else {
-					assert(g_to == dst);
-					clear_group_labels(g, labels);
-					g_i++;
-					d_i++;
-				}
-			}
+		for (size_t c_i = 0; c_i < env->cvect.used; c_i++) {
+			const fsm_state_t g_id = env->cvect.ids[c_i];
+			assert(g_id < env->group_count);
+			struct ac_group *g = &env->groups[g_id];
+			clear_group_labels(g, labels);
 		}
 
 		if (LOG_AC) {
