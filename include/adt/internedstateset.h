@@ -7,7 +7,10 @@
 #ifndef INTERNEDSTATESET_H
 #define INTERNEDSTATESET_H
 
+#include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <fsm/fsm.h>
 
 struct fsm_alloc;
 struct state_set;
@@ -22,61 +25,37 @@ struct interned_state_set_pool;
 
 /* Numeric ID for an internal node. This is only meaningful
  * when used with the same interned_state_set_pool. */
-typedef uint32_t interned_state_set_id;
+typedef uint64_t interned_state_set_id;
 
 /* Allocate an interned state set pool. */
 struct interned_state_set_pool *
 interned_state_set_pool_alloc(const struct fsm_alloc *a);
 
 /* Free the pool.
- * Any state_sets that have not been had a referenced outside
- * the pool marked live via `interned_state_set_retain` will
- * be freed with it. */
+ * Any state_sets on the interned state sets within the pool
+ * will also be freed. */
 void
 interned_state_set_pool_free(struct interned_state_set_pool *pool);
 
-/* Get a handle to the empty state set. Can not fail. */
-interned_state_set_id
-interned_state_set_empty(struct interned_state_set_pool *pool);
+/* Save a state set and get a unique identifier that can refer
+ * to it later. If there is more than one instance of the same
+ * set of states, reuse the existing identifier.
+ *
+ * Note: states[] must be sorted and must not contain duplicates. */
+bool
+interned_state_set_intern_set(struct interned_state_set_pool *pool,
+	size_t state_count, const fsm_state_t *states,
+	interned_state_set_id *result);
 
-/* Get a handle to the state set representing set with id added.
- * Returns 1 and sets *result to an opaque set instance, or
- * returns 0 on alloc failure.
- *
- * This takes a pointer to set_id because it transfers ownership
- * of the reference. An opaque `NO_ID` value will be written into
- * the pointer passed in.
- *
- * If an existing state set is recreated, the existing one will
- * be reused. */
-int
-interned_state_set_add(struct interned_state_set_pool *pool,
-    interned_state_set_id *set_id, fsm_state_t state,
-    interned_state_set_id *result);
-
-/* Get a reference to the state_set managed by the pool.
- * Note that it should not be modified while the pool is active.
- *
- * Calling this also informs the pool that there is a live reference
- * to the state_set outside the pool, so freeing the pool will no
- * longer free the state_set. */
+/* Get the state_set associated with an interned ID.
+ * If the state_set has already been built, return the saved instance. */
 struct state_set *
-interned_state_set_retain(struct interned_state_set_pool *pool,
-    interned_state_set_id set_id);
+interned_state_set_get_state_set(struct interned_state_set_pool *pool,
+    interned_state_set_id iss_id);
 
-/* Inform the pool that the reference to the state_set outside
- * the pool is no longer being used. If there are no longer any
- * live references, the state_set will be freed with the pool.
- * An opaque `NO_ID` value will be written into the set_id pointer.
- *
- * This is mostly useful if debugging code grabs a reference to
- * the state_set to print it or something, then lets go of it. */
+/* Dump the list of states associated with a set ID. For debugging. */
 void
-interned_state_set_release(struct interned_state_set_pool *pool,
-    interned_state_set_id *set_id);
-
-void
-interned_state_set_dump(struct interned_state_set_pool *pool,
+interned_state_set_dump(FILE *f, const struct interned_state_set_pool *pool,
     interned_state_set_id set_id);
 
 #endif
