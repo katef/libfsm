@@ -10,11 +10,11 @@ RE=${BUILD}/bin/re
 
 ${TEST_OUTDIR.tests/pcre-anchor}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre-anchor}/in${n}.re
 	${RE} -r pcre -py ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre-anchor}/res${n}
 
 ${TEST_OUTDIR.tests/pcre-anchor}/nfa${n}.fsm: ${TEST_SRCDIR.tests/pcre-anchor}/in${n}.re
 	${RE} -r pcre -n -py ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre-anchor}/res${n}
 
 ${TEST_OUTDIR.tests/pcre-anchor}/res${n}: \
 	${TEST_SRCDIR.tests/pcre-anchor}/out${n}.fsm \

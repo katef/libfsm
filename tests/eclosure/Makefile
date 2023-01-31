@@ -10,7 +10,7 @@ FSM=${BUILD}/bin/fsm
 
 ${TEST_OUTDIR.tests/eclosure}/got${n}.txt: ${TEST_SRCDIR.tests/eclosure}/in${n}.fsm
 	${FSM} -cq epsilonclosure ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/eclosure}/res${n}
 
 ${TEST_OUTDIR.tests/eclosure}/res${n}: \
 	${TEST_SRCDIR.tests/eclosure}/out${n}.txt \

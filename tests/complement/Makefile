@@ -10,7 +10,7 @@ FSM=${BUILD}/bin/fsm
 
 ${TEST_OUTDIR.tests/complement}/got${n}.fsm: ${TEST_SRCDIR.tests/complement}/in${n}.fsm
 	${FSM} -p -t complement ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/complement}/res${n}
 
 ${TEST_OUTDIR.tests/complement}/res${n}: \
 	${TEST_SRCDIR.tests/complement}/out${n}.fsm \

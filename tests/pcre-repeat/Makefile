@@ -13,11 +13,11 @@ RE=${BUILD}/bin/re
 
 ${TEST_OUTDIR.tests/pcre-repeat}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre-repeat}/in${n}.re
 	${RE} -r pcre -py ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre-repeat}/res${n}
 
 ${TEST_OUTDIR.tests/pcre-repeat}/nfa${n}.fsm: ${TEST_SRCDIR.tests/pcre-repeat}/in${n}.re
 	${RE} -r pcre -n -py ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre-repeat}/res${n}
 
 ${TEST_OUTDIR.tests/pcre-repeat}/res${n}: \
 	${TEST_SRCDIR.tests/pcre-repeat}/out${n}.fsm \

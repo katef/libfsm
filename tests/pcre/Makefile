@@ -42,16 +42,16 @@ test:: ${TEST_OUTDIR.tests/pcre-pcregrep}/res${n}
 TEST_OUTDIR.tests/pcre/mode${n} != cat ${TEST_SRCDIR.tests/pcre}/mode$n
 ${TEST_OUTDIR.tests/pcre}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre}/in${n}.re
 	${RE} -F "${TEST_OUTDIR.tests/pcre/mode${n}}" -r pcre -py ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre}/res${n}
 .else
 ${TEST_OUTDIR.tests/pcre}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre}/in${n}.re
 	${RE} -r pcre -py ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre}/res${n}
 .endif
 
 ${TEST_OUTDIR.tests/pcre}/nfa${n}.fsm: ${TEST_SRCDIR.tests/pcre}/in${n}.re
 	${RE} -r pcre -n -py ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre}/res${n}
 
 ${TEST_OUTDIR.tests/pcre}/res${n}: \
 	${TEST_SRCDIR.tests/pcre}/out${n}.fsm \

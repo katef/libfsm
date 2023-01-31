@@ -14,21 +14,21 @@ TEST_OUTDIR.tests/pcre-flags/mode${n} != cat ${TEST_SRCDIR.tests/pcre-flags}/mod
 
 ${TEST_OUTDIR.tests/pcre-flags}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre-flags}/in${n}.re
 	${RE} -F "${TEST_OUTDIR.tests/pcre-flags/mode${n}}" -b -r pcre -py ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre-flags}/res${n}
 
 ${TEST_OUTDIR.tests/pcre-flags}/nfa${n}.fsm: ${TEST_SRCDIR.tests/pcre-flags}/in${n}.re
 	${RE} -F "${TEST_OUTDIR.tests/pcre-flags/mode${n}}" -b -r pcre -n -py ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre-flags}/res${n}
 
 .else
 
 ${TEST_OUTDIR.tests/pcre-flags}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre-flags}/in${n}.re
 	${RE} -b -r pcre -py ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre-flags}/res${n}
 
 ${TEST_OUTDIR.tests/pcre-flags}/nfa${n}.fsm: ${TEST_SRCDIR.tests/pcre-flags}/in${n}.re
 	${RE} -b -r pcre -n -py ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre-flags}/res${n}
 
 .endif
 

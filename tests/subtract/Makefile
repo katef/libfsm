@@ -22,15 +22,15 @@ FSM=${BUILD}/bin/fsm
 
 ${TEST_OUTDIR.tests/subtract-cuc}/compl${n}a.fsm: ${TEST_SRCDIR.tests/subtract}/in${n}a.fsm
 	  ${FSM} -p -t complement ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/subtract}/res${n}
 
 ${TEST_OUTDIR.tests/subtract-cuc}/union${n}.fsm: ${TEST_OUTDIR.tests/subtract-cuc}/compl${n}a.fsm ${TEST_SRCDIR.tests/subtract}/in${n}b.fsm
 	  ${FSM} -p -t union ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/subtract}/res${n}
 
 ${TEST_OUTDIR.tests/subtract-cuc}/got${n}.fsm: ${TEST_OUTDIR.tests/subtract-cuc}/union${n}.fsm
 	  ${FSM} -p -t complement ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/subtract}/res${n}
 
 ${TEST_OUTDIR.tests/subtract-cuc}/res${n}: \
 	${TEST_SRCDIR.tests/subtract-cuc}/out${n}.fsm \
@@ -45,7 +45,7 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/subtract-cuc}/res${n}
 ${TEST_OUTDIR.tests/subtract}/got${n}.fsm: ${TEST_SRCDIR.tests/subtract}/in${n}a.fsm ${TEST_SRCDIR.tests/subtract}/in${n}b.fsm
 	  ${FSM} -t subtract -p ${.ALLSRC:M*.fsm} 	\
 	| ${FSM} -pm					\
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/subtract}/res${n}
 
 ${TEST_OUTDIR.tests/subtract}/res${n}: \
 	${TEST_SRCDIR.tests/subtract}/out${n}.fsm \

@@ -10,7 +10,7 @@ FSM=${BUILD}/bin/fsm
 
 ${TEST_OUTDIR.tests/determinise}/got${n}.fsm: ${TEST_SRCDIR.tests/determinise}/in${n}.fsm
 	${FSM} -pd ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/determinise}/res${n}
 
 ${TEST_OUTDIR.tests/determinise}/res${n}: \
 	${TEST_SRCDIR.tests/determinise}/out${n}.fsm \

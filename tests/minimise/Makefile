@@ -19,22 +19,22 @@ ${TEST_OUTDIR.tests/minimise-rdrd}/got${n}.fsm: ${TEST_SRCDIR.tests/minimise}/in
 	| ${FSM} -pd \
 	| ${FSM} -pr \
 	| ${FSM} -pd \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/minimise}/res${n}
 
 ${TEST_OUTDIR.tests/minimise-rdrd}/rdr${n}.fsm: ${TEST_SRCDIR.tests/minimise}/in${n}.fsm
 	  ${FSM} -pr ${.ALLSRC:M*.fsm} \
 	| ${FSM} -pd \
 	| ${FSM} -pr \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/minimise}/res${n}
 
 ${TEST_OUTDIR.tests/minimise-rdrd}/rd${n}.fsm: ${TEST_SRCDIR.tests/minimise}/in${n}.fsm
 	  ${FSM} -pr ${.ALLSRC:M*.fsm} \
 	| ${FSM} -pd \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/minimise}/res${n}
 
 ${TEST_OUTDIR.tests/minimise-rdrd}/r${n}.fsm: ${TEST_SRCDIR.tests/minimise}/in${n}.fsm
 	  ${FSM} -pr ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/minimise}/res${n}
 
 ${TEST_OUTDIR.tests/minimise-rdrd}/res${n}: \
 	${TEST_SRCDIR.tests/minimise-rdrd}/out${n}.fsm \
@@ -48,7 +48,7 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/minimise-rdrd}/res${n}
 
 ${TEST_OUTDIR.tests/minimise}/got${n}.fsm: ${TEST_SRCDIR.tests/minimise}/in${n}.fsm
 	${FSM} -pm ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/minimise}/res${n}
 
 ${TEST_OUTDIR.tests/minimise}/res${n}: \
 	${TEST_SRCDIR.tests/minimise}/out${n}.fsm \

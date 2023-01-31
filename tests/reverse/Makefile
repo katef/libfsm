@@ -10,7 +10,7 @@ FSM=${BUILD}/bin/fsm
 
 ${TEST_OUTDIR.tests/reverse}/got${n}.fsm: ${TEST_SRCDIR.tests/reverse}/in${n}.fsm
 	${FSM} -pr ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/reverse}/res${n}
 
 ${TEST_OUTDIR.tests/reverse}/res${n}: \
 	${TEST_SRCDIR.tests/reverse}/out${n}.fsm \

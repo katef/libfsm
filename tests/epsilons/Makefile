@@ -10,7 +10,7 @@ FSM=${BUILD}/bin/fsm
 
 ${TEST_OUTDIR.tests/epsilons}/got${n}.fsm: ${TEST_SRCDIR.tests/epsilons}/in${n}.fsm
 	${FSM} -pG ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/epsilons}/res${n}
 
 ${TEST_OUTDIR.tests/epsilons}/res${n}: \
 	${TEST_SRCDIR.tests/epsilons}/out${n}.fsm \

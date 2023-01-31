@@ -10,7 +10,7 @@ RE=${BUILD}/bin/re
 
 ${TEST_OUTDIR.tests/ir}/got${n}.json: ${TEST_SRCDIR.tests/ir}/in${n}.re
 	${RE} -pl irjson -y ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/ir}/res${n}
 
 ${TEST_OUTDIR.tests/ir}/res${n}: \
 	${TEST_SRCDIR.tests/ir}/out${n}.json \

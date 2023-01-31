@@ -33,15 +33,15 @@ ${TEST_OUTDIR.tests/pcre-classes}/dot-all.fsm:
 
 ${TEST_OUTDIR.tests/pcre-classes}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre-classes}/in${n}.re
 	${RE} -r pcre -py ${.ALLSRC:M*/in*.re} | ${FSM} -pm \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre-classes}/res${n}
 
 ${TEST_OUTDIR.tests/pcre-classes}/got-compl${n}.fsm: ${TEST_OUTDIR.tests/pcre-classes}/got${n}.fsm ${TEST_OUTDIR.tests/pcre-classes}/dot-all.fsm
 	${FSM} -p -t subtract ${.ALLSRC:M*/dot-all.fsm} ${.ALLSRC:M*/got*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre-classes}/res${n}
 
 ${TEST_OUTDIR.tests/pcre-classes}/expect-compl${n}.fsm: ${TEST_SRCDIR.tests/pcre-classes}/compl${n}.re
 	${RE} -r pcre -py ${.ALLSRC:M*/compl*.re} | ${FSM} -pm \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre-classes}/res${n}
 
 ${TEST_OUTDIR.tests/pcre-classes}/res${n}: \
 	${TEST_OUTDIR.tests/pcre-classes}/got-compl${n}.fsm \
@@ -67,11 +67,11 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/pcre-classes}/res${n}
 
 ${TEST_OUTDIR.tests/pcre-classes}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre-classes}/in${n}.re
 	${RE} -r pcre -py ${.ALLSRC:M*/in*.re} | ${FSM} -pm \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre-classes}/res${n}
 
 ${TEST_OUTDIR.tests/pcre-classes}/out${n}.fsm: ${TEST_SRCDIR.tests/pcre-classes}/equal${n}.re
 	${RE} -r pcre -py ${.ALLSRC:M*/equal*.re} | ${FSM} -pm \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/pcre-classes}/res${n}
 
 ${TEST_OUTDIR.tests/pcre-classes}/res${n}: \
 	${TEST_OUTDIR.tests/pcre-classes}/got${n}.fsm \

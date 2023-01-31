@@ -20,19 +20,19 @@ FSM=${BUILD}/bin/fsm
 
 ${TEST_OUTDIR.tests/intersect-ccuc}/compl${n}a.fsm: ${TEST_SRCDIR.tests/intersect}/in${n}a.fsm
 	  ${FSM} -p -t complement ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/intersect}/res${n}
 
 ${TEST_OUTDIR.tests/intersect-ccuc}/compl${n}b.fsm: ${TEST_SRCDIR.tests/intersect}/in${n}b.fsm
 	  ${FSM} -p -t complement ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/intersect}/res${n}
 
 ${TEST_OUTDIR.tests/intersect-ccuc}/union${n}.fsm: ${TEST_OUTDIR.tests/intersect-ccuc}/compl${n}a.fsm ${TEST_OUTDIR.tests/intersect-ccuc}/compl${n}b.fsm
 	  ${FSM} -p -t union ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/intersect}/res${n}
 
 ${TEST_OUTDIR.tests/intersect-ccuc}/got${n}.fsm: ${TEST_OUTDIR.tests/intersect-ccuc}/union${n}.fsm
 	  ${FSM} -p -t complement ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/intersect}/res${n}
 
 ${TEST_OUTDIR.tests/intersect-ccuc}/res${n}: \
 	${TEST_SRCDIR.tests/intersect-ccuc}/out${n}.fsm \

@@ -10,7 +10,7 @@ FSM=${BUILD}/bin/fsm
 
 ${TEST_OUTDIR.tests/union}/got${n}.fsm: ${TEST_SRCDIR.tests/union}/in${n}a.fsm ${TEST_SRCDIR.tests/union}/in${n}b.fsm
 	${FSM} -p -t union ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/union}/res${n}
 
 ${TEST_OUTDIR.tests/union}/res${n}: \
 	${TEST_SRCDIR.tests/union}/out${n}.fsm \

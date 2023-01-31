@@ -10,7 +10,7 @@ FSM=${BUILD}/bin/fsm
 
 ${TEST_OUTDIR.tests/trim}/got${n}.fsm: ${TEST_SRCDIR.tests/trim}/in${n}.fsm
 	${FSM} -pt trim ${.ALLSRC:M*.fsm} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/trim}/res${n}
 
 ${TEST_OUTDIR.tests/trim}/res${n}: \
 	${TEST_SRCDIR.tests/trim}/out${n}.fsm \

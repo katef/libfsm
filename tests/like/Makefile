@@ -10,11 +10,11 @@ RE=${BUILD}/bin/re
 
 ${TEST_OUTDIR.tests/like}/got${n}.fsm: ${TEST_SRCDIR.tests/like}/in${n}.re
 	${RE} -r like -py ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/like}/res${n}
 
 ${TEST_OUTDIR.tests/like}/nfa${n}.fsm: ${TEST_SRCDIR.tests/like}/in${n}.re
 	${RE} -r like -n -py ${.ALLSRC:M*.re} \
-	> $@
+	> $@ || echo FAIL > ${TEST_OUTDIR.tests/like}/res${n}
 
 ${TEST_OUTDIR.tests/like}/res${n}: \
 	${TEST_SRCDIR.tests/like}/out${n}.fsm \
