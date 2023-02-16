@@ -42,46 +42,79 @@ cmp(const void *_a, const void *_b)
 	return ast_expr_cmp(a, b);
 }
 
-static void
-dtor(void *p, void *opaque)
+static int
+cmp_uintptr_desc(const void *pa, const void *pb)
 {
-	struct ast_expr *n = * (struct ast_expr **) p;
-	struct ast_expr_pool *pool = (struct ast_expr_pool *) opaque;
-
-	ast_expr_free(pool, n);
+	const uintptr_t a = *(const uintptr_t *)pa;
+	const uintptr_t b = *(const uintptr_t *)pb;
+	return a < b ? 1 : a > b ? -1 : 0;
 }
 
-/*
- * Remove duplicates from a pre-sorted array, according to a user-supplied
- * comparator.  Usually the array should have been sorted with qsort() using
- * the same arguments.  Return the new size.
- */
-static size_t
-qunique(void *array, size_t elements, size_t width,
-	int (*cmp)(const void *, const void *),
-	void (*dtor)(void *, void *),
-	void *opaque)
+static int
+contains_child(struct ast_expr **child, struct ast_expr **children, size_t count)
 {
-	char *bytes = array;
-	size_t i, j;
+	return bsearch(child, children, count, sizeof(children[0]), cmp_uintptr_desc) != NULL;
+}
 
-	if (elements <= 1) {
-		return elements;
+static int
+deduplicate_alt(struct ast_expr_pool **poolp, struct ast_expr *n)
+{
+	assert(n->type == AST_EXPR_ALT);
+	assert(n->u.alt.count > 1);
+
+	/* create a copy of the nodes, sorted by ast_expr_cmp */
+	struct ast_expr **child_cp = calloc(n->u.alt.count, sizeof(n->u.alt.n[0]));
+	if (child_cp == NULL) {
+		return 0;
 	}
+	for (size_t i = 0; i < n->u.alt.count; i++) {
+		child_cp[i] = n->u.alt.n[i];
+	}
+	qsort(child_cp, n->u.alt.count, sizeof *n->u.alt.n, cmp);
 
-	for (i = 1, j = 0; i < elements; ++i) {
-		if (cmp(bytes + i * width, bytes + j * width) != 0) {
-			if (++j != i) {
-				assert(i != j);
-
-				memcpy(bytes + j * width, bytes + i * width, width);
-			}
+	/* free all but the first of each consecutive node that compares equal */
+	size_t last_distinct = 0;
+	for (size_t i = 1; i < n->u.alt.count; i++) {
+		if (ast_expr_cmp(child_cp[last_distinct], child_cp[i]) == 0) {
+			ast_expr_free(*poolp, child_cp[i]);
+			child_cp[i] = NULL;
 		} else {
-			dtor(bytes + i * width, opaque);
+			last_distinct = i;
 		}
 	}
 
-	return j + 1;
+	/* sort by pointer, since now we only care about pointer equality.
+	 * sort descending, so all NULLs move to the end. */
+	size_t surviving_count = n->u.alt.count;
+	qsort(child_cp, surviving_count, sizeof(child_cp[0]), cmp_uintptr_desc);
+
+	while (surviving_count > 0 && child_cp[surviving_count - 1] == NULL) {
+		surviving_count--;
+	}
+
+	/* preserving order of the original child node array, shift them down
+	 * to discard any node that no longer appears in child_cp[]. */
+	size_t src = 0;
+	size_t dst = 0;
+	while (src < n->u.alt.count) {
+		struct ast_expr *child = n->u.alt.n[src];
+		assert(child != NULL);
+
+		if (contains_child(&n->u.alt.n[src], child_cp, surviving_count)) {
+			assert(dst <= src);
+			if (dst != src) {
+				n->u.alt.n[dst] = child;
+			}
+			dst++;	/* keep */
+		}
+		src++;
+	}
+
+	/* update the count to how many remain */
+	n->u.alt.count = dst;
+	free(child_cp);
+
+	return 1;
 }
 
 static struct fsm *
@@ -342,8 +375,9 @@ rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flag
 
 	/* de-duplicate children */
 	if (n->u.alt.count > 1) {
-		qsort(n->u.alt.n, n->u.alt.count, sizeof *n->u.alt.n, cmp);
-		n->u.alt.count = qunique(n->u.alt.n, n->u.alt.count, sizeof *n->u.alt.n, cmp, dtor, *poolp);
+		if (!deduplicate_alt(poolp, n)) {
+			return 0;
+		}
 	}
 
 	if (n->u.alt.count == 0) {
