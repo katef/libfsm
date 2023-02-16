@@ -9,11 +9,11 @@ RE=${BUILD}/bin/re
 .for n in ${TEST.tests/pcre-anchor:T:Mout*.fsm:R:C/^out//}
 
 ${TEST_OUTDIR.tests/pcre-anchor}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre-anchor}/in${n}.re
-	${RE} -r pcre -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r pcre -py ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/pcre-anchor}/nfa${n}.fsm: ${TEST_SRCDIR.tests/pcre-anchor}/in${n}.re
-	${RE} -r pcre -n -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r pcre -n -py ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/pcre-anchor}/res${n}: \

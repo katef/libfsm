@@ -13,17 +13,17 @@ RE=${BUILD}/bin/re
 TEST_OUTDIR.tests/pcre-flags/mode${n} != cat ${TEST_SRCDIR.tests/pcre-flags}/mode${n}
 
 ${TEST_OUTDIR.tests/pcre-flags}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre-flags}/in${n}.re
-	${RE} -F "${TEST_OUTDIR.tests/pcre-flags/mode${n}}" -b -r pcre -py ${.ALLSRC:M*.re} \
+	${RE} -FC -F "${TEST_OUTDIR.tests/pcre-flags/mode${n}}" -b -r pcre -py ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/pcre-flags}/nfa${n}.fsm: ${TEST_SRCDIR.tests/pcre-flags}/in${n}.re
-	${RE} -F "${TEST_OUTDIR.tests/pcre-flags/mode${n}}" -b -r pcre -n -py ${.ALLSRC:M*.re} \
+	${RE} -FC -F "${TEST_OUTDIR.tests/pcre-flags/mode${n}}" -b -r pcre -n -py ${.ALLSRC:M*.re} \
 	> $@
 
 .else
 
 ${TEST_OUTDIR.tests/pcre-flags}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre-flags}/in${n}.re
-	${RE} -b -r pcre -py ${.ALLSRC:M*.re} \
+	${RE} -FC -b -r pcre -py ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/pcre-flags}/nfa${n}.fsm: ${TEST_SRCDIR.tests/pcre-flags}/in${n}.re

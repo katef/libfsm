@@ -9,7 +9,7 @@ RE=${BUILD}/bin/re
 .for n in ${TEST.tests/re_literal:T:R:C/^out//}
 
 ${TEST_OUTDIR.tests/re_literal}/got${n}.txt: ${TEST_SRCDIR.tests/re_literal}/in${n}.re
-	( ${RE} -r pcre -t -y ${.ALLSRC:M*.re} || echo non-literal ) \
+	( ${RE} -FC -r pcre -t -y ${.ALLSRC:M*.re} || echo non-literal ) \
 	> $@
 
 ${TEST_OUTDIR.tests/re_literal}/res${n}: \

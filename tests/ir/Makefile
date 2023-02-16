@@ -9,7 +9,7 @@ RE=${BUILD}/bin/re
 .for n in ${TEST.tests/ir:T:Mout*.json:R:C/^out//}
 
 ${TEST_OUTDIR.tests/ir}/got${n}.json: ${TEST_SRCDIR.tests/ir}/in${n}.re
-	${RE} -pl irjson -y ${.ALLSRC:M*.re} \
+	${RE} -FC -pl irjson -y ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/ir}/res${n}: \

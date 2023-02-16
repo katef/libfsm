@@ -33,7 +33,7 @@ ${TEST_OUTDIR.tests/aho_corasick}/out${n}a.re: ${TEST_SRCDIR.tests/aho_corasick}
 	< ${.ALLSRC:M*.txt} > $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/out${n}a.fsm: ${RE} ${TEST_OUTDIR.tests/aho_corasick}/out${n}a.re
-	${RE} -r native -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r native -py ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/got${n}a.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
@@ -48,7 +48,7 @@ ${TEST_OUTDIR.tests/aho_corasick}/out${n}l.re: ${TEST_SRCDIR.tests/aho_corasick}
 	< ${.ALLSRC:M*.txt} > $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/out${n}l.fsm: ${RE} ${TEST_OUTDIR.tests/aho_corasick}/out${n}l.re
-	${RE} -r native -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r native -py ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/got${n}l.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
@@ -63,7 +63,7 @@ ${TEST_OUTDIR.tests/aho_corasick}/out${n}r.re: ${TEST_SRCDIR.tests/aho_corasick}
 	< ${.ALLSRC:M*.txt} > $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/out${n}r.fsm: ${RE} ${TEST_OUTDIR.tests/aho_corasick}/out${n}r.re
-	${RE} -r native -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r native -py ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/got${n}r.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
@@ -79,7 +79,7 @@ ${TEST_OUTDIR.tests/aho_corasick}/out${n}u.re: ${TEST_SRCDIR.tests/aho_corasick}
 	< ${.ALLSRC:M*.txt} > $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/out${n}u.fsm: ${RE} ${TEST_OUTDIR.tests/aho_corasick}/out${n}u.re
-	${RE} -r native -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r native -py ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/got${n}u.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
