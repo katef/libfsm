@@ -13,6 +13,7 @@ SRC += src/libfsm/endids.c
 SRC += src/libfsm/equal.c
 SRC += src/libfsm/exec.c
 SRC += src/libfsm/fsm.c
+SRC += src/libfsm/gen.c
 SRC += src/libfsm/mode.c
 SRC += src/libfsm/start.c
 SRC += src/libfsm/state.c
