@@ -26,6 +26,7 @@ fsm_hasincoming
 fsm_hasoutgoing
 fsm_hasepsilons
 fsm_hasnondeterminism
+fsm_generate_matches
 
 # <fsm/parser.h>
 fsm_parse

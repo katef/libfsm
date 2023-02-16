@@ -91,6 +91,7 @@ SUBDIR += src/lx
 SUBDIR += src
 SUBDIR += tests/capture
 SUBDIR += tests/complement
+SUBDIR += tests/gen
 SUBDIR += tests/intersect
 #SUBDIR += tests/ir # XXX: fragile due to state numbering
 SUBDIR += tests/eclosure
