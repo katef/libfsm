@@ -800,7 +800,7 @@
 
 	<ast-range-endpoint-literal>: (c :char) -> (e :endpoint) = @{
 		@e.type = AST_ENDPOINT_LITERAL;
-		@e.u.literal.c = @c;
+		@e.u.literal.c = (unsigned char)@c;
 	@};
 
 	<ast-range-endpoint-class>: (id :ast_class_id) -> (e :endpoint) = @{

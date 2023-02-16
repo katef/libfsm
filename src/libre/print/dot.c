@@ -46,7 +46,7 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 {
 	switch (e->type) {
 	case AST_ENDPOINT_LITERAL:
-		dot_escputc_html_record(f, opt, e->u.literal.c);
+		dot_escputc_html_record(f, opt, (char)e->u.literal.c);
 		break;
 
 	case AST_ENDPOINT_CODEPOINT:
