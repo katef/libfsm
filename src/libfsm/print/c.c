@@ -97,7 +97,7 @@ print_ranges(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			}
 		} else for (c = ranges[k].start; c <= ranges[k].end; c++) {
 			fprintf(f, "\t\t\tcase ");
-			c_escputcharlit(f, opt, c);
+			c_escputcharlit(f, opt, (char)c);
 			fprintf(f, ":");
 
 			if (k + 1 < n || c + 1 <= ranges[k].end) {

@@ -207,7 +207,7 @@ fprintf_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 							fputs(", ", f);
 						}
 
-						fprintf_char_range(f, fsm->opt, lower, (char)i - 1);
+						fprintf_char_range(f, fsm->opt, (char)lower, (char)i - 1);
 						ranges++;
 					}
 					lower = 256;
@@ -217,7 +217,7 @@ fprintf_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 				if (ranges > 0) {
 					fputs(", ", f);
 				}
-				fprintf_char_range(f, fsm->opt, lower, (char)255);
+				fprintf_char_range(f, fsm->opt, (char)lower, (char)255);
 			}
 
 			fprintf(f, ";");
