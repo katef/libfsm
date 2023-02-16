@@ -127,6 +127,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 
 	dst->states     = src->states;
 	dst->start      = src->start;
+	dst->hasstart   = src->hasstart;
 	dst->statecount = src->statecount;
 	dst->statealloc = src->statealloc;
 	dst->endcount   = src->endcount;
