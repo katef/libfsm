@@ -952,7 +952,12 @@ analyze_closures__init_iterators(struct analyze_closures_env *env,
 
 	/* Init all the edge group iterators so we can step them in
 	 * parallel and merge. Each will yield edge groups in order,
-	 * sorted by .to, so we can merge them that way. */
+	 * sorted by .to, so we can merge them that way.
+	 *
+	 * This ordering also leads to gathering the state sets in
+	 * ascending order in analyze_closures__analyze, so we can avoid
+	 * overhead from sorting the state sets before passing them to
+	 * interned_state_set_intern_set, which needs sorted input. */
 	i_i = 0;
 	state_set_reset(ss, &it);
 
