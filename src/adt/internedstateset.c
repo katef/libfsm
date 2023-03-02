@@ -282,6 +282,13 @@ interned_state_set_intern_set(struct interned_state_set_pool *pool,
 	fprintf(stderr, "%s: state_count %zu\n", __func__, state_count);
 #endif
 
+#if EXPENSIVE_CHECKS
+	/* input must be ordered */
+	for (size_t i = 1; i < state_count; i++) {
+		assert(states[i - 1] <= states[i]);
+	}
+#endif
+
 	assert(state_count > 0);
 
 	/* If there's only one state, return a singleton. */
