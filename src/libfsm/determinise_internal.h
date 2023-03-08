@@ -14,6 +14,7 @@
 #include <adt/alloc.h>
 #include <adt/set.h>
 #include <adt/edgeset.h>
+#include <adt/hash.h>
 #include <adt/stateset.h>
 #include <adt/internedstateset.h>
 #include <adt/ipriq.h>
@@ -26,12 +27,15 @@
 #include <ctype.h>
 
 #define DUMP_MAPPING 0
+#define LOG_INPUT 0
 #define LOG_DETERMINISE_CLOSURES 0
 #define LOG_DETERMINISE_CAPTURES 0
+#define LOG_DETERMINISE_STATE_SETS 0
 #define LOG_SYMBOL_CLOSURE 0
 #define LOG_AC 0
+#define LOG_GROUPING 0
 
-#if LOG_DETERMINISE_CAPTURES
+#if LOG_DETERMINISE_CAPTURES || LOG_INPUT
 #include <fsm/print.h>
 #endif
 
@@ -98,6 +102,65 @@ struct mappingstack {
 #define DEF_OUTPUT_CEIL 4
 #define DEF_DST_CEIL 4
 
+#if NEW_ANALYSIS
+/* Mark an ID as a cached result ID (1) rather than a state ID (0). */
+#define RESULT_BIT ((fsm_state_t)1U << (8U*sizeof(fsm_state_t) - 1))
+#define DEF_PBUF_CEIL 4
+#define DEF_GROUP_BUFFER_CEIL 4
+#define DEF_TO_SET_CEIL 4
+#define DEF_GROUP_GS 4
+#define DEF_PAIR_CACHE_HTAB_BUCKET_COUNT 64
+#define DEF_DST_TMP_CEIL 4
+#define DEF_TO_SET_HTAB_BUCKET_COUNT 64
+
+#define ID_WITH_SUFFIX(ID) ID &~ RESULT_BIT, ID & RESULT_BIT ? "_R" : "_s"
+
+struct analyze_closures_env;	/* fwd ref */
+
+static int
+analyze_closures__pairwise_grouping(struct analyze_closures_env *env,
+	interned_state_set_id iss_id);
+
+static int
+analyze_single_state(struct analyze_closures_env *env, fsm_state_t id);
+
+static int
+build_output_from_cached_analysis(struct analyze_closures_env *env, fsm_state_t cached_result_id);
+
+static int
+add_group_dst_info_to_buffer(struct analyze_closures_env *env,
+	size_t dst_count, const fsm_state_t *dst,
+	const uint64_t labels[256/64]);
+
+static int
+commit_buffered_group(struct analyze_closures_env *env, uint32_t *cache_result_id);
+
+static int
+combine_pair(struct analyze_closures_env *env, fsm_state_t pa, fsm_state_t pb,
+    fsm_state_t *result_id);
+
+static int
+combine_result_pair_and_commit(struct analyze_closures_env *env,
+    fsm_state_t result_id_a, fsm_state_t result_id_b,
+    fsm_state_t *committed_result_id);
+
+static int
+analysis_cache_check_pair(struct analyze_closures_env *env, fsm_state_t pa, fsm_state_t pb,
+    fsm_state_t *result_id);
+
+static int
+analysis_cache_check_single_state(struct analyze_closures_env *env, fsm_state_t id,
+	fsm_state_t *result_id);
+
+static int
+analysis_cache_save_single_state(struct analyze_closures_env *env,
+	fsm_state_t state_id, fsm_state_t result_id);
+
+static int
+analysis_cache_save_pair(struct analyze_closures_env *env,
+	fsm_state_t a, fsm_state_t b, fsm_state_t result_id);
+#endif
+
 struct analyze_closures_env {
 	const struct fsm_alloc *alloc;
 	const struct fsm *fsm;
@@ -143,6 +206,82 @@ struct analyze_closures_env {
 		fsm_state_t *ids;
 	} cvect;
 
+#if NEW_ANALYSIS
+	/* Pair of buffers used to store IDs as the list is combined
+	 * and reduced, switching back and forth. */
+	size_t pbuf_ceil;
+	fsm_state_t *pbuf[2];
+
+	/* Buffer for storing unique runs of ascending state IDs. */
+	struct {
+		size_t used;
+		size_t ceil;
+		fsm_state_t *buf;
+	} to_sets;
+
+	/* Hash table for finding offsets of existing runs of ascending
+	 * state IDs, since they tend to be duplicated heavily. */
+	struct to_set_htab {
+		size_t bucket_count;
+		size_t buckets_used;
+		struct to_set_bucket {
+			uint32_t count; /* count of 0 -> unused */
+			uint32_t offset;
+		} *buckets;
+	} to_set_htab;
+
+	/* Buffer used to accumulate destination state IDs, to avoid
+	 * pointing into .to_sets when doing operations that could
+	 * cause .to_sets.buf to grow/relocate. */
+	struct {
+		size_t used;
+		size_t ceil;
+		fsm_state_t *buf;
+	} dst_tmp;
+
+	/* Hash table for {id, id} -> result_id, where id is
+	 * either an fsm_state_t or (result_id | RESULT_BIT).
+	 *
+	 * state IDs are always distinct and stored in ascending
+	 * order, so a second ID of 0 marks an empty bucket.
+	 * manages collisions with linear probing, grows when half full. */
+	struct result_pair_htab {
+		size_t bucket_count;
+		size_t buckets_used;
+		struct result_pair_bucket {
+			enum result_pair_bucket_type {
+				RPBT_UNUSED,
+				RPBT_SINGLE_STATE,
+				RPBT_PAIR,
+			} t;
+			fsm_state_t ids[2]; /* hash key */
+			fsm_state_t result_id; /* < .groups.used */
+		} *buckets;
+	} htab;
+
+	/* Cached results from analysing a state ID or pair of IDs. */
+	struct {
+		size_t used;
+		size_t ceil;
+		struct analysis_result {
+			uint32_t count;
+			struct result_entry {
+				uint32_t to_set_offset;
+				uint32_t to_set_count;
+				uint8_t words_used;
+				uint64_t labels[256/64];
+			} entries[];
+		} **rs;
+
+		/* Buffer for building up the current result. */
+		struct result_buffer {
+			uint32_t used;
+			uint32_t ceil;
+			struct result_entry *entries;
+		} buffer;
+	} results;
+#endif
+
 	size_t dst_ceil;
 	fsm_state_t *dst;
 };
@@ -152,11 +291,12 @@ analyze_closures_for_iss(struct analyze_closures_env *env,
 	interned_state_set_id curr_iss);
 
 static int
+analyze_closures__init_groups(struct analyze_closures_env *env);
+
+#if !NEW_ANALYSIS
+static int
 analyze_closures__init_iterators(struct analyze_closures_env *env,
 	const struct state_set *ss, size_t set_count);
-
-static int
-analyze_closures__init_groups(struct analyze_closures_env *env);
 
 enum ac_collect_res {
 	AC_COLLECT_DONE,
@@ -171,12 +311,13 @@ static int
 analyze_closures__analyze(struct analyze_closures_env *env);
 
 static int
-analyze_closures__save_output(struct analyze_closures_env *env,
-    const uint64_t labels[256/4], interned_state_set_id iss);
-
-static int
 analyze_closures__grow_iters(struct analyze_closures_env *env,
     size_t set_count);
+#endif
+
+static int
+analyze_closures__save_output(struct analyze_closures_env *env,
+    const uint64_t labels[256/4], interned_state_set_id iss);
 
 static int
 analyze_closures__grow_groups(struct analyze_closures_env *env);
