@@ -34,6 +34,7 @@
 #define LOG_SYMBOL_CLOSURE 0
 #define LOG_AC 0
 #define LOG_GROUPING 0
+#define LOG_ANALYSIS_STATS 0
 
 #if LOG_DETERMINISE_CAPTURES || LOG_INPUT
 #include <fsm/print.h>
@@ -280,6 +281,11 @@ struct analyze_closures_env {
 			struct result_entry *entries;
 		} buffer;
 	} results;
+
+	size_t count_single;
+	size_t usec_single;
+	size_t count_pair;
+	size_t usec_pair;
 #endif
 
 	size_t dst_ceil;
