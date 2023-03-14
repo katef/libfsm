@@ -294,6 +294,23 @@ cleanup:
 	}
 	f_free(ac_env.alloc, ac_env.results.rs);
 	f_free(ac_env.alloc, ac_env.results.buffer.entries);
+
+	if (LOG_ANALYSIS_STATS) {
+		const size_t count_total = ac_env.count_single + ac_env.count_pair;
+		fprintf(stderr, "%s: counts: single %zu/%zu (%g%%), pair %zu/%zu (%g%%)\n",
+		    __func__,
+		    ac_env.count_single, count_total, (100.0 * ac_env.count_single)/count_total,
+		    ac_env.count_pair, count_total, (100.0 * ac_env.count_pair)/count_total);
+
+		if (TRACK_TIMES) {
+			const size_t usec_total = ac_env.usec_single + ac_env.usec_pair;
+			fprintf(stderr, "%s: usec: single %zu/%zu (%g%%), pair %zu/%zu (%g%%)\n",
+			    __func__,
+			    ac_env.usec_single, usec_total, (100.0 * ac_env.usec_single)/usec_total,
+			    ac_env.usec_pair, usec_total, (100.0 * ac_env.usec_pair)/usec_total);
+		}
+	}
+
 #endif
 
 	return res;
@@ -1498,6 +1515,9 @@ cache_single_state_analysis(struct analyze_closures_env *env, fsm_state_t state_
 	fprintf(stderr, "%s: state_id %d\n", __func__, state_id);
 #endif
 
+	INIT_TIMERS();
+	TIME(&pre);
+
 	/* build up outputs
 	 *
 	 * info.to will be ascending
@@ -1583,6 +1603,9 @@ cache_single_state_analysis(struct analyze_closures_env *env, fsm_state_t state_
 			return 0;
 		}
 
+		TIME(&post);
+		DIFF_MSEC("cache_single_state_analysis_0", pre, post, &env->usec_single);
+		env->count_single++;
 		return 1;
 	}
 
@@ -1759,6 +1782,9 @@ cache_single_state_analysis(struct analyze_closures_env *env, fsm_state_t state_
 		return 0;
 	}
 
+	TIME(&post);
+	DIFF_MSEC(__func__, pre, post, &env->usec_single);
+	env->count_single++;
 	return 1;
 }
 
@@ -2074,6 +2100,36 @@ commit_buffered_group(struct analyze_closures_env *env, uint32_t *cache_result_i
 	return 1;
 }
 
+#define LOG_CACHE_HTAB 0
+#if LOG_CACHE_HTAB
+#define CACHE_HTAB_INIT_STATS()			\
+	size_t collisions = 0;			\
+	static size_t max_collisions
+#define CACHE_HTAB_INC_COLLISIONS() collisions++
+#define COLLISION_LIMIT 100
+#define CACHE_HTAB_PRINT_COLLISIONS(TAG, PA, PB, H)			\
+	if (collisions > max_collisions) {				\
+		max_collisions = collisions;				\
+		fprintf(stderr, "%s: %s: new max_collisions: %zu\n",	\
+		    __func__, TAG, max_collisions);			\
+	} else if (LOG_CACHE_HTAB > 1					\
+	    || collisions > COLLISION_LIMIT) {				\
+		fprintf(stderr,						\
+		    "%s: %s: collisions %zu, { %d, %d } -> %016lx\n",	\
+		    __func__, TAG, collisions,				\
+		    PA &~ RESULT_BIT,					\
+		    PB &~ RESULT_BIT,					\
+		    H);							\
+		assert(collisions < COLLISION_LIMIT);			\
+	}
+#define CACHE_HTAB_DUMP(ENV) dump_pair_cache_htab(env)
+#else
+#define CACHE_HTAB_INIT_STATS()
+#define CACHE_HTAB_INC_COLLISIONS()
+#define CACHE_HTAB_PRINT_COLLISIONS(TAG, PA, PB, H)
+#define CACHE_HTAB_DUMP(ENV)
+#endif
+
 SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static uint64_t
 hash_pair(fsm_state_t a, fsm_state_t b)
@@ -2081,7 +2137,20 @@ hash_pair(fsm_state_t a, fsm_state_t b)
 	assert(a != b);
 	assert(a & RESULT_BIT);
 	assert(b & RESULT_BIT);
-	return fsm_hash_id(a) ^ fsm_hash_id(b);
+	a &=~ RESULT_BIT;
+	b &=~ RESULT_BIT;
+
+	/* Don't hash a and b separately and combine them with
+	 * fsm_hash_id, because it's common to have adjacent pairs of
+	 * result IDs, and with how fsm_hash_id works that leads to
+	 * multiples of similar hash values bunching up.
+	 *
+	 * This could be replaced with a better hash function later,
+	 * but use LOG_CACHE_HTAB to ensure there aren't visually obvious
+	 * runs of collisions appearing in the tables. */
+	const uint64_t res = fsm_hash_id(a + b);
+	/* fprintf(stderr, "%s: a %d, b %d -> %016lx\n", __func__, a, b, res); */
+	return res;
 }
 
 static int
@@ -2090,6 +2159,7 @@ analysis_cache_check_pair(struct analyze_closures_env *env, fsm_state_t pa, fsm_
 {
 	assert(pa & RESULT_BIT);
 	assert(pb & RESULT_BIT);
+
 	const struct result_pair_htab *htab = &env->htab;
 	if (htab->bucket_count == 0) {
 #if LOG_GROUPING > 1
@@ -2101,6 +2171,9 @@ analysis_cache_check_pair(struct analyze_closures_env *env, fsm_state_t pa, fsm_
 
 	const uint64_t h = hash_pair(pa, pb);
 	const uint64_t mask = htab->bucket_count - 1;
+
+	CACHE_HTAB_INIT_STATS();
+
 	for (size_t i = 0; i < htab->bucket_count; i++) {
 		struct result_pair_bucket *b = &htab->buckets[(h + i) & mask];
 		if (b->t == RPBT_UNUSED) {
@@ -2108,19 +2181,25 @@ analysis_cache_check_pair(struct analyze_closures_env *env, fsm_state_t pa, fsm_
 		} else if (b->t == RPBT_PAIR && b->ids[0] == pa && b->ids[1] == pb) {
 			*result_id = b->result_id; /* hit */
 #if LOG_GROUPING > 1
-		fprintf(stderr, "%s: cache hit for pair { %d_R, %d_R } => %d\n",
-		    __func__, pa &~ RESULT_BIT, pb &~ RESULT_BIT, b->result_id);
+			fprintf(stderr, "%s: cache hit for pair { %d_R, %d_R } => %d\n",
+			    __func__, pa, pb, b->result_id);
 #endif
+
+			CACHE_HTAB_PRINT_COLLISIONS("hit", pa, pb, h);
 			return 1;
 		} else {
+			CACHE_HTAB_INC_COLLISIONS();
 			continue; /* collision */
 		}
 	}
 
 #if LOG_GROUPING > 1
-		fprintf(stderr, "%s: cache miss for pair { %d_R, %d_R }\n",
-		    __func__, pa &~ RESULT_BIT, pb &~ RESULT_BIT);
+	fprintf(stderr, "%s: cache miss for pair { %d_R, %d_R }\n",
+	    __func__, pa, pb);
 #endif
+
+	CACHE_HTAB_PRINT_COLLISIONS("miss", pa, pb, h);
+
 	return 0;
 }
 
@@ -2138,6 +2217,8 @@ analysis_cache_check_single_state(struct analyze_closures_env *env, fsm_state_t 
 		return 0;
 	}
 
+	CACHE_HTAB_INIT_STATS();
+
 	const uint64_t h = fsm_hash_id(id);
 	const uint64_t mask = htab->bucket_count - 1;
 	for (size_t i = 0; i < htab->bucket_count; i++) {
@@ -2151,16 +2232,20 @@ analysis_cache_check_single_state(struct analyze_closures_env *env, fsm_state_t 
 			fprintf(stderr, "%s: cache hit for state %d -> result_id %d\n",
 			    __func__, id, b->result_id);
 #endif
+			CACHE_HTAB_PRINT_COLLISIONS("hit", id, id, h);
 			return 1;
 		} else {
+			CACHE_HTAB_INC_COLLISIONS();
 			continue; /* collision */
 		}
 	}
 
 #if LOG_GROUPING > 1
-		fprintf(stderr, "%s: cache miss for state %d\n",
-		    __func__, id);
+	fprintf(stderr, "%s: cache miss for state %d\n",
+	    __func__, id);
 #endif
+
+	CACHE_HTAB_PRINT_COLLISIONS("miss", id, id, h);
 	return 0;
 }
 
@@ -2182,6 +2267,38 @@ dump_group(FILE *f, struct analyze_closures_env *env, const struct analysis_resu
 }
 #endif
 
+#if LOG_CACHE_HTAB
+static void
+dump_pair_cache_htab(const struct analyze_closures_env *env)
+{
+	unsigned bits = 0;
+	size_t total = 0;
+	const size_t bucket_count = env->htab.bucket_count;
+	fprintf(stderr, "### pair_htab, %zu buckets\n", bucket_count);
+	for (size_t i = 0; i < bucket_count; i++) {
+		if (env->htab.buckets[i].t != RPBT_UNUSED) {
+			bits++;
+		}
+
+		if ((i & 7) == 7) {
+			fprintf(stderr, "%c",
+			    bits == 0 ? '.' : ('0' + bits));
+			total += bits;
+			bits = 0;
+		}
+
+		if ((i & 511) == 511) { /* 64 cells/row */
+			fprintf(stderr, "\n");
+		}
+	}
+
+	if (bucket_count < 512) {
+		fprintf(stderr, "\n");
+	}
+	fprintf(stderr, "used: %zu/%zu\n", total, bucket_count);
+}
+#endif
+
 static int
 pair_cache_save(struct analyze_closures_env *env,
 	enum result_pair_bucket_type type,
@@ -2189,9 +2306,12 @@ pair_cache_save(struct analyze_closures_env *env,
 {
 	if (type == RPBT_SINGLE_STATE) {
 		assert(pa == pb);
+		assert(0 == (pa & RESULT_BIT));
 	} else {
 		assert(type == RPBT_PAIR);
 		assert(pa != pb);
+		assert(pa & RESULT_BIT);
+		assert(pb & RESULT_BIT);
 	}
 
 #if LOG_GROUPING > 1
@@ -2200,6 +2320,8 @@ pair_cache_save(struct analyze_closures_env *env,
 	    type == RPBT_SINGLE_STATE ? "SINGLE" : "PAIR",
 	    ID_WITH_SUFFIX(pa), ID_WITH_SUFFIX(pb), result_id);
 #endif
+
+	CACHE_HTAB_INIT_STATS();
 
 	struct result_pair_htab *htab = &env->htab;
 	if (htab->buckets_used >= htab->bucket_count/2) {
@@ -2215,6 +2337,7 @@ pair_cache_save(struct analyze_closures_env *env,
 		if (htab->bucket_count > 0) {
 			const uint32_t ocount = htab->bucket_count;
 			const uint32_t nmask = ncount - 1;
+			CACHE_HTAB_DUMP(env);
 			for (size_t ob_i = 0; ob_i < ocount; ob_i++) {
 				const struct result_pair_bucket *ob = &htab->buckets[ob_i];
 				if (ob->t == RPBT_UNUSED) {
@@ -2223,7 +2346,7 @@ pair_cache_save(struct analyze_closures_env *env,
 
 				const uint64_t h = (ob->t == RPBT_SINGLE_STATE
 				    ? fsm_hash_id(ob->ids[0])
-				    : (fsm_hash_id(ob->ids[0]) ^ fsm_hash_id(ob->ids[1])));
+				    : hash_pair(ob->ids[0], ob->ids[1]));
 				if (ob->t == RPBT_SINGLE_STATE) {
 					assert(ob->ids[0] == ob->ids[1]);
 				}
@@ -2278,10 +2401,12 @@ pair_cache_save(struct analyze_closures_env *env,
 			dump_group(stderr, env, r);
 #endif
 
+			CACHE_HTAB_PRINT_COLLISIONS("saved", pa, pb, h);
 			return 1;
 		} else {
 			/* should not save duplicates */
 			assert(b->ids[0] != pa || b->ids[1] != pb);
+			CACHE_HTAB_INC_COLLISIONS();
 			continue; /* collision */
 		}
 	}
@@ -2294,6 +2419,7 @@ static int
 analysis_cache_save_single_state(struct analyze_closures_env *env,
 	fsm_state_t state_id, fsm_state_t result_id)
 {
+	assert(0 == (state_id & RESULT_BIT));
 	return pair_cache_save(env, RPBT_SINGLE_STATE, state_id, state_id, result_id);
 }
 
@@ -2451,6 +2577,9 @@ combine_result_pair_and_commit(struct analyze_closures_env *env,
     fsm_state_t result_id_a, fsm_state_t result_id_b,
     fsm_state_t *committed_result_id)
 {
+	INIT_TIMERS();
+	TIME(&pre);
+
 	assert(result_id_a < env->results.used);
 	assert(result_id_b < env->results.used);
 	const struct analysis_result *ra = env->results.rs[result_id_a];
@@ -2469,11 +2598,8 @@ combine_result_pair_and_commit(struct analyze_closures_env *env,
 	assert_entry_labels_are_mutually_exclusive(rb);
 	#endif
 
-	/* but they can overlap; union them, collecting all to-states associate
-	 * with each subset of the labels */
-
-	/* for whichever group is smaller (has less entries), find every overlap
-	 * it has with the other, and then emit all remaning from the other as-is */
+	/* For whichever group is smaller (has less entries), find every overlap
+	 * it has with the other, and then emit all remaning from the other as-is. */
 	const struct analysis_result *rl = (ra->count <= rb->count ? ra : rb);
 	const struct analysis_result *rr = (ra->count > rb->count ? ra : rb);
 	assert(rl != rr);
@@ -2614,6 +2740,10 @@ combine_result_pair_and_commit(struct analyze_closures_env *env,
 	    __func__, rz->count, *committed_result_id);
 	dump_group(stderr, env, rz);
 	#endif
+
+	TIME(&post);
+	DIFF_MSEC(__func__, pre, post, &env->usec_pair);
+	env->count_pair++;
 
 	return 1;
 }
