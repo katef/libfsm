@@ -1830,14 +1830,22 @@ build_output_from_cached_analysis(struct analyze_closures_env *env, fsm_state_t 
 
 #define LOG_TO_SET_HTAB 0
 
+SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
+static uint64_t
+to_set_hash(size_t count, const fsm_state_t *ids)
+{
+	uint64_t h = fsm_hash_id(count);
+	for (size_t i = 0; i < count; i++) {
+		h += fsm_hash_id(ids[i]);
+	}
+	return h;
+}
+
 static int
 to_set_htab_check(struct analyze_closures_env *env,
     size_t count, const fsm_state_t *dst, uint64_t *hash, uint32_t *out_offset)
 {
-	uint64_t h = fsm_hash_id(count);
-	for (size_t i = 0; i < count; i++) {
-		h += fsm_hash_id(dst[i]);
-	}
+	const uint64_t h = to_set_hash(count, dst);
 	*hash = h;
 
 	struct to_set_htab *htab = &env->to_set_htab;
@@ -1856,9 +1864,10 @@ to_set_htab_check(struct analyze_closures_env *env,
 			const fsm_state_t *ids = &env->to_sets.buf[b->offset];
 			if (0 == memcmp(ids, dst, count * sizeof(dst[0]))) {
 				*out_offset = b->offset;
+
 				return 1; /* cache hit */
 			} else {
-				    continue; /* collision */
+				continue; /* collision */
 			}
 		} else {
 			continue; /* collision */
@@ -1896,12 +1905,9 @@ to_set_htab_save(struct analyze_closures_env *env,
 				if (ob->count == 0) {
 					continue; /* empty */
 				}
-				uint64_t h = fsm_hash_id(ob->count);
 				assert(ob->offset + ob->count <= env->to_sets.used);
 				const fsm_state_t *ids = &env->to_sets.buf[ob->offset];
-				for (size_t i = 0; i < ob->count; i++) {
-					h += fsm_hash_id(ids[i]);
-				}
+				const uint64_t h = to_set_hash(ob->count, ids);
 
 				for (size_t nb_i = 0; nb_i < ncount; nb_i++) {
 					struct to_set_bucket *nb = &nbuckets[(h + nb_i) & nmask];
