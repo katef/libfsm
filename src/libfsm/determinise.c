@@ -129,7 +129,8 @@ fsm_determinise(struct fsm *nfa)
 			interned_state_set_id iss = output->iss;
 
 #if LOG_DETERMINISE_CLOSURES
-			fprintf(stderr, "fsm_determinise: cur (dfa %zu) label [", curr->dfastate);
+			fprintf(stderr, "fsm_determinise: output %zu/%zu: cur (dfa %zu) label [",
+			    o_i, ac_env.output_count, curr->dfastate);
 			dump_labels(stderr, output->labels);
 			fprintf(stderr, "] -> iss:%ld: ", output->iss);
 			interned_state_set_dump(stderr, issp, output->iss);
@@ -191,6 +192,7 @@ fsm_determinise(struct fsm *nfa)
 			 * of the new DFA state Y, then add Y to a list for X */
 			for (m = map_first(&map, &it); m != NULL; m = map_next(&it)) {
 				struct state_iter si;
+				interned_state_set_id iss_id = m->iss;
 				fsm_state_t state;
 				struct state_set *ss = interned_state_set_get_state_set(ac_env.issp, iss_id);
 				fprintf(stderr, "%zu:", m->dfastate);
@@ -252,6 +254,10 @@ fsm_determinise(struct fsm *nfa)
 
 		fsm_move(nfa, dfa);
 	}
+
+#if EXPENSIVE_CHECKS
+	assert(fsm_all(nfa, fsm_isdfa));
+#endif
 
 	res = 1;
 
@@ -2775,9 +2781,9 @@ analyze_closures__save_output(struct analyze_closures_env *env,
 	dst->iss = iss;
 
 #if LOG_AC
-	fprintf(stderr, "ac_save_output: labels [");
+	fprintf(stderr, "%s: output %zu: labels [", __func__, env->output_count);
 	dump_labels(stderr, labels);
-	fprintf(stderr, "] -> iss:%p\n", (void *)iss);
+	fprintf(stderr, "] -> iss:%ld\n", iss);
 #endif
 
 	env->output_count++;
