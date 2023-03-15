@@ -1364,6 +1364,23 @@ analyze_closures__analyze(struct analyze_closures_env *env)
 #endif
 
 #if NEW_ANALYSIS
+
+#if EXPENSIVE_CHECKS
+static void
+assert_labels_are_disjoint(const struct analysis_result *r)
+{
+	/* verify that the labels sets are disjoint */
+	uint64_t seen[256/64] = { 0 };
+	for (size_t e_i = 0; e_i < r->count; e_i++) {
+		const struct result_entry *re = &r->entries[e_i];
+		for (size_t i = 0; i < 4; i++) {
+			assert((seen[i] & re->labels[i]) == 0);
+			seen[i] |= re->labels[i];
+		}
+	}
+}
+#endif
+
 static int
 analyze_closures__pairwise_grouping(struct analyze_closures_env *env,
 	interned_state_set_id iss_id)
@@ -1506,6 +1523,10 @@ analyze_closures__pairwise_grouping(struct analyze_closures_env *env,
 
 #if LOG_GROUPING > 1
 	fprintf(stderr, "%s: result %d in %zu rounds\n", __func__, result_id &~ RESULT_BIT, round);
+#endif
+
+#if EXPENSIVE_CHECKS
+	assert_labels_are_disjoint(env->results.rs[result_id]);
 #endif
 
 	assert(result_id & RESULT_BIT);
@@ -2105,6 +2126,10 @@ commit_buffered_group(struct analyze_closures_env *env, uint32_t *cache_result_i
 		    __func__, alloc_sz, fsm_hash_fnv1a_64((const uint8_t *)ng, alloc_sz));
 #endif
 	}
+
+#if EXPENSIVE_CHECKS
+	assert_labels_are_disjoint(ng);
+#endif
 
 	const uint32_t cache_id = env->results.used;
 	env->results.rs[cache_id] = ng;
