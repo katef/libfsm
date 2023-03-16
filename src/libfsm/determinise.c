@@ -171,6 +171,8 @@ fsm_determinise(struct fsm *nfa)
 			}
 		}
 
+		ac_env.output_count = 0;
+
 		/* All elements in sclosures[] are interned, so they will be freed later. */
 	} while ((curr = stack_pop(stack)));
 
@@ -724,7 +726,7 @@ cleanup:
 	return res;
 }
 
-#if LOG_AC
+#if LOG_AC && !NEW_ANALYSIS
 static void
 dump_egi_info(size_t i, const struct edge_group_iter_info *info) {
 	if (info->to == AC_NO_STATE) {
@@ -1519,18 +1521,19 @@ analyze_closures__pairwise_grouping(struct analyze_closures_env *env,
 	}
 
 	assert(cur_used == 1);
-	const fsm_state_t result_id = cbuf[0];
+	assert(cbuf[0] & RESULT_BIT);
+	const fsm_state_t result_id = cbuf[0] &~ RESULT_BIT;
+	assert(result_id < env->results.used);
 
 #if LOG_GROUPING > 1
-	fprintf(stderr, "%s: result %d in %zu rounds\n", __func__, result_id &~ RESULT_BIT, round);
+	fprintf(stderr, "%s: result %d in %zu rounds\n", __func__, result_id, round);
 #endif
 
 #if EXPENSIVE_CHECKS
 	assert_labels_are_disjoint(env->results.rs[result_id]);
 #endif
 
-	assert(result_id & RESULT_BIT);
-	if (!build_output_from_cached_analysis(env, result_id &~ RESULT_BIT)) {
+	if (!build_output_from_cached_analysis(env, result_id)) {
 		return 0;
 	}
 	TIME(&post);
