@@ -4,7 +4,6 @@
  * See LICENCE for the full copyright terms.
  */
 
-#define NEW_ANALYSIS 1
 #include "determinise_internal.h"
 
 static void
@@ -115,7 +114,7 @@ fsm_determinise(struct fsm *nfa)
 
 		assert(curr != NULL);
 
-		if (!analyze_closures_for_iss(&ac_env, curr->iss)) {
+		if (!analyze_closures__pairwise_grouping(&ac_env, curr->iss)) {
 			goto cleanup;
 		}
 
@@ -268,9 +267,6 @@ cleanup:
 	stack_free(stack);
 	interned_state_set_pool_free(issp);
 
-	if (ac_env.iters != NULL) {
-		f_free(ac_env.alloc, ac_env.iters);
-	}
 	if (ac_env.outputs != NULL) {
 		f_free(ac_env.alloc, ac_env.outputs);
 	}
@@ -284,13 +280,6 @@ cleanup:
 		f_free(ac_env.alloc, ac_env.groups);
 	}
 
-#if !NEW_ANALYSIS
-	if (ac_env.pq != NULL) {
-		ipriq_free(ac_env.pq);
-	}
-#endif
-
-#if NEW_ANALYSIS
 	f_free(ac_env.alloc, ac_env.pbuf[0]);
 	f_free(ac_env.alloc, ac_env.pbuf[1]);
 	f_free(ac_env.alloc, ac_env.htab.buckets);
@@ -318,8 +307,6 @@ cleanup:
 			    ac_env.usec_pair, usec_total, (100.0 * ac_env.usec_pair)/usec_total);
 		}
 	}
-
-#endif
 
 	return res;
 }
@@ -726,22 +713,6 @@ cleanup:
 	return res;
 }
 
-#if LOG_AC && !NEW_ANALYSIS
-static void
-dump_egi_info(size_t i, const struct edge_group_iter_info *info) {
-	if (info->to == AC_NO_STATE) {
-		fprintf(stderr, "%zu: DONE\n", i);
-		return;
-	}
-	fprintf(stderr, "%zu: unique %d, to %d, symbols: [0x%lx, 0x%lx, 0x%lx, 0x%lx] -- ",
-	    i, info->unique, info->to,
-	    info->symbols[0], info->symbols[1],
-	    info->symbols[2], info->symbols[3]);
-	dump_labels(stderr, info->symbols);
-	fprintf(stderr, "\n");
-}
-#endif
-
 static int
 group_labels_overlap(const struct ac_group *a, const struct ac_group *b)
 {
@@ -804,88 +775,6 @@ clear_group_labels(struct ac_group *g, const uint64_t *b)
 }
 
 static int
-analyze_closures_for_iss(struct analyze_closures_env *env,
-    interned_state_set_id cur_iss)
-{
-#if NEW_ANALYSIS
-	return analyze_closures__pairwise_grouping(env, cur_iss);
-#else
-	int res = 0;
-
-	/* Save the ID in a local variable, because release
-	 * below needs to overwrite the reference. */
-	interned_state_set_id iss_id = cur_iss;
-
-	struct state_set *ss = interned_state_set_get_state_set(env->issp, iss_id);
-	const size_t set_count = state_set_count(ss);
-
-#if LOG_DETERMINISE_STATE_SETS
-	{
-		static size_t ss_id;
-		struct state_iter it;
-		fsm_state_t s;
-		fprintf(stderr, "ss %zu :", ss_id++);
-		state_set_reset(ss, &it);
-		while (state_set_next(&it, &s)) {
-			fprintf(stderr, " %d", s);
-		}
-		fprintf(stderr, "\n");
-	}
-#endif
-
-	INIT_TIMERS();
-
-	assert(env != NULL);
-	assert(set_count > 0);
-
-	TIME(&pre);
-	if (!analyze_closures__init_iterators(env, ss, set_count)) {
-		goto cleanup;
-	}
-	TIME(&post);
-	DIFF_MSEC("init_iterators", pre, post, NULL);
-
-	env->output_count = 0;
-
-	TIME(&pre);
-	if (!analyze_closures__init_groups(env)) {
-		goto cleanup;
-	}
-	TIME(&post);
-	DIFF_MSEC("init_groups", pre, post, NULL);
-
-	TIME(&pre);
-
-	switch (analyze_closures__collect(env)) {
-	case AC_COLLECT_DONE:
-		TIME(&post);
-		DIFF_MSEC("collect", pre, post, NULL);
-
-		TIME(&pre);
-		if (!analyze_closures__analyze(env)) {
-			goto cleanup;
-		}
-		TIME(&post);
-		DIFF_MSEC("analyze", pre, post, NULL);
-		break;
-
-	case AC_COLLECT_EMPTY:
-		/* no analysis to do */
-		break;
-
-	default:
-	case AC_COLLECT_ERROR:
-		goto cleanup;
-	}
-
-	res = 1;
-
-cleanup:
-	return res;
-#endif
-}
-
-static int
 analyze_closures__init_groups(struct analyze_closures_env *env)
 {
 	if (env->group_ceil == 0) {
@@ -906,252 +795,6 @@ analyze_closures__init_groups(struct analyze_closures_env *env)
 	return 1;
 }
 
-#if !NEW_ANALYSIS
-static enum ipriq_cmp_res
-cmp_iterator_cb(size_t a, size_t b, void *opaque)
-{
-	struct analyze_closures_env *env = opaque;
-	assert(env != NULL);
-
-	assert(a < env->iter_count);
-	assert(b < env->iter_count);
-
-	const fsm_state_t to_a = env->iters[a].info.to;
-	const fsm_state_t to_b = env->iters[b].info.to;
-
-#if LOG_AC
-	fprintf(stderr, "cmp_iterator_ac: a %zu -> to_a %d, b %zu -> to_b %d\n",
-	    a, to_a, b, to_b);
-#endif
-
-	return to_a < to_b ? IPRIQ_CMP_LT : to_a > to_b ? IPRIQ_CMP_GT : IPRIQ_CMP_EQ;
-}
-
-static int
-analyze_closures__init_iterators(struct analyze_closures_env *env,
-	const struct state_set *ss, size_t set_count)
-{
-	struct state_iter it;
-	fsm_state_t s;
-	size_t i_i;
-
-	if (env->pq == NULL) {
-		env->pq = ipriq_new(env->alloc,
-		    cmp_iterator_cb, (void *)env);
-		if (env->pq == NULL) {
-			return 0;
-		}
-	} else {
-		/* reuse, to avoid allocating in inner loop */
-		assert(ipriq_empty(env->pq));
-	}
-
-#if LOG_AC
-	fprintf(stderr, "ac_init: ceil %zu, count %zu\n",
-	    env->iter_ceil, set_count);
-#endif
-
-	/* Grow backing array for iterators on demand */
-	if (env->iter_ceil < set_count) {
-		if (!analyze_closures__grow_iters(env, set_count)) {
-			return 0;
-		}
-	}
-
-	/* Init all the edge group iterators so we can step them in
-	 * parallel and merge. Each will yield edge groups in order,
-	 * sorted by .to, so we can merge them that way.
-	 *
-	 * This ordering also leads to gathering the state sets in
-	 * ascending order in analyze_closures__analyze, so we can avoid
-	 * overhead from sorting the state sets before passing them to
-	 * interned_state_set_intern_set, which needs sorted input. */
-	i_i = 0;
-	state_set_reset(ss, &it);
-
-#if LOG_AC
-	fprintf(stderr, "ac_init: initializing iterators:");
-#endif
-
-	while (state_set_next(&it, &s)) {
-		/* The edge set group iterator can partition them into
-		 * unique (within the edge set) and non-unique label
-		 * sets, but what we really care about is labels that
-		 * are unique within the entire state set, so that
-		 * doesn't actually help us much. */
-#if LOG_AC
-		fprintf(stderr, " %d", s);
-#endif
-		edge_set_group_iter_reset(env->fsm->states[s].edges,
-		    EDGE_GROUP_ITER_ALL, &env->iters[i_i].iter);
-		i_i++;
-	}
-
-#if LOG_AC
-	fprintf(stderr, "\n");
-#endif
-	env->iter_count = set_count;
-
-	assert(env->pq != NULL);
-	assert(ipriq_empty(env->pq));
-
-	for (i_i = 0; i_i < set_count; i_i++) {
-		struct ac_iter *egi = &env->iters[i_i];
-		if (edge_set_group_iter_next(&egi->iter, &egi->info)) {
-#if LOG_AC
-			fprintf(stderr, "ac_collect: iter[%zu]: to: %d\n",
-			    i_i, egi->info.to);
-			dump_egi_info(i_i, &egi->info);
-#endif
-			if (!ipriq_add(env->pq, i_i)) {
-				return 0;
-			}
-		} else {
-#if LOG_AC
-			fprintf(stderr, "ac_collect: iter[%zu]: DONE\n", i_i);
-#endif
-			egi->info.to = AC_NO_STATE; /* done */
-		}
-	}
-
-	return 1;
-}
-
-static int
-analyze_closures__grow_iters(struct analyze_closures_env *env,
-    size_t set_count)
-{
-	size_t nceil = (env->iter_ceil == 0
-	    ? DEF_ITER_CEIL : env->iter_ceil);
-	while (nceil < set_count) {
-		assert(nceil > 0);
-		nceil *= 2;
-	}
-
-#if LOG_AC
-	fprintf(stderr, "ac_init: growing iters to %zu\n", nceil);
-#endif
-
-	struct ac_iter *niters = f_realloc(env->alloc,
-	    env->iters, nceil * sizeof(env->iters[0]));
-	if (niters == NULL) {
-		return 0;
-	}
-	env->iters = niters;
-	env->iter_ceil = nceil;
-	return 1;
-}
-
-static enum ac_collect_res
-analyze_closures__collect(struct analyze_closures_env *env)
-{
-	/* All iterators have been stepped once, and any that didn't
-	 * finish immediately were added to the queue. Keep stepping
-	 * whichever is earliest (by .to state) until they're all done.
-	 * Merge (label set -> state) info along the way. */
-
-	if (ipriq_empty(env->pq)) {
-#if LOG_AC
-		fprintf(stderr, "ac_collect: empty\n");
-#endif
-		return AC_COLLECT_EMPTY;
-	}
-
-	size_t steps = 0;
-	while (!ipriq_empty(env->pq)) {
-		size_t next_i;
-		steps++;
-
-		if (!ipriq_pop(env->pq, &next_i)) {
-			assert(!"unreachable: non-empty, but pop failed");
-			return AC_COLLECT_ERROR;
-		}
-
-#if LOG_AC
-		fprintf(stderr, "ac_collect: popped %zu\n", next_i);
-#endif
-
-		assert(next_i < env->iter_count);
-		struct ac_iter *iter = &env->iters[next_i];
-		assert(iter->info.to != AC_NO_STATE);
-
-		/* If we are about to put the current iterator into the
-		 * priority queue only to pop it right back out again,
-		 * note what the next state is on the next iterator in
-		 * the queue and resume the current iterator as long as
-		 * we can. This saves a lot of time spent on pointless
-		 * queue bookkeeping. */
-		size_t next_next_i = 0;
-		fsm_state_t resume_current_limit = AC_NO_STATE;
-		if (ipriq_peek(env->pq, &next_next_i)) {
-			assert(next_next_i < env->iter_count);
-			struct ac_iter *next_iter = &env->iters[next_next_i];
-			assert(next_iter->info.to != AC_NO_STATE);
-			if (next_iter->info.to > iter->info.to) {
-				resume_current_limit = next_iter->info.to;
-			}
-		}
-
-advance_current_iterator:;
-
-		if (env->group_count + 1 == env->group_ceil) {
-			if (!analyze_closures__grow_groups(env)) {
-				return AC_COLLECT_ERROR;
-			}
-		}
-
-		assert(env->group_count < env->group_ceil);
-
-		struct ac_group *g = &env->groups[env->group_count];
-
-		if (g->to == AC_NO_STATE) { /* init new group */
-			memset(g, 0x00, sizeof(*g));
-			g->to = iter->info.to;
-			union_with(g->labels, iter->info.symbols);
-		} else if (g->to == iter->info.to) { /* update current group */
-			union_with(g->labels, iter->info.symbols);
-		} else {	/* switch to next group */
-			assert(iter->info.to > g->to);
-			env->group_count++;
-
-			if (env->group_count + 1 == env->group_ceil) {
-				if (!analyze_closures__grow_groups(env)) {
-					return AC_COLLECT_ERROR;
-				}
-			}
-			assert(env->group_count < env->group_ceil);
-
-			struct ac_group *ng = &env->groups[env->group_count];
-			memset(ng, 0x00, sizeof(*ng));
-			ng->to = iter->info.to;
-			union_with(ng->labels, iter->info.symbols);
-		}
-
-		if (edge_set_group_iter_next(&iter->iter, &iter->info)) {
-#if LOG_AC
-			fprintf(stderr, "ac_collect: iter %zu -- to %d\n",
-			    next_i, iter->info.to);
-#endif
-			if (resume_current_limit != AC_NO_STATE
-			    && iter->info.to < resume_current_limit) {
-				goto advance_current_iterator;
-			}
-			if (!ipriq_add(env->pq, next_i)) {
-				return AC_COLLECT_ERROR;
-			}
-		} else {
-#if LOG_AC
-			fprintf(stderr, "ac_collect: iter %zu -- DONE\n", next_i);
-#endif
-		}
-	}
-
-	env->group_count++;	/* commit current group */
-
-	return AC_COLLECT_DONE;
-}
-#endif
-
 static int
 grow_clearing_vector(struct analyze_closures_env *env)
 {
@@ -1168,204 +811,6 @@ grow_clearing_vector(struct analyze_closures_env *env)
 	env->cvect.ids = nids;
 	return 1;
 }
-
-#if !NEW_ANALYSIS
-static int
-analyze_closures__analyze(struct analyze_closures_env *env)
-{
-#if LOG_AC
-	/* Dump group table. */
-	{
-		size_t g_i;
-		fprintf(stderr, "# group label/to closure table\n");
-		for (g_i = 0; g_i < env->group_count; g_i++) {
-			const struct ac_group *g = &env->groups[g_i];
-			fprintf(stderr,
-			    "g[%03zu]: to %4d: 0x%016lx%016lx%016lx%016lx",
-			    g_i, g->to,
-			    g->labels[0], g->labels[1],
-			    g->labels[2], g->labels[3]);
-			if (LOG_AC > 1) {
-				fprintf(stderr, " -- ");
-				dump_labels(stderr, g->labels);
-			}
-			fprintf(stderr, "\n");
-		}
-	}
-#endif
-
-	/* This partitions the table into an array of non-overlapping
-	 * (label set -> state set) pairs.
-	 *
-	 * For the first group in the table, find labels in that group that
-	 * are shared by later groups, create a set of the states those
-	 * groups lead to, then clear those labels. If the first group is
-	 * empty, advance base_i to the next group, and repeat until all
-	 * the groups in the table have been cleared. Because each pass
-	 * clears lables, this must eventually terminate.
-	 *
-	 * The pass that clears the labels on groups that were just
-	 * added to the result set benefits from the groups being sorted
-	 * by ascending .to fields, but other approaches may be faster.
-	 * I tried sorting the table by ascending count of bits used in
-	 * the label sets, so earlier groups with only a few labels
-	 * would be cleared faster and reduce the overall working set
-	 * sooner, but neither approach seemed to be clearly faster for
-	 * my test data sets. There is also a lot of room here for
-	 * speeding up the group label set unioning, intersecting, and
-	 * clearing. Casual experiments suggested small improvements but
-	 * not drastic improvements, so I'm leaving that performance
-	 * work for later. */
-	size_t base_i, g_i, o_i; /* base_i, group_i, other_i */
-
-	base_i = 0;
-	env->output_count = 0;
-
-	if (env->dst_ceil == 0) {
-		if (!analyze_closures__grow_dst(env)) {
-			return 0;
-		}
-	}
-
-	/* Initialize words_used for each group. */
-	for (g_i = 0; g_i < env->group_count; g_i++) {
-		size_t w_i;
-		uint8_t bit;
-		struct ac_group *g = &env->groups[g_i];
-		g->words_used = 0;
-		for (w_i = 0, bit = 0x01; w_i < 4; w_i++, bit <<= 1) {
-			if (g->labels[w_i] != 0) {
-				g->words_used |= bit;
-			}
-		}
-	}
-
-	while (base_i < env->group_count) {
-		/* labels assigned in current sweep. The g_labels wrapper
-		 * is used for g_labels.words_used. */
-		struct ac_group g_labels = { 0 };
-		uint64_t *labels = g_labels.labels;
-		size_t dst_count = 0;
-
-#if LOG_AC
-		fprintf(stderr, "base_i %zu/%zu\n",
-		    base_i, env->group_count);
-#endif
-
-		const struct ac_group *bg = &env->groups[base_i];
-		memcpy(&g_labels, bg, sizeof(*bg));
-
-		/* At least one bit should be set; otherwise
-		 * we should have incremented base_i. */
-		assert(labels[0] || labels[1]
-		    || labels[2] || labels[3]);
-
-#if LOG_AC
-		fprintf(stderr, "ac_analyze: dst[%zu] <- %d (base)\n", dst_count, bg->to);
-#endif
-
-		if (dst_count + 1 == env->dst_ceil) {
-			if (!analyze_closures__grow_dst(env)) {
-				return 0;
-			}
-		}
-		env->dst[dst_count] = bg->to;
-		dst_count++;
-
-		if (env->cvect.ceil == 0) {
-			if (!grow_clearing_vector(env)) { return 0; }
-		}
-		env->cvect.ids[0] = base_i;
-		env->cvect.used = 1;
-
-		for (o_i = base_i + 1; o_i < env->group_count; o_i++) {
-			const struct ac_group *og = &env->groups[o_i];
-			if (og->words_used == 0) {
-				continue; /* skip empty groups */
-			}
-
-			/* TODO: Combining checking for overlap and intersecting
-			 * into one pass would be ugly, but a little faster, and
-			 * this loop has a big impact on performance. */
-			if (group_labels_overlap(&g_labels, og)) {
-				intersect_with(labels, og->labels);
-#if LOG_AC
-				fprintf(stderr, "ac_analyze: dst[%zu] <- %d (other w/ overlapping labels)\n", dst_count, og->to);
-#endif
-
-				if (dst_count + 1 == env->dst_ceil) {
-					if (!analyze_closures__grow_dst(env)) {
-						return 0;
-					}
-				}
-
-				env->dst[dst_count] = og->to;
-				dst_count++;
-
-				if (env->cvect.used == env->cvect.ceil) {
-					if (!grow_clearing_vector(env)) { return 0; }
-				}
-				env->cvect.ids[env->cvect.used] = o_i;
-				env->cvect.used++;
-			}
-		}
-
-#if LOG_AC
-		fprintf(stderr, "ac_analyze: dst_count: %zu\n", dst_count);
-#endif
-
-		assert(labels[0] || labels[1]
-		    || labels[2] || labels[3]);
-
-		for (size_t c_i = 0; c_i < env->cvect.used; c_i++) {
-			const fsm_state_t g_id = env->cvect.ids[c_i];
-			assert(g_id < env->group_count);
-			struct ac_group *g = &env->groups[g_id];
-			clear_group_labels(g, labels);
-		}
-
-		if (LOG_AC) {
-			size_t i;
-			fprintf(stderr, "new_edge_group:");
-			for (i = 0; i < dst_count; i++) {
-				fprintf(stderr, " %d", env->dst[i]);
-			}
-			fprintf(stderr, " -- ");
-			dump_labels(stderr, labels);
-			fprintf(stderr, "\n");
-		}
-
-		{		/* build the state set and add to the output */
-#if LOG_AC > 1
-			fprintf(stderr, "ac_analyze: building interned_state_set with %zu states:", dst_count);
-#endif
-			interned_state_set_id iss;
-			if (!interned_state_set_intern_set(env->issp, dst_count, env->dst, &iss)) {
-				return 0;
-			}
-
-			if (!analyze_closures__save_output(env, labels, iss)) {
-				return 0;
-			}
-		}
-
-		while (base_i < env->group_count && env->groups[base_i].words_used == 0) {
-#if LOG_AC
-			fprintf(stderr, "ac_analyze: base %zu all clear, advancing\n", base_i);
-#endif
-			base_i++;
-		}
-	}
-
-#if LOG_AC
-	fprintf(stderr, "ac_analyze: done\n");
-#endif
-
-	return 1;
-}
-#endif
-
-#if NEW_ANALYSIS
 
 #if EXPENSIVE_CHECKS
 static void
@@ -2792,7 +2237,6 @@ combine_result_pair_and_commit(struct analyze_closures_env *env,
 
 	return 1;
 }
-#endif
 
 static int
 analyze_closures__save_output(struct analyze_closures_env *env,

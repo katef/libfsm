@@ -103,7 +103,6 @@ struct mappingstack {
 #define DEF_OUTPUT_CEIL 4
 #define DEF_DST_CEIL 4
 
-#if NEW_ANALYSIS
 /* Mark an ID as a cached result ID (1) rather than a state ID (0). */
 #define RESULT_BIT ((fsm_state_t)1U << (8U*sizeof(fsm_state_t) - 1))
 #define DEF_PBUF_CEIL 4
@@ -160,27 +159,11 @@ analysis_cache_save_single_state(struct analyze_closures_env *env,
 static int
 analysis_cache_save_pair(struct analyze_closures_env *env,
 	fsm_state_t a, fsm_state_t b, fsm_state_t result_id);
-#endif
 
 struct analyze_closures_env {
 	const struct fsm_alloc *alloc;
 	const struct fsm *fsm;
 	struct interned_state_set_pool *issp;
-
-	/* TODO: iters and outputs are never in use at the same time, so
-	 * they could potentially share the same underlying allocation.
-	 * It may not be worth the extra complexity though. */
-
-	/* Temporary state for iterators */
-	size_t iter_ceil;
-	size_t iter_count;
-	struct ac_iter {
-		/* if info.to is AC_NO_STATE then it's done */
-		struct edge_group_iter iter;
-		struct edge_group_iter_info info;
-	} *iters;
-
-	struct ipriq *pq;
 
 	/* All sets of labels leading to states,
 	 * stored in ascending order. */
@@ -207,7 +190,6 @@ struct analyze_closures_env {
 		fsm_state_t *ids;
 	} cvect;
 
-#if NEW_ANALYSIS
 	/* Pair of buffers used to store IDs as the list is combined
 	 * and reduced, switching back and forth. */
 	size_t pbuf_ceil;
@@ -286,40 +268,14 @@ struct analyze_closures_env {
 	size_t usec_single;
 	size_t count_pair;
 	size_t usec_pair;
-#endif
 
+	/* Buffer for building up destination state set. */
 	size_t dst_ceil;
 	fsm_state_t *dst;
 };
 
 static int
-analyze_closures_for_iss(struct analyze_closures_env *env,
-	interned_state_set_id curr_iss);
-
-static int
 analyze_closures__init_groups(struct analyze_closures_env *env);
-
-#if !NEW_ANALYSIS
-static int
-analyze_closures__init_iterators(struct analyze_closures_env *env,
-	const struct state_set *ss, size_t set_count);
-
-enum ac_collect_res {
-	AC_COLLECT_DONE,
-	AC_COLLECT_EMPTY,
-	AC_COLLECT_ERROR = -1,
-};
-
-static enum ac_collect_res
-analyze_closures__collect(struct analyze_closures_env *env);
-
-static int
-analyze_closures__analyze(struct analyze_closures_env *env);
-
-static int
-analyze_closures__grow_iters(struct analyze_closures_env *env,
-    size_t set_count);
-#endif
 
 static int
 analyze_closures__save_output(struct analyze_closures_env *env,
