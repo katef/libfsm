@@ -134,7 +134,7 @@ add_group_dst_info_to_buffer(struct analyze_closures_env *env,
 	const uint64_t labels[256/64]);
 
 static int
-commit_buffered_group(struct analyze_closures_env *env, uint32_t *cache_result_id);
+commit_buffered_result(struct analyze_closures_env *env, uint32_t *cache_result_id);
 
 static int
 combine_pair(struct analyze_closures_env *env, fsm_state_t pa, fsm_state_t pb,
