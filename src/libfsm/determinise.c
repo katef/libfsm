@@ -898,7 +898,12 @@ analyze_closures__pairwise_grouping(struct analyze_closures_env *env,
 		return analyze_single_state(env, id);
 	}
 
-	/* FIXME: block comment describing design */
+	/* Reduce via pairwise merging, flip/flopping between the
+	 * two buffers, until there is only one state/pair id, then
+	 * intern the resulting state sets and push any new ones onto
+	 * the stack for later processing.
+	 *
+	 * Cache intermediate results of merging each pair. */
 	size_t round = 0;	/* used to flip buffers */
 	size_t cur_used = set_count;
 	size_t next_used = 0;
@@ -907,12 +912,6 @@ analyze_closures__pairwise_grouping(struct analyze_closures_env *env,
 	fsm_state_t *cbuf = env->pbuf[(round + 0) & 1];
 	fsm_state_t *nbuf = env->pbuf[(round + 1) & 1];
 
-	/* reduce via pairwise merging, flip/flopping between the
-	 * two buffers, until there is only one state/pair id, then
-	 * intern the resulting state sets and push any new ones onto
-	 * the stack for later processing.
-	 *
-	 * cache intermediate results of merging each pair. */
 	while (cur_used > 1) {
 #if LOG_GROUPING > 1
 		if (cur_i == 0) {
@@ -949,7 +948,7 @@ analyze_closures__pairwise_grouping(struct analyze_closures_env *env,
 			 * the same ID pairs tend to repeat frequently. */
 			fsm_state_t a = cbuf[cur_i++];
 			fsm_state_t b = cbuf[cur_i++];
-			fsm_state_t result_id = a;
+			fsm_state_t result_id = a; /* out-of-bounds value */
 			if (!combine_pair(env, a, b, &result_id)) {
 				return 0;
 			}
