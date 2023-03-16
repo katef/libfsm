@@ -1436,7 +1436,7 @@ save_to_set(struct analyze_closures_env *env,
 	 * because it can be relocated. */
 	if (env->to_sets.buf != NULL) {
 		assert(dst < &env->to_sets.buf[0]
-		    || dst > &env->to_sets.buf[env->to_sets.ceil]);
+		    || dst >= &env->to_sets.buf[env->to_sets.ceil]);
 	}
 
 	/* There is substantial duplication of these sets, so
