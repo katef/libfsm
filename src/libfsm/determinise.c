@@ -1627,7 +1627,7 @@ cache_single_state_analysis(struct analyze_closures_env *env, fsm_state_t state_
 		fprintf(stderr, "Caching empty group analysis\n");
 #endif
 
-		if (!commit_buffered_group(env, cached_result_id)) {
+		if (!commit_buffered_result(env, cached_result_id)) {
 			return 0;
 		}
 #if LOG_GROUPING > 1
@@ -1806,7 +1806,7 @@ cache_single_state_analysis(struct analyze_closures_env *env, fsm_state_t state_
 		}
 	}
 
-	if (!commit_buffered_group(env, cached_result_id)) {
+	if (!commit_buffered_result(env, cached_result_id)) {
 		return 0;
 	}
 #if LOG_GROUPING > 1
@@ -2083,7 +2083,7 @@ add_group_dst_info_to_buffer(struct analyze_closures_env *env,
 }
 
 static int
-commit_buffered_group(struct analyze_closures_env *env, uint32_t *cache_result_id)
+commit_buffered_result(struct analyze_closures_env *env, uint32_t *cache_result_id)
 {
 #define LOG_COMMIT_BUFFERED_GROUP 0
 
@@ -2094,48 +2094,48 @@ commit_buffered_group(struct analyze_closures_env *env, uint32_t *cache_result_i
 		const size_t nceil = (env->results.ceil == 0
 		    ? DEF_GROUP_GS
 		    : 2*env->results.ceil);
-		struct analysis_result **ngs = f_realloc(env->alloc,
+		struct analysis_result **nrs = f_realloc(env->alloc,
 		    env->results.rs, nceil * sizeof(env->results.rs[0]));
 #if LOG_GROUPING || LOG_COMMIT_BUFFERED_GROUP
 		fprintf(stderr, "%s: growing %zu -> %zu\n",
 		    __func__, env->results.ceil, nceil);
 #endif
-		if (ngs == NULL) {
+		if (nrs == NULL) {
 			return 0;
 		}
 		env->results.ceil = nceil;
-		env->results.rs = ngs;
+		env->results.rs = nrs;
 	}
 
-	struct analysis_result *ng;
-	const size_t alloc_sz = sizeof(*ng)
-	    + env->results.buffer.used * sizeof(ng->entries[0]);
-	ng = f_malloc(env->alloc, alloc_sz);
+	struct analysis_result *nr;
+	const size_t alloc_sz = sizeof(*nr)
+	    + env->results.buffer.used * sizeof(nr->entries[0]);
+	nr = f_malloc(env->alloc, alloc_sz);
 #if LOG_GROUPING || LOG_COMMIT_BUFFERED_GROUP
 	fprintf(stderr, "%s: alloc %zu\n",
-	    __func__, sizeof(*ng) + env->results.buffer.used * sizeof(ng->entries[0]));
+	    __func__, sizeof(*nr) + env->results.buffer.used * sizeof(nr->entries[0]));
 #endif
-	if (ng == NULL) {
+	if (nr == NULL) {
 		return 0;
 	}
-	ng->count = env->results.buffer.used;
+	nr->count = env->results.buffer.used;
 
-	if (ng->count > 0) {
+	if (nr->count > 0) {
 		assert(env->results.buffer.entries != NULL);
-		memcpy(&ng->entries[0], env->results.buffer.entries,
-		    ng->count * sizeof(env->results.buffer.entries[0]));
+		memcpy(&nr->entries[0], env->results.buffer.entries,
+		    nr->count * sizeof(env->results.buffer.entries[0]));
 #if LOG_GROUPING || LOG_COMMIT_BUFFERED_GROUP
 		fprintf(stderr, "%s: alloc %zu, hash 0x%016lx\n",
-		    __func__, alloc_sz, fsm_hash_fnv1a_64((const uint8_t *)ng, alloc_sz));
+		    __func__, alloc_sz, fsm_hash_fnv1a_64((const uint8_t *)nr, alloc_sz));
 #endif
 	}
 
 #if EXPENSIVE_CHECKS
-	assert_labels_are_disjoint(ng);
+	assert_labels_are_disjoint(nr);
 #endif
 
 	const uint32_t cache_id = env->results.used;
-	env->results.rs[cache_id] = ng;
+	env->results.rs[cache_id] = nr;
 	env->results.used++;
 
 	/* clear buffer */
@@ -2775,7 +2775,7 @@ combine_result_pair_and_commit(struct analyze_closures_env *env,
 		}
 	}
 
-	if (!commit_buffered_group(env, committed_result_id)) {
+	if (!commit_buffered_result(env, committed_result_id)) {
 		return 0;
 	}
 
