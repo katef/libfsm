@@ -279,7 +279,7 @@ analyze_closures__init_groups(struct analyze_closures_env *env);
 
 static int
 analyze_closures__save_output(struct analyze_closures_env *env,
-    const uint64_t labels[256/4], interned_state_set_id iss);
+    const uint64_t labels[256/64], interned_state_set_id iss);
 
 static int
 analyze_closures__grow_groups(struct analyze_closures_env *env);
