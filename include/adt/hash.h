@@ -20,7 +20,7 @@
 
 SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static __inline__ uint64_t
-fsm_hash_id(unsigned id)
+hash_id(unsigned id)
 {
 	return FSM_PHI_64 * (uint64_t)(id + (unsigned)1);
 }
@@ -33,7 +33,7 @@ fsm_hash_id(unsigned id)
 
 SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static __inline__ uint32_t
-fsm_hash_fnv1a_32(const uint8_t *buf, size_t length)
+hash_fnv1a_32(const uint8_t *buf, size_t length)
 {
 #define FNV1a_32_OFFSET_BASIS 	0x811c9dc5UL
 #define FNV1a_32_PRIME		0x01000193UL
@@ -48,7 +48,7 @@ fsm_hash_fnv1a_32(const uint8_t *buf, size_t length)
 
 SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static __inline__ uint64_t
-fsm_hash_fnv1a_64(const uint8_t *buf, size_t length)
+hash_fnv1a_64(const uint8_t *buf, size_t length)
 {
 #define FNV1a_64_OFFSET_BASIS   0xcbf29ce484222325UL
 #define FNV1a_64_PRIME		0x100000001b3UL
