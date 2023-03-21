@@ -1313,9 +1313,9 @@ SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static uint64_t
 to_set_hash(size_t count, const fsm_state_t *ids)
 {
-	uint64_t h = fsm_hash_id(count);
+	uint64_t h = hash_id(count);
 	for (size_t i = 0; i < count; i++) {
-		h += fsm_hash_id(ids[i]);
+		h += hash_id(ids[i]);
 	}
 	return h;
 }
@@ -1570,7 +1570,7 @@ commit_buffered_result(struct analyze_closures_env *env, uint32_t *cache_result_
 		    nr->count * sizeof(env->results.buffer.entries[0]));
 #if LOG_GROUPING || LOG_COMMIT_BUFFERED_GROUP
 		fprintf(stderr, "%s: alloc %zu, hash 0x%016lx\n",
-		    __func__, alloc_sz, fsm_hash_fnv1a_64((const uint8_t *)nr, alloc_sz));
+		    __func__, alloc_sz, hash_fnv1a_64((const uint8_t *)nr, alloc_sz));
 #endif
 	}
 
@@ -1630,14 +1630,14 @@ hash_pair(fsm_state_t a, fsm_state_t b)
 	b &=~ RESULT_BIT;
 
 	/* Don't hash a and b separately and combine them with
-	 * fsm_hash_id, because it's common to have adjacent pairs of
-	 * result IDs, and with how fsm_hash_id works that leads to
+	 * hash_id, because it's common to have adjacent pairs of
+	 * result IDs, and with how hash_id works that leads to
 	 * multiples of similar hash values bunching up.
 	 *
 	 * This could be replaced with a better hash function later,
 	 * but use LOG_CACHE_HTAB to ensure there aren't visually obvious
 	 * runs of collisions appearing in the tables. */
-	const uint64_t res = fsm_hash_id(a + b);
+	const uint64_t res = hash_id(a + b);
 	/* fprintf(stderr, "%s: a %d, b %d -> %016lx\n", __func__, a, b, res); */
 	return res;
 }
@@ -1708,7 +1708,7 @@ analysis_cache_check_single_state(struct analyze_closures_env *env, fsm_state_t 
 
 	CACHE_HTAB_INIT_STATS();
 
-	const uint64_t h = fsm_hash_id(id);
+	const uint64_t h = hash_id(id);
 	const uint64_t mask = htab->bucket_count - 1;
 	for (size_t i = 0; i < htab->bucket_count; i++) {
 		struct result_pair_bucket *b = &htab->buckets[(h + i) & mask];
@@ -1834,7 +1834,7 @@ pair_cache_save(struct analyze_closures_env *env,
 				}
 
 				const uint64_t h = (ob->t == RPBT_SINGLE_STATE
-				    ? fsm_hash_id(ob->ids[0])
+				    ? hash_id(ob->ids[0])
 				    : hash_pair(ob->ids[0], ob->ids[1]));
 				if (ob->t == RPBT_SINGLE_STATE) {
 					assert(ob->ids[0] == ob->ids[1]);
@@ -1857,7 +1857,7 @@ pair_cache_save(struct analyze_closures_env *env,
 	}
 
 	const uint64_t h = (pa == pb
-	    ? fsm_hash_id(pa)
+	    ? hash_id(pa)
 	    : (hash_pair(pa, pb)));
 
 	const uint64_t mask = htab->bucket_count - 1;
