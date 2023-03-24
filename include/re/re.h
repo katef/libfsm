@@ -11,14 +11,6 @@ struct fsm;
 struct fsm_options;
 
 enum re_dialect {
-/* TODO:
-	RE_ERE,
-	RE_BRE,
-	RE_PLAN9,
-	RE_PCRE,
-	RE_JS,
-	RE_PYTHON,
-*/
 	RE_LIKE,
 	RE_LITERAL,
 	RE_GLOB,
@@ -41,16 +33,6 @@ enum re_flags {
 };
 
 #define RE_ANCHOR (RE_TEXT | RE_MULTI | RE_ZONE)
-
-enum re_pred {
-	RE_SOL = 1 << 0,
-	RE_SOZ = 1 << 1,
-	RE_SOT = 1 << 2 | RE_SOL,
-
-	RE_EOL = 1 << 3,
-	RE_EOZ = 1 << 4,
-	RE_EOT = 1 << 5 | RE_EOL
-};
 
 enum {
 	RE_MISC  = 1 << (8 - 1),
