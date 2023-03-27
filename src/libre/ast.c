@@ -12,6 +12,7 @@
 #include <limits.h>
 
 #include <re/re.h>
+#include <re/literal.h>
 
 #include "class.h"
 #include "ast.h"
@@ -912,3 +913,128 @@ ast_node_type_name(enum ast_expr_type t)
 	case AST_EXPR_TOMBSTONE: return "TOMBSTONE";
 	}
 }
+
+/*
+ * TODO: we could use this for AST->NFA conversion and decide to call
+ * re_strings() instead (also for a set of alts of strings)
+ *
+ * Return values:
+ *  -1: Error
+ *   0: Not a literal, *s and *n are not defined. *anchor_start/end are not defined.
+ *   1: Literal, *s may or may not be NULL (i.e. for an empty string), *n >= 0
+ *      and *anchor_start/_end are set.
+ */
+int
+ast_expr_is_literal(const struct ast_expr *e,
+	int *anchor_start, int *anchor_end,
+	char **s, size_t *n)
+{
+	size_t count;
+	const struct ast_expr **nodes;
+	int is_end_nl;
+	size_t i;
+
+	is_end_nl = 0;
+
+	*anchor_start = 0;
+	*anchor_end   = 0;
+
+	/* correctly match the empty string */
+	if (e == NULL || e->type == AST_EXPR_EMPTY) {
+		count = 0;
+		nodes = NULL;
+		goto done;
+	}
+
+	/*
+	 * TODO: We could also handle AST_EXPR_CODEPOINT here
+	 * (and in concatenations below), and perhaps render out
+	 * the string to utf8.
+	 */
+
+	/* a single character has no concat node (or anchors) */
+	if (e->type == AST_EXPR_LITERAL) {
+		count = 1;
+		nodes = &e;
+		goto done;
+	}
+
+	if (e->type != AST_EXPR_CONCAT && e->type != AST_EXPR_ANCHOR) {
+		return 0;
+	}
+
+	/*
+	 * At this point we're considering either a single anchor,
+	 * or we're looking at the CONCAT node in the following AST.
+	 * Either way we're just after the list of nodes.
+	 *
+	 *                GROUP #0
+	 *                   |
+	 *                CONCAT
+	 *                   |
+	 *   [ANCHOR ^] [LITERAL ...] [ANCHOR $]
+	 *
+	 * Where both anchors (and the literals) are optional.
+	 */
+
+	if (e->type == AST_EXPR_ANCHOR) {
+		count = 1;
+		nodes = &e;
+	} else {
+		count = e->u.concat.count;
+		nodes = e->u.concat.n;
+	}
+
+	if (count >= 1 && nodes[0] != NULL && nodes[0]->type == AST_EXPR_ANCHOR && nodes[0]->u.anchor.type == AST_ANCHOR_START) {
+		count--;
+		nodes++;
+		*anchor_start = 1;
+	}
+
+	if (count >= 1 && nodes[count - 1] != NULL && nodes[count - 1]->type == AST_EXPR_ANCHOR && nodes[count - 1]->u.anchor.type == AST_ANCHOR_END) {
+		is_end_nl = nodes[count - 1]->u.anchor.is_end_nl;
+		count--;
+		*anchor_end = 1;
+	}
+
+	for (i = 0; i < count; i++) {
+		if (nodes[i] == NULL || nodes[i]->type != AST_EXPR_LITERAL) {
+			return 0;
+		}
+	}
+
+done:
+
+	*n = count + is_end_nl;
+
+	if (*n == 0) {
+		*s = NULL;
+		return 1;
+	}
+
+	/*
+	 * We're using regular malloc() here, rather than the f_malloc() hooks
+	 * (libre doesn't have access to these hooks, but I think it's worth
+	 * saying that this is intentional regardless). Because this storage
+	 * isn't part of the working operations in libfsm's processing, it's
+	 * storage intended to persist beyond this call, and the caller frees.
+	 */
+	*s = malloc(*n);
+	if (*s == NULL) {
+		return -1;
+	}
+
+	for (i = 0; i < count; i++) {
+		assert(nodes[i] != NULL);
+		assert(nodes[i]->type == AST_EXPR_LITERAL);
+
+		(*s)[i] = nodes[i]->u.literal.c;
+	}
+
+	if (is_end_nl) {
+		(*s)[i] = '\n';
+	}
+
+	return 1;
+}
+

@@ -11,6 +11,7 @@
 #include <errno.h>
 
 #include <re/re.h>
+#include <re/literal.h>
 
 #include <fsm/fsm.h>
 
@@ -145,6 +146,8 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct dialect *m;
 	int unsatisfiable;
 
+	assert(getc != NULL);
+
 	m = re_dialect(dialect);
 	if (m == NULL) {
 		if (err != NULL) { err->e = RE_EBADDIALECT; }
@@ -191,3 +194,106 @@ error:
 
 	return NULL;
 }
+
+/*
+ * Return values:
+ *  -1: Error
+ *   0: Not a literal, *s and *n are not defined. *category is not defined.
+ *   1: Literal, *s may or may not be NULL (i.e. for an empty string), *n >= 0
+ *      and *category is set.
+ */
+int
+re_is_literal(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
+	const struct fsm_options *opt,
+	enum re_flags flags, struct re_err *err,
+	enum re_literal_category *category, char **s, size_t *n)
+{
+	struct ast *ast;
+	const struct dialect *m;
+	int unsatisfiable;
+	int r;
+
+	assert(getc != NULL);
+	assert(category != NULL);
+	assert(s != NULL);
+
+	m = re_dialect(dialect);
+	if (m == NULL) {
+		if (err != NULL) { err->e = RE_EBADDIALECT; }
+		return 0;
+	}
+
+	flags |= m->flags;
+
+	ast = re_parse(dialect, getc, opaque, opt, flags, err, &unsatisfiable);
+	if (ast == NULL) {
+		goto error;
+	}
+
+	/*
+	 * We consider this a kind of literal, returning 1 really just means
+	 * we got an AST we can understand here.
+	 */
+	if (unsatisfiable) {
+		*category = RE_LITERAL_UNSATISFIABLE;
+		*s = NULL;
+		r = 1;
+		goto done;
+	}
+
+	if (ast->expr == NULL) {
+		errno = EINVAL;
+		goto error;
+	}
+
+	/*
+	 * Literals have an enclosing group #0, and we skip it for our purposes.
+	 * Parsing a satisfiable expression is required to produce group #0.
+	 * If this doesn't exist, whatever we parsed, it's not a literal.
+	 *
+	 * I'm not doing this as an assertion because AST rewriting is free to
+	 * transform as it wishes, and I don't want to assume a particular
+	 * structure here.
+	 *
+	 * This is outside of ast_expr_is_literal() because that function may
+	 * apply to sub-trees within a larger AST.
+	 */
+	if (ast->expr->type != AST_EXPR_GROUP || ast->expr->u.group.id != 0) {
+		r = 0;
+		goto done;
+	}
+
+	int anchor_start, anchor_end;
+
+	r = ast_expr_is_literal(ast->expr->u.group.e, &anchor_start, &anchor_end, s, n);
+	if (r == -1) {
+		goto error;
+	}
+
+	*category = RE_LITERAL_UNANCHORED;
+	if (anchor_start) {
+		*category |= RE_LITERAL_ANCHOR_START;
+	}
+	if (anchor_end) {
+		*category |= RE_LITERAL_ANCHOR_END;
+	}
+
+	/* caller frees *s */
+
+done:
+
+	ast_free(ast);
+
+	return r;
+
+error:
+
+	ast_free(ast);
+
+	if (err != NULL) {
+		err->e = RE_EERRNO;
+	}
+
+	return -1;
+}
+
