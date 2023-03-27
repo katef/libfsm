@@ -25,6 +25,9 @@
 #include <fsm/vm.h>
 
 #include <re/re.h>
+#include <re/literal.h>
+
+#include <print/esc.h>
 
 #include "libfsm/internal.h" /* XXX */
 #include "libre/print.h" /* XXX */
@@ -628,6 +631,7 @@ main(int argc, char *argv[])
 	int xfiles, yfiles;
 	int fsmfiles;
 	int example;
+	int isliteral;
 	int keep_nfa;
 	int patterns;
 	int ambig;
@@ -649,6 +653,7 @@ main(int argc, char *argv[])
 	xfiles    = 0;
 	yfiles    = 0;
 	example   = 0;
+	isliteral = 0;
 	keep_nfa  = 0;
 	patterns  = 0;
 	ambig     = 0;
@@ -663,7 +668,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:F:" "upMmnfxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:F:" "upMmnftxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
@@ -691,14 +696,15 @@ main(int argc, char *argv[])
 			case 'q': query     = comparison(optarg);   break;
 			case 'r': dialect   = dialect_name(optarg); break;
 
-			case 'u': ambig    = 1; break;
-			case 'f': fsmfiles = 1; break;
-			case 'x': xfiles   = 1; break;
-			case 'y': yfiles   = 1; break;
-			case 'm': example  = 1; break;
-			case 'n': keep_nfa = 1; break;
-			case 'z': patterns = 1; break;
-			case 'M': makevm   = 1; break;
+			case 'u': ambig     = 1; break;
+			case 'f': fsmfiles  = 1; break;
+			case 'x': xfiles    = 1; break;
+			case 'y': yfiles    = 1; break;
+			case 'm': example   = 1; break;
+			case 'n': keep_nfa  = 1; break;
+			case 't': isliteral = 1; break;
+			case 'z': patterns  = 1; break;
+			case 'M': makevm    = 1; break;
 
 			case 'h':
 				usage();
@@ -720,18 +726,18 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (!!print_fsm + !!print_ast + example + !!query > 1) {
-		fprintf(stderr, "-m, -p and -q are mutually exclusive\n");
+	if (!!print_fsm + !!print_ast + example + isliteral + !!query > 1) {
+		fprintf(stderr, "-m, -p, -q and -t are mutually exclusive\n");
 		return EXIT_FAILURE;
 	}
 
-	if (!!print_fsm + !!print_ast + example + !!query && xfiles) {
+	if (!!print_fsm + !!print_ast + example + isliteral + !!query && xfiles) {
 		fprintf(stderr, "-x applies only when executing\n");
 		return EXIT_FAILURE;
 	}
 
-	if (makevm && (keep_nfa || example || query)) {
-		fprintf(stderr, "-M cannot be used with -m, -q, or -n\n");
+	if (makevm && (keep_nfa || example || isliteral || query)) {
+		fprintf(stderr, "-M cannot be used with -m, -n, -q, or -t\n");
 		return EXIT_FAILURE;
 	}
 
@@ -751,6 +757,90 @@ main(int argc, char *argv[])
 
 	if (keep_nfa) {
 		ambig = 1;
+	}
+
+	/* XXX: repetitive */
+	if (isliteral) {
+		enum re_literal_category literal_category;
+		struct re_err err;
+		char *literal_s;
+		size_t literal_n;
+		int literal_r;
+		size_t i;
+
+		if (argc != 1) {
+			fprintf(stderr, "single regexp only for -t\n");
+			return EXIT_FAILURE;
+		}
+
+		if (fsmfiles) {
+			fprintf(stderr, "-f cannot be used with -t\n");
+			return EXIT_FAILURE;
+		}
+
+		if (yfiles) {
+			FILE *f;
+
+			f = xopen(argv[0]);
+
+			literal_r =
+			re_is_literal(dialect, fsm_fgetc, f,
+				&opt, flags, &err,
+				&literal_category, &literal_s, &literal_n);
+
+			fclose(f);
+		} else {
+			const char *s;
+
+			s = argv[0];
+
+			literal_r =
+			re_is_literal(dialect, fsm_sgetc, &s,
+				&opt, flags, &err,
+				&literal_category, &literal_s, &literal_n);
+		}
+
+		if (literal_r == -1) {
+			re_perror(dialect, &err,
+				 yfiles ? argv[0] : NULL,
+				!yfiles ? argv[0] : NULL);
+
+			if (err.e == RE_EXUNSUPPORTD) {
+				return 2;
+			}
+
+			return EXIT_FAILURE;
+		}
+
+		if (literal_r == 0) {
+			return EXIT_FAILURE;
+		}
+
+		assert(literal_r == 1);
+
+		if (literal_category == RE_LITERAL_UNSATISFIABLE) {
+			printf("unsatisfiable\n");
+			return EXIT_SUCCESS;
+		}
+
+		printf("anchors: ");
+		if (literal_category & RE_LITERAL_ANCHOR_START) {
+			printf("^");
+		}
+		if (literal_category & RE_LITERAL_ANCHOR_END) {
+			printf("$");
+		}
+		printf("\n");
+
+		printf("literal: ");
+		for (i = 0; i < literal_n; i++) {
+			(void) c_escputc_str(stdout, &opt, literal_s[i]);
+		}
+		printf("\n");
+
+		free(literal_s);
+
+		return !literal_r;
 	}
 
 	/* XXX: repetitive */
@@ -830,7 +920,7 @@ main(int argc, char *argv[])
 	{
 		int i;
 
-		for (i = 0; i < argc - !(print_fsm || example || !!query || argc <= 1); i++) {
+		for (i = 0; i < argc - !(print_fsm || example || isliteral || !!query || argc <= 1); i++) {
 			struct re_err err;
 			struct fsm *new, *q;
 
@@ -1024,7 +1114,7 @@ main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 
-		if (!patterns && !example && print_fsm != fsm_print_c) {
+		if (!patterns && example && print_fsm != fsm_print_c) {
 			if (!fsm_minimise(fsm)) {
 				perror("fsm_minimise");
 				return EXIT_FAILURE;

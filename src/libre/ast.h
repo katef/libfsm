@@ -325,4 +325,9 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 const char *
 ast_node_type_name(enum ast_expr_type t);
 
+int
+ast_expr_is_literal(const struct ast_expr *e,
+	int *anchor_start, int *anchor_end,
+    char **s, size_t *n);
+
 #endif

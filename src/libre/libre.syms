@@ -1,4 +1,5 @@
 re_comp
+re_is_literal
 re_flags
 re_strerror
 re_perror
