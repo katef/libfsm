@@ -12,14 +12,15 @@
 #include <adt/set.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
+#include <adt/u64bitset.h>
 
 #include "internal.h"
 
 fsm_state_t
 fsm_findmode(const struct fsm *fsm, fsm_state_t state, unsigned int *freq)
 {
-	struct edge_iter it;
-	struct fsm_edge e;
+	struct edge_group_iter iter;
+	struct edge_group_iter_info info;
 
 	struct {
 		fsm_state_t state;
@@ -28,28 +29,16 @@ fsm_findmode(const struct fsm *fsm, fsm_state_t state, unsigned int *freq)
 
 	mode.freq = 1;
 
-	assert(fsm != NULL);
-	assert(state < fsm->statecount);
-
-	for (edge_set_reset(fsm->states[state].edges, &it); edge_set_next(&it, &e); ) {
-		struct edge_iter kt = it;
-		struct fsm_edge c;
-		unsigned int curr;
-
-		curr = 1; /* including ourself */
-
-		/*
-		 * Count the remaining edes which have the same destination.
-		 */
-		while (edge_set_next(&kt, &c)) {
-			if (c.state == e.state) {
-				curr++;
-			}
+	edge_set_group_iter_reset(fsm->states[state].edges, EDGE_GROUP_ITER_ALL, &iter);
+	while (edge_set_group_iter_next(&iter, &info)) {
+		unsigned curr = 0;
+		for (size_t i = 0; i < 4; i++) {
+			const uint8_t count = u64bitset_popcount(info.symbols[i]);
+			curr += count;
 		}
-
 		if (curr > mode.freq) {
 			mode.freq  = curr;
-			mode.state = e.state;
+			mode.state = info.to;
 		}
 	}
 
@@ -58,7 +47,5 @@ fsm_findmode(const struct fsm *fsm, fsm_state_t state, unsigned int *freq)
 	}
 
 	assert(mode.freq >= 1);
-
 	return mode.state;
 }
-
