@@ -91,6 +91,10 @@ encode_opasm_v1(const struct dfavm_vm_op *instr, size_t ninstr, size_t total_byt
 	unsigned char *enc;
 
 	ret = malloc(sizeof *ret);
+	if (ret == NULL) {
+		goto error;
+	}
+
 	*ret = zero;
 
 	ret->version_major = DFAVM_VARENC_MAJOR;
@@ -99,6 +103,9 @@ encode_opasm_v1(const struct dfavm_vm_op *instr, size_t ninstr, size_t total_byt
 	vm = &ret->u.v1;
 
 	enc = malloc(total_bytes);
+	if (enc == NULL) {
+		goto error;
+	}
 
 	vm->ops = enc;
 	vm->len = total_bytes;
