@@ -105,6 +105,7 @@ SUBDIR += tests/pcre-anchor
 SUBDIR += tests/pcre-flags
 SUBDIR += tests/pcre-repeat
 SUBDIR += tests/pred
+SUBDIR += tests/re_literal
 SUBDIR += tests/reverse
 SUBDIR += tests/trim
 SUBDIR += tests/union
