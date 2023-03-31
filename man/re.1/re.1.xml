@@ -40,6 +40,7 @@
 	<!ENTITY y.opt "<option>-y</option>">
 	<!ENTITY z.opt "<option>-z</option>">
 	<!ENTITY s.opt "<option>-s</option>">
+	<!ENTITY t.opt "<option>-t</option>">
 	<!ENTITY u.opt "<option>-u</option>">
 	<!ENTITY x.opt "<option>-x</option>">
 
@@ -322,6 +323,19 @@ group (for dialects which have them) (rather than a "whole" regexp)
 						&s.opt; joins them by concatenation.
 						The default is to join by union.
 						See &fsm_concat.3; and &fsm_union.3; respectively.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&t.opt;</term>
+
+				<listitem>
+					<para>Print the literal string and anchors that would be
+						matched by a regex, rather than executing it.
+						If the regex is unsatisfiable,
+						print <literal>unsatisfiable</literal>.
+						Otherwise if the regex would not match a literal string,
+						exit non-zero.</para>
 				</listitem>
 			</varlistentry>
 
