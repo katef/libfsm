@@ -144,7 +144,7 @@
 '(?<=' -> $unsupported;
 '(?<!' -> $unsupported;
 
-# varous backtracking control things that aren't supported
+# various backtracking control things that aren't supported
 '(*' .. ')' {
 	# PCRE2, taking from Perl 5.28
 	'positive_lookahead:'  -> $unsupported;
