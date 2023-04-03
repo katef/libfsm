@@ -139,6 +139,33 @@ rewrite_concat(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags f
 		}
 	}
 
+	/* Eliminate consecutive, redundant anchors */
+	for (i = 0; i < n->u.concat.count; i++) {
+		size_t j;
+		if (n->u.concat.n[i]->type == AST_EXPR_ANCHOR) {
+			const enum ast_anchor_type atype = n->u.concat.n[i]->u.anchor.type;
+			j = i + 1;
+			while (j < n->u.concat.count) {
+				struct ast_expr *child = n->u.concat.n[j];
+				if (child->type != AST_EXPR_ANCHOR
+					|| child->u.anchor.type != atype) {
+					break;
+				}
+
+				/* delete node */
+				ast_expr_free(*poolp, n->u.concat.n[j]);
+				if (j + 1 < n->u.concat.count) {
+					memmove(&n->u.concat.n[j], &n->u.concat.n[j + 1],
+					    (n->u.concat.count - j - 1) * sizeof *n->u.concat.n);
+				}
+
+				n->u.concat.count--;
+				/* does not increment j, either loop iteration breaks
+				 * or the current node is deleted and the rest shift down. */
+			}
+		}
+	}
+
 	/* a tombstone here means the entire concatenation is a tombstone */
 	for (i = 0; i < n->u.concat.count; i++) {
 		if (n->u.concat.n[i]->type == AST_EXPR_TOMBSTONE) {

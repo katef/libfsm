@@ -39,6 +39,10 @@ encode_opasm_v2(const struct dfavm_vm_op *instr, size_t ninstr)
 	uint32_t alen,acap;
 
 	ret = malloc(sizeof *ret);
+	if (ret == NULL) {
+		goto error;
+	}
+
 	*ret = zero;
 
 	ret->version_major = DFAVM_FIXEDENC_MAJOR;
@@ -47,6 +51,9 @@ encode_opasm_v2(const struct dfavm_vm_op *instr, size_t ninstr)
 	vm = &ret->u.v2;
 
 	enc = malloc(ninstr * sizeof *enc);
+	if (enc == NULL) {
+		goto error;
+	}
 
 	vm->ops = enc;
 	vm->len = ninstr;
