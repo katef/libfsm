@@ -930,7 +930,7 @@ ast_expr_is_literal(const struct ast_expr *e,
 	char **s, size_t *n)
 {
 	size_t count;
-	const struct ast_expr **nodes;
+	const struct ast_expr *const *nodes;
 	int is_end_nl;
 	size_t i;
 
@@ -982,7 +982,7 @@ ast_expr_is_literal(const struct ast_expr *e,
 		nodes = &e;
 	} else {
 		count = e->u.concat.count;
-		nodes = e->u.concat.n;
+		nodes = (const struct ast_expr *const *) e->u.concat.n; /* .n is not const */
 	}
 
 	if (count >= 1 && nodes[0] != NULL && nodes[0]->type == AST_EXPR_ANCHOR && nodes[0]->u.anchor.type == AST_ANCHOR_START) {
