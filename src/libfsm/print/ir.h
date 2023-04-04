@@ -85,7 +85,11 @@ struct ir_state {
 		} error;
 
 		struct {
-			unsigned to[FSM_SIGMA_COUNT];
+			/* Note: This is allocated separately, to avoid
+			 * making the union significantly larger. */
+			struct ir_state_table {
+				unsigned to[FSM_SIGMA_COUNT];
+			} *table;
 		} table;
 	} u;
 };
