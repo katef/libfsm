@@ -25,14 +25,9 @@
 
 #define LOG_MAPPINGS 0
 #define LOG_STEPS 0
-#define LOG_TIME 0
 #define LOG_INIT 0
 #define LOG_ECS 0
 #define LOG_PARTITIONS 0
-
-#if LOG_TIME
-#include <sys/time.h>
-#endif
 
 #include "minimise_internal.h"
 
@@ -47,18 +42,7 @@ fsm_minimise(struct fsm *fsm)
 	fsm_state_t *mapping = NULL;
 	unsigned *shortest_end_distance = NULL;
 
-#if LOG_TIME
-	struct timeval tv_pre, tv_post;
-
-#define TIME(T) if (0 != gettimeofday(&T, NULL)) { assert(0); }
-#define LOG_TIME_DELTA(NAME)				\
-	fprintf(stderr, "%-8s %.3f msec\n", NAME,	\
-	    1000.0 * (tv_post.tv_sec - tv_pre.tv_sec)	\
-	    + (tv_post.tv_usec - tv_pre.tv_usec)/1000.0);
-#else
-#define TIME(T)
-#define LOG_TIME_DELTA(NAME)
-#endif
+	INIT_TIMERS();
 
 	/* This should only be called with a DFA. */
 	assert(fsm != NULL);
@@ -77,10 +61,10 @@ fsm_minimise(struct fsm *fsm)
 		goto cleanup;
 	}
 
-	TIME(tv_pre);
+	TIME(&pre);
 	collect_labels(fsm, labels, &label_count);
-	TIME(tv_post);
-	LOG_TIME_DELTA("collect_labels");
+	TIME(&post);
+	DIFF_MSEC("collect_labels", pre, post, NULL);
 
 	if (label_count == 0) {
 		r = 1;
@@ -95,12 +79,12 @@ fsm_minimise(struct fsm *fsm)
 
 	orig_states = fsm->statecount;
 
-	TIME(tv_pre);
+	TIME(&pre);
 	r = build_minimised_mapping(fsm, labels, label_count,
 	    shortest_end_distance,
 	    mapping, &minimised_states);
-	TIME(tv_post);
-	LOG_TIME_DELTA("minimise");
+	TIME(&post);
+	DIFF_MSEC("minimise", pre, post, NULL);
 
 	if (!r) {
 		goto cleanup;
@@ -112,10 +96,10 @@ fsm_minimise(struct fsm *fsm)
 	/* Use the mapping to consolidate the current states
 	 * into a new DFA, combining states that could not be
 	 * proven distinguishable. */
-	TIME(tv_pre);
+	TIME(&pre);
 	dst = fsm_consolidate(fsm, mapping, fsm->statecount);
-	TIME(tv_post);
-	LOG_TIME_DELTA("consolidate");
+	TIME(&post);
+	DIFF_MSEC("consolidate", pre, post, NULL);
 
 	if (dst == NULL) {
 		r = 0;
