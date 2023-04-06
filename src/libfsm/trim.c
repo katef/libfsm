@@ -125,8 +125,8 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	 * collect edges & end states. */
 	while (queue_pop(q, &s_id)) {
 		fsm_state_t next;
-		struct fsm_edge e;
-		struct edge_iter edge_iter;
+		struct edge_group_iter_info edge_iter_info;
+		struct edge_group_iter edge_iter;
 		struct state_iter state_iter;
 
 		if (LOG_TRIM > 0) {
@@ -179,12 +179,13 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 			}
 		}
 
-		for (edge_set_reset(fsm->states[s_id].edges, &edge_iter);
-		     edge_set_next(&edge_iter, &e); ) {
-			next = e.state;
+		edge_set_group_iter_reset(fsm->states[s_id].edges,
+		    EDGE_GROUP_ITER_ALL, &edge_iter);
+		while (edge_set_group_iter_next(&edge_iter, &edge_iter_info)) {
+			next = edge_iter_info.to;
 			if (LOG_TRIM > 0) {
-				fprintf(stderr, "mark_states: edge: 0x%x to %d, visited? %d\n",
-				    e.symbol, next, fsm->states[next].visited);
+				fprintf(stderr, "mark_states: edge: %d to %d, visited? %d\n",
+				    s_id, next, fsm->states[next].visited);
 			}
 
 			if (!fsm->states[next].visited) {
