@@ -18,6 +18,7 @@
 #include <adt/path.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
+#include <adt/u64bitset.h>
 
 #include "internal.h"
 
@@ -88,8 +89,8 @@ fsm_shortest(const struct fsm *fsm,
 	}
 
 	while (u = priq_pop(&todo), u != NULL) {
-		struct edge_iter it;
-		struct fsm_edge e;
+		struct edge_group_iter it;
+		struct edge_group_iter_info info;
 
 		priq_move(&done, u);
 
@@ -102,27 +103,43 @@ fsm_shortest(const struct fsm *fsm,
 			goto done;
 		}
 
-		for (edge_set_reset(fsm->states[u->state].edges, &it); edge_set_next(&it, &e); ) {
+		edge_set_group_iter_reset(fsm->states[u->state].edges, EDGE_GROUP_ITER_ALL, &it);
+		while (edge_set_group_iter_next(&it, &info)) {
 			struct priq *v;
 			unsigned c;
+			unsigned symbol = (unsigned)-1;
 
-			v = priq_find(todo, e.state);
+			v = priq_find(todo, info.to);
 
 			/* visited already */
 			if (v == NULL) {
-				assert(priq_find(done, e.state));
+				assert(priq_find(done, info.to));
 				continue;
 			}
 
-			assert(v->state == e.state);
+			assert(v->state == info.to);
 
-			c = cost(u->state, v->state, (char)e.symbol);
+			/* find first character in bitset. */
+			for (size_t i = 0; i < 4 && symbol == (unsigned)-1; i++) {
+				const uint64_t w = info.symbols[i];
+				if (w != 0) {
+					for (size_t bit = 0; bit < 64; bit++) {
+						if (u64bitset_get(&w, bit)) {
+							symbol = 64*i + bit;
+							break;
+						}
+					}
+				}
+			}
+			assert(symbol != (unsigned)-1); /* found */
+
+			c = cost(u->state, v->state, (char)symbol);
 
 			/* relax */
 			if (v->cost > u->cost + c) {
 				v->cost = u->cost + c;
 				v->prev = u;
-				v->c    = (char)e.symbol;
+				v->c    = (char)symbol;
 
 				priq_update(&todo, v, v->cost);
 			}

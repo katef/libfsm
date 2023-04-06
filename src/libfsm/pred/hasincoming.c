@@ -25,15 +25,16 @@ fsm_hasincoming(const struct fsm *fsm, fsm_state_t state)
 	assert(state < fsm->statecount);
 
 	for (i = 0; i < fsm->statecount; i++) {
-		struct fsm_edge e;
-		struct edge_iter it;
+		struct edge_group_iter it;
+		struct edge_group_iter_info info;
 
 		if (state_set_contains(fsm->states[i].epsilons, state)) {
 			return 1;
 		}
 
-		for (edge_set_reset(fsm->states[i].edges, &it); edge_set_next(&it, &e); ) {
-			if (e.state == state) {
+		edge_set_group_iter_reset(fsm->states[i].edges, EDGE_GROUP_ITER_ALL, &it);
+		while (edge_set_group_iter_next(&it, &info)) {
+			if (info.to == state) {
 				return 1;
 			}
 		}
