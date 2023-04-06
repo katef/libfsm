@@ -53,29 +53,25 @@ static int
 carry_endids(struct fsm *fsm, struct state_set *states,
     fsm_state_t s);
 
-static void
-free_closure_sets(struct state_set *closures[FSM_SIGMA_COUNT])
-{
-	int i;
-
-	for (i = 0; i <= FSM_SIGMA_MAX; i++) {
-		if (closures[i] != NULL) {
-			state_set_free(closures[i]);
-		}
-	}
-}
-
 int
 fsm_remove_epsilons(struct fsm *nfa)
 {
-	struct state_set **eclosures;
+	const size_t state_count = fsm_countstates(nfa);
+	int res = 0;
+	struct state_set **eclosures = NULL;
 	fsm_state_t s;
+
+	INIT_TIMERS();
 
 	assert(nfa != NULL);
 
+	TIME(&pre);
 	eclosures = epsilon_closure(nfa);
+	TIME(&post);
+	DIFF_MSEC("epsilon_closure", pre, post, NULL);
+
 	if (eclosures == NULL) {
-		return 0;
+		goto cleanup;
 	}
 
 #if DUMP_EPSILON_CLOSURES
@@ -94,96 +90,87 @@ fsm_remove_epsilons(struct fsm *nfa)
 	}
 #endif
 
-	for (s = 0; s < nfa->statecount; s++) {
-		struct state_set *sclosures[FSM_SIGMA_COUNT] = { NULL };
-		struct state_iter kt;
-		fsm_state_t es;
-		int i;
+	for (s = 0; s < state_count; s++) {
+		struct state_iter si;
+		fsm_state_t es_id;
 
-		if (nfa->states[s].epsilons == NULL) {
-			continue;
-		}
+		struct edge_group_iter egi;
+		struct edge_group_iter_info info;
 
-		for (state_set_reset(eclosures[s], &kt); state_set_next(&kt, &es); ) {
-			/* we already have edges from s */
-			if (es == s) {
-				continue;
+		/* Process the epsilon closure. */
+		state_set_reset(eclosures[s], &si);
+		while (state_set_next(&si, &es_id)) {
+			struct fsm_state *es = &nfa->states[es_id];
+
+			/* The current NFA state is an end state if any
+			 * of its associated epsilon-clousure states are
+			 * end states.
+			 *
+			 * Similarly, any end state metadata on states
+			 * in its epsilon-closure is copied to it.
+			 *
+			 * Capture actions are copied in a later pass. */
+			if (fsm_isend(nfa, es_id)) {
+#if LOG_COPYING
+				fprintf(stderr, "remove_epsilons: setting end on %d (due to %d)\n", s, es_id);
+#endif
+				fsm_setend(nfa, s, 1);
+
+				/*
+				 * Carry through end IDs, if present. This isn't anything to do
+				 * with the NFA conversion; it's meaningful only to the caller.
+				 */
+				if (!carry_endids(nfa, eclosures[s], s)) {
+					goto cleanup;
+				}
 			}
 
-			if (!symbol_closure(nfa, es, eclosures, sclosures)) {
-				free_closure_sets(sclosures);
-				goto error;
+			/* For every state in this state's transitive
+			 * epsilon closure, add all of their sets of
+			 * labeled edges. */
+			edge_set_group_iter_reset(es->edges, EDGE_GROUP_ITER_ALL, &egi);
+			while (edge_set_group_iter_next(&egi, &info)) {
+#if LOG_COPYING
+				fprintf(stderr, "%s: bulk-copying edges leading to state %d onto state %d (from state %d)\n",
+				    __func__, info.to, s, es_id);
+#endif
+				if (!edge_set_add_bulk(&nfa->states[s].edges, nfa->opt->alloc,
+					info.symbols, info.to)) {
+					goto cleanup;
+				}
 			}
-		}
-
-		state_set_free(nfa->states[s].epsilons);
-		nfa->states[s].epsilons = NULL;
-
-		/* TODO: bail out early if there are no edges to create? */
-
-		for (i = 0; i <= FSM_SIGMA_MAX; i++) {
-			if (sclosures[i] == NULL) {
-				continue;
-			}
-
-			if (!edge_set_add_state_set(&nfa->states[s].edges, nfa->opt->alloc, i, sclosures[i])) {
-				free_closure_sets(sclosures);
-				goto error;
-			}
-
-			/* XXX: we took a copy, but i would prefer to bulk transplant ownership instead */
-			state_set_free(sclosures[i]);
-			sclosures[i] = NULL; /* prevent double free if we encounter an error */
-		}
-
-		/* all elements in sclosures[] have been freed or moved to their
-		 * respective newly-created edge, so there's nothing to free here */
-
-		/*
-		 * The current NFA state is an end state if any of its associated
-		 * epsilon-clousre states are end states.
-		 *
-		 * Since we're operating on states in-situ, we only need to find
-		 * out if the current state isn't already marked as an end state.
-		 *
-		 * However in either case we still need to carry opaques, because
-		 * the set of opaque values may differ.
-		 */
-		if (!fsm_isend(nfa, s)) {
-			if (!state_set_has(nfa,  eclosures[s], fsm_isend)) {
-				continue;
-			}
-
-			fsm_setend(nfa, s, 1);
-		}
-
-		/*
-		 * Carry through end IDs, if present. This isn't anything to do
-		 * with the NFA conversion; it's meaningful only to the caller.
-		 *
-		 * The closure may contain non-end states, but at least one state is
-		 * known to have been an end state.
-		 */
-		if (!carry_endids(nfa, eclosures[s], s)) {
-			free_closure_sets(sclosures);
-			goto error;
 		}
 	}
+
+	/* Remove the epsilon-edge state sets from everything.
+	 * This can make states unreachable. */
+	for (s = 0; s < state_count; s++) {
+		struct fsm_state *state = &nfa->states[s];
+		state_set_free(state->epsilons);
+		state->epsilons = NULL;
+	}
+
+#if LOG_RESULT
+	fprintf(stderr, "=== %s: about to update capture actions\n", __func__);
+	fsm_print_fsm(stderr, nfa);
+#endif
 
 	if (!remap_capture_actions(nfa, eclosures)) {
-		goto error;
+		goto cleanup;
 	}
 
-	closure_free(eclosures, nfa->statecount);
+#if LOG_RESULT
+	fsm_print_fsm(stderr, nfa);
+	fsm_capture_dump(stderr, "#### post_remove_epsilons", nfa);
+#endif
 
-	return 1;
+	res = 1;
+cleanup:
+	if (eclosures != NULL) {
+		closure_free(eclosures, state_count);
+	}
 
-error:
-
-	/* TODO: free stuff */
-	closure_free(eclosures, nfa->statecount);
-
-	return 0;
+	return res;
 }
 
 static int
