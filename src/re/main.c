@@ -668,13 +668,14 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acwXe:k:" "bi" "sq:r:l:F:" "upMmnftxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acwXe:E:k:" "bi" "sq:r:l:F:" "upMmnftxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
 			case 'w': opt.fragment          = 1;          break;
 			case 'X': opt.always_hex        = 1;          break;
 			case 'e': opt.prefix            = optarg;     break;
+			case 'E': opt.package_prefix	= optarg;     break;
 			case 'k': opt.io                = io(optarg); break;
 
 			case 'b': flags |= RE_ANCHORED; break;
