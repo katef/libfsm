@@ -228,6 +228,7 @@ fsm_print_go(FILE *f, const struct fsm *fsm)
 {
 	struct ir *ir;
 	const char *prefix;
+	const char *package_prefix;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
@@ -251,10 +252,16 @@ fsm_print_go(FILE *f, const struct fsm *fsm)
 		return;
 	}
 
-	fprintf(f, "package %sfsm\n", prefix);
+	if (fsm->opt->package_prefix != NULL) {
+		package_prefix = fsm->opt->package_prefix;
+	} else {
+		package_prefix = prefix;
+	}
+
+	fprintf(f, "package %sfsm\n", package_prefix);
 	fprintf(f, "\n");
 
-	fprintf(f, "func Match");
+	fprintf(f, "func %sMatch", prefix);
 
 	switch (fsm->opt->io) {
 	case FSM_IO_PAIR:

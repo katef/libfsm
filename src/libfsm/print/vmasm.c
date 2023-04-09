@@ -108,12 +108,12 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 		fprintf(f, "\n");
 		switch (opt->io) {
 		case FSM_IO_STR:
-			fprintf(f, "// func Match(data string) int\n");
-			fprintf(f, "TEXT    ·Match(SB), NOSPLIT, $0-24\n");
+			fprintf(f, "// func %s(data string) int\n", funcname);
+			fprintf(f, "TEXT    ·%s(SB), NOSPLIT, $0-24\n", funcname);
 			break;
 		case FSM_IO_PAIR:
-			fprintf(f, "// func Match(data []byte) int\n");
-			fprintf(f, "TEXT    ·Match(SB), NOSPLIT, $0-32\n");
+			fprintf(f, "// func %s(data []byte) int\n", funcname);
+			fprintf(f, "TEXT    ·%s(SB), NOSPLIT, $0-32\n", funcname);
 			break;
 
 		default:
@@ -404,7 +404,7 @@ print_vmasm_encoding(FILE *f, const struct fsm *fsm, enum asm_dialect dialect)
 	}
 
 	if (dialect == AMD64_GO) {
-		snprintf(funcname, sizeof funcname, "Match");
+		snprintf(funcname, sizeof funcname, "%sMatch", prefix);
 	} else {
 		snprintf(funcname, sizeof funcname, "%smatch", prefix);
 	}

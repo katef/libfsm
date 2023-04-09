@@ -58,6 +58,9 @@ struct fsm_options {
 	/* a prefix for namespacing generated identifiers. NULL if not required. */
 	const char *prefix;
 
+	/* the name of the enclosing package; NULL to use `prefix` (default). */
+	const char *package_prefix;
+
 	/* character pointer, for C code fragment output. NULL for the default. */
 	const char *cp;
 
