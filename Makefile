@@ -89,6 +89,7 @@ SUBDIR += tests/complement
 SUBDIR += tests/intersect
 #SUBDIR += tests/ir # XXX: fragile due to state numbering
 SUBDIR += tests/eclosure
+SUBDIR += tests/equals
 SUBDIR += tests/subtract
 SUBDIR += tests/determinise
 SUBDIR += tests/epsilons
