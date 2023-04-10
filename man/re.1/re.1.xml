@@ -30,6 +30,7 @@
 	<!ENTITY w.opt "<option>-w</option>">
 	<!ENTITY X.opt "<option>-X</option>">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
+	<!ENTITY E.opt "<option>-E</option>&nbsp;&prefix.arg;">
 
 	<!ENTITY a.opt "<option>-a</option>">
 	<!ENTITY d.opt "<option>-d</option>">
@@ -273,6 +274,16 @@ group (for dialects which have them) (rather than a "whole" regexp)
 					<para>Set a prefix for output,
 						per the <code>prefix</code> option for &fsm_print.3;.
 						The default is to output with no prefix.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&E.opt;</term>
+
+				<listitem>
+					<para>Set a package prefix for output,
+						per the <code>package_prefix</code> option for &fsm_print.3;.
+						The default is to output with the value of <code>prefix.</code></para>
 				</listitem>
 			</varlistentry>
 
