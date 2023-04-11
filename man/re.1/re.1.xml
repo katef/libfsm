@@ -27,6 +27,7 @@
 	<!ENTITY a.opt "<option>-a</option>">
 	<!ENTITY b.opt "<option>-b</option>">
 	<!ENTITY c.opt "<option>-c</option>">
+	<!ENTITY C.opt "<option>-C</option>">
 	<!ENTITY w.opt "<option>-w</option>">
 	<!ENTITY X.opt "<option>-X</option>">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
@@ -244,6 +245,15 @@ group (for dialects which have them) (rather than a "whole" regexp)
 						per the <code>consolidate_edges</code> option for &fsm_print.3;.
 						The default is to output edges independently,
 						which is the opposite to the equivalent &c.opt; option for &fsm.1;.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&C.opt;</term>
+
+				<listitem>
+					<para>Disable comments in generated code,
+						per the <code>comments</code> option for &fsm_print.3;.</para>
 				</listitem>
 			</varlistentry>
 
