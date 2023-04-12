@@ -22,6 +22,12 @@
 /* 10 seconds */
 #define TIMEOUT_USEC (10ULL * 1000 * 1000)
 
+enum run_mode {
+	MODE_DEFAULT,
+	MODE_SHUFFLE_MINIMISE,
+};
+
+
 /* This stuff will already exist elsewhere once other branches are merged. */
 #if 1
 static void
@@ -142,12 +148,96 @@ build_and_codegen(const char *pattern)
 	return EXIT_SUCCESS;
 }
 
+#define MAX_SHUFFLE 100
+
+static int
+shuffle_minimise(const char *pattern)
+{
+	assert(pattern != NULL);
+
+	struct re_err err;
+	struct fsm *fsm;
+	const size_t length = strlen(pattern);
+
+	struct scanner s = {
+		.str    = (const uint8_t *)pattern,
+		.size   = length,
+		.offset = 0
+	};
+
+	fsm = re_comp(RE_PCRE, scanner_next, &s, &opt, RE_MULTI, &err);
+
+	if (fsm == NULL) {
+		/* ignore invalid regexp syntax, etc. */
+		return EXIT_SUCCESS;
+	}
+
+	if (!fsm_determinise(fsm)) {
+		return EXIT_FAILURE;
+	}
+
+	const size_t det_state_count = fsm_countstates(fsm);
+	const size_t shuffle_limit = det_state_count > MAX_SHUFFLE
+	    ? MAX_SHUFFLE : det_state_count;
+
+	bool has_expected_state_count = false;
+	size_t expected_state_count;
+
+	/* Repeatedly copy the fsm, shuffle it different ways,
+	 * minimise, and check if the resulting state count matches. */
+	for (unsigned s_i = 0; s_i < shuffle_limit; s_i++) {
+		struct fsm *cp = fsm_clone(fsm);
+		if (cp == NULL) {
+			return EXIT_FAILURE;
+		}
+
+		fsm_shuffle(cp, s_i);
+
+		if (!fsm_minimise(cp)) {
+			return EXIT_FAILURE;
+		}
+
+		const size_t cp_state_count = fsm_countstates(cp);
+		if (has_expected_state_count) {
+			if (cp_state_count != expected_state_count) {
+				fprintf(stderr, "%s: failure for seed %u, regex '%s', exp %zu, got %zu\n",
+				    __func__, s_i, pattern, expected_state_count, cp_state_count);
+			}
+		} else {
+			expected_state_count = cp_state_count;
+			has_expected_state_count = true;
+		}
+
+		fsm_free(cp);
+	}
+
+	fsm_free(fsm);
+	return EXIT_SUCCESS;
+}
+
 #define MAX_FUZZER_DATA (64 * 1024)
 static uint8_t data_buf[MAX_FUZZER_DATA + 1];
+
+static enum run_mode
+get_run_mode(void)
+{
+	const char *mode = getenv("MODE");
+	if (mode != NULL) {
+		switch (mode[0]) {
+		case 'm': return MODE_SHUFFLE_MINIMISE;
+		default:
+			break;
+		}
+	}
+
+	return MODE_DEFAULT;
+}
 
 int
 harness_fuzzer_target(const uint8_t *data, size_t size)
 {
+	enum run_mode run_mode = get_run_mode();
+
 	/* Ensure that input is '\0'-terminated. */
 	if (size > MAX_FUZZER_DATA) {
 		size = MAX_FUZZER_DATA;
@@ -155,5 +245,11 @@ harness_fuzzer_target(const uint8_t *data, size_t size)
 	memcpy(data_buf, data, size);
 
 	const char *pattern = (const char *)data_buf;
-	return build_and_codegen(pattern);
+
+	switch (run_mode) {
+	case MODE_DEFAULT:
+		return build_and_codegen(pattern);
+	case MODE_SHUFFLE_MINIMISE:
+		return shuffle_minimise(pattern);
+	}
 }
