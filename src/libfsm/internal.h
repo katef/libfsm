@@ -9,6 +9,7 @@
 
 #include <limits.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include <fsm/fsm.h>
 #include <fsm/options.h>
@@ -124,20 +125,22 @@ struct fsm_edge {
 	unsigned char symbol;
 };
 
+/* Keep in sync with fsm.rs:State */
 struct fsm_state {
-	unsigned int end:1;
+	bool end;
 
 	/* If 0, then this state has no need for checking
 	 * the fsm->capture_info struct. */
-	unsigned int has_capture_actions:1;
+	bool has_capture_actions;
 
 	/* meaningful within one particular transformation only */
-	unsigned int visited:1;
+	bool visited;
 
 	struct edge_set *edges;
 	struct state_set *epsilons;
 };
 
+/* Keep in sync with fsm.rs:Fsm */
 struct fsm {
 	struct fsm_state *states; /* array */
 
@@ -146,7 +149,7 @@ struct fsm {
 	size_t endcount;
 
 	fsm_state_t start;
-	unsigned int hasstart:1;
+	bool hasstart;
 
 	struct fsm_capture_info *capture_info;
 	struct endid_info *endid_info;

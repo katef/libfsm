@@ -11,8 +11,9 @@ DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor
 
 .if ${SYSTEM} == Linux
-LFLAGS.reperf += -ldl
-LFLAGS.retest += -ldl
+LFLAGS.reperf += -lpthread -ldl
+LFLAGS.retest += -lpthread -ldl
+LFLAGS.cvtpcre += -lpthread -ldl
 .endif
 
 PROG += retest

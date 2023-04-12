@@ -140,7 +140,6 @@ INCDIR += include
 .include <obj.mk>
 .include <dep.mk>
 .include <ar.mk>
-.include <so.mk>
 .include <part.mk>
 .include <prog.mk>
 .include <man.mk>
@@ -162,5 +161,26 @@ STAGE_BUILD := ${STAGE_BUILD:Nbin/cvtpcre}
 .if make(test)
 .END::
 	grep FAIL ${BUILD}/tests/*/res*; [ $$? -ne 0 ]
+.endif
+
+.if !${CC:T:Memcc*}
+
+./target/debug/liblibfsm_rs.a:
+	cargo build
+
+test::
+	cargo test
+
+./target/debug/liblibfsm_rs.d: ./target/debug/liblibfsm_rs.a
+.if exists(./target/debug/liblibfsm_rs.d)
+.include "./target/debug/liblibfsm_rs.d"
+.endif
+
+.for part in ${PART}
+${BUILD}/lib/${part}.o: ./target/debug/liblibfsm_rs.a
+# hijacking LDRFLAGS here because the target only expects .o sources
+LDRFLAGS.${part} += ./target/debug/liblibfsm_rs.a
+.endfor
+
 .endif
 

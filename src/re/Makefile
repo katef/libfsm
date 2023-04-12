@@ -17,9 +17,12 @@ ${BUILD}/bin/re: ${BUILD}/lib/${lib:R}.a
 ${BUILD}/bin/re: ${BUILD}/${src:R}.o
 .endfor
 
+.if ${SYSTEM} == Linux
+LFLAGS.re += -lpthread -ldl
+.endif
+
 # smoke test for sh codegen -- does not work for bash 3.2.x
 .if ${SYSTEM} != Darwin
 test:: ${BUILD}/bin/re
 	echo -n abcd | bash -c "`./build/bin/re -pl sh -k str -br glob 'a?c*d'`"
 .endif
-	
