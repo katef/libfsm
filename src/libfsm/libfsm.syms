@@ -60,6 +60,7 @@ fsm_merge
 fsm_addstate
 fsm_addstate_bulk
 fsm_removestate
+fsm_shuffle
 
 fsm_addedge_any
 fsm_addedge_epsilon

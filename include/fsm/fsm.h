@@ -436,5 +436,9 @@ fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque,
 int fsm_sgetc(void *opaque); /* expects opaque to be char ** */
 int fsm_fgetc(void *opaque); /* expects opaque to be FILE *  */
 
+/* Shuffle the state IDs in the FSM. This is mainly useful for testing. */
+int
+fsm_shuffle(struct fsm *fsm, unsigned seed);
+
 #endif
 
