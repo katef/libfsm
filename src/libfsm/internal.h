@@ -220,7 +220,7 @@ f_realloc(const struct fsm_alloc *a, void *p, size_t sz);
 /* Take a source fsm and a state mapping, produce a new
  * fsm where states may be consolidated. */
 struct fsm *
-fsm_consolidate(struct fsm *src,
+fsm_consolidate(const struct fsm *src,
     const fsm_state_t *mapping, size_t mapping_count);
 
 #endif
