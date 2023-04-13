@@ -19,6 +19,8 @@
 
 #include <re/re.h>
 
+#include "../src/libfsm/minimise_test_oracle.h"
+
 /* 10 seconds */
 #define TIMEOUT_USEC (10ULL * 1000 * 1000)
 
@@ -148,7 +150,8 @@ build_and_codegen(const char *pattern)
 	return EXIT_SUCCESS;
 }
 
-#define MAX_SHUFFLE 100
+#define DEF_MAX_SHUFFLE 10
+#define DEF_MAX_MINIMISE_ORACLE_STATE_COUNT 1000
 
 static int
 shuffle_minimise(const char *pattern)
@@ -176,41 +179,83 @@ shuffle_minimise(const char *pattern)
 		return EXIT_FAILURE;
 	}
 
-	const size_t det_state_count = fsm_countstates(fsm);
-	const size_t shuffle_limit = det_state_count > MAX_SHUFFLE
-	    ? MAX_SHUFFLE : det_state_count;
+	const long trim_res = fsm_trim(fsm, FSM_TRIM_START_AND_END_REACHABLE, NULL);
+	if (trim_res == -1) {
+		return EXIT_FAILURE;
+	}
 
-	bool has_expected_state_count = false;
-	size_t expected_state_count;
+	const size_t det_state_count = fsm_countstates(fsm);
+	const char *max_shuffle_str = getenv("MAX_SHUFFLE");
+	const size_t max_shuffle = (max_shuffle_str == NULL
+	    ? DEF_MAX_SHUFFLE : atoi(max_shuffle_str));
+	const size_t shuffle_limit = det_state_count > max_shuffle
+	    ? max_shuffle : det_state_count;
+
+	/* This can become very slow when the state count is large. */
+	const char *max_minimise_oracle_state_count_str = getenv("MAX_MINIMISE_ORACLE");
+	const size_t max_minimise_oracle_state_count =
+	    (max_minimise_oracle_state_count_str == NULL
+		? DEF_MAX_MINIMISE_ORACLE_STATE_COUNT
+		: atoi(max_minimise_oracle_state_count_str));
+	if (det_state_count > max_minimise_oracle_state_count) {
+		/* Too many states, skip. This can become VERY
+		 * slow as the state count gets large. */
+		fsm_free(fsm);
+		return EXIT_SUCCESS;
+	}
+
+	struct fsm *oracle_min = fsm_minimise_test_oracle(fsm);
+	if (oracle_min == NULL) {
+		return EXIT_SUCCESS; /* ignore malloc failure */
+	}
+
+	const size_t expected_state_count = fsm_countstates(oracle_min);
 
 	/* Repeatedly copy the fsm, shuffle it different ways,
-	 * minimise, and check if the resulting state count matches. */
+	 * minimise, and check if the resulting state count matches
+	 * the result from the test oracle. */
 	for (unsigned s_i = 0; s_i < shuffle_limit; s_i++) {
 		struct fsm *cp = fsm_clone(fsm);
 		if (cp == NULL) {
 			return EXIT_FAILURE;
 		}
 
-		fsm_shuffle(cp, s_i);
+		const size_t cp_state_count_before = fsm_countstates(cp);
+		if (!fsm_shuffle(cp, s_i)) {
+			return EXIT_FAILURE;
+		}
+		const size_t cp_state_count = fsm_countstates(cp);
+		assert(cp_state_count == cp_state_count_before);
 
 		if (!fsm_minimise(cp)) {
 			return EXIT_FAILURE;
 		}
+		const size_t cp_state_count_min = fsm_countstates(cp);
 
-		const size_t cp_state_count = fsm_countstates(cp);
-		if (has_expected_state_count) {
-			if (cp_state_count != expected_state_count) {
-				fprintf(stderr, "%s: failure for seed %u, regex '%s', exp %zu, got %zu\n",
-				    __func__, s_i, pattern, expected_state_count, cp_state_count);
-			}
-		} else {
-			expected_state_count = cp_state_count;
-			has_expected_state_count = true;
+		if (cp_state_count_min != expected_state_count) {
+			fprintf(stderr, "%s: failure for seed %u, regex '%s', exp %zu, got %zu\n",
+			    __func__, s_i, pattern, expected_state_count, cp_state_count);
+
+			fprintf(stderr, "== original input:\n");
+			fsm_print_fsm(stderr, fsm);
+
+
+			fprintf(stderr, "== expected:\n");
+			fsm_print_fsm(stderr, oracle_min);
+
+			fprintf(stderr, "== got:\n");
+			fsm_print_fsm(stderr, cp);
+
+			fsm_free(cp);
+			fsm_free(oracle_min);
+			fsm_free(fsm);
+			assert(!"non-minimal result");
 		}
 
 		fsm_free(cp);
 	}
 
+	fsm_free(oracle_min);
 	fsm_free(fsm);
 	return EXIT_SUCCESS;
 }
