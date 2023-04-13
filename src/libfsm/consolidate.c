@@ -44,11 +44,11 @@ struct consolidate_copy_capture_actions_env {
 };
 
 static int
-consolidate_copy_capture_actions(struct fsm *dst, struct fsm *src,
+consolidate_copy_capture_actions(struct fsm *dst, const struct fsm *src,
     const fsm_state_t *mapping, size_t mapping_count);
 
 static int
-consolidate_end_ids(struct fsm *dst, struct fsm *src,
+consolidate_end_ids(struct fsm *dst, const struct fsm *src,
     const fsm_state_t *mapping, size_t mapping_count);
 
 static fsm_state_t
@@ -60,7 +60,7 @@ mapping_cb(fsm_state_t id, const void *opaque)
 }
 
 struct fsm *
-fsm_consolidate(struct fsm *src,
+fsm_consolidate(const struct fsm *src,
     const fsm_state_t *mapping, size_t mapping_count)
 {
 	struct fsm *dst;
@@ -196,7 +196,7 @@ consolidate_copy_capture_actions_cb(fsm_state_t state,
 }
 
 static int
-consolidate_copy_capture_actions(struct fsm *dst, struct fsm *src,
+consolidate_copy_capture_actions(struct fsm *dst, const struct fsm *src,
     const fsm_state_t *mapping, size_t mapping_count)
 {
 	size_t i;
@@ -224,7 +224,7 @@ consolidate_copy_capture_actions(struct fsm *dst, struct fsm *src,
 struct consolidate_end_ids_env {
 	char tag;
 	struct fsm *dst;
-	struct fsm *src;
+	const struct fsm *src;
 	const fsm_state_t *mapping;
 	size_t mapping_count;
 	int ok;
@@ -265,7 +265,7 @@ consolidate_end_ids_cb(fsm_state_t state, const fsm_end_id_t id,
 }
 
 static int
-consolidate_end_ids(struct fsm *dst, struct fsm *src,
+consolidate_end_ids(struct fsm *dst, const struct fsm *src,
     const fsm_state_t *mapping, size_t mapping_count)
 {
 	struct consolidate_end_ids_env env;
