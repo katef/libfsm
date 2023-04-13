@@ -103,9 +103,15 @@ edge_set_find(const struct edge_set *set, unsigned char symbol,
 
 /* Check whether an edge_set has an edge with a particular label. Return
  * 0 for not found, otherwise set *to_state, and note any other labels
- * in labels[] that lead to the same state, then return 1. */
+ * in labels[] that lead to states that are in the same EC group according
+ * to state_ecs[], then return 1.
+ *
+ * This interface exists specifically so that fsm_minimise can use
+ * bit parallelelism to speed up some of its partitioning, it should
+ * not be used by anything else. */
 int
-edge_set_check_edges(const struct edge_set *set, unsigned char label,
+edge_set_check_edges_with_EC_mapping(const struct edge_set *set,
+    unsigned char label, size_t ec_map_count, fsm_state_t *state_ecs,
     fsm_state_t *to_state, uint64_t labels[256/64]);
 
 int
