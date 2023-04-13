@@ -76,6 +76,14 @@ fsm_countcaptures(const struct fsm *fsm)
 }
 
 int
+fsm_capture_has_captures(const struct fsm *fsm)
+{
+	return fsm->capture_info
+	    ? fsm->capture_info->buckets_used > 0
+	    : 0;
+}
+
+int
 fsm_capture_has_capture_actions(const struct fsm *fsm, fsm_state_t state)
 {
 	assert(state < fsm->statecount);

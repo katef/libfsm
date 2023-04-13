@@ -126,3 +126,5 @@ fsm_capture_set_path
 fsm_capture_rebase_capture_id
 fsm_capture_alloc
 fsm_capture_dump
+
+fsm_minimise_test_oracle

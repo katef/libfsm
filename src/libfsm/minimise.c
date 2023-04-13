@@ -22,6 +22,7 @@
 #include <adt/u64bitset.h>
 
 #include "internal.h"
+#include "capture.h"
 
 #define LOG_MAPPINGS 0
 #define LOG_STEPS 0
@@ -30,6 +31,7 @@
 #define LOG_PARTITIONS 0
 
 #include "minimise_internal.h"
+#include "minimise_test_oracle.h"
 
 int
 fsm_minimise(struct fsm *fsm)
@@ -105,6 +107,26 @@ fsm_minimise(struct fsm *fsm)
 		r = 0;
 		goto cleanup;
 	}
+
+#if EXPENSIVE_CHECKS
+	if (!fsm_capture_has_captures(fsm)) {
+		struct fsm *oracle = fsm_minimise_test_oracle(fsm);
+		const size_t exp_count = fsm_countstates(oracle);
+		const size_t got_count = fsm_countstates(dst);
+		if (exp_count != got_count) {
+			fprintf(stderr, "%s: expected minimal DFA with %zu states, got %zu\n",
+			    __func__, exp_count, got_count);
+			fprintf(stderr, "== expected:\n");
+			fsm_print_fsm(stderr, oracle);
+
+			fprintf(stderr, "== got:\n");
+			fsm_print_fsm(stderr, dst);
+			assert(!"non-minimal result");
+		}
+
+		fsm_free(oracle);
+	}
+#endif
 
 	fsm_move(fsm, dst);
 

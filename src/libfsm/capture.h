@@ -31,6 +31,10 @@ fsm_capture_init(struct fsm *fsm);
 void
 fsm_capture_free(struct fsm *fsm);
 
+/* Does the FSM have captures? */
+int
+fsm_capture_has_captures(const struct fsm *fsm);
+
 /* Update captures, called when exiting or ending on a state.
  * If ending on a state, use NEXT_STATE_END for next_state. */
 void
