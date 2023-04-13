@@ -58,3 +58,21 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/minimise}/res${n}
 
 .endfor
 
+test:: ${TEST_OUTDIR.tests/minimise}/res_test_case_list
+
+${TEST_OUTDIR.tests/minimise}/res_test_case_list: ${TEST_OUTDIR.tests/minimise}/run_test_case_list
+
+${TEST_OUTDIR.tests/minimise}/run_test_case_list: ${TEST_OUTDIR.tests/minimise}/minimise_test_case_list.o
+
+.for lib in ${LIB:Mlibfsm} ${LIB:Mlibre}
+${TEST_OUTDIR.tests/minimise}/run_test_case_list: ${BUILD}/lib/${lib:R}.a
+.endfor
+
+SRC += ${TEST_SRCDIR.tests/minimise}/minimise_test_case_list.c
+CFLAGS.${TEST_SRCDIR.tests/minimise}/minimise_test_case_list.c += -UNDEBUG -D_DEFAULT_SOURCE
+
+${TEST_OUTDIR.tests/minimise}/run_test_case_list: ${TEST_OUTDIR.tests/minimise}/minimise_test_case_list.o
+	${CC} ${CFLAGS} ${CFLAGS.${TEST_SRCDIR.tests/minimise}/minimise_test_case_list.c} -o ${TEST_OUTDIR.tests/minimise}/run_test_case_list ${TEST_OUTDIR.tests/minimise}/minimise_test_case_list.o ${BUILD}/lib/libfsm.a ${BUILD}/lib/libre.a
+
+${TEST_OUTDIR.tests/minimise}/res_test_case_list: ${TEST_OUTDIR.tests/minimise}/run_test_case_list
+	( ${TEST_OUTDIR.tests/minimise}/run_test_case_list 1>&2 && echo PASS || echo FAIL ) > ${TEST_OUTDIR.tests/minimise}/res_test_case_list

@@ -47,6 +47,9 @@ SRC += src/libfsm/walk2.c
 SRC += src/libfsm/lexer.c
 SRC += src/libfsm/parser.c
 
+# testing
+SRC += src/libfsm/minimise_test_oracle.c
+
 .for src in ${SRC:Msrc/libfsm/lexer.c}
 CFLAGS.${src} += -D LX_HEADER='"lexer.h"'
 DFLAGS.${src} += -D LX_HEADER='"lexer.h"'
