@@ -51,7 +51,6 @@ fsm_reachable(const struct fsm *fsm, fsm_state_t state,
 
 	while (qtop > 0) {
 		struct edge_iter it;
-		struct state_iter si;
 		struct fsm_edge e;
 		fsm_state_t state;
 		int pred_result;
