@@ -90,7 +90,7 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	 * the Myhill-Nerode theorem, mark all pairs of states where
 	 * following the same label leads each to a pair of states that
 	 * have already been marked (and are thus transitively
-	 * distinguishable). Repeat until no furhter progress can be
+	 * distinguishable). Repeat until no further progress can be
 	 * made. Any pairs of states still unmarked can be combined into
 	 * a single state, because no possible input leads them to
 	 * observably distinguishable results.
