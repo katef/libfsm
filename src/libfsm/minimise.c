@@ -278,7 +278,7 @@ build_minimised_mapping(const struct fsm *fsm,
 				}
 			}
 
-			uint64_t checked_labels[4] = {0};
+			uint64_t checked_labels[256/64] = {0};
 			init_label_iterator(&env, ec_i,
 			    should_gather_EC_labels, &li);
 
@@ -892,7 +892,8 @@ try_partition(struct min_env *env, unsigned char label,
 	/* Use the edge_set's label grouping to check a
 	 * set of labels at once, and note which labels
 	 * have already been checked. */
-	if (edge_set_check_edges(states[cur].edges, label,
+	if (edge_set_check_edges_with_EC_mapping(states[cur].edges, label,
+		env->ec_map_count, env->state_ecs,
 		&first_dst_state, first_dst_label_set)) {
 
 		assert(first_dst_state < env->ec_map_count);
@@ -917,7 +918,7 @@ try_partition(struct min_env *env, unsigned char label,
 	cur = env->jump[cur];
 
 #if LOG_PARTITIONS > 1
-	fprintf(stderr, "# --- try_partition: first, %u, has to %d -> first_ec %d\n", cur, to, first_ec);
+	fprintf(stderr, "# --- try_partition: first, %u, has first_dst_state %d -> first_ec %d\n", cur, first_dst_state, first_ec);
 #endif
 
 	/* initialize the new EC -- empty */
@@ -927,7 +928,8 @@ try_partition(struct min_env *env, unsigned char label,
 		uint64_t cur_label_set[256/64];
 		fsm_state_t cur_dst_state;
 
-		if (edge_set_check_edges(states[cur].edges, label,
+		if (edge_set_check_edges_with_EC_mapping(states[cur].edges, label,
+			env->ec_map_count, env->state_ecs,
 			&cur_dst_state, cur_label_set)) {
 			assert(cur_dst_state < env->ec_map_count);
 			to_ec = env->state_ecs[cur_dst_state];

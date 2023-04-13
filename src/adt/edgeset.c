@@ -328,11 +328,19 @@ edge_set_find(const struct edge_set *set, unsigned char symbol,
 	return 0;		/* not found */
 }
 
+/* This interface exists specifically so that fsm_minimise can use
+ * bit parallelelism to speed up some of its partitioning, it should
+ * not be used by anything else.
+ *
+ * In particular, this assumes determinism -- only the FIRST edge_group
+ * with the label will match. */
 int
-edge_set_check_edges(const struct edge_set *set, unsigned char label,
+edge_set_check_edges_with_EC_mapping(const struct edge_set *set,
+    unsigned char label, size_t ec_map_count, fsm_state_t *state_ecs,
     fsm_state_t *to_state, uint64_t labels[256/64])
 {
 	size_t i;
+
 	if (set == NULL) {
 		return 0;
 	}
@@ -348,20 +356,45 @@ edge_set_check_edges(const struct edge_set *set, unsigned char label,
 	const size_t offset = label/64;
 	const uint64_t bit = (uint64_t)1 << (label & 63);
 
+	int found = 0;
+	fsm_state_t first_ec;
+
 	for (i = 0; i < set->count; i++) {
 		const struct edge_group *eg = &set->groups[i];
 		if (eg->symbols[offset] & bit) {
-			*to_state = eg->to;
-
-			/* Note other labels to the same state. */
-			for (size_t w_i = 0; w_i < 4; w_i++) {
-				labels[w_i] |= eg->symbols[w_i];
+			if (!found) {
+				assert(eg->to < ec_map_count);
+				first_ec = state_ecs[eg->to];
+				*to_state = eg->to;
+				found = 1;
+				break;
 			}
-			return 1;
 		}
 	}
 
-	return 0;	/* not found */
+	if (!found) {
+		return 0;
+	}
+
+	/* Second pass: Note labels that lead to other states which
+	 * belong to the same EC.
+	 *
+	 * This has to be done in a second pass because some of the
+	 * relevant edge groups may appear before label is found. */
+	for (i = 0; i < set->count; i++) {
+		const struct edge_group *eg = &set->groups[i];
+		assert(eg->to < ec_map_count);
+
+		/* Note other labels leading to states that
+		 * map to the same EC. */
+		if (state_ecs[eg->to] == first_ec) {
+			for (size_t w_i = 0; w_i < 4; w_i++) {
+				labels[w_i] |= eg->symbols[w_i];
+			}
+		}
+	}
+
+	return 1;
 }
 
 int
