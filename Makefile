@@ -1,6 +1,11 @@
 .MAKEFLAGS: -r -m $(.CURDIR)/share/mk
 .MAKE.JOB.PREFIX=
 
+.MAIN: all
+
+.SYSPATH:
+.SYSPATH: $(.CURDIR)/share/mk
+
 .if defined(unix)
 BUILD_IMPOSSIBLE="attempting to use sys.mk"
 .endif
