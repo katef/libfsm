@@ -148,9 +148,9 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 		/* For every combination of states that are still
 		 * considered potentially indistinguishable, check
 		 * whether the current label leads both to a pair of
-		 * distinguishable states. If so, then they are no
-		 * longer distinguishable (transitively), so mark them
-		 * and set changed to note that another iteration may be
+		 * distinguishable states. If so, then they are
+		 * transitively distinguishable, so mark them and
+		 * set changed to note that another iteration may be
 		 * necessary. */
 		if (LOG_NAIVE_MIN > 1) {
 			fprintf(stderr, "==== table\n");

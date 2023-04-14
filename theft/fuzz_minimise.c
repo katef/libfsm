@@ -404,8 +404,8 @@ naive_minimised_count_inner(const struct dfa_spec *spec, size_t *count)
 		/* For every combination of states that are still
 		 * considered potentially indistinguishable, check
 		 * whether the current label leads both to a pair of
-		 * distinguishable states. If so, then they are no
-		 * longer distinguishable (transitively), so mark them
+		 * distinguishable states. If so, then they are
+		 * transitively distinguishable, so mark them and
 		 * and set changed to note that another iteration may be
 		 * necessary. */
 		if (LOG_NAIVE_MIN > 1) {
