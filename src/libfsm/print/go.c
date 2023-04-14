@@ -28,6 +28,11 @@
 
 #include "ir.h"
 
+enum go_dialect {
+        GO_SAFE,
+        GO_UNSAFE,
+};
+
 static int
 leaf(FILE *f, const struct fsm_end_ids *ids, const void *leaf_opaque)
 {
@@ -76,13 +81,18 @@ print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt
 }
 
 static void
-print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
+print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt, enum go_dialect dialect)
 {
 	if (op->cmp == VM_CMP_ALWAYS) {
 		return;
 	}
 
-	fprintf(f, "if data[idx] %s ", cmp_operator(op->cmp));
+        switch (dialect) {
+	case GO_SAFE: fprintf(f, "if data[idx] %s ", cmp_operator(op->cmp)); break;
+	case GO_UNSAFE: fprintf(f, "if c %s ", cmp_operator(op->cmp)); break;
+        break;
+        }
+
 	/* Go's character escapes are a superset of C's. */
 	c_escputcharlit(f, opt, op->cmp_arg);
 	fprintf(f, " ");
@@ -111,12 +121,35 @@ print_branch(FILE *f, const struct dfavm_op_ir *op)
 }
 
 static void
-print_fetch(FILE *f, const struct fsm_options *opt)
+print_fetch_end(FILE *f, const struct fsm_options *opt, enum go_dialect dialect)
 {
 	switch (opt->io) {
 	case FSM_IO_STR:
 	case FSM_IO_PAIR:
-		fprintf(f, "if idx++; idx >= uint(len(data)) ");
+                switch (dialect) {
+                case GO_SAFE: fprintf(f, "if idx++; idx >= uint(len(data)) "); break;
+                case GO_UNSAFE: fprintf(f, "if ptr == end "); break;
+                }
+		break;
+	default:
+		assert(!"unreached");
+	}
+}
+
+static void
+print_fetch(FILE *f, const struct fsm_options *opt, enum go_dialect dialect)
+{
+	switch (opt->io) {
+	case FSM_IO_STR:
+	case FSM_IO_PAIR:
+                switch (dialect) {
+                case GO_SAFE:
+                    /* Nothing */
+                    break;
+		case GO_UNSAFE:
+			fprintf(f, "\tptr = (*byte)(unsafe.Add(unsafe.Pointer(ptr), 1))\n");
+			fprintf(f, "\tc = *ptr\n");
+                }
 		break;
 	default:
 		assert(!"unreached");
@@ -126,6 +159,7 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 /* TODO: eventually to be non-static */
 static int
 fsm_print_gofrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+        enum go_dialect dialect,
 	const char *cp,
 	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
 	const void *leaf_opaque)
@@ -182,17 +216,18 @@ fsm_print_gofrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		switch (op->instr) {
 		case VM_OP_STOP:
-			print_cond(f, op, opt);
+			print_cond(f, op, opt, dialect);
 			print_end(f, op, opt, op->u.stop.end_bits, ir);
 			break;
 
 		case VM_OP_FETCH:
-			print_fetch(f, opt);
+			print_fetch_end(f, opt, dialect);
 			print_end(f, op, opt, op->u.fetch.end_bits, ir);
+                        print_fetch(f, opt, dialect);
 			break;
 
 		case VM_OP_BRANCH:
-			print_cond(f, op, opt);
+			print_cond(f, op, opt, dialect);
 			print_branch(f, op);
 			break;
 
@@ -210,7 +245,7 @@ fsm_print_gofrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 }
 
 static void
-fsm_print_go_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt)
+fsm_print_go_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt, enum go_dialect dialect)
 {
 	/* TODO: currently unused, but must be non-NULL */
 	const char *cp = "";
@@ -219,12 +254,12 @@ fsm_print_go_complete(FILE *f, const struct ir *ir, const struct fsm_options *op
 	assert(ir != NULL);
 	assert(opt != NULL);
 
-	(void) fsm_print_gofrag(f, ir, opt, cp,
+	(void) fsm_print_gofrag(f, ir, opt, dialect, cp,
 		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
 }
 
 void
-fsm_print_go(FILE *f, const struct fsm *fsm)
+fsm_print_go(FILE *f, const struct fsm *fsm, enum go_dialect dialect)
 {
 	struct ir *ir;
 	const char *prefix;
@@ -248,7 +283,7 @@ fsm_print_go(FILE *f, const struct fsm *fsm)
 	}
 
 	if (fsm->opt->fragment) {
-		fsm_print_go_complete(f, ir, fsm->opt);
+		fsm_print_go_complete(f, ir, fsm->opt, dialect);
 		return;
 	}
 
@@ -260,6 +295,9 @@ fsm_print_go(FILE *f, const struct fsm *fsm)
 
 	fprintf(f, "package %sfsm\n", package_prefix);
 	fprintf(f, "\n");
+        if (dialect == GO_UNSAFE) {
+	        fprintf(f, "import \"unsafe\"\n");
+        }
 
 	fprintf(f, "func %sMatch", prefix);
 
@@ -267,18 +305,47 @@ fsm_print_go(FILE *f, const struct fsm *fsm)
 	case FSM_IO_PAIR:
 		fprintf(f, "(data []byte) int {\n");
 		if (ir->n > 0) {
-			/* start idx at -1 unsigned so after first increment we're correct at index 0 */
-			fprintf(f, "\tvar idx = ^uint(0)\n");
-			fprintf(f, "\n");
+                        switch (dialect) {
+                        case GO_SAFE:
+                                fprintf(f, "\tvar idx = ^uint(0)\n");
+				fprintf(f, "\n");
+                                break;
+			case GO_UNSAFE:
+				fprintf(f, "\tvar ptr, end *byte\n");
+				fprintf(f, "\tif len(data) > 0 {\n");
+				fprintf(f, "\t\tptr = (*byte)(unsafe.Pointer(&data[0]))\n");
+				fprintf(f, "\t\tend = (*byte)(unsafe.Add(unsafe.Pointer(ptr), len(data)))\n");
+				fprintf(f, "\t}\n");
+				fprintf(f, "\tvar c byte\n");
+				fprintf(f, "\n");
+                                break;
+                        }
 		}
 		break;
 
 	case FSM_IO_STR:
 		fprintf(f, "(data string) int {\n");
 		if (ir->n > 0) {
-			/* start idx at -1 unsigned so after first increment we're correct at index 0 */
-			fprintf(f, "\tvar idx = ^uint(0)\n");
-			fprintf(f, "\n");
+                        switch (dialect) {
+                        case GO_SAFE:
+				/* start idx at -1 unsigned so after first increment we're correct at index 0 */
+                                fprintf(f, "\tvar idx = ^uint(0)\n");
+				fprintf(f, "\n");
+                                break;
+			case GO_UNSAFE:
+                                fprintf(stderr, "unsupported Safety/IO API combination\n");
+                                exit(EXIT_FAILURE);
+                                /*
+				fprintf(f, "\tvar ptr, end *byte\n");
+				fprintf(f, "\tif len(data) > 0 {\n");
+				fprintf(f, "\t\tptr = (*byte)(unsafe.Pointer(&data[0]))\n");
+				fprintf(f, "\t\tend = (*byte)(unsafe.Add(unsafe.Pointer(ptr), len(data)))\n");
+				fprintf(f, "\t}\n");
+				fprintf(f, "\tvar c byte\n");
+				fprintf(f, "\n");
+                                break;
+                                */
+                        }
 		}
 		break;
 
@@ -287,10 +354,17 @@ fsm_print_go(FILE *f, const struct fsm *fsm)
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_print_go_complete(f, ir, fsm->opt);
+	fsm_print_go_complete(f, ir, fsm->opt, dialect);
 
 	fprintf(f, "}\n");
 
 	free_ir(fsm, ir);
 }
 
+void fsm_print_go_safe(FILE *f, const struct fsm *fsm) {
+    fsm_print_go(f, fsm, GO_SAFE);
+}
+
+void fsm_print_go_unsafe(FILE *f, const struct fsm *fsm) {
+    fsm_print_go(f, fsm, GO_UNSAFE);
+}
