@@ -166,7 +166,9 @@ print_name(const char *name)
 		{ "vmdot", fsm_print_vmdot },
 		{ "rust",  fsm_print_rust  },
 		{ "sh",    fsm_print_sh    },
-		{ "go",    fsm_print_go    },
+
+		{ "go",        fsm_print_go_safe   },
+		{ "go_unsafe", fsm_print_go_unsafe },
 
 		{ "amd64",      fsm_print_vmasm            },
 		{ "amd64_att",  fsm_print_vmasm_amd64_att  },
