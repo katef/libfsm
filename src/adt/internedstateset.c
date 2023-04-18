@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include <fsm/fsm.h>
 
@@ -263,7 +264,7 @@ grow_htab(struct interned_state_set_pool *pool)
 	pool->htab.bucket_count = ncount;
 
 	if (LOG_ISS) {
-		fprintf(stderr, "%s: %lu -> %lu, max_collisions %zu\n",
+		fprintf(stderr, "%s: %" PRIu64 " -> %" PRIu64 ", max_collisions %zu\n",
 		    __func__, ocount, ncount, max_collisions);
 		dump_tables(stderr, pool);
 	}
