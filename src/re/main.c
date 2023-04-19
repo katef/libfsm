@@ -123,6 +123,10 @@ print_name(const char *name,
 		{ "sh",     fsm_print_sh,     NULL },
 		{ "go",     fsm_print_go,     NULL },
 
+		{ "vmops_c",    fsm_print_vmops_c,    NULL },
+		{ "vmops_h",    fsm_print_vmops_h,    NULL },
+		{ "vmops_main", fsm_print_vmops_main, NULL },
+
 		{ "amd64",      fsm_print_vmasm,            NULL },
 		{ "amd64_att",  fsm_print_vmasm_amd64_att,  NULL },
 		{ "amd64_nasm", fsm_print_vmasm_amd64_nasm, NULL },
