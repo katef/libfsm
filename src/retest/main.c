@@ -1220,6 +1220,8 @@ main(int argc, char *argv[])
 					impl = IMPL_VMASM;
 				} else if (strcmp(optarg, "vmc") == 0) {
 					impl = IMPL_VMC;
+				} else if (strcmp(optarg, "vmops") == 0) {
+					impl = IMPL_VMOPS;
 				} else {
 					fprintf(stderr, "unknown argument to -l: %s\n", optarg);
 					usage();
