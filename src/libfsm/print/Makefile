@@ -3,6 +3,7 @@
 SRC += src/libfsm/print/api.c
 SRC += src/libfsm/print/awk.c
 SRC += src/libfsm/print/c.c
+SRC += src/libfsm/print/vmops.c
 SRC += src/libfsm/print/dot.c
 SRC += src/libfsm/print/fsm.c
 SRC += src/libfsm/print/ir.c
