@@ -29,7 +29,8 @@ enum implementation {
 	IMPL_RUST,
 	IMPL_VMC,
 	IMPL_VMASM,
-	IMPL_INTERPRET
+	IMPL_INTERPRET,
+	IMPL_VMOPS,
 };
 
 struct fsm_runner {
