@@ -269,6 +269,7 @@ fsm_print_go(FILE *f, const struct fsm *fsm)
 		if (ir->n > 0) {
 			/* start idx at -1 unsigned so after first increment we're correct at index 0 */
 			fprintf(f, "\tvar idx = ^uint(0)\n");
+			fprintf(f, "\t_ = idx\n");
 			fprintf(f, "\n");
 		}
 		break;
@@ -278,6 +279,7 @@ fsm_print_go(FILE *f, const struct fsm *fsm)
 		if (ir->n > 0) {
 			/* start idx at -1 unsigned so after first increment we're correct at index 0 */
 			fprintf(f, "\tvar idx = ^uint(0)\n");
+			fprintf(f, "\t_ = idx\n");
 			fprintf(f, "\n");
 		}
 		break;
