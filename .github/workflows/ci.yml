@@ -328,7 +328,7 @@ jobs:
         cc: [ clang, gcc ]
         make: [ bmake ]
         debug: [ DEBUG, EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op
-        lang: [ "vm -x v1", "vm -x v2", asm, c, vmc, vmops ]
+        lang: [ "vm -x v1", "vm -x v2", asm, c, vmc, vmops, go, goasm ]
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
@@ -351,6 +351,13 @@ jobs:
         uname -a
         brew update
         ${{ matrix.cc }} --version
+
+    - name: Dependencies (Ubuntu/Go)
+      if: matrix.os == 'ubuntu' && (matrix.lang == 'go' || matrix.lang == 'goasm')
+      run: |
+        uname -a
+        sudo apt-get install golang
+        go version
 
     - name: Fetch build
       uses: actions/cache@v3

@@ -27,6 +27,8 @@ enum error_type {
 enum implementation {
 	IMPL_C,
 	IMPL_RUST,
+	IMPL_GO,
+	IMPL_GOASM,
 	IMPL_VMC,
 	IMPL_VMASM,
 	IMPL_INTERPRET,
@@ -47,6 +49,11 @@ struct fsm_runner {
 			void *h;
 			size_t (*func)(const unsigned char *, size_t);
 		} impl_rust;
+
+		struct {
+			void *h;
+			int64_t (*func)(const unsigned char *, size_t);
+		} impl_go;
 
 		struct {
 			void *h;

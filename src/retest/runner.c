@@ -1,8 +1,10 @@
-#define _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE
 
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/param.h>
 
 #include <assert.h>
 
@@ -20,19 +22,35 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 {
 	static fsm_print *asm_print = fsm_print_vmasm_amd64_att;
 
-	char tmp_src[] = "/tmp/fsmcompile_src-XXXXXX";
+	/* Need extra null bytes for any potential suffix */
+	char tmp_src[] = "/tmp/fsmcompile_src-XXXXXX\0\0\0\0";
 	char tmp_o[]   = "/tmp/fsmcompile_o-XXXXXX";
 	char tmp_so[]  = "/tmp/fsmcompile_so-XXXXXX";
 
+	/* Go runner needs a second object file */
+	char tmp_o2[] = "/tmp/fsmcompile_o2-XXXXXX";
+
 	char cmd[sizeof tmp_src + sizeof tmp_o + sizeof tmp_so + 256];
 	const char *cc, *cflags, *as, *asflags;
-	int fd_src, fd_so, fd_o;
+	int src_suffix_len = 0;
+	int fd_src, fd_so, fd_o, fd_o2;
 	FILE *f = NULL;
 	void *h = NULL;
 
-	fd_src = mkstemp(tmp_src);
+	if (impl == IMPL_GO) {
+		/* The Go compiler needs an extension on tmp_src so it knows it's a file not a package. */
+		strcat(tmp_src, ".go");
+		src_suffix_len = 3;
+	}
+
+	if (impl == IMPL_GOASM) {
+		asm_print = fsm_print_vmasm_amd64_go;
+	}
+
+	fd_src = mkstemps(tmp_src, src_suffix_len);
 	fd_so  = mkstemp(tmp_so);
 	fd_o   = -1;
+	fd_o2   = -1;
 
 	f = fdopen(fd_src, "w");
 	if (f == NULL) {
@@ -44,11 +62,16 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	case IMPL_C:     fsm_print_c(f, fsm);    break;
 	case IMPL_RUST:  fsm_print_rust(f, fsm); break;
 	case IMPL_VMC:   fsm_print_vmc(f, fsm);  break;
+	case IMPL_GOASM:
 	case IMPL_VMASM: asm_print(f,fsm);       break;
 	case IMPL_VMOPS:
 		fsm_print_vmops_h(f, fsm);
 		fsm_print_vmops_c(f, fsm);
 		fsm_print_vmops_main(f, fsm);
+		break;
+
+	case IMPL_GO:
+		fsm_print_go(f, fsm);
 		break;
 
 	case IMPL_INTERPRET:
@@ -105,6 +128,43 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 
 		break;
 
+	case IMPL_GO:
+	case IMPL_GOASM:
+		fd_o = mkstemp(tmp_o);
+		fd_o2 = mkstemp(tmp_o2);
+
+		/* Go compiler needs to know not to look for a go.mod file */
+		setenv("GOMODULE111", "off", 1);
+
+		asflags = "";
+		if (impl == IMPL_GOASM) {
+			asflags = "-I $(go env GOROOT)/src/runtime";
+		}
+
+		(void) snprintf(cmd, sizeof cmd, "%s tool %s %s -p main -o %s %s",
+			"go", (impl == IMPL_GO) ? "compile" : "asm", asflags, tmp_o, tmp_src);
+
+		if (0 != system(cmd)) {
+			perror(cmd);
+			return ERROR_FILE_IO;
+		}
+
+		as      = getenv("AS");
+		asflags = getenv("ASFLAGS");
+
+		(void) snprintf(cmd, sizeof cmd, "%s tool objdump -gnu %s |awk -f ./share/bin/go2att.awk |%s %s -o %s",
+				"go", tmp_o, as ? as : "as", asflags ? asflags : "", tmp_o2);
+
+		if (0 != system(cmd)) {
+			perror(cmd);
+			return ERROR_FILE_IO;
+		}
+
+		(void) snprintf(cmd, sizeof cmd, "%s %s -shared %s -o %s",
+				cc ? cc : "gcc", cflags ? cflags : "",
+				tmp_o2, tmp_so);
+		break;
+
 	case IMPL_VMASM:
 		as      = getenv("AS");
 		asflags = getenv("ASFLAGS");
@@ -157,6 +217,18 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		}
 	}
 
+	if (fd_o2 != -1) {
+		if (-1 == close(fd_o2)) {
+			perror(tmp_o2);
+			return ERROR_FILE_IO;
+		}
+
+		if (-1 == unlinkat(-1, tmp_o2, 0)) {
+			perror(tmp_o2);
+			return ERROR_FILE_IO;
+		}
+	}
+
 	h = dlopen(tmp_so, RTLD_NOW);
 	if (h == NULL) {
 		fprintf(stderr, "%s: %s", tmp_so, dlerror());
@@ -193,6 +265,12 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		r->u.impl_rust.func = (size_t (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "reperf_trampoline");
 		break;
 
+	case IMPL_GO:
+	case IMPL_GOASM:
+		r->u.impl_go.h = h;
+		r->u.impl_go.func = (int64_t (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "retest_trampoline");
+		break;
+
 	case IMPL_VMASM:
 		r->u.impl_asm.h = h;
 		r->u.impl_asm.func = (int (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "fsm_match");
@@ -222,6 +300,8 @@ fsm_runner_initialize(struct fsm *fsm, struct fsm_runner *r, enum implementation
 	case IMPL_VMASM:
 	case IMPL_VMC:
 	case IMPL_VMOPS:
+	case IMPL_GO:
+	case IMPL_GOASM:
 		return runner_init_compiled(fsm, r, impl);
 
 	case IMPL_INTERPRET:
@@ -258,6 +338,13 @@ fsm_runner_finalize(struct fsm_runner *r)
 		}
 		break;
 
+	case IMPL_GO:
+	case IMPL_GOASM:
+		if (r->u.impl_go.h != NULL) {
+			dlclose(r->u.impl_go.h);
+		}
+		break;
+
 	case IMPL_VMASM:
 		if (r->u.impl_asm.h != NULL) {
 			dlclose(r->u.impl_c.h);
@@ -291,6 +378,11 @@ fsm_runner_run(const struct fsm_runner *r, const char *s, size_t n)
 	case IMPL_RUST:
 		assert(r->u.impl_rust.func != NULL);
 		return r->u.impl_rust.func((const unsigned char *)s, n) >= 0;
+
+	case IMPL_GO:
+	case IMPL_GOASM:
+		assert(r->u.impl_go.func != NULL);
+		return r->u.impl_go.func((const unsigned char *)s, n) >= 0;
 
 	case IMPL_VMASM:
 		assert(r->u.impl_asm.func != NULL);

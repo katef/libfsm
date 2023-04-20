@@ -1223,6 +1223,10 @@ main(int argc, char *argv[])
 					impl = IMPL_VMC;
 				} else if (strcmp(optarg, "vmops") == 0) {
 					impl = IMPL_VMOPS;
+				} else if (strcmp(optarg, "go") == 0) {
+					impl = IMPL_GO;
+				} else if (strcmp(optarg, "goasm") == 0) {
+					impl = IMPL_GOASM;
 				} else {
 					fprintf(stderr, "unknown argument to -l: %s\n", optarg);
 					usage();
