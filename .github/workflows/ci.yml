@@ -328,7 +328,7 @@ jobs:
         cc: [ clang, gcc ]
         make: [ bmake ]
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
-        lang: [ "vm -x v1", "vm -x v2", asm, c, vmc ]
+        lang: [ "vm -x v1", "vm -x v2", asm, c, vmc, vmops ]
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
