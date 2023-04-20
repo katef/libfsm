@@ -81,36 +81,36 @@ print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt
 }
 
 static void
-print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt, enum vmops_dialect dialect)
+print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt, const char *prefix, enum vmops_dialect dialect)
 {
-	fprintf(f, "\t\t{%s, ", cmp_operator(op->cmp));
+	fprintf(f, "\t\t{%s%s, ", prefix, cmp_operator(op->cmp));
 	c_escputcharlit(f, opt, op->cmp_arg);
 	fprintf(f, ", ");
 }
 
 static void
-print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt, enum vmops_dialect dialect,
+print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt, const char *prefix, enum vmops_dialect dialect,
 	enum dfavm_op_end end_bits, const struct ir *ir)
 {
 	if (end_bits == VM_END_FAIL) {
-		fprintf(f, "actionRET, -1},\n");
+		fprintf(f, "%sactionRET, -1},\n", prefix);
 		return;
 	}
 
-	fprintf(f, "actionRET, %td},\n", op->ir_state - ir->states);
+	fprintf(f, "%sactionRET, %td},\n", prefix, op->ir_state - ir->states);
 }
 
 static void
-print_branch(FILE *f, const struct dfavm_op_ir *op, enum vmops_dialect dialect)
+print_branch(FILE *f, const struct dfavm_op_ir *op, const char *prefix, enum vmops_dialect dialect)
 {
-	fprintf(f, "actionGOTO, %" PRIu32 "},\n", op->u.br.dest_arg->index);
+	fprintf(f, "%sactionGOTO, %" PRIu32 "},\n", prefix, op->u.br.dest_arg->index);
 }
 
 static void
-print_fetch(FILE *f, const struct fsm_options *opt, enum vmops_dialect dialect)
+print_fetch(FILE *f, const struct fsm_options *opt, const char *prefix, enum vmops_dialect dialect)
 {
 
-	fprintf(f, "\t\t{opEOF, 0, ");
+	fprintf(f, "\t\t{%sopEOF, 0, ", prefix);
 	switch (opt->io) {
 	case FSM_IO_STR:
 	case FSM_IO_PAIR:
@@ -122,7 +122,7 @@ print_fetch(FILE *f, const struct fsm_options *opt, enum vmops_dialect dialect)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_vmopsfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt, enum vmops_dialect dialect,
+fsm_print_vmopsfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt, const char *prefix, enum vmops_dialect dialect,
 	const char *cp,
 	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
 	const void *leaf_opaque)
@@ -158,18 +158,18 @@ fsm_print_vmopsfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		}
 		switch (op->instr) {
 		case VM_OP_STOP:
-			print_cond(f, op, opt, dialect);
-			print_end(f, op, opt,  dialect, op->u.stop.end_bits, ir);
+			print_cond(f, op, opt, prefix, dialect);
+			print_end(f, op, opt,  prefix, dialect, op->u.stop.end_bits, ir);
 			break;
 
 		case VM_OP_FETCH:
-			print_fetch(f, opt, dialect);
-			print_end(f, op, opt, dialect, op->u.fetch.end_bits, ir);
+			print_fetch(f, opt, prefix, dialect);
+			print_end(f, op, opt, prefix, dialect, op->u.fetch.end_bits, ir);
 			break;
 
 		case VM_OP_BRANCH:
-			print_cond(f, op, opt, dialect);
-			print_branch(f, op, dialect);
+			print_cond(f, op, opt, prefix, dialect);
+			print_branch(f, op, prefix, dialect);
 			break;
 
 		default:
@@ -184,7 +184,7 @@ fsm_print_vmopsfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 }
 
 static void
-fsm_print_vmops_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt, enum vmops_dialect dialect)
+fsm_print_vmops_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt, const char *prefix, enum vmops_dialect dialect)
 {
 	/* TODO: currently unused, but must be non-NULL */
 	const char *cp = "";
@@ -201,7 +201,7 @@ fsm_print_vmops_complete(FILE *f, const struct ir *ir, const struct fsm_options 
 		break;
 	}
 
-	(void) fsm_print_vmopsfrag(f, ir, opt, dialect, cp,
+	(void) fsm_print_vmopsfrag(f, ir, opt, prefix, dialect, cp,
 		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
 }
 
@@ -230,7 +230,7 @@ fsm_print_vmops(FILE *f, const struct fsm *fsm, enum vmops_dialect dialect)
 	}
 
 	if (fsm->opt->fragment) {
-		fsm_print_vmops_complete(f, ir, fsm->opt, dialect);
+		fsm_print_vmops_complete(f, ir, fsm->opt, prefix, dialect);
 		return;
 	}
 
@@ -243,31 +243,31 @@ fsm_print_vmops(FILE *f, const struct fsm *fsm, enum vmops_dialect dialect)
 	switch (dialect) {
 	case VMOPS_C:
 		fprintf(f, "#include <stdint.h>\n\n");
-		fprintf(f, "#ifndef LIBFSM_VMOPS_H\n");
-		fprintf(f, "#include \"vmops.h\"\n");
-		fprintf(f, "#endif /* LIBFSM_VMOPS_H */\n");
-		fprintf(f, "struct op %sOps[] = {\n", prefix);
-		fsm_print_vmops_complete(f, ir, fsm->opt, dialect);
+		fprintf(f, "#ifndef %sLIBFSM_VMOPS_H\n", prefix);
+		fprintf(f, "#include \"%svmops.h\"\n", prefix);
+		fprintf(f, "#endif /* %sLIBFSM_VMOPS_H */\n", prefix);
+		fprintf(f, "struct %sop %sOps[] = {\n", prefix, prefix);
+		fsm_print_vmops_complete(f, ir, fsm->opt, prefix, dialect);
 		fprintf(f, "\t};\n");
 		break;
 
 	case VMOPS_H:
-		fprintf(f, "#ifndef LIBFSM_VMOPS_H\n");
-		fprintf(f, "#define LIBFSM_VMOPS_H\n");
+		fprintf(f, "#ifndef %sLIBFSM_VMOPS_H\n", prefix);
+		fprintf(f, "#define %sLIBFSM_VMOPS_H\n", prefix);
 		fprintf(f, "#include <stdint.h>\n\n");
-		fprintf(f, "enum vmOp { opEOF, opLT, opLE, opEQ, opNE, opGE, opGT, opALWAYS};\n");
-		fprintf(f, "enum actionOp { actionRET, actionGOTO };\n");
-		fprintf(f, "struct op { enum vmOp op; char c; enum actionOp action; int32_t arg; };\n\n");
-		fprintf(f, "#endif /* LIBFSM_VMOPS_H */\n");
+		fprintf(f, "enum %svmOp { %sopEOF, %sopLT, %sopLE, %sopEQ, %sopNE, %sopGE, %sopGT, %sopALWAYS};\n", prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix);
+		fprintf(f, "enum %sactionOp { %sactionRET, %sactionGOTO };\n", prefix, prefix, prefix);
+		fprintf(f, "struct %sop { enum %svmOp op; char c; enum %sactionOp action; int32_t arg; };\n\n", prefix, prefix, prefix);
+		fprintf(f, "#endif /* %sLIBFSM_VMOPS_H */\n", prefix);
 		break;
 
 	case VMOPS_MAIN:
 		fprintf(f, "#include <stdio.h>\n");
 		fprintf(f, "#include <stdlib.h>\n\n");
-		fprintf(f, "#ifndef LIBFSM_VMOPS_H\n");
-		fprintf(f, "#include \"vmops.h\"\n");
-		fprintf(f, "#endif /* LIBFSM_VMOPS_H */\n");
-		fprintf(f, "extern struct op %sOps[];\n", prefix);
+		fprintf(f, "#ifndef %sLIBFSM_VMOPS_H\n", prefix);
+		fprintf(f, "#include \"%svmops.h\"\n", prefix);
+		fprintf(f, "#endif /* %sLIBFSM_VMOPS_H */\n", prefix);
+		fprintf(f, "extern struct %sop %sOps[];\n", prefix, prefix);
 		fprintf(f, "\n");
 
 		switch (fsm->opt->io) {
@@ -285,7 +285,7 @@ fsm_print_vmops(FILE *f, const struct fsm *fsm, enum vmops_dialect dialect)
 		fprintf(f, "\tunsigned int i = 0;\n");
 		fprintf(f, "\tchar c;\n");
 		fprintf(f, "\tint ok;\n");
-		fprintf(f, "\tstruct op *ops = %sOps;\n", prefix);
+		fprintf(f, "\tstruct %sop *ops = %sOps;\n", prefix, prefix);
 
 
 		switch (fsm->opt->io) {
@@ -304,7 +304,7 @@ fsm_print_vmops(FILE *f, const struct fsm *fsm, enum vmops_dialect dialect)
 		fprintf(f, "\tfor (;;) {\n");
 		fprintf(f, "\t\tok = 0;\n");
 		fprintf(f, "\t\tswitch (ops[i].op) {\n");
-		fprintf(f, "\t\tcase opEOF:\n");
+		fprintf(f, "\t\tcase %sopEOF:\n", prefix);
 
 		switch (fsm->opt->io) {
 		case FSM_IO_PAIR:
@@ -330,16 +330,16 @@ fsm_print_vmops(FILE *f, const struct fsm *fsm, enum vmops_dialect dialect)
 
 		fprintf(f, "\t\t\tok = 1;\n");
 		fprintf(f, "\t\t\tbreak;\n");
-		fprintf(f, "\t\tcase opLT: ok = c < ops[i].c; break;\n");
-		fprintf(f, "\t\tcase opLE: ok = c <= ops[i].c; break;\n");
-		fprintf(f, "\t\tcase opEQ: ok = c == ops[i].c; break;\n");
-		fprintf(f, "\t\tcase opNE: ok = c != ops[i].c; break;\n");
-		fprintf(f, "\t\tcase opGE: ok = c >= ops[i].c; break;\n");
-		fprintf(f, "\t\tcase opGT: ok = c > ops[i].c; break;\n");
-		fprintf(f, "\t\tcase opALWAYS: ok = 1; break;\n");
+		fprintf(f, "\t\tcase %sopLT: ok = c < ops[i].c; break;\n", prefix);
+		fprintf(f, "\t\tcase %sopLE: ok = c <= ops[i].c; break;\n", prefix);
+		fprintf(f, "\t\tcase %sopEQ: ok = c == ops[i].c; break;\n", prefix);
+		fprintf(f, "\t\tcase %sopNE: ok = c != ops[i].c; break;\n", prefix);
+		fprintf(f, "\t\tcase %sopGE: ok = c >= ops[i].c; break;\n", prefix);
+		fprintf(f, "\t\tcase %sopGT: ok = c > ops[i].c; break;\n", prefix);
+		fprintf(f, "\t\tcase %sopALWAYS: ok = 1; break;\n", prefix);
 		fprintf(f, "\t\t}\n");
 		fprintf(f, "\t\tif (ok) {\n");
-		fprintf(f, "\t\t\tif (ops[i].action == actionRET) {\n");
+		fprintf(f, "\t\t\tif (ops[i].action == %sactionRET) {\n", prefix);
 		fprintf(f, "\t\t\t\treturn (int) (ops[i].arg);\n");
 		fprintf(f, "\t\t\t}\n");
 		fprintf(f, "\t\t\ti = ops[i].arg;\n");
@@ -349,16 +349,16 @@ fsm_print_vmops(FILE *f, const struct fsm *fsm, enum vmops_dialect dialect)
 		fprintf(f, "\t}\n");
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
-		fprintf(f, "#define BUFFER_SIZE (1024)\n");
+		fprintf(f, "#define %sBUFFER_SIZE (1024)\n", prefix);
 		fprintf(f, "\n");
 		fprintf(f, "int main(void)\n");
 		fprintf(f, "{\n");
 		fprintf(f, "\tchar *buf;\n");
-		fprintf(f, "\tsize_t linecap = BUFFER_SIZE;\n");
+		fprintf(f, "\tsize_t linecap = %sBUFFER_SIZE;\n", prefix);
 		fprintf(f, "\tssize_t linelen;\n");
 		fprintf(f, "\tint r;\n");
 		fprintf(f, "\n");
-		fprintf(f, "\tbuf = malloc(BUFFER_SIZE);\n");
+		fprintf(f, "\tbuf = malloc(%sBUFFER_SIZE);\n", prefix);
 		fprintf(f, "\tif (!buf) {\n");
 		fprintf(f, "\t\tperror(\"malloc\");\n");
 		fprintf(f, "\t\texit(1);\n");
