@@ -389,6 +389,7 @@ jobs:
       if: steps.cache-docs.outputs.cache-hit != 'true'
       run: |
         uname -a
+        sudo apt-get update
         sudo apt-get install bmake libxml2-utils xsltproc docbook-xml docbook-xsl
 
     - name: Fetch checkout
