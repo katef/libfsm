@@ -27,6 +27,7 @@
 enum run_mode {
 	MODE_DEFAULT,
 	MODE_SHUFFLE_MINIMISE,
+	MODE_PRINT_VMC,
 };
 
 
@@ -260,6 +261,49 @@ shuffle_minimise(const char *pattern)
 	return EXIT_SUCCESS;
 }
 
+static int
+fuzz_print_vm(FILE *f, const char *pattern, bool det, bool min)
+{
+	assert(pattern != NULL);
+
+	struct re_err err;
+	struct fsm *fsm;
+	const size_t length = strlen(pattern);
+
+	struct scanner s = {
+		.str    = (const uint8_t *)pattern,
+		.size   = length,
+		.offset = 0
+	};
+
+	fsm = re_comp(RE_PCRE, scanner_next, &s, &opt, RE_MULTI, &err);
+
+	if (fsm == NULL) {
+		/* ignore invalid regexp syntax, etc. */
+		return EXIT_SUCCESS;
+	}
+
+	if (det) {
+		if (!fsm_determinise(fsm)) {
+			assert(!"det failure");
+			return EXIT_FAILURE;
+		}
+
+		if (min) {
+			if (!fsm_minimise(fsm)) {
+				assert(!"min failure");
+				return EXIT_FAILURE;
+			}
+		}
+	}
+
+	/* see if this triggers any asserts */
+	fsm_print_vmc(f, fsm);
+
+	fsm_free(fsm);
+	return EXIT_SUCCESS;
+}
+
 #define MAX_FUZZER_DATA (64 * 1024)
 static uint8_t data_buf[MAX_FUZZER_DATA + 1];
 
@@ -270,6 +314,7 @@ get_run_mode(void)
 	if (mode != NULL) {
 		switch (mode[0]) {
 		case 'm': return MODE_SHUFFLE_MINIMISE;
+		case 'v': return MODE_PRINT_VMC;
 		default:
 			break;
 		}
@@ -278,10 +323,16 @@ get_run_mode(void)
 	return MODE_DEFAULT;
 }
 
+static FILE *dev_null = NULL;
+
 int
 harness_fuzzer_target(const uint8_t *data, size_t size)
 {
 	enum run_mode run_mode = get_run_mode();
+
+	if (size < 1) {
+		return EXIT_SUCCESS;
+	}
 
 	/* Ensure that input is '\0'-terminated. */
 	if (size > MAX_FUZZER_DATA) {
@@ -294,7 +345,24 @@ harness_fuzzer_target(const uint8_t *data, size_t size)
 	switch (run_mode) {
 	case MODE_DEFAULT:
 		return build_and_codegen(pattern);
+
 	case MODE_SHUFFLE_MINIMISE:
 		return shuffle_minimise(pattern);
+
+	case MODE_PRINT_VMC:
+	{
+		if (dev_null == NULL) {
+			dev_null = fopen("/dev/null", "w");
+			assert(dev_null != NULL);
+		}
+
+		const uint8_t b0 = data_buf[0];
+		const bool det = b0 & 0x1;
+		const bool min = b0 & 0x2;
+		
+		const char *shifted_pattern = (const char *)&data_buf[1];
+		int res = fuzz_print_vm(dev_null, shifted_pattern, det, min);
+		return res;
+	}
 	}
 }
