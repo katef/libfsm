@@ -724,7 +724,7 @@ p_expr_C_Ccharacter_Hclass_C_Crange_Hendpoint_C_Crange_Hendpoint_Hliteral(flags 
 #line 801 "src/libre/parser.act"
 
 		(ZIr).type = AST_ENDPOINT_LITERAL;
-		(ZIr).u.literal.c = (ZIc);
+		(ZIr).u.literal.c = (unsigned char)(ZIc);
 	
 #line 730 "src/libre/dialect/pcre/parser.c"
 		}
@@ -2290,7 +2290,7 @@ p_expr_C_Ccharacter_Hclass_C_Crange_Hendpoint_Hend(flags flags, lex_state lex_st
 #line 801 "src/libre/parser.act"
 
 		(ZIr).type = AST_ENDPOINT_LITERAL;
-		(ZIr).u.literal.c = (ZIc);
+		(ZIr).u.literal.c = (unsigned char)(ZIc);
 	
 #line 2296 "src/libre/dialect/pcre/parser.c"
 					}
@@ -2430,7 +2430,7 @@ p_320(flags flags, lex_state lex_state, act_state act_state, err err, t_char *ZI
 #line 801 "src/libre/parser.act"
 
 		(ZIlower).type = AST_ENDPOINT_LITERAL;
-		(ZIlower).u.literal.c = (*ZI317);
+		(ZIlower).u.literal.c = (unsigned char)(*ZI317);
 	
 #line 2436 "src/libre/dialect/pcre/parser.c"
 			}
@@ -2621,7 +2621,7 @@ p_195(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__exp
 #line 801 "src/libre/parser.act"
 
 		(ZIlower).type = AST_ENDPOINT_LITERAL;
-		(ZIlower).u.literal.c = (ZIc);
+		(ZIlower).u.literal.c = (unsigned char)(ZIc);
 	
 #line 2627 "src/libre/dialect/pcre/parser.c"
 						}
@@ -3402,7 +3402,7 @@ p_210(flags flags, lex_state lex_state, act_state act_state, err err, t_pos *ZIs
 #line 801 "src/libre/parser.act"
 
 		(ZIr).type = AST_ENDPOINT_LITERAL;
-		(ZIr).u.literal.c = (*ZIcbrak);
+		(ZIr).u.literal.c = (unsigned char)(*ZIcbrak);
 	
 #line 3408 "src/libre/dialect/pcre/parser.c"
 			}
@@ -3429,7 +3429,7 @@ p_210(flags flags, lex_state lex_state, act_state act_state, err err, t_pos *ZIs
 #line 801 "src/libre/parser.act"
 
 		(ZIlower).type = AST_ENDPOINT_LITERAL;
-		(ZIlower).u.literal.c = (*ZIcbrak);
+		(ZIlower).u.literal.c = (unsigned char)(*ZIcbrak);
 	
 #line 3435 "src/libre/dialect/pcre/parser.c"
 			}
@@ -4359,6 +4359,17 @@ ZL0:;
 		err->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
+
+#define BUILD_FOR_FUZZER 0
+#if BUILD_FOR_FUZZER
+		/* these errors currently are not handled properly */
+		if (act_state->lex_tok == TOK_ERROR) {
+			fprintf(stderr, "syntax error\n");
+			lx->free(lx->buf_opaque);
+			goto error;
+		}
+#endif
+
 		DIALECT_ENTRY(&flags, lex_state, act_state, err, &ast->expr);
 
 		lx->free(lx->buf_opaque);
@@ -4426,6 +4437,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 4430 "src/libre/dialect/pcre/parser.c"
+#line 4441 "src/libre/dialect/pcre/parser.c"
 
 /* END OF FILE */

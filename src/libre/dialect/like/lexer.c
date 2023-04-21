@@ -174,7 +174,7 @@ z0(struct lx_like_lx *lx)
 			}
 			break;
 
-		case S1: /* e.g. "a" */
+		case S1: /* e.g. "\\x00" */
 			lx_like_ungetc(lx, c); return TOK_CHAR;
 
 		case S2: /* e.g. "%" */
@@ -188,7 +188,7 @@ z0(struct lx_like_lx *lx)
 		}
 
 		if (lx->push != NULL) {
-			if (-1 == lx->push(lx->buf_opaque, c)) {
+			if (-1 == lx->push(lx->buf_opaque, (char)c)) {
 				return TOK_ERROR;
 			}
 		}

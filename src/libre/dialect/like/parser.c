@@ -698,6 +698,17 @@ ZL0:;
 		err->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
+
+#define BUILD_FOR_FUZZER 0
+#if BUILD_FOR_FUZZER
+		/* these errors currently are not handled properly */
+		if (act_state->lex_tok == TOK_ERROR) {
+			fprintf(stderr, "syntax error\n");
+			lx->free(lx->buf_opaque);
+			goto error;
+		}
+#endif
+
 		DIALECT_ENTRY(&flags, lex_state, act_state, err, &ast->expr);
 
 		lx->free(lx->buf_opaque);
@@ -765,6 +776,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 769 "src/libre/dialect/like/parser.c"
+#line 780 "src/libre/dialect/like/parser.c"
 
 /* END OF FILE */
