@@ -1233,7 +1233,7 @@ p_212(flags flags, lex_state lex_state, act_state act_state, err err, t_char *ZI
 #line 801 "src/libre/parser.act"
 
 		(ZIa).type = AST_ENDPOINT_LITERAL;
-		(ZIa).u.literal.c = (*ZI209);
+		(ZIa).u.literal.c = (unsigned char)(*ZI209);
 	
 #line 1239 "src/libre/dialect/sql/parser.c"
 			}
@@ -1277,7 +1277,7 @@ p_212(flags flags, lex_state lex_state, act_state act_state, err err, t_char *ZI
 #line 801 "src/libre/parser.act"
 
 		(ZIz).type = AST_ENDPOINT_LITERAL;
-		(ZIz).u.literal.c = (ZIcz);
+		(ZIz).u.literal.c = (unsigned char)(ZIcz);
 	
 #line 1283 "src/libre/dialect/sql/parser.c"
 			}
@@ -2143,6 +2143,17 @@ ZL0:;
 		err->e = RE_ESUCCESS;
 
 		ADVANCE_LEXER;
+
+#define BUILD_FOR_FUZZER 0
+#if BUILD_FOR_FUZZER
+		/* these errors currently are not handled properly */
+		if (act_state->lex_tok == TOK_ERROR) {
+			fprintf(stderr, "syntax error\n");
+			lx->free(lx->buf_opaque);
+			goto error;
+		}
+#endif
+
 		DIALECT_ENTRY(&flags, lex_state, act_state, err, &ast->expr);
 
 		lx->free(lx->buf_opaque);
@@ -2210,6 +2221,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 2214 "src/libre/dialect/sql/parser.c"
+#line 2225 "src/libre/dialect/sql/parser.c"
 
 /* END OF FILE */
