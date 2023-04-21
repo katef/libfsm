@@ -367,7 +367,7 @@ jobs:
         key: cvtpcre-bmake-ubuntu-gcc-DEBUG-ASAN-${{ github.sha }}-${{ env.pcre2 }}
 
     - name: Run PCRE suite (${{ matrix.lang }})
-      run: ./${{ env.build }}/bin/retest -O1 -l ${{ matrix.lang }} ${{ env.cvtpcre }}/*.tst
+      run: CC=${{ matrix.cc }} ./${{ env.build }}/bin/retest -O1 -l ${{ matrix.lang }} ${{ env.cvtpcre }}/*.tst
 
   docs:
     name: Documentation
