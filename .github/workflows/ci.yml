@@ -139,7 +139,7 @@ jobs:
         os: [ ubuntu ]
         cc: [ clang, gcc ]
         make: [ bmake ] # we test makefiles separately
-        debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
+        debug: [ DEBUG, EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
@@ -266,7 +266,7 @@ jobs:
         os: [ ubuntu ]
         cc: [ clang, gcc ]
         make: [ bmake ]
-        debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
+        debug: [ DEBUG, EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
@@ -327,7 +327,7 @@ jobs:
         os: [ ubuntu ]
         cc: [ clang, gcc ]
         make: [ bmake ]
-        debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
+        debug: [ DEBUG, EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op
         lang: [ "vm -x v1", "vm -x v2", asm, c, vmc, vmops ]
         exclude:
           - os: macos
