@@ -83,7 +83,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	case IMPL_VMC:
 	case IMPL_VMOPS:
 		(void) snprintf(cmd, sizeof cmd, "%s %s -xc -shared -fPIC %s -o %s",
-				cc ? cc : "gcc", cflags ? cflags : "-std=c89 -pedantic -Wall -O3",
+				cc ? cc : "gcc", cflags ? cflags : "-std=c89 -pedantic -Wall -Werror -O3",
 				tmp_src, tmp_so);
 
 		if (0 != system(cmd)) {
