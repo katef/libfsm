@@ -183,6 +183,35 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		}
 	}
 
+	assert(a.linked != NULL);
+
+	/*
+	 * Only declare variables if we're actually going to use them.
+	 */
+	if (a.linked->cmp == VM_CMP_ALWAYS && a.linked->instr == VM_OP_STOP) {
+		assert(a.linked->next == NULL);
+	} else {
+		switch (opt->io) {
+		case FSM_IO_GETC:
+			fprintf(f, "\tint c;\n");
+			break;
+
+		case FSM_IO_STR:
+			fprintf(f, "\tconst char *p;\n");
+			fprintf(f, "\tint c;\n");
+			fprintf(f, "\n");
+			fprintf(f, "\tp = s;\n");
+			break;
+
+		case FSM_IO_PAIR:
+			fprintf(f, "\tconst char *p;\n");
+			fprintf(f, "\tint c;\n");
+			fprintf(f, "\n");
+			fprintf(f, "\tp = b;\n");
+			break;
+		}
+	}
+
 	for (op = a.linked; op != NULL; op = op->next) {
 		if (op->num_incoming > 0) {
 			fprintf(f, "\n");
@@ -276,34 +305,16 @@ fsm_print_vmc(FILE *f, const struct fsm *fsm)
 	case FSM_IO_GETC:
 		fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
 		fprintf(f, "{\n");
-		if (ir->n > 0) {
-			fprintf(f, "\tint c;\n");
-			fprintf(f, "\n");
-		}
 		break;
 
 	case FSM_IO_STR:
 		fprintf(f, "(const char *s)\n");
 		fprintf(f, "{\n");
-		if (ir->n > 0) {
-			fprintf(f, "\tconst char *p;\n");
-			fprintf(f, "\tint c;\n");
-			fprintf(f, "\n");
-			fprintf(f, "\tp = s;\n");
-			fprintf(f, "\n");
-		}
 		break;
 
 	case FSM_IO_PAIR:
 		fprintf(f, "(const char *b, const char *e)\n");
 		fprintf(f, "{\n");
-		if (ir->n > 0) {
-			fprintf(f, "\tconst char *p;\n");
-			fprintf(f, "\tint c;\n");
-			fprintf(f, "\n");
-			fprintf(f, "\tp = b;\n");
-			fprintf(f, "\n");
-		}
 		break;
 	}
 

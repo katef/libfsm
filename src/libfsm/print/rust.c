@@ -173,6 +173,33 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		}
 	}
 
+	/*
+	 * Only declare variables if we're actually going to use them.
+	 */
+	if (a.linked->cmp == VM_CMP_ALWAYS && a.linked->instr == VM_OP_STOP) {
+		assert(a.linked->next == NULL);
+		fprintf(f, "\n");
+	} else {
+		switch (opt->io) {
+		case FSM_IO_GETC:
+			break;
+
+		case FSM_IO_STR:
+			fprintf(f, "    let mut bytes = input.bytes();\n");
+			fprintf(f, "\n");
+			break;
+
+		case FSM_IO_PAIR:
+			fprintf(f, "    let mut bytes = input.iter();\n");
+			fprintf(f, "\n");
+			break;
+
+		default:
+			fprintf(stderr, "unsupported IO API\n");
+			break;
+		}
+	}
+
 	fprintf(f, "    pub enum Label {\n       ");
 	for (op = a.linked; op != NULL; op = op->next) {
 		if (op == a.linked || op->num_incoming > 0) {
@@ -352,21 +379,17 @@ fsm_print_rust_complete(FILE *f, const struct ir *ir,
 		/* e.g. dbg!(fsm_main("xabces")); */
 		fprintf(f, "(input: &str) -> Option<usize> {\n");
 		fprintf(f, "    use Label::*;\n");
-		fprintf(f, "    let mut bytes = input.bytes();\n");
-		fprintf(f, "\n");
 		break;
 
 	case FSM_IO_PAIR:
 		/* e.g. dbg!(fsm_main("xabces".as_bytes())); */
 		fprintf(f, "(input: &[u8]) -> Option<usize> {\n");
 		fprintf(f, "    use Label::*;\n");
-		fprintf(f, "    let mut bytes = input.iter();\n");
-		fprintf(f, "\n");
 		break;
 
 	default:
 		fprintf(stderr, "unsupported IO API\n");
-		break;
+		exit(EXIT_FAILURE);
 	}
 
 	fsm_print_rustfrag(f, ir, opt, cp,

@@ -172,6 +172,35 @@ fsm_print_gofrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		}
 	}
 
+	/*
+	 * Only declare variables if we're actually going to use them.
+	 */
+	if (a.linked->cmp == VM_CMP_ALWAYS && a.linked->instr == VM_OP_STOP) {
+		assert(a.linked->next == NULL);
+	} else {
+		switch (opt->io) {
+		case FSM_IO_PAIR:
+			if (ir->n > 0) {
+				/* start idx at -1 unsigned so after first increment we're correct at index 0 */
+				fprintf(f, "\tvar idx = ^uint(0)\n");
+				fprintf(f, "\n");
+			}
+			break;
+
+		case FSM_IO_STR:
+			if (ir->n > 0) {
+				/* start idx at -1 unsigned so after first increment we're correct at index 0 */
+				fprintf(f, "\tvar idx = ^uint(0)\n");
+				fprintf(f, "\n");
+			}
+			break;
+
+		default:
+			assert(!"unreached");
+			break;
+		}
+	}
+
 	for (op = a.linked; op != NULL; op = op->next) {
 		if (op->num_incoming > 0) {
 			print_label(f, op, opt);
@@ -266,22 +295,10 @@ fsm_print_go(FILE *f, const struct fsm *fsm)
 	switch (fsm->opt->io) {
 	case FSM_IO_PAIR:
 		fprintf(f, "(data []byte) int {\n");
-		if (ir->n > 0) {
-			/* start idx at -1 unsigned so after first increment we're correct at index 0 */
-			fprintf(f, "\tvar idx = ^uint(0)\n");
-			fprintf(f, "\t_ = idx\n");
-			fprintf(f, "\n");
-		}
 		break;
 
 	case FSM_IO_STR:
 		fprintf(f, "(data string) int {\n");
-		if (ir->n > 0) {
-			/* start idx at -1 unsigned so after first increment we're correct at index 0 */
-			fprintf(f, "\tvar idx = ^uint(0)\n");
-			fprintf(f, "\t_ = idx\n");
-			fprintf(f, "\n");
-		}
 		break;
 
 	default:
