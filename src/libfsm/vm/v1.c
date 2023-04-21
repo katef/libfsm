@@ -411,7 +411,11 @@ vm_match_v1(const struct dfavm_v1 *vm, struct vm_state *st, const char *buf, siz
 					rel = packed.i;
 				}
 
-				st->pc += rel;
+				if (rel >= 0) {
+					st->pc += (uint32_t)rel;
+				} else {
+					st->pc -= (uint32_t)-rel;
+				}
 			} else if (op == VM_OP_BRANCH) {
 				st->pc = off + dest_nbytes;
 			} else {
