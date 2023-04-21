@@ -531,7 +531,7 @@ jobs:
         printf "package_file=%s\n" $(basename pkg/*) >> $GITHUB_ENV
 
     - name: Upload
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ${{ env.package_file }}
         path: pkg/${{ env.package_file }}
