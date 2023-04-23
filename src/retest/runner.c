@@ -152,7 +152,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		as      = getenv("AS");
 		asflags = getenv("ASFLAGS");
 
-		(void) snprintf(cmd, sizeof cmd, "%s tool objdump -gnu %s |awk -f ./share/bin/go2att.awk |%s %s -o %s",
+		(void) snprintf(cmd, sizeof cmd, "%s tool objdump -gnu %s |awk -f ./build/bin/go2att.awk |%s %s -o %s",
 				"go", tmp_o, as ? as : "as", asflags ? asflags : "", tmp_o2);
 
 		if (0 != system(cmd)) {

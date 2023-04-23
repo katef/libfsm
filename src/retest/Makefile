@@ -25,6 +25,11 @@ ${BUILD}/bin/${prg}: ${BUILD}/src/retest/runner.o
 
 ${BUILD}/lib/runner.o: $
 
+${BUILD}/bin/retest: ${BUILD}/bin/go2att.awk
+
+${BUILD}/bin/go2att.awk: ./share/bin/go2att.awk
+	cp ./share/bin/go2att.awk ${BUILD}/bin/go2att.awk
+
 .for lib in ${LIB:Mlibfsm} ${LIB:Mlibre}
 ${BUILD}/bin/retest: ${BUILD}/lib/${lib:R}.a
 ${BUILD}/bin/reperf: ${BUILD}/lib/${lib:R}.a
