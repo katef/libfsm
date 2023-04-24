@@ -27,7 +27,7 @@
 enum run_mode {
 	MODE_DEFAULT,
 	MODE_SHUFFLE_MINIMISE,
-	MODE_PRINT_VMC,
+	MODE_ALL_PRINT_FUNCTIONS,
 };
 
 
@@ -262,7 +262,7 @@ shuffle_minimise(const char *pattern)
 }
 
 static int
-fuzz_print_vm(FILE *f, const char *pattern, bool det, bool min)
+fuzz_all_print_functions(FILE *f, const char *pattern, bool det, bool min, const enum fsm_io io_mode)
 {
 	assert(pattern != NULL);
 
@@ -276,7 +276,11 @@ fuzz_print_vm(FILE *f, const char *pattern, bool det, bool min)
 		.offset = 0
 	};
 
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &opt, RE_MULTI, &err);
+	const struct fsm_options options = {
+		.io = io_mode,
+	};
+
+	fsm = re_comp(RE_PCRE, scanner_next, &s, &options, RE_MULTI, &err);
 
 	if (fsm == NULL) {
 		/* ignore invalid regexp syntax, etc. */
@@ -298,7 +302,23 @@ fuzz_print_vm(FILE *f, const char *pattern, bool det, bool min)
 	}
 
 	/* see if this triggers any asserts */
+	fsm_print_api(f, fsm);
+	fsm_print_awk(f, fsm);
+	fsm_print_c(f, fsm);
+	fsm_print_dot(f, fsm);
+	fsm_print_fsm(f, fsm);
+	fsm_print_ir(f, fsm);
+	fsm_print_irjson(f, fsm);
+	fsm_print_json(f, fsm);
 	fsm_print_vmc(f, fsm);
+	fsm_print_vmdot(f, fsm);
+	fsm_print_vmasm(f, fsm);
+	fsm_print_vmasm_amd64_att(f, fsm);
+	fsm_print_vmasm_amd64_nasm(f, fsm);
+	fsm_print_vmasm_amd64_go(f, fsm);
+	fsm_print_sh(f, fsm);
+	fsm_print_go(f, fsm);
+	fsm_print_rust(f, fsm);
 
 	fsm_free(fsm);
 	return EXIT_SUCCESS;
@@ -314,7 +334,7 @@ get_run_mode(void)
 	if (mode != NULL) {
 		switch (mode[0]) {
 		case 'm': return MODE_SHUFFLE_MINIMISE;
-		case 'v': return MODE_PRINT_VMC;
+		case 'p': return MODE_ALL_PRINT_FUNCTIONS;
 		default:
 			break;
 		}
@@ -349,7 +369,7 @@ harness_fuzzer_target(const uint8_t *data, size_t size)
 	case MODE_SHUFFLE_MINIMISE:
 		return shuffle_minimise(pattern);
 
-	case MODE_PRINT_VMC:
+	case MODE_ALL_PRINT_FUNCTIONS:
 	{
 		if (dev_null == NULL) {
 			dev_null = fopen("/dev/null", "w");
@@ -359,9 +379,10 @@ harness_fuzzer_target(const uint8_t *data, size_t size)
 		const uint8_t b0 = data_buf[0];
 		const bool det = b0 & 0x1;
 		const bool min = b0 & 0x2;
+		const enum fsm_io io_mode = (b0 >> 2) % 3;
 		
 		const char *shifted_pattern = (const char *)&data_buf[1];
-		int res = fuzz_print_vm(dev_null, shifted_pattern, det, min);
+		int res = fuzz_all_print_functions(dev_null, shifted_pattern, det, min, io_mode);
 		return res;
 	}
 	}
