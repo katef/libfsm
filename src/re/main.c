@@ -23,6 +23,7 @@
 #include <fsm/options.h>
 #include <fsm/parser.h>
 #include <fsm/vm.h>
+#include <fsm/walk.h>
 
 #include <re/re.h>
 #include <re/literal.h>
@@ -62,6 +63,7 @@ usage(void)
 	fprintf(stderr, "       re    [-r <dialect>] [-nbiusfyz] {-q <query>} <re> ...\n");
 	fprintf(stderr, "       re -p [-r <dialect>] [-nbiusfyz] [-l <language>] [-acwX] [-k <io>] [-e <prefix>] <re> ...\n");
 	fprintf(stderr, "       re -m [-r <dialect>] [-nbiusfyz] <re> ...\n");
+	fprintf(stderr, "       re -G <max_length> [-r <dialect>] [-biu] <re>\n");
 	fprintf(stderr, "       re -h\n");
 }
 
@@ -640,6 +642,7 @@ main(int argc, char *argv[])
 	int patterns;
 	int ambig;
 	int makevm;
+	size_t generate_bounds = 0;
 
 	struct fsm_dfavm *vm;
 
@@ -672,7 +675,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acCwXe:E:k:" "bi" "sq:r:l:F:" "upMmnftxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acCwXe:E:G:k:" "bi" "sq:r:l:F:" "upMmnftxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
@@ -712,6 +715,14 @@ main(int argc, char *argv[])
 			case 'z': patterns  = 1; break;
 			case 'M': makevm    = 1; break;
 
+			case 'G':
+				generate_bounds = strtoul(optarg, NULL, 10);
+				if (generate_bounds == 0) {
+					usage();
+					exit(EXIT_FAILURE);
+				}
+				break;
+
 			case 'h':
 				usage();
 				return EXIT_SUCCESS;
@@ -749,6 +760,11 @@ main(int argc, char *argv[])
 
 	if (patterns && !!query) {
 		fprintf(stderr, "-z does not apply for querying\n");
+		return EXIT_FAILURE;
+	}
+
+	if (generate_bounds > 0 && (keep_nfa || example || isliteral || query)) {
+		fprintf(stderr, "-G cannot be used with -m, -n, -q, or -t\n");
 		return EXIT_FAILURE;
 	}
 
@@ -1164,6 +1180,11 @@ main(int argc, char *argv[])
 /* XXX: free fsm */
 
 		return 0;
+	}
+
+	if (generate_bounds > 0) {
+		int r = fsm_generate_matches(fsm, generate_bounds, fsm_generate_cb_printf, NULL);
+		return r;
 	}
 
 	if (print_fsm != NULL) {

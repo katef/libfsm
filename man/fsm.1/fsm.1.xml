@@ -21,6 +21,7 @@
 -->
 	<!ENTITY io.arg "<replaceable>io</replaceable>">
 	<!ENTITY iterations.arg "<replaceable>iterations</replaceable>">
+	<!ENTITY length.arg "<replaceable>length</replaceable>">
 
 	<!ENTITY a.opt "<option>-a</option>">
 	<!ENTITY w.opt "<option>-w</option>">
@@ -28,6 +29,7 @@
 	<!ENTITY c.opt "<option>-c</option>">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
 	<!ENTITY E.opt "<option>-E</option>">
+	<!ENTITY G.opt "<option>-G</option>&nbsp;&length.arg;">
 	<!ENTITY k.opt "<option>-k</option>&nbsp;&io.arg;">
 	<!ENTITY i.opt "<option>-i</option>&nbsp;&iterations.arg;">
 	<!ENTITY X.opt "<option>-X</option>">
@@ -275,6 +277,14 @@
 
 				<listitem>
 					<para>Equivalent to <code>-t&nbsp;remove_epsilons</code>.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&G.opt;</term>
+
+				<listitem>
+					<para>Print example matching inputs up to a maximum length.</para>
 				</listitem>
 			</varlistentry>
 

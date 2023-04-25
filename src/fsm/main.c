@@ -109,6 +109,7 @@ usage(void)
 	printf("       fsm {-p} [-l <language>] [-aCcEgwX] [-k <io>] [-e <prefix>]\n");
 	printf("       fsm {-dmr | -t <transformation>} [-i <iterations>] [<file.fsm> | <file-a> <file-b>]\n");
 	printf("       fsm {-q <query>} [<file>]\n");
+	printf("       fsm {-G <max_length>} [<file>]\n");
 	printf("       fsm {-W <maxlen>} <file.fsm>\n");
 	printf("       fsm -h\n");
 }
@@ -369,6 +370,7 @@ main(int argc, char *argv[])
 	struct fsm *fsm;
 	int xfiles;
 	int r;
+	size_t generate_bounds = 0;
 
 	int (*query)(const struct fsm *, fsm_state_t);
 	int (*walk )(const struct fsm *,
@@ -392,7 +394,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "aCcgwXe:k:i:" "xpq:l:dmrt:EW:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aCcgwXe:k:i:" "xpq:l:dG:mrt:EW:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
@@ -424,6 +426,13 @@ main(int argc, char *argv[])
 				/* XXX: error handling */
 				fprintf(stderr, "not yet implemented.\n");
 				exit(EXIT_FAILURE);
+				break;
+			case 'G':
+				generate_bounds = strtoul(optarg, NULL, 10);
+				if (generate_bounds == 0) {
+					usage();
+					exit(EXIT_FAILURE);
+				}
 				break;
 
 			case 'h':
@@ -659,6 +668,10 @@ main(int argc, char *argv[])
 
 	if (print != NULL) {
 		print(stdout, fsm);
+	}
+
+	if (generate_bounds > 0) {
+		r = fsm_generate_matches(fsm, generate_bounds, fsm_generate_cb_printf, NULL);
 	}
 
 	fsm_free(fsm);
