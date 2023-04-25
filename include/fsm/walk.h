@@ -115,5 +115,10 @@ int
 fsm_generate_matches(struct fsm *fsm, size_t max_length,
     fsm_generate_matches_cb *cb, void *opaque);
 
+/* Callback provided for the most basic use case for
+ * fsm_generate_matches: exhaustively generate input up to
+ * max_length and print each to stdout. */
+fsm_generate_matches_cb fsm_generate_cb_printf;
+
 #endif
 
