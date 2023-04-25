@@ -145,6 +145,23 @@ fsm_generate_matches(struct fsm *fsm, size_t max_length,
 	return res;
 }
 
+enum fsm_generate_matches_cb_res
+fsm_generate_cb_printf(const struct fsm *fsm,
+	size_t depth, size_t match_count, size_t steps,
+	const char *input, size_t input_length,
+	fsm_state_t end_state, void *opaque)
+{
+	(void)fsm;
+	(void)input_length;
+	(void)end_state;
+	(void)opaque;
+	(void)depth;
+	(void)match_count;
+	(void)steps;
+	printf("%s\n", input);
+	return FSM_GENERATE_MATCHES_CB_RES_CONTINUE;
+}
+
 static bool
 gen_init_outer(struct fsm *fsm, size_t max_length,
     fsm_generate_matches_cb *cb, void *opaque,
