@@ -1304,7 +1304,7 @@ p_212(flags flags, lex_state lex_state, act_state act_state, err err, t_char *ZI
 
 		if ((ZIa).type != AST_ENDPOINT_LITERAL ||
 			(ZIz).type != AST_ENDPOINT_LITERAL) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 			goto ZL1;
 		}
 

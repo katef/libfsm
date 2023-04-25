@@ -811,7 +811,7 @@ main(int argc, char *argv[])
 				 yfiles ? argv[0] : NULL,
 				!yfiles ? argv[0] : NULL);
 
-			if (err.e == RE_EXUNSUPPORTD) {
+			if (err.e == RE_EUNSUPPORTED) {
 				return 2;
 			}
 
@@ -899,7 +899,7 @@ main(int argc, char *argv[])
 				 yfiles ? argv[0] : NULL,
 				!yfiles ? argv[0] : NULL);
 
-			if (err.e == RE_EXUNSUPPORTD) {
+			if (err.e == RE_EUNSUPPORTED) {
 				return 2;
 			}
 
@@ -968,7 +968,7 @@ main(int argc, char *argv[])
 					 yfiles ? argv[i] : NULL,
 					!yfiles ? argv[i] : NULL);
 
-				if (err.e == RE_EXUNSUPPORTD) {
+				if (err.e == RE_EUNSUPPORTED) {
 					return 2;
 				}
 

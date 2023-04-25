@@ -701,7 +701,7 @@
 
 	<err-unsupported> = @{
 		if (err->e == RE_ESUCCESS) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 		}
 		@!;
 	@};
@@ -972,7 +972,7 @@
 
 		if (@from.type != AST_ENDPOINT_LITERAL ||
 			@to.type != AST_ENDPOINT_LITERAL) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 			@!;
 		}
 

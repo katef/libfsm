@@ -1943,7 +1943,7 @@ p_181(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__exp
 
 		if ((ZIlower).type != AST_ENDPOINT_LITERAL ||
 			(ZIupper).type != AST_ENDPOINT_LITERAL) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 			goto ZL1;
 		}
 
@@ -2268,7 +2268,7 @@ p_196(flags flags, lex_state lex_state, act_state act_state, err err, t_pos *ZIs
 
 		if ((ZIlower).type != AST_ENDPOINT_LITERAL ||
 			(ZIupper).type != AST_ENDPOINT_LITERAL) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 			goto ZL1;
 		}
 
@@ -2809,7 +2809,7 @@ p_249(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__cla
 
 		if ((ZIlower).type != AST_ENDPOINT_LITERAL ||
 			(ZIupper).type != AST_ENDPOINT_LITERAL) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 			goto ZL1;
 		}
 
@@ -2949,7 +2949,7 @@ p_253(flags flags, lex_state lex_state, act_state act_state, err err, t_char *ZI
 
 		if ((ZIlower).type != AST_ENDPOINT_LITERAL ||
 			(ZIupper).type != AST_ENDPOINT_LITERAL) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 			goto ZL1;
 		}
 
