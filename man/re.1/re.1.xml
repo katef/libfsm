@@ -17,6 +17,7 @@
 	<!ENTITY file.arg    "<replaceable>file</replaceable>">
 	<!ENTITY dialect.arg "<replaceable>dialect</replaceable>">
 	<!ENTITY prefix.arg  "<replaceable>prefix</replaceable>">
+	<!ENTITY length.arg  "<replaceable>length</replaceable>">
 	<!ENTITY group.arg   "<replaceable>group</replaceable>">
 	<!ENTITY query.arg   "<replaceable>query</replaceable>">
 
@@ -32,6 +33,7 @@
 	<!ENTITY X.opt "<option>-X</option>">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
 	<!ENTITY E.opt "<option>-E</option>&nbsp;&prefix.arg;">
+	<!ENTITY G.opt "<option>-G</option>&nbsp;&length.arg;">
 
 	<!ENTITY a.opt "<option>-a</option>">
 	<!ENTITY d.opt "<option>-d</option>">
@@ -294,6 +296,14 @@ group (for dialects which have them) (rather than a "whole" regexp)
 					<para>Set a package prefix for output,
 						per the <code>package_prefix</code> option for &fsm_print.3;.
 						The default is to output with the value of <code>prefix.</code></para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&G.opt;</term>
+
+				<listitem>
+					<para>Print example matching inputs up to a maximum length.</para>
 				</listitem>
 			</varlistentry>
 
