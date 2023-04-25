@@ -27,7 +27,7 @@
 	<!ENTITY C.opt "<option>-C</option>">
 	<!ENTITY c.opt "<option>-c</option>">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
-	<!ENTITY G.opt "<option>-G</option>">
+	<!ENTITY E.opt "<option>-E</option>">
 	<!ENTITY k.opt "<option>-k</option>&nbsp;&io.arg;">
 	<!ENTITY i.opt "<option>-i</option>&nbsp;&iterations.arg;">
 	<!ENTITY X.opt "<option>-X</option>">
@@ -271,10 +271,10 @@
 			</varlistentry>
 
 			<varlistentry>
-				<term>&G.opt;</term>
+				<term>&E.opt;</term>
 
 				<listitem>
-					<para>Equivalent to <code>-t&nbsp;glushkovise</code>.</para>
+					<para>Equivalent to <code>-t&nbsp;remove_epsilons</code>.</para>
 				</listitem>
 			</varlistentry>
 
@@ -352,13 +352,9 @@
 								<td><code>dfa</code></td>
 							</tr>
 							<tr>
-								<td><code>glushkovise</code></td>
-								<td rowspan="2">&fsm_remove_epsilons.3;</td>
-								<td rowspan="2">Eliminate epsilon transitions from the &fsm;, converting a
-									Thompson NFA into a Glushkov NFA.</td>
-							</tr>
-							<tr>
-								<td><code>glush</code></td>
+								<td><code>remove_epsilons</code></td>
+								<td>&fsm_remove_epsilons.3;</td>
+								<td>Eliminate epsilon transitions from the &fsm;.</td>
 							</tr>
 							<tr>
 								<td><code>minimise</code></td>

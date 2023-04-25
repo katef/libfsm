@@ -9,7 +9,7 @@ FSM=${BUILD}/bin/fsm
 .for n in ${TEST.tests/epsilons:T:R:C/^out//}
 
 ${TEST_OUTDIR.tests/epsilons}/got${n}.fsm: ${TEST_SRCDIR.tests/epsilons}/in${n}.fsm
-	${FSM} -pG ${.ALLSRC:M*.fsm} \
+	${FSM} -pE ${.ALLSRC:M*.fsm} \
 	> $@
 
 ${TEST_OUTDIR.tests/epsilons}/res${n}: \

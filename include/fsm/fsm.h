@@ -313,7 +313,7 @@ fsm_trim(struct fsm *fsm, enum fsm_trim_mode mode,
 /*
  * Produce a short legible string that matches up to a goal state.
  *
- * The given FSM is expected to be a Glushkov NFA.
+ * The given FSM is expected to be an epsilon-free NFA.
  */
 int
 fsm_example(const struct fsm *fsm, fsm_state_t goal,
@@ -328,8 +328,8 @@ int
 fsm_reverse(struct fsm *fsm);
 
 /*
- * Convert an NFA with epsilon transitions to a Glushkov NFA (NFA without
- * epsilon transitions).
+ * Convert an NFA with epsilon transitions to an NFA without
+ * epsilon transitions.
  *
  * Returns false on error; see errno.
  */
@@ -388,7 +388,7 @@ fsm_equal(const struct fsm *a, const struct fsm *b);
  * reachable, then the path returned will be non-NULL but will not contain
  * the goal state.
  *
- * The given FSM is expected to be a Glushkov NFA.
+ * The given FSM is expected to be an epsilon-free NFA.
  */
 struct path *
 fsm_shortest(const struct fsm *fsm,
