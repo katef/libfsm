@@ -34,9 +34,9 @@ fsm_determinise(struct fsm *nfa)
 	map.alloc = nfa->opt->alloc;
 
 	/*
-	 * This NFA->DFA implementation is for Glushkov NFA only; it keeps things
-	 * a little simpler by avoiding epsilon closures here, and also a little
-	 * faster where we can start with a Glushkov NFA in the first place.
+	 * This NFA->DFA implementation is for epsilon-free NFA only. This keeps
+	 * things a little simpler by avoiding epsilon closures, and also a little
+	 * faster where we can start with an epsilon-free NFA in the first place.
 	 */
 	if (fsm_has(nfa, fsm_hasepsilons)) {
 		if (!fsm_remove_epsilons(nfa)) {

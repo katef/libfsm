@@ -268,12 +268,9 @@ op_name(const char *name)
 		{ "determinise", OP_DETERMINISE },
 		{ "dfa",         OP_DETERMINISE },
 		{ "todfa",       OP_DETERMINISE },
-		{ "glush",       OP_RM_EPSILONS },
-		{ "glushovize",  OP_RM_EPSILONS },
 		{ "min",         OP_MINIMISE    },
 		{ "minimise",    OP_MINIMISE    },
 		{ "trim",        OP_TRIM        },
-		{ "glushkovise", OP_RM_EPSILONS },
 		{ "remove_epsilons", OP_RM_EPSILONS },
 
 		{ "cat",         OP_CONCAT      },
@@ -395,11 +392,11 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "aCcgwXEe:k:i:" "xpq:l:dGmrt:W:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aCcgwXe:k:i:" "xpq:l:dmrt:EW:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
-			case 'C': opt.comments		= 0;          break;
+			case 'C': opt.comments          = 0;          break;
 			case 'g': opt.group_edges       = 1;          break;
 			case 'w': opt.fragment          = 1;          break;
 			case 'X': opt.always_hex        = 1;          break;
@@ -420,7 +417,6 @@ main(int argc, char *argv[])
 			case 'm': op = op_name("minimise");           break;
 			case 'r': op = op_name("reverse");            break;
 			case 't': op = op_name(optarg);               break;
-			case 'G': op = op_name("glushkovise");        break;
 			case 'E': op = op_name("remove_epsilons");    break;
 			case 'W':
 				/* print = gen_words; */

@@ -187,8 +187,8 @@ fsm_reverse(struct fsm *fsm)
 	 * transitions (or an epsilon closure).
 	 *
 	 * We avoid introducing epsilon transitions to an FSM where
-	 * there potentially were none before. That is, a Glushkov NFA
-	 * will not be converted to a Thompson NFA.
+	 * there potentially were none before. A Glushkov NFA will
+	 * not be converted to a Thompson NFA.
 	 *
 	 * Conceptually this is equivalent to hooking the start state
 	 * up with epsilons, then taking the epsilon closure of that
