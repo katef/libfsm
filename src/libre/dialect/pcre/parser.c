@@ -532,7 +532,7 @@ p_expr_C_Ccharacter_Hclass_C_Crange_Hendpoint_C_Crange_Hendpoint_Hliteral(flags 
 #line 702 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 		}
 		goto ZL1;
 	
@@ -705,7 +705,7 @@ p_expr_C_Ccharacter_Hclass_C_Crange_Hendpoint_C_Crange_Hendpoint_Hliteral(flags 
 #line 702 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 		}
 		goto ZL1;
 	
@@ -925,7 +925,7 @@ p_296(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__cla
 
 		if ((ZIlower).type != AST_ENDPOINT_LITERAL ||
 			(ZIupper).type != AST_ENDPOINT_LITERAL) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 			goto ZL1;
 		}
 
@@ -1301,7 +1301,7 @@ p_expr_C_Cliteral(flags flags, lex_state lex_state, act_state act_state, err err
 #line 702 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 		}
 		goto ZL1;
 	
@@ -1422,7 +1422,7 @@ p_expr_C_Ccharacter_Hclass_C_Cclass_Hterm(flags flags, lex_state lex_state, act_
 #line 702 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 		}
 		goto ZL1;
 	
@@ -1698,7 +1698,7 @@ p_expr_C_Ccharacter_Hclass_C_Cclass_Hterm(flags flags, lex_state lex_state, act_
 #line 702 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 		}
 		goto ZL1;
 	
@@ -2463,7 +2463,7 @@ p_320(flags flags, lex_state lex_state, act_state act_state, err err, t_char *ZI
 
 		if ((ZIlower).type != AST_ENDPOINT_LITERAL ||
 			(ZIupper).type != AST_ENDPOINT_LITERAL) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 			goto ZL1;
 		}
 
@@ -2655,7 +2655,7 @@ p_195(flags flags, lex_state lex_state, act_state act_state, err err, t_ast__exp
 
 		if ((ZIlower).type != AST_ENDPOINT_LITERAL ||
 			(ZIupper).type != AST_ENDPOINT_LITERAL) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 			goto ZL1;
 		}
 
@@ -3217,7 +3217,7 @@ p_expr_C_Cpiece_C_Clist_Hof_Hcounts(flags flags, lex_state lex_state, act_state 
 #line 702 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 		}
 		goto ZL1;
 	
@@ -3234,7 +3234,7 @@ p_expr_C_Cpiece_C_Clist_Hof_Hcounts(flags flags, lex_state lex_state, act_state 
 #line 702 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 		}
 		goto ZL1;
 	
@@ -3446,7 +3446,7 @@ p_210(flags flags, lex_state lex_state, act_state act_state, err err, t_pos *ZIs
 
 		if ((ZIlower).type != AST_ENDPOINT_LITERAL ||
 			(ZIupper).type != AST_ENDPOINT_LITERAL) {
-			err->e = RE_EXUNSUPPORTD;
+			err->e = RE_EUNSUPPORTED;
 			goto ZL1;
 		}
 

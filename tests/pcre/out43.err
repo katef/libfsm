@@ -1,1 +1,1 @@
-tests/pcre/in43.re:7: Syntax error: bad comment
+tests/pcre/in43.re:7: Comments may not nest

@@ -28,7 +28,10 @@ re_strerror(enum re_errno e)
 	case RE_EOCTRANGE:    return "Octal escape out of range";
 	case RE_ECOUNTRANGE:  return "Count out of range";
 
+	case RE_EUNSUPPORTED: return "Unsupported operator";
 	case RE_EFLAG:        return "Unknown control flag";
+	case RE_EBADCP:       return "Invalid codepoint";
+	case RE_EBADCOMMENT:  return "Comments may not nest";
 
 	case RE_EXSUB:        return "Syntax error: expected sub-expression";
 	case RE_EXTERM:       return "Syntax error: expected group term";
@@ -38,13 +41,10 @@ re_strerror(enum re_errno e)
 	case RE_EXALTS:       return "Syntax error: expected alternative list";
 	case RE_EXRANGE:      return "Syntax error: expected range separator";
 	case RE_EXCLOSEGROUP: return "Syntax error: group is not closed";
+	case RE_EXCLOSEFLAGS: return "Syntax error: flags are not closed";
 	case RE_EXGROUPBODY:  return "Syntax error: expected group body";
 	case RE_EXEOF:        return "Syntax error: expected EOF";
 	case RE_EXESC:        return "Syntax error: expected character escape";
-	case RE_EXCLOSEFLAGS: return "Syntax error: flags are not closed";
-	case RE_EXUNSUPPORTD: return "Syntax error: unsupported operator";
-	case RE_EBADCP:       return "Syntax error: invalid codepoint";
-	case RE_EBADCOMMENT:  return "Syntax error: bad comment";
 	}
 
 	assert(!"unreached");

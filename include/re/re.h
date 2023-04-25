@@ -54,22 +54,24 @@ enum re_errno {
 	RE_EOCTRANGE    =  1 | RE_MARK | RE_ESC,
 	RE_ECOUNTRANGE  =  2 | RE_MARK | RE_ESC,
 
-	RE_EXSUB        =  0 | RE_MARK,
-	RE_EXTERM       =  1 | RE_MARK,
-	RE_EXGROUP      =  2 | RE_MARK,
-	RE_EXATOM       =  3 | RE_MARK,
-	RE_EXCOUNT      =  4 | RE_MARK,
-	RE_EXALTS       =  5 | RE_MARK,
-	RE_EXRANGE      =  6 | RE_MARK,
-	RE_EXCLOSEGROUP =  7 | RE_MARK,
-	RE_EXGROUPBODY  =  8 | RE_MARK,
-	RE_EXEOF        =  9 | RE_MARK,
-	RE_EXESC        = 10 | RE_MARK,
-	RE_EFLAG        = 11 | RE_MARK,
+	RE_EUNSUPPORTED =  0 | RE_MARK,
+	RE_EFLAG        =  1 | RE_MARK,
+	RE_EBADCP       =  2 | RE_MARK,
+	RE_EBADCOMMENT  =  3 | RE_MARK,
+
+	/* the X means "Expected", these are all syntax errors */
+	RE_EXSUB        =  4 | RE_MARK,
+	RE_EXTERM       =  5 | RE_MARK,
+	RE_EXGROUP      =  6 | RE_MARK,
+	RE_EXATOM       =  7 | RE_MARK,
+	RE_EXCOUNT      =  8 | RE_MARK,
+	RE_EXALTS       =  9 | RE_MARK,
+	RE_EXRANGE      = 10 | RE_MARK,
+	RE_EXCLOSEGROUP = 11 | RE_MARK,
 	RE_EXCLOSEFLAGS = 12 | RE_MARK,
-	RE_EXUNSUPPORTD = 13 | RE_MARK,
-	RE_EBADCP       = 14 | RE_MARK,
-	RE_EBADCOMMENT  = 15 | RE_MARK
+	RE_EXGROUPBODY  = 13 | RE_MARK,
+	RE_EXEOF        = 14 | RE_MARK,
+	RE_EXESC        = 15 | RE_MARK
 };
 
 struct re_pos {
@@ -83,17 +85,17 @@ struct re_err {
 
 	/* XXX: these should be a union */
 
-	/* populated for RE_ECOUNTRANGE; ignored otherwise */
+	/* populated for RE_ECOUNTRANGE; unused otherwise */
 	unsigned m;
 	unsigned n;
 
-	/* populated for RE_ESC; ignored otherwise */
+	/* populated for RE_ESC; unused otherwise */
 	char esc[32];
 
-	/* populated for RE_GROUP; ignored otherwise */
+	/* populated for RE_GROUP; unused otherwise */
 	char set[128];
 
-	/* populated for RE_EBADCP; ignored otherwise */
+	/* populated for RE_EXBADCP; unused otherwise */
 	unsigned long cp;
 };
 
