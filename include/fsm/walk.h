@@ -120,5 +120,13 @@ fsm_generate_matches(struct fsm *fsm, size_t max_length,
  * max_length and print each to stdout. */
 fsm_generate_matches_cb fsm_generate_cb_printf;
 
+/* Same as fsm_generate_cb_printf, but call c_escputc_str
+ * internally to escape characters.
+ *
+ * Note: This MUST be called with opaque set to a `const struct
+ * fsm_options *`, because c_escputc_str will use that to decide whether
+ * to escape all characters or just nonprintable ones. */
+fsm_generate_matches_cb fsm_generate_cb_printf_escaped;
+
 #endif
 

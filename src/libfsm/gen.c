@@ -16,6 +16,9 @@
 #include <adt/edgeset.h>
 #include <adt/stateset.h>
 
+#include <stdio.h>
+#include <print/esc.h>
+
 #include <assert.h>
 
 #include <ctype.h>
@@ -146,6 +149,28 @@ fsm_generate_matches(struct fsm *fsm, size_t max_length,
 }
 
 enum fsm_generate_matches_cb_res
+fsm_generate_cb_printf_escaped(const struct fsm *fsm,
+	size_t depth, size_t match_count, size_t steps,
+	const char *input, size_t input_length,
+	fsm_state_t end_state, void *opaque)
+{
+	(void)fsm;
+	(void)end_state;
+	(void)depth;
+	(void)match_count;
+	(void)steps;
+
+	assert(opaque != NULL);
+	const struct fsm_options *opt = opaque;
+
+	for (size_t i = 0; i < input_length; i++) {
+		c_escputc_str(stdout, opt, input[i]);
+	}
+	printf("\n");
+	return FSM_GENERATE_MATCHES_CB_RES_CONTINUE;
+}
+
+enum fsm_generate_matches_cb_res
 fsm_generate_cb_printf(const struct fsm *fsm,
 	size_t depth, size_t match_count, size_t steps,
 	const char *input, size_t input_length,
@@ -158,6 +183,7 @@ fsm_generate_cb_printf(const struct fsm *fsm,
 	(void)depth;
 	(void)match_count;
 	(void)steps;
+
 	printf("%s\n", input);
 	return FSM_GENERATE_MATCHES_CB_RES_CONTINUE;
 }

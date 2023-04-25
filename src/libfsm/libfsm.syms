@@ -28,6 +28,7 @@ fsm_hasepsilons
 fsm_hasnondeterminism
 fsm_generate_matches
 fsm_generate_cb_printf
+fsm_generate_cb_printf_escaped
 
 # <fsm/parser.h>
 fsm_parse
