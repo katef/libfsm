@@ -259,29 +259,29 @@ op_name(const char *name)
 		const char *name;
 		enum op op;
 	} a[] = {
-		{ "complete",    OP_COMPLETE    },
+		{ "complete",        OP_COMPLETE    },
 
-		{ "complement",  OP_COMPLEMENT  },
-		{ "invert",      OP_COMPLEMENT  },
-		{ "reverse",     OP_REVERSE     },
-		{ "rev",         OP_REVERSE     },
-		{ "determinise", OP_DETERMINISE },
-		{ "dfa",         OP_DETERMINISE },
-		{ "todfa",       OP_DETERMINISE },
-		{ "min",         OP_MINIMISE    },
-		{ "minimise",    OP_MINIMISE    },
-		{ "trim",        OP_TRIM        },
+		{ "complement",      OP_COMPLEMENT  },
+		{ "invert",          OP_COMPLEMENT  },
+		{ "reverse",         OP_REVERSE     },
+		{ "rev",             OP_REVERSE     },
+		{ "determinise",     OP_DETERMINISE },
+		{ "dfa",             OP_DETERMINISE },
+		{ "todfa",           OP_DETERMINISE },
+		{ "min",             OP_MINIMISE    },
+		{ "minimise",        OP_MINIMISE    },
+		{ "trim",            OP_TRIM        },
 		{ "remove_epsilons", OP_RM_EPSILONS },
 
-		{ "cat",         OP_CONCAT      },
-		{ "concat",      OP_CONCAT      },
-		{ "union",       OP_UNION       },
-		{ "intersect",   OP_INTERSECT   },
-		{ "subtract",    OP_SUBTRACT    },
-		{ "sub",         OP_SUBTRACT    },
-		{ "minus",       OP_SUBTRACT    },
-		{ "equals",      OP_EQUAL       },
-		{ "equal",       OP_EQUAL       }
+		{ "cat",             OP_CONCAT      },
+		{ "concat",          OP_CONCAT      },
+		{ "union",           OP_UNION       },
+		{ "intersect",       OP_INTERSECT   },
+		{ "subtract",        OP_SUBTRACT    },
+		{ "sub",             OP_SUBTRACT    },
+		{ "minus",           OP_SUBTRACT    },
+		{ "equals",          OP_EQUAL       },
+		{ "equal",           OP_EQUAL       }
 	};
 
 	assert(name != NULL);
