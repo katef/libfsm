@@ -1183,8 +1183,7 @@ main(int argc, char *argv[])
 	}
 
 	if (generate_bounds > 0) {
-		int r = fsm_generate_matches(fsm, generate_bounds, fsm_generate_cb_printf, NULL);
-		return r;
+		return fsm_generate_matches(fsm, generate_bounds, fsm_generate_cb_printf, NULL);
 	}
 
 	if (print_fsm != NULL) {
