@@ -9,6 +9,7 @@
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 
+#include <adt/hash.h>
 #include <adt/stateset.h>
 
 #include <string.h>
