@@ -52,7 +52,7 @@ struct fsm_runner {
 
 		struct {
 			void *h;
-			int64_t (*func)(const unsigned char *, size_t);
+			int64_t (*func)(const unsigned char *, int64_t);
 		} impl_go;
 
 		struct {

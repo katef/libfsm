@@ -268,10 +268,10 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	case IMPL_GO:
 	case IMPL_GOASM:
 		r->u.impl_go.h = h;
-		r->u.impl_go.func = (int64_t (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "retest_trampoline");
+		r->u.impl_go.func = (int64_t (*)(const unsigned char *, int64_t)) (uintptr_t) dlsym(h, "retest_trampoline");
 		if (r->u.impl_go.func == NULL) {
                         /* Sometime we need a leading underscore. */
-			r->u.impl_go.func = (int64_t (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "_retest_trampoline");
+			r->u.impl_go.func = (int64_t (*)(const unsigned char *, int64_t)) (uintptr_t) dlsym(h, "_retest_trampoline");
 		}
 		break;
 
