@@ -118,13 +118,6 @@ fsm_endid_free(struct fsm *fsm)
 	f_free(fsm->opt->alloc, fsm->endid_info);
 }
 
-SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
-static unsigned long
-hash_state(fsm_state_t state)
-{
-	return PHI32 * (state + 1);
-}
-
 static int
 grow_endid_buckets(const struct fsm_alloc *alloc, struct endid_info *info)
 {
@@ -157,12 +150,12 @@ grow_endid_buckets(const struct fsm_alloc *alloc, struct endid_info *info)
 	for (old_i = 0; old_i < old_count; old_i++) {
 		struct endid_info_bucket *src_b = &old_buckets[old_i];
 		struct endid_info_bucket *dst_b;
-		unsigned hash;
+		uint64_t hash;
 		int copied = 0;
 		if (src_b->state == BUCKET_NO_STATE) {
 			continue;
 		}
-		hash = hash_state(src_b->state);
+		hash = hash_id(src_b->state);
 		for (new_i = 0; new_i < new_count; new_i++) {
 			dst_b = &new_buckets[(hash + new_i) & new_mask];
 			if (dst_b->state == BUCKET_NO_STATE) {
@@ -189,9 +182,9 @@ fsm_endid_set(struct fsm *fsm,
 {
 	struct endid_info *ei = NULL;
 	int has_grown = 0;
-	unsigned hash;
+	uint64_t hash;
 	size_t i;
-	unsigned mask;
+	uint64_t mask;
 
 	assert(fsm != NULL);
 	ei = fsm->endid_info;
@@ -199,7 +192,7 @@ fsm_endid_set(struct fsm *fsm,
 
 rehash:
 
-	hash = hash_state(state);
+	hash = hash_id(state);
 	mask = ei->bucket_count - 1;
 	assert((mask & ei->bucket_count) == 0); /* power of 2 */
 
@@ -328,8 +321,8 @@ fsm_endid_count(const struct fsm *fsm,
 	const struct endid_info *ei = NULL;
 	size_t i;
 
-	unsigned hash = hash_state(state);
-	unsigned mask;
+	uint64_t hash = hash_id(state);
+	uint64_t mask;
 
 	assert(fsm != NULL);
 	ei = fsm->endid_info;
@@ -364,8 +357,8 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 	size_t written = 0;
 	const struct endid_info *ei = NULL;
 
-	unsigned hash = hash_state(end_state);
-	unsigned mask;
+	uint64_t hash = hash_id(end_state);
+	uint64_t mask;
 
 	(void)written;
 
@@ -544,8 +537,8 @@ fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
 	size_t bucket_count;
 	struct endid_info *ei = NULL;
 
-	unsigned hash;
-	unsigned mask;
+	uint64_t hash;
+	uint64_t mask;
 
 	assert(fsm != NULL);
 	assert(cb != NULL);
@@ -557,7 +550,7 @@ fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
 
 	assert(state != BUCKET_NO_STATE);
 
-	hash = hash_state(state);
+	hash = hash_id(state);
 	bucket_count = ei->bucket_count;
 	mask = bucket_count - 1;
 	assert((mask & bucket_count) == 0); /* power of 2 */

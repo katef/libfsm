@@ -289,18 +289,11 @@ fsm_capture_add_action(struct fsm *fsm,
 	    state, &action);
 }
 
-SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
-static unsigned
-hash_state(fsm_state_t state)
-{
-	return PHI32 * (state + 1);
-}
-
 static int
 add_capture_action(struct fsm *fsm, struct fsm_capture_info *ci,
     fsm_state_t state, const struct fsm_capture_action *action)
 {
-	unsigned h;
+	uint64_t h;
 	size_t b_i, mask;
 
 	assert(state < fsm->statecount);
@@ -322,7 +315,7 @@ add_capture_action(struct fsm *fsm, struct fsm_capture_info *ci,
 		}
 	}
 
-	h = hash_state(state);
+	h = hash_id(state);
 	mask = ci->bucket_count - 1;
 
 	for (b_i = 0; b_i < ci->bucket_count; b_i++) {
@@ -372,7 +365,7 @@ grow_capture_action_buckets(const struct fsm_alloc *alloc,
 
 	for (i = 0; i < ci->bucket_count; i++) {
 		const struct fsm_capture_action_bucket *src_b = &ci->buckets[i];
-		unsigned h;
+		uint64_t h;
 		const size_t mask = ncount - 1;
 		size_t b_i;
 
@@ -380,7 +373,7 @@ grow_capture_action_buckets(const struct fsm_alloc *alloc,
 			continue;
 		}
 
-		h = hash_state(src_b->state);
+		h = hash_id(src_b->state);
 		for (b_i = 0; b_i < ncount; b_i++) {
 			struct fsm_capture_action_bucket *dst_b;
 			dst_b = &nbuckets[(h + b_i) & mask];
@@ -649,7 +642,7 @@ fsm_capture_update_captures(const struct fsm *fsm,
     struct fsm_capture *captures)
 {
 	const struct fsm_capture_info *ci;
-	unsigned h;
+	uint64_t h;
 	size_t b_i, mask;
 
 	assert(cur_state < fsm->statecount);
@@ -658,7 +651,7 @@ fsm_capture_update_captures(const struct fsm *fsm,
 	ci = fsm->capture_info;
 	assert(ci != NULL);
 
-	h = hash_state(cur_state);
+	h = hash_id(cur_state);
 	mask = ci->bucket_count - 1;
 
 #if LOG_CAPTURE > 0

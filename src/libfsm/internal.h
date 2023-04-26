@@ -48,9 +48,6 @@ struct state_array;
 
 #define FSM_CAPTURE_MAX INT_MAX
 
-/* 32-bit approximation of golden ratio, used for hashing */
-#define PHI32 0x9e3779b9
-
 #ifndef TRACK_TIMES
 #define TRACK_TIMES 0
 #endif
