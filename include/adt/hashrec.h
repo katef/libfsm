@@ -4,8 +4,8 @@
  * See LICENCE for the full copyright terms.
  */
 
-#ifndef ADT_HASHSET_H
-#define ADT_HASHSET_H
+#ifndef ADT_HASHREC_H
+#define ADT_HASHREC_H
 
 unsigned long
 hashrec(const void *p, size_t n);

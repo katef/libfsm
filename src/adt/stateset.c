@@ -13,7 +13,7 @@
 
 #include <adt/alloc.h>
 #include <adt/stateset.h>
-#include <adt/hashset.h>
+#include <adt/hashrec.h>
 
 /*
  * TODO: now fsm_state_t is a numeric index, this could be a dynamically

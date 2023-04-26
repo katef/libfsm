@@ -8,12 +8,11 @@ SRC += src/adt/path.c
 SRC += src/adt/xalloc.c
 SRC += src/adt/siphash.c
 SRC += src/adt/queue.c
+SRC += src/adt/hashrec.c
 
 SRC += src/adt/edgeset.c
 SRC += src/adt/stateset.c
 SRC += src/adt/tupleset.c
-
-SRC += src/adt/hashset.c
 
 .for src in ${SRC:Msrc/adt/bitmap.c} ${SRC:Msrc/adt/edgeset.c}
 CFLAGS.${src} += -I src # XXX: for internal.h

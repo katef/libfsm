@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include <adt/alloc.h>
+#include <adt/hashrec.h>
 
 /* XXX: cheesing around uint8_t here */
 extern int
