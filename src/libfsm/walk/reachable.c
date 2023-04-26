@@ -10,7 +10,6 @@
 #include <fsm/fsm.h>
 
 #include <adt/set.h>
-#include <adt/dlist.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 

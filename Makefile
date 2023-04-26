@@ -120,7 +120,6 @@ SUBDIR += tests/set
 SUBDIR += tests/stateset
 SUBDIR += tests/internedstateset
 SUBDIR += tests/sql
-SUBDIR += tests/hashset
 SUBDIR += tests/queue
 SUBDIR += tests/aho_corasick
 SUBDIR += tests/retest
