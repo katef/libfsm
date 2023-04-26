@@ -189,69 +189,6 @@ error:
 	return NULL;
 }
 
-int
-symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
-	struct state_set *sclosures[static FSM_SIGMA_COUNT])
-{
-	struct edge_iter jt;
-	struct fsm_edge e;
-
-	assert(fsm != NULL);
-	assert(sclosures != NULL);
-
-	if (fsm->states[s].edges == NULL) {
-		return 1;
-	}
-
-	/*
-	 * TODO: it's common for many symbols to have transitions to the same state
-	 * (the worst case being an "any" transition). It'd be nice to find a way
-	 * to avoid repeating that work by de-duplicating on the destination.
-	 */
-
-	for (edge_set_reset(fsm->states[s].edges, &jt); edge_set_next(&jt, &e); ) {
-		if (!state_set_add(&sclosures[e.symbol], fsm->opt->alloc, e.state)) {
-			return 0;
-		}
-	}
-
-	return 1;
-}
-
-int
-symbol_closure(const struct fsm *fsm, fsm_state_t s,
-	struct state_set * const eclosures[static FSM_SIGMA_COUNT],
-	struct state_set *sclosures[static FSM_SIGMA_COUNT])
-{
-	struct edge_iter jt;
-	struct fsm_edge e;
-
-	assert(fsm != NULL);
-	assert(eclosures != NULL);
-	assert(sclosures != NULL);
-
-	if (fsm->states[s].edges == NULL) {
-		return 1;
-	}
-
-	/*
-	 * TODO: it's common for many symbols to have transitions to the same state
-	 * (the worst case being an "any" transition). It'd be nice to find a way
-	 * to avoid repeating that work by de-duplicating on the destination.
-	 *
-	 * The epsilon closure of a state will always include itself,
-	 * so there's no need to explicitly copy the state itself here.
-	 */
-
-	for (edge_set_reset(fsm->states[s].edges, &jt); edge_set_next(&jt, &e); ) {
-		if (!state_set_copy(&sclosures[e.symbol], fsm->opt->alloc, eclosures[e.state])) {
-			return 0;
-		}
-	}
-
-	return 1;
-}
-
 void
 closure_free(struct state_set **closures, size_t n)
 {
