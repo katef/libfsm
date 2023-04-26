@@ -48,10 +48,10 @@ END {
     print "pushq %rbp";
     print "movq %rsp, %rbp";
 
-    # rbx is callee save
-    print "pushq %rbx";
-
     if (go_trampoline) {
+        # rbx is callee save
+        print "pushq %rbx";
+
         # calling convention has params in rax/rbx
         print "movq %rsi, %rbx";
         print "movq %rdi, %rax";
@@ -61,7 +61,13 @@ END {
         print "call _fsm_Match";
         print "addq $24, %rsp";
 
+        # restore rbx
+        print "popq %rbx";
     } else {
+        # save rdx; it's a scratch register and not required to save, but it's the only
+        # other register we use so let's be safe.
+        print "pushq %rdx";
+
         # space for return value
         print "pushq $0";
         # arguments on the stack for Go assembly
@@ -70,16 +76,16 @@ END {
         print "pushq %rsi";
         print "pushq %rdi";
         print "call _fsm_Match";
-        # pop off arguments -- discard
-        print "popq %rax";
-        print "popq %rax";
-        print "popq %rax";
+        # pop off arguments; this also restores rdi/rsi
+        print "popq %rdi";
+        print "popq %rsi";
+        print "popq %rax"; # discard
         # and pop off return value
         print "popq %rax";
-    }
 
-    # restore rbx
-    print "popq %rbx";
+        # restore rdx
+        print "popq %rdx";
+    }
 
     # epilogue
     print "movq %rbp, %rsp";
