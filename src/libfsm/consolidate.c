@@ -19,8 +19,6 @@
 #include <adt/set.h>
 #include <adt/edgeset.h>
 #include <adt/stateset.h>
-#include <adt/hashset.h>
-#include <adt/mappinghashset.h>
 
 #include "internal.h"
 #include "capture.h"

@@ -2,9 +2,7 @@
 
 SRC += src/adt/alloc.c
 SRC += src/adt/bitmap.c
-SRC += src/adt/dlist.c
 SRC += src/adt/internedstateset.c
-SRC += src/adt/ipriq.c
 SRC += src/adt/priq.c
 SRC += src/adt/path.c
 SRC += src/adt/xalloc.c
@@ -16,8 +14,6 @@ SRC += src/adt/stateset.c
 SRC += src/adt/tupleset.c
 
 SRC += src/adt/hashset.c
-SRC += src/adt/mappinghashset.c
-SRC += src/adt/statehashset.c
 
 .for src in ${SRC:Msrc/adt/bitmap.c} ${SRC:Msrc/adt/edgeset.c}
 CFLAGS.${src} += -I src # XXX: for internal.h
@@ -36,13 +32,6 @@ CFLAGS.${src} += -Wno-unused-function
 .if ${CC:T:Mgcc*} || ${CC:T:Mclang*}
 .for src in ${SRC:Msrc/adt/stateset.c} ${SRC:Msrc/adt/tupleset.c} ${SRC:Msrc/adt/edgeset.c}
 CFLAGS.${src} += -Wno-tautological-constant-out-of-range-compare
-.endfor
-.endif
-
-# not all concrete hashset interfaces use all static functions from hashset.inc
-.if ${CC:T:Mgcc*} || ${CC:T:Mclang*}
-.for src in ${SRC:Msrc/adt/mappinghashset.c} ${SRC:Msrc/adt/statehashset.c}
-CFLAGS.${src} += -Wno-unused-function  
 .endfor
 .endif
 

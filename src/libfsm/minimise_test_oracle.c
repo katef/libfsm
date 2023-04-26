@@ -17,7 +17,6 @@
 #include <adt/set.h>
 #include <adt/edgeset.h>
 #include <adt/stateset.h>
-#include <adt/hashset.h>
 #include <adt/u64bitset.h>
 
 #include <assert.h>

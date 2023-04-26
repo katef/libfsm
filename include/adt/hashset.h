@@ -7,15 +7,6 @@
 #ifndef ADT_HASHSET_H
 #define ADT_HASHSET_H
 
-struct hashset_iter {
-	size_t i;
-	const struct hashset *hashset;
-};
-
-/*
- * Type-independent utility functions
- */
-
 unsigned long
 hashrec(const void *p, size_t n);
 
