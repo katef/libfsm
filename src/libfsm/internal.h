@@ -164,15 +164,6 @@ state_hasnondeterminism(const struct fsm *fsm, fsm_state_t state, struct bm *bm)
 struct state_set **
 epsilon_closure(struct fsm *fsm);
 
-int
-symbol_closure_without_epsilons(const struct fsm *fsm, fsm_state_t s,
-	struct state_set *sclosures[]);
-
-int
-symbol_closure(const struct fsm *fsm, fsm_state_t s,
-	struct state_set * const eclosures[],
-	struct state_set *sclosures[]);
-
 void
 closure_free(struct state_set **closures, size_t n);
 
