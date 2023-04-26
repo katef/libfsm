@@ -6,8 +6,8 @@ BEGIN {
 }
 
 /TEXT main./ {
-    sub(/TEXT main./, "")
-    sub(/.(SB).*/, "")
+    sub(/TEXT main\./, "")
+    sub(/\(SB\).*/, "")
 
     # prevent gnu ld warning about executable stack[
     if (os_is_linux) {
@@ -22,9 +22,9 @@ BEGIN {
     next;
 }
 
-/^  *[a-zA-Z0-9_.-]*(.s|.go)?:[0-9]*/ {
+/^  *[a-zA-Z0-9_-]*(\.s|\.go)?:[0-9]*/ {
     # abc.go:16		0x8ed			4839cb			CMPQ CX, BX                          // cmp %rcx,%rbx
-    if (/.go:/) {
+    if (/\.go:/) {
         go_trampoline=1;
     }
     label=$2
