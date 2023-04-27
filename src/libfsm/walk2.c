@@ -24,6 +24,7 @@
 #include <adt/tupleset.h>
 
 #include "internal.h"
+#include "endids.h"
 #include "walk2.h"
 
 /*
@@ -208,6 +209,23 @@ walk2_comb_state(struct fsm *dst_fsm, int is_end,
 	return 1;
 } 
 
+static int
+cmp_endids(const void *pa, const void *pb)
+{
+	const fsm_end_id_t *a = pa;
+	const fsm_end_id_t *b = pb;
+
+	if (*a < *b) {
+		return -1;
+	}
+
+	if (*a > *b) {
+		return 1;
+	}
+
+	return 0;
+}
+
 static struct fsm_walk2_tuple *
 fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 	const struct fsm *fsm_a, fsm_state_t a,
@@ -259,6 +277,71 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 
 	if (!walk2_comb_state(data->new, is_end, &p->comb)) {
 		return NULL;
+	}
+
+	if (is_end) {
+		size_t num_a_endids = 0, num_b_endids = 0, total_num_endids;
+
+		if (fsm_a != NULL && fsm_isend(fsm_a,a)) {
+			num_a_endids = fsm_getendidcount(fsm_a, a);
+		}
+
+		if (fsm_b != NULL && fsm_isend(fsm_b,b)) {
+			num_b_endids = fsm_getendidcount(fsm_b, b);
+		}
+
+		total_num_endids = num_a_endids + num_b_endids;
+
+		if (total_num_endids > 0) {
+			fsm_end_id_t *endids= NULL;
+			enum fsm_getendids_res ret;
+			size_t i;
+
+			endids = calloc(total_num_endids, sizeof endids[0]);
+			if (endids == NULL) {
+				return NULL;
+			}
+
+			if (num_a_endids > 0) {
+				size_t nwritten = 0;
+				ret = fsm_getendids(fsm_a, a, num_a_endids, &endids[0], &nwritten);
+
+				if (ret != FSM_GETENDIDS_FOUND || nwritten != num_a_endids) {
+					free(endids);
+					errno = (ret != FSM_GETENDIDS_FOUND) ? ENOENT : EINVAL;
+					return NULL;
+				}
+			}
+
+			if (num_b_endids > 0) {
+				size_t nwritten = 0;
+				ret = fsm_getendids(fsm_b, b, num_b_endids, &endids[num_a_endids], &nwritten);
+
+				if (ret != FSM_GETENDIDS_FOUND || nwritten != num_b_endids) {
+					free(endids);
+					errno = (ret != FSM_GETENDIDS_FOUND) ? ENOENT : EINVAL;
+					return NULL;
+				}
+			}
+
+			// sort to avoid adding duplicates
+			qsort(&endids[0], total_num_endids, sizeof endids[0], cmp_endids);
+			for (i=0; i < total_num_endids; i++) {
+				if (i==0 || endids[i] != endids[i-1]) {
+					enum fsm_endid_set_res ret;
+					ret = fsm_endid_set(data->new, p->comb, endids[i]);
+
+					if (ret == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
+						int errsv = errno;
+						free(endids);
+						errno = errsv;
+						return NULL;
+					}
+				}
+			}
+
+			free(endids);
+		}
 	}
 
 	assert(!data->new->states[p->comb].visited);
