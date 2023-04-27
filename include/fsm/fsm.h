@@ -33,6 +33,8 @@ typedef unsigned int fsm_state_t;
  * original FSM(s) matched when executing a combined FSM. */
 typedef unsigned int fsm_end_id_t;
 
+#define FSM_END_ID_MAX UINT_MAX
+
 /* struct used to return a collection of end IDs. */
 struct fsm_end_ids {
 	unsigned count;
@@ -199,6 +201,8 @@ fsm_setend(struct fsm *fsm, fsm_state_t state, int end);
  * - union
  * - concat
  * - ...
+ *
+ * Returns 1 on success, 0 on error.
  * */
 int
 fsm_setendid(struct fsm *fsm, fsm_end_id_t id);
@@ -224,6 +228,31 @@ fsm_getendids(const struct fsm *fsm, fsm_state_t end_state,
 /* Get the number of end IDs associated with an end state. */
 size_t
 fsm_getendidcount(const struct fsm *fsm, fsm_state_t end_state);
+
+/* Remaps all end states with endids.  remap() is called for any
+ * state with endids.
+ *
+ * remap arguments:
+ *   state         The fsm state.  This will be an end state, and will have
+ *                 at least one endid.
+ *   num_ids       The number of end ids.
+ *   endids        An array of end ids
+ *   num_written   The number of end ids after remap() returns.  This must
+ *                 be in the range: 0 < *num_written <= num_ids.
+ *   opaque        opaque user-defined data passed to remap()
+ *
+ * remap return value
+ *   0             indicates that the remapping should stop
+ *   1             remapping should continue
+ *
+ * fsm_mapendids returns:
+ *   0            remapping stopped
+ *   1            remapping succeeded
+ */
+int
+fsm_mapendids(struct fsm * fsm,
+	int (*remap)(fsm_state_t state, size_t num_ids, fsm_end_id_t *endids, size_t *num_written, void *opaque),
+	void *opaque);
 
 /*
  * Find the state (if there is just one), or add epsilon edges from all states,
