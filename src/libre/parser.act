@@ -247,7 +247,7 @@
 
 		n = sprintf(s, "%.*s", (int) sz - 3 - 1, msg);
 		if (n == sz - 3 - 1) {
-			strcpy(s + sz, "...");
+			strcpy(s + n, "...");
 		}
 	}
 
