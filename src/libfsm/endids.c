@@ -314,6 +314,62 @@ rehash:
 	return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
 }
 
+static int
+cmp_endids(const void *pa, const void *pb)
+{
+	const fsm_end_id_t *a = pa;
+	const fsm_end_id_t *b = pb;
+
+	if (*a < *b) {
+		return -1;
+	}
+
+	if (*a > *b) {
+		return 1;
+	}
+
+	return 0;
+}
+
+int
+fsm_mapendids(struct fsm *fsm,
+	int (*remap)(fsm_state_t state, size_t num_ids, fsm_end_id_t *endids, size_t *num_written, void *opaque),
+	void *opaque)
+{
+	size_t i;
+	const struct endid_info *ei = NULL;
+
+	assert(fsm != NULL);
+	ei = fsm->endid_info;
+	assert(ei != NULL);
+
+	for (i = 0; i < ei->bucket_count; i++) {
+		struct endid_info_bucket *b = &ei->buckets[i];
+
+		if (b->state != BUCKET_NO_STATE) {
+			int ret;
+			size_t nwritten = 0;
+
+			ret = remap(b->state, b->ids->count, b->ids->ids, &nwritten, opaque);
+			if (nwritten > 0) {
+				assert(nwritten <= b->ids->count);
+
+				if (nwritten > 1) {
+					qsort(&b->ids->ids[0], nwritten, sizeof b->ids->ids[0], cmp_endids);
+				}
+
+				b->ids->count = nwritten;
+			}
+
+			if (!ret) {
+				return 0;
+			}
+		}
+	}
+
+	return 1;
+}
+
 size_t
 fsm_endid_count(const struct fsm *fsm,
     fsm_state_t state)
