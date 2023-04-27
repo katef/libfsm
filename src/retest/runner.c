@@ -87,9 +87,9 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		fprintf(f, "\n");
 
 		fprintf(f, "#[no_mangle]\n");
-		fprintf(f, "pub extern \"C\" fn reperf_trampoline(ptr: *const c_uchar, len: usize) -> usize {\n");
+		fprintf(f, "pub extern \"C\" fn reperf_trampoline(ptr: *const c_uchar, len: usize) -> i64 {\n");
 		fprintf(f, "    let a: &[u8] = unsafe { slice::from_raw_parts(ptr, len as usize) };\n");
-		fprintf(f, "    fsm_main(a).unwrap_or(0)\n");
+		fprintf(f, "    fsm_main(a).unwrap_or(-1)\n");
 		fprintf(f, "}\n");
 	}
 
@@ -262,7 +262,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 
 	case IMPL_RUST:
 		r->u.impl_rust.h = h;
-		r->u.impl_rust.func = (size_t (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "reperf_trampoline");
+		r->u.impl_rust.func = (int64_t (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "reperf_trampoline");
 		break;
 
 	case IMPL_GO:
