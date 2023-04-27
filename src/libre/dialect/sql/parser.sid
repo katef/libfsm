@@ -288,17 +288,13 @@
 				{
 					(!, close_start, close_end) = CLOSEGROUP;
 					<mark-group>(close_start, close_end);
+
+					/* TODO: would prefer to demark class and mask separately */
+					<mark-expr>(tmp, open_start, close_end);
+					<mark-expr>(mask_tmp, open_start, close_end);
 				##
 					<err-expected-closegroup>;
-
-					/* appease sid */
-					close_start = open_end;
-					close_end   = open_end;
 				};
-
-				/* TODO: would prefer to demark class and mask separately */
-				<mark-expr>(tmp, open_start, close_end);
-				<mark-expr>(mask_tmp, open_start, close_end);
 
 				/* TODO: store start, end for the subtract expr */
 				node = <ast-make-subtract>(class, mask);
