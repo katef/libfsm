@@ -4,9 +4,40 @@
  * See LICENCE for the full copyright terms.
  */
 
+#include <stddef.h>
+
 #include "endids_internal.h"
 
 #define LOG_ENDIDS 0
+
+/* Convenience macros to avoid #if LOG_ENDIDS > n ... #endif pairs that disrupt
+ * the flow
+ * 
+ * Note: __VA_ARGS__ requires C99
+ */
+#if LOG_ENDIDS > 2
+#	define LOG_2(...) fprintf(stderr, __VA_ARGS__)
+#	define DBG_2(expr)    do { (expr); } while (0)
+#else
+#	define LOG_2(...) do {} while(0)
+#	define DBG_2(expr)    do {} while (0)
+#endif
+
+#if LOG_ENDIDS > 3
+#	define LOG_3(...) fprintf(stderr, __VA_ARGS__)
+#	define DBG_3(expr)    do { (expr); } while (0)
+#else
+#	define LOG_3(...) do {} while(0)
+#	define DBG_3(expr)    do {} while (0)
+#endif
+
+#if LOG_ENDIDS > 4
+#	define LOG_4(...) fprintf(stderr, __VA_ARGS__)
+#	define DBG_4(expr)    do { (expr); } while (0)
+#else
+#	define LOG_4(...) do {} while(0)
+#	define DBG_4(expr)    do {} while (0)
+#endif
 
 static void
 dump_buckets(const char *tag, const struct endid_info *ei)
@@ -135,7 +166,6 @@ grow_endid_buckets(const struct fsm_alloc *alloc, struct endid_info *info)
 #if LOG_ENDIDS > 3
 	fprintf(stderr, "grow_endid_buckets: growing from %lu to %lu buckets\n",
 	    old_count, new_count);
-	    res->bucket_count);
 #endif
 
 	new_buckets = f_malloc(alloc, new_count * sizeof(new_buckets[0]));
