@@ -84,11 +84,9 @@ print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt
 }
 
 static void
-print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
+print_cond(FILE *f, const struct dfavm_op_ir *op)
 {
 	char c;
-
-	(void) opt;
 
 	if (op->cmp == VM_CMP_ALWAYS) {
 		return;
@@ -142,10 +140,8 @@ print_branch(FILE *f, const struct dfavm_op_ir *op)
 }
 
 static void
-print_fetch(FILE *f, const struct fsm_options *opt)
+print_fetch(FILE *f)
 {
-	(void) opt;
-
 	fprintf(f, "read -rn 1 c || ");
 }
 
@@ -214,17 +210,17 @@ fsm_print_shfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 
 		switch (op->instr) {
 		case VM_OP_STOP:
-			print_cond(f, op, opt);
+			print_cond(f, op);
 			print_end(f, op, opt, op->u.stop.end_bits, ir);
 			break;
 
 		case VM_OP_FETCH:
-			print_fetch(f, opt);
+			print_fetch(f);
 			print_end(f, op, opt, op->u.fetch.end_bits, ir);
 			break;
 
 		case VM_OP_BRANCH:
-			print_cond(f, op, opt);
+			print_cond(f, op);
 			print_branch(f, op);
 			break;
 

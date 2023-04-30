@@ -69,16 +69,13 @@ leaf(FILE *f, const struct fsm_end_ids *ids, const void *leaf_opaque)
 }
 
 static void
-print_ranges(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+print_ranges(FILE *f, const struct fsm_options *opt,
 	const struct ir_range *ranges, size_t n)
 {
 	size_t k;
 	size_t c;
 
-	(void)ir; /* unused */
-
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
 	assert(ranges != NULL);
 
@@ -108,21 +105,20 @@ print_ranges(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 }
 
 static void
-print_groups(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+print_groups(FILE *f, const struct fsm_options *opt,
 	unsigned csi,
 	const struct ir_group *groups, size_t n)
 {
 	size_t j;
 
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
 	assert(groups != NULL);
 
 	for (j = 0; j < n; j++) {
 		assert(groups[j].ranges != NULL);
 
-		print_ranges(f, ir, opt, groups[j].ranges, groups[j].n);
+		print_ranges(f, opt, groups[j].ranges, groups[j].n);
 
 		/* TODO: pad S%u out to maximum state width */
 		if (groups[j].to != csi) {
@@ -172,7 +168,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	case IR_COMPLETE:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
 
-		print_groups(f, ir, opt, ir_indexof(ir, cs), cs->u.complete.groups, cs->u.complete.n);
+		print_groups(f, opt, ir_indexof(ir, cs), cs->u.complete.groups, cs->u.complete.n);
 
 		fprintf(f, "\t\t\t}\n");
 		fprintf(f, "\t\t\tbreak;\n");
@@ -181,7 +177,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	case IR_PARTIAL:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
 
-		print_groups(f, ir, opt, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
+		print_groups(f, opt, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
 
 		fprintf(f, "\t\t\tdefault:  ");
 		leaf(f, cs->end_ids, leaf_opaque);
@@ -194,7 +190,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	case IR_DOMINANT:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
 
-		print_groups(f, ir, opt, ir_indexof(ir, cs), cs->u.dominant.groups, cs->u.dominant.n);
+		print_groups(f, opt, ir_indexof(ir, cs), cs->u.dominant.groups, cs->u.dominant.n);
 
 		fprintf(f, "\t\t\tdefault: ");
 		if (cs->u.dominant.mode != ir_indexof(ir, cs)) {
@@ -209,9 +205,9 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	case IR_ERROR:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
 
-		print_groups(f, ir, opt, ir_indexof(ir, cs), cs->u.error.groups, cs->u.error.n);
+		print_groups(f, opt, ir_indexof(ir, cs), cs->u.error.groups, cs->u.error.n);
 
-		print_ranges(f, ir, opt, cs->u.error.error.ranges, cs->u.error.error.n);
+		print_ranges(f, opt, cs->u.error.error.ranges, cs->u.error.error.n);
 		fprintf(f, " ");
 		leaf(f, cs->end_ids, leaf_opaque);
 		fprintf(f, "\n");
