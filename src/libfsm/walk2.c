@@ -293,6 +293,7 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		total_num_endids = num_a_endids + num_b_endids;
 
 		if (total_num_endids > 0) {
+			fsm_end_id_t buf[64];
 			fsm_end_id_t *endids= NULL;
 			enum fsm_getendids_res ret;
 			size_t i;
@@ -324,19 +325,20 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 				}
 			}
 
-			// sort to avoid adding duplicates
-			qsort(&endids[0], total_num_endids, sizeof endids[0], cmp_endids);
-			for (i=0; i < total_num_endids; i++) {
-				if (i==0 || endids[i] != endids[i-1]) {
-					enum fsm_endid_set_res ret;
-					ret = fsm_endid_set(data->new, p->comb, endids[i]);
+			{
+				enum fsm_endid_set_res ret;
 
-					if (ret == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
-						int errsv = errno;
-						free(endids);
-						errno = errsv;
-						return NULL;
-					}
+				ret = fsm_endid_set_bulk(
+					data->new,
+					p->comb,
+					total_num_endids,
+					&endids[0],
+					FSM_ENDID_BULK_REPLACE);
+				if (ret == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
+					int errsv = errno;
+					free(endids);
+					errno = errsv;
+					return NULL;
 				}
 			}
 
