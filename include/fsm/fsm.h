@@ -254,6 +254,12 @@ fsm_mapendids(struct fsm * fsm,
 	int (*remap)(fsm_state_t state, size_t num_ids, fsm_end_id_t *endids, size_t *num_written, void *opaque),
 	void *opaque);
 
+/* Remaps endids by adding a constant delta to them.  Note that this will wrap around as an unsigned integer,
+ * with the max value given by FSM_END_ID_MAX.
+ */
+void
+fsm_increndids(struct fsm * fsm, int delta);
+
 /*
  * Find the state (if there is just one), or add epsilon edges from all states,
  * for which the given predicate is true.
