@@ -457,6 +457,123 @@ cmp_endids(const void *pa, const void *pb)
 	return 0;
 }
 
+enum fsm_endid_set_res
+fsm_endid_set_bulk(struct fsm *fsm,
+    fsm_state_t state, size_t num_ids, const fsm_end_id_t *ids, enum fsm_endid_bulk_op op)
+{
+	struct endid_info *ei = NULL;
+	struct endid_info_bucket *b;
+
+	assert(fsm != NULL);
+
+	ei = fsm->endid_info;
+	assert(ei != NULL);
+
+	b = endid_find_bucket(fsm, state);
+	if (b == NULL) {
+		return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+	}
+
+	if (b->state == state) {
+		size_t prev_count;
+		size_t total_count;
+
+		assert(b->ids != NULL);
+
+		prev_count = (op == FSM_ENDID_BULK_REPLACE) ? 0 : b->ids->count;
+		total_count = num_ids + prev_count;
+
+		if (total_count > b->ids->ceil) {
+			struct end_info_ids *new_ids;
+			size_t new_ceil = 2*b->ids->ceil;
+
+			/* TODO: use log2 */
+			while (new_ceil < total_count && new_ceil <= SIZE_MAX/2) {
+				new_ceil *= 2;
+			}
+
+			if (new_ceil < total_count) {
+				/* num_ids is too large? */
+				return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+			}
+
+			new_ids = allocate_ids(fsm, b->ids, new_ceil);
+			if (new_ids == NULL) {
+				return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+			}
+
+			b->ids = new_ids;
+			b->ids->ceil = new_ceil;
+		}
+
+		assert(total_count <= b->ids->ceil);
+		assert(total_count == num_ids + prev_count);
+
+		if (op == FSM_ENDID_BULK_REPLACE) {
+			assert(prev_count == 0);
+			assert(total_count == num_ids);
+		}
+
+		memcpy(&b->ids->ids[prev_count], &ids[0], num_ids * sizeof ids[0]);
+		b->ids->count = total_count;
+	} else {
+		struct end_info_ids *new_ids;
+		size_t n;
+
+		assert(b->state == BUCKET_NO_STATE);
+
+		n = DEF_BUCKET_ID_COUNT;
+		while (n < num_ids && n < SIZE_MAX/2) {
+			n *= 2;
+		}
+
+		if (n < num_ids) {
+			/* num_ids is too large? */
+			return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+		}
+
+		new_ids = allocate_ids(fsm, NULL, n);
+		if (new_ids == NULL) {
+			return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+		}
+
+		memcpy(&new_ids->ids[0], &ids[0], num_ids * sizeof ids[0]);
+		new_ids->count = num_ids;
+		new_ids->ceil = n;
+
+		b->state = state;
+		b->ids = new_ids;
+		ei->buckets_used++;
+	}
+
+	// sort and remove any duplicates
+	qsort(&b->ids->ids[0], b->ids->count, sizeof b->ids->ids[0], cmp_endids);
+	{
+		size_t i,j,n;
+
+		fsm_end_id_t *ids = b->ids->ids;
+		n = b->ids->count;
+		for (i=1, j=1; i < n; i++) {
+			LOG_3("i = %zu, j = %zu, ids[i] = %u, ids[j] = %u\n", i,j,ids[i],ids[j]);
+			if (ids[i]  != ids[i-1]) {
+				if (i != j) {
+					ids[j] = ids[i];
+				}
+				j++;
+			} else {
+				LOG_2("duplicate ids[%zu] == ids[%zu] = %u\n", i, i-1, ids[i]);
+			}
+		}
+
+		LOG_2("removed id duplicates, %zu starting entries, %zu after duplicates removed\n",
+			n, j);
+
+		b->ids->count = j;
+	}
+
+	return FSM_ENDID_SET_ADDED;
+}
+
 int
 fsm_mapendids(struct fsm *fsm,
 	int (*remap)(fsm_state_t state, size_t num_ids, fsm_end_id_t *endids, size_t *num_written, void *opaque),
