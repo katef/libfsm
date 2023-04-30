@@ -486,7 +486,7 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 			}
 			for (id_i = 0; id_i < b->ids->count; id_i++) {
 #if LOG_ENDIDS > 2
-				fprintf(stderr, "fsm_endid_get: writing id[%zu]: %d\n", k, b->ids->ids[k]);
+				fprintf(stderr, "fsm_endid_get: writing id[%zu]: %d\n", id_i, b->ids->ids[id_i]);
 #endif
 				id_buf[id_i] = b->ids->ids[id_i];
 			}
