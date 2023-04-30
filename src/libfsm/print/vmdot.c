@@ -207,14 +207,13 @@ fsm_print_nodes(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 }
 
 static void
-fsm_print_edges(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+fsm_print_edges(FILE *f, const struct fsm_options *opt,
 	const struct dfavm_assembler_ir *a)
 {
 	const struct dfavm_op_ir *op;
 	unsigned long block;
 	int can_fallthrough;
 
-	(void) ir;
 	(void) opt;
 
 	can_fallthrough = 1;
@@ -294,7 +293,7 @@ fsm_print_vmdotfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 	fsm_print_nodes(f, ir, opt, &a);
 	fprintf(f, "\n");
 
-	fsm_print_edges(f, ir, opt, &a);
+	fsm_print_edges(f, opt, &a);
 
 	dfavm_opasm_finalize_op(&a);
 
