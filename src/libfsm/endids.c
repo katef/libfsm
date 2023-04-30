@@ -674,3 +674,36 @@ fsm_endid_dump(FILE *f, const struct fsm *fsm)
 
 	fsm_endid_iter(fsm, dump_cb, &env);
 }
+
+static int
+incr_remap(fsm_state_t state, size_t num_ids, fsm_end_id_t *endids, size_t *num_written, void *opaque)
+{
+	const int *delta_ptr;
+	int delta;
+	size_t i;
+
+	(void)state;
+
+	delta_ptr = opaque;
+	delta = *delta_ptr;
+
+	for (i=0; i < num_ids; i++) {
+		endids[i] += delta;
+	}
+
+	*num_written = num_ids;
+
+	return 1;
+}
+
+void
+fsm_increndids(struct fsm * fsm, int delta)
+{
+	if (delta == 0) {
+		/* nothing to do ... */
+		return;
+	}
+
+	fsm_mapendids(fsm, incr_remap, &delta);
+}
+
