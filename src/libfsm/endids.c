@@ -270,6 +270,72 @@ rehash:
 	return NULL;
 }
 
+/* Returns the entry k of ids such that:
+ * 0 <= k <= n
+ * if 0 < k < n, then: ids[k-1] < itm <= ids[k]
+ * if k == 0, then: itm <= ids[0]
+ * if k == n, then: ids[n-1] < itm
+ *
+ * Note that ids must be sorted in ascending order: if i <= j, then ids[i] <= ids[j]
+ */
+static size_t
+search_sorted_ids(fsm_end_id_t itm, const fsm_end_id_t *ids, size_t n)
+{
+	ptrdiff_t lo,hi;
+
+	/* fast paths for empty, prepend or append */
+	if (n == 0) {
+		return 0;
+	}
+
+	if (itm < ids[0]) {
+		return 0;
+	}
+
+	if (itm > ids[n-1]) {
+		return n;
+	}
+
+	/* binary search */
+	lo=0;
+	hi=n-1;
+	while (lo <= hi) {
+		ptrdiff_t mid = (lo+hi)/2;
+
+		if (itm == ids[mid]) {
+			return mid;
+		}
+
+		if (itm < ids[mid]) {
+			hi = mid-1;
+		}
+
+		if (itm > ids[mid]) {
+			lo = mid+1;
+		}
+	}
+
+	assert(lo == hi+1);
+	assert(ids[hi] < itm);
+	assert(ids[lo] >= itm);
+
+	return lo;
+}
+
+static int
+check_ids_sorted(const fsm_end_id_t *ids, size_t n)
+{
+	fprintf(stderr, " --> checking: ids sorted\n");
+	size_t i;
+	for (i=1; i < n; i++) {
+		if (ids[i] < ids[i-1]) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 static struct end_info_ids *
 allocate_ids(const struct fsm *fsm, struct end_info_ids *prev, size_t n)
 {
@@ -317,7 +383,7 @@ fsm_endid_set(struct fsm *fsm,
 
 		return FSM_ENDID_SET_ADDED;
 	} else if (b->state == state) {
-		size_t j;
+		size_t ind;
 
 		LOG_2("fsm_endid_set: appending to bucket %zd's IDs, [%u/%u used]\n",
 			(b - &ei->buckets[0]), b->ids->count, b->ids->ceil);;
@@ -338,17 +404,35 @@ fsm_endid_set(struct fsm *fsm,
 			b->ids = nids;
 		}
 
-		/* This does not order the IDs. We could also
-		 * bsearch and shift them down, etc. */
-		for (j = 0; j < b->ids->count; j++) {
-		    if (b->ids->ids[j] == id) {
+		/* can't use bsearch here.  bsearch returns NULL if the item is not found, 
+		 * and what we really want is the item that's the least upper bound:
+		 *
+		 *     min{ind, id <= b->ids->ids[ind]}
+		 */
+		ind = search_sorted_ids(id, b->ids->ids, b->ids->count);
+		assert(ind <= b->ids->count);
+
+		if (ind == b->ids->count) {
+			/* append */
+			b->ids->ids[b->ids->count] = id;
+			b->ids->count++;
+		} else if (b->ids->ids[ind] == id) {
+			/* already present, our work is done! */
 			LOG_2("fsm_endid_set: already present, skipping\n");
 			return FSM_ENDID_SET_ALREADY_PRESENT;
-		    }
+		} else {
+			/* need to shift items up to make room for id */
+			memmove(&b->ids->ids[ind+1], &b->ids->ids[ind], 
+				(b->ids->count - ind) * sizeof b->ids->ids[0]);
+			b->ids->ids[ind] = id;
+			b->ids->count++;
 		}
 
-		b->ids->ids[b->ids->count] = id;
-		b->ids->count++;
+		DBG_3(assert(check_ids_sorted(b->ids->ids, b->ids->count)));
+
+		LOG_3("fsm_endid_set: wrote %d at %d/%d\n", id, b->ids->count - 1, b->ids->ceil);
+		DBG_3(dump_buckets("set_dump", ei));
+
 		return FSM_ENDID_SET_ADDED;
 	} else {
 	    assert(!"unreachable: endid_find_bucket failed");
