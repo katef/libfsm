@@ -184,7 +184,11 @@
 
 # Comments are just ignored... no token emitted
 '(?#' .. ')' {
-	# emit a token if the comment has nested parens (which are not permitted)
+	# emit a token if the comment has nested parens, which are
+        # explicitly not permitted according to the pcrepattern(3)
+        # documentation -- see COMMENTS. While the PCRE library does
+        # accept them (example: `echo x | pcregrep '(?#...(abc)x'`),
+        # this is a bug in PCRE.
 	'(' -> $invalid__comment;
 	/[^()]+/;
 }
