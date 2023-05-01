@@ -7,6 +7,8 @@
 #ifndef ADT_STATESET_H
 #define ADT_STATESET_H
 
+#include <stdint.h>
+
 struct set;
 struct fsm_alloc;
 struct state_set;
@@ -72,7 +74,7 @@ state_set_rebase(struct state_set **set, fsm_state_t base);
 void
 state_set_replace(struct state_set **set, fsm_state_t old, fsm_state_t new);
 
-unsigned long
+uint64_t
 state_set_hash(const struct state_set *set);
 
 #endif
