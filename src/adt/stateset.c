@@ -15,6 +15,12 @@
 #include <adt/stateset.h>
 #include <adt/hashrec.h>
 
+/* FIXME: This should use the same define as currently exists in
+ * src/fsm/internal.h. This is used here because the calls to
+ * state_set_contains change the order of growth. */
+#define EXPENSIVE_CHECKS 0
+
+
 /*
  * TODO: now fsm_state_t is a numeric index, this could be a dynamically
  * allocated bitmap, instead of a set.inc's array of items.
@@ -276,7 +282,9 @@ state_set_add(struct state_set **setp, const struct fsm_alloc *alloc,
 		set->i = 1;
 	}
 
+#if EXPENSIVE_CHECKS
 	assert(state_set_contains(set, state));
+#endif
 
 	return 1;
 }
@@ -478,7 +486,9 @@ state_set_remove(struct state_set **setp, fsm_state_t state)
 		set->i--;
 	}
 
+#if EXPENSIVE_CHECKS
 	assert(!state_set_contains(set, state));
+#endif
 }
 
 int
