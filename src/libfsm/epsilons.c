@@ -66,7 +66,7 @@ fsm_remove_epsilons(struct fsm *nfa)
 	assert(nfa != NULL);
 
 	TIME(&pre);
-	eclosures = epsilon_closure(nfa);
+	eclosures = fsm_epsilon_closure(nfa);
 	TIME(&post);
 	DIFF_MSEC("epsilon_closure", pre, post, NULL);
 
@@ -167,7 +167,7 @@ fsm_remove_epsilons(struct fsm *nfa)
 	res = 1;
 cleanup:
 	if (eclosures != NULL) {
-		closure_free(eclosures, state_count);
+		fsm_closure_free(eclosures, state_count);
 	}
 
 	return res;

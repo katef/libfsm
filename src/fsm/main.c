@@ -598,7 +598,7 @@ main(int argc, char *argv[])
 			size_t n;
 			struct state_iter it;
 
-			closures = epsilon_closure(fsm);
+			closures = fsm_epsilon_closure(fsm);
 			if (closures == NULL) {
 				return -1;
 			}
@@ -619,7 +619,7 @@ main(int argc, char *argv[])
 				printf("\n");
 			}
 
-			closure_free(closures, fsm->statecount);
+			fsm_closure_free(closures, fsm->statecount);
 
 			return 0;
 		} else {
