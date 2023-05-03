@@ -827,6 +827,46 @@ fsm_endid_iter(const struct fsm *fsm,
 	}
 }
 
+int
+fsm_endid_iter_bulk(const struct fsm *fsm,
+    fsm_endid_iter_bulk_cb *cb, void *opaque)
+{
+	size_t b_i;
+	struct endid_info *ei = NULL;
+	size_t bucket_count;
+
+	assert(fsm != NULL);
+	assert(cb != NULL);
+
+	ei = fsm->endid_info;
+	if (ei == NULL) {
+		return 1;
+	}
+
+	bucket_count = ei->bucket_count;
+
+	for (b_i = 0; b_i < bucket_count; b_i++) {
+		struct endid_info_bucket *b = &ei->buckets[b_i];
+		size_t id_i;
+		size_t count;
+		if (b->state == BUCKET_NO_STATE) {
+			continue;
+		}
+
+		count = b->ids->count;
+
+		if (!cb(b->state, &b->ids->ids[0], count, opaque)) {
+			return 0;
+		}
+
+		/* The cb must not grow the hash table. */
+		assert(bucket_count == ei->bucket_count);
+		assert(b->ids->count == count);
+	}
+
+	return 1;
+}
+
 void
 fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
     fsm_endid_iter_cb *cb, void *opaque)

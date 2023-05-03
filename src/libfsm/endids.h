@@ -67,6 +67,16 @@ void
 fsm_endid_iter(const struct fsm *fsm,
     fsm_endid_iter_cb *cb, void *opaque);
 
+/* Callback when bulk iterating over the endids.
+ * Return 0 to halt, or non-zero to continue. */
+typedef int
+fsm_endid_iter_bulk_cb(fsm_state_t state, const fsm_end_id_t *ids, size_t num_ids, void *opaque);
+
+/* returns 0 if the callback ever returns 0, otherwise returns 1 */
+int
+fsm_endid_iter_bulk(const struct fsm *fsm,
+    fsm_endid_iter_bulk_cb *cb, void *opaque);
+
 /* Same as fsm_endid_iter, but only for a single state. */
 void
 fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
