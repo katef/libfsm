@@ -231,7 +231,46 @@ int main(void)
 		}
 	}
 
-        printf("ok\n");
+	/* fsm_minimise currently collapses all end states to the same state.  This should
+	 * create a single end state with NUM_ENDIDS_TOTAL end ids
+	 */
+	ret = fsm_minimise(fsm);
+	assert(ret != 0);
+
+	assert( fsm_count(fsm, fsm_isend) == 1 );
+
+	nstates = fsm_countstates(fsm);
+	for (state_ind = 0; state_ind < nstates; state_ind++) {
+		if (fsm_isend(fsm, state_ind)) {
+			int tested_pattern[NUM_PATTERNS];
+			fsm_end_id_t endids[NUM_ENDIDS_TOTAL];
+			size_t nwritten, num_endids, j;
+			enum fsm_getendids_res ret;
+
+			memset(&endids[0], 0, sizeof endids);
+
+			nwritten = 0;
+			num_endids = fsm_getendidcount(fsm, state_ind);
+
+			assert(num_endids == NUM_ENDIDS_TOTAL);
+
+			ret = fsm_getendids(
+				fsm,
+				state_ind,
+				sizeof endids/sizeof endids[0],
+				&endids[0],
+				&nwritten);
+
+			assert(ret == FSM_GETENDIDS_FOUND);
+			assert(nwritten == num_endids);
+
+			for (j=0; j < num_endids; j++) {
+				assert( endids[j] == j+1 );
+			}
+		}
+	}
+
+	printf("ok\n");
 
 	return EXIT_SUCCESS;
 }
