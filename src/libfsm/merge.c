@@ -158,11 +158,10 @@ struct copy_end_ids_env {
 	struct fsm *dst;
 	struct fsm *src;
 	fsm_state_t base_src;
-	int ok;
 };
 
 static int
-copy_end_ids_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
+copy_end_ids_cb(fsm_state_t state, const fsm_end_id_t *ids, size_t num_ids, void *opaque)
 {
 	enum fsm_endid_set_res sres;
 	struct copy_end_ids_env *env = opaque;
@@ -173,9 +172,8 @@ copy_end_ids_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
 	    state + env->base_src, id);
 #endif
 
-	sres = fsm_endid_set(env->dst, state + env->base_src, id);
+	sres = fsm_endid_set_bulk(env->dst, state + env->base_src, num_ids, ids, FSM_ENDID_BULK_REPLACE);
 	if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
-		env->ok = 0;
 		return 0;
 	}
 
@@ -190,10 +188,8 @@ copy_end_ids(struct fsm *dst, struct fsm *src, fsm_state_t base_src)
 	env.dst = dst;
 	env.src = src;
 	env.base_src = base_src;
-	env.ok = 1;
 
-	fsm_endid_iter(src, copy_end_ids_cb, &env);
-	return env.ok;
+	return fsm_endid_iter_bulk(src, copy_end_ids_cb, &env);
 }
 
 struct fsm *

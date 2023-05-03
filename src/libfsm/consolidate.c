@@ -225,37 +225,21 @@ struct consolidate_end_ids_env {
 	const struct fsm *src;
 	const fsm_state_t *mapping;
 	size_t mapping_count;
-	int ok;
 };
 
 static int
-consolidate_end_ids_cb(fsm_state_t state, const fsm_end_id_t id,
-    void *opaque)
+consolidate_end_ids_cb(fsm_state_t state, const fsm_end_id_t *ids, size_t num_ids, void *opaque)
 {
 	struct consolidate_end_ids_env *env = opaque;
 	enum fsm_endid_set_res sres;
 	fsm_state_t s;
 	assert(env->tag == 'C');
 
-#if LOG_CONSOLIDATE_ENDIDS > 1
-	fprintf(stderr, "consolidate_end_ids_cb: state %u, count %lu, ID %d:",
-	    state, id);
-	for (i = 0; i < count; i++) {
-		fprintf(stderr, " %u", ids[i]);
-	}
-	fprintf(stderr, "\n");
-#endif
-
 	assert(state < env->mapping_count);
 	s = env->mapping[state];
 
-#if LOG_CONSOLIDATE_ENDIDS > 1
-	fprintf(stderr, "consolidate[%d] <- %d\n", s, id);
-#endif
-
-	sres = fsm_endid_set(env->dst, s, id);
+	sres = fsm_endid_set_bulk(env->dst, s, num_ids, ids, FSM_ENDID_BULK_APPEND);
 	if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
-		env->ok = 0;
 		return 0;
 	}
 
@@ -267,19 +251,20 @@ consolidate_end_ids(struct fsm *dst, const struct fsm *src,
     const fsm_state_t *mapping, size_t mapping_count)
 {
 	struct consolidate_end_ids_env env;
+	int ret;
+
 	env.tag = 'C';		/* for Consolidate */
 	env.dst = dst;
 	env.src = src;
 	env.mapping = mapping;
 	env.mapping_count = mapping_count;
-	env.ok = 1;
 
-	fsm_endid_iter(src, consolidate_end_ids_cb, &env);
+	ret = fsm_endid_iter_bulk(src, consolidate_end_ids_cb, &env);
 
 #if LOG_CONSOLIDATE_ENDIDS > 1
 	fprintf(stderr, "==== fsm_consolidate -- endid_info after:\n");
 	fsm_endid_dump(stderr, dst);
 #endif
 
-	return env.ok;
+	return ret;
 }
