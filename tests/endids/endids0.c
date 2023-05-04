@@ -73,7 +73,7 @@ int main(void)
 	 */
 
         {
-            int i;
+            size_t i;
             static const struct {
                 const char *s;
                 int should_match;

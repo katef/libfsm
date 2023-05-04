@@ -97,7 +97,7 @@ int main(void)
 				fsm,
 				state_ind,
 				sizeof endids/sizeof endids[0],
-				&endids,
+				&endids[0],
 				&nwritten);
 
 			assert(ret == FSM_GETENDIDS_FOUND);
@@ -127,7 +127,7 @@ int main(void)
 	 */
 
         {
-            int i;
+            size_t i;
             static const struct {
                 const char *s;
                 int should_match;
