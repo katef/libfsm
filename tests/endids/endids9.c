@@ -34,7 +34,7 @@ int main(void)
 	struct fsm *fsm;
 	const char *s;
 	struct state_info *info;
-	size_t nstates, ninfo, state_ind, info_ind, nend;
+	size_t nstates, ninfo, state_ind, nend;
 	int ret;
 
 	s = "abc"; fsm = re_comp(RE_NATIVE, fsm_sgetc, &s, NULL, 0, NULL);

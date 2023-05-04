@@ -117,7 +117,7 @@ int main(void)
 {
 	struct fsm *fsm;
 	fsm_end_id_t all_endids[NUM_PATTERNS];
-	size_t nstates, nend, state_ind;
+	size_t nstates, state_ind;
 	size_t i;
 	int ret;
 	
@@ -169,7 +169,6 @@ int main(void)
 
 	// find end states, make sure we have two end states and they each have endids
 	nstates = fsm_countstates(fsm);
-	nend = fsm_count(fsm, fsm_isend);
 
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
@@ -242,7 +241,6 @@ int main(void)
 	nstates = fsm_countstates(fsm);
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
-			int tested_pattern[NUM_PATTERNS];
 			fsm_end_id_t endids[NUM_ENDIDS_TOTAL];
 			size_t nwritten, num_endids, j;
 			enum fsm_getendids_res ret;
