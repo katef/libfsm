@@ -225,7 +225,7 @@ rehash:
 	mask = ei->bucket_count - 1;
 	assert((mask & ei->bucket_count) == 0); /* power of 2 */
 
-	LOG_2("endid_find_bucket: state %d -> hash %x\n", state, hash);
+	LOG_2("endid_find_bucket: state %d -> hash %" PRIx64 "\n", state, hash);
 
 	for (i = 0; i < ei->bucket_count; i++) {
 		const size_t b_i = (hash + i) & mask;
@@ -895,7 +895,7 @@ fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
 	assert((mask & bucket_count) == 0); /* power of 2 */
 
 #if LOG_ENDIDS > 2
-	fprintf(stderr, "fsm_endid_iter_state: state %d -> hash %x\n",
+	fprintf(stderr, "fsm_endid_iter_state: state %d -> hash %" PRIx64 "\n",
 	    state, hash);
 #endif
 
@@ -906,7 +906,7 @@ fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
 	for (b_i = 0; b_i < bucket_count; b_i++) {
 		struct endid_info_bucket *b = &ei->buckets[(hash + b_i) & mask];
 #if LOG_ENDIDS > 2
-		fprintf(stderr, "fsm_endid_iter_state: bucket [%ld/%ld]: %d\n",
+		fprintf(stderr, "fsm_endid_iter_state: bucket [%" PRIu64 "/%ld]: %d\n",
 		    (hash + b_i) & mask, bucket_count, b->state);
 #endif
 
