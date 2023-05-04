@@ -847,7 +847,6 @@ fsm_endid_iter_bulk(const struct fsm *fsm,
 
 	for (b_i = 0; b_i < bucket_count; b_i++) {
 		struct endid_info_bucket *b = &ei->buckets[b_i];
-		size_t id_i;
 		size_t count;
 		if (b->state == BUCKET_NO_STATE) {
 			continue;
