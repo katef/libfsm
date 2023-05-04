@@ -428,9 +428,11 @@ fsm_endid_set(struct fsm *fsm,
 			b->ids->count++;
 		}
 
+                (void)check_ids_sorted;
 		DBG_3(assert(check_ids_sorted(b->ids->ids, b->ids->count)));
 
 		LOG_3("fsm_endid_set: wrote %d at %d/%d\n", id, b->ids->count - 1, b->ids->ceil);
+                (void)dump_buckets;
 		DBG_3(dump_buckets("set_dump", ei));
 
 		return FSM_ENDID_SET_ADDED;

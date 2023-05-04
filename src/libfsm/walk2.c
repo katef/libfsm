@@ -209,22 +209,6 @@ walk2_comb_state(struct fsm *dst_fsm, int is_end,
 	return 1;
 } 
 
-static int
-cmp_endids(const void *pa, const void *pb)
-{
-	const fsm_end_id_t *a = pa;
-	const fsm_end_id_t *b = pb;
-
-	if (*a < *b) {
-		return -1;
-	}
-
-	if (*a > *b) {
-		return 1;
-	}
-
-	return 0;
-}
 
 static struct fsm_walk2_tuple *
 fsm_walk2_tuple_new(struct fsm_walk2_data *data,
@@ -293,10 +277,8 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		total_num_endids = num_a_endids + num_b_endids;
 
 		if (total_num_endids > 0) {
-			fsm_end_id_t buf[64];
 			fsm_end_id_t *endids= NULL;
 			enum fsm_getendids_res ret;
-			size_t i;
 
 			endids = calloc(total_num_endids, sizeof endids[0]);
 			if (endids == NULL) {
