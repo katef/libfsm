@@ -175,7 +175,7 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case IR_TABLE:
-		/* TODO */
+		assert(!"unreached");
 		break;
 
 	default:
@@ -185,7 +185,7 @@ print_cs(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\t\t}");
 }
 
-void
+int
 fsm_print_irjson(FILE *f, const struct fsm *fsm)
 {
 	struct ir *ir;
@@ -196,7 +196,7 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 
 	ir = make_ir(fsm);
 	if (ir == NULL) {
-		return;
+		return -1;
 	}
 
 	fprintf(f, "{\n");
@@ -218,5 +218,11 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 	fprintf(f, "}\n");
 
 	free_ir(fsm, ir);
+
+	if (ferror(f)) {
+		return -1;
+	}
+
+	return 0;
 }
 

@@ -117,20 +117,24 @@ print_cond(FILE *f, const struct dfavm_op_ir *op)
 	fprintf(f, " ]] && ");
 }
 
-static void
+static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits, const struct ir *ir)
 {
 	if (end_bits == VM_END_FAIL) {
 		fprintf(f, "fail");
-		return;
+		return 0;
 	}
 
 	if (opt->endleaf != NULL) {
-		opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque);
+		if (-1 == opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque)) {
+			return -1;
+		}
 	} else {
 		fprintf(f, "matched %td", op->ir_state - ir->states);
 	}
+
+	return 0;
 }
 
 static void
@@ -211,12 +215,16 @@ fsm_print_shfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op);
-			print_end(f, op, opt, op->u.stop.end_bits, ir);
+			if (-1 == print_end(f, op, opt, op->u.stop.end_bits, ir)) {
+				return -1;
+			}
 			break;
 
 		case VM_OP_FETCH:
 			print_fetch(f);
-			print_end(f, op, opt, op->u.fetch.end_bits, ir);
+			if (-1 == print_end(f, op, opt, op->u.fetch.end_bits, ir)) {
+				return -1;
+			}
 			break;
 
 		case VM_OP_BRANCH:
@@ -238,13 +246,18 @@ fsm_print_shfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 
 	dfavm_opasm_finalize_op(&a);
 
+	if (ferror(f)) {
+		return -1;
+	}
+
 	return 0;
 }
 
-void
+int
 fsm_print_sh(FILE *f, const struct fsm *fsm)
 {
 	struct ir *ir;
+	int r;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
@@ -252,16 +265,18 @@ fsm_print_sh(FILE *f, const struct fsm *fsm)
 
 	ir = make_ir(fsm);
 	if (ir == NULL) {
-		return;
+		return -1;
 	}
 
 	if (fsm->opt->io != FSM_IO_STR) {
-		fprintf(stderr, "unsupported IO API\n");
-		exit(EXIT_FAILURE);
+		errno = ENOTSUP;
+		return -1;
 	}
 
-	(void) fsm_print_shfrag(f, ir, fsm->opt);
+	r = fsm_print_shfrag(f, ir, fsm->opt);
 
 	free_ir(fsm, ir);
+
+	return r;
 }
 

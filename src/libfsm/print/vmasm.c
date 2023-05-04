@@ -33,19 +33,9 @@ enum asm_dialect {
 	AMD64_GO,
 };
 
-/* What I want:
- *
- * int32_t
- * funcname(struct STATE *st, const char *buf, size_t n);
- *
- * What I'll settle for:
- *
- * int32_t
- * funcname(const char *buf, uint64_t n);
- *
- */
 static int
-print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct fsm_options *opt, const struct dfavm_assembler_ir *a, enum asm_dialect dialect)
+print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct fsm_options *opt,
+	const struct dfavm_assembler_ir *a, enum asm_dialect dialect)
 {
 	// const char *sst_reg = NULL;      // state struct: not currently used
 	const char *stp_reg = "rdi";  // string pointer
@@ -78,14 +68,16 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 	case AMD64_ATT:  comment = "#"; break;
 	case AMD64_NASM: comment = ";"; break;
 	case AMD64_GO:  comment = "//";
-			stp_reg = "DI";
-			stn_reg = "SI";
-			chr_reg = "DX";
-			ret_reg = "AX";
-			label_dot = "";
-			break;
+		stp_reg = "DI";
+		stn_reg = "SI";
+		chr_reg = "DX";
+		ret_reg = "AX";
+		label_dot = "";
+		break;
+
 	default:
-		assert(!"should not be reachable");
+		errno = ENOTSUP;
+		return -1;
 	}
 
 	/* print preamble */
@@ -106,11 +98,13 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 		/* need to determine if we're doing []byte or str */
 		fprintf(f, "#include \"textflag.h\"\n");
 		fprintf(f, "\n");
+
 		switch (opt->io) {
 		case FSM_IO_STR:
 			fprintf(f, "// func %s(data string) int\n", funcname);
 			fprintf(f, "TEXT    ·%s(SB), NOSPLIT, $0-24\n", funcname);
 			break;
+
 		case FSM_IO_PAIR:
 			fprintf(f, "// func %s(data []byte) int\n", funcname);
 			fprintf(f, "TEXT    ·%s(SB), NOSPLIT, $0-32\n", funcname);
@@ -118,13 +112,11 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 
 		default:
 			assert(! "unreached");
-
 		}
 
 		/* Go calling convention has everything on the stack */
 		fprintf(f, "\tMOVQ data_base+0(FP), DI\n");
 		fprintf(f, "\tMOVQ data_len+8(FP), SI\n");
-
 	}
 
 	/* XXX: add trampoline into previous state
@@ -201,9 +193,11 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 						case AMD64_ATT:
 							fprintf(f, "\tcmpl    $0x%02x,%%%s\n", (unsigned)op->cmp_arg, chr_reg);
 							break;
+
 						case AMD64_NASM:
 							fprintf(f, "\tCMP   %s,%02xh\n", chr_reg, (unsigned)op->cmp_arg);
 							break;
+
 						case AMD64_GO:
 							fprintf(f, "\tCMPL   %s, $0x%02x\n", chr_reg, (unsigned)op->cmp_arg);
 							break;
@@ -336,7 +330,6 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 
 	fprintf(f, "%sfinish:\n", label_dot);
 
-
 	switch (dialect) {
 	case AMD64_ATT:
 		fprintf(f, "\tret\n");
@@ -351,25 +344,34 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 		case FSM_IO_STR:
 			fprintf(f, "\tMOVQ    %s, ret+16(FP)\n", ret_reg);
 			break;
+
 		case FSM_IO_PAIR:
 			fprintf(f, "\tMOVQ    %s, ret+24(FP)\n", ret_reg);
 			break;
-		default: assert(! "unreached");
+
+		default:
+			errno = ENOTSUP;
+			return -1;
 		}
 
 		fprintf(f, "\tRET\n");
 		break;
 	}
 
+	if (ferror(f)) {
+		return -1;
+	}
+
 	return 0;
 }
 
-static void
+static int
 print_vmasm_encoding(FILE *f, const struct fsm *fsm, enum asm_dialect dialect)
 {
 	struct ir *ir;
 	const char *prefix;
 	char funcname[256];
+	int r;
 
 	static const struct dfavm_assembler_ir zero;
 	struct dfavm_assembler_ir a;
@@ -382,7 +384,7 @@ print_vmasm_encoding(FILE *f, const struct fsm *fsm, enum asm_dialect dialect)
 
 	ir = make_ir(fsm);
 	if (ir == NULL) {
-		return;
+		return -1;
 	}
 
 	assert(f != NULL);
@@ -392,7 +394,7 @@ print_vmasm_encoding(FILE *f, const struct fsm *fsm, enum asm_dialect dialect)
 
 	if (!dfavm_compile_ir(&a, ir, vm_opts)) {
 		free_ir(fsm, ir);
-		return;
+		return -1;
 	}
 
 	/* henceforth, no function should be passed struct fsm *, only the ir and options */
@@ -409,34 +411,37 @@ print_vmasm_encoding(FILE *f, const struct fsm *fsm, enum asm_dialect dialect)
 		snprintf(funcname, sizeof funcname, "%smatch", prefix);
 	}
 
-	print_asm_amd64(f, funcname, ir, fsm->opt, &a, dialect);
+	r = print_asm_amd64(f, funcname, ir, fsm->opt, &a, dialect);
 
 	dfavm_opasm_finalize_op(&a);
 	free_ir(fsm, ir);
+
+	return r;
 }
 
-static const enum asm_dialect default_dialect = AMD64_NASM;
-
-void
+int
 fsm_print_vmasm(FILE *f, const struct fsm *fsm)
 {
-	print_vmasm_encoding(f, fsm, default_dialect);
+	static const enum asm_dialect default_dialect = AMD64_NASM;
+
+	return print_vmasm_encoding(f, fsm, default_dialect);
 }
 
-void
+int
 fsm_print_vmasm_amd64_att(FILE *f, const struct fsm *fsm)
 {
-	print_vmasm_encoding(f, fsm, AMD64_ATT);
+	return print_vmasm_encoding(f, fsm, AMD64_ATT);
 }
 
-void
+int
 fsm_print_vmasm_amd64_nasm(FILE *f, const struct fsm *fsm)
 {
-	print_vmasm_encoding(f, fsm, AMD64_NASM);
+	return print_vmasm_encoding(f, fsm, AMD64_NASM);
 }
 
-void
+int
 fsm_print_vmasm_amd64_go(FILE *f, const struct fsm *fsm)
 {
-	print_vmasm_encoding(f, fsm, AMD64_GO);
+	return print_vmasm_encoding(f, fsm, AMD64_GO);
 }
+

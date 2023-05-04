@@ -42,7 +42,7 @@ rangeclass(unsigned char x, unsigned char y)
 	return 0;
 }
 
-void
+int
 fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 {
 	struct fsm *fsm;
@@ -56,15 +56,16 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 
 	if (!fsm_has(fsm_orig, fsm_isend)) {
 		errno = EINVAL;
-		return;
+		return -1;
 	}
 
 	fsm = fsm_clone(fsm_orig);
 	if (fsm == NULL) {
-		return;
+		return -1;
 	}
 
 	if (!fsm_getstart(fsm, &start)) {
+		errno = EINVAL;
 		goto error;
 	}
 
@@ -204,12 +205,16 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 
 	fsm_free(fsm);
 
-	return;
+	if (ferror(f)) {
+		return -1;
+	}
+
+	return 0;
 
 error:
 
 	fsm_free(fsm);
 
-	return;
+	return -1;
 }
 

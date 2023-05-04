@@ -24,12 +24,6 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
-static int
-fprintf_state(FILE *f, const struct fsm *fsm, fsm_state_t s);
-
-static int
-fprintf_state_comments(FILE *f, const struct fsm *fsm, fsm_state_t dst);
-
 /* TODO: centralise */
 static int
 findany(const struct fsm *fsm, fsm_state_t state, fsm_state_t *a)
@@ -93,77 +87,55 @@ findany(const struct fsm *fsm, fsm_state_t state, fsm_state_t *a)
 	return 1;
 }
 
-void
-fsm_print_fsm(FILE *f, const struct fsm *fsm)
+static int
+print_state_comments(FILE *f, const struct fsm *fsm, fsm_state_t dst)
 {
-	fsm_state_t s, start;
-	size_t end;
-
-	assert(f != NULL);
-	assert(fsm != NULL);
-
-	if (!fsm->opt->anonymous_states) {
-		/*
-		 * States are output in order here so as to force ordering when
-		 * parsing the .fsm format and creating new states. This ensures
-		 * that the new states (numbered in order) match the numbering here.
-		 */
-		for (s = 0; s < fsm->statecount; s++) {
-			fprintf(f, "%u;%s", s,
-				s + 1 < fsm->statecount ? " " : "\n");
-		}
-
-		fprintf(f, "\n");
-	}
-
-	for (s = 0; s < fsm->statecount; s++) {
-		if (!fprintf_state(f, fsm, s)) {
-			return;
-		}
-	}
-
-	fprintf(f, "\n");
+	fsm_state_t start;
 
 	if (!fsm_getstart(fsm, &start)) {
-		return;
+		return 0;
 	}
 
-	fprintf(f, "start: %u;\n", start);
+	if (dst == start) {
+		fprintf(f, " # start");
+	} else if (!fsm_has(fsm, fsm_hasepsilons)) {
+		char buf[50];
+		int n;
 
-	end = fsm->endcount;
+		n = fsm_example(fsm, dst, buf, sizeof buf);
+		if (-1 == n) {
+			return -1;
+		}
 
-	if (end == 0) {
-		return;
-	}
-
-	fprintf(f, "end:   ");
-	for (s = 0; s < fsm->statecount; s++) {
-		if (fsm_isend(fsm, s)) {
-			end--;
-
-			fprintf(f, "%u%s", s, end > 0 ? ", " : ";\n");
+		if (n > 0) {
+			fprintf(f, " # e.g. \"");
+			escputs(f, fsm->opt, fsm_escputc, buf);
+			fprintf(f, "%s\"",
+				n >= (int) sizeof buf - 1 ? "..." : "");
 		}
 	}
+
+	return 0;
 }
 
 static void
-fprintf_char_range(FILE *f, const struct fsm_options *opt, char lower, char upper)
+print_char_range(FILE *f, const struct fsm_options *opt, char lower, char upper)
 {
 	if (lower == upper) {
-		fputs("\"", f);
-		fsm_escputc(f, opt, (char)lower);
-		fputs("\"", f);
+		fprintf(f, "\"");
+		fsm_escputc(f, opt, (char) lower);
+		fprintf(f, "\"");
 	} else {
-		fputs("\"", f);
-		fsm_escputc(f, opt, (char)lower);
-		fputs("\" .. \"", f);
-		fsm_escputc(f, opt, (char)upper);
-		fputs("\"", f);
+		fprintf(f, "\"");
+		fsm_escputc(f, opt, (char) lower);
+		fprintf(f, "\" .. \"");
+		fsm_escputc(f, opt, (char) upper);
+		fprintf(f, "\"");
 	}
 }
 
 static int
-fprintf_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
+print_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 {
 	{
 		struct state_iter jt;
@@ -179,7 +151,7 @@ fprintf_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 
 		if (findany(fsm, s, &a)) {
 			fprintf(f, "%-2u -> %2u ?;\n", s, a);
-			return 1;
+			return 0;
 		}
 	}
 
@@ -205,10 +177,10 @@ fprintf_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 				} else {
 					if (lower < i) {
 						if (ranges > 0) {
-							fputs(", ", f);
+							fprintf(f, ", ");
 						}
 
-						fprintf_char_range(f, fsm->opt, (char)lower, (char)i - 1);
+						print_char_range(f, fsm->opt, (char) lower, (char) i - 1);
 						ranges++;
 					}
 					lower = 256;
@@ -216,16 +188,17 @@ fprintf_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 			}
 			if (lower < 256) { /* close last range */
 				if (ranges > 0) {
-					fputs(", ", f);
+					fprintf(f, ", ");
 				}
-				fprintf_char_range(f, fsm->opt, (char)lower, (char)255);
+
+				print_char_range(f, fsm->opt, (char) lower, (char) 255);
 			}
 
 			fprintf(f, ";");
 
 			if (fsm->opt->comments) {
-				if (!fprintf_state_comments(f, fsm, info.to)) {
-					return 0;
+				if (-1 == print_state_comments(f, fsm, info.to)) {
+					return -1;
 				}
 			}
 
@@ -234,21 +207,22 @@ fprintf_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	} else {
 		struct fsm_edge e;
 		struct edge_ordered_iter eoi;
+
 		for (edge_set_ordered_iter_reset(fsm->states[s].edges, &eoi);
 		     edge_set_ordered_iter_next(&eoi, &e); ) {
 			assert(e.state < fsm->statecount);
 
 			fprintf(f, "%-2u -> %2u", s, e.state);
 
-			fputs(" \"", f);
-			fsm_escputc(f, fsm->opt, (char)e.symbol);
+			fprintf(f, " \"");
+			fsm_escputc(f, fsm->opt, (char) e.symbol);
 			putc('\"', f);
 
 			fprintf(f, ";");
 
 			if (fsm->opt->comments) {
-				if (!fprintf_state_comments(f, fsm, e.state)) {
-					return 0;
+				if (-1 == print_state_comments(f, fsm, e.state)) {
+					return -1;
 				}
 			}
 
@@ -256,34 +230,67 @@ fprintf_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 		}
 	}
 
-	return 1;
+	return 0;
 }
 
-static int
-fprintf_state_comments(FILE *f, const struct fsm *fsm, fsm_state_t dst)
+int
+fsm_print_fsm(FILE *f, const struct fsm *fsm)
 {
-	fsm_state_t start;
+	fsm_state_t s, start;
+	size_t end;
 
-	if (fsm_getstart(fsm, &start)) {
-		if (dst == start) {
-			fprintf(f, " # start");
-		} else if (!fsm_has(fsm, fsm_hasepsilons)) {
-			char buf[50];
-			int n;
+	assert(f != NULL);
+	assert(fsm != NULL);
 
-			n = fsm_example(fsm, dst, buf, sizeof buf);
-			if (-1 == n) {
-				perror("fsm_example");
-				return 0;
-			}
+	if (!fsm->opt->anonymous_states) {
+		/*
+		 * States are output in order here so as to force ordering when
+		 * parsing the .fsm format and creating new states. This ensures
+		 * that the new states (numbered in order) match the numbering here.
+		 */
+		for (s = 0; s < fsm->statecount; s++) {
+			fprintf(f, "%u;%s", s,
+				s + 1 < fsm->statecount ? " " : "\n");
+		}
 
-			if (n > 0) {
-				fprintf(f, " # e.g. \"");
-				escputs(f, fsm->opt, fsm_escputc, buf);
-				fprintf(f, "%s\"",
-				    n >= (int) sizeof buf - 1 ? "..." : "");
-			}
+		fprintf(f, "\n");
+	}
+
+	for (s = 0; s < fsm->statecount; s++) {
+		if (-1 == print_state(f, fsm, s)) {
+			return -1;
 		}
 	}
-	return 1;
+
+	fprintf(f, "\n");
+
+	if (!fsm_getstart(fsm, &start)) {
+		goto done;
+	}
+
+	fprintf(f, "start: %u;\n", start);
+
+	end = fsm->endcount;
+
+	if (end == 0) {
+		goto done;
+	}
+
+	fprintf(f, "end:   ");
+	for (s = 0; s < fsm->statecount; s++) {
+		if (fsm_isend(fsm, s)) {
+			end--;
+
+			fprintf(f, "%u%s", s, end > 0 ? ", " : ";\n");
+		}
+	}
+
+done:
+
+	if (ferror(f)) {
+		return -1;
+	}
+
+	return 0;
 }
+
