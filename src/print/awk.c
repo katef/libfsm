@@ -48,19 +48,24 @@ awk_escputc_char(FILE *f, const struct fsm_options *opt, char c)
 	return fprintf(f, "%c", c);
 }
 
-void
+int
 awk_escputcharlit(FILE *f, const struct fsm_options *opt, char c)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 
 	if (opt->always_hex || (unsigned char) c > SCHAR_MAX) {
-		fprintf(f, "0x%02x", (unsigned char) c);
-		return;
+		return fprintf(f, "0x%02x", (unsigned char) c);
 	}
 
 	fprintf(f, "\"");
 	awk_escputc_char(f, opt, c);
 	fprintf(f, "\"");
+
+	if (ferror(f)) {
+		return -1;
+	}
+
+	return 0;
 }
 

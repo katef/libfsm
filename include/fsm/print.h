@@ -33,9 +33,12 @@ struct fsm;
  *
  * TODO: what to return?
  * TODO: explain constraints
+ *
+ * Returns 0, or -1 on error and errno will be set. An errno of ENOTSUP means
+ * the requested IO API is not implemented for this output format.
  */
 
-typedef void (fsm_print)(FILE *f, const struct fsm *fsm);
+typedef int (fsm_print)(FILE *f, const struct fsm *fsm);
 
 fsm_print fsm_print_api;
 fsm_print fsm_print_awk;

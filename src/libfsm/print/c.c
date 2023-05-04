@@ -94,7 +94,7 @@ print_ranges(FILE *f, const struct fsm_options *opt,
 			}
 		} else for (c = ranges[k].start; c <= ranges[k].end; c++) {
 			fprintf(f, "\t\t\tcase ");
-			c_escputcharlit(f, opt, (char)c);
+			c_escputcharlit(f, opt, (char) c);
 			fprintf(f, ":");
 
 			if (k + 1 < n || c + 1 <= ranges[k].end) {
@@ -132,7 +132,7 @@ print_groups(FILE *f, const struct fsm_options *opt,
 	}
 }
 
-static void
+static int
 print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
 	struct ir_state *cs,
@@ -147,15 +147,13 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	assert(leaf != NULL);
 
 	switch (cs->strategy) {
-	case IR_TABLE:
-		/* TODO */
-		abort();
-
 	case IR_NONE:
 		fprintf(f, "\t\t\t");
-		leaf(f, cs->end_ids, leaf_opaque);
+		if (-1 == leaf(f, cs->end_ids, leaf_opaque)) {
+			return -1;
+		}
 		fprintf(f, "\n");
-		return;
+		return 0;
 
 	case IR_SAME:
 		fprintf(f, "\t\t\t");
@@ -163,7 +161,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			fprintf(f, "state = S%u; ", cs->u.same.to);
 		}
 		fprintf(f, "break;\n");
-		return;
+		return 0;
 
 	case IR_COMPLETE:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
@@ -172,7 +170,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		fprintf(f, "\t\t\t}\n");
 		fprintf(f, "\t\t\tbreak;\n");
-		return;
+		return 0;
 
 	case IR_PARTIAL:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
@@ -180,12 +178,14 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		print_groups(f, opt, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
 
 		fprintf(f, "\t\t\tdefault:  ");
-		leaf(f, cs->end_ids, leaf_opaque);
+		if (-1 == leaf(f, cs->end_ids, leaf_opaque)) {
+			return -1;
+		}
 		fprintf(f, "\n");
 
 		fprintf(f, "\t\t\t}\n");
 		fprintf(f, "\t\t\tbreak;\n");
-		return;
+		return 0;
 
 	case IR_DOMINANT:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
@@ -200,7 +200,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		fprintf(f, "\t\t\t}\n");
 		fprintf(f, "\t\t\tbreak;\n");
-		return;
+		return 0;
 
 	case IR_ERROR:
 		fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
@@ -209,7 +209,9 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		print_ranges(f, opt, cs->u.error.error.ranges, cs->u.error.error.n);
 		fprintf(f, " ");
-		leaf(f, cs->end_ids, leaf_opaque);
+		if (-1 == leaf(f, cs->end_ids, leaf_opaque)) {
+			return -1;
+		}
 		fprintf(f, "\n");
 
 		fprintf(f, "\t\t\tdefault: ");
@@ -220,7 +222,11 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		fprintf(f, "\t\t\t}\n");
 		fprintf(f, "\t\t\tbreak;\n");
-		return;
+		return 0;
+
+	case IR_TABLE:
+		errno = ENOTSUP;
+		return -1;
 	}
 
 	fprintf(f, "\t\t\tswitch ((unsigned char) %s) {\n", cp);
@@ -228,6 +234,8 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	fprintf(f, "\t\t\t}\n");
 
 	fprintf(f, "\t\t\tbreak;\n");
+
+	return 0;
 }
 
 static void
@@ -256,7 +264,7 @@ print_stateenum(FILE *f, size_t n)
 	fprintf(f, "\t} state;\n");
 }
 
-static void
+static int
 endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 {
 	unsigned i;
@@ -268,7 +276,7 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 	/* no end states */
 	if (!ir_hasend(ir)) {
 		fprintf(f, "\treturn -1; /* unexpected EOT */\n");
-		return;
+		return 0;
 	}
 
 	/* usual case */
@@ -281,7 +289,9 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 
 		fprintf(f, "\tcase S%u: ", i);
 		if (opt->endleaf != NULL) {
-			opt->endleaf(f, ir->states[i].end_ids, opt->endleaf_opaque);
+			if (-1 == opt->endleaf(f, ir->states[i].end_ids, opt->endleaf_opaque)) {
+				return -1;
+			}
 		} else {
 			fprintf(f, "return %u;", i);
 		}
@@ -289,6 +299,8 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 	}
 	fprintf(f, "\tdefault: return -1; /* unexpected EOT */\n");
 	fprintf(f, "\t}\n");
+
+	return 0;
 }
 
 int
@@ -319,7 +331,9 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		}
 		fprintf(f, "\n");
 
-		print_singlecase(f, ir, opt, cp, &ir->states[i], leaf, leaf_opaque);
+		if (-1 == print_singlecase(f, ir, opt, cp, &ir->states[i], leaf, leaf_opaque)) {
+			return -1;
+		}
 
 		fprintf(f, "\n");
 	}
@@ -327,11 +341,15 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	fprintf(f, "\t\t\t; /* unreached */\n");
 	fprintf(f, "\t\t}\n");
 
+	if (ferror(f)) {
+		return -1;
+	}
+
 	return 0;
 }
 
-static void
-fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt)
+static int
+fsm_print_c_body(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 {
 	const char *cp;
 
@@ -371,21 +389,94 @@ fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt
 		break;
 	}
 
-	(void) fsm_print_cfrag(f, ir, opt, cp,
-		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
+	if (-1 == fsm_print_cfrag(f, ir, opt, cp,
+		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
+	{
+		return -1;
+	}
 
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 
 	/* end states */
-	endstates(f, opt, ir);
+	if (-1 == endstates(f, opt, ir)) {
+		return -1;
+	}
+
+	return 0;
 }
 
-void
+static int
+fsm_print_c_complete(FILE *f, const struct ir *ir,
+	const struct fsm_options *opt, const char *prefix)
+{
+	assert(f != NULL);
+	assert(ir != NULL);
+	assert(opt != NULL);
+
+	if (opt->fragment) {
+		if (-1 == fsm_print_c_body(f, ir, opt)) {
+			return -1;
+		}
+	} else {
+		fprintf(f, "\n");
+
+		fprintf(f, "int\n%smain", prefix);
+
+		switch (opt->io) {
+		case FSM_IO_GETC:
+			fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
+			fprintf(f, "{\n");
+			if (ir->n > 0) {
+				fprintf(f, "\tint c;\n");
+				fprintf(f, "\n");
+			}
+			break;
+
+		case FSM_IO_STR:
+			fprintf(f, "(const char *s)\n");
+			fprintf(f, "{\n");
+			if (ir->n > 0) {
+				fprintf(f, "\tconst char *p;\n");
+				fprintf(f, "\n");
+			}
+			break;
+
+		case FSM_IO_PAIR:
+			fprintf(f, "(const char *b, const char *e)\n");
+			fprintf(f, "{\n");
+			if (ir->n > 0) {
+				fprintf(f, "\tconst char *p;\n");
+				fprintf(f, "\n");
+			}
+			break;
+		}
+
+		if (ir->n == 0) {
+			fprintf(f, "\treturn -1; /* no matches */\n");
+		} else {
+			if (-1 == fsm_print_c_body(f, ir, opt)) {
+				return -1;
+			}
+		}
+
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
+
+	if (ferror(f)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+int
 fsm_print_c(FILE *f, const struct fsm *fsm)
 {
 	struct ir *ir;
 	const char *prefix;
+	int r;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
@@ -393,7 +484,7 @@ fsm_print_c(FILE *f, const struct fsm *fsm)
 
 	ir = make_ir(fsm);
 	if (ir == NULL) {
-		return;
+		return -1;
 	}
 
 	/* henceforth, no function should be passed struct fsm *, only the ir and options */
@@ -404,53 +495,10 @@ fsm_print_c(FILE *f, const struct fsm *fsm)
 		prefix = "fsm_";
 	}
 
-	if (fsm->opt->fragment) {
-		fsm_print_c_complete(f, ir, fsm->opt);
-		return;
-	}
-
-	fprintf(f, "\n");
-
-	fprintf(f, "int\n%smain", prefix);
-
-	switch (fsm->opt->io) {
-	case FSM_IO_GETC:
-		fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
-		fprintf(f, "{\n");
-		if (ir->n > 0) {
-			fprintf(f, "\tint c;\n");
-			fprintf(f, "\n");
-		}
-		break;
-
-	case FSM_IO_STR:
-		fprintf(f, "(const char *s)\n");
-		fprintf(f, "{\n");
-		if (ir->n > 0) {
-			fprintf(f, "\tconst char *p;\n");
-			fprintf(f, "\n");
-		}
-		break;
-
-	case FSM_IO_PAIR:
-		fprintf(f, "(const char *b, const char *e)\n");
-		fprintf(f, "{\n");
-		if (ir->n > 0) {
-			fprintf(f, "\tconst char *p;\n");
-			fprintf(f, "\n");
-		}
-		break;
-	}
-
-	if (ir->n == 0) {
-		fprintf(f, "\treturn -1; /* no matches */\n");
-	} else {
-		fsm_print_c_complete(f, ir, fsm->opt);
-	}
-
-	fprintf(f, "}\n");
-	fprintf(f, "\n");
+	r = fsm_print_c_complete(f, ir, fsm->opt, prefix);
 
 	free_ir(fsm, ir);
+
+	return r;
 }
 

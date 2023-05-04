@@ -86,20 +86,24 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 	fprintf(f, ") ");
 }
 
-static void
+static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits, const struct ir *ir)
 {
 	if (end_bits == VM_END_FAIL) {
 		fprintf(f, "return -1;");
-		return;
+		return 0;
 	}
 
 	if (opt->endleaf != NULL) {
-		opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque);
+		if (-1 == opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque)) {
+			return -1;
+		}
 	} else {
 		fprintf(f, "return %td;", op->ir_state - ir->states);
 	}
+
+	return 0;
 }
 
 static void
@@ -224,12 +228,16 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op, opt);
-			print_end(f, op, opt, op->u.stop.end_bits, ir);
+			if (-1 == print_end(f, op, opt, op->u.stop.end_bits, ir)) {
+				return -1;
+			}
 			break;
 
 		case VM_OP_FETCH:
 			print_fetch(f, opt);
-			print_end(f, op, opt, op->u.fetch.end_bits, ir);
+			if (-1 == print_end(f, op, opt, op->u.fetch.end_bits, ir)) {
+				return -1;
+			}
 			if (opt->io == FSM_IO_PAIR) {
 				/* second part of FSM_IO_PAIR fetch */
 				fprintf(f, "\n\n\t");
@@ -255,8 +263,8 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	return 0;
 }
 
-static void
-fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt)
+static int
+fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt, const char *prefix)
 {
 	/* TODO: currently unused, but must be non-NULL */
 	const char *cp = "";
@@ -264,16 +272,59 @@ fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt
 	assert(f != NULL);
 	assert(ir != NULL);
 	assert(opt != NULL);
+	assert(prefix != NULL);
 
-	(void) fsm_print_cfrag(f, ir, opt, cp,
-		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
+	if (opt->fragment) {
+		if (-1 == fsm_print_cfrag(f, ir, opt, cp,
+			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
+		{
+			return -1;
+		}
+	} else {
+		fprintf(f, "\n");
+
+		fprintf(f, "int\n%smain", prefix);
+
+		switch (opt->io) {
+		case FSM_IO_GETC:
+			fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
+			fprintf(f, "{\n");
+			break;
+
+		case FSM_IO_STR:
+			fprintf(f, "(const char *s)\n");
+			fprintf(f, "{\n");
+			break;
+
+		case FSM_IO_PAIR:
+			fprintf(f, "(const char *b, const char *e)\n");
+			fprintf(f, "{\n");
+			break;
+		}
+
+		if (-1 == fsm_print_cfrag(f, ir, opt, cp,
+			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
+		{
+			return -1;
+		}
+
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
+
+	if (ferror(f)) {
+		return -1;
+	}
+
+	return 0;
 }
 
-void
+int
 fsm_print_vmc(FILE *f, const struct fsm *fsm)
 {
 	struct ir *ir;
 	const char *prefix;
+	int r;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
@@ -281,7 +332,7 @@ fsm_print_vmc(FILE *f, const struct fsm *fsm)
 
 	ir = make_ir(fsm);
 	if (ir == NULL) {
-		return;
+		return -1;
 	}
 
 	/* henceforth, no function should be passed struct fsm *, only the ir and options */
@@ -292,37 +343,10 @@ fsm_print_vmc(FILE *f, const struct fsm *fsm)
 		prefix = "fsm_";
 	}
 
-	if (fsm->opt->fragment) {
-		fsm_print_c_complete(f, ir, fsm->opt);
-		return;
-	}
-
-	fprintf(f, "\n");
-
-	fprintf(f, "int\n%smain", prefix);
-
-	switch (fsm->opt->io) {
-	case FSM_IO_GETC:
-		fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
-		fprintf(f, "{\n");
-		break;
-
-	case FSM_IO_STR:
-		fprintf(f, "(const char *s)\n");
-		fprintf(f, "{\n");
-		break;
-
-	case FSM_IO_PAIR:
-		fprintf(f, "(const char *b, const char *e)\n");
-		fprintf(f, "{\n");
-		break;
-	}
-
-	fsm_print_c_complete(f, ir, fsm->opt);
-
-	fprintf(f, "}\n");
-	fprintf(f, "\n");
+	r = fsm_print_c_complete(f, ir, fsm->opt, prefix);
 
 	free_ir(fsm, ir);
+
+	return r;
 }
 

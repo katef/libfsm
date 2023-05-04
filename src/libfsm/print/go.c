@@ -57,7 +57,7 @@ cmp_operator(int cmp)
 
 	case VM_CMP_ALWAYS:
 	default:
-		assert("unreached");
+		assert(!"unreached");
 		return NULL;
 	}
 }
@@ -88,20 +88,24 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 	fprintf(f, " ");
 }
 
-static void
+static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits, const struct ir *ir)
 {
 	if (end_bits == VM_END_FAIL) {
 		fprintf(f, "{\n\t\treturn -1\n\t}\n");
-		return;
+		return 0;
 	}
 
 	if (opt->endleaf != NULL) {
-		opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque);
+		if (-1 == opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque)) {
+			return -1;
+		}
 	} else {
 		fprintf(f, "{\n\t\treturn %td\n\t}\n", op->ir_state - ir->states);
 	}
+
+	return 0;
 }
 
 static void
@@ -118,6 +122,7 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 	case FSM_IO_PAIR:
 		fprintf(f, "if idx++; idx >= uint(len(data)) ");
 		break;
+
 	default:
 		assert(!"unreached");
 	}
@@ -238,8 +243,9 @@ fsm_print_gofrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	return 0;
 }
 
-static void
-fsm_print_go_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt)
+static int
+fsm_print_go_complete(FILE *f, const struct ir *ir,
+	const struct fsm_options *opt, const char *prefix, const char *package_prefix)
 {
 	/* TODO: currently unused, but must be non-NULL */
 	const char *cp = "";
@@ -247,17 +253,58 @@ fsm_print_go_complete(FILE *f, const struct ir *ir, const struct fsm_options *op
 	assert(f != NULL);
 	assert(ir != NULL);
 	assert(opt != NULL);
+	assert(prefix != NULL);
+	assert(package_prefix != NULL);
 
-	(void) fsm_print_gofrag(f, ir, opt, cp,
-		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
+	if (opt->fragment) {
+		if (-1 == fsm_print_gofrag(f, ir, opt, cp,
+			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
+		{
+			return -1;
+		}
+	} else {
+		fprintf(f, "package %sfsm\n", package_prefix);
+		fprintf(f, "\n");
+
+		fprintf(f, "func %sMatch", prefix);
+
+		switch (opt->io) {
+		case FSM_IO_PAIR:
+			fprintf(f, "(data []byte) int {\n");
+			break;
+
+		case FSM_IO_STR:
+			fprintf(f, "(data string) int {\n");
+			break;
+
+		default:
+			errno = ENOTSUP;
+			return -1;
+		}
+
+		if (-1 == fsm_print_gofrag(f, ir, opt, cp,
+			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
+		{
+			return -1;
+		}
+
+		fprintf(f, "}\n");
+	}
+
+	if (ferror(f)) {
+		return -1;
+	}
+
+	return 0;
 }
 
-void
+int
 fsm_print_go(FILE *f, const struct fsm *fsm)
 {
 	struct ir *ir;
 	const char *prefix;
 	const char *package_prefix;
+	int r;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
@@ -265,7 +312,7 @@ fsm_print_go(FILE *f, const struct fsm *fsm)
 
 	ir = make_ir(fsm);
 	if (ir == NULL) {
-		return;
+		return -1;
 	}
 
 	/* henceforth, no function should be passed struct fsm *, only the ir and options */
@@ -276,40 +323,16 @@ fsm_print_go(FILE *f, const struct fsm *fsm)
 		prefix = "fsm_";
 	}
 
-	if (fsm->opt->fragment) {
-		fsm_print_go_complete(f, ir, fsm->opt);
-		return;
-	}
-
 	if (fsm->opt->package_prefix != NULL) {
 		package_prefix = fsm->opt->package_prefix;
 	} else {
 		package_prefix = prefix;
 	}
 
-	fprintf(f, "package %sfsm\n", package_prefix);
-	fprintf(f, "\n");
-
-	fprintf(f, "func %sMatch", prefix);
-
-	switch (fsm->opt->io) {
-	case FSM_IO_PAIR:
-		fprintf(f, "(data []byte) int {\n");
-		break;
-
-	case FSM_IO_STR:
-		fprintf(f, "(data string) int {\n");
-		break;
-
-	default:
-		fprintf(stderr, "unsupported IO API\n");
-		exit(EXIT_FAILURE);
-	}
-
-	fsm_print_go_complete(f, ir, fsm->opt);
-
-	fprintf(f, "}\n");
+	r = fsm_print_go_complete(f, ir, fsm->opt, prefix, package_prefix);
 
 	free_ir(fsm, ir);
+
+	return r;
 }
 

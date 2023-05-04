@@ -113,7 +113,7 @@ print_edge_label(FILE *f, int *notfirst,
 	*notfirst = 1;
 }
 
-static void
+static int
 singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s, int *notfirst)
 {
 	struct fsm_edge e;
@@ -140,15 +140,14 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s, int *notfirst)
 				s, e.state, e.symbol);
 		}
 
-		return;
+		return 0;
 	}
 
 	unique = NULL;
 
 	for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
 		if (!state_set_add(&unique, fsm->opt->alloc, e.state)) {
-			/* TODO: error */
-			return;
+			return -1;
 		}
 	}
 
@@ -196,9 +195,11 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s, int *notfirst)
 			print_edge_label(f, notfirst, s, st, "\\u03B5");
 		}
 	}
+
+	return 0;
 }
 
-void
+int
 fsm_print_json(FILE *f, const struct fsm *fsm)
 {
 	fsm_state_t start;
@@ -284,13 +285,21 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 		notfirst = 0;
 
 		fprintf(f, "  \"edges\": [\n");
-			for (i = 0; i < fsm->statecount; i++) {
-				singlestate(f, fsm, i, &notfirst);
+		for (i = 0; i < fsm->statecount; i++) {
+			if (-1 == singlestate(f, fsm, i, &notfirst)) {
+				return -1;
 			}
+		}
 		fprintf(f, "\n  ]\n");
 	}
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
+
+	if (ferror(f)) {
+		return -1;
+	}
+
+	return 0;
 }
 

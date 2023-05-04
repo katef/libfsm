@@ -102,7 +102,7 @@ void wordlist_finalize(struct word_list *words)
 int main(int argc, char *argv[]) {
 	struct fsm *fsm;
 	char s[BUFSIZ];
-	void (*print)(FILE *, const struct fsm *);
+	fsm_print *print;
 
 	const char *pname = argv[0];
 

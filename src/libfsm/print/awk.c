@@ -87,20 +87,24 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 	fprintf(f, ") ");
 }
 
-static void
+static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits, const struct ir *ir)
 {
 	if (end_bits == VM_END_FAIL) {
 		fprintf(f, "return -1");
-		return;
+		return 0;
 	}
 
 	if (opt->endleaf != NULL) {
-		opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque);
+		if (-1 == opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque)) {
+			return -1;
+		}
 	} else {
 		fprintf(f, "return %td", op->ir_state - ir->states);
 	}
+
+	return 0;
 }
 
 static void
@@ -193,13 +197,17 @@ fsm_print_awkfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op, opt);
-			print_end(f, op, opt, op->u.stop.end_bits, ir);
+			if (-1 == print_end(f, op, opt, op->u.stop.end_bits, ir)) {
+				return -1;
+			}
 			fprintf(f, ";");
 			break;
 
 		case VM_OP_FETCH: {
 			fprintf(f, "if (s == \"\") ");
-			print_end(f, op, opt, op->u.fetch.end_bits, ir);
+			if (-1 == print_end(f, op, opt, op->u.fetch.end_bits, ir)) {
+				return -1;
+			}
 			fprintf(f, "\n");
 
 			fprintf(f, "        ");
@@ -233,7 +241,7 @@ fsm_print_awkfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	return 0;
 }
 
-void
+static int
 fsm_print_awk_complete(FILE *f, const struct ir *ir,
 	const struct fsm_options *opt, const char *prefix, const char *cp)
 {
@@ -242,43 +250,54 @@ fsm_print_awk_complete(FILE *f, const struct ir *ir,
 	assert(opt != NULL);
 
 	if (opt->fragment) {
-		fsm_print_awkfrag(f, ir, opt, cp, prefix,
-			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
-		return;
+		if (-1 == fsm_print_awkfrag(f, ir, opt, cp, prefix,
+			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
+		{
+			return -1;
+		}
+	} else {
+		fprintf(f, "\n");
+
+		fprintf(f, "function %smain(", prefix);
+
+		switch (opt->io) {
+		case FSM_IO_STR:
+			fprintf(f, "s");
+			break;
+
+		case FSM_IO_GETC:
+		case FSM_IO_PAIR:
+		default:
+			errno = ENOTSUP;
+			return -1;
+		}
+
+		fprintf(f, ",    l, c) {\n");
+
+		if (-1 == fsm_print_awkfrag(f, ir, opt, cp, prefix,
+			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
+		{
+			return -1;
+		}
+
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
 	}
 
-	fprintf(f, "\n");
-
-	fprintf(f, "function %smain(", prefix);
-
-	switch (opt->io) {
-	case FSM_IO_STR:
-		fprintf(f, "s");
-		break;
-
-	case FSM_IO_GETC:
-	case FSM_IO_PAIR:
-	default:
-		fprintf(stderr, "unsupported IO API\n");
-		break;
+	if (ferror(f)) {
+		return -1;
 	}
 
-	fprintf(f, ",    l, c) {\n");
-
-	fsm_print_awkfrag(f, ir, opt, cp, prefix,
-		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
-
-	fprintf(f, "}\n");
-	fprintf(f, "\n");
-
+	return 0;
 }
 
-void
+int
 fsm_print_awk(FILE *f, const struct fsm *fsm)
 {
 	struct ir *ir;
 	const char *prefix;
 	const char *cp;
+	int r;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
@@ -286,7 +305,7 @@ fsm_print_awk(FILE *f, const struct fsm *fsm)
 
 	ir = make_ir(fsm);
 	if (ir == NULL) {
-		return;
+		return -1;
 	}
 
 	if (fsm->opt->prefix != NULL) {
@@ -301,8 +320,10 @@ fsm_print_awk(FILE *f, const struct fsm *fsm)
 		cp = "c"; /* XXX */
 	}
 
-	fsm_print_awk_complete(f, ir, fsm->opt, prefix, cp);
+	r = fsm_print_awk_complete(f, ir, fsm->opt, prefix, cp);
 
 	free_ir(fsm, ir);
+
+	return r;
 }
 

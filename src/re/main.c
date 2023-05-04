@@ -1200,7 +1200,14 @@ main(int argc, char *argv[])
 			opt.endleaf = patterns ? endleaf_json : NULL;
 		}
 
-		print_fsm(stdout, fsm);
+		if (-1 == print_fsm(stdout, fsm)) {
+			if (errno == ENOTSUP) {
+				fprintf(stderr, "unsupported IO API\n");
+			} else {
+				perror("print_fsm");
+			}
+			exit(EXIT_FAILURE);
+		}
 
 /* XXX: free fsm */
 

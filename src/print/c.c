@@ -89,19 +89,24 @@ c_escputc_str(FILE *f, const struct fsm_options *opt, char c)
 	return fprintf(f, "%c", c);
 }
 
-void
+int
 c_escputcharlit(FILE *f, const struct fsm_options *opt, char c)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 
 	if (opt->always_hex || (unsigned char) c > SCHAR_MAX) {
-		fprintf(f, "0x%02x", (unsigned char) c);
-		return;
+		return fprintf(f, "0x%02x", (unsigned char) c);
 	}
 
 	fprintf(f, "'");
 	c_escputc_char(f, opt, c);
 	fprintf(f, "'");
+
+	if (ferror(f)) {
+		return -1;
+	}
+
+	return 0;
 }
 

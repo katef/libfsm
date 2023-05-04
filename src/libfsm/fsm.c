@@ -11,7 +11,6 @@
 #include <fsm/alloc.h>
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
-#include <fsm/print.h>
 #include <fsm/options.h>
 
 #include <adt/alloc.h>

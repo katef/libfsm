@@ -24,7 +24,7 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
-static void
+static int
 singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 {
 	struct fsm_edge e;
@@ -59,7 +59,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 					st);
 
-				fputs("&#x3B5;", f);
+				fprintf(f, "&#x3B5;");
 
 				fprintf(f, "> ];\n");
 			}
@@ -72,20 +72,19 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				e.state);
 
-			dot_escputc_html(f, fsm->opt, e.symbol);
+			dot_escputc_html(f, fsm->opt, (char) e.symbol);
 
 			fprintf(f, "> ];\n");
 		}
 
-		return;
+		return 0;
 	}
 
 	unique = NULL;
 
 	for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
 		if (!state_set_add(&unique, fsm->opt->alloc, e.state)) {
-			/* TODO: error */
-			return;
+			return -1;
 		}
 	}
 
@@ -99,8 +98,6 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	 * looping through each edge.
 	 */
 	for (edge_set_ordered_iter_reset(fsm->states[s].edges, &eoi); edge_set_ordered_iter_next(&eoi, &e); ) {
-
-
 		struct fsm_edge ne;
 		struct edge_iter kt;
 		struct bm bm;
@@ -132,9 +129,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 		}
 
 		fprintf(f, "label = <");
-
-		(void) bm_print(f, fsm->opt, &bm, 0, dot_escputc_html);
-
+		bm_print(f, fsm->opt, &bm, 0, dot_escputc_html);
 		fprintf(f, "> ];\n");
 	}
 
@@ -152,7 +147,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
 				st);
 
-			fputs("&#x3B5;", f);
+			fprintf(f, "&#x3B5;");
 
 			fprintf(f, "> ];\n");
 		}
@@ -161,9 +156,11 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	if (unique != NULL) {
 		state_set_free(unique);
 	}
+
+	return 0;
 }
 
-static void
+static int
 print_dotfrag(FILE *f, const struct fsm *fsm)
 {
 	fsm_state_t i;
@@ -182,6 +179,9 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 				ids = f_malloc(fsm->opt->alloc,
 			    sizeof(*ids) + ((count - 1) * sizeof(ids->ids)));
 				assert(ids != NULL);
+				if (ids == NULL) {
+					return -1;
+				}
 
 				res = fsm_getendids(fsm, i, count,
 				    ids->ids, &written);
@@ -197,7 +197,9 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 
 			if (fsm->opt->endleaf != NULL) {
 				fprintf(f, ", ");
-				fsm->opt->endleaf(f, ids, fsm->opt->endleaf_opaque);
+				if (-1 == fsm->opt->endleaf(f, ids, fsm->opt->endleaf_opaque)) {
+					return -1;
+				}
 			}
 
 			fprintf(f, " ];\n");
@@ -205,50 +207,63 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 
 		/* TODO: show example here, unless !opt->comments */
 
-		singlestate(f, fsm, i);
+		if (-1 == singlestate(f, fsm, i)) {
+			return -1;
+		}
 	}
+
+	return 0;
 }
 
-void
+int
 fsm_print_dot(FILE *f, const struct fsm *fsm)
 {
-	fsm_state_t start;
-
 	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
 	if (fsm->opt->fragment) {
-		print_dotfrag(f, fsm);
-		return;
-	}
+		if (-1 == print_dotfrag(f, fsm)) {
+			return -1;
+		}
+	} else {
+		fsm_state_t start;
 
-	fprintf(f, "digraph G {\n");
-	fprintf(f, "\trankdir = LR;\n");
+		fprintf(f, "digraph G {\n");
+		fprintf(f, "\trankdir = LR;\n");
 
-	fprintf(f, "\tnode [ shape = circle ];\n");
-	fprintf(f, "\tedge [ weight = 2 ];\n");
+		fprintf(f, "\tnode [ shape = circle ];\n");
+		fprintf(f, "\tedge [ weight = 2 ];\n");
 
-	if (fsm->opt->anonymous_states) {
-		fprintf(f, "\tnode [ label = \"\", width = 0.3 ];\n");
-	}
+		if (fsm->opt->anonymous_states) {
+			fprintf(f, "\tnode [ label = \"\", width = 0.3 ];\n");
+		}
 
-	fprintf(f, "\troot = start;\n");
-	fprintf(f, "\n");
+		fprintf(f, "\troot = start;\n");
+		fprintf(f, "\n");
 
-	fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
+		fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
 
-	if (fsm_getstart(fsm, &start)) {
-		fprintf(f, "\tstart -> %sS%u;\n",
-			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-			start);
+		if (fsm_getstart(fsm, &start)) {
+			fprintf(f, "\tstart -> %sS%u;\n",
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+				start);
 
+			fprintf(f, "\n");
+		}
+
+		if (-1 == print_dotfrag(f, fsm)) {
+			return -1;
+		}
+
+		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
 
-	print_dotfrag(f, fsm);
+	if (ferror(f)) {
+		return -1;
+	}
 
-	fprintf(f, "}\n");
-	fprintf(f, "\n");
+	return 0;
 }
 
