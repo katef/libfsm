@@ -110,6 +110,8 @@ int main(void)
 
 	assert( ninfo == nend );
 
+        fsm_free(fsm);
+
         printf("ok\n");
 
 	return EXIT_SUCCESS;

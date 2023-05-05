@@ -103,6 +103,8 @@ int main(void)
 	 * right endids
 	 */
 
+        fsm_free(comb);
+
         printf("ok\n");
 
 	return EXIT_SUCCESS;

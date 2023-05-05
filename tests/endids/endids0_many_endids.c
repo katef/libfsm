@@ -177,6 +177,8 @@ int main(void)
             }
         }
 
+        fsm_free(fsm);
+
         printf("ok\n");
 
 	return EXIT_SUCCESS;
