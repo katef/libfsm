@@ -209,7 +209,6 @@ walk2_comb_state(struct fsm *dst_fsm, int is_end,
 	return 1;
 } 
 
-
 static struct fsm_walk2_tuple *
 fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 	const struct fsm *fsm_a, fsm_state_t a,
