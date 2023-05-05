@@ -181,6 +181,7 @@ int main(void)
 	}
 
         fsm_free(fsm);
+        free(info);
 
         printf("ok\n");
 
