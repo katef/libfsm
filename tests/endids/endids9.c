@@ -111,6 +111,7 @@ int main(void)
 	assert( ninfo == nend );
 
         fsm_free(fsm);
+        free(info);
 
         printf("ok\n");
 
