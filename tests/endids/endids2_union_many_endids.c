@@ -59,6 +59,13 @@ void init_examples(struct example_list *l)
 	l->cap = DEFAULT_EXAMPLE_CAP;
 }
 
+void finalize_examples(struct example_list *l)
+{
+    free(l->examples);
+    l->examples = NULL;
+    l->len = l->cap = 0;
+}
+
 struct example *add_example(struct example_list *l)
 {
 	if (l->len == l->cap) {
@@ -270,6 +277,7 @@ int main(void)
 	}
 
         fsm_free(fsm);
+        finalize_examples(&example_list);
 
 	printf("ok\n");
 
