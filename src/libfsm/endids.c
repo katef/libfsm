@@ -356,6 +356,8 @@ bisect_left_sorted_ids(fsm_end_id_t itm, const fsm_end_id_t *ids, size_t n)
 static int
 check_ids_sorted_and_unique(const fsm_end_id_t *ids, size_t n)
 {
+	(void) ids;
+	(void) n;
 
 #if ENDIDS_EXPENSIVE_CHECK_SORTED_ORDER
 	fprintf(stderr, " --> checking: ids sorted and unique\n");
