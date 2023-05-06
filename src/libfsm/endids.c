@@ -636,7 +636,20 @@ fsm_mapendids(struct fsm *fsm,
 				assert(nwritten <= b->ids->count);
 
 				if (nwritten > 1) {
+					size_t j,k;
 					qsort(&b->ids->ids[0], nwritten, sizeof b->ids->ids[0], cmp_endids);
+
+					/* check for any duplicates and remove them */
+					for (j = 1, k = 1; j < nwritten; j++) {
+						if (b->ids->ids[j] != b->ids->ids[j-1]) {
+							if (j != k) {
+								b->ids->ids[k] = b->ids->ids[j];
+							}
+							k++;
+						}
+					}
+
+					nwritten = k;
 				}
 
 				b->ids->count = nwritten;
