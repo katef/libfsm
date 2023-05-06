@@ -13,6 +13,7 @@
 
 /* flags to enable or disable some expensive checks */
 #define ENDIDS_EXPENSIVE_CHECK_SORTED_ORDER 0
+#define ENDIDS_EXPENSIVE_CHECK_BISECTION    0
 
 /* Convenience macros to avoid #if LOG_ENDIDS > n ... #endif pairs that disrupt
  * the flow
@@ -333,6 +334,21 @@ bisect_left_sorted_ids(fsm_end_id_t itm, const fsm_end_id_t *ids, size_t n)
 	assert(lo == hi+1);
 	assert(ids[hi] < itm);
 	assert(ids[lo] >= itm);
+
+#if ENDIDS_EXPENSIVE_CHECK_BISECTION
+	{
+		size_t i;
+
+		assert(lo >= 0);
+		for (i=0; i < n; i++) {
+			if (i < (size_t)lo) {
+				assert(ids[i] < itm);
+			} else {
+				assert(ids[i] >= itm);
+			}
+		}
+	}
+#endif /* ENDIDS_EXPENSIVE_CHECK_BISECTION */
 
 	return lo;
 }
