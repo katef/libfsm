@@ -5,6 +5,7 @@
  */
 
 #include <stddef.h>
+#include <inttypes.h>
 
 #include "endids_internal.h"
 
