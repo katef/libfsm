@@ -11,6 +11,9 @@
 
 #define LOG_ENDIDS 0
 
+/* flags to enable or disable some expensive checks */
+#define ENDIDS_EXPENSIVE_CHECK_SORTED_ORDER 0
+
 /* Convenience macros to avoid #if LOG_ENDIDS > n ... #endif pairs that disrupt
  * the flow
  * 
@@ -324,15 +327,18 @@ search_sorted_ids(fsm_end_id_t itm, const fsm_end_id_t *ids, size_t n)
 }
 
 static int
-check_ids_sorted(const fsm_end_id_t *ids, size_t n)
+check_ids_sorted_and_unique(const fsm_end_id_t *ids, size_t n)
 {
-	fprintf(stderr, " --> checking: ids sorted\n");
+
+#if ENDIDS_EXPENSIVE_CHECK_SORTED_ORDER
+	fprintf(stderr, " --> checking: ids sorted and unique\n");
 	size_t i;
 	for (i=1; i < n; i++) {
 		if (ids[i] < ids[i-1]) {
 			return 0;
 		}
 	}
+#endif /* ENDIDS_EXPENSIVE_CHECK_SORTED_ORDER */
 
 	return 1;
 }
@@ -429,8 +435,8 @@ fsm_endid_set(struct fsm *fsm,
 			b->ids->count++;
 		}
 
-                (void)check_ids_sorted;
-		DBG_3(assert(check_ids_sorted(b->ids->ids, b->ids->count)));
+		(void)check_ids_sorted_and_unique;
+		assert(check_ids_sorted_and_unique(b->ids->ids, b->ids->count));
 
 		LOG_3("fsm_endid_set: wrote %d at %d/%d\n", id, b->ids->count - 1, b->ids->ceil);
                 (void)dump_buckets;
