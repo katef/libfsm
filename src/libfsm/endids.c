@@ -274,18 +274,29 @@ rehash:
 	return NULL;
 }
 
-/* Returns the entry k of ids such that:
- * 0 <= k <= n
- * if 0 < k < n, then: ids[k-1] < itm <= ids[k]
- * if k == 0, then: itm <= ids[0]
- * if k == n, then: ids[n-1] < itm
+static int
+check_ids_sorted_and_unique(const fsm_end_id_t *ids, size_t n);
+
+/* Bisects a sorted list similar to Python's bisect.bisect_left function to return
+ * an index that can be used for insertion.
  *
- * Note that ids must be sorted in ascending order: if i <= j, then ids[i] <= ids[j]
+ * This function assumes that the items in the array are unique.
+ *
+ * Returns the entry k of ids such that:
+ *     0 <= k <= n
+ *     if 0 < k < n, then: ids[k-1] < itm <= ids[k]
+ *     if k == 0, then: itm <= ids[0]
+ *     if k == n, then: ids[n-1] < itm
+ *
+ * Note that ids must be unique and sorted in ascending order:
+ *     if i < j, then ids[i] < ids[j]
  */
 static size_t
-search_sorted_ids(fsm_end_id_t itm, const fsm_end_id_t *ids, size_t n)
+bisect_left_sorted_ids(fsm_end_id_t itm, const fsm_end_id_t *ids, size_t n)
 {
 	ptrdiff_t lo,hi;
+
+	assert(check_ids_sorted_and_unique(ids, n));
 
 	/* fast paths for empty, prepend or append */
 	if (n == 0) {
@@ -416,7 +427,7 @@ fsm_endid_set(struct fsm *fsm,
 		 *
 		 *     min{ind, id <= b->ids->ids[ind]}
 		 */
-		ind = search_sorted_ids(id, b->ids->ids, b->ids->count);
+		ind = bisect_left_sorted_ids(id, b->ids->ids, b->ids->count);
 		assert(ind <= b->ids->count);
 
 		if (ind == b->ids->count) {
