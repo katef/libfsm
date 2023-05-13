@@ -60,11 +60,10 @@ xmkstemps(char *s)
 	return fd;
 }
 
-static enum error_type
-runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation impl)
+static int
+compile(struct fsm *fsm, enum implementation impl, const char *tmp_so)
 {
 	char tmp_o[]      = "/tmp/fsmcompile_o-XXXXXX.o";
-	char tmp_so[]     = "/tmp/fsmcompile_so-XXXXXX.so";
 
 	/* Go runner needs a second object file */
 	char tmp_o2[] = "/tmp/fsmcompile_o2-XXXXXX.o";
@@ -93,12 +92,10 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	}
 
 	const char *cc, *cflags, *as, *asflags;
-	int fd_src, fd_so, fd_o, fd_o2;
+	int fd_src, fd_o, fd_o2;
 	FILE *f;
-	void *h;
 
 	fd_src = xmkstemps(tmp_src);
-	fd_so  = xmkstemps(tmp_so);
 
 	fd_o   = -1;
 	fd_o2  = -1;
@@ -106,7 +103,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	f = fdopen(fd_src, "w");
 	if (f == NULL) {
 		perror(tmp_src);
-		return ERROR_FILE_IO;
+		return 0;
 	}
 
 	{
@@ -132,7 +129,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		}
 
 		if (e == -1) {
-			return ERROR_FILE_IO;
+			return 0;
 		}
 	}
 
@@ -152,7 +149,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 
 	if (EOF == fflush(f)) {
 		perror(tmp_src);
-		return ERROR_FILE_IO;
+		return 0;
 	}
 
 	cc     = getenv("CC");
@@ -166,7 +163,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 				cc ? cc : "gcc", cflags ? cflags : "-std=c89 -pedantic -Wall -Werror -O3",
 				tmp_src, tmp_so))
 		{
-			return ERROR_FILE_IO;
+			return 0;
 		}
 
 		break;
@@ -176,7 +173,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 				"rustc", "--edition 2018",
 				tmp_src, tmp_so))
 		{
-			return ERROR_FILE_IO;
+			return 0;
 		}
 
 		break;
@@ -197,7 +194,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		if (0 != systemf("%s tool %s %s -p main -o %s %s",
 			"go", (impl == IMPL_GO) ? "compile" : "asm", asflags, tmp_o, tmp_src))
 		{
-			return ERROR_FILE_IO;
+			return 0;
 		}
 
 		as      = getenv("AS");
@@ -206,14 +203,14 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		if (0 != systemf("%s tool objdump -gnu %s | awk -f ./build/bin/go2att.awk | %s %s -o %s",
 				"go", tmp_o, as ? as : "as", asflags ? asflags : "", tmp_o2))
 		{
-			return ERROR_FILE_IO;
+			return 0;
 		}
 
 		if (0 != systemf("%s %s -shared %s -o %s",
 				cc ? cc : "gcc", cflags ? cflags : "",
 				tmp_o2, tmp_so))
 		{
-			return ERROR_FILE_IO;
+			return 0;
 		}
 
 		break;
@@ -227,14 +224,14 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		if (0 != systemf("%s %s -o %s %s",
 				as ? as : "as", asflags ? asflags : "", tmp_o, tmp_src))
 		{
-			return ERROR_FILE_IO;
+			return 0;
 		}
 
 		if (0 != systemf("%s %s -shared %s -o %s",
 				cc ? cc : "gcc", cflags ? cflags : "",
 				tmp_o, tmp_so))
 		{
-			return ERROR_FILE_IO;
+			return 0;
 		}
 
 		break;
@@ -246,58 +243,78 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 
 	if (EOF == fclose(f)) {
 		perror(tmp_src);
-		return ERROR_FILE_IO;
+		return 0;
 	}
 
 	if (-1 == unlinkat(-1, tmp_src, 0)) {
 		perror(tmp_src);
-		return ERROR_FILE_IO;
+		return 0;
 	}
 
 	if (fd_o != -1) {
 		if (-1 == close(fd_o)) {
 			perror(tmp_o);
-			return ERROR_FILE_IO;
+			return 0;
 		}
 
 		if (-1 == unlinkat(-1, tmp_o, 0)) {
 			perror(tmp_so);
-			return ERROR_FILE_IO;
+			return 0;
 		}
 	}
 
 	if (fd_o2 != -1) {
 		if (-1 == close(fd_o2)) {
 			perror(tmp_o2);
-			return ERROR_FILE_IO;
+			return 0;
 		}
 
 		if (-1 == unlinkat(-1, tmp_o2, 0)) {
 			perror(tmp_o2);
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+static enum error_type
+runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation impl)
+{
+	void *h;
+
+	r->impl = impl;
+
+	{
+		char tmp_so[]     = "/tmp/fsmcompile_so-XXXXXX.so";
+		int fd_so;
+
+		/* compile() writes to tmp_so by name, we don't write to the open fd */
+		fd_so  = xmkstemps(tmp_so);
+
+		if (!compile(fsm, r->impl, tmp_so)) {
+			return ERROR_FILE_IO;
+		}
+
+		if (-1 == close(fd_so)) {
+			perror(tmp_so);
+			return ERROR_FILE_IO;
+		}
+
+		h = dlopen(tmp_so, RTLD_NOW);
+		if (h == NULL) {
+			fprintf(stderr, "%s: %s", tmp_so, dlerror());
+			return ERROR_FILE_IO;
+		}
+
+		if (-1 == unlinkat(-1, tmp_so, 0)) {
+			perror(tmp_so);
 			return ERROR_FILE_IO;
 		}
 	}
 
-	h = dlopen(tmp_so, RTLD_NOW);
-	if (h == NULL) {
-		fprintf(stderr, "%s: %s", tmp_so, dlerror());
-		return ERROR_FILE_IO;
-	}
-
-	if (-1 == close(fd_so)) {
-		perror(tmp_so);
-		return ERROR_FILE_IO;
-	}
-
-	if (-1 == unlinkat(-1, tmp_so, 0)) {
-		perror(tmp_so);
-		return ERROR_FILE_IO;
-	}
-
-	r->impl = impl;
-
 	/* XXX: depends on IO API */
-	switch (impl) {
+	switch (r->impl) {
 	case IMPL_C:
 	case IMPL_VMC:
 		r->u.impl_c.h = h;
