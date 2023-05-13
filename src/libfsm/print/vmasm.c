@@ -34,7 +34,8 @@ enum asm_dialect {
 };
 
 static int
-print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct fsm_options *opt,
+print_asm_amd64(FILE *f, const char *prefix,
+	const struct ir *ir, const struct fsm_options *opt,
 	const struct dfavm_assembler_ir *a, enum asm_dialect dialect)
 {
 	// const char *sst_reg = NULL;      // state struct: not currently used
@@ -50,16 +51,15 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 	const struct dfavm_op_ir *op;
 
 	char *comment;
-	const char *prefix;
+	const char *sigil;
 
 #if defined(__MACH__)
-	prefix = "_";
+	sigil = "_";
 #else
-	prefix = "";
+	sigil = "";
 #endif
 
 	assert(f != NULL);
-	assert(funcname != NULL);
 	assert(ir != NULL);
 	assert(opt != NULL);
 	assert(a != NULL);
@@ -83,15 +83,15 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 	/* print preamble */
 	switch (dialect) {
 	case AMD64_ATT:
-		fprintf(f, ".globl %s%s\n", prefix, funcname);
+		fprintf(f, ".globl %s%s%s\n", sigil, prefix, "match");
 		fprintf(f, ".text\n");
-		fprintf(f, "%s%s:\n", prefix, funcname);
+		fprintf(f, "%s%s%s:\n", sigil, prefix, "match");
 		break;
 
 	case AMD64_NASM:
 		fprintf(f, "section .text\n");
-		fprintf(f, "global %s%s\n", prefix, funcname);
-		fprintf(f, "%s%s:\n", prefix, funcname);
+		fprintf(f, "global %s%s%s\n", sigil, prefix, "match");
+		fprintf(f, "%s%s%s:\n", sigil, prefix, "match");
 		break;
 
 	case AMD64_GO:
@@ -101,13 +101,13 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 
 		switch (opt->io) {
 		case FSM_IO_STR:
-			fprintf(f, "// func %s(data string) int\n", funcname);
-			fprintf(f, "TEXT    ·%s(SB), NOSPLIT, $0-24\n", funcname);
+			fprintf(f, "// func %s%s(data string) int\n", prefix, "Match");
+			fprintf(f, "TEXT    ·%s(SB), NOSPLIT, $0-24\n", "Match");
 			break;
 
 		case FSM_IO_PAIR:
-			fprintf(f, "// func %s(data []byte) int\n", funcname);
-			fprintf(f, "TEXT    ·%s(SB), NOSPLIT, $0-32\n", funcname);
+			fprintf(f, "// func %s%s(data []byte) int\n", prefix, "Match");
+			fprintf(f, "TEXT    ·%s%s(SB), NOSPLIT, $0-32\n", prefix, "Match");
 			break;
 
 		default:
@@ -285,7 +285,6 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 		case VM_OP_BRANCH:
 			{
 				const char *jmp_op;
-				char jlbl[64];
 				unsigned dest_state = op->u.br.dest_arg->ir_state - ir->states;
 
 				if (op->cmp != VM_CMP_ALWAYS) {
@@ -304,8 +303,6 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 					}
 				}
 
-				snprintf(jlbl, sizeof jlbl, "%sstate_%u", label_dot, dest_state);
-
 				switch (op->cmp) {
 				case VM_CMP_ALWAYS: jmp_op = (dialect == AMD64_ATT) ? "jmp    " : "JMP  "; break;
 				case VM_CMP_LT:     jmp_op = (dialect == AMD64_ATT) ? "jb     " : "JB   "; break;
@@ -316,7 +313,7 @@ print_asm_amd64(FILE *f, const char *funcname, const struct ir *ir, const struct
 				case VM_CMP_NE:     jmp_op = (dialect == AMD64_ATT) ? "jne    " : "JNE  "; break;
 				}
 
-				fprintf(f, "\t%-3s %s\n", jmp_op, jlbl);
+				fprintf(f, "\t%-3s %sstate_%u\n", jmp_op, label_dot, dest_state);
 			}
 			break;
 
@@ -370,7 +367,6 @@ print_vmasm_encoding(FILE *f, const struct fsm *fsm, enum asm_dialect dialect)
 {
 	struct ir *ir;
 	const char *prefix;
-	char funcname[256];
 	int r;
 
 	static const struct dfavm_assembler_ir zero;
@@ -405,13 +401,7 @@ print_vmasm_encoding(FILE *f, const struct fsm *fsm, enum asm_dialect dialect)
 		prefix = "fsm_";
 	}
 
-	if (dialect == AMD64_GO) {
-		snprintf(funcname, sizeof funcname, "%sMatch", prefix);
-	} else {
-		snprintf(funcname, sizeof funcname, "%smatch", prefix);
-	}
-
-	r = print_asm_amd64(f, funcname, ir, fsm->opt, &a, dialect);
+	r = print_asm_amd64(f, prefix, ir, fsm->opt, &a, dialect);
 
 	dfavm_opasm_finalize_op(&a);
 	free_ir(fsm, ir);
