@@ -1,6 +1,7 @@
-#define _DEFAULT_SOURCE
+#define _GNU_SOURCE /* for vasprintf */
 
 #include <stdint.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +18,34 @@
 
 #include "runner.h"
 
+static int
+systemf(const char *fmt, ...)
+{
+	va_list ap;
+	char *cmd;
+	int r;
+
+	assert(fmt != NULL);
+
+	va_start(ap, fmt);
+	r = vasprintf(&cmd, fmt, ap);
+	va_end(ap);
+
+	if (r == -1) {
+		perror("vasprintf");
+		exit(EXIT_FAILURE);
+	}
+
+	r = system(cmd);
+	if (r != 0) {
+		perror(cmd);
+	}
+
+	free(cmd);
+
+	return r;
+}
+
 static enum error_type
 runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation impl)
 {
@@ -30,7 +59,6 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	/* Go runner needs a second object file */
 	char tmp_o2[] = "/tmp/fsmcompile_o2-XXXXXX";
 
-	char cmd[sizeof tmp_src + sizeof tmp_o + sizeof tmp_so + 256];
 	const char *cc, *cflags, *as, *asflags;
 	int src_suffix_len = 0;
 	int fd_src, fd_so, fd_o, fd_o2;
@@ -105,24 +133,20 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	case IMPL_C:
 	case IMPL_VMC:
 	case IMPL_VMOPS:
-		(void) snprintf(cmd, sizeof cmd, "%s %s -xc -shared -fPIC %s -o %s",
+		if (0 != systemf("%s %s -xc -shared -fPIC %s -o %s",
 				cc ? cc : "gcc", cflags ? cflags : "-std=c89 -pedantic -Wall -Werror -O3",
-				tmp_src, tmp_so);
-
-		if (0 != system(cmd)) {
-			perror(cmd);
+				tmp_src, tmp_so))
+		{
 			return ERROR_FILE_IO;
 		}
 
 		break;
 
 	case IMPL_RUST:
-		(void) snprintf(cmd, sizeof cmd, "%s %s --crate-type dylib %s -o %s",
+		if (0 != systemf("%s %s --crate-type dylib %s -o %s",
 				"rustc", "--edition 2018",
-				tmp_src, tmp_so);
-
-		if (0 != system(cmd)) {
-			perror(cmd);
+				tmp_src, tmp_so))
+		{
 			return ERROR_FILE_IO;
 		}
 
@@ -141,31 +165,25 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 			asflags = "-I $(go env GOROOT)/src/runtime";
 		}
 
-		(void) snprintf(cmd, sizeof cmd, "%s tool %s %s -p main -o %s %s",
-			"go", (impl == IMPL_GO) ? "compile" : "asm", asflags, tmp_o, tmp_src);
-
-		if (0 != system(cmd)) {
-			perror(cmd);
+		if (0 != systemf("%s tool %s %s -p main -o %s %s",
+			"go", (impl == IMPL_GO) ? "compile" : "asm", asflags, tmp_o, tmp_src))
+		{
 			return ERROR_FILE_IO;
 		}
 
 		as      = getenv("AS");
 		asflags = getenv("ASFLAGS");
 
-		(void) snprintf(cmd, sizeof cmd, "%s tool objdump -gnu %s |awk -f ./build/bin/go2att.awk |%s %s -o %s",
-				"go", tmp_o, as ? as : "as", asflags ? asflags : "", tmp_o2);
-
-		if (0 != system(cmd)) {
-			perror(cmd);
+		if (0 != systemf("%s tool objdump -gnu %s |awk -f ./build/bin/go2att.awk |%s %s -o %s",
+				"go", tmp_o, as ? as : "as", asflags ? asflags : "", tmp_o2))
+		{
 			return ERROR_FILE_IO;
 		}
 
-		(void) snprintf(cmd, sizeof cmd, "%s %s -shared %s -o %s",
+		if (0 != systemf("%s %s -shared %s -o %s",
 				cc ? cc : "gcc", cflags ? cflags : "",
-				tmp_o2, tmp_so);
-
-		if (0 != system(cmd)) {
-			perror(cmd);
+				tmp_o2, tmp_so))
+		{
 			return ERROR_FILE_IO;
 		}
 
@@ -177,20 +195,16 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 
 		fd_o = mkstemp(tmp_o);
 
-		(void) snprintf(cmd, sizeof cmd, "%s %s -o %s %s",
-				as ? as : "as", asflags ? asflags : "", tmp_o, tmp_src);
-
-		if (0 != system(cmd)) {
-			perror(cmd);
+		if (0 != systemf("%s %s -o %s %s",
+				as ? as : "as", asflags ? asflags : "", tmp_o, tmp_src))
+		{
 			return ERROR_FILE_IO;
 		}
 
-		(void) snprintf(cmd, sizeof cmd, "%s %s -shared %s -o %s",
+		if (0 != systemf("%s %s -shared %s -o %s",
 				cc ? cc : "gcc", cflags ? cflags : "",
-				tmp_o, tmp_so);
-
-		if (0 != system(cmd)) {
-			perror(cmd);
+				tmp_o, tmp_so))
+		{
 			return ERROR_FILE_IO;
 		}
 
