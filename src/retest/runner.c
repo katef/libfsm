@@ -49,8 +49,6 @@ systemf(const char *fmt, ...)
 static enum error_type
 runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation impl)
 {
-	static fsm_print *asm_print = fsm_print_vmasm_amd64_att;
-
 	/* Need extra null bytes for any potential suffix */
 	char tmp_src[] = "/tmp/fsmcompile_src-XXXXXX\0\0\0\0";
 	char tmp_o[]   = "/tmp/fsmcompile_o-XXXXXX";
@@ -71,10 +69,6 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		src_suffix_len = 3;
 	}
 
-	if (impl == IMPL_GOASM) {
-		asm_print = fsm_print_vmasm_amd64_go;
-	}
-
 	fd_src = mkstemps(tmp_src, src_suffix_len);
 	fd_so  = mkstemp(tmp_so);
 	fd_o   = -1;
@@ -86,25 +80,31 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		return ERROR_FILE_IO;
 	}
 
-	switch (impl) {
-	case IMPL_C:     fsm_print_c(f, fsm);    break;
-	case IMPL_RUST:  fsm_print_rust(f, fsm); break;
-	case IMPL_VMC:   fsm_print_vmc(f, fsm);  break;
-	case IMPL_GOASM:
-	case IMPL_VMASM: asm_print(f,fsm);       break;
-	case IMPL_VMOPS:
-		fsm_print_vmops_h(f, fsm);
-		fsm_print_vmops_c(f, fsm);
-		fsm_print_vmops_main(f, fsm);
-		break;
+	{
+		int e;
 
-	case IMPL_GO:
-		fsm_print_go(f, fsm);
-		break;
+		switch (impl) {
+		case IMPL_C:     e = fsm_print_c(f, fsm);               break;
+		case IMPL_RUST:  e = fsm_print_rust(f, fsm);            break;
+		case IMPL_VMC:   e = fsm_print_vmc(f, fsm);             break;
+		case IMPL_GOASM: e = fsm_print_vmasm_amd64_go(f, fsm);  break;
+		case IMPL_VMASM: e = fsm_print_vmasm_amd64_att(f, fsm); break;
+		case IMPL_GO:    e = fsm_print_go(f, fsm);              break;
 
-	case IMPL_INTERPRET:
-			 assert(!"should not reach!");
-			 break;
+		case IMPL_VMOPS:
+			e = fsm_print_vmops_h(f, fsm)
+			  | fsm_print_vmops_c(f, fsm)
+			  | fsm_print_vmops_main(f, fsm);
+			break;
+
+		case IMPL_INTERPRET:
+			assert(!"unreached");
+			break;
+		}
+
+		if (e == -1) {
+			return ERROR_FILE_IO;
+		}
 	}
 
 	if (impl == IMPL_RUST) {
@@ -211,7 +211,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		break;
 
 	case IMPL_INTERPRET:
-		assert(!"should not reach!");
+		assert(!"unreached");
 		break;
 	}
 
