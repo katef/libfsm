@@ -163,6 +163,12 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		(void) snprintf(cmd, sizeof cmd, "%s %s -shared %s -o %s",
 				cc ? cc : "gcc", cflags ? cflags : "",
 				tmp_o2, tmp_so);
+
+		if (0 != system(cmd)) {
+			perror(cmd);
+			return ERROR_FILE_IO;
+		}
+
 		break;
 
 	case IMPL_VMASM:
@@ -183,16 +189,16 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 				cc ? cc : "gcc", cflags ? cflags : "",
 				tmp_o, tmp_so);
 
+		if (0 != system(cmd)) {
+			perror(cmd);
+			return ERROR_FILE_IO;
+		}
+
 		break;
 
 	case IMPL_INTERPRET:
 		assert(!"should not reach!");
 		break;
-	}
-
-	if (0 != system(cmd)) {
-		perror(cmd);
-		return ERROR_FILE_IO;
 	}
 
 	if (EOF == fclose(f)) {
