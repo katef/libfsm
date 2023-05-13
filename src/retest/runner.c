@@ -46,33 +46,62 @@ systemf(const char *fmt, ...)
 	return r;
 }
 
+static int
+xmkstemps(char *s)
+{
+	int fd;
+
+	fd = mkstemps(s, strlen(strrchr(s, '.')));
+	if (fd == -1) {
+		perror(s);
+		exit(EXIT_FAILURE);
+	}
+
+	return fd;
+}
+
 static enum error_type
 runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation impl)
 {
-	/* Need extra null bytes for any potential suffix */
-	char tmp_src[] = "/tmp/fsmcompile_src-XXXXXX\0\0\0\0";
-	char tmp_o[]   = "/tmp/fsmcompile_o-XXXXXX";
-	char tmp_so[]  = "/tmp/fsmcompile_so-XXXXXX";
+	char tmp_o[]      = "/tmp/fsmcompile_o-XXXXXX.o";
+	char tmp_so[]     = "/tmp/fsmcompile_so-XXXXXX.so";
 
 	/* Go runner needs a second object file */
-	char tmp_o2[] = "/tmp/fsmcompile_o2-XXXXXX";
+	char tmp_o2[] = "/tmp/fsmcompile_o2-XXXXXX.o";
 
-	const char *cc, *cflags, *as, *asflags;
-	int src_suffix_len = 0;
-	int fd_src, fd_so, fd_o, fd_o2;
-	FILE *f = NULL;
-	void *h = NULL;
+	/* The Go compiler needs an extension on tmp_src so it knows
+	 * it's a file not a package. Since we're doing that, it's
+	 * easier to do the same for everyone. */
+	char tmp_src_go[] = "/tmp/fsmcompile_src-XXXXXX.go";
+	char tmp_src_c[]  = "/tmp/fsmcompile_src-XXXXXX.c";
+	char tmp_src_rs[] = "/tmp/fsmcompile_src-XXXXXX.rs";
+	char tmp_src_s[]  = "/tmp/fsmcompile_src-XXXXXX.s";
+	char *tmp_src;
 
-	if (impl == IMPL_GO) {
-		/* The Go compiler needs an extension on tmp_src so it knows it's a file not a package. */
-		strcat(tmp_src, ".go");
-		src_suffix_len = 3;
+	switch (impl) {
+	case IMPL_VMOPS:
+	case IMPL_C:
+	case IMPL_VMC:   tmp_src = tmp_src_c;  break;
+	case IMPL_RUST:  tmp_src = tmp_src_rs; break;
+	case IMPL_GOASM:
+	case IMPL_VMASM: tmp_src = tmp_src_s;  break;
+	case IMPL_GO:    tmp_src = tmp_src_go; break;
+
+	case IMPL_INTERPRET:
+		assert(!"unreached");
+		break;
 	}
 
-	fd_src = mkstemps(tmp_src, src_suffix_len);
-	fd_so  = mkstemp(tmp_so);
+	const char *cc, *cflags, *as, *asflags;
+	int fd_src, fd_so, fd_o, fd_o2;
+	FILE *f;
+	void *h;
+
+	fd_src = xmkstemps(tmp_src);
+	fd_so  = xmkstemps(tmp_so);
+
 	fd_o   = -1;
-	fd_o2   = -1;
+	fd_o2  = -1;
 
 	f = fdopen(fd_src, "w");
 	if (f == NULL) {
@@ -154,8 +183,8 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 
 	case IMPL_GO:
 	case IMPL_GOASM:
-		fd_o = mkstemp(tmp_o);
-		fd_o2 = mkstemp(tmp_o2);
+		fd_o  = xmkstemps(tmp_o);
+		fd_o2 = xmkstemps(tmp_o2);
 
 		/* Go compiler needs to know not to look for a go.mod file */
 		setenv("GOMODULE111", "off", 1);
@@ -174,7 +203,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		as      = getenv("AS");
 		asflags = getenv("ASFLAGS");
 
-		if (0 != systemf("%s tool objdump -gnu %s |awk -f ./build/bin/go2att.awk |%s %s -o %s",
+		if (0 != systemf("%s tool objdump -gnu %s | awk -f ./build/bin/go2att.awk | %s %s -o %s",
 				"go", tmp_o, as ? as : "as", asflags ? asflags : "", tmp_o2))
 		{
 			return ERROR_FILE_IO;
@@ -193,7 +222,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		as      = getenv("AS");
 		asflags = getenv("ASFLAGS");
 
-		fd_o = mkstemp(tmp_o);
+		fd_o = xmkstemps(tmp_o);
 
 		if (0 != systemf("%s %s -o %s %s",
 				as ? as : "as", asflags ? asflags : "", tmp_o, tmp_src))
