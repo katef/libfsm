@@ -129,16 +129,6 @@ compile(enum implementation impl,
 	const char *tmp_src, const char *tmp_so)
 {
 	const char *cc, *cflags, *as, *asflags;
-	int fd_o, fd_o2;
-
-	fd_o   = -1;
-	fd_o2  = -1;
-
-	char tmp_o[]      = "/tmp/fsmcompile_o-XXXXXX.o";
-
-	/* Go runner needs a second object file */
-	char tmp_o2[] = "/tmp/fsmcompile_o2-XXXXXX.o";
-
 	cc     = getenv("CC");
 	cflags = getenv("CFLAGS");
 
@@ -166,8 +156,13 @@ compile(enum implementation impl,
 		break;
 
 	case IMPL_GO:
-	case IMPL_GOASM:
-		fd_o  = xmkstemps(tmp_o);
+	case IMPL_GOASM: {
+		char tmp_o1[] = "/tmp/fsmcompile_o1-XXXXXX.o";
+		char tmp_o2[] = "/tmp/fsmcompile_o2-XXXXXX.o";
+
+		int fd_o1, fd_o2;
+
+		fd_o1 = xmkstemps(tmp_o1);
 		fd_o2 = xmkstemps(tmp_o2);
 
 		/* Go compiler needs to know not to look for a go.mod file */
@@ -179,7 +174,7 @@ compile(enum implementation impl,
 		}
 
 		if (0 != systemf("%s tool %s %s -p main -o %s %s",
-			"go", (impl == IMPL_GO) ? "compile" : "asm", asflags, tmp_o, tmp_src))
+			"go", (impl == IMPL_GO) ? "compile" : "asm", asflags, tmp_o1, tmp_src))
 		{
 			return 0;
 		}
@@ -188,7 +183,7 @@ compile(enum implementation impl,
 		asflags = getenv("ASFLAGS");
 
 		if (0 != systemf("%s tool objdump -gnu %s | awk -f ./build/bin/go2att.awk | %s %s -o %s",
-				"go", tmp_o, as ? as : "as", asflags ? asflags : "", tmp_o2))
+				"go", tmp_o1, as ? as : "as", asflags ? asflags : "", tmp_o2))
 		{
 			return 0;
 		}
@@ -200,9 +195,33 @@ compile(enum implementation impl,
 			return 0;
 		}
 
-		break;
+		if (-1 == close(fd_o1)) {
+			perror(tmp_o1);
+			return 0;
+		}
 
-	case IMPL_VMASM:
+		if (-1 == unlinkat(-1, tmp_o1, 0)) {
+			perror(tmp_o1);
+			return 0;
+		}
+
+		if (-1 == close(fd_o2)) {
+			perror(tmp_o2);
+			return 0;
+		}
+
+		if (-1 == unlinkat(-1, tmp_o2, 0)) {
+			perror(tmp_o2);
+			return 0;
+		}
+
+		break;
+	}
+
+	case IMPL_VMASM: {
+		char tmp_o[] = "/tmp/fsmcompile_o-XXXXXX.o";
+		int fd_o;
+
 		as      = getenv("AS");
 		asflags = getenv("ASFLAGS");
 
@@ -221,35 +240,22 @@ compile(enum implementation impl,
 			return 0;
 		}
 
-		break;
-
-	case IMPL_INTERPRET:
-		assert(!"unreached");
-		break;
-	}
-
-	if (fd_o != -1) {
 		if (-1 == close(fd_o)) {
 			perror(tmp_o);
 			return 0;
 		}
 
 		if (-1 == unlinkat(-1, tmp_o, 0)) {
-			perror(tmp_so);
+			perror(tmp_o);
 			return 0;
 		}
+
+		break;
 	}
 
-	if (fd_o2 != -1) {
-		if (-1 == close(fd_o2)) {
-			perror(tmp_o2);
-			return 0;
-		}
-
-		if (-1 == unlinkat(-1, tmp_o2, 0)) {
-			perror(tmp_o2);
-			return 0;
-		}
+	case IMPL_INTERPRET:
+		assert(!"unreached");
+		break;
 	}
 
 	return 1;
