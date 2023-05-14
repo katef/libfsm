@@ -61,44 +61,13 @@ xmkstemps(char *s)
 }
 
 static int
-compile(struct fsm *fsm, enum implementation impl, const char *tmp_so)
+print(const struct fsm *fsm, enum implementation impl,
+	char *tmp_src)
 {
-	char tmp_o[]      = "/tmp/fsmcompile_o-XXXXXX.o";
-
-	/* Go runner needs a second object file */
-	char tmp_o2[] = "/tmp/fsmcompile_o2-XXXXXX.o";
-
-	/* The Go compiler needs an extension on tmp_src so it knows
-	 * it's a file not a package. Since we're doing that, it's
-	 * easier to do the same for everyone. */
-	char tmp_src_go[] = "/tmp/fsmcompile_src-XXXXXX.go";
-	char tmp_src_c[]  = "/tmp/fsmcompile_src-XXXXXX.c";
-	char tmp_src_rs[] = "/tmp/fsmcompile_src-XXXXXX.rs";
-	char tmp_src_s[]  = "/tmp/fsmcompile_src-XXXXXX.s";
-	char *tmp_src;
-
-	switch (impl) {
-	case IMPL_VMOPS:
-	case IMPL_C:
-	case IMPL_VMC:   tmp_src = tmp_src_c;  break;
-	case IMPL_RUST:  tmp_src = tmp_src_rs; break;
-	case IMPL_GOASM:
-	case IMPL_VMASM: tmp_src = tmp_src_s;  break;
-	case IMPL_GO:    tmp_src = tmp_src_go; break;
-
-	case IMPL_INTERPRET:
-		assert(!"unreached");
-		break;
-	}
-
-	const char *cc, *cflags, *as, *asflags;
-	int fd_src, fd_o, fd_o2;
+	int fd_src;
 	FILE *f;
 
 	fd_src = xmkstemps(tmp_src);
-
-	fd_o   = -1;
-	fd_o2  = -1;
 
 	f = fdopen(fd_src, "w");
 	if (f == NULL) {
@@ -141,16 +110,34 @@ compile(struct fsm *fsm, enum implementation impl, const char *tmp_so)
 		fprintf(f, "\n");
 
 		fprintf(f, "#[no_mangle]\n");
-		fprintf(f, "pub extern \"C\" fn reperf_trampoline(ptr: *const c_uchar, len: usize) -> i64 {\n");
+		fprintf(f, "pub extern \"C\" fn retest_trampoline(ptr: *const c_uchar, len: usize) -> i64 {\n");
 		fprintf(f, "    let a: &[u8] = unsafe { slice::from_raw_parts(ptr, len as usize) };\n");
 		fprintf(f, "    fsm_main(a).unwrap_or(-1)\n");
 		fprintf(f, "}\n");
 	}
 
-	if (EOF == fflush(f)) {
+	if (EOF == fclose(f)) {
 		perror(tmp_src);
 		return 0;
 	}
+
+	return 1;
+}
+
+static int
+compile(enum implementation impl,
+	const char *tmp_src, const char *tmp_so)
+{
+	const char *cc, *cflags, *as, *asflags;
+	int fd_o, fd_o2;
+
+	fd_o   = -1;
+	fd_o2  = -1;
+
+	char tmp_o[]      = "/tmp/fsmcompile_o-XXXXXX.o";
+
+	/* Go runner needs a second object file */
+	char tmp_o2[] = "/tmp/fsmcompile_o2-XXXXXX.o";
 
 	cc     = getenv("CC");
 	cflags = getenv("CFLAGS");
@@ -241,16 +228,6 @@ compile(struct fsm *fsm, enum implementation impl, const char *tmp_so)
 		break;
 	}
 
-	if (EOF == fclose(f)) {
-		perror(tmp_src);
-		return 0;
-	}
-
-	if (-1 == unlinkat(-1, tmp_src, 0)) {
-		perror(tmp_src);
-		return 0;
-	}
-
 	if (fd_o != -1) {
 		if (-1 == close(fd_o)) {
 			perror(tmp_o);
@@ -285,6 +262,33 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 
 	r->impl = impl;
 
+	/* The Go compiler needs an extension on tmp_src so it knows
+	 * it's a file not a package. Since we're doing that, it's
+	 * easier to do the same for everyone. */
+	char tmp_src_go[] = "/tmp/fsmcompile_src-XXXXXX.go";
+	char tmp_src_c[]  = "/tmp/fsmcompile_src-XXXXXX.c";
+	char tmp_src_rs[] = "/tmp/fsmcompile_src-XXXXXX.rs";
+	char tmp_src_s[]  = "/tmp/fsmcompile_src-XXXXXX.s";
+	char *tmp_src;
+
+	switch (impl) {
+	case IMPL_VMOPS:
+	case IMPL_C:
+	case IMPL_VMC:   tmp_src = tmp_src_c;  break;
+	case IMPL_RUST:  tmp_src = tmp_src_rs; break;
+	case IMPL_GOASM:
+	case IMPL_VMASM: tmp_src = tmp_src_s;  break;
+	case IMPL_GO:    tmp_src = tmp_src_go; break;
+
+	case IMPL_INTERPRET:
+		assert(!"unreached");
+		break;
+	}
+
+	if (!print(fsm, r->impl, tmp_src)) {
+		return ERROR_FILE_IO;
+	}
+
 	{
 		char tmp_so[]     = "/tmp/fsmcompile_so-XXXXXX.so";
 		int fd_so;
@@ -292,7 +296,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		/* compile() writes to tmp_so by name, we don't write to the open fd */
 		fd_so  = xmkstemps(tmp_so);
 
-		if (!compile(fsm, r->impl, tmp_so)) {
+		if (!compile(r->impl, tmp_src, tmp_so)) {
 			return ERROR_FILE_IO;
 		}
 
@@ -313,6 +317,11 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		}
 	}
 
+	if (-1 == unlinkat(-1, tmp_src, 0)) {
+		perror(tmp_src);
+		return 0;
+	}
+
 	/* XXX: depends on IO API */
 	switch (r->impl) {
 	case IMPL_C:
@@ -328,7 +337,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 
 	case IMPL_RUST:
 		r->u.impl_rust.h = h;
-		r->u.impl_rust.func = (int64_t (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "reperf_trampoline");
+		r->u.impl_rust.func = (int64_t (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "retest_trampoline");
 		break;
 
 	case IMPL_GO:
