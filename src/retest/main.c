@@ -172,9 +172,11 @@ usage(void)
 	fprintf(stderr, "        -l <implementation>\n");
 	fprintf(stderr, "             sets implementation type:\n");
 	fprintf(stderr, "                 vm        interpret vm instructions (default)\n");
-	fprintf(stderr, "                 asm       generate assembly and assemble\n");
+	fprintf(stderr, "                 asm/goasm generate assembly and assemble\n");
 	fprintf(stderr, "                 c         compile as per fsm_print_c()\n");
 	fprintf(stderr, "                 vmc       compile as per fsm_print_vmc()\n");
+	fprintf(stderr, "                 vmops     compile as per fsm_print_vmops_{c,h,main}()\n");
+	fprintf(stderr, "                 rust      compile as per fsm_print_rust()\n");
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -x <encoding>\n");
@@ -1264,6 +1266,8 @@ main(int argc, char *argv[])
 					impl = IMPL_GO;
 				} else if (strcmp(optarg, "goasm") == 0) {
 					impl = IMPL_GOASM;
+				} else if (strcmp(optarg, "rust") == 0) {
+					impl = IMPL_RUST;
 				} else {
 					fprintf(stderr, "unknown argument to -l: %s\n", optarg);
 					usage();
