@@ -1,3 +1,6 @@
+#include <sys/time.h>
+#include <unistd.h>
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -6,8 +9,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <ctype.h>
-#include <sys/time.h>
-#include <unistd.h>
+#include <errno.h>
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
