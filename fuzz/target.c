@@ -283,7 +283,6 @@ fuzz_all_print_functions(FILE *f, const char *pattern, bool det, bool min, const
 	};
 
 	fsm = re_comp(RE_PCRE, scanner_next, &s, &options, RE_MULTI, &err);
-
 	if (fsm == NULL) {
 		/* ignore invalid regexp syntax, etc. */
 		return EXIT_SUCCESS;
@@ -302,6 +301,9 @@ fuzz_all_print_functions(FILE *f, const char *pattern, bool det, bool min, const
 			}
 		}
 	}
+
+	/* if errno isn't zero already, I want to know why */
+	assert(errno == 0);
 
 	/* see if this triggers any asserts */
 	int r = 0;
