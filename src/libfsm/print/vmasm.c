@@ -378,6 +378,18 @@ print_vmasm_encoding(FILE *f, const struct fsm *fsm, enum asm_dialect dialect)
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
+	if (dialect == AMD64_GO) {
+		if (fsm->opt->io != FSM_IO_STR && fsm->opt->io != FSM_IO_PAIR) {
+			errno = ENOTSUP;
+			return -1;   
+		}
+	} else {
+		if (fsm->opt->io != FSM_IO_PAIR) {
+			errno = ENOTSUP;
+			return -1;   
+		}
+	}
+
 	ir = make_ir(fsm);
 	if (ir == NULL) {
 		return -1;
