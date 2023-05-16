@@ -15,6 +15,9 @@ BUILD_IMPOSSIBLE="attempting to use .OBJDIR other than .CURDIR"
 
 # targets
 all::  mkdir .WAIT dep .WAIT lib prog
+.if make(fuzz)
+fuzz:: mkdir
+.endif
 doc::  mkdir
 dep::
 gen::
@@ -151,6 +154,11 @@ INCDIR += include
 .include <prog.mk>
 .include <man.mk>
 .include <mkdir.mk>
+.endif
+
+# XXX: workaround for CI in github where the linker doesn't support dwarf-5?
+.if defined(FUZZER)
+CFLAGS += -gdwarf-4
 .endif
 
 # these are internal tools for development; we don't install them to $PREFIX
