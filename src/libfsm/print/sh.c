@@ -263,13 +263,13 @@ fsm_print_sh(FILE *f, const struct fsm *fsm)
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
-	ir = make_ir(fsm);
-	if (ir == NULL) {
+	if (fsm->opt->io != FSM_IO_STR) {
+		errno = ENOTSUP;
 		return -1;
 	}
 
-	if (fsm->opt->io != FSM_IO_STR) {
-		errno = ENOTSUP;
+	ir = make_ir(fsm);
+	if (ir == NULL) {
 		return -1;
 	}
 
