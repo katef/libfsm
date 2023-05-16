@@ -135,7 +135,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        san: [ NO_SANITIZER, ASAN, UBSAN, MSAN, EFENCE ] # NO_SANITIZER=1 is a no-op
+        san: [ NO_SANITIZER, ASAN, UBSAN, MSAN, EFENCE, FUZZER ] # NO_SANITIZER=1 is a no-op
         os: [ ubuntu ]
         cc: [ clang, gcc ]
         make: [ bmake ] # we test makefiles separately
@@ -149,6 +149,8 @@ jobs:
             san: MSAN # not supported
           - os: macos
             make: pmake # not packaged
+          - san: FUZZER
+            cc: gcc # -fsanitize=fuzzer is clang-only
 
     steps:
     - name: Fetch checkout
@@ -186,12 +188,24 @@ jobs:
       id: cpu-cores
 
     - name: Make
-      if: steps.cache-build.outputs.cache-hit != 'true'
+      if: matrix.san != 'FUZZER' && steps.cache-build.outputs.cache-hit != 'true'
       run: |
         # note: lexer.h first, because parser.? depends on it
         find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
         find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
         ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }} NODOC=1
+
+    # We aren't building the CLI executables here, just the fuzzer
+    # matrix.san=FUZZER implies UBSAN and ASAN (but not MSAN, MSAN is incompatible with ASAN)
+    # XXX: needing to explicitly mkdir here is a makefile bug
+    - name: Make (Fuzzer)
+      if: matrix.san == 'FUZZER' && steps.cache-build.outputs.cache-hit != 'true'
+      run: |
+        # note: lexer.h first, because parser.? depends on it
+        find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
+        find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
+        ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 UBSAN=1 ASAN=1 PKGCONF=pkg-config CC=${{ matrix.cc }} NODOC=1 mkdir
+        ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 UBSAN=1 ASAN=1 PKGCONF=pkg-config CC=${{ matrix.cc }} NODOC=1 fuzz
 
   # testing different bmake dialects
   # the goal here is to excercise the build system, not the code
@@ -314,6 +328,67 @@ jobs:
         EF_DISABLE_BANNER: 1
       # I don't want to build SID just for sake of its -l test
       run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} NODOC=1 LX=../${{ env.build }}/bin/lx test
+
+  test_fuzz:
+    name: "Fuzz (mode ${{ matrix.mode }}) ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
+    runs-on: ${{ matrix.os }}-latest
+    needs: [ build ]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        san: [ FUZZER ]
+        os: [ ubuntu ]
+        cc: [ clang ]
+        make: [ bmake ]
+        debug: [ DEBUG, EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op
+        mode: [ p, m ]
+        exclude:
+          - os: macos
+            cc: gcc # it's clang anyway
+
+    steps:
+    - name: Fetch checkout
+      uses: actions/cache@v3
+      id: cache-checkout
+      with:
+        path: ${{ env.wc }}
+        key: checkout-${{ github.sha }}
+
+    - name: Dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu'
+      run: |
+        uname -a
+        sudo apt-get install bmake
+        ${{ matrix.cc }} --version
+
+    - name: Dependencies (MacOS)
+      if: matrix.os == 'macos'
+      run: |
+        uname -a
+        brew update
+        brew install bmake
+        ${{ matrix.cc }} --version
+
+    - name: Fetch build
+      uses: actions/cache@v3
+      id: cache-build
+      with:
+        path: ${{ env.build }}
+        key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+
+    - name: Get number of CPU cores
+      uses: SimenB/github-actions-cpu-cores@v1
+      id: cpu-cores
+
+    - name: Fuzz
+      env:
+        MODE: ${{ env.mode }}
+        ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
+        UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+      run: |
+        mkdir -p seeds
+        ./${{ env.build }}/fuzz/fuzzer -jobs=$((${{ steps.cpu-cores.outputs.count }} + 1)) -max_total_time=60 seeds
 
   test_pcre:
     name: "Test (PCRE suite) ${{ matrix.lang }} ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
