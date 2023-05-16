@@ -1,11 +1,11 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <assert.h>
 #include <string.h>
 #include <inttypes.h>
 #include <ctype.h>
@@ -390,4 +390,6 @@ harness_fuzzer_target(const uint8_t *data, size_t size)
 		return res;
 	}
 	}
+
+	assert(!"unreached");
 }
