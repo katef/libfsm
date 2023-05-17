@@ -975,6 +975,10 @@ ast_compile(const struct ast *ast,
 
 error:
 
+	if (err != NULL && err->e == RE_ESUCCESS && errno != 0) {
+		err->e = RE_EERRNO;
+	}
+
 	fsm_free(fsm);
 
 	return NULL;
