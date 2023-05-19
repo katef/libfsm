@@ -99,7 +99,7 @@ print(const struct fsm *fsm, enum implementation impl,
 
 		case IMPL_INTERPRET:
 			assert(!"unreached");
-			break;
+			abort();
 		}
 
 		if (e == -1) {
@@ -297,7 +297,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 
 	case IMPL_INTERPRET:
 		assert(!"unreached");
-		break;
+		abort();
 	}
 
 	if (!print(fsm, r->impl, tmp_src)) {
