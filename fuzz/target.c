@@ -337,16 +337,17 @@ static enum run_mode
 get_run_mode(void)
 {
 	const char *mode = getenv("MODE");
-	if (mode != NULL) {
-		switch (mode[0]) {
-		case 'm': return MODE_SHUFFLE_MINIMISE;
-		case 'p': return MODE_ALL_PRINT_FUNCTIONS;
-		default:
-			break;
-		}
+	if (mode == NULL) {
+		return MODE_DEFAULT;
 	}
 
-	return MODE_DEFAULT;
+	switch (mode[0]) {
+	case 'm': return MODE_SHUFFLE_MINIMISE;
+	case 'p': return MODE_ALL_PRINT_FUNCTIONS;
+	case 'd':
+	default:
+		return MODE_DEFAULT;
+	}
 }
 
 static FILE *dev_null = NULL;
@@ -354,8 +355,6 @@ static FILE *dev_null = NULL;
 int
 harness_fuzzer_target(const uint8_t *data, size_t size)
 {
-	enum run_mode run_mode = get_run_mode();
-
 	if (size < 1) {
 		return EXIT_SUCCESS;
 	}
@@ -368,7 +367,7 @@ harness_fuzzer_target(const uint8_t *data, size_t size)
 
 	const char *pattern = (const char *)data_buf;
 
-	switch (run_mode) {
+	switch (get_run_mode()) {
 	case MODE_DEFAULT:
 		return build_and_codegen(pattern);
 
