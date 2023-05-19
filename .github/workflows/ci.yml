@@ -71,7 +71,7 @@ jobs:
       id: cache-cvtpcre
       with:
         path: ${{ env.cvtpcre }}
-        key: cvtpcre-bmake-ubuntu-gcc-DEBUG-ASAN-${{ github.sha }}-${{ env.pcre2 }}
+        key: cvtpcre-bmake-ubuntu-gcc-EXPENSIVE_CHECKS-ASAN-${{ github.sha }}-${{ env.pcre2 }}
 
     - name: Fetch build
       if: steps.cache-cvtpcre.outputs.cache-hit != 'true'
@@ -79,7 +79,7 @@ jobs:
       id: cache-build
       with:
         path: ${{ env.build }}
-        key: build-bmake-ubuntu-gcc-DEBUG-ASAN-${{ github.sha }} # arbitary build, just for cvtpcre
+        key: build-bmake-ubuntu-gcc-EXPENSIVE_CHECKS-ASAN-${{ github.sha }} # arbitary build, just for cvtpcre
 
     - name: Convert PCRE suite
       if: steps.cache-cvtpcre.outputs.cache-hit != 'true'
@@ -140,7 +140,7 @@ jobs:
         os: [ ubuntu ]
         cc: [ clang, gcc ]
         make: [ bmake ] # we test makefiles separately
-        debug: [ DEBUG, EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op
+        debug: [ EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op, EXPENSIVE_CHECKS implies DEBUG
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
@@ -281,7 +281,7 @@ jobs:
         os: [ ubuntu ]
         cc: [ clang, gcc ]
         make: [ bmake ]
-        debug: [ DEBUG, EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op
+        debug: [ EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op, EXPENSIVE_CHECKS implies DEBUG
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
@@ -342,7 +342,7 @@ jobs:
         os: [ ubuntu ]
         cc: [ clang ]
         make: [ bmake ]
-        debug: [ DEBUG, EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op
+        debug: [ EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op, EXPENSIVE_CHECKS implies DEBUG
         mode: [ m, p, d ]
         exclude:
           - os: macos
@@ -420,7 +420,7 @@ jobs:
         os: [ ubuntu ]
         cc: [ clang, gcc ]
         make: [ bmake ]
-        debug: [ DEBUG, EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op
+        debug: [ EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op, EXPENSIVE_CHECKS implies DEBUG
         lang: [ "vm -x v1", "vm -x v2", asm, c, rust, vmc, vmops, go, goasm ]
         exclude:
           - os: macos
@@ -464,7 +464,7 @@ jobs:
       id: cache-cvtpcre
       with:
         path: ${{ env.cvtpcre }}
-        key: cvtpcre-bmake-ubuntu-gcc-DEBUG-ASAN-${{ github.sha }}-${{ env.pcre2 }}
+        key: cvtpcre-bmake-ubuntu-gcc-EXPENSIVE_CHECKS-ASAN-${{ github.sha }}-${{ env.pcre2 }}
 
     - name: Run PCRE suite (${{ matrix.lang }})
       run: CC=${{ matrix.cc }} ./${{ env.build }}/bin/retest -O1 -l ${{ matrix.lang }} ${{ env.cvtpcre }}/*.tst

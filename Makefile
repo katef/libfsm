@@ -34,6 +34,13 @@ RE     ?= re
 BUILD  ?= build
 PREFIX ?= /usr/local
 
+# libfsm has EXPENSIVE_CHECKS which are a superset of assertions;
+# this is here just so CI can only set one flag at a time.
+.if defined(EXPENSIVE_CHECKS)
+CFLAGS += -DEXPENSIVE_CHECKS
+DEBUG ?= 1
+.endif
+
 # ${unix} is an arbitrary variable set by sys.mk
 .if defined(unix)
 .BEGIN::
