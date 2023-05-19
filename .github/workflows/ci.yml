@@ -342,7 +342,7 @@ jobs:
         cc: [ clang ]
         make: [ bmake ]
         debug: [ DEBUG, EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op
-        mode: [ p, m ]
+        mode: [ m, p, d ]
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
