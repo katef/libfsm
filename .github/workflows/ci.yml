@@ -6,6 +6,7 @@ on: [ push, pull_request ]
 env:
   pcre2: pcre2-10.40
   wc: wc
+  seeds: seeds
   build: build
   cvtpcre: build/test/retest
   prefix: prefix
@@ -377,6 +378,18 @@ jobs:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
+    # note we do the fuzzing unconditionally; each run adds to the corpus
+    - name: Cache seeds (mode ${{ matrix.mode }})
+      uses: actions/cache@v3
+      id: cache-seeds
+      with:
+        path: ${{ env.seeds }}-${{ matrix.mode }}
+        key: seeds-${{ matrix.mode }}
+
+    - name: mkdir seeds
+      if: steps.cache-seeds.outputs.cache-hit != 'true'
+      run: mkdir -p ${{ env.seeds }}-${{ matrix.mode }}
+
     - name: Get number of CPU cores
       uses: SimenB/github-actions-cpu-cores@v1
       id: cpu-cores
@@ -386,9 +399,14 @@ jobs:
         MODE: ${{ env.mode }}
         ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
         UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
-      run: |
-        mkdir -p seeds
-        ./${{ env.build }}/fuzz/fuzzer -jobs=$((${{ steps.cpu-cores.outputs.count }} + 1)) -max_total_time=60 seeds
+      run: ./${{ env.build }}/fuzz/fuzzer -jobs=$((${{ steps.cpu-cores.outputs.count }} + 1)) -max_total_time=60 ${{ env.seeds }}-${{ matrix.mode }}
+
+    # nothing to do with the caching, I'm uploading the seeds so a developer can grab them to fuzz locally
+    - name: Upload seeds (mode ${{ matrix.mode }})
+      uses: actions/upload-artifact@v3
+      with:
+        name: seeds-${{ matrix.mode }}
+        path: ${{ env.seeds }}-${{ matrix.mode }}
 
   test_pcre:
     name: "Test (PCRE suite) ${{ matrix.lang }} ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
