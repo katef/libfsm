@@ -123,6 +123,9 @@ build(const char *pattern)
 	if (total_usec > TIMEOUT_USEC) {
 #ifndef EXPENSIVE_CHECKS
 		assert(!"timeout");
+#else
+		fprintf(stderr, "exiting zero due to timeout under EXPENSIVE_CHECKS\n");
+		exit(0);
 #endif
 	}
 

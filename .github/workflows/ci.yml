@@ -333,6 +333,7 @@ jobs:
   test_fuzz:
     name: "Fuzz (mode ${{ matrix.mode }}) ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
     runs-on: ${{ matrix.os }}-latest
+    timeout-minutes: 5 # this should never be reached, it's a safeguard for bugs in the fuzzer itself
     needs: [ build ]
 
     strategy:
