@@ -163,11 +163,6 @@ INCDIR += include
 .include <mkdir.mk>
 .endif
 
-# XXX: workaround for CI in github where the linker doesn't support dwarf-5?
-.if defined(FUZZER)
-CFLAGS += -gdwarf-4
-.endif
-
 # these are internal tools for development; we don't install them to $PREFIX
 STAGE_BUILD := ${STAGE_BUILD:Nbin/retest}
 STAGE_BUILD := ${STAGE_BUILD:Nbin/reperf}
