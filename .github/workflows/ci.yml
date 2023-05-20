@@ -397,8 +397,7 @@ jobs:
     - name: Fuzz
       env:
         MODE: ${{ env.mode }}
-        ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
-        UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        UBSAN_OPTIONS: ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
       run: ./${{ env.build }}/fuzz/fuzzer -fork=$((${{ steps.cpu-cores.outputs.count }} + 1)) -max_total_time=60 ${{ env.seeds }}-${{ matrix.mode }}
 
     # nothing to do with the caching, I'm uploading the seeds so a developer can grab them to fuzz locally
