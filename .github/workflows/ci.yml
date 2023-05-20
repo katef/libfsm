@@ -266,8 +266,16 @@ jobs:
       # Same for lx
       run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' LX='true; echo lx' CC=${{ matrix.cc }} NODOC=1 test
 
+    # there's an unfixed intermittent makefile bug under -j for
+    # kmkf duplicate install targets, it's not interesting for libfsm's CI,
+    # so I'm retrying on error here. # github.com/katef/kmkf/issues/14
     - name: Install
-      run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.debug }}=1 PKGCONF=pkg-config PREFIX=../${{ env.prefix }} NODOC=1 install
+      uses: nick-fields/retry@v2.8.3
+      with:
+        timeout_seconds: 10 # required, but not a problem for the kmkf bug
+        max_attempts: 3
+        retry_on: error
+        command: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.debug }}=1 PKGCONF=pkg-config PREFIX=../${{ env.prefix }} NODOC=1 install
 
   test_san:
     name: "Test (Sanitizers) ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
