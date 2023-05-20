@@ -8,6 +8,8 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 
+#include <sys/wait.h>
+
 #include <unistd.h>
 
 #include <assert.h>
@@ -1230,6 +1232,9 @@ main(int argc, char *argv[])
 
 	max_test_errors = 0;
 
+	/* because we fork() for each test file */
+	setvbuf(stderr, NULL, _IOLBF, BUFSIZ);
+
 	{
 		int c;
 
@@ -1342,35 +1347,60 @@ main(int argc, char *argv[])
 
 	{
 		int r, i;
-		struct error_record erec;
-
-
-		r = 0;
-
-		if (error_record_init(&erec) != 0) {
-			fprintf(stderr, "error initializing error state: %s\n", strerror(errno));
-			return EXIT_FAILURE;
-		}
 
 		for (i = 0; i < argc; i++) {
+			struct error_record erec;
 			int nerrs;
+
+			switch (fork()) {
+			case -1:
+				perror("fork");
+				return EXIT_FAILURE;
+
+			case 0:
+				break;
+
+			default:
+				continue;
+			}
+
+			if (error_record_init(&erec) != 0) {
+				fprintf(stderr, "error initializing error state: %s\n", strerror(errno));
+				return EXIT_FAILURE;
+			}
 
 			nerrs = process_test_file(argv[i], dialect, impl, max_test_errors, &erec);
 
-			if (nerrs > 0) {
+			if (erec.len > 0) {
+				error_record_print(stderr, &erec);
+				fprintf(stderr, "%s: %u errors\n", argv[i], (unsigned) erec.len);
+			} else {
+				fprintf(stderr, "%s: no errors\n", argv[i]);
+			}
+
+			error_record_finalize(&erec);
+
+			exit(nerrs > 0 ? EXIT_FAILURE : EXIT_SUCCESS);
+
+/* XXX: would prefer to get errors to parent, summarize once. pipe is probably simplest.
+or: wait in child for signal, parent signals child to summarize errors when ready */
+		}
+
+		r = 0;
+
+		for (i = 0; i < argc; i++) {
+			int status;
+
+			pid_t pid = wait(&status);
+			if (pid == -1) {
+				perror("wait");
+			}
+
+			if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
 				r |= 1;
-				continue;
 			}
 		}
-
-		if (erec.len > 0) {
-			error_record_print(stderr, &erec);
-			fprintf(stderr, "%u errors\n", (unsigned) erec.len);
-		} else {
-			fprintf(stderr, "no errors\n");
-		}
-
-		error_record_finalize(&erec);
+/* TODO: summarise which argv[] .tst files failed */
 
 		return r;
 	}
