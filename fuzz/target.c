@@ -121,7 +121,9 @@ build(const char *pattern)
 	total_usec += delta_usec;
 
 	if (total_usec > TIMEOUT_USEC) {
+#ifndef EXPENSIVE_CHECKS
 		assert(!"timeout");
+#endif
 	}
 
 	return fsm;
