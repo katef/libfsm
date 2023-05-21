@@ -41,6 +41,12 @@ CFLAGS += -DEXPENSIVE_CHECKS
 DEBUG ?= 1
 .endif
 
+# combined just to save time in CI
+.if defined(AUSAN)
+ASAN  ?= 1
+UBSAN ?= 1
+.endif
+
 # ${unix} is an arbitrary variable set by sys.mk
 .if defined(unix)
 .BEGIN::
