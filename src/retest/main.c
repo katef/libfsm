@@ -442,7 +442,7 @@ hexdigit:
 }
 
 struct single_error_record {
-	char *filename;
+	const char *filename; /* owned by argv[] storage */
 	char *regexp;
 	char *flags;
 	char *failed_match;
@@ -568,7 +568,8 @@ dup_str(const char *s, int *err)
 }
 
 static int
-error_record_add(struct error_record *erec, enum error_type type, const char *fn, const char *re, const char *flags, const char *failed_match, unsigned int line, enum re_dialect dialect)
+error_record_add(struct error_record *erec, enum error_type type,
+	const char *filename, const char *re, const char *flags, const char *failed_match, unsigned int line, enum re_dialect dialect)
 {
 	size_t ind;
 	int err;
@@ -595,7 +596,7 @@ error_record_add(struct error_record *erec, enum error_type type, const char *fn
 
 	/* add record */
 	err = 0;
-	erec->errors[ind].filename     = dup_str(fn,&err);
+	erec->errors[ind].filename     = filename;
 	erec->errors[ind].regexp       = re != NULL           ? dup_str_esc(re,&err)       : NULL;
 	erec->errors[ind].flags        = flags != NULL        ? dup_str_esc(flags,&err)    : NULL;
 	erec->errors[ind].failed_match = failed_match != NULL ? dup_str(failed_match,&err) : NULL;
@@ -612,6 +613,9 @@ static void
 single_error_record_print(FILE *f, const struct single_error_record *err)
 {
 	const char *dialect_name;
+
+	assert(f != NULL);
+	assert(err != NULL);
 
 	dialect_name = dialect_to_name(err->dialect);
 
@@ -650,6 +654,10 @@ static void
 error_record_print(FILE *f, const struct error_record *erec)
 {
 	size_t i,n;
+
+	assert(f != NULL);
+	assert(erec != NULL);
+
 	n = erec->len;
 	for (i=0; i < n; i++) {
 		fprintf(f, "[%4u/%4u] ", (unsigned) i + 1, (unsigned) n);
@@ -668,7 +676,6 @@ error_record_finalize(struct error_record *erec)
 
 	n = erec->len;
 	for (i=0; i < n; i++) {
-		free(erec->errors[i].filename);
 		free(erec->errors[i].regexp);
 		free(erec->errors[i].flags);
 		free(erec->errors[i].failed_match);
@@ -730,7 +737,8 @@ flagstring(enum re_flags flags, char buf[16])
  *     c. '#' lines are comments
  */
 static int
-process_test_file(const char *fname, enum re_dialect default_dialect, enum implementation impl, int max_errors, struct error_record *erec)
+process_test_file(const char *filename,
+	enum re_dialect default_dialect, enum implementation impl, int max_errors, struct error_record *erec)
 {
 	static const struct fsm_runner init_runner;
 
@@ -764,7 +772,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 	/* XXX - fix this */
 	opt.comments = 0;
 
-	f = xopen(fname);
+	f = xopen(filename);
 
 	num_regexps    = 0;
 	num_re_errors  = 0;
@@ -951,7 +959,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 					/* ignore errors */
 					error_record_add(erec,
-						ERROR_ESCAPE_SEQUENCE, fname, regexp, flagdesc, NULL, linenum, dialect);
+						ERROR_ESCAPE_SEQUENCE, filename, regexp, flagdesc, NULL, linenum, dialect);
 
 					num_re_errors++;
 					continue;
@@ -976,7 +984,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_PARSING_REGEXP, fname, regexp, flagdesc, NULL, linenum, dialect);
+					ERROR_PARSING_REGEXP, filename, regexp, flagdesc, NULL, linenum, dialect);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
@@ -1009,7 +1017,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_WATCHDOG, fname, regexp, flagdesc, NULL, linenum, dialect);
+					ERROR_WATCHDOG, filename, regexp, flagdesc, NULL, linenum, dialect);
 
 				/* try to free */
 				fsm_free(fsm);
@@ -1026,7 +1034,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_DETERMINISING, fname, regexp, flagdesc, NULL, linenum, dialect);
+					ERROR_DETERMINISING, filename, regexp, flagdesc, NULL, linenum, dialect);
 
 				/* try to free */
 				fsm_free(fsm);
@@ -1062,7 +1070,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 					linenum, dialect_name, regexp, flagdesc, strerror(errno));
 
 				/* ignore errors */
-				error_record_add(erec, ret, fname, regexp, flagdesc, NULL, linenum, dialect);
+				error_record_add(erec, ret, filename, regexp, flagdesc, NULL, linenum, dialect);
 
 				/* don't exit; instead we leave vm==NULL so we
 				 * skip to next regexp ... */
@@ -1084,7 +1092,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 				fprintf(stderr, "line %d: unrecognized record type '%c': %s\n", linenum, s[0], s);
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_BAD_RECORD_TYPE, fname, regexp, flagdesc, NULL, linenum, dialect);
+					ERROR_BAD_RECORD_TYPE, filename, regexp, flagdesc, NULL, linenum, dialect);
 
 				num_errors++;
 				continue;
@@ -1105,7 +1113,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 
 				/* ignore errors */
 				error_record_add(erec,
-					ERROR_ESCAPE_SEQUENCE, fname, regexp, flagdesc, NULL, linenum, dialect);
+					ERROR_ESCAPE_SEQUENCE, filename, regexp, flagdesc, NULL, linenum, dialect);
 
 				num_errors++;
 				continue;
@@ -1137,7 +1145,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 						(matching)
 							? ERROR_SHOULD_MATCH
 							: ERROR_SHOULD_NOT_MATCH,
-						fname, regexp, flagdesc, orig, linenum, dialect);
+						filename, regexp, flagdesc, orig, linenum, dialect);
 
 
 				if (max_errors > 0 && num_errors >= max_errors) {
@@ -1156,7 +1164,7 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 	}
 
 	if (ferror(f)) {
-		fprintf(stderr, "line %d: error reading %s: %s\n", linenum, fname, strerror(errno));
+		fprintf(stderr, "line %d: error reading %s: %s\n", linenum, filename, strerror(errno));
 		if (regexp != NULL) {
 			num_errors++;
 		}
@@ -1165,8 +1173,9 @@ process_test_file(const char *fname, enum re_dialect default_dialect, enum imple
 	fclose(f);
 
 finish:
-	printf("%s: %d regexps, %d test cases\n", fname, num_regexps, num_test_cases);
-	printf("%s: %d re errors, %d errors\n", fname, num_re_errors, num_errors);
+
+	printf("%s: %d regexps, %d test cases\n", filename, num_regexps, num_test_cases);
+	printf("%s: %d re errors, %d errors\n", filename, num_re_errors, num_errors);
 
 	if (max_errors > 0 && num_errors >= max_errors) {
 		exit(EXIT_FAILURE);
