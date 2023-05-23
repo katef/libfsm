@@ -36,6 +36,10 @@ int
 escputs(FILE *f, const struct fsm_options *opt, escputc *escputc,
 	const char *s);
 
+int
+escputbuf(FILE *f, const struct fsm_options *opt, escputc *escputc,
+	const char *buf, size_t len);
+
 void
 esctok(FILE *f, const char *s);
 
