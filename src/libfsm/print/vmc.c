@@ -138,6 +138,143 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 	}
 }
 
+static size_t
+walk_sequence(struct dfavm_op_ir *op,
+	enum dfavm_op_end *end_bits,
+	char *buf, size_t len,
+	struct dfavm_op_ir **tail)
+{
+	size_t n;
+
+	assert(end_bits != NULL);
+	assert(buf != NULL);
+	assert(tail != NULL);
+
+	/*
+	 * Here we're looking for a sequence of:
+	 * 
+	 *   FETCH: (or fail)
+	 *   STOP: c != 'x' (or fail)
+	 * 
+	 * This catches situations like the "abc" and "xyz" in /^abc[01]xyz/,
+	 * but not for runs in unanchored regexes. For those, we'd be better
+	 * off adding VM instructions for sets of strings, and producing
+	 * those from the various types of enum ir_strategy.
+	 */
+
+	n = 0;
+
+	/* fetch */
+	{
+		if (op == NULL || op->instr != VM_OP_FETCH) {
+			goto unsuitable;
+		}
+
+		assert(op->cmp == VM_CMP_ALWAYS);
+
+		/* op->num_incoming > 0 is allowed for this instruction only */
+
+		if (op->u.fetch.end_bits != VM_END_FAIL) {
+			goto unsuitable;
+		}
+
+		*end_bits = op->u.fetch.end_bits;
+	}
+
+	op = op->next;
+
+	/* stop */
+	{
+		if (op == NULL || op->instr != VM_OP_STOP) {
+			goto unsuitable;
+		}
+
+		if (op->cmp != VM_CMP_NE) {
+			goto unsuitable;
+		}
+
+		if (op->num_incoming > 0) {
+			goto unsuitable;
+		}
+
+		if (op->u.stop.end_bits != *end_bits) {
+			goto unsuitable;
+		}
+	}
+
+	if (n >= len) {
+		goto done;
+	}
+
+	buf[n] = op->cmp_arg;
+
+	*end_bits = op->u.stop.end_bits;
+
+	*tail = op;
+
+	op = op->next;
+	n++;
+
+	for (;;) {
+		/* fetch */
+		{
+			if (op == NULL || op->instr != VM_OP_FETCH) {
+				break;
+			}
+
+			assert(op->cmp == VM_CMP_ALWAYS);
+
+			if (op->num_incoming > 0) {
+				break;
+			}
+
+			if (op->u.fetch.end_bits != *end_bits) {
+				break;
+			}
+		}
+
+		op = op->next;
+
+		/* stop */
+		{
+			if (op == NULL || op->instr != VM_OP_STOP) {
+				break;
+			}
+
+			if (op->cmp != VM_CMP_NE) {
+				break;
+			}
+
+			if (op->num_incoming > 0) {
+				break;
+			}
+
+			if (op->u.stop.end_bits != *end_bits) {
+				break;
+			}
+		}
+
+		if (n >= len) {
+			break;
+		}
+
+		buf[n] = op->cmp_arg;
+
+		*tail = op;
+
+		op = op->next;
+		n++;
+	}
+
+done:
+
+	return n;
+
+unsuitable:
+
+	return 0;
+}
+
 /* TODO: eventually to be non-static */
 static int
 fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
@@ -233,17 +370,41 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			}
 			break;
 
-		case VM_OP_FETCH:
-			print_fetch(f, opt);
-			if (-1 == print_end(f, op, opt, op->u.fetch.end_bits, ir)) {
-				return -1;
-			}
-			if (opt->io == FSM_IO_PAIR) {
-				/* second part of FSM_IO_PAIR fetch */
-				fprintf(f, "\n\n\t");
-				fprintf(f, "c = (unsigned char) *p++;");
+		case VM_OP_FETCH: {
+			size_t n;
+			enum dfavm_op_end end_bits;
+			struct dfavm_op_ir *tail;
+
+			char buf[8192];
+
+			n = walk_sequence(op, &end_bits, buf, sizeof buf, &tail);
+
+			if (n > 1 && opt->io == FSM_IO_PAIR) {
+				fprintf(f, "if (e - p < %zu || 0 != memcmp(p, \"", n);
+				escputbuf(f, opt, c_escputc_str, buf, n);
+				fprintf(f, "\", %zu)) ", n);
+				if (-1 == print_end(f, NULL, opt, end_bits, ir)) {
+					return -1;
+				}
+				fprintf(f, "\n");
+
+				fprintf(f, "\t");
+				fprintf(f, "p += %zu;\n", n);
+
+				op = tail;
+			} else {
+				print_fetch(f, opt);
+				if (-1 == print_end(f, op, opt, op->u.fetch.end_bits, ir)) {
+					return -1;
+				}
+				if (opt->io == FSM_IO_PAIR) {
+					/* second part of FSM_IO_PAIR fetch */
+					fprintf(f, "\n\n\t");
+					fprintf(f, "c = (unsigned char) *p++;");
+				}
 			}
 			break;
+		}
 
 		case VM_OP_BRANCH:
 			print_cond(f, op, opt);
@@ -281,6 +442,7 @@ fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt
 			return -1;
 		}
 	} else {
+		fprintf(f, "#include <string.h>\n");
 		fprintf(f, "\n");
 
 		fprintf(f, "int\n%smain", prefix);
