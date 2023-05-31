@@ -4,6 +4,8 @@ BUILD=../build
 FUZZER=${BUILD}/fuzz/fuzzer
 SEEDS=${BUILD}/fuzz/fuzzer_seeds
 
+ARG=$1
+
 SECONDS=${SECONDS:-60}
 WORKERS=${WORKERS:-4}
 SEEDS=${SEEDS:-seeds}
@@ -25,5 +27,9 @@ if [ ! -d "${SEEDS}" ]; then
    mkdir -p "${SEEDS}"
 fi
 
-echo "\n==== ${FUZZER}"
-${FUZZER} -jobs=${WORKERS} -workers=${WORKERS} -max_total_time=${SECONDS} ${SEEDS}
+if [ -z "${ARG}" ]; then
+    echo "\n==== ${FUZZER}"
+    exec ${FUZZER} -jobs=${WORKERS} -workers=${WORKERS} -max_total_time=${SECONDS} ${SEEDS}
+else
+    exec ${FUZZER} ${ARG}
+fi
