@@ -20,16 +20,18 @@ enum re_dialect {
 };
 
 enum re_flags {
-	RE_ICASE   = 1 << 0,
-	RE_TEXT    = 1 << 1,
-	RE_MULTI   = 1 << 2,
-	RE_REVERSE = 1 << 3,
-	RE_SINGLE  = 1 << 4, /* aka PCRE_DOTALL */
-	RE_ZONE    = 1 << 5,
-	RE_ANCHORED = 1 << 6,
-	RE_EXTENDED = 1 << 7,  /* PCRE extended mode */
-	RE_END_NL  = 1 << 8, /* end anchor matches '\n' */
-	RE_FLAGS_NONE = 0
+	RE_ICASE          = 1 << 0,
+	RE_TEXT           = 1 << 1,
+	RE_MULTI          = 1 << 2,
+	RE_REVERSE        = 1 << 3,
+	RE_SINGLE         = 1 << 4,  /* aka PCRE_DOTALL */
+	RE_ZONE           = 1 << 5,
+	RE_ANCHORED       = 1 << 6,
+	RE_EXTENDED       = 1 << 7,  /* PCRE extended mode */
+	RE_NOCAPTURE      = 1 << 8,  /* disable captures */
+	RE_END_NL         = 1 << 9,  /* end anchor matches '\n' */
+	RE_END_NL_DISABLE = 1 << 10, /* disable end anchor matching '\n' */
+	RE_FLAGS_NONE     = 0
 };
 
 #define RE_ANCHOR (RE_TEXT | RE_MULTI | RE_ZONE)
@@ -46,6 +48,8 @@ enum re_errno {
 	RE_EERRNO       =  1 | RE_MISC,
 	RE_EBADDIALECT  =  2 | RE_MISC,
 	RE_EBADGROUP    =  3 | RE_MISC,
+	RE_EUNSUPCAPTUR =  4 | RE_MISC,
+	RE_EUNSUPPPCRE  =  5 | RE_MISC,
 
 	RE_ENEGRANGE    =  0 | RE_MARK | RE_GROUP,
 	RE_ENEGCOUNT    =  1 | RE_MARK | RE_GROUP,

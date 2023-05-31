@@ -124,10 +124,6 @@ struct fsm_edge {
 struct fsm_state {
 	unsigned int end:1;
 
-	/* If 0, then this state has no need for checking
-	 * the fsm->capture_info struct. */
-	unsigned int has_capture_actions:1;
-
 	/* meaningful within one particular transformation only */
 	unsigned int visited:1;
 

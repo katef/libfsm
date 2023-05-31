@@ -6,6 +6,8 @@
 
 #include "determinise_internal.h"
 
+#define LOG_DETERMINISATION_COUNTERS 0
+
 static void
 dump_labels(FILE *f, const uint64_t labels[4])
 {
@@ -29,6 +31,8 @@ fsm_determinise(struct fsm *nfa)
 	size_t dfacount = 0;
 
 	struct analyze_closures_env ac_env = { 0 };
+	INIT_TIMERS();
+	INIT_TIMERS_NAMED(overall);
 
 	assert(nfa != NULL);
 	map.alloc = nfa->opt->alloc;
@@ -39,9 +43,12 @@ fsm_determinise(struct fsm *nfa)
 	 * faster where we can start with an epsilon-free NFA in the first place.
 	 */
 	if (fsm_has(nfa, fsm_hasepsilons)) {
+		TIME(&pre);
 		if (!fsm_remove_epsilons(nfa)) {
 			return 0;
 		}
+		TIME(&post);
+		DIFF_MSEC("det_remove_eps", pre, post, NULL);
 	}
 
 #if LOG_DETERMINISE_CAPTURES || LOG_INPUT
@@ -49,6 +56,7 @@ fsm_determinise(struct fsm *nfa)
 	fsm_print_fsm(stderr, nfa);
 	fsm_capture_dump(stderr, "#### post_remove_epsilons", nfa);
 #endif
+	TIME(&overall_pre);
 
 	issp = interned_state_set_pool_alloc(nfa->opt->alloc);
 	if (issp == NULL) {
@@ -104,6 +112,17 @@ fsm_determinise(struct fsm *nfa)
 	ac_env.fsm = nfa;
 	ac_env.issp = issp;
 
+#if LOG_DETERMINISATION_STATS
+	fprintf(stderr, "%s: determinising FSM with %d states\n", __func__, fsm_countstates(nfa));
+#endif
+
+	INIT_TIMERS_NAMED(iss);
+	size_t iss_accum = 0;
+	size_t iss_calls = 0;
+	size_t stack_pushes = 0;
+	size_t inner_steps = 0;
+
+	TIME(&pre);
 	do {
 		size_t o_i;
 
@@ -114,18 +133,25 @@ fsm_determinise(struct fsm *nfa)
 
 		assert(curr != NULL);
 
+		TIME(&iss_pre);
 		if (!analyze_closures__pairwise_grouping(&ac_env, curr->iss)) {
 			goto cleanup;
 		}
+		TIME(&iss_post);
+		DIFF_MSEC("det_iss", iss_pre, iss_post, &iss_accum);
+		(void)iss_accum;
+		iss_calls++;
 
 		if (!edge_set_advise_growth(&curr->edges, nfa->opt->alloc, ac_env.output_count)) {
 			goto cleanup;
 		}
 
+		/* each output is an outgoing (label set) -> interned_state_set pair */
 		for (o_i = 0; o_i < ac_env.output_count; o_i++) {
 			struct mapping *m;
 			struct ac_output *output = &ac_env.outputs[o_i];
 			interned_state_set_id iss = output->iss;
+			inner_steps++;
 
 #if LOG_DETERMINISE_CLOSURES
 			fprintf(stderr, "fsm_determinise: output %zu/%zu: cur (dfa %zu) label [",
@@ -157,6 +183,7 @@ fsm_determinise(struct fsm *nfa)
 				if (!stack_push(stack, m)) {
 					goto cleanup;
 				}
+				stack_pushes++;
 			}
 
 #if LOG_SYMBOL_CLOSURE
@@ -174,6 +201,13 @@ fsm_determinise(struct fsm *nfa)
 
 		/* All elements in sclosures[] are interned, so they will be freed later. */
 	} while ((curr = stack_pop(stack)));
+	TIME(&post);
+	DIFF_MSEC("det_stack_loop", pre, post, NULL);
+
+	if (LOG_DETERMINISATION_COUNTERS) {
+		fprintf(stderr, "%s: iss_accum total %zu (%zu calls, %g usec avg.), %zu stack pushes, %zu iterations, %zu inner_steps\n",
+		    __func__, iss_accum, iss_calls, iss_accum / (1.0 * iss_calls), stack_pushes, iss_calls, inner_steps);
+	}
 
 	{
 		struct map_iter it;
@@ -185,6 +219,13 @@ fsm_determinise(struct fsm *nfa)
 			goto cleanup;
 		}
 
+		TIME(&pre);
+		if (!fsm_capture_copy_programs(nfa, dfa)) {
+			goto cleanup;
+		}
+		TIME(&post);
+		DIFF_MSEC("det_copy_captures", pre, post, NULL);
+
 #if DUMP_MAPPING
 		{
 			fprintf(stderr, "#### fsm_determinise: mapping\n");
@@ -192,10 +233,10 @@ fsm_determinise(struct fsm *nfa)
 			/* build reverse mappings table: for every NFA state X, if X is part
 			 * of the new DFA state Y, then add Y to a list for X */
 			for (m = map_first(&map, &it); m != NULL; m = map_next(&it)) {
-				struct state_iter si;
 				interned_state_set_id iss_id = m->iss;
+				struct state_iter si;
 				fsm_state_t state;
-				struct state_set *ss = interned_state_set_get_state_set(ac_env.issp, iss_id);
+				struct state_set *ss = interned_state_set_get_state_set(issp, iss_id);
 				fprintf(stderr, "%zu:", m->dfastate);
 
 				for (state_set_reset(ss, &si); state_set_next(&si, &state); ) {
@@ -238,23 +279,40 @@ fsm_determinise(struct fsm *nfa)
 			fsm_setend(dfa, m->dfastate, 1);
 
 			/*
-			 * Carry through end IDs, if present. This isn't anything to do
-			 * with the DFA conversion; it's meaningful only to the caller.
+			 * Copy over metadata associated with end
+			 * states, if present. This isn't anything to do
+			 * with the DFA conversion; it's meaningful only
+			 * to the caller.
 			 *
 			 * The closure may contain non-end states, but at least one state is
 			 * known to have been an end state.
 			 */
-			if (!fsm_endid_carry(nfa, ss, dfa, m->dfastate)) {
+			if (!remap_end_metadata(nfa, ss, dfa, m->dfastate)) {
 				goto cleanup;
 			}
 		}
+		TIME(&post);
+		DIFF_MSEC("det_map_loop", pre, post, NULL);
 
-		if (!remap_capture_actions(&map, issp, dfa, nfa)) {
-			goto cleanup;
-		}
+		fsm_capture_integrity_check(dfa);
 
 		fsm_move(nfa, dfa);
 	}
+
+#if LOG_DETERMINISE_CAPTURES
+	fprintf(stderr, "# post_determinise\n");
+	fsm_print_fsm(stderr, nfa);
+	fsm_capture_dump(stderr, "#### post_determinise", nfa);
+#endif
+
+	TIME(&overall_post);
+	DIFF_MSEC("det_overall", overall_pre, overall_post, NULL);
+
+#if LOG_DETERMINISATION_STATS
+	fprintf(stderr, "%s: created DFA with %d states\n", __func__, fsm_countstates(nfa));
+	fprintf(stderr, "%s: analyze_closures_env.analyze_usec: %zu\n",
+	    __func__, ac_env.analyze_usec);
+#endif
 
 #if EXPENSIVE_CHECKS
 	assert(fsm_all(nfa, fsm_isdfa));
@@ -309,85 +367,6 @@ cleanup:
 	}
 
 	return res;
-}
-
-/* Add DFA_state to the list for NFA_state. */
-static int
-add_reverse_mapping(const struct fsm_alloc *alloc,
-    struct reverse_mapping *reverse_mappings,
-    fsm_state_t dfastate, fsm_state_t nfa_state)
-{
-	struct reverse_mapping *rm = &reverse_mappings[nfa_state];
-	if (rm->count == rm->ceil) {
-		const unsigned nceil = (rm->ceil ? 2*rm->ceil : 2);
-		fsm_state_t *nlist = f_realloc(alloc,
-		    rm->list, nceil * sizeof(rm->list));
-		if (nlist == NULL) {
-			return 0;
-		}
-		rm->list = nlist;
-		rm->ceil = nceil;
-	}
-
-	rm->list[rm->count] = dfastate;
-	rm->count++;
-	return 1;
-}
-
-static int
-det_copy_capture_actions_cb(fsm_state_t state,
-    enum capture_action_type type, unsigned capture_id, fsm_state_t to,
-    void *opaque)
-{
-	struct reverse_mapping *rm_s;
-	size_t s_i, t_i;
-	struct det_copy_capture_actions_env *env = opaque;
-	assert(env->tag == 'D');
-
-#if LOG_DETERMINISE_CAPTURES
-	fprintf(stderr, "det_copy_capture_actions_cb: state %u, type %s, ID %u, TO %d\n",
-	    state, fsm_capture_action_type_name[type],
-	    capture_id, to);
-#endif
-
-	rm_s = &env->reverse_mappings[state];
-
-	for (s_i = 0; s_i < rm_s->count; s_i++) {
-		const fsm_state_t s = rm_s->list[s_i];
-
-		if (to == CAPTURE_NO_STATE) {
-			if (!fsm_capture_add_action(env->dst,
-				s, type, capture_id, CAPTURE_NO_STATE)) {
-				env->ok = 0;
-				return 0;
-			}
-		} else {
-			struct reverse_mapping *rm_t = &env->reverse_mappings[to];
-			for (t_i = 0; t_i < rm_t->count; t_i++) {
-				const fsm_state_t t = rm_t->list[t_i];
-
-				if (!fsm_capture_add_action(env->dst,
-					s, type, capture_id, t)) {
-					env->ok = 0;
-					return 0;
-				}
-			}
-		}
-	}
-
-	return 1;
-}
-
-static int
-det_copy_capture_actions(struct reverse_mapping *reverse_mappings,
-    struct fsm *dst, struct fsm *src)
-{
-	struct det_copy_capture_actions_env env = { 'D', NULL, NULL, 1 };
-	env.dst = dst;
-	env.reverse_mappings = reverse_mappings;
-
-	fsm_capture_action_iter(src, det_copy_capture_actions_cb, &env);
-	return env.ok;
 }
 
 SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
@@ -637,83 +616,6 @@ stack_pop(struct mappingstack *stack)
 }
 
 static int
-remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
-    struct fsm *dst_dfa, struct fsm *src_nfa)
-{
-	struct map_iter it;
-	struct state_iter si;
-	struct mapping *m;
-	struct reverse_mapping *reverse_mappings;
-	fsm_state_t state;
-	const size_t capture_count = fsm_countcaptures(src_nfa);
-	size_t i, j;
-	int res = 0;
-
-	if (capture_count == 0) {
-		return 1;
-	}
-
-	/* This is not 1 to 1 -- if state X is now represented by multiple
-	 * states Y in the DFA, and state X has action(s) when transitioning
-	 * to state Z, this needs to be added on every Y, for every state
-	 * representing Z in the DFA.
-	 *
-	 * We could probably filter this somehow, at the very least by
-	 * checking reachability from every X, but the actual path
-	 * handling later will also check reachability. */
-	reverse_mappings = f_calloc(dst_dfa->opt->alloc, src_nfa->statecount, sizeof(reverse_mappings[0]));
-	if (reverse_mappings == NULL) {
-		return 0;
-	}
-
-	/* build reverse mappings table: for every NFA state X, if X is part
-	 * of the new DFA state Y, then add Y to a list for X */
-	for (m = map_first(map, &it); m != NULL; m = map_next(&it)) {
-		struct state_set *ss;
-		interned_state_set_id iss_id = m->iss;
-		assert(m->dfastate < dst_dfa->statecount);
-		ss = interned_state_set_get_state_set(issp, iss_id);
-
-		for (state_set_reset(ss, &si); state_set_next(&si, &state); ) {
-			if (!add_reverse_mapping(dst_dfa->opt->alloc,
-				reverse_mappings,
-				m->dfastate, state)) {
-				goto cleanup;
-			}
-		}
-	}
-
-#if LOG_DETERMINISE_CAPTURES
-	fprintf(stderr, "#### reverse mapping for %zu states\n", src_nfa->statecount);
-	for (i = 0; i < src_nfa->statecount; i++) {
-		struct reverse_mapping *rm = &reverse_mappings[i];
-		fprintf(stderr, "%lu:", i);
-		for (j = 0; j < rm->count; j++) {
-			fprintf(stderr, " %u", rm->list[j]);
-		}
-		fprintf(stderr, "\n");
-	}
-#else
-	(void)j;
-#endif
-
-	if (!det_copy_capture_actions(reverse_mappings, dst_dfa, src_nfa)) {
-		goto cleanup;
-	}
-
-	res = 1;
-cleanup:
-	for (i = 0; i < src_nfa->statecount; i++) {
-		if (reverse_mappings[i].list != NULL) {
-			f_free(dst_dfa->opt->alloc, reverse_mappings[i].list);
-		}
-	}
-	f_free(dst_dfa->opt->alloc, reverse_mappings);
-
-	return res;
-}
-
-static int
 group_labels_overlap(const struct ac_group *a, const struct ac_group *b)
 {
 	size_t i;
@@ -728,6 +630,25 @@ group_labels_overlap(const struct ac_group *a, const struct ac_group *b)
 	}
 
 	return 0;
+}
+
+static int
+remap_end_metadata(const struct fsm *src_fsm, const struct state_set *src_set,
+    struct fsm *dst_fsm, fsm_state_t dst_state)
+{
+	if (!fsm_endid_carry(src_fsm, src_set, dst_fsm, dst_state)) {
+		return 0;
+	}
+
+	if (!fsm_capture_copy_active_for_ends(src_fsm, src_set, dst_fsm, dst_state)) {
+		return 0;
+	}
+
+	if (!fsm_capture_copy_program_end_state_associations(src_fsm, src_set, dst_fsm, dst_state)) {
+		return 0;
+	}
+
+	return 1;
 }
 
 static void

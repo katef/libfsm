@@ -20,12 +20,10 @@ CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h
 .endfor
 
-# not all concrete set interfaces use all static functions from set.inc
-.if ${CC:T:Mgcc*} || ${CC:T:Mclang*}
-.for src in ${SRC:Msrc/adt/stateset.c} ${SRC:Msrc/adt/tupleset.c} ${SRC:Msrc/adt/edgeset.c}
-CFLAGS.${src} += -Wno-unused-function  
+.for src in ${SRC:Msrc/adt/siphash.c} ${SRC:Msrc/adt/edgeset.c} ${SRC:Msrc/adt/idmap.c} ${SRC:Msrc/adt/ipriq.c} ${SRC:Msrc/adt/internedstateset.c}
+CFLAGS.${src} += -std=c99 # XXX: for internal.h
+DFLAGS.${src} += -std=c99 # XXX: for internal.h
 .endfor
-.endif
 
 # I want to assert on things which are currently true for this platform,
 # but not true in general.

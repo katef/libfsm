@@ -7,6 +7,11 @@
 #ifndef RE_AST_H
 #define RE_AST_H
 
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <re/re.h>
+
 /*
  * This is a duplicate of struct lx_pos, but since we're linking to
  * code with several distinct lexers, there isn't a clear lexer.h
@@ -62,7 +67,9 @@ enum ast_anchor_type {
  *   followed by nullable nodes.
  *
  * - AST_FLAG_UNSATISFIABLE
- *   The node caused the regex to become unsatisfiable.
+ *   The node is unsatisfiable (can never match anything).
+ *   This can cause AST subtrees to be pruned, or for the
+ *   entire regex to become unsatisfiable.
  *
  * - AST_FLAG_NULLABLE
  *   The node is not always evaluated, such as nodes that
@@ -159,6 +166,8 @@ struct ast_expr {
 			size_t count; /* used */
 			size_t alloc; /* allocated */
 			struct ast_expr **n;
+			int contains_empty_groups;
+			int nullable_alt_inside_plus_repeat;
 		} alt;
 
 		struct {
@@ -172,12 +181,15 @@ struct ast_expr {
 		struct ast_expr_repeat {
 			struct ast_expr *e;
 			unsigned min;
-			unsigned max;
+			unsigned max; /* can be AST_COUNT_UNBOUNDED */
+			int contains_empty_groups;
+			int contains_nullable_alt;
 		} repeat;
 
 		struct {
 			struct ast_expr *e;
 			unsigned id;
+			int repeated; /* set during analysis */
 		} group;
 
 		struct {
@@ -235,9 +247,12 @@ ast_pool_free(struct ast_expr_pool *pool);
 struct ast_expr_pool *
 ast_expr_pool_save(void);
 
+#define AST_NO_MAX_CAPTURE_ID ((long)-1)
+
 struct ast {
 	struct ast_expr_pool *pool;
 	struct ast_expr *expr;
+	long max_capture_id;
 	int has_unanchored_start;
 	int has_unanchored_end;
 };

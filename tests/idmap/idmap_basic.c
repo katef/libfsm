@@ -19,13 +19,14 @@
 #define ID_MASK ((1 << 9) - 1)
 #define VALUE_MASK ((1 << 10) - 1)
 
-static void
+static int
 dump_cb(fsm_state_t state_id, unsigned value, void *opaque)
 {
 	/* fprintf(stderr, " -- state %d, value %u\n", state_id, value); */
 	assert(state_id <= ID_MASK);
 	assert(value <= VALUE_MASK);
 	(void)opaque;
+	return 1;
 }
 
 static int

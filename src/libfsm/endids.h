@@ -32,10 +32,15 @@ int
 fsm_endid_carry(const struct fsm *src_fsm, const struct state_set *src_set,
     struct fsm *dst_fsm, fsm_state_t dst_state);
 
+int
+fsm_endid_compact(struct fsm *fsm,
+    const fsm_state_t *mapping, size_t mapping_count);
+
 /* Callback when iterating over the endids.
  * Return 0 to halt, or non-zero to continue. */
 typedef int
-fsm_endid_iter_cb(fsm_state_t state, const fsm_end_id_t id, void *opaque);
+fsm_endid_iter_cb(const struct fsm *fsm, fsm_state_t state,
+    size_t nth, const fsm_end_id_t id, void *opaque);
 
 void
 fsm_endid_iter(const struct fsm *fsm,

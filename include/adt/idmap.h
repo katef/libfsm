@@ -39,8 +39,9 @@ int
 idmap_get(const struct idmap *m, fsm_state_t state_id,
 	size_t buf_size, unsigned *buf, size_t *written);
 
-/* Iterator callback. */
-typedef void
+/* Iterator callback.
+ * The return value indicates whether iteration should continue. */
+typedef int
 idmap_iter_fun(fsm_state_t state_id, unsigned value, void *opaque);
 
 /* Iterate over the ID map. State IDs may be yielded out of order,

@@ -388,7 +388,7 @@
 		assert(@a != NULL);
 		assert(@a->p != NULL);
 
-		@r = re_comp(RE_NATIVE, act_agetc, @a, act_state->opt, @f, &err);
+		@r = re_comp(RE_NATIVE, act_agetc, @a, act_state->opt, @f | RE_NOCAPTURE, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
