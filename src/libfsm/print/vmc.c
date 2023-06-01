@@ -442,9 +442,6 @@ fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt
 			return -1;
 		}
 	} else {
-		fprintf(f, "#include <string.h>\n");
-		fprintf(f, "\n");
-
 		fprintf(f, "int\n%smain", prefix);
 
 		switch (opt->io) {
