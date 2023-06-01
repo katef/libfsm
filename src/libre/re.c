@@ -227,7 +227,7 @@ re_is_literal(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	ast = re_parse(dialect, getc, opaque, opt, flags, err, &unsatisfiable);
 	if (ast == NULL) {
-		goto error;
+		return -1;
 	}
 
 	/*
