@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 	fsm_state_t start;
 	char s[BUFSIZ];
 	int (*dmf)(struct fsm *);
-	void (*print)(FILE *, const struct fsm *);
+	int (*print)(FILE *, const struct fsm *);
 	unsigned long ms, mt;
 	int timing;
 	int native = 0;
