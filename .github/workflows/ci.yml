@@ -410,12 +410,12 @@ jobs:
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
     # note we do the fuzzing unconditionally; each run adds to the corpus
-    - name: Cache seeds (mode ${{ matrix.mode }})
-      uses: actions/cache@v3
+    - name: Restore seeds (mode ${{ matrix.mode }})
+      uses: actions/cache/restore@v3
       id: cache-seeds
       with:
         path: ${{ env.seeds }}-${{ matrix.mode }}
-        key: seeds-${{ matrix.mode }}
+        key: seeds-${{ matrix.mode }}-${{ matrix.debug }}
 
     - name: mkdir seeds
       if: steps.cache-seeds.outputs.cache-hit != 'true'
@@ -431,11 +431,34 @@ jobs:
         UBSAN_OPTIONS: ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
       run: ./${{ env.build }}/fuzz/fuzzer -fork=$((${{ steps.cpu-cores.outputs.count }} + 1)) -max_total_time=60 ${{ env.seeds }}-${{ matrix.mode }}
 
+    # saving the cache would fail because this key already exists,
+    # so I'm just explicitly purging by key here.
+    # the key contains "-${{ matrix.debug }}" so we don't lose seeds
+    # found from another instance in the matrix when purging.
+    - name: Purge cached seeds (mode ${{ matrix.mode }}-${{ matrix.debug }})
+      if: steps.cache-seeds.outputs.cache-hit == 'true'
+      run: |
+        set +e
+        gh extension install actions/gh-actions-cache
+        gh actions-cache delete ${{ steps.cache-seeds.outputs.cache-primary-key }} -R ${{ github.repository }} --confirm
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # if: always() means we keep these even on error, so we don't need to re-find
+    # the same seeds for a given bug.
+    # The explicit cache/restore and cache/save actions are just for that.
+    - name: Save seeds (mode ${{ matrix.mode }}-${{ matrix.debug }})
+      uses: actions/cache/save@v3
+      if: always()
+      with:
+        path: ${{ env.seeds }}-${{ matrix.mode }}
+        key: ${{ steps.cache-seeds.outputs.cache-primary-key }}
+
     # nothing to do with the caching, I'm uploading the seeds so a developer can grab them to fuzz locally
-    - name: Upload seeds (mode ${{ matrix.mode }})
+    - name: Upload seeds (mode ${{ matrix.mode }}-${{ matrix.debug }})
       uses: actions/upload-artifact@v3
       with:
-        name: seeds-${{ matrix.mode }}
+        name: seeds-${{ matrix.mode }}-${{ matrix.debug }}
         path: ${{ env.seeds }}-${{ matrix.mode }}
 
   test_pcre:
