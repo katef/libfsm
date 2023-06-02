@@ -392,6 +392,19 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 				fprintf(f, "p += %zu;\n", n);
 
 				op = tail;
+			} else if (n > 1 && opt->io == FSM_IO_STR) {
+				fprintf(f, "if (0 != strncmp(p, \"");
+				escputbuf(f, opt, c_escputc_str, buf, n);
+				fprintf(f, "\", %zu)) ", n);
+				if (-1 == print_end(f, NULL, opt, end_bits, ir)) {
+					return -1;
+				}
+				fprintf(f, "\n");
+
+				fprintf(f, "\t");
+				fprintf(f, "p += %zu;\n", n);
+
+				op = tail;
 			} else {
 				print_fetch(f, opt);
 				if (-1 == print_end(f, op, opt, op->u.fetch.end_bits, ir)) {
