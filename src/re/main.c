@@ -618,6 +618,10 @@ parse_flags(const char *arg, enum re_flags *flags)
 			*flags = *flags | RE_EXTENDED;
 			break;
 
+		case 'C':
+			*flags = *flags | RE_NOCAPTURE;
+			break;
+
 		/* others? */
 
 		default:
