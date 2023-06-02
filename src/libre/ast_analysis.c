@@ -1836,7 +1836,13 @@ analysis_iter_captures(struct capture_env *env, struct ast_expr *n)
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_TOMBSTONE:
+		break;
+
 	case AST_EXPR_ANCHOR:
+		if (env->use_captures && n->u.anchor.type == AST_ANCHOR_END && !n->u.anchor.is_end_nl) {
+			set_flags(n, AST_FLAG_UNSATISFIABLE);
+			return AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE;
+		}
 		break;
 
 	case AST_EXPR_LITERAL:

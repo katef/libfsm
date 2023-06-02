@@ -1376,6 +1376,13 @@ const struct captest_case_single single_cases[] = {
 			{ .pos = {0, 1}, },
 		},
 	},
+
+	{
+	        .regex = "\\z",
+		.input = "",
+		.count = 1,
+		.match = SHOULD_REJECT_AS_UNSUPPORTED,
+	},
 };
 
 const struct captest_case_multi multi_cases[] = {
