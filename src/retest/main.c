@@ -165,6 +165,10 @@ usage(void)
 	fprintf(stderr, "                 enc       logs VM encoding instructions\n");
 
 	fprintf(stderr, "\n");
+	fprintf(stderr, "        -k <io>\n");
+	fprintf(stderr, "             sets IO API:  getc, str, pair (default)\n");
+
+	fprintf(stderr, "\n");
 	fprintf(stderr, "        -l <implementation>\n");
 	fprintf(stderr, "             sets implementation type:\n");
 	fprintf(stderr, "                 vm        interpret vm instructions (default)\n");
@@ -1167,6 +1171,39 @@ finish:
 	return num_errors;
 }
 
+static enum fsm_io
+io(const char *name)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		enum fsm_io io;
+	} a[] = {
+		{ "getc", FSM_IO_GETC },
+		{ "str",  FSM_IO_STR  },
+		{ "pair", FSM_IO_PAIR }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].io;
+		}
+	}
+
+	fprintf(stderr, "unrecognised IO API; valid IO APIs are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
+	exit(EXIT_FAILURE);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -1194,7 +1231,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "O:L:l:x:" "e:E:" "r:" "tw:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "k:O:L:l:x:" "e:E:" "r:" "tw:"), c != -1) {
 			switch (c) {
 			case 'O':
 				optlevel = strtoul(optarg, NULL, 10);
@@ -1232,6 +1269,10 @@ main(int argc, char *argv[])
 					usage();
 					exit(1);
 				}
+				break;
+
+			case 'k':
+				opt.io = io(optarg);
 				break;
 
 			case 'x':
