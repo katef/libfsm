@@ -216,8 +216,19 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	fprintf(f, "    }\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "    let mut l = Ls;\n");
-	fprintf(f, "\n");
+	{
+		int has_branch = 0;
+
+		for (op = a.linked; op != NULL; op = op->next) {
+			if (op->instr == VM_OP_BRANCH) {
+				has_branch = 1;
+				break;
+			}
+		}
+
+		fprintf(f, "    let %sl = Ls;\n", has_branch ? "mut " : "");
+		fprintf(f, "\n");
+	}
 
 	fprintf(f, "    loop {\n");
 	fprintf(f, "        match l {\n");
