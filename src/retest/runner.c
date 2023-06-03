@@ -75,8 +75,8 @@ print(const struct fsm *fsm, enum implementation impl,
 		return 0;
 	}
 
-	/* the vmc codegen can emit memcmp() calls */
-	if (impl == IMPL_VMC && fsm_getoptions(fsm)->io == FSM_IO_PAIR) {
+	/* the vmc codegen can emit memcmp() or strncmp() calls */
+	if (impl == IMPL_VMC && (fsm_getoptions(fsm)->io == FSM_IO_PAIR || fsm_getoptions(fsm)->io == FSM_IO_STR)) {
 		fprintf(f, "#include <string.h>\n\n");
 	}
 
