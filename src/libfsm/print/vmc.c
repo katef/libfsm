@@ -403,6 +403,14 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 					fprintf(f, "c = (unsigned char) *p++;");
 				}
 			}
+
+			/*
+			 * If the following instruction is an unconditional return,
+			 * we won't be using this value.
+			 */
+			if (op->next != NULL && op->next->instr == VM_OP_STOP && op->next->cmp == VM_CMP_ALWAYS) {
+				fprintf(f, "\n\t(void) c;\n");
+			}
 			break;
 		}
 
