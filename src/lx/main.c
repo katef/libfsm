@@ -966,4 +966,4 @@ main(int argc, char *argv[])
 /* XXX: we're not interested in leaks in lx for the moment; ASAN is applied
  * for the libraries only. cleanup for lx's own structures should be addressed
  * at some point; excluding this is sloppy, but it's less important right now. */
-const char * __asan_default_options() { return "detect_leaks=0"; }
+const char * __asan_default_options(void) { return "detect_leaks=0"; }
