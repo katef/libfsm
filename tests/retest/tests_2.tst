@@ -16,3 +16,10 @@ R pcre
 +
 -xyz
 
+# avoid generating trigraphs (!) in strncmp()/memcmp() for inlined strings
+~^abc\?\?-$
++abc??-
+-abc???-
+-abc~
+-abc
+

@@ -80,9 +80,11 @@ c_escputc_str(FILE *f, const struct fsm_options *opt, char c)
 	 * Escaping '/' here is a lazy way to avoid keeping state when
 	 * emitting '*', '/', since this is used to output example strings
 	 * inside comments.
+	 *
+	 * Escaping '?' is a cheap way to avoid accidentally emitting trigraphs.
 	 */
 
-	if (!isprint((unsigned char) c) || c == '/') {
+	if (!isprint((unsigned char) c) || c == '/' || c == '?') {
 		return fprintf(f, "\\%03o", (unsigned char) c);
 	}
 
