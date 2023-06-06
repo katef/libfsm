@@ -27,7 +27,7 @@
 
 /* XXX: abstraction */
 int
-fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+fsm_print_vmcfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
 	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
 	const void *opaque);
@@ -687,6 +687,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		o.case_ranges = z->fsm->opt->case_ranges;
 		o.leaf        = leaf;
 		o.leaf_opaque = (void *) ast;
+		o.prefix      = "lx_";
 
 		z->fsm->opt = &o;
 
@@ -698,7 +699,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		}
 
 		/* XXX: abstraction */
-		(void) fsm_print_cfrag(f, ir, &o, opt.cp,
+		(void) fsm_print_vmcfrag(f, ir, &o, opt.cp,
 			z->fsm->opt->leaf != NULL ? z->fsm->opt->leaf : leaf, z->fsm->opt->leaf_opaque);
 
 		free_ir(z->fsm, ir);

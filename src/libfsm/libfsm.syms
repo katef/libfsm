@@ -114,6 +114,7 @@ fsm_fgetc
 fsm_sgetc
 
 fsm_print_cfrag # XXX: workaround for lx
+fsm_print_vmcfrag # XXX: workaround for lx
 make_ir # XXX: workaround for lx
 free_ir # XXX: workaround for lx
 

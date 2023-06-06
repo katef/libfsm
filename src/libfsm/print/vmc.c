@@ -115,13 +115,21 @@ print_branch(FILE *f, const struct dfavm_op_ir *op)
 static void
 print_fetch(FILE *f, const struct fsm_options *opt)
 {
+	const char *prefix;
+
+	if (opt->prefix != NULL) {
+		prefix = opt->prefix;
+	} else {
+		prefix = "fsm_";
+	}
+
 	switch (opt->io) {
 	case FSM_IO_GETC:
 		/*
 		 * Per its API, fsm_getc() is expected to return a positive character
 		 * value (as if cast via unsigned char), or EOF. Just like fgetc() does.
 		 */
-		fprintf(f, "if (c = fsm_getc(opaque), c == EOF) ");
+		fprintf(f, "if (c = %sgetc(opaque), c == EOF) ", prefix);
 		break;
 
 	case FSM_IO_STR:
@@ -131,7 +139,7 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 	case FSM_IO_PAIR:
 		/* This is split into two parts.  The first part checks if we're
 		 * at the end of the buffer.  The second part, in
-		 * fsm_print_cfrag, fetches the byte
+		 * fsm_print_vmcfrag, fetches the byte
 		 */
 		fprintf(f, "if (p == e) ");
 		break;
@@ -275,9 +283,8 @@ unsuitable:
 	return 0;
 }
 
-/* TODO: eventually to be non-static */
-static int
-fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+int
+fsm_print_vmcfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
 	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
 	const void *leaf_opaque)
@@ -436,7 +443,7 @@ fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt
 	assert(prefix != NULL);
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_cfrag(f, ir, opt, cp,
+		if (-1 == fsm_print_vmcfrag(f, ir, opt, cp,
 			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
 		{
 			return -1;
@@ -461,7 +468,7 @@ fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt
 			break;
 		}
 
-		if (-1 == fsm_print_cfrag(f, ir, opt, cp,
+		if (-1 == fsm_print_vmcfrag(f, ir, opt, cp,
 			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
 		{
 			return -1;
