@@ -30,6 +30,10 @@
 '\Z' -> $end__nl;
 '\z' -> $end;
 
+# unicode crime, one "code unit, whether or not a UTF mode is set"
+# not supporting this is equivalent to PCRE2_NEVER_BACKSLASH_C
+'\C' -> $unsupported;
+
 # unicode extended grapheme cluster
 '\X' -> $unsupported;
 
