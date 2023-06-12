@@ -8,10 +8,11 @@ TEST_OUTDIR.tests/endids = ${BUILD}/tests/endids
 INCDIR.${TEST_SRCDIR.tests/endids}/endids${n}.c += src/adt
 .endfor
 
+SRC += ${TEST_SRCDIR.tests/endids}/utils.c
+
 .for n in ${TEST.tests/endids:T:R:C/^endids//}
 test:: ${TEST_OUTDIR.tests/endids}/res${n}
 SRC += ${TEST_SRCDIR.tests/endids}/endids${n}.c
-SRC += ${TEST_SRCDIR.tests/endids}/utils.c
 CFLAGS.${TEST_SRCDIR.tests/endids}/endids${n}.c += -UNDEBUG
 
 ${TEST_OUTDIR.tests/endids}/run${n}: ${TEST_OUTDIR.tests/endids}/endids${n}.o ${TEST_OUTDIR.tests/endids}/utils.o ${BUILD}/lib/libfsm.a ${BUILD}/lib/libre.a
