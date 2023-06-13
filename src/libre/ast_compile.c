@@ -159,7 +159,8 @@ fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t x, fsm_state_t y)
 	{
 		size_t i;
 
-		for (i = 0; i < b->statecount; i++) {
+		const size_t statecount = fsm_countstates(b);
+		for (i = 0; i < statecount; i++) {
 			fsm_setend(b, i, 0);
 		}
 	}
