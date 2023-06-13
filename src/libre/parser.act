@@ -31,6 +31,7 @@
 	#include <ctype.h>
 
 	#include <re/re.h>
+	#include <adt/common.h>
 
 	#include "libre/class.h"
 	#include "libre/class_lookup.h"
@@ -1167,7 +1168,6 @@
 
 		ADVANCE_LEXER;
 
-#define BUILD_FOR_FUZZER 0
 #if BUILD_FOR_FUZZER
 		/* these errors currently are not handled properly */
 		if (act_state->lex_tok == TOK_ERROR) {

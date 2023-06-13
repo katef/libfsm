@@ -9,7 +9,7 @@
 
 #include <stdint.h>
 
-#include "common/check.h"
+#include "adt/common.h"
 
 /* 32 and 64-bit approximations of the golden ratio. */
 #define FSM_PHI_32 0x9e3779b9UL

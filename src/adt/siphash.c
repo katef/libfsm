@@ -20,7 +20,7 @@
 #include <string.h>
 
 /* Added to suppress UBSan warning for (expected) unsigned integer overflow. */
-#include "common/check.h"
+#include "adt/common.h"
 
 /* default: SipHash-2-4 */
 #define cROUNDS 2

@@ -17,6 +17,8 @@
 #include "ast.h"
 #include "ast_analysis.h"
 
+#include <adt/common.h>
+
 #define LOG_ANALYSIS 0
 #define LOG_FIRST_ANALYSIS (0 + LOG_ANALYSIS)
 #define LOG_REPEATED_GROUPS (0 + LOG_ANALYSIS)
@@ -204,6 +206,19 @@ analysis_iter(struct ast_expr *n)
 			    (void *)n, (void *)e);
 			set_flags(n, AST_FLAG_NULLABLE);
 		}
+
+		/* When building for fuzzing, ignore uninteresting
+		 * failures from regexes like '.{1000000}' that use
+		 * repetition to hit memory limits. */
+#if BUILD_FOR_FUZZER
+                if ((n->u.repeat.max != AST_COUNT_UNBOUNDED && n->u.repeat.max >= 10)
+		    || (n->u.repeat.min >= 10)) {
+			fprintf(stderr, "%s: rejecting regex with {count} >= 10 (%u)\n",
+			    __func__, n->u.repeat.max);
+			return AST_ANALYSIS_ERROR_MEMORY;
+                }
+#endif
+
 		break;
 	}
 
