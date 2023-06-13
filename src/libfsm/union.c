@@ -33,6 +33,8 @@ fsm_union(struct fsm *a, struct fsm *b,
 		combine_info = &combine_info_internal;
 	}
 
+	memset(combine_info, 0x00, sizeof(*combine_info));
+
 	assert(a != NULL);
 	assert(b != NULL);
 
