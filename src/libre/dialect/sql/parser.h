@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 310 "src/libre/parser.act"
+#line 300 "src/libre/parser.act"
 
 
 	#include <re/re.h>
@@ -28,7 +28,7 @@
 extern void p_re__sql(flags, lex_state, act_state, err, t_ast__expr *);
 /* BEGINNING OF TRAILER */
 
-#line 1249 "src/libre/parser.act"
+#line 1247 "src/libre/parser.act"
 
 
 #line 35 "src/libre/dialect/sql/parser.h"
