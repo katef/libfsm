@@ -217,7 +217,9 @@ encode_opasm_v1(const struct dfavm_vm_op *instr, size_t ninstr, size_t total_byt
 	return ret;
 
 error:
-	/* XXX - cleanup */
+	if (ret != NULL) {
+		free(ret);
+	}
 	return NULL;
 }
 
