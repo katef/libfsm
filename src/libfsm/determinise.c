@@ -1339,6 +1339,7 @@ to_set_htab_check(struct analyze_closures_env *env,
 		if (b->count == 0) {
 			return 0; /* empty bucket -> not found */
 		} else if (b->count == count) {
+			assert(env->to_sets.buf != NULL);
 			assert(b->offset + count <= env->to_sets.used);
 			const fsm_state_t *ids = &env->to_sets.buf[b->offset];
 			if (0 == memcmp(ids, dst, count * sizeof(dst[0]))) {
@@ -1465,6 +1466,7 @@ save_to_set(struct analyze_closures_env *env,
 		env->to_sets.ceil = nceil;
 		env->to_sets.buf = nbuf;
 	}
+	assert(env->to_sets.buf != NULL);
 
 #if LOG_TO_SET
 	static size_t to_set_id;
