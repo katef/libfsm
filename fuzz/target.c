@@ -877,6 +877,11 @@ build_and_check_multi(const char *input)
 	}
 	if (j > 0) { count++; }
 
+	if (count == 1) {
+		/* multi mode with only one pattern is pointless */
+		return EXIT_SUCCESS;
+	}
+
 	struct re_err err;
 	const enum re_flags flags = 0;
 
@@ -894,6 +899,7 @@ build_and_check_multi(const char *input)
 	}
 
 	/* compile each individually */
+	/* FIXME: apply and check endids */
 	for (size_t i = 0; i < count; i++) {
 		if (verbosity > 1) {
 			fprintf(stderr, "%s: compiling \"%s\"\n",
@@ -908,6 +914,11 @@ build_and_check_multi(const char *input)
 		struct fsm *fsm = re_comp(RE_PCRE, scanner_next, &s, &fsm_options, flags, &err);
 		if (fsm == NULL) {
 			res = EXIT_SUCCESS; /* invalid regex, so skip this batch */
+			goto cleanup;
+		}
+
+		/* set endid to associate each FSM with its pattern */
+		if (!fsm_setendid(fsm, (fsm_end_id_t)i)) {
 			goto cleanup;
 		}
 
@@ -1102,6 +1113,7 @@ cmp_combined_and_separate_cb(const struct fsm *fsm,
     fsm_state_t end_state, void *opaque)
 {
 	struct cmp_combined_env *env = opaque;
+	(void)end_state;
 
 	if (steps > env->max_steps) {
 		return FSM_GENERATE_MATCHES_CB_RES_HALT;
@@ -1119,11 +1131,15 @@ cmp_combined_and_separate_cb(const struct fsm *fsm,
 	struct fsm_capture captures_single[MAX_CAPTURES];
 	struct fsm_capture captures_combined[MAX_CAPTURES];
 
+	const fsm_end_id_t expected_end_id = (fsm_end_id_t)env->current_i;
+
 	const uint8_t *u8_input = (const uint8_t *)input;
+	fsm_state_t end_state_combined, end_state_single;
+
 	const int res_combined = fsm_exec_with_captures(env->combined_fsm, u8_input, input_length,
-	    &end_state, captures_combined, MAX_CAPTURES);
+	    &end_state_combined, captures_combined, MAX_CAPTURES);
 	const int res_single = fsm_exec_with_captures(fsm, u8_input, input_length,
-	    &end_state, captures_single, MAX_CAPTURES);
+	    &end_state_single, captures_single, MAX_CAPTURES);
 
 	if (res_combined != res_single) {
 		env->ok = false;
@@ -1134,10 +1150,43 @@ cmp_combined_and_separate_cb(const struct fsm *fsm,
 		return FSM_GENERATE_MATCHES_CB_RES_HALT;
 	}
 
+	fsm_end_id_t id_buf_combined[MAX_PATTERNS];
+	size_t written_combined = 0;
+	if (res_combined > 0) {
+		const size_t exp_written = fsm_getendidcount(env->combined_fsm, end_state_combined);
+		assert(exp_written <= env->count);
+		const enum fsm_getendids_res gres = fsm_getendids(env->combined_fsm,
+		    end_state_combined, MAX_PATTERNS, id_buf_combined, &written_combined);
+		assert(gres == FSM_GETENDIDS_FOUND);
+		assert(written_combined == exp_written);
+	}
+
 	if (res_single > 0) {
 		if (env->verbosity > 3) {
 			fprintf(stderr, "%s: res %d (single and combined)\n", __func__, res_single);
 		}
+
+		/* Check that the end state's endid for the single DFA is among the
+		 * endids for the combined DFA's end state. */
+		assert(fsm_getendidcount(fsm, end_state_single) == 1);
+		assert(fsm_getendidcount(env->combined_fsm, end_state_combined) <= env->count);
+
+		fsm_end_id_t id_buf_single[1];
+		size_t written;
+		const enum fsm_getendids_res gres = fsm_getendids(fsm,
+		    end_state_single, 1, id_buf_single, &written);
+		assert(gres == FSM_GETENDIDS_FOUND);
+		assert(written == 1);
+		assert(id_buf_single[0] == expected_end_id);
+
+		bool found_single_id_in_combined = false;
+		for (size_t i = 0; i < written_combined; i++) {
+			if (id_buf_combined[i] == expected_end_id) {
+				found_single_id_in_combined = true;
+				break;
+			}
+		}
+		assert(found_single_id_in_combined);
 
 		bool matching = true;
 		const unsigned base = env->bases[env->current_i].capture;
@@ -1165,6 +1214,18 @@ cmp_combined_and_separate_cb(const struct fsm *fsm,
 			env->ok = false;
 			return FSM_GENERATE_MATCHES_CB_RES_HALT;
 		}
+	} else if (res_combined > 0) {
+		/* This matched the combined DFA but not the single one,
+		 * so check that the single DFA's end id is *absent*
+		 * from the combined DFA's end state. */
+		bool found_single_id_in_combined = false;
+		for (size_t i = 0; i < written_combined; i++) {
+			if (id_buf_combined[i] == expected_end_id) {
+				found_single_id_in_combined = true;
+				break;
+			}
+		}
+		assert(!found_single_id_in_combined);
 	}
 
 	return FSM_GENERATE_MATCHES_CB_RES_CONTINUE;
