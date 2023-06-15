@@ -265,20 +265,26 @@ carry_end_metadata(struct carry_end_metadata_env *env,
 		enum fsm_getendids_res id_res;
 		size_t written;
 		if (id_count > env->end.ceil) { /* grow buffer */
-			const size_t nceil = (env->end.ceil == 0)
+			size_t nceil = (env->end.ceil == 0)
 			    ? DEF_END_METADATA_ENDIDS_CEIL
 			    : 2*env->end.ceil;
+			while (nceil < id_count) {
+				nceil *= 2;
+			}
 			assert(nceil > 0);
-			env->end.ids = f_realloc(env->alloc,
+			fsm_end_id_t *nids = f_realloc(env->alloc,
 			    env->end.ids, nceil * sizeof(env->end.ids[0]));
-			if (env->end.ids == NULL) {
+			if (nids == NULL) {
 				return 0;
 			}
+			env->end.ids = nids;
+			env->end.ceil = nceil;
 		}
 
 		id_res = fsm_getendids(env->fsm, end_state,
 		    id_count, env->end.ids, &written);
-		assert(id_res != FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE);
+		assert(id_res == FSM_GETENDIDS_FOUND);
+		assert(written == id_count);
 
 		for (i = 0; i < id_count; i++) {
 #if LOG_COPYING
