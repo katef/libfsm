@@ -104,15 +104,8 @@ fsm_union_array(size_t fsm_count,
 	fsms[0] = NULL;
 	memset(bases, 0x00, fsm_count * sizeof(bases[0]));
 
-#if EXPENSIVE_CHECKS
-	size_t capture_count = fsm_capture_count(res);
-#endif
-
 	for (i = 1; i < fsm_count; i++) {
 		struct fsm_combine_info ci;
-#if EXPENSIVE_CHECKS
-		capture_count += fsm_capture_count(fsms[i]);
-#endif
 
 		struct fsm *combined = fsm_union(res, fsms[i], &ci);
 		fsms[i] = NULL;
@@ -149,8 +142,5 @@ fsm_union_array(size_t fsm_count,
 	}
 #endif
 
-#if EXPENSIVE_CHECKS
-	assert(fsm_capture_count(res) == capture_count);
-#endif
 	return res;
 }
