@@ -56,6 +56,12 @@ fsm_consolidate(const struct fsm *src,
 	struct mapping_closure closure;
 	size_t max_used = 0;
 
+#if LOG_CONSOLIDATE_END_METADATA > 1
+	fprintf(stderr, "==== fsm_consolidate -- endid_info before:\n");
+	fsm_endid_dump(stderr, src);
+	fsm_capture_dump_active_for_ends(stderr, src);
+#endif
+
 	assert(src != NULL);
 	if (mapping_count == 0) {
 		return fsm_clone(src);
@@ -168,40 +174,6 @@ struct consolidate_end_ids_env {
 };
 
 static int
-consolidate_end_ids_cb(const struct fsm *fsm, fsm_state_t state,
-    size_t nth, const fsm_end_id_t id, void *opaque)
-{
-	struct consolidate_end_ids_env *env = opaque;
-	enum fsm_endid_set_res sres;
-	fsm_state_t s;
-	assert(env->tag == 'C');
-
-	(void)fsm;
-	(void)nth;
-
-#if LOG_CONSOLIDATE_END_METADATA > 1
-	fprintf(stderr, "consolidate_end_ids_cb: state %u, ID[%zu]: %d\n",
-	    state, nth, id);
-	fprintf(stderr, "  -- mapping_count %zu\n",
-	    env->mapping_count);
-#endif
-
-	s = env->mapping[state];
-
-#if LOG_CONSOLIDATE_END_METADATA > 1
-	fprintf(stderr, "consolidate[%d] <- %d\n", s, id);
-#endif
-
-	sres = fsm_endid_set(env->dst, s, id);
-	if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
-		env->ok = 0;
-		return 0;
-	}
-
-	return 1;
-}
-
-static int
 consolidate_active_captures_cb(fsm_state_t state, unsigned capture_id,
     void *opaque)
 {
@@ -235,14 +207,36 @@ consolidate_capture_programs_cb(fsm_state_t state, unsigned program_id,
 	assert(state < env->mapping_count);
 	dst_s = env->mapping[state];
 
-#if LOG_CONSOLIDATE_END_METADATA
-	fprintf(stderr, "%s: state %d -> dst_s %d, capture_id %u\n",
-	    __func__, state, dst_s, program_id);
-#endif
-
 	if (!fsm_capture_associate_program_with_end_state(env->dst,
 		(uint32_t)program_id, dst_s)) {
 		env->ok = 0;
+	}
+
+	return 1;
+}
+
+static int
+consolidate_end_ids_cb(fsm_state_t state, const fsm_end_id_t *ids, size_t num_ids, void *opaque)
+{
+	struct consolidate_end_ids_env *env = opaque;
+	fsm_state_t dst_s;
+	assert(env->tag == 'C');
+
+	assert(state < env->mapping_count);
+	dst_s = env->mapping[state];
+
+#if LOG_CONSOLIDATE_END_METADATA > 1
+	fprintf(stderr, "consolidate_end_ids_cb: state %u, dst %u, IDs [",
+	    state, dst_s);
+	for (size_t i = 0; i < num_ids; i++) {
+		fprintf(stderr, "%s%d", i > 0 ? " " : "", ids[i]);
+	}
+	fprintf(stderr, "]\n");
+#endif
+
+	enum fsm_endid_set_res sres = fsm_endid_set_bulk(env->dst,
+	    dst_s, num_ids, ids, FSM_ENDID_BULK_APPEND);
+	if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
 		return 0;
 	}
 	return 1;
@@ -253,14 +247,14 @@ consolidate_end_metadata(struct fsm *dst, const struct fsm *src,
     const fsm_state_t *mapping, size_t mapping_count)
 {
 	struct consolidate_end_ids_env env;
+
 	env.tag = 'C';		/* for Consolidate */
 	env.dst = dst;
 	env.src = src;
 	env.mapping = mapping;
 	env.mapping_count = mapping_count;
-	env.ok = 1;
 
-	fsm_endid_iter(src, consolidate_end_ids_cb, &env);
+	env.ok = fsm_endid_iter_bulk(src, consolidate_end_ids_cb, &env);
 
 	if (env.ok) {
 		fsm_state_t s;

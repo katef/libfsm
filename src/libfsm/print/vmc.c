@@ -86,20 +86,24 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 	fprintf(f, ") ");
 }
 
-static void
+static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits, const struct ir *ir)
 {
 	if (end_bits == VM_END_FAIL) {
 		fprintf(f, "return -1;");
-		return;
+		return 0;
 	}
 
 	if (opt->endleaf != NULL) {
-		opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque);
+		if (-1 == opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque)) {
+			return -1;
+		}
 	} else {
 		fprintf(f, "return %td;", op->ir_state - ir->states);
 	}
+
+	return 0;
 }
 
 static void
@@ -132,6 +136,143 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 		fprintf(f, "if (p == e) ");
 		break;
 	}
+}
+
+static size_t
+walk_sequence(struct dfavm_op_ir *op,
+	enum dfavm_op_end *end_bits,
+	char *buf, size_t len,
+	struct dfavm_op_ir **tail)
+{
+	size_t n;
+
+	assert(end_bits != NULL);
+	assert(buf != NULL);
+	assert(tail != NULL);
+
+	/*
+	 * Here we're looking for a sequence of:
+	 * 
+	 *   FETCH: (or fail)
+	 *   STOP: c != 'x' (or fail)
+	 * 
+	 * This catches situations like the "abc" and "xyz" in /^abc[01]xyz/,
+	 * but not for runs in unanchored regexes. For those, we'd be better
+	 * off adding VM instructions for sets of strings, and producing
+	 * those from the various types of enum ir_strategy.
+	 */
+
+	n = 0;
+
+	/* fetch */
+	{
+		if (op == NULL || op->instr != VM_OP_FETCH) {
+			goto unsuitable;
+		}
+
+		assert(op->cmp == VM_CMP_ALWAYS);
+
+		/* op->num_incoming > 0 is allowed for this instruction only */
+
+		if (op->u.fetch.end_bits != VM_END_FAIL) {
+			goto unsuitable;
+		}
+
+		*end_bits = op->u.fetch.end_bits;
+	}
+
+	op = op->next;
+
+	/* stop */
+	{
+		if (op == NULL || op->instr != VM_OP_STOP) {
+			goto unsuitable;
+		}
+
+		if (op->cmp != VM_CMP_NE) {
+			goto unsuitable;
+		}
+
+		if (op->num_incoming > 0) {
+			goto unsuitable;
+		}
+
+		if (op->u.stop.end_bits != *end_bits) {
+			goto unsuitable;
+		}
+	}
+
+	if (n >= len) {
+		goto done;
+	}
+
+	buf[n] = op->cmp_arg;
+
+	*end_bits = op->u.stop.end_bits;
+
+	*tail = op;
+
+	op = op->next;
+	n++;
+
+	for (;;) {
+		/* fetch */
+		{
+			if (op == NULL || op->instr != VM_OP_FETCH) {
+				break;
+			}
+
+			assert(op->cmp == VM_CMP_ALWAYS);
+
+			if (op->num_incoming > 0) {
+				break;
+			}
+
+			if (op->u.fetch.end_bits != *end_bits) {
+				break;
+			}
+		}
+
+		op = op->next;
+
+		/* stop */
+		{
+			if (op == NULL || op->instr != VM_OP_STOP) {
+				break;
+			}
+
+			if (op->cmp != VM_CMP_NE) {
+				break;
+			}
+
+			if (op->num_incoming > 0) {
+				break;
+			}
+
+			if (op->u.stop.end_bits != *end_bits) {
+				break;
+			}
+		}
+
+		if (n >= len) {
+			break;
+		}
+
+		buf[n] = op->cmp_arg;
+
+		*tail = op;
+
+		op = op->next;
+		n++;
+	}
+
+done:
+
+	return n;
+
+unsuitable:
+
+	return 0;
 }
 
 /* TODO: eventually to be non-static */
@@ -224,18 +365,67 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op, opt);
-			print_end(f, op, opt, op->u.stop.end_bits, ir);
-			break;
-
-		case VM_OP_FETCH:
-			print_fetch(f, opt);
-			print_end(f, op, opt, op->u.fetch.end_bits, ir);
-			if (opt->io == FSM_IO_PAIR) {
-				/* second part of FSM_IO_PAIR fetch */
-				fprintf(f, "\n\n\t");
-				fprintf(f, "c = (unsigned char) *p++;");
+			if (-1 == print_end(f, op, opt, op->u.stop.end_bits, ir)) {
+				return -1;
 			}
 			break;
+
+		case VM_OP_FETCH: {
+			size_t n;
+			enum dfavm_op_end end_bits;
+			struct dfavm_op_ir *tail;
+
+			char buf[8192];
+
+			n = walk_sequence(op, &end_bits, buf, sizeof buf, &tail);
+
+			if (n > 1 && opt->io == FSM_IO_PAIR) {
+				fprintf(f, "if (e - p < %zu || 0 != memcmp(p, \"", n);
+				escputbuf(f, opt, c_escputc_str, buf, n);
+				fprintf(f, "\", %zu)) ", n);
+				if (-1 == print_end(f, NULL, opt, end_bits, ir)) {
+					return -1;
+				}
+				fprintf(f, "\n");
+
+				fprintf(f, "\t");
+				fprintf(f, "p += %zu;\n", n);
+
+				op = tail;
+			} else if (n > 1 && opt->io == FSM_IO_STR) {
+				fprintf(f, "if (0 != strncmp(p, \"");
+				escputbuf(f, opt, c_escputc_str, buf, n);
+				fprintf(f, "\", %zu)) ", n);
+				if (-1 == print_end(f, NULL, opt, end_bits, ir)) {
+					return -1;
+				}
+				fprintf(f, "\n");
+
+				fprintf(f, "\t");
+				fprintf(f, "p += %zu;\n", n);
+
+				op = tail;
+			} else {
+				print_fetch(f, opt);
+				if (-1 == print_end(f, op, opt, op->u.fetch.end_bits, ir)) {
+					return -1;
+				}
+				if (opt->io == FSM_IO_PAIR) {
+					/* second part of FSM_IO_PAIR fetch */
+					fprintf(f, "\n\n\t");
+					fprintf(f, "c = (unsigned char) *p++;");
+				}
+			}
+
+			/*
+			 * If the following instruction is an unconditional return,
+			 * we won't be using this value.
+			 */
+			if (op->next != NULL && op->next->instr == VM_OP_STOP && op->next->cmp == VM_CMP_ALWAYS) {
+				fprintf(f, "\n\t(void) c;\n");
+			}
+			break;
+		}
 
 		case VM_OP_BRANCH:
 			print_cond(f, op, opt);
@@ -255,8 +445,8 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	return 0;
 }
 
-static void
-fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt)
+static int
+fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt, const char *prefix)
 {
 	/* TODO: currently unused, but must be non-NULL */
 	const char *cp = "";
@@ -264,16 +454,57 @@ fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt
 	assert(f != NULL);
 	assert(ir != NULL);
 	assert(opt != NULL);
+	assert(prefix != NULL);
 
-	(void) fsm_print_cfrag(f, ir, opt, cp,
-		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
+	if (opt->fragment) {
+		if (-1 == fsm_print_cfrag(f, ir, opt, cp,
+			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
+		{
+			return -1;
+		}
+	} else {
+		fprintf(f, "int\n%smain", prefix);
+
+		switch (opt->io) {
+		case FSM_IO_GETC:
+			fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
+			fprintf(f, "{\n");
+			break;
+
+		case FSM_IO_STR:
+			fprintf(f, "(const char *s)\n");
+			fprintf(f, "{\n");
+			break;
+
+		case FSM_IO_PAIR:
+			fprintf(f, "(const char *b, const char *e)\n");
+			fprintf(f, "{\n");
+			break;
+		}
+
+		if (-1 == fsm_print_cfrag(f, ir, opt, cp,
+			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
+		{
+			return -1;
+		}
+
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
+
+	if (ferror(f)) {
+		return -1;
+	}
+
+	return 0;
 }
 
-void
+int
 fsm_print_vmc(FILE *f, const struct fsm *fsm)
 {
 	struct ir *ir;
 	const char *prefix;
+	int r;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
@@ -281,7 +512,7 @@ fsm_print_vmc(FILE *f, const struct fsm *fsm)
 
 	ir = make_ir(fsm);
 	if (ir == NULL) {
-		return;
+		return -1;
 	}
 
 	/* henceforth, no function should be passed struct fsm *, only the ir and options */
@@ -292,37 +523,10 @@ fsm_print_vmc(FILE *f, const struct fsm *fsm)
 		prefix = "fsm_";
 	}
 
-	if (fsm->opt->fragment) {
-		fsm_print_c_complete(f, ir, fsm->opt);
-		return;
-	}
-
-	fprintf(f, "\n");
-
-	fprintf(f, "int\n%smain", prefix);
-
-	switch (fsm->opt->io) {
-	case FSM_IO_GETC:
-		fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
-		fprintf(f, "{\n");
-		break;
-
-	case FSM_IO_STR:
-		fprintf(f, "(const char *s)\n");
-		fprintf(f, "{\n");
-		break;
-
-	case FSM_IO_PAIR:
-		fprintf(f, "(const char *b, const char *e)\n");
-		fprintf(f, "{\n");
-		break;
-	}
-
-	fsm_print_c_complete(f, ir, fsm->opt);
-
-	fprintf(f, "}\n");
-	fprintf(f, "\n");
+	r = fsm_print_c_complete(f, ir, fsm->opt, prefix);
 
 	free_ir(fsm, ir);
+
+	return r;
 }
 

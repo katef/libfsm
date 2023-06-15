@@ -55,17 +55,13 @@ print_endpoint(FILE *f, const struct fsm_options *opt, unsigned char c)
 
 static void
 print_ranges(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir,
 	const struct ir_range *ranges, size_t n)
 {
 	size_t k;
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 	assert(ranges != NULL);
-
-	(void)ir; /* unused */
 
 	for (k = 0; k < n; k++) {
 		fprintf(f, "\t\t\t\t\t\t{ ");
@@ -86,14 +82,12 @@ print_ranges(FILE *f, const struct fsm_options *opt,
 
 static void
 print_groups(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir,
 	const struct ir_group *groups, size_t n)
 {
 	size_t j;
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 	assert(groups != NULL);
 
 	fprintf(f, "[\n");
@@ -105,7 +99,7 @@ print_groups(FILE *f, const struct fsm_options *opt,
 
 		fprintf(f, "\t\t\t\t\t\"to\": %u,\n", groups[j].to);
 		fprintf(f, "\t\t\t\t\t\"ranges\": [\n");
-		print_ranges(f, opt, ir, groups[j].ranges, groups[j].n);
+		print_ranges(f, opt, groups[j].ranges, groups[j].n);
 		fprintf(f, "\t\t\t\t\t]\n");
 
 		fprintf(f, "\t\t\t\t}");
@@ -120,11 +114,10 @@ print_groups(FILE *f, const struct fsm_options *opt,
 
 static void
 print_cs(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, const struct ir_state *cs)
+	const struct ir_state *cs)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 	assert(cs != NULL);
 
 	fprintf(f, "\t\t{\n");
@@ -158,31 +151,31 @@ print_cs(FILE *f, const struct fsm_options *opt,
 
 	case IR_COMPLETE:
 		fprintf(f, "\t\t\t\"groups\": ");
-		print_groups(f, opt, ir, cs->u.complete.groups, cs->u.complete.n);
+		print_groups(f, opt, cs->u.complete.groups, cs->u.complete.n);
 		break;
 
 	case IR_PARTIAL:
 		fprintf(f, "\t\t\t\"groups\": ");
-		print_groups(f, opt, ir, cs->u.partial.groups, cs->u.partial.n);
+		print_groups(f, opt, cs->u.partial.groups, cs->u.partial.n);
 		break;
 
 	case IR_DOMINANT:
 		fprintf(f, "\t\t\t\"mode\": %u,\n", cs->u.dominant.mode);
 		fprintf(f, "\t\t\t\"groups\": ");
-		print_groups(f, opt, ir, cs->u.dominant.groups, cs->u.dominant.n);
+		print_groups(f, opt, cs->u.dominant.groups, cs->u.dominant.n);
 		break;
 
 	case IR_ERROR:
 		fprintf(f, "\t\t\t\"mode\": %u,\n", cs->u.error.mode);
 		fprintf(f, "\t\t\t\"error\": [\n");
-		print_ranges(f, opt, ir, cs->u.error.error.ranges, cs->u.error.error.n);
+		print_ranges(f, opt, cs->u.error.error.ranges, cs->u.error.error.n);
 		fprintf(f, "\t\t\t],\n");
 		fprintf(f, "\t\t\t\"groups\": ");
-		print_groups(f, opt, ir, cs->u.error.groups, cs->u.error.n);
+		print_groups(f, opt, cs->u.error.groups, cs->u.error.n);
 		break;
 
 	case IR_TABLE:
-		/* TODO */
+		assert(!"unreached");
 		break;
 
 	default:
@@ -192,7 +185,7 @@ print_cs(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\t\t}");
 }
 
-void
+int
 fsm_print_irjson(FILE *f, const struct fsm *fsm)
 {
 	struct ir *ir;
@@ -203,7 +196,7 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 
 	ir = make_ir(fsm);
 	if (ir == NULL) {
-		return;
+		return -1;
 	}
 
 	fprintf(f, "{\n");
@@ -212,7 +205,7 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\t\"states\": [\n");
 
 	for (i = 0; i < ir->n; i++) {
-		print_cs(f, fsm->opt, ir, &ir->states[i]);
+		print_cs(f, fsm->opt, &ir->states[i]);
 
 		if (i + 1 < ir->n) {
 			fprintf(f, ",");
@@ -225,5 +218,11 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 	fprintf(f, "}\n");
 
 	free_ir(fsm, ir);
+
+	if (ferror(f)) {
+		return -1;
+	}
+
+	return 0;
 }
 

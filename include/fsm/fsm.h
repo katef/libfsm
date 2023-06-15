@@ -33,6 +33,8 @@ typedef unsigned int fsm_state_t;
  * original FSM(s) matched when executing a combined FSM. */
 typedef unsigned int fsm_end_id_t;
 
+#define FSM_END_ID_MAX UINT_MAX
+
 /* struct used to return a collection of end IDs. */
 struct fsm_end_ids {
 	unsigned count;
@@ -203,6 +205,8 @@ fsm_setendid_state(struct fsm *fsm, fsm_state_t s, fsm_end_id_t id);
  * - union
  * - concat
  * - ...
+ *
+ * Returns 1 on success, 0 on error.
  * */
 int
 fsm_setendid(struct fsm *fsm, fsm_end_id_t id);
@@ -229,16 +233,48 @@ fsm_getendids(const struct fsm *fsm, fsm_state_t end_state,
 size_t
 fsm_getendidcount(const struct fsm *fsm, fsm_state_t end_state);
 
-/* Callback for iterating over end IDs.
- * Returns whether iteration should continue. */
+/* Callback function to remap the end ids of a state.  This function can
+ * remap to fewer end ids, but cannot add additional end ids, and cannot
+ * remove all end ids from a state.
+ *
+ * Arguments:
+ *   state         The fsm state.  This will be an end state, and will have
+ *                 at least one endid.
+ *   num_ids       The number of end ids.
+ *   endids        An array of end ids
+ *   num_written   The number of end ids after remap() returns.  This must
+ *                 be in the range: 0 < *num_written <= num_ids.
+ *   opaque        opaque user-defined data passed to remap()
+ *
+ * Return value
+ *   0             indicates that the remapping should stop
+ *   non-zero      remapping should continue
+ */
 typedef int
-fsm_iterendids_cb(const struct fsm *fsm, fsm_state_t end_state,
-    size_t nth, fsm_end_id_t id, void *opaque);
+fsm_endid_remap_fun(fsm_state_t state, size_t num_ids,
+	fsm_end_id_t *endids, size_t *num_written, void *opaque);
 
-/* Iterate over the end IDs associated with a state, if any. */
+/* Remaps all end states with endids.  remap function is called for any
+ * state with endids.  See the fsm_endid_remap_fun typedef for the
+ * requirements of this function.
+ *
+ * Arguments
+ *   fsm          The fsm being remapped
+ *   remap        The function called to remap end ids
+ *   opaque       The opaque user defined data passed to the remap function
+ *
+ * Return value
+ *   0            remapping stopped by the remap function returning 0
+ *   1            remapping finished without stopping
+ */
+int
+fsm_mapendids(struct fsm * fsm, fsm_endid_remap_fun remap, void *opaque);
+
+/* Remaps endids by adding a constant delta to them.  Note that this will wrap around as an unsigned integer,
+ * with the max value given by FSM_END_ID_MAX.
+ */
 void
-fsm_iterendids(const struct fsm *fsm, fsm_state_t state,
-	fsm_iterendids_cb *cb, void *opaque);
+fsm_increndids(struct fsm * fsm, int delta);
 
 /*
  * Find the state (if there is just one), or add epsilon edges from all states,

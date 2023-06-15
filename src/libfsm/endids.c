@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <stddef.h>
+#include <inttypes.h>
+
 #include <fsm/alloc.h>
 #include <fsm/capture.h>
 #include <fsm/fsm.h>
@@ -44,6 +47,39 @@ struct endid_info {
 };
 
 #define LOG_ENDIDS 0
+
+/* flags to enable or disable some expensive checks */
+#define ENDIDS_EXPENSIVE_CHECK_SORTED_ORDER 0
+#define ENDIDS_EXPENSIVE_CHECK_BISECTION    0
+
+/* Convenience macros to avoid #if LOG_ENDIDS > n ... #endif pairs that disrupt
+ * the flow
+ * 
+ * Note: __VA_ARGS__ requires C99
+ */
+#if LOG_ENDIDS > 2
+#	define LOG_2(...) fprintf(stderr, __VA_ARGS__)
+#	define DBG_2(expr)    do { (expr); } while (0)
+#else
+#	define LOG_2(...) do {} while(0)
+#	define DBG_2(expr)    do {} while (0)
+#endif
+
+#if LOG_ENDIDS > 3
+#	define LOG_3(...) fprintf(stderr, __VA_ARGS__)
+#	define DBG_3(expr)    do { (expr); } while (0)
+#else
+#	define LOG_3(...) do {} while(0)
+#	define DBG_3(expr)    do {} while (0)
+#endif
+
+#if LOG_ENDIDS > 4
+#	define LOG_4(...) fprintf(stderr, __VA_ARGS__)
+#	define DBG_4(expr)    do { (expr); } while (0)
+#else
+#	define LOG_4(...) do {} while(0)
+#	define DBG_4(expr)    do {} while (0)
+#endif
 
 static void
 dump_buckets(const char *tag, const struct endid_info *ei)
@@ -180,7 +216,6 @@ grow_endid_buckets(const struct fsm_alloc *alloc, struct endid_info *info)
 #if LOG_ENDIDS > 3
 	fprintf(stderr, "grow_endid_buckets: growing from %lu to %lu buckets\n",
 	    old_count, new_count);
-	    res->bucket_count);
 #endif
 
 	new_buckets = f_malloc(alloc, new_count * sizeof(new_buckets[0]));
@@ -221,9 +256,8 @@ grow_endid_buckets(const struct fsm_alloc *alloc, struct endid_info *info)
 	return 1;
 }
 
-enum fsm_endid_set_res
-fsm_endid_set(struct fsm *fsm,
-    fsm_state_t state, fsm_end_id_t id)
+static struct endid_info_bucket *
+endid_find_bucket(struct fsm *fsm, fsm_state_t state)
 {
 	struct endid_info *ei = NULL;
 	int has_grown = 0;
@@ -241,37 +275,31 @@ rehash:
 	mask = ei->bucket_count - 1;
 	assert((mask & ei->bucket_count) == 0); /* power of 2 */
 
-#if LOG_ENDIDS > 2
-	fprintf(stderr, "fsm_endid_set: state %d, id %d -> hash %x\n",
-	    state, id, hash);
-#endif
+	LOG_2("endid_find_bucket: state %d -> hash %" PRIx64 "\n", state, hash);
 
 	for (i = 0; i < ei->bucket_count; i++) {
 		const size_t b_i = (hash + i) & mask;
 		struct endid_info_bucket *b = &ei->buckets[b_i];
 
-#if LOG_ENDIDS > 2
-		fprintf(stderr, "fsm_endid_set[%lu/%u]: %d for state %d\n",
+		LOG_2("fsm_endid_set[%lu/%u]: %d for state %d\n",
 		    b_i, ei->bucket_count, b->state, state);
-#endif
 
-		if (b->state == BUCKET_NO_STATE) { /* empty */
-			struct end_info_ids *ids = NULL;
-			const size_t id_alloc_size = sizeof(*ids)
-			    + (DEF_BUCKET_ID_COUNT - 1) * sizeof(ids->ids[0]);
+		if (b->state == state) {
+			return b;
+		}
 
-#if LOG_ENDIDS > 2
-		fprintf(stderr, "fsm_endid_set: setting empty bucket %lu\n", b_i);
-#endif
+		else if (b->state == BUCKET_NO_STATE) { /* empty */
+
+			LOG_2("fsm_endid_set: setting empty bucket %lu\n", b_i);
+
 			if (ei->buckets_used == ei->bucket_count / 2) {
 				assert(!has_grown); /* should only happen once */
 
-#if LOG_ENDIDS > 2
-				fprintf(stderr, "  -- growing buckets [%u/%u used], then rehashing\n",
+				LOG_2("  -- growing buckets [%u/%u used], then rehashing\n",
 				    ei->buckets_used, ei->bucket_count);
-#endif
+
 				if (!grow_endid_buckets(fsm->opt->alloc, ei)) {
-					return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+					return NULL;
 				}
 				has_grown = 1;
 				/* At this point, we need to re-hash, since
@@ -280,83 +308,405 @@ rehash:
 				goto rehash;
 			}
 
-			ids = f_malloc(fsm->opt->alloc, id_alloc_size);
-			if (ids == NULL) {
-				return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
-			}
-			ids->ids[0] = id;
-			ids->count = 1;
-			ids->ceil = DEF_BUCKET_ID_COUNT;
+			return b;
 
-			b->state = state;
-			b->ids = ids;
-			ei->buckets_used++;
-
-#if LOG_ENDIDS > 3
-			fprintf(stderr, "fsm_endid_set: [%lu] now %d (on %p)\n",
-			    b_i, b->state, (void *)ei->buckets);
-			dump_buckets("set_dump", ei);
-#else
-	(void)dump_buckets;
-#endif
-			return FSM_ENDID_SET_ADDED;
-		} else if (b->state == state) {	   /* add if not present */
-			size_t j;
-#if LOG_ENDIDS > 2
-			fprintf(stderr, "fsm_endid_set: appending to bucket %lu's IDs, [%u/%u used]\n",
-			    b_i, b->ids->count, b->ids->ceil);
-#endif
-
-			if (b->ids->count == b->ids->ceil) { /* grow? */
-				struct end_info_ids *nids;
-				const size_t nceil = 2*b->ids->ceil;
-				const size_t id_realloc_size = sizeof(*nids)
-				    + (nceil - 1) * sizeof(nids->ids[0]);
-				assert(nceil > b->ids->ceil);
-
-#if LOG_ENDIDS > 2
-			fprintf(stderr, "fsm_endid_set: growing id array %u -> %zu\n",
-			    b->ids->ceil, nceil);
-#endif
-				nids = f_realloc(fsm->opt->alloc,
-				    b->ids, id_realloc_size);
-				if (nids == NULL) {
-					return FSM_ENDID_SET_ERROR_ALLOC_FAIL; /* alloc fail */
-				}
-				nids->ceil = nceil;
-				b->ids = nids;
-			}
-
-			/* This does not order the IDs. We could also
-			 * bsearch and shift them down, etc. */
-			for (j = 0; j < b->ids->count; j++) {
-				if (b->ids->ids[j] == id) {
-#if LOG_ENDIDS > 2
-					fprintf(stderr, "fsm_endid_set: already present, skipping\n");
-#endif
-					return FSM_ENDID_SET_ALREADY_PRESENT;
-				}
-			}
-
-			b->ids->ids[b->ids->count] = id;
-			b->ids->count++;
-
-#if LOG_ENDIDS > 3
-			fprintf(stderr, "fsm_endid_set: wrote %d at %d/%d\n",
-			    id, b->ids->count - 1, b->ids->ceil);
-			dump_buckets("set_dump", ei);
-#endif
-			return FSM_ENDID_SET_ADDED;
-		} else {			   /* collision */
-#if LOG_ENDIDS > 4
-			fprintf(stderr, "fsm_endid_set: collision, continuing\n");
-#endif
+		} else {   /* collision */
+			LOG_4("fsm_endid_set: collision, continuing\n");
 			continue;
 		}
 	}
 
 	assert(!"unreachable: full but not resizing");
-	return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+	return NULL;
+}
+
+static int
+check_ids_sorted_and_unique(const fsm_end_id_t *ids, size_t n);
+
+/* Bisects a sorted list similar to Python's bisect.bisect_left function to return
+ * an index that can be used for insertion.
+ *
+ * This function assumes that the items in the array are unique.
+ *
+ * Returns the entry k of ids such that:
+ *     0 <= k <= n
+ *     if 0 < k < n, then: ids[k-1] < itm <= ids[k]
+ *     if k == 0, then: itm <= ids[0]
+ *     if k == n, then: ids[n-1] < itm
+ *
+ * Note that ids must be unique and sorted in ascending order:
+ *     if i < j, then ids[i] < ids[j]
+ */
+static size_t
+bisect_left_sorted_ids(fsm_end_id_t itm, const fsm_end_id_t *ids, size_t n)
+{
+	ptrdiff_t lo,hi;
+
+	assert(check_ids_sorted_and_unique(ids, n));
+
+	/* fast paths for empty, prepend or append */
+	if (n == 0) {
+		return 0;
+	}
+
+	if (itm < ids[0]) {
+		return 0;
+	}
+
+	if (itm > ids[n-1]) {
+		return n;
+	}
+
+	/* binary search */
+	lo=0;
+	hi=n-1;
+	while (lo <= hi) {
+		ptrdiff_t mid = (lo+hi)/2;
+
+		if (itm == ids[mid]) {
+			return mid;
+		}
+
+		if (itm < ids[mid]) {
+			hi = mid-1;
+		}
+
+		if (itm > ids[mid]) {
+			lo = mid+1;
+		}
+	}
+
+	assert(lo == hi+1);
+	assert(ids[hi] < itm);
+	assert(ids[lo] >= itm);
+
+#if ENDIDS_EXPENSIVE_CHECK_BISECTION
+	{
+		size_t i;
+
+		assert(lo >= 0);
+		for (i=0; i < n; i++) {
+			if (i < (size_t)lo) {
+				assert(ids[i] < itm);
+			} else {
+				assert(ids[i] >= itm);
+			}
+		}
+	}
+#endif /* ENDIDS_EXPENSIVE_CHECK_BISECTION */
+
+	return lo;
+}
+
+static int
+check_ids_sorted_and_unique(const fsm_end_id_t *ids, size_t n)
+{
+	(void) ids;
+	(void) n;
+
+#if ENDIDS_EXPENSIVE_CHECK_SORTED_ORDER
+	fprintf(stderr, " --> checking: ids sorted and unique\n");
+	size_t i;
+	for (i=1; i < n; i++) {
+		if (ids[i] < ids[i-1]) {
+			return 0;
+		}
+	}
+#endif /* ENDIDS_EXPENSIVE_CHECK_SORTED_ORDER */
+
+	return 1;
+}
+
+static struct end_info_ids *
+allocate_ids(const struct fsm *fsm, struct end_info_ids *prev, size_t n)
+{
+	struct end_info_ids *ids;
+	size_t id_alloc_size;
+
+	assert(n > 0);
+
+	id_alloc_size = sizeof(*ids) + (n - 1) * sizeof(ids->ids[0]);
+	return f_realloc(fsm->opt->alloc, prev, id_alloc_size);
+}
+
+enum fsm_endid_set_res
+fsm_endid_set(struct fsm *fsm,
+    fsm_state_t state, fsm_end_id_t id)
+{
+	struct endid_info *ei = NULL;
+
+	assert(fsm != NULL);
+	ei = fsm->endid_info;
+	assert(ei != NULL);
+
+	struct endid_info_bucket *b = endid_find_bucket(fsm, state);
+	if (b == NULL) {
+		return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+	}
+
+	LOG_2("fsm_endid_set: state %d, bucket %p\n", state, (void *)b);
+
+	if (b->state == BUCKET_NO_STATE) { 
+		struct end_info_ids *ids;
+
+		ids = allocate_ids(fsm, NULL, DEF_BUCKET_ID_COUNT);
+		if (ids == NULL) {
+			return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+		}
+
+		ids->ids[0] = id;
+		ids->count = 1;
+		ids->ceil = DEF_BUCKET_ID_COUNT;
+
+		b->state = state;
+		b->ids = ids;
+		ei->buckets_used++;
+
+		return FSM_ENDID_SET_ADDED;
+	} else if (b->state == state) {
+		size_t ind;
+
+		LOG_2("fsm_endid_set: appending to bucket %zd's IDs, [%u/%u used]\n",
+			(b - &ei->buckets[0]), b->ids->count, b->ids->ceil);;
+
+		if (b->ids->count == b->ids->ceil) { /* grow? */
+			struct end_info_ids *nids;
+			const size_t nceil = 2*b->ids->ceil;
+
+			assert(nceil > b->ids->ceil);
+
+			LOG_2("fsm_endid_set: growing id array %u -> %zu\n", b->ids->ceil, nceil);
+
+			nids = allocate_ids(fsm, b->ids, nceil);
+			if (nids == NULL) {
+				return FSM_ENDID_SET_ERROR_ALLOC_FAIL; /* alloc fail */
+			}
+			nids->ceil = nceil;
+			b->ids = nids;
+		}
+
+		/* can't use bsearch here.  bsearch returns NULL if the item is not found, 
+		 * and what we really want is the item that's the least upper bound:
+		 *
+		 *     min{ind, id <= b->ids->ids[ind]}
+		 */
+		ind = bisect_left_sorted_ids(id, b->ids->ids, b->ids->count);
+		assert(ind <= b->ids->count);
+
+		if (ind == b->ids->count) {
+			/* append */
+			b->ids->ids[b->ids->count] = id;
+			b->ids->count++;
+		} else if (b->ids->ids[ind] == id) {
+			/* already present, our work is done! */
+			LOG_2("fsm_endid_set: already present, skipping\n");
+			return FSM_ENDID_SET_ALREADY_PRESENT;
+		} else {
+			/* need to shift items up to make room for id */
+			memmove(&b->ids->ids[ind+1], &b->ids->ids[ind], 
+				(b->ids->count - ind) * sizeof b->ids->ids[0]);
+			b->ids->ids[ind] = id;
+			b->ids->count++;
+		}
+
+		(void)check_ids_sorted_and_unique;
+		assert(check_ids_sorted_and_unique(b->ids->ids, b->ids->count));
+
+		LOG_3("fsm_endid_set: wrote %d at %d/%d\n", id, b->ids->count - 1, b->ids->ceil);
+                (void)dump_buckets;
+		DBG_3(dump_buckets("set_dump", ei));
+
+		return FSM_ENDID_SET_ADDED;
+	} else {
+	    assert(!"unreachable: endid_find_bucket failed");
+	    return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+	}
+}
+
+static int
+cmp_endids(const void *pa, const void *pb)
+{
+	const fsm_end_id_t *a = pa;
+	const fsm_end_id_t *b = pb;
+
+	if (*a < *b) {
+		return -1;
+	}
+
+	if (*a > *b) {
+		return 1;
+	}
+
+	return 0;
+}
+
+enum fsm_endid_set_res
+fsm_endid_set_bulk(struct fsm *fsm,
+    fsm_state_t state, size_t num_ids, const fsm_end_id_t *ids, enum fsm_endid_bulk_op op)
+{
+	struct endid_info *ei = NULL;
+	struct endid_info_bucket *b;
+
+	assert(fsm != NULL);
+
+	ei = fsm->endid_info;
+	assert(ei != NULL);
+
+	b = endid_find_bucket(fsm, state);
+	if (b == NULL) {
+		return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+	}
+
+	if (b->state == state) {
+		size_t prev_count;
+		size_t total_count;
+
+		assert(b->ids != NULL);
+
+		prev_count = (op == FSM_ENDID_BULK_REPLACE) ? 0 : b->ids->count;
+		total_count = num_ids + prev_count;
+
+		if (total_count > b->ids->ceil) {
+			struct end_info_ids *new_ids;
+			size_t new_ceil = 2*b->ids->ceil;
+
+			/* TODO: use log2 */
+			while (new_ceil < total_count && new_ceil <= SIZE_MAX/2) {
+				new_ceil *= 2;
+			}
+
+			if (new_ceil < total_count) {
+				/* num_ids is too large? */
+				return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+			}
+
+			new_ids = allocate_ids(fsm, b->ids, new_ceil);
+			if (new_ids == NULL) {
+				return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+			}
+
+			b->ids = new_ids;
+			b->ids->ceil = new_ceil;
+		}
+
+		assert(total_count <= b->ids->ceil);
+		assert(total_count == num_ids + prev_count);
+
+		if (op == FSM_ENDID_BULK_REPLACE) {
+			assert(prev_count == 0);
+			assert(total_count == num_ids);
+		}
+
+		memcpy(&b->ids->ids[prev_count], &ids[0], num_ids * sizeof ids[0]);
+		b->ids->count = total_count;
+	} else {
+		struct end_info_ids *new_ids;
+		size_t n;
+
+		assert(b->state == BUCKET_NO_STATE);
+
+		n = DEF_BUCKET_ID_COUNT;
+		while (n < num_ids && n < SIZE_MAX/2) {
+			n *= 2;
+		}
+
+		if (n < num_ids) {
+			/* num_ids is too large? */
+			return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+		}
+
+		new_ids = allocate_ids(fsm, NULL, n);
+		if (new_ids == NULL) {
+			return FSM_ENDID_SET_ERROR_ALLOC_FAIL;
+		}
+
+		memcpy(&new_ids->ids[0], &ids[0], num_ids * sizeof ids[0]);
+		new_ids->count = num_ids;
+		new_ids->ceil = n;
+
+		b->state = state;
+		b->ids = new_ids;
+		ei->buckets_used++;
+	}
+
+	// sort and remove any duplicates
+	qsort(&b->ids->ids[0], b->ids->count, sizeof b->ids->ids[0], cmp_endids);
+	{
+		size_t i,j,n;
+
+		fsm_end_id_t *ids = b->ids->ids;
+		n = b->ids->count;
+		for (i=1, j=1; i < n; i++) {
+			LOG_3("i = %zu, j = %zu, ids[i] = %u, ids[j] = %u\n", i,j,ids[i],ids[j]);
+			if (ids[i]  != ids[i-1]) {
+				if (i != j) {
+					ids[j] = ids[i];
+				}
+				j++;
+			} else {
+				LOG_2("duplicate ids[%zu] == ids[%zu] = %u\n", i, i-1, ids[i]);
+			}
+		}
+
+		LOG_2("removed id duplicates, %zu starting entries, %zu after duplicates removed\n",
+			n, j);
+
+		b->ids->count = j;
+	}
+
+	return FSM_ENDID_SET_ADDED;
+}
+
+int
+fsm_mapendids(struct fsm *fsm,
+	int (*remap)(fsm_state_t state, size_t num_ids, fsm_end_id_t *endids, size_t *num_written, void *opaque),
+	void *opaque)
+{
+	size_t i;
+	const struct endid_info *ei = NULL;
+
+	assert(fsm != NULL);
+	ei = fsm->endid_info;
+	assert(ei != NULL);
+
+	for (i = 0; i < ei->bucket_count; i++) {
+		struct endid_info_bucket *b = &ei->buckets[i];
+
+		if (b->state != BUCKET_NO_STATE) {
+			int ret;
+			size_t nwritten = 0;
+
+			ret = remap(b->state, b->ids->count, b->ids->ids, &nwritten, opaque);
+			if (nwritten > 0) {
+				assert(nwritten <= b->ids->count);
+
+				if (nwritten > 1) {
+					size_t j,k;
+					qsort(&b->ids->ids[0], nwritten, sizeof b->ids->ids[0], cmp_endids);
+
+					/* check for any duplicates and remove them */
+					for (j = 1, k = 1; j < nwritten; j++) {
+						if (b->ids->ids[j] != b->ids->ids[j-1]) {
+							if (j != k) {
+								b->ids->ids[k] = b->ids->ids[j];
+							}
+							k++;
+						}
+					}
+
+					nwritten = k;
+				}
+
+				b->ids->count = nwritten;
+			}
+
+			if (!ret) {
+				return 0;
+			}
+		}
+	}
+
+	return 1;
 }
 
 size_t
@@ -445,7 +795,7 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 			}
 			for (id_i = 0; id_i < b->ids->count; id_i++) {
 #if LOG_ENDIDS > 2
-				fprintf(stderr, "fsm_endid_get: writing id[%zu]: %d\n", k, b->ids->ids[k]);
+				fprintf(stderr, "fsm_endid_get: writing id[%zu]: %d\n", id_i, b->ids->ids[id_i]);
 #endif
 				id_buf[id_i] = b->ids->ids[id_i];
 			}
@@ -463,13 +813,6 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 
 	assert(!"unreachable");
 	return FSM_GETENDIDS_NOT_FOUND;
-}
-
-void
-fsm_iterendids(const struct fsm *fsm, fsm_state_t state,
-	fsm_iterendids_cb *cb, void *opaque)
-{
-	fsm_endid_iter_state(fsm, state, cb, opaque);
 }
 
 struct carry_env {
@@ -649,6 +992,45 @@ fsm_endid_iter(const struct fsm *fsm,
 	}
 }
 
+int
+fsm_endid_iter_bulk(const struct fsm *fsm,
+    fsm_endid_iter_bulk_cb *cb, void *opaque)
+{
+	size_t b_i;
+	struct endid_info *ei = NULL;
+	size_t bucket_count;
+
+	assert(fsm != NULL);
+	assert(cb != NULL);
+
+	ei = fsm->endid_info;
+	if (ei == NULL) {
+		return 1;
+	}
+
+	bucket_count = ei->bucket_count;
+
+	for (b_i = 0; b_i < bucket_count; b_i++) {
+		struct endid_info_bucket *b = &ei->buckets[b_i];
+		size_t count;
+		if (b->state == BUCKET_NO_STATE) {
+			continue;
+		}
+
+		count = b->ids->count;
+
+		if (!cb(b->state, &b->ids->ids[0], count, opaque)) {
+			return 0;
+		}
+
+		/* The cb must not grow the hash table. */
+		assert(bucket_count == ei->bucket_count);
+		assert(b->ids->count == count);
+	}
+
+	return 1;
+}
+
 void
 fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
     fsm_endid_iter_cb *cb, void *opaque)
@@ -677,7 +1059,7 @@ fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
 	assert((mask & bucket_count) == 0); /* power of 2 */
 
 #if LOG_ENDIDS > 2
-	fprintf(stderr, "fsm_endid_iter_state: state %d -> hash %x\n",
+	fprintf(stderr, "fsm_endid_iter_state: state %d -> hash %" PRIx64 "\n",
 	    state, hash);
 #endif
 
@@ -688,7 +1070,7 @@ fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
 	for (b_i = 0; b_i < bucket_count; b_i++) {
 		struct endid_info_bucket *b = &ei->buckets[(hash + b_i) & mask];
 #if LOG_ENDIDS > 2
-		fprintf(stderr, "fsm_endid_iter_state: bucket [%ld/%ld]: %d\n",
+		fprintf(stderr, "fsm_endid_iter_state: bucket [%" PRIu64 "/%ld]: %d\n",
 		    (hash + b_i) & mask, bucket_count, b->state);
 #endif
 
@@ -742,3 +1124,36 @@ fsm_endid_dump(FILE *f, const struct fsm *fsm)
 
 	fsm_endid_iter(fsm, dump_cb, &env);
 }
+
+static int
+incr_remap(fsm_state_t state, size_t num_ids, fsm_end_id_t *endids, size_t *num_written, void *opaque)
+{
+	const int *delta_ptr;
+	int delta;
+	size_t i;
+
+	(void)state;
+
+	delta_ptr = opaque;
+	delta = *delta_ptr;
+
+	for (i=0; i < num_ids; i++) {
+		endids[i] += delta;
+	}
+
+	*num_written = num_ids;
+
+	return 1;
+}
+
+void
+fsm_increndids(struct fsm * fsm, int delta)
+{
+	if (delta == 0) {
+		/* nothing to do ... */
+		return;
+	}
+
+	fsm_mapendids(fsm, incr_remap, &delta);
+}
+

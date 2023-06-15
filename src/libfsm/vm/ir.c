@@ -301,9 +301,9 @@ opasm_new(struct dfavm_assembler_ir *a, enum dfavm_op_instr instr, enum dfavm_op
 		op->instr = instr;
 
 		op->cmp_arg = arg;
-	}
 
-	op->ir_state = ir_state;
+		op->ir_state = ir_state;
+	}
 
 	return op;
 }

@@ -18,7 +18,7 @@
 #include <adt/hash.h>
 #include <adt/stateset.h>
 
-#include "common/check.h"
+#include "adt/common.h"
 
 #include <adt/internedstateset.h>
 

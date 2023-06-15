@@ -99,6 +99,7 @@ SUBDIR += tests/eclosure
 SUBDIR += tests/equals
 SUBDIR += tests/subtract
 SUBDIR += tests/determinise
+SUBDIR += tests/endids
 SUBDIR += tests/epsilons
 SUBDIR += tests/glob
 SUBDIR += tests/like

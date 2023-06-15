@@ -1,3 +1,6 @@
+#include <sys/time.h>
+#include <unistd.h>
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -6,8 +9,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <ctype.h>
-#include <sys/time.h>
-#include <unistd.h>
+#include <errno.h>
 
 #include <fsm/fsm.h>
 #include <fsm/alloc.h>
@@ -1319,23 +1321,25 @@ fuzz_all_print_functions(FILE *f, const char *pattern, bool det, bool min, const
 	}
 
 	/* see if this triggers any asserts */
-	fsm_print_api(f, fsm);
-	fsm_print_awk(f, fsm);
-	fsm_print_c(f, fsm);
-	fsm_print_dot(f, fsm);
-	fsm_print_fsm(f, fsm);
-	fsm_print_ir(f, fsm);
-	fsm_print_irjson(f, fsm);
-	fsm_print_json(f, fsm);
-	fsm_print_vmc(f, fsm);
-	fsm_print_vmdot(f, fsm);
-	fsm_print_vmasm(f, fsm);
-	fsm_print_vmasm_amd64_att(f, fsm);
-	fsm_print_vmasm_amd64_nasm(f, fsm);
-	fsm_print_vmasm_amd64_go(f, fsm);
-	fsm_print_sh(f, fsm);
-	fsm_print_go(f, fsm);
-	fsm_print_rust(f, fsm);
+	int r = 0;
+	r |= fsm_print_api(f, fsm);
+	r |= fsm_print_awk(f, fsm);
+	r |= fsm_print_c(f, fsm);
+	r |= fsm_print_dot(f, fsm);
+	r |= fsm_print_fsm(f, fsm);
+	r |= fsm_print_ir(f, fsm);
+	r |= fsm_print_irjson(f, fsm);
+	r |= fsm_print_json(f, fsm);
+	r |= fsm_print_vmc(f, fsm);
+	r |= fsm_print_vmdot(f, fsm);
+	r |= fsm_print_vmasm(f, fsm);
+	r |= fsm_print_vmasm_amd64_att(f, fsm);
+	r |= fsm_print_vmasm_amd64_nasm(f, fsm);
+	r |= fsm_print_vmasm_amd64_go(f, fsm);
+	r |= fsm_print_sh(f, fsm);
+	r |= fsm_print_go(f, fsm);
+	r |= fsm_print_rust(f, fsm);
+	assert(r == 0 || errno != 0);
 
 	fsm_free(fsm);
 	return EXIT_SUCCESS;

@@ -87,6 +87,8 @@ fsm_setend
 fsm_getendidcount
 fsm_getendids
 fsm_setendid
+fsm_mapendids
+fsm_increndids
 
 fsm_countedges
 fsm_countstates

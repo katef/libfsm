@@ -74,18 +74,14 @@ print_state(FILE *f, unsigned to, unsigned self)
 
 static void
 print_errorrows(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir,
 	const struct ir_error *error)
 {
 	size_t k;
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 	assert(error != NULL);
 	assert(error->ranges != NULL);
-
-	(void)ir; /* unused */
 
 	for (k = 0; k < error->n; k++) {
 		fprintf(f, "\t\t  <TR>");
@@ -115,17 +111,14 @@ print_errorrows(FILE *f, const struct fsm_options *opt,
 
 static void
 print_grouprows(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, unsigned self,
+	unsigned self,
 	const struct ir_group *groups, size_t n)
 {
 	size_t j, k;
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 	assert(groups != NULL);
-
-	(void)ir; /* unused */
 
 	for (j = 0; j < n; j++) {
 		assert(groups[j].ranges != NULL);
@@ -161,16 +154,13 @@ print_grouprows(FILE *f, const struct fsm_options *opt,
 }
 
 static void
-print_grouplinks(FILE *f, const struct ir *ir, unsigned self,
+print_grouplinks(FILE *f, unsigned self,
 	const struct ir_group *groups, size_t n)
 {
 	unsigned j;
 
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(groups != NULL);
-
-	(void)ir; /* unused */
 
 	for (j = 0; j < n; j++) {
 		if (groups[j].to == self) {
@@ -220,30 +210,30 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case IR_COMPLETE:
-		print_grouprows(f, opt, ir, ir_indexof(ir, cs), cs->u.complete.groups, cs->u.complete.n);
+		print_grouprows(f, opt, ir_indexof(ir, cs), cs->u.complete.groups, cs->u.complete.n);
 		break;
 
 	case IR_PARTIAL:
-		print_grouprows(f, opt, ir, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
+		print_grouprows(f, opt, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
 		break;
 
 	case IR_DOMINANT:
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>mode</TD><TD ALIGN='LEFT' PORT='mode'>");
 		print_state(f, cs->u.dominant.mode, ir_indexof(ir, cs));
 		fprintf(f, "</TD></TR>\n");
-		print_grouprows(f, opt, ir, ir_indexof(ir, cs), cs->u.dominant.groups, cs->u.dominant.n);
+		print_grouprows(f, opt, ir_indexof(ir, cs), cs->u.dominant.groups, cs->u.dominant.n);
 		break;
 
 	case IR_ERROR:
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>mode</TD><TD ALIGN='LEFT' PORT='mode'>");
 		print_state(f, cs->u.error.mode, ir_indexof(ir, cs));
 		fprintf(f, "</TD></TR>\n");
-		print_errorrows(f, opt, ir, &cs->u.error.error);
-		print_grouprows(f, opt, ir, ir_indexof(ir, cs), cs->u.error.groups, cs->u.error.n);
+		print_errorrows(f, opt, &cs->u.error.error);
+		print_grouprows(f, opt, ir_indexof(ir, cs), cs->u.error.groups, cs->u.error.n);
 		break;
 
 	case IR_TABLE:
-		/* TODO */
+		assert(!"unreached");
 		break;
 
 	default:
@@ -266,11 +256,11 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case IR_COMPLETE:
-		print_grouplinks(f, ir, ir_indexof(ir, cs), cs->u.complete.groups, cs->u.complete.n);
+		print_grouplinks(f, ir_indexof(ir, cs), cs->u.complete.groups, cs->u.complete.n);
 		break;
 
 	case IR_PARTIAL:
-		print_grouplinks(f, ir, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
+		print_grouplinks(f, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
 		break;
 
 	case IR_DOMINANT:
@@ -280,7 +270,7 @@ print_cs(FILE *f, const struct fsm_options *opt,
 			fprintf(f, "\tcs%u:mode -> cs%u;\n",
 				ir_indexof(ir, cs), cs->u.dominant.mode);
 		}
-		print_grouplinks(f, ir, ir_indexof(ir, cs), cs->u.dominant.groups, cs->u.dominant.n);
+		print_grouplinks(f, ir_indexof(ir, cs), cs->u.dominant.groups, cs->u.dominant.n);
 		break;
 
 	case IR_ERROR:
@@ -290,10 +280,11 @@ print_cs(FILE *f, const struct fsm_options *opt,
 			fprintf(f, "\tcs%u:mode -> cs%u;\n",
 				ir_indexof(ir, cs), cs->u.error.mode);
 		}
-		print_grouplinks(f, ir, ir_indexof(ir, cs), cs->u.error.groups, cs->u.error.n);
+		print_grouplinks(f, ir_indexof(ir, cs), cs->u.error.groups, cs->u.error.n);
 		break;
 
 	case IR_TABLE:
+		assert(!"unreached");
 		break;
 
 	default:
@@ -301,7 +292,7 @@ print_cs(FILE *f, const struct fsm_options *opt,
 	}
 }
 
-void
+int
 fsm_print_ir(FILE *f, const struct fsm *fsm)
 {
 	struct ir *ir;
@@ -312,7 +303,7 @@ fsm_print_ir(FILE *f, const struct fsm *fsm)
 
 	ir = make_ir(fsm);
 	if (ir == NULL) {
-		return;
+		return -1;
 	}
 
 	fprintf(f, "digraph G {\n");
@@ -335,5 +326,11 @@ fsm_print_ir(FILE *f, const struct fsm *fsm)
 	fprintf(f, "}\n");
 
 	free_ir(fsm, ir);
+
+	if (ferror(f)) {
+		return -1;
+	}
+
+	return 0;
 }
 

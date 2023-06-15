@@ -40,3 +40,29 @@ escputs(FILE *f, const struct fsm_options *opt, escputc *escputc,
 	return n;
 }
 
+int
+escputbuf(FILE *f, const struct fsm_options *opt, escputc *escputc,
+	const char *buf, size_t len)
+{
+	const char *p;
+	int r, n;
+
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(escputc != NULL);
+	assert(buf != NULL);
+
+	n = 0;
+
+	for (p = buf; p < buf + len; p++) {
+		r = escputc(f, opt, *p);
+		if (r == -1) {
+			return -1;
+		}
+
+		n += r;
+	}
+
+	return n;
+}
+

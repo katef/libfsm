@@ -24,6 +24,7 @@
 #include <adt/tupleset.h>
 
 #include "internal.h"
+#include "endids.h"
 #include "walk2.h"
 
 /*
@@ -259,6 +260,71 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 
 	if (!walk2_comb_state(data->new, is_end, &p->comb)) {
 		return NULL;
+	}
+
+	if (is_end) {
+		size_t num_a_endids = 0, num_b_endids = 0, total_num_endids;
+
+		if (fsm_a != NULL && fsm_isend(fsm_a,a)) {
+			num_a_endids = fsm_getendidcount(fsm_a, a);
+		}
+
+		if (fsm_b != NULL && fsm_isend(fsm_b,b)) {
+			num_b_endids = fsm_getendidcount(fsm_b, b);
+		}
+
+		total_num_endids = num_a_endids + num_b_endids;
+
+		if (total_num_endids > 0) {
+			fsm_end_id_t *endids= NULL;
+			enum fsm_getendids_res ret;
+
+			endids = calloc(total_num_endids, sizeof endids[0]);
+			if (endids == NULL) {
+				return NULL;
+			}
+
+			if (num_a_endids > 0) {
+				size_t nwritten = 0;
+				ret = fsm_getendids(fsm_a, a, num_a_endids, &endids[0], &nwritten);
+
+				if (ret != FSM_GETENDIDS_FOUND || nwritten != num_a_endids) {
+					free(endids);
+					errno = (ret != FSM_GETENDIDS_FOUND) ? ENOENT : EINVAL;
+					return NULL;
+				}
+			}
+
+			if (num_b_endids > 0) {
+				size_t nwritten = 0;
+				ret = fsm_getendids(fsm_b, b, num_b_endids, &endids[num_a_endids], &nwritten);
+
+				if (ret != FSM_GETENDIDS_FOUND || nwritten != num_b_endids) {
+					free(endids);
+					errno = (ret != FSM_GETENDIDS_FOUND) ? ENOENT : EINVAL;
+					return NULL;
+				}
+			}
+
+			{
+				enum fsm_endid_set_res ret;
+
+				ret = fsm_endid_set_bulk(
+					data->new,
+					p->comb,
+					total_num_endids,
+					&endids[0],
+					FSM_ENDID_BULK_REPLACE);
+				if (ret == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
+					int errsv = errno;
+					free(endids);
+					errno = errsv;
+					return NULL;
+				}
+			}
+
+			free(endids);
+		}
 	}
 
 	assert(!data->new->states[p->comb].visited);

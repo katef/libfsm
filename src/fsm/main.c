@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <time.h>
 
 #include <fsm/fsm.h>
@@ -667,7 +668,14 @@ main(int argc, char *argv[])
 	}
 
 	if (print != NULL) {
-		print(stdout, fsm);
+		if (-1 == print(stdout, fsm)) {
+			if (errno == ENOTSUP) {
+				fprintf(stderr, "unsupported IO API\n");
+			} else {
+				perror("print_fsm");
+			}
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (generate_bounds > 0) {

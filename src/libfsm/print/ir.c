@@ -321,7 +321,7 @@ error:
 
 static int
 make_state(const struct fsm *fsm, fsm_state_t state,
-	const struct ir *ir, struct ir_state *cs)
+	struct ir_state *cs)
 {
 	struct ir_group *groups;
 	struct group_count max;
@@ -334,12 +334,9 @@ make_state(const struct fsm *fsm, fsm_state_t state,
 		unsigned int freq; /* 0 meaning no mode */
 	} mode;
 
-	(void)ir; /* unused */
-
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 	assert(state < fsm->statecount);
-	assert(ir != NULL);
 
 	/* TODO: IR_TABLE */
 
@@ -492,7 +489,7 @@ make_ir(const struct fsm *fsm)
 			}
 		}
 
-		if (make_state(fsm, i, ir, &ir->states[i]) == -1) {
+		if (make_state(fsm, i, &ir->states[i]) == -1) {
 			goto error;
 		}
 

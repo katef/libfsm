@@ -23,10 +23,10 @@ escputc pcre_escputc;
 escputc rust_escputc_char;
 escputc rust_escputc_str;
 
-void
+int
 awk_escputcharlit(FILE *f, const struct fsm_options *opt, char c);
 
-void
+int
 c_escputcharlit(FILE *f, const struct fsm_options *opt, char c);
 
 void
@@ -35,6 +35,10 @@ rust_escputcharlit(FILE *f, const struct fsm_options *opt, char c);
 int
 escputs(FILE *f, const struct fsm_options *opt, escputc *escputc,
 	const char *s);
+
+int
+escputbuf(FILE *f, const struct fsm_options *opt, escputc *escputc,
+	const char *buf, size_t len);
 
 void
 esctok(FILE *f, const char *s);
