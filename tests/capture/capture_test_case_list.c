@@ -1525,6 +1525,76 @@ const struct captest_case_multi multi_cases[] = {
 			},
 		},
 	},
+
+	{
+		/* This checks that minimisation doesn't incorrectly
+		 * merge these and lead to capture false positives. */
+		.regex_count = 2,
+		.regexes = {
+			"^a(b)c$", /* exactly one 'b' */
+			"^a(b*)c$", /* any number of 'b's */
+		},
+		.inputs = {
+			{
+				.input = "",
+				.expected = {
+					{ .regex = 0, .capture = 0, .pos = POS_NONE },
+					{ .regex = 0, .capture = 1, .pos = POS_NONE },
+					{ .regex = 1, .capture = 0, .pos = POS_NONE },
+					{ .regex = 1, .capture = 1, .pos = POS_NONE },
+				},
+			},
+			{
+				.input = "a",
+				.expected = {
+					{ .regex = 0, .capture = 0, .pos = POS_NONE },
+					{ .regex = 0, .capture = 1, .pos = POS_NONE },
+					{ .regex = 1, .capture = 0, .pos = POS_NONE },
+					{ .regex = 1, .capture = 1, .pos = POS_NONE },
+				},
+			},
+			{
+				.input = "ab",
+				.expected = {
+					{ .regex = 0, .capture = 0, .pos = POS_NONE },
+					{ .regex = 0, .capture = 1, .pos = POS_NONE },
+					{ .regex = 1, .capture = 0, .pos = POS_NONE },
+					{ .regex = 1, .capture = 1, .pos = POS_NONE },
+				},
+			},
+			{
+				.input = "ac",
+				.expected = {
+					{ .regex = 0, .capture = 0, .pos = POS_NONE },
+					{ .regex = 0, .capture = 1, .pos = POS_NONE },
+					{ .regex = 1, .capture = 0, .pos = { 0, 2 } },
+					{ .regex = 1, .capture = 1, .pos = { 1, 1 } },
+				},
+			},
+			{
+				.input = "abc",
+				.expected = {
+					{ .regex = 0, .capture = 0, .pos = {0, 3 } },
+					{ .regex = 0, .capture = 1, .pos = {1, 2 } },
+					{ .regex = 1, .capture = 0, .pos = { 0, 3 } },
+					{ .regex = 1, .capture = 1, .pos = { 1, 2 } },
+				},
+			},
+			{
+				.input = "abbc",
+				.expected = {
+					{ .regex = 0, .capture = 0, .pos = POS_NONE },
+					{ .regex = 0, .capture = 1, .pos = POS_NONE },
+					{ .regex = 1, .capture = 0, .pos = { 0, 4 } },
+					{ .regex = 1, .capture = 1, .pos = { 1, 3 } },
+				},
+			},
+
+			{
+				.input = NULL,
+			},
+		},
+	}
 };
 
 

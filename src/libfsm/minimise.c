@@ -53,11 +53,6 @@ all_end_states_are_currently_together(const struct min_env *env);
 
 #define DEF_CAPTURE_ID_CEIL 4
 struct end_metadata {
-	struct end_metadata_end {
-		unsigned count;
-		fsm_end_id_t *ids;
-	} end;
-
 	struct end_metadata_capture {
 		unsigned count;
 		unsigned ceil;
@@ -70,10 +65,6 @@ struct end_metadata {
 		unsigned *ids;
 	} program;
 };
-
-static int
-collect_end_ids(const struct fsm *fsm, fsm_state_t s,
-	struct end_metadata_end *e);
 
 static int
 collect_capture_ids(const struct fsm *fsm, fsm_state_t s,
@@ -732,24 +723,23 @@ incremental_hash_of_ids(uint64_t *accum, fsm_end_id_t id)
 static int
 same_end_metadata(const struct end_metadata *a, const struct end_metadata *b)
 {
-	if (a->end.count != b->end.count) {
+	if (a->capture.count != b->capture.count) {
 		return 0;
 	}
 
-	if (a->capture.count != b->capture.count) {
+	if (a->program.count != b->program.count) {
 		return 0;
 	}
 
 	/* compare -- these must be sorted */
 
-	for (size_t i = 0; i < a->end.count; i++) {
-		if (a->end.ids[i] != b->end.ids[i]) {
+	for (size_t i = 0; i < a->capture.count; i++) {
+		if (a->capture.ids[i] != b->capture.ids[i]) {
 			return 0;
 		}
 	}
-
-	for (size_t i = 0; i < a->capture.count; i++) {
-		if (a->capture.ids[i] != b->capture.ids[i]) {
+	for (size_t i = 0; i < a->program.count; i++) {
+		if (a->program.ids[i] != b->program.ids[i]) {
 			return 0;
 		}
 	}
@@ -806,13 +796,6 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 				break; /* this EC has non-end states, skip */
 			}
 
-			/* FIXME: should distinct end IDs partition here?
-			 * Disabled to make tests/endids/endids2_union_many_endids.c pass. */
-			if (0 &&
-			    !collect_end_ids(fsm, s, &e->end)) {
-				goto cleanup;
-			}
-
 			if (!collect_capture_ids(fsm, s, &e->capture)) {
 				goto cleanup;
 			}
@@ -849,9 +832,6 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 			uint64_t hash = 0;
 			const fsm_state_t next = env->jump[s];
 
-			for (size_t eid_i = 0; eid_i < s_md->end.count; eid_i++) {
-				incremental_hash_of_ids(&hash, s_md->end.ids[eid_i]);
-			}
 			for (size_t pid_i = 0; pid_i < s_md->program.count; pid_i++) {
 				incremental_hash_of_ids(&hash, s_md->program.ids[pid_i]);
 			}
@@ -996,9 +976,6 @@ cleanup:
 		size_t i;
 		for (i = 0; i < state_count; i++) {
 			struct end_metadata *e = &end_md[i];
-			if (e->end.ids != NULL) {
-				f_free(fsm->opt->alloc, e->end.ids);
-			}
 			if (e->capture.ids != NULL) {
 				f_free(fsm->opt->alloc, e->capture.ids);
 			}
@@ -1013,52 +990,11 @@ cleanup:
 }
 
 static int
-cmp_end_ids(const void *pa, const void *pb)
-{
-	const fsm_end_id_t a = *(fsm_end_id_t *)pa;
-	const fsm_end_id_t b = *(fsm_end_id_t *)pb;
-	return a < b ? -1 : a > b ? 1 : 0;
-}
-
-static int
 cmp_unsigned(const void *pa, const void *pb)
 {
 	const unsigned a = *(unsigned *)pa;
 	const unsigned b = *(unsigned *)pb;
 	return a < b ? -1 : a > b ? 1 : 0;
-}
-
-static int
-collect_end_ids(const struct fsm *fsm, fsm_state_t s,
-	struct end_metadata_end *e)
-{
-	e->count = fsm_getendidcount(fsm, s);
-
-	if (e->count > 0) {
-		e->ids = f_malloc(fsm->opt->alloc,
-		    e->count * sizeof(e->ids[0]));
-		if (e->ids == NULL) {
-			return 0;
-		}
-
-#if LOG_ECS
-		fprintf(stderr, "%d:", s);
-#endif
-
-		size_t written;
-		enum fsm_getendids_res gres = fsm_getendids(fsm,
-		    s, e->count, e->ids, &written);
-		assert(gres == FSM_GETENDIDS_FOUND);
-		assert(written == e->count);
-
-#if LOG_ECS
-		fprintf(stderr, "\n");
-#endif
-		/* sort, to make comparison easier later */
-		qsort(e->ids, e->count,
-		    sizeof(e->ids[0]), cmp_end_ids);
-	}
-	return 1;
 }
 
 struct collect_capture_env {
