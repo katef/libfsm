@@ -659,6 +659,10 @@ cmp_paths(struct capvm *vm, uint32_t p_a, uint32_t p_b)
 		const uint32_t backlink_a = get_path_node_backlink(vm, link_a);
 		const uint32_t backlink_b = get_path_node_backlink(vm, link_b);
 
+		/* These are only used for logging, which may compile out. */
+		(void)backlink_a;
+		(void)backlink_b;
+
 		LOG(3 - LOG_CMP_PATHS,
 		    "%s: backward loop: link_a %d (offset %u, prev %d), link_b %d (offset %u, prev %d)\n",
 		    __func__, link_a, offset_a, prev_a, link_b, offset_b, prev_b);
@@ -1506,6 +1510,7 @@ extend_path_info(struct capvm *vm, uint32_t pi_id, bool greedy, uint32_t uniq_id
 
 					if (LOG_CAPVM >= 4 || 1) {
 						const uint32_t refcount = get_path_node_refcount(vm, epi_id);
+						(void)refcount;
 						LOG(4 - LOG_EPI, "%s: pi[%u] refcount %u -> %u (reusing identical path backlink %u instead of %u)\n",
 						    __func__, epi_id, refcount, refcount + 1,
 						    epi_id, pi_id);
@@ -1593,7 +1598,6 @@ populate_solution(struct capvm *vm)
 
 	uint32_t path_link = vm->solution.best_path_id;
 	uint32_t next_link = NO_ID;
-	uint32_t next_offset = NO_POS;
 	uint32_t first_link = NO_ID;
 
 	size_t split_count = 0;
@@ -1648,33 +1652,34 @@ populate_solution(struct capvm *vm)
 			prev = prev_link;
 		}
 
-		next_offset = get_path_node_offset(vm, path_link);
 		next_link = path_link;
 		assert(path_link != prev_link);
 		path_link = prev_link;
 	} while (path_link != NO_ID && path_link != COLLAPSED_ZERO_PREFIX_ID);
 
 	/* iter forward */
-	uint32_t cur = first_link;
-	if (LOG_CAPVM >= 3) do {
-		struct capvm_path_info *pi = &vm->paths.pool[cur];
+	if (LOG_CAPVM >= 3) {
+		uint32_t cur = first_link;
+		do {
+			struct capvm_path_info *pi = &vm->paths.pool[cur];
 
-		assert(IS_PATH_NODE(pi));
-		LOG(3, "%s (moving fwd): node %u: refcount %u, used %u, offset %u, fwdlink %d, bits '",
-		    __func__, cur, get_path_node_refcount(vm, cur),
-		    pi->u.path.used,
-		    get_path_node_offset(vm, cur),
-		    get_path_node_backlink(vm, cur));
-		for (uint8_t i = 0; i < pi->u.path.used; i++) {
-			const uint32_t bit = (pi->u.path.bits & ((uint32_t)1 << (31 - i)));
-			LOG(3, "%c", bit ? '1' : '0');
-		}
-		LOG(3, "'\n");
+			assert(IS_PATH_NODE(pi));
+			LOG(3, "%s (moving fwd): node %u: refcount %u, used %u, offset %u, fwdlink %d, bits '",
+			    __func__, cur, get_path_node_refcount(vm, cur),
+			    pi->u.path.used,
+			    get_path_node_offset(vm, cur),
+			    get_path_node_backlink(vm, cur));
+			for (uint8_t i = 0; i < pi->u.path.used; i++) {
+				const uint32_t bit = (pi->u.path.bits & ((uint32_t)1 << (31 - i)));
+				LOG(3, "%c", bit ? '1' : '0');
+			}
+			LOG(3, "'\n");
 
-		const uint32_t next_cur = get_path_node_backlink(vm, cur);
-		assert(cur != next_cur);
-		cur = next_cur;	/* fwd link */
-	} while (cur != NO_ID);
+			const uint32_t next_cur = get_path_node_backlink(vm, cur);
+			assert(cur != next_cur);
+			cur = next_cur;	/* fwd link */
+		} while (cur != NO_ID);
+	}
 
 	/* evaluate program with forward path */
 	LOG(3, "%s: split_count %zu\n", __func__, split_count);
@@ -1693,7 +1698,7 @@ populate_solution(struct capvm *vm)
 	 * as (0,1). */
 	bool explicitly_matched_nl_at_end = false;
 
-	cur = first_link;
+	uint32_t cur = first_link;
 	while (split_i < split_count || !done) {
 		assert(prog_i < vm->p->used);
 		const uint32_t cur_prog_i = prog_i;
@@ -1901,6 +1906,7 @@ populate_solution(struct capvm *vm)
 		for (uint8_t i = 0; i < pi->u.path.used; i++) {
 			const uint32_t bit = (pi->u.path.bits & ((uint32_t)1 << (31 - i)));
 			LOG(3, "%c", (pi->u.path.bits & bit) ? '1' : '0');
+			(void)bit;
 		}
 		LOG(3, "'\n");
 
