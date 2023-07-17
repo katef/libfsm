@@ -605,9 +605,11 @@ capvm_compile_iter(struct capvm_compile_env *env,
 				pop_repeated_group_info(env, expr);
 			}
 
-			/* FIXME: may need distinct error case to not leak.
-			 * There is currently no test reaching this, try
-			 * using the fuzzer to trigger it. */
+			/* FIXME: May need distinct error case to not
+			 * leak. There is currently no test reaching
+			 * this and the fuzzer has not produced an input
+			 * that reaches it -- unsatisfiability has probably
+			 * already pruned subtrees that would get here. */
 			return true;
 		} else if (active_count == 1) {
 			/* even if one of the later subtrees is active, an earlier
@@ -938,7 +940,9 @@ capvm_compile_iter(struct capvm_compile_env *env,
 
 			if (max == AST_COUNT_UNBOUNDED) {
 				/* A repeat of {x,inf} should be treated like
-				 * (?:subtree){x} (?:subtree)* . */
+				 * (?:subtree){x} (?:subtree)* , where any numbered
+				 * capture groups inside have the same group ID in
+				 * both copies of the subtree. */
 				if (!compile_kleene_star(env, p, expr)) {
 					return false;
 				}

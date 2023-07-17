@@ -36,7 +36,7 @@
  * This value cannot be changed without reworking the data structures. */
 #define PATH_LINK_BITS 32
 
-/* This enables extra debugging/testing output */
+/* This enables extra debugging/testing output in an easily scraped format */
 #ifndef TESTING_OPTIONS
 #define TESTING_OPTIONS 0
 #endif
@@ -49,10 +49,12 @@
 #define CAPVM_STATS (0 || TESTING_OPTIONS)
 #define CAPVM_PATH_STATS (0 && CAPVM_STATS)
 
-/* This may no longer be necessary after further work on path handling. */
-#define ALLOW_TABLE_RESIZING 1
-#define ALLOW_PATH_TABLE_RESIZING (1 || ALLOW_TABLE_RESIZING)
-#define ALLOW_THREAD_TABLE_RESIZING (0 || ALLOW_TABLE_RESIZING)
+/* Allow the path table to grow on demand.
+ * In theory it should be possible to determine the worst case
+ * based on compile-time analysis and the input length; if an
+ * appropriately sized buffer was passed in capture resolution
+ * would not need dynamic allocation at all. */
+#define ALLOW_PATH_TABLE_RESIZING 1
 
 /* Set to non-zero to trap runaway path table growth */
 #define PATH_TABLE_CEIL_LIMIT 0
@@ -135,7 +137,8 @@ struct capvm {
 	 * be advanced next. The current stack is
 	 * run_stacks[PAIR_ID_CURRENT], run_stacks[PAIR_ID_NEXT] is the
 	 * stack for the next input position, and when the current stack
-	 * is completed the next stack is copied over (and reversed).
+	 * is completed the next stack is copied over (and reversed, so
+	 * the greediest threads end up on top and resume first).
 	 * Same with run_stacks_h, the height for each stack, and the
 	 * other fields with [2] below. */
 	uint32_t *run_stacks[2];
@@ -143,9 +146,12 @@ struct capvm {
 
 	/* Similarly, two columns of bits and two arrays of path_info
 	 * node IDs and uniq_ids for the execution at a particular
-	 * opcode. */
+	 * opcode.
+	 *
+	 * evaluated bit array[]: Has the instruction n already been
+	 * evaluated at the current input position? */
 	uint32_t *evaluated[2];
-	uint32_t *path_info_heads[2];
+	uint32_t *path_info_heads[2]; /* path for thread on instruction */
 #if CAPVM_STATS
 	uint32_t *uniq_ids[2];
 #endif
@@ -164,14 +170,19 @@ struct capvm {
 		struct capvm_path_info {
 			union {
 				struct capvm_path_freelist_link {
-					uint16_t refcount; /* == 0 */
+					uint16_t refcount; /* == 0: tag for freelist node */
 					uint32_t freelist;
 				} freelist_node;
 				struct capvm_path_info_link {
-					uint16_t refcount; /* > 0, sticky at UINT16_MAX? */
+					/* refcount: When > 0 this is a path node.
+					 * This could be sticky at UINT16_MAX, but in order
+					 * to get there it would need a regex whose compiled
+					 * program has well over 2**16 instructions that all
+					 * share the same path info node. */
+					uint16_t refcount;
 					uint8_t used;      /* .bits used, <= PATH_LINK_BITS */
-					uint32_t bits;
-					uint32_t offset;
+					uint32_t bits;	   /* buffer for this link's path bits */
+					uint32_t offset;   /* offset into the path bit array */
 					/* Linked list to earlier path nodes, with common
 					 * nodes shared until paths diverge.
 					 *
@@ -667,8 +678,8 @@ cmp_paths(struct capvm *vm, uint32_t p_a, uint32_t p_b)
 		    "%s: backward loop: link_a %d (offset %u, prev %d), link_b %d (offset %u, prev %d)\n",
 		    __func__, link_a, offset_a, prev_a, link_b, offset_b, prev_b);
 
-		assert((offset_a & 31) == 0); /* multiple of 32 */
-		assert((offset_b & 31) == 0); /* multiple of 32 */
+		assert((offset_a & (PATH_LINK_BITS - 1)) == 0); /* multiple of 32 */
+		assert((offset_b & (PATH_LINK_BITS - 1)) == 0); /* multiple of 32 */
 		if (offset_a > offset_b) {
 			LOG(3 - LOG_CMP_PATHS, "%s: backward loop: a longer than b\n", __func__);
 			set_path_node_backlink(vm, link_a, fwd_a);
@@ -894,7 +905,7 @@ schedule_possible_next_step(struct capvm *vm, enum pair_id pair_id,
 			const size_t h = *stack_h;
 			for (size_t i = 0; i < h; i++) {
 				if (stack[i] == op_id) {
-					stack[i] = NO_ID;
+					stack[i] = NO_ID; /* cancel thread */
 					vm->threads.live--;
 				}
 			}
@@ -1093,8 +1104,8 @@ eval_vm_advance_greediest(struct capvm *vm, uint32_t input_pos,
 	case CAPVM_OP_ANCHOR:
 		if (op->u.anchor == CAPVM_ANCHOR_START) {
 			LOG(3, "%s: ^ anchor\n", __func__);
-			/* ignore a trailing newline, because PCRE does,
-			 * even after a $ anchor. */
+			/* ignore a single trailing newline, because PCRE does.
+			 * For ^ this affects the capture position. */
 			if (input_pos == 0
 			    && vm->input_len == 1
 			    && vm->input[0] == '\n') {
@@ -1113,7 +1124,7 @@ eval_vm_advance_greediest(struct capvm *vm, uint32_t input_pos,
 			LOG(3, "%s: $ anchor: input_len %u, input_pos %u\n",
 			    __func__, vm->input_len, input_pos);
 
-			/* ignore a trailing newline, because PCRE does */
+			/* ignore a single trailing newline, because PCRE does */
 			if (vm->input_len > 0 && input_pos == vm->input_len - 1) {
 				if (vm->input[input_pos] != '\n') {
 					goto halt_thread;
@@ -1140,7 +1151,6 @@ eval_vm_advance_greediest(struct capvm *vm, uint32_t input_pos,
 		check_path_table(vm);
 	}
 
-	/* FIXME: Check the cleanup logic here. */
 	return;
 
 halt_thread:

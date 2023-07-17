@@ -13,7 +13,7 @@
 #include <fsm/alloc.h>
 #include <fsm/capture.h>
 
-/* Interface the virtual machine used to resolve captures.
+/* Interface for the virtual machine used to resolve captures.
  * These interfaces are exposed to libre but should not be
  * used directly. */
 
@@ -43,7 +43,6 @@ enum fsm_capvm_program_exec_res {
 	FSM_CAPVM_PROGRAM_EXEC_NO_SOLUTION_FOUND,
 
 	FSM_CAPVM_PROGRAM_EXEC_ERROR_ALLOC = -1,
-	/* FIXME: what other ways can this fail? */
 };
 
 /* Execute a capture program with the given input and populate

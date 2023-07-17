@@ -13,9 +13,8 @@
  * with PCRE's behavior for libfsm's supported subset of PCRE.
  *
  * Instead of giving each green thread its own copy of the capture
- * buffers, which uses a prohibitive amount of memory when matching DFAs
- * that combine several regexes with several captures each, operate in
- * two passes.
+ * buffers, which uses a prohibitive amount of memory when combining DFAs
+ * with several captures each, operate in two passes:
  *
  * In the first pass, each thread keeps track of its execution path,
  * appending a bit for each branch: 1 for the greedy option, 0 for the
@@ -32,13 +31,13 @@
  * a greedier search path (since PCRE's results match the greediest).
  *
  * In the second pass, replay the execution path for just the single
- * greediest thread, which represents the "best" match, and write
- * capture offsets into buffers passed in by the caller.
+ * greediest thread, which represents the "correct" match (according to
+ * PCRE semantics), and write capture offsets into buffers passed in by
+ * the caller.
  *
- * Most of the other differences have to do with matching PCRE's quirky
- * behaviors, particularly interactions between newlines and start/end
- * anchors.
- * */
+ * Most of the other differences have to do with matching PCRE
+ * edge cases, particularly interactions between newlines and start/end
+ * anchors. */
 
 #include "capture_vm.h"
 #include "capture_vm_program.h"
