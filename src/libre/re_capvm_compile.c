@@ -88,19 +88,6 @@ struct capvm_compile_env {
 		/* linked list */
 		struct repeated_group_info *prev;
 	} *repeated_groups;
-
-	/* Linked list of nodes used for regexes like '^(($)|x)+$',
-	 * which need to special-case the JMP instruction after the
-	 * nullable '($)' case to replace it with a SPLIT to before
-	 * and after the + repetition. */
-	struct repeated_alt_backpatch_info {
-		const struct ast_expr *repeat; /* must be a + repeat */
-		size_t ceil;
-		size_t used;
-		unsigned *opcode_offsets;
-		/* linked list */
-		struct repeated_alt_backpatch_info *prev;
-	} *repeated_alt_backpatches;
 };
 
 static bool
@@ -513,74 +500,6 @@ pop_repeated_group_info(struct capvm_compile_env *env, const struct ast_expr *ex
 }
 
 static bool
-push_repeated_alt_backpatch_info(struct capvm_compile_env *env, const struct ast_expr *expr)
-{
-	assert(expr
-	    && expr->type == AST_EXPR_REPEAT
-	    && expr->u.repeat.min == 1
-	    && expr->u.repeat.max == AST_COUNT_UNBOUNDED);
-	struct repeated_alt_backpatch_info *rabi = f_calloc(env->alloc,
-	    1, sizeof(*rabi));
-	if (rabi == NULL) {
-		return false;
-	}
-	rabi->repeat = expr;
-	rabi->prev = env->repeated_alt_backpatches;
-	LOG(3 - LOG_REPETITION_CASES,
-	    "%s: pushing node %p onto %p, prev link %p\n",
-	    __func__, (void *)expr, (void *)rabi, (void *)rabi->prev);
-	env->repeated_alt_backpatches = rabi;
-	return true;
-}
-
-static bool
-append_repeated_alt_backpatch_offset(struct capvm_compile_env *env, unsigned offset)
-{
-	struct repeated_alt_backpatch_info *rabi = env->repeated_alt_backpatches;
-	assert(rabi != NULL);
-	if (rabi->used == rabi->ceil) {
-		const size_t nceil = (rabi->ceil == 0
-		    ? DEF_REPEATED_ALT_BACKPATCH_CEIL
-		    : 2*rabi->ceil);
-		LOG(3 - LOG_REPETITION_CASES,
-		    "%s: growing %zu -> %zu\n", __func__, rabi->ceil, nceil);
-
-		unsigned *noffsets = f_realloc(env->alloc,
-		    rabi->opcode_offsets, nceil * sizeof(noffsets[0]));
-		if (noffsets == NULL) {
-			return false;
-		}
-		rabi->ceil = nceil;
-		rabi->opcode_offsets = noffsets;
-	}
-
-	LOG(3 - LOG_REPETITION_CASES,
-	    "%s: pushing offset %u\n", __func__, offset);
-	rabi->opcode_offsets[rabi->used] = offset;
-	rabi->used++;
-	return true;
-}
-
-static void
-pop_repeated_alt_backpatch_info(struct capvm_compile_env *env, const struct ast_expr *expr)
-{
-	struct repeated_alt_backpatch_info *rabi = env->repeated_alt_backpatches;
-	assert(rabi != NULL);
-	assert(rabi->repeat == expr);
-	struct repeated_alt_backpatch_info *prev = rabi->prev;
-	LOG(3 - LOG_REPETITION_CASES,
-	    "%s: popping %p, prev link %p\n",
-	    __func__, (void *)rabi, (void *)prev);
-	f_free(env->alloc, rabi->opcode_offsets);
-	f_free(env->alloc, rabi);
-	env->repeated_alt_backpatches = prev;
-}
-
-static void
-backpatch_repeated_nullable_alt_split(struct capvm_compile_env *env,
-    const struct ast_expr *expr, struct capvm_program *p, unsigned split_new_dst);
-
-static bool
 emit_repeated_groups(struct capvm_compile_env *env, struct capvm_program *p);
 
 static bool
@@ -845,9 +764,6 @@ capvm_compile_iter(struct capvm_compile_env *env,
 					op_split_after->t = CAPVM_OP_SPLIT;
 					op_split_after->u.split.cont = PENDING_OFFSET_ALT_BACKPATCH_JMP;
 					op_split_after->u.split.new = PENDING_OFFSET_ALT_BACKPATCH_AFTER_REPEAT_PLUS;
-					if (!append_repeated_alt_backpatch_offset(env, pos_split_after)) {
-						return false;
-					}
 				} else {
 					const uint32_t pos_jmp_after = reserve_program_opcode(p);
 					flow_info[c_i].backpatch = pos_jmp_after;
@@ -974,12 +890,6 @@ capvm_compile_iter(struct capvm_compile_env *env,
 				return false;
 			}
 		} else if (min == 1 && max == AST_COUNT_UNBOUNDED) { /* + */
-			if (expr->u.repeat.contains_nullable_alt) {
-				if (!push_repeated_alt_backpatch_info(env, expr)) {
-					return false;
-				}
-			}
-
 			/* l1: <subtree>
 			 *     split l1, l2
 			 * l2: <after> */
@@ -1007,16 +917,6 @@ capvm_compile_iter(struct capvm_compile_env *env,
 				op_split->t = CAPVM_OP_SPLIT;
 				op_split->u.split.cont = pos_l1;
 				op_split->u.split.new = pos_l2;
-
-				/* Update any ALT nodes in the subtree whose SPLIT instructions
-				 * are awaiting backpatching with pos_l2. */
-				if (expr->u.repeat.contains_nullable_alt) {
-					backpatch_repeated_nullable_alt_split(env, expr, p, pos_l2);
-				}
-			}
-
-			if (expr->u.repeat.contains_nullable_alt) {
-				pop_repeated_alt_backpatch_info(env, expr);
 			}
 		} else if (min == 0 && max == 0) { /* {0,0} */
 			/* ignored, except any groups contained within that could match
@@ -1382,28 +1282,6 @@ emit_repeated_groups(struct capvm_compile_env *env, struct capvm_program *p)
 	rgi->count = 0;
 
 	return true;
-}
-
-static void
-backpatch_repeated_nullable_alt_split(struct capvm_compile_env *env,
-    const struct ast_expr *expr, struct capvm_program *p, unsigned split_new_dst)
-{
-	struct repeated_alt_backpatch_info *rabi = env->repeated_alt_backpatches;
-	assert(rabi != NULL && rabi->repeat == expr);
-
-	for (size_t op_i = 0; op_i < rabi->used; op_i++) {
-		const unsigned offset = rabi->opcode_offsets[op_i];
-		assert(offset < p->used);
-		LOG(3 - LOG_REPETITION_CASES,
-		    "%s: backpatching SPLIT instruction %u's .new to %u\n",
-		    __func__, offset, split_new_dst);
-		struct capvm_opcode *op = &p->ops[offset];
-		assert(op->t == CAPVM_OP_SPLIT);
-		assert(op->u.split.new == PENDING_OFFSET_ALT_BACKPATCH_AFTER_REPEAT_PLUS);
-		op->u.split.new = split_new_dst;
-	}
-
-	rabi->used = 0;
 }
 
 static bool

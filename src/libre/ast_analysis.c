@@ -392,7 +392,6 @@ analysis_iter_repetition(struct ast_expr *n, struct ast_expr *outermost_repeat_p
 					assert(repeat_plus_ancestor->type == AST_EXPR_REPEAT);
 					assert(repeat_plus_ancestor->u.repeat.min == 1);
 					assert(repeat_plus_ancestor->u.repeat.max == AST_COUNT_UNBOUNDED);
-					repeat_plus_ancestor->u.repeat.contains_nullable_alt = 1;
 
 					/* Repetition of an alt subtree which has a capture group child that
 					 * only contains only* anchors is not handled properly yet. This

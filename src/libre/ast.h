@@ -183,7 +183,6 @@ struct ast_expr {
 			unsigned min;
 			unsigned max; /* can be AST_COUNT_UNBOUNDED */
 			int contains_empty_groups;
-			int contains_nullable_alt;
 		} repeat;
 
 		struct {
