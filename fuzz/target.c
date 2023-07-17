@@ -813,12 +813,12 @@ compare_with_pcre(const char *pattern, struct fsm *fsm)
 /* Note: combined_fsm and fsms[] are non-const because fsm_generate_matches
  * calls fsm_trim on them. */
 static int
-compare_combined_and_separate(int verbosity, size_t max_length, size_t count,
+compare_separate_and_combined(int verbosity, size_t max_length, size_t count,
     struct fsm *combined_fsm, const struct fsm_combined_base_pair *bases,
     struct fsm **fsms);
 
 static enum fsm_generate_matches_cb_res
-cmp_combined_and_separate_cb(const struct fsm *fsm,
+cmp_separate_and_combined_cb(const struct fsm *fsm,
     size_t depth, size_t match_count, size_t steps,
     const char *input, size_t input_length,
     fsm_state_t end_state, void *opaque);
@@ -1015,7 +1015,7 @@ build_and_check_multi(const char *input)
 		fsm_capture_dump(stderr, "combined", combined_fsm);
 	}
 
-	res = compare_combined_and_separate(verbosity, max_length,
+	res = compare_separate_and_combined(verbosity, max_length,
 	    count, combined_fsm, bases, (struct fsm **)fsms_cp);
 
 	for (i = 0; i < count; i++) {
@@ -1068,8 +1068,14 @@ struct cmp_combined_env {
 	size_t max_match_count;
 };
 
+static enum fsm_generate_matches_cb_res
+cmp_combined_with_separate_cb(const struct fsm *fsm,
+    size_t depth, size_t match_count, size_t steps,
+    const char *input, size_t input_length,
+    fsm_state_t end_state, void *opaque);
+
 static int
-compare_combined_and_separate(int verbosity, size_t max_length, size_t count,
+compare_separate_and_combined(int verbosity, size_t max_length, size_t count,
     struct fsm *combined_fsm, const struct fsm_combined_base_pair *bases,
     struct fsm **fsms)
 {
@@ -1093,21 +1099,29 @@ compare_combined_and_separate(int verbosity, size_t max_length, size_t count,
 	 * they match with the same captures in the combined fsm. */
 	for (env.current_i = 0; env.current_i < count; env.current_i++) {
 		if (!fsm_generate_matches(env.fsms[env.current_i], max_length,
-			cmp_combined_and_separate_cb, &env)) {
+			cmp_separate_and_combined_cb, &env)) {
 			env.ok = false;
 		}
 		if (!env.ok) {
 			break;
 		}
 	}
+	env.current_i = (size_t)-1;
 
-	/* TODO: also generate matches with combined and check the individual ones */
+	/* Also go in the other direction, generating matches with
+	 * combined and check the individual ones match as expected. */
+	if (env.ok) {
+		if (!fsm_generate_matches(env.combined_fsm, max_length,
+			cmp_combined_with_separate_cb, &env)) {
+			env.ok = false;
+		}
+	}
 
 	return env.ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 static enum fsm_generate_matches_cb_res
-cmp_combined_and_separate_cb(const struct fsm *fsm,
+cmp_separate_and_combined_cb(const struct fsm *fsm,
     size_t depth, size_t match_count, size_t steps,
     const char *input, size_t input_length,
     fsm_state_t end_state, void *opaque)
@@ -1161,75 +1175,177 @@ cmp_combined_and_separate_cb(const struct fsm *fsm,
 		assert(written_combined == exp_written);
 	}
 
-	if (res_single > 0) {
+	/* we got here, so we have a match */
+	assert(res_single > 0);
+
+	if (env->verbosity > 3) {
+		fprintf(stderr, "%s: res %d (single and combined)\n", __func__, res_single);
+	}
+
+	/* Check that the end state's endid for the single DFA is among the
+	 * endids for the combined DFA's end state. */
+	assert(fsm_getendidcount(fsm, end_state_single) == 1);
+	assert(fsm_getendidcount(env->combined_fsm, end_state_combined) <= env->count);
+
+	fsm_end_id_t id_buf_single[1];
+	size_t written;
+	const enum fsm_getendids_res gres = fsm_getendids(fsm,
+	    end_state_single, 1, id_buf_single, &written);
+	assert(gres == FSM_GETENDIDS_FOUND);
+	assert(written == 1);
+	assert(id_buf_single[0] == expected_end_id);
+
+	bool found_single_id_in_combined = false;
+	for (size_t i = 0; i < written_combined; i++) {
+		if (id_buf_combined[i] == expected_end_id) {
+			found_single_id_in_combined = true;
+			break;
+		}
+	}
+	assert(found_single_id_in_combined);
+
+	bool matching = true;
+	const unsigned base = env->bases[env->current_i].capture;
+	assert(base < MAX_CAPTURES);
+	for (int i = 0; i < res_single; i++) {
 		if (env->verbosity > 3) {
-			fprintf(stderr, "%s: res %d (single and combined)\n", __func__, res_single);
+			fprintf(stderr, "%d/%d: single [%ld, %ld] <-> combined [%ld, %ld]\n",
+			    i, res_single,
+			    captures_single[i].pos[0], captures_single[i].pos[1],
+			    captures_combined[i + base].pos[0], captures_combined[i + base].pos[1]);
 		}
-
-		/* Check that the end state's endid for the single DFA is among the
-		 * endids for the combined DFA's end state. */
-		assert(fsm_getendidcount(fsm, end_state_single) == 1);
-		assert(fsm_getendidcount(env->combined_fsm, end_state_combined) <= env->count);
-
-		fsm_end_id_t id_buf_single[1];
-		size_t written;
-		const enum fsm_getendids_res gres = fsm_getendids(fsm,
-		    end_state_single, 1, id_buf_single, &written);
-		assert(gres == FSM_GETENDIDS_FOUND);
-		assert(written == 1);
-		assert(id_buf_single[0] == expected_end_id);
-
-		bool found_single_id_in_combined = false;
-		for (size_t i = 0; i < written_combined; i++) {
-			if (id_buf_combined[i] == expected_end_id) {
-				found_single_id_in_combined = true;
-				break;
-			}
+		if ((captures_single[i].pos[0] != captures_combined[i + base].pos[0]) ||
+		    (captures_single[i].pos[1] != captures_combined[i + base].pos[1])) {
+			matching = false;
 		}
-		assert(found_single_id_in_combined);
+	}
 
-		bool matching = true;
-		const unsigned base = env->bases[env->current_i].capture;
-		assert(base < MAX_CAPTURES);
+	if (!matching) {
 		for (int i = 0; i < res_single; i++) {
-			if (env->verbosity > 3) {
-				fprintf(stderr, "%d/%d: single [%ld, %ld] <-> combined [%ld, %ld]\n",
-				    i, res_single,
-				    captures_single[i].pos[0], captures_single[i].pos[1],
-				    captures_combined[i + base].pos[0], captures_combined[i + base].pos[1]);
-			}
-			if ((captures_single[i].pos[0] != captures_combined[i + base].pos[0]) ||
-			    (captures_single[i].pos[1] != captures_combined[i + base].pos[1])) {
-				matching = false;
-			}
+			fprintf(stderr, "%d/%d: single [%ld, %ld] <-> combined [%ld, %ld]\n",
+			    i, res_single,
+			    captures_single[i].pos[0], captures_single[i].pos[1],
+			    captures_combined[i + base].pos[0], captures_combined[i + base].pos[1]);
 		}
-
-		if (!matching) {
-			for (int i = 0; i < res_single; i++) {
-				fprintf(stderr, "%d/%d: single [%ld, %ld] <-> combined [%ld, %ld]\n",
-				    i, res_single,
-				    captures_single[i].pos[0], captures_single[i].pos[1],
-				    captures_combined[i + base].pos[0], captures_combined[i + base].pos[1]);
-			}
-			env->ok = false;
-			return FSM_GENERATE_MATCHES_CB_RES_HALT;
-		}
-	} else if (res_combined > 0) {
-		/* This matched the combined DFA but not the single one,
-		 * so check that the single DFA's end id is *absent*
-		 * from the combined DFA's end state. */
-		bool found_single_id_in_combined = false;
-		for (size_t i = 0; i < written_combined; i++) {
-			if (id_buf_combined[i] == expected_end_id) {
-				found_single_id_in_combined = true;
-				break;
-			}
-		}
-		assert(!found_single_id_in_combined);
+		env->ok = false;
+		return FSM_GENERATE_MATCHES_CB_RES_HALT;
 	}
 
 	return FSM_GENERATE_MATCHES_CB_RES_CONTINUE;
 }
+
+static enum fsm_generate_matches_cb_res
+cmp_combined_with_separate_cb(const struct fsm *fsm,
+    size_t depth, size_t match_count, size_t steps,
+    const char *input, size_t input_length,
+    fsm_state_t end_state, void *opaque)
+{
+	/* We have an input that matched the combined DFA,
+	 * use the set of end IDs to check which of the
+	 * single DFAs it should/should not match, and check
+	 * the endid behavior. */
+
+	struct cmp_combined_env *env = opaque;
+
+	if (steps > env->max_steps) {
+		return FSM_GENERATE_MATCHES_CB_RES_HALT;
+	}
+
+	if (depth > env->max_depth) {
+		return FSM_GENERATE_MATCHES_CB_RES_PRUNE;
+	}
+
+	if (match_count > env->max_match_count) {
+		return FSM_GENERATE_MATCHES_CB_RES_HALT;
+	}
+
+#define MAX_CAPTURES 256
+	struct fsm_capture captures_single[MAX_CAPTURES];
+	struct fsm_capture captures_combined[MAX_CAPTURES];
+
+	const uint8_t *u8_input = (const uint8_t *)input;
+
+	fsm_state_t end_state_combined;
+	assert(fsm == env->combined_fsm);
+	const int res_combined = fsm_exec_with_captures(env->combined_fsm, u8_input, input_length,
+	    &end_state_combined, captures_combined, MAX_CAPTURES);
+	assert(res_combined > 0); /* we got here, so we have a match */
+	assert(end_state_combined == end_state);
+
+	fsm_end_id_t id_buf_combined[MAX_PATTERNS];
+	size_t written_combined = 0;
+	{
+		const size_t exp_written = fsm_getendidcount(env->combined_fsm, end_state_combined);
+		assert(exp_written <= env->count);
+		const enum fsm_getendids_res gres = fsm_getendids(env->combined_fsm,
+		    end_state_combined, MAX_PATTERNS, id_buf_combined, &written_combined);
+		assert(gres == FSM_GETENDIDS_FOUND);
+		assert(written_combined == exp_written);
+	}
+
+	/* For each pattern, check if its endid is in the combined DFA's end state
+	 * endids. If so, it should match, otherwise it should not. */
+	for (size_t pattern_i = 0; pattern_i < env->count; pattern_i++) {
+		const struct fsm *single_fsm = env->fsms[pattern_i];
+		bool found = false;
+		for (size_t endid_i = 0; endid_i < written_combined; endid_i++) {
+			const fsm_end_id_t endid = id_buf_combined[endid_i];
+			if (endid == pattern_i) {
+				found = true;
+				break;
+			}
+		}
+		fsm_state_t end_state_single;
+
+		const int res_single = fsm_exec_with_captures(single_fsm,
+		    u8_input, input_length,
+		    &end_state_single, captures_single, MAX_CAPTURES);
+
+		if (found) {
+			assert(res_single > 0);
+			fsm_end_id_t id_buf_single[1];
+			size_t written;
+			const enum fsm_getendids_res gres = fsm_getendids(single_fsm,
+			    end_state_single, 1, id_buf_single, &written);
+			assert(gres == FSM_GETENDIDS_FOUND);
+			assert(written == 1);
+			assert(id_buf_single[0] == pattern_i);
+
+			/* check captures */
+			bool matching = true;
+			const unsigned base = env->bases[pattern_i].capture;
+			assert(base < MAX_CAPTURES);
+			for (int i = 0; i < res_single; i++) {
+				if (env->verbosity > 3) {
+					fprintf(stderr, "%d/%d: single [%ld, %ld] <-> combined [%ld, %ld]\n",
+					    i, res_single,
+					    captures_single[i].pos[0], captures_single[i].pos[1],
+					    captures_combined[i + base].pos[0], captures_combined[i + base].pos[1]);
+				}
+				if ((captures_single[i].pos[0] != captures_combined[i + base].pos[0]) ||
+				    (captures_single[i].pos[1] != captures_combined[i + base].pos[1])) {
+					matching = false;
+				}
+			}
+
+			if (!matching) {
+				for (int i = 0; i < res_single; i++) {
+					fprintf(stderr, "%d/%d: single [%ld, %ld] <-> combined [%ld, %ld]\n",
+					    i, res_single,
+					    captures_single[i].pos[0], captures_single[i].pos[1],
+					    captures_combined[i + base].pos[0], captures_combined[i + base].pos[1]);
+				}
+				env->ok = false;
+				return FSM_GENERATE_MATCHES_CB_RES_HALT;
+			}
+		} else {
+			assert(res_single == 0); /* no match */
+		}
+	}
+
+	return FSM_GENERATE_MATCHES_CB_RES_CONTINUE;
+}
+
 
 #define DEF_MAX_SHUFFLE 10
 #define DEF_MAX_MINIMISE_ORACLE_STATE_COUNT 1000
@@ -1622,7 +1738,7 @@ harness_fuzzer_target(const uint8_t *data, size_t size)
 		const bool det = b0 & 0x1;
 		const bool min = b0 & 0x2;
 		const enum fsm_io io_mode = (b0 >> 2) % 3;
-		
+
 		const char *shifted_pattern = (const char *)&data_buf[1];
 		int res = fuzz_all_print_functions(dev_null, shifted_pattern, det, min, io_mode);
 		return res;
