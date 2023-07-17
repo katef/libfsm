@@ -10,7 +10,7 @@
 #include "../libfsm/capture_vm_log.h"
 
 /* for EXPENSIVE_CHECKS */
-#include "../libfsm/internal.h"
+#include "adt/common.h"
 
 #include <assert.h>
 #include <stdlib.h>
