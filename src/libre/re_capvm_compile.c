@@ -334,7 +334,7 @@ active_node(const struct ast_expr *n)
 	case AST_EXPR_TOMBSTONE:
 		return false;
 	default:
-		return true;
+		return !(n->flags & AST_FLAG_UNSATISFIABLE);
 	}
 }
 
