@@ -294,8 +294,8 @@ ast_noteconflicts(const struct fsm *fsm)
 	size_t s;
 	size_t id_buf_ceil = DEF_ID_BUF_CEIL;
 	fsm_end_id_t *id_buf = malloc(id_buf_ceil * sizeof(id_buf[0]));
-	struct ast_mapping **mappings = malloc(sizeof(mappings[0]));
 	size_t mappings_ceil = DEF_MAPPINGS_CEIL;
+	struct ast_mapping **mappings = malloc(mappings_ceil * sizeof(mappings[0]));
 	enum fsm_getendids_res getendids_res;
 	int res = 0;
 
