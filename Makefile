@@ -121,6 +121,7 @@ SUBDIR += tests/like
 SUBDIR += tests/literal
 # FIXME: commenting this out for now due to Makefile error
 #SUBDIR += tests/lxpos
+SUBDIR += tests/lxconflict
 SUBDIR += tests/minimise
 SUBDIR += tests/native
 SUBDIR += tests/pcre

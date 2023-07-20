@@ -15,6 +15,7 @@
 #include <re/re.h>
 
 #include <fsm/bool.h>
+#include <fsm/pred.h>
 
 #include <adt/xalloc.h>
 
@@ -268,6 +269,8 @@ ast_getendmapping(const struct fsm *fsm, fsm_state_t s)
 	assert(written == id_count);
 	assert(written > 0);
 
+	/* This only returns the first, assuming there is only one.
+	 * More than one end ID would mean conflicts, which are handled separately. */
 	m = ast_getendmappingbyendid(id_buf[0]);
 
 	if (LOG()) {
@@ -279,4 +282,93 @@ ast_getendmapping(const struct fsm *fsm, fsm_state_t s)
 		free(id_buf_dynamic);
 	}
 	return m;
+}
+
+#define DEF_ID_BUF_CEIL 8
+#define DEF_MAPPINGS_CEIL 8
+
+int
+ast_noteconflicts(const struct fsm *fsm)
+{
+	const size_t statecount = fsm_countstates(fsm);
+	size_t s;
+	size_t id_buf_ceil = DEF_ID_BUF_CEIL;
+	fsm_end_id_t *id_buf = malloc(id_buf_ceil * sizeof(id_buf[0]));
+	struct ast_mapping **mappings = malloc(sizeof(mappings[0]));
+	size_t mappings_ceil = DEF_MAPPINGS_CEIL;
+	enum fsm_getendids_res getendids_res;
+	int res = 0;
+
+	if (id_buf == NULL) {
+		goto cleanup;
+	}
+	if (mappings == NULL) {
+		goto cleanup;
+	}
+
+	for (s = 0; s < statecount; s++) {
+		if (!fsm_isend(fsm, s)) {
+			continue;
+		}
+
+		const size_t id_count = fsm_getendidcount(fsm, s);
+		if (id_count == 0) {
+			continue;
+		} else if (id_count > id_buf_ceil) {
+			size_t nceil = 2*id_buf_ceil;
+			while (nceil < id_count) {
+				nceil *= 2;
+			}
+			fsm_end_id_t *nid_buf = realloc(id_buf,
+			    nceil * sizeof(nid_buf[0]));
+			if (nid_buf == NULL) {
+				goto cleanup;
+			}
+			id_buf_ceil = nceil;
+			id_buf = nid_buf;
+		}
+
+		size_t written;
+		getendids_res = fsm_getendids(fsm, s, id_count, id_buf, &written);
+		assert(getendids_res == FSM_GETENDIDS_FOUND);
+		assert(written == id_count);
+		assert(written > 0);
+
+		size_t seen = 0;
+		for (size_t i = 0; i < written; i++) {
+#define MAX_SEEN 32
+			struct ast_mapping *m = ast_getendmappingbyendid(id_buf[i]);
+			if (m != NULL) {
+				if (seen == mappings_ceil) {
+					size_t nceil = 2 * mappings_ceil;
+					struct ast_mapping **nmappings = realloc(mappings,
+					    nceil * sizeof(nmappings[0]));
+					if (nmappings == NULL) {
+						goto cleanup;
+					}
+					mappings = nmappings;
+					mappings_ceil = nceil;
+				}
+				mappings[seen++] = m;
+			}
+		}
+
+		/* If more than one mapping is associated with that end state,
+		 * then register the set as conflicts. */
+		if (seen > 1) {
+			struct ast_mapping *m = mappings[0];
+			for (size_t i = 0; i < seen; i++) {
+				if (!ast_addconflict(&m->conflict,
+					    mappings[i])) {
+					goto cleanup;
+				}
+			}
+		}
+	}
+
+	res = 1;
+cleanup:
+	free(id_buf);
+	free(mappings);
+	return res;
 }
