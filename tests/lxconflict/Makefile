@@ -1,10 +1,14 @@
 .include "../../share/mk/top.mk"
 
+LX?=${BUILD}/bin/lx
+
+# If this is being run in CI's (Makefiles) mode just ignore this
+# test, substituting "true; echo lx" into the ${LX} call below
+# obviously won't work.
+.if ${LX} != "true; echo lx"
 TEST.tests/lxconflict != ls -1 tests/lxconflict/out*.err
 TEST_SRCDIR.tests/lxconflict = tests/lxconflict
 TEST_OUTDIR.tests/lxconflict = ${BUILD}/tests/lxconflict
-
-LX?=${BUILD}/bin/lx
 
 DIR += ${TEST_OUTDIR.tests/lxconflict}
 
@@ -20,3 +24,4 @@ ${TEST_OUTDIR.tests/lxconflict}/res${n}: \
 FSMTEST_ERROR += ${TEST_OUTDIR.tests/lxconflict}/res${n}
 
 .endfor
+.endif
