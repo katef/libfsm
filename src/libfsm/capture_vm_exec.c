@@ -926,32 +926,28 @@ schedule_possible_next_step(struct capvm *vm, enum pair_id pair_id,
 	}
 }
 
-static void
+/* returns whether the vm should continue. */
+static bool
 eval_vm_advance_greediest(struct capvm *vm, uint32_t input_pos,
     uint32_t path_info_head, uint32_t uniq_id, uint32_t op_id)
 {
 	LOG(5, "%s: input_pos %u, input_len %u, op_id %u, threads_live %u\n",
 	    __func__, input_pos, vm->input_len, op_id, vm->threads.live);
 
+	assert(op_id < vm->p->used);
+
 	if (vm->stats.steps == vm->step_limit) {
 		LOG(1, "%s: halting, steps == step_limit %zu\n",
 		    __func__, vm->step_limit);
-		return;
+		vm->res = FSM_CAPVM_PROGRAM_EXEC_STEP_LIMIT_REACHED;
+		return false;
 	}
-
-	assert(op_id < vm->p->used);
+	vm->stats.steps++;
 
 	const struct capvm_opcode *op = &vm->p->ops[op_id];
-
 	LOG(2, "%s: op_id[%u]: input_pos %u, path_info_head %u, uniq_id %u, op %s\n",
 	    __func__, op_id, input_pos, path_info_head, uniq_id, op_name[op->t]);
 	LOG_EXEC_OP(uniq_id, input_pos, op_id, op_name[op->t]);
-
-	vm->stats.steps++;
-	if (vm->stats.steps == vm->step_limit) {
-		/* TODO: Set some sort of STEP_LIMIT_REACHED error. */
-		return;
-	}
 
 	switch (op->t) {
 	case CAPVM_OP_CHAR:
@@ -1142,14 +1138,14 @@ eval_vm_advance_greediest(struct capvm *vm, uint32_t input_pos,
 
 	default:
 		assert(!"unreachable");
-		return;
+		return false;
 	}
 
 	if (EXPENSIVE_CHECKS) { /* postcondition */
 		check_path_table(vm);
 	}
 
-	return;
+	return true;
 
 halt_thread:
 	/* do not push further execution on the run stack */
@@ -1158,11 +1154,12 @@ halt_thread:
 	release_path_info_link(vm, &path_info_head);
 	assert(vm->threads.live > 0);
 	vm->threads.live--;
-	return;
+	return true;
 
 alloc_error:
 	release_path_info_link(vm, &path_info_head);
 	vm->res = FSM_CAPVM_PROGRAM_EXEC_ERROR_ALLOC;
+	return false;
 }
 
 static void
@@ -1351,7 +1348,9 @@ eval_vm(struct capvm *vm)
 #else
 			const uint32_t uniq_id = 0;
 #endif
-			eval_vm_advance_greediest(vm, i_i, path_info_head, uniq_id, op_id);
+			if (!eval_vm_advance_greediest(vm, i_i, path_info_head, uniq_id, op_id)) {
+				return false;
+			}
 		}
 
 
@@ -2054,7 +2053,7 @@ fsm_capvm_program_exec(const struct capvm_program *program,
 		 * flag, which would skip this assertion. */
 		assert(vm.paths.live == 0);
 	} else {
-		assert(vm.res == FSM_CAPVM_PROGRAM_EXEC_NO_SOLUTION_FOUND);
+		assert(vm.res != FSM_CAPVM_PROGRAM_EXEC_SOLUTION_WRITTEN);
 	}
 
 	TIME(&post);
