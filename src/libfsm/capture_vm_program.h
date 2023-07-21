@@ -45,8 +45,8 @@ struct capvm_program {
 			uint32_t jmp;	     /* absolute */
 			uint32_t jmp_once;   /* absolute */
 			struct {
-				uint32_t cont; /* greedy branch */
-				uint32_t new;  /* non-greedy branch */
+				uint32_t greedy;
+				uint32_t nongreedy;
 			} split;
 			/* (save >> 1): capture ID,
 			 * (save & 0x01): save pos to start (0b0) or end (0b1). */

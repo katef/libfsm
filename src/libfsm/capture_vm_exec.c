@@ -1045,36 +1045,35 @@ eval_vm_advance_greediest(struct capvm *vm, uint32_t input_pos,
 
 	case CAPVM_OP_SPLIT:
 	{
-		const uint32_t dst_cont = op->u.split.cont;
-		const uint32_t dst_new = op->u.split.new;
+		const uint32_t dst_greedy = op->u.split.greedy;
+		const uint32_t dst_nongreedy = op->u.split.nongreedy;
 
 		/* destinations must be in range and not self-referential */
-		assert(dst_cont < vm->p->used);
-		assert(dst_new < vm->p->used);
-		assert(dst_cont != op_id);
-		assert(dst_new != op_id);
+		assert(dst_greedy < vm->p->used);
+		assert(dst_nongreedy < vm->p->used);
+		assert(dst_greedy != op_id);
+		assert(dst_nongreedy != op_id);
 
-		uint32_t new_path_info_head;
-		if (!copy_path_info(vm, path_info_head, &new_path_info_head)) {
+		uint32_t nongreedy_path_info_head;
+		if (!copy_path_info(vm, path_info_head, &nongreedy_path_info_head)) {
 			goto alloc_error;
 		}
 
-		/* cont is the greedy branch */
 		if (!extend_path_info(vm, path_info_head, 1, uniq_id, &path_info_head)) {
 			release_path_info_link(vm, &path_info_head);
 			goto alloc_error;
 		}
 
-		/* new is the non-greedy branch */
-		if (!extend_path_info(vm, new_path_info_head, 0, uniq_id, &new_path_info_head)) {
+		/* nongreedy is the non-greedy branch */
+		if (!extend_path_info(vm, nongreedy_path_info_head, 0, uniq_id, &nongreedy_path_info_head)) {
 			release_path_info_link(vm, &path_info_head);
 			goto alloc_error;
 		}
 
 #if CAPVM_STATS
-		const uint32_t new_uniq_id = ++vm->uniq_id_counter;
+		const uint32_t nongreedy_uniq_id = ++vm->uniq_id_counter;
 #else
-		const uint32_t new_uniq_id = 0;
+		const uint32_t nongreedy_uniq_id = 0;
 #endif
 
 		vm->threads.live++;
@@ -1082,15 +1081,14 @@ eval_vm_advance_greediest(struct capvm *vm, uint32_t input_pos,
 			set_max_threads_live(vm, vm->threads.live);
 		}
 
-		/* Push the split.new destination, and then the
-		 * split.cont destination on top of it, so that the
-		 * greedier .cont branch will be fully evaluated
-		 * first. */
-		schedule_possible_next_step(vm, PAIR_ID_CURRENT, input_pos, dst_new,
-		    new_path_info_head, new_uniq_id);
-		schedule_possible_next_step(vm, PAIR_ID_CURRENT, input_pos, dst_cont,
+		/* Push the split.nongreedy destination, and then the
+		 * split.greedy destination on top of it, so that the
+		 * greedier branch will be fully evaluated first. */
+		schedule_possible_next_step(vm, PAIR_ID_CURRENT, input_pos, dst_nongreedy,
+		    nongreedy_path_info_head, nongreedy_uniq_id);
+		schedule_possible_next_step(vm, PAIR_ID_CURRENT, input_pos, dst_greedy,
 		    path_info_head, uniq_id);
-		LOG_EXEC_SPLIT(uniq_id, new_uniq_id);
+		LOG_EXEC_SPLIT(uniq_id, nongreedy_uniq_id);
 
 	break;
 	}
@@ -1792,8 +1790,8 @@ populate_solution(struct capvm *vm)
 			const uint32_t offset = get_path_node_offset(vm, cur);
 			const struct capvm_path_info *pi = &vm->paths.pool[cur];
 
-			const uint32_t dst_cont = op->u.split.cont;
-			const uint32_t dst_new = op->u.split.new;
+			const uint32_t dst_greedy = op->u.split.greedy;
+			const uint32_t dst_nongreedy = op->u.split.nongreedy;
 
 			assert(IS_PATH_NODE(pi));
 			bool next_bit;
@@ -1811,9 +1809,9 @@ populate_solution(struct capvm *vm)
 			LOG(3, "split: next_bit %d\n", next_bit);
 			LOG_EXEC_PATH_SAVE_CAPTURES(uniq_id, next_bit);
 			if (next_bit) { /* greedy edge */
-				prog_i = dst_cont;
+				prog_i = dst_greedy;
 			} else { /* non-greedy edge */
-				prog_i = dst_new;
+				prog_i = dst_nongreedy;
 			}
 			split_i++;
 			if (split_i >= offset &&

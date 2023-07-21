@@ -153,7 +153,7 @@ fsm_capvm_program_dump(FILE *f,
 			fprintf(f, "%zu: jmp_once %u\n", i, op->u.jmp_once);
 			break;
 		case CAPVM_OP_SPLIT:
-			fprintf(f, "%zu: split cont %u new %u\n", i, op->u.split.cont, op->u.split.new);
+			fprintf(f, "%zu: split greedy %u nongreedy %u\n", i, op->u.split.greedy, op->u.split.nongreedy);
 			break;
 		case CAPVM_OP_SAVE:
 			fprintf(f, "%zu: save %u (cap %u, %s)\n",

@@ -144,10 +144,10 @@ check_program_for_invalid_labels(const struct capvm_program *p)
 			assert(op->u.jmp_once != op_i);
 			break;
 		case CAPVM_OP_SPLIT:
-			assert(op->u.split.cont < p->used);
-			assert(op->u.split.cont != op_i);
-			assert(op->u.split.new < p->used);
-			assert(op->u.split.new != op_i);
+			assert(op->u.split.greedy < p->used);
+			assert(op->u.split.greedy != op_i);
+			assert(op->u.split.nongreedy < p->used);
+			assert(op->u.split.nongreedy != op_i);
 			break;
 
 		case CAPVM_OP_CHAR:
@@ -724,11 +724,11 @@ capvm_compile_iter(struct capvm_compile_env *env,
 				op_split_before->t = CAPVM_OP_SPLIT;
 
 				/* greedier branch: trying the next case, in order */
-				op_split_before->u.split.cont = get_program_offset(p);
+				op_split_before->u.split.greedy = get_program_offset(p);
 
 				/* less greedy branch: moving on to the next case.
 				 * will backpatch .new to after this case's JMP later */
-				op_split_before->u.split.new = PENDING_OFFSET_ALT_BACKPATCH_NEW;
+				op_split_before->u.split.nongreedy = PENDING_OFFSET_ALT_BACKPATCH_NEW;
 
 				const struct ast_expr *n = expr->u.alt.n[c_i];
 				LOG(3, "%s: %p recursing...\n", __func__, (void *)expr);
@@ -764,8 +764,8 @@ capvm_compile_iter(struct capvm_compile_env *env,
 					flow_info[c_i].backpatch = pos_split_after;
 					struct capvm_opcode *op_split_after = &p->ops[pos_split_after];
 					op_split_after->t = CAPVM_OP_SPLIT;
-					op_split_after->u.split.cont = PENDING_OFFSET_ALT_BACKPATCH_JMP;
-					op_split_after->u.split.new = PENDING_OFFSET_ALT_BACKPATCH_AFTER_REPEAT_PLUS;
+					op_split_after->u.split.greedy = PENDING_OFFSET_ALT_BACKPATCH_JMP;
+					op_split_after->u.split.nongreedy = PENDING_OFFSET_ALT_BACKPATCH_AFTER_REPEAT_PLUS;
 				} else {
 					const uint32_t pos_jmp_after = reserve_program_opcode(p);
 					flow_info[c_i].backpatch = pos_jmp_after;
@@ -779,7 +779,7 @@ capvm_compile_iter(struct capvm_compile_env *env,
 
 				/* and the original split jumps to after
 				 * this case's JMP */
-				op_split_before->u.split.new = get_program_offset(p);
+				op_split_before->u.split.nongreedy = get_program_offset(p);
 			}
 		}
 
@@ -802,10 +802,10 @@ capvm_compile_iter(struct capvm_compile_env *env,
 				assert(op_patch->u.jmp == PENDING_OFFSET_ALT_BACKPATCH_JMP);
 				op_patch->u.jmp = pos_after_all;
 			} else if (op_patch->t == CAPVM_OP_SPLIT) {
-				assert(op_patch->u.split.cont == PENDING_OFFSET_ALT_BACKPATCH_JMP);
-				op_patch->u.split.cont = pos_after_all;
+				assert(op_patch->u.split.greedy == PENDING_OFFSET_ALT_BACKPATCH_JMP);
+				op_patch->u.split.greedy = pos_after_all;
 				/* This will be patched by an ancestor repeat node after returning. */
-				assert(op_patch->u.split.cont == PENDING_OFFSET_ALT_BACKPATCH_AFTER_REPEAT_PLUS);
+				assert(op_patch->u.split.greedy == PENDING_OFFSET_ALT_BACKPATCH_AFTER_REPEAT_PLUS);
 			} else {
 				assert(!"type mismatch");
 			}
@@ -875,8 +875,8 @@ capvm_compile_iter(struct capvm_compile_env *env,
 
 			struct capvm_opcode *op_split = &p->ops[pos_split];
 			op_split->t = CAPVM_OP_SPLIT;
-			op_split->u.split.cont = pos_l1;
-			op_split->u.split.new = PENDING_OFFSET_REPEAT_OPTIONAL_NEW;
+			op_split->u.split.greedy = pos_l1;
+			op_split->u.split.nongreedy = PENDING_OFFSET_REPEAT_OPTIONAL_NEW;
 
 			if (!capvm_compile_iter(env, p, e)) { return false; }
 
@@ -886,7 +886,7 @@ capvm_compile_iter(struct capvm_compile_env *env,
 			op_split = &p->ops[pos_split]; /* refresh pointer */
 
 			const uint32_t after_expr = get_program_offset(p);
-			op_split->u.split.new = after_expr;
+			op_split->u.split.nongreedy = after_expr;
 		} else if (min == 0 && max == AST_COUNT_UNBOUNDED) { /* * */
 			if (!compile_kleene_star(env, p, expr)) {
 				return false;
@@ -917,8 +917,8 @@ capvm_compile_iter(struct capvm_compile_env *env,
 
 				struct capvm_opcode *op_split = &p->ops[pos_split];
 				op_split->t = CAPVM_OP_SPLIT;
-				op_split->u.split.cont = pos_l1;
-				op_split->u.split.new = pos_l2;
+				op_split->u.split.greedy = pos_l1;
+				op_split->u.split.nongreedy = pos_l2;
 			}
 		} else if (min == 0 && max == 0) { /* {0,0} */
 			/* ignored, except any groups contained within that could match
@@ -963,8 +963,8 @@ capvm_compile_iter(struct capvm_compile_env *env,
 
 					struct capvm_opcode *op_split = &p->ops[pos_split];
 					op_split->t = CAPVM_OP_SPLIT;
-					op_split->u.split.cont = pos_l1;
-					op_split->u.split.new = PENDING_OFFSET_REPEAT_OPTIONAL_NEW;
+					op_split->u.split.greedy = pos_l1;
+					op_split->u.split.nongreedy = PENDING_OFFSET_REPEAT_OPTIONAL_NEW;
 
 					if (!capvm_compile_iter(env, p, e)) { return false; }
 
@@ -974,7 +974,7 @@ capvm_compile_iter(struct capvm_compile_env *env,
 					op_split = &p->ops[pos_split]; /* refresh pointer */
 
 					const uint32_t after_expr = get_program_offset(p);
-					op_split->u.split.new = after_expr;
+					op_split->u.split.nongreedy = after_expr;
 				}
 			}
 		}
@@ -1171,8 +1171,8 @@ compile_kleene_star(struct capvm_compile_env *env,
 
 	struct capvm_opcode *op_split = &p->ops[pos_l1];
 	op_split->t = CAPVM_OP_SPLIT;
-	op_split->u.split.cont = PENDING_OFFSET_REPEAT_OPTIONAL_CONT;
-	op_split->u.split.new = PENDING_OFFSET_REPEAT_OPTIONAL_NEW;
+	op_split->u.split.greedy = PENDING_OFFSET_REPEAT_OPTIONAL_CONT;
+	op_split->u.split.nongreedy = PENDING_OFFSET_REPEAT_OPTIONAL_NEW;
 
 	if (!capvm_compile_iter(env, p, expr->u.repeat.e)) { return false; }
 
@@ -1197,8 +1197,8 @@ compile_kleene_star(struct capvm_compile_env *env,
 
 	const uint32_t pos_l3 = get_program_offset(p);
 	op_split = &p->ops[pos_l1]; /* refresh pointer */
-	op_split->u.split.cont = pos_l2;
-	op_split->u.split.new = pos_l3;
+	op_split->u.split.greedy = pos_l2;
+	op_split->u.split.nongreedy = pos_l3;
 	return true;
 }
 
@@ -1233,8 +1233,8 @@ emit_repeated_groups(struct capvm_compile_env *env, struct capvm_program *p)
 
 			struct capvm_opcode *op_split = &p->ops[pos_split];
 			op_split->t = CAPVM_OP_SPLIT;
-			op_split->u.split.cont = pos_l1;
-			op_split->u.split.new = PENDING_OFFSET_REPEAT_OPTIONAL_NEW;
+			op_split->u.split.greedy = pos_l1;
+			op_split->u.split.nongreedy = PENDING_OFFSET_REPEAT_OPTIONAL_NEW;
 
 			if (group->flags & AST_FLAG_ANCHORED_START) {
 				const uint32_t pos_start = reserve_program_opcode(p);
@@ -1263,7 +1263,7 @@ emit_repeated_groups(struct capvm_compile_env *env, struct capvm_program *p)
 
 			const uint32_t after_expr = get_program_offset(p);
 			op_split = &p->ops[pos_split]; /* refresh pointer */
-			op_split->u.split.new = after_expr;
+			op_split->u.split.nongreedy = after_expr;
 		} else {
 			/* simple case, emit SAVE pair */
 			if (!ensure_program_capacity(env->alloc, p, 2)) {
@@ -1404,8 +1404,8 @@ capvm_compile(struct capvm_compile_env *env,
 		const uint32_t l3 = get_program_offset(p);
 
 		op_split->t = CAPVM_OP_SPLIT;
-		op_split->u.split.cont = l3; /* greedy */
-		op_split->u.split.new = l2;  /* non-greedy */
+		op_split->u.split.greedy = l3;
+		op_split->u.split.nongreedy = l2;
 
 		op_cc->t = CAPVM_OP_CHARCLASS;
 		uint64_t any[4];
@@ -1447,8 +1447,8 @@ capvm_compile(struct capvm_compile_env *env,
 		struct capvm_opcode *op_jmp = &p->ops[l_jmp];
 
 		op_split->t = CAPVM_OP_SPLIT;
-		op_split->u.split.cont = l3; /* greedy */
-		op_split->u.split.new = l2;  /* non-greedy */
+		op_split->u.split.greedy = l3;
+		op_split->u.split.nongreedy = l2;
 
 		op_any->t = CAPVM_OP_CHARCLASS;
 		uint64_t any[4];

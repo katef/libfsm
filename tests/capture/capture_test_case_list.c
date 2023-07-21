@@ -1615,25 +1615,25 @@ static struct captest_case_program program_cases[] = {
 		},
 
 		.ops = {
-			{ .t = CAPVM_OP_SPLIT, .u.split = { .cont = 3, .new = 1 }},
+			{ .t = CAPVM_OP_SPLIT, .u.split = { .greedy = 3, .nongreedy = 1 }},
 			{ .t = CAPVM_OP_CHARCLASS, .u.charclass_id = 0 },
 			{ .t = CAPVM_OP_JMP, .u.jmp = 0 },
 			{ .t = CAPVM_OP_SAVE, .u.save = 0 },
-			{ .t = CAPVM_OP_SPLIT, .u.split = { .cont = 5, .new = 7 }},
+			{ .t = CAPVM_OP_SPLIT, .u.split = { .greedy = 5, .nongreedy = 7 }},
 			{ .t = CAPVM_OP_ANCHOR, .u.anchor = CAPVM_ANCHOR_START },
 
 			{ .t = CAPVM_OP_JMP, .u.jmp = 9 }, /* jump after |() */
 			{ .t = CAPVM_OP_SAVE, .u.save = 4 },
 			{ .t = CAPVM_OP_SAVE, .u.save = 5 },
 
-			{ .t = CAPVM_OP_SPLIT, .u.split = { .cont = 4, .new = 10 }},
+			{ .t = CAPVM_OP_SPLIT, .u.split = { .greedy = 4, .nongreedy = 10 }},
 
 			{ .t = CAPVM_OP_SAVE, .u.save = 2 },
 			{ .t = CAPVM_OP_SAVE, .u.save = 3 },
 			{ .t = CAPVM_OP_SAVE, .u.save = 6 },
 			{ .t = CAPVM_OP_SAVE, .u.save = 7 },
 			{ .t = CAPVM_OP_SAVE, .u.save = 1 },
-			{ .t = CAPVM_OP_SPLIT, .u.split = { .cont = 18, .new = 16 }},
+			{ .t = CAPVM_OP_SPLIT, .u.split = { .greedy = 18, .nongreedy = 16 }},
 			{ .t = CAPVM_OP_CHARCLASS, .u.charclass_id = 0 },
 			{ .t = CAPVM_OP_JMP, .u.jmp = 15 },
 			{ .t = CAPVM_OP_MATCH },
@@ -1656,15 +1656,15 @@ static struct captest_case_program program_cases[] = {
 			[0] = { .t = CAPVM_OP_SAVE, .u.save = 0 },
 			[1] = { .t = CAPVM_OP_ANCHOR, .u.anchor = CAPVM_ANCHOR_START },
 			[2] = { .t = CAPVM_OP_SAVE, .u.save = 2 },
-			[3] = { .t = CAPVM_OP_SPLIT, .u.split = { .cont = 4, .new = 6 }},
+			[3] = { .t = CAPVM_OP_SPLIT, .u.split = { .greedy = 4, .nongreedy = 6 }},
 			[4] = { .t = CAPVM_OP_ANCHOR, .u.anchor = CAPVM_ANCHOR_END },
 
 		        /* [5] = { .t = CAPVM_OP_JMP, .u.jmp = 7 }, */
-		        [5] = { .t = CAPVM_OP_SPLIT, .u.split = { .cont = 7, .new = 9 }},
+		        [5] = { .t = CAPVM_OP_SPLIT, .u.split = { .greedy = 7, .nongreedy = 9 }},
 
 			[6] = { .t = CAPVM_OP_CHAR, .u.chr = 'x' },
 			[7] = { .t = CAPVM_OP_SAVE, .u.save = 3 },
-			[8] = { .t = CAPVM_OP_SPLIT, .u.split = { .cont = 2, .new = 9 }},
+			[8] = { .t = CAPVM_OP_SPLIT, .u.split = { .greedy = 2, .nongreedy = 9 }},
 			[9] = { .t = CAPVM_OP_ANCHOR, .u.anchor = CAPVM_ANCHOR_END },
 			[10] = { .t = CAPVM_OP_SAVE, .u.save = 1 },
 			[11] = { .t = CAPVM_OP_MATCH },
