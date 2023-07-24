@@ -15,6 +15,9 @@ BUILD_IMPOSSIBLE="attempting to use .OBJDIR other than .CURDIR"
 
 # targets
 all::  mkdir .WAIT dep .WAIT lib prog
+.if make(fuzz)
+fuzz:: mkdir
+.endif
 doc::  mkdir
 dep::
 gen::
@@ -30,6 +33,19 @@ DOT    ?= dot
 RE     ?= re
 BUILD  ?= build
 PREFIX ?= /usr/local
+
+# libfsm has EXPENSIVE_CHECKS which are a superset of assertions;
+# this is here just so CI can only set one flag at a time.
+.if defined(EXPENSIVE_CHECKS)
+CFLAGS += -DEXPENSIVE_CHECKS
+DEBUG ?= 1
+.endif
+
+# combined just to save time in CI
+.if defined(AUSAN)
+ASAN  ?= 1
+UBSAN ?= 1
+.endif
 
 # ${unix} is an arbitrary variable set by sys.mk
 .if defined(unix)

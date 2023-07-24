@@ -17,6 +17,10 @@
 #include <fsm/walk.h>
 #include <fsm/alloc.h>
 
+#if EXPENSIVE_CHECKS
+#include <fsm/print.h>
+#endif
+
 #include <adt/edgeset.h>
 #include <adt/hash.h>
 #include <adt/pv.h>

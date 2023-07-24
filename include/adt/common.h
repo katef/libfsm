@@ -20,6 +20,10 @@
 #define EXPENSIVE_CHECKS 0
 #endif
 
+#if EXPENSIVE_CHECKS && NDEBUG
+#error NDEBUG with EXPENSIVE_CHECKS
+#endif
+
 /* If set to non-zero, this build should reject inputs as unsupported
  * that lead to uninteresting failures while fuzzing -- for example,
  * it's not surprising that `(some regex){1000000}` can hit the

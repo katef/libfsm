@@ -99,7 +99,7 @@ print(const struct fsm *fsm, enum implementation impl,
 
 		case IMPL_INTERPRET:
 			assert(!"unreached");
-			break;
+			abort();
 		}
 
 		if (e == -1) {
@@ -114,10 +114,14 @@ print(const struct fsm *fsm, enum implementation impl,
 		fprintf(f, "use std::slice;\n");
 		fprintf(f, "\n");
 
+		// XXX: fsm_main shouldn't return Option<usize>, Option<u64> or a bitfield type
 		fprintf(f, "#[no_mangle]\n");
 		fprintf(f, "pub extern \"C\" fn retest_trampoline(ptr: *const c_uchar, len: usize) -> i64 {\n");
 		fprintf(f, "    let a: &[u8] = unsafe { slice::from_raw_parts(ptr, len as usize) };\n");
-		fprintf(f, "    fsm_main(a).unwrap_or(-1)\n");
+		fprintf(f, "    match fsm_main(a) {\n");
+		fprintf(f, "    Some(u) => u as i64,\n"); // XXX: we lose info for the i64 ABI
+		fprintf(f, "    None => -1,\n");
+		fprintf(f, "    }\n");
 		fprintf(f, "}\n");
 	}
 
@@ -152,7 +156,7 @@ compile(enum implementation impl,
 
 	case IMPL_RUST:
 		if (0 != systemf("%s %s --crate-type dylib %s -o %s",
-				"rustc", "--edition 2018",
+				"rustc", "--edition 2021",
 				tmp_src, tmp_so))
 		{
 			return 0;
@@ -293,7 +297,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 
 	case IMPL_INTERPRET:
 		assert(!"unreached");
-		break;
+		abort();
 	}
 
 	if (!print(fsm, r->impl, tmp_src)) {

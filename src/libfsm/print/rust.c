@@ -65,6 +65,18 @@ cmp_operator(int cmp)
 	}
 }
 
+static int
+has_op(const struct dfavm_op_ir *op, enum dfavm_op_instr instr)
+{
+	for ( ; op != NULL; op = op->next) {
+		if (op->instr == instr) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 static void
 print_label(FILE *f, const struct dfavm_op_ir *op)
 {
@@ -129,24 +141,19 @@ print_fetch(FILE *f)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+fsm_print_rustfrag(FILE *f, const struct dfavm_assembler_ir *a,
+	const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
 	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
-	static const struct dfavm_assembler_ir zero;
-	struct dfavm_assembler_ir a;
 	struct dfavm_op_ir *op;
 	bool fallthrough;
 
-	static const struct fsm_vm_compile_opts vm_opts = { FSM_VM_COMPILE_DEFAULT_FLAGS, FSM_VM_COMPILE_VM_V1, NULL };
-
 	assert(f != NULL);
-	assert(ir != NULL);
+	assert(a != NULL);
 	assert(opt != NULL);
 	assert(cp != NULL);
-
-	a = zero;
 
 	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
 	 * We'll need that in order to be able to use the leaf callback here. */
@@ -155,10 +162,6 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
 	(void) cp;
-
-	if (!dfavm_compile_ir(&a, ir, vm_opts)) {
-		return -1;
-	}
 
 	/*
 	 * We only output labels for ops which are branched to. This gives
@@ -170,8 +173,8 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		l = START;
 
-		for (op = a.linked; op != NULL; op = op->next) {
-			if (op == a.linked || op->num_incoming > 0) {
+		for (op = a->linked; op != NULL; op = op->next) {
+			if (op == a->linked || op->num_incoming > 0) {
 				op->index = l++;
 			}
 		}
@@ -180,8 +183,8 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	/*
 	 * Only declare variables if we're actually going to use them.
 	 */
-	if (a.linked->cmp == VM_CMP_ALWAYS && a.linked->instr == VM_OP_STOP) {
-		assert(a.linked->next == NULL);
+	if (a->linked->cmp == VM_CMP_ALWAYS && a->linked->instr == VM_OP_STOP) {
+		assert(a->linked->next == NULL);
 		fprintf(f, "\n");
 	} else {
 		switch (opt->io) {
@@ -205,8 +208,8 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	}
 
 	fprintf(f, "    pub enum Label {\n       ");
-	for (op = a.linked; op != NULL; op = op->next) {
-		if (op == a.linked || op->num_incoming > 0) {
+	for (op = a->linked; op != NULL; op = op->next) {
+		if (op == a->linked || op->num_incoming > 0) {
 			fprintf(f, " ");
 			print_label(f, op);
 			fprintf(f, ",");
@@ -216,7 +219,7 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	fprintf(f, "    }\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "    let mut l = Ls;\n");
+	fprintf(f, "    let %sl = Ls;\n", has_op(a->linked, VM_OP_BRANCH) ? "mut " : "");
 	fprintf(f, "\n");
 
 	fprintf(f, "    loop {\n");
@@ -224,9 +227,9 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 	fallthrough = true;
 
-	for (op = a.linked; op != NULL; op = op->next) {
-		if (op == a.linked || op->num_incoming > 0) {
-			if (op != a.linked) {
+	for (op = a->linked; op != NULL; op = op->next) {
+		if (op == a->linked || op->num_incoming > 0) {
+			if (op != a->linked) {
 				if (fallthrough) {
 					fprintf(f, "                ");
 					print_jump(f, op);
@@ -351,8 +354,6 @@ fsm_print_rustfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	fprintf(f, "        }\n");
 	fprintf(f, "    }\n");
 
-	dfavm_opasm_finalize_op(&a);
-
 	return 0;
 }
 
@@ -360,14 +361,24 @@ static int
 fsm_print_rust_complete(FILE *f, const struct ir *ir,
 	const struct fsm_options *opt, const char *prefix, const char *cp)
 {
+	static const struct dfavm_assembler_ir zero;
+	static const struct fsm_vm_compile_opts vm_opts = { FSM_VM_COMPILE_DEFAULT_FLAGS, FSM_VM_COMPILE_VM_V1, NULL };
+	struct dfavm_assembler_ir a;
+
 	assert(f != NULL);
 	assert(ir != NULL);
 	assert(opt != NULL);
 
-	if (opt->fragment) {
-		fsm_print_rustfrag(f, ir, opt, cp,
-			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
+	a = zero;
+
+	if (!dfavm_compile_ir(&a, ir, vm_opts)) {
 		return -1;
+	}
+
+	if (opt->fragment) {
+		fsm_print_rustfrag(f, &a, ir, opt, cp,
+			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
+		goto error;
 	}
 
 	fprintf(f, "\n");
@@ -383,13 +394,15 @@ fsm_print_rust_complete(FILE *f, const struct ir *ir,
 
 	case FSM_IO_STR:
 		/* e.g. dbg!(fsm_main("xabces")); */
-		fprintf(f, "(input: &str) -> Option<usize> {\n");
+		fprintf(f, "(%sinput: &str) -> Option<usize> {\n",
+			has_op(a.linked, VM_OP_FETCH) ? "" : "_");
 		fprintf(f, "    use Label::*;\n");
 		break;
 
 	case FSM_IO_PAIR:
 		/* e.g. dbg!(fsm_main("xabces".as_bytes())); */
-		fprintf(f, "(input: &[u8]) -> Option<usize> {\n");
+		fprintf(f, "(%sinput: &[u8]) -> Option<usize> {\n",
+			has_op(a.linked, VM_OP_FETCH) ? "" : "_");
 		fprintf(f, "    use Label::*;\n");
 		break;
 
@@ -398,17 +411,25 @@ fsm_print_rust_complete(FILE *f, const struct ir *ir,
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_print_rustfrag(f, ir, opt, cp,
+	fsm_print_rustfrag(f, &a, ir, opt, cp,
 		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
+
+	dfavm_opasm_finalize_op(&a);
 
 	if (ferror(f)) {
 		return -1;
 	}
 
 	return 0;
+
+error:
+
+	dfavm_opasm_finalize_op(&a);
+
+	return -1;
 }
 
 int

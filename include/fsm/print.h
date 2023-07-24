@@ -15,23 +15,24 @@ struct fsm;
  * Print an FSM to the given file stream. The output is written in the format
  * specified. The available formats are:
  *
- *  fsm_print_api    - C code which calls the fsm(3) API
- *  fsm_print_awk    - awk code (gawk dialect)
- *  fsm_print_c      - ISO C90 code
- *  fsm_print_dot    - Graphviz Dot format, intended for rendering graphically
- *  fsm_print_fsm    - fsm(5) .fsm format, suitable for parsing by fsm(1)
- *  fsm_print_ir     - Codegen IR as Dot
- *  fsm_print_irjson - Codegen IR as JSON
- *  fsm_print_json   - JavaScript Object Notation
- *  fsm_print_vmc    - ISO C90 code, VM style
- *  fsm_print_vmdot  - Graphviz Dot format, showing VM opcodes
- *  fsm_print_rust   - Rust code
- *  fsm_print_sh     - Shell script (bash dialect)
- *  fsm_print_go     - Go code
+ *  fsm_print_api           - C code which calls the fsm(3) API
+ *  fsm_print_awk           - awk code (gawk dialect)
+ *  fsm_print_c             - ISO C90 code
+ *  fsm_print_dot           - Graphviz Dot format, intended for rendering graphically
+ *  fsm_print_fsm           - fsm(5) .fsm format, suitable for parsing by fsm(1)
+ *  fsm_print_ir            - Codegen IR as Dot
+ *  fsm_print_irjson        - Codegen IR as JSON
+ *  fsm_print_json          - JavaScript Object Notation
+ *  fsm_print_vmc           - ISO C90 code, VM style
+ *  fsm_print_vmdot         - Graphviz Dot format, showing VM opcodes
+ *  fsm_print_rust          - Rust code
+ *  fsm_print_sh            - Shell script (bash dialect)
+ *  fsm_print_go            - Go code
+ *  fsm_print_goasm/vmasm_* - Assembly in various dialects
+ *  fsm_print_vmops_*       - VM opcodes as a datastructure
  *
  * The output options may be NULL, indicating to use defaults.
  *
- * TODO: what to return?
  * TODO: explain constraints
  *
  * Returns 0, or -1 on error and errno will be set. An errno of ENOTSUP means

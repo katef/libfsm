@@ -6,6 +6,7 @@ on: [ push, pull_request ]
 env:
   pcre2: pcre2-10.40
   wc: wc
+  seeds: seeds
   build: build
   cvtpcre: build/test/retest
   prefix: prefix
@@ -70,7 +71,7 @@ jobs:
       id: cache-cvtpcre
       with:
         path: ${{ env.cvtpcre }}
-        key: cvtpcre-bmake-ubuntu-gcc-DEBUG-ASAN-${{ github.sha }}-${{ env.pcre2 }}
+        key: cvtpcre-bmake-ubuntu-gcc-DEBUG-AUSAN-${{ github.sha }}-${{ env.pcre2 }}
 
     - name: Fetch build
       if: steps.cache-cvtpcre.outputs.cache-hit != 'true'
@@ -78,7 +79,7 @@ jobs:
       id: cache-build
       with:
         path: ${{ env.build }}
-        key: build-bmake-ubuntu-gcc-DEBUG-ASAN-${{ github.sha }} # arbitary build, just for cvtpcre
+        key: build-bmake-ubuntu-gcc-DEBUG-AUSAN-${{ github.sha }} # arbitary build, just for cvtpcre
 
     - name: Convert PCRE suite
       if: steps.cache-cvtpcre.outputs.cache-hit != 'true'
@@ -135,11 +136,11 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        san: [ NO_SANITIZER, ASAN, UBSAN, MSAN, EFENCE ] # NO_SANITIZER=1 is a no-op
+        san: [ NO_SANITIZER, AUSAN, MSAN, EFENCE, FUZZER ] # NO_SANITIZER=1 is a no-op
         os: [ ubuntu ]
         cc: [ clang, gcc ]
         make: [ bmake ] # we test makefiles separately
-        debug: [ DEBUG, EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op
+        debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
@@ -149,6 +150,8 @@ jobs:
             san: MSAN # not supported
           - os: macos
             make: pmake # not packaged
+          - san: FUZZER
+            cc: gcc # -fsanitize=fuzzer is clang-only
 
     steps:
     - name: Fetch checkout
@@ -186,28 +189,44 @@ jobs:
       id: cpu-cores
 
     - name: Make
-      if: steps.cache-build.outputs.cache-hit != 'true'
+      if: matrix.san != 'FUZZER' && steps.cache-build.outputs.cache-hit != 'true'
       run: |
         # note: lexer.h first, because parser.? depends on it
         find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
         find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
         ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config CC=${{ matrix.cc }} NODOC=1
 
+    # We aren't building the CLI executables here, just the fuzzer
+    # matrix.san=FUZZER implies UBSAN and ASAN (but not MSAN, MSAN is incompatible with ASAN)
+    # XXX: needing to explicitly mkdir here is a makefile bug
+    - name: Make (Fuzzer)
+      if: matrix.san == 'FUZZER' && steps.cache-build.outputs.cache-hit != 'true'
+      run: |
+        # note: lexer.h first, because parser.? depends on it
+        find . -name 'lexer.?' -exec touch '{}' \; # workaround for git checkout timestamps
+        find . -name 'parser.?' -exec touch '{}' \; # workaround for git checkout timestamps
+        ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 AUSAN=1 PKGCONF=pkg-config CC=${{ matrix.cc }} NODOC=1 mkdir
+        ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 AUSAN=1 PKGCONF=pkg-config CC=${{ matrix.cc }} NODOC=1 fuzz
+
   # testing different bmake dialects
   # the goal here is to excercise the build system, not the code
   # we don't care about e.g. different compilers here
+  #
+  # I'm including EXPENSIVE_CHECKS here just so we have some coverage
+  # of the build during CI, even if we don't run that during tests.
   test_makefiles:
     name: "Test (Makefiles) ${{ matrix.make }} ${{ matrix.os }} ${{ matrix.debug }}"
     runs-on: ${{ matrix.os }}-latest
-    needs: [ checkout ]
+    needs: [ checkout, build ]
 
     strategy:
       fail-fast: false
       matrix:
+        san: [ NO_SANITIZER ] # NO_SANITIZER=1 is a no-op
         os: [ ubuntu ]
         cc: [ clang ]
         make: [ bmake, pmake ]
-        debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
+        debug: [ EXPENSIVE_CHECKS, DEBUG, RELEASE ] # RELEASE=1 is a no-op
         exclude:
           - os: macos
             make: pmake # not packaged
@@ -219,6 +238,24 @@ jobs:
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
+
+    # An arbitary build.
+    - name: Fetch build
+      uses: actions/cache@v3
+      id: cache-build
+      with:
+        path: ${{ env.build }}
+        key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+
+    # We don't need to build the entire repo to know that the makefiles work,
+    # I'm just deleting a couple of .o files and rebuilding those instead.
+    - name: Delete something
+      if: steps.cache-build.outputs.cache-hit == 'true'
+      run: find ${{ env.build }} -type f -name '*.o' | sort -r | head -5 | xargs rm
+
+    - name: Outdate something
+      if: steps.cache-build.outputs.cache-hit == 'true'
+      run: find ${{ env.wc }} -type f -name '*.c' | sort -r | head -5 | xargs touch
 
     - name: Dependencies (Ubuntu)
       if: matrix.os == 'ubuntu'
@@ -251,8 +288,16 @@ jobs:
       # Same for lx
       run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' LX='true; echo lx' CC=${{ matrix.cc }} NODOC=1 test
 
+    # there's an unfixed intermittent makefile bug under -j for
+    # kmkf duplicate install targets, it's not interesting for libfsm's CI,
+    # so I'm retrying on error here. # github.com/katef/kmkf/issues/14
     - name: Install
-      run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.debug }}=1 PKGCONF=pkg-config PREFIX=../${{ env.prefix }} NODOC=1 install
+      uses: nick-fields/retry@v2.8.3
+      with:
+        timeout_seconds: 10 # required, but not a problem for the kmkf bug
+        max_attempts: 3
+        retry_on: error
+        command: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.debug }}=1 PKGCONF=pkg-config PREFIX=../${{ env.prefix }} NODOC=1 install
 
   test_san:
     name: "Test (Sanitizers) ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
@@ -262,11 +307,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        san: [ ASAN, UBSAN, MSAN, EFENCE ]
+        san: [ AUSAN, MSAN, EFENCE ]
         os: [ ubuntu ]
         cc: [ clang, gcc ]
         make: [ bmake ]
-        debug: [ DEBUG, EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op
+        debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
@@ -315,6 +360,107 @@ jobs:
       # I don't want to build SID just for sake of its -l test
       run: ${{ matrix.make }} -r -j $((${{ steps.cpu-cores.outputs.count }} + 1)) -C ${{ env.wc }} BUILD=../${{ env.build }} ${{ matrix.san }}=1 ${{ matrix.debug }}=1 PKGCONF=pkg-config SID='true; echo sid' CC=${{ matrix.cc }} NODOC=1 LX=../${{ env.build }}/bin/lx test
 
+  test_fuzz:
+    name: "Fuzz (mode ${{ matrix.mode }}) ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
+    runs-on: ${{ matrix.os }}-latest
+    timeout-minutes: 5 # this should never be reached, it's a safeguard for bugs in the fuzzer itself
+    needs: [ build ]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        san: [ FUZZER ]
+        os: [ ubuntu ]
+        cc: [ clang ]
+        make: [ bmake ]
+        debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
+        mode: [ m, p, d ]
+        exclude:
+          - os: macos
+            cc: gcc # it's clang anyway
+
+    steps:
+    - name: Fetch checkout
+      uses: actions/cache@v3
+      id: cache-checkout
+      with:
+        path: ${{ env.wc }}
+        key: checkout-${{ github.sha }}
+
+    - name: Dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu'
+      run: |
+        uname -a
+        sudo apt-get install bmake
+        ${{ matrix.cc }} --version
+
+    - name: Dependencies (MacOS)
+      if: matrix.os == 'macos'
+      run: |
+        uname -a
+        brew update
+        brew install bmake
+        ${{ matrix.cc }} --version
+
+    - name: Fetch build
+      uses: actions/cache@v3
+      id: cache-build
+      with:
+        path: ${{ env.build }}
+        key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+
+    # note we do the fuzzing unconditionally; each run adds to the corpus
+    - name: Restore seeds (mode ${{ matrix.mode }})
+      uses: actions/cache/restore@v3
+      id: cache-seeds
+      with:
+        path: ${{ env.seeds }}-${{ matrix.mode }}
+        key: seeds-${{ matrix.mode }}-${{ matrix.debug }}
+
+    - name: mkdir seeds
+      if: steps.cache-seeds.outputs.cache-hit != 'true'
+      run: mkdir -p ${{ env.seeds }}-${{ matrix.mode }}
+
+    - name: Get number of CPU cores
+      uses: SimenB/github-actions-cpu-cores@v1
+      id: cpu-cores
+
+    - name: Fuzz
+      env:
+        MODE: ${{ env.mode }}
+        UBSAN_OPTIONS: ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
+      run: ./${{ env.build }}/fuzz/fuzzer -fork=$((${{ steps.cpu-cores.outputs.count }} + 1)) -max_total_time=60 ${{ env.seeds }}-${{ matrix.mode }}
+
+    # saving the cache would fail because this key already exists,
+    # so I'm just explicitly purging by key here.
+    # the key contains "-${{ matrix.debug }}" so we don't lose seeds
+    # found from another instance in the matrix when purging.
+    - name: Purge cached seeds (mode ${{ matrix.mode }}-${{ matrix.debug }})
+      if: steps.cache-seeds.outputs.cache-hit == 'true'
+      run: |
+        set +e
+        gh extension install actions/gh-actions-cache
+        gh actions-cache delete ${{ steps.cache-seeds.outputs.cache-primary-key }} -R ${{ github.repository }} --confirm
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # if: always() means we keep these even on error, so we don't need to re-find
+    # the same seeds for a given bug.
+    # The explicit cache/restore and cache/save actions are just for that.
+    - name: Save seeds (mode ${{ matrix.mode }}-${{ matrix.debug }})
+      uses: actions/cache/save@v3
+      if: always()
+      with:
+        path: ${{ env.seeds }}-${{ matrix.mode }}
+        key: ${{ steps.cache-seeds.outputs.cache-primary-key }}
+
+    # nothing to do with the caching, I'm uploading the seeds so a developer can grab them to fuzz locally
+    - name: Upload seeds (mode ${{ matrix.mode }}-${{ matrix.debug }})
+      uses: actions/upload-artifact@v3
+      with:
+        name: seeds-${{ matrix.mode }}-${{ matrix.debug }}
+        path: ${{ env.seeds }}-${{ matrix.mode }}
+
   test_pcre:
     name: "Test (PCRE suite) ${{ matrix.lang }} ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
     runs-on: ${{ matrix.os }}-latest
@@ -323,12 +469,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        san: [ ASAN, UBSAN, MSAN, EFENCE ]
+        san: [ AUSAN, MSAN, EFENCE ]
         os: [ ubuntu ]
         cc: [ clang, gcc ]
         make: [ bmake ]
-        debug: [ DEBUG, EXPENSIVE_CHECKS, RELEASE ] # RELEASE=1 is a no-op
-        lang: [ "vm -x v1", "vm -x v2", asm, c, vmc, vmops, go, goasm ]
+        debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
+        lang: [ "vm -x v1", "vm -x v2", asm, c, rust, vmc, vmops, go, goasm ]
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
@@ -371,7 +517,7 @@ jobs:
       id: cache-cvtpcre
       with:
         path: ${{ env.cvtpcre }}
-        key: cvtpcre-bmake-ubuntu-gcc-DEBUG-ASAN-${{ github.sha }}-${{ env.pcre2 }}
+        key: cvtpcre-bmake-ubuntu-gcc-DEBUG-AUSAN-${{ github.sha }}-${{ env.pcre2 }}
 
     - name: Run PCRE suite (${{ matrix.lang }})
       run: CC=${{ matrix.cc }} ./${{ env.build }}/bin/retest -O1 -l ${{ matrix.lang }} ${{ env.cvtpcre }}/*.tst
