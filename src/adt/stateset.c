@@ -15,10 +15,9 @@
 #include <adt/stateset.h>
 #include <adt/hashrec.h>
 
-/* FIXME: This should use the same define as currently exists in
- * src/fsm/internal.h. This is used here because the calls to
+/* This is used here because the calls to
  * state_set_contains change the order of growth. */
-#define EXPENSIVE_CHECKS 0
+#include <adt/common.h>
 
 
 /*
