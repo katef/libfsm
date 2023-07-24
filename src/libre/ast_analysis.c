@@ -1048,8 +1048,6 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 		/* flow ANCHORED_START and ANCHORED_END flags upward */
 		{
-			int after_always_consumes = 0;
-
 			for (i = 0; i < n->u.concat.count; i++) {
 				struct ast_expr *child = n->u.concat.n[i];
 				if (child->flags & AST_FLAG_ANCHORED_START) {
@@ -1062,7 +1060,6 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				if (always_consumes_input(child)) {
 					LOG(3 - LOG_ANCHORING,
 					    "%s: child %zd always consumes input\n", __func__, i);
-					after_always_consumes = 1;
 				}
 			}
 		}
@@ -1525,7 +1522,6 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 	case AST_EXPR_ALT: {
 		int any_sat = 0;
 		int all_set_followed_by_consuming = 1;
-		int all_set_followed_by_consuming_newline = 1;
 		int any_set_followed_by_consuming_newline = 0;
 		int all_set_before_start_anchor = 1;
 
@@ -1554,7 +1550,6 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				all_set_before_start_anchor &= child_env.before_start_anchor;
 
 				any_set_followed_by_consuming_newline |= child_env.followed_by_consuming_newline;
-				all_set_followed_by_consuming_newline &= child_env.followed_by_consuming_newline;
 
 				any_sat = 1;
 			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED_CAPTURE
