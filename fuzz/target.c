@@ -1615,6 +1615,7 @@ get_run_mode(void)
 	}
 
 	switch (mode[0]) {
+	case '\0': return MODE_REGEX; /* default */
 	case 'r': return MODE_REGEX;
 	case 's': return MODE_REGEX_SINGLE_ONLY;
 	case 'm': return MODE_REGEX_MULTI_ONLY;
