@@ -362,7 +362,7 @@ subtree_represents_character_class(const struct ast_expr *expr, uint64_t cc[4])
 		    || t->type != AST_ENDPOINT_LITERAL) {
 			return false;
 		}
-		for (uint64_t c = (uint64_t)f->u.literal.c; c <= (uint64_t)t->u.literal.c; c++) {
+		for (uint64_t c = (uint8_t)f->u.literal.c; c <= (uint8_t)t->u.literal.c; c++) {
 			u64bitset_set(cc, (uint8_t)c);
 		}
 		return true;
@@ -404,7 +404,7 @@ subtree_represents_character_class(const struct ast_expr *expr, uint64_t cc[4])
 		}
 
 		for (uint64_t i = 0; i < 256; i++) {
-			if (i >= (uint64_t)f->u.literal.c && i <= (uint64_t)f->u.literal.c) {
+			if (i >= (uint8_t)f->u.literal.c && i <= (uint8_t)f->u.literal.c) {
 				u64bitset_set(cc, i);
 			}
 		}
@@ -827,7 +827,7 @@ capvm_compile_iter(struct capvm_compile_env *env,
 
 		if (expr->re_flags & RE_ICASE) {
 			uint64_t cc[4] = { 0 };
-			u64bitset_set(cc, (uint64_t)expr->u.literal.c);
+			u64bitset_set(cc, (uint8_t)expr->u.literal.c);
 
 			op->t = CAPVM_OP_CHARCLASS;
 			make_charclass_case_insensitive(cc);
