@@ -765,7 +765,7 @@ comp_iter(struct comp_env *env,
 
 	{
 		const size_t capture_id_words = (env->max_capture_id == AST_NO_MAX_CAPTURE_ID)
-		    ? 0
+		    ? 1		/* do non-zero allocation to silence EFENCE */
 		    : ((env->max_capture_id)/64 + 1);
 		active_capture_ids = f_calloc(env->alloc, capture_id_words,
 		    sizeof(active_capture_ids[0]));

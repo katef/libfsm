@@ -77,7 +77,9 @@ capvm_program_copy(const struct fsm_alloc *alloc,
 	ops = f_calloc(alloc, src->used, sizeof(ops[0]));
 	if (ops == NULL) { goto cleanup; }
 
-	sets = f_calloc(alloc, src->char_classes.count,
+	sets = f_calloc(alloc,
+	    /* do non-zero allocation to silence EFENCE */
+	    src->char_classes.count == 0 ? 1 : src->char_classes.count,
 	    sizeof(src->char_classes.sets[0]));
 	if (sets == NULL) { goto cleanup; }
 
