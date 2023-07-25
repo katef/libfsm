@@ -414,7 +414,11 @@ subtree_represents_character_class(const struct ast_expr *expr, uint64_t cc[4])
 		}
 
 		uint64_t neg_cc[4];
-		if (subtree_represents_character_class(expr->u.subtract.b, neg_cc)) {
+		if (expr->u.subtract.b->type == AST_EXPR_EMPTY) {
+			for (size_t cc_i = 0; cc_i < 4; cc_i++) {
+				neg_cc[cc_i] = (uint64_t)0;
+			}
+		} else if (subtree_represents_character_class(expr->u.subtract.b, neg_cc)) {
 			for (size_t cc_i = 0; cc_i < 4; cc_i++) {
 				cc[cc_i] &=~ neg_cc[cc_i];
 			}
