@@ -44,8 +44,8 @@
 struct state_set {
 	const struct fsm_alloc *alloc;
 	fsm_state_t *a;
-	size_t i;
-	size_t n;
+	size_t i;		/* used */
+	size_t n;		/* ceil */
 };
 
 int
