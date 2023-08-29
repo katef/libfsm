@@ -223,9 +223,9 @@ edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
 	assert(set->count <= set->ceil);
 
 #if LOG_BITSET
-		fprintf(stderr, " -- edge_set_add: symbols [0x%lx, 0x%lx, 0x%lx, 0x%lx] -> state %d on %p\n",
-		    symbols[0], symbols[1], symbols[2], symbols[3],
-		    state, (void *)set);
+	fprintf(stderr, " -- edge_set_add: symbols [0x%lx, 0x%lx, 0x%lx, 0x%lx] -> state %d on %p\n",
+	    symbols[0], symbols[1], symbols[2], symbols[3],
+	    state, (void *)set);
 #endif
 
 	/* Linear search for a group with the same destination
