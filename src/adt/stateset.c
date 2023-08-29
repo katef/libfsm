@@ -284,6 +284,8 @@ state_set_add(struct state_set **setp, const struct fsm_alloc *alloc,
 		set->i = 1;
 	}
 
+	/* This assert can be pretty expensive in -O0 but in -O3 it has very
+	 * little impact on the overall runtime. */
 	assert(state_set_contains(set, state));
 
 	return 1;
