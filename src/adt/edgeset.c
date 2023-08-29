@@ -194,7 +194,7 @@ enum fsp_res {
  * which includes the position immediately following the last entry. Return an enum
  * which indicates whether state is already present. */
 static enum fsp_res
-find_state_position_bsearch(const struct edge_set *set, fsm_state_t state, size_t *dst)
+find_state_position(const struct edge_set *set, fsm_state_t state, size_t *dst)
 {
 	size_t lo = 0, hi = set->count;
 	if (LOG_BSEARCH) {
@@ -277,63 +277,6 @@ find_state_position_bsearch(const struct edge_set *set, fsm_state_t state, size_
 	assert(mid == set->count || set->groups[mid].to > state);
 	*dst = mid;
 	return FSP_FOUND_INSERT_POSITION;
-}
-
-static enum fsp_res
-find_state_position_linear(const struct edge_set *set, fsm_state_t state, size_t *dst)
-{
-	/* Linear search for a group with the same destination
-	 * state, or the position where that group would go. */
-	size_t i;
-	for (i = 0; i < set->count; i++) {
-		const struct edge_group *eg = &set->groups[i];
-		if (eg->to == state) {
-			*dst = i;
-			return FSP_FOUND_VALUE_PRESENT;
-		} else if (eg->to > state) {
-			break;	/* will shift down and insert below */
-		} else {
-			continue;
-		}
-	}
-
-	*dst = i;
-	return FSP_FOUND_INSERT_POSITION;
-}
-
-/* Find the state in the edge set, or where it would be inserted if not present. */
-static enum fsp_res
-find_state_position(const struct edge_set *set, fsm_state_t state, size_t *dst)
-{
-	/* 0: linear, 1: bsearch, -1: call both, to check result */
-#define USE_BSEARCH 1
-
-	switch (USE_BSEARCH) {
-	case 0:
-		return find_state_position_linear(set, state, dst);
-	case 1:
-		return find_state_position_bsearch(set, state, dst);
-	case -1:
-	{
-		size_t dst_linear, dst_bsearch;
-		enum fsp_res res_linear = find_state_position_linear(set, state, &dst_linear);
-		enum fsp_res res_bsearch = find_state_position_bsearch(set, state, &dst_bsearch);
-
-		if (res_linear != res_bsearch || dst_linear != dst_bsearch) {
-			fprintf(stderr, "%s: disagreement for state %d: linear res %d, dst %zu, bsearch res %d, dst %zu\n",
-			    __func__, state,
-			    res_linear, dst_linear,
-			    res_bsearch, dst_bsearch);
-			for (size_t i = 0; i < set->count; i++) {
-				fprintf(stderr, "set->groups[%zu].to: %d\n", i, set->groups[i].to);
-			}
-		}
-		assert(res_linear == res_bsearch);
-		assert(dst_linear == dst_bsearch);
-		*dst = dst_linear;
-		return res_linear;
-	}
-	}
 }
 
 int
