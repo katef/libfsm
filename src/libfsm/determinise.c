@@ -2075,7 +2075,7 @@ sort_and_dedup_dst_buf(fsm_state_t *buf, size_t *used)
 		 * and deduplicates in the process. Add 1 to avoid a zero-
 		 * zero-length array error if QSORT_CUTOFF is 0. */
 		uint64_t bitset[QSORT_CUTOFF/64 + 1];
-		const size_t words = u64bitset_words(max - min);
+		const size_t words = u64bitset_words(max - min + 1);
 		memset(bitset, 0x00, words * sizeof(bitset[0]));
 
 		for (size_t i = 0; i < orig_used; i++) {
