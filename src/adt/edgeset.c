@@ -326,8 +326,6 @@ edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
 	switch (find_state_position(set, state, &i)) {
 	case FSP_FOUND_VALUE_PRESENT:
 		assert(i < set->count);
-		/* This API does not indicate whether that
-		 * symbol -> to edge was already present. */
 		eg = &set->groups[i];
 		for (i = 0; i < 256/64; i++) {
 			eg->symbols[i] |= symbols[i];
