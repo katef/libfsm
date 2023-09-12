@@ -409,8 +409,15 @@ jobs:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
-    # note we do the fuzzing unconditionally; each run adds to the corpus
+    # note we do the fuzzing unconditionally; each run adds to the corpus.
+    #
+    # We only run fuzzing for PRs in the base repo, this prevents attempting
+    # to purge the seed cache from a PR syncing a forked repo, which fails
+    # due to a permissions error (I'm unsure why, I think PRs from clones can't
+    # purge a cache in CI presumably for security/DoS reasons). PRs from clones
+    # still run fuzzing, just from empty, and do not save their seeds.
     - name: Restore seeds (mode ${{ matrix.mode }})
+      if: github.repository == 'katef/libfsm'
       uses: actions/cache/restore@v3
       id: cache-seeds
       with:
