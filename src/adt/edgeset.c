@@ -11,6 +11,7 @@
 #include <inttypes.h>
 
 #define LOG_BITSET 0
+#define LOG_BSEARCH 0
 
 #include "libfsm/internal.h" /* XXX: for allocating struct fsm_edge, and the edges array */
 
@@ -184,6 +185,100 @@ edge_set_advise_growth(struct edge_set **pset, const struct fsm_alloc *alloc,
 	return 1;
 }
 
+enum fsp_res {
+	FSP_FOUND_INSERT_POSITION,
+	FSP_FOUND_VALUE_PRESENT,
+};
+
+/* Use binary search to find the first position N where set->groups[N].to >= state,
+ * which includes the position immediately following the last entry. Return an enum
+ * which indicates whether state is already present. */
+static enum fsp_res
+find_state_position(const struct edge_set *set, fsm_state_t state, size_t *dst)
+{
+	size_t lo = 0, hi = set->count;
+	if (LOG_BSEARCH) {
+		fprintf(stderr, "%s: looking for %d in %p (count %zu)\n",
+		    __func__, state, (void *)set, set->count);
+	}
+
+#if EXPENSIVE_CHECKS
+	/* invariant: input is unique and sorted */
+	for (size_t i = 1; i < set->count; i++) {
+		assert(set->groups[i - 1].to < set->groups[i].to);
+	}
+#endif
+
+	if (set->count == 0) {
+		if (LOG_BSEARCH) {
+			fprintf(stderr, "%s: empty, returning 0\n", __func__);
+		}
+		*dst = 0;
+		return FSP_FOUND_INSERT_POSITION;
+	} else {
+		if (LOG_BSEARCH) {
+			fprintf(stderr, "%s: fast path: looking for %d, set->groups[last].to %d\n",
+			    __func__, state, set->groups[hi - 1].to);
+		}
+
+		/* Check the last entry so we can append in constant time. */
+		const fsm_state_t last = set->groups[hi - 1].to;
+		if (state > last) {
+			*dst = hi;
+			return FSP_FOUND_INSERT_POSITION;
+		} else if (state == last) {
+			*dst = hi - 1;
+			return FSP_FOUND_VALUE_PRESENT;
+		}
+	}
+
+	size_t mid;
+	while (lo < hi) {		/* lo <= mid < hi */
+		mid = lo + (hi - lo)/2; /* avoid overflow */
+		const struct edge_group *eg = &set->groups[mid];
+		const fsm_state_t cur = eg->to;
+		if (LOG_BSEARCH) {
+			fprintf(stderr, "%s: lo %zu, hi %zu, mid %zu, cur %d, looking for %d\n",
+			    __func__, lo, hi, mid, cur, state);
+		}
+
+		if (state == cur) {
+			*dst = mid;
+			return FSP_FOUND_VALUE_PRESENT;
+		} else if (state > cur) {
+			lo = mid + 1;
+			if (LOG_BSEARCH) {
+				fprintf(stderr, "%s: new lo %zd\n", __func__, lo);
+			}
+
+			/* Update mid if we're about to halt, because we're looking
+			 * for the first position >= state, not the last position <=. */
+			if (lo == hi) {
+				mid = lo;
+				if (LOG_BSEARCH) {
+					fprintf(stderr, "%s: special case, updating mid to %zd\n", __func__, mid);
+				}
+			}
+		} else if (state < cur) {
+			hi = mid;
+			if (LOG_BSEARCH) {
+				fprintf(stderr, "%s: new hi %zd\n", __func__, hi);
+			}
+		}
+	}
+
+	if (LOG_BSEARCH) {
+		fprintf(stderr, "%s: halting at %zd (looking for %d, cur %d)\n",
+		    __func__, mid, state, set->groups[mid].to);
+	}
+
+	/* dst is now the first position > state (== case is handled above),
+	 * which may be one past the end of the array. */
+	assert(mid == set->count || set->groups[mid].to > state);
+	*dst = mid;
+	return FSP_FOUND_INSERT_POSITION;
+}
+
 int
 edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
 	uint64_t symbols[256/64], fsm_state_t state)
@@ -223,30 +318,24 @@ edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
 	assert(set->count <= set->ceil);
 
 #if LOG_BITSET
-		fprintf(stderr, " -- edge_set_add: symbols [0x%lx, 0x%lx, 0x%lx, 0x%lx] -> state %d on %p\n",
-		    symbols[0], symbols[1], symbols[2], symbols[3],
-		    state, (void *)set);
+	fprintf(stderr, " -- edge_set_add: symbols [0x%lx, 0x%lx, 0x%lx, 0x%lx] -> state %d on %p\n",
+	    symbols[0], symbols[1], symbols[2], symbols[3],
+	    state, (void *)set);
 #endif
 
-	/* Linear search for a group with the same destination
-	 * state, or the position where that group would go. */
-	for (i = 0; i < set->count; i++) {
+	switch (find_state_position(set, state, &i)) {
+	case FSP_FOUND_VALUE_PRESENT:
+		assert(i < set->count);
 		eg = &set->groups[i];
-
-		if (eg->to == state) {
-			/* This API does not indicate whether that
-			 * symbol -> to edge was already present. */
-			size_t i;
-			for (i = 0; i < 256/64; i++) {
-				eg->symbols[i] |= symbols[i];
-			}
-			dump_edge_set(set);
-			return 1;
-		} else if (eg->to > state) {
-			break;	/* will shift down and insert below */
-		} else {
-			continue;
+		for (i = 0; i < 256/64; i++) {
+			eg->symbols[i] |= symbols[i];
 		}
+		dump_edge_set(set);
+		return 1;
+
+		break;
+	case FSP_FOUND_INSERT_POSITION:
+		break;		/* continue below */
 	}
 
 	/* insert/append at i */

@@ -1939,28 +1939,87 @@ static void
 sort_and_dedup_dst_buf(fsm_state_t *buf, size_t *used)
 {
 	const size_t orig_used = *used;
-	qsort(buf, orig_used, sizeof(buf[0]), cmp_fsm_state_t);
 
-	/* squash out duplicates */
-	size_t rd = 1;
-	size_t wr = 1;
-	while (rd < orig_used) {
-		if (buf[rd - 1] == buf[rd]) {
-			rd++;	/* skip */
-		} else {
-			buf[wr] = buf[rd];
-			rd++;
-			wr++;
+	if (orig_used <= 1) {
+		return;		/* no change */
+	}
+
+	/* Figure out what the min and max values are, because
+	 * when the difference between them is not too large it
+	 * can be significantly faster to avoid qsort here. */
+	fsm_state_t min = (fsm_state_t)-1;
+	fsm_state_t max = 0;
+	for (size_t i = 0; i < orig_used; i++) {
+		const fsm_state_t cur = buf[i];
+		if (cur < min) { min = cur; }
+		if (cur > max) { max = cur; }
+	}
+
+	/* If there's only one unique value, then we're done. */
+	if (min == max) {
+		buf[0] = min;
+		*used = 1;
+		return;
+	}
+
+/* 81920 = 10 KB buffer on the stack. This must be divisible by 64.
+ * Set to 0 to disable. */
+#define QSORT_CUTOFF 81920
+
+	if (QSORT_CUTOFF == 0 || max - min > QSORT_CUTOFF) {
+		/* If the bitset would be very large but sparse due to
+		 * extreme values, then fall back on using qsort and
+		 * then sweeping over the array to squash out
+		 * duplicates. */
+		qsort(buf, orig_used, sizeof(buf[0]), cmp_fsm_state_t);
+
+		/* squash out duplicates */
+		size_t rd = 1;
+		size_t wr = 1;
+		while (rd < orig_used) {
+			if (buf[rd - 1] == buf[rd]) {
+				rd++;	/* skip */
+			} else {
+				buf[wr] = buf[rd];
+				rd++;
+				wr++;
+			}
 		}
-	}
 
-	*used = wr;
+		*used = wr;
 #if EXPENSIVE_CHECKS
-	assert(wr <= orig_used);
-	for (size_t i = 1; i < *used; i++) {
-		assert(buf[i - 1] < buf[i]);
-	}
+		assert(wr <= orig_used);
+		for (size_t i = 1; i < *used; i++) {
+			assert(buf[i - 1] < buf[i]);
+		}
 #endif
+	} else {
+		/* Convert the array into a bitset and back, which sorts
+		 * and deduplicates in the process. Add 1 to avoid a zero-
+		 * zero-length array error if QSORT_CUTOFF is 0. */
+		uint64_t bitset[QSORT_CUTOFF/64 + 1];
+		const size_t words = u64bitset_words(max - min + 1);
+		memset(bitset, 0x00, words * sizeof(bitset[0]));
+
+		for (size_t i = 0; i < orig_used; i++) {
+			u64bitset_set(bitset, buf[i] - min);
+		}
+
+		size_t dst = 0;
+		for (size_t i = 0; i < words; i++) {
+			const uint64_t w = bitset[i];
+			if (w != 0) { /* skip empty words */
+				uint64_t bit = 0x1;
+				for (size_t b_i = 0; b_i < 64; b_i++, bit <<= 1) {
+					if (w & bit) {
+						buf[dst] = 64*i + b_i + min;
+						dst++;
+					}
+				}
+			}
+		}
+		*used = dst;
+	}
 }
 
 static int

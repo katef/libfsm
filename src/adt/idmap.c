@@ -334,7 +334,9 @@ idmap_iter(const struct idmap *m,
 			for (uint64_t b_i = 0; b_i < 64; b_i++) {
 				if (w & ((uint64_t)1 << b_i)) {
 					const unsigned v = 64*w_i + b_i;
-					cb(b->state, v, opaque);
+					if (!cb(b->state, v, opaque)) {
+						return;
+					}
 				}
 			}
 		}
@@ -371,7 +373,9 @@ idmap_iter_for_state(const struct idmap *m, fsm_state_t state_id,
 
 			if (w & ((uint64_t)1 << b_i)) {
 				const unsigned v = 64*w_i + b_i;
-				cb(b->state, v, opaque);
+				if (!cb(b->state, v, opaque)) {
+					return;
+				}
 				block_count++;
 			}
 			b_i++;
