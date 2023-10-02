@@ -21,7 +21,7 @@ PCREGREP ?= pcregrep
 #    bit of a hack.
 # 2) removes any trailing \n at the end of the input
 ${TEST_OUTDIR.tests/pcre-pcregrep}/in${n}.txt: ${TEST_SRCDIR.tests/pcre}/in${n}.re
-	${RE} -mr pcre -y ${.ALLSRC:M*.re} \
+	${RE} -FC -mr pcre -y ${.ALLSRC:M*.re} \
 	| perl -0pe 's/\\x([0-9a-zA-z]{2})/chr(hex($$1))/ge;' -e 's/\n\Z//' \
 	> $@
 
@@ -41,16 +41,16 @@ test:: ${TEST_OUTDIR.tests/pcre-pcregrep}/res${n}
 .if exists(${TEST_SRCDIR.tests/pcre}/mode${n})
 TEST_OUTDIR.tests/pcre/mode${n} != cat ${TEST_SRCDIR.tests/pcre}/mode$n
 ${TEST_OUTDIR.tests/pcre}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre}/in${n}.re
-	${RE} -F "${TEST_OUTDIR.tests/pcre/mode${n}}" -r pcre -py ${.ALLSRC:M*.re} \
+	${RE} -FC -F "${TEST_OUTDIR.tests/pcre/mode${n}}" -r pcre -py ${.ALLSRC:M*.re} \
 	> $@
 .else
 ${TEST_OUTDIR.tests/pcre}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre}/in${n}.re
-	${RE} -r pcre -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r pcre -py ${.ALLSRC:M*.re} \
 	> $@
 .endif
 
 ${TEST_OUTDIR.tests/pcre}/nfa${n}.fsm: ${TEST_SRCDIR.tests/pcre}/in${n}.re
-	${RE} -r pcre -n -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r pcre -n -py ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/pcre}/res${n}: \
@@ -64,7 +64,7 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/pcre}/res${n}
 .for n in ${TEST.tests/pcre:T:Mout*.err:R:C/^out//}
 
 ${TEST_OUTDIR.tests/pcre}/got${n}.err: ${TEST_SRCDIR.tests/pcre}/in${n}.re
-	${RE} -r pcre -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r pcre -py ${.ALLSRC:M*.re} \
 	2> $@; [ $$? -ne 0 ]
 
 ${TEST_OUTDIR.tests/pcre}/res${n}: \

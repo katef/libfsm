@@ -6,31 +6,82 @@
 
 #include <stdio.h>
 
-#include "capture_internal.h"
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+#include <fsm/alloc.h>
+#include <fsm/capture.h>
+#include <fsm/fsm.h>
+#include <fsm/pred.h>
+
+#include <adt/hash.h>
+#include <adt/idmap.h>
+
+#include <string.h>
+#include <assert.h>
+#include <errno.h>
+
+#include "internal.h"
+#include "capture.h"
+#include "capture_vm_program.h"
+#include "capture_log.h"
+#include "capture_vm.h"
+#include "endids.h"
+
+#define DEF_PROGRAMS_CEIL 4
+
+struct fsm_capture_info {
+	unsigned max_capture_id;
+
+	/* For particular end states, which captures are active? */
+	struct idmap *end_capture_map;
+
+	/* Set of capture resolution programs associated with specific
+	 * end states. */
+	struct capvm_program_set {
+		uint32_t ceil;
+		uint32_t used;
+		struct capvm_program **set;
+	} programs;
+
+	/* For particular end states, which capture programs are
+	 * associtaed with them? */
+	struct idmap *end_capvm_program_map;
+};
 
 int
 fsm_capture_init(struct fsm *fsm)
 {
 	struct fsm_capture_info *ci = NULL;
-	size_t i;
+	struct idmap *end_capture_map = NULL;
+	struct idmap *end_capvm_program_map = NULL;
 
 	ci = f_calloc(fsm->opt->alloc,
 	    1, sizeof(*ci));
 	if (ci == NULL) {
 		goto cleanup;
 	}
-	fsm->capture_info = ci;
-
-	for (i = 0; i < fsm->statealloc; i++) {
-		fsm->states[i].has_capture_actions = 0;
+	end_capture_map = idmap_new(fsm->opt->alloc);
+	if (end_capture_map == NULL) {
+		goto cleanup;
 	}
+	ci->end_capture_map = end_capture_map;
+
+	end_capvm_program_map = idmap_new(fsm->opt->alloc);
+	if (end_capvm_program_map == NULL) {
+		goto cleanup;
+	}
+	ci->end_capvm_program_map = end_capvm_program_map;
+
+	fsm->capture_info = ci;
 
 	return 1;
 
 cleanup:
-	if (ci != NULL) {
-		f_free(fsm->opt->alloc, ci);
-	}
+	f_free(fsm->opt->alloc, ci);
+	idmap_free(end_capture_map);
+	idmap_free(end_capvm_program_map);
 	return 0;
 }
 
@@ -41,783 +92,158 @@ fsm_capture_free(struct fsm *fsm)
 	if (ci == NULL) {
 		return;
 	}
-	f_free(fsm->opt->alloc, ci->buckets);
+
+	idmap_free(ci->end_capture_map);
+	idmap_free(ci->end_capvm_program_map);
+
+	for (size_t p_i = 0; p_i < ci->programs.used; p_i++) {
+		fsm_capvm_program_free(fsm->opt->alloc, ci->programs.set[p_i]);
+	}
+	f_free(fsm->opt->alloc, ci->programs.set);
+
 	f_free(fsm->opt->alloc, ci);
 	fsm->capture_info = NULL;
 }
 
 unsigned
-fsm_countcaptures(const struct fsm *fsm)
+fsm_capture_ceiling(const struct fsm *fsm)
 {
-	(void)fsm;
 	if (fsm->capture_info == NULL) {
 		return 0;
 	}
-	if (fsm->capture_info->buckets_used == 0) {
-		return 0;
-	}
 
-	/* check actual */
 #if EXPENSIVE_CHECKS
-	{
-		struct fsm_capture_info *ci = fsm->capture_info;
-		size_t i;
-		for (i = 0; i < ci->bucket_count; i++) {
-			struct fsm_capture_action_bucket *b = &ci->buckets[i];
-			if (b->state == CAPTURE_NO_STATE) { /* empty */
-				continue;
-			}
-			assert(ci->max_capture_id >= b->action.id);
+	/* check actual */
+	unsigned res = 0;
+	for (size_t i = 0; i < fsm->capture_info->programs.used; i++) {
+		const unsigned id = fsm_capvm_program_get_max_capture_id(fsm->capture_info->programs.set[i]);
+		if (id > res) {
+			res = id;
 		}
 	}
+	assert(res == fsm->capture_info->max_capture_id);
 #endif
 
 	return fsm->capture_info->max_capture_id + 1;
 }
 
+struct fsm_capture *
+fsm_capture_alloc_capture_buffer(const struct fsm *fsm)
+{
+	assert(fsm != NULL);
+	const size_t len = fsm_capture_ceiling(fsm);
+	struct fsm_capture *res = f_malloc(fsm->opt->alloc,
+	    len * sizeof(res[0]));
+	return res;
+}
+
+void
+fsm_capture_free_capture_buffer(const struct fsm *fsm,
+    struct fsm_capture *capture_buffer)
+{
+	assert(fsm != NULL);
+	f_free(fsm->opt->alloc, capture_buffer);
+}
+
+
 int
 fsm_capture_has_captures(const struct fsm *fsm)
 {
 	return fsm->capture_info
-	    ? fsm->capture_info->buckets_used > 0
+	    ? fsm->capture_info->programs.used > 0
 	    : 0;
 }
 
-int
-fsm_capture_has_capture_actions(const struct fsm *fsm, fsm_state_t state)
+void
+fsm_capture_dump_programs(FILE *f, const struct fsm *fsm)
 {
-	assert(state < fsm->statecount);
-	return fsm->states[state].has_capture_actions;
-}
-
-int
-fsm_capture_set_path(struct fsm *fsm, unsigned capture_id,
-    fsm_state_t start, fsm_state_t end)
-{
-	struct fsm_capture_info *ci;
-	struct capture_set_path_env env;
-	size_t seen_words;
-	int res = 0;
-
-	assert(fsm != NULL);
-	assert(start < fsm->statecount);
-	assert(end < fsm->statecount);
-
-	ci = fsm->capture_info;
-	assert(ci != NULL);
-
-	/* captures should no longer be stored as paths -- instead, set
-	 * the info on the states _here_, and convert it as necessary. */
-
-#if LOG_CAPTURE > 0
-	fprintf(stderr, "fsm_capture_set_path: capture %u: <%u, %u>\n",
-	    capture_id, start, end);
-#endif
-
-	if (capture_id > FSM_CAPTURE_MAX) {
-		return 0;	/* ID out of range */
+	fprintf(f, "\n==== %s:\n", __func__);
+	struct fsm_capture_info *ci = fsm->capture_info;
+	for (uint32_t i = 0; i < ci->programs.used; i++) {
+		const struct capvm_program *p = ci->programs.set[i];
+		fprintf(f, "# program %u, capture_count %u, base %u\n",
+		    i, p->capture_count, p->capture_base);
+		fsm_capvm_program_dump(f, p);
+		fprintf(f, "\n");
 	}
-
-	if (!init_capture_action_htab(fsm, ci)) {
-		return 0;
-	}
-
-	/* This will create a trail and do a depth-first search from the
-	 * start state, marking every unique path to the end state. */
-	env.fsm = fsm;
-	env.capture_id = capture_id;
-	env.start = start;
-	env.end = end;
-
-	env.trail_ceil = 0;
-	env.trail = NULL;
-	env.seen = NULL;
-
-	env.trail = f_malloc(fsm->opt->alloc,
-	    DEF_TRAIL_CEIL * sizeof(env.trail[0]));
-	if (env.trail == NULL) {
-		goto cleanup;
-	}
-	env.trail_ceil = DEF_TRAIL_CEIL;
-
-	seen_words = fsm->statecount/64 + 1;
-	env.seen = f_malloc(fsm->opt->alloc,
-	    seen_words * sizeof(env.seen[0]));
-
-	if (!mark_capture_path(&env)) {
-		goto cleanup;
-	}
-
-	if (capture_id >= ci->max_capture_id) {
-		ci->max_capture_id = capture_id;
-	}
-
-	res = 1;
-	/* fall through */
-
-cleanup:
-	f_free(fsm->opt->alloc, env.trail);
-	f_free(fsm->opt->alloc, env.seen);
-	return res;
-}
-
-static int
-init_capture_action_htab(struct fsm *fsm, struct fsm_capture_info *ci)
-{
-	size_t count, i;
-	assert(fsm != NULL);
-	assert(ci != NULL);
-
-	if (ci->bucket_count > 0) {
-		assert(ci->buckets != NULL);
-		return 1;	/* done */
-	}
-
-	assert(ci->buckets == NULL);
-	assert(ci->buckets_used == 0);
-
-	count = DEF_CAPTURE_ACTION_BUCKET_COUNT;
-	ci->buckets = f_malloc(fsm->opt->alloc,
-	    count * sizeof(ci->buckets[0]));
-	if (ci->buckets == NULL) {
-		return 0;
-	}
-
-	/* Init buckets to CAPTURE_NO_STATE -> empty. */
-	for (i = 0; i < count; i++) {
-		ci->buckets[i].state = CAPTURE_NO_STATE;
-	}
-
-	ci->bucket_count = count;
-	return 1;
-}
-
-static int
-mark_capture_path(struct capture_set_path_env *env)
-{
-	const size_t seen_words = env->fsm->statecount/64 + 1;
-
-#if LOG_CAPTURE > 0
-	fprintf(stderr, "mark_capture_path: path [id %u, %u - %u]\n",
-	    env->capture_id, env->start, env->end);
-#endif
-
-	if (env->start == env->end) {
-		struct fsm_capture_action action;
-		action.type = CAPTURE_ACTION_COMMIT_ZERO_STEP;
-		action.id = env->capture_id;
-		action.to = CAPTURE_NO_STATE;
-		if (!add_capture_action(env->fsm, env->fsm->capture_info,
-			env->start, &action)) {
-			return 0;
-		}
-		return 1;
-	}
-
-	memset(env->seen, 0x00,
-	    seen_words * sizeof(env->seen[0]));
-
-	/* initialize to starting node */
-	env->trail_i = 1;
-	env->trail[0].state = env->start;
-	env->trail[0].step = TRAIL_STEP_START;
-	env->trail[0].has_self_edge = 0;
-
-	while (env->trail_i > 0) {
-		const enum trail_step step = env->trail[env->trail_i - 1].step;
-#if LOG_CAPTURE > 0
-		fprintf(stderr, "mark_capture_path: trail %u/%u, cur %u, step %d\n",
-		    env->trail_i, env->trail_ceil,
-		    env->trail[env->trail_i - 1].state,
-		    step);
-#endif
-
-		switch (step) {
-		case TRAIL_STEP_START:
-			if (!step_trail_start(env)) {
-				return 0;
-			}
-			break;
-		case TRAIL_STEP_ITER_EDGES:
-			if (!step_trail_iter_edges(env)) {
-				return 0;
-			}
-			break;
-		case TRAIL_STEP_ITER_EPSILONS:
-			if (!step_trail_iter_epsilons(env)) {
-				return 0;
-			}
-			break;
-		case TRAIL_STEP_DONE:
-			if (!step_trail_done(env)) {
-				return 0;
-			}
-			break;
-		default:
-			assert(!"match fail");
-		}
-	}
-
-	return 1;
-}
-
-static int
-cmp_action(const struct fsm_capture_action *a,
-    const struct fsm_capture_action *b) {
-	/* could use memcmp here, provided padding is always zeroed. */
-	return a->id < b->id ? -1
-	    : a->id > b->id ? 1
-	    : a->type < b->type ? -1
-	    : a->type > b->type ? 1
-	    : a->to < b->to ? -1
-	    : a->to > b->to ? 1
-	    : 0;
 }
 
 int
-fsm_capture_add_action(struct fsm *fsm,
-    fsm_state_t state, enum capture_action_type type,
-    unsigned id, fsm_state_t to)
+fsm_capture_set_active_for_end(struct fsm *fsm,
+    unsigned capture_id, fsm_state_t end_state)
 {
-	struct fsm_capture_action action;
-	assert(fsm->capture_info != NULL);
-
-	action.type = type;
-	action.id = id;
-	action.to = to;
-	return add_capture_action(fsm, fsm->capture_info,
-	    state, &action);
-}
-
-static int
-add_capture_action(struct fsm *fsm, struct fsm_capture_info *ci,
-    fsm_state_t state, const struct fsm_capture_action *action)
-{
-	uint64_t h;
-	size_t b_i, mask;
-
-	assert(state < fsm->statecount);
-	assert(action->to == CAPTURE_NO_STATE || action->to < fsm->statecount);
-
-#if LOG_CAPTURE > 0
-	fprintf(stderr, "add_capture_action: state %u, type %s, ID %u, TO %d\n",
-	    state, fsm_capture_action_type_name[action->type],
-	    action->id, action->to);
-#endif
-
-	if (ci->bucket_count == 0) {
-		if (!init_capture_action_htab(fsm, ci)) {
-			return 0;
-		}
-	} else if (ci->buckets_used >= ci->bucket_count/2) { /* grow */
-		if (!grow_capture_action_buckets(fsm->opt->alloc, ci)) {
-			return 0;
-		}
-	}
-
-	h = hash_id(state);
-	mask = ci->bucket_count - 1;
-
-	for (b_i = 0; b_i < ci->bucket_count; b_i++) {
-		struct fsm_capture_action_bucket *b = &ci->buckets[(h + b_i) & mask];
-		if (b->state == CAPTURE_NO_STATE) { /* empty */
-			b->state = state;
-			memcpy(&b->action, action, sizeof(*action));
-			ci->buckets_used++;
-			fsm->states[state].has_capture_actions = 1;
-			if (action->id > ci->max_capture_id) {
-				ci->max_capture_id = action->id;
-			}
-			return 1;
-		} else if (b->state == state &&
-		    0 == cmp_action(action, &b->action)) {
-			/* already present, ignore duplicate */
-			assert(fsm->states[state].has_capture_actions);
-			assert(ci->max_capture_id >= action->id);
-			return 1;
-		} else {
-			continue; /* skip past collision */
-		}
-	}
-
-	assert(!"unreachable");
-	return 0;
-}
-
-static int
-grow_capture_action_buckets(const struct fsm_alloc *alloc,
-    struct fsm_capture_info *ci)
-{
-	const size_t ncount = 2 * ci->bucket_count;
-	struct fsm_capture_action_bucket *nbuckets;
-	size_t nused = 0;
-	size_t i;
-
-	assert(ncount != 0);
-	nbuckets = f_malloc(alloc, ncount * sizeof(nbuckets[0]));
-	if (nbuckets == NULL) {
-		return 0;
-	}
-
-	for (i = 0; i < ncount; i++) {
-		nbuckets[i].state = CAPTURE_NO_STATE;
-	}
-
-	for (i = 0; i < ci->bucket_count; i++) {
-		const struct fsm_capture_action_bucket *src_b = &ci->buckets[i];
-		uint64_t h;
-		const size_t mask = ncount - 1;
-		size_t b_i;
-
-		if (src_b->state == CAPTURE_NO_STATE) {
-			continue;
-		}
-
-		h = hash_id(src_b->state);
-		for (b_i = 0; b_i < ncount; b_i++) {
-			struct fsm_capture_action_bucket *dst_b;
-			dst_b = &nbuckets[(h + b_i) & mask];
-			if (dst_b->state == CAPTURE_NO_STATE) {
-				memcpy(dst_b, src_b, sizeof(*src_b));
-				nused++;
-				break;
-			} else {
-				continue;
-			}
-		}
-	}
-
-	assert(nused == ci->buckets_used);
-	f_free(alloc, ci->buckets);
-	ci->buckets = nbuckets;
-	ci->bucket_count = ncount;
-	return 1;
-}
-
-static int
-grow_trail(struct capture_set_path_env *env)
-{
-	struct trail_cell *ntrail;
-	unsigned nceil;
-	assert(env != NULL);
-
-	nceil = 2 * env->trail_ceil;
-	assert(nceil > env->trail_ceil);
-
-	ntrail = f_realloc(env->fsm->opt->alloc, env->trail,
-	    nceil * sizeof(env->trail[0]));
-	if (ntrail == NULL) {
-		return 0;
-	}
-
-	env->trail = ntrail;
-	env->trail_ceil = nceil;
-	return 1;
-}
-
-static int
-step_trail_start(struct capture_set_path_env *env)
-{
-	struct trail_cell *tc = &env->trail[env->trail_i - 1];
-	const fsm_state_t cur = tc->state;
-	size_t i;
-	struct edge_set *edge_set = NULL;
-
-	/* check if node is endpoint, if so mark trail,
-	 * then pop trail and continue */
-	if (cur == env->end) {
-		struct fsm_capture_action action;
-#if LOG_CAPTURE > 0
-		fprintf(stderr, " -- GOT END at %u\n", cur);
-#endif
-		action.id = env->capture_id;
-
-		for (i = 0; i < env->trail_i; i++) {
-			fsm_state_t state = env->trail[i].state;
-#if LOG_CAPTURE > 0
-			fprintf(stderr, " -- %lu: %d\n",
-			    i, state);
-#endif
-
-			/* Special case: if this is marked as having
-			 * a self-edge on the path, then also add an
-			 * extend for that. */
-			if (env->trail[i].has_self_edge) {
-				struct fsm_capture_action self_action;
-				self_action.type = CAPTURE_ACTION_EXTEND;
-				self_action.id = env->capture_id;
-				self_action.to = state;
-
-				if (!add_capture_action(env->fsm,
-					env->fsm->capture_info,
-					state, &self_action)) {
-					return 0;
-				}
-			}
-
-
-			if (i == 0) {
-				action.type = CAPTURE_ACTION_START;
-			} else {
-				action.type = (i < env->trail_i - 1
-				    ? CAPTURE_ACTION_EXTEND
-				    : CAPTURE_ACTION_COMMIT);
-			}
-
-			if (i < env->trail_i - 1) {
-				action.to = env->trail[i + 1].state;
-			} else {
-				action.to = CAPTURE_NO_STATE;
-			}
-
-			if (!add_capture_action(env->fsm,
-				env->fsm->capture_info,
-				state, &action)) {
-				return 0;
-			}
-		}
-
-		tc->step = TRAIL_STEP_DONE;
-		return 1;
-	}
-
-#if LOG_CAPTURE > 0
-	fprintf(stderr, " -- resetting edge iterator\n");
-#endif
-	edge_set = env->fsm->states[cur].edges;
-
-	MARK_SEEN(env, cur);
-#if LOG_CAPTURE > 0
-	fprintf(stderr, " -- marking %u as seen\n", cur);
-#endif
-
-	edge_set_reset(edge_set, &tc->iter);
-	tc->step = TRAIL_STEP_ITER_EDGES;
-	return 1;
-}
-
-static int
-step_trail_iter_edges(struct capture_set_path_env *env)
-{
-	struct trail_cell *tc = &env->trail[env->trail_i - 1];
-	struct trail_cell *next_tc = NULL;
-
-	struct fsm_edge e;
-
-	if (!edge_set_next(&tc->iter, &e)) {
-#if LOG_CAPTURE > 0
-		fprintf(stderr, " -- ITER_EDGE_NEXT: DONE %u\n", tc->state);
-#endif
-		tc->step = TRAIL_STEP_ITER_EPSILONS;
-		return 1;
-	}
-
-#if LOG_CAPTURE > 0
-	fprintf(stderr, " -- ITER_EDGE_NEXT: %u -- NEXT %u\n",
-	    tc->state, e.state);
-#endif
-
-	if (tc->state == e.state) {
-#if LOG_CAPTURE > 0
-		fprintf(stderr, "    -- special case, self-edge\n");
-#endif
-		/* Mark this state as having a self-edge, then continue
-		 * the iterator. An EXTEND action will be added for the
-		 * self-edge later, if necessary. */
-		tc->has_self_edge = 1;
-		return 1;
-	} else if (CHECK_SEEN(env, e.state)) {
-#if LOG_CAPTURE > 0
-		fprintf(stderr, "    -- seen, skipping\n");
-#endif
-		return 1;	/* continue */
-	}
-
-	if (env->trail_i == env->trail_ceil) {
-		if (!grow_trail(env)) {
-			return 0;
-		}
-	}
-
-#if LOG_CAPTURE > 0
-	fprintf(stderr, " -- marking %u as seen\n", e.state);
-#endif
-	MARK_SEEN(env, e.state);
-
-#if LOG_CAPTURE > 0
-	fprintf(stderr, "    -- not seen (%u), exploring\n", e.state);
-#endif
-	env->trail_i++;
-	next_tc = &env->trail[env->trail_i - 1];
-	next_tc->state = e.state;
-	next_tc->step = TRAIL_STEP_START;
-	next_tc->has_self_edge = 0;
-	return 1;
-}
-
-static int
-step_trail_iter_epsilons(struct capture_set_path_env *env)
-{
-	struct trail_cell *tc = &env->trail[env->trail_i - 1];
-
-	/* skipping this for now */
-
-#if LOG_CAPTURE > 0
-	fprintf(stderr, " -- ITER_EPSILONS: %u\n", tc->state);
-#endif
-
-	tc->step = TRAIL_STEP_DONE;
-	return 1;
-}
-
-static int
-step_trail_done(struct capture_set_path_env *env)
-{
-	struct trail_cell *tc;
-
-	/* 0-step paths already handled outside loop */
-	assert(env->trail_i > 0);
-
-	tc = &env->trail[env->trail_i - 1];
-#if LOG_CAPTURE > 0
-	fprintf(stderr, " -- DONE: %u\n", tc->state);
-#endif
-	CLEAR_SEEN(env, tc->state);
-
-	env->trail_i--;
-	return 1;
-}
-
-void
-fsm_capture_rebase_capture_id(struct fsm *fsm, unsigned base)
-{
-	size_t i;
 	struct fsm_capture_info *ci = fsm->capture_info;
 	assert(ci != NULL);
+	struct idmap *m = ci->end_capture_map;
+	assert(m != NULL);
 
-	for (i = 0; i < ci->bucket_count; i++) {
-		struct fsm_capture_action_bucket *b = &ci->buckets[i];
-		if (b->state == CAPTURE_NO_STATE) {
-			continue;
-		}
+	#if EXPENSIVE_CHECKS
+	assert(fsm_isend(fsm, end_state));
+	#endif
 
-		b->action.id += base;
-		if (b->action.id > ci->max_capture_id) {
-			ci->max_capture_id = b->action.id;
-		}
-	}
+	return idmap_set(m, end_state, capture_id);
 }
 
 void
-fsm_capture_rebase_capture_action_states(struct fsm *fsm, fsm_state_t base)
+fsm_capture_iter_active_for_end_state(const struct fsm *fsm, fsm_state_t state,
+    fsm_capture_iter_active_for_end_cb *cb, void *opaque)
 {
-	size_t i;
-	struct fsm_capture_info *ci = fsm->capture_info;
-	assert(ci != NULL);
-
-	for (i = 0; i < ci->bucket_count; i++) {
-		struct fsm_capture_action_bucket *b = &ci->buckets[i];
-		if (b->state == CAPTURE_NO_STATE) {
-			continue;
-		}
-
-		b->state += base;
-		if (b->action.to != CAPTURE_NO_STATE) {
-			b->action.to += base;
-		}
-	}
-}
-
-struct fsm_capture *
-fsm_capture_alloc(const struct fsm *fsm)
-{
-	(void)fsm;
-	assert(!"todo");
-	return NULL;
+	/* These types should be the same. */
+	idmap_iter_fun *idmap_cb = cb;
+	idmap_iter_for_state(fsm->capture_info->end_capture_map, state,
+	    idmap_cb, opaque);
 }
 
 void
-fsm_capture_update_captures(const struct fsm *fsm,
-    fsm_state_t cur_state, fsm_state_t next_state, size_t offset,
-    struct fsm_capture *captures)
+fsm_capture_iter_active_for_all_end_states(const struct fsm *fsm,
+    fsm_capture_iter_active_for_end_cb *cb, void *opaque)
 {
-	const struct fsm_capture_info *ci;
-	uint64_t h;
-	size_t b_i, mask;
-
-	assert(cur_state < fsm->statecount);
-	assert(fsm->states[cur_state].has_capture_actions);
-
-	ci = fsm->capture_info;
-	assert(ci != NULL);
-
-	h = hash_id(cur_state);
-	mask = ci->bucket_count - 1;
-
-#if LOG_CAPTURE > 0
-	fprintf(stderr, "-- updating captures at state %u, to %d, offset %lu\n",
-	    cur_state, next_state, offset);
-#endif
-
-	for (b_i = 0; b_i < ci->bucket_count; b_i++) {
-		const size_t b_id = (h + b_i) & mask;
-		struct fsm_capture_action_bucket *b = &ci->buckets[b_id];
-		unsigned capture_id;
-
-#if LOG_CAPTURE > 3
-		fprintf(stderr, "   -- update_captures: bucket %lu, state %d\n", b_id, b->state);
-#endif
-
-
-		if (b->state == CAPTURE_NO_STATE) {
-#if LOG_CAPTURE > 3
-			fprintf(stderr, "  -- no more actions for this state\n");
-#endif
-			break;	/* no more for this state */
-		} else if (b->state != cur_state) {
-			continue; /* skip collision */
-		}
-
-		assert(b->state == cur_state);
-		capture_id = b->action.id;
-
-		switch (b->action.type) {
-		case CAPTURE_ACTION_START:
-#if LOG_CAPTURE > 0
-			fprintf(stderr, "START [%u, %u]\n",
-			    b->action.id, b->action.to);
-#endif
-			if (next_state == b->action.to && captures[capture_id].pos[0] == FSM_CAPTURE_NO_POS) {
-				captures[capture_id].pos[0] = offset;
-#if LOG_CAPTURE > 0
-				fprintf(stderr, " -- set capture[%u].[0] to %lu\n", b->action.id, offset);
-#endif
-			} else {
-				/* filtered, ignore */
-			}
-			break;
-		case CAPTURE_ACTION_EXTEND:
-#if LOG_CAPTURE > 0
-			fprintf(stderr, "EXTEND [%u, %u]\n",
-			    b->action.id, b->action.to);
-#endif
-			if (captures[capture_id].pos[0] != FSM_CAPTURE_NO_POS
-			    && (0 == (captures[capture_id].pos[1] & COMMITTED_CAPTURE_FLAG))) {
-				if (next_state == b->action.to) {
-					captures[capture_id].pos[1] = offset;
-#if LOG_CAPTURE > 0
-				fprintf(stderr, " -- set capture[%u].[1] to %lu\n", b->action.id, offset);
-#endif
-				} else {
-					/* filtered, ignore */
-				}
-			}
-			break;
-		case CAPTURE_ACTION_COMMIT_ZERO_STEP:
-#if LOG_CAPTURE > 0
-			fprintf(stderr, "COMMIT_ZERO_STEP [%u]\n",
-			    b->action.id);
-#endif
-
-			if (captures[capture_id].pos[0] == FSM_CAPTURE_NO_POS) {
-				captures[capture_id].pos[0] = offset;
-				captures[capture_id].pos[1] = offset | COMMITTED_CAPTURE_FLAG;
-			} else { /* extend */
-				captures[capture_id].pos[1] = offset | COMMITTED_CAPTURE_FLAG;
-			}
-
-#if LOG_CAPTURE > 0
-			fprintf(stderr, " -- set capture[%u].[0] and [1] to %lu (with COMMIT flag)\n", b->action.id, offset);
-#endif
-			break;
-		case CAPTURE_ACTION_COMMIT:
-#if LOG_CAPTURE > 0
-			fprintf(stderr, "COMMIT [%u]\n",
-			    b->action.id);
-#endif
-			captures[capture_id].pos[1] = offset | COMMITTED_CAPTURE_FLAG;
-#if LOG_CAPTURE > 0
-			fprintf(stderr, " -- set capture[%u].[1] to %lu (with COMMIT flag)\n", b->action.id, offset);
-#endif
-			break;
-		default:
-			assert(!"matchfail");
-		}
-	}
+	/* These types should be the same. */
+	idmap_iter_fun *idmap_cb = cb;
+	idmap_iter(fsm->capture_info->end_capture_map,
+	    idmap_cb, opaque);
 }
 
 void
-fsm_capture_finalize_captures(const struct fsm *fsm,
-    size_t capture_count, struct fsm_capture *captures)
+fsm_capture_iter_program_ids_for_end_state(const struct fsm *fsm, fsm_state_t state,
+    fsm_capture_iter_program_ids_for_end_state_cb *cb, void *opaque)
 {
-	size_t i;
-
-	/* If either pos[] is FSM_CAPTURE_NO_POS or the
-	 * COMMITTED_CAPTURE_FLAG isn't set on pos[1], then the capture
-	 * wasn't finalized; clear it. Otherwise, clear that bit so the
-	 * pos[1] offset is meaningful. */
-
-	/* FIXME: this should also take the end state(s) associated
-	 * with a capture into account, when that information is available;
-	 * otherwise there will be false positives for zero-width captures
-	 * where the paths have a common prefix. */
-	(void)fsm;
-
-	for (i = 0; i < capture_count; i++) {
-#if LOG_CAPTURE > 1
-		fprintf(stderr, "finalize[%lu]: pos[0]: %ld, pos[1]: %ld\n",
-		    i, captures[i].pos[0], captures[i].pos[1]);
-#endif
-
-		if (captures[i].pos[0] == FSM_CAPTURE_NO_POS
-		    || captures[i].pos[1] == FSM_CAPTURE_NO_POS
-		    || (0 == (captures[i].pos[1] & COMMITTED_CAPTURE_FLAG))) {
-			captures[i].pos[0] = FSM_CAPTURE_NO_POS;
-			captures[i].pos[1] = FSM_CAPTURE_NO_POS;
-#if LOG_CAPTURE > 1
-			fprintf(stderr, "finalize: discard %lu\n", i);
-#endif
-		} else if (captures[i].pos[1] & COMMITTED_CAPTURE_FLAG) {
-			captures[i].pos[1] &=~ COMMITTED_CAPTURE_FLAG;
-		}
-	}
+	/* These types should be the same. */
+	idmap_iter_fun *idmap_cb = cb;
+	idmap_iter_for_state(fsm->capture_info->end_capvm_program_map, state,
+	    idmap_cb, opaque);
 }
 
 void
-fsm_capture_action_iter(const struct fsm *fsm,
-    fsm_capture_action_iter_cb *cb, void *opaque)
+fsm_capture_iter_program_ids_for_all_end_states(const struct fsm *fsm,
+    fsm_capture_iter_program_ids_for_end_state_cb *cb, void *opaque)
 {
-	size_t i;
-	struct fsm_capture_info *ci = fsm->capture_info;
-	assert(ci != NULL);
-
-	for (i = 0; i < ci->bucket_count; i++) {
-		struct fsm_capture_action_bucket *b = &ci->buckets[i];
-		if (b->state == CAPTURE_NO_STATE) {
-			continue;
-		}
-
-		if (!cb(b->state, b->action.type,
-			b->action.id, b->action.to, opaque)) {
-			break;
-		}
-	}
+	/* These types should be the same. */
+	idmap_iter_fun *idmap_cb = cb;
+	idmap_iter(fsm->capture_info->end_capvm_program_map,
+	    idmap_cb, opaque);
 }
-
-const char *fsm_capture_action_type_name[] = {
-	"START", "EXTEND",
-	"COMMIT_ZERO_STEP", "COMMIT"
-};
 
 static int
-dump_iter_cb(fsm_state_t state,
-    enum capture_action_type type, unsigned capture_id, fsm_state_t to,
-    void *opaque)
+dump_active_for_ends_cb(fsm_state_t state_id, unsigned value, void *opaque)
 {
 	FILE *f = opaque;
-	fprintf(f, " - state %u, %s [capture_id: %u, to: %d]\n",
-	    state, fsm_capture_action_type_name[type], capture_id, to);
+	fprintf(f, " -- state %d: value %u\n", state_id, value);
 	return 1;
+}
+
+void
+fsm_capture_dump_active_for_ends(FILE *f, const struct fsm *fsm)
+{
+	fprintf(f, "%s:\n", __func__);
+	idmap_iter(fsm->capture_info->end_capture_map, dump_active_for_ends_cb, f);
+}
+
+void
+fsm_capture_dump_program_end_mapping(FILE *f, const struct fsm *fsm)
+{
+	fprintf(f, "%s:\n", __func__);
+	idmap_iter(fsm->capture_info->end_capvm_program_map, dump_active_for_ends_cb, f);
 }
 
 /* Dump capture metadata about an FSM. */
@@ -828,12 +254,408 @@ fsm_capture_dump(FILE *f, const char *tag, const struct fsm *fsm)
 
 	assert(fsm != NULL);
 	ci = fsm->capture_info;
-	if (ci == NULL || ci->bucket_count == 0) {
+	if (ci == NULL) {
 		fprintf(f, "==== %s -- no captures\n", tag);
 		return;
 	}
 
-	fprintf(f, "==== %s -- capture action hash table (%u buckets)\n",
-	    tag, ci->bucket_count);
-	fsm_capture_action_iter(fsm, dump_iter_cb, f);
+	fsm_endid_dump(f, fsm);
+	fsm_capture_dump_active_for_ends(f, fsm);
+	fsm_capture_dump_programs(f, fsm);
+	fsm_capture_dump_program_end_mapping(f, fsm);
+}
+
+struct carry_active_captures_env {
+	fsm_state_t dst;
+	struct idmap *dst_m;
+	int ok;
+};
+
+static int
+copy_active_captures_cb(fsm_state_t state_id, unsigned value, void *opaque)
+{
+	(void)state_id;
+
+	struct carry_active_captures_env *env = opaque;
+	if (!idmap_set(env->dst_m, env->dst, value)) {
+		env->ok = false;
+		return 0;
+	}
+	return 1;
+}
+
+static int
+copy_program_associations_cb(fsm_state_t state_id, unsigned value, void *opaque)
+{
+	(void)state_id;
+
+	struct carry_active_captures_env *env = opaque;
+	if (!idmap_set(env->dst_m, env->dst, value)) {
+		env->ok = false;
+		return 0;
+	}
+	return 1;
+}
+
+int
+fsm_capture_copy_active_for_ends(const struct fsm *src_fsm,
+	const struct state_set *states,
+	struct fsm *dst_fsm, fsm_state_t dst_state)
+{
+	struct state_iter it;
+	fsm_state_t s;
+
+	assert(src_fsm != NULL);
+	assert(src_fsm->capture_info != NULL);
+	assert(src_fsm->capture_info->end_capture_map != NULL);
+	assert(dst_fsm != NULL);
+	assert(dst_fsm->capture_info != NULL);
+	assert(dst_fsm->capture_info->end_capture_map != NULL);
+	struct idmap *src_m = src_fsm->capture_info->end_capture_map;
+	struct idmap *dst_m = dst_fsm->capture_info->end_capture_map;
+
+	struct carry_active_captures_env env = {
+		.dst_m = dst_m,
+		.dst = dst_state,
+		.ok = true,
+	};
+
+	state_set_reset(states, &it);
+	while (state_set_next(&it, &s)) {
+		if (!fsm_isend(src_fsm, s)) {
+			continue;
+		}
+
+		idmap_iter_for_state(src_m, s, copy_active_captures_cb, &env);
+		if (!env.ok) {
+			goto cleanup;
+		}
+	}
+
+cleanup:
+	return env.ok;
+}
+
+int
+fsm_capture_copy_program_end_state_associations(const struct fsm *src_fsm,
+	const struct state_set *states,
+	struct fsm *dst_fsm, fsm_state_t dst_state)
+{
+	struct state_iter it;
+	fsm_state_t s;
+
+	assert(src_fsm != NULL);
+	assert(src_fsm->capture_info != NULL);
+	assert(src_fsm->capture_info->end_capvm_program_map != NULL);
+	assert(dst_fsm != NULL);
+	assert(dst_fsm->capture_info != NULL);
+	assert(dst_fsm->capture_info->end_capvm_program_map != NULL);
+	struct idmap *src_m = src_fsm->capture_info->end_capvm_program_map;
+	struct idmap *dst_m = dst_fsm->capture_info->end_capvm_program_map;
+
+	struct carry_active_captures_env env = {
+		.dst_m = dst_m,
+		.dst = dst_state,
+		.ok = true,
+	};
+
+	state_set_reset(states, &it);
+	while (state_set_next(&it, &s)) {
+		if (!fsm_isend(src_fsm, s)) {
+			continue;
+		}
+
+		LOG(5 - LOG_CAPTURE_COMBINING_ANALYSIS,
+		    "%s: dst_state %d, state_set_next => %d\n",
+		    __func__, dst_state, s);
+
+		idmap_iter_for_state(src_m, s, copy_program_associations_cb, &env);
+		if (!env.ok) {
+			goto cleanup;
+		}
+	}
+
+cleanup:
+	return env.ok;
+}
+
+int
+fsm_capture_copy_programs(const struct fsm *src_fsm,
+	struct fsm *dst_fsm)
+{
+	const struct fsm_alloc *alloc = src_fsm->opt->alloc;
+	assert(alloc == dst_fsm->opt->alloc);
+	const struct fsm_capture_info *src_ci = src_fsm->capture_info;
+
+	for (uint32_t p_i = 0; p_i < src_ci->programs.used; p_i++) {
+		const struct capvm_program *p = src_ci->programs.set[p_i];
+		struct capvm_program *cp = capvm_program_copy(alloc, p);
+		if (cp == NULL) {
+			return 0;
+		}
+
+		/* unused: because this is an in-order copy, it's assumed
+		 * the programs will retain their order. */
+		uint32_t prog_id;
+		if (!fsm_capture_add_program(dst_fsm, cp, &prog_id)) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+size_t
+fsm_capture_program_count(const struct fsm *fsm)
+{
+	return fsm->capture_info->programs.used;
+}
+
+struct check_program_mappings_env {
+	const struct fsm *fsm;
+};
+
+static int
+check_program_mappings_cb(fsm_state_t state_id, unsigned value, void *opaque)
+{
+	const uint32_t prog_id = (uint32_t)value;
+	struct check_program_mappings_env *env = opaque;
+	assert(state_id < env->fsm->statecount);
+	assert(prog_id < env->fsm->capture_info->programs.used);
+	return 1;
+}
+
+void
+fsm_capture_integrity_check(const struct fsm *fsm)
+{
+	if (!EXPENSIVE_CHECKS) { return; }
+
+	/* check that all program mappings are in range */
+	struct check_program_mappings_env env = {
+		.fsm = fsm,
+	};
+	idmap_iter(fsm->capture_info->end_capvm_program_map, check_program_mappings_cb, &env);
+}
+
+struct capture_idmap_compact_env {
+	int ok;
+	struct idmap *dst;
+	const fsm_state_t *mapping;
+	size_t orig_statecount;
+};
+
+static int
+copy_with_mapping_cb(fsm_state_t state_id, unsigned value, void *opaque)
+{
+	fsm_state_t dst_id;
+	struct capture_idmap_compact_env *env = opaque;
+
+	assert(state_id < env->orig_statecount);
+	dst_id = env->mapping[state_id];
+
+	if (dst_id == FSM_STATE_REMAP_NO_STATE) {
+		return 1;		/* discard */
+	}
+
+	if (!idmap_set(env->dst, dst_id, value)) {
+		env->ok = 0;
+		return 0;
+	}
+
+	return 1;
+}
+
+int
+fsm_capture_id_compact(struct fsm *fsm, const fsm_state_t *mapping,
+    size_t orig_statecount)
+{
+	struct capture_idmap_compact_env env;
+	struct idmap *old_idmap = fsm->capture_info->end_capture_map;
+	struct idmap *new_idmap = idmap_new(fsm->opt->alloc);
+
+	if (new_idmap == NULL) {
+		return 0;
+	}
+
+	env.ok = 1;
+	env.dst = new_idmap;
+	env.mapping = mapping;
+	env.orig_statecount = orig_statecount;
+
+	idmap_iter(old_idmap, copy_with_mapping_cb, &env);
+	if (!env.ok) {
+		idmap_free(new_idmap);
+		return 0;
+	}
+
+	idmap_free(old_idmap);
+	fsm->capture_info->end_capture_map = new_idmap;
+
+	return 1;
+}
+
+int
+fsm_capture_program_association_compact(struct fsm *fsm, const fsm_state_t *mapping,
+    size_t orig_statecount)
+{
+	struct capture_idmap_compact_env env;
+	struct idmap *old_idmap = fsm->capture_info->end_capvm_program_map;
+	struct idmap *new_idmap = idmap_new(fsm->opt->alloc);
+
+	if (new_idmap == NULL) {
+		return 0;
+	}
+
+	env.ok = 1;
+	env.dst = new_idmap;
+	env.mapping = mapping;
+	env.orig_statecount = orig_statecount;
+
+	idmap_iter(old_idmap, copy_with_mapping_cb, &env);
+	if (!env.ok) {
+		idmap_free(new_idmap);
+		return 0;
+	}
+
+	idmap_free(old_idmap);
+	fsm->capture_info->end_capvm_program_map = new_idmap;
+
+	return 1;
+}
+
+void
+fsm_capture_update_max_capture_id(struct fsm_capture_info *ci,
+	unsigned capture_id)
+{
+	assert(ci != NULL);
+	if (capture_id >= ci->max_capture_id) {
+		ci->max_capture_id = capture_id;
+	}
+}
+
+int
+fsm_capture_add_program(struct fsm *fsm,
+	struct capvm_program *program, uint32_t *prog_id)
+{
+	assert(program != NULL);
+	assert(prog_id != NULL);
+
+	struct fsm_capture_info *ci = fsm->capture_info;
+
+	if (ci->programs.used == ci->programs.ceil) {
+		const size_t nceil = (ci->programs.ceil == 0
+		    ? DEF_PROGRAMS_CEIL
+		    : 2*ci->programs.ceil);
+		assert(nceil > ci->programs.ceil);
+		struct capvm_program **nset = f_realloc(fsm->opt->alloc,
+		    ci->programs.set, nceil * sizeof(nset[0]));
+		if (nset == NULL) {
+			return 0;
+		}
+
+		ci->programs.ceil = nceil;
+		ci->programs.set = nset;
+	}
+	assert(ci->programs.used < ci->programs.ceil);
+
+	const unsigned max_prog_capture_id = fsm_capvm_program_get_max_capture_id(program);
+	if (max_prog_capture_id > ci->max_capture_id) {
+		fsm_capture_update_max_capture_id(ci, max_prog_capture_id);
+	}
+
+	*prog_id = ci->programs.used;
+	ci->programs.set[ci->programs.used] = program;
+	ci->programs.used++;
+	return 1;
+}
+
+const struct capvm_program *
+fsm_capture_get_program_by_id(const struct fsm *fsm, uint32_t prog_id)
+{
+	struct fsm_capture_info *ci = fsm->capture_info;
+	if (prog_id >= ci->programs.used) {
+		return NULL;
+	}
+	return ci->programs.set[prog_id];
+}
+
+int
+fsm_capture_associate_program_with_end_state(struct fsm *fsm,
+	uint32_t prog_id, fsm_state_t end_state)
+{
+	struct fsm_capture_info *ci = fsm->capture_info;
+	assert(end_state < fsm->statecount);
+	assert(prog_id < ci->programs.used);
+
+	if (!idmap_set(ci->end_capvm_program_map, end_state, prog_id)) {
+		return 0;
+	}
+	return 1;
+}
+
+struct capture_resolve_env {
+	const struct fsm_capture_info *ci;
+	const unsigned char *input;
+	const size_t length;
+
+	int res;
+	struct fsm_capture *captures;
+	size_t captures_len;
+};
+
+static int
+exec_capvm_program_cb(fsm_state_t state_id, unsigned prog_id, void *opaque)
+{
+	struct capture_resolve_env *env = opaque;
+	(void)state_id;
+
+	/* TODO: idmap_iter could take a halt return value */
+	if (env->res != 1) { return 0; }
+
+	assert(prog_id < env->ci->programs.used);
+	struct capvm_program *p = env->ci->programs.set[prog_id];
+
+	LOG(5 - LOG_EVAL, "%s: evaluating prog_id %u for state %d\n",
+	    __func__, prog_id, state_id);
+
+#define EXEC_COUNT 1		/* can be increased for benchmarking */
+
+	for (size_t i = 0; i < EXEC_COUNT; i++) {
+		const enum fsm_capvm_program_exec_res exec_res =
+		    fsm_capvm_program_exec(p,
+			(const uint8_t *)env->input, env->length,
+			env->captures, env->captures_len);
+		if (exec_res != FSM_CAPVM_PROGRAM_EXEC_SOLUTION_WRITTEN) {
+			env->res = 0;
+			return 0;
+		}
+	}
+	return 1;
+}
+
+int
+fsm_capture_resolve_during_exec(const struct fsm *fsm,
+	fsm_state_t end_state, const unsigned char *input, size_t input_offset,
+	struct fsm_capture *captures, size_t captures_len)
+{
+	assert(fsm != NULL);
+	assert(input != NULL);
+	assert(captures != NULL);
+
+	const struct fsm_capture_info *ci = fsm->capture_info;
+
+	struct capture_resolve_env capture_env = {
+		.res = 1,
+		.ci = ci,
+		.input = input,
+		.length = input_offset,
+		.captures = captures,
+		.captures_len = captures_len,
+	};
+
+	LOG(5 - LOG_EVAL, "%s: ended on state %d\n",
+	    __func__, end_state);
+	idmap_iter_for_state(ci->end_capvm_program_map,
+	    end_state, exec_capvm_program_cb, &capture_env);
+
+	return capture_env.res;
 }

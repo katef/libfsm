@@ -146,7 +146,7 @@ compile_subexpr(struct ast_expr *e, enum re_flags flags)
 		return 0;
 	}
 
-	fsm = ast_compile(&ast, flags | RE_ANCHORED, NULL, NULL);
+	fsm = ast_compile(&ast, flags | RE_ANCHORED | RE_NOCAPTURE, NULL, NULL);
 	if (fsm == NULL) {
 		return 0;
 	}

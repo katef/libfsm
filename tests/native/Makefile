@@ -9,11 +9,11 @@ RE=${BUILD}/bin/re
 .for n in ${TEST.tests/native:T:Mout*.fsm:R:C/^out//}
 
 ${TEST_OUTDIR.tests/native}/got${n}.fsm: ${TEST_SRCDIR.tests/native}/in${n}.re
-	${RE} -r native -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r native -py ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/native}/nfa${n}.fsm: ${TEST_SRCDIR.tests/native}/in${n}.re
-	${RE} -r native -n -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r native -n -py ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/native}/res${n}: \
@@ -27,7 +27,7 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/native}/res${n}
 .for n in ${TEST.tests/native:T:Mout*.err:R:C/^out//}
 
 ${TEST_OUTDIR.tests/native}/got${n}.err: ${TEST_SRCDIR.tests/native}/in${n}.re
-	${RE} -r native -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r native -py ${.ALLSRC:M*.re} \
 	2> $@; [ $$? -ne 0 ]
 
 ${TEST_OUTDIR.tests/native}/res${n}: \

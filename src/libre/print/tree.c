@@ -147,7 +147,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, enum re_flags re_
 
 	case AST_EXPR_ALT: {
 		size_t i, count = n->u.alt.count;
-		fprintf(f, "ALT (%u):\n", (unsigned)count);
+		fprintf(f, "ALT (%u):%s\n",
+		    (unsigned)count,
+		    n->u.alt.contains_empty_groups ? " (contains_empty_groups)" : "");
 		for (i = 0; i < count; i++) {
 			pp_iter(f, opt, indent + 1 * IND, re_flags, n->u.alt.n[i]);
 		}
@@ -155,7 +157,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, enum re_flags re_
 	}
 
 	case AST_EXPR_LITERAL:
-		fprintf(f, "LITERAL '%c'\n", n->u.literal.c);
+		fprintf(f, "LITERAL '");
+		print_char_or_esc(f, n->u.literal.c);
+		fprintf(f, "'\n");
 		break;
 
 	case AST_EXPR_CODEPOINT:
@@ -167,18 +171,27 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, enum re_flags re_
 		fprintf_count(f, n->u.repeat.min);
 		fprintf(f, ",");
 		fprintf_count(f, n->u.repeat.max);
-		fprintf(f, "}\n");
+		fprintf(f, "}%s\n", n->u.repeat.contains_empty_groups ? " (contains_empty_groups)" : "");
 		pp_iter(f, opt, indent + 1 * IND, re_flags, n->u.repeat.e);
 		break;
 
 	case AST_EXPR_GROUP:
-		fprintf(f, "GROUP %p: %u\n", (void *) n, n->u.group.id);
+		fprintf(f, "GROUP: %u%s\n", n->u.group.id,
+		    n->u.group.repeated ? " (repeated)" : "");
 		pp_iter(f, opt, indent + 1 * IND, re_flags, n->u.group.e);
 		break;
 
 	case AST_EXPR_ANCHOR:
 		assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
-		fprintf(f, "ANCHOR %s\n", n->u.anchor.type == AST_ANCHOR_START ? "^" : "$");
+		if (n->u.anchor.type == AST_ANCHOR_START) {
+			fprintf(f, "ANCHOR ^\n");
+		} else if (n->u.anchor.type == AST_ANCHOR_END) {
+			assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
+			fprintf(f, "ANCHOR $%s\n",
+			    n->u.anchor.is_end_nl ? " (with \\n)" : "");
+		} else {
+			assert(!"unreachable");
+		}
 		break;
 
 	case AST_EXPR_SUBTRACT:

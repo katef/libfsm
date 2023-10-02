@@ -167,6 +167,7 @@ int main(void)
 		if (fsm == NULL) {
 			fsm = new;
 		} else {
+			/* TODO: this could use fsm_union_array instead */
 			fsm = fsm_union(fsm, new, NULL);
 			assert(fsm != NULL);
 		}
@@ -283,5 +284,3 @@ int main(void)
 
 	return EXIT_SUCCESS;
 }
-
-

@@ -192,6 +192,10 @@ fsm_findmode(const struct fsm *fsm, fsm_state_t state, unsigned int *freq);
 void
 fsm_setend(struct fsm *fsm, fsm_state_t state, int end);
 
+/* Associate a numeric ID with a single end state in an FSM. */
+int
+fsm_setendid_state(struct fsm *fsm, fsm_state_t s, fsm_end_id_t id);
+
 /* Associate a numeric ID with the end states in an fsm.
  * This can be used to track which of the original fsms matched
  * input when multiple fsms are combined.
@@ -462,8 +466,21 @@ fsm_shortest(const struct fsm *fsm,
  * The given FSM is expected to be a DFA.
  */
 int
-fsm_exec(const struct fsm *fsm, int (*fsm_getc)(void *opaque), void *opaque,
-	fsm_state_t *end, struct fsm_capture *captures);
+fsm_exec(const struct fsm *fsm,
+	int (*fsm_getc)(void *opaque), void *opaque, fsm_state_t *end);
+
+/* Same as fsm_exec, but also populate information about captures if
+ * *captures is non-NULL and capture metadata is available for the DFA.
+ * Captures is expected to be large enough to fit captures from the FSM.
+ * To check, use `fsm_capture_ceiling`.
+ *
+ * The current implementation requires all input to be buffered ahead of
+ * time, so this takes a pointer to an input array rather than a
+ * character iterator. */
+int
+fsm_exec_with_captures(const struct fsm *fsm, const unsigned char *input,
+	size_t input_length, fsm_state_t *end,
+	struct fsm_capture *captures, size_t capture_buf_length);
 
 /*
  * Callbacks which may be passed to fsm_exec(). These are conveniences for

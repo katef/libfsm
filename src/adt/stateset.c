@@ -15,6 +15,11 @@
 #include <adt/stateset.h>
 #include <adt/hashrec.h>
 
+/* This is used here because the calls to
+ * state_set_contains change the order of growth. */
+#include <adt/common.h>
+
+
 /*
  * TODO: now fsm_state_t is a numeric index, this could be a dynamically
  * allocated bitmap, instead of a set.inc's array of items.
@@ -44,8 +49,8 @@
 struct state_set {
 	const struct fsm_alloc *alloc;
 	fsm_state_t *a;
-	size_t i;
-	size_t n;
+	size_t i;		/* used */
+	size_t n;		/* ceil */
 };
 
 int
@@ -138,7 +143,8 @@ state_set_cmp(const struct state_set *a, const struct state_set *b)
 }
 
 /*
- * Return where an item would be, if it were inserted
+ * Return where an item would be, if it were inserted.
+ * When insertion would append this returns one past the array.
  */
 static size_t
 state_set_search(const struct state_set *set, fsm_state_t state)
@@ -149,6 +155,11 @@ state_set_search(const struct state_set *set, fsm_state_t state)
 	assert(set != NULL);
 	assert(!IS_SINGLETON(set));
 	assert(set->a != NULL);
+
+	/* fast path: append case */
+	if (set->i > 0 && state > set->a[set->i - 1]) {
+		return set->i;
+	}
 
 	start = mid = 0;
 	end = set->i;
@@ -161,6 +172,12 @@ state_set_search(const struct state_set *set, fsm_state_t state)
 			end = mid;
 		} else if (r > 0) {
 			start = mid + 1;
+			/* update mid if we're about to halt, because
+			 * we're looking for the first position >= state,
+			 * not the last position <= */
+			if (start == end) {
+				mid = start;
+			}
 		} else {
 			return mid;
 		}
@@ -242,7 +259,7 @@ state_set_add(struct state_set **setp, const struct fsm_alloc *alloc,
 	 */
 	if (!state_set_empty(set)) {
 		i = state_set_search(set, state);
-		if (set->a[i] == state) {
+		if (i < set->i && set->a[i] == state) {
 			return 1;
 		}
 	}
@@ -261,11 +278,7 @@ state_set_add(struct state_set **setp, const struct fsm_alloc *alloc,
 			set->n *= 2;
 		}
 
-		if (state_set_cmpval(state, set->a[i]) > 0) {
-			i++;
-		}
-
-		if (i <= set->i) {
+		if (i < set->i) {
 			memmove(&set->a[i + 1], &set->a[i], (set->i - i) * (sizeof *set->a));
 		}
 
@@ -276,6 +289,8 @@ state_set_add(struct state_set **setp, const struct fsm_alloc *alloc,
 		set->i = 1;
 	}
 
+	/* This assert can be pretty expensive in -O0 but in -O3 it has very
+	 * little impact on the overall runtime. */
 	assert(state_set_contains(set, state));
 
 	return 1;
@@ -470,7 +485,7 @@ state_set_remove(struct state_set **setp, fsm_state_t state)
 	}
 
 	i = state_set_search(set, state);
-	if (set->a[i] == state) {
+	if (i < set->i && set->a[i] == state) {
 		if (i < set->i) {
 			memmove(&set->a[i], &set->a[i + 1], (set->i - i - 1) * (sizeof *set->a));
 		}
@@ -478,7 +493,9 @@ state_set_remove(struct state_set **setp, fsm_state_t state)
 		set->i--;
 	}
 
+#if EXPENSIVE_CHECKS
 	assert(!state_set_contains(set, state));
+#endif
 }
 
 int
@@ -524,7 +541,7 @@ state_set_contains(const struct state_set *set, fsm_state_t state)
 	}
 
 	i = state_set_search(set, state);
-	if (set->a[i] == state) {
+	if (i < set->i && set->a[i] == state) {
 		return 1;
 	}
 
@@ -659,7 +676,7 @@ state_set_replace(struct state_set **setp, fsm_state_t old, fsm_state_t new)
 	}
 }
 
-unsigned long
+uint64_t
 state_set_hash(const struct state_set *set)
 {
 	if (set == NULL) {

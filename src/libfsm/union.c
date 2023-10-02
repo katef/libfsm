@@ -32,6 +32,7 @@ fsm_union(struct fsm *a, struct fsm *b,
 	if (combine_info == NULL) {
 		combine_info = &combine_info_internal;
 	}
+	memset(combine_info, 0x00, sizeof(*combine_info));
 
 	memset(combine_info, 0x00, sizeof(*combine_info));
 
@@ -105,6 +106,7 @@ fsm_union_array(size_t fsm_count,
 
 	for (i = 1; i < fsm_count; i++) {
 		struct fsm_combine_info ci;
+
 		struct fsm *combined = fsm_union(res, fsms[i], &ci);
 		fsms[i] = NULL;
 		if (combined == NULL) {

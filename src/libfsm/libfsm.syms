@@ -108,6 +108,7 @@ fsm_shortest
 fsm_example
 
 fsm_exec
+fsm_exec_with_captures
 
 # exec
 fsm_fgetc
@@ -117,8 +118,8 @@ fsm_print_cfrag # XXX: workaround for lx
 make_ir # XXX: workaround for lx
 free_ir # XXX: workaround for lx
 
-epsilon_closure # XXX: workaround for fsm
-closure_free # XXX: workaround for fsm
+fsm_epsilon_closure # XXX: workaround for fsm
+fsm_closure_free # XXX: workaround for fsm
 
 fsm_mergeab
 
@@ -129,11 +130,19 @@ fsm_vm_match_buffer
 fsm_vm_match_file
 
 # <fsm/capture.h>
-fsm_countcaptures
-fsm_capture_has_capture_actions
+fsm_capture_ceiling
 fsm_capture_set_path
 fsm_capture_rebase_capture_id
-fsm_capture_alloc
+fsm_capture_alloc_capture_buffer
+fsm_capture_free_capture_buffer
 fsm_capture_dump
+fsm_capture_set_active_for_end
+fsm_capture_add_program
+fsm_capture_associate_program_with_end_state
+
+# capture_vm*
+fsm_capvm_program_free
+fsm_capvm_program_dump
+fsm_capvm_program_exec
 
 fsm_minimise_test_oracle

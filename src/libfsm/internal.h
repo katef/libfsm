@@ -52,10 +52,6 @@ struct fsm_edge {
 struct fsm_state {
 	unsigned int end:1;
 
-	/* If 0, then this state has no need for checking
-	 * the fsm->capture_info struct. */
-	unsigned int has_capture_actions:1;
-
 	/* meaningful within one particular transformation only */
 	unsigned int visited:1;
 
@@ -90,10 +86,10 @@ state_hasnondeterminism(const struct fsm *fsm, fsm_state_t state, struct bm *bm)
  * for states, with wrapper to populate malloced array of user-facing structs.
  */
 struct state_set **
-epsilon_closure(struct fsm *fsm);
+fsm_epsilon_closure(struct fsm *fsm);
 
 void
-closure_free(struct state_set **closures, size_t n);
+fsm_closure_free(struct state_set **closures, size_t n);
 
 /*
  * Internal free function that invokes free(3) by default, or a user-provided

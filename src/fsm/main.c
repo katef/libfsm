@@ -599,7 +599,7 @@ main(int argc, char *argv[])
 			size_t n;
 			struct state_iter it;
 
-			closures = epsilon_closure(fsm);
+			closures = fsm_epsilon_closure(fsm);
 			if (closures == NULL) {
 				return -1;
 			}
@@ -620,7 +620,7 @@ main(int argc, char *argv[])
 				printf("\n");
 			}
 
-			closure_free(closures, fsm->statecount);
+			fsm_closure_free(closures, fsm->statecount);
 
 			return 0;
 		} else {
@@ -647,7 +647,7 @@ main(int argc, char *argv[])
 
 				f = xopen(argv[0]);
 
-				e = fsm_exec(fsm, fsm_fgetc, f, &state, NULL);
+				e = fsm_exec(fsm, fsm_fgetc, f, &state);
 
 				fclose(f);
 			} else {
@@ -655,7 +655,7 @@ main(int argc, char *argv[])
 
 				s = argv[i];
 
-				e = fsm_exec(fsm, fsm_sgetc, &s, &state, NULL);
+				e = fsm_exec(fsm, fsm_sgetc, &s, &state);
 			}
 
 			if (e != 1) {

@@ -10,13 +10,16 @@
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+#include <fsm/print.h>
 
 #include <adt/set.h>
 #include <adt/edgeset.h>
+#include <adt/pv.h>
 #include <adt/stateset.h>
 #include <adt/queue.h>
 
 #include "internal.h"
+#include "capture.h"
 
 #define DEF_EDGES_CEIL 8
 #define DEF_ENDS_CEIL 8
@@ -42,17 +45,18 @@ save_edge(const struct fsm_alloc *alloc,
     size_t *count, size_t *ceil, struct edge **edges,
     fsm_state_t from, fsm_state_t to);
 
-static int
-cmp_edges_by_to(const void *pa, const void *pb)
+static fsm_state_t
+get_max_to(const struct edge *edges, size_t edge_count)
 {
-	const struct edge *a = (const struct edge *)pa;
-	const struct edge *b = (const struct edge *)pb;
-
-	return a->to < b->to ? -1
-	    : a->to > b->to ? 1
-	    : a->from < b->from ? -1
-	    : a->from > b->from ? 1
-	    : 0;
+	size_t i;
+	fsm_state_t res = edges[0].to;
+	for (i = 1; i < edge_count; i++) {
+		const fsm_state_t to = edges[i].to;
+		if (to > res) {
+			res = to;
+		}
+	}
+	return res;
 }
 
 static int
@@ -61,7 +65,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 {
 	/* Use a queue to walk breath-first over all states reachable
 	 * from the start state. Note all end states. Collect all the
-	 * edges, then sort them by the note they lead to, to convert it
+	 * edges, then sort them by the node they lead to, to convert it
 	 * to a reverse edge index. Then, enqueue all the end states,
 	 * and again use the queue to walk the graph breadth-first, but
 	 * this time iterating bottom-up from the end states, and mark
@@ -81,10 +85,13 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	fsm_state_t max_end;
 
 	const size_t state_count = fsm->statecount;
+	fsm_state_t max_to;
 
+	unsigned *pv = NULL;
 	size_t *offsets = NULL;
+	INIT_TIMERS();
 
-	if (!fsm_getstart(fsm, &start)) {
+	if (!fsm_getstart(fsm, &start) || state_count == 0) {
 		return 1;	/* nothing is reachable */
 	}
 
@@ -225,7 +232,33 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	}
 
 	/* Sort edges by state they lead to, inverting the index. */
-	qsort(edges, edge_count, sizeof(edges[0]), cmp_edges_by_to);
+	max_to = edge_count == 0 ? 0 : get_max_to(edges, edge_count);
+#if LOG_TRIM
+	fprintf(stderr, " -- edge count %zu, got max_to %u\n", edge_count, max_to);
+#endif
+	TIME(&pre);
+	pv = permutation_vector_with_size_and_offset(fsm->opt->alloc,
+	    edge_count, max_to, edges, sizeof(edges[0]), offsetof(struct edge, to));
+	TIME(&post);
+	DIFF_MSEC("trim_pv_so", pre, post, NULL);
+
+	if (EXPENSIVE_CHECKS) {
+		size_t i;
+		int ok = 1;
+#if LOG_TRIM
+		fprintf(stderr, "\n#i\tedge\tpv\tsorted, max_to %u\n", max_to);
+#endif
+		for (i = 0; i < edge_count; i++) {
+#if LOG_TRIM
+			fprintf(stderr, "%zu\t%u\t%u\t%u\n",
+			    i, edges[i].to, pv[i], edges[pv[i]].to);
+#endif
+			if (i > 0 && edges[pv[i]].to < edges[pv[i - 1]].to) {
+				ok = 0;
+			}
+		}
+		assert(ok);
+	}
 
 	max_end = 0;
 
@@ -282,7 +315,6 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	 * offsets[i - 1], to represent zero entries. */
 	{
 		size_t i;
-		const fsm_state_t max_to = edges[edge_count - 1].to;
 		const size_t offset_count = fsm_countstates(fsm);
 
 		offsets = f_calloc(fsm->opt->alloc,
@@ -292,7 +324,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 		}
 
 		for (i = 0; i < edge_count; i++) {
-			const fsm_state_t to = edges[i].to;
+			const fsm_state_t to = edges[pv[i]].to;
 			offsets[to] = i + 1;
 		}
 
@@ -312,8 +344,8 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	if (LOG_TRIM > 1) {
 		size_t i;
 		for (i = 0; i < edge_count; i++) {
-		fprintf(stderr, "mark_states: edges[%zu]: %d -> %d\n",
-		    i, edges[i].from, edges[i].to);
+		fprintf(stderr, "mark_states: edges[pv[%zu]]: %d -> %d\n",
+		    i, edges[pv[i]].from, edges[pv[i]].to);
 		}
 	}
 
@@ -331,13 +363,13 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 		}
 
 		for (e_i = base; e_i < limit; e_i++) {
-			const fsm_state_t from = edges[e_i].from;
+			const fsm_state_t from = edges[pv[e_i]].from;
 			const unsigned end_distance = (sed == NULL
 			    ? 0 : sed[s_id]);
 			assert(from < state_count);
 
 			if (LOG_TRIM > 0) {
-				fprintf(stderr, "mark_states: edges[%zu]: from: %d, visited? %d\n",
+				fprintf(stderr, "mark_states: edges[pv[%zu]]: from: %d, visited? %d\n",
 				    e_i, from, fsm->states[from].visited);
 			}
 
@@ -370,6 +402,7 @@ cleanup:
 	if (ends != NULL) { f_free(fsm->opt->alloc, ends); }
 	if (offsets != NULL) { f_free(fsm->opt->alloc, offsets); }
 	if (q != NULL) { queue_free(q); }
+	if (pv != NULL) { f_free(fsm->opt->alloc, pv); }
 
 	return res;
 }
@@ -457,7 +490,7 @@ integrity_check(const char *descr, const struct fsm *fsm)
 	struct edge_iter edge_iter;
 	struct fsm_edge e;
 
-#ifdef NDEBUG
+#if defined(NDEBUG) || !EXPENSIVE_CHECKS
 	return;
 #endif
 
@@ -484,8 +517,14 @@ integrity_check(const char *descr, const struct fsm *fsm)
 		}
 	}
 
+	fsm_capture_integrity_check(fsm);
+
 	if (LOG_TRIM > 1) {
 		fprintf(stderr, "integrity check: %s...PASS\n", descr);
+		if (LOG_TRIM > 2) {
+			fsm_print_fsm(stderr, fsm);
+			fsm_capture_dump(stderr, "post_trim", fsm);
+		}
 	}
 }
 
@@ -503,6 +542,8 @@ fsm_trim(struct fsm *fsm, enum fsm_trim_mode mode,
 	if (fsm->statecount == 0) {
 		return 1;
 	}
+
+	integrity_check("pre", fsm);
 
 	if (shortest_end_distance != NULL
 		&& mode == FSM_TRIM_START_AND_END_REACHABLE) {

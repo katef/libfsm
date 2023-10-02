@@ -9,7 +9,7 @@ match_string(const struct fsm *fsm, const char *s, fsm_state_t *end_ptr, fsm_end
 	fsm_state_t end = 0;
 	int ret;
 
-	ret = fsm_exec(fsm, fsm_sgetc, &s, &end, NULL);
+	ret = fsm_exec(fsm, fsm_sgetc, &s, &end);
 	if (ret == 1) {
 		size_t num_endids;
 

@@ -16,7 +16,7 @@ RE=${BUILD}/bin/re
 FSM=${BUILD}/bin/fsm
 
 ${TEST_OUTDIR.tests/pcre-classes}/dot-all.fsm:
-	${RE} -r pcre -p '^[\x00-\xff]$$' | ${FSM} -pm \
+	${RE} -FC -r pcre -p '^[\x00-\xff]$$' | ${FSM} -pm \
 	> $@
 
 # compl<N>.re tests
@@ -32,7 +32,7 @@ ${TEST_OUTDIR.tests/pcre-classes}/dot-all.fsm:
 .for n in ${TEST.tests/pcre-classes:M*/compl*.re:T:R:C/^compl//}
 
 ${TEST_OUTDIR.tests/pcre-classes}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre-classes}/in${n}.re
-	${RE} -r pcre -py ${.ALLSRC:M*/in*.re} | ${FSM} -pm \
+	${RE} -FC -r pcre -py ${.ALLSRC:M*/in*.re} | ${FSM} -pm \
 	> $@
 
 ${TEST_OUTDIR.tests/pcre-classes}/got-compl${n}.fsm: ${TEST_OUTDIR.tests/pcre-classes}/got${n}.fsm ${TEST_OUTDIR.tests/pcre-classes}/dot-all.fsm
@@ -40,7 +40,7 @@ ${TEST_OUTDIR.tests/pcre-classes}/got-compl${n}.fsm: ${TEST_OUTDIR.tests/pcre-cl
 	> $@
 
 ${TEST_OUTDIR.tests/pcre-classes}/expect-compl${n}.fsm: ${TEST_SRCDIR.tests/pcre-classes}/compl${n}.re
-	${RE} -r pcre -py ${.ALLSRC:M*/compl*.re} | ${FSM} -pm \
+	${RE} -FC -r pcre -py ${.ALLSRC:M*/compl*.re} | ${FSM} -pm \
 	> $@
 
 ${TEST_OUTDIR.tests/pcre-classes}/res${n}: \
@@ -66,11 +66,11 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/pcre-classes}/res${n}
 @echo x: ${n}
 
 ${TEST_OUTDIR.tests/pcre-classes}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre-classes}/in${n}.re
-	${RE} -r pcre -py ${.ALLSRC:M*/in*.re} | ${FSM} -pm \
+	${RE} -FC -r pcre -py ${.ALLSRC:M*/in*.re} | ${FSM} -pm \
 	> $@
 
 ${TEST_OUTDIR.tests/pcre-classes}/out${n}.fsm: ${TEST_SRCDIR.tests/pcre-classes}/equal${n}.re
-	${RE} -r pcre -py ${.ALLSRC:M*/equal*.re} | ${FSM} -pm \
+	${RE} -FC -r pcre -py ${.ALLSRC:M*/equal*.re} | ${FSM} -pm \
 	> $@
 
 ${TEST_OUTDIR.tests/pcre-classes}/res${n}: \

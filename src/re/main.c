@@ -18,6 +18,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
+#include <fsm/capture.h>
 #include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
@@ -47,6 +48,10 @@
  * for specifying flags: /abc/g
  * TODO: flags; -r for RE_REVERSE, etc
  */
+
+static int
+exec_with_captures(struct fsm *fsm,
+	int (*fsm_getc)(void *opaque), void *opaque, fsm_state_t *end);
 
 struct match {
 	fsm_end_id_t i;
@@ -613,6 +618,10 @@ parse_flags(const char *arg, enum re_flags *flags)
 			*flags = *flags | RE_EXTENDED;
 			break;
 
+		case 'C':
+			*flags = *flags | RE_NOCAPTURE;
+			break;
+
 		/* others? */
 
 		default:
@@ -642,6 +651,7 @@ main(int argc, char *argv[])
 	int patterns;
 	int ambig;
 	int makevm;
+	int resolve_captures;
 	size_t generate_bounds = 0;
 
 	struct fsm_dfavm *vm;
@@ -665,6 +675,7 @@ main(int argc, char *argv[])
 	patterns  = 0;
 	ambig     = 0;
 	makevm    = 0;
+	resolve_captures = 0;
 	print_fsm = NULL;
 	print_ast = NULL;
 	query     = NULL;
@@ -675,7 +686,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acCwXe:E:G:k:" "bi" "sq:r:l:F:" "upMmnftxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acCwXe:E:G:k:" "bi" "sq:r:l:F:" "upMmnRftxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
@@ -714,6 +725,7 @@ main(int argc, char *argv[])
 			case 't': isliteral = 1; break;
 			case 'z': patterns  = 1; break;
 			case 'M': makevm    = 1; break;
+			case 'R': resolve_captures = 1; break;
 
 			case 'G':
 				generate_bounds = strtoul(optarg, NULL, 10);
@@ -1242,8 +1254,10 @@ main(int argc, char *argv[])
 
 					if (vm != NULL) {
 						e = fsm_vm_match_file(vm, f);
+					} else if (resolve_captures) {
+						assert(!"todo");
 					} else {
-						e = fsm_exec(fsm, fsm_fgetc, f, &state, NULL);
+						e = fsm_exec(fsm, fsm_fgetc, f, &state);
 					}
 
 					fclose(f);
@@ -1254,8 +1268,10 @@ main(int argc, char *argv[])
 
 					if (vm != NULL) {
 						e = fsm_vm_match_buffer(vm, s, strlen(s));
+					} else if (resolve_captures) {
+						e = exec_with_captures(fsm, fsm_sgetc, &s, &state);
 					} else {
-						e = fsm_exec(fsm, fsm_sgetc, &s, &state, NULL);
+						e = fsm_exec(fsm, fsm_sgetc, &s, &state);
 					}
 				}
 
@@ -1287,4 +1303,57 @@ main(int argc, char *argv[])
 
 		return r;
 	}
+}
+
+static int
+exec_with_captures(struct fsm *fsm,
+	int (*fsm_getc)(void *opaque), void *opaque, fsm_state_t *end)
+{
+	int c;
+	size_t ceil = 16;
+	size_t used = 0;
+	unsigned char *buf = malloc(ceil);
+	size_t i;
+	size_t capture_ceil;
+	struct fsm_capture *captures;
+	int res;
+
+	while (c = fsm_getc(opaque), c != EOF) {
+		if (used == ceil - 1) {
+			const size_t nceil = 2*ceil;
+			unsigned char *nbuf = realloc(buf, nceil);
+			if (nbuf == NULL) {
+				free(buf);
+				return -1;
+			}
+			ceil = nceil;
+			buf = nbuf;
+		}
+		buf[used] = c;
+		used++;
+	}
+	buf[used] = '\0';
+
+	capture_ceil = fsm_capture_ceiling(fsm);
+
+	captures = malloc(capture_ceil * sizeof(captures[0]));
+	if (captures == NULL) {
+		free(buf);
+		return -1;
+	}
+
+	res = fsm_exec_with_captures(fsm, buf, used,
+	    end, captures, capture_ceil);
+	if (res == 1) {
+		for (i = 0; i < capture_ceil; i++) {
+			printf("-- %zu: %zd,%zd\n",
+			    i, captures[i].pos[0], captures[i].pos[1]);
+		}
+	} else {
+		printf("-- no match\n");
+	}
+
+	free(buf);
+	free(captures);
+	return res;
 }

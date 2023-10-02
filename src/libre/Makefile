@@ -10,13 +10,17 @@ SRC += src/libre/ast_new_from_fsm.c
 SRC += src/libre/ast_rewrite.c
 SRC += src/libre/ac.c
 SRC += src/libre/re_strings.c
+SRC += src/libre/re_capvm_compile.c
 
 # generated
 SRC += src/libre/class_name.c
 
-.for src in ${SRC:Msrc/libre/ast_compile.c}
+.for src in ${SRC:Msrc/libre/ast*.c} ${SRC:Msrc/libre/re*.c}
 CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h
+
+CFLAGS.${src} += -std=c99
+DFLAGS.${src} += -std=c99
 .endfor
 
 LIB        += libre

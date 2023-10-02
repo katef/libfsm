@@ -494,6 +494,7 @@ ast_expr_cmp(const struct ast_expr *a, const struct ast_expr *b)
 	case AST_EXPR_GROUP:
 		if (a->u.group.id < b->u.group.id) { return -1; }
 		if (a->u.group.id > b->u.group.id) { return +1; }
+		/* .repeated flag is ignored here */
 
 		return ast_expr_cmp(a->u.group.e, b->u.group.e);
 
@@ -753,6 +754,7 @@ ast_make_expr_group(struct ast_expr_pool **poolp, enum re_flags re_flags, struct
 	res->re_flags = re_flags;
 	res->u.group.e = e;
 	res->u.group.id = id;
+	res->u.group.repeated = 0; /* may be set during analysis */
 
 	return res;
 }
@@ -770,6 +772,7 @@ ast_make_expr_anchor(struct ast_expr_pool **poolp, enum re_flags re_flags, enum 
 	res->type = AST_EXPR_ANCHOR;
 	res->re_flags = re_flags;
 	res->u.anchor.type = type;
+	res->u.anchor.is_end_nl = 0; /* may be set later */
 
 	return res;
 }

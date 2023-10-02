@@ -17,6 +17,8 @@
 #include <adt/edgeset.h>
 
 #include "internal.h"
+#include "capture.h"
+#include "endids.h"
 
 int
 fsm_addstate(struct fsm *fsm, fsm_state_t *state)
@@ -33,15 +35,10 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 		const size_t factor = 2; /* a guess */
 		const size_t n = fsm->statealloc * factor;
 		struct fsm_state *tmp;
-		size_t i;
 
 		tmp = f_realloc(fsm->opt->alloc, fsm->states, n * sizeof *fsm->states);
 		if (tmp == NULL) {
 			return 0;
-		}
-
-		for (i = fsm->statealloc; i < n; i++) {
-			tmp[i].has_capture_actions = 0;
 		}
 
 		fsm->statealloc = n;
@@ -253,6 +250,18 @@ fsm_compact_states(struct fsm *fsm,
 		}
 	}
 
+	if (!fsm_endid_compact(fsm, mapping, orig_statecount)) {
+		goto error;
+	}
+
+	if (!fsm_capture_id_compact(fsm, mapping, orig_statecount)) {
+		goto error;
+	}
+
+	if (!fsm_capture_program_association_compact(fsm, mapping, orig_statecount)) {
+		goto error;
+	}
+
 	assert(dst == kept);
 	assert(kept == fsm->statecount);
 
@@ -278,4 +287,9 @@ fsm_compact_states(struct fsm *fsm,
 		*removed = removed_count;
 	}
 	return 1;
+
+error:
+	f_free(fsm->opt->alloc, mapping);
+
+	return 0;
 }

@@ -158,7 +158,7 @@ check_capstring_set(struct capture_env *env,
 			return THEFT_TRIAL_ERROR;
 		}
 
-		const size_t capture_count = fsm_countcaptures(dfa);
+		const size_t capture_count = fsm_capture_ceiling(dfa);
 
 		if (verbosity > 2) {
 			fprintf(stderr, "==== cs '%s'\n", cs->string);
@@ -172,7 +172,7 @@ check_capstring_set(struct capture_env *env,
 		assert(cp != NULL);
 		fsm_copies[cs_i] = cp;
 
-		const size_t cp_capture_count = fsm_countcaptures(cp);
+		const size_t cp_capture_count = fsm_capture_ceiling(cp);
 		if (verbosity > 2) {
 			fprintf(stderr, "==== min(det(cp))\n");
 			fsm_print_fsm(stderr, cp);
@@ -196,7 +196,7 @@ check_capstring_set(struct capture_env *env,
 		return THEFT_TRIAL_FAIL;
 	}
 
-	combined_capture_count = fsm_countcaptures(combined);
+	combined_capture_count = fsm_capture_ceiling(combined);
 	for (size_t cs_i = 0; cs_i < css->count; cs_i++) {
 		total_captures += capture_counts[cs_i];
 	}
@@ -295,7 +295,7 @@ check_fsms_for_single_input(struct check_env *env, struct fsm_capture *captures,
 	assert(exec_res >= 0);
 	if (exec_res == 1) {
 		if (LOG_LEVEL > 0) {
-			const size_t combined_capture_count = fsm_countcaptures(env->combined);
+			const size_t combined_capture_count = fsm_capture_ceiling(env->combined);
 			for (size_t i = 0; i < combined_capture_count; i++) {
 				fprintf(stderr, "capture[%zu/%zu]: (%ld, %ld)\n",
 				    i, combined_capture_count,
@@ -415,7 +415,7 @@ compare_captures(const struct check_env *env,
     const struct fsm_capture *captures_combined,
     size_t nth_fsm, const struct fsm_capture *captures)
 {
-	const size_t combined_capture_count = fsm_countcaptures(env->combined);
+	const size_t combined_capture_count = fsm_capture_ceiling(env->combined);
 	if (combined_capture_count == 0) {
 		return true;	/* no captures */
 	}
@@ -639,7 +639,7 @@ build_capstring_dfa(const struct capstring *cs, uint8_t end_id)
 		goto cleanup;
 	}
 
-	if (fsm_countcaptures(fsm) != cs->capture_count) {
+	if (fsm_capture_ceiling(fsm) != cs->capture_count) {
 		goto cleanup;
 	}
 

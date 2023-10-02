@@ -20,6 +20,9 @@ SRC += src/libfsm/print/vmasm.c
 .for src in ${SRC:Msrc/libfsm/print/*.c}
 CFLAGS.${src} += -I src # XXX: for internal.h
 DFLAGS.${src} += -I src # XXX: for internal.h
+
+CFLAGS.${src} += -std=c99
+DFLAGS.${src} += -std=c99
 .endfor
 
 .for src in ${SRC:Msrc/libfsm/print/*.c}

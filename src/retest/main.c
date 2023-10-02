@@ -393,7 +393,7 @@ hexdigit:
 
 					ndig++;
 				} else {
-					s[j++] = ccode;
+					s[j++] = (char)ccode;
 					st = ST_BARE;
 
 					if (!hexcurly) {

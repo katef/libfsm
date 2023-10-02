@@ -22,7 +22,6 @@ const char *test_cases[] = {
 	"(?:a+|b)a+",
 	"(?:a*ba)+",
 	"(?:a|cd)+e?x",
-	"-> 1 'a';",
 	"(?:abc|def)+",
 	"(?:abc|def)*",
 	"(?:b|a*)",
@@ -81,7 +80,7 @@ check_minimisation(const char *pattern)
 		.offset = 0
 	};
 
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &opt, RE_MULTI, &err);
+	fsm = re_comp(RE_PCRE, scanner_next, &s, &opt, RE_MULTI | RE_NOCAPTURE, &err);
 	assert(fsm != NULL);
 	if (!fsm_determinise(fsm)) {
 		return 0;

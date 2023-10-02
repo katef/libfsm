@@ -7,7 +7,7 @@
 #ifndef ADT_HASHREC_H
 #define ADT_HASHREC_H
 
-unsigned long
+uint64_t
 hashrec(const void *p, size_t n);
 
 #endif
