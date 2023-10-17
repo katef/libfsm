@@ -307,6 +307,7 @@ check_fetch_sequence_FOR_LOOP(struct dfavm_op_ir *op,
 			}
 
 			assert(op->cmp == VM_CMP_ALWAYS);
+			(void)op->cmp;
 
 			if (op->num_incoming > 0) {
 				break;
