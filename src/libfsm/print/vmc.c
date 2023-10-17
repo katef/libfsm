@@ -138,69 +138,56 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 	}
 }
 
-static size_t
-walk_sequence(struct dfavm_op_ir *op,
+enum fetch_sequence_special_case_type {
+	/* none: do default codegen */
+	FETCH_SEQUENCE_SPECIAL_CASE_NONE,
+	/* can be replaced with memcmp/strncmp */
+	FETCH_SEQUENCE_SPECIAL_CASE_CMP,
+	/* can be replaced with for loop */
+	FETCH_SEQUENCE_SPECIAL_CASE_FOR_LOOP,
+};
+struct fetch_sequence_info {
+	enum fetch_sequence_special_case_type type;
+	union {
+		struct special_case_cmp {
+			size_t n;
+			struct dfavm_op_ir *tail;
+		} cmp;
+		struct special_case_for_loop {
+			size_t n;
+			struct dfavm_op_ir *tail;
+			fsm_state_t dest_state;
+			char cmp_arg;
+		} for_loop;
+	} u;
+};
+
+static int
+check_fetch_sequence_CMP(struct dfavm_op_ir *op,
 	enum dfavm_op_end *end_bits,
-	char *buf, size_t len,
-	struct dfavm_op_ir **tail)
+	char *buf, size_t len, size_t n,
+	struct fetch_sequence_info *output)
 {
-	size_t n;
-
-	assert(end_bits != NULL);
-	assert(buf != NULL);
-	assert(tail != NULL);
-
-	/*
-	 * Here we're looking for a sequence of:
-	 * 
-	 *   FETCH: (or fail)
-	 *   STOP: c != 'x' (or fail)
-	 * 
-	 * This catches situations like the "abc" and "xyz" in /^abc[01]xyz/,
-	 * but not for runs in unanchored regexes. For those, we'd be better
-	 * off adding VM instructions for sets of strings, and producing
-	 * those from the various types of enum ir_strategy.
-	 */
-
-	n = 0;
-
-	/* fetch */
-	{
-		if (op == NULL || op->instr != VM_OP_FETCH) {
-			goto unsuitable;
-		}
-
-		assert(op->cmp == VM_CMP_ALWAYS);
-
-		/* op->num_incoming > 0 is allowed for this instruction only */
-
-		if (op->u.fetch.end_bits != VM_END_FAIL) {
-			goto unsuitable;
-		}
-
-		*end_bits = op->u.fetch.end_bits;
-	}
-
-	op = op->next;
-
 	/* stop */
 	{
-		if (op == NULL || op->instr != VM_OP_STOP) {
-			goto unsuitable;
+		if (op->instr != VM_OP_STOP) {
+			return 0;
 		}
 
 		if (op->cmp != VM_CMP_NE) {
-			goto unsuitable;
+			return 0;
 		}
 
 		if (op->num_incoming > 0) {
-			goto unsuitable;
+			return 0;
 		}
 
 		if (op->u.stop.end_bits != *end_bits) {
-			goto unsuitable;
+			return 0;
 		}
 	}
+
+	struct dfavm_op_ir *tail = NULL;
 
 	if (n >= len) {
 		goto done;
@@ -210,7 +197,7 @@ walk_sequence(struct dfavm_op_ir *op,
 
 	*end_bits = op->u.stop.end_bits;
 
-	*tail = op;
+	tail = op;
 
 	op = op->next;
 	n++;
@@ -260,7 +247,7 @@ walk_sequence(struct dfavm_op_ir *op,
 
 		buf[n] = op->cmp_arg;
 
-		*tail = op;
+		tail = op;
 
 		op = op->next;
 		n++;
@@ -268,11 +255,180 @@ walk_sequence(struct dfavm_op_ir *op,
 
 done:
 
-	return n;
+	if (tail != NULL) {
+		output->type = FETCH_SEQUENCE_SPECIAL_CASE_CMP;
+		output->u.cmp.n = n;
+		output->u.cmp.tail = tail;
+		return 1;
+	}
+	return 0;
+}
+
+static int
+check_fetch_sequence_FOR_LOOP(struct dfavm_op_ir *op,
+	enum dfavm_op_end *end_bits, size_t n,
+	struct fetch_sequence_info *output)
+{
+	struct dfavm_op_ir *dest_arg = NULL;
+	uint32_t dest_state = (uint32_t)-1;
+	enum dfavm_op_cmp cmp;
+	char cmp_arg;
+
+	/* branch */
+	{
+		if (op->instr != VM_OP_BRANCH) {
+			return 0;
+		}
+
+		cmp = op->cmp;
+
+		if (op->num_incoming > 0) {
+			return 0;
+		}
+
+		dest_arg = op->u.br.dest_arg;
+		dest_state = op->u.br.dest_state;
+	}
+
+	struct dfavm_op_ir *tail = NULL;
+
+	cmp_arg = op->cmp_arg;
+
+	tail = op;
+
+	op = op->next;
+	n++;
+
+	for (;;) {
+		/* fetch */
+		{
+			if (op == NULL || op->instr != VM_OP_FETCH) {
+				break;
+			}
+
+			assert(op->cmp == VM_CMP_ALWAYS);
+
+			if (op->num_incoming > 0) {
+				break;
+			}
+
+			if (op->u.fetch.end_bits != *end_bits) {
+				break;
+			}
+		}
+
+		op = op->next;
+
+		/* branch */
+		{
+			if (op == NULL || op->instr != VM_OP_BRANCH) {
+				break;
+			}
+
+			if (op->u.br.dest_state != dest_state ||
+			    op->u.br.dest_arg != dest_arg) {
+				break;
+			}
+
+			if (op->num_incoming > 0) {
+				break;
+			}
+		}
+
+		/* for the loop, the comparison arg for all must match */
+		if (op->cmp_arg != cmp_arg) {
+			return 0;
+		}
+
+		tail = op;
+
+		op = op->next;
+		n++;
+	}
+
+	if (tail != NULL) {
+		output->type = FETCH_SEQUENCE_SPECIAL_CASE_FOR_LOOP;
+		output->u.for_loop.n = n;
+		output->u.for_loop.tail = tail;
+		output->u.for_loop.dest_state = dest_state;
+		output->u.for_loop.cmp_arg = cmp_arg;
+		return 1;
+	}
+	return 0;
+}
+
+static void
+check_fetch_sequence(struct dfavm_op_ir *op,
+	enum dfavm_op_end *end_bits,
+	char *buf, size_t len,
+	struct fetch_sequence_info *output)
+{
+	size_t n;
+	output->type = FETCH_SEQUENCE_SPECIAL_CASE_NONE;
+
+	assert(end_bits != NULL);
+	assert(buf != NULL);
+
+	/*
+	 * Here we're looking for repeated sequences we can detect
+	 * and generate better code for:
+	 *
+	 *   FETCH: (or fail)
+	 *   STOP: c != 'x' (or fail)
+	 *
+	 * This catches situations like the "abc" and "xyz" in /^abc[01]xyz/,
+	 * but not for runs in unanchored regexes. For those, we'd be better
+	 * off adding VM instructions for sets of strings, and producing
+	 * those from the various types of enum ir_strategy.
+	 *
+	 *   FETCH:
+	 *   BRANCH: .dest_arg == a, .dst_state == s (where (a,s) is consistent)
+	 *
+	 * This catches situations like /.{1000,}/, which otherwise would
+	 * generate C code that can be very slow to compile.
+	 */
+
+	n = 0;
+
+	/* fetch */
+	{
+		if (op == NULL || op->instr != VM_OP_FETCH) {
+			goto unsuitable;
+		}
+
+		assert(op->cmp == VM_CMP_ALWAYS);
+
+		/* op->num_incoming > 0 is allowed for this instruction only */
+
+		if (op->u.fetch.end_bits != VM_END_FAIL) {
+			goto unsuitable;
+		}
+
+		*end_bits = op->u.fetch.end_bits;
+	}
+
+	op = op->next;
+
+	if (op == NULL) {
+		goto unsuitable;
+	}
+
+	if (op->instr == VM_OP_STOP) {
+		if (!check_fetch_sequence_CMP(op, end_bits, buf, len, n, output)) {
+			goto unsuitable;
+		}
+		return;
+	} else if (op->instr == VM_OP_BRANCH) {
+		if (!check_fetch_sequence_FOR_LOOP(op, end_bits, n, output)) {
+			goto unsuitable;
+		}
+		return;
+	} else {
+		goto unsuitable;
+	}
 
 unsuitable:
-
-	return 0;
+	output->type = FETCH_SEQUENCE_SPECIAL_CASE_NONE;
 }
 
 /* TODO: eventually to be non-static */
@@ -371,40 +527,88 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			break;
 
 		case VM_OP_FETCH: {
-			size_t n;
 			enum dfavm_op_end end_bits;
-			struct dfavm_op_ir *tail;
 
 			char buf[8192];
 
-			n = walk_sequence(op, &end_bits, buf, sizeof buf, &tail);
+			struct fetch_sequence_info info;
+			check_fetch_sequence(op, &end_bits, buf, sizeof buf, &info);
 
-			if (n > 1 && opt->io == FSM_IO_PAIR) {
-				fprintf(f, "if (e - p < %zu || 0 != memcmp(p, \"", n);
-				escputbuf(f, opt, c_escputc_str, buf, n);
-				fprintf(f, "\", %zu)) ", n);
-				if (-1 == print_end(f, NULL, opt, end_bits, ir)) {
-					return -1;
+			if (info.type == FETCH_SEQUENCE_SPECIAL_CASE_CMP
+			    && info.u.cmp.n > 1
+			    && (opt->io == FSM_IO_PAIR || opt->io == FSM_IO_STR)) {
+				const size_t n = info.u.cmp.n;
+				if (opt->io == FSM_IO_PAIR) {
+					fprintf(f, "if (e - p < %zu || 0 != memcmp(p, \"", n);
+					escputbuf(f, opt, c_escputc_str, buf, n);
+					fprintf(f, "\", %zu)) ", n);
+					if (-1 == print_end(f, NULL, opt, end_bits, ir)) {
+						return -1;
+					}
+					fprintf(f, "\n");
+
+					fprintf(f, "\t");
+					fprintf(f, "p += %zu;\n", n);
+
+					op = info.u.cmp.tail;
+				} else if (opt->io == FSM_IO_STR) {
+					fprintf(f, "if (0 != strncmp(p, \"");
+					escputbuf(f, opt, c_escputc_str, buf, n);
+					fprintf(f, "\", %zu)) ", n);
+					if (-1 == print_end(f, NULL, opt, end_bits, ir)) {
+						return -1;
+					}
+					fprintf(f, "\n");
+
+					fprintf(f, "\t");
+					fprintf(f, "p += %zu;\n", n);
+
+					op = info.u.cmp.tail;
 				}
-				fprintf(f, "\n");
+			} else if (info.type == FETCH_SEQUENCE_SPECIAL_CASE_FOR_LOOP
+			    && info.u.for_loop.n > 1
+			    && (opt->io == FSM_IO_PAIR || opt->io == FSM_IO_STR)) {
 
-				fprintf(f, "\t");
-				fprintf(f, "p += %zu;\n", n);
+				/* Instead of emitting e.g.:
+				 *     if (c = (unsigned char) *p++, c == '\0') return -1;
+				 *     if (c == '\n') goto l0;
+				 * N times, emit a for loop around that once.
+				 *
+				 * While not strictly necessary, as N gets large this can
+				 * trigger quadratic behavior in GCC (>= -O1 in gcc 9 can
+				 * take several minutes to compile when N == 1000), so it
+				 * is less trouble to emit a for loop. */
 
-				op = tail;
-			} else if (n > 1 && opt->io == FSM_IO_STR) {
-				fprintf(f, "if (0 != strncmp(p, \"");
-				escputbuf(f, opt, c_escputc_str, buf, n);
-				fprintf(f, "\", %zu)) ", n);
-				if (-1 == print_end(f, NULL, opt, end_bits, ir)) {
-					return -1;
+				fprintf(f, "{    /* beginning of loop */\n");
+
+				const size_t n = info.u.for_loop.n;
+				if (opt->io == FSM_IO_PAIR) {
+					fprintf(f, "\t\tsize_t i;\n");
+					fprintf(f, "\t\tfor (i = 0; i < %zu; i++) {\n", n);
+					fprintf(f, "\t\t\tc = (unsigned char) *p++;\n");
+					fprintf(f, "\t\t\tif (c == ");
+					c_escputcharlit(f, opt, info.u.for_loop.cmp_arg);
+					fprintf(f, ") { goto l%u; }\n", info.u.for_loop.dest_state);
+
+					fprintf(f, "\t\t\tif (p == e) { ");
+					if (-1 == print_end(f, NULL, opt, end_bits, ir)) { return -1; }
+					fprintf(f, " }\n");
+					fprintf(f, "\t\t}\n");
+				} else if (opt->io == FSM_IO_STR) {
+					fprintf(f, "\t\tsize_t i;\n");
+					fprintf(f, "\t\tfor (i = 0; i < %zu; i++) {\n", n);
+
+					fprintf(f, "\t\t\tif (c = (unsigned char) *p++, c == '\\0') { ");
+					if (-1 == print_end(f, NULL, opt, end_bits, ir)) { return -1; }
+					fprintf(f, " }\n");
+					fprintf(f, "\t\t\tif (c == ");
+					c_escputcharlit(f, opt, info.u.for_loop.cmp_arg);
+					fprintf(f, ") { goto l%u; }\n", info.u.for_loop.dest_state);
+
+					fprintf(f, "\t\t}\n");
 				}
-				fprintf(f, "\n");
-
-				fprintf(f, "\t");
-				fprintf(f, "p += %zu;\n", n);
-
-				op = tail;
+				op = info.u.cmp.tail;
+				fprintf(f, "\t}    /* end of loop */\n");
 			} else {
 				print_fetch(f, opt);
 				if (-1 == print_end(f, op, opt, op->u.fetch.end_bits, ir)) {
