@@ -271,7 +271,6 @@ check_fetch_sequence_FOR_LOOP(struct dfavm_op_ir *op,
 {
 	struct dfavm_op_ir *dest_arg = NULL;
 	uint32_t dest_state = (uint32_t)-1;
-	enum dfavm_op_cmp cmp;
 	char cmp_arg;
 
 	/* branch */
@@ -279,8 +278,6 @@ check_fetch_sequence_FOR_LOOP(struct dfavm_op_ir *op,
 		if (op->instr != VM_OP_BRANCH) {
 			return 0;
 		}
-
-		cmp = op->cmp;
 
 		if (op->num_incoming > 0) {
 			return 0;
@@ -305,9 +302,6 @@ check_fetch_sequence_FOR_LOOP(struct dfavm_op_ir *op,
 			if (op == NULL || op->instr != VM_OP_FETCH) {
 				break;
 			}
-
-			assert(op->cmp == VM_CMP_ALWAYS);
-			(void)op->cmp;
 
 			if (op->num_incoming > 0) {
 				break;
