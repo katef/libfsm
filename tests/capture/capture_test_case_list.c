@@ -1370,11 +1370,11 @@ const struct captest_case_single single_cases[] = {
 
 	{
 		.regex = "a|_$[^b]",
-		.input = "a",
-		.count = 1,
-		.expected = {
-			{ .pos = {0, 1}, },
-		},
+		.match = SHOULD_REJECT_AS_UNSUPPORTED,
+	},
+	{
+		.regex = "^a|$[^x]b*",
+		.match = SHOULD_REJECT_AS_UNSUPPORTED,
 	},
 
 	{

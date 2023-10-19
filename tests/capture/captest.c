@@ -63,7 +63,13 @@ captest_run_case(const struct captest_case_single *testcase,
 	if (testcase->match == SHOULD_REJECT_AS_UNSUPPORTED) {
 		if (fsm != NULL) {
 			fsm_free(fsm);
+			if (verbosity > 0) {
+				printf("FAIL (expected UNSUPPORTED)\n");
+			}
 			return CAPTEST_RUN_CASE_FAIL;
+		}
+		if (verbosity > 0) {
+			printf("pass\n");
 		}
 		return CAPTEST_RUN_CASE_PASS;
 	}
