@@ -20,6 +20,8 @@ re_strerror(enum re_errno e)
 	case RE_EERRNO:       return strerror(errno);
 	case RE_EBADDIALECT:  return "Bad dialect";
 	case RE_EBADGROUP:    return "Bad group";
+	case RE_EUNSUPCAPTUR: return "Cannot support captures in this case";
+	case RE_EUNSUPPPCRE:  return "Unsupported PCRE edge case";
 
 	case RE_ENEGRANGE:    return "Negative group range";
 	case RE_ENEGCOUNT:    return "Negative count range";

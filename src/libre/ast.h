@@ -98,6 +98,7 @@ enum ast_flags {
 	AST_FLAG_ANCHORED_START  = 1 << 6,
 	AST_FLAG_ANCHORED_END    = 1 << 7,
 	AST_FLAG_END_NL          = 1 << 8,
+	AST_FLAG_MATCHES_1NEWLINE= 1 << 9,
 
 	AST_FLAG_NONE = 0x00
 };
