@@ -36,6 +36,7 @@
 
 /* Mask for end-anchor flags */
 #define END_ANCHOR_FLAG_MASK (AST_FLAG_ANCHORED_END | AST_FLAG_END_NL)
+#define ANCHOR_FLAG_MASK (END_ANCHOR_FLAG_MASK | AST_FLAG_ANCHORED_START)
 
 static int
 is_nullable(const struct ast_expr *n)
@@ -1231,6 +1232,14 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			}
 			return res;
 		}
+
+		if (n->u.group.e->flags & ANCHOR_FLAG_MASK) {
+			LOG(3 - LOG_ANCHORING,
+			    "%s: bubbling up anchoring flags from %p to %p\n",
+			    __func__, (void *)n->u.group.e, (void *)n);
+			set_flags(n, n->u.group.e->flags & ANCHOR_FLAG_MASK);
+		}
+
 		break;
 
 	case AST_EXPR_SUBTRACT:
