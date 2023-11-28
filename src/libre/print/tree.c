@@ -62,6 +62,7 @@ fprintf_flags(FILE *f, enum ast_flags flags)
 	PR_FLAG(END_NL,        "N");
 	PR_FLAG(CAN_CONSUME,   "c");
 	PR_FLAG(ALWAYS_CONSUMES, "C");
+	PR_FLAG(MATCHES_1NEWLINE, "n");
 
 #undef PR_FLAG
 
