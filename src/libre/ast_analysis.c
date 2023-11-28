@@ -553,6 +553,46 @@ set_flags_subtree(struct ast_expr *n, enum ast_flags flags)
 	}
 }
 
+static int
+can_consume_single_newline(struct ast_expr *n)
+{
+	if (!can_consume_input(n)) { return 0; }
+
+	if (n->flags & AST_FLAG_MATCHES_1NEWLINE) { return 1; }
+
+	switch (n->type) {
+	case AST_EXPR_LITERAL:
+		return n->u.literal.c == '\n';
+
+	case AST_EXPR_CODEPOINT:
+		return n->u.codepoint.u == (uint32_t)'\n';
+
+	case AST_EXPR_RANGE:
+		if ((n->u.range.from.type == AST_ENDPOINT_LITERAL) &&
+		    (n->u.range.to.type == AST_ENDPOINT_LITERAL)) {
+			return n->u.range.from.u.literal.c <= '\n'
+			    && n->u.range.to.u.literal.c >= '\n';
+		} else if ((n->u.range.from.type == AST_ENDPOINT_CODEPOINT) &&
+		    (n->u.range.to.type == AST_ENDPOINT_CODEPOINT)) {
+			    return n->u.range.from.u.codepoint.u <= '\n'
+				&& n->u.range.to.u.codepoint.u >= '\n';
+		} else if (n->u.range.from.type == AST_ENDPOINT_NAMED) {
+			/* TODO: unreachable? */
+			break;
+		}
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		return can_consume_single_newline(n->u.subtract.a)
+		    && !can_consume_single_newline(n->u.subtract.b);
+
+	default:
+		break;
+	}
+
+	return 0;
+}
+
 struct anchoring_env {
 	enum re_flags re_flags;
 
@@ -563,6 +603,7 @@ struct anchoring_env {
 
 	/* Corresponding flag for end anchors while sweeping backward. */
 	int followed_by_consuming;
+	int followed_by_consuming_newline;
 
 	int before_start_anchor;
 };
@@ -645,6 +686,9 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_RANGE:
+		if (can_consume_single_newline(n)) {
+			set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
+		}
 		break;		/* handled outside switch/case */
 
 	case AST_EXPR_CONCAT: {
@@ -811,6 +855,13 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			}
 		}
 
+		for (i = 0; i < n->u.concat.count; i++) {
+			struct ast_expr *child = n->u.concat.n[i];
+			if (can_consume_single_newline(child)) {
+				set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
+			}
+		}
+
 		break;
 	}
 
@@ -847,6 +898,9 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			} else if (res == AST_ANALYSIS_OK) {
 				all_set_past_always_consuming &= child_env.past_always_consuming;
 				any_sat = 1;
+			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED_CAPTURE
+			    || res == AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE) {
+				continue;
 			} else {
 				return res;
 			}
@@ -858,6 +912,10 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				if (!(child->flags & AST_FLAG_ANCHORED_END)) {
 					all_end_anchored = 0;
 				}
+			}
+
+			if (child->flags & AST_FLAG_MATCHES_1NEWLINE) {
+				set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
 			}
 		}
 
@@ -926,6 +984,10 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			return res;
 		}
 
+		if (can_consume_single_newline(n->u.repeat.e)) {
+			set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
+		}
+
 		if (n->u.repeat.e->flags & AST_FLAG_ANCHORED_END && n->u.repeat.min > 0) {
 			/* FIXME: if repeating something that is always
 			 * anchored at the end, repeat.max could be
@@ -965,6 +1027,11 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		} while(0)
 
 		PROPAGATE_CHILD_FLAGS("GROUP", n, n->u.group.e);
+
+		if (n->u.group.e->flags & AST_FLAG_MATCHES_1NEWLINE) {
+			set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
+		}
+
 		break;
 
 	case AST_EXPR_SUBTRACT:
@@ -992,6 +1059,10 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			}
 			return res;
 		}
+		if (can_consume_single_newline(n->u.repeat.e)) {
+			set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
+		}
+
 		break;
 
 	default:
@@ -1049,11 +1120,18 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			assert(n->flags & AST_FLAG_ANCHORED_END);
 
 			if (env->followed_by_consuming) {
-				LOG(3 - LOG_ANCHORING,
-				    "%s: END anchor & followed_by_consuming, setting UNSATISFIABLE\n",
-				    __func__);
-				set_flags(n, AST_FLAG_UNSATISFIABLE);
-				return AST_ANALYSIS_UNSATISFIABLE;
+				if (env->followed_by_consuming_newline) {
+					LOG(3 - LOG_ANCHORING,
+					    "%s: END anchor & followed_by_consuming, returning UNSUPPORTED_PCRE\n",
+					    __func__);
+					return AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE;
+				} else {
+					LOG(3 - LOG_ANCHORING,
+					    "%s: END anchor & followed_by_consuming, setting UNSATISFIABLE\n",
+					    __func__);
+					set_flags(n, AST_FLAG_UNSATISFIABLE);
+					return AST_ANALYSIS_UNSATISFIABLE;
+				}
 			}
 
 			break;
@@ -1114,6 +1192,8 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 					set_flags(n, AST_FLAG_UNSATISFIABLE);
 				}
 			} else if (res != AST_ANALYSIS_OK) {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: CONCAT: got res of %d, bubbling up\n", __func__, res);
 				return res;
 			}
 
@@ -1127,6 +1207,15 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				    "%s: setting followed_by_consuming due to child %p's analysis\n",
 				    __func__, (void *)child);
 				env->followed_by_consuming = 1;
+			}
+
+			if (!env->followed_by_consuming_newline &&
+			    (child_env.followed_by_consuming_newline
+				|| child->flags & AST_FLAG_MATCHES_1NEWLINE)) {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: setting followed_by_consuming_newline due to child %p's analysis\n",
+				    __func__, (void *)child);
+				env->followed_by_consuming_newline = 1;
 			}
 
 			if (!env->before_start_anchor && child_env.before_start_anchor
@@ -1170,6 +1259,10 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				all_set_followed_by_consuming &= child_env.followed_by_consuming;
 				all_set_before_start_anchor &= child_env.before_start_anchor;
 				any_sat = 1;
+			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED_CAPTURE
+			    || res == AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE) {
+				LOG(3 - LOG_ANCHORING, "%s: got res of UNSUPPORTED_*, bubbling up\n", __func__);
+				return res;
 			} else {
 				return res;
 			}
