@@ -100,6 +100,10 @@ enum ast_flags {
 	AST_FLAG_END_NL          = 1 << 8,
 	AST_FLAG_MATCHES_1NEWLINE= 1 << 9,
 
+	/* FIXME: These need a description above */
+	AST_FLAG_CONSTRAINED_AT_START	 = 1 << 10,
+	AST_FLAG_CONSTRAINED_AT_END	 = 1 << 11,
+
 	AST_FLAG_NONE = 0x00
 };
 
@@ -160,6 +164,8 @@ struct ast_expr {
 			size_t count; /* used */
 			size_t alloc; /* allocated */
 			struct ast_expr **n;
+			int contains_empty_groups;
+			int nullable_alt_inside_plus_repeat;
 		} alt;
 
 		struct {
@@ -174,11 +180,13 @@ struct ast_expr {
 			struct ast_expr *e;
 			unsigned min;
 			unsigned max;
+			int contains_empty_groups;
 		} repeat;
 
 		struct {
 			struct ast_expr *e;
 			unsigned id;
+			int repeated; /* set during analysis */
 		} group;
 
 		struct {
