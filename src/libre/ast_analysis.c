@@ -1259,8 +1259,11 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			break;
 
 		case AST_ANCHOR_END:
-			/* should already be set during forward pass */
-			assert(n->flags & AST_FLAG_ANCHORED_END);
+			/* This should already be set during forward pass, but
+			 * may have been skipped when evaluation moving forward
+			 * rejected this subtree as unsatisfiable (but evaluating
+			 * moving in reverse hasn't). */
+			set_flags(n, AST_FLAG_ANCHORED_END);
 
 			if (env->followed_by_consuming) {
 				if (env->followed_by_consuming_newline) {
