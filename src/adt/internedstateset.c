@@ -203,7 +203,7 @@ hash_state_ids(size_t count, const fsm_state_t *ids)
 {
 	uint64_t h = 0;
 	for (size_t i = 0; i < count; i++) {
-		h = hash_id(ids[i]) + (FSM_PHI_64 * h);
+		h ^= hash_id(ids[i]);
 	}
 	return h;
 }
