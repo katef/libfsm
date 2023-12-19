@@ -1315,7 +1315,7 @@ to_set_hash(size_t count, const fsm_state_t *ids)
 {
 	uint64_t h = hash_id(count);
 	for (size_t i = 0; i < count; i++) {
-		h += hash_id(ids[i]);
+		h ^= hash_id(ids[i]);
 	}
 	return h;
 }
@@ -1333,19 +1333,28 @@ to_set_htab_check(struct analyze_closures_env *env,
 		return 0;
 	}
 
+
+#if LOG_TO_SET_HTAB
+	size_t probes = 0;
+#endif
+	int res = 0;
+
 	const uint64_t mask = bcount - 1;
 	for (size_t b_i = 0; b_i < bcount; b_i++) {
+#if LOG_TO_SET_HTAB
+		probes++;
+#endif
 		const struct to_set_bucket *b = &htab->buckets[(h + b_i) & mask];
 		if (b->count == 0) {
-			return 0; /* empty bucket -> not found */
+			goto done; /* empty bucket -> not found */
 		} else if (b->count == count) {
 			assert(env->to_sets.buf != NULL);
 			assert(b->offset + count <= env->to_sets.used);
 			const fsm_state_t *ids = &env->to_sets.buf[b->offset];
 			if (0 == memcmp(ids, dst, count * sizeof(dst[0]))) {
 				*out_offset = b->offset;
-
-				return 1; /* cache hit */
+				res = 1;  /* cache hit */
+				goto done;
 			} else {
 				continue; /* collision */
 			}
@@ -1354,7 +1363,13 @@ to_set_htab_check(struct analyze_closures_env *env,
 		}
 	}
 
-	return 0;
+done:
+#if LOG_TO_SET_HTAB
+	fprintf(stderr, "%s: result %d, %zu probes, htab: used %zu/%zu ceil\n",
+	    __func__, res, probes, htab->buckets_used, htab->bucket_count);
+#endif
+
+	return res;
 }
 
 static int
