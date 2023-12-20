@@ -387,6 +387,8 @@ idmap_iter_for_state(const struct idmap *m, fsm_state_t state_id,
 			}
 		}
 		assert(block_count == check_count);
+#else
+                (void)block_count;
 #endif
 	}
 }
