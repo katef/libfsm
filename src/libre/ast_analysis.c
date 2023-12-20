@@ -1627,9 +1627,7 @@ assign_firsts(struct ast_expr *n)
 	}
 
 	case AST_EXPR_REPEAT:
-		if (n->u.repeat.max >= 0) {
-			set_flags(n, AST_FLAG_FIRST);
-		}
+		set_flags(n, AST_FLAG_FIRST);
 
 		/* Don't recurse.
 		 *
@@ -1710,9 +1708,7 @@ assign_lasts(struct ast_expr *n)
 	}
 
 	case AST_EXPR_REPEAT:
-		if (n->u.repeat.max >= 0) {
-			set_flags(n, AST_FLAG_LAST);
-		}
+		set_flags(n, AST_FLAG_LAST);
 
 		/* Don't recurse.
 		 *
