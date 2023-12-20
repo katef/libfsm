@@ -86,6 +86,15 @@ is_unsatisfiable_or_skipped(const struct ast_expr *n)
 		&& n->u.repeat.max == 0);
 }
 
+static void
+prune_repeat_node(struct ast_expr *n)
+{
+	assert(n->type == AST_EXPR_REPEAT && n->u.repeat.min == 0);
+	LOG(3, "%s: setting REPEAT node %p's max count to 0\n",
+	    __func__, (void *)n);
+	n->u.repeat.max = 0;
+}
+
 static enum ast_analysis_res
 analysis_iter(struct ast_expr *n)
 {
@@ -937,7 +946,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				if (child->type == AST_EXPR_REPEAT
 				    && (child->flags & AST_FLAG_UNSATISFIABLE)
 				    && child->u.repeat.min == 0) {
-					child->u.repeat.max = 0;
+					prune_repeat_node(child);
 				}
 			} else if (!after_end_anchor
 			    && child->flags & AST_FLAG_ANCHORED_END
@@ -1090,7 +1099,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			if (n->u.repeat.min == 0) {
 				LOG(3 - LOG_ANCHORING,
 				    "%s: REPEAT: UNSATISFIABLE but can be repeated 0 times, ignoring\n", __func__);
-				n->u.repeat.max = 0;
+				prune_repeat_node(n);
 				break;
 			} else if (n->u.repeat.min > 0) {
 				set_flags(n, AST_FLAG_UNSATISFIABLE);
@@ -1102,7 +1111,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			if (n->u.repeat.min == 0) {
 				LOG(3 - LOG_ANCHORING,
 				    "%s: REPEAT: analysis on child returned %d, setting repeat count to 0\n", __func__, res);
-				n->u.repeat.max = 0;
+				prune_repeat_node(n);
 			} else {
 				LOG(3 - LOG_ANCHORING,
 				    "%s: REPEAT: analysis on child returned %d\n", __func__, res);
@@ -1134,7 +1143,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		if (orig_after_end_anchor
 		    && always_consumes_input(n)
 		    && n->u.repeat.min == 0) {
-			n->u.repeat.max = 0;
+			prune_repeat_node(n);
  		}
 
 		break;
@@ -1489,7 +1498,7 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			if (n->u.repeat.min == 0) {
 				LOG(3 - LOG_ANCHORING,
 				    "%s: REPEAT: UNSATISFIABLE but can be repeated 0 times, ignoring\n", __func__);
-				n->u.repeat.max = 0; /* skip */
+				prune_repeat_node(n);
 				break;
 			} else if (n->u.repeat.min > 0) {
 				LOG(3 - LOG_ANCHORING,
@@ -1511,7 +1520,7 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			LOG(3 - LOG_ANCHORING,
 			    "%s: REPEAT: repeated group that consumes input before ^, setting max count to 0\n",
 			    __func__);
-			n->u.repeat.max = 0;
+			prune_repeat_node(n);
 		}
 
 		break;
