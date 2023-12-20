@@ -364,6 +364,8 @@ interned_state_set_intern_set(struct interned_state_set_pool *pool,
 
 #if LOG_ISS > 3
 	fprintf(stderr, "%s: miss after %zd probes\n", __func__, probes);
+#else
+        (void)probes;
 #endif
 
 
