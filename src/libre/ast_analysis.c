@@ -117,7 +117,9 @@ analysis_iter(struct ast_expr *n)
 				    (void *)n, (void *)child);
 				set_flags(child, AST_FLAG_NULLABLE);
 			}
-			analysis_iter(child);
+			enum ast_analysis_res child_res = analysis_iter(child);
+                        if (child_res != AST_ANALYSIS_OK) { return child_res; }
+
 			if (can_consume_input(child)) {
 				any_can_consume = 1;
 			}
@@ -156,7 +158,8 @@ analysis_iter(struct ast_expr *n)
 
 		for (i = 0; i < n->u.alt.count; i++) {
 			struct ast_expr *child = n->u.alt.n[i];
-			analysis_iter(child);
+			enum ast_analysis_res child_res = analysis_iter(child);
+                        if (child_res != AST_ANALYSIS_OK) { return child_res; }
 
 			/* spread nullability upward */
 			if (is_nullable(child)) {
@@ -203,7 +206,8 @@ analysis_iter(struct ast_expr *n)
 			set_flags(n, AST_FLAG_NULLABLE);
 		}
 
-		analysis_iter(e);
+                enum ast_analysis_res child_res = analysis_iter(e);
+                if (child_res != AST_ANALYSIS_OK) { return child_res; }
 		set_flags(n, e->flags & AST_FLAG_CAN_CONSUME);
 
 		if (n->u.repeat.min > 0 && e->flags & AST_FLAG_ALWAYS_CONSUMES) {
@@ -242,7 +246,8 @@ analysis_iter(struct ast_expr *n)
 			set_flags(e, AST_FLAG_NULLABLE);
 		}
 
-		analysis_iter(e);
+                enum ast_analysis_res child_res = analysis_iter(e);
+                if (child_res != AST_ANALYSIS_OK) { return child_res; }
 		set_flags(n, e->flags & (AST_FLAG_CAN_CONSUME | AST_FLAG_ALWAYS_CONSUMES));
 
 		if (is_nullable(e)) {
