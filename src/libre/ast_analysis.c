@@ -1094,9 +1094,15 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				return AST_ANALYSIS_UNSATISFIABLE;
 			}
 		} else if (res != AST_ANALYSIS_OK) {
-			LOG(3 - LOG_ANCHORING,
-			    "%s: REPEAT: analysis on child returned %d\n", __func__, res);
-			return res;
+			if (n->u.repeat.min == 0) {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: REPEAT: analysis on child returned %d, setting repeat count to 0\n", __func__, res);
+				n->u.repeat.max = 0;
+			} else {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: REPEAT: analysis on child returned %d\n", __func__, res);
+				return res;
+			}
 		}
 
 		if (can_consume_single_newline(n->u.repeat.e)) {
