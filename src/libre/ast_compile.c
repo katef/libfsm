@@ -418,6 +418,11 @@ decide_linking(struct comp_env *env,
 		return LINK_TOP_DOWN;
 	}
 
+	/* An alt node should always pass along the top-down (x,y) pair
+	 * unmodified, individual subtrees may override the linking. */
+	if (n->type == AST_EXPR_ALT) {
+		return LINK_TOP_DOWN;
+	}
 
 	/* Special case for anchors that are more constrained than normal -- search
 	 * for "pincer_anchors" in ast_analysis.c for details. */
