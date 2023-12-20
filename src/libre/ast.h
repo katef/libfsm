@@ -86,6 +86,13 @@ enum ast_anchor_type {
  *   ends with the PCRE end anchor that implicitly matches a single
  *   trailing newline.
  *
+ * - AST_FLAG_CONSTRAINED_AT_START
+ *   The anchor needs more restrictive linkage on its start side,
+ *   see ast_analysis's "pincer_anchors" analysis for details.
+ *
+ * - AST_FLAG_CONSTRAINED_AT_END
+ *   End counterpart to AST_FLAG_CONSTRAINED_AT_START.
+ *
  * Not all are valid for all node types.
  */
 enum ast_flags {
@@ -99,8 +106,6 @@ enum ast_flags {
 	AST_FLAG_ANCHORED_END    = 1 << 7,
 	AST_FLAG_END_NL          = 1 << 8,
 	AST_FLAG_MATCHES_1NEWLINE= 1 << 9,
-
-	/* FIXME: These need a description above */
 	AST_FLAG_CONSTRAINED_AT_START	 = 1 << 10,
 	AST_FLAG_CONSTRAINED_AT_END	 = 1 << 11,
 
