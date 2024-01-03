@@ -15,14 +15,17 @@
 #define FSM_PHI_32 0x9e3779b9UL
 #define FSM_PHI_64 (uint64_t)0x9e3779b97f4a7c15UL
 
-/* A suitable hash function for individual sequentially allocated
- * identifiers. See Knuth 6.4, Fibonacci hashing. */
-
 SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static __inline__ uint64_t
 hash_id(unsigned id)
 {
-	return FSM_PHI_64 * (uint64_t)(id + (unsigned)1);
+	/* xorshift* A1(12,25,27),
+	 * from http://vigna.di.unimi.it/ftp/papers/xorshift.pdf */
+	uint64_t x = id + 1;
+	x ^= x >> 12; // a
+	x ^= x << 25; // b
+	x ^= x >> 27; // c
+	return x * 2685821657736338717LLU;
 }
 
 /* FNV-1a hash function, 32 and 64 bit versions. This is in the public
