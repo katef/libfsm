@@ -17,7 +17,7 @@
 
 SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static __inline__ uint64_t
-hash_id(unsigned id)
+hash_id(uint64_t id)
 {
 	/* xorshift* A1(12,25,27),
 	 * from http://vigna.di.unimi.it/ftp/papers/xorshift.pdf */

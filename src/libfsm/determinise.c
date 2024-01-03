@@ -1645,16 +1645,9 @@ hash_pair(fsm_state_t a, fsm_state_t b)
 	assert(b & RESULT_BIT);
 	a &=~ RESULT_BIT;
 	b &=~ RESULT_BIT;
-
-	/* Don't hash a and b separately and combine them with
-	 * hash_id, because it's common to have adjacent pairs of
-	 * result IDs, and with how hash_id works that leads to
-	 * multiples of similar hash values bunching up.
-	 *
-	 * This could be replaced with a better hash function later,
-	 * but use LOG_CACHE_HTAB to ensure there aren't visually obvious
-	 * runs of collisions appearing in the tables. */
-	const uint64_t res = hash_id(a + b);
+	assert(a != b);
+	const uint64_t ab = ((uint64_t)a << 32) | (uint64_t)b;
+	const uint64_t res = hash_id(ab);
 	/* fprintf(stderr, "%s: a %d, b %d -> %016lx\n", __func__, a, b, res); */
 	return res;
 }
