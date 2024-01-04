@@ -86,6 +86,13 @@ enum ast_anchor_type {
  *   ends with the PCRE end anchor that implicitly matches a single
  *   trailing newline.
  *
+ * - AST_FLAG_CONSTRAINED_AT_START
+ *   The anchor needs more restrictive linkage on its start side,
+ *   see ast_analysis's "pincer_anchors" analysis for details.
+ *
+ * - AST_FLAG_CONSTRAINED_AT_END
+ *   End counterpart to AST_FLAG_CONSTRAINED_AT_START.
+ *
  * Not all are valid for all node types.
  */
 enum ast_flags {
@@ -99,6 +106,8 @@ enum ast_flags {
 	AST_FLAG_ANCHORED_END    = 1 << 7,
 	AST_FLAG_END_NL          = 1 << 8,
 	AST_FLAG_MATCHES_1NEWLINE= 1 << 9,
+	AST_FLAG_CONSTRAINED_AT_START	 = 1 << 10,
+	AST_FLAG_CONSTRAINED_AT_END	 = 1 << 11,
 
 	AST_FLAG_NONE = 0x00
 };
@@ -160,6 +169,8 @@ struct ast_expr {
 			size_t count; /* used */
 			size_t alloc; /* allocated */
 			struct ast_expr **n;
+			int contains_empty_groups;
+			int nullable_alt_inside_plus_repeat;
 		} alt;
 
 		struct {
@@ -174,11 +185,13 @@ struct ast_expr {
 			struct ast_expr *e;
 			unsigned min;
 			unsigned max;
+			int contains_empty_groups;
 		} repeat;
 
 		struct {
 			struct ast_expr *e;
 			unsigned id;
+			int repeated; /* set during analysis */
 		} group;
 
 		struct {

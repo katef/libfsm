@@ -203,7 +203,7 @@ hash_state_ids(size_t count, const fsm_state_t *ids)
 {
 	uint64_t h = 0;
 	for (size_t i = 0; i < count; i++) {
-		h = hash_id(ids[i]) + (FSM_PHI_64 * h);
+		h ^= hash_id(ids[i]);
 	}
 	return h;
 }
@@ -364,6 +364,8 @@ interned_state_set_intern_set(struct interned_state_set_pool *pool,
 
 #if LOG_ISS > 3
 	fprintf(stderr, "%s: miss after %zd probes\n", __func__, probes);
+#else
+        (void)probes;
 #endif
 
 

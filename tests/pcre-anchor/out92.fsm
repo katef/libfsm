@@ -1,0 +1,19 @@
+# This is a tricky one -- with '(a|$)(b|^)' the ^ must not be linked to
+# the global start or have an unanchored end loop after, because by the
+# time execution gets there it has already either matched some input
+# ('a') or anchored to the end -- the only matching inputs should be "",
+# "\n", and "<anything>ab<anything>", but "a^", "$b", or anything else
+# that does not contain "ab" must not match.
+
+0 -> 1;
+0 -> 4 "\n";
+
+1 -> 1 ?;
+1 -> 2 "a";
+
+2 -> 3 "b";
+
+3 -> 3 ?;
+
+start: 0;
+end:   0, 3, 4;

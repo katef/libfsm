@@ -51,12 +51,20 @@ enum link_side {
  *   Link to the unanchored self loop adjacent to the start/end
  *   state (env->start_any_loop or env->end_any_loop), because
  *   this node is in a FIRST or LAST position, but unanchored.
+ *
+ * - LINK_SKIP
+ *   This is used to prune linkage when anchoring leads to
+ *   unsatisfiability.
  */
 enum link_types {
 	LINK_TOP_DOWN,
 	LINK_GLOBAL,
 	LINK_GLOBAL_SELF_LOOP,
+	LINK_SKIP,
 };
+
+/* Special case: Don't link an epsilon edge */
+#define SKIP_EPSILON ((fsm_state_t)-1)
 
 struct comp_env {
 	struct fsm *fsm;
@@ -410,6 +418,27 @@ decide_linking(struct comp_env *env,
 		return LINK_TOP_DOWN;
 	}
 
+	/* An alt node should always pass along the top-down (x,y) pair
+	 * unmodified, individual subtrees may override the linking. */
+	if (n->type == AST_EXPR_ALT) {
+		return LINK_TOP_DOWN;
+	}
+
+	/* Special case for anchors that are more constrained than normal -- search
+	 * for "pincer_anchors" in ast_analysis.c for details. */
+	if (n->type == AST_EXPR_ANCHOR) {
+		if (n->u.anchor.type == AST_ANCHOR_START) {
+			if (side == LINK_END && n->flags & AST_FLAG_CONSTRAINED_AT_END) {
+				return LINK_GLOBAL;
+			}
+
+		} else if (n->u.anchor.type == AST_ANCHOR_END) {
+			if (side == LINK_START && n->flags & AST_FLAG_CONSTRAINED_AT_START) {
+				return LINK_SKIP;
+			}
+		}
+	}
+
 	/* parent can be NULL, if we're at the root node, but it must
 	 * never be the same node. */
 	assert(parent != n);
@@ -467,6 +496,9 @@ print_linkage(enum link_types t)
 	case LINK_GLOBAL_SELF_LOOP:
 		fprintf(stderr, "[SELF_LOOP]");
 		break;
+	case LINK_SKIP:
+		fprintf(stderr, "[SKIP]");
+		break;
 	default:
 		assert(!"match fail");
 		break;
@@ -477,8 +509,9 @@ print_linkage(enum link_types t)
     if (!fsm_addstate(env->fsm, &(NAME))) { return 0; }
 
 #define EPSILON(FROM, TO)           \
-    assert((FROM) != (TO));         \
-    if (!fsm_addedge_epsilon(env->fsm, (FROM), (TO))) { return 0; }
+	assert((FROM) != (TO) || ((FROM) == SKIP_EPSILON && (TO) == SKIP_EPSILON)); \
+	if ((FROM) != SKIP_EPSILON && (TO) != SKIP_EPSILON		\
+	    && !fsm_addedge_epsilon(env->fsm, (FROM), (TO))) { return 0; }
         
 #define ANY(FROM, TO)               \
     if (!fsm_addedge_any(env->fsm, (FROM), (TO))) { return 0; }
@@ -641,6 +674,10 @@ comp_iter(struct comp_env *env,
 
 		x = env->start_any_loop;
 		break;
+	case LINK_SKIP:
+		x = SKIP_EPSILON;
+		y = SKIP_EPSILON;
+		break;
 	default:
 		assert(!"unreachable");
 	}
@@ -650,6 +687,15 @@ comp_iter(struct comp_env *env,
 		break;
 	case LINK_GLOBAL:
 		if (env->re_flags & RE_END_NL && (n->flags & AST_FLAG_END_NL)) {
+			if (!intern_end_nl(env)) {
+				return 0;
+			}
+			y = env->end_nl;
+		} else if (n->type == AST_EXPR_ANCHOR
+		    && n->u.anchor.type == AST_ANCHOR_START
+		    && n->flags & AST_FLAG_CONSTRAINED_AT_END) {
+			/* the start anchor is constrained, so only
+			 * link directly to '\n''s end here */
 			if (!intern_end_nl(env)) {
 				return 0;
 			}
@@ -665,6 +711,10 @@ comp_iter(struct comp_env *env,
 		assert(env->has_end_any_loop);
 
 		y = env->end_any_loop;
+		break;
+	case LINK_SKIP:
+		x = SKIP_EPSILON;
+		y = SKIP_EPSILON;
 		break;
 	default:
 		assert(!"unreachable");

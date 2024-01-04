@@ -997,13 +997,31 @@ ast_expr_is_literal(const struct ast_expr *e,
 		*anchor_end = 1;
 	}
 
+done:
+
 	for (i = 0; i < count; i++) {
 		if (nodes[i] == NULL || nodes[i]->type != AST_EXPR_LITERAL) {
 			return 0;
 		}
-	}
 
-done:
+		/* mask out AST flags that we don't care about; these may be present or not */
+		int ast_flags = nodes[i]->flags
+			& ~(AST_FLAG_FIRST | AST_FLAG_LAST | AST_FLAG_ALWAYS_CONSUMES | AST_FLAG_CAN_CONSUME);
+
+		/* we reject anything else */
+		if (ast_flags != 0) {
+			return 0;
+		}
+
+		/* mask out re flags that we don't handle here yet (the caller is responsible for these) */
+		int re_flags = nodes[i]->re_flags
+			& ~(RE_END_NL);
+
+		/* and we don't permit any other re_flags */
+		if (re_flags != 0) {
+			return 0;
+		}
+	}
 
 	*n = count + is_end_nl;
 
