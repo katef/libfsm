@@ -72,8 +72,5 @@ state_set_rebase(struct state_set **set, fsm_state_t base);
 void
 state_set_replace(struct state_set **set, fsm_state_t old, fsm_state_t new);
 
-unsigned long
-state_set_hash(const struct state_set *set);
-
 #endif
 
