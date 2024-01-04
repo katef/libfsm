@@ -396,7 +396,7 @@ hash_iss(interned_state_set_id iss)
 {
 	/* Just hashing the ID directly is fine here -- since they're
 	 * interned, they're identified by pointer equality. */
-	return FSM_PHI_64 * (uintptr_t)iss;
+	return hash_id((uintptr_t)iss);
 }
 
 static struct mapping *
@@ -1309,15 +1309,10 @@ build_output_from_cached_analysis(struct analyze_closures_env *env, fsm_state_t 
 
 #define LOG_TO_SET_HTAB 0
 
-SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static uint64_t
 to_set_hash(size_t count, const fsm_state_t *ids)
 {
-	uint64_t h = hash_id(count);
-	for (size_t i = 0; i < count; i++) {
-		h ^= hash_id(ids[i]);
-	}
-	return h;
+	return hash_ids(count, ids);
 }
 
 static int
@@ -1333,15 +1328,14 @@ to_set_htab_check(struct analyze_closures_env *env,
 		return 0;
 	}
 
-
-#if LOG_TO_SET_HTAB
+#if LOG_TO_SET_HTAB || HASH_LOG_PROBES || defined(HASH_PROBE_LIMIT)
 	size_t probes = 0;
 #endif
 	int res = 0;
 
 	const uint64_t mask = bcount - 1;
 	for (size_t b_i = 0; b_i < bcount; b_i++) {
-#if LOG_TO_SET_HTAB
+#if LOG_TO_SET_HTAB || HASH_LOG_PROBES || defined(HASH_PROBE_LIMIT)
 		probes++;
 #endif
 		const struct to_set_bucket *b = &htab->buckets[(h + b_i) & mask];
@@ -1364,9 +1358,15 @@ to_set_htab_check(struct analyze_closures_env *env,
 	}
 
 done:
-#if LOG_TO_SET_HTAB
+#if LOG_TO_SET_HTAB || HASH_LOG_PROBES
 	fprintf(stderr, "%s: result %d, %zu probes, htab: used %zu/%zu ceil\n",
 	    __func__, res, probes, htab->buckets_used, htab->bucket_count);
+#endif
+#ifdef HASH_PROBE_LIMIT
+	if (probes >= HASH_PROBE_LIMIT) {
+		fprintf(stderr, "-- %zd probes, limit exceeded\n", probes);
+	}
+	assert(probes < HASH_PROBE_LIMIT);
 #endif
 
 	return res;
@@ -1431,6 +1431,22 @@ to_set_htab_save(struct analyze_closures_env *env,
 			b->count = count;
 			b->offset = offset;
 			htab->buckets_used++;
+#if HASH_LOG_PROBES
+			fprintf(stderr, "%s: [", __func__);
+			const fsm_state_t *ids = &env->to_sets.buf[offset];
+			for (size_t i = 0; i < count; i++) {
+				fprintf(stderr, "%s%d",
+				    i > 0 ? " " : "", ids[i]);
+			}
+
+			fprintf(stderr, "] -> hash %lx -> b %zu (%zu/%zu used), %zd probes\n",
+			    hash, (hash + b_i) & mask,
+			    htab->buckets_used, htab->bucket_count, b_i);
+#endif
+#if HASH_PROBE_LIMIT
+			assert(b_i < HASH_PROBE_LIMIT);
+#endif
+
 			return 1;
 		} else if (b->count == count) {
 			assert(b->offset != offset); /* no duplicates */
@@ -1586,8 +1602,8 @@ commit_buffered_result(struct analyze_closures_env *env, uint32_t *cache_result_
 		memcpy(&nr->entries[0], env->results.buffer.entries,
 		    nr->count * sizeof(env->results.buffer.entries[0]));
 #if LOG_GROUPING || LOG_COMMIT_BUFFERED_GROUP
-		fprintf(stderr, "%s: alloc %zu, hash 0x%016lx\n",
-		    __func__, alloc_sz, hash_fnv1a_64((const uint8_t *)nr, alloc_sz));
+		fprintf(stderr, "%s: alloc %zu, count %u\n",
+		    __func__, alloc_sz, nr->count));
 #endif
 	}
 

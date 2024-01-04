@@ -197,15 +197,10 @@ dump_tables(FILE *f, const struct interned_state_set_pool *pool)
 #endif
 }
 
-SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static uint64_t
 hash_state_ids(size_t count, const fsm_state_t *ids)
 {
-	uint64_t h = 0;
-	for (size_t i = 0; i < count; i++) {
-		h ^= hash_id(ids[i]);
-	}
-	return h;
+	return hash_ids(count, ids);
 }
 
 static bool
@@ -329,8 +324,13 @@ interned_state_set_intern_set(struct interned_state_set_pool *pool,
 		fprintf(stderr, "%s: htab[(0x%lx + %lu) & 0x%lx => %d\n",
 		    __func__, h, b_i, mask, *b);
 #endif
+
+#ifdef HASH_PROBE_LIMIT
+		assert(probes < HASH_PROBE_LIMIT);
+#endif
+
 		if (*b == NO_ID) {
-#if LOG_ISS > 3
+#if LOG_ISS > 3 || HASH_LOG_PROBES
 			fprintf(stderr, "%s: empty bucket (%zd probes)\n", __func__, probes);
 #endif
 			dst_bucket = b;
@@ -351,7 +351,7 @@ interned_state_set_intern_set(struct interned_state_set_pool *pool,
 
 		if (0 == memcmp(states, buf, s->length * sizeof(buf[0]))) {
 			*result = id;
-#if LOG_ISS > 3
+#if LOG_ISS > 3 || HASH_LOG_PROBES
 			fprintf(stderr, "%s: reused %u (%zd probes)\n", __func__, id, probes);
 #endif
 			return true;
@@ -362,7 +362,7 @@ interned_state_set_intern_set(struct interned_state_set_pool *pool,
 	}
 	assert(dst_bucket != NULL);
 
-#if LOG_ISS > 3
+#if LOG_ISS > 3 || HASH_LOG_PROBES
 	fprintf(stderr, "%s: miss after %zd probes\n", __func__, probes);
 #else
         (void)probes;
