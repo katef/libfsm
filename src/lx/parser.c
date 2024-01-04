@@ -3364,11 +3364,23 @@ ZL1:;
 
 		lx->free(lx->buf_opaque);
 
-		assert(ast != NULL);
+		/*
+		 * This can happen when the first token is TOK_UNKNOWN.
+		 * SID's generated parser bails out immediately.
+		 * So we never reach <make-ast>, and never <err-syntax> about it.
+		 *
+		 * Really I wanted this handled along with the usual syntax error
+		 * case, from ## alts inside parser.sid, instead of reproducing
+		 * the same error here.
+		 */
+		if (ast == NULL) {
+			err(lex_state, "Syntax error");
+			exit(EXIT_FAILURE);
+		}
 
 		return ast;
 	}
 
-#line 3373 "src/lx/parser.c"
+#line 3385 "src/lx/parser.c"
 
 /* END OF FILE */
