@@ -1672,6 +1672,15 @@ hash_pair(fsm_state_t a, fsm_state_t b)
 	return res;
 }
 
+static int eq_bucket_pair(const struct result_pair_bucket *b, fsm_state_t pa, fsm_state_t pb)
+{
+	if ((pa & ~RESULT_BIT) < (pb & ~RESULT_BIT)) {
+		return b->ids[0] == pa && b->ids[1] == pb;
+	} else {
+		return b->ids[0] == pb && b->ids[1] == pa;
+	}
+}
+
 static int
 analysis_cache_check_pair(struct analyze_closures_env *env, fsm_state_t pa, fsm_state_t pb,
 	fsm_state_t *result_id)
@@ -1697,7 +1706,7 @@ analysis_cache_check_pair(struct analyze_closures_env *env, fsm_state_t pa, fsm_
 		struct result_pair_bucket *b = &htab->buckets[(h + i) & mask];
 		if (b->t == RPBT_UNUSED) {
 			break;	/* not found */
-		} else if (b->t == RPBT_PAIR && b->ids[0] == pa && b->ids[1] == pb) {
+		} else if (b->t == RPBT_PAIR && eq_bucket_pair(b, pa, pb)) {
 			*result_id = b->result_id; /* hit */
 #if LOG_GROUPING > 1
 			fprintf(stderr, "%s: cache hit for pair { %d_R, %d_R } => %d\n",
@@ -1831,6 +1840,7 @@ pair_cache_save(struct analyze_closures_env *env,
 		assert(pa != pb);
 		assert(pa & RESULT_BIT);
 		assert(pb & RESULT_BIT);
+		assert((pa & ~RESULT_BIT) < (pb & ~RESULT_BIT));
 	}
 
 #if LOG_GROUPING > 1
@@ -1868,6 +1878,8 @@ pair_cache_save(struct analyze_closures_env *env,
 				    : hash_pair(ob->ids[0], ob->ids[1]));
 				if (ob->t == RPBT_SINGLE_STATE) {
 					assert(ob->ids[0] == ob->ids[1]);
+				} else {
+					assert((ob->ids[0] & ~RESULT_BIT) < (ob->ids[1] & ~RESULT_BIT));
 				}
 
 				for (size_t nb_i = 0; nb_i < ncount; nb_i++) {
@@ -1902,8 +1914,9 @@ pair_cache_save(struct analyze_closures_env *env,
 #endif
 
 		if (b->t == RPBT_UNUSED) { /* empty */
-			b->ids[0] = pa;
-			b->ids[1] = pb;
+			/* Ensure pair ordering is consistent */
+			b->ids[0] = pa < pb ? pa : pb;
+			b->ids[1] = pa < pb ? pb : pa;
 			b->t = type;
 			b->result_id = result_id;
 			htab->buckets_used++;
@@ -1947,6 +1960,16 @@ analysis_cache_save_pair(struct analyze_closures_env *env,
 	fsm_state_t a, fsm_state_t b, fsm_state_t result_id)
 {
 	assert(a != b);
+	assert((a & RESULT_BIT) == 0);
+	assert((b & RESULT_BIT) == 0);
+
+	if (a > b) {		/* if necessary, swap to ensure a < b */
+		const fsm_state_t tmp = a;
+		a = b;
+		b = tmp;
+	}
+	assert(a < b);
+
 	return pair_cache_save(env, RPBT_PAIR, a | RESULT_BIT, b | RESULT_BIT, result_id);
 }
 
