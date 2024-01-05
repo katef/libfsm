@@ -1659,10 +1659,14 @@ hash_pair(fsm_state_t a, fsm_state_t b)
 	assert(a != b);
 	assert(a & RESULT_BIT);
 	assert(b & RESULT_BIT);
-	a &=~ RESULT_BIT;
-	b &=~ RESULT_BIT;
-	assert(a != b);
-	const uint64_t ab = ((uint64_t)a << 32) | (uint64_t)b;
+	const uint64_t ma = (uint64_t)(a & ~RESULT_BIT); /* m: masked */
+	const uint64_t mb = (uint64_t)(b & ~RESULT_BIT);
+	assert(ma != mb);
+
+	/* Left-shift the smaller ID, so the pair order is consistent for hashing. */
+	const uint64_t ab = (ma < mb)
+	    ? ((ma << 32) | mb)
+	    : ((mb << 32) | ma);
 	const uint64_t res = hash_id(ab);
 	/* fprintf(stderr, "%s: a %d, b %d -> %016lx\n", __func__, a, b, res); */
 	return res;
