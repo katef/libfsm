@@ -664,7 +664,6 @@ struct anchoring_env {
 
 	/* Corresponding flag for end anchors while sweeping backward. */
 	int followed_by_consuming;
-	int followed_by_consuming_newline;
 
 	/* Special case for detecting '$[^a]', which matches "\n" with
 	 * a capture group 0 of (0,1) in PCRE. */
