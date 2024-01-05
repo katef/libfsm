@@ -12,6 +12,10 @@
 #include "adt/common.h"
 #include "fsm/fsm.h"
 
+#if EXPENSIVE_CHECKS
+#include <assert.h>
+#endif
+
 #define HASH_LOG_PROBES 0
 /* #define HASH_PROBE_LIMIT 100 */
 
@@ -35,6 +39,11 @@ hash_ids(size_t count, const fsm_state_t *ids)
 	uint64_t h = 0;
 	for (size_t i = 0; i < count; i++) {
 		h = hash_id(h ^ ids[i]);
+#if EXPENSIVE_CHECKS
+		if (i > 0) {
+			assert(ids[i-1] <= ids[i]);
+		}
+#endif
 	}
 	return h;
 }
