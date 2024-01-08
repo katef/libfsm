@@ -603,7 +603,8 @@ can_consume_single_newline(struct ast_expr *n)
 			    return n->u.range.from.u.codepoint.u <= '\n'
 				&& n->u.range.to.u.codepoint.u >= '\n';
 		} else if (n->u.range.from.type == AST_ENDPOINT_NAMED) {
-			/* TODO: unreachable? */
+			/* currently unreachable, named ranges are unsupported */
+			assert(!"unreachable");
 			break;
 		}
 		break;
