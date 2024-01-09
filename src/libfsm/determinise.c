@@ -2065,7 +2065,7 @@ cmp_fsm_state_t(const void *pa, const void *pb)
 	return a < b ? -1 : a > b ? 1 : 0;
 }
 
-#define SMALL_INPUT_LIMIT 15
+#define SMALL_INPUT_LIMIT 255
 #define SMALL_INPUT_CHECK 0
 
 #ifdef SMALL_INPUT_LIMIT
