@@ -177,7 +177,7 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 			const size_t count = fsm_getendidcount(fsm, i);
 			if (count > 0) {
 				ids = f_malloc(fsm->opt->alloc,
-			    sizeof(*ids) + ((count - 1) * sizeof(ids->ids)));
+					sizeof(*ids) + ((count - 1) * sizeof(ids->ids)));
 				assert(ids != NULL);
 				if (ids == NULL) {
 					return -1;
@@ -203,6 +203,8 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 			}
 
 			fprintf(f, " ];\n");
+
+			f_free(fsm->opt->alloc, ids);
 		}
 
 		/* TODO: show example here, unless !opt->comments */
