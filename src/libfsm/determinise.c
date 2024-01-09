@@ -2065,6 +2065,71 @@ cmp_fsm_state_t(const void *pa, const void *pb)
 	return a < b ? -1 : a > b ? 1 : 0;
 }
 
+#define SMALL_INPUT_LIMIT 15
+#define SMALL_INPUT_CHECK 0
+
+#ifdef SMALL_INPUT_LIMIT
+static void
+small_input_sort_and_dedup(fsm_state_t *buf, size_t *pused)
+{
+	/* Alternate sort_and_dedup_dst_buf implementation for when
+	 * the input is small enough to fit in a few cache lines. */
+
+	const size_t orig_used = *pused;
+	assert(orig_used > 0 && orig_used <= SMALL_INPUT_LIMIT);
+	size_t used = 0;
+	fsm_state_t tmp[SMALL_INPUT_LIMIT];
+
+	const fsm_state_t MOVED = (fsm_state_t)-1;
+
+	tmp[used++] = buf[0];
+	buf[0] = MOVED;
+
+	/* First, insert unique ascending values into a tmp buffer.
+	 * If the input is already mostly sorted, great. */
+	for (size_t i = 1; i < orig_used; i++) {
+		fsm_state_t cur = buf[i];
+		if (cur > tmp[used - 1]) {
+			tmp[used++] = cur;
+			buf[i] = MOVED;
+		}
+	}
+
+	/* Then, do insertion sort for entries that haven't already been
+	 * moved into tmp. They must go somewhere in the middle, because
+	 * entries > the other entries in tmp would have already been
+	 * appended in the first pass. */
+	for (size_t i = 1; i < orig_used; i++) {
+		const fsm_state_t cur = buf[i];
+		if (cur == MOVED) { continue; }
+		for (size_t j = 0; j < used; j++) {
+			const fsm_state_t other = tmp[j];
+			if (cur < other) { /* shift the rest down */
+				const size_t to_move = used - j;
+				memmove(&tmp[j+1], &tmp[j], to_move * sizeof(tmp[j]));
+				tmp[j] = cur;
+				used++;
+				break;
+			} else if (cur == other) {
+				break;		  /* discard duplicate */
+			}
+		}
+	}
+
+	/* Finally, copy the sorted/dedup'd input back into the buffer. */
+	for (size_t i = 0; i < used; i++) {
+		buf[i] = tmp[i];
+	}
+	*pused = used;
+
+	if (SMALL_INPUT_CHECK) {
+		for (size_t i = 1; i < used; i++) {
+			assert(buf[i - 1] < buf[i]);
+		}
+	}
+}
+#endif
+
 static void
 sort_and_dedup_dst_buf(fsm_state_t *buf, size_t *used)
 {
@@ -2074,15 +2139,38 @@ sort_and_dedup_dst_buf(fsm_state_t *buf, size_t *used)
 		return;		/* no change */
 	}
 
+#ifdef SMALL_INPUT_LIMIT
+	if (orig_used <= SMALL_INPUT_LIMIT) {
+		small_input_sort_and_dedup(buf, used);
+		return;
+	}
+#endif
+
 	/* Figure out what the min and max values are, because
 	 * when the difference between them is not too large it
 	 * can be significantly faster to avoid qsort here. */
 	fsm_state_t min = (fsm_state_t)-1;
 	fsm_state_t max = 0;
+	fsm_state_t prev;
+	int already_sorted_and_unique = 1;
+
 	for (size_t i = 0; i < orig_used; i++) {
 		const fsm_state_t cur = buf[i];
 		if (cur < min) { min = cur; }
 		if (cur > max) { max = cur; }
+
+		if (i > 0) {
+			if (cur <= prev) {
+				already_sorted_and_unique = 0;
+			}
+		}
+		prev = cur;
+	}
+
+	/* If the buffer is already sorted and unique, we're done. */
+	if (already_sorted_and_unique) {
+		*used = orig_used;
+		return;
 	}
 
 	/* If there's only one unique value, then we're done. */
