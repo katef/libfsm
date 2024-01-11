@@ -603,7 +603,8 @@ can_consume_single_newline(struct ast_expr *n)
 			    return n->u.range.from.u.codepoint.u <= '\n'
 				&& n->u.range.to.u.codepoint.u >= '\n';
 		} else if (n->u.range.from.type == AST_ENDPOINT_NAMED) {
-			/* TODO: unreachable? */
+			/* currently unreachable, named ranges are unsupported */
+			assert(!"unreachable");
 			break;
 		}
 		break;
@@ -1128,6 +1129,10 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			    "%s: REPEAT: repeating ANCHORED_START subtree >0 times -> ANCHORED_START\n", __func__);
 			set_flags(n, AST_FLAG_ANCHORED_START);
 			n->u.repeat.max = 1;
+		}
+
+		if (can_consume_single_newline(n->u.repeat.e)) {
+			set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
 		}
 
 		if (n->u.repeat.e->flags & AST_FLAG_ANCHORED_END && n->u.repeat.min > 0) {
