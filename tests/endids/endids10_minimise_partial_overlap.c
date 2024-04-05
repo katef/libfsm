@@ -63,6 +63,7 @@ int main(void)
 	}
 	assert(written == 1);
 	assert(endids[0] == ENDID_AB_STAR_C);
+	free(endids);
 
 	if (match_string(combined, "abc", NULL, &endids, &written) != 1) {
 		assert(!"'abc' should match");
@@ -71,12 +72,14 @@ int main(void)
 	/* result is not sorted */
 	assert((endids[0] == ENDID_AB_STAR_C && endids[1] == ENDID_ABC) ||
 	    (endids[1] == ENDID_AB_STAR_C && endids[0] == ENDID_ABC));
+	free(endids);
 
 	if (match_string(combined, "abbc", NULL, &endids, &written) != 1) {
 		assert(!"'abbc' should match");
 	}
 	assert(written == 1);
 	assert(endids[0] == ENDID_AB_STAR_C);
+	free(endids);
 
 	fsm_free(combined);
 }
