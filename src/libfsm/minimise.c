@@ -17,10 +17,6 @@
 #include <fsm/walk.h>
 #include <fsm/alloc.h>
 
-#if EXPENSIVE_CHECKS
-#include <fsm/print.h>
-#endif
-
 #include <adt/edgeset.h>
 #include <adt/pv.h>
 #include <adt/set.h>
@@ -38,6 +34,16 @@
 
 #include "minimise_internal.h"
 #include "minimise_test_oracle.h"
+
+#if EXPENSIVE_CHECKS
+#include <fsm/print.h>
+
+static void
+check_done_ec_offset(const struct min_env *env);
+
+static int
+all_end_states_are_currently_together(const struct min_env *env);
+#endif
 
 static int
 split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm);
@@ -351,7 +357,7 @@ build_minimised_mapping(const struct fsm *fsm,
 					}
 				}
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 				check_done_ec_offset(&env);
 #endif
 			}
@@ -425,7 +431,7 @@ dump_ecs(FILE *f, const struct min_env *env)
 #endif
 }
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 static void
 check_descending_EC_counts(const struct min_env *env)
 {
@@ -633,7 +639,7 @@ populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
 	/* The dead state is not a member of any EC. */
 	env->state_ecs[env->dead_state] = NO_ID;
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 	check_descending_EC_counts(env);
 #endif
 
@@ -703,7 +709,7 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 
 	const size_t state_count = fsm_countstates(fsm);
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 	/* Invariant: For each EC, either all or none of the states
 	 * are end states. We only partition the set(s) of end states
 	 * here. */
@@ -969,7 +975,7 @@ collect_end_ids(const struct fsm *fsm, fsm_state_t s,
 	return 1;
 }
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 static void
 check_done_ec_offset(const struct min_env *env)
 {
@@ -984,12 +990,33 @@ check_done_ec_offset(const struct min_env *env)
 	 * worth the added complexity to avoid checking ECs 0 and 1. */
 	for (i = 0; i < env->ec_count; i++) {
 		const fsm_state_t head = MASK_EC_HEAD(env->ecs[i]);
-		if (i >= done_ec_offset) {
+		if (i >= env->done_ec_offset) {
 			assert(head == NO_ID || env->jump[head] == NO_ID);
 		} else if (i >= 2) {
 			assert(env->jump[head] != NO_ID);
 		}
 	}
+}
+
+static int
+all_end_states_are_currently_together(const struct min_env *env)
+{
+	/* For each EC, either all or none of the states in it
+	 * are end states. */
+	for (size_t i = 0; i < env->ec_count; i++) {
+		const fsm_state_t head = MASK_EC_HEAD(env->ecs[i]);
+		const int ec_first_is_end = fsm_isend(env->fsm, head);
+
+		fsm_state_t s = env->jump[head];
+		while (s != NO_ID) {
+			if (fsm_isend(env->fsm, s) != ec_first_is_end) {
+				return 0;
+			}
+			s = env->jump[s];
+		}
+	}
+
+	return 1;
 }
 #endif
 
@@ -1140,7 +1167,7 @@ try_partition(struct min_env *env, unsigned char label,
 	const unsigned dead_state_ec = env->state_ecs[env->dead_state];
 	const struct fsm_state *states = env->fsm->states;
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 	/* Count states here, to compare against the partitioned
 	 * EC' counts later. */
 	size_t state_count = 0, psrc_count, pdst_count;
@@ -1238,7 +1265,7 @@ try_partition(struct min_env *env, unsigned char label,
 		}
 	}
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 	/* Count how many states were split into each EC
 	 * and check that the sum matches the original count. */
 	psrc_count = 0;
