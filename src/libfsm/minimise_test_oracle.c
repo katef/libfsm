@@ -353,6 +353,10 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	free(table);
 	free(tmp_map);
 	free(mapping);
+	free(endid_group_assignments);
+	free(endid_group_leaders);
+	free(endid_buf_a);
+	free(endid_buf_b);
 
 	return res;
 
