@@ -116,6 +116,7 @@ SUBDIR += tests/equals
 SUBDIR += tests/subtract
 SUBDIR += tests/determinise
 SUBDIR += tests/endids
+SUBDIR += tests/endids_codegen
 SUBDIR += tests/epsilons
 SUBDIR += tests/glob
 SUBDIR += tests/like
