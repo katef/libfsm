@@ -7,6 +7,8 @@
 #ifndef AC_H
 #define AC_H
 
+#include "fsm/fsm.h"
+
 struct fsm;
 struct fsm_state;
 struct fsm_options;
@@ -20,7 +22,8 @@ void
 trie_free(struct trie_graph *g);
 
 struct trie_graph *
-trie_add_word(struct trie_graph *g, const char *w, size_t n);
+trie_add_word(struct trie_graph *g, const char *w, size_t n,
+	const fsm_end_id_t *endid);
 
 int
 trie_add_failure_edges(struct trie_graph *g);

@@ -207,6 +207,12 @@ fsm_setend(struct fsm *fsm, fsm_state_t state, int end);
 int
 fsm_setendid(struct fsm *fsm, fsm_end_id_t id);
 
+/* Associate a numeric ID with a specific end state in an fsm.
+ * Returns 1 on success, 0 on error.
+ * */
+int
+fsm_setendidstate(struct fsm *fsm, fsm_state_t end_state, fsm_end_id_t id);
+
 /* Get the end IDs associated with an end state, if any.
  * If id_buf has enough cells to store all the end IDs (according
  * to id_buf_count) then they are written into id_buf[] and

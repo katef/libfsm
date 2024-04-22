@@ -32,7 +32,7 @@ re_strings(const struct fsm_options *opt, const char *a[], size_t n,
 	}
 
 	for (i = 0; i < n; i++) {
-		if (!re_strings_add_str(g, a[i])) {
+		if (!re_strings_add_str(g, a[i], NULL)) {
 			goto error;
 		}
 	}
@@ -64,20 +64,20 @@ re_strings_free(struct re_strings *g)
 }
 
 int
-re_strings_add_raw(struct re_strings *g, const void *p, size_t n)
+re_strings_add_raw(struct re_strings *g, const void *p, size_t n, const fsm_end_id_t *endid)
 {
 	assert(p != NULL);
 	assert(n > 0);
 
-	return trie_add_word((struct trie_graph *) g, p, n) != NULL;
+	return trie_add_word((struct trie_graph *) g, p, n, endid) != NULL;
 }
 
 int
-re_strings_add_str(struct re_strings *g, const char *s)
+re_strings_add_str(struct re_strings *g, const char *s, const fsm_end_id_t *endid)
 {
 	assert(s != NULL);
 
-	return re_strings_add_raw(g, s, strlen(s));
+	return re_strings_add_raw(g, s, strlen(s), endid);
 }
 
 struct fsm *

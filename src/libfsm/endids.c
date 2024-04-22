@@ -84,6 +84,16 @@ fsm_setendid(struct fsm *fsm, fsm_end_id_t id)
 	return 1;
 }
 
+int
+fsm_setendidstate(struct fsm *fsm, fsm_state_t end_state, fsm_end_id_t id)
+{
+	enum fsm_endid_set_res sres = fsm_endid_set(fsm, end_state, id);
+	if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
+		return 0;
+	}
+	return 1;
+}
+
 enum fsm_getendids_res
 fsm_getendids(const struct fsm *fsm, fsm_state_t end_state,
     size_t id_buf_count, fsm_end_id_t *id_buf,

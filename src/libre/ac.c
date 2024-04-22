@@ -16,6 +16,7 @@
 
 #include "ac.h"
 
+#define ENDID_NONE ((fsm_end_id_t)-1)
 enum { POOL_BLOCK_SIZE = 256 };
 
 struct trie_state {
@@ -25,6 +26,7 @@ struct trie_state {
 	unsigned int index;
 	unsigned int output:1;
 	unsigned int have_st:1;
+	fsm_end_id_t endid;	/* or ENDID_NONE */
 };
 
 struct trie_pool {
@@ -126,7 +128,7 @@ trie_create(void)
 }
 
 struct trie_graph *
-trie_add_word(struct trie_graph *g, const char *w, size_t n)
+trie_add_word(struct trie_graph *g, const char *w, size_t n, const fsm_end_id_t *endid)
 {
 	struct trie_state *st;
 	size_t i;
@@ -159,6 +161,7 @@ trie_add_word(struct trie_graph *g, const char *w, size_t n)
 		g->depth = n;
 	}
 
+	st->endid = (endid == NULL ? ENDID_NONE : *endid);
 	return g;
 }
 
@@ -278,7 +281,7 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 	assert(fsm != NULL);
 	assert(q != NULL);
 
-	if (ts->output && have_end) {
+	if (ts->output && have_end && ts->endid == ENDID_NONE) {
 		*q = single_end;
 		return 1;
 	}
@@ -315,6 +318,11 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 
 	if (ts->output) {
 		fsm_setend(fsm, st, 1);
+		if (ts->endid != ENDID_NONE) {
+			if (!fsm_setendidstate(fsm, st, ts->endid)) {
+				return 0;
+			}
+		}
 	}
 
 	*q = st;
