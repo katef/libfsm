@@ -17,14 +17,11 @@
 #include <fsm/walk.h>
 #include <fsm/alloc.h>
 
-#if EXPENSIVE_CHECKS
-#include <fsm/print.h>
-#endif
-
 #include <adt/edgeset.h>
 #include <adt/pv.h>
 #include <adt/set.h>
 #include <adt/u64bitset.h>
+#include <adt/hash.h>
 
 #include "internal.h"
 #include "capture.h"
@@ -37,6 +34,31 @@
 
 #include "minimise_internal.h"
 #include "minimise_test_oracle.h"
+
+#if EXPENSIVE_CHECKS
+#include <fsm/print.h>
+
+static void
+check_done_ec_offset(const struct min_env *env);
+
+static int
+all_end_states_are_currently_together(const struct min_env *env);
+#endif
+
+static int
+split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm);
+
+#define DEF_CAPTURE_ID_CEIL 4
+struct end_metadata {
+	struct end_metadata_end {
+		unsigned count;
+		fsm_end_id_t *ids;
+	} end;
+};
+
+static int
+collect_end_ids(const struct fsm *fsm, fsm_state_t s,
+	struct end_metadata_end *e);
 
 int
 fsm_minimise(struct fsm *fsm)
@@ -253,6 +275,12 @@ build_minimised_mapping(const struct fsm *fsm,
 		goto cleanup;
 	}
 
+	/* This only needs to be run once, but must run before the main
+	 * fixpoint loop below, because it potentially refines ECs. */
+	if (!split_ecs_by_end_metadata(&env, fsm)) {
+		goto cleanup;
+	}
+
 #if LOG_INIT
 	for (i = 0; i < env.ec_count; i++) {
 		fprintf(stderr, "# --ec[%lu]: %d\n", i, env.ecs[i]);
@@ -329,7 +357,7 @@ build_minimised_mapping(const struct fsm *fsm,
 					}
 				}
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 				check_done_ec_offset(&env);
 #endif
 			}
@@ -403,7 +431,7 @@ dump_ecs(FILE *f, const struct min_env *env)
 #endif
 }
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 static void
 check_descending_EC_counts(const struct min_env *env)
 {
@@ -611,7 +639,7 @@ populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
 	/* The dead state is not a member of any EC. */
 	env->state_ecs[env->dead_state] = NO_ID;
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 	check_descending_EC_counts(env);
 #endif
 
@@ -646,7 +674,308 @@ cleanup:
 #endif
 }
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
+static void
+incremental_hash_of_ids(uint64_t *accum, fsm_end_id_t id)
+{
+	(*accum) += hash_id(id);
+}
+
+static int
+same_end_metadata(const struct end_metadata *a, const struct end_metadata *b)
+{
+	if (a->end.count != b->end.count) {
+		return 0;
+	}
+
+	/* compare -- these must be sorted */
+
+	for (size_t i = 0; i < a->end.count; i++) {
+		if (a->end.ids[i] != b->end.ids[i]) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+static int
+split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
+{
+	int res = 0;
+
+	struct end_metadata *end_md;
+	fsm_state_t *htab = NULL;
+
+	const size_t state_count = fsm_countstates(fsm);
+
+#if EXPENSIVE_CHECKS
+	/* Invariant: For each EC, either all or none of the states
+	 * are end states. We only partition the set(s) of end states
+	 * here. */
+	all_end_states_are_currently_together(env);
+#endif
+
+	/* Use the hash table to assign to new groups. */
+
+	end_md = f_calloc(fsm->opt->alloc,
+	    state_count, sizeof(end_md[0]));
+	if (end_md == NULL) {
+		goto cleanup;
+	}
+
+	size_t bucket_count = 1;
+	while (bucket_count < state_count) {
+		bucket_count *= 2; /* power of 2 ceiling */
+	}
+	const size_t mask = bucket_count - 1;
+
+	htab = f_malloc(fsm->opt->alloc,
+	    bucket_count * sizeof(htab[0]));
+	if (htab == NULL) {
+		goto cleanup;
+	}
+
+	/* First pass: collect end state metadata */
+	for (size_t ec_i = 0; ec_i < env->ec_count; ec_i++) {
+		fsm_state_t s = MASK_EC_HEAD(env->ecs[ec_i]);
+#if LOG_ECS
+		fprintf(stderr, "## EC %zu\n", ec_i);
+#endif
+		while (s != NO_ID) {
+			struct end_metadata *e = &end_md[s];
+			if (!fsm_isend(fsm, s)) {
+				break; /* this EC has non-end states, skip */
+			}
+
+			if (!collect_end_ids(fsm, s, &e->end)) {
+				goto cleanup;
+			}
+
+			s = env->jump[s];
+		}
+	}
+
+#if LOG_ECS
+	fprintf(stderr, "==== BEFORE PARTITIONING BY END METADATA\n");
+	dump_ecs(stderr, env);
+	fprintf(stderr, "====\n");
+#endif
+
+	/* Second pass: partition ECs into groups with identical end IDs.
+	 * for each group with different end IDs, unlink them. */
+	const size_t max_ec = env->ec_count;
+	for (size_t ec_i = 0; ec_i < max_ec; ec_i++) {
+		fsm_state_t s = MASK_EC_HEAD(env->ecs[ec_i]);
+		fsm_state_t prev = NO_ID;
+
+		for (size_t i = 0; i < bucket_count; i++) {
+			htab[i] = NO_ID; /* reset hash table */
+		}
+
+		while (s != NO_ID) {
+			const struct end_metadata *s_md = &end_md[s];
+
+			uint64_t hash = 0;
+			const fsm_state_t next = env->jump[s];
+
+			for (size_t eid_i = 0; eid_i < s_md->end.count; eid_i++) {
+				incremental_hash_of_ids(&hash, s_md->end.ids[eid_i]);
+			}
+
+			for (size_t b_i = 0; b_i < bucket_count; b_i++) {
+				fsm_state_t *b = &htab[(b_i + hash) & mask];
+				const fsm_state_t other = *b;
+				const struct end_metadata *other_md = &end_md[other];
+
+				if (other == NO_ID) { /* empty hash bucket */
+					*b = s;
+					if (prev == NO_ID) {
+						/* keep the first state, along with other states
+						 * with matching end IDs, in this EC. no-op. */
+#if LOG_ECS
+						fprintf(stderr, " -- keeping state s %d in EC %u\n",
+						    s, env->state_ecs[s]);
+#endif
+						prev = s;
+					} else { /* not first (prev is set), so it landed somewhere else */
+						/* unlink and assign new EC */
+#if LOG_ECS
+						fprintf(stderr, " -- moving state s %d from EC %u to EC %u\n",
+						    s, env->state_ecs[s], env->ec_count);
+#endif
+						env->jump[prev] = env->jump[s]; /* unlink */
+						env->ecs[env->ec_count] = s;    /* head of new EC */
+						env->state_ecs[s] = env->ec_count;
+						env->jump[s] = NO_ID;
+						env->ec_count++;
+					}
+					break;
+				} else if (same_end_metadata(s_md, other_md)) {
+					if (env->state_ecs[other] == ec_i) {
+						/* keep in the current EC -- no-op */
+#if LOG_ECS
+						fprintf(stderr, " -- keeping state s %d in EC %u\n",
+						    s, env->state_ecs[s]);
+#endif
+						prev = s;
+					} else {
+						/* unlink and link to other state's EC */
+#if LOG_ECS
+						fprintf(stderr, " -- appending s %d to EC %u, after state %d, before %d\n",
+						    s, env->state_ecs[other], other, env->jump[other]);
+#endif
+						assert(prev != NO_ID);
+						env->jump[prev] = env->jump[s]; /* unlink */
+						env->state_ecs[s] = env->state_ecs[other];
+						env->jump[s] = env->jump[other];
+						env->jump[other] = s; /* link after other */
+					}
+					break;
+				} else {
+					continue; /* collision */
+				}
+			}
+
+			s = next;
+		}
+
+		/* If this EC only has one entry and it's before the
+		 * done_ec_offset, then set that here so that invariants
+		 * will be restored while sweeping forward after this loop. */
+
+		if (env->jump[MASK_EC_HEAD(env->ecs[ec_i])] == NO_ID && ec_i < env->done_ec_offset) {
+			env->done_ec_offset = ec_i; /* will be readjusted later */
+		}
+
+#if LOG_ECS
+		fprintf(stderr, "==== AFTER PARTITIONING BY END METADATA -- EC %zu\n", ec_i);
+		dump_ecs(stderr, env);
+		fprintf(stderr, "==== (done_ec_offset: %d)\n", env->done_ec_offset);
+#endif
+	}
+
+#if LOG_ECS
+	fprintf(stderr, "==== AFTER PARTITIONING BY END IDs\n");
+	dump_ecs(stderr, env);
+	fprintf(stderr, "==== (done_ec_offset: %d)\n", env->done_ec_offset);
+#endif
+
+	/* Sweep forward and swap ECs as necessary so all single-entry
+	 * ECs are at the end -- they're done. */
+	size_t ec_i = env->done_ec_offset;
+
+	while (ec_i < env->ec_count) {
+		const fsm_state_t head = MASK_EC_HEAD(env->ecs[ec_i]);
+		if (env->jump[head] == NO_ID) {
+			/* offset stays where it is */
+#if LOG_ECS
+			fprintf(stderr, "ec_i: %zu / %u -- branch a\n", ec_i, env->ec_count);
+#endif
+			env->ecs[ec_i] = SET_SMALL_EC_FLAG(head);
+		} else {
+			/* this EC has more than one state, but is after
+			 * the done_ec_offset, so swap it with an EC at
+			 * the boundary. */
+			const fsm_state_t n_ec_i = env->done_ec_offset;
+#if LOG_ECS
+			fprintf(stderr, "ec_i: %zu / %u -- branch b -- swap %ld and %d\n",
+			    ec_i, env->ec_count, ec_i, n_ec_i);
+#endif
+
+			/* swap ec[n_ec_i] and ec[ec_i] */
+			const fsm_state_t tmp = env->ecs[ec_i];
+			env->ecs[ec_i] = env->ecs[n_ec_i];
+			env->ecs[n_ec_i] = tmp;
+			/* note: this may set the SMALL_EC_FLAG. */
+			update_ec_links(env, ec_i);
+			update_ec_links(env, n_ec_i);
+			env->done_ec_offset++;
+		}
+		ec_i++;
+	}
+
+#if LOG_ECS
+	fprintf(stderr, "==== (done_ec_offset is now: %d, ec_count %u)\n", env->done_ec_offset, env->ec_count);
+	dump_ecs(stderr, env);
+#endif
+
+	/* check that all ECs are before/after done_ec_offset */
+	for (size_t ec_i = 0; ec_i < env->ec_count; ec_i++) {
+		const fsm_state_t s = MASK_EC_HEAD(env->ecs[ec_i]);
+#if LOG_ECS
+		fprintf(stderr, "  -- ec_i %zu: s %d\n", ec_i, s);
+#endif
+		if (ec_i < env->done_ec_offset) {
+			assert(env->jump[s] != NO_ID);
+		} else {
+			assert(env->jump[s] == NO_ID);
+		}
+	}
+
+	res = 1;
+
+cleanup:
+	if (htab != NULL) {
+		f_free(fsm->opt->alloc, htab);
+	}
+	if (end_md != NULL) {
+		size_t i;
+		for (i = 0; i < state_count; i++) {
+			struct end_metadata *e = &end_md[i];
+			if (e->end.ids != NULL) {
+				f_free(fsm->opt->alloc, e->end.ids);
+			}
+		}
+		f_free(fsm->opt->alloc, end_md);
+	}
+
+	return res;
+}
+
+static int
+cmp_end_ids(const void *pa, const void *pb)
+{
+	const fsm_end_id_t a = *(fsm_end_id_t *)pa;
+	const fsm_end_id_t b = *(fsm_end_id_t *)pb;
+	return a < b ? -1 : a > b ? 1 : 0;
+}
+
+static int
+collect_end_ids(const struct fsm *fsm, fsm_state_t s,
+	struct end_metadata_end *e)
+{
+	e->count = fsm_getendidcount(fsm, s);
+
+	if (e->count > 0) {
+		e->ids = f_malloc(fsm->opt->alloc,
+		    e->count * sizeof(e->ids[0]));
+		if (e->ids == NULL) {
+			return 0;
+		}
+
+		size_t written;
+		enum fsm_getendids_res res = fsm_getendids(fsm, s,
+		    e->count, e->ids, &written);
+		assert(res == FSM_GETENDIDS_FOUND);
+		assert(written == e->count);
+
+		/* sort, to make comparison easier later */
+		qsort(e->ids, e->count,
+		    sizeof(e->ids[0]), cmp_end_ids);
+
+#if LOG_ECS
+		fprintf(stderr, "%d:", s);
+		for (size_t i = 0; i < written; i++) {
+			fprintf(stderr, " %u", e->ids[i]);
+		}
+		fprintf(stderr, "\n");
+#endif
+	}
+	return 1;
+}
+
+#if EXPENSIVE_CHECKS
 static void
 check_done_ec_offset(const struct min_env *env)
 {
@@ -661,12 +990,33 @@ check_done_ec_offset(const struct min_env *env)
 	 * worth the added complexity to avoid checking ECs 0 and 1. */
 	for (i = 0; i < env->ec_count; i++) {
 		const fsm_state_t head = MASK_EC_HEAD(env->ecs[i]);
-		if (i >= done_ec_offset) {
+		if (i >= env->done_ec_offset) {
 			assert(head == NO_ID || env->jump[head] == NO_ID);
 		} else if (i >= 2) {
 			assert(env->jump[head] != NO_ID);
 		}
 	}
+}
+
+static int
+all_end_states_are_currently_together(const struct min_env *env)
+{
+	/* For each EC, either all or none of the states in it
+	 * are end states. */
+	for (size_t i = 0; i < env->ec_count; i++) {
+		const fsm_state_t head = MASK_EC_HEAD(env->ecs[i]);
+		const int ec_first_is_end = fsm_isend(env->fsm, head);
+
+		fsm_state_t s = env->jump[head];
+		while (s != NO_ID) {
+			if (fsm_isend(env->fsm, s) != ec_first_is_end) {
+				return 0;
+			}
+			s = env->jump[s];
+		}
+	}
+
+	return 1;
 }
 #endif
 
@@ -817,7 +1167,7 @@ try_partition(struct min_env *env, unsigned char label,
 	const unsigned dead_state_ec = env->state_ecs[env->dead_state];
 	const struct fsm_state *states = env->fsm->states;
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 	/* Count states here, to compare against the partitioned
 	 * EC' counts later. */
 	size_t state_count = 0, psrc_count, pdst_count;
@@ -915,7 +1265,7 @@ try_partition(struct min_env *env, unsigned char label,
 		}
 	}
 
-#if EXPENSIVE_INTEGRITY_CHECKS
+#if EXPENSIVE_CHECKS
 	/* Count how many states were split into each EC
 	 * and check that the sum matches the original count. */
 	psrc_count = 0;

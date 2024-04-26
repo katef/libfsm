@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include <fsm/fsm.h>
 #include <fsm/capture.h>
@@ -107,6 +108,14 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	fsm_state_t *tmp_map = NULL;
 	fsm_state_t *mapping = NULL;
 
+	/* endid_group_assignments[X] = Y: state X is in endid group Y
+	 * endid_group_leaders[X] = Y: see end state Y for endid group X */
+	unsigned *endid_group_assignments = NULL;
+	size_t endid_group_count = 1; /* group 0 is the empty set */
+	unsigned *endid_group_leaders = NULL;
+	fsm_end_id_t *endid_buf_a = NULL;
+	fsm_end_id_t *endid_buf_b = NULL;
+
 	table = calloc(row_words * table_states, sizeof(table[0]));
 	if (table == NULL) { goto cleanup; }
 
@@ -116,15 +125,30 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	mapping = malloc(state_count * sizeof(mapping[0]));
 	if (mapping == NULL) { goto cleanup; }
 
+	endid_group_assignments = calloc(state_count, sizeof(tmp_map[0]));
+	if (endid_group_assignments == NULL) { goto cleanup; }
+
+	endid_group_leaders = calloc(state_count, sizeof(tmp_map[0]));
+	if (endid_group_leaders == NULL) { goto cleanup; }
+
 	/* macros for NxN bit table */
 #define POS(X,Y) ((X*table_states) + Y)
 #define MARK(X,Y)  u64bitset_set(table, POS(X,Y))
 #define CLEAR(X,Y) u64bitset_clear(table, POS(X,Y))
 #define CHECK(X,Y) u64bitset_get(table, POS(X,Y))
 
+	size_t max_endid_count = 0;
+
 	/* Mark all pairs of states where one is final and one is not.
 	 * This includes the dead state. */
 	for (size_t i = 0; i < table_states; i++) {
+		if (i < state_count && fsm_isend(fsm, i)) {
+			const size_t count = fsm_getendidcount(fsm, i);
+			if (count > max_endid_count) {
+				max_endid_count = count;
+			}
+		}
+
 		for (size_t j = 0; j < i; j++) {
 			const bool end_i = i == dead_state
 			    ? false : fsm_isend(fsm, i);
@@ -137,6 +161,69 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 					    i, j);
 				}
 				MARK(i, j);
+			}
+		}
+	}
+
+	endid_buf_a = malloc(max_endid_count * sizeof(endid_buf_a[0]));
+	if (endid_buf_a == NULL) { goto cleanup; }
+	endid_buf_b = malloc(max_endid_count * sizeof(endid_buf_b[0]));
+	if (endid_buf_b == NULL) { goto cleanup; }
+
+	/* For every end state, check if it has endids. If not, assign it
+	 * to endid group 0 (none). Otherwise, check if its endids match
+	 * any of the other end states. If so, assign it to the same endid
+	 * group, otherwise assign a new one and mark it as the leader. */
+	for (size_t i = 0; i < state_count; i++) {
+		if (fsm_isend(fsm, i)) {
+			size_t written_a;
+			enum fsm_getendids_res eres = fsm_getendids(fsm, i,
+			    max_endid_count, endid_buf_a, &written_a);
+			assert(eres != FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE);
+			if (eres == FSM_GETENDIDS_NOT_FOUND) {
+				assert(written_a == 0);
+			} else {
+				assert(written_a > 0);
+				bool found = false;
+				/* note: skipping eg 0 here since that's the empty set */
+				for (size_t eg_i = 1; eg_i < endid_group_count; eg_i++) {
+					size_t written_b;
+					eres = fsm_getendids(fsm, endid_group_leaders[eg_i],
+					    max_endid_count, endid_buf_b, &written_b);
+					assert(eres != FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE);
+					if (written_b != written_a) { continue; }
+					if (0 == memcmp(endid_buf_a, endid_buf_b, written_a * sizeof(endid_buf_a[0]))) {
+						found = true;
+						endid_group_assignments[i] = eg_i;
+						break;
+					} else {
+						continue;
+					}
+				}
+
+				if (!found) {
+					endid_group_assignments[i] = endid_group_count;
+					endid_group_leaders[endid_group_count] = i;
+					endid_group_count++;
+				}
+			}
+		} else {
+			endid_group_assignments[i] = 0; /* none */
+		}
+	}
+
+	/* Any end states that have not been assigned the same endid
+	 * group must be distinguishable. */
+	for (size_t i = 0; i < state_count; i++) {
+		if (fsm_isend(fsm, i)) {
+			const unsigned i_group = endid_group_assignments[i];
+			for (size_t j = 0; j < i; j++) {
+				if (fsm_isend(fsm, j)) {
+					const unsigned j_group = endid_group_assignments[j];
+					if (i_group != j_group) {
+						MARK(i, j);
+					}
+				}
 			}
 		}
 	}
@@ -266,6 +353,10 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	free(table);
 	free(tmp_map);
 	free(mapping);
+	free(endid_group_assignments);
+	free(endid_group_leaders);
+	free(endid_buf_a);
+	free(endid_buf_b);
 
 	return res;
 
@@ -273,6 +364,10 @@ cleanup:
 	if (table != NULL) { free(table); }
 	if (tmp_map != NULL) { free(tmp_map); }
 	if (mapping != NULL) { free(mapping); }
+	if (endid_group_assignments != NULL) { free(endid_group_assignments); }
+	if (endid_group_leaders != NULL) { free(endid_group_leaders); }
+	if (endid_buf_a != NULL) { free(endid_buf_a); }
+	if (endid_buf_b != NULL) { free(endid_buf_b); }
 	if (res != NULL) { fsm_free(res); }
 	return NULL;
 }

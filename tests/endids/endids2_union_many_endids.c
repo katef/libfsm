@@ -22,6 +22,7 @@
 // to exercise reallocs in the ID list
 //
 // Each pattern gets 5 end ids
+// Note: These are unanchored and therefore partially overlap
 static const char *patterns[] = {
 	"abc",		//  1-5
 	"def",		//  6-10
@@ -175,7 +176,7 @@ int main(void)
 	ret = fsm_determinise(fsm);
 	assert(ret != 0);
 
-	// find end states, make sure we have two end states and they each have endids
+	// find end states, make sure we have multiple end states and they each have endids
 	nstates = fsm_countstates(fsm);
 
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
@@ -238,19 +239,18 @@ int main(void)
 		}
 	}
 
-	/* fsm_minimise currently collapses all end states to the same state.  This should
-	 * create a single end state with NUM_ENDIDS_TOTAL end ids
-	 */
 	ret = fsm_minimise(fsm);
 	assert(ret != 0);
 
-	assert( fsm_count(fsm, fsm_isend) == 1 );
+	/* fsm_minimise should not collapse all the end states to a
+	 * single end state, because they have distinct endids. */
+	assert( fsm_count(fsm, fsm_isend) > 1);
 
 	nstates = fsm_countstates(fsm);
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
 			fsm_end_id_t endids[NUM_ENDIDS_TOTAL];
-			size_t nwritten, num_endids, j;
+			size_t nwritten, num_endids;
 			enum fsm_getendids_res ret;
 
 			memset(&endids[0], 0, sizeof endids);
@@ -258,7 +258,7 @@ int main(void)
 			nwritten = 0;
 			num_endids = fsm_getendidcount(fsm, state_ind);
 
-			assert(num_endids == NUM_ENDIDS_TOTAL);
+			assert(num_endids <= NUM_ENDIDS_TOTAL);
 
 			ret = fsm_getendids(
 				fsm,
@@ -269,10 +269,6 @@ int main(void)
 
 			assert(ret == FSM_GETENDIDS_FOUND);
 			assert(nwritten == num_endids);
-
-			for (j=0; j < num_endids; j++) {
-				assert( endids[j] == j+1 );
-			}
 		}
 	}
 
