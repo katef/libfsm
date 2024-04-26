@@ -44,7 +44,7 @@ fsm_union(struct fsm *a, struct fsm *b,
  * starting states and (if used) capture bases.
  *
  * bases[] is expected to have the same count as fsms[], and
- * will be initialized by the function.
+ * will be initialized by the function. May be NULL.
  *
  * On success, returns the unioned fsm and updates bases[].
  * On failure, returns NULL; all fsms are freed. */
