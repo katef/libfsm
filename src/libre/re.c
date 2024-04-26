@@ -223,7 +223,6 @@ re_is_literal(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	enum re_literal_category *category, char **s, size_t *n)
 {
 	struct ast *ast;
-	struct ast_expr *root;
 	const struct dialect *m;
 	int unsatisfiable;
 	int r;
@@ -263,10 +262,10 @@ re_is_literal(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	/*
 	 * Literals have an enclosing group #0, and we skip it for our purposes.
-	 * Parsing a satisfiable expression is required to produce group #0,
-	 * so we grab the root node from inside #0. But this is only true for
-	 * dialects with group capture, and I dont want to explicitly handle
-	 * all those dialects here. So this is conditional on group #0.
+	 * Parsing a satisfiable expression is required to produce group #0.
+	 * All dialects do this, regardless of whether their syntax provides
+	 * for group capture of subexpressions.
+	 * If this doesn't exist, whatever we parsed, it's not a literal.
 	 *
 	 * I'm not doing this as an assertion because AST rewriting is free to
 	 * transform as it wishes, and I don't want to assume a particular
@@ -275,15 +274,14 @@ re_is_literal(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	 * This is outside of ast_expr_is_literal() because that function may
 	 * apply to sub-trees within a larger AST.
 	 */
-	if (ast->expr->type == AST_EXPR_GROUP && ast->expr->u.group.id == 0) {
-		root = ast->expr->u.group.e;
-	} else {
-		root = ast->expr;
+	if (ast->expr->type != AST_EXPR_GROUP || ast->expr->u.group.id != 0) {
+		r = 0;
+		goto done;
 	}
 
 	int anchor_start, anchor_end;
 
-	r = ast_expr_is_literal(root, &anchor_start, &anchor_end, s, n);
+	r = ast_expr_is_literal(ast->expr->u.group.e, &anchor_start, &anchor_end, s, n);
 	if (r == -1) {
 		goto error;
 	}

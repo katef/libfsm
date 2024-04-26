@@ -466,9 +466,9 @@
 	};
 
 	re_native: () -> (node :ast_expr) = {
-		{
-			node = expr;
-		};
+		id = <make-group-id>;
+		e = expr;
+		node = <ast-make-group>(e, id);
 
 		{
 			EOF;
