@@ -263,6 +263,8 @@ re_is_literal(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	/*
 	 * Literals have an enclosing group #0, and we skip it for our purposes.
 	 * Parsing a satisfiable expression is required to produce group #0.
+	 * All dialects do this, regardless of whether their syntax provides
+	 * for group capture of subexpressions.
 	 * If this doesn't exist, whatever we parsed, it's not a literal.
 	 *
 	 * I'm not doing this as an assertion because AST rewriting is free to

@@ -15,7 +15,7 @@
 	!ast_count;
 	!ast_class_id;
 	!endpoint;
-	!group_id;
+	group_id;
 
 %terminals%
 
@@ -84,7 +84,7 @@
 	!<count-one>:          () -> (:ast_count);
 	!<count-range>: (:unsigned, :pos, :unsigned, :pos) -> (:ast_count);
 
-	!<make-group-id>:      () -> (:group_id);
+	<make-group-id>:       () -> (:group_id);
 	!<make-literal-cbrak>: () -> (:char);
 	!<make-literal-cr>:    () -> (:char);
 	!<make-literal-nl>:    () -> (:char);
@@ -97,7 +97,7 @@
 	<ast-make-concat>:        ()                       -> (:ast_expr);
 	!<ast-make-alt>:          ()                       -> (:ast_expr);
 	!<ast-make-piece>:        (:ast_expr, :ast_count)  -> (:ast_expr);
-	!<ast-make-group>:        (:ast_expr, :group_id)   -> (:ast_expr);
+	<ast-make-group>:         (:ast_expr, :group_id)   -> (:ast_expr);
 	!<ast-get-re-flags>:      ()                       -> (:re_flags);
 	!<ast-set-re-flags>:      (:re_flags)              -> ();
 	!<ast-mask-re-flags>:     (:re_flags, :re_flags)   -> ();
@@ -155,12 +155,14 @@
 	};
 
 	re_literal: () -> (node :ast_expr) = {
+		id = <make-group-id>;
 		{
-			node = <ast-make-concat>;
-			list-of-atoms(node);
+			e = <ast-make-concat>;
+			list-of-atoms(e);
 		||
-			node = <ast-make-empty>;
+			e = <ast-make-empty>;
 		};
+		node = <ast-make-group>(e, id);
 	
 		{
 			EOF;

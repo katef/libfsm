@@ -101,7 +101,9 @@ fsm_union_array(size_t fsm_count,
 	struct fsm *res = fsms[0];
 
 	fsms[0] = NULL;
-	memset(bases, 0x00, fsm_count * sizeof(bases[0]));
+	if (bases != NULL) {
+		memset(bases, 0x00, fsm_count * sizeof(bases[0]));
+	}
 
 	for (i = 1; i < fsm_count; i++) {
 		struct fsm_combine_info ci;
@@ -117,9 +119,14 @@ fsm_union_array(size_t fsm_count,
 			return NULL;
 		}
 
+		res = combined;
+
+		if (bases == NULL) {
+			continue;
+		}
+
 		bases[i].state = ci.base_b;
 		bases[i].capture = ci.capture_base_b;
-		res = combined;
 
 		/* If the first argument didn't get its states put first
 		 * in the union, then shift the bases for everything
@@ -134,9 +141,11 @@ fsm_union_array(size_t fsm_count,
 	}
 
 #if LOG_UNION_ARRAY
-	for (i = 0; i < fsm_count; i++) {
-		fprintf(stderr, "union_array: bases %u: %zu, %zu\n",
-		    i, bases[i].state, bases[i].capture);
+	if (bases != NULL) {
+		for (i = 0; i < fsm_count; i++) {
+			fprintf(stderr, "union_array: bases %u: %zu, %zu\n",
+				i, bases[i].state, bases[i].capture);
+		}
 	}
 #endif
 

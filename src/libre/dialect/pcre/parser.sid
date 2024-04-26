@@ -465,7 +465,7 @@
 				e = <ast-make-anchor-end>;
 			||
 				END_NL;
-                                e = <ast-make-anchor-end-nl>;
+				e = <ast-make-anchor-end-nl>;
 			||
 				ANY;
 				a = <class-any>;
@@ -644,11 +644,9 @@
 	};
 
 	re_pcre: () -> (node :ast_expr) = {
-		{
-			id = <make-group-id>;
-			e = expr;
-			node = <ast-make-group>(e, id);
-		};
+		id = <make-group-id>;
+		e = expr;
+		node = <ast-make-group>(e, id);
 
 		{
 			EOF;
