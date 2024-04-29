@@ -65,5 +65,7 @@ run_test(const char **strings)
 	}
 
 	re_strings_free(s);
+	fsm_free(fsm);
+
 	return EXIT_SUCCESS;
 }
