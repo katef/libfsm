@@ -131,6 +131,7 @@ SUBDIR += tests/pcre-flags
 SUBDIR += tests/pcre-repeat
 SUBDIR += tests/pred
 SUBDIR += tests/re_literal
+SUBDIR += tests/re_strings
 SUBDIR += tests/reverse
 SUBDIR += tests/trim
 SUBDIR += tests/union
