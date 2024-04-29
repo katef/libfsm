@@ -91,6 +91,10 @@ cleanup_pool(struct trie_graph *g)
 		p = g->pool;
 		g->pool = p->next;
 
+		for (size_t i = 0; i < p->n; i++) {
+			state_set_free(p->states[i].endids);
+		}
+
 		free(p->states);
 		free(p);
 	}
