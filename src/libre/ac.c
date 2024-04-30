@@ -22,13 +22,13 @@ enum { POOL_BLOCK_SIZE = 256 };
 struct trie_state {
 	struct trie_state *children[256];
 	struct trie_state *fail;
+	/* use a state set as an endid set */
+	struct state_set *endids;
+
 	fsm_state_t st;
 	unsigned int index;
 	unsigned int output:1;
 	unsigned int have_st:1;
-
-	/* use a state set as an endid set */
-	struct state_set *endids;
 };
 
 struct trie_pool {
