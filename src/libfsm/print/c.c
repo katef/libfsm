@@ -434,7 +434,7 @@ fsm_print_c_complete(FILE *f, const struct ir *ir,
 			break;
 
 		case FSM_IO_STR:
-			fprintf(f, "(const char *s)\n");
+			fprintf(f, "(const char *s, void *opaque)\n");
 			fprintf(f, "{\n");
 			if (ir->n > 0) {
 				fprintf(f, "\tconst char *p;\n");
@@ -443,7 +443,7 @@ fsm_print_c_complete(FILE *f, const struct ir *ir,
 			break;
 
 		case FSM_IO_PAIR:
-			fprintf(f, "(const char *b, const char *e)\n");
+			fprintf(f, "(const char *b, const char *e, void *opaque)\n");
 			fprintf(f, "{\n");
 			if (ir->n > 0) {
 				fprintf(f, "\tconst char *p;\n");
