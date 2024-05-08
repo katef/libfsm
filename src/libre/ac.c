@@ -13,6 +13,7 @@
 #include <ctype.h>
 
 #include <fsm/fsm.h>
+#include <adt/stateset.h>
 
 #include "ac.h"
 
@@ -21,6 +22,9 @@ enum { POOL_BLOCK_SIZE = 256 };
 struct trie_state {
 	struct trie_state *children[256];
 	struct trie_state *fail;
+	/* use a state set as an endid set */
+	struct state_set *endids;
+
 	fsm_state_t st;
 	unsigned int index;
 	unsigned int output:1;
@@ -73,6 +77,7 @@ newstate(struct trie_graph *g)
 	st->index   = ++g->nstates;
 
 	st->output  = 0;
+	st->endids  = NULL;
 
 	return st;
 }
@@ -85,6 +90,10 @@ cleanup_pool(struct trie_graph *g)
 	while (g->pool != NULL) {
 		p = g->pool;
 		g->pool = p->next;
+
+		for (size_t i = 0; i < p->n; i++) {
+			state_set_free(p->states[i].endids);
+		}
 
 		free(p->states);
 		free(p);
@@ -126,7 +135,7 @@ trie_create(void)
 }
 
 struct trie_graph *
-trie_add_word(struct trie_graph *g, const char *w, size_t n)
+trie_add_word(struct trie_graph *g, const char *w, size_t n, const fsm_end_id_t *endid)
 {
 	struct trie_state *st;
 	size_t i;
@@ -159,6 +168,9 @@ trie_add_word(struct trie_graph *g, const char *w, size_t n)
 		g->depth = n;
 	}
 
+	if (endid != NULL) {
+		state_set_add(&st->endids, NULL, (fsm_state_t)*endid);
+	}
 	return g;
 }
 
@@ -278,7 +290,7 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 	assert(fsm != NULL);
 	assert(q != NULL);
 
-	if (ts->output && have_end) {
+	if (ts->output && have_end && state_set_empty(ts->endids)) {
 		*q = single_end;
 		return 1;
 	}
@@ -315,6 +327,16 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 
 	if (ts->output) {
 		fsm_setend(fsm, st, 1);
+
+		struct state_iter si;
+		fsm_state_t state;
+		state_set_reset(ts->endids, &si);
+		while (state_set_next(&si, &state)) {
+			fsm_end_id_t endid = (fsm_end_id_t)state;
+			if (!fsm_setendidstate(fsm, st, endid)) {
+				return 0;
+			}
+		}
 	}
 
 	*q = st;

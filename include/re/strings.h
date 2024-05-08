@@ -7,7 +7,7 @@
 #ifndef RE_STRINGS_H
 #define RE_STRINGS_H
 
-struct fsm;
+#include <fsm/fsm.h>
 struct fsm_options;
 
 struct re_strings;
@@ -42,10 +42,10 @@ void
 re_strings_free(struct re_strings *g);
 
 int
-re_strings_add_raw(struct re_strings *g, const void *p, size_t n);
+re_strings_add_raw(struct re_strings *g, const void *p, size_t n, const fsm_end_id_t *endid);
 
 int
-re_strings_add_str(struct re_strings *g, const char *s);
+re_strings_add_str(struct re_strings *g, const char *s, const fsm_end_id_t *endid);
 
 struct fsm *
 re_strings_build(struct re_strings *g,
