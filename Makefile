@@ -101,6 +101,7 @@ SUBDIR += src/libre/print
 SUBDIR += src/libre
 SUBDIR += src/fsm
 SUBDIR += src/re
+SUBDIR += src/rx
 SUBDIR += src/retest
 SUBDIR += src/lx/print
 SUBDIR += src/lx
