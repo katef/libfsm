@@ -1118,7 +1118,9 @@ lx_print_c(FILE *f, const struct ast *ast)
 		fprintf(f, "{\n");
 		fprintf(f, "\tassert(lx != NULL);\n");
 		fprintf(f, "\tassert(p != NULL);\n");
-		fprintf(f, "\tlx->end.col = 1;\n");
+		if (~api_exclude & API_POS) {
+			fprintf(f, "\tlx->end.col = 1;\n");
+		}
 		fprintf(f, "\tlx->p = p;\n");
 		fprintf(f, "}\n");
         }
