@@ -150,6 +150,28 @@ append_literal(struct literal_set *set, const char *p, size_t n, fsm_end_id_t id
 	set->count++;
 }
 
+static enum re_strings_flags
+literal_flags(enum re_literal_category category)
+{
+	switch (category) {
+	case RE_LITERAL_UNANCHORED:
+		return 0;
+
+	case RE_LITERAL_ANCHOR_START:
+		return RE_STRINGS_ANCHOR_LEFT;
+
+	case RE_LITERAL_ANCHOR_END:
+		return RE_STRINGS_ANCHOR_RIGHT;
+
+	case RE_LITERAL_ANCHOR_BOTH:
+		return RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT;
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+}
+
 /* ^[abc..]*$ */
 // XXX: this interface doesn't allow us to have \0 in the character set
 static struct fsm *
@@ -245,10 +267,7 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 	bool strict, bool verbose,
 	const char *charset, const char *reject, fsm_end_id_t id, const char *s,
 	struct id_set *general, struct id_set *declined,
-	struct literal_set *literals_none,
-	struct literal_set *literals_left,
-	struct literal_set *literals_right,
-	struct literal_set *literals_both)
+	struct literal_set *literals)
 {
 	enum re_literal_category category;
 	struct re_err err;
@@ -258,6 +277,7 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 
 	assert(general != NULL);
 	assert(declined != NULL);
+	assert(literals != NULL);
 
 	/*
 	 *  -1: Error
@@ -323,7 +343,6 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 
 	/* is a literal */
 	if (r == 1) {
-		assert(lit_n >= 0);
 		assert(lit_s != NULL);
 
 		for (size_t i = 0; i < lit_n; i++) {
@@ -362,28 +381,10 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 
 //fprintf(stderr, "re_is_literal found: '%.*s'\n", (int) lit_n, lit_s);
 
-		switch (category) {
-		case RE_LITERAL_UNANCHORED:
-			append_literal(literals_none, lit_s, lit_n, id);
-			break;
+		enum re_strings_flags flags = literal_flags(category);
+		assert(flags >= 0 && flags <= 3);
 
-		case RE_LITERAL_ANCHOR_START:
-			append_literal(literals_left, lit_s, lit_n, id);
-			break;
-
-		case RE_LITERAL_ANCHOR_END:
-			append_literal(literals_right, lit_s, lit_n, id);
-			break;
-
-		case RE_LITERAL_ANCHOR_BOTH:
-			append_literal(literals_both, lit_s, lit_n, id);
-			break;
-
-		default:
-			assert(!"unreached");
-			abort();
-		}
-
+		append_literal(&literals[flags], lit_s, lit_n, id);
 		return;
 	}
 
@@ -850,6 +851,7 @@ charset =
 		switch (argc) {
 		case 2:
 			declined_file = argv[1];
+			/* fallthrough */
 		case 1:
 			input_file = argv[0];
 			break;
@@ -938,26 +940,19 @@ charset =
 	// TODO: patterns_set, fsm_set
 	struct id_set declined;
 	struct id_set general;
-	struct literal_set literals_none;
-	struct literal_set literals_left;
-	struct literal_set literals_right;
-	struct literal_set literals_both;
+	struct literal_set literals[4]; /* unanchored, left, right, both */
 
 	// TODO: explain we use the worst case of patterns_count for all these, prior to categorization
 	declined.a = xalloc(patterns_count * sizeof *declined.a);
-declined.count = 0;
+	declined.count = 0;
 	general.a  = xalloc(patterns_count * sizeof *general.a);
-general.count = 0;
+	general.count = 0;
 		
 // XXX: xalloc()ing these conservatively is large, i don't like it
-	literals_none.a  = xalloc(patterns_count * sizeof *literals_none.a);
-literals_none.count = 0;
-	literals_left.a  = xalloc(patterns_count * sizeof *literals_left.a);
-literals_left.count = 0;
-	literals_right.a = xalloc(patterns_count * sizeof *literals_right.a);
-literals_right.count = 0;
-	literals_both.a  = xalloc(patterns_count * sizeof *literals_both.a);
-literals_both.count = 0;
+	for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
+		literals[i].a  = xalloc(patterns_count * sizeof *literals[i].a);
+		literals[i].count = 0;
+	}
 
 	/*
 	 * On end id numbering: The UI must be one pattern per line, because
@@ -986,8 +981,7 @@ literals_both.count = 0;
 
 			categorize(&opt, dialect, flags, strict, verbose,
 				charset, reject, id, patterns[id],
-				&general, &declined,
-				&literals_none, &literals_left, &literals_right, &literals_both);
+				&general, &declined, literals);
 
 			/*
 			 * On error the parser may not have consumed all the input.
@@ -1017,23 +1011,20 @@ literals_both.count = 0;
 
 	/* sets of literals */
 	{
-		const struct {
-			struct literal_set *set;
-			enum re_strings_flags flags;
-		} a[] = {
-			{ &literals_none,  0 },
-			{ &literals_left,  RE_STRINGS_ANCHOR_LEFT  },
-			{ &literals_right, RE_STRINGS_ANCHOR_RIGHT },
-			{ &literals_both,  RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT },
+		enum re_strings_flags flags[] = {
+			0,
+			RE_STRINGS_ANCHOR_LEFT,
+			RE_STRINGS_ANCHOR_RIGHT,
+			RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT
 		};
 
-		for (size_t j = 0; j < sizeof a / sizeof *a; j++) {
+		for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
 			if (show_stats) {
-				fprintf(stderr, "literals[%zu].count = %zu\n", j, a[j].set->count);
+				fprintf(stderr, "literals[%zu].count = %zu\n", i, literals[i].count);
 			}
 
 			struct fsm *fsm = build_literals_fsm(&opt, show_stats, charset,
-				a[j].set, a[j].flags);
+				&literals[i], flags[i]);
 			assert(fsm != NULL);
 
 			fsms[fsm_count] = fsm;
@@ -1041,10 +1032,9 @@ literals_both.count = 0;
 		}
 	}
 
-	free(literals_none.a);
-	free(literals_left.a);
-	free(literals_right.a);
-	free(literals_both.a);
+	for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
+		free(literals[i].a);
+	}
 
 	/* individual regexps */
 	{
@@ -1081,14 +1071,14 @@ literals_both.count = 0;
 	if (show_stats) {
 		fprintf(stderr, "declined: %zu patterns\n",
 			declined.count);
-		fprintf(stderr, "literals_none: %zu patterns, %u states\n",
-			literals_none.count, fsm_countstates(fsms[0]));
-		fprintf(stderr, "literals_left: %zu patterns, %u states\n",
-			literals_left.count, fsm_countstates(fsms[1]));
-		fprintf(stderr, "literals_right: %zu patterns, %u states\n",
-			literals_right.count, fsm_countstates(fsms[2]));
-		fprintf(stderr, "literals_both: %zu patterns, %u states\n",
-			literals_both.count, fsm_countstates(fsms[3]));
+		fprintf(stderr, "literals (unanchored): %zu patterns, %u states\n",
+			literals[0].count, fsm_countstates(fsms[0]));
+		fprintf(stderr, "literals (left): %zu patterns, %u states\n",
+			literals[1].count, fsm_countstates(fsms[1]));
+		fprintf(stderr, "literals (right): %zu patterns, %u states\n",
+			literals[2].count, fsm_countstates(fsms[2]));
+		fprintf(stderr, "literals (both): %zu patterns, %u states\n",
+			literals[3].count, fsm_countstates(fsms[3]));
 		fprintf(stderr, "general: %zu patterns (limit %zu)\n",
 			general.count, general_limit);
 	}
