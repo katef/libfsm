@@ -483,8 +483,17 @@ build_literals_fsm(const struct fsm_options *opt, bool show_stats,
 	}
 
 #ifndef NDEBUG
-// TODO: could test to see that the fsm isn't any different. for general regexps, lots will be, because of /./
-// TODO: but literal strings should be no different. except for the anchoring
+	/*
+	 * We could test to see that the fsm isn't any different.
+	 * For general regexps, lots will be different because of
+	 * mapping down /./ edges to the character set.
+	 *
+	 * But literal strings should be no different after the mapping,
+	 * except for the implicit .* at either end for anchoring.
+	 *
+	 * So in order to assert here, we'd depend on constructing
+	 * those .* long-hand at union time.
+	 */
 #endif
 
 	return fsm;
