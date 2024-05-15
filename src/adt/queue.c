@@ -51,7 +51,7 @@ queue_push(struct queue *q, fsm_state_t state)
 		 * memmove everything after reading 1. */
 		if (q->rd > 0 && q->rd < q->wr) {
 			memmove(&q->q[0], &q->q[q->rd],
-			    q->rd * sizeof(q->q[0]));
+			    (q->capacity - q->rd) * sizeof(q->q[0]));
 			q->wr -= q->rd;
 			q->rd = 0;
 		} else {
