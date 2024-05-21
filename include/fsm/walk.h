@@ -7,6 +7,8 @@
 #ifndef FSM_WALK_H
 #define FSM_WALK_H
 
+#include <adt/bitmap.h>
+
 struct fsm;
 struct fsm_state;
 
@@ -127,6 +129,35 @@ fsm_generate_matches_cb fsm_generate_cb_printf;
  * fsm_options *`, because c_escputc_str will use that to decide whether
  * to escape all characters or just nonprintable ones. */
 fsm_generate_matches_cb fsm_generate_cb_printf_escaped;
+
+/* Walk a DFA and detect which characters MUST appear in the input for a
+ * match to be possible. For example, if input for the DFA corresponding
+ * to /^(abc|dbe)$/ does not contain 'b' at all, there's no way it can
+ * ever match, so executing the regex is unnecessary. This does not detect
+ * which characters must appear before/after others or how many times, just
+ * which must be present.
+ *
+ * The input must be a DFA. When run with EXPENSIVE_CHECKS this will
+ * check and return ERROR_MISUSE if it is not, otherwise this is an
+ * unchecked error.
+ *
+ * The bitmap will be cleared before populating. Afterward,
+ * bm_count(bitmap) will return how many required characters were
+ * found.
+ *
+ * There is an optional step_limit -- if this is reached, then it will
+ * return FSM_DETECT_REQUIRED_CHARACTERS_STEP_LIMIT_REACHED and a
+ * cleared bitmap, because any partial information could still have been
+ * contradicted later. If the step_limit is 0 it will be ignored. */
+enum fsm_detect_required_characters_res {
+	FSM_DETECT_REQUIRED_CHARACTERS_WRITTEN,
+	FSM_DETECT_REQUIRED_CHARACTERS_STEP_LIMIT_REACHED,
+	FSM_DETECT_REQUIRED_CHARACTERS_ERROR_MISUSE = -1,
+	FSM_DETECT_REQUIRED_CHARACTERS_ERROR_ALLOC = -2,
+};
+enum fsm_detect_required_characters_res
+fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit,
+    struct bm *bitmap);
 
 #endif
 
