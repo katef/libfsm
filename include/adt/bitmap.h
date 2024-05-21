@@ -8,6 +8,9 @@
 #define ADT_BITMAP_H
 
 #include <stdint.h>
+#include <limits.h>
+
+#include <stdio.h>
 #include "print/esc.h"
 
 struct fsm_state;
@@ -22,6 +25,9 @@ bm_get(const struct bm *bm, size_t i);
 
 void
 bm_set(struct bm *bm, size_t i);
+
+void
+bm_unset(struct bm *bm, size_t i);
 
 /* Get a writeable pointer to the Nth word of the char set bitmap,
  * or NULL if out of bounds. */
@@ -50,6 +56,18 @@ bm_snprint(const struct bm *bm, const struct fsm_options *opt,
 	char *s, size_t sz,
 	int boxed,
 	escputc *escputc);
+
+void
+bm_copy(struct bm *dst, const struct bm *src);
+
+void
+bm_intersect(struct bm *dst, const struct bm *src);
+
+void
+bm_union(struct bm *dst, const struct bm *src);
+
+int
+bm_any(const struct bm *bm);
 
 #endif
 
