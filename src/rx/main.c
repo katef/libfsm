@@ -23,6 +23,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
@@ -34,6 +35,16 @@
 #include <re/re.h>
 #include <re/literal.h>
 #include <re/strings.h>
+
+enum category {
+	CATEGORY_LITERAL,
+	CATEGORY_GENERAL,
+	CATEGORY_ERROR,
+	CATEGORY_UNSUPPORTED,
+	CATEGORY_UNSATISFIABLE,
+	CATEGORY_ZERO,
+	CATEGORY_PERMITTED
+};
 
 struct literal {
 	const void *p;
@@ -49,6 +60,20 @@ struct literal_set {
 struct id_set {
 	size_t count;
 	fsm_end_id_t *a;
+};
+
+/*
+TODO: flag to have the generated api only ever return a single endid, and resolve ambiguity by one of several ways:
+1. earlier line (lower endid) wins
+2. longest match/most specific regex wins (this doesn't work for dfa)
+3. error about it at compile time (in particular use rx -q as a lint to find conflicts). this is the opposite to -u. give examples, lx style
+- unsure if there are any other strategies for allowing ambiguities
+4. allow ambiguious patterns and have the generated api return a set
+*/
+enum ambig {
+	AMBIG_ERROR,
+	AMBIG_EARLIEST,
+	AMBIG_MULTIPLE
 };
 
 static void *
@@ -150,6 +175,24 @@ append_literal(struct literal_set *set, const char *p, size_t n, fsm_end_id_t id
 	set->count++;
 }
 
+static fsm_end_id_t
+min_id(const fsm_end_id_t *ids, size_t count)
+{
+	fsm_end_id_t min;
+
+	assert(ids != NULL);
+	assert(count > 0);
+
+	min = ids[0];
+	for (fsm_end_id_t i = 1; i < count; i++) {
+		if (ids[i] < min) {
+			min = ids[i];
+		}
+	}
+
+	return min;
+}
+
 static enum re_strings_flags
 literal_flags(enum re_literal_category category)
 {
@@ -209,22 +252,39 @@ intersect_charset(bool show_stats, const char *charset, struct fsm *fsm)
 	return q;
 }
 
-static void
+const char *
+category_reason(enum category r)
+{
+	switch (r) {
+	case CATEGORY_LITERAL:       return "literal";
+	case CATEGORY_GENERAL:       return "general";
+	case CATEGORY_ERROR:         return "parse error";
+	case CATEGORY_UNSUPPORTED:   return "unsupported";
+	case CATEGORY_UNSATISFIABLE: return "unsatisfiable";
+	case CATEGORY_ZERO:          return "contains \\0, which a charset cannot express";
+	case CATEGORY_PERMITTED:     return "charset/reject";
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+}
+
+/* return an error reason if a pattern was not successfully appended to a set */
+static enum category
 categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags flags,
-	bool strict, bool verbose,
-	const char *charset, const char *reject, fsm_end_id_t id, const char *s,
-	struct id_set *general, struct id_set *declined,
-	struct literal_set *literals)
+	const char *charset, const char *reject, const char *s,
+	struct re_err *err,
+	char **lit_s_out, size_t *lit_n_out)
 {
 	enum re_literal_category category;
-	struct re_err err;
 	char *lit_s;
 	size_t lit_n;
 	int r;
 
-	assert(general != NULL);
-	assert(declined != NULL);
-	assert(literals != NULL);
+	assert(err != NULL);
+	assert(lit_s_out != NULL);
+	assert(lit_n_out != NULL);
 
 	/*
 	 *  -1: Error
@@ -232,60 +292,27 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 	 *      and *category is set.
 	 */
 	const char *q = s;
-	r = re_is_literal(dialect, nlgetc, &q, opt, flags, &err, &category,
+	r = re_is_literal(dialect, nlgetc, &q, opt, flags, err, &category,
 		&lit_s, &lit_n);
 
 	/* unsupported */
-	if (r == -1 && err.e == RE_EUNSUPPORTED) {
-		if (verbose) {
-			fprintf(stderr, "declined (unsupported) #%u: /%.*s/\n",
-				id, (int) strcspn(s, "\n"), s);
-		}
-
-		append_id(declined, id);
-		return;
+	if (r == -1 && err->e == RE_EUNSUPPORTED) {
+		return CATEGORY_UNSUPPORTED;
 	}
 
 	/* parse error */
-// we consider a parse error here a failure, rather than declining the pattern
-// TOOD: pass cli flag to make this non-fatal, quietly decline. also for empty strings and unsatisfiable expressions
 	if (r == -1) {
-		if (!strict) {
-			if (verbose) {
-// XXX: rephrase error. also re_perror() for this too
-				fprintf(stderr, "XXX: would decline (parse error) #%u: /%.*s/\n",
-					id, (int) strcspn(s, "\n"), s);
-			}
-
-			append_id(declined, id);
-			return;
-		}
-
-		const char *p;
-
-		/* s is \n-terminated per pattern.
-		 * We allocate here so we can \0-terminate for re_perror() */
-		p = xstrndup(s, strcspn(s, "\n"));
-		re_perror(dialect, &err, NULL, p);
-		free((void *) p);
-
-		exit(EXIT_FAILURE);
+		return CATEGORY_ERROR;
 	}
 
 	/* empty string */
 	if (r == 1 && lit_n == 0) {
-		fprintf(stdout, "re_is_literal: /%.*s/ regex matches empty string only\n",
-			(int) strcspn(s, "\n"), s);
-// TODO: cli option to decline instead
-		exit(EXIT_FAILURE);
+		/* this is acceptable */
 	}
 
 	/* unsatisfiable */
 	if (r == 1 && category == RE_LITERAL_UNSATISFIABLE) {
-		fprintf(stdout, "re_is_literal: /%.*s/ regex is unsatisfiable\n",
-			(int) strcspn(s, "\n"), s);
-// TODO: cli option to decline instead
-		exit(EXIT_FAILURE);
+		return CATEGORY_UNSATISFIABLE;
 	}
 
 	/* is a literal */
@@ -293,11 +320,8 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 		assert(lit_s != NULL);
 
 		for (size_t i = 0; i < lit_n; i++) {
-			if (lit_s[i] == '\0') {
-// TODO: cli option to decline instead
-				fprintf(stderr, "re_is_literal: '%.*s' literal contains \\0\n",
-					(int) strcspn(s, "\n"), s);
-				exit(EXIT_FAILURE);
+			if (charset != NULL && lit_s[i] == '\0') {
+				return CATEGORY_ZERO;
 			}
 		}
 
@@ -314,16 +338,9 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 			}
 		}
 
-		if (verbose) {
-			fprintf(stderr, "literal #%u '%.*s'\n", id, (int) lit_n, lit_s);
-		}
-
 // TODO: explain reject does not apply
 		if (!permitted_chars(lit_s, lit_n, charset, NULL)) {
-// TODO: cli option to decline instead
-//fprintf(stderr, "declined literal (charset) #%u: /%.*s/\n", id, (int) strcspn(s, "\n"), s);
-			append_id(declined, id);
-			return;
+			return CATEGORY_PERMITTED;
 		}
 
 //fprintf(stderr, "re_is_literal found: '%.*s'\n", (int) lit_n, lit_s);
@@ -331,8 +348,10 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 		enum re_strings_flags flags = literal_flags(category);
 		assert(flags >= 0 && flags <= 3);
 
-		append_literal(&literals[flags], lit_s, lit_n, id);
-		return;
+		*lit_s_out = lit_s;
+		*lit_n_out = lit_n;
+
+		return CATEGORY_LITERAL;
 	}
 
 	/*
@@ -348,15 +367,15 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 	 *
 	 * So we're relying on that here, and this is just a best-effort help.
 	 */
-	if (!permitted_chars(s, strcspn(s, "\n"), charset, reject)) {
-//fprintf(stderr, "declined general (charset or reject) #%u: /%.*s/\n", id, (int) strcspn(s, "\n"), s);
-		append_id(declined, id);
-		return;
+// TODO: would need to pass charset here *plus all the regex syntax operators*
+// we shouldn't enforce positive charset pre-lexing here, this would need to be done at AST time
+	if (!permitted_chars(s, strcspn(s, "\n"), NULL, reject)) {
+// XXX: this accidentally includes regex operators, we need those in the charset too
+		return CATEGORY_PERMITTED;
 	}
 
-//fprintf(stderr, "general #%u: /%.*s/\n", id, (int) strcspn(s, "\n"), s);
 	/* not a literal */
-	append_id(general, id);
+	return CATEGORY_GENERAL;
 }
 
 /*
@@ -509,10 +528,13 @@ build_regex_fsm(const struct fsm_options *opt, bool show_stats,
 // TODO: explain we minimise again after intersect_charset because this fsm has a single endid, so it's (potentially) a worthwhile difference
 
 // TODO: we do minimise now after intersection, explain it's because only one end id
+fsm_print_dot(stderr, fsm);
+#if 0
 	if (!fsm_minimise(fsm)) {
 		perror("fsm_minimise");
 		exit(EXIT_FAILURE);
 	}
+#endif
 
 	return fsm;
 }
@@ -521,11 +543,10 @@ static int
 endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
 	const void *endleaf_opaque)
 {
-	assert(endleaf_opaque == NULL);
-	assert(endleaf_opaque == NULL);
+	assert(ids != NULL);
+	assert(endleaf_opaque != NULL);
 
-	(void) f;
-	(void) endleaf_opaque;
+	enum ambig ambig = * (const enum ambig *) endleaf_opaque;
 
 	/* morally an assertion, but I feel better leaving this in for various user data */
 	if (count == 0) {
@@ -533,48 +554,67 @@ endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
 		exit(EXIT_FAILURE);
 	}
 
-	/* exactly one end id means no ambiguious patterns */
-// TODO: want to ensure at compile time that the endids set only has one element, reject ambigious patterns
-// XXX: i'm not convinced we do. we could just as well emit code that returns a list of IDs
-// and have a cli option to error about ambiguities
-// TODO: this isn't strict checking. this is the opposite to -u
-// TODO: give examples, lx style
-#if 0
-	if (count > 1) {
-// TODO: explain this more clearly
-		fprintf(stderr, "ambigious patterns:");
-
-		for (fsm_end_id_t i = 0; i < ids->count; i++) {
-			fprintf(stderr, " %u", ids->ids[i]);
-		}
-
-		fprintf(stderr, "\n");
-
-// we consider this a compilation error for the purposes of this program
-		exit(EXIT_FAILURE);
-	}
-#endif
-
-	/*
-	 * Here I would like to emit (static unsigned []) { 1, 2, 3 }
-	 * but specifying a storage duration for compound literals
-	 * is a compiler extension.
-	 * So I'm emitting a static const variable declaration instead.
-	 */
-
-	fprintf(f, "{\n");
-	fprintf(f, "\t\tstatic const unsigned a[] = { ");
 	for (fsm_end_id_t i = 0; i < count; i++) {
-		fprintf(f, "%u", ids[i]);
-		if (i + 1 < count) {
-			fprintf(f, ", ");
-		}
+		assert(ids[i] <= INT_MAX);
 	}
-	fprintf(f, " };\n");
-	fprintf(f, "\t\t*ids = a;\n");
-	fprintf(f, "\t\t*count = %zu;\n", count);
-	fprintf(f, "\t\treturn 0;\n");
-	fprintf(f, "\t}");
+
+	/* exactly one end id means no ambiguious patterns */
+
+	switch (ambig) {
+	case AMBIG_ERROR:
+		if (count > 1) {
+// TODO: explain this more clearly
+			fprintf(stderr, "ambigious patterns:");
+
+			for (fsm_end_id_t i = 0; i < count; i++) {
+				fprintf(stderr, " %u", ids[i]);
+			}
+
+// TODO: give example, lx-style
+
+			fprintf(stderr, "\n");
+
+			exit(EXIT_FAILURE);
+		}
+
+		fprintf(f, "return %u;", ids[0]);
+		break;
+
+	case AMBIG_EARLIEST:
+		/*
+		 * The libfsm api guarentees these ids are unique,
+		 * and only appear once each, but are not sorted.
+		 */
+		fprintf(f, "return %u;", min_id(ids, count));
+		break;
+
+	case AMBIG_MULTIPLE:
+		/*
+		 * Here I would like to emit (static unsigned []) { 1, 2, 3 }
+		 * but specifying a storage duration for compound literals
+		 * is a compiler extension.
+		 * So I'm emitting a static const variable declaration instead.
+		 */
+
+		fprintf(f, "{\n");
+		fprintf(f, "\t\tstatic const unsigned a[] = { ");
+		for (fsm_end_id_t i = 0; i < count; i++) {
+			fprintf(f, "%u", ids[i]);
+			if (i + 1 < count) {
+				fprintf(f, ", ");
+			}
+		}
+		fprintf(f, " };\n");
+		fprintf(f, "\t\t*ids = a;\n");
+		fprintf(f, "\t\t*count = %zu;\n", count);
+		fprintf(f, "\t\treturn 0;\n");
+		fprintf(f, "\t}");
+		break;
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
 
 // TODO: override return -1
 
@@ -582,7 +622,7 @@ endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
 }
 
 void
-print_fsm_c(struct fsm *fsm, const char *prefix)
+print_fsm_c(struct fsm *fsm, const char *prefix, enum ambig ambig)
 {
 	const struct fsm_options *old;
 	struct fsm_options tmp;
@@ -598,9 +638,16 @@ print_fsm_c(struct fsm *fsm, const char *prefix)
 	fprintf(stdout, "#include <stddef.h>\n");
 	fprintf(stdout, "\n");
 
-	fprintf(stdout, "bool\n");
-	fprintf(stdout, "%s_main(const char *s, size_t n,\n", prefix);
-	fprintf(stdout, "\tconst unsigned **ids, size_t *count)\n");
+// TODO: not bool?
+// TODO: return type depends on enum ambig
+// TODO: but also override return -1
+	fprintf(stdout, "int\n");
+	fprintf(stdout, "%s_main(const char *s, size_t n", prefix);
+	if (ambig == AMBIG_MULTIPLE) {
+		fprintf(stdout, ",\n");
+		fprintf(stdout, "\tconst unsigned **ids, size_t *count");
+	}
+	fprintf(stdout, ")\n");
 	fprintf(stdout, "{\n");
 	fprintf(stdout, "\tconst char *b = s, *e = s + n;\n");
 
@@ -609,7 +656,7 @@ print_fsm_c(struct fsm *fsm, const char *prefix)
 
 	tmp = *old;
 	tmp.fragment = true,
-	tmp.endleaf_opaque = NULL,
+	tmp.endleaf_opaque = &ambig,
 	tmp.endleaf = endleaf_c,
 
 	fsm_setoptions(fsm, &tmp);
@@ -666,7 +713,7 @@ void usage(const char *name)
 		name = p != NULL ? p + 1 : name;
 	}
 
-	printf("usage: %s: [-ciQqv] [-C charset] [-r dialect] [-R reject] input-file [declined-file]\n", name);
+	printf("usage: %s: [-ciQquv] [-C charset] [-r dialect] [-R reject] input-file [declined-file]\n", name);
 	printf("       %s -h\n", name);
 }
 
@@ -677,6 +724,7 @@ main(int argc, char *argv[])
 	bool strict = false;
 	bool verbose = false;
 	bool show_stats = false;
+	enum ambig ambig = AMBIG_ERROR;
 
 	size_t general_limit = 0;
 
@@ -718,9 +766,8 @@ charset =
 // TODO: optional extra argv[1] to output declined patterns (we could iteratively munch down on the list)
 // TODO: cli option for numeric limit for general.count to decline patterns
 // TODO: cli option for memory limit to decline patterns (implement via allocation hooks)
-// TODO: cli option for worker pool threads
-// TODO: make this a whole tool, alongside re(1) and fsm(1)
 // TODO: manpage
+// TODO: cli option for worker pool threads
 // TODO: probably handle each of fsms[] in a separate thread, use worker pool
 // TODO: cli flag to set prefix
 
@@ -728,7 +775,7 @@ charset =
 		const char *name = argv[0];
 		int c;
 
-		while (c = getopt(argc, argv, "h" "C:cin:r:R:Qqv"), c != -1) {
+		while (c = getopt(argc, argv, "h" "C:cin:r:R:Qquv"), c != -1) {
 			switch (c) {
 			case 'C':
 				charset = optarg;
@@ -786,6 +833,10 @@ charset =
 			case 'q':
 				/* "quiet" applies to the generated code only */
 				quiet = true;
+				break;
+
+			case 'u':
+				ambig = AMBIG_MULTIPLE;
 				break;
 
 			case 'v':
@@ -875,6 +926,11 @@ charset =
 			}
 		}
 
+		if (patterns_count > INT_MAX) {
+// TODO: error about it
+// TODO: explain this is so we can fit the endid value in an int for the return value of the generated code
+		}
+
 		if (show_stats) {
 			fprintf(stderr, "patterns: %zu\n", patterns_count);
 		}
@@ -929,15 +985,20 @@ charset =
 		const char *q = addr;
 
 		for (fsm_end_id_t id = 0; id < patterns_count; id++) {
+			struct re_err err;
+			char *lit_s;
+			size_t lit_n;
+			enum category r;
+
 			patterns[id] = q;
 			if (verbose) {
-				fprintf(stderr, "pattern[%u]: /%.*s/\n",
+				fprintf(stderr, "pattern #%u: /%.*s/\n",
 					id, (int) strcspn(q, "\n"), patterns[id]);
 			}
 
-			categorize(&opt, dialect, flags, strict, verbose,
-				charset, reject, id, patterns[id],
-				&general, &declined, literals);
+			r = categorize(&opt, dialect, flags,
+				charset, reject, patterns[id],
+				&err, &lit_s, &lit_n);
 
 			/*
 			 * On error the parser may not have consumed all the input.
@@ -945,6 +1006,50 @@ charset =
 			 * points somewhere mid-way along the regex.
 			 */
 			q += strcspn(patterns[id], "\n") + 1;
+
+			if (verbose) {
+				switch (r) {
+				case CATEGORY_LITERAL:
+					fprintf(stderr, "literal #%u '%.*s'\n",
+						id, (int) lit_n, lit_s);
+					break;
+
+				case CATEGORY_GENERAL:
+					fprintf(stderr, "general #%u: /%.*s/\n",
+						id, (int) strcspn(patterns[id], "\n"), patterns[id]);
+					break;
+
+				case CATEGORY_ERROR:
+					fprintf(stderr, "declined (%s) #%u: /%.*s/",
+						category_reason(r), id,
+						(int) strcspn(patterns[id], "\n"), patterns[id]);
+					re_perror(dialect, &err, NULL, NULL);
+					break;
+
+				default:
+					fprintf(stderr, "declined (%s) #%u: /%.*s/\n",
+						category_reason(r), id,
+						(int) strcspn(patterns[id], "\n"), patterns[id]);
+					break;
+				}
+			}
+
+			switch (r) {
+			case CATEGORY_LITERAL:
+				append_literal(&literals[flags], lit_s, lit_n, id);
+				break;
+
+			case CATEGORY_GENERAL:
+				append_id(&general, id);
+				break;
+
+			default:
+				if (strict) {
+					exit(EXIT_FAILURE);
+				}
+
+				append_id(&declined, id);
+			}
 		}
 	}
 
@@ -952,7 +1057,8 @@ charset =
 	 * This is conservative allocation, the declined list may still grow yet.
 	 * We track actual usage in fsm_count.
 	 */
-	struct fsm **fsms = xalloc((patterns_count - declined.count) * sizeof *fsms);
+#define LITERALS_COUNT 4
+	struct fsm **fsms = xalloc((LITERALS_COUNT + patterns_count - declined.count) * sizeof *fsms);
 	size_t fsm_count = 0;
 
 	/*
@@ -965,9 +1071,12 @@ charset =
 	 * unioned anyway.
 	 */
 
+// TODO: also have strict mode error for empty strings and unsatisfiable expressions
+// TODO: better to do this when looking at the DFA for both literals and for regexps
+
 	/* sets of literals */
 	{
-		enum re_strings_flags flags[] = {
+		enum re_strings_flags flags[LITERALS_COUNT] = {
 			0,
 			RE_STRINGS_ANCHOR_LEFT,
 			RE_STRINGS_ANCHOR_RIGHT,
@@ -983,6 +1092,7 @@ charset =
 				&literals[i], flags[i]);
 			assert(fsm != NULL);
 
+fprintf(stderr, "fsms[%zu] <- literal[%zu]\n", fsm_count, i);
 			fsms[fsm_count] = fsm;
 			fsm_count++;
 		}
@@ -1013,6 +1123,7 @@ charset =
 				continue;
 			}
 
+fprintf(stderr, "fsms[%zu] <- general[%zu]\n", fsm_count, i);
 			fsms[fsm_count] = fsm;
 			fsm_count++;
 		}
@@ -1041,7 +1152,7 @@ charset =
 
 	if (verbose) {
 		for (size_t i = 0; i < declined.count; i++) {
-			fprintf(stderr, "declined.a[%zu]: #%u /%.*s/\n",
+			fprintf(stderr, "declined[%zu]: #%u /%.*s/\n",
 				i, declined.a[i],
 				(int) strcspn(patterns[declined.a[i]], "\n"), patterns[declined.a[i]]);
 		}
@@ -1129,7 +1240,7 @@ charset =
 		}
 
 		if (!quiet) {
-			print_fsm_c(fsm, opt.prefix);
+			print_fsm_c(fsm, opt.prefix, ambig);
 		}
 
 		fsm_free(fsm);
