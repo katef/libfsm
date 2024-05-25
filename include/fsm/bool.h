@@ -56,6 +56,14 @@ struct fsm *
 fsm_intersect(struct fsm *a, struct fsm *b);
 
 /*
+ * A convenience to intersect against a character set, rather than
+ * a pre-existing FSM. Unlike fsm_intersect(), the FSM is required
+ * to be a DFA.
+ */
+struct fsm *
+fsm_intersect_charset(struct fsm *a, size_t n, const char *charset);
+
+/*
  * Subtract b from a. This is not commutative.
  */
 struct fsm *
