@@ -126,16 +126,14 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	if (res < 0) {
 		ast_free(ast);
 		if (err != NULL) {
-			if (res == AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE) {
-				err->e = RE_EUNSUPPPCRE;
+			if (res == AST_ANALYSIS_ERROR_UNSUPPORTED) {
+				err->e = RE_EUNSUPPORTED;
 			} else if (res == AST_ANALYSIS_ERROR_MEMORY) {
 				/* This case comes up during fuzzing. */
 				if (err->e == RE_ESUCCESS) {
 					err->e = RE_EERRNO;
 					errno = ENOMEM;
 				}
-			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED_CAPTURE) {
-				err->e = RE_EUNSUPCAPTUR;
 			} else if (err->e == RE_ESUCCESS) {
 				err->e = RE_EERRNO;
 			}
