@@ -172,79 +172,26 @@ literal_flags(enum re_literal_category category)
 	}
 }
 
-/* ^[abc..]*$ */
-// XXX: this interface doesn't allow us to have \0 in the character set
+/* this interface doesn't allow us to have \0 in the character set */
 static struct fsm *
-intersect_charset(const struct fsm_options *opt, bool show_stats,
-	const char *charset, struct fsm *b)
+intersect_charset(bool show_stats, const char *charset, struct fsm *fsm)
 {
-	struct fsm *a, *q;
+	struct fsm *q;
 
 	if (charset == NULL) {
-		return b;
+		return fsm;
 	}
 
-	/*
-	 * Since intersection is destructive, there's no point in making
-	 * the charset FSM in advance and then fsm_clone()ing it.
-	 * We may as well just make a new one each time.
-	 */
-	{
-		fsm_state_t state;
+	assert(fsm_all(fsm, fsm_isdfa));
 
-		// TODO: pass .statealloc explicitly, we know it's 1. the default is overkill
-		a = fsm_new(opt);
-		if (a == NULL) {
-			perror("fsm_new");
-			exit(EXIT_FAILURE);
-		}
-
-		if (!fsm_addstate(a, &state)) {
-			perror("fsm_addstate");
-			exit(EXIT_FAILURE);
-		}
-
-		for (const char *p = charset; *p != '\0'; p++) {
-			if (!fsm_addedge_literal(a, state, state, *p)) {
-				perror("fsm_addedge_literal");
-				exit(EXIT_FAILURE);
-			}
-		}
-
-		fsm_setend(a, state, true);
-		fsm_setstart(a, state);
-	}
-
-	assert(fsm_all(a, fsm_isdfa));
-	assert(fsm_all(b, fsm_isdfa));
-
-	size_t pre = fsm_countstates(b);
+	size_t pre = fsm_countstates(fsm);
 	if (show_stats) {
 		fprintf(stderr, "pre-intersection dfa: %zu states\n", pre);
 	}
 
-	/*
-	 * Here I would call:
-	 *
-	 *     q = fsm_walk2(a, b, FSM_WALK2_BOTH, FSM_WALK2_BOTH);
-	 *
-	 * This is equivalent to fsm_intersect(). fsm_intersect() asserts that
-	 * both operands are DFA at runtime. But in this program we know this
-	 * empirically from our callers. So we would call fsm_walk2() directly
-	 * to avoid needlessly running the DFA predicate in DNDEBUG builds.
-	 *
-	 * This is intersection implemented by walking sets of states through
-	 * both FSM simultaneously, as described by Hopcroft, Motwani and Ullman
-	 * (2001, 2nd ed.) 4.2, Closure under Intersection.
-	 *
-	 * The intersection of two FSM consists of only those items which
-	 * are present in _BOTH.
-	 *
-	 * Unfortunately fsm_walk2() isn't in the public API, so we don't do that.
-	 */
-	q = fsm_intersect(a, b);
+	q = fsm_intersect_charset(fsm, strlen(charset), charset);
 	if (q == NULL) {
-		perror("fsm_intersect");
+		perror("fsm_intersect_charset");
 		exit(EXIT_FAILURE);
 	}
 
@@ -468,7 +415,7 @@ build_literals_fsm(const struct fsm_options *opt, bool show_stats,
 	}
 // TODO: also free a[j].a when we malloc for the 20k-element arrays
 
-	fsm = intersect_charset(opt, show_stats, charset, fsm);
+	fsm = intersect_charset(show_stats, charset, fsm);
 	if (fsm == NULL) {
 		perror("intersect_charset");
 		exit(EXIT_FAILURE);
@@ -552,7 +499,7 @@ build_regex_fsm(const struct fsm_options *opt, bool show_stats,
 		exit(EXIT_FAILURE);
 	}
 
-	fsm = intersect_charset(opt, show_stats, charset, fsm);
+	fsm = intersect_charset(show_stats, charset, fsm);
 	if (fsm == NULL) {
 		perror("intersect_charset");
 		exit(EXIT_FAILURE);
