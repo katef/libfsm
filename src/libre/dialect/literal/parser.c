@@ -323,7 +323,7 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 1073 "src/libre/parser.act"
+#line 1069 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIa))) {
 			goto ZL1;
@@ -558,7 +558,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 1085 "src/libre/parser.act"
+#line 1081 "src/libre/parser.act"
 
 
 	static int

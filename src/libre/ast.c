@@ -784,8 +784,7 @@ ast_make_expr_subtract(struct ast_expr_pool **poolp, enum re_flags re_flags, str
 
 struct ast_expr *
 ast_make_expr_range(struct ast_expr_pool **poolp, enum re_flags re_flags,
-    const struct ast_endpoint *from, struct ast_pos start,
-    const struct ast_endpoint *to, struct ast_pos end)
+    const struct ast_endpoint *from, const struct ast_endpoint *to)
 {
 	struct ast_expr *res;
 
@@ -800,9 +799,7 @@ ast_make_expr_range(struct ast_expr_pool **poolp, enum re_flags re_flags,
 	res->type = AST_EXPR_RANGE;
 	res->re_flags = re_flags;
 	res->u.range.from = *from;
-	res->u.range.start = start;
 	res->u.range.to = *to;
-	res->u.range.end = end;
 
 	return res;
 }
@@ -842,7 +839,6 @@ ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const 
 			}
 		} else {
 			struct ast_endpoint from, to;
-			struct ast_pos pos = { 0, 0, 0 }; /* XXX: pass in pos */
 
 			from.type = AST_ENDPOINT_LITERAL;
 			if (class->ranges[i].a <= UCHAR_MAX) {
@@ -858,7 +854,7 @@ ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const 
 				to.u.codepoint.u = class->ranges[i].b;
 			}
 
-			res->u.alt.n[i] = ast_make_expr_range(poolp, re_flags, &from, pos, &to, pos);
+			res->u.alt.n[i] = ast_make_expr_range(poolp, re_flags, &from, &to);
 			if (res->u.alt.n[i] == NULL) {
 				goto error;
 			}

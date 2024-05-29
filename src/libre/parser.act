@@ -1031,11 +1031,7 @@
 	@};
 
 	<ast-make-range>: (from :endpoint, start :pos, to :endpoint, end :pos) -> (node :ast_expr) = @{
-		struct ast_pos ast_start, ast_end;
 		unsigned char lower, upper;
-
-		AST_POS_OF_LX_POS(ast_start, @start);
-		AST_POS_OF_LX_POS(ast_end, @end);
 
 		if (@from.type != AST_ENDPOINT_LITERAL ||
 			@to.type != AST_ENDPOINT_LITERAL) {
@@ -1057,7 +1053,7 @@
 			@!;
 		}
 
-		@node = ast_make_expr_range(act_state->poolp, *flags, &@from, ast_start, &@to, ast_end);
+		@node = ast_make_expr_range(act_state->poolp, *flags, &@from, &@to);
 		if (@node == NULL) {
 			@!;
 		}

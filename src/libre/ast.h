@@ -204,9 +204,7 @@ struct ast_expr {
 
 		struct {
 			struct ast_endpoint from;
-			struct ast_pos start;
 			struct ast_endpoint to;
-			struct ast_pos end;
 		} range;
 
 		struct {
@@ -319,8 +317,7 @@ ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
 
 struct ast_expr *
 ast_make_expr_range(struct ast_expr_pool **poolp, enum re_flags re_flags,
-	const struct ast_endpoint *from, struct ast_pos start,
-	const struct ast_endpoint *to, struct ast_pos end);
+	const struct ast_endpoint *from, const struct ast_endpoint *to);
 
 struct ast_expr *
 ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const struct class *class);
