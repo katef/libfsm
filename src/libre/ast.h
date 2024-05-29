@@ -7,18 +7,6 @@
 #ifndef RE_AST_H
 #define RE_AST_H
 
-/*
- * This is a duplicate of struct lx_pos, but since we're linking to
- * code with several distinct lexers, there isn't a clear lexer.h
- * to include here. The parser sees both definitions, and will
- * build a `struct ast_pos` in the appropriate places.
- */
-struct ast_pos {
-	unsigned byte;
-	unsigned line;
-	unsigned col;
-};
-
 enum ast_expr_type {
 	/* Reserve one value (0) indicating a freed expression. This value is
 	 * intentionally unnamed: code that switches on n->type should be able

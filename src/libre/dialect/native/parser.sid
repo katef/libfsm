@@ -134,7 +134,6 @@
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();
 	<mark-count>: (:pos, :pos) -> ();
-	<mark-expr>: (:ast_expr, :pos, :pos) -> ();
 
 	<class-any>:  () -> (:ast_class_id);
 	!<class-bsr>: () -> (:ast_class_id);
@@ -350,10 +349,7 @@
 				<mark-group>(start, end);
 			##
 				<err-expected-closegroup>;
-				end = start; /* appease sid */
 			};
-
-			<mark-expr>(tmp, start, end);
 		};
 
 		piece: () -> (node :ast_expr) [

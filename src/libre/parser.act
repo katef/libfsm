@@ -77,14 +77,6 @@
 	#define TOK_CLASS__nspace  TOK_CLASS_NSPACE
 	#define TOK_CLASS__ndigit  TOK_CLASS_NDIGIT
 
-	/* This is a hack to work around the AST files not being able to include lexer.h. */
-	#define AST_POS_OF_LX_POS(AST_POS, LX_POS) \
-	    do {                                   \
-	        AST_POS.line = LX_POS.line;        \
-	        AST_POS.col = LX_POS.col;          \
-	        AST_POS.byte = LX_POS.byte;        \
-	    } while (0)
-
 	#include "parser.h"
 	#include "lexer.h"
 
@@ -797,16 +789,6 @@
 	<mark-count>: (start :pos, end :pos) -> () = @{
 		mark(&act_state->countstart, &@start);
 		mark(&act_state->countend,   &@end);
-	@};
-
-	<mark-expr>: (node :ast_expr, start :pos, end :pos) -> () = @{
-		(void) @start;
-		(void) @end;
-
-/* TODO: reinstate this, applies to an expr node in general
-		@node->u.class.start = ast_start;
-		@node->u.class.end   = ast_end;
-*/
 	@};
 
 	<class-any>: () -> (c :ast_class_id) = @{

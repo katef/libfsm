@@ -128,7 +128,6 @@
 	!<mark-group>: (:pos, :pos) -> ();
 	!<mark-range>: (:pos, :pos) -> ();
 	!<mark-count>: (:pos, :pos) -> ();
-	!<mark-expr>: (:ast_expr, :pos, :pos) -> ();
 
 	<class-any>:  () -> (:ast_class_id);
 	!<class-bsr>: () -> (:ast_class_id);
