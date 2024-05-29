@@ -800,13 +800,8 @@
 	@};
 
 	<mark-expr>: (node :ast_expr, start :pos, end :pos) -> () = @{
-		struct ast_pos ast_start, ast_end;
-
-		AST_POS_OF_LX_POS(ast_start, @start);
-		AST_POS_OF_LX_POS(ast_end, @end);
-
-		mark(&act_state->groupstart, &@start);
-		mark(&act_state->groupend,   &@end);
+		(void) @start;
+		(void) @end;
 
 /* TODO: reinstate this, applies to an expr node in general
 		@node->u.class.start = ast_start;
