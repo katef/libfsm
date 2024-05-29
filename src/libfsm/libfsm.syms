@@ -3,6 +3,7 @@ fsm_complement
 fsm_union
 fsm_union_array
 fsm_intersect
+fsm_intersect_charset
 
 # <fsm/cost.h>
 fsm_cost_legible

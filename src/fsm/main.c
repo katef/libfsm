@@ -368,6 +368,7 @@ main(int argc, char *argv[])
 	double elapsed;
 	fsm_print *print;
 	enum op op;
+	const char *charset;
 	struct fsm *fsm;
 	int xfiles;
 	int r;
@@ -390,12 +391,13 @@ main(int argc, char *argv[])
 
 	iterations = 1;
 	fsm = NULL;
+	charset = NULL;
 	r = 0;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "aCcgwXe:k:i:" "xpq:l:dG:mrt:EW:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aCcgwXe:k:i:" "xpq:l:dG:mrt:EU:W:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
@@ -421,6 +423,11 @@ main(int argc, char *argv[])
 			case 'r': op = op_name("reverse");            break;
 			case 't': op = op_name(optarg);               break;
 			case 'E': op = op_name("remove_epsilons");    break;
+
+			case 'U':
+				charset = optarg;
+				break;
+
 			case 'W':
 				/* print = gen_words; */
 				/* num_words = strtoul(optarg, NULL, 10); */
@@ -428,6 +435,7 @@ main(int argc, char *argv[])
 				fprintf(stderr, "not yet implemented.\n");
 				exit(EXIT_FAILURE);
 				break;
+
 			case 'G':
 				generate_bounds = strtoul(optarg, NULL, 10);
 				if (generate_bounds == 0) {
@@ -546,6 +554,29 @@ main(int argc, char *argv[])
 
 		if (r == -1) {
 			q = NULL;
+		}
+
+		/*
+		 * It might be more efficient to intersect the character set for each
+		 * operand, but that gives a different result for some operations
+		 * (complement especially). So since we'd also need to intersect the
+		 * result here too, I'm just doing it in the one place for simplicity.
+		 *
+		 * Passing a NULL charset is a no-op, so the default charset is a byte.
+		 * We can't include \0 here because optarg is a string, and I don't
+		 * want to invent a syntax for character sets.
+		 */
+		if (charset != NULL) {
+			if (!fsm_determinise(q)) {
+				perror("fsm_determinise");
+				exit(EXIT_FAILURE);
+			}
+
+			q = fsm_intersect_charset(q, strlen(charset), charset);
+			if (q == NULL) {
+				perror("fsm_intersect_charset");
+				exit(EXIT_FAILURE);
+			}
 		}
 
 		fsm_to_cleanup = q;
