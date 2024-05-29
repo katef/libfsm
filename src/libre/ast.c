@@ -153,22 +153,12 @@ ast_free(struct ast *ast)
 }
 
 struct ast_count
-ast_make_count(unsigned min, const struct ast_pos *start,
-    unsigned max, const struct ast_pos *end)
+ast_make_count(unsigned min, unsigned max)
 {
 	struct ast_count res;
 
-	memset(&res, 0x00, sizeof res);
-
 	res.min = min;
 	res.max = max;
-
-	if (start != NULL) {
-		res.start = *start;
-	}
-	if (end != NULL) {
-		res.end = *end;
-	}
 
 	return res;
 }

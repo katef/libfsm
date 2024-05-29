@@ -40,9 +40,7 @@ enum ast_expr_type {
 #define AST_COUNT_UNBOUNDED ((unsigned)-1)
 struct ast_count {
 	unsigned min;
-	struct ast_pos start;
 	unsigned max;
-	struct ast_pos end;
 };
 
 enum ast_anchor_type {
@@ -265,8 +263,7 @@ void
 ast_free(struct ast *ast);
 
 struct ast_count
-ast_make_count(unsigned min, const struct ast_pos *start,
-	unsigned max, const struct ast_pos *end);
+ast_make_count(unsigned min, unsigned max);
 
 /*
  * Expressions

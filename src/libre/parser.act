@@ -835,24 +835,22 @@
 	@};
 
 	<count-zero-or-more>: () -> (c :ast_count) = @{
-		@c = ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
+		@c = ast_make_count(0, AST_COUNT_UNBOUNDED);
 	@};
 
 	<count-one-or-more>: () -> (c :ast_count) = @{
-		@c = ast_make_count(1, NULL, AST_COUNT_UNBOUNDED, NULL);
+		@c = ast_make_count(1, AST_COUNT_UNBOUNDED);
 	@};
 
 	<count-zero-or-one>: () -> (c :ast_count) = @{
-		@c = ast_make_count(0, NULL, 1, NULL);
+		@c = ast_make_count(0, 1);
 	@};
 
 	<count-one>: () -> (c :ast_count) = @{
-		@c = ast_make_count(1, NULL, 1, NULL);
+		@c = ast_make_count(1, 1);
 	@};
 
 	<count-range>: (min :unsigned, start :pos, max :unsigned, end :pos) -> (c :ast_count) = @{
-		struct ast_pos ast_start, ast_end;
-
 		if (@max < @min) {
 			err->e = RE_ENEGCOUNT;
 			err->m = @min;
@@ -864,10 +862,7 @@
 			@!;
 		}
 
-		AST_POS_OF_LX_POS(ast_start, @start);
-		AST_POS_OF_LX_POS(ast_end, @end);
-
-		@c = ast_make_count(@min, &ast_start, @max, &ast_end);
+		@c = ast_make_count(@min, @max);
 	@};
 
 	<ast-range-endpoint-literal>: (c :char) -> (e :endpoint) = @{
