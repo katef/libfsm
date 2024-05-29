@@ -22,6 +22,7 @@ SRC += src/libfsm/trim.c
 SRC += src/libfsm/example.c
 SRC += src/libfsm/getc.c
 SRC += src/libfsm/shuffle.c
+SRC += src/libfsm/vacuum.c
 SRC += src/libfsm/vm.c
 
 # graph things

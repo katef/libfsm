@@ -44,6 +44,9 @@ struct state_array;
 
 #define FSM_CAPTURE_MAX INT_MAX
 
+/* guess for default state allocation */
+#define FSM_DEFAULT_STATEALLOC 128
+
 struct fsm_edge {
 	fsm_state_t state; /* destination */
 	unsigned char symbol;

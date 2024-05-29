@@ -57,7 +57,7 @@ fsm_new(const struct fsm_options *opt)
 		return NULL;
 	}
 
-	new->statealloc = 128; /* guess */
+	new->statealloc = FSM_DEFAULT_STATEALLOC;
 	new->statecount = 0;
 	new->endcount   = 0;
 	new->capture_info = NULL;
