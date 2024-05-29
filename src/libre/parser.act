@@ -181,6 +181,7 @@
 		} 
 
 	restart:
+
 		tok = act_state->lex_tok;
 		if (lex_state->extended_mode_comment) {
 			switch (tok) {
@@ -465,16 +466,21 @@
 		assert(lex_state->buf.a[3] == '\0');
 
 		@c = lex_state->buf.a[2];
-		/* from http://www.pcre.org/current/doc/html/pcre2pattern.html#SEC5
+
+		/*
+		 * From http://www.pcre.org/current/doc/html/pcre2pattern.html#SEC5
 		 * 
-		 *  The precise effect of \cx on ASCII characters is as follows: if x is a lower case letter, it is converted to
-		 *  upper case. Then bit 6 of the character (hex 40) is inverted. Thus \cA to \cZ become hex 01 to hex 1A (A is
-		 *  41, Z is 5A), but \c{ becomes hex 3B ({ is 7B), and \c; becomes hex 7B (; is 3B). If the code unit following
-		 *  \c has a value less than 32 or greater than 126, a compile-time error occurs. 
+		 *  The precise effect of \cx on ASCII characters is as follows:
+		 *  if x is a lower case letter, it is converted to upper case.
+		 *  Then bit 6 of the character (hex 40) is inverted.
+		 *  Thus \cA to \cZ become hex 01 to hex 1A (A is 41, Z is 5A),
+		 *  but \c{ becomes hex 3B ({ is 7B), and \c; becomes hex 7B (; is 3B).
+		 *  If the code unit following \c has a value less than 32
+		 *  or greater than 126, a compile-time error occurs. 
 		 */
 
 		{
-			unsigned char cc = (unsigned char)@c;
+			unsigned char cc = (unsigned char) @c;
 			if (cc > 126 || cc < 32) {
 				@!;
 			}
@@ -867,7 +873,7 @@
 
 	<ast-range-endpoint-literal>: (c :char) -> (e :endpoint) = @{
 		@e.type = AST_ENDPOINT_LITERAL;
-		@e.u.literal.c = (unsigned char)@c;
+		@e.u.literal.c = (unsigned char) @c;
 	@};
 
 	<ast-range-endpoint-class>: (id :ast_class_id) -> (e :endpoint) = @{
