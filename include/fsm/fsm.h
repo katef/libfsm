@@ -15,6 +15,8 @@
  * be atomic.
  */
 
+#include <stdbool.h>
+
 struct fsm;
 struct fsm_options;
 struct path; /* XXX */
@@ -494,12 +496,9 @@ int
 fsm_shuffle(struct fsm *fsm, unsigned seed);
 
 /* Attempt to reclaim memory if an FSM has significantly reduced its
- * state count. Returns 1 if */
-enum fsm_vacuum_res {
-	FSM_VACUUM_NO_CHANGE,
-	FSM_VACUUM_REDUCED_MEMORY,
-	FSM_VACUUM_ERROC_REALLOC = -1,
-}
+ * state count. Returns true if the vacuuming attempt succeeded (including
+ * deciding not to do anything), false if realloc failed. */
+bool
 fsm_vacuum(struct fsm *fsm);
 
 #endif

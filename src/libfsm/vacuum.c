@@ -12,7 +12,7 @@
 
 #include "internal.h"
 
-enum fsm_vacuum_res
+bool
 fsm_vacuum(struct fsm *fsm)
 {
 	assert(fsm != NULL);
@@ -24,17 +24,17 @@ fsm_vacuum(struct fsm *fsm)
 	}
 
 	if (nceil == fsm->statealloc) {
-		return FSM_VACUUM_NO_CHANGE;
+		return true;
 	}
 
 	struct fsm_state *nstates = f_realloc(fsm->opt->alloc,
 	    fsm->states, nceil * sizeof(nstates[0]));
 	if (nstates == NULL) {
-		return FSM_VACUUM_ERROC_REALLOC;
+		return false;
 	}
 
 	fsm->states = nstates;
 	fsm->statealloc = nceil;
 
-	return FSM_VACUUM_REDUCED_MEMORY;
+	return true;
 }
