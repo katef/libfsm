@@ -123,34 +123,8 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	/* Do a complete pass over the AST, filling in other details. */
 	res = ast_analysis(ast, flags);
-
 	if (res < 0) {
-		ast_free(ast);
-		if (err != NULL) {
-			if (res == AST_ANALYSIS_ERROR_UNSUPPORTED) {
-				err->e = RE_EUNSUPPORTED;
-
-				/*
-				 * We can't tag AST nodes with re_pos, because it's
-				 * also possible to construct an AST from an .fsm file.
-				 * We detect RE_EUNSUPPORTED from annotations (e.g. nullable)
-				 * on arbitary nodes. So at best we could tag an expr.
-				 * But since in general we'd need to fabricate a pos anyway,
-				 * I'm blaming the entire expression here.
-				 */
-				err->start.byte = 0;
-				err->end.byte = end.byte;
-			} else if (res == AST_ANALYSIS_ERROR_MEMORY) {
-				/* This case comes up during fuzzing. */
-				if (err->e == RE_ESUCCESS) {
-					err->e = RE_EERRNO;
-					errno = ENOMEM;
-				}
-			} else if (err->e == RE_ESUCCESS) {
-				err->e = RE_EERRNO;
-			}
-		}
-		return NULL;
+		goto error;
 	}
 
 	if (unsatisfiable != NULL) {
@@ -158,6 +132,47 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	}
 
 	return ast;
+
+error:
+
+	ast_free(ast);
+
+	if (err == NULL) {
+		return NULL;
+	}
+
+	switch (res) {
+	case AST_ANALYSIS_ERROR_MEMORY:
+		/* This case comes up during fuzzing. */
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EERRNO;
+			errno = ENOMEM;
+		}
+		break;
+
+	case AST_ANALYSIS_ERROR_UNSUPPORTED:
+		err->e = RE_EUNSUPPORTED;
+
+		/*
+		 * We can't tag AST nodes with re_pos, because it's
+		 * also possible to construct an AST from an .fsm file.
+		 * We detect RE_EUNSUPPORTED from annotations (e.g. nullable)
+		 * on arbitary nodes. So at best we could tag an expr.
+		 * But since in general we'd need to fabricate a pos anyway,
+		 * I'm blaming the entire expression here.
+		 */
+		err->start.byte = 0;
+		err->end.byte = end.byte;
+		break;
+
+	default:
+		if (err->e == RE_ESUCCESS) {
+			err->e = RE_EERRNO;
+		}
+		break;
+	}
+
+	return NULL;
 }
 
 struct fsm *
