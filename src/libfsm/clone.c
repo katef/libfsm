@@ -35,7 +35,7 @@ fsm_clone(const struct fsm *fsm)
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
-	new = fsm_new(fsm->opt);
+	new = fsm_new_statealloc(fsm->opt, fsm->statecount);
 	if (new == NULL) {
 		return NULL;
 	}

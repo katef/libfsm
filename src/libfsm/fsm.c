@@ -44,10 +44,14 @@ free_contents(struct fsm *fsm)
 }
 
 struct fsm *
-fsm_new(const struct fsm_options *opt)
+fsm_new_statealloc(const struct fsm_options *opt, size_t statealloc)
 {
 	static const struct fsm_options defaults;
 	struct fsm *new, f;
+
+	if (statealloc == 0) {
+		return fsm_new(opt);
+	}
 
 	if (opt == NULL) {
 		opt = &defaults;
@@ -60,7 +64,7 @@ fsm_new(const struct fsm_options *opt)
 		return NULL;
 	}
 
-	new->statealloc = FSM_DEFAULT_STATEALLOC;
+	new->statealloc = statealloc;
 	new->statecount = 0;
 	new->endcount   = 0;
 	new->capture_info = NULL;
@@ -90,6 +94,12 @@ fsm_new(const struct fsm_options *opt)
 	}
 
 	return new;
+}
+
+struct fsm *
+fsm_new(const struct fsm_options *opt)
+{
+	return fsm_new_statealloc(opt, FSM_DEFAULT_STATEALLOC);
 }
 
 void
