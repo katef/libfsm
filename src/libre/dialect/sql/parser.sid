@@ -139,7 +139,6 @@
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();
 	<mark-count>: (:pos, :pos) -> ();
-	<mark-expr>: (:ast_expr, :pos, :pos) -> ();
 
 	<class-any>:  () -> (:ast_class_id);
 	!<class-bsr>: () -> (:ast_class_id);
@@ -253,9 +252,7 @@
 
 			{
 				(!, close_start, close_end) = CLOSEGROUP;
-				<mark-group>(open_start, open_end);
-
-				<mark-expr>(tmp, open_start, close_end);
+				<mark-group>(open_start, close_end);
 
 				node = class;
 			||
@@ -287,11 +284,8 @@
 
 				{
 					(!, close_start, close_end) = CLOSEGROUP;
-					<mark-group>(close_start, close_end);
-
 					/* TODO: would prefer to demark class and mask separately */
-					<mark-expr>(tmp, open_start, close_end);
-					<mark-expr>(mask_tmp, open_start, close_end);
+					<mark-group>(open_start, close_end);
 				##
 					<err-expected-closegroup>;
 				};

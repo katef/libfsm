@@ -7,18 +7,6 @@
 #ifndef RE_AST_H
 #define RE_AST_H
 
-/*
- * This is a duplicate of struct lx_pos, but since we're linking to
- * code with several distinct lexers, there isn't a clear lexer.h
- * to include here. The parser sees both definitions, and will
- * build a `struct ast_pos` in the appropriate places.
- */
-struct ast_pos {
-	unsigned byte;
-	unsigned line;
-	unsigned col;
-};
-
 enum ast_expr_type {
 	/* Reserve one value (0) indicating a freed expression. This value is
 	 * intentionally unnamed: code that switches on n->type should be able
@@ -40,9 +28,7 @@ enum ast_expr_type {
 #define AST_COUNT_UNBOUNDED ((unsigned)-1)
 struct ast_count {
 	unsigned min;
-	struct ast_pos start;
 	unsigned max;
-	struct ast_pos end;
 };
 
 enum ast_anchor_type {
@@ -206,9 +192,7 @@ struct ast_expr {
 
 		struct {
 			struct ast_endpoint from;
-			struct ast_pos start;
 			struct ast_endpoint to;
-			struct ast_pos end;
 		} range;
 
 		struct {
@@ -265,8 +249,7 @@ void
 ast_free(struct ast *ast);
 
 struct ast_count
-ast_make_count(unsigned min, const struct ast_pos *start,
-	unsigned max, const struct ast_pos *end);
+ast_make_count(unsigned min, unsigned max);
 
 /*
  * Expressions
@@ -322,8 +305,7 @@ ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
 
 struct ast_expr *
 ast_make_expr_range(struct ast_expr_pool **poolp, enum re_flags re_flags,
-	const struct ast_endpoint *from, struct ast_pos start,
-	const struct ast_endpoint *to, struct ast_pos end);
+	const struct ast_endpoint *from, const struct ast_endpoint *to);
 
 struct ast_expr *
 ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const struct class *class);
