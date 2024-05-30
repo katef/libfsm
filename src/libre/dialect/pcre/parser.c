@@ -4341,7 +4341,7 @@ ZL0:;
 	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
 		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
-		struct re_err *err)
+		struct re_err *err, struct re_pos *end)
 	{
 		struct ast *ast;
 
@@ -4354,6 +4354,7 @@ ZL0:;
 		struct LX_STATE *lx;
 
 		assert(f != NULL);
+		assert(end != NULL);
 
 		ast = ast_new();
 
@@ -4406,6 +4407,9 @@ ZL0:;
 #endif
 
 		DIALECT_ENTRY(&flags, lex_state, act_state, err, &ast->expr);
+
+		/* we output this for reporting errors found through AST analysis */
+		mark(end, &lx->end);
 
 		lx->free(lx->buf_opaque);
 
@@ -4472,6 +4476,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 4476 "src/libre/dialect/pcre/parser.c"
+#line 4480 "src/libre/dialect/pcre/parser.c"
 
 /* END OF FILE */

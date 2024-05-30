@@ -1,1 +1,1 @@
-tests/pcre/in49.re: Unsupported PCRE edge case
+tests/pcre/in49.re:1-17: Unsupported operator
