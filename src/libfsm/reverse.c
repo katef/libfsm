@@ -54,7 +54,7 @@ fsm_reverse(struct fsm *fsm)
 	if (fsm->endcount == 0 || !fsm_getstart(fsm, &prevstart)) {
 		struct fsm *new;
 
-		new = fsm_new(fsm->opt);
+		new = fsm_new_statealloc(fsm->opt, 1);
 		if (new == NULL) {
 			return 0;
 		}

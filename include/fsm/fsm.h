@@ -61,6 +61,15 @@ struct fsm *
 fsm_new(const struct fsm_options *opt);
 
 /*
+ * As fsm_new(), but with an explicit number of pre-allocated states.
+ * This is intended to save on internal reallocations for situations
+ * where it's known in advance exactly how many states an FSM will have.
+ * You can still add more states per usual.
+ */
+struct fsm *
+fsm_new_statealloc(const struct fsm_options *opt, size_t statealloc);
+
+/*
  * Free a structure created by fsm_new(), and all of its contents.
  * No other pointers returned by this API are to be freed individually.
  */

@@ -36,8 +36,7 @@ fsm_intersect_charset(struct fsm *a, size_t n, const char *charset)
 	{
 		fsm_state_t state;
 
-		// TODO: pass .statealloc explicitly, we know it's 1. the default is overkill
-		b = fsm_new(a->opt);
+		b = fsm_new_statealloc(a->opt, 1);
 		if (b == NULL) {
 			return NULL;
 		}

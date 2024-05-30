@@ -96,6 +96,7 @@ re_strings_build(struct re_strings *g,
 		}
 	}
 
+	/* TODO: count trie nodes and fsm_new_statealloc() */
 	fsm = fsm_new(opt);
 	if (fsm == NULL) {
 		goto error;
