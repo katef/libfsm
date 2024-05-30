@@ -22,6 +22,9 @@
 #include "capture.h"
 #include "endids.h"
 
+/* guess for default state allocation */
+#define FSM_DEFAULT_STATEALLOC 128
+
 void
 free_contents(struct fsm *fsm)
 {
