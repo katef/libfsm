@@ -133,11 +133,6 @@
 		/* TODO: use lx's generated conveniences for the pattern buffer */
 		char a[512];
 		char *p;
-
-#if PCRE_DIALECT
-		int extended_mode_comment;
-		enum re_flags *flags_ptr;
-#endif /* PCRE_DIALECT */
 	};
 
 	static void
@@ -219,51 +214,49 @@
 	}
 
 	static enum LX_TOKEN
-	current_token(struct lex_state *lex_state, struct act_state *act_state)
+	current_token(struct lex_state *lex_state, struct act_state *act_state,
+		enum re_flags *flags)
 	{
 #ifndef PCRE_DIALECT
 		(void) lex_state;
+		(void) flags;
 		return act_state->lex_tok;
 #else
-		enum re_flags fl = (lex_state->flags_ptr != NULL) ? lex_state->flags_ptr[0] : 0;
-		enum LX_TOKEN tok;
-
-		if ((fl & RE_EXTENDED) == 0) {
-			tok = act_state->lex_tok;
-
-			switch (tok) {
+		if ((*flags & RE_EXTENDED) == 0) {
+			switch (act_state->lex_tok) {
 			case TOK_WHITESPACE:
 			case TOK_NEWLINE:
 			case TOK_MAYBE_COMMENT:
 				return TOK_CHAR;
 
 			default:
-				return tok;
+				return act_state->lex_tok;
 			}
 		} 
 
+		int extended_mode_comment = 0;
+
 	restart:
 
-		tok = act_state->lex_tok;
-		if (lex_state->extended_mode_comment) {
-			switch (tok) {
+		if (extended_mode_comment) {
+			switch (act_state->lex_tok) {
 			case TOK_EOF:
 			case TOK_ERROR:
 			case TOK_UNKNOWN:
 				/* don't eat EOF or errors */
-				return tok;
+				return act_state->lex_tok;
 
 			case TOK_NEWLINE:
-				lex_state->extended_mode_comment = 0;
+				extended_mode_comment = 0;
 				/* fall through */
 			default:
 				advance_lexer(lex_state, act_state);
 				goto restart;
 			}
 		} else {
-			switch (tok) {
+			switch (act_state->lex_tok) {
 			case TOK_MAYBE_COMMENT:
-				lex_state->extended_mode_comment = 1;
+				extended_mode_comment = 1;
 				/* fall through */
 			case TOK_WHITESPACE:
 			case TOK_NEWLINE:
@@ -271,14 +264,14 @@
 				goto restart;
 
 			default:
-				return tok;
+				return act_state->lex_tok;
 			}
 		}
 #endif
 	}
 
 	#define ADVANCE_LEXER    (advance_lexer(lex_state, act_state))
-	#define CURRENT_TERMINAL (current_token(lex_state, act_state))
+	#define CURRENT_TERMINAL (current_token(lex_state, act_state, flags))
 	#define ERROR_TERMINAL   @$ERROR
 
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
@@ -1112,11 +1105,6 @@
 
 		lex_state->buf.a   = NULL;
 		lex_state->buf.len = 0;
-
-#if PCRE_DIALECT
-		lex_state->extended_mode_comment = 0;
-		lex_state->flags_ptr = &flags;
-#endif /* PCRE_DIALECT */
 
 		/* XXX: unneccessary since we're lexing from a string */
 		/* (except for pushing "[" and "]" around ::group-$dialect) */

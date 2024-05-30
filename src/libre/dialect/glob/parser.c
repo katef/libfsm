@@ -124,11 +124,6 @@
 		/* TODO: use lx's generated conveniences for the pattern buffer */
 		char a[512];
 		char *p;
-
-#if PCRE_DIALECT
-		int extended_mode_comment;
-		enum re_flags *flags_ptr;
-#endif /* PCRE_DIALECT */
 	};
 
 	static void
@@ -210,51 +205,49 @@
 	}
 
 	static enum LX_TOKEN
-	current_token(struct lex_state *lex_state, struct act_state *act_state)
+	current_token(struct lex_state *lex_state, struct act_state *act_state,
+		enum re_flags *flags)
 	{
 #ifndef PCRE_DIALECT
 		(void) lex_state;
+		(void) flags;
 		return act_state->lex_tok;
 #else
-		enum re_flags fl = (lex_state->flags_ptr != NULL) ? lex_state->flags_ptr[0] : 0;
-		enum LX_TOKEN tok;
-
-		if ((fl & RE_EXTENDED) == 0) {
-			tok = act_state->lex_tok;
-
-			switch (tok) {
+		if ((*flags & RE_EXTENDED) == 0) {
+			switch (act_state->lex_tok) {
 			case TOK_WHITESPACE:
 			case TOK_NEWLINE:
 			case TOK_MAYBE_COMMENT:
 				return TOK_CHAR;
 
 			default:
-				return tok;
+				return act_state->lex_tok;
 			}
 		} 
 
+		int extended_mode_comment = 0;
+
 	restart:
 
-		tok = act_state->lex_tok;
-		if (lex_state->extended_mode_comment) {
-			switch (tok) {
+		if (extended_mode_comment) {
+			switch (act_state->lex_tok) {
 			case TOK_EOF:
 			case TOK_ERROR:
 			case TOK_UNKNOWN:
 				/* don't eat EOF or errors */
-				return tok;
+				return act_state->lex_tok;
 
 			case TOK_NEWLINE:
-				lex_state->extended_mode_comment = 0;
+				extended_mode_comment = 0;
 				/* fall through */
 			default:
 				advance_lexer(lex_state, act_state);
 				goto restart;
 			}
 		} else {
-			switch (tok) {
+			switch (act_state->lex_tok) {
 			case TOK_MAYBE_COMMENT:
-				lex_state->extended_mode_comment = 1;
+				extended_mode_comment = 1;
 				/* fall through */
 			case TOK_WHITESPACE:
 			case TOK_NEWLINE:
@@ -262,21 +255,21 @@
 				goto restart;
 
 			default:
-				return tok;
+				return act_state->lex_tok;
 			}
 		}
 #endif
 	}
 
 	#define ADVANCE_LEXER    (advance_lexer(lex_state, act_state))
-	#define CURRENT_TERMINAL (current_token(lex_state, act_state))
+	#define CURRENT_TERMINAL (current_token(lex_state, act_state, flags))
 	#define ERROR_TERMINAL   (TOK_ERROR)
 
 	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
 	                              act_state->lex_tok = tok;                     } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
 
-#line 280 "src/libre/dialect/glob/parser.c"
+#line 273 "src/libre/dialect/glob/parser.c"
 
 
 #ifndef ERROR_TERMINAL
@@ -311,13 +304,13 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 1047 "src/libre/parser.act"
+#line 1040 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIa))) {
 			goto ZL1;
 		}
 	
-#line 321 "src/libre/dialect/glob/parser.c"
+#line 314 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: ast-add-concat */
 		/* BEGINNING OF INLINE: 115 */
@@ -355,24 +348,24 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 			ADVANCE_LEXER;
 			/* BEGINNING OF ACTION: class-any */
 			{
-#line 789 "src/libre/parser.act"
+#line 782 "src/libre/parser.act"
 
 		/* TODO: or the unicode equivalent */
 		(ZIa) = (*flags & RE_SINGLE) ? &class_any : &class_notnl;
 	
-#line 364 "src/libre/dialect/glob/parser.c"
+#line 357 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: class-any */
 			/* BEGINNING OF ACTION: ast-make-named */
 			{
-#line 1040 "src/libre/parser.act"
+#line 1033 "src/libre/parser.act"
 
 		(ZIe) = ast_make_expr_named(act_state->poolp, *flags, (ZIa));
 		if ((ZIe) == NULL) {
 			goto ZL1;
 		}
 	
-#line 376 "src/libre/dialect/glob/parser.c"
+#line 369 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: ast-make-named */
 		}
@@ -385,7 +378,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 582 "src/libre/parser.act"
+#line 575 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
@@ -398,20 +391,20 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 
 		ZIc = lex_state->buf.a[0];
 	
-#line 402 "src/libre/dialect/glob/parser.c"
+#line 395 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF EXTRACT: CHAR */
 			ADVANCE_LEXER;
 			/* BEGINNING OF ACTION: ast-make-literal */
 			{
-#line 881 "src/libre/parser.act"
+#line 874 "src/libre/parser.act"
 
 		(ZIe) = ast_make_expr_literal(act_state->poolp, *flags, (ZIc));
 		if ((ZIe) == NULL) {
 			goto ZL1;
 		}
 	
-#line 415 "src/libre/dialect/glob/parser.c"
+#line 408 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: ast-make-literal */
 		}
@@ -425,38 +418,38 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 			ADVANCE_LEXER;
 			/* BEGINNING OF ACTION: class-any */
 			{
-#line 789 "src/libre/parser.act"
+#line 782 "src/libre/parser.act"
 
 		/* TODO: or the unicode equivalent */
 		(ZIa) = (*flags & RE_SINGLE) ? &class_any : &class_notnl;
 	
-#line 434 "src/libre/dialect/glob/parser.c"
+#line 427 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: class-any */
 			/* BEGINNING OF ACTION: ast-make-named */
 			{
-#line 1040 "src/libre/parser.act"
+#line 1033 "src/libre/parser.act"
 
 		(ZIg) = ast_make_expr_named(act_state->poolp, *flags, (ZIa));
 		if ((ZIg) == NULL) {
 			goto ZL1;
 		}
 	
-#line 446 "src/libre/dialect/glob/parser.c"
+#line 439 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: ast-make-named */
 			/* BEGINNING OF ACTION: count-zero-or-more */
 			{
-#line 815 "src/libre/parser.act"
+#line 808 "src/libre/parser.act"
 
 		(ZIc) = ast_make_count(0, AST_COUNT_UNBOUNDED);
 	
-#line 455 "src/libre/dialect/glob/parser.c"
+#line 448 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: count-zero-or-more */
 			/* BEGINNING OF ACTION: ast-make-piece */
 			{
-#line 904 "src/libre/parser.act"
+#line 897 "src/libre/parser.act"
 
 		if ((ZIc).min == 0 && (ZIc).max == 0) {
 			(ZIe) = ast_make_expr_empty(act_state->poolp, *flags);
@@ -470,7 +463,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 			goto ZL1;
 		}
 	
-#line 474 "src/libre/dialect/glob/parser.c"
+#line 467 "src/libre/dialect/glob/parser.c"
 			}
 			/* END OF ACTION: ast-make-piece */
 		}
@@ -485,26 +478,26 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-expected-atom */
 		{
-#line 711 "src/libre/parser.act"
+#line 704 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXATOM;
 		}
 		goto ZL2;
 	
-#line 496 "src/libre/dialect/glob/parser.c"
+#line 489 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: err-expected-atom */
 		/* BEGINNING OF ACTION: ast-make-empty */
 		{
-#line 860 "src/libre/parser.act"
+#line 853 "src/libre/parser.act"
 
 		(ZIe) = ast_make_expr_empty(act_state->poolp, *flags);
 		if ((ZIe) == NULL) {
 			goto ZL2;
 		}
 	
-#line 508 "src/libre/dialect/glob/parser.c"
+#line 501 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: ast-make-empty */
 	}
@@ -530,11 +523,11 @@ p_re__glob(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 
 		/* BEGINNING OF ACTION: make-group-id */
 		{
-#line 888 "src/libre/parser.act"
+#line 881 "src/libre/parser.act"
 
 		(ZIid) = act_state->group_id++;
 	
-#line 538 "src/libre/dialect/glob/parser.c"
+#line 531 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: make-group-id */
 		/* BEGINNING OF INLINE: 119 */
@@ -544,14 +537,14 @@ p_re__glob(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 				{
 					/* BEGINNING OF ACTION: ast-make-concat */
 					{
-#line 867 "src/libre/parser.act"
+#line 860 "src/libre/parser.act"
 
 		(ZIe) = ast_make_expr_concat(act_state->poolp, *flags);
 		if ((ZIe) == NULL) {
 			goto ZL1;
 		}
 	
-#line 555 "src/libre/dialect/glob/parser.c"
+#line 548 "src/libre/dialect/glob/parser.c"
 					}
 					/* END OF ACTION: ast-make-concat */
 					p_list_Hof_Hatoms (flags, lex_state, act_state, err, ZIe);
@@ -565,14 +558,14 @@ p_re__glob(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 				{
 					/* BEGINNING OF ACTION: ast-make-empty */
 					{
-#line 860 "src/libre/parser.act"
+#line 853 "src/libre/parser.act"
 
 		(ZIe) = ast_make_expr_empty(act_state->poolp, *flags);
 		if ((ZIe) == NULL) {
 			goto ZL1;
 		}
 	
-#line 576 "src/libre/dialect/glob/parser.c"
+#line 569 "src/libre/dialect/glob/parser.c"
 					}
 					/* END OF ACTION: ast-make-empty */
 				}
@@ -582,14 +575,14 @@ p_re__glob(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 		/* END OF INLINE: 119 */
 		/* BEGINNING OF ACTION: ast-make-group */
 		{
-#line 918 "src/libre/parser.act"
+#line 911 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_group(act_state->poolp, *flags, (ZIe), (ZIid));
 		if ((ZInode) == NULL) {
 			goto ZL1;
 		}
 	
-#line 593 "src/libre/dialect/glob/parser.c"
+#line 586 "src/libre/dialect/glob/parser.c"
 		}
 		/* END OF ACTION: ast-make-group */
 		/* BEGINNING OF INLINE: 120 */
@@ -608,14 +601,14 @@ p_re__glob(flags flags, lex_state lex_state, act_state act_state, err err, t_ast
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 760 "src/libre/parser.act"
+#line 753 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
 		}
 		goto ZL1;
 	
-#line 619 "src/libre/dialect/glob/parser.c"
+#line 612 "src/libre/dialect/glob/parser.c"
 				}
 				/* END OF ACTION: err-expected-eof */
 			}
@@ -633,7 +626,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 1059 "src/libre/parser.act"
+#line 1052 "src/libre/parser.act"
 
 
 	static int
@@ -690,11 +683,6 @@ ZL0:;
 
 		lex_state->buf.a   = NULL;
 		lex_state->buf.len = 0;
-
-#if PCRE_DIALECT
-		lex_state->extended_mode_comment = 0;
-		lex_state->flags_ptr = &flags;
-#endif /* PCRE_DIALECT */
 
 		/* XXX: unneccessary since we're lexing from a string */
 		/* (except for pushing "[" and "]" around ::group-$dialect) */
@@ -791,6 +779,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 795 "src/libre/dialect/glob/parser.c"
+#line 783 "src/libre/dialect/glob/parser.c"
 
 /* END OF FILE */
