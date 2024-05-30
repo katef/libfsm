@@ -1,1 +1,1 @@
-tests/pcre/in48.re:1: Unsupported operator
+tests/pcre/in48.re:1-11: Unsupported operator

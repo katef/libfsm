@@ -28,7 +28,7 @@
 extern void p_re__glob(flags, lex_state, act_state, err, t_ast__expr *);
 /* BEGINNING OF TRAILER */
 
-#line 1204 "src/libre/parser.act"
+#line 1208 "src/libre/parser.act"
 
 
 #line 35 "src/libre/dialect/glob/parser.h"

@@ -98,6 +98,7 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct dialect *m;
 	struct ast *ast = NULL;
 	enum ast_analysis_res res;
+	struct re_pos end;
 	
 	assert(getc != NULL);
 
@@ -109,7 +110,7 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	flags |= m->flags;
 
-	ast = m->parse(getc, opaque, opt, flags, m->overlap, err);
+	ast = m->parse(getc, opaque, opt, flags, m->overlap, err, &end);
 
 	if (ast == NULL) {
 		return NULL;
@@ -128,6 +129,17 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		if (err != NULL) {
 			if (res == AST_ANALYSIS_ERROR_UNSUPPORTED) {
 				err->e = RE_EUNSUPPORTED;
+
+				/*
+				 * We can't tag AST nodes with re_pos, because it's
+				 * also possible to construct an AST from an .fsm file.
+				 * We detect RE_EUNSUPPORTED from annotations (e.g. nullable)
+				 * on arbitary nodes. So at best we could tag an expr.
+				 * But since in general we'd need to fabricate a pos anyway,
+				 * I'm blaming the entire expression here.
+				 */
+				err->start.byte = 0;
+				err->end.byte = end.byte;
 			} else if (res == AST_ANALYSIS_ERROR_MEMORY) {
 				/* This case comes up during fuzzing. */
 				if (err->e == RE_ESUCCESS) {

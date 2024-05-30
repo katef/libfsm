@@ -1010,8 +1010,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 					all_set_past_always_consuming &= child_env.past_always_consuming;
 					any_sat = 1;
 				}
-			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED
-			    || res == AST_ANALYSIS_ERROR_UNSUPPORTED) {
+			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED) {
 				continue;
 			} else {
 				return res;
