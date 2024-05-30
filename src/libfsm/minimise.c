@@ -157,6 +157,12 @@ fsm_minimise(struct fsm *fsm)
 
 	fsm_move(fsm, dst);
 
+	/* The FSM state count should be settled now, so if the state
+	 * allocation is unnecessarily large move to a smaller one. */
+	if (!fsm_vacuum(fsm)) {	/* realloc failure */
+		r = 0;
+	}
+
 cleanup:
 	if (mapping != NULL) {
 		f_free(fsm->opt->alloc, mapping);

@@ -15,6 +15,8 @@
  * be atomic.
  */
 
+#include <stdbool.h>
+
 struct fsm;
 struct fsm_options;
 struct path; /* XXX */
@@ -492,6 +494,12 @@ int fsm_fgetc(void *opaque); /* expects opaque to be FILE *  */
 /* Shuffle the state IDs in the FSM. This is mainly useful for testing. */
 int
 fsm_shuffle(struct fsm *fsm, unsigned seed);
+
+/* Attempt to reclaim memory if an FSM has significantly reduced its
+ * state count. Returns true if the vacuuming attempt succeeded (including
+ * deciding not to do anything), false if realloc failed. */
+bool
+fsm_vacuum(struct fsm *fsm);
 
 #endif
 
