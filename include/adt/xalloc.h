@@ -17,6 +17,9 @@ xstrdup(const char *s);
  * The following functions are for CLI use only; they exit on error
  */
 
+char *
+xstrndup(const char *s, size_t n);
+
 void *
 xmalloc(size_t sz);
 
