@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2017 Katherine Flavel
+ * Copyright 2008-2024 Katherine Flavel
  *
  * See LICENCE for the full copyright terms.
  */

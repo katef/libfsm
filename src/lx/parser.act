@@ -223,18 +223,10 @@
 	TOKEN: () -> (s :string) = @{
 		/* TODO: submatch addressing */
 		@s = xstrdup(lex_state->buf.a + 1); /* +1 for '$' prefix */
-		if (@s == NULL) {
-			perror("xstrdup");
-			exit(EXIT_FAILURE);
-		}
 	@};
 
 	IDENT: () -> (s :string) = @{
 		@s = xstrdup(lex_state->buf.a);
-		if (@s == NULL) {
-			perror("xstrdup");
-			exit(EXIT_FAILURE);
-		}
 	@};
 
 	RE: () -> (f :flags) = @{

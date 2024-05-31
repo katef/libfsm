@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 159 "src/libfsm/parser.act"
+#line 160 "src/libfsm/parser.act"
 
 
 	typedef struct lex_state * lex_state;
@@ -26,7 +26,7 @@
 extern void p_fsm(fsm, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 437 "src/libfsm/parser.act"
+#line 432 "src/libfsm/parser.act"
 
 #line 32 "src/libfsm/parser.h"
 

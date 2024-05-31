@@ -241,11 +241,8 @@
 	@};
 
 	IDENT: () -> (s :string) = @{
+		/* XXX: don't exit in library code */
 		@s = xstrdup(lex_state->buf.a);
-		if (@s == NULL) {
-			perror("xstrdup");
-			exit(EXIT_FAILURE);
-		}
 	@};
 
 %actions%
@@ -288,11 +285,8 @@
 				exit(EXIT_FAILURE);
 			}
 
+			/* XXX: don't exit in library code */
 			new->id = xstrdup(@n);
-			if (new->id == NULL) {
-				perror("xstrdup");
-				exit(EXIT_FAILURE);
-			}
 
 			if (!fsm_addstate(fsm, &@s)) {
 				perror("fsm_addstate");
