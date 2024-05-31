@@ -263,10 +263,6 @@ parse_modifiers(size_t linenum, const char *s, enum re_flags *mods_p)
 	assert(s != NULL);
 
 	buf = xstrdup(s);
-	if (buf == NULL) {
-		return 0;
-	}
-
 	pos = tok = buf;
 	first = true;
 

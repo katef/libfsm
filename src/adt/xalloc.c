@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2017 Katherine Flavel
+ * Copyright 2008-2024 Katherine Flavel
  *
  * See LICENCE for the full copyright terms.
  */
@@ -22,6 +22,19 @@ xstrdup(const char *s)
 	}
 
 	return strcpy(new, s);
+}
+
+char *
+xstrndup(const char *s, size_t n)
+{
+	char *new;
+
+	new = malloc(n);
+	if (new == NULL) {
+		return NULL;
+	}
+
+	return memcpy(new, s, n);
 }
 
 void *
@@ -57,11 +70,8 @@ xrealloc(void *p, size_t sz)
 {
 	void *q;
 
-	/* This is legal and frees p, but confusing; use free() instead */
-	assert(sz != 0);
-
 	q = realloc(p, sz);
-	if (q == NULL) {
+	if (sz > 0 && q == NULL) {
 		perror("realloc");
 		abort();
 	}
