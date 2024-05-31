@@ -4,8 +4,6 @@
  * See LICENCE for the full copyright terms.
  */
 
-#define _POSIX_C_SOURCE 200809L
-
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
@@ -29,13 +27,14 @@ xstrdup(const char *s)
 char *
 xstrndup(const char *s, size_t n)
 {
-	char *new = strndup(s, n);
+	char *new;
+
+	new = malloc(n);
 	if (new == NULL) {
-		perror("strndup");
-		abort();
+		return NULL;
 	}
 
-	return new;
+	return memcpy(new, s, n);
 }
 
 void *
