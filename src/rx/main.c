@@ -25,6 +25,8 @@
 #include <stdlib.h>
 #include <limits.h>
 
+#include <adt/xalloc.h>
+
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/options.h>
@@ -37,6 +39,7 @@
 #include <re/strings.h>
 
 enum category {
+	CATEGORY_EMPTY,
 	CATEGORY_LITERAL,
 	CATEGORY_GENERAL,
 	CATEGORY_ERROR,
@@ -75,31 +78,6 @@ enum ambig {
 	AMBIG_EARLIEST,
 	AMBIG_MULTIPLE
 };
-
-static void *
-xalloc(size_t size)
-{
-	void *p;
-
-	p = malloc(size);
-	if (p == NULL) {
-		perror("malloc");
-		exit(EXIT_FAILURE);
-	}
-
-	return p;
-}
-static char *
-xstrndup(const char *s, size_t n)
-{
-	char *new = strndup(s, n);
-	if (new == NULL) {
-		perror("strndup");
-		exit(EXIT_FAILURE);
-	}
-
-	return new;
-}
 
 static bool
 permitted_chars(const char *p, size_t n, const char *accept, const char *reject)
@@ -256,6 +234,7 @@ const char *
 category_reason(enum category r)
 {
 	switch (r) {
+	case CATEGORY_EMPTY:         return "empty string";
 	case CATEGORY_LITERAL:       return "literal";
 	case CATEGORY_GENERAL:       return "general";
 	case CATEGORY_ERROR:         return "parse error";
@@ -307,7 +286,8 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 
 	/* empty string */
 	if (r == 1 && lit_n == 0) {
-		/* this is acceptable */
+		assert(lit_s == NULL);
+		return CATEGORY_EMPTY;
 	}
 
 	/* unsatisfiable */
@@ -342,8 +322,6 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 		if (!permitted_chars(lit_s, lit_n, charset, NULL)) {
 			return CATEGORY_PERMITTED;
 		}
-
-//fprintf(stderr, "re_is_literal found: '%.*s'\n", (int) lit_n, lit_s);
 
 		enum re_strings_flags flags = literal_flags(category);
 		assert(flags >= 0 && flags <= 3);
@@ -388,7 +366,7 @@ literal_strings(const struct fsm_options *opt,
 	struct re_strings *g;
 	struct fsm *fsm;
 
-	assert(a != NULL);
+	assert(a != NULL || n == 0);
 
 	g = re_strings_new();
 	if (g == NULL) {
@@ -407,9 +385,6 @@ literal_strings(const struct fsm_options *opt,
 	fsm = re_strings_build(g, opt, flags);
 	re_strings_free(g);
 
-// XXX: this fsm has unreachable states boo
-//fsm_print_dot(stderr, fsm);
-
 	/* this is already a DFA, courtesy of re_strings() */
 	assert(fsm_all(fsm, fsm_isdfa));
 
@@ -427,12 +402,6 @@ build_literals_fsm(const struct fsm_options *opt, bool show_stats,
 
 	fsm = literal_strings(opt, set->a, set->count, flags);
 // XXX: we do produce an empty fsm for 0 literals assert(!fsm_empty(fsm));
-
-	for (size_t i = 0; i < set->count; i++) {
-// TODO: when we switch to libfsm alloc hooks, check if re_is_literal() calls malloc proper or not for *lit_s
-		free((void *) set->a[i].p);
-	}
-// TODO: also free a[j].a when we malloc for the 20k-element arrays
 
 	fsm = intersect_charset(show_stats, charset, fsm);
 	if (fsm == NULL) {
@@ -507,7 +476,10 @@ build_regex_fsm(const struct fsm_options *opt, bool show_stats,
 		exit(EXIT_FAILURE);
 	}
 
-// TODO: note we don't minimise rather than determinise, explain why
+	/*
+	 * There's no need to minimise here, we only need a DFA in order
+	 * to fsm_intersect_charset(). We'd want to minimise again anyway.
+	 */
 	if (!fsm_determinise(fsm)) {
 		perror("fsm_determinise");
 		exit(EXIT_FAILURE);
@@ -524,17 +496,15 @@ build_regex_fsm(const struct fsm_options *opt, bool show_stats,
 		exit(EXIT_FAILURE);
 	}
 
-// XXX: unsure why this gives 0 states, even with endids
-// TODO: explain we minimise again after intersect_charset because this fsm has a single endid, so it's (potentially) a worthwhile difference
-
-// TODO: we do minimise now after intersection, explain it's because only one end id
-fsm_print_dot(stderr, fsm);
-#if 0
+	/*
+	 * This FSM has only one endid. fsm_minimise() does now maintain
+	 * uniqueness for endids, but here we get the same FSM as if they
+	 * didn't exist at all.
+	 */
 	if (!fsm_minimise(fsm)) {
 		perror("fsm_minimise");
 		exit(EXIT_FAILURE);
 	}
-#endif
 
 	return fsm;
 }
@@ -926,9 +896,13 @@ charset =
 			}
 		}
 
+		/*
+		 * This is so we can fit the endid value in an int for the
+		 * return value of the generated code.
+		 */
 		if (patterns_count > INT_MAX) {
-// TODO: error about it
-// TODO: explain this is so we can fit the endid value in an int for the return value of the generated code
+			fprintf(stderr, "pattern count overflow\n");
+			exit(EXIT_FAILURE);
 		}
 
 		if (show_stats) {
@@ -947,7 +921,7 @@ charset =
 
 	const char **patterns;
 
-	patterns = xalloc(patterns_count * sizeof *patterns);
+	patterns = xmalloc(patterns_count * sizeof *patterns);
 
 	// TODO: patterns_set, fsm_set
 	struct id_set declined;
@@ -955,14 +929,14 @@ charset =
 	struct literal_set literals[4]; /* unanchored, left, right, both */
 
 	// TODO: explain we use the worst case of patterns_count for all these, prior to categorization
-	declined.a = xalloc(patterns_count * sizeof *declined.a);
+	declined.a = xmalloc(patterns_count * sizeof *declined.a);
 	declined.count = 0;
-	general.a  = xalloc(patterns_count * sizeof *general.a);
+	general.a  = xmalloc(patterns_count * sizeof *general.a);
 	general.count = 0;
 		
-// XXX: xalloc()ing these conservatively is large, i don't like it
+// XXX: malloc()ing these conservatively is large, i don't like it
 	for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
-		literals[i].a  = xalloc(patterns_count * sizeof *literals[i].a);
+		literals[i].a = xmalloc(patterns_count * sizeof *literals[i].a);
 		literals[i].count = 0;
 	}
 
@@ -1014,6 +988,8 @@ charset =
 						id, (int) lit_n, lit_s);
 					break;
 
+				case CATEGORY_EMPTY:
+					/* fallthrough */
 				case CATEGORY_GENERAL:
 					fprintf(stderr, "general #%u: /%.*s/\n",
 						id, (int) strcspn(patterns[id], "\n"), patterns[id]);
@@ -1039,6 +1015,8 @@ charset =
 				append_literal(&literals[flags], lit_s, lit_n, id);
 				break;
 
+			case CATEGORY_EMPTY:
+				/* fallthrough */
 			case CATEGORY_GENERAL:
 				append_id(&general, id);
 				break;
@@ -1051,14 +1029,24 @@ charset =
 				append_id(&declined, id);
 			}
 		}
+
+		/*
+		 * realloc down to size, note this leaves some .a arrays NULL
+		 * when its count is 0.
+		 */
+		declined.a = xrealloc(declined.a, declined.count * sizeof *declined.a);
+		general.a  = xrealloc(general.a, general.count * sizeof *general.a);
+		for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
+			literals[i].a  = xrealloc(literals[i].a, literals[i].count * sizeof *literals[i].a);
+		}
 	}
 
 	/*
 	 * This is conservative allocation, the declined list may still grow yet.
 	 * We track actual usage in fsm_count.
 	 */
-#define LITERALS_COUNT 4
-	struct fsm **fsms = xalloc((LITERALS_COUNT + patterns_count - declined.count) * sizeof *fsms);
+	struct fsm **fsms = xmalloc(((sizeof literals / sizeof *literals)
+		+ patterns_count - declined.count) * sizeof *fsms);
 	size_t fsm_count = 0;
 
 	/*
@@ -1076,7 +1064,7 @@ charset =
 
 	/* sets of literals */
 	{
-		enum re_strings_flags flags[LITERALS_COUNT] = {
+		enum re_strings_flags flags[sizeof literals / sizeof *literals] = {
 			0,
 			RE_STRINGS_ANCHOR_LEFT,
 			RE_STRINGS_ANCHOR_RIGHT,
@@ -1092,13 +1080,19 @@ charset =
 				&literals[i], flags[i]);
 			assert(fsm != NULL);
 
-fprintf(stderr, "fsms[%zu] <- literal[%zu]\n", fsm_count, i);
+			if (verbose) {
+				fprintf(stderr, "fsms[%zu] <- literal[%zu]\n", fsm_count, i);
+			}
+
 			fsms[fsm_count] = fsm;
 			fsm_count++;
 		}
 	}
 
 	for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
+		for (size_t j = 0; j < literals[i].count; j++) {
+			free((void *) literals[i].a[j].p); /* allocated by re_is_literal() */
+		}
 		free(literals[i].a);
 	}
 
@@ -1112,7 +1106,8 @@ fprintf(stderr, "fsms[%zu] <- literal[%zu]\n", fsm_count, i);
 
 			if (verbose) {
 				fprintf(stderr, "general[%zu]: #%u /%.*s/\n",
-					i, general.a[i], (int) strcspn(patterns[general.a[i]], "\n"), patterns[general.a[i]]);
+					i, general.a[i],
+					(int) strcspn(patterns[general.a[i]], "\n"), patterns[general.a[i]]);
 			}
 
 			struct fsm *fsm = build_regex_fsm(&opt, show_stats, charset,
@@ -1123,7 +1118,10 @@ fprintf(stderr, "fsms[%zu] <- literal[%zu]\n", fsm_count, i);
 				continue;
 			}
 
-fprintf(stderr, "fsms[%zu] <- general[%zu]\n", fsm_count, i);
+			if (verbose) {
+				fprintf(stderr, "fsms[%zu] <- general[%zu]\n", fsm_count, i);
+			}
+
 			fsms[fsm_count] = fsm;
 			fsm_count++;
 		}
@@ -1140,11 +1138,11 @@ fprintf(stderr, "fsms[%zu] <- general[%zu]\n", fsm_count, i);
 			declined.count);
 		fprintf(stderr, "literals (unanchored): %zu patterns, %u states\n",
 			literals[0].count, fsm_countstates(fsms[0]));
-		fprintf(stderr, "literals (left): %zu patterns, %u states\n",
+		fprintf(stderr, "literals (^left): %zu patterns, %u states\n",
 			literals[1].count, fsm_countstates(fsms[1]));
-		fprintf(stderr, "literals (right): %zu patterns, %u states\n",
+		fprintf(stderr, "literals (right$): %zu patterns, %u states\n",
 			literals[2].count, fsm_countstates(fsms[2]));
-		fprintf(stderr, "literals (both): %zu patterns, %u states\n",
+		fprintf(stderr, "literals (^both$): %zu patterns, %u states\n",
 			literals[3].count, fsm_countstates(fsms[3]));
 		fprintf(stderr, "general: %zu patterns (limit %zu)\n",
 			general.count, general_limit);
@@ -1158,8 +1156,11 @@ fprintf(stderr, "fsms[%zu] <- general[%zu]\n", fsm_count, i);
 		}
 	}
 
-// TODO: dump to file, handle these with pcre or such
-// TODO: explain you're expected to disambiguate by pattern spelling, the endids are not relevant here
+	/*
+	 * The declined patterns are intended to be handled by some other regex
+	 * engine. The user is expected to disambiguate these by pattern spelling.
+	 * This gives a way to map back to the per-line ID from the original list.
+	 */
 	if (declined_file != NULL) {
 		FILE *f;
 
@@ -1170,7 +1171,8 @@ fprintf(stderr, "fsms[%zu] <- general[%zu]\n", fsm_count, i);
 		}
 
 		for (size_t i = 0; i < declined.count; i++) {
-			fprintf(f, "%.*s\n", (int) strcspn(patterns[declined.a[i]], "\n"), patterns[declined.a[i]]);
+			fprintf(f, "%.*s\n",
+				(int) strcspn(patterns[declined.a[i]], "\n"), patterns[declined.a[i]]);
 		}
 
 		fclose(f);
@@ -1260,7 +1262,5 @@ fprintf(stderr, "fsms[%zu] <- general[%zu]\n", fsm_count, i);
 		fprintf(stderr, "rusage.maxrss: %zu MiB\n", (size_t) ru.ru_maxrss / 1024);
 	}
 #endif
-
-// TODO: also free lit_s
 }
 
