@@ -57,11 +57,8 @@ xrealloc(void *p, size_t sz)
 {
 	void *q;
 
-	/* This is legal and frees p, but confusing; use free() instead */
-	assert(sz != 0);
-
 	q = realloc(p, sz);
-	if (q == NULL) {
+	if (sz > 0 && q == NULL) {
 		perror("realloc");
 		abort();
 	}

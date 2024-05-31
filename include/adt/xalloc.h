@@ -23,6 +23,7 @@ xmalloc(size_t sz);
 void *
 xcalloc(size_t count, size_t sz);
 
+/* equivalent to free(p) when sz is 0, returns NULL */
 void *
 xrealloc(void *p, size_t sz);
 
