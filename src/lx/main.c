@@ -307,14 +307,10 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 	}
 
 	{
-		/* opt.carryopaque = carryopaque; */
-
 		if (!fsm_determinise(q)) {
 			fsm_free(q);
 			return -1;
 		}
-
-		/* opt.carryopaque = NULL; */
 	}
 
 	{
@@ -842,7 +838,12 @@ main(int argc, char *argv[])
 				e = 1;
 			}
 
-			/* pick up conflicts flagged by carryopaque() */
+			if (!ast_noteconflicts(z->fsm)) {
+				perror("ast_noteconflicts");
+				return EXIT_FAILURE;
+			}
+
+			/* pick up conflicts flagged by ast_noteconflicts() */
 			for (i = 0; i < z->fsm->statecount; i++) {
 				struct ast_mapping *m;
 

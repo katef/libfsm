@@ -71,5 +71,8 @@ ast_getendmappingbyendid(fsm_end_id_t id);
 struct ast_mapping *
 ast_getendmapping(const struct fsm *fsm, fsm_state_t s);
 
+int
+ast_noteconflicts(const struct fsm *fsm);
+
 #endif
 
