@@ -46,7 +46,7 @@ enum category {
 	CATEGORY_UNSUPPORTED,
 	CATEGORY_UNSATISFIABLE,
 	CATEGORY_ZERO,
-	CATEGORY_PERMITTED
+	CATEGORY_NOT_PERMITTED
 };
 
 struct literal {
@@ -65,19 +65,13 @@ struct id_set {
 	fsm_end_id_t *a;
 };
 
-/*
-TODO: flag to have the generated api only ever return a single endid, and resolve ambiguity by one of several ways:
-1. earlier line (lower endid) wins
-2. longest match/most specific regex wins (this doesn't work for dfa)
-3. error about it at compile time (in particular use rx -q as a lint to find conflicts). this is the opposite to -u. give examples, lx style
-- unsure if there are any other strategies for allowing ambiguities
-4. allow ambiguious patterns and have the generated api return a set
-*/
 enum ambig {
 	AMBIG_ERROR,
 	AMBIG_EARLIEST,
 	AMBIG_MULTIPLE
 };
+
+typedef void (print_fsm)(struct fsm *, const char *, enum ambig);
 
 static bool
 permitted_chars(const char *p, size_t n, const char *accept, const char *reject)
@@ -86,7 +80,6 @@ permitted_chars(const char *p, size_t n, const char *accept, const char *reject)
 	bool r = true;
 
 	assert(p != NULL);
-	assert(accept != NULL || reject != NULL);
 
 	/*
 	 * p,n is a slice into a \n-terminated buffer, so we can't strcspn() here.
@@ -94,6 +87,7 @@ permitted_chars(const char *p, size_t n, const char *accept, const char *reject)
 	 * actually a problem I'd prefer to allocate and \0-terminate here just
 	 * for the sake of using strcspn().
 	 */
+// XXX: in this program xstrndup is enough after all. strndup will look past the end for a \0, but n < the position of \n, and all lines end with \n. so it'll just look at the \n
 	s = xstrndup(p, n);
 
 	if (accept != NULL) {
@@ -241,7 +235,7 @@ category_reason(enum category r)
 	case CATEGORY_UNSUPPORTED:   return "unsupported";
 	case CATEGORY_UNSATISFIABLE: return "unsatisfiable";
 	case CATEGORY_ZERO:          return "contains \\0, which a charset cannot express";
-	case CATEGORY_PERMITTED:     return "charset/reject";
+	case CATEGORY_NOT_PERMITTED: return "charset/reject";
 
 	default:
 		assert(!"unreached");
@@ -292,6 +286,7 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 
 	/* unsatisfiable */
 	if (r == 1 && category == RE_LITERAL_UNSATISFIABLE) {
+		assert(lit_s == NULL);
 		return CATEGORY_UNSATISFIABLE;
 	}
 
@@ -318,9 +313,11 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 			}
 		}
 
-// TODO: explain reject does not apply
+		/* The reject set does not apply for literals,
+		 * it's intended only for regex operators */
 		if (!permitted_chars(lit_s, lit_n, charset, NULL)) {
-			return CATEGORY_PERMITTED;
+			free(lit_s);
+			return CATEGORY_NOT_PERMITTED;
 		}
 
 		enum re_strings_flags flags = literal_flags(category);
@@ -332,6 +329,18 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 		return CATEGORY_LITERAL;
 	}
 
+	/*
+	 * XXX: The charset accidentally includes regex operators,
+	 * because we're cheesily looking at the string pre-parse,
+	 * we need those in the charset too, in addition to the
+	 * charset matching literals within the regex.
+	 *
+	 * So we shouldn't enforce positive charset pre-lexing here,
+	 * this would need to be done at AST time. Until this is done,
+	 * I'm just skipping the reject set.
+	 */
+	(void) reject;
+#if 0
 	/*
 	 * Reject regexps that contain characters that may be expensive.
 	 *
@@ -345,12 +354,10 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 	 *
 	 * So we're relying on that here, and this is just a best-effort help.
 	 */
-// TODO: would need to pass charset here *plus all the regex syntax operators*
-// we shouldn't enforce positive charset pre-lexing here, this would need to be done at AST time
 	if (!permitted_chars(s, strcspn(s, "\n"), NULL, reject)) {
-// XXX: this accidentally includes regex operators, we need those in the charset too
 		return CATEGORY_PERMITTED;
 	}
+#endif
 
 	/* not a literal */
 	return CATEGORY_GENERAL;
@@ -401,7 +408,13 @@ build_literals_fsm(const struct fsm_options *opt, bool show_stats,
 	assert(set != NULL);
 
 	fsm = literal_strings(opt, set->a, set->count, flags);
-// XXX: we do produce an empty fsm for 0 literals assert(!fsm_empty(fsm));
+
+	/* we do produce an empty fsm for 0 literals */
+	if (set->count == 0) {
+		assert(fsm_empty(fsm));
+	} else {
+		assert(!fsm_empty(fsm));
+	}
 
 	fsm = intersect_charset(show_stats, charset, fsm);
 	if (fsm == NULL) {
@@ -485,16 +498,29 @@ build_regex_fsm(const struct fsm_options *opt, bool show_stats,
 		exit(EXIT_FAILURE);
 	}
 
+	assert(!fsm_empty(fsm));
+
 	if (!fsm_setendid(fsm, id)) {
 		perror("fsm_setendid");
 		exit(EXIT_FAILURE);
 	}
 
+// XXX: collapses down to nothing because for ^.*abc.*$ the middle is a subset of the .*
+// XXX: not sure at all
+// XXX: this is the wrong operation!
+// instead of .* we should go edge-by-edge and remove anything not in the charset
+// but that would give the same result
+// i want to intersect_charset but without folding the fsm down to nothing
+// XXX: i *think* intersect_charset must be doing the wrong thing. somehow
+	(void) charset;
+	(void) show_stats;
+/*
 	fsm = intersect_charset(show_stats, charset, fsm);
 	if (fsm == NULL) {
 		perror("intersect_charset");
 		exit(EXIT_FAILURE);
 	}
+*/
 
 	/*
 	 * This FSM has only one endid. fsm_minimise() does now maintain
@@ -505,6 +531,8 @@ build_regex_fsm(const struct fsm_options *opt, bool show_stats,
 		perror("fsm_minimise");
 		exit(EXIT_FAILURE);
 	}
+
+	assert(!fsm_empty(fsm));
 
 	return fsm;
 }
@@ -591,8 +619,8 @@ endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
 	return 0;
 }
 
-void
-print_fsm_c(struct fsm *fsm, const char *prefix, enum ambig ambig)
+static void
+print_fsm_vmc(struct fsm *fsm, const char *prefix, enum ambig ambig)
 {
 	const struct fsm_options *old;
 	struct fsm_options tmp;
@@ -672,6 +700,70 @@ dialect_name(const char *name)
 	exit(EXIT_FAILURE);
 }
 
+static enum fsm_io
+io(const char *name)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		enum fsm_io io;
+	} a[] = {
+		{ "getc", FSM_IO_GETC },
+		{ "str",  FSM_IO_STR  },
+		{ "pair", FSM_IO_PAIR }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].io;
+		}
+	}
+
+	fprintf(stderr, "unrecognised IO API; valid IO APIs are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
+	exit(EXIT_FAILURE);
+}
+
+static print_fsm *
+print_name(const char *name)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		print_fsm *print;
+	} a[] = {
+		{ "vmc", print_fsm_vmc }
+	};
+
+	assert(name != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (0 == strcmp(a[i].name, name)) {
+			return a[i].print;
+		}
+	}
+
+	fprintf(stderr, "unrecognised output language; valid languages are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			i + 1 < sizeof a / sizeof *a ? ", " : "\n");
+	}
+
+	exit(EXIT_FAILURE);
+}
+
 static
 void usage(const char *name)
 {
@@ -683,7 +775,7 @@ void usage(const char *name)
 		name = p != NULL ? p + 1 : name;
 	}
 
-	printf("usage: %s: [-ciQquv] [-C charset] [-r dialect] [-R reject] input-file [declined-file]\n", name);
+	printf("usage: %s: [-ciQquv] [-C charset] [-k io] [-l <language> ] [-r dialect] [-R reject] input-file [declined-file]\n", name);
 	printf("       %s -h\n", name);
 }
 
@@ -695,6 +787,7 @@ main(int argc, char *argv[])
 	bool verbose = false;
 	bool show_stats = false;
 	enum ambig ambig = AMBIG_ERROR;
+	print_fsm *print = print_fsm_vmc;
 
 	size_t general_limit = 0;
 
@@ -703,49 +796,37 @@ main(int argc, char *argv[])
 	const char *declined_file = NULL;
 
 	enum re_dialect dialect = RE_PCRE;
-// TODO: we need to provide a way to disable RE_END_NL
-// TODO: RE_SINGLE. also be careful, flags disrupt re_is_literal()
+
+	/*
+	 * TODO: we need to provide a way to disable RE_END_NL
+	 * TODO: RE_SINGLE. also be careful, flags disrupt re_is_literal()
+	 */
 	const enum re_flags flags = 0; // TODO: notably not RE_END_NL
 
-	// TODO: explain we decline these at compile time because NFA->DFA is too costly
-	const char *reject = "*+{";
+	/* regex syntax characters we decline at compile time
+	 * because NFA->DFA is too costly */
+	const char *reject = "";
 
-	const struct fsm_options opt = {
+	struct fsm_options opt = {
 		.anonymous_states = true,
 		.consolidate_edges = true,
 		.comments = false,
 		.case_ranges = true,
 		.always_hex = false,
 		.group_edges = true,
-		.io = FSM_IO_PAIR,
-// TODO: cli option to set io api
+		.io = FSM_IO_PAIR
 	};
 
-// XXX: actual character set in practice
-charset =
-	/* RFC9110 field-value stuff... */
-	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	"abcdefghijklmnopqrstuvwzyx"
-	"0123456789"
-	"!#$%&'*+-.^_`|~"
-
-	/* ...plus some extras found in practice */
-	"'\"/()@,:; ";
-
-// TODO: -l cli option for codegen lang
-// TODO: optional extra argv[1] to output declined patterns (we could iteratively munch down on the list)
 // TODO: cli option for numeric limit for general.count to decline patterns
 // TODO: cli option for memory limit to decline patterns (implement via allocation hooks)
 // TODO: manpage
-// TODO: cli option for worker pool threads
-// TODO: probably handle each of fsms[] in a separate thread, use worker pool
 // TODO: cli flag to set prefix
 
 	{
 		const char *name = argv[0];
 		int c;
 
-		while (c = getopt(argc, argv, "h" "C:cin:r:R:Qquv"), c != -1) {
+		while (c = getopt(argc, argv, "h" "C:cikl::n:r:R:Qquv"), c != -1) {
 			switch (c) {
 			case 'C':
 				charset = optarg;
@@ -783,12 +864,24 @@ charset =
 				strict = true;
 				break;
 
+			case 'k':
+				opt.io = io(optarg);
+				break;
+
+			case 'l':
+				print = print_name(optarg);
+				break;
+
 			case 'n':
 				general_limit = atoi(optarg);
 				break;
 
 			case 'R':
 				reject = optarg;
+
+				/* XXX: see categorize() */
+				fprintf(stderr, "reject charset not implemented\n");
+				exit(EXIT_FAILURE);
 				break;
 
 			case 'r':
@@ -839,10 +932,15 @@ charset =
 		}
 	}
 
-// TODO: error if charset contains \n (it also can't contain \0)
+	if (charset != NULL && strchr(charset, '\n')) {
+		fprintf(stderr, "charset cannot contain \\n "
+			"(because regexes are delimited by newlines)\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (show_stats) {
-		fprintf(stderr, "charset: [%s]\n", charset);
+		fprintf(stderr, "charset: [%s]\n",
+			charset == NULL ? "(none)" : charset);
 		fprintf(stderr, "reject: [%s]\n", reject);
 	}
 
@@ -914,10 +1012,17 @@ charset =
 		general_limit = patterns_count;
 	}
 
-// we're keying id -> spelling 
-// we don't use patterns[] just for debugging, we use it for passing to re_comp(). but not to re_strings(), we pass lit_s there
-// note this is \n-terminated, not \0-terminated. need %.*s for printing
-// TODO: explain the index here is an endid
+	/*
+	 * We're keying unique id to regex pattern spellings. The index
+	 * here is used as an fsm_end_id_t.
+	 *
+	 * We don't use patterns[] just for debugging, we use it for passing
+	 * to re_comp(). But not to re_strings(), we pass lit_s there.
+	 *
+	 * Note patterns[] points into the mmaped file, so each pattern is
+	 * \n-terminated, not \0-terminated. So we use %.*s for printing.
+	 * XXX: this is ridiculous, we should just malloc() and \0-terminate.
+	 */
 
 	const char **patterns;
 
@@ -928,13 +1033,15 @@ charset =
 	struct id_set general;
 	struct literal_set literals[4]; /* unanchored, left, right, both */
 
-	// TODO: explain we use the worst case of patterns_count for all these, prior to categorization
+	/*
+	 * We allocate the worse case of patterns_count for these,
+	 * prior to categorization. And then realloc down later.
+	 */
 	declined.a = xmalloc(patterns_count * sizeof *declined.a);
 	declined.count = 0;
 	general.a  = xmalloc(patterns_count * sizeof *general.a);
 	general.count = 0;
 		
-// XXX: malloc()ing these conservatively is large, i don't like it
 	for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
 		literals[i].a = xmalloc(patterns_count * sizeof *literals[i].a);
 		literals[i].count = 0;
@@ -965,10 +1072,6 @@ charset =
 			enum category r;
 
 			patterns[id] = q;
-			if (verbose) {
-				fprintf(stderr, "pattern #%u: /%.*s/\n",
-					id, (int) strcspn(q, "\n"), patterns[id]);
-			}
 
 			r = categorize(&opt, dialect, flags,
 				charset, reject, patterns[id],
@@ -1034,6 +1137,7 @@ charset =
 		 * realloc down to size, note this leaves some .a arrays NULL
 		 * when its count is 0.
 		 */
+		patterns = xrealloc(patterns, patterns_count * sizeof *patterns);
 		declined.a = xrealloc(declined.a, declined.count * sizeof *declined.a);
 		general.a  = xrealloc(general.a, general.count * sizeof *general.a);
 		for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
@@ -1057,6 +1161,10 @@ charset =
 	 * Also, the order of FSMs in the fsms[] array is not significant,
 	 * they could be populated in any order. They're just going to get
 	 * unioned anyway.
+	 *
+	 * We'd probably have a CLI option for the size of the worker pool.
+	 * However the bottleneck is fsm_determinise() after union, not here.
+	 * So this doesn't help until fsm_determinise() also runs in parallel.
 	 */
 
 // TODO: also have strict mode error for empty strings and unsatisfiable expressions
@@ -1132,6 +1240,8 @@ charset =
 	}
 
 	free(general.a);
+
+	fsms = xrealloc(fsms, fsm_count * sizeof *fsms);
 
 	if (show_stats) {
 		fprintf(stderr, "declined: %zu patterns\n",
@@ -1242,7 +1352,7 @@ charset =
 		}
 
 		if (!quiet) {
-			print_fsm_c(fsm, opt.prefix, ambig);
+			print(fsm, opt.prefix, ambig);
 		}
 
 		fsm_free(fsm);
