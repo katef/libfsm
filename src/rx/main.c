@@ -761,7 +761,6 @@ main(int argc, char *argv[])
 		.io = FSM_IO_PAIR
 	};
 
-// TODO: cli option for numeric limit for general.count to decline patterns
 // TODO: cli option for memory limit to decline patterns (implement via allocation hooks)
 // TODO: manpage
 // TODO: cli flag to set prefix
@@ -1057,7 +1056,7 @@ main(int argc, char *argv[])
 			case CATEGORY_EMPTY:
 				/* fallthrough */
 			case CATEGORY_GENERAL:
-				append_id(&general, id);
+				append_id(general.count < general_limit ? &general : &declined, id);
 				break;
 
 			default:
@@ -1153,11 +1152,6 @@ main(int argc, char *argv[])
 	/* individual regexps */
 	{
 		for (size_t i = 0; i < general.count; i++) {
-			if (i > general_limit) {
-				append_id(&declined, i);
-				continue;
-			}
-
 			if (verbose) {
 				fprintf(stderr, "general[%zu]: #%u /%s/\n",
 					i, general.a[i], patterns[general.a[i]]);
