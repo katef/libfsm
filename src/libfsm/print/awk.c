@@ -91,6 +91,8 @@ static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits, const struct ir *ir)
 {
+	(void) ir;
+
 	if (end_bits == VM_END_FAIL) {
 		fprintf(f, "return -1");
 		return 0;
@@ -101,7 +103,22 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 			return -1;
 		}
 	} else {
-		fprintf(f, "return %td", op->ir_state - ir->states);
+		size_t i;
+
+		assert(f != NULL);
+
+		/* awk can't return an array */
+		fprintf(f, "return \"");
+
+		for (i = 0; i < op->ir_state->end_ids->count; i++) {
+			fprintf(f, "%u", op->ir_state->end_ids->ids[i]);
+
+			if (i < op->ir_state->end_ids->count - 1) {
+				fprintf(f, ",");
+			}
+		}
+
+		fprintf(f, "\"");
 	}
 
 	return 0;
