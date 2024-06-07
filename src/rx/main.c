@@ -45,7 +45,6 @@ enum category {
 	CATEGORY_ERROR,
 	CATEGORY_UNSUPPORTED,
 	CATEGORY_UNSATISFIABLE,
-	CATEGORY_ZERO,
 	CATEGORY_NOT_PERMITTED
 };
 
@@ -72,57 +71,6 @@ enum ambig {
 };
 
 typedef void (print_fsm)(struct fsm *, const char *, enum ambig);
-
-static bool
-permitted_chars(const char *p, size_t n, const char *accept, const char *reject)
-{
-	char *s;
-	bool r = true;
-
-	assert(p != NULL);
-
-	/*
-	 * p,n is a slice into a \n-terminated buffer, so we can't strcspn() here.
-	 * We could provide our own implementation (i.e. memcspn), but until it's
-	 * actually a problem I'd prefer to allocate and \0-terminate here just
-	 * for the sake of using strcspn().
-	 */
-// XXX: in this program xstrndup is enough after all. strndup will look past the end for a \0, but n < the position of \n, and all lines end with \n. so it'll just look at the \n
-	s = xstrndup(p, n);
-
-	if (accept != NULL) {
-		r &= s[strspn(s, accept)] == '\0';
-	}
-
-	if (reject != NULL) {
-		r &= s[strcspn(s, reject)] == '\0';
-	}
-
-	free(s);
-
-	return r;
-}
-
-int
-nlgetc(void *opaque)
-{
-	const char **s = opaque;
-	char c;
-
-	assert(s != NULL);
-	assert(*s != NULL);
-
-	c = **s;
-
-	/* skip the newline too */
-	(*s)++;
-
-	if (c == '\n') {
-		return EOF;
-	}
-
-	return (unsigned char) c;
-}
 
 static void
 append_id(struct id_set *set, fsm_end_id_t id)
@@ -234,7 +182,6 @@ category_reason(enum category r)
 	case CATEGORY_ERROR:         return "parse error";
 	case CATEGORY_UNSUPPORTED:   return "unsupported";
 	case CATEGORY_UNSATISFIABLE: return "unsatisfiable";
-	case CATEGORY_ZERO:          return "contains \\0, which a charset cannot express";
 	case CATEGORY_NOT_PERMITTED: return "charset/reject";
 
 	default:
@@ -265,7 +212,7 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 	 *      and *category is set.
 	 */
 	const char *q = s;
-	r = re_is_literal(dialect, nlgetc, &q, opt, flags, err, &category,
+	r = re_is_literal(dialect, fsm_sgetc, &q, opt, flags, err, &category,
 		&lit_s, &lit_n);
 
 	/* unsupported */
@@ -294,12 +241,6 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 	if (r == 1) {
 		assert(lit_s != NULL);
 
-		for (size_t i = 0; i < lit_n; i++) {
-			if (charset != NULL && lit_s[i] == '\0') {
-				return CATEGORY_ZERO;
-			}
-		}
-
 		if (category == RE_LITERAL_ANCHOR_END || category == RE_LITERAL_ANCHOR_BOTH) {
 			/*
 			 * This newline is appended in ast_is_literal() as an attempt to
@@ -313,11 +254,20 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 			}
 		}
 
-		/* The reject set does not apply for literals,
-		 * it's intended only for regex operators */
-		if (!permitted_chars(lit_s, lit_n, charset, NULL)) {
-			free(lit_s);
-			return CATEGORY_NOT_PERMITTED;
+		/*
+		 * The reject set does not apply for literals,
+		 * it's intended only for regex operators.
+		 *
+		 * We're walking lit_s longhand here (rather than strcspn)
+		 * because it isn't a \0-terminated string.
+		 */
+		if (charset != NULL) {
+			for (size_t i = 0; i < lit_n; i++) {
+				if (!strchr(charset, lit_s[i])) {
+					free(lit_s);
+					return CATEGORY_NOT_PERMITTED;
+				}
+			}
 		}
 
 		enum re_strings_flags flags = literal_flags(category);
@@ -354,8 +304,8 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 	 *
 	 * So we're relying on that here, and this is just a best-effort help.
 	 */
-	if (!permitted_chars(s, strcspn(s, "\n"), NULL, reject)) {
-		return CATEGORY_PERMITTED;
+	if (reject != NULL && s[strcspn(s, reject)]) {
+		return CATEGORY_NOT_PERMITTED;
 	}
 #endif
 
@@ -463,15 +413,10 @@ build_regex_fsm(const struct fsm_options *opt, bool show_stats,
 
 	const char *q = s;
 // TODO: RE_SINGLE here? i think it shouldn't have any effect when \n isn't present in the charset
-	fsm = re_comp(dialect, nlgetc, &q, opt, flags, &err);
+	fsm = re_comp(dialect, fsm_sgetc, &q, opt, flags, &err);
 
 	if (strict && fsm == NULL) {
-		const char *p;
-
-		/* patterns[] is \n-terminated per pattern.
-		 * We allocate here so we can \0-terminate for re_perror() */
-		p = xstrndup(s, strcspn(s, "\n"));
-		re_perror(dialect, &err, NULL, p);
+		re_perror(dialect, &err, NULL, s);
 		exit(EXIT_FAILURE);
 	}
 
@@ -484,8 +429,7 @@ build_regex_fsm(const struct fsm_options *opt, bool show_stats,
 	 * so that unioning it with other regexes will still work.
 	 */
 	if (strict && fsm_empty(fsm)) {
-		fprintf(stdout, "re_comp: /%.*s/ regex is unsatisfiable\n",
-			(int) strcspn(s, "\n"), s);
+		fprintf(stdout, "re_comp: /%s/ regex is unsatisfiable\n", s);
 		exit(EXIT_FAILURE);
 	}
 
@@ -764,8 +708,8 @@ print_name(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static
-void usage(const char *name)
+static void
+usage(const char *name)
 {
 
 	if (name == NULL) {
@@ -1018,15 +962,9 @@ main(int argc, char *argv[])
 	 *
 	 * We don't use patterns[] just for debugging, we use it for passing
 	 * to re_comp(). But not to re_strings(), we pass lit_s there.
-	 *
-	 * Note patterns[] points into the mmaped file, so each pattern is
-	 * \n-terminated, not \0-terminated. So we use %.*s for printing.
-	 * XXX: this is ridiculous, we should just malloc() and \0-terminate.
 	 */
 
-	const char **patterns;
-
-	patterns = xmalloc(patterns_count * sizeof *patterns);
+	char **patterns = xmalloc(patterns_count * sizeof *patterns);
 
 	// TODO: patterns_set, fsm_set
 	struct id_set declined;
@@ -1070,19 +1008,19 @@ main(int argc, char *argv[])
 			char *lit_s;
 			size_t lit_n;
 			enum category r;
+			size_t pattern_len;
 
-			patterns[id] = q;
+			pattern_len = strcspn(q, "\n");
+
+			patterns[id] = xmalloc(pattern_len + 1);
+			memcpy(patterns[id], q, pattern_len);
+			patterns[id][pattern_len] = '\0';
 
 			r = categorize(&opt, dialect, flags,
 				charset, reject, patterns[id],
 				&err, &lit_s, &lit_n);
 
-			/*
-			 * On error the parser may not have consumed all the input.
-			 * So we can't use the current value of q because it potentially
-			 * points somewhere mid-way along the regex.
-			 */
-			q += strcspn(patterns[id], "\n") + 1;
+			q += pattern_len + 1;
 
 			if (verbose) {
 				switch (r) {
@@ -1094,21 +1032,19 @@ main(int argc, char *argv[])
 				case CATEGORY_EMPTY:
 					/* fallthrough */
 				case CATEGORY_GENERAL:
-					fprintf(stderr, "general #%u: /%.*s/\n",
-						id, (int) strcspn(patterns[id], "\n"), patterns[id]);
+					fprintf(stderr, "general #%u: /%s/\n",
+						id, patterns[id]);
 					break;
 
 				case CATEGORY_ERROR:
-					fprintf(stderr, "declined (%s) #%u: /%.*s/",
-						category_reason(r), id,
-						(int) strcspn(patterns[id], "\n"), patterns[id]);
+					fprintf(stderr, "declined (%s) #%u: /%s/",
+						category_reason(r), id, patterns[id]);
 					re_perror(dialect, &err, NULL, NULL);
 					break;
 
 				default:
-					fprintf(stderr, "declined (%s) #%u: /%.*s/\n",
-						category_reason(r), id,
-						(int) strcspn(patterns[id], "\n"), patterns[id]);
+					fprintf(stderr, "declined (%s) #%u: /%s/\n",
+						category_reason(r), id, patterns[id]);
 					break;
 				}
 			}
@@ -1143,6 +1079,16 @@ main(int argc, char *argv[])
 		for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
 			literals[i].a  = xrealloc(literals[i].a, literals[i].count * sizeof *literals[i].a);
 		}
+	}
+
+	if (-1 == munmap(addr, sb.st_size)) {
+		perror("munmap");
+		exit(EXIT_FAILURE);
+	}
+
+	if (-1 == close(fd)) {
+		perror("close");
+		exit(EXIT_FAILURE);
 	}
 
 	/*
@@ -1213,9 +1159,8 @@ main(int argc, char *argv[])
 			}
 
 			if (verbose) {
-				fprintf(stderr, "general[%zu]: #%u /%.*s/\n",
-					i, general.a[i],
-					(int) strcspn(patterns[general.a[i]], "\n"), patterns[general.a[i]]);
+				fprintf(stderr, "general[%zu]: #%u /%s/\n",
+					i, general.a[i], patterns[general.a[i]]);
 			}
 
 			struct fsm *fsm = build_regex_fsm(&opt, show_stats, charset,
@@ -1260,9 +1205,8 @@ main(int argc, char *argv[])
 
 	if (verbose) {
 		for (size_t i = 0; i < declined.count; i++) {
-			fprintf(stderr, "declined[%zu]: #%u /%.*s/\n",
-				i, declined.a[i],
-				(int) strcspn(patterns[declined.a[i]], "\n"), patterns[declined.a[i]]);
+			fprintf(stderr, "declined[%zu]: #%u /%s/\n",
+				i, declined.a[i], patterns[declined.a[i]]);
 		}
 	}
 
@@ -1281,25 +1225,18 @@ main(int argc, char *argv[])
 		}
 
 		for (size_t i = 0; i < declined.count; i++) {
-			fprintf(f, "%.*s\n",
-				(int) strcspn(patterns[declined.a[i]], "\n"), patterns[declined.a[i]]);
+			fprintf(f, "%s\n", patterns[declined.a[i]]);
 		}
 
 		fclose(f);
 	}
 
+	for (size_t i = 0; i < patterns_count; i++) {
+		free(patterns[i]);
+	}
+
 	free(declined.a);
 	free(patterns);
-
-	if (-1 == munmap(addr, sb.st_size)) {
-		perror("munmap");
-		exit(EXIT_FAILURE);
-	}
-
-	if (-1 == close(fd)) {
-		perror("close");
-		exit(EXIT_FAILURE);
-	}
 
 	if (show_stats) {
 		fprintf(stderr, "fsm_count = %zu FSMs prior to union\n", fsm_count);
