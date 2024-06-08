@@ -146,13 +146,13 @@
 
 static void p_label(fsm, lex_state, act_state, char *);
 static void p_items(fsm, lex_state, act_state);
+static void p_xend_C_Cend_Hstates(fsm, lex_state, act_state);
 static void p_xstart(fsm, lex_state, act_state);
 static void p_xend(fsm, lex_state, act_state);
+static void p_xend_C_Cend_Hstate(fsm, lex_state, act_state);
 static void p_61(fsm, lex_state, act_state);
 static void p_63(fsm, lex_state, act_state, string *);
 extern void p_fsm(fsm, lex_state, act_state);
-static void p_xend_C_Cend_Hids(fsm, lex_state, act_state);
-static void p_xend_C_Cend_Hid(fsm, lex_state, act_state);
 
 /* BEGINNING OF STATIC VARIABLES */
 
@@ -323,7 +323,7 @@ ZL2_items:;
 				{
 					string ZIa;
 
-					/* BEGINNING OF INLINE: id */
+					/* BEGINNING OF INLINE: ident */
 					{
 						{
 							switch (CURRENT_TERMINAL) {
@@ -345,7 +345,7 @@ ZL2_items:;
 							ADVANCE_LEXER;
 						}
 					}
-					/* END OF INLINE: id */
+					/* END OF INLINE: ident */
 					p_63 (fsm, lex_state, act_state, &ZIa);
 					if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 						RESTORE_LEXER;
@@ -363,6 +363,67 @@ ZL2_items:;
 		return;
 	default:
 		break;
+	}
+	return;
+ZL1:;
+	SAVE_LEXER ((ERROR_TERMINAL));
+	return;
+}
+
+static void
+p_xend_C_Cend_Hstates(fsm fsm, lex_state lex_state, act_state act_state)
+{
+	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
+		return;
+	}
+ZL2_xend_C_Cend_Hstates:;
+	{
+		p_xend_C_Cend_Hstate (fsm, lex_state, act_state);
+		/* BEGINNING OF INLINE: 58 */
+		{
+			switch (CURRENT_TERMINAL) {
+			case (TOK_COMMA):
+				{
+					/* BEGINNING OF INLINE: 59 */
+					{
+						{
+							switch (CURRENT_TERMINAL) {
+							case (TOK_COMMA):
+								break;
+							default:
+								goto ZL5;
+							}
+							ADVANCE_LEXER;
+						}
+						goto ZL4;
+					ZL5:;
+						{
+							/* BEGINNING OF ACTION: err-expected-comma */
+							{
+#line 362 "src/libfsm/parser.act"
+
+		err_expected(lex_state, "','");
+	
+#line 408 "src/libfsm/parser.c"
+							}
+							/* END OF ACTION: err-expected-comma */
+						}
+					ZL4:;
+					}
+					/* END OF INLINE: 59 */
+					/* BEGINNING OF INLINE: xend::end-states */
+					goto ZL2_xend_C_Cend_Hstates;
+					/* END OF INLINE: xend::end-states */
+				}
+				/*UNREACHED*/
+			case (ERROR_TERMINAL):
+				RESTORE_LEXER;
+				goto ZL1;
+			default:
+				break;
+			}
+		}
+		/* END OF INLINE: 58 */
 	}
 	return;
 ZL1:;
@@ -399,14 +460,14 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 
 		err_expected(lex_state, "'start:'");
 	
-#line 403 "src/libfsm/parser.c"
+#line 464 "src/libfsm/parser.c"
 					}
 					/* END OF ACTION: err-expected-start */
 				}
 			ZL2:;
 			}
 			/* END OF INLINE: 50 */
-			/* BEGINNING OF INLINE: id */
+			/* BEGINNING OF INLINE: ident */
 			{
 				{
 					switch (CURRENT_TERMINAL) {
@@ -418,7 +479,7 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 		/* XXX: don't exit in library code */
 		ZIn = xstrdup(lex_state->buf.a);
 	
-#line 422 "src/libfsm/parser.c"
+#line 483 "src/libfsm/parser.c"
 						}
 						/* END OF EXTRACT: IDENT */
 						break;
@@ -428,7 +489,7 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 					ADVANCE_LEXER;
 				}
 			}
-			/* END OF INLINE: id */
+			/* END OF INLINE: ident */
 			p_61 (fsm, lex_state, act_state);
 			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 				RESTORE_LEXER;
@@ -489,7 +550,7 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 			act_state->states.buckets[bucket_id] = new;
 		}
 	
-#line 493 "src/libfsm/parser.c"
+#line 554 "src/libfsm/parser.c"
 			}
 			/* END OF ACTION: add-state */
 			/* BEGINNING OF ACTION: mark-start */
@@ -498,7 +559,7 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 
 		fsm_setstart(fsm, (ZIs));
 	
-#line 502 "src/libfsm/parser.c"
+#line 563 "src/libfsm/parser.c"
 			}
 			/* END OF ACTION: mark-start */
 			/* BEGINNING OF ACTION: free */
@@ -507,7 +568,7 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 
 		free((ZIn));
 	
-#line 511 "src/libfsm/parser.c"
+#line 572 "src/libfsm/parser.c"
 			}
 			/* END OF ACTION: free */
 		}
@@ -549,14 +610,14 @@ p_xend(fsm fsm, lex_state lex_state, act_state act_state)
 
 		err_expected(lex_state, "'end:'");
 	
-#line 553 "src/libfsm/parser.c"
+#line 614 "src/libfsm/parser.c"
 					}
 					/* END OF ACTION: err-expected-end */
 				}
 			ZL2:;
 			}
 			/* END OF INLINE: 60 */
-			p_xend_C_Cend_Hids (fsm, lex_state, act_state);
+			p_xend_C_Cend_Hstates (fsm, lex_state, act_state);
 			p_61 (fsm, lex_state, act_state);
 			if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
 				RESTORE_LEXER;
@@ -568,6 +629,122 @@ p_xend(fsm fsm, lex_state lex_state, act_state act_state)
 		return;
 	default:
 		break;
+	}
+	return;
+ZL1:;
+	SAVE_LEXER ((ERROR_TERMINAL));
+	return;
+}
+
+static void
+p_xend_C_Cend_Hstate(fsm fsm, lex_state lex_state, act_state act_state)
+{
+	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
+		return;
+	}
+	{
+		string ZIn;
+		state ZIs;
+
+		/* BEGINNING OF INLINE: ident */
+		{
+			{
+				switch (CURRENT_TERMINAL) {
+				case (TOK_IDENT):
+					/* BEGINNING OF EXTRACT: IDENT */
+					{
+#line 245 "src/libfsm/parser.act"
+
+		/* XXX: don't exit in library code */
+		ZIn = xstrdup(lex_state->buf.a);
+	
+#line 662 "src/libfsm/parser.c"
+					}
+					/* END OF EXTRACT: IDENT */
+					break;
+				default:
+					goto ZL1;
+				}
+				ADVANCE_LEXER;
+			}
+		}
+		/* END OF INLINE: ident */
+		/* BEGINNING OF ACTION: add-state */
+		{
+#line 252 "src/libfsm/parser.act"
+
+		struct act_statelist *p;
+		const unsigned hash = hash_of_id((ZIn));
+		const unsigned mask = act_state->states.bucket_count - 1;
+		size_t chain_length = 0;
+		unsigned bucket_id = hash & mask;
+
+		assert((ZIn) != NULL);
+
+		if (act_state->states.longest_chain_length > MAX_CHAIN_LENGTH) {
+			grow_state_hash_table(&act_state->states);
+			bucket_id = hash & (act_state->states.bucket_count - 1);
+		}
+
+		for (p = act_state->states.buckets[bucket_id]; p != NULL; p = p->next) {
+			assert(p->id != NULL);
+
+			chain_length++;
+
+			if (0 == strcmp(p->id, (ZIn))) {
+				(ZIs) = p->state;
+				break;
+			}
+		}
+
+		if (chain_length > act_state->states.longest_chain_length) {
+			act_state->states.longest_chain_length = chain_length;
+		}
+
+		if (p == NULL) {
+			struct act_statelist *new;
+
+			new = malloc(sizeof *new);
+			if (new == NULL) {
+				perror("malloc");
+				exit(EXIT_FAILURE);
+			}
+
+			/* XXX: don't exit in library code */
+			new->id = xstrdup((ZIn));
+
+			if (!fsm_addstate(fsm, &(ZIs))) {
+				perror("fsm_addstate");
+				exit(EXIT_FAILURE);
+			}
+
+			new->state = (ZIs);
+
+			new->next = act_state->states.buckets[bucket_id];
+			act_state->states.buckets[bucket_id] = new;
+		}
+	
+#line 728 "src/libfsm/parser.c"
+		}
+		/* END OF ACTION: add-state */
+		/* BEGINNING OF ACTION: mark-end */
+		{
+#line 308 "src/libfsm/parser.act"
+
+		fsm_setend(fsm, (ZIs), 1);
+	
+#line 737 "src/libfsm/parser.c"
+		}
+		/* END OF ACTION: mark-end */
+		/* BEGINNING OF ACTION: free */
+		{
+#line 312 "src/libfsm/parser.act"
+
+		free((ZIn));
+	
+#line 746 "src/libfsm/parser.c"
+		}
+		/* END OF ACTION: free */
 	}
 	return;
 ZL1:;
@@ -599,7 +776,7 @@ ZL1:;
 
 		err_expected(lex_state, "';'");
 	
-#line 603 "src/libfsm/parser.c"
+#line 780 "src/libfsm/parser.c"
 		}
 		/* END OF ACTION: err-expected-sep */
 	}
@@ -616,7 +793,7 @@ p_63(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 			state ZIy;
 
 			ADVANCE_LEXER;
-			/* BEGINNING OF INLINE: id */
+			/* BEGINNING OF INLINE: ident */
 			{
 				{
 					switch (CURRENT_TERMINAL) {
@@ -628,7 +805,7 @@ p_63(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 		/* XXX: don't exit in library code */
 		ZIb = xstrdup(lex_state->buf.a);
 	
-#line 632 "src/libfsm/parser.c"
+#line 809 "src/libfsm/parser.c"
 						}
 						/* END OF EXTRACT: IDENT */
 						break;
@@ -638,7 +815,7 @@ p_63(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 					ADVANCE_LEXER;
 				}
 			}
-			/* END OF INLINE: id */
+			/* END OF INLINE: ident */
 			/* BEGINNING OF ACTION: add-state */
 			{
 #line 252 "src/libfsm/parser.act"
@@ -694,7 +871,7 @@ p_63(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 			act_state->states.buckets[bucket_id] = new;
 		}
 	
-#line 698 "src/libfsm/parser.c"
+#line 875 "src/libfsm/parser.c"
 			}
 			/* END OF ACTION: add-state */
 			/* BEGINNING OF ACTION: add-state */
@@ -752,7 +929,7 @@ p_63(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 			act_state->states.buckets[bucket_id] = new;
 		}
 	
-#line 756 "src/libfsm/parser.c"
+#line 933 "src/libfsm/parser.c"
 			}
 			/* END OF ACTION: add-state */
 			/* BEGINNING OF ACTION: free */
@@ -761,7 +938,7 @@ p_63(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 
 		free((*ZIa));
 	
-#line 765 "src/libfsm/parser.c"
+#line 942 "src/libfsm/parser.c"
 			}
 			/* END OF ACTION: free */
 			/* BEGINNING OF ACTION: free */
@@ -770,7 +947,7 @@ p_63(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 
 		free((ZIb));
 	
-#line 774 "src/libfsm/parser.c"
+#line 951 "src/libfsm/parser.c"
 			}
 			/* END OF ACTION: free */
 			/* BEGINNING OF INLINE: 42 */
@@ -788,7 +965,7 @@ p_63(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 792 "src/libfsm/parser.c"
+#line 969 "src/libfsm/parser.c"
 						}
 						/* END OF ACTION: add-edge-any */
 					}
@@ -811,7 +988,7 @@ p_63(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 815 "src/libfsm/parser.c"
+#line 992 "src/libfsm/parser.c"
 						}
 						/* END OF ACTION: add-edge-literal */
 					}
@@ -827,7 +1004,7 @@ p_63(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 			exit(EXIT_FAILURE);
 		}
 	
-#line 831 "src/libfsm/parser.c"
+#line 1008 "src/libfsm/parser.c"
 						}
 						/* END OF ACTION: add-edge-epsilon */
 					}
@@ -842,7 +1019,7 @@ p_63(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 
 		err_expected(lex_state, "transition");
 	
-#line 846 "src/libfsm/parser.c"
+#line 1023 "src/libfsm/parser.c"
 					}
 					/* END OF ACTION: err-expected-trans */
 				}
@@ -915,7 +1092,7 @@ p_63(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 			act_state->states.buckets[bucket_id] = new;
 		}
 	
-#line 919 "src/libfsm/parser.c"
+#line 1096 "src/libfsm/parser.c"
 			}
 			/* END OF ACTION: add-state */
 			/* BEGINNING OF ACTION: free */
@@ -924,7 +1101,7 @@ p_63(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 
 		free((*ZIa));
 	
-#line 928 "src/libfsm/parser.c"
+#line 1105 "src/libfsm/parser.c"
 			}
 			/* END OF ACTION: free */
 			p_61 (fsm, lex_state, act_state);
@@ -982,7 +1159,7 @@ p_fsm(fsm fsm, lex_state lex_state, act_state act_state)
 			}
 		}
 	
-#line 986 "src/libfsm/parser.c"
+#line 1163 "src/libfsm/parser.c"
 		}
 		/* END OF ACTION: free-statelist */
 	}
@@ -996,187 +1173,10 @@ ZL1:;
 		err(lex_state, "Syntax error");
 		exit(EXIT_FAILURE);
 	
-#line 1000 "src/libfsm/parser.c"
+#line 1177 "src/libfsm/parser.c"
 		}
 		/* END OF ACTION: err-syntax */
 	}
-}
-
-static void
-p_xend_C_Cend_Hids(fsm fsm, lex_state lex_state, act_state act_state)
-{
-	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
-		return;
-	}
-ZL2_xend_C_Cend_Hids:;
-	{
-		p_xend_C_Cend_Hid (fsm, lex_state, act_state);
-		/* BEGINNING OF INLINE: 58 */
-		{
-			switch (CURRENT_TERMINAL) {
-			case (TOK_COMMA):
-				{
-					/* BEGINNING OF INLINE: 59 */
-					{
-						{
-							switch (CURRENT_TERMINAL) {
-							case (TOK_COMMA):
-								break;
-							default:
-								goto ZL5;
-							}
-							ADVANCE_LEXER;
-						}
-						goto ZL4;
-					ZL5:;
-						{
-							/* BEGINNING OF ACTION: err-expected-comma */
-							{
-#line 362 "src/libfsm/parser.act"
-
-		err_expected(lex_state, "','");
-	
-#line 1040 "src/libfsm/parser.c"
-							}
-							/* END OF ACTION: err-expected-comma */
-						}
-					ZL4:;
-					}
-					/* END OF INLINE: 59 */
-					/* BEGINNING OF INLINE: xend::end-ids */
-					goto ZL2_xend_C_Cend_Hids;
-					/* END OF INLINE: xend::end-ids */
-				}
-				/*UNREACHED*/
-			case (ERROR_TERMINAL):
-				RESTORE_LEXER;
-				goto ZL1;
-			default:
-				break;
-			}
-		}
-		/* END OF INLINE: 58 */
-	}
-	return;
-ZL1:;
-	SAVE_LEXER ((ERROR_TERMINAL));
-	return;
-}
-
-static void
-p_xend_C_Cend_Hid(fsm fsm, lex_state lex_state, act_state act_state)
-{
-	if ((CURRENT_TERMINAL) == (ERROR_TERMINAL)) {
-		return;
-	}
-	{
-		string ZIn;
-		state ZIs;
-
-		/* BEGINNING OF INLINE: id */
-		{
-			{
-				switch (CURRENT_TERMINAL) {
-				case (TOK_IDENT):
-					/* BEGINNING OF EXTRACT: IDENT */
-					{
-#line 245 "src/libfsm/parser.act"
-
-		/* XXX: don't exit in library code */
-		ZIn = xstrdup(lex_state->buf.a);
-	
-#line 1089 "src/libfsm/parser.c"
-					}
-					/* END OF EXTRACT: IDENT */
-					break;
-				default:
-					goto ZL1;
-				}
-				ADVANCE_LEXER;
-			}
-		}
-		/* END OF INLINE: id */
-		/* BEGINNING OF ACTION: add-state */
-		{
-#line 252 "src/libfsm/parser.act"
-
-		struct act_statelist *p;
-		const unsigned hash = hash_of_id((ZIn));
-		const unsigned mask = act_state->states.bucket_count - 1;
-		size_t chain_length = 0;
-		unsigned bucket_id = hash & mask;
-
-		assert((ZIn) != NULL);
-
-		if (act_state->states.longest_chain_length > MAX_CHAIN_LENGTH) {
-			grow_state_hash_table(&act_state->states);
-			bucket_id = hash & (act_state->states.bucket_count - 1);
-		}
-
-		for (p = act_state->states.buckets[bucket_id]; p != NULL; p = p->next) {
-			assert(p->id != NULL);
-
-			chain_length++;
-
-			if (0 == strcmp(p->id, (ZIn))) {
-				(ZIs) = p->state;
-				break;
-			}
-		}
-
-		if (chain_length > act_state->states.longest_chain_length) {
-			act_state->states.longest_chain_length = chain_length;
-		}
-
-		if (p == NULL) {
-			struct act_statelist *new;
-
-			new = malloc(sizeof *new);
-			if (new == NULL) {
-				perror("malloc");
-				exit(EXIT_FAILURE);
-			}
-
-			/* XXX: don't exit in library code */
-			new->id = xstrdup((ZIn));
-
-			if (!fsm_addstate(fsm, &(ZIs))) {
-				perror("fsm_addstate");
-				exit(EXIT_FAILURE);
-			}
-
-			new->state = (ZIs);
-
-			new->next = act_state->states.buckets[bucket_id];
-			act_state->states.buckets[bucket_id] = new;
-		}
-	
-#line 1155 "src/libfsm/parser.c"
-		}
-		/* END OF ACTION: add-state */
-		/* BEGINNING OF ACTION: mark-end */
-		{
-#line 308 "src/libfsm/parser.act"
-
-		fsm_setend(fsm, (ZIs), 1);
-	
-#line 1164 "src/libfsm/parser.c"
-		}
-		/* END OF ACTION: mark-end */
-		/* BEGINNING OF ACTION: free */
-		{
-#line 312 "src/libfsm/parser.act"
-
-		free((ZIn));
-	
-#line 1173 "src/libfsm/parser.c"
-		}
-		/* END OF ACTION: free */
-	}
-	return;
-ZL1:;
-	SAVE_LEXER ((ERROR_TERMINAL));
-	return;
 }
 
 /* BEGINNING OF TRAILER */
