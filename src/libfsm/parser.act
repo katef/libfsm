@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2017 Katherine Flavel
+ * Copyright 2008-2024 Katherine Flavel
  *
  * See LICENCE for the full copyright terms.
  */
@@ -22,6 +22,7 @@
 	char   -> char;
 	string -> string;
 	state  -> state;
+	endid  -> endid;
 
 %header% @{
 
@@ -41,8 +42,9 @@
 	#include "lexer.h"
 	#include "parser.h"
 
-	typedef char *      string;
-	typedef fsm_state_t state;
+	typedef char *       string;
+	typedef fsm_state_t  state;
+	typedef fsm_end_id_t endid;
 
 	struct act_statelist {
 		char *id;
@@ -194,12 +196,14 @@
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
 			err(lex_state, "octal escape %s out of range: expected \\0..\\%o inclusive",
 				lex_state->buf.a, UCHAR_MAX);
+			/* XXX: don't exit in library code */
 			exit(EXIT_FAILURE);
 		}
 
 		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
 			err(lex_state, "%s: %s: expected \\0..\\%o inclusive",
 				lex_state->buf.a, strerror(errno), UCHAR_MAX);
+			/* XXX: don't exit in library code */
 			exit(EXIT_FAILURE);
 		}
 
@@ -221,12 +225,14 @@
 		if ((u == ULONG_MAX && errno == ERANGE) || u > UCHAR_MAX) {
 			err(lex_state, "hex escape %s out of range: expected \\x0..\\x%x inclusive",
 				lex_state->buf.a, UCHAR_MAX);
+			/* XXX: don't exit in library code */
 			exit(EXIT_FAILURE);
 		}
 
 		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
 			err(lex_state, "%s: %s: expected \\x0..\\x%x inclusive",
 				lex_state->buf.a, strerror(errno), UCHAR_MAX);
+			/* XXX: don't exit in library code */
 			exit(EXIT_FAILURE);
 		}
 
@@ -243,6 +249,31 @@
 	IDENT: () -> (s :string) = @{
 		/* XXX: don't exit in library code */
 		@s = xstrdup(lex_state->buf.a);
+	@};
+
+	ENDID: () -> (id :endid) = @{
+		unsigned long u;
+		char *e;
+
+		errno = 0;
+
+		u = strtoul(lex_state->buf.a, &e, 16);
+
+		if ((u == ULONG_MAX && errno == ERANGE) || u > FSM_END_ID_MAX) {
+			err(lex_state, "end id %s out of range: expected 0..%u inclusive",
+				lex_state->buf.a, FSM_END_ID_MAX);
+			/* XXX: don't exit in library code */
+			exit(EXIT_FAILURE);
+		}
+
+		if ((u == ULONG_MAX && errno != 0) || *e != '\0') {
+			err(lex_state, "%s: %s: expected 0..%u inclusive",
+				lex_state->buf.a, strerror(errno), FSM_END_ID_MAX);
+			/* XXX: don't exit in library code */
+			exit(EXIT_FAILURE);
+		}
+
+		@id = (fsm_end_id_t) u;
 	@};
 
 %actions%
@@ -306,6 +337,12 @@
 
 	<mark-end>: (s :state) -> () = @{
 		fsm_setend(fsm, @s, 1);
+	@};
+
+	<mark-end-id>: (s :state, id :endid) -> () = @{
+		if (!fsm_setendidstate(fsm, @s, @id)) {
+			@!;
+		}
 	@};
 
 	<free>: (s :string) -> () = @{
