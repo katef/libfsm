@@ -1338,7 +1338,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 468 "src/libfsm/parser.act"
+#line 480 "src/libfsm/parser.act"
 
 
 	struct fsm *fsm_parse(FILE *f, const struct fsm_options *opt) {
@@ -1384,7 +1384,19 @@ ZL1:;
 			return NULL;
 		}
 
-		ADVANCE_LEXER; /* XXX: what if the first token is unrecognised? */
+		ADVANCE_LEXER;
+		switch (CURRENT_TERMINAL) {
+		case TOK_UNKNOWN:
+			/* fallthrough */
+		case TOK_ERROR:
+			/* XXX: don't exit in library code */
+			err(lex_state, "Syntax error");
+			exit(EXIT_FAILURE);
+
+		default:
+			break;
+		}
+
 		p_fsm(new, lex_state, act_state);
 
 		free(act_state_s.states.buckets);
@@ -1393,6 +1405,6 @@ ZL1:;
 		return new;
 	}
 
-#line 1397 "src/libfsm/parser.c"
+#line 1409 "src/libfsm/parser.c"
 
 /* END OF FILE */
