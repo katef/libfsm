@@ -117,6 +117,7 @@ SUBDIR += tests/subtract
 SUBDIR += tests/determinise
 SUBDIR += tests/endids
 SUBDIR += tests/epsilons
+SUBDIR += tests/fsm
 SUBDIR += tests/glob
 SUBDIR += tests/like
 SUBDIR += tests/literal
