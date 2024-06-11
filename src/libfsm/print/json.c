@@ -184,6 +184,8 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s, int *notfirst)
 		print_edge_bitmap(f, notfirst, fsm->opt, s, e.state, &bm);
 	}
 
+	state_set_free(unique);
+
 	/*
 	 * Special edges are not consolidated above
 	 */
