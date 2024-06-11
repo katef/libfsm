@@ -123,6 +123,18 @@ print_cs(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\t\t{\n");
 
 	fprintf(f, "\t\t\t\"end\": %s,\n", cs->isend ? "true" : "false");
+	if (cs->isend && cs->end_ids != NULL) {
+		fprintf(f, "\t\t\t\"end_id\": [");
+		for (size_t i = 0; i < cs->end_ids->count; i++) {
+			fprintf(f, "%u", cs->end_ids->ids[i]);
+
+			if (i < cs->end_ids->count - 1) {
+				fprintf(f, ", ");
+			}
+		}
+		fprintf(f, "],\n");
+	}
+
 	fprintf(f, "\t\t\t\"strategy\": \"%s\"", strategy_name(cs->strategy));
 	if (cs->example != NULL || cs->strategy != IR_NONE) {
 		fprintf(f, ",");
