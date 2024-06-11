@@ -93,7 +93,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 		fprintf(f, "\n");
 
 		fprintf(f, "int\n");
-		fprintf(f, "%sfsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)\n",
+		fprintf(f, "%sfsm(struct fsm *fsm, fsm_state_t *x, fsm_state_t *y)\n",
 			fsm->opt->prefix != NULL ? fsm->opt->prefix : "");
 
 		fprintf(f, "{\n");
@@ -103,16 +103,20 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 	fprintf(f, "\tsize_t i;\n");
 	fprintf(f, "\n");
 
+	fprintf(f, "\tassert(x != NULL);\n");
+	fprintf(f, "\tassert(y != NULL);\n");
+	fprintf(f, "\n");
+
 	fprintf(f, "\tfor (i = 0; i < %zu; i++) {\n", fsm->statecount);
 
 	fprintf(f, "\t\tif (i == %u) {\n", start);
-	fprintf(f, "\t\t\ts[%u] = x;\n", start);
+	fprintf(f, "\t\t\ts[%u] = *x;\n", start);
 	fprintf(f, "\t\t\tcontinue;\n");
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "\t\tif (i == %u) {\n", end);
-	fprintf(f, "\t\t\ts[%u] = y;\n", end);
+	fprintf(f, "\t\t\ts[%u] = *y;\n", end);
 	fprintf(f, "\t\t\tcontinue;\n");
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\n");
