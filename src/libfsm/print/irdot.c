@@ -191,6 +191,20 @@ print_cs(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>S%u</TD><TD ALIGN='LEFT'>%s</TD></TR>\n",
 		ir_indexof(ir, cs), strategy_name(cs->strategy));
 
+	if (cs->isend && cs->end_ids != NULL) {
+		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>end id</TD><TD ALIGN='LEFT'>");
+
+		for (size_t i = 0; i < cs->end_ids->count; i++) {
+			fprintf(f, "#%u", cs->end_ids->ids[i]);
+
+			if (i < cs->end_ids->count - 1) {
+				fprintf(f, " ");
+			}
+		}
+
+		fprintf(f, "</TD></TR>\n");
+	}
+
 	if (cs->example != NULL) {
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>example</TD><TD ALIGN='LEFT'>");
 		escputs(f, opt, dot_escputc_html, cs->example);
