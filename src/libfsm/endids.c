@@ -69,13 +69,11 @@ fsm_setendid(struct fsm *fsm, fsm_end_id_t id)
 	/* for every end state */
 	for (i = 0; i < fsm->statecount; i++) {
 		if (fsm_isend(fsm, i)) {
-			enum fsm_endid_set_res sres;
 #if LOG_ENDIDS > 3
 			fprintf(stderr, "fsm_setendid: setting id %u on state %d\n",
 			    id, i);
 #endif
-			sres = fsm_endid_set(fsm, i, id);
-			if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
+			if (!fsm_setendidstate(fsm, i, id)) {
 				return 0;
 			}
 		}
@@ -92,21 +90,6 @@ fsm_setendidstate(struct fsm *fsm, fsm_state_t end_state, fsm_end_id_t id)
 		return 0;
 	}
 	return 1;
-}
-
-enum fsm_getendids_res
-fsm_getendids(const struct fsm *fsm, fsm_state_t end_state,
-    size_t id_buf_count, fsm_end_id_t *id_buf,
-    size_t *ids_written)
-{
-	return fsm_endid_get(fsm, end_state,
-	    id_buf_count, id_buf, ids_written);
-}
-
-size_t
-fsm_getendidcount(const struct fsm *fsm, fsm_state_t end_state)
-{
-	return fsm_endid_count(fsm, end_state);
 }
 
 int
@@ -796,8 +779,7 @@ carry_iter_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
 
 	(void)state;
 
-	sres = fsm_endid_set(env->dst, env->dst_state, id);
-	if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
+	if (!fsm_setendidstate(env->dst, env->dst_state, id)) {
 		env->ok = 0;
 		return 0;
 	}

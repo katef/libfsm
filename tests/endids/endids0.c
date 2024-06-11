@@ -47,10 +47,10 @@ int main(void)
 			size_t nwritten;
 			enum fsm_getendids_res ret;
 
-			assert( fsm_getendidcount(fsm, state_ind) == 1);
+			assert( fsm_endid_count(fsm, state_ind) == 1);
 
                         nwritten = 0;
-			ret = fsm_getendids(
+			ret = fsm_endid_get(
 				fsm,
 				state_ind,
 				1,

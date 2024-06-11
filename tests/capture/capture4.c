@@ -223,7 +223,7 @@ check(const struct fsm *fsm, const char *string,
 		enum fsm_getendids_res gres;
 		fsm_end_id_t id_buf[2];
 		size_t written;
-		gres = fsm_getendids(fsm, end, 2, id_buf, &written);
+		gres = fsm_endid_get(fsm, end, 2, id_buf, &written);
 		if (gres != FSM_GETENDIDS_FOUND) {
 			assert(!"fsm_getendids failed");
 		}

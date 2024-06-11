@@ -301,7 +301,7 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 
 		fprintf(f, "%u", s);
 
-		count = fsm_getendidcount(fsm, s);
+		count = fsm_endid_count(fsm, s);
 		if (count > 0) {
 			enum fsm_getendids_res res;
 			fsm_end_id_t *ids;
@@ -312,7 +312,7 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 				return -1;
 			}
 
-			res = fsm_getendids(fsm, s, count, ids, &written);
+			res = fsm_endid_get(fsm, s, count, ids, &written);
 			switch (res) {
 			case FSM_GETENDIDS_NOT_FOUND:
 			case FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE:

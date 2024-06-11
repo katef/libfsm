@@ -951,7 +951,7 @@ static int
 collect_end_ids(const struct fsm *fsm, fsm_state_t s,
 	struct end_metadata_end *e)
 {
-	e->count = fsm_getendidcount(fsm, s);
+	e->count = fsm_endid_count(fsm, s);
 
 	if (e->count > 0) {
 		e->ids = f_malloc(fsm->opt->alloc,
@@ -961,7 +961,7 @@ collect_end_ids(const struct fsm *fsm, fsm_state_t s,
 		}
 
 		size_t written;
-		enum fsm_getendids_res res = fsm_getendids(fsm, s,
+		enum fsm_getendids_res res = fsm_endid_get(fsm, s,
 		    e->count, e->ids, &written);
 		assert(res == FSM_GETENDIDS_FOUND);
 		assert(written == e->count);

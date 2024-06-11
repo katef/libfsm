@@ -241,7 +241,7 @@ ast_getendmapping(const struct fsm *fsm, fsm_state_t s)
 	size_t written;
 	struct ast_mapping *m;
 
-	id_count = fsm_getendidcount(fsm, s);
+	id_count = fsm_endid_count(fsm, s);
 	if (id_count > ID_STACK_BUF_COUNT) {
 		id_buf_dynamic = malloc(id_count * sizeof(id_buf_dynamic[0]));
 		if (id_buf_dynamic == NULL) {
@@ -249,7 +249,7 @@ ast_getendmapping(const struct fsm *fsm, fsm_state_t s)
 		}
 	}
 
-	res = fsm_getendids(fsm,
+	res = fsm_endid_get(fsm,
 	    s, id_count,
 	    id_buf_dynamic == NULL ? id_buf : id_buf_dynamic,
 	    &written);

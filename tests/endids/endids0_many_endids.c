@@ -69,7 +69,7 @@ int main(void)
 
 	assert(end_state < nstates);
 
-	assert(fsm_getendidcount(fsm, end_state) == sizeof all_end_ids / sizeof all_end_ids[0]);
+	assert(fsm_endid_count(fsm, end_state) == sizeof all_end_ids / sizeof all_end_ids[0]);
 	for (i=0; i < sizeof all_end_ids / sizeof all_end_ids[0]; i++) {
 		/* add duplicate end ids */
 		ret = fsm_setendid(fsm, all_end_ids[i]);
@@ -78,7 +78,7 @@ int main(void)
 		assert(ret == 1);
 
 		/* but it shouldn't add a duplicate id */
-		assert(fsm_getendidcount(fsm, end_state) == sizeof all_end_ids / sizeof all_end_ids[0]);
+		assert(fsm_endid_count(fsm, end_state) == sizeof all_end_ids / sizeof all_end_ids[0]);
 	}
 
 	nend = 0;
@@ -90,10 +90,10 @@ int main(void)
 
 			memset(&endids[0], 0, sizeof endids);
 
-			assert(fsm_getendidcount(fsm, state_ind) == sizeof all_end_ids / sizeof all_end_ids[0]);
+			assert(fsm_endid_count(fsm, state_ind) == sizeof all_end_ids / sizeof all_end_ids[0]);
 
                         nwritten = 0;
-			ret = fsm_getendids(
+			ret = fsm_endid_get(
 				fsm,
 				state_ind,
 				sizeof endids/sizeof endids[0],

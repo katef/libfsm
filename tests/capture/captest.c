@@ -92,11 +92,11 @@ captest_run_single(const struct captest_single_fsm_test_info *info)
 		fsm_end_id_t id_buf[1] = { ~0 };
 		enum fsm_getendids_res gres;
 		size_t written;
-		if (1 != fsm_getendidcount(fsm, end)) {
+		if (1 != fsm_endid_count(fsm, end)) {
 			FAIL("did not have exactly one end ID");
 		}
 
-		gres = fsm_getendids(fsm, end, 1, id_buf, &written);
+		gres = fsm_endid_get(fsm, end, 1, id_buf, &written);
 		if (gres != FSM_GETENDIDS_FOUND) {
 			FAIL("failed to get end IDs");
 		}
@@ -190,12 +190,12 @@ captest_check_single_end_id(const struct fsm *fsm, fsm_state_t end_state,
 		msg = &unused;
 	}
 
-	if (1 != fsm_getendidcount(fsm, end_state)) {
+	if (1 != fsm_endid_count(fsm, end_state)) {
 		*msg = "did not have exactly one end ID";
 		return 0;
 	}
 
-	gres = fsm_getendids(fsm, end_state, 1, id_buf, &written);
+	gres = fsm_endid_get(fsm, end_state, 1, id_buf, &written);
 	if (gres != FSM_GETENDIDS_FOUND) {
 		*msg = "failed to get end IDs";
 		return 0;

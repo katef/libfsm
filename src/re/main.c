@@ -294,7 +294,7 @@ find_first_match_for_end_state(const struct fsm *dfa, fsm_state_t s)
 		return NULL;
 	}
 
-	res = fsm_getendids(dfa, s, MAX_END_IDS,
+	res = fsm_endid_get(dfa, s, MAX_END_IDS,
 	    end_id_buf, &end_ids_written);
 	if (res == FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE) {
 		fprintf(stderr, "Error: Multiple end IDs\n");

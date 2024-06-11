@@ -249,12 +249,12 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 			if (fsm_isend(fsm, i)) {
 				enum fsm_getendids_res res;
 				size_t written;
-				const size_t count = fsm_getendidcount(fsm, i);
+				const size_t count = fsm_endid_count(fsm, i);
 				struct fsm_end_ids *ids = f_malloc(fsm->opt->alloc,
 				    sizeof(*ids) + ((count - 1) * sizeof(ids->ids[0])));
 				assert(ids != NULL);
 
-				res = fsm_getendids(fsm, i, count,
+				res = fsm_endid_get(fsm, i, count,
 				    ids->ids, &written);
 				if (res == FSM_GETENDIDS_FOUND) {
 					ids->count = (unsigned)written;

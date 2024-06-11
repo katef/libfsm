@@ -170,7 +170,7 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 			enum fsm_getendids_res res;
 			size_t written;
 			struct fsm_end_ids *ids = NULL;
-			const size_t count = fsm_getendidcount(fsm, s);
+			const size_t count = fsm_endid_count(fsm, s);
 			if (count > 0) {
 				ids = f_malloc(fsm->opt->alloc,
 					sizeof(*ids) + ((count - 1) * sizeof(ids->ids)));
@@ -179,7 +179,7 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 					return -1;
 				}
 
-				res = fsm_getendids(fsm, s, count,
+				res = fsm_endid_get(fsm, s, count,
 				    ids->ids, &written);
 				if (res == FSM_GETENDIDS_FOUND) {
 					ids->count = (unsigned)written;

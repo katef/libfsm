@@ -183,17 +183,17 @@ int main(void)
 		if (fsm_isend(fsm, state_ind)) {
 			int tested_pattern[NUM_PATTERNS];
 			fsm_end_id_t endids[NUM_ENDIDS_TOTAL];
-			size_t nwritten, num_endids, j;
+			size_t nwritten, count, j;
 			enum fsm_getendids_res ret;
 
 			memset(&endids[0], 0, sizeof endids);
 
 			nwritten = 0;
-			num_endids = fsm_getendidcount(fsm, state_ind);
+			count = fsm_endid_count(fsm, state_ind);
 
-			assert(num_endids > 0 && num_endids <= sizeof endids/sizeof endids[0]);
+			assert(count > 0 && count <= sizeof endids/sizeof endids[0]);
 
-			ret = fsm_getendids(
+			ret = fsm_endid_get(
 				fsm,
 				state_ind,
 				sizeof endids/sizeof endids[0],
@@ -201,11 +201,11 @@ int main(void)
 				&nwritten);
 
 			assert(ret == FSM_GETENDIDS_FOUND);
-			assert(nwritten == num_endids);
+			assert(nwritten == count);
 
 			memset(&tested_pattern[0], 0, sizeof tested_pattern);
 
-			for (j=0; j < num_endids; j++) {
+			for (j=0; j < count; j++) {
 				size_t k, pattern_index;
 
 				pattern_index = (endids[j] - 1)/NUM_ENDIDS_PER_PATTERN;
@@ -250,17 +250,17 @@ int main(void)
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
 			fsm_end_id_t endids[NUM_ENDIDS_TOTAL];
-			size_t nwritten, num_endids;
+			size_t nwritten, count;
 			enum fsm_getendids_res ret;
 
 			memset(&endids[0], 0, sizeof endids);
 
 			nwritten = 0;
-			num_endids = fsm_getendidcount(fsm, state_ind);
+			count = fsm_endid_count(fsm, state_ind);
 
-			assert(num_endids <= NUM_ENDIDS_TOTAL);
+			assert(count <= NUM_ENDIDS_TOTAL);
 
-			ret = fsm_getendids(
+			ret = fsm_endid_get(
 				fsm,
 				state_ind,
 				sizeof endids/sizeof endids[0],
@@ -268,7 +268,7 @@ int main(void)
 				&nwritten);
 
 			assert(ret == FSM_GETENDIDS_FOUND);
-			assert(nwritten == num_endids);
+			assert(nwritten == count);
 		}
 	}
 

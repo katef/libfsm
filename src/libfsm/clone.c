@@ -127,15 +127,13 @@ static int
 copy_end_ids_cb(fsm_state_t state, const fsm_end_id_t id, void *opaque)
 {
 	struct copy_end_ids_env *env = opaque;
-	enum fsm_endid_set_res sres;
 	assert(env->tag == 'c');
 
 #if LOG_CLONE_ENDIDS
 	fprintf(stderr, "clone[%d] <- %d\n", state, id);
 #endif
 
-	sres = fsm_endid_set(env->dst, state, id);
-	if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
+	if (!fsm_setendidstate(env->dst, state, id)) {
 		env->ok = 0;
 		return 0;
 	}

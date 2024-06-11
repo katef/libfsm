@@ -4,30 +4,30 @@
 #include <errno.h>
 
 int
-match_string(const struct fsm *fsm, const char *s, fsm_state_t *end_ptr, fsm_end_id_t **endids_ptr, size_t *num_endids_ptr)
+match_string(const struct fsm *fsm, const char *s, fsm_state_t *end_ptr, fsm_end_id_t **endids_ptr, size_t *count_ptr)
 {
 	fsm_state_t end = 0;
 	int ret;
 
 	ret = fsm_exec(fsm, fsm_sgetc, &s, &end, NULL);
 	if (ret == 1) {
-		size_t num_endids;
+		size_t count;
 
 		if (end_ptr != NULL) {
 			*end_ptr = end;
 		}
 
-		num_endids = fsm_getendidcount(fsm, end);
-		if (num_endids > 0) {
+		count = fsm_endid_count(fsm, end);
+		if (count > 0) {
 			enum fsm_getendids_res ret;
 			size_t nwritten = 0;
 
-			fsm_end_id_t *endids = calloc(num_endids, sizeof *endids);
+			fsm_end_id_t *endids = calloc(count, sizeof *endids);
 			if (endids == NULL) {
 				return -1;
 			}
 
-			ret = fsm_getendids(fsm, end, num_endids, endids, &nwritten);
+			ret = fsm_endid_get(fsm, end, count, endids, &nwritten);
 			if (ret != FSM_GETENDIDS_FOUND) {
 				free(endids);
 				errno = (ret == FSM_GETENDIDS_NOT_FOUND) ? EINVAL : ENOMEM;
@@ -36,8 +36,8 @@ match_string(const struct fsm *fsm, const char *s, fsm_state_t *end_ptr, fsm_end
 			
 			if (endids_ptr != NULL) {
 				*endids_ptr = endids;
-				if (num_endids_ptr != NULL) {
-					*num_endids_ptr = num_endids;
+				if (count_ptr != NULL) {
+					*count_ptr = count;
 				}
 			} else {
 				free(endids);

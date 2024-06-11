@@ -238,13 +238,13 @@ enum fsm_getendids_res {
 	FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE = -1
 };
 enum fsm_getendids_res
-fsm_getendids(const struct fsm *fsm, fsm_state_t end_state,
+fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
     size_t id_buf_count, fsm_end_id_t *id_buf,
     size_t *ids_written);
 
 /* Get the number of end IDs associated with an end state. */
 size_t
-fsm_getendidcount(const struct fsm *fsm, fsm_state_t end_state);
+fsm_endid_count(const struct fsm *fsm, fsm_state_t end_state);
 
 /* Callback function to remap the end ids of a state.  This function can
  * remap to fewer end ids, but cannot add additional end ids, and cannot

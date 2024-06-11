@@ -19,7 +19,7 @@
 
 struct state_info {
 	fsm_state_t state;
-	unsigned num_endids;
+	unsigned count;
 	fsm_end_id_t endids[2];
 };
 
@@ -105,15 +105,15 @@ int main(void)
 		if (fsm_isend(fsm, state_ind)) {
 			fsm_end_id_t endids[2] = {0,0};
 			size_t nwritten;
-			size_t num_endids;
+			size_t count;
 			enum fsm_getendids_res ret;
 
 			nwritten = 0;
-			num_endids = fsm_getendidcount(fsm, state_ind);
+			count = fsm_endid_count(fsm, state_ind);
 
-			assert( num_endids > 0 && num_endids <= 2);
+			assert( count > 0 && count <= 2);
 
-			ret = fsm_getendids(
+			ret = fsm_endid_get(
 				fsm,
 				state_ind,
 				sizeof endids / sizeof endids[0],
@@ -121,10 +121,10 @@ int main(void)
 				&nwritten);
 
 			assert(ret == FSM_GETENDIDS_FOUND);
-			assert(nwritten == num_endids);
+			assert(nwritten == count);
 
 			info[ninfo].state = state_ind;
-			info[ninfo].num_endids = nwritten;
+			info[ninfo].count = nwritten;
 
 			if (nwritten == 1) {
 				assert(endids[0] == 1 || endids[0] == 2);
@@ -150,16 +150,16 @@ int main(void)
 		if (fsm_isend(fsm, state_ind)) {
 			fsm_end_id_t endid = 0;
 			fsm_end_id_t expected;
-			size_t nwritten, num_endids;
+			size_t nwritten, count;
 			enum fsm_getendids_res ret;
 
 			assert( state_ind == info[info_ind].state );
 
 			nwritten = 0;
-			num_endids = fsm_getendidcount(fsm, state_ind);
+			count = fsm_endid_count(fsm, state_ind);
 
-			assert(num_endids == 1);
-			ret = fsm_getendids(
+			assert(count == 1);
+			ret = fsm_endid_get(
 				fsm,
 				state_ind,
 				1,
@@ -167,9 +167,9 @@ int main(void)
 				&nwritten);
 
 			assert(ret == FSM_GETENDIDS_FOUND);
-			assert(nwritten == num_endids);
+			assert(nwritten == count);
 
-			if (info[info_ind].num_endids == 2) {
+			if (info[info_ind].count == 2) {
 				expected = 3;
 			} else if (info[info_ind].endids[0] == 1) {
 				expected = 7;

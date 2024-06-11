@@ -48,7 +48,7 @@ run_test(const char **strings)
 		assert(res > 0); /* match */
 
 		size_t written;
-		enum fsm_getendids_res eres = fsm_getendids(fsm, end,
+		enum fsm_getendids_res eres = fsm_endid_get(fsm, end,
 		    MAX_INPUTS, id_buf, &written);
 		assert(eres == FSM_GETENDIDS_FOUND);
 		bool found = false;

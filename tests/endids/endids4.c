@@ -68,17 +68,17 @@ int main(void)
 		if (fsm_isend(comb, state_ind)) {
 			fsm_end_id_t endids[2] = {0,0};
 			size_t nwritten;
-			size_t num_endids;
+			size_t count;
 			enum fsm_getendids_res ret;
 
 			nwritten = 0;
-			num_endids = fsm_getendidcount(comb, state_ind);
+			count = fsm_endid_count(comb, state_ind);
 
-			printf("state %u num_endids = %zu\n", state_ind, num_endids);
+			printf("state %u count = %zu\n", state_ind, count);
 
-			assert(num_endids == 2);
+			assert(count == 2);
 
-			ret = fsm_getendids(
+			ret = fsm_endid_get(
 				comb,
 				state_ind,
 				2,
@@ -86,9 +86,9 @@ int main(void)
 				&nwritten);
 
 			assert(ret == FSM_GETENDIDS_FOUND);
-			assert(nwritten == num_endids);
+			assert(nwritten == count);
 
-                        qsort(&endids[0], num_endids, sizeof endids[0], cmp_endids);
+                        qsort(&endids[0], count, sizeof endids[0], cmp_endids);
                         assert(endids[0] == 1 && endids[1] == 2);
 		}
 	}
@@ -102,7 +102,7 @@ int main(void)
 		static const struct {
 			const char *s;
 			int should_match;
-			size_t num_endids;
+			size_t count;
 			fsm_end_id_t endid[2];
 		} matches[] = {
 			{ "abc"      , 0, 0, { 0, 0 } },
@@ -151,7 +151,7 @@ int main(void)
 				assert( ret == 1 );
 				assert( end_ids != NULL );
 
-				assert( num_end_ids == matches[i].num_endids );
+				assert( num_end_ids == matches[i].count );
 
 				qsort(&end_ids[0], num_end_ids, sizeof end_ids[0], cmp_endids);
 

@@ -45,15 +45,6 @@ enum fsm_endid_set_res
 fsm_endid_set_bulk(struct fsm *fsm,
     fsm_state_t state, size_t num_ids, const fsm_end_id_t *ids, enum fsm_endid_bulk_op op);
 
-size_t
-fsm_endid_count(const struct fsm *fsm,
-    fsm_state_t state);
-
-enum fsm_getendids_res
-fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
-    size_t id_buf_count, fsm_end_id_t *id_buf,
-    size_t *ids_written);
-
 int
 fsm_endid_carry(const struct fsm *src_fsm, const struct state_set *src_set,
     struct fsm *dst_fsm, fsm_state_t dst_state);

@@ -143,7 +143,7 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	 * This includes the dead state. */
 	for (size_t i = 0; i < table_states; i++) {
 		if (i < state_count && fsm_isend(fsm, i)) {
-			const size_t count = fsm_getendidcount(fsm, i);
+			const size_t count = fsm_endid_count(fsm, i);
 			if (count > max_endid_count) {
 				max_endid_count = count;
 			}
@@ -177,7 +177,7 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	for (size_t i = 0; i < state_count; i++) {
 		if (fsm_isend(fsm, i)) {
 			size_t written_a;
-			enum fsm_getendids_res eres = fsm_getendids(fsm, i,
+			enum fsm_getendids_res eres = fsm_endid_get(fsm, i,
 			    max_endid_count, endid_buf_a, &written_a);
 			assert(eres != FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE);
 			if (eres == FSM_GETENDIDS_NOT_FOUND) {
@@ -188,7 +188,7 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 				/* note: skipping eg 0 here since that's the empty set */
 				for (size_t eg_i = 1; eg_i < endid_group_count; eg_i++) {
 					size_t written_b;
-					eres = fsm_getendids(fsm, endid_group_leaders[eg_i],
+					eres = fsm_endid_get(fsm, endid_group_leaders[eg_i],
 					    max_endid_count, endid_buf_b, &written_b);
 					assert(eres != FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE);
 					if (written_b != written_a) { continue; }

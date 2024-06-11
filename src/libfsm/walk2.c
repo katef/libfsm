@@ -266,11 +266,11 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		size_t num_a_endids = 0, num_b_endids = 0, total_num_endids;
 
 		if (fsm_a != NULL && fsm_isend(fsm_a,a)) {
-			num_a_endids = fsm_getendidcount(fsm_a, a);
+			num_a_endids = fsm_endid_count(fsm_a, a);
 		}
 
 		if (fsm_b != NULL && fsm_isend(fsm_b,b)) {
-			num_b_endids = fsm_getendidcount(fsm_b, b);
+			num_b_endids = fsm_endid_count(fsm_b, b);
 		}
 
 		total_num_endids = num_a_endids + num_b_endids;
@@ -286,7 +286,7 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 
 			if (num_a_endids > 0) {
 				size_t nwritten = 0;
-				ret = fsm_getendids(fsm_a, a, num_a_endids, &endids[0], &nwritten);
+				ret = fsm_endid_get(fsm_a, a, num_a_endids, &endids[0], &nwritten);
 
 				if (ret != FSM_GETENDIDS_FOUND || nwritten != num_a_endids) {
 					free(endids);
@@ -297,7 +297,7 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 
 			if (num_b_endids > 0) {
 				size_t nwritten = 0;
-				ret = fsm_getendids(fsm_b, b, num_b_endids, &endids[num_a_endids], &nwritten);
+				ret = fsm_endid_get(fsm_b, b, num_b_endids, &endids[num_a_endids], &nwritten);
 
 				if (ret != FSM_GETENDIDS_FOUND || nwritten != num_b_endids) {
 					free(endids);
