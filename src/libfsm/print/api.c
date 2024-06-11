@@ -27,6 +27,19 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
+/* TODO: centralise */
+static int
+comp_end_id(const void *a, const void *b)
+{
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (* (fsm_end_id_t *) a < * (fsm_end_id_t *) b) { return -1; }
+	if (* (fsm_end_id_t *) a > * (fsm_end_id_t *) b) { return +1; }
+
+	return 0;
+}
+
 static int
 rangeclass(unsigned char x, unsigned char y)
 {
@@ -90,6 +103,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 		fprintf(f, "\n");
 
 		fprintf(f, "#include <fsm/fsm.h>\n");
+		fprintf(f, "#include <fsm/pred.h>\n");
 		fprintf(f, "\n");
 
 		fprintf(f, "int\n");
@@ -127,6 +141,47 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
+
+	{
+		size_t count;
+
+		count = fsm_getendidcount(fsm, end);
+		if (count > 0) {
+			enum fsm_getendids_res res;
+			fsm_end_id_t *ids;
+			size_t written;
+
+			ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
+			if (ids == NULL) {
+				/* XXX */
+				goto error;
+			}
+
+			res = fsm_getendids(fsm, end, count, ids, &written);
+			switch (res) {
+			case FSM_GETENDIDS_NOT_FOUND:
+			case FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE:
+				assert(!"unreached");
+				abort();
+
+			case FSM_GETENDIDS_FOUND:
+				break;
+			}
+
+			assert(written == count);
+
+			qsort(ids, count, sizeof *ids, comp_end_id);
+
+			fprintf(f, "\tif (fsm_isend(fsm, s[%u])) {\n", end);
+			for (size_t id = 0; id < count; id++) {
+				fprintf(f, "\t\tfsm_setendidstate(fsm, s[%u], %zu);\n", end, id);
+			}
+			fprintf(f, "\t}\n");
+			fprintf(f, "\n");
+
+			f_free(fsm->opt->alloc, ids);
+		}
+	}
 
 	a = f_malloc(fsm->opt->alloc, fsm->statecount * sizeof *a);
 	if (a == NULL) {
