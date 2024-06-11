@@ -97,6 +97,18 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 		}
 	} else {
 		fprintf(f, "ret %td", op->ir_state - ir->states);
+
+		if (op->ir_state->end_ids != NULL) {
+			fprintf(f, " / ");
+
+			for (size_t i = 0; i < op->ir_state->end_ids->count; i++) {
+				fprintf(f, "#%u", op->ir_state->end_ids->ids[i]);
+
+				if (i < op->ir_state->end_ids->count - 1) {
+					fprintf(f, " ");
+				}
+			}
+		}
 	}
 
 	return 0;
