@@ -200,7 +200,7 @@
 				EQUALS;
 
 				OPENENDIDS;
-				end-ids(s);
+				{ end-ids(s); || $; };
 				CLOSEENDIDS;
 			||
 				$;
