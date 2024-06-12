@@ -298,24 +298,20 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 				assert(nwritten == num_b_endids);
 			}
 
-			{
-				enum fsm_endid_set_res ret;
-
-				ret = fsm_endid_set_bulk(
-					data->new,
-					p->comb,
-					total_num_endids,
-					&endids[0],
-					FSM_ENDID_BULK_REPLACE);
-				if (ret == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
-					int errsv = errno;
-					free(endids);
-					errno = errsv;
-					return NULL;
-				}
-			}
+			ret = fsm_endid_set_bulk(
+				data->new,
+				p->comb,
+				total_num_endids,
+				&endids[0],
+				FSM_ENDID_BULK_REPLACE);
 
 			free(endids);
+
+			if (!ret) {
+				int errsv = errno;
+				errno = errsv;
+				return NULL;
+			}
 		}
 	}
 

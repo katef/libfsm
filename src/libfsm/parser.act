@@ -340,7 +340,7 @@
 	@};
 
 	<mark-end-id>: (s :state, id :endid) -> () = @{
-		if (!fsm_setendidstate(fsm, @s, @id)) {
+		if (!fsm_endid_set(fsm, @s, @id)) {
 			@!;
 		}
 	@};

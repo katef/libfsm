@@ -133,7 +133,7 @@ copy_end_ids_cb(fsm_state_t state, const fsm_end_id_t id, void *opaque)
 	fprintf(stderr, "clone[%d] <- %d\n", state, id);
 #endif
 
-	if (!fsm_setendidstate(env->dst, state, id)) {
+	if (!fsm_endid_set(env->dst, state, id)) {
 		env->ok = 0;
 		return 0;
 	}

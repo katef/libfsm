@@ -10,15 +10,6 @@ fsm_endid_init(struct fsm *fsm);
 void
 fsm_endid_free(struct fsm *fsm);
 
-enum fsm_endid_set_res {
-	FSM_ENDID_SET_ADDED,
-	FSM_ENDID_SET_ALREADY_PRESENT,
-	FSM_ENDID_SET_ERROR_ALLOC_FAIL = -1
-};
-enum fsm_endid_set_res
-fsm_endid_set(struct fsm *fsm,
-    fsm_state_t state, fsm_end_id_t id);
-
 /* Sets end ids in a bulk operation.
  *
  * Repeatedly calling fsm_endid_set will end up with quadratic behavior.  This
@@ -34,14 +25,13 @@ fsm_endid_set(struct fsm *fsm,
  *
  * The caller maintains ownership of ids, and must free it if needed.
  *
- * Only FSM_ENDID_SET_ADDED and FSM_ENDID_SET_ERROR_ALLOC_FAIL
- * are returned.
+ * Returns 1 on success, 0 on failure.
  */
 enum fsm_endid_bulk_op {
 	FSM_ENDID_BULK_REPLACE = 0,
 	FSM_ENDID_BULK_APPEND  = 1,
 };
-enum fsm_endid_set_res
+int
 fsm_endid_set_bulk(struct fsm *fsm,
     fsm_state_t state, size_t num_ids, const fsm_end_id_t *ids, enum fsm_endid_bulk_op op);
 

@@ -332,8 +332,7 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 		fsm_state_t state;
 		state_set_reset(ts->endids, &si);
 		while (state_set_next(&si, &state)) {
-			fsm_end_id_t endid = (fsm_end_id_t)state;
-			if (!fsm_setendidstate(fsm, st, endid)) {
+			if (!fsm_endid_set(fsm, st, (fsm_end_id_t) state)) {
 				return 0;
 			}
 		}

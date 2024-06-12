@@ -1335,7 +1335,7 @@ p_xend_C_Cend_Hid(fsm fsm, lex_state lex_state, act_state act_state, state ZIs)
 		{
 #line 343 "src/libfsm/parser.act"
 
-		if (!fsm_setendidstate(fsm, (ZIs), (ZIid))) {
+		if (!fsm_endid_set(fsm, (ZIs), (ZIid))) {
 			goto ZL1;
 		}
 	

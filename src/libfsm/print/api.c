@@ -165,7 +165,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 
 			fprintf(f, "\tif (fsm_isend(fsm, s[%u])) {\n", end);
 			for (size_t id = 0; id < count; id++) {
-				fprintf(f, "\t\tif (!fsm_setendidstate(fsm, s[%u], %zu)) { return 0; }\n", end, id);
+				fprintf(f, "\t\tif (!fsm_endid_set(fsm, s[%u], %zu)) { return 0; }\n", end, id);
 			}
 			fprintf(f, "\t}\n");
 			fprintf(f, "\n");

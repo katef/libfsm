@@ -222,7 +222,7 @@ fsm_setendid(struct fsm *fsm, fsm_end_id_t id);
  * Returns 1 on success, 0 on error.
  * */
 int
-fsm_setendidstate(struct fsm *fsm, fsm_state_t end_state, fsm_end_id_t id);
+fsm_endid_set(struct fsm *fsm, fsm_state_t end_state, fsm_end_id_t id);
 
 /* Get the end IDs associated with an end state, if any.
  * If id_buf has enough cells to store all the end IDs (according

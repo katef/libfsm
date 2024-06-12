@@ -405,7 +405,7 @@ carry_endids(struct fsm *fsm, struct state_set *states,
 
 	/* add them */
 	for (i = 0; i < env.count; i++) {
-		if (!fsm_setendidstate(fsm, dst_state, env.ids[i])) {
+		if (!fsm_endid_set(fsm, dst_state, env.ids[i])) {
 			env.ok = 0;
 			goto cleanup;
 		}
