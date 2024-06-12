@@ -41,7 +41,7 @@ int main(void)
 		if (fsm_isend(fsm, state_ind)) {
 			fsm_end_id_t endid = 0;
 			size_t nwritten;
-			enum fsm_getendids_res ret;
+			int ret;
 
 			assert( fsm_endid_count(fsm, state_ind) == 1);
 
@@ -53,9 +53,9 @@ int main(void)
 				&endid,
 				&nwritten);
 
-			assert(ret == FSM_GETENDIDS_FOUND);
-                        assert(nwritten == 1);
-                        assert( endid == 1 );
+			assert(ret == 1);
+			assert(nwritten == 1);
+			assert( endid == 1 );
 		}
 	}
 

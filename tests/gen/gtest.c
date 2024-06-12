@@ -60,10 +60,10 @@ gtest_matches_cb(const struct fsm *fsm,
 #define ID_BUF_COUNT 1
 			fsm_end_id_t id_buf[ID_BUF_COUNT];
 			size_t written;
-			enum fsm_getendids_res gres = fsm_endid_get(fsm,
+			int gres = fsm_endid_get(fsm,
 			    end_state, ID_BUF_COUNT, id_buf, &written);
 
-			if (gres != FSM_GETENDIDS_FOUND) {
+			if (gres != 1) {
 				fprintf(stderr,
 				    "ERROR: fsm_endid_get: returned %d\n",
 				    gres);

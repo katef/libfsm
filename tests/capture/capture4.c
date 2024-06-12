@@ -220,11 +220,12 @@ check(const struct fsm *fsm, const char *string,
 	assert(captures[cb_b].pos[1] == pb_1);
 
 	{
-		enum fsm_getendids_res gres;
+		int gres;
 		fsm_end_id_t id_buf[2];
 		size_t written;
+
 		gres = fsm_endid_get(fsm, end, 2, id_buf, &written);
-		if (gres != FSM_GETENDIDS_FOUND) {
+		if (gres != 1) {
 			assert(!"fsm_getendids failed");
 		}
 

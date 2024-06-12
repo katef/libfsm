@@ -237,9 +237,9 @@ ast_getendmapping(const struct fsm *fsm, fsm_state_t s)
 	size_t id_count;
 	fsm_end_id_t *id_buf_dynamic = NULL;
 	fsm_end_id_t id_buf[ID_STACK_BUF_COUNT];
-	enum fsm_getendids_res res;
 	size_t written;
 	struct ast_mapping *m;
+	int res;
 
 	id_count = fsm_endid_count(fsm, s);
 	if (id_count > ID_STACK_BUF_COUNT) {
@@ -253,18 +253,10 @@ ast_getendmapping(const struct fsm *fsm, fsm_state_t s)
 	    s, id_count,
 	    id_buf_dynamic == NULL ? id_buf : id_buf_dynamic,
 	    &written);
-	if (res == FSM_GETENDIDS_NOT_FOUND) {
-		if (id_buf_dynamic != NULL) {
-			free(id_buf_dynamic);
-		}
-		return NULL;
-	}
 
 	/* Should always have an appropriately sized buffer,
 	 * or fail to allocate above */
-	assert(res != FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE);
-
-	assert(res == FSM_GETENDIDS_FOUND);
+	assert(res == 1);
 	assert(written == id_count);
 	assert(written > 0);
 

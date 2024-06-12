@@ -74,7 +74,7 @@ int main(void)
 			fsm_end_id_t endids[2] = {0,0};
 			size_t nwritten;
 			size_t count;
-			enum fsm_getendids_res ret;
+			int ret;
 
 			nwritten = 0;
 			count = fsm_endid_count(fsm, state_ind);
@@ -88,7 +88,7 @@ int main(void)
 				&endids[0],
 				&nwritten);
 
-			assert(ret == FSM_GETENDIDS_FOUND);
+			assert(ret == 1);
 			assert(nwritten == count);
 
 			info[ninfo].state = state_ind;

@@ -276,8 +276,8 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		total_num_endids = num_a_endids + num_b_endids;
 
 		if (total_num_endids > 0) {
-			fsm_end_id_t *endids= NULL;
-			enum fsm_getendids_res ret;
+			fsm_end_id_t *endids;
+			int ret;
 
 			endids = calloc(total_num_endids, sizeof endids[0]);
 			if (endids == NULL) {
@@ -286,24 +286,16 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 
 			if (num_a_endids > 0) {
 				size_t nwritten = 0;
-				ret = fsm_endid_get(fsm_a, a, num_a_endids, &endids[0], &nwritten);
-
-				if (ret != FSM_GETENDIDS_FOUND || nwritten != num_a_endids) {
-					free(endids);
-					errno = (ret != FSM_GETENDIDS_FOUND) ? ENOENT : EINVAL;
-					return NULL;
-				}
+				ret = fsm_endid_get(fsm_a, a, num_a_endids, endids, &nwritten);
+				assert(ret == 1);
+				assert(nwritten == num_a_endids);
 			}
 
 			if (num_b_endids > 0) {
 				size_t nwritten = 0;
-				ret = fsm_endid_get(fsm_b, b, num_b_endids, &endids[num_a_endids], &nwritten);
-
-				if (ret != FSM_GETENDIDS_FOUND || nwritten != num_b_endids) {
-					free(endids);
-					errno = (ret != FSM_GETENDIDS_FOUND) ? ENOENT : EINVAL;
-					return NULL;
-				}
+				ret = fsm_endid_get(fsm_b, b, num_b_endids, endids + num_a_endids, &nwritten);
+				assert(ret == 1);
+				assert(nwritten == num_b_endids);
 			}
 
 			{

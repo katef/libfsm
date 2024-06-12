@@ -177,10 +177,9 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	for (size_t i = 0; i < state_count; i++) {
 		if (fsm_isend(fsm, i)) {
 			size_t written_a;
-			enum fsm_getendids_res eres = fsm_endid_get(fsm, i,
+			int eres = fsm_endid_get(fsm, i,
 			    max_endid_count, endid_buf_a, &written_a);
-			assert(eres != FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE);
-			if (eres == FSM_GETENDIDS_NOT_FOUND) {
+			if (eres == 0) {
 				assert(written_a == 0);
 			} else {
 				assert(written_a > 0);
@@ -190,7 +189,7 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 					size_t written_b;
 					eres = fsm_endid_get(fsm, endid_group_leaders[eg_i],
 					    max_endid_count, endid_buf_b, &written_b);
-					assert(eres != FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE);
+					assert(eres != 0);
 					if (written_b != written_a) { continue; }
 					if (0 == memcmp(endid_buf_a, endid_buf_b, written_a * sizeof(endid_buf_a[0]))) {
 						found = true;

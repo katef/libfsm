@@ -86,7 +86,7 @@ int main(void)
 		if (fsm_isend(fsm, state_ind)) {
 			fsm_end_id_t endids[sizeof all_end_ids / sizeof all_end_ids[0]];
 			size_t i, nwritten;
-			enum fsm_getendids_res ret;
+			int ret;
 
 			memset(&endids[0], 0, sizeof endids);
 
@@ -100,11 +100,11 @@ int main(void)
 				&endids[0],
 				&nwritten);
 
-			assert(ret == FSM_GETENDIDS_FOUND);
-                        assert(nwritten == sizeof all_end_ids / sizeof all_end_ids[0]);
+			assert(ret == 1);
+			assert(nwritten == sizeof all_end_ids / sizeof all_end_ids[0]);
 
-                        /* sort endids and compare */
-                        qsort(&endids[0], nwritten, sizeof endids[0], cmp_endids);
+			/* sort endids and compare */
+			qsort(&endids[0], nwritten, sizeof endids[0], cmp_endids);
 			for (i=0; i < nwritten; i++) {
 				assert(endids[i] == sorted_all_end_ids[i]);
 			}

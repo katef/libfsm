@@ -303,9 +303,9 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 
 		count = fsm_endid_count(fsm, s);
 		if (count > 0) {
-			enum fsm_getendids_res res;
 			fsm_end_id_t *ids;
 			size_t written;
+			int res;
 
 			ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
 			if (ids == NULL) {
@@ -313,16 +313,7 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 			}
 
 			res = fsm_endid_get(fsm, s, count, ids, &written);
-			switch (res) {
-			case FSM_GETENDIDS_NOT_FOUND:
-			case FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE:
-				assert(!"unreached");
-				abort();
-
-			case FSM_GETENDIDS_FOUND:
-				break;
-			}
-
+			assert(res == 1);
 			assert(written == count);
 
 			qsort(ids, count, sizeof *ids, comp_end_id);

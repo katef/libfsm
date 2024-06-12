@@ -48,9 +48,9 @@ run_test(const char **strings)
 		assert(res > 0); /* match */
 
 		size_t written;
-		enum fsm_getendids_res eres = fsm_endid_get(fsm, end,
+		int eres = fsm_endid_get(fsm, end,
 		    MAX_INPUTS, id_buf, &written);
-		assert(eres == FSM_GETENDIDS_FOUND);
+		assert(eres == 1);
 		bool found = false;
 		for (size_t i = 0; i < written; i++) {
 			if (id_buf[i] == id) {

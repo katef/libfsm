@@ -691,7 +691,7 @@ fsm_endid_count(const struct fsm *fsm,
 	return 0;
 }
 
-enum fsm_getendids_res
+int
 fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
     size_t id_buf_count, fsm_end_id_t *id_buf,
     size_t *ids_written)
@@ -732,14 +732,14 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 			fprintf(stderr, "fsm_endid_get: not found\n");
 #endif
 			*ids_written = 0; /* not found */
-			return FSM_GETENDIDS_NOT_FOUND;
+			return 0;
 		} else if (b->state == end_state) {
 			size_t id_i;
 			if (b->ids->count > id_buf_count) {
 #if LOG_ENDIDS > 2
 				fprintf(stderr, "fsm_endid_get: insufficient space\n");
 #endif
-				return FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE;
+				return 0; /* insufficient space */
 			}
 			for (id_i = 0; id_i < b->ids->count; id_i++) {
 #if LOG_ENDIDS > 2
@@ -750,7 +750,7 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 
 			/* todo: could sort them here, if it matters. */
 			*ids_written = b->ids->count;
-			return FSM_GETENDIDS_FOUND;
+			return 1;
 		} else {	/* collision */
 #if LOG_ENDIDS > 4
 			fprintf(stderr, "fsm_endid_get: collision\n");
@@ -760,7 +760,7 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 	}
 
 	assert(!"unreachable");
-	return FSM_GETENDIDS_NOT_FOUND;
+	return 0;
 }
 
 struct carry_env {
@@ -773,7 +773,6 @@ struct carry_env {
 static int
 carry_iter_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
 {
-	enum fsm_endid_set_res sres;
 	struct carry_env *env = opaque;
 	assert(env->tag == 'C');
 

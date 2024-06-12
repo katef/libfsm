@@ -30,6 +30,8 @@
 
 #include <print/esc.h>
 
+#include <adt/xalloc.h>
+
 #include "libfsm/internal.h" /* XXX */
 #include "libre/print.h" /* XXX */
 #include "libre/class.h" /* XXX */
@@ -285,28 +287,31 @@ find_match_with_id(fsm_end_id_t id)
 static struct match *
 find_first_match_for_end_state(const struct fsm *dfa, fsm_state_t s)
 {
-#define MAX_END_IDS 8		/* FIXME: what is reasonable here? */
-	fsm_end_id_t end_id_buf[MAX_END_IDS];
-	size_t end_ids_written;
-	enum fsm_getendids_res res;
+	fsm_end_id_t *ids, id;
+	size_t count;
+	size_t nwritten;
+	int res;
 
 	if (!fsm_isend(dfa, s)) {
 		return NULL;
 	}
 
-	res = fsm_endid_get(dfa, s, MAX_END_IDS,
-	    end_id_buf, &end_ids_written);
-	if (res == FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE) {
-		fprintf(stderr, "Error: Multiple end IDs\n");
+	count = fsm_endid_count(dfa, s);
+	if (count == 0) {
 		return NULL;
-	} else if (res == FSM_GETENDIDS_NOT_FOUND) {
-		return NULL;
-	} else {
-		assert(res == FSM_GETENDIDS_FOUND);
-		/* continues below */
 	}
 
-	return find_match_with_id(end_id_buf[0]);
+	ids = xmalloc(count * sizeof *ids);
+
+	res = fsm_endid_get(dfa, s, count, ids, &nwritten);
+	assert(res == 1);
+	assert(nwritten == count);
+
+	id = ids[0];
+
+	free(ids);
+
+	return find_match_with_id(id);
 }
 
 static struct match *
@@ -337,10 +342,7 @@ addmatch(struct match **head, int i, const char *s)
 		}
 	}
 
-	new = malloc(sizeof *new);
-	if (new == NULL) {
-		return NULL;
-	}
+	new = xmalloc(sizeof *new);
 
 	new->i = i;
 	new->s = s;
@@ -360,11 +362,7 @@ add_matches_list(struct match *head)
 		return;
 	}
 
-	new = malloc(sizeof *new);
-	if (new == NULL) {
-		perror("allocating matches list");
-		abort();
-	}
+	new = xmalloc(sizeof *new);
 
 	new->next = all_matches;
 	new->head = head;

@@ -247,7 +247,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 		fprintf(f, "  \"endleaf\": [ ");
 		for (i = 0; i < fsm->statecount; i++) {
 			if (fsm_isend(fsm, i)) {
-				enum fsm_getendids_res res;
+				int res;
 				size_t written;
 				const size_t count = fsm_endid_count(fsm, i);
 				struct fsm_end_ids *ids = f_malloc(fsm->opt->alloc,
@@ -256,10 +256,9 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 
 				res = fsm_endid_get(fsm, i, count,
 				    ids->ids, &written);
-				if (res == FSM_GETENDIDS_FOUND) {
+				if (res == 1) {
 					ids->count = (unsigned)written;
 				} else {
-					assert(res == FSM_GETENDIDS_NOT_FOUND);
 					ids->count = 0;
 				}
 

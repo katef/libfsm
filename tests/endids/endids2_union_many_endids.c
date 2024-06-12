@@ -184,7 +184,7 @@ int main(void)
 			int tested_pattern[NUM_PATTERNS];
 			fsm_end_id_t endids[NUM_ENDIDS_TOTAL];
 			size_t nwritten, count, j;
-			enum fsm_getendids_res ret;
+			int ret;
 
 			memset(&endids[0], 0, sizeof endids);
 
@@ -200,7 +200,7 @@ int main(void)
 				&endids[0],
 				&nwritten);
 
-			assert(ret == FSM_GETENDIDS_FOUND);
+			assert(ret == 1);
 			assert(nwritten == count);
 
 			memset(&tested_pattern[0], 0, sizeof tested_pattern);
@@ -251,7 +251,7 @@ int main(void)
 		if (fsm_isend(fsm, state_ind)) {
 			fsm_end_id_t endids[NUM_ENDIDS_TOTAL];
 			size_t nwritten, count;
-			enum fsm_getendids_res ret;
+			int ret;
 
 			memset(&endids[0], 0, sizeof endids);
 
@@ -267,7 +267,7 @@ int main(void)
 				&endids[0],
 				&nwritten);
 
-			assert(ret == FSM_GETENDIDS_FOUND);
+			assert(ret == 1);
 			assert(nwritten == count);
 		}
 	}

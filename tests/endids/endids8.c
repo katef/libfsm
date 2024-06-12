@@ -75,7 +75,7 @@ int main(void)
 			fsm_end_id_t endids[3] = {0,0,0};
 			size_t nwritten;
 			size_t count;
-			enum fsm_getendids_res ret;
+			int ret;
 
 			nwritten = 0;
 			count = fsm_endid_count(comb, state_ind);
@@ -91,11 +91,11 @@ int main(void)
 				&endids[0],
 				&nwritten);
 
-			assert(ret == FSM_GETENDIDS_FOUND);
+			assert(ret == 1);
 			assert(nwritten == count);
 
-                        qsort(&endids[0], count, sizeof endids[0], cmp_endids);
-                        assert(endids[0] == 1 && endids[1] == 2 && endids[2] == 4);
+			qsort(&endids[0], count, sizeof endids[0], cmp_endids);
+			assert(endids[0] == 1 && endids[1] == 2 && endids[2] == 4);
 		}
 	}
 

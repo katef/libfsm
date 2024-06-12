@@ -19,7 +19,7 @@ match_string(const struct fsm *fsm, const char *s, fsm_state_t *end_ptr, fsm_end
 
 		count = fsm_endid_count(fsm, end);
 		if (count > 0) {
-			enum fsm_getendids_res ret;
+			int ret;
 			size_t nwritten = 0;
 
 			fsm_end_id_t *endids = calloc(count, sizeof *endids);
@@ -28,9 +28,9 @@ match_string(const struct fsm *fsm, const char *s, fsm_state_t *end_ptr, fsm_end
 			}
 
 			ret = fsm_endid_get(fsm, end, count, endids, &nwritten);
-			if (ret != FSM_GETENDIDS_FOUND) {
+			if (ret == 0) {
 				free(endids);
-				errno = (ret == FSM_GETENDIDS_NOT_FOUND) ? EINVAL : ENOMEM;
+				errno = EINVAL;
 				return -1;
 			}
 			
