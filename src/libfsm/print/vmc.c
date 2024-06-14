@@ -121,7 +121,7 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 		 * Per its API, fsm_getc() is expected to return a positive character
 		 * value (as if cast via unsigned char), or EOF. Just like fgetc() does.
 		 */
-		fprintf(f, "if (c = fsm_getc(opaque), c == EOF) ");
+		fprintf(f, "if (c = fsm_getc(getc_opaque), c == EOF) ");
 		break;
 
 	case FSM_IO_STR:
@@ -467,22 +467,18 @@ fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt
 
 		switch (opt->io) {
 		case FSM_IO_GETC:
-			fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
+			fprintf(f, "(int (*fsm_getc)(void *opaque), void *getc_opaque)\n");
 			fprintf(f, "{\n");
 			break;
 
 		case FSM_IO_STR:
-			fprintf(f, "(const char *s, void *opaque)\n");
+			fprintf(f, "(const char *s)\n");
 			fprintf(f, "{\n");
-			fprintf(f, "\t(void) opaque;\n");
-			fprintf(f, "\n");
 			break;
 
 		case FSM_IO_PAIR:
-			fprintf(f, "(const char *b, const char *e, void *opaque)\n");
+			fprintf(f, "(const char *b, const char *e)\n");
 			fprintf(f, "{\n");
-			fprintf(f, "\t(void) opaque;\n");
-			fprintf(f, "\n");
 			break;
 		}
 
