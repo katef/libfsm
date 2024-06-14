@@ -54,6 +54,7 @@ lx_print lx_print_c;
 lx_print lx_print_h;
 lx_print lx_print_dot;
 lx_print lx_print_dump;
+lx_print lx_print_json;
 lx_print lx_print_zdot;
 
 #endif

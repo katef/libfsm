@@ -4,6 +4,7 @@ SRC += src/lx/print/c.c
 SRC += src/lx/print/h.c
 SRC += src/lx/print/dot.c
 SRC += src/lx/print/dump.c
+SRC += src/lx/print/json.c
 SRC += src/lx/print/zdot.c
 
 .for src in ${SRC:Msrc/lx/print/*.c}
