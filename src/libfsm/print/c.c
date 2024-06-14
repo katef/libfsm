@@ -427,31 +427,34 @@ fsm_print_c_complete(FILE *f, const struct ir *ir,
 		case FSM_IO_GETC:
 			fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
 			fprintf(f, "{\n");
-			fprintf(f, "\t(void)opaque;\n");
 			if (ir->n > 0) {
 				fprintf(f, "\tint c;\n");
 				fprintf(f, "\n");
 			}
+			fprintf(f, "\t(void) opaque;\n");
+			fprintf(f, "\n");
 			break;
 
 		case FSM_IO_STR:
 			fprintf(f, "(const char *s, void *opaque)\n");
 			fprintf(f, "{\n");
-			fprintf(f, "\t(void)opaque;\n");
 			if (ir->n > 0) {
 				fprintf(f, "\tconst char *p;\n");
 				fprintf(f, "\n");
 			}
+			fprintf(f, "\t(void) opaque;\n");
+			fprintf(f, "\n");
 			break;
 
 		case FSM_IO_PAIR:
 			fprintf(f, "(const char *b, const char *e, void *opaque)\n");
 			fprintf(f, "{\n");
-			fprintf(f, "\t(void)opaque;\n");
 			if (ir->n > 0) {
 				fprintf(f, "\tconst char *p;\n");
 				fprintf(f, "\n");
 			}
+			fprintf(f, "\t(void) opaque;\n");
+			fprintf(f, "\n");
 			break;
 		}
 
