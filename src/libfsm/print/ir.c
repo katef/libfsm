@@ -467,25 +467,32 @@ make_ir(const struct fsm *fsm)
 		assert(i < ir->n);
 
 		ir->states[i].isend  = fsm_isend(fsm, i);
-		ir->states[i].end_ids = NULL;
+		ir->states[i].endids.ids = NULL;
+		ir->states[i].endids.count = 0;
+
 		if (fsm_isend(fsm, i)) {
-			int res;
-			size_t written;
-			const size_t count = fsm_endid_count(fsm, i);
-			struct fsm_end_ids *ids = f_malloc(fsm->opt->alloc,
-			    sizeof(*ids) + (count == 0 ? 0 : (count - 1) * sizeof(ids->ids[0])));
-			if (ids == NULL) {
-				goto error;
+			fsm_end_id_t *ids;
+			size_t count;
+
+			count = fsm_endid_count(fsm, i);
+			if (count == 0) {
+				ids = NULL;
+			} else {
+				int res;
+				size_t written;
+
+				ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
+				if (ids == NULL) {
+					goto error;
+				}
+
+				res = fsm_endid_get(fsm, i, count, ids, &written);
+				assert(res == 1);
+				assert(count = written);
 			}
 
-			res = fsm_endid_get(fsm, i, count,
-			    ids->ids, &written);
-			if (res == 1) {
-				ids->count = (unsigned)written;
-				ir->states[i].end_ids = ids;
-			} else {
-				f_free(fsm->opt->alloc, ids);
-			}
+			ir->states[i].endids.ids = ids;
+			ir->states[i].endids.count = count;
 		}
 
 		if (make_state(fsm, i, &ir->states[i]) == -1) {
@@ -592,8 +599,7 @@ free_ir(const struct fsm *fsm, struct ir *ir)
 
 	for (i = 0; i < ir->n; i++) {
 		f_free(fsm->opt->alloc, (void *) ir->states[i].example);
-
-		f_free(fsm->opt->alloc, (void *) ir->states[i].end_ids);
+		f_free(fsm->opt->alloc, (void *) ir->states[i].endids.ids);
 
 		switch (ir->states[i].strategy) {
 		case IR_TABLE:

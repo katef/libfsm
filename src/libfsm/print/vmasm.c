@@ -372,7 +372,11 @@ print_vmasm_encoding(FILE *f, const struct fsm *fsm, enum asm_dialect dialect)
 	static const struct dfavm_assembler_ir zero;
 	struct dfavm_assembler_ir a;
 
-	static const struct fsm_vm_compile_opts vm_opts = { FSM_VM_COMPILE_DEFAULT_FLAGS, FSM_VM_COMPILE_VM_V1, NULL };
+	static const struct fsm_vm_compile_opts vm_opts = {
+		FSM_VM_COMPILE_DEFAULT_FLAGS,
+		FSM_VM_COMPILE_VM_V1,
+		NULL
+	};
 
 	assert(f != NULL);
 	assert(fsm != NULL);

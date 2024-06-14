@@ -127,7 +127,10 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	}
 
 	if (opt->endleaf != NULL) {
-		if (-1 == opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque)) {
+		if (-1 == opt->endleaf(f,
+			op->ir_state->endids.ids, op->ir_state->endids.count,
+			opt->endleaf_opaque))
+		{
 			return -1;
 		}
 	} else {
@@ -156,7 +159,11 @@ fsm_print_shfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 	struct dfavm_assembler_ir a;
 	struct dfavm_op_ir *op;
 
-	static const struct fsm_vm_compile_opts vm_opts = { FSM_VM_COMPILE_DEFAULT_FLAGS, FSM_VM_COMPILE_VM_V1, NULL };
+	static const struct fsm_vm_compile_opts vm_opts = {
+		FSM_VM_COMPILE_DEFAULT_FLAGS,
+		FSM_VM_COMPILE_VM_V1,
+		NULL
+	};
 
 	assert(f != NULL);
 	assert(ir != NULL);

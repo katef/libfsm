@@ -51,7 +51,7 @@
  */
 
 struct match {
-	fsm_end_id_t i;
+	fsm_end_id_t id;
 	const char *s;
 	struct match *next;
 };
@@ -276,7 +276,7 @@ find_match_with_id(fsm_end_id_t id)
 	struct matches_list *res = all_matches;
 	while (res != NULL) {
 		struct match *m = res->head;
-		if (m->i == id) {
+		if (m->id == id) {
 			return m;
 		}
 		res = res->next;
@@ -315,14 +315,14 @@ find_first_match_for_end_state(const struct fsm *dfa, fsm_state_t s)
 }
 
 static struct match *
-addmatch(struct match **head, int i, const char *s)
+addmatch(struct match **head, fsm_end_id_t id, const char *s)
 {
 	struct match *new;
 
 	assert(head != NULL);
 	assert(s != NULL);
 
-	if ((1U << i) > INT_MAX) {
+	if ((1U << id) > INT_MAX) {
 		fprintf(stderr, "Too many patterns for int bitmap\n");
 		exit(EXIT_FAILURE);
 	}
@@ -344,7 +344,7 @@ addmatch(struct match **head, int i, const char *s)
 
 	new = xmalloc(sizeof *new);
 
-	new->i = i;
+	new->id = id;
 	new->s = s;
 
 	new->next = *head;
@@ -414,12 +414,13 @@ printexample(FILE *f, const struct fsm *fsm, fsm_state_t state)
 }
 
 static int
-endleaf_c(FILE *f, const struct fsm_end_ids *end_ids,
-    const void *endleaf_opaque)
+endleaf_c(FILE *f,
+	const fsm_end_id_t *ids, size_t count,
+	const void *endleaf_opaque)
 {
 	const struct match *m;
-	int n;
-	size_t i, end_ids_count;
+	unsigned n;
+	size_t i;
 
 	assert(endleaf_opaque == NULL);
 
@@ -428,11 +429,9 @@ endleaf_c(FILE *f, const struct fsm_end_ids *end_ids,
 
 	n = 0;
 
-	end_ids_count = (end_ids == NULL ? 0 : end_ids->count);
-
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
-			n |= 1 << m->i;
+	for (i = 0; i < count; i++) {
+		for (m = find_match_with_id(ids[i]); m != NULL; m = m->next) {
+			n |= 1U << m->id;
 		}
 	}
 
@@ -440,11 +439,11 @@ endleaf_c(FILE *f, const struct fsm_end_ids *end_ids,
 
 	fprintf(f, " /* ");
 
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
+	for (i = 0; i < count; i++) {
+		for (m = find_match_with_id(ids[i]); m != NULL; m = m->next) {
 			fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
 
-			if (m->next != NULL || i < end_ids_count - 1) {
+			if (m->next != NULL || i < count - 1) {
 				fprintf(f, ", ");
 			}
 		}
@@ -456,12 +455,13 @@ endleaf_c(FILE *f, const struct fsm_end_ids *end_ids,
 }
 
 static int
-endleaf_rust(FILE *f, const struct fsm_end_ids *end_ids,
-    const void *endleaf_opaque)
+endleaf_rust(FILE *f,
+	const fsm_end_id_t *ids, size_t count,
+	const void *endleaf_opaque)
 {
 	const struct match *m;
-	int n;
-	size_t i, end_ids_count;
+	unsigned n;
+	size_t i;
 
 	assert(endleaf_opaque == NULL);
 
@@ -470,11 +470,9 @@ endleaf_rust(FILE *f, const struct fsm_end_ids *end_ids,
 
 	n = 0;
 
-	end_ids_count = (end_ids == NULL ? 0 : end_ids->count);
-
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
-			n |= 1 << m->i;
+	for (i = 0; i < count; i++) {
+		for (m = find_match_with_id(ids[i]); m != NULL; m = m->next) {
+			n |= 1U << m->id;
 		}
 	}
 
@@ -482,11 +480,11 @@ endleaf_rust(FILE *f, const struct fsm_end_ids *end_ids,
 
 	fprintf(f, " /* ");
 
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
+	for (i = 0; i < count; i++) {
+		for (m = find_match_with_id(ids[i]); m != NULL; m = m->next) {
 			fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
 
-			if (m->next != NULL || i < end_ids_count - 1) {
+			if (m->next != NULL || i < count - 1) {
 				fprintf(f, ", ");
 			}
 		}
@@ -498,11 +496,12 @@ endleaf_rust(FILE *f, const struct fsm_end_ids *end_ids,
 }
 
 static int
-endleaf_dot(FILE *f, const struct fsm_end_ids *end_ids,
-    const void *endleaf_opaque)
+endleaf_dot(FILE *f,
+	const fsm_end_id_t *ids, size_t count,
+	const void *endleaf_opaque)
 {
 	const struct match *m;
-	size_t i, end_ids_count;
+	size_t i;
 
 	assert(f != NULL);
 	assert(endleaf_opaque == NULL);
@@ -511,13 +510,11 @@ endleaf_dot(FILE *f, const struct fsm_end_ids *end_ids,
 
 	fprintf(f, "label = <");
 
-	end_ids_count = (end_ids == NULL ? 0 : end_ids->count);
+	for (i = 0; i < count; i++) {
+		for (m = find_match_with_id(ids[i]); m != NULL; m = m->next) {
+			fprintf(f, "#%u", m->id);
 
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
-			fprintf(f, "#%u", m->i);
-
-			if (m->next != NULL || i < end_ids_count - 1) {
+			if (m->next != NULL || i < count - 1) {
 				fprintf(f, ",");
 			}
 		}
@@ -531,11 +528,11 @@ endleaf_dot(FILE *f, const struct fsm_end_ids *end_ids,
 #if 0
 	fprintf(f, " # ");
 
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
+	for (i = 0; i < count; i++) {
+		for (m = find_match_with_id(ids[i]); m != NULL; m = m->next) {
 			fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
 
-			if (m->next != NULL || i < end_ids_count - 1) {
+			if (m->next != NULL || i < count - 1) {
 				fprintf(f, ", ");
 			}
 		}
@@ -548,11 +545,12 @@ endleaf_dot(FILE *f, const struct fsm_end_ids *end_ids,
 }
 
 static int
-endleaf_json(FILE *f, const struct fsm_end_ids *end_ids,
-    const void *endleaf_opaque)
+endleaf_json(FILE *f,
+	const fsm_end_id_t *ids, size_t count,
+	const void *endleaf_opaque)
 {
 	const struct match *m;
-	size_t i, end_ids_count;
+	size_t i;
 
 	assert(f != NULL);
 	assert(endleaf_opaque == NULL);
@@ -561,11 +559,9 @@ endleaf_json(FILE *f, const struct fsm_end_ids *end_ids,
 
 	fprintf(f, "[ ");
 
-	end_ids_count = (end_ids == NULL ? 0 : end_ids->count);
-
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
-			fprintf(f, "%u", m->i);
+	for (i = 0; i < count; i++) {
+		for (m = find_match_with_id(ids[i]); m != NULL; m = m->next) {
+			fprintf(f, "%u", m->id);
 
 			if (m->next != NULL) {
 				fprintf(f, ", ");

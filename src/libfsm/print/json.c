@@ -247,20 +247,19 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 		fprintf(f, "  \"endleaf\": [ ");
 		for (i = 0; i < fsm->statecount; i++) {
 			if (fsm_isend(fsm, i)) {
+				fsm_end_id_t *ids;
+				size_t count, written;
 				int res;
-				size_t written;
-				const size_t count = fsm_endid_count(fsm, i);
-				struct fsm_end_ids *ids = f_malloc(fsm->opt->alloc,
-				    sizeof(*ids) + ((count - 1) * sizeof(ids->ids[0])));
-				assert(ids != NULL);
 
-				res = fsm_endid_get(fsm, i, count,
-				    ids->ids, &written);
-				if (res == 1) {
-					ids->count = (unsigned)written;
-				} else {
-					ids->count = 0;
+				count = fsm_endid_count(fsm, i);
+
+				ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
+				if (ids == NULL) {
+					return -1;
 				}
+
+				res = fsm_endid_get(fsm, i, count, ids, &written);
+				assert(res == 1);
 
 				if (notfirst) {
 					fprintf(f, ", ");
@@ -268,7 +267,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 
 				fprintf(f, "{ %u, ", i);
 
-				fsm->opt->endleaf(f, ids, fsm->opt->endleaf_opaque);
+				fsm->opt->endleaf(f, ids, count, fsm->opt->endleaf_opaque);
 
 				fprintf(f, " }");
 

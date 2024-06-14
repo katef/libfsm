@@ -53,12 +53,13 @@ ir_hasend(const struct ir *ir)
 }
 
 static int
-leaf(FILE *f, const struct fsm_end_ids *ids, const void *leaf_opaque)
+leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
 {
 	assert(f != NULL);
 	assert(leaf_opaque == NULL);
 
 	(void) ids;
+	(void) count;
 	(void) leaf_opaque;
 
 	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
@@ -136,7 +137,7 @@ static int
 print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
 	struct ir_state *cs,
-	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
+	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
 	assert(ir != NULL);
@@ -149,7 +150,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	switch (cs->strategy) {
 	case IR_NONE:
 		fprintf(f, "\t\t\t");
-		if (-1 == leaf(f, cs->end_ids, leaf_opaque)) {
+		if (-1 == leaf(f, cs->endids.ids, cs->endids.count, leaf_opaque)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -178,7 +179,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		print_groups(f, opt, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
 
 		fprintf(f, "\t\t\tdefault:  ");
-		if (-1 == leaf(f, cs->end_ids, leaf_opaque)) {
+		if (-1 == leaf(f, cs->endids.ids, cs->endids.count, leaf_opaque)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -209,7 +210,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		print_ranges(f, opt, cs->u.error.error.ranges, cs->u.error.error.n);
 		fprintf(f, " ");
-		if (-1 == leaf(f, cs->end_ids, leaf_opaque)) {
+		if (-1 == leaf(f, cs->endids.ids, cs->endids.count, leaf_opaque)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -289,7 +290,10 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 
 		fprintf(f, "\tcase S%u: ", i);
 		if (opt->endleaf != NULL) {
-			if (-1 == opt->endleaf(f, ir->states[i].end_ids, opt->endleaf_opaque)) {
+			if (-1 == opt->endleaf(f,
+				ir->states[i].endids.ids, ir->states[i].endids.count,
+				opt->endleaf_opaque))
+			{
 				return -1;
 			}
 		} else {
@@ -306,7 +310,7 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 int
 fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
-	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
+	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
 	unsigned i;

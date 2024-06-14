@@ -92,19 +92,22 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	}
 
 	if (opt->endleaf != NULL) {
-		if (-1 == opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque)) {
+		if (-1 == opt->endleaf(f,
+			op->ir_state->endids.ids, op->ir_state->endids.count,
+			opt->endleaf_opaque))
+		{
 			return -1;
 		}
 	} else {
 		fprintf(f, "ret %td", op->ir_state - ir->states);
 
-		if (op->ir_state->end_ids != NULL) {
+		if (op->ir_state->endids.count > 0) {
 			fprintf(f, " / ");
 
-			for (size_t i = 0; i < op->ir_state->end_ids->count; i++) {
-				fprintf(f, "#%u", op->ir_state->end_ids->ids[i]);
+			for (size_t i = 0; i < op->ir_state->endids.count; i++) {
+				fprintf(f, "#%u", op->ir_state->endids.ids[i]);
 
-				if (i < op->ir_state->end_ids->count - 1) {
+				if (i < op->ir_state->endids.count - 1) {
 					fprintf(f, " ");
 				}
 			}
@@ -300,7 +303,11 @@ fsm_print_vmdotfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 	static const struct dfavm_assembler_ir zero;
 	struct dfavm_assembler_ir a;
 
-	static const struct fsm_vm_compile_opts vm_opts = { FSM_VM_COMPILE_DEFAULT_FLAGS, FSM_VM_COMPILE_VM_V1, NULL };
+	static const struct fsm_vm_compile_opts vm_opts = {
+		FSM_VM_COMPILE_DEFAULT_FLAGS,
+		FSM_VM_COMPILE_VM_V1,
+		NULL
+	};
 
 	assert(f != NULL);
 	assert(ir != NULL);

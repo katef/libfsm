@@ -65,7 +65,7 @@ mapping(FILE *f, const struct ast_mapping *m, const struct ast *ast)
 }
 
 static int
-endleaf_dot(FILE *f, const struct fsm_end_ids *end_ids,
+endleaf_dot(FILE *f, const fsm_end_id_t *ids, size_t count,
     const void *endleaf_opaque)
 {
 	const struct ast_mapping *m;
@@ -74,9 +74,9 @@ endleaf_dot(FILE *f, const struct fsm_end_ids *end_ids,
 	assert(f != NULL);
 	assert(endleaf_opaque != NULL);
 
-	(void)end_ids;		/* TODO */
-	assert(end_ids->count > 0);
-	m = ast_getendmappingbyendid(end_ids->ids[0]);
+	assert(ids != NULL);
+	assert(count > 0);
+	m = ast_getendmappingbyendid(ids[0]);
 
 	ast = endleaf_opaque;
 

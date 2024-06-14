@@ -167,23 +167,22 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 				s, s);
 			}
 		} else {
-			size_t written;
-			struct fsm_end_ids *ids = NULL;
-			const size_t count = fsm_endid_count(fsm, s);
+			fsm_end_id_t *ids;
+			size_t count, written;
+
+			ids = NULL;
+			count = fsm_endid_count(fsm, s);
 			if (count > 0) {
 				int res;
 
-				ids = f_malloc(fsm->opt->alloc,
-					sizeof(*ids) + ((count - 1) * sizeof(ids->ids)));
-				assert(ids != NULL);
+				ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
 				if (ids == NULL) {
 					return -1;
 				}
 
-				res = fsm_endid_get(fsm, s, count, ids->ids, &written);
-				if (res == 1) {
-					ids->count = (unsigned)written;
-				}
+				res = fsm_endid_get(fsm, s, count, ids, &written);
+				assert(res == 1);
+				assert(count == written);
 			}
 
 			fprintf(f, "\t%sS%-2u [ shape = doublecircle",
@@ -191,7 +190,7 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 
 			if (fsm->opt->endleaf != NULL) {
 				fprintf(f, ", ");
-				if (-1 == fsm->opt->endleaf(f, ids, fsm->opt->endleaf_opaque)) {
+				if (-1 == fsm->opt->endleaf(f, ids, count, fsm->opt->endleaf_opaque)) {
 					return -1;
 				}
 			} else {
@@ -204,15 +203,15 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 				if (!fsm->opt->anonymous_states) {
 					fprintf(f, "%u", s);
 
-					if (ids->count > 0) {
+					if (count > 0) {
 						fprintf(f, "<BR/>");
 					}
 				}
 
-				for (size_t i = 0; i < ids->count; i++) {
-					fprintf(f, "#%u", ids->ids[i]);
+				for (size_t i = 0; i < count; i++) {
+					fprintf(f, "#%u", ids[i]);
 
-					if (i < ids->count - 1) {
+					if (i < count - 1) {
 						fprintf(f, ",");
 					}
 				}

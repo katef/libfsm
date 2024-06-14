@@ -37,12 +37,6 @@ typedef unsigned int fsm_end_id_t;
 
 #define FSM_END_ID_MAX UINT_MAX
 
-/* struct used to return a collection of end IDs. */
-struct fsm_end_ids {
-	unsigned count;
-	fsm_end_id_t ids[1];
-};
-
 /*
  * Create a new FSM. This is to be freed with fsm_free(). A structure allocated
  * from fsm_new() is expected to be passed as the "fsm" argument to the
