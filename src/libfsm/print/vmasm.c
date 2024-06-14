@@ -171,7 +171,18 @@ print_asm_amd64(FILE *f, const char *prefix,
 						break;
 
 					}
+
+					/* endleaf in addition to existing instructions */
+					if (opt->endleaf != NULL) {
+						if (-1 == opt->endleaf(f,
+							op->ir_state->endids.ids, op->ir_state->endids.count,
+							opt->endleaf_opaque))
+						{
+							return -1;
+						}
+					}
 				} else {
+					/* TODO: we don't have a way to override the -1 (or its API) */
 					switch (dialect) {
 					case AMD64_ATT:
 						fprintf(f, "\tmovl    $-1, %%%s\n", ret_reg);

@@ -289,6 +289,7 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 		}
 
 		fprintf(f, "\tcase S%u: ", i);
+
 		if (opt->endleaf != NULL) {
 			if (-1 == opt->endleaf(f,
 				ir->states[i].endids.ids, ir->states[i].endids.count,
@@ -299,6 +300,7 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 		} else {
 			fprintf(f, "return %u;", i);
 		}
+
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\tdefault: return -1; /* unexpected EOT */\n");

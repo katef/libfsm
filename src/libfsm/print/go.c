@@ -98,6 +98,9 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 		return 0;
 	}
 
+	fprintf(f, "{\n");
+	fprintf(f, "\t\t");
+
 	if (opt->endleaf != NULL) {
 		if (-1 == opt->endleaf(f,
 			op->ir_state->endids.ids, op->ir_state->endids.count,
@@ -106,8 +109,10 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 			return -1;
 		}
 	} else {
-		fprintf(f, "{\n\t\treturn %td\n\t}\n", op->ir_state - ir->states);
+		fprintf(f, "return %td", op->ir_state - ir->states);
 	}
+
+	fprintf(f, "\n\t}\n");
 
 	return 0;
 }

@@ -142,6 +142,8 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
 
+	/* endleaf() doesn't make sense for this format */
+
 	{
 		size_t count;
 

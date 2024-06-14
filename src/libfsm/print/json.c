@@ -239,6 +239,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 		fprintf(f, " ],\n");
 	}
 
+	/* showing endleaf in addition to existing content */
 	if (fsm->opt->endleaf != NULL) {
 		int notfirst;
 
@@ -246,35 +247,42 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 
 		fprintf(f, "  \"endleaf\": [ ");
 		for (i = 0; i < fsm->statecount; i++) {
-			if (fsm_isend(fsm, i)) {
-				fsm_end_id_t *ids;
-				size_t count, written;
-				int res;
+			fsm_end_id_t *ids;
+			size_t count, written;
+			int res;
 
-				count = fsm_endid_count(fsm, i);
-
-				ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
-				if (ids == NULL) {
-					return -1;
-				}
-
-				res = fsm_endid_get(fsm, i, count, ids, &written);
-				assert(res == 1);
-
-				if (notfirst) {
-					fprintf(f, ", ");
-				}
-
-				fprintf(f, "{ %u, ", i);
-
-				fsm->opt->endleaf(f, ids, count, fsm->opt->endleaf_opaque);
-
-				fprintf(f, " }");
-
-				f_free(fsm->opt->alloc, ids);
-
-				notfirst = 1;
+			if (!fsm_isend(fsm, i)) {
+				continue;
 			}
+
+			count = fsm_endid_count(fsm, i);
+
+			ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
+			if (ids == NULL) {
+				return -1;
+			}
+
+			res = fsm_endid_get(fsm, i, count, ids, &written);
+			assert(res == 1);
+
+			if (notfirst) {
+				fprintf(f, ", ");
+			}
+
+			fprintf(f, "{ %u, ", i);
+
+			if (-1 == fsm->opt->endleaf(f,
+				ids, count,
+				fsm->opt->endleaf_opaque))
+			{
+				return -1;
+			}
+
+			fprintf(f, " }");
+
+			f_free(fsm->opt->alloc, ids);
+
+			notfirst = 1;
 		}
 		fprintf(f, " ],\n");
 	}

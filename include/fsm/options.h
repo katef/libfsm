@@ -70,6 +70,9 @@ struct fsm_options {
 	void *leaf_opaque;
 
 	/* TODO: explain. for C code fragment output */
+	/* Placement in the output stream depends on the format.
+	 * This replaces an entire "return xyz;" statement for C-like formats,
+	 * but appends extra information for others. */
 	int (*endleaf)(FILE *, const fsm_end_id_t *ids, size_t count,
 	    const void *endleaf_opaque);
 	void *endleaf_opaque;

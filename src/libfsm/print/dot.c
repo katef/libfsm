@@ -188,36 +188,38 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 			fprintf(f, "\t%sS%-2u [ shape = doublecircle",
 				fsm->opt->prefix != NULL ? fsm->opt->prefix : "", s);
 
+			assert(f != NULL);
+
+			fprintf(f, ", ");
+
+			fprintf(f, "label = <");
+
 			if (fsm->opt->endleaf != NULL) {
-				fprintf(f, ", ");
-				if (-1 == fsm->opt->endleaf(f, ids, count, fsm->opt->endleaf_opaque)) {
+				if (-1 == fsm->opt->endleaf(f,
+					ids, count,
+					fsm->opt->endleaf_opaque))
+				{
 					return -1;
 				}
-			} else {
-				assert(f != NULL);
-
-				fprintf(f, ", ");
-
-				fprintf(f, "label = <");
-
-				if (!fsm->opt->anonymous_states) {
-					fprintf(f, "%u", s);
-
-					if (count > 0) {
-						fprintf(f, "<BR/>");
-					}
-				}
-
-				for (size_t i = 0; i < count; i++) {
-					fprintf(f, "#%u", ids[i]);
-
-					if (i < count - 1) {
-						fprintf(f, ",");
-					}
-				}
-
-				fprintf(f, ">");
+			} else if (!fsm->opt->anonymous_states) {
+				fprintf(f, "%u", s);
 			}
+
+			if (fsm->opt->endleaf != NULL || !fsm->opt->anonymous_states) {
+				if (count > 0) {
+					fprintf(f, "<BR/>");
+				}
+			}
+
+			for (size_t i = 0; i < count; i++) {
+				fprintf(f, "#%u", ids[i]);
+
+				if (i < count - 1) {
+					fprintf(f, ",");
+				}
+			}
+
+			fprintf(f, ">");
 
 			fprintf(f, " ];\n");
 

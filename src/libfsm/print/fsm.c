@@ -291,6 +291,7 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 
 	fprintf(f, "end:   ");
 	for (s = 0; s < fsm->statecount; s++) {
+		fsm_end_id_t *ids;
 		size_t count;
 
 		if (!fsm_isend(fsm, s)) {
@@ -299,11 +300,8 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 
 		end--;
 
-		fprintf(f, "%u", s);
-
 		count = fsm_endid_count(fsm, s);
 		if (count > 0) {
-			fsm_end_id_t *ids;
 			size_t written;
 			int res;
 
@@ -315,7 +313,20 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 			res = fsm_endid_get(fsm, s, count, ids, &written);
 			assert(res == 1);
 			assert(written == count);
+		}
 
+		if (fsm->opt->endleaf != NULL) {
+			if (-1 == fsm->opt->endleaf(f,
+				ids, count,
+				fsm->opt->endleaf_opaque))
+			{
+				return -1;
+			}
+		} else {
+			fprintf(f, "%u", s);
+		}
+
+		if (count > 0) {
 			qsort(ids, count, sizeof *ids, comp_end_id);
 
 			fprintf(f, " = [");
