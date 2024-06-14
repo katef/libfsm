@@ -431,8 +431,6 @@ fsm_print_c_complete(FILE *f, const struct ir *ir,
 				fprintf(f, "\tint c;\n");
 				fprintf(f, "\n");
 			}
-			fprintf(f, "\t(void) opaque;\n");
-			fprintf(f, "\n");
 			break;
 
 		case FSM_IO_STR:
