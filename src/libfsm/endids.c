@@ -716,8 +716,10 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 #if LOG_ENDIDS > 2
 			fprintf(stderr, "fsm_endid_get: not found\n");
 #endif
-			return 0; /* not found */
-		} else if (b->state == end_state) {
+			return 1; /* not an error */
+		}
+
+		if (b->state == end_state) {
 			size_t id_i;
 			if (b->ids->count > id_buf_count) {
 #if LOG_ENDIDS > 2
