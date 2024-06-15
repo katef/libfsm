@@ -175,39 +175,50 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	 * any of the other end states. If so, assign it to the same endid
 	 * group, otherwise assign a new one and mark it as the leader. */
 	for (size_t i = 0; i < state_count; i++) {
-		if (fsm_isend(fsm, i)) {
-			size_t written_a;
-			int eres = fsm_endid_get(fsm, i,
-			    max_endid_count, endid_buf_a, &written_a);
-			if (eres == 0) {
-				assert(written_a == 0);
-			} else {
-				assert(written_a > 0);
-				bool found = false;
-				/* note: skipping eg 0 here since that's the empty set */
-				for (size_t eg_i = 1; eg_i < endid_group_count; eg_i++) {
-					size_t written_b;
-					eres = fsm_endid_get(fsm, endid_group_leaders[eg_i],
-					    max_endid_count, endid_buf_b, &written_b);
-					assert(eres != 0);
-					if (written_b != written_a) { continue; }
-					if (0 == memcmp(endid_buf_a, endid_buf_b, written_a * sizeof(endid_buf_a[0]))) {
-						found = true;
-						endid_group_assignments[i] = eg_i;
-						break;
-					} else {
-						continue;
-					}
-				}
-
-				if (!found) {
-					endid_group_assignments[i] = endid_group_count;
-					endid_group_leaders[endid_group_count] = i;
-					endid_group_count++;
-				}
-			}
-		} else {
+		if (!fsm_isend(fsm, i)) {
 			endid_group_assignments[i] = 0; /* none */
+			continue;
+		}
+
+		size_t count_a = fsm_endid_count(fsm, i);
+		assert(count_a <= max_endid_count);
+		if (count_a == 0) {
+			continue;
+		}
+
+		size_t written_a;
+		int eres = fsm_endid_get(fsm, i,
+		    count_a, endid_buf_a, &written_a);
+		assert(eres == 1);
+		assert(written_a > 0);
+
+		bool found = false;
+		/* note: skipping eg 0 here since that's the empty set */
+		for (size_t eg_i = 1; eg_i < endid_group_count; eg_i++) {
+			size_t written_b;
+			size_t count_b = fsm_endid_count(fsm, endid_group_leaders[eg_i]);
+			if (count_b != count_a) {
+				continue;
+			}
+
+			assert(count_b > 0);
+			assert(count_b <= max_endid_count);
+			eres = fsm_endid_get(fsm, endid_group_leaders[eg_i],
+			    count_b, endid_buf_b, &written_b);
+			assert(eres == 1);
+			assert(written_b == count_b);
+
+			if (0 == memcmp(endid_buf_a, endid_buf_b, count_a * sizeof(endid_buf_a[0]))) {
+				found = true;
+				endid_group_assignments[i] = eg_i;
+				break;
+			}
+		}
+
+		if (!found) {
+			endid_group_assignments[i] = endid_group_count;
+			endid_group_leaders[endid_group_count] = i;
+			endid_group_count++;
 		}
 	}
 
