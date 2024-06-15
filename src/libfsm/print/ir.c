@@ -479,16 +479,14 @@ make_ir(const struct fsm *fsm)
 				ids = NULL;
 			} else {
 				int res;
-				size_t written;
 
 				ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
 				if (ids == NULL) {
 					goto error;
 				}
 
-				res = fsm_endid_get(fsm, i, count, ids, &written);
+				res = fsm_endid_get(fsm, i, count, ids);
 				assert(res == 1);
-				assert(count = written);
 			}
 
 			ir->states[i].endids.ids = ids;

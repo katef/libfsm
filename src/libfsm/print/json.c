@@ -248,7 +248,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 		fprintf(f, "  \"endleaf\": [ ");
 		for (i = 0; i < fsm->statecount; i++) {
 			fsm_end_id_t *ids;
-			size_t count, written;
+			size_t count;
 			int res;
 
 			if (!fsm_isend(fsm, i)) {
@@ -262,7 +262,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 				return -1;
 			}
 
-			res = fsm_endid_get(fsm, i, count, ids, &written);
+			res = fsm_endid_get(fsm, i, count, ids);
 			assert(res == 1);
 
 			if (notfirst) {

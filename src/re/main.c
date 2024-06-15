@@ -289,7 +289,6 @@ find_first_match_for_end_state(const struct fsm *dfa, fsm_state_t s)
 {
 	fsm_end_id_t *ids, id;
 	size_t count;
-	size_t nwritten;
 	int res;
 
 	if (!fsm_isend(dfa, s)) {
@@ -303,9 +302,8 @@ find_first_match_for_end_state(const struct fsm *dfa, fsm_state_t s)
 
 	ids = xmalloc(count * sizeof *ids);
 
-	res = fsm_endid_get(dfa, s, count, ids, &nwritten);
+	res = fsm_endid_get(dfa, s, count, ids);
 	assert(res == 1);
-	assert(nwritten == count);
 
 	id = ids[0];
 

@@ -220,16 +220,15 @@ fsm_endid_set(struct fsm *fsm, fsm_state_t end_state, fsm_end_id_t id);
 
 /* Get the end IDs associated with an end state, if any.
  * If id_buf has enough cells to store all the end IDs (according
- * to id_buf_count) then they are written into id_buf[] and
- * *ids_written is set to the number of IDs. The end IDs in the
- * buffer may appear in any order, but will not have duplicates.
+ * to id_buf_count) then they are written into id_buf[].
+ * The end IDs in the buffer may appear in any order,
+ * but will not have duplicates.
  *
  * Returns 0 if there is not enough space in id_buf for the
  * end IDs, or 1 if zero or more end IDs were returned. */
 int
 fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
-    size_t id_buf_count, fsm_end_id_t *id_buf,
-    size_t *ids_written);
+    size_t id_buf_count, fsm_end_id_t *id_buf);
 
 /* Get the number of end IDs associated with an end state. */
 size_t

@@ -186,16 +186,13 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 			continue;
 		}
 
-		size_t written_a;
 		int eres = fsm_endid_get(fsm, i,
-		    count_a, endid_buf_a, &written_a);
+		    count_a, endid_buf_a);
 		assert(eres == 1);
-		assert(written_a > 0);
 
 		bool found = false;
 		/* note: skipping eg 0 here since that's the empty set */
 		for (size_t eg_i = 1; eg_i < endid_group_count; eg_i++) {
-			size_t written_b;
 			size_t count_b = fsm_endid_count(fsm, endid_group_leaders[eg_i]);
 			if (count_b != count_a) {
 				continue;
@@ -204,9 +201,8 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 			assert(count_b > 0);
 			assert(count_b <= max_endid_count);
 			eres = fsm_endid_get(fsm, endid_group_leaders[eg_i],
-			    count_b, endid_buf_b, &written_b);
+			    count_b, endid_buf_b);
 			assert(eres == 1);
-			assert(written_b == count_b);
 
 			if (0 == memcmp(endid_buf_a, endid_buf_b, count_a * sizeof(endid_buf_a[0]))) {
 				found = true;

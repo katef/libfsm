@@ -20,14 +20,13 @@ match_string(const struct fsm *fsm, const char *s, fsm_state_t *end_ptr, fsm_end
 		count = fsm_endid_count(fsm, end);
 		if (count > 0) {
 			int ret;
-			size_t nwritten = 0;
 
 			fsm_end_id_t *endids = calloc(count, sizeof *endids);
 			if (endids == NULL) {
 				return -1;
 			}
 
-			ret = fsm_endid_get(fsm, end, count, endids, &nwritten);
+			ret = fsm_endid_get(fsm, end, count, endids);
 			if (ret == 0) {
 				free(endids);
 				errno = EINVAL;

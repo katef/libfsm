@@ -236,7 +236,7 @@ struct ast_mapping *
 ast_getendmapping(const struct fsm *fsm, fsm_state_t s)
 {
 	fsm_end_id_t *ids;
-	size_t count, written;
+	size_t count;
 	struct ast_mapping *m;
 	int res;
 
@@ -256,11 +256,8 @@ ast_getendmapping(const struct fsm *fsm, fsm_state_t s)
 		return NULL;
 	}
 
-	res = fsm_endid_get(fsm, s, count, ids, &written);
-
+	res = fsm_endid_get(fsm, s, count, ids);
 	assert(res == 1);
-	assert(written == count);
-	assert(written > 0);
 
 	m = ast_getendmappingbyendid(ids[0]);
 

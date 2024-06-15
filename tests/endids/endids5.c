@@ -68,11 +68,9 @@ int main(void)
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(comb, state_ind)) {
 			fsm_end_id_t endids[2] = {0,0};
-			size_t nwritten;
 			size_t count;
 			int ret;
 
-			nwritten = 0;
 			count = fsm_endid_count(comb, state_ind);
 
 			printf("state %u count = %zu\n", state_ind, count);
@@ -83,11 +81,9 @@ int main(void)
 				comb,
 				state_ind,
 				2,
-				&endids[0],
-				&nwritten);
+				&endids[0]);
 
 			assert(ret == 1);
-			assert(nwritten == count);
 
 			assert(endids[0] == 1);
 		}

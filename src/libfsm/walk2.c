@@ -285,17 +285,13 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 			}
 
 			if (num_a_endids > 0) {
-				size_t nwritten = 0;
-				ret = fsm_endid_get(fsm_a, a, num_a_endids, endids, &nwritten);
+				ret = fsm_endid_get(fsm_a, a, num_a_endids, endids);
 				assert(ret == 1);
-				assert(nwritten == num_a_endids);
 			}
 
 			if (num_b_endids > 0) {
-				size_t nwritten = 0;
-				ret = fsm_endid_get(fsm_b, b, num_b_endids, endids + num_a_endids, &nwritten);
+				ret = fsm_endid_get(fsm_b, b, num_b_endids, endids + num_a_endids);
 				assert(ret == 1);
-				assert(nwritten == num_b_endids);
 			}
 
 			ret = fsm_endid_set_bulk(

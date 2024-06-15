@@ -962,10 +962,8 @@ collect_end_ids(const struct fsm *fsm, fsm_state_t s,
 		return 0;
 	}
 
-	size_t written;
-	int res = fsm_endid_get(fsm, s, e->count, e->ids, &written);
+	int res = fsm_endid_get(fsm, s, e->count, e->ids);
 	assert(res == 1);
-	assert(written == e->count);
 
 	/* sort, to make comparison easier later */
 	qsort(e->ids, e->count,

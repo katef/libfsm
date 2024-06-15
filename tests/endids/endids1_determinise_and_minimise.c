@@ -45,21 +45,17 @@ int main(void)
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
 			fsm_end_id_t endid = 0;
-			size_t nwritten;
 			int ret;
 
 			assert(fsm_endid_count(fsm, state_ind) == 1);
 
-			nwritten = 0;
 			ret = fsm_endid_get(
 				fsm,
 				state_ind,
 				1,
-				&endid,
-				&nwritten);
+				&endid);
 
 			assert(ret == 1);
-			assert(nwritten == 1);
 			assert( endid == 1 );
 		}
 	}

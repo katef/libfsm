@@ -302,7 +302,6 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 
 		count = fsm_endid_count(fsm, s);
 		if (count > 0) {
-			size_t written;
 			int res;
 
 			ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
@@ -310,9 +309,8 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 				return -1;
 			}
 
-			res = fsm_endid_get(fsm, s, count, ids, &written);
+			res = fsm_endid_get(fsm, s, count, ids);
 			assert(res == 1);
-			assert(written == count);
 		}
 
 		if (fsm->opt->endleaf != NULL) {

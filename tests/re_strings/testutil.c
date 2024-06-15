@@ -47,12 +47,11 @@ run_test(const char **strings)
 		const int res = fsm_exec(fsm, fsm_sgetc, string, &end, NULL);
 		assert(res > 0); /* match */
 
-		size_t written;
 		int eres = fsm_endid_get(fsm, end,
-		    MAX_INPUTS, id_buf, &written);
+		    MAX_INPUTS, id_buf);
 		assert(eres == 1);
 		bool found = false;
-		for (size_t i = 0; i < written; i++) {
+		for (size_t i = 0; i < fsm_endid_count(fsm, end); i++) {
 			if (id_buf[i] == id) {
 				found = true;
 				break;

@@ -85,27 +85,26 @@ int main(void)
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
 			fsm_end_id_t endids[sizeof all_end_ids / sizeof all_end_ids[0]];
-			size_t i, nwritten;
+			size_t i;
 			int ret;
 
 			memset(&endids[0], 0, sizeof endids);
 
 			assert(fsm_endid_count(fsm, state_ind) == sizeof all_end_ids / sizeof all_end_ids[0]);
 
-                        nwritten = 0;
 			ret = fsm_endid_get(
 				fsm,
 				state_ind,
-				sizeof endids/sizeof endids[0],
-				&endids[0],
-				&nwritten);
+				sizeof endids / sizeof endids[0],
+				&endids[0]);
 
 			assert(ret == 1);
-			assert(nwritten == sizeof all_end_ids / sizeof all_end_ids[0]);
 
 			/* sort endids and compare */
-			qsort(&endids[0], nwritten, sizeof endids[0], cmp_endids);
-			for (i=0; i < nwritten; i++) {
+			qsort(&endids[0],
+				sizeof endids / sizeof endids[0], sizeof endids[0],
+				cmp_endids);
+			for (i=0; i < fsm_endid_count(fsm, state_ind); i++) {
 				assert(endids[i] == sorted_all_end_ids[i]);
 			}
 

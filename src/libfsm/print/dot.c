@@ -168,7 +168,7 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 			}
 		} else {
 			fsm_end_id_t *ids;
-			size_t count, written;
+			size_t count;
 
 			ids = NULL;
 			count = fsm_endid_count(fsm, s);
@@ -180,9 +180,8 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 					return -1;
 				}
 
-				res = fsm_endid_get(fsm, s, count, ids, &written);
+				res = fsm_endid_get(fsm, s, count, ids);
 				assert(res == 1);
-				assert(count == written);
 			}
 
 			fprintf(f, "\t%sS%-2u [ shape = doublecircle",

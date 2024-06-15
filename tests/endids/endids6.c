@@ -92,11 +92,9 @@ int main(void)
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
 			fsm_end_id_t endids[2] = {0,0};
-			size_t nwritten;
 			size_t count;
 			int ret;
 
-			nwritten = 0;
 			count = fsm_endid_count(fsm, state_ind);
 
 			assert( count > 0 && count <= 2);
@@ -105,20 +103,18 @@ int main(void)
 				fsm,
 				state_ind,
 				sizeof endids / sizeof endids[0],
-				&endids[0],
-				&nwritten);
+				&endids[0]);
 
 			assert(ret == 1);
-			assert(nwritten == count);
 
 			info[ninfo].state = state_ind;
-			info[ninfo].count = nwritten;
+			info[ninfo].count = count;
 
-			if (nwritten == 1) {
+			if (count == 1) {
 				assert(endids[0] == 1 || endids[0] == 2);
 				info[ninfo].endids[0] = endids[0];
-			} else if (nwritten == 2) {
-				qsort(&endids[0], nwritten, sizeof endids[0], cmp_endids);
+			} else if (count == 2) {
+				qsort(&endids[0], count, sizeof endids[0], cmp_endids);
 				assert(endids[0] == 1 && endids[1] == 2);
 				info[ninfo].endids[0] = endids[0];
 				info[ninfo].endids[1] = endids[1];
@@ -137,12 +133,11 @@ int main(void)
 	for (state_ind = 0, info_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
 			fsm_end_id_t endids[2] = {0,0};
-			size_t nwritten, count, ind;
+			size_t count, ind;
 			int ret;
 
 			assert( state_ind == info[info_ind].state );
 
-			nwritten = 0;
 			count = fsm_endid_count(fsm, state_ind);
 
 			assert(count > 0 && count <= 2);
@@ -152,13 +147,11 @@ int main(void)
 				fsm,
 				state_ind,
 				sizeof endids / sizeof endids[0],
-				&endids[0],
-				&nwritten);
+				&endids[0]);
 
 			assert(ret == 1);
-			assert(nwritten == count);
 
-			if (nwritten > 1) {
+			if (count > 1) {
 				qsort(&endids[0], count, sizeof endids[0], cmp_endids);
 			}
 

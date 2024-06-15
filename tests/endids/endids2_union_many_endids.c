@@ -183,12 +183,11 @@ int main(void)
 		if (fsm_isend(fsm, state_ind)) {
 			int tested_pattern[NUM_PATTERNS];
 			fsm_end_id_t endids[NUM_ENDIDS_TOTAL];
-			size_t nwritten, count, j;
+			size_t count, j;
 			int ret;
 
 			memset(&endids[0], 0, sizeof endids);
 
-			nwritten = 0;
 			count = fsm_endid_count(fsm, state_ind);
 
 			assert(count > 0 && count <= sizeof endids/sizeof endids[0]);
@@ -197,11 +196,9 @@ int main(void)
 				fsm,
 				state_ind,
 				sizeof endids/sizeof endids[0],
-				&endids[0],
-				&nwritten);
+				&endids[0]);
 
 			assert(ret == 1);
-			assert(nwritten == count);
 
 			memset(&tested_pattern[0], 0, sizeof tested_pattern);
 
@@ -250,12 +247,11 @@ int main(void)
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
 			fsm_end_id_t endids[NUM_ENDIDS_TOTAL];
-			size_t nwritten, count;
+			size_t count;
 			int ret;
 
 			memset(&endids[0], 0, sizeof endids);
 
-			nwritten = 0;
 			count = fsm_endid_count(fsm, state_ind);
 
 			assert(count <= NUM_ENDIDS_TOTAL);
@@ -264,11 +260,9 @@ int main(void)
 				fsm,
 				state_ind,
 				sizeof endids/sizeof endids[0],
-				&endids[0],
-				&nwritten);
+				&endids[0]);
 
 			assert(ret == 1);
-			assert(nwritten == count);
 		}
 	}
 

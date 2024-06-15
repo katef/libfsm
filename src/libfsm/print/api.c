@@ -150,7 +150,6 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 		count = fsm_endid_count(fsm, end);
 		if (count > 0) {
 			fsm_end_id_t *ids;
-			size_t written;
 			int res;
 
 			ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
@@ -159,9 +158,8 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 				goto error;
 			}
 
-			res = fsm_endid_get(fsm, end, count, ids, &written);
+			res = fsm_endid_get(fsm, end, count, ids);
 			assert(res == 1);
-			assert(written == count);
 
 			qsort(ids, count, sizeof *ids, comp_end_id);
 

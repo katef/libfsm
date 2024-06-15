@@ -73,11 +73,9 @@ int main(void)
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(comb, state_ind)) {
 			fsm_end_id_t endids[3] = {0,0,0};
-			size_t nwritten;
 			size_t count;
 			int ret;
 
-			nwritten = 0;
 			count = fsm_endid_count(comb, state_ind);
 
 			printf("state %u count = %zu\n", state_ind, count);
@@ -88,11 +86,9 @@ int main(void)
 				comb,
 				state_ind,
 				sizeof endids / sizeof endids[0],
-				&endids[0],
-				&nwritten);
+				&endids[0]);
 
 			assert(ret == 1);
-			assert(nwritten == count);
 
 			qsort(&endids[0], count, sizeof endids[0], cmp_endids);
 			assert(endids[0] == 1 && endids[1] == 2 && endids[2] == 4);
