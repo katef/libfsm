@@ -80,26 +80,26 @@ int main(void)
             };
 
             for (i=0; i < sizeof matches / sizeof matches[0]; i++) {
-		fsm_end_id_t *end_ids;
-		size_t num_end_ids;
+		fsm_end_id_t *ids;
+		size_t count;
 
-		end_ids = NULL;
-		num_end_ids = 0;
-		ret = match_string(fsm, matches[i].s, NULL, &end_ids, &num_end_ids);
+		ids = NULL;
+		count = 0;
+		ret = match_string(fsm, matches[i].s, NULL, &ids, &count);
 
                 if (matches[i].should_match) {
                     assert( ret == 1 );
-                    assert( end_ids != NULL );
-                    assert( end_ids[0] = 1 );
-                    assert( num_end_ids == 1 );
-                    assert( end_ids[0] = matches[i].endid );
+                    assert( ids != NULL );
+                    assert( ids[0] = 1 );
+                    assert( count == 1 );
+                    assert( ids[0] = matches[i].endid );
                 } else {
                     assert( ret == 0 );
-                    assert( end_ids == NULL );
-                    assert( num_end_ids == 0 );
+                    assert( ids == NULL );
+                    assert( count == 0 );
                 }
 
-		free(end_ids);
+		free(ids);
             }
         }
 

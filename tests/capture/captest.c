@@ -89,18 +89,18 @@ captest_run_single(const struct captest_single_fsm_test_info *info)
 	if (end != strlen(info->string)) { FAIL("exec end pos"); }
 
 	{
-		fsm_end_id_t id_buf[1] = { ~0 };
+		fsm_end_id_t ids[1] = { ~0 };
 		int gres;
 		if (1 != fsm_endid_count(fsm, end)) {
 			FAIL("did not have exactly one end ID");
 		}
 
-		gres = fsm_endid_get(fsm, end, 1, id_buf);
+		gres = fsm_endid_get(fsm, end, 1, ids);
 		if (gres != 1) {
 			FAIL("failed to get end IDs");
 		}
 
-		if (0 != id_buf[0]) {
+		if (0 != ids[0]) {
 			FAIL("failed to get end ID of 0");
 		}
 	}
@@ -180,7 +180,7 @@ int
 captest_check_single_end_id(const struct fsm *fsm, fsm_state_t end_state,
     unsigned expected_end_id, const char **msg)
 {
-	fsm_end_id_t id_buf[1] = { ~0 };
+	fsm_end_id_t ids[1] = { ~0 };
 	int gres;
 	const char *unused;
 
@@ -193,13 +193,13 @@ captest_check_single_end_id(const struct fsm *fsm, fsm_state_t end_state,
 		return 0;
 	}
 
-	gres = fsm_endid_get(fsm, end_state, 1, id_buf);
+	gres = fsm_endid_get(fsm, end_state, 1, ids);
 	if (gres != 1) {
 		*msg = "failed to get end IDs";
 		return 0;
 	}
 
-	if (expected_end_id != id_buf[0]) {
+	if (expected_end_id != ids[0]) {
 		*msg = "failed to get expected end ID";
 		return 0;
 	}

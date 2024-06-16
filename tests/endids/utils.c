@@ -4,7 +4,7 @@
 #include <errno.h>
 
 int
-match_string(const struct fsm *fsm, const char *s, fsm_state_t *end_ptr, fsm_end_id_t **endids_ptr, size_t *count_ptr)
+match_string(const struct fsm *fsm, const char *s, fsm_state_t *end_ptr, fsm_end_id_t **ids_ptr, size_t *count_ptr)
 {
 	fsm_state_t end = 0;
 	int ret;
@@ -21,25 +21,25 @@ match_string(const struct fsm *fsm, const char *s, fsm_state_t *end_ptr, fsm_end
 		if (count > 0) {
 			int ret;
 
-			fsm_end_id_t *endids = calloc(count, sizeof *endids);
-			if (endids == NULL) {
+			fsm_end_id_t *ids = calloc(count, sizeof *ids);
+			if (ids == NULL) {
 				return -1;
 			}
 
-			ret = fsm_endid_get(fsm, end, count, endids);
+			ret = fsm_endid_get(fsm, end, count, ids);
 			if (ret == 0) {
-				free(endids);
+				free(ids);
 				errno = EINVAL;
 				return -1;
 			}
 			
-			if (endids_ptr != NULL) {
-				*endids_ptr = endids;
+			if (ids_ptr != NULL) {
+				*ids_ptr = ids;
 				if (count_ptr != NULL) {
 					*count_ptr = count;
 				}
 			} else {
-				free(endids);
+				free(ids);
 			}
 		}
 	}

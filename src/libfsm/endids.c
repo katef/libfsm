@@ -683,7 +683,7 @@ fsm_endid_count(const struct fsm *fsm,
 
 int
 fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
-    size_t id_buf_count, fsm_end_id_t *id_buf)
+    size_t count, fsm_end_id_t *ids)
 {
 	size_t i;
 	const struct endid_info *ei = NULL;
@@ -695,7 +695,7 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 	ei = fsm->endid_info;
 	assert(ei != NULL);
 
-	assert(id_buf != NULL);
+	assert(ids != NULL);
 
 	mask = ei->bucket_count - 1;
 	/* bucket count is a power of 2 */
@@ -721,7 +721,7 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 
 		if (b->state == end_state) {
 			size_t id_i;
-			if (b->ids->count > id_buf_count) {
+			if (b->ids->count > count) {
 #if LOG_ENDIDS > 2
 				fprintf(stderr, "fsm_endid_get: insufficient space\n");
 #endif
@@ -731,7 +731,7 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 #if LOG_ENDIDS > 2
 				fprintf(stderr, "fsm_endid_get: writing id[%zu]: %d\n", id_i, b->ids->ids[id_i]);
 #endif
-				id_buf[id_i] = b->ids->ids[id_i];
+				ids[id_i] = b->ids->ids[id_i];
 			}
 
 			/* todo: could sort them here, if it matters. */

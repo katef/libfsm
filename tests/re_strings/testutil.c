@@ -12,7 +12,7 @@
 static struct fsm_options opt;
 
 #define MAX_INPUTS 100
-static fsm_end_id_t id_buf[MAX_INPUTS];
+static fsm_end_id_t ids[MAX_INPUTS];
 
 int
 run_test(const char **strings)
@@ -48,11 +48,11 @@ run_test(const char **strings)
 		assert(res > 0); /* match */
 
 		int eres = fsm_endid_get(fsm, end,
-		    MAX_INPUTS, id_buf);
+		    MAX_INPUTS, ids);
 		assert(eres == 1);
 		bool found = false;
 		for (size_t i = 0; i < fsm_endid_count(fsm, end); i++) {
-			if (id_buf[i] == id) {
+			if (ids[i] == id) {
 				found = true;
 				break;
 			}

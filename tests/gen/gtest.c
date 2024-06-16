@@ -58,9 +58,9 @@ gtest_matches_cb(const struct fsm *fsm,
 			m->found = true;
 
 #define ID_BUF_COUNT 1
-			fsm_end_id_t id_buf[ID_BUF_COUNT];
+			fsm_end_id_t ids[ID_BUF_COUNT];
 			int gres = fsm_endid_get(fsm,
-			    end_state, ID_BUF_COUNT, id_buf);
+			    end_state, ID_BUF_COUNT, ids);
 
 			if (gres != 1) {
 				fprintf(stderr,
@@ -69,9 +69,9 @@ gtest_matches_cb(const struct fsm *fsm,
 				return FSM_GENERATE_MATCHES_CB_RES_HALT;
 			}
 
-			if (fsm_endid_count(fsm, end_state) != 1 || id_buf[0] != m_i) {
+			if (fsm_endid_count(fsm, end_state) != 1 || ids[0] != m_i) {
 				fprintf(stderr, "ERROR: endid mismatch, expected %zu, got %u\n",
-				    m_i, id_buf[0]);
+				    m_i, ids[0]);
 				return FSM_GENERATE_MATCHES_CB_RES_HALT;
 			}
 

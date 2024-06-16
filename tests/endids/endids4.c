@@ -134,33 +134,33 @@ int main(void)
 		};
 
 		for (i=0; i < sizeof matches / sizeof matches[0]; i++) {
-			fsm_end_id_t *end_ids;
-			size_t num_end_ids;
+			fsm_end_id_t *ids;
+			size_t count;
 
-			end_ids = NULL;
-			num_end_ids = 0;
-			ret = match_string(comb, matches[i].s, NULL, &end_ids, &num_end_ids);
+			ids = NULL;
+			count = 0;
+			ret = match_string(comb, matches[i].s, NULL, &ids, &count);
 
 			if (matches[i].should_match) {
 				size_t j;
 
 				assert( ret == 1 );
-				assert( end_ids != NULL );
+				assert( ids != NULL );
 
-				assert( num_end_ids == matches[i].count );
+				assert( count == matches[i].count );
 
-				qsort(&end_ids[0], num_end_ids, sizeof end_ids[0], cmp_endids);
+				qsort(&ids[0], count, sizeof ids[0], cmp_endids);
 
-				for (j=0; j < num_end_ids; j++) {
-					assert( end_ids[j] == matches[i].endid[j] );
+				for (j=0; j < count; j++) {
+					assert( ids[j] == matches[i].endid[j] );
 				}
 			} else {
 				assert( ret == 0 );
-				assert( end_ids == NULL );
-				assert( num_end_ids == 0 );
+				assert( ids == NULL );
+				assert( count == 0 );
 			}
 
-			free(end_ids);
+			free(ids);
 		}
         }
 

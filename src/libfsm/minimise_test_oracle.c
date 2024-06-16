@@ -113,8 +113,8 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	unsigned *endid_group_assignments = NULL;
 	size_t endid_group_count = 1; /* group 0 is the empty set */
 	unsigned *endid_group_leaders = NULL;
-	fsm_end_id_t *endid_buf_a = NULL;
-	fsm_end_id_t *endid_buf_b = NULL;
+	fsm_end_id_t *ids_a = NULL;
+	fsm_end_id_t *ids_b = NULL;
 
 	table = calloc(row_words * table_states, sizeof(table[0]));
 	if (table == NULL) { goto cleanup; }
@@ -165,10 +165,10 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 		}
 	}
 
-	endid_buf_a = malloc(max_endid_count * sizeof(endid_buf_a[0]));
-	if (endid_buf_a == NULL) { goto cleanup; }
-	endid_buf_b = malloc(max_endid_count * sizeof(endid_buf_b[0]));
-	if (endid_buf_b == NULL) { goto cleanup; }
+	ids_a = malloc(max_endid_count * sizeof(ids_a[0]));
+	if (ids_a == NULL) { goto cleanup; }
+	ids_b = malloc(max_endid_count * sizeof(ids_b[0]));
+	if (ids_b == NULL) { goto cleanup; }
 
 	/* For every end state, check if it has endids. If not, assign it
 	 * to endid group 0 (none). Otherwise, check if its endids match
@@ -187,7 +187,7 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 		}
 
 		int eres = fsm_endid_get(fsm, i,
-		    count_a, endid_buf_a);
+		    count_a, ids_a);
 		assert(eres == 1);
 
 		bool found = false;
@@ -201,10 +201,10 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 			assert(count_b > 0);
 			assert(count_b <= max_endid_count);
 			eres = fsm_endid_get(fsm, endid_group_leaders[eg_i],
-			    count_b, endid_buf_b);
+			    count_b, ids_b);
 			assert(eres == 1);
 
-			if (0 == memcmp(endid_buf_a, endid_buf_b, count_a * sizeof(endid_buf_a[0]))) {
+			if (0 == memcmp(ids_a, ids_b, count_a * sizeof(ids_a[0]))) {
 				found = true;
 				endid_group_assignments[i] = eg_i;
 				break;
@@ -361,8 +361,8 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	free(mapping);
 	free(endid_group_assignments);
 	free(endid_group_leaders);
-	free(endid_buf_a);
-	free(endid_buf_b);
+	free(ids_a);
+	free(ids_b);
 
 	return res;
 
@@ -372,8 +372,8 @@ cleanup:
 	if (mapping != NULL) { free(mapping); }
 	if (endid_group_assignments != NULL) { free(endid_group_assignments); }
 	if (endid_group_leaders != NULL) { free(endid_group_leaders); }
-	if (endid_buf_a != NULL) { free(endid_buf_a); }
-	if (endid_buf_b != NULL) { free(endid_buf_b); }
+	if (ids_a != NULL) { free(ids_a); }
+	if (ids_b != NULL) { free(ids_b); }
 	if (res != NULL) { fsm_free(res); }
 	return NULL;
 }
