@@ -26,6 +26,19 @@
 
 /* TODO: centralise */
 static int
+comp_end_id(const void *a, const void *b)
+{
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (* (fsm_end_id_t *) a < * (fsm_end_id_t *) b) { return -1; }
+	if (* (fsm_end_id_t *) a > * (fsm_end_id_t *) b) { return +1; }
+
+	return 0;
+}
+
+/* TODO: centralise */
+static int
 findany(const struct fsm *fsm, fsm_state_t state, fsm_state_t *a)
 {
 	struct fsm_edge e;
@@ -278,11 +291,58 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 
 	fprintf(f, "end:   ");
 	for (s = 0; s < fsm->statecount; s++) {
-		if (fsm_isend(fsm, s)) {
-			end--;
+		fsm_end_id_t *ids;
+		size_t count;
 
-			fprintf(f, "%u%s", s, end > 0 ? ", " : ";\n");
+		if (!fsm_isend(fsm, s)) {
+			continue;
 		}
+
+		end--;
+
+		count = fsm_endid_count(fsm, s);
+		if (count > 0) {
+			int res;
+
+			ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
+			if (ids == NULL) {
+				return -1;
+			}
+
+			res = fsm_endid_get(fsm, s, count, ids);
+			assert(res == 1);
+		}
+
+		if (fsm->opt->endleaf != NULL) {
+			if (-1 == fsm->opt->endleaf(f,
+				ids, count,
+				fsm->opt->endleaf_opaque))
+			{
+				return -1;
+			}
+		} else {
+			fprintf(f, "%u", s);
+		}
+
+		if (count > 0) {
+			qsort(ids, count, sizeof *ids, comp_end_id);
+
+			fprintf(f, " = [");
+
+			for (size_t id = 0; id < count; id++) {
+				fprintf(f, "%zu", id);
+
+				if (id + 1 < count) {
+					fprintf(f, ", ");
+				}
+			}
+
+			fprintf(f, "]");
+
+			f_free(fsm->opt->alloc, ids);
+		}
+
+		fprintf(f, "%s", end > 0 ? ", " : ";\n");
 	}
 
 done:

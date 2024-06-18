@@ -32,13 +32,14 @@
 #define START UINT32_MAX
 
 static int
-leaf(FILE *f, const struct fsm_end_ids *ids, const void *leaf_opaque)
+leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
 {
 	assert(f != NULL);
 	assert(leaf_opaque == NULL);
 
 	(void) leaf_opaque;
 	(void) ids;
+	(void) count;
 
 	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
 	 * maybe user defined */
@@ -91,17 +92,37 @@ static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits, const struct ir *ir)
 {
+	(void) ir;
+
 	if (end_bits == VM_END_FAIL) {
 		fprintf(f, "return -1");
 		return 0;
 	}
 
 	if (opt->endleaf != NULL) {
-		if (-1 == opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque)) {
+		if (-1 == opt->endleaf(f,
+			op->ir_state->endids.ids, op->ir_state->endids.count,
+			opt->endleaf_opaque))
+		{
 			return -1;
 		}
 	} else {
-		fprintf(f, "return %td", op->ir_state - ir->states);
+		size_t i;
+
+		assert(f != NULL);
+
+		/* awk can't return an array */
+		fprintf(f, "return \"");
+
+		for (i = 0; i < op->ir_state->endids.count; i++) {
+			fprintf(f, "%u", op->ir_state->endids.ids[i]);
+
+			if (i < op->ir_state->endids.count - 1) {
+				fprintf(f, ",");
+			}
+		}
+
+		fprintf(f, "\"");
 	}
 
 	return 0;
@@ -125,14 +146,18 @@ print_branch(FILE *f, const struct dfavm_op_ir *op, const char *prefix)
 static int
 fsm_print_awkfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp, const char *prefix,
-	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
+	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
 	static const struct dfavm_assembler_ir zero;
 	struct dfavm_assembler_ir a;
 	struct dfavm_op_ir *op;
 
-	static const struct fsm_vm_compile_opts vm_opts = { FSM_VM_COMPILE_DEFAULT_FLAGS, FSM_VM_COMPILE_VM_V1, NULL };
+	static const struct fsm_vm_compile_opts vm_opts = {
+		FSM_VM_COMPILE_DEFAULT_FLAGS,
+		FSM_VM_COMPILE_VM_V1,
+		NULL
+	};
 
 	assert(f != NULL);
 	assert(ir != NULL);

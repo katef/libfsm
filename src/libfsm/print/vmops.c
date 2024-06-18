@@ -35,12 +35,13 @@ enum vmops_dialect {
 };
 
 static int
-leaf(FILE *f, const struct fsm_end_ids *ids, const void *leaf_opaque)
+leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
 {
 	assert(f != NULL);
 	assert(leaf_opaque == NULL);
 
 	(void) ids;
+	(void) count;
 	(void) leaf_opaque;
 
 	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
@@ -97,7 +98,7 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 }
 
 static int
-print_end(FILE *f, const struct dfavm_op_ir *op, const char *prefix,
+print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt, const char *prefix,
 	enum dfavm_op_end end_bits, const struct ir *ir)
 {
 	if (end_bits == VM_END_FAIL) {
@@ -105,7 +106,18 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const char *prefix,
 		return 0;
 	}
 
-	fprintf(f, "%sactionRET, %td},\n", prefix, op->ir_state - ir->states);
+	if (opt->endleaf != NULL) {
+		if (-1 == opt->endleaf(f,
+			op->ir_state->endids.ids, op->ir_state->endids.count,
+			opt->endleaf_opaque))
+		{
+			return -1;
+		}
+	} else {
+		fprintf(f, "%sactionRET, %td", prefix, op->ir_state - ir->states);
+	}
+
+	fprintf(f, "},\n");
 
 	return 0;
 }
@@ -137,14 +149,18 @@ print_fetch(FILE *f, const struct fsm_options *opt, const char *prefix)
 /* TODO: eventually to be non-static */
 static int
 fsm_print_vmopsfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt, const char *prefix,
-	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
+	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
 	static const struct dfavm_assembler_ir zero;
 	struct dfavm_assembler_ir a;
 	struct dfavm_op_ir *op;
 
-	static const struct fsm_vm_compile_opts vm_opts = { FSM_VM_COMPILE_DEFAULT_FLAGS, FSM_VM_COMPILE_VM_V1, NULL };
+	static const struct fsm_vm_compile_opts vm_opts = {
+		FSM_VM_COMPILE_DEFAULT_FLAGS,
+		FSM_VM_COMPILE_VM_V1,
+		NULL
+	};
 
 	assert(f != NULL);
 	assert(ir != NULL);
@@ -172,7 +188,7 @@ fsm_print_vmopsfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			if (-1 == print_cond(f, op, opt, prefix)) {
 				return -1;
 			}
-			if (-1 == print_end(f, op, prefix, op->u.stop.end_bits, ir)) {
+			if (-1 == print_end(f, op, opt, prefix, op->u.stop.end_bits, ir)) {
 				return -1;
 			}
 			break;
@@ -181,7 +197,7 @@ fsm_print_vmopsfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			if (-1 == print_fetch(f, opt, prefix)) {
 				return -1;
 			}
-			if (-1 == print_end(f, op, prefix, op->u.fetch.end_bits, ir)) {
+			if (-1 == print_end(f, op, opt, prefix, op->u.fetch.end_bits, ir)) {
 				return -1;
 			}
 			break;

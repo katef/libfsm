@@ -477,17 +477,14 @@ main(int argc, char *argv[])
 		struct fsm *q;
 
 		if ((op & OP_ARITY) == 1) {
-			if (argc > 1) {
-				usage();
-				exit(EXIT_FAILURE);
-			}
+			/* argc < 1 is okay */
 
 			q = fsm_parse((argc == 0) ? stdin : xopen(argv[0]), &opt);
 			if (q == NULL) {
 				exit(EXIT_FAILURE);
 			}
 		} else {
-			if (argc != 2) {
+			if (argc < 2) {
 				usage();
 				exit(EXIT_FAILURE);
 			}
@@ -610,6 +607,17 @@ main(int argc, char *argv[])
 		printf("=> total %g ms (avg %g ms)\n", elapsed, elapsed / iterations);
 	}
 
+	/* we're done consuming filenames, remaining argv is text to match */
+	if ((op & OP_ARITY) == 1) {
+		if (argc > 0) {
+			argc -= 1;
+			argv += 1;
+		}
+	} else {
+		argc -= 2;
+		argv += 2;
+	}
+
 	/* henceforth, r is $?-convention (0 for success) */
 
 	if (fsm == NULL) {
@@ -661,14 +669,15 @@ main(int argc, char *argv[])
 		}
 	}
 
-	/* TODO: optional -- to delimit texts as opposed to .fsm filenames */
-	if (op == OP_IDENTITY && argc > 0) {
+	/* match text */
+	if (argc > 0) {
 		int i;
 
 		/* TODO: option to print input texts which match. like grep(1) does.
 		 * This is not the same as printing patterns which match (by associating
 		 * a pattern to the end state), like lx(1) does */
 
+		/* TODO: optional -- to delimit texts as opposed to .fsm filenames */
 		for (i = 0; i < argc; i++) {
 			fsm_state_t state;
 			int e;
@@ -694,7 +703,7 @@ main(int argc, char *argv[])
 				continue;
 			}
 
-			/* TODO: option to print state number? */
+			/* TODO: option to print matching end-ids */
 		}
 	}
 

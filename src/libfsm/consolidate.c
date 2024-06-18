@@ -231,19 +231,14 @@ static int
 consolidate_end_ids_cb(fsm_state_t state, const fsm_end_id_t *ids, size_t num_ids, void *opaque)
 {
 	struct consolidate_end_ids_env *env = opaque;
-	enum fsm_endid_set_res sres;
 	fsm_state_t s;
 	assert(env->tag == 'C');
 
 	assert(state < env->mapping_count);
 	s = env->mapping[state];
 
-	sres = fsm_endid_set_bulk(env->dst, s, num_ids, ids, FSM_ENDID_BULK_APPEND);
-	if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
-		return 0;
-	}
-
-	return 1;
+	return fsm_endid_set_bulk(env->dst, s,
+		num_ids, ids, FSM_ENDID_BULK_APPEND);
 }
 
 static int

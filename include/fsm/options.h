@@ -65,12 +65,15 @@ struct fsm_options {
 	const char *cp;
 
 	/* TODO: explain. for C code fragment output */
-	int (*leaf)(FILE *, const struct fsm_end_ids *ids,
+	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count,
 	    const void *leaf_opaque);
 	void *leaf_opaque;
 
 	/* TODO: explain. for C code fragment output */
-	int (*endleaf)(FILE *, const struct fsm_end_ids *ids,
+	/* Placement in the output stream depends on the format.
+	 * This replaces an entire "return xyz;" statement for C-like formats,
+	 * but appends extra information for others. */
+	int (*endleaf)(FILE *, const fsm_end_id_t *ids, size_t count,
 	    const void *endleaf_opaque);
 	void *endleaf_opaque;
 

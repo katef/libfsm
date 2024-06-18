@@ -37,16 +37,6 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	assert(fsm->opt != NULL);
 	assert(s < fsm->statecount);
 
-	if (!fsm->opt->anonymous_states) {
-		fprintf(f, "\t%sS%-2u [ label = <",
-			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-			s);
-
-		fprintf(f, "%u", s);
-
-		fprintf(f, "> ];\n");
-	}
-
 	if (!fsm->opt->consolidate_edges) {
 		{
 			struct state_iter jt;
@@ -163,44 +153,72 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 static int
 print_dotfrag(FILE *f, const struct fsm *fsm)
 {
-	fsm_state_t i;
+	fsm_state_t s;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(fsm->opt != NULL);
 
-	for (i = 0; i < fsm->statecount; i++) {
-		if (fsm_isend(fsm, i)) {
-			enum fsm_getendids_res res;
-			size_t written;
-			struct fsm_end_ids *ids = NULL;
-			const size_t count = fsm_getendidcount(fsm, i);
+	for (s = 0; s < fsm->statecount; s++) {
+		if (!fsm_isend(fsm, s)) {
+			if (!fsm->opt->anonymous_states) {
+				fprintf(f, "\t%sS%-2u [ label = <%u> ];\n",
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+				s, s);
+			}
+		} else {
+			fsm_end_id_t *ids;
+			size_t count;
+
+			ids = NULL;
+			count = fsm_endid_count(fsm, s);
 			if (count > 0) {
-				ids = f_malloc(fsm->opt->alloc,
-					sizeof(*ids) + ((count - 1) * sizeof(ids->ids)));
-				assert(ids != NULL);
+				int res;
+
+				ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
 				if (ids == NULL) {
 					return -1;
 				}
 
-				res = fsm_getendids(fsm, i, count,
-				    ids->ids, &written);
-				if (res == FSM_GETENDIDS_FOUND) {
-					ids->count = (unsigned)written;
-				} else {
-					assert(res == FSM_GETENDIDS_NOT_FOUND);
-				}
+				res = fsm_endid_get(fsm, s, count, ids);
+				assert(res == 1);
 			}
 
 			fprintf(f, "\t%sS%-2u [ shape = doublecircle",
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "", i);
+				fsm->opt->prefix != NULL ? fsm->opt->prefix : "", s);
+
+			assert(f != NULL);
+
+			fprintf(f, ", ");
+
+			fprintf(f, "label = <");
 
 			if (fsm->opt->endleaf != NULL) {
-				fprintf(f, ", ");
-				if (-1 == fsm->opt->endleaf(f, ids, fsm->opt->endleaf_opaque)) {
+				if (-1 == fsm->opt->endleaf(f,
+					ids, count,
+					fsm->opt->endleaf_opaque))
+				{
 					return -1;
 				}
+			} else if (!fsm->opt->anonymous_states) {
+				fprintf(f, "%u", s);
 			}
+
+			if (fsm->opt->endleaf != NULL || !fsm->opt->anonymous_states) {
+				if (count > 0) {
+					fprintf(f, "<BR/>");
+				}
+			}
+
+			for (size_t i = 0; i < count; i++) {
+				fprintf(f, "#%u", ids[i]);
+
+				if (i < count - 1) {
+					fprintf(f, ",");
+				}
+			}
+
+			fprintf(f, ">");
 
 			fprintf(f, " ];\n");
 
@@ -209,7 +227,7 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 
 		/* TODO: show example here, unless !opt->comments */
 
-		if (-1 == singlestate(f, fsm, i)) {
+		if (-1 == singlestate(f, fsm, s)) {
 			return -1;
 		}
 	}

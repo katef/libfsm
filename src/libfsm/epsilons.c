@@ -405,9 +405,7 @@ carry_endids(struct fsm *fsm, struct state_set *states,
 
 	/* add them */
 	for (i = 0; i < env.count; i++) {
-		enum fsm_endid_set_res sres;
-		sres = fsm_endid_set(fsm, dst_state, env.ids[i]);
-		if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
+		if (!fsm_endid_set(fsm, dst_state, env.ids[i])) {
 			env.ok = 0;
 			goto cleanup;
 		}

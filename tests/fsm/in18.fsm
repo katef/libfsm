@@ -1,0 +1,11 @@
+#
+# Copyright 2008-2024 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+start: a;
+
+# missing end-id
+end: a = [ , ];
+

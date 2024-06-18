@@ -27,6 +27,19 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
+/* TODO: centralise */
+static int
+comp_end_id(const void *a, const void *b)
+{
+	assert(a != NULL);
+	assert(b != NULL);
+
+	if (* (fsm_end_id_t *) a < * (fsm_end_id_t *) b) { return -1; }
+	if (* (fsm_end_id_t *) a > * (fsm_end_id_t *) b) { return +1; }
+
+	return 0;
+}
+
 static int
 rangeclass(unsigned char x, unsigned char y)
 {
@@ -90,10 +103,11 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 		fprintf(f, "\n");
 
 		fprintf(f, "#include <fsm/fsm.h>\n");
+		fprintf(f, "#include <fsm/pred.h>\n");
 		fprintf(f, "\n");
 
 		fprintf(f, "int\n");
-		fprintf(f, "%sfsm(struct fsm *fsm, struct fsm_state *x, struct fsm_state *y)\n",
+		fprintf(f, "%sfsm(struct fsm *fsm, fsm_state_t *x, fsm_state_t *y)\n",
 			fsm->opt->prefix != NULL ? fsm->opt->prefix : "");
 
 		fprintf(f, "{\n");
@@ -103,16 +117,20 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 	fprintf(f, "\tsize_t i;\n");
 	fprintf(f, "\n");
 
+	fprintf(f, "\tassert(x != NULL);\n");
+	fprintf(f, "\tassert(y != NULL);\n");
+	fprintf(f, "\n");
+
 	fprintf(f, "\tfor (i = 0; i < %zu; i++) {\n", fsm->statecount);
 
 	fprintf(f, "\t\tif (i == %u) {\n", start);
-	fprintf(f, "\t\t\ts[%u] = x;\n", start);
+	fprintf(f, "\t\t\ts[%u] = *x;\n", start);
 	fprintf(f, "\t\t\tcontinue;\n");
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\n");
 
 	fprintf(f, "\t\tif (i == %u) {\n", end);
-	fprintf(f, "\t\t\ts[%u] = y;\n", end);
+	fprintf(f, "\t\t\ts[%u] = *y;\n", end);
 	fprintf(f, "\t\t\tcontinue;\n");
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\n");
@@ -123,6 +141,38 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 
 	fprintf(f, "\t}\n");
 	fprintf(f, "\n");
+
+	/* endleaf() doesn't make sense for this format */
+
+	{
+		size_t count;
+
+		count = fsm_endid_count(fsm, end);
+		if (count > 0) {
+			fsm_end_id_t *ids;
+			int res;
+
+			ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
+			if (ids == NULL) {
+				/* XXX */
+				goto error;
+			}
+
+			res = fsm_endid_get(fsm, end, count, ids);
+			assert(res == 1);
+
+			qsort(ids, count, sizeof *ids, comp_end_id);
+
+			fprintf(f, "\tif (fsm_isend(fsm, s[%u])) {\n", end);
+			for (size_t id = 0; id < count; id++) {
+				fprintf(f, "\t\tif (!fsm_endid_set(fsm, s[%u], %zu)) { return 0; }\n", end, id);
+			}
+			fprintf(f, "\t}\n");
+			fprintf(f, "\n");
+
+			f_free(fsm->opt->alloc, ids);
+		}
+	}
 
 	a = f_malloc(fsm->opt->alloc, fsm->statecount * sizeof *a);
 	if (a == NULL) {

@@ -29,12 +29,13 @@
 #include "ir.h"
 
 static int
-leaf(FILE *f, const struct fsm_end_ids *ids, const void *leaf_opaque)
+leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
 {
 	assert(f != NULL);
 	assert(leaf_opaque == NULL);
 
 	(void) ids;
+	(void) count;
 	(void) leaf_opaque;
 
 	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
@@ -96,7 +97,10 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	}
 
 	if (opt->endleaf != NULL) {
-		if (-1 == opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque)) {
+		if (-1 == opt->endleaf(f,
+			op->ir_state->endids.ids, op->ir_state->endids.count,
+			opt->endleaf_opaque))
+		{
 			return -1;
 		}
 	} else {
@@ -121,7 +125,7 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 		 * Per its API, fsm_getc() is expected to return a positive character
 		 * value (as if cast via unsigned char), or EOF. Just like fgetc() does.
 		 */
-		fprintf(f, "if (c = fsm_getc(opaque), c == EOF) ");
+		fprintf(f, "if (c = fsm_getc(getc_opaque), c == EOF) ");
 		break;
 
 	case FSM_IO_STR:
@@ -279,14 +283,18 @@ unsuitable:
 static int
 fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
-	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
+	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
 	static const struct dfavm_assembler_ir zero;
 	struct dfavm_assembler_ir a;
 	struct dfavm_op_ir *op;
 
-	static const struct fsm_vm_compile_opts vm_opts = { FSM_VM_COMPILE_DEFAULT_FLAGS, FSM_VM_COMPILE_VM_V1, NULL };
+	static const struct fsm_vm_compile_opts vm_opts = {
+		FSM_VM_COMPILE_DEFAULT_FLAGS,
+		FSM_VM_COMPILE_VM_V1,
+		NULL
+	};
 
 	assert(f != NULL);
 	assert(ir != NULL);
@@ -467,20 +475,18 @@ fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt
 
 		switch (opt->io) {
 		case FSM_IO_GETC:
-			fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
+			fprintf(f, "(int (*fsm_getc)(void *opaque), void *getc_opaque)\n");
 			fprintf(f, "{\n");
 			break;
 
 		case FSM_IO_STR:
-			fprintf(f, "(const char *s, void *opaque)\n");
+			fprintf(f, "(const char *s)\n");
 			fprintf(f, "{\n");
-			fprintf(f, "\t(void)opaque;\n");
 			break;
 
 		case FSM_IO_PAIR:
-			fprintf(f, "(const char *b, const char *e, void *opaque)\n");
+			fprintf(f, "(const char *b, const char *e)\n");
 			fprintf(f, "{\n");
-			fprintf(f, "\t(void)opaque;\n");
 			break;
 		}
 

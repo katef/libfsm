@@ -113,8 +113,8 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	unsigned *endid_group_assignments = NULL;
 	size_t endid_group_count = 1; /* group 0 is the empty set */
 	unsigned *endid_group_leaders = NULL;
-	fsm_end_id_t *endid_buf_a = NULL;
-	fsm_end_id_t *endid_buf_b = NULL;
+	fsm_end_id_t *ids_a = NULL;
+	fsm_end_id_t *ids_b = NULL;
 
 	table = calloc(row_words * table_states, sizeof(table[0]));
 	if (table == NULL) { goto cleanup; }
@@ -143,7 +143,7 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	 * This includes the dead state. */
 	for (size_t i = 0; i < table_states; i++) {
 		if (i < state_count && fsm_isend(fsm, i)) {
-			const size_t count = fsm_getendidcount(fsm, i);
+			const size_t count = fsm_endid_count(fsm, i);
 			if (count > max_endid_count) {
 				max_endid_count = count;
 			}
@@ -165,50 +165,56 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 		}
 	}
 
-	endid_buf_a = malloc(max_endid_count * sizeof(endid_buf_a[0]));
-	if (endid_buf_a == NULL) { goto cleanup; }
-	endid_buf_b = malloc(max_endid_count * sizeof(endid_buf_b[0]));
-	if (endid_buf_b == NULL) { goto cleanup; }
+	ids_a = malloc(max_endid_count * sizeof(ids_a[0]));
+	if (ids_a == NULL) { goto cleanup; }
+	ids_b = malloc(max_endid_count * sizeof(ids_b[0]));
+	if (ids_b == NULL) { goto cleanup; }
 
 	/* For every end state, check if it has endids. If not, assign it
 	 * to endid group 0 (none). Otherwise, check if its endids match
 	 * any of the other end states. If so, assign it to the same endid
 	 * group, otherwise assign a new one and mark it as the leader. */
 	for (size_t i = 0; i < state_count; i++) {
-		if (fsm_isend(fsm, i)) {
-			size_t written_a;
-			enum fsm_getendids_res eres = fsm_getendids(fsm, i,
-			    max_endid_count, endid_buf_a, &written_a);
-			assert(eres != FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE);
-			if (eres == FSM_GETENDIDS_NOT_FOUND) {
-				assert(written_a == 0);
-			} else {
-				assert(written_a > 0);
-				bool found = false;
-				/* note: skipping eg 0 here since that's the empty set */
-				for (size_t eg_i = 1; eg_i < endid_group_count; eg_i++) {
-					size_t written_b;
-					eres = fsm_getendids(fsm, endid_group_leaders[eg_i],
-					    max_endid_count, endid_buf_b, &written_b);
-					assert(eres != FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE);
-					if (written_b != written_a) { continue; }
-					if (0 == memcmp(endid_buf_a, endid_buf_b, written_a * sizeof(endid_buf_a[0]))) {
-						found = true;
-						endid_group_assignments[i] = eg_i;
-						break;
-					} else {
-						continue;
-					}
-				}
-
-				if (!found) {
-					endid_group_assignments[i] = endid_group_count;
-					endid_group_leaders[endid_group_count] = i;
-					endid_group_count++;
-				}
-			}
-		} else {
+		if (!fsm_isend(fsm, i)) {
 			endid_group_assignments[i] = 0; /* none */
+			continue;
+		}
+
+		size_t count_a = fsm_endid_count(fsm, i);
+		assert(count_a <= max_endid_count);
+		if (count_a == 0) {
+			continue;
+		}
+
+		int eres = fsm_endid_get(fsm, i,
+		    count_a, ids_a);
+		assert(eres == 1);
+
+		bool found = false;
+		/* note: skipping eg 0 here since that's the empty set */
+		for (size_t eg_i = 1; eg_i < endid_group_count; eg_i++) {
+			size_t count_b = fsm_endid_count(fsm, endid_group_leaders[eg_i]);
+			if (count_b != count_a) {
+				continue;
+			}
+
+			assert(count_b > 0);
+			assert(count_b <= max_endid_count);
+			eres = fsm_endid_get(fsm, endid_group_leaders[eg_i],
+			    count_b, ids_b);
+			assert(eres == 1);
+
+			if (0 == memcmp(ids_a, ids_b, count_a * sizeof(ids_a[0]))) {
+				found = true;
+				endid_group_assignments[i] = eg_i;
+				break;
+			}
+		}
+
+		if (!found) {
+			endid_group_assignments[i] = endid_group_count;
+			endid_group_leaders[endid_group_count] = i;
+			endid_group_count++;
 		}
 	}
 
@@ -355,8 +361,8 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	free(mapping);
 	free(endid_group_assignments);
 	free(endid_group_leaders);
-	free(endid_buf_a);
-	free(endid_buf_b);
+	free(ids_a);
+	free(ids_b);
 
 	return res;
 
@@ -366,8 +372,8 @@ cleanup:
 	if (mapping != NULL) { free(mapping); }
 	if (endid_group_assignments != NULL) { free(endid_group_assignments); }
 	if (endid_group_leaders != NULL) { free(endid_group_leaders); }
-	if (endid_buf_a != NULL) { free(endid_buf_a); }
-	if (endid_buf_b != NULL) { free(endid_buf_b); }
+	if (ids_a != NULL) { free(ids_a); }
+	if (ids_b != NULL) { free(ids_b); }
 	if (res != NULL) { fsm_free(res); }
 	return NULL;
 }

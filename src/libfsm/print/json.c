@@ -184,6 +184,8 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s, int *notfirst)
 		print_edge_bitmap(f, notfirst, fsm->opt, s, e.state, &bm);
 	}
 
+	state_set_free(unique);
+
 	/*
 	 * Special edges are not consolidated above
 	 */
@@ -237,6 +239,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 		fprintf(f, " ],\n");
 	}
 
+	/* showing endleaf in addition to existing content */
 	if (fsm->opt->endleaf != NULL) {
 		int notfirst;
 
@@ -244,37 +247,42 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 
 		fprintf(f, "  \"endleaf\": [ ");
 		for (i = 0; i < fsm->statecount; i++) {
-			if (fsm_isend(fsm, i)) {
-				enum fsm_getendids_res res;
-				size_t written;
-				const size_t count = fsm_getendidcount(fsm, i);
-				struct fsm_end_ids *ids = f_malloc(fsm->opt->alloc,
-				    sizeof(*ids) + ((count - 1) * sizeof(ids->ids[0])));
-				assert(ids != NULL);
+			fsm_end_id_t *ids;
+			size_t count;
+			int res;
 
-				res = fsm_getendids(fsm, i, count,
-				    ids->ids, &written);
-				if (res == FSM_GETENDIDS_FOUND) {
-					ids->count = (unsigned)written;
-				} else {
-					assert(res == FSM_GETENDIDS_NOT_FOUND);
-					ids->count = 0;
-				}
-
-				if (notfirst) {
-					fprintf(f, ", ");
-				}
-
-				fprintf(f, "{ %u, ", i);
-
-				fsm->opt->endleaf(f, ids, fsm->opt->endleaf_opaque);
-
-				fprintf(f, " }");
-
-				f_free(fsm->opt->alloc, ids);
-
-				notfirst = 1;
+			if (!fsm_isend(fsm, i)) {
+				continue;
 			}
+
+			count = fsm_endid_count(fsm, i);
+
+			ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
+			if (ids == NULL) {
+				return -1;
+			}
+
+			res = fsm_endid_get(fsm, i, count, ids);
+			assert(res == 1);
+
+			if (notfirst) {
+				fprintf(f, ", ");
+			}
+
+			fprintf(f, "{ %u, ", i);
+
+			if (-1 == fsm->opt->endleaf(f,
+				ids, count,
+				fsm->opt->endleaf_opaque))
+			{
+				return -1;
+			}
+
+			fprintf(f, " }");
+
+			f_free(fsm->opt->alloc, ids);
+
+			notfirst = 1;
 		}
 		fprintf(f, " ],\n");
 	}

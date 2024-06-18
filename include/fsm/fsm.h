@@ -37,12 +37,6 @@ typedef unsigned int fsm_end_id_t;
 
 #define FSM_END_ID_MAX UINT_MAX
 
-/* struct used to return a collection of end IDs. */
-struct fsm_end_ids {
-	unsigned count;
-	fsm_end_id_t ids[1];
-};
-
 /*
  * Create a new FSM. This is to be freed with fsm_free(). A structure allocated
  * from fsm_new() is expected to be passed as the "fsm" argument to the
@@ -222,29 +216,31 @@ fsm_setendid(struct fsm *fsm, fsm_end_id_t id);
  * Returns 1 on success, 0 on error.
  * */
 int
-fsm_setendidstate(struct fsm *fsm, fsm_state_t end_state, fsm_end_id_t id);
+fsm_endid_set(struct fsm *fsm, fsm_state_t end_state, fsm_end_id_t id);
 
 /* Get the end IDs associated with an end state, if any.
- * If id_buf has enough cells to store all the end IDs (according
- * to id_buf_count) then they are written into id_buf[] and
- * *ids_written is set to the number of IDs. The end IDs in the
- * buffer may appear in any order, but should not have duplicates.
+ * id_buf is expected to have enough cells (according to id_buf_count)
+ * to store all the end IDs. You can find this with fsm_endid_count().
+ *
+ * The end IDs in the buffer may appear in any order,
+ * but will not have duplicates.
+ *
+ * A state with no end IDs set is considered equivalent to a state
+ * that has the empty set, this API does not distinguish these cases.
+ * This is not an error.
+ *
+ * It is an error to attempt to get end IDs associated with a state
+ * that is not marked as an end state.
  *
  * Returns 0 if there is not enough space in id_buf for the
  * end IDs, or 1 if zero or more end IDs were returned. */
-enum fsm_getendids_res {
-	FSM_GETENDIDS_NOT_FOUND,
-	FSM_GETENDIDS_FOUND,
-	FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE = -1
-};
-enum fsm_getendids_res
-fsm_getendids(const struct fsm *fsm, fsm_state_t end_state,
-    size_t id_buf_count, fsm_end_id_t *id_buf,
-    size_t *ids_written);
+int
+fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
+    size_t id_buf_count, fsm_end_id_t *id_buf);
 
 /* Get the number of end IDs associated with an end state. */
 size_t
-fsm_getendidcount(const struct fsm *fsm, fsm_state_t end_state);
+fsm_endid_count(const struct fsm *fsm, fsm_state_t end_state);
 
 /* Callback function to remap the end ids of a state.  This function can
  * remap to fewer end ids, but cannot add additional end ids, and cannot

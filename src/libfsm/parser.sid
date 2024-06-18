@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2017 Katherine Flavel
+ * Copyright 2008-2024 Katherine Flavel
  *
  * See LICENCE for the full copyright terms.
  */
@@ -9,10 +9,12 @@
 	char;
 	string;
 	state;
+	endid;
 
 %terminals%
 
 	IDENT: () -> (:string);
+	ENDID: () -> (:endid);
 
 	ESC:  () -> (:char);
 	OCT:  () -> (:char);
@@ -23,6 +25,10 @@
 	START;
 	END;
 
+	OPENENDIDS;
+	CLOSEENDIDS;
+
+	EQUALS;
 	TO;
 	ANY;
 	SEP;
@@ -36,6 +42,7 @@
 	<add-state>:        (:string) -> (:state);
 	<mark-start>:       (:state)  -> ();
 	<mark-end>:         (:state)  -> ();
+	<mark-end-id>:      (:state, :endid) -> ();
 
 	<free>:             (:string) -> ();
 	<free-statelist>;
@@ -64,14 +71,14 @@
 		LABEL;
 	};
 
-	id: () -> (n :string) = {
+	ident: () -> (n :string) = {
 		n = IDENT;
 	};
 
 	edge = {
-		a = id;
+		a = ident;
 		TO;
-		b = id;
+		b = ident;
 
 		x = <add-state>(a);
 		y = <add-state>(b);
@@ -106,7 +113,7 @@
 	 * its own output.
 	 */
 	decl = {
-		a = id;
+		a = ident;
 
 		! = <add-state>(a);
 
@@ -137,7 +144,7 @@
 			<err-expected-start>;
 		};
 
-		n = id;
+		n = ident;
 
 		{
 			SEP;
@@ -155,17 +162,14 @@
 
 	xend [
 
-		end-id = {
-			n = id;
+		end-id: (s :state) -> () = {
+			id = ENDID;
 
-			s = <add-state>(n);
-			<mark-end>(s);
-
-			<free>(n);
+			<mark-end-id>(s, id);
 		};
 
-		end-ids = {
-			end-id;
+		end-ids: (s :state) -> () = {
+			end-id(s);
 
 			{
 				{
@@ -174,7 +178,42 @@
 					<err-expected-comma>;
 				};
 
-				end-ids;
+				end-ids(s);
+			||
+				$;
+			};
+		};
+
+		end-state: () -> (s :state) = {
+			n = ident;
+
+			s = <add-state>(n);
+			<mark-end>(s);
+
+			<free>(n);
+		};
+
+		end-states = {
+			s = end-state;
+
+			{
+				EQUALS;
+
+				OPENENDIDS;
+				{ end-ids(s); || $; };
+				CLOSEENDIDS;
+			||
+				$;
+			};
+
+			{
+				{
+					COMMA;
+				##
+					<err-expected-comma>;
+				};
+
+				end-states;
 			||
 				$;
 			};
@@ -187,7 +226,7 @@
 			<err-expected-end>;
 		};
 
-		end-ids;
+		end-states;
 
 		{
 			SEP;

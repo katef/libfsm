@@ -29,12 +29,13 @@
 #include "ir.h"
 
 static int
-leaf(FILE *f, const struct fsm_end_ids *ids, const void *leaf_opaque)
+leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
 {
 	assert(f != NULL);
 	assert(leaf_opaque == NULL);
 
 	(void) ids;
+	(void) count;
 	(void) leaf_opaque;
 
 	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
@@ -97,13 +98,21 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 		return 0;
 	}
 
+	fprintf(f, "{\n");
+	fprintf(f, "\t\t");
+
 	if (opt->endleaf != NULL) {
-		if (-1 == opt->endleaf(f, op->ir_state->end_ids, opt->endleaf_opaque)) {
+		if (-1 == opt->endleaf(f,
+			op->ir_state->endids.ids, op->ir_state->endids.count,
+			opt->endleaf_opaque))
+		{
 			return -1;
 		}
 	} else {
-		fprintf(f, "{\n\t\treturn %td\n\t}\n", op->ir_state - ir->states);
+		fprintf(f, "return %td", op->ir_state - ir->states);
 	}
+
+	fprintf(f, "\n\t}\n");
 
 	return 0;
 }
@@ -132,14 +141,18 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 static int
 fsm_print_gofrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
-	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
+	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
 	static const struct dfavm_assembler_ir zero;
 	struct dfavm_assembler_ir a;
 	struct dfavm_op_ir *op;
 
-	static const struct fsm_vm_compile_opts vm_opts = { FSM_VM_COMPILE_DEFAULT_FLAGS, FSM_VM_COMPILE_VM_V1, NULL };
+	static const struct fsm_vm_compile_opts vm_opts = {
+		FSM_VM_COMPILE_DEFAULT_FLAGS,
+		FSM_VM_COMPILE_VM_V1,
+		NULL
+	};
 
 	assert(f != NULL);
 	assert(ir != NULL);

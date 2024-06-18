@@ -9,8 +9,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include <fsm/fsm.h>
+#include <fsm/pred.h>
 
 #include <re/re.h>
 
@@ -233,50 +235,39 @@ ast_getendmappingbyendid(fsm_end_id_t id)
 struct ast_mapping *
 ast_getendmapping(const struct fsm *fsm, fsm_state_t s)
 {
-	#define ID_STACK_BUF_COUNT 4
-	size_t id_count;
-	fsm_end_id_t *id_buf_dynamic = NULL;
-	fsm_end_id_t id_buf[ID_STACK_BUF_COUNT];
-	enum fsm_getendids_res res;
-	size_t written;
+	fsm_end_id_t *ids;
+	size_t count;
 	struct ast_mapping *m;
+	int res;
 
-	id_count = fsm_getendidcount(fsm, s);
-	if (id_count > ID_STACK_BUF_COUNT) {
-		id_buf_dynamic = malloc(id_count * sizeof(id_buf_dynamic[0]));
-		if (id_buf_dynamic == NULL) {
-			return NULL;
-		}
-	}
-
-	res = fsm_getendids(fsm,
-	    s, id_count,
-	    id_buf_dynamic == NULL ? id_buf : id_buf_dynamic,
-	    &written);
-	if (res == FSM_GETENDIDS_NOT_FOUND) {
-		if (id_buf_dynamic != NULL) {
-			free(id_buf_dynamic);
-		}
+	if (!fsm_isend(fsm, s)) {
+		errno = EINVAL;
 		return NULL;
 	}
 
-	/* Should always have an appropriately sized buffer,
-	 * or fail to allocate above */
-	assert(res != FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE);
+	count = fsm_endid_count(fsm, s);
+	if (count == 0) {
+		errno = EINVAL;
+		return NULL;
+	}
 
-	assert(res == FSM_GETENDIDS_FOUND);
-	assert(written == id_count);
-	assert(written > 0);
+	ids = malloc(count * sizeof *ids);
+	if (ids == NULL) {
+		return NULL;
+	}
 
-	m = ast_getendmappingbyendid(id_buf[0]);
+	res = fsm_endid_get(fsm, s, count, ids);
+	assert(res == 1);
+
+	m = ast_getendmappingbyendid(ids[0]);
 
 	if (LOG()) {
 		fprintf(stderr, "ast_getendmapping: got mapping %p mappings[%d]\n",
-		    (void *)m, id_buf[0]);
+		    (void *) m, ids[0]);
 	}
 
-	if (id_buf_dynamic != NULL) {
-		free(id_buf_dynamic);
-	}
+	free(ids);
+
 	return m;
 }
+

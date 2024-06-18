@@ -121,18 +121,18 @@ size_t generate_examples(struct example_list *l, const struct fsm *fsm, size_t p
 	return (first_index != SIZE_MAX) ? first_index : 0;
 }
 
-/* test that endids correctly propagate through union, determinise, and minimise */
+/* test that ids correctly propagate through union, determinise, and minimise */
 int main(void)
 {
 	struct fsm *fsm;
-	fsm_end_id_t all_endids[NUM_PATTERNS];
+	fsm_end_id_t all_ids[NUM_PATTERNS];
 	size_t nstates, state_ind;
 	size_t i;
 	int ret;
 	
 	struct example_list example_list;
 
-	memset(all_endids, 0, sizeof all_endids);
+	memset(all_ids, 0, sizeof all_ids);
 
 	init_examples(&example_list);
 
@@ -176,39 +176,36 @@ int main(void)
 	ret = fsm_determinise(fsm);
 	assert(ret != 0);
 
-	// find end states, make sure we have multiple end states and they each have endids
+	// find end states, make sure we have multiple end states and they each have ids
 	nstates = fsm_countstates(fsm);
 
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
 			int tested_pattern[NUM_PATTERNS];
-			fsm_end_id_t endids[NUM_ENDIDS_TOTAL];
-			size_t nwritten, num_endids, j;
-			enum fsm_getendids_res ret;
+			fsm_end_id_t ids[NUM_ENDIDS_TOTAL];
+			size_t count, j;
+			int ret;
 
-			memset(&endids[0], 0, sizeof endids);
+			memset(&ids[0], 0, sizeof ids);
 
-			nwritten = 0;
-			num_endids = fsm_getendidcount(fsm, state_ind);
+			count = fsm_endid_count(fsm, state_ind);
 
-			assert(num_endids > 0 && num_endids <= sizeof endids/sizeof endids[0]);
+			assert(count > 0 && count <= sizeof ids/sizeof ids[0]);
 
-			ret = fsm_getendids(
+			ret = fsm_endid_get(
 				fsm,
 				state_ind,
-				sizeof endids/sizeof endids[0],
-				&endids[0],
-				&nwritten);
+				sizeof ids/sizeof ids[0],
+				&ids[0]);
 
-			assert(ret == FSM_GETENDIDS_FOUND);
-			assert(nwritten == num_endids);
+			assert(ret == 1);
 
 			memset(&tested_pattern[0], 0, sizeof tested_pattern);
 
-			for (j=0; j < num_endids; j++) {
+			for (j=0; j < count; j++) {
 				size_t k, pattern_index;
 
-				pattern_index = (endids[j] - 1)/NUM_ENDIDS_PER_PATTERN;
+				pattern_index = (ids[j] - 1)/NUM_ENDIDS_PER_PATTERN;
 				assert(pattern_index < NUM_PATTERNS);
 
 				if (tested_pattern[pattern_index]) {
@@ -227,11 +224,11 @@ int main(void)
 					if (ret) {
 #if 0
 						printf("end state %zu (end id %u) matches example \"%s\" from pattern /%s/\n",
-							state_ind, endids[j], ex->example, patterns[pattern_index]);
+							state_ind, ids[j], ex->example, patterns[pattern_index]);
 #endif /* 0 */
 					} else {
 						printf("end state %zu (end id %u) does NOT match example \"%s\" from pattern /%s/\n",
-							state_ind, endids[j], ex->example, patterns[pattern_index]);
+							state_ind, ids[j], ex->example, patterns[pattern_index]);
 						abort();
 					}
 				}
@@ -243,32 +240,29 @@ int main(void)
 	assert(ret != 0);
 
 	/* fsm_minimise should not collapse all the end states to a
-	 * single end state, because they have distinct endids. */
+	 * single end state, because they have distinct ids. */
 	assert( fsm_count(fsm, fsm_isend) > 1);
 
 	nstates = fsm_countstates(fsm);
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
-			fsm_end_id_t endids[NUM_ENDIDS_TOTAL];
-			size_t nwritten, num_endids;
-			enum fsm_getendids_res ret;
+			fsm_end_id_t ids[NUM_ENDIDS_TOTAL];
+			size_t count;
+			int ret;
 
-			memset(&endids[0], 0, sizeof endids);
+			memset(&ids[0], 0, sizeof ids);
 
-			nwritten = 0;
-			num_endids = fsm_getendidcount(fsm, state_ind);
+			count = fsm_endid_count(fsm, state_ind);
 
-			assert(num_endids <= NUM_ENDIDS_TOTAL);
+			assert(count <= NUM_ENDIDS_TOTAL);
 
-			ret = fsm_getendids(
+			ret = fsm_endid_get(
 				fsm,
 				state_ind,
-				sizeof endids/sizeof endids[0],
-				&endids[0],
-				&nwritten);
+				sizeof ids/sizeof ids[0],
+				&ids[0]);
 
-			assert(ret == FSM_GETENDIDS_FOUND);
-			assert(nwritten == num_endids);
+			assert(ret == 1);
 		}
 	}
 

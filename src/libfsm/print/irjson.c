@@ -112,7 +112,7 @@ print_groups(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\t\t\t]\n");
 }
 
-static void
+static int
 print_cs(FILE *f, const struct fsm_options *opt,
 	const struct ir_state *cs)
 {
@@ -123,6 +123,30 @@ print_cs(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\t\t{\n");
 
 	fprintf(f, "\t\t\t\"end\": %s,\n", cs->isend ? "true" : "false");
+	if (cs->isend && cs->endids.count > 0) {
+		fprintf(f, "\t\t\t\"end_id\": [");
+		for (size_t i = 0; i < cs->endids.count; i++) {
+			fprintf(f, "%u", cs->endids.ids[i]);
+
+			if (i < cs->endids.count - 1) {
+				fprintf(f, ", ");
+			}
+		}
+		fprintf(f, "],\n");
+	}
+
+	/* showing endleaf in addition to existing content */
+	if (cs->isend && opt->endleaf != NULL) {
+		fprintf(f, "\t\t\t\"endleaf\": ");
+		if (-1 == opt->endleaf(f,
+			cs->endids.ids, cs->endids.count,
+			opt->endleaf_opaque))
+		{
+			return -1;
+		}
+		fprintf(f, ",\n");
+	}
+
 	fprintf(f, "\t\t\t\"strategy\": \"%s\"", strategy_name(cs->strategy));
 	if (cs->example != NULL || cs->strategy != IR_NONE) {
 		fprintf(f, ",");
@@ -183,6 +207,8 @@ print_cs(FILE *f, const struct fsm_options *opt,
 	}
 
 	fprintf(f, "\t\t}");
+
+	return 0;
 }
 
 int
@@ -205,7 +231,9 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\t\"states\": [\n");
 
 	for (i = 0; i < ir->n; i++) {
-		print_cs(f, fsm->opt, &ir->states[i]);
+		if (-1 == print_cs(f, fsm->opt, &ir->states[i])) {
+			return -1;
+		}
 
 		if (i + 1 < ir->n) {
 			fprintf(f, ",");

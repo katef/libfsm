@@ -951,33 +951,32 @@ static int
 collect_end_ids(const struct fsm *fsm, fsm_state_t s,
 	struct end_metadata_end *e)
 {
-	e->count = fsm_getendidcount(fsm, s);
+	e->count = fsm_endid_count(fsm, s);
+	if (e->count == 0) {
+		return 1;
+	}
 
-	if (e->count > 0) {
-		e->ids = f_malloc(fsm->opt->alloc,
-		    e->count * sizeof(e->ids[0]));
-		if (e->ids == NULL) {
-			return 0;
-		}
+	e->ids = f_malloc(fsm->opt->alloc,
+		e->count * sizeof(e->ids[0]));
+	if (e->ids == NULL) {
+		return 0;
+	}
 
-		size_t written;
-		enum fsm_getendids_res res = fsm_getendids(fsm, s,
-		    e->count, e->ids, &written);
-		assert(res == FSM_GETENDIDS_FOUND);
-		assert(written == e->count);
+	int res = fsm_endid_get(fsm, s, e->count, e->ids);
+	assert(res == 1);
 
-		/* sort, to make comparison easier later */
-		qsort(e->ids, e->count,
-		    sizeof(e->ids[0]), cmp_end_ids);
+	/* sort, to make comparison easier later */
+	qsort(e->ids, e->count,
+		sizeof(e->ids[0]), cmp_end_ids);
 
 #if LOG_ECS
-		fprintf(stderr, "%d:", s);
-		for (size_t i = 0; i < written; i++) {
-			fprintf(stderr, " %u", e->ids[i]);
-		}
-		fprintf(stderr, "\n");
-#endif
+	fprintf(stderr, "%d:", s);
+	for (size_t i = 0; i < written; i++) {
+		fprintf(stderr, " %u", e->ids[i]);
 	}
+	fprintf(stderr, "\n");
+#endif
+
 	return 1;
 }
 

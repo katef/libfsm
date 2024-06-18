@@ -173,7 +173,7 @@ print_grouplinks(FILE *f, unsigned self,
 	}
 }
 
-static void
+static int
 print_cs(FILE *f, const struct fsm_options *opt,
 	const struct ir *ir, const struct ir_state *cs)
 {
@@ -188,8 +188,23 @@ print_cs(FILE *f, const struct fsm_options *opt,
 
 	fprintf(f, "\tcs%u [ label =\n", ir_indexof(ir, cs));
 	fprintf(f, "\t\t<<TABLE BORDER='0' CELLPADDING='2' CELLSPACING='0'>\n");
+
 	fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>S%u</TD><TD ALIGN='LEFT'>%s</TD></TR>\n",
 		ir_indexof(ir, cs), strategy_name(cs->strategy));
+
+	if (cs->isend && cs->endids.count > 0) {
+		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>end id</TD><TD ALIGN='LEFT'>");
+
+		for (size_t i = 0; i < cs->endids.count; i++) {
+			fprintf(f, "#%u", cs->endids.ids[i]);
+
+			if (i < cs->endids.count - 1) {
+				fprintf(f, " ");
+			}
+		}
+
+		fprintf(f, "</TD></TR>\n");
+	}
 
 	if (cs->example != NULL) {
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>example</TD><TD ALIGN='LEFT'>");
@@ -198,6 +213,18 @@ print_cs(FILE *f, const struct fsm_options *opt,
 	}
 
 	/* TODO: leaf callback for dot output */
+
+	/* showing endleaf in addition to existing content */
+	if (cs->isend && opt->endleaf != NULL) {
+		fprintf(f, "\t\t  <TR><TD COLSPAN='3' ALIGN='LEFT'>");
+		if (-1 == opt->endleaf(f,
+			cs->endids.ids, cs->endids.count,
+			opt->endleaf_opaque))
+		{
+			return -1;
+		}
+		fprintf(f, "</TD></TR>\n");
+	}
 
 	switch (cs->strategy) {
 	case IR_NONE:
@@ -290,6 +317,8 @@ print_cs(FILE *f, const struct fsm_options *opt,
 	default:
 		;
 	}
+
+	return 0;
 }
 
 int
@@ -320,7 +349,9 @@ fsm_print_ir(FILE *f, const struct fsm *fsm)
 	}
 
 	for (i = 0; i < ir->n; i++) {
-		print_cs(f, fsm->opt, ir, &ir->states[i]);
+		if (-1 == print_cs(f, fsm->opt, ir, &ir->states[i])) {
+			return -1;
+		}
 	}
 
 	fprintf(f, "}\n");

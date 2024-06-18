@@ -1,0 +1,12 @@
+#
+# Copyright 2008-2024 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+# explicitly created states
+x;
+y;
+
+start: x;
+
