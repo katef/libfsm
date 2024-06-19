@@ -38,6 +38,12 @@
 #include <re/literal.h>
 #include <re/strings.h>
 
+enum ambig {
+	AMBIG_ERROR,
+	AMBIG_EARLIEST,
+	AMBIG_MULTIPLE
+};
+
 enum category {
 	CATEGORY_EMPTY,
 	CATEGORY_LITERAL,
@@ -64,10 +70,9 @@ struct id_set {
 	fsm_end_id_t *a;
 };
 
-enum ambig {
-	AMBIG_ERROR,
-	AMBIG_EARLIEST,
-	AMBIG_MULTIPLE
+struct endleaf_env {
+	enum ambig ambig;
+	const struct fsm *fsm;
 };
 
 typedef void (print_fsm)(struct fsm *, const char *, enum ambig);
@@ -485,10 +490,11 @@ static int
 endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
 	const void *endleaf_opaque)
 {
-	assert(ids != NULL);
-	assert(endleaf_opaque != NULL);
+	const struct endleaf_env *env = endleaf_opaque;
 
-	enum ambig ambig = * (const enum ambig *) endleaf_opaque;
+	assert(ids != NULL);
+	assert(env != NULL);
+	assert(env->fsm != NULL);
 
 	/* morally an assertion, but I feel better leaving this in for various user data */
 	if (count == 0) {
@@ -502,9 +508,18 @@ endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
 
 	/* exactly one end id means no ambiguious patterns */
 
-	switch (ambig) {
+	switch (env->ambig) {
 	case AMBIG_ERROR:
 		if (count > 1) {
+			char buf[50]; /* 50 looks reasonable for an on-screen limit */
+			int n;
+
+			n = fsm_example(env->fsm, ids[0], buf, sizeof buf);
+			if (-1 == n) {
+				perror("fsm_example");
+				exit(EXIT_FAILURE);
+			}
+
 // TODO: explain this more clearly
 			fprintf(stderr, "ambigious patterns:");
 
@@ -512,9 +527,8 @@ endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
 				fprintf(stderr, " %u", ids[i]);
 			}
 
-// TODO: give example, lx-style
-
-			fprintf(stderr, "\n");
+			fprintf(f, "; for example on input '%s%s'\n", buf,
+				n >= (int) sizeof buf - 1 ? "..." : "");
 
 			exit(EXIT_FAILURE);
 		}
@@ -598,7 +612,7 @@ print_fsm_vmc(struct fsm *fsm, const char *prefix, enum ambig ambig)
 
 	tmp = *old;
 	tmp.fragment = true,
-	tmp.endleaf_opaque = &ambig,
+	tmp.endleaf_opaque = & (struct endleaf_env) { ambig, fsm };
 	tmp.endleaf = endleaf_c,
 
 	fsm_setoptions(fsm, &tmp);
