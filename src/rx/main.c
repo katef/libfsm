@@ -733,7 +733,7 @@ usage(const char *name)
 		name = p != NULL ? p + 1 : name;
 	}
 
-	printf("usage: %s: [-ciQquv] [-C charset] [-k io] [-l <language> ] [-r dialect] [-R reject] input-file [declined-file]\n", name);
+	printf("usage: %s: [-ciQquv] [-C charset] [-k io] [-l <language> ] [-r dialect] [-R reject] [-d declined-file] input-file\n", name);
 	printf("       %s -h\n", name);
 }
 
@@ -778,12 +778,13 @@ main(int argc, char *argv[])
 // TODO: cli option for memory limit to decline patterns (implement via allocation hooks)
 // TODO: manpage
 // TODO: cli flag to set prefix
+// TODO: argv[] multiple files, one per id
 
 	{
 		const char *name = argv[0];
 		int c;
 
-		while (c = getopt(argc, argv, "h" "C:cikl::n:r:R:Qquv"), c != -1) {
+		while (c = getopt(argc, argv, "h" "C:cd:ikl::n:r:R:Qquv"), c != -1) {
 			switch (c) {
 			case 'C':
 				charset = optarg;
@@ -811,6 +812,10 @@ main(int argc, char *argv[])
 					"abcdefghijklmnopqrstuvwzyx"
 					"0123456789"
 					"!#$%&'*+-.^_`|~";
+				break;
+
+			case 'd':
+				declined_file = optarg;
 				break;
 
 			case 'h':
@@ -875,18 +880,12 @@ main(int argc, char *argv[])
 		argc -= optind;
 		argv += optind;
 
-		switch (argc) {
-		case 2:
-			declined_file = argv[1];
-			/* fallthrough */
-		case 1:
-			input_file = argv[0];
-			break;
-
-		default:
+		if (argc != 1) {
 			usage(name);
 			exit(EXIT_FAILURE);
 		}
+
+		input_file = argv[0];
 	}
 
 	if (charset != NULL && strchr(charset, '\n')) {
