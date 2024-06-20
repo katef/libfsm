@@ -497,6 +497,57 @@ build_pattern_fsm(const struct fsm_options *opt, bool show_stats,
 }
 
 static int
+check_end_ambiguity(const struct fsm *fsm, fsm_state_t s, void *opaque)
+{
+	fsm_end_id_t *ids;
+	size_t count;
+	char buf[50]; /* 50 looks reasonable for an on-screen limit */
+	int n, res;
+
+	assert(fsm != NULL);
+	assert(opaque == NULL);
+
+	if (!fsm_isend(fsm, s)) {
+		return 1;
+	}
+
+	count = fsm_endid_count(fsm, s);
+
+	/* in rx all end states have an end id */
+	assert(count > 0);
+
+	if (count == 1) {
+		return 1;
+	}
+
+// TODO: explain this more clearly
+	fprintf(stderr, "ambigious patterns:");
+
+	ids = xmalloc(count * sizeof *ids);
+
+	res = fsm_endid_get(fsm, s, count, ids);
+	assert(res == 1);
+
+// TODO: print patterns rather than IDs, pass &literals, &general via opaque, find by id
+	for (fsm_end_id_t i = 0; i < count; i++) {
+		fprintf(stderr, " #%u", ids[i]);
+	}
+
+	free(ids);
+
+	n = fsm_example(fsm, s, buf, sizeof buf);
+	if (-1 == n) {
+		perror("fsm_example");
+		exit(EXIT_FAILURE);
+	}
+
+	fprintf(stderr, "; for example on input '%s%s'\n", buf,
+		n >= (int) sizeof buf - 1 ? "..." : "");
+
+	return 0;
+}
+
+static int
 endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
 	const void *endleaf_opaque)
 {
@@ -520,28 +571,8 @@ endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
 
 	switch (env->ambig) {
 	case AMBIG_ERROR:
-		if (count > 1) {
-			char buf[50]; /* 50 looks reasonable for an on-screen limit */
-			int n;
-
-			n = fsm_example(env->fsm, ids[0], buf, sizeof buf);
-			if (-1 == n) {
-				perror("fsm_example");
-				exit(EXIT_FAILURE);
-			}
-
-// TODO: explain this more clearly
-			fprintf(stderr, "ambigious patterns:");
-
-			for (fsm_end_id_t i = 0; i < count; i++) {
-				fprintf(stderr, " %u", ids[i]);
-			}
-
-			fprintf(f, "; for example on input '%s%s'\n", buf,
-				n >= (int) sizeof buf - 1 ? "..." : "");
-
-			exit(EXIT_FAILURE);
-		}
+		/* dealt with ahead of the call to print */
+		assert(count <= 1);
 
 		fprintf(f, "return %u;", ids[0]);
 		break;
@@ -998,7 +1029,7 @@ main(int argc, char *argv[])
 	declined.count = 0;
 	general.a  = xmalloc(patterns_count * sizeof *general.a);
 	general.count = 0;
-		
+
 	for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
 		literals[i].a = xmalloc(patterns_count * sizeof *literals[i].a);
 		literals[i].count = 0;
@@ -1310,6 +1341,12 @@ main(int argc, char *argv[])
 
 		if (show_stats) {
 			fprintf(stderr, "dfa: %u states\n", fsm_countstates(fsm));
+		}
+
+		if (ambig == AMBIG_ERROR) {
+			if (!fsm_walk_states(fsm, NULL, check_end_ambiguity)) {
+				exit(EXIT_FAILURE);
+			}
 		}
 
 		if (!quiet) {
