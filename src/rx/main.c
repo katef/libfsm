@@ -81,6 +81,11 @@ struct endleaf_env {
 	const struct fsm *fsm;
 };
 
+struct check_env {
+	const struct literal_set (*literals)[4];
+	const struct pattern_set *general;
+};
+
 typedef void (print_fsm)(struct fsm *, const char *, enum ambig);
 
 static void
@@ -108,8 +113,27 @@ append_literal(struct literal_set *set, const char *p, size_t n, fsm_end_id_t id
 	set->count++;
 }
 
+/* TODO: centralise */
+static int
+cmp_id(const void *pa, const void *pb)
+{
+	const fsm_end_id_t *a = pa;
+	const fsm_end_id_t *b = pb;
+
+	if (*a < *b) {
+		return -1;
+	}
+
+	if (*a > *b) {
+		return 1;
+	}
+
+	return 0;
+}
+
+/* TODO: centralise */
 static fsm_end_id_t
-min_id(const fsm_end_id_t *ids, size_t count)
+min_endid(const fsm_end_id_t *ids, size_t count)
 {
 	fsm_end_id_t min;
 
@@ -124,28 +148,6 @@ min_id(const fsm_end_id_t *ids, size_t count)
 	}
 
 	return min;
-}
-
-static enum re_strings_flags
-literal_flags(enum re_literal_category category)
-{
-	switch (category) {
-	case RE_LITERAL_UNANCHORED:
-		return 0;
-
-	case RE_LITERAL_ANCHOR_START:
-		return RE_STRINGS_ANCHOR_LEFT;
-
-	case RE_LITERAL_ANCHOR_END:
-		return RE_STRINGS_ANCHOR_RIGHT;
-
-	case RE_LITERAL_ANCHOR_BOTH:
-		return RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT;
-
-	default:
-		assert(!"unreached");
-		abort();
-	}
 }
 
 /* this interface doesn't allow us to have \0 in the character set */
@@ -282,9 +284,6 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 				}
 			}
 		}
-
-		enum re_strings_flags flags = literal_flags(category);
-		assert(flags >= 0 && flags <= 3);
 
 		*lit_s_out = lit_s;
 		*lit_n_out = lit_n;
@@ -497,15 +496,18 @@ build_pattern_fsm(const struct fsm_options *opt, bool show_stats,
 }
 
 static int
-check_end_ambiguity(const struct fsm *fsm, fsm_state_t s, void *opaque)
+check_ambig(const struct fsm *fsm, fsm_state_t s, void *opaque)
 {
+	const struct check_env *env = opaque;
 	fsm_end_id_t *ids;
 	size_t count;
 	char buf[50]; /* 50 looks reasonable for an on-screen limit */
 	int n, res;
 
 	assert(fsm != NULL);
-	assert(opaque == NULL);
+	assert(env != NULL);
+	assert(env->literals != NULL);
+	assert(env->general != NULL);
 
 	if (!fsm_isend(fsm, s)) {
 		return 1;
@@ -520,38 +522,61 @@ check_end_ambiguity(const struct fsm *fsm, fsm_state_t s, void *opaque)
 		return 1;
 	}
 
-// TODO: explain this more clearly
-	fprintf(stderr, "ambigious patterns:");
-
-	ids = xmalloc(count * sizeof *ids);
-
-	res = fsm_endid_get(fsm, s, count, ids);
-	assert(res == 1);
-
-// TODO: print patterns rather than IDs, pass &literals, &general via opaque, find by id
-	for (fsm_end_id_t i = 0; i < count; i++) {
-		fprintf(stderr, " #%u", ids[i]);
-	}
-
-	free(ids);
-
 	n = fsm_example(fsm, s, buf, sizeof buf);
 	if (-1 == n) {
 		perror("fsm_example");
 		exit(EXIT_FAILURE);
 	}
 
-	fprintf(stderr, "; for example on input '%s%s'\n", buf,
+	fprintf(stderr, "error: ambiguous patterns, for example on input '%s%s':\n", buf,
 		n >= (int) sizeof buf - 1 ? "..." : "");
+
+	ids = xmalloc(count * sizeof *ids);
+
+	res = fsm_endid_get(fsm, s, count, ids);
+	assert(res == 1);
+
+	qsort(ids, count, sizeof *ids, cmp_endid);
+
+	for (fsm_end_id_t i = 0; i < count; i++) {
+		for (size_t k = 0; k < sizeof *env->literals / sizeof **env->literals; k++) {
+			const struct literal_set *literals = &(*env->literals)[k];
+			for (size_t j = 0; j < literals->count; j++) {
+				if (literals->a[j].id == ids[i]) {
+					// TODO: escape, centralise with libre's re_perror()
+					fprintf(stderr, "#%u: /%s%.*s%s/\n",
+						ids[i],
+						(k & RE_STRINGS_ANCHOR_LEFT) ? "^" : "",
+						(int) literals->a[j].n, (const char *) literals->a[j].p,
+						(k & RE_STRINGS_ANCHOR_RIGHT) ? "$" : "");
+					goto next;
+				}
+			}
+		}
+
+		for (size_t j = 0; j < env->general->count; j++) {
+			// TODO: delimiters per dialect, centralise with libre's re_perror()
+			if (env->general->a[i].id == ids[i]) {
+				fprintf(stderr, "#%u: /%s/\n",
+					ids[i],
+					env->general->a[i].s);
+				goto next;
+			}
+		}
+
+next: ;
+	}
+
+	free(ids);
 
 	return 0;
 }
 
 static int
 endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
-	const void *endleaf_opaque)
+	const void *opaque)
 {
-	const struct endleaf_env *env = endleaf_opaque;
+	const struct endleaf_env *env = opaque;
 
 	assert(ids != NULL);
 	assert(env != NULL);
@@ -567,7 +592,7 @@ endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
 		assert(ids[i] <= INT_MAX);
 	}
 
-	/* exactly one end id means no ambiguious patterns */
+	/* exactly one end id means no ambiguous patterns */
 
 	switch (env->ambig) {
 	case AMBIG_ERROR:
@@ -582,7 +607,7 @@ endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
 		 * The libfsm api guarentees these ids are unique,
 		 * and only appear once each, but are not sorted.
 		 */
-		fprintf(f, "return %u;", min_id(ids, count));
+		fprintf(f, "return %u;", min_endid(ids, count));
 		break;
 
 	case AMBIG_MULTIPLE:
@@ -1202,13 +1227,6 @@ main(int argc, char *argv[])
 		}
 	}
 
-	for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
-		for (size_t j = 0; j < literals[i].count; j++) {
-			free((void *) literals[i].a[j].p); /* allocated by re_is_literal() */
-		}
-		free(literals[i].a);
-	}
-
 	/* individual regexps */
 	{
 		for (size_t i = 0; i < general.count; i++) {
@@ -1237,11 +1255,6 @@ main(int argc, char *argv[])
 			general.count = general_limit;
 		}
 	}
-
-	for (size_t i = 0; i < general.count; i++) {
-		free((void *) general.a[i].s);
-	}
-	free(general.a);
 
 	fsms = xrealloc(fsms, fsm_count * sizeof *fsms);
 
@@ -1344,7 +1357,10 @@ main(int argc, char *argv[])
 		}
 
 		if (ambig == AMBIG_ERROR) {
-			if (!fsm_walk_states(fsm, NULL, check_end_ambiguity)) {
+			if (!fsm_walk_states(fsm,
+				& (struct check_env) { &literals, &general },
+				check_ambig))
+			{
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -1355,6 +1371,18 @@ main(int argc, char *argv[])
 
 		fsm_free(fsm);
 	}
+
+	for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
+		for (size_t j = 0; j < literals[i].count; j++) {
+			free((void *) literals[i].a[j].p); /* allocated by re_is_literal() */
+		}
+		free(literals[i].a);
+	}
+
+	for (size_t i = 0; i < general.count; i++) {
+		free((void *) general.a[i].s);
+	}
+	free(general.a);
 
 #ifdef __linux__
 	if (show_stats) {
