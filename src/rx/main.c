@@ -54,10 +54,16 @@ enum category {
 	CATEGORY_NOT_PERMITTED
 };
 
+struct pattern {
+	fsm_end_id_t id;
+	enum re_dialect dialect;
+	const char *s;
+};
+
 struct literal {
+	fsm_end_id_t id;
 	const void *p;
 	size_t n;
-	fsm_end_id_t id;
 };
 
 struct literal_set {
@@ -65,9 +71,9 @@ struct literal_set {
 	struct literal *a;
 };
 
-struct id_set {
+struct pattern_set {
 	size_t count;
-	fsm_end_id_t *a;
+	struct pattern *a;
 };
 
 struct endleaf_env {
@@ -78,12 +84,14 @@ struct endleaf_env {
 typedef void (print_fsm)(struct fsm *, const char *, enum ambig);
 
 static void
-append_id(struct id_set *set, fsm_end_id_t id)
+append_pattern(struct pattern_set *set, fsm_end_id_t id, enum re_dialect dialect, const char *s)
 {
 	assert(set != NULL);
 	assert(set->a != NULL);
 
-	set->a[set->count] = id;
+	set->a[set->count].id = id;
+	set->a[set->count].dialect = dialect;
+	set->a[set->count].s = s;
 	set->count++;
 }
 
@@ -403,7 +411,7 @@ build_literals_fsm(const struct fsm_options *opt, bool show_stats,
 }
 
 static struct fsm *
-build_regex_fsm(const struct fsm_options *opt, bool show_stats,
+build_pattern_fsm(const struct fsm_options *opt, bool show_stats,
 	const char *charset,
 	enum re_dialect dialect, bool strict,
 	const char *s, enum re_flags flags, fsm_end_id_t id)
@@ -480,6 +488,8 @@ build_regex_fsm(const struct fsm_options *opt, bool show_stats,
 		perror("fsm_minimise");
 		exit(EXIT_FAILURE);
 	}
+
+// TODO: therefore set endid after minimisation
 
 	assert(!fsm_empty(fsm));
 
@@ -976,11 +986,8 @@ main(int argc, char *argv[])
 	 * to re_comp(). But not to re_strings(), we pass lit_s there.
 	 */
 
-	char **patterns = xmalloc(patterns_count * sizeof *patterns);
-
-	// TODO: patterns_set, fsm_set
-	struct id_set declined;
-	struct id_set general;
+	struct pattern_set declined;
+	struct pattern_set general;
 	struct literal_set literals[4]; /* unanchored, left, right, both */
 
 	/*
@@ -1002,11 +1009,10 @@ main(int argc, char *argv[])
 	 * it's the only format that doesn't introduce a syntax with escaping.
 	 * So that means we need to track the line number associated with each
 	 * regex. And that means the line number is neccessarily the end id.
-	 * So patterns[] is indexed by the end id.
+	 * So each pattern carries its associated end id.
 	 *
 	 * We have four whole FSMs from re_strings(), each potentially contains
-	 * a set of end ids. And each regex in general.a[i] is a single end id.
-	 * So general.a[i] is the index into patterns[].
+	 * a set of end ids. And each regex in general.a[i] has a single end id.
 	 */
 
 	/*
@@ -1017,22 +1023,32 @@ main(int argc, char *argv[])
 
 		for (fsm_end_id_t id = 0; id < patterns_count; id++) {
 			struct re_err err;
-			char *lit_s;
+			char *s, *lit_s;
 			size_t lit_n;
+			size_t n;
 			enum category r;
-			size_t pattern_len;
 
-			pattern_len = strcspn(q, "\n");
+			// TODO: would fgets() here. then we can get rid of patterns_count
+			n = strcspn(q, "\n");
 
-			patterns[id] = xmalloc(pattern_len + 1);
-			memcpy(patterns[id], q, pattern_len);
-			patterns[id][pattern_len] = '\0';
+			s = xmalloc(n + 1);
+			memcpy(s, q, n);
+			s[n] = '\0';
 
 			r = categorize(&opt, dialect, flags,
-				charset, reject, patterns[id],
+				charset, reject, s,
 				&err, &lit_s, &lit_n);
 
-			q += pattern_len + 1;
+			q += n + 1;
+
+			/*
+			 * For pattern sets, s storage belongs to the entry in the set
+			 * (and is freed when the set is destroyed). For literals, we're
+			 * done with the original syntax, and use lit_s/lit_n instead.
+			 */
+			if (r == CATEGORY_LITERAL) {
+				free(s);
+			}
 
 			if (verbose) {
 				switch (r) {
@@ -1045,18 +1061,18 @@ main(int argc, char *argv[])
 					/* fallthrough */
 				case CATEGORY_GENERAL:
 					fprintf(stderr, "general #%u: /%s/\n",
-						id, patterns[id]);
+						id, s);
 					break;
 
 				case CATEGORY_ERROR:
 					fprintf(stderr, "declined (%s) #%u: /%s/",
-						category_reason(r), id, patterns[id]);
+						category_reason(r), id, s);
 					re_perror(dialect, &err, NULL, NULL);
 					break;
 
 				default:
 					fprintf(stderr, "declined (%s) #%u: /%s/\n",
-						category_reason(r), id, patterns[id]);
+						category_reason(r), id, s);
 					break;
 				}
 			}
@@ -1069,7 +1085,8 @@ main(int argc, char *argv[])
 			case CATEGORY_EMPTY:
 				/* fallthrough */
 			case CATEGORY_GENERAL:
-				append_id(general.count < general_limit ? &general : &declined, id);
+				append_pattern(general.count < general_limit ? &general : &declined,
+					id, dialect, s);
 				break;
 
 			default:
@@ -1077,7 +1094,7 @@ main(int argc, char *argv[])
 					exit(EXIT_FAILURE);
 				}
 
-				append_id(&declined, id);
+				append_pattern(&declined, id, dialect, s);
 			}
 		}
 
@@ -1085,7 +1102,6 @@ main(int argc, char *argv[])
 		 * realloc down to size, note this leaves some .a arrays NULL
 		 * when its count is 0.
 		 */
-		patterns = xrealloc(patterns, patterns_count * sizeof *patterns);
 		declined.a = xrealloc(declined.a, declined.count * sizeof *declined.a);
 		general.a  = xrealloc(general.a, general.count * sizeof *general.a);
 		for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
@@ -1167,14 +1183,14 @@ main(int argc, char *argv[])
 		for (size_t i = 0; i < general.count; i++) {
 			if (verbose) {
 				fprintf(stderr, "general[%zu]: #%u /%s/\n",
-					i, general.a[i], patterns[general.a[i]]);
+					i, general.a[i].id, general.a[i].s);
 			}
 
-			struct fsm *fsm = build_regex_fsm(&opt, show_stats, charset,
+			struct fsm *fsm = build_pattern_fsm(&opt, show_stats, charset,
 				dialect, strict,
-				patterns[general.a[i]], flags, general.a[i]);
+				general.a[i].s, flags, general.a[i].id);
 			if (fsm == NULL) {
-				append_id(&declined, i);
+				append_pattern(&declined, i, general.a[i].dialect, general.a[i].s);
 				continue;
 			}
 
@@ -1191,13 +1207,14 @@ main(int argc, char *argv[])
 		}
 	}
 
+	for (size_t i = 0; i < general.count; i++) {
+		free((void *) general.a[i].s);
+	}
 	free(general.a);
 
 	fsms = xrealloc(fsms, fsm_count * sizeof *fsms);
 
 	if (show_stats) {
-		fprintf(stderr, "declined: %zu patterns\n",
-			declined.count);
 		fprintf(stderr, "literals (unanchored): %zu patterns, %u states\n",
 			literals[0].count, fsm_countstates(fsms[0]));
 		fprintf(stderr, "literals (^left): %zu patterns, %u states\n",
@@ -1208,12 +1225,14 @@ main(int argc, char *argv[])
 			literals[3].count, fsm_countstates(fsms[3]));
 		fprintf(stderr, "general: %zu patterns (limit %zu)\n",
 			general.count, general_limit);
+		fprintf(stderr, "declined: %zu patterns\n",
+			declined.count);
 	}
 
 	if (verbose) {
 		for (size_t i = 0; i < declined.count; i++) {
 			fprintf(stderr, "declined[%zu]: #%u /%s/\n",
-				i, declined.a[i], patterns[declined.a[i]]);
+				i, declined.a[i].id, declined.a[i].s);
 		}
 	}
 
@@ -1232,18 +1251,16 @@ main(int argc, char *argv[])
 		}
 
 		for (size_t i = 0; i < declined.count; i++) {
-			fprintf(f, "%s\n", patterns[declined.a[i]]);
+			fprintf(f, "%s\n", declined.a[i].s);
 		}
 
 		fclose(f);
 	}
 
-	for (size_t i = 0; i < patterns_count; i++) {
-		free(patterns[i]);
+	for (size_t i = 0; i < declined.count; i++) {
+		free((void *) declined.a[i].s);
 	}
-
 	free(declined.a);
-	free(patterns);
 
 	if (show_stats) {
 		fprintf(stderr, "fsm_count = %zu FSMs prior to union\n", fsm_count);
