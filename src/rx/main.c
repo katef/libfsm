@@ -20,10 +20,12 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <errno.h>
 
 #include <adt/xalloc.h>
 
@@ -88,11 +90,81 @@ struct check_env {
 
 typedef void (print_fsm)(struct fsm *, const char *, enum ambig);
 
-static void
-append_pattern(struct pattern_set *set, fsm_end_id_t id, enum re_dialect dialect, const char *s)
+// TODO: centralise, maybe adt/alloc.h
+static FILE *
+xopen(const char *s)
 {
+	FILE *f;
+
+	assert(s != NULL);
+
+	if (0 == strcmp(s, "-")) {
+		return stdin;
+	}
+
+	f = fopen(s, "r");
+	if (f == NULL) {
+		perror(s);
+		exit(EXIT_FAILURE);
+	}
+
+	return f;
+}
+
+// TODO: centralise
+static char *
+xgetline(FILE *f)
+{
+	char *buf;
+	size_t len;
+	ssize_t n;
+
+	buf = NULL;
+	len = 0;
+
+	n = getline(&buf, &len, f);
+	if (n == -1) {
+		free(buf);
+
+		if (feof(f)) {
+			return NULL;
+		}
+
+		perror("getline");
+		exit(EXIT_FAILURE);
+	}
+
+	/* n == 0 for an empty line */
+	if (n > 0) {
+		assert(buf[n - 1] == '\n');
+		buf[n - 1] = '\0';
+	}
+
+	return buf;
+}
+
+static void
+append_pattern(struct pattern_set *set,
+	fsm_end_id_t id, enum re_dialect dialect, const char *s)
+{
+	const size_t low    = 16; /* must be power of 2 */
+	const size_t factor =  2; /* must be even */
+
 	assert(set != NULL);
-	assert(set->a != NULL);
+	assert(s != NULL);
+
+	if (set->count == 0) {
+		set->a = xmalloc(low * sizeof *set->a);
+	} else if (set->count >= low && (set->count & (set->count - 1)) == 0) {
+		size_t new = set->count * factor;
+		if (new < set->count) {
+			errno = E2BIG;
+			perror("realloc");
+			exit(EXIT_FAILURE);
+		}
+
+		set->a = xrealloc(set->a, new * sizeof *set->a);
+	}
 
 	set->a[set->count].id = id;
 	set->a[set->count].dialect = dialect;
@@ -101,11 +173,27 @@ append_pattern(struct pattern_set *set, fsm_end_id_t id, enum re_dialect dialect
 }
 
 static void
-append_literal(struct literal_set *set, const char *p, size_t n, fsm_end_id_t id)
+append_literal(struct literal_set *set,
+	const char *p, size_t n, fsm_end_id_t id)
 {
+	const size_t low    = 16; /* must be power of 2 */
+	const size_t factor =  2; /* must be even */
+
 	assert(set != NULL);
-	assert(set->a != NULL);
 	assert(p != NULL);
+
+	if (set->count == 0) {
+		set->a = xmalloc(low * sizeof *set->a);
+	} else if (set->count >= low && (set->count & (set->count - 1)) == 0) {
+		size_t new = set->count * factor;
+		if (new < set->count) {
+			errno = E2BIG;
+			perror("realloc");
+			exit(EXIT_FAILURE);
+		}
+
+		set->a = xrealloc(set->a, new * sizeof *set->a);
+	}
 
 	set->a[set->count].id = id;
 	set->a[set->count].p  = p;
@@ -536,7 +624,7 @@ check_ambig(const struct fsm *fsm, fsm_state_t s, void *opaque)
 	res = fsm_endid_get(fsm, s, count, ids);
 	assert(res == 1);
 
-	qsort(ids, count, sizeof *ids, cmp_endid);
+	qsort(ids, count, sizeof *ids, cmp_id);
 
 	for (fsm_end_id_t i = 0; i < count; i++) {
 		for (size_t k = 0; k < sizeof *env->literals / sizeof **env->literals; k++) {
@@ -816,7 +904,6 @@ main(int argc, char *argv[])
 	size_t general_limit = 0;
 
 	const char *charset = NULL;
-	const char *input_file = NULL;
 	const char *declined_file = NULL;
 
 	enum re_dialect dialect = RE_PCRE;
@@ -950,8 +1037,6 @@ main(int argc, char *argv[])
 			usage(name);
 			exit(EXIT_FAILURE);
 		}
-
-		input_file = argv[0];
 	}
 
 	if (charset != NULL && strchr(charset, '\n')) {
@@ -966,72 +1051,16 @@ main(int argc, char *argv[])
 		fprintf(stderr, "reject: [%s]\n", reject);
 	}
 
-	struct stat sb;
-	char *addr;
-	int fd;
-
-	size_t patterns_count;
-
 	/*
 	 * Phases:
 	 *
-	 * 1. per byte, delimiting
-	 * 2. per pattern, categorization
-	 * 3. per set of literals/general regex to FSMs
-	 * 4. union FSMs, codegen
+	 * 1. per pattern, categorization
+	 * 2. per set of literals/general regex to FSMs
+	 * 3. union FSMs, codegen
 	 */
 
-	{
-		fd = open(input_file, O_RDONLY);
-		if (fd == -1) {
-			perror(input_file);
-			exit(EXIT_FAILURE);
-		}
-
-		if (fstat(fd, &sb) == -1) {
-			perror(input_file);
-			exit(EXIT_FAILURE);
-		}
-
-		addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-		if (addr == MAP_FAILED) {
-			perror("mmap");
-			exit(EXIT_FAILURE);
-		}
-
-		/* we assume a trailing newline per pattern in the getc callback */
-		if (sb.st_size == 0 || addr[sb.st_size - 1] != '\n') {
-			fprintf(stderr, "%s: missing newline at end of file\n", input_file);
-			exit(EXIT_FAILURE);
-		}
-
-		/*
-		 * Here we iterate per byte, finding the \n delimiter for patterns.
-		 * Henceforth we iterate per pattern id, not per byte.
-		 */
-		patterns_count = 0;
-		for (const char *p = addr; p - addr < sb.st_size; p++) {
-			if (*p == '\n') {
-				patterns_count++;
-			}
-		}
-
-		/*
-		 * This is so we can fit the endid value in an int for the
-		 * return value of the generated code.
-		 */
-		if (patterns_count > INT_MAX) {
-			fprintf(stderr, "pattern count overflow\n");
-			exit(EXIT_FAILURE);
-		}
-
-		if (show_stats) {
-			fprintf(stderr, "patterns: %zu\n", patterns_count);
-		}
-	}
-
 	if (general_limit == 0) {
-		general_limit = patterns_count;
+		general_limit = SIZE_MAX;
 	}
 
 	/*
@@ -1046,17 +1075,10 @@ main(int argc, char *argv[])
 	struct pattern_set general;
 	struct literal_set literals[4]; /* unanchored, left, right, both */
 
-	/*
-	 * We allocate the worse case of patterns_count for these,
-	 * prior to categorization. And then realloc down later.
-	 */
-	declined.a = xmalloc(patterns_count * sizeof *declined.a);
 	declined.count = 0;
-	general.a  = xmalloc(patterns_count * sizeof *general.a);
-	general.count = 0;
+	general.count  = 0;
 
 	for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
-		literals[i].a = xmalloc(patterns_count * sizeof *literals[i].a);
 		literals[i].count = 0;
 	}
 
@@ -1075,27 +1097,31 @@ main(int argc, char *argv[])
 	 * Categorize patterns
 	 */
 	{
-		const char *q = addr;
+		FILE *f;
+		char *s;
 
-		for (fsm_end_id_t id = 0; id < patterns_count; id++) {
+// TODO: iterate argv[] here
+
+		f = xopen(argv[0]);
+
+		for (fsm_end_id_t id = 0; (s = xgetline(f)); id++) {
 			struct re_err err;
-			char *s, *lit_s;
+			char *lit_s;
 			size_t lit_n;
-			size_t n;
 			enum category r;
 
-			// TODO: would fgets() here. then we can get rid of patterns_count
-			n = strcspn(q, "\n");
-
-			s = xmalloc(n + 1);
-			memcpy(s, q, n);
-			s[n] = '\0';
+			/*
+			 * This is so we can fit the endid value in an int for the
+			 * return value of the generated code.
+			 */
+			if (id > INT_MAX) {
+				fprintf(stderr, "pattern count overflow\n");
+				exit(EXIT_FAILURE);
+			}
 
 			r = categorize(&opt, dialect, flags,
 				charset, reject, s,
 				&err, &lit_s, &lit_n);
-
-			q += n + 1;
 
 			/*
 			 * For pattern sets, s storage belongs to the entry in the set
@@ -1154,33 +1180,32 @@ main(int argc, char *argv[])
 			}
 		}
 
+		fclose(f);
+
 		/*
 		 * realloc down to size, note this leaves some .a arrays NULL
 		 * when its count is 0.
 		 */
-		declined.a = xrealloc(declined.a, declined.count * sizeof *declined.a);
-		general.a  = xrealloc(general.a, general.count * sizeof *general.a);
-		for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
-			literals[i].a  = xrealloc(literals[i].a, literals[i].count * sizeof *literals[i].a);
+		if (declined.count > 0) {
+			declined.a = xrealloc(declined.a, declined.count * sizeof *declined.a);
 		}
-	}
-
-	if (-1 == munmap(addr, sb.st_size)) {
-		perror("munmap");
-		exit(EXIT_FAILURE);
-	}
-
-	if (-1 == close(fd)) {
-		perror("close");
-		exit(EXIT_FAILURE);
+		if (general.count > 0) {
+			general.a  = xrealloc(general.a, general.count * sizeof *general.a);
+		}
+		for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
+			if (literals[i].count > 0) {
+				literals[i].a  = xrealloc(literals[i].a, literals[i].count * sizeof *literals[i].a);
+			}
+		}
 	}
 
 	/*
 	 * This is conservative allocation, the declined list may still grow yet.
 	 * We track actual usage in fsm_count.
 	 */
-	struct fsm **fsms = xmalloc(((sizeof literals / sizeof *literals)
-		+ patterns_count - declined.count) * sizeof *fsms);
+	struct fsm **fsms = xmalloc(
+		(general.count + sizeof literals / sizeof *literals)
+		* sizeof *fsms);
 	size_t fsm_count = 0;
 
 	/*
@@ -1304,7 +1329,9 @@ main(int argc, char *argv[])
 	for (size_t i = 0; i < declined.count; i++) {
 		free((void *) declined.a[i].s);
 	}
-	free(declined.a);
+	if (declined.count > 0) {
+		free(declined.a);
+	}
 
 	if (show_stats) {
 		fprintf(stderr, "fsm_count = %zu FSMs prior to union\n", fsm_count);
@@ -1376,13 +1403,17 @@ main(int argc, char *argv[])
 		for (size_t j = 0; j < literals[i].count; j++) {
 			free((void *) literals[i].a[j].p); /* allocated by re_is_literal() */
 		}
-		free(literals[i].a);
+		if (literals[i].count > 0) {
+			free(literals[i].a);
+		}
 	}
 
 	for (size_t i = 0; i < general.count; i++) {
 		free((void *) general.a[i].s);
 	}
-	free(general.a);
+	if (general.count > 0) {
+		free(general.a);
+	}
 
 #ifdef __linux__
 	if (show_stats) {
