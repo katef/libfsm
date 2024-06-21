@@ -84,7 +84,7 @@ struct endleaf_env {
 };
 
 struct check_env {
-	const struct literal_set (*literals)[4];
+	struct literal_set (*literals)[4];
 	const struct pattern_set *general;
 };
 
