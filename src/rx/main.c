@@ -57,13 +57,13 @@ enum category {
 };
 
 struct pattern {
-	fsm_end_id_t id;
+	fsm_end_id_t id; /* either per file or per pattern */
 	enum re_dialect dialect;
 	const char *s;
 };
 
 struct literal {
-	fsm_end_id_t id;
+	fsm_end_id_t id; /* either per file or per literal */
 	const void *p;
 	size_t n;
 };
@@ -887,7 +887,7 @@ usage(const char *name)
 		name = p != NULL ? p + 1 : name;
 	}
 
-	printf("usage: %s: [-ciQquv] [-C charset] [-k io] [-l <language> ] [-r dialect] [-R reject] [-d declined-file] input-file\n", name);
+	printf("usage: %s: [-ciQquv] [-C charset] [-k io] [-l <language> ] [-r dialect] [-R reject] [-d declined-file] input-file...\n", name);
 	printf("       %s -h\n", name);
 }
 
@@ -928,10 +928,12 @@ main(int argc, char *argv[])
 		.io = FSM_IO_PAIR
 	};
 
+// TODO: prepend comment with rx invocation to output
 // TODO: cli option for memory limit to decline patterns (implement via allocation hooks)
 // TODO: manpage
 // TODO: cli flag to set prefix
-// TODO: argv[] multiple files, one per id
+// TODO: option to set dialect per file from file extension
+// TODO: consider de-duplicating arrays. not sure there's any reason
 
 	{
 		const char *name = argv[0];
@@ -1033,7 +1035,7 @@ main(int argc, char *argv[])
 		argc -= optind;
 		argv += optind;
 
-		if (argc != 1) {
+		if (argc == 0) {
 			usage(name);
 			exit(EXIT_FAILURE);
 		}
@@ -1096,15 +1098,18 @@ main(int argc, char *argv[])
 	/*
 	 * Categorize patterns
 	 */
-	{
+	for (int arg = 0; arg < argc; arg++) {
+		fsm_end_id_t id = 0;
 		FILE *f;
 		char *s;
 
-// TODO: iterate argv[] here
+		f = xopen(argv[arg]);
 
-		f = xopen(argv[0]);
+		if (argc > 1) {
+			id = arg;
+		}
 
-		for (fsm_end_id_t id = 0; (s = xgetline(f)); id++) {
+		while (s = xgetline(f), s != NULL) {
 			struct re_err err;
 			char *lit_s;
 			size_t lit_n;
@@ -1135,39 +1140,43 @@ main(int argc, char *argv[])
 			if (verbose) {
 				switch (r) {
 				case CATEGORY_LITERAL:
-					fprintf(stderr, "literal #%u '%.*s'\n",
-						id, (int) lit_n, lit_s);
+					fprintf(stderr, "literal %s:#%u '%.*s'\n",
+						argv[arg], id, (int) lit_n, lit_s);
 					break;
 
 				case CATEGORY_EMPTY:
 					/* fallthrough */
 				case CATEGORY_GENERAL:
-					fprintf(stderr, "general #%u: /%s/\n",
-						id, s);
+					fprintf(stderr, "general %s:#%u: /%s/\n",
+						argv[arg], id, s);
 					break;
 
 				case CATEGORY_ERROR:
-					fprintf(stderr, "declined (%s) #%u: /%s/",
-						category_reason(r), id, s);
+					fprintf(stderr, "declined (%s) %s:#%u: /%s/",
+						category_reason(r),
+						argv[arg], id, s);
 					re_perror(dialect, &err, NULL, NULL);
 					break;
 
 				default:
-					fprintf(stderr, "declined (%s) #%u: /%s/\n",
-						category_reason(r), id, s);
+					fprintf(stderr, "declined (%s) %s:#%u: /%s/\n",
+						category_reason(r),
+						argv[arg], id, s);
 					break;
 				}
 			}
 
 			switch (r) {
 			case CATEGORY_LITERAL:
-				append_literal(&literals[flags], lit_s, lit_n, id);
+				append_literal(&literals[flags], lit_s, lit_n,
+					id);
 				break;
 
 			case CATEGORY_EMPTY:
 				/* fallthrough */
 			case CATEGORY_GENERAL:
-				append_pattern(general.count < general_limit ? &general : &declined,
+				append_pattern(
+					general.count < general_limit ? &general : &declined,
 					id, dialect, s);
 				break;
 
@@ -1178,24 +1187,28 @@ main(int argc, char *argv[])
 
 				append_pattern(&declined, id, dialect, s);
 			}
+
+			if (argc == 1) {
+				id++;
+			}
 		}
 
 		fclose(f);
+	}
 
-		/*
-		 * realloc down to size, note this leaves some .a arrays NULL
-		 * when its count is 0.
-		 */
-		if (declined.count > 0) {
-			declined.a = xrealloc(declined.a, declined.count * sizeof *declined.a);
-		}
-		if (general.count > 0) {
-			general.a  = xrealloc(general.a, general.count * sizeof *general.a);
-		}
-		for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
-			if (literals[i].count > 0) {
-				literals[i].a  = xrealloc(literals[i].a, literals[i].count * sizeof *literals[i].a);
-			}
+	/*
+	 * realloc down to size, note this leaves some .a arrays NULL
+	 * when its count is 0.
+	 */
+	if (declined.count > 0) {
+		declined.a = xrealloc(declined.a, declined.count * sizeof *declined.a);
+	}
+	if (general.count > 0) {
+		general.a  = xrealloc(general.a, general.count * sizeof *general.a);
+	}
+	for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
+		if (literals[i].count > 0) {
+			literals[i].a  = xrealloc(literals[i].a, literals[i].count * sizeof *literals[i].a);
 		}
 	}
 
