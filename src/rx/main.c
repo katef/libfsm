@@ -944,7 +944,6 @@ main(int argc, char *argv[])
 // TODO: cli option for memory limit to decline patterns (implement via allocation hooks)
 // TODO: manpage
 // TODO: cli flag to set prefix
-// TODO: option to set dialect per file from file extension
 // TODO: consider de-duplicating arrays. not sure there's any reason
 // TODO: decide if i want dialect==RE_LITERAL unanchored or not, maybe a cli flag either way
 // TODO: maybe a re(1)-style -F... argument to |= in some flags
@@ -1116,6 +1115,14 @@ main(int argc, char *argv[])
 		fsm_end_id_t id = 0;
 		FILE *f;
 		char *s;
+
+		const char *ext = strrchr(argv[arg], '.');
+		if (ext != NULL) {
+			ext++;
+			fprintf(stderr, "overriding dialect by extension for %s: %s\n",
+				argv[arg], ext);
+			dialect = dialect_name(ext);
+		}
 
 		f = xopen(argv[arg]);
 
