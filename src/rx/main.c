@@ -298,7 +298,7 @@ static enum category
 categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags flags,
 	const char *charset, const char *reject, const char *s,
 	struct re_err *err,
-	char **lit_s_out, size_t *lit_n_out)
+	const char **lit_s_out, size_t *lit_n_out)
 {
 	enum re_literal_category category;
 	char *lit_s;
@@ -308,6 +308,18 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 	assert(err != NULL);
 	assert(lit_s_out != NULL);
 	assert(lit_n_out != NULL);
+
+	/*
+	 * As an optimisation, we skip libre's parsing for RE_LITERAL and
+	 * categorize empirically based on the dialect. We can't do this
+	 * inside re_is_literal() because that uses the getc callback,
+	 * and this shortcut depends on the storage for the input string s.
+	 */
+	if (dialect == RE_LITERAL) {
+		*lit_s_out = s;
+		*lit_n_out = strlen(s);
+		return CATEGORY_LITERAL;
+	}
 
 	/*
 	 *  -1: Error
@@ -934,6 +946,8 @@ main(int argc, char *argv[])
 // TODO: cli flag to set prefix
 // TODO: option to set dialect per file from file extension
 // TODO: consider de-duplicating arrays. not sure there's any reason
+// TODO: decide if i want dialect==RE_LITERAL unanchored or not, maybe a cli flag either way
+// TODO: maybe a re(1)-style -F... argument to |= in some flags
 
 	{
 		const char *name = argv[0];
@@ -1111,7 +1125,7 @@ main(int argc, char *argv[])
 
 		while (s = xgetline(f), s != NULL) {
 			struct re_err err;
-			char *lit_s;
+			const char *lit_s;
 			size_t lit_n;
 			enum category r;
 
@@ -1133,7 +1147,7 @@ main(int argc, char *argv[])
 			 * (and is freed when the set is destroyed). For literals, we're
 			 * done with the original syntax, and use lit_s/lit_n instead.
 			 */
-			if (r == CATEGORY_LITERAL) {
+			if (dialect != RE_LITERAL && r == CATEGORY_LITERAL) {
 				free(s);
 			}
 
