@@ -556,11 +556,6 @@ build_pattern_fsm(const struct fsm_options *opt, bool show_stats,
 
 	assert(!fsm_empty(fsm));
 
-	if (!fsm_setendid(fsm, id)) {
-		perror("fsm_setendid");
-		exit(EXIT_FAILURE);
-	}
-
 // XXX: collapses down to nothing because for ^.*abc.*$ the middle is a subset of the .*
 // XXX: not sure at all
 // XXX: this is the wrong operation!
@@ -588,9 +583,12 @@ build_pattern_fsm(const struct fsm_options *opt, bool show_stats,
 		exit(EXIT_FAILURE);
 	}
 
-// TODO: therefore set endid after minimisation
-
 	assert(!fsm_empty(fsm));
+
+	if (!fsm_setendid(fsm, id)) {
+		perror("fsm_setendid");
+		exit(EXIT_FAILURE);
+	}
 
 	return fsm;
 }
