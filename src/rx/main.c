@@ -244,10 +244,7 @@ intersect_charset(bool show_stats, const char *charset, struct fsm *fsm)
 {
 	struct fsm *q;
 
-	if (charset == NULL) {
-		return fsm;
-	}
-
+	assert(charset != NULL);
 	assert(fsm_all(fsm, fsm_isdfa));
 
 	size_t pre = fsm_countstates(fsm);
@@ -478,19 +475,21 @@ build_literals_fsm(const struct fsm_options *opt, bool show_stats,
 		assert(!fsm_empty(fsm));
 	}
 
-	fsm = intersect_charset(show_stats, charset, fsm);
-	if (fsm == NULL) {
-		perror("intersect_charset");
-		exit(EXIT_FAILURE);
+	if (charset != NULL) {
+		fsm = intersect_charset(show_stats, charset, fsm);
+		if (fsm == NULL) {
+			perror("intersect_charset");
+			exit(EXIT_FAILURE);
+		}
+
+		if (fsm_countstates(fsm) == 0) {
+			fprintf(stderr, "literals produced empty intersection\n");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	/* We don't minimise here because this fsm has multiple endids,
 	 * and the resulting FSM would be very similar to the current DFA */
-
-	if (fsm_countstates(fsm) == 0) {
-		fprintf(stderr, "literals produced empty intersection\n");
-		exit(EXIT_FAILURE);
-	}
 
 #ifndef NDEBUG
 	/*
@@ -556,22 +555,19 @@ build_pattern_fsm(const struct fsm_options *opt, bool show_stats,
 
 	assert(!fsm_empty(fsm));
 
-// XXX: collapses down to nothing because for ^.*abc.*$ the middle is a subset of the .*
-// XXX: not sure at all
+	if (charset != NULL) {
 // XXX: this is the wrong operation!
-// instead of .* we should go edge-by-edge and remove anything not in the charset
-// but that would give the same result
-// i want to intersect_charset but without folding the fsm down to nothing
 // XXX: i *think* intersect_charset must be doing the wrong thing. somehow
-	(void) charset;
-	(void) show_stats;
+		(void) charset;
+		(void) show_stats;
 /*
-	fsm = intersect_charset(show_stats, charset, fsm);
-	if (fsm == NULL) {
-		perror("intersect_charset");
-		exit(EXIT_FAILURE);
-	}
+		fsm = intersect_charset(show_stats, charset, fsm);
+		if (fsm == NULL) {
+			perror("intersect_charset");
+			exit(EXIT_FAILURE);
+		}
 */
+	}
 
 	/*
 	 * This FSM has only one endid. fsm_minimise() does now maintain
