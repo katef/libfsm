@@ -888,6 +888,33 @@ print_name(const char *name)
 	exit(EXIT_FAILURE);
 }
 
+/* TODO: centralize */
+static void
+parse_flags(const char *arg, enum re_flags *flags)
+{
+	for (; *arg; arg++) {
+		switch (*arg) {
+		case 'i':
+			*flags = *flags | RE_ICASE;
+			break;
+
+		case 's':
+			*flags = *flags | RE_SINGLE;
+			break;
+
+		case 'x':
+			*flags = *flags | RE_EXTENDED;
+			break;
+
+		/* others? */
+
+		default:
+			printf("unknown flag '%c'\n", *arg);
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
 static void
 usage(const char *name)
 {
@@ -924,7 +951,7 @@ main(int argc, char *argv[])
 	 * TODO: we need to provide a way to disable RE_END_NL
 	 * TODO: RE_SINGLE. also be careful, flags disrupt re_is_literal()
 	 */
-	const enum re_flags flags = 0; // TODO: notably not RE_END_NL
+	enum re_flags flags = 0; // TODO: notably not RE_END_NL
 
 	/* regex syntax characters we decline at compile time
 	 * because NFA->DFA is too costly */
@@ -945,13 +972,12 @@ main(int argc, char *argv[])
 // TODO: manpage
 // TODO: consider de-duplicating arrays. not sure there's any reason
 // TODO: decide if i want dialect==RE_LITERAL unanchored or not, maybe a cli flag either way
-// TODO: maybe a re(1)-style -F... argument to |= in some flags
 
 	{
 		const char *name = argv[0];
 		int c;
 
-		while (c = getopt(argc, argv, "h" "C:cd:ikl::n:p:r:R:Qquv"), c != -1) {
+		while (c = getopt(argc, argv, "h" "C:cd:ikF:l::n:p:r:R:Qquv"), c != -1) {
 			switch (c) {
 			case 'C':
 				charset = optarg;
@@ -999,6 +1025,10 @@ main(int argc, char *argv[])
 
 			case 'l':
 				print = print_name(optarg);
+				break;
+
+			case 'F':
+				parse_flags(optarg, &flags);
 				break;
 
 			case 'n':
@@ -1067,6 +1097,7 @@ main(int argc, char *argv[])
 		fprintf(stderr, "charset: [%s]\n",
 			charset == NULL ? "(none)" : charset);
 		fprintf(stderr, "reject: [%s]\n", reject);
+		fprintf(stderr, "flags: %#x\n", (unsigned) flags);
 	}
 
 	/*
