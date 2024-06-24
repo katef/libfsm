@@ -899,7 +899,7 @@ usage(const char *name)
 		name = p != NULL ? p + 1 : name;
 	}
 
-	printf("usage: %s: [-ciQquv] [-C charset] [-k io] [-l <language> ] [-r dialect] [-R reject] [-d declined-file] input-file...\n", name);
+	printf("usage: %s: [-ciQquv] [-C charset] [-k io] [-l <language> ] [-p prefix] [-r dialect] [-R reject] [-d declined-file] input-file...\n", name);
 	printf("       %s -h\n", name);
 }
 
@@ -943,7 +943,6 @@ main(int argc, char *argv[])
 // TODO: prepend comment with rx invocation to output
 // TODO: cli option for memory limit to decline patterns (implement via allocation hooks)
 // TODO: manpage
-// TODO: cli flag to set prefix
 // TODO: consider de-duplicating arrays. not sure there's any reason
 // TODO: decide if i want dialect==RE_LITERAL unanchored or not, maybe a cli flag either way
 // TODO: maybe a re(1)-style -F... argument to |= in some flags
@@ -952,7 +951,7 @@ main(int argc, char *argv[])
 		const char *name = argv[0];
 		int c;
 
-		while (c = getopt(argc, argv, "h" "C:cd:ikl::n:r:R:Qquv"), c != -1) {
+		while (c = getopt(argc, argv, "h" "C:cd:ikl::n:p:r:R:Qquv"), c != -1) {
 			switch (c) {
 			case 'C':
 				charset = optarg;
@@ -1004,6 +1003,10 @@ main(int argc, char *argv[])
 
 			case 'n':
 				general_limit = atoi(optarg);
+				break;
+
+			case 'p':
+				opt.prefix = optarg;
 				break;
 
 			case 'R':
