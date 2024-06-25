@@ -240,6 +240,28 @@ min_endid(const fsm_end_id_t *ids, size_t count)
 	return min;
 }
 
+static enum re_strings_flags
+literal_flags(enum re_literal_category category)
+{
+	switch (category) {
+	case RE_LITERAL_UNANCHORED:
+		return 0;
+
+	case RE_LITERAL_ANCHOR_START:
+		return RE_STRINGS_ANCHOR_LEFT;
+
+	case RE_LITERAL_ANCHOR_END:
+		return RE_STRINGS_ANCHOR_RIGHT;
+
+	case RE_LITERAL_ANCHOR_BOTH:
+		return RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT;
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+}
+
 /* this interface doesn't allow us to have \0 in the character set */
 static struct fsm *
 intersect_charset(bool show_stats, const char *charset, struct fsm *fsm)
@@ -297,7 +319,7 @@ static enum category
 categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags flags,
 	const char *charset, const char *reject, const char *s,
 	struct re_err *err,
-	const char **lit_s_out, size_t *lit_n_out)
+	const char **lit_s_out, size_t *lit_n_out, enum re_strings_flags *strings_flags)
 {
 	enum re_literal_category category;
 	char *lit_s;
@@ -317,6 +339,7 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 	if (dialect == RE_LITERAL) {
 		*lit_s_out = s;
 		*lit_n_out = strlen(s);
+		*strings_flags = RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT;
 		return CATEGORY_LITERAL;
 	}
 
@@ -386,6 +409,7 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 
 		*lit_s_out = lit_s;
 		*lit_n_out = lit_n;
+		*strings_flags = literal_flags(category);
 
 		return CATEGORY_LITERAL;
 	}
@@ -971,7 +995,7 @@ usage(const char *name)
 		name = p != NULL ? p + 1 : name;
 	}
 
-	printf("usage: %s: [-ciQquv] [-C charset] [-k io] [-l <language> ] [-p prefix] [-r dialect] [-R reject] [-d declined-file] input-file...\n", name);
+	printf("usage: %s: [-ciQquvx] [-C charset] [-k io] [-l <language> ] [-p prefix] [-r dialect] [-R reject] [-d declined-file] input-file...\n", name);
 	printf("       %s -h\n", name);
 }
 
@@ -982,6 +1006,7 @@ main(int argc, char *argv[])
 	bool strict = false;
 	bool verbose = false;
 	bool show_stats = false;
+	bool unanchored_literals = false;
 	enum ambig ambig = AMBIG_ERROR;
 	const char *lang = "c";
 	fsm_print *print = NULL;
@@ -991,7 +1016,7 @@ main(int argc, char *argv[])
 	const char *charset = NULL;
 	const char *declined_file = NULL;
 
-	enum re_dialect dialect = RE_PCRE;
+	enum re_dialect default_dialect = RE_PCRE;
 
 	/*
 	 * TODO: we need to provide a way to disable RE_END_NL
@@ -1023,7 +1048,7 @@ main(int argc, char *argv[])
 		const char *name = argv[0];
 		int c;
 
-		while (c = getopt(argc, argv, "h" "C:cd:ikF:l:n:p:r:R:Qquv"), c != -1) {
+		while (c = getopt(argc, argv, "h" "C:cd:ikF:l:n:p:r:R:Qquvx"), c != -1) {
 			switch (c) {
 			case 'C':
 				charset = optarg;
@@ -1094,7 +1119,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'r':
-				dialect = dialect_name(optarg);
+				default_dialect = dialect_name(optarg);
 				break;
 
 			case 'Q':
@@ -1115,6 +1140,10 @@ main(int argc, char *argv[])
 				/* "verbose" means showing information about every pattern and FSM,
 				 * this is O(n) output to the length of the input file */
 				verbose = true;
+				break;
+
+			case 'x':
+				unanchored_literals = true;
 				break;
 
 			case '?':
@@ -1197,6 +1226,7 @@ main(int argc, char *argv[])
 		fsm_end_id_t id = 0;
 		FILE *f;
 		char *s;
+		enum re_dialect dialect = default_dialect;
 
 		const char *ext = strrchr(argv[arg], '.');
 		if (ext != NULL) {
@@ -1217,6 +1247,7 @@ main(int argc, char *argv[])
 			const char *lit_s;
 			size_t lit_n;
 			enum category r;
+			enum re_strings_flags strings_flags;
 
 			/*
 			 * This is so we can fit the endid value in an int for the
@@ -1229,7 +1260,7 @@ main(int argc, char *argv[])
 
 			r = categorize(&opt, dialect, flags,
 				charset, reject, s,
-				&err, &lit_s, &lit_n);
+				&err, &lit_s, &lit_n, &strings_flags);
 
 			/*
 			 * For pattern sets, s storage belongs to the entry in the set
@@ -1240,11 +1271,20 @@ main(int argc, char *argv[])
 				free(s);
 			}
 
+			if (dialect == RE_LITERAL && r == CATEGORY_LITERAL && unanchored_literals) {
+				strings_flags = 0;
+			}
+
 			if (verbose) {
 				switch (r) {
 				case CATEGORY_LITERAL:
 					fprintf(stderr, "literal %s:#%u '%.*s'\n",
 						argv[arg], id, (int) lit_n, lit_s);
+					fprintf(stderr, "literal %s:#%u /%s%.*s%s/\n",
+						argv[arg], id,
+						(strings_flags & RE_STRINGS_ANCHOR_LEFT) ? "^" : "",
+						(int) lit_n, lit_s,
+						(strings_flags & RE_STRINGS_ANCHOR_RIGHT) ? "$" : "");
 					break;
 
 				case CATEGORY_EMPTY:
@@ -1271,7 +1311,9 @@ main(int argc, char *argv[])
 
 			switch (r) {
 			case CATEGORY_LITERAL:
-				append_literal(&literals[flags], lit_s, lit_n,
+				assert(strings_flags >= 0 && strings_flags <= 3);
+				append_literal(&literals[strings_flags],
+					lit_s, lit_n,
 					id);
 				break;
 
@@ -1377,7 +1419,7 @@ main(int argc, char *argv[])
 			}
 
 			struct fsm *fsm = build_pattern_fsm(&opt, show_stats, charset,
-				dialect, strict,
+				general.a[i].dialect, strict,
 				general.a[i].s, flags, general.a[i].id);
 			if (fsm == NULL) {
 				append_pattern(&declined, i, general.a[i].dialect, general.a[i].s);
