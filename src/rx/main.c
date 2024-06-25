@@ -40,10 +40,14 @@
 #include <re/literal.h>
 #include <re/strings.h>
 
+/* TODO: find a better way to handle this, maybe centralise with re(1) */
 enum ambig {
-	AMBIG_ERROR,
-	AMBIG_EARLIEST,
-	AMBIG_MULTIPLE
+	AMBIG_ERROR    = 1 << 0,
+	AMBIG_EARLIEST = 1 << 1,
+	AMBIG_MULTIPLE = 1 << 2,
+
+	AMBIG_SINGLE   = AMBIG_ERROR | AMBIG_EARLIEST,
+	AMBIG_ANY      = ~0
 };
 
 enum category {
@@ -87,8 +91,6 @@ struct check_env {
 	struct literal_set (*literals)[4];
 	const struct pattern_set *general;
 };
-
-typedef void (print_fsm)(struct fsm *, const char *, enum ambig);
 
 // TODO: centralise, maybe adt/alloc.h
 static FILE *
@@ -737,14 +739,22 @@ endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
 	return 0;
 }
 
-static void
-print_fsm_vmc(struct fsm *fsm, const char *prefix, enum ambig ambig)
+static int
+print_vmc_ambig(FILE *f, const struct fsm *fsm, enum ambig ambig)
 {
 	const struct fsm_options *old;
 	struct fsm_options tmp;
 
-	if (prefix == NULL) {
-		prefix = "fsm";
+	old = fsm_getoptions(fsm);
+	assert(old != NULL);
+
+	tmp = *old;
+	tmp.fragment = true,
+	tmp.endleaf_opaque = & (struct endleaf_env) { ambig, fsm };
+	tmp.endleaf = endleaf_c;
+
+	if (tmp.prefix == NULL) {
+		tmp.prefix = "fsm";
 	}
 
 	fprintf(stdout, "/* generated */\n");
@@ -755,10 +765,9 @@ print_fsm_vmc(struct fsm *fsm, const char *prefix, enum ambig ambig)
 	fprintf(stdout, "\n");
 
 // TODO: not bool?
-// TODO: return type depends on enum ambig
-// TODO: but also override return -1
+// TODO: also override return -1
 	fprintf(stdout, "int\n");
-	fprintf(stdout, "%s_main(const char *s, size_t n", prefix);
+	fprintf(stdout, "%s_main(const char *s, size_t n", tmp.prefix);
 	if (ambig == AMBIG_MULTIPLE) {
 		fprintf(stdout, ",\n");
 		fprintf(stdout, "\tconst unsigned **ids, size_t *count");
@@ -767,19 +776,31 @@ print_fsm_vmc(struct fsm *fsm, const char *prefix, enum ambig ambig)
 	fprintf(stdout, "{\n");
 	fprintf(stdout, "\tconst char *b = s, *e = s + n;\n");
 
-	old = fsm_getoptions(fsm);
-	assert(old != NULL);
-
-	tmp = *old;
-	tmp.fragment = true,
-	tmp.endleaf_opaque = & (struct endleaf_env) { ambig, fsm };
-	tmp.endleaf = endleaf_c,
-
-	fsm_setoptions(fsm, &tmp);
-	fsm_print_vmc(stdout, fsm);
-	fsm_setoptions(fsm, old);
+	fsm_setoptions((struct fsm *) fsm, &tmp); /* XXX: const */
+	fsm_print_vmc(f, fsm);
+	fsm_setoptions((struct fsm *) fsm, old); /* XXX: const */
 
 	fprintf(stdout, "}\n");
+
+	return 0; /* XXX */
+}
+
+static int
+print_vmc_error(FILE *f, const struct fsm *fsm)
+{
+	return print_vmc_ambig(f, fsm, AMBIG_ERROR);
+}
+
+static int
+print_vmc_earliest(FILE *f, const struct fsm *fsm)
+{
+	return print_vmc_ambig(f, fsm, AMBIG_EARLIEST);
+}
+
+static int
+print_vmc_multiple(FILE *f, const struct fsm *fsm)
+{
+	return print_vmc_ambig(f, fsm, AMBIG_MULTIPLE);
 }
 
 static enum re_dialect
@@ -851,24 +872,54 @@ io(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static print_fsm *
-print_name(const char *name)
+static fsm_print *
+print_name(const char *name, enum ambig ambig)
 {
 	size_t i;
+	bool failed_mask;
 
 	struct {
 		const char *name;
-		print_fsm *print;
+		fsm_print *print;
+		enum ambig mask;
 	} a[] = {
-		{ "vmc", print_fsm_vmc }
+		{ "c",          print_vmc_error,            AMBIG_ERROR    },
+		{ "c",          print_vmc_earliest,         AMBIG_EARLIEST },
+		{ "c",          print_vmc_multiple,         AMBIG_MULTIPLE },
+		{ "fsm",        fsm_print_fsm,              AMBIG_ANY      },
+		{ "rust",       fsm_print_rust,             AMBIG_ERROR    },
+		{ "go",         fsm_print_go,               AMBIG_ERROR    },
+		{ "ir",         fsm_print_ir,               AMBIG_ANY      },
+		{ "irjson",     fsm_print_irjson,           AMBIG_ANY      },
+		{ "vmdot",      fsm_print_vmdot,            AMBIG_ANY      },
+		{ "vmops_c",    fsm_print_vmops_c,          AMBIG_ERROR    },
+		{ "vmops_h",    fsm_print_vmops_c,          AMBIG_ERROR    },
+		{ "vmops_main", fsm_print_vmops_main,       AMBIG_ERROR    },
+		{ "amd64",      fsm_print_vmasm_amd64_nasm, AMBIG_ERROR    },
+		{ "amd64_att",  fsm_print_vmasm_amd64_att,  AMBIG_ERROR    },
+		{ "amd64_nasm", fsm_print_vmasm_amd64_nasm, AMBIG_ERROR    },
+		{ "amd64_go",   fsm_print_vmasm_amd64_go,   AMBIG_ERROR    }
 	};
 
 	assert(name != NULL);
 
+	failed_mask = false;
+
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (0 == strcmp(a[i].name, name)) {
+		if (0 != strcmp(a[i].name, name)) {
+			continue;
+		}
+
+		if ((a[i].mask & ambig)) {
 			return a[i].print;
 		}
+
+		failed_mask = true;
+	}
+
+	if (failed_mask) {
+		fprintf(stderr, "unsupported ambig mode for output language\n");
+		exit(EXIT_FAILURE);
 	}
 
 	fprintf(stderr, "unrecognised output language; valid languages are: ");
@@ -932,7 +983,8 @@ main(int argc, char *argv[])
 	bool verbose = false;
 	bool show_stats = false;
 	enum ambig ambig = AMBIG_ERROR;
-	print_fsm *print = print_fsm_vmc;
+	const char *lang = "c";
+	fsm_print *print = NULL;
 
 	size_t general_limit = 0;
 
@@ -971,7 +1023,7 @@ main(int argc, char *argv[])
 		const char *name = argv[0];
 		int c;
 
-		while (c = getopt(argc, argv, "h" "C:cd:ikF:l::n:p:r:R:Qquv"), c != -1) {
+		while (c = getopt(argc, argv, "h" "C:cd:ikF:l:n:p:r:R:Qquv"), c != -1) {
 			switch (c) {
 			case 'C':
 				charset = optarg;
@@ -1018,7 +1070,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'l':
-				print = print_name(optarg);
+				lang = optarg;
 				break;
 
 			case 'F':
@@ -1080,6 +1132,8 @@ main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	print = print_name(lang, ambig);
 
 	if (charset != NULL && strchr(charset, '\n')) {
 		fprintf(stderr, "charset cannot contain \\n "
@@ -1455,7 +1509,9 @@ main(int argc, char *argv[])
 		}
 
 		if (!quiet) {
-			print(fsm, opt.prefix, ambig);
+			if (-1 == print(stdout, fsm)) {
+				exit(EXIT_FAILURE);
+			}
 		}
 
 		fsm_free(fsm);
