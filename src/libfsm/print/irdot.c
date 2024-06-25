@@ -335,6 +335,7 @@ fsm_print_ir(FILE *f, const struct fsm *fsm)
 		return -1;
 	}
 
+	fprintf(f, "# generated\n");
 	fprintf(f, "digraph G {\n");
 
 	fprintf(f, "\tnode [ shape = box, style = rounded ];\n");

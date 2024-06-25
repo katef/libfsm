@@ -279,6 +279,7 @@ fsm_print_go_complete(FILE *f, const struct ir *ir,
 		fprintf(f, "package %sfsm\n", package_prefix);
 		fprintf(f, "\n");
 
+		fprintf(f, "// generated\n");
 		fprintf(f, "func %sMatch", prefix);
 
 		switch (opt->io) {

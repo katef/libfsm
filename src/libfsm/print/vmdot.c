@@ -344,8 +344,7 @@ fsm_print_vmdot_complete(FILE *f, const struct ir *ir, const struct fsm_options 
 			return -1;
 		}
 	} else {
-		fprintf(f, "\n");
-
+		fprintf(f, "# generated\n");
 		fprintf(f, "digraph G {\n");
 
 		fprintf(f, "\tnode [ shape = plaintext ];\n");

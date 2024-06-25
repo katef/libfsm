@@ -384,6 +384,8 @@ fsm_print_rust_complete(FILE *f, const struct ir *ir,
 		return -1;
 	}
 
+	fprintf(f, "// generated\n");
+
 	if (opt->fragment) {
 		fsm_print_rustfrag(f, &a, ir, opt, cp,
 			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);

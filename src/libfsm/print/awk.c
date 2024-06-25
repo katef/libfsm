@@ -283,6 +283,7 @@ fsm_print_awk_complete(FILE *f, const struct ir *ir,
 	} else {
 		fprintf(f, "\n");
 
+		fprintf(f, "# generated\n");
 		fprintf(f, "function %smain(", prefix);
 
 		switch (opt->io) {

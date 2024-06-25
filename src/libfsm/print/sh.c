@@ -202,6 +202,7 @@ fsm_print_shfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 	fprintf(f, "IFS=\n");
 	fprintf(f, "\n");
 
+	fprintf(f, "# generated\n");
 	fprintf(f, "while true; do\n");
 	fprintf(f, "\tcase $l in\n");
 	fprintf(f, "\tstart)\n");
