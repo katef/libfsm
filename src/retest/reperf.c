@@ -1062,6 +1062,7 @@ usage(void)
 	fprintf(stderr, "                 c         compile as per fsm_print_c()\n");
 	fprintf(stderr, "                 vmc       compile as per fsm_print_vmc()\n");
 	fprintf(stderr, "                 rust      compile as per fsm_print_rust()\n");
+	fprintf(stderr, "                 llvm      compile as per fsm_print_llvm()\n");
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -x <encoding>\n");
@@ -1155,6 +1156,8 @@ main(int argc, char *argv[])
 					impl = IMPL_INTERPRET;
 				} else if (strcmp(optarg, "c") == 0) {
 					impl = IMPL_C;
+				} else if (strcmp(optarg, "llvm") == 0) {
+					impl = IMPL_LLVM;
 				} else if (strcmp(optarg, "rust") == 0) {
 					impl = IMPL_RUST;
 				} else if (strcmp(optarg, "asm") == 0) {

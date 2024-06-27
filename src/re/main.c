@@ -124,6 +124,7 @@ print_name(const char *name,
 		{ "vmc",    fsm_print_vmc,    NULL },
 		{ "vmdot",  fsm_print_vmdot,  NULL },
 		{ "rust",   fsm_print_rust,   NULL },
+		{ "llvm",   fsm_print_llvm,   NULL },
 		{ "sh",     fsm_print_sh,     NULL },
 		{ "go",     fsm_print_go,     NULL },
 
@@ -489,6 +490,47 @@ endleaf_rust(FILE *f,
 	}
 
 	fprintf(f, " */");
+
+	return 0;
+}
+
+static int
+endleaf_llvm(FILE *f,
+	const fsm_end_id_t *ids, size_t count,
+	const void *endleaf_opaque)
+{
+	const struct match *m;
+	unsigned n;
+	size_t i;
+
+	assert(endleaf_opaque == NULL);
+
+	(void) f;
+	(void) endleaf_opaque;
+
+	n = 0;
+
+	for (i = 0; i < count; i++) {
+		for (m = find_match_with_id(ids[i]); m != NULL; m = m->next) {
+			n |= 1U << m->id;
+		}
+	}
+
+	fprintf(f, "\tret i32 u%#x", (unsigned) n);
+
+	fprintf(f, " ; ");
+
+	for (i = 0; i < count; i++) {
+		for (m = find_match_with_id(ids[i]); m != NULL; m = m->next) {
+			fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
+
+			if (m->next != NULL || i < count - 1) {
+				fprintf(f, ", ");
+			}
+		}
+	}
+
+	fprintf(f, "\n");
 
 	return 0;
 }
@@ -1186,6 +1228,8 @@ main(int argc, char *argv[])
 			opt.endleaf = endleaf_c;
 		} else if (print_fsm == fsm_print_rust) {
 			opt.endleaf = endleaf_rust;
+		} else if (print_fsm == fsm_print_llvm) {
+			opt.endleaf = endleaf_llvm;
 		} else if (print_fsm == fsm_print_dot || print_fsm == fsm_print_vmdot) {
 			opt.endleaf = patterns ? endleaf_dot : NULL;
 		} else if (print_fsm == fsm_print_json) {

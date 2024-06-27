@@ -167,6 +167,7 @@ print_name(const char *name)
 		{ "vmc",   fsm_print_vmc   },
 		{ "vmdot", fsm_print_vmdot },
 		{ "rust",  fsm_print_rust  },
+		{ "llvm",  fsm_print_llvm  },
 		{ "sh",    fsm_print_sh    },
 		{ "go",    fsm_print_go    },
 

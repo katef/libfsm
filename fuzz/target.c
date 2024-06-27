@@ -329,6 +329,7 @@ fuzz_all_print_functions(FILE *f, const char *pattern, bool det, bool min, const
 	r |= fsm_print_sh(f, fsm);
 	r |= fsm_print_go(f, fsm);
 	r |= fsm_print_rust(f, fsm);
+	r |= fsm_print_llvm(f, fsm);
 	assert(r == 0 || errno != 0);
 
 	fsm_free(fsm);
