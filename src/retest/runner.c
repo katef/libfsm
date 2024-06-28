@@ -242,8 +242,12 @@ compile(enum implementation impl,
 			return 0;
 		}
 
-		if (0 != systemf("%s %s -shared %s -o %s",
+		if (0 != systemf("%s %s -shared %s %s -o %s",
 				cc ? cc : "gcc", cflags ? cflags : "",
+
+				// for "missing .note.GNU-stack section implies executable stack"
+				"-Wl,-z,noexecstack",
+
 				tmp_o, tmp_so))
 		{
 			return 0;
