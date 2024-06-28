@@ -1181,7 +1181,7 @@ finish:
 		exit(EXIT_FAILURE);
 	}
 
-	return num_errors;
+	return num_errors + num_re_errors;
 }
 
 static enum fsm_io

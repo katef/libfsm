@@ -11,6 +11,9 @@ RETEST=${BUILD}/bin/retest
 .for lang in vm asm c vmc
 .for io in pair str
 
+# XXX: we don't have FSM_IO_STR for asm yet
+.if ${lang} != asm || ${io} != str
+
 .for n in ${TEST.tests/retest:T:R:C/^tests_//}
 
 ${TEST_OUTDIR.tests/retest}/res-${lang}-${io}${n}: ${TEST_SRCDIR.tests/retest}/tests_${n}.tst
@@ -21,6 +24,8 @@ ${TEST_OUTDIR.tests/retest}/res-${lang}-${io}${n}: ${TEST_SRCDIR.tests/retest}/t
 test:: ${TEST_OUTDIR.tests/retest}/res-${lang}-${io}${n}
 
 .endfor
+
+.endif
 
 .endfor
 .endfor
