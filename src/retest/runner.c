@@ -166,7 +166,7 @@ compile(enum implementation impl,
 		break;
 
 	case IMPL_LLVM:
-		if (0 != systemf("clang %s -shared -fPIC -opaque-pointers %s -o %s",
+		if (0 != systemf("clang %s -shared -fPIC -mllvm -opaque-pointers %s -o %s",
 				cflags ? cflags : "-pedantic -Wall -Werror -Wno-override-module -O3",
 				tmp_src, tmp_so))
 		{
