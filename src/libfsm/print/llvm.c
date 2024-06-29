@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <inttypes.h>
 
 #include <print/esc.h>
@@ -111,15 +112,18 @@ print_ret(FILE *f, long l)
 	fprintf(f, "\tret i32 %ld\n", l);
 }
 
-// TODO: variadic
 static void
-print_label(FILE *f, const struct dfavm_op_ir *op, bool decl)
+print_label(FILE *f, bool decl, const char *fmt, ...)
 {
+	va_list ap;
+
 	if (!decl) {
-		fprintf(f, "%%");
+		fprintf(f, "label %%");
 	}
 
-	fprintf(f, "l%" PRIu32, op->index);
+	va_start(ap, fmt);
+	vfprintf(f, fmt, ap);
+	va_end(ap);
 
 	if (decl) {
 		fprintf(f, ":\n");
@@ -167,8 +171,8 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 static void
 print_jump(FILE *f, const struct dfavm_op_ir *dest)
 {
-	fprintf(f, "\tbr label ");
-	print_label(f, dest, false);
+	fprintf(f, "\tbr ");
+	print_label(f, false, "l%" PRIu32, dest->index);
 	fprintf(f, "\n");
 }
 
@@ -210,8 +214,11 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 		print_decl(f, "r", decl(&frame->r));
 		fprintf(f, "icmp eq i32 %%i%u, -1 ; EOF\n", n);
 
-		fprintf(f, "\tbr i1 %%r%u, label %%t%u, label %%f%u\n",
-			use(&frame->r), b, b);
+		fprintf(f, "\tbr i1 %%r%u, ", use(&frame->r));
+		print_label(f, false, "t%u", b);
+		fprintf(f, ", ");
+		print_label(f, false, "f%u", b);
+		fprintf(f, "\n");
 		fprintf(f, "f%u:\n", b);
 
 		print_decl(f, "c", n);
@@ -239,8 +246,11 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 			n);
 
 		// TODO: skip t%u: if the next instruction is ret -1, centralise it to fail:
-		fprintf(f, "\tbr i1 %%r%u, label %%t%u, label %%f%u\n",
-			use(&frame->r), b, b);
+		fprintf(f, "\tbr i1 %%r%u, ", use(&frame->r));
+		print_label(f, false, "t%u", b);
+		fprintf(f, ", ");
+		print_label(f, false, "f%u", b);
+		fprintf(f, "\n");
 		fprintf(f, "f%u:\n", b);
 
 		print_incr(f, "n", n);
@@ -261,8 +271,11 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 	  	fprintf(f, "icmp eq %s %%p%u, %%e ; EOF\n",
 			ptr_i8, n);
 
-		fprintf(f, "\tbr i1 %%r%u, label %%t%u, label %%f%u\n",
-			use(&frame->r), b, b);
+		fprintf(f, "\tbr i1 %%r%u, ", use(&frame->r));
+		print_label(f, false, "t%u", b);
+		fprintf(f, ", ");
+		print_label(f, false, "f%u", b);
+		fprintf(f, "\n");
 		fprintf(f, "f%u:\n", b);
 
 		print_decl(f, "c", n);
@@ -321,7 +334,7 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 
 	struct frame frame = { 0, 0, 0 };
 	for (op = a->linked; op != NULL; op = op->next) {
-		print_label(f, op, true);
+		print_label(f, true, "l%" PRIu32, op->index);
 
 		if (op->ir_state != NULL && op->ir_state->example != NULL) {
 			/* C's escaping seems to be a subset of llvm's, and these are
@@ -337,13 +350,14 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 		case VM_OP_STOP:
 			if (op->cmp != VM_CMP_ALWAYS) {
 				unsigned b = decl(&frame.b);
-				unsigned next = op->next->index;
 
 				print_cond(f, op, opt, &frame);
 
-// TODO: fold into print_cond()
-				fprintf(f, "\tbr i1 %%r%u, label %%t%u, label %%l%u\n",
-					use(&frame.r), b, next);
+				fprintf(f, "\tbr i1 %%r%u, ", use(&frame.r));
+				print_label(f, false, "t%u", b);
+				fprintf(f, ", ");
+				print_label(f, false, "l%" PRIu32, op->next->index);
+				fprintf(f, "\n");
 				fprintf(f, "t%u:\n", b);
 			}
 
@@ -367,13 +381,13 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 			if (op->cmp == VM_CMP_ALWAYS) {
 				print_jump(f, dest);
 			} else {
-				unsigned next = op->next->index;
-
 				print_cond(f, op, opt, &frame);
 
-				fprintf(f, "\tbr i1 %%r%u, label ", use(&frame.r));
-				print_label(f, dest, false);
-				fprintf(f, ", label %%l%u\n", next);
+				fprintf(f, "\tbr i1 %%r%u, ", use(&frame.r));
+				print_label(f, false, "l%" PRIu32, dest->index);
+				fprintf(f, ", ");
+				print_label(f, false, "l%" PRIu32, op->next->index);
+				fprintf(f, "\n");
 			}
 			break;
 		}
