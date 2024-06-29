@@ -173,6 +173,16 @@ print_jump(FILE *f, const struct dfavm_op_ir *dest)
 }
 
 static void
+print_incr(FILE *f, const char *name, unsigned n)
+{
+	// TODO: emit incr()?
+	print_decl(f, "n.new", n);
+	fprintf(f, "add i32 1, %%%s%u\n", name, n);
+
+	fprintf(f, "\tstore i32 %%%s.new%u, %s %%%s\n", name, n, ptr_i32, name);
+}
+
+static void
 print_fetch(FILE *f, const struct fsm_options *opt,
 	struct frame *frame, const struct dfavm_op_ir *next)
 {
@@ -212,18 +222,9 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 	}
 
 	case FSM_IO_STR: {
-		/*
-		 * If we increment %s instead of maintaining %n, we'd need to
-		 * do it post-EOS check. Otherwise we'd skip the first character
-		 * (or start with the pointer out of bounds).
-		 */
+		// TODO: we could increment %s instead of maintaining %n here
 		print_decl(f, "n", n);
 		fprintf(f, "load i32, %s %%n\n", ptr_i32);
-
-		print_decl(f, "n.new", n);
-		fprintf(f, "add i32 1, %%n%u\n", n);
-
-		fprintf(f, "\tstore i32 %%n.new%u, %s %%n\n", n, ptr_i32);
 
 		print_decl(f, "p", n);
 		fprintf(f, "getelementptr inbounds i8, %s %%s, i32 %%n%u\n",
@@ -238,19 +239,19 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 			n);
 
 		// TODO: skip t%u: if the next instruction is ret -1, centralise it to fail:
-		fprintf(f, "\tbr i1 %%r%u, label %%t%u, label %%l%u\n",
-			use(&frame->r), b, next->index);
+		fprintf(f, "\tbr i1 %%r%u, label %%t%u, label %%f%u\n",
+			use(&frame->r), b, b);
+		fprintf(f, "f%u:\n", b);
+
+		print_incr(f, "n", n);
+
+		print_jump(f, next);
 		break;
 	 }
 
 	case FSM_IO_PAIR: {
 		print_decl(f, "n", n);
 		fprintf(f, "load i32, %s %%n\n", ptr_i32);
-
-		print_decl(f, "n.new", n);
-		fprintf(f, "add i32 1, %%n%u\n", n);
-
-		fprintf(f, "\tstore i32 %%n.new%u, %s %%n\n", n, ptr_i32);
 
 		print_decl(f, "p", n);
 		fprintf(f, "getelementptr inbounds i8, %s %%b, i32 %%n%u\n",
@@ -267,6 +268,8 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 		print_decl(f, "c", n);
 		fprintf(f, "load i8, %s %%p%u\n",
 			ptr_i8, n);
+
+		print_incr(f, "n", n);
 
 		print_jump(f, next);
 		break;
@@ -455,12 +458,12 @@ fsm_print_llvm_complete(FILE *f, const struct ir *ir,
 
 	case FSM_IO_STR:
 		fprintf(f, "\t%%n = alloca i32\n");
-		fprintf(f, "\tstore i32 -1, %s %%n\n", ptr_i32);
+		fprintf(f, "\tstore i32 0, %s %%n\n", ptr_i32);
 		break;
 
 	case FSM_IO_PAIR:
 		fprintf(f, "\t%%n = alloca i32\n");
-		fprintf(f, "\tstore i32 -1, %s %%n\n", ptr_i32);
+		fprintf(f, "\tstore i32 0, %s %%n\n", ptr_i32);
 		break;
 
 	default:
