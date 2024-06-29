@@ -187,6 +187,25 @@ print_incr(FILE *f, const char *name, unsigned n)
 }
 
 static void
+print_branch(FILE *f, const struct frame *frame,
+	const struct dfavm_op_ir *op_true, const struct dfavm_op_ir *op_false)
+{
+	fprintf(f, "\tbr i1 %%r%u, ", use(&frame->r));
+	if (op_true != NULL) {
+		print_label(f, false, "l%" PRIu32, op_true->index);
+	} else {
+		print_label(f, false, "t%u", use(&frame->b));
+	}
+	fprintf(f, ", ");
+	if (op_false != NULL) {
+		print_label(f, false, "l%" PRIu32, op_false->index);
+	} else {
+		print_label(f, false, "f%u", use(&frame->b));
+	}
+	fprintf(f, "\n");
+}
+
+static void
 print_fetch(FILE *f, const struct fsm_options *opt,
 	struct frame *frame, const struct dfavm_op_ir *next)
 {
@@ -214,12 +233,8 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 		print_decl(f, "r", decl(&frame->r));
 		fprintf(f, "icmp eq i32 %%i%u, -1 ; EOF\n", n);
 
-		fprintf(f, "\tbr i1 %%r%u, ", use(&frame->r));
-		print_label(f, false, "t%u", b);
-		fprintf(f, ", ");
-		print_label(f, false, "f%u", b);
-		fprintf(f, "\n");
-		fprintf(f, "f%u:\n", b);
+		print_branch(f, frame, NULL, NULL);
+		print_label(f, true, "f%u", b);
 
 		print_decl(f, "c", n);
 		fprintf(f, "trunc i32 %%i%u to i8\n", n);
@@ -246,12 +261,8 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 			n);
 
 		// TODO: skip t%u: if the next instruction is ret -1, centralise it to fail:
-		fprintf(f, "\tbr i1 %%r%u, ", use(&frame->r));
-		print_label(f, false, "t%u", b);
-		fprintf(f, ", ");
-		print_label(f, false, "f%u", b);
-		fprintf(f, "\n");
-		fprintf(f, "f%u:\n", b);
+		print_branch(f, frame, NULL, NULL);
+		print_label(f, true, "f%u", b);
 
 		print_incr(f, "n", n);
 
@@ -271,12 +282,8 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 	  	fprintf(f, "icmp eq %s %%p%u, %%e ; EOF\n",
 			ptr_i8, n);
 
-		fprintf(f, "\tbr i1 %%r%u, ", use(&frame->r));
-		print_label(f, false, "t%u", b);
-		fprintf(f, ", ");
-		print_label(f, false, "f%u", b);
-		fprintf(f, "\n");
-		fprintf(f, "f%u:\n", b);
+		print_branch(f, frame, NULL, NULL);
+		print_label(f, true, "f%u", b);
 
 		print_decl(f, "c", n);
 		fprintf(f, "load i8, %s %%p%u\n",
@@ -352,13 +359,8 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 				unsigned b = decl(&frame.b);
 
 				print_cond(f, op, opt, &frame);
-
-				fprintf(f, "\tbr i1 %%r%u, ", use(&frame.r));
-				print_label(f, false, "t%u", b);
-				fprintf(f, ", ");
-				print_label(f, false, "l%" PRIu32, op->next->index);
-				fprintf(f, "\n");
-				fprintf(f, "t%u:\n", b);
+				print_branch(f, &frame, NULL, op->next);
+				print_label(f, true, "t%u", b);
 			}
 
 			if (-1 == print_end(f, op, opt, ir, op->u.stop.end_bits)) {
@@ -382,12 +384,7 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 				print_jump(f, dest);
 			} else {
 				print_cond(f, op, opt, &frame);
-
-				fprintf(f, "\tbr i1 %%r%u, ", use(&frame.r));
-				print_label(f, false, "l%" PRIu32, dest->index);
-				fprintf(f, ", ");
-				print_label(f, false, "l%" PRIu32, op->next->index);
-				fprintf(f, "\n");
+				print_branch(f, &frame, dest, op->next);
 			}
 			break;
 		}
