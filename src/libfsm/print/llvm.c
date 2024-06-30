@@ -464,7 +464,7 @@ fsm_print_llvm_complete(FILE *f, const struct ir *ir,
 
 	fprintf(f, " local_unnamed_addr");
 	fprintf(f, " hot nosync nounwind norecurse willreturn");
-	fprintf(f, "#0 {\n");
+	fprintf(f, " #0 {\n");
 
 	switch (opt->io) {
 	case FSM_IO_GETC:
