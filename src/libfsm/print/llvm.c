@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -336,6 +337,150 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 	}
 }
 
+struct ret {
+	size_t count;
+	const fsm_end_id_t *ids;
+	const struct ir_state *ir_state; // TODO: remove when we return endids only
+};
+
+struct ret_list {
+	size_t count;
+	struct ret *a;
+};
+
+static bool
+append_ret(struct ret_list *list,
+	const fsm_end_id_t *ids, size_t count,
+	const struct ir_state *ir_state)
+{
+	const size_t low    = 16; /* must be power of 2 */
+	const size_t factor =  2; /* must be even */
+
+	assert(list != NULL);
+
+	if (list->count == 0) {
+		list->a = malloc(low * sizeof *list->a);
+		if (list->a == NULL) {
+			return false;
+		}
+	} else if (list->count >= low && (list->count & (list->count - 1)) == 0) {
+		void *tmp;
+		size_t new = list->count * factor;
+		if (new < list->count) {
+			errno = E2BIG;
+			perror("realloc");
+			exit(EXIT_FAILURE);
+		}
+
+		tmp = realloc(list->a, new * sizeof *list->a);
+		if (tmp == NULL) {
+			return false;
+		}
+
+		list->a = tmp;
+	}
+
+	list->a[list->count].ids = ids;
+	list->a[list->count].count = count;
+
+	/* .ir_state is not part of the "key" for struct ret,
+	 * we ignore it for comparisons and effectively pick
+	 * an arbitrary ir_state for output */
+	list->a[list->count].ir_state = ir_state;
+
+	list->count++;
+
+	return true;
+}
+
+static int
+cmp_ret(const void *pa, const void *pb)
+{
+	const struct ret *a = pa;
+	const struct ret *b = pb;
+
+	if (a->count < b->count) {
+		return -1;
+	}
+
+	if (a->count > b->count) {
+		return 1;
+	}
+
+	/* .ir_state intentionally ignored */
+
+	return memcmp(a->ids, b->ids, a->count);
+}
+
+/* TODO: centralise */
+static int
+cmp_id(const void *pa, const void *pb)
+{
+	const fsm_end_id_t *a = pa;
+	const fsm_end_id_t *b = pb;
+
+	if (*a < *b) {
+		return -1;
+	}
+
+	if (*a > *b) {
+		return 1;
+	}
+
+	return 0;
+}
+
+static bool
+build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
+{
+	const struct dfavm_op_ir *op;
+
+	assert(list != NULL);
+
+	for (op = a; op != NULL; op = op->next) {
+		switch (op->instr) {
+		case VM_OP_STOP:
+			if (op->u.stop.end_bits == VM_END_FAIL) {
+				/* always present */
+				continue;
+			}
+
+			break;
+
+		case VM_OP_FETCH:
+			if (op->u.fetch.end_bits == VM_END_FAIL) {
+				/* always present */
+				continue;
+			}
+
+			break;
+
+		case VM_OP_BRANCH:
+			continue;
+
+		default:
+			assert(!"unreached");
+			abort();
+		}
+
+		// sorting ids here so we can memcmp() (struct ret).a
+		qsort(op->ir_state->endids.ids, op->ir_state->endids.count,
+			sizeof *op->ir_state->endids.ids, cmp_id);
+
+		// TODO; pick up endids here
+		if (!append_ret(list,
+			op->ir_state->endids.ids, op->ir_state->endids.count,
+			op->ir_state))
+		{
+			return false;
+		}
+	}
+
+	qsort(list->a, list->count, sizeof *list->a, cmp_ret);
+
+	return true;
+}
+
 /* TODO: eventually to be non-static */
 static int
 fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
@@ -369,10 +514,42 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 		}
 	}
 
-	print_jump(f, a->linked);
+	{
+		struct ret_list retlist;
+		size_t prev;
 
-	fprintf(f, "fail:\n");
-	print_ret(f, -1);
+		retlist.count = 0;
+		build_retlist(&retlist, a->linked);
+
+		print_jump(f, a->linked);
+
+		print_label(f, true, "fail");
+		print_ret(f, -1);
+
+		for (size_t i = 0; i < retlist.count; i++) {
+			if (i > 0 && cmp_ret(&retlist.a[i], &retlist.a[prev]) == 0) {
+				continue;
+			}
+
+			print_label(f, true, "ret%u", i);
+			if (opt->endleaf != NULL) {
+				if (-1 == opt->endleaf(f,
+					retlist.a[i].ids, retlist.a[i].count,
+					opt->endleaf_opaque))
+				{
+					return -1;
+				}
+			} else {
+				print_ret(f, retlist.a[i].ir_state - ir->states);
+			}
+
+			prev = i;
+		}
+
+		if (retlist.count > 0) {
+			free(retlist.a);
+		}
+	}
 
 	struct frame frame = { 0, 0, 0 };
 	for (op = a->linked; op != NULL; op = op->next) {
@@ -441,9 +618,6 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 			break;
 		}
 	}
-
-// TODO: collate ret values together at the end, keeps them out of the i-cache maybe
-// or better yet, have one ret: label and emit a phi
 
 	return 0;
 }
