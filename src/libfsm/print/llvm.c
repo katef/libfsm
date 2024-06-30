@@ -42,6 +42,8 @@ static const char *ptr_i32  = "i32*";
 static const char *ptr_void = "i8*";
 #endif
 
+static const struct dfavm_op_ir fail; // used as a unqiue address only
+
 /*
  * If we had a stack, the current set of live values would be a frame.
  * We're a DFA, so we don't have a stack. But I still think of them as a frame.
@@ -113,20 +115,50 @@ print_ret(FILE *f, long l)
 }
 
 static void
-print_label(FILE *f, bool decl, const char *fmt, ...)
+vprint_label(FILE *f, bool decl, const char *fmt, va_list ap)
 {
-	va_list ap;
+	assert(fmt != NULL);
 
 	if (!decl) {
 		fprintf(f, "label %%");
 	}
 
-	va_start(ap, fmt);
 	vfprintf(f, fmt, ap);
-	va_end(ap);
 
 	if (decl) {
 		fprintf(f, ":\n");
+	}
+}
+
+static void
+print_label(FILE *f, bool decl, const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	vprint_label(f, decl, fmt, ap);
+	va_end(ap);
+}
+
+static void
+print_target(FILE *f, const struct dfavm_op_ir *op,
+	const char *fmt, ...)
+{
+	va_list ap;
+
+	if (op == &fail) {
+		print_label(f, false, "fail");
+	} else if (op != NULL && op->instr == VM_OP_STOP && op->cmp == VM_CMP_ALWAYS && op->u.stop.end_bits == VM_END_FAIL) {
+		print_label(f, false, "fail");
+	} else if (op != NULL) {
+		print_label(f, false, "l%" PRIu32, op->index);
+	} else if (fmt == NULL) {
+		assert("!unreached");
+		abort();
+	} else {
+		va_start(ap, fmt);
+		vprint_label(f, false, fmt, ap);
+		va_end(ap);
 	}
 }
 
@@ -172,7 +204,7 @@ static void
 print_jump(FILE *f, const struct dfavm_op_ir *dest)
 {
 	fprintf(f, "\tbr ");
-	print_label(f, false, "l%" PRIu32, dest->index);
+	print_target(f, dest, NULL);
 	fprintf(f, "\n");
 }
 
@@ -191,23 +223,16 @@ print_branch(FILE *f, const struct frame *frame,
 	const struct dfavm_op_ir *op_true, const struct dfavm_op_ir *op_false)
 {
 	fprintf(f, "\tbr i1 %%r%u, ", use(&frame->r));
-	if (op_true != NULL) {
-		print_label(f, false, "l%" PRIu32, op_true->index);
-	} else {
-		print_label(f, false, "t%u", use(&frame->b));
-	}
+	print_target(f, op_true, "t%u", use(&frame->b));
 	fprintf(f, ", ");
-	if (op_false != NULL) {
-		print_label(f, false, "l%" PRIu32, op_false->index);
-	} else {
-		print_label(f, false, "f%u", use(&frame->b));
-	}
+	print_target(f, op_false, "f%u", use(&frame->b));
 	fprintf(f, "\n");
 }
 
 static void
 print_fetch(FILE *f, const struct fsm_options *opt,
-	struct frame *frame, const struct dfavm_op_ir *next)
+	struct frame *frame, const struct dfavm_op_ir *next,
+	enum dfavm_op_end end_bits)
 {
 	unsigned n = decl(&frame->c);
 	unsigned b = decl(&frame->b);
@@ -233,7 +258,9 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 		print_decl(f, "r", decl(&frame->r));
 		fprintf(f, "icmp eq i32 %%i%u, -1 ; EOF\n", n);
 
-		print_branch(f, frame, NULL, NULL);
+		print_branch(f, frame,
+			end_bits == VM_END_FAIL ? &fail : NULL,
+			NULL);
 		print_label(f, true, "f%u", b);
 
 		print_decl(f, "c", n);
@@ -260,8 +287,9 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 	  	fprintf(f, "icmp eq i8 %%c%u, 0 ; EOT\n",
 			n);
 
-		// TODO: skip t%u: if the next instruction is ret -1, centralise it to fail:
-		print_branch(f, frame, NULL, NULL);
+		print_branch(f, frame,
+			end_bits == VM_END_FAIL ? &fail : NULL,
+			NULL);
 		print_label(f, true, "f%u", b);
 
 		print_incr(f, "n", n);
@@ -282,7 +310,9 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 	  	fprintf(f, "icmp eq %s %%p%u, %%e ; EOF\n",
 			ptr_i8, n);
 
-		print_branch(f, frame, NULL, NULL);
+		print_branch(f, frame,
+			end_bits == VM_END_FAIL ? &fail : NULL,
+			NULL);
 		print_label(f, true, "f%u", b);
 
 		print_decl(f, "c", n);
@@ -300,8 +330,10 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 		exit(EXIT_FAILURE);
 	}
 
-	// TODO: skip t%u: if the next instruction is ret -1, centralise it to fail:
-	fprintf(f, "t%u:\n", use(&frame->b));
+	if (end_bits != VM_END_FAIL) {
+		// TODO: skip t%u: if the next instruction is ret -1, centralise it to fail:
+		fprintf(f, "t%u:\n", use(&frame->b));
+	}
 }
 
 /* TODO: eventually to be non-static */
@@ -339,9 +371,14 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 
 	print_jump(f, a->linked);
 
+	fprintf(f, "fail:\n");
+	print_ret(f, -1);
+
 	struct frame frame = { 0, 0, 0 };
 	for (op = a->linked; op != NULL; op = op->next) {
-		print_label(f, true, "l%" PRIu32, op->index);
+		if (op->instr != VM_OP_STOP || op->cmp != VM_CMP_ALWAYS || op->u.stop.end_bits != VM_END_FAIL) {
+			print_label(f, true, "l%" PRIu32, op->index);
+		}
 
 		if (op->ir_state != NULL && op->ir_state->example != NULL) {
 			/* C's escaping seems to be a subset of llvm's, and these are
@@ -359,19 +396,27 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 				unsigned b = decl(&frame.b);
 
 				print_cond(f, op, opt, &frame);
-				print_branch(f, &frame, NULL, op->next);
-				print_label(f, true, "t%u", b);
+				print_branch(f, &frame,
+					op->u.stop.end_bits == VM_END_FAIL ? &fail : NULL,
+					op->next);
+				if (op->u.stop.end_bits != VM_END_FAIL) {
+					print_label(f, true, "t%u", b);
+				}
 			}
 
-			if (-1 == print_end(f, op, opt, ir, op->u.stop.end_bits)) {
+			if (op->u.stop.end_bits == VM_END_FAIL) {
+				/* handled above */
+			} else if (-1 == print_end(f, op, opt, ir, op->u.stop.end_bits)) {
 				return -1;
 			}
 			break;
 
 		case VM_OP_FETCH: {
-			print_fetch(f, opt, &frame, op->next);
+			print_fetch(f, opt, &frame, op->next, op->u.fetch.end_bits);
 
-			if (-1 == print_end(f, op, opt, ir, op->u.fetch.end_bits)) {
+			if (op->u.fetch.end_bits == VM_END_FAIL) {
+				/* handled in print_fetch() */
+			} else if (-1 == print_end(f, op, opt, ir, op->u.fetch.end_bits)) {
 				return -1;
 			}
 			break;
@@ -384,7 +429,9 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 				print_jump(f, dest);
 			} else {
 				print_cond(f, op, opt, &frame);
-				print_branch(f, &frame, dest, op->next);
+				print_branch(f, &frame,
+					dest,
+					op->next);
 			}
 			break;
 		}
