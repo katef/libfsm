@@ -110,12 +110,6 @@ print_decl(FILE *f, const char *name, unsigned n)
 }
 
 static void
-print_ret(FILE *f, long l)
-{
-	fprintf(f, "\tret i32 %ld\n", l);
-}
-
-static void
 vprint_label(FILE *f, bool decl, const char *fmt, va_list ap)
 {
 	assert(fmt != NULL);
@@ -528,22 +522,71 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 
 		print_jump(f, a->linked);
 
-		print_label(f, true, "fail");
-		print_ret(f, -1);
-
+		/*
+		 * We're jumping to ret*: labels, and having each jump
+		 * to a single stop: with a phi instruction.
+		 *
+		 * This looks like:
+		 *
+		 *  stop:
+		 *      %ret = phi i32
+		 *       [u0x1, %ret0], ; "abc"
+		 *       [u0x2, %ret1], ; "xyz"
+		 *       [u0x3, %ret2], ; "abc", "xyz"
+		 *       [-1, %fail]
+		 *      ret i32 %ret
+		 *  fail:
+		 *      br label %stop
+		 *  ret0:
+		 *      br label %stop
+		 *  ret1:
+		 *      br label %stop
+		 *  ret2:
+		 *      br label %stop
+		 *
+		 * And we jump to stop: via the ret*: labels rather than
+		 * to a phi node directly. This helps for two reasons:
+		 *
+		 *  - We don't need to track every location in the DFA
+		 *    that can stop. In other words, many basic blocks
+		 *    jump to the same ret*: label.
+		 *
+		 *  - The number of basic blocks grows quadratically
+		 *    (as DFA grow quadratically), but the set of endids
+		 *    remains constant. So the phi list is small.
+		 *
+		 * llvm doesn't find this optimisation for us.
+		 */
+		print_label(f, true, "stop");
+		fprintf(f, "\t%%ret = phi i32\n");
 		for (size_t i = 0; i < retlist.count; i++) {
+			fprintf(f, "\t  ");
+
 			if (opt->endleaf != NULL) {
-				print_label(f, true, "ret%zu", i);
 				if (-1 == opt->endleaf(f,
 					retlist.a[i].ids, retlist.a[i].count,
-					opt->endleaf_opaque))
+					&i)) // XXX: passing &i rather than opt->endleaf_opaque is a hack
 				{
 					return -1;
 				}
 			} else {
-				print_label(f, true, "ret%zu", i);
-				print_ret(f, retlist.a[i].ir_state - ir->states);
+				fprintf(f, "[%td, %%ret%zu],\n",
+					retlist.a[i].ir_state - ir->states, i);
 			}
+		}
+		fprintf(f, "\t%s[-1, %%fail]\n", "  ");
+		fprintf(f, "\tret i32 %%ret\n");
+
+		print_label(f, true, "fail");
+		fprintf(f, "\tbr ");
+		print_label(f, false, "stop");
+		fprintf(f, "\n");
+
+		for (size_t i = 0; i < retlist.count; i++) {
+			print_label(f, true, "ret%zu", i);
+			fprintf(f, "\tbr ");
+			print_label(f, false, "stop");
+			fprintf(f, "\n");
 		}
 	}
 
