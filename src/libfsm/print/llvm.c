@@ -179,28 +179,6 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	fprintf(f, "\n");
 }
 
-static int
-print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
-	const struct ir *ir, enum dfavm_op_end end_bits)
-{
-	if (end_bits == VM_END_FAIL) {
-		print_ret(f, -1);
-	} else {
-		if (opt->endleaf != NULL) {
-			if (-1 == opt->endleaf(f,
-				op->ir_state->endids.ids, op->ir_state->endids.count,
-				opt->endleaf_opaque))
-			{
-				return -1;
-			}
-		} else {
-			print_ret(f, op->ir_state - ir->states);
-		}
-	}
-
-	return 0;
-}
-
 static void
 print_jump(FILE *f, const struct dfavm_op_ir *dest)
 {
@@ -394,40 +372,47 @@ append_ret(struct ret_list *list,
 }
 
 static int
-cmp_ret(const void *pa, const void *pb)
+cmp_ret_by_endid(const void *pa, const void *pb)
 {
 	const struct ret *a = pa;
 	const struct ret *b = pb;
 
-	if (a->count < b->count) {
-		return -1;
-	}
-
-	if (a->count > b->count) {
-		return 1;
-	}
+	if (a->count < b->count) { return -1; }
+	if (a->count > b->count) { return +1; }
 
 	/* .ir_state intentionally ignored */
 
-	return memcmp(a->ids, b->ids, a->count);
+	return memcmp(a->ids, b->ids, a->count * sizeof *a->ids);
 }
 
-/* TODO: centralise */
 static int
-cmp_id(const void *pa, const void *pb)
+cmp_ret_by_state(const void *pa, const void *pb)
 {
-	const fsm_end_id_t *a = pa;
-	const fsm_end_id_t *b = pb;
+	const struct ret *a = pa;
+	const struct ret *b = pb;
 
-	if (*a < *b) {
-		return -1;
-	}
+	if (a->ir_state < b->ir_state) { return -1; }
+	if (a->ir_state > b->ir_state) { return +1; }
 
-	if (*a > *b) {
-		return 1;
-	}
+	/* .ids intentionally ignored */
 
 	return 0;
+}
+
+static struct ret *
+find_ret(const struct ret_list *list, const struct dfavm_op_ir *op,
+	int (*cmp)(const void *pa, const void *pb))
+{
+	struct ret key;
+
+	assert(op != NULL);
+	assert(cmp != NULL);
+
+	key.count    = op->ir_state->endids.count;
+	key.ids      = op->ir_state->endids.ids;
+	key.ir_state = op->ir_state;
+
+	return bsearch(&key, list->a, list->count, sizeof *list->a, cmp);
 }
 
 static bool
@@ -441,7 +426,7 @@ build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
 		switch (op->instr) {
 		case VM_OP_STOP:
 			if (op->u.stop.end_bits == VM_END_FAIL) {
-				/* always present */
+				/* %fail is special, don't add to retlist */
 				continue;
 			}
 
@@ -449,7 +434,7 @@ build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
 
 		case VM_OP_FETCH:
 			if (op->u.fetch.end_bits == VM_END_FAIL) {
-				/* always present */
+				/* %fail is special, don't add to retlist */
 				continue;
 			}
 
@@ -463,11 +448,6 @@ build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
 			abort();
 		}
 
-		// sorting ids here so we can memcmp() (struct ret).a
-		qsort(op->ir_state->endids.ids, op->ir_state->endids.count,
-			sizeof *op->ir_state->endids.ids, cmp_id);
-
-		// TODO; pick up endids here
 		if (!append_ret(list,
 			op->ir_state->endids.ids, op->ir_state->endids.count,
 			op->ir_state))
@@ -475,8 +455,6 @@ build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
 			return false;
 		}
 	}
-
-	qsort(list->a, list->count, sizeof *list->a, cmp_ret);
 
 	return true;
 }
@@ -489,6 +467,7 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
+	struct ret_list retlist;
 	struct dfavm_op_ir *op;
 
 	assert(f != NULL);
@@ -515,11 +494,37 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 	}
 
 	{
-		struct ret_list retlist;
-		size_t prev;
-
 		retlist.count = 0;
 		build_retlist(&retlist, a->linked);
+
+		/* sort for both dedup and bsearch */
+		qsort(retlist.a, retlist.count, sizeof *retlist.a,
+			opt->endleaf != NULL ? cmp_ret_by_endid : cmp_ret_by_state);
+
+		/*
+		 * If we're going by endleaf, we deal with endids.
+		 * If we don't have endleaf, we deal with state numbers.
+		 */
+		if (opt->endleaf != NULL && retlist.count > 0) {
+			size_t j = 0;
+
+			/* deduplicate based on endids only.
+			 * j is the start of a run; i increments until we find
+			 * the start of the next run */
+			for (size_t i = 1; i < retlist.count; i++) {
+				assert(i > j);
+				if (cmp_ret_by_endid(&retlist.a[j], &retlist.a[i]) == 0) {
+					continue;
+				}
+
+				j++;
+				retlist.a[j] = retlist.a[i];
+			}
+
+			retlist.count = j + 1;
+
+			assert(retlist.count > 0);
+		}
 
 		print_jump(f, a->linked);
 
@@ -527,12 +532,8 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 		print_ret(f, -1);
 
 		for (size_t i = 0; i < retlist.count; i++) {
-			if (i > 0 && cmp_ret(&retlist.a[i], &retlist.a[prev]) == 0) {
-				continue;
-			}
-
-			print_label(f, true, "ret%u", i);
 			if (opt->endleaf != NULL) {
+				print_label(f, true, "ret%zu", i);
 				if (-1 == opt->endleaf(f,
 					retlist.a[i].ids, retlist.a[i].count,
 					opt->endleaf_opaque))
@@ -540,14 +541,9 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 					return -1;
 				}
 			} else {
+				print_label(f, true, "ret%zu", i);
 				print_ret(f, retlist.a[i].ir_state - ir->states);
 			}
-
-			prev = i;
-		}
-
-		if (retlist.count > 0) {
-			free(retlist.a);
 		}
 	}
 
@@ -572,6 +568,7 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 			if (op->cmp != VM_CMP_ALWAYS) {
 				unsigned b = decl(&frame.b);
 
+// TODO: our ret%u: label goes in place of t%u here, which means we're replacing the NULL
 				print_cond(f, op, opt, &frame);
 				print_branch(f, &frame,
 					op->u.stop.end_bits == VM_END_FAIL ? &fail : NULL,
@@ -583,8 +580,17 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 
 			if (op->u.stop.end_bits == VM_END_FAIL) {
 				/* handled above */
-			} else if (-1 == print_end(f, op, opt, ir, op->u.stop.end_bits)) {
-				return -1;
+			} else {
+				assert(retlist.count > 0);
+				const struct ret *ret = find_ret(&retlist, op,
+					opt->endleaf != NULL ? cmp_ret_by_endid : cmp_ret_by_state);
+				assert(ret != NULL);
+				assert(ret >= retlist.a && ret <= (retlist.a + retlist.count));
+				assert(ret->count == op->ir_state->endids.count);
+				assert(0 == memcmp(ret->ids, op->ir_state->endids.ids, ret->count));
+				fprintf(f, "\tbr ");
+				print_label(f, false, "ret%u", ret - retlist.a);
+				fprintf(f, "\n");
 			}
 			break;
 
@@ -593,8 +599,17 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 
 			if (op->u.fetch.end_bits == VM_END_FAIL) {
 				/* handled in print_fetch() */
-			} else if (-1 == print_end(f, op, opt, ir, op->u.fetch.end_bits)) {
-				return -1;
+			} else {
+				assert(retlist.count > 0);
+				const struct ret *ret = find_ret(&retlist, op,
+					opt->endleaf != NULL ? cmp_ret_by_endid : cmp_ret_by_state);
+				assert(ret != NULL);
+				assert(ret >= retlist.a && ret <= (retlist.a + retlist.count));
+				assert(ret->count == op->ir_state->endids.count);
+				assert(0 == memcmp(ret->ids, op->ir_state->endids.ids, ret->count));
+				fprintf(f, "\tbr ");
+				print_label(f, false, "ret%u", ret - retlist.a);
+				fprintf(f, "\n");
 			}
 			break;
 		}
@@ -617,6 +632,10 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 			assert(!"unreached");
 			break;
 		}
+	}
+
+	if (retlist.count > 0) {
+		free(retlist.a);
 	}
 
 	return 0;
