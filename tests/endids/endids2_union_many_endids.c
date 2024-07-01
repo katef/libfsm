@@ -189,15 +189,9 @@ int main(void)
 			memset(&ids[0], 0, sizeof ids);
 
 			count = fsm_endid_count(fsm, state_ind);
-
 			assert(count > 0 && count <= sizeof ids/sizeof ids[0]);
 
-			ret = fsm_endid_get(
-				fsm,
-				state_ind,
-				sizeof ids/sizeof ids[0],
-				&ids[0]);
-
+			ret = fsm_endid_get(fsm, state_ind, count, &ids[0]);
 			assert(ret == 1);
 
 			memset(&tested_pattern[0], 0, sizeof tested_pattern);
@@ -253,15 +247,9 @@ int main(void)
 			memset(&ids[0], 0, sizeof ids);
 
 			count = fsm_endid_count(fsm, state_ind);
-
 			assert(count <= NUM_ENDIDS_TOTAL);
 
-			ret = fsm_endid_get(
-				fsm,
-				state_ind,
-				sizeof ids/sizeof ids[0],
-				&ids[0]);
-
+			ret = fsm_endid_get(fsm, state_ind, count, &ids[0]);
 			assert(ret == 1);
 		}
 	}

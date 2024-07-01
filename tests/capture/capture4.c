@@ -223,7 +223,7 @@ check(const struct fsm *fsm, const char *string,
 		int gres;
 		fsm_end_id_t ids[2];
 
-		gres = fsm_endid_get(fsm, end, 2, ids);
+		gres = fsm_endid_get(fsm, end, fsm_endid_count(fsm, end), ids);
 		if (gres != 1) {
 			assert(!"fsm_getendids failed");
 		}

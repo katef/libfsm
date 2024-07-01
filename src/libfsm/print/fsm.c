@@ -26,19 +26,6 @@
 
 /* TODO: centralise */
 static int
-comp_end_id(const void *a, const void *b)
-{
-	assert(a != NULL);
-	assert(b != NULL);
-
-	if (* (fsm_end_id_t *) a < * (fsm_end_id_t *) b) { return -1; }
-	if (* (fsm_end_id_t *) a > * (fsm_end_id_t *) b) { return +1; }
-
-	return 0;
-}
-
-/* TODO: centralise */
-static int
 findany(const struct fsm *fsm, fsm_state_t state, fsm_state_t *a)
 {
 	struct fsm_edge e;
@@ -325,8 +312,6 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 		}
 
 		if (count > 0) {
-			qsort(ids, count, sizeof *ids, comp_end_id);
-
 			fprintf(f, " = [");
 
 			for (size_t id = 0; id < count; id++) {
