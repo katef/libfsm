@@ -503,10 +503,11 @@ endleaf_llvm(FILE *f,
 	unsigned n;
 	size_t i;
 
-	assert(endleaf_opaque == NULL);
+	/* hack for llvm codegen only */
+	const size_t *ret = endleaf_opaque;
+	assert(ret != NULL);
 
 	(void) f;
-	(void) endleaf_opaque;
 
 	n = 0;
 
@@ -516,7 +517,7 @@ endleaf_llvm(FILE *f,
 		}
 	}
 
-	fprintf(f, "\tret i32 u%#x", (unsigned) n);
+	fprintf(f, "[u%#x, %%ret%zu],", (unsigned) n, *ret);
 
 	fprintf(f, " ; ");
 
