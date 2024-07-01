@@ -100,20 +100,14 @@ int main(void)
 
 			assert(ret == 1);
 
-			/* sort endids and compare */
-			qsort(&endids[0],
-				sizeof endids / sizeof endids[0], sizeof endids[0],
-				cmp_endids);
-			for (i=0; i < fsm_endid_count(fsm, state_ind); i++) {
+			for (i=0; i < sizeof all_ids / sizeof all_ids[0]; i++) {
 				assert(endids[i] == sorted_all_ids[i]);
 			}
 
-#if 0
 			/* endids should be sorted */
-			for (i=0; i < nwritten; i++) {
+			for (i=0; i < sizeof all_ids / sizeof all_ids[0]; i++) {
 				assert(endids[i] == sorted_all_ids[i]);
 			}
-#endif /* 0 */
 
 			nend++;
 		}
@@ -159,9 +153,6 @@ int main(void)
 			assert( ids[0] == 1 );
 			assert( ids[0] == matches[i].endid );
 #endif /* 0 */
-
-                        /* sort endids and compare */
-                        qsort(&ids[0], count, sizeof ids[0], cmp_endids);
 
 			for (j=0; j < count; j++) {
 				assert(ids[j] == sorted_all_ids[j]);

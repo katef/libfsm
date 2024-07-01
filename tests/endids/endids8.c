@@ -77,20 +77,12 @@ int main(void)
 			int ret;
 
 			count = fsm_endid_count(comb, state_ind);
-
 			printf("state %u count = %zu\n", state_ind, count);
-
 			assert(count == 3);
 
-			ret = fsm_endid_get(
-				comb,
-				state_ind,
-				sizeof ids / sizeof ids[0],
-				&ids[0]);
-
+			ret = fsm_endid_get(comb, state_ind, count, &ids[0]);
 			assert(ret == 1);
 
-			qsort(&ids[0], count, sizeof ids[0], cmp_endids);
 			assert(ids[0] == 1 && ids[1] == 2 && ids[2] == 4);
 		}
 	}

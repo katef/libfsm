@@ -60,7 +60,7 @@ gtest_matches_cb(const struct fsm *fsm,
 #define ID_BUF_COUNT 1
 			fsm_end_id_t ids[ID_BUF_COUNT];
 			int gres = fsm_endid_get(fsm,
-			    end_state, ID_BUF_COUNT, ids);
+			    end_state, fsm_endid_count(fsm, end_state), ids);
 
 			if (gres != 1) {
 				fprintf(stderr,

@@ -48,12 +48,7 @@ int main(void)
 
 			assert( fsm_endid_count(fsm, state_ind) == 1);
 
-			ret = fsm_endid_get(
-				fsm,
-				state_ind,
-				1,
-				&id);
-
+			ret = fsm_endid_get(fsm, state_ind, 1, &id);
 			assert(ret == 1);
 			assert(id == 1);
 

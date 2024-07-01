@@ -186,8 +186,7 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 			continue;
 		}
 
-		int eres = fsm_endid_get(fsm, i,
-		    count_a, ids_a);
+		int eres = fsm_endid_get(fsm, i, count_a, ids_a);
 		assert(eres == 1);
 
 		bool found = false;

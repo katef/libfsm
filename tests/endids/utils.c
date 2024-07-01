@@ -47,14 +47,3 @@ match_string(const struct fsm *fsm, const char *s, fsm_state_t *end_ptr, fsm_end
 	return ret;
 }
 
-int
-cmp_endids(const void *pa, const void *pb) {
-	const fsm_end_id_t *a = pa;
-	const fsm_end_id_t *b = pb;
-
-	if (*a < *b) { return -1; }
-	if (*a > *b) { return  1; }
-	return 0;
-}
-
-

@@ -27,19 +27,6 @@
 #include <fsm/print.h>
 #include <fsm/options.h>
 
-/* TODO: centralise */
-static int
-comp_end_id(const void *a, const void *b)
-{
-	assert(a != NULL);
-	assert(b != NULL);
-
-	if (* (fsm_end_id_t *) a < * (fsm_end_id_t *) b) { return -1; }
-	if (* (fsm_end_id_t *) a > * (fsm_end_id_t *) b) { return +1; }
-
-	return 0;
-}
-
 static int
 rangeclass(unsigned char x, unsigned char y)
 {
@@ -160,8 +147,6 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 
 			res = fsm_endid_get(fsm, end, count, ids);
 			assert(res == 1);
-
-			qsort(ids, count, sizeof *ids, comp_end_id);
 
 			fprintf(f, "\tif (fsm_isend(fsm, s[%u])) {\n", end);
 			for (size_t id = 0; id < count; id++) {

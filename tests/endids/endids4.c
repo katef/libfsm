@@ -71,20 +71,12 @@ int main(void)
 			int ret;
 
 			count = fsm_endid_count(comb, state_ind);
-
 			printf("state %u count = %zu\n", state_ind, count);
-
 			assert(count == 2);
 
-			ret = fsm_endid_get(
-				comb,
-				state_ind,
-				2,
-				&endids[0]);
-
+			ret = fsm_endid_get(comb, state_ind, count, &endids[0]);
 			assert(ret == 1);
 
-			qsort(&endids[0], count, sizeof endids[0], cmp_endids);
 			assert(endids[0] == 1 && endids[1] == 2);
 		}
 	}
@@ -148,8 +140,6 @@ int main(void)
 				assert( ids != NULL );
 
 				assert( count == matches[i].count );
-
-				qsort(&ids[0], count, sizeof ids[0], cmp_endids);
 
 				for (j=0; j < count; j++) {
 					assert( ids[j] == matches[i].endid[j] );

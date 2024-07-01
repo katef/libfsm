@@ -222,8 +222,7 @@ fsm_endid_set(struct fsm *fsm, fsm_state_t end_state, fsm_end_id_t id);
  * id_buf is expected to have enough cells (according to id_buf_count)
  * to store all the end IDs. You can find this with fsm_endid_count().
  *
- * The end IDs in the buffer may appear in any order,
- * but will not have duplicates.
+ * The end IDs in the buffer are sorted and do not have duplicates.
  *
  * A state with no end IDs set is considered equivalent to a state
  * that has the empty set, this API does not distinguish these cases.

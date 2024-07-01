@@ -734,7 +734,9 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 				ids[id_i] = b->ids->ids[id_i];
 			}
 
-			/* todo: could sort them here, if it matters. */
+			/* sorting for caller convenience */
+			qsort(ids, count, sizeof *ids, cmp_endids);
+
 			return 1;
 		} else {	/* collision */
 #if LOG_ENDIDS > 4

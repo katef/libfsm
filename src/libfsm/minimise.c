@@ -940,14 +940,6 @@ cleanup:
 }
 
 static int
-cmp_end_ids(const void *pa, const void *pb)
-{
-	const fsm_end_id_t a = *(fsm_end_id_t *)pa;
-	const fsm_end_id_t b = *(fsm_end_id_t *)pb;
-	return a < b ? -1 : a > b ? 1 : 0;
-}
-
-static int
 collect_end_ids(const struct fsm *fsm, fsm_state_t s,
 	struct end_metadata_end *e)
 {
@@ -964,10 +956,6 @@ collect_end_ids(const struct fsm *fsm, fsm_state_t s,
 
 	int res = fsm_endid_get(fsm, s, e->count, e->ids);
 	assert(res == 1);
-
-	/* sort, to make comparison easier later */
-	qsort(e->ids, e->count,
-		sizeof(e->ids[0]), cmp_end_ids);
 
 #if LOG_ECS
 	fprintf(stderr, "%d:", s);

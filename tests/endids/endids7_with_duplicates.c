@@ -112,15 +112,9 @@ int main(void)
 			int ret;
 
 			count = fsm_endid_count(fsm, state_ind);
-
 			assert( count > 0 && count <= 2);
 
-			ret = fsm_endid_get(
-				fsm,
-				state_ind,
-				sizeof ids / sizeof ids[0],
-				&ids[0]);
-
+			ret = fsm_endid_get(fsm, state_ind, count, &ids[0]);
 			assert(ret == 1);
 
 			info[ninfo].state = state_ind;
@@ -130,7 +124,6 @@ int main(void)
 				assert(ids[0] == 1 || ids[0] == 2);
 				info[ninfo].ids[0] = ids[0];
 			} else if (count == 2) {
-				qsort(&ids[0], count, sizeof ids[0], cmp_endids);
 				assert(ids[0] == 1 && ids[1] == 2);
 				info[ninfo].ids[0] = ids[0];
 				info[ninfo].ids[1] = ids[1];
@@ -156,14 +149,9 @@ int main(void)
 			assert( state_ind == info[info_ind].state );
 
 			count = fsm_endid_count(fsm, state_ind);
-
 			assert(count == 1);
-			ret = fsm_endid_get(
-				fsm,
-				state_ind,
-				1,
-				&endid);
 
+			ret = fsm_endid_get( fsm, state_ind, 1, &endid);
 			assert(ret == 1);
 
 			if (info[info_ind].count == 2) {
