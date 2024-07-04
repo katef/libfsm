@@ -8,7 +8,7 @@ DIR += ${TEST_OUTDIR.tests/retest}
 
 RETEST=${BUILD}/bin/retest
 
-.for lang in vm asm c vmc
+.for lang in vm asm c vmc llvm
 .for io in pair str
 
 # XXX: we don't have FSM_IO_STR for asm yet

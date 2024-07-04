@@ -86,6 +86,7 @@ print(const struct fsm *fsm, enum implementation impl,
 		switch (impl) {
 		case IMPL_C:     e = fsm_print_c(f, fsm);               break;
 		case IMPL_RUST:  e = fsm_print_rust(f, fsm);            break;
+		case IMPL_LLVM:  e = fsm_print_llvm(f, fsm);            break;
 		case IMPL_VMC:   e = fsm_print_vmc(f, fsm);             break;
 		case IMPL_GOASM: e = fsm_print_vmasm_amd64_go(f, fsm);  break;
 		case IMPL_VMASM: e = fsm_print_vmasm_amd64_att(f, fsm); break;
@@ -145,7 +146,7 @@ compile(enum implementation impl,
 	case IMPL_C:
 	case IMPL_VMC:
 	case IMPL_VMOPS:
-		if (0 != systemf("%s %s -xc -shared -fPIC %s -o %s",
+		if (0 != systemf("%s %s -shared -fPIC %s -o %s",
 				cc ? cc : "gcc", cflags ? cflags : "-std=c89 -pedantic -Wall -Werror -O3",
 				tmp_src, tmp_so))
 		{
@@ -157,6 +158,16 @@ compile(enum implementation impl,
 	case IMPL_RUST:
 		if (0 != systemf("%s %s --crate-type dylib %s -o %s",
 				"rustc", "--edition 2021",
+				tmp_src, tmp_so))
+		{
+			return 0;
+		}
+
+		break;
+
+	case IMPL_LLVM:
+		if (0 != systemf("clang %s -shared -fPIC -mllvm -opaque-pointers %s -o %s",
+				cflags ? cflags : "-pedantic -Wall -Werror -Wno-override-module -O3",
 				tmp_src, tmp_so))
 		{
 			return 0;
@@ -287,6 +298,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	char tmp_src_go[] = "/tmp/fsmcompile_src-XXXXXX.go";
 	char tmp_src_c[]  = "/tmp/fsmcompile_src-XXXXXX.c";
 	char tmp_src_rs[] = "/tmp/fsmcompile_src-XXXXXX.rs";
+	char tmp_src_ll[] = "/tmp/fsmcompile_src-XXXXXX.ll";
 	char tmp_src_s[]  = "/tmp/fsmcompile_src-XXXXXX.s";
 	char *tmp_src;
 
@@ -295,6 +307,7 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 	case IMPL_C:
 	case IMPL_VMC:   tmp_src = tmp_src_c;  break;
 	case IMPL_RUST:  tmp_src = tmp_src_rs; break;
+	case IMPL_LLVM:  tmp_src = tmp_src_ll; break;
 	case IMPL_GOASM:
 	case IMPL_VMASM: tmp_src = tmp_src_s;  break;
 	case IMPL_GO:    tmp_src = tmp_src_go; break;
@@ -359,6 +372,11 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		r->u.impl_rust.func = (int64_t (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "retest_trampoline");
 		break;
 
+	case IMPL_LLVM:
+		r->u.impl_llvm.h = h;
+		r->u.impl_llvm.func = (int (*)(const char *, const char *)) (uintptr_t) dlsym(h, "fsm_main");
+		break;
+
 	case IMPL_GO:
 	case IMPL_GOASM:
 		r->u.impl_go.h = h;
@@ -394,6 +412,7 @@ fsm_runner_initialize(struct fsm *fsm, struct fsm_runner *r, enum implementation
 
 	switch (impl) {
 	case IMPL_C:
+	case IMPL_LLVM:
 	case IMPL_RUST:
 	case IMPL_VMASM:
 	case IMPL_VMC:
@@ -433,6 +452,12 @@ fsm_runner_finalize(struct fsm_runner *r)
 	case IMPL_RUST:
 		if (r->u.impl_rust.h != NULL) {
 			dlclose(r->u.impl_rust.h);
+		}
+		break;
+
+	case IMPL_LLVM:
+		if (r->u.impl_llvm.h != NULL) {
+			dlclose(r->u.impl_llvm.h);
 		}
 		break;
 
@@ -476,6 +501,10 @@ fsm_runner_run(const struct fsm_runner *r, const char *s, size_t n)
 	case IMPL_RUST:
 		assert(r->u.impl_rust.func != NULL);
 		return r->u.impl_rust.func((const unsigned char *)s, n) >= 0;
+
+	case IMPL_LLVM:
+		assert(r->u.impl_llvm.func != NULL);
+		return r->u.impl_llvm.func(s, s+n) >= 0;
 
 	case IMPL_GO:
 	case IMPL_GOASM:

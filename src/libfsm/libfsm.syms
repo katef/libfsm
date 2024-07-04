@@ -50,6 +50,7 @@ fsm_print_vmasm_amd64_att
 fsm_print_vmasm_amd64_nasm
 fsm_print_vmasm_amd64_go
 fsm_print_rust
+fsm_print_llvm
 fsm_print_sh
 fsm_print_go
 fsm_print_vmops_c
