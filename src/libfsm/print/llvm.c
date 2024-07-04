@@ -565,7 +565,7 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 			if (opt->endleaf != NULL) {
 				if (-1 == opt->endleaf(f,
 					retlist.a[i].ids, retlist.a[i].count,
-					&i)) // XXX: passing &i rather than opt->endleaf_opaque is a hack
+					opt->endleaf_opaque))
 				{
 					return -1;
 				}

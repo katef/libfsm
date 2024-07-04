@@ -503,11 +503,20 @@ endleaf_llvm(FILE *f,
 	unsigned n;
 	size_t i;
 
-	/* hack for llvm codegen only */
-	const size_t *ret = endleaf_opaque;
-	assert(ret != NULL);
+	/*
+	 * XXX: Hack for llvm codegen only, we don't have a way to pass this
+	 * value from fsm_print_llvm(). We're working around that by making
+	 * an assumption about the ordering for ret label numbers, that
+	 * they're output sequentially.
+	 *
+	 * And also it's not very forward-thinking to keep this in static storage.
+	 */
+	static size_t ret = 0;
+
+	assert(endleaf_opaque == NULL);
 
 	(void) f;
+	(void) endleaf_opaque;
 
 	n = 0;
 
@@ -517,7 +526,7 @@ endleaf_llvm(FILE *f,
 		}
 	}
 
-	fprintf(f, "[u%#x, %%ret%zu],", (unsigned) n, *ret);
+	fprintf(f, "[u%#x, %%ret%zu],", (unsigned) n, ret++);
 
 	fprintf(f, " ; ");
 
