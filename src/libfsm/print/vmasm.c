@@ -437,27 +437,19 @@ print_vmasm_encoding(FILE *f, const struct fsm *fsm, enum asm_dialect dialect)
 }
 
 int
-fsm_print_vmasm(FILE *f, const struct fsm *fsm)
-{
-	static const enum asm_dialect default_dialect = AMD64_NASM;
-
-	return print_vmasm_encoding(f, fsm, default_dialect);
-}
-
-int
-fsm_print_vmasm_amd64_att(FILE *f, const struct fsm *fsm)
+fsm_print_amd64_att(FILE *f, const struct fsm *fsm)
 {
 	return print_vmasm_encoding(f, fsm, AMD64_ATT);
 }
 
 int
-fsm_print_vmasm_amd64_nasm(FILE *f, const struct fsm *fsm)
+fsm_print_amd64_nasm(FILE *f, const struct fsm *fsm)
 {
 	return print_vmasm_encoding(f, fsm, AMD64_NASM);
 }
 
 int
-fsm_print_vmasm_amd64_go(FILE *f, const struct fsm *fsm)
+fsm_print_amd64_go(FILE *f, const struct fsm *fsm)
 {
 	return print_vmasm_encoding(f, fsm, AMD64_GO);
 }

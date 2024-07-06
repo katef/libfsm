@@ -9,6 +9,7 @@ SRC += src/libre/ast_compile.c
 SRC += src/libre/ast_new_from_fsm.c
 SRC += src/libre/ast_rewrite.c
 SRC += src/libre/ac.c
+SRC += src/libre/print.c
 SRC += src/libre/re_strings.c
 
 # generated

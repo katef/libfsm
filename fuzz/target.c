@@ -137,7 +137,7 @@ codegen(const struct fsm *fsm)
 {
 	FILE *dev_null = fopen("/dev/null", "w");
 	assert(dev_null != NULL);
-	fsm_print_c(dev_null, fsm);
+	fsm_print(dev_null, fsm, FSM_PRINT_C);
 	fclose(dev_null);
 	return 1;
 }
@@ -245,14 +245,14 @@ shuffle_minimise(const char *pattern)
 			    __func__, s_i, pattern, expected_state_count, cp_state_count);
 
 			fprintf(stderr, "== original input:\n");
-			fsm_print_fsm(stderr, fsm);
+			fsm_print(stderr, fsm, FSM_PRINT_FSM);
 
 
 			fprintf(stderr, "== expected:\n");
-			fsm_print_fsm(stderr, oracle_min);
+			fsm_print(stderr, oracle_min, FSM_PRINT_FSM);
 
 			fprintf(stderr, "== got:\n");
-			fsm_print_fsm(stderr, cp);
+			fsm_print(stderr, cp, FSM_PRINT_FSM);
 
 			fsm_free(cp);
 			fsm_free(oracle_min);
@@ -312,24 +312,30 @@ fuzz_all_print_functions(FILE *f, const char *pattern, bool det, bool min, const
 
 	/* see if this triggers any asserts */
 	int r = 0;
-	r |= fsm_print_api(f, fsm);
-	r |= fsm_print_awk(f, fsm);
-	r |= fsm_print_c(f, fsm);
-	r |= fsm_print_dot(f, fsm);
-	r |= fsm_print_fsm(f, fsm);
-	r |= fsm_print_ir(f, fsm);
-	r |= fsm_print_irjson(f, fsm);
-	r |= fsm_print_json(f, fsm);
-	r |= fsm_print_vmc(f, fsm);
-	r |= fsm_print_vmdot(f, fsm);
-	r |= fsm_print_vmasm(f, fsm);
-	r |= fsm_print_vmasm_amd64_att(f, fsm);
-	r |= fsm_print_vmasm_amd64_nasm(f, fsm);
-	r |= fsm_print_vmasm_amd64_go(f, fsm);
-	r |= fsm_print_sh(f, fsm);
-	r |= fsm_print_go(f, fsm);
-	r |= fsm_print_rust(f, fsm);
-	r |= fsm_print_llvm(f, fsm);
+
+	r |= fsm_print(f, fsm, FSM_PRINT_AMD64_ATT);
+	r |= fsm_print(f, fsm, FSM_PRINT_AMD64_GO);
+	r |= fsm_print(f, fsm, FSM_PRINT_AMD64_NASM);
+
+	r |= fsm_print(f, fsm, FSM_PRINT_API);
+	r |= fsm_print(f, fsm, FSM_PRINT_AWK);
+	r |= fsm_print(f, fsm, FSM_PRINT_C);
+	r |= fsm_print(f, fsm, FSM_PRINT_DOT);
+	r |= fsm_print(f, fsm, FSM_PRINT_FSM);
+	r |= fsm_print(f, fsm, FSM_PRINT_GO);
+	r |= fsm_print(f, fsm, FSM_PRINT_IR);
+	r |= fsm_print(f, fsm, FSM_PRINT_IRJSON);
+	r |= fsm_print(f, fsm, FSM_PRINT_JSON);
+	r |= fsm_print(f, fsm, FSM_PRINT_LLVM);
+	r |= fsm_print(f, fsm, FSM_PRINT_RUST);
+	r |= fsm_print(f, fsm, FSM_PRINT_SH);
+	r |= fsm_print(f, fsm, FSM_PRINT_VMC);
+	r |= fsm_print(f, fsm, FSM_PRINT_VMDOT);
+
+	r |= fsm_print(f, fsm, FSM_PRINT_VMOPS_C);
+	r |= fsm_print(f, fsm, FSM_PRINT_VMOPS_H);
+	r |= fsm_print(f, fsm, FSM_PRINT_VMOPS_MAIN);
+
 	assert(r == 0 || errno != 0);
 
 	fsm_free(fsm);

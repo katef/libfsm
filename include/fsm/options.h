@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 struct fsm;
+struct fsm_alloc;
 struct fsm_state;
 
 enum fsm_io {

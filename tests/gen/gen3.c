@@ -61,7 +61,7 @@ build(void)
 	}
 
 	if (getenv("PRINT")) {
-		fsm_print_fsm(stderr, fsm);
+		fsm_print(stderr, fsm, FSM_PRINT_FSM);
 	}
 
 	return fsm;

@@ -84,18 +84,18 @@ print(const struct fsm *fsm, enum implementation impl,
 		int e;
 
 		switch (impl) {
-		case IMPL_C:     e = fsm_print_c(f, fsm);               break;
-		case IMPL_RUST:  e = fsm_print_rust(f, fsm);            break;
-		case IMPL_LLVM:  e = fsm_print_llvm(f, fsm);            break;
-		case IMPL_VMC:   e = fsm_print_vmc(f, fsm);             break;
-		case IMPL_GOASM: e = fsm_print_vmasm_amd64_go(f, fsm);  break;
-		case IMPL_VMASM: e = fsm_print_vmasm_amd64_att(f, fsm); break;
-		case IMPL_GO:    e = fsm_print_go(f, fsm);              break;
+		case IMPL_C:     e = fsm_print(f, fsm, FSM_PRINT_C);         break;
+		case IMPL_RUST:  e = fsm_print(f, fsm, FSM_PRINT_RUST);      break;
+		case IMPL_LLVM:  e = fsm_print(f, fsm, FSM_PRINT_LLVM);      break;
+		case IMPL_VMC:   e = fsm_print(f, fsm, FSM_PRINT_VMC);       break;
+		case IMPL_GOASM: e = fsm_print(f, fsm, FSM_PRINT_AMD64_GO);  break;
+		case IMPL_VMASM: e = fsm_print(f, fsm, FSM_PRINT_AMD64_ATT); break;
+		case IMPL_GO:    e = fsm_print(f, fsm, FSM_PRINT_GO);        break;
 
 		case IMPL_VMOPS:
-			e = fsm_print_vmops_h(f, fsm)
-			  | fsm_print_vmops_c(f, fsm)
-			  | fsm_print_vmops_main(f, fsm);
+			e = fsm_print(f, fsm, FSM_PRINT_VMOPS_H)
+			  | fsm_print(f, fsm, FSM_PRINT_VMOPS_C)
+			  | fsm_print(f, fsm, FSM_PRINT_VMOPS_MAIN);
 			break;
 
 		case IMPL_INTERPRET:

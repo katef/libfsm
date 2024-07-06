@@ -33,11 +33,10 @@
 #include <adt/xalloc.h>
 
 #include "libfsm/internal.h" /* XXX */
-#include "libre/print.h" /* XXX */
 #include "libre/class.h" /* XXX */
 #include "libre/ast.h" /* XXX */
 #include "libre/ast_new_from_fsm.h" /* XXX */
-
+#include "libre/print.h" /* XXX */
 
 #define DEBUG_ESCAPES     0
 #define DEBUG_VM_FSM      0
@@ -102,60 +101,74 @@ io(const char *name)
 	exit(EXIT_FAILURE);
 }
 
+/* TODO: centralise */
 static void
-print_name(const char *name,
-	fsm_print **print_fsm, ast_print **print_ast)
+lang_name(const char *name, enum fsm_print_lang *fsm_lang, enum ast_print_lang *ast_lang)
 {
 	size_t i;
 
-	struct {
+	const struct {
 		const char *name;
-		fsm_print *print_fsm;
-		ast_print *print_ast;
+		enum fsm_print_lang lang;
 	} a[] = {
-		{ "api",    fsm_print_api,    NULL },
-		{ "awk",    fsm_print_awk,    NULL },
-		{ "c",      fsm_print_c,      NULL },
-		{ "dot",    fsm_print_dot,    NULL },
-		{ "fsm",    fsm_print_fsm,    NULL },
-		{ "ir",     fsm_print_ir,     NULL },
-		{ "irjson", fsm_print_irjson, NULL },
-		{ "json",   fsm_print_json,   NULL },
-		{ "vmc",    fsm_print_vmc,    NULL },
-		{ "vmdot",  fsm_print_vmdot,  NULL },
-		{ "rust",   fsm_print_rust,   NULL },
-		{ "llvm",   fsm_print_llvm,   NULL },
-		{ "sh",     fsm_print_sh,     NULL },
-		{ "go",     fsm_print_go,     NULL },
+		{ "amd64",      FSM_PRINT_AMD64_NASM },
+		{ "amd64_att",  FSM_PRINT_AMD64_ATT  },
+		{ "amd64_go",   FSM_PRINT_AMD64_GO   },
+		{ "amd64_nasm", FSM_PRINT_AMD64_NASM },
 
-		{ "vmops_c",    fsm_print_vmops_c,    NULL },
-		{ "vmops_h",    fsm_print_vmops_h,    NULL },
-		{ "vmops_main", fsm_print_vmops_main, NULL },
+		{ "api",        FSM_PRINT_API        },
+		{ "awk",        FSM_PRINT_AWK        },
+		{ "c",          FSM_PRINT_C          },
+		{ "dot",        FSM_PRINT_DOT        },
+		{ "fsm",        FSM_PRINT_FSM        },
+		{ "go",         FSM_PRINT_GO         },
+		{ "ir",         FSM_PRINT_IR         },
+		{ "irjson",     FSM_PRINT_IRJSON     },
+		{ "json",       FSM_PRINT_JSON       },
+		{ "llvm",       FSM_PRINT_LLVM       },
+		{ "rust",       FSM_PRINT_RUST       },
+		{ "sh",         FSM_PRINT_SH         },
+		{ "vmc",        FSM_PRINT_VMC        },
 
-		{ "amd64",      fsm_print_vmasm,            NULL },
-		{ "amd64_att",  fsm_print_vmasm_amd64_att,  NULL },
-		{ "amd64_nasm", fsm_print_vmasm_amd64_nasm, NULL },
-		{ "amd64_go",   fsm_print_vmasm_amd64_go,   NULL },
+		{ "vmdot",      FSM_PRINT_VMDOT      },
+		{ "vmops_c",    FSM_PRINT_VMOPS_C    },
+		{ "vmops_h",    FSM_PRINT_VMOPS_H    },
+		{ "vmops_main", FSM_PRINT_VMOPS_MAIN }
+	};
 
-		{ "tree",   NULL, ast_print_tree },
-		{ "abnf",   NULL, ast_print_abnf },
-		{ "ast",    NULL, ast_print_dot  },
-		{ "pcre",   NULL, ast_print_pcre }
+	const struct {
+		const char *name;
+		enum ast_print_lang lang;
+	} b[] = {
+		{ "abnf",       AST_PRINT_ABNF       },
+		{ "ast",        AST_PRINT_DOT        },
+		{ "pcre",       AST_PRINT_PCRE       },
+		{ "tree",       AST_PRINT_TREE       }
 	};
 
 	assert(name != NULL);
-	assert(print_fsm != NULL);
-	assert(print_ast != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			*print_fsm = a[i].print_fsm;
-			*print_ast = a[i].print_ast;
+			*fsm_lang = a[i].lang;
+			return;
+		}
+	}
+
+	for (i = 0; i < sizeof b / sizeof *b; i++) {
+		if (0 == strcmp(b[i].name, name)) {
+			*ast_lang = b[i].lang;
 			return;
 		}
 	}
 
 	fprintf(stderr, "unrecognised output language; valid languages are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			", ");
+	}
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		fprintf(stderr, "%s%s",
@@ -670,14 +683,15 @@ parse_flags(const char *arg, enum re_flags *flags)
 int
 main(int argc, char *argv[])
 {
+	struct fsm *fsm;
 	struct fsm *(*join)(struct fsm *, struct fsm *,
 	    struct fsm_combine_info *);
 	int (*query)(const struct fsm *, const struct fsm *);
-	fsm_print *print_fsm;
-	ast_print *print_ast;
+	enum fsm_print_lang fsm_lang;
+	enum ast_print_lang ast_lang;
 	enum re_dialect dialect;
-	struct fsm *fsm;
 	enum re_flags flags;
+	size_t generate_bounds = 0;
 	int xfiles, yfiles;
 	int fsmfiles;
 	int example;
@@ -686,7 +700,6 @@ main(int argc, char *argv[])
 	int patterns;
 	int ambig;
 	int makevm;
-	size_t generate_bounds = 0;
 
 	struct fsm_dfavm *vm;
 
@@ -709,8 +722,8 @@ main(int argc, char *argv[])
 	patterns  = 0;
 	ambig     = 0;
 	makevm    = 0;
-	print_fsm = NULL;
-	print_ast = NULL;
+	fsm_lang  = FSM_PRINT_NONE;
+	ast_lang  = AST_PRINT_NONE;
 	query     = NULL;
 	join      = fsm_union;
 	dialect   = RE_NATIVE;
@@ -738,14 +751,14 @@ main(int argc, char *argv[])
 				break;
 
 			case 'l':
-				print_name(optarg, &print_fsm, &print_ast);
+				lang_name(optarg, &fsm_lang, &ast_lang);
 				break;
 
 			case 'F':
 				parse_flags(optarg, &flags);
 				break;
 
-			case 'p': print_fsm = fsm_print_fsm;        break;
+			case 'p': fsm_lang  = FSM_PRINT_FSM;        break;
 			case 'q': query     = comparison(optarg);   break;
 			case 'r': dialect   = dialect_name(optarg); break;
 
@@ -787,12 +800,12 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (!!print_fsm + !!print_ast + example + isliteral + !!query > 1) {
+	if ((fsm_lang != FSM_PRINT_NONE) + (ast_lang != AST_PRINT_NONE) + example + isliteral + !!query > 1) {
 		fprintf(stderr, "-m, -p, -q and -t are mutually exclusive\n");
 		return EXIT_FAILURE;
 	}
 
-	if (!!print_fsm + !!print_ast + example + isliteral + !!query && xfiles) {
+	if ((fsm_lang != FSM_PRINT_NONE) + (ast_lang != AST_PRINT_NONE) + example + isliteral + !!query && xfiles) {
 		fprintf(stderr, "-x applies only when executing\n");
 		return EXIT_FAILURE;
 	}
@@ -817,7 +830,7 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (print_fsm == NULL) {
+	if (fsm_lang == FSM_PRINT_NONE) {
 		keep_nfa = 0;
 	}
 
@@ -910,7 +923,7 @@ main(int argc, char *argv[])
 	}
 
 	/* XXX: repetitive */
-	if (print_ast != NULL) {
+	if (ast_lang != AST_PRINT_NONE) {
 		struct ast *ast;
 		struct re_err err;
 
@@ -966,7 +979,7 @@ main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 
-		print_ast(stdout, &opt, flags, ast);
+		ast_print(stdout, ast, &opt, flags, ast_lang);
 
 		ast_free(ast);
 
@@ -986,7 +999,7 @@ main(int argc, char *argv[])
 	{
 		int i;
 
-		for (i = 0; i < argc - !(print_fsm || example || isliteral || !!query || argc <= 1); i++) {
+		for (i = 0; i < argc - !(fsm_lang != FSM_PRINT_NONE || example || isliteral || !!query || argc <= 1); i++) {
 			struct re_err err;
 			struct fsm *new, *q;
 
@@ -1112,7 +1125,7 @@ main(int argc, char *argv[])
 		return EXIT_SUCCESS;
 	}
 
-	if ((print_fsm || example) && argc > 0) {
+	if ((fsm_lang != FSM_PRINT_NONE || example) && argc > 0) {
 		fprintf(stderr, "too many arguments\n");
 		return EXIT_FAILURE;
 	}
@@ -1180,7 +1193,7 @@ main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 
-		if (!patterns && example && print_fsm != fsm_print_c) {
+		if (!patterns && example && fsm_lang != FSM_PRINT_C) {
 			if (!fsm_minimise(fsm)) {
 				perror("fsm_minimise");
 				return EXIT_FAILURE;
@@ -1230,27 +1243,43 @@ main(int argc, char *argv[])
 		return fsm_generate_matches(fsm, generate_bounds, fsm_generate_cb_printf_escaped, &opt);
 	}
 
-	if (print_fsm != NULL) {
+	if (fsm_lang != FSM_PRINT_NONE) {
 		/* TODO: print examples in comments for end states;
 		 * patterns in comments for the whole FSM */
 
-		if (print_fsm == fsm_print_c || print_fsm == fsm_print_vmc) {
+		switch (fsm_lang) {
+		case FSM_PRINT_C:
+		case FSM_PRINT_VMC:
 			opt.endleaf = endleaf_c;
-		} else if (print_fsm == fsm_print_rust) {
+			break;
+
+		case FSM_PRINT_RUST:
 			opt.endleaf = endleaf_rust;
-		} else if (print_fsm == fsm_print_llvm) {
+			break;
+
+		case FSM_PRINT_LLVM:
 			opt.endleaf = endleaf_llvm;
-		} else if (print_fsm == fsm_print_dot || print_fsm == fsm_print_vmdot) {
+			break;
+
+		case FSM_PRINT_DOT:
+		case FSM_PRINT_VMDOT:
 			opt.endleaf = patterns ? endleaf_dot : NULL;
-		} else if (print_fsm == fsm_print_json) {
+			break;
+
+		case FSM_PRINT_JSON:
 			opt.endleaf = patterns ? endleaf_json : NULL;
+			break;
+
+		default:
+			opt.endleaf = NULL;
+			break;
 		}
 
-		if (-1 == print_fsm(stdout, fsm)) {
+		if (-1 == fsm_print(stdout, fsm, fsm_lang)) {
 			if (errno == ENOTSUP) {
 				fprintf(stderr, "unsupported IO API\n");
 			} else {
-				perror("print_fsm");
+				perror("fsm_print");
 			}
 			exit(EXIT_FAILURE);
 		}

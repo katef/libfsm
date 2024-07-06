@@ -34,7 +34,6 @@
 #include <re/re.h>
 
 #include "libfsm/internal.h" /* XXX */
-#include "libre/print.h" /* XXX */
 #include "libre/class.h" /* XXX */
 #include "libre/ast.h" /* XXX */
 
@@ -1049,11 +1048,11 @@ process_test_file(const char *filename,
 
 #if DEBUG_VM_FSM
 			fprintf(stderr, "FSM:\n");
-			fsm_print_fsm(stderr, fsm);
+			fsm_print(stderr, fsm, FSM_PRINT_FSM);
 			fprintf(stderr, "---\n");
 			{
 				FILE *f = fopen("dump.fsm", "w");
-				fsm_print_fsm(f, fsm);
+				fsm_print(f, fsm, FSM_PRINT_FSM);
 				fclose(f);
 			}
 #endif /* DEBUG_VM_FSM */

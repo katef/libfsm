@@ -205,7 +205,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 
 		z->fsm->opt = &opt;
 
-		fsm_print_dot(f, z->fsm);
+		fsm_print(f, z->fsm, FSM_PRINT_DOT);
 
 		z->fsm->opt = tmp;
 	}

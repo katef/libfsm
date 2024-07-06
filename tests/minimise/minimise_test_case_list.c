@@ -110,10 +110,10 @@ check_minimisation(const char *pattern)
 		    __func__, pattern, expected_state_count, state_count_min);
 
 		fprintf(stderr, "== expected:\n");
-		fsm_print_fsm(stderr, oracle_min);
+		fsm_print(stderr, oracle_min, FSM_PRINT_FSM);
 
 		fprintf(stderr, "== got:\n");
-		fsm_print_fsm(stderr, fsm);
+		fsm_print(stderr, fsm, FSM_PRINT_FSM);
 	}
 
 	fsm_free(oracle_min);

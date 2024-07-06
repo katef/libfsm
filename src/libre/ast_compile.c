@@ -28,10 +28,6 @@
 
 #define LOG_LINKAGE 0
 
-#if LOG_LINKAGE
-#include "print.h"
-#endif
-
 enum link_side {
 	LINK_START,
 	LINK_END

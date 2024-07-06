@@ -144,10 +144,10 @@ fsm_minimise(struct fsm *fsm)
 			fprintf(stderr, "%s: expected minimal DFA with %zu states, got %zu\n",
 			    __func__, exp_count, got_count);
 			fprintf(stderr, "== expected:\n");
-			fsm_print_fsm(stderr, oracle);
+			fsm_print(stderr, oracle, FSM_PRINT_FSM);
 
 			fprintf(stderr, "== got:\n");
-			fsm_print_fsm(stderr, dst);
+			fsm_print(stderr, dst, FSM_PRINT_FSM);
 			assert(!"non-minimal result");
 		}
 
