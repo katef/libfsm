@@ -240,10 +240,6 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 
 	fsm_free(fsm);
 
-	if (ferror(f)) {
-		return -1;
-	}
-
 	return 0;
 
 error:

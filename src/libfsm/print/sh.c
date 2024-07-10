@@ -119,7 +119,8 @@ print_cond(FILE *f, const struct dfavm_op_ir *op)
 
 static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
-	enum dfavm_op_end end_bits, const struct ir *ir)
+	const struct ir_state *ir_states,
+	enum dfavm_op_end end_bits)
 {
 	if (end_bits == VM_END_FAIL) {
 		fprintf(f, "fail");
@@ -134,7 +135,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 			return -1;
 		}
 	} else {
-		fprintf(f, "matched %td", op->ir_state - ir->states);
+		fprintf(f, "matched %td", op->ir_state - ir_states);
 	}
 
 	return 0;
@@ -152,26 +153,18 @@ print_fetch(FILE *f)
 	fprintf(f, "read -rn 1 c || ");
 }
 
-static int
-fsm_print_shfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt)
+int
+fsm_print_sh(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir, struct dfavm_op_ir *ops)
 {
-	static const struct dfavm_assembler_ir zero;
-	struct dfavm_assembler_ir a;
 	struct dfavm_op_ir *op;
 
-	static const struct fsm_vm_compile_opts vm_opts = {
-		FSM_VM_COMPILE_DEFAULT_FLAGS,
-		FSM_VM_COMPILE_VM_V1,
-		NULL
-	};
-
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
+	assert(ir != NULL);
 
-	a = zero;
-
-	if (!dfavm_compile_ir(&a, ir, vm_opts)) {
+	if (opt->io != FSM_IO_STR) {
+		errno = ENOTSUP;
 		return -1;
 	}
 
@@ -185,7 +178,7 @@ fsm_print_shfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 
 		l = 0;
 
-		for (op = a.linked; op != NULL; op = op->next) {
+		for (op = ops; op != NULL; op = op->next) {
 			if (op->num_incoming > 0) {
 				op->index = l++;
 			}
@@ -206,9 +199,9 @@ fsm_print_shfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 	fprintf(f, "\tcase $l in\n");
 	fprintf(f, "\tstart)\n");
 
-	for (op = a.linked; op != NULL; op = op->next) {
+	for (op = ops; op != NULL; op = op->next) {
 		if (op->num_incoming > 0) {
-			if (op != a.linked) {
+			if (op != ops) {
 				fprintf(f, "\t\t;&\n");
 			}
 
@@ -222,14 +215,14 @@ fsm_print_shfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op);
-			if (-1 == print_end(f, op, opt, op->u.stop.end_bits, ir)) {
+			if (-1 == print_end(f, op, opt, ir->states, op->u.stop.end_bits)) {
 				return -1;
 			}
 			break;
 
 		case VM_OP_FETCH:
 			print_fetch(f);
-			if (-1 == print_end(f, op, opt, op->u.fetch.end_bits, ir)) {
+			if (-1 == print_end(f, op, opt, ir->states, op->u.fetch.end_bits)) {
 				return -1;
 			}
 			break;
@@ -251,39 +244,6 @@ fsm_print_shfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 	fprintf(f, "\tesac\n");
 	fprintf(f, "done\n");
 
-	dfavm_opasm_finalize_op(&a);
-
-	if (ferror(f)) {
-		return -1;
-	}
-
 	return 0;
-}
-
-int
-fsm_print_sh(FILE *f, const struct fsm *fsm)
-{
-	struct ir *ir;
-	int r;
-
-	assert(f != NULL);
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
-
-	if (fsm->opt->io != FSM_IO_STR) {
-		errno = ENOTSUP;
-		return -1;
-	}
-
-	ir = make_ir(fsm);
-	if (ir == NULL) {
-		return -1;
-	}
-
-	r = fsm_print_shfrag(f, ir, fsm->opt);
-
-	free_ir(fsm, ir);
-
-	return r;
 }
 

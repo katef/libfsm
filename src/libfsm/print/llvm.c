@@ -69,7 +69,7 @@ decl(unsigned *n)
 }
 
 static int
-leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
+print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
 {
 	assert(f != NULL);
 	assert(leaf_opaque == NULL);
@@ -158,7 +158,7 @@ print_target(FILE *f, const struct dfavm_op_ir *op,
 }
 
 static void
-print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
+print_cond(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *op,
 	struct frame *frame)
 {
 	assert(frame != NULL);
@@ -455,8 +455,8 @@ build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
-	const struct fsm_options *opt, const struct ir *ir,
+fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir, struct dfavm_op_ir *ops,
 	const char *cp,
 	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
@@ -465,8 +465,8 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 	struct dfavm_op_ir *op;
 
 	assert(f != NULL);
-	assert(a != NULL);
 	assert(opt != NULL);
+	assert(ir != NULL);
 	assert(cp != NULL);
 
 	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
@@ -482,14 +482,14 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 
 		l = 0;
 
-		for (op = a->linked; op != NULL; op = op->next) {
+		for (op = ops; op != NULL; op = op->next) {
 			op->index = l++;
 		}
 	}
 
 	{
 		retlist.count = 0;
-		build_retlist(&retlist, a->linked);
+		build_retlist(&retlist, ops);
 
 		/* sort for both dedup and bsearch */
 		qsort(retlist.a, retlist.count, sizeof *retlist.a,
@@ -520,7 +520,7 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 			assert(retlist.count > 0);
 		}
 
-		print_jump(f, a->linked);
+		print_jump(f, ops);
 
 		/*
 		 * We're jumping to ret*: labels, and having each jump
@@ -591,7 +591,7 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 	}
 
 	struct frame frame = { 0, 0, 0 };
-	for (op = a->linked; op != NULL; op = op->next) {
+	for (op = ops; op != NULL; op = op->next) {
 		if (op->instr != VM_OP_STOP || op->cmp != VM_CMP_ALWAYS || op->u.stop.end_bits != VM_END_FAIL) {
 			print_label(f, true, "l%" PRIu32, op->index);
 		}
@@ -612,7 +612,7 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 				unsigned b = decl(&frame.b);
 
 // TODO: our ret%u: label goes in place of t%u here, which means we're replacing the NULL
-				print_cond(f, op, opt, &frame);
+				print_cond(f, opt, op, &frame);
 				print_branch(f, &frame,
 					op->u.stop.end_bits == VM_END_FAIL ? &fail : NULL,
 					op->next);
@@ -663,7 +663,7 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 			if (op->cmp == VM_CMP_ALWAYS) {
 				print_jump(f, dest);
 			} else {
-				print_cond(f, op, opt, &frame);
+				print_cond(f, opt, op, &frame);
 				print_branch(f, &frame,
 					dest,
 					op->next);
@@ -684,32 +684,38 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 	return 0;
 }
 
-static int
-fsm_print_llvm_complete(FILE *f, const struct ir *ir,
-	const struct fsm_options *opt, const char *prefix, const char *cp)
+int
+fsm_print_llvm(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir, struct dfavm_op_ir *ops)
 {
-	static const struct dfavm_assembler_ir zero;
-	struct dfavm_assembler_ir a;
-
-	static const struct fsm_vm_compile_opts vm_opts = {
-		FSM_VM_COMPILE_DEFAULT_FLAGS,
-		FSM_VM_COMPILE_VM_V1,
-		NULL
-	};
+	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque);
+	const char *prefix;
+	const char *cp;
 
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
 
-	a = zero;
+	if (opt->prefix != NULL) {
+		prefix = opt->prefix;
+	} else {
+		prefix = "fsm_";
+	}
 
-	if (!dfavm_compile_ir(&a, ir, vm_opts)) {
-		return -1;
+	if (opt->leaf != NULL) {
+		leaf = opt->leaf;
+	} else {
+		leaf = print_leaf;
+	}
+
+	if (opt->cp != NULL) {
+		cp = opt->cp;
+	} else {
+		cp = "c"; /* XXX */
 	}
 
 	if (opt->fragment) {
-		fsm_print_llvmfrag(f, &a, opt, ir, cp,
-			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
+		fsm_print_llvmfrag(f, opt, ir, ops, cp,
+			leaf, opt->leaf_opaque);
 		goto error;
 	}
 
@@ -765,60 +771,16 @@ fsm_print_llvm_complete(FILE *f, const struct ir *ir,
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_print_llvmfrag(f, &a, opt, ir, cp,
-		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
+	fsm_print_llvmfrag(f, opt, ir, ops, cp,
+		leaf, opt->leaf_opaque);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
-
-	dfavm_opasm_finalize_op(&a);
-
-	if (ferror(f)) {
-		return -1;
-	}
 
 	return 0;
 
 error:
 
-	dfavm_opasm_finalize_op(&a);
-
 	return -1;
-}
-
-int
-fsm_print_llvm(FILE *f, const struct fsm *fsm)
-{
-	struct ir *ir;
-	const char *prefix;
-	const char *cp;
-	int r;
-
-	assert(f != NULL);
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
-
-	ir = make_ir(fsm);
-	if (ir == NULL) {
-		return -1;
-	}
-
-	if (fsm->opt->prefix != NULL) {
-		prefix = fsm->opt->prefix;
-	} else {
-		prefix = "fsm_";
-	}
-
-	if (fsm->opt->cp != NULL) {
-		cp = fsm->opt->cp;
-	} else {
-		cp = "c"; /* XXX */
-	}
-
-	r = fsm_print_llvm_complete(f, ir, fsm->opt, prefix, cp);
-
-	free_ir(fsm, ir);
-
-	return r;
 }
 

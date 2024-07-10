@@ -35,7 +35,7 @@ enum vmops_dialect {
 };
 
 static int
-leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
+print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
 {
 	assert(f != NULL);
 	assert(leaf_opaque == NULL);
@@ -98,8 +98,10 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 }
 
 static int
-print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt, const char *prefix,
-	enum dfavm_op_end end_bits, const struct ir *ir)
+print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
+	const struct ir_state *ir_states,
+	const char *prefix,
+	enum dfavm_op_end end_bits)
 {
 	if (end_bits == VM_END_FAIL) {
 		fprintf(f, "%sactionRET, -1},\n", prefix);
@@ -114,7 +116,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt, 
 			return -1;
 		}
 	} else {
-		fprintf(f, "%sactionRET, %td", prefix, op->ir_state - ir->states);
+		fprintf(f, "%sactionRET, %td", prefix, op->ir_state - ir_states);
 	}
 
 	fprintf(f, "},\n");
@@ -148,36 +150,23 @@ print_fetch(FILE *f, const struct fsm_options *opt, const char *prefix)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_vmopsfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt, const char *prefix,
+fsm_print_vmopsfrag(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir, struct dfavm_op_ir *ops,
+	const char *prefix,
 	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
-	static const struct dfavm_assembler_ir zero;
-	struct dfavm_assembler_ir a;
 	struct dfavm_op_ir *op;
 
-	static const struct fsm_vm_compile_opts vm_opts = {
-		FSM_VM_COMPILE_DEFAULT_FLAGS,
-		FSM_VM_COMPILE_VM_V1,
-		NULL
-	};
-
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
-
-	a = zero;
 
 	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
 	 * We'll need that in order to be able to use the leaf callback here. */
 	(void) leaf;
 	(void) leaf_opaque;
 
-	if (!dfavm_compile_ir(&a, ir, vm_opts)) {
-		return -1;
-	}
-
-	for (op = a.linked; op != NULL; op = op->next) {
+	for (op = ops; op != NULL; op = op->next) {
 		if (op->num_incoming > 0) {
 			if (-1 == print_label(f, op, opt)) {
 				return -1;
@@ -188,7 +177,7 @@ fsm_print_vmopsfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			if (-1 == print_cond(f, op, opt, prefix)) {
 				return -1;
 			}
-			if (-1 == print_end(f, op, opt, prefix, op->u.stop.end_bits, ir)) {
+			if (-1 == print_end(f, op, opt, ir->states, prefix, op->u.stop.end_bits)) {
 				return -1;
 			}
 			break;
@@ -197,7 +186,7 @@ fsm_print_vmopsfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			if (-1 == print_fetch(f, opt, prefix)) {
 				return -1;
 			}
-			if (-1 == print_end(f, op, opt, prefix, op->u.fetch.end_bits, ir)) {
+			if (-1 == print_end(f, op, opt, ir->states, prefix, op->u.fetch.end_bits)) {
 				return -1;
 			}
 			break;
@@ -217,38 +206,37 @@ fsm_print_vmopsfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		}
 	}
 
-	dfavm_opasm_finalize_op(&a);
-
 	return 0;
 }
 
 int
-fsm_print_vmops(FILE *f, const struct fsm *fsm, enum vmops_dialect dialect)
+fsm_print_vmops(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir, struct dfavm_op_ir *ops,
+	enum vmops_dialect dialect)
 {
-	struct ir *ir;
+	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque);
 	const char *prefix;
 
 	assert(f != NULL);
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
+	assert(opt != NULL);
+	assert(ir != NULL);
 
-	ir = make_ir(fsm);
-	if (ir == NULL) {
-		return -1;
-	}
-
-	/* henceforth, no function should be passed struct fsm *, only the ir and options */
-
-	if (fsm->opt->prefix != NULL) {
-		prefix = fsm->opt->prefix;
+	if (opt->prefix != NULL) {
+		prefix = opt->prefix;
 	} else {
 		prefix = "fsm_";
 	}
 
-	if (fsm->opt->fragment) {
+	if (opt->leaf != NULL) {
+		leaf = opt->leaf;
+	} else {
+		leaf = print_leaf;
+	}
+
+	if (opt->fragment) {
 		if (dialect == VMOPS_C) {
-			if (-1 == fsm_print_vmopsfrag(f, ir, fsm->opt, prefix,
-				fsm->opt->leaf != NULL ? fsm->opt->leaf : leaf, fsm->opt->leaf_opaque))
+			if (-1 == fsm_print_vmopsfrag(f, opt, ir, ops, prefix,
+				leaf, opt->leaf_opaque))
 			{
 				return -1;
 			}
@@ -261,8 +249,8 @@ fsm_print_vmops(FILE *f, const struct fsm *fsm, enum vmops_dialect dialect)
 			fprintf(f, "#include \"%svmops.h\"\n", prefix);
 			fprintf(f, "#endif /* %sLIBFSM_VMOPS_H */\n", prefix);
 			fprintf(f, "struct %sop %sOps[] = {\n", prefix, prefix);
-			if (-1 == fsm_print_vmopsfrag(f, ir, fsm->opt, prefix,
-				fsm->opt->leaf != NULL ? fsm->opt->leaf : leaf, fsm->opt->leaf_opaque))
+			if (-1 == fsm_print_vmopsfrag(f, opt, ir, ops, prefix,
+				leaf, opt->leaf_opaque))
 			{
 				return -1;
 			}
@@ -291,7 +279,7 @@ fsm_print_vmops(FILE *f, const struct fsm *fsm, enum vmops_dialect dialect)
 			fprintf(f, "extern struct %sop %sOps[];\n", prefix, prefix);
 			fprintf(f, "\n");
 
-			switch (fsm->opt->io) {
+			switch (opt->io) {
 			case FSM_IO_PAIR:
 				fprintf(f, "int %smatch(const char *b, const char *e)\n", prefix);
 				break;
@@ -312,7 +300,7 @@ fsm_print_vmops(FILE *f, const struct fsm *fsm, enum vmops_dialect dialect)
 			fprintf(f, "\tint ok;\n");
 			fprintf(f, "\tstruct %sop *ops = %sOps;\n", prefix, prefix);
 
-			switch (fsm->opt->io) {
+			switch (opt->io) {
 			case FSM_IO_PAIR:
 				fprintf(f, "\tconst char *p = b;\n");
 				break;
@@ -332,7 +320,7 @@ fsm_print_vmops(FILE *f, const struct fsm *fsm, enum vmops_dialect dialect)
 			fprintf(f, "\t\tswitch (ops[i].op) {\n");
 			fprintf(f, "\t\tcase %sopEOF:\n", prefix);
 
-			switch (fsm->opt->io) {
+			switch (opt->io) {
 			case FSM_IO_PAIR:
 				fprintf(f, "\t\t\tif (p < e) {\n");
 				fprintf(f, "\t\t\t\t/* not at EOF */\n");
@@ -395,7 +383,7 @@ fsm_print_vmops(FILE *f, const struct fsm *fsm, enum vmops_dialect dialect)
 			fprintf(f, "\t\t\tbreak;\n");
 			fprintf(f, "\t\t}\n");
 
-			switch (fsm->opt->io) {
+			switch (opt->io) {
 			case FSM_IO_PAIR:
 				fprintf(f, "\t\tr = %smatch(p, p + strlen(p));\n", prefix);
 				break;
@@ -414,30 +402,27 @@ fsm_print_vmops(FILE *f, const struct fsm *fsm, enum vmops_dialect dialect)
 		}
 	}
 
-	free_ir(fsm, ir);
-
-	if (ferror(f)) {
-		return -1;
-	}
-
 	return 0;
 }
 
 int
-fsm_print_vmops_c(FILE *f, const struct fsm *fsm)
+fsm_print_vmops_c(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir, struct dfavm_op_ir *ops)
 {
-	return fsm_print_vmops(f, fsm, VMOPS_C);
+	return fsm_print_vmops(f, opt, ir, ops, VMOPS_C);
 }
 
 int
-fsm_print_vmops_h(FILE *f, const struct fsm *fsm)
+fsm_print_vmops_h(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir, struct dfavm_op_ir *ops)
 {
-	return fsm_print_vmops(f, fsm, VMOPS_H);
+	return fsm_print_vmops(f, opt, ir, ops, VMOPS_H);
 }
 
 int
-fsm_print_vmops_main(FILE *f, const struct fsm *fsm)
+fsm_print_vmops_main(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir, struct dfavm_op_ir *ops)
 {
-	return fsm_print_vmops(f, fsm, VMOPS_MAIN);
+	return fsm_print_vmops(f, opt, ir, ops, VMOPS_MAIN);
 }
 

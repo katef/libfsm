@@ -8,30 +8,34 @@
 #define FSM_INTERNAL_PRINT_H
 
 struct fsm;
+struct ir;
+struct dfavm_op_ir;
 
-typedef int fsm_print_f(FILE *f, const struct fsm *fsm);
+typedef int fsm_print_f(FILE *f, const struct fsm_options *opt, const struct fsm *fsm);
+typedef int ir_print_f(FILE *f, const struct fsm_options *opt, const struct ir *ir);
+typedef int vm_print_f(FILE *f, const struct fsm_options *opt, const struct ir *ir, struct dfavm_op_ir *ops);
 
-fsm_print_f fsm_print_amd64_att;
-fsm_print_f fsm_print_amd64_go;
-fsm_print_f fsm_print_amd64_nasm;
+vm_print_f fsm_print_amd64_att;
+vm_print_f fsm_print_amd64_go;
+vm_print_f fsm_print_amd64_nasm;
 
 fsm_print_f fsm_print_api;
-fsm_print_f fsm_print_awk;
-fsm_print_f fsm_print_c;
-fsm_print_f fsm_print_dot;
+vm_print_f fsm_print_awk;
+ir_print_f fsm_print_c;
+ir_print_f fsm_print_dot;
 fsm_print_f fsm_print_fsm;
-fsm_print_f fsm_print_go;
-fsm_print_f fsm_print_ir;
-fsm_print_f fsm_print_irjson;
+vm_print_f fsm_print_go;
+ir_print_f fsm_print_ir;
+ir_print_f fsm_print_irjson;
 fsm_print_f fsm_print_json;
-fsm_print_f fsm_print_llvm;
-fsm_print_f fsm_print_rust;
-fsm_print_f fsm_print_sh;
-fsm_print_f fsm_print_vmc;
+vm_print_f fsm_print_llvm;
+vm_print_f fsm_print_rust;
+vm_print_f fsm_print_sh;
+vm_print_f fsm_print_vmc;
 
-fsm_print_f fsm_print_vmdot;
-fsm_print_f fsm_print_vmops_c;
-fsm_print_f fsm_print_vmops_h;
-fsm_print_f fsm_print_vmops_main;
+vm_print_f fsm_print_vmdot;
+vm_print_f fsm_print_vmops_c;
+vm_print_f fsm_print_vmops_h;
+vm_print_f fsm_print_vmops_main;
 
 #endif

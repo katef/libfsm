@@ -29,7 +29,7 @@
 #include "ir.h"
 
 static int
-leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
+print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
 {
 	assert(f != NULL);
 	assert(leaf_opaque == NULL);
@@ -91,7 +91,8 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 
 static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
-	enum dfavm_op_end end_bits, const struct ir *ir)
+	const struct ir_state *ir_states,
+	enum dfavm_op_end end_bits)
 {
 	if (end_bits == VM_END_FAIL) {
 		fprintf(f, "{\n\t\treturn -1\n\t}\n");
@@ -109,7 +110,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 			return -1;
 		}
 	} else {
-		fprintf(f, "return %td", op->ir_state - ir->states);
+		fprintf(f, "return %td", op->ir_state - ir_states);
 	}
 
 	fprintf(f, "\n\t}\n");
@@ -139,27 +140,18 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_gofrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+fsm_print_gofrag(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir, struct dfavm_op_ir *ops,
 	const char *cp,
 	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
 {
-	static const struct dfavm_assembler_ir zero;
-	struct dfavm_assembler_ir a;
 	struct dfavm_op_ir *op;
 
-	static const struct fsm_vm_compile_opts vm_opts = {
-		FSM_VM_COMPILE_DEFAULT_FLAGS,
-		FSM_VM_COMPILE_VM_V1,
-		NULL
-	};
-
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
+	assert(ir != NULL);
 	assert(cp != NULL);
-
-	a = zero;
 
 	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
 	 * We'll need that in order to be able to use the leaf callback here. */
@@ -168,10 +160,6 @@ fsm_print_gofrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
 	(void) cp;
-
-	if (!dfavm_compile_ir(&a, ir, vm_opts)) {
-		return -1;
-	}
 
 	/*
 	 * We only output labels for ops which are branched to. This gives
@@ -183,7 +171,7 @@ fsm_print_gofrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		l = 0;
 
-		for (op = a.linked; op != NULL; op = op->next) {
+		for (op = ops; op != NULL; op = op->next) {
 			if (op->num_incoming > 0) {
 				op->index = l++;
 			}
@@ -193,8 +181,8 @@ fsm_print_gofrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	/*
 	 * Only declare variables if we're actually going to use them.
 	 */
-	if (a.linked->cmp == VM_CMP_ALWAYS && a.linked->instr == VM_OP_STOP) {
-		assert(a.linked->next == NULL);
+	if (ops->cmp == VM_CMP_ALWAYS && ops->instr == VM_OP_STOP) {
+		assert(ops->next == NULL);
 	} else {
 		switch (opt->io) {
 		case FSM_IO_PAIR:
@@ -219,7 +207,7 @@ fsm_print_gofrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		}
 	}
 
-	for (op = a.linked; op != NULL; op = op->next) {
+	for (op = ops; op != NULL; op = op->next) {
 		if (op->num_incoming > 0) {
 			print_label(f, op, opt);
 			fprintf(f, "\n");
@@ -230,12 +218,12 @@ fsm_print_gofrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op, opt);
-			print_end(f, op, opt, op->u.stop.end_bits, ir);
+			print_end(f, op, opt, ir->states, op->u.stop.end_bits);
 			break;
 
 		case VM_OP_FETCH:
 			print_fetch(f, opt);
-			print_end(f, op, opt, op->u.fetch.end_bits, ir);
+			print_end(f, op, opt, ir->states, op->u.fetch.end_bits);
 			break;
 
 		case VM_OP_BRANCH:
@@ -251,27 +239,45 @@ fsm_print_gofrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		fprintf(f, "\n");
 	}
 
-	dfavm_opasm_finalize_op(&a);
-
 	return 0;
 }
 
-static int
-fsm_print_go_complete(FILE *f, const struct ir *ir,
-	const struct fsm_options *opt, const char *prefix, const char *package_prefix)
+int
+fsm_print_go(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir, struct dfavm_op_ir *ops)
 {
+	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque);
+	const char *prefix;
+	const char *package_prefix;
+
 	/* TODO: currently unused, but must be non-NULL */
 	const char *cp = "";
 
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
-	assert(prefix != NULL);
-	assert(package_prefix != NULL);
+	assert(ir != NULL);
+
+	if (opt->prefix != NULL) {
+		prefix = opt->prefix;
+	} else {
+		prefix = "fsm_";
+	}
+
+	if (opt->leaf != NULL) {
+		leaf = opt->leaf;
+	} else {
+		leaf = print_leaf;
+	}
+
+	if (opt->package_prefix != NULL) {
+		package_prefix = opt->package_prefix;
+	} else {
+		package_prefix = prefix;
+	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_gofrag(f, ir, opt, cp,
-			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
+		if (-1 == fsm_print_gofrag(f, opt, ir, ops, cp,
+			leaf, opt->leaf_opaque))
 		{
 			return -1;
 		}
@@ -295,8 +301,8 @@ fsm_print_go_complete(FILE *f, const struct ir *ir,
 			return -1;
 		}
 
-		if (-1 == fsm_print_gofrag(f, ir, opt, cp,
-			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
+		if (-1 == fsm_print_gofrag(f, opt, ir, ops, cp,
+			leaf, opt->leaf_opaque))
 		{
 			return -1;
 		}
@@ -304,48 +310,6 @@ fsm_print_go_complete(FILE *f, const struct ir *ir,
 		fprintf(f, "}\n");
 	}
 
-	if (ferror(f)) {
-		return -1;
-	}
-
 	return 0;
-}
-
-int
-fsm_print_go(FILE *f, const struct fsm *fsm)
-{
-	struct ir *ir;
-	const char *prefix;
-	const char *package_prefix;
-	int r;
-
-	assert(f != NULL);
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
-
-	ir = make_ir(fsm);
-	if (ir == NULL) {
-		return -1;
-	}
-
-	/* henceforth, no function should be passed struct fsm *, only the ir and options */
-
-	if (fsm->opt->prefix != NULL) {
-		prefix = fsm->opt->prefix;
-	} else {
-		prefix = "fsm_";
-	}
-
-	if (fsm->opt->package_prefix != NULL) {
-		package_prefix = fsm->opt->package_prefix;
-	} else {
-		package_prefix = prefix;
-	}
-
-	r = fsm_print_go_complete(f, ir, fsm->opt, prefix, package_prefix);
-
-	free_ir(fsm, ir);
-
-	return r;
 }
 

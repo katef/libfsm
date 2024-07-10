@@ -88,9 +88,14 @@ findany(const struct fsm *fsm, fsm_state_t state, fsm_state_t *a)
 }
 
 static int
-print_state_comments(FILE *f, const struct fsm *fsm, fsm_state_t dst)
+print_state_comments(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
+	fsm_state_t dst)
 {
 	fsm_state_t start;
+
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(fsm != NULL);
 
 	if (!fsm_getstart(fsm, &start)) {
 		return 0;
@@ -109,7 +114,7 @@ print_state_comments(FILE *f, const struct fsm *fsm, fsm_state_t dst)
 
 		if (n > 0) {
 			fprintf(f, " # e.g. \"");
-			escputs(f, fsm->opt, fsm_escputc, buf);
+			escputs(f, opt, fsm_escputc, buf);
 			fprintf(f, "%s\"",
 				n >= (int) sizeof buf - 1 ? "..." : "");
 		}
@@ -121,6 +126,9 @@ print_state_comments(FILE *f, const struct fsm *fsm, fsm_state_t dst)
 static void
 print_char_range(FILE *f, const struct fsm_options *opt, char lower, char upper)
 {
+	assert(f != NULL);
+	assert(opt != NULL);
+
 	if (lower == upper) {
 		fprintf(f, "\"");
 		fsm_escputc(f, opt, (char) lower);
@@ -135,8 +143,12 @@ print_char_range(FILE *f, const struct fsm_options *opt, char lower, char upper)
 }
 
 static int
-print_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
+print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
+	fsm_state_t s)
 {
+	assert(f != NULL);
+	assert(opt != NULL);
+
 	{
 		struct state_iter jt;
 		fsm_state_t st;
@@ -156,7 +168,7 @@ print_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	}
 
 	assert(s < fsm->statecount);
-	if (fsm->opt->group_edges) {
+	if (opt->group_edges) {
 		struct edge_group_iter egi;
 		struct edge_group_iter_info info;
 
@@ -180,7 +192,7 @@ print_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 							fprintf(f, ", ");
 						}
 
-						print_char_range(f, fsm->opt, (char) lower, (char) i - 1);
+						print_char_range(f, opt, (char) lower, (char) i - 1);
 						ranges++;
 					}
 					lower = 256;
@@ -191,13 +203,13 @@ print_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 					fprintf(f, ", ");
 				}
 
-				print_char_range(f, fsm->opt, (char) lower, (char) 255);
+				print_char_range(f, opt, (char) lower, (char) 255);
 			}
 
 			fprintf(f, ";");
 
-			if (fsm->opt->comments) {
-				if (-1 == print_state_comments(f, fsm, info.to)) {
+			if (opt->comments) {
+				if (-1 == print_state_comments(f, opt, fsm, info.to)) {
 					return -1;
 				}
 			}
@@ -215,13 +227,13 @@ print_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 			fprintf(f, "%-2u -> %2u", s, e.state);
 
 			fprintf(f, " \"");
-			fsm_escputc(f, fsm->opt, (char) e.symbol);
+			fsm_escputc(f, opt, (char) e.symbol);
 			putc('\"', f);
 
 			fprintf(f, ";");
 
-			if (fsm->opt->comments) {
-				if (-1 == print_state_comments(f, fsm, e.state)) {
+			if (opt->comments) {
+				if (-1 == print_state_comments(f, opt, fsm, e.state)) {
 					return -1;
 				}
 			}
@@ -234,7 +246,7 @@ print_state(FILE *f, const struct fsm *fsm, fsm_state_t s)
 }
 
 int
-fsm_print_fsm(FILE *f, const struct fsm *fsm)
+fsm_print_fsm(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 {
 	fsm_state_t s, start;
 	size_t end;
@@ -242,7 +254,7 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 	assert(f != NULL);
 	assert(fsm != NULL);
 
-	if (!fsm->opt->anonymous_states) {
+	if (!opt->anonymous_states) {
 		/*
 		 * States are output in order here so as to force ordering when
 		 * parsing the .fsm format and creating new states. This ensures
@@ -257,7 +269,7 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 	}
 
 	for (s = 0; s < fsm->statecount; s++) {
-		if (-1 == print_state(f, fsm, s)) {
+		if (-1 == print_state(f, opt, fsm, s)) {
 			return -1;
 		}
 	}
@@ -291,7 +303,7 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 		if (count > 0) {
 			int res;
 
-			ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
+			ids = f_malloc(opt->alloc, count * sizeof *ids);
 			if (ids == NULL) {
 				return -1;
 			}
@@ -300,10 +312,10 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 			assert(res == 1);
 		}
 
-		if (fsm->opt->endleaf != NULL) {
-			if (-1 == fsm->opt->endleaf(f,
+		if (opt->endleaf != NULL) {
+			if (-1 == opt->endleaf(f,
 				ids, count,
-				fsm->opt->endleaf_opaque))
+				opt->endleaf_opaque))
 			{
 				return -1;
 			}
@@ -324,17 +336,13 @@ fsm_print_fsm(FILE *f, const struct fsm *fsm)
 
 			fprintf(f, "]");
 
-			f_free(fsm->opt->alloc, ids);
+			f_free(opt->alloc, ids);
 		}
 
 		fprintf(f, "%s", end > 0 ? ", " : ";\n");
 	}
 
 done:
-
-	if (ferror(f)) {
-		return -1;
-	}
 
 	return 0;
 }

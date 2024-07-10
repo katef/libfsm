@@ -53,7 +53,7 @@ ir_hasend(const struct ir *ir)
 }
 
 static int
-leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
+print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
 {
 	assert(f != NULL);
 	assert(leaf_opaque == NULL);
@@ -134,7 +134,7 @@ print_groups(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+print_case(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	const char *cp,
 	struct ir_state *cs,
 	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
@@ -337,7 +337,7 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		}
 		fprintf(f, "\n");
 
-		if (-1 == print_singlecase(f, ir, opt, cp, &ir->states[i], leaf, leaf_opaque)) {
+		if (-1 == print_case(f, ir, opt, cp, &ir->states[i], leaf, leaf_opaque)) {
 			return -1;
 		}
 
@@ -355,7 +355,9 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 }
 
 static int
-fsm_print_c_body(FILE *f, const struct ir *ir, const struct fsm_options *opt)
+fsm_print_c_body(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
+	const void *leaf_opaque)
 {
 	const char *cp;
 
@@ -396,7 +398,7 @@ fsm_print_c_body(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 	}
 
 	if (-1 == fsm_print_cfrag(f, ir, opt, cp,
-		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
+		leaf, leaf_opaque))
 	{
 		return -1;
 	}
@@ -412,16 +414,31 @@ fsm_print_c_body(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 	return 0;
 }
 
-static int
-fsm_print_c_complete(FILE *f, const struct ir *ir,
-	const struct fsm_options *opt, const char *prefix)
+int
+fsm_print_c(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir)
 {
+	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque);
+	const char *prefix;
+
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
+	assert(ir != NULL);
+
+	if (opt->prefix != NULL) {
+		prefix = opt->prefix;
+	} else {
+		prefix = "fsm_";
+	}
+
+	if (opt->leaf != NULL) {
+		leaf = opt->leaf;
+	} else {
+		leaf = print_leaf;
+	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_c_body(f, ir, opt)) {
+		if (-1 == fsm_print_c_body(f, ir, opt, leaf, opt->leaf_opaque)) {
 			return -1;
 		}
 	} else {
@@ -461,7 +478,7 @@ fsm_print_c_complete(FILE *f, const struct ir *ir,
 		if (ir->n == 0) {
 			fprintf(f, "\treturn -1; /* no matches */\n");
 		} else {
-			if (-1 == fsm_print_c_body(f, ir, opt)) {
+			if (-1 == fsm_print_c_body(f, ir, opt, leaf, opt->leaf_opaque)) {
 				return -1;
 			}
 		}
@@ -470,41 +487,6 @@ fsm_print_c_complete(FILE *f, const struct ir *ir,
 		fprintf(f, "\n");
 	}
 
-	if (ferror(f)) {
-		return -1;
-	}
-
 	return 0;
-}
-
-int
-fsm_print_c(FILE *f, const struct fsm *fsm)
-{
-	struct ir *ir;
-	const char *prefix;
-	int r;
-
-	assert(f != NULL);
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
-
-	ir = make_ir(fsm);
-	if (ir == NULL) {
-		return -1;
-	}
-
-	/* henceforth, no function should be passed struct fsm *, only the ir and options */
-
-	if (fsm->opt->prefix != NULL) {
-		prefix = fsm->opt->prefix;
-	} else {
-		prefix = "fsm_";
-	}
-
-	r = fsm_print_c_complete(f, ir, fsm->opt, prefix);
-
-	free_ir(fsm, ir);
-
-	return r;
 }
 

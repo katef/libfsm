@@ -61,7 +61,7 @@ print_endpoint(FILE *f, const struct fsm_options *opt, unsigned char c)
 }
 
 static void
-print_state(FILE *f, unsigned to, unsigned self)
+print_name(FILE *f, unsigned to, unsigned self)
 {
 	assert(f != NULL);
 
@@ -144,7 +144,7 @@ print_grouprows(FILE *f, const struct fsm_options *opt,
 			} else {
 				fprintf(f, "<TD ALIGN='LEFT' PORT='group%u'>",
 					(unsigned) j);
-				print_state(f, groups[j].to, self);
+				print_name(f, groups[j].to, self);
 				fprintf(f, "</TD>");
 			}
 
@@ -174,7 +174,7 @@ print_grouplinks(FILE *f, unsigned self,
 }
 
 static int
-print_cs(FILE *f, const struct fsm_options *opt,
+print_state(FILE *f, const struct fsm_options *opt,
 	const struct ir *ir, const struct ir_state *cs)
 {
 	assert(f != NULL);
@@ -232,7 +232,7 @@ print_cs(FILE *f, const struct fsm_options *opt,
 
 	case IR_SAME:
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>to</TD><TD ALIGN='LEFT'>");
-		print_state(f, cs->u.same.to, ir_indexof(ir, cs));
+		print_name(f, cs->u.same.to, ir_indexof(ir, cs));
 		fprintf(f, "</TD></TR>\n");
 		break;
 
@@ -246,14 +246,14 @@ print_cs(FILE *f, const struct fsm_options *opt,
 
 	case IR_DOMINANT:
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>mode</TD><TD ALIGN='LEFT' PORT='mode'>");
-		print_state(f, cs->u.dominant.mode, ir_indexof(ir, cs));
+		print_name(f, cs->u.dominant.mode, ir_indexof(ir, cs));
 		fprintf(f, "</TD></TR>\n");
 		print_grouprows(f, opt, ir_indexof(ir, cs), cs->u.dominant.groups, cs->u.dominant.n);
 		break;
 
 	case IR_ERROR:
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>mode</TD><TD ALIGN='LEFT' PORT='mode'>");
-		print_state(f, cs->u.error.mode, ir_indexof(ir, cs));
+		print_name(f, cs->u.error.mode, ir_indexof(ir, cs));
 		fprintf(f, "</TD></TR>\n");
 		print_errorrows(f, opt, &cs->u.error.error);
 		print_grouprows(f, opt, ir_indexof(ir, cs), cs->u.error.groups, cs->u.error.n);
@@ -322,18 +322,14 @@ print_cs(FILE *f, const struct fsm_options *opt,
 }
 
 int
-fsm_print_ir(FILE *f, const struct fsm *fsm)
+fsm_print_ir(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir)
 {
-	struct ir *ir;
 	size_t i;
 
 	assert(f != NULL);
-	assert(fsm != NULL);
-
-	ir = make_ir(fsm);
-	if (ir == NULL) {
-		return -1;
-	}
+	assert(opt != NULL);
+	assert(ir != NULL);
 
 	fprintf(f, "digraph G {\n");
 
@@ -349,18 +345,12 @@ fsm_print_ir(FILE *f, const struct fsm *fsm)
 	}
 
 	for (i = 0; i < ir->n; i++) {
-		if (-1 == print_cs(f, fsm->opt, ir, &ir->states[i])) {
+		if (-1 == print_state(f, opt, ir, &ir->states[i])) {
 			return -1;
 		}
 	}
 
 	fprintf(f, "}\n");
-
-	free_ir(fsm, ir);
-
-	if (ferror(f)) {
-		return -1;
-	}
 
 	return 0;
 }

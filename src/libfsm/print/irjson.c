@@ -113,7 +113,7 @@ print_groups(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-print_cs(FILE *f, const struct fsm_options *opt,
+print_state(FILE *f, const struct fsm_options *opt,
 	const struct ir_state *cs)
 {
 	assert(f != NULL);
@@ -212,18 +212,14 @@ print_cs(FILE *f, const struct fsm_options *opt,
 }
 
 int
-fsm_print_irjson(FILE *f, const struct fsm *fsm)
+fsm_print_irjson(FILE *f, const struct fsm_options *opt,
+	const struct ir *ir)
 {
-	struct ir *ir;
 	size_t i;
 
 	assert(f != NULL);
-	assert(fsm != NULL);
-
-	ir = make_ir(fsm);
-	if (ir == NULL) {
-		return -1;
-	}
+	assert(opt != NULL);
+	assert(ir != NULL);
 
 	fprintf(f, "{\n");
 
@@ -231,7 +227,7 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\t\"states\": [\n");
 
 	for (i = 0; i < ir->n; i++) {
-		if (-1 == print_cs(f, fsm->opt, &ir->states[i])) {
+		if (-1 == print_state(f, opt, &ir->states[i])) {
 			return -1;
 		}
 
@@ -244,12 +240,6 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\t]\n");
 
 	fprintf(f, "}\n");
-
-	free_ir(fsm, ir);
-
-	if (ferror(f)) {
-		return -1;
-	}
 
 	return 0;
 }

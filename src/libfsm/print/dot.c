@@ -25,7 +25,8 @@
 #include <fsm/options.h>
 
 static int
-singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
+print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
+	const char *prefix, fsm_state_t s)
 {
 	struct fsm_edge e;
 	struct edge_iter it;
@@ -33,21 +34,20 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	struct state_set *unique;
 
 	assert(f != NULL);
+	assert(opt != NULL);
 	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
+	assert(prefix != NULL);
 	assert(s < fsm->statecount);
 
-	if (!fsm->opt->consolidate_edges) {
+	if (!opt->consolidate_edges) {
 		{
 			struct state_iter jt;
 			fsm_state_t st;
 
 			for (state_set_reset(fsm->states[s].epsilons, &jt); state_set_next(&jt, &st); ) {
 				fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
-					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-					s,
-					fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-					st);
+					prefix, s,
+					prefix, st);
 
 				fprintf(f, "&#x3B5;");
 
@@ -57,12 +57,10 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 
 		for (edge_set_ordered_iter_reset(fsm->states[s].edges, &eoi); edge_set_ordered_iter_next(&eoi, &e); ) {
 			fprintf(f, "\t%sS%-2u -> %sS%-2u [ label = <",
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				s,
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				e.state);
+				prefix, s,
+				prefix, e.state);
 
-			dot_escputc_html(f, fsm->opt, (char) e.symbol);
+			dot_escputc_html(f, opt, (char) e.symbol);
 
 			fprintf(f, "> ];\n");
 		}
@@ -73,7 +71,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 	unique = NULL;
 
 	for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
-		if (!state_set_add(&unique, fsm->opt->alloc, e.state)) {
+		if (!state_set_add(&unique, opt->alloc, e.state)) {
 			return -1;
 		}
 	}
@@ -109,17 +107,15 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 		}
 
 		fprintf(f, "\t%sS%-2u -> %sS%-2u [ ",
-			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-			s,
-			fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-			e.state);
+			prefix, s,
+			prefix, e.state);
 
 		if (bm_count(&bm) > 4) {
 			fprintf(f, "weight = 3, ");
 		}
 
 		fprintf(f, "label = <");
-		bm_print(f, fsm->opt, &bm, 0, dot_escputc_html);
+		bm_print(f, opt, &bm, 0, dot_escputc_html);
 		fprintf(f, "> ];\n");
 	}
 
@@ -132,10 +128,8 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 
 		for (state_set_reset(fsm->states[s].epsilons, &jt); state_set_next(&jt, &st); ) {
 			fprintf(f, "\t%sS%-2u -> %sS%-2u [ weight = 1, label = <",
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				s,
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				st);
+				prefix, s,
+				prefix, st);
 
 			fprintf(f, "&#x3B5;");
 
@@ -151,20 +145,21 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s)
 }
 
 static int
-print_dotfrag(FILE *f, const struct fsm *fsm)
+print_dotfrag(FILE *f, const struct fsm_options *opt,
+	const struct fsm *fsm, const char *prefix)
 {
 	fsm_state_t s;
 
 	assert(f != NULL);
+	assert(opt != NULL);
 	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
+	assert(prefix != NULL);
 
 	for (s = 0; s < fsm->statecount; s++) {
 		if (!fsm_isend(fsm, s)) {
-			if (!fsm->opt->anonymous_states) {
+			if (!opt->anonymous_states) {
 				fprintf(f, "\t%sS%-2u [ label = <%u> ];\n",
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
-				s, s);
+				prefix, s, s);
 			}
 		} else {
 			fsm_end_id_t *ids;
@@ -175,7 +170,7 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 			if (count > 0) {
 				int res;
 
-				ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
+				ids = f_malloc(opt->alloc, count * sizeof *ids);
 				if (ids == NULL) {
 					return -1;
 				}
@@ -185,7 +180,7 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 			}
 
 			fprintf(f, "\t%sS%-2u [ shape = doublecircle",
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "", s);
+				prefix, s);
 
 			assert(f != NULL);
 
@@ -193,18 +188,18 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 
 			fprintf(f, "label = <");
 
-			if (fsm->opt->endleaf != NULL) {
-				if (-1 == fsm->opt->endleaf(f,
+			if (opt->endleaf != NULL) {
+				if (-1 == opt->endleaf(f,
 					ids, count,
-					fsm->opt->endleaf_opaque))
+					opt->endleaf_opaque))
 				{
 					return -1;
 				}
-			} else if (!fsm->opt->anonymous_states) {
+			} else if (!opt->anonymous_states) {
 				fprintf(f, "%u", s);
 			}
 
-			if (fsm->opt->endleaf != NULL || !fsm->opt->anonymous_states) {
+			if (opt->endleaf != NULL || !opt->anonymous_states) {
 				if (count > 0) {
 					fprintf(f, "<BR/>");
 				}
@@ -222,12 +217,12 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 
 			fprintf(f, " ];\n");
 
-			f_free(fsm->opt->alloc, ids);
+			f_free(opt->alloc, ids);
 		}
 
 		/* TODO: show example here, unless !opt->comments */
 
-		if (-1 == singlestate(f, fsm, s)) {
+		if (-1 == print_state(f, opt, fsm, prefix, s)) {
 			return -1;
 		}
 	}
@@ -236,14 +231,22 @@ print_dotfrag(FILE *f, const struct fsm *fsm)
 }
 
 int
-fsm_print_dot(FILE *f, const struct fsm *fsm)
+fsm_print_dot(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 {
+	const char *prefix;
+
 	assert(f != NULL);
 	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
+	assert(opt != NULL);
 
-	if (fsm->opt->fragment) {
-		if (-1 == print_dotfrag(f, fsm)) {
+	if (opt->prefix != NULL) {
+		prefix = opt->prefix;
+	} else {
+		prefix = "";
+	}
+
+	if (opt->fragment) {
+		if (-1 == print_dotfrag(f, opt, fsm, prefix)) {
 			return -1;
 		}
 	} else {
@@ -255,7 +258,7 @@ fsm_print_dot(FILE *f, const struct fsm *fsm)
 		fprintf(f, "\tnode [ shape = circle ];\n");
 		fprintf(f, "\tedge [ weight = 2 ];\n");
 
-		if (fsm->opt->anonymous_states) {
+		if (opt->anonymous_states) {
 			fprintf(f, "\tnode [ label = \"\", width = 0.3 ];\n");
 		}
 
@@ -266,22 +269,18 @@ fsm_print_dot(FILE *f, const struct fsm *fsm)
 
 		if (fsm_getstart(fsm, &start)) {
 			fprintf(f, "\tstart -> %sS%u;\n",
-				fsm->opt->prefix != NULL ? fsm->opt->prefix : "",
+				opt->prefix != NULL ? opt->prefix : "",
 				start);
 
 			fprintf(f, "\n");
 		}
 
-		if (-1 == print_dotfrag(f, fsm)) {
+		if (-1 == print_dotfrag(f, opt, fsm, prefix)) {
 			return -1;
 		}
 
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
-	}
-
-	if (ferror(f)) {
-		return -1;
 	}
 
 	return 0;
