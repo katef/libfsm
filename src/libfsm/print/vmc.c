@@ -26,8 +26,6 @@
 
 #include "libfsm/vm/vm.h"
 
-#include "ir.h"
-
 static int
 print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
 {
@@ -66,9 +64,9 @@ print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt
 {
 	fprintf(f, "l%" PRIu32 ":", op->index);
 
-	if (op->ir_state->example != NULL) {
+	if (op->example != NULL) {
 		fprintf(f, " /* e.g. \"");
-		escputs(f, opt, c_escputc_str, op->ir_state->example);
+		escputs(f, opt, c_escputc_str, op->example);
 		fprintf(f, "\" */");
 	}
 }
@@ -87,7 +85,6 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 
 static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
-	const struct ir_state *ir_states,
 	enum dfavm_op_end end_bits)
 {
 	if (end_bits == VM_END_FAIL) {
@@ -97,7 +94,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 
 	if (opt->endleaf != NULL) {
 		if (-1 == opt->endleaf(f,
-			op->ir_state->endids.ids, op->ir_state->endids.count,
+			op->endids.ids, op->endids.count,
 			opt->endleaf_opaque))
 		{
 			return -1;
@@ -280,8 +277,7 @@ unsuitable:
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_cfrag(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, struct dfavm_op_ir *ops,
+fsm_print_cfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 	const char *cp,
 	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
@@ -290,7 +286,6 @@ fsm_print_cfrag(FILE *f, const struct fsm_options *opt,
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 	assert(cp != NULL);
 
 	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
@@ -359,7 +354,7 @@ fsm_print_cfrag(FILE *f, const struct fsm_options *opt,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op, opt);
-			if (-1 == print_end(f, op, opt, ir->states, op->u.stop.end_bits)) {
+			if (-1 == print_end(f, op, opt, op->u.stop.end_bits)) {
 				return -1;
 			}
 			break;
@@ -377,7 +372,7 @@ fsm_print_cfrag(FILE *f, const struct fsm_options *opt,
 				fprintf(f, "if (e - p < %zu || 0 != memcmp(p, \"", n);
 				escputbuf(f, opt, c_escputc_str, buf, n);
 				fprintf(f, "\", %zu)) ", n);
-				if (-1 == print_end(f, NULL, opt, ir->states, end_bits)) {
+				if (-1 == print_end(f, NULL, opt, end_bits)) {
 					return -1;
 				}
 				fprintf(f, "\n");
@@ -390,7 +385,7 @@ fsm_print_cfrag(FILE *f, const struct fsm_options *opt,
 				fprintf(f, "if (0 != strncmp(p, \"");
 				escputbuf(f, opt, c_escputc_str, buf, n);
 				fprintf(f, "\", %zu)) ", n);
-				if (-1 == print_end(f, NULL, opt, ir->states, end_bits)) {
+				if (-1 == print_end(f, NULL, opt, end_bits)) {
 					return -1;
 				}
 				fprintf(f, "\n");
@@ -401,7 +396,7 @@ fsm_print_cfrag(FILE *f, const struct fsm_options *opt,
 				op = tail;
 			} else {
 				print_fetch(f, opt);
-				if (-1 == print_end(f, op, opt, ir->states, op->u.fetch.end_bits)) {
+				if (-1 == print_end(f, op, opt, op->u.fetch.end_bits)) {
 					return -1;
 				}
 				if (opt->io == FSM_IO_PAIR) {
@@ -438,8 +433,7 @@ fsm_print_cfrag(FILE *f, const struct fsm_options *opt,
 }
 
 int
-fsm_print_vmc(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, struct dfavm_op_ir *ops)
+fsm_print_vmc(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 {
 	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque);
 	const char *prefix;
@@ -449,7 +443,6 @@ fsm_print_vmc(FILE *f, const struct fsm_options *opt,
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
@@ -464,7 +457,7 @@ fsm_print_vmc(FILE *f, const struct fsm_options *opt,
 	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_cfrag(f, opt, ir, ops, cp,
+		if (-1 == fsm_print_cfrag(f, opt, ops, cp,
 			leaf, opt->leaf_opaque))
 		{
 			return -1;
@@ -489,7 +482,7 @@ fsm_print_vmc(FILE *f, const struct fsm_options *opt,
 			break;
 		}
 
-		if (-1 == fsm_print_cfrag(f, opt, ir, ops, cp,
+		if (-1 == fsm_print_cfrag(f, opt, ops, cp,
 			leaf, opt->leaf_opaque))
 		{
 			return -1;

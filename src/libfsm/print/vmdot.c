@@ -26,17 +26,6 @@
 
 #include "libfsm/vm/vm.h"
 
-#include "ir.h"
-
-static unsigned int
-ir_indexof(const struct ir *ir, const struct ir_state *cs)
-{
-	assert(ir != NULL);
-	assert(cs != NULL);
-
-	return cs - &ir->states[0];
-}
-
 static const char *
 cmp_operator(int cmp)
 {
@@ -84,7 +73,6 @@ print_cond(FILE *f, const struct fsm_options *opt, const struct dfavm_op_ir *op)
 
 static int
 print_end(FILE *f, const struct fsm_options *opt,
-	const struct ir_state *ir_states,
 	const struct dfavm_op_ir *op, enum dfavm_op_end end_bits)
 {
 	if (end_bits == VM_END_FAIL) {
@@ -94,21 +82,21 @@ print_end(FILE *f, const struct fsm_options *opt,
 
 	if (opt->endleaf != NULL) {
 		if (-1 == opt->endleaf(f,
-			op->ir_state->endids.ids, op->ir_state->endids.count,
+			op->endids.ids, op->endids.count,
 			opt->endleaf_opaque))
 		{
 			return -1;
 		}
 	} else {
-		fprintf(f, "ret %td", op->ir_state - ir_states);
+		fprintf(f, "match");
 
-		if (op->ir_state->endids.count > 0) {
+		if (op->endids.count > 0) {
 			fprintf(f, " / ");
 
-			for (size_t i = 0; i < op->ir_state->endids.count; i++) {
-				fprintf(f, "#%u", op->ir_state->endids.ids[i]);
+			for (size_t i = 0; i < op->endids.count; i++) {
+				fprintf(f, "#%u", op->endids.ids[i]);
 
-				if (i < op->ir_state->endids.count - 1) {
+				if (i < op->endids.count - 1) {
 					fprintf(f, " ");
 				}
 			}
@@ -125,20 +113,18 @@ print_branch(FILE *f, const struct dfavm_op_ir *op)
 }
 
 static int
-fsm_print_nodes(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, struct dfavm_op_ir *ops)
+fsm_print_nodes(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 {
 	struct dfavm_op_ir *op;
-	const struct ir_state *ir_state;
+	const char *example;
 	unsigned block;
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 
 	block = 0;
 
-	ir_state = NULL;
+	example = NULL;
 
 	for (op = ops; op != NULL; op = op->next) {
 		if (op->num_incoming > 0 || op == ops) {
@@ -158,24 +144,23 @@ fsm_print_nodes(FILE *f, const struct fsm_options *opt,
 			} else {
 				fprintf(f, "\t\t\t<td><b>L%u</b></td>\n", block++);
 			}
-			fprintf(f, "\t\t\t<td><b>State</b></td>\n");
 			fprintf(f, "\t\t\t<td><b>Cond</b></td>\n");
 			fprintf(f, "\t\t\t<td align='left'><b>Op</b></td>\n");
 			fprintf(f, "\t\t</tr>\n");
 		}
 
-		if (ir_state != op->ir_state || op->num_incoming > 0) {
-			if (op->ir_state->example != NULL) {
+		if (example != op->example) {
+			if (op->example != NULL) {
 				fprintf(f, "\t\t<tr>\n");
-				fprintf(f, "\t\t\t<td colspan='4' align='left'>");
+				fprintf(f, "\t\t\t<td colspan='3' align='left'>");
 				fprintf(f, "e.g. <font face='mono'>\"");
-				escputs(f, opt, dot_escputc_html, op->ir_state->example);
+				escputs(f, opt, dot_escputc_html, op->example);
 				fprintf(f, "\"</font>");
 				fprintf(f, "</td>\n");
 				fprintf(f, "\t\t</tr>\n");
 			}
 
-			ir_state = op->ir_state;
+			example = op->example;
 		}
 
 		fprintf(f, "\t\t<tr>\n");
@@ -184,21 +169,13 @@ fsm_print_nodes(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "#%" PRIu32, op->index);
 		fprintf(f, "</td>\n");
 
-		fprintf(f, "\t\t\t<td>");
-		if (op->ir_state != NULL) {
-			fprintf(f, op->ir_state->isend ? "(S%u)" : "S%u", ir_indexof(ir, op->ir_state));
-		} else {
-			fprintf(f, "(none)");
-		}
-		fprintf(f, "</td>\n");
-
 		switch (op->instr) {
 		case VM_OP_STOP:
 			fprintf(f, "\t\t\t<td>");
 			print_cond(f, opt, op);
 			fprintf(f, "</td>\n");
 			fprintf(f, "\t\t\t<td align='left' port='b%u'>", op->index);
-			if (-1 == print_end(f, opt, ir->states, op, op->u.stop.end_bits)) {
+			if (-1 == print_end(f, opt, op, op->u.stop.end_bits)) {
 				return -1;
 			}
 			fprintf(f, "</td>\n");
@@ -207,7 +184,7 @@ fsm_print_nodes(FILE *f, const struct fsm_options *opt,
 		case VM_OP_FETCH:
 			fprintf(f, "\t\t\t<td>fetch</td>\n");
 			fprintf(f, "\t\t\t<td align='left' port='b%u'>", op->index);
-			if (-1 == print_end(f, opt, ir->states, op, op->u.fetch.end_bits)) {
+			if (-1 == print_end(f, opt, op, op->u.fetch.end_bits)) {
 				return -1;
 			}
 			fprintf(f, "</td>\n");
@@ -237,8 +214,7 @@ fsm_print_nodes(FILE *f, const struct fsm_options *opt,
 }
 
 static void
-fsm_print_edges(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, const struct dfavm_op_ir *ops)
+fsm_print_edges(FILE *f, const struct fsm_options *opt, const struct dfavm_op_ir *ops)
 {
 	const struct dfavm_op_ir *op;
 	unsigned long block;
@@ -246,7 +222,6 @@ fsm_print_edges(FILE *f, const struct fsm_options *opt,
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 
 	(void) opt;
 
@@ -307,33 +282,29 @@ fsm_print_edges(FILE *f, const struct fsm_options *opt,
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_vmdotfrag(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, struct dfavm_op_ir *ops)
+fsm_print_vmdotfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 
-	if (-1 == fsm_print_nodes(f, opt, ir, ops)) {
+	if (-1 == fsm_print_nodes(f, opt, ops)) {
 		return -1;
 	}
 	fprintf(f, "\n");
 
-	fsm_print_edges(f, opt, ir, ops);
+	fsm_print_edges(f, opt, ops);
 
 	return 0;
 }
 
 int
-fsm_print_vmdot(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, struct dfavm_op_ir *ops)
+fsm_print_vmdot(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_vmdotfrag(f, opt, ir, ops)) {
+		if (-1 == fsm_print_vmdotfrag(f, opt, ops)) {
 			return -1;
 		}
 	} else {
@@ -351,7 +322,7 @@ fsm_print_vmdot(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
 		fprintf(f, "\tstart -> S0:i0:w [ style = bold ];\n");
 
-		if (-1 == fsm_print_vmdotfrag(f, opt, ir, ops)) {
+		if (-1 == fsm_print_vmdotfrag(f, opt, ops)) {
 			return -1;
 		}
 

@@ -13,7 +13,7 @@ struct dfavm_op_ir;
 
 typedef int fsm_print_f(FILE *f, const struct fsm_options *opt, const struct fsm *fsm);
 typedef int ir_print_f(FILE *f, const struct fsm_options *opt, const struct ir *ir);
-typedef int vm_print_f(FILE *f, const struct fsm_options *opt, const struct ir *ir, struct dfavm_op_ir *ops);
+typedef int vm_print_f(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops);
 
 vm_print_f fsm_print_amd64_att;
 vm_print_f fsm_print_amd64_go;

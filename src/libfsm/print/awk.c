@@ -27,8 +27,6 @@
 
 #include "libfsm/vm/vm.h"
 
-#include "ir.h"
-
 #define START UINT32_MAX
 
 static int
@@ -97,7 +95,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 
 	if (opt->endleaf != NULL) {
 		if (-1 == opt->endleaf(f,
-			op->ir_state->endids.ids, op->ir_state->endids.count,
+			op->endids.ids, op->endids.count,
 			opt->endleaf_opaque))
 		{
 			return -1;
@@ -110,10 +108,10 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 		/* awk can't return an array */
 		fprintf(f, "return \"");
 
-		for (i = 0; i < op->ir_state->endids.count; i++) {
-			fprintf(f, "%u", op->ir_state->endids.ids[i]);
+		for (i = 0; i < op->endids.count; i++) {
+			fprintf(f, "%u", op->endids.ids[i]);
 
-			if (i < op->ir_state->endids.count - 1) {
+			if (i < op->endids.count - 1) {
 				fprintf(f, ",");
 			}
 		}
@@ -190,9 +188,9 @@ fsm_print_awkfrag(FILE *f, const struct fsm_options *opt,
 			print_label(f, op);
 			fprintf(f, ":");
 
-			if (op->ir_state != NULL && op->ir_state->example != NULL) {
+			if (op->example != NULL) {
 				fprintf(f, " /* e.g. \"");
-				escputs(f, opt, c_escputc_str, op->ir_state->example);
+				escputs(f, opt, c_escputc_str, op->example);
 				fprintf(f, "\" */");
 			}
 
@@ -247,8 +245,7 @@ fsm_print_awkfrag(FILE *f, const struct fsm_options *opt,
 }
 
 int
-fsm_print_awk(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, struct dfavm_op_ir *ops)
+fsm_print_awk(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 {
 	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque);
 	const char *prefix;
@@ -256,9 +253,6 @@ fsm_print_awk(FILE *f, const struct fsm_options *opt,
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
-
-	(void) ir;
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;

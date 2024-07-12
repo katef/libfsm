@@ -101,15 +101,7 @@ fsm_print(FILE *f, const struct fsm *fsm, enum fsm_print_lang lang)
 	}
 
 	if (print_vm != NULL) {
-		/*
-		 * TODO: I'm passing ir here for sake of emitting a state index by
-		 * op->ir_state - ir_states for returning from the generated code.
-		 *
-		 * I want to remove this after moving the generated API to just
-		 * return a boolean, and for callers to think in terms of endid
-		 * sets instead.
-		 */
-		r = print_vm(f, fsm->opt, ir, a.linked);
+		r = print_vm(f, fsm->opt, a.linked);
 	}
 
 	dfavm_opasm_finalize_op(&a);

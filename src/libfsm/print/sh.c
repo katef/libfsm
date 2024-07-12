@@ -27,8 +27,6 @@
 
 #include "libfsm/vm/vm.h"
 
-#include "ir.h"
-
 static const char *
 str_operator(int cmp)
 {
@@ -76,9 +74,9 @@ print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt
 	 * arbitrary characters, and nobody can read $'...' style strings.
 	 * So I'm just using C-style strings here because it's simple enough.
 	 */
-	if (op->ir_state->example != NULL) {
+	if (op->example != NULL) {
 		fprintf(f, " # e.g. \"");
-		escputs(f, opt, c_escputc_str, op->ir_state->example);
+		escputs(f, opt, c_escputc_str, op->example);
 		fprintf(f, "\"");
 	}
 }
@@ -119,7 +117,6 @@ print_cond(FILE *f, const struct dfavm_op_ir *op)
 
 static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
-	const struct ir_state *ir_states,
 	enum dfavm_op_end end_bits)
 {
 	if (end_bits == VM_END_FAIL) {
@@ -129,7 +126,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 
 	if (opt->endleaf != NULL) {
 		if (-1 == opt->endleaf(f,
-			op->ir_state->endids.ids, op->ir_state->endids.count,
+			op->endids.ids, op->endids.count,
 			opt->endleaf_opaque))
 		{
 			return -1;
@@ -154,14 +151,12 @@ print_fetch(FILE *f)
 }
 
 int
-fsm_print_sh(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, struct dfavm_op_ir *ops)
+fsm_print_sh(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 {
 	struct dfavm_op_ir *op;
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 
 	if (opt->io != FSM_IO_STR) {
 		errno = ENOTSUP;
@@ -215,14 +210,14 @@ fsm_print_sh(FILE *f, const struct fsm_options *opt,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op);
-			if (-1 == print_end(f, op, opt, ir->states, op->u.stop.end_bits)) {
+			if (-1 == print_end(f, op, opt, op->u.stop.end_bits)) {
 				return -1;
 			}
 			break;
 
 		case VM_OP_FETCH:
 			print_fetch(f);
-			if (-1 == print_end(f, op, opt, ir->states, op->u.fetch.end_bits)) {
+			if (-1 == print_end(f, op, opt, op->u.fetch.end_bits)) {
 				return -1;
 			}
 			break;

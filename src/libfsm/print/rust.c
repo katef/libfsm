@@ -27,8 +27,6 @@
 
 #include "libfsm/vm/vm.h"
 
-#include "ir.h"
-
 #define START UINT32_MAX
 
 static int
@@ -102,7 +100,6 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 
 static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
-	const struct ir_state *ir_states,
 	enum dfavm_op_end end_bits)
 {
 	if (end_bits == VM_END_FAIL) {
@@ -112,7 +109,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 
 	if (opt->endleaf != NULL) {
 		if (-1 == opt->endleaf(f,
-			op->ir_state->endids.ids, op->ir_state->endids.count,
+			op->endids.ids, op->endids.count,
 			opt->endleaf_opaque))
 		{
 			return -1;
@@ -146,8 +143,7 @@ print_fetch(FILE *f)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_rustfrag(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, struct dfavm_op_ir *ops,
+fsm_print_rustfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 	const char *cp,
 	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
@@ -157,7 +153,6 @@ fsm_print_rustfrag(FILE *f, const struct fsm_options *opt,
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 	assert(cp != NULL);
 
 	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
@@ -248,11 +243,11 @@ fsm_print_rustfrag(FILE *f, const struct fsm_options *opt,
 			print_label(f, op);
 			fprintf(f, " => {");
 
-			if (op->ir_state != NULL && op->ir_state->example != NULL) {
+			if (op->example != NULL) {
 				/* C's escaping seems to be a subset of rust's, and these are
 				 * for comments anyway. So I'm borrowing this for C here */
 				fprintf(f, " // e.g. \"");
-				escputs(f, opt, c_escputc_str, op->ir_state->example);
+				escputs(f, opt, c_escputc_str, op->example);
 				fprintf(f, "\"");
 			}
 
@@ -269,7 +264,7 @@ fsm_print_rustfrag(FILE *f, const struct fsm_options *opt,
 			if (op->cmp != VM_CMP_ALWAYS) {
 				fprintf(f, "{ ");
 			}
-			if (-1 == print_end(f, op, opt, ir->states, op->u.stop.end_bits)) {
+			if (-1 == print_end(f, op, opt, op->u.stop.end_bits)) {
 				return -1;
 			}
 			fprintf(f, ";");
@@ -318,7 +313,7 @@ fsm_print_rustfrag(FILE *f, const struct fsm_options *opt,
 
 				fprintf(f, "                    ");
 				fprintf(f, "None => ");
-				print_end(f, op, opt, ir->states, op->u.fetch.end_bits);
+				print_end(f, op, opt, op->u.fetch.end_bits);
 				fprintf(f, ",\n");
 				fprintf(f, "                    ");
 
@@ -363,8 +358,7 @@ fsm_print_rustfrag(FILE *f, const struct fsm_options *opt,
 }
 
 int
-fsm_print_rust(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, struct dfavm_op_ir *ops)
+fsm_print_rust(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 {
 	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque);
 	const char *prefix;
@@ -392,7 +386,7 @@ fsm_print_rust(FILE *f, const struct fsm_options *opt,
 	}
 
 	if (opt->fragment) {
-		fsm_print_rustfrag(f, opt, ir, ops, cp,
+		fsm_print_rustfrag(f, opt, ops, cp,
 			leaf, opt->leaf_opaque);
 		goto error;
 	}
@@ -427,7 +421,7 @@ fsm_print_rust(FILE *f, const struct fsm_options *opt,
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_print_rustfrag(f, opt, ir, ops, cp,
+	fsm_print_rustfrag(f, opt, ops, cp,
 		leaf, opt->leaf_opaque);
 
 	fprintf(f, "}\n");

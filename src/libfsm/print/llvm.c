@@ -29,8 +29,6 @@
 
 #include "libfsm/vm/vm.h"
 
-#include "ir.h"
-
 #define OPAQUE_POINTERS 1
 
 #ifdef OPAQUE_POINTERS // llvm >= 15
@@ -312,7 +310,6 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 struct ret {
 	size_t count;
 	const fsm_end_id_t *ids;
-	const struct ir_state *ir_state; // TODO: remove when we return endids only
 };
 
 struct ret_list {
@@ -322,8 +319,7 @@ struct ret_list {
 
 static bool
 append_ret(struct ret_list *list,
-	const fsm_end_id_t *ids, size_t count,
-	const struct ir_state *ir_state)
+	const fsm_end_id_t *ids, size_t count)
 {
 	const size_t low    = 16; /* must be power of 2 */
 	const size_t factor =  2; /* must be even */
@@ -355,11 +351,6 @@ append_ret(struct ret_list *list,
 	list->a[list->count].ids = ids;
 	list->a[list->count].count = count;
 
-	/* .ir_state is not part of the "key" for struct ret,
-	 * we ignore it for comparisons and effectively pick
-	 * an arbitrary ir_state for output */
-	list->a[list->count].ir_state = ir_state;
-
 	list->count++;
 
 	return true;
@@ -374,23 +365,7 @@ cmp_ret_by_endid(const void *pa, const void *pb)
 	if (a->count < b->count) { return -1; }
 	if (a->count > b->count) { return +1; }
 
-	/* .ir_state intentionally ignored */
-
 	return memcmp(a->ids, b->ids, a->count * sizeof *a->ids);
-}
-
-static int
-cmp_ret_by_state(const void *pa, const void *pb)
-{
-	const struct ret *a = pa;
-	const struct ret *b = pb;
-
-	if (a->ir_state < b->ir_state) { return -1; }
-	if (a->ir_state > b->ir_state) { return +1; }
-
-	/* .ids intentionally ignored */
-
-	return 0;
 }
 
 static struct ret *
@@ -402,9 +377,8 @@ find_ret(const struct ret_list *list, const struct dfavm_op_ir *op,
 	assert(op != NULL);
 	assert(cmp != NULL);
 
-	key.count    = op->ir_state->endids.count;
-	key.ids      = op->ir_state->endids.ids;
-	key.ir_state = op->ir_state;
+	key.count    = op->endids.count;
+	key.ids      = op->endids.ids;
 
 	return bsearch(&key, list->a, list->count, sizeof *list->a, cmp);
 }
@@ -442,10 +416,7 @@ build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
 			abort();
 		}
 
-		if (!append_ret(list,
-			op->ir_state->endids.ids, op->ir_state->endids.count,
-			op->ir_state))
-		{
+		if (!append_ret(list, op->endids.ids, op->endids.count)) {
 			return false;
 		}
 	}
@@ -455,8 +426,7 @@ build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, struct dfavm_op_ir *ops,
+fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 	const char *cp,
 	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
@@ -466,7 +436,6 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt,
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 	assert(cp != NULL);
 
 	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
@@ -492,8 +461,7 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt,
 		build_retlist(&retlist, ops);
 
 		/* sort for both dedup and bsearch */
-		qsort(retlist.a, retlist.count, sizeof *retlist.a,
-			opt->endleaf != NULL ? cmp_ret_by_endid : cmp_ret_by_state);
+		qsort(retlist.a, retlist.count, sizeof *retlist.a, cmp_ret_by_endid);
 
 		/*
 		 * If we're going by endleaf, we deal with endids.
@@ -595,11 +563,11 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt,
 			print_label(f, true, "l%" PRIu32, op->index);
 		}
 
-		if (op->ir_state != NULL && op->ir_state->example != NULL) {
+		if (op->example != NULL) {
 			/* C's escaping seems to be a subset of llvm's, and these are
 			 * for comments anyway. So I'm borrowing this for C here */
 			fprintf(f, "\t; e.g. \"");
-			escputs(f, opt, c_escputc_str, op->ir_state->example);
+			escputs(f, opt, c_escputc_str, op->example);
 			fprintf(f, "\"");
 
 			fprintf(f, "\n");
@@ -624,12 +592,11 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt,
 				/* handled above */
 			} else {
 				assert(retlist.count > 0);
-				const struct ret *ret = find_ret(&retlist, op,
-					opt->endleaf != NULL ? cmp_ret_by_endid : cmp_ret_by_state);
+				const struct ret *ret = find_ret(&retlist, op, cmp_ret_by_endid);
 				assert(ret != NULL);
 				assert(ret >= retlist.a && ret <= (retlist.a + retlist.count));
-				assert(ret->count == op->ir_state->endids.count);
-				assert(0 == memcmp(ret->ids, op->ir_state->endids.ids, ret->count));
+				assert(ret->count == op->endids.count);
+				assert(0 == memcmp(ret->ids, op->endids.ids, ret->count));
 				fprintf(f, "\tbr ");
 				print_label(f, false, "ret%u", ret - retlist.a);
 				fprintf(f, "\n");
@@ -643,12 +610,11 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt,
 				/* handled in print_fetch() */
 			} else {
 				assert(retlist.count > 0);
-				const struct ret *ret = find_ret(&retlist, op,
-					opt->endleaf != NULL ? cmp_ret_by_endid : cmp_ret_by_state);
+				const struct ret *ret = find_ret(&retlist, op, cmp_ret_by_endid);
 				assert(ret != NULL);
 				assert(ret >= retlist.a && ret <= (retlist.a + retlist.count));
-				assert(ret->count == op->ir_state->endids.count);
-				assert(0 == memcmp(ret->ids, op->ir_state->endids.ids, ret->count));
+				assert(ret->count == op->endids.count);
+				assert(0 == memcmp(ret->ids, op->endids.ids, ret->count));
 				fprintf(f, "\tbr ");
 				print_label(f, false, "ret%u", ret - retlist.a);
 				fprintf(f, "\n");
@@ -684,8 +650,7 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt,
 }
 
 int
-fsm_print_llvm(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, struct dfavm_op_ir *ops)
+fsm_print_llvm(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 {
 	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque);
 	const char *prefix;
@@ -713,7 +678,7 @@ fsm_print_llvm(FILE *f, const struct fsm_options *opt,
 	}
 
 	if (opt->fragment) {
-		fsm_print_llvmfrag(f, opt, ir, ops, cp,
+		fsm_print_llvmfrag(f, opt, ops, cp,
 			leaf, opt->leaf_opaque);
 		return 0;
 	}
@@ -770,7 +735,7 @@ fsm_print_llvm(FILE *f, const struct fsm_options *opt,
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_print_llvmfrag(f, opt, ir, ops, cp,
+	fsm_print_llvmfrag(f, opt, ops, cp,
 		leaf, opt->leaf_opaque);
 
 	fprintf(f, "}\n");

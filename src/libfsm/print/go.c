@@ -26,8 +26,6 @@
 
 #include "libfsm/vm/vm.h"
 
-#include "ir.h"
-
 static int
 print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
 {
@@ -66,10 +64,10 @@ print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt
 {
 	fprintf(f, "l%" PRIu32 ":", op->index);
 
-	if (op->ir_state->example != NULL) {
+	if (op->example != NULL) {
 		fprintf(f, " // e.g. \"");
 		/* Go's string escape rules are a superset of C's. */
-		escputs(f, opt, c_escputc_str, op->ir_state->example);
+		escputs(f, opt, c_escputc_str, op->example);
 		fprintf(f, "\"");
 	}
 }
@@ -89,7 +87,6 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 
 static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
-	const struct ir_state *ir_states,
 	enum dfavm_op_end end_bits)
 {
 	if (end_bits == VM_END_FAIL) {
@@ -102,7 +99,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 
 	if (opt->endleaf != NULL) {
 		if (-1 == opt->endleaf(f,
-			op->ir_state->endids.ids, op->ir_state->endids.count,
+			op->endids.ids, op->endids.count,
 			opt->endleaf_opaque))
 		{
 			return -1;
@@ -138,8 +135,7 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_gofrag(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, struct dfavm_op_ir *ops,
+fsm_print_gofrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 	const char *cp,
 	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
 	const void *leaf_opaque)
@@ -148,7 +144,6 @@ fsm_print_gofrag(FILE *f, const struct fsm_options *opt,
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 	assert(cp != NULL);
 
 	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
@@ -184,7 +179,7 @@ fsm_print_gofrag(FILE *f, const struct fsm_options *opt,
 	} else {
 		switch (opt->io) {
 		case FSM_IO_PAIR:
-			if (ir->n > 0) {
+			if (ops != NULL) {
 				/* start idx at -1 unsigned so after first increment we're correct at index 0 */
 				fprintf(f, "\tvar idx = ^uint(0)\n");
 				fprintf(f, "\n");
@@ -192,7 +187,7 @@ fsm_print_gofrag(FILE *f, const struct fsm_options *opt,
 			break;
 
 		case FSM_IO_STR:
-			if (ir->n > 0) {
+			if (ops != NULL) {
 				/* start idx at -1 unsigned so after first increment we're correct at index 0 */
 				fprintf(f, "\tvar idx = ^uint(0)\n");
 				fprintf(f, "\n");
@@ -216,12 +211,12 @@ fsm_print_gofrag(FILE *f, const struct fsm_options *opt,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op, opt);
-			print_end(f, op, opt, ir->states, op->u.stop.end_bits);
+			print_end(f, op, opt, op->u.stop.end_bits);
 			break;
 
 		case VM_OP_FETCH:
 			print_fetch(f, opt);
-			print_end(f, op, opt, ir->states, op->u.fetch.end_bits);
+			print_end(f, op, opt, op->u.fetch.end_bits);
 			break;
 
 		case VM_OP_BRANCH:
@@ -241,8 +236,7 @@ fsm_print_gofrag(FILE *f, const struct fsm_options *opt,
 }
 
 int
-fsm_print_go(FILE *f, const struct fsm_options *opt,
-	const struct ir *ir, struct dfavm_op_ir *ops)
+fsm_print_go(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 {
 	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque);
 	const char *prefix;
@@ -253,7 +247,6 @@ fsm_print_go(FILE *f, const struct fsm_options *opt,
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ir != NULL);
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
@@ -274,7 +267,7 @@ fsm_print_go(FILE *f, const struct fsm_options *opt,
 	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_gofrag(f, opt, ir, ops, cp,
+		if (-1 == fsm_print_gofrag(f, opt, ops, cp,
 			leaf, opt->leaf_opaque))
 		{
 			return -1;
@@ -299,7 +292,7 @@ fsm_print_go(FILE *f, const struct fsm_options *opt,
 			return -1;
 		}
 
-		if (-1 == fsm_print_gofrag(f, opt, ir, ops, cp,
+		if (-1 == fsm_print_gofrag(f, opt, ops, cp,
 			leaf, opt->leaf_opaque))
 		{
 			return -1;
