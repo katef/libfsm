@@ -62,9 +62,7 @@ print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaq
 	(void) count;
 	(void) leaf_opaque;
 
-	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
-	 * maybe user defined */
-	fprintf(f, "return -1; /* leaf */");
+	fprintf(f, "return 0; /* leaf */");
 
 	return 0;
 }
@@ -121,15 +119,10 @@ print_groups(FILE *f, const struct fsm_options *opt,
 
 		print_ranges(f, opt, groups[j].ranges, groups[j].n);
 
-		/* TODO: pad S%u out to maximum state width */
 		if (groups[j].to != csi) {
 			fprintf(f, " state = S%u;", groups[j].to);
 		}
 		fprintf(f, " break;\n");
-
-		/* TODO: if greedy, and fsm_isend(fsm, state->edges[i].sl->state) then:
-			fprintf(f, "         return %s%s;\n", prefix.tok, state->edges[i].sl->state's token);
-		 */
 	}
 }
 
@@ -276,7 +269,7 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 
 	/* no end states */
 	if (!ir_hasend(ir)) {
-		fprintf(f, "\treturn -1; /* unexpected EOT */\n");
+		fprintf(f, "\treturn 0; /* unexpected EOT */\n");
 		return 0;
 	}
 
@@ -298,12 +291,12 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 				return -1;
 			}
 		} else {
-			fprintf(f, "return %u;", i);
+			fprintf(f, "return 1;");
 		}
 
 		fprintf(f, "\n");
 	}
-	fprintf(f, "\tdefault: return -1; /* unexpected EOT */\n");
+	fprintf(f, "\tdefault: return 0; /* unexpected EOT */\n");
 	fprintf(f, "\t}\n");
 
 	return 0;
@@ -476,7 +469,7 @@ fsm_print_c(FILE *f, const struct fsm_options *opt,
 		}
 
 		if (ir->n == 0) {
-			fprintf(f, "\treturn -1; /* no matches */\n");
+			fprintf(f, "\treturn 0; /* no matches */\n");
 		} else {
 			if (-1 == fsm_print_c_body(f, ir, opt, leaf, opt->leaf_opaque)) {
 				return -1;

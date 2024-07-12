@@ -156,22 +156,21 @@ print_asm_amd64(FILE *f, const struct fsm_options *opt,
 		case VM_OP_STOP:
 			{
 				const char *jmp_op;
+				bool r = op->u.stop.end_bits == VM_END_SUCC;
 
-				if (op->u.stop.end_bits == VM_END_SUCC) {
-					unsigned end_st = op->ir_state - ir->states;
-					switch (dialect) {
-					case AMD64_ATT:
-						fprintf(f, "\tmovl    $0x%02x, %%%s\n", end_st, ret_reg);
-						break;
-					case AMD64_NASM:
-						fprintf(f, "\tMOV   %s, %02xh\n", ret_reg, end_st);
-						break;
-					case AMD64_GO:
-						fprintf(f, "\tMOVQ   $0x%02x, %s\n", end_st, ret_reg);
-						break;
+				switch (dialect) {
+				case AMD64_ATT:
+					fprintf(f, "\tmovl    $%d, %%%s\n", r, ret_reg);
+					break;
+				case AMD64_NASM:
+					fprintf(f, "\tMOV   %s, %d\n", ret_reg, r);
+					break;
+				case AMD64_GO:
+					fprintf(f, "\tMOVQ   $%d, %s\n", r, ret_reg);
+					break;
+				}
 
-					}
-
+				if (r) {
 					/* endleaf in addition to existing instructions */
 					if (opt->endleaf != NULL) {
 						if (-1 == opt->endleaf(f,
@@ -180,19 +179,6 @@ print_asm_amd64(FILE *f, const struct fsm_options *opt,
 						{
 							return -1;
 						}
-					}
-				} else {
-					/* TODO: we don't have a way to override the -1 (or its API) */
-					switch (dialect) {
-					case AMD64_ATT:
-						fprintf(f, "\tmovl    $-1, %%%s\n", ret_reg);
-						break;
-					case AMD64_NASM:
-						fprintf(f, "\tMOV   %s, -1\n", ret_reg);
-						break;
-					case AMD64_GO:
-						fprintf(f, "\tMOVQ    $-1, %s\n", ret_reg);
-						break;
 					}
 				}
 
@@ -232,40 +218,31 @@ print_asm_amd64(FILE *f, const struct fsm_options *opt,
 
 		case VM_OP_FETCH:
 			{
-				if (op->u.fetch.end_bits == VM_END_SUCC) {
-					unsigned end_st = op->ir_state - ir->states;
+				bool r = op->u.fetch.end_bits == VM_END_SUCC;
 
-					switch (dialect) {
-					case AMD64_ATT:
-						fprintf(f, "\tmovl    $0x%02x,%%%s\n", (unsigned)end_st, ret_reg);
-						break;
-
-					case AMD64_NASM:
-						fprintf(f, "\tMOV   %s, %02xh\n", ret_reg, end_st);
-						break;
-
-					case AMD64_GO:
-						fprintf(f, "\tMOVL   $0x%02x, %s\n", end_st, ret_reg);
-						break;
-
-					}
-				} else {
-
-					switch (dialect) {
-					case AMD64_ATT:
-						fprintf(f, "\tmovl    $-1, %%%s\n", ret_reg);
-						break;
-
-					case AMD64_NASM:
-						fprintf(f, "\tMOV   %s, -1\n", ret_reg);
-						break;
-
-					case AMD64_GO:
-						fprintf(f, "\tMOVQ    $-1, %s\n", ret_reg);
-						break;
-					}
+				switch (dialect) {
+				case AMD64_ATT:
+					fprintf(f, "\tmovl    $%d, %%%s\n", r, ret_reg);
+					break;
+				case AMD64_NASM:
+					fprintf(f, "\tMOV   %s, %d\n", ret_reg, r);
+					break;
+				case AMD64_GO:
+					fprintf(f, "\tMOVQ   $%d, %s\n", r, ret_reg);
+					break;
 				}
 
+				if (r) {
+					/* endleaf in addition to existing instructions */
+					if (opt->endleaf != NULL) {
+						if (-1 == opt->endleaf(f,
+							op->ir_state->endids.ids, op->ir_state->endids.count,
+							opt->endleaf_opaque))
+						{
+							return -1;
+						}
+					}
+				}
 
 				switch (dialect) {
 				case AMD64_ATT:

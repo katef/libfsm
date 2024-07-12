@@ -41,9 +41,7 @@ print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaq
 	(void) count;
 	(void) leaf_opaque;
 
-	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
-	 * maybe user defined */
-	fprintf(f, "return TOK_UNKNOWN;");
+	fprintf(f, "return None;");
 
 	return 0;
 }
@@ -120,7 +118,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 			return -1;
 		}
 	} else {
-		fprintf(f, "return Some(%td)", op->ir_state - ir_states);
+		fprintf(f, "return Some(())");
 	}
 
 	return 0;
@@ -406,20 +404,20 @@ fsm_print_rust(FILE *f, const struct fsm_options *opt,
 	switch (opt->io) {
 	case FSM_IO_GETC:
 		/* e.g. dbg!(fsm_main("abc".as_bytes().iter().copied())); */
-		fprintf(f, "(mut bytes: impl Iterator<Item = u8>) -> Option<usize> {\n");
+		fprintf(f, "(mut bytes: impl Iterator<Item = u8>) -> Option<()> {\n");
 		fprintf(f, "    use Label::*;\n");
 		break;
 
 	case FSM_IO_STR:
 		/* e.g. dbg!(fsm_main("xabces")); */
-		fprintf(f, "(%sinput: &str) -> Option<usize> {\n",
+		fprintf(f, "(%sinput: &str) -> Option<()> {\n",
 			has_op(ops, VM_OP_FETCH) ? "" : "_");
 		fprintf(f, "    use Label::*;\n");
 		break;
 
 	case FSM_IO_PAIR:
 		/* e.g. dbg!(fsm_main("xabces".as_bytes())); */
-		fprintf(f, "(%sinput: &[u8]) -> Option<usize> {\n",
+		fprintf(f, "(%sinput: &[u8]) -> Option<()> {\n",
 			has_op(ops, VM_OP_FETCH) ? "" : "_");
 		fprintf(f, "    use Label::*;\n");
 		break;

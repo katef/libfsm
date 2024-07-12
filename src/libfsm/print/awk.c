@@ -41,9 +41,7 @@ print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaq
 	(void) ids;
 	(void) count;
 
-	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
-	 * maybe user defined */
-	fprintf(f, "return -1;");
+	fprintf(f, "return 0;");
 
 	return 0;
 }
@@ -93,7 +91,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits)
 {
 	if (end_bits == VM_END_FAIL) {
-		fprintf(f, "return -1");
+		fprintf(f, "return 0");
 		return 0;
 	}
 

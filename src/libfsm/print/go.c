@@ -38,9 +38,7 @@ print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaq
 	(void) count;
 	(void) leaf_opaque;
 
-	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
-	 * maybe user defined */
-	fprintf(f, "return TOK_UNKNOWN;");
+	fprintf(f, "return 0;");
 
 	return 0;
 }
@@ -95,7 +93,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits)
 {
 	if (end_bits == VM_END_FAIL) {
-		fprintf(f, "{\n\t\treturn -1\n\t}\n");
+		fprintf(f, "{\n\t\treturn false\n\t}\n");
 		return 0;
 	}
 
@@ -110,7 +108,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 			return -1;
 		}
 	} else {
-		fprintf(f, "return %td", op->ir_state - ir_states);
+		fprintf(f, "return true");
 	}
 
 	fprintf(f, "\n\t}\n");
@@ -289,11 +287,11 @@ fsm_print_go(FILE *f, const struct fsm_options *opt,
 
 		switch (opt->io) {
 		case FSM_IO_PAIR:
-			fprintf(f, "(data []byte) int {\n");
+			fprintf(f, "(data []byte) bool {\n");
 			break;
 
 		case FSM_IO_STR:
-			fprintf(f, "(data string) int {\n");
+			fprintf(f, "(data string) bool {\n");
 			break;
 
 		default:

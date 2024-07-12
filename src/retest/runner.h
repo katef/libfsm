@@ -48,17 +48,17 @@ struct fsm_runner {
 		struct {
 			/* pub extern "C" fn f(ptr: *const c_uchar, len: usize) -> usize */
 			void *h;
-			int64_t (*func)(const unsigned char *, size_t);
+			bool (*func)(const unsigned char *, size_t);
 		} impl_rust;
 
 		struct {
 			void *h;
-			int (*func)(const char *, const char *);
+			bool (*func)(const char *, const char *);
 		} impl_llvm;
 
 		struct {
 			void *h;
-			int64_t (*func)(const unsigned char *, int64_t);
+			bool (*func)(const unsigned char *, int64_t);
 		} impl_go;
 
 		struct {

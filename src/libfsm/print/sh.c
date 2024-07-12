@@ -135,7 +135,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 			return -1;
 		}
 	} else {
-		fprintf(f, "matched %td", op->ir_state - ir_states);
+		fprintf(f, "matched");
 	}
 
 	return 0;

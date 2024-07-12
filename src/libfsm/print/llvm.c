@@ -80,7 +80,7 @@ print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaq
 
 	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
 	 * maybe user defined */
-	fprintf(f, "return TOK_UNKNOWN;");
+	fprintf(f, "ret false;");
 
 	return 0;
 }
@@ -529,12 +529,12 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt,
 		 * This looks like:
 		 *
 		 *  stop:
-		 *      %ret = phi i32
-		 *       [u0x1, %ret0], ; "abc"
-		 *       [u0x2, %ret1], ; "xyz"
-		 *       [u0x3, %ret2], ; "abc", "xyz"
-		 *       [-1, %fail]
-		 *      ret i32 %ret
+		 *      %ret = phi i1
+		 *       [true, %ret0], ; "abc"
+		 *       [true, %ret1], ; "xyz"
+		 *       [true, %ret2], ; "abc", "xyz"
+		 *       [false, %fail]
+		 *      ret i1 %ret
 		 *  fail:
 		 *      br label %stop
 		 *  ret0:
@@ -558,7 +558,7 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt,
 		 * llvm doesn't find this optimisation for us.
 		 */
 		print_label(f, true, "stop");
-		fprintf(f, "\t%%ret = phi i32\n");
+		fprintf(f, "\t%%ret = phi i1\n");
 		for (size_t i = 0; i < retlist.count; i++) {
 			fprintf(f, "\t  ");
 
@@ -570,12 +570,11 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt,
 					return -1;
 				}
 			} else {
-				fprintf(f, "[%td, %%ret%zu],\n",
-					retlist.a[i].ir_state - ir->states, i);
+				fprintf(f, "[true, %%ret%zu],\n", i);
 			}
 		}
-		fprintf(f, "\t%s[-1, %%fail]\n", "  ");
-		fprintf(f, "\tret i32 %%ret\n");
+		fprintf(f, "\t%s[false, %%fail]\n", "  ");
+		fprintf(f, "\tret i1 %%ret\n");
 
 		print_label(f, true, "fail");
 		fprintf(f, "\tbr ");
@@ -716,11 +715,11 @@ fsm_print_llvm(FILE *f, const struct fsm_options *opt,
 	if (opt->fragment) {
 		fsm_print_llvmfrag(f, opt, ir, ops, cp,
 			leaf, opt->leaf_opaque);
-		goto error;
+		return 0;
 	}
 
 	fprintf(f, "; generated\n");
-	fprintf(f, "define dso_local i32 @%smain", prefix);
+	fprintf(f, "define dso_local i1 @%smain", prefix);
 
 	switch (opt->io) {
 	case FSM_IO_GETC:
@@ -778,9 +777,5 @@ fsm_print_llvm(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\n");
 
 	return 0;
-
-error:
-
-	return -1;
 }
 

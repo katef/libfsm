@@ -104,7 +104,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits)
 {
 	if (end_bits == VM_END_FAIL) {
-		fprintf(f, "%sactionRET, -1},\n", prefix);
+		fprintf(f, "%sactionRET, 0},\n", prefix);
 		return 0;
 	}
 
@@ -116,7 +116,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 			return -1;
 		}
 	} else {
-		fprintf(f, "%sactionRET, %td", prefix, op->ir_state - ir_states);
+		fprintf(f, "%sactionRET, 1", prefix);
 	}
 
 	fprintf(f, "},\n");
@@ -394,7 +394,7 @@ fsm_print_vmops(FILE *f, const struct fsm_options *opt,
 				errno = ENOTSUP;
 				return -1;
 			}
-			fprintf(f, "\t\tprintf(\"%%smatch\\n\", (r == -1) ? \"no \" : \"\");\n");
+			fprintf(f, "\t\tprintf(\"%%smatch\\n\", r ? \"no \" : \"\");\n");
 			fprintf(f, "\t}\n");
 			fprintf(f, "\treturn 0;\n");
 			fprintf(f, "}\n");
