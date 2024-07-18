@@ -19,6 +19,16 @@ enum fsm_io {
 	FSM_IO_PAIR
 };
 
+// TODO: comment
+enum fsm_ambig {
+	AMBIG_NONE     = 0, /* default */
+	AMBIG_ERROR    = 1 << 0,
+	AMBIG_EARLIEST = 1 << 1,
+	AMBIG_MULTIPLE = 1 << 2,
+
+	AMBIG_SINGLE   = AMBIG_ERROR | AMBIG_EARLIEST
+};
+
 struct fsm_options {
 	/* boolean: true indicates to omit names for states in output */
 	unsigned int anonymous_states:1;
@@ -56,27 +66,46 @@ struct fsm_options {
 	/* for generated code, what kind of I/O API to generate */
 	enum fsm_io io;
 
+	/* for generated code, how to handle multiple endids on an accepting state */
+	enum fsm_ambig ambig;
+
 	/* a prefix for namespacing generated identifiers. NULL if not required. */
 	const char *prefix;
 
 	/* the name of the enclosing package; NULL to use `prefix` (default). */
 	const char *package_prefix;
 
-	/* character pointer, for C code fragment output. NULL for the default. */
-	const char *cp;
-
-	/* TODO: explain. for C code fragment output */
-	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count,
-	    const void *leaf_opaque);
-	void *leaf_opaque;
-
-	/* TODO: explain. for C code fragment output */
-	/* Placement in the output stream depends on the format.
+	/*
+	 * Hooks to override generated code. These give an oportunity to
+	 * emit application-specific constructs, especially based on ids
+	 * attached to end states.
+	 *
+	 * These hooks are optional, and default to whatever makes sense
+	 * for the language.
+	 *
+	 * Placement in the output stream depends on the format.
 	 * This replaces an entire "return xyz;" statement for C-like formats,
-	 * but appends extra information for others. */
-	int (*endleaf)(FILE *, const fsm_end_id_t *ids, size_t count,
-	    const void *endleaf_opaque);
-	void *endleaf_opaque;
+	 * but appends extra information for others.
+	 */
+	struct fsm_hooks {
+		/* character pointer, for C code fragment output. NULL for the default. */
+		const char *cp;
+
+		int (*args)(FILE *, const struct fsm_options *opt,
+			void *leaf_opaque);
+
+		/*
+		 * ids[] is sorted and does not have duplicates.
+		 */
+		int (*accept)(FILE *, const struct fsm_options *opt,
+			const fsm_end_id_t *ids, size_t count,
+			void *leaf_opaque);
+
+		int (*reject)(FILE *, const struct fsm_options *opt,
+			void *leaf_opaque);
+
+		void *hook_opaque;
+	} hooks;
 
 	/* custom allocation functions */
 	const struct fsm_alloc *alloc;

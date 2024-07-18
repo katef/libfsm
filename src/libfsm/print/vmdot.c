@@ -23,6 +23,7 @@
 #include <fsm/vm.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
 #include "libfsm/vm/vm.h"
 
@@ -42,6 +43,49 @@ cmp_operator(int cmp)
 		assert("unreached");
 		return NULL;
 	}
+}
+
+static int
+default_accept(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+ 
+	fprintf(f, "match");
+
+	if (count > 0) {
+		fprintf(f, " / ");
+
+		for (size_t i = 0; i < count; i++) {
+			fprintf(f, "#%u", ids[i]);
+
+			if (i < count - 1) {
+				fprintf(f, " ");
+			}
+		}
+	}
+
+	return 0;
+}	  
+		
+static int
+default_reject(FILE *f, const struct fsm_options *opt,
+	void *lang_opaque)
+{   
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+
+	fprintf(f, "fail");
+
+	return 0;
 }
 
 static int
@@ -75,35 +119,20 @@ static int
 print_end(FILE *f, const struct fsm_options *opt,
 	const struct dfavm_op_ir *op, enum dfavm_op_end end_bits)
 {
-	if (end_bits == VM_END_FAIL) {
-		fprintf(f, "fail");
-		return 0;
-	}
+	switch (end_bits) {
+	case VM_END_FAIL:
+		return print_hook_reject(f, opt, default_reject, NULL);
 
-	if (opt->endleaf != NULL) {
-		if (-1 == opt->endleaf(f,
+	case VM_END_SUCC:
+		return print_hook_accept(f, opt,
 			op->endids.ids, op->endids.count,
-			opt->endleaf_opaque))
-		{
-			return -1;
-		}
-	} else {
-		fprintf(f, "match");
+			default_accept,
+			NULL);
 
-		if (op->endids.count > 0) {
-			fprintf(f, " / ");
-
-			for (size_t i = 0; i < op->endids.count; i++) {
-				fprintf(f, "#%u", op->endids.ids[i]);
-
-				if (i < op->endids.count - 1) {
-					fprintf(f, " ");
-				}
-			}
-		}
+	default:
+		assert(!"unreached");
+		abort();
 	}
-
-	return 0;
 }
 
 static void

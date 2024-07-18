@@ -19,6 +19,73 @@
 #include "vm/vm.h"
 #include "print/ir.h"
 
+int
+print_hook_args(FILE *f, const struct fsm_options *opt,
+	int (*default_args)(FILE *f, const struct fsm_options *opt,
+		void *lang_opaque),
+	void *lang_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+
+	if (default_args == NULL) {
+		assert(lang_opaque == NULL);
+	}
+
+	if (opt->hooks.accept != NULL) {
+		return opt->hooks.args(f, opt, lang_opaque);
+	} else if (default_args != NULL) {
+		return default_args(f, opt, lang_opaque);
+	}
+
+	return 0;
+}
+
+int
+print_hook_accept(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	int (*default_accept)(FILE *f, const struct fsm_options *opt,
+		const fsm_end_id_t *ids, size_t count,
+		void *lang_opaque),
+	void *lang_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+
+	if (default_accept == NULL) {
+		assert(lang_opaque == NULL);
+	}
+
+	if (opt->hooks.accept != NULL) {
+		return opt->hooks.accept(f, opt, ids, count, lang_opaque);
+	} else if (default_accept != NULL) {
+		return default_accept(f, opt, ids, count, lang_opaque);
+	}
+
+	return 0;
+}
+
+int
+print_hook_reject(FILE *f, const struct fsm_options *opt,
+	int (*default_reject)(FILE *f, const struct fsm_options *opt,
+		void *lang_opaque),
+	void *lang_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+
+	if (default_reject == NULL) {
+		assert(lang_opaque == NULL);
+	}
+
+	if (opt->hooks.reject != NULL) {
+		return opt->hooks.reject(f, opt, lang_opaque);
+	} else if (default_reject != NULL) {
+		return default_reject(f, opt, lang_opaque);
+	}
+
+	return 0;
+}
 
 int
 fsm_print(FILE *f, const struct fsm *fsm, enum fsm_print_lang lang)
@@ -54,7 +121,7 @@ fsm_print(FILE *f, const struct fsm *fsm, enum fsm_print_lang lang)
 	case FSM_PRINT_API:        print_fsm = fsm_print_api;        break;
 	case FSM_PRINT_AWK:        print_vm  = fsm_print_awk;        break;
 	case FSM_PRINT_C:          print_ir  = fsm_print_c;          break;
-	case FSM_PRINT_DOT:        print_ir  = fsm_print_dot;        break;
+	case FSM_PRINT_DOT:        print_fsm = fsm_print_dot;        break;
 	case FSM_PRINT_FSM:        print_fsm = fsm_print_fsm;        break;
 	case FSM_PRINT_GO:         print_vm  = fsm_print_go;         break;
 	case FSM_PRINT_IR:         print_ir  = fsm_print_ir;         break;

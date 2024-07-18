@@ -23,6 +23,7 @@
 #include <fsm/vm.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
 #include "libfsm/vm/vm.h"
 
@@ -31,23 +32,6 @@ enum vmops_dialect {
 	VMOPS_H,
 	VMOPS_MAIN,
 };
-
-static int
-print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
-{
-	assert(f != NULL);
-	assert(leaf_opaque == NULL);
-
-	(void) ids;
-	(void) count;
-	(void) leaf_opaque;
-
-	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
-	 * maybe user defined */
-	fprintf(f, "return TOK_UNKNOWN;");
-
-	return 0;
-}
 
 static const char *
 cmp_operator(int cmp)
@@ -64,6 +48,45 @@ cmp_operator(int cmp)
 		assert("unreached");
 		return NULL;
 	}
+}
+
+static int
+default_accept(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque)
+{
+	const char *prefix;
+
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque != NULL);
+
+	prefix = lang_opaque;
+
+	// TODO: print ids
+	(void) ids;
+	(void) count;
+
+	fprintf(f, "%sactionRET, 1", prefix);
+
+	return 0;
+}
+
+static int
+default_reject(FILE *f, const struct fsm_options *opt,
+	void *lang_opaque)
+{
+	const char *prefix;
+
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque != NULL);
+
+	prefix = lang_opaque;
+
+	fprintf(f, "%sactionRET, 0", prefix);
+
+	return 0;
 }
 
 static int
@@ -100,20 +123,28 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	const char *prefix,
 	enum dfavm_op_end end_bits)
 {
-	if (end_bits == VM_END_FAIL) {
-		fprintf(f, "%sactionRET, 0},\n", prefix);
-		return 0;
-	}
-
-	if (opt->endleaf != NULL) {
-		if (-1 == opt->endleaf(f,
-			op->endids.ids, op->endids.count,
-			opt->endleaf_opaque))
+	switch (end_bits) {
+	case VM_END_FAIL:
+		if (-1 == print_hook_reject(f, opt, default_reject,
+			(void *) prefix))
 		{
 			return -1;
 		}
-	} else {
-		fprintf(f, "%sactionRET, 1", prefix);
+		break;
+
+	case VM_END_SUCC:
+		if (-1 == print_hook_accept(f, opt,
+			op->endids.ids, op->endids.count,
+			default_accept,
+			(void *) prefix))
+		{
+			return -1;
+		}
+		break;
+
+	default:
+		assert(!"unreached");
+		abort();
 	}
 
 	fprintf(f, "},\n");
@@ -148,19 +179,12 @@ print_fetch(FILE *f, const struct fsm_options *opt, const char *prefix)
 /* TODO: eventually to be non-static */
 static int
 fsm_print_vmopsfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
-	const char *prefix,
-	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
-	const void *leaf_opaque)
+	const char *prefix)
 {
 	struct dfavm_op_ir *op;
 
 	assert(f != NULL);
 	assert(opt != NULL);
-
-	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
-	 * We'll need that in order to be able to use the leaf callback here. */
-	(void) leaf;
-	(void) leaf_opaque;
 
 	for (op = ops; op != NULL; op = op->next) {
 		if (op->num_incoming > 0) {
@@ -209,7 +233,6 @@ int
 fsm_print_vmops(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 	enum vmops_dialect dialect)
 {
-	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque);
 	const char *prefix;
 
 	assert(f != NULL);
@@ -221,17 +244,9 @@ fsm_print_vmops(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 		prefix = "fsm_";
 	}
 
-	if (opt->leaf != NULL) {
-		leaf = opt->leaf;
-	} else {
-		leaf = print_leaf;
-	}
-
 	if (opt->fragment) {
 		if (dialect == VMOPS_C) {
-			if (-1 == fsm_print_vmopsfrag(f, opt, ops, prefix,
-				leaf, opt->leaf_opaque))
-			{
+			if (-1 == fsm_print_vmopsfrag(f, opt, ops, prefix)) {
 				return -1;
 			}
 		}
@@ -243,9 +258,7 @@ fsm_print_vmops(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 			fprintf(f, "#include \"%svmops.h\"\n", prefix);
 			fprintf(f, "#endif /* %sLIBFSM_VMOPS_H */\n", prefix);
 			fprintf(f, "struct %sop %sOps[] = {\n", prefix, prefix);
-			if (-1 == fsm_print_vmopsfrag(f, opt, ops, prefix,
-				leaf, opt->leaf_opaque))
-			{
+			if (-1 == fsm_print_vmopsfrag(f, opt, ops, prefix)) {
 				return -1;
 			}
 			fprintf(f, "\t};\n");

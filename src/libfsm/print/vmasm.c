@@ -22,6 +22,7 @@
 #include <fsm/vm.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
 #include "libfsm/vm/vm.h"
 
@@ -30,6 +31,56 @@ enum asm_dialect {
 	AMD64_NASM,
 	AMD64_GO,
 };
+
+static int
+print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
+	enum asm_dialect dialect, const char *ret_reg,
+	enum dfavm_op_end end_bits)
+{
+	bool r;
+
+	switch (end_bits) {
+	case VM_END_FAIL:
+		if (-1 == print_hook_reject(f, opt, NULL, NULL)) {
+			return -1;
+		}
+		break;
+
+	case VM_END_SUCC:
+		if (-1 == print_hook_accept(f, opt,
+			op->endids.ids, op->endids.count,
+			NULL, NULL))
+		{
+			return -1;
+		}
+		break;
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+
+	if (opt->ambig != AMBIG_NONE) {
+		errno = ENOTSUP;
+		return -1;
+	}
+
+	r = end_bits == VM_END_SUCC;
+
+	switch (dialect) {
+	case AMD64_ATT:
+		fprintf(f, "\tmovl	$%d, %%%s\n", r, ret_reg);
+		break;
+	case AMD64_NASM:
+		fprintf(f, "\tMOV   %s, %d\n", ret_reg, r);
+		break;
+	case AMD64_GO:
+		fprintf(f, "\tMOVQ   $%d, %s\n", r, ret_reg);
+		break;
+	}
+	
+	return 0;
+}
 
 static int
 print_asm_amd64(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
@@ -145,36 +196,18 @@ print_asm_amd64(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			{
-				const char *jmp_op;
-				bool r = op->u.stop.end_bits == VM_END_SUCC;
-
-				switch (dialect) {
-				case AMD64_ATT:
-					fprintf(f, "\tmovl    $%d, %%%s\n", r, ret_reg);
-					break;
-				case AMD64_NASM:
-					fprintf(f, "\tMOV   %s, %d\n", ret_reg, r);
-					break;
-				case AMD64_GO:
-					fprintf(f, "\tMOVQ   $%d, %s\n", r, ret_reg);
-					break;
-				}
-
-				if (r) {
-					/* endleaf in addition to existing instructions */
-					if (opt->endleaf != NULL) {
-						if (-1 == opt->endleaf(f,
-							op->endids.ids, op->endids.count,
-							opt->endleaf_opaque))
-						{
-							return -1;
-						}
-					}
+				if (-1 == print_end(f, op, opt,
+					dialect, ret_reg,
+					op->u.stop.end_bits))
+				{
+					return -1;
 				}
 
 				if (op->cmp == VM_CMP_ALWAYS && op->next == NULL) {
 					fprintf(f, "\t%s elided jmp to %sfinish\n", comment, label_dot);
 				} else {
+					const char *jmp_op;
+
 					if (op->cmp != VM_CMP_ALWAYS) {
 						switch (dialect) {
 						case AMD64_ATT:
@@ -208,30 +241,11 @@ print_asm_amd64(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 
 		case VM_OP_FETCH:
 			{
-				bool r = op->u.fetch.end_bits == VM_END_SUCC;
-
-				switch (dialect) {
-				case AMD64_ATT:
-					fprintf(f, "\tmovl    $%d, %%%s\n", r, ret_reg);
-					break;
-				case AMD64_NASM:
-					fprintf(f, "\tMOV   %s, %d\n", ret_reg, r);
-					break;
-				case AMD64_GO:
-					fprintf(f, "\tMOVQ   $%d, %s\n", r, ret_reg);
-					break;
-				}
-
-				if (r) {
-					/* endleaf in addition to existing instructions */
-					if (opt->endleaf != NULL) {
-						if (-1 == opt->endleaf(f,
-							op->endids.ids, op->endids.count,
-							opt->endleaf_opaque))
-						{
-							return -1;
-						}
-					}
+				if (-1 == print_end(f, op, opt,
+					dialect, ret_reg,
+					op->u.fetch.end_bits))
+				{
+					return -1;
 				}
 
 				switch (dialect) {

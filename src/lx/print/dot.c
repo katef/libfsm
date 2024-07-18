@@ -65,29 +65,31 @@ mapping(FILE *f, const struct ast_mapping *m, const struct ast *ast)
 }
 
 static int
-endleaf_dot(FILE *f, const fsm_end_id_t *ids, size_t count,
-    const void *endleaf_opaque)
+accept_dot(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque)
 {
 	const struct ast_mapping *m;
 	const struct ast *ast;
+	fsm_state_t s;
 
 	assert(f != NULL);
-	assert(endleaf_opaque != NULL);
-
+	assert(opt != NULL);
+	assert(opt->hooks.hook_opaque != NULL);
 	assert(ids != NULL);
 	assert(count > 0);
-	m = ast_getendmappingbyendid(ids[0]);
+	assert(lang_opaque != NULL);
 
-	ast = endleaf_opaque;
+	ast = opt->hooks.hook_opaque;
+	s = * (fsm_state_t *) lang_opaque;
+
+	m = ast_getendmappingbyendid(ids[0]);
 
 	fprintf(f, "label = <");
 
-/* TODO: would need the fsm for indexing here */
-#if 0
 	if (!anonymous_states) {
 		fprintf(f, "%u<br/>", s);
 	}
-#endif
 
 	if (m->conflict != NULL) {
 		const struct mapping_set *p;
@@ -200,8 +202,8 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 		opt.consolidate_edges = z->fsm->opt->consolidate_edges;
 		opt.comments          = z->fsm->opt->comments;
 		opt.prefix            = p;
- 		opt.endleaf           = endleaf_dot;
-		opt.endleaf_opaque    = (void *) ast;
+ 		opt.hooks.accept      = accept_dot;
+		opt.hooks.hook_opaque = (void *) ast;
 
 		z->fsm->opt = &opt;
 

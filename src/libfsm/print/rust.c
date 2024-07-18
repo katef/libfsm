@@ -24,25 +24,11 @@
 #include <fsm/vm.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
 #include "libfsm/vm/vm.h"
 
 #define START UINT32_MAX
-
-static int
-print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
-{
-	assert(f != NULL);
-	assert(leaf_opaque == NULL);
-
-	(void) ids;
-	(void) count;
-	(void) leaf_opaque;
-
-	fprintf(f, "return None;");
-
-	return 0;
-}
 
 static const char *
 cmp_operator(int cmp)
@@ -60,6 +46,78 @@ cmp_operator(int cmp)
 		assert("unreached");
 		return NULL;
 	}
+}
+
+static int
+print_ids(FILE *f,
+	enum fsm_ambig ambig, const fsm_end_id_t *ids, size_t count)
+{
+	switch (ambig) {
+    case AMBIG_NONE:
+		fprintf(f, "return Some(())");
+		break;
+
+	case AMBIG_ERROR:
+// TODO: decide if we deal with this ahead of the call to print or not
+		if (count > 1) {
+			errno = EINVAL;
+			return -1;
+		}	
+ 
+		fprintf(f, "return Some(%u)", ids[0]);
+		break;
+
+	case AMBIG_EARLIEST:
+		/*
+		 * The libfsm api guarentees these ids are unique,
+		 * and only appear once each, and are sorted.
+		 */
+		fprintf(f, "return Some(%u)", ids[0]);
+		break;
+	
+	case AMBIG_MULTIPLE:
+		assert(!"unimplemented");
+		abort();
+		
+	default:
+		assert(!"unreached");
+		abort();
+	}
+ 
+	return 0;
+}
+
+static int
+default_accept(FILE *f, const struct fsm_options *opt,
+    const fsm_end_id_t *ids, size_t count,
+    void *lang_opaque)
+{   
+    assert(f != NULL);
+    assert(opt != NULL);
+    assert(lang_opaque == NULL);
+    
+    (void) lang_opaque;
+      
+    if (-1 == print_ids(f, opt->ambig, ids, count)) {
+        return -1;
+    }
+
+    return 0;
+}
+        
+static int    
+default_reject(FILE *f, const struct fsm_options *opt,
+    void *lang_opaque)
+{
+    assert(f != NULL);
+    assert(opt != NULL);
+    assert(lang_opaque == NULL);
+                   
+    (void) lang_opaque;
+
+	fprintf(f, "return None");
+
+    return 0;
 }
 
 static int
@@ -102,23 +160,20 @@ static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits)
 {
-	if (end_bits == VM_END_FAIL) {
-		fprintf(f, "return None");
-		return 0;
-	}
+	switch (end_bits) {
+	case VM_END_FAIL:
+		return print_hook_reject(f, opt, default_reject, NULL);
 
-	if (opt->endleaf != NULL) {
-		if (-1 == opt->endleaf(f,
+	case VM_END_SUCC:
+		return print_hook_accept(f, opt,
 			op->endids.ids, op->endids.count,
-			opt->endleaf_opaque))
-		{
-			return -1;
-		}
-	} else {
-		fprintf(f, "return Some(())");
-	}
+			default_accept,
+			NULL);
 
-	return 0;
+	default:
+		assert(!"unreached");
+		abort();
+	}
 }
 
 static void
@@ -144,9 +199,7 @@ print_fetch(FILE *f)
 /* TODO: eventually to be non-static */
 static int
 fsm_print_rustfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
-	const char *cp,
-	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
-	const void *leaf_opaque)
+	const char *cp)
 {
 	struct dfavm_op_ir *op;
 	bool fallthrough;
@@ -154,11 +207,6 @@ fsm_print_rustfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *o
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(cp != NULL);
-
-	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
-	 * We'll need that in order to be able to use the leaf callback here. */
-	(void) leaf;
-	(void) leaf_opaque;
 
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
 	(void) cp;
@@ -267,7 +315,6 @@ fsm_print_rustfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *o
 			if (-1 == print_end(f, op, opt, op->u.stop.end_bits)) {
 				return -1;
 			}
-			fprintf(f, ";");
 			if (op->cmp != VM_CMP_ALWAYS) {
 				fprintf(f, " }");
 			}
@@ -360,7 +407,6 @@ fsm_print_rustfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *o
 int
 fsm_print_rust(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 {
-	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque);
 	const char *prefix;
 	const char *cp;
 
@@ -373,21 +419,14 @@ fsm_print_rust(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 		prefix = "fsm_";
 	}
 
-	if (opt->leaf != NULL) {
-		leaf = opt->leaf;
-	} else {
-		leaf = print_leaf;
-	}
-
-	if (opt->cp != NULL) {
-		cp = opt->cp;
+	if (opt->hooks.cp != NULL) {
+		cp = opt->hooks.cp;
 	} else {
 		cp = "c"; /* XXX */
 	}
 
 	if (opt->fragment) {
-		fsm_print_rustfrag(f, opt, ops, cp,
-			leaf, opt->leaf_opaque);
+		fsm_print_rustfrag(f, opt, ops, cp);
 		goto error;
 	}
 
@@ -421,8 +460,7 @@ fsm_print_rust(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_print_rustfrag(f, opt, ops, cp,
-		leaf, opt->leaf_opaque);
+	fsm_print_rustfrag(f, opt, ops, cp);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

@@ -22,6 +22,7 @@
 #include <fsm/options.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
 #include "ir.h"
 
@@ -135,15 +136,17 @@ print_state(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "],\n");
 	}
 
-	/* showing endleaf in addition to existing content */
-	if (cs->isend && opt->endleaf != NULL) {
+	/* showing hook in addition to existing content */
+	if (cs->isend && opt->hooks.accept != NULL) {
 		fprintf(f, "\t\t\t\"endleaf\": ");
-		if (-1 == opt->endleaf(f,
+
+		if (-1 == print_hook_accept(f, opt,
 			cs->endids.ids, cs->endids.count,
-			opt->endleaf_opaque))
+			NULL, NULL))
 		{
 			return -1;
 		}
+
 		fprintf(f, ",\n");
 	}
 

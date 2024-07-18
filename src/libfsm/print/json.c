@@ -11,6 +11,7 @@
 #include <limits.h>
 
 #include "libfsm/internal.h" /* XXX: up here for bitmap.h */
+#include "libfsm/print.h"
 
 #include <print/esc.h>
 
@@ -240,8 +241,8 @@ fsm_print_json(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 		fprintf(f, " ],\n");
 	}
 
-	/* showing endleaf in addition to existing content */
-	if (opt->endleaf != NULL) {
+	/* showing hook in addition to existing content */
+	if (opt->hooks.accept != NULL) {
 		int notfirst;
 
 		notfirst = 0;
@@ -272,9 +273,9 @@ fsm_print_json(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 
 			fprintf(f, "{ %u, ", i);
 
-			if (-1 == opt->endleaf(f,
+			if (-1 == print_hook_accept(f, opt,
 				ids, count,
-				opt->endleaf_opaque))
+				NULL, NULL))
 			{
 				return -1;
 			}

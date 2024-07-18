@@ -24,25 +24,11 @@
 #include <fsm/vm.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
 #include "libfsm/vm/vm.h"
 
 #define START UINT32_MAX
-
-static int
-print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
-{
-	assert(f != NULL);
-	assert(leaf_opaque == NULL);
-
-	(void) leaf_opaque;
-	(void) ids;
-	(void) count;
-
-	fprintf(f, "return 0;");
-
-	return 0;
-}
 
 static const char *
 cmp_operator(int cmp)
@@ -60,6 +46,79 @@ cmp_operator(int cmp)
 		assert("unreached");
 		return NULL;
 	}
+}
+
+static int
+default_accept(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+
+	switch (opt->ambig) {
+	case AMBIG_NONE:
+		/* awk doesn't have a boolean type */
+		fprintf(f, "return 1;");
+		break;
+
+	case AMBIG_ERROR:
+// TODO: decide if we deal with this ahead of the call to print or not
+		if (count > 1) {   
+			errno = EINVAL;
+			return -1;
+		}
+		
+		fprintf(f, "return %u;", ids[0]);
+		break;
+	
+	case AMBIG_EARLIEST:
+		/*
+		 * The libfsm api guarentees these ids are unique,
+		 * and only appear once each, and are sorted.
+		 */
+		fprintf(f, "return %u;", ids[0]);
+		break;
+	
+	case AMBIG_MULTIPLE:
+		/* awk can't return an array */
+		fprintf(f, "return \"");
+
+		for (size_t i = 0; i < count; i++) {
+			fprintf(f, "%u", ids[i]);
+
+			if (i < count - 1) {
+				fprintf(f, ",");
+			}
+		}
+
+		fprintf(f, "\"");
+		break;
+	
+	default:
+		assert(!"unreached");
+		abort();
+	}
+
+	return 0;
+}
+
+static int
+default_reject(FILE *f, const struct fsm_options *opt,
+	void *lang_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+
+	fprintf(f, "return 0;");
+
+	return 0;
 }
 
 static void
@@ -88,38 +147,20 @@ static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits)
 {
-	if (end_bits == VM_END_FAIL) {
-		fprintf(f, "return 0");
-		return 0;
-	}
+	switch (end_bits) {
+	case VM_END_FAIL:
+		return print_hook_reject(f, opt, default_reject, NULL);
 
-	if (opt->endleaf != NULL) {
-		if (-1 == opt->endleaf(f,
+	case VM_END_SUCC:
+		return print_hook_accept(f, opt,
 			op->endids.ids, op->endids.count,
-			opt->endleaf_opaque))
-		{
-			return -1;
-		}
-	} else {
-		size_t i;
+			default_accept,
+			NULL);
 
-		assert(f != NULL);
-
-		/* awk can't return an array */
-		fprintf(f, "return \"");
-
-		for (i = 0; i < op->endids.count; i++) {
-			fprintf(f, "%u", op->endids.ids[i]);
-
-			if (i < op->endids.count - 1) {
-				fprintf(f, ",");
-			}
-		}
-
-		fprintf(f, "\"");
+	default:
+		assert(!"unreached");
+		abort();
 	}
-
-	return 0;
 }
 
 static void
@@ -140,9 +181,7 @@ print_branch(FILE *f, const struct dfavm_op_ir *op, const char *prefix)
 static int
 fsm_print_awkfrag(FILE *f, const struct fsm_options *opt,
 	struct dfavm_op_ir *ops,
-	const char *cp, const char *prefix,
-	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
-	const void *leaf_opaque)
+	const char *cp, const char *prefix)
 {
 	struct dfavm_op_ir *op;
 
@@ -150,11 +189,6 @@ fsm_print_awkfrag(FILE *f, const struct fsm_options *opt,
 	assert(opt != NULL);
 	assert(cp != NULL);
 	assert(prefix != NULL);
-
-	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
-	 * We'll need that in order to be able to use the leaf callback here. */
-	(void) leaf;
-	(void) leaf_opaque;
 
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
 	(void) cp;
@@ -247,7 +281,6 @@ fsm_print_awkfrag(FILE *f, const struct fsm_options *opt,
 int
 fsm_print_awk(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 {
-	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque);
 	const char *prefix;
 	const char *cp;
 
@@ -260,22 +293,14 @@ fsm_print_awk(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 		prefix = "fsm_";
 	}
 
-	if (opt->leaf != NULL) {
-		leaf = opt->leaf;
-	} else {
-		leaf = print_leaf;
-	}
-
-	if (opt->cp != NULL) {
-		cp = opt->cp;
+	if (opt->hooks.cp != NULL) {
+		cp = opt->hooks.cp;
 	} else {
 		cp = "c"; /* XXX */
 	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_awkfrag(f, opt, ops, cp, prefix,
-			leaf, opt->leaf_opaque))
-		{
+		if (-1 == fsm_print_awkfrag(f, opt, ops, cp, prefix)) {
 			return -1;
 		}
 	} else {
@@ -297,9 +322,7 @@ fsm_print_awk(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 
 		fprintf(f, ",    l, c) {\n");
 
-		if (-1 == fsm_print_awkfrag(f, opt, ops, cp, prefix,
-			leaf, opt->leaf_opaque))
-		{
+		if (-1 == fsm_print_awkfrag(f, opt, ops, cp, prefix)) {
 			return -1;
 		}
 

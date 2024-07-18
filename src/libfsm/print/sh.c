@@ -24,6 +24,7 @@
 #include <fsm/vm.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
 #include "libfsm/vm/vm.h"
 
@@ -61,6 +62,81 @@ ord_operator(int cmp)
 		assert("unreached");
 		return NULL;
 	}
+}
+
+static int
+print_ids(FILE *f,
+	enum fsm_ambig ambig, const fsm_end_id_t *ids, size_t count)
+{
+	switch (ambig) {
+	case AMBIG_NONE:
+		break;
+
+	case AMBIG_ERROR:
+// TODO: decide if we deal with this ahead of the call to print or not
+		if (count > 1) {
+			errno = EINVAL;
+			return -1;
+		}
+
+		fprintf(f, " %u", ids[0]);
+		break;
+
+	case AMBIG_EARLIEST:
+		/*
+		 * The libfsm api guarentees these ids are unique,
+		 * and only appear once each, and are sorted.
+		 */
+		fprintf(f, " %u", ids[0]);
+		break;
+
+	case AMBIG_MULTIPLE:
+		for (size_t i = 0; i < count; i++) {
+			fprintf(f, " %u", ids[i]);
+		}
+		break;
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+
+	return 0;
+}
+
+static int
+default_accept(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+
+	fprintf(f, "matched");
+
+	if (-1 == print_ids(f, opt->ambig, ids, count)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
+default_reject(FILE *f, const struct fsm_options *opt,
+	void *lang_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+
+	fprintf(f, "fail");
+
+	return 0;
 }
 
 static void
@@ -119,20 +195,19 @@ static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits)
 {
-	if (end_bits == VM_END_FAIL) {
-		fprintf(f, "fail");
-		return 0;
-	}
+	switch (end_bits) {
+	case VM_END_FAIL:
+		return print_hook_reject(f, opt, default_reject, NULL);
 
-	if (opt->endleaf != NULL) {
-		if (-1 == opt->endleaf(f,
+	case VM_END_SUCC:
+		return print_hook_accept(f, opt,
 			op->endids.ids, op->endids.count,
-			opt->endleaf_opaque))
-		{
-			return -1;
-		}
-	} else {
-		fprintf(f, "matched");
+			default_accept,
+			NULL);
+
+	default:
+		assert(!"unreached");
+		abort();
 	}
 
 	return 0;

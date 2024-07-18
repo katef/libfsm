@@ -23,23 +23,9 @@
 #include <fsm/vm.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
 #include "libfsm/vm/vm.h"
-
-static int
-print_leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
-{
-	assert(f != NULL);
-	assert(leaf_opaque == NULL);
-
-	(void) ids;
-	(void) count;
-	(void) leaf_opaque;
-
-	fprintf(f, "return 0;");
-
-	return 0;
-}
 
 static const char *
 cmp_operator(int cmp)
@@ -57,6 +43,79 @@ cmp_operator(int cmp)
 		assert(!"unreached");
 		return NULL;
 	}
+}
+
+static int
+print_ids(FILE *f,
+	enum fsm_ambig ambig, const fsm_end_id_t *ids, size_t count)
+{
+	switch (ambig) {
+	case AMBIG_NONE:
+		break;
+
+	case AMBIG_ERROR:
+// TODO: decide if we deal with this ahead of the call to print or not
+		if (count > 1) {
+			errno = EINVAL;
+			return -1;
+		}
+
+		fprintf(f, ", %u;", ids[0]);
+		break;
+
+	case AMBIG_EARLIEST:
+		/*
+		 * The libfsm api guarentees these ids are unique,
+		 * and only appear once each, and are sorted.
+		 */
+		fprintf(f, ", %u;", ids[0]);
+		break;
+
+	case AMBIG_MULTIPLE:
+		assert(!"unimplemented");
+		abort();
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+
+	return 0;
+}
+
+static int
+default_accept(FILE *f, const struct fsm_options *opt,
+    const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque)
+{
+    assert(f != NULL);
+    assert(opt != NULL);
+    assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+
+	fprintf(f, "return true");
+
+	if (-1 == print_ids(f, opt->ambig, ids, count)) {
+		return -1;
+	}
+
+    return 0;
+}
+
+static int
+default_reject(FILE *f, const struct fsm_options *opt,
+	void *lang_opaque)
+{
+    assert(f != NULL);
+    assert(opt != NULL);
+    assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+
+	fprintf(f, "{\n\t\treturn false\n\t}\n");
+
+    return 0;
 }
 
 static void
@@ -89,28 +148,30 @@ static int
 print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 	enum dfavm_op_end end_bits)
 {
-	if (end_bits == VM_END_FAIL) {
-		fprintf(f, "{\n\t\treturn false\n\t}\n");
-		return 0;
-	}
+	switch (end_bits) {
+	case VM_END_FAIL:
+		return print_hook_reject(f, opt, default_reject, NULL);
 
-	fprintf(f, "{\n");
-	fprintf(f, "\t\t");
+	case VM_END_SUCC:
+		fprintf(f, "{\n");
+		fprintf(f, "\t\t");
 
-	if (opt->endleaf != NULL) {
-		if (-1 == opt->endleaf(f,
+		if (-1 == print_hook_accept(f, opt,
 			op->endids.ids, op->endids.count,
-			opt->endleaf_opaque))
+			default_accept,
+			NULL))
 		{
 			return -1;
 		}
-	} else {
-		fprintf(f, "return true");
+
+		fprintf(f, "\n\t}\n");
+
+		return 0;
+
+	default:
+		assert(!"unreached");
+		abort();
 	}
-
-	fprintf(f, "\n\t}\n");
-
-	return 0;
 }
 
 static void
@@ -136,20 +197,13 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 /* TODO: eventually to be non-static */
 static int
 fsm_print_gofrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
-	const char *cp,
-	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
-	const void *leaf_opaque)
+	const char *cp)
 {
 	struct dfavm_op_ir *op;
 
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(cp != NULL);
-
-	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
-	 * We'll need that in order to be able to use the leaf callback here. */
-	(void) leaf;
-	(void) leaf_opaque;
 
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
 	(void) cp;
@@ -238,7 +292,6 @@ fsm_print_gofrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops
 int
 fsm_print_go(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 {
-	int (*leaf)(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque);
 	const char *prefix;
 	const char *package_prefix;
 
@@ -254,12 +307,6 @@ fsm_print_go(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 		prefix = "fsm_";
 	}
 
-	if (opt->leaf != NULL) {
-		leaf = opt->leaf;
-	} else {
-		leaf = print_leaf;
-	}
-
 	if (opt->package_prefix != NULL) {
 		package_prefix = opt->package_prefix;
 	} else {
@@ -267,9 +314,7 @@ fsm_print_go(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_gofrag(f, opt, ops, cp,
-			leaf, opt->leaf_opaque))
-		{
+		if (-1 == fsm_print_gofrag(f, opt, ops, cp)) {
 			return -1;
 		}
 	} else {
@@ -280,11 +325,11 @@ fsm_print_go(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 
 		switch (opt->io) {
 		case FSM_IO_PAIR:
-			fprintf(f, "(data []byte) bool {\n");
+			fprintf(f, "(data []byte)");
 			break;
 
 		case FSM_IO_STR:
-			fprintf(f, "(data string) bool {\n");
+			fprintf(f, "(data string)");
 			break;
 
 		default:
@@ -292,9 +337,39 @@ fsm_print_go(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 			return -1;
 		}
 
-		if (-1 == fsm_print_gofrag(f, opt, ops, cp,
-			leaf, opt->leaf_opaque))
-		{
+		if (opt->hooks.args != NULL) {
+			fprintf(stdout, ", ");
+		
+			if (-1 == print_hook_args(f, opt, NULL, NULL)) {
+				return -1;
+			}
+		}
+
+		fprintf(f, " ");
+
+		switch (opt->ambig) {
+		case AMBIG_NONE:
+			fprintf(f, "bool");
+			break;
+	
+		case AMBIG_ERROR:
+		case AMBIG_EARLIEST:
+			fprintf(stdout, "(bool, uint)");
+			break;
+
+		case AMBIG_MULTIPLE:
+			// TODO: fprintf(stdout, "(bool, uint[])");
+			errno = ENOTSUP;
+			return -1;
+		
+		default:
+			assert(!"unreached");
+			abort();
+		}	
+
+		fprintf(f, " {\n");
+
+		if (-1 == fsm_print_gofrag(f, opt, ops, cp)) {
 			return -1;
 		}
 

@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include "libfsm/internal.h" /* XXX: up here for bitmap.h */
+#include "libfsm/print.h"
 
 #include <print/esc.h>
 
@@ -23,6 +24,34 @@
 #include <fsm/walk.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
+
+static int
+default_accept(FILE *f, const struct fsm_options *opt,
+    const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+
+	if (count == 0) {
+		return 0;
+	}
+
+	fprintf(f, " = [");
+
+	for (size_t i = 0; i < count; i++) {
+		fprintf(f, "%u", ids[i]);
+
+		if (i + 1 < count) {
+			fprintf(f, ", ");
+		}
+	}
+
+	fprintf(f, "]");
+
+	return 0;
+}
 
 /* TODO: centralise */
 static int
@@ -148,6 +177,12 @@ print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
 {
 	assert(f != NULL);
 	assert(opt != NULL);
+
+	if (!fsm_isend(fsm, s)) {
+		if (-1 == print_hook_reject(f, opt, NULL, NULL)) {
+			return -1;
+		}
+	}
 
 	{
 		struct state_iter jt;
@@ -312,30 +347,17 @@ fsm_print_fsm(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 			assert(res == 1);
 		}
 
-		if (opt->endleaf != NULL) {
-			if (-1 == opt->endleaf(f,
-				ids, count,
-				opt->endleaf_opaque))
-			{
-				return -1;
-			}
-		} else {
-			fprintf(f, "%u", s);
+		fprintf(f, "%u", s);
+
+		if (-1 == print_hook_accept(f, opt,
+			ids, count,    
+			default_accept,
+			NULL))    
+		{
+			return -1;
 		}
 
 		if (count > 0) {
-			fprintf(f, " = [");
-
-			for (size_t id = 0; id < count; id++) {
-				fprintf(f, "%zu", id);
-
-				if (id + 1 < count) {
-					fprintf(f, ", ");
-				}
-			}
-
-			fprintf(f, "]");
-
 			f_free(opt->alloc, ids);
 		}
 

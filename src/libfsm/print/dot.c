@@ -11,6 +11,7 @@
 #include <limits.h>
 
 #include "libfsm/internal.h" /* XXX: up here for bitmap.h */
+#include "libfsm/print.h"
 
 #include <print/esc.h>
 
@@ -23,6 +24,61 @@
 #include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
+
+static int
+default_accept(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque)
+{
+	fsm_state_t s;
+
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque != NULL);
+
+	s = * (fsm_state_t *) lang_opaque;
+
+	fprintf(f, "label = <");
+
+	if (!opt->anonymous_states) {
+		fprintf(f, "%u", s);
+
+		if (count > 0) {
+			fprintf(f, "<BR/>");
+		}
+	}
+
+	for (size_t i = 0; i < count; i++) {
+		fprintf(f, "#%u", ids[i]);
+
+		if (i < count - 1) {
+			fprintf(f, ",");
+		}
+	}
+
+	fprintf(f, ">");
+
+	return 0;
+}
+
+static int
+default_reject(FILE *f, const struct fsm_options *opt,
+	void *lang_opaque)
+{   
+	fsm_state_t s;
+
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque != NULL);
+
+	s = * (fsm_state_t *) lang_opaque;
+
+	if (!opt->anonymous_states) {
+		fprintf(f, "label = <%u>", s);
+	}
+
+	return 0;
+}
 
 static int
 print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
@@ -158,8 +214,13 @@ print_dotfrag(FILE *f, const struct fsm_options *opt,
 	for (s = 0; s < fsm->statecount; s++) {
 		if (!fsm_isend(fsm, s)) {
 			if (!opt->anonymous_states) {
-				fprintf(f, "\t%sS%-2u [ label = <%u> ];\n",
-				prefix, s, s);
+				fprintf(f, "\t%sS%-2u [ ", prefix, s);
+
+				if (-1 == print_hook_reject(f, opt, default_reject, &s)) {
+					return -1;
+				}
+
+				fprintf(f, " ];\n");
 			}
 		} else {
 			fsm_end_id_t *ids;
@@ -186,34 +247,12 @@ print_dotfrag(FILE *f, const struct fsm_options *opt,
 
 			fprintf(f, ", ");
 
-			fprintf(f, "label = <");
-
-			if (opt->endleaf != NULL) {
-				if (-1 == opt->endleaf(f,
-					ids, count,
-					opt->endleaf_opaque))
-				{
-					return -1;
-				}
-			} else if (!opt->anonymous_states) {
-				fprintf(f, "%u", s);
+			if (-1 == print_hook_accept(f, opt,
+				ids, count,
+				default_accept, &s))
+			{
+				return -1;
 			}
-
-			if (opt->endleaf != NULL || !opt->anonymous_states) {
-				if (count > 0) {
-					fprintf(f, "<BR/>");
-				}
-			}
-
-			for (size_t i = 0; i < count; i++) {
-				fprintf(f, "#%u", ids[i]);
-
-				if (i < count - 1) {
-					fprintf(f, ",");
-				}
-			}
-
-			fprintf(f, ">");
 
 			fprintf(f, " ];\n");
 

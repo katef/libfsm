@@ -426,18 +426,19 @@ printexample(FILE *f, const struct fsm *fsm, fsm_state_t state)
 }
 
 static int
-endleaf_c(FILE *f,
-	const fsm_end_id_t *ids, size_t count,
-	const void *endleaf_opaque)
+accept_c(FILE *f, const struct fsm_options *opt,
+    const fsm_end_id_t *ids, size_t count,
+    void *lang_opaque)
 {
 	const struct match *m;
 	unsigned n;
 	size_t i;
 
-	assert(endleaf_opaque == NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
 
-	(void) f;
-	(void) endleaf_opaque;
+	(void) opt;
+	(void) lang_opaque;
 
 	n = 0;
 
@@ -467,18 +468,19 @@ endleaf_c(FILE *f,
 }
 
 static int
-endleaf_rust(FILE *f,
-	const fsm_end_id_t *ids, size_t count,
-	const void *endleaf_opaque)
+accept_rust(FILE *f, const struct fsm_options *opt,
+    const fsm_end_id_t *ids, size_t count,
+    void *lang_opaque)
 {
 	const struct match *m;
 	unsigned n;
 	size_t i;
 
-	assert(endleaf_opaque == NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
 
-	(void) f;
-	(void) endleaf_opaque;
+	(void) opt;
+	(void) lang_opaque;
 
 	n = 0;
 
@@ -508,28 +510,18 @@ endleaf_rust(FILE *f,
 }
 
 static int
-endleaf_llvm(FILE *f,
-	const fsm_end_id_t *ids, size_t count,
-	const void *endleaf_opaque)
+accept_llvm(FILE *f, const struct fsm_options *opt,
+    const fsm_end_id_t *ids, size_t count,
+    void *lang_opaque)
 {
 	const struct match *m;
 	unsigned n;
 	size_t i;
 
-	/*
-	 * XXX: Hack for llvm codegen only, we don't have a way to pass this
-	 * value from fsm_print_llvm(). We're working around that by making
-	 * an assumption about the ordering for ret label numbers, that
-	 * they're output sequentially.
-	 *
-	 * And also it's not very forward-thinking to keep this in static storage.
-	 */
-	static size_t ret = 0;
+	assert(opt != NULL);
+	assert(lang_opaque != NULL);
 
-	assert(endleaf_opaque == NULL);
-
-	(void) f;
-	(void) endleaf_opaque;
+	(void) opt;
 
 	n = 0;
 
@@ -539,7 +531,9 @@ endleaf_llvm(FILE *f,
 		}
 	}
 
-	fprintf(f, "[u%#x, %%ret%zu],", (unsigned) n, ret++);
+	i = * (const size_t *) lang_opaque;
+
+	fprintf(f, "[u%#x, %%ret%zu],", (unsigned) n, i);
 
 	fprintf(f, " ; ");
 
@@ -559,19 +553,30 @@ endleaf_llvm(FILE *f,
 }
 
 static int
-endleaf_dot(FILE *f,
-	const fsm_end_id_t *ids, size_t count,
-	const void *endleaf_opaque)
+accept_dot(FILE *f, const struct fsm_options *opt,
+    const fsm_end_id_t *ids, size_t count,
+    void *lang_opaque)
 {
 	const struct match *m;
+	fsm_state_t s;
 	size_t i;
 
-	assert(f != NULL);
-	assert(endleaf_opaque == NULL);
+	assert(opt != NULL);
+	assert(lang_opaque != NULL);
 
-	(void) endleaf_opaque;
+	(void) opt;
+
+	s = * (fsm_state_t *) lang_opaque;
 
 	fprintf(f, "label = <");
+
+	if (!opt->anonymous_states) {
+		fprintf(f, "%u", s);
+
+		if (count > 0) {
+			fprintf(f, "<BR/>");
+		}
+	}
 
 	for (i = 0; i < count; i++) {
 		for (m = find_match_with_id(ids[i]); m != NULL; m = m->next) {
@@ -585,40 +590,39 @@ endleaf_dot(FILE *f,
 
 	fprintf(f, ">");
 
-	/* TODO: only if comments */
 	/* TODO: centralise to libfsm/print/dot.c */
+	if (opt->comments) {
+		fprintf(f, " # ");
 
-#if 0
-	fprintf(f, " # ");
+		for (i = 0; i < count; i++) {
+			for (m = find_match_with_id(ids[i]); m != NULL; m = m->next) {
+				fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
 
-	for (i = 0; i < count; i++) {
-		for (m = find_match_with_id(ids[i]); m != NULL; m = m->next) {
-			fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
-
-			if (m->next != NULL || i < count - 1) {
-				fprintf(f, ", ");
+				if (m->next != NULL || i < count - 1) {
+					fprintf(f, ", ");
+				}
 			}
 		}
-	}
 
-	fprintf(f, "\n");
-#endif
+		fprintf(f, "\n");
+	}
 
 	return 0;
 }
 
 static int
-endleaf_json(FILE *f,
-	const fsm_end_id_t *ids, size_t count,
-	const void *endleaf_opaque)
+accept_json(FILE *f, const struct fsm_options *opt,
+    const fsm_end_id_t *ids, size_t count,
+    void *lang_opaque)
 {
 	const struct match *m;
 	size_t i;
 
-	assert(f != NULL);
-	assert(endleaf_opaque == NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
 
-	(void) endleaf_opaque;
+	(void) opt;
+	(void) lang_opaque;
 
 	fprintf(f, "[ ");
 
@@ -633,9 +637,6 @@ endleaf_json(FILE *f,
 	}
 
 	fprintf(f, " ]");
-
-	/* TODO: only if comments */
-	/* TODO: centralise to libfsm/print/json.c */
 
 	return 0;
 }
@@ -1250,28 +1251,28 @@ main(int argc, char *argv[])
 		switch (fsm_lang) {
 		case FSM_PRINT_C:
 		case FSM_PRINT_VMC:
-			opt.endleaf = endleaf_c;
+			opt.hooks.accept = accept_c;
 			break;
 
 		case FSM_PRINT_RUST:
-			opt.endleaf = endleaf_rust;
+			opt.hooks.accept = accept_rust;
 			break;
 
 		case FSM_PRINT_LLVM:
-			opt.endleaf = endleaf_llvm;
+			opt.hooks.accept = accept_llvm;
 			break;
 
 		case FSM_PRINT_DOT:
 		case FSM_PRINT_VMDOT:
-			opt.endleaf = patterns ? endleaf_dot : NULL;
+			opt.hooks.accept = patterns ? accept_dot : NULL;
 			break;
 
 		case FSM_PRINT_JSON:
-			opt.endleaf = patterns ? endleaf_json : NULL;
+			opt.hooks.accept = patterns ? accept_json : NULL;
 			break;
 
 		default:
-			opt.endleaf = NULL;
+			opt.hooks.accept = NULL;
 			break;
 		}
 
