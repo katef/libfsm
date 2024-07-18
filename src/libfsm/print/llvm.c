@@ -460,8 +460,10 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *o
 		retlist.count = 0;
 		build_retlist(&retlist, ops);
 
-		/* sort for both dedup and bsearch */
-		qsort(retlist.a, retlist.count, sizeof *retlist.a, cmp_ret_by_endid);
+		if (retlist.count > 0) {
+			/* sort for both dedup and bsearch */
+			qsort(retlist.a, retlist.count, sizeof *retlist.a, cmp_ret_by_endid);
+		}
 
 		/*
 		 * If we're going by endleaf, we deal with endids.
@@ -469,6 +471,9 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *o
 		 */
 		if (opt->endleaf != NULL && retlist.count > 0) {
 			size_t j = 0;
+
+			/* sort for both dedup and bsearch */
+			qsort(retlist.a, retlist.count, sizeof *retlist.a, cmp_ret_by_endid);
 
 			/* deduplicate based on endids only.
 			 * j is the start of a run; i increments until we find
