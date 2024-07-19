@@ -121,6 +121,11 @@ fsm_equal(const struct fsm *a, const struct fsm *b)
 	assert(a != NULL);
 	assert(b != NULL);
 
+	if (a->alloc != b->alloc) {
+		errno = EINVAL;
+		return -1;
+	}
+
 	if (a->opt != b->opt) {
 		errno = EINVAL;
 		return -1;

@@ -127,7 +127,7 @@ print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
 	unique = NULL;
 
 	for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
-		if (!state_set_add(&unique, opt->alloc, e.state)) {
+		if (!state_set_add(&unique, fsm->alloc, e.state)) {
 			return -1;
 		}
 	}
@@ -231,7 +231,7 @@ print_dotfrag(FILE *f, const struct fsm_options *opt,
 			if (count > 0) {
 				int res;
 
-				ids = f_malloc(opt->alloc, count * sizeof *ids);
+				ids = f_malloc(fsm->alloc, count * sizeof *ids);
 				if (ids == NULL) {
 					return -1;
 				}
@@ -256,7 +256,7 @@ print_dotfrag(FILE *f, const struct fsm_options *opt,
 
 			fprintf(f, " ];\n");
 
-			f_free(opt->alloc, ids);
+			f_free(fsm->alloc, ids);
 		}
 
 		/* TODO: show example here, unless !opt->comments */

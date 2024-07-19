@@ -27,7 +27,7 @@ fsm_vacuum(struct fsm *fsm)
 		return true;
 	}
 
-	struct fsm_state *nstates = f_realloc(fsm->opt->alloc,
+	struct fsm_state *nstates = f_realloc(fsm->alloc,
 	    fsm->states, nceil * sizeof(nstates[0]));
 	if (nstates == NULL) {
 		return false;

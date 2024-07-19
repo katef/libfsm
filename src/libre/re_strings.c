@@ -19,7 +19,8 @@
 #include "ac.h"
 
 struct fsm *
-re_strings(const struct fsm_options *opt, const char *a[], size_t n,
+re_strings(const struct fsm_alloc *alloc, const struct fsm_options *opt,
+	const char *a[], size_t n,
 	enum re_strings_flags flags)
 {
 	struct re_strings *g;
@@ -37,7 +38,7 @@ re_strings(const struct fsm_options *opt, const char *a[], size_t n,
 		}
 	}
 
-	fsm = re_strings_build(g, opt, flags);
+	fsm = re_strings_build(g, alloc, opt, flags);
 	re_strings_free(g);
 
 	return fsm;
@@ -82,7 +83,9 @@ re_strings_add_str(struct re_strings *g, const char *s, const fsm_end_id_t *endi
 
 struct fsm *
 re_strings_build(struct re_strings *g,
-	const struct fsm_options *opt, enum re_strings_flags flags)
+	const struct fsm_alloc *alloc,
+	const struct fsm_options *opt,
+	enum re_strings_flags flags)
 {
 	struct fsm *fsm;
 	fsm_state_t end;
@@ -97,10 +100,12 @@ re_strings_build(struct re_strings *g,
 	}
 
 	/* TODO: count trie nodes and fsm_new_statealloc() */
-	fsm = fsm_new(opt);
+	fsm = fsm_new(alloc);
 	if (fsm == NULL) {
 		goto error;
 	}
+
+	fsm_setoptions(fsm, opt);
 
 	have_end = 0;
 

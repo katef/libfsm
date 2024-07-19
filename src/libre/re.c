@@ -176,6 +176,7 @@ error:
 
 struct fsm *
 re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
+	const struct fsm_alloc *alloc,
 	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err)
 {
@@ -212,7 +213,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		ast->expr = ast_expr_tombstone;
 	}
 
-	new = ast_compile(ast, flags, opt, err);
+	new = ast_compile(ast, flags, alloc, opt, err);
 
 	ast_free(ast);
 

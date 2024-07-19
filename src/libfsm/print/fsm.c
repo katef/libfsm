@@ -338,7 +338,7 @@ fsm_print_fsm(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 		if (count > 0) {
 			int res;
 
-			ids = f_malloc(opt->alloc, count * sizeof *ids);
+			ids = f_malloc(fsm->alloc, count * sizeof *ids);
 			if (ids == NULL) {
 				return -1;
 			}
@@ -358,7 +358,7 @@ fsm_print_fsm(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 		}
 
 		if (count > 0) {
-			f_free(opt->alloc, ids);
+			f_free(fsm->alloc, ids);
 		}
 
 		fprintf(f, "%s", end > 0 ? ", " : ";\n");

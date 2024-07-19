@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 162 "src/libfsm/parser.act"
+#line 163 "src/libfsm/parser.act"
 
 
 	typedef struct lex_state * lex_state;
@@ -17,17 +17,18 @@
 	typedef struct fsm *       fsm;
 
 	struct fsm *
-	fsm_parse(FILE *f, const struct fsm_options *opt);
+	fsm_parse(FILE *f,
+		const struct fsm_alloc *alloc, const struct fsm_options *opt);
 
-#line 23 "src/libfsm/parser.h"
+#line 24 "src/libfsm/parser.h"
 
 /* BEGINNING OF FUNCTION DECLARATIONS */
 
 extern void p_fsm(fsm, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 481 "src/libfsm/parser.act"
+#line 483 "src/libfsm/parser.act"
 
-#line 32 "src/libfsm/parser.h"
+#line 33 "src/libfsm/parser.h"
 
 /* END OF FILE */

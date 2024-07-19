@@ -133,7 +133,7 @@ captest_run_single(const struct captest_single_fsm_test_info *info)
 struct fsm *
 captest_fsm_of_string(const char *string, unsigned end_id)
 {
-	struct fsm *fsm = captest_fsm_with_options();
+	struct fsm *fsm = fsm_new(NULL);
 	const size_t length = strlen(string);
 	size_t i;
 
@@ -162,18 +162,6 @@ captest_fsm_of_string(const char *string, unsigned end_id)
 cleanup:
 	fsm_free(fsm);
 	return NULL;
-}
-
-static struct fsm_options options;
-
-struct fsm *
-captest_fsm_with_options(void)
-{
-	struct fsm *fsm = NULL;
-
-	/* We currently don't need to set anything custom on this. */
-	fsm = fsm_new(&options);
-	return fsm;
 }
 
 int

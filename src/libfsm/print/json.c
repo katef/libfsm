@@ -148,7 +148,7 @@ print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
 	unique = NULL;
 
 	for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
-		if (!state_set_add(&unique, opt->alloc, e.state)) {
+		if (!state_set_add(&unique, fsm->alloc, e.state)) {
 			return -1;
 		}
 	}
@@ -259,7 +259,7 @@ fsm_print_json(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 
 			count = fsm_endid_count(fsm, i);
 
-			ids = f_malloc(opt->alloc, count * sizeof *ids);
+			ids = f_malloc(fsm->alloc, count * sizeof *ids);
 			if (ids == NULL) {
 				return -1;
 			}
@@ -282,7 +282,7 @@ fsm_print_json(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 
 			fprintf(f, " }");
 
-			f_free(opt->alloc, ids);
+			f_free(fsm->alloc, ids);
 
 			notfirst = 1;
 		}

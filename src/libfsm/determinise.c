@@ -31,7 +31,7 @@ fsm_determinise(struct fsm *nfa)
 	struct analyze_closures_env ac_env = { 0 };
 
 	assert(nfa != NULL);
-	map.alloc = nfa->opt->alloc;
+	map.alloc = nfa->alloc;
 
 	/*
 	 * This NFA->DFA implementation is for epsilon-free NFA only. This keeps
@@ -50,7 +50,7 @@ fsm_determinise(struct fsm *nfa)
 	fsm_capture_dump(stderr, "#### post_remove_epsilons", nfa);
 #endif
 
-	issp = interned_state_set_pool_alloc(nfa->opt->alloc);
+	issp = interned_state_set_pool_alloc(nfa->alloc);
 	if (issp == NULL) {
 		return 0;
 	}
@@ -95,12 +95,12 @@ fsm_determinise(struct fsm *nfa)
 	 * Our "todo" list. It needn't be a stack; we treat it as an unordered
 	 * set where we can consume arbitrary items in turn.
 	 */
-	stack = stack_init(nfa->opt->alloc);
+	stack = stack_init(nfa->alloc);
 	if (stack == NULL) {
 		goto cleanup;
 	}
 
-	ac_env.alloc = nfa->opt->alloc;
+	ac_env.alloc = nfa->alloc;
 	ac_env.fsm = nfa;
 	ac_env.issp = issp;
 
@@ -118,7 +118,7 @@ fsm_determinise(struct fsm *nfa)
 			goto cleanup;
 		}
 
-		if (!edge_set_advise_growth(&curr->edges, nfa->opt->alloc, ac_env.output_count)) {
+		if (!edge_set_advise_growth(&curr->edges, nfa->alloc, ac_env.output_count)) {
 			goto cleanup;
 		}
 
@@ -165,7 +165,7 @@ fsm_determinise(struct fsm *nfa)
 			fprintf(stderr, "] -> dfastate %zu on output state %zu\n", m->dfastate, curr->dfastate);
 #endif
 
-			if (!edge_set_add_bulk(&curr->edges, nfa->opt->alloc, output->labels, m->dfastate)) {
+			if (!edge_set_add_bulk(&curr->edges, nfa->alloc, output->labels, m->dfastate)) {
 				goto cleanup;
 			}
 		}
@@ -180,10 +180,12 @@ fsm_determinise(struct fsm *nfa)
 		struct mapping *m;
 		struct fsm *dfa;
 
-		dfa = fsm_new(nfa->opt);
+		dfa = fsm_new(nfa->alloc);
 		if (dfa == NULL) {
 			goto cleanup;
 		}
+
+		fsm_setoptions(dfa, nfa->opt);
 
 #if DUMP_MAPPING
 		{
@@ -661,7 +663,7 @@ remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
 	 * We could probably filter this somehow, at the very least by
 	 * checking reachability from every X, but the actual path
 	 * handling later will also check reachability. */
-	reverse_mappings = f_calloc(dst_dfa->opt->alloc, src_nfa->statecount, sizeof(reverse_mappings[0]));
+	reverse_mappings = f_calloc(dst_dfa->alloc, src_nfa->statecount, sizeof(reverse_mappings[0]));
 	if (reverse_mappings == NULL) {
 		return 0;
 	}
@@ -675,7 +677,7 @@ remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
 		ss = interned_state_set_get_state_set(issp, iss_id);
 
 		for (state_set_reset(ss, &si); state_set_next(&si, &state); ) {
-			if (!add_reverse_mapping(dst_dfa->opt->alloc,
+			if (!add_reverse_mapping(dst_dfa->alloc,
 				reverse_mappings,
 				m->dfastate, state)) {
 				goto cleanup;
@@ -705,10 +707,10 @@ remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
 cleanup:
 	for (i = 0; i < src_nfa->statecount; i++) {
 		if (reverse_mappings[i].list != NULL) {
-			f_free(dst_dfa->opt->alloc, reverse_mappings[i].list);
+			f_free(dst_dfa->alloc, reverse_mappings[i].list);
 		}
 	}
-	f_free(dst_dfa->opt->alloc, reverse_mappings);
+	f_free(dst_dfa->alloc, reverse_mappings);
 
 	return res;
 }

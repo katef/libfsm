@@ -651,6 +651,9 @@ static enum error_type
 perf_case_run(struct perf_case *c, enum halt halt,
 	struct timing *t)
 {
+	/* TODO: use alloc hooks for -Q accounting */
+	struct fsm_alloc *alloc = NULL;
+
 	struct fsm *fsm;
 	struct fsm_runner runner;
 	struct str contents;
@@ -685,7 +688,7 @@ perf_case_run(struct perf_case *c, enum halt halt,
 
 			re = c->regexp.data;
 
-			fsm = re_comp(c->dialect, fsm_sgetc, &re, &opt, flags, &comp_err);
+			fsm = re_comp(c->dialect, fsm_sgetc, &re, alloc, &opt, flags, &comp_err);
 			if (fsm == NULL) {
 				return ERROR_PARSING_REGEXP;
 			}

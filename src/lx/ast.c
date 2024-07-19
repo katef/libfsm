@@ -117,11 +117,13 @@ ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 			return NULL;
 		}
 
-		m->fsm = fsm_new(fsm->opt);
+		m->fsm = fsm_new(fsm->alloc);
 		if (m->fsm == NULL) {
 			free(m);
 			return NULL;
 		}
+
+		fsm_setoptions(m->fsm, fsm->opt);
 
 		m->token    = token;
 		m->to       = to;

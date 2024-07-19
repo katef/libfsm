@@ -427,10 +427,11 @@ state_name(enum state st)
 	return "unk";
 }
 
-static const struct fsm_options zero_options;
-
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
+	static const struct fsm_options zero_options;
+
 	struct str l;
 	enum state state;
 	size_t count, nparsed, linenum, regexp_line;
@@ -619,7 +620,7 @@ restart:
 
 						comp_err = err_zero;
 
-						fsm = re_comp(RE_PCRE, fsm_sgetc, &re, &opt, mods, &comp_err);
+						fsm = re_comp(RE_PCRE, fsm_sgetc, &re, NULL, &opt, mods, &comp_err);
 						re_ok = (fsm != NULL);
 						if (re_ok) {
 							fsm_free(fsm);

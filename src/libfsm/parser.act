@@ -157,7 +157,8 @@
 	typedef struct fsm *       fsm;
 
 	struct fsm *
-	fsm_parse(FILE *f, const struct fsm_options *opt);
+	fsm_parse(FILE *f,
+		const struct fsm_alloc *alloc, const struct fsm_options *opt);
 
 @};
 
@@ -413,7 +414,7 @@
 
 %trailer% @{
 
-	struct fsm *fsm_parse(FILE *f, const struct fsm_options *opt) {
+	struct fsm *fsm_parse(FILE *f, const struct fsm_alloc *alloc, const struct fsm_options *opt) {
 		struct act_state act_state_s;
 		struct act_state *act_state;
 		struct lex_state lex_state_s;
@@ -449,12 +450,13 @@
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
 
-		/* TODO: pass in fsm_options */
-		new = fsm_new(opt);
+		new = fsm_new(alloc);
 		if (new == NULL) {
 			perror("fsm_new");
 			return NULL;
 		}
+
+		fsm_setoptions(new, opt);
 
 		ADVANCE_LEXER;
 		switch (CURRENT_TERMINAL) {

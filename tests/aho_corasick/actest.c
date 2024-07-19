@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
 		flags |= RE_STRINGS_ANCHOR_RIGHT;
 	}
 
-	fsm = re_strings(&opt, (const char **)words.list, words.len, flags);
+	fsm = re_strings(NULL, &opt, (const char **)words.list, words.len, flags);
 	wordlist_finalize(&words);
 
 	if (fsm == NULL) {

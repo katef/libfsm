@@ -10,6 +10,7 @@
 #include <stdbool.h>
 
 struct fsm;
+struct fsm_alloc;
 struct fsm_options;
 struct path; /* XXX */
 struct fsm_capture;
@@ -44,7 +45,7 @@ typedef unsigned int fsm_end_id_t;
  * TODO: also fsm_parse should create an FSM, not add into an existing one
  */
 struct fsm *
-fsm_new(const struct fsm_options *opt);
+fsm_new(const struct fsm_alloc *alloc);
 
 /*
  * As fsm_new(), but with an explicit number of pre-allocated states.
@@ -53,7 +54,7 @@ fsm_new(const struct fsm_options *opt);
  * You can still add more states per usual.
  */
 struct fsm *
-fsm_new_statealloc(const struct fsm_options *opt, size_t statealloc);
+fsm_new_statealloc(const struct fsm_alloc *alloc, size_t statealloc);
 
 /*
  * Free a structure created by fsm_new(), and all of its contents.

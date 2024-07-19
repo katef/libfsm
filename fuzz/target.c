@@ -95,7 +95,7 @@ build(const char *pattern)
 	};
 
 	time_get(&pre);
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &opt, RE_MULTI, &err);
+	fsm = re_comp(RE_PCRE, scanner_next, &s, NULL, &opt, RE_MULTI, &err);
 	time_get(&post);
 	delta_usec = time_diff_usec(&pre, &post);
 	total_usec += delta_usec;
@@ -176,7 +176,7 @@ shuffle_minimise(const char *pattern)
 		.offset = 0
 	};
 
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &opt, RE_MULTI, &err);
+	fsm = re_comp(RE_PCRE, scanner_next, &s, NULL, &opt, RE_MULTI, &err);
 
 	if (fsm == NULL) {
 		/* ignore invalid regexp syntax, etc. */
@@ -283,11 +283,11 @@ fuzz_all_print_functions(FILE *f, const char *pattern, bool det, bool min, const
 		.offset = 0
 	};
 
-	const struct fsm_options options = {
+	const struct fsm_options opt = {
 		.io = io_mode,
 	};
 
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &options, RE_MULTI, &err);
+	fsm = re_comp(RE_PCRE, scanner_next, &s, NULL, &opt, RE_MULTI, &err);
 	if (fsm == NULL) {
 		/* ignore invalid regexp syntax, etc. */
 		return EXIT_SUCCESS;

@@ -10,7 +10,6 @@
 #include <stdio.h>
 
 struct fsm;
-struct fsm_alloc;
 struct fsm_state;
 
 enum fsm_io {
@@ -106,9 +105,6 @@ struct fsm_options {
 
 		void *hook_opaque;
 	} hooks;
-
-	/* custom allocation functions */
-	const struct fsm_alloc *alloc;
 };
 
 #endif

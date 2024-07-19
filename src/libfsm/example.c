@@ -92,7 +92,7 @@ done:
 		bufsz--;
 	}
 
-	path_free(fsm->opt->alloc, path);
+	path_free(fsm->alloc, path);
 
 	return n;
 }

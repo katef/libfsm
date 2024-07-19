@@ -44,6 +44,8 @@ struct prefix prefix = {
 	""
 };
 
+/* TODO: use alloc hooks for -Q accounting */
+static struct fsm_alloc *alloc;
 struct fsm_options opt;
 
 int print_progress;
@@ -373,13 +375,15 @@ zone_minimise(void *arg)
 		}
 		pthread_mutex_unlock(&zmtx);
 
-		z->fsm = fsm_new(&opt);
+		z->fsm = fsm_new(alloc);
 		if (z->fsm == NULL) {
 			pthread_mutex_lock(&zmtx);
 			zerror = errno;
 			pthread_mutex_unlock(&zmtx);
 			return "fsm_new";
 		}
+
+		fsm_setoptions(z->fsm, &opt);
 
 		if (!fsm_addstate(z->fsm, &start)) {
 			pthread_mutex_lock(&zmtx);
@@ -643,7 +647,7 @@ main(int argc, char *argv[])
 			fprintf(stderr, "-- parsing:");
 		}
 
-		ast = lx_parse(stdin, &opt);
+		ast = lx_parse(stdin, alloc, &opt);
 		if (ast == NULL) {
 			return EXIT_FAILURE;
 		}

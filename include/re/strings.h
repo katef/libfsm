@@ -8,6 +8,8 @@
 #define RE_STRINGS_H
 
 #include <fsm/fsm.h>
+
+struct fsm_alloc;
 struct fsm_options;
 
 struct re_strings;
@@ -32,7 +34,8 @@ enum re_strings_flags {
 };
 
 struct fsm *
-re_strings(const struct fsm_options *opt, const char *a[], size_t n,
+re_strings(const struct fsm_alloc *alloc, const struct fsm_options *opt,
+	const char *a[], size_t n,
 	enum re_strings_flags flags);
 
 struct re_strings *
@@ -49,7 +52,9 @@ re_strings_add_str(struct re_strings *g, const char *s, const fsm_end_id_t *endi
 
 struct fsm *
 re_strings_build(struct re_strings *g,
-	const struct fsm_options *opt, enum re_strings_flags flags);
+	const struct fsm_alloc *alloc,
+	const struct fsm_options *opt,
+	enum re_strings_flags flags);
 
 #endif
 

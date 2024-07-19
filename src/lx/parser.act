@@ -69,6 +69,7 @@
 		enum lx_token lex_tok_save;
 		unsigned int zn;
 		const struct fsm_options *opt;
+		const struct fsm_alloc *alloc;
 	};
 
 	struct lex_state {
@@ -135,7 +136,8 @@
 	typedef struct act_state * act_state;
 	typedef struct ast *       ast;
 
-	struct ast *lx_parse(FILE *f, const struct fsm_options *opt);
+	struct ast *lx_parse(FILE *f,
+		const struct fsm_alloc *alloc, const struct fsm_options *opt);
 
 @};
 
@@ -309,11 +311,13 @@
 		assert(@t != NULL);
 		assert(@t != NULL);
 
-		@r = fsm_new(act_state->opt);
+		@r = fsm_new(act_state->alloc);
 		if (@r == NULL) {
 			perror("fsm_new");
 			@!;
 		}
+
+		fsm_setoptions(@r, act_state->opt);
 
 		if (!fsm_addstate(@r, &start)) {
 			perror("fsm_addstate");
@@ -365,7 +369,7 @@
 		assert(@a != NULL);
 		assert(@a->p != NULL);
 
-		@r = re_comp(RE_LITERAL, act_agetc, @a, act_state->opt, 0, &err);
+		@r = re_comp(RE_LITERAL, act_agetc, @a, act_state->alloc, act_state->opt, 0, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
@@ -380,7 +384,7 @@
 		assert(@a != NULL);
 		assert(@a->p != NULL);
 
-		@r = re_comp(RE_NATIVE, act_agetc, @a, act_state->opt, @f, &err);
+		@r = re_comp(RE_NATIVE, act_agetc, @a, act_state->alloc, act_state->opt, @f, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
@@ -393,11 +397,13 @@
 	<regex-any>: () -> (r :fsm) = @{
 		fsm_state_t start, end;
 
-		@r = fsm_new(act_state->opt);
+		@r = fsm_new(act_state->alloc);
 		if (@r == NULL) {
 			perror("fsm_new");
 			@!;
 		}
+
+		fsm_setoptions(@r, act_state->opt);
 
 		if (!fsm_addstate(@r, &start)) {
 			perror("fsm_addstate");
@@ -818,7 +824,7 @@
 
 %trailer% @{
 
-	struct ast *lx_parse(FILE *f, const struct fsm_options *opt) {
+	struct ast *lx_parse(FILE *f, const struct fsm_alloc *alloc, const struct fsm_options *opt) {
 		struct act_state act_state_s;
 		struct act_state *act_state;
 		struct lex_state lex_state_s;
@@ -851,6 +857,7 @@
 		act_state = &act_state_s;
 
 		act_state->opt = opt;
+		act_state->alloc = alloc;
 
 		if (print_progress) {
 			act_state->zn = 0;

@@ -60,8 +60,6 @@ static int clock_gettime(int clk_id, struct timespec *ts)
 extern int optind;
 extern char *optarg;
 
-static struct fsm_options opt;
-
 #define OP_ARITY 0x1
 
 enum op {
@@ -365,10 +363,16 @@ do_fsm_cleanup(void)
 int
 main(int argc, char *argv[])
 {
+	static const struct fsm_options zero_options;
+
+	/* TODO: use alloc hooks for -Q accounting */
+	struct fsm_alloc *alloc = NULL;
+
 	unsigned iterations, i;
 	enum fsm_print_lang lang;
 	enum op op;
 	const char *charset;
+	struct fsm_options opt;
 	struct fsm *fsm;
 	double elapsed;
 	int xfiles;
@@ -381,6 +385,7 @@ main(int argc, char *argv[])
 
 	atexit(do_fsm_cleanup);
 
+	opt = zero_options;
 	opt.comments = 1;
 	opt.io       = FSM_IO_GETC;
 
@@ -480,7 +485,7 @@ main(int argc, char *argv[])
 		if ((op & OP_ARITY) == 1) {
 			/* argc < 1 is okay */
 
-			q = fsm_parse((argc == 0) ? stdin : xopen(argv[0]), &opt);
+			q = fsm_parse((argc == 0) ? stdin : xopen(argv[0]), alloc, &opt);
 			if (q == NULL) {
 				exit(EXIT_FAILURE);
 			}
@@ -490,12 +495,12 @@ main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 			}
 
-			a = fsm_parse(xopen(argv[0]), &opt);
+			a = fsm_parse(xopen(argv[0]), alloc, &opt);
 			if (a == NULL) {
 				exit(EXIT_FAILURE);
 			}
 
-			b = fsm_parse(xopen(argv[1]), &opt);
+			b = fsm_parse(xopen(argv[1]), alloc, &opt);
 			if (b == NULL) {
 				exit(EXIT_FAILURE);
 			}

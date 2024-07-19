@@ -53,7 +53,7 @@ merge(struct fsm *dst, struct fsm *src,
 
 		/* TODO: round up to next power of two here?
 		 * or let realloc do that internally */
-		tmp = f_realloc(dst->opt->alloc, dst->states, newalloc * sizeof *dst->states);
+		tmp = f_realloc(dst->alloc, dst->states, newalloc * sizeof *dst->states);
 		if (tmp == NULL) {
 			return NULL;
 		}
@@ -110,7 +110,7 @@ merge(struct fsm *dst, struct fsm *src,
 		return NULL;
 	}
 
-	f_free(src->opt->alloc, src->states);
+	f_free(src->alloc, src->states);
 	src->states = NULL;
 	src->statealloc = 0;
 	src->statecount = 0;
@@ -198,6 +198,11 @@ fsm_mergeab(struct fsm *a, struct fsm *b,
 	assert(a != NULL);
 	assert(b != NULL);
 	assert(base_b != NULL);
+
+	if (a->alloc != b->alloc) {
+		errno = EINVAL;
+		return NULL;
+	}
 
 	if (a->opt != b->opt) {
 		errno = EINVAL;

@@ -68,12 +68,13 @@ fsm_consolidate(const struct fsm *src,
 	size_t max_used = 0;
 
 	assert(src != NULL);
-	assert(src->opt != NULL);
 
-	dst = fsm_new(src->opt);
+	dst = fsm_new(src->alloc);
 	if (dst == NULL) {
 		goto cleanup;
 	}
+
+	fsm_setoptions(dst, src->opt);
 
 	for (src_i = 0; src_i < mapping_count; src_i++) {
 #if LOG_MAPPING
@@ -90,7 +91,7 @@ fsm_consolidate(const struct fsm *src,
 	}
 	assert(dst->statecount == max_used + 1);
 
-	seen = f_calloc(src->opt->alloc,
+	seen = f_calloc(src->alloc,
 	    mapping_count/64 + 1, sizeof(seen[0]));
 	if (seen == NULL) {
 		goto cleanup;
@@ -114,19 +115,19 @@ fsm_consolidate(const struct fsm *src,
 			SET_DST_SEEN(dst_i);
 
 			if (!state_set_copy(&dst->states[dst_i].epsilons,
-				dst->opt->alloc, src->states[src_i].epsilons)) {
+				dst->alloc, src->states[src_i].epsilons)) {
 				goto cleanup;
 			}
 			state_set_compact(&dst->states[dst_i].epsilons,
 			    mapping_cb, &closure);
 
 			if (!edge_set_copy(&dst->states[dst_i].edges,
-				dst->opt->alloc,
+				dst->alloc,
 				src->states[src_i].edges)) {
 				goto cleanup;
 			}
 			edge_set_compact(&dst->states[dst_i].edges,
-			    dst->opt->alloc, mapping_cb, &closure);
+			    dst->alloc, mapping_cb, &closure);
 
 			if (fsm_isend(src, src_i)) {
 				fsm_setend(dst, dst_i, 1);
@@ -151,13 +152,13 @@ fsm_consolidate(const struct fsm *src,
 		}
 	}
 
-	f_free(src->opt->alloc, seen);
+	f_free(src->alloc, seen);
 
 	return dst;
 
 cleanup:
 
-	if (seen != NULL) { f_free(src->opt->alloc, seen); }
+	if (seen != NULL) { f_free(src->alloc, seen); }
 	return NULL;
 }
 

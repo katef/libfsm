@@ -153,7 +153,7 @@ det_and_min(const char *tag, struct fsm *fsm)
 static struct fsm *
 build_ab_c(void)
 {
-	struct fsm *fsm = captest_fsm_with_options();
+	struct fsm *fsm = fsm_new(NULL);
 	assert(fsm != NULL);
 
 	if (!fsm_addstate_bulk(fsm, 4)) { goto fail; }

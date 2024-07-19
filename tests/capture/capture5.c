@@ -60,7 +60,7 @@ int main(void) {
 static struct fsm *
 build(void)
 {
-	struct fsm *fsm = captest_fsm_with_options();
+	struct fsm *fsm = fsm_new(NULL);
 
 	if (!fsm_addstate_bulk(fsm, 4)) { goto fail; }
 

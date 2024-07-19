@@ -81,7 +81,7 @@ check_minimisation(const char *pattern)
 		.offset = 0
 	};
 
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &opt, RE_MULTI, &err);
+	fsm = re_comp(RE_PCRE, scanner_next, &s, NULL, &opt, RE_MULTI, &err);
 	assert(fsm != NULL);
 	if (!fsm_determinise(fsm)) {
 		return 0;

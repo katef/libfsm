@@ -88,7 +88,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 		return 1;	/* nothing is reachable */
 	}
 
-	q = queue_new(fsm->opt->alloc, state_count);
+	q = queue_new(fsm->alloc, state_count);
 	if (q == NULL) {
 		goto cleanup;
 	}
@@ -98,13 +98,13 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	}
 
 	if (mode == FSM_TRIM_START_AND_END_REACHABLE) {
-		edges = f_malloc(fsm->opt->alloc,
+		edges = f_malloc(fsm->alloc,
 		    edge_ceil * sizeof(edges[0]));
 		if (edges == NULL) {
 			goto cleanup;
 		}
 
-		ends = f_malloc(fsm->opt->alloc,
+		ends = f_malloc(fsm->alloc,
 		    end_ceil * sizeof(ends[0]));
 		if (ends == NULL) {
 			goto cleanup;
@@ -138,7 +138,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 
 		if (ends && fsm_isend(fsm, s_id)) {
 			if (end_count == end_ceil) {
-				if (!grow_ends(fsm->opt->alloc,
+				if (!grow_ends(fsm->alloc,
 					&end_ceil, &ends)) {
 					goto cleanup;
 				}
@@ -172,7 +172,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 			if (edges == NULL) {
 				continue;
 			}
-			if (!save_edge(fsm->opt->alloc,
+			if (!save_edge(fsm->alloc,
 				&edge_count, &edge_ceil, &edges,
 				s_id, next)) {
 				goto cleanup;
@@ -201,7 +201,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 			if (edges == NULL) {
 				continue;
 			}
-			if (!save_edge(fsm->opt->alloc,
+			if (!save_edge(fsm->alloc,
 				&edge_count, &edge_ceil, &edges,
 				s_id, next)) {
 				goto cleanup;
@@ -262,7 +262,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 		}
 
 		/* The ends are no longer needed. */
-		f_free(fsm->opt->alloc, ends);
+		f_free(fsm->alloc, ends);
 		ends = NULL;
 	}
 
@@ -285,7 +285,7 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 		const fsm_state_t max_to = edges[edge_count - 1].to;
 		const size_t offset_count = fsm_countstates(fsm);
 
-		offsets = f_calloc(fsm->opt->alloc,
+		offsets = f_calloc(fsm->alloc,
 		    offset_count, sizeof(offsets[0]));
 		if (offsets == NULL) {
 			goto cleanup;
@@ -366,9 +366,9 @@ mark_states(struct fsm *fsm, enum fsm_trim_mode mode,
 	res = 1;
 
 cleanup:
-	if (edges != NULL) { f_free(fsm->opt->alloc, edges); }
-	if (ends != NULL) { f_free(fsm->opt->alloc, ends); }
-	if (offsets != NULL) { f_free(fsm->opt->alloc, offsets); }
+	if (edges != NULL) { f_free(fsm->alloc, edges); }
+	if (ends != NULL) { f_free(fsm->alloc, ends); }
+	if (offsets != NULL) { f_free(fsm->alloc, offsets); }
 	if (q != NULL) { queue_free(q); }
 
 	return res;
@@ -507,7 +507,7 @@ fsm_trim(struct fsm *fsm, enum fsm_trim_mode mode,
 	if (shortest_end_distance != NULL
 		&& mode == FSM_TRIM_START_AND_END_REACHABLE) {
 		size_t s_i;
-		sed = f_malloc(fsm->opt->alloc,
+		sed = f_malloc(fsm->alloc,
 		    fsm->statecount * sizeof(sed[0]));
 		if (sed == NULL) {
 			goto cleanup;
@@ -546,7 +546,7 @@ fsm_trim(struct fsm *fsm, enum fsm_trim_mode mode,
 
 	if (ret < 0) {
 		if (sed != NULL) {
-			f_free(fsm->opt->alloc, sed);
+			f_free(fsm->alloc, sed);
 		}
 		return ret;
 	}
@@ -562,10 +562,10 @@ fsm_trim(struct fsm *fsm, enum fsm_trim_mode mode,
 
 cleanup:
 	if (marks != NULL) {
-		f_free(fsm->opt->alloc, marks);
+		f_free(fsm->alloc, marks);
 	}
 	if (sed != NULL) {
-		f_free(fsm->opt->alloc, sed);
+		f_free(fsm->alloc, sed);
 	}
 	return -1;
 }

@@ -33,14 +33,14 @@ int main(void)
 	const char *regex_ab_star_c = "^ab*c$";
 	const char *regex_abc = "^abc$";
 
-	struct fsm *fsm_ab_star_c = re_comp(RE_NATIVE, fsm_sgetc, (void *)&regex_ab_star_c, NULL, 0, NULL);
+	struct fsm *fsm_ab_star_c = re_comp(RE_NATIVE, fsm_sgetc, (void *)&regex_ab_star_c, NULL, NULL, 0, NULL);
 	assert(fsm_ab_star_c != NULL);
 	if (!fsm_setendid(fsm_ab_star_c, ENDID_AB_STAR_C)) { assert(!"setendid"); }
 
 	if (!fsm_determinise(fsm_ab_star_c)) { assert(!"determinise"); }
 	if (!fsm_minimise(fsm_ab_star_c)) { assert(!"minimise"); }
 
-	struct fsm *fsm_abc = re_comp(RE_NATIVE, fsm_sgetc, (void *)&regex_abc, NULL, 0, NULL);
+	struct fsm *fsm_abc = re_comp(RE_NATIVE, fsm_sgetc, (void *)&regex_abc, NULL, NULL, 0, NULL);
 	assert(fsm_abc != NULL);
 	if (!fsm_setendid(fsm_abc, ENDID_ABC)) { assert(!"setendid"); }
 

@@ -26,8 +26,8 @@ int main(void)
 	fsm_end_id_t all_endids[2];
 	unsigned nstates, state_ind;
 
-	s1 = "abc"; fsm1 = re_comp(RE_NATIVE, fsm_sgetc, &s1, NULL, 0, NULL);
-	s2 = "def"; fsm2 = re_comp(RE_NATIVE, fsm_sgetc, &s2, NULL, 0, NULL);
+	s1 = "abc"; fsm1 = re_comp(RE_NATIVE, fsm_sgetc, &s1, NULL, NULL, 0, NULL);
+	s2 = "def"; fsm2 = re_comp(RE_NATIVE, fsm_sgetc, &s2, NULL, NULL, 0, NULL);
 
 	assert(s1 != NULL);
 	assert(s2 != NULL);

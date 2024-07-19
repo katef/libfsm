@@ -33,6 +33,11 @@ fsm_concat(struct fsm *a, struct fsm *b,
 	assert(a != NULL);
 	assert(b != NULL);
 
+	if (a->alloc != b->alloc) {
+		errno = EINVAL;
+		return NULL;
+	}
+
 	if (a->opt != b->opt) {
 		errno = EINVAL;
 		return NULL;

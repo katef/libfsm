@@ -139,7 +139,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 			fsm_end_id_t *ids;
 			int res;
 
-			ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
+			ids = f_malloc(fsm->alloc, count * sizeof *ids);
 			if (ids == NULL) {
 				/* XXX */
 				goto error;
@@ -155,11 +155,11 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 			fprintf(f, "\t}\n");
 			fprintf(f, "\n");
 
-			f_free(fsm->opt->alloc, ids);
+			f_free(fsm->alloc, ids);
 		}
 	}
 
-	a = f_malloc(fsm->opt->alloc, fsm->statecount * sizeof *a);
+	a = f_malloc(fsm->alloc, fsm->statecount * sizeof *a);
 	if (a == NULL) {
 		/* XXX */
 		goto error;
@@ -226,7 +226,7 @@ fsm_print_api(FILE *f, const struct fsm *fsm_orig)
 		}
 	}
 
-	f_free(fsm->opt->alloc, a);
+	f_free(fsm->alloc, a);
 
 	fprintf(f, "\n");
 
