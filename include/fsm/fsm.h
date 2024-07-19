@@ -7,14 +7,6 @@
 #ifndef FSM_H
 #define FSM_H
 
-/*
- * TODO: This API needs quite some refactoring. Mostly we ought to operate
- * in-place, else the user would only free() everything. Having an explicit
- * clone interface leaves the option for duplicating, if they wish. However be
- * careful about leaving things in an indeterminate state; everything ought to
- * be atomic.
- */
-
 #include <stdbool.h>
 
 struct fsm;
