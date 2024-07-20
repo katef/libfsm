@@ -351,6 +351,7 @@ make_state(const struct fsm *fsm, fsm_state_t state,
 	if (fsm_iscomplete(fsm, state)) {
 		mode.state = fsm_findmode(fsm, state, &mode.freq);
 	} else {
+		mode.state = 0; /* XXX: dummy */
 		mode.freq = 0;
 	}
 
