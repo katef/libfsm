@@ -81,7 +81,7 @@ check_minimisation(const char *pattern)
 		.offset = 0
 	};
 
-	fsm = re_comp(RE_PCRE, scanner_next, &s, NULL, &opt, RE_MULTI, &err);
+	fsm = re_comp(RE_PCRE, scanner_next, &s, NULL, RE_MULTI, &err);
 	assert(fsm != NULL);
 	if (!fsm_determinise(fsm)) {
 		return 0;
@@ -110,10 +110,10 @@ check_minimisation(const char *pattern)
 		    __func__, pattern, expected_state_count, state_count_min);
 
 		fprintf(stderr, "== expected:\n");
-		fsm_print(stderr, oracle_min, FSM_PRINT_FSM);
+		fsm_print(stderr, oracle_min, &opt, NULL, FSM_PRINT_FSM);
 
 		fprintf(stderr, "== got:\n");
-		fsm_print(stderr, fsm, FSM_PRINT_FSM);
+		fsm_print(stderr, fsm, &opt, NULL, FSM_PRINT_FSM);
 	}
 
 	fsm_free(oracle_min);

@@ -158,7 +158,7 @@
 
 	struct fsm *
 	fsm_parse(FILE *f,
-		const struct fsm_alloc *alloc, const struct fsm_options *opt);
+		const struct fsm_alloc *alloc);
 
 @};
 
@@ -414,7 +414,7 @@
 
 %trailer% @{
 
-	struct fsm *fsm_parse(FILE *f, const struct fsm_alloc *alloc, const struct fsm_options *opt) {
+	struct fsm *fsm_parse(FILE *f, const struct fsm_alloc *alloc) {
 		struct act_state act_state_s;
 		struct act_state *act_state;
 		struct lex_state lex_state_s;
@@ -423,7 +423,6 @@
 		struct lx *lx;
 
 		assert(f != NULL);
-		assert(opt != NULL);
 
 		lex_state = &lex_state_s;
 
@@ -455,8 +454,6 @@
 			perror("fsm_new");
 			return NULL;
 		}
-
-		fsm_setoptions(new, opt);
 
 		ADVANCE_LEXER;
 		switch (CURRENT_TERMINAL) {

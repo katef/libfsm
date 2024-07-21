@@ -116,13 +116,14 @@ print_ids(FILE *f,
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
 
 	(void) lang_opaque;
+	(void) hook_opaque;
 
 	if (-1 == print_ids(f, opt->ambig, ids, count)) {
 		return -1;
@@ -133,13 +134,14 @@ default_accept(FILE *f, const struct fsm_options *opt,
 
 static int
 default_reject(FILE *f, const struct fsm_options *opt,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
 
 	(void) lang_opaque;
+	(void) hook_opaque;
 
 	fprintf(f, "return 0;");
 
@@ -206,7 +208,9 @@ print_groups(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-print_case(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+print_case(FILE *f, const struct ir *ir,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	const char *cp,
 	struct ir_state *cs)
 {
@@ -219,7 +223,7 @@ print_case(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 	switch (cs->strategy) {
 	case IR_NONE:
 		fprintf(f, "\t\t\t");
-		if (-1 == print_hook_reject(f, opt, default_reject, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -248,7 +252,7 @@ print_case(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		print_groups(f, opt, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
 
 		fprintf(f, "\t\t\tdefault:  ");
-		if (-1 == print_hook_reject(f, opt, default_reject, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -279,7 +283,7 @@ print_case(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		print_ranges(f, opt, cs->u.error.error.ranges, cs->u.error.error.n);
 		fprintf(f, " ");
-		if (-1 == print_hook_reject(f, opt, default_reject, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -335,7 +339,10 @@ print_stateenum(FILE *f, size_t n)
 }
 
 static int
-print_endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
+print_endstates(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct ir *ir)
 {
 	unsigned i;
 
@@ -359,7 +366,7 @@ print_endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 
 		fprintf(f, "\tcase S%u: ", i);
 
-		if (-1 == print_hook_accept(f, opt,
+		if (-1 == print_hook_accept(f, opt, hooks,
 			ir->states[i].endids.ids, ir->states[i].endids.count,
 			default_accept,
 			NULL))
@@ -372,7 +379,7 @@ print_endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 
 	/* unexpected EOT */
 	fprintf(f, "\tdefault: ");
-	if (-1 == print_hook_reject(f, opt, default_reject, NULL)) {
+	if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
 		return -1;
 	}
 	fprintf(f, "\n");
@@ -382,7 +389,9 @@ print_endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 }
 
 int
-fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+fsm_print_cfrag(FILE *f, const struct ir *ir,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	const char *cp)
 {
 	unsigned i;
@@ -407,7 +416,7 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		}
 		fprintf(f, "\n");
 
-		if (-1 == print_case(f, ir, opt, cp, &ir->states[i])) {
+		if (-1 == print_case(f, ir, opt, hooks, cp, &ir->states[i])) {
 			return -1;
 		}
 
@@ -425,16 +434,19 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 }
 
 static int
-fsm_print_c_body(FILE *f, const struct ir *ir, const struct fsm_options *opt)
+fsm_print_c_body(FILE *f, const struct ir *ir,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks)
 {
 	const char *cp;
 
 	assert(f != NULL);
 	assert(ir != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 
-	if (opt->hooks.cp != NULL) {
-		cp = opt->hooks.cp;
+	if (hooks->cp != NULL) {
+		cp = hooks->cp;
 	} else {
 		switch (opt->io) {
 		case FSM_IO_GETC: cp = "c";  break;
@@ -465,7 +477,7 @@ fsm_print_c_body(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 		break;
 	}
 
-	if (-1 == fsm_print_cfrag(f, ir, opt, cp)) {
+	if (-1 == fsm_print_cfrag(f, ir, opt, hooks, cp)) {
 		return -1;
 	}
 
@@ -473,7 +485,7 @@ fsm_print_c_body(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 	fprintf(f, "\n");
 
 	/* end states */
-	if (-1 == print_endstates(f, opt, ir)) {
+	if (-1 == print_endstates(f, opt, hooks, ir)) {
 		return -1;
 	}
 
@@ -481,13 +493,16 @@ fsm_print_c_body(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 }
 
 int
-fsm_print_c(FILE *f, const struct fsm_options *opt,
+fsm_print_c(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	const struct ir *ir)
 {
 	const char *prefix;
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 	assert(ir != NULL);
 
 	if (opt->prefix != NULL) {
@@ -497,7 +512,7 @@ fsm_print_c(FILE *f, const struct fsm_options *opt,
 	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_c_body(f, ir, opt)) {
+		if (-1 == fsm_print_c_body(f, ir, opt, hooks)) {
 			return -1;
 		}
 	} else {
@@ -544,11 +559,11 @@ fsm_print_c(FILE *f, const struct fsm_options *opt,
 			abort();
 		}
 
-		if (opt->hooks.args != NULL) {
+		if (hooks->args != NULL) {
 			fprintf(stdout, ",\n");
 			fprintf(stdout, "\t");
 
-			if (-1 == print_hook_args(f, opt, NULL, NULL)) {
+			if (-1 == print_hook_args(f, opt, hooks, NULL, NULL)) {
 				return -1;
 			}
 		}
@@ -582,7 +597,7 @@ fsm_print_c(FILE *f, const struct fsm_options *opt,
 		if (ir->n == 0) {
 			fprintf(f, "\treturn 0; /* no matches */\n");
 		} else {
-			if (-1 == fsm_print_c_body(f, ir, opt)) {
+			if (-1 == fsm_print_c_body(f, ir, opt, hooks)) {
 				return -1;
 			}
 		}

@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -33,14 +34,11 @@ fsm_clone(const struct fsm *fsm)
 	size_t i;
 
 	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
 
 	new = fsm_new_statealloc(fsm->alloc, fsm->statecount);
 	if (new == NULL) {
 		return NULL;
 	}
-
-	fsm_setoptions(new, fsm->opt);
 
 	if (!fsm_addstate_bulk(new, fsm->statecount)) {
 		fsm_free(new);

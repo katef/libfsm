@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <fsm/fsm.h>
@@ -152,7 +153,7 @@ fsm_remove_epsilons(struct fsm *nfa)
 
 #if LOG_RESULT
 	fprintf(stderr, "=== %s: about to update capture actions\n", __func__);
-	fsm_print(stderr, nfa, FSM_PRINT_FSM);
+	fsm_print(stderr, nfa, NULL, NULL, FSM_PRINT_FSM);
 #endif
 
 	if (!remap_capture_actions(nfa, eclosures)) {
@@ -160,7 +161,7 @@ fsm_remove_epsilons(struct fsm *nfa)
 	}
 
 #if LOG_RESULT
-	fsm_print(stderr, nfa, FSM_PRINT_FSM);
+	fsm_print(stderr, nfa, NULL, NULL, FSM_PRINT_FSM);
 	fsm_capture_dump(stderr, "#### post_remove_epsilons", nfa);
 #endif
 

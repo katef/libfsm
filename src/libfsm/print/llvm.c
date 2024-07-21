@@ -98,13 +98,15 @@ cmp_operator(int cmp)
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
 	size_t i;
 
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque != NULL);
+
+	(void) hook_opaque;
 
 	i = * (const size_t *) lang_opaque;
 
@@ -146,13 +148,14 @@ default_accept(FILE *f, const struct fsm_options *opt,
 
 static int
 default_reject(FILE *f, const struct fsm_options *opt,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
 
 	(void) lang_opaque;
+	(void) hook_opaque;
 
 	switch (opt->ambig) {
 	case AMBIG_NONE:
@@ -516,7 +519,10 @@ build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
+fsm_print_llvmfrag(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops,
 	const char *cp)
 {
 	struct ret_list retlist;
@@ -613,7 +619,7 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *o
 		for (size_t i = 0; i < retlist.count; i++) {
 			fprintf(f, "\t  ");
 
-			if (-1 == print_hook_accept(f, opt,
+			if (-1 == print_hook_accept(f, opt, hooks,
 				retlist.a[i].ids, retlist.a[i].count,
 				default_accept, &i))
 			{
@@ -622,7 +628,7 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *o
 		}
 
 		fprintf(f, "\t  ");
-		if (-1 == print_hook_reject(f, opt, default_reject, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
 			return -1;
 		}
 
@@ -736,13 +742,17 @@ fsm_print_llvmfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *o
 }
 
 int
-fsm_print_llvm(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
+fsm_print_llvm(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops)
 {
 	const char *prefix;
 	const char *cp;
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
@@ -750,14 +760,14 @@ fsm_print_llvm(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 		prefix = "fsm_";
 	}
 
-	if (opt->hooks.cp != NULL) {
-		cp = opt->hooks.cp;
+	if (hooks->cp != NULL) {
+		cp = hooks->cp;
 	} else {
 		cp = "c"; /* XXX */
 	}
 
 	if (opt->fragment) {
-		fsm_print_llvmfrag(f, opt, ops, cp);
+		fsm_print_llvmfrag(f, opt, hooks, ops, cp);
 		return 0;
 	}
 
@@ -814,7 +824,7 @@ fsm_print_llvm(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_print_llvmfrag(f, opt, ops, cp);
+	fsm_print_llvmfrag(f, opt, hooks, ops, cp);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

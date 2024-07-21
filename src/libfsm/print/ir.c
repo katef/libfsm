@@ -335,7 +335,6 @@ make_state(const struct fsm *fsm, fsm_state_t state,
 	} mode;
 
 	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
 	assert(state < fsm->statecount);
 
 	/* TODO: IR_TABLE */
@@ -433,13 +432,13 @@ make_state(const struct fsm *fsm, fsm_state_t state,
 }
 
 struct ir *
-make_ir(const struct fsm *fsm)
+make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 {
 	fsm_state_t start, i;
 	struct ir *ir;
 
 	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
+	assert(opt != NULL);
 
 	if (!fsm_getstart(fsm, &start)) {
 		goto empty;
@@ -498,7 +497,7 @@ make_ir(const struct fsm *fsm)
 			goto error;
 		}
 
-		if (!fsm->opt->comments) {
+		if (!opt->comments) {
 			ir->states[i].example = NULL;
 		} else {
 			char *p;

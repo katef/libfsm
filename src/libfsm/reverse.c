@@ -10,7 +10,6 @@
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/options.h>
 
 #include <adt/set.h>
 #include <adt/stateset.h>
@@ -29,7 +28,6 @@ fsm_reverse(struct fsm *fsm)
 	struct state_set **epsilons;
 
 	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
 
 	/*
 	 * Reversing an FSM means to reverse the language the FSM matches.
@@ -58,8 +56,6 @@ fsm_reverse(struct fsm *fsm)
 		if (new == NULL) {
 			return 0;
 		}
-
-		fsm_setoptions(new, fsm->opt);
 
 		if (!fsm_addstate(new, &new->start)) {
 			fsm_free(new);

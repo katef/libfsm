@@ -19,7 +19,7 @@
 #include "ac.h"
 
 struct fsm *
-re_strings(const struct fsm_alloc *alloc, const struct fsm_options *opt,
+re_strings(const struct fsm_alloc *alloc,
 	const char *a[], size_t n,
 	enum re_strings_flags flags)
 {
@@ -38,7 +38,7 @@ re_strings(const struct fsm_alloc *alloc, const struct fsm_options *opt,
 		}
 	}
 
-	fsm = re_strings_build(g, alloc, opt, flags);
+	fsm = re_strings_build(g, alloc, flags);
 	re_strings_free(g);
 
 	return fsm;
@@ -84,7 +84,6 @@ re_strings_add_str(struct re_strings *g, const char *s, const fsm_end_id_t *endi
 struct fsm *
 re_strings_build(struct re_strings *g,
 	const struct fsm_alloc *alloc,
-	const struct fsm_options *opt,
 	enum re_strings_flags flags)
 {
 	struct fsm *fsm;
@@ -104,8 +103,6 @@ re_strings_build(struct re_strings *g,
 	if (fsm == NULL) {
 		goto error;
 	}
-
-	fsm_setoptions(fsm, opt);
 
 	have_end = 0;
 

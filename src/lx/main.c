@@ -308,15 +308,9 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 		return -1;
 	}
 
-	{
-		/* opt.carryopaque = carryopaque; */
-
-		if (!fsm_determinise(q)) {
-			fsm_free(q);
-			return -1;
-		}
-
-		/* opt.carryopaque = NULL; */
+	if (!fsm_determinise(q)) {
+		fsm_free(q);
+		return -1;
 	}
 
 	{
@@ -382,8 +376,6 @@ zone_minimise(void *arg)
 			pthread_mutex_unlock(&zmtx);
 			return "fsm_new";
 		}
-
-		fsm_setoptions(z->fsm, &opt);
 
 		if (!fsm_addstate(z->fsm, &start)) {
 			pthread_mutex_lock(&zmtx);
@@ -647,7 +639,7 @@ main(int argc, char *argv[])
 			fprintf(stderr, "-- parsing:");
 		}
 
-		ast = lx_parse(stdin, alloc, &opt);
+		ast = lx_parse(stdin, alloc);
 		if (ast == NULL) {
 			return EXIT_FAILURE;
 		}
@@ -693,12 +685,10 @@ main(int argc, char *argv[])
 				zn = 0;
 			}
 
-			/* opt.carryopaque = carryopaque; */
 			cur_zone = ast->zl;
 			if (run_threads(concurrency, zone_determinise)) {
 				return EXIT_FAILURE;
 			}
-			/* opt.carryopaque = NULL; */
 
 			if (print_progress) {
 				fprintf(stderr, "\n");
@@ -955,7 +945,7 @@ main(int argc, char *argv[])
 			fprintf(stderr, "-- output:");
 		}
 
-		lx_print(stdout, ast, lang);
+		lx_print(stdout, ast, &opt, lang);
 
 		if (print_progress) {
 			fprintf(stderr, "\n");

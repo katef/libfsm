@@ -175,7 +175,9 @@ print_grouplinks(FILE *f, unsigned self,
 }
 
 static int
-print_state(FILE *f, const struct fsm_options *opt,
+print_state(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	const struct ir *ir, const struct ir_state *cs)
 {
 	assert(f != NULL);
@@ -216,10 +218,10 @@ print_state(FILE *f, const struct fsm_options *opt,
 	/* TODO: leaf callback for dot output */
 
 	/* showing hook in addition to existing content */
-	if (cs->isend && opt->hooks.accept != NULL) {
+	if (cs->isend && hooks->accept != NULL) {
 		fprintf(f, "\t\t  <TR><TD COLSPAN='3' ALIGN='LEFT'>");
 
-		if (-1 == print_hook_accept(f, opt,
+		if (-1 == print_hook_accept(f, opt, hooks,
 			cs->endids.ids, cs->endids.count,
 			NULL,
 			NULL))
@@ -326,13 +328,16 @@ print_state(FILE *f, const struct fsm_options *opt,
 }
 
 int
-fsm_print_ir(FILE *f, const struct fsm_options *opt,
+fsm_print_ir(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	const struct ir *ir)
 {
 	size_t i;
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 	assert(ir != NULL);
 
 	fprintf(f, "digraph G {\n");
@@ -349,7 +354,7 @@ fsm_print_ir(FILE *f, const struct fsm_options *opt,
 	}
 
 	for (i = 0; i < ir->n; i++) {
-		if (-1 == print_state(f, opt, ir, &ir->states[i])) {
+		if (-1 == print_state(f, opt, hooks, ir, &ir->states[i])) {
 			return -1;
 		}
 	}

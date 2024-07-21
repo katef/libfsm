@@ -72,14 +72,14 @@ int main(void)
 	size_t nstates, ninfo, state_ind, info_ind, nend;
 	int ret;
 
-	s = "abc"; fsm = re_comp(RE_NATIVE, fsm_sgetc, &s, NULL, NULL, 0, NULL);
+	s = "abc"; fsm = re_comp(RE_NATIVE, fsm_sgetc, &s, NULL, 0, NULL);
 
 	ret = fsm_setendid(fsm, (fsm_end_id_t) 1);
 	assert(ret == 1);
 
 	{
 		struct fsm *fsm2;
-		s = "def"; fsm2 = re_comp(RE_NATIVE, fsm_sgetc, &s, NULL, NULL, 0, NULL);
+		s = "def"; fsm2 = re_comp(RE_NATIVE, fsm_sgetc, &s, NULL, 0, NULL);
 
 		ret = fsm_setendid(fsm2, (fsm_end_id_t) 2);
 		assert(ret == 1);

@@ -3,9 +3,8 @@
 
 struct fsm;
 struct fsm_alloc;
-struct fsm_options;
 
 struct fsm *
-fsm_parse(FILE *, const struct fsm_alloc *alloc, const struct fsm_options *);
+fsm_parse(FILE *, const struct fsm_alloc *alloc);
 
 #endif

@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include <fsm/fsm.h>
 #include <fsm/capture.h>
@@ -73,8 +74,6 @@ fsm_consolidate(const struct fsm *src,
 	if (dst == NULL) {
 		goto cleanup;
 	}
-
-	fsm_setoptions(dst, src->opt);
 
 	for (src_i = 0; src_i < mapping_count; src_i++) {
 #if LOG_MAPPING

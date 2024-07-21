@@ -147,7 +147,7 @@ compile_subexpr(struct ast_expr *e, const struct fsm_alloc *alloc,
 		return 0;
 	}
 
-	fsm = ast_compile(&ast, flags | RE_ANCHORED, alloc, NULL, NULL);
+	fsm = ast_compile(&ast, flags | RE_ANCHORED, alloc, NULL);
 	if (fsm == NULL) {
 		return 0;
 	}

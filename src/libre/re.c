@@ -91,7 +91,6 @@ re_flags(const char *s, enum re_flags *f)
 
 struct ast *
 re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
-	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err, int *unsatisfiable)
 {
 	const struct dialect *m;
@@ -109,7 +108,7 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	flags |= m->flags;
 
-	ast = m->parse(getc, opaque, opt, flags, m->overlap, err, &end);
+	ast = m->parse(getc, opaque, flags, m->overlap, err, &end);
 
 	if (ast == NULL) {
 		return NULL;
@@ -177,7 +176,6 @@ error:
 struct fsm *
 re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	const struct fsm_alloc *alloc,
-	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err)
 {
 	struct ast *ast;
@@ -195,7 +193,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	flags |= m->flags;
 
-	ast = re_parse(dialect, getc, opaque, opt, flags, err, &unsatisfiable);
+	ast = re_parse(dialect, getc, opaque, flags, err, &unsatisfiable);
 	if (ast == NULL) {
 		return NULL;
 	}
@@ -213,7 +211,7 @@ re_comp(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 		ast->expr = ast_expr_tombstone;
 	}
 
-	new = ast_compile(ast, flags, alloc, opt, err);
+	new = ast_compile(ast, flags, alloc, err);
 
 	ast_free(ast);
 
@@ -243,7 +241,6 @@ error:
  */
 int
 re_is_literal(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
-	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err,
 	enum re_literal_category *category, char **s, size_t *n)
 {
@@ -264,7 +261,7 @@ re_is_literal(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 
 	flags |= m->flags;
 
-	ast = re_parse(dialect, getc, opaque, opt, flags, err, &unsatisfiable);
+	ast = re_parse(dialect, getc, opaque, flags, err, &unsatisfiable);
 	if (ast == NULL) {
 		return -1;
 	}

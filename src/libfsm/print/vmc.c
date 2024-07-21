@@ -108,13 +108,14 @@ print_ids(FILE *f,
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
 
 	(void) lang_opaque;
+	(void) hook_opaque;
  
 	if (-1 == print_ids(f, opt->ambig, ids, count)) {
 		return -1;
@@ -125,13 +126,14 @@ default_accept(FILE *f, const struct fsm_options *opt,
 		
 static int
 default_reject(FILE *f, const struct fsm_options *opt,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {   
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
 
 	(void) lang_opaque;
+	(void) hook_opaque;
 
 	fprintf(f, "return 0;");
 
@@ -163,15 +165,17 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 }
 
 static int
-print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
+print_end(FILE *f, const struct dfavm_op_ir *op,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	enum dfavm_op_end end_bits)
 {
 	switch (end_bits) {
 	case VM_END_FAIL:
-		return print_hook_reject(f, opt, default_reject, NULL);
+		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
 	case VM_END_SUCC:
-		return print_hook_accept(f, opt,
+		return print_hook_accept(f, opt, hooks,
 			op->endids.ids, op->endids.count,
 			default_accept,
 			NULL);
@@ -353,7 +357,10 @@ unsuitable:
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_cfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
+fsm_print_cfrag(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops,
 	const char *cp)
 {
 	struct dfavm_op_ir *op;
@@ -423,7 +430,7 @@ fsm_print_cfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op, opt);
-			if (-1 == print_end(f, op, opt, op->u.stop.end_bits)) {
+			if (-1 == print_end(f, op, opt, hooks, op->u.stop.end_bits)) {
 				return -1;
 			}
 			break;
@@ -441,7 +448,7 @@ fsm_print_cfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 				fprintf(f, "if (e - p < %zu || 0 != memcmp(p, \"", n);
 				escputbuf(f, opt, c_escputc_str, buf, n);
 				fprintf(f, "\", %zu)) ", n);
-				if (-1 == print_end(f, NULL, opt, end_bits)) {
+				if (-1 == print_end(f, NULL, opt, hooks, end_bits)) {
 					return -1;
 				}
 				fprintf(f, "\n");
@@ -454,7 +461,7 @@ fsm_print_cfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 				fprintf(f, "if (0 != strncmp(p, \"");
 				escputbuf(f, opt, c_escputc_str, buf, n);
 				fprintf(f, "\", %zu)) ", n);
-				if (-1 == print_end(f, NULL, opt, end_bits)) {
+				if (-1 == print_end(f, NULL, opt, hooks, end_bits)) {
 					return -1;
 				}
 				fprintf(f, "\n");
@@ -465,7 +472,7 @@ fsm_print_cfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 				op = tail;
 			} else {
 				print_fetch(f, opt);
-				if (-1 == print_end(f, op, opt, op->u.fetch.end_bits)) {
+				if (-1 == print_end(f, op, opt, hooks, op->u.fetch.end_bits)) {
 					return -1;
 				}
 				if (opt->io == FSM_IO_PAIR) {
@@ -502,7 +509,10 @@ fsm_print_cfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 }
 
 int
-fsm_print_vmc(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
+fsm_print_vmc(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops)
 {
 	const char *prefix;
 
@@ -511,6 +521,7 @@ fsm_print_vmc(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
@@ -519,7 +530,7 @@ fsm_print_vmc(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_cfrag(f, opt, ops, cp)) {
+		if (-1 == fsm_print_cfrag(f, opt, hooks, ops, cp)) {
 			return -1;
 		}
 	} else {
@@ -568,11 +579,11 @@ fsm_print_vmc(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 			abort();
 		}
 
-		if (opt->hooks.args != NULL) {
+		if (hooks->args != NULL) {
 			fprintf(stdout, ",\n");
 			fprintf(stdout, "\t");
 
-			if (-1 == print_hook_args(f, opt, NULL, NULL)) {
+			if (-1 == print_hook_args(f, opt, hooks, NULL, NULL)) {
 				return -1;
 			}
 		}
@@ -580,7 +591,7 @@ fsm_print_vmc(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 		fprintf(f, ")\n");
 		fprintf(f, "{\n");
 
-		if (-1 == fsm_print_cfrag(f, opt, ops, cp)) {
+		if (-1 == fsm_print_cfrag(f, opt, hooks, ops, cp)) {
 			return -1;
 		}
 

@@ -33,7 +33,9 @@ enum asm_dialect {
 };
 
 static int
-print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
+print_end(FILE *f, const struct dfavm_op_ir *op,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	enum asm_dialect dialect, const char *ret_reg,
 	enum dfavm_op_end end_bits)
 {
@@ -41,13 +43,13 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 
 	switch (end_bits) {
 	case VM_END_FAIL:
-		if (-1 == print_hook_reject(f, opt, NULL, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, NULL, NULL)) {
 			return -1;
 		}
 		break;
 
 	case VM_END_SUCC:
-		if (-1 == print_hook_accept(f, opt,
+		if (-1 == print_hook_accept(f, opt, hooks,
 			op->endids.ids, op->endids.count,
 			NULL, NULL))
 		{
@@ -83,7 +85,10 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 }
 
 static int
-print_asm_amd64(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
+print_asm_amd64(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops,
 	const char *prefix,
 	enum asm_dialect dialect)
 {
@@ -196,7 +201,7 @@ print_asm_amd64(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			{
-				if (-1 == print_end(f, op, opt,
+				if (-1 == print_end(f, op, opt, hooks,
 					dialect, ret_reg,
 					op->u.stop.end_bits))
 				{
@@ -241,7 +246,7 @@ print_asm_amd64(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 
 		case VM_OP_FETCH:
 			{
-				if (-1 == print_end(f, op, opt,
+				if (-1 == print_end(f, op, opt, hooks,
 					dialect, ret_reg,
 					op->u.fetch.end_bits))
 				{
@@ -350,13 +355,17 @@ print_asm_amd64(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 }
 
 static int
-print_vmasm_encoding(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
+print_vmasm_encoding(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops,
 	enum asm_dialect dialect)
 {
 	const char *prefix;
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 
 	if (dialect == AMD64_GO) {
 		if (opt->io != FSM_IO_STR && opt->io != FSM_IO_PAIR) {
@@ -376,27 +385,33 @@ print_vmasm_encoding(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir 
 		prefix = "fsm_";
 	}
 
-	return print_asm_amd64(f, opt, ops, prefix, dialect);
+	return print_asm_amd64(f, opt, hooks, ops, prefix, dialect);
 }
 
 int
-fsm_print_amd64_att(FILE *f, const struct fsm_options *opt,
+fsm_print_amd64_att(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	struct dfavm_op_ir *ops)
 {
-	return print_vmasm_encoding(f, opt, ops, AMD64_ATT);
+	return print_vmasm_encoding(f, opt, hooks, ops, AMD64_ATT);
 }
 
 int
-fsm_print_amd64_nasm(FILE *f, const struct fsm_options *opt,
+fsm_print_amd64_nasm(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	struct dfavm_op_ir *ops)
 {
-	return print_vmasm_encoding(f, opt, ops, AMD64_NASM);
+	return print_vmasm_encoding(f, opt, hooks, ops, AMD64_NASM);
 }
 
 int
-fsm_print_amd64_go(FILE *f, const struct fsm_options *opt,
+fsm_print_amd64_go(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	struct dfavm_op_ir *ops)
 {
-	return print_vmasm_encoding(f, opt, ops, AMD64_GO);
+	return print_vmasm_encoding(f, opt, hooks, ops, AMD64_GO);
 }
 

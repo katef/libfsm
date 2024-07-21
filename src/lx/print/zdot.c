@@ -74,13 +74,16 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 void
-lx_print_zdot(FILE *f, const struct ast *ast)
+lx_print_zdot(FILE *f, const struct ast *ast, const struct fsm_options *opt)
 {
 	const struct ast_zone *z;
 	unsigned int zn;
 
 	assert(f != NULL);
 	assert(ast != NULL);
+	assert(opt != NULL);
+
+	(void) opt;
 
 	fprintf(f, "digraph %sG {\n", prefix.api);
 	fprintf(f, "\trankdir = TB;\n");

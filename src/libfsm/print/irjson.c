@@ -114,11 +114,14 @@ print_groups(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-print_state(FILE *f, const struct fsm_options *opt,
+print_state(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	const struct ir_state *cs)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 	assert(cs != NULL);
 
 	fprintf(f, "\t\t{\n");
@@ -137,10 +140,10 @@ print_state(FILE *f, const struct fsm_options *opt,
 	}
 
 	/* showing hook in addition to existing content */
-	if (cs->isend && opt->hooks.accept != NULL) {
+	if (cs->isend && hooks->accept != NULL) {
 		fprintf(f, "\t\t\t\"endleaf\": ");
 
-		if (-1 == print_hook_accept(f, opt,
+		if (-1 == print_hook_accept(f, opt, hooks,
 			cs->endids.ids, cs->endids.count,
 			NULL, NULL))
 		{
@@ -165,8 +168,6 @@ print_state(FILE *f, const struct fsm_options *opt,
 		}
 		fprintf(f, "\n");
 	}
-
-	/* TODO: leaf callback for json output */
 
 	switch (cs->strategy) {
 	case IR_NONE:
@@ -215,13 +216,16 @@ print_state(FILE *f, const struct fsm_options *opt,
 }
 
 int
-fsm_print_irjson(FILE *f, const struct fsm_options *opt,
+fsm_print_irjson(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	const struct ir *ir)
 {
 	size_t i;
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 	assert(ir != NULL);
 
 	fprintf(f, "{\n");
@@ -230,7 +234,7 @@ fsm_print_irjson(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\t\"states\": [\n");
 
 	for (i = 0; i < ir->n; i++) {
-		if (-1 == print_state(f, opt, &ir->states[i])) {
+		if (-1 == print_state(f, opt, hooks, &ir->states[i])) {
 			return -1;
 		}
 

@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
@@ -14,7 +15,6 @@
 #include <fsm/capture.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
-#include <fsm/options.h>
 
 #include "internal.h"
 
@@ -39,11 +39,6 @@ fsm_union(struct fsm *a, struct fsm *b,
 	assert(b != NULL);
 
 	if (a->alloc != b->alloc) {
-		errno = EINVAL;
-		return NULL;
-	}
-
-	if (a->opt != b->opt) {
 		errno = EINVAL;
 		return NULL;
 	}

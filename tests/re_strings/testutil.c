@@ -32,7 +32,7 @@ run_test(const char **strings)
 
 	const int flags = 0;	/* not anchored */
 
-	struct fsm *fsm = re_strings_build(s, NULL, NULL, flags);
+	struct fsm *fsm = re_strings_build(s, NULL, flags);
 	assert(fsm != NULL);
 
 	/* Each literal string input should match, and the set of

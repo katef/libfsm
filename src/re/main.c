@@ -425,8 +425,8 @@ printexample(FILE *f, const struct fsm *fsm, fsm_state_t state)
 
 static int
 accept_c(FILE *f, const struct fsm_options *opt,
-    const fsm_end_id_t *ids, size_t count,
-    void *lang_opaque)
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque, void *hook_opaque)
 {
 	const struct match *m;
 	unsigned n;
@@ -434,9 +434,11 @@ accept_c(FILE *f, const struct fsm_options *opt,
 
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
+	assert(hook_opaque == NULL);
 
 	(void) opt;
 	(void) lang_opaque;
+	(void) hook_opaque;
 
 	n = 0;
 
@@ -467,8 +469,8 @@ accept_c(FILE *f, const struct fsm_options *opt,
 
 static int
 accept_rust(FILE *f, const struct fsm_options *opt,
-    const fsm_end_id_t *ids, size_t count,
-    void *lang_opaque)
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque, void *hook_opaque)
 {
 	const struct match *m;
 	unsigned n;
@@ -476,9 +478,11 @@ accept_rust(FILE *f, const struct fsm_options *opt,
 
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
+	assert(hook_opaque == NULL);
 
 	(void) opt;
 	(void) lang_opaque;
+	(void) hook_opaque;
 
 	n = 0;
 
@@ -509,8 +513,8 @@ accept_rust(FILE *f, const struct fsm_options *opt,
 
 static int
 accept_llvm(FILE *f, const struct fsm_options *opt,
-    const fsm_end_id_t *ids, size_t count,
-    void *lang_opaque)
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque, void *hook_opaque)
 {
 	const struct match *m;
 	unsigned n;
@@ -518,8 +522,10 @@ accept_llvm(FILE *f, const struct fsm_options *opt,
 
 	assert(opt != NULL);
 	assert(lang_opaque != NULL);
+	assert(hook_opaque == NULL);
 
 	(void) opt;
+	(void) hook_opaque;
 
 	n = 0;
 
@@ -552,8 +558,8 @@ accept_llvm(FILE *f, const struct fsm_options *opt,
 
 static int
 accept_dot(FILE *f, const struct fsm_options *opt,
-    const fsm_end_id_t *ids, size_t count,
-    void *lang_opaque)
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque, void *hook_opaque)
 {
 	const struct match *m;
 	fsm_state_t s;
@@ -561,8 +567,10 @@ accept_dot(FILE *f, const struct fsm_options *opt,
 
 	assert(opt != NULL);
 	assert(lang_opaque != NULL);
+	assert(hook_opaque == NULL);
 
 	(void) opt;
+	(void) hook_opaque;
 
 	s = * (fsm_state_t *) lang_opaque;
 
@@ -610,17 +618,19 @@ accept_dot(FILE *f, const struct fsm_options *opt,
 
 static int
 accept_json(FILE *f, const struct fsm_options *opt,
-    const fsm_end_id_t *ids, size_t count,
-    void *lang_opaque)
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque, void *hook_opaque)
 {
 	const struct match *m;
 	size_t i;
 
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
+	assert(hook_opaque == NULL);
 
 	(void) opt;
 	(void) lang_opaque;
+	(void) hook_opaque;
 
 	fprintf(f, "[ ");
 
@@ -683,10 +693,12 @@ int
 main(int argc, char *argv[])
 {
 	static const struct fsm_options zero_options;
+	static const struct fsm_hooks zero_hooks;
 
 	/* TODO: use alloc hooks for -Q accounting */
 	struct fsm_alloc *alloc = NULL;
 	struct fsm_options opt;
+	struct fsm_hooks hooks;
 
 	struct fsm *fsm;
 	struct fsm *(*join)(struct fsm *, struct fsm *,
@@ -711,6 +723,7 @@ main(int argc, char *argv[])
 	atexit(do_fsm_cleanup);
 
 	opt = zero_options;
+	hooks = zero_hooks;
 
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;
@@ -871,7 +884,7 @@ main(int argc, char *argv[])
 
 			literal_r =
 			re_is_literal(dialect, fsm_fgetc, f,
-				&opt, flags, &err,
+				flags, &err,
 				&literal_category, &literal_s, &literal_n);
 
 			fclose(f);
@@ -882,7 +895,7 @@ main(int argc, char *argv[])
 
 			literal_r =
 			re_is_literal(dialect, fsm_sgetc, &s,
-				&opt, flags, &err,
+				flags, &err,
 				&literal_category, &literal_s, &literal_n);
 		}
 
@@ -945,11 +958,11 @@ main(int argc, char *argv[])
 			f = xopen(argv[0]);
 
 			if (!fsmfiles) {
-				ast = re_parse(dialect, fsm_fgetc, f, &opt, flags, &err, NULL);
+				ast = re_parse(dialect, fsm_fgetc, f, flags, &err, NULL);
 			} else {
 				struct fsm *fsm;
 
-				fsm = fsm_parse(f, alloc, &opt);
+				fsm = fsm_parse(f, alloc);
 				if (fsm == NULL) {
 					perror("fsm_parse");
 					return EXIT_FAILURE;
@@ -971,7 +984,7 @@ main(int argc, char *argv[])
 
 			s = argv[0];
 
-			ast = re_parse(dialect, fsm_sgetc, &s, &opt, flags, &err, NULL);
+			ast = re_parse(dialect, fsm_sgetc, &s, flags, &err, NULL);
 		}
 
 		if (ast == NULL) {
@@ -1001,8 +1014,6 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	fsm_setoptions(fsm, &opt);
-
 	fsm_to_cleanup = fsm;
 
 	{
@@ -1027,9 +1038,9 @@ main(int argc, char *argv[])
 				f = xopen(argv[i]);
 
 				if (!fsmfiles) {
-					new = re_comp(dialect, fsm_fgetc, f, alloc, &opt, flags, &err);
+					new = re_comp(dialect, fsm_fgetc, f, alloc, flags, &err);
 				} else {
-					new = fsm_parse(f, alloc, &opt);
+					new = fsm_parse(f, alloc);
 					if (new == NULL) {
 						perror("fsm_parse");
 						return EXIT_FAILURE;
@@ -1042,7 +1053,7 @@ main(int argc, char *argv[])
 
 				s = argv[i];
 
-				new = re_comp(dialect, fsm_sgetc, &s, alloc, &opt, flags, &err);
+				new = re_comp(dialect, fsm_sgetc, &s, alloc, flags, &err);
 			}
 
 			if (new == NULL) {
@@ -1259,32 +1270,32 @@ main(int argc, char *argv[])
 		switch (fsm_lang) {
 		case FSM_PRINT_C:
 		case FSM_PRINT_VMC:
-			opt.hooks.accept = accept_c;
+			hooks.accept = accept_c;
 			break;
 
 		case FSM_PRINT_RUST:
-			opt.hooks.accept = accept_rust;
+			hooks.accept = accept_rust;
 			break;
 
 		case FSM_PRINT_LLVM:
-			opt.hooks.accept = accept_llvm;
+			hooks.accept = accept_llvm;
 			break;
 
 		case FSM_PRINT_DOT:
 		case FSM_PRINT_VMDOT:
-			opt.hooks.accept = patterns ? accept_dot : NULL;
+			hooks.accept = patterns ? accept_dot : NULL;
 			break;
 
 		case FSM_PRINT_JSON:
-			opt.hooks.accept = patterns ? accept_json : NULL;
+			hooks.accept = patterns ? accept_json : NULL;
 			break;
 
 		default:
-			opt.hooks.accept = NULL;
+			hooks.accept = NULL;
 			break;
 		}
 
-		if (-1 == fsm_print(stdout, fsm, fsm_lang)) {
+		if (-1 == fsm_print(stdout, fsm, &opt, &hooks, fsm_lang)) {
 			if (errno == ENOTSUP) {
 				fprintf(stderr, "unsupported IO API\n");
 			} else {

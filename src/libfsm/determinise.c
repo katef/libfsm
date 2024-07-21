@@ -185,8 +185,6 @@ fsm_determinise(struct fsm *nfa)
 			goto cleanup;
 		}
 
-		fsm_setoptions(dfa, nfa->opt);
-
 #if DUMP_MAPPING
 		{
 			fprintf(stderr, "#### fsm_determinise: mapping\n");

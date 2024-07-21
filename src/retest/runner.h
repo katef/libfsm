@@ -6,6 +6,7 @@
 #include <fsm/vm.h>
 
 struct fsm;
+struct fsm_options;
 struct fsm_dfavm;
 
 enum error_type {
@@ -73,7 +74,8 @@ struct fsm_runner {
 };
 
 enum error_type
-fsm_runner_initialize(struct fsm *fsm, struct fsm_runner *r, enum implementation impl, struct fsm_vm_compile_opts vm_opts);
+fsm_runner_initialize(struct fsm *fsm, const struct fsm_options *opt,
+	struct fsm_runner *r, enum implementation impl, struct fsm_vm_compile_opts vm_opts);
 
 void
 fsm_runner_finalize(struct fsm_runner *r);

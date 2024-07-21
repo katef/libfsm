@@ -204,13 +204,17 @@ print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
 }
 
 int
-fsm_print_json(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
+fsm_print_json(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct fsm *fsm)
 {
 	fsm_state_t start;
 	fsm_state_t i;
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 	assert(fsm != NULL);
 
 	fprintf(f, "{\n");
@@ -242,7 +246,7 @@ fsm_print_json(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 	}
 
 	/* showing hook in addition to existing content */
-	if (opt->hooks.accept != NULL) {
+	if (hooks->accept != NULL) {
 		int notfirst;
 
 		notfirst = 0;
@@ -258,14 +262,17 @@ fsm_print_json(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 			}
 
 			count = fsm_endid_count(fsm, i);
+			if (count == 0) {
+				ids = NULL;
+			} else {
+				ids = f_malloc(fsm->alloc, count * sizeof *ids);
+				if (ids == NULL) {
+					return -1;
+				}
 
-			ids = f_malloc(fsm->alloc, count * sizeof *ids);
-			if (ids == NULL) {
-				return -1;
+				res = fsm_endid_get(fsm, i, count, ids);
+				assert(res == 1);
 			}
-
-			res = fsm_endid_get(fsm, i, count, ids);
-			assert(res == 1);
 
 			if (notfirst) {
 				fprintf(f, ", ");
@@ -273,7 +280,7 @@ fsm_print_json(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 
 			fprintf(f, "{ %u, ", i);
 
-			if (-1 == print_hook_accept(f, opt,
+			if (-1 == print_hook_accept(f, opt, hooks,
 				ids, count,
 				NULL, NULL))
 			{
@@ -282,7 +289,9 @@ fsm_print_json(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 
 			fprintf(f, " }");
 
-			f_free(fsm->alloc, ids);
+			if (count > 0) {
+				f_free(fsm->alloc, ids);
+			}
 
 			notfirst = 1;
 		}

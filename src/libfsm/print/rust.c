@@ -53,7 +53,7 @@ print_ids(FILE *f,
 	enum fsm_ambig ambig, const fsm_end_id_t *ids, size_t count)
 {
 	switch (ambig) {
-    case AMBIG_NONE:
+	case AMBIG_NONE:
 		fprintf(f, "return Some(())");
 		break;
 
@@ -89,35 +89,37 @@ print_ids(FILE *f,
 
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
-    const fsm_end_id_t *ids, size_t count,
-    void *lang_opaque)
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque, void *hook_opaque)
 {   
-    assert(f != NULL);
-    assert(opt != NULL);
-    assert(lang_opaque == NULL);
-    
-    (void) lang_opaque;
-      
-    if (-1 == print_ids(f, opt->ambig, ids, count)) {
-        return -1;
-    }
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+	
+	(void) lang_opaque;
+	(void) hook_opaque;
+	  
+	if (-1 == print_ids(f, opt->ambig, ids, count)) {
+	    return -1;
+	}
 
-    return 0;
+	return 0;
 }
-        
+
 static int    
 default_reject(FILE *f, const struct fsm_options *opt,
-    void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
-    assert(f != NULL);
-    assert(opt != NULL);
-    assert(lang_opaque == NULL);
-                   
-    (void) lang_opaque;
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+		   
+	(void) lang_opaque;
+	(void) hook_opaque;
 
 	fprintf(f, "return None");
 
-    return 0;
+	return 0;
 }
 
 static int
@@ -157,15 +159,17 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 }
 
 static int
-print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
+print_end(FILE *f, const struct dfavm_op_ir *op,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	enum dfavm_op_end end_bits)
 {
 	switch (end_bits) {
 	case VM_END_FAIL:
-		return print_hook_reject(f, opt, default_reject, NULL);
+		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
 	case VM_END_SUCC:
-		return print_hook_accept(f, opt,
+		return print_hook_accept(f, opt, hooks,
 			op->endids.ids, op->endids.count,
 			default_accept,
 			NULL);
@@ -198,7 +202,10 @@ print_fetch(FILE *f)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_rustfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
+fsm_print_rustfrag(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops,
 	const char *cp)
 {
 	struct dfavm_op_ir *op;
@@ -312,7 +319,7 @@ fsm_print_rustfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *o
 			if (op->cmp != VM_CMP_ALWAYS) {
 				fprintf(f, "{ ");
 			}
-			if (-1 == print_end(f, op, opt, op->u.stop.end_bits)) {
+			if (-1 == print_end(f, op, opt, hooks, op->u.stop.end_bits)) {
 				return -1;
 			}
 			if (op->cmp != VM_CMP_ALWAYS) {
@@ -360,7 +367,7 @@ fsm_print_rustfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *o
 
 				fprintf(f, "                    ");
 				fprintf(f, "None => ");
-				print_end(f, op, opt, op->u.fetch.end_bits);
+				print_end(f, op, opt, hooks, op->u.fetch.end_bits);
 				fprintf(f, ",\n");
 				fprintf(f, "                    ");
 
@@ -405,13 +412,17 @@ fsm_print_rustfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *o
 }
 
 int
-fsm_print_rust(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
+fsm_print_rust(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops)
 {
 	const char *prefix;
 	const char *cp;
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
@@ -419,14 +430,14 @@ fsm_print_rust(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 		prefix = "fsm_";
 	}
 
-	if (opt->hooks.cp != NULL) {
-		cp = opt->hooks.cp;
+	if (hooks->cp != NULL) {
+		cp = hooks->cp;
 	} else {
 		cp = "c"; /* XXX */
 	}
 
 	if (opt->fragment) {
-		fsm_print_rustfrag(f, opt, ops, cp);
+		fsm_print_rustfrag(f, opt, hooks, ops, cp);
 		goto error;
 	}
 
@@ -460,7 +471,7 @@ fsm_print_rust(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_print_rustfrag(f, opt, ops, cp);
+	fsm_print_rustfrag(f, opt, hooks, ops, cp);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

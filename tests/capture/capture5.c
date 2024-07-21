@@ -77,7 +77,7 @@ build(void)
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==== built\n");
-	fsm_print(stderr, fsm, FSM_PRINT_FSM);
+	fsm_print(stderr, fsm, NULL, NULL, FSM_PRINT_FSM);
 	fsm_capture_dump(stderr, "built", fsm);
 #endif
 
@@ -88,7 +88,7 @@ build(void)
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==== after det\n");
-	fsm_print(stderr, fsm, FSM_PRINT_FSM);
+	fsm_print(stderr, fsm, NULL, NULL, FSM_PRINT_FSM);
 	fsm_capture_dump(stderr, "after det", fsm);
 #endif
 
@@ -99,7 +99,7 @@ build(void)
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==== after min\n");
-	fsm_print(stderr, fsm, FSM_PRINT_FSM);
+	fsm_print(stderr, fsm, NULL, NULL, FSM_PRINT_FSM);
 	fsm_capture_dump(stderr, "after min", fsm);
 #endif
 	return fsm;

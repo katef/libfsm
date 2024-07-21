@@ -978,7 +978,7 @@ process_test_file(const char *filename,
 			}
 
 			re_str = regexp;
-			fsm = re_comp(dialect, fsm_sgetc, &re_str, alloc, &opt, flags, &err);
+			fsm = re_comp(dialect, fsm_sgetc, &re_str, alloc, flags, &err);
 			if (fsm == NULL) {
 				fprintf(stderr, "line %d: error with %s regexp /%s/%s: %s\n",
 					linenum, dialect_name, regexp, flagdesc, re_strerror(err.e));
@@ -1062,7 +1062,7 @@ process_test_file(const char *filename,
 			fprintf(stderr, "REGEXP matching for /%s/%s\n", regexp, flagdesc);
 #endif /* DEBUG_TEST_REGEXP */
 
-			ret = fsm_runner_initialize(fsm, &runner, impl, vm_opts);
+			ret = fsm_runner_initialize(fsm, &opt, &runner, impl, vm_opts);
 
 			fsm_free(fsm);
 

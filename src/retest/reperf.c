@@ -688,7 +688,7 @@ perf_case_run(struct perf_case *c, enum halt halt,
 
 			re = c->regexp.data;
 
-			fsm = re_comp(c->dialect, fsm_sgetc, &re, alloc, &opt, flags, &comp_err);
+			fsm = re_comp(c->dialect, fsm_sgetc, &re, alloc, flags, &comp_err);
 			if (fsm == NULL) {
 				return ERROR_PARSING_REGEXP;
 			}
@@ -728,7 +728,7 @@ perf_case_run(struct perf_case *c, enum halt halt,
 		goto done;
 	}
 
-	ret = fsm_runner_initialize(fsm, &runner, c->impl, vm_opts);
+	ret = fsm_runner_initialize(fsm, &opt, &runner, c->impl, vm_opts);
 	if (ret != ERROR_NONE) {
 		fsm_free(fsm);
 		return ret;

@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <fsm/fsm.h>
@@ -14,7 +15,8 @@
 #include "print.h"
 
 int
-lx_print(FILE *f, const struct ast *ast, enum lx_print_lang lang)
+lx_print(FILE *f, const struct ast *ast, const struct fsm_options *opt,
+	enum lx_print_lang lang)
 {
 	lx_print_f *print;
 
@@ -37,7 +39,7 @@ lx_print(FILE *f, const struct ast *ast, enum lx_print_lang lang)
 	}
 
 	// TODO: return int
-	print(f, ast);
+	print(f, ast, opt);
 
 	return 0;
 }

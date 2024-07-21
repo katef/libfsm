@@ -123,8 +123,6 @@ ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 			return NULL;
 		}
 
-		fsm_setoptions(m->fsm, fsm->opt);
-
 		m->token    = token;
 		m->to       = to;
 		m->conflict = NULL;

@@ -12,7 +12,6 @@
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/options.h>
 
 #include <adt/queue.h>
 #include <adt/set.h>

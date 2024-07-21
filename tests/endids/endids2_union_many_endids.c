@@ -149,7 +149,7 @@ int main(void)
 		strncpy(&buf[0], patterns[i], sizeof buf);
 
 		bufp = &buf[0];
-		new = re_comp(RE_NATIVE, fsm_sgetc, &bufp, NULL, NULL, 0, NULL);
+		new = re_comp(RE_NATIVE, fsm_sgetc, &bufp, NULL, 0, NULL);
 		assert(new != NULL);
 
 		ret = fsm_determinise(new);

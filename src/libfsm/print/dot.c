@@ -28,13 +28,15 @@
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
 	fsm_state_t s;
 
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque != NULL);
+
+	(void) hook_opaque;
 
 	s = * (fsm_state_t *) lang_opaque;
 
@@ -63,13 +65,15 @@ default_accept(FILE *f, const struct fsm_options *opt,
 
 static int
 default_reject(FILE *f, const struct fsm_options *opt,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {   
 	fsm_state_t s;
 
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque != NULL);
+
+	(void) hook_opaque;
 
 	s = * (fsm_state_t *) lang_opaque;
 
@@ -81,7 +85,10 @@ default_reject(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
+print_state(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct fsm *fsm,
 	const char *prefix, fsm_state_t s)
 {
 	struct fsm_edge e;
@@ -91,6 +98,7 @@ print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 	assert(fsm != NULL);
 	assert(prefix != NULL);
 	assert(s < fsm->statecount);
@@ -201,7 +209,9 @@ print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
 }
 
 static int
-print_dotfrag(FILE *f, const struct fsm_options *opt,
+print_dotfrag(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	const struct fsm *fsm, const char *prefix)
 {
 	fsm_state_t s;
@@ -216,7 +226,7 @@ print_dotfrag(FILE *f, const struct fsm_options *opt,
 			if (!opt->anonymous_states) {
 				fprintf(f, "\t%sS%-2u [ ", prefix, s);
 
-				if (-1 == print_hook_reject(f, opt, default_reject, &s)) {
+				if (-1 == print_hook_reject(f, opt, hooks, default_reject, &s)) {
 					return -1;
 				}
 
@@ -226,9 +236,10 @@ print_dotfrag(FILE *f, const struct fsm_options *opt,
 			fsm_end_id_t *ids;
 			size_t count;
 
-			ids = NULL;
 			count = fsm_endid_count(fsm, s);
-			if (count > 0) {
+			if (count == 0) {
+				ids = NULL;
+			} else {
 				int res;
 
 				ids = f_malloc(fsm->alloc, count * sizeof *ids);
@@ -247,7 +258,7 @@ print_dotfrag(FILE *f, const struct fsm_options *opt,
 
 			fprintf(f, ", ");
 
-			if (-1 == print_hook_accept(f, opt,
+			if (-1 == print_hook_accept(f, opt, hooks,
 				ids, count,
 				default_accept, &s))
 			{
@@ -261,7 +272,7 @@ print_dotfrag(FILE *f, const struct fsm_options *opt,
 
 		/* TODO: show example here, unless !opt->comments */
 
-		if (-1 == print_state(f, opt, fsm, prefix, s)) {
+		if (-1 == print_state(f, opt, hooks, fsm, prefix, s)) {
 			return -1;
 		}
 	}
@@ -270,13 +281,17 @@ print_dotfrag(FILE *f, const struct fsm_options *opt,
 }
 
 int
-fsm_print_dot(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
+fsm_print_dot(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct fsm *fsm)
 {
 	const char *prefix;
 
 	assert(f != NULL);
 	assert(fsm != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
@@ -285,7 +300,7 @@ fsm_print_dot(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 	}
 
 	if (opt->fragment) {
-		if (-1 == print_dotfrag(f, opt, fsm, prefix)) {
+		if (-1 == print_dotfrag(f, opt, hooks, fsm, prefix)) {
 			return -1;
 		}
 	} else {
@@ -314,7 +329,7 @@ fsm_print_dot(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 			fprintf(f, "\n");
 		}
 
-		if (-1 == print_dotfrag(f, opt, fsm, prefix)) {
+		if (-1 == print_dotfrag(f, opt, hooks, fsm, prefix)) {
 			return -1;
 		}
 

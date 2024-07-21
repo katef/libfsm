@@ -67,7 +67,7 @@ mapping(FILE *f, const struct ast_mapping *m, const struct ast *ast)
 static int
 accept_dot(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
 	const struct ast_mapping *m;
 	const struct ast *ast;
@@ -75,12 +75,12 @@ accept_dot(FILE *f, const struct fsm_options *opt,
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(opt->hooks.hook_opaque != NULL);
 	assert(ids != NULL);
 	assert(count > 0);
 	assert(lang_opaque != NULL);
+	assert(hook_opaque != NULL);
 
-	ast = opt->hooks.hook_opaque;
+	ast = hook_opaque;
 	s = * (fsm_state_t *) lang_opaque;
 
 	m = ast_getendmappingbyendid(ids[0]);
@@ -164,7 +164,8 @@ singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 }
 
 static void
-print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
+print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
+	const struct fsm_options *opt)
 {
 	fsm_state_t start, i;
 
@@ -172,6 +173,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(ast != NULL);
 	assert(z != NULL);
 	assert(z->fsm != NULL);
+	assert(opt != NULL);
 
 	(void) fsm_getstart(z->fsm, &start);
 
@@ -188,28 +190,20 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\t\n");
 
 	{
-		const struct fsm_options *tmp;
-		static const struct fsm_options defaults;
-		struct fsm_options opt = defaults;
-		char p[128];
+		static const struct fsm_hooks defaults;
+		struct fsm_hooks hooks = defaults;
+		struct fsm_options o = *opt;
 
-		tmp = z->fsm->opt;
+		char p[128];
 
 		(void) sprintf(p, "z%u", zindexof(ast, z));
 
-		opt.anonymous_states  = anonymous_states;
-		opt.fragment          = 1; /* XXX */
-		opt.consolidate_edges = z->fsm->opt->consolidate_edges;
-		opt.comments          = z->fsm->opt->comments;
-		opt.prefix            = p;
- 		opt.hooks.accept      = accept_dot;
-		opt.hooks.hook_opaque = (void *) ast;
+		o.prefix = p;
 
-		z->fsm->opt = &opt;
+ 		hooks.accept      = accept_dot;
+		hooks.hook_opaque = (void *) ast;
 
-		fsm_print(f, z->fsm, FSM_PRINT_DOT);
-
-		z->fsm->opt = tmp;
+		fsm_print(f, z->fsm, &o, &hooks, FSM_PRINT_DOT);
 	}
 
 	for (i = 0; i < z->fsm->statecount; i++) {
@@ -224,13 +218,14 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 void
-lx_print_dot(FILE *f, const struct ast *ast)
+lx_print_dot(FILE *f, const struct ast *ast, const struct fsm_options *opt)
 {
 	const struct ast_zone *z;
 	unsigned int zn;
 	fsm_state_t start;
 
 	assert(f != NULL);
+	assert(opt != NULL);
 
 	(void) fsm_getstart(ast->global->fsm, &start);
 
@@ -295,7 +290,7 @@ lx_print_dot(FILE *f, const struct ast *ast)
 			zn++;
 		}
 
-		print_zone(f, ast, z);
+		print_zone(f, ast, z, opt);
 	}
 
 	fprintf(f, "}\n");

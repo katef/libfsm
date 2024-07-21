@@ -6,12 +6,12 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <fsm/alloc.h>
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
-#include <fsm/options.h>
 
 #include <adt/alloc.h>
 #include <adt/set.h>
@@ -65,7 +65,6 @@ fsm_new_statealloc(const struct fsm_alloc *alloc, size_t statealloc)
 	}
 
 	new->alloc        = alloc;
-	new->opt          = NULL;
 	new->statealloc   = statealloc;
 	new->statecount   = 0;
 	new->endcount     = 0;
@@ -112,18 +111,6 @@ fsm_free(struct fsm *fsm)
 	f_free(fsm->alloc, fsm);
 }
 
-const struct fsm_options *
-fsm_getoptions(const struct fsm *fsm)
-{
-	return fsm->opt;
-}
-
-void
-fsm_setoptions(struct fsm *fsm, const struct fsm_options *opts)
-{
-	fsm->opt = opts;
-}
-
 void
 fsm_move(struct fsm *dst, struct fsm *src)
 {
@@ -131,11 +118,6 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	assert(dst != NULL);
 
 	if (dst->alloc != src->alloc) {
-		errno = EINVAL;
-		return; /* XXX */
-	}
-
-	if (dst->opt != src->opt) {
 		errno = EINVAL;
 		return; /* XXX */
 	}

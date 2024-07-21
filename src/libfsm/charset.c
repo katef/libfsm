@@ -41,8 +41,6 @@ fsm_intersect_charset(struct fsm *a, size_t n, const char *charset)
 			return NULL;
 		}
 
-		fsm_setoptions(b, a->opt);
-
 		if (!fsm_addstate(b, &state)) {
 			goto error;
 		}

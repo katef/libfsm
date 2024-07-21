@@ -107,13 +107,14 @@ print_ids(FILE *f,
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
 
 	(void) lang_opaque;
+	(void) hook_opaque;
 
 	fprintf(f, "matched");
 
@@ -126,13 +127,14 @@ default_accept(FILE *f, const struct fsm_options *opt,
 
 static int
 default_reject(FILE *f, const struct fsm_options *opt,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
 
 	(void) lang_opaque;
+	(void) hook_opaque;
 
 	fprintf(f, "fail");
 
@@ -192,15 +194,17 @@ print_cond(FILE *f, const struct dfavm_op_ir *op)
 }
 
 static int
-print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
+print_end(FILE *f, const struct dfavm_op_ir *op,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	enum dfavm_op_end end_bits)
 {
 	switch (end_bits) {
 	case VM_END_FAIL:
-		return print_hook_reject(f, opt, default_reject, NULL);
+		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
 	case VM_END_SUCC:
-		return print_hook_accept(f, opt,
+		return print_hook_accept(f, opt, hooks,
 			op->endids.ids, op->endids.count,
 			default_accept,
 			NULL);
@@ -226,12 +230,16 @@ print_fetch(FILE *f)
 }
 
 int
-fsm_print_sh(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
+fsm_print_sh(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops)
 {
 	struct dfavm_op_ir *op;
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 
 	if (opt->io != FSM_IO_STR) {
 		errno = ENOTSUP;
@@ -285,14 +293,14 @@ fsm_print_sh(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op);
-			if (-1 == print_end(f, op, opt, op->u.stop.end_bits)) {
+			if (-1 == print_end(f, op, opt, hooks, op->u.stop.end_bits)) {
 				return -1;
 			}
 			break;
 
 		case VM_OP_FETCH:
 			print_fetch(f);
-			if (-1 == print_end(f, op, opt, op->u.fetch.end_bits)) {
+			if (-1 == print_end(f, op, opt, hooks, op->u.fetch.end_bits)) {
 				return -1;
 			}
 			break;

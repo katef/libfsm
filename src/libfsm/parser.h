@@ -18,7 +18,7 @@
 
 	struct fsm *
 	fsm_parse(FILE *f,
-		const struct fsm_alloc *alloc, const struct fsm_options *opt);
+		const struct fsm_alloc *alloc);
 
 #line 24 "src/libfsm/parser.h"
 
@@ -27,7 +27,7 @@
 extern void p_fsm(fsm, lex_state, act_state);
 /* BEGINNING OF TRAILER */
 
-#line 483 "src/libfsm/parser.act"
+#line 480 "src/libfsm/parser.act"
 
 #line 33 "src/libfsm/parser.h"
 

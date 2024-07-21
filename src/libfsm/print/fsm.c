@@ -27,12 +27,14 @@
 
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
-    const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque)
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
+
+	(void) hook_opaque;
 
 	if (count == 0) {
 		return 0;
@@ -117,7 +119,9 @@ findany(const struct fsm *fsm, fsm_state_t state, fsm_state_t *a)
 }
 
 static int
-print_state_comments(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
+print_state_comments(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm *fsm,
 	fsm_state_t dst)
 {
 	fsm_state_t start;
@@ -172,14 +176,15 @@ print_char_range(FILE *f, const struct fsm_options *opt, char lower, char upper)
 }
 
 static int
-print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
+print_state(FILE *f, const struct fsm_options *opt, const struct fsm_hooks *hooks,
+	const struct fsm *fsm,
 	fsm_state_t s)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 
 	if (!fsm_isend(fsm, s)) {
-		if (-1 == print_hook_reject(f, opt, NULL, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, NULL, NULL)) {
 			return -1;
 		}
 	}
@@ -281,12 +286,17 @@ print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
 }
 
 int
-fsm_print_fsm(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
+fsm_print_fsm(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct fsm *fsm)
 {
 	fsm_state_t s, start;
 	size_t end;
 
 	assert(f != NULL);
+	assert(opt != NULL);
+	assert(hooks != NULL);
 	assert(fsm != NULL);
 
 	if (!opt->anonymous_states) {
@@ -304,7 +314,7 @@ fsm_print_fsm(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 	}
 
 	for (s = 0; s < fsm->statecount; s++) {
-		if (-1 == print_state(f, opt, fsm, s)) {
+		if (-1 == print_state(f, opt, hooks, fsm, s)) {
 			return -1;
 		}
 	}
@@ -335,7 +345,9 @@ fsm_print_fsm(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 		end--;
 
 		count = fsm_endid_count(fsm, s);
-		if (count > 0) {
+		if (count == 0) {
+			ids = NULL;
+		} else {
 			int res;
 
 			ids = f_malloc(fsm->alloc, count * sizeof *ids);
@@ -349,7 +361,7 @@ fsm_print_fsm(FILE *f, const struct fsm_options *opt, const struct fsm *fsm)
 
 		fprintf(f, "%u", s);
 
-		if (-1 == print_hook_accept(f, opt,
+		if (-1 == print_hook_accept(f, opt, hooks,
 			ids, count,    
 			default_accept,
 			NULL))    

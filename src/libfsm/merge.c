@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <fsm/fsm.h>
@@ -204,11 +205,6 @@ fsm_mergeab(struct fsm *a, struct fsm *b,
 		return NULL;
 	}
 
-	if (a->opt != b->opt) {
-		errno = EINVAL;
-		return NULL;
-	}
-
 	/*
 	 * We merge b into a.
 	 */
@@ -231,11 +227,6 @@ fsm_merge(struct fsm *a, struct fsm *b,
 	assert(a != NULL);
 	assert(b != NULL);
 	assert(combine_info != NULL);
-
-	if (a->opt != b->opt) {
-		errno = EINVAL;
-		return NULL;
-	}
 
 	/*
 	 * We merge the smaller FSM into the larger FSM.

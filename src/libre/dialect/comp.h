@@ -15,7 +15,6 @@
 
 typedef struct ast *
 re_dialect_parse_fun(re_getchar_fun *getchar, void *opaque,
-	const struct fsm_options *opt,
 	enum re_flags flags, int overlap,
 	struct re_err *err, struct re_pos *end);
 

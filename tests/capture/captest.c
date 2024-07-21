@@ -80,7 +80,7 @@ captest_run_single(const struct captest_single_fsm_test_info *info)
 	}
 
 #if CAPTEST_RUN_SINGLE_LOG
-	fsm_print(stderr, fsm, FSM_PRINT_FSM);
+	fsm_print(stderr, fsm, NULL, NULL, FSM_PRINT_FSM);
 	fsm_capture_dump(stderr, "fsm", fsm);
 #endif
 

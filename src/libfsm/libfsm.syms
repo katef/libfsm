@@ -61,8 +61,6 @@ fsm_print_vmops_main
 fsm_clone
 fsm_free
 fsm_new
-fsm_setoptions
-fsm_getoptions
 fsm_move
 fsm_merge
 fsm_addstate

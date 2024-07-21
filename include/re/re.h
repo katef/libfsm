@@ -9,7 +9,6 @@
 
 struct fsm;
 struct fsm_alloc;
-struct fsm_options;
 
 enum re_dialect {
 	RE_LIKE,
@@ -135,7 +134,6 @@ struct fsm *
 re_comp(enum re_dialect dialect,
 	re_getchar_fun *f, void *opaque,
 	const struct fsm_alloc *alloc,
-	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err);
 
 /*

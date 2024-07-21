@@ -61,7 +61,10 @@ xmkstemps(char *s)
 }
 
 static int
-print(const struct fsm *fsm, enum implementation impl,
+print(const struct fsm *fsm,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	enum implementation impl,
 	char *tmp_src)
 {
 	int fd_src;
@@ -76,7 +79,7 @@ print(const struct fsm *fsm, enum implementation impl,
 	}
 
 	/* the vmc codegen can emit memcmp() or strncmp() calls */
-	if (impl == IMPL_VMC && (fsm_getoptions(fsm)->io == FSM_IO_PAIR || fsm_getoptions(fsm)->io == FSM_IO_STR)) {
+	if (impl == IMPL_VMC && (opt->io == FSM_IO_PAIR || opt->io == FSM_IO_STR)) {
 		fprintf(f, "#include <string.h>\n\n");
 	}
 
@@ -84,18 +87,18 @@ print(const struct fsm *fsm, enum implementation impl,
 		int e;
 
 		switch (impl) {
-		case IMPL_C:     e = fsm_print(f, fsm, FSM_PRINT_C);         break;
-		case IMPL_RUST:  e = fsm_print(f, fsm, FSM_PRINT_RUST);      break;
-		case IMPL_LLVM:  e = fsm_print(f, fsm, FSM_PRINT_LLVM);      break;
-		case IMPL_VMC:   e = fsm_print(f, fsm, FSM_PRINT_VMC);       break;
-		case IMPL_GOASM: e = fsm_print(f, fsm, FSM_PRINT_AMD64_GO);  break;
-		case IMPL_VMASM: e = fsm_print(f, fsm, FSM_PRINT_AMD64_ATT); break;
-		case IMPL_GO:    e = fsm_print(f, fsm, FSM_PRINT_GO);        break;
+		case IMPL_C:     e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_C);         break;
+		case IMPL_RUST:  e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_RUST);      break;
+		case IMPL_LLVM:  e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_LLVM);      break;
+		case IMPL_VMC:   e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_VMC);       break;
+		case IMPL_GOASM: e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_AMD64_GO);  break;
+		case IMPL_VMASM: e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_AMD64_ATT); break;
+		case IMPL_GO:    e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_GO);        break;
 
 		case IMPL_VMOPS:
-			e = fsm_print(f, fsm, FSM_PRINT_VMOPS_H)
-			  | fsm_print(f, fsm, FSM_PRINT_VMOPS_C)
-			  | fsm_print(f, fsm, FSM_PRINT_VMOPS_MAIN);
+			e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_VMOPS_H)
+			  | fsm_print(f, fsm, opt, hooks, FSM_PRINT_VMOPS_C)
+			  | fsm_print(f, fsm, opt, hooks, FSM_PRINT_VMOPS_MAIN);
 			break;
 
 		case IMPL_INTERPRET:
@@ -285,7 +288,9 @@ compile(enum implementation impl,
 }
 
 static enum error_type
-runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation impl)
+runner_init_compiled(struct fsm *fsm,
+	const struct fsm_options *opt,
+	struct fsm_runner *r, enum implementation impl)
 {
 	void *h;
 
@@ -316,7 +321,8 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		abort();
 	}
 
-	if (!print(fsm, r->impl, tmp_src)) {
+	/* we don't override the print hooks for retest */
+	if (!print(fsm, opt, NULL, r->impl, tmp_src)) {
 		return ERROR_FILE_IO;
 	}
 
@@ -399,7 +405,8 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 }
 
 enum error_type
-fsm_runner_initialize(struct fsm *fsm, struct fsm_runner *r, enum implementation impl, struct fsm_vm_compile_opts vm_opts)
+fsm_runner_initialize(struct fsm *fsm, const struct fsm_options *opt,
+	struct fsm_runner *r, enum implementation impl, struct fsm_vm_compile_opts vm_opts)
 {
 	static const struct fsm_runner zero;
 	struct fsm_dfavm *vm;
@@ -418,10 +425,10 @@ fsm_runner_initialize(struct fsm *fsm, struct fsm_runner *r, enum implementation
 	case IMPL_VMOPS:
 	case IMPL_GO:
 	case IMPL_GOASM:
-		return runner_init_compiled(fsm, r, impl);
+		return runner_init_compiled(fsm, opt, r, impl);
 
 	case IMPL_INTERPRET:
-		vm = fsm_vm_compile_with_options(fsm, vm_opts);
+		vm = fsm_vm_compile_with_options(fsm, opt, vm_opts);
 		if (vm == NULL) {
 			fsm_free(fsm);
 			return ERROR_COMPILING_BYTECODE;

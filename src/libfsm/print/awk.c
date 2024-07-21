@@ -51,13 +51,14 @@ cmp_operator(int cmp)
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
 
 	(void) lang_opaque;
+	(void) hook_opaque;
 
 	switch (opt->ambig) {
 	case AMBIG_NONE:
@@ -108,13 +109,14 @@ default_accept(FILE *f, const struct fsm_options *opt,
 
 static int
 default_reject(FILE *f, const struct fsm_options *opt,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
 
 	(void) lang_opaque;
+	(void) hook_opaque;
 
 	fprintf(f, "return 0;");
 
@@ -144,15 +146,17 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 }
 
 static int
-print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
+print_end(FILE *f, const struct dfavm_op_ir *op,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	enum dfavm_op_end end_bits)
 {
 	switch (end_bits) {
 	case VM_END_FAIL:
-		return print_hook_reject(f, opt, default_reject, NULL);
+		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
 	case VM_END_SUCC:
-		return print_hook_accept(f, opt,
+		return print_hook_accept(f, opt, hooks,
 			op->endids.ids, op->endids.count,
 			default_accept,
 			NULL);
@@ -179,7 +183,9 @@ print_branch(FILE *f, const struct dfavm_op_ir *op, const char *prefix)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_awkfrag(FILE *f, const struct fsm_options *opt,
+fsm_print_awkfrag(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	struct dfavm_op_ir *ops,
 	const char *cp, const char *prefix)
 {
@@ -187,6 +193,7 @@ fsm_print_awkfrag(FILE *f, const struct fsm_options *opt,
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 	assert(cp != NULL);
 	assert(prefix != NULL);
 
@@ -236,7 +243,7 @@ fsm_print_awkfrag(FILE *f, const struct fsm_options *opt,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op, opt);
-			if (-1 == print_end(f, op, opt, op->u.stop.end_bits)) {
+			if (-1 == print_end(f, op, opt, hooks, op->u.stop.end_bits)) {
 				return -1;
 			}
 			fprintf(f, ";");
@@ -244,7 +251,7 @@ fsm_print_awkfrag(FILE *f, const struct fsm_options *opt,
 
 		case VM_OP_FETCH: {
 			fprintf(f, "if (s == \"\") ");
-			if (-1 == print_end(f, op, opt, op->u.fetch.end_bits)) {
+			if (-1 == print_end(f, op, opt, hooks, op->u.fetch.end_bits)) {
 				return -1;
 			}
 			fprintf(f, "\n");
@@ -279,13 +286,17 @@ fsm_print_awkfrag(FILE *f, const struct fsm_options *opt,
 }
 
 int
-fsm_print_awk(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
+fsm_print_awk(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops)
 {
 	const char *prefix;
 	const char *cp;
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
@@ -293,14 +304,14 @@ fsm_print_awk(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 		prefix = "fsm_";
 	}
 
-	if (opt->hooks.cp != NULL) {
-		cp = opt->hooks.cp;
+	if (hooks->cp != NULL) {
+		cp = hooks->cp;
 	} else {
 		cp = "c"; /* XXX */
 	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_awkfrag(f, opt, ops, cp, prefix)) {
+		if (-1 == fsm_print_awkfrag(f, opt, hooks, ops, cp, prefix)) {
 			return -1;
 		}
 	} else {
@@ -322,7 +333,7 @@ fsm_print_awk(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
 
 		fprintf(f, ",    l, c) {\n");
 
-		if (-1 == fsm_print_awkfrag(f, opt, ops, cp, prefix)) {
+		if (-1 == fsm_print_awkfrag(f, opt, hooks, ops, cp, prefix)) {
 			return -1;
 		}
 

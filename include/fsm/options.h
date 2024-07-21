@@ -7,11 +7,6 @@
 #ifndef FSM_OPTIONS_H
 #define FSM_OPTIONS_H
 
-#include <stdio.h>
-
-struct fsm;
-struct fsm_state;
-
 enum fsm_io {
 	FSM_IO_GETC,
 	FSM_IO_STR,
@@ -28,6 +23,10 @@ enum fsm_ambig {
 	AMBIG_SINGLE   = AMBIG_ERROR | AMBIG_EARLIEST
 };
 
+/*
+ * Print options.
+ * This is separate to <fsm/print.h> because we also borrow it for libre.
+ */
 struct fsm_options {
 	/* boolean: true indicates to omit names for states in output */
 	unsigned int anonymous_states:1;
@@ -73,38 +72,6 @@ struct fsm_options {
 
 	/* the name of the enclosing package; NULL to use `prefix` (default). */
 	const char *package_prefix;
-
-	/*
-	 * Hooks to override generated code. These give an oportunity to
-	 * emit application-specific constructs, especially based on ids
-	 * attached to end states.
-	 *
-	 * These hooks are optional, and default to whatever makes sense
-	 * for the language.
-	 *
-	 * Placement in the output stream depends on the format.
-	 * This replaces an entire "return xyz;" statement for C-like formats,
-	 * but appends extra information for others.
-	 */
-	struct fsm_hooks {
-		/* character pointer, for C code fragment output. NULL for the default. */
-		const char *cp;
-
-		int (*args)(FILE *, const struct fsm_options *opt,
-			void *leaf_opaque);
-
-		/*
-		 * ids[] is sorted and does not have duplicates.
-		 */
-		int (*accept)(FILE *, const struct fsm_options *opt,
-			const fsm_end_id_t *ids, size_t count,
-			void *leaf_opaque);
-
-		int (*reject)(FILE *, const struct fsm_options *opt,
-			void *leaf_opaque);
-
-		void *hook_opaque;
-	} hooks;
 };
 
 #endif

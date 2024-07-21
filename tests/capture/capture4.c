@@ -90,11 +90,11 @@ build_and_combine(unsigned *cb_a, unsigned *cb_b)
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==================== abc \n");
-	fsm_print(stderr, f_abc, FSM_PRINT_FSM);
+	fsm_print(stderr, f_abc, NULL, NULL, FSM_PRINT_FSM);
 	fsm_capture_dump(stderr, "abc", f_abc);
 
 	fprintf(stderr, "==================== ab*c \n");
-	fsm_print(stderr, f_ab_c, FSM_PRINT_FSM);
+	fsm_print(stderr, f_ab_c, NULL, NULL, FSM_PRINT_FSM);
 	fsm_capture_dump(stderr, "ab*c", f_ab_c);
 #endif
 
@@ -110,7 +110,7 @@ build_and_combine(unsigned *cb_a, unsigned *cb_b)
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==================== post-union \n");
-	fsm_print(stderr, f_all, FSM_PRINT_FSM);
+	fsm_print(stderr, f_all, NULL, NULL, FSM_PRINT_FSM);
 	fsm_capture_dump(stderr, "capture_actions", f_all);
 	fprintf(stderr, "====================\n");
 #endif
@@ -121,7 +121,7 @@ build_and_combine(unsigned *cb_a, unsigned *cb_b)
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==================== post-det \n");
-	fsm_print(stderr, f_all, FSM_PRINT_FSM);
+	fsm_print(stderr, f_all, NULL, NULL, FSM_PRINT_FSM);
 	fsm_capture_dump(stderr, "capture_actions", f_all);
 	fprintf(stderr, "====================\n");
 #endif
@@ -144,7 +144,7 @@ det_and_min(const char *tag, struct fsm *fsm)
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==== after det_and_min: '%s'\n", tag);
-	fsm_print(stderr, fsm, FSM_PRINT_FSM);
+	fsm_print(stderr, fsm, NULL, NULL, FSM_PRINT_FSM);
 	fsm_capture_dump(stderr, tag, fsm);
 #endif
 

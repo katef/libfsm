@@ -53,13 +53,15 @@ cmp_operator(int cmp)
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
 	const char *prefix;
 
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque != NULL);
+
+	(void) hook_opaque;
 
 	prefix = lang_opaque;
 
@@ -74,13 +76,15 @@ default_accept(FILE *f, const struct fsm_options *opt,
 
 static int
 default_reject(FILE *f, const struct fsm_options *opt,
-	void *lang_opaque)
+	void *lang_opaque, void *hook_opaque)
 {
 	const char *prefix;
 
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque != NULL);
+
+	(void) hook_opaque;
 
 	prefix = lang_opaque;
 
@@ -119,13 +123,15 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 }
 
 static int
-print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
+print_end(FILE *f, const struct dfavm_op_ir *op,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	const char *prefix,
 	enum dfavm_op_end end_bits)
 {
 	switch (end_bits) {
 	case VM_END_FAIL:
-		if (-1 == print_hook_reject(f, opt, default_reject,
+		if (-1 == print_hook_reject(f, opt, hooks, default_reject,
 			(void *) prefix))
 		{
 			return -1;
@@ -133,7 +139,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
 		break;
 
 	case VM_END_SUCC:
-		if (-1 == print_hook_accept(f, opt,
+		if (-1 == print_hook_accept(f, opt, hooks,
 			op->endids.ids, op->endids.count,
 			default_accept,
 			(void *) prefix))
@@ -178,7 +184,10 @@ print_fetch(FILE *f, const struct fsm_options *opt, const char *prefix)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_vmopsfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
+fsm_print_vmopsfrag(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops,
 	const char *prefix)
 {
 	struct dfavm_op_ir *op;
@@ -197,7 +206,7 @@ fsm_print_vmopsfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *
 			if (-1 == print_cond(f, op, opt, prefix)) {
 				return -1;
 			}
-			if (-1 == print_end(f, op, opt, prefix, op->u.stop.end_bits)) {
+			if (-1 == print_end(f, op, opt, hooks, prefix, op->u.stop.end_bits)) {
 				return -1;
 			}
 			break;
@@ -206,7 +215,7 @@ fsm_print_vmopsfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *
 			if (-1 == print_fetch(f, opt, prefix)) {
 				return -1;
 			}
-			if (-1 == print_end(f, op, opt, prefix, op->u.fetch.end_bits)) {
+			if (-1 == print_end(f, op, opt, hooks, prefix, op->u.fetch.end_bits)) {
 				return -1;
 			}
 			break;
@@ -230,13 +239,17 @@ fsm_print_vmopsfrag(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *
 }
 
 int
-fsm_print_vmops(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
+fsm_print_vmops(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops,
 	enum vmops_dialect dialect)
 {
 	const char *prefix;
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
@@ -246,7 +259,7 @@ fsm_print_vmops(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 
 	if (opt->fragment) {
 		if (dialect == VMOPS_C) {
-			if (-1 == fsm_print_vmopsfrag(f, opt, ops, prefix)) {
+			if (-1 == fsm_print_vmopsfrag(f, opt, hooks, ops, prefix)) {
 				return -1;
 			}
 		}
@@ -258,7 +271,7 @@ fsm_print_vmops(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 			fprintf(f, "#include \"%svmops.h\"\n", prefix);
 			fprintf(f, "#endif /* %sLIBFSM_VMOPS_H */\n", prefix);
 			fprintf(f, "struct %sop %sOps[] = {\n", prefix, prefix);
-			if (-1 == fsm_print_vmopsfrag(f, opt, ops, prefix)) {
+			if (-1 == fsm_print_vmopsfrag(f, opt, hooks, ops, prefix)) {
 				return -1;
 			}
 			fprintf(f, "\t};\n");
@@ -413,20 +426,29 @@ fsm_print_vmops(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops,
 }
 
 int
-fsm_print_vmops_c(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
+fsm_print_vmops_c(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops)
 {
-	return fsm_print_vmops(f, opt, ops, VMOPS_C);
+	return fsm_print_vmops(f, opt, hooks, ops, VMOPS_C);
 }
 
 int
-fsm_print_vmops_h(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
+fsm_print_vmops_h(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops)
 {
-	return fsm_print_vmops(f, opt, ops, VMOPS_H);
+	return fsm_print_vmops(f, opt, hooks, ops, VMOPS_H);
 }
 
 int
-fsm_print_vmops_main(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *ops)
+fsm_print_vmops_main(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops)
 {
-	return fsm_print_vmops(f, opt, ops, VMOPS_MAIN);
+	return fsm_print_vmops(f, opt, hooks, ops, VMOPS_MAIN);
 }
 

@@ -1351,10 +1351,10 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 482 "src/libfsm/parser.act"
+#line 479 "src/libfsm/parser.act"
 
 
-	struct fsm *fsm_parse(FILE *f, const struct fsm_alloc *alloc, const struct fsm_options *opt) {
+	struct fsm *fsm_parse(FILE *f, const struct fsm_alloc *alloc) {
 		struct act_state act_state_s;
 		struct act_state *act_state;
 		struct lex_state lex_state_s;
@@ -1363,7 +1363,6 @@ ZL1:;
 		struct lx *lx;
 
 		assert(f != NULL);
-		assert(opt != NULL);
 
 		lex_state = &lex_state_s;
 
@@ -1396,8 +1395,6 @@ ZL1:;
 			return NULL;
 		}
 
-		fsm_setoptions(new, opt);
-
 		ADVANCE_LEXER;
 		switch (CURRENT_TERMINAL) {
 		case TOK_UNKNOWN:
@@ -1419,6 +1416,6 @@ ZL1:;
 		return new;
 	}
 
-#line 1423 "src/libfsm/parser.c"
+#line 1420 "src/libfsm/parser.c"
 
 /* END OF FILE */

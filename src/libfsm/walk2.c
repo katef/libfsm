@@ -9,10 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <fsm/fsm.h>
-#include <fsm/options.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
@@ -567,8 +567,6 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 		goto error;
 	}
 
-	fsm_setoptions(data.new, a->opt);
-
 	data.states = tuple_set_create(data.new->alloc, cmp_walk2_tuple);
 	if (data.states == NULL) {
 		goto error;
@@ -602,8 +600,6 @@ empty:
 	if (new == NULL) {
 		return NULL;
 	}
-
-	fsm_setoptions(new, a->opt);
 
 	return new;
 

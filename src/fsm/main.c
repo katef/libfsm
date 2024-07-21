@@ -485,7 +485,7 @@ main(int argc, char *argv[])
 		if ((op & OP_ARITY) == 1) {
 			/* argc < 1 is okay */
 
-			q = fsm_parse((argc == 0) ? stdin : xopen(argv[0]), alloc, &opt);
+			q = fsm_parse((argc == 0) ? stdin : xopen(argv[0]), alloc);
 			if (q == NULL) {
 				exit(EXIT_FAILURE);
 			}
@@ -495,12 +495,12 @@ main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 			}
 
-			a = fsm_parse(xopen(argv[0]), alloc, &opt);
+			a = fsm_parse(xopen(argv[0]), alloc);
 			if (a == NULL) {
 				exit(EXIT_FAILURE);
 			}
 
-			b = fsm_parse(xopen(argv[1]), alloc, &opt);
+			b = fsm_parse(xopen(argv[1]), alloc);
 			if (b == NULL) {
 				exit(EXIT_FAILURE);
 			}
@@ -713,7 +713,7 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (-1 == fsm_print(stdout, fsm, lang)) {
+	if (-1 == fsm_print(stdout, fsm, &opt, NULL, lang)) {
 		if (errno == ENOTSUP) {
 			fprintf(stderr, "unsupported IO API\n");
 		} else {

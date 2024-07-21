@@ -11,7 +11,6 @@
 #include <stdlib.h>
 
 #include <fsm/fsm.h>
-#include <fsm/options.h>
 
 #include <adt/common.h>
 
@@ -76,7 +75,6 @@ struct fsm {
 
 	struct fsm_capture_info *capture_info;
 	struct endid_info *endid_info;
-	const struct fsm_options *opt;
 };
 
 struct fsm *

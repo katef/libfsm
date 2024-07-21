@@ -26,7 +26,7 @@ int main(void)
 	size_t nend;
 	size_t nstates, state_ind;
 
-	s = "abc"; fsm = re_comp(RE_NATIVE, fsm_sgetc, &s, NULL, NULL, 0, NULL);
+	s = "abc"; fsm = re_comp(RE_NATIVE, fsm_sgetc, &s, NULL, 0, NULL);
 
 	ret = fsm_determinise(fsm);
 	assert(ret == 1);
