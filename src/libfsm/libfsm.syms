@@ -35,6 +35,7 @@ fsm_generate_cb_printf_escaped
 fsm_parse
 
 # <fsm/print.h>
+fsm_dump
 fsm_print
 fsm_print_amd64_att
 fsm_print_amd64_go

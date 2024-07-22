@@ -10,6 +10,11 @@
 struct fsm;
 struct fsm_options;
 
+/* a convenience for debugging */
+void fsm_dump(FILE *f, const struct fsm *fsm,
+	const char *file, unsigned line, const char *name);
+#define fsm_dump(f, fsm) (fsm_dump)((f), (fsm), __FILE__, __LINE__, #fsm);
+
 enum fsm_print_lang {
 	FSM_PRINT_NONE,       /* No output */
 

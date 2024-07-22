@@ -736,11 +736,11 @@ perf_case_run(struct perf_case *c, enum halt halt,
 
 #if DEBUG_VM_FSM
 	fprintf(stderr, "FSM:\n");
-	fsm_print(stderr, fsm, FSM_PRINT_FSM);
+	fsm_dump(stderr, fsm);
 	fprintf(stderr, "---\n");
 	{
 		FILE *f = fopen("dump.fsm", "w");
-		fsm_print(f, fsm, FSM_PRINT_FSM);
+		fsm_dump(f, fsm);
 		fclose(f);
 	}
 #endif /* DEBUG_VM_FSM */

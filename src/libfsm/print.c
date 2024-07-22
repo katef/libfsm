@@ -214,3 +214,26 @@ done:
 	return r;
 }
 
+void
+(fsm_dump)(FILE *f, const struct fsm *fsm,
+	const char *file, unsigned line, const char *name)
+{
+	assert(f != NULL);
+	assert(file != NULL);
+	assert(name != NULL);
+
+	fprintf(f, "# %s:%d %s\n", file, line, name);
+
+	if (fsm == NULL) {
+		fprintf(f, "# (null)\n");
+		return;
+	}
+
+	fsm_print(f, fsm, & (const struct fsm_options) {
+		.consolidate_edges = 1,
+		.comments = 1,
+		.group_edges = 1
+	}, NULL, FSM_PRINT_FSM);
+
+}
+

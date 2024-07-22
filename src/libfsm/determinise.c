@@ -46,7 +46,7 @@ fsm_determinise(struct fsm *nfa)
 
 #if LOG_DETERMINISE_CAPTURES || LOG_INPUT
 	fprintf(stderr, "# post_remove_epsilons, pre_determinise\n");
-	fsm_print(stderr, nfa, FSM_PRINT_FSM);
+	fsm_dump(stderr, nfa);
 	fsm_capture_dump(stderr, "#### post_remove_epsilons", nfa);
 #endif
 

@@ -62,12 +62,6 @@ scanner_next(void *opaque)
 	return (int) c;
 }
 
-static const struct fsm_options opt = {
-	.consolidate_edges = 1,
-	.comments = 1,
-	.group_edges = 1,
-};
-
 static int
 check_minimisation(const char *pattern)
 {
@@ -110,10 +104,10 @@ check_minimisation(const char *pattern)
 		    __func__, pattern, expected_state_count, state_count_min);
 
 		fprintf(stderr, "== expected:\n");
-		fsm_print(stderr, oracle_min, &opt, NULL, FSM_PRINT_FSM);
+		fsm_dump(stderr, oracle_min);
 
 		fprintf(stderr, "== got:\n");
-		fsm_print(stderr, fsm, &opt, NULL, FSM_PRINT_FSM);
+		fsm_dump(stderr, fsm);
 	}
 
 	fsm_free(oracle_min);
