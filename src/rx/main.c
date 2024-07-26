@@ -995,7 +995,7 @@ usage(const char *name)
 		name = p != NULL ? p + 1 : name;
 	}
 
-	printf("usage: %s: [-ciQquvx] [-C charset] [-k io] [-l <language> ] [-p prefix] [-r dialect] [-R reject] [-d declined-file] input-file...\n", name);
+	printf("usage: %s: [-ciQqsuvx] [-C charset] [-k io] [-l <language> ] [-p prefix] [-r dialect] [-R reject] [-d declined-file] input-file...\n", name);
 	printf("       %s -h\n", name);
 }
 
@@ -1006,6 +1006,7 @@ main(int argc, char *argv[])
 	bool strict = false;
 	bool verbose = false;
 	bool show_stats = false;
+	bool override_dialect = false;
 	bool unanchored_literals = false;
 	enum ambig ambig = AMBIG_ERROR;
 	const char *lang = "c";
@@ -1048,7 +1049,7 @@ main(int argc, char *argv[])
 		const char *name = argv[0];
 		int c;
 
-		while (c = getopt(argc, argv, "h" "C:cd:ikF:l:n:p:r:R:Qquvx"), c != -1) {
+		while (c = getopt(argc, argv, "h" "C:cd:ikF:l:n:p:r:sR:Qquvx"), c != -1) {
 			switch (c) {
 			case 'C':
 				charset = optarg;
@@ -1120,6 +1121,11 @@ main(int argc, char *argv[])
 
 			case 'r':
 				default_dialect = dialect_name(optarg);
+				break;
+
+			case 's':
+				/* override dialect by file extension */
+				override_dialect = true;
 				break;
 
 			case 'Q':
@@ -1228,12 +1234,14 @@ main(int argc, char *argv[])
 		char *s;
 		enum re_dialect dialect = default_dialect;
 
-		const char *ext = strrchr(argv[arg], '.');
-		if (ext != NULL) {
-			ext++;
-			fprintf(stderr, "overriding dialect by extension for %s: %s\n",
-				argv[arg], ext);
-			dialect = dialect_name(ext);
+		if (override_dialect) {
+			const char *ext = strrchr(argv[arg], '.');
+			if (ext != NULL) {
+				ext++;
+				fprintf(stderr, "overriding dialect by extension for %s: %s\n",
+					argv[arg], ext);
+				dialect = dialect_name(ext);
+			}
 		}
 
 		f = xopen(argv[arg]);
