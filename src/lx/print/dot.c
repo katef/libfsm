@@ -83,30 +83,30 @@ accept_dot(FILE *f, const struct fsm_options *opt,
 	ast = hook_opaque;
 	s = * (fsm_state_t *) lang_opaque;
 
-	m = ast_getendmappingbyendid(ids[0]);
-
 	fprintf(f, "label = <");
 
 	if (!anonymous_states) {
 		fprintf(f, "%u<br/>", s);
 	}
 
-	if (m->conflict != NULL) {
-		const struct mapping_set *p;
+	if (count == 1) {
+		m = ast_getendmappingbyendid(ids[0]);
+		mapping(f, m, ast);
+	} else {
+		size_t i;
 
 		fprintf(f, "<font color=\"red\">");
 
-		for (p = m->conflict; p != NULL; p = p->next) {
-			mapping(f, p->m, ast);
+		for (i = 0; i < count; i++) {
+			m = ast_getendmappingbyendid(ids[i]);
+			mapping(f, m, ast);
 
-			if (p->next != NULL) {
+			if (i + 1 < count) {
 				fprintf(f, "<br/>");
 			}
 		}
 
 		fprintf(f, "</font>");
-	} else {
-		mapping(f, m, ast);
 	}
 
 	fprintf(f, ">");
@@ -136,30 +136,15 @@ singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 	}
 	assert(m != NULL);
 
-	if (m->conflict != NULL) {
-		const struct mapping_set *p;
+	if (m->to != NULL) {
+		fsm_state_t start;
 
-		for (p = m->conflict; p != NULL; p = p->next) {
-			if (p->m->to != NULL) {
-				fsm_state_t start;
+		(void) fsm_getstart(m->to->fsm, &start);
 
-				(void) fsm_getstart(p->m->to->fsm, &start);
-
-				fprintf(f, "\tz%uS%u -> z%uS%u [ color = red, style = dashed ];\n",
-					zindexof(ast, z), s,
-					zindexof(ast, p->m->to), start);
-			}
-		}
-	} else {
-		if (m->to != NULL) {
-			fsm_state_t start;
-
-			(void) fsm_getstart(m->to->fsm, &start);
-
-			fprintf(f, "\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
-				zindexof(ast, z), s,
-				zindexof(ast, m->to), start);
-		}
+		fprintf(f, "\tz%uS%u -> z%uS%u [ color = %s, style = dashed ];\n",
+			zindexof(ast, z), s,
+			zindexof(ast, m->to), start,
+			fsm_endid_count(fsm, s) > 1 ? "red" : "cornflowerblue");
 	}
 }
 
@@ -199,6 +184,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		(void) sprintf(p, "z%u", zindexof(ast, z));
 
 		o.prefix = p;
+		o.fragment = 1;
 
  		hooks.accept      = accept_dot;
 		hooks.hook_opaque = (void *) ast;

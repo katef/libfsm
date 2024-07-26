@@ -105,6 +105,10 @@ struct ir {
 	struct ir_state *states; /* array */
 };
 
+/* caller frees */
+int
+make_example(const struct fsm *fsm, fsm_state_t s, char **example);
+
 /* TODO: can pass in mask of allowed strategies */
 struct ir *
 make_ir(const struct fsm *fsm, const struct fsm_options *opt);

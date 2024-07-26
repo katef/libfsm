@@ -21,6 +21,7 @@
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
+#include <fsm/print.h>
 #include <fsm/cost.h>
 #include <fsm/options.h>
 
@@ -328,12 +329,6 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 				fprintf(stderr, "zone_equal: asserting ast_getendmapping(q, state %d) != NULL: %p\n", i, (void *)m);
 			}
 			assert(m != NULL);
-
-			if (m->conflict != NULL) {
-				/* TODO: free conflict set */
-				fsm_free(q);
-				return 0;
-			}
 		}
 	}
 
@@ -526,6 +521,73 @@ run_threads(int concurrency, void *(*fn)(void *))
 	return 0;
 }
 
+static int
+conflict(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count, const char *example,
+	void *hook_opaque)
+{
+	const struct ast *ast;
+	size_t i;
+
+	assert(opt != NULL);
+	assert(opt->ambig == AMBIG_ERROR);
+	assert(count > 1);
+
+	(void) f;
+	(void) opt;
+	(void) hook_opaque;
+
+	ast = hook_opaque;
+
+	/* TODO: // delimeters depend on dialect */
+	/* TODO: would deal with dialect: prefix here, too */
+
+	fprintf(stderr, "ambiguous mappings to ");
+
+	for (i = 0; i < count; i++) {
+		const struct ast_mapping *m;
+
+		/*
+		 * When the example is '', we have two patterns which match the empty string.
+		 * Here we defer to the error about the start state accepting,
+		 * and it seems redundant to also show an error about both patterns
+		 * matching the same input, even if there's a non-empty part.
+		 */
+		if (example != NULL && strlen(example) == 0) {
+			continue;
+		}
+
+		m = ast_getendmappingbyendid(ids[i]);
+
+		if (m->token != NULL) {
+			fprintf(stderr, "$%s", m->token->s);
+		} else if (m->to == NULL) {
+			fprintf(stderr, "skip");
+		}
+		if (m->token != NULL && m->to != NULL) {
+			fprintf(stderr, "/");
+		}
+		if (m->to == ast->global) {
+			fprintf(stderr, "global zone");
+		} else if (m->to != NULL) {
+			fprintf(stderr, "z%p", (void *) m->to); /* TODO: zindexof(n->to) */
+		}
+
+		if (i + 1 < count) {
+			fprintf(stderr, ", ");
+		}
+	}
+
+	if (example != NULL) {
+		/* TODO: escape hex etc */
+		fprintf(stderr, "; for example on input '%s'", example);
+	}
+
+	fprintf(stderr, "\n");
+
+	return 0;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -538,7 +600,6 @@ main(int argc, char *argv[])
 	print_progress = 0;
 	concurrency = 1;
 
-	/* TODO: populate options */
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
 	opt.comments          = 1;
@@ -798,7 +859,6 @@ main(int argc, char *argv[])
 	if (lang != LX_PRINT_H) {
 		struct ast_zone  *z;
 		unsigned int zn;
-		fsm_state_t i;
 		int e;
 
 		if (print_progress) {
@@ -829,6 +889,18 @@ main(int argc, char *argv[])
 				zn++;
 			}
 
+			switch (lang) {
+			case LX_PRINT_NONE:
+			case LX_PRINT_C:
+			case LX_PRINT_H:
+				opt.ambig = AMBIG_ERROR;
+				break;
+
+			default:
+				opt.ambig = AMBIG_MULTIPLE;
+				continue;
+			}
+
 			(void) fsm_getstart(z->fsm, &start);
 
 			if (fsm_isend(z->fsm, start)) {
@@ -836,68 +908,26 @@ main(int argc, char *argv[])
 				e = 1;
 			}
 
-			/* pick up conflicts flagged by carryopaque() */
-			for (i = 0; i < z->fsm->statecount; i++) {
-				struct ast_mapping *m;
+			{
+				static const struct fsm_hooks zero_hooks;
+				struct fsm_hooks hooks = zero_hooks;
+				int r;
 
-				if (!fsm_isend(z->fsm, i)) {
-					continue;
+				hooks.conflict = conflict;
+				hooks.hook_opaque = ast;
+
+				r = fsm_print(stdout, z->fsm, &opt, &hooks, FSM_PRINT_NONE);
+
+				if (r < 0) {
+					exit(EXIT_FAILURE);
 				}
 
-				m = ast_getendmapping(z->fsm, i);
-				if (LOG()) {
-					fprintf(stderr, "main: m <- ast_getendmapping(dst_fsm, i]: %d) = %p    // pick up conflicts\n", i, (void *)m);
-				}
-				assert(m != NULL);
-
-				if (m->conflict != NULL) {
-					struct mapping_set *p;
-					char buf[50]; /* 50 looks reasonable for an on-screen limit */
-					int n;
-
-					n = fsm_example(z->fsm, i, buf, sizeof buf);
-					if (-1 == n) {
-						perror("fsm_example");
-						return EXIT_FAILURE;
-					}
-
-					/*
-					 * When n == 0, we have two patterns which match the empty string.
-					 * Here we defer to the error about the start state accepting,
-					 * and it seems redundant to also show an error about both patterns
-					 * matching the same input, even if there's a non-empty part.
-					 */
-					if (n > 0) {
-						fprintf(stderr, "ambiguous mappings to ");
-
-						for (p = m->conflict; p != NULL; p = p->next) {
-							if (p->m->token != NULL) {
-								fprintf(stderr, "$%s", p->m->token->s);
-							} else if (p->m->to == NULL) {
-								fprintf(stderr, "skip");
-							}
-							if (p->m->token != NULL && p->m->to != NULL) {
-								fprintf(stderr, "/");
-							}
-							if (p->m->to == ast->global) {
-								fprintf(stderr, "global zone");
-							} else if (p->m->to != NULL) {
-								fprintf(stderr, "z%p", (void *) p->m->to); /* TODO: zindexof(n->to) */
-							}
-
-							if (p->next != NULL) {
-								fprintf(stderr, ", ");
-							}
-						}
-
-						/* TODO: escape hex etc */
-						fprintf(stderr, "; for example on input '%s%s'\n", buf,
-							n >= (int) sizeof buf - 1 ? "..." : "");
-
-						e = 1;
-					}
+				if (r == 1) {
+					/* conflict */
+					exit(EXIT_FAILURE);
 				}
 			}
+
 		}
 
 		if (print_progress) {
@@ -932,9 +962,6 @@ main(int argc, char *argv[])
 				}
 				if (m != NULL) {
 					assert(m->fsm == NULL);
-
-					/* TODO: free m->conflict, allocated in carryopaque */
-					(void) m->conflict;
 				}
 			}
 		}

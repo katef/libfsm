@@ -386,6 +386,7 @@ main(int argc, char *argv[])
 	atexit(do_fsm_cleanup);
 
 	opt = zero_options;
+	opt.ambig    = AMBIG_MULTIPLE;
 	opt.comments = 1;
 	opt.io       = FSM_IO_GETC;
 

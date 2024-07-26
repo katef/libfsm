@@ -431,6 +431,80 @@ make_state(const struct fsm *fsm, fsm_state_t state,
 	return 0;
 }
 
+int
+make_example(const struct fsm *fsm, fsm_state_t s, char **example)
+{
+	fsm_state_t start;
+	size_t count;
+	char *p;
+	int n;
+
+	assert(fsm != NULL);
+	assert(example != NULL);
+
+	if (!fsm_getstart(fsm, &start)) {
+		*example = NULL;
+		return 1;
+	}
+
+	count = fsm_countstates(fsm);
+
+	/*
+	 * Example lengths are approximately proportional to the number of states,
+	 * and shorter where the graph branches often.
+	 */
+	p = f_malloc(fsm->alloc, count + 3 + 1);
+	if (p == NULL) {
+		return 0;
+	}
+
+	/*
+	 * fsm_example() doesn't distinguish an unreachable state from n = 0
+	 */
+	if (s == start) {
+		p[0] = '\0';
+		goto done;
+	}
+
+	n = fsm_example(fsm, s, p, count + 1);
+	if (-1 == n) {
+		goto error;
+	}
+
+	/*
+	 * The goal state is always reachable for a DFA with
+	 * no "stray" states, but the caller may not trim an FSM,
+	 * and need not pass a DFA.
+	 */
+	if (n == 0) {
+		f_free(fsm->alloc, p);
+		p = NULL;
+	} else if ((size_t) n < count + 1) {
+		char *tmp;
+
+		tmp = f_realloc(fsm->alloc, p, strlen(p) + 1);
+		if (tmp == NULL) {
+			goto error;
+		}
+
+		p = tmp;
+	} else if ((size_t) n > count + 1) {
+		strcpy(p + count, "...");
+	}
+
+done:
+
+	*example = p;
+
+	return 1;
+
+error:
+
+	f_free(fsm->alloc, p);
+
+	return 0;
+}
+
 struct ir *
 make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 {
@@ -500,54 +574,13 @@ make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 		if (!opt->comments) {
 			ir->states[i].example = NULL;
 		} else {
-			char *p;
-			int n;
+			char *example;
 
-			if (i == start) {
-				ir->states[i].example = NULL;
-				continue;
-			}
-
-			/*
-			 * Example lengths are approximately proportional
-			 * to the number of states in an fsm, and shorter where
-			 * the graph branches often.
-			 */
-			p = f_malloc(fsm->alloc, ir->n + 3 + 1);
-			if (p == NULL) {
+			if (!make_example(fsm, i, &example)) {
 				goto error_example;
 			}
 
-			n = fsm_example(fsm, i, p, ir->n + 1);
-			if (-1 == n) {
-				f_free(fsm->alloc, p);
-				goto error_example;
-			}
-
-			/*
-			 * The goal state is always reachable for a DFA with
-			 * no "stray" states, but the caller may not trim an FSM.
-			 */
-			if (n == 0) {
-				f_free(fsm->alloc, p);
-				p = NULL;
-			} else if ((size_t) n < ir->n + 1) {
-				char *tmp;
-
-				n = strlen(p);
-
-				tmp = f_realloc(fsm->alloc, p, n + 1);
-				if (tmp == NULL) {
-					f_free(fsm->alloc, p);
-					goto error_example;
-				}
-
-				p = tmp;
-			} else if ((size_t) n > ir->n + 1) {
-				strcpy(p + ir->n, "...");
-			}
-
-			ir->states[i].example = p;
+			ir->states[i].example = example;
 		}
 	}
 
@@ -577,7 +610,6 @@ empty:
 
 error_example:
 
-	ir->states[i].example = NULL;
 	i++;
 
 error:

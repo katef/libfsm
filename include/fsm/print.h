@@ -53,23 +53,29 @@ enum fsm_print_lang {
  * Placement in the output stream depends on the format.
  * This replaces an entire "return xyz;" statement for C-like formats,
  * but appends extra information for others.
+ *
+ * ids[] is sorted and does not have duplicates.
+ *
+ * example may be NULL.
  */
 struct fsm_hooks {
 	/* character pointer, for C code fragment output. NULL for the default. */
 	const char *cp;
 
 	int (*args)(FILE *, const struct fsm_options *opt,
-		void *leaf_opaque, void *hook_opaque);
+		void *lang_opaque, void *hook_opaque);
 
-	/*
-	 * ids[] is sorted and does not have duplicates.
-	 */
 	int (*accept)(FILE *, const struct fsm_options *opt,
 		const fsm_end_id_t *ids, size_t count,
-		void *leaf_opaque, void *hook_opaque);
+		void *lang_opaque, void *hook_opaque);
 
 	int (*reject)(FILE *, const struct fsm_options *opt,
-		void *leaf_opaque, void *hook_opaque);
+		void *lang_opaque, void *hook_opaque);
+
+	int (*conflict)(FILE *, const struct fsm_options *opt,
+		const fsm_end_id_t *ids, size_t count,
+		const char *example,
+		void *hook_opaque);
 
 	void *hook_opaque;
 };

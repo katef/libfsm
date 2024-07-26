@@ -14,7 +14,6 @@ struct ast_mapping {
 	struct fsm *fsm;
 	struct ast_token *token;
 	struct ast_zone  *to;
-	struct mapping_set *conflict;
 
 	struct ast_mapping *next;
 };
@@ -32,11 +31,6 @@ struct ast_token {
 	const char *s;
 
 	struct ast_token *next;
-};
-
-struct mapping_set {
-	struct ast_mapping *m;
-	struct mapping_set *next;
 };
 
 struct ast {
@@ -58,9 +52,6 @@ ast_addzone(struct ast *ast, struct ast_zone *parent);
 struct ast_mapping *
 ast_addmapping(struct ast_zone *z, struct fsm *fsm,
 	struct ast_token *token, struct ast_zone *to);
-
-struct mapping_set *
-ast_addconflict(struct mapping_set **head, struct ast_mapping *n);
 
 int
 ast_setendmapping(struct fsm *fsm, struct ast_mapping *m);

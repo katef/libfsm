@@ -10,6 +10,7 @@
 #include <errno.h>
 
 #include <fsm/fsm.h>
+#include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
 #include <fsm/vm.h>
@@ -61,6 +62,10 @@ print_hook_accept(FILE *f,
 	assert(opt != NULL);
 	assert(hooks != NULL);
 
+	if (opt->ambig == AMBIG_ERROR) {
+		assert(count <= 1);
+	}
+
 	if (default_accept == NULL) {
 		assert(lang_opaque == NULL);
 	}
@@ -104,6 +109,105 @@ print_hook_reject(FILE *f,
 }
 
 int
+print_hook_conflict(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const fsm_end_id_t *ids, size_t count,
+	const char *example)
+{
+	assert(opt != NULL);
+	assert(hooks != NULL);
+
+	/* f may be NULL for FSM_PRINT_NONE */
+
+	if (hooks->conflict != NULL) {
+		return hooks->conflict(f, opt, ids, count,
+			example,
+			hooks->hook_opaque);
+	}
+
+	return 0;
+}
+
+static int
+print_conflicts(FILE *f, const struct fsm *fsm,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks)
+{
+	fsm_state_t s;
+	int conflicts;
+
+	assert(fsm != NULL);
+	assert(opt != NULL);
+	assert(hooks != NULL);
+
+	conflicts = 0;
+
+	for (s = 0; s < fsm->statecount; s++) {
+		char *example;
+		fsm_end_id_t *ids;
+		size_t count;
+		int res;
+
+		if (!fsm_isend(fsm, s)) {
+			continue;
+		}
+
+		count = fsm_endid_count(fsm, s);
+		if (count <= 1) {
+			continue;
+		}
+
+		/*
+		 * It's unfortunate that we call fsm_example() and allocate ids[] here
+		 * as well as during make_ir(), but I can't find a way to do them in
+		 * just one place. That's because we handle conflicts for output formats
+		 * where there isn't an ir, and because the ir only exists for DFA,
+		 * we can't move all output formats to use the ir.
+		 */
+
+		if (!make_example(fsm, s, &example)) {
+			goto error;
+		}
+
+		ids = f_malloc(fsm->alloc, count * sizeof *ids);
+		if (ids == NULL) {
+			goto error;
+		}
+
+		res = fsm_endid_get(fsm, s, count, ids);
+		assert(res == 1);
+
+		// TODO: de-duplicate by ids[], so we don't call the conflict hook an unneccessary number of times
+
+		/*
+		 * The conflict hook is called here (rather in the caller),
+		 * because it can be called multiple times, for different states.
+		 */
+		if (-1 == print_hook_conflict(f, opt, hooks,
+			ids, count,
+			example))
+		{
+			goto error;
+		}
+
+		if (example != NULL) {
+			f_free(fsm->alloc, example);
+		}
+
+		f_free(fsm->alloc, ids);
+
+		conflicts++;
+	}
+
+	return conflicts;
+
+error:
+
+	return -1;
+}
+
+int
 fsm_print(FILE *f, const struct fsm *fsm,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
@@ -127,7 +231,9 @@ fsm_print(FILE *f, const struct fsm *fsm,
 	ir_print_f *print_ir   = NULL;
 	vm_print_f *print_vm   = NULL;
 
-	assert(f != NULL);
+	if (lang != FSM_PRINT_NONE) {
+		assert(f != NULL);
+	}
 
 	if (opt == NULL) {
 		opt = &opt_zero;
@@ -137,11 +243,40 @@ fsm_print(FILE *f, const struct fsm *fsm,
 		hooks = &hooks_zero;
 	}
 
-	if (lang == FSM_PRINT_NONE) {
-		return 0;
+	ir = NULL;
+
+	/*
+	 * fsm_print() can print an NFA or a DFA. The ir is DFA-only.
+	 * So we can't use the ir for ambiguity checks, because it
+	 * can't be constructed when we have an NFA.
+	 *
+	 * That also means we can't move all output routines to ir-only,
+	 * we need to keep struct fsm around. So we're walking the fsm
+	 * struct to check for ambiguities.
+	 *
+	 * This could be done conditionally, only when print_fsm != NULL
+	 * and then we'd also check for ambiguities for ir and vm output
+	 * at the point where the accept hook is called. But there's no
+	 * reason to do that, it's simpler to detect all the conflicts
+	 * ahead of time regardless.
+	 */
+	if (opt->ambig == AMBIG_ERROR) {
+		int count;
+
+		count = print_conflicts(f, fsm, opt, hooks);
+		if (count == -1) {
+			goto error;
+		}
+
+		if (count > 0) {
+			goto conflict;
+		}
 	}
 
 	switch (lang) {
+	case FSM_PRINT_NONE:
+		return 0;
+
 	case FSM_PRINT_AMD64_ATT:  print_vm  = fsm_print_amd64_att;  break;
 	case FSM_PRINT_AMD64_GO:   print_vm  = fsm_print_amd64_go;   break;
 	case FSM_PRINT_AMD64_NASM: print_vm  = fsm_print_amd64_nasm; break;
@@ -170,16 +305,30 @@ fsm_print(FILE *f, const struct fsm *fsm,
 		return -1;
 	}
 
-	ir = NULL;
+	r = 0;
 
 	if (print_fsm != NULL) {
 		r = print_fsm(f, opt, hooks, fsm);
 		goto done;
 	}
 
+	/* DFA only after this point */
+
 	ir = make_ir(fsm, opt);
 	if (ir == NULL) {
 		return -1;
+	}
+
+	if (opt->ambig == AMBIG_ERROR) {
+		size_t i;
+
+		for (i = 0; i < ir->n; i++) {
+			if (!ir->states[i].isend) {
+				continue;
+			}
+
+			assert(ir->states[i].endids.count <= 1);
+		}
 	}
 
 	if (print_ir != NULL) {
@@ -211,7 +360,27 @@ done:
 		return -1;
 	}
 
-	return r;
+	if (r < 0) {
+		goto error;
+	}
+
+	return 0;
+
+conflict:
+
+	/*
+	 * Finding an ambiguity conflict is not an error;
+	 * we successfully identified AMBIG_ERROR.
+	 *
+	 * Success is >= 0 for a print function, we're
+	 * distinguishing this from done: just for the caller.
+	 */
+
+	return 1;
+
+error:
+
+	return -1;
 }
 
 void
