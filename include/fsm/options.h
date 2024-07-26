@@ -13,7 +13,25 @@ enum fsm_io {
 	FSM_IO_PAIR
 };
 
-// TODO: comment
+/*
+ * Ambiguity mode. 
+ *
+ * The ambiguity mode controls how endids are emitted into generated code,
+ * and passed to the hooks.accept() callback for an accepting state.
+ *
+ * This also causes fsm_print() to resolve endid conflicts in various ways
+ * for accepting states that have multiple endids present:
+ *
+ *   AMBIG_NONE     - Do not emit endids.
+ *   AMBIG_ERROR    - Emit a single endid.
+ *                    hook.conflict() is called for accepting states
+ *                    which have multiple endids, and printing errors.
+ *   AMBIG_EARLIEST - Emit the lowest numbered endid only.
+ *   AMBIG_MULTIPLE - Emit all endids.
+ *
+ * What it means to emit multiple or single endids is particular to each
+ * output language; not every language supports both.
+ */
 enum fsm_ambig {
 	AMBIG_NONE     = 0, /* default */
 	AMBIG_ERROR    = 1 << 0,
@@ -25,6 +43,7 @@ enum fsm_ambig {
 
 /*
  * Print options.
+ *
  * This is separate to <fsm/print.h> because we also borrow it for libre.
  */
 struct fsm_options {
