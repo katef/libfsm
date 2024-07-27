@@ -1,0 +1,161 @@
+/*
+ * Copyright 2008-2024 Katherine Flavel
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
+#include <assert.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <errno.h>
+
+#include <fsm/fsm.h>
+
+#include "libfsm/vm/vm.h"
+#include "libfsm/vm/retlist.h"
+
+static bool
+append_ret(struct ret_list *list,
+	const fsm_end_id_t *ids, size_t count)
+{
+	const size_t low    = 16; /* must be power of 2 */
+	const size_t factor =  2; /* must be even */
+
+	assert(list != NULL);
+
+	// TODO: alloc callbacks
+	if (list->count == 0) {
+		list->a = malloc(low * sizeof *list->a);
+		if (list->a == NULL) {
+			return false;
+		}
+	} else if (list->count >= low && (list->count & (list->count - 1)) == 0) {
+		void *tmp;
+		size_t new = list->count * factor;
+		if (new < list->count) {
+			errno = E2BIG;
+			perror("realloc");
+			exit(EXIT_FAILURE);
+		}
+
+		tmp = realloc(list->a, new * sizeof *list->a);
+		if (tmp == NULL) {
+			return false;
+		}
+
+		list->a = tmp;
+	}
+
+	list->a[list->count].ids = ids;
+	list->a[list->count].count = count;
+
+	list->count++;
+
+	return true;
+}
+
+int
+cmp_ret_by_endid(const void *pa, const void *pb)
+{
+	const struct ret *a = pa;
+	const struct ret *b = pb;
+
+	if (a->count < b->count) { return -1; }
+	if (a->count > b->count) { return +1; }
+
+	return memcmp(a->ids, b->ids, a->count * sizeof *a->ids);
+}
+
+struct ret *
+find_ret(const struct ret_list *list, const struct dfavm_op_ir *op,
+	int (*cmp)(const void *pa, const void *pb))
+{
+	struct ret key;
+
+	assert(op != NULL);
+	assert(cmp != NULL);
+
+	key.count    = op->endids.count;
+	key.ids      = op->endids.ids;
+
+	return bsearch(&key, list->a, list->count, sizeof *list->a, cmp);
+}
+
+bool
+build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
+{
+	const struct dfavm_op_ir *op;
+
+	assert(list != NULL);
+
+	list->count = 0;
+
+	for (op = a; op != NULL; op = op->next) {
+		switch (op->instr) {
+		case VM_OP_STOP:
+			if (op->u.stop.end_bits == VM_END_FAIL) {
+				/* %fail is special, don't add to retlist */
+				continue;
+			}
+
+			break;
+
+		case VM_OP_FETCH:
+			if (op->u.fetch.end_bits == VM_END_FAIL) {
+				/* %fail is special, don't add to retlist */
+				continue;
+			}
+
+			break;
+
+		case VM_OP_BRANCH:
+			continue;
+
+		default:
+			assert(!"unreached");
+			abort();
+		}
+
+		if (!append_ret(list, op->endids.ids, op->endids.count)) {
+			return false;
+		}
+	}
+
+	if (list->count > 0) {
+		size_t j = 0;
+
+		/* sort for both dedup and bsearch */
+		qsort(list->a, list->count, sizeof *list->a, cmp_ret_by_endid);
+
+		/* deduplicate based on endids only.
+		 * j is the start of a run; i increments until we find
+		 * the start of the next run */
+		for (size_t i = 1; i < list->count; i++) {
+			assert(i > j);
+			if (cmp_ret_by_endid(&list->a[j], &list->a[i]) == 0) {
+				continue;
+			}
+
+			j++;
+			list->a[j] = list->a[i];
+		}
+
+		list->count = j + 1;
+
+		assert(list->count > 0);
+	}
+
+	return true;
+}
+
+void
+free_retlist(struct ret_list *list)
+{
+	if (list->count > 0) {
+		free(list->a);
+	}
+}
+

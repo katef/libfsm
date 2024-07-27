@@ -29,6 +29,7 @@
 #include "libfsm/print.h"
 
 #include "libfsm/vm/vm.h"
+#include "libfsm/vm/retlist.h"
 
 #define OPAQUE_POINTERS 1
 
@@ -43,16 +44,6 @@ static const char *ptr_void = "i8*";
 #endif
 
 static const struct dfavm_op_ir fail; // used as a unqiue address only
-
-struct ret {
-	size_t count;
-	const fsm_end_id_t *ids;
-};
-
-struct ret_list {
-	size_t count;
-	struct ret *a;
-};
 
 /*
  * If we had a stack, the current set of live values would be a frame.
@@ -410,113 +401,6 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 	}
 }
 
-static bool
-append_ret(struct ret_list *list,
-	const fsm_end_id_t *ids, size_t count)
-{
-	const size_t low    = 16; /* must be power of 2 */
-	const size_t factor =  2; /* must be even */
-
-	assert(list != NULL);
-
-	if (list->count == 0) {
-		list->a = malloc(low * sizeof *list->a);
-		if (list->a == NULL) {
-			return false;
-		}
-	} else if (list->count >= low && (list->count & (list->count - 1)) == 0) {
-		void *tmp;
-		size_t new = list->count * factor;
-		if (new < list->count) {
-			errno = E2BIG;
-			perror("realloc");
-			exit(EXIT_FAILURE);
-		}
-
-		tmp = realloc(list->a, new * sizeof *list->a);
-		if (tmp == NULL) {
-			return false;
-		}
-
-		list->a = tmp;
-	}
-
-	list->a[list->count].ids = ids;
-	list->a[list->count].count = count;
-
-	list->count++;
-
-	return true;
-}
-
-static int
-cmp_ret_by_endid(const void *pa, const void *pb)
-{
-	const struct ret *a = pa;
-	const struct ret *b = pb;
-
-	if (a->count < b->count) { return -1; }
-	if (a->count > b->count) { return +1; }
-
-	return memcmp(a->ids, b->ids, a->count * sizeof *a->ids);
-}
-
-static struct ret *
-find_ret(const struct ret_list *list, const struct dfavm_op_ir *op,
-	int (*cmp)(const void *pa, const void *pb))
-{
-	struct ret key;
-
-	assert(op != NULL);
-	assert(cmp != NULL);
-
-	key.count    = op->endids.count;
-	key.ids      = op->endids.ids;
-
-	return bsearch(&key, list->a, list->count, sizeof *list->a, cmp);
-}
-
-static bool
-build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
-{
-	const struct dfavm_op_ir *op;
-
-	assert(list != NULL);
-
-	for (op = a; op != NULL; op = op->next) {
-		switch (op->instr) {
-		case VM_OP_STOP:
-			if (op->u.stop.end_bits == VM_END_FAIL) {
-				/* %fail is special, don't add to retlist */
-				continue;
-			}
-
-			break;
-
-		case VM_OP_FETCH:
-			if (op->u.fetch.end_bits == VM_END_FAIL) {
-				/* %fail is special, don't add to retlist */
-				continue;
-			}
-
-			break;
-
-		case VM_OP_BRANCH:
-			continue;
-
-		default:
-			assert(!"unreached");
-			abort();
-		}
-
-		if (!append_ret(list, op->endids.ids, op->endids.count)) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
 /* TODO: eventually to be non-static */
 static int
 fsm_print_llvmfrag(FILE *f,
@@ -546,32 +430,7 @@ fsm_print_llvmfrag(FILE *f,
 	}
 
 	{
-		retlist.count = 0;
 		build_retlist(&retlist, ops);
-
-		if (retlist.count > 0) {
-			size_t j = 0;
-
-			/* sort for both dedup and bsearch */
-			qsort(retlist.a, retlist.count, sizeof *retlist.a, cmp_ret_by_endid);
-
-			/* deduplicate based on endids only.
-			 * j is the start of a run; i increments until we find
-			 * the start of the next run */
-			for (size_t i = 1; i < retlist.count; i++) {
-				assert(i > j);
-				if (cmp_ret_by_endid(&retlist.a[j], &retlist.a[i]) == 0) {
-					continue;
-				}
-
-				j++;
-				retlist.a[j] = retlist.a[i];
-			}
-
-			retlist.count = j + 1;
-
-			assert(retlist.count > 0);
-		}
 
 		print_jump(f, ops);
 
@@ -734,9 +593,7 @@ fsm_print_llvmfrag(FILE *f,
 		}
 	}
 
-	if (retlist.count > 0) {
-		free(retlist.a);
-	}
+	free_retlist(&retlist);
 
 	return 0;
 }
