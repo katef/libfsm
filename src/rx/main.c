@@ -995,7 +995,7 @@ usage(const char *name)
 		name = p != NULL ? p + 1 : name;
 	}
 
-	printf("usage: %s: [-ciQqsuvx] [-C charset] [-k io] [-l <language> ] [-p prefix] [-r dialect] [-R reject] [-d declined-file] input-file...\n", name);
+	printf("usage: %s: [-ciQqsuvx] [-C charset] [-k io] [-l <language> ] [-r dialect] [-R reject] [-d declined-file] [-E <package_prefix>] [-e <prefix>] input-file...\n", name);
 	printf("       %s -h\n", name);
 }
 
@@ -1049,7 +1049,7 @@ main(int argc, char *argv[])
 		const char *name = argv[0];
 		int c;
 
-		while (c = getopt(argc, argv, "h" "C:cd:ikF:l:n:p:r:sR:Qquvx"), c != -1) {
+		while (c = getopt(argc, argv, "h" "C:cd:E:e:ikF:l:n:r:sR:Qquvx"), c != -1) {
 			switch (c) {
 			case 'C':
 				charset = optarg;
@@ -1083,6 +1083,14 @@ main(int argc, char *argv[])
 				declined_file = optarg;
 				break;
 
+			case 'E':
+				opt.package_prefix = optarg;
+				break;
+
+			case 'e':
+				opt.prefix = optarg;
+				break;
+
 			case 'h':
 				usage(name);
 				exit(EXIT_SUCCESS);
@@ -1105,10 +1113,6 @@ main(int argc, char *argv[])
 
 			case 'n':
 				general_limit = atoi(optarg);
-				break;
-
-			case 'p':
-				opt.prefix = optarg;
 				break;
 
 			case 'R':

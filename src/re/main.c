@@ -63,7 +63,7 @@ usage(void)
 {
 	fprintf(stderr, "usage: re    [-r <dialect>] [-nbiusfyz] [-x] <re> ... [ <text> | -- <text> ... ]\n");
 	fprintf(stderr, "       re    [-r <dialect>] [-nbiusfyz] {-q <query>} <re> ...\n");
-	fprintf(stderr, "       re -p [-r <dialect>] [-nbiusfyz] [-l <language>] [-acwX] [-k <io>] [-e <prefix>] <re> ...\n");
+	fprintf(stderr, "       re -p [-r <dialect>] [-nbiusfyz] [-l <language>] [-acwX] [-k <io>] [-E <package_prefix>] [-e <prefix>] <re> ...\n");
 	fprintf(stderr, "       re -m [-r <dialect>] [-nbiusfyz] <re> ...\n");
 	fprintf(stderr, "       re -G <max_length> [-r <dialect>] [-biu] <re>\n");
 	fprintf(stderr, "       re -h\n");
