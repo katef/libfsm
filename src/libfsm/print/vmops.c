@@ -25,6 +25,7 @@
 #include "libfsm/internal.h"
 #include "libfsm/print.h"
 
+#include "libfsm/vm/retlist.h"
 #include "libfsm/vm/vm.h"
 
 enum vmops_dialect {
@@ -140,7 +141,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 
 	case VM_END_SUCC:
 		if (-1 == print_hook_accept(f, opt, hooks,
-			op->endids.ids, op->endids.count,
+			op->ret->ids, op->ret->count,
 			default_accept,
 			(void *) prefix))
 		{
@@ -187,6 +188,7 @@ static int
 fsm_print_vmopsfrag(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops,
 	const char *prefix)
 {
@@ -194,6 +196,8 @@ fsm_print_vmopsfrag(FILE *f,
 
 	assert(f != NULL);
 	assert(opt != NULL);
+
+	(void) retlist;
 
 	for (op = ops; op != NULL; op = op->next) {
 		if (op->num_incoming > 0) {
@@ -242,6 +246,7 @@ int
 fsm_print_vmops(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops,
 	enum vmops_dialect dialect)
 {
@@ -259,7 +264,7 @@ fsm_print_vmops(FILE *f,
 
 	if (opt->fragment) {
 		if (dialect == VMOPS_C) {
-			if (-1 == fsm_print_vmopsfrag(f, opt, hooks, ops, prefix)) {
+			if (-1 == fsm_print_vmopsfrag(f, opt, hooks, retlist, ops, prefix)) {
 				return -1;
 			}
 		}
@@ -271,7 +276,7 @@ fsm_print_vmops(FILE *f,
 			fprintf(f, "#include \"%svmops.h\"\n", prefix);
 			fprintf(f, "#endif /* %sLIBFSM_VMOPS_H */\n", prefix);
 			fprintf(f, "struct %sop %sOps[] = {\n", prefix, prefix);
-			if (-1 == fsm_print_vmopsfrag(f, opt, hooks, ops, prefix)) {
+			if (-1 == fsm_print_vmopsfrag(f, opt, hooks, retlist, ops, prefix)) {
 				return -1;
 			}
 			fprintf(f, "\t};\n");
@@ -429,26 +434,29 @@ int
 fsm_print_vmops_c(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
-	return fsm_print_vmops(f, opt, hooks, ops, VMOPS_C);
+	return fsm_print_vmops(f, opt, hooks, retlist, ops, VMOPS_C);
 }
 
 int
 fsm_print_vmops_h(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
-	return fsm_print_vmops(f, opt, hooks, ops, VMOPS_H);
+	return fsm_print_vmops(f, opt, hooks, retlist, ops, VMOPS_H);
 }
 
 int
 fsm_print_vmops_main(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
-	return fsm_print_vmops(f, opt, hooks, ops, VMOPS_MAIN);
+	return fsm_print_vmops(f, opt, hooks, retlist, ops, VMOPS_MAIN);
 }
 

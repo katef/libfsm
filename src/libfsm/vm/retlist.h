@@ -7,6 +7,8 @@
 #ifndef FSM_INTERNAL_RETLIST_H
 #define FSM_INTERNAL_RETLIST_H
 
+struct ir;
+
 struct ret {
 	size_t count;
 	const fsm_end_id_t *ids;
@@ -17,15 +19,11 @@ struct ret_list {
 	struct ret *a;
 };
 
-int
-cmp_ret_by_endid(const void *pa, const void *pb);
-
 struct ret *
-find_ret(const struct ret_list *list, const struct dfavm_op_ir *op,
-	int (*cmp)(const void *pa, const void *pb));
+find_ret(const struct ret_list *list, const fsm_end_id_t *ids, size_t count);
 
 bool
-build_retlist(struct ret_list *list, const struct dfavm_op_ir *a);
+build_retlist(struct ret_list *list, const struct ir *ir);
 
 void
 free_retlist(struct ret_list *list);

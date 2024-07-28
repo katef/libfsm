@@ -26,6 +26,7 @@
 #include "libfsm/internal.h"
 #include "libfsm/print.h"
 
+#include "libfsm/vm/retlist.h"
 #include "libfsm/vm/vm.h"
 
 static const char *
@@ -205,7 +206,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 
 	case VM_END_SUCC:
 		return print_hook_accept(f, opt, hooks,
-			op->endids.ids, op->endids.count,
+			op->ret->ids, op->ret->count,
 			default_accept,
 			NULL);
 
@@ -233,6 +234,7 @@ int
 fsm_print_sh(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
 	struct dfavm_op_ir *op;
@@ -240,6 +242,7 @@ fsm_print_sh(FILE *f,
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
+	assert(retlist != NULL);
 
 	if (opt->io != FSM_IO_STR) {
 		errno = ENOTSUP;

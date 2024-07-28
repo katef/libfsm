@@ -24,6 +24,7 @@
 #include "libfsm/internal.h"
 #include "libfsm/print.h"
 
+#include "libfsm/vm/retlist.h"
 #include "libfsm/vm/vm.h"
 
 enum asm_dialect {
@@ -50,7 +51,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 
 	case VM_END_SUCC:
 		if (-1 == print_hook_accept(f, opt, hooks,
-			op->endids.ids, op->endids.count,
+			op->ret->ids, op->ret->count,
 			NULL, NULL))
 		{
 			return -1;
@@ -358,6 +359,7 @@ static int
 print_vmasm_encoding(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops,
 	enum asm_dialect dialect)
 {
@@ -366,6 +368,7 @@ print_vmasm_encoding(FILE *f,
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
+	assert(retlist != NULL);
 
 	if (dialect == AMD64_GO) {
 		if (opt->io != FSM_IO_STR && opt->io != FSM_IO_PAIR) {
@@ -392,26 +395,29 @@ int
 fsm_print_amd64_att(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
-	return print_vmasm_encoding(f, opt, hooks, ops, AMD64_ATT);
+	return print_vmasm_encoding(f, opt, hooks, retlist, ops, AMD64_ATT);
 }
 
 int
 fsm_print_amd64_nasm(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
-	return print_vmasm_encoding(f, opt, hooks, ops, AMD64_NASM);
+	return print_vmasm_encoding(f, opt, hooks, retlist, ops, AMD64_NASM);
 }
 
 int
 fsm_print_amd64_go(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
-	return print_vmasm_encoding(f, opt, hooks, ops, AMD64_GO);
+	return print_vmasm_encoding(f, opt, hooks, retlist, ops, AMD64_GO);
 }
 

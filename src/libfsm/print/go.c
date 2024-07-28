@@ -25,6 +25,7 @@
 #include "libfsm/internal.h"
 #include "libfsm/print.h"
 
+#include "libfsm/vm/retlist.h"
 #include "libfsm/vm/vm.h"
 
 static const char *
@@ -72,8 +73,10 @@ print_ids(FILE *f,
 		break;
 
 	case AMBIG_MULTIPLE:
-		assert(!"unimplemented");
-		abort();
+		assert(!"unreached");
+// TODO:	fprintf(f, ", ret%u[0:%u];", TODO: retlist index, count);
+// ids[]
+		break;
 
 	default:
 		assert(!"unreached");
@@ -161,9 +164,9 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 		fprintf(f, "\t\t");
 
 		if (-1 == print_hook_accept(f, opt, hooks,
-			op->endids.ids, op->endids.count,
-			default_accept,
-			NULL))
+			op->ret->ids, op->ret->count,
+			default_accept, NULL))
+			// TODO: index for retlist
 		{
 			return -1;
 		}
@@ -203,6 +206,7 @@ static int
 fsm_print_gofrag(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops,
 	const char *cp)
 {
@@ -210,6 +214,7 @@ fsm_print_gofrag(FILE *f,
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(retlist != NULL);
 	assert(cp != NULL);
 
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
@@ -300,6 +305,7 @@ int
 fsm_print_go(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
 	const char *prefix;
@@ -311,6 +317,7 @@ fsm_print_go(FILE *f,
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
+	assert(retlist != NULL);
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
@@ -325,7 +332,7 @@ fsm_print_go(FILE *f,
 	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_gofrag(f, opt, hooks, ops, cp)) {
+		if (-1 == fsm_print_gofrag(f, opt, hooks, retlist, ops, cp)) {
 			return -1;
 		}
 	} else {
@@ -362,17 +369,16 @@ fsm_print_go(FILE *f,
 		case AMBIG_NONE:
 			fprintf(f, "bool");
 			break;
-	
+
 		case AMBIG_ERROR:
 		case AMBIG_EARLIEST:
 			fprintf(stdout, "(bool, uint)");
 			break;
 
 		case AMBIG_MULTIPLE:
-			// TODO: fprintf(stdout, "(bool, uint[])");
-			errno = ENOTSUP;
-			return -1;
-		
+			fprintf(stdout, "(bool, uint[])");
+			break;
+
 		default:
 			assert(!"unreached");
 			abort();
@@ -380,7 +386,7 @@ fsm_print_go(FILE *f,
 
 		fprintf(f, " {\n");
 
-		if (-1 == fsm_print_gofrag(f, opt, hooks, ops, cp)) {
+		if (-1 == fsm_print_gofrag(f, opt, hooks, retlist, ops, cp)) {
 			return -1;
 		}
 

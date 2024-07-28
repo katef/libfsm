@@ -28,8 +28,8 @@
 #include "libfsm/internal.h"
 #include "libfsm/print.h"
 
-#include "libfsm/vm/vm.h"
 #include "libfsm/vm/retlist.h"
+#include "libfsm/vm/vm.h"
 
 #define OPAQUE_POINTERS 1
 
@@ -406,14 +406,15 @@ static int
 fsm_print_llvmfrag(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops,
 	const char *cp)
 {
-	struct ret_list retlist;
 	struct dfavm_op_ir *op;
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(retlist != NULL);
 	assert(cp != NULL);
 
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
@@ -430,8 +431,6 @@ fsm_print_llvmfrag(FILE *f,
 	}
 
 	{
-		build_retlist(&retlist, ops);
-
 		print_jump(f, ops);
 
 		/*
@@ -475,11 +474,11 @@ fsm_print_llvmfrag(FILE *f,
 		print_rettype(f, opt->ambig);
 		fprintf(f, "\n");
 
-		for (size_t i = 0; i < retlist.count; i++) {
+		for (size_t i = 0; i < retlist->count; i++) {
 			fprintf(f, "\t  ");
 
 			if (-1 == print_hook_accept(f, opt, hooks,
-				retlist.a[i].ids, retlist.a[i].count,
+				retlist->a[i].ids, retlist->a[i].count,
 				default_accept, &i))
 			{
 				return -1;
@@ -500,7 +499,7 @@ fsm_print_llvmfrag(FILE *f,
 		print_label(f, false, "stop");
 		fprintf(f, "\n");
 
-		for (size_t i = 0; i < retlist.count; i++) {
+		for (size_t i = 0; i < retlist->count; i++) {
 			print_label(f, true, "ret%zu", i);
 			fprintf(f, "\tbr ");
 			print_label(f, false, "stop");
@@ -542,14 +541,12 @@ fsm_print_llvmfrag(FILE *f,
 			if (op->u.stop.end_bits == VM_END_FAIL) {
 				/* handled above */
 			} else {
-				assert(retlist.count > 0);
-				const struct ret *ret = find_ret(&retlist, op, cmp_ret_by_endid);
+				assert(retlist->count > 0);
+				const struct ret *ret = op->ret;
 				assert(ret != NULL);
-				assert(ret >= retlist.a && ret <= (retlist.a + retlist.count));
-				assert(ret->count == op->endids.count);
-				assert(0 == memcmp(ret->ids, op->endids.ids, ret->count));
+				assert(ret >= retlist->a && ret <= (retlist->a + retlist->count));
 				fprintf(f, "\tbr ");
-				print_label(f, false, "ret%u", ret - retlist.a);
+				print_label(f, false, "ret%u", ret - retlist->a);
 				fprintf(f, "\n");
 			}
 			break;
@@ -560,14 +557,12 @@ fsm_print_llvmfrag(FILE *f,
 			if (op->u.fetch.end_bits == VM_END_FAIL) {
 				/* handled in print_fetch() */
 			} else {
-				assert(retlist.count > 0);
-				const struct ret *ret = find_ret(&retlist, op, cmp_ret_by_endid);
+				assert(retlist->count > 0);
+				const struct ret *ret = op->ret;
 				assert(ret != NULL);
-				assert(ret >= retlist.a && ret <= (retlist.a + retlist.count));
-				assert(ret->count == op->endids.count);
-				assert(0 == memcmp(ret->ids, op->endids.ids, ret->count));
+				assert(ret >= retlist->a && ret <= (retlist->a + retlist->count));
 				fprintf(f, "\tbr ");
-				print_label(f, false, "ret%u", ret - retlist.a);
+				print_label(f, false, "ret%u", ret - retlist->a);
 				fprintf(f, "\n");
 			}
 			break;
@@ -593,8 +588,6 @@ fsm_print_llvmfrag(FILE *f,
 		}
 	}
 
-	free_retlist(&retlist);
-
 	return 0;
 }
 
@@ -602,6 +595,7 @@ int
 fsm_print_llvm(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
 	const char *prefix;
@@ -610,6 +604,7 @@ fsm_print_llvm(FILE *f,
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
+	assert(retlist != NULL);
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
@@ -624,7 +619,7 @@ fsm_print_llvm(FILE *f,
 	}
 
 	if (opt->fragment) {
-		fsm_print_llvmfrag(f, opt, hooks, ops, cp);
+		fsm_print_llvmfrag(f, opt, hooks, retlist, ops, cp);
 		return 0;
 	}
 
@@ -681,7 +676,7 @@ fsm_print_llvm(FILE *f,
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_print_llvmfrag(f, opt, hooks, ops, cp);
+	fsm_print_llvmfrag(f, opt, hooks, retlist, ops, cp);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

@@ -26,6 +26,7 @@
 #include "libfsm/internal.h"
 #include "libfsm/print.h"
 
+#include "libfsm/vm/retlist.h"
 #include "libfsm/vm/vm.h"
 
 #define START UINT32_MAX
@@ -157,7 +158,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 
 	case VM_END_SUCC:
 		return print_hook_accept(f, opt, hooks,
-			op->endids.ids, op->endids.count,
+			op->ret->ids, op->ret->count,
 			default_accept,
 			NULL);
 
@@ -186,6 +187,7 @@ static int
 fsm_print_awkfrag(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops,
 	const char *cp, const char *prefix)
 {
@@ -194,6 +196,7 @@ fsm_print_awkfrag(FILE *f,
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
+	assert(retlist != NULL);
 	assert(cp != NULL);
 	assert(prefix != NULL);
 
@@ -289,6 +292,7 @@ int
 fsm_print_awk(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
 	const char *prefix;
@@ -297,6 +301,7 @@ fsm_print_awk(FILE *f,
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
+	assert(retlist != NULL);
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
@@ -311,7 +316,7 @@ fsm_print_awk(FILE *f,
 	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_awkfrag(f, opt, hooks, ops, cp, prefix)) {
+		if (-1 == fsm_print_awkfrag(f, opt, hooks, retlist, ops, cp, prefix)) {
 			return -1;
 		}
 	} else {
@@ -333,7 +338,7 @@ fsm_print_awk(FILE *f,
 
 		fprintf(f, ",    l, c) {\n");
 
-		if (-1 == fsm_print_awkfrag(f, opt, hooks, ops, cp, prefix)) {
+		if (-1 == fsm_print_awkfrag(f, opt, hooks, retlist, ops, cp, prefix)) {
 			return -1;
 		}
 

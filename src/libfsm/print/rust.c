@@ -26,6 +26,7 @@
 #include "libfsm/internal.h"
 #include "libfsm/print.h"
 
+#include "libfsm/vm/retlist.h"
 #include "libfsm/vm/vm.h"
 
 #define START UINT32_MAX
@@ -170,7 +171,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 
 	case VM_END_SUCC:
 		return print_hook_accept(f, opt, hooks,
-			op->endids.ids, op->endids.count,
+			op->ret->ids, op->ret->count,
 			default_accept,
 			NULL);
 
@@ -205,6 +206,7 @@ static int
 fsm_print_rustfrag(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops,
 	const char *cp)
 {
@@ -213,6 +215,7 @@ fsm_print_rustfrag(FILE *f,
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(retlist != NULL);
 	assert(cp != NULL);
 
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
@@ -415,6 +418,7 @@ int
 fsm_print_rust(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
 	const char *prefix;
@@ -423,6 +427,7 @@ fsm_print_rust(FILE *f,
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
+	assert(retlist != NULL);
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
@@ -437,7 +442,7 @@ fsm_print_rust(FILE *f,
 	}
 
 	if (opt->fragment) {
-		fsm_print_rustfrag(f, opt, hooks, ops, cp);
+		fsm_print_rustfrag(f, opt, hooks, retlist, ops, cp);
 		goto error;
 	}
 
@@ -471,7 +476,7 @@ fsm_print_rust(FILE *f,
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_print_rustfrag(f, opt, hooks, ops, cp);
+	fsm_print_rustfrag(f, opt, hooks, retlist, ops, cp);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

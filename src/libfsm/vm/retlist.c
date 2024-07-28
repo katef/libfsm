@@ -14,7 +14,9 @@
 
 #include <fsm/fsm.h>
 
-#include "libfsm/vm/vm.h"
+#include "libfsm/internal.h"
+
+#include "libfsm/print/ir.h"
 #include "libfsm/vm/retlist.h"
 
 static bool
@@ -57,8 +59,8 @@ append_ret(struct ret_list *list,
 	return true;
 }
 
-int
-cmp_ret_by_endid(const void *pa, const void *pb)
+static int
+cmp_ret(const void *pa, const void *pb)
 {
 	const struct ret *a = pa;
 	const struct ret *b = pb;
@@ -70,56 +72,33 @@ cmp_ret_by_endid(const void *pa, const void *pb)
 }
 
 struct ret *
-find_ret(const struct ret_list *list, const struct dfavm_op_ir *op,
-	int (*cmp)(const void *pa, const void *pb))
+find_ret(const struct ret_list *list,
+	const fsm_end_id_t *ids, size_t count)
 {
 	struct ret key;
 
-	assert(op != NULL);
-	assert(cmp != NULL);
+	key.count = count;
+	key.ids   = ids;
 
-	key.count    = op->endids.count;
-	key.ids      = op->endids.ids;
-
-	return bsearch(&key, list->a, list->count, sizeof *list->a, cmp);
+	return bsearch(&key, list->a, list->count, sizeof *list->a, cmp_ret);
 }
 
 bool
-build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
+build_retlist(struct ret_list *list, const struct ir *ir)
 {
-	const struct dfavm_op_ir *op;
+	size_t i;
 
 	assert(list != NULL);
+	assert(ir != NULL);
 
 	list->count = 0;
 
-	for (op = a; op != NULL; op = op->next) {
-		switch (op->instr) {
-		case VM_OP_STOP:
-			if (op->u.stop.end_bits == VM_END_FAIL) {
-				/* %fail is special, don't add to retlist */
-				continue;
-			}
-
-			break;
-
-		case VM_OP_FETCH:
-			if (op->u.fetch.end_bits == VM_END_FAIL) {
-				/* %fail is special, don't add to retlist */
-				continue;
-			}
-
-			break;
-
-		case VM_OP_BRANCH:
+	for (i = 0; i < ir->n; i++) {
+		if (!ir->states[i].isend) {
 			continue;
-
-		default:
-			assert(!"unreached");
-			abort();
 		}
 
-		if (!append_ret(list, op->endids.ids, op->endids.count)) {
+		if (!append_ret(list, ir->states[i].endids.ids, ir->states[i].endids.count)) {
 			return false;
 		}
 	}
@@ -128,14 +107,14 @@ build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
 		size_t j = 0;
 
 		/* sort for both dedup and bsearch */
-		qsort(list->a, list->count, sizeof *list->a, cmp_ret_by_endid);
+		qsort(list->a, list->count, sizeof *list->a, cmp_ret);
 
 		/* deduplicate based on endids only.
 		 * j is the start of a run; i increments until we find
 		 * the start of the next run */
 		for (size_t i = 1; i < list->count; i++) {
 			assert(i > j);
-			if (cmp_ret_by_endid(&list->a[j], &list->a[i]) == 0) {
+			if (cmp_ret(&list->a[j], &list->a[i]) == 0) {
 				continue;
 			}
 

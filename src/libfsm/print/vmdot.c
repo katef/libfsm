@@ -25,6 +25,7 @@
 #include "libfsm/internal.h"
 #include "libfsm/print.h"
 
+#include "libfsm/vm/retlist.h"
 #include "libfsm/vm/vm.h"
 
 static const char *
@@ -129,7 +130,7 @@ print_end(FILE *f,
 
 	case VM_END_SUCC:
 		return print_hook_accept(f, opt, hooks,
-			op->endids.ids, op->endids.count,
+			op->ret->ids, op->ret->count,
 			default_accept,
 			NULL);
 
@@ -321,10 +322,12 @@ static int
 fsm_print_vmdotfrag(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(retlist != NULL);
 
 	if (-1 == fsm_print_nodes(f, opt, hooks, ops)) {
 		return -1;
@@ -340,14 +343,16 @@ int
 fsm_print_vmdot(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
+	assert(retlist != NULL);
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_vmdotfrag(f, opt, hooks, ops)) {
+		if (-1 == fsm_print_vmdotfrag(f, opt, hooks, retlist, ops)) {
 			return -1;
 		}
 	} else {
@@ -365,7 +370,7 @@ fsm_print_vmdot(FILE *f,
 		fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
 		fprintf(f, "\tstart -> S0:i0:w [ style = bold ];\n");
 
-		if (-1 == fsm_print_vmdotfrag(f, opt, hooks, ops)) {
+		if (-1 == fsm_print_vmdotfrag(f, opt, hooks, retlist, ops)) {
 			return -1;
 		}
 
