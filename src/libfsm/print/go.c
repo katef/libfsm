@@ -48,7 +48,8 @@ cmp_operator(int cmp)
 
 static int
 print_ids(FILE *f,
-	enum fsm_ambig ambig, const fsm_end_id_t *ids, size_t count)
+	enum fsm_ambig ambig, const fsm_end_id_t *ids, size_t count,
+	size_t i)
 {
 	switch (ambig) {
 	case AMBIG_NONE:
@@ -61,7 +62,7 @@ print_ids(FILE *f,
 			return -1;
 		}
 
-		fprintf(f, ", %u;", ids[0]);
+		fprintf(f, ", %u", ids[0]);
 		break;
 
 	case AMBIG_EARLIEST:
@@ -69,13 +70,11 @@ print_ids(FILE *f,
 		 * The libfsm api guarentees these ids are unique,
 		 * and only appear once each, and are sorted.
 		 */
-		fprintf(f, ", %u;", ids[0]);
+		fprintf(f, ", %u", ids[0]);
 		break;
 
 	case AMBIG_MULTIPLE:
-		assert(!"unreached");
-// TODO:	fprintf(f, ", ret%u[0:%u];", TODO: retlist index, count);
-// ids[]
+		fprintf(f, ", ret%zu", i);
 		break;
 
 	default:
@@ -91,16 +90,19 @@ default_accept(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
 	void *lang_opaque, void *hook_opaque)
 {
+	size_t i;
+
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(lang_opaque == NULL);
+	assert(lang_opaque != NULL);
 
-	(void) lang_opaque;
 	(void) hook_opaque;
+
+	i = * (const size_t *) lang_opaque;
 
 	fprintf(f, "return true");
 
-	if (-1 == print_ids(f, opt->ambig, ids, count)) {
+	if (-1 == print_ids(f, opt->ambig, ids, count, i)) {
 		return -1;
 	}
 
@@ -118,7 +120,30 @@ default_reject(FILE *f, const struct fsm_options *opt,
 	(void) lang_opaque;
 	(void) hook_opaque;
 
-	fprintf(f, "{\n\t\treturn false\n\t}\n");
+	fprintf(f, "{\n\t\treturn false");
+
+	switch (opt->ambig) {
+	case AMBIG_NONE:
+		break;
+
+	case AMBIG_ERROR:
+		fprintf(f, ", 0");
+		break;
+
+	case AMBIG_EARLIEST:
+		fprintf(f, ", 0");
+		break;
+
+	case AMBIG_MULTIPLE:
+		fprintf(f, ", nil");
+		break;
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+
+	fprintf(f, "\n\t}\n");
 
     return 0;
 }
@@ -153,20 +178,26 @@ static int
 print_end(FILE *f, const struct dfavm_op_ir *op,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	enum dfavm_op_end end_bits)
 {
+	size_t i;
+
 	switch (end_bits) {
 	case VM_END_FAIL:
 		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
 	case VM_END_SUCC:
+		assert(op->ret >= retlist->a);
+
+		i = op->ret - retlist->a;
+
 		fprintf(f, "{\n");
 		fprintf(f, "\t\t");
 
 		if (-1 == print_hook_accept(f, opt, hooks,
 			op->ret->ids, op->ret->count,
-			default_accept, NULL))
-			// TODO: index for retlist
+			default_accept, &i))
 		{
 			return -1;
 		}
@@ -277,12 +308,12 @@ fsm_print_gofrag(FILE *f,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op, opt);
-			print_end(f, op, opt, hooks, op->u.stop.end_bits);
+			print_end(f, op, opt, hooks, retlist, op->u.stop.end_bits);
 			break;
 
 		case VM_OP_FETCH:
 			print_fetch(f, opt);
-			print_end(f, op, opt, hooks, op->u.fetch.end_bits);
+			print_end(f, op, opt, hooks, retlist, op->u.fetch.end_bits);
 			break;
 
 		case VM_OP_BRANCH:
@@ -339,6 +370,20 @@ fsm_print_go(FILE *f,
 		fprintf(f, "package %sfsm\n", package_prefix);
 		fprintf(f, "\n");
 
+		if (opt->ambig == AMBIG_MULTIPLE) {
+			for (size_t i = 0; i < retlist->count; i++) {
+				fprintf(f, "var ret%zu []uint = []uint{", i);
+				for (size_t j = 0; j < retlist->a[i].count; j++) {
+					fprintf(f, "%u", retlist->a[i].ids[j]);
+					if (j + 1 < retlist->a[i].count) {
+						fprintf(f, ", ");
+					}
+				}
+				fprintf(f, "}\n");
+			}
+			fprintf(f, "\n");
+		}
+
 		fprintf(f, "func %sMatch", prefix);
 
 		switch (opt->io) {
@@ -376,7 +421,7 @@ fsm_print_go(FILE *f,
 			break;
 
 		case AMBIG_MULTIPLE:
-			fprintf(stdout, "(bool, uint[])");
+			fprintf(stdout, "(bool, []uint)");
 			break;
 
 		default:
