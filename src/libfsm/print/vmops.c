@@ -108,7 +108,7 @@ print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt
 static int
 print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt, const char *prefix)
 {
-	fprintf(f, "\t\t{%s%s, ", prefix, cmp_operator(op->cmp));
+	fprintf(f, "%s%s, ", prefix, cmp_operator(op->cmp));
 	if (-1 == c_escputcharlit(f, opt, op->cmp_arg)) {
 		return -1;
 	}
@@ -148,15 +148,13 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 		abort();
 	}
 
-	fprintf(f, "},\n");
-
 	return 0;
 }
 
 static int
 print_branch(FILE *f, const struct dfavm_op_ir *op, const char *prefix)
 {
-	fprintf(f, "%sactionGOTO, %" PRIu32 "},\n", prefix, op->u.br.dest_arg->index);
+	fprintf(f, "%sactionGOTO, %" PRIu32, prefix, op->u.br.dest_arg->index);
 
 	return 0;
 }
@@ -165,7 +163,7 @@ static int
 print_fetch(FILE *f, const struct fsm_options *opt, const char *prefix)
 {
 
-	fprintf(f, "\t\t{%sopEOF, 0, ", prefix);
+	fprintf(f, "%sopEOF, 0, ", prefix);
 	switch (opt->io) {
 	case FSM_IO_GETC:
 	case FSM_IO_STR:
@@ -200,6 +198,9 @@ fsm_print_vmopsfrag(FILE *f,
 				return -1;
 			}
 		}
+
+		fprintf(f, "\t\t{");
+
 		switch (op->instr) {
 		case VM_OP_STOP:
 			if (-1 == print_cond(f, op, opt, prefix)) {
@@ -232,6 +233,8 @@ fsm_print_vmopsfrag(FILE *f,
 			assert(!"unreached");
 			break;
 		}
+
+		fprintf(f, "},\n");
 	}
 
 	return 0;
