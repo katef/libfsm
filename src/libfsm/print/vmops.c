@@ -459,7 +459,7 @@ fsm_print_vmops_main(FILE *f,
 		errno = ENOTSUP;
 		return -1;
 	}
-	fprintf(f, "\t\tprintf(\"%%smatch\\n\", r ? \"no \" : \"\");\n");
+	fprintf(f, "\t\tprintf(\"%%smatch\\n\", r == 0 ? \"no \" : \"\");\n");
 	fprintf(f, "\t}\n");
 	fprintf(f, "\treturn 0;\n");
 	fprintf(f, "}\n");
