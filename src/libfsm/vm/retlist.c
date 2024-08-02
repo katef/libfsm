@@ -68,6 +68,13 @@ cmp_ret(const void *pa, const void *pb)
 	if (a->count < b->count) { return -1; }
 	if (a->count > b->count) { return +1; }
 
+	if (a->count == 0) {
+		return 0;
+	}
+
+	assert(a->ids != NULL);
+	assert(b->ids != NULL);
+
 	return memcmp(a->ids, b->ids, a->count * sizeof *a->ids);
 }
 
