@@ -565,13 +565,13 @@ fsm_print_vmc(FILE *f,
 
 		case AMBIG_ERROR:
 		case AMBIG_EARLIEST:
-			fprintf(stdout, ",\n");
-			fprintf(stdout, "\tconst unsigned *id");
+			fprintf(f, ",\n");
+			fprintf(f, "\tconst unsigned *id");
 			break;
 
 		case AMBIG_MULTIPLE:
-			fprintf(stdout, ",\n");
-			fprintf(stdout, "\tconst unsigned **ids, size_t *count");
+			fprintf(f, ",\n");
+			fprintf(f, "\tconst unsigned **ids, size_t *count");
 			break;
 
 		default:
@@ -580,8 +580,8 @@ fsm_print_vmc(FILE *f,
 		}
 
 		if (hooks->args != NULL) {
-			fprintf(stdout, ",\n");
-			fprintf(stdout, "\t");
+			fprintf(f, ",\n");
+			fprintf(f, "\t");
 
 			if (-1 == print_hook_args(f, opt, hooks, NULL, NULL)) {
 				return -1;

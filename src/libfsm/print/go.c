@@ -349,7 +349,7 @@ fsm_print_go(FILE *f,
 		}
 
 		if (hooks->args != NULL) {
-			fprintf(stdout, ", ");
+			fprintf(f, ", ");
 		
 			if (-1 == print_hook_args(f, opt, hooks, NULL, NULL)) {
 				return -1;
@@ -365,11 +365,11 @@ fsm_print_go(FILE *f,
 	
 		case AMBIG_ERROR:
 		case AMBIG_EARLIEST:
-			fprintf(stdout, "(bool, uint)");
+			fprintf(f, "(bool, uint)");
 			break;
 
 		case AMBIG_MULTIPLE:
-			// TODO: fprintf(stdout, "(bool, uint[])");
+			// TODO: fprintf(f, "(bool, uint[])");
 			errno = ENOTSUP;
 			return -1;
 		
