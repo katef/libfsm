@@ -21,6 +21,7 @@
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
+#include <fsm/print.h>
 #include <fsm/cost.h>
 #include <fsm/options.h>
 
@@ -44,6 +45,8 @@ struct prefix prefix = {
 	""
 };
 
+/* TODO: use alloc hooks for -Q accounting */
+static struct fsm_alloc *alloc;
 struct fsm_options opt;
 
 int print_progress;
@@ -128,28 +131,28 @@ io(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static lx_print *
-print_name(const char *name)
+static enum lx_print_lang
+lang_name(const char *name)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		lx_print *f;
+		enum lx_print_lang lang;
 	} a[] = {
-		{ "test", NULL          },
-		{ "dot",  lx_print_dot  },
-		{ "dump", lx_print_dump },
-		{ "zdot", lx_print_zdot },
-		{ "c",    lx_print_c    },
-		{ "h",    lx_print_h    }
+		{ "test", LX_PRINT_NONE },
+		{ "dot",  LX_PRINT_DOT  },
+		{ "dump", LX_PRINT_DUMP },
+		{ "zdot", LX_PRINT_ZDOT },
+		{ "c",    LX_PRINT_C    },
+		{ "h",    LX_PRINT_H    }
 	};
 
 	assert(name != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].f;
+			return a[i].lang;
 		}
 	}
 
@@ -306,15 +309,9 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 		return -1;
 	}
 
-	{
-		/* opt.carryopaque = carryopaque; */
-
-		if (!fsm_determinise(q)) {
-			fsm_free(q);
-			return -1;
-		}
-
-		/* opt.carryopaque = NULL; */
+	if (!fsm_determinise(q)) {
+		fsm_free(q);
+		return -1;
 	}
 
 	{
@@ -332,12 +329,6 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 				fprintf(stderr, "zone_equal: asserting ast_getendmapping(q, state %d) != NULL: %p\n", i, (void *)m);
 			}
 			assert(m != NULL);
-
-			if (m->conflict != NULL) {
-				/* TODO: free conflict set */
-				fsm_free(q);
-				return 0;
-			}
 		}
 	}
 
@@ -373,7 +364,7 @@ zone_minimise(void *arg)
 		}
 		pthread_mutex_unlock(&zmtx);
 
-		z->fsm = fsm_new(&opt);
+		z->fsm = fsm_new(alloc);
 		if (z->fsm == NULL) {
 			pthread_mutex_lock(&zmtx);
 			zerror = errno;
@@ -530,19 +521,85 @@ run_threads(int concurrency, void *(*fn)(void *))
 	return 0;
 }
 
+static int
+conflict(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count, const char *example,
+	void *hook_opaque)
+{
+	const struct ast *ast;
+	size_t i;
+
+	assert(opt != NULL);
+	assert(opt->ambig == AMBIG_ERROR);
+	assert(count > 1);
+
+	(void) f;
+	(void) opt;
+	(void) hook_opaque;
+
+	ast = hook_opaque;
+
+	/* TODO: // delimeters depend on dialect */
+	/* TODO: would deal with dialect: prefix here, too */
+
+	fprintf(stderr, "ambiguous mappings to ");
+
+	for (i = 0; i < count; i++) {
+		const struct ast_mapping *m;
+
+		/*
+		 * When the example is '', we have two patterns which match the empty string.
+		 * Here we defer to the error about the start state accepting,
+		 * and it seems redundant to also show an error about both patterns
+		 * matching the same input, even if there's a non-empty part.
+		 */
+		if (example != NULL && strlen(example) == 0) {
+			continue;
+		}
+
+		m = ast_getendmappingbyendid(ids[i]);
+
+		if (m->token != NULL) {
+			fprintf(stderr, "$%s", m->token->s);
+		} else if (m->to == NULL) {
+			fprintf(stderr, "skip");
+		}
+		if (m->token != NULL && m->to != NULL) {
+			fprintf(stderr, "/");
+		}
+		if (m->to == ast->global) {
+			fprintf(stderr, "global zone");
+		} else if (m->to != NULL) {
+			fprintf(stderr, "z%p", (void *) m->to); /* TODO: zindexof(n->to) */
+		}
+
+		if (i + 1 < count) {
+			fprintf(stderr, ", ");
+		}
+	}
+
+	if (example != NULL) {
+		/* TODO: escape hex etc */
+		fprintf(stderr, "; for example on input '%s'", example);
+	}
+
+	fprintf(stderr, "\n");
+
+	return 0;
+}
+
 int
 main(int argc, char *argv[])
 {
 	struct ast *ast;
-	lx_print *print;
+	enum lx_print_lang lang;
 	int concurrency;
 
-	print = lx_print_c;
+	lang = LX_PRINT_C;
 	keep_nfa = 0;
 	print_progress = 0;
 	concurrency = 1;
 
-	/* TODO: populate options */
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
 	opt.comments          = 1;
@@ -579,7 +636,7 @@ main(int argc, char *argv[])
 			case 'x': api_exclude |= lang_exclude(optarg); break;
 
 			case 'l':
-				print = print_name(optarg);
+				lang = lang_name(optarg);
 				break;
 
 			case 'n':
@@ -610,17 +667,17 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (keep_nfa && print != lx_print_dot) {
+	if (keep_nfa && lang != LX_PRINT_DOT) {
 		fprintf(stderr, "-n is for .dot output only\n");
 		return EXIT_FAILURE;
 	}
 
-	if (api_tokbuf && (print != lx_print_c && print != lx_print_h && print != lx_print_dump)) {
+	if (api_tokbuf && (lang != LX_PRINT_C && lang != LX_PRINT_H && lang != LX_PRINT_DUMP)) {
 		fprintf(stderr, "-b is for .c/.h output only\n");
 		return EXIT_FAILURE;
 	}
 
-	if (api_getc && (print != lx_print_c && print != lx_print_h && print != lx_print_dump)) {
+	if (api_getc && (lang != LX_PRINT_C && lang != LX_PRINT_H && lang != LX_PRINT_DUMP)) {
 		fprintf(stderr, "-g is for .c/.h output only\n");
 		return EXIT_FAILURE;
 	}
@@ -643,7 +700,7 @@ main(int argc, char *argv[])
 			fprintf(stderr, "-- parsing:");
 		}
 
-		ast = lx_parse(stdin, &opt);
+		ast = lx_parse(stdin, alloc);
 		if (ast == NULL) {
 			return EXIT_FAILURE;
 		}
@@ -668,7 +725,7 @@ main(int argc, char *argv[])
 	 * of which end state is associated with each mapping. In other words,
 	 * without losing track of which regexp maps to which token.
 	 */
-	if (print != lx_print_h) {
+	if (lang != LX_PRINT_H) {
 		if (print_progress) {
 			fprintf(stderr, "-- minimise AST:");
 			zn = 0;
@@ -689,12 +746,10 @@ main(int argc, char *argv[])
 				zn = 0;
 			}
 
-			/* opt.carryopaque = carryopaque; */
 			cur_zone = ast->zl;
 			if (run_threads(concurrency, zone_determinise)) {
 				return EXIT_FAILURE;
 			}
-			/* opt.carryopaque = NULL; */
 
 			if (print_progress) {
 				fprintf(stderr, "\n");
@@ -707,7 +762,7 @@ main(int argc, char *argv[])
 	 * This converts the tree of zones to a DAG.
 	 * TODO: Fix
 	 */
-	if (0 && print != lx_print_h) {
+	if (0 && lang != LX_PRINT_H) {
 		struct ast_zone *z, **p;
 		int changed;
 		unsigned int zn, zd, zp;
@@ -801,10 +856,9 @@ main(int argc, char *argv[])
 	/*
 	 * Semantic checks.
 	 */
-	if (print != lx_print_h) {
+	if (lang != LX_PRINT_H) {
 		struct ast_zone  *z;
 		unsigned int zn;
-		fsm_state_t i;
 		int e;
 
 		if (print_progress) {
@@ -835,6 +889,18 @@ main(int argc, char *argv[])
 				zn++;
 			}
 
+			switch (lang) {
+			case LX_PRINT_NONE:
+			case LX_PRINT_C:
+			case LX_PRINT_H:
+				opt.ambig = AMBIG_ERROR;
+				break;
+
+			default:
+				opt.ambig = AMBIG_MULTIPLE;
+				continue;
+			}
+
 			(void) fsm_getstart(z->fsm, &start);
 
 			if (fsm_isend(z->fsm, start)) {
@@ -842,75 +908,33 @@ main(int argc, char *argv[])
 				e = 1;
 			}
 
-			/* pick up conflicts flagged by carryopaque() */
-			for (i = 0; i < z->fsm->statecount; i++) {
-				struct ast_mapping *m;
+			{
+				static const struct fsm_hooks zero_hooks;
+				struct fsm_hooks hooks = zero_hooks;
+				int r;
 
-				if (!fsm_isend(z->fsm, i)) {
-					continue;
+				hooks.conflict = conflict;
+				hooks.hook_opaque = ast;
+
+				r = fsm_print(stdout, z->fsm, &opt, &hooks, FSM_PRINT_NONE);
+
+				if (r < 0) {
+					exit(EXIT_FAILURE);
 				}
 
-				m = ast_getendmapping(z->fsm, i);
-				if (LOG()) {
-					fprintf(stderr, "main: m <- ast_getendmapping(dst_fsm, i]: %d) = %p    // pick up conflicts\n", i, (void *)m);
-				}
-				assert(m != NULL);
-
-				if (m->conflict != NULL) {
-					struct mapping_set *p;
-					char buf[50]; /* 50 looks reasonable for an on-screen limit */
-					int n;
-
-					n = fsm_example(z->fsm, i, buf, sizeof buf);
-					if (-1 == n) {
-						perror("fsm_example");
-						return EXIT_FAILURE;
-					}
-
-					/*
-					 * When n == 0, we have two patterns which match the empty string.
-					 * Here we defer to the error about the start state accepting,
-					 * and it seems redundant to also show an error about both patterns
-					 * matching the same input, even if there's a non-empty part.
-					 */
-					if (n > 0) {
-						fprintf(stderr, "ambiguous mappings to ");
-
-						for (p = m->conflict; p != NULL; p = p->next) {
-							if (p->m->token != NULL) {
-								fprintf(stderr, "$%s", p->m->token->s);
-							} else if (p->m->to == NULL) {
-								fprintf(stderr, "skip");
-							}
-							if (p->m->token != NULL && p->m->to != NULL) {
-								fprintf(stderr, "/");
-							}
-							if (p->m->to == ast->global) {
-								fprintf(stderr, "global zone");
-							} else if (p->m->to != NULL) {
-								fprintf(stderr, "z%p", (void *) p->m->to); /* TODO: zindexof(n->to) */
-							}
-
-							if (p->next != NULL) {
-								fprintf(stderr, ", ");
-							}
-						}
-
-						/* TODO: escape hex etc */
-						fprintf(stderr, "; for example on input '%s%s'\n", buf,
-							n >= (int) sizeof buf - 1 ? "..." : "");
-
-						e = 1;
-					}
+				if (r == 1) {
+					/* conflict */
+					exit(EXIT_FAILURE);
 				}
 			}
+
 		}
 
 		if (print_progress) {
 			fprintf(stderr, "\n");
 		}
 
-		if (e && print != lx_print_dot) {
+		if (e && lang != LX_PRINT_DOT) {
 			return EXIT_FAILURE;
 		}
 	}
@@ -918,10 +942,10 @@ main(int argc, char *argv[])
 	/* XXX: can do this before semantic checks */
 	/* TODO: free ast */
 	/* TODO: free DFA ast_mappings, created in carryopaque, iff making a DFA. i.e. those which have non-NULL conflict sets */
-	if (print == lx_print_h) {
+	if (lang == LX_PRINT_H) {
 		/* TODO: special case to avoid overhead; free non-minimized NFA */
 	}
-	if (!keep_nfa && print != lx_print_h) {
+	if (!keep_nfa && lang != LX_PRINT_H) {
 		struct ast_zone *z;
 		struct ast_mapping *m;
 		fsm_state_t i;
@@ -938,9 +962,6 @@ main(int argc, char *argv[])
 				}
 				if (m != NULL) {
 					assert(m->fsm == NULL);
-
-					/* TODO: free m->conflict, allocated in carryopaque */
-					(void) m->conflict;
 				}
 			}
 		}
@@ -951,9 +972,7 @@ main(int argc, char *argv[])
 			fprintf(stderr, "-- output:");
 		}
 
-		if (print != NULL) {
-			print(stdout, ast);
-		}
+		lx_print(stdout, ast, &opt, lang);
 
 		if (print_progress) {
 			fprintf(stderr, "\n");

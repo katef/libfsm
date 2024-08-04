@@ -211,7 +211,7 @@ gen_init_outer(struct fsm *fsm, size_t max_length,
 	}
 
 	struct gen_ctx ctx = {
-		.alloc = fsm->opt->alloc,
+		.alloc = fsm->alloc,
 		.fsm = fsm,
 		.max_length = max_length,
 		.cb = cb,

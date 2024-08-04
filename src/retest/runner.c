@@ -61,7 +61,10 @@ xmkstemps(char *s)
 }
 
 static int
-print(const struct fsm *fsm, enum implementation impl,
+print(const struct fsm *fsm,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	enum implementation impl,
 	char *tmp_src)
 {
 	int fd_src;
@@ -76,7 +79,7 @@ print(const struct fsm *fsm, enum implementation impl,
 	}
 
 	/* the vmc codegen can emit memcmp() or strncmp() calls */
-	if (impl == IMPL_VMC && (fsm_getoptions(fsm)->io == FSM_IO_PAIR || fsm_getoptions(fsm)->io == FSM_IO_STR)) {
+	if (impl == IMPL_VMC && (opt->io == FSM_IO_PAIR || opt->io == FSM_IO_STR)) {
 		fprintf(f, "#include <string.h>\n\n");
 	}
 
@@ -84,18 +87,18 @@ print(const struct fsm *fsm, enum implementation impl,
 		int e;
 
 		switch (impl) {
-		case IMPL_C:     e = fsm_print_c(f, fsm);               break;
-		case IMPL_RUST:  e = fsm_print_rust(f, fsm);            break;
-		case IMPL_LLVM:  e = fsm_print_llvm(f, fsm);            break;
-		case IMPL_VMC:   e = fsm_print_vmc(f, fsm);             break;
-		case IMPL_GOASM: e = fsm_print_vmasm_amd64_go(f, fsm);  break;
-		case IMPL_VMASM: e = fsm_print_vmasm_amd64_att(f, fsm); break;
-		case IMPL_GO:    e = fsm_print_go(f, fsm);              break;
+		case IMPL_C:     e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_C);         break;
+		case IMPL_RUST:  e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_RUST);      break;
+		case IMPL_LLVM:  e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_LLVM);      break;
+		case IMPL_VMC:   e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_VMC);       break;
+		case IMPL_GOASM: e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_AMD64_GO);  break;
+		case IMPL_VMASM: e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_AMD64_ATT); break;
+		case IMPL_GO:    e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_GO);        break;
 
 		case IMPL_VMOPS:
-			e = fsm_print_vmops_h(f, fsm)
-			  | fsm_print_vmops_c(f, fsm)
-			  | fsm_print_vmops_main(f, fsm);
+			e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_VMOPS_H)
+			  | fsm_print(f, fsm, opt, hooks, FSM_PRINT_VMOPS_C)
+			  | fsm_print(f, fsm, opt, hooks, FSM_PRINT_VMOPS_MAIN);
 			break;
 
 		case IMPL_INTERPRET:
@@ -115,13 +118,12 @@ print(const struct fsm *fsm, enum implementation impl,
 		fprintf(f, "use std::slice;\n");
 		fprintf(f, "\n");
 
-		// XXX: fsm_main shouldn't return Option<usize>, Option<u64> or a bitfield type
 		fprintf(f, "#[no_mangle]\n");
-		fprintf(f, "pub extern \"C\" fn retest_trampoline(ptr: *const c_uchar, len: usize) -> i64 {\n");
+		fprintf(f, "pub extern \"C\" fn retest_trampoline(ptr: *const c_uchar, len: usize) -> bool {\n");
 		fprintf(f, "    let a: &[u8] = unsafe { slice::from_raw_parts(ptr, len as usize) };\n");
 		fprintf(f, "    match fsm_main(a) {\n");
-		fprintf(f, "    Some(u) => u as i64,\n"); // XXX: we lose info for the i64 ABI
-		fprintf(f, "    None => -1,\n");
+		fprintf(f, "    Some(()) => true,\n");
+		fprintf(f, "    None => false,\n");
 		fprintf(f, "    }\n");
 		fprintf(f, "}\n");
 	}
@@ -286,7 +288,9 @@ compile(enum implementation impl,
 }
 
 static enum error_type
-runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation impl)
+runner_init_compiled(struct fsm *fsm,
+	const struct fsm_options *opt,
+	struct fsm_runner *r, enum implementation impl)
 {
 	void *h;
 
@@ -317,7 +321,8 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 		abort();
 	}
 
-	if (!print(fsm, r->impl, tmp_src)) {
+	/* we don't override the print hooks for retest */
+	if (!print(fsm, opt, NULL, r->impl, tmp_src)) {
 		return ERROR_FILE_IO;
 	}
 
@@ -369,21 +374,21 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 
 	case IMPL_RUST:
 		r->u.impl_rust.h = h;
-		r->u.impl_rust.func = (int64_t (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "retest_trampoline");
+		r->u.impl_rust.func = (bool (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "retest_trampoline");
 		break;
 
 	case IMPL_LLVM:
 		r->u.impl_llvm.h = h;
-		r->u.impl_llvm.func = (int (*)(const char *, const char *)) (uintptr_t) dlsym(h, "fsm_main");
+		r->u.impl_llvm.func = (bool (*)(const char *, const char *)) (uintptr_t) dlsym(h, "fsm_main");
 		break;
 
 	case IMPL_GO:
 	case IMPL_GOASM:
 		r->u.impl_go.h = h;
-		r->u.impl_go.func = (int64_t (*)(const unsigned char *, int64_t)) (uintptr_t) dlsym(h, "retest_trampoline");
+		r->u.impl_go.func = (bool (*)(const unsigned char *, int64_t)) (uintptr_t) dlsym(h, "retest_trampoline");
 		if (r->u.impl_go.func == NULL) {
                         /* Sometime we need a leading underscore. */
-			r->u.impl_go.func = (int64_t (*)(const unsigned char *, int64_t)) (uintptr_t) dlsym(h, "_retest_trampoline");
+			r->u.impl_go.func = (bool (*)(const unsigned char *, int64_t)) (uintptr_t) dlsym(h, "_retest_trampoline");
 		}
 		break;
 
@@ -400,7 +405,8 @@ runner_init_compiled(struct fsm *fsm, struct fsm_runner *r, enum implementation 
 }
 
 enum error_type
-fsm_runner_initialize(struct fsm *fsm, struct fsm_runner *r, enum implementation impl, struct fsm_vm_compile_opts vm_opts)
+fsm_runner_initialize(struct fsm *fsm, const struct fsm_options *opt,
+	struct fsm_runner *r, enum implementation impl, struct fsm_vm_compile_opts vm_opts)
 {
 	static const struct fsm_runner zero;
 	struct fsm_dfavm *vm;
@@ -419,10 +425,10 @@ fsm_runner_initialize(struct fsm *fsm, struct fsm_runner *r, enum implementation
 	case IMPL_VMOPS:
 	case IMPL_GO:
 	case IMPL_GOASM:
-		return runner_init_compiled(fsm, r, impl);
+		return runner_init_compiled(fsm, opt, r, impl);
 
 	case IMPL_INTERPRET:
-		vm = fsm_vm_compile_with_options(fsm, vm_opts);
+		vm = fsm_vm_compile_with_options(fsm, opt, vm_opts);
 		if (vm == NULL) {
 			fsm_free(fsm);
 			return ERROR_COMPILING_BYTECODE;
@@ -496,24 +502,24 @@ fsm_runner_run(const struct fsm_runner *r, const char *s, size_t n)
 	case IMPL_VMC:
 	case IMPL_VMOPS:
 		assert(r->u.impl_c.func != NULL);
-		return r->u.impl_c.func(s, s+n) >= 0;
+		return r->u.impl_c.func(s, s + n);
 
 	case IMPL_RUST:
 		assert(r->u.impl_rust.func != NULL);
-		return r->u.impl_rust.func((const unsigned char *)s, n) >= 0;
+		return r->u.impl_rust.func((const unsigned char *) s, n);
 
 	case IMPL_LLVM:
 		assert(r->u.impl_llvm.func != NULL);
-		return r->u.impl_llvm.func(s, s+n) >= 0;
+		return r->u.impl_llvm.func(s, s + n);
 
 	case IMPL_GO:
 	case IMPL_GOASM:
 		assert(r->u.impl_go.func != NULL);
-		return r->u.impl_go.func((const unsigned char *)s, n) >= 0;
+		return r->u.impl_go.func((const unsigned char *) s, n);
 
 	case IMPL_VMASM:
 		assert(r->u.impl_asm.func != NULL);
-		return r->u.impl_asm.func((const unsigned char *)s, n) >= 0;
+		return r->u.impl_asm.func((const unsigned char *) s, n);
 
 	case IMPL_INTERPRET:
 		assert(r->u.impl_vm.vm != NULL);

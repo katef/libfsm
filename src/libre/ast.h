@@ -312,10 +312,8 @@ ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const 
 
 /* XXX: exposed for sake of re(1) printing an ast;
  * it's not part of the <re/re.h> API proper */
-struct fsm_options;
 struct ast *
 re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
-	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err, int *unsatisfiable);
 
 const char *

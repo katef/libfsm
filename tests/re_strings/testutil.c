@@ -9,8 +9,6 @@
 #include "re/re.h"
 #include "re/strings.h"
 
-static struct fsm_options opt;
-
 #define MAX_INPUTS 100
 static fsm_end_id_t ids[MAX_INPUTS];
 
@@ -34,7 +32,7 @@ run_test(const char **strings)
 
 	const int flags = 0;	/* not anchored */
 
-	struct fsm *fsm = re_strings_build(s, &opt, flags);
+	struct fsm *fsm = re_strings_build(s, NULL, flags);
 	assert(fsm != NULL);
 
 	/* Each literal string input should match, and the set of

@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 struct ast;
+struct fsm_options;
 
 /* TODO: combine all variables here into an lx_outoptions struct */
 struct prefix {
@@ -42,19 +43,32 @@ enum api_exclude {
 	API_BUF      = 1 << 4
 };
 
+enum lx_print_lang {
+	LX_PRINT_NONE,
+	LX_PRINT_C,
+	LX_PRINT_DOT,
+	LX_PRINT_DUMP,
+	LX_PRINT_H,
+	LX_PRINT_ZDOT
+};
+
 extern enum api_tokbuf  api_tokbuf;
 extern enum api_getc    api_getc;
 extern enum api_exclude api_exclude;
 
-extern struct fsm_options opt;
+typedef void (lx_print_f)(FILE *f,
+	const struct ast *ast, const struct fsm_options *opt);
 
-typedef void (lx_print)(FILE *f, const struct ast *ast);
+lx_print_f lx_print_c;
+lx_print_f lx_print_dot;
+lx_print_f lx_print_dump;
+lx_print_f lx_print_h;
+lx_print_f lx_print_zdot;
 
-lx_print lx_print_c;
-lx_print lx_print_h;
-lx_print lx_print_dot;
-lx_print lx_print_dump;
-lx_print lx_print_zdot;
+int
+lx_print(FILE *f, const struct ast *ast,
+	const struct fsm_options *opt,
+	enum lx_print_lang lang);
 
 #endif
 

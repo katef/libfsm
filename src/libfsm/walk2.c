@@ -9,10 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <fsm/fsm.h>
-#include <fsm/options.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
@@ -131,7 +131,7 @@ fsm_walk2_data_free(const struct fsm *fsm, struct fsm_walk2_data *data)
 
 	for (p = data->head; p != NULL; p = next) {
 		next = p->next;
-		f_free(fsm->opt->alloc, p);
+		f_free(fsm->alloc, p);
 	}
 
 	if (data->new) {
@@ -159,7 +159,7 @@ alloc_walk2_tuple(struct fsm_walk2_data *data)
 
 new_pool:
 
-	pool = f_malloc(data->new->opt->alloc, sizeof *pool);
+	pool = f_malloc(data->new->alloc, sizeof *pool);
 	if (pool == NULL) {
 		return NULL;
 	}
@@ -281,9 +281,9 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 			int ret;
 
 			if (fsm_a != NULL) {
-				alloc = fsm_a->opt->alloc;
+				alloc = fsm_a->alloc;
 			} else if (fsm_b != NULL) {
-				alloc = fsm_b->opt->alloc;
+				alloc = fsm_b->alloc;
 			} else {
 				assert(!"unreached");
 			}
@@ -562,12 +562,12 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 	data.edgemask = edgemask;
 	data.endmask  = endmask;
 
-	data.new = fsm_new(a->opt);
+	data.new = fsm_new(a->alloc);
 	if (data.new == NULL) {
 		goto error;
 	}
 
-	data.states = tuple_set_create(data.new->opt->alloc, cmp_walk2_tuple);
+	data.states = tuple_set_create(data.new->alloc, cmp_walk2_tuple);
 	if (data.states == NULL) {
 		goto error;
 	}
@@ -596,7 +596,12 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 
 empty:
 
-	return fsm_new(a->opt);
+	new = fsm_new(a->alloc);
+	if (new == NULL) {
+		return NULL;
+	}
+
+	return new;
 
 error:
 

@@ -10,3 +10,6 @@ pcre: pcre.c
 libfsm: libfsm.c
 	gcc -o libfsm -O3 -Wall -std=c99 ${BM_CFLAGS} libfsm.c -I ../../include ../../build/lib/libre.a ../../build/lib/libfsm.a
 
+clean:
+	rm -f pcre libfsm
+

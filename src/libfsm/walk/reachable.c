@@ -32,7 +32,7 @@ fsm_reachable(const struct fsm *fsm, fsm_state_t state,
 		fsm->states[i].visited = 0;
 	}
 
-	q = f_malloc(fsm->opt->alloc, fsm->statecount * sizeof *q);
+	q = f_malloc(fsm->alloc, fsm->statecount * sizeof *q);
 	if (q == NULL) {
 		return -1;
 	}
@@ -96,7 +96,7 @@ cleanup:
 		fsm->states[i].visited = 0;
 	}
 
-	f_free(fsm->opt->alloc, q);
+	f_free(fsm->alloc, q);
 
 	return r;
 }

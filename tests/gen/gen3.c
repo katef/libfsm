@@ -11,6 +11,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/print.h>
+#include <fsm/options.h>
 #include <fsm/walk.h>
 
 #include "gtest.h"
@@ -61,7 +62,7 @@ build(void)
 	}
 
 	if (getenv("PRINT")) {
-		fsm_print_fsm(stderr, fsm);
+		fsm_dump(stderr, fsm);
 	}
 
 	return fsm;

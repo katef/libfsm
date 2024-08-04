@@ -26,10 +26,9 @@
 #include <fsm/vm.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
 #include "libfsm/vm/vm.h"
-
-#include "ir.h"
 
 #define OPAQUE_POINTERS 1
 
@@ -44,6 +43,16 @@ static const char *ptr_void = "i8*";
 #endif
 
 static const struct dfavm_op_ir fail; // used as a unqiue address only
+
+struct ret {
+	size_t count;
+	const fsm_end_id_t *ids;
+};
+
+struct ret_list {
+	size_t count;
+	struct ret *a;
+};
 
 /*
  * If we had a stack, the current set of live values would be a frame.
@@ -68,23 +77,6 @@ decl(unsigned *n)
 	return (*n)++;
 }
 
-static int
-leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
-{
-	assert(f != NULL);
-	assert(leaf_opaque == NULL);
-
-	(void) ids;
-	(void) count;
-	(void) leaf_opaque;
-
-	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
-	 * maybe user defined */
-	fprintf(f, "return TOK_UNKNOWN;");
-
-	return 0;
-}
-
 static const char *
 cmp_operator(int cmp)
 {
@@ -101,6 +93,113 @@ cmp_operator(int cmp)
 		assert("unreached");
 		return NULL;
 	}
+}
+
+static int
+default_accept(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque, void *hook_opaque)
+{
+	size_t i;
+
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque != NULL);
+
+	(void) hook_opaque;
+
+	i = * (const size_t *) lang_opaque;
+
+	switch (opt->ambig) {
+	case AMBIG_NONE:
+		fprintf(f, "[true, %%ret%zu],\n", i);
+		break;
+
+	case AMBIG_ERROR:
+// TODO: decide if we deal with this ahead of the call to print or not
+		if (count > 1) {
+			errno = EINVAL;
+			return -1;
+		}
+
+		fprintf(f, "[{ true, %u }, %%ret%zu],\n", ids[0], i);
+		break;
+
+	case AMBIG_EARLIEST:
+		/*
+		 * The libfsm api guarentees these ids are unique,
+		 * and only appear once each, and are sorted.
+		 */
+		fprintf(f, "[{ true, i32 %u }, %%ret%zu],\n", ids[0], i);
+		break;
+
+	case AMBIG_MULTIPLE:
+		// TODO: probably { i1, ptr_u8 }
+		assert(!"unimplemented");
+		abort();
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+
+	return 0;
+}
+
+static int
+default_reject(FILE *f, const struct fsm_options *opt,
+	void *lang_opaque, void *hook_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+	(void) hook_opaque;
+
+	switch (opt->ambig) {
+	case AMBIG_NONE:
+		fprintf(f, "[false, %%fail]\n");
+		break;
+
+	case AMBIG_ERROR:
+	case AMBIG_EARLIEST:
+	case AMBIG_MULTIPLE:
+		fprintf(f, "[{ false, undef }, %%fail]\n");
+		break;
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+
+	return 0;
+}
+
+static int
+print_rettype(FILE *f, enum fsm_ambig ambig)
+{
+	switch (ambig) {
+	case AMBIG_NONE:
+		fprintf(f, "i1");
+		break;
+
+	case AMBIG_ERROR:
+	case AMBIG_EARLIEST:
+		fprintf(f, "{ i1, u32 }");
+		break;
+
+	case AMBIG_MULTIPLE:
+		// TODO: probably { i1, ptr_u8 }
+		assert(!"unimplemented");
+		abort();
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+
+	return 0;
 }
 
 static void
@@ -158,7 +257,7 @@ print_target(FILE *f, const struct dfavm_op_ir *op,
 }
 
 static void
-print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
+print_cond(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *op,
 	struct frame *frame)
 {
 	assert(frame != NULL);
@@ -231,6 +330,8 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 		print_decl(f, "r", decl(&frame->r));
 		fprintf(f, "icmp eq i32 %%i%u, -1 ; EOF\n", n);
 
+// XXX: we don't distinguish error from eof
+// https://github.com/katef/libfsm/issues/484
 		print_branch(f, frame,
 			end_bits == VM_END_FAIL ? &fail : NULL,
 			NULL);
@@ -309,21 +410,9 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 	}
 }
 
-struct ret {
-	size_t count;
-	const fsm_end_id_t *ids;
-	const struct ir_state *ir_state; // TODO: remove when we return endids only
-};
-
-struct ret_list {
-	size_t count;
-	struct ret *a;
-};
-
 static bool
 append_ret(struct ret_list *list,
-	const fsm_end_id_t *ids, size_t count,
-	const struct ir_state *ir_state)
+	const fsm_end_id_t *ids, size_t count)
 {
 	const size_t low    = 16; /* must be power of 2 */
 	const size_t factor =  2; /* must be even */
@@ -355,11 +444,6 @@ append_ret(struct ret_list *list,
 	list->a[list->count].ids = ids;
 	list->a[list->count].count = count;
 
-	/* .ir_state is not part of the "key" for struct ret,
-	 * we ignore it for comparisons and effectively pick
-	 * an arbitrary ir_state for output */
-	list->a[list->count].ir_state = ir_state;
-
 	list->count++;
 
 	return true;
@@ -374,23 +458,7 @@ cmp_ret_by_endid(const void *pa, const void *pb)
 	if (a->count < b->count) { return -1; }
 	if (a->count > b->count) { return +1; }
 
-	/* .ir_state intentionally ignored */
-
 	return memcmp(a->ids, b->ids, a->count * sizeof *a->ids);
-}
-
-static int
-cmp_ret_by_state(const void *pa, const void *pb)
-{
-	const struct ret *a = pa;
-	const struct ret *b = pb;
-
-	if (a->ir_state < b->ir_state) { return -1; }
-	if (a->ir_state > b->ir_state) { return +1; }
-
-	/* .ids intentionally ignored */
-
-	return 0;
 }
 
 static struct ret *
@@ -402,9 +470,8 @@ find_ret(const struct ret_list *list, const struct dfavm_op_ir *op,
 	assert(op != NULL);
 	assert(cmp != NULL);
 
-	key.count    = op->ir_state->endids.count;
-	key.ids      = op->ir_state->endids.ids;
-	key.ir_state = op->ir_state;
+	key.count    = op->endids.count;
+	key.ids      = op->endids.ids;
 
 	return bsearch(&key, list->a, list->count, sizeof *list->a, cmp);
 }
@@ -442,10 +509,7 @@ build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
 			abort();
 		}
 
-		if (!append_ret(list,
-			op->ir_state->endids.ids, op->ir_state->endids.count,
-			op->ir_state))
-		{
+		if (!append_ret(list, op->endids.ids, op->endids.count)) {
 			return false;
 		}
 	}
@@ -455,24 +519,18 @@ build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
-	const struct fsm_options *opt, const struct ir *ir,
-	const char *cp,
-	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
-	const void *leaf_opaque)
+fsm_print_llvmfrag(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops,
+	const char *cp)
 {
 	struct ret_list retlist;
 	struct dfavm_op_ir *op;
 
 	assert(f != NULL);
-	assert(a != NULL);
 	assert(opt != NULL);
 	assert(cp != NULL);
-
-	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
-	 * We'll need that in order to be able to use the leaf callback here. */
-	(void) leaf;
-	(void) leaf_opaque;
 
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
 	(void) cp;
@@ -482,25 +540,20 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 
 		l = 0;
 
-		for (op = a->linked; op != NULL; op = op->next) {
+		for (op = ops; op != NULL; op = op->next) {
 			op->index = l++;
 		}
 	}
 
 	{
 		retlist.count = 0;
-		build_retlist(&retlist, a->linked);
+		build_retlist(&retlist, ops);
 
-		/* sort for both dedup and bsearch */
-		qsort(retlist.a, retlist.count, sizeof *retlist.a,
-			opt->endleaf != NULL ? cmp_ret_by_endid : cmp_ret_by_state);
-
-		/*
-		 * If we're going by endleaf, we deal with endids.
-		 * If we don't have endleaf, we deal with state numbers.
-		 */
-		if (opt->endleaf != NULL && retlist.count > 0) {
+		if (retlist.count > 0) {
 			size_t j = 0;
+
+			/* sort for both dedup and bsearch */
+			qsort(retlist.a, retlist.count, sizeof *retlist.a, cmp_ret_by_endid);
 
 			/* deduplicate based on endids only.
 			 * j is the start of a run; i increments until we find
@@ -520,7 +573,7 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 			assert(retlist.count > 0);
 		}
 
-		print_jump(f, a->linked);
+		print_jump(f, ops);
 
 		/*
 		 * We're jumping to ret*: labels, and having each jump
@@ -529,12 +582,12 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 		 * This looks like:
 		 *
 		 *  stop:
-		 *      %ret = phi i32
-		 *       [u0x1, %ret0], ; "abc"
-		 *       [u0x2, %ret1], ; "xyz"
-		 *       [u0x3, %ret2], ; "abc", "xyz"
-		 *       [-1, %fail]
-		 *      ret i32 %ret
+		 *      %ret = phi i1
+		 *       [true, %ret0], ; "abc"
+		 *       [true, %ret1], ; "xyz"
+		 *       [true, %ret2], ; "abc", "xyz"
+		 *       [false, %fail]
+		 *      ret i1 %ret
 		 *  fail:
 		 *      br label %stop
 		 *  ret0:
@@ -558,24 +611,30 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 		 * llvm doesn't find this optimisation for us.
 		 */
 		print_label(f, true, "stop");
-		fprintf(f, "\t%%ret = phi i32\n");
+
+		fprintf(f, "\t%%ret = phi ");
+		print_rettype(f, opt->ambig);
+		fprintf(f, "\n");
+
 		for (size_t i = 0; i < retlist.count; i++) {
 			fprintf(f, "\t  ");
 
-			if (opt->endleaf != NULL) {
-				if (-1 == opt->endleaf(f,
-					retlist.a[i].ids, retlist.a[i].count,
-					opt->endleaf_opaque))
-				{
-					return -1;
-				}
-			} else {
-				fprintf(f, "[%td, %%ret%zu],\n",
-					retlist.a[i].ir_state - ir->states, i);
+			if (-1 == print_hook_accept(f, opt, hooks,
+				retlist.a[i].ids, retlist.a[i].count,
+				default_accept, &i))
+			{
+				return -1;
 			}
 		}
-		fprintf(f, "\t%s[-1, %%fail]\n", "  ");
-		fprintf(f, "\tret i32 %%ret\n");
+
+		fprintf(f, "\t  ");
+		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
+			return -1;
+		}
+
+		fprintf(f, "\tret ");
+		print_rettype(f, opt->ambig);
+		fprintf(f, " %%ret\n");
 
 		print_label(f, true, "fail");
 		fprintf(f, "\tbr ");
@@ -591,16 +650,16 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 	}
 
 	struct frame frame = { 0, 0, 0 };
-	for (op = a->linked; op != NULL; op = op->next) {
+	for (op = ops; op != NULL; op = op->next) {
 		if (op->instr != VM_OP_STOP || op->cmp != VM_CMP_ALWAYS || op->u.stop.end_bits != VM_END_FAIL) {
 			print_label(f, true, "l%" PRIu32, op->index);
 		}
 
-		if (op->ir_state != NULL && op->ir_state->example != NULL) {
+		if (op->example != NULL) {
 			/* C's escaping seems to be a subset of llvm's, and these are
 			 * for comments anyway. So I'm borrowing this for C here */
 			fprintf(f, "\t; e.g. \"");
-			escputs(f, opt, c_escputc_str, op->ir_state->example);
+			escputs(f, opt, c_escputc_str, op->example);
 			fprintf(f, "\"");
 
 			fprintf(f, "\n");
@@ -612,7 +671,7 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 				unsigned b = decl(&frame.b);
 
 // TODO: our ret%u: label goes in place of t%u here, which means we're replacing the NULL
-				print_cond(f, op, opt, &frame);
+				print_cond(f, opt, op, &frame);
 				print_branch(f, &frame,
 					op->u.stop.end_bits == VM_END_FAIL ? &fail : NULL,
 					op->next);
@@ -625,12 +684,11 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 				/* handled above */
 			} else {
 				assert(retlist.count > 0);
-				const struct ret *ret = find_ret(&retlist, op,
-					opt->endleaf != NULL ? cmp_ret_by_endid : cmp_ret_by_state);
+				const struct ret *ret = find_ret(&retlist, op, cmp_ret_by_endid);
 				assert(ret != NULL);
 				assert(ret >= retlist.a && ret <= (retlist.a + retlist.count));
-				assert(ret->count == op->ir_state->endids.count);
-				assert(0 == memcmp(ret->ids, op->ir_state->endids.ids, ret->count));
+				assert(ret->count == op->endids.count);
+				assert(0 == memcmp(ret->ids, op->endids.ids, ret->count));
 				fprintf(f, "\tbr ");
 				print_label(f, false, "ret%u", ret - retlist.a);
 				fprintf(f, "\n");
@@ -644,12 +702,11 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 				/* handled in print_fetch() */
 			} else {
 				assert(retlist.count > 0);
-				const struct ret *ret = find_ret(&retlist, op,
-					opt->endleaf != NULL ? cmp_ret_by_endid : cmp_ret_by_state);
+				const struct ret *ret = find_ret(&retlist, op, cmp_ret_by_endid);
 				assert(ret != NULL);
 				assert(ret >= retlist.a && ret <= (retlist.a + retlist.count));
-				assert(ret->count == op->ir_state->endids.count);
-				assert(0 == memcmp(ret->ids, op->ir_state->endids.ids, ret->count));
+				assert(ret->count == op->endids.count);
+				assert(0 == memcmp(ret->ids, op->endids.ids, ret->count));
 				fprintf(f, "\tbr ");
 				print_label(f, false, "ret%u", ret - retlist.a);
 				fprintf(f, "\n");
@@ -663,7 +720,7 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 			if (op->cmp == VM_CMP_ALWAYS) {
 				print_jump(f, dest);
 			} else {
-				print_cond(f, op, opt, &frame);
+				print_cond(f, opt, op, &frame);
 				print_branch(f, &frame,
 					dest,
 					op->next);
@@ -684,37 +741,39 @@ fsm_print_llvmfrag(FILE *f, const struct dfavm_assembler_ir *a,
 	return 0;
 }
 
-static int
-fsm_print_llvm_complete(FILE *f, const struct ir *ir,
-	const struct fsm_options *opt, const char *prefix, const char *cp)
+int
+fsm_print_llvm(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops)
 {
-	static const struct dfavm_assembler_ir zero;
-	struct dfavm_assembler_ir a;
-
-	static const struct fsm_vm_compile_opts vm_opts = {
-		FSM_VM_COMPILE_DEFAULT_FLAGS,
-		FSM_VM_COMPILE_VM_V1,
-		NULL
-	};
+	const char *prefix;
+	const char *cp;
 
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 
-	a = zero;
+	if (opt->prefix != NULL) {
+		prefix = opt->prefix;
+	} else {
+		prefix = "fsm_";
+	}
 
-	if (!dfavm_compile_ir(&a, ir, vm_opts)) {
-		return -1;
+	if (hooks->cp != NULL) {
+		cp = hooks->cp;
+	} else {
+		cp = "c"; /* XXX */
 	}
 
 	if (opt->fragment) {
-		fsm_print_llvmfrag(f, &a, opt, ir, cp,
-			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
-		goto error;
+		fsm_print_llvmfrag(f, opt, hooks, ops, cp);
+		return 0;
 	}
 
 	fprintf(f, "; generated\n");
-	fprintf(f, "define dso_local i32 @%smain", prefix);
+//XXX: type depends on ambig
+	fprintf(f, "define dso_local i1 @%smain", prefix);
 
 	switch (opt->io) {
 	case FSM_IO_GETC:
@@ -765,60 +824,11 @@ fsm_print_llvm_complete(FILE *f, const struct ir *ir,
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_print_llvmfrag(f, &a, opt, ir, cp,
-		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque);
+	fsm_print_llvmfrag(f, opt, hooks, ops, cp);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
 
-	dfavm_opasm_finalize_op(&a);
-
-	if (ferror(f)) {
-		return -1;
-	}
-
 	return 0;
-
-error:
-
-	dfavm_opasm_finalize_op(&a);
-
-	return -1;
-}
-
-int
-fsm_print_llvm(FILE *f, const struct fsm *fsm)
-{
-	struct ir *ir;
-	const char *prefix;
-	const char *cp;
-	int r;
-
-	assert(f != NULL);
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
-
-	ir = make_ir(fsm);
-	if (ir == NULL) {
-		return -1;
-	}
-
-	if (fsm->opt->prefix != NULL) {
-		prefix = fsm->opt->prefix;
-	} else {
-		prefix = "fsm_";
-	}
-
-	if (fsm->opt->cp != NULL) {
-		cp = fsm->opt->cp;
-	} else {
-		cp = "c"; /* XXX */
-	}
-
-	r = fsm_print_llvm_complete(f, ir, fsm->opt, prefix, cp);
-
-	free_ir(fsm, ir);
-
-	return r;
 }
 

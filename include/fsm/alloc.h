@@ -7,6 +7,8 @@
 #ifndef FSM_ALLOC_H
 #define FSM_ALLOC_H
 
+struct fsm;
+
 struct fsm_alloc {
 	void (*free)(void *opaque, void *p);
 	void *(*calloc)(void *opaque, size_t n, size_t sz);
@@ -14,6 +16,9 @@ struct fsm_alloc {
 	void *(*realloc)(void *opaque, void *p, size_t sz);
 	void *opaque;
 };
+
+void
+fsm_set_alloc(struct fsm *fsm, const struct fsm_alloc *alloc);
 
 #endif
 

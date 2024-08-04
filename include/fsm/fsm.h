@@ -7,18 +7,10 @@
 #ifndef FSM_H
 #define FSM_H
 
-/*
- * TODO: This API needs quite some refactoring. Mostly we ought to operate
- * in-place, else the user would only free() everything. Having an explicit
- * clone interface leaves the option for duplicating, if they wish. However be
- * careful about leaving things in an indeterminate state; everything ought to
- * be atomic.
- */
-
 #include <stdbool.h>
 
 struct fsm;
-struct fsm_options;
+struct fsm_alloc;
 struct path; /* XXX */
 struct fsm_capture;
 struct fsm_combine_info;
@@ -42,17 +34,15 @@ typedef unsigned int fsm_end_id_t;
  * from fsm_new() is expected to be passed as the "fsm" argument to the
  * functions in this API.
  *
- * An options pointer may be passed for control over various details of
- * FSM construction and output. This may be NULL, in which case default
- * options are used.
+ * An fsm_alloc pointer may be passed for callbacks on memory allocation.
+ * This may be NULL, in which case the default libc functions are used.
  * When non-NULL, the storage pointed to must remain extant until fsm_free().
  *
  * Returns NULL on error; see errno.
  * TODO: perhaps automatically create a start state, and never have an empty FSM
- * TODO: also fsm_parse should create an FSM, not add into an existing one
  */
 struct fsm *
-fsm_new(const struct fsm_options *opt);
+fsm_new(const struct fsm_alloc *alloc);
 
 /*
  * As fsm_new(), but with an explicit number of pre-allocated states.
@@ -61,7 +51,7 @@ fsm_new(const struct fsm_options *opt);
  * You can still add more states per usual.
  */
 struct fsm *
-fsm_new_statealloc(const struct fsm_options *opt, size_t statealloc);
+fsm_new_statealloc(const struct fsm_alloc *alloc, size_t statealloc);
 
 /*
  * Free a structure created by fsm_new(), and all of its contents.
@@ -75,14 +65,6 @@ fsm_free(struct fsm *fsm);
  */
 struct fsm *
 fsm_clone(const struct fsm *fsm);
-
-/* Returns the options of an FSM */
-const struct fsm_options *
-fsm_getoptions(const struct fsm *fsm);
-
-/* Sets the options of an FSM */
-void
-fsm_setoptions(struct fsm *fsm, const struct fsm_options *opts);
 
 /*
  * Copy the contents of src over dst, and free src.

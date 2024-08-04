@@ -281,7 +281,6 @@ opasm_new(struct dfavm_assembler_ir *a, enum dfavm_op_instr instr, enum dfavm_op
 	const struct ir_state *ir_state)
 {
 	static const struct dfavm_op_ir zero;
-
 	struct dfavm_op_ir *op;
 
 	if (a->freelist != NULL) {
@@ -291,18 +290,24 @@ opasm_new(struct dfavm_assembler_ir *a, enum dfavm_op_instr instr, enum dfavm_op
 		op = pool_newop(&a->pool);
 	}
 
-	if (op != NULL) {
-		*op = zero;
+	if (op == NULL) {
+		return NULL;
+	}
 
-		op->asm_index = a->count++;
-		op->index = 0;
+	*op = zero;
 
-		op->cmp   = cmp;
-		op->instr = instr;
+	op->asm_index = a->count++;
+	op->index = 0;
 
-		op->cmp_arg = arg;
+	op->cmp   = cmp;
+	op->instr = instr;
 
-		op->ir_state = ir_state;
+	op->cmp_arg = arg;
+
+	if (ir_state != NULL) {
+		op->example = ir_state->example;
+		op->endids.ids = ir_state->endids.ids;
+		op->endids.count = ir_state->endids.count;
 	}
 
 	return op;
@@ -315,10 +320,12 @@ opasm_new_fetch(struct dfavm_assembler_ir *a, unsigned state, enum dfavm_op_end 
 	struct dfavm_op_ir *op;
 
 	op = opasm_new(a, VM_OP_FETCH, VM_CMP_ALWAYS, 0, ir_state);
-	if (op != NULL) {
-		op->u.fetch.state    = state;
-		op->u.fetch.end_bits = end;
+	if (op == NULL) {
+		return NULL;
 	}
+
+	op->u.fetch.state    = state;
+	op->u.fetch.end_bits = end;
 
 	return op;
 }
@@ -330,9 +337,11 @@ opasm_new_stop(struct dfavm_assembler_ir *a, enum dfavm_op_cmp cmp, unsigned cha
 	struct dfavm_op_ir *op;
 
 	op = opasm_new(a, VM_OP_STOP, cmp, arg, ir_state);
-	if (op != NULL) {
-		op->u.stop.end_bits = end;
+	if (op == NULL) {
+		return NULL;
 	}
+
+	op->u.stop.end_bits = end;
 
 	return op;
 }
@@ -346,10 +355,12 @@ opasm_new_branch(struct dfavm_assembler_ir *a, enum dfavm_op_cmp cmp, unsigned c
 	assert(dest_state < a->nstates);
 
 	op = opasm_new(a, VM_OP_BRANCH, cmp, arg, ir_state);
-	if (op != NULL) {
-		// op->u.br.dest  = VM_DEST_FAR;  // start with all branches as 'far'
-		op->u.br.dest_state = dest_state;
+	if (op == NULL) {
+		return NULL;
 	}
+
+	// op->u.br.dest  = VM_DEST_FAR;  // start with all branches as 'far'
+	op->u.br.dest_state = dest_state;
 
 	return op;
 }
@@ -372,7 +383,8 @@ dfavm_opasm_finalize_op(struct dfavm_assembler_ir *a)
 }
 
 static int
-cmp_mode_dests(const void *a, const void *b) {
+cmp_mode_dests(const void *a, const void *b)
+{
 	const long *va = a;
 	const long *vb = b;
 

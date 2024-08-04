@@ -12,8 +12,6 @@
  */
 
 struct ast;
-struct re_err;
-struct fsm_options;
 
 enum ast_analysis_res {
 	AST_ANALYSIS_OK,

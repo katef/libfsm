@@ -23,27 +23,9 @@
 #include <fsm/vm.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
 #include "libfsm/vm/vm.h"
-
-#include "ir.h"
-
-static int
-leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
-{
-	assert(f != NULL);
-	assert(leaf_opaque == NULL);
-
-	(void) ids;
-	(void) count;
-	(void) leaf_opaque;
-
-	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
-	 * maybe user defined */
-	fprintf(f, "return TOK_UNKNOWN;");
-
-	return 0;
-}
 
 static const char *
 cmp_operator(int cmp)
@@ -63,14 +45,109 @@ cmp_operator(int cmp)
 	}
 }
 
+// TODO: centralise vmc/c
+static int
+print_ids(FILE *f,
+	enum fsm_ambig ambig, const fsm_end_id_t *ids, size_t count)
+{
+	switch (ambig) {
+	case AMBIG_NONE:
+		// TODO: for C99 we'd return bool
+		fprintf(f, "return 1;");
+		break;
+
+	case AMBIG_ERROR:
+// TODO: decide if we deal with this ahead of the call to print or not
+		if (count > 1) {
+			errno = EINVAL;
+			return -1;
+		}
+		
+		fprintf(f, "return %u;", ids[0]);
+		break;
+	
+	case AMBIG_EARLIEST:
+		/*
+		 * The libfsm api guarentees these ids are unique,
+		 * and only appear once each, and are sorted.
+		 */
+		fprintf(f, "return %u;", ids[0]);
+		break;
+	
+	case AMBIG_MULTIPLE:
+		/*
+		 * Here I would like to emit (static unsigned []) { 1, 2, 3 }
+		 * but specifying a storage duration for compound literals
+		 * is a compiler extension.
+		 * So I'm emitting a static const variable declaration instead.
+		 */
+		
+		fprintf(f, "{\n");
+		fprintf(f, "\t\tstatic const unsigned a[] = { ");
+		for (fsm_end_id_t i = 0; i < count; i++) {
+			fprintf(f, "%u", ids[i]);
+			if (i + 1 < count) { 
+				fprintf(f, ", ");
+			}
+		}
+		fprintf(f, " };\n");
+		fprintf(f, "\t\t*ids = a;\n");
+		fprintf(f, "\t\t*count = %zu;\n", count);
+		fprintf(f, "\t\treturn 0;\n");
+		fprintf(f, "\t}");
+		break;
+	
+	default:
+		assert(!"unreached");
+		abort();
+	}
+
+	return 0;
+}
+
+static int
+default_accept(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque, void *hook_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+	(void) hook_opaque;
+ 
+	if (-1 == print_ids(f, opt->ambig, ids, count)) {
+		return -1;
+	}
+
+	return 0;
+}	   
+		
+static int
+default_reject(FILE *f, const struct fsm_options *opt,
+	void *lang_opaque, void *hook_opaque)
+{   
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+	(void) hook_opaque;
+
+	fprintf(f, "return 0;");
+
+	return 0;
+}
+
 static void
 print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 {
 	fprintf(f, "l%" PRIu32 ":", op->index);
 
-	if (op->ir_state->example != NULL) {
+	if (op->example != NULL) {
 		fprintf(f, " /* e.g. \"");
-		escputs(f, opt, c_escputc_str, op->ir_state->example);
+		escputs(f, opt, c_escputc_str, op->example);
 		fprintf(f, "\" */");
 	}
 }
@@ -88,26 +165,25 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 }
 
 static int
-print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
-	enum dfavm_op_end end_bits, const struct ir *ir)
+print_end(FILE *f, const struct dfavm_op_ir *op,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	enum dfavm_op_end end_bits)
 {
-	if (end_bits == VM_END_FAIL) {
-		fprintf(f, "return -1;");
-		return 0;
-	}
+	switch (end_bits) {
+	case VM_END_FAIL:
+		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
-	if (opt->endleaf != NULL) {
-		if (-1 == opt->endleaf(f,
-			op->ir_state->endids.ids, op->ir_state->endids.count,
-			opt->endleaf_opaque))
-		{
-			return -1;
-		}
-	} else {
-		fprintf(f, "return %td;", op->ir_state - ir->states);
-	}
+	case VM_END_SUCC:
+		return print_hook_accept(f, opt, hooks,
+			op->endids.ids, op->endids.count,
+			default_accept,
+			NULL);
 
-	return 0;
+	default:
+		assert(!"unreached");
+		abort();
+	}
 }
 
 static void
@@ -281,39 +357,20 @@ unsuitable:
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
-	const char *cp,
-	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
-	const void *leaf_opaque)
+fsm_print_cfrag(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops,
+	const char *cp)
 {
-	static const struct dfavm_assembler_ir zero;
-	struct dfavm_assembler_ir a;
 	struct dfavm_op_ir *op;
 
-	static const struct fsm_vm_compile_opts vm_opts = {
-		FSM_VM_COMPILE_DEFAULT_FLAGS,
-		FSM_VM_COMPILE_VM_V1,
-		NULL
-	};
-
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
 	assert(cp != NULL);
 
-	a = zero;
-
-	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
-	 * We'll need that in order to be able to use the leaf callback here. */
-	(void) leaf;
-	(void) leaf_opaque;
-
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
 	(void) cp;
-
-	if (!dfavm_compile_ir(&a, ir, vm_opts)) {
-		return -1;
-	}
 
 	/*
 	 * We only output labels for ops which are branched to. This gives
@@ -325,20 +382,20 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		l = 0;
 
-		for (op = a.linked; op != NULL; op = op->next) {
+		for (op = ops; op != NULL; op = op->next) {
 			if (op->num_incoming > 0) {
 				op->index = l++;
 			}
 		}
 	}
 
-	assert(a.linked != NULL);
+	assert(ops != NULL);
 
 	/*
 	 * Only declare variables if we're actually going to use them.
 	 */
-	if (a.linked->cmp == VM_CMP_ALWAYS && a.linked->instr == VM_OP_STOP) {
-		assert(a.linked->next == NULL);
+	if (ops->cmp == VM_CMP_ALWAYS && ops->instr == VM_OP_STOP) {
+		assert(ops->next == NULL);
 	} else {
 		switch (opt->io) {
 		case FSM_IO_GETC:
@@ -361,7 +418,7 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		}
 	}
 
-	for (op = a.linked; op != NULL; op = op->next) {
+	for (op = ops; op != NULL; op = op->next) {
 		if (op->num_incoming > 0) {
 			fprintf(f, "\n");
 			print_label(f, op, opt);
@@ -373,7 +430,7 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op, opt);
-			if (-1 == print_end(f, op, opt, op->u.stop.end_bits, ir)) {
+			if (-1 == print_end(f, op, opt, hooks, op->u.stop.end_bits)) {
 				return -1;
 			}
 			break;
@@ -391,7 +448,7 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 				fprintf(f, "if (e - p < %zu || 0 != memcmp(p, \"", n);
 				escputbuf(f, opt, c_escputc_str, buf, n);
 				fprintf(f, "\", %zu)) ", n);
-				if (-1 == print_end(f, NULL, opt, end_bits, ir)) {
+				if (-1 == print_end(f, NULL, opt, hooks, end_bits)) {
 					return -1;
 				}
 				fprintf(f, "\n");
@@ -404,7 +461,7 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 				fprintf(f, "if (0 != strncmp(p, \"");
 				escputbuf(f, opt, c_escputc_str, buf, n);
 				fprintf(f, "\", %zu)) ", n);
-				if (-1 == print_end(f, NULL, opt, end_bits, ir)) {
+				if (-1 == print_end(f, NULL, opt, hooks, end_bits)) {
 					return -1;
 				}
 				fprintf(f, "\n");
@@ -415,7 +472,7 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 				op = tail;
 			} else {
 				print_fetch(f, opt);
-				if (-1 == print_end(f, op, opt, op->u.fetch.end_bits, ir)) {
+				if (-1 == print_end(f, op, opt, hooks, op->u.fetch.end_bits)) {
 					return -1;
 				}
 				if (opt->io == FSM_IO_PAIR) {
@@ -448,51 +505,93 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		fprintf(f, "\n");
 	}
 
-	dfavm_opasm_finalize_op(&a);
-
 	return 0;
 }
 
-static int
-fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt, const char *prefix)
+int
+fsm_print_vmc(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	struct dfavm_op_ir *ops)
 {
+	const char *prefix;
+
 	/* TODO: currently unused, but must be non-NULL */
 	const char *cp = "";
 
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
-	assert(prefix != NULL);
+	assert(hooks != NULL);
+
+	if (opt->prefix != NULL) {
+		prefix = opt->prefix;
+	} else {
+		prefix = "fsm_";
+	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_cfrag(f, ir, opt, cp,
-			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
-		{
+		if (-1 == fsm_print_cfrag(f, opt, hooks, ops, cp)) {
 			return -1;
 		}
 	} else {
 		fprintf(f, "int\n%smain", prefix);
+		fprintf(f, "(");
 
 		switch (opt->io) {
 		case FSM_IO_GETC:
-			fprintf(f, "(int (*fsm_getc)(void *opaque), void *getc_opaque)\n");
-			fprintf(f, "{\n");
+			fprintf(f, "int (*fsm_getc)(void *opaque), void *getc_opaque");
 			break;
 
 		case FSM_IO_STR:
-			fprintf(f, "(const char *s)\n");
-			fprintf(f, "{\n");
+			fprintf(f, "const char *s");
 			break;
 
 		case FSM_IO_PAIR:
-			fprintf(f, "(const char *b, const char *e)\n");
-			fprintf(f, "{\n");
+			fprintf(f, "const char *b, const char *e");
 			break;
+
+		default:
+			assert(!"unreached");
+			abort();
 		}
 
-		if (-1 == fsm_print_cfrag(f, ir, opt, cp,
-			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
-		{
+		/*
+		 * unsigned rather than fsm_end_id_t here, so the generated code
+		 * doesn't depend on fsm.h
+		 */
+		switch (opt->ambig) {
+		case AMBIG_NONE:
+			break;
+
+		case AMBIG_ERROR:
+		case AMBIG_EARLIEST:
+			fprintf(f, ",\n");
+			fprintf(f, "\tconst unsigned *id");
+			break;
+
+		case AMBIG_MULTIPLE:
+			fprintf(f, ",\n");
+			fprintf(f, "\tconst unsigned **ids, size_t *count");
+			break;
+
+		default:
+			assert(!"unreached");
+			abort();
+		}
+
+		if (hooks->args != NULL) {
+			fprintf(f, ",\n");
+			fprintf(f, "\t");
+
+			if (-1 == print_hook_args(f, opt, hooks, NULL, NULL)) {
+				return -1;
+			}
+		}
+
+		fprintf(f, ")\n");
+		fprintf(f, "{\n");
+
+		if (-1 == fsm_print_cfrag(f, opt, hooks, ops, cp)) {
 			return -1;
 		}
 
@@ -500,41 +599,6 @@ fsm_print_c_complete(FILE *f, const struct ir *ir, const struct fsm_options *opt
 		fprintf(f, "\n");
 	}
 
-	if (ferror(f)) {
-		return -1;
-	}
-
 	return 0;
-}
-
-int
-fsm_print_vmc(FILE *f, const struct fsm *fsm)
-{
-	struct ir *ir;
-	const char *prefix;
-	int r;
-
-	assert(f != NULL);
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
-
-	ir = make_ir(fsm);
-	if (ir == NULL) {
-		return -1;
-	}
-
-	/* henceforth, no function should be passed struct fsm *, only the ir and options */
-
-	if (fsm->opt->prefix != NULL) {
-		prefix = fsm->opt->prefix;
-	} else {
-		prefix = "fsm_";
-	}
-
-	r = fsm_print_c_complete(f, ir, fsm->opt, prefix);
-
-	free_ir(fsm, ir);
-
-	return r;
 }
 

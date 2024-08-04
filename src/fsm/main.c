@@ -60,8 +60,6 @@ static int clock_gettime(int clk_id, struct timespec *ts)
 extern int optind;
 extern char *optarg;
 
-static struct fsm_options opt;
-
 #define OP_ARITY 0x1
 
 enum op {
@@ -148,40 +146,40 @@ io(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static fsm_print *
-print_name(const char *name)
+static enum fsm_print_lang
+lang_name(const char *name)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		fsm_print *f;
+		enum fsm_print_lang lang;
 	} a[] = {
-		{ "api",   fsm_print_api   },
-		{ "awk",   fsm_print_awk   },
-		{ "c",     fsm_print_c     },
-		{ "dot",   fsm_print_dot   },
-		{ "fsm",   fsm_print_fsm   },
-		{ "ir",    fsm_print_ir    },
-		{ "json",  fsm_print_json  },
-		{ "vmc",   fsm_print_vmc   },
-		{ "vmdot", fsm_print_vmdot },
-		{ "rust",  fsm_print_rust  },
-		{ "llvm",  fsm_print_llvm  },
-		{ "sh",    fsm_print_sh    },
-		{ "go",    fsm_print_go    },
+		{ "api",        FSM_PRINT_API        },
+		{ "awk",        FSM_PRINT_AWK        },
+		{ "c",          FSM_PRINT_C          },
+		{ "dot",        FSM_PRINT_DOT        },
+		{ "fsm",        FSM_PRINT_FSM        },
+		{ "ir",         FSM_PRINT_IR         },
+		{ "json",       FSM_PRINT_JSON       },
+		{ "vmc",        FSM_PRINT_VMC        },
+		{ "vmdot",      FSM_PRINT_VMDOT      },
+		{ "rust",       FSM_PRINT_RUST       },
+		{ "llvm",       FSM_PRINT_LLVM       },
+		{ "sh",         FSM_PRINT_SH         },
+		{ "go",         FSM_PRINT_GO         },
 
-		{ "amd64",      fsm_print_vmasm            },
-		{ "amd64_att",  fsm_print_vmasm_amd64_att  },
-		{ "amd64_nasm", fsm_print_vmasm_amd64_nasm },
-		{ "amd64_go",   fsm_print_vmasm_amd64_go   }
+		{ "amd64",      FSM_PRINT_AMD64_NASM },
+		{ "amd64_att",  FSM_PRINT_AMD64_ATT  },
+		{ "amd64_nasm", FSM_PRINT_AMD64_NASM },
+		{ "amd64_go",   FSM_PRINT_AMD64_GO   }
 	};
 
 	assert(name != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].f;
+			return a[i].lang;
 		}
 	}
 
@@ -365,12 +363,18 @@ do_fsm_cleanup(void)
 int
 main(int argc, char *argv[])
 {
+	static const struct fsm_options zero_options;
+
+	/* TODO: use alloc hooks for -Q accounting */
+	struct fsm_alloc *alloc = NULL;
+
 	unsigned iterations, i;
-	double elapsed;
-	fsm_print *print;
+	enum fsm_print_lang lang;
 	enum op op;
 	const char *charset;
+	struct fsm_options opt;
 	struct fsm *fsm;
+	double elapsed;
 	int xfiles;
 	int r;
 	size_t generate_bounds = 0;
@@ -381,11 +385,13 @@ main(int argc, char *argv[])
 
 	atexit(do_fsm_cleanup);
 
+	opt = zero_options;
+	opt.ambig    = AMBIG_MULTIPLE;
 	opt.comments = 1;
 	opt.io       = FSM_IO_GETC;
 
 	xfiles = 0;
-	print  = NULL;
+	lang   = FSM_PRINT_NONE;
 	query  = NULL;
 	walk   = NULL;
 	op     = OP_IDENTITY;
@@ -415,8 +421,8 @@ main(int argc, char *argv[])
 				break;
 
 			case 'x': xfiles = 1;                         break;
-			case 'l': print  = print_name(optarg);        break;
-			case 'p': print  = fsm_print_fsm;             break;
+			case 'l': lang   = lang_name(optarg);         break;
+			case 'p': lang   = FSM_PRINT_FSM;             break;
 			case 'q': query  = query_name(optarg, &walk); break;
 
 			case 'd': op = op_name("determinise");        break;
@@ -465,7 +471,7 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if ((op == OP_EQUAL) + !!print > 1) {
+	if ((op == OP_EQUAL) + (lang != FSM_PRINT_NONE) > 1) {
 		fprintf(stderr, "-t equal and -p are mutually exclusive\n");
 		return EXIT_FAILURE;
 	}
@@ -480,7 +486,7 @@ main(int argc, char *argv[])
 		if ((op & OP_ARITY) == 1) {
 			/* argc < 1 is okay */
 
-			q = fsm_parse((argc == 0) ? stdin : xopen(argv[0]), &opt);
+			q = fsm_parse((argc == 0) ? stdin : xopen(argv[0]), alloc);
 			if (q == NULL) {
 				exit(EXIT_FAILURE);
 			}
@@ -490,12 +496,12 @@ main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 			}
 
-			a = fsm_parse(xopen(argv[0]), &opt);
+			a = fsm_parse(xopen(argv[0]), alloc);
 			if (a == NULL) {
 				exit(EXIT_FAILURE);
 			}
 
-			b = fsm_parse(xopen(argv[1]), &opt);
+			b = fsm_parse(xopen(argv[1]), alloc);
 			if (b == NULL) {
 				exit(EXIT_FAILURE);
 			}
@@ -708,15 +714,13 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (print != NULL) {
-		if (-1 == print(stdout, fsm)) {
-			if (errno == ENOTSUP) {
-				fprintf(stderr, "unsupported IO API\n");
-			} else {
-				perror("print_fsm");
-			}
-			exit(EXIT_FAILURE);
+	if (-1 == fsm_print(stdout, fsm, &opt, NULL, lang)) {
+		if (errno == ENOTSUP) {
+			fprintf(stderr, "unsupported IO API\n");
+		} else {
+			perror("fsm_print");
 		}
+		exit(EXIT_FAILURE);
 	}
 
 	if (generate_bounds > 0) {

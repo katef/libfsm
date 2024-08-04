@@ -1,9 +1,6 @@
 #ifndef ENDIDS_H
 #define ENDIDS_H
 
-#include <stdlib.h>
-#include <fsm/fsm.h>
-
 int
 fsm_endid_init(struct fsm *fsm);
 

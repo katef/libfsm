@@ -3,6 +3,7 @@
 SRC += src/lx/ast.c
 SRC += src/lx/lexer.c
 SRC += src/lx/parser.c
+SRC += src/lx/print.c
 SRC += src/lx/main.c
 SRC += src/lx/tokens.c
 SRC += src/lx/var.c

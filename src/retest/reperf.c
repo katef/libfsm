@@ -31,7 +31,6 @@
 #include <adt/xalloc.h>
 
 #include "libfsm/internal.h" /* XXX */
-#include "libre/print.h" /* XXX */
 #include "libre/class.h" /* XXX */
 #include "libre/ast.h" /* XXX */
 
@@ -652,6 +651,9 @@ static enum error_type
 perf_case_run(struct perf_case *c, enum halt halt,
 	struct timing *t)
 {
+	/* TODO: use alloc hooks for -Q accounting */
+	struct fsm_alloc *alloc = NULL;
+
 	struct fsm *fsm;
 	struct fsm_runner runner;
 	struct str contents;
@@ -686,7 +688,7 @@ perf_case_run(struct perf_case *c, enum halt halt,
 
 			re = c->regexp.data;
 
-			fsm = re_comp(c->dialect, fsm_sgetc, &re, &opt, flags, &comp_err);
+			fsm = re_comp(c->dialect, fsm_sgetc, &re, alloc, flags, &comp_err);
 			if (fsm == NULL) {
 				return ERROR_PARSING_REGEXP;
 			}
@@ -726,7 +728,7 @@ perf_case_run(struct perf_case *c, enum halt halt,
 		goto done;
 	}
 
-	ret = fsm_runner_initialize(fsm, &runner, c->impl, vm_opts);
+	ret = fsm_runner_initialize(fsm, &opt, &runner, c->impl, vm_opts);
 	if (ret != ERROR_NONE) {
 		fsm_free(fsm);
 		return ret;
@@ -734,11 +736,11 @@ perf_case_run(struct perf_case *c, enum halt halt,
 
 #if DEBUG_VM_FSM
 	fprintf(stderr, "FSM:\n");
-	fsm_print_fsm(stderr, fsm);
+	fsm_dump(stderr, fsm);
 	fprintf(stderr, "---\n");
 	{
 		FILE *f = fopen("dump.fsm", "w");
-		fsm_print_fsm(f, fsm);
+		fsm_dump(f, fsm);
 		fclose(f);
 	}
 #endif /* DEBUG_VM_FSM */

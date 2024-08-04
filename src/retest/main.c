@@ -34,7 +34,6 @@
 #include <re/re.h>
 
 #include "libfsm/internal.h" /* XXX */
-#include "libre/print.h" /* XXX */
 #include "libre/class.h" /* XXX */
 #include "libre/ast.h" /* XXX */
 
@@ -739,6 +738,7 @@ flagstring(enum re_flags flags, char buf[16])
  */
 static int
 process_test_file(const char *filename,
+	const struct fsm_alloc *alloc,
 	enum re_dialect default_dialect, enum implementation impl, int max_errors, struct error_record *erec)
 {
 	static const struct fsm_runner init_runner;
@@ -978,7 +978,7 @@ process_test_file(const char *filename,
 			}
 
 			re_str = regexp;
-			fsm = re_comp(dialect, fsm_sgetc, &re_str, &opt, flags, &err);
+			fsm = re_comp(dialect, fsm_sgetc, &re_str, alloc, flags, &err);
 			if (fsm == NULL) {
 				fprintf(stderr, "line %d: error with %s regexp /%s/%s: %s\n",
 					linenum, dialect_name, regexp, flagdesc, re_strerror(err.e));
@@ -1049,11 +1049,11 @@ process_test_file(const char *filename,
 
 #if DEBUG_VM_FSM
 			fprintf(stderr, "FSM:\n");
-			fsm_print_fsm(stderr, fsm);
+			fsm_dump(stderr, fsm);
 			fprintf(stderr, "---\n");
 			{
 				FILE *f = fopen("dump.fsm", "w");
-				fsm_print_fsm(f, fsm);
+				fsm_dump(f, fsm);
 				fclose(f);
 			}
 #endif /* DEBUG_VM_FSM */
@@ -1062,7 +1062,7 @@ process_test_file(const char *filename,
 			fprintf(stderr, "REGEXP matching for /%s/%s\n", regexp, flagdesc);
 #endif /* DEBUG_TEST_REGEXP */
 
-			ret = fsm_runner_initialize(fsm, &runner, impl, vm_opts);
+			ret = fsm_runner_initialize(fsm, &opt, &runner, impl, vm_opts);
 
 			fsm_free(fsm);
 
@@ -1221,6 +1221,9 @@ io(const char *name)
 int
 main(int argc, char *argv[])
 {
+	/* TODO: use alloc hooks for -Q accounting as well as watchdog timeouts */
+	struct fsm_alloc *alloc = NULL;
+
 	enum re_dialect dialect;
 	enum implementation impl;
 	int max_test_errors;
@@ -1345,7 +1348,7 @@ main(int argc, char *argv[])
 	}
 
 	if (do_watchdog) {
-		opt.alloc = &watchdog_alloc;
+		alloc = &watchdog_alloc;
 	}
 
 	if (argc < 1) {
@@ -1381,7 +1384,8 @@ main(int argc, char *argv[])
 				return EXIT_FAILURE;
 			}
 
-			nerrs = process_test_file(argv[i], dialect, impl, max_test_errors, &erec);
+			nerrs = process_test_file(argv[i], alloc,
+				dialect, impl, max_test_errors, &erec);
 
 			if (erec.len > 0) {
 				error_record_print(stderr, &erec);

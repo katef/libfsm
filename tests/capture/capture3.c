@@ -83,15 +83,15 @@ int main(void) {
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "\n=== f_ab...\n");
-	fsm_print_fsm(stderr, f_ab);
+	fsm_dump(stderr, f_ab);
 	fsm_capture_dump(stderr, "#### f_ab", f_ab);
 
 	fprintf(stderr, "\n=== f_cde...\n");
-	fsm_print_fsm(stderr, f_cde);
+	fsm_dump(stderr, f_cde);
 	fsm_capture_dump(stderr, "#### f_cde", f_cde);
 
 	fprintf(stderr, "\n=== f_fghi...\n");
-	fsm_print_fsm(stderr, f_fghi);
+	fsm_dump(stderr, f_fghi);
 	fsm_capture_dump(stderr, "#### f_fghi", f_fghi);
 #endif
 
@@ -111,14 +111,14 @@ int main(void) {
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "=== unioned f_ab with f_cde... (CB ab: %u, cde: %u)\n",
 	    bases[0].capture, bases[1].capture);
-	fsm_print_fsm(stderr, f_all);
+	fsm_dump(stderr, f_all);
 	fsm_capture_dump(stderr, "#### f_all", f_all);
 #endif
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "=== unioned f_all with f_fghi... (CB fghi: %u), %u captures\n",
 	    bases[2].capture, fsm_countcaptures(f_all));
-	fsm_print_fsm(stderr, f_all);
+	fsm_dump(stderr, f_all);
 	fsm_capture_dump(stderr, "#### f_all #2", f_all);
 #endif
 
@@ -129,7 +129,7 @@ int main(void) {
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==== after determinise\n");
-	fsm_print_fsm(stderr, f_all);
+	fsm_dump(stderr, f_all);
 	fsm_capture_dump(stderr, "#### f_all", f_all);
 #endif
 
@@ -164,7 +164,7 @@ det_and_min(const char *tag, struct fsm *fsm)
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==== after det_and_min: '%s'\n", tag);
-	fsm_print_fsm(stderr, fsm);
+	fsm_dump(stderr, fsm);
 	fsm_capture_dump(stderr, tag, fsm);
 #endif
 

@@ -120,7 +120,7 @@ main(int argc, char *argv[])
 {
 	struct fsm *fsm;
 	fsm_state_t start;
-	fsm_print *print;
+	enum fsm_print_lang lang;
 
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
@@ -128,7 +128,7 @@ main(int argc, char *argv[])
 	opt.comments          = 0;
 	opt.case_ranges       = 0;
 
-	print = fsm_print_api;
+	lang = FSM_PRINT_API;
 
 	{
 		int c;
@@ -139,11 +139,11 @@ main(int argc, char *argv[])
 
 			case 'l':
 				if (strcmp(optarg, "dot") == 0) {
-					print = fsm_print_dot;
+					lang = FSM_PRINT_DOT;
 				} else if (strcmp(optarg, "api") == 0) {
-					print = fsm_print_api;
+					lang = FSM_PRINT_API;
 				} else if (strcmp(optarg, "c") == 0) {
-					print = fsm_print_c;
+					lang = FSM_PRINT_C;
 				} else {
 					fprintf(stderr, "Invalid language '%s'", optarg);
 					exit(1);
@@ -220,7 +220,7 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	print(stdout, fsm);
+	fsm_print(stdout, fsm, lang);
 
 	fsm_free(fsm);
 

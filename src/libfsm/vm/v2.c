@@ -11,6 +11,8 @@
 #include <ctype.h>
 #include <inttypes.h>
 
+#include <fsm/fsm.h>
+
 #include "vm.h"
 
 enum dfavm_vm_op_v2 {

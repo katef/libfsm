@@ -44,9 +44,6 @@ int
 captest_getc(void *opaque);
 
 struct fsm *
-captest_fsm_with_options(void);
-
-struct fsm *
 captest_fsm_of_string(const char *string, unsigned end_id);
 
 int
