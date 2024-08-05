@@ -420,25 +420,40 @@ accept_llvm(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
 	void *lang_opaque, void *hook_opaque)
 {
-	unsigned n;
+	const char *prefix;
 	size_t i;
 
 	assert(opt != NULL);
 	assert(lang_opaque != NULL);
 	assert(hook_opaque == NULL);
 
+	if (opt->prefix != NULL) {
+		prefix = opt->prefix;
+	} else {
+		prefix = "fsm.";
+	}
+
 	(void) opt;
 	(void) hook_opaque;
 
-	n = 0;
-
-	for (i = 0; i < count; i++) {
-		n |= 1U << ids[i];
-	}
-
 	i = * (const size_t *) lang_opaque;
 
-	fprintf(f, "[u%#x, %%ret%zu],", (unsigned) n, i);
+	if (opt->ambig == AMBIG_MULTIPLE) {
+// XXX
+#define ptr_i8 "ptr"
+		fprintf(f, "[{ i1 true, %s @%sr%zu, i32 %zu }, %%ret%zu],", ptr_i8, prefix, i, count, i);
+#undef ptr_i8
+	} else {
+		unsigned n;
+
+		n = 0;
+
+		for (i = 0; i < count; i++) {
+			n |= 1U << ids[i];
+		}
+
+		fprintf(f, "[u%#x, %%ret%zu],", (unsigned) n, i);
+	}
 
 	fprintf(f, " ; ");
 

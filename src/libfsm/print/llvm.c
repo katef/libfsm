@@ -91,11 +91,18 @@ default_accept(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
 	void *lang_opaque, void *hook_opaque)
 {
+	const char *prefix;
 	size_t i;
 
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque != NULL);
+
+	if (opt->prefix != NULL) {
+		prefix = opt->prefix;
+	} else {
+		prefix = "fsm.";
+	}
 
 	(void) hook_opaque;
 
@@ -125,9 +132,9 @@ default_accept(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case AMBIG_MULTIPLE:
-		// TODO: probably { i1, ptr_u8 }
-		assert(!"unimplemented");
-		abort();
+		(void) ids;
+		fprintf(f, "[{ i1 true, @%sr%zu, %zu }, %%ret%zu],\n", prefix, i, count, i);
+		break;
 
 	default:
 		assert(!"unreached");
@@ -155,8 +162,11 @@ default_reject(FILE *f, const struct fsm_options *opt,
 
 	case AMBIG_ERROR:
 	case AMBIG_EARLIEST:
-	case AMBIG_MULTIPLE:
 		fprintf(f, "[{ false, undef }, %%fail]\n");
+		break;
+
+	case AMBIG_MULTIPLE:
+		fprintf(f, "[{ i1 false, %s undef, i32 undef }, %%fail]\n", ptr_i8);
 		break;
 
 	default:
@@ -177,13 +187,13 @@ print_rettype(FILE *f, enum fsm_ambig ambig)
 
 	case AMBIG_ERROR:
 	case AMBIG_EARLIEST:
-		fprintf(f, "{ i1, u32 }");
+		fprintf(f, "{ i1, i32 }");
 		break;
 
 	case AMBIG_MULTIPLE:
-		// TODO: probably { i1, ptr_u8 }
-		assert(!"unimplemented");
-		abort();
+		// success, ids, count
+		fprintf(f, "{ i1, %s, i32 }", ptr_i8);
+		break;
 
 	default:
 		assert(!"unreached");
@@ -609,7 +619,7 @@ fsm_print_llvm(FILE *f,
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
 	} else {
-		prefix = "fsm_";
+		prefix = "fsm.";
 	}
 
 	if (hooks->cp != NULL) {
@@ -624,8 +634,23 @@ fsm_print_llvm(FILE *f,
 	}
 
 	fprintf(f, "; generated\n");
-//XXX: type depends on ambig
-	fprintf(f, "define dso_local i1 @%smain", prefix);
+
+	if (opt->ambig == AMBIG_MULTIPLE) {
+		for (size_t i = 0; i < retlist->count; i++) {
+			fprintf(f, "@%sr%zu = internal unnamed_addr constant [%zu x i32] [", prefix, i, retlist->a[i].count);
+			for (size_t j = 0; j < retlist->a[i].count; j++) {
+				fprintf(f, "i32 %u", retlist->a[i].ids[j]);
+				if (j + 1 < retlist->a[i].count) {
+					fprintf(f, ", ");
+				}
+			}
+			fprintf(f, "]\n");
+		}
+	}
+
+	fprintf(f, "define dso_local ");
+	print_rettype(f, opt->ambig);
+	fprintf(f, " @%smain", prefix);
 
 	switch (opt->io) {
 	case FSM_IO_GETC:
