@@ -160,11 +160,11 @@ default_reject(FILE *f, const struct fsm_options *opt,
 
 	case AMBIG_ERROR:
 	case AMBIG_EARLIEST:
-		fprintf(f, "%%rt { i1 false, i32 undef } ; fail\n");
+		fprintf(f, "%%rt { i1 false, i32 poison } ; fail\n");
 		break;
 
 	case AMBIG_MULTIPLE:
-		fprintf(f, "%%rt { i1 false, %s undef, i32 undef } ; fail\n", ptr_i32);
+		fprintf(f, "%%rt { i1 false, %s poison, i32 poison } ; fail\n", ptr_i32);
 		break;
 
 	default:
