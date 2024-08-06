@@ -33,14 +33,16 @@
 
 #define OPAQUE_POINTERS 1
 
-#ifdef OPAQUE_POINTERS // llvm >= 15
+#if OPAQUE_POINTERS // llvm >= 15
 static const char *ptr_i8   = "ptr";
 static const char *ptr_i32  = "ptr";
 static const char *ptr_void = "ptr";
+static const char *ptr_rt   = "ptr";
 #else
 static const char *ptr_i8   = "i8*";
 static const char *ptr_i32  = "i32*";
 static const char *ptr_void = "i8*";
+static const char *ptr_rt   = "%rt*";
 #endif
 
 static const struct dfavm_op_ir fail; // used as a unqiue address only
@@ -91,26 +93,16 @@ default_accept(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
 	void *lang_opaque, void *hook_opaque)
 {
-	const char *prefix;
-	size_t i;
-
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(lang_opaque != NULL);
-
-	if (opt->prefix != NULL) {
-		prefix = opt->prefix;
-	} else {
-		prefix = "fsm.";
-	}
+	assert(lang_opaque == NULL);
 
 	(void) hook_opaque;
-
-	i = * (const size_t *) lang_opaque;
+	(void) lang_opaque;
 
 	switch (opt->ambig) {
 	case AMBIG_NONE:
-		fprintf(f, "[true, %%ret%zu],\n", i);
+		fprintf(f, "%%rt true");
 		break;
 
 	case AMBIG_ERROR:
@@ -120,7 +112,7 @@ default_accept(FILE *f, const struct fsm_options *opt,
 			return -1;
 		}
 
-		fprintf(f, "[{ true, %u }, %%ret%zu],\n", ids[0], i);
+		fprintf(f, "%%rt { i1 true, i32 %u }", ids[0]);
 		break;
 
 	case AMBIG_EARLIEST:
@@ -128,12 +120,18 @@ default_accept(FILE *f, const struct fsm_options *opt,
 		 * The libfsm api guarentees these ids are unique,
 		 * and only appear once each, and are sorted.
 		 */
-		fprintf(f, "[{ true, i32 %u }, %%ret%zu],\n", ids[0], i);
+		fprintf(f, "%%rt { i1 true, i32 %u }", ids[0]);
 		break;
 
 	case AMBIG_MULTIPLE:
-		(void) ids;
-		fprintf(f, "[{ i1 true, @%sr%zu, %zu }, %%ret%zu],\n", prefix, i, count, i);
+		fprintf(f, "internal unnamed_addr constant [%zu x i32] [", count);
+		for (size_t j = 0; j < count; j++) {
+			fprintf(f, "i32 %u", ids[j]);
+			if (j + 1 < count) {
+				fprintf(f, ", ");
+			}
+		}
+		fprintf(f, "]");
 		break;
 
 	default:
@@ -157,16 +155,16 @@ default_reject(FILE *f, const struct fsm_options *opt,
 
 	switch (opt->ambig) {
 	case AMBIG_NONE:
-		fprintf(f, "[false, %%fail]\n");
+		fprintf(f, "%%rt false ; fail\n");
 		break;
 
 	case AMBIG_ERROR:
 	case AMBIG_EARLIEST:
-		fprintf(f, "[{ false, undef }, %%fail]\n");
+		fprintf(f, "%%rt { i1 false, i32 undef } ; fail\n");
 		break;
 
 	case AMBIG_MULTIPLE:
-		fprintf(f, "[{ i1 false, %s undef, i32 undef }, %%fail]\n", ptr_i8);
+		fprintf(f, "%%rt { i1 false, %s undef, i32 undef } ; fail\n", ptr_i32);
 		break;
 
 	default:
@@ -178,8 +176,10 @@ default_reject(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-print_rettype(FILE *f, enum fsm_ambig ambig)
+print_rettype(FILE *f, const char *name, enum fsm_ambig ambig)
 {
+	fprintf(f, "%s = type ", name);
+
 	switch (ambig) {
 	case AMBIG_NONE:
 		fprintf(f, "i1");
@@ -187,18 +187,21 @@ print_rettype(FILE *f, enum fsm_ambig ambig)
 
 	case AMBIG_ERROR:
 	case AMBIG_EARLIEST:
+		// success, id
 		fprintf(f, "{ i1, i32 }");
 		break;
 
 	case AMBIG_MULTIPLE:
 		// success, ids, count
-		fprintf(f, "{ i1, %s, i32 }", ptr_i8);
+		fprintf(f, "{ i1, %s, i32 }", ptr_i32);
 		break;
 
 	default:
 		assert(!"unreached");
 		abort();
 	}
+
+	fprintf(f, "\n");
 
 	return 0;
 }
@@ -415,10 +418,10 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 static int
 fsm_print_llvmfrag(FILE *f,
 	const struct fsm_options *opt,
-	const struct fsm_hooks *hooks,
 	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops,
-	const char *cp)
+	const char *cp,
+	const char *prefix)
 {
 	struct dfavm_op_ir *op;
 
@@ -426,6 +429,7 @@ fsm_print_llvmfrag(FILE *f,
 	assert(opt != NULL);
 	assert(retlist != NULL);
 	assert(cp != NULL);
+	assert(prefix != NULL);
 
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
 	(void) cp;
@@ -450,12 +454,14 @@ fsm_print_llvmfrag(FILE *f,
 		 * This looks like:
 		 *
 		 *  stop:
-		 *      %ret = phi i1
-		 *       [true, %ret0], ; "abc"
-		 *       [true, %ret1], ; "xyz"
-		 *       [true, %ret2], ; "abc", "xyz"
-		 *       [false, %fail]
-		 *      ret i1 %ret
+		 *      %i = phi i64
+		 *        [0, %ret0],
+		 *        [1, %ret1],
+		 *        [2, %ret2],
+		 *        [3, %fail]
+		 *      %p = getelementptr inbounds [4 x %rt], [4 x %rt]* @fsm.r, i64 0, i64 %i
+		 *      %ret = load %rt, ptr %p
+		 *      ret %rt %ret
 		 *  fail:
 		 *      br label %stop
 		 *  ret0:
@@ -464,6 +470,8 @@ fsm_print_llvmfrag(FILE *f,
 		 *      br label %stop
 		 *  ret2:
 		 *      br label %stop
+		 *
+		 * where @fsm.r is [4 x %rt] and %rt is the return type.
 		 *
 		 * And we jump to stop: via the ret*: labels rather than
 		 * to a phi node directly. This helps for two reasons:
@@ -480,29 +488,16 @@ fsm_print_llvmfrag(FILE *f,
 		 */
 		print_label(f, true, "stop");
 
-		fprintf(f, "\t%%ret = phi ");
-		print_rettype(f, opt->ambig);
-		fprintf(f, "\n");
-
+		fprintf(f, "\t%%i = phi i64\n");
 		for (size_t i = 0; i < retlist->count; i++) {
-			fprintf(f, "\t  ");
-
-			if (-1 == print_hook_accept(f, opt, hooks,
-				retlist->a[i].ids, retlist->a[i].count,
-				default_accept, &i))
-			{
-				return -1;
-			}
+			fprintf(f, "\t  [%zu, %%ret%zu],\n", i, i);
 		}
+		fprintf(f, "\t  [%zu, %%fail]\n", retlist->count);
 
-		fprintf(f, "\t  ");
-		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
-			return -1;
-		}
-
-		fprintf(f, "\tret ");
-		print_rettype(f, opt->ambig);
-		fprintf(f, " %%ret\n");
+		fprintf(f, "\t%%p = getelementptr inbounds [%zu x %%rt], [%zu x %%rt]* @%sr, i64 0, i64 %%i\n",
+			retlist->count + 1, retlist->count + 1, prefix);
+		fprintf(f, "\t%%ret = load %%rt, %s %%p\n", ptr_rt);
+		fprintf(f, "\tret %%rt %%ret\n");
 
 		print_label(f, true, "fail");
 		fprintf(f, "\tbr ");
@@ -629,28 +624,54 @@ fsm_print_llvm(FILE *f,
 	}
 
 	if (opt->fragment) {
-		fsm_print_llvmfrag(f, opt, hooks, retlist, ops, cp);
+		fsm_print_llvmfrag(f, opt, retlist, ops, cp, prefix);
 		return 0;
 	}
 
 	fprintf(f, "; generated\n");
+	print_rettype(f, "%rt", opt->ambig);
 
+	/*
+	 * For AMBIG_MULTIPLE we emit a bunch of arrays and then point at them from
+	 * each %rt. So we call the hook for the arrays, because that's where the id
+	 * list is. For other ambig modes, we call the hook for the %rt instead.
+	 */
 	if (opt->ambig == AMBIG_MULTIPLE) {
 		for (size_t i = 0; i < retlist->count; i++) {
-			fprintf(f, "@%sr%zu = internal unnamed_addr constant [%zu x i32] [", prefix, i, retlist->a[i].count);
-			for (size_t j = 0; j < retlist->a[i].count; j++) {
-				fprintf(f, "i32 %u", retlist->a[i].ids[j]);
-				if (j + 1 < retlist->a[i].count) {
-					fprintf(f, ", ");
-				}
+			fprintf(f, "@%sr%zu = ", prefix, i);
+			if (-1 == print_hook_accept(f, opt, hooks,
+				retlist->a[i].ids, retlist->a[i].count,
+				default_accept, NULL))
+			{
+				return -1;
 			}
-			fprintf(f, "]\n");
+			fprintf(f, "\n");
 		}
 	}
 
-	fprintf(f, "define dso_local ");
-	print_rettype(f, opt->ambig);
-	fprintf(f, " @%smain", prefix);
+	fprintf(f, "@%sr = internal unnamed_addr constant [%zu x %%rt] [\n", prefix, retlist->count + 1);
+	for (size_t i = 0; i < retlist->count; i++) {
+		fprintf(f, "\t  ");
+		if (opt->ambig == AMBIG_MULTIPLE) {
+			fprintf(f, "%%rt { i1 true, %s bitcast ([%zu x i32]* @%sr%zu to %s), i32 %zu }",
+				ptr_i32, retlist->a[i].count, prefix, i, ptr_i32, retlist->a[i].count);
+		} else {
+			if (-1 == print_hook_accept(f, opt, hooks,
+				retlist->a[i].ids, retlist->a[i].count,
+				default_accept, NULL))
+			{
+				return -1;
+			}
+		}
+		fprintf(f, ",\n");
+	}
+	fprintf(f, "\t  ");
+	if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
+		return -1;
+	}
+	fprintf(f, "\t]\n");
+
+	fprintf(f, "define dso_local %%rt @%smain", prefix);
 
 	switch (opt->io) {
 	case FSM_IO_GETC:
@@ -701,7 +722,7 @@ fsm_print_llvm(FILE *f,
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_print_llvmfrag(f, opt, hooks, retlist, ops, cp);
+	fsm_print_llvmfrag(f, opt, retlist, ops, cp, prefix);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

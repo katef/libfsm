@@ -420,39 +420,52 @@ accept_llvm(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
 	void *lang_opaque, void *hook_opaque)
 {
-	const char *prefix;
 	size_t i;
 
 	assert(opt != NULL);
-	assert(lang_opaque != NULL);
+	assert(lang_opaque == NULL);
 	assert(hook_opaque == NULL);
-
-	if (opt->prefix != NULL) {
-		prefix = opt->prefix;
-	} else {
-		prefix = "fsm.";
-	}
 
 	(void) opt;
 	(void) hook_opaque;
 
-	i = * (const size_t *) lang_opaque;
+	switch (opt->ambig) {
+	case AMBIG_NONE:
+		fprintf(f, "%%rt true");
+		break;
 
-	if (opt->ambig == AMBIG_MULTIPLE) {
-// XXX
-#define ptr_i8 "ptr"
-		fprintf(f, "[{ i1 true, %s @%sr%zu, i32 %zu }, %%ret%zu],", ptr_i8, prefix, i, count, i);
-#undef ptr_i8
-	} else {
-		unsigned n;
-
-		n = 0;
-
-		for (i = 0; i < count; i++) {
-			n |= 1U << ids[i];
+	case AMBIG_ERROR:
+// TODO: decide if we deal with this ahead of the call to print or not
+		if (count > 1) {
+			errno = EINVAL;
+			return -1;
 		}
 
-		fprintf(f, "[u%#x, %%ret%zu],", (unsigned) n, i);
+		fprintf(f, "%%rt { i1 true, i32 %u }", ids[0]);
+		break;
+
+	case AMBIG_EARLIEST:
+		/*
+		 * The libfsm api guarentees these ids are unique,
+		 * and only appear once each, and are sorted.
+		 */
+		fprintf(f, "%%rt { i1 true, i32 %u }", ids[0]);
+		break;
+
+	case AMBIG_MULTIPLE:
+		fprintf(f, "internal unnamed_addr constant [%zu x i32] [", count);
+		for (size_t j = 0; j < count; j++) {
+			fprintf(f, "i32 %u", ids[j]);
+			if (j + 1 < count) {
+				fprintf(f, ", ");
+			}
+		}
+		fprintf(f, "]");
+		break;
+
+	default:
+		assert(!"unreached");
+		abort();
 	}
 
 	fprintf(f, " ; ");
@@ -466,8 +479,6 @@ accept_llvm(FILE *f, const struct fsm_options *opt,
 			fprintf(f, ", ");
 		}
 	}
-
-	fprintf(f, "\n");
 
 	return 0;
 }
