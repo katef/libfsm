@@ -334,60 +334,6 @@ conflict(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-accept_c(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque, void *hook_opaque)
-{
-	unsigned n;
-	size_t i;
-
-	assert(opt != NULL);
-	assert(lang_opaque == NULL);
-	assert(hook_opaque == NULL);
-
-	(void) opt;
-	(void) lang_opaque;
-	(void) hook_opaque;
-
-	n = 0;
-
-	for (i = 0; i < count; i++) {
-		n |= 1U << ids[i];
-	}
-
-	fprintf(f, "return %#x;", (unsigned) n);
-
-	return 0;
-}
-
-static int
-accept_rust(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque, void *hook_opaque)
-{
-	unsigned n;
-	size_t i;
-
-	assert(opt != NULL);
-	assert(lang_opaque == NULL);
-	assert(hook_opaque == NULL);
-
-	(void) opt;
-	(void) lang_opaque;
-	(void) hook_opaque;
-
-	n = 0;
-
-	for (i = 0; i < count; i++) {
-		n |= 1U << ids[i];
-	}
-
-	fprintf(f, "return Some(%#x)", (unsigned) n);
-
-	return 0;
-}
-
-static int
 comment_c(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
 	void *lang_opaque, void *hook_opaque)
@@ -1116,12 +1062,10 @@ main(int argc, char *argv[])
 
 		case FSM_PRINT_C:
 		case FSM_PRINT_VMC:
-			hooks.accept  = accept_c;
 			hooks.comment = comment_c;
 			break;
 
 		case FSM_PRINT_RUST:
-			hooks.accept  = accept_rust;
 			hooks.comment = comment_rust;
 			break;
 
