@@ -164,7 +164,7 @@ default_reject(FILE *f, const struct fsm_options *opt,
 		break;
 
 	case AMBIG_MULTIPLE:
-		fprintf(f, "%%rt { i1 false, %s poison, i32 poison }", ptr_i32);
+		fprintf(f, "%%rt { %s poison, i64 -1 }", ptr_i32);
 		break;
 
 	default:
@@ -196,8 +196,8 @@ print_rettype(FILE *f, const char *name, enum fsm_ambig ambig)
 		break;
 
 	case AMBIG_MULTIPLE:
-		// success, ids, count
-		fprintf(f, "{ i1, %s, i32 }", ptr_i32);
+		// ids, -1/count
+		fprintf(f, "{ %s, i64 }", ptr_i32);
 		break;
 
 	default:
@@ -676,7 +676,7 @@ fsm_print_llvm(FILE *f,
 	for (size_t i = 0; i < retlist->count; i++) {
 		fprintf(f, "\t  ");
 		if (opt->ambig == AMBIG_MULTIPLE) {
-			fprintf(f, "%%rt { i1 true, %s bitcast ([%zu x i32]* @%sr%zu to %s), i32 %zu }",
+			fprintf(f, "%%rt { %s bitcast ([%zu x i32]* @%sr%zu to %s), i64 %zu }",
 				ptr_i32, retlist->a[i].count, prefix, i, ptr_i32, retlist->a[i].count);
 		} else {
 			if (-1 == print_hook_accept(f, opt, hooks,
