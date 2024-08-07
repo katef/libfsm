@@ -155,21 +155,25 @@ default_reject(FILE *f, const struct fsm_options *opt,
 
 	switch (opt->ambig) {
 	case AMBIG_NONE:
-		fprintf(f, "%%rt false ; fail\n");
+		fprintf(f, "%%rt false");
 		break;
 
 	case AMBIG_ERROR:
 	case AMBIG_EARLIEST:
-		fprintf(f, "%%rt { i1 false, i32 poison } ; fail\n");
+		fprintf(f, "%%rt { i1 false, i32 poison }");
 		break;
 
 	case AMBIG_MULTIPLE:
-		fprintf(f, "%%rt { i1 false, %s poison, i32 poison } ; fail\n", ptr_i32);
+		fprintf(f, "%%rt { i1 false, %s poison, i32 poison }", ptr_i32);
 		break;
 
 	default:
 		assert(!"unreached");
 		abort();
+	}
+
+	if (opt->comments) {
+		fprintf(f, " ; fail");
 	}
 
 	return 0;
@@ -271,8 +275,11 @@ print_cond(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *op,
 	fprintf(f, "icmp %s i8 %%c%u, ",
 		cmp_operator(op->cmp), use(&frame->c));
 	llvm_escputcharlit(f, opt, op->cmp_arg);
-	fprintf(f, " ; ");
-	c_escputcharlit(f, opt, op->cmp_arg); // C escaping for a comment
+
+	if (opt->comments) {
+		fprintf(f, " ; ");
+		c_escputcharlit(f, opt, op->cmp_arg); // C escaping for a comment
+	}
 	fprintf(f, "\n");
 }
 
@@ -332,7 +339,11 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 			ptr_i8);
 
 		print_decl(f, "r", decl(&frame->r));
-		fprintf(f, "icmp eq i32 %%i%u, -1 ; EOF\n", n);
+		fprintf(f, "icmp eq i32 %%i%u, -1", n);
+		if (opt->comments) {
+			fprintf(f, " ; EOF");
+		}
+		fprintf(f, "\n");
 
 // XXX: we don't distinguish error from eof
 // https://github.com/katef/libfsm/issues/484
@@ -362,8 +373,11 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 			ptr_i8, n);
 
 		print_decl(f, "r", decl(&frame->r));
-	  	fprintf(f, "icmp eq i8 %%c%u, 0 ; EOT\n",
-			n);
+	  	fprintf(f, "icmp eq i8 %%c%u, 0", n);
+		if (opt->comments) {
+			fprintf(f, " ; EOT");
+		}
+		fprintf(f, "\n");
 
 		print_branch(f, frame,
 			end_bits == VM_END_FAIL ? &fail : NULL,
@@ -385,8 +399,11 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 			ptr_i8, n);
 
 		print_decl(f, "r", decl(&frame->r));
-	  	fprintf(f, "icmp eq %s %%p%u, %%e ; EOF\n",
-			ptr_i8, n);
+	  	fprintf(f, "icmp eq %s %%p%u, %%e", ptr_i8, n);
+		if (opt->comments) {
+			fprintf(f, " ; EOT");
+		}
+		fprintf(f, "\n");
 
 		print_branch(f, frame,
 			end_bits == VM_END_FAIL ? &fail : NULL,
@@ -516,16 +533,22 @@ fsm_print_llvmfrag(FILE *f,
 	for (op = ops; op != NULL; op = op->next) {
 		if (op->instr != VM_OP_STOP || op->cmp != VM_CMP_ALWAYS || op->u.stop.end_bits != VM_END_FAIL) {
 			print_label(f, true, "l%" PRIu32, op->index);
-		}
 
-		if (op->example != NULL) {
-			/* C's escaping seems to be a subset of llvm's, and these are
-			 * for comments anyway. So I'm borrowing this for C here */
-			fprintf(f, "\t; e.g. \"");
-			escputs(f, opt, c_escputc_str, op->example);
-			fprintf(f, "\"");
+			/*
+			 * We only show examples when there's a label for the block,
+			 * otherwise it's confusing with the conditionally elided
+			 * optimisations per-instruction below, which can result in
+			 * no block code being emitted for a particular vm op.
+			 */
+			if (op->example != NULL) {
+				/* C's escaping seems to be a subset of llvm's, and these are
+				 * for comments anyway. So I'm borrowing this for C here */
+				fprintf(f, "\t; e.g. \"");
+				escputs(f, opt, c_escputc_str, op->example);
+				fprintf(f, "\"");
 
-			fprintf(f, "\n");
+				fprintf(f, "\n");
+			}
 		}
 
 		switch (op->instr) {
@@ -669,6 +692,7 @@ fsm_print_llvm(FILE *f,
 	if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
 		return -1;
 	}
+	fprintf(f, "\n");
 	fprintf(f, "\t]\n");
 
 	fprintf(f, "define dso_local %%rt @%smain", prefix);

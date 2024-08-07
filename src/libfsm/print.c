@@ -59,6 +59,8 @@ print_hook_accept(FILE *f,
 		void *lang_opaque, void *hook_opaque),
 	void *lang_opaque)
 {
+	int r;
+
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
@@ -72,10 +74,24 @@ print_hook_accept(FILE *f,
 	}
 
 	if (hooks->accept != NULL) {
-		return hooks->accept(f, opt, ids, count,
+		r = hooks->accept(f, opt, ids, count,
 			lang_opaque, hooks->hook_opaque);
 	} else if (default_accept != NULL) {
-		return default_accept(f, opt, ids, count,
+		r = default_accept(f, opt, ids, count,
+			lang_opaque, hooks->hook_opaque);
+	} else {
+		r = 0;
+	}
+
+	if (r != 0) {
+		return r;
+	}
+
+	if (opt->comments && hooks->comment != NULL) {
+		/* this space is a polyglot */
+		fprintf(f, " ");
+
+		r = hooks->comment(f, opt, ids, count,
 			lang_opaque, hooks->hook_opaque);
 	}
 

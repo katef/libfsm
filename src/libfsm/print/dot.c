@@ -270,7 +270,7 @@ print_dotfrag(FILE *f,
 			f_free(fsm->alloc, ids);
 		}
 
-		/* TODO: show example here, unless !opt->comments */
+		/* TODO: comment example per state */
 
 		if (-1 == print_state(f, opt, hooks, fsm, prefix, s)) {
 			return -1;

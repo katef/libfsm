@@ -108,7 +108,9 @@ default_reject(FILE *f, const struct fsm_options *opt,
 static int
 print_label(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 {
-	fprintf(f, "\t\t/* l%" PRIu32 " */\n", op->index);
+	if (opt->comments) {
+		fprintf(f, "\t\t/* l%" PRIu32 " */\n", op->index);
+	}
 
 	if (op->example != NULL) {
 		fprintf(f, "\t\t/* e.g. \"");
@@ -409,8 +411,10 @@ fsm_print_vmops_main(FILE *f,
 
 	fprintf(f, "{\n");
 	fprintf(f, "\tunsigned int i = 0;\n");
-	fprintf(f, "\t/* The compiler doesn't know the op stream will have fetch before the first comparison. */\n");
-	fprintf(f, "\t/* Initialize to zero to prevent maybe-uninitialized warning. */\n");
+	if (opt->comments) {
+		fprintf(f, "\t/* The compiler doesn't know the op stream will have fetch before the first comparison. */\n");
+		fprintf(f, "\t/* Initialize to zero to prevent maybe-uninitialized warning. */\n");
+	}
 	fprintf(f, "\tunsigned char c = 0;\n");
 	fprintf(f, "\tint ok;\n");
 	fprintf(f, "\tstruct %sop *ops = %sOps;\n", prefix, prefix);
@@ -438,7 +442,9 @@ fsm_print_vmops_main(FILE *f,
 	switch (opt->io) {
 	case FSM_IO_PAIR:
 		fprintf(f, "\t\t\tif (p < e) {\n");
-		fprintf(f, "\t\t\t\t/* not at EOF */\n");
+		if (opt->comments) {
+			fprintf(f, "\t\t\t\t/* not at EOF */\n");
+		}
 		fprintf(f, "\t\t\t\tc = *p++;\n");
 		fprintf(f, "\t\t\t\ti++;\n");
 		fprintf(f, "\t\t\t\tcontinue;\n");
@@ -448,7 +454,9 @@ fsm_print_vmops_main(FILE *f,
 	case FSM_IO_STR:
 		fprintf(f, "\t\t\tc = *p++;\n");
 		fprintf(f, "\t\t\tif (c != '\\0') {\n");
-		fprintf(f, "\t\t\t\t/* not at EOF */\n");
+		if (opt->comments) {
+			fprintf(f, "\t\t\t\t/* not at EOF */\n");
+		}
 		fprintf(f, "\t\t\t\ti++;\n");
 		fprintf(f, "\t\t\t\tcontinue;\n");
 		fprintf(f, "\t\t\t}\n");

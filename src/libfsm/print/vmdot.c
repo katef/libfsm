@@ -268,9 +268,12 @@ fsm_print_edges(FILE *f, const struct fsm_options *opt, const struct dfavm_op_ir
 		if (op->num_incoming > 0 || op == ops) {
 			if (op != ops && can_fallthrough) {
 				fprintf(f, "\t");
-				fprintf(f, "S%lu:s -> S%" PRIu32 ":n [ style = bold ]; /* fallthrough */",
+				fprintf(f, "S%lu:s -> S%" PRIu32 ":n [ style = bold ];",
 					block,
 					op->index);
+				if (opt->comments) {
+					fprintf(f, " /* fallthrough */");
+				}
 				fprintf(f, "\n");
 			}
 
@@ -306,11 +309,14 @@ fsm_print_edges(FILE *f, const struct fsm_options *opt, const struct dfavm_op_ir
 		} else {
 			/* relative branch within the same block, entry on the east */
 			/* XXX: would like to make these edges shorter, but I don't know how */
-			fprintf(f, "S%lu:b%" PRIu32 ":e -> S%lu:b%" PRIu32 ":e [ constraint = false ]; /* relative */",
+			fprintf(f, "S%lu:b%" PRIu32 ":e -> S%lu:b%" PRIu32 ":e [ constraint = false ];",
 				block,
 				op->index,
 				block,
 				op->u.br.dest_arg->index);
+			if (opt->comments) {
+				fprintf(f, " /* relative */");
+			}
 		}
 
 		fprintf(f, "\n");

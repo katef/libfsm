@@ -153,12 +153,16 @@ print_asm_amd64(FILE *f,
 
 		switch (opt->io) {
 		case FSM_IO_STR:
-			fprintf(f, "// func %s%s(data string) int\n", prefix, "Match");
+			if (opt->comments) {
+				fprintf(f, "// func %s%s(data string) int\n", prefix, "Match");
+			}
 			fprintf(f, "TEXT    ·%s(SB), NOSPLIT, $0-24\n", "Match");
 			break;
 
 		case FSM_IO_PAIR:
-			fprintf(f, "// func %s%s(data []byte) int\n", prefix, "Match");
+			if (opt->comments) {
+				fprintf(f, "// func %s%s(data []byte) int\n", prefix, "Match");
+			}
 			fprintf(f, "TEXT    ·%s%s(SB), NOSPLIT, $0-32\n", prefix, "Match");
 			break;
 
@@ -195,7 +199,9 @@ print_asm_amd64(FILE *f,
 	for (op = ops; op != NULL; op = op->next) {
 		if (op->num_incoming > 0) {
 			fprintf(f, "%sl%u:\n", label_dot, op->index);
-		} else {
+
+			// TODO: example
+		} else if (opt->comments) {
 			fprintf(f, "%s l%u\n", comment, op->index);
 		}
 
@@ -210,7 +216,9 @@ print_asm_amd64(FILE *f,
 				}
 
 				if (op->cmp == VM_CMP_ALWAYS && op->next == NULL) {
-					fprintf(f, "\t%s elided jmp to %sfinish\n", comment, label_dot);
+					if (opt->comments) {
+						fprintf(f, "\t%s elided jmp to %sfinish\n", comment, label_dot);
+					}
 				} else {
 					const char *jmp_op;
 

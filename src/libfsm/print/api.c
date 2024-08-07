@@ -217,7 +217,7 @@ fsm_print_api(FILE *f,
 				} else {
 					fprintf(f, "\tfor (i = 0x%02x; i <= 0x%02x; i++) {",
 						(unsigned int) lo, (unsigned int) hi - 1);
-					if (rangeclass(lo, hi - 1)) {
+					if (opt->comments && rangeclass(lo, hi - 1)) {
 						fprintf(f, " /* '%c' .. '%c' */", (unsigned char) lo, (unsigned char) hi - 1);
 					}
 					fprintf(f, "\n");

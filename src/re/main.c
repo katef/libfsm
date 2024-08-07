@@ -357,20 +357,6 @@ accept_c(FILE *f, const struct fsm_options *opt,
 
 	fprintf(f, "return %#x;", (unsigned) n);
 
-	fprintf(f, " /* ");
-
-	for (i = 0; i < count; i++) {
-		assert(ids[i] < matchc);
-
-		fprintf(f, "\"%s\"", matchv[ids[i]]); /* XXX: escape string (and comment) */
-
-		if (i + 1 < count) {
-			fprintf(f, ", ");
-		}
-	}
-
-	fprintf(f, " */");
-
 	return 0;
 }
 
@@ -398,7 +384,25 @@ accept_rust(FILE *f, const struct fsm_options *opt,
 
 	fprintf(f, "return Some(%#x)", (unsigned) n);
 
-	fprintf(f, " /* ");
+	return 0;
+}
+
+static int
+comment_c(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque, void *hook_opaque)
+{
+	size_t i;
+
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+	assert(hook_opaque == NULL);
+
+	(void) opt;
+	(void) lang_opaque;
+	(void) hook_opaque;
+
+	fprintf(f, "/* ");
 
 	for (i = 0; i < count; i++) {
 		assert(ids[i] < matchc);
@@ -416,7 +420,7 @@ accept_rust(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-accept_llvm(FILE *f, const struct fsm_options *opt,
+comment_rust(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
 	void *lang_opaque, void *hook_opaque)
 {
@@ -427,48 +431,42 @@ accept_llvm(FILE *f, const struct fsm_options *opt,
 	assert(hook_opaque == NULL);
 
 	(void) opt;
+	(void) lang_opaque;
 	(void) hook_opaque;
 
-	switch (opt->ambig) {
-	case AMBIG_NONE:
-		fprintf(f, "%%rt true");
-		break;
+	fprintf(f, "/* ");
 
-	case AMBIG_ERROR:
-// TODO: decide if we deal with this ahead of the call to print or not
-		if (count > 1) {
-			errno = EINVAL;
-			return -1;
+	for (i = 0; i < count; i++) {
+		assert(ids[i] < matchc);
+
+		fprintf(f, "\"%s\"", matchv[ids[i]]); /* XXX: escape string (and comment) */
+
+		if (i + 1 < count) {
+			fprintf(f, ", ");
 		}
-
-		fprintf(f, "%%rt { i1 true, i32 %u }", ids[0]);
-		break;
-
-	case AMBIG_EARLIEST:
-		/*
-		 * The libfsm api guarentees these ids are unique,
-		 * and only appear once each, and are sorted.
-		 */
-		fprintf(f, "%%rt { i1 true, i32 %u }", ids[0]);
-		break;
-
-	case AMBIG_MULTIPLE:
-		fprintf(f, "internal unnamed_addr constant [%zu x i32] [", count);
-		for (size_t j = 0; j < count; j++) {
-			fprintf(f, "i32 %u", ids[j]);
-			if (j + 1 < count) {
-				fprintf(f, ", ");
-			}
-		}
-		fprintf(f, "]");
-		break;
-
-	default:
-		assert(!"unreached");
-		abort();
 	}
 
-	fprintf(f, " ; ");
+	fprintf(f, " */");
+
+	return 0;
+}
+
+static int
+comment_llvm(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque, void *hook_opaque)
+{
+	size_t i;
+
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+	assert(hook_opaque == NULL);
+
+	(void) opt;
+	(void) lang_opaque;
+	(void) hook_opaque;
+
+	fprintf(f, "; ");
 
 	for (i = 0; i < count; i++) {
 		assert(ids[i] < matchc);
@@ -484,11 +482,10 @@ accept_llvm(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-accept_dot(FILE *f, const struct fsm_options *opt,
+comment_dot(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
 	void *lang_opaque, void *hook_opaque)
 {
-	fsm_state_t s;
 	size_t i;
 
 	assert(opt != NULL);
@@ -498,78 +495,19 @@ accept_dot(FILE *f, const struct fsm_options *opt,
 	(void) opt;
 	(void) hook_opaque;
 
-	s = * (fsm_state_t *) lang_opaque;
-
-	fprintf(f, "label = <");
-
-	if (!opt->anonymous_states) {
-		fprintf(f, "%u", s);
-
-		if (count > 0) {
-			fprintf(f, "<BR/>");
-		}
-	}
+	fprintf(f, "/* ");
 
 	for (i = 0; i < count; i++) {
 		assert(ids[i] < matchc);
 
-		fprintf(f, "#%u", ids[i]);
-
-		if (i + 1 < count) {
-			fprintf(f, ",");
-		}
-	}
-
-	fprintf(f, ">");
-
-	/* TODO: centralise to libfsm/print/dot.c */
-	if (opt->comments) {
-		fprintf(f, " /* ");
-
-		for (i = 0; i < count; i++) {
-			assert(ids[i] < matchc);
-
-			fprintf(f, "\"%s\"", matchv[ids[i]]); /* XXX: escape string (and comment) */
-
-			if (i + 1 < count) {
-				fprintf(f, ", ");
-			}
-		}
-
-		fprintf(f, " */");
-	}
-
-	return 0;
-}
-
-static int
-accept_json(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque, void *hook_opaque)
-{
-	size_t i;
-
-	assert(opt != NULL);
-	assert(lang_opaque == NULL);
-	assert(hook_opaque == NULL);
-
-	(void) opt;
-	(void) lang_opaque;
-	(void) hook_opaque;
-
-	fprintf(f, "[ ");
-
-	for (i = 0; i < count; i++) {
-		assert(ids[i] < matchc);
-
-		fprintf(f, "%u", ids[i]);
+		fprintf(f, "\"%s\"", matchv[ids[i]]); /* XXX: escape string (and comment) */
 
 		if (i + 1 < count) {
 			fprintf(f, ", ");
 		}
 	}
 
-	fprintf(f, " ]");
+	fprintf(f, " */");
 
 	return 0;
 }
@@ -1172,33 +1110,31 @@ main(int argc, char *argv[])
 	}
 
 	if (fsm_lang != FSM_PRINT_NONE) {
-		/* TODO: print examples in comments for end states;
-		 * patterns in comments for the whole FSM */
-
 		switch (fsm_lang) {
 		case FSM_PRINT_NONE:
 			break;
 
 		case FSM_PRINT_C:
 		case FSM_PRINT_VMC:
-			hooks.accept = accept_c;
+			hooks.accept  = accept_c;
+			hooks.comment = comment_c;
 			break;
 
 		case FSM_PRINT_RUST:
-			hooks.accept = accept_rust;
+			hooks.accept  = accept_rust;
+			hooks.comment = comment_rust;
 			break;
 
 		case FSM_PRINT_LLVM:
-			hooks.accept = accept_llvm;
+			hooks.comment = comment_llvm;
 			break;
 
 		case FSM_PRINT_DOT:
 		case FSM_PRINT_VMDOT:
-			hooks.accept = patterns ? accept_dot : NULL;
+			hooks.comment = patterns ? comment_dot : NULL;
 			break;
 
 		case FSM_PRINT_JSON:
-			hooks.accept = patterns ? accept_json : NULL;
 			break;
 
 		default:
