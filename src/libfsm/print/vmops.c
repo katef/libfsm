@@ -201,6 +201,21 @@ print_fetch(FILE *f, const struct fsm_options *opt, const char *prefix)
 	return 0;
 }
 
+static void
+print_ret(FILE *f, const unsigned *ids, size_t count)
+{
+	size_t i;
+
+	fprintf(f, "{ (const unsigned []) { ");
+	for (i = 0; i < count; i++) {
+		fprintf(f, "%u", ids[i]);
+		if (i + 1 < count) {
+			fprintf(f, ", ");
+		}
+	}
+	fprintf(f, " }, %zu }", count);
+}
+
 int
 fsm_print_vmops_c(FILE *f,
 	const struct fsm_options *opt,
@@ -235,14 +250,9 @@ fsm_print_vmops_c(FILE *f,
 	if (opt->ambig != AMBIG_NONE) {
 		fprintf(f, "struct %sret %sRet[] = {\n", prefix, prefix);
 		for (size_t i = 0; i < retlist->count; i++) {
-			fprintf(f, "\t{ (const unsigned []) { ");
-			for (size_t j = 0; j < retlist->a[i].count; j++) {
-				fprintf(f, "%u", retlist->a[i].ids[j]);
-				if (j + 1 < retlist->a[i].count) {
-					fprintf(f, ", ");
-				}
-			}
-			fprintf(f, " }, %zu },\n", retlist->a[i].count);
+			fprintf(f, "\t");
+			print_ret(f, retlist->a[i].ids, retlist->a[i].count);
+			fprintf(f, ",\n");
 		}
 		fprintf(f, "};\n");
 		fprintf(f, "const size_t %sRet_count = sizeof %sRet / sizeof *%sRet;\n", prefix, prefix, prefix);

@@ -232,6 +232,21 @@ print_fetch(FILE *f, const struct fsm_options *opt)
 	}
 }
 
+static void
+print_ret(FILE *f, const unsigned *ids, size_t count)
+{
+	size_t i;
+
+	fprintf(f, "[]uint{");
+	for (i = 0; i < count; i++) {
+		fprintf(f, "%u", ids[i]);
+		if (i + 1 < count) {
+			fprintf(f, ", ");
+		}
+	}
+	fprintf(f, "}");
+}
+
 /* TODO: eventually to be non-static */
 static int
 fsm_print_gofrag(FILE *f,
@@ -372,14 +387,9 @@ fsm_print_go(FILE *f,
 
 		if (opt->ambig == AMBIG_MULTIPLE) {
 			for (size_t i = 0; i < retlist->count; i++) {
-				fprintf(f, "var ret%zu []uint = []uint{", i);
-				for (size_t j = 0; j < retlist->a[i].count; j++) {
-					fprintf(f, "%u", retlist->a[i].ids[j]);
-					if (j + 1 < retlist->a[i].count) {
-						fprintf(f, ", ");
-					}
-				}
-				fprintf(f, "}\n");
+				fprintf(f, "var ret%zu []uint = ", i);
+				print_ret(f, retlist->a[i].ids, retlist->a[i].count);
+				fprintf(f, "\n");
 			}
 			fprintf(f, "\n");
 		}
