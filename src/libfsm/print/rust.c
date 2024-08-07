@@ -51,7 +51,8 @@ cmp_operator(int cmp)
 
 static int
 print_ids(FILE *f,
-	enum fsm_ambig ambig, const fsm_end_id_t *ids, size_t count)
+	enum fsm_ambig ambig, const fsm_end_id_t *ids, size_t count,
+	size_t i)
 {
 	switch (ambig) {
 	case AMBIG_NONE:
@@ -63,8 +64,8 @@ print_ids(FILE *f,
 		if (count > 1) {
 			errno = EINVAL;
 			return -1;
-		}	
- 
+		}
+
 		fprintf(f, "return Some(%u)", ids[0]);
 		break;
 
@@ -75,16 +76,16 @@ print_ids(FILE *f,
 		 */
 		fprintf(f, "return Some(%u)", ids[0]);
 		break;
-	
+
 	case AMBIG_MULTIPLE:
-		assert(!"unimplemented");
-		abort();
-		
+		fprintf(f, "return Some(&RET%zu)", i);
+		break;
+
 	default:
 		assert(!"unreached");
 		abort();
 	}
- 
+
 	return 0;
 }
 
@@ -92,29 +93,32 @@ static int
 default_accept(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
 	void *lang_opaque, void *hook_opaque)
-{   
+{
+	size_t i;
+
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(lang_opaque == NULL);
-	
-	(void) lang_opaque;
+	assert(lang_opaque != NULL);
+
 	(void) hook_opaque;
-	  
-	if (-1 == print_ids(f, opt->ambig, ids, count)) {
+
+	i = * (const size_t *) lang_opaque;
+
+	if (-1 == print_ids(f, opt->ambig, ids, count, i)) {
 	    return -1;
 	}
 
 	return 0;
 }
 
-static int    
+static int
 default_reject(FILE *f, const struct fsm_options *opt,
 	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
-		   
+
 	(void) lang_opaque;
 	(void) hook_opaque;
 
@@ -163,17 +167,24 @@ static int
 print_end(FILE *f, const struct dfavm_op_ir *op,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	enum dfavm_op_end end_bits)
 {
+	size_t i;
+
 	switch (end_bits) {
 	case VM_END_FAIL:
 		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
 	case VM_END_SUCC:
+		assert(op->ret >= retlist->a);
+
+		i = op->ret - retlist->a;
+
 		return print_hook_accept(f, opt, hooks,
 			op->ret->ids, op->ret->count,
 			default_accept,
-			NULL);
+			&i);
 
 	default:
 		assert(!"unreached");
@@ -220,6 +231,20 @@ fsm_print_rustfrag(FILE *f,
 
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
 	(void) cp;
+
+	if (opt->ambig == AMBIG_MULTIPLE) {
+		for (size_t i = 0; i < retlist->count; i++) {
+			fprintf(f, "    static RET%zu: [u32; %zu] = [", i, retlist->a[i].count);
+			for (size_t j = 0; j < retlist->a[i].count; j++) {
+				fprintf(f, "%u", retlist->a[i].ids[j]);
+				if (j + 1 < retlist->a[i].count) {
+					fprintf(f, ", ");
+				}
+			}
+			fprintf(f, "];\n");
+		}
+		fprintf(f, "\n");
+	}
 
 	/*
 	 * We only output labels for ops which are branched to. This gives
@@ -322,7 +347,7 @@ fsm_print_rustfrag(FILE *f,
 			if (op->cmp != VM_CMP_ALWAYS) {
 				fprintf(f, "{ ");
 			}
-			if (-1 == print_end(f, op, opt, hooks, op->u.stop.end_bits)) {
+			if (-1 == print_end(f, op, opt, hooks, retlist, op->u.stop.end_bits)) {
 				return -1;
 			}
 			if (op->cmp != VM_CMP_ALWAYS) {
@@ -370,7 +395,7 @@ fsm_print_rustfrag(FILE *f,
 
 				fprintf(f, "                    ");
 				fprintf(f, "None => ");
-				print_end(f, op, opt, hooks, op->u.fetch.end_bits);
+				print_end(f, op, opt, hooks, retlist, op->u.fetch.end_bits);
 				fprintf(f, ",\n");
 				fprintf(f, "                    ");
 
@@ -453,28 +478,45 @@ fsm_print_rust(FILE *f,
 	switch (opt->io) {
 	case FSM_IO_GETC:
 		/* e.g. dbg!(fsm_main("abc".as_bytes().iter().copied())); */
-		fprintf(f, "(mut bytes: impl Iterator<Item = u8>) -> Option<()> {\n");
-		fprintf(f, "    use Label::*;\n");
+		fprintf(f, "(mut bytes: impl Iterator<Item = u8>)");
 		break;
 
 	case FSM_IO_STR:
 		/* e.g. dbg!(fsm_main("xabces")); */
-		fprintf(f, "(%sinput: &str) -> Option<()> {\n",
+		fprintf(f, "(%sinput: &str)",
 			has_op(ops, VM_OP_FETCH) ? "" : "_");
-		fprintf(f, "    use Label::*;\n");
 		break;
 
 	case FSM_IO_PAIR:
 		/* e.g. dbg!(fsm_main("xabces".as_bytes())); */
-		fprintf(f, "(%sinput: &[u8]) -> Option<()> {\n",
+		fprintf(f, "(%sinput: &[u8])",
 			has_op(ops, VM_OP_FETCH) ? "" : "_");
-		fprintf(f, "    use Label::*;\n");
 		break;
 
 	default:
 		fprintf(stderr, "unsupported IO API\n");
 		exit(EXIT_FAILURE);
 	}
+
+	fprintf(f, " -> ");
+
+	switch (opt->ambig) {
+	case AMBIG_NONE:
+	case AMBIG_ERROR:
+	case AMBIG_EARLIEST:
+		fprintf(f, "Option<()>");
+		break;
+
+	case AMBIG_MULTIPLE:
+		fprintf(f, "Option<&'static [u32]>");
+		break;
+	default:
+		fprintf(stderr, "unsupported ambig mode\n");
+		exit(EXIT_FAILURE);
+	}
+
+	fprintf(f, " {\n");
+	fprintf(f, "    use Label::*;\n");
 
 	fsm_print_rustfrag(f, opt, hooks, retlist, ops, cp);
 

@@ -373,7 +373,7 @@ comment_rust(FILE *f, const struct fsm_options *opt,
 	size_t i;
 
 	assert(opt != NULL);
-	assert(lang_opaque == NULL);
+	assert(lang_opaque != NULL);
 	assert(hook_opaque == NULL);
 
 	(void) opt;
