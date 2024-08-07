@@ -379,7 +379,7 @@ runner_init_compiled(struct fsm *fsm,
 
 	case IMPL_LLVM:
 		r->u.impl_llvm.h = h;
-		r->u.impl_llvm.func = (bool (*)(const char *, const char *)) (uintptr_t) dlsym(h, "fsm_main");
+		r->u.impl_llvm.func = (bool (*)(const char *, const char *)) (uintptr_t) dlsym(h, "fsm.main");
 		break;
 
 	case IMPL_GO:

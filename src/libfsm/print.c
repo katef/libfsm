@@ -18,6 +18,7 @@
 #include "print.h"
 #include "internal.h"
 
+#include "vm/retlist.h"
 #include "vm/vm.h"
 #include "print/ir.h"
 
@@ -58,6 +59,8 @@ print_hook_accept(FILE *f,
 		void *lang_opaque, void *hook_opaque),
 	void *lang_opaque)
 {
+	int r;
+
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
@@ -71,10 +74,24 @@ print_hook_accept(FILE *f,
 	}
 
 	if (hooks->accept != NULL) {
-		return hooks->accept(f, opt, ids, count,
+		r = hooks->accept(f, opt, ids, count,
 			lang_opaque, hooks->hook_opaque);
 	} else if (default_accept != NULL) {
-		return default_accept(f, opt, ids, count,
+		r = default_accept(f, opt, ids, count,
+			lang_opaque, hooks->hook_opaque);
+	} else {
+		r = 0;
+	}
+
+	if (r != 0) {
+		return r;
+	}
+
+	if (opt->comments && hooks->comment != NULL) {
+		/* this space is a polyglot */
+		fprintf(f, " ");
+
+		r = hooks->comment(f, opt, ids, count,
 			lang_opaque, hooks->hook_opaque);
 	}
 
@@ -179,6 +196,7 @@ print_conflicts(FILE *f, const struct fsm *fsm,
 		assert(res == 1);
 
 		// TODO: de-duplicate by ids[], so we don't call the conflict hook an unneccessary number of times
+		// TODO: now i think this is the same as calling once per retlist entry
 
 		/*
 		 * The conflict hook is called here (rather in the caller),
@@ -336,19 +354,36 @@ fsm_print(FILE *f, const struct fsm *fsm,
 		goto done;
 	}
 
+	/*
+	 * We're building the retlist here based on the ir.
+	 * I think we could build the retlist earlier instead,
+	 * and then point at the struct ret entries from the ir,
+	 * and then dfavm_compile_ir() would pick those up from there.
+	 * But for now this is good.
+	 */
+	struct ret_list retlist;
+
+	if (!build_retlist(&retlist, ir)) {
+		free_ir(fsm, ir);
+		goto error;
+	}
+
 	a = zero;
 
 	/* TODO: non-const a */
-	if (!dfavm_compile_ir(&a, ir, vm_opts)) {
+	if (!dfavm_compile_ir(&a, ir, &retlist, vm_opts)) {
+		free_retlist(&retlist);
 		free_ir(fsm, ir);
 		return -1;
 	}
 
 	if (print_vm != NULL) {
-		r = print_vm(f, opt, hooks, a.linked);
+		r = print_vm(f, opt, hooks, &retlist, a.linked);
 	}
 
 	dfavm_opasm_finalize_op(&a);
+
+	free_retlist(&retlist);
 
 done:
 
