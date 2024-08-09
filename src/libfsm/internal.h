@@ -11,7 +11,6 @@
 #include <stdlib.h>
 
 #include <fsm/fsm.h>
-#include <fsm/options.h>
 
 #include <adt/common.h>
 
@@ -65,6 +64,7 @@ struct fsm_state {
 
 struct fsm {
 	struct fsm_state *states; /* array */
+	const struct fsm_alloc *alloc;
 
 	size_t statealloc; /* number of elements allocated */
 	size_t statecount; /* number of elements populated */
@@ -75,7 +75,6 @@ struct fsm {
 
 	struct fsm_capture_info *capture_info;
 	struct endid_info *endid_info;
-	const struct fsm_options *opt;
 };
 
 struct fsm *

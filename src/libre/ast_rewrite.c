@@ -118,7 +118,8 @@ deduplicate_alt(struct ast_expr_pool **poolp, struct ast_expr *n)
 }
 
 static struct fsm *
-compile_subexpr(struct ast_expr *e, enum re_flags flags)
+compile_subexpr(struct ast_expr *e, const struct fsm_alloc *alloc,
+	enum re_flags flags)
 {
 	struct fsm *fsm;
 	struct ast ast;
@@ -146,7 +147,7 @@ compile_subexpr(struct ast_expr *e, enum re_flags flags)
 		return 0;
 	}
 
-	fsm = ast_compile(&ast, flags | RE_ANCHORED, NULL, NULL);
+	fsm = ast_compile(&ast, flags | RE_ANCHORED, alloc, NULL);
 	if (fsm == NULL) {
 		return 0;
 	}
@@ -619,17 +620,23 @@ rewrite_subtract(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags
 	 * sub-expressions may be written to assume particular flags
 	 * (for example subtraction of two case-insensitive sets may depend
 	 * on case-insensitity to produce an empty result).
+	 *
+	 * It's okay to elide the alloc hooks (provided to re_comp)
+	 * because we immediately destroy the constructed fsm, q.
+	 * So we won't mix up different sources of allocation into the AST.
 	 */
 	{
+		const struct fsm_alloc *alloc = NULL;
+
 		struct fsm *a, *b;
 		struct fsm *q;
 
-		a = compile_subexpr(n->u.subtract.a, flags);
+		a = compile_subexpr(n->u.subtract.a, alloc, flags);
 		if (a == NULL) {
 			return 0;
 		}
 
-		b = compile_subexpr(n->u.subtract.b, flags);
+		b = compile_subexpr(n->u.subtract.b, alloc, flags);
 		if (b == NULL) {
 			fsm_free(a);
 			return 0;

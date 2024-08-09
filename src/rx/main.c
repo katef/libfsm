@@ -40,15 +40,8 @@
 #include <re/literal.h>
 #include <re/strings.h>
 
-/* TODO: find a better way to handle this, maybe centralise with re(1) */
-enum ambig {
-	AMBIG_ERROR    = 1 << 0,
-	AMBIG_EARLIEST = 1 << 1,
-	AMBIG_MULTIPLE = 1 << 2,
-
-	AMBIG_SINGLE   = AMBIG_ERROR | AMBIG_EARLIEST,
-	AMBIG_ANY      = ~0
-};
+/* placeholder for alloc hooks */
+static const struct fsm_alloc *alloc;
 
 enum category {
 	CATEGORY_EMPTY,
@@ -80,11 +73,6 @@ struct literal_set {
 struct pattern_set {
 	size_t count;
 	struct pattern *a;
-};
-
-struct endleaf_env {
-	enum ambig ambig;
-	const struct fsm *fsm;
 };
 
 struct check_env {
@@ -203,43 +191,6 @@ append_literal(struct literal_set *set,
 	set->count++;
 }
 
-/* TODO: centralise */
-static int
-cmp_id(const void *pa, const void *pb)
-{
-	const fsm_end_id_t *a = pa;
-	const fsm_end_id_t *b = pb;
-
-	if (*a < *b) {
-		return -1;
-	}
-
-	if (*a > *b) {
-		return 1;
-	}
-
-	return 0;
-}
-
-/* TODO: centralise */
-static fsm_end_id_t
-min_endid(const fsm_end_id_t *ids, size_t count)
-{
-	fsm_end_id_t min;
-
-	assert(ids != NULL);
-	assert(count > 0);
-
-	min = ids[0];
-	for (fsm_end_id_t i = 1; i < count; i++) {
-		if (ids[i] < min) {
-			min = ids[i];
-		}
-	}
-
-	return min;
-}
-
 static enum re_strings_flags
 literal_flags(enum re_literal_category category)
 {
@@ -316,7 +267,7 @@ category_reason(enum category r)
 
 /* return an error reason if a pattern was not successfully appended to a set */
 static enum category
-categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags flags,
+categorize(enum re_dialect dialect, enum re_flags flags,
 	const char *charset, const char *reject, const char *s,
 	struct re_err *err,
 	const char **lit_s_out, size_t *lit_n_out, enum re_strings_flags *strings_flags)
@@ -349,7 +300,7 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
 	 *      and *category is set.
 	 */
 	const char *q = s;
-	r = re_is_literal(dialect, fsm_sgetc, &q, opt, flags, err, &category,
+	r = re_is_literal(dialect, fsm_sgetc, &q, flags, err, &category,
 		&lit_s, &lit_n);
 
 	/* unsupported */
@@ -452,8 +403,7 @@ categorize(const struct fsm_options *opt, enum re_dialect dialect, enum re_flags
  * This is re_strings() but for an array of struct literal
  */
 static struct fsm *
-literal_strings(const struct fsm_options *opt,
-	const struct literal *a, size_t n, enum re_strings_flags flags)
+literal_strings(const struct literal *a, size_t n, enum re_strings_flags flags)
 {
 	struct re_strings *g;
 	struct fsm *fsm;
@@ -474,7 +424,7 @@ literal_strings(const struct fsm_options *opt,
 		}
 	}
 
-	fsm = re_strings_build(g, opt, flags);
+	fsm = re_strings_build(g, alloc, flags);
 	re_strings_free(g);
 
 	/* this is already a DFA, courtesy of re_strings() */
@@ -484,7 +434,7 @@ literal_strings(const struct fsm_options *opt,
 }
 
 static struct fsm *
-build_literals_fsm(const struct fsm_options *opt, bool show_stats,
+build_literals_fsm(bool show_stats,
 	const char *charset,
 	struct literal_set *set, enum re_strings_flags flags)
 {
@@ -492,7 +442,7 @@ build_literals_fsm(const struct fsm_options *opt, bool show_stats,
 
 	assert(set != NULL);
 
-	fsm = literal_strings(opt, set->a, set->count, flags);
+	fsm = literal_strings(set->a, set->count, flags);
 
 	/* we do produce an empty fsm for 0 literals */
 	if (set->count == 0) {
@@ -535,7 +485,7 @@ build_literals_fsm(const struct fsm_options *opt, bool show_stats,
 }
 
 static struct fsm *
-build_pattern_fsm(const struct fsm_options *opt, bool show_stats,
+build_pattern_fsm(bool show_stats,
 	const char *charset,
 	enum re_dialect dialect, bool strict,
 	const char *s, enum re_flags flags, fsm_end_id_t id)
@@ -550,7 +500,7 @@ build_pattern_fsm(const struct fsm_options *opt, bool show_stats,
 
 	const char *q = s;
 // TODO: RE_SINGLE here? i think it shouldn't have any effect when \n isn't present in the charset
-	fsm = re_comp(dialect, fsm_sgetc, &q, opt, flags, &err);
+	fsm = re_comp(dialect, fsm_sgetc, &q, alloc, flags, &err);
 
 	if (strict && fsm == NULL) {
 		re_perror(dialect, &err, NULL, s);
@@ -616,47 +566,31 @@ build_pattern_fsm(const struct fsm_options *opt, bool show_stats,
 }
 
 static int
-check_ambig(const struct fsm *fsm, fsm_state_t s, void *opaque)
+conflict(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	const char *example,
+	void *hook_opaque)
 {
-	const struct check_env *env = opaque;
-	fsm_end_id_t *ids;
-	size_t count;
-	char buf[50]; /* 50 looks reasonable for an on-screen limit */
-	int n, res;
+	const struct check_env *env = hook_opaque;
 
-	assert(fsm != NULL);
 	assert(env != NULL);
 	assert(env->literals != NULL);
 	assert(env->general != NULL);
 
-	if (!fsm_isend(fsm, s)) {
-		return 1;
-	}
-
-	count = fsm_endid_count(fsm, s);
-
 	/* in rx all end states have an end id */
 	assert(count > 0);
 
-	if (count == 1) {
-		return 1;
+	/* ...and we only conflict when there's more than one */
+	assert(count > 1);
+
+	(void) f;
+	(void) opt;
+
+	fprintf(stderr, "error: ambiguous patterns");
+	if (example != NULL) {
+		fprintf(stderr, ", for example on input '%s':", example);
 	}
-
-	n = fsm_example(fsm, s, buf, sizeof buf);
-	if (-1 == n) {
-		perror("fsm_example");
-		exit(EXIT_FAILURE);
-	}
-
-	fprintf(stderr, "error: ambiguous patterns, for example on input '%s%s':\n", buf,
-		n >= (int) sizeof buf - 1 ? "..." : "");
-
-	ids = xmalloc(count * sizeof *ids);
-
-	res = fsm_endid_get(fsm, s, count, ids);
-	assert(res == 1);
-
-	qsort(ids, count, sizeof *ids, cmp_id);
+	fprintf(stderr, "\n");
 
 	for (fsm_end_id_t i = 0; i < count; i++) {
 		for (size_t k = 0; k < sizeof *env->literals / sizeof **env->literals; k++) {
@@ -687,144 +621,7 @@ check_ambig(const struct fsm *fsm, fsm_state_t s, void *opaque)
 next: ;
 	}
 
-	free(ids);
-
 	return 0;
-}
-
-static int
-endleaf_c(FILE *f, const fsm_end_id_t *ids, size_t count,
-	const void *opaque)
-{
-	const struct endleaf_env *env = opaque;
-
-	assert(ids != NULL);
-	assert(env != NULL);
-	assert(env->fsm != NULL);
-
-	/* morally an assertion, but I feel better leaving this in for various user data */
-	if (count == 0) {
-		fprintf(stderr, "no IDs attached to one accepting state\n");
-		exit(EXIT_FAILURE);
-	}
-
-	for (fsm_end_id_t i = 0; i < count; i++) {
-		assert(ids[i] <= INT_MAX);
-	}
-
-	/* exactly one end id means no ambiguous patterns */
-
-	switch (env->ambig) {
-	case AMBIG_ERROR:
-		/* dealt with ahead of the call to print */
-		assert(count <= 1);
-
-		fprintf(f, "return %u;", ids[0]);
-		break;
-
-	case AMBIG_EARLIEST:
-		/*
-		 * The libfsm api guarentees these ids are unique,
-		 * and only appear once each, but are not sorted.
-		 */
-		fprintf(f, "return %u;", min_endid(ids, count));
-		break;
-
-	case AMBIG_MULTIPLE:
-		/*
-		 * Here I would like to emit (static unsigned []) { 1, 2, 3 }
-		 * but specifying a storage duration for compound literals
-		 * is a compiler extension.
-		 * So I'm emitting a static const variable declaration instead.
-		 */
-
-		fprintf(f, "{\n");
-		fprintf(f, "\t\tstatic const unsigned a[] = { ");
-		for (fsm_end_id_t i = 0; i < count; i++) {
-			fprintf(f, "%u", ids[i]);
-			if (i + 1 < count) {
-				fprintf(f, ", ");
-			}
-		}
-		fprintf(f, " };\n");
-		fprintf(f, "\t\t*ids = a;\n");
-		fprintf(f, "\t\t*count = %zu;\n", count);
-		fprintf(f, "\t\treturn 0;\n");
-		fprintf(f, "\t}");
-		break;
-
-	default:
-		assert(!"unreached");
-		abort();
-	}
-
-// TODO: override return -1
-
-	return 0;
-}
-
-static int
-print_vmc_ambig(FILE *f, const struct fsm *fsm, enum ambig ambig)
-{
-	const struct fsm_options *old;
-	struct fsm_options tmp;
-
-	old = fsm_getoptions(fsm);
-	assert(old != NULL);
-
-	tmp = *old;
-	tmp.fragment = true,
-	tmp.endleaf_opaque = & (struct endleaf_env) { ambig, fsm };
-	tmp.endleaf = endleaf_c;
-
-	if (tmp.prefix == NULL) {
-		tmp.prefix = "fsm";
-	}
-
-	fprintf(stdout, "/* generated */\n");
-	fprintf(stdout, "\n");
-
-	fprintf(stdout, "#include <stdbool.h>\n");
-	fprintf(stdout, "#include <stddef.h>\n");
-	fprintf(stdout, "\n");
-
-// TODO: not bool?
-// TODO: also override return -1
-	fprintf(stdout, "int\n");
-	fprintf(stdout, "%s_main(const char *s, size_t n", tmp.prefix);
-	if (ambig == AMBIG_MULTIPLE) {
-		fprintf(stdout, ",\n");
-		fprintf(stdout, "\tconst unsigned **ids, size_t *count");
-	}
-	fprintf(stdout, ")\n");
-	fprintf(stdout, "{\n");
-	fprintf(stdout, "\tconst char *b = s, *e = s + n;\n");
-
-	fsm_setoptions((struct fsm *) fsm, &tmp); /* XXX: const */
-	fsm_print_vmc(f, fsm);
-	fsm_setoptions((struct fsm *) fsm, old); /* XXX: const */
-
-	fprintf(stdout, "}\n");
-
-	return 0; /* XXX */
-}
-
-static int
-print_vmc_error(FILE *f, const struct fsm *fsm)
-{
-	return print_vmc_ambig(f, fsm, AMBIG_ERROR);
-}
-
-static int
-print_vmc_earliest(FILE *f, const struct fsm *fsm)
-{
-	return print_vmc_ambig(f, fsm, AMBIG_EARLIEST);
-}
-
-static int
-print_vmc_multiple(FILE *f, const struct fsm *fsm)
-{
-	return print_vmc_ambig(f, fsm, AMBIG_MULTIPLE);
 }
 
 static enum re_dialect
@@ -896,33 +693,31 @@ io(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static fsm_print *
-print_name(const char *name, enum ambig ambig)
+static enum fsm_print_lang
+print_name(const char *name, enum fsm_ambig ambig)
 {
 	size_t i;
 	bool failed_mask;
 
 	struct {
 		const char *name;
-		fsm_print *print;
-		enum ambig mask;
+		enum fsm_print_lang lang;
+		enum fsm_ambig mask;
 	} a[] = {
-		{ "c",          print_vmc_error,            AMBIG_ERROR    },
-		{ "c",          print_vmc_earliest,         AMBIG_EARLIEST },
-		{ "c",          print_vmc_multiple,         AMBIG_MULTIPLE },
-		{ "fsm",        fsm_print_fsm,              AMBIG_ANY      },
-		{ "rust",       fsm_print_rust,             AMBIG_ERROR    },
-		{ "go",         fsm_print_go,               AMBIG_ERROR    },
-		{ "ir",         fsm_print_ir,               AMBIG_ANY      },
-		{ "irjson",     fsm_print_irjson,           AMBIG_ANY      },
-		{ "vmdot",      fsm_print_vmdot,            AMBIG_ANY      },
-		{ "vmops_c",    fsm_print_vmops_c,          AMBIG_ERROR    },
-		{ "vmops_h",    fsm_print_vmops_c,          AMBIG_ERROR    },
-		{ "vmops_main", fsm_print_vmops_main,       AMBIG_ERROR    },
-		{ "amd64",      fsm_print_vmasm_amd64_nasm, AMBIG_ERROR    },
-		{ "amd64_att",  fsm_print_vmasm_amd64_att,  AMBIG_ERROR    },
-		{ "amd64_nasm", fsm_print_vmasm_amd64_nasm, AMBIG_ERROR    },
-		{ "amd64_go",   fsm_print_vmasm_amd64_go,   AMBIG_ERROR    }
+		{ "c",          FSM_PRINT_VMC,        AMBIG_ANY   },
+		{ "fsm",        FSM_PRINT_FSM,        AMBIG_ANY   },
+		{ "rust",       FSM_PRINT_RUST,       AMBIG_ANY   },
+		{ "go",         FSM_PRINT_GO,         AMBIG_ANY   },
+		{ "ir",         FSM_PRINT_IR,         AMBIG_ANY   },
+		{ "irjson",     FSM_PRINT_IRJSON,     AMBIG_ANY   },
+		{ "llvm",       FSM_PRINT_LLVM,       AMBIG_ANY   },
+		{ "vmdot",      FSM_PRINT_VMDOT,      AMBIG_ANY   },
+		{ "vmops_c",    FSM_PRINT_VMOPS_C,    AMBIG_ANY   },
+		{ "vmops_h",    FSM_PRINT_VMOPS_H,    AMBIG_ANY   },
+		{ "vmops_main", FSM_PRINT_VMOPS_MAIN, AMBIG_ANY   },
+		{ "amd64_att",  FSM_PRINT_AMD64_ATT,  AMBIG_ERROR },
+		{ "amd64_nasm", FSM_PRINT_AMD64_NASM, AMBIG_ERROR },
+		{ "amd64_go",   FSM_PRINT_AMD64_GO,   AMBIG_ERROR }
 	};
 
 	assert(name != NULL);
@@ -935,7 +730,7 @@ print_name(const char *name, enum ambig ambig)
 		}
 
 		if ((a[i].mask & ambig)) {
-			return a[i].print;
+			return a[i].lang;
 		}
 
 		failed_mask = true;
@@ -1008,9 +803,8 @@ main(int argc, char *argv[])
 	bool show_stats = false;
 	bool override_dialect = false;
 	bool unanchored_literals = false;
-	enum ambig ambig = AMBIG_ERROR;
 	const char *lang = "c";
-	fsm_print *print = NULL;
+	enum fsm_print_lang fsm_lang = FSM_PRINT_VMC;
 
 	size_t general_limit = 0;
 
@@ -1036,7 +830,8 @@ main(int argc, char *argv[])
 		.case_ranges = true,
 		.always_hex = false,
 		.group_edges = true,
-		.io = FSM_IO_PAIR
+		.io = FSM_IO_PAIR,
+		.ambig = AMBIG_ERROR
 	};
 
 // TODO: prepend comment with rx invocation to output
@@ -1049,7 +844,7 @@ main(int argc, char *argv[])
 		const char *name = argv[0];
 		int c;
 
-		while (c = getopt(argc, argv, "h" "C:cd:E:e:ikF:l:n:r:sR:Qquvx"), c != -1) {
+		while (c = getopt(argc, argv, "h" "C:cd:E:e:ik:F:l:n:r:sR:Qquvx"), c != -1) {
 			switch (c) {
 			case 'C':
 				charset = optarg;
@@ -1143,7 +938,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'u':
-				ambig = AMBIG_MULTIPLE;
+				opt.ambig = AMBIG_MULTIPLE;
 				break;
 
 			case 'v':
@@ -1172,7 +967,11 @@ main(int argc, char *argv[])
 		}
 	}
 
-	print = print_name(lang, ambig);
+	fsm_lang = print_name(lang, opt.ambig);
+
+	if (quiet) {
+		fsm_lang = FSM_PRINT_NONE;
+	}
 
 	if (charset != NULL && strchr(charset, '\n')) {
 		fprintf(stderr, "charset cannot contain \\n "
@@ -1270,7 +1069,7 @@ main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 			}
 
-			r = categorize(&opt, dialect, flags,
+			r = categorize(dialect, flags,
 				charset, reject, s,
 				&err, &lit_s, &lit_n, &strings_flags);
 
@@ -1409,7 +1208,7 @@ main(int argc, char *argv[])
 				fprintf(stderr, "literals[%zu].count = %zu\n", i, literals[i].count);
 			}
 
-			struct fsm *fsm = build_literals_fsm(&opt, show_stats, charset,
+			struct fsm *fsm = build_literals_fsm(show_stats, charset,
 				&literals[i], flags[i]);
 			assert(fsm != NULL);
 
@@ -1430,7 +1229,7 @@ main(int argc, char *argv[])
 					i, general.a[i].id, general.a[i].s);
 			}
 
-			struct fsm *fsm = build_pattern_fsm(&opt, show_stats, charset,
+			struct fsm *fsm = build_pattern_fsm(show_stats, charset,
 				general.a[i].dialect, strict,
 				general.a[i].s, flags, general.a[i].id);
 			if (fsm == NULL) {
@@ -1519,6 +1318,11 @@ main(int argc, char *argv[])
 	{
 		struct fsm *fsm;
 
+		struct fsm_hooks hooks = {
+			.conflict = conflict,
+			.hook_opaque = & (struct check_env) { &literals, &general }
+		};
+
 		/*
 		 * fsm_union_array introduces epsilons.
 		 * If we construct anchored DFA and deal with ^.* ourselves here,
@@ -1553,19 +1357,8 @@ main(int argc, char *argv[])
 			fprintf(stderr, "dfa: %u states\n", fsm_countstates(fsm));
 		}
 
-		if (ambig == AMBIG_ERROR) {
-			if (!fsm_walk_states(fsm,
-				& (struct check_env) { &literals, &general },
-				check_ambig))
-			{
-				exit(EXIT_FAILURE);
-			}
-		}
-
-		if (!quiet) {
-			if (-1 == print(stdout, fsm)) {
-				exit(EXIT_FAILURE);
-			}
+		if (-1 == fsm_print(stdout, fsm, &opt, &hooks, fsm_lang)) {
+			exit(EXIT_FAILURE);
 		}
 
 		fsm_free(fsm);

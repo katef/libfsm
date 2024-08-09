@@ -12,11 +12,13 @@
 #include <errno.h>
 
 #include <fsm/fsm.h>
+#include <fsm/options.h>
 #include <fsm/vm.h>
 
 #include "internal.h"
 
 #include "vm/vm.h"
+#include "vm/retlist.h"
 #include "print/ir.h"
 
 // VM state:
@@ -84,32 +86,45 @@ cmp_name(int cmp)
 }
 
 struct fsm_dfavm *
-fsm_vm_compile_with_options(const struct fsm *fsm, struct fsm_vm_compile_opts opts)
+fsm_vm_compile_with_options(const struct fsm *fsm,
+	const struct fsm_options *opt,
+	struct fsm_vm_compile_opts vmopts)
 {
 	static const struct dfavm_assembler_ir zero;
 	struct dfavm_assembler_ir a;
 	struct ir *ir;
+	struct ret_list retlist;
 	struct fsm_dfavm *vm;
 
-	ir = make_ir(fsm);
+	assert(fsm != NULL);
+	assert(opt != NULL);
+
+	ir = make_ir(fsm, opt);
 	if (ir == NULL) {
+		return NULL;
+	}
+
+	if (!build_retlist(&retlist, ir)) {
+		free_ir(fsm, ir);
 		return NULL;
 	}
 
 	a = zero;
 
-	if (!dfavm_compile_ir(&a, ir, opts)) {
+	if (!dfavm_compile_ir(&a, ir, &retlist, vmopts)) {
+		free_retlist(&retlist);
 		free_ir(fsm, ir);
 		return NULL;
 	}
 
 	free_ir(fsm, ir);
 
-	vm = dfavm_compile_vm(&a, opts);
+	vm = dfavm_compile_vm(&a, vmopts);
 	if (vm == NULL) {
 		return NULL;
 	}
 
+	free_retlist(&retlist);
 	dfavm_opasm_finalize_op(&a);
 
 	return vm;
@@ -120,8 +135,19 @@ fsm_vm_compile(const struct fsm *fsm)
 {
 	// static const struct fsm_vm_compile_opts defaults = { FSM_VM_COMPILE_DEFAULT_FLAGS | FSM_VM_COMPILE_PRINT_IR_PREOPT | FSM_VM_COMPILE_PRINT_IR, NULL };
 	static const struct fsm_vm_compile_opts defaults = { FSM_VM_COMPILE_DEFAULT_FLAGS, FSM_VM_COMPILE_VM_V1, NULL };
+	static const struct fsm_options opt_default;
 
-	return fsm_vm_compile_with_options(fsm, defaults);
+	assert(fsm != NULL);
+
+	/*
+	 * The only fsm_option make_ir() uses is .comments,
+	 * for whether to generate examples.
+	 *
+	 * The caller won't use that, because the only user-facing
+	 * vm interfaces are to interpret for execution. So we use
+	 * default options here.
+	 */
+	return fsm_vm_compile_with_options(fsm, &opt_default, defaults);
 }
 
 void

@@ -102,7 +102,7 @@ void wordlist_finalize(struct word_list *words)
 int main(int argc, char *argv[]) {
 	struct fsm *fsm;
 	char s[BUFSIZ];
-	fsm_print *print;
+	enum fsm_print_lang lang;
 
 	const char *pname = argv[0];
 
@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
 
-	print = fsm_print_fsm;
+	lang = FSM_PRINT_FSM;
 
 	{
 		int c;
@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
 			case 'l': anchored_left  = 1;  break;
 			case 'r': anchored_right = 1;  break;
 
-			case 'd': print = fsm_print_dot; break;
+			case 'd': lang = FSM_PRINT_DOT; break;
 
 			case 'h':
 			case '?':
@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
 		flags |= RE_STRINGS_ANCHOR_RIGHT;
 	}
 
-	fsm = re_strings(&opt, (const char **)words.list, words.len, flags);
+	fsm = re_strings(NULL, (const char **)words.list, words.len, flags);
 	wordlist_finalize(&words);
 
 	if (fsm == NULL) {
@@ -173,9 +173,7 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	if (print != NULL) {
-		print(stdout, fsm);
-	}
+	fsm_print(stdout, fsm, &opt, NULL, lang);
 
 	fsm_free(fsm);
 

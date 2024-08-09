@@ -9,7 +9,7 @@
 
 /* BEGINNING OF HEADER */
 
-#line 22 "src/libre/parser.act"
+#line 275 "src/libre/parser.act"
 
 
 	#include <assert.h>
@@ -304,7 +304,7 @@ ZL2_list_Hof_Hatoms:;
 		}
 		/* BEGINNING OF ACTION: ast-add-concat */
 		{
-#line 1040 "src/libre/parser.act"
+#line 1041 "src/libre/parser.act"
 
 		if (!ast_add_expr_concat((ZIcat), (ZIa))) {
 			goto ZL1;
@@ -322,7 +322,7 @@ ZL2_list_Hof_Hatoms:;
 					goto ZL2_list_Hof_Hatoms;
 					/* END OF INLINE: list-of-atoms */
 				}
-				/* UNREACHED */
+				/*UNREACHED*/
 			default:
 				break;
 			}
@@ -349,7 +349,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 
 		/* BEGINNING OF ACTION: make-group-id */
 		{
-#line 881 "src/libre/parser.act"
+#line 882 "src/libre/parser.act"
 
 		(ZIid) = act_state->group_id++;
 	
@@ -363,7 +363,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				{
 					/* BEGINNING OF ACTION: ast-make-concat */
 					{
-#line 860 "src/libre/parser.act"
+#line 861 "src/libre/parser.act"
 
 		(ZIe) = ast_make_expr_concat(act_state->poolp, *flags);
 		if ((ZIe) == NULL) {
@@ -384,7 +384,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 				{
 					/* BEGINNING OF ACTION: ast-make-empty */
 					{
-#line 853 "src/libre/parser.act"
+#line 854 "src/libre/parser.act"
 
 		(ZIe) = ast_make_expr_empty(act_state->poolp, *flags);
 		if ((ZIe) == NULL) {
@@ -401,7 +401,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 		/* END OF INLINE: 117 */
 		/* BEGINNING OF ACTION: ast-make-group */
 		{
-#line 911 "src/libre/parser.act"
+#line 912 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_group(act_state->poolp, *flags, (ZIe), (ZIid));
 		if ((ZInode) == NULL) {
@@ -427,7 +427,7 @@ p_re__literal(flags flags, lex_state lex_state, act_state act_state, err err, t_
 			{
 				/* BEGINNING OF ACTION: err-expected-eof */
 				{
-#line 753 "src/libre/parser.act"
+#line 757 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXEOF;
@@ -467,7 +467,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		case (TOK_CHAR):
 			/* BEGINNING OF EXTRACT: CHAR */
 			{
-#line 575 "src/libre/parser.act"
+#line 579 "src/libre/parser.act"
 
 		/* the first byte may be '\x00' */
 		assert(lex_state->buf.a[1] == '\0');
@@ -490,7 +490,7 @@ p_list_Hof_Hatoms_C_Catom(flags flags, lex_state lex_state, act_state act_state,
 		ADVANCE_LEXER;
 		/* BEGINNING OF ACTION: ast-make-literal */
 		{
-#line 874 "src/libre/parser.act"
+#line 875 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_literal(act_state->poolp, *flags, (ZIc));
 		if ((ZInode) == NULL) {
@@ -506,7 +506,7 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-expected-atom */
 		{
-#line 704 "src/libre/parser.act"
+#line 708 "src/libre/parser.act"
 
 		if (err->e == RE_ESUCCESS) {
 			err->e = RE_EXATOM;
@@ -518,7 +518,7 @@ ZL1:;
 		/* END OF ACTION: err-expected-atom */
 		/* BEGINNING OF ACTION: ast-make-empty */
 		{
-#line 853 "src/libre/parser.act"
+#line 854 "src/libre/parser.act"
 
 		(ZInode) = ast_make_expr_empty(act_state->poolp, *flags);
 		if ((ZInode) == NULL) {
@@ -539,7 +539,7 @@ ZL0:;
 
 /* BEGINNING OF TRAILER */
 
-#line 1052 "src/libre/parser.act"
+#line 1207 "src/libre/parser.act"
 
 
 	static int
@@ -559,7 +559,6 @@ ZL0:;
 
 	struct ast *
 	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
-		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
 		struct re_err *err, struct re_pos *end)
 	{
@@ -696,6 +695,6 @@ ZL0:;
 		return NULL;
 	}
 
-#line 700 "src/libre/dialect/literal/parser.c"
+#line 699 "src/libre/dialect/literal/parser.c"
 
 /* END OF FILE */

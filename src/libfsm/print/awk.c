@@ -24,29 +24,12 @@
 #include <fsm/vm.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
+#include "libfsm/vm/retlist.h"
 #include "libfsm/vm/vm.h"
 
-#include "ir.h"
-
 #define START UINT32_MAX
-
-static int
-leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
-{
-	assert(f != NULL);
-	assert(leaf_opaque == NULL);
-
-	(void) leaf_opaque;
-	(void) ids;
-	(void) count;
-
-	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
-	 * maybe user defined */
-	fprintf(f, "return -1;");
-
-	return 0;
-}
 
 static const char *
 cmp_operator(int cmp)
@@ -64,6 +47,81 @@ cmp_operator(int cmp)
 		assert("unreached");
 		return NULL;
 	}
+}
+
+static int
+default_accept(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque, void *hook_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+	(void) hook_opaque;
+
+	switch (opt->ambig) {
+	case AMBIG_NONE:
+		/* awk doesn't have a boolean type */
+		fprintf(f, "return 1;");
+		break;
+
+	case AMBIG_ERROR:
+// TODO: decide if we deal with this ahead of the call to print or not
+		if (count > 1) {   
+			errno = EINVAL;
+			return -1;
+		}
+		
+		fprintf(f, "return %u;", ids[0]);
+		break;
+	
+	case AMBIG_EARLIEST:
+		/*
+		 * The libfsm api guarentees these ids are unique,
+		 * and only appear once each, and are sorted.
+		 */
+		fprintf(f, "return %u;", ids[0]);
+		break;
+	
+	case AMBIG_MULTIPLE:
+		/* awk can't return an array */
+		fprintf(f, "return \"");
+
+		for (size_t i = 0; i < count; i++) {
+			fprintf(f, "%u", ids[i]);
+
+			if (i < count - 1) {
+				fprintf(f, ",");
+			}
+		}
+
+		fprintf(f, "\"");
+		break;
+	
+	default:
+		assert(!"unreached");
+		abort();
+	}
+
+	return 0;
+}
+
+static int
+default_reject(FILE *f, const struct fsm_options *opt,
+	void *lang_opaque, void *hook_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+	(void) hook_opaque;
+
+	fprintf(f, "return 0;");
+
+	return 0;
 }
 
 static void
@@ -89,43 +147,25 @@ print_cond(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt)
 }
 
 static int
-print_end(FILE *f, const struct dfavm_op_ir *op, const struct fsm_options *opt,
-	enum dfavm_op_end end_bits, const struct ir *ir)
+print_end(FILE *f, const struct dfavm_op_ir *op,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	enum dfavm_op_end end_bits)
 {
-	(void) ir;
+	switch (end_bits) {
+	case VM_END_FAIL:
+		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
-	if (end_bits == VM_END_FAIL) {
-		fprintf(f, "return -1");
-		return 0;
+	case VM_END_SUCC:
+		return print_hook_accept(f, opt, hooks,
+			op->ret->ids, op->ret->count,
+			default_accept,
+			NULL);
+
+	default:
+		assert(!"unreached");
+		abort();
 	}
-
-	if (opt->endleaf != NULL) {
-		if (-1 == opt->endleaf(f,
-			op->ir_state->endids.ids, op->ir_state->endids.count,
-			opt->endleaf_opaque))
-		{
-			return -1;
-		}
-	} else {
-		size_t i;
-
-		assert(f != NULL);
-
-		/* awk can't return an array */
-		fprintf(f, "return \"");
-
-		for (i = 0; i < op->ir_state->endids.count; i++) {
-			fprintf(f, "%u", op->ir_state->endids.ids[i]);
-
-			if (i < op->ir_state->endids.count - 1) {
-				fprintf(f, ",");
-			}
-		}
-
-		fprintf(f, "\"");
-	}
-
-	return 0;
 }
 
 static void
@@ -144,40 +184,24 @@ print_branch(FILE *f, const struct dfavm_op_ir *op, const char *prefix)
 
 /* TODO: eventually to be non-static */
 static int
-fsm_print_awkfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
-	const char *cp, const char *prefix,
-	int (*leaf)(FILE *, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque),
-	const void *leaf_opaque)
+fsm_print_awkfrag(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
+	struct dfavm_op_ir *ops,
+	const char *cp, const char *prefix)
 {
-	static const struct dfavm_assembler_ir zero;
-	struct dfavm_assembler_ir a;
 	struct dfavm_op_ir *op;
 
-	static const struct fsm_vm_compile_opts vm_opts = {
-		FSM_VM_COMPILE_DEFAULT_FLAGS,
-		FSM_VM_COMPILE_VM_V1,
-		NULL
-	};
-
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
+	assert(retlist != NULL);
 	assert(cp != NULL);
 	assert(prefix != NULL);
 
-	a = zero;
-
-	/* TODO: we don't currently have .opaque information attached to struct dfavm_op_ir.
-	 * We'll need that in order to be able to use the leaf callback here. */
-	(void) leaf;
-	(void) leaf_opaque;
-
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
 	(void) cp;
-
-	if (!dfavm_compile_ir(&a, ir, vm_opts)) {
-		return -1;
-	}
 
 	/*
 	 * We only output labels for ops which are branched to. This gives
@@ -189,8 +213,8 @@ fsm_print_awkfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		l = START;
 
-		for (op = a.linked; op != NULL; op = op->next) {
-			if (op == a.linked || op->num_incoming > 0) {
+		for (op = ops; op != NULL; op = op->next) {
+			if (op == ops|| op->num_incoming > 0) {
 				op->index = l++;
 			}
 		}
@@ -198,9 +222,9 @@ fsm_print_awkfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 	fprintf(f, "    switch (l) {\n");
 
-	for (op = a.linked; op != NULL; op = op->next) {
-		if (op == a.linked || op->num_incoming > 0) {
-			if (op != a.linked) {
+	for (op = ops; op != NULL; op = op->next) {
+		if (op == ops|| op->num_incoming > 0) {
+			if (op != ops) {
 				fprintf(f, "\n");
 			}
 
@@ -208,9 +232,9 @@ fsm_print_awkfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 			print_label(f, op);
 			fprintf(f, ":");
 
-			if (op->ir_state != NULL && op->ir_state->example != NULL) {
+			if (op->example != NULL) {
 				fprintf(f, " /* e.g. \"");
-				escputs(f, opt, c_escputc_str, op->ir_state->example);
+				escputs(f, opt, c_escputc_str, op->example);
 				fprintf(f, "\" */");
 			}
 
@@ -222,7 +246,7 @@ fsm_print_awkfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		switch (op->instr) {
 		case VM_OP_STOP:
 			print_cond(f, op, opt);
-			if (-1 == print_end(f, op, opt, op->u.stop.end_bits, ir)) {
+			if (-1 == print_end(f, op, opt, hooks, op->u.stop.end_bits)) {
 				return -1;
 			}
 			fprintf(f, ";");
@@ -230,7 +254,7 @@ fsm_print_awkfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		case VM_OP_FETCH: {
 			fprintf(f, "if (s == \"\") ");
-			if (-1 == print_end(f, op, opt, op->u.fetch.end_bits, ir)) {
+			if (-1 == print_end(f, op, opt, hooks, op->u.fetch.end_bits)) {
 				return -1;
 			}
 			fprintf(f, "\n");
@@ -261,23 +285,38 @@ fsm_print_awkfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 	fprintf(f, "    }\n");
 
-	dfavm_opasm_finalize_op(&a);
-
 	return 0;
 }
 
-static int
-fsm_print_awk_complete(FILE *f, const struct ir *ir,
-	const struct fsm_options *opt, const char *prefix, const char *cp)
+int
+fsm_print_awk(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
+	struct dfavm_op_ir *ops)
 {
+	const char *prefix;
+	const char *cp;
+
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
+	assert(retlist != NULL);
+
+	if (opt->prefix != NULL) {
+		prefix = opt->prefix;
+	} else {
+		prefix = "fsm_";
+	}
+
+	if (hooks->cp != NULL) {
+		cp = hooks->cp;
+	} else {
+		cp = "c"; /* XXX */
+	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_awkfrag(f, ir, opt, cp, prefix,
-			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
-		{
+		if (-1 == fsm_print_awkfrag(f, opt, hooks, retlist, ops, cp, prefix)) {
 			return -1;
 		}
 	} else {
@@ -300,9 +339,7 @@ fsm_print_awk_complete(FILE *f, const struct ir *ir,
 
 		fprintf(f, ",    l, c) {\n");
 
-		if (-1 == fsm_print_awkfrag(f, ir, opt, cp, prefix,
-			opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
-		{
+		if (-1 == fsm_print_awkfrag(f, opt, hooks, retlist, ops, cp, prefix)) {
 			return -1;
 		}
 
@@ -310,46 +347,6 @@ fsm_print_awk_complete(FILE *f, const struct ir *ir,
 		fprintf(f, "\n");
 	}
 
-	if (ferror(f)) {
-		return -1;
-	}
-
 	return 0;
-}
-
-int
-fsm_print_awk(FILE *f, const struct fsm *fsm)
-{
-	struct ir *ir;
-	const char *prefix;
-	const char *cp;
-	int r;
-
-	assert(f != NULL);
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
-
-	ir = make_ir(fsm);
-	if (ir == NULL) {
-		return -1;
-	}
-
-	if (fsm->opt->prefix != NULL) {
-		prefix = fsm->opt->prefix;
-	} else {
-		prefix = "fsm_";
-	}
-
-	if (fsm->opt->cp != NULL) {
-		cp = fsm->opt->cp;
-	} else {
-		cp = "c"; /* XXX */
-	}
-
-	r = fsm_print_awk_complete(f, ir, fsm->opt, prefix, cp);
-
-	free_ir(fsm, ir);
-
-	return r;
 }
 

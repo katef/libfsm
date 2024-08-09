@@ -68,7 +68,7 @@ fsm_shuffle(struct fsm *fsm, unsigned seed)
 		return 1;
 	}
 
-	mapping = f_malloc(fsm->opt->alloc, state_count * sizeof(mapping[0]));
+	mapping = f_malloc(fsm->alloc, state_count * sizeof(mapping[0]));
 	if (mapping == NULL) { goto cleanup; }
 
 	populate_mapping(mapping, state_count, (uint32_t)seed);
@@ -80,6 +80,6 @@ fsm_shuffle(struct fsm *fsm, unsigned seed)
 	res = 1;
 
 cleanup:
-	f_free(fsm->opt->alloc, mapping);
+	f_free(fsm->alloc, mapping);
 	return res;
 }

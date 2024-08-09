@@ -22,6 +22,7 @@
 #include <fsm/options.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
 #include "ir.h"
 
@@ -113,11 +114,14 @@ print_groups(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-print_cs(FILE *f, const struct fsm_options *opt,
+print_state(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	const struct ir_state *cs)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 	assert(cs != NULL);
 
 	fprintf(f, "\t\t{\n");
@@ -135,15 +139,17 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "],\n");
 	}
 
-	/* showing endleaf in addition to existing content */
-	if (cs->isend && opt->endleaf != NULL) {
+	/* showing hook in addition to existing content */
+	if (cs->isend && hooks->accept != NULL) {
 		fprintf(f, "\t\t\t\"endleaf\": ");
-		if (-1 == opt->endleaf(f,
+
+		if (-1 == print_hook_accept(f, opt, hooks,
 			cs->endids.ids, cs->endids.count,
-			opt->endleaf_opaque))
+			NULL, NULL))
 		{
 			return -1;
 		}
+
 		fprintf(f, ",\n");
 	}
 
@@ -162,8 +168,6 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		}
 		fprintf(f, "\n");
 	}
-
-	/* TODO: leaf callback for json output */
 
 	switch (cs->strategy) {
 	case IR_NONE:
@@ -212,18 +216,17 @@ print_cs(FILE *f, const struct fsm_options *opt,
 }
 
 int
-fsm_print_irjson(FILE *f, const struct fsm *fsm)
+fsm_print_irjson(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct ir *ir)
 {
-	struct ir *ir;
 	size_t i;
 
 	assert(f != NULL);
-	assert(fsm != NULL);
-
-	ir = make_ir(fsm);
-	if (ir == NULL) {
-		return -1;
-	}
+	assert(opt != NULL);
+	assert(hooks != NULL);
+	assert(ir != NULL);
 
 	fprintf(f, "{\n");
 
@@ -231,7 +234,7 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\t\"states\": [\n");
 
 	for (i = 0; i < ir->n; i++) {
-		if (-1 == print_cs(f, fsm->opt, &ir->states[i])) {
+		if (-1 == print_state(f, opt, hooks, &ir->states[i])) {
 			return -1;
 		}
 
@@ -244,12 +247,6 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\t]\n");
 
 	fprintf(f, "}\n");
-
-	free_ir(fsm, ir);
-
-	if (ferror(f)) {
-		return -1;
-	}
 
 	return 0;
 }

@@ -5,6 +5,7 @@
  */
 
 #include <stddef.h>
+#include <stdio.h>
 #include <inttypes.h>
 
 #include "endids_internal.h"
@@ -87,15 +88,15 @@ fsm_endid_init(struct fsm *fsm)
 {
 	struct endid_info_bucket *buckets = NULL;
 	size_t i;
-	struct endid_info *res = f_calloc(fsm->opt->alloc, 1, sizeof(*res));
+	struct endid_info *res = f_calloc(fsm->alloc, 1, sizeof(*res));
 	if (res == NULL) {
 		return 0;
 	}
 
-	buckets = f_malloc(fsm->opt->alloc,
+	buckets = f_malloc(fsm->alloc,
 	    DEF_BUCKET_COUNT * sizeof(buckets[0]));
 	if (buckets == NULL) {
-		f_free(fsm->opt->alloc, res);
+		f_free(fsm->alloc, res);
 		return 0;
 	}
 
@@ -131,10 +132,10 @@ fsm_endid_free(struct fsm *fsm)
 		if (b->state == BUCKET_NO_STATE) {
 			continue;
 		}
-		f_free(fsm->opt->alloc, fsm->endid_info->buckets[i].ids);
+		f_free(fsm->alloc, fsm->endid_info->buckets[i].ids);
 	}
-	f_free(fsm->opt->alloc, fsm->endid_info->buckets);
-	f_free(fsm->opt->alloc, fsm->endid_info);
+	f_free(fsm->alloc, fsm->endid_info->buckets);
+	f_free(fsm->alloc, fsm->endid_info);
 }
 
 static int
@@ -236,7 +237,7 @@ rehash:
 				LOG_2("  -- growing buckets [%u/%u used], then rehashing\n",
 				    ei->buckets_used, ei->bucket_count);
 
-				if (!grow_endid_buckets(fsm->opt->alloc, ei)) {
+				if (!grow_endid_buckets(fsm->alloc, ei)) {
 					return NULL;
 				}
 				has_grown = 1;
@@ -364,7 +365,7 @@ allocate_ids(const struct fsm *fsm, struct end_info_ids *prev, size_t n)
 	assert(n > 0);
 
 	id_alloc_size = sizeof(*ids) + (n - 1) * sizeof(ids->ids[0]);
-	return f_realloc(fsm->opt->alloc, prev, id_alloc_size);
+	return f_realloc(fsm->alloc, prev, id_alloc_size);
 }
 
 int
@@ -734,7 +735,9 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 				ids[id_i] = b->ids->ids[id_i];
 			}
 
-			/* todo: could sort them here, if it matters. */
+			/* sorting for caller convenience */
+			qsort(ids, count, sizeof *ids, cmp_endids);
+
 			return 1;
 		} else {	/* collision */
 #if LOG_ENDIDS > 4

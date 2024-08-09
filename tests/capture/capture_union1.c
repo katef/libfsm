@@ -74,7 +74,7 @@ build(unsigned *cb_a, unsigned *cb_b)
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==== after union: cb_ab %u, cb_cde %u\n",
 	    *cb_a, *cb_b);
-	fsm_print_fsm(stderr, abcde);
+	fsm_dump(stderr, abcde);
 
 	fsm_capture_dump(stderr, "#### after union", abcde);
 
@@ -87,7 +87,7 @@ build(unsigned *cb_a, unsigned *cb_b)
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==== after determinise\n");
-	fsm_print_fsm(stderr, abcde);
+	fsm_dump(stderr, abcde);
 
 	assert(fsm_countcaptures(abcde) == cc_abcde);
 

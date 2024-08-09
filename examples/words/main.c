@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 	fsm_state_t start;
 	char s[BUFSIZ];
 	int (*dmf)(struct fsm *);
-	fsm_print *print;
+	enum fsm_print_lang lang;
 	unsigned long ms, mt;
 	int timing;
 	int native = 0;
@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 	opt.consolidate_edges = 1;
 
 	dmf = NULL;
-	print = NULL;
+	lang = FSM_PRINT_NONE;
 	timing = 0;
 
 	{
@@ -55,8 +55,8 @@ int main(int argc, char *argv[]) {
 			case 'n': native = 1;            break;
 			case 'N': unanchored = 1;        break;
 
-			case 'c': print = fsm_print_dot; break;
-			case 'f': print = fsm_print_fsm; break;
+			case 'c': lang = FSM_PRINT_DOT; break;
+			case 'f': lang = FSM_PRINT_FSM; break;
 
 			case 't':
 				timing = 1;
@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (ahocorasick) {
-			if (!re_strings_add_str(g, s)) {
+			if (!re_strings_add_str(g, s, NULL)) {
 				perror("re_strings_add_str");
 				exit(EXIT_FAILURE);
 			}
@@ -211,9 +211,7 @@ int main(int argc, char *argv[]) {
 		           + ((long) post.tv_nsec - (long) pre.tv_nsec) / 1000000;
 	}
 
-	if (print != NULL) {
-		print(stdout, fsm);
-	}
+	fsm_print(stdout, fsm, lang);
 
 	if (timing) {
 		printf("construction, reduction, total: %lu, %lu, %lu\n", ms, mt, ms + mt);

@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -33,9 +34,8 @@ fsm_clone(const struct fsm *fsm)
 	size_t i;
 
 	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
 
-	new = fsm_new_statealloc(fsm->opt, fsm->statecount);
+	new = fsm_new_statealloc(fsm->alloc, fsm->statecount);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -50,12 +50,12 @@ fsm_clone(const struct fsm *fsm)
 			fsm_setend(new, i, 1);
 		}
 
-		if (!state_set_copy(&new->states[i].epsilons, new->opt->alloc, fsm->states[i].epsilons)) {
+		if (!state_set_copy(&new->states[i].epsilons, new->alloc, fsm->states[i].epsilons)) {
 			fsm_free(new);
 			return NULL;
 		}
 
-		if (!edge_set_copy(&new->states[i].edges, new->opt->alloc, fsm->states[i].edges)) {
+		if (!edge_set_copy(&new->states[i].edges, new->alloc, fsm->states[i].edges)) {
 			fsm_free(new);
 			return NULL;
 		}

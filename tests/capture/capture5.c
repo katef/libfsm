@@ -60,7 +60,7 @@ int main(void) {
 static struct fsm *
 build(void)
 {
-	struct fsm *fsm = captest_fsm_with_options();
+	struct fsm *fsm = fsm_new(NULL);
 
 	if (!fsm_addstate_bulk(fsm, 4)) { goto fail; }
 
@@ -77,7 +77,7 @@ build(void)
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==== built\n");
-	fsm_print_fsm(stderr, fsm);
+	fsm_dump(stderr, fsm);
 	fsm_capture_dump(stderr, "built", fsm);
 #endif
 
@@ -88,7 +88,7 @@ build(void)
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==== after det\n");
-	fsm_print_fsm(stderr, fsm);
+	fsm_dump(stderr, fsm);
 	fsm_capture_dump(stderr, "after det", fsm);
 #endif
 
@@ -99,7 +99,7 @@ build(void)
 
 #if LOG_INTERMEDIATE_FSMS
 	fprintf(stderr, "==== after min\n");
-	fsm_print_fsm(stderr, fsm);
+	fsm_dump(stderr, fsm);
 	fsm_capture_dump(stderr, "after min", fsm);
 #endif
 	return fsm;

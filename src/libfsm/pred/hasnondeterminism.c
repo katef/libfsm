@@ -51,7 +51,7 @@ state_epsilon_closure(const struct fsm *fsm, fsm_state_t state,
 		return *closure;
 	}
 
-	if (!state_set_add(closure, fsm->opt->alloc, state)) {
+	if (!state_set_add(closure, fsm->alloc, state)) {
 		return NULL;
 	}
 

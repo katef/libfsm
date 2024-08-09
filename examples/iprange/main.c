@@ -49,7 +49,8 @@
 #define VALUE_SEP ','
 
 static struct fsm *fsm;
-static struct fsm_state *fsmstart;
+static fsm_state_t fsm_start;
+static fsm_state_t fsm_none = (fsm_state_t) -1;
 
 static unsigned char zeroes[16];
 static unsigned char ones[16];
@@ -61,10 +62,10 @@ struct record {
 	unsigned id;
 
 	struct fsm *fsm;
-	struct fsm_state *start;
-	struct fsm_state *end;
+	fsm_state_t start;
+	fsm_state_t end;
 	struct {
-		struct fsm_state *s;
+		fsm_state_t s;
 		unsigned char c;
 	} regs[16];
 };
@@ -120,21 +121,22 @@ get_id(char *rec, size_t reclen)
 		exit(-1);
 	}
 
-	r->start = fsm_addstate(r->fsm);
-	if (r->start == NULL) {
+	if (!fsm_addstate(r->fsm, &r->start)) {
 		perror("fsm_addstate");
 		exit(-1);
 	}
 	fsm_setstart(r->fsm, r->start);
 
-	r->end = fsm_addstate(r->fsm);
-	if (r->end == NULL) {
+	if (!fsm_addstate(r->fsm, &r->end)) {
 		perror("fsm_addstate");
 		exit(-1);
 	}
 	fsm_setend(r->fsm, r->end, 1);
 
-	memset(r->regs, 0, sizeof r->regs);
+	for (size_t i = 0; i < sizeof r->regs; i++) {
+		r->regs[i].c = '\0';
+		r->regs[i].s = fsm_none;
+	}
 
 	RB_INSERT(recmap, &recmap, r);
 
@@ -170,7 +172,7 @@ usage(void)
 	exit(-1);
 }
 
-struct fsm_state *
+static fsm_state_t
 get_from(struct record *r, unsigned oct)
 {
 	if (oct == 0) {
@@ -180,15 +182,16 @@ get_from(struct record *r, unsigned oct)
 	return r->regs[oct - 1].s;
 }
 
-struct fsm_state *
+static fsm_state_t
 get_to(struct record *r, unsigned oct, unsigned noct, const unsigned char *octs)
 {
-	if (r->regs[oct].s != NULL && r->regs[oct].c == octs[oct]) {
+	fsm_state_t to;
+
+	if (r->regs[oct].s != fsm_none && r->regs[oct].c == octs[oct]) {
 		return r->regs[oct].s;
 	}
 
-	struct fsm_state *to = fsm_addstate(r->fsm);
-	if (to == NULL) {
+	if (!fsm_addstate(r->fsm, &to)) {
 		perror("fsm_addstate");
 		exit(-1);
 	}
@@ -197,7 +200,7 @@ get_to(struct record *r, unsigned oct, unsigned noct, const unsigned char *octs)
 	r->regs[oct].c = octs[oct];
 
 	for (unsigned i = oct + 1; i < noct; i++) {
-		r->regs[i].s = NULL;
+		r->regs[i].s = fsm_none;
 	}
 
 	return to;
@@ -207,8 +210,7 @@ static void
 gen_edge_range(struct record *r, unsigned oct, const unsigned char *octs,
     unsigned range_start, unsigned range_end, unsigned noct, unsigned final)
 {
-	struct fsm_state *from, *to;
-	struct fsm_edge *e;
+	fsm_state_t from, to;
 
 	from = get_from(r, oct);
 	if (oct > 0) {
@@ -225,8 +227,7 @@ gen_edge_range(struct record *r, unsigned oct, const unsigned char *octs,
 	}
 
 	for (unsigned i = range_start; i <= range_end; i++) {
-		e = fsm_addedge_literal(r->fsm, from, to, (unsigned char) i);
-		if (e == NULL) {
+		if (!fsm_addedge_literal(r->fsm, from, to, (unsigned char) i)) {
 			perror("fsm_addedge_literal");
 			exit(-1);
 		}
@@ -420,47 +421,19 @@ important(unsigned n)
 	}
 }
 
-static void
-carryopaque(const struct fsm *src_fsm, const fsm_state_t *src_set, size_t n,
-	struct fsm *dst_fsm, struct fsm_state *dst_state)
-{
-	void *o = NULL;
-	size_t i;
-
-	assert(src_fsm != NULL);
-	assert(src_set != NULL);
-	assert(n > 0);
-	assert(dst_fsm != NULL);
-	assert(fsm_isend(dst_fsm, dst_state));
-	assert(fsm_getopaque(dst_fsm, dst_state) == NULL);
-
-	for (i = 0; i < n; i++) {
-		/*
-		 * The opaque data is attached to end states only, so we skip
-		 * non-end states here.
-		 */
-		if (!fsm_isend(src_fsm, src_set[i])) {
-			continue;
-		}
-
-		assert(fsm_getopaque(src_fsm, src_set[i]) != NULL);
-
-		if (o == NULL) {
-			o = fsm_getopaque(src_fsm, src_set[i]);
-			fsm_setopaque(dst_fsm, dst_state, o);
-			continue;
-		}
-
-		assert(o == fsm_getopaque(src_fsm, src_set[i]));
-	}
-}
-
 static int
-leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
+leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
 {
-	const struct record *r = state_opaque;
+	const struct record *r;
 
 	(void) leaf_opaque;
+
+	if (count != 1) {
+		fprintf(f, "endid conflict\n");
+		exit(EXIT_FAILURE);
+	}
+
+	r = (const void *) (intptr_t) ids[0]; /* XXX */
 
 	if (r == NULL) {
 		fprintf(f, "return -1;");
@@ -473,19 +446,27 @@ leaf(FILE *f, const void *state_opaque, const void *leaf_opaque)
 }
 
 static int
-endleaf_dot(FILE *f, const void *state_opaque, const void *endleaf_opaque)
+endleaf_dot(FILE *f, const fsm_end_id_t *ids, size_t count, const void *endleaf_opaque)
 {
 	const struct record *r;
 
 	assert(f != NULL);
-	assert(state_opaque != NULL);
 	assert(endleaf_opaque == NULL);
 
 	(void) endleaf_opaque;
 
-	r = state_opaque;
+	fprintf(f, "label = <");
 
-	fprintf(f, "label = <%s>", r->rec); /* XXX: escape */
+	for (size_t i = 0; i < count; i++) {
+		r = (const void *) (intptr_t) ids[i]; /* XXX */
+
+		fprintf(f, "%s", r->rec); /* XXX: escape */
+		if (i + 1 < count) {
+			fprintf(f, ", ");
+		}
+	}
+
+	fprintf(f, ">");
 
 	return 0;
 }
@@ -556,8 +537,7 @@ main(int argc, char **argv)
 		return -1;
 	}
 
-	fsmstart = fsm_addstate(fsm);
-	if (fsmstart == NULL) {
+	if (!fsm_addstate(fsm, &fsm_start)) {
 		perror("fsm_addstate");
 		return -1;
 	}
@@ -661,17 +641,17 @@ main(int argc, char **argv)
 			exit(-1);
 		}
 
-		fsm_setendopaque(r->fsm, r);
+		fsm_setendid(r->fsm, (intptr_t) r); /* XXX */
 
 		(void) fsm_getstart(r->fsm, &start);
 
-		fsm = fsm_merge(fsm, r->fsm);
+		fsm = fsm_merge(fsm, r->fsm, NULL);
 		if (fsm == NULL) {
 			perror("fsm_merge");
 			exit(-1);
 		}
 
-		if (!fsm_addedge_epsilon(fsm, fsmstart, start)) {
+		if (!fsm_addedge_epsilon(fsm, fsm_start, start)) {
 			perror("fsm_addedge_epsilon");
 			exit(-1);
 		}
@@ -686,7 +666,7 @@ main(int argc, char **argv)
 		}
 	}
 
-	fsm_setstart(fsm, fsmstart);
+	fsm_setstart(fsm, fsm_start);
 
 	if (progress) {
 		tend = time(NULL);
@@ -696,15 +676,9 @@ main(int argc, char **argv)
 		tstart = time(NULL);
 	}
 
-	{
-		opt.carryopaque = carryopaque;
-
-		if (!fsm_determinise(fsm) == 0) {
-			perror("fsm_determinise");
-			exit(-1);
-		}
-
-		opt.carryopaque = NULL;
+	if (!fsm_determinise(fsm) == 0) {
+		perror("fsm_determinise");
+		exit(-1);
 	}
 
 	if (progress) {
@@ -717,11 +691,11 @@ main(int argc, char **argv)
 		opt.cp          = "c";
 		opt.leaf        = leaf;
 		opt.leaf_opaque = NULL;
-		fsm_print_c(stdout, fsm);
+		fsm_print(stdout, fsm, FSM_PRINT_C);
 	} else if (odot) {
 		opt.endleaf        = endleaf_dot;
 		opt.endleaf_opaque = NULL;
-		fsm_print_dot(stdout, fsm);
+		fsm_print(stdout, fsm, FSM_PRINT_DOT);
 	}
 }
 

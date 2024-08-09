@@ -13,10 +13,14 @@
 
 #include "lx/print.h"
 
-static void
-print_dump(FILE *f)
+void
+lx_print_dump(FILE *f, const struct ast *ast, const struct fsm_options *opt)
 {
 	assert(f != NULL);
+	assert(ast != NULL);
+	assert(opt != NULL);
+
+	(void) ast;
 
 	if (api_getc == API_FDGETC) {
 		fprintf(f, "#define _POSIX_SOURCE\n");
@@ -67,7 +71,7 @@ print_dump(FILE *f)
 	fprintf(f, "\tenum lx_token t;\n");
 	fprintf(f, "\tstruct lx lx = { 0 };\n");
 
-	switch (opt.io) {
+	switch (opt->io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\tint (*lgetc)(struct lx *lx);\n");
 		fprintf(f, "\tvoid *getc_opaque;\n");
@@ -113,7 +117,7 @@ print_dump(FILE *f)
 
 	fprintf(f, "\n");
 
-	if (opt.io == FSM_IO_GETC && (api_getc != API_AGETC && api_getc != API_SGETC)) {
+	if (opt->io == FSM_IO_GETC && (api_getc != API_AGETC && api_getc != API_SGETC)) {
 		fprintf(f, "\tif (argc != 1) {\n");
 		fprintf(f, "\t\tfprintf(stderr, \"usage: dump\\n\");\n");
 		fprintf(f, "\t\treturn 1;\n");
@@ -172,7 +176,7 @@ print_dump(FILE *f)
 	fprintf(f, "\tlx_init(&lx);\n");
 	fprintf(f, "\n");
 
-	switch (opt.io) {
+	switch (opt->io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\tlx.lgetc       = lgetc;\n");
 		fprintf(f, "\tlx.getc_opaque = getc_opaque;\n");
@@ -301,16 +305,5 @@ print_dump(FILE *f)
 
 	fprintf(f, "\treturn t == TOK_ERROR;\n");
 	fprintf(f, "}\n");
-}
-
-void
-lx_print_dump(FILE *f, const struct ast *ast)
-{
-	assert(f != NULL);
-	assert(ast != NULL);
-
-	(void) ast;
-
-	print_dump(f);
 }
 

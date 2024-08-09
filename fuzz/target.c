@@ -75,8 +75,6 @@ scanner_next(void *opaque)
 }
 #endif
 
-static const struct fsm_options opt;
-
 static struct fsm *
 build(const char *pattern)
 {
@@ -95,7 +93,7 @@ build(const char *pattern)
 	};
 
 	time_get(&pre);
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &opt, RE_MULTI, &err);
+	fsm = re_comp(RE_PCRE, scanner_next, &s, NULL, RE_MULTI, &err);
 	time_get(&post);
 	delta_usec = time_diff_usec(&pre, &post);
 	total_usec += delta_usec;
@@ -133,24 +131,28 @@ build(const char *pattern)
 }
 
 static int
-codegen(const struct fsm *fsm)
+codegen(const struct fsm *fsm, enum fsm_io io_mode)
 {
+	const struct fsm_options opt = {
+		.io = io_mode,
+	};
+
 	FILE *dev_null = fopen("/dev/null", "w");
 	assert(dev_null != NULL);
-	fsm_print_c(dev_null, fsm);
+	fsm_print(dev_null, fsm, &opt, NULL, FSM_PRINT_C);
 	fclose(dev_null);
 	return 1;
 }
 
 static int
-build_and_codegen(const char *pattern)
+build_and_codegen(const char *pattern, enum fsm_io io_mode)
 {
 	struct fsm *fsm = build(pattern);
 	if (fsm == NULL) {
 		return EXIT_SUCCESS;
 	}
 
-	if (!codegen(fsm)) {
+	if (!codegen(fsm, io_mode)) {
 		return EXIT_SUCCESS;
 	}
 
@@ -176,7 +178,7 @@ shuffle_minimise(const char *pattern)
 		.offset = 0
 	};
 
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &opt, RE_MULTI, &err);
+	fsm = re_comp(RE_PCRE, scanner_next, &s, NULL, RE_MULTI, &err);
 
 	if (fsm == NULL) {
 		/* ignore invalid regexp syntax, etc. */
@@ -245,14 +247,14 @@ shuffle_minimise(const char *pattern)
 			    __func__, s_i, pattern, expected_state_count, cp_state_count);
 
 			fprintf(stderr, "== original input:\n");
-			fsm_print_fsm(stderr, fsm);
+			fsm_print(stderr, fsm, NULL, NULL, FSM_PRINT_FSM);
 
 
 			fprintf(stderr, "== expected:\n");
-			fsm_print_fsm(stderr, oracle_min);
+			fsm_print(stderr, oracle_min, NULL, NULL, FSM_PRINT_FSM);
 
 			fprintf(stderr, "== got:\n");
-			fsm_print_fsm(stderr, cp);
+			fsm_print(stderr, cp, NULL, NULL, FSM_PRINT_FSM);
 
 			fsm_free(cp);
 			fsm_free(oracle_min);
@@ -283,11 +285,11 @@ fuzz_all_print_functions(FILE *f, const char *pattern, bool det, bool min, const
 		.offset = 0
 	};
 
-	const struct fsm_options options = {
+	const struct fsm_options opt = {
 		.io = io_mode,
 	};
 
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &options, RE_MULTI, &err);
+	fsm = re_comp(RE_PCRE, scanner_next, &s, NULL, RE_MULTI, &err);
 	if (fsm == NULL) {
 		/* ignore invalid regexp syntax, etc. */
 		return EXIT_SUCCESS;
@@ -312,23 +314,30 @@ fuzz_all_print_functions(FILE *f, const char *pattern, bool det, bool min, const
 
 	/* see if this triggers any asserts */
 	int r = 0;
-	r |= fsm_print_api(f, fsm);
-	r |= fsm_print_awk(f, fsm);
-	r |= fsm_print_c(f, fsm);
-	r |= fsm_print_dot(f, fsm);
-	r |= fsm_print_fsm(f, fsm);
-	r |= fsm_print_ir(f, fsm);
-	r |= fsm_print_irjson(f, fsm);
-	r |= fsm_print_json(f, fsm);
-	r |= fsm_print_vmc(f, fsm);
-	r |= fsm_print_vmdot(f, fsm);
-	r |= fsm_print_vmasm(f, fsm);
-	r |= fsm_print_vmasm_amd64_att(f, fsm);
-	r |= fsm_print_vmasm_amd64_nasm(f, fsm);
-	r |= fsm_print_vmasm_amd64_go(f, fsm);
-	r |= fsm_print_sh(f, fsm);
-	r |= fsm_print_go(f, fsm);
-	r |= fsm_print_rust(f, fsm);
+
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_AMD64_ATT);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_AMD64_GO);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_AMD64_NASM);
+
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_API);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_AWK);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_C);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_DOT);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_FSM);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_GO);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_IR);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_IRJSON);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_JSON);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_LLVM);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_RUST);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_SH);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_VMC);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_VMDOT);
+
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_VMOPS_C);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_VMOPS_H);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_VMOPS_MAIN);
+
 	assert(r == 0 || errno != 0);
 
 	fsm_free(fsm);
@@ -373,8 +382,12 @@ harness_fuzzer_target(const uint8_t *data, size_t size)
 	const char *pattern = (const char *)data_buf;
 
 	switch (get_run_mode()) {
-	case MODE_DEFAULT:
-		return build_and_codegen(pattern);
+	case MODE_DEFAULT: {
+		const uint8_t b0 = data_buf[0];
+		const enum fsm_io io_mode = (b0 >> 2) % 3;
+
+		return build_and_codegen(pattern, io_mode);
+	}
 
 	case MODE_SHUFFLE_MINIMISE:
 		return shuffle_minimise(pattern);

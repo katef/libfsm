@@ -6,12 +6,12 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <fsm/alloc.h>
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
-#include <fsm/options.h>
 
 #include <adt/alloc.h>
 #include <adt/set.h>
@@ -34,61 +34,60 @@ free_contents(struct fsm *fsm)
 
 	for (i = 0; i < fsm->statecount; i++) {
 		state_set_free(fsm->states[i].epsilons);
-		edge_set_free(fsm->opt->alloc, fsm->states[i].edges);
+		edge_set_free(fsm->alloc, fsm->states[i].edges);
 	}
 
 	fsm_capture_free(fsm);
 	fsm_endid_free(fsm);
 
-	f_free(fsm->opt->alloc, fsm->states);
+	f_free(fsm->alloc, fsm->states);
 }
 
 struct fsm *
-fsm_new_statealloc(const struct fsm_options *opt, size_t statealloc)
+fsm_new_statealloc(const struct fsm_alloc *alloc, size_t statealloc)
 {
-	static const struct fsm_options defaults;
-	struct fsm *new, f;
+	struct fsm *new;
+
+	if (alloc != NULL) {
+		assert(alloc->free != NULL);
+		assert(alloc->calloc != NULL);
+		assert(alloc->malloc != NULL);
+		assert(alloc->realloc != NULL);
+	}
 
 	if (statealloc == 0) {
-		return fsm_new(opt);
+		return fsm_new(alloc);
 	}
 
-	if (opt == NULL) {
-		opt = &defaults;
-	}
-
-	f.opt = opt;
-
-	new = f_malloc(f.opt->alloc, sizeof *new);
+	new = f_malloc(alloc, sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
 
-	new->statealloc = statealloc;
-	new->statecount = 0;
-	new->endcount   = 0;
+	new->alloc        = alloc;
+	new->statealloc   = statealloc;
+	new->statecount   = 0;
+	new->endcount     = 0;
 	new->capture_info = NULL;
-	new->endid_info = NULL;
+	new->endid_info   = NULL;
 
-	new->states = f_malloc(f.opt->alloc, new->statealloc * sizeof *new->states);
+	new->states = f_malloc(new->alloc, new->statealloc * sizeof *new->states);
 	if (new->states == NULL) {
-		f_free(f.opt->alloc, new);
+		f_free(new->alloc, new);
 		return NULL;
 	}
 
 	fsm_clearstart(new);
 
-	new->opt = opt;
-
 	if (!fsm_capture_init(new)) {
-		f_free(f.opt->alloc, new->states);
-		f_free(f.opt->alloc, new);
+		f_free(new->alloc, new->states);
+		f_free(new->alloc, new);
 		return NULL;
 	}
 
 	if (!fsm_endid_init(new)) {
-		f_free(f.opt->alloc, new->states);
-		f_free(f.opt->alloc, new);
+		f_free(new->alloc, new->states);
+		f_free(new->alloc, new);
 		fsm_capture_free(new);
 		return NULL;
 	}
@@ -97,9 +96,9 @@ fsm_new_statealloc(const struct fsm_options *opt, size_t statealloc)
 }
 
 struct fsm *
-fsm_new(const struct fsm_options *opt)
+fsm_new(const struct fsm_alloc *alloc)
 {
-	return fsm_new_statealloc(opt, FSM_DEFAULT_STATEALLOC);
+	return fsm_new_statealloc(alloc, FSM_DEFAULT_STATEALLOC);
 }
 
 void
@@ -109,19 +108,7 @@ fsm_free(struct fsm *fsm)
 
 	free_contents(fsm);
 
-	f_free(fsm->opt->alloc, fsm);
-}
-
-const struct fsm_options *
-fsm_getoptions(const struct fsm *fsm)
-{
-	return fsm->opt;
-}
-
-void
-fsm_setoptions(struct fsm *fsm, const struct fsm_options *opts)
-{
-	fsm->opt = opts;
+	f_free(fsm->alloc, fsm);
 }
 
 void
@@ -130,7 +117,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	assert(src != NULL);
 	assert(dst != NULL);
 
-	if (dst->opt != src->opt) {
+	if (dst->alloc != src->alloc) {
 		errno = EINVAL;
 		return; /* XXX */
 	}
@@ -147,7 +134,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	dst->capture_info = src->capture_info;
 	dst->endid_info = src->endid_info;
 
-	f_free(src->opt->alloc, src);
+	f_free(src->alloc, src);
 }
 
 unsigned int

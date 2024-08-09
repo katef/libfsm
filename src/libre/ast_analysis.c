@@ -13,7 +13,6 @@
 #include <re/re.h>
 
 #include "class.h"
-#include "print.h"
 #include "ast.h"
 #include "ast_analysis.h"
 

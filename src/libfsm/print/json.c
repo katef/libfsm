@@ -11,6 +11,7 @@
 #include <limits.h>
 
 #include "libfsm/internal.h" /* XXX: up here for bitmap.h */
+#include "libfsm/print.h"
 
 #include <print/esc.h>
 
@@ -114,7 +115,8 @@ print_edge_label(FILE *f, int *notfirst,
 }
 
 static int
-singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s, int *notfirst)
+print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
+	fsm_state_t s, int *notfirst)
 {
 	struct fsm_edge e;
 	struct edge_iter it;
@@ -122,12 +124,12 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s, int *notfirst)
 	struct state_set *unique;
 
 	assert(f != NULL);
+	assert(opt != NULL);
 	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
 	assert(s < fsm->statecount);
 	assert(notfirst != NULL);
 
-	if (!fsm->opt->consolidate_edges) {
+	if (!opt->consolidate_edges) {
 		struct state_iter jt;
 		fsm_state_t st;
 
@@ -136,7 +138,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s, int *notfirst)
 		}
 
 		for (edge_set_ordered_iter_reset(fsm->states[s].edges, &eoi); edge_set_ordered_iter_next(&eoi, &e); ) {
-			print_edge_symbol(f, notfirst, fsm->opt,
+			print_edge_symbol(f, notfirst, opt,
 				s, e.state, e.symbol);
 		}
 
@@ -146,7 +148,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s, int *notfirst)
 	unique = NULL;
 
 	for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
-		if (!state_set_add(&unique, fsm->opt->alloc, e.state)) {
+		if (!state_set_add(&unique, fsm->alloc, e.state)) {
 			return -1;
 		}
 	}
@@ -181,7 +183,7 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s, int *notfirst)
 			}
 		}
 
-		print_edge_bitmap(f, notfirst, fsm->opt, s, e.state, &bm);
+		print_edge_bitmap(f, notfirst, opt, s, e.state, &bm);
 	}
 
 	state_set_free(unique);
@@ -202,14 +204,18 @@ singlestate(FILE *f, const struct fsm *fsm, fsm_state_t s, int *notfirst)
 }
 
 int
-fsm_print_json(FILE *f, const struct fsm *fsm)
+fsm_print_json(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct fsm *fsm)
 {
 	fsm_state_t start;
 	fsm_state_t i;
 
 	assert(f != NULL);
+	assert(opt != NULL);
+	assert(hooks != NULL);
 	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
 
 	fprintf(f, "{\n");
 
@@ -239,8 +245,8 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 		fprintf(f, " ],\n");
 	}
 
-	/* showing endleaf in addition to existing content */
-	if (fsm->opt->endleaf != NULL) {
+	/* showing hook in addition to existing content */
+	if (hooks->accept != NULL) {
 		int notfirst;
 
 		notfirst = 0;
@@ -256,14 +262,17 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 			}
 
 			count = fsm_endid_count(fsm, i);
+			if (count == 0) {
+				ids = NULL;
+			} else {
+				ids = f_malloc(fsm->alloc, count * sizeof *ids);
+				if (ids == NULL) {
+					return -1;
+				}
 
-			ids = f_malloc(fsm->opt->alloc, count * sizeof *ids);
-			if (ids == NULL) {
-				return -1;
+				res = fsm_endid_get(fsm, i, count, ids);
+				assert(res == 1);
 			}
-
-			res = fsm_endid_get(fsm, i, count, ids);
-			assert(res == 1);
 
 			if (notfirst) {
 				fprintf(f, ", ");
@@ -271,16 +280,18 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 
 			fprintf(f, "{ %u, ", i);
 
-			if (-1 == fsm->opt->endleaf(f,
+			if (-1 == print_hook_accept(f, opt, hooks,
 				ids, count,
-				fsm->opt->endleaf_opaque))
+				NULL, NULL))
 			{
 				return -1;
 			}
 
 			fprintf(f, " }");
 
-			f_free(fsm->opt->alloc, ids);
+			if (count > 0) {
+				f_free(fsm->alloc, ids);
+			}
 
 			notfirst = 1;
 		}
@@ -294,7 +305,7 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 
 		fprintf(f, "  \"edges\": [\n");
 		for (i = 0; i < fsm->statecount; i++) {
-			if (-1 == singlestate(f, fsm, i, &notfirst)) {
+			if (-1 == print_state(f, opt, fsm, i, &notfirst)) {
 				return -1;
 			}
 		}
@@ -303,10 +314,6 @@ fsm_print_json(FILE *f, const struct fsm *fsm)
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
-
-	if (ferror(f)) {
-		return -1;
-	}
 
 	return 0;
 }

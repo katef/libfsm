@@ -80,7 +80,7 @@ main(int argc, char *argv[])
 	printf("#include <time.h>\n");
 	printf("\n");
 
-	fsm_print_c(stdout, fsm);
+	fsm_print(stdout, fsm, FSM_PRINT_C);
 
 	printf("int\n");
 	printf("main(void)\n");

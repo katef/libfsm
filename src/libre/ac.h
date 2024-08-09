@@ -11,7 +11,6 @@
 
 struct fsm;
 struct fsm_state;
-struct fsm_options;
 
 struct trie_graph;
 

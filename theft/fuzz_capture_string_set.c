@@ -162,7 +162,7 @@ check_capstring_set(struct capture_env *env,
 
 		if (verbosity > 2) {
 			fprintf(stderr, "==== cs '%s'\n", cs->string);
-			fsm_print_fsm(stderr, dfa);
+			fsm_print(stderr, dfa, FSM_PRINT_FSM);
 		}
 
 		struct fsm *cp = fsm_clone(dfa);
@@ -175,7 +175,7 @@ check_capstring_set(struct capture_env *env,
 		const size_t cp_capture_count = fsm_countcaptures(cp);
 		if (verbosity > 2) {
 			fprintf(stderr, "==== min(det(cp))\n");
-			fsm_print_fsm(stderr, cp);
+			fsm_print(stderr, cp, FSM_PRINT_FSM);
 			fsm_capture_dump(stderr, "min(det(cp))", cp);
 			fprintf(stderr, "capture_count: %lu\n", cp_capture_count);
 		}
@@ -209,7 +209,7 @@ check_capstring_set(struct capture_env *env,
 
 	if (verbosity > 2) {
 		fprintf(stderr, "==== combined, pre-det\n");
-		fsm_print_fsm(stderr, combined);
+		fsm_print(stderr, combined, FSM_PRINT_FSM);
 		fsm_capture_dump(stderr, "combined, pre-det", combined);
 	}
 
@@ -227,7 +227,7 @@ check_capstring_set(struct capture_env *env,
 
 	if (verbosity > 2) {
 		fprintf(stderr, "==== det(combined)\n");
-		fsm_print_fsm(stderr, combined);
+		fsm_print(stderr, combined, FSM_PRINT_FSM);
 		fsm_capture_dump(stderr, "det(combined)", combined);
 	}
 

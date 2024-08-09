@@ -28,10 +28,6 @@
 
 #define LOG_LINKAGE 0
 
-#if LOG_LINKAGE
-#include "print.h"
-#endif
-
 enum link_side {
 	LINK_START,
 	LINK_END
@@ -196,13 +192,14 @@ fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t x, fsm_state_t y)
 
 static struct fsm *
 expr_compile(struct ast_expr *e, enum re_flags flags,
-	const struct fsm_options *opt, struct re_err *err)
+	const struct fsm_alloc *alloc,
+	struct re_err *err)
 {
 	struct ast ast;
 
 	ast.expr = e;
 
-	return ast_compile(&ast, flags, opt, err);
+	return ast_compile(&ast, flags, alloc, err);
 }
 
 static int
@@ -887,13 +884,13 @@ comp_iter(struct comp_env *env,
 		re_flags &= ~(unsigned)RE_REVERSE;
 
 		a = expr_compile(n->u.subtract.a, re_flags,
-			fsm_getoptions(env->fsm), env->err);
+			env->fsm->alloc, env->err);
 		if (a == NULL) {
 			return 0;
 		}
 
 		b = expr_compile(n->u.subtract.b, re_flags,
-			fsm_getoptions(env->fsm), env->err);
+			env->fsm->alloc, env->err);
 		if (b == NULL) {
 			fsm_free(a);
 			return 0;
@@ -963,7 +960,7 @@ comp_iter(struct comp_env *env,
 struct fsm *
 ast_compile(const struct ast *ast,
 	enum re_flags re_flags,
-	const struct fsm_options *opt,
+	const struct fsm_alloc *alloc,
 	struct re_err *err)
 {
 	fsm_state_t x, y;
@@ -971,7 +968,7 @@ ast_compile(const struct ast *ast,
 
 	assert(ast != NULL);
 
-	fsm = fsm_new(opt);
+	fsm = fsm_new(alloc);
 	if (fsm == NULL) {
 		return NULL;
 	}

@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <fsm/fsm.h>
@@ -134,7 +135,7 @@ fsm_remove_epsilons(struct fsm *nfa)
 				fprintf(stderr, "%s: bulk-copying edges leading to state %d onto state %d (from state %d)\n",
 				    __func__, info.to, s, es_id);
 #endif
-				if (!edge_set_add_bulk(&nfa->states[s].edges, nfa->opt->alloc,
+				if (!edge_set_add_bulk(&nfa->states[s].edges, nfa->alloc,
 					info.symbols, info.to)) {
 					goto cleanup;
 				}
@@ -152,7 +153,7 @@ fsm_remove_epsilons(struct fsm *nfa)
 
 #if LOG_RESULT
 	fprintf(stderr, "=== %s: about to update capture actions\n", __func__);
-	fsm_print_fsm(stderr, nfa);
+	fsm_dump(stderr, nfa);
 #endif
 
 	if (!remap_capture_actions(nfa, eclosures)) {
@@ -160,7 +161,7 @@ fsm_remove_epsilons(struct fsm *nfa)
 	}
 
 #if LOG_RESULT
-	fsm_print_fsm(stderr, nfa);
+	fsm_dump(stderr, nfa);
 	fsm_capture_dump(stderr, "#### post_remove_epsilons", nfa);
 #endif
 
@@ -182,10 +183,10 @@ remap_capture_actions(struct fsm *nfa, struct state_set **eclosures)
 	struct state_iter si;
 	fsm_state_t si_s;
 	struct remap_env env = { 'R', NULL, NULL, 1, 0, 0, NULL };
-	env.alloc = nfa->opt->alloc;
+	env.alloc = nfa->alloc;
 
 	/* build a reverse mapping */
-	rmap = f_calloc(nfa->opt->alloc, nfa->statecount, sizeof(rmap[0]));
+	rmap = f_calloc(nfa->alloc, nfa->statecount, sizeof(rmap[0]));
 	if (rmap == NULL) {
 		goto cleanup;
 	}
@@ -200,7 +201,7 @@ remap_capture_actions(struct fsm *nfa, struct state_set **eclosures)
 			fprintf(stderr, "remap_capture_actions: %u <- %u\n",
 			    s, si_s);
 #endif
-			if (!state_set_add(&rmap[si_s], nfa->opt->alloc, s)) {
+			if (!state_set_add(&rmap[si_s], nfa->alloc, s)) {
 				goto cleanup;
 			}
 		}
@@ -229,14 +230,14 @@ remap_capture_actions(struct fsm *nfa, struct state_set **eclosures)
 
 cleanup:
 	if (env.actions != NULL) {
-		f_free(nfa->opt->alloc, env.actions);
+		f_free(nfa->alloc, env.actions);
 	}
 
 	if (rmap != NULL) {
 		for (i = 0; i < nfa->statecount; i++) {
 			state_set_free(rmap[i]);
 		}
-		f_free(nfa->opt->alloc, rmap);
+		f_free(nfa->alloc, rmap);
 	}
 	return res;
 
@@ -381,10 +382,10 @@ carry_endids(struct fsm *fsm, struct state_set *states,
 
 	struct collect_env env;
 	env.tag = 'E';		/* for fsm_remove_epsilons */
-	env.alloc = fsm->opt->alloc;
+	env.alloc = fsm->alloc;
 	env.count = 0;
 	env.ceil = DEF_CARRY_ENDIDS_COUNT;
-	env.ids = f_malloc(fsm->opt->alloc,
+	env.ids = f_malloc(fsm->alloc,
 	    env.ceil * sizeof(*env.ids));
 	if (env.ids == NULL) {
 		return 0;
@@ -412,7 +413,7 @@ carry_endids(struct fsm *fsm, struct state_set *states,
 	}
 
 cleanup:
-	f_free(fsm->opt->alloc, env.ids);
+	f_free(fsm->alloc, env.ids);
 
 	return env.ok;
 }
