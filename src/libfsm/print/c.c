@@ -101,7 +101,7 @@ print_ids(FILE *f,
 		fprintf(f, " };\n");
 		fprintf(f, "\t\t*ids = a;\n");
 		fprintf(f, "\t\t*count = %zu;\n", count);
-		fprintf(f, "\t\treturn 0;\n");
+		fprintf(f, "\t\treturn 1;\n");
 		fprintf(f, "\t}");
 		break;
 
