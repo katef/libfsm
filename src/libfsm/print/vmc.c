@@ -63,16 +63,18 @@ print_ids(FILE *f,
 			errno = EINVAL;
 			return -1;
 		}
-		
-		fprintf(f, "return %u;", ids[0]);
-		break;
-	
+
+		/* fallthrough */
+
 	case AMBIG_EARLIEST:
 		/*
 		 * The libfsm api guarentees these ids are unique,
 		 * and only appear once each, and are sorted.
 		 */
-		fprintf(f, "return %u;", ids[0]);
+		fprintf(f, "{\n");
+		fprintf(f, "\t\t*id = %u;\n", ids[0]);
+		fprintf(f, "\t\treturn 1;\n");
+		fprintf(f, "\t}");
 		break;
 	
 	case AMBIG_MULTIPLE:
