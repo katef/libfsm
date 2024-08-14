@@ -33,6 +33,12 @@ print_hook_accept(FILE *f,
 	void *lang_opaque);
 
 int
+print_hook_comment(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const fsm_end_id_t *ids, size_t count);
+
+int
 print_hook_reject(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,

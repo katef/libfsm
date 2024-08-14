@@ -668,6 +668,13 @@ fsm_print_llvm(FILE *f,
 			{
 				return -1;
 			}
+
+			if (-1 == print_hook_comment(f, opt, hooks,
+				retlist->a[i].ids, retlist->a[i].count))
+			{
+				return -1;
+			}
+
 			fprintf(f, "\n");
 		}
 	}
@@ -678,6 +685,7 @@ fsm_print_llvm(FILE *f,
 		if (opt->ambig == AMBIG_MULTIPLE) {
 			fprintf(f, "%%rt { %s bitcast ([%zu x i32]* @%sr%zu to %s), i64 %zu }",
 				ptr_i32, retlist->a[i].count, prefix, i, ptr_i32, retlist->a[i].count);
+			fprintf(f, ",");
 		} else {
 			if (-1 == print_hook_accept(f, opt, hooks,
 				retlist->a[i].ids, retlist->a[i].count,
@@ -685,8 +693,16 @@ fsm_print_llvm(FILE *f,
 			{
 				return -1;
 			}
+
+			fprintf(f, ",");
+
+			if (-1 == print_hook_comment(f, opt, hooks,
+				retlist->a[i].ids, retlist->a[i].count))
+			{
+				return -1;
+			}
 		}
-		fprintf(f, ",\n");
+		fprintf(f, "\n");
 	}
 	fprintf(f, "\t  ");
 	if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {

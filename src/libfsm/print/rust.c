@@ -364,6 +364,14 @@ fsm_print_rustfrag(FILE *f,
 				fprintf(f, " }");
 			}
 
+			if (op->u.stop.end_bits == VM_END_SUCC) {
+				if (-1 == print_hook_comment(f, opt, hooks,
+					op->ret->ids, op->ret->count))
+				{
+					return -1;
+				}
+			}
+
 			if (op->cmp == VM_CMP_ALWAYS) {
 				/* the code for fallthrough would be unreachable */
 				fallthrough = false;

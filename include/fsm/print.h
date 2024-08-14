@@ -74,7 +74,7 @@ struct fsm_hooks {
 
 	int (*comment)(FILE *, const struct fsm_options *opt,
 		const fsm_end_id_t *ids, size_t count,
-		void *lang_opaque, void *hook_opaque);
+		void *hook_opaque);
 
 	/* only called for AMBIG_ERROR; see opt.ambig */
 	int (*conflict)(FILE *, const struct fsm_options *opt,

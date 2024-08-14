@@ -382,6 +382,12 @@ print_endstates(FILE *f,
 			return -1;
 		}
 
+		if (-1 == print_hook_comment(f, opt, hooks,
+			ir->states[i].endids.ids, ir->states[i].endids.count))
+		{
+			return -1;
+		}
+
 		fprintf(f, "\n");
 	}
 

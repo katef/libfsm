@@ -215,8 +215,6 @@ print_state(FILE *f,
 		fprintf(f, "</TD></TR>\n");
 	}
 
-	/* TODO: leaf callback for dot output */
-
 	/* showing hook in addition to existing content */
 	if (cs->isend && hooks->accept != NULL) {
 		fprintf(f, "\t\t  <TR><TD COLSPAN='3' ALIGN='LEFT'>");

@@ -202,6 +202,12 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 			return -1;
 		}
 
+		if (-1 == print_hook_comment(f, opt, hooks,
+			op->ret->ids, op->ret->count))
+		{
+			return -1;
+		}
+
 		fprintf(f, "\n\t}\n");
 
 		return 0;

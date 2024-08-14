@@ -205,10 +205,21 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
 	case VM_END_SUCC:
-		return print_hook_accept(f, opt, hooks,
+		if (-1 == print_hook_accept(f, opt, hooks,
 			op->ret->ids, op->ret->count,
 			default_accept,
-			NULL);
+			NULL))
+		{
+			return -1;
+		}
+
+		if (-1 == print_hook_comment(f, opt, hooks,
+			op->ret->ids, op->ret->count))
+		{
+			return -1;
+		}
+
+		return 0;
 
 	default:
 		assert(!"unreached");

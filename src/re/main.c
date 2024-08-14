@@ -336,16 +336,14 @@ conflict(FILE *f, const struct fsm_options *opt,
 static int
 comment_c(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque, void *hook_opaque)
+	void *hook_opaque)
 {
 	size_t i;
 
 	assert(opt != NULL);
-	assert(lang_opaque == NULL);
 	assert(hook_opaque == NULL);
 
 	(void) opt;
-	(void) lang_opaque;
 	(void) hook_opaque;
 
 	fprintf(f, "/* ");
@@ -368,19 +366,17 @@ comment_c(FILE *f, const struct fsm_options *opt,
 static int
 comment_rust(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque, void *hook_opaque)
+	void *hook_opaque)
 {
 	size_t i;
 
 	assert(opt != NULL);
-	assert(lang_opaque != NULL);
 	assert(hook_opaque == NULL);
 
 	(void) opt;
-	(void) lang_opaque;
 	(void) hook_opaque;
 
-	fprintf(f, "/* ");
+	fprintf(f, "// ");
 
 	for (i = 0; i < count; i++) {
 		assert(ids[i] < matchc);
@@ -392,24 +388,20 @@ comment_rust(FILE *f, const struct fsm_options *opt,
 		}
 	}
 
-	fprintf(f, " */");
-
 	return 0;
 }
 
 static int
 comment_llvm(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque, void *hook_opaque)
+	void *hook_opaque)
 {
 	size_t i;
 
 	assert(opt != NULL);
-	assert(lang_opaque == NULL);
 	assert(hook_opaque == NULL);
 
 	(void) opt;
-	(void) lang_opaque;
 	(void) hook_opaque;
 
 	fprintf(f, "; ");
@@ -430,12 +422,11 @@ comment_llvm(FILE *f, const struct fsm_options *opt,
 static int
 comment_dot(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
-	void *lang_opaque, void *hook_opaque)
+	void *hook_opaque)
 {
 	size_t i;
 
 	assert(opt != NULL);
-	assert(lang_opaque != NULL);
 	assert(hook_opaque == NULL);
 
 	(void) opt;
@@ -1066,6 +1057,7 @@ main(int argc, char *argv[])
 			break;
 
 		case FSM_PRINT_RUST:
+		case FSM_PRINT_GO: /* close enough */
 			hooks.comment = comment_rust;
 			break;
 
