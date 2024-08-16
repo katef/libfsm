@@ -129,10 +129,17 @@ print_end(FILE *f,
 		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
 	case VM_END_SUCC:
-		return print_hook_accept(f, opt, hooks,
+		if (-1 == print_hook_accept(f, opt, hooks,
 			op->ret->ids, op->ret->count,
 			default_accept,
-			NULL);
+			NULL))
+		{
+			return -1;
+		}
+
+		/* no print_hook_comment() for dot output */
+
+		return 0;
 
 	default:
 		assert(!"unreached");

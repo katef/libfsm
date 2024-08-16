@@ -71,15 +71,17 @@ print_ids(FILE *f,
 			return -1;
 		}
 
-		fprintf(f, "return %u;", ids[0]);
-		break;
+		/* fallthrough */
 
 	case AMBIG_EARLIEST:
 		/*
 		 * The libfsm api guarentees these ids are unique,
 		 * and only appear once each, and are sorted.
 		 */
-		fprintf(f, "return %u;", ids[0]);
+		fprintf(f, "{\n");
+		fprintf(f, "\t\t*id = %u;\n", ids[0]);
+		fprintf(f, "\t\treturn 1;\n");
+		fprintf(f, "\t}");
 		break;
 
 	case AMBIG_MULTIPLE:
@@ -101,7 +103,7 @@ print_ids(FILE *f,
 		fprintf(f, " };\n");
 		fprintf(f, "\t\t*ids = a;\n");
 		fprintf(f, "\t\t*count = %zu;\n", count);
-		fprintf(f, "\t\treturn 0;\n");
+		fprintf(f, "\t\treturn 1;\n");
 		fprintf(f, "\t}");
 		break;
 
@@ -380,6 +382,12 @@ print_endstates(FILE *f,
 			return -1;
 		}
 
+		if (-1 == print_hook_comment(f, opt, hooks,
+			ir->states[i].endids.ids, ir->states[i].endids.count))
+		{
+			return -1;
+		}
+
 		fprintf(f, "\n");
 	}
 
@@ -555,13 +563,13 @@ fsm_print_c(FILE *f,
 
 		case AMBIG_ERROR:
 		case AMBIG_EARLIEST:
-			fprintf(stdout, ",\n");
-			fprintf(stdout, "\tconst unsigned *id");
+			fprintf(f, ",\n");
+			fprintf(f, "\tconst unsigned *id");
 			break;
 
 		case AMBIG_MULTIPLE:
-			fprintf(stdout, ",\n");
-			fprintf(stdout, "\tconst unsigned **ids, size_t *count");
+			fprintf(f, ",\n");
+			fprintf(f, "\tconst unsigned **ids, size_t *count");
 			break;
 
 		default:
@@ -570,8 +578,8 @@ fsm_print_c(FILE *f,
 		}
 
 		if (hooks->args != NULL) {
-			fprintf(stdout, ",\n");
-			fprintf(stdout, "\t");
+			fprintf(f, ",\n");
+			fprintf(f, "\t");
 
 			if (-1 == print_hook_args(f, opt, hooks, NULL, NULL)) {
 				return -1;

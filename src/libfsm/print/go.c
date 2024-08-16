@@ -202,6 +202,12 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 			return -1;
 		}
 
+		if (-1 == print_hook_comment(f, opt, hooks,
+			op->ret->ids, op->ret->count))
+		{
+			return -1;
+		}
+
 		fprintf(f, "\n\t}\n");
 
 		return 0;
@@ -413,7 +419,7 @@ fsm_print_go(FILE *f,
 		}
 
 		if (hooks->args != NULL) {
-			fprintf(stdout, ", ");
+			fprintf(f, ", ");
 		
 			if (-1 == print_hook_args(f, opt, hooks, NULL, NULL)) {
 				return -1;
@@ -429,7 +435,7 @@ fsm_print_go(FILE *f,
 
 		case AMBIG_ERROR:
 		case AMBIG_EARLIEST:
-			fprintf(stdout, "(bool, uint)");
+			fprintf(f, "(bool, uint)");
 			break;
 
 		case AMBIG_MULTIPLE:

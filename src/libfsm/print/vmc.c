@@ -63,16 +63,18 @@ print_ids(FILE *f,
 			errno = EINVAL;
 			return -1;
 		}
-		
-		fprintf(f, "return %u;", ids[0]);
-		break;
-	
+
+		/* fallthrough */
+
 	case AMBIG_EARLIEST:
 		/*
 		 * The libfsm api guarentees these ids are unique,
 		 * and only appear once each, and are sorted.
 		 */
-		fprintf(f, "return %u;", ids[0]);
+		fprintf(f, "{\n");
+		fprintf(f, "\t\t*id = %u;\n", ids[0]);
+		fprintf(f, "\t\treturn 1;\n");
+		fprintf(f, "\t}");
 		break;
 	
 	case AMBIG_MULTIPLE:
@@ -94,7 +96,7 @@ print_ids(FILE *f,
 		fprintf(f, " };\n");
 		fprintf(f, "\t\t*ids = a;\n");
 		fprintf(f, "\t\t*count = %zu;\n", count);
-		fprintf(f, "\t\treturn 0;\n");
+		fprintf(f, "\t\treturn 1;\n");
 		fprintf(f, "\t}");
 		break;
 	
@@ -176,10 +178,21 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
 	case VM_END_SUCC:
-		return print_hook_accept(f, opt, hooks,
+		if (-1 == print_hook_accept(f, opt, hooks,
 			op->ret->ids, op->ret->count,
 			default_accept,
-			NULL);
+			NULL))
+		{
+			return -1;
+		}
+
+		if (-1 == print_hook_comment(f, opt, hooks,
+			op->ret->ids, op->ret->count))
+		{
+			return -1;
+		}
+
+		return 0;
 
 	default:
 		assert(!"unreached");
@@ -570,13 +583,13 @@ fsm_print_vmc(FILE *f,
 
 		case AMBIG_ERROR:
 		case AMBIG_EARLIEST:
-			fprintf(stdout, ",\n");
-			fprintf(stdout, "\tconst unsigned *id");
+			fprintf(f, ",\n");
+			fprintf(f, "\tconst unsigned *id");
 			break;
 
 		case AMBIG_MULTIPLE:
-			fprintf(stdout, ",\n");
-			fprintf(stdout, "\tconst unsigned **ids, size_t *count");
+			fprintf(f, ",\n");
+			fprintf(f, "\tconst unsigned **ids, size_t *count");
 			break;
 
 		default:
@@ -585,8 +598,8 @@ fsm_print_vmc(FILE *f,
 		}
 
 		if (hooks->args != NULL) {
-			fprintf(stdout, ",\n");
-			fprintf(stdout, "\t");
+			fprintf(f, ",\n");
+			fprintf(f, "\t");
 
 			if (-1 == print_hook_args(f, opt, hooks, NULL, NULL)) {
 				return -1;

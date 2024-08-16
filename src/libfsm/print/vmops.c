@@ -303,7 +303,17 @@ fsm_print_vmops_c(FILE *f,
 			break;
 		}
 
-		fprintf(f, "},\n");
+		fprintf(f, "},");
+
+		if (op->instr == VM_OP_STOP && op->u.stop.end_bits == VM_END_SUCC) {
+			if (-1 == print_hook_comment(f, opt, hooks,
+				op->ret->ids, op->ret->count))
+			{
+				return -1;
+			}
+		}
+
+		fprintf(f, "\n");
 	}
 
 	fprintf(f, "\t};\n");
