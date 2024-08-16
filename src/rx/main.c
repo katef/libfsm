@@ -790,7 +790,7 @@ usage(const char *name)
 		name = p != NULL ? p + 1 : name;
 	}
 
-	printf("usage: %s: [-ciQqsuvx] [-C charset] [-k io] [-l <language> ] [-r dialect] [-R reject] [-d declined-file] [-E <package_prefix>] [-e <prefix>] input-file...\n", name);
+	printf("usage: %s: [-ciQqstuvx] [-C charset] [-k io] [-l <language> ] [-r dialect] [-R reject] [-d declined-file] [-E <package_prefix>] [-e <prefix>] input-file...\n", name);
 	printf("       %s -h\n", name);
 }
 
@@ -844,7 +844,7 @@ main(int argc, char *argv[])
 		const char *name = argv[0];
 		int c;
 
-		while (c = getopt(argc, argv, "h" "C:cd:E:e:ik:F:l:n:r:sR:Qquvx"), c != -1) {
+		while (c = getopt(argc, argv, "h" "C:cd:E:e:ik:F:l:n:r:R:stQquvx"), c != -1) {
 			switch (c) {
 			case 'C':
 				charset = optarg;
@@ -935,6 +935,10 @@ main(int argc, char *argv[])
 			case 'q':
 				/* "quiet" applies to the generated code only */
 				quiet = true;
+				break;
+
+			case 't':
+				opt.ambig = AMBIG_EARLIEST;
 				break;
 
 			case 'u':
