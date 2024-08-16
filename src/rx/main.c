@@ -791,7 +791,7 @@ usage(const char *name)
 		name = p != NULL ? p + 1 : name;
 	}
 
-	printf("usage: %s: [-aciQqstuvwx] [-C charset] [-k io] [-l <language> ] [-r dialect] [-R reject] [-d declined-file] [-E <package_prefix>] [-e <prefix>] input-file...\n", name);
+	printf("usage: %s: [-aciQqstuvwXx] [-C charset] [-k io] [-l <language> ] [-r dialect] [-R reject] [-d declined-file] [-E <package_prefix>] [-e <prefix>] input-file...\n", name);
 	printf("       %s -h\n", name);
 }
 
@@ -845,7 +845,7 @@ main(int argc, char *argv[])
 		const char *name = argv[0];
 		int c;
 
-		while (c = getopt(argc, argv, "h" "aC:cd:E:e:ik:F:l:n:r:R:stQquvwx"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aC:cd:E:e:ik:F:l:n:r:R:stQquvwXx"), c != -1) {
 			switch (c) {
 			case 'a':
 				opt.anonymous_states = false;
@@ -958,6 +958,10 @@ main(int argc, char *argv[])
 
 			case 'w':
 				opt.fragment = true;
+				break;
+
+			case 'X':
+				opt.always_hex = true;
 				break;
 
 			case 'x':
