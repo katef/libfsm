@@ -791,7 +791,7 @@ usage(const char *name)
 		name = p != NULL ? p + 1 : name;
 	}
 
-	printf("usage: %s: [-ciQqstuvx] [-C charset] [-k io] [-l <language> ] [-r dialect] [-R reject] [-d declined-file] [-E <package_prefix>] [-e <prefix>] input-file...\n", name);
+	printf("usage: %s: [-aciQqstuvwx] [-C charset] [-k io] [-l <language> ] [-r dialect] [-R reject] [-d declined-file] [-E <package_prefix>] [-e <prefix>] input-file...\n", name);
 	printf("       %s -h\n", name);
 }
 
@@ -845,8 +845,12 @@ main(int argc, char *argv[])
 		const char *name = argv[0];
 		int c;
 
-		while (c = getopt(argc, argv, "h" "C:cd:E:e:ik:F:l:n:r:R:stQquvx"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aC:cd:E:e:ik:F:l:n:r:R:stQquvwx"), c != -1) {
 			switch (c) {
+			case 'a':
+				opt.anonymous_states = false;
+				break;
+
 			case 'C':
 				charset = optarg;
 				break;
@@ -950,6 +954,10 @@ main(int argc, char *argv[])
 				/* "verbose" means showing information about every pattern and FSM,
 				 * this is O(n) output to the length of the input file */
 				verbose = true;
+				break;
+
+			case 'w':
+				opt.fragment = true;
 				break;
 
 			case 'x':
