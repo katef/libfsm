@@ -12,6 +12,7 @@ struct fsm_options;
 struct fsm_hooks;
 struct ir;
 struct dfavm_op_ir;
+struct ret_list;
 
 int
 print_hook_args(FILE *f,
@@ -30,6 +31,12 @@ print_hook_accept(FILE *f,
 		const fsm_end_id_t *ids, size_t count,
 		void *lang_opaque, void *hook_opaque),
 	void *lang_opaque);
+
+int
+print_hook_comment(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const fsm_end_id_t *ids, size_t count);
 
 int
 print_hook_reject(FILE *f,
@@ -59,6 +66,7 @@ typedef int ir_print_f(FILE *f,
 typedef int vm_print_f(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops);
 
 vm_print_f fsm_print_amd64_att;

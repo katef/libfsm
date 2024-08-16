@@ -24,6 +24,7 @@
 #include "libfsm/internal.h"
 #include "libfsm/print.h"
 
+#include "libfsm/vm/retlist.h"
 #include "libfsm/vm/vm.h"
 
 enum asm_dialect {
@@ -50,8 +51,13 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 
 	case VM_END_SUCC:
 		if (-1 == print_hook_accept(f, opt, hooks,
-			op->endids.ids, op->endids.count,
+			op->ret->ids, op->ret->count,
 			NULL, NULL))
+		{
+			return -1;
+		}
+		if (-1 == print_hook_comment(f, opt, hooks,
+			op->ret->ids, op->ret->count))
 		{
 			return -1;
 		}
@@ -152,12 +158,16 @@ print_asm_amd64(FILE *f,
 
 		switch (opt->io) {
 		case FSM_IO_STR:
-			fprintf(f, "// func %s%s(data string) int\n", prefix, "Match");
+			if (opt->comments) {
+				fprintf(f, "// func %s%s(data string) int\n", prefix, "Match");
+			}
 			fprintf(f, "TEXT    ·%s(SB), NOSPLIT, $0-24\n", "Match");
 			break;
 
 		case FSM_IO_PAIR:
-			fprintf(f, "// func %s%s(data []byte) int\n", prefix, "Match");
+			if (opt->comments) {
+				fprintf(f, "// func %s%s(data []byte) int\n", prefix, "Match");
+			}
 			fprintf(f, "TEXT    ·%s%s(SB), NOSPLIT, $0-32\n", prefix, "Match");
 			break;
 
@@ -194,7 +204,9 @@ print_asm_amd64(FILE *f,
 	for (op = ops; op != NULL; op = op->next) {
 		if (op->num_incoming > 0) {
 			fprintf(f, "%sl%u:\n", label_dot, op->index);
-		} else {
+
+			// TODO: example
+		} else if (opt->comments) {
 			fprintf(f, "%s l%u\n", comment, op->index);
 		}
 
@@ -209,7 +221,9 @@ print_asm_amd64(FILE *f,
 				}
 
 				if (op->cmp == VM_CMP_ALWAYS && op->next == NULL) {
-					fprintf(f, "\t%s elided jmp to %sfinish\n", comment, label_dot);
+					if (opt->comments) {
+						fprintf(f, "\t%s elided jmp to %sfinish\n", comment, label_dot);
+					}
 				} else {
 					const char *jmp_op;
 
@@ -358,6 +372,7 @@ static int
 print_vmasm_encoding(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops,
 	enum asm_dialect dialect)
 {
@@ -366,6 +381,7 @@ print_vmasm_encoding(FILE *f,
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
+	assert(retlist != NULL);
 
 	if (dialect == AMD64_GO) {
 		if (opt->io != FSM_IO_STR && opt->io != FSM_IO_PAIR) {
@@ -392,26 +408,29 @@ int
 fsm_print_amd64_att(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
-	return print_vmasm_encoding(f, opt, hooks, ops, AMD64_ATT);
+	return print_vmasm_encoding(f, opt, hooks, retlist, ops, AMD64_ATT);
 }
 
 int
 fsm_print_amd64_nasm(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
-	return print_vmasm_encoding(f, opt, hooks, ops, AMD64_NASM);
+	return print_vmasm_encoding(f, opt, hooks, retlist, ops, AMD64_NASM);
 }
 
 int
 fsm_print_amd64_go(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
-	return print_vmasm_encoding(f, opt, hooks, ops, AMD64_GO);
+	return print_vmasm_encoding(f, opt, hooks, retlist, ops, AMD64_GO);
 }
 

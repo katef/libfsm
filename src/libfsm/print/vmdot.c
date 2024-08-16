@@ -25,6 +25,7 @@
 #include "libfsm/internal.h"
 #include "libfsm/print.h"
 
+#include "libfsm/vm/retlist.h"
 #include "libfsm/vm/vm.h"
 
 static const char *
@@ -128,10 +129,17 @@ print_end(FILE *f,
 		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
 	case VM_END_SUCC:
-		return print_hook_accept(f, opt, hooks,
-			op->endids.ids, op->endids.count,
+		if (-1 == print_hook_accept(f, opt, hooks,
+			op->ret->ids, op->ret->count,
 			default_accept,
-			NULL);
+			NULL))
+		{
+			return -1;
+		}
+
+		/* no print_hook_comment() for dot output */
+
+		return 0;
 
 	default:
 		assert(!"unreached");
@@ -267,9 +275,12 @@ fsm_print_edges(FILE *f, const struct fsm_options *opt, const struct dfavm_op_ir
 		if (op->num_incoming > 0 || op == ops) {
 			if (op != ops && can_fallthrough) {
 				fprintf(f, "\t");
-				fprintf(f, "S%lu:s -> S%" PRIu32 ":n [ style = bold ]; /* fallthrough */",
+				fprintf(f, "S%lu:s -> S%" PRIu32 ":n [ style = bold ];",
 					block,
 					op->index);
+				if (opt->comments) {
+					fprintf(f, " /* fallthrough */");
+				}
 				fprintf(f, "\n");
 			}
 
@@ -305,11 +316,14 @@ fsm_print_edges(FILE *f, const struct fsm_options *opt, const struct dfavm_op_ir
 		} else {
 			/* relative branch within the same block, entry on the east */
 			/* XXX: would like to make these edges shorter, but I don't know how */
-			fprintf(f, "S%lu:b%" PRIu32 ":e -> S%lu:b%" PRIu32 ":e [ constraint = false ]; /* relative */",
+			fprintf(f, "S%lu:b%" PRIu32 ":e -> S%lu:b%" PRIu32 ":e [ constraint = false ];",
 				block,
 				op->index,
 				block,
 				op->u.br.dest_arg->index);
+			if (opt->comments) {
+				fprintf(f, " /* relative */");
+			}
 		}
 
 		fprintf(f, "\n");
@@ -321,10 +335,12 @@ static int
 fsm_print_vmdotfrag(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(retlist != NULL);
 
 	if (-1 == fsm_print_nodes(f, opt, hooks, ops)) {
 		return -1;
@@ -340,14 +356,16 @@ int
 fsm_print_vmdot(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
+	assert(retlist != NULL);
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_vmdotfrag(f, opt, hooks, ops)) {
+		if (-1 == fsm_print_vmdotfrag(f, opt, hooks, retlist, ops)) {
 			return -1;
 		}
 	} else {
@@ -365,7 +383,7 @@ fsm_print_vmdot(FILE *f,
 		fprintf(f, "\tstart [ shape = none, label = \"\" ];\n");
 		fprintf(f, "\tstart -> S0:i0:w [ style = bold ];\n");
 
-		if (-1 == fsm_print_vmdotfrag(f, opt, hooks, ops)) {
+		if (-1 == fsm_print_vmdotfrag(f, opt, hooks, retlist, ops)) {
 			return -1;
 		}
 

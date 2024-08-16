@@ -72,6 +72,10 @@ struct fsm_hooks {
 	int (*reject)(FILE *, const struct fsm_options *opt,
 		void *lang_opaque, void *hook_opaque);
 
+	int (*comment)(FILE *, const struct fsm_options *opt,
+		const fsm_end_id_t *ids, size_t count,
+		void *hook_opaque);
+
 	/* only called for AMBIG_ERROR; see opt.ambig */
 	int (*conflict)(FILE *, const struct fsm_options *opt,
 		const fsm_end_id_t *ids, size_t count,
@@ -83,7 +87,17 @@ struct fsm_hooks {
 
 /*
  * Print an FSM to the given file stream. The output is written in the format
- * specified.
+ * specified by the lang enum.
+ *
+ * Not all languages support all options, and fsm_print will ENOTSUP where
+ * these are not possible. This is different to when an option is possible
+ * but simply not yet implemented, where fsm_print() will print a message
+ * to stderr and exit.
+ *
+ * The code generation for the typical case of matching input requires the FSM
+ * to be a DFA, and will EINVAL if the FSM is not a DFA. As opposed to e.g.
+ * FSM_PRINT_API, which generates code for other purposes, and does not place
+ * particular expecations on the FSM.
  *
  * The output options may be NULL, indicating to use defaults.
  *

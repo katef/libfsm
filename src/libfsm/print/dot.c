@@ -265,12 +265,22 @@ print_dotfrag(FILE *f,
 				return -1;
 			}
 
+			if (opt->comments && hooks->comment != NULL) {
+				fprintf(f, ",");
+
+				if (-1 == print_hook_comment(f, opt, hooks,
+					ids, count))
+				{
+					return -1;
+				}
+			}
+
 			fprintf(f, " ];\n");
 
 			f_free(fsm->alloc, ids);
 		}
 
-		/* TODO: show example here, unless !opt->comments */
+		/* TODO: comment example per state */
 
 		if (-1 == print_state(f, opt, hooks, fsm, prefix, s)) {
 			return -1;

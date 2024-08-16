@@ -71,15 +71,17 @@ print_ids(FILE *f,
 			return -1;
 		}
 
-		fprintf(f, "return %u;", ids[0]);
-		break;
+		/* fallthrough */
 
 	case AMBIG_EARLIEST:
 		/*
 		 * The libfsm api guarentees these ids are unique,
 		 * and only appear once each, and are sorted.
 		 */
-		fprintf(f, "return %u;", ids[0]);
+		fprintf(f, "{\n");
+		fprintf(f, "\t\t*id = %u;\n", ids[0]);
+		fprintf(f, "\t\treturn 1;\n");
+		fprintf(f, "\t}");
 		break;
 
 	case AMBIG_MULTIPLE:
@@ -101,7 +103,7 @@ print_ids(FILE *f,
 		fprintf(f, " };\n");
 		fprintf(f, "\t\t*ids = a;\n");
 		fprintf(f, "\t\t*count = %zu;\n", count);
-		fprintf(f, "\t\treturn 0;\n");
+		fprintf(f, "\t\treturn 1;\n");
 		fprintf(f, "\t}");
 		break;
 
@@ -352,12 +354,18 @@ print_endstates(FILE *f,
 
 	/* no end states */
 	if (!ir_hasend(ir)) {
-		fprintf(f, "\treturn 0; /* unexpected EOT */\n");
+		fprintf(f, "\treturn 0;");
+		if (opt->comments) {
+			fprintf(f, " /* unexpected EOT */");
+		}
+		fprintf(f, "\n");
 		return 0;
 	}
 
 	/* usual case */
-	fprintf(f, "\t/* end states */\n");
+	if (opt->comments) {
+		fprintf(f, "\t/* end states */\n");
+	}
 	fprintf(f, "\tswitch (state) {\n");
 	for (i = 0; i < ir->n; i++) {
 		if (!ir->states[i].isend) {
@@ -370,6 +378,12 @@ print_endstates(FILE *f,
 			ir->states[i].endids.ids, ir->states[i].endids.count,
 			default_accept,
 			NULL))
+		{
+			return -1;
+		}
+
+		if (-1 == print_hook_comment(f, opt, hooks,
+			ir->states[i].endids.ids, ir->states[i].endids.count))
 		{
 			return -1;
 		}
@@ -410,7 +424,7 @@ fsm_print_cfrag(FILE *f, const struct ir *ir,
 				fprintf(f, " /* e.g. \"");
 				escputs(f, opt, c_escputc_str, ir->states[i].example);
 				fprintf(f, "\" */");
-			} else if (i == ir->start) {
+			} else if (i == ir->start && opt->comments) {
 				fprintf(f, " /* start */");
 			}
 		}
@@ -423,7 +437,11 @@ fsm_print_cfrag(FILE *f, const struct ir *ir,
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\t\tdefault:\n");
-	fprintf(f, "\t\t\t; /* unreached */\n");
+	fprintf(f, "\t\t\t;");
+	if (opt->comments) {
+		fprintf(f, " /* unreached */");
+	}
+	fprintf(f, "\n");
 	fprintf(f, "\t\t}\n");
 
 	if (ferror(f)) {
@@ -595,7 +613,11 @@ fsm_print_c(FILE *f,
 		}
 
 		if (ir->n == 0) {
-			fprintf(f, "\treturn 0; /* no matches */\n");
+			fprintf(f, "\treturn 0;");
+			if (opt->comments) {
+				fprintf(f, " /* no matches */");
+			}
+			fprintf(f, "\n");
 		} else {
 			if (-1 == fsm_print_c_body(f, ir, opt, hooks)) {
 				return -1;

@@ -28,31 +28,24 @@
 #include "libfsm/internal.h"
 #include "libfsm/print.h"
 
+#include "libfsm/vm/retlist.h"
 #include "libfsm/vm/vm.h"
 
 #define OPAQUE_POINTERS 1
 
-#ifdef OPAQUE_POINTERS // llvm >= 15
+#if OPAQUE_POINTERS // llvm >= 15
 static const char *ptr_i8   = "ptr";
 static const char *ptr_i32  = "ptr";
 static const char *ptr_void = "ptr";
+static const char *ptr_rt   = "ptr";
 #else
 static const char *ptr_i8   = "i8*";
 static const char *ptr_i32  = "i32*";
 static const char *ptr_void = "i8*";
+static const char *ptr_rt   = "%rt*";
 #endif
 
 static const struct dfavm_op_ir fail; // used as a unqiue address only
-
-struct ret {
-	size_t count;
-	const fsm_end_id_t *ids;
-};
-
-struct ret_list {
-	size_t count;
-	struct ret *a;
-};
 
 /*
  * If we had a stack, the current set of live values would be a frame.
@@ -100,19 +93,16 @@ default_accept(FILE *f, const struct fsm_options *opt,
 	const fsm_end_id_t *ids, size_t count,
 	void *lang_opaque, void *hook_opaque)
 {
-	size_t i;
-
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(lang_opaque != NULL);
+	assert(lang_opaque == NULL);
 
 	(void) hook_opaque;
-
-	i = * (const size_t *) lang_opaque;
+	(void) lang_opaque;
 
 	switch (opt->ambig) {
 	case AMBIG_NONE:
-		fprintf(f, "[true, %%ret%zu],\n", i);
+		fprintf(f, "%%rt true");
 		break;
 
 	case AMBIG_ERROR:
@@ -122,7 +112,7 @@ default_accept(FILE *f, const struct fsm_options *opt,
 			return -1;
 		}
 
-		fprintf(f, "[{ true, %u }, %%ret%zu],\n", ids[0], i);
+		fprintf(f, "%%rt { i1 true, i32 %u }", ids[0]);
 		break;
 
 	case AMBIG_EARLIEST:
@@ -130,13 +120,19 @@ default_accept(FILE *f, const struct fsm_options *opt,
 		 * The libfsm api guarentees these ids are unique,
 		 * and only appear once each, and are sorted.
 		 */
-		fprintf(f, "[{ true, i32 %u }, %%ret%zu],\n", ids[0], i);
+		fprintf(f, "%%rt { i1 true, i32 %u }", ids[0]);
 		break;
 
 	case AMBIG_MULTIPLE:
-		// TODO: probably { i1, ptr_u8 }
-		assert(!"unimplemented");
-		abort();
+		fprintf(f, "internal unnamed_addr constant [%zu x i32] [", count);
+		for (size_t j = 0; j < count; j++) {
+			fprintf(f, "i32 %u", ids[j]);
+			if (j + 1 < count) {
+				fprintf(f, ", ");
+			}
+		}
+		fprintf(f, "]");
+		break;
 
 	default:
 		assert(!"unreached");
@@ -159,13 +155,16 @@ default_reject(FILE *f, const struct fsm_options *opt,
 
 	switch (opt->ambig) {
 	case AMBIG_NONE:
-		fprintf(f, "[false, %%fail]\n");
+		fprintf(f, "%%rt false");
 		break;
 
 	case AMBIG_ERROR:
 	case AMBIG_EARLIEST:
+		fprintf(f, "%%rt { i1 false, i32 poison }");
+		break;
+
 	case AMBIG_MULTIPLE:
-		fprintf(f, "[{ false, undef }, %%fail]\n");
+		fprintf(f, "%%rt { %s poison, i64 -1 }", ptr_i32);
 		break;
 
 	default:
@@ -173,12 +172,18 @@ default_reject(FILE *f, const struct fsm_options *opt,
 		abort();
 	}
 
+	if (opt->comments) {
+		fprintf(f, " ; fail");
+	}
+
 	return 0;
 }
 
 static int
-print_rettype(FILE *f, enum fsm_ambig ambig)
+print_rettype(FILE *f, const char *name, enum fsm_ambig ambig)
 {
+	fprintf(f, "%s = type ", name);
+
 	switch (ambig) {
 	case AMBIG_NONE:
 		fprintf(f, "i1");
@@ -186,18 +191,21 @@ print_rettype(FILE *f, enum fsm_ambig ambig)
 
 	case AMBIG_ERROR:
 	case AMBIG_EARLIEST:
-		fprintf(f, "{ i1, u32 }");
+		// success, id
+		fprintf(f, "{ i1, i32 }");
 		break;
 
 	case AMBIG_MULTIPLE:
-		// TODO: probably { i1, ptr_u8 }
-		assert(!"unimplemented");
-		abort();
+		// ids, -1/count
+		fprintf(f, "{ %s, i64 }", ptr_i32);
+		break;
 
 	default:
 		assert(!"unreached");
 		abort();
 	}
+
+	fprintf(f, "\n");
 
 	return 0;
 }
@@ -267,8 +275,11 @@ print_cond(FILE *f, const struct fsm_options *opt, struct dfavm_op_ir *op,
 	fprintf(f, "icmp %s i8 %%c%u, ",
 		cmp_operator(op->cmp), use(&frame->c));
 	llvm_escputcharlit(f, opt, op->cmp_arg);
-	fprintf(f, " ; ");
-	c_escputcharlit(f, opt, op->cmp_arg); // C escaping for a comment
+
+	if (opt->comments) {
+		fprintf(f, " ; ");
+		c_escputcharlit(f, opt, op->cmp_arg); // C escaping for a comment
+	}
 	fprintf(f, "\n");
 }
 
@@ -328,7 +339,11 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 			ptr_i8);
 
 		print_decl(f, "r", decl(&frame->r));
-		fprintf(f, "icmp eq i32 %%i%u, -1 ; EOF\n", n);
+		fprintf(f, "icmp eq i32 %%i%u, -1", n);
+		if (opt->comments) {
+			fprintf(f, " ; EOF");
+		}
+		fprintf(f, "\n");
 
 // XXX: we don't distinguish error from eof
 // https://github.com/katef/libfsm/issues/484
@@ -358,8 +373,11 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 			ptr_i8, n);
 
 		print_decl(f, "r", decl(&frame->r));
-	  	fprintf(f, "icmp eq i8 %%c%u, 0 ; EOT\n",
-			n);
+	  	fprintf(f, "icmp eq i8 %%c%u, 0", n);
+		if (opt->comments) {
+			fprintf(f, " ; EOT");
+		}
+		fprintf(f, "\n");
 
 		print_branch(f, frame,
 			end_bits == VM_END_FAIL ? &fail : NULL,
@@ -381,8 +399,11 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 			ptr_i8, n);
 
 		print_decl(f, "r", decl(&frame->r));
-	  	fprintf(f, "icmp eq %s %%p%u, %%e ; EOF\n",
-			ptr_i8, n);
+	  	fprintf(f, "icmp eq %s %%p%u, %%e", ptr_i8, n);
+		if (opt->comments) {
+			fprintf(f, " ; EOT");
+		}
+		fprintf(f, "\n");
 
 		print_branch(f, frame,
 			end_bits == VM_END_FAIL ? &fail : NULL,
@@ -410,127 +431,22 @@ print_fetch(FILE *f, const struct fsm_options *opt,
 	}
 }
 
-static bool
-append_ret(struct ret_list *list,
-	const fsm_end_id_t *ids, size_t count)
-{
-	const size_t low    = 16; /* must be power of 2 */
-	const size_t factor =  2; /* must be even */
-
-	assert(list != NULL);
-
-	if (list->count == 0) {
-		list->a = malloc(low * sizeof *list->a);
-		if (list->a == NULL) {
-			return false;
-		}
-	} else if (list->count >= low && (list->count & (list->count - 1)) == 0) {
-		void *tmp;
-		size_t new = list->count * factor;
-		if (new < list->count) {
-			errno = E2BIG;
-			perror("realloc");
-			exit(EXIT_FAILURE);
-		}
-
-		tmp = realloc(list->a, new * sizeof *list->a);
-		if (tmp == NULL) {
-			return false;
-		}
-
-		list->a = tmp;
-	}
-
-	list->a[list->count].ids = ids;
-	list->a[list->count].count = count;
-
-	list->count++;
-
-	return true;
-}
-
-static int
-cmp_ret_by_endid(const void *pa, const void *pb)
-{
-	const struct ret *a = pa;
-	const struct ret *b = pb;
-
-	if (a->count < b->count) { return -1; }
-	if (a->count > b->count) { return +1; }
-
-	return memcmp(a->ids, b->ids, a->count * sizeof *a->ids);
-}
-
-static struct ret *
-find_ret(const struct ret_list *list, const struct dfavm_op_ir *op,
-	int (*cmp)(const void *pa, const void *pb))
-{
-	struct ret key;
-
-	assert(op != NULL);
-	assert(cmp != NULL);
-
-	key.count    = op->endids.count;
-	key.ids      = op->endids.ids;
-
-	return bsearch(&key, list->a, list->count, sizeof *list->a, cmp);
-}
-
-static bool
-build_retlist(struct ret_list *list, const struct dfavm_op_ir *a)
-{
-	const struct dfavm_op_ir *op;
-
-	assert(list != NULL);
-
-	for (op = a; op != NULL; op = op->next) {
-		switch (op->instr) {
-		case VM_OP_STOP:
-			if (op->u.stop.end_bits == VM_END_FAIL) {
-				/* %fail is special, don't add to retlist */
-				continue;
-			}
-
-			break;
-
-		case VM_OP_FETCH:
-			if (op->u.fetch.end_bits == VM_END_FAIL) {
-				/* %fail is special, don't add to retlist */
-				continue;
-			}
-
-			break;
-
-		case VM_OP_BRANCH:
-			continue;
-
-		default:
-			assert(!"unreached");
-			abort();
-		}
-
-		if (!append_ret(list, op->endids.ids, op->endids.count)) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
 /* TODO: eventually to be non-static */
 static int
 fsm_print_llvmfrag(FILE *f,
 	const struct fsm_options *opt,
-	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops,
-	const char *cp)
+	const char *cp,
+	const char *prefix)
 {
-	struct ret_list retlist;
 	struct dfavm_op_ir *op;
 
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(retlist != NULL);
 	assert(cp != NULL);
+	assert(prefix != NULL);
 
 	/* TODO: we'll need to heed cp for e.g. lx's codegen */
 	(void) cp;
@@ -546,33 +462,6 @@ fsm_print_llvmfrag(FILE *f,
 	}
 
 	{
-		retlist.count = 0;
-		build_retlist(&retlist, ops);
-
-		if (retlist.count > 0) {
-			size_t j = 0;
-
-			/* sort for both dedup and bsearch */
-			qsort(retlist.a, retlist.count, sizeof *retlist.a, cmp_ret_by_endid);
-
-			/* deduplicate based on endids only.
-			 * j is the start of a run; i increments until we find
-			 * the start of the next run */
-			for (size_t i = 1; i < retlist.count; i++) {
-				assert(i > j);
-				if (cmp_ret_by_endid(&retlist.a[j], &retlist.a[i]) == 0) {
-					continue;
-				}
-
-				j++;
-				retlist.a[j] = retlist.a[i];
-			}
-
-			retlist.count = j + 1;
-
-			assert(retlist.count > 0);
-		}
-
 		print_jump(f, ops);
 
 		/*
@@ -582,12 +471,14 @@ fsm_print_llvmfrag(FILE *f,
 		 * This looks like:
 		 *
 		 *  stop:
-		 *      %ret = phi i1
-		 *       [true, %ret0], ; "abc"
-		 *       [true, %ret1], ; "xyz"
-		 *       [true, %ret2], ; "abc", "xyz"
-		 *       [false, %fail]
-		 *      ret i1 %ret
+		 *      %i = phi i64
+		 *        [0, %ret0],
+		 *        [1, %ret1],
+		 *        [2, %ret2],
+		 *        [3, %fail]
+		 *      %p = getelementptr inbounds [4 x %rt], [4 x %rt]* @fsm.r, i64 0, i64 %i
+		 *      %ret = load %rt, ptr %p
+		 *      ret %rt %ret
 		 *  fail:
 		 *      br label %stop
 		 *  ret0:
@@ -596,6 +487,8 @@ fsm_print_llvmfrag(FILE *f,
 		 *      br label %stop
 		 *  ret2:
 		 *      br label %stop
+		 *
+		 * where @fsm.r is [4 x %rt] and %rt is the return type.
 		 *
 		 * And we jump to stop: via the ret*: labels rather than
 		 * to a phi node directly. This helps for two reasons:
@@ -612,36 +505,23 @@ fsm_print_llvmfrag(FILE *f,
 		 */
 		print_label(f, true, "stop");
 
-		fprintf(f, "\t%%ret = phi ");
-		print_rettype(f, opt->ambig);
-		fprintf(f, "\n");
-
-		for (size_t i = 0; i < retlist.count; i++) {
-			fprintf(f, "\t  ");
-
-			if (-1 == print_hook_accept(f, opt, hooks,
-				retlist.a[i].ids, retlist.a[i].count,
-				default_accept, &i))
-			{
-				return -1;
-			}
+		fprintf(f, "\t%%i = phi i64\n");
+		for (size_t i = 0; i < retlist->count; i++) {
+			fprintf(f, "\t  [%zu, %%ret%zu],\n", i, i);
 		}
+		fprintf(f, "\t  [%zu, %%fail]\n", retlist->count);
 
-		fprintf(f, "\t  ");
-		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
-			return -1;
-		}
-
-		fprintf(f, "\tret ");
-		print_rettype(f, opt->ambig);
-		fprintf(f, " %%ret\n");
+		fprintf(f, "\t%%p = getelementptr inbounds [%zu x %%rt], [%zu x %%rt]* @%sr, i64 0, i64 %%i\n",
+			retlist->count + 1, retlist->count + 1, prefix);
+		fprintf(f, "\t%%ret = load %%rt, %s %%p\n", ptr_rt);
+		fprintf(f, "\tret %%rt %%ret\n");
 
 		print_label(f, true, "fail");
 		fprintf(f, "\tbr ");
 		print_label(f, false, "stop");
 		fprintf(f, "\n");
 
-		for (size_t i = 0; i < retlist.count; i++) {
+		for (size_t i = 0; i < retlist->count; i++) {
 			print_label(f, true, "ret%zu", i);
 			fprintf(f, "\tbr ");
 			print_label(f, false, "stop");
@@ -653,16 +533,22 @@ fsm_print_llvmfrag(FILE *f,
 	for (op = ops; op != NULL; op = op->next) {
 		if (op->instr != VM_OP_STOP || op->cmp != VM_CMP_ALWAYS || op->u.stop.end_bits != VM_END_FAIL) {
 			print_label(f, true, "l%" PRIu32, op->index);
-		}
 
-		if (op->example != NULL) {
-			/* C's escaping seems to be a subset of llvm's, and these are
-			 * for comments anyway. So I'm borrowing this for C here */
-			fprintf(f, "\t; e.g. \"");
-			escputs(f, opt, c_escputc_str, op->example);
-			fprintf(f, "\"");
+			/*
+			 * We only show examples when there's a label for the block,
+			 * otherwise it's confusing with the conditionally elided
+			 * optimisations per-instruction below, which can result in
+			 * no block code being emitted for a particular vm op.
+			 */
+			if (op->example != NULL) {
+				/* C's escaping seems to be a subset of llvm's, and these are
+				 * for comments anyway. So I'm borrowing this for C here */
+				fprintf(f, "\t; e.g. \"");
+				escputs(f, opt, c_escputc_str, op->example);
+				fprintf(f, "\"");
 
-			fprintf(f, "\n");
+				fprintf(f, "\n");
+			}
 		}
 
 		switch (op->instr) {
@@ -683,14 +569,12 @@ fsm_print_llvmfrag(FILE *f,
 			if (op->u.stop.end_bits == VM_END_FAIL) {
 				/* handled above */
 			} else {
-				assert(retlist.count > 0);
-				const struct ret *ret = find_ret(&retlist, op, cmp_ret_by_endid);
+				assert(retlist->count > 0);
+				const struct ret *ret = op->ret;
 				assert(ret != NULL);
-				assert(ret >= retlist.a && ret <= (retlist.a + retlist.count));
-				assert(ret->count == op->endids.count);
-				assert(0 == memcmp(ret->ids, op->endids.ids, ret->count));
+				assert(ret >= retlist->a && ret <= (retlist->a + retlist->count));
 				fprintf(f, "\tbr ");
-				print_label(f, false, "ret%u", ret - retlist.a);
+				print_label(f, false, "ret%u", ret - retlist->a);
 				fprintf(f, "\n");
 			}
 			break;
@@ -701,14 +585,12 @@ fsm_print_llvmfrag(FILE *f,
 			if (op->u.fetch.end_bits == VM_END_FAIL) {
 				/* handled in print_fetch() */
 			} else {
-				assert(retlist.count > 0);
-				const struct ret *ret = find_ret(&retlist, op, cmp_ret_by_endid);
+				assert(retlist->count > 0);
+				const struct ret *ret = op->ret;
 				assert(ret != NULL);
-				assert(ret >= retlist.a && ret <= (retlist.a + retlist.count));
-				assert(ret->count == op->endids.count);
-				assert(0 == memcmp(ret->ids, op->endids.ids, ret->count));
+				assert(ret >= retlist->a && ret <= (retlist->a + retlist->count));
 				fprintf(f, "\tbr ");
-				print_label(f, false, "ret%u", ret - retlist.a);
+				print_label(f, false, "ret%u", ret - retlist->a);
 				fprintf(f, "\n");
 			}
 			break;
@@ -734,10 +616,6 @@ fsm_print_llvmfrag(FILE *f,
 		}
 	}
 
-	if (retlist.count > 0) {
-		free(retlist.a);
-	}
-
 	return 0;
 }
 
@@ -745,6 +623,7 @@ int
 fsm_print_llvm(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	struct dfavm_op_ir *ops)
 {
 	const char *prefix;
@@ -753,11 +632,12 @@ fsm_print_llvm(FILE *f,
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
+	assert(retlist != NULL);
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
 	} else {
-		prefix = "fsm_";
+		prefix = "fsm.";
 	}
 
 	if (hooks->cp != NULL) {
@@ -767,13 +647,71 @@ fsm_print_llvm(FILE *f,
 	}
 
 	if (opt->fragment) {
-		fsm_print_llvmfrag(f, opt, hooks, ops, cp);
+		fsm_print_llvmfrag(f, opt, retlist, ops, cp, prefix);
 		return 0;
 	}
 
 	fprintf(f, "; generated\n");
-//XXX: type depends on ambig
-	fprintf(f, "define dso_local i1 @%smain", prefix);
+	print_rettype(f, "%rt", opt->ambig);
+
+	/*
+	 * For AMBIG_MULTIPLE we emit a bunch of arrays and then point at them from
+	 * each %rt. So we call the hook for the arrays, because that's where the id
+	 * list is. For other ambig modes, we call the hook for the %rt instead.
+	 */
+	if (opt->ambig == AMBIG_MULTIPLE) {
+		for (size_t i = 0; i < retlist->count; i++) {
+			fprintf(f, "@%sr%zu = ", prefix, i);
+			if (-1 == print_hook_accept(f, opt, hooks,
+				retlist->a[i].ids, retlist->a[i].count,
+				default_accept, NULL))
+			{
+				return -1;
+			}
+
+			if (-1 == print_hook_comment(f, opt, hooks,
+				retlist->a[i].ids, retlist->a[i].count))
+			{
+				return -1;
+			}
+
+			fprintf(f, "\n");
+		}
+	}
+
+	fprintf(f, "@%sr = internal unnamed_addr constant [%zu x %%rt] [\n", prefix, retlist->count + 1);
+	for (size_t i = 0; i < retlist->count; i++) {
+		fprintf(f, "\t  ");
+		if (opt->ambig == AMBIG_MULTIPLE) {
+			fprintf(f, "%%rt { %s bitcast ([%zu x i32]* @%sr%zu to %s), i64 %zu }",
+				ptr_i32, retlist->a[i].count, prefix, i, ptr_i32, retlist->a[i].count);
+			fprintf(f, ",");
+		} else {
+			if (-1 == print_hook_accept(f, opt, hooks,
+				retlist->a[i].ids, retlist->a[i].count,
+				default_accept, NULL))
+			{
+				return -1;
+			}
+
+			fprintf(f, ",");
+
+			if (-1 == print_hook_comment(f, opt, hooks,
+				retlist->a[i].ids, retlist->a[i].count))
+			{
+				return -1;
+			}
+		}
+		fprintf(f, "\n");
+	}
+	fprintf(f, "\t  ");
+	if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
+		return -1;
+	}
+	fprintf(f, "\n");
+	fprintf(f, "\t]\n");
+
+	fprintf(f, "define dso_local %%rt @%smain", prefix);
 
 	switch (opt->io) {
 	case FSM_IO_GETC:
@@ -824,7 +762,7 @@ fsm_print_llvm(FILE *f,
 		exit(EXIT_FAILURE);
 	}
 
-	fsm_print_llvmfrag(f, opt, hooks, ops, cp);
+	fsm_print_llvmfrag(f, opt, retlist, ops, cp, prefix);
 
 	fprintf(f, "}\n");
 	fprintf(f, "\n");

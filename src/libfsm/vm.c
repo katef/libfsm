@@ -18,6 +18,7 @@
 #include "internal.h"
 
 #include "vm/vm.h"
+#include "vm/retlist.h"
 #include "print/ir.h"
 
 // VM state:
@@ -92,6 +93,7 @@ fsm_vm_compile_with_options(const struct fsm *fsm,
 	static const struct dfavm_assembler_ir zero;
 	struct dfavm_assembler_ir a;
 	struct ir *ir;
+	struct ret_list retlist;
 	struct fsm_dfavm *vm;
 
 	assert(fsm != NULL);
@@ -102,9 +104,15 @@ fsm_vm_compile_with_options(const struct fsm *fsm,
 		return NULL;
 	}
 
+	if (!build_retlist(&retlist, ir)) {
+		free_ir(fsm, ir);
+		return NULL;
+	}
+
 	a = zero;
 
-	if (!dfavm_compile_ir(&a, ir, vmopts)) {
+	if (!dfavm_compile_ir(&a, ir, &retlist, vmopts)) {
+		free_retlist(&retlist);
 		free_ir(fsm, ir);
 		return NULL;
 	}
@@ -116,6 +124,7 @@ fsm_vm_compile_with_options(const struct fsm *fsm,
 		return NULL;
 	}
 
+	free_retlist(&retlist);
 	dfavm_opasm_finalize_op(&a);
 
 	return vm;

@@ -364,7 +364,13 @@ fsm_print_fsm(FILE *f,
 		if (-1 == print_hook_accept(f, opt, hooks,
 			ids, count,    
 			default_accept,
-			NULL))    
+			NULL))
+		{
+			return -1;
+		}
+
+		if (-1 == print_hook_comment(f, opt, hooks,
+			ids, count))
 		{
 			return -1;
 		}
