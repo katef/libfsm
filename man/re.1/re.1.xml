@@ -13,8 +13,10 @@
 	<!ENTITY stdout.lit "<literal>stdout</literal>">
 
 	<!-- TODO: centralise to mdb -->
+	<!ENTITY io.arg      "<replaceable>io</replaceable>">
 	<!ENTITY re.arg      "<replaceable>re</replaceable>">
 	<!ENTITY file.arg    "<replaceable>file</replaceable>">
+	<!ENTITY flags.arg   "<replaceable>flags</replaceable>">
 	<!ENTITY dialect.arg "<replaceable>dialect</replaceable>">
 	<!ENTITY prefix.arg  "<replaceable>prefix</replaceable>">
 	<!ENTITY length.arg  "<replaceable>length</replaceable>">
@@ -33,7 +35,9 @@
 	<!ENTITY X.opt "<option>-X</option>">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
 	<!ENTITY E.opt "<option>-E</option>&nbsp;&prefix.arg;">
+	<!ENTITY F.opt "<option>-F</option>&nbsp;&flags.arg;">
 	<!ENTITY G.opt "<option>-G</option>&nbsp;&length.arg;">
+	<!ENTITY k.opt "<option>-k</option>&nbsp;&io.arg;">
 
 	<!ENTITY a.opt "<option>-a</option>">
 	<!ENTITY d.opt "<option>-d</option>">
@@ -49,7 +53,6 @@
 	<!ENTITY x.opt "<option>-x</option>">
 
 	<!ENTITY h.opt "<option>-h</option>">
-	<!ENTITY v.opt "<option>-v</option>">
 ]>
 
 <refentry>
@@ -97,6 +100,7 @@ query
 
 			<arg choice="opt">&a.opt;</arg>
 			<arg choice="opt">&c.opt;</arg>
+			<arg choice="opt">&k.opt;</arg>
 			<arg choice="opt">&w.opt;</arg>
 			<arg choice="opt">&X.opt;</arg>
 			<arg choice="opt">&e.opt;</arg>
@@ -169,9 +173,6 @@ query
 
 			<group choice="req">
 				<arg choice="plain">&h.opt;</arg>
-<!-- TODO: does re(1) have -v?
-				<arg choice="plain">&v.opt;</arg>
--->
 			</group>
 		</cmdsynopsis>
 	</refsynopsisdiv>
@@ -184,6 +185,8 @@ query
 			which are &ldquo;executed&rdquo; to match against input strings,
 			or used to provide example strings which would match when given as input.</para>
 
+		<para>This tool provides an interface to the &re.3; &api;.</para>
+
 		<para>The &re.1; tool constructs a Finite State Machine
 			from Regular Expression syntax.
 <!--
@@ -194,12 +197,14 @@ query
 			and minimised to its canonical &dfa; by default.
 			The &nfa; may be preserved by the &n.opt; option.</para>
 
-		<para>multiple regexps may be given; these are unioned by default,
+		<para>Multiple regexps may be given; these are unioned by default,
 			or concatenated when the &s.opt; option is given.</para>
 
-		<para>&re.1; is invoked in one of four modes of operation:
+		<para>&re.1; is invoked in one of several distinct modes:
 			&p.opt; to print the constructed &fsm;,
+			&q.opt; to query each pattern's &fsm;,
 			&m.opt; to print example strings,
+			&G.opt; to print example matching inputs,
 			and the default is to execute regular expressions.
 			These modes are mutually exclusive.</para>
 <!--
@@ -207,21 +212,23 @@ query
 regexp dialect specified by &r.opt;
 -->
 
-<para>
-XXX: when executing,
-strings are single or multiple with --.
-can't we feed a string to stdin, too?
-XXX: now with -x instead: Unlike &grep.1;, strings are matched from
-command line arguments rather than &stdin.lit;.
-TODO: with no strings to match, will just validate fsm instead.
-validate is the wrong word
-</para>
+		<para>When executing, text to match is given either as strings
+			from command line arguments, or is given as filenames with &x.opt;.
+			Multiple arguments may be given using <literal>--</literal>.
+			Unlike &grep.1;, &re.1; does not read text from &stdin.lit;.
+			<!-- TODO: why not?
+				can't we feed a string to stdin, too?
+				maybe better after moving execution to fsm(1) only -->
+			With no text to match, &re.1; will just validate
+			<!-- validate is the wrong word -->
+			the pattern syntax instead.</para>
 
+		<!-- TODO: groups don't exist as a UI feature yet,
+			not sure what to say here that doesn't belong to the libre api instead
 <para>XXX: Groups
 group (for dialects which have them) (rather than a "whole" regexp)
 </para>
-
-		<para>This tool provides an interface to the &re.3; &api;.</para>
+		-->
 	</refsection>
 
 	<refsection>
@@ -300,10 +307,74 @@ group (for dialects which have them) (rather than a "whole" regexp)
 			</varlistentry>
 
 			<varlistentry>
+				<term>&F.opt;</term>
+
+				<listitem>
+					<para>Set <literal>RE_*</literal> flags per &re.3;.
+						Note not all <code>enum re_flags</code> constants are meaningful
+						to expose to the &cli;.
+						The default is no flags set.
+						The available flags are:</para>
+
+					<table>
+						<col align="left"/>
+						<col align="left"/>
+						<col align="left"/>
+
+						<thead>
+							<tr>
+								<th>Flag</th>
+								<th>Value</th>
+								<th>Meaning</th>
+							</tr>
+						</thead>
+
+						<tbody>
+							<tr>
+								<td><literal>b</literal> (&b.opt;)</td>
+								<td><code>RE_ANCHORED</code></td>
+								<td>Anchor patterns at both start and end,
+									as if by <code>^</code> and <code>$</code>
+									(<code>\Z</code> for PCRE).</td>
+							</tr>
+							<tr>
+								<td><literal>i</literal> (&i.opt;)</td>
+								<td><code>RE_ICASE</code></td>
+								<td>Patterns are case insensitive.</td>
+							</tr>
+							<tr>
+								<td><literal>s</literal></td>
+								<td><code>RE_SINGLE</code></td>
+								<td>Single-line mode.
+									Equivalent to <code>PCRE_DOTALL</code>.</td>
+							</tr>
+							<tr>
+								<td><literal>x</literal></td>
+								<td><code>RE_EXTENDED</code></td>
+								<td>
+									Eextended mode.
+									Equivalent to <code>PCRE_EXTENDED</code>.</td>
+							</tr>
+						</tbody>
+					</table>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
 				<term>&G.opt;</term>
 
 				<listitem>
 					<para>Print example matching inputs up to a maximum length.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&k.opt;</term>
+
+				<listitem>
+					<para>Set the IO &api; for output,
+						per the <code>io</code> option for &fsm_print.3;.
+						The default is <literal>getc</literal>.</para>
 				</listitem>
 			</varlistentry>
 
@@ -466,17 +537,6 @@ group (for dialects which have them) (rather than a "whole" regexp)
 						multiple regexps may be associated with each item.</para>
 				</listitem>
 			</varlistentry>
-
-<!-- TODO:
-
-			<varlistentry>
-				<term>&v.opt;</term>
-
-				<listitem>
-					<para>Causes &re.1; to print its version number.</para>
-				</listitem>
-			</varlistentry>
--->
 
 			<varlistentry>
 				<term>&h.opt;</term>
