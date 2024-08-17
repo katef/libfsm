@@ -53,7 +53,6 @@
 	<!ENTITY x.opt "<option>-x</option>">
 
 	<!ENTITY h.opt "<option>-h</option>">
-	<!ENTITY v.opt "<option>-v</option>">
 ]>
 
 <refentry>
@@ -174,9 +173,6 @@ query
 
 			<group choice="req">
 				<arg choice="plain">&h.opt;</arg>
-<!-- TODO: does re(1) have -v?
-				<arg choice="plain">&v.opt;</arg>
--->
 			</group>
 		</cmdsynopsis>
 	</refsynopsisdiv>
@@ -189,6 +185,8 @@ query
 			which are &ldquo;executed&rdquo; to match against input strings,
 			or used to provide example strings which would match when given as input.</para>
 
+		<para>This tool provides an interface to the &re.3; &api;.</para>
+
 		<para>The &re.1; tool constructs a Finite State Machine
 			from Regular Expression syntax.
 <!--
@@ -199,12 +197,14 @@ query
 			and minimised to its canonical &dfa; by default.
 			The &nfa; may be preserved by the &n.opt; option.</para>
 
-		<para>multiple regexps may be given; these are unioned by default,
+		<para>Multiple regexps may be given; these are unioned by default,
 			or concatenated when the &s.opt; option is given.</para>
 
-		<para>&re.1; is invoked in one of four modes of operation:
+		<para>&re.1; is invoked in one of several distinct modes:
 			&p.opt; to print the constructed &fsm;,
+			&q.opt; to query each pattern's &fsm;,
 			&m.opt; to print example strings,
+			&G.opt; to print example matching inputs,
 			and the default is to execute regular expressions.
 			These modes are mutually exclusive.</para>
 <!--
@@ -212,21 +212,23 @@ query
 regexp dialect specified by &r.opt;
 -->
 
-<para>
-XXX: when executing,
-strings are single or multiple with --.
-can't we feed a string to stdin, too?
-XXX: now with -x instead: Unlike &grep.1;, strings are matched from
-command line arguments rather than &stdin.lit;.
-TODO: with no strings to match, will just validate fsm instead.
-validate is the wrong word
-</para>
+		<para>When executing, text to match is given either as strings
+			from command line arguments, or is given as filenames with &x.opt;.
+			Multiple arguments may be given using <literal>--</literal>.
+			Unlike &grep.1;, &re.1; does not read text from &stdin.lit;.
+			<!-- TODO: why not?
+				can't we feed a string to stdin, too?
+				maybe better after moving execution to fsm(1) only -->
+			With no text to match, &re.1; will just validate
+			<!-- validate is the wrong word -->
+			the pattern syntax instead.</para>
 
+		<!-- TODO: groups don't exist as a UI feature yet,
+			not sure what to say here that doesn't belong to the libre api instead
 <para>XXX: Groups
 group (for dialects which have them) (rather than a "whole" regexp)
 </para>
-
-		<para>This tool provides an interface to the &re.3; &api;.</para>
+		-->
 	</refsection>
 
 	<refsection>
@@ -535,17 +537,6 @@ group (for dialects which have them) (rather than a "whole" regexp)
 						multiple regexps may be associated with each item.</para>
 				</listitem>
 			</varlistentry>
-
-<!-- TODO:
-
-			<varlistentry>
-				<term>&v.opt;</term>
-
-				<listitem>
-					<para>Causes &re.1; to print its version number.</para>
-				</listitem>
-			</varlistentry>
--->
 
 			<varlistentry>
 				<term>&h.opt;</term>
