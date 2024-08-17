@@ -31,6 +31,7 @@
 
 <!ENTITY lx.1  "<citerefentry><refentrytitle>lx</refentrytitle>  %vol.1;</citerefentry>">
 <!ENTITY re.1  "<citerefentry><refentrytitle>re</refentrytitle>  %vol.1;</citerefentry>">
+<!ENTITY rx.1  "<citerefentry><refentrytitle>rx</refentrytitle>  %vol.1;</citerefentry>">
 <!ENTITY fsm.1 "<citerefentry><refentrytitle>fsm</refentrytitle> %vol.1;</citerefentry>">
 
 <!ENTITY re.3  "<citerefentry><refentrytitle>libre</refentrytitle>  %vol.3;</citerefentry>">

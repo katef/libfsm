@@ -194,7 +194,7 @@ query
 			and minimised to its canonical &dfa; by default.
 			The &nfa; may be preserved by the &n.opt; option.</para>
 
-		<para>multiple regexps may be given; these are unioned by default,
+		<para>Multiple regexps may be given; these are unioned by default,
 			or concatenated when the &s.opt; option is given.</para>
 
 		<para>&re.1; is invoked in one of four modes of operation:

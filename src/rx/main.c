@@ -837,7 +837,6 @@ main(int argc, char *argv[])
 
 // TODO: prepend comment with rx invocation to output
 // TODO: cli option for memory limit to decline patterns (implement via allocation hooks)
-// TODO: manpage
 // TODO: consider de-duplicating arrays. not sure there's any reason
 // TODO: decide if i want dialect==RE_LITERAL unanchored or not, maybe a cli flag either way
 
