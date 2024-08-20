@@ -759,6 +759,10 @@ parse_flags(const char *arg, enum re_flags *flags)
 {
 	for (; *arg; arg++) {
 		switch (*arg) {
+		case 'b':
+			*flags = *flags | RE_ANCHORED;
+			break;
+
 		case 'i':
 			*flags = *flags | RE_ICASE;
 			break;
