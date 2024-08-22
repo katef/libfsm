@@ -137,7 +137,7 @@
 			</listitem>
 
 			<listitem>
-				<para>Allow ambiguious patterns,
+				<para>Allow ambiguous patterns,
 					and the generated &api; returns a set of ids.
 					See &u.opt;.</para>
 			</listitem>
@@ -154,7 +154,7 @@
 			</listitem>
 		</orderedlist>
 
-		<!--- not sure it's neccessary to discuss categories -->
+		<!--- not sure it's necessary to discuss categories -->
 		<para>&rx.1; places patterns into one of several categories:
 			literal strings, general regexps, parse errors,
 			unsupported syntax, unsatisfiable expressions,
@@ -324,7 +324,7 @@
 								<td><literal>x</literal></td>
 								<td><code>RE_EXTENDED</code></td>
 								<td>
-									Eextended mode.
+									Extended mode.
 									Equivalent to <code>PCRE_EXTENDED</code>.</td>
 							</tr>
 						</tbody>
@@ -359,7 +359,7 @@
 
 				<listitem>
 					<para>Set the default &re_dialect.5re; for patterns.
-						This applies to all files unless overriden by &s.opt;.
+						This applies to all files unless overridden by &s.opt;.
 						The default is <literal>pcre</literal>.</para>
 				</listitem>
 			</varlistentry>
@@ -424,7 +424,7 @@
 						requiring all regexps unioned to be non-overlapping.
 						Formally, the requirement is that they are disjoint languages.
 						Erroring for ambiguities applies after multiple regexps are joined,
-						either by union or by concaternation (&s.opt;).</para>
+						either by union or by concatenation (&s.opt;).</para>
 
 					<para>&u.opt; is implied by &n.opt;.</para>
 				</listitem>
