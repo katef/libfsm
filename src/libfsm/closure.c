@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fsm/alloc.h>
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
@@ -189,7 +190,7 @@ error:
 }
 
 void
-closure_free(struct state_set **closures, size_t n)
+closure_free(struct fsm *fsm, struct state_set **closures, size_t n)
 {
 	fsm_state_t s;
 
@@ -197,6 +198,6 @@ closure_free(struct state_set **closures, size_t n)
 		state_set_free(closures[s]);
 	}
 
-	free(closures);
+	f_free(fsm->alloc, closures);
 }
 
