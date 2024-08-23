@@ -666,7 +666,7 @@ main(int argc, char *argv[])
 				printf("\n");
 			}
 
-			closure_free(closures, fsm->statecount);
+			closure_free(fsm, closures, fsm->statecount);
 
 			return 0;
 		} else {

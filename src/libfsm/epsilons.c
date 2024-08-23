@@ -168,7 +168,7 @@ fsm_remove_epsilons(struct fsm *nfa)
 	res = 1;
 cleanup:
 	if (eclosures != NULL) {
-		closure_free(eclosures, state_count);
+		closure_free(nfa, eclosures, state_count);
 	}
 
 	return res;
