@@ -1047,7 +1047,11 @@ main(int argc, char *argv[])
 	}
 
 	if (generate_bounds > 0) {
-		return fsm_generate_matches(fsm, generate_bounds, fsm_generate_cb_printf_escaped, &opt);
+		if (!fsm_generate_matches(fsm, generate_bounds, fsm_generate_cb_printf_escaped, &opt)) {
+			exit(EXIT_FAILURE);
+		}
+
+		return 0;
 	}
 
 	if (fsm_lang != FSM_PRINT_NONE) {

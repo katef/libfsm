@@ -193,7 +193,7 @@ gen_init_outer(struct fsm *fsm, size_t max_length,
     fsm_generate_matches_cb *cb, void *opaque,
     bool randomized, unsigned seed)
 {
-	int res = 0;
+	int res = false;
 	if (fsm == NULL || cb == NULL || max_length == 0) {
 		return false;
 	}
@@ -222,11 +222,11 @@ gen_init_outer(struct fsm *fsm, size_t max_length,
 		goto cleanup;
 	}
 
-	res = 1;
+	res = true;
 
 	while (!ctx.done) {
 		if (!gen_iter(&ctx)) {
-			res = 0;
+			res = false;
 			break;
 		}
 	}
