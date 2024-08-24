@@ -5,6 +5,7 @@
  */
 
 #include <stddef.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <inttypes.h>
 
@@ -755,7 +756,7 @@ struct carry_env {
 	char tag;
 	struct fsm *dst;
 	fsm_state_t dst_state;
-	int ok;
+	bool ok;
 };
 
 static int
@@ -767,7 +768,7 @@ carry_iter_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
 	(void)state;
 
 	if (!fsm_endid_set(env->dst, env->dst_state, id)) {
-		env->ok = 0;
+		env->ok = false;
 		return 0;
 	}
 	return 1;
@@ -798,7 +799,7 @@ fsm_endid_carry(const struct fsm *src_fsm, const struct state_set *src_set,
 		env.tag = 'C';
 		env.dst = dst_fsm;
 		env.dst_state = dst_state;
-		env.ok = 1;
+		env.ok = true;
 
 		if (!fsm_isend(src_fsm, s)) {
 			continue;

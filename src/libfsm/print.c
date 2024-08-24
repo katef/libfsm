@@ -354,7 +354,7 @@ fsm_print(FILE *f, const struct fsm *fsm,
 				continue;
 			}
 
-			assert(ir->states[i].endids.count <= 1);
+			assert(ir->states[i].count <= 1);
 		}
 	}
 

@@ -35,8 +35,8 @@ struct edge_set {
 	size_t ceil;		/* nonzero */
 	size_t count;		/* <= ceil */
 	struct edge_group {
-		fsm_state_t to;	/* distinct */
 		uint64_t symbols[256/64];
+		fsm_state_t to;	/* distinct */
 	} *groups;		/* sorted by .to */
 };
 

@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <fsm/fsm.h>
@@ -39,7 +40,7 @@ struct consolidate_copy_capture_actions_env {
 	struct fsm *dst;
 	size_t mapping_count;
 	const fsm_state_t *mapping;
-	int ok;
+	bool ok;
 };
 
 static int
@@ -186,7 +187,7 @@ consolidate_copy_capture_actions_cb(fsm_state_t state,
 
 	if (!fsm_capture_add_action(env->dst,
 		s, type, capture_id, t)) {
-		env->ok = 0;
+		env->ok = false;
 		return 0;
 	}
 
@@ -204,7 +205,7 @@ consolidate_copy_capture_actions(struct fsm *dst, const struct fsm *src,
 	env.dst = dst;
 	env.mapping_count = mapping_count;
 	env.mapping = mapping;
-	env.ok = 1;
+	env.ok = true;
 
 #if LOG_MAPPING
 	for (i = 0; i < mapping_count; i++) {

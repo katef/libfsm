@@ -309,7 +309,7 @@ opasm_new(struct dfavm_assembler_ir *a, const struct ret_list *retlist,
 	if (ir_state != NULL) {
 		op->example = ir_state->example;
 		op->ret = ir_state->isend
-			? find_ret(retlist, ir_state->endids.ids, ir_state->endids.count)
+			? find_ret(retlist, ir_state->ids, ir_state->count)
 			: NULL;
 	}
 
@@ -968,7 +968,7 @@ order_basic_blocks(struct dfavm_assembler_ir *a)
 
 	/* mark all states as !in_trace */
 	for (i=0; i < n; i++) {
-		a->ops[i]->in_trace = 0;
+		a->ops[i]->in_trace = false;
 	}
 
 	opp = &a->linked;
@@ -987,7 +987,7 @@ order_basic_blocks(struct dfavm_assembler_ir *a)
 		assert(opp != NULL);
 		assert(*opp == NULL);
 
-		st->in_trace = 1;
+		st->in_trace = true;
 
 		/* look for branches to states not in the trace.
 		 * Start at the last branch and work toward the first.

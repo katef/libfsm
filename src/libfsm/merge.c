@@ -27,8 +27,8 @@
 
 struct copy_capture_env {
 	char tag;
+	bool ok;
 	struct fsm *dst;
-	int ok;
 };
 
 static int
@@ -134,7 +134,7 @@ copy_capture_cb(fsm_state_t state,
 
 	if (!fsm_capture_add_action(env->dst, state, type,
 		capture_id, to)) {
-		env->ok = 0;
+		env->ok = false;
 		return 0;
 	}
 
@@ -147,7 +147,7 @@ copy_capture_actions(struct fsm *dst, struct fsm *src)
 	struct copy_capture_env env;
 	env.tag = 'C';
 	env.dst = dst;
-	env.ok = 1;
+	env.ok = true;
 
 	fsm_capture_action_iter(src, copy_capture_cb, &env);
 

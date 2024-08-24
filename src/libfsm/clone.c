@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -86,7 +87,7 @@ fsm_clone(const struct fsm *fsm)
 
 struct copy_capture_actions_env {
 	struct fsm *dst;
-	int ok;
+	bool ok;
 };
 
 static int
@@ -99,7 +100,7 @@ copy_capture_actions_cb(fsm_state_t state,
 
 	if (!fsm_capture_add_action(env->dst,
 		state, type, capture_id, to)) {
-		env->ok = 0;
+		env->ok = false;
 	}
 
 	return env->ok;
@@ -108,7 +109,7 @@ copy_capture_actions_cb(fsm_state_t state,
 static int
 copy_capture_actions(struct fsm *dst, const struct fsm *src)
 {
-	struct copy_capture_actions_env env = { NULL, 1 };
+	struct copy_capture_actions_env env = { NULL, true };
 	env.dst = dst;
 
 	fsm_capture_action_iter(src,
@@ -120,7 +121,7 @@ struct copy_end_ids_env {
 	char tag;
 	struct fsm *dst;
 	const struct fsm *src;
-	int ok;
+	bool ok;
 };
 
 static int
@@ -134,7 +135,7 @@ copy_end_ids_cb(fsm_state_t state, const fsm_end_id_t id, void *opaque)
 #endif
 
 	if (!fsm_endid_set(env->dst, state, id)) {
-		env->ok = 0;
+		env->ok = false;
 		return 0;
 	}
 
@@ -148,7 +149,7 @@ copy_end_ids(struct fsm *dst, const struct fsm *src)
 	env.tag = 'c';		/* for clone */
 	env.dst = dst;
 	env.src = src;
-	env.ok = 1;
+	env.ok = true;
 
 	fsm_endid_iter(src, copy_end_ids_cb, &env);
 

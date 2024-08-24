@@ -2014,10 +2014,10 @@ analysis_iter_repetition(struct ast_expr *n, struct ast_expr *outermost_repeat_p
 }
 
 struct pincer_anchors_env {
-	int always_consumes_or_anchored_start;
-	int always_consumes_or_anchored_end;
+	unsigned int always_consumes_or_anchored_start:1;
+	unsigned int always_consumes_or_anchored_end:1;
 
-	int alloc_fail;
+	unsigned int alloc_fail:1;
 	size_t used;
 	size_t ceil;
 	struct ast_expr **nodes;
