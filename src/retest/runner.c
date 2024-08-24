@@ -158,7 +158,7 @@ compile(enum implementation impl,
 		break;
 
 	case IMPL_RUST:
-		if (0 != systemf("%s %s --crate-type dylib %s -o %s",
+		if (0 != systemf("%s %s -C opt-level=3 --crate-type dylib %s -o %s",
 				"rustc", "--edition 2021",
 				tmp_src, tmp_so))
 		{
