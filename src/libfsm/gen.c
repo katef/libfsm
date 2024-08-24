@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <string.h>
+#include <errno.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -139,6 +140,11 @@ int
 fsm_generate_matches(struct fsm *fsm, size_t max_length,
     fsm_generate_matches_cb *cb, void *opaque)
 {
+	if (max_length == 0) {
+		errno = EINVAL;
+		return 0;
+	}
+
 	INIT_TIMERS();
 	TIME(&pre);
 	int res = gen_init_outer(fsm, max_length, cb, opaque, false, 0);
@@ -562,8 +568,8 @@ sfs_step_edges(struct gen_ctx *ctx, struct gen_stack_frame *sf)
 		sf->u.step_edges.initialized = true;
 	}
 
-	if (ctx->buf_used + ctx->sed[sf->s_id] >= ctx->max_length) {
-		LOG(2, "PRUNING due to max length: used:%zu + sed[%d]:%u >= max_length:%zu\n",
+	if (ctx->buf_used + ctx->sed[sf->s_id] > ctx->max_length) {
+		LOG(2, "PRUNING due to max length: used:%zu + sed[%d]:%u > max_length:%zu\n",
 		    ctx->buf_used, sf->s_id, ctx->sed[sf->s_id], ctx->max_length);
 		sf->t = GEN_SFS_LEAVING_STATE;
 		return true;
