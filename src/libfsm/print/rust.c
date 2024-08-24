@@ -520,14 +520,18 @@ fsm_print_rust(FILE *f,
 
 	switch (opt->ambig) {
 	case AMBIG_NONE:
+		fprintf(f, "Option<()>");
+		break;
+
 	case AMBIG_ERROR:
 	case AMBIG_EARLIEST:
-		fprintf(f, "Option<()>");
+		fprintf(f, "Option<u32>");
 		break;
 
 	case AMBIG_MULTIPLE:
 		fprintf(f, "Option<&'static [u32]>");
 		break;
+
 	default:
 		fprintf(stderr, "unsupported ambig mode\n");
 		exit(EXIT_FAILURE);
