@@ -1270,16 +1270,10 @@ main(int argc, char *argv[])
 				break;
 
 			case 'l':
-				if (strcmp(optarg, "vm") == 0) {
-					impl = IMPL_INTERPRET;
+				if (strcmp(optarg, "asm") == 0) {
+					impl = IMPL_VMASM;
 				} else if (strcmp(optarg, "c") == 0) {
 					impl = IMPL_C;
-				} else if (strcmp(optarg, "asm") == 0) {
-					impl = IMPL_VMASM;
-				} else if (strcmp(optarg, "vmc") == 0) {
-					impl = IMPL_VMC;
-				} else if (strcmp(optarg, "vmops") == 0) {
-					impl = IMPL_VMOPS;
 				} else if (strcmp(optarg, "go") == 0) {
 					impl = IMPL_GO;
 				} else if (strcmp(optarg, "goasm") == 0) {
@@ -1288,6 +1282,12 @@ main(int argc, char *argv[])
 					impl = IMPL_LLVM;
 				} else if (strcmp(optarg, "rust") == 0) {
 					impl = IMPL_RUST;
+				} else if (strcmp(optarg, "vm") == 0) {
+					impl = IMPL_INTERPRET;
+				} else if (strcmp(optarg, "vmc") == 0) {
+					impl = IMPL_VMC;
+				} else if (strcmp(optarg, "vmops") == 0) {
+					impl = IMPL_VMOPS;
 				} else {
 					fprintf(stderr, "unknown argument to -l: %s\n", optarg);
 					usage();
