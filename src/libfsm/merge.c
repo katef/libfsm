@@ -26,7 +26,9 @@
 #define LOG_MERGE_ENDIDS 0
 
 struct copy_capture_env {
+#ifndef NDEBUG
 	char tag;
+#endif
 	bool ok;
 	struct fsm *dst;
 };
@@ -145,7 +147,9 @@ static int
 copy_capture_actions(struct fsm *dst, struct fsm *src)
 {
 	struct copy_capture_env env;
+#ifndef NDEBUG
 	env.tag = 'C';
+#endif
 	env.dst = dst;
 	env.ok = true;
 
@@ -180,7 +184,9 @@ static int
 copy_end_ids(struct fsm *dst, struct fsm *src, fsm_state_t base_src)
 {
 	struct copy_end_ids_env env;
+#ifndef NDEBUG
 	env.tag = 'M';		/* for Merge */
+#endif
 	env.dst = dst;
 	env.src = src;
 	env.base_src = base_src;

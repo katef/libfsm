@@ -36,7 +36,9 @@ struct mapping_closure {
 };
 
 struct consolidate_copy_capture_actions_env {
+#ifndef NDEBUG
 	char tag;
+#endif
 	struct fsm *dst;
 	size_t mapping_count;
 	const fsm_state_t *mapping;
@@ -201,7 +203,9 @@ consolidate_copy_capture_actions(struct fsm *dst, const struct fsm *src,
 	size_t i;
 
 	struct consolidate_copy_capture_actions_env env;
+#ifndef NDEBUG
 	env.tag = 'C';
+#endif
 	env.dst = dst;
 	env.mapping_count = mapping_count;
 	env.mapping = mapping;
@@ -249,7 +253,9 @@ consolidate_end_ids(struct fsm *dst, const struct fsm *src,
 	struct consolidate_end_ids_env env;
 	int ret;
 
+#ifndef NDEBUG
 	env.tag = 'C';		/* for Consolidate */
+#endif
 	env.dst = dst;
 	env.src = src;
 	env.mapping = mapping;

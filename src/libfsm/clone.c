@@ -118,7 +118,9 @@ copy_capture_actions(struct fsm *dst, const struct fsm *src)
 }
 
 struct copy_end_ids_env {
+#ifndef NDEBUG
 	char tag;
+#endif
 	struct fsm *dst;
 	const struct fsm *src;
 	bool ok;
@@ -146,7 +148,9 @@ static int
 copy_end_ids(struct fsm *dst, const struct fsm *src)
 {
 	struct copy_end_ids_env env;
+#ifndef NDEBUG
 	env.tag = 'c';		/* for clone */
+#endif
 	env.dst = dst;
 	env.src = src;
 	env.ok = true;

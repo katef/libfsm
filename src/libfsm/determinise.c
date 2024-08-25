@@ -382,7 +382,12 @@ static int
 det_copy_capture_actions(struct reverse_mapping *reverse_mappings,
     struct fsm *dst, struct fsm *src)
 {
-	struct det_copy_capture_actions_env env = { 'D', NULL, NULL, 1 };
+	struct det_copy_capture_actions_env env = {
+#ifndef NDEBUG
+		'D',
+#endif
+		NULL, NULL, 1
+	};
 	env.dst = dst;
 	env.reverse_mappings = reverse_mappings;
 

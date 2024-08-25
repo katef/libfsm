@@ -28,7 +28,9 @@
 #define DEF_CARRY_ENDIDS_COUNT 2
 
 struct remap_env {
+#ifndef NDEBUG
 	char tag;
+#endif
 	bool ok;
 	const struct fsm_alloc *alloc;
 	struct state_set **rmap;
@@ -183,7 +185,12 @@ remap_capture_actions(struct fsm *nfa, struct state_set **eclosures)
 	struct state_set **rmap;
 	struct state_iter si;
 	fsm_state_t si_s;
-	struct remap_env env = { 'R', true, NULL, NULL, 0, 0, NULL };
+	struct remap_env env = {
+#ifndef NDEBUG
+		'R',
+#endif
+		true, NULL, NULL, 0, 0, NULL
+	};
 	env.alloc = nfa->alloc;
 
 	/* build a reverse mapping */

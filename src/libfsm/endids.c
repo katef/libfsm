@@ -753,7 +753,9 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 }
 
 struct carry_env {
+#ifndef NDEBUG
 	char tag;
+#endif
 	struct fsm *dst;
 	fsm_state_t dst_state;
 	bool ok;
@@ -796,7 +798,9 @@ fsm_endid_carry(const struct fsm *src_fsm, const struct state_set *src_set,
 
 	for (state_set_reset(src_set, &it); state_set_next(&it, &s); ) {
 		struct carry_env env;
+#ifndef NDEBUG
 		env.tag = 'C';
+#endif
 		env.dst = dst_fsm;
 		env.dst_state = dst_state;
 		env.ok = true;
