@@ -30,11 +30,13 @@ queue_new(const struct fsm_alloc *a, size_t max_capacity)
 	if (max_capacity == 0) { return NULL; }
 	alloc_size = sizeof(*q) + (max_capacity - 1) * sizeof(q->q[0]);
 
-	q = f_calloc(a, 1, alloc_size);
+	q = f_malloc(a, alloc_size);
 	if (q == NULL) { return NULL; }
 
 	q->alloc = a;
 	q->capacity = max_capacity;
+	q->rd = 0;
+	q->wr = 0;
 
 	return q;
 }

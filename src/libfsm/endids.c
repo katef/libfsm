@@ -89,7 +89,7 @@ fsm_endid_init(struct fsm *fsm)
 {
 	struct endid_info_bucket *buckets = NULL;
 	size_t i;
-	struct endid_info *res = f_calloc(fsm->alloc, 1, sizeof(*res));
+	struct endid_info *res = f_malloc(fsm->alloc, sizeof(*res));
 	if (res == NULL) {
 		return 0;
 	}

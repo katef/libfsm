@@ -119,6 +119,7 @@ grow_bucket_values(struct idmap *m, unsigned old_words, unsigned new_words)
 			return 0;
 		}
 
+		// TODO: memcpy
 		for (size_t w_i = 0; w_i < old_words; w_i++) {
 			nv[w_i] = b->values[w_i];
 		}
