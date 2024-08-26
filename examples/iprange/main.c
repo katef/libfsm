@@ -88,6 +88,24 @@ RB_GENERATE_STATIC(recmap, record, entry, recmap_cmp)
 static unsigned nrecords;
 
 static struct fsm_options opt;
+static struct fsm_hooks hooks;
+
+static struct record *
+find_id(unsigned id)
+{
+	struct record *r;
+
+	/* XXX: this is a crime, we have a tree.
+	 * we should be able to RB_FIND() */
+	RB_FOREACH(r, recmap, &recmap) {
+		if (r->id == id) {
+			return r;
+		}
+	}
+
+	assert(!"unreached");
+	abort();
+}
 
 static struct record *
 get_id(char *rec, size_t reclen)
@@ -115,7 +133,7 @@ get_id(char *rec, size_t reclen)
 
 	r->len = reclen;
 	r->id  = nrecords++;
-	r->fsm = fsm_new(&opt);
+	r->fsm = fsm_new(NULL);
 	if (r->fsm == NULL) {
 		perror("fsm_new");
 		exit(-1);
@@ -133,7 +151,7 @@ get_id(char *rec, size_t reclen)
 	}
 	fsm_setend(r->fsm, r->end, 1);
 
-	for (size_t i = 0; i < sizeof r->regs; i++) {
+	for (size_t i = 0; i < sizeof r->regs / sizeof *r->regs; i++) {
 		r->regs[i].c = '\0';
 		r->regs[i].s = fsm_none;
 	}
@@ -164,7 +182,7 @@ get_id(char *rec, size_t reclen)
 static void
 usage(void)
 {
-	fprintf(stderr, "ip2fsm -[46] [-f <file>] -l fmt\n"
+	fprintf(stderr, "iprange -[46] [-f <file>] -l fmt\n"
 	    "\t-4\t\tIPv4\n"
 	    "\t-6\t\tIPv6\n"
 	    "\t-f <file>\tuse <file> as input\n"
@@ -378,6 +396,9 @@ handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
 			}
 
 			socts[spos] = eocts[spos];
+
+			// XXX: not sure about this
+			break;
 		} else {
 			gen_range(r, noct, spos - 1, socts[spos], 255, socts);
 
@@ -422,51 +443,104 @@ important(unsigned n)
 }
 
 static int
-leaf(FILE *f, const fsm_end_id_t *ids, size_t count, const void *leaf_opaque)
+conflict(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	const char *example, void *hook_opaque)
 {
-	const struct record *r;
+	size_t i;
 
-	(void) leaf_opaque;
+	(void) f;
+	(void) hook_opaque;
+	(void) opt;
 
-	if (count != 1) {
-		fprintf(f, "endid conflict\n");
-		exit(EXIT_FAILURE);
+	fprintf(stderr, "ambiguous matches for ");
+
+	for (i = 0; i < count; i++) {
+		const struct record *r;
+
+		r = (const void *) (intptr_t) ids[i]; /* XXX */
+
+		fprintf(stderr, "%s", r->rec);
+
+		if (i + 1 < count) {
+			fprintf(stderr, ", ");
+		}
 	}
 
-	r = (const void *) (intptr_t) ids[0]; /* XXX */
-
-	if (r == NULL) {
-		fprintf(f, "return -1;");
-		return 0;
+	if (example != NULL) {
+		fprintf(stderr, "; for example on input '%s'", example);
 	}
 
-	fprintf(f, "return 0x%u; /* %s */", r->id, r->rec);
+	fprintf(stderr, "\n");
 
 	return 0;
 }
 
 static int
-endleaf_dot(FILE *f, const fsm_end_id_t *ids, size_t count, const void *endleaf_opaque)
+accept_dot(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	void *lang_opaque, void *hook_opaque)
 {
-	const struct record *r;
+	fsm_state_t s;
 
 	assert(f != NULL);
-	assert(endleaf_opaque == NULL);
 
-	(void) endleaf_opaque;
+	(void) hook_opaque;
+
+	s = * (fsm_state_t *) lang_opaque;
 
 	fprintf(f, "label = <");
 
+	if (!opt->anonymous_states) {
+		fprintf(f, "%u", s);
+
+		if (count > 0) {
+			fprintf(f, "<BR/>");
+		}
+	}
+
 	for (size_t i = 0; i < count; i++) {
-		r = (const void *) (intptr_t) ids[i]; /* XXX */
+		const struct record *r;
+
+		r = find_id(ids[i]);
 
 		fprintf(f, "%s", r->rec); /* XXX: escape */
+
 		if (i + 1 < count) {
 			fprintf(f, ", ");
 		}
 	}
 
 	fprintf(f, ">");
+
+	return 0;
+}
+
+static int
+comment_c(FILE *f, const struct fsm_options *opt,
+	const fsm_end_id_t *ids, size_t count,
+	void *hook_opaque)
+{
+	assert(f != NULL);
+
+	(void) opt;
+	(void) hook_opaque;
+
+	fprintf(f, "/* ");
+
+	for (size_t i = 0; i < count; i++) {
+		const struct record *r;
+
+		r = find_id(ids[i]);
+
+		fprintf(f, "%s", r->rec); /* XXX: escape */
+
+		if (i + 1 < count) {
+			fprintf(f, ", ");
+		}
+	}
+
+	fprintf(f, " */\n");
 
 	return 0;
 }
@@ -481,11 +555,14 @@ main(int argc, char **argv)
 	int oc = 0;
 	int c;
 
+	opt.ambig             = AMBIG_ERROR;
 	opt.prefix            = NULL;
 	opt.always_hex        = 1;
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
 	opt.case_ranges       = 1;
+
+	hooks.conflict = conflict;
 
 	while (c = getopt(argc, argv, "46f:l:Q"), c != -1) {
 		switch (c) {
@@ -531,7 +608,7 @@ main(int argc, char **argv)
 
 	memset(ones, 0xff, sizeof ones);
 
-	fsm = fsm_new(&opt);
+	fsm = fsm_new(NULL);
 	if (fsm == NULL) {
 		perror("fsm_new");
 		return -1;
@@ -634,22 +711,30 @@ main(int argc, char **argv)
 
 	struct record *r;
 	RB_FOREACH(r, recmap, &recmap) {
+		struct fsm_combine_info ci;
 		fsm_state_t start;
 
-		if (fsm_minimise(r->fsm) == 0) {
+		if (!fsm_determinise(r->fsm)) {
+			perror("fsm_determinse");
+			exit(-1);
+		}
+
+		if (!fsm_minimise(r->fsm)) {
 			perror("fsm_minimise");
 			exit(-1);
 		}
 
-		fsm_setendid(r->fsm, (intptr_t) r); /* XXX */
+		fsm_setendid(r->fsm, r->id);
 
 		(void) fsm_getstart(r->fsm, &start);
 
-		fsm = fsm_merge(fsm, r->fsm, NULL);
+		fsm = fsm_merge(fsm, r->fsm, &ci);
 		if (fsm == NULL) {
 			perror("fsm_merge");
 			exit(-1);
 		}
+
+		(void) ci;
 
 		if (!fsm_addedge_epsilon(fsm, fsm_start, start)) {
 			perror("fsm_addedge_epsilon");
@@ -676,7 +761,7 @@ main(int argc, char **argv)
 		tstart = time(NULL);
 	}
 
-	if (!fsm_determinise(fsm) == 0) {
+	if (!fsm_determinise(fsm)) {
 		perror("fsm_determinise");
 		exit(-1);
 	}
@@ -687,15 +772,13 @@ main(int argc, char **argv)
 	}
 
 	if (oc) {
-		opt.fragment    = 1;
-		opt.cp          = "c";
-		opt.leaf        = leaf;
-		opt.leaf_opaque = NULL;
-		fsm_print(stdout, fsm, FSM_PRINT_C);
+		opt.fragment = 1;
+		opt.comments = 1;
+		hooks.comment = comment_c;
+		fsm_print(stdout, fsm, &opt, &hooks, FSM_PRINT_C);
 	} else if (odot) {
-		opt.endleaf        = endleaf_dot;
-		opt.endleaf_opaque = NULL;
-		fsm_print(stdout, fsm, FSM_PRINT_DOT);
+		hooks.accept = accept_dot;
+		fsm_print(stdout, fsm, &opt, &hooks, FSM_PRINT_DOT);
 	}
 }
 

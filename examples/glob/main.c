@@ -196,7 +196,7 @@ main(int argc, char *argv[])
 	}
 
 	if (!quiet) {
-		fsm_print(stdout, fsm, FSM_PRINT_FSM);
+		fsm_print(stdout, fsm, NULL, NULL, FSM_PRINT_FSM);
 	}
 
 	matched = match(fsm, argv[1]);

@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 	} else {
-		fsm = fsm_new(&opt);
+		fsm = fsm_new(NULL);
 		if (fsm == NULL) {
 			perror("fsm_new");
 			return 1;
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 			struct fsm *r;
 			struct fsm_combine_info ci;
 
-			r = re_comp(native ? RE_NATIVE : RE_LITERAL, fsm_sgetc, &p, &opt, 0, &e);
+			r = re_comp(native ? RE_NATIVE : RE_LITERAL, fsm_sgetc, &p, NULL, 0, &e);
 			if (r == NULL) {
 				re_perror(native ? RE_NATIVE : RE_LITERAL, &e, NULL, s);
 				return 1;
@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		fsm = re_strings_build(g,
-			&opt, unanchored ? 0 : (RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT));
+			NULL, unanchored ? 0 : (RE_STRINGS_ANCHOR_LEFT | RE_STRINGS_ANCHOR_RIGHT));
 		if (fsm == NULL) {
 			perror("re_strings_builder_build");
 			exit(EXIT_FAILURE);
@@ -211,7 +211,7 @@ int main(int argc, char *argv[]) {
 		           + ((long) post.tv_nsec - (long) pre.tv_nsec) / 1000000;
 	}
 
-	fsm_print(stdout, fsm, lang);
+	fsm_print(stdout, fsm, &opt, NULL, lang);
 
 	if (timing) {
 		printf("construction, reduction, total: %lu, %lu, %lu\n", ms, mt, ms + mt);

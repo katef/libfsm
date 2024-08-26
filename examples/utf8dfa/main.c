@@ -164,7 +164,7 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	fsm = fsm_new(&opt);
+	fsm = fsm_new(NULL);
 	if (fsm == NULL) {
 		perror("fsm_new");
 		exit(1);
@@ -215,12 +215,17 @@ main(int argc, char *argv[])
 		}
 	}
 
+	if (!fsm_determinise(fsm)) {
+		perror("fsm_determinise");
+		exit(1);
+	}
+
 	if (!fsm_minimise(fsm)) {
 		perror("fsm_minimise");
 		exit(1);
 	}
 
-	fsm_print(stdout, fsm, lang);
+	fsm_print(stdout, fsm, NULL, NULL, lang);
 
 	fsm_free(fsm);
 
