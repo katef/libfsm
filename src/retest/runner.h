@@ -27,13 +27,13 @@ enum error_type {
 
 enum implementation {
 	IMPL_C,
-	IMPL_RUST,
-	IMPL_LLVM,
 	IMPL_GO,
 	IMPL_GOASM,
-	IMPL_VMC,
-	IMPL_VMASM,
 	IMPL_INTERPRET,
+	IMPL_LLVM,
+	IMPL_RUST,
+	IMPL_VMASM,
+	IMPL_VMC,
 	IMPL_VMOPS,
 };
 
