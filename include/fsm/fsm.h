@@ -7,6 +7,7 @@
 #ifndef FSM_H
 #define FSM_H
 
+#include <stdlib.h>
 #include <stdbool.h>
 
 struct fsm;
@@ -26,6 +27,9 @@ typedef unsigned int fsm_state_t;
  * their end states. These can be used to determine which of the
  * original FSM(s) matched when executing a combined FSM. */
 typedef unsigned int fsm_end_id_t;
+
+/* Eager output ID. */
+typedef unsigned int fsm_output_id_t;
 
 #define FSM_END_ID_MAX UINT_MAX
 
@@ -266,6 +270,39 @@ fsm_mapendids(struct fsm * fsm, fsm_endid_remap_fun remap, void *opaque);
 void
 fsm_increndids(struct fsm * fsm, int delta);
 
+/* Associate an eagerly matched numeric ID with the end states in an fsm.
+ *
+ * This is similar to fsm_setendid, but has different performance
+ * trade-offs. In particular, it can become extremely expensive to
+ * combine multiple DFAs with endids on their end states when they
+ * representing regexes with unanchored ends, because the FSM has to
+ * explicitly represent all the possible combinations of matches by
+ * copying the entire path to every reachable end state. Eager endids
+ * are associated with the edge leaving the main pattern match.
+ *
+ * Returns 1 on success, 0 on error.
+ * */
+int
+fsm_seteagerendid(struct fsm *fsm, fsm_end_id_t id);
+
+/* Set an eager output ID to emit every time the state is entered.
+ * This turns the automata into a Moore machine. */
+int
+fsm_seteageroutput(struct fsm *fsm, fsm_state_t state, fsm_output_id_t id);
+
+/* Set an eager output ID on all current end states. */
+int
+fsm_seteageroutputonends(struct fsm *fsm, fsm_output_id_t id);
+
+/* HACK */
+typedef void
+fsm_eager_output_cb(fsm_output_id_t id, void *opaque);
+void
+fsm_eager_output_set_cb(struct fsm *fsm, fsm_eager_output_cb *cb, void *opaque);
+
+void
+fsm_eager_output_get_cb(const struct fsm *fsm, fsm_eager_output_cb **cb, void **opaque);
+
 /*
  * Find the state (if there is just one), or add epsilon edges from all states,
  * for which the given predicate is true.
@@ -450,6 +487,15 @@ struct path *
 fsm_shortest(const struct fsm *fsm,
 	fsm_state_t start, fsm_state_t goal,
 	unsigned (*cost)(fsm_state_t from, fsm_state_t to, char c));
+
+/* HACK */
+typedef void
+fsm_eager_endid_cb(fsm_end_id_t id, void *opaque);
+void
+fsm_eager_endid_set_cb(struct fsm *fsm, fsm_eager_endid_cb *cb, void *opaque);
+
+void
+fsm_eager_endid_get_cb(const struct fsm *fsm, fsm_eager_endid_cb **cb, void **opaque);
 
 /*
  * Execute an FSM reading input from the user-specified callback fsm_getc().

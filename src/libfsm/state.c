@@ -19,6 +19,7 @@
 
 #include "internal.h"
 #include "endids.h"
+#include "eager_output.h"
 
 int
 fsm_addstate(struct fsm *fsm, fsm_state_t *state)
@@ -44,6 +45,7 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 
 		for (i = fsm->statealloc; i < n; i++) {
 			tmp[i].has_capture_actions = 0;
+			tmp[i].has_eager_outputs = 0;
 		}
 
 		fsm->statealloc = n;
@@ -87,6 +89,8 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 			new->visited  = 0;
 			new->epsilons = NULL;
 			new->edges    = NULL;
+
+			new->has_eager_outputs = 0;
 		}
 
 		fsm->statecount += n;
@@ -259,6 +263,10 @@ fsm_compact_states(struct fsm *fsm,
 	if (!fsm_endid_compact(fsm, mapping, orig_statecount)) {
 		return 0;
 	}
+	if (!fsm_eager_output_compact(fsm, mapping, orig_statecount)) {
+		return 0;
+	}
+
 	assert(dst == kept);
 	assert(kept == fsm->statecount);
 

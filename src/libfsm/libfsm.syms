@@ -2,6 +2,7 @@
 fsm_complement
 fsm_union
 fsm_union_array
+fsm_union_repeated_pattern_group
 fsm_intersect
 fsm_intersect_charset
 
@@ -72,6 +73,8 @@ fsm_removestate
 fsm_shuffle
 fsm_vacuum
 
+fsm_new_statealloc
+
 fsm_addedge_any
 fsm_addedge_epsilon
 fsm_addedge_literal
@@ -94,6 +97,14 @@ fsm_endid_set
 fsm_setendid
 fsm_mapendids
 fsm_increndids
+
+fsm_endid_dump
+
+fsm_seteageroutput
+fsm_seteageroutputonends
+# short term hack
+fsm_eager_output_set_cb
+fsm_eager_output_dump
 
 fsm_countedges
 fsm_countstates

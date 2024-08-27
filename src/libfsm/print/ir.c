@@ -26,6 +26,7 @@
 #include <adt/edgeset.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/eager_output.h"
 
 #include "ir.h"
 
@@ -505,6 +506,23 @@ error:
 	return 0;
 }
 
+static int
+append_eager_output_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
+{
+	struct ir_state_eager_output *outputs = opaque;
+	(void)state;
+	outputs->ids[outputs->count++] = id;
+	return 1;
+}
+
+static int
+cmp_fsm_output_id_t(const void *pa, const void *pb)
+{
+	const fsm_output_id_t a = *(fsm_output_id_t *)pa;
+	const fsm_output_id_t b = *(fsm_output_id_t *)pb;
+	return a < b ? -1 : a > b ? 1 : 0;
+}
+
 struct ir *
 make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 {
@@ -544,6 +562,8 @@ make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 		ir->states[i].endids.ids = NULL;
 		ir->states[i].endids.count = 0;
 
+		ir->states[i].eager_outputs = NULL;
+
 		if (fsm_isend(fsm, i)) {
 			fsm_end_id_t *ids;
 			size_t count;
@@ -565,6 +585,20 @@ make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 
 			ir->states[i].endids.ids = ids;
 			ir->states[i].endids.count = count;
+		}
+
+		size_t count;
+		if (fsm_eager_output_has_any(fsm, i, &count)) {
+			struct ir_state_eager_output *outputs = f_malloc(fsm->alloc,
+			    sizeof(*outputs) + count * sizeof(outputs->ids[0]));
+			if (outputs == NULL) {
+				goto error;
+			}
+			outputs->count = 0;
+			fsm_eager_output_iter_state(fsm, i, append_eager_output_cb, outputs);
+			assert(outputs->count == count);
+			qsort(outputs->ids, outputs->count, sizeof(outputs->ids[0]), cmp_fsm_output_id_t);
+			ir->states[i].eager_outputs = outputs;
 		}
 
 		if (make_state(fsm, i, &ir->states[i]) == -1) {
@@ -630,6 +664,7 @@ free_ir(const struct fsm *fsm, struct ir *ir)
 	for (i = 0; i < ir->n; i++) {
 		f_free(fsm->alloc, (void *) ir->states[i].example);
 		f_free(fsm->alloc, (void *) ir->states[i].endids.ids);
+		f_free(fsm->alloc, (void *) ir->states[i].eager_outputs);
 
 		switch (ir->states[i].strategy) {
 		case IR_TABLE:

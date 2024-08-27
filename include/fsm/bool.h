@@ -52,6 +52,16 @@ struct fsm *
 fsm_union_array(size_t fsm_count,
     struct fsm **fsms, struct fsm_combined_base_pair *bases);
 
+struct fsm_union_entry {
+	struct fsm *fsm;
+	bool anchored_start;
+	bool anchored_end;
+};
+
+struct fsm *
+fsm_union_repeated_pattern_group(size_t entry_count,
+    struct fsm_union_entry *entries, struct fsm_combined_base_pair *bases);
+
 struct fsm *
 fsm_intersect(struct fsm *a, struct fsm *b);
 

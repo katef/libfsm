@@ -118,6 +118,7 @@ SUBDIR += tests/equals
 SUBDIR += tests/subtract
 SUBDIR += tests/detect_required
 SUBDIR += tests/determinise
+SUBDIR += tests/eager_output
 SUBDIR += tests/endids
 SUBDIR += tests/epsilons
 SUBDIR += tests/fsm

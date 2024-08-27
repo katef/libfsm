@@ -6,6 +6,9 @@
 
 #include "determinise_internal.h"
 
+#include <fsm/print.h>
+#include <fsm/options.h>
+
 static void
 dump_labels(FILE *f, const uint64_t labels[4])
 {
@@ -266,6 +269,10 @@ fsm_determinise_with_config(struct fsm *nfa,
 			goto cleanup;
 		}
 
+		if (!remap_eager_outputs(&map, issp, dfa, nfa)) {
+			goto cleanup;
+		}
+
 		fsm_move(nfa, dfa);
 	}
 
@@ -363,6 +370,22 @@ add_reverse_mapping(const struct fsm_alloc *alloc,
 	return 1;
 }
 
+static void
+free_reverse_mappings(const struct fsm_alloc *alloc, size_t map_count, struct reverse_mapping *rmaps)
+{
+	if (rmaps == NULL) { return; }
+
+	for (size_t map_i = 0; map_i < map_count; map_i++) {
+		struct reverse_mapping *rmap = &rmaps[map_i];
+		for (size_t i = 0; i < rmap->count; i++) {
+			f_free(alloc, rmap[i].list);
+			rmap->count = 0;
+			rmap[i].list = NULL;
+		}
+	}
+	f_free(alloc, rmaps);
+}
+
 static int
 det_copy_capture_actions_cb(fsm_state_t state,
     enum capture_action_type type, unsigned capture_id, fsm_state_t to,
@@ -434,7 +457,7 @@ hash_iss(interned_state_set_id iss)
 }
 
 static struct mapping *
-map_first(struct map *map, struct map_iter *iter)
+map_first(const struct map *map, struct map_iter *iter)
 {
 	iter->m = map;
 	iter->i = 0;
@@ -672,22 +695,14 @@ stack_pop(struct mappingstack *stack)
 	return item;
 }
 
-static int
-remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
-    struct fsm *dst_dfa, struct fsm *src_nfa)
+static struct reverse_mapping *
+build_reverse_mappings(const struct map *map, struct interned_state_set_pool *issp,
+    struct fsm *dst_dfa, const struct fsm *src_nfa)
 {
+	struct reverse_mapping *reverse_mappings = NULL;
 	struct map_iter it;
 	struct state_iter si;
 	struct mapping *m;
-	struct reverse_mapping *reverse_mappings;
-	fsm_state_t state;
-	const size_t capture_count = fsm_countcaptures(src_nfa);
-	size_t i, j;
-	int res = 0;
-
-	if (capture_count == 0) {
-		return 1;
-	}
 
 	/* This is not 1 to 1 -- if state X is now represented by multiple
 	 * states Y in the DFA, and state X has action(s) when transitioning
@@ -698,9 +713,7 @@ remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
 	 * checking reachability from every X, but the actual path
 	 * handling later will also check reachability. */
 	reverse_mappings = f_calloc(dst_dfa->alloc, src_nfa->statecount, sizeof(reverse_mappings[0]));
-	if (reverse_mappings == NULL) {
-		return 0;
-	}
+	if (reverse_mappings == NULL) { goto cleanup; }
 
 	/* build reverse mappings table: for every NFA state X, if X is part
 	 * of the new DFA state Y, then add Y to a list for X */
@@ -710,6 +723,7 @@ remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
 		assert(m->dfastate < dst_dfa->statecount);
 		ss = interned_state_set_get_state_set(issp, iss_id);
 
+		fsm_state_t state;
 		for (state_set_reset(ss, &si); state_set_next(&si, &state); ) {
 			if (!add_reverse_mapping(dst_dfa->alloc,
 				reverse_mappings,
@@ -719,33 +733,47 @@ remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
 		}
 	}
 
-#if LOG_DETERMINISE_CAPTURES
+#if LOG_BUILD_REVERSE_MAPPING
 	fprintf(stderr, "#### reverse mapping for %zu states\n", src_nfa->statecount);
-	for (i = 0; i < src_nfa->statecount; i++) {
+	for (size_t i = 0; i < src_nfa->statecount; i++) {
 		struct reverse_mapping *rm = &reverse_mappings[i];
 		fprintf(stderr, "%lu:", i);
-		for (j = 0; j < rm->count; j++) {
+		for (size_t j = 0; j < rm->count; j++) {
 			fprintf(stderr, " %u", rm->list[j]);
 		}
 		fprintf(stderr, "\n");
 	}
-#else
-	(void)j;
 #endif
+
+	return reverse_mappings;
+
+cleanup:
+	free_reverse_mappings(dst_dfa->alloc, src_nfa->statecount, reverse_mappings);
+	return NULL;
+}
+
+static int
+remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
+    struct fsm *dst_dfa, struct fsm *src_nfa)
+{
+	const size_t capture_count = fsm_countcaptures(src_nfa);
+	int res = 0;
+
+	if (capture_count == 0) {
+		return 1;
+	}
+
+	struct reverse_mapping *reverse_mappings = build_reverse_mappings(map, issp, dst_dfa, src_nfa);
+	if (reverse_mappings == NULL) { goto cleanup; }
 
 	if (!det_copy_capture_actions(reverse_mappings, dst_dfa, src_nfa)) {
 		goto cleanup;
 	}
 
 	res = 1;
-cleanup:
-	for (i = 0; i < src_nfa->statecount; i++) {
-		if (reverse_mappings[i].list != NULL) {
-			f_free(dst_dfa->alloc, reverse_mappings[i].list);
-		}
-	}
-	f_free(dst_dfa->alloc, reverse_mappings);
 
+cleanup:
+	free_reverse_mappings(dst_dfa->alloc, src_nfa->statecount, reverse_mappings);
 	return res;
 }
 
@@ -2557,5 +2585,52 @@ analyze_closures__grow_outputs(struct analyze_closures_env *env)
 
 	env->outputs = nos;
 	env->output_ceil = nceil;
+	return 1;
+}
+
+struct remap_eager_output_env {
+	bool ok;
+	struct fsm *dst;
+	fsm_state_t dst_state;
+};
+
+static int
+remap_eager_output_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
+{
+	(void)state;
+	struct remap_eager_output_env *env = opaque;
+	if (!fsm_seteageroutput(env->dst, env->dst_state, id)) {
+		env->ok = false;
+		return 0;
+	}
+
+	return 1;
+}
+
+static int
+remap_eager_outputs(const struct map *map, struct interned_state_set_pool *issp,
+	struct fsm *dst_dfa, const struct fsm *src_nfa)
+{
+	/* For each DFA state, get the set of NFA states corresponding to it from the
+	 * map and issp, then copy every eager output ID over. */
+	struct map_iter iter;
+	for (struct mapping *b = map_first(map, &iter); b != NULL; b = map_next(&iter)) {
+		struct state_set *ss = interned_state_set_get_state_set(issp, b->iss);
+		assert(ss != NULL);
+
+		struct state_iter it;
+		fsm_state_t s;
+		state_set_reset(ss, &it);
+		while (state_set_next(&it, &s)) {
+			struct remap_eager_output_env env = {
+				.ok = true,
+				.dst = dst_dfa,
+				.dst_state = b->dfastate,
+			};
+			fsm_eager_output_iter_state(src_nfa, s, remap_eager_output_cb, &env);
+			if (!env.ok) { return 0; }
+		}
+	}
+
 	return 1;
 }

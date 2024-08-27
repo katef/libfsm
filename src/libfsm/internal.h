@@ -60,6 +60,10 @@ struct fsm_state {
 
 	/* meaningful within one particular transformation only */
 	unsigned int visited:1;
+
+	/* If 0, then this state has no need for checking
+	 * the fsm->eager_output_info struct. */
+	unsigned int has_eager_outputs:1;
 };
 
 struct fsm {
@@ -75,6 +79,7 @@ struct fsm {
 
 	struct fsm_capture_info *capture_info;
 	struct endid_info *endid_info;
+	struct eager_output_info *eager_output_info;
 };
 
 struct fsm *

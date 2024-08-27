@@ -45,6 +45,9 @@ enum fsm_print_lang {
 struct fsm_state_metadata {
 	const fsm_end_id_t *end_ids;
 	size_t end_id_count;
+
+	const fsm_output_id_t *eager_output_ids;
+	size_t eager_output_count;
 };
 
 /*

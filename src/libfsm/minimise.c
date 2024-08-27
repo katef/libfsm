@@ -25,6 +25,8 @@
 
 #include "internal.h"
 #include "capture.h"
+#include "eager_output.h"
+#include "endids.h"
 
 #define LOG_MAPPINGS 0
 #define LOG_STEPS 0
@@ -54,11 +56,20 @@ struct end_metadata {
 		unsigned count;
 		fsm_end_id_t *ids;
 	} end;
+
+	struct end_metadata_eager_outputs {
+		unsigned count;
+		fsm_output_id_t *ids;
+	} eager_outputs;
 };
 
 static int
 collect_end_ids(const struct fsm *fsm, fsm_state_t s,
 	struct end_metadata_end *e);
+
+static int
+collect_eager_output_ids(const struct fsm *fsm, fsm_state_t s,
+	struct end_metadata_eager_outputs *e);
 
 int
 fsm_minimise(struct fsm *fsm)
@@ -121,6 +132,10 @@ fsm_minimise(struct fsm *fsm)
 
 	/* Minimisation should never add states. */
 	assert(minimised_states <= orig_states);
+
+	for (size_t i = 0; i < fsm->statecount; i++) {
+		assert(mapping[i] < fsm->statecount);
+	}
 
 	/* Use the mapping to consolidate the current states
 	 * into a new DFA, combining states that could not be
@@ -693,11 +708,20 @@ same_end_metadata(const struct end_metadata *a, const struct end_metadata *b)
 	if (a->end.count != b->end.count) {
 		return 0;
 	}
+	if (a->eager_outputs.count != b->eager_outputs.count) {
+		return 0;
+	}
 
 	/* compare -- these must be sorted */
 
 	for (size_t i = 0; i < a->end.count; i++) {
 		if (a->end.ids[i] != b->end.ids[i]) {
+			return 0;
+		}
+	}
+
+	for (size_t i = 0; i < a->eager_outputs.count; i++) {
+		if (a->eager_outputs.ids[i] != b->eager_outputs.ids[i]) {
 			return 0;
 		}
 	}
@@ -750,11 +774,18 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 #endif
 		while (s != NO_ID) {
 			struct end_metadata *e = &end_md[s];
-			if (!fsm_isend(fsm, s)) {
-				break; /* this EC has non-end states, skip */
+			const bool is_end = fsm_isend(fsm, s);
+			const bool has_eager_outputs = fsm_eager_output_state_has_eager_output(fsm, s);
+
+			if (!is_end && !has_eager_outputs) {
+				break; /* skip */
 			}
 
 			if (!collect_end_ids(fsm, s, &e->end)) {
+				goto cleanup;
+			}
+
+			if (!collect_eager_output_ids(fsm, s, &e->eager_outputs)) {
 				goto cleanup;
 			}
 
@@ -787,6 +818,10 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 
 			for (size_t eid_i = 0; eid_i < s_md->end.count; eid_i++) {
 				incremental_hash_of_ids(&hash, s_md->end.ids[eid_i]);
+			}
+
+			for (size_t eo_i = 0; eo_i < s_md->eager_outputs.count; eo_i++) {
+				incremental_hash_of_ids(&hash, s_md->eager_outputs.ids[eo_i]);
 			}
 
 			for (size_t b_i = 0; b_i < bucket_count; b_i++) {
@@ -932,6 +967,9 @@ cleanup:
 			if (e->end.ids != NULL) {
 				f_free(fsm->alloc, e->end.ids);
 			}
+			if (e->eager_outputs.ids != NULL) {
+				f_free(fsm->alloc, e->eager_outputs.ids);
+			}
 		}
 		f_free(fsm->alloc, end_md);
 	}
@@ -959,12 +997,47 @@ collect_end_ids(const struct fsm *fsm, fsm_state_t s,
 
 #if LOG_ECS
 	fprintf(stderr, "%d:", s);
-	for (size_t i = 0; i < written; i++) {
+	for (size_t i = 0; i < e->count; i++) {
 		fprintf(stderr, " %u", e->ids[i]);
 	}
 	fprintf(stderr, "\n");
 #endif
 
+	return 1;
+}
+
+static int
+collect_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
+{
+	(void)state;
+	struct end_metadata_eager_outputs *e = opaque;
+	e->ids[e->count++] = id;
+	return 1;
+}
+
+static int cmp_eager_output_id(const void *pa, const void *pb)
+{
+	const fsm_output_id_t a = *(fsm_output_id_t *)pa;
+	const fsm_output_id_t b = *(fsm_output_id_t *)pb;
+	return a < b ? -1 : a > b ? 1 : 0;
+}
+
+static int
+collect_eager_output_ids(const struct fsm *fsm, fsm_state_t state,
+	struct end_metadata_eager_outputs *e)
+{
+	size_t count = 0;
+	if (!fsm_eager_output_has_any(fsm, state, &count)) {
+		return 1;	/* nothing to do */
+	}
+
+	e->ids = f_malloc(fsm->alloc, count * sizeof(e->ids[0]));
+	if (e->ids == NULL) { return 0; }
+
+	fsm_eager_output_iter_state(fsm, state, collect_cb, e);
+
+	/* sort, to normalize set */
+	qsort(e->ids, e->count, sizeof(e->ids[0]), cmp_eager_output_id);
 	return 1;
 }
 
