@@ -1041,7 +1041,7 @@ main(int argc, char *argv[])
 	 * On end id numbering: The UI must be one pattern per line, because
 	 * it's the only format that doesn't introduce a syntax with escaping.
 	 * So that means we need to track the line number associated with each
-	 * regex. And that means the line number is neccessarily the end id.
+	 * regex. And that means the line number is necessarily the end id.
 	 * So each pattern carries its associated end id.
 	 *
 	 * We have four whole FSMs from re_strings(), each potentially contains

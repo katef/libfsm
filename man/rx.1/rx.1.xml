@@ -98,7 +98,7 @@
 	<refsection>
 		<title>Description</title>
 
-		<para>&rx.1; is a command line too to compile sets of
+		<para>&rx.1; is a command line tool to compile sets of
 			<firstterm>regular expressions</firstterm> to executable code.
 			Patterns are read from one or more files, with multiple patterns per file.
 			Patterns that &rx.1; declines to handle are written out
