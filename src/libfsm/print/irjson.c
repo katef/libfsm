@@ -224,6 +224,7 @@ int
 fsm_print_irjson(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	const struct ir *ir)
 {
 	size_t i;
@@ -232,6 +233,8 @@ fsm_print_irjson(FILE *f,
 	assert(opt != NULL);
 	assert(hooks != NULL);
 	assert(ir != NULL);
+
+	(void) retlist;
 
 	fprintf(f, "{\n");
 
