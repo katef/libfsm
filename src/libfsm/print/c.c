@@ -514,6 +514,7 @@ int
 fsm_print_c(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
 	const struct ir *ir)
 {
 	const char *prefix;
@@ -522,6 +523,10 @@ fsm_print_c(FILE *f,
 	assert(opt != NULL);
 	assert(hooks != NULL);
 	assert(ir != NULL);
+
+	/* XXX: it would actually make sense to use the retlist here,
+	 * but my plan is to remove the ir-based C codegen anyway */
+	(void) retlist;
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;

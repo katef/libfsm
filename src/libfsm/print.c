@@ -358,11 +358,6 @@ fsm_print(FILE *f, const struct fsm *fsm,
 		}
 	}
 
-	if (print_ir != NULL) {
-		r = print_ir(f, opt, hooks, ir);
-		goto done;
-	}
-
 	/*
 	 * We're building the retlist here based on the ir.
 	 * I think we could build the retlist earlier instead,
@@ -375,6 +370,12 @@ fsm_print(FILE *f, const struct fsm *fsm,
 	if (!build_retlist(&retlist, ir)) {
 		free_ir(fsm, ir);
 		goto error;
+	}
+
+	if (print_ir != NULL) {
+		r = print_ir(f, opt, hooks, &retlist, ir);
+		free_retlist(&retlist);
+		goto done;
 	}
 
 	a = zero;
