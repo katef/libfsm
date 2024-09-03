@@ -35,6 +35,7 @@ enum implementation {
 	IMPL_VMASM,
 	IMPL_VMC,
 	IMPL_VMOPS,
+	IMPL_WASM2C,
 };
 
 struct fsm_runner {
@@ -70,6 +71,11 @@ struct fsm_runner {
 		struct {
 			struct fsm_dfavm *vm;
 		} impl_vm;
+
+		struct {
+			void *h;
+			int (*func)(const unsigned char *);
+		} impl_wasm2c;
 	} u;
 };
 
