@@ -87,13 +87,14 @@ print(const struct fsm *fsm,
 		int e;
 
 		switch (impl) {
-		case IMPL_C:     e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_C);         break;
-		case IMPL_RUST:  e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_RUST);      break;
-		case IMPL_LLVM:  e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_LLVM);      break;
-		case IMPL_VMC:   e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_VMC);       break;
-		case IMPL_GOASM: e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_AMD64_GO);  break;
-		case IMPL_VMASM: e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_AMD64_ATT); break;
-		case IMPL_GO:    e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_GO);        break;
+		case IMPL_C:      e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_C);         break;
+		case IMPL_RUST:   e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_RUST);      break;
+		case IMPL_LLVM:   e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_LLVM);      break;
+		case IMPL_VMC:    e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_VMC);       break;
+		case IMPL_GOASM:  e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_AMD64_GO);  break;
+		case IMPL_VMASM:  e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_AMD64_ATT); break;
+		case IMPL_GO:     e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_GO);        break;
+		case IMPL_WASM2C: e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_WASM);      break;
 
 		case IMPL_VMOPS:
 			e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_VMOPS_H)
@@ -241,7 +242,7 @@ compile(enum implementation impl,
 	}
 
 	case IMPL_VMASM: {
-		char tmp_o[] = "/tmp/fsmcompile_o-XXXXXX.o";
+		char tmp_o[] = "/tmp/fsmcompile-XXXXXX.o";
 		int fd_o;
 
 		as      = getenv("AS");
@@ -279,6 +280,145 @@ compile(enum implementation impl,
 		break;
 	}
 
+	case IMPL_WASM2C: {
+		char tmp_c[] = "/tmp/fsmcompile-XXXXXX.c";
+		int fd_c;
+
+		{
+			const char *wat2wasm;
+			const char *wasm2c, *wasm2cflags, *wasmrt_impl;
+
+			wat2wasm = getenv("WAT2WASM");
+
+			wasm2c = getenv("WASM2C");
+			wasm2cflags = getenv("WASM2CFLAGS");
+			wasmrt_impl = getenv("WASMRTIMPL");
+
+			fd_c = xmkstemps(tmp_c);
+
+			if (0 != systemf("%s --enable-multi-memory %s -o /dev/stdout | %s %s - > %s",
+				wat2wasm ? wat2wasm : "wat2wasm",
+				tmp_src,
+				wasm2c ? wasm2c : "wasm2c",
+				wasm2cflags ? wasm2cflags : "",
+				tmp_c, tmp_src))
+			{
+				return 0;
+			}
+
+			/* append trampoline */
+			{
+				FILE *f;
+
+				f = fdopen(fd_c, "a");
+				if (f == NULL) {
+					perror(tmp_c);
+					return 0;
+				}
+
+				/* trampoline for wabt 1.0.27 */
+
+				fprintf(f, "#include <assert.h>\n");
+				fprintf(f, "#include <stdlib.h>\n");
+				fprintf(f, "#include <stdio.h>\n");
+				fprintf(f, "\n");
+
+				fprintf(f, "int retest_trampoline(const char *s) {\n");
+				fprintf(f, "  size_t n;\n");
+				fprintf(f, "\n");
+
+				fprintf(f, "  assert(s != NULL);\n");
+				fprintf(f, "\n");
+
+				fprintf(f, "  fsm_init();\n");
+				fprintf(f, "\n");
+
+				/* TODO: we could grow the memory region to size.
+				 * but a page is 64kB, probably enough for our test strings */
+				fprintf(f, "  n = strlen(s);\n");
+				fprintf(f, "  if (n + 1 > w2c_M0.size) {\n");
+			   	fprintf(f, "    fprintf(stderr, \"overflow\");\n");
+				fprintf(f, "    abort();\n");
+		   		fprintf(f, "  }\n");
+				fprintf(f, "\n");
+
+/* XXX: placeholder */
+				fprintf(f, "  memcpy(w2c_M0.data, s, n);\n");
+
+				/* TODO: would deal with different IO APIs here */
+				fprintf(f, "  u32 p = 0;\n");
+				fprintf(f, "  int r = w2c_fsm_match(p);\n");
+				fprintf(f, "\n");
+
+				/* TODO: would handle endids here */
+
+				/* XXX: wasm2c's generated code leaks. we free() here as a workaround */
+				fprintf(f, "  free(w2c_M0.data);\n");
+				fprintf(f, "\n");
+
+				fprintf(f, "  return r;\n");
+				fprintf(f, "}\n");
+
+				if (0 != fclose(f)) {
+					perror(tmp_c);
+					return 0;
+				}
+			}
+
+			// XXX: hacky
+			if (0 != systemf("sed -i '/^#include \"wasm\\.h\"/d' %s", tmp_c)) {
+				return 0;
+			}
+
+			/*
+			 * wasm2c would also write to src.h when writing out to src.c
+			 * However it doesn't write to src.h when output is stdout.
+			 */
+
+			/*
+			 * The wasm2c readme:
+			 *
+			 *   With GCC 11, adding the command-line arguments
+			 *   -fno-optimize-sibling-calls -frounding-math -fsignaling-nans
+			 *   appears to be sufficient.
+			 *
+			 *   With clang 14, just -fno-optimize-sibling-calls -frounding-math
+			 *   appears to be sufficient.
+			 *
+			 * (however -fsignaling-nans is actually not supported for clang)
+			 */
+
+			if (0 != systemf("%s %s -fPIC -shared %s %s %s %s %s %s %s %s -o %s",
+					cc ? cc : "gcc",
+					cflags ? cflags : "",
+					"-g",
+					"-Wno-unused-parameter -Wno-unused-variable", /* for wasm-rt-impl.c */
+					"-Wno-unused-function", /* for wasm2c generated code */
+					"-D WASM_RT_MODULE_PREFIX=fsm_ -D WASM_RT_SANITY_CHECKS "
+					"-D WASM_RT_MEMCHECK_SIGNAL_HANDLER=0", /* so we can free() */
+					(cc && (strcmp(cc, "clang") == 0 || strcmp(cc, "gcc") == 0))
+						? "-fno-optimize-sibling-calls -frounding-math"
+						: "",
+					(cc && strcmp(cc, "clang") == 0)
+						? ""
+						: "-fsignaling-nans",
+					wasmrt_impl ? wasmrt_impl : "/usr/src/wasm2c/wasm-rt-impl.c",
+					tmp_c, tmp_so))
+			{
+				return 0;
+			}
+
+			/* fd_c implicitly closed by fclose() */
+
+			if (-1 == unlinkat(-1, tmp_c, 0)) {
+				perror(tmp_c);
+				return 0;
+			}
+		}
+
+		break;
+	}
+
 	case IMPL_INTERPRET:
 		assert(!"unreached");
 		break;
@@ -294,27 +434,27 @@ runner_init_compiled(struct fsm *fsm,
 {
 	void *h;
 
-	r->impl = impl;
-
 	/* The Go compiler needs an extension on tmp_src so it knows
 	 * it's a file not a package. Since we're doing that, it's
 	 * easier to do the same for everyone. */
-	char tmp_src_go[] = "/tmp/fsmcompile_src-XXXXXX.go";
-	char tmp_src_c[]  = "/tmp/fsmcompile_src-XXXXXX.c";
-	char tmp_src_rs[] = "/tmp/fsmcompile_src-XXXXXX.rs";
-	char tmp_src_ll[] = "/tmp/fsmcompile_src-XXXXXX.ll";
-	char tmp_src_s[]  = "/tmp/fsmcompile_src-XXXXXX.s";
+	char tmp_src_go[]  = "/tmp/fsmcompile_src-XXXXXX.go";
+	char tmp_src_c[]   = "/tmp/fsmcompile_src-XXXXXX.c";
+	char tmp_src_rs[]  = "/tmp/fsmcompile_src-XXXXXX.rs";
+	char tmp_src_ll[]  = "/tmp/fsmcompile_src-XXXXXX.ll";
+	char tmp_src_s[]   = "/tmp/fsmcompile_src-XXXXXX.s";
+	char tmp_src_wat[] = "/tmp/fsmcompile_src-XXXXXX.wat";
 	char *tmp_src;
 
 	switch (impl) {
 	case IMPL_VMOPS:
 	case IMPL_C:
-	case IMPL_VMC:   tmp_src = tmp_src_c;  break;
-	case IMPL_RUST:  tmp_src = tmp_src_rs; break;
-	case IMPL_LLVM:  tmp_src = tmp_src_ll; break;
+	case IMPL_VMC:      tmp_src = tmp_src_c;  break;
+	case IMPL_RUST:     tmp_src = tmp_src_rs; break;
+	case IMPL_LLVM:     tmp_src = tmp_src_ll; break;
 	case IMPL_GOASM:
-	case IMPL_VMASM: tmp_src = tmp_src_s;  break;
-	case IMPL_GO:    tmp_src = tmp_src_go; break;
+	case IMPL_VMASM:    tmp_src = tmp_src_s;  break;
+	case IMPL_GO:       tmp_src = tmp_src_go; break;
+	case IMPL_WASM2C:   tmp_src = tmp_src_wat; break;
 
 	case IMPL_INTERPRET:
 		assert(!"unreached");
@@ -352,11 +492,11 @@ runner_init_compiled(struct fsm *fsm,
 			perror(tmp_so);
 			return ERROR_FILE_IO;
 		}
-	}
 
-	if (-1 == unlinkat(-1, tmp_src, 0)) {
-		perror(tmp_src);
-		return 0;
+		if (-1 == unlinkat(-1, tmp_src, 0)) {
+			perror(tmp_src);
+			return 0;
+		}
 	}
 
 	/* XXX: depends on IO API */
@@ -397,6 +537,11 @@ runner_init_compiled(struct fsm *fsm,
 		r->u.impl_asm.func = (int (*)(const unsigned char *, size_t)) (uintptr_t) dlsym(h, "fsm_match");
 		break;
 
+	case IMPL_WASM2C:
+		r->u.impl_wasm2c.h = h;
+		r->u.impl_wasm2c.func = (int (*)(const unsigned char *)) (uintptr_t) dlsym(h, "retest_trampoline");
+		break;
+
 	case IMPL_INTERPRET:
 		break;
 	}
@@ -416,6 +561,8 @@ fsm_runner_initialize(struct fsm *fsm, const struct fsm_options *opt,
 
 	*r = zero;
 
+	r->impl = impl;
+
 	switch (impl) {
 	case IMPL_C:
 	case IMPL_LLVM:
@@ -425,6 +572,7 @@ fsm_runner_initialize(struct fsm *fsm, const struct fsm_options *opt,
 	case IMPL_VMOPS:
 	case IMPL_GO:
 	case IMPL_GOASM:
+	case IMPL_WASM2C:
 		return runner_init_compiled(fsm, opt, r, impl);
 
 	case IMPL_INTERPRET:
@@ -433,7 +581,7 @@ fsm_runner_initialize(struct fsm *fsm, const struct fsm_options *opt,
 			fsm_free(fsm);
 			return ERROR_COMPILING_BYTECODE;
 		}
-		r->impl = impl;
+
 		r->u.impl_vm.vm = vm;
 		return ERROR_NONE;
 	}
@@ -486,6 +634,12 @@ fsm_runner_finalize(struct fsm_runner *r)
 		}
 		break;
 
+	case IMPL_WASM2C:
+		if (r->u.impl_wasm2c.h != NULL) {
+			dlclose(r->u.impl_wasm2c.h);
+		}
+		break;
+
 	default:
 		assert(!"should not reach");
 	}
@@ -524,6 +678,28 @@ fsm_runner_run(const struct fsm_runner *r, const char *s, size_t n)
 	case IMPL_INTERPRET:
 		assert(r->u.impl_vm.vm != NULL);
 		return fsm_vm_match_buffer(r->u.impl_vm.vm, s, n);
+
+	/*
+	 * TODO: other ways we could run wasm, with the goal of avoiding
+	 * a link-time dependency from retest:
+	 *
+	 *   wat2wasm --emable-multi-memory -o /dev/stdout %s | wasm-interp -
+	 *   wasmtime %s
+	 *
+	 * A wasm trampoline (maybe simple enough to handwrite as .wat)
+	 * would write endids to stdout, redirect to tmp file.
+	 * The result is the exit status code
+	 *
+	 * We cannot use 'wasmtime compile' because despite producing an ELF
+	 * file, the contents aren't executable (there is no runtime),
+	 * it's just using ELF as a container format for internal data.
+	 *
+	 * Could also use w2c2, which is the same approach as wasm2c.
+	 */
+
+	case IMPL_WASM2C:
+		assert(r->u.impl_wasm2c.func != NULL);
+		return r->u.impl_wasm2c.func((const unsigned char *) s);
 	}
 
 	assert(!"should not reach");

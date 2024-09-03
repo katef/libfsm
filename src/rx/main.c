@@ -713,6 +713,7 @@ print_name(const char *name, enum fsm_ambig ambig)
 		{ "irjson",     FSM_PRINT_IRJSON,     AMBIG_ANY   },
 		{ "llvm",       FSM_PRINT_LLVM,       AMBIG_ANY   },
 		{ "vmdot",      FSM_PRINT_VMDOT,      AMBIG_ANY   },
+		{ "wasm",       FSM_PRINT_WASM,       AMBIG_ANY   },
 		{ "vmops_c",    FSM_PRINT_VMOPS_C,    AMBIG_ANY   },
 		{ "vmops_h",    FSM_PRINT_VMOPS_H,    AMBIG_ANY   },
 		{ "vmops_main", FSM_PRINT_VMOPS_MAIN, AMBIG_ANY   },

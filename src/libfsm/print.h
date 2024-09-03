@@ -89,6 +89,7 @@ vm_print_f fsm_print_llvm;
 vm_print_f fsm_print_rust;
 vm_print_f fsm_print_sh;
 vm_print_f fsm_print_vmc;
+ir_print_f fsm_print_wasm;
 
 vm_print_f fsm_print_vmdot;
 vm_print_f fsm_print_vmops_c;

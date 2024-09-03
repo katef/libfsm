@@ -1172,6 +1172,8 @@ main(int argc, char *argv[])
 					impl = IMPL_VMC;
 				} else if (strcmp(optarg, "vmops") == 0) {
 					impl = IMPL_VMOPS;
+				} else if (strcmp(optarg, "wasm2c") == 0) {
+					impl = IMPL_WASM2C;
 				} else {
 					fprintf(stderr, "unknown argument to -l: %s\n", optarg);
 					usage();

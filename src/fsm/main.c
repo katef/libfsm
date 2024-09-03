@@ -179,6 +179,7 @@ lang_name(const char *name)
 		{ "llvm",       FSM_PRINT_LLVM       },
 		{ "sh",         FSM_PRINT_SH         },
 		{ "go",         FSM_PRINT_GO         },
+		{ "wasm",       FSM_PRINT_WASM       },
 
 		{ "amd64",      FSM_PRINT_AMD64_NASM },
 		{ "amd64_att",  FSM_PRINT_AMD64_ATT  },

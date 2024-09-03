@@ -481,7 +481,7 @@ jobs:
         cc: [ clang, gcc ]
         make: [ bmake ]
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
-        lang: [ "vm -x v1", "vm -x v2", asm, c, rust, vmc, vmops, go, goasm, llvm ]
+        lang: [ "vm -x v1", "vm -x v2", asm, c, rust, vmc, vmops, go, goasm, llvm, wasm2c ]
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
@@ -511,6 +511,12 @@ jobs:
         uname -a
         sudo apt-get install golang
         go version
+
+    - name: Dependencies (Ubuntu/Wabt)
+      if: matrix.os == 'ubuntu' && matrix.lang == 'wasm2c'
+      run: |
+        uname -a
+        sudo apt-get install wabt
 
     - name: Fetch build
       uses: actions/cache@v4

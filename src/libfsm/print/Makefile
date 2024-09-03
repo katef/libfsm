@@ -17,6 +17,7 @@ SRC += src/libfsm/print/vmasm.c
 SRC += src/libfsm/print/vmc.c
 SRC += src/libfsm/print/vmdot.c
 SRC += src/libfsm/print/vmops.c
+SRC += src/libfsm/print/wasm.c
 
 .for src in ${SRC:Msrc/libfsm/print/*.c}
 CFLAGS.${src} += -I src # XXX: for internal.h
