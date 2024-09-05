@@ -77,7 +77,7 @@ interned_state_set_pool_alloc(const struct fsm_alloc *a)
 	fsm_state_t *buf = NULL;
 	uint32_t *buckets = NULL;
 
-	res = f_calloc(a, 1, sizeof(*res));
+	res = f_malloc(a, sizeof(*res));
 	if (res == NULL) { goto cleanup; }
 
 	sets = f_malloc(a, DEF_SETS * sizeof(sets[0]));
@@ -93,7 +93,7 @@ interned_state_set_pool_alloc(const struct fsm_alloc *a)
 		buckets[i] = NO_ID;
 	}
 
-	struct interned_state_set_pool p = {
+	*res = (struct interned_state_set_pool) {
 		.alloc = a,
 		.sets = {
 			.ceil = DEF_SETS,
@@ -108,7 +108,7 @@ interned_state_set_pool_alloc(const struct fsm_alloc *a)
 			.buckets = buckets,
 		},
 	};
-	memcpy(res, &p, sizeof(p));
+
 	return res;
 
 cleanup:

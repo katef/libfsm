@@ -195,13 +195,13 @@ print_state(FILE *f,
 	fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>S%u</TD><TD ALIGN='LEFT'>%s</TD></TR>\n",
 		ir_indexof(ir, cs), strategy_name(cs->strategy));
 
-	if (cs->isend && cs->endids.count > 0) {
+	if (cs->isend && cs->count > 0) {
 		fprintf(f, "\t\t  <TR><TD COLSPAN='2' ALIGN='LEFT'>end id</TD><TD ALIGN='LEFT'>");
 
-		for (size_t i = 0; i < cs->endids.count; i++) {
-			fprintf(f, "#%u", cs->endids.ids[i]);
+		for (size_t i = 0; i < cs->count; i++) {
+			fprintf(f, "#%u", cs->ids[i]);
 
-			if (i < cs->endids.count - 1) {
+			if (i < (size_t) cs->count - 1) {
 				fprintf(f, " ");
 			}
 		}
@@ -220,7 +220,7 @@ print_state(FILE *f,
 		fprintf(f, "\t\t  <TR><TD COLSPAN='3' ALIGN='LEFT'>");
 
 		if (-1 == print_hook_accept(f, opt, hooks,
-			cs->endids.ids, cs->endids.count,
+			cs->ids, cs->count,
 			NULL,
 			NULL))
 		{

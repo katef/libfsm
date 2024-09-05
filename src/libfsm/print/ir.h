@@ -53,12 +53,11 @@ struct ir_error {
 
 struct ir_state {
 	const char *example;
-	unsigned int isend:1;
 
-	struct {
-		fsm_end_id_t *ids; /* NULL -> 0 */
-		size_t count;
-	} endids;
+	fsm_end_id_t *ids; /* NULL -> 0 */
+	size_t count:31; // :31 for packing
+
+	unsigned int isend:1;
 
 	enum ir_strategy strategy;
 	union {

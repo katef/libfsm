@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <fsm/fsm.h>
@@ -35,11 +36,13 @@ struct mapping_closure {
 };
 
 struct consolidate_copy_capture_actions_env {
+#ifndef NDEBUG
 	char tag;
+#endif
 	struct fsm *dst;
 	size_t mapping_count;
 	const fsm_state_t *mapping;
-	int ok;
+	bool ok;
 };
 
 static int
@@ -186,7 +189,7 @@ consolidate_copy_capture_actions_cb(fsm_state_t state,
 
 	if (!fsm_capture_add_action(env->dst,
 		s, type, capture_id, t)) {
-		env->ok = 0;
+		env->ok = false;
 		return 0;
 	}
 
@@ -200,11 +203,13 @@ consolidate_copy_capture_actions(struct fsm *dst, const struct fsm *src,
 	size_t i;
 
 	struct consolidate_copy_capture_actions_env env;
+#ifndef NDEBUG
 	env.tag = 'C';
+#endif
 	env.dst = dst;
 	env.mapping_count = mapping_count;
 	env.mapping = mapping;
-	env.ok = 1;
+	env.ok = true;
 
 #if LOG_MAPPING
 	for (i = 0; i < mapping_count; i++) {
@@ -248,7 +253,9 @@ consolidate_end_ids(struct fsm *dst, const struct fsm *src,
 	struct consolidate_end_ids_env env;
 	int ret;
 
+#ifndef NDEBUG
 	env.tag = 'C';		/* for Consolidate */
+#endif
 	env.dst = dst;
 	env.src = src;
 	env.mapping = mapping;

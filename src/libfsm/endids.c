@@ -5,6 +5,7 @@
  */
 
 #include <stddef.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <inttypes.h>
 
@@ -88,7 +89,7 @@ fsm_endid_init(struct fsm *fsm)
 {
 	struct endid_info_bucket *buckets = NULL;
 	size_t i;
-	struct endid_info *res = f_calloc(fsm->alloc, 1, sizeof(*res));
+	struct endid_info *res = f_malloc(fsm->alloc, sizeof(*res));
 	if (res == NULL) {
 		return 0;
 	}
@@ -752,10 +753,12 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 }
 
 struct carry_env {
+#ifndef NDEBUG
 	char tag;
+#endif
 	struct fsm *dst;
 	fsm_state_t dst_state;
-	int ok;
+	bool ok;
 };
 
 static int
@@ -767,7 +770,7 @@ carry_iter_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
 	(void)state;
 
 	if (!fsm_endid_set(env->dst, env->dst_state, id)) {
-		env->ok = 0;
+		env->ok = false;
 		return 0;
 	}
 	return 1;
@@ -795,10 +798,12 @@ fsm_endid_carry(const struct fsm *src_fsm, const struct state_set *src_set,
 
 	for (state_set_reset(src_set, &it); state_set_next(&it, &s); ) {
 		struct carry_env env;
+#ifndef NDEBUG
 		env.tag = 'C';
+#endif
 		env.dst = dst_fsm;
 		env.dst_state = dst_state;
-		env.ok = 1;
+		env.ok = true;
 
 		if (!fsm_isend(src_fsm, s)) {
 			continue;

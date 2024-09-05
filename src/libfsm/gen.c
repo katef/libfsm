@@ -75,21 +75,23 @@ struct gen_ctx {
 	const struct fsm *fsm;
 	size_t max_length;
 	fsm_generate_matches_cb *cb;
-	void *opaque;
+
+	bool done;
 
 	size_t buf_ceil;
 	size_t buf_used;
 	char *buf;
+
+	void *opaque;
+
+	unsigned depth;
+	unsigned steps;
 
 	/* This is used to avoid useless cycles -- if a state
 	 * was reached since the same match_count, then don't
 	 * explore it again. */
 	unsigned match_count;
 	unsigned *state_counts;
-
-	unsigned depth;
-	unsigned steps;
-	bool done;
 
 	/* Shortest end distance for a state: sed[s_id] */
 	unsigned *sed;

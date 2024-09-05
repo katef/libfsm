@@ -14,11 +14,16 @@ fsm_capture_init(struct fsm *fsm)
 	struct fsm_capture_info *ci = NULL;
 	size_t i;
 
-	ci = f_calloc(fsm->alloc,
-	    1, sizeof(*ci));
+	ci = f_malloc(fsm->alloc, sizeof(*ci));
 	if (ci == NULL) {
 		goto cleanup;
 	}
+
+	ci->max_capture_id = 0;
+	ci->bucket_count   = 0;
+	ci->buckets_used   = 0;
+	ci->buckets        = NULL;
+
 	fsm->capture_info = ci;
 
 	for (i = 0; i < fsm->statealloc; i++) {

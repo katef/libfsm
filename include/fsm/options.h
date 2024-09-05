@@ -81,17 +81,17 @@ struct fsm_options {
 	 */
 	unsigned int group_edges:1;
 
-	/* for generated code, what kind of I/O API to generate */
-	enum fsm_io io;
-
-	/* for generated code, how to handle multiple endids on an accepting state */
-	enum fsm_ambig ambig;
-
 	/* a prefix for namespacing generated identifiers. NULL if not required. */
 	const char *prefix;
 
 	/* the name of the enclosing package; NULL to use `prefix` (default). */
 	const char *package_prefix;
+
+	/* for generated code, what kind of I/O API to generate */
+	enum fsm_io io;
+
+	/* for generated code, how to handle multiple endids on an accepting state */
+	enum fsm_ambig ambig;
 };
 
 #endif

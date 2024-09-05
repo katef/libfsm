@@ -79,8 +79,9 @@ struct dfavm_op_ir {
 	const char *example;
 	const struct ret *ret;
 
-	uint32_t num_incoming; // number of branches to this instruction
-	int in_trace;
+	uint32_t num_incoming:31; // number of branches to this instruction, :31 for packing
+	unsigned int in_trace:1;
+
 	int cmp_arg;
 
 	enum dfavm_op_cmp cmp;

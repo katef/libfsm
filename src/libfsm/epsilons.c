@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <errno.h>
 
 #include <fsm/fsm.h>
@@ -27,10 +28,12 @@
 #define DEF_CARRY_ENDIDS_COUNT 2
 
 struct remap_env {
+#ifndef NDEBUG
 	char tag;
+#endif
+	bool ok;
 	const struct fsm_alloc *alloc;
 	struct state_set **rmap;
-	int ok;
 
 	size_t count;
 	size_t ceil;
@@ -182,7 +185,12 @@ remap_capture_actions(struct fsm *nfa, struct state_set **eclosures)
 	struct state_set **rmap;
 	struct state_iter si;
 	fsm_state_t si_s;
-	struct remap_env env = { 'R', NULL, NULL, 1, 0, 0, NULL };
+	struct remap_env env = {
+#ifndef NDEBUG
+		'R',
+#endif
+		true, NULL, NULL, 0, 0, NULL
+	};
 	env.alloc = nfa->alloc;
 
 	/* build a reverse mapping */
@@ -325,17 +333,17 @@ remap_capture_action_cb(fsm_state_t state,
 	return 1;
 
 fail:
-	env->ok = 0;
+	env->ok = false;
 	return 0;
 }
 
 struct collect_env {
 	char tag;
+	bool ok;
 	const struct fsm_alloc *alloc;
 	size_t count;
 	size_t ceil;
 	fsm_end_id_t *ids;
-	int ok;
 };
 
 static int
@@ -353,7 +361,7 @@ collect_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
 		nids = f_realloc(env->alloc, env->ids,
 		    nceil * sizeof(*env->ids));
 		if (nids == NULL) {
-			env->ok = 0;
+			env->ok = false;
 			return 0;
 		}
 		env->ceil = nceil;
@@ -390,7 +398,7 @@ carry_endids(struct fsm *fsm, struct state_set *states,
 	if (env.ids == NULL) {
 		return 0;
 	}
-	env.ok = 1;
+	env.ok = true;
 
 	/* collect from states */
 	for (state_set_reset(states, &it); state_set_next(&it, &s); ) {
@@ -407,7 +415,7 @@ carry_endids(struct fsm *fsm, struct state_set *states,
 	/* add them */
 	for (i = 0; i < env.count; i++) {
 		if (!fsm_endid_set(fsm, dst_state, env.ids[i])) {
-			env.ok = 0;
+			env.ok = false;
 			goto cleanup;
 		}
 	}

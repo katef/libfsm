@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 
@@ -82,10 +83,12 @@ struct reverse_mapping {
 };
 
 struct det_copy_capture_actions_env {
+#ifndef NDEBUG
 	char tag;
+#endif
 	struct fsm *dst;
 	struct reverse_mapping *reverse_mappings;
-	int ok;
+	bool ok;
 };
 
 #define MAPPINGSTACK_DEF_CEIL 16

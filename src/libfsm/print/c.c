@@ -375,7 +375,7 @@ print_endstates(FILE *f,
 		fprintf(f, "\tcase S%u: ", i);
 
 		if (-1 == print_hook_accept(f, opt, hooks,
-			ir->states[i].endids.ids, ir->states[i].endids.count,
+			ir->states[i].ids, ir->states[i].count,
 			default_accept,
 			NULL))
 		{
@@ -383,7 +383,7 @@ print_endstates(FILE *f,
 		}
 
 		if (-1 == print_hook_comment(f, opt, hooks,
-			ir->states[i].endids.ids, ir->states[i].endids.count))
+			ir->states[i].ids, ir->states[i].count))
 		{
 			return -1;
 		}
