@@ -391,6 +391,8 @@ fsm_print_go(FILE *f,
 		fprintf(f, "package %sfsm\n", package_prefix);
 		fprintf(f, "\n");
 
+		fprintf(f, "// generated\n");
+
 		if (opt->ambig == AMBIG_MULTIPLE) {
 			for (size_t i = 0; i < retlist->count; i++) {
 				fprintf(f, "var ret%zu []uint = ", i);

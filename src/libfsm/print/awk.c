@@ -333,6 +333,7 @@ fsm_print_awk(FILE *f,
 	} else {
 		fprintf(f, "\n");
 
+		fprintf(f, "# generated\n");
 		fprintf(f, "function %smain(", prefix);
 
 		switch (opt->io) {

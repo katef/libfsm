@@ -68,7 +68,6 @@ int
 re_strings_add_raw(struct re_strings *g, const void *p, size_t n, const fsm_end_id_t *endid)
 {
 	assert(p != NULL);
-	assert(n > 0);
 
 	return trie_add_word((struct trie_graph *) g, p, n, endid) != NULL;
 }

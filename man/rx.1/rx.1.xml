@@ -1,0 +1,482 @@
+<?xml version="1.0"?>
+
+<!--
+	Copyright 2024 Katherine Flavel
+
+	See LICENCE for the full copyright terms.
+-->
+
+<!DOCTYPE refentry SYSTEM "minidocbook.dtd" [
+
+	<!-- TODO: centralise to mdb -->
+	<!ENTITY stdin.lit  "<literal>stdin</literal>">
+	<!ENTITY stdout.lit "<literal>stdout</literal>">
+	<!ENTITY stderr.lit "<literal>stderr</literal>">
+
+	<!-- TODO: centralise to mdb -->
+	<!ENTITY charset.arg "<replaceable>charset</replaceable>">
+	<!ENTITY file.arg	"<replaceable>file</replaceable>">
+	<!ENTITY flags.arg   "<replaceable>flags</replaceable>">
+	<!ENTITY dialect.arg "<replaceable>dialect</replaceable>">
+	<!ENTITY io.arg	  "<replaceable>io</replaceable>">
+	<!ENTITY prefix.arg  "<replaceable>prefix</replaceable>">
+	<!ENTITY limit.arg   "<replaceable>limit</replaceable>">
+
+	<!ENTITY a.opt "<option>-a</option>">
+	<!ENTITY b.opt "<option>-b</option>">
+	<!ENTITY C.opt "<option>-C</option>&nbsp;&charset.arg;">
+	<!ENTITY c.opt "<option>-c</option>">
+	<!ENTITY d.opt "<option>-d</option>&nbsp;&file.arg;">
+	<!ENTITY E.opt "<option>-E</option>&nbsp;&prefix.arg;">
+	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
+	<!ENTITY F.opt "<option>-F</option>&nbsp;&flags.arg;">
+	<!ENTITY i.opt "<option>-i</option>">
+	<!ENTITY k.opt "<option>-k</option>&nbsp;&io.arg;">
+	<!ENTITY Q.opt "<option>-Q</option>">
+	<!ENTITY q.opt "<option>-q</option>">
+	<!ENTITY R.opt "<option>-R</option>&nbsp;&charset.arg;">
+	<!ENTITY r.opt "<option>-r</option>&nbsp;&dialect.arg;">
+	<!ENTITY s.opt "<option>-s</option>">
+	<!ENTITY t.opt "<option>-t</option>">
+	<!ENTITY u.opt "<option>-u</option>">
+	<!ENTITY l.opt "<option>-l</option>&nbsp;&lang.arg;">
+	<!ENTITY n.opt "<option>-n</option>&nbsp;&limit.arg;">
+	<!ENTITY v.opt "<option>-v</option>">
+	<!ENTITY w.opt "<option>-w</option>">
+	<!ENTITY X.opt "<option>-X</option>">
+
+	<!ENTITY h.opt "<option>-h</option>">
+]>
+
+<refentry>
+	<refentryinfo>
+		<productname>rx</productname>
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>rx</refentrytitle>
+		<manvolnum>1</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>rx</refname>
+		<refpurpose>Compile sets of Regular Expressions</refpurpose>
+	</refnamediv>
+
+	<refsynopsisdiv>
+		<cmdsynopsis>
+			<command>rx</command>
+
+			<group>
+				<arg choice="plain">&a.opt;</arg>
+				<arg choice="plain">&c.opt;</arg>
+				<arg choice="plain">&i.opt;</arg>
+				<arg choice="plain">&Q.opt;</arg>
+				<arg choice="plain">&q.opt;</arg>
+				<arg choice="plain">&s.opt;</arg>
+				<arg choice="plain">&t.opt;</arg>
+				<arg choice="plain">&u.opt;</arg>
+				<arg choice="plain">&v.opt;</arg>
+				<arg choice="plain">&w.opt;</arg>
+				<arg choice="plain">&X.opt;</arg>
+				<arg choice="plain">&x.opt;</arg>
+			</group>
+
+			<arg choice="opt">&C.opt;</arg>
+			<arg choice="opt">&k.opt;</arg>
+			<arg choice="opt">&l.opt;</arg>
+			<arg choice="opt">&r.opt;</arg>
+			<arg choice="opt">&R.opt;</arg>
+			<arg choice="opt">&d.opt;</arg>
+			<arg choice="opt">&E.opt;</arg>
+			<arg choice="opt">&e.opt;</arg>
+
+			<arg choice="plain" rep="repeat">&file.arg;</arg>
+		</cmdsynopsis>
+	</refsynopsisdiv>
+
+	<refsection>
+		<title>Description</title>
+
+		<para>&rx.1; is a command line tool to compile sets of
+			<firstterm>regular expressions</firstterm> to executable code.
+			Patterns are read from one or more files, with multiple patterns per file.
+			Patterns that &rx.1; declines to handle are written out
+			to a file given by <option>-d</option>, if present.
+			Generated code is printed out to &stdout.lit;.</para>
+
+		<para>Input files have one pattern per line.
+			Each pattern has an associated id.
+			ids are assigned depending on the number of input files.
+			For a single file, ids are assigned per pattern
+			(that is, the id is the line number within the file).
+			For multiple files, ids are assigned per file
+			(that is, the same id is shared by all patterns within a file).</para>
+
+		<para>Pattern ids are made available to the generated code
+			when successfully matching a set of one or more patterns.
+			You can see these with <option>-l&nbsp;<literal>dot</literal></option> output.
+			It is possible for a given text string to match patterns
+			associated with different ids.
+			There are several ways to deal with this,
+			which of these is appropriate depends on the application:</para>
+
+		<orderedlist>
+			<listitem>
+				<para>Error about it at compile time.
+					This is the default for &rx.1;
+					To use this mode, ensure your patterns don't overlap.
+					In particular you can use <code>rx -q</code> as a lint to find conflicts.</para>
+			</listitem>
+
+			<listitem>
+				<para>Give conflicting patterns the same id in the first place.
+					This would be the case for a lexer,
+					where you might have multiple spellings that
+					produce the same token.</para>
+			</listitem>
+
+			<listitem>
+				<para>Allow ambiguous patterns,
+					and the generated &api; returns a set of ids.
+					See &u.opt;.</para>
+			</listitem>
+
+			<listitem>
+				<para>Earliest line number (lower id) wins.
+					This would suit a firewall-like application where it doesn't matter which 
+					See &t.opt;.</para>
+			</listitem>
+
+			<listitem>
+				<para>Longest match or most specific regex wins.
+					This doesn't work for &dfa; and so is not provided by &rx.1;.</para>
+			</listitem>
+		</orderedlist>
+
+		<!--- not sure it's necessary to discuss categories -->
+		<para>&rx.1; places patterns into one of several categories:
+			literal strings, general regexps, parse errors,
+			unsupported syntax, unsatisfiable expressions,
+			expressions rejected due to <option>-C</option>
+			or <option>-R</option> character set violations.
+			These categories are internal, and do not appear in the
+			generated code. However they may be seen with the &v.opt; output,
+			and apply for the &n.opt; limit on the number of general regexps.</para>
+	</refsection>
+
+	<refsection>
+		<title>Options</title>
+
+		<variablelist>
+			<varlistentry>
+				<term>&a.opt;</term>
+
+				<listitem>
+					<para>Number states,
+						per the <code>anonymous_states</code> option for &fsm_print.3;.
+						The default is to anonymise states,
+						which is the opposite to the equivalent &a.opt; option for &fsm.1;.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&C.opt;</term>
+
+				<listitem>
+					<para>Intersect the constructed &fsm; down to a given
+						character set.
+						This effectively cuts regex constructions like
+						<code>.*</code> down to <code>[[:charset:]]*</code>.
+						The default is to allow all character values.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&c.opt;</term>
+
+				<listitem>
+					<para>Use RFC 9110 HTTP <code>-field-name</code> tokens
+						as the intersection character set
+						(as if by <option>-C</option>).
+						A valid HTTP header also has at least one character,
+						but &rx.1; does not enforce this.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&d.opt;</term>
+
+				<listitem>
+					<para>Output declined patterns to a file, one per line.
+						Patterns are declined by &rx.1; either because they're unsupported,
+						or (in the absence of <option>-i</option>) because of an error
+						compiling the pattern.</para>
+				</listitem>
+			</varlistentry>
+
+
+			<varlistentry>
+				<term>&E.opt;</term>
+
+				<listitem>
+					<para>Set a package prefix for output,
+						per the <code>package_prefix</code> option for &fsm_print.3;.
+						The default is to output with the value of <code>prefix.</code></para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&e.opt;</term>
+
+				<listitem>
+					<para>Set a prefix for output,
+						per the <code>prefix</code> option for &fsm_print.3;.
+						The default is to output with no prefix.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&i.opt;</term>
+
+				<listitem>
+					<para>Strict mode.
+						This causes &rx.1; to error on parse errors and for unsatisfiable
+						expressions (such as <code>$x</code>).</para>
+
+					<para>Strict mode does not error on regexps that are parsed correctly
+						but unsupported, these go to the declined list (see &d.opt;).</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&k.opt;</term>
+
+				<listitem>
+					<para>Set the IO &api; for output,
+						per the <code>io</code> option for &fsm_print.3;.
+						The default is <literal>getc</literal>.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&l.opt;</term>
+
+				<listitem>
+					<para>Set the output language for generated code.
+						See &fsm_lang.5fsm; for the supported language identifiers.
+						The default is <literal>vmc</literal>.</para>
+
+					<para>Compiled code is printed is to &stdout.lit;,
+						&q.opt; disables output.</para>
+
+					<para>&rx.1; does not provide a way to disable
+						<code>consolidate_edges</code>,
+						or to disable <code>disable_comments</code>.
+						See &fsm_print.3; for information on these.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&F.opt;</term>
+
+				<listitem>
+					<para>Set <literal>RE_*</literal> flags per &re.3;.
+						Note not all <code>enum re_flags</code> constants are meaningful
+						to expose to the &cli;.
+						Flags apply to all patterns.
+						The default is no flags set.
+						The available flags are:</para>
+
+					<table>
+						<col align="left"/>
+						<col align="left"/>
+						<col align="left"/>
+
+						<thead>
+							<tr>
+								<th>Flag</th>
+								<th>Value</th>
+								<th>Meaning</th>
+							</tr>
+						</thead>
+
+						<tbody>
+							<tr>
+								<td><literal>b</literal> (&b.opt;)</td>
+								<td><code>RE_ANCHORED</code></td>
+								<td>Anchor patterns at both start and end,
+									as if by <code>^</code> and <code>$</code>
+									(<code>\Z</code> for PCRE).</td>
+							</tr>
+							<tr>
+								<td><literal>i</literal> (&i.opt;)</td>
+								<td><code>RE_ICASE</code></td>
+								<td>Patterns are case insensitive.</td>
+							</tr>
+							<tr>
+								<td><literal>s</literal></td>
+								<td><code>RE_SINGLE</code></td>
+								<td>Single-line mode.
+									Equivalent to <code>PCRE_DOTALL</code>.</td>
+							</tr>
+							<tr>
+								<td><literal>x</literal></td>
+								<td><code>RE_EXTENDED</code></td>
+								<td>
+									Extended mode.
+									Equivalent to <code>PCRE_EXTENDED</code>.</td>
+							</tr>
+						</tbody>
+					</table>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&n.opt;</term>
+
+				<listitem>
+					<para>&rx.1; categorizes patterns internally when constructing
+						intermediate state machines.
+						<option>-n</option> allows a limit on the <firstterm>general</firstterm> category of patterns.
+						The default is no limit.
+						Categorization is visible per-pattern by &v.opt;.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&R.opt;</term>
+
+				<listitem>
+					<para>Reject character set.
+						When a pattern contains a character in
+						The default is to accept all characters.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&r.opt;</term>
+
+				<listitem>
+					<para>Set the default &re_dialect.5re; for patterns.
+						This applies to all files unless overridden by &s.opt;.
+						The default is <literal>pcre</literal>.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&s.opt;</term>
+
+				<listitem>
+					<para>Override default dialect per-file by file extension.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&Q.opt;</term>
+
+				<listitem>
+					<para>Print resource consumption stats to &stderr.lit;.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&q.opt;</term>
+
+				<listitem>
+					<para>Quiet (do not print generated code).
+						The default is to print generated code to &stdout.lit;.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&t.opt;</term>
+
+				<listitem>
+					<para>Resolve ambiguities by picking the earliest (lowest) id
+						for a set of conflicts.
+						The default is to error for conflicts.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&u.opt;</term>
+
+				<listitem>
+					<para>Allow ambiguities.
+						This means patterns with different ids may match the same text.
+						The default is to error for conflicts.</para>
+
+					<para>It's possible to have multiple patterns with the same id
+						(i.e. by being in the same file when using multi-file mode),
+						and these are not considered a conflict because they key
+						to the same id.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&u.opt;</term>
+
+				<listitem>
+					<para>Allow ambiguities between regexps,
+						such that multiple regexps may match the same text.
+						The default is to error for ambiguities,
+						requiring all regexps unioned to be non-overlapping.
+						Formally, the requirement is that they are disjoint languages.
+						Erroring for ambiguities applies after multiple regexps are joined,
+						either by union or by concatenation (&s.opt;).</para>
+
+					<para>&u.opt; is implied by &n.opt;.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&v.opt;</term>
+
+				<listitem>
+					<para>Verbose mode.
+						This prints information about every pattern and associated &fsm;
+						to &stderr.lit; during compilation.
+						In particular this shows the internal categorization
+						per pattern, which is relevant for the <option>-n</option> limit.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&w.opt;</term>
+
+				<listitem>
+					<para>Output a fragment,
+						per the <code>fragment</code> option for &fsm_print.3;.
+						The default is to output a complete file.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&X.opt;</term>
+
+				<listitem>
+					<para>Always encode byte values in hexadecimal,
+						per the <code>always_hex</code> option for &fsm_print.3;.
+						The default is to only use hex for non-printable characters.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&h.opt;</term>
+
+				<listitem>
+					<para>Print command-line usage help.</para>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+	</refsection>
+
+	<refsection>
+		<title>See Also</title>
+
+		<para>&re.1;, &fsm.3;,
+			&native.5re;, &literal.5re;, &lx.5;.</para>
+	</refsection>
+</refentry>
+

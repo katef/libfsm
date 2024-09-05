@@ -16,7 +16,8 @@ You get:
  * libfsm — library for manipulating FSM (NFA and DFA)
  * libre  — library for compiling regular expressions to NFA
  * fsm(1) — command line interface for FSM
- * re(1)  — command line interface for executing regular expressions
+ * re(1)  — command line interface for regular expressions
+ * rx(1)  — command line interface for compiling sets of regular expressions
  * lx(1)  — lexer generator
 
 lx is an attempt to produce a simple, expressive, and unobtrusive

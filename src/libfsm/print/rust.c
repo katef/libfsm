@@ -484,6 +484,8 @@ fsm_print_rust(FILE *f,
 		cp = "c"; /* XXX */
 	}
 
+	fprintf(f, "// generated\n");
+
 	if (opt->fragment) {
 		fsm_print_rustfrag(f, opt, hooks, retlist, ops, cp);
 		goto error;

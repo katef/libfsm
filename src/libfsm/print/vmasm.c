@@ -140,12 +140,14 @@ print_asm_amd64(FILE *f,
 	/* print preamble */
 	switch (dialect) {
 	case AMD64_ATT:
+		fprintf(f, "%s generated\n", comment);
 		fprintf(f, ".globl %s%s%s\n", sigil, prefix, "match");
 		fprintf(f, ".text\n");
 		fprintf(f, "%s%s%s:\n", sigil, prefix, "match");
 		break;
 
 	case AMD64_NASM:
+		fprintf(f, "%s generated\n", comment);
 		fprintf(f, "section .text\n");
 		fprintf(f, "global %s%s%s\n", sigil, prefix, "match");
 		fprintf(f, "%s%s%s:\n", sigil, prefix, "match");
@@ -156,6 +158,7 @@ print_asm_amd64(FILE *f,
 		fprintf(f, "#include \"textflag.h\"\n");
 		fprintf(f, "\n");
 
+		fprintf(f, "%s generated\n", comment);
 		switch (opt->io) {
 		case FSM_IO_STR:
 			if (opt->comments) {

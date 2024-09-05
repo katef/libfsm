@@ -71,6 +71,7 @@ PKG += libtheft
 .if !defined(NODOC)
 SUBDIR += man/fsm.1
 SUBDIR += man/re.1
+SUBDIR += man/rx.1
 SUBDIR += man/lx.1
 SUBDIR += man/fsm_print.3
 SUBDIR += man/libfsm.3
@@ -101,6 +102,7 @@ SUBDIR += src/libre/print
 SUBDIR += src/libre
 SUBDIR += src/fsm
 SUBDIR += src/re
+SUBDIR += src/rx
 SUBDIR += src/retest
 SUBDIR += src/lx/print
 SUBDIR += src/lx

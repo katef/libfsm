@@ -338,6 +338,7 @@ fsm_print_ir(FILE *f,
 	assert(hooks != NULL);
 	assert(ir != NULL);
 
+	fprintf(f, "# generated\n");
 	fprintf(f, "digraph G {\n");
 
 	fprintf(f, "\tnode [ shape = box, style = rounded ];\n");

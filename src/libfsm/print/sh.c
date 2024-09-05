@@ -287,6 +287,7 @@ fsm_print_sh(FILE *f,
 	fprintf(f, "IFS=\n");
 	fprintf(f, "\n");
 
+	fprintf(f, "# generated\n");
 	fprintf(f, "while true; do\n");
 	fprintf(f, "\tcase $l in\n");
 	fprintf(f, "\tstart)\n");
