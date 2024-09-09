@@ -462,6 +462,10 @@ integrity_check(const char *descr, const struct fsm *fsm)
 	return;
 #endif
 
+#if !EXPENSIVE_CHECKS
+	return;
+#endif
+
 	if (LOG_TRIM > 1) {
 		fprintf(stderr, "integrity check: %s...\n", descr);
 	}
