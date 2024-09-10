@@ -185,8 +185,6 @@ fsm_determinise_with_config(struct fsm *nfa,
 		}
 
 		ac_env.output_count = 0;
-
-		/* All elements in sclosures[] are interned, so they will be freed later. */
 	} while ((curr = stack_pop(stack)));
 
 	{
