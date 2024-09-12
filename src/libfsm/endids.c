@@ -689,6 +689,7 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 {
 	size_t i;
 	const struct endid_info *ei = NULL;
+	size_t result_count = 0;
 
 	uint64_t hash = hash_id(end_state);
 	uint64_t mask;
@@ -735,9 +736,10 @@ fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
 #endif
 				ids[id_i] = b->ids->ids[id_i];
 			}
+			result_count = b->ids->count;
 
 			/* sorting for caller convenience */
-			qsort(ids, count, sizeof *ids, cmp_endids);
+			qsort(ids, result_count, sizeof *ids, cmp_endids);
 
 			return 1;
 		} else {	/* collision */
