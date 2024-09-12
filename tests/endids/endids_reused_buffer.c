@@ -52,5 +52,6 @@ int main(void)
 	ret = fsm_endid_get(fsm, end, ENDID_BUF_CEIL, endids);
 	assert(endids[0] == 12345);
 
+	fsm_free(fsm);
 	return EXIT_SUCCESS;
 }
