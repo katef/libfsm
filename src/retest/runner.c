@@ -296,7 +296,7 @@ compile(enum implementation impl,
 
 			fd_c = xmkstemps(tmp_c);
 
-			if (0 != systemf("%s --enable-multi-memory %s -o /dev/stdout | %s %s - > %s",
+			if (0 != systemf("%s --enable-multi-memory %s -o /dev/stdout | %s %s - >> %s",
 				wat2wasm ? wat2wasm : "wat2wasm",
 				tmp_src,
 				wasm2c ? wasm2c : "wasm2c",
@@ -316,7 +316,7 @@ compile(enum implementation impl,
 					return 0;
 				}
 
-				/* trampoline for wabt 1.0.27 */
+				/* trampoline for wabt >= 1.0.27 */
 
 				fprintf(f, "#include <assert.h>\n");
 				fprintf(f, "#include <stdlib.h>\n");
@@ -324,36 +324,64 @@ compile(enum implementation impl,
 				fprintf(f, "\n");
 
 				fprintf(f, "int retest_trampoline(const char *s) {\n");
+				fprintf(f, "#if HAVE_WASM_INSTANTIATE\n");
+				fprintf(f, "  struct w2c_ ctx;\n");
+				fprintf(f, "#endif\n");
 				fprintf(f, "  size_t n;\n");
 				fprintf(f, "\n");
 
 				fprintf(f, "  assert(s != NULL);\n");
 				fprintf(f, "\n");
 
+				fprintf(f, "#if HAVE_WASM_RT_INIT\n");
+				fprintf(f, "  wasm_rt_init();\n");
+				fprintf(f, "#endif\n");
+				fprintf(f, "\n");
+
+				fprintf(f, "#if HAVE_WASM_INSTANTIATE\n");
+				fprintf(f, "  wasm2c__instantiate(&ctx);\n");
+				fprintf(f, "#else\n");
 				fprintf(f, "  fsm_init();\n");
+				fprintf(f, "#endif\n");
 				fprintf(f, "\n");
 
 				/* TODO: we could grow the memory region to size.
 				 * but a page is 64kB, probably enough for our test strings */
 				fprintf(f, "  n = strlen(s);\n");
+				fprintf(f, "#if HAVE_WASM_INSTANTIATE\n");
+				fprintf(f, "  if (n + 1 > ctx.w2c_M0.size) {\n");
+				fprintf(f, "#else\n");
 				fprintf(f, "  if (n + 1 > w2c_M0.size) {\n");
+				fprintf(f, "#endif\n");
 			   	fprintf(f, "    fprintf(stderr, \"overflow\");\n");
 				fprintf(f, "    abort();\n");
 		   		fprintf(f, "  }\n");
 				fprintf(f, "\n");
 
 /* XXX: placeholder */
+				fprintf(f, "#if HAVE_WASM_INSTANTIATE\n");
+				fprintf(f, "  memcpy(ctx.w2c_M0.data, s, n);\n");
+				fprintf(f, "#else\n");
 				fprintf(f, "  memcpy(w2c_M0.data, s, n);\n");
+				fprintf(f, "#endif\n");
 
 				/* TODO: would deal with different IO APIs here */
 				fprintf(f, "  u32 p = 0;\n");
+				fprintf(f, "#if HAVE_WASM_INSTANTIATE\n");
+				fprintf(f, "  int r = w2c__fsm_match(&ctx, p);\n");
+				fprintf(f, "#else\n");
 				fprintf(f, "  int r = w2c_fsm_match(p);\n");
+				fprintf(f, "#endif\n");
 				fprintf(f, "\n");
 
 				/* TODO: would handle endids here */
 
 				/* XXX: wasm2c's generated code leaks. we free() here as a workaround */
+				fprintf(f, "#if HAVE_WASM_FREE\n");
+				fprintf(f, "  wasm2c__free(&ctx);\n");
+				fprintf(f, "#else\n");
 				fprintf(f, "  free(w2c_M0.data);\n");
+				fprintf(f, "#endif\n");
 				fprintf(f, "\n");
 
 				fprintf(f, "  return r;\n");
@@ -388,14 +416,29 @@ compile(enum implementation impl,
 			 * (however -fsignaling-nans is actually not supported for clang)
 			 */
 
-			if (0 != systemf("%s %s -fPIC -shared %s %s %s %s %s %s %s %s -o %s",
+			if (0 != systemf("%s %s -fPIC -shared %s %s %s "
+					"-D WASM_RT_MODULE_PREFIX=%s "
+					"-D WASM_RT_SANITY_CHECKS "
+
+					/* compatibility for wasm2c api changes */
+					"-D HAVE_WASM_INSTANTIATE=$(! echo '(module)' | wat2wasm -o /dev/stdout - | wasm2c - | grep -q 'wasm2c__instantiate('; echo $?) "
+					"-D HAVE_WASM_FREE=$(! echo '(module)' | wat2wasm -o /dev/stdout - | wasm2c - | grep -q 'wasm2c__free('; echo $?) "
+					"-D HAVE_WASM_RT_USE_MMAP=$(! grep -q WASM_RT_USE_MMAP %s; echo $?) " /* so we can free() */
+					"-D HAVE_WASM_RT_INIT=$(! grep -q 'wasm_rt_init(' %s; echo $?) "
+
+					"%s %s %s %s -o %s -lm",
+
 					cc ? cc : "gcc",
 					cflags ? cflags : "",
 					"-g",
 					"-Wno-unused-parameter -Wno-unused-variable", /* for wasm-rt-impl.c */
 					"-Wno-unused-function", /* for wasm2c generated code */
-					"-D WASM_RT_MODULE_PREFIX=fsm_ -D WASM_RT_SANITY_CHECKS "
-					"-D WASM_RT_MEMCHECK_SIGNAL_HANDLER=0", /* so we can free() */
+
+					"fsm_", /* TODO: module prefix */
+
+					wasmrt_impl ? wasmrt_impl : "/usr/src/wasm2c/wasm-rt-impl.c",
+					wasmrt_impl ? wasmrt_impl : "/usr/src/wasm2c/wasm-rt-impl.c",
+
 					(cc && (strcmp(cc, "clang") == 0 || strcmp(cc, "gcc") == 0))
 						? "-fno-optimize-sibling-calls -frounding-math"
 						: "",
