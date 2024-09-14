@@ -43,6 +43,7 @@ transition(FILE *f, unsigned index, unsigned to,
 	if (to == ERROR_STATE) {
 		fprintf(f, "      i32.const 0\n");
 		fprintf(f, "      return\n");
+		fprintf(f, "      end_function\n");
 		return;
 	}
 
@@ -65,7 +66,7 @@ print_endpoint(FILE *f, const struct fsm_options *opt, unsigned char c)
 	fprintf(f, "    i32.const %u", (unsigned char) c);
 
 	if (opt->comments) {
-		fprintf(f, " ;; \'");
+		fprintf(f, " // \'");
 		json_escputc(f, opt, c);
 		fprintf(f, "\'");
 	}
@@ -137,7 +138,7 @@ print_ranges(FILE *f, const struct fsm_options *opt,
 	for (k = 0; k < n; k++) {
 		print_range(f, opt, &ranges[k]);
 		fprintf(f, "    if (result i32)\n");
-		fprintf(f, "      i32.const 1 ;; match \n");
+		fprintf(f, "      i32.const 1 // match \n");
 // XXX: we don't want to return here, just leave a bool on the stack for (result i32)
 // fprintf(f, "      return\n");
 
@@ -148,12 +149,12 @@ print_ranges(FILE *f, const struct fsm_options *opt,
 
 	if (!complete) {
 		fprintf(f, "    else\n");
-		fprintf(f, "      i32.const 0 ;; no match \n");
+		fprintf(f, "      i32.const 0 // no match \n");
 		fprintf(f, "      return\n");
 	}
 
 	for (k = 0; k < n; k++) {
-		fprintf(f, "    end\n");
+		fprintf(f, "    end_if\n");
 	}
 }
 
@@ -198,7 +199,7 @@ print_groups(FILE *f, const struct fsm_options *opt,
 	}
 
 	for (j = 0; j < n; j++) {
-		fprintf(f, "    end\n");
+		fprintf(f, "    end_if\n");
 	}
 }
 
@@ -225,10 +226,10 @@ print_state(FILE *f,
 		}
 	}
 
-	fprintf(f, "    end\n");
+	fprintf(f, "    end_block\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "    ;; S%u", index);
+	fprintf(f, "    // S%u", index);
 	if (cs->example != NULL) {
 		fprintf(f, " \"");
 		escputs(f, opt, json_escputc, cs->example);
@@ -238,33 +239,33 @@ print_state(FILE *f,
 
 	switch (cs->strategy) {
 	case IR_NONE:
-		fprintf(f, "    ;; IR_NONE\n");
+		fprintf(f, "    // IR_NONE\n");
 		transition(f, index, ERROR_STATE, "    ");
 		return 0;
 
 	case IR_SAME:
-		fprintf(f, "    ;; IR_SAME\n");
+		fprintf(f, "    // IR_SAME\n");
 		transition(f, index, cs->u.same.to, "    ");
 		break;
 
 	case IR_COMPLETE:
-		fprintf(f, "    ;; IR_COMPLETE\n");
+		fprintf(f, "    // IR_COMPLETE\n");
 		print_groups(f, opt, cs->u.complete.groups, cs->u.complete.n, index, true, ERROR_STATE);
 		break;
 
 	case IR_PARTIAL:
-		fprintf(f, "    ;; IR_PARTIAL\n");
+		fprintf(f, "    // IR_PARTIAL\n");
 		print_groups(f, opt, cs->u.partial.groups, cs->u.partial.n, index, false, ERROR_STATE);
 		fprintf(f, "\n");
 		break;
 
 	case IR_DOMINANT:
-		fprintf(f, "    ;; IR_DOMINANT\n");
+		fprintf(f, "    // IR_DOMINANT\n");
 		print_groups(f, opt, cs->u.dominant.groups, cs->u.dominant.n, index, false, cs->u.dominant.mode);
 		break;
 
 	case IR_ERROR:
-		fprintf(f, "    ;; IR_ERROR\n");
+		fprintf(f, "    // IR_ERROR\n");
 		print_ranges(f, opt, cs->u.error.error.ranges, cs->u.error.error.n, false);
 		fprintf(f, "    if\n");
 		transition(f, index, ERROR_STATE, "      ");
@@ -274,11 +275,11 @@ print_state(FILE *f,
 			print_groups(f, opt, cs->u.error.groups, cs->u.error.n, index, true, cs->u.error.mode);
 		}
 
-		fprintf(f, "    end\n");
+		fprintf(f, "    end_if\n");
 		break;
 
 	case IR_TABLE:
-		fprintf(f, "    ;; IR_TABLE\n");
+		fprintf(f, "    // IR_TABLE\n");
 		fprintf(f, "    local.get %u\n", LOCAL_CHAR); // get current input byte
 		fprintf(f, "    drop\n"); // TODO: do something with it ...
 		// TODO: would emit br_table here
@@ -289,7 +290,7 @@ print_state(FILE *f,
 		;
 	}
 
-	fprintf(f, "    br %u ;; continue the loop, %u block%s up\n", delta - 1, delta - 1, &"s"[delta - 1 == 1]);
+	fprintf(f, "    br %u // continue the loop, %u block%s up\n", delta - 1, delta - 1, &"s"[delta - 1 == 1]);
 
 	return 0;
 }
@@ -317,64 +318,68 @@ fsm_print_wasm(FILE *f,
 	}
 
 	if (!opt->fragment) {
-		fprintf(f, "(module\n");
-		fprintf(f, "  (export \"%smatch\" (func 0))", prefix);
-		fprintf(f, "  (memory 1 1)\n"); // input
+                fprintf(f, ".global  %smatch\n", prefix);
+                fprintf(f, ".hidden  %smatch\n", prefix);
+                fprintf(f, ".type    %smatch,@function\n", prefix);
+                fprintf(f, "%smatch:\n", prefix);
+                fprintf(f, ".functype %smatch (i32) -> (i32)\n", prefix);
+                fprintf(f, ".local i32, i32\n");
+		fprintf(f, "// (memory 1 1) // TODO(dgryski): I guess we don't need this line?\n"); // input
 	}
 
 // TODO: export to component model, use opt.package_prefix
 // TODO: various IO APIs
 // TODO: endids
 
-	fprintf(f, "  (func (param i32) (result i32) (local i32 i32)\n");
-//	fprintf(f, "    ;; s is in LOCAL_STR (the parameter) and we'll keep p there too\n");
-//	fprintf(f, "    ;; we'll cache *p in LOCAL_CHAR\n");
+//	fprintf(f, "  (func (param i32) (result i32) (local i32 i32)\n");
+//	fprintf(f, "    // s is in LOCAL_STR (the parameter) and we'll keep p there too\n");
+//	fprintf(f, "    // we'll cache *p in LOCAL_CHAR\n");
 //	fprintf(f, "\n");
 
 	// the current state will be in LOCAL_STATE
 	// locals are implicitly initialized to 0
 	if (ir->start != 0) {
-		fprintf(f, "    ;; start S%u\n", ir->start);
+		fprintf(f, "    // start S%u\n", ir->start);
 		fprintf(f, "    i32.const %u\n", ir->start);
 		fprintf(f, "    local.set %u\n", LOCAL_STATE);
 		fprintf(f, "\n");
 	}
 
-//	fprintf(f, "    ;; for (p = s; *p != '\0'; p++)\n");
+//	fprintf(f, "    // for (p = s; *p != '\0'; p++)\n");
 	fprintf(f, "    block\n"); // introduce a branch target for getting out of the loop
 	fprintf(f, "    loop\n"); // begin the outer loop
 	fprintf(f, "\n");
 
-	fprintf(f, "    ;; fetch *p\n");
+	fprintf(f, "    // fetch *p\n");
 	fprintf(f, "    local.get %u\n", LOCAL_STR); // get address of next byte
 	fprintf(f, "    i32.load8_u 0\n"); // load byte at that address
 	fprintf(f, "    local.tee %u\n", LOCAL_CHAR); // save the current input byte and keep it on the stack
 	fprintf(f, "\n");
 
-	fprintf(f, "    ;; *p != '\\0'\n");
+	fprintf(f, "    // *p != '\\0'\n");
 	fprintf(f, "    i32.eqz\n"); // test if the byte is zero
 	fprintf(f, "    br_if 1\n"); // exit the outer block if so
 	fprintf(f, "\n");
 
-	fprintf(f, "    ;; p++\n");
+	fprintf(f, "    // p++\n");
 	fprintf(f, "    local.get %u\n", LOCAL_STR);
 	fprintf(f, "    i32.const 1\n");
 	fprintf(f, "    i32.add\n");
 	fprintf(f, "    local.set %u\n", LOCAL_STR);
 	fprintf(f, "\n");
 
-//	fprintf(f, "    ;; switch (state)\n");
-//	fprintf(f, "    ;; we need a block for each state: we'll start with a jump-table that\n");
-//	fprintf(f, "    ;; branches out of the block which ends before the code we want to run\n");
+//	fprintf(f, "    // switch (state)\n");
+//	fprintf(f, "    // we need a block for each state: we'll start with a jump-table that\n");
+//	fprintf(f, "    // branches out of the block which ends before the code we want to run\n");
 	for (i = 0; i < ir->n; i++) {
-		fprintf(f, "    block ;; S%zu\n", i);
+		fprintf(f, "    block // S%zu\n", i);
 	}
 	fprintf(f, "    local.get %u\n", LOCAL_STATE);
-	fprintf(f, "    br_table");
+	fprintf(f, "    br_table {");
 	for (i = 0; i < ir->n; i++) {
-		fprintf(f, " %zu", i);
+		fprintf(f, "%s %zu", i > 0 ? "," : "", i);
 	}
-	fprintf(f, "\n");
+	fprintf(f, "}\n");
 
 	for (i = 0; i < ir->n; i++) {
 		if (i == ERROR_STATE) {
@@ -387,8 +392,8 @@ fsm_print_wasm(FILE *f,
 		}
 	}
 
-	fprintf(f, "    end\n"); // end of loop
-	fprintf(f, "    end\n"); // end of outer block
+	fprintf(f, "    end_loop\n"); // end of loop
+	fprintf(f, "    end_block\n"); // end of outer block
 	fprintf(f, "\n");
 
 // TODO: use retlist
@@ -414,7 +419,7 @@ fsm_print_wasm(FILE *f,
 	 * For indexing end states I would like to:
 	 *
 	 *   (memory 1 1)
-	 *   (data 1 (i32.const 0) ;; better: use a bitmap
+	 *   (data 1 (i32.const 0) // better: use a bitmap
 	 *     "\00\01\00\00\01\00...\00")
 	 *
 	 * and:
@@ -432,22 +437,24 @@ fsm_print_wasm(FILE *f,
 		}
 
 		fprintf(f, "    local.get %u\n", LOCAL_STATE);
-		fprintf(f, "    i32.const %zu ;; S%zu\n", i, i);
+		fprintf(f, "    i32.const %zu // S%zu\n", i, i);
 		fprintf(f, "    i32.eq\n");
 		fprintf(f, "    if\n");
 		fprintf(f, "      i32.const %zu\n", i);
 		fprintf(f, "      return\n");
-		fprintf(f, "    end\n");
+		fprintf(f, "    end_if\n");
 		fprintf(f, "\n");
 	}
 
 	fprintf(f, "    i32.const 0\n");
 	fprintf(f, "    return\n");
-	fprintf(f, "  )\n");
+	fprintf(f, "    end_function\n");
 
+        /*
 	if (!opt->fragment) {
 		fprintf(f, ")\n");
 	}
+        */
 
 	return 0;
 }
