@@ -137,7 +137,7 @@ print_ranges(FILE *f, const struct fsm_options *opt,
 
 	for (k = 0; k < n; k++) {
 		print_range(f, opt, &ranges[k]);
-		fprintf(f, "    if (result i32)\n");
+		fprintf(f, "    if i32\n");
 		fprintf(f, "      i32.const 1 // match \n");
 // XXX: we don't want to return here, just leave a bool on the stack for (result i32)
 // fprintf(f, "      return\n");
