@@ -326,7 +326,8 @@ fsm_print(FILE *f, const struct fsm *fsm,
 	case FSM_PRINT_SH:         print_vm  = fsm_print_sh;         break;
 	case FSM_PRINT_VMC:        print_vm  = fsm_print_vmc;        break;
 	case FSM_PRINT_VMDOT:      print_vm  = fsm_print_vmdot;      break;
-	case FSM_PRINT_WASM:       print_ir  = fsm_print_wasm;       break;
+	case FSM_PRINT_WASM_S:     print_ir  = fsm_print_wasm_s;     break;
+	case FSM_PRINT_WAT:        print_ir  = fsm_print_wat;        break;
 
 	case FSM_PRINT_VMOPS_C:    print_vm  = fsm_print_vmops_c;    break;
 	case FSM_PRINT_VMOPS_H:    print_vm  = fsm_print_vmops_h;    break;

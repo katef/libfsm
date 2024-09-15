@@ -94,7 +94,7 @@ print(const struct fsm *fsm,
 		case IMPL_GOASM:  e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_AMD64_GO);  break;
 		case IMPL_VMASM:  e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_AMD64_ATT); break;
 		case IMPL_GO:     e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_GO);        break;
-		case IMPL_WASM2C: e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_WASM);      break;
+		case IMPL_WASM2C: e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_WAT);       break;
 
 		case IMPL_VMOPS:
 			e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_VMOPS_H)
