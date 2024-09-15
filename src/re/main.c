@@ -124,7 +124,8 @@ lang_name(const char *name, enum fsm_print_lang *fsm_lang, enum ast_print_lang *
 		{ "rust",       FSM_PRINT_RUST       },
 		{ "sh",         FSM_PRINT_SH         },
 		{ "vmc",        FSM_PRINT_VMC        },
-		{ "wasm",       FSM_PRINT_WASM       },
+		{ "wasm_s",     FSM_PRINT_WASM_S     },
+		{ "wat",        FSM_PRINT_WAT        },
 
 		{ "vmdot",      FSM_PRINT_VMDOT      },
 		{ "vmops_c",    FSM_PRINT_VMOPS_C    },

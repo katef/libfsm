@@ -36,6 +36,11 @@
 
 #define ERROR_STATE (uint32_t) -1
 
+enum wasm_dialect {
+	DIALECT_S,
+	DIALECT_WAT
+};
+
 static void
 transition(FILE *f, unsigned index, unsigned to,
 	const char *indent)
@@ -299,12 +304,13 @@ print_state(FILE *f,
 	return 0;
 }
 
-int
+static int
 fsm_print_wasm(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
 	const struct ret_list *retlist,
-	const struct ir *ir)
+	const struct ir *ir,
+	enum wasm_dialect dialect)
 {
 	const char *prefix;
 	size_t i;
@@ -314,6 +320,8 @@ fsm_print_wasm(FILE *f,
 	assert(hooks != NULL);
 	assert(ir != NULL);
 	assert(retlist != NULL);
+
+	(void) dialect;
 
 	if (opt->prefix != NULL) {
 		prefix = opt->prefix;
@@ -455,5 +463,25 @@ fsm_print_wasm(FILE *f,
 	}
 
 	return 0;
+}
+
+int
+fsm_print_wasm_s(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
+	const struct ir *ir)
+{
+	return fsm_print_wasm(f, opt, hooks, retlist, ir, DIALECT_S);
+}
+
+int
+fsm_print_wat(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct ret_list *retlist,
+	const struct ir *ir)
+{
+	return fsm_print_wasm(f, opt, hooks, retlist, ir, DIALECT_WAT);
 }
 
