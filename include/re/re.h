@@ -136,6 +136,22 @@ re_comp(enum re_dialect dialect,
 	const struct fsm_alloc *alloc,
 	enum re_flags flags, struct re_err *err);
 
+/* Parse and analyze the regex enough to determine whether it is
+ * anchored at the start and/or end.
+ *
+ * As long as the result is checked for RE_IS_ANCHORED_ERROR first,
+ * the result can be used like a bitset. */
+enum re_is_anchored_res {
+	RE_IS_ANCHORED_NONE = 0x00,
+	RE_IS_ANCHORED_START = 0x01,
+	RE_IS_ANCHORED_END = 0x02,
+	RE_IS_ANCHORED_BOTH = 0x03,
+	RE_IS_ANCHORED_ERROR = 0xFFFF,
+};
+enum re_is_anchored_res
+re_is_anchored(enum re_dialect dialect, re_getchar_fun *f, void *opaque,
+	enum re_flags flags, struct re_err *err);
+
 /*
  * Return a human-readable string describing a given error code. The string
  * returned has static storage, and must not be freed.
