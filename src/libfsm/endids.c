@@ -880,6 +880,8 @@ fsm_endid_iter_bulk(const struct fsm *fsm,
 		return 1;
 	}
 
+	const fsm_state_t state_count = fsm_countstates(fsm);
+
 	bucket_count = ei->bucket_count;
 
 	for (b_i = 0; b_i < bucket_count; b_i++) {
@@ -891,6 +893,7 @@ fsm_endid_iter_bulk(const struct fsm *fsm,
 
 		count = b->ids->count;
 
+		assert(b->state < state_count);
 		if (!cb(b->state, &b->ids->ids[0], count, opaque)) {
 			return 0;
 		}
@@ -1026,3 +1029,62 @@ fsm_increndids(struct fsm * fsm, int delta)
 	fsm_mapendids(fsm, incr_remap, &delta);
 }
 
+int
+fsm_endid_compact(struct fsm *fsm, fsm_state_t *mapping, size_t mapping_count)
+{
+	/* Don't reallocate unless something has actually changed. */
+	bool changes = false;
+	for (size_t i = 0; i < mapping_count; i++) {
+		if (mapping[i] != i) {
+			changes = true;
+			break;
+		}
+	}
+
+	/* nothing to do */
+	if (!changes) { return 1; }
+
+	struct endid_info *ei = fsm->endid_info;
+
+	struct endid_info_bucket *nbuckets = f_malloc(fsm->alloc,
+	    ei->bucket_count * sizeof(nbuckets[0]));
+	if (nbuckets == NULL) {
+		return 0;
+	}
+
+	const uint64_t mask = ei->bucket_count - 1;
+	assert((ei->bucket_count & mask) == 0);
+
+	/* initialize to empty */
+	for (size_t nb_i = 0; nb_i < ei->bucket_count; nb_i++) {
+		nbuckets[nb_i].state = BUCKET_NO_STATE;
+	}
+
+	for (size_t ob_i = 0; ob_i < ei->bucket_count; ob_i++) {
+		const struct endid_info_bucket *ob = &ei->buckets[ob_i];
+		if (ob->state == BUCKET_NO_STATE) { continue; }
+
+		assert(ob->state < mapping_count);
+		const fsm_state_t nstate = mapping[ob->state];
+		if (nstate == FSM_STATE_REMAP_NO_STATE) { continue; }
+
+		const uint64_t hash = hash_id(nstate);
+
+		bool placed = false;
+		for (size_t probes = 0; probes < ei->bucket_count; probes++) {
+			const size_t nb_i = (hash + probes) & mask;
+			struct endid_info_bucket *nb = &nbuckets[nb_i];
+			if (nb->state == BUCKET_NO_STATE) {
+				nb->state = nstate;
+				nb->ids = ob->ids;
+				placed = true;
+				break;
+			}
+		}
+		assert(placed);
+	}
+
+	f_free(fsm->alloc, ei->buckets);
+	ei->buckets = nbuckets;
+	return 1;
+}
