@@ -6,10 +6,10 @@
 #include <fsm/fsm.h>
 #include <fsm/options.h>
 #include <fsm/walk.h>
-#include <adt/bitmap.h>
 #include <fsm/print.h>
-
 #include <fsm/pred.h>
+
+#include <adt/u64bitset.h>
 
 bool
 run_test(const struct testcase *tc)
@@ -38,8 +38,7 @@ run_test(const struct testcase *tc)
 		return false;
 	}
 
-	struct bm bitmap;
-	bm_clear(&bitmap);
+	uint64_t charmap[4];
 
 	{
 		const size_t statecount = fsm_countstates(fsm);
@@ -53,7 +52,7 @@ run_test(const struct testcase *tc)
 	}
 
 
-	const enum fsm_detect_required_characters_res res = fsm_detect_required_characters(fsm, step_limit, &bitmap);
+	const enum fsm_detect_required_characters_res res = fsm_detect_required_characters(fsm, step_limit, charmap, NULL);
 	if (res == FSM_DETECT_REQUIRED_CHARACTERS_STEP_LIMIT_REACHED) {
 		fprintf(stderr, "-- step limit reached, halting\n");
 		goto cleanup;
@@ -62,14 +61,12 @@ run_test(const struct testcase *tc)
 
 	char buf[257] = {0};
 	size_t used = 0;
-	assert(!bm_get(&bitmap, 0)); /* does not contain 0x00 */
+	assert(!u64bitset_get(charmap, 0)); /* does not contain 0x00 */
 
-	int i = 0;
-	for (;;) {
-		const size_t next = bm_next(&bitmap, i, 1);
-		if (next > UCHAR_MAX) { break; }
-		buf[used++] = (char)next;
-		i = next;
+	for (size_t i = 0; i < 256; i++) {
+		if (u64bitset_get(charmap, i)) {
+			buf[used++] = (char)i;
+		}
 	}
 
 	if (0 != strcmp(required, buf)) {

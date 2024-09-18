@@ -141,8 +141,8 @@ fsm_generate_matches_cb fsm_generate_cb_printf_escaped;
  * check and return ERROR_MISUSE if it is not, otherwise this is an
  * unchecked error.
  *
- * The bitmap will be cleared before populating. Afterward,
- * bm_count(bitmap) will return how many required characters were
+ * The character map will be cleared before populating. If *count is
+ * non-NULL it will be updated with how many required characters were
  * found.
  *
  * There is an optional step_limit -- if this is reached, then it will
@@ -157,7 +157,7 @@ enum fsm_detect_required_characters_res {
 };
 enum fsm_detect_required_characters_res
 fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit,
-    struct bm *bitmap);
+    uint64_t charmap[4], size_t *count);
 
 #endif
 

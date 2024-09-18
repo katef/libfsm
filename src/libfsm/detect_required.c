@@ -95,10 +95,11 @@ static void check_symbols(const struct edge_group_iter_info *info, uint16_t *lab
  * edges with only one label that must be followed by all matches), so it can take
  * prohibitively long for large/complex DFAs. */
 enum fsm_detect_required_characters_res
-fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit, struct bm *bitmap)
+fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit,
+	uint64_t charmap[4], size_t *count)
 {
 	assert(dfa != NULL);
-	assert(bitmap != NULL);
+	assert(charmap != NULL);
 
 	#if EXPENSIVE_CHECKS
 	if (!fsm_all(dfa, fsm_isdfa)) {
@@ -128,7 +129,7 @@ fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit, struct 
 	}
 	#endif
 
-	bm_clear(bitmap);
+	for (size_t i = 0; i < 4; i++) { charmap[i] = 0; }
 
 	/* If the start state is also an end state, then
 	 * it matches the empty string, so we're done. */
@@ -193,8 +194,8 @@ fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit, struct 
 
 			if (nsf->label != LABEL_GROUP) {
 				size_t offset = (nsf->label & 0xff);
-				size_t count = ++env.counts[offset];
-				if (count == 1) {
+				const size_t label_count = ++env.counts[offset];
+				if (label_count == 1) {
 					bm_set(&env.current, offset);
 				}
 			}
@@ -233,8 +234,8 @@ fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit, struct 
 			 * it from the constraint set. */
 			if (sf->label != LABEL_GROUP) {
 				size_t offset = (sf->label & 0xff);
-				size_t count = --env.counts[offset];
-				if (count == 0) {
+				const size_t label_count = --env.counts[offset];
+				if (label_count == 0) {
 					bm_unset(&env.current, offset);
 				}
 			}
@@ -250,8 +251,15 @@ fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit, struct 
 		fprintf(stderr, "%s: finished in %zu/%zu steps\n", __func__, env.steps, step_limit);
 	}
 
+	for (size_t i = 0; i < 4; i++) {
+		charmap[i] = *bm_nth_word(&env.overall, i);
+	}
+
+	if (count != NULL) {
+		*count = bm_count(&env.overall);
+	}
+
 	res = FSM_DETECT_REQUIRED_CHARACTERS_WRITTEN;
-	bm_copy(bitmap, &env.overall);
 
 cleanup:
 	f_free(dfa->alloc, env.stack.frames);

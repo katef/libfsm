@@ -4,7 +4,6 @@
 #include <fsm/fsm.h>
 #include <fsm/options.h>
 #include <fsm/walk.h>
-#include <adt/bitmap.h>
 #include <fsm/print.h>
 
 int main()
@@ -25,7 +24,7 @@ int main()
 		return EXIT_FAILURE;
 	}
 
-	struct bm bitmap;
+	uint64_t charmap[4];
 
 	/* keep decreasing the step limit until it's hit, and check that
 	 * the bitmap is cleared. */
@@ -34,14 +33,13 @@ int main()
 	while (!hit_step_limit) {
 		assert(step_limit > 0);
 
-		const enum fsm_detect_required_characters_res res = fsm_detect_required_characters(fsm, step_limit, &bitmap);
+		const enum fsm_detect_required_characters_res res = fsm_detect_required_characters(fsm, step_limit, charmap, NULL);
 		if (res == FSM_DETECT_REQUIRED_CHARACTERS_STEP_LIMIT_REACHED) {
 			hit_step_limit = true;
 
 			/* this should not contain any partially complete information */
 			for (size_t i = 0; i < 4; i++) {
-				const uint64_t *w = bm_nth_word(&bitmap, i);
-				if (*w != 0) {
+				if (charmap[i] != 0) {
 					fprintf(stderr, "-- Test failure: partial information set when step limit reached\n");
 					return EXIT_FAILURE;
 				}
