@@ -25,6 +25,7 @@
 #include <fsm/parser.h>
 
 #include <adt/stateset.h> /* XXX */
+#include <adt/u64bitset.h>
 
 #include "libfsm/internal.h" /* XXX */
 
@@ -93,6 +94,16 @@ query_countstates(const struct fsm *fsm, fsm_state_t state)
 
 static int
 query_epsilonclosure(const struct fsm *fsm, fsm_state_t state)
+{
+	(void) fsm;
+	(void) state;
+
+	/* never called */
+	abort();
+}
+
+static int
+query_required_chars(const struct fsm *fsm, fsm_state_t state)
 {
 	(void) fsm;
 	(void) state;
@@ -227,7 +238,9 @@ static int
 		{ "hasambiguity",      fsm_has, fsm_hasnondeterminism },
 		{ "hasnondeterminism", fsm_has, fsm_hasnondeterminism },
 		{ "hasepsilons",       fsm_has, fsm_hasepsilons       },
-		{ "epsilons",          fsm_has, fsm_hasepsilons       }
+		{ "epsilons",          fsm_has, fsm_hasepsilons       },
+		{ "requiredchars",     NULL,    query_required_chars  },
+		{ "chars",             NULL,    query_required_chars  },
 	};
 
 	assert(name != NULL);
@@ -378,6 +391,7 @@ main(int argc, char *argv[])
 	int xfiles;
 	int r;
 	size_t generate_bounds = 0;
+	size_t step_limit = 0;
 
 	int (*query)(const struct fsm *, fsm_state_t);
 	int (*walk )(const struct fsm *,
@@ -404,7 +418,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "aCcgwXe:k:i:" "xpq:l:dG:mrt:EU:W:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aCcgwXe:k:i:" "xpq:l:dG:mrt:ES:U:W:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
@@ -450,6 +464,10 @@ main(int argc, char *argv[])
 					exit(EXIT_FAILURE);
 				}
 				break;
+
+			case 'S':
+				step_limit = strtoul(optarg, NULL, 10);
+				break; /* can be 0 */
 
 			case 'h':
 				usage();
@@ -669,6 +687,34 @@ main(int argc, char *argv[])
 			closure_free(fsm, closures, fsm->statecount);
 
 			return 0;
+		} else if (query == query_required_chars) {
+			assert(walk == NULL);
+			uint64_t charmap[4];
+			size_t count;
+			enum fsm_detect_required_characters_res res;
+			res = fsm_detect_required_characters(fsm, step_limit, charmap, &count);
+			if (res == FSM_DETECT_REQUIRED_CHARACTERS_STEP_LIMIT_REACHED) {
+				fprintf(stderr, "fsm_detect_required_characters: step limit reached (%zd)\n", step_limit);
+				exit(EXIT_FAILURE);
+			} else {
+				assert(res == FSM_DETECT_REQUIRED_CHARACTERS_WRITTEN);
+				char buf[257] = {0};
+				size_t used = 0;
+				for (size_t i = 0; i < 256; i++) {
+					if (u64bitset_get(charmap, i)) {
+						buf[used++] = (char)i;
+					}
+				}
+				printf("%zd ", count);
+				for (size_t i = 0; i < used; i++) {
+					c_escputc_str(stdout, &opt, buf[i]);
+				}
+				printf("\n");
+
+				fsm_free(fsm);
+				fsm_to_cleanup = NULL;
+				return EXIT_SUCCESS;
+			}
 		} else {
 			assert(walk != NULL);
 			r |= !walk(fsm, query);
