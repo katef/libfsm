@@ -135,6 +135,9 @@ fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit,
 	 * it matches the empty string, so we're done. */
 	if (fsm_isend(dfa, start_state)) {
 		res = FSM_DETECT_REQUIRED_CHARACTERS_WRITTEN;
+		if (count != NULL) {
+			*count = 0;
+		}
 		goto cleanup;
 	}
 
