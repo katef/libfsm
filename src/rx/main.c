@@ -567,7 +567,7 @@ build_pattern_fsm(bool show_stats,
 
 static int
 conflict(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	const char *example,
 	void *hook_opaque)
 {
@@ -578,10 +578,10 @@ conflict(FILE *f, const struct fsm_options *opt,
 	assert(env->general != NULL);
 
 	/* in rx all end states have an end id */
-	assert(count > 0);
+	assert(state_metadata->end_id_count > 0);
 
 	/* ...and we only conflict when there's more than one */
-	assert(count > 1);
+	assert(state_metadata->end_id_count > 1);
 
 	(void) f;
 	(void) opt;
@@ -592,14 +592,14 @@ conflict(FILE *f, const struct fsm_options *opt,
 	}
 	fprintf(stderr, "\n");
 
-	for (fsm_end_id_t i = 0; i < count; i++) {
+	for (fsm_end_id_t i = 0; i < state_metadata->end_id_count; i++) {
 		for (size_t k = 0; k < sizeof *env->literals / sizeof **env->literals; k++) {
 			const struct literal_set *literals = &(*env->literals)[k];
 			for (size_t j = 0; j < literals->count; j++) {
-				if (literals->a[j].id == ids[i]) {
+				if (literals->a[j].id == state_metadata->end_ids[i]) {
 					// TODO: escape, centralise with libre's re_perror()
 					fprintf(stderr, "#%u: /%s%.*s%s/\n",
-						ids[i],
+						state_metadata->end_ids[i],
 						(k & RE_STRINGS_ANCHOR_LEFT) ? "^" : "",
 						(int) literals->a[j].n, (const char *) literals->a[j].p,
 						(k & RE_STRINGS_ANCHOR_RIGHT) ? "$" : "");
@@ -610,9 +610,9 @@ conflict(FILE *f, const struct fsm_options *opt,
 
 		for (size_t j = 0; j < env->general->count; j++) {
 			// TODO: delimiters per dialect, centralise with libre's re_perror()
-			if (env->general->a[i].id == ids[i]) {
+			if (env->general->a[i].id == state_metadata->end_ids[i]) {
 				fprintf(stderr, "#%u: /%s/\n",
-					ids[i],
+					state_metadata->end_ids[i],
 					env->general->a[i].s);
 				goto next;
 			}

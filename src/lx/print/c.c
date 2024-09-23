@@ -139,7 +139,7 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token,
 
 static int
 accept_c(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	const struct ast *ast;
@@ -147,13 +147,13 @@ accept_c(FILE *f, const struct fsm_options *opt,
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ids != NULL);
-	assert(count > 0);
+	assert(state_metadata->end_ids != NULL);
+	assert(state_metadata->end_id_count > 0);
 	assert(lang_opaque == NULL);
 	assert(hook_opaque != NULL);
 
 	ast = hook_opaque;
-	m = ast_getendmappingbyendid(ids[0]);
+	m = ast_getendmappingbyendid(state_metadata->end_ids[0]);
 
 	/* XXX: don't need this if complete */
 	fprintf(f, "%sungetc(lx, c); ", prefix.api);

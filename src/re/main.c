@@ -294,14 +294,14 @@ printexample(FILE *f, const struct fsm *fsm, fsm_state_t state)
 
 static int
 conflict(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count, const char *example,
+	const struct fsm_state_metadata *state_metadata, const char *example,
 	void *hook_opaque)
 {
 	size_t i;
 
 	assert(opt != NULL);
 	assert(opt->ambig == AMBIG_ERROR);
-	assert(count > 1);
+	assert(state_metadata->end_id_count > 1);
 
 	(void) f;
 	(void) opt;
@@ -312,13 +312,13 @@ conflict(FILE *f, const struct fsm_options *opt,
 
 	fprintf(stderr, "ambiguous matches for ");
 
-	for (i = 0; i < count; i++) {
-		assert(ids[i] < matchc);
+	for (i = 0; i < state_metadata->end_id_count; i++) {
+		assert(state_metadata->end_ids[i] < matchc);
 
 		/* TODO: print nicely */
-		fprintf(stderr, "/%s/", matchv[ids[i]]);
+		fprintf(stderr, "/%s/", matchv[state_metadata->end_ids[i]]);
 
-		if (i + 1 < count) {
+		if (i + 1 < state_metadata->end_id_count) {
 			fprintf(stderr, ", ");
 		}
 	}
@@ -335,7 +335,7 @@ conflict(FILE *f, const struct fsm_options *opt,
 
 static int
 comment_c(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *hook_opaque)
 {
 	size_t i;
@@ -348,12 +348,12 @@ comment_c(FILE *f, const struct fsm_options *opt,
 
 	fprintf(f, "/* ");
 
-	for (i = 0; i < count; i++) {
-		assert(ids[i] < matchc);
+	for (i = 0; i < state_metadata->end_id_count; i++) {
+		assert(state_metadata->end_ids[i] < matchc);
 
-		fprintf(f, "\"%s\"", matchv[ids[i]]); /* XXX: escape string (and comment) */
+		fprintf(f, "\"%s\"", matchv[state_metadata->end_ids[i]]); /* XXX: escape string (and comment) */
 
-		if (i + 1 < count) {
+		if (i + 1 < state_metadata->end_id_count) {
 			fprintf(f, ", ");
 		}
 	}
@@ -365,7 +365,7 @@ comment_c(FILE *f, const struct fsm_options *opt,
 
 static int
 comment_rust(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *hook_opaque)
 {
 	size_t i;
@@ -378,12 +378,12 @@ comment_rust(FILE *f, const struct fsm_options *opt,
 
 	fprintf(f, "// ");
 
-	for (i = 0; i < count; i++) {
-		assert(ids[i] < matchc);
+	for (i = 0; i < state_metadata->end_id_count; i++) {
+		assert(state_metadata->end_ids[i] < matchc);
 
-		fprintf(f, "\"%s\"", matchv[ids[i]]); /* XXX: escape string (and comment) */
+		fprintf(f, "\"%s\"", matchv[state_metadata->end_ids[i]]); /* XXX: escape string (and comment) */
 
-		if (i + 1 < count) {
+		if (i + 1 < state_metadata->end_id_count) {
 			fprintf(f, ", ");
 		}
 	}
@@ -393,7 +393,7 @@ comment_rust(FILE *f, const struct fsm_options *opt,
 
 static int
 comment_llvm(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *hook_opaque)
 {
 	size_t i;
@@ -406,12 +406,12 @@ comment_llvm(FILE *f, const struct fsm_options *opt,
 
 	fprintf(f, "; ");
 
-	for (i = 0; i < count; i++) {
-		assert(ids[i] < matchc);
+	for (i = 0; i < state_metadata->end_id_count; i++) {
+		assert(state_metadata->end_ids[i] < matchc);
 
-		fprintf(f, "\"%s\"", matchv[ids[i]]); /* XXX: escape string (and comment) */
+		fprintf(f, "\"%s\"", matchv[state_metadata->end_ids[i]]); /* XXX: escape string (and comment) */
 
-		if (i + 1 < count) {
+		if (i + 1 < state_metadata->end_id_count) {
 			fprintf(f, ", ");
 		}
 	}
@@ -421,7 +421,7 @@ comment_llvm(FILE *f, const struct fsm_options *opt,
 
 static int
 comment_dot(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *hook_opaque)
 {
 	size_t i;
@@ -434,12 +434,12 @@ comment_dot(FILE *f, const struct fsm_options *opt,
 
 	fprintf(f, "/* ");
 
-	for (i = 0; i < count; i++) {
-		assert(ids[i] < matchc);
+	for (i = 0; i < state_metadata->end_id_count; i++) {
+		assert(state_metadata->end_ids[i] < matchc);
 
-		fprintf(f, "\"%s\"", matchv[ids[i]]); /* XXX: escape string (and comment) */
+		fprintf(f, "\"%s\"", matchv[state_metadata->end_ids[i]]); /* XXX: escape string (and comment) */
 
-		if (i + 1 < count) {
+		if (i + 1 < state_metadata->end_id_count) {
 			fprintf(f, ", ");
 		}
 	}

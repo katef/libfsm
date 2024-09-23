@@ -139,12 +139,17 @@ print_state(FILE *f,
 		fprintf(f, "],\n");
 	}
 
+	const struct fsm_state_metadata state_metadata = {
+		.end_ids = cs->ids,
+		.end_id_count = cs->count,
+	};
+
 	/* showing hook in addition to existing content */
 	if (cs->isend && hooks->accept != NULL) {
 		fprintf(f, "\t\t\t\"endleaf\": ");
 
 		if (-1 == print_hook_accept(f, opt, hooks,
-			cs->ids, cs->count,
+			&state_metadata,
 			NULL, NULL))
 		{
 			return -1;

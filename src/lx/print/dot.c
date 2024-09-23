@@ -66,7 +66,7 @@ mapping(FILE *f, const struct ast_mapping *m, const struct ast *ast)
 
 static int
 accept_dot(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	const struct ast_mapping *m;
@@ -75,8 +75,8 @@ accept_dot(FILE *f, const struct fsm_options *opt,
 
 	assert(f != NULL);
 	assert(opt != NULL);
-	assert(ids != NULL);
-	assert(count > 0);
+	assert(state_metadata->end_ids != NULL);
+	assert(state_metadata->end_id_count > 0);
 	assert(lang_opaque != NULL);
 	assert(hook_opaque != NULL);
 
@@ -89,19 +89,19 @@ accept_dot(FILE *f, const struct fsm_options *opt,
 		fprintf(f, "%u<br/>", s);
 	}
 
-	if (count == 1) {
-		m = ast_getendmappingbyendid(ids[0]);
+	if (state_metadata->end_id_count == 1) {
+		m = ast_getendmappingbyendid(state_metadata->end_ids[0]);
 		mapping(f, m, ast);
 	} else {
 		size_t i;
 
 		fprintf(f, "<font color=\"red\">");
 
-		for (i = 0; i < count; i++) {
-			m = ast_getendmappingbyendid(ids[i]);
+		for (i = 0; i < state_metadata->end_id_count; i++) {
+			m = ast_getendmappingbyendid(state_metadata->end_ids[i]);
 			mapping(f, m, ast);
 
-			if (i + 1 < count) {
+			if (i + 1 < state_metadata->end_id_count) {
 				fprintf(f, "<br/>");
 			}
 		}

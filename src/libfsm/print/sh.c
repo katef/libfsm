@@ -107,7 +107,7 @@ print_ids(FILE *f,
 
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
@@ -119,7 +119,7 @@ default_accept(FILE *f, const struct fsm_options *opt,
 
 	fprintf(f, "matched");
 
-	if (-1 == print_ids(f, opt->ambig, ids, count)) {
+	if (-1 == print_ids(f, opt->ambig, state_metadata->end_ids, state_metadata->end_id_count)) {
 		return -1;
 	}
 
@@ -204,9 +204,13 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 	case VM_END_FAIL:
 		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
-	case VM_END_SUCC:
+	case VM_END_SUCC:;
+		const struct fsm_state_metadata state_metadata = {
+			.end_ids = op->ret->ids,
+			.end_id_count = op->ret->count,
+		};
 		if (-1 == print_hook_accept(f, opt, hooks,
-			op->ret->ids, op->ret->count,
+			&state_metadata,
 			default_accept,
 			NULL))
 		{
@@ -214,7 +218,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 		}
 
 		if (-1 == print_hook_comment(f, opt, hooks,
-			op->ret->ids, op->ret->count))
+			&state_metadata))
 		{
 			return -1;
 		}

@@ -219,8 +219,13 @@ print_state(FILE *f,
 	if (cs->isend && hooks->accept != NULL) {
 		fprintf(f, "\t\t  <TR><TD COLSPAN='3' ALIGN='LEFT'>");
 
+		const struct fsm_state_metadata state_metadata = {
+			.end_ids = cs->ids,
+			.end_id_count = cs->count,
+		};
+
 		if (-1 == print_hook_accept(f, opt, hooks,
-			cs->ids, cs->count,
+			&state_metadata,
 			NULL,
 			NULL))
 		{

@@ -280,8 +280,13 @@ fsm_print_json(FILE *f,
 
 			fprintf(f, "{ %u, ", i);
 
+			const struct fsm_state_metadata state_metadata = {
+				.end_ids = ids,
+				.end_id_count = count,
+			};
+
 			if (-1 == print_hook_accept(f, opt, hooks,
-				ids, count,
+				&state_metadata,
 				NULL, NULL))
 			{
 				return -1;

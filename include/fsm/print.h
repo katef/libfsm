@@ -42,6 +42,11 @@ enum fsm_print_lang {
 	FSM_PRINT_VMOPS_MAIN
 };
 
+struct fsm_state_metadata {
+	const fsm_end_id_t *end_ids;
+	size_t end_id_count;
+};
+
 /*
  * Hooks to override generated code. These give an oportunity to
  * emit application-specific constructs, especially based on ids
@@ -66,19 +71,19 @@ struct fsm_hooks {
 		void *lang_opaque, void *hook_opaque);
 
 	int (*accept)(FILE *, const struct fsm_options *opt,
-		const fsm_end_id_t *ids, size_t count,
+		const struct fsm_state_metadata *state_metadata,
 		void *lang_opaque, void *hook_opaque);
 
 	int (*reject)(FILE *, const struct fsm_options *opt,
 		void *lang_opaque, void *hook_opaque);
 
 	int (*comment)(FILE *, const struct fsm_options *opt,
-		const fsm_end_id_t *ids, size_t count,
+		const struct fsm_state_metadata *state_metadata,
 		void *hook_opaque);
 
 	/* only called for AMBIG_ERROR; see opt.ambig */
 	int (*conflict)(FILE *, const struct fsm_options *opt,
-		const fsm_end_id_t *ids, size_t count,
+		const struct fsm_state_metadata *state_metadata,
 		const char *example,
 		void *hook_opaque);
 
