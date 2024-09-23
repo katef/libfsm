@@ -880,7 +880,9 @@ fsm_endid_iter_bulk(const struct fsm *fsm,
 		return 1;
 	}
 
+#ifndef NDEBUG
 	const fsm_state_t state_count = fsm_countstates(fsm);
+#endif
 
 	bucket_count = ei->bucket_count;
 
