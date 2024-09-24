@@ -105,7 +105,7 @@ build_retlist(struct ret_list *list, const struct ir *ir)
 			continue;
 		}
 
-		if (!append_ret(list, ir->states[i].ids, ir->states[i].count)) {
+		if (!append_ret(list, ir->states[i].endids.ids, ir->states[i].endids.count)) {
 			return false;
 		}
 	}

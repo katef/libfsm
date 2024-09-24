@@ -375,8 +375,8 @@ print_endstates(FILE *f,
 		fprintf(f, "\tcase S%u: ", i);
 
 		const struct fsm_state_metadata state_metadata = {
-			.end_ids = ir->states[i].ids,
-			.end_id_count = ir->states[i].count,
+			.end_ids = ir->states[i].endids.ids,
+			.end_id_count = ir->states[i].endids.count,
 		};
 
 		if (-1 == print_hook_accept(f, opt, hooks,

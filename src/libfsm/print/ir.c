@@ -541,8 +541,8 @@ make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 		assert(i < ir->n);
 
 		ir->states[i].isend  = fsm_isend(fsm, i);
-		ir->states[i].ids = NULL;
-		ir->states[i].count = 0;
+		ir->states[i].endids.ids = NULL;
+		ir->states[i].endids.count = 0;
 
 		if (fsm_isend(fsm, i)) {
 			fsm_end_id_t *ids;
@@ -563,8 +563,8 @@ make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 				assert(res == 1);
 			}
 
-			ir->states[i].ids = ids;
-			ir->states[i].count = count;
+			ir->states[i].endids.ids = ids;
+			ir->states[i].endids.count = count;
 		}
 
 		if (make_state(fsm, i, &ir->states[i]) == -1) {
@@ -629,7 +629,7 @@ free_ir(const struct fsm *fsm, struct ir *ir)
 
 	for (i = 0; i < ir->n; i++) {
 		f_free(fsm->alloc, (void *) ir->states[i].example);
-		f_free(fsm->alloc, (void *) ir->states[i].ids);
+		f_free(fsm->alloc, (void *) ir->states[i].endids.ids);
 
 		switch (ir->states[i].strategy) {
 		case IR_TABLE:
