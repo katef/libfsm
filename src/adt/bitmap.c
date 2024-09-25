@@ -10,6 +10,7 @@
 #include <limits.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <adt/bitmap.h>
 #include <adt/u64bitset.h>
@@ -32,6 +33,15 @@ bm_set(struct bm *bm, size_t i)
 	assert(i <= UCHAR_MAX);
 
 	u64bitset_set(bm->map, i);
+}
+
+void
+bm_unset(struct bm *bm, size_t i)
+{
+	assert(bm != NULL);
+	assert(i <= UCHAR_MAX);
+
+	u64bitset_clear(bm->map, i);
 }
 
 uint64_t *
@@ -324,4 +334,35 @@ error:
 	(void) fclose(f);
 
 	return -1;
+}
+
+void
+bm_copy(struct bm *dst, const struct bm *src)
+{
+	memcpy(dst, src, sizeof(*src));
+}
+
+void
+bm_intersect(struct bm *dst, const struct bm *src)
+{
+	for (size_t i = 0; i < sizeof(src->map)/sizeof(src->map[0]); i++) {
+		dst->map[i] &= src->map[i];
+	}
+}
+
+void
+bm_union(struct bm *dst, const struct bm *src)
+{
+	for (size_t i = 0; i < sizeof(src->map)/sizeof(src->map[0]); i++) {
+		dst->map[i] |= src->map[i];
+	}
+}
+
+int
+bm_any(const struct bm *bm)
+{
+	for (size_t i = 0; i < sizeof(bm->map)/sizeof(bm->map[0]); i++) {
+		if (bm->map[i]) { return 1; }
+	}
+	return 0;
 }

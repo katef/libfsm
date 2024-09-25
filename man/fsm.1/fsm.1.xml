@@ -33,6 +33,7 @@
 	<!ENTITY G.opt "<option>-G</option>&nbsp;&length.arg;">
 	<!ENTITY k.opt "<option>-k</option>&nbsp;&io.arg;">
 	<!ENTITY i.opt "<option>-i</option>&nbsp;&iterations.arg;">
+	<!ENTITY G.opt "<option>-S</option>&nbsp;&limit.arg;">
 	<!ENTITY U.opt "<option>-U</option>&nbsp;&charset.arg;">
 	<!ENTITY X.opt "<option>-X</option>">
 
@@ -326,6 +327,14 @@
 			</varlistentry>
 
 			<varlistentry>
+				<term>&S.opt;</term>
+
+				<listitem>
+					<para>Set a step limit for long-running operations.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
 				<term>&t.opt;</term>
 
 				<listitem>
@@ -486,6 +495,13 @@
 								<td rowspan="1">Compute the <newterm>epsilon closure</newterm>
 									of each state in the &fsm;.
 									Printed to &stdout.lit;; exit status is always true.</td>
+							</tr>
+							<tr>
+								<td><code>requiredchars</code></td>
+								<td rowspan="1" role="na">&ndash;</td>
+								<td rowspan="1">Determine characters that must appear in any
+									inputs that could match the &fsm;. Exit status is true
+									unless the step limit was reached.</td>
 							</tr>
 						</tbody>
 					</table>

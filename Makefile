@@ -116,6 +116,7 @@ SUBDIR += tests/intersect
 SUBDIR += tests/eclosure
 SUBDIR += tests/equals
 SUBDIR += tests/subtract
+SUBDIR += tests/detect_required
 SUBDIR += tests/determinise
 SUBDIR += tests/endids
 SUBDIR += tests/epsilons

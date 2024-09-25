@@ -7,6 +7,7 @@ SRC += src/libfsm/complete.c
 SRC += src/libfsm/consolidate.c
 SRC += src/libfsm/clone.c
 SRC += src/libfsm/closure.c
+SRC += src/libfsm/detect_required.c
 SRC += src/libfsm/edge.c
 SRC += src/libfsm/empty.c
 SRC += src/libfsm/end.c

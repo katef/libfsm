@@ -16,6 +16,7 @@ fsm_reachableall
 fsm_reachableany
 fsm_walk_edges
 fsm_walk_states
+fsm_detect_required_characters
 
 # <fsm/pred.h>
 fsm_epsilonsonly
