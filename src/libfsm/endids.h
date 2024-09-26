@@ -63,4 +63,7 @@ fsm_endid_iter_state(const struct fsm *fsm, fsm_state_t state,
 void
 fsm_endid_dump(FILE *f, const struct fsm *fsm);
 
+int
+fsm_endid_compact(struct fsm *fsm, fsm_state_t *mapping, size_t mapping_count);
+
 #endif

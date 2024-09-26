@@ -18,6 +18,7 @@
 #include <adt/edgeset.h>
 
 #include "internal.h"
+#include "endids.h"
 
 int
 fsm_addstate(struct fsm *fsm, fsm_state_t *state)
@@ -179,7 +180,7 @@ fsm_compact_states(struct fsm *fsm,
 	const fsm_state_t orig_statecount = fsm->statecount;
 
 	fsm_state_t *mapping = f_malloc(fsm->alloc,
-	    fsm->statecount * sizeof(mapping[0]));
+	    orig_statecount * sizeof(mapping[0]));
 	if (mapping == NULL) {
 		return 0;
 	}
@@ -254,6 +255,10 @@ fsm_compact_states(struct fsm *fsm,
 		}
 	}
 
+	/* Remap end metadata */
+	if (!fsm_endid_compact(fsm, mapping, orig_statecount)) {
+		return 0;
+	}
 	assert(dst == kept);
 	assert(kept == fsm->statecount);
 
