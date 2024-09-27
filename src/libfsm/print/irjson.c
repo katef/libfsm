@@ -127,24 +127,29 @@ print_state(FILE *f,
 	fprintf(f, "\t\t{\n");
 
 	fprintf(f, "\t\t\t\"end\": %s,\n", cs->isend ? "true" : "false");
-	if (cs->isend && cs->count > 0) {
+	if (cs->isend && cs->endids.count > 0) {
 		fprintf(f, "\t\t\t\"end_id\": [");
-		for (size_t i = 0; i < cs->count; i++) {
-			fprintf(f, "%u", cs->ids[i]);
+		for (size_t i = 0; i < cs->endids.count; i++) {
+			fprintf(f, "%u", cs->endids.ids[i]);
 
-			if (i < (size_t) cs->count - 1) {
+			if (i < (size_t) cs->endids.count - 1) {
 				fprintf(f, ", ");
 			}
 		}
 		fprintf(f, "],\n");
 	}
 
+	const struct fsm_state_metadata state_metadata = {
+		.end_ids = cs->endids.ids,
+		.end_id_count = cs->endids.count,
+	};
+
 	/* showing hook in addition to existing content */
 	if (cs->isend && hooks->accept != NULL) {
 		fprintf(f, "\t\t\t\"endleaf\": ");
 
 		if (-1 == print_hook_accept(f, opt, hooks,
-			cs->ids, cs->count,
+			&state_metadata,
 			NULL, NULL))
 		{
 			return -1;

@@ -49,15 +49,19 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 		}
 		break;
 
-	case VM_END_SUCC:
+	case VM_END_SUCC:;
+		const struct fsm_state_metadata state_metadata = {
+			.end_ids = op->ret->ids,
+			.end_id_count = op->ret->count,
+		};
 		if (-1 == print_hook_accept(f, opt, hooks,
-			op->ret->ids, op->ret->count,
+			&state_metadata,
 			NULL, NULL))
 		{
 			return -1;
 		}
 		if (-1 == print_hook_comment(f, opt, hooks,
-			op->ret->ids, op->ret->count))
+			&state_metadata))
 		{
 			return -1;
 		}

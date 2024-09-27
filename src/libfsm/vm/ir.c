@@ -309,7 +309,7 @@ opasm_new(struct dfavm_assembler_ir *a, const struct ret_list *retlist,
 	if (ir_state != NULL) {
 		op->example = ir_state->example;
 		op->ret = ir_state->isend
-			? find_ret(retlist, ir_state->ids, ir_state->count)
+			? find_ret(retlist, ir_state->endids.ids, ir_state->endids.count)
 			: NULL;
 	}
 

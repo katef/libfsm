@@ -56,17 +56,17 @@ ir_hasend(const struct ir *ir)
 // TODO: centralise vmc/c
 static int
 print_ids(FILE *f,
-	enum fsm_ambig ambig, const fsm_end_id_t *ids, size_t count)
+	enum fsm_ambig ambig, const struct fsm_state_metadata *state_metadata)
 {
 	switch (ambig) {
 	case AMBIG_NONE:
 		// TODO: for C99 we'd return bool
-		fprintf(f, "return 1;");   
+		fprintf(f, "return 1;");
 		break;
 
 	case AMBIG_ERROR:
 // TODO: decide if we deal with this ahead of the call to print or not
-		if (count > 1) {
+		if (state_metadata->end_id_count > 1) {
 			errno = EINVAL;
 			return -1;
 		}
@@ -79,7 +79,7 @@ print_ids(FILE *f,
 		 * and only appear once each, and are sorted.
 		 */
 		fprintf(f, "{\n");
-		fprintf(f, "\t\t*id = %u;\n", ids[0]);
+		fprintf(f, "\t\t*id = %u;\n", state_metadata->end_ids[0]);
 		fprintf(f, "\t\treturn 1;\n");
 		fprintf(f, "\t}");
 		break;
@@ -94,15 +94,15 @@ print_ids(FILE *f,
 
 		fprintf(f, "{\n");
 		fprintf(f, "\t\tstatic const unsigned a[] = { ");
-		for (fsm_end_id_t i = 0; i < count; i++) {
-			fprintf(f, "%u", ids[i]);
-			if (i + 1 < count) {
+		for (fsm_end_id_t i = 0; i < state_metadata->end_id_count; i++) {
+			fprintf(f, "%u", state_metadata->end_ids[i]);
+			if (i + 1 < state_metadata->end_id_count) {
 				fprintf(f, ", ");
 			}
 		}
 		fprintf(f, " };\n");
 		fprintf(f, "\t\t*ids = a;\n");
-		fprintf(f, "\t\t*count = %zu;\n", count);
+		fprintf(f, "\t\t*count = %zu;\n", state_metadata->end_id_count);
 		fprintf(f, "\t\treturn 1;\n");
 		fprintf(f, "\t}");
 		break;
@@ -117,7 +117,7 @@ print_ids(FILE *f,
 
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
@@ -127,7 +127,7 @@ default_accept(FILE *f, const struct fsm_options *opt,
 	(void) lang_opaque;
 	(void) hook_opaque;
 
-	if (-1 == print_ids(f, opt->ambig, ids, count)) {
+	if (-1 == print_ids(f, opt->ambig, state_metadata)) {
 		return -1;
 	}
 
@@ -374,8 +374,13 @@ print_endstates(FILE *f,
 
 		fprintf(f, "\tcase S%u: ", i);
 
+		const struct fsm_state_metadata state_metadata = {
+			.end_ids = ir->states[i].endids.ids,
+			.end_id_count = ir->states[i].endids.count,
+		};
+
 		if (-1 == print_hook_accept(f, opt, hooks,
-			ir->states[i].ids, ir->states[i].count,
+			&state_metadata,
 			default_accept,
 			NULL))
 		{
@@ -383,7 +388,7 @@ print_endstates(FILE *f,
 		}
 
 		if (-1 == print_hook_comment(f, opt, hooks,
-			ir->states[i].ids, ir->states[i].count))
+			&state_metadata))
 		{
 			return -1;
 		}

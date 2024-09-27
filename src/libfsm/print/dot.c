@@ -27,7 +27,7 @@
 
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	fsm_state_t s;
@@ -45,15 +45,15 @@ default_accept(FILE *f, const struct fsm_options *opt,
 	if (!opt->anonymous_states) {
 		fprintf(f, "%u", s);
 
-		if (count > 0) {
+		if (state_metadata->end_id_count > 0) {
 			fprintf(f, "<BR/>");
 		}
 	}
 
-	for (size_t i = 0; i < count; i++) {
-		fprintf(f, "#%u", ids[i]);
+	for (size_t i = 0; i < state_metadata->end_id_count; i++) {
+		fprintf(f, "#%u", state_metadata->end_ids[i]);
 
-		if (i < count - 1) {
+		if (i < state_metadata->end_id_count - 1) {
 			fprintf(f, ",");
 		}
 	}
@@ -66,7 +66,7 @@ default_accept(FILE *f, const struct fsm_options *opt,
 static int
 default_reject(FILE *f, const struct fsm_options *opt,
 	void *lang_opaque, void *hook_opaque)
-{   
+{
 	fsm_state_t s;
 
 	assert(f != NULL);
@@ -258,8 +258,13 @@ print_dotfrag(FILE *f,
 
 			fprintf(f, ", ");
 
+			const struct fsm_state_metadata state_metadata = {
+				.end_ids = ids,
+				.end_id_count = count,
+			};
+
 			if (-1 == print_hook_accept(f, opt, hooks,
-				ids, count,
+				&state_metadata,
 				default_accept, &s))
 			{
 				return -1;
@@ -269,7 +274,7 @@ print_dotfrag(FILE *f,
 				fprintf(f, ",");
 
 				if (-1 == print_hook_comment(f, opt, hooks,
-					ids, count))
+					&state_metadata))
 				{
 					return -1;
 				}

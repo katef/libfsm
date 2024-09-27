@@ -48,7 +48,7 @@ cmp_operator(int cmp)
 
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
@@ -60,13 +60,13 @@ default_accept(FILE *f, const struct fsm_options *opt,
  
 	fprintf(f, "match");
 
-	if (count > 0) {
+	if (state_metadata->end_id_count > 0) {
 		fprintf(f, " / ");
 
-		for (size_t i = 0; i < count; i++) {
-			fprintf(f, "#%u", ids[i]);
+		for (size_t i = 0; i < state_metadata->end_id_count; i++) {
+			fprintf(f, "#%u", state_metadata->end_ids[i]);
 
-			if (i < count - 1) {
+			if (i < state_metadata->end_id_count - 1) {
 				fprintf(f, " ");
 			}
 		}
@@ -128,9 +128,13 @@ print_end(FILE *f,
 	case VM_END_FAIL:
 		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
-	case VM_END_SUCC:
+	case VM_END_SUCC:;
+		struct fsm_state_metadata state_metadata = {
+			.end_ids = op->ret->ids,
+			.end_id_count = op->ret->count,
+		};
 		if (-1 == print_hook_accept(f, opt, hooks,
-			op->ret->ids, op->ret->count,
+			&state_metadata,
 			default_accept,
 			NULL))
 		{

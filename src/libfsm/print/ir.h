@@ -54,8 +54,10 @@ struct ir_error {
 struct ir_state {
 	const char *example;
 
-	fsm_end_id_t *ids; /* NULL -> 0 */
-	size_t count:31; // :31 for packing
+	struct ir_state_endids {
+		fsm_end_id_t *ids; /* NULL -> 0 */
+		size_t count;
+	} endids;
 
 	unsigned int isend:1;
 

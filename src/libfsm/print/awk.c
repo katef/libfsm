@@ -51,7 +51,7 @@ cmp_operator(int cmp)
 
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
@@ -69,37 +69,37 @@ default_accept(FILE *f, const struct fsm_options *opt,
 
 	case AMBIG_ERROR:
 // TODO: decide if we deal with this ahead of the call to print or not
-		if (count > 1) {   
+		if (state_metadata->end_id_count > 1) {
 			errno = EINVAL;
 			return -1;
 		}
-		
-		fprintf(f, "return %u;", ids[0]);
+
+		fprintf(f, "return %u;", state_metadata->end_ids[0]);
 		break;
-	
+
 	case AMBIG_EARLIEST:
 		/*
 		 * The libfsm api guarentees these ids are unique,
 		 * and only appear once each, and are sorted.
 		 */
-		fprintf(f, "return %u;", ids[0]);
+		fprintf(f, "return %u;", state_metadata->end_ids[0]);
 		break;
-	
+
 	case AMBIG_MULTIPLE:
 		/* awk can't return an array */
 		fprintf(f, "return \"");
 
-		for (size_t i = 0; i < count; i++) {
-			fprintf(f, "%u", ids[i]);
+		for (size_t i = 0; i < state_metadata->end_id_count; i++) {
+			fprintf(f, "%u", state_metadata->end_ids[i]);
 
-			if (i < count - 1) {
+			if (i < state_metadata->end_id_count - 1) {
 				fprintf(f, ",");
 			}
 		}
 
 		fprintf(f, "\"");
 		break;
-	
+
 	default:
 		assert(!"unreached");
 		abort();
@@ -156,9 +156,13 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 	case VM_END_FAIL:
 		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
-	case VM_END_SUCC:
+	case VM_END_SUCC:;
+		struct fsm_state_metadata state_metadata = {
+			.end_ids = op->ret->ids,
+			.end_id_count = op->ret->count,
+		};
 		if (-1 == print_hook_accept(f, opt, hooks,
-			op->ret->ids, op->ret->count,
+			&state_metadata,
 			default_accept,
 			NULL))
 		{
@@ -166,7 +170,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 		}
 
 		if (-1 == print_hook_comment(f, opt, hooks,
-			op->ret->ids, op->ret->count))
+			&state_metadata))
 		{
 			return -1;
 		}

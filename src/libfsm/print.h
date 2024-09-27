@@ -14,6 +14,8 @@ struct ir;
 struct dfavm_op_ir;
 struct ret_list;
 
+#include <fsm/print.h>
+
 int
 print_hook_args(FILE *f,
 	const struct fsm_options *opt,
@@ -26,9 +28,9 @@ int
 print_hook_accept(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	int (*default_accept)(FILE *f, const struct fsm_options *opt,
-		const fsm_end_id_t *ids, size_t count,
+		const struct fsm_state_metadata *state_metadata,
 		void *lang_opaque, void *hook_opaque),
 	void *lang_opaque);
 
@@ -36,7 +38,7 @@ int
 print_hook_comment(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
-	const fsm_end_id_t *ids, size_t count);
+	const struct fsm_state_metadata *state_metadata);
 
 int
 print_hook_reject(FILE *f,
@@ -50,7 +52,7 @@ int
 print_hook_conflict(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	const char *example);
 
 typedef int fsm_print_f(FILE *f,

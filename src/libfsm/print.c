@@ -53,9 +53,9 @@ int
 print_hook_accept(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	int (*default_accept)(FILE *f, const struct fsm_options *opt,
-		const fsm_end_id_t *ids, size_t count,
+		const struct fsm_state_metadata *state_metadata,
 		void *lang_opaque, void *hook_opaque),
 	void *lang_opaque)
 {
@@ -64,7 +64,7 @@ print_hook_accept(FILE *f,
 	assert(hooks != NULL);
 
 	if (opt->ambig == AMBIG_ERROR) {
-		assert(count <= 1);
+		assert(state_metadata->end_id_count <= 1);
 	}
 
 	if (default_accept == NULL) {
@@ -72,10 +72,10 @@ print_hook_accept(FILE *f,
 	}
 
 	if (hooks->accept != NULL) {
-		return hooks->accept(f, opt, ids, count,
+		return hooks->accept(f, opt, state_metadata,
 			lang_opaque, hooks->hook_opaque);
 	} else if (default_accept != NULL) {
-		return default_accept(f, opt, ids, count,
+		return default_accept(f, opt, state_metadata,
 			lang_opaque, hooks->hook_opaque);
 	}
 
@@ -86,21 +86,21 @@ int
 print_hook_comment(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
-	const fsm_end_id_t *ids, size_t count)
+	const struct fsm_state_metadata *state_metadata)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(hooks != NULL);
 
 	if (opt->ambig == AMBIG_ERROR) {
-		assert(count <= 1);
+		assert(state_metadata->end_id_count <= 1);
 	}
 
 	if (opt->comments && hooks->comment != NULL) {
 		/* this space is a polyglot */
 		fprintf(f, " ");
 
-		return hooks->comment(f, opt, ids, count,
+		return hooks->comment(f, opt, state_metadata,
 			hooks->hook_opaque);
 	}
 
@@ -138,7 +138,7 @@ int
 print_hook_conflict(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	const char *example)
 {
 	assert(opt != NULL);
@@ -147,7 +147,7 @@ print_hook_conflict(FILE *f,
 	/* f may be NULL for FSM_PRINT_NONE */
 
 	if (hooks->conflict != NULL) {
-		return hooks->conflict(f, opt, ids, count,
+		return hooks->conflict(f, opt, state_metadata,
 			example,
 			hooks->hook_opaque);
 	}
@@ -211,8 +211,12 @@ print_conflicts(FILE *f, const struct fsm *fsm,
 		 * The conflict hook is called here (rather in the caller),
 		 * because it can be called multiple times, for different states.
 		 */
+		struct fsm_state_metadata state_metadata = {
+			.end_ids = ids,
+			.end_id_count = count,
+		};
 		if (-1 == print_hook_conflict(f, opt, hooks,
-			ids, count,
+			&state_metadata,
 			example))
 		{
 			goto error;
@@ -354,7 +358,7 @@ fsm_print(FILE *f, const struct fsm *fsm,
 				continue;
 			}
 
-			assert(ir->states[i].count <= 1);
+			assert(ir->states[i].endids.count <= 1);
 		}
 	}
 

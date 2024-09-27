@@ -91,7 +91,7 @@ print_ids(FILE *f,
 
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	size_t i;
@@ -104,7 +104,7 @@ default_accept(FILE *f, const struct fsm_options *opt,
 
 	i = * (const size_t *) lang_opaque;
 
-	if (-1 == print_ids(f, opt->ambig, ids, count, i)) {
+	if (-1 == print_ids(f, opt->ambig, state_metadata->end_ids, state_metadata->end_id_count, i)) {
 	    return -1;
 	}
 
@@ -181,9 +181,13 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 
 		i = op->ret - retlist->a;
 
+		const struct fsm_state_metadata state_metadata = {
+			.end_ids = op->ret->ids,
+			.end_id_count = op->ret->count,
+		};
+
 		return print_hook_accept(f, opt, hooks,
-			op->ret->ids, op->ret->count,
-			default_accept,
+			&state_metadata, default_accept,
 			&i);
 
 	default:
@@ -365,8 +369,12 @@ fsm_print_rustfrag(FILE *f,
 			}
 
 			if (op->u.stop.end_bits == VM_END_SUCC) {
+				const struct fsm_state_metadata state_metadata = {
+					.end_ids = op->ret->ids,
+					.end_id_count = op->ret->count,
+				};
 				if (-1 == print_hook_comment(f, opt, hooks,
-					op->ret->ids, op->ret->count))
+					&state_metadata))
 				{
 					return -1;
 				}

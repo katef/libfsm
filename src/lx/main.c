@@ -523,7 +523,7 @@ run_threads(int concurrency, void *(*fn)(void *))
 
 static int
 conflict(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count, const char *example,
+	const struct fsm_state_metadata *state_metadata, const char *example,
 	void *hook_opaque)
 {
 	const struct ast *ast;
@@ -531,7 +531,7 @@ conflict(FILE *f, const struct fsm_options *opt,
 
 	assert(opt != NULL);
 	assert(opt->ambig == AMBIG_ERROR);
-	assert(count > 1);
+	assert(state_metadata->end_id_count > 1);
 
 	(void) f;
 	(void) opt;
@@ -544,7 +544,7 @@ conflict(FILE *f, const struct fsm_options *opt,
 
 	fprintf(stderr, "ambiguous mappings to ");
 
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < state_metadata->end_id_count; i++) {
 		const struct ast_mapping *m;
 
 		/*
@@ -557,7 +557,7 @@ conflict(FILE *f, const struct fsm_options *opt,
 			continue;
 		}
 
-		m = ast_getendmappingbyendid(ids[i]);
+		m = ast_getendmappingbyendid(state_metadata->end_ids[i]);
 
 		if (m->token != NULL) {
 			fprintf(stderr, "$%s", m->token->s);
@@ -573,7 +573,7 @@ conflict(FILE *f, const struct fsm_options *opt,
 			fprintf(stderr, "z%p", (void *) m->to); /* TODO: zindexof(n->to) */
 		}
 
-		if (i + 1 < count) {
+		if (i + 1 < state_metadata->end_id_count) {
 			fprintf(stderr, ", ");
 		}
 	}

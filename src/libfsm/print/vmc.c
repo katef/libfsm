@@ -49,7 +49,7 @@ cmp_operator(int cmp)
 // TODO: centralise vmc/c
 static int
 print_ids(FILE *f,
-	enum fsm_ambig ambig, const fsm_end_id_t *ids, size_t count)
+	enum fsm_ambig ambig, const struct fsm_state_metadata *state_metadata)
 {
 	switch (ambig) {
 	case AMBIG_NONE:
@@ -59,7 +59,7 @@ print_ids(FILE *f,
 
 	case AMBIG_ERROR:
 // TODO: decide if we deal with this ahead of the call to print or not
-		if (count > 1) {
+		if (state_metadata->end_id_count > 1) {
 			errno = EINVAL;
 			return -1;
 		}
@@ -72,11 +72,11 @@ print_ids(FILE *f,
 		 * and only appear once each, and are sorted.
 		 */
 		fprintf(f, "{\n");
-		fprintf(f, "\t\t*id = %u;\n", ids[0]);
+		fprintf(f, "\t\t*id = %u;\n", state_metadata->end_ids[0]);
 		fprintf(f, "\t\treturn 1;\n");
 		fprintf(f, "\t}");
 		break;
-	
+
 	case AMBIG_MULTIPLE:
 		/*
 		 * Here I would like to emit (static unsigned []) { 1, 2, 3 }
@@ -84,22 +84,22 @@ print_ids(FILE *f,
 		 * is a compiler extension.
 		 * So I'm emitting a static const variable declaration instead.
 		 */
-		
+
 		fprintf(f, "{\n");
 		fprintf(f, "\t\tstatic const unsigned a[] = { ");
-		for (fsm_end_id_t i = 0; i < count; i++) {
-			fprintf(f, "%u", ids[i]);
-			if (i + 1 < count) { 
+		for (fsm_end_id_t i = 0; i < state_metadata->end_id_count; i++) {
+			fprintf(f, "%u", state_metadata->end_ids[i]);
+			if (i + 1 < state_metadata->end_id_count) {
 				fprintf(f, ", ");
 			}
 		}
 		fprintf(f, " };\n");
 		fprintf(f, "\t\t*ids = a;\n");
-		fprintf(f, "\t\t*count = %zu;\n", count);
+		fprintf(f, "\t\t*count = %zu;\n", state_metadata->end_id_count);
 		fprintf(f, "\t\treturn 1;\n");
 		fprintf(f, "\t}");
 		break;
-	
+
 	default:
 		assert(!"unreached");
 		abort();
@@ -110,7 +110,7 @@ print_ids(FILE *f,
 
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
@@ -119,18 +119,18 @@ default_accept(FILE *f, const struct fsm_options *opt,
 
 	(void) lang_opaque;
 	(void) hook_opaque;
- 
-	if (-1 == print_ids(f, opt->ambig, ids, count)) {
+
+	if (-1 == print_ids(f, opt->ambig, state_metadata)) {
 		return -1;
 	}
 
 	return 0;
-}	   
-		
+}
+
 static int
 default_reject(FILE *f, const struct fsm_options *opt,
 	void *lang_opaque, void *hook_opaque)
-{   
+{
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
@@ -177,9 +177,13 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 	case VM_END_FAIL:
 		return print_hook_reject(f, opt, hooks, default_reject, NULL);
 
-	case VM_END_SUCC:
+	case VM_END_SUCC:;
+		struct fsm_state_metadata state_metadata = {
+			.end_ids = op->ret->ids,
+			.end_id_count = op->ret->count,
+		};
 		if (-1 == print_hook_accept(f, opt, hooks,
-			op->ret->ids, op->ret->count,
+			&state_metadata,
 			default_accept,
 			NULL))
 		{
@@ -187,7 +191,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 		}
 
 		if (-1 == print_hook_comment(f, opt, hooks,
-			op->ret->ids, op->ret->count))
+			&state_metadata))
 		{
 			return -1;
 		}
@@ -246,10 +250,10 @@ walk_sequence(struct dfavm_op_ir *op,
 
 	/*
 	 * Here we're looking for a sequence of:
-	 * 
+	 *
 	 *   FETCH: (or fail)
 	 *   STOP: c != 'x' (or fail)
-	 * 
+	 *
 	 * This catches situations like the "abc" and "xyz" in /^abc[01]xyz/,
 	 * but not for runs in unanchored regexes. For those, we'd be better
 	 * off adding VM instructions for sets of strings, and producing
@@ -619,4 +623,3 @@ fsm_print_vmc(FILE *f,
 
 	return 0;
 }
-

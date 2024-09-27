@@ -48,7 +48,7 @@ cmp_operator(int cmp)
 
 static int
 print_ids(FILE *f,
-	enum fsm_ambig ambig, const fsm_end_id_t *ids, size_t count,
+	enum fsm_ambig ambig, const struct fsm_state_metadata *state_metadata,
 	size_t i)
 {
 	switch (ambig) {
@@ -57,12 +57,12 @@ print_ids(FILE *f,
 
 	case AMBIG_ERROR:
 // TODO: decide if we deal with this ahead of the call to print or not
-		if (count > 1) {
+		if (state_metadata->end_id_count > 1) {
 			errno = EINVAL;
 			return -1;
 		}
 
-		fprintf(f, ", %u", ids[0]);
+		fprintf(f, ", %u", state_metadata->end_ids[0]);
 		break;
 
 	case AMBIG_EARLIEST:
@@ -70,7 +70,7 @@ print_ids(FILE *f,
 		 * The libfsm api guarentees these ids are unique,
 		 * and only appear once each, and are sorted.
 		 */
-		fprintf(f, ", %u", ids[0]);
+		fprintf(f, ", %u", state_metadata->end_ids[0]);
 		break;
 
 	case AMBIG_MULTIPLE:
@@ -87,7 +87,7 @@ print_ids(FILE *f,
 
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	size_t i;
@@ -102,7 +102,7 @@ default_accept(FILE *f, const struct fsm_options *opt,
 
 	fprintf(f, "return true");
 
-	if (-1 == print_ids(f, opt->ambig, ids, count, i)) {
+	if (-1 == print_ids(f, opt->ambig, state_metadata, i)) {
 		return -1;
 	}
 
@@ -195,15 +195,20 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 		fprintf(f, "{\n");
 		fprintf(f, "\t\t");
 
+		const struct fsm_state_metadata state_metadata = {
+			.end_ids = op->ret->ids,
+			.end_id_count = op->ret->count,
+		};
+
 		if (-1 == print_hook_accept(f, opt, hooks,
-			op->ret->ids, op->ret->count,
+			&state_metadata,
 			default_accept, &i))
 		{
 			return -1;
 		}
 
 		if (-1 == print_hook_comment(f, opt, hooks,
-			op->ret->ids, op->ret->count))
+			&state_metadata))
 		{
 			return -1;
 		}
@@ -420,7 +425,7 @@ fsm_print_go(FILE *f,
 
 		if (hooks->args != NULL) {
 			fprintf(f, ", ");
-		
+
 			if (-1 == print_hook_args(f, opt, hooks, NULL, NULL)) {
 				return -1;
 			}
@@ -445,7 +450,7 @@ fsm_print_go(FILE *f,
 		default:
 			assert(!"unreached");
 			abort();
-		}	
+		}
 
 		fprintf(f, " {\n");
 

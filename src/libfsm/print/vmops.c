@@ -47,7 +47,7 @@ cmp_operator(int cmp)
 
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	const char *prefix;
@@ -65,8 +65,7 @@ default_accept(FILE *f, const struct fsm_options *opt,
 		prefix = "fsm_";
 	}
 
-	(void) ids;
-	(void) count;
+	(void) state_metadata;
 
 	fprintf(f, "%sactionRET, 1", prefix);
 	if (opt->ambig != AMBIG_NONE) {
@@ -152,13 +151,17 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 		}
 		break;
 
-	case VM_END_SUCC:
+	case VM_END_SUCC:;
+		struct fsm_state_metadata state_metadata = {
+			.end_ids = op->ret->ids,
+			.end_id_count = op->ret->count,
+		};
 		assert(op->ret >= retlist->a);
 
 		i = op->ret - retlist->a;
 
 		if (-1 == print_hook_accept(f, opt, hooks,
-			op->ret->ids, op->ret->count,
+			&state_metadata,
 			default_accept, &i))
 		{
 			return -1;
@@ -306,8 +309,12 @@ fsm_print_vmops_c(FILE *f,
 		fprintf(f, "},");
 
 		if (op->instr == VM_OP_STOP && op->u.stop.end_bits == VM_END_SUCC) {
+			struct fsm_state_metadata state_metadata = {
+				.end_ids = op->ret->ids,
+				.end_id_count = op->ret->count,
+			};
 			if (-1 == print_hook_comment(f, opt, hooks,
-				op->ret->ids, op->ret->count))
+				&state_metadata))
 			{
 				return -1;
 			}

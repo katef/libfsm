@@ -90,7 +90,7 @@ cmp_operator(int cmp)
 
 static int
 default_accept(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
@@ -107,12 +107,12 @@ default_accept(FILE *f, const struct fsm_options *opt,
 
 	case AMBIG_ERROR:
 // TODO: decide if we deal with this ahead of the call to print or not
-		if (count > 1) {
+		if (state_metadata->end_id_count > 1) {
 			errno = EINVAL;
 			return -1;
 		}
 
-		fprintf(f, "%%rt { i1 true, i32 %u }", ids[0]);
+		fprintf(f, "%%rt { i1 true, i32 %u }", state_metadata->end_ids[0]);
 		break;
 
 	case AMBIG_EARLIEST:
@@ -120,14 +120,14 @@ default_accept(FILE *f, const struct fsm_options *opt,
 		 * The libfsm api guarentees these ids are unique,
 		 * and only appear once each, and are sorted.
 		 */
-		fprintf(f, "%%rt { i1 true, i32 %u }", ids[0]);
+		fprintf(f, "%%rt { i1 true, i32 %u }", state_metadata->end_ids[0]);
 		break;
 
 	case AMBIG_MULTIPLE:
-		fprintf(f, "internal unnamed_addr constant [%zu x i32] [", count);
-		for (size_t j = 0; j < count; j++) {
-			fprintf(f, "i32 %u", ids[j]);
-			if (j + 1 < count) {
+		fprintf(f, "internal unnamed_addr constant [%zu x i32] [", state_metadata->end_id_count);
+		for (size_t j = 0; j < state_metadata->end_id_count; j++) {
+			fprintf(f, "i32 %u", state_metadata->end_ids[j]);
+			if (j + 1 < state_metadata->end_id_count) {
 				fprintf(f, ", ");
 			}
 		}
@@ -662,15 +662,19 @@ fsm_print_llvm(FILE *f,
 	if (opt->ambig == AMBIG_MULTIPLE) {
 		for (size_t i = 0; i < retlist->count; i++) {
 			fprintf(f, "@%sr%zu = ", prefix, i);
+			const struct fsm_state_metadata state_metadata = {
+				.end_ids = retlist->a[i].ids,
+				.end_id_count = retlist->a[i].count,
+			};
 			if (-1 == print_hook_accept(f, opt, hooks,
-				retlist->a[i].ids, retlist->a[i].count,
+				&state_metadata,
 				default_accept, NULL))
 			{
 				return -1;
 			}
 
 			if (-1 == print_hook_comment(f, opt, hooks,
-				retlist->a[i].ids, retlist->a[i].count))
+				&state_metadata))
 			{
 				return -1;
 			}
@@ -687,8 +691,12 @@ fsm_print_llvm(FILE *f,
 				ptr_i32, retlist->a[i].count, prefix, i, ptr_i32, retlist->a[i].count);
 			fprintf(f, ",");
 		} else {
+			const struct fsm_state_metadata state_metadata = {
+				.end_ids = retlist->a[i].ids,
+				.end_id_count = retlist->a[i].count,
+			};
 			if (-1 == print_hook_accept(f, opt, hooks,
-				retlist->a[i].ids, retlist->a[i].count,
+				&state_metadata,
 				default_accept, NULL))
 			{
 				return -1;
@@ -697,7 +705,7 @@ fsm_print_llvm(FILE *f,
 			fprintf(f, ",");
 
 			if (-1 == print_hook_comment(f, opt, hooks,
-				retlist->a[i].ids, retlist->a[i].count))
+				&state_metadata))
 			{
 				return -1;
 			}
