@@ -28,7 +28,7 @@ int main(void) {
 	struct fsm *fsm = gtest_fsm_of_matches(&matches);
 	assert(fsm != NULL);
 
-	if (!fsm_generate_matches(fsm, MAX_EXP_MATCH + 1, gtest_matches_cb, &matches)) {
+	if (!fsm_generate_matches(fsm, MAX_EXP_MATCH + 1, 0, gtest_matches_cb, &matches)) {
 		fprintf(stderr, "fsm_generate_matches: error\n");
 		exit(EXIT_FAILURE);
 	}
