@@ -17,16 +17,20 @@ dump_labels(FILE *f, const uint64_t labels[4])
 	}
 }
 
-int
-fsm_determinise(struct fsm *nfa)
+enum fsm_determinise_with_config_res
+fsm_determinise_with_config(struct fsm *nfa,
+	const struct fsm_determinise_config *config)
 {
-	int res = 0;
+	enum fsm_determinise_with_config_res res = FSM_DETERMINISE_WITH_CONFIG_ERRNO;
 	struct mappingstack *stack = NULL;
 
 	struct interned_state_set_pool *issp = NULL;
 	struct map map = { NULL, 0, 0, NULL };
 	struct mapping *curr = NULL;
 	size_t dfacount = 0;
+	const size_t state_limit = config == NULL
+	    ? 0
+	    : config->state_limit;
 
 	struct analyze_closures_env ac_env = { 0 };
 
@@ -40,7 +44,7 @@ fsm_determinise(struct fsm *nfa)
 	 */
 	if (fsm_has(nfa, fsm_hasepsilons)) {
 		if (!fsm_remove_epsilons(nfa)) {
-			return 0;
+			return FSM_DETERMINISE_WITH_CONFIG_ERRNO;
 		}
 	}
 
@@ -52,7 +56,12 @@ fsm_determinise(struct fsm *nfa)
 
 	issp = interned_state_set_pool_alloc(nfa->alloc);
 	if (issp == NULL) {
-		return 0;
+		return FSM_DETERMINISE_WITH_CONFIG_ERRNO;
+	}
+
+	if (state_limit != 0 && fsm_countstates(nfa) > state_limit) {
+		res = FSM_DETERMINISE_WITH_CONFIG_STATE_LIMIT_REACHED;
+		goto cleanup;
 	}
 
 	{
@@ -74,7 +83,7 @@ fsm_determinise(struct fsm *nfa)
 		 */
 
 		if (!fsm_getstart(nfa, &start)) {
-			res = 1;
+			res = FSM_DETERMINISE_WITH_CONFIG_OK;
 			goto cleanup;
 		}
 
@@ -150,6 +159,11 @@ fsm_determinise(struct fsm *nfa)
 				assert(m->dfastate < dfacount);
 			} else {
 				/* not found -- add a new one and push it to the stack for processing */
+
+				if (state_limit != 0 && dfacount > state_limit) {
+					res = FSM_DETERMINISE_WITH_CONFIG_STATE_LIMIT_REACHED;
+					goto cleanup;
+				}
 				if (!map_add(&map, dfacount, iss, &m)) {
 					goto cleanup;
 				}
@@ -260,7 +274,7 @@ fsm_determinise(struct fsm *nfa)
 	assert(fsm_all(nfa, fsm_isdfa));
 #endif
 
-	res = 1;
+	res = FSM_DETERMINISE_WITH_CONFIG_OK;
 
 cleanup:
 	map_free(&map);
@@ -309,6 +323,21 @@ cleanup:
 	}
 
 	return res;
+}
+
+int
+fsm_determinise(struct fsm *nfa)
+{
+	enum fsm_determinise_with_config_res res = fsm_determinise_with_config(nfa, NULL);
+	switch (res) {
+	case FSM_DETERMINISE_WITH_CONFIG_OK:
+		return 1;
+	case FSM_DETERMINISE_WITH_CONFIG_STATE_LIMIT_REACHED:
+		/* unreachable */
+		return 0;
+	case FSM_DETERMINISE_WITH_CONFIG_ERRNO:
+		return 0;
+	}
 }
 
 /* Add DFA_state to the list for NFA_state. */

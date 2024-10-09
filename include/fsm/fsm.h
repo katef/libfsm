@@ -385,6 +385,21 @@ fsm_remove_epsilons(struct fsm *fsm);
 int
 fsm_determinise(struct fsm *fsm);
 
+/* Determinise, with a passed in configuration
+ * and a distinct return value for reaching
+ * the state limit. */
+struct fsm_determinise_config {
+	size_t state_limit;	/* 0: no limit */
+};
+enum fsm_determinise_with_config_res {
+	FSM_DETERMINISE_WITH_CONFIG_OK,
+	FSM_DETERMINISE_WITH_CONFIG_STATE_LIMIT_REACHED,
+	FSM_DETERMINISE_WITH_CONFIG_ERRNO,
+};
+enum fsm_determinise_with_config_res
+fsm_determinise_with_config(struct fsm *fsm,
+	const struct fsm_determinise_config *config);
+
 /*
  * Make a DFA complete, as per fsm_iscomplete.
  */
