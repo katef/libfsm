@@ -336,6 +336,7 @@ fsm_determinise(struct fsm *nfa)
 		/* unreachable */
 		return 0;
 	case FSM_DETERMINISE_WITH_CONFIG_ERRNO:
+	default:
 		return 0;
 	}
 }
