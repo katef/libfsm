@@ -287,7 +287,8 @@ fsm_union_repeated_pattern_group(size_t entry_count,
 			/* for any state that has eager outputs and a self edge,
 			 * remove the self edge before further linkage */
 			for (fsm_state_t s = 0; s < fsm->statecount; s++) {
-				if (!fsm_eager_output_has_any(fsm, s, NULL)) { continue; }
+				const size_t eager_output_count = fsm_eager_output_count(fsm, s);
+				if (eager_output_count == 0) { continue; }
 				struct edge_set *edges = fsm->states[s].edges;
 				struct edge_set *new = edge_set_new();
 

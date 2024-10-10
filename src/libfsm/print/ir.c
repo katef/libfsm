@@ -506,23 +506,6 @@ error:
 	return 0;
 }
 
-static int
-append_eager_output_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
-{
-	struct ir_state_eager_output *outputs = opaque;
-	(void)state;
-	outputs->ids[outputs->count++] = id;
-	return 1;
-}
-
-static int
-cmp_fsm_output_id_t(const void *pa, const void *pb)
-{
-	const fsm_output_id_t a = *(fsm_output_id_t *)pa;
-	const fsm_output_id_t b = *(fsm_output_id_t *)pb;
-	return a < b ? -1 : a > b ? 1 : 0;
-}
-
 struct ir *
 make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 {
@@ -587,17 +570,16 @@ make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 			ir->states[i].endids.count = count;
 		}
 
-		size_t count;
-		if (fsm_eager_output_has_any(fsm, i, &count)) {
+		const size_t eager_output_count = fsm_eager_output_count(fsm, i);
+		if (eager_output_count > 0) {
 			struct ir_state_eager_output *outputs = f_malloc(fsm->alloc,
-			    sizeof(*outputs) + count * sizeof(outputs->ids[0]));
+			    sizeof(*outputs) + eager_output_count * sizeof(outputs->ids[0]));
 			if (outputs == NULL) {
 				goto error;
 			}
-			outputs->count = 0;
-			fsm_eager_output_iter_state(fsm, i, append_eager_output_cb, outputs);
-			assert(outputs->count == count);
-			qsort(outputs->ids, outputs->count, sizeof(outputs->ids[0]), cmp_fsm_output_id_t);
+			fsm_eager_output_get(fsm, i, outputs->ids);
+			outputs->count = eager_output_count;
+
 			ir->states[i].eager_outputs = outputs;
 		}
 

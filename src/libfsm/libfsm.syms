@@ -102,9 +102,11 @@ fsm_endid_dump
 
 fsm_seteageroutput
 fsm_seteageroutputonends
+fsm_eager_output_count
 # short term hack
 fsm_eager_output_set_cb
 fsm_eager_output_dump
+fsm_eager_output_get
 
 fsm_countedges
 fsm_countstates

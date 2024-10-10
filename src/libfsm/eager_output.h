@@ -36,10 +36,6 @@ void
 fsm_eager_output_iter_all(const struct fsm *fsm,
     fsm_eager_output_iter_cb *cb, void *opaque);
 
-bool
-fsm_eager_output_has_any(const struct fsm *fsm,
-    fsm_state_t state, size_t *count);
-
 int
 fsm_eager_output_compact(struct fsm *fsm, fsm_state_t *mapping, size_t mapping_count);
 

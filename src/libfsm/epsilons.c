@@ -222,7 +222,8 @@ fsm_remove_epsilons(struct fsm *nfa)
 			 * in the current state's epsilon closure to the
 			 * current state. These will be added at the end. */
 			{
-				if (fsm_eager_output_has_any(nfa, es_id, NULL)) {
+				const size_t count = fsm_eager_output_count(nfa, es_id);
+				if (count > 0) {
 					fsm_eager_output_iter_state(nfa, es_id, collect_eager_output_ids_cb, &eager_output_buf);
 					if (!eager_output_buf.ok) { goto cleanup; }
 				}

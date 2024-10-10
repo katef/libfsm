@@ -1026,8 +1026,8 @@ static int
 collect_eager_output_ids(const struct fsm *fsm, fsm_state_t state,
 	struct end_metadata_eager_outputs *e)
 {
-	size_t count = 0;
-	if (!fsm_eager_output_has_any(fsm, state, &count)) {
+	size_t count = fsm_eager_output_count(fsm, state);
+	if (count == 0) {
 		return 1;	/* nothing to do */
 	}
 

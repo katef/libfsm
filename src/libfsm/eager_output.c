@@ -276,6 +276,55 @@ fsm_eager_output_iter_state(const struct fsm *fsm,
 	}
 }
 
+static int
+inc_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
+{
+	(void)state;
+	(void)id;
+	size_t *count = opaque;
+	(*count)++;
+	return 1;
+}
+
+/* Get the number of eager output IDs associated with a state. */
+size_t
+fsm_eager_output_count(const struct fsm *fsm, fsm_state_t state)
+{
+	size_t res = 0;
+	fsm_eager_output_iter_state(fsm, state, inc_cb, (void *)&res);
+	return res;
+}
+
+struct get_env {
+	size_t count;
+	fsm_output_id_t *buf;
+};
+
+static int
+append_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
+{
+	struct get_env *env = opaque;
+	(void)state;
+	env->buf[env->count++] = id;
+	return 1;
+}
+
+static int
+cmp_fsm_output_id_t(const void *pa, const void *pb)
+{
+	const fsm_output_id_t a = *(fsm_output_id_t *)pa;
+	const fsm_output_id_t b = *(fsm_output_id_t *)pb;
+	return a < b ? -1 : a > b ? 1 : 0;
+}
+
+void
+fsm_eager_output_get(const struct fsm *fsm, fsm_state_t state, fsm_output_id_t *buf)
+{
+	struct get_env env = { .buf = buf };
+	fsm_eager_output_iter_state(fsm, state, append_cb, &env);
+	qsort(buf, env.count, sizeof(buf[0]), cmp_fsm_output_id_t);
+}
+
 void
 fsm_eager_output_iter_all(const struct fsm *fsm,
     fsm_eager_output_iter_cb *cb, void *opaque)
@@ -325,26 +374,6 @@ fsm_eager_output_dump(FILE *f, const struct fsm *fsm)
 	fprintf(f, "%s:\n", __func__);
 	fsm_eager_output_iter_all(fsm, dump_cb, (void *)&env);
 	fprintf(f, "== %zu total\n", env.count);
-}
-
-static int
-inc_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
-{
-	(void)state;
-	(void)id;
-	size_t *count = opaque;
-	(*count)++;
-	return 1;
-}
-
-bool
-fsm_eager_output_has_any(const struct fsm *fsm,
-    fsm_state_t state, size_t *count)
-{
-	size_t c = 0;
-	fsm_eager_output_iter_state(fsm, state, &inc_cb, &c);
-	if (count != NULL) { *count = c; }
-	return c > 0;
 }
 
 int

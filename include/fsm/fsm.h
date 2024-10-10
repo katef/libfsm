@@ -303,6 +303,16 @@ fsm_eager_output_set_cb(struct fsm *fsm, fsm_eager_output_cb *cb, void *opaque);
 void
 fsm_eager_output_get_cb(const struct fsm *fsm, fsm_eager_output_cb **cb, void **opaque);
 
+/* Get the number of eager output IDs associated with a state. */
+size_t
+fsm_eager_output_count(const struct fsm *fsm, fsm_state_t state);
+
+/* Get eager output associated with a state. It's expected that buf[] has
+ * sufficient space -- call fsm_eager_output_count first to get the count.
+ * The contents of buf will be sorted and unique. */
+void
+fsm_eager_output_get(const struct fsm *fsm, fsm_state_t state, fsm_output_id_t *buf);
+
 /*
  * Find the state (if there is just one), or add epsilon edges from all states,
  * for which the given predicate is true.
