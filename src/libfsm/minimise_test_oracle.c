@@ -109,13 +109,19 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	fsm_state_t *tmp_map = NULL;
 	fsm_state_t *mapping = NULL;
 
-	/* endid_group_assignments[X] = Y: state X is in endid group Y
-	 * endid_group_leaders[X] = Y: see end state Y for endid group X */
-	unsigned *endid_group_assignments = NULL;
-	size_t endid_group_count = 1; /* group 0 is the empty set */
-	unsigned *endid_group_leaders = NULL;
+	/* End metadata grouping: The fixpoint algorithm here isn't aware
+	 * of endids or eager outputs associated with particular states,
+	 * so do a pass grouping them by matching end metadata.
+	 *
+	 * end_md_group_assignments[X] = Y: state X is in end_md group Y
+	 * end_md_group_leaders[X] = Y: see end state Y for end_md group X */
+	unsigned *end_md_group_assignments = NULL;
+	size_t end_md_group_count = 1; /* group 0 is the empty set */
+	unsigned *end_md_group_leaders = NULL;
 	fsm_end_id_t *ids_a = NULL;
 	fsm_end_id_t *ids_b = NULL;
+	fsm_output_id_t *eo_ids_a = NULL;
+	fsm_output_id_t *eo_ids_b = NULL;
 
 	table = calloc(row_words * table_states, sizeof(table[0]));
 	if (table == NULL) { goto cleanup; }
@@ -126,11 +132,11 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	mapping = malloc(state_count * sizeof(mapping[0]));
 	if (mapping == NULL) { goto cleanup; }
 
-	endid_group_assignments = calloc(state_count, sizeof(tmp_map[0]));
-	if (endid_group_assignments == NULL) { goto cleanup; }
+	end_md_group_assignments = calloc(state_count, sizeof(tmp_map[0]));
+	if (end_md_group_assignments == NULL) { goto cleanup; }
 
-	endid_group_leaders = calloc(state_count, sizeof(tmp_map[0]));
-	if (endid_group_leaders == NULL) { goto cleanup; }
+	end_md_group_leaders = calloc(state_count, sizeof(tmp_map[0]));
+	if (end_md_group_leaders == NULL) { goto cleanup; }
 
 	/* macros for NxN bit table */
 #define POS(X,Y) ((X*table_states) + Y)
@@ -139,6 +145,7 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 #define CHECK(X,Y) u64bitset_get(table, POS(X,Y))
 
 	size_t max_endid_count = 0;
+	size_t max_eager_output_count = 0;
 
 	/* Mark all pairs of states where one is final and one is not.
 	 * This includes the dead state. */
@@ -148,6 +155,12 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 			if (count > max_endid_count) {
 				max_endid_count = count;
 			}
+		}
+
+		/* count eager outputs, not just on end states */
+		const size_t eo_count = fsm_eager_output_count(fsm, i);
+		if (eo_count > max_eager_output_count) {
+			max_eager_output_count = eo_count;
 		}
 
 		for (size_t j = 0; j < i; j++) {
@@ -171,50 +184,70 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	ids_b = malloc(max_endid_count * sizeof(ids_b[0]));
 	if (ids_b == NULL) { goto cleanup; }
 
-	/* For every end state, check if it has endids. If not, assign it
-	 * to endid group 0 (none). Otherwise, check if its endids match
-	 * any of the other end states. If so, assign it to the same endid
+	eo_ids_a = malloc(max_eager_output_count * sizeof(eo_ids_a[0]));
+	if (eo_ids_a == NULL) { goto cleanup; }
+	eo_ids_b = malloc(max_eager_output_count * sizeof(eo_ids_b[0]));
+	if (eo_ids_b == NULL) { goto cleanup; }
+
+	/* For every end state, check if it has endids or eager outputs.
+	 * If not, assign it to group 0 (none). Otherwise, check if its IDs match
+	 * any of the other end states. If so, assign it to the same
 	 * group, otherwise assign a new one and mark it as the leader. */
 	for (size_t i = 0; i < state_count; i++) {
 		if (!fsm_isend(fsm, i)) {
-			endid_group_assignments[i] = 0; /* none */
+			end_md_group_assignments[i] = 0; /* none */
 			continue;
 		}
 
-		size_t count_a = fsm_endid_count(fsm, i);
-		assert(count_a <= max_endid_count);
-		if (count_a == 0) {
+		const size_t endid_count_a = fsm_endid_count(fsm, i);
+		assert(endid_count_a <= max_endid_count);
+
+		const size_t eager_output_count_a = fsm_eager_output_count(fsm, i);
+		assert(eager_output_count_a <= max_eager_output_count);
+
+		if (endid_count_a == 0 && eager_output_count_a == 0) {
 			continue;
 		}
 
-		int eres = fsm_endid_get(fsm, i, count_a, ids_a);
+		int eres = fsm_endid_get(fsm, i, endid_count_a, ids_a);
 		assert(eres == 1);
+
+		fsm_eager_output_get(fsm, i, eo_ids_a);
 
 		bool found = false;
 		/* note: skipping eg 0 here since that's the empty set */
-		for (size_t eg_i = 1; eg_i < endid_group_count; eg_i++) {
-			size_t count_b = fsm_endid_count(fsm, endid_group_leaders[eg_i]);
-			if (count_b != count_a) {
+		for (size_t eg_i = 1; eg_i < end_md_group_count; eg_i++) {
+			size_t endid_count_b = fsm_endid_count(fsm, end_md_group_leaders[eg_i]);
+			if (endid_count_b != endid_count_a) {
 				continue;
 			}
 
-			assert(count_b > 0);
-			assert(count_b <= max_endid_count);
-			eres = fsm_endid_get(fsm, endid_group_leaders[eg_i],
-			    count_b, ids_b);
+			const size_t eager_output_count_b = fsm_eager_output_count(fsm, end_md_group_leaders[eg_i]);
+			assert(eager_output_count_b <= max_eager_output_count);
+			if (eager_output_count_b != eager_output_count_a) {
+				continue;
+			}
+
+			assert(endid_count_b > 0 || eager_output_count_b > 0);
+			assert(endid_count_b <= max_endid_count);
+			eres = fsm_endid_get(fsm, end_md_group_leaders[eg_i],
+			    endid_count_b, ids_b);
 			assert(eres == 1);
 
-			if (0 == memcmp(ids_a, ids_b, count_a * sizeof(ids_a[0]))) {
+			fsm_eager_output_get(fsm, end_md_group_leaders[eg_i], eo_ids_b);
+
+			if ((0 == memcmp(ids_a, ids_b, endid_count_a * sizeof(ids_a[0]))) &&
+			    (0 == memcmp(eo_ids_a, eo_ids_b, eager_output_count_a * sizeof(eo_ids_a[0])))) {
 				found = true;
-				endid_group_assignments[i] = eg_i;
+				end_md_group_assignments[i] = eg_i;
 				break;
 			}
 		}
 
 		if (!found) {
-			endid_group_assignments[i] = endid_group_count;
-			endid_group_leaders[endid_group_count] = i;
-			endid_group_count++;
+			end_md_group_assignments[i] = end_md_group_count;
+			end_md_group_leaders[end_md_group_count] = i;
+			end_md_group_count++;
 		}
 	}
 
@@ -222,10 +255,10 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	 * group must be distinguishable. */
 	for (size_t i = 0; i < state_count; i++) {
 		if (fsm_isend(fsm, i)) {
-			const unsigned i_group = endid_group_assignments[i];
+			const unsigned i_group = end_md_group_assignments[i];
 			for (size_t j = 0; j < i; j++) {
 				if (fsm_isend(fsm, j)) {
-					const unsigned j_group = endid_group_assignments[j];
+					const unsigned j_group = end_md_group_assignments[j];
 					if (i_group != j_group) {
 						MARK(i, j);
 					}
@@ -359,10 +392,12 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 	free(table);
 	free(tmp_map);
 	free(mapping);
-	free(endid_group_assignments);
-	free(endid_group_leaders);
+	free(end_md_group_assignments);
+	free(end_md_group_leaders);
 	free(ids_a);
 	free(ids_b);
+	free(eo_ids_a);
+	free(eo_ids_b);
 
 	return res;
 
@@ -370,10 +405,12 @@ cleanup:
 	if (table != NULL) { free(table); }
 	if (tmp_map != NULL) { free(tmp_map); }
 	if (mapping != NULL) { free(mapping); }
-	if (endid_group_assignments != NULL) { free(endid_group_assignments); }
-	if (endid_group_leaders != NULL) { free(endid_group_leaders); }
+	if (end_md_group_assignments != NULL) { free(end_md_group_assignments); }
+	if (end_md_group_leaders != NULL) { free(end_md_group_leaders); }
 	if (ids_a != NULL) { free(ids_a); }
 	if (ids_b != NULL) { free(ids_b); }
 	if (res != NULL) { fsm_free(res); }
+	free(eo_ids_a);
+	free(eo_ids_b);
 	return NULL;
 }
