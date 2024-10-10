@@ -101,6 +101,7 @@ fsm_countstates
 fsm_trim
 fsm_reverse
 fsm_determinise
+fsm_determinise_with_config
 fsm_remove_epsilons
 fsm_complete
 fsm_minimise
