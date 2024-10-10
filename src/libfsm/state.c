@@ -65,6 +65,7 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 		new->visited  = 0;
 		new->epsilons = NULL;
 		new->edges    = NULL;
+		new->has_eager_outputs = 0;
 	}
 
 	fsm->statecount++;
