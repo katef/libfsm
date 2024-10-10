@@ -446,6 +446,8 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 
 	size_t max_pattern_length = 0;
 
+	const unsigned seed = size == 0 ? 0 : data[0];
+
 	/* chop data into a series of patterns */
 	{
 		size_t prev = 0;
@@ -646,7 +648,7 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 	 * Use the combined DFA to generate matches, check that the
 	 * match behavior agrees with the individual DFA copies. */
 	env.current_pattern = (size_t)-1;
-	if (!fsm_generate_matches(env.combined, max_pattern_length, gen_combined_check_individual_cb, &env)) {
+	if (!fsm_generate_matches(env.combined, max_pattern_length, seed, gen_combined_check_individual_cb, &env)) {
 		goto cleanup;
 	}
 
@@ -656,7 +658,7 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 	/* check behavior against the combined DFA. */
 	for (size_t i = 0; i < env.pattern_count; i++) {
 		env.current_pattern = i;
-		if (!fsm_generate_matches(env.combined, max_pattern_length, gen_individual_check_combined_cb, &env)) {
+		if (!fsm_generate_matches(env.combined, max_pattern_length, seed, gen_individual_check_combined_cb, &env)) {
 			goto cleanup;
 		}
 	}
