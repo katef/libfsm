@@ -107,7 +107,7 @@ struct gen_ctx {
 static bool
 gen_init_outer(struct fsm *fsm, size_t max_length,
     fsm_generate_matches_cb *cb, void *opaque,
-    bool randomized, unsigned seed);
+    bool randomized);
 
 static bool
 gen_init(struct gen_ctx *ctx, struct fsm *fsm);
@@ -140,7 +140,7 @@ static bool
 grow_stack(struct gen_ctx *ctx);
 
 int
-fsm_generate_matches(struct fsm *fsm, size_t max_length, unsigned seed,
+fsm_generate_matches(struct fsm *fsm, size_t max_length, int randomized,
     fsm_generate_matches_cb *cb, void *opaque)
 {
 	if (max_length == 0) {
@@ -154,7 +154,7 @@ fsm_generate_matches(struct fsm *fsm, size_t max_length, unsigned seed,
 
 	INIT_TIMERS();
 	TIME(&pre);
-	int res = gen_init_outer(fsm, max_length, cb, opaque, seed != 0, seed);
+	int res = gen_init_outer(fsm, max_length, cb, opaque, randomized != 0);
 	TIME(&post);
 
 	DIFF_MSEC("fsm_generate_matches", pre, post, NULL);
@@ -204,7 +204,7 @@ fsm_generate_cb_printf(const struct fsm *fsm,
 static bool
 gen_init_outer(struct fsm *fsm, size_t max_length,
     fsm_generate_matches_cb *cb, void *opaque,
-    bool randomized, unsigned seed)
+    bool randomized)
 {
 	int res = false;
 	if (fsm == NULL || cb == NULL || max_length == 0) {
@@ -212,10 +212,6 @@ gen_init_outer(struct fsm *fsm, size_t max_length,
 	}
 
 	assert(fsm_all(fsm, fsm_isdfa)); /* DFA-only */
-
-	if (randomized) {
-		srand(seed);
-	}
 
 #if LOG_GEN > 1
 	fprintf(stderr, "%s: %u states\n", __func__, fsm_countstates(fsm));
