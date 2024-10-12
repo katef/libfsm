@@ -90,6 +90,11 @@ fsm_walk_edges(const struct fsm *fsm, void *opaque,
  * functionally equivalent cases makes testing dramatically faster,
  * but exploring every edge could be added later.
  *
+ * If randomized is zero then it will generate the first label in the
+ * label set, otherwise a label from the set will be chosen using rand()
+ * (favoring printable characters). The caller can use srand()
+ * beforehand to set a PRNG seed.
+ *
  * Note: fsm is non-const because it calls fsm_trim on the FSM
  * internally. This records the shortest distance from each state to an
  * end state, which is used to prune branches that would not produce
@@ -114,7 +119,7 @@ fsm_generate_matches_cb(const struct fsm *fsm,
     const char *input, size_t input_length,
     fsm_state_t end_state, void *opaque);
 int
-fsm_generate_matches(struct fsm *fsm, size_t max_length,
+fsm_generate_matches(struct fsm *fsm, size_t max_length, int randomized,
     fsm_generate_matches_cb *cb, void *opaque);
 
 /* Callback provided for the most basic use case for

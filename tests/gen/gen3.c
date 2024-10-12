@@ -146,7 +146,7 @@ int main(void) {
 	struct fsm *fsm = build();
 	assert(fsm != NULL);
 
-	if (!fsm_generate_matches(fsm, 11, matches_cb, NULL)) {
+	if (!fsm_generate_matches(fsm, 11, 0, matches_cb, NULL)) {
 		fprintf(stderr, "fsm_generate_matches: error\n");
 		exit(EXIT_FAILURE);
 	}

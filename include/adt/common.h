@@ -36,7 +36,7 @@
 /* If non-zero, expand the timer macros defined below, otherwise
  * they compile away. */
 #ifndef TRACK_TIMES
-#define TRACK_TIMES 0
+#define TRACK_TIMES (0 && !BUILD_FOR_FUZZER)
 #endif
 
 #if EXPENSIVE_CHECKS && TRACK_TIMES

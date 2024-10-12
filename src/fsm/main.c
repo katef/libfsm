@@ -770,7 +770,7 @@ main(int argc, char *argv[])
 	}
 
 	if (generate_bounds > 0) {
-		r = fsm_generate_matches(fsm, generate_bounds, fsm_generate_cb_printf_escaped, &opt);
+		r = fsm_generate_matches(fsm, generate_bounds, 0, fsm_generate_cb_printf_escaped, &opt);
 	}
 
 	fsm_free(fsm);
