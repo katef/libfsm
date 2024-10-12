@@ -503,13 +503,14 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 		}
 	}
 
-	struct re_anchoring_info anchorage[MAX_PATTERNS] = {0};
+	enum re_is_anchored_res anchorage[MAX_PATTERNS] = {0};
 
 	/* for each pattern, attempt to compile to a DFA */
 	for (size_t p_i = 0; p_i < env.pattern_count; p_i++) {
 		const char *p = env.patterns[p_i];
 
-		if (!re_is_anchored(RE_PCRE, fsm_sgetc, &p, 0, NULL, &anchorage[p_i])) {
+		enum re_is_anchored_res a = re_is_anchored(RE_PCRE, fsm_sgetc, &p, 0, NULL);
+		if (a == RE_IS_ANCHORED_ERROR) {
 			continue; /* unsupported regex */
 		}
 
@@ -599,8 +600,8 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 			}
 
 			entries[used].fsm = cp;
-			entries[used].anchored_start = anchorage[i].start;
-			entries[used].anchored_end = anchorage[i].end;
+			entries[used].anchored_start = anchorage[i] & RE_IS_ANCHORED_START;
+			entries[used].anchored_end = anchorage[i] & RE_IS_ANCHORED_END;
 			used++;
 		}
 
