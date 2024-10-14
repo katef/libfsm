@@ -504,10 +504,11 @@ fsm_print_wasm(FILE *f,
 			fprintf(f, ".global  %smatch\n", prefix);
 			fprintf(f, ".hidden  %smatch\n", prefix);
 			fprintf(f, ".type    %smatch,@function\n", prefix);
+//			fprintf(f, "(memory 1 1)\n"); // TODO(dgryski): I guess we don't need this line?
+// XXX: i think we do because without it clang introduces w2c_env_0x5F_linear_memory and i *think* that's what we want, but named .M0 in the generated C
 			fprintf(f, "%smatch:\n", prefix);
 			fprintf(f, ".functype %smatch (i32) -> (i32)\n", prefix);
 			fprintf(f, ".local i32, i32\n");
-//			fprintf(f, "// (memory 1 1)\n"); // TODO(dgryski): I guess we don't need this line?
 			break;
 
 		case DIALECT_WAT:
@@ -626,6 +627,7 @@ fsm_print_wasm(FILE *f,
 	 * we're able to use multi-memory.
 	 */
 // TODO: i could at least consolidate runs and use i32.ge_u/i32.le_u
+// would prefer to do that as range consolidation in the vm ir
 	for (i = 0; i < ir->n; i++) {
 		if (!ir->states[i].isend) {
 			continue;

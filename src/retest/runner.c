@@ -94,7 +94,8 @@ print(const struct fsm *fsm,
 		case IMPL_GOASM:  e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_AMD64_GO);  break;
 		case IMPL_VMASM:  e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_AMD64_ATT); break;
 		case IMPL_GO:     e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_GO);        break;
-		case IMPL_WASM2C: e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_WAT);       break;
+		case IMPL_WASM2C: e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_WASM_S);    break;
+		case IMPL_WAT2C:  e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_WAT);       break;
 
 		case IMPL_VMOPS:
 			e = fsm_print(f, fsm, opt, hooks, FSM_PRINT_VMOPS_H)
@@ -280,30 +281,63 @@ compile(enum implementation impl,
 		break;
 	}
 
-	case IMPL_WASM2C: {
+	case IMPL_WASM2C:
+	case IMPL_WAT2C: {
 		char tmp_c[] = "/tmp/fsmcompile-XXXXXX.c";
 		int fd_c;
 
 		{
 			const char *wat2wasm;
 			const char *wasm2c, *wasm2cflags, *wasmrt_impl;
+			const char *wasi_sdk, *wasi_sdkflags;
 
 			wat2wasm = getenv("WAT2WASM");
 
 			wasm2c = getenv("WASM2C");
 			wasm2cflags = getenv("WASM2CFLAGS");
+			wasi_sdk = getenv("WASISDK");
+			wasi_sdkflags = getenv("WASISDKFLAGS");
 			wasmrt_impl = getenv("WASMRTIMPL");
 
 			fd_c = xmkstemps(tmp_c);
 
-			if (0 != systemf("%s --enable-multi-memory %s -o /dev/stdout | %s %s - >> %s",
-				wat2wasm ? wat2wasm : "wat2wasm",
-				tmp_src,
-				wasm2c ? wasm2c : "wasm2c",
-				wasm2cflags ? wasm2cflags : "",
-				tmp_c, tmp_src))
-			{
-				return 0;
+//XXX: for wasi-sdk, IMPL_WASISDK2C we'd use LANG_WASM_S and /opt/wasi-sdk/bin/clang-18 x.s -o x.wasm to produce a wasm binary. then wasm2c per usual.
+//unsure if we need an equivalent to --enable-multi-memory for wasi-sdk
+// we could do this in two steps and produce an intermediate file. but who likes intermediate files?
+
+// TODO: which of -g, -Werror etc are relevant for wasi-sdk's clang?
+// TODO: grep out
+// (import "env" "__linear_memory" (memory (;0;) 0))
+// ...somehow
+			switch (impl) {
+			case IMPL_WASM2C:
+				if (0 != systemf("%s -c %s %s -o /dev/stdout | %s %s - >> %s",
+					wasi_sdk ? wasi_sdk : "clang",
+					wasi_sdkflags ? wasi_sdkflags : "",
+					tmp_src,
+					wasm2c ? wasm2c : "wasm2c",
+					wasm2cflags ? wasm2cflags : "",
+					tmp_c, tmp_src))
+				{
+					return 0;
+				}
+				break;
+
+			case IMPL_WAT2C:
+				if (0 != systemf("%s --enable-multi-memory %s -o /dev/stdout | %s %s - >> %s",
+					wat2wasm ? wat2wasm : "wat2wasm",
+					tmp_src,
+					wasm2c ? wasm2c : "wasm2c",
+					wasm2cflags ? wasm2cflags : "",
+					tmp_c, tmp_src))
+				{
+					return 0;
+				}
+				break;
+
+			default:
+				assert(!"unreached");
+				abort();
 			}
 
 			/* append trampoline */
@@ -323,11 +357,27 @@ compile(enum implementation impl,
 				fprintf(f, "#include <stdio.h>\n");
 				fprintf(f, "\n");
 
+				if (impl == IMPL_WASM2C) {
+					fprintf(f, "struct w2c_env { wasm_rt_memory_t mem; };\n");
+					fprintf(f, "wasm_rt_memory_t *w2c_env_0x5F_linear_memory(struct w2c_env *env) { return &env->mem; }\n");
+					fprintf(f, "\n");
+				}
+
 				fprintf(f, "int retest_trampoline(const char *s) {\n");
 				fprintf(f, "#if HAVE_WASM_INSTANTIATE\n");
 				fprintf(f, "  struct w2c_ ctx;\n");
+				if (impl == IMPL_WASM2C) {
+					fprintf(f, "  struct w2c_env env;\n");
+				}
 				fprintf(f, "#endif\n");
 				fprintf(f, "  size_t n;\n");
+				fprintf(f, "\n");
+
+				/* copies just for convenience of naming */
+// XXX: explain we have two layers of generated code (wasi-sdk's wasm binary, and wasm2c). both introduce their own identifiers or name mangling. here we're scraping everything under one interface
+// this gets confusing because some differences apply during compilation of the generated C (i.e. output as #ifdefs here), and some apply at retest(1) invocation time (i.e. as switches on impl). and on top of that, we attempt to support backwards compatibility for wasm2c as its generated API changes between versions.
+				fprintf(f, "  uint64_t mem_size;\n");
+				fprintf(f, "  uint8_t *mem_data;\n");
 				fprintf(f, "\n");
 
 				fprintf(f, "  assert(s != NULL);\n");
@@ -338,32 +388,66 @@ compile(enum implementation impl,
 				fprintf(f, "#endif\n");
 				fprintf(f, "\n");
 
-				fprintf(f, "#if HAVE_WASM_INSTANTIATE\n");
-				fprintf(f, "  wasm2c__instantiate(&ctx);\n");
-				fprintf(f, "#else\n");
-				fprintf(f, "  fsm_init();\n");
-				fprintf(f, "#endif\n");
-				fprintf(f, "\n");
+				{
+					const char *M0_size;
+					const char *M0_data;
+					switch (impl) {
+					case IMPL_WASM2C:
+						/*
+						 * wasi-sdk clang generates (in the binary wasm):
+						 *
+						 *  (import "env" "__linear_memory" (memory (;0;) 0))
+						 *
+						 * which wasm2c compiles to the following identifier.
+						 */
+// instance->w2c_env_0x5F_linear_memory depends on init_instance_import() to get initialised.
+// and where are we even importing from? i think this is wasi-sdk's generated "env" struct
+// i would love to not have the import, and therefore no "env". meanwhile i'm working with it
+						M0_size = "w2c_env_0x5F_linear_memory->size";
+						M0_data = "w2c_env_0x5F_linear_memory->data";
+						break;
+
+					case IMPL_WAT2C:
+						M0_size = "w2c_M0.size";
+						M0_data = "w2c_M0.data";
+						break;
+
+					default:
+						assert(!"unreached");
+						break;
+					}
+
+					if (impl == IMPL_WASM2C) {
+						fprintf(f, "  wasm_rt_allocate_memory(&env.mem, 1, 1, false);\n");
+					}
+
+					fprintf(f, "#if HAVE_WASM_INSTANTIATE\n");
+					fprintf(f, "  wasm2c__instantiate(&ctx");
+					if (impl == IMPL_WASM2C) {
+						fprintf(f, ", &env");
+					}
+					fprintf(f, ");\n");
+					fprintf(f, "  mem_size = ctx.%s;\n", M0_size);
+					fprintf(f, "  mem_data = ctx.%s;\n", M0_data);
+					fprintf(f, "#else\n");
+					fprintf(f, "  fsm_init();\n");
+					fprintf(f, "  mem_size = %s;\n", M0_size);
+					fprintf(f, "  mem_data = %s;\n", M0_data);
+					fprintf(f, "#endif\n");
+					fprintf(f, "\n");
+				}
 
 				/* TODO: we could grow the memory region to size.
 				 * but a page is 64kB, probably enough for our test strings */
 				fprintf(f, "  n = strlen(s);\n");
-				fprintf(f, "#if HAVE_WASM_INSTANTIATE\n");
-				fprintf(f, "  if (n + 1 > ctx.w2c_M0.size) {\n");
-				fprintf(f, "#else\n");
-				fprintf(f, "  if (n + 1 > w2c_M0.size) {\n");
-				fprintf(f, "#endif\n");
+				fprintf(f, "  if (n + 1 > mem_size) {\n");
 			   	fprintf(f, "    fprintf(stderr, \"overflow\");\n");
 				fprintf(f, "    abort();\n");
 		   		fprintf(f, "  }\n");
 				fprintf(f, "\n");
 
 /* XXX: placeholder */
-				fprintf(f, "#if HAVE_WASM_INSTANTIATE\n");
-				fprintf(f, "  memcpy(ctx.w2c_M0.data, s, n);\n");
-				fprintf(f, "#else\n");
-				fprintf(f, "  memcpy(w2c_M0.data, s, n);\n");
-				fprintf(f, "#endif\n");
+				fprintf(f, "  memcpy(mem_data, s, n);\n");
 
 				/* TODO: would deal with different IO APIs here */
 				fprintf(f, "  u32 p = 0;\n");
@@ -380,7 +464,7 @@ compile(enum implementation impl,
 				fprintf(f, "#if HAVE_WASM_FREE\n");
 				fprintf(f, "  wasm2c__free(&ctx);\n");
 				fprintf(f, "#else\n");
-				fprintf(f, "  free(w2c_M0.data);\n");
+				fprintf(f, "  free(mem_data);\n");
 				fprintf(f, "#endif\n");
 				fprintf(f, "\n");
 
@@ -417,6 +501,9 @@ compile(enum implementation impl,
 			 */
 
 			if (0 != systemf("%s %s -fPIC -shared %s %s %s "
+					"-D _XOPEN_SOURCE=500 " /* for sigaltstack(2) in wasm-rt-impl.c */
+					"-include setjmp.h " /* for siglongjmp(2) in wasm-rt-impl.c */
+					"-include signal.h " /* for sigaction(2) in wasm-rt-impl.c */
 					"-D WASM_RT_MODULE_PREFIX=%s "
 					"-D WASM_RT_SANITY_CHECKS "
 
@@ -431,8 +518,8 @@ compile(enum implementation impl,
 					cc ? cc : "gcc",
 					cflags ? cflags : "",
 					"-g",
-					"-Wno-unused-parameter -Wno-unused-variable", /* for wasm-rt-impl.c */
-					"-Wno-unused-function", /* for wasm2c generated code */
+					"-Wno-unused-parameter -Wno-unused-variable -Wno-strict-prototypes", /* for wasm-rt-impl.c */
+					"-Wno-unused-function -Wno-unused-but-set-variable", /* for wasm2c generated code */
 
 					"fsm_", /* TODO: module prefix */
 
@@ -495,9 +582,10 @@ runner_init_compiled(struct fsm *fsm,
 	case IMPL_RUST:     tmp_src = tmp_src_rs; break;
 	case IMPL_LLVM:     tmp_src = tmp_src_ll; break;
 	case IMPL_GOASM:
-	case IMPL_VMASM:    tmp_src = tmp_src_s;  break;
-	case IMPL_GO:       tmp_src = tmp_src_go; break;
-	case IMPL_WASM2C:   tmp_src = tmp_src_wat; break;
+	case IMPL_VMASM:    tmp_src = tmp_src_s;   break;
+	case IMPL_GO:       tmp_src = tmp_src_go;  break;
+	case IMPL_WASM2C:   tmp_src = tmp_src_s;   break;
+	case IMPL_WAT2C:    tmp_src = tmp_src_wat; break;
 
 	case IMPL_INTERPRET:
 		assert(!"unreached");
@@ -581,6 +669,7 @@ runner_init_compiled(struct fsm *fsm,
 		break;
 
 	case IMPL_WASM2C:
+	case IMPL_WAT2C:
 		r->u.impl_wasm2c.h = h;
 		r->u.impl_wasm2c.func = (int (*)(const unsigned char *)) (uintptr_t) dlsym(h, "retest_trampoline");
 		break;
@@ -616,6 +705,7 @@ fsm_runner_initialize(struct fsm *fsm, const struct fsm_options *opt,
 	case IMPL_GO:
 	case IMPL_GOASM:
 	case IMPL_WASM2C:
+	case IMPL_WAT2C:
 		return runner_init_compiled(fsm, opt, r, impl);
 
 	case IMPL_INTERPRET:
@@ -678,6 +768,7 @@ fsm_runner_finalize(struct fsm_runner *r)
 		break;
 
 	case IMPL_WASM2C:
+	case IMPL_WAT2C:
 		if (r->u.impl_wasm2c.h != NULL) {
 			dlclose(r->u.impl_wasm2c.h);
 		}
@@ -741,6 +832,7 @@ fsm_runner_run(const struct fsm_runner *r, const char *s, size_t n)
 	 */
 
 	case IMPL_WASM2C:
+	case IMPL_WAT2C:
 		assert(r->u.impl_wasm2c.func != NULL);
 		return r->u.impl_wasm2c.func((const unsigned char *) s);
 	}

@@ -484,7 +484,7 @@ jobs:
         cc: [ clang, gcc ]
         make: [ bmake ]
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
-        lang: [ "vm -x v1", "vm -x v2", asm, c, rust, vmc, vmops, go, goasm, llvm, wasm2c ]
+        lang: [ "vm -x v1", "vm -x v2", asm, c, rust, vmc, vmops, go, goasm, llvm, wasm2c, wat2c ]
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
@@ -516,7 +516,7 @@ jobs:
         go version
 
     - name: Dependencies (Ubuntu/Wabt)
-      if: matrix.os == 'ubuntu' && matrix.lang == 'wasm2c'
+      if: matrix.os == 'ubuntu' && (matrix.lang == 'wasm2c' || matrix.lang == 'wat2c')
       run: |
         uname -a
         sudo apt-get install wabt
@@ -537,6 +537,7 @@ jobs:
 
     - name: Run PCRE suite (${{ matrix.lang }})
       run: CC=${{ matrix.cc }} ./${{ env.build }}/bin/retest -O1 -l ${{ matrix.lang }} ${{ env.cvtpcre }}/*.tst
+# TODO: pass WASM2C=/opt/wasi-sdk/bin/clang and install wasi-sdk (there is a .deb package i think)
 
   docs:
     name: Documentation
