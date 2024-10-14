@@ -35,7 +35,8 @@ enum implementation {
 	IMPL_VMASM,
 	IMPL_VMC,
 	IMPL_VMOPS,
-	IMPL_WASM2C,
+	IMPL_WASM2C, /* FSM_PRINT_WASM_S and wasm2c */
+	IMPL_WAT2C,  /* FSM_PRINT_WAT and wasm2c */
 };
 
 struct fsm_runner {
