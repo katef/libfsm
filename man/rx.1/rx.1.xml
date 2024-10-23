@@ -44,6 +44,7 @@
 	<!ENTITY v.opt "<option>-v</option>">
 	<!ENTITY w.opt "<option>-w</option>">
 	<!ENTITY X.opt "<option>-X</option>">
+	<!ENTITY x.opt "<option>-x</option>">
 
 	<!ENTITY h.opt "<option>-h</option>">
 ]>
@@ -459,6 +460,17 @@
 					<para>Always encode byte values in hexadecimal,
 						per the <code>always_hex</code> option for &fsm_print.3;.
 						The default is to only use hex for non-printable characters.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&x.opt;</term>
+
+				<listitem>
+					<para>Literals are unanchored.
+						This applies to all literals; for finer control use a regex dialect.
+						The default is that literals are anchored,
+						as if written <code>^abc$</code> in regex syntax.</para>
 				</listitem>
 			</varlistentry>
 
