@@ -44,6 +44,7 @@
 	<!ENTITY v.opt "<option>-v</option>">
 	<!ENTITY w.opt "<option>-w</option>">
 	<!ENTITY X.opt "<option>-X</option>">
+	<!ENTITY x.opt "<option>-x</option>">
 
 	<!ENTITY h.opt "<option>-h</option>">
 ]>
@@ -403,28 +404,19 @@
 				<term>&u.opt;</term>
 
 				<listitem>
-					<para>Allow ambiguities.
-						This means patterns with different ids may match the same text.
-						The default is to error for conflicts.</para>
+					<para>Allow ambiguities between patterns.
+						This means patterns with different ids may match the same text.</para>
+
+					<para>The default is to error for ambiguities,
+						requiring all regexps unioned to be non-overlapping.
+						Formally, the requirement is that they are disjoint languages.
+						Erroring for ambiguities applies after multiple regexps are joined,
+						either by union or by concatenation (&s.opt;).</para>
 
 					<para>It's possible to have multiple patterns with the same id
 						(i.e. by being in the same file when using multi-file mode),
 						and these are not considered a conflict because they key
 						to the same id.</para>
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
-				<term>&u.opt;</term>
-
-				<listitem>
-					<para>Allow ambiguities between regexps,
-						such that multiple regexps may match the same text.
-						The default is to error for ambiguities,
-						requiring all regexps unioned to be non-overlapping.
-						Formally, the requirement is that they are disjoint languages.
-						Erroring for ambiguities applies after multiple regexps are joined,
-						either by union or by concatenation (&s.opt;).</para>
 
 					<para>&u.opt; is implied by &n.opt;.</para>
 				</listitem>
@@ -459,6 +451,17 @@
 					<para>Always encode byte values in hexadecimal,
 						per the <code>always_hex</code> option for &fsm_print.3;.
 						The default is to only use hex for non-printable characters.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&x.opt;</term>
+
+				<listitem>
+					<para>Literals are unanchored.
+						This applies to all literals; for finer control use a regex dialect.
+						The default is that literals are anchored,
+						as if written <code>^abc$</code> in regex syntax.</para>
 				</listitem>
 			</varlistentry>
 
