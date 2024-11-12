@@ -136,6 +136,7 @@ SUBDIR += tests/pcre-repeat
 SUBDIR += tests/pred
 SUBDIR += tests/re_literal
 SUBDIR += tests/re_strings
+SUBDIR += tests/regressions
 SUBDIR += tests/reverse
 SUBDIR += tests/trim
 SUBDIR += tests/union
