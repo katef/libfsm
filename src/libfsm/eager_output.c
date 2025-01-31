@@ -408,7 +408,10 @@ fsm_eager_output_compact(struct fsm *fsm, fsm_state_t *mapping, size_t mapping_c
 
 		assert(ob->state < mapping_count);
 		const fsm_state_t nstate = mapping[ob->state];
-		if (nstate == FSM_STATE_REMAP_NO_STATE) { continue; }
+		if (nstate == FSM_STATE_REMAP_NO_STATE) {
+			f_free(fsm->alloc, ob->entry);
+			continue;
+		}
 
 		const uint64_t hash = hash_id(nstate);
 
