@@ -638,31 +638,28 @@ free_analysis(const struct fsm_alloc *alloc, struct analysis_info *ainfo)
  * all in one pass, with an extra loop so that more than one pattern with
  * eager outputs can match. */
 struct fsm *
-fsm_union_repeated_pattern_group(size_t entry_count,
-    struct fsm_union_entry *entries, struct fsm_combined_base_pair *bases)
+fsm_union_repeated_pattern_group(size_t nfa_count,
+    struct fsm **nfas, struct fsm_combined_base_pair *bases, size_t id_base)
 {
-	const struct fsm_alloc *alloc = entries[0].fsm->alloc;
+	const struct fsm_alloc *alloc = nfas[0]->alloc;
 	const bool log = 0 || LOG_UNION_REPEATED_PATTERN_GROUP;
 
-	/* TODO: make this an extra argument */
-	const size_t id_base = 1;
-
-	struct analysis_info *ainfos = f_calloc(alloc, entry_count, sizeof(ainfos[0]));
+	struct analysis_info *ainfos = f_calloc(alloc, nfa_count, sizeof(ainfos[0]));
 	if (ainfos == NULL) { goto fail; }
 
 	size_t est_total_states = 0;
-	for (size_t i = 0; i < entry_count; i++) {
-		assert(entries[i].fsm);
-		if (entries[i].fsm->alloc != alloc) {
+	for (size_t i = 0; i < nfa_count; i++) {
+		assert(nfas[i]);
+		if (nfas[i]->alloc != alloc) {
 			errno = EINVAL;
 			return NULL;
 		}
-		const size_t count = fsm_countstates(entries[i].fsm);
+		const size_t count = fsm_countstates(nfas[i]);
 		est_total_states += count;
 	}
 
-	for (size_t i = 0; i < entry_count; i++) {
-		struct fsm *fsm = entries[i].fsm;
+	for (size_t i = 0; i < nfa_count; i++) {
+		struct fsm *fsm = nfas[i];
 
 		/* Identify various states in the NFA that will be relevant to combining. */
 		if (!analyze_group_nfa(fsm, &ainfos[i])) {
@@ -716,17 +713,17 @@ fsm_union_repeated_pattern_group(size_t entry_count,
 	if (!fsm_addedge_epsilon(res, global_unanchored_end_loop, global_end)) { goto fail; }
 
 	if (bases != NULL) {
-		memset(bases, 0x00, entry_count * sizeof(bases[0]));
+		memset(bases, 0x00, nfa_count * sizeof(bases[0]));
 	}
 
-	/* For each group FSM, link its unanchored and anchored start states
+	/* For each group NFA, link its unanchored and anchored start states
 	 * and eager_match_state to the global ones. */
-	for (size_t fsm_i = 0; fsm_i < entry_count; fsm_i++) {
-		struct fsm *fsm = entries[fsm_i].fsm;
-		entries[fsm_i].fsm = NULL; /* transfer ownership */
+	for (size_t nfa_i = 0; nfa_i < nfa_count; nfa_i++) {
+		struct fsm *fsm = nfas[nfa_i];
+		nfas[nfa_i] = NULL; /* transfer ownership */
 
 		const size_t state_count = fsm_countstates(fsm);
-		struct analysis_info *ainfo = &ainfos[fsm_i];
+		struct analysis_info *ainfo = &ainfos[nfa_i];
 		if (ainfo->start == NO_STATE) {
 			fsm_free(fsm);		      /* no start, just discard */
 			continue;
@@ -749,8 +746,8 @@ fsm_union_repeated_pattern_group(size_t entry_count,
 		rebase_analysis_info(ainfo, combine_info.base_b);
 
 		if (bases != NULL) {
-			bases[fsm_i].state = combine_info.base_b;
-			bases[fsm_i].capture = combine_info.capture_base_b;
+			bases[nfa_i].state = combine_info.base_b;
+			bases[nfa_i].capture = combine_info.capture_base_b;
 		}
 
 		/* Link the FSM's eager match state back to the global_unanchored_end_loop, so that after
@@ -840,7 +837,7 @@ fsm_union_repeated_pattern_group(size_t entry_count,
 	fsm_setstart(res, global_start);
 	fsm_setend(res, global_end, 1);
 
-	for (size_t i = 0; i < entry_count; i++) {
+	for (size_t i = 0; i < nfa_count; i++) {
 		free_analysis(alloc, &ainfos[i]);
 	}
 
@@ -850,7 +847,7 @@ fsm_union_repeated_pattern_group(size_t entry_count,
 
 fail:
 	if (ainfos != NULL) {
-		for (size_t i = 0; i < entry_count; i++) {
+		for (size_t i = 0; i < nfa_count; i++) {
 			free_analysis(alloc, &ainfos[i]);
 		}
 		f_free(alloc, ainfos);

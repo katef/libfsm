@@ -10,5 +10,5 @@ int main(void)
 			{ .input = "abbc", .expected_ids = { 2 } },
 		},
 	};
-	return run_test(&test, false, false);
+	return run_test(&test);
 }

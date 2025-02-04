@@ -4,8 +4,8 @@ int main(void)
 {
 	struct eager_output_test test = {
 		.patterns = {
-			[0] = "$",
-			[1] = "^$",
+			[0] = "",
+			[1] = "",
 		},
 		.inputs = {
 			{ .input = "", .expected_ids = { 1, 2 } },

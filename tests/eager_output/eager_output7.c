@@ -2,24 +2,6 @@
 
 int main(void)
 {
-	/* Run this test with env FORCE_ENDIDS=N ... to see how much more
-	 * expensive it is to combine the first N patterns using endids,
-	 * rather than eager_outputs. It becomes VERY slow for >= 9 or so.
-	 * (Note that the checks probably will not pass for N < 4, because
-	 * it will start skipping appear in the early test inputs.) */
-	bool force_endids = false;
-	size_t force_endid_count = 0;
-	{
-		const char *str = getenv("FORCE_ENDIDS");
-		if (str != NULL) {
-			force_endid_count = atoi(str);
-			if (force_endid_count == 0) {
-				force_endid_count = 26;
-			}
-			force_endids = true;
-		}
-	}
-
 	struct eager_output_test test = {
 		.patterns =  {
 			[0] = "apple",
@@ -89,15 +71,5 @@ int main(void)
 		},
 	};
 
-	/* truncate patterns to the first N */
-	if (force_endids) {
-		assert(force_endid_count > 0 && force_endid_count <= 26);
-		test.patterns[force_endid_count] = NULL;
-
-		/* truncate test inputs to just the first couple, since
-		 * later inputs use later patterns */
-		test.inputs[5].input = NULL;
-	}
-
-	return run_test(&test, false, force_endids);
+	return run_test(&test);
 }

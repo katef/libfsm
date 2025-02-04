@@ -30,5 +30,5 @@ int main(void)
 		},
 	};
 
-	return run_test(&test, false, false);
+	return run_test(&test);
 }

@@ -52,15 +52,22 @@ struct fsm *
 fsm_union_array(size_t fsm_count,
     struct fsm **fsms, struct fsm_combined_base_pair *bases);
 
-struct fsm_union_entry {
-	struct fsm *fsm;
-	bool anchored_start;
-	bool anchored_end;
-};
-
+/* Combine an array of NFAs into a single NFA that attempts to match them
+ * all in one pass, with an extra loop so that more than one pattern with
+ * eager outputs can match. Ownership of the NFAs is transferred, they will
+ * be combined (or freed, if they don't have a start state).
+ *
+ * This MUST be called with NFAs constructed via re_comp, Calling it with
+ * manually constructed NFAs or DFAs is unsupported.
+ *
+ * This will set end IDs and/or output IDs representing matching each
+ * of the original NFAs on the combined result, where nfas[i] will
+ * get ID of (id_base + i).
+ *
+ * Returns NULL on error. */
 struct fsm *
-fsm_union_repeated_pattern_group(size_t entry_count,
-    struct fsm_union_entry *entries, struct fsm_combined_base_pair *bases);
+fsm_union_repeated_pattern_group(size_t nfa_count,
+    struct fsm **nfas, struct fsm_combined_base_pair *bases, size_t id_base);
 
 struct fsm *
 fsm_intersect(struct fsm *a, struct fsm *b);

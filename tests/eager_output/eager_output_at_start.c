@@ -8,5 +8,5 @@ int main(void)
 			{ .input = "", .expected_ids = { 1 } },
 		},
 	};
-	return run_test(&test, false, false);
+	return run_test(&test);
 }

@@ -9,5 +9,5 @@ int main(void)
 			{ .input = "ab", .expected_ids = { 1, 2 } },
 		},
 	};
-	return run_test(&test, false, false);
+	return run_test(&test);
 }

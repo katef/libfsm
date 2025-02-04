@@ -16,7 +16,7 @@ int main(void)
 		},
 	};
 
-	bool pass = run_test(&test_unanchored_start, false, false);
-	pass = run_test(&test_anchored_start, false, false) && pass;
+	bool pass = run_test(&test_unanchored_start);
+	pass = run_test(&test_anchored_start) && pass;
 	return pass;
 }

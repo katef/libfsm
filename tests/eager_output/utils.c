@@ -43,15 +43,11 @@ dump(const struct fsm *fsm)
 }
 
 int
-run_test(const struct eager_output_test *test, bool allow_extra_outputs, bool force_endids)
+run_test(const struct eager_output_test *test)
 {
-	(void)force_endids;	/* TODO: unused, remove. */
+	struct fsm *nfas[MAX_PATTERNS] = {0};
 
-	struct fsm_union_entry entries[MAX_PATTERNS] = {0};
-
-	allow_extra_outputs = false;
-
-	size_t fsms_used = 0;
+	size_t nfas_used = 0;
 	int ret = 0;
 
 	int log = 0;
@@ -68,24 +64,12 @@ run_test(const struct eager_output_test *test, bool allow_extra_outputs, bool fo
 	for (size_t i = 0; i < MAX_PATTERNS; i++) {
 		const char *p = test->patterns[i];
 		if (test->patterns[i] == NULL) { break; }
-		const size_t len = strlen(p);
-		struct fsm_union_entry *e = &entries[fsms_used];
-
-		/* For sake of these patterns, they are anchored if the first/last
-		 * character is '^' and '$', respectively. This is too simplistic
-		 * for the general case, though. */
-		if (len > 0) {
-			if (p[0] == '^') { e->anchored_start = true; }
-			if (p[len - 1] == '$') { e->anchored_end = true; }
-			/* fprintf(stderr, "%s: p[%zd]: '%s', start %d, end %d\n", */
-			/*     __func__, fsms_used, p, e->anchored_start, e->anchored_end); */
-		}
 
 		struct fsm *fsm = re_comp(RE_PCRE, fsm_sgetc, &p, NULL, 0, NULL);
 		assert(fsm != NULL);
 
 		if (log) {
-			fprintf(stderr, "==== source DFA %zd (pre det+min)\n", i);
+			fprintf(stderr, "==== source NFA %zd\n", i);
 			if (log > 1) {
 				dump(fsm);
 				fsm_eager_output_dump(stderr, fsm);
@@ -94,12 +78,12 @@ run_test(const struct eager_output_test *test, bool allow_extra_outputs, bool fo
 			}
 		}
 
-		e->fsm = fsm;
-		fsms_used++;
+		nfas[i] = fsm;
+		nfas_used++;
 	}
 
-	/* If there's only one pattern this just returns fsms[0]. */
-	struct fsm *fsm = fsm_union_repeated_pattern_group(fsms_used, entries, NULL);
+	const size_t id_base = 1; /* offset by 1 because 0 is used as end-of-list */
+	struct fsm *fsm = fsm_union_repeated_pattern_group(nfas_used, nfas, NULL, id_base);
 	assert(fsm != NULL);
 
 	if (log) {
@@ -238,11 +222,7 @@ run_test(const struct eager_output_test *test, bool allow_extra_outputs, bool fo
 			assert(ret == 1);
 		}
 
-		if (!allow_extra_outputs) {
-			assert(outputs.used == expected_id_count);
-		} else {
-			assert(outputs.used >= expected_id_count);
-		}
+		assert(outputs.used >= expected_id_count);
 
 		size_t floor = 0;
 		for (size_t exp_i = 0; exp_i < outputs.used; exp_i++) {

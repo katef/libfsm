@@ -48,7 +48,7 @@ int
 cmp_output(const void *pa, const void *pb);
 
 int
-run_test(const struct eager_output_test *test, bool allow_extra_outputs, bool force_endids);
+run_test(const struct eager_output_test *test);
 
 struct cb_info {
 	size_t used;
