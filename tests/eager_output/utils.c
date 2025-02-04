@@ -45,6 +45,8 @@ dump(const struct fsm *fsm)
 int
 run_test(const struct eager_output_test *test, bool allow_extra_outputs, bool force_endids)
 {
+	(void)force_endids;	/* TODO: unused, remove. */
+
 	struct fsm_union_entry entries[MAX_PATTERNS] = {0};
 
 	allow_extra_outputs = false;
@@ -82,45 +84,14 @@ run_test(const struct eager_output_test *test, bool allow_extra_outputs, bool fo
 		struct fsm *fsm = re_comp(RE_PCRE, fsm_sgetc, &p, NULL, 0, NULL);
 		assert(fsm != NULL);
 
-		/* Zero is used to terminate expected_ids, so don't use it here. */
-		const fsm_output_id_t output_id = (fsm_output_id_t) (i + 1);
-		const fsm_end_id_t end_id = (fsm_end_id_t) (i + 1);
-
-		/* Set either an end ID or an eager output ID, depending on
-		 * whether the fsm is anchored at the end or not. */
-		if (e->anchored_end || force_endids) {
-			ret = fsm_setendid(fsm, end_id);
-		} else {
-			ret = fsm_seteageroutputonends(fsm, output_id);
-		}
-		assert(ret == 1);
-
 		if (log) {
 			fprintf(stderr, "==== source DFA %zd (pre det+min)\n", i);
-			if (log > 1) { dump(fsm); }
-			fsm_eager_output_dump(stderr, fsm);
-			fsm_endid_dump(stderr, fsm);
-			fprintf(stderr, "====\n");
-		}
-
-		ret = fsm_determinise(fsm);
-		assert(ret == 1);
-
-		if (log) {
-			fprintf(stderr, "==== source DFA %zd (post det)\n", i);
-			if (log > 1) { dump(fsm); }
-			fsm_eager_output_dump(stderr, fsm);
-			fprintf(stderr, "====\n");
-		}
-
-		ret = fsm_minimise(fsm);
-		assert(ret == 1);
-
-		if (log) {
-			fprintf(stderr, "==== source DFA %zd (post det+min)\n", i);
-			if (log > 1) { dump(fsm); }
-			fsm_eager_output_dump(stderr, fsm);
-			fprintf(stderr, "====\n");
+			if (log > 1) {
+				dump(fsm);
+				fsm_eager_output_dump(stderr, fsm);
+				fsm_endid_dump(stderr, fsm);
+				fprintf(stderr, "====\n");
+			}
 		}
 
 		e->fsm = fsm;
@@ -133,11 +104,13 @@ run_test(const struct eager_output_test *test, bool allow_extra_outputs, bool fo
 
 	if (log) {
 		fprintf(stderr, "==== combined (pre det+min)\n");
-		if (log > 1) { dump(fsm); }
-		fsm_eager_output_dump(stderr, fsm);
-		fprintf(stderr, "--- endids:\n");
-		fsm_endid_dump(stderr, fsm);
-		fprintf(stderr, "====\n");
+		if (log > 1) {
+			dump(fsm);
+			fsm_eager_output_dump(stderr, fsm);
+			fprintf(stderr, "--- endids:\n");
+			fsm_endid_dump(stderr, fsm);
+			fprintf(stderr, "====\n");
+		}
 	}
 
 	if (log) {
@@ -151,9 +124,11 @@ run_test(const struct eager_output_test *test, bool allow_extra_outputs, bool fo
 
 	if (log) {
 		fprintf(stderr, "==== combined (post det)\n");
-		if (log > 1) { dump(fsm); }
-		fsm_eager_output_dump(stderr, fsm);
-		fprintf(stderr, "====\n");
+		if (log > 1) {
+			dump(fsm);
+			fsm_eager_output_dump(stderr, fsm);
+			fprintf(stderr, "====\n");
+		}
 	}
 
 	ret = fsm_minimise(fsm);
@@ -164,11 +139,13 @@ run_test(const struct eager_output_test *test, bool allow_extra_outputs, bool fo
 
 	if (log) {
 		fprintf(stderr, "==== combined (post det+min)\n");
-		if (log > 1) { dump(fsm); }
-		fsm_eager_output_dump(stderr, fsm);
-		fprintf(stderr, "--- endids:\n");
-		fsm_endid_dump(stderr, fsm);
-		fprintf(stderr, "====\n");
+		if (log > 1) {
+			dump(fsm);
+			fsm_eager_output_dump(stderr, fsm);
+			fprintf(stderr, "--- endids:\n");
+			fsm_endid_dump(stderr, fsm);
+			fprintf(stderr, "====\n");
+		}
 	}
 
 	struct cb_info outputs = { 0 };
@@ -218,13 +195,22 @@ run_test(const struct eager_output_test *test, bool allow_extra_outputs, bool fo
 
 			/* Copy endid outputs into outputs.ids[], since for testing
 			 * purposes we don't care about the difference between eager
-			 * output and endids here -- the values don't overlap. */
+			 * output and endids here. */
 			assert(outputs.used + endid_count <= MAX_IDS);
 			for (size_t endid_i = 0; endid_i < endid_count; endid_i++) {
 				if (log) {
 					fprintf(stderr, "-- adding endid %zd: %d\n", endid_i, endid_buf[endid_i]);
 				}
-				outputs.ids[outputs.used++] = (fsm_output_id_t)endid_buf[endid_i];
+				bool found = false;
+				for (size_t o_i = 0; o_i < outputs.used; o_i++) {
+					if (outputs.ids[o_i] == endid_buf[endid_i]) {
+						found = true;
+						break;
+					}
+				}
+				if (!found) {
+					outputs.ids[outputs.used++] = (fsm_output_id_t)endid_buf[endid_i];
+				}
 			}
 		}
 
