@@ -358,6 +358,56 @@ start_state_epsilon_closure_matches_empty_string(const struct fsm *nfa, fsm_stat
 }
 
 static bool
+copy_noncycle_labeled_edges_from_epsilon_closure_iter(struct analysis_info *ainfo,
+    const struct fsm *nfa, fsm_state_t usl_i, fsm_state_t s_i, struct state_set **seen)
+{
+	const struct fsm_state *s = &nfa->states[s_i];
+
+	struct edge_group_iter egi;
+	struct edge_group_iter_info info;
+
+	/* copy its labeled edges to ainfo->repeatable_firsts,
+	 * unless they lead back to the unanchored_start_loop */
+	edge_set_group_iter_reset(s->edges, EDGE_GROUP_ITER_ALL, &egi);
+	while (edge_set_group_iter_next(&egi, &info)) {
+		if (info.to != usl_i) {
+			if (!edge_set_add_bulk(&ainfo->repeatable_firsts,
+				nfa->alloc, info.symbols, info.to)) {
+				return false;
+			}
+		}
+	}
+
+	if (!state_set_add(seen, nfa->alloc, usl_i)) { return false; }
+
+	struct state_iter si;
+	state_set_reset(s->epsilons, &si);
+	fsm_state_t ns_i;
+	while (state_set_next(&si, &ns_i)) {
+		if (state_set_contains(*seen, ns_i)) { continue; }
+		if (!copy_noncycle_labeled_edges_from_epsilon_closure_iter(ainfo, nfa, usl_i, ns_i, seen)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+static bool
+copy_noncycle_labeled_edges_from_epsilon_closure(struct analysis_info *ainfo,
+    const struct fsm *nfa, fsm_state_t unanchored_start_loop_id)
+{
+	struct state_set *seen = NULL; /* empty set */
+	if (!copy_noncycle_labeled_edges_from_epsilon_closure_iter(ainfo, nfa,
+		unanchored_start_loop_id, unanchored_start_loop_id, &seen)) {
+		return false;
+	}
+	state_set_free(seen);
+
+	return true;
+}
+
+static bool
 analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 {
 	memset(ainfo, 0x00, sizeof(*ainfo));
@@ -396,15 +446,11 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 				assert(ainfo->unanchored_start_loop == NO_STATE);
 				ainfo->unanchored_start_loop = ns_i;
 
-				/* copy its non-self labeled edges to ainfo->repeatable_firsts */
-				edge_set_group_iter_reset(ns->edges, EDGE_GROUP_ITER_ALL, &egi);
-				while (edge_set_group_iter_next(&egi, &info)) {
-					if (info.to != ns_i) {
-						if (!edge_set_add_bulk(&ainfo->repeatable_firsts,
-							nfa->alloc, info.symbols, info.to)) {
-							goto alloc_fail;
-						}
-					}
+				/* Copy labeled edges from the unanchored start loop and its epsilon
+				 * closure to ainfo->repeatable_firsts, except for edges leading back
+				 * to the unanchored start loop. */
+				if (!copy_noncycle_labeled_edges_from_epsilon_closure(ainfo, nfa, ns_i)) {
+					goto alloc_fail;
 				}
 			} else {
 				/* likewise, a state without a dot self-edge is the anchored start */
