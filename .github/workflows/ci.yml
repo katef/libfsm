@@ -15,7 +15,7 @@ env:
 jobs:
   checkout:
     name: "Checkout"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Cache checkout
@@ -44,7 +44,10 @@ jobs:
 
   pcre_suite:
     name: "Import PCRE suite"
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-22.04 ]
     needs: [ build ] # for cvtpcre
 
     steps:
@@ -71,7 +74,7 @@ jobs:
       id: cache-cvtpcre
       with:
         path: ${{ env.cvtpcre }}
-        key: cvtpcre-bmake-ubuntu-gcc-DEBUG-AUSAN-${{ github.sha }}-${{ env.pcre2 }}
+        key: cvtpcre-bmake-${{ matrix.os }}-gcc-DEBUG-AUSAN-${{ github.sha }}-${{ env.pcre2 }}
 
     - name: Fetch build
       if: steps.cache-cvtpcre.outputs.cache-hit != 'true'
@@ -79,7 +82,7 @@ jobs:
       id: cache-build
       with:
         path: ${{ env.build }}
-        key: build-bmake-ubuntu-gcc-DEBUG-AUSAN-${{ github.sha }} # arbitary build, just for cvtpcre
+        key: build-bmake-${{ matrix.os }}-gcc-DEBUG-AUSAN-${{ github.sha }} # arbitrary build, just for cvtpcre
 
     - name: Convert PCRE suite
       if: steps.cache-cvtpcre.outputs.cache-hit != 'true'
@@ -130,14 +133,14 @@ jobs:
 
   build:
     name: "Build ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
     needs: [ checkout ]
 
     strategy:
       fail-fast: true
       matrix:
         san: [ NO_SANITIZER, AUSAN, MSAN, EFENCE, FUZZER ] # NO_SANITIZER=1 is a no-op
-        os: [ ubuntu ]
+        os: [ ubuntu-22.04 ]
         cc: [ clang, gcc ]
         make: [ bmake ] # we test makefiles separately
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
@@ -169,7 +172,7 @@ jobs:
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu' && steps.cache-build.outputs.cache-hit != 'true'
+      if: matrix.os == 'ubuntu-22.04' && steps.cache-build.outputs.cache-hit != 'true'
       run: |
         uname -a
         sudo apt-get install bmake electric-fence
@@ -216,14 +219,14 @@ jobs:
   # of the build during CI, even if we don't run that during tests.
   test_makefiles:
     name: "Test (Makefiles) ${{ matrix.make }} ${{ matrix.os }} ${{ matrix.debug }}"
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
     needs: [ checkout, build ]
 
     strategy:
       fail-fast: false
       matrix:
         san: [ NO_SANITIZER ] # NO_SANITIZER=1 is a no-op
-        os: [ ubuntu ]
+        os: [ ubuntu-22.04 ]
         cc: [ clang ]
         make: [ bmake, pmake ]
         debug: [ EXPENSIVE_CHECKS, DEBUG, RELEASE ] # RELEASE=1 is a no-op
@@ -258,7 +261,7 @@ jobs:
       run: find ${{ env.wc }} -type f -name '*.c' | sort -r | head -5 | xargs touch
 
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu'
+      if: matrix.os == 'ubuntu-22.04'
       run: |
         uname -a
         sudo apt-get install pmake bmake pcregrep
@@ -301,14 +304,14 @@ jobs:
 
   test_san:
     name: "Test (Sanitizers) ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
     needs: [ build ]
 
     strategy:
       fail-fast: false
       matrix:
         san: [ AUSAN, MSAN, EFENCE ]
-        os: [ ubuntu ]
+        os: [ ubuntu-22.04 ]
         cc: [ clang, gcc ]
         make: [ bmake ]
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
@@ -329,7 +332,7 @@ jobs:
         key: checkout-${{ github.sha }}
 
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu'
+      if: matrix.os == 'ubuntu-22.04'
       run: |
         uname -a
         sudo apt-get install bmake pcregrep electric-fence
@@ -362,7 +365,7 @@ jobs:
 
   test_fuzz:
     name: "Fuzz (mode ${{ matrix.mode }}) ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 5 # this should never be reached, it's a safeguard for bugs in the fuzzer itself
     needs: [ build ]
 
@@ -370,7 +373,7 @@ jobs:
       fail-fast: false
       matrix:
         san: [ FUZZER ]
-        os: [ ubuntu ]
+        os: [ ubuntu-22.04 ]
         cc: [ clang ]
         make: [ bmake ]
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
@@ -388,7 +391,7 @@ jobs:
         key: checkout-${{ github.sha }}
 
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu'
+      if: matrix.os == 'ubuntu-22.04'
       run: |
         uname -a
         sudo apt-get install bmake
@@ -470,14 +473,14 @@ jobs:
 
   test_pcre:
     name: "Test (PCRE suite) ${{ matrix.lang }} ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
     needs: [ pcre_suite ] # and also build, but pcre_suite gives us that
 
     strategy:
       fail-fast: false
       matrix:
         san: [ AUSAN, MSAN, EFENCE ]
-        os: [ ubuntu ]
+        os: [ ubuntu-22.04 ]
         cc: [ clang, gcc ]
         make: [ bmake ]
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
@@ -492,7 +495,7 @@ jobs:
 
     steps:
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu' && matrix.san == 'EFENCE'
+      if: matrix.os == 'ubuntu-22.04' && matrix.san == 'EFENCE'
       run: |
         uname -a
         sudo apt-get install electric-fence
@@ -506,7 +509,7 @@ jobs:
         ${{ matrix.cc }} --version
 
     - name: Dependencies (Ubuntu/Go)
-      if: matrix.os == 'ubuntu' && (matrix.lang == 'go' || matrix.lang == 'goasm')
+      if: matrix.os == 'ubuntu-22.04' && (matrix.lang == 'go' || matrix.lang == 'goasm')
       run: |
         uname -a
         sudo apt-get install golang
@@ -524,14 +527,14 @@ jobs:
       id: cache-cvtpcre
       with:
         path: ${{ env.cvtpcre }}
-        key: cvtpcre-bmake-ubuntu-gcc-DEBUG-AUSAN-${{ github.sha }}-${{ env.pcre2 }}
+        key: cvtpcre-bmake-${{ matrix.os }}-gcc-DEBUG-AUSAN-${{ github.sha }}-${{ env.pcre2 }}
 
     - name: Run PCRE suite (${{ matrix.lang }})
       run: CC=${{ matrix.cc }} ./${{ env.build }}/bin/retest -O1 -l ${{ matrix.lang }} ${{ env.cvtpcre }}/*.tst
 
   docs:
     name: Documentation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [ checkout ]
 
     env:
@@ -582,12 +585,12 @@ jobs:
 
   install:
     name: Install
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [ build, docs ]
 
     env:
       san: NO_SANITIZER # NO_SANITIZER=1 is a no-op
-      os: ubuntu
+      os: ubuntu-22.04
       cc: clang
       make: bmake
       debug: RELEASE # RELEASE=1 is a no-op
@@ -601,7 +604,7 @@ jobs:
         key: prefix-${{ env.make }}-${{ env.os }}-${{ env.cc }}-${{ env.debug }}-${{ env.san }}-${{ github.sha }}
 
     - name: Dependencies (Ubuntu)
-      if: env.os == 'ubuntu' && steps.cache-prefix.outputs.cache-hit != 'true'
+      if: env.os == 'ubuntu-22.04' && steps.cache-prefix.outputs.cache-hit != 'true'
       run: |
         uname -a
         sudo apt-get install bmake
@@ -643,12 +646,12 @@ jobs:
 
   fpm:
     name: Package ${{ matrix.pkg }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [ install ]
 
     env:
       san: NO_SANITIZER # NO_SANITIZER=1 is a no-op
-      os: ubuntu
+      os: ubuntu-22.04
       cc: clang
       make: bmake
       debug: RELEASE # RELEASE=1 is a no-op
@@ -661,7 +664,7 @@ jobs:
 
     steps:
     - name: Dependencies (Ubuntu)
-      if: env.os == 'ubuntu'
+      if: env.os == 'ubuntu-22.04'
       run: |
         uname -a
         sudo gem install --no-document fpm
