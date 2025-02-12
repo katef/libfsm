@@ -435,7 +435,17 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 			if (LOG_ANALYZE_GROUP_NFA) {
 				fprintf(stderr, "%s: unanchored_start_loop found on state %d\n", __func__, ns_i);
 			}
-			/* there can be only one */
+
+			/* TODO: There is only one unanchored start loop, but in obscure cases it may
+			 * be difficult to distinguish between the USL and the unanchored end loop or
+			 * other intermediate .* loops. The real USL will strictly appear before any
+			 * other such loops in the graph.
+			 *
+			 * For now, assert that there is only one, because it's safer to have this
+			 * loudly fail at compile time than produce an incorrect graph. Fuzzing has
+			 * produced some inputs that make this fail, but currently they seem to
+			 * depend on having a '\0' character embedded in the middle, which would
+			 * normally be rejected by this point. */
 			assert(ainfo->unanchored_start_loop == NO_STATE
 			    || ainfo->unanchored_start_loop == ns_i);
 			ainfo->unanchored_start_loop = ns_i;
@@ -445,7 +455,10 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 			if (LOG_ANALYZE_GROUP_NFA) {
 				fprintf(stderr, "%s: anchored_start found on state %d\n", __func__, ns_i);
 			}
+
+			/* TODO: This, too, can fail in obscure cases and needs further investigation. */
 			assert(ainfo->anchored_start == NO_STATE || ainfo->anchored_start == ns_i);
+
 			ainfo->anchored_start = ns_i;
 			continue;
 		}
