@@ -770,6 +770,7 @@ free_analysis(const struct fsm_alloc *alloc, struct analysis_info *ainfo)
 {
 	state_set_free(ainfo->anchored_ends);
 	state_set_free(ainfo->eager_matches);
+	state_set_free(ainfo->needs_indirect_epsilon_edge_to_eager_match_state);
 	edge_set_free(alloc, ainfo->anchored_firsts);
 	edge_set_free(alloc, ainfo->repeatable_firsts);
 }
