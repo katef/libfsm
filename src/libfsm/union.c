@@ -48,8 +48,8 @@ struct analysis_info {
 	/* The end state following the unanchored end loop. */
 	fsm_state_t unanchored_end_loop_end;
 
-	/* State that links to paths only reachable from the beginning of input. */
-	fsm_state_t anchored_start;
+	/* States that link to paths only reachable from the beginning of input. */
+	struct state_set *anchored_starts;
 
 	/* States leading to an anchored end. */
 	struct state_set *anchored_ends;
@@ -396,7 +396,6 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 	memset(ainfo, 0x00, sizeof(*ainfo));
 	ainfo->start = NO_STATE;
 	ainfo->unanchored_start_loop = NO_STATE;
-	ainfo->anchored_start = NO_STATE;
 	ainfo->unanchored_end_loop = NO_STATE;
 	ainfo->unanchored_end_loop_end = NO_STATE;
 	ainfo->eager_match_state = NO_STATE;
@@ -456,10 +455,9 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 				fprintf(stderr, "%s: anchored_start found on state %d\n", __func__, ns_i);
 			}
 
-			/* TODO: This, too, can fail in obscure cases and needs further investigation. */
-			assert(ainfo->anchored_start == NO_STATE || ainfo->anchored_start == ns_i);
-
-			ainfo->anchored_start = ns_i;
+			if (!state_set_add(&ainfo->anchored_starts, nfa->alloc, ns_i)) {
+				goto alloc_fail;
+			}
 			continue;
 		}
 	}
@@ -492,9 +490,12 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 
 	/* Copy labeled edges from the anchored start and its epsilon
 	 * closure to ainfo->anchored_firsts. */
-	if (ainfo->anchored_start != NO_STATE) {
+	struct state_iter si_anchored_start;
+	state_set_reset(ainfo->anchored_starts, &si_anchored_start);
+	fsm_state_t anchored_start;
+	while (state_set_next(&si_anchored_start, &anchored_start)) {
 		struct state_iter si;
-		state_set_reset(eclosures[ainfo->anchored_start], &si);
+		state_set_reset(eclosures[anchored_start], &si);
 		fsm_state_t cs_i;
 		while (state_set_next(&si, &cs_i)) {
 			assert(cs_i < nfa->statecount);
@@ -766,11 +767,11 @@ rebase_analysis_info(struct analysis_info *ainfo, fsm_state_t base)
 	SHIFT(unanchored_start_loop);
 	SHIFT(unanchored_end_loop);
 	SHIFT(unanchored_end_loop_end);
-	SHIFT(anchored_start);
 	SHIFT(eager_match_state);
 #undef SHIFT
 
 	state_set_rebase(&ainfo->anchored_ends, base);
+	state_set_rebase(&ainfo->anchored_starts, base);
 	state_set_rebase(&ainfo->eager_matches, base);
 
 	edge_set_rebase(&ainfo->anchored_firsts, base);
@@ -782,6 +783,7 @@ static void
 free_analysis(const struct fsm_alloc *alloc, struct analysis_info *ainfo)
 {
 	state_set_free(ainfo->anchored_ends);
+	state_set_free(ainfo->anchored_starts);
 	state_set_free(ainfo->eager_matches);
 	state_set_free(ainfo->needs_indirect_epsilon_edge_to_eager_match_state);
 	edge_set_free(alloc, ainfo->anchored_firsts);
