@@ -184,7 +184,7 @@ print_state(FILE *f, const struct fsm_options *opt, const struct fsm_hooks *hook
 	assert(opt != NULL);
 
 	if (!fsm_isend(fsm, s)) {
-		if (-1 == print_hook_reject(f, opt, hooks, NULL, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, NULL, NULL, NULL)) {
 			return -1;
 		}
 	}
