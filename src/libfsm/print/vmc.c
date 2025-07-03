@@ -175,7 +175,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 {
 	switch (end_bits) {
 	case VM_END_FAIL:
-		return print_hook_reject(f, opt, hooks, default_reject, NULL);
+		return print_hook_reject(f, opt, hooks, NULL, default_reject, NULL);
 
 	case VM_END_SUCC:;
 		struct fsm_state_metadata state_metadata = {

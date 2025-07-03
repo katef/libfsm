@@ -18,19 +18,14 @@
 
 #include <print/esc.h>
 
-#include "libfsm/internal.h" /* XXX */
-#include "libfsm/print/ir.h" /* XXX */
-
 #include "lx/lx.h"
 #include "lx/ast.h"
 #include "lx/print.h"
 
-/* XXX: abstraction */
-int
-fsm_print_cfrag(FILE *f, const struct ir *ir,
-	const struct fsm_options *opt,
-	const struct fsm_hooks *hooks,
-	const char *cp);
+struct lx_hook_env {
+	const struct ast *ast;
+};
+
 
 static int
 skip(const struct fsm *fsm, fsm_state_t state)
@@ -38,7 +33,7 @@ skip(const struct fsm *fsm, fsm_state_t state)
 	struct ast_mapping *m;
 
 	assert(fsm != NULL);
-	assert(state < fsm->statecount);
+	assert(state < fsm_countstates(fsm));
 
 	if (!fsm_isend(fsm, state)) {
 		return 1;
@@ -100,7 +95,8 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token,
 	(void) fsm_getstart(fsm, &goal);
 	min = INT_MAX;
 
-	for (i = 0; i < fsm->statecount; i++) {
+	const size_t statecount = fsm_countstates(fsm);
+	for (i = 0; i < statecount; i++) {
 		const struct ast_mapping *m;
 		int n;
 
@@ -144,6 +140,7 @@ accept_c(FILE *f, const struct fsm_options *opt,
 {
 	const struct ast *ast;
 	const struct ast_mapping *m;
+	struct lx_hook_env *env = hook_opaque;
 
 	assert(f != NULL);
 	assert(opt != NULL);
@@ -152,7 +149,7 @@ accept_c(FILE *f, const struct fsm_options *opt,
 	assert(lang_opaque == NULL);
 	assert(hook_opaque != NULL);
 
-	ast = hook_opaque;
+	ast = env->ast;
 	m = ast_getendmappingbyendid(state_metadata->end_ids[0]);
 
 	/* XXX: don't need this if complete */
@@ -174,6 +171,7 @@ accept_c(FILE *f, const struct fsm_options *opt,
 
 static int
 reject_c(FILE *f, const struct fsm_options *opt,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
@@ -182,7 +180,30 @@ reject_c(FILE *f, const struct fsm_options *opt,
 	assert(hook_opaque != NULL);
 
 	(void) lang_opaque;
-	(void) hook_opaque;
+	struct lx_hook_env *env = hook_opaque;
+
+	const struct ast_mapping *m = state_metadata != NULL && state_metadata->end_id_count > 0
+	    ? ast_getendmappingbyendid(state_metadata->end_ids[0])
+	    : NULL;
+
+	/* If there is an AST mapping associated with this end state,
+	 * then unget the previous character, and possibly emit its
+	 * token type and/or new z state. */
+	if (m != NULL) {
+		fprintf(f, "%sungetc(lx, c); ", prefix.api);
+		fprintf(f, "return ");
+		if (m->to != NULL) {
+			fprintf(f, "lx->z = z%u, ", zindexof(env->ast, m->to));
+		}
+		if (m->token != NULL) {
+			fprintf(f, "%s", prefix.tok);
+			esctok(f, m->token->s);
+		} else {
+			fprintf(f, "lx->z(lx)");
+		}
+		fprintf(f, ";");
+		return 0;
+	}
 
 	/* XXX: don't need this if complete */
 	switch (opt->io) {
@@ -607,10 +628,11 @@ print_stateenum(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\tenum {\n");
 	fprintf(f, "\t\t");
 
-	for (i = 0; i < fsm->statecount; i++) {
+	const size_t statecount = fsm_countstates(fsm);
+	for (i = 0; i < statecount; i++) {
 		fprintf(f, "S%u, ", i);
 
-		if (i + 1 < fsm->statecount && (i + 1) % 10 == 0) {
+		if (i + 1 < statecount && (i + 1) % 10 == 0) {
 			fprintf(f, "\n");
 			fprintf(f, "\t\t");
 		}
@@ -693,23 +715,18 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 	{
 		static const struct fsm_hooks defaults;
 		struct fsm_hooks hooks = defaults;
-		struct ir *ir;
 
 		assert(cp != NULL);
 
+		struct lx_hook_env hook_env = {
+			.ast = ast,
+		};
+
 		hooks.accept      = accept_c;
 		hooks.reject      = reject_c;
-		hooks.hook_opaque = (void *) ast;
+		hooks.hook_opaque = &hook_env;
 
-		ir = make_ir(z->fsm, opt);
-		if (ir == NULL) {
-			/* TODO */
-		}
-
-		/* XXX: abstraction */
-		(void) fsm_print_cfrag(f, ir, opt, &hooks, cp);
-
-		free_ir(z->fsm, ir);
+		fsm_print(f, z->fsm, opt, &hooks, FSM_PRINT_C);
 	}
 
 	if (~api_exclude & API_BUF) {
@@ -718,7 +735,8 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 
 		has_skips = 0;
 
-		for (i = 0; i < z->fsm->statecount; i++) {
+		const size_t statecount = fsm_countstates(z->fsm);
+		for (i = 0; i < statecount; i++) {
 			int r;
 
 			r = fsm_reachableall(z->fsm, i, skip);
@@ -740,7 +758,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 			fprintf(f, "\n");
 			fprintf(f, "\t\tswitch (state) {\n");
 
-			for (i = 0; i < z->fsm->statecount; i++) {
+			for (i = 0; i < statecount; i++) {
 				int r;
 
 				r = fsm_reachableall(z->fsm, i, skip);
@@ -806,7 +824,8 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 
 		fprintf(f, "\tcase NONE: return %sEOF;\n", prefix.tok);
 
-		for (i = 0; i < z->fsm->statecount; i++) {
+		const size_t statecount = fsm_countstates(z->fsm);
+		for (i = 0; i < statecount; i++) {
 			const struct ast_mapping *m;
 
 			if (!fsm_isend(z->fsm, i)) {
