@@ -18,7 +18,6 @@
 
 #include <print/esc.h>
 
-#include "libfsm/internal.h" /* XXX */
 #include "libfsm/print/ir.h" /* XXX */
 
 #include "lx/lx.h"
@@ -38,7 +37,7 @@ skip(const struct fsm *fsm, fsm_state_t state)
 	struct ast_mapping *m;
 
 	assert(fsm != NULL);
-	assert(state < fsm->statecount);
+	assert(state < fsm_countstates(fsm));
 
 	if (!fsm_isend(fsm, state)) {
 		return 1;
@@ -100,7 +99,8 @@ shortest_example(const struct fsm *fsm, const struct ast_token *token,
 	(void) fsm_getstart(fsm, &goal);
 	min = INT_MAX;
 
-	for (i = 0; i < fsm->statecount; i++) {
+	const size_t statecount = fsm_countstates(fsm);
+	for (i = 0; i < statecount; i++) {
 		const struct ast_mapping *m;
 		int n;
 
@@ -607,10 +607,11 @@ print_stateenum(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\tenum {\n");
 	fprintf(f, "\t\t");
 
-	for (i = 0; i < fsm->statecount; i++) {
+	const size_t statecount = fsm_countstates(fsm);
+	for (i = 0; i < statecount; i++) {
 		fprintf(f, "S%u, ", i);
 
-		if (i + 1 < fsm->statecount && (i + 1) % 10 == 0) {
+		if (i + 1 < statecount && (i + 1) % 10 == 0) {
 			fprintf(f, "\n");
 			fprintf(f, "\t\t");
 		}
@@ -718,7 +719,8 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 
 		has_skips = 0;
 
-		for (i = 0; i < z->fsm->statecount; i++) {
+		const size_t statecount = fsm_countstates(z->fsm);
+		for (i = 0; i < statecount; i++) {
 			int r;
 
 			r = fsm_reachableall(z->fsm, i, skip);
@@ -740,7 +742,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 			fprintf(f, "\n");
 			fprintf(f, "\t\tswitch (state) {\n");
 
-			for (i = 0; i < z->fsm->statecount; i++) {
+			for (i = 0; i < statecount; i++) {
 				int r;
 
 				r = fsm_reachableall(z->fsm, i, skip);
@@ -806,7 +808,8 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 
 		fprintf(f, "\tcase NONE: return %sEOF;\n", prefix.tok);
 
-		for (i = 0; i < z->fsm->statecount; i++) {
+		const size_t statecount = fsm_countstates(z->fsm);
+		for (i = 0; i < statecount; i++) {
 			const struct ast_mapping *m;
 
 			if (!fsm_isend(z->fsm, i)) {
