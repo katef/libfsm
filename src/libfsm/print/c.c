@@ -210,7 +210,7 @@ print_groups(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-print_case(FILE *f, const struct ir *ir,
+print_case(FILE *f, const struct ir *ir, fsm_state_t state_id,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
 	const char *cp,
@@ -222,10 +222,16 @@ print_case(FILE *f, const struct ir *ir,
 	assert(f != NULL);
 	assert(cs != NULL);
 
+	assert(state_id < ir->n);
+	const struct fsm_state_metadata state_metadata = {
+		.end_ids = ir->states[state_id].endids.ids,
+		.end_id_count = ir->states[state_id].endids.count,
+	};
+
 	switch (cs->strategy) {
 	case IR_NONE:
 		fprintf(f, "\t\t\t");
-		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, &state_metadata, default_reject, NULL)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -254,7 +260,7 @@ print_case(FILE *f, const struct ir *ir,
 		print_groups(f, opt, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
 
 		fprintf(f, "\t\t\tdefault:  ");
-		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, &state_metadata, default_reject, NULL)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -285,7 +291,7 @@ print_case(FILE *f, const struct ir *ir,
 
 		print_ranges(f, opt, cs->u.error.error.ranges, cs->u.error.error.n);
 		fprintf(f, " ");
-		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, &state_metadata, default_reject, NULL)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -398,7 +404,7 @@ print_endstates(FILE *f,
 
 	/* unexpected EOT */
 	fprintf(f, "\tdefault: ");
-	if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
+	if (-1 == print_hook_reject(f, opt, hooks, NULL, default_reject, NULL)) {
 		return -1;
 	}
 	fprintf(f, "\n");
@@ -435,7 +441,7 @@ fsm_print_cfrag(FILE *f, const struct ir *ir,
 		}
 		fprintf(f, "\n");
 
-		if (-1 == print_case(f, ir, opt, hooks, cp, &ir->states[i])) {
+		if (-1 == print_case(f, ir, i, opt, hooks, cp, &ir->states[i])) {
 			return -1;
 		}
 
@@ -478,6 +484,41 @@ fsm_print_c_body(FILE *f, const struct ir *ir,
 		}
 	}
 
+	/* This flag indicates whether the any of the input stream was
+	 * consumed before getting EOF and skipping over the state and
+	 * character logic expanded here.
+	 *
+	 * lx needs to track this for proper EOF handling. It previously
+	 * generated the state enum itself, so that it could include an
+	 * additional 'NONE' state. Inside the input loop, the default
+	 * state of NONE would be updated to the start state, but if the
+	 * input loop was skipped it would still be NONE. */
+	fprintf(f, "\tint has_consumed_input = 0;\n");
+
+	/* For FSM_IO_STR and FSM_IO_PAIR, define a macro that will be
+	 * called with the new character every time iteration advances.
+	 * This is used by lx's internal bookkeeping to track token
+	 * positions in the input stream. For FSM_IO_GETC, the generated
+	 * getc function handles this directly.
+	 *
+	 * This defaults to a no-op unless defined. */
+	switch (opt->io) {
+	case FSM_IO_GETC:
+		break;		/* nothing to do */
+
+	case FSM_IO_STR:
+		fprintf(f, "#ifndef FSM_ADVANCE_HOOK\n");
+		fprintf(f, "#define FSM_ADVANCE_HOOK(C) /* no-op */ (void)C\n");
+		fprintf(f, "#endif\n");
+		break;
+
+	case FSM_IO_PAIR:
+		fprintf(f, "#ifndef FSM_ADVANCE_HOOK\n");
+		fprintf(f, "#define FSM_ADVANCE_HOOK(C) /* no-op */ (void)C\n");
+		fprintf(f, "#endif\n");
+		break;
+	}
+
 	/* enum of states */
 	print_stateenum(f, ir->n);
 	fprintf(f, "\n");
@@ -489,14 +530,19 @@ fsm_print_c_body(FILE *f, const struct ir *ir,
 	switch (opt->io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\twhile (c = fsm_getc(getc_opaque), c != EOF) {\n");
+		fprintf(f, "\t\thas_consumed_input = 1;\n");
 		break;
 
 	case FSM_IO_STR:
 		fprintf(f, "\tfor (p = s; *p != '\\0'; p++) {\n");
+		fprintf(f, "\t\thas_consumed_input = 1;\n");
+		fprintf(f, "\t\tFSM_ADVANCE_HOOK(%s);\n", cp);
 		break;
 
 	case FSM_IO_PAIR:
 		fprintf(f, "\tfor (p = b; p != e; p++) {\n");
+		fprintf(f, "\t\thas_consumed_input = 1;\n");
+		fprintf(f, "\t\tFSM_ADVANCE_HOOK(%s);\n", cp);
 		break;
 	}
 
@@ -505,6 +551,10 @@ fsm_print_c_body(FILE *f, const struct ir *ir,
 	}
 
 	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+
+	/* Suppress unused variable warning -- this is mainly for lx. */
+	fprintf(f, "\t(void)has_consumed_input;\n");
 	fprintf(f, "\n");
 
 	/* end states */

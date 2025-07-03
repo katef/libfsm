@@ -75,6 +75,7 @@ struct fsm_hooks {
 		void *lang_opaque, void *hook_opaque);
 
 	int (*reject)(FILE *, const struct fsm_options *opt,
+		const struct fsm_state_metadata *state_metadata,
 		void *lang_opaque, void *hook_opaque);
 
 	int (*comment)(FILE *, const struct fsm_options *opt,

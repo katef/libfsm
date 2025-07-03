@@ -695,6 +695,10 @@ main(int argc, char *argv[])
 		opt.comments = 0;
 	}
 
+	if (lang == LX_PRINT_C) {
+		opt.fragment = 1;
+	}
+
 	{
 		if (print_progress) {
 			fprintf(stderr, "-- parsing:");

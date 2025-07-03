@@ -201,10 +201,12 @@ lx_print_dump(FILE *f, const struct ast *ast, const struct fsm_options *opt)
 		fprintf(f, "\tbuf.len = 0;\n");
 		fprintf(f, "\n");
 
-		fprintf(f, "\tlx.buf_opaque = &buf;\n");
-		fprintf(f, "\tlx.push       = lx_dynpush;\n");
-		fprintf(f, "\tlx.clear      = lx_dynclear;\n");
-		fprintf(f, "\tlx.free       = lx_dynfree;\n");
+		if (~api_exclude & API_BUF) {
+			fprintf(f, "\tlx.buf_opaque = &buf;\n");
+			fprintf(f, "\tlx.push       = lx_dynpush;\n");
+			fprintf(f, "\tlx.clear      = lx_dynclear;\n");
+			fprintf(f, "\tlx.free       = lx_dynfree;\n");
+		}
 		fprintf(f, "\n");
 		break;
 
@@ -214,10 +216,12 @@ lx_print_dump(FILE *f, const struct ast *ast, const struct fsm_options *opt)
 		fprintf(f, "\tbuf.len = sizeof a;\n"); /* XXX: rename .len to .size */
 		fprintf(f, "\n");
 
-		fprintf(f, "\tlx.buf_opaque = &buf;\n");
-		fprintf(f, "\tlx.push       = lx_fixedpush;\n");
-		fprintf(f, "\tlx.clear      = lx_fixedclear;\n");
-		fprintf(f, "\tlx.free       = NULL;\n");
+		if (~api_exclude & API_BUF) {
+			fprintf(f, "\tlx.buf_opaque = &buf;\n");
+			fprintf(f, "\tlx.push       = lx_fixedpush;\n");
+			fprintf(f, "\tlx.clear      = lx_fixedclear;\n");
+			fprintf(f, "\tlx.free       = NULL;\n");
+		}
 		fprintf(f, "\n");
 		break;
 	}

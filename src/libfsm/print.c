@@ -111,6 +111,7 @@ int
 print_hook_reject(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct fsm_state_metadata *state_metadata,
 	int (*default_reject)(FILE *f, const struct fsm_options *opt,
 		void *lang_opaque, void *hook_opaque),
 	void *lang_opaque)
@@ -124,7 +125,7 @@ print_hook_reject(FILE *f,
 	}
 
 	if (hooks->reject != NULL) {
-		return hooks->reject(f, opt,
+		return hooks->reject(f, opt, state_metadata,
 			lang_opaque, hooks->hook_opaque);
 	} else if (default_reject != NULL) {
 		return default_reject(f, opt,
