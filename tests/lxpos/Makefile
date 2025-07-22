@@ -30,13 +30,13 @@ CFLAGS.${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump += -I ${BUILD}/tests/lxpos
 
 .for ext in c h
 
-${BUILD}/tests/lxpos/${buf}-${getc}-${io}-lexer.${ext}: tests/lxpos/lexer.lx
+${BUILD}/tests/lxpos/${buf}-${getc}-${io}-lexer.${ext}: tests/lxpos/lexer.lx ${LX}
 	${LX} -l ${ext} ${LX_CFLAGS} ${LX_CFLAGS.tests/lxpos/${buf}-${getc}-${io}-lexer.lx} < ${.ALLSRC:M*.lx} > $@ \
 		|| { rm -f $@; false; }
 
 .endfor
 
-${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump.c: tests/lxpos/lexer.lx
+${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump.c: tests/lxpos/lexer.lx ${LX}
 	${LX} -l dump ${LX_CFLAGS} ${LX_CFLAGS.tests/lxpos/${buf}-${getc}-${io}-lexer.lx} < ${.ALLSRC:M*.lx} > $@ \
 		|| { rm -f $@; false; }
 
@@ -53,11 +53,11 @@ CLEAN += ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump
 
 ${TEST_OUTDIR.tests/lxpos}/${buf}-${getc}-${io}-got${n}.dump: ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump ${TEST_SRCDIR.tests/lxpos}/in${n}.txt
 .if ${getc} != none
-	cat ${.ALLSRC:M*.txt} getcio=${io} \
+	cat ${.ALLSRC:M*.txt} \
 	| ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump \
 	> $@
 .else
-	cat ${.ALLSRC:M*.txt} io=${io} \
+	cat ${.ALLSRC:M*.txt} \
 	| xargs -0 ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump \
 	> $@
 .endif
