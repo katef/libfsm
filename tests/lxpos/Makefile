@@ -4,7 +4,7 @@ TEST.tests/lxpos != ls -1 tests/lxpos/out*.dump
 TEST_SRCDIR.tests/lxpos = tests/lxpos
 TEST_OUTDIR.tests/lxpos = ${BUILD}/tests/lxpos
 
-LX?=${BUILD}/bin/lx
+LX_BIN?=${BUILD}/bin/lx
 
 # for lx -l test
 LEXER += tests/lxpos/lexer.lx
@@ -30,14 +30,14 @@ CFLAGS.${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump += -I ${BUILD}/tests/lxpos
 
 .for ext in c h
 
-${BUILD}/tests/lxpos/${buf}-${getc}-${io}-lexer.${ext}: tests/lxpos/lexer.lx ${LX}
-	${LX} -l ${ext} ${LX_CFLAGS} ${LX_CFLAGS.tests/lxpos/${buf}-${getc}-${io}-lexer.lx} < ${.ALLSRC:M*.lx} > $@ \
+${BUILD}/tests/lxpos/${buf}-${getc}-${io}-lexer.${ext}: tests/lxpos/lexer.lx ${LX_BIN}
+	${LX_BIN} -l ${ext} ${LX_CFLAGS} ${LX_CFLAGS.tests/lxpos/${buf}-${getc}-${io}-lexer.lx} < ${.ALLSRC:M*.lx} > $@ \
 		|| { rm -f $@; false; }
 
 .endfor
 
-${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump.c: tests/lxpos/lexer.lx ${LX}
-	${LX} -l dump ${LX_CFLAGS} ${LX_CFLAGS.tests/lxpos/${buf}-${getc}-${io}-lexer.lx} < ${.ALLSRC:M*.lx} > $@ \
+${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump.c: tests/lxpos/lexer.lx ${LX_BIN}
+	${LX_BIN} -l dump ${LX_CFLAGS} ${LX_CFLAGS.tests/lxpos/${buf}-${getc}-${io}-lexer.lx} < ${.ALLSRC:M*.lx} > $@ \
 		|| { rm -f $@; false; }
 
 ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-dump: ${BUILD}/tests/lxpos/${buf}-${getc}-${io}-lexer.h
