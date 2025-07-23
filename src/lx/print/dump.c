@@ -307,6 +307,11 @@ lx_print_dump(FILE *f, const struct ast *ast, const struct fsm_options *opt)
 	fprintf(f, "\t} while (t != TOK_ERROR && t != TOK_EOF && t != TOK_UNKNOWN);\n");
 	fprintf(f, "\n");
 
+	if (api_tokbuf == API_DYNBUF && (~api_exclude & API_BUF)) {
+		fprintf(f, "\tlx.free(lx.buf_opaque);\n");
+		fprintf(f, "\n");
+	}
+
 	fprintf(f, "\treturn t == TOK_ERROR;\n");
 	fprintf(f, "}\n");
 }
