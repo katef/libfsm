@@ -262,7 +262,7 @@ reject_c(FILE *f, const struct fsm_options *opt,
 		fprintf(f, ";");
 		return 0;
 	} else {
-		fprintf(f, "\n\t\t\t\tif (!has_consumed_input) { return TOK_EOF; }\n");
+		fprintf(f, "\n\t\t\t\tif (!has_consumed_input) { return %sEOF; }\n", prefix.tok);
 		fprintf(f, "\t\t\t\t");
 		unget_character(f, false, env->cur_char_var);
 	}
@@ -529,7 +529,7 @@ print_io(FILE *f, const struct fsm_options *opt)
 		/* When libfsm's generated code advances a character, update
 		 * lx's token name buffer and position bookkeeping. */
 		fprintf(f, "#ifndef FSM_ADVANCE_HOOK\n");
-		fprintf(f, "#define FSM_ADVANCE_HOOK(C) if (!lx_advance_end(lx, C)) { return TOK_ERROR; }\n");
+		fprintf(f, "#define FSM_ADVANCE_HOOK(C) if (!lx_advance_end(lx, C)) { return %sERROR; }\n", prefix.tok);
 		fprintf(f, "#endif\n");
 		fprintf(f, "\n");
 		break;
@@ -910,7 +910,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		}
 
 		fprintf(f, "\tif (!has_consumed_input) {\n");
-		fprintf(f, "\t\treturn TOK_EOF;\n");
+		fprintf(f, "\t\treturn %sEOF;\n", prefix.tok);
 		fprintf(f, "\t} \n");
 		fprintf(f, "\n");
 	}
