@@ -192,6 +192,12 @@ accept_c(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "return ");
 	if (m->to != NULL) {
 		fprintf(f, "lx->z = z%u, ", zindexof(ast, m->to));
+	} else if (m->to == NULL && m->token == NULL) {
+		/* If accept-ing here doesn't actually map to a token or
+		 * a different zone, then it's stuck in the middle of a
+		 * pattern pair like `'//' .. /\n/ -> $nl;` with an EOF,
+		 * so tokenization should still fail. */
+		fprintf(f, "%sUNKNOWN; ", prefix.tok);
 	}
 	if (m->token != NULL) {
 		fprintf(f, "%s", prefix.tok);
