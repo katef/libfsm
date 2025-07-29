@@ -912,6 +912,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		fprintf(f, "\tif (!has_consumed_input) {\n");
 		fprintf(f, "\t\treturn %sEOF;\n", prefix.tok);
 		fprintf(f, "\t} \n");
+		fprintf(f, "\treturn %sERROR;", prefix.tok);
 		fprintf(f, "\n");
 	}
 
