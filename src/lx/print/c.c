@@ -1151,6 +1151,16 @@ lx_print_c(FILE *f, const struct ast *ast, const struct fsm_options *opt)
 			fprintf(f, "\tlx->end.line = 1;\n");
 			fprintf(f, "\tlx->end.col  = 1;\n");
 		}
+
+		/* Suppress warning for possibly unused function */
+		if (~api_exclude & API_BUF) {
+			if (api_tokbuf & API_FIXEDBUF) {
+				fprintf(f, "\t(void)%sfixedpop;\n", prefix.api);
+			} else if (api_tokbuf & API_DYNBUF) {
+				fprintf(f, "\t(void)%sdynpop;\n", prefix.api);
+			}
+		}
+
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
