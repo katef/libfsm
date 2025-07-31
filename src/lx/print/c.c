@@ -637,7 +637,7 @@ print_buf(FILE *f, const struct fsm_options *opt)
 		fprintf(f, "\n");
 
 
-		if (~api_exclude & API_BUF) {
+		if ((~api_exclude & API_BUF) && (api_tokbuf & API_DYNBUF)) {
 			fprintf(f, "static void\n");
 			fprintf(f, "%sdynpop(void *buf_opaque)\n", prefix.api);
 			fprintf(f, "{\n");
@@ -722,7 +722,7 @@ print_buf(FILE *f, const struct fsm_options *opt)
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 
-		if (~api_exclude & API_BUF) {
+		if (~api_exclude & API_BUF && (api_tokbuf & API_FIXEDBUF)) {
 			fprintf(f, "static void\n");
 			fprintf(f, "%sfixedpop(void *buf_opaque)\n", prefix.api);
 			fprintf(f, "{\n");
