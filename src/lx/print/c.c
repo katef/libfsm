@@ -452,7 +452,7 @@ print_io(FILE *f, const struct fsm_options *opt)
 	}
 
 	fprintf(f, "static int\n");
-	fprintf(f, "lx_advance_end(struct lx *lx, int c)\n");
+	fprintf(f, "%sadvance_end(struct %slx *lx, int c)\n", prefix.api, prefix.lx);
 	fprintf(f, "{\n");
 	if (~api_exclude & API_POS) {
 		fprintf(f, "\tlx->end.byte++;\n");
@@ -496,7 +496,7 @@ print_io(FILE *f, const struct fsm_options *opt)
 		fprintf(f, "inline\n");
 		fprintf(f, "#endif\n");
 		fprintf(f, "static int\n");
-		fprintf(f, "lx_getc(struct %slx *lx)\n", prefix.lx);
+		fprintf(f, "%sgetc(struct %slx *lx)\n", prefix.api, prefix.lx);
 		fprintf(f, "{\n");
 		fprintf(f, "\tint c;\n");
 		fprintf(f, "\n");
@@ -518,7 +518,7 @@ print_io(FILE *f, const struct fsm_options *opt)
 
 		/* FIXME: This should distinguish between alloc failure
 		 * and EOF, but will require layers of interface changes. */
-		fprintf(f, "\tif (!lx_advance_end(lx, c)) { return EOF; }\n");
+		fprintf(f, "\tif (!%sadvance_end(lx, c)) { return EOF; }\n", prefix.api);
 		fprintf(f, "\n");
 
 		fprintf(f, "\treturn c;\n");
@@ -527,13 +527,13 @@ print_io(FILE *f, const struct fsm_options *opt)
 
 		/* Add an implementation of fsm_getc that calls back
 		 * into lx_getc with the lx handle. */
-		fprintf(f, "/* This wrapper adapts calling lx_getc to the interface\n");
+		fprintf(f, "/* This wrapper adapts calling %sgetc to the interface\n", prefix.api);
 		fprintf(f, " * in libfsm's generated code. */\n");
 		fprintf(f, "static int\n");
 		fprintf(f, "fsm_getc(void *getc_opaque)\n");
 		fprintf(f, "{\n");
 
-		fprintf(f, "\treturn lx_getc((struct lx *)getc_opaque);\n");
+		fprintf(f, "\treturn %sgetc((struct %slx *)getc_opaque);\n", prefix.api, prefix.lx);
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 		break;
@@ -543,7 +543,7 @@ print_io(FILE *f, const struct fsm_options *opt)
 		/* When libfsm's generated code advances a character, update
 		 * lx's token name buffer and position bookkeeping. */
 		fprintf(f, "#ifndef FSM_ADVANCE_HOOK\n");
-		fprintf(f, "#define FSM_ADVANCE_HOOK(C) if (!lx_advance_end(lx, C)) { return %sERROR; }\n", prefix.tok);
+		fprintf(f, "#define FSM_ADVANCE_HOOK(C) if (!%sadvance_end(lx, C)) { return %sERROR; }\n", prefix.api, prefix.tok);
 		fprintf(f, "#endif\n");
 		fprintf(f, "\n");
 		break;
