@@ -484,17 +484,6 @@ fsm_print_c_body(FILE *f, const struct ir *ir,
 		}
 	}
 
-	/* This flag indicates whether the any of the input stream was
-	 * consumed before getting EOF and skipping over the state and
-	 * character logic expanded here.
-	 *
-	 * lx needs to track this for proper EOF handling. It previously
-	 * generated the state enum itself, so that it could include an
-	 * additional 'NONE' state. Inside the input loop, the default
-	 * state of NONE would be updated to the start state, but if the
-	 * input loop was skipped it would still be NONE. */
-	fprintf(f, "\tint has_consumed_input = 0;\n");
-
 	/* enum of states */
 	print_stateenum(f, ir->n);
 	fprintf(f, "\n");
@@ -506,17 +495,14 @@ fsm_print_c_body(FILE *f, const struct ir *ir,
 	switch (opt->io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\twhile (c = fsm_getc(getc_opaque), c != EOF) {\n");
-		fprintf(f, "\t\thas_consumed_input = 1;\n");
 		break;
 
 	case FSM_IO_STR:
 		fprintf(f, "\tfor (p = s; *p != '\\0'; p++) {\n");
-		fprintf(f, "\t\thas_consumed_input = 1;\n");
 		break;
 
 	case FSM_IO_PAIR:
 		fprintf(f, "\tfor (p = b; p != e; p++) {\n");
-		fprintf(f, "\t\thas_consumed_input = 1;\n");
 		break;
 	}
 
@@ -531,10 +517,6 @@ fsm_print_c_body(FILE *f, const struct ir *ir,
 	}
 
 	fprintf(f, "\t}\n");
-	fprintf(f, "\n");
-
-	/* Suppress unused variable warning -- this is mainly for lx. */
-	fprintf(f, "\t(void)has_consumed_input;\n");
 	fprintf(f, "\n");
 
 	/* end states */

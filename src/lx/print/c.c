@@ -302,6 +302,8 @@ advance_c(FILE *f, const struct fsm_options *opt, const char *cur_char_var, void
 {
 	(void)hook_opaque;
 
+	fprintf(f, "\t\thas_consumed_input = 1;\n");
+
 	switch (opt->io) {
 	case FSM_IO_GETC:
 		break;
@@ -782,6 +784,17 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 	fprintf(f, "static enum %stoken\n", prefix.api);
 	fprintf(f, "z%u(struct %slx *lx)\n", zindexof(ast, z), prefix.lx);
 	fprintf(f, "{\n");
+
+	/* This flag indicates whether the any of the input stream was
+	 * consumed before getting EOF and skipping over the state and
+	 * character logic expanded here.
+	 *
+	 * lx needs to track this for proper EOF handling. It previously
+	 * generated the state enum itself, so that it could include an
+	 * additional 'NONE' state. Inside the input loop, the default
+	 * state of NONE would be updated to the start state, but if the
+	 * input loop was skipped it would still be NONE. */
+	fprintf(f, "\tint has_consumed_input = 0;\n");
 
 	switch (opt->io) {
 	case FSM_IO_GETC:
