@@ -297,6 +297,26 @@ reject_c(FILE *f, const struct fsm_options *opt,
 	return 0;
 }
 
+static int
+advance_c(FILE *f, const struct fsm_options *opt, const char *cur_char_var, void *hook_opaque)
+{
+	(void)hook_opaque;
+
+	switch (opt->io) {
+	case FSM_IO_GETC:
+		break;
+
+	case FSM_IO_STR:
+	case FSM_IO_PAIR:
+		/* When libfsm's generated code advances a character, update
+		 * lx's token name buffer and position bookkeeping. */
+		fprintf(f, "\t\tif (!%sadvance_end(lx, %s)) { return %sERROR; }\n",
+		    prefix.api, cur_char_var, prefix.tok);
+		break;
+	}
+	return 0;
+}
+
 static void
 print_proto(FILE *f, const struct ast *ast, const struct ast_zone *z)
 {
@@ -485,8 +505,7 @@ print_io(FILE *f, const struct fsm_options *opt)
 	fprintf(f, "}\n");
 	fprintf(f, "\n");
 
-	switch (opt->io) {
-	case FSM_IO_GETC:
+	if (opt->io == FSM_IO_GETC) {
 		/* TODO: consider passing char *c, and return int 0/-1 for error */
 		if (opt->comments) {
 			fprintf(f, "/* This wrapper manages one character of lookahead/pushback\n");
@@ -536,17 +555,6 @@ print_io(FILE *f, const struct fsm_options *opt)
 		fprintf(f, "\treturn %sgetc((struct %slx *)getc_opaque);\n", prefix.api, prefix.lx);
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
-		break;
-
-	case FSM_IO_PAIR:
-	case FSM_IO_STR:
-		/* When libfsm's generated code advances a character, update
-		 * lx's token name buffer and position bookkeeping. */
-		fprintf(f, "#ifndef FSM_ADVANCE_HOOK\n");
-		fprintf(f, "#define FSM_ADVANCE_HOOK(C) if (!%sadvance_end(lx, C)) { return %sERROR; }\n", prefix.api, prefix.tok);
-		fprintf(f, "#endif\n");
-		fprintf(f, "\n");
-		break;
 	}
 
 	fprintf(f, "#if __STDC_VERSION__ >= 199901L\n");
@@ -831,6 +839,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 
 		hooks.accept      = accept_c;
 		hooks.reject      = reject_c;
+		hooks.advance     = advance_c;
 		hooks.hook_opaque = &hook_env;
 
 		fsm_print(f, z->fsm, opt, &hooks, FSM_PRINT_C);

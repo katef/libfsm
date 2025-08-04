@@ -495,30 +495,6 @@ fsm_print_c_body(FILE *f, const struct ir *ir,
 	 * input loop was skipped it would still be NONE. */
 	fprintf(f, "\tint has_consumed_input = 0;\n");
 
-	/* For FSM_IO_STR and FSM_IO_PAIR, define a macro that will be
-	 * called with the new character every time iteration advances.
-	 * This is used by lx's internal bookkeeping to track token
-	 * positions in the input stream. For FSM_IO_GETC, the generated
-	 * getc function handles this directly.
-	 *
-	 * This defaults to a no-op unless defined. */
-	switch (opt->io) {
-	case FSM_IO_GETC:
-		break;		/* nothing to do */
-
-	case FSM_IO_STR:
-		fprintf(f, "#ifndef FSM_ADVANCE_HOOK\n");
-		fprintf(f, "#define FSM_ADVANCE_HOOK(C) /* no-op */ (void)C\n");
-		fprintf(f, "#endif\n");
-		break;
-
-	case FSM_IO_PAIR:
-		fprintf(f, "#ifndef FSM_ADVANCE_HOOK\n");
-		fprintf(f, "#define FSM_ADVANCE_HOOK(C) /* no-op */ (void)C\n");
-		fprintf(f, "#endif\n");
-		break;
-	}
-
 	/* enum of states */
 	print_stateenum(f, ir->n);
 	fprintf(f, "\n");
@@ -536,13 +512,21 @@ fsm_print_c_body(FILE *f, const struct ir *ir,
 	case FSM_IO_STR:
 		fprintf(f, "\tfor (p = s; *p != '\\0'; p++) {\n");
 		fprintf(f, "\t\thas_consumed_input = 1;\n");
-		fprintf(f, "\t\tFSM_ADVANCE_HOOK(%s);\n", cp);
+		if (hooks->advance != NULL) {
+			if (-1 == hooks->advance(f, opt, cp, hooks->hook_opaque)) {
+				return -1;
+			}
+		}
 		break;
 
 	case FSM_IO_PAIR:
 		fprintf(f, "\tfor (p = b; p != e; p++) {\n");
 		fprintf(f, "\t\thas_consumed_input = 1;\n");
-		fprintf(f, "\t\tFSM_ADVANCE_HOOK(%s);\n", cp);
+		if (hooks->advance != NULL) {
+			if (-1 == hooks->advance(f, opt, cp, hooks->hook_opaque)) {
+				return -1;
+			}
+		}
 		break;
 	}
 
