@@ -512,22 +512,18 @@ fsm_print_c_body(FILE *f, const struct ir *ir,
 	case FSM_IO_STR:
 		fprintf(f, "\tfor (p = s; *p != '\\0'; p++) {\n");
 		fprintf(f, "\t\thas_consumed_input = 1;\n");
-		if (hooks->advance != NULL) {
-			if (-1 == hooks->advance(f, opt, cp, hooks->hook_opaque)) {
-				return -1;
-			}
-		}
 		break;
 
 	case FSM_IO_PAIR:
 		fprintf(f, "\tfor (p = b; p != e; p++) {\n");
 		fprintf(f, "\t\thas_consumed_input = 1;\n");
-		if (hooks->advance != NULL) {
-			if (-1 == hooks->advance(f, opt, cp, hooks->hook_opaque)) {
-				return -1;
-			}
-		}
 		break;
+	}
+
+	if (hooks->advance != NULL) {
+		if (-1 == hooks->advance(f, opt, cp, hooks->hook_opaque)) {
+			return -1;
+		}
 	}
 
 	if (-1 == fsm_print_cfrag(f, ir, opt, hooks, cp)) {
