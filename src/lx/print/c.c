@@ -153,7 +153,7 @@ static void
 unget_character(FILE *f, bool pop, const char *cur_char_var)
 {
 	fprintf(f, "%sungetc(lx, %s); ", prefix.api, cur_char_var);
-	if (pop && (~api_exclude & API_POS)) {
+	if (pop && (~api_exclude & API_BUF)) {
 		fprintf(f, "%s%spop(lx->buf_opaque); ",
 		    prefix.api, buf_op_prefix());
 	}
@@ -312,8 +312,10 @@ advance_c(FILE *f, const struct fsm_options *opt, const char *cur_char_var, void
 	case FSM_IO_PAIR:
 		/* When libfsm's generated code advances a character, update
 		 * lx's token name buffer and position bookkeeping. */
-		fprintf(f, "\t\tif (!%sadvance_end(lx, %s)) { return %sERROR; }\n",
-		    prefix.api, cur_char_var, prefix.tok);
+		if (~api_exclude & API_POS) {
+			fprintf(f, "\t\tif (!%sadvance_end(lx, %s)) { return %sERROR; }\n",
+			    prefix.api, cur_char_var, prefix.tok);
+		}
 		break;
 	}
 	return 0;
@@ -473,39 +475,46 @@ print_io(FILE *f, const struct fsm_options *opt)
 		fprintf(stderr, " io");
 	}
 
-	fprintf(f, "static int\n");
-	fprintf(f, "%sadvance_end(struct %slx *lx, int c)\n", prefix.api, prefix.lx);
-	fprintf(f, "{\n");
-	if (~api_exclude & API_POS) {
-		fprintf(f, "\tlx->end.byte++;\n");
-		fprintf(f, "\tlx->end.col++;\n");
+	if (opt->io == FSM_IO_GETC || (~api_exclude & API_POS)) {
+		fprintf(f, "static int\n");
+		fprintf(f, "%sadvance_end(struct %slx *lx, int c)\n", prefix.api, prefix.lx);
+		fprintf(f, "{\n");
 
-		fprintf(f, "\tif (c == '\\n') {\n");
-		fprintf(f, "\t\tlx->end.line++;\n");
-		fprintf(f, "\t\tlx->end.saved_col = lx->end.col - 1;\n");
-		fprintf(f, "\t\tlx->end.col = 1;\n");
-
-		if (opt->io == FSM_IO_STR) {   /* ignore terminating '\0' */
-			fprintf(f, "\t} else if (c == '\\0') { /* don't count terminating '\\0' */\n");
-			fprintf(f, "\t\tlx->end.byte--;\n");
-			fprintf(f, "\t\tlx->end.col--;\n");
-			fprintf(f, "\t}\n");
+		if (api_exclude & API_POS) {
+			fprintf(f, "\t(void)lx; (void)c;\n");
 		} else {
+			fprintf(f, "\tlx->end.byte++;\n");
+			fprintf(f, "\tlx->end.col++;\n");
+
+			fprintf(f, "\tif (c == '\\n') {\n");
+			fprintf(f, "\t\tlx->end.line++;\n");
+			fprintf(f, "\t\tlx->end.saved_col = lx->end.col - 1;\n");
+			fprintf(f, "\t\tlx->end.col = 1;\n");
+
+			if (opt->io == FSM_IO_STR) {   /* ignore terminating '\0' */
+				fprintf(f, "\t} else if (c == '\\0') { /* don't count terminating '\\0' */\n");
+				fprintf(f, "\t\tlx->end.byte--;\n");
+				fprintf(f, "\t\tlx->end.col--;\n");
+				fprintf(f, "\t}\n");
+			} else {
+				fprintf(f, "\t}\n");
+			}
+		}
+
+		if (api_exclude & API_BUF) {
+			fprintf(f, "\t(void)lx; (void)c;\n");
+		} else {
+			fprintf(f, "\tif (lx->push != NULL) {\n");
+			fprintf(f, "\t\tif (-1 == lx->push(lx->buf_opaque, (char)c)) {\n");
+			fprintf(f, "\t\t\treturn 0;\n");
+			fprintf(f, "\t\t}\n");
 			fprintf(f, "\t}\n");
 		}
-	}
 
-	if (~api_exclude & API_BUF) {
-		fprintf(f, "\tif (lx->push != NULL) {\n");
-		fprintf(f, "\t\tif (-1 == lx->push(lx->buf_opaque, (char)c)) {\n");
-		fprintf(f, "\t\t\treturn 0;\n");
-		fprintf(f, "\t\t}\n");
-		fprintf(f, "\t}\n");
+		fprintf(f, "\treturn 1;\n");
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
 	}
-
-	fprintf(f, "\treturn 1;\n");
-	fprintf(f, "}\n");
-	fprintf(f, "\n");
 
 	if (opt->io == FSM_IO_GETC) {
 		/* TODO: consider passing char *c, and return int 0/-1 for error */
@@ -582,7 +591,9 @@ print_io(FILE *f, const struct fsm_options *opt)
 		break;
 	}
 
-	if (~api_exclude & API_POS) {
+	if (api_exclude & API_POS) {
+		fprintf(f, "\t(void)lx; (void)c;\n");
+	} else {
 		fprintf(f, "\tlx->end.byte--;\n");
 		fprintf(f, "\tlx->end.col--;\n");
 		fprintf(f, "\n");
