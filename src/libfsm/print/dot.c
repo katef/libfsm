@@ -226,7 +226,7 @@ print_dotfrag(FILE *f,
 			if (!opt->anonymous_states) {
 				fprintf(f, "\t%sS%-2u [ ", prefix, s);
 
-				if (-1 == print_hook_reject(f, opt, hooks, default_reject, &s)) {
+				if (-1 == print_hook_reject(f, opt, hooks, NULL, default_reject, &s)) {
 					return -1;
 				}
 

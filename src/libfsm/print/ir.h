@@ -91,11 +91,7 @@ struct ir_state {
 		} error;
 
 		struct {
-			/* Note: This is allocated separately, to avoid
-			 * making the union significantly larger. */
-			struct ir_state_table {
-				unsigned to[FSM_SIGMA_COUNT];
-			} *table;
+			int not_yet_implemented;
 		} table;
 	} u;
 };

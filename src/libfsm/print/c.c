@@ -210,7 +210,7 @@ print_groups(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-print_case(FILE *f, const struct ir *ir,
+print_case(FILE *f, const struct ir *ir, fsm_state_t state_id,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
 	const char *cp,
@@ -222,10 +222,16 @@ print_case(FILE *f, const struct ir *ir,
 	assert(f != NULL);
 	assert(cs != NULL);
 
+	assert(state_id < ir->n);
+	const struct fsm_state_metadata state_metadata = {
+		.end_ids = ir->states[state_id].endids.ids,
+		.end_id_count = ir->states[state_id].endids.count,
+	};
+
 	switch (cs->strategy) {
 	case IR_NONE:
 		fprintf(f, "\t\t\t");
-		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, &state_metadata, default_reject, NULL)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -254,7 +260,7 @@ print_case(FILE *f, const struct ir *ir,
 		print_groups(f, opt, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
 
 		fprintf(f, "\t\t\tdefault:  ");
-		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, &state_metadata, default_reject, NULL)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -285,7 +291,7 @@ print_case(FILE *f, const struct ir *ir,
 
 		print_ranges(f, opt, cs->u.error.error.ranges, cs->u.error.error.n);
 		fprintf(f, " ");
-		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, &state_metadata, default_reject, NULL)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -398,7 +404,7 @@ print_endstates(FILE *f,
 
 	/* unexpected EOT */
 	fprintf(f, "\tdefault: ");
-	if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
+	if (-1 == print_hook_reject(f, opt, hooks, NULL, default_reject, NULL)) {
 		return -1;
 	}
 	fprintf(f, "\n");
@@ -435,7 +441,7 @@ fsm_print_cfrag(FILE *f, const struct ir *ir,
 		}
 		fprintf(f, "\n");
 
-		if (-1 == print_case(f, ir, opt, hooks, cp, &ir->states[i])) {
+		if (-1 == print_case(f, ir, i, opt, hooks, cp, &ir->states[i])) {
 			return -1;
 		}
 
@@ -498,6 +504,12 @@ fsm_print_c_body(FILE *f, const struct ir *ir,
 	case FSM_IO_PAIR:
 		fprintf(f, "\tfor (p = b; p != e; p++) {\n");
 		break;
+	}
+
+	if (hooks->advance != NULL) {
+		if (-1 == hooks->advance(f, opt, cp, hooks->hook_opaque)) {
+			return -1;
+		}
 	}
 
 	if (-1 == fsm_print_cfrag(f, ir, opt, hooks, cp)) {

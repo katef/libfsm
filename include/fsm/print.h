@@ -75,7 +75,14 @@ struct fsm_hooks {
 		void *lang_opaque, void *hook_opaque);
 
 	int (*reject)(FILE *, const struct fsm_options *opt,
+		const struct fsm_state_metadata *state_metadata,
 		void *lang_opaque, void *hook_opaque);
+
+	/* If non-NULL, this will be called to generate code
+	 * in scope immediately after advancing to the
+	 * next character of input. */
+	int (*advance)(FILE *, const struct fsm_options *opt,
+		const char *cur_char_var, void *hook_opaque);
 
 	int (*comment)(FILE *, const struct fsm_options *opt,
 		const struct fsm_state_metadata *state_metadata,
