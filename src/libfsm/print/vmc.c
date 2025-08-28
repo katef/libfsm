@@ -588,7 +588,7 @@ fsm_print_vmc(FILE *f,
 		case AMBIG_ERROR:
 		case AMBIG_EARLIEST:
 			fprintf(f, ",\n");
-			fprintf(f, "\tconst unsigned *id");
+			fprintf(f, "\tunsigned *id");
 			break;
 
 		case AMBIG_MULTIPLE:
