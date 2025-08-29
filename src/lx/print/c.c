@@ -159,6 +159,28 @@ unget_character(FILE *f, bool pop, const char *cur_char_var)
 	}
 }
 
+static bool
+endid_represents_dead_end(fsm_end_id_t endid, const struct ast *ast)
+{
+	const struct ast_mapping *m = ast_getendmappingbyendid(endid);
+	if (m == NULL) {
+		return false;
+	}
+
+	/* For each zone, check if this endid is associated with its z->ml zone.
+	 * If so, that endid is the "dead end" for that zone.
+	 *
+	 * The total number of zones and end ids (each corresponding to mapping)
+	 * should stay small enough that linear search is fine. If this becomes
+	 * prohibitively expensive, then build a bitset of dead-end IDs upfront
+	 * in one pass. */
+	for (struct ast_zone *z = ast->zl; z != NULL; z = z->next) {
+		if (z->ml == m) { return true; }
+	}
+
+	return false;
+}
+
 static int
 accept_c(FILE *f, const struct fsm_options *opt,
 	const struct fsm_state_metadata *state_metadata,
@@ -193,10 +215,21 @@ accept_c(FILE *f, const struct fsm_options *opt,
 	if (m->to == NULL) {
 		if (m->token == NULL) {
 			/* If accept-ing here doesn't actually map to a token or
-			 * a different zone, then it's stuck in the middle of a
-			 * pattern pair like `'//' .. /\n/ -> $nl;` with an EOF,
-			 * so tokenization should still fail. */
-			fprintf(f, "%sUNKNOWN", prefix.tok);
+			 * a different zone, then check whether the endid represents
+			 * a dead end. In that case, it's stuck in the middle of a
+			 * pattern pair like `'//' .. /\n/ -> $nl;` with an unexpected
+			 * EOF, so tokenization should still fail (with TOK_UNKNOWN).
+			 *
+			 * An example where the endid doesn't represent a dead end is
+			 * a zone ignoring trailing whitespace in a file, such as
+			 * `/[\r\n\t ]+/;`. In that case, the EOF is valid, so still
+			 * return TOK_EOF. */
+			const fsm_end_id_t endid = state_metadata->end_ids[0];
+			if (endid_represents_dead_end(endid, ast)) {
+				fprintf(f, "%sUNKNOWN", prefix.tok);
+			} else {
+				fprintf(f, "%sEOF", prefix.tok);
+			}
 		} else {
 			/* yield a token */
 			fprintf(f, "%s", prefix.tok);

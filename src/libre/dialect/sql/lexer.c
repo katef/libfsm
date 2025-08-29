@@ -12,11 +12,31 @@ static enum lx_sql_token z0(struct lx_sql_lx *lx);
 static enum lx_sql_token z1(struct lx_sql_lx *lx);
 static enum lx_sql_token z2(struct lx_sql_lx *lx);
 
+static int
+lx_sql_advance_end(struct lx_sql_lx *lx, int c)
+{
+	lx->end.byte++;
+	lx->end.col++;
+	if (c == '\n') {
+		lx->end.line++;
+		lx->end.saved_col = lx->end.col - 1;
+		lx->end.col = 1;
+	}
+	if (lx->push != NULL) {
+		if (-1 == lx->push(lx->buf_opaque, (char)c)) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+/* This wrapper manages one character of lookahead/pushback
+ * and the line, column, and byte offsets. */
 #if __STDC_VERSION__ >= 199901L
 inline
 #endif
 static int
-lx_getc(struct lx_sql_lx *lx)
+lx_sql_getc(struct lx_sql_lx *lx)
 {
 	int c;
 
@@ -32,16 +52,17 @@ lx_getc(struct lx_sql_lx *lx)
 		}
 	}
 
-	lx->end.byte++;
-	lx->end.col++;
-
-	if (c == '\n') {
-		lx->end.line++;
-		lx->end.saved_col = lx->end.col - 1;
-		lx->end.col = 1;
-	}
+	if (!lx_sql_advance_end(lx, c)) { return EOF; }
 
 	return c;
+}
+
+/* This wrapper adapts calling lx_sql_getc to the interface
+ * in libfsm's generated code. */
+static int
+fsm_getc(void *getc_opaque)
+{
+	return lx_sql_getc((struct lx_sql_lx *)getc_opaque);
 }
 
 #if __STDC_VERSION__ >= 199901L
@@ -52,10 +73,7 @@ lx_sql_ungetc(struct lx_sql_lx *lx, int c)
 {
 	assert(lx != NULL);
 	assert(lx->c == EOF);
-
 	lx->c = c;
-
-
 	lx->end.byte--;
 	lx->end.col--;
 
@@ -107,6 +125,17 @@ lx_sql_dynpush(void *buf_opaque, char c)
 	return 0;
 }
 
+static void
+lx_sql_dynpop(void *buf_opaque)
+{
+	struct lx_dynbuf *t = buf_opaque;
+
+	assert(t != NULL);
+
+	assert(t->p != t->a);
+	t->p--;
+}
+
 int
 lx_sql_dynclear(void *buf_opaque)
 {
@@ -146,11 +175,8 @@ lx_sql_dynfree(void *buf_opaque)
 static enum lx_sql_token
 z0(struct lx_sql_lx *lx)
 {
+	int has_consumed_input = 0;
 	int c;
-
-	enum {
-		S0, S1, S2, S3, NONE
-	} state;
 
 	assert(lx != NULL);
 
@@ -158,17 +184,19 @@ z0(struct lx_sql_lx *lx)
 		lx->clear(lx->buf_opaque);
 	}
 
-	state = NONE;
-
 	lx->start = lx->end;
 
-	while (c = lx_getc(lx), c != EOF) {
-		if (state == NONE) {
-			state = S0;
-		}
+	void *getc_opaque = (void *)lx;
+	enum {
+		S0, S1, S2, S3
+	} state;
 
+	state = S0;
+
+	while (c = fsm_getc(getc_opaque), c != EOF) {
+		has_consumed_input = 1;
 		switch (state) {
-		case S0: /* start */
+		case S0: /* e.g. "" */
 			switch ((unsigned char) c) {
 			case ',': state = S1; break;
 			case '0':
@@ -182,12 +210,14 @@ z0(struct lx_sql_lx *lx)
 			case '8':
 			case '9': state = S2; break;
 			case '}': state = S3; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S1: /* e.g. "," */
-			lx_sql_ungetc(lx, c); return TOK_SEP;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_SEP;
 
 		case S2: /* e.g. "0" */
 			switch ((unsigned char) c) {
@@ -201,46 +231,47 @@ z0(struct lx_sql_lx *lx)
 			case '7':
 			case '8':
 			case '9': break;
-			default:  lx_sql_ungetc(lx, c); return TOK_COUNT;
+			default:  lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_COUNT;
 			}
 			break;
 
 		case S3: /* e.g. "}" */
-			lx_sql_ungetc(lx, c); return lx->z = z2, TOK_CLOSECOUNT;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return lx->z = z2, TOK_CLOSECOUNT;
 
 		default:
 			; /* unreached */
 		}
+	}
+
+	/* end states */
+	switch (state) {
+	case S1: return TOK_SEP;
+	case S2: return TOK_COUNT;
+	case S3: return lx->z = z2, TOK_CLOSECOUNT;
+	default: 
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+	}
 
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx->buf_opaque, (char)c)) {
 				return TOK_ERROR;
 			}
 		}
-	}
 
 	lx->lgetc = NULL;
 
-	switch (state) {
-	case NONE: return TOK_EOF;
-	case S1: return TOK_SEP;
-	case S2: return TOK_COUNT;
-	case S3: return TOK_CLOSECOUNT;
-	default: errno = EINVAL; return TOK_ERROR;
-	}
+	if (!has_consumed_input) {
+		return TOK_EOF;
+	} 
+	return TOK_ERROR;
 }
 
 static enum lx_sql_token
 z1(struct lx_sql_lx *lx)
 {
+	int has_consumed_input = 0;
 	int c;
-
-	enum {
-		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
-		S10, S11, S12, S13, S14, S15, S16, S17, S18, S19, 
-		S20, S21, S22, S23, S24, S25, S26, S27, S28, S29, 
-		S30, S31, S32, S33, S34, NONE
-	} state;
 
 	assert(lx != NULL);
 
@@ -248,17 +279,22 @@ z1(struct lx_sql_lx *lx)
 		lx->clear(lx->buf_opaque);
 	}
 
-	state = NONE;
-
 	lx->start = lx->end;
 
-	while (c = lx_getc(lx), c != EOF) {
-		if (state == NONE) {
-			state = S0;
-		}
+	void *getc_opaque = (void *)lx;
+	enum {
+		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
+		S10, S11, S12, S13, S14, S15, S16, S17, S18, S19, 
+		S20, S21, S22, S23, S24, S25, S26, S27, S28, S29, 
+		S30, S31, S32, S33, S34
+	} state;
 
+	state = S0;
+
+	while (c = fsm_getc(getc_opaque), c != EOF) {
+		has_consumed_input = 1;
 		switch (state) {
-		case S0: /* start */
+		case S0: /* e.g. "" */
 			switch ((unsigned char) c) {
 			case '[': state = S1; break;
 			case '-': state = S3; break;
@@ -271,21 +307,21 @@ z1(struct lx_sql_lx *lx)
 		case S1: /* e.g. "[" */
 			switch ((unsigned char) c) {
 			case ':': state = S6; break;
-			default:  lx_sql_ungetc(lx, c); return TOK_CHAR;
+			default:  lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_CHAR;
 			}
 			break;
 
 		case S2: /* e.g. "\\x00" */
-			lx_sql_ungetc(lx, c); return TOK_CHAR;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_CHAR;
 
 		case S3: /* e.g. "-" */
-			lx_sql_ungetc(lx, c); return TOK_RANGE;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_RANGE;
 
 		case S4: /* e.g. "^" */
-			lx_sql_ungetc(lx, c); return TOK_INVERT;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_INVERT;
 
 		case S5: /* e.g. "]" */
-			lx_sql_ungetc(lx, c); return lx->z = z2, TOK_CLOSEGROUP;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return lx->z = z2, TOK_CLOSEGROUP;
 
 		case S6: /* e.g. "[:" */
 			switch ((unsigned char) c) {
@@ -295,94 +331,120 @@ z1(struct lx_sql_lx *lx)
 			case 'A': state = S10; break;
 			case 'L': state = S11; break;
 			case 'U': state = S12; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S7: /* e.g. "[:S" */
 			switch ((unsigned char) c) {
 			case 'P': state = S32; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S8: /* e.g. "[:W" */
 			switch ((unsigned char) c) {
 			case 'H': state = S28; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S9: /* e.g. "[:D" */
 			switch ((unsigned char) c) {
 			case 'I': state = S25; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S10: /* e.g. "[:A" */
 			switch ((unsigned char) c) {
 			case 'L': state = S20; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S11: /* e.g. "[:L" */
 			switch ((unsigned char) c) {
 			case 'O': state = S19; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S12: /* e.g. "[:U" */
 			switch ((unsigned char) c) {
 			case 'P': state = S13; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S13: /* e.g. "[:UP" */
 			switch ((unsigned char) c) {
 			case 'P': state = S14; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S14: /* e.g. "[:LOW" */
 			switch ((unsigned char) c) {
 			case 'E': state = S15; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S15: /* e.g. "[:LOWE" */
 			switch ((unsigned char) c) {
 			case 'R': state = S16; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S16: /* e.g. "[:ALPHA" */
 			switch ((unsigned char) c) {
 			case ':': state = S17; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S17: /* e.g. "[:ALPHA:" */
 			switch ((unsigned char) c) {
 			case ']': state = S18; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S18: /* e.g. "[:ALPHA:]" */
-			lx_sql_ungetc(lx, c); return TOK_NAMED__CLASS;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_NAMED__CLASS;
 
 		case S19: /* e.g. "[:LO" */
 			switch ((unsigned char) c) {
 			case 'W': state = S14; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
@@ -390,142 +452,175 @@ z1(struct lx_sql_lx *lx)
 			switch ((unsigned char) c) {
 			case 'N': state = S21; break;
 			case 'P': state = S22; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S21: /* e.g. "[:ALN" */
 			switch ((unsigned char) c) {
 			case 'U': state = S24; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S22: /* e.g. "[:ALP" */
 			switch ((unsigned char) c) {
 			case 'H': state = S23; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S23: /* e.g. "[:ALPH" */
 			switch ((unsigned char) c) {
 			case 'A': state = S16; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S24: /* e.g. "[:ALNU" */
 			switch ((unsigned char) c) {
 			case 'M': state = S16; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S25: /* e.g. "[:DI" */
 			switch ((unsigned char) c) {
 			case 'G': state = S26; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S26: /* e.g. "[:DIG" */
 			switch ((unsigned char) c) {
 			case 'I': state = S27; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S27: /* e.g. "[:DIGI" */
 			switch ((unsigned char) c) {
 			case 'T': state = S16; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S28: /* e.g. "[:WH" */
 			switch ((unsigned char) c) {
 			case 'I': state = S29; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S29: /* e.g. "[:WHI" */
 			switch ((unsigned char) c) {
 			case 'T': state = S30; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S30: /* e.g. "[:WHIT" */
 			switch ((unsigned char) c) {
 			case 'E': state = S31; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S31: /* e.g. "[:WHITE" */
 			switch ((unsigned char) c) {
 			case 'S': state = S7; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S32: /* e.g. "[:SP" */
 			switch ((unsigned char) c) {
 			case 'A': state = S33; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S33: /* e.g. "[:SPA" */
 			switch ((unsigned char) c) {
 			case 'C': state = S34; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S34: /* e.g. "[:SPAC" */
 			switch ((unsigned char) c) {
 			case 'E': state = S16; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		default:
 			; /* unreached */
 		}
+	}
+
+	/* end states */
+	switch (state) {
+	case S1: return TOK_CHAR;
+	case S2: return TOK_CHAR;
+	case S3: return TOK_RANGE;
+	case S4: return TOK_INVERT;
+	case S5: return lx->z = z2, TOK_CLOSEGROUP;
+	case S18: return TOK_NAMED__CLASS;
+	default: 
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+	}
 
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx->buf_opaque, (char)c)) {
 				return TOK_ERROR;
 			}
 		}
-	}
 
 	lx->lgetc = NULL;
 
-	switch (state) {
-	case NONE: return TOK_EOF;
-	case S1: return TOK_CHAR;
-	case S2: return TOK_CHAR;
-	case S3: return TOK_RANGE;
-	case S4: return TOK_INVERT;
-	case S5: return TOK_CLOSEGROUP;
-	case S18: return TOK_NAMED__CLASS;
-	default: errno = EINVAL; return TOK_ERROR;
-	}
+	if (!has_consumed_input) {
+		return TOK_EOF;
+	} 
+	return TOK_ERROR;
 }
 
 static enum lx_sql_token
 z2(struct lx_sql_lx *lx)
 {
+	int has_consumed_input = 0;
 	int c;
-
-	enum {
-		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
-		S10, S11, NONE
-	} state;
 
 	assert(lx != NULL);
 
@@ -533,17 +628,20 @@ z2(struct lx_sql_lx *lx)
 		lx->clear(lx->buf_opaque);
 	}
 
-	state = NONE;
-
 	lx->start = lx->end;
 
-	while (c = lx_getc(lx), c != EOF) {
-		if (state == NONE) {
-			state = S0;
-		}
+	void *getc_opaque = (void *)lx;
+	enum {
+		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
+		S10, S11
+	} state;
 
+	state = S0;
+
+	while (c = fsm_getc(getc_opaque), c != EOF) {
+		has_consumed_input = 1;
 		switch (state) {
-		case S0: /* start */
+		case S0: /* e.g. "" */
 			switch ((unsigned char) c) {
 			case '{': state = S2; break;
 			case '[': state = S3; break;
@@ -560,56 +658,48 @@ z2(struct lx_sql_lx *lx)
 			break;
 
 		case S1: /* e.g. "\\x00" */
-			lx_sql_ungetc(lx, c); return TOK_CHAR;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_CHAR;
 
 		case S2: /* e.g. "{" */
-			lx_sql_ungetc(lx, c); return lx->z = z0, TOK_OPENCOUNT;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return lx->z = z0, TOK_OPENCOUNT;
 
 		case S3: /* e.g. "[" */
-			lx_sql_ungetc(lx, c); return lx->z = z1, TOK_OPENGROUP;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return lx->z = z1, TOK_OPENGROUP;
 
 		case S4: /* e.g. "|" */
-			lx_sql_ungetc(lx, c); return TOK_ALT;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_ALT;
 
 		case S5: /* e.g. "+" */
-			lx_sql_ungetc(lx, c); return TOK_PLUS;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_PLUS;
 
 		case S6: /* e.g. "*" */
-			lx_sql_ungetc(lx, c); return TOK_STAR;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_STAR;
 
-		case S7: /* e.g. "?" */
-			lx_sql_ungetc(lx, c); return TOK_OPT;
+		case S7: /* e.g. "\077" */
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_OPT;
 
 		case S8: /* e.g. ")" */
-			lx_sql_ungetc(lx, c); return TOK_CLOSESUB;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_CLOSESUB;
 
 		case S9: /* e.g. "(" */
-			lx_sql_ungetc(lx, c); return TOK_OPENSUB;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_OPENSUB;
 
 		case S10: /* e.g. "%" */
-			lx_sql_ungetc(lx, c); return TOK_MANY;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_MANY;
 
 		case S11: /* e.g. "_" */
-			lx_sql_ungetc(lx, c); return TOK_ANY;
+			lx_sql_ungetc(lx, c); lx_sql_dynpop(lx->buf_opaque); return TOK_ANY;
 
 		default:
 			; /* unreached */
 		}
-
-		if (lx->push != NULL) {
-			if (-1 == lx->push(lx->buf_opaque, (char)c)) {
-				return TOK_ERROR;
-			}
-		}
 	}
 
-	lx->lgetc = NULL;
-
+	/* end states */
 	switch (state) {
-	case NONE: return TOK_EOF;
 	case S1: return TOK_CHAR;
-	case S2: return TOK_OPENCOUNT;
-	case S3: return TOK_OPENGROUP;
+	case S2: return lx->z = z0, TOK_OPENCOUNT;
+	case S3: return lx->z = z1, TOK_OPENGROUP;
 	case S4: return TOK_ALT;
 	case S5: return TOK_PLUS;
 	case S6: return TOK_STAR;
@@ -618,8 +708,23 @@ z2(struct lx_sql_lx *lx)
 	case S9: return TOK_OPENSUB;
 	case S10: return TOK_MANY;
 	case S11: return TOK_ANY;
-	default: errno = EINVAL; return TOK_ERROR;
+	default: 
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_sql_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 	}
+
+		if (lx->push != NULL) {
+			if (-1 == lx->push(lx->buf_opaque, (char)c)) {
+				return TOK_ERROR;
+			}
+		}
+
+	lx->lgetc = NULL;
+
+	if (!has_consumed_input) {
+		return TOK_EOF;
+	} 
+	return TOK_ERROR;
 }
 
 const char *
@@ -747,6 +852,7 @@ lx_sql_init(struct lx_sql_lx *lx)
 	lx->end.byte = 0;
 	lx->end.line = 1;
 	lx->end.col  = 1;
+	(void)lx_sql_dynpop;
 }
 
 enum lx_sql_token
