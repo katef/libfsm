@@ -107,13 +107,13 @@ fsm_eager_output_free(struct fsm *fsm)
 }
 
 int
-fsm_seteageroutputonends(struct fsm *fsm, fsm_output_id_t id)
+fsm_eager_output_set_on_ends(struct fsm *fsm, fsm_output_id_t id)
 {
 	assert(fsm != NULL);
 	const size_t count = fsm_countstates(fsm);
 	for (size_t i = 0; i < count; i++) {
 		if (fsm_isend(fsm, i)) {
-			if (!fsm_seteageroutput(fsm, i, id)) { return 0; }
+			if (!fsm_eager_output_set(fsm, i, id)) { return 0; }
 		}
 	}
 	return 1;
@@ -157,7 +157,7 @@ grow_htab(const struct fsm_alloc *alloc, struct eager_output_htab *htab)
 }
 
 int
-fsm_seteageroutput(struct fsm *fsm, fsm_state_t state, fsm_output_id_t id)
+fsm_eager_output_set(struct fsm *fsm, fsm_state_t state, fsm_output_id_t id)
 {
 	assert(fsm != NULL);
 
@@ -296,7 +296,9 @@ fsm_eager_output_count(const struct fsm *fsm, fsm_state_t state)
 }
 
 struct get_env {
+	bool ok;
 	size_t count;
+	size_t ceil;
 	fsm_output_id_t *buf;
 };
 
@@ -305,6 +307,10 @@ append_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
 {
 	struct get_env *env = opaque;
 	(void)state;
+	if (env->count == env->ceil) {
+		env->ok = false;
+		return 0;
+	}
 	env->buf[env->count++] = id;
 	return 1;
 }
@@ -317,12 +323,18 @@ cmp_fsm_output_id_t(const void *pa, const void *pb)
 	return a < b ? -1 : a > b ? 1 : 0;
 }
 
-void
-fsm_eager_output_get(const struct fsm *fsm, fsm_state_t state, fsm_output_id_t *buf)
+int
+fsm_eager_output_get(const struct fsm *fsm, fsm_state_t state,
+    size_t buf_count, fsm_output_id_t *id_buf)
 {
-	struct get_env env = { .buf = buf };
+	struct get_env env = {
+		.ok = true,
+		.buf = id_buf,
+		.ceil = buf_count,
+	};
 	fsm_eager_output_iter_state(fsm, state, append_cb, &env);
-	qsort(buf, env.count, sizeof(buf[0]), cmp_fsm_output_id_t);
+	qsort(id_buf, env.count, sizeof(id_buf[0]), cmp_fsm_output_id_t);
+	return env.ok ? 1 : 0;
 }
 
 void

@@ -2599,7 +2599,7 @@ remap_eager_output_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
 {
 	(void)state;
 	struct remap_eager_output_env *env = opaque;
-	if (!fsm_seteageroutput(env->dst, env->dst_state, id)) {
+	if (!fsm_eager_output_set(env->dst, env->dst_state, id)) {
 		env->ok = false;
 		return 0;
 	}

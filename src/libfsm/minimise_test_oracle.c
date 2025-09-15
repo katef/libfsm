@@ -212,7 +212,7 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 		int eres = fsm_endid_get(fsm, i, endid_count_a, ids_a);
 		assert(eres == 1);
 
-		fsm_eager_output_get(fsm, i, eo_ids_a);
+		fsm_eager_output_get(fsm, i, max_eager_output_count, eo_ids_a);
 
 		bool found = false;
 		/* note: skipping eg 0 here since that's the empty set */
@@ -234,7 +234,7 @@ fsm_minimise_test_oracle(const struct fsm *fsm)
 			    endid_count_b, ids_b);
 			assert(eres == 1);
 
-			fsm_eager_output_get(fsm, end_md_group_leaders[eg_i], eo_ids_b);
+			fsm_eager_output_get(fsm, end_md_group_leaders[eg_i], max_eager_output_count, eo_ids_b);
 
 			if ((0 == memcmp(ids_a, ids_b, endid_count_a * sizeof(ids_a[0]))) &&
 			    (0 == memcmp(eo_ids_a, eo_ids_b, eager_output_count_a * sizeof(eo_ids_a[0])))) {

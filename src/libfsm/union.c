@@ -708,7 +708,7 @@ modify_group_nfa(struct fsm *nfa, size_t id, struct analysis_info *ainfo, size_t
 
 		/* Set eager match ID on new eager_match_state. */
 		const fsm_output_id_t oid = (fsm_output_id_t)(id + id_base);
-		if (!fsm_seteageroutput(nfa, ainfo->eager_match_state, oid)) {
+		if (!fsm_eager_output_set(nfa, ainfo->eager_match_state, oid)) {
 			return false;
 		}
 		if (log) {

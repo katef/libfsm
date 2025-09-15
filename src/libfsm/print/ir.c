@@ -577,7 +577,7 @@ make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 			if (outputs == NULL) {
 				goto error;
 			}
-			fsm_eager_output_get(fsm, i, outputs->ids);
+			fsm_eager_output_get(fsm, i, eager_output_count, outputs->ids);
 			outputs->count = eager_output_count;
 
 			ir->states[i].eager_outputs = outputs;

@@ -246,7 +246,7 @@ fsm_remove_epsilons(struct fsm *nfa)
 		}
 
 		for (size_t i = 0; i < eager_output_buf.used; i++) {
-			if (!fsm_seteageroutput(nfa, s, eager_output_buf.ids[i])) {
+			if (!fsm_eager_output_set(nfa, s, eager_output_buf.ids[i])) {
 				goto cleanup;
 			}
 		}
