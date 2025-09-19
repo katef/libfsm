@@ -83,7 +83,16 @@ run_test(const struct eager_output_test *test)
 	}
 
 	const size_t id_base = 1; /* offset by 1 because 0 is used as end-of-list */
-	struct fsm *fsm = fsm_union_repeated_pattern_group(nfas_used, nfas, NULL, id_base);
+	struct fsm *fsm;
+	if (test->force_endids) {
+		for (size_t i = 0; i < nfas_used; i++) {
+			fsm_setendid(nfas[i], i + id_base);
+		}
+		fsm = fsm_union_array(nfas_used, nfas, NULL);
+	} else {
+		/* This function sets the eager output IDs. */
+		fsm = fsm_union_repeated_pattern_group(nfas_used, nfas, NULL, id_base);
+	}
 	assert(fsm != NULL);
 
 	if (log) {
@@ -167,6 +176,7 @@ run_test(const struct eager_output_test *test)
 		fsm_state_t end; /* only set on match */
 		ret = fsm_exec(fsm, fsm_sgetc, &input, &end, NULL);
 
+		size_t match_id_count = 0;
 		if (ret == 1) {
 #define ENDID_BUF_SIZE 32
 			fsm_end_id_t endid_buf[ENDID_BUF_SIZE] = {0};
@@ -177,10 +187,26 @@ run_test(const struct eager_output_test *test)
 				assert(!"fsm_endid_get failed");
 			}
 
+			match_id_count += outputs.used;
+			for (size_t e_i = 0; e_i < endid_count; e_i++) {
+				fsm_end_id_t endid = endid_buf[e_i];
+				bool found = false;
+				for (size_t o_i = 0; o_i < outputs.used; o_i++) {
+					if (outputs.ids[o_i] == endid) {
+						found = true;
+						break;
+					}
+				}
+				if (!found) {
+					/* Don't count IDs set by both endids AND eager outputs twice. */
+					match_id_count++;
+				}
+			}
+
 			/* Copy endid outputs into outputs.ids[], since for testing
 			 * purposes we don't care about the difference between eager
 			 * output and endids here. */
-			assert(outputs.used + endid_count <= MAX_IDS);
+			assert(match_id_count <= MAX_IDS);
 			for (size_t endid_i = 0; endid_i < endid_count; endid_i++) {
 				if (log) {
 					fprintf(stderr, "-- adding endid %zd: %d\n", endid_i, endid_buf[endid_i]);
@@ -222,7 +248,7 @@ run_test(const struct eager_output_test *test)
 			assert(ret == 1);
 		}
 
-		assert(outputs.used >= expected_id_count);
+		assert(match_id_count == expected_id_count);
 
 		size_t floor = 0;
 		for (size_t exp_i = 0; exp_i < outputs.used; exp_i++) {
