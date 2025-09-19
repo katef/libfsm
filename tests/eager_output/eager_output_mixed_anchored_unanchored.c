@@ -2,9 +2,6 @@
 
 int main(void)
 {
-	/* fprintf(stderr, "%s: skipping for now, this doesn't pass yet.\n", __FILE__); */
-	/* return EXIT_SUCCESS; */
-
 	struct eager_output_test test = {
 		.patterns =  {
 			"^abc$",

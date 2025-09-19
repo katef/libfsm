@@ -291,7 +291,7 @@ cleanup:
  * reachable. This doesn't check that the FROM state is reachable from
  * the start state (trim will do that soon enough), it's just used to
  * check which states will become unreachable once epsilon edges are
- * removed. We don't need to add eager endids for them, because they
+ * removed. We don't need to add eager outputs for them, because they
  * will soon be disconnected from the epsilon-free NFA. */
 static void
 mark_states_reachable_by_label(const struct fsm *nfa, uint64_t *reachable_by_label)
@@ -311,9 +311,7 @@ mark_states_reachable_by_label(const struct fsm *nfa, uint64_t *reachable_by_lab
 		struct fsm_state *s = &nfa->states[s_i];
 
 		/* Clear the visited flag, it will be used to avoid cycles. */
-#if 1
 		assert(s->visited == 0); /* stale */
-#endif
 		s->visited = 0;
 
 		edge_set_group_iter_reset(s->edges, EDGE_GROUP_ITER_ALL, &egi);

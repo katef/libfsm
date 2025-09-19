@@ -90,7 +90,6 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 			new->visited  = 0;
 			new->epsilons = NULL;
 			new->edges    = NULL;
-
 			new->has_eager_outputs = 0;
 		}
 

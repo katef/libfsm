@@ -1,3 +1,9 @@
+/*
+ * Copyright 2024 Scott Vokes
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #ifndef EAGER_OUTPUT_H
 #define EAGER_OUTPUT_H
 
@@ -13,12 +19,15 @@ fsm_eager_output_init(struct fsm *fsm);
 void
 fsm_eager_output_free(struct fsm *fsm);
 
+/* Does an FSM have eager outputs? */
 bool
 fsm_eager_output_has_eager_output(const struct fsm *fsm);
 
+/* Does a particular state have eager outputs? */
 bool
 fsm_eager_output_state_has_eager_output(const struct fsm *fsm, fsm_state_t state);
 
+/* Dump eager outputs on an FSM. (For debugging.) */
 void
 fsm_eager_output_dump(FILE *f, const struct fsm *fsm);
 
@@ -28,14 +37,17 @@ fsm_eager_output_dump(FILE *f, const struct fsm *fsm);
 typedef int
 fsm_eager_output_iter_cb(fsm_state_t state, fsm_output_id_t id, void *opaque);
 
+/* Iterate over eager outputs on a state. */
 void
 fsm_eager_output_iter_state(const struct fsm *fsm,
     fsm_state_t state, fsm_eager_output_iter_cb *cb, void *opaque);
 
+/* Iterate over all eager outputs on an FSM. */
 void
 fsm_eager_output_iter_all(const struct fsm *fsm,
     fsm_eager_output_iter_cb *cb, void *opaque);
 
+/* Compact eager output metadata. */
 int
 fsm_eager_output_compact(struct fsm *fsm, fsm_state_t *mapping, size_t mapping_count);
 
