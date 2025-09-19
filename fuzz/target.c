@@ -505,8 +505,6 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 		}
 	}
 
-	enum re_is_anchored_res anchorage[MAX_PATTERNS] = {0};
-
 	/* for each pattern, attempt to compile to a DFA */
 	for (size_t p_i = 0; p_i < env.pattern_count; p_i++) {
 		const char *p = env.patterns[p_i];
@@ -526,7 +524,7 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 		}
 
 		const fsm_output_id_t endid = (fsm_output_id_t)p_i;
-		ret = fsm_seteageroutputonends(fsm, endid);
+		ret = fsm_eager_output_set_on_ends(fsm, endid);
 		assert(ret == 1);
 
 		if (verbose) {
@@ -575,7 +573,7 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 	/* copy and combine fsms into one DFA */
 	{
 		size_t used = 0;
-		struct fsm_union_entry entries[MAX_PATTERNS] = {0};
+		struct fsm *nfas[MAX_PATTERNS] = {0};
 
 		for (size_t i = 0; i < env.fsm_count; i++) {
 			/* there can be gaps, fsms[] lines up with patterns[] */
@@ -601,9 +599,7 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 				}
 			}
 
-			entries[used].fsm = cp;
-			entries[used].anchored_start = anchorage[i] & RE_IS_ANCHORED_START;
-			entries[used].anchored_end = anchorage[i] & RE_IS_ANCHORED_END;
+			nfas[used] = cp;
 			used++;
 		}
 
@@ -611,8 +607,8 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 			goto cleanup; /* nothing to do */
 		}
 
-		/* consumes entries[] */
-		struct fsm *fsm = fsm_union_repeated_pattern_group(used, entries, NULL);
+		/* consumes nfas[] */
+		struct fsm *fsm = fsm_union_repeated_pattern_group(used, nfas, NULL, 0);
 		assert(fsm != NULL);
 
 		if (verbose) {
