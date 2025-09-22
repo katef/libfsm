@@ -278,7 +278,7 @@ fsm_increndids(struct fsm * fsm, int delta);
  * During DFA execution, states with eager outputs will output their
  * ID when output reaches them. With fsm_exec, this happens via a
  * callback (see fsm_eager_output_set_cb). Some print languages
- * will eventually eager outputs.
+ * will eventually support eager outputs.
  *
  * One use case for eager outputs is combining multiple unanchored
  * regexes into a single DFA and detecting when input matches more than
