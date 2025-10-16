@@ -65,7 +65,7 @@ run_test(const struct eager_output_test *test)
 		const char *p = test->patterns[i];
 		if (test->patterns[i] == NULL) { break; }
 
-		struct fsm *fsm = re_comp(RE_PCRE, fsm_sgetc, &p, NULL, 0, NULL);
+		struct fsm *fsm = re_comp(RE_PCRE, fsm_sgetc, &p, NULL, RE_SAVE_LINKAGE_INFO, NULL);
 		assert(fsm != NULL);
 
 		if (log) {

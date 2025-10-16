@@ -280,6 +280,9 @@ fsm_determinise_with_config(struct fsm *nfa,
 	assert(fsm_all(nfa, fsm_isdfa));
 #endif
 
+	/* This should not be carried over from the NFA. */
+	assert(nfa->linkage_info == NULL);
+
 	res = FSM_DETERMINISE_WITH_CONFIG_OK;
 
 cleanup:

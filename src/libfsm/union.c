@@ -619,18 +619,90 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 		}
 	}
 
+	/* Compare/log the linkage info */
+#define COMPARE_LINKAGE_INFO 1
+#define LOG_LINKAGE_INFO 1
+	if (LOG_LINKAGE_INFO) {
+		struct state_iter si;
+		state_set_reset(ainfo->anchored_starts, &si);
+		fsm_state_t s_i;
+
+		fprintf(stderr, "ainfo->anchored_starts count: %zd\n", state_set_count(ainfo->anchored_starts));
+		state_set_reset(ainfo->anchored_starts, &si);
+		while (state_set_next(&si, &s_i)) {
+			fprintf(stderr, "ainfo->anchored_starts: %d\n", s_i);
+		}
+
+		fprintf(stderr, "linkage_info->anchored_starts count: %zd\n", state_set_count(nfa->linkage_info->anchored_starts));
+		state_set_reset(nfa->linkage_info->anchored_starts, &si);
+		while (state_set_next(&si, &s_i)) {
+			fprintf(stderr, "linkage_info->anchored_starts: %d\n", s_i);
+		}
+
+		assert(state_set_count(nfa->linkage_info->anchored_starts) >= state_set_count(ainfo->anchored_starts));
+		state_set_reset(ainfo->anchored_starts, &si);
+		while (state_set_next(&si, &s_i)) {
+			assert(state_set_contains(nfa->linkage_info->anchored_starts, s_i));
+		}
+	}
+
+	if (LOG_LINKAGE_INFO) {
+		struct state_iter si;
+		state_set_reset(ainfo->anchored_ends, &si);
+		fsm_state_t s_i;
+
+		fprintf(stderr, "ainfo->anchored_ends count: %zd\n", state_set_count(ainfo->anchored_ends));
+		state_set_reset(ainfo->anchored_ends, &si);
+		while (state_set_next(&si, &s_i)) {
+			fprintf(stderr, "ainfo->anchored_ends: %d\n", s_i);
+		}
+
+		fprintf(stderr, "linkage_info->anchored_ends count: %zd\n", state_set_count(nfa->linkage_info->anchored_ends));
+		state_set_reset(nfa->linkage_info->anchored_ends, &si);
+		while (state_set_next(&si, &s_i)) {
+			fprintf(stderr, "linkage_info->anchored_ends: %d\n", s_i);
+		}
+
+		assert(state_set_count(nfa->linkage_info->anchored_ends) >= state_set_count(ainfo->anchored_ends));
+		state_set_reset(ainfo->anchored_ends, &si);
+		while (state_set_next(&si, &s_i)) {
+			assert(state_set_contains(nfa->linkage_info->anchored_ends, s_i));
+		}
+	}
+
 #if LOG_ANALYZE_GROUP_NFA_RESULTS
 	{
 		fprintf(stderr, "# analysis_info start %d, usl %d, uel %d, uele %d\n",
 		    ainfo->start, ainfo->unanchored_start_loop, ainfo->unanchored_end_loop, ainfo->unanchored_end_loop_end);
 		dump_state_set(stderr, "anchored_ends", ainfo->anchored_ends);
 		dump_state_set(stderr, "eager_matches", ainfo->eager_matches);
-		dump_edge_set(stderr, "anchored_firsts", ainfo->anchored_start, ainfo->anchored_firsts);
 		dump_edge_set(stderr, "repeatable_firsts", ainfo->unanchored_start_loop, ainfo->repeatable_firsts);
 	}
 #endif
 
 	closure_free(nfa, eclosures, state_count);
+
+	if (COMPARE_LINKAGE_INFO) {
+		/* Check that the analysis and saved linkage_info from ast_compile.c match */
+		fprintf(stderr, "%s: checking that build-time data matches... usl %d, %d; uel %d, %d; uele %d, %d\n",
+		    __func__,
+		    nfa->linkage_info->unanchored_start_loop, ainfo->unanchored_start_loop,
+		    nfa->linkage_info->unanchored_end_loop, ainfo->unanchored_end_loop,
+		    nfa->linkage_info->unanchored_end_loop_end, ainfo->unanchored_end_loop_end);
+
+		if (nfa->linkage_info->unanchored_start_loop != ainfo->unanchored_start_loop) {
+			fprintf(stderr, "DISAGREEMENT, overriding\n");
+			ainfo->unanchored_start_loop = nfa->linkage_info->unanchored_start_loop;
+		}
+
+		assert(nfa->linkage_info->unanchored_start_loop == ainfo->unanchored_start_loop);
+		assert(nfa->linkage_info->unanchored_end_loop == ainfo->unanchored_end_loop);
+		assert(nfa->linkage_info->unanchored_end_loop_end == ainfo->unanchored_end_loop_end);
+	}
+
+	/* The unanchored start and end loop cannot be the same state. */
+	assert(nfa->linkage_info->unanchored_start_loop == NO_STATE
+	    || nfa->linkage_info->unanchored_start_loop != nfa->linkage_info->unanchored_end_loop);
 
 	return true;
 
@@ -869,6 +941,16 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 			errno = EINVAL;
 			return NULL;
 		}
+
+		/* Any NFAs passed to this function must be built with
+		 * an re_comp flag of RE_SAVE_LINKAGE_INFO, because some
+		 * of the info saved during construction informs
+		 * linking. */
+		if (nfas[i]->linkage_info == NULL) {
+			errno = EINVAL;
+			return NULL;
+		}
+
 		const size_t count = fsm_countstates(nfas[i]);
 		est_total_states += count;
 	}
