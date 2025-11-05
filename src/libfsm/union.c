@@ -41,17 +41,19 @@ struct analysis_info {
 	fsm_state_t start;	/* start state */
 
 	/* The states with a /./ self edge representing the unanchored
-	 * start and end, or NO_STATE. There can be at most one of each. */
+	 * start and end, or LINKAGE_NO_STATE. There can be at most one
+	 * of each. Copied from linkage_info. */
 	fsm_state_t unanchored_start_loop;
 	fsm_state_t unanchored_end_loop;
 
-	/* The end state following the unanchored end loop. */
+	/* The end state following the unanchored end loop.
+	 * Copied from linkage_info.*/
 	fsm_state_t unanchored_end_loop_end;
 
-	/* States that link to paths only reachable from the beginning of input. */
+	/* States that link to paths only reachable from the beginning of input.
+	 * Copied from linkage_info. */
 	struct state_set *anchored_starts;
-
-	/* States leading to an anchored end. */
+	/* States leading to an anchored end. Copied from linkage_info. */
 	struct state_set *anchored_ends;
 
 	/* States with an outgoing labeled edge to the unanchored end loop. Input
@@ -213,25 +215,6 @@ fsm_union_array(size_t fsm_count,
 	return res;
 }
 
-static bool
-state_has_dot_self_edge(const struct fsm *nfa, fsm_state_t s_i)
-{
-	const struct fsm_state *s = &nfa->states[s_i];
-
-	struct edge_group_iter ei;
-	edge_set_group_iter_reset(s->edges, EDGE_GROUP_ITER_ALL, &ei);
-	struct edge_group_iter_info info;
-	while (edge_set_group_iter_next(&ei, &info)) {
-		if (info.to != s_i) { continue; }
-		for (size_t i = 0; i < 256/64; i++) {
-			if (info.symbols[i] != (uint64_t)-1) { continue; }
-		}
-		return true;
-	}
-
-	return false;
-}
-
 #if LOG_ANALYZE_GROUP_NFA_RESULTS
 static void
 dump_state_set(FILE *f, const char *name, const struct state_set *set)
@@ -263,63 +246,6 @@ dump_edge_set(FILE *f, const char *name, fsm_state_t from, const struct edge_set
 	fprintf(f, "\n");
 }
 #endif
-
-/* For each state in the epsilon closure, if there's a labeled edge
- * to an end state with no outgoing edges, check if the label set is
- * only [\n] and there's also an epsilon edge to the same end state.
- * If so, this represents an anchored end in the NFA. */
-static bool
-state_has_epsilon_and_newline_edges_to_same_end(const struct fsm *nfa,
-    fsm_state_t s_id, struct state_set *s_eclosure, fsm_state_t *dst_end)
-{
-	struct state_iter si;
-	state_set_reset(s_eclosure, &si);
-	fsm_state_t ns_i;
-	while (state_set_next(&si, &ns_i)) {
-		assert(ns_i < nfa->statecount);
-		const struct fsm_state *ns = &nfa->states[ns_i];
-
-		if (state_set_empty(ns->epsilons)) { continue; }
-		if (edge_set_empty(ns->edges)) { continue; }
-
-		struct edge_group_iter iter;
-		struct edge_group_iter_info info;
-		edge_set_group_iter_reset(ns->edges, EDGE_GROUP_ITER_ALL, &iter);
-		while (edge_set_group_iter_next(&iter, &info)) {
-			/* Look for an edge set with only '\n' */
-			if ((info.symbols[0] != (1ULL << '\n'))
-			    || info.symbols[1] || info.symbols[2] || info.symbols[3]) {
-				continue;
-			}
-
-			/* If it's an end, look for an epsilon leeding to the same destination */
-			if (fsm_isend(nfa, info.to)) {
-				assert(info.to < nfa->statecount);
-				const struct fsm_state *end_candidate = &nfa->states[info.to];
-				if (!state_set_empty(end_candidate->epsilons) ||
-				    !edge_set_empty(end_candidate->edges)) {
-					continue; /* not an anchored end */
-				}
-
-				struct state_iter inner_si;
-				fsm_state_t os_i;
-
-				assert(s_id < nfa->statecount);
-				const struct fsm_state *s = &nfa->states[s_id];
-
-				state_set_reset(s->epsilons, &inner_si);
-				while (state_set_next(&inner_si, &os_i)) {
-					if (os_i == info.to) {
-						*dst_end = info.to;
-						return true;
-					}
-				}
-			}
-		}
-	}
-
-	return false;
-}
 
 static bool
 state_has_labeled_edge_to_eclosure_with_unanchored_end_loop(const struct fsm *nfa,
@@ -394,11 +320,7 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 		}
 	}
 
-	memset(ainfo, 0x00, sizeof(*ainfo));
 	ainfo->start = NO_STATE;
-	ainfo->unanchored_start_loop = NO_STATE;
-	ainfo->unanchored_end_loop = NO_STATE;
-	ainfo->unanchored_end_loop_end = NO_STATE;
 	ainfo->eager_match_state = NO_STATE;
 
 	if (!fsm_getstart(nfa, &ainfo->start)) {
@@ -442,80 +364,6 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 			if (!state_set_add(&ainfo->reachable_from_nonstart_state, nfa->alloc, info.to)) {
 				return false;
 			}
-		}
-	}
-
-	/* Iterate over the start state's epsilon edges, attempting to
-	 * identify the unanchored start loop and anchored start states
-	 * (if present).
-	 *
-	 * Note: This uses the start state's epsilon set rather than its
-	 * epsilon closure because (by construction) the unanchored
-	 * start loop and anchored start states will both be directly
-	 * connected to the start state. Using the epsilon closure can
-	 * mis-identify the unanchored *end* loop as the start loop, if
-	 * there is a path with only epsilon edges between them. */
-	struct state_iter si;
-	state_set_reset(nfa->states[ainfo->start].epsilons, &si);
-	fsm_state_t ns_i;
-	while (state_set_next(&si, &ns_i)) {
-		/* Ignore self edges. */
-		if (ns_i == ainfo->start) { continue; }
-
-		/* If there's a state in the start state's epsilon set that
-		 * has a dot self-edge, it's the unanchored start loop. */
-		if (state_has_dot_self_edge(nfa, ns_i)) {
-			if (LOG_ANALYZE_GROUP_NFA) {
-				fprintf(stderr, "%s: unanchored_start_loop found on state %d\n", __func__, ns_i);
-			}
-
-			/* By construction, the true unanchored start loop is only reachable
-			 * via an epsilon edge from the start state, so if any other state
-			 * has an epsilon or labeled edge to this one, it cannot be the
-			 * unanchored start loop.
-			 *
-			 * This is necessary for cases like '^|x', which produces:
-			 *
-			 *     0  ->  2;
-			 *     0  ->  3;
-			 *     2  ->  2 "\x00" .. "\xff";
-			 *     2  ->  3 "x";
-			 *     3  ->  1;
-			 *     3  ->  3 ?;
-			 *
-			 *     start: 0;
-			 *     end:   1 = [0];
-			 *
-			 * where this analysis would otherwise identify both 2 (correct)
-			 * and 3 (incorrect) as the unanchored start loop. Both are reachable
-			 * from the start state via an epsilon edge, but the labeled edge
-			 * 2->3 'x' rules 3 out.
-			 * */
-			if (state_set_contains(ainfo->reachable_from_nonstart_state, ns_i)) {
-				continue;
-			}
-
-			/* The reachable_from_nonstart_state check handles the other cases,
-			 * but for `$|^` other attempts to distinguish them will fail,
-			 * but by construction the USL will have the earlier state ID. */
-			if (ainfo->unanchored_start_loop != NO_STATE &&
-			    ainfo->unanchored_start_loop < ns_i) {
-				continue;
-			}
-
-			ainfo->unanchored_start_loop = ns_i;
-			continue;
-		} else {
-			/* Otherwise, a state without a dot self-edge is an anchored start.
-			 * There may be more than one. */
-			if (LOG_ANALYZE_GROUP_NFA) {
-				fprintf(stderr, "%s: anchored_start found on state %d\n", __func__, ns_i);
-			}
-
-			if (!state_set_add(&ainfo->anchored_starts, nfa->alloc, ns_i)) {
-				goto alloc_fail;
-			}
-			continue;
 		}
 	}
 
@@ -576,35 +424,8 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 	 * trivially match, but otherwise it would never match. */
 	ainfo->nullable = start_state_epsilon_closure_matches_empty_string(nfa, eclosures[ainfo->start]);
 
-	/* If there's a state with a dot self-edge and an epsilon edge to an end state, it's
-	 * the unanchored end loop. There should only be one. */
-	for (size_t s_i = 0; s_i < state_count; s_i++) {
-		const struct fsm_state *s = &nfa->states[s_i];
-		if (state_has_dot_self_edge(nfa, s_i)) {
-			struct state_iter si;
-			state_set_reset(s->epsilons, &si);
-			fsm_state_t ns_i;
-			while (state_set_next(&si, &ns_i)) {
-				if (fsm_isend(nfa, ns_i)) {
-					assert(ainfo->unanchored_end_loop == NO_STATE);
-					ainfo->unanchored_end_loop = s_i;
-					ainfo->unanchored_end_loop_end = ns_i;
-					break;
-				}
-			}
-			if (ainfo->unanchored_end_loop != NO_STATE) { break; }
-		}
-	}
-
 	/* Collect states that lead to an anchored end or eager match. */
 	for (size_t s_i = 0; s_i < state_count; s_i++) {
-		fsm_state_t dst_end = NO_STATE;
-		if (state_has_epsilon_and_newline_edges_to_same_end(nfa, s_i, eclosures[s_i], &dst_end)) {
-			if (!state_set_add(&ainfo->anchored_ends, nfa->alloc, dst_end)) {
-				goto alloc_fail;
-			}
-		}
-
 		fsm_state_t indirect_dst = NO_STATE;
 		if (state_has_labeled_edge_to_eclosure_with_unanchored_end_loop(nfa, s_i, eclosures, ainfo->unanchored_end_loop, &indirect_dst)) {
 			if (!state_set_add(&ainfo->eager_matches, nfa->alloc, s_i)) {
@@ -616,57 +437,6 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 			if (!state_set_add(&ainfo->needs_indirect_epsilon_edge_to_eager_match_state, nfa->alloc, indirect_dst)) {
 				goto alloc_fail;
 			}
-		}
-	}
-
-	/* Compare/log the linkage info */
-#define COMPARE_LINKAGE_INFO 1
-#define LOG_LINKAGE_INFO 1
-	if (LOG_LINKAGE_INFO) {
-		struct state_iter si;
-		state_set_reset(ainfo->anchored_starts, &si);
-		fsm_state_t s_i;
-
-		fprintf(stderr, "ainfo->anchored_starts count: %zd\n", state_set_count(ainfo->anchored_starts));
-		state_set_reset(ainfo->anchored_starts, &si);
-		while (state_set_next(&si, &s_i)) {
-			fprintf(stderr, "ainfo->anchored_starts: %d\n", s_i);
-		}
-
-		fprintf(stderr, "linkage_info->anchored_starts count: %zd\n", state_set_count(nfa->linkage_info->anchored_starts));
-		state_set_reset(nfa->linkage_info->anchored_starts, &si);
-		while (state_set_next(&si, &s_i)) {
-			fprintf(stderr, "linkage_info->anchored_starts: %d\n", s_i);
-		}
-
-		assert(state_set_count(nfa->linkage_info->anchored_starts) >= state_set_count(ainfo->anchored_starts));
-		state_set_reset(ainfo->anchored_starts, &si);
-		while (state_set_next(&si, &s_i)) {
-			assert(state_set_contains(nfa->linkage_info->anchored_starts, s_i));
-		}
-	}
-
-	if (LOG_LINKAGE_INFO) {
-		struct state_iter si;
-		state_set_reset(ainfo->anchored_ends, &si);
-		fsm_state_t s_i;
-
-		fprintf(stderr, "ainfo->anchored_ends count: %zd\n", state_set_count(ainfo->anchored_ends));
-		state_set_reset(ainfo->anchored_ends, &si);
-		while (state_set_next(&si, &s_i)) {
-			fprintf(stderr, "ainfo->anchored_ends: %d\n", s_i);
-		}
-
-		fprintf(stderr, "linkage_info->anchored_ends count: %zd\n", state_set_count(nfa->linkage_info->anchored_ends));
-		state_set_reset(nfa->linkage_info->anchored_ends, &si);
-		while (state_set_next(&si, &s_i)) {
-			fprintf(stderr, "linkage_info->anchored_ends: %d\n", s_i);
-		}
-
-		assert(state_set_count(nfa->linkage_info->anchored_ends) >= state_set_count(ainfo->anchored_ends));
-		state_set_reset(ainfo->anchored_ends, &si);
-		while (state_set_next(&si, &s_i)) {
-			assert(state_set_contains(nfa->linkage_info->anchored_ends, s_i));
 		}
 	}
 
@@ -682,27 +452,9 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 
 	closure_free(nfa, eclosures, state_count);
 
-	if (COMPARE_LINKAGE_INFO) {
-		/* Check that the analysis and saved linkage_info from ast_compile.c match */
-		fprintf(stderr, "%s: checking that build-time data matches... usl %d, %d; uel %d, %d; uele %d, %d\n",
-		    __func__,
-		    nfa->linkage_info->unanchored_start_loop, ainfo->unanchored_start_loop,
-		    nfa->linkage_info->unanchored_end_loop, ainfo->unanchored_end_loop,
-		    nfa->linkage_info->unanchored_end_loop_end, ainfo->unanchored_end_loop_end);
-
-		if (nfa->linkage_info->unanchored_start_loop != ainfo->unanchored_start_loop) {
-			fprintf(stderr, "DISAGREEMENT, overriding\n");
-			ainfo->unanchored_start_loop = nfa->linkage_info->unanchored_start_loop;
-		}
-
-		assert(nfa->linkage_info->unanchored_start_loop == ainfo->unanchored_start_loop);
-		assert(nfa->linkage_info->unanchored_end_loop == ainfo->unanchored_end_loop);
-		assert(nfa->linkage_info->unanchored_end_loop_end == ainfo->unanchored_end_loop_end);
-	}
-
 	/* The unanchored start and end loop cannot be the same state. */
-	assert(nfa->linkage_info->unanchored_start_loop == NO_STATE
-	    || nfa->linkage_info->unanchored_start_loop != nfa->linkage_info->unanchored_end_loop);
+	assert(ainfo->unanchored_start_loop == NO_STATE
+	    || ainfo->unanchored_start_loop != ainfo->unanchored_end_loop);
 
 	return true;
 
@@ -912,8 +664,6 @@ rebase_analysis_info(struct analysis_info *ainfo, fsm_state_t base)
 static void
 free_analysis(const struct fsm_alloc *alloc, struct analysis_info *ainfo)
 {
-	state_set_free(ainfo->anchored_ends);
-	state_set_free(ainfo->anchored_starts);
 	state_set_free(ainfo->eager_matches);
 	state_set_free(ainfo->needs_indirect_epsilon_edge_to_eager_match_state);
 	state_set_free(ainfo->reachable_from_nonstart_state);
@@ -958,8 +708,26 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 	for (size_t i = 0; i < nfa_count; i++) {
 		struct fsm *fsm = nfas[i];
 
+		struct analysis_info *ainfo = &ainfos[i];
+
+		/* Copy these fields over, because fsm->linkage_info will be
+		 * freed during the call to fsm_merge below. */
+		{
+			struct linkage_info *linkage_info = fsm->linkage_info;
+
+			ainfo->unanchored_start_loop = linkage_info->unanchored_start_loop;
+			ainfo->unanchored_end_loop = linkage_info->unanchored_end_loop;
+			ainfo->unanchored_end_loop_end = linkage_info->unanchored_end_loop_end;
+
+			/* Transfer ownership of these. */
+			ainfo->anchored_starts = linkage_info->anchored_starts;
+			linkage_info->anchored_starts = NULL;
+			ainfo->anchored_ends = linkage_info->anchored_ends;
+			linkage_info->anchored_ends = NULL;
+		}
+
 		/* Identify various states in the NFA that will be relevant to combining. */
-		if (!analyze_group_nfa(fsm, &ainfos[i])) {
+		if (!analyze_group_nfa(fsm, ainfo)) {
 			goto fail;
 		}
 
