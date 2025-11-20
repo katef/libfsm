@@ -26,6 +26,7 @@
 #include <adt/edgeset.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/eager_output.h"
 
 #include "ir.h"
 
@@ -544,6 +545,8 @@ make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 		ir->states[i].endids.ids = NULL;
 		ir->states[i].endids.count = 0;
 
+		ir->states[i].eager_outputs = NULL;
+
 		if (fsm_isend(fsm, i)) {
 			fsm_end_id_t *ids;
 			size_t count;
@@ -565,6 +568,19 @@ make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 
 			ir->states[i].endids.ids = ids;
 			ir->states[i].endids.count = count;
+		}
+
+		const size_t eager_output_count = fsm_eager_output_count(fsm, i);
+		if (eager_output_count > 0) {
+			struct ir_state_eager_output *outputs = f_malloc(fsm->alloc,
+			    sizeof(*outputs) + eager_output_count * sizeof(outputs->ids[0]));
+			if (outputs == NULL) {
+				goto error;
+			}
+			fsm_eager_output_get(fsm, i, eager_output_count, outputs->ids);
+			outputs->count = eager_output_count;
+
+			ir->states[i].eager_outputs = outputs;
 		}
 
 		if (make_state(fsm, i, &ir->states[i]) == -1) {
@@ -630,6 +646,7 @@ free_ir(const struct fsm *fsm, struct ir *ir)
 	for (i = 0; i < ir->n; i++) {
 		f_free(fsm->alloc, (void *) ir->states[i].example);
 		f_free(fsm->alloc, (void *) ir->states[i].endids.ids);
+		f_free(fsm->alloc, (void *) ir->states[i].eager_outputs);
 
 		switch (ir->states[i].strategy) {
 		case IR_TABLE:

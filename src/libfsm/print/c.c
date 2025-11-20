@@ -228,6 +228,14 @@ print_case(FILE *f, const struct ir *ir, fsm_state_t state_id,
 		.end_id_count = ir->states[state_id].endids.count,
 	};
 
+	if (cs->eager_outputs != NULL && opt->fragment) {
+		/* If .fragment is set and the state has eager outputs, then emit a call to a
+		 * macro (the caller is expected to define). This is a temporary interface. */
+		for (size_t i = 0; i < cs->eager_outputs->count; i++) {
+			fprintf(f, "\t\t\tFSM_SET_EAGER_OUTPUT(%u);\n", cs->eager_outputs->ids[i]);
+		}
+	}
+
 	switch (cs->strategy) {
 	case IR_NONE:
 		fprintf(f, "\t\t\t");
@@ -383,6 +391,11 @@ print_endstates(FILE *f,
 		const struct fsm_state_metadata state_metadata = {
 			.end_ids = ir->states[i].endids.ids,
 			.end_id_count = ir->states[i].endids.count,
+
+			.eager_output_count = (ir->states[i].eager_outputs == NULL
+			    ? 0 : ir->states[i].eager_outputs->count),
+			.eager_output_ids = (ir->states[i].eager_outputs == NULL
+			    ? NULL : ir->states[i].eager_outputs->ids),
 		};
 
 		if (-1 == print_hook_accept(f, opt, hooks,

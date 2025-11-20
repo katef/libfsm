@@ -23,6 +23,7 @@
 #include "internal.h"
 #include "capture.h"
 #include "endids.h"
+#include "eager_output.h"
 
 #include <ctype.h>
 
@@ -35,6 +36,7 @@
 #define LOG_AC 0
 #define LOG_GROUPING 0
 #define LOG_ANALYSIS_STATS 0
+#define LOG_BUILD_REVERSE_MAPPING 0
 
 #if LOG_DETERMINISE_CAPTURES || LOG_INPUT
 #include <fsm/print.h>
@@ -72,7 +74,7 @@ struct map {
 };
 
 struct map_iter {
-	struct map *m;
+	const struct map *m;
 	size_t i;
 };
 
@@ -304,7 +306,7 @@ static void
 map_free(struct map *map);
 
 static struct mapping *
-map_first(struct map *map, struct map_iter *iter);
+map_first(const struct map *map, struct map_iter *iter);
 
 static struct mapping *
 map_next(struct map_iter *iter);
@@ -324,6 +326,10 @@ grow_map(struct map *map);
 static int
 remap_capture_actions(struct map *map, struct interned_state_set_pool *issp,
 	struct fsm *dst_dfa, struct fsm *src_nfa);
+
+static int
+remap_eager_outputs(const struct map *map, struct interned_state_set_pool *issp,
+	struct fsm *dst_dfa, const struct fsm *src_nfa);
 
 static struct mappingstack *
 stack_init(const struct fsm_alloc *alloc);

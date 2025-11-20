@@ -7,6 +7,7 @@
 #ifndef FSM_H
 #define FSM_H
 
+#include <stdlib.h>
 #include <stdbool.h>
 
 struct fsm;
@@ -26,6 +27,9 @@ typedef unsigned int fsm_state_t;
  * their end states. These can be used to determine which of the
  * original FSM(s) matched when executing a combined FSM. */
 typedef unsigned int fsm_end_id_t;
+
+/* Eager output ID. */
+typedef unsigned int fsm_output_id_t;
 
 #define FSM_END_ID_MAX UINT_MAX
 
@@ -265,6 +269,89 @@ fsm_mapendids(struct fsm * fsm, fsm_endid_remap_fun remap, void *opaque);
  */
 void
 fsm_increndids(struct fsm * fsm, int delta);
+
+/* Set an eager output ID to emit every time the state is entered.
+ * This is similar to fsm_setendid, but has different performance
+ * trade-offs for determinisation, and can be applied to
+ * non-end states.
+ *
+ * During DFA execution, states with eager outputs will output their
+ * ID when output reaches them. With fsm_exec, this happens via a
+ * callback (see fsm_eager_output_set_cb). Some print languages
+ * will eventually support eager outputs.
+ *
+ * One use case for eager outputs is combining multiple unanchored
+ * regexes into a single DFA and detecting when input matches more than
+ * one of them. With endids, determinisation has to represent every
+ * possible reachable combination of endids as a distinct copy of the
+ * DFA subgraph, leading to a combinatorial explosion that makes
+ * combining more than a 8 or so regexes (even very simple ones)
+ * prohibitively expensive. With eager outputs, the graph no longer
+ * needs a separate subgraph copy for each combination of IDs, so it is
+ * possible to combine several dozen or even hundreds of FSMs into a
+ * single DFA. See fsm_union_repeated_pattern_group for more details. */
+int
+fsm_eager_output_set(struct fsm *fsm, fsm_state_t state, fsm_output_id_t id);
+
+/* Set an eager output ID on all current end states. */
+int
+fsm_eager_output_set_on_ends(struct fsm *fsm, fsm_output_id_t id);
+
+/* Callback for eager output processing.
+ * If set (using fsm_eager_output_set_cb), this may be called while fsm_exec runs. */
+typedef void
+fsm_eager_output_cb(fsm_output_id_t id, void *opaque);
+
+/* Set a callback and opaque argument on an FSM for eager outputs encountered
+ * while fsm_exec is running. Rather than adding another pair of arguments to
+ * fsm_exec, this is called as a separate step -- most DFAs will not use eager
+ * outputs, or use them with code generation rather than fsm_exec.
+ *
+ * See fsm_eager_output_set for more details about eager output functionality. */
+void
+fsm_eager_output_set_cb(struct fsm *fsm, fsm_eager_output_cb *cb, void *opaque);
+
+/* Get the eager output callback set on a FSM and its opaque pointer, if any. */
+void
+fsm_eager_output_get_cb(const struct fsm *fsm, fsm_eager_output_cb **cb, void **opaque);
+
+/* Get the number of eager output IDs associated with a state. */
+size_t
+fsm_eager_output_count(const struct fsm *fsm, fsm_state_t state);
+
+/* Get eager output IDs associated with a state, if any.
+ * id_buf is expected to have enough cells (according to id_buf_count)
+ * to store all the end IDs. You can find this with fsm_eager_output_count().
+ *
+ * The IDs in the buffer are sorted and do not have duplicates.
+ *
+ * Unlike end IDs, eager outputs can appear on states that are
+ * not marked as end states.
+ *
+ * Returns 0 if there is not enough space in id_buf for the
+ * eager output IDs, or 1 if zero more IDs were returned. */
+int
+fsm_eager_output_get(const struct fsm *fsm, fsm_state_t state,
+    size_t buf_count, fsm_output_id_t *id_buf);
+
+/* Get the end IDs associated with an end state, if any.
+ * id_buf is expected to have enough cells (according to id_buf_count)
+ * to store all the end IDs. You can find this with fsm_endid_count().
+ *
+ * The end IDs in the buffer are sorted and do not have duplicates.
+ *
+ * A state with no end IDs set is considered equivalent to a state
+ * that has the empty set, this API does not distinguish these cases.
+ * This is not an error.
+ *
+ * It is an error to attempt to get end IDs associated with a state
+ * that is not marked as an end state.
+ *
+ * Returns 0 if there is not enough space in id_buf for the
+ * end IDs, or 1 if zero or more end IDs were returned. */
+int
+fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
+    size_t id_buf_count, fsm_end_id_t *id_buf);
 
 /*
  * Find the state (if there is just one), or add epsilon edges from all states,

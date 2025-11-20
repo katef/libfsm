@@ -52,6 +52,27 @@ struct fsm *
 fsm_union_array(size_t fsm_count,
     struct fsm **fsms, struct fsm_combined_base_pair *bases);
 
+/* Combine an array of NFAs into a single NFA that attempts to match them
+ * all in one pass, with an extra loop so that more than one pattern with
+ * eager outputs can match. Ownership of the NFAs is transferred, they will
+ * be combined (or freed, if they don't have a start state).
+ *
+ * This must be called with NFAs constructed via re_comp, using its
+ * RE_SAVE_LINKAGE_INFO flag. That saves details during construction
+ * that are necessary to correctly handle anchoring while linking
+ * them into the combined NFA. If any of the NFAs do not have that
+ * information populated, the whole set will be rejected and it
+ * will return NULL.
+ *
+ * This will set end IDs and/or output IDs representing matching each
+ * of the original NFAs on the combined result, where nfas[i] will
+ * get ID of (id_base + i).
+ *
+ * Returns NULL on error. */
+struct fsm *
+fsm_union_repeated_pattern_group(size_t nfa_count,
+    struct fsm **nfas, struct fsm_combined_base_pair *bases, size_t id_base);
+
 struct fsm *
 fsm_intersect(struct fsm *a, struct fsm *b);
 

@@ -20,6 +20,8 @@
 
 #include <re/re.h>
 
+#include <adt/stateset.h>
+
 #include "class.h"
 #include "ast.h"
 #include "ast_compile.h"
@@ -258,6 +260,10 @@ intern_start_any_loop(struct comp_env *env)
 	env->start_any_loop = loop;
 	env->has_start_any_loop = 1;
 
+	if (env->fsm->linkage_info) {
+		env->fsm->linkage_info->unanchored_start_loop = loop;
+	}
+
 	return 1;
 }
 
@@ -289,6 +295,11 @@ intern_end_any_loop(struct comp_env *env)
 
 	env->end_any_loop = loop;
 	env->has_end_any_loop = 1;
+
+	if (env->fsm->linkage_info != NULL) {
+		env->fsm->linkage_info->unanchored_end_loop = loop;
+		env->fsm->linkage_info->unanchored_end_loop_end = env->end;
+	}
 
 	return 1;
 }
@@ -327,6 +338,14 @@ intern_end_nl(struct comp_env *env)
 
 	env->end_nl = end_nl;
 	env->has_end_nl = 1;
+
+	if (env->fsm->linkage_info != NULL) {
+		if (!state_set_add(&env->fsm->linkage_info->anchored_ends,
+			env->fsm->alloc, env->end)) {
+			return 0;
+		}
+	}
+
 	return 1;
 }
 
@@ -718,7 +737,7 @@ comp_iter(struct comp_env *env,
 	}
 
 #if LOG_LINKAGE
-	fprintf(stderr, " ---> x: %d, y: %d\n", x, y);
+	fprintf(stderr, " ---> x: %d, y: %d, type: %s\n", x, y, ast_node_type_name(n->type));
 #endif
 
 	switch (n->type) {
@@ -871,6 +890,20 @@ comp_iter(struct comp_env *env,
 
 	case AST_EXPR_ANCHOR:
 		EPSILON(x, y);
+
+		if (env->fsm->linkage_info != NULL
+		    && x == env->start
+		    && n->u.anchor.type == AST_ANCHOR_START) {
+			/* This state is directly linked from the global start. */
+#if LOG_LINKAGE
+			fprintf(stderr, "%s: adding %d to anchored_starts due to start anchor\n",
+			    __func__, y);
+#endif
+			if (!state_set_add(&env->fsm->linkage_info->anchored_starts,
+				env->fsm->alloc, y)) {
+				return 0;
+			}
+		}
 		break;
 
 	case AST_EXPR_SUBTRACT: {
@@ -971,6 +1004,17 @@ ast_compile(const struct ast *ast,
 	fsm = fsm_new(alloc);
 	if (fsm == NULL) {
 		return NULL;
+	}
+
+	if (re_flags & RE_SAVE_LINKAGE_INFO) {
+		struct linkage_info *li = f_malloc(alloc, sizeof(*fsm->linkage_info));
+		if (li == NULL) { goto error; }
+		li->unanchored_start_loop = LINKAGE_NO_STATE;
+		li->unanchored_end_loop = LINKAGE_NO_STATE;
+		li->unanchored_end_loop_end = LINKAGE_NO_STATE;
+		li->anchored_starts = NULL;
+		li->anchored_ends = NULL;
+		fsm->linkage_info = li;
 	}
 
 	if (!fsm_addstate(fsm, &x)) {

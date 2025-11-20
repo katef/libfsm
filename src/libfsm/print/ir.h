@@ -59,6 +59,11 @@ struct ir_state {
 		size_t count;
 	} endids;
 
+	struct ir_state_eager_output {
+		size_t count;
+		fsm_output_id_t ids[];
+	} *eager_outputs;	/* NULL -> 0 */
+
 	unsigned int isend:1;
 
 	enum ir_strategy strategy;
