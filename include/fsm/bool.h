@@ -57,11 +57,12 @@ fsm_union_array(size_t fsm_count,
  * eager outputs can match. Ownership of the NFAs is transferred, they will
  * be combined (or freed, if they don't have a start state).
  *
- * This MUST be called with NFAs constructed via re_comp, Calling it
- * with manually constructed NFAs or DFAs may lead to incorrect loop
- * linking, because in a few ambiguous cases (e.g. `$|^`) it relies on
- * internal details of re_comp's normal construction to correctly
- * identify the state representing the unanchored start loop.
+ * This must be called with NFAs constructed via re_comp, using its
+ * RE_SAVE_LINKAGE_INFO flag. That saves details during construction
+ * that are necessary to correctly handle anchoring while linking
+ * them into the combined NFA. If any of the NFAs do not have that
+ * information populated, the whole set will be rejected and it
+ * will return NULL.
  *
  * This will set end IDs and/or output IDs representing matching each
  * of the original NFAs on the combined result, where nfas[i] will
