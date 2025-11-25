@@ -24,6 +24,12 @@ lx is an attempt to produce a simple, expressive, and unobtrusive
 lexer generator which is good at lexing, does just lexing,
 is language independent, and has no other features.
 
+### Performance and Requirements
+
+libfsm is not a drop-in replacement for other regex engines and it only supports patterns that can be compiled to deterministic FSMs. In return, supported patterns run in linear time.
+
+**→ See [doc/GUIDE.md](doc/GUIDE.md) for detailed unsupported features, usage patterns, and examples.**
+
 ### Building from source
 
 Clone with submodules (contains required .mk files):
