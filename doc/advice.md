@@ -1,4 +1,4 @@
-# Using libfsm for High-Performance Pattern Matching
+# Advice on using libfsm for high-performance pattern matching
 
 libfsm compiles regular expressions to deterministic finite state machines (FSMs) and generates executable code. FSM-based matching runs in **linear time O(n)** with **no backtracking**.
 
