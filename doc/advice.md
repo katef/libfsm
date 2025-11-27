@@ -163,7 +163,7 @@ The following bits of advice illustrate various specific ways to bring down this
 
 2. Take care with bounded repetition
 
-    If you have the pattern ^x{3,5}$, libfsm's resulting DFA will be structured like "match an x, then match an x, then match an x, then match an x or skip it, then match an x or skip it, then report an overall match if at the end of input". It has to repeat the pattern, noting each time whether it's required or optional (beyond the lower count in {min,max}), because DFA execution doesn't have a counter, just the current state within the overall DFA.
+    If you have the pattern `^x{3,5}$`, libfsm's resulting DFA will be structured like "match an x, then match an x, then match an x, then match an x or skip it, then match an x or skip it, then report an overall match if at the end of input". It has to repeat the pattern, noting each time whether it's required or optional (beyond the lower count in `{min,max}`), because DFA execution doesn't have a counter, just the current state within the overall DFA.
 
     When the subexpression (represented by `x`) unintentionally matches too many things, they all have to be spelled out every time.
     So pay especially close attention to tightening up subexpressions in bounded repetition clauses.
