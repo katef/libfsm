@@ -87,7 +87,13 @@ A recommended workflow when using libfsm is:
     re -p -r pcre -l rust -k str '^item-[A-Z]{3}\z' > item_detector.rs
     ```
 
-4. Multiple patterns
+4. Use multiple patterns
+
+   Execution complexity for the generated code is proportional to the length of the text being matched, not to the number of patterns.
+   Assuming your generated code isn't too large to compile, this means you can have as many patterns as you want,
+   for the same time it takes to execute a single pattern.
+
+   Take advantage of this.
 
     ```sh
     # re - patterns from command line:
@@ -124,7 +130,19 @@ The man pages can be built by running `bmake -r doc`, then view with `man build/
 
 ## Writing Effective libfsm Patterns
 
-1. Replace Broad Wildcards
+Generally, to keep generated code compact, stick to the least expressive subset of features.
+
+libfsm has no way to know in advance what text you'll be passing to its generated code.
+For example, are you matching a string that you know will never contain a newline?
+libfsm doesn't know that.
+It has to generate code that's capable of handling any input.
+You can help it out by making your patterns precise.
+
+Think about what you intend your pattern to match, and what it's actually capable of matching given arbitrary text.
+This helps restrict the scope of your pattern from arbitrary text to exactly what you mean.
+The following bits of advice illustrate various specific ways to bring down this scope.
+
+1. Replace broad wildcards
 
     Avoid `.*` and `.+` when possible. Wildcards match “anything,” which is often imprecise. And although they look compact, libfsm must enumerate every possible byte and continuation. This quickly leads to large DFAs.
 
@@ -143,7 +161,14 @@ The man pages can be built by running `bmake -r doc`, then view with `man build/
 
     The overlap between `.*` or `.+` and strings that follow is often the cause of an “explosion” in the size of the generated FSM. So when compilation is slow or generated output is large, look for `.*` and `.+` first and replace them with a narrower character class.
 
-2. Anchor When Matching Full String
+2. Take care with bounded repetition
+
+    If you have the pattern ^x{3,5}$, libfsm's resulting DFA will be structured like "match an x, then match an x, then match an x, then match an x or skip it, then match an x or skip it, then report an overall match if at the end of input". It has to repeat the pattern, noting each time whether it's required or optional (beyond the lower count in {min,max}), because DFA execution doesn't have a counter, just the current state within the overall DFA.
+
+    When the subexpression (represented by `x`) unintentionally matches too many things, they all have to be spelled out every time.
+    So pay especially close attention to tightening up subexpressions in bounded repetition clauses.
+
+3. Anchor when matching full string
 
     When the intention is to match an entire string, use anchors.
     Use `^` at the beginning and `\z` for the true end of the string.
@@ -160,7 +185,7 @@ The man pages can be built by running `bmake -r doc`, then view with `man build/
     web\d+\.example\.com
     ```
 
-3. Prefer `\z` Over `$` for End-of-String
+4. Prefer `\z` over `$` for End-of-String
 
     `\z` always matches the end of the string.
     `$` will also match a trailing newline at the end of the string,
@@ -180,7 +205,7 @@ The man pages can be built by running `bmake -r doc`, then view with `man build/
     /bar$
     ```
 
-4. Escape Special Characters When Used As Literal
+5. Escape special characters when used as literals
 
     Many characters have special meaning in regex (for example `.`, `+`, `*`, `?`, `[`, `(`).
     If you mean to match them literally, escape them:
@@ -194,16 +219,23 @@ The man pages can be built by running `bmake -r doc`, then view with `man build/
     | `(test)`                   | `\(test\)`                  | `(` and `)` begin/end a group              |
     | Markdown link `[t](u)`     | `(\[[^]]*\]\([^)]*\))`      | Matches `[text](url)` without crossing `]` or `)` |
 
-5. Use Non-Capturing Groups
+    The `.` wildcard in particular is often mistakenly left unescaped in practice.
+    On testing, it will match a literal `.` as intended. But it will also match any other character.
+    This means that not only is your pattern incorrect (write negative test cases!),
+    but also this part of your FSM is 256 times larger than it should be.
+
+6. Use non-capturing groups
 
     Capture groups are _currently_ not supported (coming soon!).
-    If you need grouping for alternation or precedence, use non-capturing syntax `(?:...)`:
+
+    If you don't need to capture things, don't use capture.
+    If you need grouping for alternation or precedence, use PCRE's non-capturing syntax `(?:...)`:
 
     ```regex
     # Correct
     (?:private|no-store)
     
-    # Unsupported
+    # Not what's intended
     (private|no-store)
     ```
 
@@ -214,7 +246,7 @@ This quickly jumps to likely match positions instead of scanning every byte.
 
 Good candidates are patterns that start with uncommon prefix characters, for example:
 
-```
+```regex
 #tag-[a-z]+
 @user-[0-9]+
 \[section\]
