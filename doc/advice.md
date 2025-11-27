@@ -62,11 +62,11 @@ libfsm provides two main tools for pattern matching:
 
 A recommended workflow when using libfsm is:
 
-1. Validate the Regex
+1. Validate the regex
 
     Test behavior using any PCRE-compatible tool (e.g., [pcregrep(1)](https://man7.org/linux/man-pages/man1/pcregrep.1.html) on the CLI or [https://regex101.com/](https://regex101.com/) in the browser).
 
-2. Verify libfsm Compatibility
+2. Verify libfsm compatibility
 
     If unsupported constructs exist, libfsm reports the failing location:
     ```sh
@@ -81,13 +81,13 @@ A recommended workflow when using libfsm is:
     ```
 
 
-3. Generate Code
+3. Generate code
 
     ```sh
     re -p -r pcre -l rust -k str '^item-[A-Z]{3}\z' > item_detector.rs
     ```
 
-4. Multiple Patterns
+4. Multiple patterns
 
     ```sh
     # re - patterns from command line:
@@ -96,6 +96,12 @@ A recommended workflow when using libfsm is:
     # rx - patterns from file:
     rx -p -r pcre -l vmc -k str -d skipped.txt patterns.txt > detectors.c
     ```
+
+5. Call the generated code from your program somehow
+
+    You're on your own for this. `-k` controls the API for the generated code to read in data to match. Try different options for the language you're using and see which suits you.
+
+    The generated API can also vary depending on how you want libfsm to handle ambiguities between different patterns. See the `AMBIG_*` flags in [include/fsm/options.h](../include/fsm/options.h) for different approaches there.
 
 Both tools:
 * Combine all patterns into one function (like using `|` to join them)
@@ -114,7 +120,7 @@ Both tools:
 | `-d` | Declined patterns            | filename                                   | Only applies to `rx` (batch mode)                                |
 
 This is not an exhaustive list. For full flag details, see [include/fsm/options.h](../include/fsm/options.h) and the [man pages](../man).
-The man pages can be built by running `bmake -r doc`, then view with `build/man/re.1/re.1`.
+The man pages can be built by running `bmake -r doc`, then view with `man build/man/re.1/re.1`.
 
 ## Writing Effective libfsm Patterns
 
