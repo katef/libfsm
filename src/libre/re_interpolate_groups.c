@@ -14,11 +14,19 @@
 #include <re/re.h>
 #include <re/groups.h>
 
-// TODO
-#define OUT_CHAR(c) do { if (outn < 1) { goto overflow; } *outs++ = (c); outn--; } while (0)
-#define OUT_GROUP(s) do { if (outn < strlen((s))) { goto overflow; } outs += sprintf(outs, "%s", (s)); outn -= strlen((s)); } while (0)
+#define OUT_CHAR(c) \
+    do { \
+        if (outn < 1) { goto overflow; } \
+        *outs++ = (c); outn--; \
+    } while (0)
 
-// TODO: return values: syntax error, nonexistent group error (digit overflow is the same thing), success
+#define OUT_GROUP(s) \
+    do { \
+        if (outn < strlen((s))) { goto overflow; } \
+        outs += sprintf(outs, "%s", (s)); \
+        outn -= strlen((s)); \
+    } while (0)
+
 bool
 re_interpolate_groups(const char *fmt, char esc,
 	const char *group0, unsigned groupc, const char *groupv[], const char *nonexistent,
@@ -91,11 +99,18 @@ re_interpolate_groups(const char *fmt, char esc,
 				group *= 10;
 				group += *p - '0';
 
-// TODO: explain this
-// digit overflow, we cap to groupc + 1
-// groupc + 1 is always out of bounds
-// this is a simple way to avoid needing to handle digit overflow for subsequent digits,
-// assuming groupc *= 10 is <= UINT_MAX
+				/*
+				 * We need to handle numeric overflow somehow here,
+				 * as we would with using strtol() or similar. But
+				 * we don't need to distinguish this as a special
+				 * error code, semantically it's the same as a group
+				 * that doesn't exist.
+				 *
+				 * groupc + 1 is always out of bounds. So we cap to that,
+				 * using it as a simple way to avoid needing to handle
+				 * numeric overflow for subsequent digits. This assumes
+				 * groupc *= 10 is <= UINT_MAX.
+				 */
 				if (group > groupc) {
 					group = groupc + 1;
 				}
@@ -108,8 +123,15 @@ re_interpolate_groups(const char *fmt, char esc,
 				assert(groupv[group - 1] != NULL);
 				OUT_GROUP(groupv[group - 1]);
 			} else if (nonexistent == NULL) {
-// TODO: maybe want to indicate this independently from syntax errors
-// TODO: no need, you can pre-check the entire syntax by running with 0 groups
+				/*
+				 * We could indicate this independently from syntax errors,
+				 * with some way to return different error codes.
+				 *
+				 * But there's no need, you can pre-check the fmt syntax
+				 * by running ahead of time with groupc == 0 and pass
+				 * nonexistent != NULL, because that eliminates the
+				 * possibility for group-related errors.
+				 */
 				goto error;
 			} else {
 				OUT_GROUP(nonexistent);
