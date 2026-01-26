@@ -14,17 +14,20 @@
 #include <re/re.h>
 #include <re/groups.h>
 
-#define OUT_CHAR(c) \
-    do { \
-        if (outn < 1) { goto overflow; } \
-        *outs++ = (c); outn--; \
+#define OUT_CHAR(c)                  \
+    do {                             \
+        if (outn < 1) goto overflow; \
+        *outs++ = (c);               \
+        outn--;                      \
     } while (0)
 
-#define OUT_GROUP(s) \
-    do { \
-        if (outn < strlen((s))) { goto overflow; } \
-        outs += sprintf(outs, "%s", (s)); \
-        outn -= strlen((s)); \
+#define OUT_GROUP(s)                 \
+    do {                             \
+        size_t n = strlen((s));      \
+        if (outn < n) goto overflow; \
+        (void) memcpy(outs, s, n);   \
+        outs += n;                   \
+        outn -= n;                   \
     } while (0)
 
 bool
