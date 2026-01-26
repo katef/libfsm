@@ -26,6 +26,8 @@ struct re_pos;
  * to error, otherwise the string value will be used.
  * Typically this would be passed as "".
  *
+ * start,end are only populated on error.
+ *
  * You can distinguish compile-time errors (that is,
  * syntax errors in the format string) vs. runtime errors
  * (that is, nonexistent groups) by calling
@@ -40,7 +42,7 @@ bool
 re_interpolate_groups(const char *fmt, char esc,
 	const char *group0, unsigned groupc, const char *groupv[], const char *nonexistent,
 	char *outs, size_t outn,
-	struct re_pos *pos);
+	struct re_pos *start, struct re_pos *end);
 
 #endif
 

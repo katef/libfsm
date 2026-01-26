@@ -17,14 +17,13 @@ static unsigned failed;
 static void
 test(const char *fmt, size_t groupc, const char *groupv[], const char *expected)
 {
-	struct re_pos pos;
 	char outs[40];
 	bool r;
 
 	assert(fmt != NULL);
 	assert(expected != NULL);
 
-	if (!re_interpolate_groups(fmt, '$', "<g0>", groupc, groupv, "<ne>", outs, sizeof outs, &pos)) {
+	if (!re_interpolate_groups(fmt, '$', "<g0>", groupc, groupv, "<ne>", outs, sizeof outs, NULL, NULL)) {
 		printf("%s/%zu XXX\n", fmt, groupc);
 		failed++;
 		return;
@@ -58,6 +57,7 @@ int main(void) {
 	test("x$100000000000000000000x", 1, gn, "x<ne>x");
 
 	test("$$$1$1$2$1$3$4$3$2$1$$$$", 4, gn, "$oneonetwoonethreefourthreetwoone$$");
+	test("$$$$$$$$$$$$$$$$$$$$", 4, gn, "$$$$$$$$$$");
 
 	test("xyz_$1..$0003;$3,$$.$1-$4=$123", 4, gn, "xyz_one..three;three,$.one-four=<ne>");
 	test("xyz_$1..$0003;$3,$$.$1-$4=$123", 3, gn, "xyz_one..three;three,$.one-<ne>=<ne>");
@@ -66,7 +66,6 @@ int main(void) {
 	test("xyz_$1..$0003;$3,$$.$1-$4=$123", 0, g0, "xyz_<ne>..<ne>;<ne>,$.<ne>-<ne>=<ne>");
 	test("xyz_$1..$0003;$3,$$.$1-$4=$123", 1, ga, "xyz_1..<ne>;<ne>,$.1-<ne>=<ne>");
 	test("xyz_$1..$0003;$3,$$.$1-$4=$123", 1, gb, "xyz_..<ne>;<ne>,$.-<ne>=<ne>");
-//	test("xyz_$1..$0003;$3,$$.$1-$4=$123", 0, gc, "xyz_<ne>..<ne>;<ne>,$.<ne>-<ne>=<ne>");
 
 	return failed;
 }

@@ -15,15 +15,15 @@
 #include <re/groups.h>
 
 // TODO
-#define OUT_CHAR(c) do { if (outn < 1) { goto error; } *outs++ = (c); outn--; } while (0)
-#define OUT_GROUP(s) do { if (outn < strlen((s))) { goto error; } outs += sprintf(outs, "%s", (s)); outn -= strlen((s)); } while (0)
+#define OUT_CHAR(c) do { if (outn < 1) { goto overflow; } *outs++ = (c); outn--; } while (0)
+#define OUT_GROUP(s) do { if (outn < strlen((s))) { goto overflow; } outs += sprintf(outs, "%s", (s)); outn -= strlen((s)); } while (0)
 
 // TODO: return values: syntax error, nonexistent group error (digit overflow is the same thing), success
 bool
 re_interpolate_groups(const char *fmt, char esc,
 	const char *group0, unsigned groupc, const char *groupv[], const char *nonexistent,
 	char *outs, size_t outn,
-	struct re_pos *pos)
+	struct re_pos *start, struct re_pos *end)
 {
 	unsigned group; // 0 meaning group0, 1 meaning groupv[0], etc
 	const char *p;
@@ -42,7 +42,12 @@ re_interpolate_groups(const char *fmt, char esc,
 	state = STATE_LIT;
 	group = 0;
 
+	if (start != NULL) {
+		start->byte = 0;
+	}
+
 	p = fmt;
+
 	do {
 		switch (state) {
 		case STATE_LIT:
@@ -51,6 +56,10 @@ re_interpolate_groups(const char *fmt, char esc,
 			}
 
 			if (*p == esc) {
+				if (start != NULL) {
+					start->byte = p - fmt;
+				}
+
 				state = STATE_ESC;
 				continue;
 			}
@@ -114,6 +123,10 @@ re_interpolate_groups(const char *fmt, char esc,
 			}
 
 			if (*p == esc) {
+				if (start != NULL) {
+					start->byte = p - fmt;
+				}
+
 				state = STATE_ESC;
 				continue;
 			}
@@ -125,7 +138,7 @@ re_interpolate_groups(const char *fmt, char esc,
 			assert(!"unreached");
 			goto error;
 		}
-	} while (*p++);
+	} while (*p != '\0' && p++);
 
 	if (state != STATE_LIT) {
 		goto error;
@@ -135,11 +148,17 @@ re_interpolate_groups(const char *fmt, char esc,
 
 	return true;
 
+overflow:
+
+	/* we're blaming the entire fmt string for overflow */
+	if (start != NULL) {
+		start->byte = 0;
+	}
+
 error:
 
-	// TODO: track start,end independently
-	if (pos != NULL) {
-		pos->byte = p - fmt;
+	if (end != NULL) {
+		end->byte = p - fmt;
 	}
 
 	return false;
