@@ -15,14 +15,14 @@
 #include <re/groups.h>
 
 #define OUT_CHAR(c)                  \
-    do {                             \
+    do if (outs != NULL) {           \
         if (outn < 1) goto overflow; \
         *outs++ = (c);               \
         outn--;                      \
     } while (0)
 
 #define OUT_GROUP(s)                 \
-    do {                             \
+    do if (outs != NULL) {           \
         size_t n = strlen((s));      \
         if (outn < n) goto overflow; \
         (void) memcpy(outs, s, n);   \
@@ -48,7 +48,7 @@ re_interpolate_groups(const char *fmt, char esc,
 	assert(esc != '\0');
 	assert(group0 != NULL || groupc == 0);
 	assert(groupc < UINT_MAX / 10 - 1);
-	assert(outs != NULL);
+	assert(outs != NULL || outn == 0);
 
 	state = STATE_LIT;
 	group = 0;

@@ -37,6 +37,9 @@ struct re_pos;
  * The output string will always be less than or equal in
  * length to the format string. The output is \0-terminated.
  * outn includes the \0.
+ *
+ * outs may be NULL in which case outn must be 0, and no
+ * output is made.
  */
 bool
 re_interpolate_groups(const char *fmt, char esc,
