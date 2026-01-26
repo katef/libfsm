@@ -34,9 +34,10 @@ test_err(const char *fmt, size_t groupc, const char *groupv[], const char *ne,
 	failed += rs = expected_start != start.byte;
 	failed += re = expected_end   != end.byte;
 
-	printf("%s/%zu => :%u-%u :%u-%u%s\n", fmt, groupc,
+	printf("%s/%zu => :%u-%u :%u-%u '%.*s'%s\n", fmt, groupc,
 		start.byte, end.byte,
 		expected_start, expected_end,
+		(int) (end.byte - start.byte), fmt + start.byte,
 		(rs || re) ? " XXX" : "");
 }
 
