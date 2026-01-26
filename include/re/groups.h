@@ -35,8 +35,12 @@ struct re_pos;
  * and passing a non-NULL nonexistent value.
  *
  * The output string will always be less than or equal in
- * length to the format string. The output is \0-terminated.
- * outn includes the \0.
+ * length to the format string when all interpolated
+ * values are the empty string. That is, when groupc is 0
+ * and nonexistent is the empty string, or when all groups
+ * used from groupv[] are the empty string.
+ *
+ * The output is \0-terminated. outn includes the \0.
  *
  * outs may be NULL in which case outn must be 0, and no
  * output is made.
