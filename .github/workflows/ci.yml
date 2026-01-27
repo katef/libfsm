@@ -361,6 +361,7 @@ jobs:
       with:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Get number of CPU cores
       uses: SimenB/github-actions-cpu-cores@v2
@@ -421,6 +422,7 @@ jobs:
       with:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+        fail-on-cache-miss: true
 
     # note we do the fuzzing unconditionally; each run adds to the corpus.
     #
@@ -531,6 +533,7 @@ jobs:
       with:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Fetch converted PCRE tests
       uses: actions/cache@v5
@@ -636,6 +639,7 @@ jobs:
       with:
         path: ${{ env.build }}
         key: build-${{ env.make }}-${{ env.os }}-${{ env.cc }}-${{ env.debug }}-${{ env.san }}-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Fetch docs
       if: steps.cache-prefix.outputs.cache-hit != 'true'
@@ -644,6 +648,7 @@ jobs:
       with:
         path: ${{ env.build }}
         key: docs-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Get number of CPU cores
       if: steps.cache-prefix.outputs.cache-hit != 'true'
@@ -688,6 +693,7 @@ jobs:
       with:
         path: ${{ env.prefix }}
         key: prefix-${{ env.make }}-${{ env.os }}-${{ env.cc }}-${{ env.debug }}-${{ env.san }}-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Find version
       # TODO: would get a tag or branch name here
