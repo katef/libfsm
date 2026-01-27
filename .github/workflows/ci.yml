@@ -433,7 +433,7 @@ jobs:
     # still run fuzzing, just from empty, and do not save their seeds.
     - name: Restore seeds (mode ${{ matrix.mode }})
       if: github.repository == 'katef/libfsm'
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       id: cache-seeds
       with:
         path: ${{ env.seeds }}-${{ matrix.mode }}
@@ -470,7 +470,7 @@ jobs:
     # the same seeds for a given bug.
     # The explicit cache/restore and cache/save actions are just for that.
     - name: Save seeds (mode ${{ matrix.mode }}-${{ matrix.debug }})
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       if: always()
       with:
         path: ${{ env.seeds }}-${{ matrix.mode }}
