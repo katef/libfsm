@@ -83,6 +83,7 @@ jobs:
       with:
         path: ${{ env.build }}
         key: build-bmake-${{ matrix.os }}-gcc-DEBUG-AUSAN-${{ github.sha }} # arbitrary build, just for cvtpcre
+        fail-on-cache-miss: true
 
     - name: Convert PCRE suite
       if: steps.cache-cvtpcre.outputs.cache-hit != 'true'
@@ -163,6 +164,7 @@ jobs:
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Cache build
       uses: actions/cache@v5
@@ -241,6 +243,7 @@ jobs:
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
+        fail-on-cache-miss: true
 
     # An arbitary build.
     - name: Fetch build
@@ -249,6 +252,7 @@ jobs:
       with:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+        fail-on-cache-miss: true
 
     # We don't need to build the entire repo to know that the makefiles work,
     # I'm just deleting a couple of .o files and rebuilding those instead.
@@ -330,6 +334,7 @@ jobs:
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Dependencies (Ubuntu)
       if: matrix.os == 'ubuntu-22.04'
@@ -389,6 +394,7 @@ jobs:
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Dependencies (Ubuntu)
       if: matrix.os == 'ubuntu-22.04'
@@ -562,6 +568,7 @@ jobs:
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Get number of CPU cores
       if: steps.cache-docs.outputs.cache-hit != 'true'
@@ -616,6 +623,7 @@ jobs:
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Fetch build
       if: steps.cache-prefix.outputs.cache-hit != 'true'
