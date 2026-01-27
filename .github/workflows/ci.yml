@@ -246,13 +246,17 @@ jobs:
         fail-on-cache-miss: true
 
     # An arbitary build.
+    # Failing to fetch this is not fatal, we're testing Makefiles here.
+    # Some combinations of our options (pmake, EXPENSIVE_CHECKS, whatever)
+    # won't exist in cache because we didn't build those. That's okay for
+    # the purposes of this step, building those is harmless.
     - name: Fetch build
       uses: actions/cache@v5
       id: cache-build
       with:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
-        fail-on-cache-miss: true
+        fail-on-cache-miss: false
 
     # We don't need to build the entire repo to know that the makefiles work,
     # I'm just deleting a couple of .o files and rebuilding those instead.
