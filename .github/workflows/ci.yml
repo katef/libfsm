@@ -19,7 +19,7 @@ jobs:
 
     steps:
     - name: Cache checkout
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
@@ -52,7 +52,7 @@ jobs:
 
     steps:
     - name: Cache PCRE suite
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-pcre
       with:
         path: pcre-suite/${{ env.pcre2 }}
@@ -70,7 +70,7 @@ jobs:
         chmod -R ug-w pcre-suite
 
     - name: Cache converted PCRE tests
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-cvtpcre
       with:
         path: ${{ env.cvtpcre }}
@@ -78,7 +78,7 @@ jobs:
 
     - name: Fetch build
       if: steps.cache-cvtpcre.outputs.cache-hit != 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-build
       with:
         path: ${{ env.build }}
@@ -158,14 +158,14 @@ jobs:
 
     steps:
     - name: Fetch checkout
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
 
     - name: Cache build
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-build
       with:
         path: ${{ env.build }}
@@ -236,7 +236,7 @@ jobs:
 
     steps:
     - name: Fetch checkout
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
@@ -244,7 +244,7 @@ jobs:
 
     # An arbitary build.
     - name: Fetch build
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-build
       with:
         path: ${{ env.build }}
@@ -325,7 +325,7 @@ jobs:
 
     steps:
     - name: Fetch checkout
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
@@ -347,7 +347,7 @@ jobs:
         ${{ matrix.cc }} --version
 
     - name: Fetch build
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-build
       with:
         path: ${{ env.build }}
@@ -384,7 +384,7 @@ jobs:
 
     steps:
     - name: Fetch checkout
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
@@ -406,7 +406,7 @@ jobs:
         ${{ matrix.cc }} --version
 
     - name: Fetch build
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-build
       with:
         path: ${{ env.build }}
@@ -516,14 +516,14 @@ jobs:
         go version
 
     - name: Fetch build
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-build
       with:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
     - name: Fetch converted PCRE tests
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-cvtpcre
       with:
         path: ${{ env.cvtpcre }}
@@ -542,7 +542,7 @@ jobs:
 
     steps:
     - name: Cache docs
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-docs
       with:
         path: ${{ env.build }}
@@ -557,7 +557,7 @@ jobs:
 
     - name: Fetch checkout
       if: steps.cache-docs.outputs.cache-hit != 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
@@ -597,7 +597,7 @@ jobs:
 
     steps:
     - name: Cache prefix
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-prefix
       with:
         path: ${{ env.prefix }}
@@ -611,7 +611,7 @@ jobs:
 
     - name: Fetch checkout
       if: steps.cache-prefix.outputs.cache-hit != 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
@@ -619,7 +619,7 @@ jobs:
 
     - name: Fetch build
       if: steps.cache-prefix.outputs.cache-hit != 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-build
       with:
         path: ${{ env.build }}
@@ -627,7 +627,7 @@ jobs:
 
     - name: Fetch docs
       if: steps.cache-prefix.outputs.cache-hit != 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-docs
       with:
         path: ${{ env.build }}
@@ -671,7 +671,7 @@ jobs:
         fpm -v
 
     - name: Fetch prefix
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: cache-prefix
       with:
         path: ${{ env.prefix }}
