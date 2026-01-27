@@ -37,6 +37,7 @@ re_interpolate_groups(const char *fmt, char esc,
 	struct re_pos *start, struct re_pos *end)
 {
 	unsigned group; // 0 meaning group0, 1 meaning groupv[0], etc
+	char *outs_orig;
 	const char *p;
 
 	enum {
@@ -52,6 +53,8 @@ re_interpolate_groups(const char *fmt, char esc,
 
 	state = STATE_LIT;
 	group = 0;
+
+	outs_orig = outn > 0 ? outs : NULL;
 
 	if (start != NULL) {
 		start->byte = 0;
@@ -184,6 +187,10 @@ error:
 
 	if (end != NULL) {
 		end->byte = p - fmt;
+	}
+
+	if (outs_orig != NULL) {
+		*outs_orig = '\0';
 	}
 
 	return false;

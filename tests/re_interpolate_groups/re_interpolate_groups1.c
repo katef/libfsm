@@ -24,11 +24,17 @@ test_err(const char *fmt, size_t groupc, const char *groupv[], const char *ne,
 
 	assert(fmt != NULL);
 
+	outs[0] = 'x';
+
 	/* for these tests we're expecting to error */
 	if (re_interpolate_groups(fmt, '$', "<g0>", groupc, groupv, ne, outs, sizeof outs, &start, &end)) {
 		printf("%s/%zu XXX\n", fmt, groupc);
 		failed++;
 		return;
+	}
+
+	if (outs[0] != '\0') {
+		failed++;
 	}
 
 	failed += rs = expected_start != start.byte;

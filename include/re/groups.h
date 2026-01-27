@@ -44,6 +44,9 @@ struct re_pos;
  *
  * outs may be NULL in which case outn must be 0, and no
  * output is made.
+ *
+ * On error the function returns false and the output
+ * buffer is indeterminate.
  */
 bool
 re_interpolate_groups(const char *fmt, char esc,
