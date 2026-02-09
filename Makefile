@@ -191,6 +191,6 @@ STAGE_BUILD := ${STAGE_BUILD:Nbin/cvtpcre}
 
 .if make(test)
 .END::
-	grep FAIL ${BUILD}/tests/*/*res*; [ $$? -ne 0 ]
+	grep -I FAIL ${BUILD}/tests/*/*res*; [ $$? -ne 0 ]
 .endif
 
