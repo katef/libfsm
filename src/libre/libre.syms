@@ -4,6 +4,7 @@ re_flags
 re_strerror
 re_perror
 re_is_anchored
+re_interpolate_groups
 
 ast_print
 ast_print_dot

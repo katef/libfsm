@@ -294,7 +294,7 @@ consolidate_eager_output_ids_cb(fsm_state_t state, fsm_output_id_t id, void *opa
 	assert(state < env->mapping_count);
 	const fsm_state_t dst_state = env->mapping[state];
 
-	if (!fsm_seteageroutput(env->dst, dst_state, id)) {
+	if (!fsm_eager_output_set(env->dst, dst_state, id)) {
 		env->ok = false;
 		return 0;
 	}

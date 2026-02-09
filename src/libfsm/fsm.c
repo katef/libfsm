@@ -42,6 +42,11 @@ free_contents(struct fsm *fsm)
 	fsm_endid_free(fsm);
 	fsm_eager_output_free(fsm);
 
+	if (fsm->linkage_info != NULL) {
+		state_set_free(fsm->linkage_info->anchored_starts);
+		state_set_free(fsm->linkage_info->anchored_ends);
+		f_free(fsm->alloc, fsm->linkage_info);
+	}
 	f_free(fsm->alloc, fsm->states);
 }
 
@@ -72,6 +77,7 @@ fsm_new_statealloc(const struct fsm_alloc *alloc, size_t statealloc)
 	new->endcount     = 0;
 	new->capture_info = NULL;
 	new->endid_info   = NULL;
+	new->linkage_info = NULL;
 
 	new->states = f_malloc(new->alloc, new->statealloc * sizeof *new->states);
 	if (new->states == NULL) {
@@ -144,6 +150,7 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	dst->capture_info = src->capture_info;
 	dst->endid_info = src->endid_info;
 	dst->eager_output_info = src->eager_output_info;
+	dst->linkage_info = src->linkage_info;
 
 	f_free(src->alloc, src);
 }

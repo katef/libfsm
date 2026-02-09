@@ -29,6 +29,9 @@ enum re_flags {
 	RE_ANCHORED = 1 << 6,
 	RE_EXTENDED = 1 << 7,  /* PCRE extended mode */
 	RE_END_NL  = 1 << 8, /* end anchor matches '\n' */
+	/* save info about linkage at construction time, to inform
+	 * later operations -- see fsm_union_repeated_pattern_group */
+	RE_SAVE_LINKAGE_INFO = 1 << 9,
 	RE_FLAGS_NONE = 0
 };
 

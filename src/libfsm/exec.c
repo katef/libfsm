@@ -55,7 +55,6 @@ struct check_eager_outputs_for_state_env {
 static int
 match_eager_outputs_for_state_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
 {
-	/* HACK update the types here once it's working */
 	(void)state;
 	struct check_eager_outputs_for_state_env *env = opaque;
 #if LOG_EAGER
@@ -68,7 +67,6 @@ match_eager_outputs_for_state_cb(fsm_state_t state, fsm_end_id_t id, void *opaqu
 static int
 match_eager_outputs_for_state(const struct fsm *fsm, fsm_state_t state)
 {
-	/* HACK update the types here once it's working */
 	fsm_eager_output_cb *cb = NULL;
 	void *opaque = NULL;
 	fsm_eager_output_get_cb(fsm, &cb, &opaque);

@@ -22,6 +22,7 @@
 	<!ENTITY io.arg "<replaceable>io</replaceable>">
 	<!ENTITY iterations.arg "<replaceable>iterations</replaceable>">
 	<!ENTITY length.arg "<replaceable>length</replaceable>">
+	<!ENTITY limit.arg "<replaceable>limit</replaceable>">
 	<!ENTITY charset.arg "<replaceable>charset</replaceable>">
 
 	<!ENTITY a.opt "<option>-a</option>">
@@ -33,7 +34,7 @@
 	<!ENTITY G.opt "<option>-G</option>&nbsp;&length.arg;">
 	<!ENTITY k.opt "<option>-k</option>&nbsp;&io.arg;">
 	<!ENTITY i.opt "<option>-i</option>&nbsp;&iterations.arg;">
-	<!ENTITY G.opt "<option>-S</option>&nbsp;&limit.arg;">
+	<!ENTITY S.opt "<option>-S</option>&nbsp;&limit.arg;">
 	<!ENTITY U.opt "<option>-U</option>&nbsp;&charset.arg;">
 	<!ENTITY X.opt "<option>-X</option>">
 

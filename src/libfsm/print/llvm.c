@@ -713,7 +713,7 @@ fsm_print_llvm(FILE *f,
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\t  ");
-	if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
+	if (-1 == print_hook_reject(f, opt, hooks, NULL, default_reject, NULL)) {
 		return -1;
 	}
 	fprintf(f, "\n");

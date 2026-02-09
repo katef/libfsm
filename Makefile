@@ -125,8 +125,7 @@ SUBDIR += tests/fsm
 SUBDIR += tests/glob
 SUBDIR += tests/like
 SUBDIR += tests/literal
-# FIXME: commenting this out for now due to Makefile error
-#SUBDIR += tests/lxpos
+SUBDIR += tests/lxpos
 SUBDIR += tests/minimise
 SUBDIR += tests/native
 SUBDIR += tests/pcre
@@ -137,6 +136,7 @@ SUBDIR += tests/pcre-repeat
 SUBDIR += tests/pred
 SUBDIR += tests/re_literal
 SUBDIR += tests/re_strings
+SUBDIR += tests/regressions
 SUBDIR += tests/reverse
 SUBDIR += tests/trim
 SUBDIR += tests/union
@@ -147,6 +147,7 @@ SUBDIR += tests/sql
 SUBDIR += tests/queue
 SUBDIR += tests/aho_corasick
 SUBDIR += tests/retest
+SUBDIR += tests/re_interpolate_groups
 SUBDIR += tests
 .if make(theft) || make(${BUILD}/theft/theft)
 SUBDIR += theft
@@ -190,6 +191,6 @@ STAGE_BUILD := ${STAGE_BUILD:Nbin/cvtpcre}
 
 .if make(test)
 .END::
-	grep FAIL ${BUILD}/tests/*/res*; [ $$? -ne 0 ]
+	grep -I FAIL ${BUILD}/tests/*/*res*; [ $$? -ne 0 ]
 .endif
 
