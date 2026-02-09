@@ -280,6 +280,9 @@ fsm_determinise_with_config(struct fsm *nfa,
 	assert(fsm_all(nfa, fsm_isdfa));
 #endif
 
+	/* This should not be carried over from the NFA. */
+	assert(nfa->linkage_info == NULL);
+
 	res = FSM_DETERMINISE_WITH_CONFIG_OK;
 
 cleanup:
@@ -2599,7 +2602,7 @@ remap_eager_output_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
 {
 	(void)state;
 	struct remap_eager_output_env *env = opaque;
-	if (!fsm_seteageroutput(env->dst, env->dst_state, id)) {
+	if (!fsm_eager_output_set(env->dst, env->dst_state, id)) {
 		env->ok = false;
 		return 0;
 	}

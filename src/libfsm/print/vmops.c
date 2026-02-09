@@ -146,7 +146,7 @@ print_end(FILE *f, const struct dfavm_op_ir *op,
 
 	switch (end_bits) {
 	case VM_END_FAIL:
-		if (-1 == print_hook_reject(f, opt, hooks, default_reject, NULL)) {
+		if (-1 == print_hook_reject(f, opt, hooks, NULL, default_reject, NULL)) {
 			return -1;
 		}
 		break;

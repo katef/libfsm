@@ -179,7 +179,7 @@ static int
 copy_eager_output_ids_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
 {
 	struct copy_eager_output_ids_env *env = opaque;
-	if (!fsm_seteageroutput(env->dst, state, id)) {
+	if (!fsm_eager_output_set(env->dst, state, id)) {
 		env->ok = false;
 		return 0;
 	}

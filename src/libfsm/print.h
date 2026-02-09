@@ -44,6 +44,7 @@ int
 print_hook_reject(FILE *f,
 	const struct fsm_options *opt,
 	const struct fsm_hooks *hooks,
+	const struct fsm_state_metadata *state_metadata,
 	int (*default_reject)(FILE *f, const struct fsm_options *opt,
 		void *lang_opaque, void *hook_opaque),
 	void *lang_opaque);

@@ -464,9 +464,6 @@ build_literals_fsm(bool show_stats,
 		}
 	}
 
-	/* We don't minimise here because this fsm has multiple endids,
-	 * and the resulting FSM would be very similar to the current DFA */
-
 #ifndef NDEBUG
 	/*
 	 * We could test to see that the fsm isn't any different.
@@ -480,6 +477,9 @@ build_literals_fsm(bool show_stats,
 	 * those .* long-hand at union time.
 	 */
 #endif
+
+	/* We don't minimise here because this fsm has multiple endids,
+	 * and the resulting FSM would be very similar to the current DFA */
 
 	return fsm;
 }

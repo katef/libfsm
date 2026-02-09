@@ -56,7 +56,6 @@ struct match {
 	struct match *next;
 };
 
-static int tty_output = 0;
 static int do_timing  = 0;
 
 static int do_watchdog   = 0;
@@ -970,14 +969,6 @@ process_test_file(const char *filename,
 
 			flagstring(flags, &flagdesc[0]);
 
-			if (tty_output) {
-				char *re  = dup_str_esc(regexp, NULL);
-				printf("[      ] line %d: working on %s regexp /%s/%s ...\r",
-					linenum, dialect_name, re, flagdesc);
-				fflush(stdout);
-				free(re);
-			}
-
 			re_str = regexp;
 			fsm = re_comp(dialect, fsm_sgetc, &re_str, alloc, flags, &err);
 			if (fsm == NULL) {
@@ -1230,17 +1221,6 @@ main(int argc, char *argv[])
 	int max_test_errors;
 
 	int optlevel = 1;
-
-	/* is output to a tty or not? */
-	int fileno_stdout = fileno(stdout);
-	if (fileno_stdout == -1) {
-		perror("fileno");
-	} else {
-		tty_output = isatty(fileno_stdout);
-		if (tty_output == -1) {
-			perror("isatty");
-		}
-	}
 
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;

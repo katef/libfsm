@@ -422,11 +422,6 @@ fsm_eager_output_dump(FILE *f, const struct fsm *fsm);
 static int
 fuzz_eager_output(const uint8_t *data, size_t size)
 {
-	if (size > 0) {
-		const unsigned seed = data[0];
-		srand(seed);
-	}
-
 	struct feo_env env = {
 		.ok = true,
 		.pattern_count = 0,
@@ -450,6 +445,8 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 	int ret = 0;
 
 	size_t max_pattern_length = 0;
+
+	const unsigned seed = size == 0 ? 0 : data[0];
 
 	/* chop data into a series of patterns */
 	{
@@ -526,9 +523,14 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 			continue; /* invalid regex */
 		}
 
+		const fsm_output_id_t endid = (fsm_output_id_t)p_i;
+		ret = fsm_eager_output_set_on_ends(fsm, endid);
+		assert(ret == 1);
+
 		if (verbose) {
 			fprintf(stderr, "==== pattern %zd, pre det\n", p_i);
 			fsm_dump(stderr, fsm);
+			fsm_eager_output_dump(stderr, fsm);
 			fprintf(stderr, "====\n");
 
 			fsm_state_t c = fsm_countstates(fsm);
@@ -536,6 +538,12 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 				fprintf(stderr, "-- %d: end? %d\n", i, fsm_isend(fsm, i));
 			}
 		}
+
+		ret = fsm_determinise(fsm);
+		assert(ret == 1);
+
+		ret = fsm_minimise(fsm);
+		assert(ret == 1);
 
 		fsm_state_t start;
 		if (!fsm_getstart(fsm, &start)) {
@@ -599,7 +607,7 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 			goto cleanup; /* nothing to do */
 		}
 
-		/* consumes entries[] */
+		/* consumes nfas[] */
 		struct fsm *fsm = fsm_union_repeated_pattern_group(used, nfas, NULL, 0);
 		assert(fsm != NULL);
 
@@ -636,7 +644,7 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 	 * Use the combined DFA to generate matches, check that the
 	 * match behavior agrees with the individual DFA copies. */
 	env.current_pattern = (size_t)-1;
-	if (!fsm_generate_matches(env.combined, max_pattern_length, 1, gen_combined_check_individual_cb, &env)) {
+	if (!fsm_generate_matches(env.combined, max_pattern_length, seed, gen_combined_check_individual_cb, &env)) {
 		goto cleanup;
 	}
 
@@ -646,7 +654,7 @@ fuzz_eager_output(const uint8_t *data, size_t size)
 	/* check behavior against the combined DFA. */
 	for (size_t i = 0; i < env.pattern_count; i++) {
 		env.current_pattern = i;
-		if (!fsm_generate_matches(env.combined, max_pattern_length, 1, gen_individual_check_combined_cb, &env)) {
+		if (!fsm_generate_matches(env.combined, max_pattern_length, seed, gen_individual_check_combined_cb, &env)) {
 			goto cleanup;
 		}
 	}

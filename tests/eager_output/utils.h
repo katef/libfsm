@@ -32,6 +32,7 @@
 
 struct eager_output_test {
 	const char *patterns[MAX_PATTERNS];
+	bool force_endids;
 
 	struct {
 		const char *input;

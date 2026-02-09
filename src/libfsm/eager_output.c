@@ -107,13 +107,13 @@ fsm_eager_output_free(struct fsm *fsm)
 }
 
 int
-fsm_seteageroutputonends(struct fsm *fsm, fsm_output_id_t id)
+fsm_eager_output_set_on_ends(struct fsm *fsm, fsm_output_id_t id)
 {
 	assert(fsm != NULL);
 	const size_t count = fsm_countstates(fsm);
 	for (size_t i = 0; i < count; i++) {
 		if (fsm_isend(fsm, i)) {
-			if (!fsm_seteageroutput(fsm, i, id)) { return 0; }
+			if (!fsm_eager_output_set(fsm, i, id)) { return 0; }
 		}
 	}
 	return 1;
@@ -157,7 +157,7 @@ grow_htab(const struct fsm_alloc *alloc, struct eager_output_htab *htab)
 }
 
 int
-fsm_seteageroutput(struct fsm *fsm, fsm_state_t state, fsm_output_id_t id)
+fsm_eager_output_set(struct fsm *fsm, fsm_state_t state, fsm_output_id_t id)
 {
 	assert(fsm != NULL);
 
@@ -172,15 +172,11 @@ fsm_seteageroutput(struct fsm *fsm, fsm_state_t state, fsm_output_id_t id)
 	const uint64_t mask = info->htab.bucket_count - 1;
 	assert((mask & info->htab.bucket_count) == 0); /* power of 2 */
 
-	/* fprintf(stderr, "%s: bucket_count %zd\n", __func__, info->htab.bucket_count); */
 	for (size_t probes = 0; probes < info->htab.bucket_count; probes++) {
 		const size_t b_i = (hash + probes) & mask;
 		struct eager_output_bucket *b = &info->htab.buckets[b_i];
-		/* fprintf(stderr, "%s: state %d -> b_i %zd, state %d, entry %p\n", */
-		/*     __func__, state, b_i, b->state, (void *)b->entry); */
 		struct eager_output_entry *e = b->entry;
-		if (e == NULL) { /* empty */
-			/* add */
+		if (e == NULL) { /* empty, add */
 			const size_t alloc_sz = sizeof(*e)
 			    + DEF_ENTRY_CEIL * sizeof(e->ids[0]);
 			e = f_calloc(fsm->alloc, 1, alloc_sz);
@@ -191,8 +187,6 @@ fsm_seteageroutput(struct fsm *fsm, fsm_state_t state, fsm_output_id_t id)
 			b->state = state;
 			b->entry = e;
 			info->htab.buckets_used++;
-			/* fprintf(stderr, "%s: buckets_used %zd\n", __func__, info->htab.buckets_used); */
-			/* fprintf(stderr, "%s: saved new entry in bucket %zd\n", __func__, b_i); */
 		} else if (b->state != state) { /* collision */
 			continue;
 		}
@@ -214,7 +208,6 @@ fsm_seteageroutput(struct fsm *fsm, fsm_state_t state, fsm_output_id_t id)
 		}
 
 		e->ids[e->used++] = id;
-		/* fprintf(stderr, "%s: e->ids_used %u\n", __func__, e->used); */
 		fsm->states[state].has_eager_outputs = 1;
 		return 1;
 	}
@@ -259,8 +252,6 @@ fsm_eager_output_iter_state(const struct fsm *fsm,
 	for (size_t probes = 0; probes < info->htab.bucket_count; probes++) {
 		const size_t b_i = (hash + probes) & mask;
 		struct eager_output_bucket *b = &info->htab.buckets[b_i];
-		/* fprintf(stderr, "%s: state %d -> b_i %zd, state %d, entry %p\n", */
-		/*     __func__, state, b_i, b->state, (void *)b->entry); */
 		struct eager_output_entry *e = b->entry;
 		if (e == NULL) { /* empty */
 			return;
@@ -296,7 +287,9 @@ fsm_eager_output_count(const struct fsm *fsm, fsm_state_t state)
 }
 
 struct get_env {
+	bool ok;
 	size_t count;
+	size_t ceil;
 	fsm_output_id_t *buf;
 };
 
@@ -305,6 +298,10 @@ append_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
 {
 	struct get_env *env = opaque;
 	(void)state;
+	if (env->count == env->ceil) {
+		env->ok = false;
+		return 0;
+	}
 	env->buf[env->count++] = id;
 	return 1;
 }
@@ -317,12 +314,18 @@ cmp_fsm_output_id_t(const void *pa, const void *pb)
 	return a < b ? -1 : a > b ? 1 : 0;
 }
 
-void
-fsm_eager_output_get(const struct fsm *fsm, fsm_state_t state, fsm_output_id_t *buf)
+int
+fsm_eager_output_get(const struct fsm *fsm, fsm_state_t state,
+    size_t buf_count, fsm_output_id_t *id_buf)
 {
-	struct get_env env = { .buf = buf };
+	struct get_env env = {
+		.ok = true,
+		.buf = id_buf,
+		.ceil = buf_count,
+	};
 	fsm_eager_output_iter_state(fsm, state, append_cb, &env);
-	qsort(buf, env.count, sizeof(buf[0]), cmp_fsm_output_id_t);
+	qsort(id_buf, env.count, sizeof(id_buf[0]), cmp_fsm_output_id_t);
+	return env.ok ? 1 : 0;
 }
 
 void
@@ -335,12 +338,9 @@ fsm_eager_output_iter_all(const struct fsm *fsm,
 
 	struct eager_output_info *info = fsm->eager_output_info;
 
-	/* fprintf(stderr, "%s: bucket_count %zd\n", __func__, info->htab.bucket_count); */
 	for (size_t b_i = 0; b_i < info->htab.bucket_count; b_i++) {
 		struct eager_output_bucket *b = &info->htab.buckets[b_i];
 		struct eager_output_entry *e = b->entry;
-		/* fprintf(stderr, "%s: b_i %zd, state %d, entry %p\n", */
-		/*     __func__, b_i, b->state, (void *)b->entry); */
 		if (e == NULL) { /* empty */
 			continue;
 		}
