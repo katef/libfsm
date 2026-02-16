@@ -397,6 +397,30 @@ rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flag
 		return 1;
 	}
 
+	if (n->u.alt.count == 2) {
+		struct ast_expr *child = NULL;
+
+		if (n->u.alt.n[0]->type == AST_EXPR_EMPTY) {
+			ast_expr_free(n->u.alt.n[0]);
+			child = n->u.alt.n[1];
+		} else if (n->u.alt.n[1]->type == AST_EXPR_EMPTY) {
+			ast_expr_free(n->u.alt.n[1]);
+			child = n->u.alt.n[0];
+		}
+
+		if (child != NULL) {
+			free(n->u.alt.n);
+
+			/* we repurpose the same node */
+			n->type = AST_EXPR_REPEAT;
+			n->u.repeat.e = child;
+			n->u.repeat.min = 0;
+			n->u.repeat.max = 1;
+
+			return rewrite(n, flags);
+		}
+	}
+
 	return 1;
 
 empty:
