@@ -52,13 +52,25 @@ compare_with_pcre(const char *pattern, struct fsm *fsm);
 /* for TRACK_TIMES and EXPENSIVE_CHECKS */
 #include "../src/libfsm/internal.h"
 
+static bool verbosity_checked = false;
+static bool verbose = false;
+
+#define LOG(...)					\
+	do {						\
+		if (verbose) {				\
+			fprintf(stderr, __VA_ARGS__);	\
+		}					\
+	} while (0)					\
+
 enum run_mode {
+	MODE_DEFAULT,
 	MODE_REGEX,
 	MODE_REGEX_SINGLE_ONLY,
 	MODE_REGEX_MULTI_ONLY,
 	MODE_IDEMPOTENT_DET_MIN,
 	MODE_SHUFFLE_MINIMISE,
 	MODE_ALL_PRINT_FUNCTIONS,
+	MODE_EAGER_OUTPUT,
 };
 
 static size_t
@@ -187,11 +199,6 @@ static struct fsm_alloc custom_allocators = {
 	.opaque = &allocator_stats,
 };
 
-static const struct fsm_options fsm_options = {
-	.group_edges = 1,	/* make output readable */
-	.alloc = &custom_allocators,
-};
-
 static void
 dump_pattern(const char *pattern)
 {
@@ -229,7 +236,8 @@ build(const char *pattern)
 	};
 
 	time_get(&pre);
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &fsm_options, RE_MULTI, &err);
+
+	fsm = re_comp(RE_PCRE, scanner_next, &s, &custom_allocators, RE_MULTI, &err);
 	time_get(&post);
 	delta_usec = time_diff_usec(&pre, &post);
 	total_usec += delta_usec;
@@ -280,11 +288,15 @@ get_env_config(size_t default_value, const char *env_var_name)
 }
 
 static int
-codegen(const struct fsm *fsm)
+codegen(const struct fsm *fsm, enum fsm_io io_mode)
 {
+	const struct fsm_options opt = {
+		.io = io_mode,
+	};
+
 	FILE *dev_null = fopen("/dev/null", "w");
 	assert(dev_null != NULL);
-	fsm_print_c(dev_null, fsm);
+	fsm_print(dev_null, fsm, &opt, NULL, FSM_PRINT_C);
 	fclose(dev_null);
 	return 1;
 }
@@ -308,7 +320,7 @@ build_and_check_single(const char *pattern)
 
 	if (getenv("DUMP")) {
 		fprintf(stderr,"==================================================\n");
-		fsm_print_fsm(stderr, fsm);
+		fsm_print(stderr, fsm, NULL, NULL, FSM_PRINT_FSM);
 		fprintf(stderr,"==================================================\n");
 		fsm_capture_dump(stderr, "CAPTURE", fsm);
 		fprintf(stderr,"==================================================\n");
@@ -326,7 +338,7 @@ build_and_check_single(const char *pattern)
 #endif
 
 	TIME(&pre);
-	const int codegen_res = codegen(fsm);
+	const int codegen_res = codegen(fsm, FSM_IO_STR);
 	TIME(&post);
 	DIFF_MSEC("codegen", pre, post, NULL);
 	if (!codegen_res) {
@@ -336,6 +348,32 @@ build_and_check_single(const char *pattern)
 	fsm_free(fsm);
 	return EXIT_SUCCESS;
 }
+
+static int
+build_and_codegen(const char *pattern, enum fsm_io io_mode)
+{
+	const int verbosity = get_env_config(0, "VERBOSITY");
+	if (verbosity > 1) {
+		fprintf(stderr, "pattern: \"%s\"\n", pattern);
+	}
+
+	INIT_TIMERS();
+	TIME(&pre);
+	struct fsm *fsm = build(pattern);
+	if (fsm == NULL) {
+		return EXIT_SUCCESS;
+	}
+	TIME(&post);
+	DIFF_MSEC("build", pre, post, NULL);
+
+	if (!codegen(fsm, io_mode)) {
+		return EXIT_SUCCESS;
+	}
+
+	fsm_free(fsm);
+	return EXIT_SUCCESS;
+}
+
 
 #define DEF_MAX_DEPTH 20
 #define DEF_MAX_LENGTH 10
@@ -650,7 +688,7 @@ cmp_pcre_gen_cb(const struct fsm *fsm,
 	if (!exec_and_compare_captures(env, input, input_length, &match_info)) {
 		if (env->verbosity > 1 || 1) {
 			dump_pattern_and_input(env->pattern, input, input_length);
-			fsm_print_fsm(stderr, env->fsm);
+			fsm_print(stderr, env->fsm, NULL, NULL, FSM_PRINT_FSM);
 			fsm_capture_dump(stderr, "fsm", env->fsm);
 		}
 		assert(!"captures don't match");
@@ -806,7 +844,7 @@ compare_with_pcre(const char *pattern, struct fsm *fsm)
 		.max_match_count = max_match_count,
 	};
 
-	if (!fsm_generate_matches(fsm, max_length, cmp_pcre_gen_cb, &env)) {
+	if (!fsm_generate_matches(fsm, max_length, 0, cmp_pcre_gen_cb, &env)) {
 		res = 0;
 	}
 
@@ -917,7 +955,7 @@ build_and_check_multi(const char *input)
 			.size   = strlen(patterns[i]),
 		};
 
-		struct fsm *fsm = re_comp(RE_PCRE, scanner_next, &s, &fsm_options, flags, &err);
+		struct fsm *fsm = re_comp(RE_PCRE, scanner_next, &s, &custom_allocators, flags, &err);
 		if (fsm == NULL) {
 			res = EXIT_SUCCESS; /* invalid regex, so skip this batch */
 			goto cleanup;
@@ -951,7 +989,7 @@ build_and_check_multi(const char *input)
 			snprintf(tag_buf, sizeof(tag_buf), "fsm[%zu]", i);
 
 			fprintf(stderr, "==== fsm[%zu]\n", i);
-			fsm_print_fsm(stderr, fsm);
+			fsm_print(stderr, fsm, NULL, NULL, FSM_PRINT_FSM);
 			fsm_capture_dump(stderr, tag_buf, fsm);
 		}
 
@@ -1017,7 +1055,7 @@ build_and_check_multi(const char *input)
 
 	if (verbosity > 4) {
 		fprintf(stderr, "==== combined\n");
-		fsm_print_fsm(stderr, combined_fsm);
+		fsm_print(stderr, combined_fsm, NULL, NULL, FSM_PRINT_FSM);
 		fsm_capture_dump(stderr, "combined", combined_fsm);
 	}
 
@@ -1105,7 +1143,7 @@ compare_separate_and_combined(int verbosity, size_t max_length, size_t count,
 	 * they match with the same captures in the combined fsm. */
 	for (env.current_i = 0; env.current_i < count; env.current_i++) {
 		if (!fsm_generate_matches(env.fsms[env.current_i], max_length,
-			cmp_separate_and_combined_cb, &env)) {
+			0, cmp_separate_and_combined_cb, &env)) {
 			env.ok = false;
 		}
 		if (!env.ok) {
@@ -1118,13 +1156,14 @@ compare_separate_and_combined(int verbosity, size_t max_length, size_t count,
 	 * combined and check the individual ones match as expected. */
 	if (env.ok) {
 		if (!fsm_generate_matches(env.combined_fsm, max_length,
-			cmp_combined_with_separate_cb, &env)) {
+			0, cmp_combined_with_separate_cb, &env)) {
 			env.ok = false;
 		}
 	}
 
 	return env.ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+#undef DEF_MAX_STEPS
 
 static enum fsm_generate_matches_cb_res
 cmp_separate_and_combined_cb(const struct fsm *fsm,
@@ -1171,14 +1210,13 @@ cmp_separate_and_combined_cb(const struct fsm *fsm,
 	}
 
 	fsm_end_id_t id_buf_combined[MAX_PATTERNS];
-	size_t written_combined = 0;
+	size_t exp_written_combined = 0;
 	if (res_combined > 0) {
-		const size_t exp_written = fsm_getendidcount(env->combined_fsm, end_state_combined);
-		assert(exp_written <= env->count);
-		const enum fsm_getendids_res gres = fsm_getendids(env->combined_fsm,
-		    end_state_combined, MAX_PATTERNS, id_buf_combined, &written_combined);
+		exp_written_combined = fsm_endid_count(env->combined_fsm, end_state_combined);
+		assert(exp_written_combined <= env->count);
+		const enum fsm_getendids_res gres = fsm_endid_get(env->combined_fsm,
+		    end_state_combined, MAX_PATTERNS, id_buf_combined);
 		assert(gres == FSM_GETENDIDS_FOUND);
-		assert(written_combined == exp_written);
 	}
 
 	/* we got here, so we have a match */
@@ -1190,19 +1228,17 @@ cmp_separate_and_combined_cb(const struct fsm *fsm,
 
 	/* Check that the end state's endid for the single DFA is among the
 	 * endids for the combined DFA's end state. */
-	assert(fsm_getendidcount(fsm, end_state_single) == 1);
-	assert(fsm_getendidcount(env->combined_fsm, end_state_combined) <= env->count);
+	assert(fsm_endid_count(fsm, end_state_single) == 1);
+	assert(fsm_endid_count(env->combined_fsm, end_state_combined) <= env->count);
 
 	fsm_end_id_t id_buf_single[1];
-	size_t written;
-	const enum fsm_getendids_res gres = fsm_getendids(fsm,
-	    end_state_single, 1, id_buf_single, &written);
+	const enum fsm_getendids_res gres = fsm_endid_get(fsm,
+	    end_state_single, 1, id_buf_single);
 	assert(gres == FSM_GETENDIDS_FOUND);
-	assert(written == 1);
 	assert(id_buf_single[0] == expected_end_id);
 
 	bool found_single_id_in_combined = false;
-	for (size_t i = 0; i < written_combined; i++) {
+	for (size_t i = 0; i < exp_written_combined; i++) {
 		if (id_buf_combined[i] == expected_end_id) {
 			found_single_id_in_combined = true;
 			break;
@@ -1279,14 +1315,12 @@ cmp_combined_with_separate_cb(const struct fsm *fsm,
 	assert(end_state_combined == end_state);
 
 	fsm_end_id_t id_buf_combined[MAX_PATTERNS];
-	size_t written_combined = 0;
+	const size_t combined_endid_count = fsm_endid_count(env->combined_fsm, end_state_combined);
 	{
-		const size_t exp_written = fsm_getendidcount(env->combined_fsm, end_state_combined);
-		assert(exp_written <= env->count);
-		const enum fsm_getendids_res gres = fsm_getendids(env->combined_fsm,
-		    end_state_combined, MAX_PATTERNS, id_buf_combined, &written_combined);
+		assert(combined_endid_count <= env->count);
+		const enum fsm_getendids_res gres = fsm_endid_get(env->combined_fsm,
+		    end_state_combined, MAX_PATTERNS, id_buf_combined);
 		assert(gres == FSM_GETENDIDS_FOUND);
-		assert(written_combined == exp_written);
 	}
 
 	/* For each pattern, check if its endid is in the combined DFA's end state
@@ -1294,7 +1328,7 @@ cmp_combined_with_separate_cb(const struct fsm *fsm,
 	for (size_t pattern_i = 0; pattern_i < env->count; pattern_i++) {
 		const struct fsm *single_fsm = env->fsms[pattern_i];
 		bool found = false;
-		for (size_t endid_i = 0; endid_i < written_combined; endid_i++) {
+		for (size_t endid_i = 0; endid_i < combined_endid_count; endid_i++) {
 			const fsm_end_id_t endid = id_buf_combined[endid_i];
 			if (endid == pattern_i) {
 				found = true;
@@ -1310,11 +1344,9 @@ cmp_combined_with_separate_cb(const struct fsm *fsm,
 		if (found) {
 			assert(res_single > 0);
 			fsm_end_id_t id_buf_single[1];
-			size_t written;
-			const enum fsm_getendids_res gres = fsm_getendids(single_fsm,
-			    end_state_single, 1, id_buf_single, &written);
+			const enum fsm_getendids_res gres = fsm_endid_get(single_fsm,
+			    end_state_single, 1, id_buf_single);
 			assert(gres == FSM_GETENDIDS_FOUND);
-			assert(written == 1);
 			assert(id_buf_single[0] == pattern_i);
 
 			/* check captures */
@@ -1351,6 +1383,7 @@ cmp_combined_with_separate_cb(const struct fsm *fsm,
 
 	return FSM_GENERATE_MATCHES_CB_RES_CONTINUE;
 }
+#undef MAX_PATTERNS
 
 
 #define DEF_MAX_SHUFFLE 10
@@ -1371,7 +1404,7 @@ shuffle_minimise(const char *pattern)
 		.offset = 0
 	};
 
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &fsm_options, RE_MULTI, &err);
+	fsm = re_comp(RE_PCRE, scanner_next, &s, &custom_allocators, RE_MULTI, &err);
 
 	if (fsm == NULL) {
 		/* ignore invalid regexp syntax, etc. */
@@ -1440,14 +1473,14 @@ shuffle_minimise(const char *pattern)
 			    __func__, s_i, pattern, expected_state_count, cp_state_count);
 
 			fprintf(stderr, "== original input:\n");
-			fsm_print_fsm(stderr, fsm);
+			fsm_print(stderr, fsm, NULL, NULL, FSM_PRINT_FSM);
 
 
 			fprintf(stderr, "== expected:\n");
-			fsm_print_fsm(stderr, oracle_min);
+			fsm_print(stderr, oracle_min, NULL, NULL, FSM_PRINT_FSM);
 
 			fprintf(stderr, "== got:\n");
-			fsm_print_fsm(stderr, cp);
+			fsm_print(stderr, cp, NULL, NULL, FSM_PRINT_FSM);
 
 			fsm_free(cp);
 			fsm_free(oracle_min);
@@ -1478,11 +1511,11 @@ fuzz_all_print_functions(FILE *f, const char *pattern, bool det, bool min, const
 		.offset = 0
 	};
 
-	const struct fsm_options options = {
+	const struct fsm_options opt = {
 		.io = io_mode,
 	};
 
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &options, RE_MULTI, &err);
+	fsm = re_comp(RE_PCRE, scanner_next, &s, NULL, RE_MULTI, &err);
 	if (fsm == NULL) {
 		/* ignore invalid regexp syntax, etc. */
 		return EXIT_SUCCESS;
@@ -1507,23 +1540,30 @@ fuzz_all_print_functions(FILE *f, const char *pattern, bool det, bool min, const
 
 	/* see if this triggers any asserts */
 	int r = 0;
-	r |= fsm_print_api(f, fsm);
-	r |= fsm_print_awk(f, fsm);
-	r |= fsm_print_c(f, fsm);
-	r |= fsm_print_dot(f, fsm);
-	r |= fsm_print_fsm(f, fsm);
-	r |= fsm_print_ir(f, fsm);
-	r |= fsm_print_irjson(f, fsm);
-	r |= fsm_print_json(f, fsm);
-	r |= fsm_print_vmc(f, fsm);
-	r |= fsm_print_vmdot(f, fsm);
-	r |= fsm_print_vmasm(f, fsm);
-	r |= fsm_print_vmasm_amd64_att(f, fsm);
-	r |= fsm_print_vmasm_amd64_nasm(f, fsm);
-	r |= fsm_print_vmasm_amd64_go(f, fsm);
-	r |= fsm_print_sh(f, fsm);
-	r |= fsm_print_go(f, fsm);
-	r |= fsm_print_rust(f, fsm);
+
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_AMD64_ATT);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_AMD64_GO);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_AMD64_NASM);
+
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_API);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_AWK);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_C);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_DOT);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_FSM);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_GO);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_IR);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_IRJSON);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_JSON);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_LLVM);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_RUST);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_SH);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_VMC);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_VMDOT);
+
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_VMOPS_C);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_VMOPS_H);
+	r |= fsm_print(f, fsm, &opt, NULL, FSM_PRINT_VMOPS_MAIN);
+
 	assert(r == 0 || errno != 0);
 
 	fsm_free(fsm);
@@ -1545,7 +1585,7 @@ build_and_test_idempotent_det_and_min(const char *pattern)
 		.size   = length,
 	};
 
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &fsm_options, RE_MULTI, &err);
+	fsm = re_comp(RE_PCRE, scanner_next, &s, &custom_allocators, RE_MULTI, &err);
 	if (fsm == NULL) {
 		return EXIT_SUCCESS;
 	}
@@ -1555,7 +1595,7 @@ build_and_test_idempotent_det_and_min(const char *pattern)
 	}
 	if (verbosity >= 3) {
 		fprintf(stderr, "=== post_det_a\n");
-		fsm_print_fsm(stderr, fsm);
+		fsm_print(stderr, fsm, NULL, NULL, FSM_PRINT_FSM);
 	}
 	const size_t post_det_a = fsm_countstates(fsm);
 
@@ -1564,7 +1604,7 @@ build_and_test_idempotent_det_and_min(const char *pattern)
 	}
 	if (verbosity >= 3) {
 		fprintf(stderr, "=== post_det_b\n");
-		fsm_print_fsm(stderr, fsm);
+		fsm_print(stderr, fsm, NULL, NULL, FSM_PRINT_FSM);
 	}
 	const size_t post_det_b = fsm_countstates(fsm);
 	assert(post_det_b == post_det_a);
@@ -1574,7 +1614,7 @@ build_and_test_idempotent_det_and_min(const char *pattern)
 	}
 	if (verbosity >= 3) {
 		fprintf(stderr, "=== post_min_a\n");
-		fsm_print_fsm(stderr, fsm);
+		fsm_print(stderr, fsm, NULL, NULL, FSM_PRINT_FSM);
 		fsm_capture_dump(stderr, "post_a", fsm);
 	}
 	const size_t post_min_a = fsm_countstates(fsm);
@@ -1584,7 +1624,7 @@ build_and_test_idempotent_det_and_min(const char *pattern)
 	}
 	if (verbosity >= 3) {
 		fprintf(stderr, "=== post_min_b\n");
-		fsm_print_fsm(stderr, fsm);
+		fsm_print(stderr, fsm, NULL, NULL, FSM_PRINT_FSM);
 		fsm_capture_dump(stderr, "post_b", fsm);
 	}
 	const size_t post_min_b = fsm_countstates(fsm);
@@ -1606,6 +1646,510 @@ build_and_test_idempotent_det_and_min(const char *pattern)
 	return EXIT_SUCCESS;
 }
 
+#define MAX_PATTERNS 4
+struct eager_output_cb_info {
+	size_t used;
+	fsm_output_id_t ids[MAX_PATTERNS];
+};
+
+static void
+reset_eager_output_info(struct eager_output_cb_info *info)
+{
+	info->used = 0;
+}
+
+struct feo_env {
+	bool ok;
+	size_t pattern_count;
+	size_t fsm_count;
+	size_t max_match_count;
+	size_t max_steps;
+
+	char *patterns[MAX_PATTERNS];
+	struct fsm *fsms[MAX_PATTERNS];
+	struct fsm *combined;
+
+	/* which pattern is being used for generation, (size_t)-1 for combined */
+	size_t current_pattern;
+
+	struct eager_output_cb_info outputs;
+	struct eager_output_cb_info outputs_combined;
+};
+
+void
+append_eager_output_cb(fsm_output_id_t id, void *opaque)
+{
+	struct eager_output_cb_info *info = (struct eager_output_cb_info *)opaque;
+
+	for (size_t i = 0; i < info->used; i++) {
+		if (info->ids[i] == id) {
+			return;	/* already present */
+		}
+	}
+
+	assert(info->used < MAX_PATTERNS);
+	info->ids[info->used++] = id;
+}
+
+static enum fsm_generate_matches_cb_res
+gen_combined_check_individual_cb(const struct fsm *fsm,
+    size_t depth, size_t match_count, size_t steps,
+    const char *input, size_t input_length,
+    fsm_state_t end_state, void *opaque);
+
+static enum fsm_generate_matches_cb_res
+gen_individual_check_combined_cb(const struct fsm *fsm,
+    size_t depth, size_t match_count, size_t steps,
+    const char *input, size_t input_length,
+    fsm_state_t end_state, void *opaque);
+
+#define DEF_MAX_STEPS 100000
+#define DEF_MAX_MATCH_COUNT 1000
+
+/* This isn't part of the public interface, per se. */
+void
+fsm_eager_output_dump(FILE *f, const struct fsm *fsm);
+
+static int
+fuzz_eager_output(const uint8_t *data, size_t size)
+{
+	struct feo_env env = {
+		.ok = true,
+		.pattern_count = 0,
+		.max_steps = DEF_MAX_STEPS,
+		.max_match_count = DEF_MAX_MATCH_COUNT,
+	};
+
+	{
+		const char *steps = getenv("STEPS");
+		const char *matches = getenv("MATCHES");
+		if (steps != NULL) {
+			env.max_steps = strtoul(steps, NULL, 10);
+			assert(env.max_steps > 0);
+		}
+		if (matches != NULL) {
+			env.max_match_count = strtoul(matches, NULL, 10);
+			assert(env.max_match_count > 0);
+		}
+	}
+
+	int ret = 0;
+
+	size_t max_pattern_length = 0;
+
+	const unsigned seed = size == 0 ? 0 : data[0];
+
+	/* chop data into a series of patterns */
+	{
+		size_t prev = 0;
+		size_t offset = 0;
+
+		/* Patterns with lots of '.' can take a while to determinise.
+		 * That slows down fuzzer coverage, but isn't interesting here. */
+		size_t dots = 0;
+
+		while (offset < size && env.pattern_count < MAX_PATTERNS) {
+#define MAX_DOTS 4
+			if (data[offset] == '.') { dots++; }
+
+			if (data[offset] == '\0' || data[offset] == '\n' || offset == size - 1) {
+				size_t len = offset - prev;
+
+				if (dots > MAX_DOTS) {
+					/* ignored */
+					prev = offset;
+				} else if (len > 0) {
+					char *pattern = malloc(len + 1);
+					assert(pattern != NULL);
+
+					memcpy(pattern, &data[prev], len);
+					if (len > 0 && pattern[len] == '\n') {
+						len--; /* drop trailing newline */
+					}
+					pattern[len] = '\0';
+                                        bool keep = true;
+
+                                        if (len > 0) {
+                                            for (size_t i = 0; i < len - 1; i++) {
+                                                if (pattern[i] == '\\' && pattern[i + 1] == 'x') {
+                                                    /* ignore unhandled parser errors from "\x", see #386 */
+                                                    keep = false;
+                                                }
+                                            }
+                                        }
+
+                                        if (keep) {
+                                            env.patterns[env.pattern_count++] = pattern;
+
+                                            if (len > max_pattern_length) {
+						max_pattern_length = len;
+                                            }
+                                        } else {
+                                            free(pattern);
+                                        }
+					prev = offset;
+					dots = 0;
+				}
+			}
+
+			offset++;
+		}
+	}
+
+	/* for each pattern, attempt to compile to a DFA */
+	for (size_t p_i = 0; p_i < env.pattern_count; p_i++) {
+		const char *p = env.patterns[p_i];
+
+		enum re_is_anchored_res a = re_is_anchored(RE_PCRE, fsm_sgetc, &p, 0, NULL);
+		if (a == RE_IS_ANCHORED_ERROR) {
+			continue; /* unsupported regex */
+		}
+
+		p = env.patterns[p_i];
+		struct fsm *fsm = re_comp(RE_PCRE, fsm_sgetc, &p, NULL, 0, NULL);
+
+		LOG("%s: pattern %zd: '%s' => %p\n", __func__, p_i, env.patterns[p_i], (void *)fsm);
+
+		if (fsm == NULL) {
+			continue; /* invalid regex */
+		}
+
+		const fsm_output_id_t endid = (fsm_output_id_t)p_i;
+		ret = fsm_eager_output_set_on_ends(fsm, endid);
+		assert(ret == 1);
+
+		if (verbose) {
+			fprintf(stderr, "==== pattern %zd, pre det\n", p_i);
+			fsm_dump(stderr, fsm);
+			fsm_eager_output_dump(stderr, fsm);
+			fprintf(stderr, "====\n");
+
+			fsm_state_t c = fsm_countstates(fsm);
+			for (fsm_state_t i = 0; i < c; i++) {
+				fprintf(stderr, "-- %d: end? %d\n", i, fsm_isend(fsm, i));
+			}
+		}
+
+		ret = fsm_determinise(fsm);
+		assert(ret == 1);
+
+		ret = fsm_minimise(fsm);
+		assert(ret == 1);
+
+		fsm_state_t start;
+		if (!fsm_getstart(fsm, &start)) {
+			fsm_free(fsm);
+			continue;
+		}
+
+		if (verbose) {
+			fprintf(stderr, "==== pattern %zd, post det\n", p_i);
+			fsm_dump(stderr, fsm);
+			fsm_eager_output_dump(stderr, fsm);
+			fprintf(stderr, "====\n");
+
+			fsm_state_t c = fsm_countstates(fsm);
+			for (fsm_state_t i = 0; i < c; i++) {
+				fprintf(stderr, "-- %d: end? %d\n", i, fsm_isend(fsm, i));
+			}
+		}
+
+		fsm_eager_output_set_cb(fsm, append_eager_output_cb, &env.outputs);
+		env.fsms[env.fsm_count++] = fsm;
+	}
+
+	/* don't bother checking combined behavior unless there's multiple DFAs */
+	if (env.fsm_count < 2) { goto cleanup; }
+
+	/* copy and combine fsms into one DFA */
+	{
+		size_t used = 0;
+		struct fsm *nfas[MAX_PATTERNS] = {0};
+
+		for (size_t i = 0; i < env.fsm_count; i++) {
+			/* there can be gaps, fsms[] lines up with patterns[] */
+			if (env.fsms[i] == NULL) { continue; }
+
+			fsm_state_t start;
+			if (!fsm_getstart(env.fsms[i], &start)) {
+				assert(!"hit");
+			}
+
+			struct fsm *cp = fsm_clone(env.fsms[i]);
+			assert(cp != NULL);
+
+			if (verbose) {
+				fprintf(stderr, "==== cp %zd\n", i);
+				fsm_dump(stderr, cp);
+				fsm_eager_output_dump(stderr, cp);
+				fprintf(stderr, "====\n");
+
+				fsm_state_t c = fsm_countstates(cp);
+				for (fsm_state_t i = 0; i < c; i++) {
+					fprintf(stderr, "-- %d: end? %d\n", i, fsm_isend(cp, i));
+				}
+			}
+
+			nfas[used] = cp;
+			used++;
+		}
+
+		if (used == 0) {
+			goto cleanup; /* nothing to do */
+		}
+
+		/* consumes nfas[] */
+		struct fsm *fsm = fsm_union_repeated_pattern_group(used, nfas, NULL, 0);
+		assert(fsm != NULL);
+
+		if (verbose) {
+			fprintf(stderr, "==== combined (pre-det)\n");
+			fsm_dump(stderr, fsm);
+			fsm_eager_output_dump(stderr, fsm);
+			fprintf(stderr, "====\n");
+		}
+
+		if (!fsm_determinise(fsm)) {
+			assert(!"failed to determinise");
+		}
+
+		if (!fsm_minimise(fsm)) {
+			assert(!"failed to minimise");
+		}
+
+		LOG("%s: combined state_count %d\n", __func__, fsm_countstates(fsm));
+		env.combined = fsm;
+		/* fsm_eager_output_set_cb(fsm, append_eager_output_cb, &env.outputs_combined); */
+
+		if (verbose) {
+			fprintf(stderr, "==== combined\n");
+			fsm_dump(stderr, env.combined);
+			fsm_eager_output_dump(stderr, env.combined);
+			fprintf(stderr, "====\n");
+		}
+
+	}
+
+	/* Use fsm_generate_matches to check for matches that got lost
+	 * and false positives introduced while combining the DFAs.
+	 * Use the combined DFA to generate matches, check that the
+	 * match behavior agrees with the individual DFA copies. */
+	env.current_pattern = (size_t)-1;
+	if (!fsm_generate_matches(env.combined, max_pattern_length, seed, gen_combined_check_individual_cb, &env)) {
+		goto cleanup;
+	}
+
+	if (!env.ok) { goto cleanup; }
+
+	/* Likewise, use every individual DFA to generate matches and */
+	/* check behavior against the combined DFA. */
+	for (size_t i = 0; i < env.pattern_count; i++) {
+		env.current_pattern = i;
+		if (!fsm_generate_matches(env.combined, max_pattern_length, seed, gen_individual_check_combined_cb, &env)) {
+			goto cleanup;
+		}
+	}
+
+	ret = env.ok ? EXIT_SUCCESS : EXIT_FAILURE;
+cleanup:
+	for (size_t i = 0; i < MAX_PATTERNS; i++) {
+		if (env.patterns[i] != NULL) {
+			free(env.patterns[i]);
+			env.patterns[i] = NULL;
+		}
+		if (env.fsms[i] != NULL) {
+			fsm_free(env.fsms[i]);
+		}
+	}
+	if (env.combined != NULL) {
+		fsm_free(env.combined);
+	}
+
+	return ret;
+}
+
+static int
+cmp_output_id(const void *pa, const void *pb)
+{
+	const fsm_output_id_t a = *(fsm_output_id_t *)pa;
+	const fsm_output_id_t b = *(fsm_output_id_t *)pb;
+	return a < b ? -1 : a > b ? 1 : 0;
+}
+
+static bool
+match_input_get_eager_outputs(struct fsm *fsm, const char *input, size_t input_length,
+    struct eager_output_cb_info *dst)
+{
+	(void)input_length;
+	fsm_state_t end;
+
+	reset_eager_output_info(dst);
+
+	fsm_eager_output_set_cb(fsm, append_eager_output_cb, dst);
+	const int ret = fsm_exec(fsm, fsm_sgetc, &input, &end);
+	if (ret == 0) {
+		return false; /* no match */
+	} else {
+		assert(ret == 1); /* match */
+	}
+
+	/* sort the IDs, to make comparison cheaper */
+	qsort(dst->ids, dst->used, sizeof(dst->ids[0]), cmp_output_id);
+	return true;	/* match */
+}
+
+/* For a given matching input generated by the combined DFA, check that
+ * only the expected individual source DFAs match. */
+static enum fsm_generate_matches_cb_res
+gen_combined_check_individual_cb(const struct fsm *fsm,
+    size_t depth, size_t match_count, size_t steps,
+    const char *input, size_t input_length,
+    fsm_state_t end_state, void *opaque)
+{
+	(void)fsm;
+	(void)depth;
+	(void)end_state;
+
+	struct feo_env *env = opaque;
+	assert(env->current_pattern == (size_t)-1);
+
+	if (match_count > env->max_match_count) { return FSM_GENERATE_MATCHES_CB_RES_HALT; }
+	if (steps > env->max_steps) { return FSM_GENERATE_MATCHES_CB_RES_HALT; }
+
+	/* execute, to set eager outputs */
+	if (!match_input_get_eager_outputs(env->combined, input, input_length, &env->outputs_combined)) {
+		env->ok = false;
+		return FSM_GENERATE_MATCHES_CB_RES_HALT;
+	}
+
+	size_t individual_outputs_used = 0;
+	fsm_output_id_t individual_outputs[MAX_PATTERNS];
+
+	for (size_t i = 0; i < env->pattern_count; i++) {
+		struct fsm *fsm = env->fsms[i];
+		if (fsm == NULL) { continue; }
+
+		if (!match_input_get_eager_outputs(fsm, input, input_length, &env->outputs)) {
+			env->ok = false;
+			return FSM_GENERATE_MATCHES_CB_RES_HALT;
+		}
+
+		if (env->outputs.used > 0) {
+			assert(env->outputs.used == 1);
+			individual_outputs[individual_outputs_used++] = env->outputs.ids[0];
+		}
+	}
+
+	bool match = true;
+	if (env->outputs_combined.used != individual_outputs_used) {
+		match = false;
+	}
+
+	for (size_t cmb_i = 0; cmb_i < env->outputs_combined.used; cmb_i++) {
+		const fsm_output_id_t cur = env->outputs_combined.ids[cmb_i];
+		assert(env->fsms[cmb_i] != NULL);
+		bool found = false;
+		for (size_t i = 0; i < individual_outputs_used; i++) {
+			if (individual_outputs[i] == cur) {
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			match = false;
+			break;
+		}
+	}
+
+	if (!match) {
+		fprintf(stderr, "%s: combined <-> individual mismatch for input '%s'(%zd)!\n", __func__, input, input_length);
+
+		fprintf(stderr, "-- combined: %zu IDs:", env->outputs_combined.used);
+		for (size_t cmb_i = 0; cmb_i < env->outputs_combined.used; cmb_i++) {
+			fprintf(stderr, " %d", env->outputs_combined.ids[cmb_i]);
+		}
+		fprintf(stderr, "\n");
+		fprintf(stderr, "-- individiual: %zu IDs:", individual_outputs_used);
+		for (size_t i = 0; i < individual_outputs_used; i++) {
+			fprintf(stderr, " %d", individual_outputs[i]);
+		}
+		fprintf(stderr, "\n");
+		goto fail;
+	}
+
+	return FSM_GENERATE_MATCHES_CB_RES_CONTINUE;
+
+fail:
+	env->ok = false;
+	return FSM_GENERATE_MATCHES_CB_RES_HALT;
+}
+
+/* For a given matching input generated by one of the source DFAs, check that
+ * the combined DFA also matches, and that the only other source DFAs that match
+ * are ones that should according to the combined DFA. */
+static enum fsm_generate_matches_cb_res
+gen_individual_check_combined_cb(const struct fsm *fsm,
+    size_t depth, size_t match_count, size_t steps,
+    const char *input, size_t input_length,
+    fsm_state_t end_state, void *opaque)
+{
+	(void)fsm;
+	(void)depth;
+	(void)end_state;
+
+	struct feo_env *env = opaque;
+	assert(env->current_pattern < env->pattern_count);
+	if (match_count > env->max_match_count) { return FSM_GENERATE_MATCHES_CB_RES_HALT; }
+	if (steps > env->max_steps) { return FSM_GENERATE_MATCHES_CB_RES_HALT; }
+
+	struct fsm *cur_fsm = env->fsms[env->current_pattern];
+	if (cur_fsm == NULL) { return FSM_GENERATE_MATCHES_CB_RES_CONTINUE; }
+
+	/* execute, to set eager outputs */
+	if (!match_input_get_eager_outputs(cur_fsm, input, input_length, &env->outputs)) {
+		goto fail;
+	}
+	if (!match_input_get_eager_outputs(env->combined, input, input_length, &env->outputs_combined)) {
+		goto fail;
+	}
+
+	assert(env->outputs.used == 1);
+
+	bool found = false;
+	for (size_t i = 0; i < env->outputs_combined.used; i++) {
+		if (env->outputs_combined.ids[i] == env->outputs.ids[0]) {
+			found = true;
+			break;
+		}
+	}
+
+	if (!found) {
+		fprintf(stderr, "%s: combined <-> individual mismatch for input '%s'(%zd)!\n", __func__, input, input_length);
+
+		fprintf(stderr, "-- combined: %zu IDs:", env->outputs_combined.used);
+		for (size_t cmb_i = 0; cmb_i < env->outputs_combined.used; cmb_i++) {
+			fprintf(stderr, " %d", env->outputs_combined.ids[cmb_i]);
+		}
+		fprintf(stderr, "\n");
+		fprintf(stderr, "-- pattern %zd: %zu IDs:", env->current_pattern, env->outputs.used);
+		for (size_t i = 0; i < env->outputs.used; i++) {
+			fprintf(stderr, " %d", env->outputs.ids[i]);
+		}
+		fprintf(stderr, "\n");
+		goto fail;
+	}
+
+	return FSM_GENERATE_MATCHES_CB_RES_CONTINUE;
+
+fail:
+	env->ok = false;
+	return FSM_GENERATE_MATCHES_CB_RES_HALT;
+}
+#undef MAX_PATTERNS
+
+#define MAX_FUZZER_DATA (64 * 1024)
+static uint8_t data_buf[MAX_FUZZER_DATA + 1];
+
 static enum run_mode
 get_run_mode(void)
 {
@@ -1622,6 +2166,8 @@ get_run_mode(void)
 	case 'i': return MODE_IDEMPOTENT_DET_MIN;
 	case 'M': return MODE_SHUFFLE_MINIMISE;
 	case 'p': return MODE_ALL_PRINT_FUNCTIONS;
+	case 'E': return MODE_EAGER_OUTPUT;
+	case 'd':
 	default:
 		fprintf(stderr, "Unrecognized mode '%c', expect one of:\n", mode[0]);
 		fprintf(stderr, " - r.egex (default)\n");
@@ -1630,6 +2176,7 @@ get_run_mode(void)
 		fprintf(stderr, " - M.inimisation shuffling\n");
 		fprintf(stderr, " - i.dempotent determinise/minimise\n");
 		fprintf(stderr, " - p.rint functions\n");
+		fprintf(stderr, " - E.ager output\n");
 		exit(EXIT_FAILURE);
 		break;
 	}
@@ -1642,6 +2189,11 @@ harness_fuzzer_target(const uint8_t *data, size_t size)
 {
 	if (size < 1) {
 		return EXIT_SUCCESS;
+	}
+
+	if (!verbosity_checked) {
+		verbosity_checked = true;
+		verbose = getenv("VERBOSE") != NULL;
 	}
 
 	/* Ensure that input is '\0'-terminated. */
@@ -1730,9 +2282,18 @@ harness_fuzzer_target(const uint8_t *data, size_t size)
 			data_buf[first_newline] = '\0';
 		}
 		return build_and_test_idempotent_det_and_min(pattern);
+	case MODE_DEFAULT: {
+		const uint8_t b0 = data_buf[0];
+		const enum fsm_io io_mode = (b0 >> 2) % 3;
+
+		return build_and_codegen(pattern, io_mode);
+	}
 
 	case MODE_SHUFFLE_MINIMISE:
 		return shuffle_minimise(pattern);
+
+	case MODE_EAGER_OUTPUT:
+		return fuzz_eager_output(data, size);
 
 	case MODE_ALL_PRINT_FUNCTIONS:
 	{

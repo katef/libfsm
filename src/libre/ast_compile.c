@@ -22,8 +22,8 @@
 
 #include <re/re.h>
 
-#include <adt/idmap.h>
 #include <adt/u64bitset.h>
+#include <adt/stateset.h>
 
 #include "class.h"
 #include "ast.h"
@@ -35,10 +35,6 @@
 
 #define LOG_LINKAGE 0
 #define LOG_TRAMPOLINE 0
-
-#if LOG_LINKAGE
-#include "print.h"
-#endif
 
 enum link_side {
 	LINK_START,
@@ -59,16 +55,23 @@ enum link_side {
  *   Link to the unanchored self loop adjacent to the start/end
  *   states (env->start_any_inner or env->end_any_inner), because
  *   this node is in a FIRST or LAST position, but unanchored.
+ *
+ * - LINK_SKIP
+ *   This is used to prune linkage when anchoring leads to
+ *   unsatisfiability.
  */
 enum link_types {
 	LINK_TOP_DOWN,
 	LINK_GLOBAL,
 	LINK_GLOBAL_SELF_LOOP,
+	LINK_SKIP,
 };
 
 /* Call stack for AST -> NFA conversion. */
 #define DEF_COMP_STACK_CEIL 4
-#define NO_MAX_CAPTURE_IDS ((unsigned)-1)
+
+/* Special case: Don't link an epsilon edge */
+#define SKIP_EPSILON ((fsm_state_t)-1)
 
 struct comp_env {
 	const struct fsm_alloc *alloc;
@@ -270,7 +273,8 @@ fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t x, fsm_state_t y)
 
 static struct fsm *
 expr_compile(struct ast_expr *e, enum re_flags flags,
-	const struct fsm_options *opt, struct re_err *err)
+	const struct fsm_alloc *alloc,
+	struct re_err *err)
 {
 	struct ast ast;
 
@@ -279,7 +283,7 @@ expr_compile(struct ast_expr *e, enum re_flags flags,
 	ast.has_unanchored_start = 0;
 	ast.has_unanchored_end = 0;
 
-	return ast_compile(&ast, flags, opt, err);
+	return ast_compile(&ast, flags, alloc, err);
 }
 
 static int
@@ -350,6 +354,10 @@ intern_start_any_loop(struct comp_env *env)
 	env->start_any_inner = inner;
 	env->have_start_any_loop = 1;
 
+	if (env->fsm->linkage_info) {
+		env->fsm->linkage_info->unanchored_start_loop = loop;
+	}
+
 	return 1;
 }
 
@@ -393,6 +401,11 @@ intern_end_any_loop(struct comp_env *env)
 	env->end_any_inner = inner;
 	env->has_end_any_loop = 1;
 
+	if (env->fsm->linkage_info != NULL) {
+		env->fsm->linkage_info->unanchored_end_loop = loop;
+		env->fsm->linkage_info->end_any_inner = env->end_any_inner;
+	}
+
 	return 1;
 }
 
@@ -432,6 +445,14 @@ intern_end_nl(struct comp_env *env)
 
 	env->end_nl_inner = inner;
 	env->has_end_nl_inner = 1;
+
+	if (env->fsm->linkage_info != NULL) {
+		if (!state_set_add(&env->fsm->linkage_info->anchored_ends,
+			env->fsm->alloc, env->end_outer)) {
+			return 0;
+		}
+	}
+
 	return 1;
 }
 
@@ -533,6 +554,30 @@ decide_linking(struct comp_env *env, fsm_state_t x, fsm_state_t y,
 	}
 
 	const struct ast_expr *parent = get_parent_node_from_stack(stack);
+
+	/* An alt node should always pass along the top-down (x,y) pair
+	 * unmodified, individual subtrees may override the linking. */
+	if (n->type == AST_EXPR_ALT) {
+		return LINK_TOP_DOWN;
+	}
+
+	/* Special case for anchors that are more constrained than normal -- search
+	 * for "pincer_anchors" in ast_analysis.c for details. */
+	if (n->type == AST_EXPR_ANCHOR) {
+		if (n->u.anchor.type == AST_ANCHOR_START) {
+			if (side == LINK_END && n->flags & AST_FLAG_CONSTRAINED_AT_END) {
+				return LINK_GLOBAL;
+			}
+
+		} else if (n->u.anchor.type == AST_ANCHOR_END) {
+			if (side == LINK_START && n->flags & AST_FLAG_CONSTRAINED_AT_START) {
+				return LINK_SKIP;
+			}
+		}
+	}
+
+	/* parent can be NULL, if we're at the root node, but it must
+	 * never be the same node. */
 	assert(parent != n);
 
 	/* Note: any asymmetry here should be due to special cases
@@ -588,6 +633,9 @@ print_linkage(enum link_types t)
 	case LINK_GLOBAL_SELF_LOOP:
 		fprintf(stderr, "[SELF_LOOP]");
 		break;
+	case LINK_SKIP:
+		fprintf(stderr, "[SKIP]");
+		break;
 	default:
 		assert(!"match fail");
 		break;
@@ -598,9 +646,10 @@ print_linkage(enum link_types t)
     if (!fsm_addstate(env->fsm, &(NAME))) { return 0; }
 
 #define EPSILON(FROM, TO)           \
-    assert((FROM) != (TO));         \
-    if (!fsm_addedge_epsilon(env->fsm, (FROM), (TO))) { return 0; }
-
+	assert((FROM) != (TO) || ((FROM) == SKIP_EPSILON && (TO) == SKIP_EPSILON)); \
+	if ((FROM) != SKIP_EPSILON && (TO) != SKIP_EPSILON		\
+	    && !fsm_addedge_epsilon(env->fsm, (FROM), (TO))) { return 0; }
+        
 #define ANY(FROM, TO)               \
     if (!fsm_addedge_any(env->fsm, (FROM), (TO))) { return 0; }
 
@@ -649,6 +698,10 @@ set_linking(struct comp_env *env, struct ast_expr *n,
 
 		x = env->start_any_inner;
 		break;
+	case LINK_SKIP:
+		x = SKIP_EPSILON;
+		y = SKIP_EPSILON;
+		break;
 	default:
 		assert(!"match fail"); /* these should be mutually exclusive now */
 	}
@@ -659,6 +712,15 @@ set_linking(struct comp_env *env, struct ast_expr *n,
 	case LINK_GLOBAL:
 		if (env->re_flags & RE_END_NL && !(env->re_flags & RE_END_NL_DISABLE)
 		    && (n->flags & AST_FLAG_END_NL)) {
+			if (!intern_end_nl(env)) {
+				return 0;
+			}
+			y = env->end_nl_inner;
+		} else if (n->type == AST_EXPR_ANCHOR
+		    && n->u.anchor.type == AST_ANCHOR_START
+		    && n->flags & AST_FLAG_CONSTRAINED_AT_END) {
+			/* the start anchor is constrained, so only
+			 * link directly to '\n''s end here */
 			if (!intern_end_nl(env)) {
 				return 0;
 			}
@@ -675,12 +737,16 @@ set_linking(struct comp_env *env, struct ast_expr *n,
 
 		y = env->end_any_inner;
 		break;
+	case LINK_SKIP:
+		x = SKIP_EPSILON;
+		y = SKIP_EPSILON;
+		break;
 	default:
 		assert(!"match fail"); /* these should be mutually exclusive now */
 	}
 
 #if LOG_LINKAGE
-	fprintf(stderr, " ---> x: %d, y: %d\n", x, y);
+	fprintf(stderr, " ---> x: %d, y: %d, type: %s\n", x, y, ast_node_type_name(n->type));
 #endif
 	*px = x;
 	*py = y;
@@ -774,12 +840,17 @@ comp_iter(struct comp_env *env,
 		}
 	}
 
+	/* FIXME: this could be done in ast_compile; comp_iter is a misnomer,
+	 * it's only ever called once. */
+
 	/* Add inner and outer end states. Like start_outer and start_inner,
 	 * these represent the boundary between match group 0 (inner) and
 	 * states outside it (the unanchored end loop). */
+	assert(env->end_inner == LINKAGE_NO_STATE);
 	if (!fsm_addstate(env->fsm, &env->end_inner)) {
 		goto alloc_fail;
 	}
+	assert(env->end_outer == LINKAGE_NO_STATE);
 	if (!fsm_addstate(env->fsm, &env->end_outer)) {
 		goto alloc_fail;
 	}
@@ -1314,6 +1385,21 @@ eval_ANCHOR(struct comp_env *env)
 	    __func__, (void *)sf->n, sf->x, sf->y);
 #endif
 	EPSILON(sf->x, sf->y);
+
+	if (env->fsm->linkage_info != NULL
+	    && sf->x == env->start_inner
+	    && sf->n->u.anchor.type == AST_ANCHOR_START) {
+		/* This state is directly linked from the global start. */
+#if LOG_LINKAGE
+		fprintf(stderr, "%s: adding %d to anchored_starts due to start anchor\n",
+		    __func__, sf->y);
+#endif
+		if (!state_set_add(&env->fsm->linkage_info->anchored_starts,
+			env->fsm->alloc, sf->y)) {
+			return 0;
+		}
+	}
+
 #else
 	switch (sf->n->u.anchor.type) {
 	case AST_ANCHOR_START:
@@ -1331,6 +1417,10 @@ eval_ANCHOR(struct comp_env *env)
 		    __func__, (void *)sf->n, env->start_inner, sf->y);
 #endif
 		EPSILON(env->start_inner, sf->y);
+		if (!state_set_add(&env->fsm->linkage_info->anchored_starts,
+			env->fsm->alloc, y)) {
+			return 0;
+		}
 		break;
 
 	case AST_ANCHOR_END:
@@ -1377,13 +1467,13 @@ eval_SUBTRACT(struct comp_env *env)
 	re_flags |= RE_NOCAPTURE;
 
 	a = expr_compile(sf->n->u.subtract.a, re_flags,
-	    fsm_getoptions(env->fsm), env->err);
+	    env->alloc, env->err);
 	if (a == NULL) {
 		return 0;
 	}
 
 	b = expr_compile(sf->n->u.subtract.b, re_flags,
-	    fsm_getoptions(env->fsm), env->err);
+	    env->alloc, env->err);
 	if (b == NULL) {
 		fsm_free(a);
 		return 0;
@@ -1465,7 +1555,7 @@ eval_TOMBSTONE(struct comp_env *env)
 struct fsm *
 ast_compile(const struct ast *ast,
 	enum re_flags re_flags,
-	const struct fsm_options *opt,
+	const struct fsm_alloc *alloc,
 	struct re_err *err)
 {
 	/* Start states inside and outside of match group 0,
@@ -1477,11 +1567,7 @@ ast_compile(const struct ast *ast,
 
 	assert(ast != NULL);
 
-#if LOG_LINKAGE
-	ast_print_tree(stderr, opt, re_flags, ast);
-#endif
-
-	fsm = fsm_new(opt);
+	fsm = fsm_new(alloc);
 	if (fsm == NULL) {
 		return NULL;
 	}
@@ -1490,6 +1576,18 @@ ast_compile(const struct ast *ast,
 	 * Or possibly combine comp_env and stack. */
 	if (!fsm_addstate(fsm, &start_outer)) {
 		goto error;
+	}
+
+	if (re_flags & RE_SAVE_LINKAGE_INFO) {
+		struct linkage_info *li = f_malloc(alloc, sizeof(*fsm->linkage_info));
+		if (li == NULL) { goto error; }
+		li->unanchored_start_loop = LINKAGE_NO_STATE;
+		li->unanchored_end_loop = LINKAGE_NO_STATE;
+		li->end_any_inner = LINKAGE_NO_STATE;
+		li->anchored_starts = NULL;
+		li->anchored_ends = NULL;
+
+		fsm->linkage_info = li;
 	}
 
 	if (!fsm_addstate(fsm, &start_inner)) {
@@ -1512,13 +1610,16 @@ ast_compile(const struct ast *ast,
 
 		memset(&env, 0x00, sizeof(env));
 
-		env.alloc = fsm->opt->alloc;
+		env.alloc = fsm->alloc;
 		env.fsm = fsm;
 		env.re_flags = re_flags;
 		env.err = err;
 
 		env.start_inner = start_inner;
 		env.start_outer = start_outer;
+
+		env.end_inner = LINKAGE_NO_STATE;
+		env.end_outer = LINKAGE_NO_STATE;
 
 		env.max_capture_id = ast->max_capture_id;
 
@@ -1528,6 +1629,11 @@ ast_compile(const struct ast *ast,
 			}
 			goto error;
 		}
+
+#if LOG_LINKAGE
+		fprintf(stderr, "%s: end_inner %d, end_outer %d, end_nl_inner %d, end_any_loop %d, end_any_inner %d\n",
+		    __func__, env.end_inner, env.end_outer, env.end_nl_inner, env.end_any_loop, env.end_any_inner);
+#endif
 	}
 
 /* XXX:

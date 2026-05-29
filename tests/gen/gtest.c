@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <string.h>
 
-#include <fsm/options.h>
 #include <fsm/bool.h>
 
 /* Note: not "gentest" because then this matches the gen* pattern and
@@ -58,21 +57,20 @@ gtest_matches_cb(const struct fsm *fsm,
 			m->found = true;
 
 #define ID_BUF_COUNT 1
-			fsm_end_id_t id_buf[ID_BUF_COUNT];
-			size_t written;
-			enum fsm_getendids_res gres = fsm_getendids(fsm,
-			    end_state, ID_BUF_COUNT, id_buf, &written);
+			fsm_end_id_t ids[ID_BUF_COUNT];
+			enum fsm_getendids_res gres = fsm_endid_get(fsm,
+			    end_state, fsm_endid_count(fsm, end_state), ids);
 
 			if (gres != FSM_GETENDIDS_FOUND) {
 				fprintf(stderr,
-				    "ERROR: fsm_getendids: returned %d\n",
+				    "ERROR: fsm_endid_get: returned %d\n",
 				    gres);
 				return FSM_GENERATE_MATCHES_CB_RES_HALT;
 			}
 
-			if (written != 1 || id_buf[0] != m_i) {
+			if (fsm_endid_count(fsm, end_state) != 1 || ids[0] != m_i) {
 				fprintf(stderr, "ERROR: endid mismatch, expected %zu, got %u\n",
-				    m_i, id_buf[0]);
+				    m_i, ids[0]);
 				return FSM_GENERATE_MATCHES_CB_RES_HALT;
 			}
 
@@ -88,8 +86,6 @@ gtest_matches_cb(const struct fsm *fsm,
 	return FSM_GENERATE_MATCHES_CB_RES_HALT;
 }
 
-static const struct fsm_options options; /* use defaults */
-
 struct fsm *
 gtest_fsm_of_matches(const struct exp_matches *ms)
 {
@@ -97,7 +93,7 @@ gtest_fsm_of_matches(const struct exp_matches *ms)
 	for (size_t m_i = 0; m_i < ms->count; m_i++) {
 		const struct exp_match *m = &ms->matches[m_i];
 
-		struct fsm *fsm = fsm_new(&options);
+		struct fsm *fsm = fsm_new(NULL);
 		assert(fsm != NULL);
 
 		if (!fsm_addstate_bulk(fsm, m->length + 1)) {

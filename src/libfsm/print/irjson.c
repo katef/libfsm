@@ -22,6 +22,7 @@
 #include <fsm/options.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
 #include "ir.h"
 
@@ -112,17 +113,51 @@ print_groups(FILE *f, const struct fsm_options *opt,
 	fprintf(f, "\t\t\t]\n");
 }
 
-static void
-print_cs(FILE *f, const struct fsm_options *opt,
+static int
+print_state(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	const struct ir_state *cs)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 	assert(cs != NULL);
 
 	fprintf(f, "\t\t{\n");
 
 	fprintf(f, "\t\t\t\"end\": %s,\n", cs->isend ? "true" : "false");
+	if (cs->isend && cs->endids.count > 0) {
+		fprintf(f, "\t\t\t\"end_id\": [");
+		for (size_t i = 0; i < cs->endids.count; i++) {
+			fprintf(f, "%u", cs->endids.ids[i]);
+
+			if (i < (size_t) cs->endids.count - 1) {
+				fprintf(f, ", ");
+			}
+		}
+		fprintf(f, "],\n");
+	}
+
+	const struct fsm_state_metadata state_metadata = {
+		.end_ids = cs->endids.ids,
+		.end_id_count = cs->endids.count,
+	};
+
+	/* showing hook in addition to existing content */
+	if (cs->isend && hooks->accept != NULL) {
+		fprintf(f, "\t\t\t\"endleaf\": ");
+
+		if (-1 == print_hook_accept(f, opt, hooks,
+			&state_metadata,
+			NULL, NULL))
+		{
+			return -1;
+		}
+
+		fprintf(f, ",\n");
+	}
+
 	fprintf(f, "\t\t\t\"strategy\": \"%s\"", strategy_name(cs->strategy));
 	if (cs->example != NULL || cs->strategy != IR_NONE) {
 		fprintf(f, ",");
@@ -138,8 +173,6 @@ print_cs(FILE *f, const struct fsm_options *opt,
 		}
 		fprintf(f, "\n");
 	}
-
-	/* TODO: leaf callback for json output */
 
 	switch (cs->strategy) {
 	case IR_NONE:
@@ -183,21 +216,22 @@ print_cs(FILE *f, const struct fsm_options *opt,
 	}
 
 	fprintf(f, "\t\t}");
+
+	return 0;
 }
 
 int
-fsm_print_irjson(FILE *f, const struct fsm *fsm)
+fsm_print_irjson(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct ir *ir)
 {
-	struct ir *ir;
 	size_t i;
 
 	assert(f != NULL);
-	assert(fsm != NULL);
-
-	ir = make_ir(fsm);
-	if (ir == NULL) {
-		return -1;
-	}
+	assert(opt != NULL);
+	assert(hooks != NULL);
+	assert(ir != NULL);
 
 	fprintf(f, "{\n");
 
@@ -205,7 +239,9 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\t\"states\": [\n");
 
 	for (i = 0; i < ir->n; i++) {
-		print_cs(f, fsm->opt, &ir->states[i]);
+		if (-1 == print_state(f, opt, hooks, &ir->states[i])) {
+			return -1;
+		}
 
 		if (i + 1 < ir->n) {
 			fprintf(f, ",");
@@ -216,12 +252,6 @@ fsm_print_irjson(FILE *f, const struct fsm *fsm)
 	fprintf(f, "\t]\n");
 
 	fprintf(f, "}\n");
-
-	free_ir(fsm, ir);
-
-	if (ferror(f)) {
-		return -1;
-	}
 
 	return 0;
 }

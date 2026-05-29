@@ -119,5 +119,4 @@ enum captest_run_case_res
 captest_run_case_program(const struct captest_case_program *testcase,
     int verbosity);
 
-
 #endif

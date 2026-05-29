@@ -24,6 +24,7 @@
 
 #include <adt/alloc.h>
 #include <adt/hash.h>
+#include <adt/hashrec.h>
 #include <adt/u64bitset.h>
 
 #include <re/re.h>
@@ -239,7 +240,7 @@ intern_char_class(struct capvm_compile_env *env,
 			if (obuckets[o_i].id == NO_BUCKET_ID) {
 				continue;
 			}
-			const uint64_t h = hash_fnv1a_64((const uint8_t *)obuckets[o_i].bitset.octets,
+			const uint64_t h = hashrec(obuckets[o_i].bitset.octets,
 			    sizeof(obuckets[o_i].bitset));
 
 			for (uint32_t n_i = 0; n_i < ncount; n_i++) {
@@ -264,8 +265,8 @@ intern_char_class(struct capvm_compile_env *env,
 	const uint32_t mask = count - 1;
 	struct charclass_htab_bucket *buckets = env->charclass_htab.buckets;
 
-	const uint64_t h = hash_fnv1a_64((const uint8_t *)chars,
-	    sizeof(buckets[0].bitset));
+	const uint64_t h = hashrec(chars, sizeof(buckets[0].bitset));
+
 	for (uint32_t i = 0; i < count; i++) {
 		const uint64_t b = (h + i) & mask;
 		LOG(5, "%s: buckets[%lu].id == %d\n",
@@ -316,13 +317,6 @@ dump_endpoint(const struct ast_endpoint *e)
 		assert(!"todo?");
 		break;
 	}
-}
-
-static void
-dump_pos(const struct ast_pos *p)
-{
-	fprintf(stderr, "pos: byte %u, line %u, col %u\n",
-	    p->byte, p->line, p->col);
 }
 
 static bool
@@ -1121,9 +1115,7 @@ capvm_compile_iter(struct capvm_compile_env *env,
 		uint64_t cc[4] = { 0 };
 		if (!subtree_represents_character_class(expr, cc)) {
 			dump_endpoint(&expr->u.range.from);
-			dump_pos(&expr->u.range.start);
 			dump_endpoint(&expr->u.range.to);
-			dump_pos(&expr->u.range.end);
 			assert(!"unreachable");
 			return false;
 		}

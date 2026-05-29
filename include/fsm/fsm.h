@@ -7,16 +7,11 @@
 #ifndef FSM_H
 #define FSM_H
 
-/*
- * TODO: This API needs quite some refactoring. Mostly we ought to operate
- * in-place, else the user would only free() everything. Having an explicit
- * clone interface leaves the option for duplicating, if they wish. However be
- * careful about leaving things in an indeterminate state; everything ought to
- * be atomic.
- */
+#include <stdlib.h>
+#include <stdbool.h>
 
 struct fsm;
-struct fsm_options;
+struct fsm_alloc;
 struct path; /* XXX */
 struct fsm_capture;
 struct fsm_combine_info;
@@ -33,30 +28,34 @@ typedef unsigned int fsm_state_t;
  * original FSM(s) matched when executing a combined FSM. */
 typedef unsigned int fsm_end_id_t;
 
-#define FSM_END_ID_MAX UINT_MAX
+/* Eager output ID. */
+typedef unsigned int fsm_output_id_t;
 
-/* struct used to return a collection of end IDs. */
-struct fsm_end_ids {
-	unsigned count;
-	fsm_end_id_t ids[1];
-};
+#define FSM_END_ID_MAX UINT_MAX
 
 /*
  * Create a new FSM. This is to be freed with fsm_free(). A structure allocated
  * from fsm_new() is expected to be passed as the "fsm" argument to the
  * functions in this API.
  *
- * An options pointer may be passed for control over various details of
- * FSM construction and output. This may be NULL, in which case default
- * options are used.
+ * An fsm_alloc pointer may be passed for callbacks on memory allocation.
+ * This may be NULL, in which case the default libc functions are used.
  * When non-NULL, the storage pointed to must remain extant until fsm_free().
  *
  * Returns NULL on error; see errno.
  * TODO: perhaps automatically create a start state, and never have an empty FSM
- * TODO: also fsm_parse should create an FSM, not add into an existing one
  */
 struct fsm *
-fsm_new(const struct fsm_options *opt);
+fsm_new(const struct fsm_alloc *alloc);
+
+/*
+ * As fsm_new(), but with an explicit number of pre-allocated states.
+ * This is intended to save on internal reallocations for situations
+ * where it's known in advance exactly how many states an FSM will have.
+ * You can still add more states per usual.
+ */
+struct fsm *
+fsm_new_statealloc(const struct fsm_alloc *alloc, size_t statealloc);
 
 /*
  * Free a structure created by fsm_new(), and all of its contents.
@@ -70,14 +69,6 @@ fsm_free(struct fsm *fsm);
  */
 struct fsm *
 fsm_clone(const struct fsm *fsm);
-
-/* Returns the options of an FSM */
-const struct fsm_options *
-fsm_getoptions(const struct fsm *fsm);
-
-/* Sets the options of an FSM */
-void
-fsm_setoptions(struct fsm *fsm, const struct fsm_options *opts);
 
 /*
  * Copy the contents of src over dst, and free src.
@@ -211,27 +202,42 @@ fsm_setendid_state(struct fsm *fsm, fsm_state_t s, fsm_end_id_t id);
 int
 fsm_setendid(struct fsm *fsm, fsm_end_id_t id);
 
+/* Associate a numeric ID with a specific end state in an fsm.
+ * Returns an enum indicating whether it was set, already present,
+ * or errored (alloc failure).
+ * */
+enum fsm_endid_set_res {
+	FSM_ENDID_SET_ADDED,
+	FSM_ENDID_SET_ALREADY_PRESENT,
+	FSM_ENDID_SET_ERROR_ALLOC_FAIL = -1
+};
+enum fsm_endid_set_res
+fsm_endid_set(struct fsm *fsm, fsm_state_t end_state, fsm_end_id_t id);
+
 /* Get the end IDs associated with an end state, if any.
- * If id_buf has enough cells to store all the end IDs (according
- * to id_buf_count) then they are written into id_buf[] and
- * *ids_written is set to the number of IDs. The end IDs in the
- * buffer may appear in any order, but should not have duplicates.
+ * id_buf is expected to have enough cells (according to id_buf_count)
+ * to store all the end IDs. You can find this with fsm_endid_count().
  *
- * Returns 0 if there is not enough space in id_buf for the
- * end IDs, or 1 if zero or more end IDs were returned. */
+ * The end IDs in the buffer are sorted and do not have duplicates.
+ *
+ * A state with no end IDs set is considered equivalent to a state
+ * that has the empty set, this API does not distinguish these cases.
+ * This is not an error.
+ *
+ * It is an error to attempt to get end IDs associated with a state
+ * that is not marked as an end state. */
 enum fsm_getendids_res {
 	FSM_GETENDIDS_NOT_FOUND,
 	FSM_GETENDIDS_FOUND,
 	FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE = -1
 };
 enum fsm_getendids_res
-fsm_getendids(const struct fsm *fsm, fsm_state_t end_state,
-    size_t id_buf_count, fsm_end_id_t *id_buf,
-    size_t *ids_written);
+fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
+    size_t id_buf_count, fsm_end_id_t *id_buf);
 
 /* Get the number of end IDs associated with an end state. */
 size_t
-fsm_getendidcount(const struct fsm *fsm, fsm_state_t end_state);
+fsm_endid_count(const struct fsm *fsm, fsm_state_t end_state);
 
 /* Callback function to remap the end ids of a state.  This function can
  * remap to fewer end ids, but cannot add additional end ids, and cannot
@@ -275,6 +281,70 @@ fsm_mapendids(struct fsm * fsm, fsm_endid_remap_fun remap, void *opaque);
  */
 void
 fsm_increndids(struct fsm * fsm, int delta);
+
+/* Set an eager output ID to emit every time the state is entered.
+ * This is similar to fsm_setendid, but has different performance
+ * trade-offs for determinisation, and can be applied to
+ * non-end states.
+ *
+ * During DFA execution, states with eager outputs will output their
+ * ID when output reaches them. With fsm_exec, this happens via a
+ * callback (see fsm_eager_output_set_cb). Some print languages
+ * will eventually support eager outputs.
+ *
+ * One use case for eager outputs is combining multiple unanchored
+ * regexes into a single DFA and detecting when input matches more than
+ * one of them. With endids, determinisation has to represent every
+ * possible reachable combination of endids as a distinct copy of the
+ * DFA subgraph, leading to a combinatorial explosion that makes
+ * combining more than a 8 or so regexes (even very simple ones)
+ * prohibitively expensive. With eager outputs, the graph no longer
+ * needs a separate subgraph copy for each combination of IDs, so it is
+ * possible to combine several dozen or even hundreds of FSMs into a
+ * single DFA. See fsm_union_repeated_pattern_group for more details. */
+int
+fsm_eager_output_set(struct fsm *fsm, fsm_state_t state, fsm_output_id_t id);
+
+/* Set an eager output ID on all current end states. */
+int
+fsm_eager_output_set_on_ends(struct fsm *fsm, fsm_output_id_t id);
+
+/* Callback for eager output processing.
+ * If set (using fsm_eager_output_set_cb), this may be called while fsm_exec runs. */
+typedef void
+fsm_eager_output_cb(fsm_output_id_t id, void *opaque);
+
+/* Set a callback and opaque argument on an FSM for eager outputs encountered
+ * while fsm_exec is running. Rather than adding another pair of arguments to
+ * fsm_exec, this is called as a separate step -- most DFAs will not use eager
+ * outputs, or use them with code generation rather than fsm_exec.
+ *
+ * See fsm_eager_output_set for more details about eager output functionality. */
+void
+fsm_eager_output_set_cb(struct fsm *fsm, fsm_eager_output_cb *cb, void *opaque);
+
+/* Get the eager output callback set on a FSM and its opaque pointer, if any. */
+void
+fsm_eager_output_get_cb(const struct fsm *fsm, fsm_eager_output_cb **cb, void **opaque);
+
+/* Get the number of eager output IDs associated with a state. */
+size_t
+fsm_eager_output_count(const struct fsm *fsm, fsm_state_t state);
+
+/* Get eager output IDs associated with a state, if any.
+ * id_buf is expected to have enough cells (according to id_buf_count)
+ * to store all the end IDs. You can find this with fsm_eager_output_count().
+ *
+ * The IDs in the buffer are sorted and do not have duplicates.
+ *
+ * Unlike end IDs, eager outputs can appear on states that are
+ * not marked as end states.
+ *
+ * Returns 0 if there is not enough space in id_buf for the
+ * eager output IDs, or 1 if zero more IDs were returned. */
+int
+fsm_eager_output_get(const struct fsm *fsm, fsm_state_t state,
+    size_t buf_count, fsm_output_id_t *id_buf);
 
 /*
  * Find the state (if there is just one), or add epsilon edges from all states,
@@ -395,6 +465,21 @@ fsm_remove_epsilons(struct fsm *fsm);
 int
 fsm_determinise(struct fsm *fsm);
 
+/* Determinise, with a passed in configuration
+ * and a distinct return value for reaching
+ * the state limit. */
+struct fsm_determinise_config {
+	size_t state_limit;	/* 0: no limit */
+};
+enum fsm_determinise_with_config_res {
+	FSM_DETERMINISE_WITH_CONFIG_OK,
+	FSM_DETERMINISE_WITH_CONFIG_STATE_LIMIT_REACHED,
+	FSM_DETERMINISE_WITH_CONFIG_ERRNO,
+};
+enum fsm_determinise_with_config_res
+fsm_determinise_with_config(struct fsm *fsm,
+	const struct fsm_determinise_config *config);
+
 /*
  * Make a DFA complete, as per fsm_iscomplete.
  */
@@ -503,6 +588,12 @@ int fsm_fgetc(void *opaque); /* expects opaque to be FILE *  */
 /* Shuffle the state IDs in the FSM. This is mainly useful for testing. */
 int
 fsm_shuffle(struct fsm *fsm, unsigned seed);
+
+/* Attempt to reclaim memory if an FSM has significantly reduced its
+ * state count. Returns true if the vacuuming attempt succeeded (including
+ * deciding not to do anything), false if realloc failed. */
+bool
+fsm_vacuum(struct fsm *fsm);
 
 #endif
 

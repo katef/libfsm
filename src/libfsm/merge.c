@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <fsm/fsm.h>
@@ -23,9 +24,19 @@
 #include "capture_vm.h"
 #include "internal.h"
 #include "endids.h"
+#include "eager_output.h"
 
 #define LOG_MERGE_ENDIDS 0
+
 #define LOG_COPY_CAPTURE_PROGRAMS 0
+
+struct copy_capture_env {
+#ifndef NDEBUG
+	char tag;
+#endif
+	bool ok;
+	struct fsm *dst;
+};
 
 static int
 copy_end_metadata(struct fsm *dst, struct fsm *src,
@@ -37,6 +48,9 @@ copy_end_ids(struct fsm *dst, struct fsm *src, fsm_state_t base_src);
 static int
 copy_active_capture_ids(struct fsm *dst, struct fsm *src,
     fsm_state_t base_src, unsigned capture_base_src);
+
+static int
+copy_eager_output_ids(struct fsm *dst, struct fsm *src, fsm_state_t base_src);
 
 static struct fsm *
 merge(struct fsm *dst, struct fsm *src,
@@ -55,7 +69,7 @@ merge(struct fsm *dst, struct fsm *src,
 
 		/* TODO: round up to next power of two here?
 		 * or let realloc do that internally */
-		tmp = f_realloc(dst->opt->alloc, dst->states, newalloc * sizeof *dst->states);
+		tmp = f_realloc(dst->alloc, dst->states, newalloc * sizeof *dst->states);
 		if (tmp == NULL) {
 			return NULL;
 		}
@@ -95,7 +109,12 @@ merge(struct fsm *dst, struct fsm *src,
 		return NULL;
 	}
 
-	f_free(src->opt->alloc, src->states);
+	if (!copy_eager_output_ids(dst, src, *base_src)) {
+		/* non-recoverable -- destructive operation */
+		return NULL;
+	}
+
+	f_free(src->alloc, src->states);
 	src->states = NULL;
 	src->statealloc = 0;
 	src->statecount = 0;
@@ -204,7 +223,7 @@ static int
 copy_capture_programs(struct fsm *dst, const struct fsm *src,
 	fsm_state_t state_base_src, unsigned capture_base_src)
 {
-	const struct fsm_alloc *alloc = src->opt->alloc;
+	const struct fsm_alloc *alloc = src->alloc;
 	struct prog_mapping *mappings = f_malloc(alloc,
 	    DEF_MAPPING_CEIL * sizeof(mappings[0]));
 	if (mappings == NULL) {
@@ -260,7 +279,6 @@ struct copy_end_ids_env {
 static int
 copy_end_ids_cb(fsm_state_t state, const fsm_end_id_t *ids, size_t num_ids, void *opaque)
 {
-	enum fsm_endid_set_res sres;
 	struct copy_end_ids_env *env = opaque;
 	assert(env->tag == 'M');
 
@@ -269,19 +287,17 @@ copy_end_ids_cb(fsm_state_t state, const fsm_end_id_t *ids, size_t num_ids, void
 	    state + env->base_src, id);
 #endif
 
-	sres = fsm_endid_set_bulk(env->dst, state + env->base_src, num_ids, ids, FSM_ENDID_BULK_REPLACE);
-	if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
-		return 0;
-	}
-
-	return 1;
+	return fsm_endid_set_bulk(env->dst, state + env->base_src,
+		num_ids, ids, FSM_ENDID_BULK_REPLACE);
 }
 
 static int
 copy_end_ids(struct fsm *dst, struct fsm *src, fsm_state_t base_src)
 {
 	struct copy_end_ids_env env;
+#ifndef NDEBUG
 	env.tag = 'M';		/* for Merge */
+#endif
 	env.dst = dst;
 	env.base_src = base_src;
 
@@ -327,6 +343,39 @@ copy_active_capture_ids(struct fsm *dst, struct fsm *src,
 	return env.ok;
 }
 
+struct copy_eager_output_ids_env {
+	bool ok;
+	struct fsm *dst;
+	struct fsm *src;
+	fsm_state_t base_src;
+};
+
+static int
+copy_eager_output_ids_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
+{
+	struct copy_eager_output_ids_env *env = opaque;
+	if (!fsm_eager_output_set(env->dst, state + env->base_src, id)) {
+		env->ok = false;
+		return 0;
+	}
+
+	return 1;
+
+}
+
+static int
+copy_eager_output_ids(struct fsm *dst, struct fsm *src, fsm_state_t base_src)
+{
+	struct copy_eager_output_ids_env env = {
+		.ok = true,
+		.dst = dst,
+		.src = src,
+		.base_src = base_src,
+	};
+	fsm_eager_output_iter_all(src, copy_eager_output_ids_cb, &env);
+	return env.ok;
+}
+
 struct fsm *
 fsm_mergeab(struct fsm *a, struct fsm *b,
 	fsm_state_t *base_b)
@@ -339,7 +388,7 @@ fsm_mergeab(struct fsm *a, struct fsm *b,
 	assert(b != NULL);
 	assert(base_b != NULL);
 
-	if (a->opt != b->opt) {
+	if (a->alloc != b->alloc) {
 		errno = EINVAL;
 		return NULL;
 	}
@@ -366,11 +415,6 @@ fsm_merge(struct fsm *a, struct fsm *b,
 	assert(a != NULL);
 	assert(b != NULL);
 	assert(combine_info != NULL);
-
-	if (a->opt != b->opt) {
-		errno = EINVAL;
-		return NULL;
-	}
 
 	/*
 	 * We merge the smaller FSM into the larger FSM.

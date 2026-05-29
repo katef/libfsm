@@ -19,8 +19,8 @@
 
 struct state_info {
 	fsm_state_t state;
-	unsigned num_endids;
-	fsm_end_id_t endids[2];
+	unsigned count;
+	fsm_end_id_t ids[2];
 };
 
 /* use fsm_increndids to change the endids before a union/intersection */
@@ -71,37 +71,26 @@ int main(void)
 
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
-			fsm_end_id_t endids[2] = {0,0};
-			size_t nwritten;
-			size_t num_endids;
-			enum fsm_getendids_res ret;
+			fsm_end_id_t ids[2] = {0,0};
+			size_t count;
+			int ret;
 
-			nwritten = 0;
-			num_endids = fsm_getendidcount(fsm, state_ind);
+			count = fsm_endid_count(fsm, state_ind);
+			assert( count > 0 && count <= 2);
 
-			assert( num_endids > 0 && num_endids <= 2);
-
-			ret = fsm_getendids(
-				fsm,
-				state_ind,
-				sizeof endids / sizeof endids[0],
-				&endids[0],
-				&nwritten);
-
-			assert(ret == FSM_GETENDIDS_FOUND);
-			assert(nwritten == num_endids);
+			ret = fsm_endid_get(fsm, state_ind, count, &ids[0]);
+			assert(ret == 1);
 
 			info[ninfo].state = state_ind;
-			info[ninfo].num_endids = nwritten;
+			info[ninfo].count = count;
 
-			if (nwritten == 1) {
-				assert(endids[0] == 11 || endids[0] == 12);
-				info[ninfo].endids[0] = endids[0];
-			} else if (nwritten == 2) {
-				qsort(&endids[0], nwritten, sizeof endids[0], cmp_endids);
-				assert(endids[0] == 11 && endids[1] == 12);
-				info[ninfo].endids[0] = endids[0];
-				info[ninfo].endids[1] = endids[1];
+			if (count == 1) {
+				assert(ids[0] == 11 || ids[0] == 12);
+				info[ninfo].ids[0] = ids[0];
+			} else if (count == 2) {
+				assert(ids[0] == 11 && ids[1] == 12);
+				info[ninfo].ids[0] = ids[0];
+				info[ninfo].ids[1] = ids[1];
 			}
 
 			ninfo++;

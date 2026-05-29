@@ -48,6 +48,7 @@ captest_run_case(const struct captest_case_single *testcase,
 		printf("/%s/ <- \"%s%s\": ",
 		    testcase->regex, testcase->input,
 		    trailing_newline ? "\\n" : "");
+		fflush(stdout);
 	}
 
 	/* build regex */
@@ -58,7 +59,7 @@ captest_run_case(const struct captest_case_single *testcase,
 
 	struct fsm *fsm = re_comp(RE_PCRE,
 		    captest_getc, &comp_input,
-		    &options, flags, &err);
+		    NULL, flags, &err);
 
 	if (testcase->match == SHOULD_REJECT_AS_UNSUPPORTED) {
 		if (fsm != NULL) {
@@ -68,7 +69,10 @@ captest_run_case(const struct captest_case_single *testcase,
 		return CAPTEST_RUN_CASE_PASS;
 	}
 
-	assert(fsm != NULL);
+	if (fsm == NULL) {
+		re_perror(RE_PCRE, &err, NULL, testcase->regex);
+		return CAPTEST_RUN_CASE_ERROR;
+	}
 
 	if (!fsm_determinise(fsm)) {
 		return CAPTEST_RUN_CASE_ERROR;
@@ -79,7 +83,7 @@ captest_run_case(const struct captest_case_single *testcase,
 	}
 
 	if (verbosity > 3) {
-		fsm_print_fsm(stdout, fsm);
+		fsm_print(stdout, fsm, &options, NULL, FSM_PRINT_FSM);
 	}
 
 	if (trailing_newline) {
@@ -250,7 +254,7 @@ captest_run_case_multi(const struct captest_case_multi *testcase,
 
 		struct fsm *fsm = re_comp(RE_PCRE,
 		    captest_getc, &comp_input,
-		    &options, flags, &err);
+		    NULL, flags, &err);
 		assert(fsm != NULL);
 
 		if (!fsm_determinise(fsm)) {
@@ -266,7 +270,7 @@ captest_run_case_multi(const struct captest_case_multi *testcase,
 			snprintf(tag_buf, sizeof(tag_buf), "fsm[%zu]", i);
 
 			fprintf(stderr, "==== fsm[%zu]\n", i);
-			fsm_print_fsm(stderr, fsm);
+			fsm_print(stderr, fsm, &options, NULL, FSM_PRINT_FSM);
 			fsm_capture_dump(stderr, tag_buf, fsm);
 		}
 
@@ -311,7 +315,7 @@ captest_run_case_multi(const struct captest_case_multi *testcase,
 
 	if (verbosity > 3) {
 		fprintf(stderr, "==== combined\n");
-		fsm_print_fsm(stderr, combined_fsm);
+		fsm_print(stderr, combined_fsm, &options, NULL, FSM_PRINT_FSM);
 		fsm_capture_dump(stderr, "combined", combined_fsm);
 	}
 

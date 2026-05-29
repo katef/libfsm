@@ -675,19 +675,3 @@ state_set_replace(struct state_set **setp, fsm_state_t old, fsm_state_t new)
 		}
 	}
 }
-
-uint64_t
-state_set_hash(const struct state_set *set)
-{
-	if (set == NULL) {
-		return 0;	/* empty */
-	}
-
-	if (IS_SINGLETON(set)) {
-		fsm_state_t state;
-		state = SINGLETON_DECODE(set);
-		return hashrec(&state, sizeof state);
-	}
-
-	return hashrec(set->a, set->i * sizeof *set->a);
-}

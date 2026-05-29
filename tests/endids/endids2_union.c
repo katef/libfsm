@@ -55,32 +55,22 @@ int main(void)
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(comb, state_ind)) {
 			fsm_end_id_t endids[2] = {0,0};
-			size_t nwritten;
-			size_t num_endids;
-			enum fsm_getendids_res ret;
+			size_t count;
+			int ret;
 
-			nwritten = 0;
-			num_endids = fsm_getendidcount(comb, state_ind);
-			// fprintf(stderr, "state %u, num_endids = %zu\n", state_ind, num_endids);
+			count = fsm_endid_count(comb, state_ind);
+			// fprintf(stderr, "state %u, count = %zu\n", state_ind, count);
+			assert(count > 0 && count <= 2);
 
-			assert( num_endids > 0 && num_endids <= 2);
+			ret = fsm_endid_get( comb, state_ind, count, &endids[0]);
+			assert(ret == 1);
 
-			ret = fsm_getendids(
-				comb,
-				state_ind,
-				2,
-				&endids[0],
-				&nwritten);
-
-			assert(ret == FSM_GETENDIDS_FOUND);
-			assert(nwritten == num_endids);
-
-			if (nwritten == 1) {
+			if (count == 1) {
 				assert(endids[0] == 1 || endids[0] == 2);
 
 				has_endid_1 = has_endid_1 || (endids[0] == 1);
 				has_endid_2 = has_endid_2 || (endids[0] == 2);
-			} else if (nwritten == 2) {
+			} else if (count == 2) {
 				assert((endids[0] == 1 && endids[1] == 2)
 					|| (endids[0] == 2 && endids[1] == 1));
 
@@ -111,7 +101,7 @@ int main(void)
 		static const struct {
 			const char *s;
 			int should_match;
-			size_t num_endids;
+			size_t count;
 			fsm_end_id_t endid[2];
 		} matches[] = {
 			{ "abc"      , 1, 1, { 1, 0 } },
@@ -147,33 +137,31 @@ int main(void)
 		};
 
 		for (i=0; i < sizeof matches / sizeof matches[0]; i++) {
-			fsm_end_id_t *end_ids;
-			size_t num_end_ids;
+			fsm_end_id_t *ids;
+			size_t count;
 
-			end_ids = NULL;
-			num_end_ids = 0;
-			ret = match_string(comb, matches[i].s, NULL, &end_ids, &num_end_ids);
+			ids = NULL;
+			count = 0;
+			ret = match_string(comb, matches[i].s, NULL, &ids, &count);
 
 			if (matches[i].should_match) {
 				size_t j;
 
 				assert( ret == 1 );
-				assert( end_ids != NULL );
+				assert( ids != NULL );
 
-				assert( num_end_ids == matches[i].num_endids );
+				assert( count == matches[i].count );
 
-				qsort(&end_ids[0], num_end_ids, sizeof end_ids[0], cmp_endids);
-
-				for (j=0; j < num_end_ids; j++) {
-					assert( end_ids[j] == matches[i].endid[j] );
+				for (j=0; j < count; j++) {
+					assert( ids[j] == matches[i].endid[j] );
 				}
 			} else {
 				assert( ret == 0 );
-				assert( end_ids == NULL );
-				assert( num_end_ids == 0 );
+				assert( ids == NULL );
+				assert( count == 0 );
 			}
 
-			free(end_ids);
+			free(ids);
 		}
         }
 

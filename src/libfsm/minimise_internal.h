@@ -3,10 +3,6 @@
 
 #define NO_ID ((fsm_state_t)-1)
 
-/* If set to non-zero, do extra intensive
- * integrity checks inside some inner loops. */
-#define EXPENSIVE_INTEGRITY_CHECKS 0
-
 #define DEF_INITIAL_COUNT_CEIL 8
 
 struct min_env {

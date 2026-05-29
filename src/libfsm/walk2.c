@@ -9,10 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <fsm/fsm.h>
-#include <fsm/options.h>
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
@@ -131,7 +131,7 @@ fsm_walk2_data_free(const struct fsm *fsm, struct fsm_walk2_data *data)
 
 	for (p = data->head; p != NULL; p = next) {
 		next = p->next;
-		f_free(fsm->opt->alloc, p);
+		f_free(fsm->alloc, p);
 	}
 
 	if (data->new) {
@@ -159,7 +159,7 @@ alloc_walk2_tuple(struct fsm_walk2_data *data)
 
 new_pool:
 
-	pool = f_malloc(data->new->opt->alloc, sizeof *pool);
+	pool = f_malloc(data->new->alloc, sizeof *pool);
 	if (pool == NULL) {
 		return NULL;
 	}
@@ -263,67 +263,60 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 	}
 
 	if (is_end) {
-		size_t num_a_endids = 0, num_b_endids = 0, total_num_endids;
+		size_t count_a = 0, count_b = 0, count_total;
 
 		if (fsm_a != NULL && fsm_isend(fsm_a,a)) {
-			num_a_endids = fsm_getendidcount(fsm_a, a);
+			count_a = fsm_endid_count(fsm_a, a);
 		}
 
 		if (fsm_b != NULL && fsm_isend(fsm_b,b)) {
-			num_b_endids = fsm_getendidcount(fsm_b, b);
+			count_b = fsm_endid_count(fsm_b, b);
 		}
 
-		total_num_endids = num_a_endids + num_b_endids;
+		count_total = count_a + count_b;
 
-		if (total_num_endids > 0) {
-			fsm_end_id_t *endids= NULL;
-			enum fsm_getendids_res ret;
+		if (count_total > 0) {
+			const struct fsm_alloc *alloc;
+			fsm_end_id_t *ids;
+			int ret;
 
-			endids = calloc(total_num_endids, sizeof endids[0]);
-			if (endids == NULL) {
+			if (fsm_a != NULL) {
+				alloc = fsm_a->alloc;
+			} else if (fsm_b != NULL) {
+				alloc = fsm_b->alloc;
+			} else {
+				assert(!"unreached");
+			}
+
+			ids = f_malloc(alloc, count_total * sizeof *ids);
+			if (ids == NULL) {
 				return NULL;
 			}
 
-			if (num_a_endids > 0) {
-				size_t nwritten = 0;
-				ret = fsm_getendids(fsm_a, a, num_a_endids, &endids[0], &nwritten);
-
-				if (ret != FSM_GETENDIDS_FOUND || nwritten != num_a_endids) {
-					free(endids);
-					errno = (ret != FSM_GETENDIDS_FOUND) ? ENOENT : EINVAL;
-					return NULL;
-				}
+			if (count_a > 0) {
+				ret = fsm_endid_get(fsm_a, a, count_a, ids);
+				assert(ret == 1);
 			}
 
-			if (num_b_endids > 0) {
-				size_t nwritten = 0;
-				ret = fsm_getendids(fsm_b, b, num_b_endids, &endids[num_a_endids], &nwritten);
-
-				if (ret != FSM_GETENDIDS_FOUND || nwritten != num_b_endids) {
-					free(endids);
-					errno = (ret != FSM_GETENDIDS_FOUND) ? ENOENT : EINVAL;
-					return NULL;
-				}
+			if (count_b > 0) {
+				ret = fsm_endid_get(fsm_b, b, count_b, ids + count_a);
+				assert(ret == 1);
 			}
 
-			{
-				enum fsm_endid_set_res ret;
+			ret = fsm_endid_set_bulk(
+				data->new,
+				p->comb,
+				count_total,
+				&ids[0],
+				FSM_ENDID_BULK_REPLACE);
 
-				ret = fsm_endid_set_bulk(
-					data->new,
-					p->comb,
-					total_num_endids,
-					&endids[0],
-					FSM_ENDID_BULK_REPLACE);
-				if (ret == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
-					int errsv = errno;
-					free(endids);
-					errno = errsv;
-					return NULL;
-				}
+			f_free(alloc, ids);
+
+			if (!ret) {
+				int errsv = errno;
+				errno = errsv;
+				return NULL;
 			}
-
-			free(endids);
 		}
 	}
 
@@ -569,12 +562,12 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 	data.edgemask = edgemask;
 	data.endmask  = endmask;
 
-	data.new = fsm_new(a->opt);
+	data.new = fsm_new(a->alloc);
 	if (data.new == NULL) {
 		goto error;
 	}
 
-	data.states = tuple_set_create(data.new->opt->alloc, cmp_walk2_tuple);
+	data.states = tuple_set_create(data.new->alloc, cmp_walk2_tuple);
 	if (data.states == NULL) {
 		goto error;
 	}
@@ -603,7 +596,12 @@ fsm_walk2(const struct fsm *a, const struct fsm *b,
 
 empty:
 
-	return fsm_new(a->opt);
+	new = fsm_new(a->alloc);
+	if (new == NULL) {
+		return NULL;
+	}
+
+	return new;
 
 error:
 

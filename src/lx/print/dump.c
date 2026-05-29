@@ -13,10 +13,14 @@
 
 #include "lx/print.h"
 
-static void
-print_dump(FILE *f)
+void
+lx_print_dump(FILE *f, const struct ast *ast, const struct fsm_options *opt)
 {
 	assert(f != NULL);
+	assert(ast != NULL);
+	assert(opt != NULL);
+
+	(void) ast;
 
 	if (api_getc == API_FDGETC) {
 		fprintf(f, "#define _POSIX_SOURCE\n");
@@ -64,12 +68,12 @@ print_dump(FILE *f)
 	fprintf(f, "main(int argc, char *argv[])\n");
 	fprintf(f, "{\n");
 
-	fprintf(f, "\tenum lx_token t;\n");
-	fprintf(f, "\tstruct lx lx = { 0 };\n");
+	fprintf(f, "\tenum %stoken t;\n", prefix.api);
+	fprintf(f, "\tstruct %slx lx = { 0 };\n", prefix.lx);
 
-	switch (opt.io) {
+	switch (opt->io) {
 	case FSM_IO_GETC:
-		fprintf(f, "\tint (*lgetc)(struct lx *lx);\n");
+		fprintf(f, "\tint (*lgetc)(struct %slx *lx);\n", prefix.lx);
 		fprintf(f, "\tvoid *getc_opaque;\n");
 		break;
 
@@ -113,7 +117,7 @@ print_dump(FILE *f)
 
 	fprintf(f, "\n");
 
-	if (opt.io == FSM_IO_GETC && (api_getc != API_AGETC && api_getc != API_SGETC)) {
+	if (opt->io == FSM_IO_GETC && (api_getc != API_AGETC && api_getc != API_SGETC)) {
 		fprintf(f, "\tif (argc != 1) {\n");
 		fprintf(f, "\t\tfprintf(stderr, \"usage: dump\\n\");\n");
 		fprintf(f, "\t\treturn 1;\n");
@@ -131,7 +135,7 @@ print_dump(FILE *f)
 
 	switch (api_getc) {
 	case API_FGETC:
-		fprintf(f, "\tlgetc = lx_fgetc;\n");
+		fprintf(f, "\tlgetc = %sfgetc;\n", prefix.api);
 		fprintf(f, "\tgetc_opaque = stdin;\n");
 		fprintf(f, "\n");
 		break;
@@ -140,7 +144,7 @@ print_dump(FILE *f)
 		fprintf(f, "\ts = argv[1];\n");
 		fprintf(f, "\n");
 
-		fprintf(f, "\tlgetc = lx_sgetc;\n");
+		fprintf(f, "\tlgetc = %ssgetc;\n", prefix.api);
 		fprintf(f, "\tgetc_opaque = &s;\n");
 		fprintf(f, "\n");
 		break;
@@ -150,7 +154,7 @@ print_dump(FILE *f)
 		fprintf(f, "\tarr.len = strlen(arr.p);\n");
 		fprintf(f, "\n");
 
-		fprintf(f, "\tlgetc = lx_agetc;\n");
+		fprintf(f, "\tlgetc = %sagetc;\n", prefix.api);
 		fprintf(f, "\tgetc_opaque = &arr;\n");
 		fprintf(f, "\n");
 		break;
@@ -163,16 +167,16 @@ print_dump(FILE *f)
 		fprintf(f, "\td.fd    = fileno(stdin);\n");
 		fprintf(f, "\n");
 
-		fprintf(f, "\tlgetc = lx_dgetc;\n");
+		fprintf(f, "\tlgetc = %sdgetc;\n", prefix.api);
 		fprintf(f, "\tgetc_opaque = &d;\n");
 		fprintf(f, "\n");
 		break;
 	}
 
-	fprintf(f, "\tlx_init(&lx);\n");
+	fprintf(f, "\t%sinit(&lx);\n", prefix.api);
 	fprintf(f, "\n");
 
-	switch (opt.io) {
+	switch (opt->io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\tlx.lgetc       = lgetc;\n");
 		fprintf(f, "\tlx.getc_opaque = getc_opaque;\n");
@@ -197,10 +201,12 @@ print_dump(FILE *f)
 		fprintf(f, "\tbuf.len = 0;\n");
 		fprintf(f, "\n");
 
-		fprintf(f, "\tlx.buf_opaque = &buf;\n");
-		fprintf(f, "\tlx.push       = lx_dynpush;\n");
-		fprintf(f, "\tlx.clear      = lx_dynclear;\n");
-		fprintf(f, "\tlx.free       = lx_dynfree;\n");
+		if (~api_exclude & API_BUF) {
+			fprintf(f, "\tlx.buf_opaque = &buf;\n");
+			fprintf(f, "\tlx.push       = %sdynpush;\n", prefix.api);
+			fprintf(f, "\tlx.clear      = %sdynclear;\n", prefix.api);
+			fprintf(f, "\tlx.free       = %sdynfree;\n", prefix.api);
+		}
 		fprintf(f, "\n");
 		break;
 
@@ -210,10 +216,12 @@ print_dump(FILE *f)
 		fprintf(f, "\tbuf.len = sizeof a;\n"); /* XXX: rename .len to .size */
 		fprintf(f, "\n");
 
-		fprintf(f, "\tlx.buf_opaque = &buf;\n");
-		fprintf(f, "\tlx.push       = lx_fixedpush;\n");
-		fprintf(f, "\tlx.clear      = lx_fixedclear;\n");
-		fprintf(f, "\tlx.free       = NULL;\n");
+		if (~api_exclude & API_BUF) {
+			fprintf(f, "\tlx.buf_opaque = &buf;\n");
+			fprintf(f, "\tlx.push       = %sfixedpush;\n", prefix.api);
+			fprintf(f, "\tlx.clear      = %sfixedclear;\n", prefix.api);
+			fprintf(f, "\tlx.free       = NULL;\n");
+		}
 		fprintf(f, "\n");
 		break;
 	}
@@ -223,7 +231,7 @@ print_dump(FILE *f)
 	fprintf(f, "\t\tconst char *q;\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "\t\tt = lx_next(&lx);\n");
+	fprintf(f, "\t\tt = %snext(&lx);\n", prefix.api);
 	fprintf(f, "\n");
 
 	switch (api_tokbuf) {
@@ -270,7 +278,7 @@ print_dump(FILE *f)
 	fprintf(f, "\n");
 
 	fprintf(f, "\t\tcase TOK_ERROR:\n");
-	fprintf(f, "\t\t\tperror(\"lx_next\");\n");
+	fprintf(f, "\t\t\tperror(\"%snext\");\n", prefix.api);
 	fprintf(f, "\t\t\tbreak;\n");
 	fprintf(f, "\n");
 
@@ -283,7 +291,7 @@ print_dump(FILE *f)
 
 	fprintf(f, "\t\tdefault:\n");
 	if (~api_exclude & API_NAME) {
-		fprintf(f, "\t\t\tprintf(\"<%%s\", lx_name(t));\n");
+		fprintf(f, "\t\t\tprintf(\"<%%s\", %sname(t));\n", prefix.api);
 		fprintf(f, "\t\t\tdump_buf(q, l);\n");
 		fprintf(f, "\t\t\tprintf(\">\\n\");\n");
 	} else {
@@ -299,18 +307,12 @@ print_dump(FILE *f)
 	fprintf(f, "\t} while (t != TOK_ERROR && t != TOK_EOF && t != TOK_UNKNOWN);\n");
 	fprintf(f, "\n");
 
+	if (api_tokbuf == API_DYNBUF && (~api_exclude & API_BUF)) {
+		fprintf(f, "\tlx.free(lx.buf_opaque);\n");
+		fprintf(f, "\n");
+	}
+
 	fprintf(f, "\treturn t == TOK_ERROR;\n");
 	fprintf(f, "}\n");
-}
-
-void
-lx_print_dump(FILE *f, const struct ast *ast)
-{
-	assert(f != NULL);
-	assert(ast != NULL);
-
-	(void) ast;
-
-	print_dump(f);
 }
 

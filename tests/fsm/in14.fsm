@@ -1,0 +1,12 @@
+#
+# Copyright 2008-2024 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+# missing semicolon
+0 1;
+
+start: 0;
+end: 1;
+

@@ -19,13 +19,13 @@ lexer.h: lexer.lx
 	${LX} -g fgetc -l h < lexer.lx > lexer.h
 
 lexer.o: lexer.c
-	${CC} -c -DLX_HEADER='"lexer.h"' ${CFLAGS} ${.ALLSRC}
+	${CC} -c -DLX_HEADER='"lexer.h"' ${CFLAGS} $>
 
 main.o: main.c
-	${CC} -c ${CFLAGS} ${.ALLSRC}
+	${CC} -c ${CFLAGS} $>
 
 rpn: lexer.o main.o
-	${CC} -o ${.TARGET} ${.ALLSRC}
+	${CC} -o ${.TARGET} $>
 
 lexer.c: lexer.h
 

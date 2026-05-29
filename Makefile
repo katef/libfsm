@@ -71,6 +71,7 @@ PKG += libtheft
 .if !defined(NODOC)
 SUBDIR += man/fsm.1
 SUBDIR += man/re.1
+SUBDIR += man/rx.1
 SUBDIR += man/lx.1
 SUBDIR += man/fsm_print.3
 SUBDIR += man/libfsm.3
@@ -101,6 +102,7 @@ SUBDIR += src/libre/print
 SUBDIR += src/libre
 SUBDIR += src/fsm
 SUBDIR += src/re
+SUBDIR += src/rx
 SUBDIR += src/retest
 SUBDIR += src/lx/print
 SUBDIR += src/lx
@@ -114,14 +116,16 @@ SUBDIR += tests/intersect
 SUBDIR += tests/eclosure
 SUBDIR += tests/equals
 SUBDIR += tests/subtract
+SUBDIR += tests/detect_required
 SUBDIR += tests/determinise
+SUBDIR += tests/eager_output
 SUBDIR += tests/endids
 SUBDIR += tests/epsilons
+SUBDIR += tests/fsm
 SUBDIR += tests/glob
 SUBDIR += tests/like
 SUBDIR += tests/literal
-# FIXME: commenting this out for now due to Makefile error
-#SUBDIR += tests/lxpos
+SUBDIR += tests/lxpos
 SUBDIR += tests/minimise
 SUBDIR += tests/native
 SUBDIR += tests/pcre
@@ -131,6 +135,8 @@ SUBDIR += tests/pcre-flags
 SUBDIR += tests/pcre-repeat
 SUBDIR += tests/pred
 SUBDIR += tests/re_literal
+SUBDIR += tests/re_strings
+SUBDIR += tests/regressions
 SUBDIR += tests/reverse
 SUBDIR += tests/trim
 SUBDIR += tests/union
@@ -141,6 +147,7 @@ SUBDIR += tests/sql
 SUBDIR += tests/queue
 SUBDIR += tests/aho_corasick
 SUBDIR += tests/retest
+SUBDIR += tests/re_interpolate_groups
 SUBDIR += tests
 .if make(theft) || make(${BUILD}/theft/theft)
 SUBDIR += theft
@@ -184,6 +191,6 @@ STAGE_BUILD := ${STAGE_BUILD:Nbin/cvtpcre}
 
 .if make(test)
 .END::
-	grep FAIL ${BUILD}/tests/*/res*; [ $$? -ne 0 ]
+	grep -I FAIL ${BUILD}/tests/*/*res*; [ $$? -ne 0 ]
 .endif
 

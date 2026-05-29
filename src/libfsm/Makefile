@@ -3,11 +3,14 @@
 SRC += src/libfsm/capture.c
 SRC += src/libfsm/capture_vm.c
 SRC += src/libfsm/capture_vm_exec.c
+SRC += src/libfsm/charset.c
 SRC += src/libfsm/collate.c
 SRC += src/libfsm/complete.c
 SRC += src/libfsm/consolidate.c
 SRC += src/libfsm/clone.c
 SRC += src/libfsm/closure.c
+SRC += src/libfsm/detect_required.c
+SRC += src/libfsm/eager_output.c
 SRC += src/libfsm/edge.c
 SRC += src/libfsm/empty.c
 SRC += src/libfsm/end.c
@@ -17,12 +20,14 @@ SRC += src/libfsm/exec.c
 SRC += src/libfsm/fsm.c
 SRC += src/libfsm/gen.c
 SRC += src/libfsm/mode.c
+SRC += src/libfsm/print.c
 SRC += src/libfsm/start.c
 SRC += src/libfsm/state.c
 SRC += src/libfsm/trim.c
 SRC += src/libfsm/example.c
 SRC += src/libfsm/getc.c
 SRC += src/libfsm/shuffle.c
+SRC += src/libfsm/vacuum.c
 SRC += src/libfsm/vm.c
 
 # graph things

@@ -11,7 +11,6 @@
 #include <stdlib.h>
 
 #include <fsm/fsm.h>
-#include <fsm/options.h>
 
 #include <adt/common.h>
 
@@ -19,6 +18,7 @@ struct bm;
 struct edge_set;
 struct state_set;
 struct state_array;
+struct linkage_info;
 
 /*
  * The alphabet (Sigma) for libfsm's FSM is arbitrary octets.
@@ -45,33 +45,61 @@ struct state_array;
 #define FSM_CAPTURE_MAX INT_MAX
 
 struct fsm_edge {
-	fsm_state_t state; /* destination */
+	fsm_state_t state:24; /* destination. :24 for packing */
 	unsigned char symbol;
 };
 
 struct fsm_state {
+	struct edge_set *edges;
+	struct state_set *epsilons;
+
 	unsigned int end:1;
 
 	/* meaningful within one particular transformation only */
 	unsigned int visited:1;
 
-	struct edge_set *edges;
-	struct state_set *epsilons;
+	/* If 0, then this state has no need for checking
+	 * the fsm->eager_output_info struct. */
+	unsigned int has_eager_outputs:1;
 };
 
 struct fsm {
 	struct fsm_state *states; /* array */
+	const struct fsm_alloc *alloc;
 
 	size_t statealloc; /* number of elements allocated */
 	size_t statecount; /* number of elements populated */
-	size_t endcount;
+	size_t endcount:31; /* :31 for packing */
 
-	fsm_state_t start;
 	unsigned int hasstart:1;
+	fsm_state_t start;
 
 	struct fsm_capture_info *capture_info;
 	struct endid_info *endid_info;
-	const struct fsm_options *opt;
+	struct eager_output_info *eager_output_info;
+	struct linkage_info *linkage_info;
+};
+
+#define LINKAGE_NO_STATE ((fsm_state_t)-1)
+
+/* Internal structure for storing structural info about an NFA.
+ * This is currently only used by fsm_union_repeated_pattern_group,
+ * which needs to identify a couple components of the NFA in order
+ * to link groups of repeated pattern together correctly. */
+struct linkage_info {
+	/* The states with a /./ self edge representing the unanchored
+	 * start and end, or LINKAGE_NO_STATE. There can be at most one
+	 * of each. */
+	fsm_state_t unanchored_start_loop;
+	fsm_state_t unanchored_end_loop;
+
+	/* The inner end state immediately preceding the unanchored end loop. */
+	fsm_state_t end_any_inner;
+
+	/* States that link to paths only reachable from the beginning of input. */
+	struct state_set *anchored_starts;
+	/* States leading to an anchored end. */
+	struct state_set *anchored_ends;
 };
 
 struct fsm *
@@ -86,10 +114,10 @@ state_hasnondeterminism(const struct fsm *fsm, fsm_state_t state, struct bm *bm)
  * for states, with wrapper to populate malloced array of user-facing structs.
  */
 struct state_set **
-fsm_epsilon_closure(struct fsm *fsm);
+fsm_epsilon_closure(const struct fsm *fsm);
 
 void
-fsm_closure_free(struct state_set **closures, size_t n);
+fsm_closure_free(const struct fsm *fsm, struct state_set **closures, size_t n);
 
 /*
  * Internal free function that invokes free(3) by default, or a user-provided

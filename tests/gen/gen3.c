@@ -11,6 +11,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/print.h>
+#include <fsm/options.h>
 #include <fsm/walk.h>
 
 #include "gtest.h"
@@ -61,7 +62,7 @@ build(void)
 	}
 
 	if (getenv("PRINT")) {
-		fsm_print_fsm(stderr, fsm);
+		fsm_dump(stderr, fsm);
 	}
 
 	return fsm;
@@ -145,7 +146,7 @@ int main(void) {
 	struct fsm *fsm = build();
 	assert(fsm != NULL);
 
-	if (!fsm_generate_matches(fsm, 11, matches_cb, NULL)) {
+	if (!fsm_generate_matches(fsm, 11, 0, matches_cb, NULL)) {
 		fprintf(stderr, "fsm_generate_matches: error\n");
 		exit(EXIT_FAILURE);
 	}

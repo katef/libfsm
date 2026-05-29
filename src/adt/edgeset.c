@@ -35,8 +35,8 @@ struct edge_set {
 	size_t ceil;		/* nonzero */
 	size_t count;		/* <= ceil */
 	struct edge_group {
-		fsm_state_t to;	/* distinct */
 		uint64_t symbols[256/64];
+		fsm_state_t to;	/* distinct */
 	} *groups;		/* sorted by .to */
 };
 
@@ -121,7 +121,7 @@ dump_edge_set(const struct edge_set *set)
 static struct edge_set *
 init_empty(const struct fsm_alloc *alloc)
 {
-	struct edge_set *set = f_calloc(alloc, 1, sizeof(*set));
+	struct edge_set *set = f_malloc(alloc, sizeof(*set));
 	if (set == NULL) {
 		return NULL;
 	}
@@ -719,7 +719,7 @@ edge_set_copy(struct edge_set **dst, const struct fsm_alloc *alloc,
 		return 1;
 	}
 
-	set = f_calloc(alloc, 1, sizeof(*set));
+	set = f_malloc(alloc, sizeof(*set));
 	if (set == NULL) {
 		return 0;
 	}

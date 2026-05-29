@@ -45,9 +45,7 @@ enum ast_expr_type {
 #define AST_COUNT_UNBOUNDED ((unsigned)-1)
 struct ast_count {
 	unsigned min;
-	struct ast_pos start;
 	unsigned max;
-	struct ast_pos end;
 };
 
 enum ast_anchor_type {
@@ -93,6 +91,13 @@ enum ast_anchor_type {
  *   ends with the PCRE end anchor that implicitly matches a single
  *   trailing newline.
  *
+ * - AST_FLAG_CONSTRAINED_AT_START
+ *   The anchor needs more restrictive linkage on its start side,
+ *   see ast_analysis's "pincer_anchors" analysis for details.
+ *
+ * - AST_FLAG_CONSTRAINED_AT_END
+ *   End counterpart to AST_FLAG_CONSTRAINED_AT_START.
+ *
  * Not all are valid for all node types.
  */
 enum ast_flags {
@@ -105,6 +110,9 @@ enum ast_flags {
 	AST_FLAG_ANCHORED_START  = 1 << 6,
 	AST_FLAG_ANCHORED_END    = 1 << 7,
 	AST_FLAG_END_NL          = 1 << 8,
+	AST_FLAG_MATCHES_1NEWLINE= 1 << 9,
+	AST_FLAG_CONSTRAINED_AT_START	 = 1 << 10,
+	AST_FLAG_CONSTRAINED_AT_END	 = 1 << 11,
 
 	AST_FLAG_NONE = 0x00
 };
@@ -203,9 +211,7 @@ struct ast_expr {
 
 		struct {
 			struct ast_endpoint from;
-			struct ast_pos start;
 			struct ast_endpoint to;
-			struct ast_pos end;
 		} range;
 
 		struct {
@@ -265,8 +271,7 @@ void
 ast_free(struct ast *ast);
 
 struct ast_count
-ast_make_count(unsigned min, const struct ast_pos *start,
-	unsigned max, const struct ast_pos *end);
+ast_make_count(unsigned min, unsigned max);
 
 /*
  * Expressions
@@ -322,18 +327,15 @@ ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
 
 struct ast_expr *
 ast_make_expr_range(struct ast_expr_pool **poolp, enum re_flags re_flags,
-	const struct ast_endpoint *from, struct ast_pos start,
-	const struct ast_endpoint *to, struct ast_pos end);
+	const struct ast_endpoint *from, const struct ast_endpoint *to);
 
 struct ast_expr *
 ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const struct class *class);
 
 /* XXX: exposed for sake of re(1) printing an ast;
  * it's not part of the <re/re.h> API proper */
-struct fsm_options;
 struct ast *
 re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
-	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err, int *unsatisfiable);
 
 const char *

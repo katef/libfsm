@@ -55,7 +55,7 @@ match(const struct fsm *fsm, const char *s)
 	assert(fsm_all(fsm, fsm_isdfa));
 	assert(s != NULL);
 
-	if (1 != fsm_exec(fsm, fsm_sgetc, &s, &state)) {
+	if (1 != fsm_exec(fsm, fsm_sgetc, &s, &state, NULL)) {
 		return 0;
 	}
 
@@ -196,7 +196,7 @@ main(int argc, char *argv[])
 	}
 
 	if (!quiet) {
-		fsm_print_fsm(stdout, fsm);
+		fsm_print(stdout, fsm, NULL, NULL, FSM_PRINT_FSM);
 	}
 
 	matched = match(fsm, argv[1]);

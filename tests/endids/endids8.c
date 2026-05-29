@@ -24,7 +24,7 @@ int main(void)
 	const char *s1, *s2;
 	int ret;
 
-	fsm_end_id_t all_endids[2];
+	fsm_end_id_t all_ids[2];
 	unsigned nstates, state_ind;
 
 	s1 = "abc"; fsm1 = re_comp(RE_NATIVE, fsm_sgetc, &s1, NULL, 0, NULL);
@@ -69,33 +69,21 @@ int main(void)
 	nstates = fsm_countstates(comb);
 
         // all end states should have BOTH endids
-	memset(all_endids, 0, sizeof all_endids);
+	memset(all_ids, 0, sizeof all_ids);
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(comb, state_ind)) {
-			fsm_end_id_t endids[3] = {0,0,0};
-			size_t nwritten;
-			size_t num_endids;
-			enum fsm_getendids_res ret;
+			fsm_end_id_t ids[3] = {0,0,0};
+			size_t count;
+			int ret;
 
-			nwritten = 0;
-			num_endids = fsm_getendidcount(comb, state_ind);
+			count = fsm_endid_count(comb, state_ind);
+			printf("state %u count = %zu\n", state_ind, count);
+			assert(count == 3);
 
-			printf("state %u num_endids = %zu\n", state_ind, num_endids);
+			ret = fsm_endid_get(comb, state_ind, count, &ids[0]);
+			assert(ret == 1);
 
-			assert(num_endids == 3);
-
-			ret = fsm_getendids(
-				comb,
-				state_ind,
-				sizeof endids / sizeof endids[0],
-				&endids[0],
-				&nwritten);
-
-			assert(ret == FSM_GETENDIDS_FOUND);
-			assert(nwritten == num_endids);
-
-                        qsort(&endids[0], num_endids, sizeof endids[0], cmp_endids);
-                        assert(endids[0] == 1 && endids[1] == 2 && endids[2] == 4);
+			assert(ids[0] == 1 && ids[1] == 2 && ids[2] == 4);
 		}
 	}
 

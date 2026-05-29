@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <string.h>
+#include <errno.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
@@ -74,21 +75,24 @@ struct gen_ctx {
 	const struct fsm *fsm;
 	size_t max_length;
 	fsm_generate_matches_cb *cb;
-	void *opaque;
+
+	bool done;
+	bool randomized;
 
 	size_t buf_ceil;
 	size_t buf_used;
 	char *buf;
+
+	void *opaque;
+
+	unsigned depth;
+	unsigned steps;
 
 	/* This is used to avoid useless cycles -- if a state
 	 * was reached since the same match_count, then don't
 	 * explore it again. */
 	unsigned match_count;
 	unsigned *state_counts;
-
-	unsigned depth;
-	unsigned steps;
-	bool done;
 
 	/* Shortest end distance for a state: sed[s_id] */
 	unsigned *sed;
@@ -103,7 +107,7 @@ struct gen_ctx {
 static bool
 gen_init_outer(struct fsm *fsm, size_t max_length,
     fsm_generate_matches_cb *cb, void *opaque,
-    bool randomized, unsigned seed);
+    bool randomized);
 
 static bool
 gen_init(struct gen_ctx *ctx, struct fsm *fsm);
@@ -136,12 +140,21 @@ static bool
 grow_stack(struct gen_ctx *ctx);
 
 int
-fsm_generate_matches(struct fsm *fsm, size_t max_length,
+fsm_generate_matches(struct fsm *fsm, size_t max_length, int randomized,
     fsm_generate_matches_cb *cb, void *opaque)
 {
+	if (max_length == 0) {
+		errno = EINVAL;
+		return 0;
+	}
+
+	if (!fsm_has(fsm, fsm_isend)) {
+		return 1;	/* no end state -> nothing to do */
+	}
+
 	INIT_TIMERS();
 	TIME(&pre);
-	int res = gen_init_outer(fsm, max_length, cb, opaque, false, 0);
+	int res = gen_init_outer(fsm, max_length, cb, opaque, randomized != 0);
 	TIME(&post);
 
 	DIFF_MSEC("fsm_generate_matches", pre, post, NULL);
@@ -191,17 +204,14 @@ fsm_generate_cb_printf(const struct fsm *fsm,
 static bool
 gen_init_outer(struct fsm *fsm, size_t max_length,
     fsm_generate_matches_cb *cb, void *opaque,
-    bool randomized, unsigned seed)
+    bool randomized)
 {
-	int res = 0;
+	int res = false;
 	if (fsm == NULL || cb == NULL || max_length == 0) {
 		return false;
 	}
 
 	assert(fsm_all(fsm, fsm_isdfa)); /* DFA-only */
-
-	assert(!randomized);		 /* not yet supported */
-	(void)seed;
 
 #if LOG_GEN > 1
 	fprintf(stderr, "%s: %u states\n", __func__, fsm_countstates(fsm));
@@ -211,22 +221,23 @@ gen_init_outer(struct fsm *fsm, size_t max_length,
 	}
 
 	struct gen_ctx ctx = {
-		.alloc = fsm->opt->alloc,
+		.alloc = fsm->alloc,
 		.fsm = fsm,
 		.max_length = max_length,
 		.cb = cb,
 		.opaque = opaque,
+		.randomized = randomized,
 	};
 
 	if (!gen_init(&ctx, fsm)) {
 		goto cleanup;
 	}
 
-	res = 1;
+	res = true;
 
 	while (!ctx.done) {
 		if (!gen_iter(&ctx)) {
-			res = 0;
+			res = false;
 			break;
 		}
 	}
@@ -516,6 +527,55 @@ first_symbol(const uint64_t *symbols)
 	return 0;
 }
 
+static unsigned char
+random_symbol(const uint64_t *symbols)
+{
+	bool has_zero = false;
+	unsigned i = 0;
+
+	/* printable and non-printable character choices */
+	size_t choice_count = 0;
+	unsigned char choices[256];
+	size_t np_choice_count = 0;
+	unsigned char np_choices[256];
+
+	while (i < 256) {
+		const uint64_t w = symbols[i/64];
+		if ((i & 63) == 0 && w == 0) {
+			i += 64;
+			continue;
+		}
+		if (w & (1ULL << (i & 63))) {
+			if (i == 0) {
+				has_zero = true;
+			} else if (isprint(i)) {
+				choices[choice_count++] = (unsigned char)i;
+			} else {
+				np_choices[np_choice_count++] = (unsigned char)i;
+			}
+		}
+		i++;
+	}
+
+	if (choice_count > 0) {
+		const size_t c = rand() % choice_count;
+		return choices[c];
+	}
+
+	if (np_choice_count > 0) {
+		const size_t c = rand() % np_choice_count;
+		return np_choices[c];
+	}
+
+	/* Prefer anything besides 0x00 if present, since that will truncate the string. */
+	if (has_zero) {
+		return 0;
+	}
+
+	assert(!"empty set");
+	return 0;
+}
+
 #if DUMP_EDGES
 static void
 dump_edges(fsm_state_t state, struct edge_set *edges)
@@ -530,6 +590,7 @@ dump_edges(fsm_state_t state, struct edge_set *edges)
 	size_t i = 0;
 	while (edge_set_group_iter_next(&ei, &eg)) {
 		const unsigned char symbol = first_symbol(eg.symbols);
+		const unsigned char symbol = random_symbol(eg.symbols);
 		fprintf(stderr, "%s: %d -- %zu/%zu -- 0x%02x (%c) -> %d\n",
 		    __func__, state, i, count,
 		    symbol, isprint(symbol) ? symbol : '.', eg.to);
@@ -562,8 +623,8 @@ sfs_step_edges(struct gen_ctx *ctx, struct gen_stack_frame *sf)
 		sf->u.step_edges.initialized = true;
 	}
 
-	if (ctx->buf_used + ctx->sed[sf->s_id] >= ctx->max_length) {
-		LOG(2, "PRUNING due to max length: used:%zu + sed[%d]:%u >= max_length:%zu\n",
+	if (ctx->buf_used + ctx->sed[sf->s_id] > ctx->max_length) {
+		LOG(2, "PRUNING due to max length: used:%zu + sed[%d]:%u > max_length:%zu\n",
 		    ctx->buf_used, sf->s_id, ctx->sed[sf->s_id], ctx->max_length);
 		sf->t = GEN_SFS_LEAVING_STATE;
 		return true;
@@ -577,7 +638,9 @@ sfs_step_edges(struct gen_ctx *ctx, struct gen_stack_frame *sf)
 	struct edge_group_iter_info eg;
 
 	if (iter_next_transition(ctx, sf, &eg)) {
-		const unsigned char symbol = first_symbol(eg.symbols);
+		const unsigned char symbol = ctx->randomized
+		    ? random_symbol(eg.symbols)
+		    : first_symbol(eg.symbols);
 		const fsm_state_t state = eg.to;
 
 		LOG(2, "sfs_step_edges: got edge 0x%x ('%c')\n",

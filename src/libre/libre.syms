@@ -3,13 +3,17 @@ re_is_literal
 re_flags
 re_strerror
 re_perror
+re_is_anchored
+re_interpolate_groups
 
-# XXX: for re(1)
-ast_new_from_fsm
+ast_print
 ast_print_dot
 ast_print_abnf
 ast_print_pcre
 ast_print_tree
+
+# XXX: for re(1)
+ast_new_from_fsm
 ast_free
 re_parse
 re_strings

@@ -28,10 +28,10 @@ fsm_mergestates(struct fsm *fsm, fsm_state_t a, fsm_state_t b,
 	assert(b < fsm->statecount);
 
 	/* edges from b */
-	if (!state_set_copy(&fsm->states[a].epsilons, fsm->opt->alloc, fsm->states[b].epsilons)) {
+	if (!state_set_copy(&fsm->states[a].epsilons, fsm->alloc, fsm->states[b].epsilons)) {
 		return 0;
 	}
-	if (!edge_set_copy(&fsm->states[a].edges, fsm->opt->alloc, fsm->states[b].edges)) {
+	if (!edge_set_copy(&fsm->states[a].edges, fsm->alloc, fsm->states[b].edges)) {
 		return 0;
 	}
 

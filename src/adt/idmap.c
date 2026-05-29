@@ -119,6 +119,7 @@ grow_bucket_values(struct idmap *m, unsigned old_words, unsigned new_words)
 			return 0;
 		}
 
+		// TODO: memcpy
 		for (size_t w_i = 0; w_i < old_words; w_i++) {
 			nv[w_i] = b->values[w_i];
 		}
@@ -203,12 +204,15 @@ idmap_set(struct idmap *m, fsm_state_t state_id,
 	}
 
 	const uint64_t mask = m->bucket_count - 1;
-	for (size_t b_i = 0; b_i < m->bucket_count; b_i++) {
+	int res = 0;
+	size_t b_i;
+	for (b_i = 0; b_i < m->bucket_count; b_i++) {
 		struct idmap_bucket *b = &m->buckets[(h + b_i) & mask];
 		if (b->state == state_id) {
 			assert(b->values != NULL);
 			u64bitset_set(b->values, value);
-			return 1;
+			res = 1;
+			goto done;
 		} else if (b->state == NO_STATE) {
 			b->state = state_id;
 			assert(b->values == NULL);
@@ -217,20 +221,30 @@ idmap_set(struct idmap *m, fsm_state_t state_id,
 			b->values = f_calloc(m->alloc,
 			    vw, sizeof(b->values[0]));
 			if (b->values == NULL) {
-				return 0;
+				goto done;
 			}
 			m->buckets_used++;
 
 			u64bitset_set(b->values, value);
-			return 1;
+			res = 1;
+			goto done;
 		} else {
 			continue; /* collision */
 		}
-
 	}
 
-	assert(!"unreachable");
-	return 0;
+done:
+#if HASH_LOG_PROBES
+	fprintf(stderr, "%s: res %d after %zu probes (%u buckets)\n",
+	    __func__, res, b_i, m->bucket_count);
+#endif
+
+#ifdef HASH_PROBE_LIMIT
+	assert(b_i < HASH_PROBE_LIMIT);
+#endif
+	assert(b_i < m->bucket_count);
+
+	return res;
 }
 
 static const struct idmap_bucket *
@@ -391,6 +405,8 @@ idmap_iter_for_state(const struct idmap *m, fsm_state_t state_id,
 			}
 		}
 		assert(block_count == check_count);
+#else
+                (void)block_count;
 #endif
 	}
 }

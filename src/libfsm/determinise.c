@@ -6,6 +6,9 @@
 
 #include "determinise_internal.h"
 
+#include <fsm/print.h>
+#include <fsm/options.h>
+
 #define LOG_DETERMINISATION_COUNTERS 0
 
 static void
@@ -19,23 +22,27 @@ dump_labels(FILE *f, const uint64_t labels[4])
 	}
 }
 
-int
-fsm_determinise(struct fsm *nfa)
+enum fsm_determinise_with_config_res
+fsm_determinise_with_config(struct fsm *nfa,
+	const struct fsm_determinise_config *config)
 {
-	int res = 0;
+	enum fsm_determinise_with_config_res res = FSM_DETERMINISE_WITH_CONFIG_ERRNO;
 	struct mappingstack *stack = NULL;
 
 	struct interned_state_set_pool *issp = NULL;
 	struct map map = { NULL, 0, 0, NULL };
 	struct mapping *curr = NULL;
 	size_t dfacount = 0;
+	const size_t state_limit = config == NULL
+	    ? 0
+	    : config->state_limit;
 
 	struct analyze_closures_env ac_env = { 0 };
 	INIT_TIMERS();
 	INIT_TIMERS_NAMED(overall);
 
 	assert(nfa != NULL);
-	map.alloc = nfa->opt->alloc;
+	map.alloc = nfa->alloc;
 
 	/*
 	 * This NFA->DFA implementation is for epsilon-free NFA only. This keeps
@@ -45,7 +52,7 @@ fsm_determinise(struct fsm *nfa)
 	if (fsm_has(nfa, fsm_hasepsilons)) {
 		TIME(&pre);
 		if (!fsm_remove_epsilons(nfa)) {
-			return 0;
+			return FSM_DETERMINISE_WITH_CONFIG_ERRNO;
 		}
 		TIME(&post);
 		DIFF_MSEC("det_remove_eps", pre, post, NULL);
@@ -53,14 +60,19 @@ fsm_determinise(struct fsm *nfa)
 
 #if LOG_DETERMINISE_CAPTURES || LOG_INPUT
 	fprintf(stderr, "# post_remove_epsilons, pre_determinise\n");
-	fsm_print_fsm(stderr, nfa);
+	fsm_dump(stderr, nfa);
 	fsm_capture_dump(stderr, "#### post_remove_epsilons", nfa);
 #endif
 	TIME(&overall_pre);
 
-	issp = interned_state_set_pool_alloc(nfa->opt->alloc);
+	issp = interned_state_set_pool_alloc(nfa->alloc);
 	if (issp == NULL) {
-		return 0;
+		return FSM_DETERMINISE_WITH_CONFIG_ERRNO;
+	}
+
+	if (state_limit != 0 && fsm_countstates(nfa) > state_limit) {
+		res = FSM_DETERMINISE_WITH_CONFIG_STATE_LIMIT_REACHED;
+		goto cleanup;
 	}
 
 	{
@@ -82,7 +94,7 @@ fsm_determinise(struct fsm *nfa)
 		 */
 
 		if (!fsm_getstart(nfa, &start)) {
-			res = 1;
+			res = FSM_DETERMINISE_WITH_CONFIG_OK;
 			goto cleanup;
 		}
 
@@ -103,12 +115,12 @@ fsm_determinise(struct fsm *nfa)
 	 * Our "todo" list. It needn't be a stack; we treat it as an unordered
 	 * set where we can consume arbitrary items in turn.
 	 */
-	stack = stack_init(nfa->opt->alloc);
+	stack = stack_init(nfa->alloc);
 	if (stack == NULL) {
 		goto cleanup;
 	}
 
-	ac_env.alloc = nfa->opt->alloc;
+	ac_env.alloc = nfa->alloc;
 	ac_env.fsm = nfa;
 	ac_env.issp = issp;
 
@@ -142,7 +154,7 @@ fsm_determinise(struct fsm *nfa)
 		(void)iss_accum;
 		iss_calls++;
 
-		if (!edge_set_advise_growth(&curr->edges, nfa->opt->alloc, ac_env.output_count)) {
+		if (!edge_set_advise_growth(&curr->edges, nfa->alloc, ac_env.output_count)) {
 			goto cleanup;
 		}
 
@@ -176,6 +188,11 @@ fsm_determinise(struct fsm *nfa)
 				assert(m->dfastate < dfacount);
 			} else {
 				/* not found -- add a new one and push it to the stack for processing */
+
+				if (state_limit != 0 && dfacount > state_limit) {
+					res = FSM_DETERMINISE_WITH_CONFIG_STATE_LIMIT_REACHED;
+					goto cleanup;
+				}
 				if (!map_add(&map, dfacount, iss, &m)) {
 					goto cleanup;
 				}
@@ -192,14 +209,12 @@ fsm_determinise(struct fsm *nfa)
 			fprintf(stderr, "] -> dfastate %zu on output state %zu\n", m->dfastate, curr->dfastate);
 #endif
 
-			if (!edge_set_add_bulk(&curr->edges, nfa->opt->alloc, output->labels, m->dfastate)) {
+			if (!edge_set_add_bulk(&curr->edges, nfa->alloc, output->labels, m->dfastate)) {
 				goto cleanup;
 			}
 		}
 
 		ac_env.output_count = 0;
-
-		/* All elements in sclosures[] are interned, so they will be freed later. */
 	} while ((curr = stack_pop(stack)));
 	TIME(&post);
 	DIFF_MSEC("det_stack_loop", pre, post, NULL);
@@ -214,7 +229,7 @@ fsm_determinise(struct fsm *nfa)
 		struct mapping *m;
 		struct fsm *dfa;
 
-		dfa = fsm_new(nfa->opt);
+		dfa = fsm_new(nfa->alloc);
 		if (dfa == NULL) {
 			goto cleanup;
 		}
@@ -266,6 +281,7 @@ fsm_determinise(struct fsm *nfa)
 			assert(dfa->states[m->dfastate].edges == NULL);
 
 			dfa->states[m->dfastate].edges = m->edges;
+			m->edges = NULL; /* transfer ownership */
 
 			/*
 			 * The current DFA state is an end state if any of its associated NFA
@@ -296,6 +312,10 @@ fsm_determinise(struct fsm *nfa)
 
 		fsm_capture_integrity_check(dfa);
 
+		if (!remap_eager_outputs(&map, issp, dfa, nfa)) {
+			goto cleanup;
+		}
+
 		fsm_move(nfa, dfa);
 	}
 
@@ -318,7 +338,10 @@ fsm_determinise(struct fsm *nfa)
 	assert(fsm_all(nfa, fsm_isdfa));
 #endif
 
-	res = 1;
+	/* This should not be carried over from the NFA. */
+	assert(nfa->linkage_info == NULL);
+
+	res = FSM_DETERMINISE_WITH_CONFIG_OK;
 
 cleanup:
 	map_free(&map);
@@ -369,17 +392,33 @@ cleanup:
 	return res;
 }
 
+int
+fsm_determinise(struct fsm *nfa)
+{
+	enum fsm_determinise_with_config_res res = fsm_determinise_with_config(nfa, NULL);
+	switch (res) {
+	case FSM_DETERMINISE_WITH_CONFIG_OK:
+		return 1;
+	case FSM_DETERMINISE_WITH_CONFIG_STATE_LIMIT_REACHED:
+		/* unreachable */
+		return 0;
+	case FSM_DETERMINISE_WITH_CONFIG_ERRNO:
+	default:
+		return 0;
+	}
+}
+
 SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static uint64_t
 hash_iss(interned_state_set_id iss)
 {
 	/* Just hashing the ID directly is fine here -- since they're
 	 * interned, they're identified by pointer equality. */
-	return FSM_PHI_64 * (uintptr_t)iss;
+	return hash_id((uintptr_t)iss);
 }
 
 static struct mapping *
-map_first(struct map *map, struct map_iter *iter)
+map_first(const struct map *map, struct map_iter *iter)
 {
 	iter->m = map;
 	iter->i = 0;
@@ -539,6 +578,8 @@ map_free(struct map *map)
 		if (b == NULL) {
 			continue;
 		}
+		/* free any edge sets that didn't get transferred */
+		edge_set_free(map->alloc, b->edges);
 		f_free(map->alloc, b);
 	}
 
@@ -1230,15 +1271,10 @@ build_output_from_cached_analysis(struct analyze_closures_env *env, fsm_state_t 
 
 #define LOG_TO_SET_HTAB 0
 
-SUPPRESS_EXPECTED_UNSIGNED_INTEGER_OVERFLOW()
 static uint64_t
 to_set_hash(size_t count, const fsm_state_t *ids)
 {
-	uint64_t h = hash_id(count);
-	for (size_t i = 0; i < count; i++) {
-		h += hash_id(ids[i]);
-	}
-	return h;
+	return hash_ids(count, ids);
 }
 
 static int
@@ -1254,19 +1290,27 @@ to_set_htab_check(struct analyze_closures_env *env,
 		return 0;
 	}
 
+#if LOG_TO_SET_HTAB || HASH_LOG_PROBES || defined(HASH_PROBE_LIMIT)
+	size_t probes = 0;
+#endif
+	int res = 0;
+
 	const uint64_t mask = bcount - 1;
 	for (size_t b_i = 0; b_i < bcount; b_i++) {
+#if LOG_TO_SET_HTAB || HASH_LOG_PROBES || defined(HASH_PROBE_LIMIT)
+		probes++;
+#endif
 		const struct to_set_bucket *b = &htab->buckets[(h + b_i) & mask];
 		if (b->count == 0) {
-			return 0; /* empty bucket -> not found */
+			goto done; /* empty bucket -> not found */
 		} else if (b->count == count) {
 			assert(env->to_sets.buf != NULL);
 			assert(b->offset + count <= env->to_sets.used);
 			const fsm_state_t *ids = &env->to_sets.buf[b->offset];
 			if (0 == memcmp(ids, dst, count * sizeof(dst[0]))) {
 				*out_offset = b->offset;
-
-				return 1; /* cache hit */
+				res = 1;  /* cache hit */
+				goto done;
 			} else {
 				continue; /* collision */
 			}
@@ -1275,7 +1319,19 @@ to_set_htab_check(struct analyze_closures_env *env,
 		}
 	}
 
-	return 0;
+done:
+#if LOG_TO_SET_HTAB || HASH_LOG_PROBES
+	fprintf(stderr, "%s: result %d, %zu probes, htab: used %zu/%zu ceil\n",
+	    __func__, res, probes, htab->buckets_used, htab->bucket_count);
+#endif
+#ifdef HASH_PROBE_LIMIT
+	if (probes >= HASH_PROBE_LIMIT) {
+		fprintf(stderr, "-- %zd probes, limit exceeded\n", probes);
+	}
+	assert(probes < HASH_PROBE_LIMIT);
+#endif
+
+	return res;
 }
 
 static int
@@ -1337,6 +1393,22 @@ to_set_htab_save(struct analyze_closures_env *env,
 			b->count = count;
 			b->offset = offset;
 			htab->buckets_used++;
+#if HASH_LOG_PROBES
+			fprintf(stderr, "%s: [", __func__);
+			const fsm_state_t *ids = &env->to_sets.buf[offset];
+			for (size_t i = 0; i < count; i++) {
+				fprintf(stderr, "%s%d",
+				    i > 0 ? " " : "", ids[i]);
+			}
+
+			fprintf(stderr, "] -> hash %lx -> b %zu (%zu/%zu used), %zd probes\n",
+			    hash, (hash + b_i) & mask,
+			    htab->buckets_used, htab->bucket_count, b_i);
+#endif
+#if HASH_PROBE_LIMIT
+			assert(b_i < HASH_PROBE_LIMIT);
+#endif
+
 			return 1;
 		} else if (b->count == count) {
 			assert(b->offset != offset); /* no duplicates */
@@ -1492,8 +1564,8 @@ commit_buffered_result(struct analyze_closures_env *env, uint32_t *cache_result_
 		memcpy(&nr->entries[0], env->results.buffer.entries,
 		    nr->count * sizeof(env->results.buffer.entries[0]));
 #if LOG_GROUPING || LOG_COMMIT_BUFFERED_GROUP
-		fprintf(stderr, "%s: alloc %zu, hash 0x%016lx\n",
-		    __func__, alloc_sz, hash_fnv1a_64((const uint8_t *)nr, alloc_sz));
+		fprintf(stderr, "%s: alloc %zu, count %u\n",
+		    __func__, alloc_sz, nr->count));
 #endif
 	}
 
@@ -1549,20 +1621,26 @@ hash_pair(fsm_state_t a, fsm_state_t b)
 	assert(a != b);
 	assert(a & RESULT_BIT);
 	assert(b & RESULT_BIT);
-	a &=~ RESULT_BIT;
-	b &=~ RESULT_BIT;
+	const uint64_t ma = (uint64_t)(a & ~RESULT_BIT); /* m: masked */
+	const uint64_t mb = (uint64_t)(b & ~RESULT_BIT);
+	assert(ma != mb);
 
-	/* Don't hash a and b separately and combine them with
-	 * hash_id, because it's common to have adjacent pairs of
-	 * result IDs, and with how hash_id works that leads to
-	 * multiples of similar hash values bunching up.
-	 *
-	 * This could be replaced with a better hash function later,
-	 * but use LOG_CACHE_HTAB to ensure there aren't visually obvious
-	 * runs of collisions appearing in the tables. */
-	const uint64_t res = hash_id(a + b);
+	/* Left-shift the smaller ID, so the pair order is consistent for hashing. */
+	const uint64_t ab = (ma < mb)
+	    ? ((ma << 32) | mb)
+	    : ((mb << 32) | ma);
+	const uint64_t res = hash_id(ab);
 	/* fprintf(stderr, "%s: a %d, b %d -> %016lx\n", __func__, a, b, res); */
 	return res;
+}
+
+static int eq_bucket_pair(const struct result_pair_bucket *b, fsm_state_t pa, fsm_state_t pb)
+{
+	if ((pa & ~RESULT_BIT) < (pb & ~RESULT_BIT)) {
+		return b->ids[0] == pa && b->ids[1] == pb;
+	} else {
+		return b->ids[0] == pb && b->ids[1] == pa;
+	}
 }
 
 static int
@@ -1590,7 +1668,7 @@ analysis_cache_check_pair(struct analyze_closures_env *env, fsm_state_t pa, fsm_
 		struct result_pair_bucket *b = &htab->buckets[(h + i) & mask];
 		if (b->t == RPBT_UNUSED) {
 			break;	/* not found */
-		} else if (b->t == RPBT_PAIR && b->ids[0] == pa && b->ids[1] == pb) {
+		} else if (b->t == RPBT_PAIR && eq_bucket_pair(b, pa, pb)) {
 			*result_id = b->result_id; /* hit */
 #if LOG_GROUPING > 1
 			fprintf(stderr, "%s: cache hit for pair { %d_R, %d_R } => %d\n",
@@ -1724,6 +1802,7 @@ pair_cache_save(struct analyze_closures_env *env,
 		assert(pa != pb);
 		assert(pa & RESULT_BIT);
 		assert(pb & RESULT_BIT);
+		assert((pa & ~RESULT_BIT) < (pb & ~RESULT_BIT));
 	}
 
 #if LOG_GROUPING > 1
@@ -1761,6 +1840,8 @@ pair_cache_save(struct analyze_closures_env *env,
 				    : hash_pair(ob->ids[0], ob->ids[1]));
 				if (ob->t == RPBT_SINGLE_STATE) {
 					assert(ob->ids[0] == ob->ids[1]);
+				} else {
+					assert((ob->ids[0] & ~RESULT_BIT) < (ob->ids[1] & ~RESULT_BIT));
 				}
 
 				for (size_t nb_i = 0; nb_i < ncount; nb_i++) {
@@ -1795,8 +1876,9 @@ pair_cache_save(struct analyze_closures_env *env,
 #endif
 
 		if (b->t == RPBT_UNUSED) { /* empty */
-			b->ids[0] = pa;
-			b->ids[1] = pb;
+			/* Ensure pair ordering is consistent */
+			b->ids[0] = pa < pb ? pa : pb;
+			b->ids[1] = pa < pb ? pb : pa;
 			b->t = type;
 			b->result_id = result_id;
 			htab->buckets_used++;
@@ -1840,6 +1922,16 @@ analysis_cache_save_pair(struct analyze_closures_env *env,
 	fsm_state_t a, fsm_state_t b, fsm_state_t result_id)
 {
 	assert(a != b);
+	assert((a & RESULT_BIT) == 0);
+	assert((b & RESULT_BIT) == 0);
+
+	if (a > b) {		/* if necessary, swap to ensure a < b */
+		const fsm_state_t tmp = a;
+		a = b;
+		b = tmp;
+	}
+	assert(a < b);
+
 	return pair_cache_save(env, RPBT_PAIR, a | RESULT_BIT, b | RESULT_BIT, result_id);
 }
 
@@ -1935,6 +2027,71 @@ cmp_fsm_state_t(const void *pa, const void *pb)
 	return a < b ? -1 : a > b ? 1 : 0;
 }
 
+#define SMALL_INPUT_LIMIT 255
+#define SMALL_INPUT_CHECK 0
+
+#ifdef SMALL_INPUT_LIMIT
+static void
+small_input_sort_and_dedup(fsm_state_t *buf, size_t *pused)
+{
+	/* Alternate sort_and_dedup_dst_buf implementation for when
+	 * the input is small enough to fit in a few cache lines. */
+
+	const size_t orig_used = *pused;
+	assert(orig_used > 0 && orig_used <= SMALL_INPUT_LIMIT);
+	size_t used = 0;
+	fsm_state_t tmp[SMALL_INPUT_LIMIT];
+
+	const fsm_state_t MOVED = (fsm_state_t)-1;
+
+	tmp[used++] = buf[0];
+	buf[0] = MOVED;
+
+	/* First, insert unique ascending values into a tmp buffer.
+	 * If the input is already mostly sorted, great. */
+	for (size_t i = 1; i < orig_used; i++) {
+		fsm_state_t cur = buf[i];
+		if (cur > tmp[used - 1]) {
+			tmp[used++] = cur;
+			buf[i] = MOVED;
+		}
+	}
+
+	/* Then, do insertion sort for entries that haven't already been
+	 * moved into tmp. They must go somewhere in the middle, because
+	 * entries > the other entries in tmp would have already been
+	 * appended in the first pass. */
+	for (size_t i = 1; i < orig_used; i++) {
+		const fsm_state_t cur = buf[i];
+		if (cur == MOVED) { continue; }
+		for (size_t j = 0; j < used; j++) {
+			const fsm_state_t other = tmp[j];
+			if (cur < other) { /* shift the rest down */
+				const size_t to_move = used - j;
+				memmove(&tmp[j+1], &tmp[j], to_move * sizeof(tmp[j]));
+				tmp[j] = cur;
+				used++;
+				break;
+			} else if (cur == other) {
+				break;		  /* discard duplicate */
+			}
+		}
+	}
+
+	/* Finally, copy the sorted/dedup'd input back into the buffer. */
+	for (size_t i = 0; i < used; i++) {
+		buf[i] = tmp[i];
+	}
+	*pused = used;
+
+	if (SMALL_INPUT_CHECK) {
+		for (size_t i = 1; i < used; i++) {
+			assert(buf[i - 1] < buf[i]);
+		}
+	}
+}
+#endif
+
 static void
 sort_and_dedup_dst_buf(fsm_state_t *buf, size_t *used)
 {
@@ -1944,15 +2101,38 @@ sort_and_dedup_dst_buf(fsm_state_t *buf, size_t *used)
 		return;		/* no change */
 	}
 
+#ifdef SMALL_INPUT_LIMIT
+	if (orig_used <= SMALL_INPUT_LIMIT) {
+		small_input_sort_and_dedup(buf, used);
+		return;
+	}
+#endif
+
 	/* Figure out what the min and max values are, because
 	 * when the difference between them is not too large it
 	 * can be significantly faster to avoid qsort here. */
 	fsm_state_t min = (fsm_state_t)-1;
 	fsm_state_t max = 0;
+	fsm_state_t prev;
+	int already_sorted_and_unique = 1;
+
 	for (size_t i = 0; i < orig_used; i++) {
 		const fsm_state_t cur = buf[i];
 		if (cur < min) { min = cur; }
 		if (cur > max) { max = cur; }
+
+		if (i > 0) {
+			if (cur <= prev) {
+				already_sorted_and_unique = 0;
+			}
+		}
+		prev = cur;
+	}
+
+	/* If the buffer is already sorted and unique, we're done. */
+	if (already_sorted_and_unique) {
+		*used = orig_used;
+		return;
 	}
 
 	/* If there's only one unique value, then we're done. */
@@ -2303,5 +2483,52 @@ analyze_closures__grow_outputs(struct analyze_closures_env *env)
 
 	env->outputs = nos;
 	env->output_ceil = nceil;
+	return 1;
+}
+
+struct remap_eager_output_env {
+	bool ok;
+	struct fsm *dst;
+	fsm_state_t dst_state;
+};
+
+static int
+remap_eager_output_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
+{
+	(void)state;
+	struct remap_eager_output_env *env = opaque;
+	if (!fsm_eager_output_set(env->dst, env->dst_state, id)) {
+		env->ok = false;
+		return 0;
+	}
+
+	return 1;
+}
+
+static int
+remap_eager_outputs(const struct map *map, struct interned_state_set_pool *issp,
+	struct fsm *dst_dfa, const struct fsm *src_nfa)
+{
+	/* For each DFA state, get the set of NFA states corresponding to it from the
+	 * map and issp, then copy every eager output ID over. */
+	struct map_iter iter;
+	for (struct mapping *b = map_first(map, &iter); b != NULL; b = map_next(&iter)) {
+		struct state_set *ss = interned_state_set_get_state_set(issp, b->iss);
+		assert(ss != NULL);
+
+		struct state_iter it;
+		fsm_state_t s;
+		state_set_reset(ss, &it);
+		while (state_set_next(&it, &s)) {
+			struct remap_eager_output_env env = {
+				.ok = true,
+				.dst = dst_dfa,
+				.dst_state = b->dfastate,
+			};
+			fsm_eager_output_iter_state(src_nfa, s, remap_eager_output_cb, &env);
+			if (!env.ok) { return 0; }
+		}
+	}
+
 	return 1;
 }

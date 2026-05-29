@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 struct fsm;
+struct fsm_options;
 struct fsm_dfavm;
 
 enum fsm_vm_compile_flags {
@@ -34,7 +35,8 @@ struct fsm_dfavm *
 fsm_vm_compile(const struct fsm *fsm);
 
 struct fsm_dfavm *
-fsm_vm_compile_with_options(const struct fsm *fsm, struct fsm_vm_compile_opts opts);
+fsm_vm_compile_with_options(const struct fsm *fsm,
+	const struct fsm_options *opt, struct fsm_vm_compile_opts opts);
 
 struct fsm_dfavm *
 fsm_vm_read(FILE *f);

@@ -57,18 +57,22 @@ fsm_capture_init(struct fsm *fsm)
 	struct idmap *end_capture_map = NULL;
 	struct idmap *end_capvm_program_map = NULL;
 
-	ci = f_calloc(fsm->opt->alloc,
-	    1, sizeof(*ci));
+	ci = f_calloc(fsm->alloc, 1, sizeof(*ci));
 	if (ci == NULL) {
 		goto cleanup;
 	}
-	end_capture_map = idmap_new(fsm->opt->alloc);
+	end_capture_map = idmap_new(fsm->alloc);
 	if (end_capture_map == NULL) {
 		goto cleanup;
 	}
+
+	ci->max_capture_id = 0;
+
+	fsm->capture_info = ci;
+
 	ci->end_capture_map = end_capture_map;
 
-	end_capvm_program_map = idmap_new(fsm->opt->alloc);
+	end_capvm_program_map = idmap_new(fsm->alloc);
 	if (end_capvm_program_map == NULL) {
 		goto cleanup;
 	}
@@ -79,9 +83,13 @@ fsm_capture_init(struct fsm *fsm)
 	return 1;
 
 cleanup:
-	f_free(fsm->opt->alloc, ci);
+	f_free(fsm->alloc, ci);
 	idmap_free(end_capture_map);
 	idmap_free(end_capvm_program_map);
+
+	if (ci != NULL) {
+		f_free(fsm->alloc, ci);
+	}
 	return 0;
 }
 
@@ -92,16 +100,15 @@ fsm_capture_free(struct fsm *fsm)
 	if (ci == NULL) {
 		return;
 	}
-
 	idmap_free(ci->end_capture_map);
 	idmap_free(ci->end_capvm_program_map);
 
 	for (size_t p_i = 0; p_i < ci->programs.used; p_i++) {
-		fsm_capvm_program_free(fsm->opt->alloc, ci->programs.set[p_i]);
+		fsm_capvm_program_free(fsm->alloc, ci->programs.set[p_i]);
 	}
-	f_free(fsm->opt->alloc, ci->programs.set);
+	f_free(fsm->alloc, ci->programs.set);
 
-	f_free(fsm->opt->alloc, ci);
+	f_free(fsm->alloc, ci);
 	fsm->capture_info = NULL;
 }
 
@@ -132,7 +139,7 @@ fsm_capture_alloc_capture_buffer(const struct fsm *fsm)
 {
 	assert(fsm != NULL);
 	const size_t len = fsm_capture_ceiling(fsm);
-	struct fsm_capture *res = f_malloc(fsm->opt->alloc,
+	struct fsm_capture *res = f_malloc(fsm->alloc,
 	    len * sizeof(res[0]));
 	return res;
 }
@@ -142,7 +149,7 @@ fsm_capture_free_capture_buffer(const struct fsm *fsm,
     struct fsm_capture *capture_buffer)
 {
 	assert(fsm != NULL);
-	f_free(fsm->opt->alloc, capture_buffer);
+	f_free(fsm->alloc, capture_buffer);
 }
 
 
@@ -168,6 +175,10 @@ fsm_capture_dump_programs(FILE *f, const struct fsm *fsm)
 	}
 }
 
+#if EXPENSIVE_CHECKS
+#include <fsm/print.h>
+#endif
+
 int
 fsm_capture_set_active_for_end(struct fsm *fsm,
     unsigned capture_id, fsm_state_t end_state)
@@ -177,7 +188,13 @@ fsm_capture_set_active_for_end(struct fsm *fsm,
 	struct idmap *m = ci->end_capture_map;
 	assert(m != NULL);
 
+	// FIXME: failing currently
 	#if EXPENSIVE_CHECKS
+	if (!fsm_isend(fsm, end_state)) {
+		fprintf(stderr, "FAILING: %s: capture_id %u, end_state %d\n",
+		    __func__, capture_id, end_state);
+		fsm_dump(stderr, fsm);
+	}
 	assert(fsm_isend(fsm, end_state));
 	#endif
 
@@ -383,8 +400,8 @@ int
 fsm_capture_copy_programs(const struct fsm *src_fsm,
 	struct fsm *dst_fsm)
 {
-	const struct fsm_alloc *alloc = src_fsm->opt->alloc;
-	assert(alloc == dst_fsm->opt->alloc);
+	const struct fsm_alloc *alloc = src_fsm->alloc;
+	assert(alloc == dst_fsm->alloc);
 	const struct fsm_capture_info *src_ci = src_fsm->capture_info;
 
 	for (uint32_t p_i = 0; p_i < src_ci->programs.used; p_i++) {
@@ -470,7 +487,7 @@ fsm_capture_id_compact(struct fsm *fsm, const fsm_state_t *mapping,
 {
 	struct capture_idmap_compact_env env;
 	struct idmap *old_idmap = fsm->capture_info->end_capture_map;
-	struct idmap *new_idmap = idmap_new(fsm->opt->alloc);
+	struct idmap *new_idmap = idmap_new(fsm->alloc);
 
 	if (new_idmap == NULL) {
 		return 0;
@@ -499,7 +516,7 @@ fsm_capture_program_association_compact(struct fsm *fsm, const fsm_state_t *mapp
 {
 	struct capture_idmap_compact_env env;
 	struct idmap *old_idmap = fsm->capture_info->end_capvm_program_map;
-	struct idmap *new_idmap = idmap_new(fsm->opt->alloc);
+	struct idmap *new_idmap = idmap_new(fsm->alloc);
 
 	if (new_idmap == NULL) {
 		return 0;
@@ -546,7 +563,7 @@ fsm_capture_add_program(struct fsm *fsm,
 		    ? DEF_PROGRAMS_CEIL
 		    : 2*ci->programs.ceil);
 		assert(nceil > ci->programs.ceil);
-		struct capvm_program **nset = f_realloc(fsm->opt->alloc,
+		struct capvm_program **nset = f_realloc(fsm->alloc,
 		    ci->programs.set, nceil * sizeof(nset[0]));
 		if (nset == NULL) {
 			return 0;

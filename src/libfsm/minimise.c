@@ -17,18 +17,17 @@
 #include <fsm/walk.h>
 #include <fsm/alloc.h>
 
-#if EXPENSIVE_CHECKS
-#include <fsm/print.h>
-#endif
-
 #include <adt/edgeset.h>
 #include <adt/hash.h>
 #include <adt/pv.h>
 #include <adt/set.h>
 #include <adt/u64bitset.h>
+#include <adt/hash.h>
 
 #include "internal.h"
 #include "capture.h"
+#include "eager_output.h"
+#include "endids.h"
 
 #define LOG_MAPPINGS 0
 #define LOG_STEPS 0
@@ -57,6 +56,16 @@ all_end_states_are_currently_together(const struct min_env *env);
 
 #define DEF_CAPTURE_ID_CEIL 4
 struct end_metadata {
+	struct end_metadata_end {
+		unsigned count;
+		fsm_end_id_t *ids;
+	} end;
+
+	struct end_metadata_eager_outputs {
+		unsigned count;
+		fsm_output_id_t *ids;
+	} eager_outputs;
+
 	struct end_metadata_capture {
 		unsigned count;
 		unsigned ceil;
@@ -77,6 +86,14 @@ collect_capture_ids(const struct fsm *fsm, fsm_state_t s,
 static int
 collect_capture_program_ids(const struct fsm *fsm, fsm_state_t s,
 	struct end_metadata_program *p);
+
+static int
+collect_end_ids(const struct fsm *fsm, fsm_state_t s,
+	struct end_metadata_end *e);
+
+static int
+collect_eager_output_ids(const struct fsm *fsm, fsm_state_t s,
+	struct end_metadata_eager_outputs *e);
 
 int
 fsm_minimise(struct fsm *fsm)
@@ -135,7 +152,7 @@ fsm_minimise(struct fsm *fsm)
 		goto cleanup;
 	}
 
-	mapping = f_malloc(fsm->opt->alloc,
+	mapping = f_malloc(fsm->alloc,
 	    fsm->statecount * sizeof(mapping[0]));
 	if (mapping == NULL) {
 		goto cleanup;
@@ -156,6 +173,10 @@ fsm_minimise(struct fsm *fsm)
 
 	/* Minimisation should never add states. */
 	assert(minimised_states <= orig_states);
+
+	for (size_t i = 0; i < fsm->statecount; i++) {
+		assert(mapping[i] < fsm->statecount);
+	}
 
 	/* Use the mapping to consolidate the current states
 	 * into a new DFA, combining states that could not be
@@ -181,10 +202,10 @@ fsm_minimise(struct fsm *fsm)
 			fprintf(stderr, "%s: expected minimal DFA with %zu states, got %zu\n",
 			    __func__, exp_count, got_count);
 			fprintf(stderr, "== expected:\n");
-			fsm_print_fsm(stderr, oracle);
+			fsm_dump(stderr, oracle);
 
 			fprintf(stderr, "== got:\n");
-			fsm_print_fsm(stderr, dst);
+			fsm_dump(stderr, dst);
 			assert(!"non-minimal result");
 		}
 
@@ -194,12 +215,18 @@ fsm_minimise(struct fsm *fsm)
 
 	fsm_move(fsm, dst);
 
+	/* The FSM state count should be settled now, so if the state
+	 * allocation is unnecessarily large move to a smaller one. */
+	if (!fsm_vacuum(fsm)) {	/* realloc failure */
+		r = 0;
+	}
+
 cleanup:
 	if (mapping != NULL) {
-		f_free(fsm->opt->alloc, mapping);
+		f_free(fsm->alloc, mapping);
 	}
 	if (shortest_end_distance != NULL) {
-		f_free(fsm->opt->alloc, shortest_end_distance);
+		f_free(fsm->alloc, shortest_end_distance);
 	}
 
 	return r;
@@ -293,14 +320,14 @@ build_minimised_mapping(const struct fsm *fsm,
 	env.dfa_labels = dfa_labels;
 	env.dfa_label_count = dfa_label_count;
 
-	env.state_ecs = f_malloc(fsm->opt->alloc, alloc_size);
+	env.state_ecs = f_malloc(fsm->alloc, alloc_size);
 	if (env.state_ecs == NULL) { goto cleanup; }
 	env.ec_map_count = fsm->statecount + 1;
 
-	env.jump = f_malloc(fsm->opt->alloc, alloc_size);
+	env.jump = f_malloc(fsm->alloc, alloc_size);
 	if (env.jump == NULL) { goto cleanup; }
 
-	env.ecs = f_malloc(fsm->opt->alloc, alloc_size);
+	env.ecs = f_malloc(fsm->alloc, alloc_size);
 	if (env.ecs == NULL) { goto cleanup; }
 
 	env.ecs[INIT_EC_NOT_FINAL] = NO_ID;
@@ -446,9 +473,9 @@ build_minimised_mapping(const struct fsm *fsm,
 	/* fall through */
 
 cleanup:
-	f_free(fsm->opt->alloc, env.ecs);
-	f_free(fsm->opt->alloc, env.state_ecs);
-	f_free(fsm->opt->alloc, env.jump);
+	f_free(fsm->alloc, env.ecs);
+	f_free(fsm->alloc, env.state_ecs);
+	f_free(fsm->alloc, env.jump);
 	return res;
 }
 
@@ -544,7 +571,7 @@ populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
 	assert(fsm != NULL);
 	assert(shortest_end_distance != NULL);
 
-	counts = f_calloc(fsm->opt->alloc,
+	counts = f_calloc(fsm->alloc,
 	    DEF_INITIAL_COUNT_CEIL, sizeof(counts[0]));
 	if (counts == NULL) {
 		goto cleanup;
@@ -570,7 +597,7 @@ populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
 			while (sed >= nceil) {
 				nceil *= 2;
 			}
-			ncounts = f_realloc(fsm->opt->alloc,
+			ncounts = f_realloc(fsm->alloc,
 			    counts, nceil * sizeof(counts[0]));
 			if (ncounts == NULL) {
 				goto cleanup;
@@ -599,7 +626,7 @@ populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
 	/* Build a permutation vector of the counts, such
 	 * that counts[pv[i..N]] would return the values
 	 * in counts[] in ascending order. */
-	pv = permutation_vector(fsm->opt->alloc,
+	pv = permutation_vector(fsm->alloc,
 	    sed_limit, count_max, counts);
 	if (pv == NULL) {
 		goto cleanup;
@@ -639,7 +666,7 @@ populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
 	 * [1]: http://www.sudleyplace.com/APL/Anatomy%20of%20An%20Idiom.pdf
 	 * [2]: https://bitbucket.org/ngn/k/src
 	 */
-	ranking = permutation_vector(fsm->opt->alloc,
+	ranking = permutation_vector(fsm->alloc,
 	    sed_limit, sed_limit, pv);
 	if (ranking == NULL) {
 		goto cleanup;
@@ -689,9 +716,9 @@ populate_initial_ecs(struct min_env *env, const struct fsm *fsm,
 	res = 1;
 
 cleanup:
-	f_free(fsm->opt->alloc, counts);
-	f_free(fsm->opt->alloc, pv);
-	f_free(fsm->opt->alloc, ranking);
+	f_free(fsm->alloc, counts);
+	f_free(fsm->alloc, pv);
+	f_free(fsm->alloc, ranking);
 	return res;
 
 #else
@@ -735,6 +762,13 @@ same_end_metadata(const struct end_metadata *a, const struct end_metadata *b)
 		return 0;
 	}
 
+	if (a->end.count != b->end.count) {
+		return 0;
+	}
+	if (a->eager_outputs.count != b->eager_outputs.count) {
+		return 0;
+	}
+
 	/* compare -- these must be sorted */
 
 	for (size_t i = 0; i < a->capture.count; i++) {
@@ -744,6 +778,18 @@ same_end_metadata(const struct end_metadata *a, const struct end_metadata *b)
 	}
 	for (size_t i = 0; i < a->program.count; i++) {
 		if (a->program.ids[i] != b->program.ids[i]) {
+			return 0;
+		}
+	}
+
+	for (size_t i = 0; i < a->end.count; i++) {
+		if (a->end.ids[i] != b->end.ids[i]) {
+			return 0;
+		}
+	}
+
+	for (size_t i = 0; i < a->eager_outputs.count; i++) {
+		if (a->eager_outputs.ids[i] != b->eager_outputs.ids[i]) {
 			return 0;
 		}
 	}
@@ -770,7 +816,7 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 
 	/* Use the hash table to assign to new groups. */
 
-	end_md = f_calloc(fsm->opt->alloc,
+	end_md = f_calloc(fsm->alloc,
 	    state_count, sizeof(end_md[0]));
 	if (end_md == NULL) {
 		goto cleanup;
@@ -782,7 +828,7 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 	}
 	const size_t mask = bucket_count - 1;
 
-	htab = f_malloc(fsm->opt->alloc,
+	htab = f_malloc(fsm->alloc,
 	    bucket_count * sizeof(htab[0]));
 	if (htab == NULL) {
 		goto cleanup;
@@ -796,8 +842,15 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 #endif
 		while (s != NO_ID) {
 			struct end_metadata *e = &end_md[s];
-			if (!fsm_isend(fsm, s)) {
-				break; /* this EC has non-end states, skip */
+			const bool is_end = fsm_isend(fsm, s);
+			const bool has_eager_outputs = fsm_eager_output_state_has_eager_output(fsm, s);
+
+			if (!is_end && !has_eager_outputs) {
+				break; /* skip */
+			}
+
+			if (!collect_end_ids(fsm, s, &e->end)) {
+				goto cleanup;
 			}
 
 			if (!collect_capture_ids(fsm, s, &e->capture)) {
@@ -805,6 +858,10 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 			}
 
 			if (!collect_capture_program_ids(fsm, s, &e->program)) {
+				goto cleanup;
+			}
+
+			if (!collect_eager_output_ids(fsm, s, &e->eager_outputs)) {
 				goto cleanup;
 			}
 
@@ -818,7 +875,6 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 	fprintf(stderr, "====\n");
 #endif
 
-	/* FIXME: is this actually the right behavior? */
 	/* Second pass: partition ECs into groups with identical end IDs.
 	 * for each group with different end IDs, unlink them. */
 	const size_t max_ec = env->ec_count;
@@ -838,6 +894,14 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 
 			for (size_t pid_i = 0; pid_i < s_md->program.count; pid_i++) {
 				incremental_hash_of_ids(&hash, s_md->program.ids[pid_i]);
+			}
+
+			for (size_t eid_i = 0; eid_i < s_md->end.count; eid_i++) {
+				incremental_hash_of_ids(&hash, s_md->end.ids[eid_i]);
+			}
+
+			for (size_t eo_i = 0; eo_i < s_md->eager_outputs.count; eo_i++) {
+				incremental_hash_of_ids(&hash, s_md->eager_outputs.ids[eo_i]);
 			}
 
 			for (size_t b_i = 0; b_i < bucket_count; b_i++) {
@@ -974,20 +1038,26 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 
 cleanup:
 	if (htab != NULL) {
-		f_free(fsm->opt->alloc, htab);
+		f_free(fsm->alloc, htab);
 	}
 	if (end_md != NULL) {
 		size_t i;
 		for (i = 0; i < state_count; i++) {
 			struct end_metadata *e = &end_md[i];
+			if (e->end.ids != NULL) {
+				f_free(fsm->alloc, e->end.ids);
+			}
+			if (e->eager_outputs.ids != NULL) {
+				f_free(fsm->alloc, e->eager_outputs.ids);
+			}
 			if (e->capture.ids != NULL) {
-				f_free(fsm->opt->alloc, e->capture.ids);
+				f_free(fsm->alloc, e->capture.ids);
 			}
 			if (e->program.ids != NULL) {
-				f_free(fsm->opt->alloc, e->program.ids);
+				f_free(fsm->alloc, e->program.ids);
 			}
 		}
-		f_free(fsm->opt->alloc, end_md);
+		f_free(fsm->alloc, end_md);
 	}
 
 	return res;
@@ -1039,7 +1109,7 @@ collect_capture_ids(const struct fsm *fsm, fsm_state_t s,
 {
 	struct collect_capture_env env = {
 		.ok = 1,
-		.alloc = fsm->opt->alloc,
+		.alloc = fsm->alloc,
 		.c = c,
 	};
 	fsm_capture_iter_active_for_end_state(fsm, s,
@@ -1087,7 +1157,7 @@ collect_capture_program_ids(const struct fsm *fsm, fsm_state_t s,
 {
 	struct collect_capture_env env = {
 		.ok = 1,
-		.alloc = fsm->opt->alloc,
+		.alloc = fsm->alloc,
 		.p = p,
 	};
 	fsm_capture_iter_program_ids_for_end_state(fsm, s,
@@ -1102,6 +1172,70 @@ collect_capture_program_ids(const struct fsm *fsm, fsm_state_t s,
 	}
 
 	return env.ok;
+}
+
+static int
+collect_end_ids(const struct fsm *fsm, fsm_state_t s,
+	struct end_metadata_end *e)
+{
+	e->count = fsm_endid_count(fsm, s);
+	if (e->count == 0) {
+		return 1;
+	}
+
+	e->ids = f_malloc(fsm->alloc,
+		e->count * sizeof(e->ids[0]));
+	if (e->ids == NULL) {
+		return 0;
+	}
+
+	int res = fsm_endid_get(fsm, s, e->count, e->ids);
+	assert(res == 1);
+
+#if LOG_ECS
+	fprintf(stderr, "%d:", s);
+	for (size_t i = 0; i < e->count; i++) {
+		fprintf(stderr, " %u", e->ids[i]);
+	}
+	fprintf(stderr, "\n");
+#endif
+
+	return 1;
+}
+
+static int
+collect_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
+{
+	(void)state;
+	struct end_metadata_eager_outputs *e = opaque;
+	e->ids[e->count++] = id;
+	return 1;
+}
+
+static int cmp_eager_output_id(const void *pa, const void *pb)
+{
+	const fsm_output_id_t a = *(fsm_output_id_t *)pa;
+	const fsm_output_id_t b = *(fsm_output_id_t *)pb;
+	return a < b ? -1 : a > b ? 1 : 0;
+}
+
+static int
+collect_eager_output_ids(const struct fsm *fsm, fsm_state_t state,
+	struct end_metadata_eager_outputs *e)
+{
+	size_t count = fsm_eager_output_count(fsm, state);
+	if (count == 0) {
+		return 1;	/* nothing to do */
+	}
+
+	e->ids = f_malloc(fsm->alloc, count * sizeof(e->ids[0]));
+	if (e->ids == NULL) { return 0; }
+
+	fsm_eager_output_iter_state(fsm, state, collect_cb, e);
+
+	/* sort, to normalize set */
+	qsort(e->ids, e->count, sizeof(e->ids[0]), cmp_eager_output_id);
+	return 1;
 }
 
 #if EXPENSIVE_CHECKS

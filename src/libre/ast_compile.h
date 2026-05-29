@@ -12,12 +12,13 @@
  */
 
 struct fsm;
+struct fsm_alloc;
 struct re_err;
 
 struct fsm *
 ast_compile(const struct ast *ast,
 	enum re_flags re_flags,
-	const struct fsm_options *opt,
+	const struct fsm_alloc *alloc,
 	struct re_err *err);
 
 #endif

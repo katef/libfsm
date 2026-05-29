@@ -9,6 +9,8 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 #include <fsm/fsm.h>
 #include <fsm/capture.h>
@@ -24,6 +26,7 @@
 #include "internal.h"
 #include "capture.h"
 #include "endids.h"
+#include "eager_output.h"
 
 #define LOG_MAPPING 0
 #define LOG_CONSOLIDATE_CAPTURES 0
@@ -36,6 +39,10 @@ struct mapping_closure {
 
 static int
 consolidate_end_metadata(struct fsm *dst, const struct fsm *src,
+    const fsm_state_t *mapping, size_t mapping_count);
+
+static int
+consolidate_eager_output_ids(struct fsm *dst, const struct fsm *src,
     const fsm_state_t *mapping, size_t mapping_count);
 
 static fsm_state_t
@@ -66,9 +73,8 @@ fsm_consolidate(const struct fsm *src,
 	if (mapping_count == 0) {
 		return fsm_clone(src);
 	}
-	assert(src->opt != NULL);
 
-	dst = fsm_new(src->opt);
+	dst = fsm_new(src->alloc);
 	if (dst == NULL) {
 		goto cleanup;
 	}
@@ -90,7 +96,7 @@ fsm_consolidate(const struct fsm *src,
 	}
 	assert(dst->statecount == max_used + 1);
 
-	seen = f_calloc(src->opt->alloc,
+	seen = f_calloc(src->alloc,
 	    mapping_count/64 + 1, sizeof(seen[0]));
 	if (seen == NULL) {
 		goto cleanup;
@@ -117,19 +123,19 @@ fsm_consolidate(const struct fsm *src,
 			SET_DST_SEEN(dst_i);
 
 			if (!state_set_copy(&dst->states[dst_i].epsilons,
-				dst->opt->alloc, src->states[src_i].epsilons)) {
+				dst->alloc, src->states[src_i].epsilons)) {
 				goto cleanup;
 			}
 			state_set_compact(&dst->states[dst_i].epsilons,
 			    mapping_cb, &closure);
 
 			if (!edge_set_copy(&dst->states[dst_i].edges,
-				dst->opt->alloc,
+				dst->alloc,
 				src->states[src_i].edges)) {
 				goto cleanup;
 			}
 			edge_set_compact(&dst->states[dst_i].edges,
-			    dst->opt->alloc, mapping_cb, &closure);
+			    dst->alloc, mapping_cb, &closure);
 
 			if (fsm_isend(src, src_i)) {
 				fsm_setend(dst, dst_i, 1);
@@ -154,13 +160,17 @@ fsm_consolidate(const struct fsm *src,
 		}
 	}
 
-	f_free(src->opt->alloc, seen);
+	if (!consolidate_eager_output_ids(dst, src, mapping, mapping_count)) {
+		goto cleanup;
+	}
+
+	f_free(src->alloc, seen);
 
 	return dst;
 
 cleanup:
 
-	if (seen != NULL) { f_free(src->opt->alloc, seen); }
+	if (seen != NULL) { f_free(src->alloc, seen); }
 	return NULL;
 }
 
@@ -248,7 +258,9 @@ consolidate_end_metadata(struct fsm *dst, const struct fsm *src,
 {
 	struct consolidate_end_ids_env env;
 
+#ifndef NDEBUG
 	env.tag = 'C';		/* for Consolidate */
+#endif
 	env.dst = dst;
 	env.src = src;
 	env.mapping = mapping;
@@ -282,3 +294,40 @@ consolidate_end_metadata(struct fsm *dst, const struct fsm *src,
 
 	return env.ok;
 }
+
+struct consolidate_eager_output_ids_env {
+	bool ok;
+	struct fsm *dst;
+	const fsm_state_t *mapping;
+	size_t mapping_count;
+};
+
+static int
+consolidate_eager_output_ids_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
+{
+	struct consolidate_eager_output_ids_env *env = opaque;
+	assert(state < env->mapping_count);
+	const fsm_state_t dst_state = env->mapping[state];
+
+	if (!fsm_eager_output_set(env->dst, dst_state, id)) {
+		env->ok = false;
+		return 0;
+	}
+
+	return 1;
+}
+
+static int
+consolidate_eager_output_ids(struct fsm *dst, const struct fsm *src,
+    const fsm_state_t *mapping, size_t mapping_count)
+{
+	struct consolidate_eager_output_ids_env env = {
+		.ok = true,
+		.dst = dst,
+		.mapping = mapping,
+		.mapping_count = mapping_count,
+	};
+	fsm_eager_output_iter_all(src, consolidate_eager_output_ids_cb, &env);
+	return env.ok;
+}
+

@@ -18,12 +18,14 @@
 
 	<!ENTITY api_tokbuf.arg "<replaceable>tokbuf</replaceable>">
 	<!ENTITY api_getc.arg   "<replaceable>getc</replaceable>">
+	<!ENTITY api_io.arg      "<replaceable>io</replaceable>">
 
 	<!ENTITY n.opt "<option>-n</option>">
 	<!ENTITY Q.opt "<option>-Q</option>">
 	<!ENTITY X.opt "<option>-X</option>">
 	<!ENTITY b.opt "<option>-b</option>&nbsp;&api_tokbuf.arg;">
 	<!ENTITY g.opt "<option>-g</option>&nbsp;&api_getc.arg;">
+	<!ENTITY k.opt "<option>-k</option>&nbsp;&api_io.arg;">
 	<!ENTITY l.opt "<option>-l</option>&nbsp;&lang.arg;">
 	<!ENTITY e.opt "<option>-e</option>&nbsp;&prefix.arg;">
 	<!ENTITY t.opt "<option>-t</option>&nbsp;&prefix.arg;">
@@ -62,6 +64,7 @@
 			<arg choice="opt">&X.opt;</arg>
 			<arg choice="opt">&b.opt;</arg>
 			<arg choice="opt">&g.opt;</arg>
+			<arg choice="opt">&k.opt;</arg>
 			<arg choice="opt">&l.opt;</arg>
 			<arg choice="opt">&e.opt;</arg>
 			<arg choice="opt">&t.opt;</arg>
@@ -220,6 +223,16 @@ Dot output is not subject to checks for semantic errors
 							</tr>
 						</tbody>
 					</table>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&k.opt;</term>
+
+				<listitem>
+					<para>Set the IO &api; for output,
+						per the <code>io</code> option for &fsm_print.3;.
+						The default is <literal>getc</literal>.</para>
 				</listitem>
 			</varlistentry>
 

@@ -34,6 +34,7 @@ int main(void) {
 	assert(fsm != NULL);
 
 	if (!fsm_generate_matches(fsm, MAX_EXP_MATCH + 1 /* for \0 */,
+		0,
 		gtest_matches_cb, &matches)) {
 		fprintf(stderr, "fsm_generate_matches: error\n");
 		exit(EXIT_FAILURE);

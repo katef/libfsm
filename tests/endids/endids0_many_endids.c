@@ -39,18 +39,18 @@ int main(void)
 	 *
 	 * 17 endids.  This should force the array of end ids to resize.
 	 */
-	static const fsm_end_id_t all_end_ids[17] = {
+	static const fsm_end_id_t all_ids[17] = {
 		4, 17,  6, 18,  2, 63, 14, 62,
 		3, 37, 46,  7,  9, 72, 67, 36,
 		1,
 	};
 
-	static const fsm_end_id_t sorted_all_end_ids[17] = {
+	static const fsm_end_id_t sorted_all_ids[17] = {
 		1, 2, 3, 4, 6, 7, 9, 14, 17, 18, 36, 37, 46, 62, 63, 67, 72,
 	};
 
-	for (size_t i=0; i < sizeof all_end_ids / sizeof all_end_ids[0]; i++) {
-		ret = fsm_setendid(fsm, all_end_ids[i]);
+	for (size_t i=0; i < sizeof all_ids / sizeof all_ids[0]; i++) {
+		ret = fsm_setendid(fsm, all_ids[i]);
 		assert(ret == 1);
 	}
 
@@ -69,52 +69,45 @@ int main(void)
 
 	assert(end_state < nstates);
 
-	assert(fsm_getendidcount(fsm, end_state) == sizeof all_end_ids / sizeof all_end_ids[0]);
-	for (i=0; i < sizeof all_end_ids / sizeof all_end_ids[0]; i++) {
+	assert(fsm_endid_count(fsm, end_state) == sizeof all_ids / sizeof all_ids[0]);
+	for (i=0; i < sizeof all_ids / sizeof all_ids[0]; i++) {
 		/* add duplicate end ids */
-		ret = fsm_setendid(fsm, all_end_ids[i]);
+		ret = fsm_setendid(fsm, all_ids[i]);
 
 		/* fsm_setendid should succeed */
 		assert(ret == 1);
 
 		/* but it shouldn't add a duplicate id */
-		assert(fsm_getendidcount(fsm, end_state) == sizeof all_end_ids / sizeof all_end_ids[0]);
+		assert(fsm_endid_count(fsm, end_state) == sizeof all_ids / sizeof all_ids[0]);
 	}
 
 	nend = 0;
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
-			fsm_end_id_t endids[sizeof all_end_ids / sizeof all_end_ids[0]];
-			size_t i, nwritten;
-			enum fsm_getendids_res ret;
+			fsm_end_id_t endids[sizeof all_ids / sizeof all_ids[0]];
+			size_t i;
+			int ret;
 
 			memset(&endids[0], 0, sizeof endids);
 
-			assert(fsm_getendidcount(fsm, state_ind) == sizeof all_end_ids / sizeof all_end_ids[0]);
+			assert(fsm_endid_count(fsm, state_ind) == sizeof all_ids / sizeof all_ids[0]);
 
-                        nwritten = 0;
-			ret = fsm_getendids(
+			ret = fsm_endid_get(
 				fsm,
 				state_ind,
-				sizeof endids/sizeof endids[0],
-				&endids[0],
-				&nwritten);
+				sizeof endids / sizeof endids[0],
+				&endids[0]);
 
-			assert(ret == FSM_GETENDIDS_FOUND);
-                        assert(nwritten == sizeof all_end_ids / sizeof all_end_ids[0]);
+			assert(ret == 1);
 
-                        /* sort endids and compare */
-                        qsort(&endids[0], nwritten, sizeof endids[0], cmp_endids);
-			for (i=0; i < nwritten; i++) {
-				assert(endids[i] == sorted_all_end_ids[i]);
+			for (i=0; i < sizeof all_ids / sizeof all_ids[0]; i++) {
+				assert(endids[i] == sorted_all_ids[i]);
 			}
 
-#if 0
 			/* endids should be sorted */
-			for (i=0; i < nwritten; i++) {
-				assert(endids[i] == sorted_all_end_ids[i]);
+			for (i=0; i < sizeof all_ids / sizeof all_ids[0]; i++) {
+				assert(endids[i] == sorted_all_ids[i]);
 			}
-#endif /* 0 */
 
 			nend++;
 		}
@@ -142,38 +135,35 @@ int main(void)
             };
 
             for (i=0; i < sizeof matches / sizeof matches[0]; i++) {
-		fsm_end_id_t *end_ids;
-		size_t num_end_ids;
+		fsm_end_id_t *ids;
+		size_t count;
 
-		end_ids = NULL;
-		num_end_ids = 0;
-		ret = match_string(fsm, matches[i].s, NULL, &end_ids, &num_end_ids);
+		ids = NULL;
+		count = 0;
+		ret = match_string(fsm, matches[i].s, NULL, &ids, &count);
 
                 if (matches[i].should_match) {
 			size_t j;
 
 			assert( ret == 1 );
-			assert( end_ids != NULL );
-			assert( num_end_ids == sizeof all_end_ids / sizeof all_end_ids[0] );
+			assert( ids != NULL );
+			assert( count == sizeof all_ids / sizeof all_ids[0] );
 
 #if 0
-			assert( end_ids[0] == 1 );
-			assert( end_ids[0] == matches[i].endid );
+			assert( ids[0] == 1 );
+			assert( ids[0] == matches[i].endid );
 #endif /* 0 */
 
-                        /* sort endids and compare */
-                        qsort(&end_ids[0], num_end_ids, sizeof end_ids[0], cmp_endids);
-
-			for (j=0; j < num_end_ids; j++) {
-				assert(end_ids[j] == sorted_all_end_ids[j]);
+			for (j=0; j < count; j++) {
+				assert(ids[j] == sorted_all_ids[j]);
 			}
                 } else {
 			assert( ret == 0 );
-			assert( end_ids == NULL );
-			assert( num_end_ids == 0 );
+			assert( ids == NULL );
+			assert( count == 0 );
                 }
 
-		free(end_ids);
+		free(ids);
             }
         }
 

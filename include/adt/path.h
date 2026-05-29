@@ -12,8 +12,9 @@ struct fsm_state;
 
 struct path {
 	fsm_state_t state;
-	struct path *next;
 	char c;
+
+	struct path *next;
 };
 
 struct path *
