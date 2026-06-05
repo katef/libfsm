@@ -8,20 +8,6 @@
 /* for fsm_capvm_program_exec */
 #include "../../src/libfsm/capture_vm.h"
 
-struct captest_input {
-	const char *string;
-	size_t pos;
-};
-
-static int
-captest_getc(void *opaque)
-{
-	struct captest_input *input = opaque;
-	int res = input->string[input->pos];
-	input->pos++;
-	return res == 0 ? EOF : res;
-}
-
 static struct fsm_options options = {
 	.group_edges = 1,
 };
@@ -53,12 +39,11 @@ captest_run_case(const struct captest_case_single *testcase,
 
 	/* build regex */
 	const enum re_flags flags = 0;
-	struct captest_input comp_input = {
-		.string = testcase->regex,
-	};
+
+	const char *regex = testcase->regex;
 
 	struct fsm *fsm = re_comp(RE_PCRE,
-		    captest_getc, &comp_input,
+		    fsm_sgetc, &regex,
 		    NULL, flags, &err);
 
 	if (testcase->match == SHOULD_REJECT_AS_UNSUPPORTED) {
@@ -243,17 +228,15 @@ captest_run_case_multi(const struct captest_case_multi *testcase,
 
 	/* compile each individually */
 	for (size_t i = 0; i < testcase->regex_count; i++) {
-		struct captest_input comp_input = {
-			.string = testcase->regexes[i],
-		};
+		const char *regex = testcase->regexes[i];
 
 		if (verbosity > 1) {
 			fprintf(stderr, "%s: compiling \"%s\"\n",
-			    __func__, comp_input.string);
+			    __func__, regex);
 		}
 
 		struct fsm *fsm = re_comp(RE_PCRE,
-		    captest_getc, &comp_input,
+		    fsm_sgetc, &regex,
 		    NULL, flags, &err);
 		assert(fsm != NULL);
 
