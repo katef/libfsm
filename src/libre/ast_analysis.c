@@ -426,7 +426,7 @@ analysis_iter_repetition(struct ast_expr *n, struct ast_expr *outermost_repeat_p
 					 *
 					 * An example input that triggers this is '^(($)|)+$' . */
 					set_flags(n, AST_FLAG_UNSATISFIABLE);
-					return AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE;
+					return AST_ANALYSIS_ERROR_UNSUPPORTED;
 				}
 			}
 
@@ -537,7 +537,7 @@ analysis_iter_repetition(struct ast_expr *n, struct ast_expr *outermost_repeat_p
 			    && repeat_plus_ancestor->u.repeat.max == AST_COUNT_UNBOUNDED);
 			LOG(3 - LOG_REPETITION_CASES,
 			    "%s: not yet implemented, skipping\n", __func__);
-			/* return AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE; */
+			/* return AST_ANALYSIS_ERROR_UNSUPPORTED; */
 		}
 
 		res = analysis_iter_repetition(n->u.group.e, outermost_repeat_parent,
@@ -1044,8 +1044,8 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				    "%s: LITERAL: rejecting non-optional newline match after $ as unsupported\n",
 				    __func__);
 				set_flags(n, AST_FLAG_UNSATISFIABLE);
-				/* fprintf(stderr, "%s:%u: AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE\n", __func__, __LINE__); */
-				return AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE;
+				/* fprintf(stderr, "%s:%u: AST_ANALYSIS_ERROR_UNSUPPORTED\n", __func__, __LINE__); */
+				return AST_ANALYSIS_ERROR_UNSUPPORTED;
 			}
 		}
 		break;
@@ -1084,7 +1084,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 			if (res != AST_ANALYSIS_OK &&
 			    res != AST_ANALYSIS_UNSATISFIABLE) { /* unsat is handled below */
-				if (res == AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE) {
+				if (res == AST_ANALYSIS_ERROR_UNSUPPORTED) {
 
 					/* FIXME: check this */
 					assert(child->flags & AST_FLAG_UNSATISFIABLE);
@@ -1261,8 +1261,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 					all_set_past_always_consuming &= child_env.past_always_consuming;
 					any_sat = 1;
 				}
-			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED_CAPTURE
-				|| res == AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE) {
+			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED) {
 				assert(child->flags & AST_FLAG_UNSATISFIABLE);
 				continue;
 			} else {
@@ -1467,7 +1466,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			    "%s: SUBTRACT: rejecting non-optional newline match after $ as unsupported\n",
 			    __func__);
 			set_flags(n, AST_FLAG_UNSATISFIABLE);
-			return AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE;
+			return AST_ANALYSIS_ERROR_UNSUPPORTED;
 		}
 
 		if (res != AST_ANALYSIS_OK) {
@@ -1563,7 +1562,7 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 					LOG(3 - LOG_ANCHORING,
 					    "%s: END anchor & followed_by_consuming, returning UNSUPPORTED\n",
 					    __func__);
-					return AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE;
+					return AST_ANALYSIS_ERROR_UNSUPPORTED;
 				} else {
 					LOG(3 - LOG_ANCHORING,
 					    "%s: END anchor & followed_by_consuming, setting UNSATISFIABLE\n",
@@ -1730,8 +1729,7 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 					
 					any_sat = 1;
 				}
-			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED_CAPTURE
-			    || res == AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE) {
+			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED) {
 				LOG(3 - LOG_ANCHORING, "%s: got res of UNSUPPORTED, bubbling up\n", __func__);
 				assert(child->flags & AST_FLAG_UNSATISFIABLE);
 
@@ -2054,7 +2052,7 @@ analysis_iter_captures(struct capture_env *env, struct ast_expr *n)
 	case AST_EXPR_ANCHOR:
 		if (env->use_captures && n->u.anchor.type == AST_ANCHOR_END && !n->u.anchor.is_end_nl) {
 			set_flags(n, AST_FLAG_UNSATISFIABLE);
-			return AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE;
+			return AST_ANALYSIS_ERROR_UNSUPPORTED;
 		}
 		break;
 

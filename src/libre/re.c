@@ -123,10 +123,8 @@ re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
 	res = ast_analysis(ast, flags);
 	if (res < 0) {
 		if (err != NULL) {
-			if (res == AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE) {
-				err->e = RE_EUNSUPPPCRE;
-			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED_CAPTURE) {
-				err->e = RE_EUNSUPCAPTUR;
+			if (res == AST_ANALYSIS_ERROR_UNSUPPORTED) {
+				err->e = RE_EUNSUPPORTED;
 			} else if (err->e == RE_ESUCCESS) {
 				err->e = RE_EERRNO;
 			}
@@ -157,8 +155,7 @@ error:
 		}
 		break;
 
-	case AST_ANALYSIS_ERROR_UNSUPPORTED_PCRE:
-	case AST_ANALYSIS_ERROR_UNSUPPORTED_CAPTURE:
+	case AST_ANALYSIS_ERROR_UNSUPPORTED:
 		err->e = RE_EUNSUPPORTED;
 
 		/*
