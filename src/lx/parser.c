@@ -2017,7 +2017,7 @@ p_215(lex_state lex_state, act_state act_state, fsm *ZOr)
 		assert((ZIa) != NULL);
 		assert((ZIa)->p != NULL);
 
-		(ZIr) = re_comp(RE_NATIVE, act_agetc, (ZIa), act_state->alloc, (ZIf), &err);
+		(ZIr) = re_comp(RE_NATIVE, act_agetc, (ZIa), act_state->alloc, (ZIf) | RE_NOCAPTURE, &err);
 		if ((ZIr) == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
