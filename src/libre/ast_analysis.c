@@ -1732,8 +1732,7 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED) {
 				LOG(3 - LOG_ANCHORING, "%s: got res of UNSUPPORTED, bubbling up\n", __func__);
 				assert(child->flags & AST_FLAG_UNSATISFIABLE);
-
-				return res;
+				continue;
 			} else {
 				return res;
 			}
